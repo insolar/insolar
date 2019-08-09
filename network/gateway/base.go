@@ -190,8 +190,8 @@ func (g *Base) GetCert(ctx context.Context, ref *insolar.Reference) (insolar.Cer
 }
 
 // ValidateCert validates node certificate
-func (g *Base) ValidateCert(ctx context.Context, certificate insolar.AuthorizationCertificate) (bool, error) {
-	return g.CertificateManager.VerifyAuthorizationCertificate(certificate)
+func (g *Base) ValidateCert(ctx context.Context, authCert insolar.AuthorizationCertificate) (bool, error) {
+	return certificate.VerifyAuthorizationCertificate(g.CryptographyService, g.CertificateManager.GetCertificate().GetDiscoveryNodes(), authCert)
 }
 
 // ============= Bootstrap =======
@@ -271,14 +271,14 @@ func (g *Base) HandleNodeAuthorizeRequest(ctx context.Context, request network.R
 	}
 
 	valid, err := g.Gatewayer.Gateway().Auther().ValidateCert(ctx, cert)
-	if !valid {
+	if err != nil || !valid {
 		if err == nil {
 			err = errors.New("Certificate validation failed")
 		}
 
-		inslogger.FromContext(ctx).Warn(err.Error())
+		inslogger.FromContext(ctx).Warn("AuthorizeRequest with invalid cert: ", err.Error())
 		// FIXME integr tests certs signs
-		// return g.HostNetwork.BuildResponse(ctx, request, &packet.AuthorizeResponse{Code: packet.WrongMandate, Error: err.Error()}), nil
+		return g.HostNetwork.BuildResponse(ctx, request, &packet.AuthorizeResponse{Code: packet.WrongMandate, Error: err.Error()}), nil
 	}
 
 	// TODO: get random reconnectHost

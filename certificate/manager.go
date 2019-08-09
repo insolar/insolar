@@ -25,7 +25,6 @@ import (
 
 // CertificateManager is a component for working with current node certificate
 type CertificateManager struct { // nolint: golint
-	CS          insolar.CryptographyService `inject:""`
 	certificate insolar.Certificate
 }
 
@@ -40,15 +39,14 @@ func (m *CertificateManager) GetCertificate() insolar.Certificate {
 }
 
 // VerifyAuthorizationCertificate verifies certificate from some node
-func (m *CertificateManager) VerifyAuthorizationCertificate(authCert insolar.AuthorizationCertificate) (bool, error) {
-	discoveryNodes := m.certificate.GetDiscoveryNodes()
+func VerifyAuthorizationCertificate(cs insolar.CryptographyService, discoveryNodes []insolar.DiscoveryNode, authCert insolar.AuthorizationCertificate) (bool, error) {
 	if len(discoveryNodes) != len(authCert.GetDiscoverySigns()) {
 		return false, nil
 	}
 	data := authCert.SerializeNodePart()
 	for _, node := range discoveryNodes {
 		sign := authCert.GetDiscoverySigns()[*node.GetNodeRef()]
-		ok := m.CS.Verify(node.GetPublicKey(), insolar.SignatureFromBytes(sign), data)
+		ok := cs.Verify(node.GetPublicKey(), insolar.SignatureFromBytes(sign), data)
 		if !ok {
 			return false, nil
 		}
@@ -57,8 +55,8 @@ func (m *CertificateManager) VerifyAuthorizationCertificate(authCert insolar.Aut
 }
 
 // NewUnsignedCertificate returns new certificate
-func (m *CertificateManager) NewUnsignedCertificate(pKey string, role string, ref string) (insolar.Certificate, error) {
-	cert := m.certificate.(*Certificate)
+func NewUnsignedCertificate(baseCert insolar.Certificate, pKey string, role string, ref string) (insolar.Certificate, error) {
+	cert := baseCert.(*Certificate)
 	newCert := Certificate{
 		MajorityRule: cert.MajorityRule,
 		MinRoles:     cert.MinRoles,

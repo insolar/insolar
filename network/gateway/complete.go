@@ -104,11 +104,6 @@ func (g *Complete) NetworkOperable() bool {
 	return true
 }
 
-// ValidateCert validates node certificate
-func (g *Complete) ValidateCert(ctx context.Context, certificate insolar.AuthorizationCertificate) (bool, error) {
-	return g.CertificateManager.VerifyAuthorizationCertificate(certificate)
-}
-
 // GetCert method generates cert by requesting signs from discovery nodes
 func (g *Complete) GetCert(ctx context.Context, registeredNodeRef *insolar.Reference) (insolar.Certificate, error) {
 	pKey, role, err := g.getNodeInfo(ctx, registeredNodeRef)
@@ -117,7 +112,7 @@ func (g *Complete) GetCert(ctx context.Context, registeredNodeRef *insolar.Refer
 	}
 
 	currentNodeCert := g.CertificateManager.GetCertificate()
-	registeredNodeCert, err := g.CertificateManager.NewUnsignedCertificate(pKey, role, registeredNodeRef.String())
+	registeredNodeCert, err := certificate.NewUnsignedCertificate(currentNodeCert, pKey, role, registeredNodeRef.String())
 	if err != nil {
 		return nil, errors.Wrap(err, "[ GetCert ] Couldn't create certificate")
 	}
