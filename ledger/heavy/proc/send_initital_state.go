@@ -129,12 +129,12 @@ func (p *SendInitialState) sendForNetworkStart(
 			possibleIDs = append(possibleIDs, id)
 		}
 
-		logger.Debug("sendForNetworkStart. Split: ", dr.Split, ",  Possible jets: ", insolar.JetIDCollection(possibleIDs).DebugString())
+		logger.Debug("Extracted drop: Split: ", dr.Split, ",  Possible jets: ", insolar.JetIDCollection(possibleIDs).DebugString())
 		var shouldAddDrop bool
 		for _, jetID := range possibleIDs {
 			err := p.dep.jetTree.Update(ctx, req.Pulse, true, jetID)
 			if err != nil {
-				logger.Fatal("sendForNetworkStart. Couldn't update jet tree", jetID.DebugString(), " ", err)
+				logger.Fatal("Couldn't update jet tree", jetID.DebugString(), " ", err)
 			}
 			light, err := p.dep.jetCoordinator.LightExecutorForJet(ctx, insolar.ID(jetID), req.Pulse)
 			if err != nil {
