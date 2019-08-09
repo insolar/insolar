@@ -186,7 +186,7 @@ func (d *Deposit) Transfer(amountStr string, wallerRef insolar.Reference) (inter
 
 	w := wallet.GetObject(wallerRef)
 
-	acceptWalletErr := w.Accept(amountStr)
+	acceptWalletErr := w.Accept(amountStr, "XNS")
 	if acceptWalletErr == nil {
 		return nil, nil
 	}
