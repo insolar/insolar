@@ -12,7 +12,7 @@ INSOLAR_ARTIFACTS_DIR=${INSOLAR_ARTIFACTS_DIR:-".artifacts"}/
 LAUNCHNET_BASE_DIR=${LAUNCHNET_BASE_DIR:-"${INSOLAR_ARTIFACTS_DIR}launchnet"}/
 
 PROF_TIME=${1:-"30"}
-PROF_FILES_DIR=${LAUNCHNET_BASE_DIR}pprof/
+PROF_FILES_DIR=${LAUNCHNET_BASE_DIR}trace/
 WEB_PROFILE_PORT=8080
 
 trap 'killall' INT TERM EXIT
@@ -50,7 +50,7 @@ echo "Starting web servers with profile info..."
 for port in ${prof_ports}
 do
     echo "Start web profile server on localhost:${WEB_PROFILE_PORT}/ui"
-    go tool trace -http=:${WEB_PROFILE_PORT} ${PROF_FILES_DIR}prof_${port} &
+    go tool trace -http=:${WEB_PROFILE_PORT} ${PROF_FILES_DIR}trace_${port} &
     WEB_PROFILE_PORT=$((WEB_PROFILE_PORT + 1))
 done
 wait
