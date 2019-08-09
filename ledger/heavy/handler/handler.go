@@ -295,18 +295,17 @@ func (h *Handler) handleGotHotConfirmation(ctx context.Context, meta payload.Met
 		return
 	}
 
-	logger.Debug("handleGotHotConfirmation. pulse: ", confirm.Pulse, ". jet: ", confirm.JetID.DebugString())
+	logger.Debugf("handleGotHotConfirmation. pulse=%v. jet=%v", confirm.Pulse, confirm.JetID.DebugString())
 
 	err = h.JetModifier.Update(ctx, confirm.Pulse, true, confirm.JetID)
 	if err != nil {
-		logger.Error(errors.Wrapf(err, "failed to update jet %s", confirm.JetID.DebugString()))
-		return
+		logger.Fatalf("failed to update jet=%v: %s", confirm.JetID.DebugString(), err.Error())
 	}
 
 	err = h.JetKeeper.AddHotConfirmation(ctx, confirm.Pulse, confirm.JetID, confirm.Split)
 	if err != nil {
-		logger.Error(errors.Wrapf(err, "failed to add hot confitmation to JetKeeper jet=%v", confirm.String()))
-	} else {
-		logger.Debug("got confirmation: ", confirm.String())
+		logger.Fatalf("failed to add hot confirmation jet=%v: %v", confirm.String(), err.Error())
 	}
+
+	logger.Debug("got confirmation: ", confirm.String())
 }
