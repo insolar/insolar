@@ -26,9 +26,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/account"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/costcenter"
 	proxyMember "github.com/insolar/insolar/logicrunner/builtin/proxy/member"
-	"github.com/insolar/insolar/logicrunner/builtin/proxy/rootdomain"
 	proxyWallet "github.com/insolar/insolar/logicrunner/builtin/proxy/wallet"
-	"github.com/insolar/insolar/logicrunner/builtin/proxy/wallet"
 )
 
 // Wallet - basic wallet contract.
