@@ -38,9 +38,11 @@ type Wallet struct {
 
 // New creates new wallet.
 func New(accountReference insolar.Reference) (*Wallet, error) {
+	if accountReference.IsEmpty() {
+		return nil, fmt.Errorf("reference is empty")
+	}
 	accounts := make(foundation.StableMap)
 	// TODO: Think about creating of new types of assets and initial balance
-
 	accounts["XNS"] = accountReference.String()
 
 	return &Wallet{
@@ -49,6 +51,9 @@ func New(accountReference insolar.Reference) (*Wallet, error) {
 }
 
 func (w *Wallet) GetAccount(assetName string) (*insolar.Reference, error) {
+	if w.Accounts[assetName] == "" || len(assetName) == 0 {
+		return nil, fmt.Errorf("failed to get account for asset: %s", assetName)
+	}
 	return insolar.NewReferenceFromBase58(w.Accounts[assetName])
 }
 
