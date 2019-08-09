@@ -36,11 +36,14 @@ func New(balance string) (*Account, error) {
 }
 
 // Transfer transfers funds to giver reference.
-func (a *Account) Transfer(amountStr string, toAccount *insolar.Reference) (err error) {
-	amount, _ := new(big.Int).SetString(amountStr, 10)
+func (a *Account) Transfer(amountStr string, toAccount *insolar.Reference) error {
+	amount, ok := new(big.Int).SetString(amountStr, 10)
+	if !ok {
+		return fmt.Errorf("can't parse amountStr")
+	}
 	balance, ok := new(big.Int).SetString(a.Balance, 10)
 	if !ok {
-		return fmt.Errorf("can't parse wallet balance")
+		return fmt.Errorf("can't parse account balance")
 	}
 
 	newBalance, err := safemath.Sub(balance, amount)
@@ -53,7 +56,7 @@ func (a *Account) Transfer(amountStr string, toAccount *insolar.Reference) (err 
 }
 
 // Accept accepts transfer to balance.
-func (a *Account) Accept(amountStr string) (err error) {
+func (a *Account) Accept(amountStr string) error {
 
 	amount := new(big.Int)
 	amount, ok := amount.SetString(amountStr, 10)
@@ -64,7 +67,7 @@ func (a *Account) Accept(amountStr string) (err error) {
 	balance := new(big.Int)
 	balance, ok = balance.SetString(a.Balance, 10)
 	if !ok {
-		return fmt.Errorf("can't parse wallet balance")
+		return fmt.Errorf("can't parse account balance")
 	}
 
 	b, err := safemath.Add(balance, amount)
@@ -77,7 +80,7 @@ func (a *Account) Accept(amountStr string) (err error) {
 }
 
 // RollBack rolls back transfer to balance.
-func (a *Account) RollBack(amountStr string) (err error) {
+func (a *Account) RollBack(amountStr string) error {
 
 	amount := new(big.Int)
 	amount, ok := amount.SetString(amountStr, 10)
@@ -88,7 +91,7 @@ func (a *Account) RollBack(amountStr string) (err error) {
 	balance := new(big.Int)
 	balance, ok = balance.SetString(a.Balance, 10)
 	if !ok {
-		return fmt.Errorf("can't parse wallet balance")
+		return fmt.Errorf("can't parse account balance")
 	}
 
 	b, err := safemath.Sub(balance, amount)

@@ -445,7 +445,7 @@ func (m *Member) createMember(name string, key string, migrationAddress string) 
 	aHolder := account.New("1000000000")
 	accountRef, err := aHolder.AsChild(m.RootDomain)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create wallet for member: %s", err.Error())
+		return nil, fmt.Errorf("failed to create account for member: %s", err.Error())
 	}
 
 	wHolder := wallet.New(accountRef.Reference)
