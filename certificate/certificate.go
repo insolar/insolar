@@ -250,3 +250,13 @@ func ReadCertificateFromReader(publicKey crypto.PublicKey, keyProcessor insolar.
 	}
 	return cert, nil
 }
+
+// SignCert is used for signing certificate by Discovery node
+func SignCert(signer insolar.Signer, pKey, role, registeredNodeRef string) (*insolar.Signature, error) {
+	data := []byte(pKey + registeredNodeRef + role)
+	sign, err := signer.Sign(data)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ SignCert ] Couldn't sign")
+	}
+	return sign, nil
+}
