@@ -108,13 +108,13 @@ func (ar *Runner) makeCall(ctx context.Context, request requester.Request, rawBo
 	)
 
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "[ makeCall ] Can't send request")
+		return nil, ref, errors.Wrap(err, "[ makeCall ] Can't send request")
 	}
 
 	result, contractErr, err := extractor.CallResponse(res.(*reply.CallMethod).Result)
 
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "[ makeCall ] Can't extract response")
+		return nil, ref, errors.Wrap(err, "[ makeCall ] Can't extract response")
 	}
 
 	if contractErr != nil {
