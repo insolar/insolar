@@ -70,6 +70,24 @@ type NoNetwork struct {
 	*Base
 }
 
+func (g *NoNetwork) Pause() {
+	var sleep time.Duration
+	if g.backoff == g.Options.MaxTimeout {
+		sleep = g.backoff
+	} else if g.backoff == 0 {
+		g.backoff = g.Options.MinTimeout
+	} else {
+		sleep = g.backoff
+		g.backoff = g.backoff * g.Options.TimeoutMult
+		if g.backoff > g.Options.MaxTimeout {
+			g.backoff = g.Options.MaxTimeout
+		}
+	}
+	if sleep > 0 {
+		<-time.After(sleep)
+	}
+}
+
 func (g *NoNetwork) Run(ctx context.Context, pulse insolar.Pulse) {
 	cert := g.CertificateManager.GetCertificate()
 	origin := g.NodeKeeper.GetOrigin()
@@ -84,15 +102,20 @@ func (g *NoNetwork) Run(ctx context.Context, pulse insolar.Pulse) {
 
 	// run bootstrap
 	if !network.OriginIsDiscovery(cert) {
+		g.Pause()
 		g.Gatewayer.SwitchState(ctx, insolar.JoinerBootstrap, pulse)
 		return
 	}
 
 	// Simplified bootstrap
 	if origin.Role() != insolar.StaticRoleHeavyMaterial {
+		g.Pause()
 		g.Gatewayer.SwitchState(ctx, insolar.JoinerBootstrap, pulse)
 		return
 	}
+
+	// Reset backoff if not insolar.JoinerBootstrap.
+	g.backoff = 0
 
 	g.bootstrapETA = time.Minute // TODO: move to config
 	g.Gatewayer.SwitchState(ctx, insolar.WaitConsensus, pulse)
