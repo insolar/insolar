@@ -58,12 +58,12 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/network/node"
-	"github.com/insolar/insolar/testutils"
 )
 
 func newTestNode() insolar.NetworkNode {
-	return node.NewNode(testutils.RandomRef(), insolar.StaticRoleUnknown, nil, "127.0.0.1:5432", "")
+	return node.NewNode(gen.Reference(), insolar.StaticRoleUnknown, nil, "127.0.0.1:5432", "")
 }
 
 func newTestNodeWithShortID(id insolar.ShortNodeID) insolar.NetworkNode {
@@ -133,10 +133,10 @@ func (t *testNode) GetRole() insolar.StaticRole {
 }
 
 func TestExcludeOrigin(t *testing.T) {
-	origin := testutils.RandomRef()
+	origin := gen.Reference()
 	originNode := &testNode{origin}
-	first := &testNode{testutils.RandomRef()}
-	second := &testNode{testutils.RandomRef()}
+	first := &testNode{gen.Reference()}
+	second := &testNode{gen.Reference()}
 
 	discoveryNodes := []insolar.DiscoveryNode{first, originNode, second}
 	result := ExcludeOrigin(discoveryNodes, origin)

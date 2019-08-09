@@ -996,7 +996,6 @@ func TestGetParent(t *testing.T) {
 
  import (
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
- 	"github.com/insolar/insolar/insolar"
 	two "github.com/insolar/insolar/application/proxy/get_parent_two"
  )
 
@@ -1014,7 +1013,7 @@ func (r *One) AddChildAndReturnMyselfAsParent() (string, error) {
 	holder := two.New()
 	friend, err := holder.AsChild(r.GetReference())
 	if err != nil {
-		return insolar.Reference{}.String(), err
+		return "", err
 	}
 
  	return friend.GetParent()
@@ -1061,7 +1060,6 @@ package main
 import (
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	two "github.com/insolar/insolar/application/proxy/get_remote_data_two"
-	"github.com/insolar/insolar/insolar"
 )
 
 type One struct {
@@ -1077,7 +1075,7 @@ func (r *One) GetChildPrototype() (string, error) {
 	holder := two.New()
 	child, err := holder.AsChild(r.GetReference())
 	if err != nil {
-		return insolar.Reference{}.String(), err
+		return "", err
 	}
 
 	ref, err := child.GetPrototype()
@@ -1457,11 +1455,11 @@ type Two struct {
 
 
 func New() (*Two, error) {
-	return &Two{Number: 10, OneRef: insolar.Reference{}}, nil
+	return &Two{Number: 10, OneRef: insolar.NewEmptyReference()}, nil
 }
 
 func NewWithOne(oneNumber int) (*Two, error) {
-	return &Two{Number: oneNumber, OneRef: insolar.Reference{} }, nil
+	return &Two{Number: oneNumber, OneRef: insolar.NewEmptyReference() }, nil
 }
 
 var INSATTR_Get_API = true

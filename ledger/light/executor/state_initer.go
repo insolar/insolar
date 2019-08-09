@@ -143,10 +143,10 @@ func (s *StateIniterDefault) PrepareState(
 func (s *StateIniterDefault) heavy(pn insolar.PulseNumber) (insolar.Reference, error) {
 	candidates, err := s.nodes.InRole(pn, insolar.StaticRoleHeavyMaterial)
 	if err != nil {
-		return insolar.Reference{}, errors.Wrap(err, "failed to calculate heavy node for pulse")
+		return insolar.NewEmptyReference(), errors.Wrap(err, "failed to calculate heavy node for pulse")
 	}
 	if len(candidates) == 0 {
-		return insolar.Reference{}, errors.Wrap(err, "failed to calculate heavy node for pulse")
+		return insolar.NewEmptyReference(), errors.Wrap(err, "failed to calculate heavy node for pulse")
 	}
 	return candidates[0].ID, nil
 }

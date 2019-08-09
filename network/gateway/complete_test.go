@@ -59,6 +59,7 @@ import (
 
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/network"
@@ -164,8 +165,8 @@ func mockPulseManager(t *testing.T) insolar.PulseManager {
 }
 
 func TestComplete_GetCert(t *testing.T) {
-	nodeRef := testutils.RandomRef()
-	certNodeRef := testutils.RandomRef()
+	nodeRef := gen.Reference()
+	certNodeRef := gen.Reference()
 
 	gatewayer := mock.NewGatewayerMock(t)
 	nodekeeper := mock.NewNodeKeeperMock(t)
@@ -210,8 +211,8 @@ func TestComplete_GetCert(t *testing.T) {
 }
 
 func TestComplete_handler(t *testing.T) {
-	nodeRef := testutils.RandomRef()
-	certNodeRef := testutils.RandomRef()
+	nodeRef := gen.Reference()
+	certNodeRef := gen.Reference()
 
 	gatewayer := mock.NewGatewayerMock(t)
 	nodekeeper := mock.NewNodeKeeperMock(t)

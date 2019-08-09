@@ -53,6 +53,7 @@ package rules
 import (
 	"testing"
 
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/network/node"
 
 	"github.com/insolar/insolar/certificate"
@@ -64,11 +65,11 @@ import (
 func TestRules_CheckMinRole(t *testing.T) {
 	cert := testutils.NewCertificateMock(t)
 	nodes := []insolar.NetworkNode{
-		node.NewNode(testutils.RandomRef(), insolar.StaticRoleHeavyMaterial, nil, "", ""),
-		node.NewNode(testutils.RandomRef(), insolar.StaticRoleLightMaterial, nil, "", ""),
-		node.NewNode(testutils.RandomRef(), insolar.StaticRoleLightMaterial, nil, "", ""),
-		node.NewNode(testutils.RandomRef(), insolar.StaticRoleVirtual, nil, "", ""),
-		node.NewNode(testutils.RandomRef(), insolar.StaticRoleVirtual, nil, "", ""),
+		node.NewNode(gen.Reference(), insolar.StaticRoleHeavyMaterial, nil, "", ""),
+		node.NewNode(gen.Reference(), insolar.StaticRoleLightMaterial, nil, "", ""),
+		node.NewNode(gen.Reference(), insolar.StaticRoleLightMaterial, nil, "", ""),
+		node.NewNode(gen.Reference(), insolar.StaticRoleVirtual, nil, "", ""),
+		node.NewNode(gen.Reference(), insolar.StaticRoleVirtual, nil, "", ""),
 	}
 
 	cert.GetMinRolesMock.Set(func() (r uint, r1 uint, r2 uint) {

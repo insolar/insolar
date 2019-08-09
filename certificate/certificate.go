@@ -27,9 +27,9 @@ import (
 	"strings"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
 )
 
@@ -257,7 +257,7 @@ func ReadCertificateFromReader(publicKey crypto.PublicKey, keyProcessor insolar.
 func NewCertificatesWithKeys(publicKey crypto.PublicKey, keyProcessor insolar.KeyProcessor) (*Certificate, error) {
 	cert := Certificate{}
 
-	cert.Reference = testutils.RandomRef().String()
+	cert.Reference = gen.Reference().String()
 
 	keyBytes, err := keyProcessor.ExportPublicKeyPEM(publicKey)
 	if err != nil {

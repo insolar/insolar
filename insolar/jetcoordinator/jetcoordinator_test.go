@@ -129,7 +129,7 @@ func (s *jetCoordinatorSuite) TestJetCoordinator_QueryRole() {
 func TestJetCoordinator_Me(t *testing.T) {
 	t.Parallel()
 	// Arrange
-	expectedID := testutils.RandomRef()
+	expectedID := gen.Reference()
 	nodeNet := network.NewNodeNetworkMock(t)
 	node := network.NewNetworkNodeMock(t)
 	nodeNet.GetOriginMock.Return(node)
@@ -251,7 +251,7 @@ func TestJetCoordinator_NodeForJet_CheckLimitFailed(t *testing.T) {
 	calc.PulseAccessor = pulseAccessor
 
 	// Act
-	res, err := calc.NodeForJet(ctx, testutils.RandomJet(), insolar.FirstPulseNumber+1)
+	res, err := calc.NodeForJet(ctx, insolar.ID(gen.JetID()), insolar.FirstPulseNumber+1)
 
 	// Assert
 	require.NotNil(t, err)
@@ -318,7 +318,7 @@ func TestJetCoordinator_NodeForJet_GoToLight(t *testing.T) {
 	coord.PlatformCryptographyScheme = platformpolicy.NewPlatformCryptographyScheme()
 
 	// Act
-	resNode, err := coord.NodeForJet(ctx, testutils.RandomJet(), insolar.FirstPulseNumber+1)
+	resNode, err := coord.NodeForJet(ctx, insolar.ID(gen.JetID()), insolar.FirstPulseNumber+1)
 
 	// Assert
 	require.Nil(t, err)
