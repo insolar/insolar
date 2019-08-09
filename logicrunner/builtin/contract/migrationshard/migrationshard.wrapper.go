@@ -18,20 +18,9 @@ package migrationshard
 
 import (
 	XXX_insolar "github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/common"
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
-
-	"strings"
-	// TODO: this is the end of a horrible hack, please remove it
 )
-
-type ExtendableError struct {
-	S string
-}
-
-func (e *ExtendableError) Error() string {
-	return e.S
-}
 
 func INS_META_INFO() []map[string]string {
 	result := make([]map[string]string, 0)
@@ -44,12 +33,12 @@ func INSMETHOD_GetCode(object []byte, data []byte) ([]byte, []byte, error) {
 	self := new(MigrationShard)
 
 	if len(object) == 0 {
-		return nil, nil, &ExtendableError{S: "[ Fake GetCode ] ( Generated Method ) Object is nil"}
+		return nil, nil, &foundation.Error{S: "[ Fake GetCode ] ( Generated Method ) Object is nil"}
 	}
 
 	err := ph.Deserialize(object, self)
 	if err != nil {
-		e := &ExtendableError{S: "[ Fake GetCode ] ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		e := &foundation.Error{S: "[ Fake GetCode ] ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
 		return nil, nil, e
 	}
 
@@ -70,12 +59,12 @@ func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) 
 	self := new(MigrationShard)
 
 	if len(object) == 0 {
-		return nil, nil, &ExtendableError{S: "[ Fake GetPrototype ] ( Generated Method ) Object is nil"}
+		return nil, nil, &foundation.Error{S: "[ Fake GetPrototype ] ( Generated Method ) Object is nil"}
 	}
 
 	err := ph.Deserialize(object, self)
 	if err != nil {
-		e := &ExtendableError{S: "[ Fake GetPrototype ] ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		e := &foundation.Error{S: "[ Fake GetPrototype ] ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
 		return nil, nil, e
 	}
 
@@ -97,36 +86,28 @@ func INSMETHOD_GetMigrationAddressesAmount(object []byte, data []byte) ([]byte, 
 	self := new(MigrationShard)
 
 	if len(object) == 0 {
-		return nil, nil, &ExtendableError{S: "[ FakeGetMigrationAddressesAmount ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+		return nil, nil, &foundation.Error{S: "[ FakeGetMigrationAddressesAmount ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
 	}
 
 	err := ph.Deserialize(object, self)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeGetMigrationAddressesAmount ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		e := &foundation.Error{S: "[ FakeGetMigrationAddressesAmount ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
 		return nil, nil, e
 	}
 
-	args := [1]interface{}{}
+	args := make([]interface{}, 1)
 	var args0 []string
 	args[0] = &args0
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeGetMigrationAddressesAmount ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		e := &foundation.Error{S: "[ FakeGetMigrationAddressesAmount ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
 		return nil, nil, e
 	}
 
 	ret0, ret1 := self.GetMigrationAddressesAmount(args0)
 
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
-	systemErr := ph.GetSystemError()
-
-	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		systemErr = nil
-	}
-	// TODO: this is the end of a horrible hack, please remove it
-
-	if systemErr != nil {
+	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 
@@ -139,7 +120,13 @@ func INSMETHOD_GetMigrationAddressesAmount(object []byte, data []byte) ([]byte, 
 	ret1 = ph.MakeErrorSerializable(ret1)
 
 	ret := []byte{}
-	err = ph.Serialize([]interface{}{ret0, ret1}, &ret)
+	err = ph.Serialize(
+		foundation.Result{Returns: []interface{}{ret0, ret1}},
+		&ret,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	return state, ret, err
 }
@@ -150,36 +137,28 @@ func INSMETHOD_AddFreeMigrationAddresses(object []byte, data []byte) ([]byte, []
 	self := new(MigrationShard)
 
 	if len(object) == 0 {
-		return nil, nil, &ExtendableError{S: "[ FakeAddFreeMigrationAddresses ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+		return nil, nil, &foundation.Error{S: "[ FakeAddFreeMigrationAddresses ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
 	}
 
 	err := ph.Deserialize(object, self)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeAddFreeMigrationAddresses ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		e := &foundation.Error{S: "[ FakeAddFreeMigrationAddresses ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
 		return nil, nil, e
 	}
 
-	args := [1]interface{}{}
+	args := make([]interface{}, 1)
 	var args0 []string
 	args[0] = &args0
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeAddFreeMigrationAddresses ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		e := &foundation.Error{S: "[ FakeAddFreeMigrationAddresses ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
 		return nil, nil, e
 	}
 
 	ret0 := self.AddFreeMigrationAddresses(args0)
 
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
-	systemErr := ph.GetSystemError()
-
-	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		systemErr = nil
-	}
-	// TODO: this is the end of a horrible hack, please remove it
-
-	if systemErr != nil {
+	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 
@@ -192,7 +171,13 @@ func INSMETHOD_AddFreeMigrationAddresses(object []byte, data []byte) ([]byte, []
 	ret0 = ph.MakeErrorSerializable(ret0)
 
 	ret := []byte{}
-	err = ph.Serialize([]interface{}{ret0}, &ret)
+	err = ph.Serialize(
+		foundation.Result{Returns: []interface{}{ret0}},
+		&ret,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	return state, ret, err
 }
@@ -203,12 +188,12 @@ func INSMETHOD_GetFreeMigrationAddress(object []byte, data []byte) ([]byte, []by
 	self := new(MigrationShard)
 
 	if len(object) == 0 {
-		return nil, nil, &ExtendableError{S: "[ FakeGetFreeMigrationAddress ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+		return nil, nil, &foundation.Error{S: "[ FakeGetFreeMigrationAddress ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
 	}
 
 	err := ph.Deserialize(object, self)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeGetFreeMigrationAddress ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		e := &foundation.Error{S: "[ FakeGetFreeMigrationAddress ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
 		return nil, nil, e
 	}
 
@@ -216,21 +201,13 @@ func INSMETHOD_GetFreeMigrationAddress(object []byte, data []byte) ([]byte, []by
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeGetFreeMigrationAddress ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		e := &foundation.Error{S: "[ FakeGetFreeMigrationAddress ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
 		return nil, nil, e
 	}
 
 	ret0, ret1 := self.GetFreeMigrationAddress()
 
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
-	systemErr := ph.GetSystemError()
-
-	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		systemErr = nil
-	}
-	// TODO: this is the end of a horrible hack, please remove it
-
-	if systemErr != nil {
+	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 
@@ -243,7 +220,13 @@ func INSMETHOD_GetFreeMigrationAddress(object []byte, data []byte) ([]byte, []by
 	ret1 = ph.MakeErrorSerializable(ret1)
 
 	ret := []byte{}
-	err = ph.Serialize([]interface{}{ret0, ret1}, &ret)
+	err = ph.Serialize(
+		foundation.Result{Returns: []interface{}{ret0, ret1}},
+		&ret,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	return state, ret, err
 }
@@ -254,36 +237,28 @@ func INSMETHOD_GetRef(object []byte, data []byte) ([]byte, []byte, error) {
 	self := new(MigrationShard)
 
 	if len(object) == 0 {
-		return nil, nil, &ExtendableError{S: "[ FakeGetRef ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+		return nil, nil, &foundation.Error{S: "[ FakeGetRef ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
 	}
 
 	err := ph.Deserialize(object, self)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeGetRef ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		e := &foundation.Error{S: "[ FakeGetRef ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
 		return nil, nil, e
 	}
 
-	args := [1]interface{}{}
+	args := make([]interface{}, 1)
 	var args0 string
 	args[0] = &args0
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeGetRef ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		e := &foundation.Error{S: "[ FakeGetRef ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
 		return nil, nil, e
 	}
 
 	ret0, ret1 := self.GetRef(args0)
 
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
-	systemErr := ph.GetSystemError()
-
-	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		systemErr = nil
-	}
-	// TODO: this is the end of a horrible hack, please remove it
-
-	if systemErr != nil {
+	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 
@@ -296,7 +271,13 @@ func INSMETHOD_GetRef(object []byte, data []byte) ([]byte, []byte, error) {
 	ret1 = ph.MakeErrorSerializable(ret1)
 
 	ret := []byte{}
-	err = ph.Serialize([]interface{}{ret0, ret1}, &ret)
+	err = ph.Serialize(
+		foundation.Result{Returns: []interface{}{ret0, ret1}},
+		&ret,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	return state, ret, err
 }
@@ -307,16 +288,16 @@ func INSMETHOD_SetRef(object []byte, data []byte) ([]byte, []byte, error) {
 	self := new(MigrationShard)
 
 	if len(object) == 0 {
-		return nil, nil, &ExtendableError{S: "[ FakeSetRef ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+		return nil, nil, &foundation.Error{S: "[ FakeSetRef ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
 	}
 
 	err := ph.Deserialize(object, self)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeSetRef ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		e := &foundation.Error{S: "[ FakeSetRef ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
 		return nil, nil, e
 	}
 
-	args := [2]interface{}{}
+	args := make([]interface{}, 2)
 	var args0 string
 	args[0] = &args0
 	var args1 string
@@ -324,21 +305,13 @@ func INSMETHOD_SetRef(object []byte, data []byte) ([]byte, []byte, error) {
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeSetRef ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		e := &foundation.Error{S: "[ FakeSetRef ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
 		return nil, nil, e
 	}
 
 	ret0 := self.SetRef(args0, args1)
 
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
-	systemErr := ph.GetSystemError()
-
-	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		systemErr = nil
-	}
-	// TODO: this is the end of a horrible hack, please remove it
-
-	if systemErr != nil {
+	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 
@@ -351,7 +324,13 @@ func INSMETHOD_SetRef(object []byte, data []byte) ([]byte, []byte, error) {
 	ret0 = ph.MakeErrorSerializable(ret0)
 
 	ret := []byte{}
-	err = ph.Serialize([]interface{}{ret0}, &ret)
+	err = ph.Serialize(
+		foundation.Result{Returns: []interface{}{ret0}},
+		&ret,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	return state, ret, err
 }
@@ -363,18 +342,25 @@ func INSCONSTRUCTOR_New(data []byte) ([]byte, []byte, error) {
 
 	err := ph.Deserialize(data, &args)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeNew ] ( INSCONSTRUCTOR_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		e := &foundation.Error{S: "[ FakeNew ] ( INSCONSTRUCTOR_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
 		return nil, nil, e
 	}
 
 	ret0, ret1 := New()
 	ret1 = ph.MakeErrorSerializable(ret1)
 	if ret0 == nil && ret1 == nil {
-		ret1 = &ExtendableError{S: "constructor returned nil"}
+		ret1 = &foundation.Error{S: "constructor returned nil"}
+	}
+
+	if ph.GetSystemError() != nil {
+		return nil, nil, ph.GetSystemError()
 	}
 
 	result := []byte{}
-	err = ph.Serialize([]interface{}{ret1}, &result)
+	err = ph.Serialize(
+		foundation.Result{Returns: []interface{}{ret1}},
+		&result,
+	)
 	if err != nil {
 		return nil, nil, err
 	}

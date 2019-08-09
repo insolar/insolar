@@ -20,9 +20,11 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/pkg/errors"
+	"github.com/stretchr/testify/require"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
-	"github.com/stretchr/testify/require"
 )
 
 func TestInfoResponse(t *testing.T) {
@@ -33,7 +35,7 @@ func TestInfoResponse(t *testing.T) {
 	expectedValue := Info{}
 	_ = json.Unmarshal(testValue, &expectedValue)
 
-	data, err := insolar.Serialize([]interface{}{testValue, nil})
+	data, err := foundation.MarshalMethodResult(testValue, nil)
 	require.NoError(t, err)
 
 	info, err := InfoResponse(data)
@@ -43,17 +45,13 @@ func TestInfoResponse(t *testing.T) {
 }
 
 func TestInfoResponse_ErrorResponse(t *testing.T) {
-	testValue, _ := json.Marshal(map[string]interface{}{
-		"root_member": "test_root_member",
-		"node_domain": "test_node_domain",
-	})
-	contractErr := &foundation.Error{S: "Custom test error"}
+	contractErr := errors.New("Custom test error")
 
-	data, err := insolar.Serialize([]interface{}{testValue, contractErr})
+	data, err := foundation.MarshalMethodErrorResult(contractErr)
 	require.NoError(t, err)
 
 	info, err := InfoResponse(data)
-
+	require.Error(t, err)
 	require.Contains(t, err.Error(), "Has error in response")
 	require.Contains(t, err.Error(), "Custom test error")
 	require.Nil(t, info)
@@ -67,6 +65,7 @@ func TestInfoResponse_UnmarshalError(t *testing.T) {
 
 	info, err := InfoResponse(data)
 
+	require.Error(t, err)
 	require.Contains(t, err.Error(), "Can't unmarshal")
 	require.Nil(t, info)
 }
