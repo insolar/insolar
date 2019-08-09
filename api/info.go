@@ -79,7 +79,7 @@ func NewInfoService(runner *Runner) *InfoService {
 // 		"id": str|int|null // same as in request
 // 	}
 //
-func (s *InfoService) GetInfo(r *http.Request, args *InfoArgs, reply *InfoReply) error {
+func (s *InfoService) GetInfo(r *http.Request, args *InfoArgs, fullRequest *interface{}, reply *InfoReply) error {
 	ctx, inslog := inslogger.WithTraceField(context.Background(), utils.RandTraceID())
 
 	inslog.Infof("[ INFO ] Incoming request: %s", r.RequestURI)

@@ -37,7 +37,7 @@ func NewContractService(runner *Runner) *ContractService {
 	return &ContractService{runner: runner}
 }
 
-func (cs *ContractService) Call(req *http.Request, args *requester.Params, result *requester.Result) error {
+func (cs *ContractService) Call(req *http.Request, args *requester.Params, fullRequest *requester.Request, result *requester.Result) error {
 	traceID := utils.RandTraceID()
 	ctx, insLog := inslogger.WithTraceField(context.Background(), traceID)
 
@@ -50,12 +50,10 @@ func (cs *ContractService) Call(req *http.Request, args *requester.Params, resul
 		insLog.Infof("Request related to %s", args.Test)
 	}
 
-	rawBody, err := json.Marshal(requester.Request{
-		JSONRPC: requester.JSONRPCVersion,
-		ID:      1,
-		Method:  "contract.call",
-		Params:  *args,
-	})
+	rawBody, err := json.Marshal(fullRequest)
+	if err != nil {
+		return err
+	}
 
 	signature, err := validateRequestHeaders(req.Header.Get(requester.Digest), req.Header.Get(requester.Signature), rawBody)
 	if err != nil {

@@ -50,7 +50,7 @@ func NewNodeCertService(runner *Runner) *NodeCertService {
 }
 
 // Get returns certificate for node with given reference.
-func (s *NodeCertService) Get(r *http.Request, args *NodeCertArgs, reply *NodeCertReply) error {
+func (s *NodeCertService) Get(r *http.Request, args *NodeCertArgs, fullRequest *interface{}, reply *NodeCertReply) error {
 	ctx, inslog := inslogger.WithTraceField(context.Background(), utils.RandTraceID())
 
 	_, span := instracer.StartSpan(ctx, "NodeCertService.Get")

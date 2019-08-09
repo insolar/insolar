@@ -49,7 +49,7 @@ type StatusReply struct {
 }
 
 // Get returns status info
-func (s *NodeService) GetStatus(r *http.Request, args *interface{}, reply *StatusReply) error {
+func (s *NodeService) GetStatus(r *http.Request, args *interface{}, fullRequest *interface{}, reply *StatusReply) error {
 	traceID := utils.RandTraceID()
 	ctx, inslog := inslogger.WithTraceField(context.Background(), traceID)
 

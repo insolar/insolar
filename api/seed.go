@@ -65,7 +65,7 @@ func NewNodeService(runner *Runner) *NodeService {
 // 		"id": str|int|null // same as in request
 // 	}
 //
-func (s *NodeService) GetSeed(r *http.Request, args *SeedArgs, reply *SeedReply) error {
+func (s *NodeService) GetSeed(r *http.Request, args *SeedArgs, fullRequest *interface{}, reply *SeedReply) error {
 	traceID := utils.RandTraceID()
 	ctx, inslog := inslogger.WithTraceField(context.Background(), traceID)
 

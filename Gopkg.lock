@@ -254,6 +254,7 @@
   revision = "2fcc7bfc8ff98e6900dacde00aadb2a77d547a9e"
 
 [[projects]]
+  branch = "v1"
   digest = "1:d585d1cae389b646325b7ef48032cdc9b58e68cd88c1fdc5da795eabb2114455"
   name = "github.com/insolar/rpc"
   packages = [
@@ -262,7 +263,6 @@
   ]
   pruneopts = "UT"
   revision = "60ccffd3c0df575286752c08ae3d6312f728291d"
-  version = "v1.2.1"
 
 [[projects]]
   digest = "1:9f86b5f5862a8ae44a5e2461619ac8f0fd1c75d670b735e40c4319f61bcb4bd3"
