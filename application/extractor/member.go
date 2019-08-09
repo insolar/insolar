@@ -26,7 +26,7 @@ import (
 func CallResponse(data []byte) (interface{}, *foundation.Error, error) {
 	var result interface{}
 	var contractErr *foundation.Error
-	err := Generic(data, &result, &contractErr)
+	err := foundation.UnmarshalMethodResultSimplified(data, &result, &contractErr)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "[ CallResponse ] Can't unmarshal response ")
 	}

@@ -30,7 +30,7 @@ func NodeInfoResponse(data []byte) (string, string, error) {
 		Role      insolar.StaticRole
 	}{}
 	var contractErr *foundation.Error
-	err := Generic(data, &res, &contractErr)
+	err := foundation.UnmarshalMethodResultSimplified(data, &res, &contractErr)
 	if err != nil {
 		return "", "", errors.Wrap(err, "[ NodeInfoResponse ] Can't unmarshal response")
 	}

@@ -37,7 +37,7 @@ type Info struct {
 func InfoResponse(data []byte) (*Info, error) {
 	var infoMap interface{}
 	var contractErr *foundation.Error
-	err := Generic(data, &infoMap, &contractErr)
+	err := foundation.UnmarshalMethodResultSimplified(data, &infoMap, &contractErr)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ InfoResponse ] Can't unmarshal")
 	}
