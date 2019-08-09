@@ -31,8 +31,6 @@ import (
 
 //go:generate minimock -i github.com/insolar/insolar/logicrunner.StateStorage -o ./ -s _mock.go -g
 type StateStorage interface {
-	sync.Locker
-
 	UpsertExecutionState(ref insolar.Reference) ExecutionBrokerI
 	GetExecutionState(ref insolar.Reference) ExecutionBrokerI
 	GetExecutionArchive(ref insolar.Reference) ExecutionArchive
@@ -54,6 +52,30 @@ type stateStorage struct {
 
 	brokers  map[insolar.Reference]ExecutionBrokerI
 	archives map[insolar.Reference]ExecutionArchive
+}
+
+func NewStateStorage(
+	publisher watermillMsg.Publisher,
+	requestsExecutor RequestsExecutor,
+	messageBus insolar.MessageBus,
+	jetCoordinator jet.Coordinator,
+	pulseAccessor pulse.Accessor,
+	artifactsManager artifacts.Client,
+	outgoingSender OutgoingRequestSender,
+) StateStorage {
+	ss := &stateStorage{
+		brokers:  make(map[insolar.Reference]ExecutionBrokerI),
+		archives: make(map[insolar.Reference]ExecutionArchive),
+
+		publisher:        publisher,
+		requestsExecutor: requestsExecutor,
+		messageBus:       messageBus,
+		jetCoordinator:   jetCoordinator,
+		pulseAccessor:    pulseAccessor,
+		artifactsManager: artifactsManager,
+		outgoingSender:   outgoingSender,
+	}
+	return ss
 }
 
 func (ss *stateStorage) upsertExecutionArchive(ref insolar.Reference) ExecutionArchive {
@@ -153,28 +175,4 @@ func (ss *stateStorage) OnPulse(ctx context.Context, pulse insolar.Pulse) []inso
 	}
 
 	return onPulseMessages
-}
-
-func NewStateStorage(
-	publisher watermillMsg.Publisher,
-	requestsExecutor RequestsExecutor,
-	messageBus insolar.MessageBus,
-	jetCoordinator jet.Coordinator,
-	pulseAccessor pulse.Accessor,
-	artifactsManager artifacts.Client,
-	outgoingSender OutgoingRequestSender,
-) StateStorage {
-	ss := &stateStorage{
-		brokers:  make(map[insolar.Reference]ExecutionBrokerI),
-		archives: make(map[insolar.Reference]ExecutionArchive),
-
-		publisher:        publisher,
-		requestsExecutor: requestsExecutor,
-		messageBus:       messageBus,
-		jetCoordinator:   jetCoordinator,
-		pulseAccessor:    pulseAccessor,
-		artifactsManager: artifactsManager,
-		outgoingSender:   outgoingSender,
-	}
-	return ss
 }
