@@ -20,6 +20,7 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/insolar/insolar/insolar/genesisrefs"
 	"github.com/insolar/insolar/insolar"
 )
 
@@ -47,10 +48,27 @@ func GetObject(ref insolar.Reference) ProxyInterface {
 	panic("not implemented")
 }
 
+// Get reference CostCenter contract.
+func GetCostCenter() insolar.Reference {
+	return genesisrefs.ContractCostCenter
+}
+
+// Get reference MigrationAdminMember contract.
+func GetMigrationAdminMember() insolar.Reference {
+	return genesisrefs.ContractMigrationAdminMember
+}
+
+// Get reference RootMember contract.
+func GetRootMember() insolar.Reference {
+	return genesisrefs.ContractRootMember
+}
+
+// TrimPublicKey trim public key
 func TrimPublicKey(publicKey string) string {
 	return TrimAddress(between(publicKey, "KEY-----", "-----END"))
 }
 
+// TrimPublicKey trim address
 func TrimAddress(address string) string {
 	return strings.ToLower(strings.Join(strings.Split(strings.TrimSpace(address), "\n"), ""))
 }
