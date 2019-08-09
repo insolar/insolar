@@ -78,20 +78,24 @@ func TestFinalizationKeeper_OldCurrentPulse(t *testing.T) {
 }
 
 func TestFinalizationKeeper_LimitExceeded(t *testing.T) {
-	testPulse := insolar.GenesisPulse.PulseNumber
-	limit := 10
-	jkMock := NewJetKeeperMock(t)
-	jkMock.TopSyncPulseMock.Expect().Return(testPulse)
 
-	calcMock := network.NewPulseCalculatorMock(t)
-	calcMock.BackwardsMock.Set(func(p context.Context, p1 insolar.PulseNumber, p2 int) (r insolar.Pulse, r1 error) {
-		return insolar.Pulse{PulseNumber: p1 - insolar.PulseNumber(p2)}, nil
-	})
+	// Remove require panic, when INS-3121 is fixed
+	testBody := func() {
+		testPulse := insolar.GenesisPulse.PulseNumber
+		limit := 10
+		jkMock := NewJetKeeperMock(t)
+		jkMock.TopSyncPulseMock.Expect().Return(testPulse)
 
-	fk := NewFinalizationKeeperDefault(jkMock, calcMock, limit)
-	require.Panics(t, func() {
-		fk.OnPulse(context.Background(), testPulse+insolar.PulseNumber(limit*10))
-	}, "last finalized pulse falls behind too much")
+		calcMock := network.NewPulseCalculatorMock(t)
+		calcMock.BackwardsMock.Set(func(p context.Context, p1 insolar.PulseNumber, p2 int) (r insolar.Pulse, r1 error) {
+			return insolar.Pulse{PulseNumber: p1 - insolar.PulseNumber(p2)}, nil
+		})
+
+		fk := NewFinalizationKeeperDefault(jkMock, calcMock, limit)
+		err := fk.OnPulse(context.Background(), testPulse+insolar.PulseNumber(limit*10))
+		require.Contains(t, err.Error(), "last finalized pulse falls behind too much")
+	}
+	require.Panics(t, testBody)
 }
 
 func TestFinalizationKeeper_HappyPath(t *testing.T) {

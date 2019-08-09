@@ -22,9 +22,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
@@ -166,10 +164,6 @@ func (m *executionProxyImplementation) RouteCall(
 ) error {
 	inslogger.FromContext(ctx).Debug("RPC.RouteCall")
 
-	if current.Request.Immutable {
-		return errors.New("Try to call route from immutable method")
-	}
-
 	outgoing := buildOutgoingRequest(ctx, current, req)
 
 	// Step 1. Register outgoing request.
@@ -194,7 +188,7 @@ func (m *executionProxyImplementation) RouteCall(
 	outgoingReqRef := insolar.NewReference(outReqInfo.RequestID)
 
 	var incoming *record.IncomingRequest
-	rep.Result, incoming, err = m.outgoingSender.SendOutgoingRequest(ctx, *outgoingReqRef, outgoing)
+	_, rep.Result, incoming, err = m.outgoingSender.SendOutgoingRequest(ctx, *outgoingReqRef, outgoing)
 	if incoming != nil {
 		current.AddOutgoingRequest(ctx, *incoming, rep.Result, nil, err)
 	}
@@ -210,7 +204,6 @@ func (m *executionProxyImplementation) SaveAsChild(
 	defer span.End()
 
 	outgoing := buildOutgoingSaveAsChildRequest(ctx, current, req)
-	incoming := buildIncomingRequestFromOutgoing(outgoing)
 
 	// Register outgoing request
 	outReqInfo, err := m.am.RegisterOutgoingRequest(ctx, outgoing)
@@ -218,23 +211,13 @@ func (m *executionProxyImplementation) SaveAsChild(
 		return err
 	}
 
-	// Send the request
-	msg := &message.CallMethod{IncomingRequest: *incoming}
-	res, err := m.cr.Call(ctx, msg)
-	if err != nil {
-		return err
-	}
-
-	callReply := res.(*reply.CallMethod)
-	current.AddOutgoingRequest(ctx, *incoming, callReply.Result, callReply.Object, err)
-
-	rep.Reference = callReply.Object
-	rep.Result = callReply.Result
-
-	// Register result of the outgoing method
 	outgoingReqRef := insolar.NewReference(outReqInfo.RequestID)
-	reqResult := newRequestResult(rep.Result, req.Callee)
-	return m.am.RegisterResult(ctx, *outgoingReqRef, reqResult)
+	var incoming *record.IncomingRequest
+	rep.Reference, rep.Result, incoming, err = m.outgoingSender.SendOutgoingRequest(ctx, *outgoingReqRef, outgoing)
+	if incoming != nil {
+		current.AddOutgoingRequest(ctx, *incoming, rep.Result, nil, err)
+	}
+	return err
 }
 
 func (m *executionProxyImplementation) DeactivateObject(
