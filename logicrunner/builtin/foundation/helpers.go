@@ -20,8 +20,8 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/insolar/insolar/insolar/genesisrefs"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/genesisrefs"
 )
 
 // GetPulseNumber returns current pulse from context.
