@@ -781,6 +781,7 @@ func isImmutable(decl *ast.FuncDecl) bool {
 			}
 			if slice == immutableFlag {
 				isImmutable = true
+				break
 			}
 		}
 	}
@@ -790,7 +791,7 @@ func isImmutable(decl *ast.FuncDecl) bool {
 // skipCommentBegin converts '//comment' or '//[spaces]comment' to 'comment'
 // The procedure returns an error if the string is not started with '//'
 func skipCommentBeginning(comment string) (string, error) {
-	slice := strings.Trim(comment, " \r\n\t")
+	slice := strings.TrimSpace(comment)
 	sliceLen := len(slice)
 
 	// skip '//'
