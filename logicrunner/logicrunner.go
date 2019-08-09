@@ -19,9 +19,10 @@ package logicrunner
 
 import (
 	"context"
-	"github.com/insolar/insolar/network"
 	"strconv"
 	"sync"
+
+	"github.com/insolar/insolar/network"
 
 	"github.com/insolar/go-actors/actor/system"
 
@@ -49,8 +50,6 @@ import (
 )
 
 const maxQueueLength = 10
-
-type Ref = insolar.Reference
 
 // LogicRunner is a general interface of contract executor
 type LogicRunner struct {
