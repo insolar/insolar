@@ -128,10 +128,6 @@ func (c *RequestCheckerDefault) checkIncomingReason(ctx context.Context, incomin
 		return &payload.CodedError{Text: fmt.Sprintf("reason request must be Incoming, %T received", rec.Virtual.Union), Code: payload.CodeReasonIsWrong}
 	}
 
-	if reasonRequest.Result != nil {
-		return &payload.CodedError{Text: "reason request is closed", Code: payload.CodeReasonIsWrong}
-	}
-
 	isClosed := len(reasonRequest.Result) != 0
 	if !incomingRequest.IsDetachedCall() && isClosed {
 		// This is regular request, should NOT have closed reason
