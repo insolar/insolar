@@ -96,9 +96,7 @@ func New(cfg configuration.Ledger) *Handler {
 				h.IndexModifier,
 				h.RecordPositions,
 				h.PCS,
-				h.PulseAccessor,
 				h.DropModifier,
-				h.JetModifier,
 				h.JetKeeper,
 			)
 		},

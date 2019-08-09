@@ -22,9 +22,7 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
-	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/drop"
@@ -43,9 +41,7 @@ type Replication struct {
 		recordsPositions object.RecordPositionModifier
 		indexes          object.IndexModifier
 		pcs              insolar.PlatformCryptographyScheme
-		pulses           pulse.Accessor
 		drops            drop.Modifier
-		jets             jet.Modifier
 		keeper           executor.JetKeeper
 	}
 }
@@ -62,18 +58,14 @@ func (p *Replication) Dep(
 	indexes object.IndexModifier,
 	recordsPositions object.RecordPositionModifier,
 	pcs insolar.PlatformCryptographyScheme,
-	pulses pulse.Accessor,
 	drops drop.Modifier,
-	jets jet.Modifier,
 	keeper executor.JetKeeper,
 ) {
 	p.dep.records = records
 	p.dep.indexes = indexes
 	p.dep.recordsPositions = recordsPositions
 	p.dep.pcs = pcs
-	p.dep.pulses = pulses
 	p.dep.drops = drops
-	p.dep.jets = jets
 	p.dep.keeper = keeper
 }
 
