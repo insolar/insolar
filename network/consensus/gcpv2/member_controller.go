@@ -210,10 +210,10 @@ func (h *ConsensusMemberController) ProcessPacket(ctx context.Context, payload t
 		}
 		switch code {
 		case api.StartNextRound:
-			inslogger.FromContext(ctx).Debugf("discarding round: %v", round)
+			inslogger.FromContext(ctx).Debugf("discarding round")
 			h.discard(round)
 		case api.NextRoundTerminate:
-			inslogger.FromContext(ctx).Debugf("terminating round: %v", round)
+			inslogger.FromContext(ctx).Debugf("terminating round")
 			h.terminate(round)
 		}
 	}

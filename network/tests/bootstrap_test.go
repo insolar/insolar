@@ -121,8 +121,6 @@ func newBootstraptSuite(t *testing.T, bootstrapCount int) *bootstrapSuite {
 }
 
 func testBootstrap(t *testing.T) *bootstrapSuite {
-	t.Skip("Skip until fix consensus bugs")
-
 	s := newBootstraptSuite(t, 11)
 	s.SetupTest()
 	return s
