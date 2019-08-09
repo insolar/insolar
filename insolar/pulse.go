@@ -164,6 +164,9 @@ const (
 	PulseNumberJet = PulseNumber(1)
 	// BuiltinContractPulseNumber declares special pulse number that creates namespace for builtin contracts
 	BuiltinContractPulseNumber = PulseNumber(200)
+
+	InvalidPulseEpoch   int = 0
+	EphemeralPulseEpoch     = InvalidPulseEpoch + 1
 )
 
 // GenesisPulse is a first pulse for the system
@@ -172,6 +175,14 @@ const (
 var GenesisPulse = &Pulse{
 	PulseNumber:      FirstPulseNumber,
 	Entropy:          [EntropySize]byte{},
-	EpochPulseNumber: 1,
+	EpochPulseNumber: FirstPulseNumber,
+	PulseTimestamp:   pulse.UnixTimeOfMinTimePulse,
+}
+
+// EphemeralPulse is used for discovery network bootstrap
+var EphemeralPulse = &Pulse{
+	PulseNumber:      FirstPulseNumber,
+	Entropy:          [EntropySize]byte{},
+	EpochPulseNumber: EphemeralPulseEpoch,
 	PulseTimestamp:   pulse.UnixTimeOfMinTimePulse,
 }

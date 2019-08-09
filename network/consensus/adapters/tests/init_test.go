@@ -398,6 +398,7 @@ func initCrypto(node insolar.NetworkNode, discoveryNodes []insolar.NetworkNode) 
 			string(pubKeyBuf[:]),
 			dn.Address(),
 			dn.ID().String(),
+			dn.Role().String(),
 		)
 		bootstrapNodes = append(bootstrapNodes, *bootstrapNode)
 	}
@@ -441,10 +442,7 @@ type pulseChanger struct {
 
 func (pc *pulseChanger) ChangePulse(ctx context.Context, pulse insolar.Pulse) {
 	inslogger.FromContext(ctx).Info(">>>>>> Change pulse called")
-	err := pc.nodeKeeper.MoveSyncToActive(ctx, pulse.PulseNumber)
-	if err != nil {
-		inslogger.FromContext(ctx).Error(err)
-	}
+	pc.nodeKeeper.MoveSyncToActive(ctx, pulse.PulseNumber)
 }
 
 type stateUpdater struct {
@@ -454,17 +452,14 @@ type stateUpdater struct {
 func (su *stateUpdater) UpdateState(ctx context.Context, pulseNumber insolar.PulseNumber, nodes []insolar.NetworkNode, cloudStateHash []byte) {
 	inslogger.FromContext(ctx).Info(">>>>>> Update state called")
 
-	err := su.nodeKeeper.Sync(ctx, nodes, nil)
-	if err != nil {
-		inslogger.FromContext(ctx).Error(err)
-	}
-	su.nodeKeeper.SetCloudHash(cloudStateHash)
+	su.nodeKeeper.Sync(ctx, pulseNumber, nodes)
+	su.nodeKeeper.SetCloudHash(pulseNumber, cloudStateHash)
 }
 
 type ephemeralController struct {
 	allowed bool
 }
 
-func (e *ephemeralController) EphemeralMode() bool {
+func (e *ephemeralController) EphemeralMode(nodes []insolar.NetworkNode) bool {
 	return e.allowed
 }

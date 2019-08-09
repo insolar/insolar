@@ -87,7 +87,7 @@ type RPCController interface {
 type rpcController struct {
 	Scheme      insolar.PlatformCryptographyScheme `inject:""`
 	Network     network.HostNetwork                `inject:""`
-	NodeNetwork insolar.NodeNetwork                `inject:""`
+	NodeNetwork network.NodeNetwork                `inject:""`
 
 	options     *common.Options
 	methodTable map[string]insolar.RemoteProcedure

@@ -99,7 +99,7 @@ func (dh *DatagramHandler) HandleDatagram(ctx context.Context, address string, b
 
 	packetParser, err := dh.packetParserFactory.ParsePacket(ctx, bytes.NewReader(buf))
 	if err != nil {
-		logger.Error("Failed to get PacketParser: ", err)
+		logger.Warnf("Failed to get PacketParser: ", err)
 		return
 	}
 
@@ -148,6 +148,6 @@ func (ph *PulseHandler) HandlePulse(ctx context.Context, pulse insolar.Pulse, pa
 		Addr: "pulsar",
 	})
 	if err != nil {
-		logger.Error(err)
+		logger.Warn(err)
 	}
 }

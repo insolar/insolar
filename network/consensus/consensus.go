@@ -147,7 +147,7 @@ func newConstructor(ctx context.Context, dep *Dep) *constructor {
 	c.mandateRegistry = adapters.NewMandateRegistry(
 		cryptkit.NewDigest(
 			longbits.NewBits512FromBytes(
-				dep.NodeKeeper.GetCloudHash(),
+				make([]byte, 64),
 			),
 			adapters.SHA3512Digest,
 		).AsDigestHolder(),
@@ -208,8 +208,8 @@ func (c Installer) ControllerFor(mode Mode, setters ...packetProcessorSetter) Co
 	candidateFeeder := &coreapi.SequentialCandidateFeeder{}
 
 	var ephemeralFeeder api.EphemeralControlFeeder
-	if c.dep.EphemeralController.EphemeralMode() {
-		ephemeralFeeder = adapters.NewEphemeralControlFeeder(c.dep.PulseChanger, c.dep.EphemeralController)
+	if c.dep.EphemeralController.EphemeralMode(c.dep.NodeKeeper.GetAccessor(insolar.GenesisPulse.PulseNumber).GetActiveNodes()) {
+		ephemeralFeeder = adapters.NewEphemeralControlFeeder(c.dep.EphemeralController)
 	}
 
 	upstreamController := adapters.NewUpstreamPulseController(
@@ -238,7 +238,7 @@ func (c Installer) ControllerFor(mode Mode, setters ...packetProcessorSetter) Co
 func (c *Installer) createCensus(mode Mode) *censusimpl.PrimingCensusTemplate {
 	certificate := c.dep.CertificateManager.GetCertificate()
 	origin := c.dep.NodeKeeper.GetOrigin()
-	knownNodes := c.dep.NodeKeeper.GetAccessor().GetActiveNodes()
+	knownNodes := c.dep.NodeKeeper.GetAccessor(insolar.GenesisPulse.PulseNumber).GetActiveNodes()
 
 	node := adapters.NewStaticProfile(origin, certificate, c.dep.KeyProcessor)
 	nodes := adapters.NewStaticProfileList(knownNodes, certificate, c.dep.KeyProcessor)

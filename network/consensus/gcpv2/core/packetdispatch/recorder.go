@@ -51,8 +51,9 @@
 package packetdispatch
 
 import (
-	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
 	"sync"
+
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
 
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
