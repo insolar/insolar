@@ -68,15 +68,6 @@ func (hw *HelloWorld) PulseNumber() (insolar.PulseNumber, error) {
 	return foundation.GetPulseNumber()
 }
 
-// Get cost center reference from foundation.
-func (hw *HelloWorld) CostCenterRef() (insolar.Reference, error) {
-	ref := foundation.GetCostCenter()
-	if ref.IsEmpty() {
-		return insolar.Reference{}, errors.New("empty reference")
-	}
-	return ref, nil
-}
-
 func (hw *HelloWorld) CreateChild() (interface{}, error) {
 	hwHolder := hwProxy.New()
 	chw, err := hwHolder.AsChild(hw.GetReference())
@@ -139,8 +130,6 @@ func (hw *HelloWorld) Call(signedRequest []byte) (interface{}, error) {
 		return hw.ReturnObj()
 	case "PulseNumber":
 		return hw.PulseNumber()
-	case "CostCenter":
-		return hw.CostCenterRef()
 	default:
 		return nil, errors.New("unknown method " + request.Params.CallSite)
 	}

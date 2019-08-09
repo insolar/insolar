@@ -46,9 +46,6 @@ func (nd *NodeDomain) getNodeRecord(ref insolar.Reference) *noderecord.NodeRecor
 func (nd *NodeDomain) RegisterNode(publicKey string, role string) (string, error) {
 
 	root := foundation.GetRootMember()
-	if root.IsEmpty() {
-		return "", fmt.Errorf("failed to get root member reference from foundation")
-	}
 	if *nd.GetContext().Caller != root {
 		return "", fmt.Errorf("only root member can register node")
 	}

@@ -203,9 +203,6 @@ func (m *Member) addBurnAddressesCall(params map[string]interface{}) (interface{
 
 	rootDomain := rootdomain.GetObject(m.RootDomain)
 	migrationAdminRef := foundation.GetMigrationAdminMember()
-	if migrationAdminRef.IsEmpty() {
-		return nil, fmt.Errorf("failed to get migration daemon admin reference from foundation")
-	}
 
 	if m.GetReference() != migrationAdminRef {
 		return nil, fmt.Errorf("only migration daemon admin can call this method")

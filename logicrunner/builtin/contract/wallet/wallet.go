@@ -55,9 +55,6 @@ func (w *Wallet) Transfer(rootDomainRef insolar.Reference, amountStr string, toM
 	}
 
 	ccRef := foundation.GetCostCenter()
-	if ccRef.IsEmpty() {
-		return nil, fmt.Errorf("failed to get cost center reference from foundation")
-	}
 
 	cc := costcenter.GetObject(ccRef)
 	feeStr, err := cc.CalcFee(amountStr)
