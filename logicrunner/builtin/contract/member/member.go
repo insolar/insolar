@@ -486,7 +486,7 @@ func (m *Member) depositMigration(txHash string, burnAddress string, amount *big
 		dHolder := deposit.New(migrationDaemonConfirms, txHash, amount.String())
 		txDeposit, err := dHolder.AsChild(*tokenHolderRef)
 		if err != nil {
-			return fmt.Errorf("failed to save as delegate: %s", err.Error())
+			return fmt.Errorf("failed to save as child: %s", err.Error())
 		}
 
 		err = tokenHolder.AddDeposit(txHash, txDeposit.GetReference())
