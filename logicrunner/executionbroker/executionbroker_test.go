@@ -34,6 +34,7 @@ import (
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/artifacts"
+	"github.com/insolar/insolar/logicrunner/currentexecutor"
 	"github.com/insolar/insolar/logicrunner/executionarchive"
 	"github.com/insolar/insolar/logicrunner/requestsexecutor"
 	"github.com/insolar/insolar/logicrunner/requestsfetcher"
@@ -303,8 +304,8 @@ func (s *ExecutionBrokerSuite) TestDeduplication() {
 }
 
 func TestExecutionBroker_FinishPendingIfNeed(t *testing.T) {
-	notEmptyCurrentList := NewCurrentExecutionList()
-	transcript := NewTranscript(inslogger.TestContext(t), gen.Reference(), record.IncomingRequest{})
+	notEmptyCurrentList := currentexecutor.NewCurrentExecutionList()
+	transcript := transcript.NewTranscript(inslogger.TestContext(t), gen.Reference(), record.IncomingRequest{})
 	err := notEmptyCurrentList.SetOnce(transcript)
 	require.NoError(t, err)
 
@@ -320,7 +321,7 @@ func TestExecutionBroker_FinishPendingIfNeed(t *testing.T) {
 				obj := gen.Reference()
 				broker := &ExecutionBroker{
 					Ref:         obj,
-					currentList: NewCurrentExecutionList(),
+					currentList: currentexecutor.NewCurrentExecutionList(),
 					pending:     insolar.InPending,
 
 					jetCoordinator: jet.NewCoordinatorMock(t).
@@ -339,7 +340,7 @@ func TestExecutionBroker_FinishPendingIfNeed(t *testing.T) {
 				obj := gen.Reference()
 				broker := &ExecutionBroker{
 					Ref:         obj,
-					currentList: NewCurrentExecutionList(),
+					currentList: currentexecutor.NewCurrentExecutionList(),
 					pending:     insolar.InPending,
 
 					jetCoordinator: jet.NewCoordinatorMock(t).
@@ -356,7 +357,7 @@ func TestExecutionBroker_FinishPendingIfNeed(t *testing.T) {
 				obj := gen.Reference()
 				broker := &ExecutionBroker{
 					Ref:         obj,
-					currentList: NewCurrentExecutionList(),
+					currentList: currentexecutor.NewCurrentExecutionList(),
 					pending:     insolar.NotPending,
 				}
 				return broker
