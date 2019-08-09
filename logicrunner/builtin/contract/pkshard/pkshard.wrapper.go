@@ -18,6 +18,7 @@ package pkshard
 
 import (
 	XXX_insolar "github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/common"
 	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
 
@@ -202,7 +203,9 @@ func INSMETHOD_SetRef(object []byte, data []byte) ([]byte, []byte, error) {
 func INSCONSTRUCTOR_New(data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
-	args := []interface{}{}
+	args := [1]interface{}{}
+	var args0 foundation.StableMap
+	args[0] = &args0
 
 	err := ph.Deserialize(data, &args)
 	if err != nil {
@@ -210,7 +213,7 @@ func INSCONSTRUCTOR_New(data []byte) ([]byte, []byte, error) {
 		return nil, nil, e
 	}
 
-	ret0, ret1 := New()
+	ret0, ret1 := New(args0)
 	ret1 = ph.MakeErrorSerializable(ret1)
 	if ret0 == nil && ret1 == nil {
 		ret1 = &ExtendableError{S: "constructor returned nil"}
