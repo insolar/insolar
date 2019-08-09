@@ -29,7 +29,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
 )
 
@@ -250,21 +249,4 @@ func ReadCertificateFromReader(publicKey crypto.PublicKey, keyProcessor insolar.
 		return nil, errors.Wrap(err, "[ ReadCertificateFromReader ]")
 	}
 	return cert, nil
-}
-
-// NewCertificatesWithKeys generate certificate from given keys
-// DEPRECATED, this method generates invalid certificate
-func NewCertificatesWithKeys(publicKey crypto.PublicKey, keyProcessor insolar.KeyProcessor) (*Certificate, error) {
-	cert := Certificate{}
-
-	cert.Reference = testutils.RandomRef().String()
-
-	keyBytes, err := keyProcessor.ExportPublicKeyPEM(publicKey)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ ReadCertificate ] failed to retrieve public key from node private key")
-	}
-
-	cert.PublicKey = string(keyBytes)
-	cert.nodePublicKey = publicKey
-	return &cert, nil
 }
