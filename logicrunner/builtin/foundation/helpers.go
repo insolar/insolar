@@ -18,6 +18,7 @@ package foundation
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/insolar/insolar/insolar"
 )
@@ -44,4 +45,29 @@ func GetRequestReference() insolar.Reference {
 // unimplemented
 func GetObject(ref insolar.Reference) ProxyInterface {
 	panic("not implemented")
+}
+
+func TrimPublicKey(publicKey string) string {
+	return TrimAddress(between(publicKey, "KEY-----", "-----END"))
+}
+
+func TrimAddress(address string) string {
+	return strings.ToLower(strings.Join(strings.Split(strings.TrimSpace(address), "\n"), ""))
+}
+
+func between(value string, a string, b string) string {
+	// Get substring between two strings.
+	pos := strings.Index(value, a)
+	if pos == -1 {
+		return ""
+	}
+	posLast := strings.Index(value, b)
+	if posLast == -1 {
+		return ""
+	}
+	posFirst := pos + len(a)
+	if posFirst >= posLast {
+		return ""
+	}
+	return value[posFirst:posLast]
 }

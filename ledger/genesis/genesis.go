@@ -248,13 +248,16 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 	for i := 0; i < insolar.GenesisAmountPublicKeyShards; i++ {
 		MembersByPKShards[i] = make(foundation.StableMap)
 	}
-	index := foundation.GetShardIndex(g.ContractsConfig.RootPublicKey, insolar.GenesisAmountPublicKeyShards)
-	MembersByPKShards[index][g.ContractsConfig.RootPublicKey] = genesisrefs.ContractRootMember.String()
-	index = foundation.GetShardIndex(g.ContractsConfig.MigrationAdminPublicKey, insolar.GenesisAmountPublicKeyShards)
-	MembersByPKShards[index][g.ContractsConfig.MigrationAdminPublicKey] = genesisrefs.ContractMigrationAdminMember.String()
+	trimmedRootPublicKey := foundation.TrimPublicKey(g.ContractsConfig.RootPublicKey)
+	index := foundation.GetShardIndex(trimmedRootPublicKey, insolar.GenesisAmountPublicKeyShards)
+	MembersByPKShards[index][trimmedRootPublicKey] = genesisrefs.ContractRootMember.String()
+	trimmedMigrationAdminPublicKey := foundation.TrimPublicKey(g.ContractsConfig.MigrationAdminPublicKey)
+	index = foundation.GetShardIndex(trimmedMigrationAdminPublicKey, insolar.GenesisAmountPublicKeyShards)
+	MembersByPKShards[index][trimmedMigrationAdminPublicKey] = genesisrefs.ContractMigrationAdminMember.String()
 	for i, key := range g.ContractsConfig.MigrationDaemonPublicKeys {
-		index := foundation.GetShardIndex(key, insolar.GenesisAmountPublicKeyShards)
-		MembersByPKShards[index][key] = genesisrefs.ContractMigrationDaemonMembers[i].String()
+		trimmedMigrationDaemonPublicKey := foundation.TrimPublicKey(key)
+		index := foundation.GetShardIndex(trimmedMigrationDaemonPublicKey, insolar.GenesisAmountPublicKeyShards)
+		MembersByPKShards[index][trimmedMigrationDaemonPublicKey] = genesisrefs.ContractMigrationDaemonMembers[i].String()
 	}
 
 	// Append states for shards
