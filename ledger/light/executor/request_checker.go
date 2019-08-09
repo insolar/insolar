@@ -59,20 +59,20 @@ func NewRequestChecker(
 
 func (c *RequestCheckerDefault) CheckRequest(ctx context.Context, requestID insolar.ID, request record.Request) error {
 	if request.ReasonRef().IsEmpty() {
-		return &payload.CodedError{ErrorText: "reason id is empty", ErrorCode: payload.ReasonIsWrong}
+		return &payload.CodedError{Text: "reason id is empty", Code: payload.CodeReasonIsWrong}
 	}
 	reasonRef := request.ReasonRef()
 	reasonID := *reasonRef.Record()
 
 	if reasonID.Pulse() > requestID.Pulse() {
-		return &payload.CodedError{ErrorText: "request is older than its reason", ErrorCode: payload.ReasonIsWrong}
+		return &payload.CodedError{Text: "request is older than its reason", Code: payload.CodeReasonIsWrong}
 	}
 
 	switch r := request.(type) {
 	case *record.IncomingRequest:
 		// Cannot be detached.
 		if r.IsDetached() {
-			return &payload.CodedError{ErrorText: fmt.Sprintf("incoming request cannot be detached (got mode %v)", r.ReturnMode), ErrorCode: payload.IncomingRequestIsWrong}
+			return &payload.CodedError{Text: fmt.Sprintf("incoming request cannot be detached (got mode %v)", r.ReturnMode), Code: payload.CodeIncomingRequestIsWrong}
 		}
 
 		// FIXME: replace with remote request check.
@@ -85,7 +85,7 @@ func (c *RequestCheckerDefault) CheckRequest(ctx context.Context, requestID inso
 
 	case *record.OutgoingRequest:
 		if request.IsCreationRequest() {
-			return &payload.CodedError{ErrorText: "outgoing cannot be creating request", ErrorCode: payload.ReasonIsWrong}
+			return &payload.CodedError{Text: "outgoing cannot be creating request", Code: payload.CodeReasonIsWrong}
 		}
 
 		// FIXME: replace with "FindRequest" calculator method.
@@ -101,7 +101,7 @@ func (c *RequestCheckerDefault) CheckRequest(ctx context.Context, requestID inso
 
 		_, ok := findRecord(requests, reasonID)
 		if !ok {
-			return &payload.CodedError{ErrorText: "request reason not found in opened requests", ErrorCode: payload.ReasonNotFound}
+			return &payload.CodedError{Text: "request reason not found in opened requests", Code: payload.CodeReasonNotFound}
 		}
 	}
 
@@ -111,7 +111,7 @@ func (c *RequestCheckerDefault) CheckRequest(ctx context.Context, requestID inso
 func (c *RequestCheckerDefault) checkIncomingReason(ctx context.Context, request *record.IncomingRequest, reasonID insolar.ID) error {
 	reasonObject := request.ReasonAffinityRef()
 	if reasonObject.IsEmpty() {
-		return &payload.CodedError{ErrorText: "reason affinity is not set on incoming request", ErrorCode: payload.ReasonIsWrong}
+		return &payload.CodedError{Text: "reason affinity is not set on incoming request", Code: payload.CodeReasonIsWrong}
 	}
 
 	reasonRequest, err := c.getRequest(ctx, *reasonObject.Record(), reasonID)
@@ -126,35 +126,35 @@ func (c *RequestCheckerDefault) checkIncomingReason(ctx context.Context, request
 	}
 
 	if !isIncomingRequest(rec.Virtual) {
-		return &payload.CodedError{ErrorText: fmt.Sprintf("reason request must be Incoming, %T received", rec.Virtual.Union), ErrorCode: payload.ReasonIsWrong}
+		return &payload.CodedError{Text: fmt.Sprintf("reason request must be Incoming, %T received", rec.Virtual.Union), Code: payload.CodeReasonIsWrong}
 	}
 
 	if reasonRequest.Result != nil {
-		return &payload.CodedError{ErrorText: "reason request is closed", ErrorCode: payload.ReasonIsWrong}
+		return &payload.CodedError{Text: "reason request is closed", Code: payload.CodeReasonIsWrong}
 	}
 	return nil
 }
 
-func (c *RequestCheckerDefault) getRequest(ctx context.Context, objectID insolar.ID, reasonID insolar.ID) (*payload.RequestInfo, error) {
+func (c *RequestCheckerDefault) getRequest(ctx context.Context, objectID insolar.ID, reasonID insolar.ID) (payload.RequestInfo, error) {
 	emptyResp := payload.RequestInfo{}
 	isBeyond, err := c.coordinator.IsBeyondLimit(ctx, reasonID.Pulse())
 	if err != nil {
-		return &emptyResp, errors.Wrap(err, "failed to calculate limit")
+		return emptyResp, errors.Wrap(err, "failed to calculate limit")
 	}
 	var node *insolar.Reference
 	if isBeyond {
 		node, err = c.coordinator.Heavy(ctx)
 		if err != nil {
-			return &emptyResp, errors.Wrap(err, "failed to calculate node")
+			return emptyResp, errors.Wrap(err, "failed to calculate node")
 		}
 	} else {
 		jetID, err := c.fetcher.Fetch(ctx, objectID, reasonID.Pulse())
 		if err != nil {
-			return &emptyResp, errors.Wrap(err, "failed to fetch jet")
+			return emptyResp, errors.Wrap(err, "failed to fetch jet")
 		}
 		node, err = c.coordinator.NodeForJet(ctx, *jetID, reasonID.Pulse())
 		if err != nil {
-			return &emptyResp, errors.Wrap(err, "failed to calculate node")
+			return emptyResp, errors.Wrap(err, "failed to calculate node")
 		}
 	}
 	inslogger.FromContext(ctx).Debug("check reason. request: ", reasonID.DebugString())
@@ -163,28 +163,28 @@ func (c *RequestCheckerDefault) getRequest(ctx context.Context, objectID insolar
 		RequestID: reasonID,
 	})
 	if err != nil {
-		return &emptyResp, errors.Wrap(err, "failed to check an object existence")
+		return emptyResp, errors.Wrap(err, "failed to check an object existence")
 	}
 
 	reps, done := c.sender.SendTarget(ctx, msg, *node)
 	defer done()
 	res, ok := <-reps
 	if !ok {
-		return &emptyResp, errors.New("no reply for reason check")
+		return emptyResp, errors.New("no reply for reason check")
 	}
 
 	pl, err := payload.UnmarshalFromMeta(res.Payload)
 	if err != nil {
-		return &emptyResp, errors.Wrap(err, "failed to unmarshal reply")
+		return emptyResp, errors.Wrap(err, "failed to unmarshal reply")
 	}
 
 	switch concrete := pl.(type) {
 	case *payload.RequestInfo:
-		return concrete, nil
+		return *concrete, nil
 	case *payload.Error:
-		return &emptyResp, errors.New(concrete.Text)
+		return emptyResp, errors.New(concrete.Text)
 	default:
-		return &emptyResp, fmt.Errorf("unexpected reply %T", pl)
+		return emptyResp, fmt.Errorf("unexpected reply %T", pl)
 	}
 }
 

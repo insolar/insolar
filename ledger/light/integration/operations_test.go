@@ -20,7 +20,6 @@ import (
 	"context"
 	"crypto/rand"
 	"fmt"
-	"strings"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
@@ -413,18 +412,15 @@ func RequireNotError(pl payload.Payload) {
 }
 
 func RequireError(pl payload.Payload) {
-	if err, ok := pl.(*payload.Error); !ok {
+	if _, ok := pl.(*payload.Error); !ok {
 		panic("expected error")
-	} else {
-		if strings.Contains(err.Text, "index not found") {
-			panic("wrong error")
-		}
 	}
 }
 
 func RequireErrorCode(pl payload.Payload, expectedCode uint32) {
-	err, ok := pl.(*payload.Error)
-	if !ok || err.Code != expectedCode {
+	RequireError(pl)
+	err, _ := pl.(*payload.Error)
+	if err.Code != expectedCode {
 		panic(fmt.Sprintf("expected error code %d, got %d", expectedCode, err.Code))
 	}
 }

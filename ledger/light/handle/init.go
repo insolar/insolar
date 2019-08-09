@@ -280,12 +280,12 @@ func (s *Init) replyError(ctx context.Context, replyTo payload.Meta, err error) 
 
 	// Throwing custom error code
 	cause := errors.Cause(err)
-	insError, ok := cause.(payload.ErrorCoder)
+	insError, ok := cause.(*payload.CodedError)
 	if ok {
-		errCode = insError.GetErrorCode()
+		errCode = insError.GetCode()
 	}
 
-	// todo refactor this
+	// todo refactor this #INS-3191
 	if err == flow.ErrCancelled {
 		errCode = uint32(payload.CodeFlowCanceled)
 	}

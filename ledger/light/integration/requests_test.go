@@ -45,7 +45,7 @@ func Test_IncomingRequest_Check(t *testing.T) {
 	t.Run("registered is older than reason returns error", func(t *testing.T) {
 		msg, _ := MakeSetIncomingRequestFromAPI(gen.ID(), gen.IDWithPulse(s.Pulse()+1), true)
 		rep := SendMessage(ctx, s, &msg)
-		RequireErrorCode(rep, payload.ReasonIsWrong)
+		RequireErrorCode(rep, payload.CodeReasonIsWrong)
 	})
 
 	t.Run("detached returns error", func(t *testing.T) {
@@ -53,7 +53,7 @@ func Test_IncomingRequest_Check(t *testing.T) {
 		// Faking detached request.
 		record.Unwrap(&msg.Request).(*record.IncomingRequest).ReturnMode = record.ReturnSaga
 		rep := SendMessage(ctx, s, &msg)
-		RequireErrorCode(rep, payload.IncomingRequestIsWrong)
+		RequireErrorCode(rep, payload.CodeIncomingRequestIsWrong)
 	})
 
 	t.Run("registered API request appears in pendings", func(t *testing.T) {
@@ -413,7 +413,7 @@ func Test_IncomingRequest_ClosedReason(t *testing.T) {
 		{
 			msg, _ := MakeSetIncomingRequest(gen.ID(), reasonID, reasonID, true, false)
 			rep := SendMessage(ctx, s, &msg)
-			RequireErrorCode(rep, payload.ReasonIsWrong)
+			RequireErrorCode(rep, payload.CodeReasonIsWrong)
 		}
 	})
 }
@@ -454,7 +454,7 @@ func Test_OutgoingRequest_ClosedReason(t *testing.T) {
 		{
 			pl, _ := MakeSetOutgoingRequest(reasonID, reasonID, false)
 			rep := SendMessage(ctx, s, &pl)
-			RequireErrorCode(rep, payload.ReasonNotFound)
+			RequireErrorCode(rep, payload.CodeReasonNotFound)
 		}
 	})
 }
@@ -497,14 +497,14 @@ func Test_Requests_OutgoingReason(t *testing.T) {
 		{
 			msg, _ := MakeSetIncomingRequest(gen.ID(), reasonID, rootID, true, false)
 			rep := SendMessage(ctx, s, &msg)
-			RequireErrorCode(rep, payload.ReasonIsWrong)
+			RequireErrorCode(rep, payload.CodeReasonIsWrong)
 		}
 
 		// Creating wrong outgoing
 		{
 			msg, _ := MakeSetOutgoingRequest(rootID, reasonID, false)
 			rep := SendMessage(ctx, s, &msg)
-			RequireErrorCode(rep, payload.ReasonNotFound)
+			RequireErrorCode(rep, payload.CodeReasonNotFound)
 		}
 	})
 }
@@ -545,7 +545,7 @@ func Test_OutgoingRequests_DifferentObjects(t *testing.T) {
 		{
 			pl, _ := MakeSetOutgoingRequest(rootID, rootID2, false)
 			rep := SendMessage(ctx, s, &pl)
-			RequireErrorCode(rep, payload.ReasonNotFound)
+			RequireErrorCode(rep, payload.CodeReasonNotFound)
 		}
 	})
 }
@@ -643,7 +643,7 @@ func Test_IncomingRequest_DifferentResults(t *testing.T) {
 		{
 			resMsg, _ := MakeSetResult(reasonID, reasonID)
 			rep := SendMessage(ctx, s, &resMsg)
-			RequireErrorCode(rep, payload.RequestNotFound)
+			RequireErrorCode(rep, payload.CodeRequestNotFound)
 		}
 	})
 }

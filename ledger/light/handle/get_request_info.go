@@ -47,7 +47,6 @@ func (s *GetRequestInfo) Present(ctx context.Context, f flow.Flow) error {
 		return errors.Wrap(err, "failed to unmarshal RequestInfo message")
 	}
 
-	// todo check passIfNotFound := !s.passed
 	request := proc.NewGetRequestInfo(s.meta, msg.ObjectID, msg.RequestID)
 	s.dep.GetRequestInfo(request)
 	return f.Procedure(ctx, request, false)

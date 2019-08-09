@@ -427,14 +427,15 @@ func (c *FilamentCalculatorDefault) RequestInfo(
 			return nil, nil, errors.Wrap(err, "failed to calculate pending")
 		}
 
-		if bytes.Equal(rec.RecordID.Hash(), requestID.Hash()) {
+		if rec.RecordID == requestID {
 			foundRequest = &rec
 			logger.Debugf("found request %s", rec.RecordID.DebugString())
 		}
 
 		virtual := record.Unwrap(&rec.Record.Virtual)
 		if r, ok := virtual.(*record.Result); ok {
-			if bytes.Equal(r.Request.Record().Hash(), requestID.Hash()) {
+
+			if *r.Request.Record() == requestID {
 				foundResult = &rec
 				logger.Debugf("found result %s", rec.RecordID.DebugString())
 			}

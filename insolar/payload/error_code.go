@@ -17,31 +17,26 @@
 package payload
 
 const (
-	CodeUnknown            = 1000
-	CodeDeactivated        = 1001
-	CodeFlowCanceled       = 1002
-	CodeNotFound           = 1003
-	CodeNoPendings         = 1004
-	CodeNoStartPulse       = 1005
-	ReasonNotFound         = 1006
-	ReasonIsWrong          = 1007
-	IncomingRequestIsWrong = 1008
-	RequestNotFound        = 1009
+	CodeUnknown                = 1000
+	CodeDeactivated            = 1001
+	CodeFlowCanceled           = 1002
+	CodeNotFound               = 1003
+	CodeNoPendings             = 1004
+	CodeNoStartPulse           = 1005
+	CodeReasonNotFound         = 1006
+	CodeReasonIsWrong          = 1007
+	CodeIncomingRequestIsWrong = 1008
+	CodeRequestNotFound        = 1009
 )
 
-type ErrorCoder interface {
-	Error() string
-	GetErrorCode() uint32
-}
-
 type CodedError struct {
-	ErrorText string
-	ErrorCode uint32
+	Text string
+	Code uint32
 }
 
-func (e *CodedError) GetErrorCode() uint32 {
-	return e.ErrorCode
+func (e *CodedError) GetCode() uint32 {
+	return e.Code
 }
 func (e *CodedError) Error() string {
-	return e.ErrorText
+	return e.Text
 }
