@@ -21,11 +21,10 @@ import (
 	"crypto"
 	"encoding/json"
 	"fmt"
+	"github.com/pkg/errors"
 	"io/ioutil"
 	"path"
 	"strconv"
-
-	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/insolar"
@@ -156,6 +155,7 @@ func (g *Generator) makeCertificates(ctx context.Context, discoveryNodes []nodeI
 				PublicKey: n2.publicKey,
 				Host:      host,
 				NodeRef:   n2.reference().String(),
+				NodeRole:  n2.role,
 			})
 		}
 

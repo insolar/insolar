@@ -17,7 +17,7 @@
 package gen
 
 import (
-	"github.com/google/gofuzz"
+	fuzz "github.com/google/gofuzz"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bits"
 )
@@ -32,7 +32,11 @@ func ID() (id insolar.ID) {
 func IDWithPulse(pn insolar.PulseNumber) (id insolar.ID) {
 	copy(id[:insolar.PulseNumberSize], pn.Bytes())
 	fill := id[insolar.PulseNumberSize:]
-	fuzz.New().NilChance(0).Fuzz(&fill)
+	fuzz.New().
+		NilChance(0).
+		NumElements(insolar.RecordHashSize, insolar.RecordHashSize).
+		Fuzz(&fill)
+	copy(id[insolar.PulseNumberSize:], fill)
 	return
 }
 

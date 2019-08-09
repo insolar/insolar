@@ -298,7 +298,6 @@ func TestGlobulaConsensusPacketBody_Phases(t *testing.T) {
 }
 
 func TestGlobulaConsensusPacketBody_Phases_Flag0(t *testing.T) {
-	t.Skip("broken")
 	data := pulse.NewPulsarData(100000, 10, 10, *longbits.NewBits256FromBytes(make([]byte, 32)))
 
 	pu := adapters.NewPulse(data)
@@ -330,19 +329,19 @@ func TestGlobulaConsensusPacketBody_Phases_Flag0(t *testing.T) {
 	tests := []struct {
 		name       string
 		packetType phases.PacketType
-		size       int
+		size       int64
 		packet     Packet
 	}{
 		{
 			"phase0",
 			phases.PacketPhase0,
-			432,
+			431,
 			phase1p,
 		},
 		{
 			"phase1",
 			phases.PacketPhase1,
-			435,
+			434,
 			phase1p,
 		},
 		{

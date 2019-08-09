@@ -137,9 +137,11 @@ func (m *client) registerRequest(
 	case *payload.RequestInfo:
 		return p, nil
 	case *payload.Error:
-		return nil, errors.New(p.Text)
+		err = errors.New(p.Text)
+		return nil, err
 	default:
-		return nil, fmt.Errorf("registerRequest: unexpected reply: %#v", p)
+		err = fmt.Errorf("registerRequest: unexpected reply: %#v", p)
+		return nil, err
 	}
 }
 
@@ -200,8 +202,7 @@ func (m *client) GetCode(
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.GetCode")
 	defer func() {
 		if err != nil {
-			span.AddAttributes(trace.StringAttribute("error", "true"))
-			span.AddAttributes(trace.StringAttribute("errorMsg", err.Error()))
+			instracer.AddError(span, err)
 		}
 		span.End()
 		instrumenter.end()
@@ -235,9 +236,11 @@ func (m *client) GetCode(
 		}
 		return desc, nil
 	case *payload.Error:
-		return nil, errors.New(p.Text)
+		err = errors.New(p.Text)
+		return nil, err
 	default:
-		return nil, fmt.Errorf("GetObject: unexpected reply: %#v", p)
+		err = fmt.Errorf("GetObject: unexpected reply: %#v", p)
+		return nil, err
 	}
 }
 
@@ -312,13 +315,16 @@ func (m *client) GetObject(
 			logger.Debug("reply error: ", p.Text)
 			switch p.Code {
 			case payload.CodeDeactivated:
-				return nil, insolar.ErrDeactivated
+				err = insolar.ErrDeactivated
+				return nil, err
 			default:
 				logger.Errorf("reply error: %v, objectID: %v", p.Text, head.Record().DebugString())
-				return nil, errors.New(p.Text)
+				err = errors.New(p.Text)
+				return nil, err
 			}
 		default:
-			return nil, fmt.Errorf("GetObject: unexpected reply: %#v", p)
+			err = fmt.Errorf("GetObject: unexpected reply: %#v", p)
+			return nil, err
 		}
 
 		if success() {
@@ -327,6 +333,7 @@ func (m *client) GetObject(
 	}
 	if !success() {
 		logger.Error(ErrNoReply)
+		err = ErrNoReply
 		return nil, ErrNoReply
 	}
 
@@ -338,7 +345,8 @@ func (m *client) GetObject(
 	virtual := record.Unwrap(&rec.Virtual)
 	s, ok := virtual.(record.State)
 	if !ok {
-		return nil, errors.New("wrong state record")
+		err = errors.New("wrong state record")
+		return nil, err
 	}
 	state := s
 
@@ -378,7 +386,8 @@ func (m *client) GetAbandonedRequest(
 	}
 	req, ok := pl.(*payload.Request)
 	if !ok {
-		return nil, fmt.Errorf("unexpected reply %T", pl)
+		err = fmt.Errorf("unexpected reply %T", pl)
+		return nil, err
 	}
 
 	concrete := record.Unwrap(&req.Request)
@@ -390,7 +399,8 @@ func (m *client) GetAbandonedRequest(
 	case *record.OutgoingRequest:
 		result = v
 	default:
-		return nil, fmt.Errorf("GetAbandonedRequest: unexpected message: %#v", concrete)
+		err = fmt.Errorf("GetAbandonedRequest: unexpected message: %#v", concrete)
+		return nil, err
 	}
 
 	return result, nil
@@ -427,9 +437,11 @@ func (m *client) GetPendings(ctx context.Context, object insolar.Reference) ([]i
 		return res, nil
 	case *payload.Error:
 		if concrete.Code == payload.CodeNoPendings {
+			err = insolar.ErrNoPendingRequest
 			return []insolar.Reference{}, insolar.ErrNoPendingRequest
 		}
-		return []insolar.Reference{}, errors.New(concrete.Text)
+		err = errors.New(concrete.Text)
+		return []insolar.Reference{}, err
 	default:
 		return []insolar.Reference{}, fmt.Errorf("unexpected reply %T", pl)
 	}
@@ -457,16 +469,19 @@ func (m *client) HasPendings(
 
 	pl, err := m.sendToLight(ctx, m.sender, hasPendingsPl, object)
 	if err != nil {
-		return false, errors.Wrap(err, "failed to send HasPendings")
+		err = errors.Wrap(err, "failed to send HasPendings")
+		return false, err
 	}
 
 	switch concrete := pl.(type) {
 	case *payload.PendingsInfo:
 		return concrete.HasPendings, nil
 	case *payload.Error:
-		return false, errors.New(concrete.Text)
+		err = errors.New(concrete.Text)
+		return false, err
 	default:
-		return false, fmt.Errorf("HasPendings: unexpected reply %T", pl)
+		err = fmt.Errorf("HasPendings: unexpected reply %T", pl)
+		return false, err
 	}
 }
 
@@ -530,9 +545,11 @@ func (m *client) DeployCode(
 	case *payload.ID:
 		return &p.ID, nil
 	case *payload.Error:
-		return nil, errors.New(p.Text)
+		err = errors.New(p.Text)
+		return nil, err
 	default:
-		return nil, fmt.Errorf("DeployCode: unexpected reply: %#v", p)
+		err = fmt.Errorf("DeployCode: unexpected reply: %#v", p)
+		return nil, err
 	}
 }
 
@@ -782,7 +799,8 @@ func (m *client) RegisterResult(
 		pl = &plTyped
 
 	default:
-		return errors.Errorf("RegisterResult: Unknown side effect %d", result.Type())
+		err = errors.Errorf("RegisterResult: Unknown side effect %d", result.Type())
+		return err
 	}
 
 	_, err = sendResult(pl, result.ObjectReference())

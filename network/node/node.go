@@ -52,15 +52,11 @@ package node
 
 import (
 	"crypto"
+	"hash/crc32"
 	"sync"
 	"sync/atomic"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
-	"github.com/insolar/insolar/network/consensusv1/packets"
-	"github.com/insolar/insolar/network/utils"
-	"github.com/insolar/insolar/platformpolicy"
-	"github.com/pkg/errors"
 )
 
 type MutableNode interface {
@@ -73,14 +69,13 @@ type MutableNode interface {
 	ChangeState()
 	SetLeavingETA(number insolar.PulseNumber)
 	SetVersion(version string)
-	GetPower() member.Power
-	SetPower(power member.Power)
+	SetPower(power insolar.Power)
+	SetAddress(address string)
 }
 
-type Evidence struct {
-	Data      []byte
-	Digest    []byte
-	Signature []byte
+// GenerateUintShortID generate short ID for node without checking collisions
+func GenerateUintShortID(ref insolar.Reference) uint32 {
+	return crc32.ChecksumIEEE(ref[:])
 }
 
 type node struct {
@@ -133,7 +128,7 @@ func newMutableNode(
 
 	return &node{
 		NodeID:        id,
-		NodeShortID:   utils.GenerateUintShortID(id),
+		NodeShortID:   GenerateUintShortID(id),
 		NodeRole:      role,
 		NodePublicKey: publicKey,
 		NodeAddress:   address,
@@ -167,6 +162,9 @@ func (n *node) PublicKey() crypto.PublicKey {
 }
 
 func (n *node) Address() string {
+	n.mutex.RLock()
+	defer n.mutex.RUnlock()
+
 	return n.NodeAddress
 }
 
@@ -174,11 +172,11 @@ func (n *node) GetGlobuleID() insolar.GlobuleID {
 	return 0
 }
 
-func (n *node) GetPower() member.Power {
-	return member.Power(atomic.LoadUint32(&n.NodePower))
+func (n *node) GetPower() insolar.Power {
+	return insolar.Power(atomic.LoadUint32(&n.NodePower))
 }
 
-func (n *node) SetPower(power member.Power) {
+func (n *node) SetPower(power insolar.Power) {
 	atomic.StoreUint32(&n.NodePower, uint32(power))
 }
 
@@ -217,24 +215,9 @@ func (n *node) SetLeavingETA(number insolar.PulseNumber) {
 	atomic.StoreUint32(&n.NodeLeavingETA, uint32(number))
 }
 
-//
-// func init() {
-// 	gob.Register(&node{})
-// }
+func (n *node) SetAddress(address string) {
+	n.mutex.Lock()
+	defer n.mutex.Unlock()
 
-func ClaimToNode(version string, claim *packets.NodeJoinClaim) (insolar.NetworkNode, error) {
-	keyProc := platformpolicy.NewKeyProcessor()
-	key, err := keyProc.ImportPublicKeyBinary(claim.NodePK[:])
-	if err != nil {
-		return nil, errors.Wrap(err, "[ ClaimToNode ] failed to import a public key")
-	}
-	node := newMutableNode(
-		claim.NodeRef,
-		claim.NodeRoleRecID,
-		key,
-		insolar.NodeReady,
-		claim.NodeAddress.String(),
-		version)
-	node.SetShortID(claim.ShortNodeID)
-	return node, nil
+	n.NodeAddress = address
 }

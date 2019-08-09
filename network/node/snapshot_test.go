@@ -59,6 +59,25 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func NewMutator(snapshot *Snapshot) *Mutator {
+	return &Mutator{Accessor: NewAccessor(snapshot)}
+}
+
+type Mutator struct {
+	*Accessor
+}
+
+func (m *Mutator) AddWorkingNode(n insolar.NetworkNode) {
+	if _, ok := m.refIndex[n.ID()]; ok {
+		return
+	}
+	mutableNode := n.(MutableNode)
+	m.addToIndex(mutableNode)
+	listType := nodeStateToListType(mutableNode)
+	m.snapshot.nodeList[listType] = append(m.snapshot.nodeList[listType], n)
+	m.active = append(m.active, n)
+}
+
 func TestSnapshotEncodeDecode(t *testing.T) {
 
 	ks := platformpolicy.NewKeyProcessor()
