@@ -52,6 +52,7 @@ package gcpv2
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -205,25 +206,32 @@ func (h *ConsensusMemberController) ProcessPacket(ctx context.Context, payload t
 			return err
 		}
 		if isCreated {
-			return fmt.Errorf("illegal behavior - packet can not be re-processed for a just created round")
+			return fmt.Errorf("packet can not be re-processed for a just created round")
 		}
 		switch code {
 		case api.StartNextRound:
+			inslogger.FromContext(ctx).Debugf("discarding round: %v", round)
 			h.discard(round)
 		case api.NextRoundTerminate:
+			inslogger.FromContext(ctx).Debugf("terminating round: %v", round)
 			h.terminate(round)
 		}
 	}
 
 	round, _ = h.getOrCreate()
 	if round == nil {
-		return fmt.Errorf("new round can not be created - controller was terminated")
+		return fmt.Errorf("packet cant be processed - controller was terminated")
 	}
+
 	code, err := h.processPacket(ctx, round, payload, from)
-	if code == api.KeepRound {
-		return err
+	switch code {
+	case api.StartNextRound:
+		return errors.New("packet can not be re-processed twice")
+	case api.NextRoundTerminate:
+		inslogger.FromContext(ctx).Debugf("terminating round: %v", round)
+		h.terminate(round)
 	}
-	return fmt.Errorf("illegal behavior - packet can not be re-processed twice")
+	return err
 }
 
 type ephemeralInterceptor struct {
