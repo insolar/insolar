@@ -35,10 +35,12 @@ import (
 	"github.com/pkg/errors"
 )
 
+//go:generate minimock -i github.com/insolar/insolar/ledger/heavy/executor.BackupMaker -o ./ -s _gen_mock.go -g
+
 // BackupMaker is interface for doing backups
 type BackupMaker interface {
-	// Do starts process of incremental backups
-	Do(ctx context.Context, lastFinalizedPulse insolar.PulseNumber) error
+	// MakeBackup starts process of incremental backups
+	MakeBackup(ctx context.Context, lastFinalizedPulse insolar.PulseNumber) error
 }
 
 var (
@@ -56,7 +58,7 @@ type BackupInfo struct {
 	Since               uint64
 }
 
-// BackupMakerDefault is component which does incremental backups by consequent invoke Do()
+// BackupMakerDefault is component which does incremental backups by consequent invoke MakeBackup()
 type BackupMakerDefault struct {
 	lock                sync.RWMutex
 	lastBackupedVersion uint64
@@ -273,7 +275,7 @@ func (b *BackupMakerDefault) doBackup(ctx context.Context, lastFinalizedPulse in
 	return currentBkpVersion, nil
 }
 
-func (b *BackupMakerDefault) Do(ctx context.Context, lastFinalizedPulse insolar.PulseNumber) error {
+func (b *BackupMakerDefault) MakeBackup(ctx context.Context, lastFinalizedPulse insolar.PulseNumber) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 

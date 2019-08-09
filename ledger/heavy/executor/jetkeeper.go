@@ -208,7 +208,7 @@ func (jk *dbJetKeeper) updateBackup(pulse insolar.PulseNumber) error {
 	}
 
 	if len(jets) == 0 {
-		return errors.New("backup confirmation comes first. It's impossible")
+		return errors.New("Received backup confirmation before replication data")
 	}
 
 	for i := range jets {

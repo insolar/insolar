@@ -84,7 +84,7 @@ func clearData(t *testing.T, cfg configuration.Backup) {
 	require.NoError(t, err)
 }
 
-func TestBackuperM(t *testing.T) {
+func TestBackuper(t *testing.T) {
 	cfg := makeBackuperConfig(t, t.Name())
 	defer clearData(t, cfg)
 
@@ -130,7 +130,7 @@ func TestBackuperM(t *testing.T) {
 	// doing backups
 	go func() {
 		for i := 0; i < numIterations; i++ {
-			err := bm.Do(context.Background(), testPulse+insolar.PulseNumber(i))
+			err := bm.MakeBackup(context.Background(), testPulse+insolar.PulseNumber(i))
 			require.NoError(t, err)
 			wgBackup.Done()
 			time.Sleep(time.Duration(rand.Int()%1000) * time.Millisecond)

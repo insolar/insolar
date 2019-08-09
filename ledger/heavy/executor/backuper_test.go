@@ -117,7 +117,7 @@ func TestBackuper_Disabled(t *testing.T) {
 	bm, err := executor.NewBackupMaker(context.Background(), nil, cfg, 0)
 	require.NoError(t, err)
 
-	err = bm.Do(context.Background(), 1)
+	err = bm.MakeBackup(context.Background(), 1)
 	require.Equal(t, err, executor.ErrBackupDisabled)
 }
 
@@ -137,7 +137,7 @@ func TestBackuper_BackupWaitPeriodExpired(t *testing.T) {
 	bm, err := executor.NewBackupMaker(context.Background(), db, cfg, testPulse)
 	require.NoError(t, err)
 
-	err = bm.Do(context.Background(), testPulse+1)
+	err = bm.MakeBackup(context.Background(), testPulse+1)
 	require.Contains(t, err.Error(), "no backup confirmation")
 }
 
@@ -159,7 +159,7 @@ func TestBackuper_CantMoveToTargetDir(t *testing.T) {
 	_, err = os.Create(filepath.Join(cfg.TargetDirectory, fmt.Sprintf(cfg.DirNameTemplate, testPulse)))
 	require.NoError(t, err)
 
-	err = bm.Do(context.Background(), testPulse)
+	err = bm.MakeBackup(context.Background(), testPulse)
 	require.Contains(t, err.Error(), "can't move")
 }
 
@@ -171,9 +171,9 @@ func TestBackuper_Backup_OldPulse(t *testing.T) {
 	bm, err := executor.NewBackupMaker(context.Background(), nil, cfg, testPulse)
 	require.NoError(t, err)
 
-	err = bm.Do(context.Background(), testPulse)
+	err = bm.MakeBackup(context.Background(), testPulse)
 	require.Equal(t, err, executor.ErrAlreadyDone)
 
-	err = bm.Do(context.Background(), testPulse-1)
+	err = bm.MakeBackup(context.Background(), testPulse-1)
 	require.Equal(t, err, executor.ErrAlreadyDone)
 }

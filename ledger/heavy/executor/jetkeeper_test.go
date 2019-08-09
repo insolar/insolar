@@ -186,7 +186,7 @@ func TestJetInfo_BackupConfirmComesFirst(t *testing.T) {
 	defer db.Stop(context.Background())
 
 	err := jetKeeper.AddBackupConfirmation(ctx, testPulse)
-	require.Contains(t, err.Error(), "backup confirmation comes first. It's impossible")
+	require.Contains(t, err.Error(), "Received backup confirmation before replication data")
 }
 
 func TestJetInfo_ExistingDrop(t *testing.T) {
