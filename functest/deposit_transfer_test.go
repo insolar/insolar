@@ -33,15 +33,17 @@ func TestDepositTransferToken(t *testing.T) {
 	firstBalance := getBalanceNoErr(t, member, member.ref)
 	secondBalance := new(big.Int).Add(firstBalance, big.NewInt(100))
 
-	for i := 0; i <= 10; i++ {
+	var err error
+	for i := 0; i <= 20; i++ {
 		time.Sleep(time.Second)
-		_, err := signedRequest(member, "deposit.transfer", map[string]interface{}{"amount": "100", "ethTxHash": "Eth_TxHash_test"})
+		_, err = signedRequest(member, "deposit.transfer", map[string]interface{}{"amount": "100", "ethTxHash": "Eth_TxHash_test"})
 		if err != nil {
 			require.Contains(t, err.Error(), "hold period didn't end")
 		} else {
 			break
 		}
 	}
+	require.NoError(t, err)
 
 	finalBalance := getBalanceNoErr(t, member, member.ref)
 
