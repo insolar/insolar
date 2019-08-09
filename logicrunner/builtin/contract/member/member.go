@@ -98,7 +98,7 @@ type Request struct {
 type Params struct {
 	Seed       string      `json:"seed"`
 	CallSite   string      `json:"callSite"`
-	CallParams interface{} `json:"callParams"`
+	CallParams interface{} `json:"callParams,omitempty"`
 	Reference  string      `json:"reference"`
 	PublicKey  string      `json:"publicKey"`
 }
@@ -146,10 +146,13 @@ func (m *Member) Call(signedRequest []byte) (interface{}, error) {
 		return m.memberGet(request.Params.PublicKey)
 	}
 
+	if request.Params.CallParams == nil {
+		return nil, fmt.Errorf("call params are nil")
+	}
 	var params map[string]interface{}
 	var ok bool
 	if params, ok = request.Params.CallParams.(map[string]interface{}); !ok {
-		return nil, fmt.Errorf("failed to cast request.Params.CallParams: expected map[string]interface{}, got %T", request.Params.CallParams)
+		return nil, fmt.Errorf("failed to cast call params: expected 'map[string]interface{}', got '%T'", request.Params.CallParams)
 	}
 
 	switch request.Params.CallSite {
