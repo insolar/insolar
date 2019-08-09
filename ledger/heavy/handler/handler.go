@@ -315,5 +315,5 @@ func (h *Handler) handleGotHotConfirmation(ctx context.Context, meta payload.Met
 		logger.Error(errors.Wrapf(err, "failed to add hot confitmation to JetKeeper jet=%v", confirm.String()))
 	}
 
-	proc.FinalizePulse(ctx, h.PulseCalculator, h.BackupMaker, h.JetKeeper, confirm.Pulse)
+	executor.FinalizePulse(ctx, h.PulseCalculator, h.BackupMaker, h.JetKeeper, confirm.Pulse)
 }
