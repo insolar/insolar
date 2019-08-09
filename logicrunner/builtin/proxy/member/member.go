@@ -40,7 +40,7 @@ type MigrationCreateResponse struct {
 type Params struct {
 	Seed       string      `json:"seed"`
 	CallSite   string      `json:"callSite"`
-	CallParams interface{} `json:"callParams"`
+	CallParams interface{} `json:"callParams,omitempty"`
 	Reference  string      `json:"reference"`
 	PublicKey  string      `json:"publicKey"`
 }
