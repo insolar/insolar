@@ -23,4 +23,5 @@ const (
 	CodeNotFound     = 3
 	CodeNoPendings   = 4
 	CodeNoStartPulse = 5
+	CodeNoNextPulse  = 6
 )
