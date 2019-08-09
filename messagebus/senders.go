@@ -200,7 +200,7 @@ func retryer(accessor pulse.Accessor, retriesCount int, errSubstr string, debugS
 				}
 
 				if currentPulse.PulseNumber == lastPulse {
-					inslogger.FromContext(ctx).Debugf("[ retryer ]  wait for pulse change. Current: %d", currentPulse)
+					inslogger.FromContext(ctx).Debugf("[ retryer ]  wait for pulse change. Current: %d", currentPulse.PulseNumber)
 					time.Sleep(100 * time.Millisecond)
 					continue
 				}
