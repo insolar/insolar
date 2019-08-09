@@ -1,4 +1,4 @@
-//
+///
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -46,79 +46,32 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-//
+///
 
 package gateway
 
-// TODO: spans, metrics
-
 import (
-	"context"
+	"testing"
 	"time"
 
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/controller/common"
+
+	"github.com/stretchr/testify/require"
 )
 
-func newNoNetwork(b *Base) *NoNetwork {
-	return &NoNetwork{Base: b}
-}
+func TestPause(t *testing.T) {
+	minTimeout := time.Duration(1)
+	maxTimeout := time.Duration(6)
+	timeoutMult := time.Duration(2)
+	options := common.Options{MinTimeout: minTimeout, MaxTimeout: maxTimeout, TimeoutMult: timeoutMult}
+	nn := NoNetwork{Base: &Base{Options: &options}}
+	require.Zero(t, nn.pause())
 
-// NoNetwork initial state
-type NoNetwork struct {
-	*Base
-}
+	require.Equal(t, minTimeout, nn.pause())
 
-func (g *NoNetwork) pause() time.Duration {
-	var sleep time.Duration
-	if g.backoff == g.Options.MaxTimeout {
-		sleep = g.backoff
-	} else if g.backoff == 0 {
-		g.backoff = g.Options.MinTimeout
-	} else {
-		sleep = g.backoff
-		g.backoff *= g.Options.TimeoutMult
-		if g.backoff > g.Options.MaxTimeout {
-			g.backoff = g.Options.MaxTimeout
-		}
-	}
-	return sleep
-}
+	require.Equal(t, timeoutMult*minTimeout, nn.pause())
 
-func (g *NoNetwork) Run(ctx context.Context, pulse insolar.Pulse) {
-	cert := g.CertificateManager.GetCertificate()
-	origin := g.NodeKeeper.GetOrigin()
-	discoveryNodes := network.ExcludeOrigin(cert.GetDiscoveryNodes(), origin.ID())
+	require.Equal(t, timeoutMult*timeoutMult*minTimeout, nn.pause())
 
-	g.NodeKeeper.SetInitialSnapshot([]insolar.NetworkNode{origin})
-
-	if len(discoveryNodes) == 0 {
-		inslogger.FromContext(ctx).Warn("No discovery nodes found in certificate")
-		return
-	}
-
-	// run bootstrap
-	if !network.OriginIsDiscovery(cert) {
-		time.Sleep(g.pause())
-		g.Gatewayer.SwitchState(ctx, insolar.JoinerBootstrap, pulse)
-		return
-	}
-
-	// Simplified bootstrap
-	if origin.Role() != insolar.StaticRoleHeavyMaterial {
-		time.Sleep(g.pause())
-		g.Gatewayer.SwitchState(ctx, insolar.JoinerBootstrap, pulse)
-		return
-	}
-
-	// Reset backoff if not insolar.JoinerBootstrap.
-	g.backoff = 0
-
-	g.bootstrapETA = time.Minute // TODO: move to config
-	g.Gatewayer.SwitchState(ctx, insolar.WaitConsensus, pulse)
-}
-
-func (g *NoNetwork) GetState() insolar.NetworkState {
-	return insolar.NoNetworkState
+	require.Equal(t, maxTimeout, nn.pause())
 }
