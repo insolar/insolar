@@ -186,7 +186,7 @@ func (r *innerHeadedLazySortedList) cutOffHeadByLen(headCutLen int, to []interfa
 }
 
 func (r *HeadedLazySortedList) GetReversedHead(relIndex int) interface{} {
-	return r.Get(r.checkHeadLen(relIndex) - 1)
+	return r.Get(r.checkAndGetAdjustedHeadLen(relIndex) - 1)
 }
 
 func (r *HeadedLazySortedList) HasFullHead(headLenReduction int) bool {
@@ -196,7 +196,7 @@ func (r *HeadedLazySortedList) HasFullHead(headLenReduction int) bool {
 	return r.headLen <= headLenReduction+r.data.len
 }
 
-func (r *HeadedLazySortedList) checkHeadLen(headLenReduction int) int {
+func (r *HeadedLazySortedList) checkAndGetAdjustedHeadLen(headLenReduction int) int {
 	if headLenReduction < 0 || headLenReduction > r.headLen {
 		panic("index out of range")
 	}
@@ -204,12 +204,12 @@ func (r *HeadedLazySortedList) checkHeadLen(headLenReduction int) int {
 	if headCutLen > r.data.len {
 		return r.data.len
 	}
-	return r.headLen
+	return headCutLen
 }
 
 func (r *HeadedLazySortedList) CutOffHeadInto(headLenReduction int, to []interface{}) []interface{} {
 
-	headCutLen := r.checkHeadLen(headLenReduction)
+	headCutLen := r.checkAndGetAdjustedHeadLen(headLenReduction)
 	return r.CutOffHeadByLenInto(headCutLen, to)
 }
 
@@ -266,5 +266,5 @@ func (r *HeadedLazySortedList) GetHeadLen() int {
 
 func (r *HeadedLazySortedList) GetAvailableHeadLen(headLenReduction int) int {
 
-	return r.checkHeadLen(headLenReduction)
+	return r.checkAndGetAdjustedHeadLen(headLenReduction)
 }

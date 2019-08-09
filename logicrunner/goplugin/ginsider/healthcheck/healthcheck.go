@@ -17,7 +17,7 @@
 package main
 
 import (
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 )
 
 type One struct {

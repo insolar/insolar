@@ -60,7 +60,14 @@ const (
 	PrimaryRoleVirtual
 	// PrimaryRoleCascade
 	// PrimaryRoleRecrypt
+	maxPrimaryRole
 )
+
+const PrimaryRoleCount = int(maxPrimaryRole)
+
+func (v PrimaryRole) Equal(other PrimaryRole) bool {
+	return v == other
+}
 
 func (v PrimaryRole) IsMaterial() bool {
 	return v == PrimaryRoleHeavyMaterial || v == PrimaryRoleLightMaterial
@@ -82,10 +89,6 @@ func (v PrimaryRole) IsNeutral() bool {
 	return v == PrimaryRoleNeutral
 }
 
-func (v PrimaryRole) IsInactive() bool {
-	return v == PrimaryRoleInactive
-}
-
 type SpecialRole uint8
 
 const (
@@ -95,4 +98,8 @@ const (
 
 func (v SpecialRole) IsDiscovery() bool {
 	return v == SpecialRoleDiscovery
+}
+
+func (v SpecialRole) Equal(other SpecialRole) bool {
+	return v == other
 }

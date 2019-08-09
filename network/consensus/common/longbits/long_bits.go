@@ -77,7 +77,7 @@ func (v *Bits64) WriteTo(w io.Writer) (int64, error) {
 }
 
 func (v *Bits64) Read(p []byte) (n int, err error) {
-	return readFromArray(p, (*v)[:])
+	return copy(p, (*v)[:]), nil
 }
 
 func (v *Bits64) FoldToUint64() uint64 {
@@ -131,7 +131,7 @@ func (v *Bits128) WriteTo(w io.Writer) (int64, error) {
 }
 
 func (v *Bits128) Read(p []byte) (n int, err error) {
-	return readFromArray(p, (*v)[:])
+	return copy(p, (*v)[:]), nil
 }
 
 func (v *Bits128) FoldToUint64() uint64 {
@@ -162,7 +162,7 @@ func (v *Bits224) WriteTo(w io.Writer) (int64, error) {
 }
 
 func (v *Bits224) Read(p []byte) (n int, err error) {
-	return readFromArray(p, (*v)[:])
+	return copy(p, (*v)[:]), nil
 }
 
 func (v *Bits224) FoldToUint64() uint64 {
@@ -195,7 +195,7 @@ func (v *Bits256) WriteTo(w io.Writer) (int64, error) {
 }
 
 func (v *Bits256) Read(p []byte) (n int, err error) {
-	return readFromArray(p, (*v)[:])
+	return copy(p, (*v)[:]), nil
 }
 
 func (v *Bits256) FoldToUint64() uint64 {
@@ -242,7 +242,7 @@ func (v *Bits512) WriteTo(w io.Writer) (int64, error) {
 }
 
 func (v *Bits512) Read(p []byte) (n int, err error) {
-	return readFromArray(p, (*v)[:])
+	return copy(p, (*v)[:]), nil
 }
 
 func (v *Bits512) FoldToUint64() uint64 {
@@ -306,16 +306,6 @@ func FillBitsWithStaticNoise(base uint32, v []byte) {
 		t := v[i:]
 		binary.LittleEndian.PutUint64(t, u)
 	}
-}
-
-func readFromArray(d []byte, s []byte) (int, error) {
-	n := len(d)
-	if len(s) < n {
-		copy(d, s)
-		return len(s), nil
-	}
-	copy(d, s[:n])
-	return n, nil
 }
 
 func bitsToStringDefault(s FoldableReader) string {

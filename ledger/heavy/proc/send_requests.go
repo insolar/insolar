@@ -58,6 +58,7 @@ func (p *SendRequests) Proceed(ctx context.Context) error {
 	msg := payload.GetFilament{}
 	err := msg.Unmarshal(p.meta.Payload)
 	if err != nil {
+		instracer.AddError(span, err)
 		return errors.Wrap(err, "failed to decode GetFilament payload")
 	}
 
@@ -79,19 +80,21 @@ func (p *SendRequests) Proceed(ctx context.Context) error {
 		// Fetching filament record.
 		filamentRecord, err := p.dep.records.ForID(ctx, *iter)
 		if err != nil {
+			instracer.AddError(span, err)
 			return err
 		}
 		composite.MetaID = *iter
 		composite.Meta = filamentRecord
 
 		// Fetching primary record.
-		virtual := record.Unwrap(filamentRecord.Virtual)
+		virtual := record.Unwrap(&filamentRecord.Virtual)
 		filament, ok := virtual.(*record.PendingFilament)
 		if !ok {
 			return errors.New("failed to convert filament record")
 		}
 		rec, err := p.dep.records.ForID(ctx, filament.RecordID)
 		if err != nil {
+			instracer.AddError(span, err)
 			return err
 		}
 		composite.RecordID = filament.RecordID
@@ -112,8 +115,9 @@ func (p *SendRequests) Proceed(ctx context.Context) error {
 		Records:  records,
 	})
 	if err != nil {
-		return errors.Wrap(err, "failed to create a PendingFilament message")
+		instracer.AddError(span, err)
+		return errors.Wrap(err, "failed to create a FilamentSegment message")
 	}
-	go p.dep.sender.Reply(ctx, p.meta, rep)
+	p.dep.sender.Reply(ctx, p.meta, rep)
 	return nil
 }

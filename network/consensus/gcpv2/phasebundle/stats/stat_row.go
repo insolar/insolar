@@ -59,9 +59,10 @@ import (
 type RowValueFormatFunc func(v uint8) string
 
 type Row struct {
-	rowIndex int
-	values   []uint8
-	summary  []uint16
+	rowIndex      int
+	values        []uint8
+	summary       []uint16
+	customOptions uint32
 }
 
 func NewStatRow(maxValue uint8, columns int) Row {
@@ -71,8 +72,20 @@ func NewStatRow(maxValue uint8, columns int) Row {
 	return Row{rowIndex: -1, values: make([]uint8, columns), summary: make([]uint16, maxValue+1)}
 }
 
+func (r *Row) GetCustomOptions() uint32 {
+	return r.customOptions
+}
+
+func (r *Row) SetCustomOptions(v uint32) {
+	r.customOptions = v
+}
+
 func (r *Row) Len() int {
 	return len(r.values)
+}
+
+func (r *Row) IsEmpty() bool {
+	return len(r.values) == 0 && len(r.summary) == 0
 }
 
 func (r *Row) Set(column int, value uint8) uint8 {
@@ -147,8 +160,7 @@ func (r *Row) GetSummaryByValue(value uint8) uint16 {
 }
 
 func (r *Row) GetSummary() []uint16 {
-	v := make([]uint16, len(r.summary))
-	copy(v, r.summary)
+	v := append(make([]uint16, 0, len(r.summary)), r.summary...)
 	v[0] += uint16(len(r.values)) // zero is reverse-counted
 	return v
 }
@@ -192,6 +204,30 @@ func (r *Row) StringSummaryFmt(fmtFn RowValueFormatFunc) string {
 	builder := strings.Builder{}
 	stringSummary16Fmt(r.GetSummary(), &builder, fmtFn)
 	return builder.String()
+}
+
+func (r *Row) Equals(o *Row) bool {
+	if r == nil || o == nil {
+		return false
+	}
+	if r == o {
+		return true
+	}
+	return r.equals(o)
+}
+
+func (r *Row) equals(o *Row) bool {
+	for i, tS := range r.summary {
+		if tS != o.summary[i] {
+			return false
+		}
+	}
+	for j, tC := range r.values {
+		if tC != o.values[j] {
+			return false
+		}
+	}
+	return true
 }
 
 func stringSummary16Fmt(summary []uint16, builder *strings.Builder, fmtFn RowValueFormatFunc) {

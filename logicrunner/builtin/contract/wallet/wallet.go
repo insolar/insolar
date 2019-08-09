@@ -22,12 +22,12 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/member"
-	"github.com/insolar/insolar/logicrunner/builtin/contract/wallet/safemath"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation/safemath"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/costcenter"
+	proxyMember "github.com/insolar/insolar/logicrunner/builtin/proxy/member"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/rootdomain"
-	"github.com/insolar/insolar/logicrunner/builtin/proxy/tariff"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/wallet"
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
 
 // Wallet - basic wallet contract.
@@ -51,7 +51,7 @@ func (w *Wallet) Transfer(rootDomainRef insolar.Reference, amountStr string, toM
 		return nil, fmt.Errorf("can't parse input amount")
 	}
 	zero, _ := new(big.Int).SetString("0", 10)
-	if amount.Cmp(zero) == -1 {
+	if amount.Cmp(zero) < 1 {
 		return nil, fmt.Errorf("amount must be larger then zero")
 	}
 
@@ -62,13 +62,7 @@ func (w *Wallet) Transfer(rootDomainRef insolar.Reference, amountStr string, toM
 	}
 
 	cc := costcenter.GetObject(ccRef)
-	tRef, err := cc.GetCurrentTariff()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get tariff reference: %s", err.Error())
-	}
-
-	t := tariff.GetObject(tRef)
-	feeStr, err := t.CalcFee(amountStr)
+	feeStr, err := cc.CalcFee(amountStr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to calculate fee for amount: %s", err.Error())
 	}
@@ -81,9 +75,9 @@ func (w *Wallet) Transfer(rootDomainRef insolar.Reference, amountStr string, toM
 		return nil, fmt.Errorf("can't parse wallet balance")
 	}
 
-	toWallet, err := wallet.GetImplementationFrom(*toMember)
+	memberWallet, err := proxyMember.GetObject(*toMember).GetWallet()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get implementation: %s", err.Error())
+		return nil, fmt.Errorf("failed to get member wallet: %s", err.Error())
 	}
 
 	newBalance, err := safemath.Sub(balance, amountWithFee)
@@ -92,7 +86,7 @@ func (w *Wallet) Transfer(rootDomainRef insolar.Reference, amountStr string, toM
 	}
 	w.Balance = newBalance.String()
 
-	fwRef, err := rd.GetFeeWalletRef()
+	fwRef, err := cc.GetFeeWalletRef()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get fee wallet reference: %s", err.Error())
 	}
@@ -106,9 +100,10 @@ func (w *Wallet) Transfer(rootDomainRef insolar.Reference, amountStr string, toM
 			return nil, fmt.Errorf("failed to add amount back to balance: %s", err.Error())
 		}
 		w.Balance = newBalance.String()
-		return nil, fmt.Errorf("failed to transfer fee: %s", err.Error())
+		return nil, fmt.Errorf("failed to transfer fee: %s", acceptFeeErr.Error())
 	}
 
+	toWallet := wallet.GetObject(memberWallet)
 	acceptErr := toWallet.Accept(amount.String())
 	if acceptErr == nil {
 		return member.TransferResponse{Fee: feeStr}, nil
@@ -120,7 +115,7 @@ func (w *Wallet) Transfer(rootDomainRef insolar.Reference, amountStr string, toM
 	}
 	w.Balance = newBalance.String()
 
-	err = feeWallet.RollBack(amountStr)
+	err = feeWallet.RollBack(feeStr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to roll back fee: %s", err.Error())
 	}

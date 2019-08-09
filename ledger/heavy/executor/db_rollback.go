@@ -1,4 +1,4 @@
-///
+//
 // Copyright 2019 Insolar Technologies GmbH
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,7 +12,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-///
+//
 
 package executor
 
@@ -25,7 +25,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/heavy/executor.headTruncater -o ./ -s _gen_mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/heavy/executor.headTruncater -o ./ -s _gen_mock.go -g
 type headTruncater interface {
 	TruncateHead(ctx context.Context, from insolar.PulseNumber) error
 }

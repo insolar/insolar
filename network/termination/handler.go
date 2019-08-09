@@ -119,3 +119,7 @@ func (t *terminationHandler) OnLeaveApproved(ctx context.Context) {
 func (t *terminationHandler) Abort(reason string) {
 	panic(reason)
 }
+
+func (t *terminationHandler) Terminating() bool {
+	return t.terminating
+}

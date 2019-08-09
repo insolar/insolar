@@ -1,4 +1,4 @@
-///
+//
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -46,7 +46,7 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-///
+//
 
 package pulse
 
@@ -68,7 +68,7 @@ func TestNewFirstPulsarData(t *testing.T) {
 
 	require.Equal(t, delta, pd.DataExt.NextPulseDelta)
 
-	require.Equal(t, uint16(0), pd.DataExt.PrevPulseDelta)
+	require.Zero(t, pd.DataExt.PrevPulseDelta)
 }
 
 func TestNewPulsarData(t *testing.T) {
@@ -94,11 +94,11 @@ func TestNewFirstEphemeralData(t *testing.T) {
 
 	require.Equal(t, EphemeralPulseEpoch, pd.PulseEpoch)
 
-	require.Equal(t, uint32(0), pd.Timestamp)
+	require.Zero(t, pd.Timestamp)
 
 	require.Equal(t, uint16(1), pd.NextPulseDelta)
 
-	require.Equal(t, uint16(0), pd.PrevPulseDelta)
+	require.Zero(t, pd.PrevPulseDelta)
 }
 
 func TestString(t *testing.T) {
@@ -106,17 +106,17 @@ func TestString(t *testing.T) {
 	entropy := longbits.Bits256{2}
 
 	pd := NewFirstPulsarData(delta, entropy)
-	require.True(t, pd.String() != "")
+	require.NotEmpty(t, pd.String())
 
 	pd.PulseNumber = MaxTimePulse + 2
-	require.True(t, pd.String() != "")
+	require.NotEmpty(t, pd.String())
 
 	pd.PulseNumber = MaxTimePulse
 	pd.PrevPulseDelta = pd.NextPulseDelta
-	require.True(t, pd.String() != "")
+	require.NotEmpty(t, pd.String())
 
 	pd.NextPulseDelta = 0
-	require.True(t, pd.String() != "")
+	require.NotEmpty(t, pd.String())
 }
 
 func TestNnewPulsarData(t *testing.T) {
@@ -142,11 +142,11 @@ func TestNewEphemeralData(t *testing.T) {
 
 	require.Equal(t, EphemeralPulseEpoch, pd.PulseEpoch)
 
-	require.Equal(t, uint32(0), pd.Timestamp)
+	require.Zero(t, pd.Timestamp)
 
 	require.Equal(t, uint16(1), pd.NextPulseDelta)
 
-	require.Equal(t, uint16(0), pd.PrevPulseDelta)
+	require.Zero(t, pd.PrevPulseDelta)
 }
 
 func TestFixedPulseEntropy(t *testing.T) {
@@ -360,12 +360,13 @@ func TestCreateNextPulse(t *testing.T) {
 	pd.PulseEpoch = EphemeralPulseEpoch
 	d := pd.CreateNextPulse(entropyGenTest)
 	require.Equal(t, d.PrevPulseDelta, pd.NextPulseDelta)
-	require.Equal(t, uint32(0), d.Timestamp)
+
+	require.Zero(t, d.Timestamp)
 
 	pd.PulseEpoch = MaxTimePulse
 	d = pd.CreateNextPulse(entropyGenTest)
 	require.Equal(t, d.PrevPulseDelta, pd.NextPulseDelta)
-	require.NotEqual(t, uint32(0), d.Timestamp)
+	require.NotZero(t, d.Timestamp)
 }
 
 func TestIsValidNext(t *testing.T) {

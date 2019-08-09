@@ -18,82 +18,12 @@ package reply
 
 import (
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/message"
 )
-
-// GetChildrenRedirectReply is a redirect reply for get children.
-type GetChildrenRedirectReply struct {
-	Receiver *insolar.Reference
-	Token    insolar.DelegationToken
-
-	FromChild insolar.ID
-}
-
-// NewGetChildrenRedirect creates a new instance of GetChildrenRedirectReply.
-func NewGetChildrenRedirect(
-	factory insolar.DelegationTokenFactory, parcel insolar.Parcel, receiver *insolar.Reference, fromChild insolar.ID,
-) (*GetChildrenRedirectReply, error) {
-	var err error
-	rep := GetChildrenRedirectReply{
-		Receiver:  receiver,
-		FromChild: fromChild,
-	}
-	redirectedMessage := rep.Redirected(parcel.Message())
-	sender := parcel.GetSender()
-	rep.Token, err = factory.IssueGetChildrenRedirect(&sender, redirectedMessage)
-	if err != nil {
-		return nil, err
-	}
-	return &rep, nil
-}
-
-// GetReceiver returns node reference to send message to.
-func (r *GetChildrenRedirectReply) GetReceiver() *insolar.Reference {
-	return r.Receiver
-}
-
-// GetToken returns delegation token.
-func (r *GetChildrenRedirectReply) GetToken() insolar.DelegationToken {
-	return r.Token
-}
-
-// Type returns type of the reply
-func (r *GetChildrenRedirectReply) Type() insolar.ReplyType {
-	return TypeGetChildrenRedirect
-}
-
-// Redirected creates redirected message from redirect data.
-func (r *GetChildrenRedirectReply) Redirected(genericMsg insolar.Message) insolar.Message {
-	msg := genericMsg.(*message.GetChildren)
-	return &message.GetChildren{
-		Parent:    msg.Parent,
-		FromChild: &r.FromChild,
-		FromPulse: msg.FromPulse,
-		Amount:    msg.Amount,
-	}
-}
 
 // GetCodeRedirectReply is a redirect reply for get children.
 type GetCodeRedirectReply struct {
 	Receiver *insolar.Reference
 	Token    insolar.DelegationToken
-}
-
-// NewGetCodeRedirect creates a new instance of GetChildrenRedirectReply.
-func NewGetCodeRedirect(
-	factory insolar.DelegationTokenFactory, parcel insolar.Parcel, receiver *insolar.Reference,
-) (*GetCodeRedirectReply, error) {
-	var err error
-	rep := GetCodeRedirectReply{
-		Receiver: receiver,
-	}
-	redirectedMessage := rep.Redirected(parcel.Message())
-	sender := parcel.GetSender()
-	rep.Token, err = factory.IssueGetCodeRedirect(&sender, redirectedMessage)
-	if err != nil {
-		return nil, err
-	}
-	return &rep, nil
 }
 
 // GetReceiver returns node reference to send message to.

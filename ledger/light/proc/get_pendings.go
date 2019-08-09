@@ -53,7 +53,7 @@ func (gp *GetPendings) Dep(
 }
 
 func (gp *GetPendings) Proceed(ctx context.Context) error {
-	pendings, err := gp.dep.filaments.PendingRequests(ctx, flow.Pulse(ctx), gp.objectID)
+	pendings, err := gp.dep.filaments.OpenedRequests(ctx, flow.Pulse(ctx), gp.objectID, true)
 	if err != nil {
 		return errors.Wrap(err, "failed to calculate pending")
 	}

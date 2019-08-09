@@ -20,9 +20,12 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
 )
@@ -33,6 +36,7 @@ type PassState struct {
 	Dep struct {
 		Sender  bus.Sender
 		Records object.RecordAccessor
+		Pulses  pulse.Accessor
 	}
 }
 
@@ -57,11 +61,22 @@ func (p *PassState) Proceed(ctx context.Context) error {
 
 	rec, err := p.Dep.Records.ForID(ctx, pass.StateID)
 	if err == object.ErrNotFound {
+		var latestPulse insolar.PulseNumber
+		latest, err := p.Dep.Pulses.Latest(ctx)
+		if err == nil {
+			latestPulse = latest.PulseNumber
+		}
+		inslogger.FromContext(ctx).Errorf(
+			"state not found. StateID: %s, messagePN: %v, latestPN: %v",
+			pass.StateID.DebugString(),
+			origin.Pulse,
+			latestPulse,
+		)
 		msg, err := payload.NewMessage(&payload.Error{Text: "state not found"})
 		if err != nil {
 			return errors.Wrap(err, "failed to create reply")
 		}
-		go p.Dep.Sender.Reply(ctx, origin, msg)
+		p.Dep.Sender.Reply(ctx, origin, msg)
 		return nil
 	}
 	if err != nil {
@@ -69,7 +84,7 @@ func (p *PassState) Proceed(ctx context.Context) error {
 	}
 
 	virtual := rec.Virtual
-	concrete := record.Unwrap(virtual)
+	concrete := record.Unwrap(&virtual)
 	state, ok := concrete.(record.State)
 	if !ok {
 		return fmt.Errorf("invalid object record %#v", virtual)
@@ -81,7 +96,7 @@ func (p *PassState) Proceed(ctx context.Context) error {
 			return errors.Wrap(err, "failed to create reply")
 		}
 
-		go p.Dep.Sender.Reply(ctx, origin, msg)
+		p.Dep.Sender.Reply(ctx, origin, msg)
 		return nil
 	}
 
@@ -97,7 +112,7 @@ func (p *PassState) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "failed to create message")
 	}
 
-	go p.Dep.Sender.Reply(ctx, origin, msg)
+	p.Dep.Sender.Reply(ctx, origin, msg)
 
 	return nil
 }

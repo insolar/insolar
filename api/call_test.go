@@ -18,6 +18,7 @@ package api
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"net/http"
@@ -34,7 +35,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 )
@@ -86,7 +87,7 @@ func (suite *TimeoutSuite) TestRunner_callHandler_Timeout() {
 	suite.NoError(err)
 	suite.api.SeedManager.Add(*seed, 0)
 
-	suite.api.timeout = 1 * time.Second
+	suite.api.timeout = 1 * time.Millisecond
 
 	seedString := base64.StdEncoding.EncodeToString(seed[:])
 
@@ -133,7 +134,7 @@ func TestTimeoutSuite(t *testing.T) {
 	timeoutSuite.api.timeout = 1 * time.Second
 
 	cr := testutils.NewContractRequesterMock(timeoutSuite.mc)
-	cr.SendRequestWithPulseFunc = func(p context.Context, p1 *insolar.Reference, method string, p3 []interface{}, p4 insolar.PulseNumber) (insolar.Reply, error) {
+	cr.SendRequestWithPulseMock.Set(func(p context.Context, p1 *insolar.Reference, method string, p3 []interface{}, p4 insolar.PulseNumber) (insolar.Reply, error) {
 		switch method {
 		case "GetPublicKey":
 			var result = string(pKeyString)
@@ -151,7 +152,7 @@ func TestTimeoutSuite(t *testing.T) {
 				Result: data,
 			}, nil
 		}
-	}
+	})
 
 	timeoutSuite.api.ContractRequester = cr
 	timeoutSuite.api.Start(timeoutSuite.ctx)
@@ -161,6 +162,39 @@ func TestTimeoutSuite(t *testing.T) {
 	suite.Run(t, timeoutSuite)
 
 	timeoutSuite.api.Stop(timeoutSuite.ctx)
+}
+
+func TestDigestParser(t *testing.T) {
+	invalidDigest := ""
+	_, err := parseDigest(invalidDigest)
+	require.Error(t, err)
+
+	validDigest := "SHA-256=foo"
+	_, err = parseDigest(validDigest)
+	require.NoError(t, err)
+}
+
+func TestSignatureParser(t *testing.T) {
+	invalidSignature := ""
+	_, err := parseSignature(invalidSignature)
+
+	validSignature := `keyId="member-pub-key", algorithm="ecdsa", headers="digest", signature=bar`
+	_, err = parseSignature(validSignature)
+	require.NoError(t, err)
+}
+
+func TestValidateRequestHeaders(t *testing.T) {
+	body := []byte("foobar")
+	h := sha256.New()
+	_, err := h.Write(body)
+	require.NoError(t, err)
+
+	digest := h.Sum(nil)
+	calculatedDigest := `SHA-256=` + base64.URLEncoding.EncodeToString(digest)
+	signature := `keyId="member-pub-key", algorithm="ecdsa", headers="digest", signature=bar`
+	sig, err := validateRequestHeaders(calculatedDigest, signature, body)
+	require.NoError(t, err)
+	require.Equal(t, "bar", sig)
 }
 
 func (suite *TimeoutSuite) BeforeTest(suiteName, testName string) {

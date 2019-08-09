@@ -60,8 +60,8 @@ func (s *SetCode) Present(ctx context.Context, f flow.Flow) error {
 	recID := calc.Result.ID
 
 	passIfNotExecutor := !s.passed
-	jet := proc.NewCheckJet(recID, flow.Pulse(ctx), s.message, passIfNotExecutor)
-	s.dep.CheckJet(jet)
+	jet := proc.NewFetchJet(recID, flow.Pulse(ctx), s.message, passIfNotExecutor)
+	s.dep.FetchJet(jet)
 	if err := f.Procedure(ctx, jet, true); err != nil {
 		if err == proc.ErrNotExecutor && passIfNotExecutor {
 			return nil

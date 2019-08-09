@@ -21,7 +21,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/stretchr/testify/require"
 )
 

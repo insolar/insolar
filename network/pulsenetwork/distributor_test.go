@@ -63,7 +63,6 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork"
-	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 	"github.com/insolar/insolar/network/transport"
@@ -78,7 +77,6 @@ const (
 
 func createHostNetwork(t *testing.T) (network.HostNetwork, error) {
 	m := mock.NewRoutingTableMock(t)
-	m.AddToKnownHostsMock.Set(func(*host.Host) {})
 
 	cm1 := component.NewManager(nil)
 	f1 := transport.NewFactory(configuration.NewHostNetwork().Transport)
@@ -89,11 +87,6 @@ func createHostNetwork(t *testing.T) (network.HostNetwork, error) {
 	cm1.Inject(f1, n1, m)
 
 	ctx := context.Background()
-
-	err = n1.Init(ctx)
-	if err != nil {
-		return nil, err
-	}
 
 	err = n1.Start(ctx)
 	if err != nil {

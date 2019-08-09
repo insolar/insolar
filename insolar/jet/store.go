@@ -115,9 +115,9 @@ func (s *Store) Split(
 
 // Clone copies tree from one pulse to another. Use it to copy the past tree into new pulse.
 func (s *Store) Clone(
-	ctx context.Context, from, to insolar.PulseNumber,
+	ctx context.Context, from, to insolar.PulseNumber, keepActual bool,
 ) error {
-	newTree := s.ltreeForPulse(from).clone(false)
+	newTree := s.ltreeForPulse(from).clone(keepActual)
 
 	s.Lock()
 	s.trees[to] = &lockedTree{

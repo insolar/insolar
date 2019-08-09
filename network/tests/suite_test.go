@@ -56,7 +56,6 @@ import (
 	"context"
 	"crypto"
 	"fmt"
-	"math/rand"
 	"strconv"
 	"strings"
 	"sync"
@@ -64,13 +63,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/network/rules"
+	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/network/consensus"
+	"github.com/insolar/insolar/network/node"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/stretchr/testify/require"
-	"github.com/stretchr/testify/suite"
+	"github.com/insolar/insolar/keystore"
 
-	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/network/servicenetwork"
 
 	"github.com/insolar/insolar/certificate"
@@ -79,10 +80,7 @@ import (
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/consensusv1/packets"
-	"github.com/insolar/insolar/network/consensusv1/phases"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/platformpolicy"
@@ -90,21 +88,19 @@ import (
 )
 
 var (
-	testNetworkPort uint32 = 10010
+	testNetworkPort uint32 = 10000
+)
+
+var (
+	suiteLogger = inslogger.FromContext(initLogger(context.Background(), insolar.ErrorLevel))
 )
 
 const (
 	UseFakeTransport = true
 	UseFakeBootstrap = true
 
-	pulseTimeMs  int32 = 8000
 	reqTimeoutMs int32 = 2000
-	pulseDelta   int32 = 8
-
-	Phase1Timeout  float64 = 0.30
-	Phase2Timeout  float64 = 0.50
-	Phase21Timeout float64 = 0.70
-	Phase3Timeout  float64 = 0.90
+	pulseDelta   int32 = 1
 )
 
 type fixture struct {
@@ -118,9 +114,17 @@ type fixture struct {
 
 const cacheDir = "network_cache/"
 
+func initLogger(ctx context.Context, level insolar.LogLevel) context.Context {
+	logger := inslogger.FromContext(ctx).WithCaller(false)
+	logger, _ = logger.WithLevelNumber(level)
+	logger, _ = logger.WithFormat(insolar.TextFormat)
+	ctx = inslogger.SetLogger(ctx, logger)
+	return ctx
+}
+
 func newFixture(t *testing.T) *fixture {
 	return &fixture{
-		ctx:            inslogger.TestContext(t),
+		ctx:            initLogger(inslogger.TestContext(t), insolar.DebugLevel),
 		bootstrapNodes: make([]*networkNode, 0),
 		networkNodes:   make([]*networkNode, 0),
 	}
@@ -128,53 +132,57 @@ func newFixture(t *testing.T) *fixture {
 
 // testSuite is base test suite
 type testSuite struct {
-	suite.Suite
 	fixtureMap     map[string]*fixture
 	bootstrapCount int
 	nodesCount     int
+	t              *testing.T
 }
 
 type consensusSuite struct {
 	testSuite
 }
 
-func newTestSuite(bootstrapCount, nodesCount int) testSuite {
+func newTestSuite(t *testing.T, bootstrapCount, nodesCount int) testSuite {
 	return testSuite{
-		Suite:          suite.Suite{},
 		fixtureMap:     make(map[string]*fixture, 0),
 		bootstrapCount: bootstrapCount,
 		nodesCount:     nodesCount,
+		t:              t,
 	}
 }
 
-func newConsensusSuite(bootstrapCount, nodesCount int) *consensusSuite {
+func newConsensusSuite(t *testing.T, bootstrapCount, nodesCount int) *consensusSuite {
 	return &consensusSuite{
-		testSuite: newTestSuite(bootstrapCount, nodesCount),
+		testSuite: newTestSuite(t, bootstrapCount, nodesCount),
 	}
 }
 
 func (s *testSuite) fixture() *fixture {
-	return s.fixtureMap[s.T().Name()]
+	return s.fixtureMap[s.t.Name()]
 }
 
 // CheckDiscoveryCount skips test if bootstrap nodes count less then consensusMin
 func (s *consensusSuite) CheckBootstrapCount() {
 	if len(s.fixture().bootstrapNodes) < consensusMin {
-		s.T().Skip(consensusMinMsg)
+		s.t.Skip(consensusMinMsg)
 	}
 }
 
 // SetupSuite creates and run network with bootstrap and common nodes once before run all tests in the suite
 func (s *consensusSuite) SetupTest() {
-	s.fixtureMap[s.T().Name()] = newFixture(s.T())
+	s.fixtureMap[s.t.Name()] = newFixture(s.t)
 	var err error
-	s.fixture().pulsar, err = NewTestPulsar(pulseTimeMs, reqTimeoutMs, pulseDelta)
-	s.Require().NoError(err)
+	s.fixture().pulsar, err = NewTestPulsar(reqTimeoutMs, pulseDelta)
+	require.NoError(s.t, err)
 
-	log.Info("SetupTest")
+	suiteLogger.Info("SetupTest")
 
 	for i := 0; i < s.bootstrapCount; i++ {
-		s.fixture().bootstrapNodes = append(s.fixture().bootstrapNodes, s.newNetworkNode(fmt.Sprintf("bootstrap_%d", i)))
+		role := insolar.StaticRoleVirtual
+		if i == 0 {
+			role = insolar.StaticRoleHeavyMaterial
+		}
+		s.fixture().bootstrapNodes = append(s.fixture().bootstrapNodes, s.newNetworkNodeWithRole(fmt.Sprintf("bootstrap_%d", i), role))
 	}
 
 	for i := 0; i < s.nodesCount; i++ {
@@ -182,18 +190,38 @@ func (s *consensusSuite) SetupTest() {
 	}
 
 	pulseReceivers := make([]string, 0)
-	for _, node := range s.fixture().bootstrapNodes {
-		pulseReceivers = append(pulseReceivers, node.host)
+	for _, n := range s.fixture().bootstrapNodes {
+		pulseReceivers = append(pulseReceivers, n.host)
 	}
 
-	log.Info("Setup bootstrap nodes")
+	suiteLogger.Info("Setup bootstrap nodes")
 	s.SetupNodesNetwork(s.fixture().bootstrapNodes)
+	if UseFakeBootstrap {
+		bnodes := make([]insolar.NetworkNode, 0)
+		for _, n := range s.fixture().bootstrapNodes {
+			o := n.serviceNetwork.NodeKeeper.GetOrigin()
+			dig, sig := o.(node.MutableNode).GetSignature()
+			require.NotNil(s.t, dig)
+			require.NotNil(s.t, sig.Bytes())
+
+			bnodes = append(bnodes, o)
+		}
+		for _, n := range s.fixture().bootstrapNodes {
+			n.serviceNetwork.ConsensusMode = consensus.ReadyNetwork
+			n.serviceNetwork.NodeKeeper.SetInitialSnapshot(bnodes)
+			err := n.serviceNetwork.PulseAppender.AppendPulse(s.fixture().ctx, *insolar.GenesisPulse)
+			require.NoError(s.t, err)
+			n.serviceNetwork.Gatewayer.SwitchState(s.fixture().ctx, insolar.CompleteNetworkState, *insolar.GenesisPulse)
+			pulseReceivers = append(pulseReceivers, n.host)
+		}
+	}
+
 	s.StartNodesNetwork(s.fixture().bootstrapNodes)
 
 	expectedBootstrapsCount := len(s.fixture().bootstrapNodes)
-	retries := 100
+	retries := 10
 	for {
-		activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
+		activeNodes := s.fixture().bootstrapNodes[0].GetActiveNodes()
 		if expectedBootstrapsCount == len(activeNodes) {
 			break
 		}
@@ -203,45 +231,43 @@ func (s *consensusSuite) SetupTest() {
 			break
 		}
 
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(2 * time.Second)
 	}
 
-	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
-	s.Require().Equal(len(s.fixture().bootstrapNodes), len(activeNodes))
+	activeNodes := s.fixture().bootstrapNodes[0].GetActiveNodes()
+	require.Equal(s.t, len(s.fixture().bootstrapNodes), len(activeNodes))
 
 	if len(s.fixture().networkNodes) > 0 {
-		log.Info("Setup network nodes")
+		suiteLogger.Info("Setup network nodes")
 		s.SetupNodesNetwork(s.fixture().networkNodes)
 		s.StartNodesNetwork(s.fixture().networkNodes)
 
 		s.waitForConsensus(2)
 
 		// active nodes count verification
-		activeNodes1 := s.fixture().networkNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
-		activeNodes2 := s.fixture().networkNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
+		activeNodes1 := s.fixture().networkNodes[0].GetActiveNodes()
+		activeNodes2 := s.fixture().networkNodes[0].GetActiveNodes()
 
-		s.Require().Equal(s.getNodesCount(), len(activeNodes1))
-		s.Require().Equal(s.getNodesCount(), len(activeNodes2))
+		require.Equal(s.t, s.getNodesCount(), len(activeNodes1))
+		require.Equal(s.t, s.getNodesCount(), len(activeNodes2))
 	}
-	fmt.Println("=================== SetupTest() Done")
-	log.Info("Start test pulsar")
-	err = s.fixture().pulsar.Start(s.fixture().ctx, pulseReceivers)
-	s.Require().NoError(err)
-
+	suiteLogger.Info("Start test pulsar")
+	err = s.fixture().pulsar.Start(initLogger(s.fixture().ctx, insolar.ErrorLevel), pulseReceivers)
+	require.NoError(s.t, err)
 }
 
 func (s *testSuite) waitResults(results chan error, expected int) {
 	count := 0
 	for count < expected {
 		err := <-results
-		s.Require().NoError(err)
+		require.NoError(s.t, err)
 		count++
 	}
 }
 
 func (s *testSuite) SetupNodesNetwork(nodes []*networkNode) {
-	for _, node := range nodes {
-		s.preInitNode(node)
+	for _, n := range nodes {
+		s.preInitNode(n)
 	}
 
 	results := make(chan error, len(nodes))
@@ -250,24 +276,27 @@ func (s *testSuite) SetupNodesNetwork(nodes []*networkNode) {
 		results <- err
 	}
 
-	log.Info("Init nodes")
-	for _, node := range nodes {
-		go initNode(node)
+	suiteLogger.Info("Init nodes")
+	for _, n := range nodes {
+		go initNode(n)
 	}
 	s.waitResults(results, len(nodes))
 }
 
 func (s *testSuite) StartNodesNetwork(nodes []*networkNode) {
-	log.Info("Start nodes")
+	suiteLogger.Info("Start nodes")
 
 	results := make(chan error, len(nodes))
 	startNode := func(node *networkNode) {
 		err := node.componentManager.Start(node.ctx)
+		node.serviceNetwork.RegisterConsensusFinishedNotifier(func(ctx context.Context, report network.Report) {
+			node.consensusResult <- report.PulseNumber
+		})
 		results <- err
 	}
 
-	for _, node := range nodes {
-		go startNode(node)
+	for _, n := range nodes {
+		go startNode(n)
 	}
 	s.waitResults(results, len(nodes))
 	atomic.StoreUint32(&s.fixture().discoveriesAreBootstrapped, 1)
@@ -275,31 +304,35 @@ func (s *testSuite) StartNodesNetwork(nodes []*networkNode) {
 
 // TearDownSuite shutdowns all nodes in network, calls once after all tests in suite finished
 func (s *consensusSuite) TearDownTest() {
-	log.Info("=================== TearDownTest()")
-	log.Info("Stop network nodes")
+	suiteLogger.Info("=================== TearDownTest()")
+	suiteLogger.Info("Stop network nodes")
 	for _, n := range s.fixture().networkNodes {
 		err := n.componentManager.Stop(n.ctx)
-		s.NoError(err)
+		require.NoError(s.t, err)
 	}
-	log.Info("Stop bootstrap nodes")
+	suiteLogger.Info("Stop bootstrap nodes")
 	for _, n := range s.fixture().bootstrapNodes {
 		err := n.componentManager.Stop(n.ctx)
-		s.NoError(err)
+		require.NoError(s.t, err)
 	}
-	log.Info("Stop test pulsar")
-	s.fixture().pulsar.Stop(s.fixture().ctx)
+	suiteLogger.Info("Stop test pulsar")
+	err := s.fixture().pulsar.Stop(s.fixture().ctx)
+	require.NoError(s.t, err)
 }
 
 func (s *consensusSuite) waitForConsensus(consensusCount int) {
 	for i := 0; i < consensusCount; i++ {
-		for i, n := range s.fixture().bootstrapNodes {
-			err := <-n.consensusResult
-			require.NoError(s.T(), err, "Failed to pass consensus on bootstrapNodes[%d] %s ", i, n.host)
+		for _, n := range s.fixture().bootstrapNodes {
+			select {
+			case <-n.consensusResult:
+				continue
+			case <-time.After(time.Second * 10):
+				panic("waitForConsensus timeout")
+			}
 		}
 
 		for _, n := range s.fixture().networkNodes {
-			err := <-n.consensusResult
-			require.NoError(s.T(), err, "Failed to pass consensus on networkNodes[%d] %s ", i, n.host)
+			<-n.consensusResult
 		}
 	}
 }
@@ -310,16 +343,14 @@ func (s *consensusSuite) waitForConsensusExcept(consensusCount int, exception in
 			if n.id.Equal(exception) {
 				continue
 			}
-			err := <-n.consensusResult
-			require.NoError(s.T(), err, "Failed to pass consensus on bootstrapNodes[%d] %s ", i, n.host)
+			<-n.consensusResult
 		}
 
 		for _, n := range s.fixture().networkNodes {
 			if n.id.Equal(exception) {
 				continue
 			}
-			err := <-n.consensusResult
-			require.NoError(s.T(), err, "Failed to pass consensus on networkNodes[%d] %s ", i, n.host)
+			<-n.consensusResult
 		}
 	}
 }
@@ -332,21 +363,21 @@ func (s *testSuite) getNodesCount() int {
 func (s *testSuite) InitNode(node *networkNode) {
 	if node.componentManager != nil {
 		err := node.init()
-		s.Require().NoError(err)
+		require.NoError(s.t, err)
 	}
 }
 
 func (s *testSuite) StartNode(node *networkNode) {
 	if node.componentManager != nil {
 		err := node.componentManager.Start(node.ctx)
-		s.Require().NoError(err)
+		require.NoError(s.t, err)
 	}
 }
 
 func (s *testSuite) StopNode(node *networkNode) {
 	if node.componentManager != nil {
 		err := node.componentManager.Stop(s.fixture().ctx)
-		s.NoError(err)
+		require.NoError(s.t, err)
 	}
 }
 
@@ -361,25 +392,34 @@ type networkNode struct {
 	componentManager   *component.Manager
 	serviceNetwork     *servicenetwork.ServiceNetwork
 	terminationHandler *testutils.TerminationHandlerMock
-	consensusResult    chan error
+	consensusResult    chan insolar.PulseNumber
+}
+
+func (s *testSuite) newNetworkNode(name string) *networkNode {
+	return s.newNetworkNodeWithRole(name, insolar.StaticRoleVirtual)
 }
 
 // newNetworkNode returns networkNode initialized only with id, host address and key pair
-func (s *testSuite) newNetworkNode(name string) *networkNode {
+func (s *testSuite) newNetworkNodeWithRole(name string, role insolar.StaticRole) *networkNode {
 	key, err := platformpolicy.NewKeyProcessor().GeneratePrivateKey()
-	s.Require().NoError(err)
+	require.NoError(s.t, err)
 	address := "127.0.0.1:" + strconv.Itoa(incrementTestPort())
 
-	nodeContext, _ := inslogger.WithField(s.fixture().ctx, "nodeName", name)
-	return &networkNode{
+	n := &networkNode{
 		id:                  testutils.RandomRef(),
-		role:                RandomRole(),
+		role:                role,
 		privateKey:          key,
 		cryptographyService: cryptography.NewKeyBoundCryptographyService(key),
 		host:                address,
-		ctx:                 nodeContext,
-		consensusResult:     make(chan error, 30),
+		consensusResult:     make(chan insolar.PulseNumber, 1),
 	}
+
+	nodeContext, _ := inslogger.WithFields(s.fixture().ctx, map[string]interface{}{
+		"node_name": name,
+	})
+
+	n.ctx = nodeContext
+	return n
 }
 
 func incrementTestPort() int {
@@ -390,53 +430,66 @@ func incrementTestPort() int {
 // init calls Init for node component manager and wraps PhaseManager
 func (n *networkNode) init() error {
 	err := n.componentManager.Init(n.ctx)
-	n.serviceNetwork.PhaseManager = &phaseManagerWrapper{original: n.serviceNetwork.PhaseManager, result: n.consensusResult}
+	// n.serviceNetwork.PhaseManager = &phaseManagerWrapper{original: n.serviceNetwork.PhaseManager, result: n.consensusResult}
 	return err
+}
+
+func (n *networkNode) GetActiveNodes() []insolar.NetworkNode {
+	p, err := n.serviceNetwork.PulseAccessor.GetLatestPulse(n.ctx)
+	if err != nil {
+		panic(err)
+	}
+	return n.serviceNetwork.NodeKeeper.GetAccessor(p.PulseNumber).GetActiveNodes()
+}
+
+func (n *networkNode) GetWorkingNodes() []insolar.NetworkNode {
+	p, err := n.serviceNetwork.PulseAccessor.GetLatestPulse(n.ctx)
+	if err != nil {
+		panic(err)
+	}
+	return n.serviceNetwork.NodeKeeper.GetAccessor(p.PulseNumber).GetWorkingNodes()
 }
 
 func (s *testSuite) initCrypto(node *networkNode) (*certificate.CertificateManager, insolar.CryptographyService) {
 	pubKey, err := node.cryptographyService.GetPublicKey()
-	s.Require().NoError(err)
+	require.NoError(s.t, err)
 
 	// init certificate
 
 	proc := platformpolicy.NewKeyProcessor()
 	publicKey, err := proc.ExportPublicKeyPEM(pubKey)
-	s.Require().NoError(err)
+	require.NoError(s.t, err)
 
 	cert := &certificate.Certificate{}
 	cert.PublicKey = string(publicKey[:])
 	cert.Reference = node.id.String()
 	cert.Role = node.role.String()
 	cert.BootstrapNodes = make([]certificate.BootstrapNode, 0)
+	cert.MinRoles.HeavyMaterial = 1
+	cert.MinRoles.Virtual = 4
 
 	for _, b := range s.fixture().bootstrapNodes {
 		pubKey, _ := b.cryptographyService.GetPublicKey()
 		pubKeyBuf, err := proc.ExportPublicKeyPEM(pubKey)
-		s.Require().NoError(err)
+		require.NoError(s.t, err)
 
 		bootstrapNode := certificate.NewBootstrapNode(
 			pubKey,
 			string(pubKeyBuf[:]),
 			b.host,
-			b.id.String())
+			b.id.String(),
+			b.role.String())
 
 		cert.BootstrapNodes = append(cert.BootstrapNodes, *bootstrapNode)
 	}
 
 	// dump cert and read it again from json for correct private files initialization
 	jsonCert, err := cert.Dump()
-	s.Require().NoError(err)
-	log.Infof("cert: %s", jsonCert)
+	require.NoError(s.t, err)
 
 	cert, err = certificate.ReadCertificateFromReader(pubKey, proc, strings.NewReader(jsonCert))
-	s.Require().NoError(err)
+	require.NoError(s.t, err)
 	return certificate.NewCertificateManager(cert), node.cryptographyService
-}
-
-func RandomRole() insolar.StaticRole {
-	i := rand.Int()%3 + 1
-	return insolar.StaticRole(i)
 }
 
 type pulseManagerMock struct {
@@ -447,7 +500,9 @@ type pulseManagerMock struct {
 }
 
 func newPulseManagerMock(keeper network.NodeKeeper) *pulseManagerMock {
-	return &pulseManagerMock{pulse: *insolar.GenesisPulse, keeper: keeper}
+	p := *insolar.GenesisPulse
+	p.EpochPulseNumber = insolar.EphemeralPulseEpoch
+	return &pulseManagerMock{pulse: p, keeper: keeper}
 }
 
 func (p *pulseManagerMock) ForPulseNumber(context.Context, insolar.PulseNumber) (insolar.Pulse, error) {
@@ -459,21 +514,16 @@ func (p *pulseManagerMock) Latest(ctx context.Context) (insolar.Pulse, error) {
 	defer p.lock.Unlock()
 	return p.pulse, nil
 }
+func (p *pulseManagerMock) Append(ctx context.Context, pulse insolar.Pulse) error {
+	return nil
+}
 
 func (p *pulseManagerMock) Set(ctx context.Context, pulse insolar.Pulse) error {
 	p.lock.Lock()
 	p.pulse = pulse
 	p.lock.Unlock()
 
-	return p.keeper.MoveSyncToActive(ctx, pulse.PulseNumber)
-}
-
-type staterMock struct {
-	stateFunc func() []byte
-}
-
-func (m staterMock) State() []byte {
-	return m.stateFunc()
+	return nil
 }
 
 type PublisherMock struct{}
@@ -488,112 +538,107 @@ func (p *PublisherMock) Close() error {
 
 // preInitNode inits previously created node with mocks and external dependencies
 func (s *testSuite) preInitNode(node *networkNode) {
-	t := s.T()
 	cfg := configuration.NewConfiguration()
-	cfg.Pulsar.PulseTime = pulseTimeMs
+	cfg.Pulsar.PulseTime = pulseDelta * 1000
 	cfg.Host.Transport.Address = node.host
-	cfg.Service.Skip = 5
 	cfg.Service.CacheDirectory = cacheDir + node.host
-	cfg.Service.Consensus.Phase1Timeout = Phase1Timeout
-	cfg.Service.Consensus.Phase2Timeout = Phase2Timeout
-	cfg.Service.Consensus.Phase21Timeout = Phase21Timeout
-	cfg.Service.Consensus.Phase3Timeout = Phase3Timeout
 
 	node.componentManager = &component.Manager{}
-	node.componentManager.Register(platformpolicy.NewPlatformCryptographyScheme(), rules.NewRules())
+	node.componentManager.Register(platformpolicy.NewPlatformCryptographyScheme())
 	serviceNetwork, err := servicenetwork.NewServiceNetwork(cfg, node.componentManager)
-	s.Require().NoError(err)
-
-	amMock := staterMock{
-		stateFunc: func() []byte {
-			return make([]byte, packets.HashLength)
-		},
-	}
+	require.NoError(s.t, err)
 
 	certManager, cryptographyService := s.initCrypto(node)
 
 	realKeeper, err := nodenetwork.NewNodeNetwork(cfg.Host.Transport, certManager.GetCertificate())
-	s.Require().NoError(err)
-	terminationHandler := testutils.NewTerminationHandlerMock(t)
-	terminationHandler.LeaveFunc = func(p context.Context, p1 insolar.PulseNumber) {}
-	terminationHandler.OnLeaveApprovedFunc = func(p context.Context) {}
-	terminationHandler.AbortFunc = func(reason string) { log.Error(reason) }
+	require.NoError(s.t, err)
+	terminationHandler := testutils.NewTerminationHandlerMock(s.t)
+	terminationHandler.LeaveMock.Set(func(p context.Context, p1 insolar.PulseNumber) {})
+	terminationHandler.OnLeaveApprovedMock.Set(func(p context.Context) {})
+	terminationHandler.AbortMock.Set(func(reason string) { log.Error(reason) })
 
 	keyProc := platformpolicy.NewKeyProcessor()
 	pubMock := &PublisherMock{}
-	senderMock := bus.NewSenderMock(t)
 	if UseFakeTransport {
 		// little hack: this Register will override transport.Factory
 		// in servicenetwork internal component manager with fake factory
 		node.componentManager.Register(transport.NewFakeFactory(cfg.Host.Transport))
-	}
-	if UseFakeBootstrap {
-		// little hack: this Register will override DiscoveryBootstrapper
-		// in servicenetwork internal component manager with fakeBootstrap
-		node.componentManager.Register(newFakeBootstrap(s.fixture()))
+	} else {
+		node.componentManager.Register(transport.NewFactory(cfg.Host.Transport))
 	}
 
-	mb := testutils.NewMessageBusMock(t)
-	mb.MustRegisterMock.Return()
-
-	node.componentManager.Inject(realKeeper, newPulseManagerMock(realKeeper.(network.NodeKeeper)), pubMock,
-		&amMock, certManager, cryptographyService, serviceNetwork, keyProc, terminationHandler,
-		mb, testutils.NewContractRequesterMock(t), senderMock)
-
-	serviceNetwork.SetOperableFunc(func(ctx context.Context, operable bool) {
-	})
-	serviceNetwork.SetGateway(NewFakeGateway())
-
+	node.componentManager.Inject(
+		realKeeper,
+		newPulseManagerMock(realKeeper.(network.NodeKeeper)),
+		pubMock,
+		certManager,
+		cryptographyService,
+		keystore.NewInplaceKeyStore(node.privateKey),
+		serviceNetwork,
+		keyProc,
+		terminationHandler,
+		testutils.NewContractRequesterMock(s.t),
+		// pulse.NewStorageMem(),
+	)
+	// serviceNetwork.SetOperableFunc(func(ctx context.Context, operable bool) {})
 	node.serviceNetwork = serviceNetwork
 	node.terminationHandler = terminationHandler
+
+	nodeContext, _ := inslogger.WithFields(s.fixture().ctx, map[string]interface{}{
+		"node_id":      realKeeper.GetOrigin().ShortID(),
+		"node_address": realKeeper.GetOrigin().Address(),
+		"node_role":    realKeeper.GetOrigin().Role().String(),
+	})
+
+	node.ctx = nodeContext
 }
 
-func (s *testSuite) SetCommunicationPolicy(policy CommunicationPolicy) {
-	if policy == FullTimeout {
-		s.fixture().pulsar.Pause()
-		defer s.fixture().pulsar.Continue()
+// func (s *testSuite) SetCommunicationPolicy(policy CommunicationPolicy) {
+//	if policy == FullTimeout {
+//		s.fixture().pulsar.Pause()
+//		defer s.fixture().pulsar.Continue()
+//
+//		wrapper := s.fixture().bootstrapNodes[1].serviceNetwork.PhaseManager.(*phaseManagerWrapper)
+//		wrapper.original = &FullTimeoutPhaseManager{}
+//		s.fixture().bootstrapNodes[1].serviceNetwork.PhaseManager = wrapper
+//		return
+//	}
+//
+//	ref := s.fixture().bootstrapNodes[0].id // TODO: should we declare argument to select this node?
+//	s.SetCommunicationPolicyForNode(ref, policy)
+// }
 
-		wrapper := s.fixture().bootstrapNodes[1].serviceNetwork.PhaseManager.(*phaseManagerWrapper)
-		wrapper.original = &FullTimeoutPhaseManager{}
-		s.fixture().bootstrapNodes[1].serviceNetwork.PhaseManager = wrapper
-		return
-	}
-
-	ref := s.fixture().bootstrapNodes[0].id // TODO: should we declare argument to select this node?
-	s.SetCommunicationPolicyForNode(ref, policy)
-}
-
-func (s *testSuite) SetCommunicationPolicyForNode(nodeID insolar.Reference, policy CommunicationPolicy) {
-	nodes := s.fixture().bootstrapNodes
-	timedOutNodesCount := 0
-	switch policy {
-	case PartialNegative1Phase, PartialNegative2Phase, PartialNegative3Phase, PartialNegative23Phase:
-		timedOutNodesCount = int(float64(len(nodes)) * 0.6)
-	case PartialPositive1Phase, PartialPositive2Phase, PartialPositive3Phase, PartialPositive23Phase:
-		timedOutNodesCount = int(float64(len(nodes)) * 0.2)
-	case SplitCase:
-		timedOutNodesCount = int(float64(len(nodes)) * 0.5)
-	}
-
-	s.fixture().pulsar.Pause()
-	defer s.fixture().pulsar.Continue()
-
-	for i := 1; i <= timedOutNodesCount; i++ {
-		comm := nodes[i].serviceNetwork.PhaseManager.(*phaseManagerWrapper).original.(*phases.Phases).FirstPhase.(*phases.FirstPhaseImpl).Communicator
-		wrapper := &CommunicatorMock{communicator: comm, ignoreFrom: nodeID, policy: policy}
-		phasemanager := nodes[i].serviceNetwork.PhaseManager.(*phaseManagerWrapper).original.(*phases.Phases)
-		phasemanager.FirstPhase.(*phases.FirstPhaseImpl).Communicator = wrapper
-		phasemanager.SecondPhase.(*phases.SecondPhaseImpl).Communicator = wrapper
-		phasemanager.ThirdPhase.(*phases.ThirdPhaseImpl).Communicator = wrapper
-	}
-}
+// func (s *testSuite) SetCommunicationPolicyForNode(nodeID insolar.Reference, policy CommunicationPolicy) {
+//	nodes := s.fixture().bootstrapNodes
+//	timedOutNodesCount := 0
+//	switch policy {
+//	case PartialNegative1Phase, PartialNegative2Phase, PartialNegative3Phase, PartialNegative23Phase:
+//		timedOutNodesCount = int(float64(len(nodes)) * 0.6)
+//	case PartialPositive1Phase, PartialPositive2Phase, PartialPositive3Phase, PartialPositive23Phase:
+//		timedOutNodesCount = int(float64(len(nodes)) * 0.2)
+//	case SplitCase:
+//		timedOutNodesCount = int(float64(len(nodes)) * 0.5)
+//	}
+//
+//	s.fixture().pulsar.Pause()
+//	defer s.fixture().pulsar.Continue()
+//
+//	for i := 1; i <= timedOutNodesCount; i++ {
+//		comm := nodes[i].serviceNetwork.PhaseManager.(*phaseManagerWrapper).original.(*phases.Phases).FirstPhase.(*phases.FirstPhaseImpl).Communicator
+//		wrapper := &CommunicatorMock{communicator: comm, ignoreFrom: nodeID, policy: policy}
+//		phasemanager := nodes[i].serviceNetwork.PhaseManager.(*phaseManagerWrapper).original.(*phases.Phases)
+//		phasemanager.FirstPhase.(*phases.FirstPhaseImpl).Communicator = wrapper
+//		phasemanager.SecondPhase.(*phases.SecondPhaseImpl).Communicator = wrapper
+//		phasemanager.ThirdPhase.(*phases.ThirdPhaseImpl).Communicator = wrapper
+//	}
+// }
 
 func (s *testSuite) AssertActiveNodesCountDelta(delta int) {
-	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
-	s.Equal(s.getNodesCount()+delta, len(activeNodes))
+	activeNodes := s.fixture().bootstrapNodes[1].GetActiveNodes()
+	require.Equal(s.t, s.getNodesCount()+delta, len(activeNodes))
 }
 
 func (s *testSuite) AssertWorkingNodesCountDelta(delta int) {
-	workingNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetWorkingNodes()
-	s.Equal(s.getNodesCount()+delta, len(workingNodes))
+	workingNodes := s.fixture().bootstrapNodes[0].GetWorkingNodes()
+	require.Equal(s.t, s.getNodesCount()+delta, len(workingNodes))
 }

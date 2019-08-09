@@ -33,7 +33,10 @@ type Cascade struct {
 // RemoteProcedure is remote procedure call function.
 type RemoteProcedure func(ctx context.Context, args []byte) ([]byte, error)
 
-//go:generate minimock -i github.com/insolar/insolar/insolar.Network -o ../testutils -s _mock.go
+// NetworkOperableCallback is callback for notifying is network is operable or not
+type NetworkOperableCallback func(ctx context.Context, isNetworkOperable bool)
+
+//go:generate minimock -i github.com/insolar/insolar/insolar.Network -o ../testutils -s _mock.go -g
 
 // Network is interface for network modules facade.
 type Network interface {
@@ -48,10 +51,11 @@ type Network interface {
 	// GetState returns our current thoughs about whole network
 	GetState() NetworkState
 	// SetOperableFunc registers callback for notifying of network state
-	SetOperableFunc(f func(ctx context.Context, isNetworkOperable bool))
+	SetOperableFunc(NetworkOperableCallback)
+	GetCert(context.Context, *Reference) (Certificate, error)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/insolar.PulseDistributor -o ../testutils -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/insolar.PulseDistributor -o ../testutils -s _mock.go -g
 
 // PulseDistributor is interface for pulse distribution.
 type PulseDistributor interface {
@@ -66,12 +70,9 @@ type NetworkState int
 const (
 	// NoNetworkState state means that nodes doesn`t match majority_rule
 	NoNetworkState NetworkState = iota
-	// VoidNetworkState state means that nodes have not complete min_role_count rule for proper work
-	VoidNetworkState
-	// JetlessNetworkState state means that every Jet need proof completeness of stored data
-	JetlessNetworkState
-	// AuthorizationNetworkState state means that every node need to validate ActiveNodeList using NodeDomain
-	AuthorizationNetworkState
-	// CompleteNetworkState state means network is ok and ready for proper work
+	JoinerBootstrap
+	WaitConsensus
+	WaitMajority
+	WaitMinRoles
 	CompleteNetworkState
 )

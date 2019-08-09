@@ -82,6 +82,8 @@ type PacketHeaderModifier interface {
 type PacketBody interface {
 	ContextSerializerTo
 	ContextDeserializerFrom
+
+	String(ctx PacketContext) string
 }
 
 type FieldContext uint

@@ -68,7 +68,6 @@ func (s *Server) Serve() {
 	certManager := initCertificateManager(
 		ctx,
 		*cfg,
-		false,
 		bootstrapComponents.CryptographyService,
 		bootstrapComponents.KeyProcessor,
 	)
@@ -102,9 +101,6 @@ func (s *Server) Serve() {
 	ctx, inslog = inslogger.WithField(ctx, "role", certManager.GetCertificate().GetRole().String())
 	ctx = inslogger.SetLogger(ctx, inslog)
 	log.SetGlobalLogger(inslog)
-
-	err = cm.Init(ctx)
-	checkError(ctx, err, "failed to init components")
 
 	var gracefulStop = make(chan os.Signal, 1)
 	signal.Notify(gracefulStop, syscall.SIGTERM)

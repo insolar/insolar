@@ -1,4 +1,4 @@
-///
+//
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -46,7 +46,7 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-///
+//
 
 package transport
 
@@ -56,12 +56,33 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 )
 
-func NewJoinerAnnouncement(np profiles.StaticProfile, announcerID insolar.ShortNodeID,
-	joinerSignature cryptkit.SignatureHolder) *JoinerAnnouncement {
+func NewBriefJoinerAnnouncement(np profiles.StaticProfile, announcerID insolar.ShortNodeID) *JoinerAnnouncement {
+
 	return &JoinerAnnouncement{
 		privStaticProfile: np,
 		announcerID:       announcerID,
-		joinerSignature:   joinerSignature,
+		joinerSignature:   np.GetBriefIntroSignedDigest().GetSignatureHolder(),
+		disableFull:       true,
+	}
+}
+
+func NewBriefJoinerAnnouncementByFull(fp JoinerAnnouncementReader) JoinerAnnouncementReader {
+	return &fullIntroduction{fp.GetBriefIntroduction(), nil}
+}
+
+func NewFullJoinerAnnouncement(np profiles.StaticProfile, announcerID insolar.ShortNodeID) *JoinerAnnouncement {
+
+	if np.GetExtension() == nil {
+		panic("illegal value")
+	}
+	return NewAnyJoinerAnnouncement(np, announcerID)
+}
+
+func NewAnyJoinerAnnouncement(np profiles.StaticProfile, announcerID insolar.ShortNodeID) *JoinerAnnouncement {
+	return &JoinerAnnouncement{
+		privStaticProfile: np,
+		announcerID:       announcerID,
+		joinerSignature:   np.GetBriefIntroSignedDigest().GetSignatureHolder(),
 	}
 }
 
@@ -71,12 +92,24 @@ type privStaticProfile profiles.StaticProfile
 
 type JoinerAnnouncement struct {
 	privStaticProfile
+	disableFull     bool
 	announcerID     insolar.ShortNodeID
 	joinerSignature cryptkit.SignatureHolder
 }
 
-func (p *JoinerAnnouncement) GetJoinerSignature() cryptkit.SignatureHolder {
-	return p.joinerSignature
+func (p *JoinerAnnouncement) GetJoinerIntroducedByID() insolar.ShortNodeID {
+	return insolar.AbsentShortNodeID
+}
+
+func (p *JoinerAnnouncement) HasFullIntro() bool {
+	return !p.disableFull && p.privStaticProfile.GetExtension() != nil
+}
+
+func (p *JoinerAnnouncement) GetFullIntroduction() FullIntroductionReader {
+	if !p.HasFullIntro() {
+		return nil
+	}
+	return &fullIntroduction{p.privStaticProfile, p.privStaticProfile.GetExtension()}
 }
 
 func (p *JoinerAnnouncement) GetBriefIntroduction() BriefIntroductionReader {
@@ -85,4 +118,28 @@ func (p *JoinerAnnouncement) GetBriefIntroduction() BriefIntroductionReader {
 
 func (p *JoinerAnnouncement) GetAnnouncerID() insolar.ShortNodeID {
 	return p.announcerID
+}
+
+type fullIntroduction struct {
+	profiles.BriefCandidateProfile
+	profiles.StaticProfileExtension
+}
+
+func (p *fullIntroduction) GetJoinerIntroducedByID() insolar.ShortNodeID {
+	return insolar.AbsentShortNodeID
+}
+
+func (p *fullIntroduction) GetBriefIntroduction() BriefIntroductionReader {
+	return p
+}
+
+func (p *fullIntroduction) HasFullIntro() bool {
+	return p.StaticProfileExtension != nil
+}
+
+func (p *fullIntroduction) GetFullIntroduction() FullIntroductionReader {
+	if p.HasFullIntro() {
+		return p
+	}
+	return nil
 }

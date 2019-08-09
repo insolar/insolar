@@ -32,7 +32,7 @@ import (
 	"github.com/insolar/insolar/messagebus"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/logicrunner.RequestsExecutor -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/logicrunner.RequestsExecutor -o ./ -s _mock.go -g
 
 type RequestsExecutor interface {
 	ExecuteAndSave(ctx context.Context, current *Transcript) (insolar.Reply, error)
@@ -42,11 +42,10 @@ type RequestsExecutor interface {
 }
 
 type requestsExecutor struct {
-	MessageBus      insolar.MessageBus  `inject:""`
-	NodeNetwork     insolar.NodeNetwork `inject:""`
-	LogicExecutor   LogicExecutor       `inject:""`
-	ArtifactManager artifacts.Client    `inject:""`
-	PulseAccessor   pulse.Accessor      `inject:""`
+	MessageBus      insolar.MessageBus `inject:""`
+	LogicExecutor   LogicExecutor      `inject:""`
+	ArtifactManager artifacts.Client   `inject:""`
+	PulseAccessor   pulse.Accessor     `inject:""`
 }
 
 func NewRequestsExecutor() RequestsExecutor {
@@ -109,16 +108,13 @@ func (e *requestsExecutor) Save(
 ) {
 	inslogger.FromContext(ctx).Debug("Saving result")
 
-	if err := e.ArtifactManager.RegisterResult(ctx, transcript.RequestRef, res); err != nil {
+	err := e.ArtifactManager.RegisterResult(ctx, transcript.RequestRef, res)
+	if err != nil {
 		return nil, errors.Wrapf(err, "couldn't save result with %s side effect", res.Type().String())
 	}
 
-	switch res.Type() {
-	case artifacts.RequestSideEffectActivate:
-		return &reply.CallConstructor{Object: &transcript.RequestRef}, nil
-	default:
-		return &reply.CallMethod{Result: res.Result()}, nil
-	}
+	objRef := res.ObjectReference()
+	return &reply.CallMethod{Result: res.Result(), Object: &objRef}, nil
 }
 
 func (e *requestsExecutor) SendReply(

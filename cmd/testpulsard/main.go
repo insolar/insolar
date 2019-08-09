@@ -1,0 +1,146 @@
+/*
+ *    Copyright 2019 Insolar Technologies
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
+
+package main
+
+import (
+	"context"
+	"fmt"
+	"net/http"
+
+	"github.com/insolar/insolar/component"
+	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/cryptography"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/utils"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/keystore"
+	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/network/pulsenetwork"
+	"github.com/insolar/insolar/network/transport"
+	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/pulsar"
+	"github.com/insolar/insolar/pulsar/entropygenerator"
+	"github.com/insolar/insolar/version"
+	"github.com/spf13/cobra"
+	jww "github.com/spf13/jwalterweatherman"
+)
+
+type inputParams struct {
+	configPath string
+}
+
+func parseInputParams() inputParams {
+	var rootCmd = &cobra.Command{Use: "insolard"}
+	var result inputParams
+	rootCmd.Flags().StringVarP(&result.configPath, "config", "c", "", "path to config file")
+	err := rootCmd.Execute()
+	if err != nil {
+		fmt.Println("Wrong input params:", err.Error())
+	}
+
+	return result
+}
+
+func main() {
+	params := parseInputParams()
+
+	jww.SetStdoutThreshold(jww.LevelDebug)
+	cfgHolder := configuration.NewHolder()
+	var err error
+	if len(params.configPath) != 0 {
+		err = cfgHolder.LoadFromFile(params.configPath)
+	} else {
+		err = cfgHolder.Load()
+	}
+	if err != nil {
+		log.Warn("failed to load configuration from file: ", err.Error())
+	}
+
+	traceID := utils.RandTraceID()
+	ctx, inslog := initLogger(context.Background(), cfgHolder.Configuration.Log, traceID)
+	log.SetGlobalLogger(inslog)
+	testPulsar := initPulsar(ctx, cfgHolder.Configuration)
+
+	http.HandleFunc("/pulse", func(writer http.ResponseWriter, request *http.Request) {
+		err := testPulsar.SendPulse(ctx)
+		if err != nil {
+			_, err := fmt.Fprintf(writer, "Error - %v", err)
+			if err != nil {
+				panic(err)
+			}
+		}
+
+		_, err = fmt.Fprint(writer, "OK")
+		if err != nil {
+			panic(err)
+		}
+	})
+
+	fmt.Printf("Starting server for testing HTTP POST...\n")
+	if err := http.ListenAndServe(cfgHolder.Configuration.Pulsar.MainListenerAddress, nil); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func initPulsar(ctx context.Context, cfg configuration.Configuration) *pulsar.TestPulsar {
+	fmt.Println("Starts with configuration:\n", configuration.ToString(cfg))
+	fmt.Println("Version: ", version.GetFullVersion())
+
+	keyStore, err := keystore.NewKeyStore(cfg.KeysPath)
+	if err != nil {
+		inslogger.FromContext(ctx).Fatal(err)
+	}
+	cryptographyScheme := platformpolicy.NewPlatformCryptographyScheme()
+	cryptographyService := cryptography.NewCryptographyService()
+	keyProcessor := platformpolicy.NewKeyProcessor()
+
+	pulseDistributor, err := pulsenetwork.NewDistributor(cfg.Pulsar.PulseDistributor)
+	if err != nil {
+		inslogger.FromContext(ctx).Fatal(err)
+	}
+
+	cm := &component.Manager{}
+	cm.Register(cryptographyScheme, keyStore, keyProcessor, transport.NewFactory(cfg.Pulsar.DistributionTransport))
+	cm.Inject(cryptographyService, pulseDistributor)
+
+	if err = cm.Init(ctx); err != nil {
+		inslogger.FromContext(ctx).Fatal(err)
+	}
+
+	if err = cm.Start(ctx); err != nil {
+		inslogger.FromContext(ctx).Fatal(err)
+	}
+
+	return pulsar.NewTestPulsar(cfg.Pulsar, pulseDistributor, &entropygenerator.StandardEntropyGenerator{})
+}
+
+func initLogger(ctx context.Context, cfg configuration.Log, traceid string) (context.Context, insolar.Logger) {
+	inslog, err := log.NewLog(cfg)
+	if err != nil {
+		panic(err)
+	}
+
+	if newInslog, err := inslog.WithLevel(cfg.Level); err != nil {
+		inslog.Error(err.Error())
+	} else {
+		inslog = newInslog
+	}
+
+	ctx = inslogger.SetLogger(ctx, inslog)
+	ctx, inslog = inslogger.WithTraceField(ctx, traceid)
+	return ctx, inslog
+}

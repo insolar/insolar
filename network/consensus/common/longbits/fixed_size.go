@@ -53,13 +53,15 @@ package longbits
 import (
 	"bytes"
 	"io"
+
+	"github.com/insolar/insolar/network/consensus/common/args"
 )
 
 type Foldable interface {
 	FoldToUint64() uint64
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/common/longbits.FixedReader -o . -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/common/longbits.FixedReader -o . -s _mock.go -g
 
 type FixedReader interface {
 	io.WriterTo
@@ -70,7 +72,7 @@ type FixedReader interface {
 	FixedByteSize() int
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network/consensus/common/longbits.FoldableReader -o . -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/common/longbits.FoldableReader -o . -s _mock.go -g
 
 type FoldableReader interface {
 	FixedReader
@@ -83,7 +85,7 @@ func FoldUint64(v uint64) uint32 {
 
 // TODO ?NeedFix - current implementation can only work for limited cases
 func EqualFixedLenWriterTo(t, o FixedReader) bool {
-	if t == nil || o == nil {
+	if args.IsNil(t) || args.IsNil(o) {
 		return false
 	}
 	return (&writerToComparer{}).compare(t, o)
@@ -131,7 +133,8 @@ func (c *fixedSize) AsByteString() string {
 }
 
 func (c *fixedSize) WriteTo(w io.Writer) (n int64, err error) {
-	return io.Copy(w, c)
+	n32, err := w.Write(c.data)
+	return int64(n32), err
 }
 
 func (c *fixedSize) Read(p []byte) (n int, err error) {

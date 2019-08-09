@@ -23,6 +23,7 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
@@ -32,6 +33,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/instracer"
 	base58 "github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
 )
 
 const (
@@ -64,7 +66,7 @@ const (
 	TypeReply = "reply"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/insolar/bus.Sender -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/insolar/bus.Sender -o ./ -s _mock.go -g
 
 // Sender interface sends messages by watermill.
 type Sender interface {
@@ -81,8 +83,6 @@ type Sender interface {
 	SendTarget(ctx context.Context, msg *message.Message, target insolar.Reference) (<-chan *message.Message, func())
 	// Reply sends message in response to another message.
 	Reply(ctx context.Context, origin payload.Meta, reply *message.Message)
-	// Getter for latest pulse
-	LatestPulse(ctx context.Context) (insolar.Pulse, error)
 }
 
 type lockedReply struct {
@@ -106,9 +106,15 @@ type Bus struct {
 }
 
 // NewBus creates Bus instance with provided values.
-func NewBus(pub message.Publisher, pulses pulse.Accessor, jc jet.Coordinator, pcs insolar.PlatformCryptographyScheme) *Bus {
+func NewBus(
+	cfg configuration.Bus,
+	pub message.Publisher,
+	pulses pulse.Accessor,
+	jc jet.Coordinator,
+	pcs insolar.PlatformCryptographyScheme,
+) *Bus {
 	return &Bus{
-		timeout:     time.Second * 15,
+		timeout:     cfg.ReplyTimeout,
 		pub:         pub,
 		replies:     make(map[payload.MessageHash]*lockedReply),
 		pulses:      pulses,
@@ -145,6 +151,14 @@ func ReplyAsMessage(ctx context.Context, rep insolar.Reply) *message.Message {
 func (b *Bus) SendRole(
 	ctx context.Context, msg *message.Message, role insolar.DynamicRole, object insolar.Reference,
 ) (<-chan *message.Message, func()) {
+	ctx, span := instracer.StartSpan(ctx, "Bus.SendRole")
+	span.AddAttributes(
+		trace.StringAttribute("type", "bus"),
+		trace.StringAttribute("role", role.String()),
+		trace.StringAttribute("object", object.String()),
+	)
+	defer span.End()
+
 	handleError := func(err error) (<-chan *message.Message, func()) {
 		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to send message"))
 		res := make(chan *message.Message)
@@ -153,10 +167,12 @@ func (b *Bus) SendRole(
 	}
 	latestPulse, err := b.pulses.Latest(ctx)
 	if err != nil {
+		instracer.AddError(span, err)
 		return handleError(errors.Wrap(err, "failed to fetch pulse"))
 	}
 	nodes, err := b.coordinator.QueryRole(ctx, role, *object.Record(), latestPulse.PulseNumber)
 	if err != nil {
+		instracer.AddError(span, err)
 		return handleError(errors.Wrap(err, "failed to calculate role"))
 	}
 
@@ -169,13 +185,28 @@ func (b *Bus) SendRole(
 func (b *Bus) SendTarget(
 	ctx context.Context, msg *message.Message, target insolar.Reference,
 ) (<-chan *message.Message, func()) {
+	ctx, span := instracer.StartSpan(ctx, "Bus.SendTarget")
+	span.AddAttributes(
+		trace.StringAttribute("type", "bus"),
+		trace.StringAttribute("target", target.String()),
+	)
+	defer span.End()
+
 	handleError := func(err error) (<-chan *message.Message, func()) {
 		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to send message"))
 		res := make(chan *message.Message)
 		close(res)
 		return res, func() {}
 	}
+	ctx, _ = inslogger.WithField(ctx, "sending_type", msg.Metadata.Get(MetaType))
+	payloadType, err := payload.UnmarshalType(msg.Payload)
+	if err == nil {
+		ctx, _ = inslogger.WithField(ctx, "sending_type", payloadType.String())
+	}
 	logger := inslogger.FromContext(ctx)
+	span.AddAttributes(
+		trace.StringAttribute("sending_type", msg.Metadata.Get(MetaType)),
+	)
 
 	msg.Metadata.Set(MetaTraceID, inslogger.TraceID(ctx))
 
@@ -183,17 +214,20 @@ func (b *Bus) SendTarget(
 	if err == nil {
 		msg.Metadata.Set(MetaSpanData, string(sp))
 	} else {
+		instracer.AddError(span, err)
 		logger.Error(err)
 	}
 
 	msg.SetContext(ctx)
 	wrapped, msg, err := b.wrapMeta(ctx, msg, target, payload.MessageHash{})
 	if err != nil {
+		instracer.AddError(span, err)
 		return handleError(errors.Wrap(err, "can't wrap meta message"))
 	}
 	msgHash := payload.MessageHash{}
 	err = msgHash.Unmarshal(wrapped.ID)
 	if err != nil {
+		instracer.AddError(span, err)
 		return handleError(errors.Wrap(err, "failed to unmarshal hash"))
 	}
 
@@ -214,6 +248,7 @@ func (b *Bus) SendTarget(
 	err = b.pub.Publish(TopicOutgoing, msg)
 	if err != nil {
 		done()
+		instracer.AddError(span, err)
 		return handleError(errors.Wrapf(err, "can't publish message to %s topic", TopicOutgoing))
 	}
 
@@ -241,15 +276,24 @@ func (b *Bus) SendTarget(
 func (b *Bus) Reply(ctx context.Context, origin payload.Meta, reply *message.Message) {
 	logger := inslogger.FromContext(ctx)
 
+	ctx, span := instracer.StartSpan(ctx, "Bus.Reply")
+	span.AddAttributes(
+		trace.StringAttribute("type", "bus"),
+		trace.StringAttribute("sender", origin.Sender.String()),
+	)
+	defer span.End()
+
 	originHash := payload.MessageHash{}
 	err := originHash.Unmarshal(origin.ID)
 	if err != nil {
+		instracer.AddError(span, err)
 		logger.Error(errors.Wrap(err, "failed to unmarshal hash"))
 		return
 	}
 
 	wrapped, reply, err := b.wrapMeta(ctx, reply, origin.Sender, originHash)
 	if err != nil {
+		instracer.AddError(span, err)
 		logger.Error("can't wrap meta message ", err.Error())
 		return
 	}
@@ -262,6 +306,7 @@ func (b *Bus) Reply(ctx context.Context, origin payload.Meta, reply *message.Mes
 	if err == nil {
 		reply.Metadata.Set(MetaSpanData, string(sp))
 	} else {
+		instracer.AddError(span, err)
 		logger.Error(err)
 	}
 
@@ -270,6 +315,7 @@ func (b *Bus) Reply(ctx context.Context, origin payload.Meta, reply *message.Mes
 	logger.Debugf("sending reply %s", base58.Encode(replyHash))
 	err = b.pub.Publish(TopicOutgoing, reply)
 	if err != nil {
+		instracer.AddError(span, err)
 		logger.Errorf("can't publish message to %s topic: %s", TopicOutgoing, err.Error())
 	}
 }
@@ -277,11 +323,24 @@ func (b *Bus) Reply(ctx context.Context, origin payload.Meta, reply *message.Mes
 // IncomingMessageRouter is watermill middleware for incoming messages - it decides, how to handle it: as request or as reply.
 func (b *Bus) IncomingMessageRouter(handle message.HandlerFunc) message.HandlerFunc {
 	return func(msg *message.Message) ([]*message.Message, error) {
-		_, logger := inslogger.WithTraceField(context.Background(), msg.Metadata.Get(MetaTraceID))
+		ctx, logger := inslogger.WithTraceField(context.Background(), msg.Metadata.Get(MetaTraceID))
+
+		parentSpan, err := instracer.Deserialize([]byte(msg.Metadata.Get(MetaSpanData)))
+		if err == nil {
+			ctx = instracer.WithParentSpan(ctx, parentSpan)
+		} else {
+			inslogger.FromContext(ctx).Error(err)
+		}
+
+		ctx, span := instracer.StartSpan(ctx, "Bus.IncomingMessageRouter starts")
+		span.AddAttributes(
+			trace.StringAttribute("type", "bus"),
+		)
 
 		meta := payload.Meta{}
-		err := meta.Unmarshal(msg.Payload)
+		err = meta.Unmarshal(msg.Payload)
 		if err != nil {
+			instracer.AddError(span, err)
 			logger.Error(errors.Wrap(err, "failed to receive message"))
 			return nil, nil
 		}
@@ -316,6 +375,14 @@ func (b *Bus) IncomingMessageRouter(handle message.HandlerFunc) message.HandlerF
 		logger.Debug("reply received")
 		reply.wg.Add(1)
 		b.repliesMutex.RUnlock()
+
+		span.End()
+
+		_, span = instracer.StartSpan(ctx, "Bus.IncomingMessageRouter waiting")
+		span.AddAttributes(
+			trace.StringAttribute("type", "bus"),
+		)
+		defer span.End()
 
 		select {
 		case reply.messages <- msg:
@@ -361,8 +428,4 @@ func (b *Bus) wrapMeta(
 	msg.Payload = buf
 
 	return meta, msg, nil
-}
-
-func (b *Bus) LatestPulse(ctx context.Context) (insolar.Pulse, error) {
-	return b.pulses.Latest(ctx)
 }

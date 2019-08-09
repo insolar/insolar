@@ -110,8 +110,8 @@ publisherSwagger = `{
       "type": "object",
       "properties": {
         "Filters": {
-          "type": "object",
-          "additionalProperties": {
+          "type": "array",
+          "items": {
             "$ref": "#/definitions/introprotoMessageFilterWithStat"
           }
         }
@@ -150,6 +150,9 @@ publisherSwagger = `{
     "introprotoMessageFilterWithStat": {
       "type": "object",
       "properties": {
+        "Name": {
+          "type": "string"
+        },
         "Enable": {
           "type": "boolean",
           "format": "boolean"

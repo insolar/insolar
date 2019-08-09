@@ -17,12 +17,10 @@
 package pulsar
 
 import (
-	"bytes"
 	"sort"
 	"strconv"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/ugorji/go/codec"
 )
 
 // Payload is a base struct for pulsar's rpc-message
@@ -106,11 +104,7 @@ func (vp *VectorPayload) Hash(hashProvider insolar.Hasher) ([]byte, error) {
 	}
 	sort.Strings(sortedKeys)
 
-	cborH := &codec.CborHandle{}
 	for _, key := range sortedKeys {
-		var b bytes.Buffer
-		enc := codec.NewEncoder(&b, cborH)
-
 		threadUnsafeCell := vp.Vector[key]
 		threadSaveCell := &BftCell{
 			Sign:              threadUnsafeCell.GetSign(),
@@ -118,11 +112,11 @@ func (vp *VectorPayload) Hash(hashProvider insolar.Hasher) ([]byte, error) {
 			IsEntropyReceived: threadUnsafeCell.GetIsEntropyReceived(),
 		}
 
-		err := enc.Encode(threadSaveCell)
+		buf, err := insolar.Serialize(threadSaveCell)
 		if err != nil {
 			return nil, err
 		}
-		_, err = hashProvider.Write(b.Bytes())
+		_, err = hashProvider.Write(buf)
 		if err != nil {
 			return nil, err
 		}
@@ -149,16 +143,13 @@ func (pp *PulsePayload) Hash(hashProvider insolar.Hasher) ([]byte, error) {
 	}
 	sort.Strings(sortedKeys)
 
-	var b bytes.Buffer
-	cborH := &codec.CborHandle{}
 	for _, key := range sortedKeys {
 
-		enc := codec.NewEncoder(&b, cborH)
-		err := enc.Encode(pp.Pulse.Signs[key])
+		buf, err := insolar.Serialize(pp.Pulse.Signs[key])
 		if err != nil {
 			return nil, err
 		}
-		_, err = hashProvider.Write(b.Bytes())
+		_, err = hashProvider.Write(buf)
 		if err != nil {
 			return nil, err
 		}

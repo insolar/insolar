@@ -18,33 +18,24 @@ package artifacts
 
 import (
 	"context"
-	"io/ioutil"
 	"math/rand"
-	"os"
 	"testing"
 
 	wmMessage "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/gojuno/minimock"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
-	"github.com/insolar/insolar/insolar/delegationtoken"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/jet"
-	"github.com/insolar/insolar/insolar/node"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/internal/ledger/store"
-	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/insolar/insolar/testutils"
 )
 
 func TestClientImplements(t *testing.T) {
@@ -58,17 +49,6 @@ type amSuite struct {
 	ctx context.Context
 
 	scheme insolar.PlatformCryptographyScheme
-
-	nodeStorage  node.Accessor
-	jetStorage   jet.Storage
-	dropModifier drop.Modifier
-	dropAccessor drop.Accessor
-
-	tmpDir1 string
-	tmpDir2 string
-
-	badgerDB1 *store.BadgerDB
-	badgerDB2 *store.BadgerDB
 }
 
 func NewAmSuite() *amSuite {
@@ -87,45 +67,8 @@ func (s *amSuite) BeforeTest(suiteName, testName string) {
 	s.ctx = inslogger.TestContext(s.T())
 
 	s.scheme = platformpolicy.NewPlatformCryptographyScheme()
-	s.jetStorage = jet.NewStore()
-	s.nodeStorage = node.NewStorage()
 
-	var err error
-	s.tmpDir1, err = ioutil.TempDir("", "bdb-test-")
-	if err != nil {
-		s.T().Error("Can't create TempDir", err)
-	}
-
-	s.badgerDB1, err = store.NewBadgerDB(s.tmpDir1)
-	if err != nil {
-		s.T().Error("Can't NewBadgerDB", err)
-	}
-
-	dropStorage := drop.NewDB(s.badgerDB1)
-	s.dropAccessor = dropStorage
-	s.dropModifier = dropStorage
-
-	s.tmpDir2, err = ioutil.TempDir("", "bdb-test-")
-	if err != nil {
-		s.T().Error("Can't create TempDir", err)
-	}
-
-	s.badgerDB2, err = store.NewBadgerDB(s.tmpDir2)
-	if err != nil {
-		s.T().Error("Can't create NewBadgerDB", err)
-	}
-
-	s.cm.Inject(
-		s.scheme,
-		s.badgerDB2,
-		s.jetStorage,
-		s.nodeStorage,
-		pulse.NewStorageMem(),
-		s.dropAccessor,
-		s.dropModifier,
-	)
-
-	err = s.cm.Init(s.ctx)
+	err := s.cm.Init(s.ctx)
 	if err != nil {
 		s.T().Error("ComponentManager init failed", err)
 	}
@@ -140,12 +83,6 @@ func (s *amSuite) AfterTest(suiteName, testName string) {
 	if err != nil {
 		s.T().Error("ComponentManager stop failed", err)
 	}
-
-	os.RemoveAll(s.tmpDir1)
-	os.RemoveAll(s.tmpDir2)
-	s.badgerDB1.Stop(s.ctx)
-	// We don't call it explicitly since it's called by component manager
-	// s.badgerDB2.Stop(s.ctx)
 }
 
 func genRandomID(pulse insolar.PulseNumber) *insolar.ID {
@@ -165,38 +102,6 @@ func genRandomRef(pulse insolar.PulseNumber) *insolar.Reference {
 	return genRefWithID(genRandomID(pulse))
 }
 
-func (s *amSuite) TestLedgerArtifactManager_GetChildren_FollowsRedirect() {
-	mc := minimock.NewController(s.T())
-	am := NewClient(nil)
-	mb := testutils.NewMessageBusMock(mc)
-
-	objRef := genRandomRef(0)
-	nodeRef := genRandomRef(0)
-	mb.SendFunc = func(c context.Context, m insolar.Message, o *insolar.MessageSendOptions) (r insolar.Reply, r1 error) {
-		o = o.Safe()
-		if o.Receiver == nil {
-			return &reply.GetChildrenRedirectReply{
-				Receiver: nodeRef,
-				Token:    &delegationtoken.GetChildrenRedirectToken{Signature: []byte{1, 2, 3}},
-			}, nil
-		}
-
-		token, ok := o.Token.(*delegationtoken.GetChildrenRedirectToken)
-		assert.True(s.T(), ok)
-		assert.Equal(s.T(), []byte{1, 2, 3}, token.Signature)
-		assert.Equal(s.T(), nodeRef, o.Receiver)
-		return &reply.Children{}, nil
-	}
-	am.DefaultBus = mb
-
-	pa := pulse.NewAccessorMock(s.T())
-	pa.LatestMock.Return(*insolar.GenesisPulse, nil)
-	am.PulseAccessor = pa
-
-	_, err := am.GetChildren(s.ctx, *objRef, nil)
-	require.NoError(s.T(), err)
-}
-
 func (s *amSuite) TestLedgerArtifactManager_GetIncomingRequest_Success() {
 	// Arrange
 	mc := minimock.NewController(s.T())
@@ -204,10 +109,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetIncomingRequest_Success() {
 	objectRef := gen.Reference()
 	requestRef := gen.Reference()
 
-	node := testutils.RandomRef()
-
 	jc := jet.NewCoordinatorMock(mc)
-	jc.NodeForObjectMock.Return(&node, nil)
 
 	pulseAccessor := pulse.NewAccessorMock(s.T())
 	pulseAccessor.LatestMock.Return(*insolar.GenesisPulse, nil)
@@ -218,19 +120,21 @@ func (s *amSuite) TestLedgerArtifactManager_GetIncomingRequest_Success() {
 
 	finalResponse := &payload.Request{
 		RequestID: *requestRef.Record(),
-		Request:   record.Wrap(req),
+		Request:   record.Wrap(&req),
 	}
 	reqMsg, err := payload.NewMessage(finalResponse)
 	require.NoError(s.T(), err)
 
 	sender := bus.NewSenderMock(s.T())
-	sender.SendTargetFunc = func(_ context.Context, msg *wmMessage.Message, n insolar.Reference) (r <-chan *wmMessage.Message, r1 func()) {
+	sender.SendRoleMock.Set(func(_ context.Context, msg *wmMessage.Message, role insolar.DynamicRole, n insolar.Reference) (r <-chan *wmMessage.Message, r1 func()) {
+		require.Equal(s.T(), insolar.DynamicRoleLightExecutor, role)
+
 		getReq := payload.GetRequest{}
 		err := getReq.Unmarshal(msg.Payload)
 		require.NoError(s.T(), err)
 
 		require.Equal(s.T(), *requestRef.Record(), getReq.RequestID)
-		require.Equal(s.T(), node, n)
+		require.Equal(s.T(), objectRef, n)
 
 		meta := payload.Meta{Payload: reqMsg.Payload}
 		buf, err := meta.Marshal()
@@ -239,7 +143,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetIncomingRequest_Success() {
 		ch := make(chan *wmMessage.Message, 1)
 		ch <- reqMsg
 		return ch, func() {}
-	}
+	})
 
 	am := NewClient(nil)
 	am.JetCoordinator = jc
@@ -247,11 +151,11 @@ func (s *amSuite) TestLedgerArtifactManager_GetIncomingRequest_Success() {
 	am.sender = sender
 
 	// Act
-	res, err := am.GetIncomingRequest(inslogger.TestContext(s.T()), objectRef, requestRef)
+	request, err := am.GetAbandonedRequest(inslogger.TestContext(s.T()), objectRef, requestRef)
 
 	// Assert
 	require.NoError(s.T(), err)
-	require.Equal(s.T(), "test", res.Method)
+	require.Equal(s.T(), "test", request.(*record.IncomingRequest).Method)
 }
 
 func (s *amSuite) TestLedgerArtifactManager_GetPendings_Success() {
@@ -273,7 +177,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetPendings_Success() {
 	require.NoError(s.T(), err)
 
 	sender := bus.NewSenderMock(s.T())
-	sender.SendRoleFunc = func(p context.Context, msg *wmMessage.Message, role insolar.DynamicRole, ref insolar.Reference) (r <-chan *wmMessage.Message, r1 func()) {
+	sender.SendRoleMock.Set(func(p context.Context, msg *wmMessage.Message, role insolar.DynamicRole, ref insolar.Reference) (r <-chan *wmMessage.Message, r1 func()) {
 		getPendings := payload.GetPendings{}
 		err := getPendings.Unmarshal(msg.Payload)
 		require.NoError(s.T(), err)
@@ -287,7 +191,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetPendings_Success() {
 		ch := make(chan *wmMessage.Message, 1)
 		ch <- resMsg
 		return ch, func() {}
-	}
+	})
 
 	am := NewClient(nil)
 	am.JetCoordinator = jc
@@ -300,4 +204,43 @@ func (s *amSuite) TestLedgerArtifactManager_GetPendings_Success() {
 	// Assert
 	require.NoError(s.T(), err)
 	require.Equal(s.T(), []insolar.Reference{requestRef}, res)
+}
+
+func (s *amSuite) TestLedgerArtifactManager_HasPendings_Success() {
+	// Arrange
+	mc := minimock.NewController(s.T())
+	defer mc.Finish()
+	objectRef := gen.Reference()
+
+	resultHas := &payload.PendingsInfo{
+		HasPendings: true,
+	}
+	resMsg, err := payload.NewMessage(resultHas)
+	require.NoError(s.T(), err)
+
+	sender := bus.NewSenderMock(s.T())
+	sender.SendRoleMock.Set(func(p context.Context, msg *wmMessage.Message, role insolar.DynamicRole, ref insolar.Reference) (r <-chan *wmMessage.Message, r1 func()) {
+		hasPendings := payload.HasPendings{}
+		err := hasPendings.Unmarshal(msg.Payload)
+		require.NoError(s.T(), err)
+
+		require.Equal(s.T(), *objectRef.Record(), hasPendings.ObjectID)
+
+		meta := payload.Meta{Payload: resMsg.Payload}
+		buf, err := meta.Marshal()
+		require.NoError(s.T(), err)
+		resMsg.Payload = buf
+		ch := make(chan *wmMessage.Message, 1)
+		ch <- resMsg
+		return ch, func() {}
+	})
+
+	am := NewClient(sender)
+
+	// Act
+	res, err := am.HasPendings(inslogger.TestContext(s.T()), objectRef)
+
+	// Assert
+	require.NoError(s.T(), err)
+	require.Equal(s.T(), true, res)
 }

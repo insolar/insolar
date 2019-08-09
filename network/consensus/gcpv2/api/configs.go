@@ -80,6 +80,9 @@ type RoundTimings struct {
 	// Phase3 can start sooner if there is enough number of nodes covered by Phase2
 	EndOfPhase2 time.Duration
 
-	// Time to finish receiving Phase3 packets from other nodes and stop Consensus
+	// Time to finish receiving Phase3 packets from other nodes
 	EndOfPhase3 time.Duration
+
+	// Hard stop for all consensus operations
+	EndOfConsensus time.Duration
 }

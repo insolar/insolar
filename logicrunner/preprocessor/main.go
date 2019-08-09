@@ -44,13 +44,13 @@ import (
 	"github.com/pkg/errors"
 )
 
-var foundationPath = "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+var foundationPath = "github.com/insolar/insolar/logicrunner/builtin/foundation"
 var proxyctxPath = "github.com/insolar/insolar/logicrunner/common"
 var corePath = "github.com/insolar/insolar/insolar"
 
 var immutableFlag = "//ins:immutable"
 
-var sagaFlagStart = "//ins:saga("
+var sagaFlagStart = "ins:saga("
 var sagaFlagEnd = ")"
 var sagaFlagStartLength = len(sagaFlagStart)
 
@@ -297,6 +297,13 @@ func (pf *ParsedFile) WriteWrapper(out io.Writer, packageName string) error {
 		return err
 	}
 
+	functionsInfo := pf.functionInfoForWrapper(pf.constructors[pf.contract])
+	for _, fi := range functionsInfo {
+		if fi["SagaInfo"].(*SagaInfo).IsSaga {
+			return fmt.Errorf("semantic error: '%s' can't be a saga because it's a constructor", fi["Name"].(string))
+		}
+	}
+
 	methodsInfo := pf.functionInfoForWrapper(pf.methods[pf.contract])
 	err := pf.checkSagaRollbackMethodsExistAndMatch(methodsInfo)
 	if err != nil {
@@ -307,7 +314,7 @@ func (pf *ParsedFile) WriteWrapper(out io.Writer, packageName string) error {
 		"Package":            packageName,
 		"ContractType":       pf.contract,
 		"Methods":            methodsInfo,
-		"Functions":          pf.functionInfoForWrapper(pf.constructors[pf.contract]),
+		"Functions":          functionsInfo,
 		"ParsedCode":         pf.code,
 		"FoundationPath":     foundationPath,
 		"Imports":            pf.generateImports(true),
@@ -340,6 +347,15 @@ func (pf *ParsedFile) checkSagaRollbackMethodsExistAndMatch(funcInfo []map[strin
 				"Semantic error: '%v' is a saga with %v arguments. "+
 					"Currently only one argument is allowed.",
 				info["Name"].(string), sagaInfo.NumArguments)
+		}
+
+		// INS_FLAG_NO_ROLLBACK_METHOD allows to make saga calls between different
+		// contract types despite of missing corresponding syntax support. Obviously
+		// if validation fail there will be no rollback method to call. Please use
+		// this flag with extra care!
+		if sagaInfo.RollbackMethodName == "INS_FLAG_NO_ROLLBACK_METHOD" {
+			// skip following semantic checks
+			continue
 		}
 
 		rollbackInfo, exists := methodNames[sagaInfo.RollbackMethodName]
@@ -413,6 +429,11 @@ func (pf *ParsedFile) WriteProxy(classReference string, out io.Writer) error {
 	}
 
 	constructorProxies := pf.functionInfoForProxy(pf.constructors[pf.contract])
+	for _, fi := range constructorProxies {
+		if fi["SagaInfo"].(*SagaInfo).IsSaga {
+			return fmt.Errorf("semantic error: '%s' can't be a saga because it's a constructor", fi["Name"].(string))
+		}
+	}
 
 	sagaRollbackMethods := make(map[string]struct{})
 	for _, methodInfo := range allMethodsProxies {
@@ -428,7 +449,7 @@ func (pf *ParsedFile) WriteProxy(classReference string, out io.Writer) error {
 		currentMethodName := methodInfo["Name"].(string)
 		_, isRollback := sagaRollbackMethods[currentMethodName]
 		if isRollback {
-			break
+			continue
 		}
 		filteredMethodsProxies = append(filteredMethodsProxies, methodInfo)
 	}
@@ -764,9 +785,24 @@ func isImmutable(decl *ast.FuncDecl) bool {
 
 func extractSagaInfoFromComment(comment string, info *SagaInfo) bool {
 	slice := strings.Trim(comment, " \r\n\t")
+	sliceLen := len(slice)
+
+	// skip '//'
+	if !strings.HasPrefix(slice, "//") {
+		return false
+	}
+	slice = slice[2:sliceLen]
+	sliceLen -= 2
+
+	// skip all whitespaces after '//'
+	for sliceLen > 0 && (slice[0] == ' ' || slice[0] == '\t') {
+		slice = slice[1:sliceLen]
+		sliceLen--
+	}
+
 	if strings.HasPrefix(slice, sagaFlagStart) &&
 		strings.HasSuffix(slice, sagaFlagEnd) {
-		rollbackName := slice[sagaFlagStartLength : len(slice)-1]
+		rollbackName := slice[sagaFlagStartLength : sliceLen-len(sagaFlagEnd)]
 		rollbackNameLen := len(rollbackName)
 		if rollbackNameLen > 0 {
 			sliceCopy := make([]byte, rollbackNameLen)

@@ -17,9 +17,11 @@
 package logicrunner
 
 import (
+	"context"
 	"sync"
 
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/pulse"
@@ -30,23 +32,20 @@ import (
 type ObjectState struct {
 	sync.Mutex
 
-	ExecutionBroker *ExecutionBroker
-	Validation      *ExecutionState
+	ExecutionBroker  ExecutionBrokerI
+	ExecutionArchive ExecutionArchive
 }
 
-//go:generate minimock -i github.com/insolar/insolar/logicrunner.StateStorage -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/logicrunner.StateStorage -o ./ -s _mock.go -g
 type StateStorage interface {
 	sync.Locker
 
-	UpsertExecutionState(ref insolar.Reference) *ExecutionBroker
-	GetExecutionState(ref insolar.Reference) *ExecutionBroker
+	UpsertExecutionState(ref insolar.Reference) ExecutionBrokerI
+	GetExecutionState(ref insolar.Reference) ExecutionBrokerI
+	GetExecutionArchive(ref insolar.Reference) ExecutionArchive
 
-	UpsertValidationState(ref insolar.Reference) *ExecutionState
-	GetValidationState(ref insolar.Reference) *ExecutionState
-
-	DeleteObjectState(ref insolar.Reference)
-
-	StateMap() *map[insolar.Reference]*ObjectState
+	IsEmpty() bool
+	OnPulse(ctx context.Context, pulse insolar.Pulse) []insolar.Message
 }
 
 type stateStorage struct {
@@ -58,30 +57,9 @@ type stateStorage struct {
 	jetCoordinator   jet.Coordinator
 	pulseAccessor    pulse.Accessor
 	artifactsManager artifacts.Client
+	outgoingSender   OutgoingRequestSender
 
 	state map[insolar.Reference]*ObjectState // if object exists, we are validating or executing it right now
-}
-
-func (ss *stateStorage) UpsertValidationState(ref insolar.Reference) *ExecutionState {
-	os := ss.upsertObjectState(ref)
-
-	os.Lock()
-	defer os.Unlock()
-
-	os.Validation = &ExecutionState{}
-	return os.Validation
-}
-
-func (ss *stateStorage) GetValidationState(ref insolar.Reference) *ExecutionState {
-	os := ss.getObjectState(ref)
-	if os == nil {
-		return nil
-	}
-
-	os.Lock()
-	defer os.Unlock()
-
-	return os.Validation
 }
 
 func NewStateStorage(
@@ -91,6 +69,7 @@ func NewStateStorage(
 	jetCoordinator jet.Coordinator,
 	pulseAccessor pulse.Accessor,
 	artifactsManager artifacts.Client,
+	outgoingSender OutgoingRequestSender,
 
 ) StateStorage {
 	ss := &stateStorage{
@@ -102,16 +81,20 @@ func NewStateStorage(
 		jetCoordinator:   jetCoordinator,
 		pulseAccessor:    pulseAccessor,
 		artifactsManager: artifactsManager,
+		outgoingSender:   outgoingSender,
 	}
 	return ss
 }
 
-func (ss *stateStorage) UpsertExecutionState(ref insolar.Reference) *ExecutionBroker {
+func (ss *stateStorage) UpsertExecutionState(ref insolar.Reference) ExecutionBrokerI {
 	os := ss.upsertObjectState(ref)
 
 	os.Lock()
 	defer os.Unlock()
 
+	if os.ExecutionArchive == nil {
+		os.ExecutionArchive = NewExecutionArchive(ref, ss.jetCoordinator)
+	}
 	if os.ExecutionBroker == nil {
 		os.ExecutionBroker = NewExecutionBroker(
 			ref,
@@ -121,12 +104,14 @@ func (ss *stateStorage) UpsertExecutionState(ref insolar.Reference) *ExecutionBr
 			ss.jetCoordinator,
 			ss.pulseAccessor,
 			ss.artifactsManager,
+			os.ExecutionArchive,
+			ss.outgoingSender,
 		)
 	}
 	return os.ExecutionBroker
 }
 
-func (ss *stateStorage) GetExecutionState(ref insolar.Reference) *ExecutionBroker {
+func (ss *stateStorage) GetExecutionState(ref insolar.Reference) ExecutionBrokerI {
 	os := ss.getObjectState(ref)
 	if os == nil {
 		return nil
@@ -136,6 +121,18 @@ func (ss *stateStorage) GetExecutionState(ref insolar.Reference) *ExecutionBroke
 	defer os.Unlock()
 
 	return os.ExecutionBroker
+}
+
+func (ss *stateStorage) GetExecutionArchive(ref insolar.Reference) ExecutionArchive {
+	os := ss.getObjectState(ref)
+	if os == nil {
+		return nil
+	}
+
+	os.Lock()
+	defer os.Unlock()
+
+	return os.ExecutionArchive
 }
 
 func (ss *stateStorage) getObjectState(ref insolar.Reference) *ObjectState {
@@ -164,10 +161,45 @@ func (ss *stateStorage) upsertObjectState(ref insolar.Reference) *ObjectState {
 	return ss.state[ref]
 }
 
-func (ss *stateStorage) DeleteObjectState(ref insolar.Reference) {
-	delete(ss.state, ref)
+func (ss *stateStorage) IsEmpty() bool {
+	return len(ss.state) == 0
 }
 
-func (ss *stateStorage) StateMap() *map[insolar.Reference]*ObjectState {
-	return &ss.state
+func (ss *stateStorage) OnPulse(ctx context.Context, pulse insolar.Pulse) []insolar.Message {
+	ss.Lock()
+	defer ss.Unlock()
+
+	onPulseMessages := make([]insolar.Message, 0)
+
+	oldState := ss.state
+	ss.state = make(map[insolar.Reference]*ObjectState)
+	for objectRef, objectState := range oldState {
+		objectState.Lock()
+
+		meNext, _ := ss.jetCoordinator.IsMeAuthorizedNow(ctx, insolar.DynamicRoleVirtualExecutor, *objectRef.Record())
+
+		if broker := objectState.ExecutionBroker; broker != nil {
+			onPulseMessages = append(onPulseMessages, broker.OnPulse(ctx, meNext)...)
+		}
+
+		if archive := objectState.ExecutionArchive; archive != nil {
+			onPulseMessages = append(onPulseMessages, archive.OnPulse(ctx)...)
+		}
+
+		if meNext && objectState.ExecutionArchive != nil {
+			ss.state[objectRef] = &ObjectState{
+				ExecutionArchive: objectState.ExecutionArchive,
+				ExecutionBroker:  objectState.ExecutionBroker,
+			}
+		} else if objectState.ExecutionArchive != nil && !objectState.ExecutionArchive.IsEmpty() {
+			// import previous ExecutionArchive if it's not empty
+			ss.state[objectRef] = &ObjectState{
+				ExecutionArchive: objectState.ExecutionArchive,
+			}
+		}
+
+		objectState.Unlock()
+	}
+
+	return onPulseMessages
 }

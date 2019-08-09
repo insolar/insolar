@@ -33,30 +33,30 @@ import (
 
 func mockContractRequesterWithError(t *testing.T) *testutils.ContractRequesterMock {
 	contractRequesterMock := testutils.NewContractRequesterMock(t)
-	contractRequesterMock.SendRequestFunc = func(p context.Context, p1 *insolar.Reference, p2 string, p3 []interface{}) (r insolar.Reply, r1 error) {
+	contractRequesterMock.SendRequestMock.Set(func(p context.Context, p1 *insolar.Reference, p2 string, p3 []interface{}) (r insolar.Reply, r1 error) {
 		return nil, errors.New("test reasons")
-	}
+	})
 	return contractRequesterMock
 }
 
 func mockContractRequester(t *testing.T, res insolar.Reply) *testutils.ContractRequesterMock {
 	contractRequesterMock := testutils.NewContractRequesterMock(t)
-	contractRequesterMock.SendRequestFunc = func(p context.Context, p1 *insolar.Reference, p2 string, p3 []interface{}) (r insolar.Reply, r1 error) {
+	contractRequesterMock.SendRequestMock.Set(func(p context.Context, p1 *insolar.Reference, p2 string, p3 []interface{}) (r insolar.Reply, r1 error) {
 		return res, nil
-	}
+	})
 	return contractRequesterMock
 }
 
 func mockCertificateManager(t *testing.T, rootDomainRef *insolar.Reference) *testutils.CertificateManagerMock {
 	certificateMock := testutils.NewCertificateMock(t)
-	certificateMock.GetRootDomainReferenceFunc = func() (r *insolar.Reference) {
+	certificateMock.GetRootDomainReferenceMock.Set(func() (r *insolar.Reference) {
 		return rootDomainRef
-	}
+	})
 
 	certificateManagerMock := testutils.NewCertificateManagerMock(t)
-	certificateManagerMock.GetCertificateFunc = func() (r insolar.Certificate) {
+	certificateManagerMock.GetCertificateMock.Set(func() (r insolar.Certificate) {
 		return certificateMock
-	}
+	})
 	return certificateManagerMock
 }
 

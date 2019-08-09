@@ -46,20 +46,22 @@ type ContractConstructorHolder struct {
 
 // AsChild saves object as child
 func (r *ContractConstructorHolder) AsChild(objRef insolar.Reference) (*{{ .ContractType }}, error) {
-	ref, err := common.CurrentProxyCtx.SaveAsChild(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
+	ref, ret, err := common.CurrentProxyCtx.SaveAsChild(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
 	if err != nil {
 		return nil, err
 	}
-	return &{{ .ContractType }}{Reference: ref}, nil
-}
 
-// AsDelegate saves object as delegate
-func (r *ContractConstructorHolder) AsDelegate(objRef insolar.Reference) (*{{ .ContractType }}, error) {
-	ref, err := common.CurrentProxyCtx.SaveAsDelegate(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
+	var constructorError *foundation.Error
+	err = common.CurrentProxyCtx.Deserialize(ret, []interface{}{ &constructorError })
 	if err != nil {
 		return nil, err
 	}
-	return &{{ .ContractType }}{Reference: ref}, nil
+
+	if constructorError != nil {
+		return nil, constructorError
+	}
+
+	return &{{ .ContractType }}{Reference: *ref}, nil
 }
 
 // GetObject returns proxy object
@@ -70,15 +72,6 @@ func GetObject(ref insolar.Reference) (r *{{ .ContractType }}) {
 // GetPrototype returns reference to the prototype
 func GetPrototype() insolar.Reference {
 	return *PrototypeReference
-}
-
-// GetImplementationFrom returns proxy to delegate of given type
-func GetImplementationFrom(object insolar.Reference) (*{{ .ContractType }}, error) {
-	ref, err := common.CurrentProxyCtx.GetDelegate(object, *PrototypeReference)
-	if err != nil {
-		return nil, err
-	}
-	return GetObject(ref), nil
 }
 
 {{ range $func := .ConstructorsProxies }}
@@ -173,6 +166,13 @@ func (r *{{ $.ContractType }}) {{ $method.Name }}{{if $method.Immutable}}AsMutab
 		return {{ $method.ResultsWithErr }}
 	}
 
+	{{/* Saga call doesn't has a reply (it's `nil`), thus we shouldn't try to deserialize it. */}}
+	{{if $method.SagaInfo.IsSaga }}
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, true, false, {{ $method.SagaInfo.IsSaga }}, "{{ $method.Name }}", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return {{ $method.ResultsWithErr }}
+	}
+	{{else}}
 	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, {{ $method.SagaInfo.IsSaga }}, "{{ $method.Name }}", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return {{ $method.ResultsWithErr }}
@@ -186,6 +186,8 @@ func (r *{{ $.ContractType }}) {{ $method.Name }}{{if $method.Immutable}}AsMutab
 	if {{ $method.ErrorVar }} != nil {
 		return {{ $method.Results }}
 	}
+	{{end -}}
+
 	return {{ $method.ResultsNilError }}
 }
 

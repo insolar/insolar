@@ -22,7 +22,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/insolar/pulse.Accessor -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/insolar/pulse.Accessor -o ./ -s _mock.go -g
 
 // Accessor provides methods for accessing pulses.
 type Accessor interface {
@@ -30,21 +30,21 @@ type Accessor interface {
 	Latest(ctx context.Context) (insolar.Pulse, error)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/insolar/pulse.Shifter -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/insolar/pulse.Shifter -o ./ -s _mock.go -g
 
 // Shifter provides method for removing pulses from storage.
 type Shifter interface {
 	Shift(ctx context.Context, pn insolar.PulseNumber) (err error)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/insolar/pulse.Appender -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/insolar/pulse.Appender -o ./ -s _mock.go -g
 
 // Appender provides method for appending pulses to storage.
 type Appender interface {
 	Append(ctx context.Context, pulse insolar.Pulse) error
 }
 
-//go:generate minimock -i github.com/insolar/insolar/insolar/pulse.Calculator -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/insolar/pulse.Calculator -o ./ -s _mock.go -g
 
 // Calculator performs calculations for pulses.
 type Calculator interface {

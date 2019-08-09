@@ -28,13 +28,15 @@ import (
 type GetRequest struct {
 	dep *proc.Dependencies
 
+	passed  bool
 	message payload.Meta
 }
 
-func NewGetRequest(dep *proc.Dependencies, msg payload.Meta) *GetRequest {
+func NewGetRequest(dep *proc.Dependencies, msg payload.Meta, passed bool) *GetRequest {
 	return &GetRequest{
 		dep:     dep,
 		message: msg,
+		passed:  passed,
 	}
 }
 
@@ -45,7 +47,7 @@ func (s *GetRequest) Present(ctx context.Context, f flow.Flow) error {
 		return errors.Wrap(err, "failed to unmarshal GetRequest message")
 	}
 
-	req := proc.NewGetRequest(s.message, msg.RequestID)
+	req := proc.NewGetRequest(s.message, msg.ObjectID, msg.RequestID, s.passed)
 	s.dep.GetRequest(req)
 	return f.Procedure(ctx, req, false)
 }

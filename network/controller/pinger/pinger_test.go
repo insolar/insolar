@@ -58,7 +58,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/future"
-	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 
@@ -98,7 +97,6 @@ func TestPing_HappyPath(t *testing.T) {
 		return n2.BuildResponse(ctx, request, &packet.Ping{}), nil
 	})
 	resolver2 := testutils.NewRoutingTableMock(t)
-	resolver2.AddToKnownHostsFunc = func(*host.Host) {}
 	cm2.Inject(f2, n2, resolver2)
 	err = cm2.Init(ctx)
 	require.NoError(t, err)
@@ -111,7 +109,6 @@ func TestPing_HappyPath(t *testing.T) {
 	defer n.Stop(ctx)
 	require.NoError(t, err)
 	resolver := testutils.NewRoutingTableMock(t)
-	resolver.AddToKnownHostsFunc = func(*host.Host) {}
 	cm.Inject(f, n, resolver)
 	err = cm.Init(ctx)
 	require.NoError(t, err)
@@ -143,7 +140,6 @@ func TestPing_Timeout(t *testing.T) {
 		return n2.BuildResponse(ctx, request, &packet.Ping{}), nil
 	})
 	resolver2 := testutils.NewRoutingTableMock(t)
-	resolver2.AddToKnownHostsFunc = func(*host.Host) {}
 	cm2.Inject(f2, n2, resolver2)
 	err = cm2.Init(ctx)
 	require.NoError(t, err)
@@ -156,7 +152,6 @@ func TestPing_Timeout(t *testing.T) {
 	defer n.Stop(ctx)
 	require.NoError(t, err)
 	resolver := testutils.NewRoutingTableMock(t)
-	resolver.AddToKnownHostsFunc = func(*host.Host) {}
 	cm.Inject(f, n, resolver)
 	err = cm.Init(ctx)
 	require.NoError(t, err)

@@ -40,8 +40,6 @@ const (
 	TypeGetCodeRedirect
 	// TypeGetObjectRedirect is a redirect reply for object-call
 	TypeGetObjectRedirect
-	// TypeGetChildrenRedirect is a redirect reply for children-call
-	TypeGetChildrenRedirect
 
 	// Logicrunner
 
@@ -101,8 +99,6 @@ func getEmptyReply(t insolar.ReplyType) (insolar.Reply, error) {
 	switch t {
 	case TypeCallMethod:
 		return &CallMethod{}, nil
-	case TypeCallConstructor:
-		return &CallConstructor{}, nil
 	case TypeRegisterRequest:
 		return &RegisterRequest{}, nil
 	case TypeCode:
@@ -127,8 +123,6 @@ func getEmptyReply(t insolar.ReplyType) (insolar.Reply, error) {
 		return &ObjectIndex{}, nil
 	case TypeGetCodeRedirect:
 		return &GetCodeRedirectReply{}, nil
-	case TypeGetChildrenRedirect:
-		return &GetChildrenRedirectReply{}, nil
 	case TypeJetMiss:
 		return &JetMiss{}, nil
 	case TypePendingRequests:
@@ -182,7 +176,6 @@ func ToBytes(rep insolar.Reply) []byte {
 
 func init() {
 	gob.Register(&CallMethod{})
-	gob.Register(&CallConstructor{})
 	gob.Register(&RegisterRequest{})
 	gob.Register(&Code{})
 	gob.Register(&Object{})
@@ -194,7 +187,6 @@ func init() {
 	gob.Register(&OK{})
 	gob.Register(&ObjectIndex{})
 	gob.Register(&GetCodeRedirectReply{})
-	gob.Register(&GetChildrenRedirectReply{})
 	gob.Register(&HeavyError{})
 	gob.Register(&JetMiss{})
 	gob.Register(&HasPendingRequests{})

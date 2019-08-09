@@ -20,8 +20,6 @@ import (
 	"context"
 	"io"
 
-	"github.com/insolar/insolar/network/rules"
-
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
@@ -87,7 +85,6 @@ func initBootstrapComponents(ctx context.Context, cfg configuration.Configuratio
 func initCertificateManager(
 	ctx context.Context,
 	cfg configuration.Configuration,
-	isBootstrap bool,
 	cryptographyService insolar.CryptographyService,
 	keyProcessor insolar.KeyProcessor,
 ) *certificate.CertificateManager {
@@ -97,13 +94,8 @@ func initCertificateManager(
 	publicKey, err := cryptographyService.GetPublicKey()
 	checkError(ctx, err, "failed to retrieve node public key")
 
-	if isBootstrap {
-		certManager, err = certificate.NewManagerCertificateWithKeys(publicKey, keyProcessor)
-		checkError(ctx, err, "failed to start Certificate (bootstrap mode)")
-	} else {
-		certManager, err = certificate.NewManagerReadCertificate(publicKey, keyProcessor, cfg.CertificatePath)
-		checkError(ctx, err, "failed to start Certificate")
-	}
+	certManager, err = certificate.NewManagerReadCertificate(publicKey, keyProcessor, cfg.CertificatePath)
+	checkError(ctx, err, "failed to start Certificate")
 
 	return certManager
 }
@@ -153,13 +145,15 @@ func initComponents(
 
 	jc := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit)
 	pulses := pulse.NewStorageMem()
-	b := bus.NewBus(pubSub, pulses, jc, pcs)
+	b := bus.NewBus(cfg.Bus, pubSub, pulses, jc, pcs)
 
 	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner, pubSub, b)
 	checkError(ctx, err, "failed to start LogicRunner")
 
 	contractRequester, err := contractrequester.New(logicRunner)
 	checkError(ctx, err, "failed to start ContractRequester")
+
+	pm := pulsemanager.NewPulseManager()
 
 	cm.Register(
 		terminationHandler,
@@ -172,10 +166,10 @@ func initComponents(
 		logicrunner.NewLogicExecutor(),
 		logicrunner.NewRequestsExecutor(),
 		logicrunner.NewMachinesManager(),
+		apiRunner,
 		nodeNetwork,
 		nw,
-		pulsemanager.NewPulseManager(),
-		rules.NewRules(),
+		pm,
 	)
 
 	components := []interface{}{
@@ -194,7 +188,6 @@ func initComponents(
 	}
 	components = append(components, []interface{}{
 		genesisDataProvider,
-		apiRunner,
 		metricsHandler,
 		cryptographyService,
 		keyProcessor,
@@ -202,7 +195,16 @@ func initComponents(
 
 	cm.Inject(components...)
 
-	stopper := startWatermill(ctx, logger, pubSub, b, nw.SendMessageHandler, logicRunner.FlowDispatcher.Process, logicRunner.InnerFlowDispatcher.InnerSubscriber)
+	err = cm.Init(ctx)
+	checkError(ctx, err, "failed to init components")
+
+	pm.FlowDispatcher = logicRunner.FlowDispatcher
+
+	stopper := startWatermill(
+		ctx, logger, pubSub, b,
+		nw.SendMessageHandler,
+		logicRunner.FlowDispatcher.Process,
+	)
 
 	return &cm, terminationHandler, stopper
 }
@@ -212,7 +214,7 @@ func startWatermill(
 	logger watermill.LoggerAdapter,
 	pubSub message.Subscriber,
 	b *bus.Bus,
-	outHandler, inHandler, lrHandler message.HandlerFunc,
+	outHandler, inHandler message.HandlerFunc,
 ) func() {
 	inRouter, err := message.NewRouter(message.RouterConfig{}, logger)
 	if err != nil {
@@ -222,12 +224,6 @@ func startWatermill(
 	if err != nil {
 		panic(err)
 	}
-
-	lrRouter, err := message.NewRouter(message.RouterConfig{}, logger)
-	if err != nil {
-		panic(err)
-	}
-
 	outRouter.AddNoPublisherHandler(
 		"OutgoingHandler",
 		bus.TopicOutgoing,
@@ -246,18 +242,10 @@ func startWatermill(
 		inHandler,
 	)
 
-	lrRouter.AddNoPublisherHandler(
-		"InnerMsgHandler",
-		logicrunner.InnerMsgTopic,
-		pubSub,
-		lrHandler,
-	)
-
 	startRouter(ctx, inRouter)
 	startRouter(ctx, outRouter)
-	startRouter(ctx, lrRouter)
 
-	return stopWatermill(ctx, inRouter, outRouter, lrRouter)
+	return stopWatermill(ctx, inRouter, outRouter)
 }
 
 func startRouter(ctx context.Context, router *message.Router) {

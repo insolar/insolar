@@ -35,9 +35,9 @@ import (
 
 	"github.com/insolar/insolar/api/sdk"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/backoff"
 	"github.com/insolar/insolar/insolar/defaults"
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/utils/backoff"
 	"github.com/pkg/errors"
 	"github.com/spf13/pflag"
 )
@@ -401,7 +401,7 @@ func main() {
 		totalBalanceAfterWithFee := big.NewInt(0)
 		for nretries := 0; nretries < 3; nretries++ {
 			totalBalanceAfter, _ = getTotalBalance(insSDK, members)
-			totalBalanceAfterWithFee = new(big.Int).Add(totalBalanceAfter, big.NewInt(calcFee(transferAmount)))
+			totalBalanceAfterWithFee = new(big.Int).Add(totalBalanceAfter, big.NewInt(calcFee(transferAmount)*int64(repetitions*concurrent)))
 			if totalBalanceAfterWithFee.Cmp(totalBalanceBefore) == 0 {
 				break
 			}

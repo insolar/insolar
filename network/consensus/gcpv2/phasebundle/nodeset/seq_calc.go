@@ -69,7 +69,7 @@ type AnnouncementSequenceCalc struct {
 
 func (p *AnnouncementSequenceCalc) AddNext(nodeData VectorEntryData, zeroPower bool) {
 	if p.digester == nil {
-		p.digester = p.digestFactory.GetAnnouncementDigester()
+		p.digester = p.digestFactory.CreateAnnouncementDigester()
 	}
 	p.digester.AddNext(nodeData.AnnounceSignature)
 }
@@ -91,9 +91,9 @@ func (p *AnnouncementSequenceCalc) ForkSequenceOf(s AnnouncementSequenceCalc) {
 	if !p.IsEmpty() {
 		panic("illegal state")
 	}
-	if s.IsEmpty() {
-		panic("illegal value")
-	}
+	// if s.IsEmpty() {
+	//	panic("illegal value")
+	// }
 
 	if s.digester != nil {
 		p.digester = s.digester.ForkSequence()
@@ -180,7 +180,7 @@ func (p *StateAndRankSequenceCalc) AddNext(nodeData VectorEntryData, zeroPower b
 
 func (p *StateAndRankSequenceCalc) hashMemberEntry(v memberEntry, roleIndex member.Index) {
 	if p.digester == nil {
-		p.digester = p.digestFactory.GetGlobulaStateDigester()
+		p.digester = p.digestFactory.CreateGlobulaStateDigester()
 	}
 
 	fr := member.FullRank{
@@ -205,7 +205,7 @@ func (p *StateAndRankSequenceCalc) hashMemberEntry(v memberEntry, roleIndex memb
 	if v.state == nil {
 		p.digester.AddNext(nil, fr)
 	} else {
-		p.digester.AddNext(v.state.GetNodeStateHash(), fr)
+		p.digester.AddNext(v.state.GetDigestHolder(), fr)
 	}
 }
 

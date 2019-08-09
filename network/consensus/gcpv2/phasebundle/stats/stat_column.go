@@ -79,12 +79,19 @@ func (c *Column) StringFmt(fmtFn RowValueFormatFunc) string {
 	return builder.String()
 }
 
-func (c *Column) String() string {
+func (c Column) String() string {
 	return fmt.Sprintf("%03d%v", c.colIndex, c.summary)
 }
 
 func (c *Column) GetSummary() []uint16 {
-	v := make([]uint16, len(c.summary))
-	copy(v, c.summary)
-	return v
+	return append(make([]uint16, 0, len(c.summary)), c.summary...)
+}
+
+func (c Column) Equals(o Column) bool {
+	for i, tS := range c.summary {
+		if tS != o.summary[i] {
+			return false
+		}
+	}
+	return true
 }

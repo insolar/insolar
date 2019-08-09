@@ -73,7 +73,7 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/network/controller.RPCController -o ../../testutils/network -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/controller.RPCController -o ../../testutils/network -s _mock.go -g
 
 type RPCController interface {
 	component.Initer
@@ -87,7 +87,7 @@ type RPCController interface {
 type rpcController struct {
 	Scheme      insolar.PlatformCryptographyScheme `inject:""`
 	Network     network.HostNetwork                `inject:""`
-	NodeNetwork insolar.NodeNetwork                `inject:""`
+	NodeNetwork network.NodeNetwork                `inject:""`
 
 	options     *common.Options
 	methodTable map[string]insolar.RemoteProcedure

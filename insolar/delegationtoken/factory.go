@@ -21,7 +21,6 @@ import (
 	"encoding/gob"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/message"
 )
 
 type delegationTokenFactory struct {
@@ -52,32 +51,6 @@ func (f *delegationTokenFactory) IssuePendingExecution(
 	token.Signature = sign.Bytes()
 
 	return token, nil
-}
-
-// IssueGetChildrenRedirect creates new token for provided message.
-func (f *delegationTokenFactory) IssueGetChildrenRedirect(
-	sender *insolar.Reference, redirectedMessage insolar.Message,
-) (insolar.DelegationToken, error) {
-	parsedMessage := redirectedMessage.(*message.GetChildren)
-	dataForSign := append(sender.Bytes(), message.ToBytes(parsedMessage)...)
-	sign, err := f.Cryptography.Sign(dataForSign)
-	if err != nil {
-		return nil, err
-	}
-	return &GetChildrenRedirectToken{Signature: sign.Bytes()}, nil
-}
-
-// IssueGetCodeRedirect creates new token for provided message.
-func (f *delegationTokenFactory) IssueGetCodeRedirect(
-	sender *insolar.Reference, redirectedMessage insolar.Message,
-) (insolar.DelegationToken, error) {
-	parsedMessage := redirectedMessage.(*message.GetCode)
-	dataForSign := append(sender.Bytes(), message.ToBytes(parsedMessage)...)
-	sign, err := f.Cryptography.Sign(dataForSign)
-	if err != nil {
-		return nil, err
-	}
-	return &GetCodeRedirectToken{Signature: sign.Bytes()}, nil
 }
 
 // Verify performs token validation.

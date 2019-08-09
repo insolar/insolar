@@ -28,8 +28,8 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
+	"github.com/insolar/insolar/insolar/store"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/internal/ledger/store"
 )
 
 // helper for tests
@@ -212,7 +212,7 @@ func TestDBStorage_CloneJetTree(t *testing.T) {
 	tree := dbTreeForPulse(s, 100)
 	assert.Equal(t, expectedZero, tree.LeafIDs(), "actual tree in string form: %v", tree.String())
 
-	err = s.Clone(ctx, 100, 101)
+	err = s.Clone(ctx, 100, 101, false)
 	require.NoError(t, err)
 
 	tree = dbTreeForPulse(s, 101)

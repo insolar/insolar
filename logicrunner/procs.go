@@ -22,7 +22,9 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 )
@@ -45,9 +47,7 @@ func (ch *CheckOurRole) Proceed(ctx context.Context) error {
 
 	// TODO do map of supported objects for pulse, go to jetCoordinator only if map is empty for ref
 	target := ch.msg.DefaultTarget()
-	isAuthorized, err := ch.lr.JetCoordinator.IsAuthorized(
-		ctx, ch.role, *target.Record(), ch.pulseNumber, ch.lr.JetCoordinator.Me(),
-	)
+	isAuthorized, err := ch.lr.JetCoordinator.IsMeAuthorizedNow(ctx, ch.role, *target.Record())
 	if err != nil {
 		return errors.Wrap(err, "authorization failed with error")
 	}
@@ -62,7 +62,7 @@ func (ch *CheckOurRole) Proceed(ctx context.Context) error {
 type RegisterIncomingRequest struct {
 	request record.IncomingRequest
 
-	result chan *Ref
+	result chan *payload.RequestInfo
 
 	ArtifactManager artifacts.Client
 }
@@ -71,16 +71,16 @@ func NewRegisterIncomingRequest(request record.IncomingRequest, dep *Dependencie
 	return &RegisterIncomingRequest{
 		request:         request,
 		ArtifactManager: dep.lr.ArtifactManager,
-		result:          make(chan *Ref, 1),
+		result:          make(chan *payload.RequestInfo, 1),
 	}
 }
 
-func (r *RegisterIncomingRequest) setResult(result *Ref) { // nolint
+func (r *RegisterIncomingRequest) setResult(result *payload.RequestInfo) { // nolint
 	r.result <- result
 }
 
 // getResult is blocking
-func (r *RegisterIncomingRequest) getResult() *Ref { // nolint
+func (r *RegisterIncomingRequest) getResult() *payload.RequestInfo { // nolint
 	return <-r.result
 }
 
@@ -88,71 +88,26 @@ func (r *RegisterIncomingRequest) Proceed(ctx context.Context) error {
 	ctx, span := instracer.StartSpan(ctx, "RegisterIncomingRequest.Proceed")
 	defer span.End()
 
-	id, err := r.ArtifactManager.RegisterIncomingRequest(ctx, &r.request)
+	inslogger.FromContext(ctx).Debug("registering incoming request")
+
+	reqInfo, err := r.ArtifactManager.RegisterIncomingRequest(ctx, &r.request)
 	if err != nil {
 		return err
 	}
 
-	r.setResult(insolar.NewReference(*id))
+	r.setResult(reqInfo)
 	return nil
 }
 
-// ------------- ClarifyPendingState
-
-type ClarifyPendingState struct {
-	broker  *ExecutionBroker
-	request *record.IncomingRequest
-
-	ArtifactManager artifacts.Client
+type AddFreshRequest struct {
+	broker     ExecutionBrokerI
+	requestRef insolar.Reference
+	request    record.IncomingRequest
 }
 
-func (c *ClarifyPendingState) Proceed(ctx context.Context) error {
-	ctx, span := instracer.StartSpan(ctx, "ClarifyPendingState")
-	defer span.End()
-
-	es := &c.broker.executionState
-
-	es.Lock()
-	if es.pending != insolar.PendingUnknown {
-		es.Unlock()
-		return nil
-	}
-
-	if c.request != nil {
-		if c.request.CallType != record.CTMethod {
-			// It's considered that we are not pending except someone calls a method.
-			es.pending = insolar.NotPending
-			es.Unlock()
-			return nil
-		}
-	}
-
-	es.Unlock()
-
-	es.HasPendingCheckMutex.Lock()
-	defer es.HasPendingCheckMutex.Unlock()
-
-	es.Lock()
-	if es.pending != insolar.PendingUnknown {
-		es.Unlock()
-		return nil
-	}
-	es.Unlock()
-
-	has, err := c.ArtifactManager.HasPendingRequests(ctx, c.broker.Ref)
-	if err != nil {
-		return err
-	}
-
-	es.Lock()
-	if es.pending == insolar.PendingUnknown {
-		if has {
-			es.pending = insolar.InPending
-		} else {
-			es.pending = insolar.NotPending
-		}
-	}
-	es.Unlock()
-
+func (c *AddFreshRequest) Proceed(ctx context.Context) error {
+	requestCtx := freshContextFromContext(ctx)
+	tr := NewTranscript(requestCtx, c.requestRef, c.request)
+	c.broker.AddFreshRequest(ctx, tr)
 	return nil
 }

@@ -31,7 +31,7 @@ import (
 )
 
 func TestRequestsFetcher_New(t *testing.T) {
-	rf := NewRequestsFetcher(gen.Reference(), nil, nil)
+	rf := NewRequestsFetcher(gen.Reference(), nil, nil, nil)
 	require.NotNil(t, rf)
 }
 
@@ -47,10 +47,10 @@ func TestRequestsFetcher_FetchPendings(t *testing.T) {
 				reqRef := gen.Reference()
 				am := artifacts.NewClientMock(t).
 					GetPendingsMock.Return([]insolar.Reference{reqRef}, nil).
-					GetIncomingRequestMock.Return(&record.IncomingRequest{}, nil)
+					GetAbandonedRequestMock.Return(&record.IncomingRequest{}, nil)
 				broker := NewExecutionBrokerIMock(t).
 					IsKnownRequestMock.Return(false).
-					PrependMock.Return()
+					AddRequestsFromLedgerMock.Return()
 
 				return obj, am, broker
 			},
@@ -61,10 +61,10 @@ func TestRequestsFetcher_FetchPendings(t *testing.T) {
 			ctx := inslogger.TestContext(t)
 			mc := minimock.NewController(t)
 			defer mc.Finish()
-			defer mc.Wait(1*time.Minute)
+			defer mc.Wait(1 * time.Minute)
 
 			obj, am, br := test.mocks(mc)
-			rf := NewRequestsFetcher(obj, am, br)
+			rf := NewRequestsFetcher(obj, am, br, nil)
 			rf.FetchPendings(ctx)
 		})
 	}

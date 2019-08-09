@@ -79,7 +79,7 @@ func GetBaggage(ctx context.Context) []Entry {
 
 // StartSpan starts span with stored baggage and with parent span if find in context.
 func StartSpan(ctx context.Context, name string, o ...trace.StartOption) (context.Context, *trace.Span) {
-	parentSpan, haveParent := getParentSpan(ctx)
+	parentSpan, haveParent := ParentSpan(ctx)
 	var (
 		spanctx context.Context
 		span    *trace.Span
@@ -112,7 +112,7 @@ func WithParentSpan(ctx context.Context, pspan TraceSpan) context.Context {
 	return context.WithValue(ctx, parentSpanKey{}, pspan)
 }
 
-func getParentSpan(ctx context.Context) (parentSpan TraceSpan, ok bool) {
+func ParentSpan(ctx context.Context) (parentSpan TraceSpan, ok bool) {
 	val := ctx.Value(parentSpanKey{})
 	if val == nil {
 		return
@@ -193,4 +193,10 @@ func ShouldRegisterJaeger(
 		flusher = func() {}
 	}
 	return
+}
+
+// AddError add error info to span and mark span as errored
+func AddError(s *trace.Span, err error) {
+	s.AddAttributes(trace.BoolAttribute("error", true))
+	s.Annotate(nil, err.Error())
 }

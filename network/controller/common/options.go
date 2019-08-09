@@ -79,9 +79,6 @@ type Options struct {
 	// Multiplier for boostrap retry time
 	TimeoutMult time.Duration
 
-	// True - infinity tries to bootstrap
-	InfinityBootstrap bool
-
 	// HandshakeSession TTL
 	HandshakeSessionTTL time.Duration
 }
@@ -90,7 +87,6 @@ type Options struct {
 func ConfigureOptions(conf configuration.Configuration) *Options {
 	config := conf.Host
 	return &Options{
-		InfinityBootstrap:   config.InfinityBootstrap,
 		TimeoutMult:         time.Duration(config.TimeoutMult) * time.Second,
 		MinTimeout:          time.Duration(config.MinTimeout) * time.Second,
 		MaxTimeout:          time.Duration(config.MaxTimeout) * time.Second,

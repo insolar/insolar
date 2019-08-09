@@ -55,35 +55,36 @@ import (
 	"errors"
 	"testing"
 
-	inet "github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network"
 
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 
-	"github.com/insolar/insolar/testutils/network"
+	mock "github.com/insolar/insolar/testutils/network"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/testutils"
-	"github.com/stretchr/testify/require"
 )
 
 func mockCryptographyService(t *testing.T, ok bool) insolar.CryptographyService {
 	cs := testutils.NewCryptographyServiceMock(t)
-	cs.SignFunc = func(data []byte) (*insolar.Signature, error) {
+	cs.SignMock.Set(func(data []byte) (*insolar.Signature, error) {
 		if ok {
 			sig := insolar.SignatureFromBytes([]byte("test_sig"))
 			return &sig, nil
 		}
 		return nil, errors.New("test_error")
-	}
+	})
 	return cs
 }
 
 func mockCertificateManager(t *testing.T, certNodeRef *insolar.Reference, discoveryNodeRef *insolar.Reference, unsignCertOk bool) *testutils.CertificateManagerMock {
 	cm := testutils.NewCertificateManagerMock(t)
-	cm.GetCertificateFunc = func() insolar.Certificate {
+	cm.GetCertificateMock.Set(func() insolar.Certificate {
 		return &certificate.Certificate{
 			AuthorizationCertificate: certificate.AuthorizationCertificate{
 				PublicKey: "test_public_key",
@@ -100,8 +101,8 @@ func mockCertificateManager(t *testing.T, certNodeRef *insolar.Reference, discov
 				},
 			},
 		}
-	}
-	cm.NewUnsignedCertificateFunc = func(key string, role string, nodeRef string) (insolar.Certificate, error) {
+	})
+	cm.NewUnsignedCertificateMock.Set(func(key string, role string, nodeRef string) (insolar.Certificate, error) {
 		require.Equal(t, "test_node_public_key", key)
 		require.Equal(t, "virtual", role)
 
@@ -126,7 +127,7 @@ func mockCertificateManager(t *testing.T, certNodeRef *insolar.Reference, discov
 			}, nil
 		}
 		return nil, errors.New("test_error")
-	}
+	})
 	return cm
 }
 
@@ -139,22 +140,22 @@ func mockReply(t *testing.T) []byte {
 		Role:      insolar.StaticRoleVirtual,
 	}, nil)
 	require.NoError(t, err)
-	return []byte(node)
+	return node
 }
 
 func mockContractRequester(t *testing.T, nodeRef insolar.Reference, ok bool, r []byte) insolar.ContractRequester {
 	cr := testutils.NewContractRequesterMock(t)
-	cr.SendRequestFunc = func(ctx context.Context, ref *insolar.Reference, method string, args []interface{}) (insolar.Reply, error) {
+	cr.SendRequestMock.Set(func(ctx context.Context, ref *insolar.Reference, method string, argsIn []interface{}) (r1 insolar.Reply, err error) {
 		require.Equal(t, nodeRef, *ref)
 		require.Equal(t, "GetNodeInfo", method)
-		require.Equal(t, 0, len(args))
+		require.Equal(t, 0, len(argsIn))
 		if ok {
 			return &reply.CallMethod{
 				Result: r,
 			}, nil
 		}
 		return nil, errors.New("test_error")
-	}
+	})
 	return cr
 }
 
@@ -167,17 +168,26 @@ func TestComplete_GetCert(t *testing.T) {
 	nodeRef := testutils.RandomRef()
 	certNodeRef := testutils.RandomRef()
 
-	gatewayer := network.NewGatewayerMock(t)
-	nodekeeper := network.NewNodeKeeperMock(t)
-	hn := network.NewHostNetworkMock(t)
+	gatewayer := mock.NewGatewayerMock(t)
+	nodekeeper := mock.NewNodeKeeperMock(t)
+	hn := mock.NewHostNetworkMock(t)
 
 	cr := mockContractRequester(t, nodeRef, true, mockReply(t))
 	cm := mockCertificateManager(t, &certNodeRef, &certNodeRef, true)
 	cs := mockCryptographyService(t, true)
 	pm := mockPulseManager(t)
 
-	ge := NewNoNetwork(gatewayer, pm, nodekeeper, cr, cs, hn, cm)
-	ge = ge.NewGateway(insolar.CompleteNetworkState)
+	var ge network.Gateway
+	ge = newNoNetwork(&Base{
+		Gatewayer:           gatewayer,
+		NodeKeeper:          nodekeeper,
+		HostNetwork:         hn,
+		ContractRequester:   cr,
+		CertificateManager:  cm,
+		CryptographyService: cs,
+		PulseManager:        pm,
+	})
+	ge = ge.NewGateway(context.Background(), insolar.CompleteNetworkState)
 	ctx := context.Background()
 	result, err := ge.Auther().GetCert(ctx, &nodeRef)
 	require.NoError(t, err)
@@ -204,28 +214,37 @@ func TestComplete_handler(t *testing.T) {
 	nodeRef := testutils.RandomRef()
 	certNodeRef := testutils.RandomRef()
 
-	gatewayer := network.NewGatewayerMock(t)
-	nodekeeper := network.NewNodeKeeperMock(t)
+	gatewayer := mock.NewGatewayerMock(t)
+	nodekeeper := mock.NewNodeKeeperMock(t)
 
 	cr := mockContractRequester(t, nodeRef, true, mockReply(t))
 	cm := mockCertificateManager(t, &certNodeRef, &certNodeRef, true)
 	cs := mockCryptographyService(t, true)
 	pm := mockPulseManager(t)
 
-	hn := network.NewHostNetworkMock(t)
+	hn := mock.NewHostNetworkMock(t)
 
-	ge := NewNoNetwork(gatewayer, pm, nodekeeper, cr, cs, hn, cm)
-	ge = ge.NewGateway(insolar.CompleteNetworkState)
+	var ge network.Gateway
+	ge = newNoNetwork(&Base{
+		Gatewayer:           gatewayer,
+		NodeKeeper:          nodekeeper,
+		HostNetwork:         hn,
+		ContractRequester:   cr,
+		CertificateManager:  cm,
+		CryptographyService: cs,
+		PulseManager:        pm,
+	})
+	ge = ge.NewGateway(context.Background(), insolar.CompleteNetworkState)
 	ctx := context.Background()
 
 	p := packet.NewReceivedPacket(packet.NewPacket(nil, nil, types.SignCert, 1), nil)
 	p.SetRequest(&packet.SignCertRequest{NodeRef: nodeRef})
 
-	hn.BuildResponseFunc = func(p context.Context, p1 inet.Packet, p2 interface{}) inet.Packet {
+	hn.BuildResponseMock.Set(func(ctx context.Context, request network.Packet, responseData interface{}) (p1 network.Packet) {
 		r := packet.NewPacket(nil, nil, types.SignCert, 1)
 		r.SetResponse(&packet.SignCertResponse{Sign: []byte("test_sig")})
 		return r
-	}
+	})
 	result, err := ge.(*Complete).signCertHandler(ctx, p)
 
 	require.NoError(t, err)

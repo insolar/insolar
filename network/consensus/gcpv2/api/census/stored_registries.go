@@ -51,12 +51,15 @@
 package census
 
 import (
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/misbehavior"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 )
+
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/census.VersionedRegistries -o . -s _mock.go -g
 
 type VersionedRegistries interface {
 	// GetVersionId() int
@@ -66,15 +69,21 @@ type VersionedRegistries interface {
 	GetMandateRegistry() MandateRegistry
 	GetOfflinePopulation() OfflinePopulation
 	GetVersionPulseData() pulse.Data
+	GetNearestValidPulseData() pulse.Data
 }
+
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/census.MisbehaviorRegistry -o . -s _mock.go -g
 
 type MisbehaviorRegistry interface {
 	AddReport(report misbehavior.Report)
 }
 
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/census.MandateRegistry -o . -s _mock.go -g
+
 type MandateRegistry interface {
 	FindRegisteredProfile(host endpoints.Inbound) profiles.Host
 	GetPrimingCloudHash() proofs.CloudStateHash
+	GetCloudIdentity() cryptkit.DigestHolder
 	GetConsensusConfiguration() ConsensusConfiguration
 }
 

@@ -24,7 +24,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/internal/ledger/store"
+	"github.com/insolar/insolar/insolar/store"
 )
 
 type DBStore struct {
@@ -110,12 +110,12 @@ func (s *DBStore) Split(ctx context.Context, pulse insolar.PulseNumber, id insol
 	}
 	return left, right, nil
 }
-func (s *DBStore) Clone(ctx context.Context, from, to insolar.PulseNumber) error {
+func (s *DBStore) Clone(ctx context.Context, from, to insolar.PulseNumber, keepActual bool) error {
 	s.Lock()
 	defer s.Unlock()
 
 	tree := s.get(from)
-	newTree := tree.Clone(false)
+	newTree := tree.Clone(keepActual)
 	err := s.set(to, newTree)
 	if err != nil {
 		return errors.Wrapf(err, "failed to clone jet.Tree")

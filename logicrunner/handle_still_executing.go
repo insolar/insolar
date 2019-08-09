@@ -25,7 +25,6 @@ import (
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/reply"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
 type HandleStillExecuting struct {
@@ -36,36 +35,14 @@ type HandleStillExecuting struct {
 }
 
 func (h *HandleStillExecuting) Present(ctx context.Context, f flow.Flow) error {
-	logger := inslogger.FromContext(ctx)
-	lr := h.dep.lr
-	replyOk := bus.ReplyAsMessage(ctx, &reply.OK{})
-
-	inslogger.FromContext(ctx).Debug("HandleStillExecuting.Present starts ...")
-
+	ctx = loggerWithTargetID(ctx, h.Parcel)
 	msg := h.Parcel.Message().(*message.StillExecuting)
-	ref := msg.DefaultTarget()
-	broker := lr.StateStorage.UpsertExecutionState(*ref)
-	es := &broker.executionState
+	h.dep.ResultsMatcher.AddStillExecution(ctx, msg)
 
-	logger.Debugf("Got information that %s is still executing", ref.String())
-	h.dep.lr.ResultsMatcher.AddStillExecution(ctx, msg)
+	broker := h.dep.StateStorage.UpsertExecutionState(msg.Reference)
+	broker.PrevExecutorStillExecuting(ctx)
 
-	es.Lock()
-	switch es.pending {
-	case insolar.NotPending:
-		// It might be when StillExecuting comes after PendingFinished
-		logger.Error("got StillExecuting message, but our state says that it's not in pending")
-	case insolar.InPending:
-		es.PendingConfirmed = true
-	case insolar.PendingUnknown:
-		// we are first, strange, soon ExecuteResults message should come
-		es.pending = insolar.InPending
-		es.PendingConfirmed = true
-	}
-
-	es.Unlock()
+	replyOk := bus.ReplyAsMessage(ctx, &reply.OK{})
 	h.dep.Sender.Reply(ctx, h.Message, replyOk)
-
 	return nil
-
 }

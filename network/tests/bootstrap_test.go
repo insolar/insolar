@@ -53,58 +53,38 @@
 package tests
 
 import (
-	"context"
 	"fmt"
-	"time"
+	"testing"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/network/consensusv1/packets"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type bootstrapSuite struct {
 	testSuite
-
-	joiner networkNode
-}
-
-type fakeConsensus struct {
-	node  *networkNode
-	suite *bootstrapSuite
-}
-
-func (f *fakeConsensus) OnPulse(ctx context.Context, pulse *insolar.Pulse, pulseStartTime time.Time) error {
-
-	activeNodes := make([]insolar.NetworkNode, 0)
-	for _, n := range f.suite.fixture().bootstrapNodes {
-		activeNodes = append(activeNodes, n.serviceNetwork.NodeKeeper.GetOrigin())
-	}
-
-	var claims []packets.ReferendumClaim
-	// snapshot := f.node.serviceNetwork.NodeKeeper.GetSnapshotCopy()
-	// snapshot.
-
-	return f.node.serviceNetwork.NodeKeeper.Sync(f.node.ctx, activeNodes, claims)
 }
 
 func (s *bootstrapSuite) SetupTest() {
-	s.fixtureMap[s.T().Name()] = newFixture(s.T())
+	s.fixtureMap[s.t.Name()] = newFixture(s.t)
 	var err error
-	s.fixture().pulsar, err = NewTestPulsar(pulseTimeMs, reqTimeoutMs, pulseDelta)
-	s.Require().NoError(err)
+	s.fixture().pulsar, err = NewTestPulsar(reqTimeoutMs*10, pulseDelta*10)
+	require.NoError(s.t, err)
 
-	inslogger.FromContext(s.fixture().ctx).Info("SetupTest -- ")
+	inslogger.FromContext(s.fixture().ctx).Info("SetupTest")
 
 	for i := 0; i < s.bootstrapCount; i++ {
-		s.fixture().bootstrapNodes = append(s.fixture().bootstrapNodes, s.newNetworkNode(fmt.Sprintf("bootstrap_%d", i)))
+		role := insolar.StaticRoleVirtual
+		if i == 0 {
+			role = insolar.StaticRoleHeavyMaterial
+		}
+
+		s.fixture().bootstrapNodes = append(s.fixture().bootstrapNodes, s.newNetworkNodeWithRole(fmt.Sprintf("bootstrap_%d", i), role))
 	}
 
 	s.SetupNodesNetwork(s.fixture().bootstrapNodes)
-	for _, n := range s.fixture().bootstrapNodes {
-		n.serviceNetwork.PhaseManager.(*phaseManagerWrapper).original = &fakeConsensus{n, s}
-
-	}
 
 	pulseReceivers := make([]string, 0)
 	for _, node := range s.fixture().bootstrapNodes {
@@ -113,54 +93,51 @@ func (s *bootstrapSuite) SetupTest() {
 
 	log.Info("Start test pulsar")
 	err = s.fixture().pulsar.Start(s.fixture().ctx, pulseReceivers)
-	s.Require().NoError(err)
-
-	// TODO: fake bootstrap
-	// s.StartNodesNetwork(s.fixture().bootstrapNodes)
+	require.NoError(s.t, err)
 }
 
 func (s *bootstrapSuite) TearDownTest() {
-	inslogger.FromContext(s.fixture().ctx).Info("TearDownTest -- ")
+	inslogger.FromContext(s.fixture().ctx).Info("TearDownTest")
 
-}
-
-func newBootstraptSuite(bootstrapCount int) *bootstrapSuite {
-	return &bootstrapSuite{
-		testSuite: newTestSuite(3, 0),
+	suiteLogger.Info("Stop bootstrap nodes")
+	for _, n := range s.fixture().bootstrapNodes {
+		err := n.componentManager.Stop(n.ctx)
+		assert.NoError(s.t, err)
 	}
 }
 
-// func TestBootstrap(t *testing.T) {
-// 	t.Skip("fix in new consensus")
-// 	s := newBootstraptSuite(1)
-// 	suite.Run(t, s)
-// }
+func (s *bootstrapSuite) waitForConsensus(consensusCount int) {
+	for i := 0; i < consensusCount; i++ {
+		for _, n := range s.fixture().bootstrapNodes {
+			<-n.consensusResult
+		}
+	}
+}
 
-func (s *bootstrapSuite) TestExample() {
-	s.T().Skip("fix me")
-	inslogger.FromContext(s.fixture().ctx).Info("Log -- ")
-	s.True(true)
+func newBootstraptSuite(t *testing.T, bootstrapCount int) *bootstrapSuite {
+	return &bootstrapSuite{
+		testSuite: newTestSuite(t, bootstrapCount, 0),
+	}
+}
 
-	testNode := s.newNetworkNode("testNode")
-	s.preInitNode(testNode)
+func testBootstrap(t *testing.T) *bootstrapSuite {
+	t.Skip("Skip until fix consensus bugs")
 
-	s.InitNode(testNode)
-	s.StartNode(testNode)
-	defer func(s *bootstrapSuite) {
-		s.StopNode(testNode)
-	}(s)
+	s := newBootstraptSuite(t, 11)
+	s.SetupTest()
+	return s
+}
 
-	// s.waitForConsensus(1)
-	//
-	// s.AssertActiveNodesCountDelta(0)
-	//
-	// s.waitForConsensus(1)
-	//
-	// s.AssertActiveNodesCountDelta(1)
-	// s.AssertWorkingNodesCountDelta(0)
-	//
-	// s.waitForConsensus(2)
-	//
-	// s.AssertActiveNodesCountDelta(1)
-	// s.AssertWorkingNodesCountDelta(1)
+func TestBootstrap(t *testing.T) {
+	s := testBootstrap(t)
+	defer s.TearDownTest()
+
+	s.StartNodesNetwork(s.fixture().bootstrapNodes)
+
+	s.waitForConsensus(2)
+	s.AssertActiveNodesCountDelta(0)
+
+	s.waitForConsensus(1)
+	s.AssertActiveNodesCountDelta(0)
+	s.AssertWorkingNodesCountDelta(0)
 }

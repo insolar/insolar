@@ -30,14 +30,12 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/tylerb/gls"
-	"github.com/ugorji/go/codec"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	lrCommon "github.com/insolar/insolar/logicrunner/common"
-	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 	"github.com/insolar/insolar/metrics"
 )
@@ -60,6 +58,7 @@ type GoInsider struct {
 	pluginsMutex sync.Mutex
 
 	lrCommon.Serializer
+	lrCommon.SystemError
 }
 
 // NewGoInsider creates a new GoInsider instance validating arguments
@@ -69,6 +68,7 @@ func NewGoInsider(path, network, address string) *GoInsider {
 	res.plugins = make(map[insolar.Reference]*pluginRec)
 	lrCommon.CurrentProxyCtx = &res
 	res.Serializer = lrCommon.NewCBORSerializer()
+	res.SystemError = lrCommon.NewSystemError()
 	return &res
 }
 
@@ -99,8 +99,8 @@ func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCa
 	inslogger.FromContext(ctx).Debugf("Calling method %q on object %q", args.Method, args.Context.Callee)
 	defer recoverRPC(ctx, &err)
 
-	gls.Set("callCtx", args.Context)
-	defer gls.Cleanup()
+	foundation.SetLogicalContext(args.Context)
+	defer foundation.ClearContext()
 
 	p, err := t.GI.Plugin(ctx, args.Code)
 	if err != nil {
@@ -138,10 +138,10 @@ func (t *RPC) CallMethod(args rpctypes.DownCallMethodReq, reply *rpctypes.DownCa
 	}
 
 	state, result, err := wrapper(args.Data, args.Arguments) // may be entire args???
-
 	if err != nil {
 		return errors.Wrapf(err, "Method call returned error")
 	}
+
 	reply.Data = state
 	reply.Ret = result
 
@@ -158,8 +158,8 @@ func (t *RPC) CallConstructor(args rpctypes.DownCallConstructorReq, reply *rpcty
 	inslogger.FromContext(ctx).Debugf("Calling constructor %q in code %q", args.Name, args.Code)
 	defer recoverRPC(ctx, &err)
 
-	gls.Set("callCtx", args.Context)
-	defer gls.Cleanup()
+	foundation.SetLogicalContext(args.Context)
+	defer foundation.ClearContext()
 
 	p, err := t.GI.Plugin(ctx, args.Code)
 	if err != nil {
@@ -171,17 +171,18 @@ func (t *RPC) CallConstructor(args rpctypes.DownCallConstructorReq, reply *rpcty
 		return errors.Wrapf(err, "Can't find wrapper for %s", args.Name)
 	}
 
-	f, ok := symbol.(func(data []byte) ([]byte, error))
+	f, ok := symbol.(func(data []byte) ([]byte, []byte, error))
 	if !ok {
 		return errors.New("Wrapper with wrong signature")
 	}
 
-	resValues, err := f(args.Arguments)
+	state, result, err := f(args.Arguments)
 	if err != nil {
 		return errors.Wrapf(err, "Can't call constructor %s", args.Name)
 	}
 
-	reply.Ret = resValues
+	reply.Data = state
+	reply.Ret = result
 
 	return nil
 }
@@ -287,10 +288,7 @@ func (gi *GoInsider) getPluginRec(ref insolar.Reference) *pluginRec {
 
 // MakeUpBaseReq makes base of request from current CallContext
 func MakeUpBaseReq() rpctypes.UpBaseReq {
-	callCtx, ok := gls.Get("callCtx").(*insolar.LogicCallContext)
-	if !ok {
-		panic("Wrong or unexistent call context, you probably started a goroutine")
-	}
+	callCtx := foundation.GetLogicalContext()
 
 	return rpctypes.UpBaseReq{
 		Mode:            callCtx.Mode,
@@ -306,6 +304,10 @@ func (gi *GoInsider) RouteCall(ref insolar.Reference, wait bool, immutable bool,
 	if err != nil {
 		return nil, err
 	}
+	if gi.GetSystemError() != nil {
+		return nil, gi.GetSystemError()
+	}
+
 	req := rpctypes.UpRouteReq{
 		UpBaseReq: MakeUpBaseReq(),
 		Wait:      wait,
@@ -320,6 +322,7 @@ func (gi *GoInsider) RouteCall(ref insolar.Reference, wait bool, immutable bool,
 	res := rpctypes.UpRouteResp{}
 	err = client.Call("RPC.RouteCall", req, &res)
 	if err != nil {
+		gi.SetSystemError(err)
 		if err == rpc.ErrShutdown {
 			log.Error("Insgorund can't connect to Insolard")
 			os.Exit(0)
@@ -331,10 +334,17 @@ func (gi *GoInsider) RouteCall(ref insolar.Reference, wait bool, immutable bool,
 }
 
 // SaveAsChild ...
-func (gi *GoInsider) SaveAsChild(parentRef, classRef insolar.Reference, constructorName string, argsSerialized []byte) (insolar.Reference, error) {
+func (gi *GoInsider) SaveAsChild(
+	parentRef, classRef insolar.Reference, constructorName string, argsSerialized []byte,
+) (
+	*insolar.Reference, []byte, error,
+) {
 	client, err := gi.Upstream()
 	if err != nil {
-		return insolar.Reference{}, err
+		return nil, nil, err
+	}
+	if gi.GetSystemError() != nil {
+		return nil, nil, gi.GetSystemError()
 	}
 
 	req := rpctypes.UpSaveAsChildReq{
@@ -348,68 +358,15 @@ func (gi *GoInsider) SaveAsChild(parentRef, classRef insolar.Reference, construc
 	res := rpctypes.UpSaveAsChildResp{}
 	err = client.Call("RPC.SaveAsChild", req, &res)
 	if err != nil {
+		gi.SetSystemError(err)
 		if err == rpc.ErrShutdown {
 			log.Error("Insgorund can't connect to Insolard")
 			os.Exit(0)
 		}
-		return insolar.Reference{}, errors.Wrap(err, "[ SaveAsChild ] on calling main API")
+		return nil, nil, errors.Wrap(err, "[ SaveAsChild ] on calling main API")
 	}
 
-	return *res.Reference, nil
-}
-
-// SaveAsDelegate ...
-func (gi *GoInsider) SaveAsDelegate(intoRef, classRef insolar.Reference, constructorName string, argsSerialized []byte) (insolar.Reference, error) {
-	client, err := gi.Upstream()
-	if err != nil {
-		return insolar.Reference{}, err
-	}
-
-	req := rpctypes.UpSaveAsDelegateReq{
-		UpBaseReq:       MakeUpBaseReq(),
-		Into:            intoRef,
-		Prototype:       classRef,
-		ConstructorName: constructorName,
-		ArgsSerialized:  argsSerialized,
-	}
-
-	res := rpctypes.UpSaveAsDelegateResp{}
-	err = client.Call("RPC.SaveAsDelegate", req, &res)
-	if err != nil {
-		if err == rpc.ErrShutdown {
-			log.Error("Insgorund can't connect to Insolard")
-			os.Exit(0)
-		}
-		return insolar.Reference{}, errors.Wrap(err, "[ SaveAsDelegate ] on calling main API")
-	}
-
-	return *res.Reference, nil
-}
-
-// GetDelegate ...
-func (gi *GoInsider) GetDelegate(object, ofType insolar.Reference) (insolar.Reference, error) {
-	client, err := gi.Upstream()
-	if err != nil {
-		return insolar.Reference{}, err
-	}
-
-	req := rpctypes.UpGetDelegateReq{
-		UpBaseReq: MakeUpBaseReq(),
-		Object:    object,
-		OfType:    ofType,
-	}
-
-	res := rpctypes.UpGetDelegateResp{}
-	err = client.Call("RPC.GetDelegate", req, &res)
-	if err != nil {
-		if err == rpc.ErrShutdown {
-			log.Error("Insgorund can't connect to Insolard")
-			os.Exit(0)
-		}
-		return insolar.Reference{}, errors.Wrap(err, "[ GetDelegate ] on calling main API")
-	}
-
-	return res.Object, nil
+	return res.Reference, res.Result, nil
 }
 
 // DeactivateObject ...
@@ -417,6 +374,9 @@ func (gi *GoInsider) DeactivateObject(object insolar.Reference) error {
 	client, err := gi.Upstream()
 	if err != nil {
 		return err
+	}
+	if gi.GetSystemError() != nil {
+		return gi.GetSystemError()
 	}
 
 	req := rpctypes.UpDeactivateObjectReq{
@@ -426,6 +386,7 @@ func (gi *GoInsider) DeactivateObject(object insolar.Reference) error {
 	res := rpctypes.UpDeactivateObjectResp{}
 	err = client.Call("RPC.DeactivateObject", req, &res)
 	if err != nil {
+		gi.SetSystemError(err)
 		if err == rpc.ErrShutdown {
 			log.Error("Insgorund can't connect to Insolard")
 			os.Exit(0)
@@ -437,17 +398,14 @@ func (gi *GoInsider) DeactivateObject(object insolar.Reference) error {
 }
 
 // Serialize - CBOR serializer wrapper: `what` -> `to`
-func (gi *GoInsider) Serialize(what interface{}, to *[]byte) error {
-	ch := new(codec.CborHandle)
-	log.Debugf("serializing %+v", what)
-	return codec.NewEncoderBytes(to, ch).Encode(what)
+func (gi *GoInsider) Serialize(what interface{}, to *[]byte) (err error) {
+	*to, err = insolar.Serialize(what)
+	return err
 }
 
 // Deserialize - CBOR de-serializer wrapper: `from` -> `into`
 func (gi *GoInsider) Deserialize(from []byte, into interface{}) error {
-	ch := new(codec.CborHandle)
-	log.Debugf("de-serializing %+v", from)
-	return codec.NewDecoderBytes(from, ch).Decode(into)
+	return insolar.Deserialize(from, into)
 }
 
 // MakeErrorSerializable converts errors satisfying error interface to foundation.Error

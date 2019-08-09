@@ -78,7 +78,7 @@ func TestJetStorage_CloneJetTree(t *testing.T) {
 	tree, _ := treeForPulse(s, 100)
 	require.Equal(t, "root (level=0 actual=true)\n", tree.String())
 
-	s.Clone(ctx, 100, 101)
+	s.Clone(ctx, 100, 101, false)
 
 	tree, _ = treeForPulse(s, 101)
 	require.Equal(t, "root (level=0 actual=false)\n", tree.String())

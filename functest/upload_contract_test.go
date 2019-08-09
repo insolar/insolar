@@ -21,27 +21,25 @@ package functest
 import (
 	"testing"
 
-	"github.com/insolar/insolar/testutils"
-
 	"github.com/stretchr/testify/require"
 )
 
 func TestCallUploadedContract(t *testing.T) {
 	contractCode := `
 		package main
-		import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+		import "github.com/insolar/insolar/logicrunner/builtin/foundation"
 		type One struct {
 			foundation.BaseContract
 		}
 		func New() (*One, error){
 			return &One{}, nil}
 	
+		var INSATTR_Hello_API = true
 		func (r *One) Hello(str string) (string, error) {
 			return str, nil
 		}`
 
-	// if we running this test with count we need to get unique names
-	prototypeRef := uploadContract(t, testutils.RandStringBytes(16), contractCode)
+	prototypeRef := uploadContractOnce(t, "CallUploadedContract", contractCode)
 	objectRef := callConstructor(t, prototypeRef, "New")
 
 	testParam := "test"

@@ -37,7 +37,6 @@ func TestInitComponents(t *testing.T) {
 	cert := initCertificateManager(
 		ctx,
 		cfg,
-		false,
 		bootstrapComponents.CryptographyService,
 		bootstrapComponents.KeyProcessor,
 	)

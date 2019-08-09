@@ -20,6 +20,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
@@ -72,7 +73,7 @@ func (s *jetCoordinatorSuite) BeforeTest(suiteName, testName string) {
 	s.jetStorage = storage
 	s.nodeStorage = node.NewAccessorMock(s.T())
 	s.coordinator = NewJetCoordinator(5)
-	s.coordinator.NodeNet = network.NewNodeNetworkMock(s.T())
+	s.coordinator.OriginProvider = network.NewOriginProviderMock(s.T())
 
 	s.cm.Inject(
 		testutils.NewPlatformCryptographyScheme(),
@@ -134,7 +135,7 @@ func TestJetCoordinator_Me(t *testing.T) {
 	nodeNet.GetOriginMock.Return(node)
 	node.IDMock.Return(expectedID)
 	jc := NewJetCoordinator(1)
-	jc.NodeNet = nodeNet
+	jc.OriginProvider = nodeNet
 
 	// Act
 	resultID := jc.Me()
@@ -160,13 +161,13 @@ func TestJetCoordinator_IsBeyondLimit_ProblemsWithTracker(t *testing.T) {
 	pulseCalculator := pulse.NewCalculatorMock(t)
 	pulseCalculator.BackwardsMock.Return(insolar.Pulse{}, errors.New("it's expected"))
 	pulseAccessor := pulse.NewAccessorMock(t)
-	pulseAccessor.LatestMock.Return(insolar.Pulse{PulseNumber: insolar.FirstPulseNumber + 1}, nil)
+	pulseAccessor.LatestMock.Return(insolar.Pulse{PulseNumber: insolar.FirstPulseNumber + 2}, nil)
 	calc := NewJetCoordinator(12)
 	calc.PulseCalculator = pulseCalculator
 	calc.PulseAccessor = pulseAccessor
 
 	// Act
-	res, err := calc.IsBeyondLimit(ctx, insolar.FirstPulseNumber+2)
+	res, err := calc.IsBeyondLimit(ctx, insolar.FirstPulseNumber+1)
 
 	// Assert
 	require.NotNil(t, err)
@@ -198,11 +199,13 @@ func TestJetCoordinator_IsBeyondLimit_PulseNotFoundIsNotBeyondLimit(t *testing.T
 	t.Parallel()
 	// Arrange
 	ctx := inslogger.TestContext(t)
+	mc := minimock.NewController(t)
+	defer mc.Finish()
 
 	coord := NewJetCoordinator(25)
-	pulseCalculator := pulse.NewCalculatorMock(t)
-	pulseCalculator.BackwardsMock.Expect(ctx, insolar.FirstPulseNumber+2, 25).Return(insolar.Pulse{}, pulse.ErrNotFound)
-	pulseAccessor := pulse.NewAccessorMock(t)
+	pulseCalculator := pulse.NewCalculatorMock(mc)
+	pulseCalculator.BackwardsMock.Expect(ctx, insolar.FirstPulseNumber+2, 1).Return(insolar.Pulse{}, pulse.ErrNotFound)
+	pulseAccessor := pulse.NewAccessorMock(mc)
 	pulseAccessor.LatestMock.Return(insolar.Pulse{PulseNumber: insolar.FirstPulseNumber + 2}, nil)
 	coord.PulseCalculator = pulseCalculator
 	coord.PulseAccessor = pulseAccessor
@@ -212,7 +215,7 @@ func TestJetCoordinator_IsBeyondLimit_PulseNotFoundIsNotBeyondLimit(t *testing.T
 
 	// Assert
 	require.Nil(t, err)
-	require.Equal(t, false, res)
+	require.Equal(t, true, res)
 }
 
 func TestJetCoordinator_IsBeyondLimit_InsideOfLightChainLimit(t *testing.T) {
@@ -267,12 +270,12 @@ func TestJetCoordinator_NodeForJet_GoToHeavy(t *testing.T) {
 
 	expectedID := insolar.NewReference(testutils.RandomID())
 	activeNodesStorageMock := node.NewAccessorMock(t)
-	activeNodesStorageMock.InRoleFunc = func(p insolar.PulseNumber, p1 insolar.StaticRole) (r []insolar.Node, r1 error) {
+	activeNodesStorageMock.InRoleMock.Set(func(p insolar.PulseNumber, p1 insolar.StaticRole) (r []insolar.Node, r1 error) {
 		require.Equal(t, insolar.FirstPulseNumber, int(p))
 		require.Equal(t, insolar.StaticRoleHeavyMaterial, p1)
 
 		return []insolar.Node{{ID: *expectedID}}, nil
-	}
+	})
 
 	coord := NewJetCoordinator(25)
 	coord.PulseCalculator = pulseCalculator
@@ -301,12 +304,12 @@ func TestJetCoordinator_NodeForJet_GoToLight(t *testing.T) {
 
 	expectedID := insolar.NewReference(testutils.RandomID())
 	activeNodesStorageMock := node.NewAccessorMock(t)
-	activeNodesStorageMock.InRoleFunc = func(p insolar.PulseNumber, p1 insolar.StaticRole) (r []insolar.Node, r1 error) {
+	activeNodesStorageMock.InRoleMock.Set(func(p insolar.PulseNumber, p1 insolar.StaticRole) (r []insolar.Node, r1 error) {
 		require.Equal(t, insolar.FirstPulseNumber+1, int(p))
 		require.Equal(t, insolar.StaticRoleLightMaterial, p1)
 
 		return []insolar.Node{{ID: *expectedID}}, nil
-	}
+	})
 
 	coord := NewJetCoordinator(25)
 	coord.PulseAccessor = pulseAccessor

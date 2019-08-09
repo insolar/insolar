@@ -52,6 +52,7 @@ package transport
 
 import (
 	"fmt"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
@@ -62,6 +63,7 @@ import (
 func NewNodeAnnouncement(np profiles.ActiveNode, ma profiles.MembershipAnnouncement, nodeCount int,
 	pn pulse.Number, joiner *JoinerAnnouncement) *NodeAnnouncementProfile {
 	return &NodeAnnouncementProfile{
+		static:    np.GetStatic(),
 		nodeID:    np.GetNodeID(),
 		nodeCount: uint16(nodeCount),
 		ma:        ma,
@@ -70,28 +72,10 @@ func NewNodeAnnouncement(np profiles.ActiveNode, ma profiles.MembershipAnnouncem
 	}
 }
 
-// func NewNodeAnnouncementOf(na MembershipAnnouncementReader, pn common.PulseNumber) *NodeAnnouncementProfile {
-//	nr := na.GetNodeRank()
-//	return &NodeAnnouncementProfile{
-//		nodeID:    na.GetNodeID(),
-//		nodeCount: nr.GetTotalCount(),
-//		pn:        pn,
-//		isLeaving:  na.IsLeaving(),
-//		leaveReason: na.GetLeaveReason(),
-//		membership: common2.NewMembershipProfile(
-//			nr.GetMode(),
-//			nr.GetPower(),
-//			nr.GetIndex(),
-//			na.GetNodeStateHashEvidence(),
-//			na.GetAnnouncementSignature(),
-//			na.GetRequestedPower(),
-//		),
-//	}
-// }
-
 var _ MembershipAnnouncementReader = &NodeAnnouncementProfile{}
 
 type NodeAnnouncementProfile struct {
+	static    profiles.StaticProfile
 	ma        profiles.MembershipAnnouncement
 	nodeID    insolar.ShortNodeID
 	pn        pulse.Number
@@ -120,17 +104,10 @@ func (c *NodeAnnouncementProfile) GetJoinerAnnouncement() JoinerAnnouncementRead
 		return nil
 	}
 
-	if c.joiner.GetBriefIntroduction().GetStaticNodeID() == c.ma.JoinerID {
-		return c.joiner
+	if !c.ma.JoinerID.IsAbsent() && c.joiner.GetBriefIntroduction().GetStaticNodeID() != c.ma.JoinerID {
+		panic("illegal state")
 	}
-	panic("illegal state")
-}
-
-func (c *NodeAnnouncementProfile) GetJoinerIntroducedByID() insolar.ShortNodeID {
-	if c.joiner == nil {
-		return insolar.AbsentShortNodeID
-	}
-	return c.joiner.GetAnnouncerID()
+	return c.joiner
 }
 
 func (c *NodeAnnouncementProfile) GetNodeRank() member.Rank {
@@ -154,7 +131,17 @@ func (c *NodeAnnouncementProfile) GetNodeStateHashEvidence() proofs.NodeStateHas
 }
 
 func (c NodeAnnouncementProfile) String() string {
-	return fmt.Sprintf("{id:%d %03d/%d %s}", c.nodeID, c.ma.Membership.Index, c.nodeCount, c.ma.Membership.StringParts())
+	announcement := ""
+	if c.IsLeaving() {
+		announcement = fmt.Sprintf(" leave:%d", c.GetLeaveReason())
+	} else if !c.GetJoinerID().IsAbsent() {
+		joinerIntro := ""
+		if c.joiner != nil {
+			joinerIntro = "+intro"
+		}
+		announcement = fmt.Sprintf(" join:%d%s", c.GetJoinerID(), joinerIntro)
+	}
+	return fmt.Sprintf("{id:%d %03d/%d%s %s}", c.nodeID, c.ma.Membership.Index, c.nodeCount, announcement, c.ma.Membership.StringParts())
 }
 
 func (c *NodeAnnouncementProfile) GetMembershipProfile() profiles.MembershipProfile {
@@ -163,4 +150,8 @@ func (c *NodeAnnouncementProfile) GetMembershipProfile() profiles.MembershipProf
 
 func (c *NodeAnnouncementProfile) GetPulseNumber() pulse.Number {
 	return c.pn
+}
+
+func (c *NodeAnnouncementProfile) GetStatic() profiles.StaticProfile {
+	return c.static
 }

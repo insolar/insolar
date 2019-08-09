@@ -99,9 +99,9 @@ package phases
 // 	lp.LocalNodeProfileMock.Set(func() {})
 // 	callback := &nodeContext{}
 // 	r := NewNodeAppearanceAsSelf(lp, callback)
-// 	require.Equal(t, r.SetReceivedWithDupCheck(member.PacketPhase1), nil)
+// 	require.Nil(t, r.SetReceivedWithDupCheck(member.PacketPhase1))
 //
-// 	require.Equal(t, r.SetReceivedWithDupCheck(member.PacketPhase1), errors.ErrRepeatedPhasePacket)
+// 	require.Equal(t, errors.ErrRepeatedPhasePacket, r.SetReceivedWithDupCheck(member.PacketPhase1))
 //
-// 	require.Equal(t, r.SetReceivedWithDupCheck(member.MaxPacketType), errors.ErrRepeatedPhasePacket)
+// 	require.Equal(t, errors.ErrRepeatedPhasePacket, r.SetReceivedWithDupCheck(member.MaxPacketType))
 // }

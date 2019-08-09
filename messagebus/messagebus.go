@@ -21,20 +21,22 @@ import (
 	"context"
 	"encoding/gob"
 	"fmt"
+	"github.com/insolar/insolar/network"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/ThreeDotsLabs/watermill"
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
+
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
-	"go.opencensus.io/trace"
 
-	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
+
+	"github.com/insolar/insolar/insolar/pulse"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
@@ -48,22 +50,11 @@ import (
 const deliverRPCMethodName = "MessageBus.Deliver"
 
 var transferredToWatermill = map[insolar.MessageType]struct{}{
-	insolar.TypeSetBlob:                            {},
-	insolar.TypeGetChildren:                        {},
-	insolar.TypeUpdateObject:                       {},
-	insolar.TypeGetPendingRequests:                 {},
-	insolar.TypeRegisterChild:                      {},
-	insolar.TypeGetJet:                             {},
 	insolar.TypeCallMethod:                         {},
 	insolar.TypePendingFinished:                    {},
 	insolar.TypeStillExecuting:                     {},
-	insolar.TypeAbandonedRequestsNotification:      {},
 	insolar.TypeExecutorResults:                    {},
-	insolar.TypeGetPendingRequestID:                {},
-	insolar.TypeGetDelegate:                        {},
 	insolar.TypeAdditionalCallFromPreviousExecutor: {},
-	insolar.TypeHeavyPayload:                       {},
-	insolar.TypeGetObjectIndex:                     {},
 }
 
 // MessageBus is component that routes application logic requests,
@@ -71,7 +62,7 @@ var transferredToWatermill = map[insolar.MessageType]struct{}{
 type MessageBus struct {
 	Network                    insolar.Network                    `inject:""`
 	JetCoordinator             jet.Coordinator                    `inject:""`
-	NodeNetwork                insolar.NodeNetwork                `inject:""`
+	NodeNetwork                network.NodeNetwork                `inject:""`
 	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
 	CryptographyService        insolar.CryptographyService        `inject:""`
 	DelegationTokenFactory     insolar.DelegationTokenFactory     `inject:""`
@@ -83,7 +74,6 @@ type MessageBus struct {
 	signmessages bool
 
 	counter int64
-	span    *trace.Span
 
 	globalLock                  sync.RWMutex
 	NextPulseMessagePoolChan    chan interface{}
@@ -103,11 +93,15 @@ func (mb *MessageBus) Init(ctx context.Context) error {
 }
 
 func (mb *MessageBus) Acquire(ctx context.Context) {
+	parentCtx := ctx
 	counter := atomic.AddInt64(&mb.counter, 1)
 	inslogger.FromContext(ctx).Info("Call Acquire in MessageBus: ", counter)
 	if counter == 1 {
 		inslogger.FromContext(ctx).Info("Lock MB")
-		ctx, mb.span = instracer.StartSpan(context.Background(), "GIL Lock (Lock MB)")
+
+		ctx, span := instracer.StartSpan(parentCtx, "GIL Lock (Lock MB)")
+		defer span.End()
+
 		mb.Lock(ctx)
 	}
 }
@@ -120,8 +114,12 @@ func (mb *MessageBus) Release(ctx context.Context) {
 	inslogger.FromContext(ctx).Info("Call Release in MessageBus: ", counter)
 	if counter == 0 {
 		inslogger.FromContext(ctx).Info("Unlock MB")
+
+		_, span := instracer.StartSpan(ctx, "GIL Unlock (Unlock MB)")
+		defer span.End()
+
 		mb.Unlock(ctx)
-		mb.span.End()
+
 	}
 }
 
@@ -352,7 +350,6 @@ func (mb *MessageBus) OnPulse(context.Context, insolar.Pulse) error {
 }
 
 func (mb *MessageBus) doDeliver(ctx context.Context, msg insolar.Parcel) (insolar.Reply, error) {
-
 	var err error
 	ctx, span := instracer.StartSpan(ctx, "MessageBus.doDeliver")
 	defer span.End()
@@ -407,15 +404,6 @@ func (mb *MessageBus) checkPulse(ctx context.Context, parcel insolar.Parcel, loc
 		// Parcel is from past. Return error for some messages, allow for others.
 		switch parcel.Message().(type) {
 		case
-			*message.GetObject,
-			*message.GetDelegate,
-			*message.GetChildren,
-			*message.SetRecord,
-			*message.UpdateObject,
-			*message.RegisterChild,
-			*message.SetBlob,
-			*message.GetPendingRequests,
-			*message.ValidateRecord,
 			*message.CallMethod:
 			inslogger.FromContext(ctx).Errorf("[ checkPulse ] Incorrect message pulse (parcel: %d, current: %d) Msg: %s", ppn, pulse.PulseNumber, parcel.Message().Type().String())
 			return fmt.Errorf("[ checkPulse ] Incorrect message pulse (parcel: %d, current: %d)  Msg: %s", ppn, pulse.PulseNumber, parcel.Message().Type().String())
@@ -513,11 +501,16 @@ func (mb *MessageBus) deliver(ctx context.Context, args []byte) (result []byte, 
 	return buf.Bytes(), nil
 }
 
-func (mb *MessageBus) checkParcel(_ context.Context, parcel insolar.Parcel) error {
+func (mb *MessageBus) checkParcel(ctx context.Context, parcel insolar.Parcel) error {
 	sender := parcel.GetSender()
 
 	if mb.signmessages {
-		senderKey := mb.NodeNetwork.GetWorkingNode(sender).PublicKey()
+		p, err := mb.PulseAccessor.Latest(ctx)
+		if err != nil {
+			return errors.Wrap(err, "failed to get latest pulse")
+		}
+
+		senderKey := mb.NodeNetwork.GetAccessor(p.PulseNumber).GetWorkingNode(sender).PublicKey()
 		if err := mb.ParcelFactory.Validate(senderKey, parcel); err != nil {
 			return errors.Wrap(err, "failed to check a message sign")
 		}

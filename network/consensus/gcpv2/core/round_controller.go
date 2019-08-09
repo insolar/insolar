@@ -56,9 +56,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
+
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 
@@ -66,276 +70,323 @@ import (
 )
 
 type RoundStrategyFactory interface {
-	CreateRoundStrategy(chronicle api.ConsensusChronicles, config api.LocalNodeConfiguration) RoundStrategy
+	CreateRoundStrategy(chronicle api.ConsensusChronicles, config api.LocalNodeConfiguration) (RoundStrategy, PhaseControllersBundle)
 }
 
 type RoundStrategy interface {
-	PhaseControllersBundle
-
-	RandUint32() uint32
+	GetBaselineWeightForNeighbours() uint32
 	ShuffleNodeSequence(n int, swap func(i, j int))
-	IsEphemeralPulseAllowed() bool
+
 	ConfigureRoundContext(ctx context.Context, expectedPulse pulse.Number, self profiles.LocalNode) context.Context
 	AdjustConsensusTimings(timings *api.RoundTimings)
 }
+
+var _ api.RoundController = &PhasedRoundController{}
 
 type PhasedRoundController struct {
 	rw sync.RWMutex
 
 	/* Derived from the provided externally - set at init() or start(). Don't need mutex */
-	chronicle      api.ConsensusChronicles
-	fullCancel     context.CancelFunc /* cancels prepareCancel as well */
+	chronicle api.ConsensusChronicles
+	bundle    PhaseControllersBundle
+
+	// fullCancel     context.CancelFunc /* cancels prepareCancel as well */
 	prepareCancel  context.CancelFunc
 	prevPulseRound api.RoundController
 
+	roundWorker RoundStateMachineWorker
+
 	/* Other fields - need mutex */
-	isRunning bool
-	prepR     *PrepRealm
-	realm     FullRealm
+	prepR *PrepRealm
+	realm FullRealm
 }
 
-func NewPhasedRoundController(strategy RoundStrategy, chronicle api.ConsensusChronicles, transport transport.Factory,
-	config api.LocalNodeConfiguration, controlFeeder api.ConsensusControlFeeder, candidateFeeder api.CandidateControlFeeder,
+func NewPhasedRoundController(strategy RoundStrategy, chronicle api.ConsensusChronicles, bundle PhaseControllersBundle,
+	transport transport.Factory, config api.LocalNodeConfiguration,
+	controlFeeder api.ConsensusControlFeeder, candidateFeeder api.CandidateControlFeeder, ephemeralFeeder api.EphemeralControlFeeder,
 	prevPulseRound api.RoundController) *PhasedRoundController {
 
-	r := &PhasedRoundController{chronicle: chronicle}
+	r := &PhasedRoundController{chronicle: chronicle, prevPulseRound: prevPulseRound, bundle: bundle}
 
-	r.prevPulseRound = prevPulseRound
-	r.realm.coreRealm.init(&r.rw, strategy, transport, config, chronicle.GetLatestCensus())
-	nbhSizes := r.realm.init(transport, controlFeeder, candidateFeeder)
+	r.realm.coreRealm.initBefore(&r.rw, strategy, transport, config, chronicle.GetLatestCensus(),
+		controlFeeder, candidateFeeder, ephemeralFeeder)
 
-	r.realm.coreRealm.initPopulation(controlFeeder.GetRequiredPowerLevel(), nbhSizes)
+	nbhSizes := r.realm.initBefore(transport)
+	r.realm.coreRealm.initBeforePopulation(nbhSizes)
 
 	return r
 }
 
-func (r *PhasedRoundController) StartConsensusRound(upstream api.UpstreamController) {
+func (r *PhasedRoundController) PrepareConsensusRound(upstream api.UpstreamController) {
 	r.rw.Lock()
 	defer r.rw.Unlock()
 
-	if r.fullCancel != nil {
-		panic("was started once")
+	r.realm.coreRealm.roundContext = r.roundWorker.preInit(
+		r.realm.coreRealm.strategy.ConfigureRoundContext(
+			r.realm.config.GetParentContext(),
+			r.realm.initialCensus.GetExpectedPulseNumber(),
+			r.realm.GetLocalProfile(),
+		), upstream)
+
+	r.realm.coreRealm.stateMachine = &r.roundWorker
+
+	r.realm.coreRealm.postponedPacketFn = func(packet transport.PacketParser, from endpoints.Inbound, verifyFlags coreapi.PacketVerifyFlags) bool {
+		// There is no real context for delayed reprocessing, so we use the round context
+		ctx := r.realm.coreRealm.roundContext
+		_, err := r.handlePacket(ctx, packet, from, verifyFlags)
+		if err != nil {
+			inslogger.FromContext(ctx).Error(err)
+		}
+		return true
 	}
 
-	ctx := r.realm.config.GetParentContext()
-	ctx, r.fullCancel = context.WithCancel(ctx)
+	inslogger.FromContext(r.realm.roundContext).Debugf(
+		"Starting consensus round: self={%v}, ephemeral=%v, bundle=%v, census=%+v", r.realm.GetLocalProfile(),
+		r.realm.ephemeralFeeder != nil, r.bundle, r.realm.initialCensus)
 
-	r.realm.roundContext = r.realm.strategy.ConfigureRoundContext(
-		ctx,
-		r.realm.initialCensus.GetExpectedPulseNumber(),
-		r.realm.GetLocalProfile(),
+	preps := r.bundle.CreatePrepPhaseControllers()
+	if len(preps) == 0 {
+		panic("illegal state - no prep realm")
+	}
+
+	prep := PrepRealm{coreRealm: &r.realm.coreRealm}
+	prep.init(
+		func(successful bool) {
+			// RUNS under lock
+			if r.prepR == nil {
+				return
+			}
+			defer r.prepR.stop() // initiates handover from PrepRealm
+			r.prepR = nil
+			r.roundWorker.Start() // ensures that worker was started
+			r._startFullRealm(successful)
+		})
+
+	var prepCtx context.Context
+	// r.prepareCancel will be cancelled through r.fullCancel()
+	prepCtx, r.prepareCancel = context.WithCancel(r.realm.roundContext)
+
+	r.prepR = &prep
+	r.prepR.beforeStart(prepCtx, preps)
+
+	r.roundWorker.init(func() {
+		// requires r.roundWorker.StartXXX to happen under lock
+		r._setStartedAt()
+		if r.prepR != nil { // PrepRealm can be finished before starting
+			r.prepR._startWorkers(prepCtx, preps)
+		}
+	},
+		// both further handlers MUST not use round's lock inside
+		r.onConsensusStopper,
+		r.onConsensusFinished,
 	)
 
-	r.isRunning = true
+	r.realm.coreRealm.pollingWorker.Start(r.realm.roundContext, 100*time.Millisecond)
+	r.prepR.prepareEphemeralPolling(prepCtx)
+}
 
-	r.realm.coreRealm.roundStartedAt = time.Now()
-	r.realm.coreRealm.upstream = upstream
+func (r *PhasedRoundController) onConsensusStopper() {
+	latest := r.chronicle.GetLatestCensus()
 
-	preps := r.realm.strategy.GetPrepPhaseControllers()
+	inslogger.FromContext(r.realm.roundContext).Debugf(
+		"Stopping consensus round: self={%v}, ephemeral=%v, bundle=%v, census=%+v", r.realm.GetLocalProfile(),
+		r.realm.ephemeralFeeder != nil, r.bundle, latest)
 
-	if len(preps) > 0 {
-		r.prepR = &PrepRealm{
-			coreRealm: &r.realm.coreRealm,
+	if latest.GetOnlinePopulation().GetLocalProfile().IsJoiner() {
+		panic("DEBUG FAIL-FAST: local remains as joiner")
+	}
 
-			completeFn: func(successful bool) {
-				if r.prepR == nil {
-					return
-				}
-				defer r.prepR.stop() // initiates handover from PrepRealm
-				r.prepR = nil
-				r.startFullRealm()
-			},
+	if r.chronicle.GetExpectedCensus() == nil {
+		panic("DEBUG FAIL-FAST: consensus didn't finish")
+	}
 
-			postponedPacketFn: func(packet transport.PacketParser, from endpoints.Inbound) {
-				// There is no real context for delayed reprocessing, so we use the round context
-				_ = r.handlePacket(r.realm.roundContext, packet, from, true)
-			},
-		}
+	// TODO print purgatory
+}
 
-		// r.prepareCancel will be cancelled through r.fullCancel()
-		ctx, r.prepareCancel = context.WithCancel(r.realm.roundContext)
+func (r *PhasedRoundController) onConsensusFinished() {
+	r.rw.Lock()
+	defer r.rw.Unlock()
+	r._onConsensusFinished()
+}
 
-		r.prepR.start(ctx, preps /* Should be excessively enough to avoid lockups */)
-	} else {
-		r.prepR = nil
-		r.startFullRealm()
+func (r *PhasedRoundController) _onConsensusFinished() {
+	// prevents memory leak and disallows older controller to handle messages after a consensus is done
+	if r.prevPulseRound != nil {
+		r.prevPulseRound.StopConsensusRound()
+	}
+	r.prevPulseRound = nil
+}
+
+func (r *PhasedRoundController) _setStartedAt() {
+	if r.realm.roundStartedAt.IsZero() { // can be called a few times
+		r.realm.roundStartedAt = time.Now()
 	}
 }
 
-/*
-Returns true when this round was running.
-*/
 func (r *PhasedRoundController) StopConsensusRound() {
 	r.rw.Lock()
 	defer r.rw.Unlock()
+	r.roundWorker.Stop()
+	r._onConsensusFinished() // double-check, just to be on a safe side
+}
 
-	r.prevPulseRound = nil // prevents memory leak
+func (r *PhasedRoundController) IsRunning() bool {
+	return r.roundWorker.IsRunning()
+}
 
-	if r.fullCancel == nil || !r.isRunning {
+func (r *PhasedRoundController) beforeHandlePacket() (prep *PrepRealm, current pulse.Number,
+	possibleNext pulse.Number, prev api.RoundController) {
+
+	r.rw.RLock()
+	defer r.rw.RUnlock()
+	if r.prepR != nil {
+		return r.prepR, r.realm.coreRealm.initialCensus.GetExpectedPulseNumber(), 0, r.prevPulseRound
+	}
+	return nil, r.realm.GetPulseNumber(), r.realm.GetNextPulseNumber(), r.prevPulseRound
+}
+
+/*
+RUNS under lock.
+Can be called from a polling function (for ephemeral), and happen BEFORE PrepRealm start
+*/
+func (r *PhasedRoundController) _startFullRealm(prepWasSuccessful bool) {
+
+	if !prepWasSuccessful {
+		r.roundWorker.OnPrepRoundFailed()
 		return
 	}
-	r.isRunning = false
-	r.fullCancel()
-}
 
-/* LOCK: simple */
-func (r *PhasedRoundController) IsRunning() bool {
-	r.rw.RLock()
-	defer r.rw.RUnlock()
-	return r.isRunning
-}
-
-/* Checks if Controller can handle a new packet, and which Realm should do it. If result = nil, then FullRealm is used */
-/* LOCK: simple */
-func (r *PhasedRoundController) beforeHandlePacket() (prep *PrepRealm, current pulse.Number, possibleNext pulse.Number, err error) {
-	r.rw.RLock()
-	defer r.rw.RUnlock()
-
-	if r.fullCancel == nil {
-		return nil, 0, 0, errors2.NewRoundStateError("not started")
-	}
-	if !r.isRunning {
-		return nil, 0, 0, errors2.NewRoundStateError("stopped")
-	}
-
-	if r.prepR != nil {
-		return r.prepR, r.realm.coreRealm.initialCensus.GetExpectedPulseNumber(), 0, nil
-	}
-	return nil, r.realm.GetPulseNumber(), r.realm.GetNextPulseNumber(), nil
-}
-
-func (r *PhasedRoundController) startFullRealm() {
+	r.roundWorker.OnFullRoundStarting()
 
 	chronicle := r.chronicle
 	lastCensus := chronicle.GetLatestCensus()
-	pd := &r.realm.pulseData
+	pd := r.realm.pulseData
 
-	if lastCensus.IsActive() && lastCensus.GetPulseNumber().IsUnknown() {
-		/* This is the priming lastCensus */
-		b := chronicle.GetActiveCensus().CreateBuilder(pd.PulseNumber, true)
-		r.realm.preparePrimingMembers(b.GetPopulationBuilder())
+	if lastCensus.GetCensusState() == census.PrimingCensus {
+		/* This is the priming census */
 		priming := lastCensus.GetMandateRegistry().GetPrimingCloudHash()
-		b.SetGlobulaStateHash(priming)
-		b.SealCensus()
-		b.BuildAndMakeExpected(priming)
-		chronicle.GetExpectedCensus().MakeActive(*pd)
+		lastCensus.(census.Prime).BuildCopy(pd, priming, priming).MakeExpected().MakeActive(pd)
 	} else {
-		if lastCensus.GetPulseNumber() != pd.PulseNumber {
-			panic(fmt.Sprintf("illegal state - pulse number of expected census (%v) and of the realm (%v) are mismatched for %v", lastCensus.GetPulseNumber(), pd.PulseNumber, r.realm.GetSelfNodeID()))
+		// TODO restore to exact equality for expected population!!!!!
+		if !lastCensus.GetPulseNumber().IsUnknownOrEqualTo(pd.PulseNumber) {
+			// TODO inform control feeder when our pulse is less
+			panic(fmt.Sprintf("illegal state - pulse number of expected census (%v) and of the realm (%v) are mismatched for %v",
+				lastCensus.GetPulseNumber(), pd.PulseNumber, r.realm.GetSelfNodeID()))
 		}
 		if !lastCensus.IsActive() {
 			/* Auto-activation of the prepared lastCensus */
 			expCensus := chronicle.GetExpectedCensus()
-			lastCensus = expCensus.MakeActive(*pd)
+			lastCensus = expCensus.MakeActive(pd)
 		}
 	}
 
 	active := chronicle.GetActiveCensus()
-	r.realm.start(active, active.GetOnlinePopulation())
-	r.realm.CommitPulseChange()
+	if r.realm.ephemeralFeeder != nil && !active.GetPulseData().IsFromEphemeral() {
+		r.realm.ephemeralFeeder.OnEphemeralCancelled() // can't be called inline due to lock
+		r.realm.ephemeralFeeder = nil
+	}
+
+	r.realm.start(active, active.GetOnlinePopulation(), r.bundle)
+	r.roundWorker.SetTimeout(r.realm.roundStartedAt.Add(r.realm.timings.EndOfConsensus))
 }
 
-func (r *PhasedRoundController) HandlePacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound) error {
-	return r.handlePacket(ctx, packet, from, nil)
+func (r *PhasedRoundController) ensureStarted() bool {
+
+	isStarted, isRunning := r.roundWorker.IsStartedAndRunning()
+	if isStarted {
+		return isRunning
+	}
+
+	r.rw.Lock() // ensure that starting closure will run under lock
+	defer r.rw.Unlock()
+	return r.roundWorker.SafeStartAndGetIsRunning()
+}
+
+func (r *PhasedRoundController) HandlePacket(ctx context.Context, packet transport.PacketParser,
+	from endpoints.Inbound) (api.RoundControlCode, error) {
+
+	return r.handlePacket(ctx, packet, from, coreapi.DefaultVerify)
 }
 
 func (r *PhasedRoundController) handlePacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound,
-	verificationProof interface{}) error {
+	verifyFlags coreapi.PacketVerifyFlags) (api.RoundControlCode, error) {
 
+	pn := packet.GetPulseNumber()
 	/* a separate method with lock is to ensure that further packet processing is not connected to a lock */
-	prep, filterPN, nextPN, err := r.beforeHandlePacket()
-	if err != nil {
-		return err
+	prep, filterPN, _, prev := r.beforeHandlePacket()
+
+	// TODO HACK - network doesnt have information about pulsars to validate packets, hackIgnoreVerification must be removed when fixed
+	defaultOptions := coreapi.SkipVerify // coreapi.DefaultVerify
+
+	if prev != nil && filterPN > pn { // TODO fix as filterPN can be zero during ephemeral transition
+		// something from a previous round?
+		_, err := prev.HandlePacket(ctx, packet, from)
+		return api.KeepRound, fmt.Errorf("on prev round: %v", err)
+		// defaultOptions = coreapi.SkipVerify // validation was done by the prev controller
 	}
 
-	if !filterPN.IsUnknown() {
-		pn := packet.GetPulseNumber()
-		if !pn.IsUnknown() && filterPN != pn {
-			if nextPN.IsUnknown() || nextPN != pn {
-				return errors2.NewPulseRoundMismatchError(pn,
-					fmt.Sprintf("packet pulse number mismatched: expected=%v, actual=%v", filterPN, pn))
+	if r.realm.ephemeralFeeder != nil && !packet.GetPacketType().IsEphemeralPacket() && (prep == nil || !prep.disableEphemeral) { // TODO need fix, too ugly
+
+		_, err := r.realm.VerifyPacketAuthenticity(ctx, packet, from, nil, coreapi.DefaultVerify, nil, defaultOptions)
+		if err == nil {
+			err = r.realm.ephemeralFeeder.OnNonEphemeralPacket(ctx, packet, from)
+		}
+		return api.KeepRound, err
+	}
+
+	var err error
+	if prep != nil {
+		// NB! Round may NOT be running yet here - ensure it is working before calling the state machine
+		r.ensureStarted()
+
+		if !pn.IsUnknown() && (filterPN.IsUnknown() || filterPN == pn) && r.roundWorker.IsRunning() /* can be already stopped */ {
+			r.roundWorker.OnPulseDetected()
+		}
+
+		err = prep.dispatchPacket(ctx, packet, from, defaultOptions) // prep realm can't inherit flags
+	} else {
+		err = r.realm.dispatchPacket(ctx, packet, from, verifyFlags|defaultOptions)
+	}
+
+	isPulse := false
+	isPulse, pn = errors2.IsMismatchPulseError(err)
+	if !isPulse {
+		return api.KeepRound, err
+	}
+
+	if !r.chronicle.GetLatestCensus().GetPulseNumber().IsUnknownOrEqualTo(pn) {
+		r.roundWorker.onUnexpectedPulse(pn)
+		return api.KeepRound, err
+	}
+
+	if r.roundWorker.IsRunning() {
+		canStop := true
+		endOfConsensus := r.realm.GetStartedAt().Add(r.realm.timings.EndOfConsensus)
+		if time.Now().Before(endOfConsensus) {
+			if r.realm.ephemeralFeeder != nil {
+				canStop = r.realm.ephemeralFeeder.CanStopOnHastyPulse(pn, endOfConsensus)
+			} else {
+				canStop = r.realm.controlFeeder.CanStopOnHastyPulse(pn, endOfConsensus)
 			}
-			return errors2.NewNextPulseArrivedError(pn)
+		}
+
+		if !canStop {
+			r.roundWorker.onUnexpectedPulse(pn)
+			return api.KeepRound, err
+		}
+		inslogger.FromContext(ctx).Debug("stopping round by changed pulse")
+		r.StopConsensusRound()
+		// TODO should allow some time to handover a broken population?
+		// TODO build a one-node population for Suspected mode
+	} else {
+		expected := r.chronicle.GetExpectedCensus()
+		if expected == nil || !expected.GetOnlinePopulation().IsValid() {
+			return api.NextRoundTerminate, fmt.Errorf("next population is invalid or not ready on: %v", err)
 		}
 	}
+	r.roundWorker.onNextPulse(pn)
+	warnMsg := errors2.PulseRoundErrorMessageToWarn(err.Error())
+	inslogger.FromContext(ctx).Debug(warnMsg)
 
-	if prep != nil {
-		return prep.dispatchPacket(ctx, packet, from, verificationProof)
-	}
-	return r.realm.dispatchPacket(ctx, packet, from, verificationProof)
-
-	// if pt.IsMemberPacket() {
-	//	memberPacket := packet.GetMemberPacket()
-	//	if memberPacket == nil {
-	//		panic("missing parser for phased packet")
-	//	}
-	//
-	//	strictSenderCheck, err = r.verifyRoute(ctx, packet)
-	//	if err != nil {
-	//		return err
-	//	}
-	//
-	//	if prep == nil { // Full realm is active - we can use node projections
-	//		route, err := r.realm.getPacketDispatcher(pt)
-	//		if err != nil {
-	//			return err
-	//		}
-	//
-	//		pop := r.realm.GetPopulation()
-	//		sid := packet.GetSourceID()
-	//		src := pop.GetNodeAppearance(sid)
-	//		if src == nil {
-	//			if route.HasUnknownMemberHandler() {
-	//				src, err = route.dispatchUnknownMemberPacket(ctx, memberPacket, from)
-	//				if err != nil {
-	//					return err
-	//				}
-	//			}
-	//			if src == nil {
-	//				return fmt.Errorf("unknown source id (%v)", sid)
-	//			}
-	//		}
-	//
-	//		if !preVerified {
-	//			err = src.VerifyPacketAuthenticity(packet, from, strictSenderCheck)
-	//			if err != nil {
-	//				return err
-	//			}
-	//		}
-	//
-	//		if route.HasMemberHandler() {
-	//			return route.dispatchMemberPacket(ctx, memberPacket, src)
-	//		}
-	//		return route.dispatchHostPacket(ctx, packet, from)
-	//	}
-	// }
-	//
-	// //TODO HACK - network doesnt have information about pulsars to validate packets, hackIgnoreVerification must be removed when fixed
-	// hackIgnoreVerification := !packet.GetPacketType().IsMemberPacket()
-	//
-	// if !preVerified && !hackIgnoreVerification {
-	//	err = r.realm.coreRealm.VerifyPacketAuthenticity(packet, from, strictSenderCheck)
-	//	if err != nil {
-	//		return err
-	//	}
-	// }
-	//
-	// if prep != nil { // Prep realm is active
-	//	return prep.handleHostPacket(ctx, packet, from)
-	// }
-	// route, err := r.realm.getPacketDispatcher(pt)
-	// if err != nil {
-	//	return err
-	// }
-	// return route.dispatchHostPacket(ctx, packet, from)
+	return api.StartNextRound, nil
 }
-
-// /* Initiates cancellation of this round */
-// func (r *PhasedRoundController) cancelRound() {
-//	panic("not implemented")
-// }
-//
-// /* Initiates cancellation of this round */
-// func (r *PhasedRoundController) finishRound() {
-//	panic("not implemented")
-// }

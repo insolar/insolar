@@ -67,7 +67,7 @@ func TestNewClaimList(t *testing.T) {
 	payload := []byte{1, 2, 3, 4, 5}
 	claim := NewGenericClaim(payload)
 	assert.Equal(t, claimTypeGeneric, claim.ClaimType())
-	assert.Equal(t, len(claim.Payload), int(claim.Length()))
+	assert.Equal(t, len(claim.Payload), claim.Length())
 	assert.Equal(t, payload, claim.Payload)
 	list.Push(claim)
 	assert.Len(t, list.Claims, 1)
@@ -82,7 +82,7 @@ func TestClaimList_SerializeDeserialize(t *testing.T) {
 	buf := make([]byte, 0)
 	rw := bytes.NewBuffer(buf)
 	w := newTrackableWriter(rw)
-	packetCtx := newPacketContext(context.Background(), nil)
+	packetCtx := newPacketContext(context.Background(), &Header{})
 	serializeCtx := newSerializeContext(packetCtx, w, digester, signer, nil)
 
 	err := list.SerializeTo(serializeCtx, rw)

@@ -53,10 +53,12 @@ package serialization
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"math"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 
 	"github.com/pkg/errors"
@@ -89,6 +91,11 @@ type packetContext struct {
 }
 
 func newPacketContext(ctx context.Context, header *Header) packetContext {
+	ctx, _ = inslogger.WithFields(ctx, map[string]interface{}{
+		"packet_flags":   fmt.Sprintf("%08b", header.PacketFlags),
+		"payload_length": header.getPayloadLength(),
+	})
+
 	return packetContext{
 		Context:              ctx,
 		PacketHeaderAccessor: header,
@@ -105,6 +112,10 @@ func (pc *packetContext) SetInContext(ctx FieldContext) {
 }
 
 func (pc *packetContext) GetNeighbourNodeID() insolar.ShortNodeID {
+	if pc.neighbourNodeID.IsAbsent() {
+		panic("illegal value")
+	}
+
 	return pc.neighbourNodeID
 }
 
@@ -117,6 +128,10 @@ func (pc *packetContext) GetAnnouncedJoinerNodeID() insolar.ShortNodeID {
 }
 
 func (pc *packetContext) SetAnnouncedJoinerNodeID(nodeID insolar.ShortNodeID) {
+	if nodeID.IsAbsent() {
+		panic("illegal value")
+	}
+
 	pc.announcedJoinerNodeID = nodeID
 }
 
@@ -213,8 +228,8 @@ func (ctx *serializeContext) Finalize() (int64, error) {
 	readerForSignature := bytes.NewReader(ctx.packetBuffer.Bytes())
 	digest := ctx.digester.GetDigestOf(readerForSignature)
 	signedDigest := digest.SignWith(ctx.signer)
-	signature := signedDigest.GetSignature()
-	ctx.setter.setSignature(signature.AsSignatureHolder())
+	signature := signedDigest.GetSignatureHolder()
+	ctx.setter.setSignature(signature)
 
 	if _, err := signature.WriteTo(ctx.packetBuffer); err != nil {
 		return totalWrite, ErrMalformedPacketSignature(err)

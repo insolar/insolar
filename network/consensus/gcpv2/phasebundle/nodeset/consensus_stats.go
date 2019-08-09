@@ -132,6 +132,10 @@ func (t *ConsensusStatTable) AsText(header string) string {
 	return t.TableFmt(header, FmtConsensusStat)
 }
 
+func (t *ConsensusStatTable) EqualsTyped(o *ConsensusStatTable) bool {
+	return o != nil && t.StatTable.Equals(&o.StatTable)
+}
+
 type innerStatColumn struct {
 	*stats.Column
 }
@@ -184,10 +188,9 @@ func (r ConsensusStatRow) String() string {
 	return r.innerRow.Row.StringFmt(FmtConsensusStat, true)
 }
 
-func LocalToConsensusStatRow(b member.StateBitset) *ConsensusStatRow {
+func StateToConsensusStatRow(b member.StateBitset) ConsensusStatRow {
 
 	nodeStats := NewConsensusStatRow(b.Len())
-
 	for i, v := range b {
 		switch {
 		case v.IsTimeout():
@@ -201,5 +204,5 @@ func LocalToConsensusStatRow(b member.StateBitset) *ConsensusStatRow {
 		}
 	}
 
-	return &nodeStats
+	return nodeStats
 }
