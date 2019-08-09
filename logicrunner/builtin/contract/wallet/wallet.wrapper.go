@@ -37,6 +37,14 @@ func (e *ExtendableError) Error() string {
 func INS_META_INFO() []map[string]string {
 	result := make([]map[string]string, 0)
 
+	{
+		info := make(map[string]string, 3)
+		info["Type"] = "SagaInfo"
+		info["MethodName"] = "Accept"
+		info["RollbackMethodName"] = "INS_FLAG_NO_ROLLBACK_METHOD"
+		result = append(result, info)
+	}
+
 	return result
 }
 
@@ -202,18 +210,18 @@ func INSMETHOD_Accept(object []byte, data []byte) ([]byte, []byte, error) {
 	return state, ret, err
 }
 
-func INSMETHOD_RollBack(object []byte, data []byte) ([]byte, []byte, error) {
+func INSMETHOD_Rollback(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
 	self := new(Wallet)
 
 	if len(object) == 0 {
-		return nil, nil, &ExtendableError{S: "[ FakeRollBack ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+		return nil, nil, &ExtendableError{S: "[ FakeRollback ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
 	}
 
 	err := ph.Deserialize(object, self)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeRollBack ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		e := &ExtendableError{S: "[ FakeRollback ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
 		return nil, nil, e
 	}
 
@@ -223,11 +231,11 @@ func INSMETHOD_RollBack(object []byte, data []byte) ([]byte, []byte, error) {
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeRollBack ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		e := &ExtendableError{S: "[ FakeRollback ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
 		return nil, nil, e
 	}
 
-	ret0 := self.RollBack(args0)
+	ret0 := self.Rollback(args0)
 
 	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
 	systemErr := ph.GetSystemError()
@@ -352,7 +360,7 @@ func Initialize() XXX_insolar.ContractWrapper {
 		Methods: XXX_insolar.ContractMethods{
 			"Transfer":   INSMETHOD_Transfer,
 			"Accept":     INSMETHOD_Accept,
-			"RollBack":   INSMETHOD_RollBack,
+			"Rollback":   INSMETHOD_Rollback,
 			"GetBalance": INSMETHOD_GetBalance,
 		},
 		Constructors: XXX_insolar.ContractConstructors{

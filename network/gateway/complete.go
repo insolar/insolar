@@ -53,12 +53,9 @@ package gateway
 import (
 	"context"
 	"fmt"
-	"os"
-	"syscall"
 	"time"
 
 	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
@@ -258,17 +255,7 @@ func pulseProcessingWatchdog(ctx context.Context, pulse insolar.Pulse, done chan
 	go func() {
 		select {
 		case <-time.After(time.Second * time.Duration(pulse.NextPulseNumber-pulse.PulseNumber)):
-			logger.Errorf("Node stopped due to long pulse processing %v", pulse.PulseNumber)
-
-			proc, err := os.FindProcess(os.Getpid())
-			if err != nil {
-				log.Error(err)
-			} else {
-				err := proc.Signal(syscall.SIGABRT)
-				if err != nil {
-					panic(err)
-				}
-			}
+			logger.Errorf("Node stopped due to long pulse processing, pulse:%v", pulse.PulseNumber)
 		case <-done:
 		}
 	}()

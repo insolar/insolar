@@ -26,7 +26,6 @@ import (
 	"github.com/insolar/insolar/logicrunner/builtin/foundation/safemath"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/costcenter"
 	proxyMember "github.com/insolar/insolar/logicrunner/builtin/proxy/member"
-	"github.com/insolar/insolar/logicrunner/builtin/proxy/rootdomain"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/wallet"
 )
 
@@ -55,11 +54,7 @@ func (w *Wallet) Transfer(rootDomainRef insolar.Reference, amountStr string, toM
 		return nil, fmt.Errorf("amount must be larger then zero")
 	}
 
-	rd := rootdomain.GetObject(rootDomainRef)
-	ccRef, err := rd.GetCostCenter()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get cost center reference: %s", err.Error())
-	}
+	ccRef := foundation.GetCostCenter()
 
 	cc := costcenter.GetObject(ccRef)
 	feeStr, err := cc.CalcFee(amountStr)
@@ -105,25 +100,15 @@ func (w *Wallet) Transfer(rootDomainRef insolar.Reference, amountStr string, toM
 
 	toWallet := wallet.GetObject(memberWallet)
 	acceptErr := toWallet.Accept(amount.String())
-	if acceptErr == nil {
-		return member.TransferResponse{Fee: feeStr}, nil
+	if acceptErr != nil {
+		return nil, fmt.Errorf("failed to accept balance to wallet: %s", acceptErr.Error())
 	}
 
-	newBalance, err = safemath.Add(balance, amountWithFee)
-	if err != nil {
-		return nil, fmt.Errorf("failed to add amount back to balance: %s", err.Error())
-	}
-	w.Balance = newBalance.String()
-
-	err = feeWallet.RollBack(feeStr)
-	if err != nil {
-		return nil, fmt.Errorf("failed to roll back fee: %s", err.Error())
-	}
-
-	return nil, fmt.Errorf("failed to accept balance to wallet: %s", acceptErr.Error())
+	return member.TransferResponse{Fee: feeStr}, nil
 }
 
 // Accept accepts transfer to balance.
+//ins:saga(INS_FLAG_NO_ROLLBACK_METHOD)
 func (w *Wallet) Accept(amountStr string) (err error) {
 
 	amount := new(big.Int)
@@ -147,8 +132,8 @@ func (w *Wallet) Accept(amountStr string) (err error) {
 	return nil
 }
 
-// RollBack rolls back transfer to balance.
-func (w *Wallet) RollBack(amountStr string) (err error) {
+// Rollback rolls back transfer to balance.
+func (w *Wallet) Rollback(amountStr string) (err error) {
 
 	amount := new(big.Int)
 	amount, ok := amount.SetString(amountStr, 10)

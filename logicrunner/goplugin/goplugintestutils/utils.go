@@ -224,7 +224,7 @@ func (cb *ContractsBuilder) registerRequest(ctx context.Context, request *record
 		}
 
 		if currentPulse.PulseNumber == lastPulse {
-			logger.Debugf("[ registerRequest ]  wait for pulse change. Current: %d", currentPulse)
+			logger.Debugf("[ registerRequest ]  wait for pulse change. Current: %d", currentPulse.PulseNumber)
 			time.Sleep(100 * time.Millisecond)
 			continue
 		}
