@@ -25,8 +25,8 @@ import (
 	"github.com/insolar/insolar/logicrunner/builtin/foundation/safemath"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/account"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/costcenter"
-	proxyMember "github.com/insolar/insolar/logicrunner/builtin/proxy/member"
-	proxyWallet "github.com/insolar/insolar/logicrunner/builtin/proxy/wallet"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/member"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/wallet"
 )
 
 // Wallet - basic wallet contract.
@@ -97,12 +97,12 @@ func (w *Wallet) Transfer(rootDomainRef insolar.Reference, assetName string, amo
 		return nil, fmt.Errorf("balance is too low: %s", currentBalanceStr)
 	}
 
-	toWalletRef, err := proxyMember.GetObject(*toMember).GetWallet()
+	toWalletRef, err := member.GetObject(*toMember).GetWallet()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get destination member wallet: %s", err.Error())
 	}
 
-	toWallet := proxyWallet.GetObject(toWalletRef)
+	toWallet := wallet.GetObject(toWalletRef)
 
 	toAccount, err := toWallet.GetAccount(assetName)
 	if err != nil {
@@ -124,7 +124,7 @@ func (w *Wallet) Transfer(rootDomainRef insolar.Reference, assetName string, amo
 		return nil, fmt.Errorf("failed to get wallet ref: %s", err.Error())
 	}
 
-	toFeeWallet := proxyWallet.GetObject(feeWalletRef)
+	toFeeWallet := wallet.GetObject(feeWalletRef)
 
 	toFeeAccount, err := toFeeWallet.GetAccount(assetName)
 	if err != nil {
