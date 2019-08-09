@@ -87,7 +87,24 @@ func (p *Replication) Proceed(ctx context.Context) error {
 		return fmt.Errorf("unexpected payload %T", pl)
 	}
 
-	storeRecords(ctx, p.dep.records, p.dep.recordsPositions, p.dep.pcs, msg.Pulse, msg.Records)
+	err = p.store(ctx, msg)
+	if err != nil {
+		inslogger.FromContext(ctx).Fatalf("replication fatal error: %v", err.Error())
+	}
+
+	stats.Record(ctx, statReceivedHeavyPayloadCount.M(1))
+
+	return nil
+}
+
+func (p *Replication) store(
+	ctx context.Context,
+	msg *payload.Replication,
+) error {
+	if err := storeRecords(ctx, p.dep.records, p.dep.recordsPositions, p.dep.pcs, msg.Pulse, msg.Records); err != nil {
+		return errors.Wrap(err, "failed to store records")
+	}
+
 	if err := storeIndexes(ctx, p.dep.indexes, msg.Indexes, msg.Pulse); err != nil {
 		return errors.Wrap(err, "failed to store indexes")
 	}
@@ -98,12 +115,8 @@ func (p *Replication) Proceed(ctx context.Context) error {
 	}
 
 	if err := p.dep.keeper.AddDropConfirmation(ctx, dr.Pulse, dr.JetID, dr.Split); err != nil {
-		return errors.Wrapf(err, "failed to add jet to JetKeeper jet=%v", dr.JetID.DebugString())
+		return errors.Wrapf(err, "failed to add drop confirmation for jet=%v", dr.JetID.DebugString())
 	}
-
-	stats.Record(ctx,
-		statReceivedHeavyPayloadCount.M(1),
-	)
 
 	return nil
 }
@@ -149,30 +162,25 @@ func storeRecords(
 	pcs insolar.PlatformCryptographyScheme,
 	pn insolar.PulseNumber,
 	records []record.Material,
-) {
-	inslog := inslogger.FromContext(ctx)
-
+) error {
 	for _, rec := range records {
 		hash := record.HashVirtual(pcs.ReferenceHasher(), rec.Virtual)
 		id := *insolar.NewID(pn, hash)
-		// FIXME: skipping errors will lead to inconsistent state.
 		if rec.ID != id {
-			inslog.Error(fmt.Errorf(
+			return fmt.Errorf(
 				"record id does not match (calculated: %s, received: %s)",
 				id.DebugString(),
 				rec.ID.DebugString(),
-			))
-			continue
+			)
 		}
-		err := recordStorage.Set(ctx, rec)
-		if err != nil {
-			inslog.Error(err, "heavyserver: store record failed")
-			continue
+
+		if err := recordStorage.Set(ctx, rec); err != nil {
+			return errors.Wrap(err, "store record failed")
 		}
-		err = recordIndex.IncrementPosition(id)
-		if err != nil {
-			inslog.Error(err, "heavyserver: fail to store record position")
-			continue
+
+		if err := recordIndex.IncrementPosition(id); err != nil {
+			return errors.Wrap(err, "fail to store record position")
 		}
 	}
+	return nil
 }
