@@ -118,7 +118,7 @@ func (w *Wallet) GetBalance() (string, error) {
 }
 
 // Accept accepts transfer to balance.
-//ins:saga(Rollback)
+//ins:saga(INS_FLAG_NO_ROLLBACK_METHOD)
 func (w *Wallet) Accept(amountStr string) (err error) {
 
 	amount := new(big.Int)

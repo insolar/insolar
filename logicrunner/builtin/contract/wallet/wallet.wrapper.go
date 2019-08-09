@@ -41,7 +41,7 @@ func INS_META_INFO() []map[string]string {
 		info := make(map[string]string, 3)
 		info["Type"] = "SagaInfo"
 		info["MethodName"] = "Accept"
-		info["RollbackMethodName"] = "Rollback"
+		info["RollbackMethodName"] = "INS_FLAG_NO_ROLLBACK_METHOD"
 		result = append(result, info)
 	}
 
