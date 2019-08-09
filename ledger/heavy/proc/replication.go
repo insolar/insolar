@@ -130,10 +130,9 @@ func storeIndexes(
 	for _, idx := range indexes {
 		err := mod.SetIndex(ctx, pn, idx)
 		if err != nil {
-			return errors.Wrapf(err, "heavyserver: index storing failed")
+			return err
 		}
 	}
-
 	return nil
 }
 
@@ -149,7 +148,7 @@ func storeDrop(
 	}
 	err = drops.Set(ctx, *d)
 	if err != nil {
-		return nil, errors.Wrapf(err, "heavyserver: drop storing failed")
+		return nil, err
 	}
 
 	return d, nil
@@ -175,7 +174,7 @@ func storeRecords(
 		}
 
 		if err := recordStorage.Set(ctx, rec); err != nil {
-			return errors.Wrap(err, "store record failed")
+			return errors.Wrap(err, "set method failed")
 		}
 
 		if err := recordIndex.IncrementPosition(id); err != nil {
