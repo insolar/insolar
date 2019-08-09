@@ -104,7 +104,7 @@ type Base struct {
 	originCandidate *adapters.Candidate
 
 	// Next request backoff.
-	backoff time.Duration
+	backoff time.Duration // nolint
 }
 
 // NewGateway creates new gateway on top of existing

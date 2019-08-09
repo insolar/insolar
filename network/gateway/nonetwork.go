@@ -72,11 +72,12 @@ type NoNetwork struct {
 
 func (g *NoNetwork) pause() time.Duration {
 	var sleep time.Duration
-	if g.backoff == g.Options.MaxTimeout {
+	switch g.backoff {
+	case g.Options.MaxTimeout:
 		sleep = g.backoff
-	} else if g.backoff == 0 {
+	case 0:
 		g.backoff = g.Options.MinTimeout
-	} else {
+	default:
 		sleep = g.backoff
 		g.backoff *= g.Options.TimeoutMult
 		if g.backoff > g.Options.MaxTimeout {
