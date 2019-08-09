@@ -55,6 +55,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/common/capacity"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
@@ -65,13 +66,12 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/power"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
-	"github.com/insolar/insolar/network/utils"
 )
 
 const defaultEphemeralPulseDuration = 2 * time.Second
 
 type EphemeralController interface {
-	EphemeralMode() bool
+	EphemeralMode(nodes []insolar.NetworkNode) bool
 }
 
 type ConsensusControlFeeder struct {
@@ -266,9 +266,8 @@ func (cf *InternalControlFeederAdapter) setHasLeft() {
 	cf.hasLeft = true
 }
 
-func NewEphemeralControlFeeder(pulseChanger PulseChanger, ephemeralController EphemeralController) *EphemeralControlFeeder {
+func NewEphemeralControlFeeder(ephemeralController EphemeralController) *EphemeralControlFeeder {
 	return &EphemeralControlFeeder{
-		pulseChanger:        pulseChanger,
 		ephemeralController: ephemeralController,
 		pulseDuration:       defaultEphemeralPulseDuration,
 	}
@@ -280,8 +279,12 @@ type EphemeralControlFeeder struct {
 	pulseDuration       time.Duration
 }
 
+func (f *EphemeralControlFeeder) OnEphemeralCancelled() {
+	// TODO is called on cancellation by both Ph1 packets and TryConvertFromEphemeral
+}
+
 func (f *EphemeralControlFeeder) CanAcceptTimePulseToStopEphemeral(pd pulse.Data /*, sourceNode profiles.ActiveNode*/) bool {
-	return false
+	return true
 }
 
 func (f *EphemeralControlFeeder) GetMinDuration() time.Duration {
@@ -300,10 +303,22 @@ func (f *EphemeralControlFeeder) OnNonEphemeralPacket(ctx context.Context, parse
 	return nil
 }
 
-func (f *EphemeralControlFeeder) TryConvertFromEphemeral(expected census.Expected) (wasConverted bool, converted census.Expected) {
-	if f.ephemeralController.EphemeralMode() || expected == nil || !expected.GetOnlinePopulation().IsValid() {
+func (f *EphemeralControlFeeder) TryConvertFromEphemeral(ctx context.Context, expected census.Expected) (wasConverted bool, converted census.Expected) {
+	if expected == nil {
 		return false, nil
 	}
+
+	population := expected.GetOnlinePopulation()
+	if !population.IsValid() {
+		return false, nil
+	}
+
+	networkNodes := NewNetworkNodeList(population.GetProfiles())
+	if f.ephemeralController.EphemeralMode(networkNodes) {
+		return false, nil
+	}
+
+	inslogger.FromContext(ctx).Infof("Converting to real pulses with population of %d nodes", len(networkNodes))
 
 	// TODO provide a real pulse to attach to it
 	expectedRealPulse := pulse.Unknown
@@ -311,11 +326,6 @@ func (f *EphemeralControlFeeder) TryConvertFromEphemeral(expected census.Expecte
 }
 
 func (f *EphemeralControlFeeder) EphemeralConsensusFinished(isNextEphemeral bool, roundStartedAt time.Time, expected census.Operational) {
-	pulseNumber := expected.GetPulseNumber()
-	_, pulseData := expected.GetNearestPulseData()
-	ctx := utils.NewPulseContext(context.Background(), uint32(pulseNumber))
-
-	f.pulseChanger.ChangePulse(ctx, NewPulse(pulseData))
 }
 
 func (f *EphemeralControlFeeder) GetEphemeralTimings(config api.LocalNodeConfiguration) api.RoundTimings {

@@ -14,11 +14,12 @@
 // limitations under the License.
 //
 
-package gen
+package gen_test
 
 import (
 	"testing"
 
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"
@@ -26,7 +27,7 @@ import (
 
 func TestGen_JetID(t *testing.T) {
 	for i := 0; i < 100; i++ {
-		jetID := JetID()
+		jetID := gen.JetID()
 		recID := (*insolar.ID)(&jetID)
 		require.Equalf(t,
 			insolar.PulseNumberJet, recID.Pulse(),
@@ -36,5 +37,31 @@ func TestGen_JetID(t *testing.T) {
 			"jet depth %v should be less than maximum value %v. jet: %v",
 			jetID.Depth(), insolar.JetMaximumDepth, jetID.DebugString(),
 		)
+	}
+}
+
+func TestGen_IDWithPulse(t *testing.T) {
+	// Empty slice for comparison.
+	emptySlice := make([]byte, insolar.RecordHashSize)
+
+	for i := 0; i < 100; i++ {
+		pulse := gen.PulseNumber()
+
+		idWithPulse := gen.IDWithPulse(pulse)
+
+		pulseFromIDBuf := idWithPulse[:insolar.PulseNumberSize]
+		require.Equal(t,
+			pulse.Bytes(), pulseFromIDBuf,
+			"pulse bytes should be equal pulse bytes from generated ID")
+
+		pulseFromID := idWithPulse.Pulse()
+		require.Equal(t,
+			pulse, pulseFromID,
+			"pulse should be equal pulse from generated ID")
+
+		idHash := idWithPulse.Hash()
+		require.NotEqual(t,
+			emptySlice, idHash,
+			"ID.Hash() should not be empty")
 	}
 }

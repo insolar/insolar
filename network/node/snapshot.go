@@ -114,7 +114,7 @@ func (s *Snapshot) Equal(s2 *Snapshot) bool {
 }
 
 // NewSnapshot create new snapshot for pulse.
-func NewSnapshot(number insolar.PulseNumber, nodes map[insolar.Reference]insolar.NetworkNode) *Snapshot {
+func NewSnapshot(number insolar.PulseNumber, nodes []insolar.NetworkNode) *Snapshot {
 	return &Snapshot{
 		pulse: number,
 		// TODO: pass actual state
@@ -125,13 +125,13 @@ func NewSnapshot(number insolar.PulseNumber, nodes map[insolar.Reference]insolar
 
 // splitNodes temporary method to create snapshot lists. Will be replaced by special function that will take in count
 // previous snapshot and approved claims.
-func splitNodes(nodes map[insolar.Reference]insolar.NetworkNode) [ListLength][]insolar.NetworkNode {
+func splitNodes(nodes []insolar.NetworkNode) [ListLength][]insolar.NetworkNode {
 	var result [ListLength][]insolar.NetworkNode
 	for i := 0; i < int(ListLength); i++ {
 		result[i] = make([]insolar.NetworkNode, 0)
 	}
 	for _, node := range nodes {
-		listType := nodeStateToListType(node.GetState())
+		listType := nodeStateToListType(node)
 		if listType == ListLength {
 			continue
 		}
@@ -140,10 +140,13 @@ func splitNodes(nodes map[insolar.Reference]insolar.NetworkNode) [ListLength][]i
 	return result
 }
 
-func nodeStateToListType(state insolar.NodeState) ListType {
-	switch state {
+func nodeStateToListType(node insolar.NetworkNode) ListType {
+	switch node.GetState() {
 	case insolar.NodeReady:
-		return ListWorking
+		if node.GetPower() > 0 {
+			return ListWorking
+		}
+		return ListIdle
 	case insolar.NodePending:
 		return ListJoiner
 	case insolar.NodeUndefined, insolar.NodeLeaving:

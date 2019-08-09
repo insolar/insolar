@@ -116,12 +116,11 @@ func NewOfflinePopulation(nodeKeeper network.NodeKeeper, manager insolar.Certifi
 }
 
 func (op *OfflinePopulation) FindRegisteredProfile(identity endpoints.Inbound) profiles.Host {
-	node := op.nodeKeeper.GetAccessor().GetActiveNodeByAddr(identity.GetNameAddress().String())
+	node := op.nodeKeeper.GetAccessor(insolar.GenesisPulse.PulseNumber).GetActiveNodeByAddr(identity.GetNameAddress().String())
 	if node == nil {
 		return nil
 	}
 	cert := op.manager.GetCertificate()
-
 	return NewStaticProfile(node, cert, op.keyProcessor)
 }
 
@@ -131,6 +130,10 @@ type VersionedRegistries struct {
 	offlinePopulation   census.OfflinePopulation
 
 	pulseData pulse.Data
+}
+
+func (c *VersionedRegistries) GetNearestValidPulseData() pulse.Data {
+	return pulse.Data{}
 }
 
 func NewVersionedRegistries(

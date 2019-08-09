@@ -161,6 +161,9 @@ func (h *ConsensusMemberController) discardInternal(terminateMember bool, toBeDi
 }
 
 func (h *ConsensusMemberController) discard(toBeDiscarded api.RoundController) bool {
+	if toBeDiscarded == nil {
+		return false
+	}
 	return h.discardInternal(false, toBeDiscarded)
 }
 
@@ -177,7 +180,7 @@ func (h *ConsensusMemberController) processPacket(ctx context.Context, round api
 	case api.KeepRound:
 		return false, err
 	case api.StartNextRound:
-		//return true, err
+		// return true, err
 	case api.NextRoundTerminate:
 		h.terminate()
 	default:
@@ -201,11 +204,13 @@ func (h *ConsensusMemberController) ProcessPacket(ctx context.Context, payload t
 		if isCreated {
 			return fmt.Errorf("illegal behavior - packet can not be re-processed for a just created round")
 		}
+		h.discard(round)
 	}
 
-	h.discard(round)
-
 	round, _ = h.getOrCreate()
+	if round == nil {
+		return fmt.Errorf("new round can not be created - controller was terminated")
+	}
 	retry, err := h.processPacket(ctx, round, payload, from)
 	if retry {
 		return fmt.Errorf("illegal behavior - packet can not be re-processed twice")
@@ -219,6 +224,22 @@ type ephemeralInterceptor struct {
 	round      api.RoundController
 }
 
+func (p *ephemeralInterceptor) OnEphemeralCancelled() {
+	feeder := p._cancelled()
+	if feeder != nil {
+		feeder.OnEphemeralCancelled()
+	}
+}
+
+func (p *ephemeralInterceptor) _cancelled() api.EphemeralControlFeeder {
+	p.controller.mutex.Lock()
+	defer p.controller.mutex.Unlock()
+
+	feeder := p.EphemeralControlFeeder
+	p.EphemeralControlFeeder = nil
+	return feeder
+}
+
 func (p *ephemeralInterceptor) EphemeralConsensusFinished(isNextEphemeral bool, roundStartedAt time.Time,
 	expected census.Operational) {
 
@@ -228,7 +249,6 @@ func (p *ephemeralInterceptor) EphemeralConsensusFinished(isNextEphemeral bool, 
 	defer p.controller.mutex.Unlock()
 
 	if !isNextEphemeral {
-		p.EphemeralControlFeeder = nil
 		return
 	}
 

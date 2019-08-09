@@ -19,6 +19,7 @@ package logicrunner
 
 import (
 	"context"
+	"github.com/insolar/insolar/network"
 	"strconv"
 	"sync"
 
@@ -55,7 +56,7 @@ type Ref = insolar.Reference
 type LogicRunner struct {
 	MessageBus                 insolar.MessageBus                 `inject:""`
 	ContractRequester          insolar.ContractRequester          `inject:""`
-	NodeNetwork                insolar.NodeNetwork                `inject:""`
+	NodeNetwork                network.NodeNetwork                `inject:""`
 	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
 	ParcelFactory              message.ParcelFactory              `inject:""`
 	PulseAccessor              pulse.Accessor                     `inject:""`

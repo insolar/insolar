@@ -52,9 +52,9 @@ package adapters
 
 import (
 	"crypto/ecdsa"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
-	"github.com/insolar/insolar/network/consensus/common/longbits"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
@@ -202,16 +202,15 @@ func (cdf *ConsensusDigestFactory) CreatePacketDigester() cryptkit.DataDigester 
 }
 
 func (cdf *ConsensusDigestFactory) CreateSequenceDigester() cryptkit.SequenceDigester {
-	return &seqDigester{}
+	return NewSequenceDigester(NewSha3512Digester(cdf.scheme))
 }
 
 func (cdf *ConsensusDigestFactory) CreateAnnouncementDigester() cryptkit.SequenceDigester {
-	return &seqDigester{}
+	return NewSequenceDigester(NewSha3512Digester(cdf.scheme))
 }
 
 func (cdf *ConsensusDigestFactory) CreateGlobulaStateDigester() transport.StateDigester {
-	return &gshDigester{
-		sd:            &seqDigester{},
-		defaultDigest: cryptkit.NewDigest(longbits.NewBits512FromBytes(make([]byte, 64)), "stubHash").AsDigestHolder(),
-	}
+	return NewStateDigester(
+		NewSequenceDigester(NewSha3512Digester(cdf.scheme)),
+	)
 }

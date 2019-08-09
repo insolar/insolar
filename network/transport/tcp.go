@@ -60,8 +60,8 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/resolver"
-	"github.com/insolar/insolar/network/utils"
 )
 
 const (
@@ -98,7 +98,7 @@ func (t *tcpTransport) Dial(ctx context.Context, address string) (io.ReadWriteCl
 
 	conn, err := net.DialTCP("tcp", nil, tcpAddress)
 	if err != nil {
-		logger.Error("[ Dial ] Failed to open connection: ", err)
+		logger.Warn("[ Dial ] Failed to open connection: ", err)
 		return nil, errors.Wrap(err, "[ Dial ] Failed to open connection")
 	}
 
@@ -141,12 +141,12 @@ func (t *tcpTransport) listen(ctx context.Context) {
 	for {
 		conn, err := t.listener.AcceptTCP()
 		if err != nil {
-			if utils.IsConnectionClosed(err) {
+			if network.IsConnectionClosed(err) {
 				logger.Info("[ listen ] Connection closed, quiting accept loop")
 				return
 			}
 
-			logger.Error("[ listen ] Failed to accept connection: ", err)
+			logger.Warn("[ listen ] Failed to accept connection: ", err)
 			return
 		}
 		logger.Infof("[ listen ] Accepted new connection")
@@ -166,7 +166,7 @@ func (t *tcpTransport) Stop(ctx context.Context) error {
 
 		err := t.listener.Close()
 		if err != nil {
-			if !utils.IsConnectionClosed(err) {
+			if !network.IsConnectionClosed(err) {
 				return err
 			}
 			logger.Info("[ Stop ] Connection already closed")
@@ -179,14 +179,14 @@ func setupConnection(ctx context.Context, conn *net.TCPConn) {
 	logger := inslogger.FromContext(ctx).WithField("address", conn.RemoteAddr())
 
 	if err := conn.SetNoDelay(true); err != nil {
-		logger.Error("[ setupConnection ] Failed to set connection no delay: ", err)
+		logger.Warn("[ setupConnection ] Failed to set connection no delay: ", err)
 	}
 
 	if err := conn.SetKeepAlivePeriod(keepAlivePeriod); err != nil {
-		logger.Error("[ setupConnection ] Failed to set keep alive period", err)
+		logger.Warn("[ setupConnection ] Failed to set keep alive period", err)
 	}
 
 	if err := conn.SetKeepAlive(true); err != nil {
-		logger.Error("[ setupConnection ] Failed to set keep alive", err)
+		logger.Warn("[ setupConnection ] Failed to set keep alive", err)
 	}
 }

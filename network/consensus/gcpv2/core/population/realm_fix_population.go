@@ -52,6 +52,7 @@ package population
 
 import (
 	"context"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/args"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
@@ -202,9 +203,9 @@ func (r *FixedRealmPopulation) SealIndexed(indexedCountLimit int) bool {
 }
 
 func (r *FixedRealmPopulation) AddToDynamics(ctx context.Context, n *NodeAppearance) (*NodeAppearance, error) {
-	//if !n.profile.IsJoiner() {
+	// if !n.profile.IsJoiner() {
 	//	panic("illegal value")
-	//}
+	// }
 	return r.dynPop.AddToDynamics(ctx, n)
 }
 
