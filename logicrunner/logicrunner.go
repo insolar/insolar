@@ -22,14 +22,11 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/insolar/insolar/network"
-
-	"github.com/insolar/go-actors/actor/system"
-
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 
+	"github.com/insolar/go-actors/actor/system"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
@@ -47,11 +44,10 @@ import (
 	lrCommon "github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/goplugin"
 	"github.com/insolar/insolar/logicrunner/writecontroller"
+	"github.com/insolar/insolar/network"
 )
 
 const maxQueueLength = 10
-
-type Ref = insolar.Reference
 
 // LogicRunner is a general interface of contract executor
 type LogicRunner struct {
