@@ -301,6 +301,11 @@ func (h *Handler) handleGotHotConfirmation(ctx context.Context, meta payload.Met
 	next, err := h.PulseCalculator.Forwards(ctx, confirm.Pulse, 1)
 	if err != nil {
 		logger.Error("failed to get next pulse for ", confirm.Pulse, err)
+		msg, newErr := payload.NewMessage(&payload.Error{Text: "failed to get next pulse", Code: uint32(payload.CodeNoNextPulse)})
+		if newErr != nil {
+			logger.Fatal("failed to reply error", err)
+		}
+		h.Sender.Reply(ctx, meta, msg)
 		return
 	}
 
@@ -314,6 +319,12 @@ func (h *Handler) handleGotHotConfirmation(ctx context.Context, meta payload.Met
 	if err != nil {
 		logger.Error(errors.Wrapf(err, "failed to add hot confitmation to JetKeeper jet=%v", confirm.String()))
 	}
+
+	msg, newErr := payload.NewMessage(&payload.Ok{})
+	if newErr != nil {
+		logger.Fatal("failed to reply Ok", err)
+	}
+	h.Sender.Reply(ctx, meta, msg)
 
 	proc.FinalizePulse(ctx, h.PulseCalculator, h.BackupMaker, h.JetKeeper, confirm.Pulse)
 }

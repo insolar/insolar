@@ -59,7 +59,7 @@ func (p *SendIndex) Proceed(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrapf(
 			err,
-			"failed to fetch object index for %v", ensureIndex.ObjectID.String(),
+			"failed to fetch object index for %v", ensureIndex.ObjectID.DebugString(),
 		)
 	}
 

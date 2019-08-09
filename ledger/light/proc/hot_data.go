@@ -18,7 +18,9 @@ package proc
 
 import (
 	"context"
+	"time"
 
+	"github.com/insolar/insolar/insolar/backoff"
 	"github.com/insolar/insolar/insolar/bus"
 	wbus "github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
@@ -45,6 +47,7 @@ type HotObjects struct {
 	drop    drop.Drop
 	indexes []record.Index
 	pulse   insolar.PulseNumber
+	backoff backoff.Backoff
 
 	dep struct {
 		drops       drop.Modifier
@@ -71,6 +74,12 @@ func NewHotObjects(
 		drop:    drop,
 		indexes: indexes,
 		pulse:   pn,
+		backoff: backoff.Backoff{
+			Factor: 2,
+			Jitter: true,
+			Min:    50 * time.Millisecond,
+			Max:    time.Second,
+		},
 	}
 }
 
@@ -154,26 +163,51 @@ func (p *HotObjects) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "failed to release jets")
 	}
 
-	p.sendConfirmationToHeavy(ctx, p.jetID, p.drop.Pulse, p.drop.Split)
-	return nil
+	return p.sendConfirmationToHeavy(ctx, p.jetID, p.drop.Pulse, p.drop.Split)
 }
 
-func (p *HotObjects) sendConfirmationToHeavy(ctx context.Context, jetID insolar.JetID, pn insolar.PulseNumber, split bool) {
+func (p *HotObjects) sendConfirmationToHeavy(ctx context.Context, jetID insolar.JetID, pn insolar.PulseNumber, split bool) error {
 	msg, err := payload.NewMessage(&payload.GotHotConfirmation{
 		JetID: jetID,
 		Pulse: pn,
 		Split: split,
 	})
 
+	logger := inslogger.FromContext(ctx)
+
 	if err != nil {
-		inslogger.FromContext(ctx).Error("Can't create GotHotConfirmation message: ", err)
-		return
+		logger.Fatal("Can't create GotHotConfirmation message: ", err)
 	}
 
-	inslogger.FromContext(ctx).Debug("Send hot confirmation to heavy. pulse: ", pn, " jet: ", p.drop.JetID.DebugString())
+	logger.Debug("Send hot confirmation to heavy. pulse: ", pn, " jet: ", p.drop.JetID.DebugString())
 
-	_, done := p.dep.sender.SendRole(ctx, msg, insolar.DynamicRoleHeavyExecutor, *insolar.NewReference(insolar.ID(jetID)))
-	done()
+	reps, done := p.dep.sender.SendRole(ctx, msg, insolar.DynamicRoleHeavyExecutor, *insolar.NewReference(insolar.ID(jetID)))
+	defer done()
+
+	res, ok := <-reps
+	if !ok {
+		logger.Fatal("no reply for sending hot confirmation to heavy")
+	}
+
+	pl, err := payload.UnmarshalFromMeta(res.Payload)
+	if err != nil {
+		logger.Fatal(errors.Wrap(err, "failed to unmarshal reply"))
+	}
+
+	if errPayload, ok := pl.(*payload.Error); ok {
+		if errPayload.Code != payload.CodeNoNextPulse {
+			logger.Fatal(errors.Wrap(errors.New(errPayload.Text), "failed to send hot confirmation"))
+		}
+		select {
+		case <-ctx.Done():
+			return errors.New("sendConfirmationToHeavy: retry timeout")
+		case <-time.After(p.backoff.Duration()):
+			logger.Debug("Retry to sendConfirmationToHeavy")
+			return p.sendConfirmationToHeavy(ctx, jetID, pn, split)
+		}
+	}
+
+	return nil
 }
 
 func (p *HotObjects) notifyPending(
