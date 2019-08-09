@@ -165,7 +165,7 @@ func TestBackuper(t *testing.T) {
 	sgWriteStopped.Wait()
 
 	// final backup to collect all rest records
-	err = bm.Do(context.Background(), testPulse+insolar.PulseNumber(numIterations))
+	err = bm.MakeBackup(context.Background(), testPulse+insolar.PulseNumber(numIterations))
 	require.NoError(t, err)
 
 	// check backup hashes
