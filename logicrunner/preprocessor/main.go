@@ -796,7 +796,7 @@ func skipCommentBeginning(comment string) (string, error) {
 
 	// skip '//'
 	if !strings.HasPrefix(slice, "//") {
-		return "", fmt.Errorf("invalid comment begigning")
+		return "", fmt.Errorf("invalid comment beginning")
 	}
 	slice = slice[2:sliceLen]
 	sliceLen -= 2
