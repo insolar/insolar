@@ -42,25 +42,23 @@ type Member struct {
 	Wallet           insolar.Reference
 }
 
-func (m *Member) setMigrationAddress(migrationAddress string) error {
-	m.MigrationAddress = migrationAddress
-	return nil
-}
-
 // GetName gets name.
-func (m *Member) GetName() (string, error) {
+// ins:immutable
+func (m Member) GetName() (string, error) {
 	return m.Name, nil
 }
 
 // GetWallet gets wallet.
-func (m *Member) GetWallet() (insolar.Reference, error) {
+// ins:immutable
+func (m Member) GetWallet() (insolar.Reference, error) {
 	return m.Wallet, nil
 }
 
 var INSATTR_GetPublicKey_API = true
 
 // GetPublicKey gets public key.
-func (m *Member) GetPublicKey() (string, error) {
+// ins:immutable
+func (m Member) GetPublicKey() (string, error) {
 	return m.PublicKey, nil
 }
 
@@ -466,7 +464,7 @@ func (m *Member) depositMigration(txHash string, burnAddress string, amount *big
 		return fmt.Errorf("this migration daemon is not in the list of active daemons")
 	}
 
-	// Get member by burn address
+	// Get member by migration address
 	tokenHolderRef, err := rd.GetMemberByMigrationAddress(burnAddress)
 	if err != nil {
 		return fmt.Errorf("failed to get member by burn address")
@@ -505,10 +503,11 @@ func (m *Member) depositMigration(txHash string, burnAddress string, amount *big
 }
 
 // GetDeposits get all deposits for this member
-func (m *Member) GetDeposits() (map[string]interface{}, error) {
+// ins:immutable
+func (m Member) GetDeposits() (map[string]interface{}, error) {
 	return m.getDeposits()
 }
-func (m *Member) getDeposits() (map[string]interface{}, error) {
+func (m Member) getDeposits() (map[string]interface{}, error) {
 	result := map[string]interface{}{}
 	for tx, dRef := range m.Deposits {
 
@@ -525,6 +524,7 @@ func (m *Member) getDeposits() (map[string]interface{}, error) {
 }
 
 // FindDeposit finds deposit for this member with this transaction hash.
+// ins:immutable
 func (m *Member) FindDeposit(transactionsHash string) (bool, insolar.Reference, error) {
 
 	if dRef, ok := m.Deposits[transactionsHash]; ok {
@@ -543,7 +543,8 @@ func (m *Member) AddDeposit(txId string, deposit insolar.Reference) error {
 	return nil
 }
 
-func (m *Member) GetBurnAddress() (string, error) {
+// ins:immutable
+func (m Member) GetBurnAddress() (string, error) {
 	return m.MigrationAddress, nil
 }
 
