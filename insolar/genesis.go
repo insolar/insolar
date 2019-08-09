@@ -102,7 +102,6 @@ type GenesisContractState struct {
 	Name       string
 	Prototype  string
 	ParentName string
-	Delegate   bool
 	Memory     []byte
 }
 
