@@ -54,7 +54,7 @@ func VerifyAuthorizationCertificate(cs insolar.CryptographyService, discoveryNod
 	return true, nil
 }
 
-// NewUnsignedCertificate returns new certificate
+// NewUnsignedCertificate creates new unsigned certificate by copying
 func NewUnsignedCertificate(baseCert insolar.Certificate, pKey string, role string, ref string) (insolar.Certificate, error) {
 	cert := baseCert.(*Certificate)
 	newCert := Certificate{
