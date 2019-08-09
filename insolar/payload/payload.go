@@ -477,6 +477,7 @@ func Unmarshal(data []byte) (Payload, error) {
 		return &pl, err
 	case TypeAbandonedRequestsNotification:
 		pl := AbandonedRequestsNotification{}
+		err := pl.Unmarshal(data)
 		return &pl, err
 	case TypeGetLightInitialState:
 		pl := GetLightInitialState{}
