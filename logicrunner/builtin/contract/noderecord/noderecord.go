@@ -61,19 +61,22 @@ func NewNodeRecord(publicKey string, roleStr string) (*NodeRecord, error) {
 var INSATTR_GetNodeInfo_API = true
 
 // GetNodeInfo returns RecordInfo.
-func (nr *NodeRecord) GetNodeInfo() (RecordInfo, error) {
+// ins:immutable
+func (nr NodeRecord) GetNodeInfo() (RecordInfo, error) {
 	return nr.Record, nil
 }
 
 var INSATTR_GetPublicKey_API = true
 
 // GetPublicKey returns public key.
-func (nr *NodeRecord) GetPublicKey() (string, error) {
+// ins:immutable
+func (nr NodeRecord) GetPublicKey() (string, error) {
 	return nr.Record.PublicKey, nil
 }
 
 // GetRole returns role.
-func (nr *NodeRecord) GetRole() (insolar.StaticRole, error) {
+// ins:immutable
+func (nr NodeRecord) GetRole() (insolar.StaticRole, error) {
 	return nr.Record.Role, nil
 }
 

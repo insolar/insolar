@@ -52,9 +52,16 @@ func (r *ContractConstructorHolder) AsChild(objRef insolar.Reference) (*{{ .Cont
 	}
 
 	var constructorError *foundation.Error
-	err = common.CurrentProxyCtx.Deserialize(ret, []interface{}{ &constructorError })
+	resultContainer := foundation.Result{
+		Returns: []interface{}{ &constructorError },
+	}
+	err = common.CurrentProxyCtx.Deserialize(ret, &resultContainer)
 	if err != nil {
 		return nil, err
+	}
+
+	if resultContainer.Error != nil {
+		return nil, resultContainer.Error
 	}
 
 	if constructorError != nil {
@@ -178,11 +185,17 @@ func (r *{{ $.ContractType }}) {{ $method.Name }}{{if $method.Immutable}}AsMutab
 		return {{ $method.ResultsWithErr }}
 	}
 
-	err = common.CurrentProxyCtx.Deserialize(res, &ret)
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
 	if err != nil {
 		return {{ $method.ResultsWithErr }}
 	}
-
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return {{ $method.ResultsWithErr }}
+	}
 	if {{ $method.ErrorVar }} != nil {
 		return {{ $method.Results }}
 	}
@@ -227,11 +240,17 @@ func (r *{{ $.ContractType }}) {{ $method.Name }}{{if not $method.Immutable}}AsI
 		return {{ $method.ResultsWithErr }}
 	}
 
-	err = common.CurrentProxyCtx.Deserialize(res, &ret)
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
 	if err != nil {
 		return {{ $method.ResultsWithErr }}
 	}
-
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return {{ $method.ResultsWithErr }}
+	}
 	if {{ $method.ErrorVar }} != nil {
 		return {{ $method.Results }}
 	}
