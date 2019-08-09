@@ -687,13 +687,6 @@ func (q *ExecutionBroker) AddFreshRequest(
 	q.stateLock.Lock()
 	defer q.stateLock.Unlock()
 
-	select {
-	case <-ctx.Done():
-		inslogger.FromContext(ctx).Debug("pulse changed, skipping")
-		return
-	default:
-	}
-
 	if tr.Request.CallType != record.CTMethod {
 		// It's considered that we are not pending except someone calls a method.
 		q.pending = insolar.NotPending
@@ -721,13 +714,6 @@ func (q *ExecutionBroker) AddAdditionalRequestFromPrevExecutor(
 ) {
 	q.stateLock.Lock()
 	defer q.stateLock.Unlock()
-
-	select {
-	case <-ctx.Done():
-		inslogger.FromContext(ctx).Debug("pulse changed, skipping")
-		return
-	default:
-	}
 
 	q.Put(ctx, true, tr)
 }
