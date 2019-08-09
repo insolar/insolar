@@ -358,7 +358,11 @@ func (b *Bus) IncomingMessageRouter(handle message.HandlerFunc) message.HandlerF
 
 		if meta.OriginHash.IsZero() {
 			logger.Debug("not a reply")
-			return handle(msg)
+			_, err := handle(msg)
+			if err != nil {
+				logger.Error(errors.Wrap(err, "message handler returned error"))
+			}
+			return nil, nil
 		}
 
 		msg.Metadata.Set("msg_hash_origin", meta.OriginHash.String())
