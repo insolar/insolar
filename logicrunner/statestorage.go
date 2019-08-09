@@ -29,14 +29,6 @@ import (
 	"github.com/insolar/insolar/logicrunner/artifacts"
 )
 
-// Context of one contract execution
-type ObjectState struct {
-	sync.Mutex
-
-	ExecutionBroker  ExecutionBrokerI
-	ExecutionArchive ExecutionArchive
-}
-
 //go:generate minimock -i github.com/insolar/insolar/logicrunner.StateStorage -o ./ -s _mock.go -g
 type StateStorage interface {
 	sync.Locker
