@@ -155,13 +155,13 @@ func displayResultsJSON(results [][]string, _ bool, _ *bytes.Buffer) {
 	for i, res := range results {
 		doc[i].URL = res[0]
 		doc[i].NetworkState = res[1]
-		doc[i].ID = uint32(parseInt64(res[3]))
-		doc[i].NetworkPulseNumber = parseInt64(res[4])
-		doc[i].PulseNumber = parseInt64(res[5])
-		doc[i].ActiveListSize = parseInt64(res[6])
-		doc[i].WorkingListSize = parseInt64(res[7])
-		doc[i].Role = res[8]
-		doc[i].Error = res[9]
+		doc[i].ID = uint32(parseInt64(res[2]))
+		doc[i].NetworkPulseNumber = parseInt64(res[3])
+		doc[i].PulseNumber = parseInt64(res[4])
+		doc[i].ActiveListSize = parseInt64(res[5])
+		doc[i].WorkingListSize = parseInt64(res[6])
+		doc[i].Role = res[7]
+		doc[i].Error = res[8]
 	}
 
 	jsonDoc, err := json.MarshalIndent(doc, "", "    ")

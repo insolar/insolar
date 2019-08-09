@@ -86,7 +86,7 @@ func (a *Accessor) GetActiveNode(ref insolar.Reference) insolar.NetworkNode {
 
 func (a *Accessor) GetWorkingNode(ref insolar.Reference) insolar.NetworkNode {
 	node := a.GetActiveNode(ref)
-	if node == nil || node.GetState() != insolar.NodeReady || node.GetPower() == 0 {
+	if node == nil || node.GetPower() == 0 {
 		return nil
 	}
 	return node
@@ -128,7 +128,7 @@ func (a *Accessor) addToIndex(node insolar.NetworkNode) {
 	a.sidIndex[node.ShortID()] = node
 	a.addrIndex[node.Address()] = node
 
-	if node.GetState() != insolar.NodeReady || node.GetPower() == 0 {
+	if node.GetPower() == 0 {
 		return
 	}
 
