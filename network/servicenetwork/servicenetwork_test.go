@@ -111,7 +111,7 @@ func TestSendMessageHandler_ReceiverNotSet(t *testing.T) {
 	inMsg := message.NewMessage(watermill.NewUUID(), data)
 
 	_, err = serviceNetwork.SendMessageHandler(inMsg)
-	require.Error(t, err)
+	require.NoError(t, err)
 }
 
 func TestSendMessageHandler_SameNode(t *testing.T) {
@@ -182,7 +182,7 @@ func TestSendMessageHandler_SendError(t *testing.T) {
 	inMsg := message.NewMessage(watermill.NewUUID(), data)
 
 	_, err = serviceNetwork.SendMessageHandler(inMsg)
-	require.Error(t, err)
+	require.NoError(t, err)
 }
 
 func TestSendMessageHandler_WrongReply(t *testing.T) {
@@ -219,7 +219,7 @@ func TestSendMessageHandler_WrongReply(t *testing.T) {
 	inMsg := message.NewMessage(watermill.NewUUID(), data)
 
 	_, err = serviceNetwork.SendMessageHandler(inMsg)
-	require.Error(t, err)
+	require.NoError(t, err)
 }
 
 func TestSendMessageHandler(t *testing.T) {

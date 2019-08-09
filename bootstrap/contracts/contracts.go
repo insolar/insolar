@@ -86,7 +86,6 @@ func GetWalletGenesisContractState(balance string, name string, parent string) i
 		Name:       name,
 		Prototype:  insolar.GenesisNameWallet,
 		ParentName: parent,
-		Delegate:   true,
 		Memory:     mustGenMemory(w),
 	}
 }
@@ -101,7 +100,6 @@ func GetCostCenterGenesisContractState() insolar.GenesisContractState {
 		Name:       insolar.GenesisNameCostCenter,
 		Prototype:  insolar.GenesisNameCostCenter,
 		ParentName: insolar.GenesisNameRootDomain,
-		Delegate:   true,
 		Memory:     mustGenMemory(cc),
 	}
 }
