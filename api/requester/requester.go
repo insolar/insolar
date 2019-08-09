@@ -33,9 +33,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/pkg/errors"
-
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/pkg/errors"
 )
 
 var httpClient *http.Client
@@ -211,7 +210,7 @@ func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, reqC
 	if err != nil {
 		return nil, errors.Wrap(err, "[ SendWithSeed ] Config request marshaling failed")
 	}
-	signature, err := Sign(userCfg.privateKeyObject, dataToSign)
+	signature, err := Sign(userCfg.PrivateKey, dataToSign)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ SendWithSeed ] Problem with signing request")
 	}
