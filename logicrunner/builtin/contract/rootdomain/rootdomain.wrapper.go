@@ -92,159 +92,6 @@ func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) 
 	return state, ret, err
 }
 
-func INSMETHOD_GetCostCenterRef(object []byte, data []byte) ([]byte, []byte, error) {
-	ph := common.CurrentProxyCtx
-	ph.SetSystemError(nil)
-	self := new(RootDomain)
-
-	if len(object) == 0 {
-		return nil, nil, &ExtendableError{S: "[ FakeGetCostCenterRef ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
-	}
-
-	err := ph.Deserialize(object, self)
-	if err != nil {
-		e := &ExtendableError{S: "[ FakeGetCostCenterRef ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
-		return nil, nil, e
-	}
-
-	args := []interface{}{}
-
-	err = ph.Deserialize(data, &args)
-	if err != nil {
-		e := &ExtendableError{S: "[ FakeGetCostCenterRef ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
-		return nil, nil, e
-	}
-
-	ret0, ret1 := self.GetCostCenterRef()
-
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
-	systemErr := ph.GetSystemError()
-
-	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		systemErr = nil
-	}
-	// TODO: this is the end of a horrible hack, please remove it
-
-	if systemErr != nil {
-		return nil, nil, ph.GetSystemError()
-	}
-
-	state := []byte{}
-	err = ph.Serialize(self, &state)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	ret1 = ph.MakeErrorSerializable(ret1)
-
-	ret := []byte{}
-	err = ph.Serialize([]interface{}{ret0, ret1}, &ret)
-
-	return state, ret, err
-}
-
-func INSMETHOD_GetMigrationWalletRef(object []byte, data []byte) ([]byte, []byte, error) {
-	ph := common.CurrentProxyCtx
-	ph.SetSystemError(nil)
-	self := new(RootDomain)
-
-	if len(object) == 0 {
-		return nil, nil, &ExtendableError{S: "[ FakeGetMigrationWalletRef ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
-	}
-
-	err := ph.Deserialize(object, self)
-	if err != nil {
-		e := &ExtendableError{S: "[ FakeGetMigrationWalletRef ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
-		return nil, nil, e
-	}
-
-	args := []interface{}{}
-
-	err = ph.Deserialize(data, &args)
-	if err != nil {
-		e := &ExtendableError{S: "[ FakeGetMigrationWalletRef ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
-		return nil, nil, e
-	}
-
-	ret0, ret1 := self.GetMigrationWalletRef()
-
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
-	systemErr := ph.GetSystemError()
-
-	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		systemErr = nil
-	}
-	// TODO: this is the end of a horrible hack, please remove it
-
-	if systemErr != nil {
-		return nil, nil, ph.GetSystemError()
-	}
-
-	state := []byte{}
-	err = ph.Serialize(self, &state)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	ret1 = ph.MakeErrorSerializable(ret1)
-
-	ret := []byte{}
-	err = ph.Serialize([]interface{}{ret0, ret1}, &ret)
-
-	return state, ret, err
-}
-
-func INSMETHOD_GetMigrationAdminMember(object []byte, data []byte) ([]byte, []byte, error) {
-	ph := common.CurrentProxyCtx
-	ph.SetSystemError(nil)
-	self := new(RootDomain)
-
-	if len(object) == 0 {
-		return nil, nil, &ExtendableError{S: "[ FakeGetMigrationAdminMember ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
-	}
-
-	err := ph.Deserialize(object, self)
-	if err != nil {
-		e := &ExtendableError{S: "[ FakeGetMigrationAdminMember ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
-		return nil, nil, e
-	}
-
-	args := []interface{}{}
-
-	err = ph.Deserialize(data, &args)
-	if err != nil {
-		e := &ExtendableError{S: "[ FakeGetMigrationAdminMember ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
-		return nil, nil, e
-	}
-
-	ret0, ret1 := self.GetMigrationAdminMember()
-
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
-	systemErr := ph.GetSystemError()
-
-	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		systemErr = nil
-	}
-	// TODO: this is the end of a horrible hack, please remove it
-
-	if systemErr != nil {
-		return nil, nil, ph.GetSystemError()
-	}
-
-	state := []byte{}
-	err = ph.Serialize(self, &state)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	ret1 = ph.MakeErrorSerializable(ret1)
-
-	ret := []byte{}
-	err = ph.Serialize([]interface{}{ret0, ret1}, &ret)
-
-	return state, ret, err
-}
-
 func INSMETHOD_GetActiveMigrationDaemonMembers(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
@@ -269,57 +116,6 @@ func INSMETHOD_GetActiveMigrationDaemonMembers(object []byte, data []byte) ([]by
 	}
 
 	ret0, ret1 := self.GetActiveMigrationDaemonMembers()
-
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
-	systemErr := ph.GetSystemError()
-
-	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		systemErr = nil
-	}
-	// TODO: this is the end of a horrible hack, please remove it
-
-	if systemErr != nil {
-		return nil, nil, ph.GetSystemError()
-	}
-
-	state := []byte{}
-	err = ph.Serialize(self, &state)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	ret1 = ph.MakeErrorSerializable(ret1)
-
-	ret := []byte{}
-	err = ph.Serialize([]interface{}{ret0, ret1}, &ret)
-
-	return state, ret, err
-}
-
-func INSMETHOD_GetRootMemberRef(object []byte, data []byte) ([]byte, []byte, error) {
-	ph := common.CurrentProxyCtx
-	ph.SetSystemError(nil)
-	self := new(RootDomain)
-
-	if len(object) == 0 {
-		return nil, nil, &ExtendableError{S: "[ FakeGetRootMemberRef ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
-	}
-
-	err := ph.Deserialize(object, self)
-	if err != nil {
-		e := &ExtendableError{S: "[ FakeGetRootMemberRef ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
-		return nil, nil, e
-	}
-
-	args := []interface{}{}
-
-	err = ph.Deserialize(data, &args)
-	if err != nil {
-		e := &ExtendableError{S: "[ FakeGetRootMemberRef ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
-		return nil, nil, e
-	}
-
-	ret0, ret1 := self.GetRootMemberRef()
 
 	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
 	systemErr := ph.GetSystemError()
@@ -426,57 +222,6 @@ func INSMETHOD_GetMemberByMigrationAddress(object []byte, data []byte) ([]byte, 
 	}
 
 	ret0, ret1 := self.GetMemberByMigrationAddress(args0)
-
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
-	systemErr := ph.GetSystemError()
-
-	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		systemErr = nil
-	}
-	// TODO: this is the end of a horrible hack, please remove it
-
-	if systemErr != nil {
-		return nil, nil, ph.GetSystemError()
-	}
-
-	state := []byte{}
-	err = ph.Serialize(self, &state)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	ret1 = ph.MakeErrorSerializable(ret1)
-
-	ret := []byte{}
-	err = ph.Serialize([]interface{}{ret0, ret1}, &ret)
-
-	return state, ret, err
-}
-
-func INSMETHOD_GetCostCenter(object []byte, data []byte) ([]byte, []byte, error) {
-	ph := common.CurrentProxyCtx
-	ph.SetSystemError(nil)
-	self := new(RootDomain)
-
-	if len(object) == 0 {
-		return nil, nil, &ExtendableError{S: "[ FakeGetCostCenter ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
-	}
-
-	err := ph.Deserialize(object, self)
-	if err != nil {
-		e := &ExtendableError{S: "[ FakeGetCostCenter ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
-		return nil, nil, e
-	}
-
-	args := []interface{}{}
-
-	err = ph.Deserialize(data, &args)
-	if err != nil {
-		e := &ExtendableError{S: "[ FakeGetCostCenter ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
-		return nil, nil, e
-	}
-
-	ret0, ret1 := self.GetCostCenter()
 
 	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
 	systemErr := ph.GetSystemError()
@@ -933,14 +678,9 @@ func Initialize() XXX_insolar.ContractWrapper {
 		GetCode:      INSMETHOD_GetCode,
 		GetPrototype: INSMETHOD_GetPrototype,
 		Methods: XXX_insolar.ContractMethods{
-			"GetCostCenterRef":                INSMETHOD_GetCostCenterRef,
-			"GetMigrationWalletRef":           INSMETHOD_GetMigrationWalletRef,
-			"GetMigrationAdminMember":         INSMETHOD_GetMigrationAdminMember,
 			"GetActiveMigrationDaemonMembers": INSMETHOD_GetActiveMigrationDaemonMembers,
-			"GetRootMemberRef":                INSMETHOD_GetRootMemberRef,
 			"GetMemberByPublicKey":            INSMETHOD_GetMemberByPublicKey,
 			"GetMemberByMigrationAddress":     INSMETHOD_GetMemberByMigrationAddress,
-			"GetCostCenter":                   INSMETHOD_GetCostCenter,
 			"GetNodeDomainRef":                INSMETHOD_GetNodeDomainRef,
 			"Info":                            INSMETHOD_Info,
 			"AddMigrationAddresses":           INSMETHOD_AddMigrationAddresses,

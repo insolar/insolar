@@ -19,9 +19,10 @@ package logicrunner
 
 import (
 	"context"
-	"github.com/insolar/insolar/network"
 	"strconv"
 	"sync"
+
+	"github.com/insolar/insolar/network"
 
 	"github.com/insolar/go-actors/actor/system"
 
@@ -254,8 +255,6 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, oldPulse insolar.Pulse, newP
 	if err != nil {
 		return errors.Wrap(err, "failed to close pulse on write controller")
 	}
-
-	lr.ResultsMatcher.Clear()
 
 	messages := lr.StateStorage.OnPulse(ctx, newPulse)
 
