@@ -103,7 +103,7 @@ func (g *JoinerBootstrap) GetState() insolar.NetworkState {
 }
 
 func (g *JoinerBootstrap) authorize(ctx context.Context) (*packet.Permit, error) {
-	log := inslogger.FromContext(ctx)
+	logger := inslogger.FromContext(ctx)
 	cert := g.CertificateManager.GetCertificate()
 	discoveryNodes := network.ExcludeOrigin(cert.GetDiscoveryNodes(), g.NodeKeeper.GetOrigin().ID())
 
@@ -123,19 +123,19 @@ func (g *JoinerBootstrap) authorize(ctx context.Context) (*packet.Permit, error)
 	for _, n := range discoveryNodes {
 		h, err := host.NewHostN(n.GetHost(), *n.GetNodeRef())
 		if err != nil {
-			log.Warnf("Error authorizing to mallformed host %s[%s]: %s",
+			logger.Warnf("Error authorizing to mallformed host %s[%s]: %s",
 				n.GetHost(), *n.GetNodeRef(), err.Error())
 			continue
 		}
 
 		res, err := g.BootstrapRequester.Authorize(ctx, h, cert)
 		if err != nil {
-			log.Warnf("Error authorizing to host %s: %s", h.String(), err.Error())
+			logger.Warnf("Error authorizing to host %s: %s", h.String(), err.Error())
 			continue
 		}
 
 		if int(res.DiscoveryCount) < cert.GetMajorityRule() {
-			log.Infof(
+			logger.Infof(
 				"Check MajorityRule failed on authorize, expect %d, got %d",
 				cert.GetMajorityRule(),
 				res.DiscoveryCount,
