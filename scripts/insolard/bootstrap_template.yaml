@@ -111,12 +111,12 @@ discovery_nodes:
 #    role: "light_material"
 #    cert_name: "discovery_cert_23.json"
 
-nodes:
-  -
-    host: "127.0.0.1:63836"
-    role: "virtual"
-    keys_file: "{{ .BaseDir }}/nodes/1/keys.json"
-    cert_name: "node_cert_1.json"
+#nodes:
+#  -
+#    host: "127.0.0.1:63836"
+#    role: "virtual"
+#    keys_file: "{{ .BaseDir }}/nodes/1/keys.json"
+#    cert_name: "node_cert_1.json"
 #  -
 #    host: "127.0.0.1:63846"
 #    role: "virtual"
