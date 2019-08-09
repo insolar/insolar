@@ -532,21 +532,16 @@ func waitUntilRequestProcessed(
 }
 
 func waitForFunction(customFunction func() api.CallMethodReply, functionTimeout time.Duration) (*api.CallMethodReply, error) {
-	ch := make(chan api.CallMethodReply, 1)
-	done := make(chan struct{})
-
-	go func() {
-		select {
-		case ch <- customFunction():
-		case <-done:
-		}
-	}()
+	wrapper := func() chan api.CallMethodReply {
+		reply := make(chan api.CallMethodReply)
+		reply <- customFunction()
+		return reply
+	}
 
 	select {
-	case result := <-ch:
+	case result := <-wrapper():
 		return &result, nil
 	case <-time.After(functionTimeout):
-		close(done)
 		return nil, errors.New("timeout was exceeded")
 	}
 }
