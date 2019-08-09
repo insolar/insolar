@@ -38,17 +38,17 @@ type RequestMock struct {
 	beforeIsCreationRequestCounter uint64
 	IsCreationRequestMock          mRequestMockIsCreationRequest
 
-	funcIsDetached          func() (b1 bool)
-	inspectFuncIsDetached   func()
-	afterIsDetachedCounter  uint64
-	beforeIsDetachedCounter uint64
-	IsDetachedMock          mRequestMockIsDetached
-
 	funcIsTemporaryUploadCode          func() (b1 bool)
 	inspectFuncIsTemporaryUploadCode   func()
 	afterIsTemporaryUploadCodeCounter  uint64
 	beforeIsTemporaryUploadCodeCounter uint64
 	IsTemporaryUploadCodeMock          mRequestMockIsTemporaryUploadCode
+
+	funcIsValid          func() (b1 bool)
+	inspectFuncIsValid   func()
+	afterIsValidCounter  uint64
+	beforeIsValidCounter uint64
+	IsValidMock          mRequestMockIsValid
 
 	funcMarshal          func() (dAtA []byte, err error)
 	inspectFuncMarshal   func()
@@ -84,9 +84,9 @@ func NewRequestMock(t minimock.Tester) *RequestMock {
 
 	m.IsCreationRequestMock = mRequestMockIsCreationRequest{mock: m}
 
-	m.IsDetachedMock = mRequestMockIsDetached{mock: m}
-
 	m.IsTemporaryUploadCodeMock = mRequestMockIsTemporaryUploadCode{mock: m}
+
+	m.IsValidMock = mRequestMockIsValid{mock: m}
 
 	m.MarshalMock = mRequestMockMarshal{mock: m}
 
@@ -669,149 +669,6 @@ func (m *RequestMock) MinimockIsCreationRequestInspect() {
 	}
 }
 
-type mRequestMockIsDetached struct {
-	mock               *RequestMock
-	defaultExpectation *RequestMockIsDetachedExpectation
-	expectations       []*RequestMockIsDetachedExpectation
-}
-
-// RequestMockIsDetachedExpectation specifies expectation struct of the Request.IsDetached
-type RequestMockIsDetachedExpectation struct {
-	mock *RequestMock
-
-	results *RequestMockIsDetachedResults
-	Counter uint64
-}
-
-// RequestMockIsDetachedResults contains results of the Request.IsDetached
-type RequestMockIsDetachedResults struct {
-	b1 bool
-}
-
-// Expect sets up expected params for Request.IsDetached
-func (mmIsDetached *mRequestMockIsDetached) Expect() *mRequestMockIsDetached {
-	if mmIsDetached.mock.funcIsDetached != nil {
-		mmIsDetached.mock.t.Fatalf("RequestMock.IsDetached mock is already set by Set")
-	}
-
-	if mmIsDetached.defaultExpectation == nil {
-		mmIsDetached.defaultExpectation = &RequestMockIsDetachedExpectation{}
-	}
-
-	return mmIsDetached
-}
-
-// Inspect accepts an inspector function that has same arguments as the Request.IsDetached
-func (mmIsDetached *mRequestMockIsDetached) Inspect(f func()) *mRequestMockIsDetached {
-	if mmIsDetached.mock.inspectFuncIsDetached != nil {
-		mmIsDetached.mock.t.Fatalf("Inspect function is already set for RequestMock.IsDetached")
-	}
-
-	mmIsDetached.mock.inspectFuncIsDetached = f
-
-	return mmIsDetached
-}
-
-// Return sets up results that will be returned by Request.IsDetached
-func (mmIsDetached *mRequestMockIsDetached) Return(b1 bool) *RequestMock {
-	if mmIsDetached.mock.funcIsDetached != nil {
-		mmIsDetached.mock.t.Fatalf("RequestMock.IsDetached mock is already set by Set")
-	}
-
-	if mmIsDetached.defaultExpectation == nil {
-		mmIsDetached.defaultExpectation = &RequestMockIsDetachedExpectation{mock: mmIsDetached.mock}
-	}
-	mmIsDetached.defaultExpectation.results = &RequestMockIsDetachedResults{b1}
-	return mmIsDetached.mock
-}
-
-//Set uses given function f to mock the Request.IsDetached method
-func (mmIsDetached *mRequestMockIsDetached) Set(f func() (b1 bool)) *RequestMock {
-	if mmIsDetached.defaultExpectation != nil {
-		mmIsDetached.mock.t.Fatalf("Default expectation is already set for the Request.IsDetached method")
-	}
-
-	if len(mmIsDetached.expectations) > 0 {
-		mmIsDetached.mock.t.Fatalf("Some expectations are already set for the Request.IsDetached method")
-	}
-
-	mmIsDetached.mock.funcIsDetached = f
-	return mmIsDetached.mock
-}
-
-// IsDetached implements Request
-func (mmIsDetached *RequestMock) IsDetached() (b1 bool) {
-	mm_atomic.AddUint64(&mmIsDetached.beforeIsDetachedCounter, 1)
-	defer mm_atomic.AddUint64(&mmIsDetached.afterIsDetachedCounter, 1)
-
-	if mmIsDetached.inspectFuncIsDetached != nil {
-		mmIsDetached.inspectFuncIsDetached()
-	}
-
-	if mmIsDetached.IsDetachedMock.defaultExpectation != nil {
-		mm_atomic.AddUint64(&mmIsDetached.IsDetachedMock.defaultExpectation.Counter, 1)
-
-		results := mmIsDetached.IsDetachedMock.defaultExpectation.results
-		if results == nil {
-			mmIsDetached.t.Fatal("No results are set for the RequestMock.IsDetached")
-		}
-		return (*results).b1
-	}
-	if mmIsDetached.funcIsDetached != nil {
-		return mmIsDetached.funcIsDetached()
-	}
-	mmIsDetached.t.Fatalf("Unexpected call to RequestMock.IsDetached.")
-	return
-}
-
-// IsDetachedAfterCounter returns a count of finished RequestMock.IsDetached invocations
-func (mmIsDetached *RequestMock) IsDetachedAfterCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmIsDetached.afterIsDetachedCounter)
-}
-
-// IsDetachedBeforeCounter returns a count of RequestMock.IsDetached invocations
-func (mmIsDetached *RequestMock) IsDetachedBeforeCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmIsDetached.beforeIsDetachedCounter)
-}
-
-// MinimockIsDetachedDone returns true if the count of the IsDetached invocations corresponds
-// the number of defined expectations
-func (m *RequestMock) MinimockIsDetachedDone() bool {
-	for _, e := range m.IsDetachedMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			return false
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.IsDetachedMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterIsDetachedCounter) < 1 {
-		return false
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcIsDetached != nil && mm_atomic.LoadUint64(&m.afterIsDetachedCounter) < 1 {
-		return false
-	}
-	return true
-}
-
-// MinimockIsDetachedInspect logs each unmet expectation
-func (m *RequestMock) MinimockIsDetachedInspect() {
-	for _, e := range m.IsDetachedMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			m.t.Error("Expected call to RequestMock.IsDetached")
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.IsDetachedMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterIsDetachedCounter) < 1 {
-		m.t.Error("Expected call to RequestMock.IsDetached")
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcIsDetached != nil && mm_atomic.LoadUint64(&m.afterIsDetachedCounter) < 1 {
-		m.t.Error("Expected call to RequestMock.IsDetached")
-	}
-}
-
 type mRequestMockIsTemporaryUploadCode struct {
 	mock               *RequestMock
 	defaultExpectation *RequestMockIsTemporaryUploadCodeExpectation
@@ -952,6 +809,149 @@ func (m *RequestMock) MinimockIsTemporaryUploadCodeInspect() {
 	// if func was set then invocations count should be greater than zero
 	if m.funcIsTemporaryUploadCode != nil && mm_atomic.LoadUint64(&m.afterIsTemporaryUploadCodeCounter) < 1 {
 		m.t.Error("Expected call to RequestMock.IsTemporaryUploadCode")
+	}
+}
+
+type mRequestMockIsValid struct {
+	mock               *RequestMock
+	defaultExpectation *RequestMockIsValidExpectation
+	expectations       []*RequestMockIsValidExpectation
+}
+
+// RequestMockIsValidExpectation specifies expectation struct of the Request.IsValid
+type RequestMockIsValidExpectation struct {
+	mock *RequestMock
+
+	results *RequestMockIsValidResults
+	Counter uint64
+}
+
+// RequestMockIsValidResults contains results of the Request.IsValid
+type RequestMockIsValidResults struct {
+	b1 bool
+}
+
+// Expect sets up expected params for Request.IsValid
+func (mmIsValid *mRequestMockIsValid) Expect() *mRequestMockIsValid {
+	if mmIsValid.mock.funcIsValid != nil {
+		mmIsValid.mock.t.Fatalf("RequestMock.IsValid mock is already set by Set")
+	}
+
+	if mmIsValid.defaultExpectation == nil {
+		mmIsValid.defaultExpectation = &RequestMockIsValidExpectation{}
+	}
+
+	return mmIsValid
+}
+
+// Inspect accepts an inspector function that has same arguments as the Request.IsValid
+func (mmIsValid *mRequestMockIsValid) Inspect(f func()) *mRequestMockIsValid {
+	if mmIsValid.mock.inspectFuncIsValid != nil {
+		mmIsValid.mock.t.Fatalf("Inspect function is already set for RequestMock.IsValid")
+	}
+
+	mmIsValid.mock.inspectFuncIsValid = f
+
+	return mmIsValid
+}
+
+// Return sets up results that will be returned by Request.IsValid
+func (mmIsValid *mRequestMockIsValid) Return(b1 bool) *RequestMock {
+	if mmIsValid.mock.funcIsValid != nil {
+		mmIsValid.mock.t.Fatalf("RequestMock.IsValid mock is already set by Set")
+	}
+
+	if mmIsValid.defaultExpectation == nil {
+		mmIsValid.defaultExpectation = &RequestMockIsValidExpectation{mock: mmIsValid.mock}
+	}
+	mmIsValid.defaultExpectation.results = &RequestMockIsValidResults{b1}
+	return mmIsValid.mock
+}
+
+//Set uses given function f to mock the Request.IsValid method
+func (mmIsValid *mRequestMockIsValid) Set(f func() (b1 bool)) *RequestMock {
+	if mmIsValid.defaultExpectation != nil {
+		mmIsValid.mock.t.Fatalf("Default expectation is already set for the Request.IsValid method")
+	}
+
+	if len(mmIsValid.expectations) > 0 {
+		mmIsValid.mock.t.Fatalf("Some expectations are already set for the Request.IsValid method")
+	}
+
+	mmIsValid.mock.funcIsValid = f
+	return mmIsValid.mock
+}
+
+// IsValid implements Request
+func (mmIsValid *RequestMock) IsValid() (b1 bool) {
+	mm_atomic.AddUint64(&mmIsValid.beforeIsValidCounter, 1)
+	defer mm_atomic.AddUint64(&mmIsValid.afterIsValidCounter, 1)
+
+	if mmIsValid.inspectFuncIsValid != nil {
+		mmIsValid.inspectFuncIsValid()
+	}
+
+	if mmIsValid.IsValidMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmIsValid.IsValidMock.defaultExpectation.Counter, 1)
+
+		results := mmIsValid.IsValidMock.defaultExpectation.results
+		if results == nil {
+			mmIsValid.t.Fatal("No results are set for the RequestMock.IsValid")
+		}
+		return (*results).b1
+	}
+	if mmIsValid.funcIsValid != nil {
+		return mmIsValid.funcIsValid()
+	}
+	mmIsValid.t.Fatalf("Unexpected call to RequestMock.IsValid.")
+	return
+}
+
+// IsValidAfterCounter returns a count of finished RequestMock.IsValid invocations
+func (mmIsValid *RequestMock) IsValidAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmIsValid.afterIsValidCounter)
+}
+
+// IsValidBeforeCounter returns a count of RequestMock.IsValid invocations
+func (mmIsValid *RequestMock) IsValidBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmIsValid.beforeIsValidCounter)
+}
+
+// MinimockIsValidDone returns true if the count of the IsValid invocations corresponds
+// the number of defined expectations
+func (m *RequestMock) MinimockIsValidDone() bool {
+	for _, e := range m.IsValidMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			return false
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.IsValidMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterIsValidCounter) < 1 {
+		return false
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcIsValid != nil && mm_atomic.LoadUint64(&m.afterIsValidCounter) < 1 {
+		return false
+	}
+	return true
+}
+
+// MinimockIsValidInspect logs each unmet expectation
+func (m *RequestMock) MinimockIsValidInspect() {
+	for _, e := range m.IsValidMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			m.t.Error("Expected call to RequestMock.IsValid")
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.IsValidMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterIsValidCounter) < 1 {
+		m.t.Error("Expected call to RequestMock.IsValid")
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcIsValid != nil && mm_atomic.LoadUint64(&m.afterIsValidCounter) < 1 {
+		m.t.Error("Expected call to RequestMock.IsValid")
 	}
 }
 
@@ -1396,9 +1396,9 @@ func (m *RequestMock) MinimockFinish() {
 
 		m.MinimockIsCreationRequestInspect()
 
-		m.MinimockIsDetachedInspect()
-
 		m.MinimockIsTemporaryUploadCodeInspect()
+
+		m.MinimockIsValidInspect()
 
 		m.MinimockMarshalInspect()
 
@@ -1432,8 +1432,8 @@ func (m *RequestMock) minimockDone() bool {
 		m.MinimockGetCallTypeDone() &&
 		m.MinimockIsAPIRequestDone() &&
 		m.MinimockIsCreationRequestDone() &&
-		m.MinimockIsDetachedDone() &&
 		m.MinimockIsTemporaryUploadCodeDone() &&
+		m.MinimockIsValidDone() &&
 		m.MinimockMarshalDone() &&
 		m.MinimockReasonAffinityRefDone() &&
 		m.MinimockReasonRefDone()
