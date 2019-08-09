@@ -101,7 +101,6 @@ func GetAccountGenesisContractState(balance string, name string, parent string) 
 		Name:       name,
 		Prototype:  insolar.GenesisNameAccount,
 		ParentName: parent,
-		Delegate:   false,
 		Memory:     mustGenMemory(w),
 	}
 }
