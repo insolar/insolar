@@ -278,7 +278,7 @@ func (r *coreRealm) VerifyPacketAuthenticity(ctx context.Context, packet transpo
 }
 
 func (r *coreRealm) VerifyPacketPulseNumber(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound,
-	filterPN, nextPN pulse.Number) (bool, error) {
+	filterPN, nextPN pulse.Number, details string) (bool, error) {
 
 	pn := packet.GetPulseNumber()
 	if filterPN == pn || filterPN.IsUnknown() || pn.IsUnknown() {
@@ -288,5 +288,5 @@ func (r *coreRealm) VerifyPacketPulseNumber(ctx context.Context, packet transpor
 	sourceID := packet.GetSourceID()
 	localID := r.self.GetNodeID()
 
-	return false, errors.NewPulseRoundMismatchErrorDef(pn, filterPN, localID, sourceID)
+	return false, errors.NewPulseRoundMismatchErrorDef(pn, filterPN, localID, sourceID, details)
 }
