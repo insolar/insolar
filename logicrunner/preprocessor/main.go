@@ -349,6 +349,15 @@ func (pf *ParsedFile) checkSagaRollbackMethodsExistAndMatch(funcInfo []map[strin
 				info["Name"].(string), sagaInfo.NumArguments)
 		}
 
+		// INS_FLAG_NO_ROLLBACK_METHOD allows to make saga calls between different
+		// contract types despite of missing corresponding syntax support. Obviously
+		// if validation fail there will be no rollback method to call. Please use
+		// this flag with extra care!
+		if sagaInfo.RollbackMethodName == "INS_FLAG_NO_ROLLBACK_METHOD" {
+			// skip following semantic checks
+			continue
+		}
+
 		rollbackInfo, exists := methodNames[sagaInfo.RollbackMethodName]
 		if !exists {
 			return fmt.Errorf(

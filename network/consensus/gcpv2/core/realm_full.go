@@ -138,7 +138,8 @@ func (r *FullRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 	}
 
 	var canHandle bool
-	canHandle, err = r.coreRealm.VerifyPacketPulseNumber(ctx, packet, from, r.GetPulseNumber(), r.GetNextPulseNumber())
+	canHandle, err = r.coreRealm.VerifyPacketPulseNumber(ctx, packet, from, r.GetPulseNumber(), r.GetNextPulseNumber(),
+		"full:dispatchPacket")
 
 	if !canHandle || err != nil {
 		return err

@@ -34,6 +34,6 @@ func (h *HandleSagaCallAcceptNotification) Present(ctx context.Context, f flow.F
 	}
 
 	outgoingReqRef := insolar.NewReference(msg.DetachedRequestID)
-	_, _, err = h.dep.OutgoingSender.SendOutgoingRequest(ctx, *outgoingReqRef, outgoing)
+	_, _, _, err = h.dep.OutgoingSender.SendOutgoingRequest(ctx, *outgoingReqRef, outgoing)
 	return err
 }

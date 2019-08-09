@@ -52,6 +52,7 @@ package gcpv2
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -98,7 +99,7 @@ func (h *ConsensusMemberController) Prepare() {
 }
 
 func (h *ConsensusMemberController) Abort() {
-	h.terminate()
+	h.discardInternal(true, nil)
 }
 
 func (h *ConsensusMemberController) getCurrent() api.RoundController {
@@ -167,29 +168,32 @@ func (h *ConsensusMemberController) discard(toBeDiscarded api.RoundController) b
 	return h.discardInternal(false, toBeDiscarded)
 }
 
-func (h *ConsensusMemberController) terminate() {
-	h.discardInternal(true, nil)
+func (h *ConsensusMemberController) terminate(toBeDiscarded api.RoundController) bool {
+	if toBeDiscarded == nil {
+		return false
+	}
+	return h.discardInternal(true, toBeDiscarded)
 }
 
 func (h *ConsensusMemberController) processPacket(ctx context.Context, round api.RoundController,
-	payload transport.PacketParser, from endpoints.Inbound) (bool, error) {
+	payload transport.PacketParser, from endpoints.Inbound) (api.RoundControlCode, error) {
 
 	code, err := round.HandlePacket(ctx, payload, from)
 
 	switch code {
 	case api.KeepRound:
-		return false, err
+		return code, err
 	case api.StartNextRound:
 		// return true, err
 	case api.NextRoundTerminate:
-		h.terminate()
+		// h.terminate(round)
 	default:
 		panic("unexpected")
 	}
 	if err != nil {
 		inslogger.FromContext(ctx).Error(err)
 	}
-	return code == api.StartNextRound, nil
+	return code, nil
 }
 
 func (h *ConsensusMemberController) ProcessPacket(ctx context.Context, payload transport.PacketParser, from endpoints.Inbound) error {
@@ -197,23 +201,35 @@ func (h *ConsensusMemberController) ProcessPacket(ctx context.Context, payload t
 	round, isCreated := h.getOrCreate()
 
 	if round != nil {
-		retry, err := h.processPacket(ctx, round, payload, from)
-		if !retry {
+		code, err := h.processPacket(ctx, round, payload, from)
+		if code == api.KeepRound {
 			return err
 		}
 		if isCreated {
-			return fmt.Errorf("illegal behavior - packet can not be re-processed for a just created round")
+			return fmt.Errorf("packet can not be re-processed for a just created round")
 		}
-		h.discard(round)
+		switch code {
+		case api.StartNextRound:
+			inslogger.FromContext(ctx).Debugf("discarding round: %v", round)
+			h.discard(round)
+		case api.NextRoundTerminate:
+			inslogger.FromContext(ctx).Debugf("terminating round: %v", round)
+			h.terminate(round)
+		}
 	}
 
 	round, _ = h.getOrCreate()
 	if round == nil {
-		return fmt.Errorf("new round can not be created - controller was terminated")
+		return fmt.Errorf("packet cant be processed - controller was terminated")
 	}
-	retry, err := h.processPacket(ctx, round, payload, from)
-	if retry {
-		return fmt.Errorf("illegal behavior - packet can not be re-processed twice")
+
+	code, err := h.processPacket(ctx, round, payload, from)
+	switch code {
+	case api.StartNextRound:
+		return errors.New("packet can not be re-processed twice")
+	case api.NextRoundTerminate:
+		inslogger.FromContext(ctx).Debugf("terminating round: %v", round)
+		h.terminate(round)
 	}
 	return err
 }
