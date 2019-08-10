@@ -17,20 +17,20 @@
 package extractor
 
 import (
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/logicrunner/builtin/foundation"
-
 	"github.com/pkg/errors"
+
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 )
 
 // CallResponse extracts response of Call
 func CallResponse(data []byte) (interface{}, *foundation.Error, error) {
 	var result interface{}
 	var contractErr *foundation.Error
-	_, err := insolar.UnMarshalResponse(data, []interface{}{&result, &contractErr})
+	err := foundation.UnmarshalMethodResultSimplified(data, &result, &contractErr)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "[ CallResponse ] Can't unmarshal response ")
 	}
+
 	return result, contractErr, nil
 }
 

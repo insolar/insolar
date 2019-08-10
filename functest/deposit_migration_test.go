@@ -75,6 +75,7 @@ func TestMigrationTokenNotInTheList(t *testing.T) {
 	_, err := signedRequestWithEmptyRequestRef(t, &migrationAdmin,
 		"deposit.migration",
 		map[string]interface{}{"amount": "1000", "ethTxHash": "TxHash", "migrationAddress": migrationAddress})
+	require.Error(t, err)
 	require.Contains(t, err.Error(), "this migration daemon is not in the list")
 }
 
@@ -87,6 +88,7 @@ func TestMigrationTokenZeroAmount(t *testing.T) {
 		"deposit.migration",
 		map[string]interface{}{"amount": "0", "ethTxHash": "TxHash", "migrationAddress": migrationAddress})
 
+	require.Error(t, err)
 	require.Contains(t, err.Error(), "amount must be greater than zero")
 	require.Nil(t, result)
 
@@ -100,6 +102,7 @@ func TestMigrationTokenMistakeField(t *testing.T) {
 		&migrationDaemons[0],
 		"deposit.migration",
 		map[string]interface{}{"amount1": "0", "ethTxHash": "TxHash", "migrationAddress": migrationAddress})
+	require.Error(t, err)
 	require.Contains(t, err.Error(), " incorect input: failed to get 'amount' param")
 	require.Nil(t, result)
 }
@@ -109,6 +112,7 @@ func TestMigrationTokenNilValue(t *testing.T) {
 	_ = createMigrationMemberForMA(t, migrationAddress)
 
 	result, err := signedRequestWithEmptyRequestRef(t, &migrationDaemons[0], "deposit.migration", map[string]interface{}{"amount": "20", "ethTxHash": nil, "migrationAddress": migrationAddress})
+	require.Error(t, err)
 	require.Contains(t, err.Error(), "failed to get 'ethTxHash' param")
 	require.Nil(t, result)
 
@@ -123,7 +127,7 @@ func TestMigrationTokenMaxAmount(t *testing.T) {
 		"deposit.migration",
 		map[string]interface{}{"amount": "500000000000000000", "ethTxHash": "ethTxHash", "migrationAddress": migrationAddress})
 	require.NoError(t, err)
-	require.Nil(t, result)
+	require.Equal(t, result.(map[string]interface{})["memberReference"].(string), ref)
 }
 
 func TestMigrationDoubleMigrationFromSameDaemon(t *testing.T) {
@@ -133,12 +137,13 @@ func TestMigrationDoubleMigrationFromSameDaemon(t *testing.T) {
 	resultMigr1, err := signedRequest(t,
 		&migrationDaemons[0], "deposit.migration", map[string]interface{}{"amount": "20", "ethTxHash": "ethTxHash", "migrationAddress": migrationAddress})
 	require.NoError(t, err)
-	require.Nil(t, resultMigr1)
+	require.Equal(t, resultMigr1.(map[string]interface{})["memberReference"].(string), memberRef)
 
 	_, err = signedRequestWithEmptyRequestRef(t,
 		&migrationDaemons[0],
 		"deposit.migration",
 		map[string]interface{}{"amount": "20", "ethTxHash": "ethTxHash", "migrationAddress": migrationAddress})
+	require.Error(t, err)
 	require.Contains(t, err.Error(), "confirmed failed: confirm from the")
 }
 
@@ -149,11 +154,12 @@ func TestMigrationAnotherAmountSameTx(t *testing.T) {
 	resultMigr1, err := signedRequest(t,
 		&migrationDaemons[0], "deposit.migration", map[string]interface{}{"amount": "20", "ethTxHash": "ethTxHash", "migrationAddress": migrationAddress})
 	require.NoError(t, err)
-	require.Nil(t, resultMigr1)
+	require.Equal(t, resultMigr1.(map[string]interface{})["memberReference"].(string), ref)
 
 	_, err = signedRequestWithEmptyRequestRef(t,
 		&migrationDaemons[1],
 		"deposit.migration",
 		map[string]interface{}{"amount": "30", "ethTxHash": "ethTxHash", "migrationAddress": migrationAddress})
+	require.Error(t, err)
 	require.Contains(t, err.Error(), "deposit with this transaction hash has different amount")
 }

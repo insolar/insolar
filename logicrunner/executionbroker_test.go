@@ -267,7 +267,7 @@ func (s *ExecutionBrokerSuite) TestImmutable_InPending() {
 	s.Require().True(wait(processorStatus, b, false))
 	s.Require().Empty(waitMutableChannel)
 
-	b.StartProcessorIfNeeded(s.Context)
+	b.StartProcessorsIfNeeded(s.Context)
 	s.Require().True(wait(processorStatus, b, false))
 	s.Empty(waitMutableChannel)
 	s.Empty(waitImmutableChannel)
@@ -448,8 +448,6 @@ func TestExecutionBroker_FinishPendingIfNeed(t *testing.T) {
 }
 
 func (s *LogicRunnerTestSuite) TestImmutableOrder() {
-	s.T().Skip("now after hack if we started execute mutable, we will execute immutable only after we done with that mutable")
-
 	ea := NewExecutionArchiveMock(s.mc).
 		ArchiveMock.Return().
 		DoneMock.Return(true)

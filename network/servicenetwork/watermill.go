@@ -79,7 +79,8 @@ func (n *ServiceNetwork) SendMessageHandler(msg *message.Message) ([]*message.Me
 	}
 	err = n.sendMessage(ctx, msg)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to send message")
+		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to send message"))
+		return nil, nil
 	}
 	return nil, nil
 }

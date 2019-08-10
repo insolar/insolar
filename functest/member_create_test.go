@@ -52,6 +52,6 @@ func TestMemberCreateWithSamePublicKey(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = signedRequestWithEmptyRequestRef(t, member, "member.create", nil)
-	require.NotNil(t, err)
+	require.Error(t, err)
 	require.Contains(t, err.Error(), "failed to set reference in public key shard: can't set reference because this key already exists")
 }

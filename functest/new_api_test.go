@@ -157,7 +157,8 @@ func TestRequestReference(t *testing.T) {
 	secondMember := createMember(t)
 	amount := "10"
 
-	_, ref, _ := makeSignedRequest(firstMember, "member.transfer", map[string]interface{}{"amount": amount, "toMemberReference": secondMember.ref})
+	_, ref, err := makeSignedRequest(firstMember, "member.transfer", map[string]interface{}{"amount": amount, "toMemberReference": secondMember.ref})
+	require.Error(t, err)
 	require.NotEqual(t, "", ref)
 	require.NotEqual(t, "11111111111111111111111111111111.11111111111111111111111111111111", ref)
 }

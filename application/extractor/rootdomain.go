@@ -19,9 +19,9 @@ package extractor
 import (
 	"encoding/json"
 
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/pkg/errors"
+
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 )
 
 // InfoResponse represents response from Info() method of RootDomain contract
@@ -37,7 +37,7 @@ type Info struct {
 func InfoResponse(data []byte) (*Info, error) {
 	var infoMap interface{}
 	var contractErr *foundation.Error
-	_, err := insolar.UnMarshalResponse(data, []interface{}{&infoMap, &contractErr})
+	err := foundation.UnmarshalMethodResultSimplified(data, &infoMap, &contractErr)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ InfoResponse ] Can't unmarshal")
 	}

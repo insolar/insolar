@@ -52,7 +52,7 @@ func TestGetNodeRefByNotExistsPK(t *testing.T) {
 	require.NotNil(t, ref)
 
 	_, err = signedRequestWithEmptyRequestRef(t, &root, "contract.getNodeRef", map[string]interface{}{"publicKey": NOTEXISTINGPUBLICKEY})
-	require.NotNil(t, err)
+	require.Error(t, err)
 	require.Contains(t, err.Error(), "network node was not found by public key:")
 }
 
@@ -63,6 +63,6 @@ func TestGetNodeRefInvalidParams(t *testing.T) {
 	require.NotNil(t, ref)
 
 	_, err = signedRequestWithEmptyRequestRef(t, &root, "contract.getNodeRef", map[string]interface{}{"publicKey": 123})
-	require.NotNil(t, err)
+	require.Error(t, err)
 	require.Contains(t, err.Error(), "incorect input: failed to get 'publicKey' param")
 }

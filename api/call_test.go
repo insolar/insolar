@@ -139,16 +139,14 @@ func TestTimeoutSuite(t *testing.T) {
 		switch method {
 		case "GetPublicKey":
 			var result = string(pKeyString)
-			var contractErr *foundation.Error
-			data, _ := insolar.MarshalArgs(result, contractErr)
+			data, _ := foundation.MarshalMethodResult(result, nil)
 			return &reply.CallMethod{
 				Result: data,
 			}, requestReference, nil
 		default:
 			<-timeoutSuite.delay
 			var result = "OK"
-			var contractErr *foundation.Error
-			data, _ := insolar.MarshalArgs(result, contractErr)
+			data, _ := foundation.MarshalMethodResult(result, nil)
 			return &reply.CallMethod{
 				Result: data,
 			}, requestReference, nil
