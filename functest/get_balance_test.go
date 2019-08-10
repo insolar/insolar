@@ -36,6 +36,6 @@ func TestGetBalance(t *testing.T) {
 
 func TestGetBalanceWrongRef(t *testing.T) {
 	_, err := getBalance(&root, testutils.RandomRef().String())
-	require.NotNil(t, err)
+	require.Error(t, err)
 	require.Contains(t, err.Error(), "index not found")
 }

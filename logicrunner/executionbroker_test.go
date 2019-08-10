@@ -267,7 +267,7 @@ func (s *ExecutionBrokerSuite) TestImmutable_InPending() {
 	s.Require().True(wait(processorStatus, b, false))
 	s.Require().Empty(waitMutableChannel)
 
-	b.StartProcessorIfNeeded(s.Context)
+	b.StartProcessorsIfNeeded(s.Context)
 	s.Require().True(wait(processorStatus, b, false))
 	s.Empty(waitMutableChannel)
 	s.Empty(waitImmutableChannel)
@@ -354,6 +354,11 @@ func (s *ExecutionBrokerSuite) TestDeduplication() {
 }
 
 func TestExecutionBroker_FinishPendingIfNeed(t *testing.T) {
+	notEmptyCurrentList := NewCurrentExecutionList()
+	transcript := NewTranscript(inslogger.TestContext(t), gen.Reference(), record.IncomingRequest{})
+	err := notEmptyCurrentList.SetOnce(transcript)
+	require.NoError(t, err)
+
 	tests := []struct {
 		name             string
 		mocks            func(t minimock.Tester) *ExecutionBroker
@@ -365,9 +370,9 @@ func TestExecutionBroker_FinishPendingIfNeed(t *testing.T) {
 			mocks: func(t minimock.Tester) *ExecutionBroker {
 				obj := gen.Reference()
 				broker := &ExecutionBroker{
-					Ref: obj,
-
-					pending: insolar.InPending,
+					Ref:         obj,
+					currentList: NewCurrentExecutionList(),
+					pending:     insolar.InPending,
 
 					jetCoordinator: jet.NewCoordinatorMock(t).
 						IsMeAuthorizedNowMock.Return(false, nil),
@@ -384,9 +389,9 @@ func TestExecutionBroker_FinishPendingIfNeed(t *testing.T) {
 			mocks: func(t minimock.Tester) *ExecutionBroker {
 				obj := gen.Reference()
 				broker := &ExecutionBroker{
-					Ref: obj,
-
-					pending: insolar.InPending,
+					Ref:         obj,
+					currentList: NewCurrentExecutionList(),
+					pending:     insolar.InPending,
 
 					jetCoordinator: jet.NewCoordinatorMock(t).
 						IsMeAuthorizedNowMock.Return(true, nil),
@@ -401,14 +406,30 @@ func TestExecutionBroker_FinishPendingIfNeed(t *testing.T) {
 			mocks: func(t minimock.Tester) *ExecutionBroker {
 				obj := gen.Reference()
 				broker := &ExecutionBroker{
-					Ref:     obj,
-					pending: insolar.NotPending,
+					Ref:         obj,
+					currentList: NewCurrentExecutionList(),
+					pending:     insolar.NotPending,
 				}
 				return broker
 			},
 			pending: insolar.NotPending,
 		},
+		{
+			name: "we have more unfinished requests",
+			mocks: func(t minimock.Tester) *ExecutionBroker {
+				obj := gen.Reference()
+				broker := &ExecutionBroker{
+					Ref:         obj,
+					currentList: notEmptyCurrentList,
+					pending:     insolar.InPending,
+				}
+
+				return broker
+			},
+			pending: insolar.InPending,
+		},
 	}
+
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			ctx := inslogger.TestContext(t)
@@ -427,8 +448,6 @@ func TestExecutionBroker_FinishPendingIfNeed(t *testing.T) {
 }
 
 func (s *LogicRunnerTestSuite) TestImmutableOrder() {
-	s.T().Skip("now after hack if we started execute mutable, we will execute immutable only after we done with that mutable")
-
 	ea := NewExecutionArchiveMock(s.mc).
 		ArchiveMock.Return().
 		DoneMock.Return(true)

@@ -28,7 +28,6 @@ import (
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/internal/thread"
 	"github.com/insolar/insolar/insolar/pulse"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
@@ -154,53 +153,6 @@ func TestDispatcher_Process_CallFutureDispatcher(t *testing.T) {
 	require.NoError(t, err)
 	rep := <-replyChan
 	require.Equal(t, reply, rep)
-}
-
-func makeWMMessage(ctx context.Context, payLoad message.Payload) *message.Message {
-	wmMsg := message.NewMessage(watermill.NewUUID(), payLoad)
-	wmMsg.Metadata.Set("TraceID", inslogger.TraceID(ctx))
-
-	return wmMsg
-}
-
-func TestDispatcher_InnerSubscriber(t *testing.T) {
-	t.Parallel()
-	d := &dispatcher{
-		controller: thread.NewController(),
-	}
-
-	testResult := 77
-	result := make(chan int)
-
-	d.handles.present = func(msg *message.Message) flow.Handle {
-		return func(ctx context.Context, f flow.Flow) error {
-			result <- testResult
-			return nil
-		}
-	}
-
-	_, err := d.InnerSubscriber(makeWMMessage(context.Background(), nil))
-	require.NoError(t, err)
-	require.Equal(t, testResult, <-result)
-}
-
-func TestDispatcher_InnerSubscriber_Error(t *testing.T) {
-	t.Parallel()
-	d := &dispatcher{
-		controller: thread.NewController(),
-	}
-	testResult := 77
-	result := make(chan int)
-
-	d.handles.present = func(msg *message.Message) flow.Handle {
-		return func(ctx context.Context, f flow.Flow) error {
-			result <- testResult
-			return errors.New("some error.")
-		}
-	}
-	_, err := d.InnerSubscriber(makeWMMessage(context.Background(), nil))
-	require.NoError(t, err)
-	require.Equal(t, testResult, <-result)
 }
 
 func TestDispatcher_pulseFromString(t *testing.T) {
