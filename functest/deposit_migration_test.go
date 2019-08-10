@@ -120,7 +120,7 @@ func TestMigrationTokenNilValue(t *testing.T) {
 
 func TestMigrationTokenMaxAmount(t *testing.T) {
 	migrationAddress := generateMigrationAddress()
-	_ = createMigrationMemberForMA(t, migrationAddress)
+	ref := createMigrationMemberForMA(t, migrationAddress)
 
 	result, err := signedRequest(t,
 		&migrationDaemons[0],
@@ -132,12 +132,12 @@ func TestMigrationTokenMaxAmount(t *testing.T) {
 
 func TestMigrationDoubleMigrationFromSameDaemon(t *testing.T) {
 	migrationAddress := generateMigrationAddress()
-	_ = createMigrationMemberForMA(t, migrationAddress)
+	ref := createMigrationMemberForMA(t, migrationAddress)
 
 	resultMigr1, err := signedRequest(t,
 		&migrationDaemons[0], "deposit.migration", map[string]interface{}{"amount": "20", "ethTxHash": "ethTxHash", "migrationAddress": migrationAddress})
 	require.NoError(t, err)
-	require.Equal(t, resultMigr1.(map[string]interface{})["memberReference"].(string), memberRef)
+	require.Equal(t, resultMigr1.(map[string]interface{})["memberReference"].(string), ref)
 
 	_, err = signedRequestWithEmptyRequestRef(t,
 		&migrationDaemons[0],
@@ -149,7 +149,7 @@ func TestMigrationDoubleMigrationFromSameDaemon(t *testing.T) {
 
 func TestMigrationAnotherAmountSameTx(t *testing.T) {
 	migrationAddress := generateMigrationAddress()
-	_ = createMigrationMemberForMA(t, migrationAddress)
+	ref := createMigrationMemberForMA(t, migrationAddress)
 
 	resultMigr1, err := signedRequest(t,
 		&migrationDaemons[0], "deposit.migration", map[string]interface{}{"amount": "20", "ethTxHash": "ethTxHash", "migrationAddress": migrationAddress})

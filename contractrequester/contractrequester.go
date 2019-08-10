@@ -212,7 +212,7 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (i
 			close(ch)
 		}
 
-		return res, nil
+		return res, nil, nil
 	}
 
 	r, ok := res.(*reply.RegisterRequest)
