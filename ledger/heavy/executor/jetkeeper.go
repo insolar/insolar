@@ -349,7 +349,7 @@ func infoToList(s map[insolar.JetID]struct{}) []insolar.JetID {
 	return r
 }
 
-func (jk *dbJetKeeper) getTopSyncJets(ctx context.Context) ([]insolar.JetID, error) {
+func (jk *dbJetKeeper) getTopSyncJets() ([]insolar.JetID, error) {
 	var result []insolar.JetID
 	top := jk.topSyncPulse()
 	if top == insolar.FirstPulseNumber {
@@ -395,7 +395,7 @@ func compareJets(what []insolar.JetID, actualJetsSet map[insolar.JetID]struct{})
 
 func (jk *dbJetKeeper) checkPulseConsistency(ctx context.Context, pulse insolar.PulseNumber, checkBackup bool) bool {
 	logger := inslogger.FromContext(ctx)
-	topSyncJets, err := jk.getTopSyncJets(ctx)
+	topSyncJets, err := jk.getTopSyncJets()
 	if err != nil {
 		logger.Error("can't get jets for top sync pulse: ", err)
 		return false
