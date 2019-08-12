@@ -187,7 +187,7 @@ func INSMETHOD_SetRef(object []byte, data []byte) ([]byte, []byte, error) {
 func INSCONSTRUCTOR_New(data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
-	args := [1]interface{}{}
+	args := make([]interface{}, 1)
 	var args0 foundation.StableMap
 	args[0] = &args0
 
