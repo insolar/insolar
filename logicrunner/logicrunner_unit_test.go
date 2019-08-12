@@ -431,8 +431,6 @@ func TestLogicRunner_OnPulse(t *testing.T) {
 					SendMock.Return(&reply.OK{}, nil)
 
 				lr.StateStorage = NewStateStorageMock(mc).
-					LockMock.Return().
-					UnlockMock.Return().
 					IsEmptyMock.Return(false).
 					OnPulseMock.Return([]insolar.Message{&message.ExecutorResults{}})
 
@@ -451,8 +449,6 @@ func TestLogicRunner_OnPulse(t *testing.T) {
 				lr.initHandlers()
 
 				lr.StateStorage = NewStateStorageMock(mc).
-					LockMock.Return().
-					UnlockMock.Return().
 					IsEmptyMock.Return(true).
 					OnPulseMock.Return([]insolar.Message{})
 
@@ -484,7 +480,6 @@ type OnPulseCallOrderEnum int
 const (
 	OrderInitial OnPulseCallOrderEnum = iota
 	OrderWriteControllerClose
-	OrderResultsMatcherClear
 	OrderStateStorageOnPulse
 	OrderWriteControllerOpen
 	OrderMAX
@@ -511,19 +506,12 @@ func TestLogicRunner_OnPulse_Order(t *testing.T) {
 			orderChan <- OrderWriteControllerOpen
 			return nil
 		})
-	lr.ResultsMatcher = NewResultMatcherMock(mc).
-		ClearMock.Set(
-		func() {
-			orderChan <- OrderResultsMatcherClear
-		})
 	lr.StateStorage = NewStateStorageMock(mc).
 		OnPulseMock.Set(
 		func(_ context.Context, _ insolar.Pulse) []insolar.Message {
 			orderChan <- OrderStateStorageOnPulse
 			return []insolar.Message{}
 		}).
-		LockMock.Return().
-		UnlockMock.Return().
 		IsEmptyMock.Return(true)
 
 	oldPulse := insolar.Pulse{PulseNumber: insolar.FirstPulseNumber}

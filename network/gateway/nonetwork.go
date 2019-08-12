@@ -54,24 +54,15 @@ package gateway
 
 import (
 	"context"
+	"time"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
 )
 
-// TODO Slightly ugly, decide how to inject anything without exporting Base
-// TODO Remove message bus here and switch communication to network.rpc
-// NewNoNetwork this initial constructor have special signature to be called outside
-func NewNoNetwork(n network.Gatewayer, pm insolar.PulseManager,
-	nk network.NodeKeeper, cr insolar.ContractRequester,
-	cs insolar.CryptographyService, hn network.HostNetwork,
-	cm insolar.CertificateManager) network.Gateway {
-	return (&Base{
-		Network: n, PulseManager: pm,
-		Nodekeeper: nk, ContractRequester: cr,
-		CryptographyService: cs, HostNetwork: hn,
-		CertificateManager: cm,
-	}).NewGateway(insolar.NoNetworkState)
+func newNoNetwork(b *Base) *NoNetwork {
+	return &NoNetwork{Base: b}
 }
 
 // NoNetwork initial state
@@ -79,13 +70,56 @@ type NoNetwork struct {
 	*Base
 }
 
-func (g *NoNetwork) Run(ctx context.Context) {
+func (g *NoNetwork) pause() time.Duration {
+	var sleep time.Duration
+	switch g.backoff {
+	case g.Options.MaxTimeout:
+		sleep = g.backoff
+	case 0:
+		g.backoff = g.Options.MinTimeout
+	default:
+		sleep = g.backoff
+		g.backoff *= g.Options.TimeoutMult
+		if g.backoff > g.Options.MaxTimeout {
+			g.backoff = g.Options.MaxTimeout
+		}
+	}
+	return sleep
+}
+
+func (g *NoNetwork) Run(ctx context.Context, pulse insolar.Pulse) {
+	cert := g.CertificateManager.GetCertificate()
+	origin := g.NodeKeeper.GetOrigin()
+	discoveryNodes := network.ExcludeOrigin(cert.GetDiscoveryNodes(), origin.ID())
+
+	g.NodeKeeper.SetInitialSnapshot([]insolar.NetworkNode{origin})
+
+	if len(discoveryNodes) == 0 {
+		inslogger.FromContext(ctx).Warn("No discovery nodes found in certificate")
+		return
+	}
+
+	// run bootstrap
+	if !network.OriginIsDiscovery(cert) {
+		time.Sleep(g.pause())
+		g.Gatewayer.SwitchState(ctx, insolar.JoinerBootstrap, pulse)
+		return
+	}
+
+	// Simplified bootstrap
+	if origin.Role() != insolar.StaticRoleHeavyMaterial {
+		time.Sleep(g.pause())
+		g.Gatewayer.SwitchState(ctx, insolar.JoinerBootstrap, pulse)
+		return
+	}
+
+	// Reset backoff if not insolar.JoinerBootstrap.
+	g.backoff = 0
+
+	g.bootstrapETA = time.Minute // TODO: move to config
+	g.Gatewayer.SwitchState(ctx, insolar.WaitConsensus, pulse)
 }
 
 func (g *NoNetwork) GetState() insolar.NetworkState {
 	return insolar.NoNetworkState
-}
-
-func (g *NoNetwork) OnPulse(ctx context.Context, pu insolar.Pulse) error {
-	return g.Base.OnPulse(ctx, pu)
 }

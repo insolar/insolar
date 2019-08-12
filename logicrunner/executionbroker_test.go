@@ -211,16 +211,25 @@ func (s *ExecutionBrokerSuite) TestImmutable_NotPending() {
 	tr := NewTranscript(s.Context, gen.Reference(), record.IncomingRequest{Immutable: true})
 
 	b.Prepend(s.Context, false, tr)
-	s.Require().True(waitOnChannel(waitImmutableChannel), "failed to wait while processing is finished")
-	s.Require().True(wait(processorStatus, b, false))
-	s.Require().Empty(waitMutableChannel)
+	s.Equal(b.immutable.Length(), 1)
 
-	tr = NewTranscript(s.Context, gen.Reference(), record.IncomingRequest{Immutable: true})
+	reqRef2 := gen.Reference()
+	tr = NewTranscript(s.Context, reqRef2, record.IncomingRequest{Immutable: true})
 
 	b.Prepend(s.Context, true, tr)
 	s.Require().True(waitOnChannel(waitImmutableChannel), "failed to wait while processing is finished")
+	s.Require().True(waitOnChannel(waitImmutableChannel), "failed to wait while processing is finished")
 	s.Require().True(wait(processorStatus, b, false))
 	s.Require().Empty(waitMutableChannel)
+
+	s.Equal(b.mutable.Length(), 0)
+	s.Equal(b.immutable.Length(), 0)
+	s.Equal(b.finished.Length(), 2)
+
+	rotationResults := b.rotate(10)
+	s.Len(rotationResults.Requests, 0)
+	s.Equal(rotationResults.LedgerHasMoreRequests, false)
+	s.Len(rotationResults.Finished, 2)
 }
 
 func (s *ExecutionBrokerSuite) TestImmutable_InPending() {
@@ -258,7 +267,7 @@ func (s *ExecutionBrokerSuite) TestImmutable_InPending() {
 	s.Require().True(wait(processorStatus, b, false))
 	s.Require().Empty(waitMutableChannel)
 
-	b.StartProcessorIfNeeded(s.Context)
+	b.StartProcessorsIfNeeded(s.Context)
 	s.Require().True(wait(processorStatus, b, false))
 	s.Empty(waitMutableChannel)
 	s.Empty(waitImmutableChannel)
@@ -345,6 +354,11 @@ func (s *ExecutionBrokerSuite) TestDeduplication() {
 }
 
 func TestExecutionBroker_FinishPendingIfNeed(t *testing.T) {
+	notEmptyCurrentList := NewCurrentExecutionList()
+	transcript := NewTranscript(inslogger.TestContext(t), gen.Reference(), record.IncomingRequest{})
+	err := notEmptyCurrentList.SetOnce(transcript)
+	require.NoError(t, err)
+
 	tests := []struct {
 		name             string
 		mocks            func(t minimock.Tester) *ExecutionBroker
@@ -356,9 +370,9 @@ func TestExecutionBroker_FinishPendingIfNeed(t *testing.T) {
 			mocks: func(t minimock.Tester) *ExecutionBroker {
 				obj := gen.Reference()
 				broker := &ExecutionBroker{
-					Ref: obj,
-
-					pending: insolar.InPending,
+					Ref:         obj,
+					currentList: NewCurrentExecutionList(),
+					pending:     insolar.InPending,
 
 					jetCoordinator: jet.NewCoordinatorMock(t).
 						IsMeAuthorizedNowMock.Return(false, nil),
@@ -375,9 +389,9 @@ func TestExecutionBroker_FinishPendingIfNeed(t *testing.T) {
 			mocks: func(t minimock.Tester) *ExecutionBroker {
 				obj := gen.Reference()
 				broker := &ExecutionBroker{
-					Ref: obj,
-
-					pending: insolar.InPending,
+					Ref:         obj,
+					currentList: NewCurrentExecutionList(),
+					pending:     insolar.InPending,
 
 					jetCoordinator: jet.NewCoordinatorMock(t).
 						IsMeAuthorizedNowMock.Return(true, nil),
@@ -392,14 +406,30 @@ func TestExecutionBroker_FinishPendingIfNeed(t *testing.T) {
 			mocks: func(t minimock.Tester) *ExecutionBroker {
 				obj := gen.Reference()
 				broker := &ExecutionBroker{
-					Ref:     obj,
-					pending: insolar.NotPending,
+					Ref:         obj,
+					currentList: NewCurrentExecutionList(),
+					pending:     insolar.NotPending,
 				}
 				return broker
 			},
 			pending: insolar.NotPending,
 		},
+		{
+			name: "we have more unfinished requests",
+			mocks: func(t minimock.Tester) *ExecutionBroker {
+				obj := gen.Reference()
+				broker := &ExecutionBroker{
+					Ref:         obj,
+					currentList: notEmptyCurrentList,
+					pending:     insolar.InPending,
+				}
+
+				return broker
+			},
+			pending: insolar.InPending,
+		},
 	}
+
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			ctx := inslogger.TestContext(t)
@@ -418,7 +448,6 @@ func TestExecutionBroker_FinishPendingIfNeed(t *testing.T) {
 }
 
 func (s *LogicRunnerTestSuite) TestImmutableOrder() {
-
 	ea := NewExecutionArchiveMock(s.mc).
 		ArchiveMock.Return().
 		DoneMock.Return(true)

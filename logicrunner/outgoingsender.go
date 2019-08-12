@@ -3,19 +3,17 @@ package logicrunner
 import (
 	"context"
 	"fmt"
-	"strings"
 
-	"github.com/insolar/insolar/logicrunner/artifacts"
-
-	"github.com/insolar/insolar/insolar/message"
-	"github.com/insolar/insolar/insolar/reply"
-
-	"github.com/insolar/insolar/insolar"
-
-	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/pkg/errors"
 
 	"github.com/insolar/go-actors/actor"
+
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/insolar/reply"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/logicrunner/artifacts"
 )
 
 var OutgoingRequestSenderDefaultQueueLimit = 1000
@@ -24,7 +22,7 @@ var OutgoingRequestSenderDefaultQueueLimit = 1000
 
 // OutgoingRequestSender is a type-safe wrapper for an actor implementation.
 type OutgoingRequestSender interface {
-	SendOutgoingRequest(ctx context.Context, reqRef insolar.Reference, req *record.OutgoingRequest) (insolar.Arguments, *record.IncomingRequest, error)
+	SendOutgoingRequest(ctx context.Context, reqRef insolar.Reference, req *record.OutgoingRequest) (*insolar.Reference, insolar.Arguments, *record.IncomingRequest, error)
 	SendAbandonedOutgoingRequest(ctx context.Context, reqRef insolar.Reference, req *record.OutgoingRequest)
 }
 
@@ -40,6 +38,7 @@ type outgoingSenderActorState struct {
 }
 
 type sendOutgoingResult struct {
+	object   *insolar.Reference // only for CTSaveAsChild
 	result   insolar.Arguments
 	incoming *record.IncomingRequest // incoming request is used in a transcript
 	err      error
@@ -71,7 +70,7 @@ func NewOutgoingRequestSender(as actor.System, cr insolar.ContractRequester, am 
 	}
 }
 
-func (rs *outgoingRequestSender) SendOutgoingRequest(ctx context.Context, reqRef insolar.Reference, req *record.OutgoingRequest) (insolar.Arguments, *record.IncomingRequest, error) {
+func (rs *outgoingRequestSender) SendOutgoingRequest(ctx context.Context, reqRef insolar.Reference, req *record.OutgoingRequest) (*insolar.Reference, insolar.Arguments, *record.IncomingRequest, error) {
 	resultChan := make(chan sendOutgoingResult, 1)
 	msg := sendOutgoingRequestMessage{
 		ctx:              ctx,
@@ -82,11 +81,11 @@ func (rs *outgoingRequestSender) SendOutgoingRequest(ctx context.Context, reqRef
 	err := rs.as.Send(rs.senderPid, msg)
 	if err != nil {
 		inslogger.FromContext(ctx).Errorf("SendOutgoingRequest failed: %v", err)
-		return insolar.Arguments{}, nil, err
+		return nil, insolar.Arguments{}, nil, err
 	}
 
 	res := <-resultChan
-	return res.result, res.incoming, res.err
+	return res.object, res.result, res.incoming, res.err
 }
 
 func (rs *outgoingRequestSender) SendAbandonedOutgoingRequest(ctx context.Context, reqRef insolar.Reference, req *record.OutgoingRequest) {
@@ -117,12 +116,12 @@ func (a *outgoingSenderActorState) Receive(message actor.Message) (actor.Actor, 
 		// request, i.e. a deadlock situation.
 		go func() {
 			var res sendOutgoingResult
-			res.result, res.incoming, res.err = a.sendOutgoingRequest(v.ctx, v.requestReference, v.outgoingRequest)
+			res.object, res.result, res.incoming, res.err = a.sendOutgoingRequest(v.ctx, v.requestReference, v.outgoingRequest)
 			v.resultChan <- res
 		}()
 		return a, nil
 	case sendAbandonedOutgoingRequestMessage:
-		_, _, err := a.sendOutgoingRequest(v.ctx, v.requestReference, v.outgoingRequest)
+		_, _, _, err := a.sendOutgoingRequest(v.ctx, v.requestReference, v.outgoingRequest)
 		// It's OK to just log an error,  LME will re-send a corresponding notification anyway.
 		if err != nil {
 			inslogger.FromContext(context.Background()).Errorf("abandonedOutgoingRequestActor: sendOutgoingRequest failed %v", err)
@@ -134,41 +133,37 @@ func (a *outgoingSenderActorState) Receive(message actor.Message) (actor.Actor, 
 	}
 }
 
-func (a *outgoingSenderActorState) sendOutgoingRequest(ctx context.Context, outgoingReqRef insolar.Reference, outgoing *record.OutgoingRequest) (insolar.Arguments, *record.IncomingRequest, error) {
-	var result insolar.Arguments
+func (a *outgoingSenderActorState) sendOutgoingRequest(ctx context.Context, outgoingReqRef insolar.Reference, outgoing *record.OutgoingRequest) (*insolar.Reference, insolar.Arguments, *record.IncomingRequest, error) {
+	var object *insolar.Reference
 
 	incoming := buildIncomingRequestFromOutgoing(outgoing)
 
 	// Actually make a call.
 	callMsg := &message.CallMethod{IncomingRequest: *incoming}
 	res, err := a.cr.Call(ctx, callMsg)
-	if err == nil {
-		switch v := res.(type) {
-		case *reply.CallMethod: // regular call
-			result = v.Result
-		case *reply.RegisterRequest: // no-wait call
-			result = v.Request.Bytes()
-		default:
-			err = fmt.Errorf("sendOutgoingRequest: cr.Call returned unexpected type %T", v)
-			return result, nil, err
-		}
+	if err != nil {
+		return nil, nil, nil, err
 	}
 
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
-	if err != nil && !strings.Contains(err.Error(), "index not found") {
-		return result, incoming, err
+	var result []byte
+
+	switch v := res.(type) {
+	case *reply.CallMethod: // regular call
+		object = v.Object // only for CTSaveAsChild
+		result = v.Result
+	case *reply.RegisterRequest: // no-wait call
+		result = v.Request.Bytes()
+	default:
+		err = fmt.Errorf("sendOutgoingRequest: cr.Call returned unexpected type %T", v)
+		return nil, nil, nil, err
 	}
 
 	//  Register result of the outgoing method
 	reqResult := newRequestResult(result, outgoing.Caller)
-	registerResultErr := a.am.RegisterResult(ctx, outgoingReqRef, reqResult)
-
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
-	if err != nil && strings.Contains(err.Error(), "index not found") {
-		if registerResultErr != nil {
-			inslogger.FromContext(ctx).Errorf("Failed to register result for request %s, error: %s", outgoingReqRef.String(), registerResultErr.Error())
-		}
-		return result, incoming, err
+	err = a.am.RegisterResult(ctx, outgoingReqRef, reqResult)
+	if err != nil {
+		return nil, nil, nil, errors.Wrap(err, "can't register result")
 	}
-	return result, incoming, registerResultErr
+
+	return object, result, incoming, nil
 }

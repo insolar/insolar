@@ -97,26 +97,6 @@ func (d *dispatcher) getHandleByPulse(ctx context.Context, msgPulseNumber insola
 	return d.handles.present
 }
 
-func (d *dispatcher) InnerSubscriber(msg *message.Message) ([]*message.Message, error) {
-	ctx := context.Background()
-	ctx = inslogger.ContextWithTrace(ctx, msg.Metadata.Get(bus.MetaTraceID))
-	parentSpan, err := instracer.Deserialize([]byte(msg.Metadata.Get(bus.MetaSpanData)))
-	if err == nil {
-		ctx = instracer.WithParentSpan(ctx, parentSpan)
-	} else {
-		inslogger.FromContext(ctx).Error("InnerSubscriber without parent span", err)
-	}
-	logger := inslogger.FromContext(ctx)
-	go func() {
-		f := thread.NewThread(msg, d.controller)
-		err := f.Run(ctx, d.handles.present(msg))
-		if err != nil {
-			logger.Error("Handling failed: ", err)
-		}
-	}()
-	return nil, nil
-}
-
 // Process handles incoming message.
 func (d *dispatcher) Process(msg *message.Message) error {
 	ctx := context.Background()

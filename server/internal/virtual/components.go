@@ -20,8 +20,6 @@ import (
 	"context"
 	"io"
 
-	"github.com/insolar/insolar/network/rules"
-
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
@@ -87,7 +85,6 @@ func initBootstrapComponents(ctx context.Context, cfg configuration.Configuratio
 func initCertificateManager(
 	ctx context.Context,
 	cfg configuration.Configuration,
-	isBootstrap bool,
 	cryptographyService insolar.CryptographyService,
 	keyProcessor insolar.KeyProcessor,
 ) *certificate.CertificateManager {
@@ -97,13 +94,8 @@ func initCertificateManager(
 	publicKey, err := cryptographyService.GetPublicKey()
 	checkError(ctx, err, "failed to retrieve node public key")
 
-	if isBootstrap {
-		certManager, err = certificate.NewManagerCertificateWithKeys(publicKey, keyProcessor)
-		checkError(ctx, err, "failed to start Certificate (bootstrap mode)")
-	} else {
-		certManager, err = certificate.NewManagerReadCertificate(publicKey, keyProcessor, cfg.CertificatePath)
-		checkError(ctx, err, "failed to start Certificate")
-	}
+	certManager, err = certificate.NewManagerReadCertificate(publicKey, keyProcessor, cfg.CertificatePath)
+	checkError(ctx, err, "failed to start Certificate")
 
 	return certManager
 }
@@ -172,7 +164,7 @@ func initComponents(
 	contractRequester, err := contractrequester.New(logicRunner)
 	checkError(ctx, err, "failed to start ContractRequester")
 
-	pm := pulsemanager.NewPulseManager()
+	pm := pulsemanager.NewPulseManager(logicRunner.ResultsMatcher)
 
 	cm.Register(
 		terminationHandler,
@@ -185,10 +177,10 @@ func initComponents(
 		logicrunner.NewLogicExecutor(),
 		logicrunner.NewRequestsExecutor(),
 		logicrunner.NewMachinesManager(),
+		apiRunner,
 		nodeNetwork,
 		nw,
 		pm,
-		rules.NewRules(),
 	)
 
 	components := []interface{}{
@@ -208,7 +200,6 @@ func initComponents(
 	}
 	components = append(components, []interface{}{
 		genesisDataProvider,
-		apiRunner,
 		metricsHandler,
 		cryptographyService,
 		keyProcessor,

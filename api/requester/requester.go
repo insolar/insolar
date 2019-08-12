@@ -298,7 +298,7 @@ func Info(url string) (*InfoResponse, error) {
 	return &infoResp.Result, nil
 }
 
-// Status makes rpc request to info.Status method and extracts it
+// Status makes rpc request to node.getStatus method and extracts it
 func Status(url string) (*StatusResponse, error) {
 	params := getDefaultRPCParams("node.getStatus")
 

@@ -20,6 +20,9 @@ import (
 	"context"
 	"sync"
 
+	"github.com/insolar/insolar/logicrunner"
+	"github.com/insolar/insolar/network"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow/dispatcher"
 	"github.com/insolar/insolar/insolar/jet"
@@ -32,24 +35,19 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// ActiveListSwapper is required by network to swap active list.
-type ActiveListSwapper interface {
-	MoveSyncToActive(ctx context.Context, number insolar.PulseNumber) error
-}
-
 // PulseManager implements insolar.PulseManager.
 type PulseManager struct {
-	LR                insolar.LogicRunner       `inject:""`
-	Bus               insolar.MessageBus        `inject:""`
-	NodeNet           insolar.NodeNetwork       `inject:""`
-	GIL               insolar.GlobalInsolarLock `inject:""`
-	ActiveListSwapper ActiveListSwapper         `inject:""`
-	NodeSetter        node.Modifier             `inject:""`
-	Nodes             node.Accessor             `inject:""`
-	PulseAccessor     pulse.Accessor            `inject:""`
-	PulseAppender     pulse.Appender            `inject:""`
-	JetModifier       jet.Modifier              `inject:""`
-	FlowDispatcher    dispatcher.Dispatcher
+	LR             insolar.LogicRunner       `inject:""`
+	Bus            insolar.MessageBus        `inject:""`
+	NodeNet        network.NodeNetwork       `inject:""`
+	GIL            insolar.GlobalInsolarLock `inject:""`
+	NodeSetter     node.Modifier             `inject:""`
+	Nodes          node.Accessor             `inject:""`
+	PulseAccessor  pulse.Accessor            `inject:""`
+	PulseAppender  pulse.Appender            `inject:""`
+	JetModifier    jet.Modifier              `inject:""`
+	FlowDispatcher dispatcher.Dispatcher
+	resultsMatcher logicrunner.ResultMatcher
 
 	currentPulse insolar.Pulse
 
@@ -60,9 +58,10 @@ type PulseManager struct {
 }
 
 // NewPulseManager creates PulseManager instance.
-func NewPulseManager() *PulseManager {
+func NewPulseManager(resultsMatcher logicrunner.ResultMatcher) *PulseManager {
 	pm := &PulseManager{
-		currentPulse: *insolar.GenesisPulse,
+		resultsMatcher: resultsMatcher,
+		currentPulse:   *insolar.GenesisPulse,
 	}
 	return pm
 }
@@ -125,13 +124,7 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 	// swap pulse
 	m.currentPulse = newPulse
 
-	// swap active nodes
-	err = m.ActiveListSwapper.MoveSyncToActive(ctx, newPulse.PulseNumber)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to apply new active node list")
-	}
-
-	fromNetwork := m.NodeNet.GetWorkingNodes()
+	fromNetwork := m.NodeNet.GetAccessor(m.currentPulse.PulseNumber).GetWorkingNodes()
 	toSet := make([]insolar.Node, 0, len(fromNetwork))
 	for _, n := range fromNetwork {
 		toSet = append(toSet, insolar.Node{ID: n.ID(), Role: n.Role()})
@@ -151,6 +144,11 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 	if err := m.PulseAppender.Append(ctx, newPulse); err != nil {
 		return nil, errors.Wrap(err, "call of AddPulse failed")
 	}
+
+	// We must clear resultsMatcher before any ReturnResults or StillExecution messages for new pulse will be received
+	// StillExecution messages use Dispatcher for processing, so we must do Dispatcher.BeginPulse AFTER clear
+	// ReturnResults messages use MessageBus for processing, which use GIL for stopping messages. So we must do unlock GIL AFTER clear
+	m.resultsMatcher.Clear()
 
 	return &storagePulse, nil
 }

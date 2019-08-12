@@ -18,6 +18,7 @@ package executor
 
 import (
 	"context"
+	"errors"
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
@@ -27,6 +28,11 @@ import (
 // JetWaiter provides method for locking on jet id.
 type JetWaiter interface {
 	Wait(ctx context.Context, jetID insolar.JetID, pulse insolar.PulseNumber) error
+}
+
+// HotDataStatusChecker provides methods for checking receiving status of hot data.
+type HotDataStatusChecker interface {
+	IsReceived(ctx context.Context, jetID insolar.JetID, pulse insolar.PulseNumber) (bool, error)
 }
 
 // JetReleaser provides methods for releasing jet waiters.
@@ -100,6 +106,21 @@ func (w *ChannelWaiter) Wait(ctx context.Context, jetID insolar.JetID, pulse ins
 		logger.Errorf("timeout while waiting for hot objects")
 		return insolar.ErrHotDataTimeout
 	}
+}
+
+func (w *ChannelWaiter) IsReceived(ctx context.Context, jetID insolar.JetID, pn insolar.PulseNumber) (bool, error) {
+	w.lock.Lock()
+	defer w.lock.Unlock()
+
+	pWaiter, ok := w.waiters[pn]
+	if !ok {
+		return false, errors.New("waiters for pulse not found")
+	}
+	jWaiter, ok := pWaiter.waiters[jetID]
+	if !ok {
+		return false, errors.New("waiter for jet not found")
+	}
+	return jWaiter.isClosed(), nil
 }
 
 // Unlock raises hotDataChannel

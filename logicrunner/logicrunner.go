@@ -22,12 +22,11 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/insolar/go-actors/actor/system"
-
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 
+	"github.com/insolar/go-actors/actor/system"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
@@ -45,17 +44,16 @@ import (
 	lrCommon "github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/goplugin"
 	"github.com/insolar/insolar/logicrunner/writecontroller"
+	"github.com/insolar/insolar/network"
 )
 
 const maxQueueLength = 10
-
-type Ref = insolar.Reference
 
 // LogicRunner is a general interface of contract executor
 type LogicRunner struct {
 	MessageBus                 insolar.MessageBus                 `inject:""`
 	ContractRequester          insolar.ContractRequester          `inject:""`
-	NodeNetwork                insolar.NodeNetwork                `inject:""`
+	NodeNetwork                network.NodeNetwork                `inject:""`
 	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
 	ParcelFactory              message.ParcelFactory              `inject:""`
 	PulseAccessor              pulse.Accessor                     `inject:""`
@@ -254,8 +252,6 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, oldPulse insolar.Pulse, newP
 		return errors.Wrap(err, "failed to close pulse on write controller")
 	}
 
-	lr.ResultsMatcher.Clear()
-
 	messages := lr.StateStorage.OnPulse(ctx, newPulse)
 
 	err = lr.WriteController.Open(ctx, newPulse.PulseNumber)
@@ -273,10 +269,6 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, oldPulse insolar.Pulse, newP
 }
 
 func (lr *LogicRunner) stopIfNeeded(ctx context.Context) {
-	// lock is required to access LogicRunner.state
-	lr.StateStorage.Lock()
-	defer lr.StateStorage.Unlock()
-
 	if lr.StateStorage.IsEmpty() {
 		lr.stopLock.Lock()
 		if lr.isStopping {

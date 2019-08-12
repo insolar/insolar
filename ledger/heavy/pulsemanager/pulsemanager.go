@@ -18,6 +18,7 @@ package pulsemanager
 
 import (
 	"context"
+	"github.com/insolar/insolar/network"
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
@@ -39,7 +40,7 @@ var (
 // PulseManager implements insolar.PulseManager.
 type PulseManager struct {
 	Bus                insolar.MessageBus          `inject:""`
-	NodeNet            insolar.NodeNetwork         `inject:""`
+	NodeNet            network.NodeNetwork         `inject:""`
 	GIL                insolar.GlobalInsolarLock   `inject:""`
 	NodeSetter         node.Modifier               `inject:""`
 	Nodes              node.Accessor               `inject:""`
@@ -90,16 +91,8 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 	)
 	defer span.End()
 
-	logger.Debug("before calling to FinalizationKeeper.OnPulse")
-	err := m.FinalizationKeeper.OnPulse(ctx, newPulse.PulseNumber)
-	if err != nil {
-		logger.Error(err)
-		instracer.AddError(span, err)
-		return errors.Wrap(err, "got error calling FinalizationKeeper.OnPulse")
-	}
-
 	logger.Debug("before calling to setUnderGilSection")
-	err = m.setUnderGilSection(ctx, newPulse)
+	err := m.setUnderGilSection(ctx, newPulse)
 	if err != nil {
 		logger.Error(err)
 		instracer.AddError(span, err)
@@ -110,6 +103,14 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 		return err
 	}
 	logger.Debug("after calling to setUnderGilSection")
+
+	logger.Debug("before calling to FinalizationKeeper.OnPulse")
+	err = m.FinalizationKeeper.OnPulse(ctx, newPulse.PulseNumber)
+	if err != nil {
+		logger.Error(err)
+		instracer.AddError(span, err)
+		return errors.Wrap(err, "got error calling FinalizationKeeper.OnPulse")
+	}
 
 	logger.Debug("before calling to StartPulse.SetStartPulse")
 	m.StartPulse.SetStartPulse(ctx, newPulse)
@@ -156,7 +157,7 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 	m.currentPulse = newPulse
 
 	logger.Debug("calling to GetWorkingNodes")
-	fromNetwork := m.NodeNet.GetWorkingNodes()
+	fromNetwork := m.NodeNet.GetAccessor(m.currentPulse.PulseNumber).GetWorkingNodes()
 	toSet := make([]insolar.Node, 0, len(fromNetwork))
 	if len(fromNetwork) == 0 {
 		logger.Errorf("received zero nodes for pulse %d", newPulse.PulseNumber)

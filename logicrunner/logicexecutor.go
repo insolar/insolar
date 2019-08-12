@@ -46,6 +46,8 @@ func NewLogicExecutor() LogicExecutor {
 }
 
 func (le *logicExecutor) Execute(ctx context.Context, transcript *Transcript) (artifacts.RequestResult, error) {
+	ctx, _ = inslogger.WithField(ctx, "name", transcript.Request.Method)
+
 	switch transcript.Request.CallType {
 	case record.CTMethod:
 		return le.ExecuteMethod(ctx, transcript)
@@ -59,6 +61,8 @@ func (le *logicExecutor) Execute(ctx context.Context, transcript *Transcript) (a
 func (le *logicExecutor) ExecuteMethod(ctx context.Context, transcript *Transcript) (artifacts.RequestResult, error) {
 	ctx, span := instracer.StartSpan(ctx, "logicExecutor.ExecuteMethod")
 	defer span.End()
+
+	inslogger.FromContext(ctx).Debug("Executing method")
 
 	request := transcript.Request
 
@@ -84,6 +88,7 @@ func (le *logicExecutor) ExecuteMethod(ctx context.Context, transcript *Transcri
 	newData, result, err := executor.CallMethod(
 		ctx, transcript.LogicContext, *codeDesc.Ref(), objDesc.Memory(), request.Method, request.Arguments,
 	)
+
 	if err != nil {
 		return nil, errors.Wrap(err, "executor error")
 	}
@@ -114,6 +119,8 @@ func (le *logicExecutor) ExecuteConstructor(
 ) {
 	ctx, span := instracer.StartSpan(ctx, "LogicRunner.executeConstructorCall")
 	defer span.End()
+
+	inslogger.FromContext(ctx).Debug("Executing constructor")
 
 	request := transcript.Request
 

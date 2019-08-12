@@ -93,7 +93,7 @@ func (cr *ContractRequester) SendRequestWithPulse(ctx context.Context, ref *inso
 	ctx, span := instracer.StartSpan(ctx, "SendRequest "+method)
 	defer span.End()
 
-	args, err := insolar.MarshalArgs(argsIn...)
+	args, err := insolar.Serialize(argsIn)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ContractRequester::SendRequest ] Can't marshal")
 	}
@@ -142,6 +142,25 @@ func (cr *ContractRequester) checkCall(_ context.Context, msg *message.CallMetho
 	return nil
 }
 
+func (cr *ContractRequester) createResultWaiter(
+	request record.IncomingRequest,
+) (
+	chan *message.ReturnResults, [insolar.RecordHashSize]byte, error,
+) {
+	cr.ResultMutex.Lock()
+	defer cr.ResultMutex.Unlock()
+
+	reqHash, err := cr.calcRequestHash(request)
+	if err != nil {
+		return nil, reqHash, errors.Wrap(err, "failed to calculate hash")
+	}
+
+	ch := make(chan *message.ReturnResults, 1)
+	cr.ResultMap[reqHash] = ch
+
+	return ch, reqHash, nil
+}
+
 func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (insolar.Reply, error) {
 	ctx, span := instracer.StartSpan(ctx, "ContractRequester.Call")
 	defer span.End()
@@ -163,16 +182,11 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (i
 	var reqHash [insolar.RecordHashSize]byte
 
 	if !async {
-		cr.ResultMutex.Lock()
 		var err error
-		reqHash, err = cr.calcRequestHash(msg.IncomingRequest)
+		ch, reqHash, err = cr.createResultWaiter(msg.IncomingRequest)
 		if err != nil {
-			return nil, errors.Wrap(err, "[ ContractRequester::Call ] Failed to calculate hash")
+			return nil, errors.Wrap(err, "can't create waiter record")
 		}
-		ch = make(chan *message.ReturnResults, 1)
-		cr.ResultMap[reqHash] = ch
-
-		cr.ResultMutex.Unlock()
 	}
 
 	sender := messagebus.BuildSender(
@@ -184,6 +198,19 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (i
 	res, err := sender(ctx, msg, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't dispatch event")
+	}
+
+	if _, earlyResult := res.(*reply.CallMethod); earlyResult {
+		inslogger.FromContext(ctx).Debug("early result for request, not registered")
+		if !async {
+			cr.ResultMutex.Lock()
+			defer cr.ResultMutex.Unlock()
+
+			delete(cr.ResultMap, reqHash)
+			close(ch)
+		}
+
+		return res, nil
 	}
 
 	r, ok := res.(*reply.RegisterRequest)

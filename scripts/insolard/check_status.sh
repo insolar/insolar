@@ -19,10 +19,10 @@ exit_code=0
 for port in $api_ports
 do
     echo "Port $port. Status: "
-    status=$(curl --header "Content-Type:application/json"  --data '{ "jsonrpc": "2.0", "method": "node.getStatus","id": "" }'  "localhost:$port/api/rpc" 2>/dev/null |  python -m json.tool | grep -i NodeState)
+    status=$(curl --header "Content-Type:application/json"  --data '{ "jsonrpc": "2.0", "method": "node.getStatus","id": "" }'  "localhost:$port/api/rpc" 2>/dev/null |  python -m json.tool | grep -i NetworkState)
     echo "    $status"
     echo
-    if [[ $status != *"NodeReady"* ]]; then
+    if [[ $status != *"CompleteNetworkState"* ]]; then
         exit_code=1
     fi
 done

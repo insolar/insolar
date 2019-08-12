@@ -29,7 +29,6 @@ type Transport struct {
 // HostNetwork holds configuration for HostNetwork
 type HostNetwork struct {
 	Transport           Transport
-	InfinityBootstrap   bool  // set true for infinity tries to bootstrap
 	MinTimeout          int   // bootstrap timeout min
 	MaxTimeout          int   // bootstrap timeout max
 	TimeoutMult         int   // bootstrap timout multiplier
@@ -44,10 +43,9 @@ func NewHostNetwork() HostNetwork {
 
 	return HostNetwork{
 		Transport:           transport,
-		MinTimeout:          1,
-		MaxTimeout:          60,
+		MinTimeout:          10,
+		MaxTimeout:          2000,
 		TimeoutMult:         2,
-		InfinityBootstrap:   false,
 		SignMessages:        false,
 		HandshakeSessionTTL: 5000,
 	}

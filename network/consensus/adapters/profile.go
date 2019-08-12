@@ -55,6 +55,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/insolar/insolar/network"
+
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/common/longbits"
@@ -64,7 +66,6 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/node"
-	"github.com/insolar/insolar/network/utils"
 )
 
 type StaticProfileExtension struct {
@@ -141,7 +142,7 @@ type StaticProfile struct {
 func NewStaticProfile(networkNode insolar.NetworkNode, certificate insolar.Certificate, keyProcessor insolar.KeyProcessor) *StaticProfile {
 
 	specialRole := member.SpecialRoleNone
-	if utils.IsDiscovery(networkNode.ID(), certificate) {
+	if network.IsDiscovery(networkNode.ID(), certificate) {
 		specialRole = member.SpecialRoleDiscovery
 	}
 
@@ -301,7 +302,7 @@ func NewNetworkNode(profile profiles.ActiveNode) insolar.NetworkNode {
 
 	mutableNode.SetShortID(profile.GetNodeID())
 	mutableNode.SetState(insolar.NodeReady)
-	mutableNode.SetPower(profile.GetDeclaredPower())
+	mutableNode.SetPower(insolar.Power(profile.GetDeclaredPower()))
 
 	sd := nip.GetBriefIntroSignedDigest()
 	mutableNode.SetSignature(

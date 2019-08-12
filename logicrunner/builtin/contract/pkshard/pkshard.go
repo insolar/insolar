@@ -29,13 +29,14 @@ type PKShard struct {
 }
 
 // New creates new member.
-func New() (*PKShard, error) {
+func New(members foundation.StableMap) (*PKShard, error) {
 	return &PKShard{
-		Map: make(foundation.StableMap),
+		Map: members,
 	}, nil
 }
 
 // GetRef gets ref by key.
+// ins:immutable
 func (s PKShard) GetRef(key string) (string, error) {
 	if ref, ok := s.Map[key]; !ok {
 		return "", errors.New("failed to find reference by key")

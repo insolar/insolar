@@ -23,7 +23,7 @@ import (
 	"github.com/insolar/insolar/insolar/flow/dispatcher"
 	"github.com/insolar/insolar/ledger/light/handle"
 	"github.com/insolar/insolar/ledger/light/proc"
-	"github.com/insolar/insolar/network/rules"
+	"github.com/insolar/insolar/network"
 
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
@@ -126,7 +126,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 	// Network.
 	var (
 		NetworkService *servicenetwork.ServiceNetwork
-		NodeNetwork    insolar.NodeNetwork
+		NodeNetwork    network.NodeNetwork
 		Termination    insolar.TerminationHandler
 	)
 	{
@@ -187,7 +187,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		c.PulseCalculator = Pulses
 		c.PulseAccessor = Pulses
 		c.JetAccessor = Jets
-		c.NodeNet = NodeNetwork
+		c.OriginProvider = NodeNetwork
 		c.PlatformCryptographyScheme = CryptoScheme
 		c.Nodes = Nodes
 
@@ -338,6 +338,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			hotSender,
 			writeController,
 			stateIniter,
+			hotWaitReleaser,
 		)
 	}
 
@@ -363,7 +364,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		NetworkService,
 		publisher,
 		subscriber,
-		rules.NewRules(),
 		messagebus.NewParcelFactory(),
 	)
 

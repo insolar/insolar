@@ -38,6 +38,7 @@ func New(feeWallet insolar.Reference) (*CostCenter, error) {
 }
 
 // GetFeeWalletRef gets fee wallet reference.
+// ins:immutable
 func (cc CostCenter) GetFeeWalletRef() (insolar.Reference, error) {
 	return cc.FeeWallet, nil
 }
@@ -61,6 +62,7 @@ func calcFeeRate(amountStr string) (string, error) {
 }
 
 // CalcFee calculates fee for amount. Returns fee.
+// ins:immutable
 func (cc CostCenter) CalcFee(amountStr string) (string, error) {
 	amount, ok := new(big.Int).SetString(amountStr, 10)
 	if !ok {

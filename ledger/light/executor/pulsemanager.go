@@ -20,12 +20,15 @@ import (
 	"context"
 	"sync"
 
+	"github.com/insolar/insolar/network"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow/dispatcher"
 	"github.com/insolar/insolar/insolar/node"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 )
@@ -34,22 +37,23 @@ import (
 type PulseManager struct {
 	setLock sync.RWMutex
 
-	nodeNet         insolar.NodeNetwork
-	dispatcher      dispatcher.Dispatcher
-	nodeSetter      node.Modifier
-	pulseAccessor   pulse.Accessor
-	pulseAppender   pulse.Appender
-	jetReleaser     JetReleaser
-	jetSplitter     JetSplitter
-	lightReplicator LightReplicator
-	hotSender       HotSender
-	writeManager    WriteManager
-	stateIniter     StateIniter
+	nodeNet          network.NodeNetwork
+	dispatcher       dispatcher.Dispatcher
+	nodeSetter       node.Modifier
+	pulseAccessor    pulse.Accessor
+	pulseAppender    pulse.Appender
+	jetReleaser      JetReleaser
+	jetSplitter      JetSplitter
+	lightReplicator  LightReplicator
+	hotSender        HotSender
+	writeManager     WriteManager
+	stateIniter      StateIniter
+	hotStatusChecker HotDataStatusChecker
 }
 
 // NewPulseManager creates PulseManager instance.
 func NewPulseManager(
-	nodeNet insolar.NodeNetwork,
+	nodeNet network.NodeNetwork,
 	disp dispatcher.Dispatcher,
 	nodeSetter node.Modifier,
 	pulseAccessor pulse.Accessor,
@@ -60,19 +64,21 @@ func NewPulseManager(
 	hotSender HotSender,
 	writeManager WriteManager,
 	stateIniter StateIniter,
+	hotStatusChecker HotDataStatusChecker,
 ) *PulseManager {
 	pm := &PulseManager{
-		nodeNet:         nodeNet,
-		dispatcher:      disp,
-		jetSplitter:     jetSplitter,
-		nodeSetter:      nodeSetter,
-		pulseAccessor:   pulseAccessor,
-		pulseAppender:   pulseAppender,
-		jetReleaser:     jetReleaser,
-		lightReplicator: lightReplicator,
-		hotSender:       hotSender,
-		writeManager:    writeManager,
-		stateIniter:     stateIniter,
+		nodeNet:          nodeNet,
+		dispatcher:       disp,
+		jetSplitter:      jetSplitter,
+		nodeSetter:       nodeSetter,
+		pulseAccessor:    pulseAccessor,
+		pulseAppender:    pulseAppender,
+		jetReleaser:      jetReleaser,
+		lightReplicator:  lightReplicator,
+		hotSender:        hotSender,
+		writeManager:     writeManager,
+		stateIniter:      stateIniter,
+		hotStatusChecker: hotStatusChecker,
 	}
 	return pm
 }
@@ -98,7 +104,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 
 	// Dealing with node lists.
 	{
-		fromNetwork := m.nodeNet.GetWorkingNodes()
+		fromNetwork := m.nodeNet.GetAccessor(newPulse.PulseNumber).GetWorkingNodes()
 		if len(fromNetwork) == 0 {
 			logger.Errorf("received zero nodes for pulse %d", newPulse.PulseNumber)
 			return nil
@@ -127,6 +133,19 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 		m.dispatcher.ClosePulse(ctx, newPulse)
 
 		createDrops := !justJoined
+
+		if !justJoined {
+			for _, jet := range jets {
+				received, err := m.hotStatusChecker.IsReceived(ctx, jet, endedPulse.PulseNumber)
+				if err != nil {
+					panic(errors.Wrap(err, "can't find waiter for pn/jet"))
+				}
+				if !received {
+					log.Fatal("hot data for jet:%v and pulse:%v wasn't received", jet.DebugString(), endedPulse.PulseNumber)
+				}
+			}
+		}
+
 		jets, err = m.jetSplitter.Do(ctx, endedPulse.PulseNumber, newPulse.PulseNumber, jets, createDrops)
 		if err != nil {
 			panic(errors.Wrap(err, "failed to split jets"))
