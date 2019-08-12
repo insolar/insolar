@@ -51,7 +51,7 @@ func TestBadSeed(t *testing.T) {
 	rootCfg, err := requester.CreateUserConfig(root.ref, root.privKey, root.pubKey)
 	require.NoError(t, err)
 	res, err := requester.SendWithSeed(ctx, TestRPCUrl, rootCfg, &requester.Request{
-		JSONRPC: "2.0",
+		Version: "2.0",
 		ID:      1,
 		Method:  "contract.call",
 		Params:  requester.Params{CallSite: "member.create", PublicKey: rootCfg.PublicKey},
@@ -65,7 +65,7 @@ func TestIncorrectSeed(t *testing.T) {
 	rootCfg, err := requester.CreateUserConfig(root.ref, root.privKey, root.pubKey)
 	require.NoError(t, err)
 	res, err := requester.SendWithSeed(ctx, TestRPCUrl, rootCfg, &requester.Request{
-		JSONRPC: "2.0",
+		Version: "2.0",
 		ID:      1,
 		Method:  "contract.call",
 		Params:  requester.Params{CallSite: "member.create", PublicKey: rootCfg.PublicKey},
@@ -114,7 +114,7 @@ func TestIncorrectSign(t *testing.T) {
 	body, err := requester.GetResponseBodyContract(
 		TestRPCUrl,
 		requester.Request{
-			JSONRPC: "2.0",
+			Version: "2.0",
 			ID:      1,
 			Method:  "contract.call",
 			Params:  requester.Params{Seed: seed, Reference: testMember.ref, PublicKey: testMember.pubKey, CallSite: "wallet.getBalance", CallParams: map[string]interface{}{"reference": testMember.ref}},
@@ -135,7 +135,7 @@ func TestIncorrectMethodName(t *testing.T) {
 	rootCfg, err := requester.CreateUserConfig(root.ref, root.privKey, root.pubKey)
 	require.NoError(t, err)
 	res, err := requester.SendWithSeed(ctx, TestRPCUrl, rootCfg, &requester.Request{
-		JSONRPC: "2.0",
+		Version: "2.0",
 		ID:      1,
 		Method:  "foo.bar",
 		Params:  requester.Params{CallSite: "member.create", PublicKey: rootCfg.PublicKey},

@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/utils"
@@ -50,7 +51,7 @@ func NewNodeCertService(runner *Runner) *NodeCertService {
 }
 
 // Get returns certificate for node with given reference.
-func (s *NodeCertService) Get(r *http.Request, args *NodeCertArgs, fullRequest *interface{}, reply *NodeCertReply) error {
+func (s *NodeCertService) Get(r *http.Request, args *NodeCertArgs, fullReq *requester.Request, reply *NodeCertReply) error {
 	ctx, inslog := inslogger.WithTraceField(context.Background(), utils.RandTraceID())
 
 	_, span := instracer.StartSpan(ctx, "NodeCertService.Get")

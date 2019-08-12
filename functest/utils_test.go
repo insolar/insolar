@@ -319,7 +319,7 @@ func signedRequest(user *user, method string, params interface{}) (interface{}, 
 	currentIterNum := 1
 	for ; currentIterNum <= sendRetryCount; currentIterNum++ {
 		res, err := requester.Send(ctx, TestAPIURL, rootCfg, &requester.Request{
-			JSONRPC: "2.0",
+			Version: "2.0",
 			ID:      1,
 			Method:  "contract.call",
 			Params:  requester.Params{CallSite: method, CallParams: params, PublicKey: user.pubKey, Test: caller},

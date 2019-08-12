@@ -44,7 +44,7 @@ func NewHelloWorld(ctx context.Context) (*HelloWorldInstance, error) {
 
 	rootCfg, err := requester.CreateUserConfig(root.ref, root.privKey, root.pubKey)
 	res, err := requester.SendWithSeed(ctx, TestRPCUrl, rootCfg, &requester.Request{
-		JSONRPC: "2.0",
+		Version: "2.0",
 		ID:      1,
 		Method:  "contract.call",
 		Params:  requester.Params{CallSite: "CreateHelloWorld", CallParams: make(foundation.StableMap), PublicKey: rootCfg.PublicKey},
@@ -85,7 +85,7 @@ func (i *HelloWorldInstance) Greet(ctx context.Context, name string) (string, er
 	callParams := make(foundation.StableMap)
 	callParams["name"] = name
 	res, err := requester.SendWithSeed(ctx, TestRPCUrl, rootCfg, &requester.Request{
-		JSONRPC: "2.0",
+		Version: "2.0",
 		ID:      1,
 		Method:  "contract.call",
 		Params:  requester.Params{CallSite: "Greet", CallParams: callParams, PublicKey: rootCfg.PublicKey},
@@ -117,7 +117,7 @@ func (i *HelloWorldInstance) Count(ctx context.Context) (int, error) {
 
 	rootCfg, err := requester.CreateUserConfig(i.Ref.String(), root.privKey, root.pubKey)
 	res, err := requester.SendWithSeed(ctx, TestRPCUrl, rootCfg, &requester.Request{
-		JSONRPC: "2.0",
+		Version: "2.0",
 		ID:      1,
 		Method:  "contract.call",
 		Params:  requester.Params{CallSite: "Count", CallParams: make(foundation.StableMap), PublicKey: rootCfg.PublicKey},
@@ -162,7 +162,7 @@ func (i *HelloWorldInstance) CreateChild(ctx context.Context) (*HelloWorldInstan
 
 	rootCfg, err := requester.CreateUserConfig(i.Ref.String(), root.privKey, root.pubKey)
 	res, err := requester.SendWithSeed(ctx, TestRPCUrl, rootCfg, &requester.Request{
-		JSONRPC: "2.0",
+		Version: "2.0",
 		ID:      1,
 		Method:  "contract.call",
 		Params:  requester.Params{CallSite: "CreateChild", CallParams: make(foundation.StableMap), PublicKey: rootCfg.PublicKey},
@@ -201,7 +201,7 @@ func (i *HelloWorldInstance) ReturnObj(ctx context.Context) (map[string]interfac
 
 	rootCfg, err := requester.CreateUserConfig(i.Ref.String(), root.privKey, root.pubKey)
 	res, err := requester.SendWithSeed(ctx, TestRPCUrl, rootCfg, &requester.Request{
-		JSONRPC: "2.0",
+		Version: "2.0",
 		ID:      1,
 		Method:  "contract.call",
 		Params:  requester.Params{CallSite: "ReturnObj", CallParams: make(foundation.StableMap), PublicKey: rootCfg.PublicKey},

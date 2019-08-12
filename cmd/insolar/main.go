@@ -192,7 +192,7 @@ func createMember(sendURL string, userName string, serverLogLevel string) {
 
 	ctx := inslogger.ContextWithTrace(context.Background(), "insolarUtility")
 	req := requester.Request{
-		JSONRPC: "2.0",
+		Version: "2.0",
 		ID:      1,
 		Method:  "contract.call",
 		Params: requester.Params{

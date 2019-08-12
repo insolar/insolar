@@ -79,7 +79,7 @@ func (g *certGen) registerNode() insolar.Reference {
 	keySerialized, err := g.keyProcessor.ExportPublicKeyPEM(g.pubKey)
 	checkError("Failed to export public key:", err)
 	request := requester.Request{
-		JSONRPC: JSONRPCVersion,
+		Version: JSONRPCVersion,
 		ID:      1,
 		Method:  "contract.call",
 		Params: requester.Params{
@@ -195,7 +195,7 @@ func (g *certGen) getNodeRefByPublicKey() insolar.Reference {
 	keySerialized, err := g.keyProcessor.ExportPublicKeyPEM(g.privKey)
 	checkError("Failed to export public key:", err)
 	request := requester.Request{
-		JSONRPC: JSONRPCVersion,
+		Version: JSONRPCVersion,
 		ID:      1,
 		Method:  "contract.call",
 		Params: requester.Params{
