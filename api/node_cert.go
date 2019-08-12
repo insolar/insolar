@@ -28,6 +28,7 @@ import (
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/rpc/v2"
 )
 
 // NodeCertArgs is arguments that NodeCert service accepts.
@@ -51,7 +52,7 @@ func NewNodeCertService(runner *Runner) *NodeCertService {
 }
 
 // Get returns certificate for node with given reference.
-func (s *NodeCertService) Get(r *http.Request, args *NodeCertArgs, requestBody *RequestBody, reply *NodeCertReply) error {
+func (s *NodeCertService) Get(r *http.Request, args *NodeCertArgs, requestBody *rpc.RequestBody, reply *NodeCertReply) error {
 	ctx, inslog := inslogger.WithTraceField(context.Background(), utils.RandTraceID())
 
 	_, span := instracer.StartSpan(ctx, "NodeCertService.Get")

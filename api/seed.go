@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/rpc/v2"
 )
 
 // SeedArgs is arguments that Seed service accepts.
@@ -66,7 +67,7 @@ func NewNodeService(runner *Runner) *NodeService {
 // 		"id": str|int|null // same as in request
 // 	}
 //
-func (s *NodeService) GetSeed(r *http.Request, args *SeedArgs, requestBody *RequestBody, reply *SeedReply) error {
+func (s *NodeService) GetSeed(r *http.Request, args *SeedArgs, requestBody *rpc.RequestBody, reply *SeedReply) error {
 	traceID := utils.RandTraceID()
 	ctx, inslog := inslogger.WithTraceField(context.Background(), traceID)
 
