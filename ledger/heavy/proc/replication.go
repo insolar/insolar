@@ -70,6 +70,7 @@ func (p *Replication) Dep(
 }
 
 func (p *Replication) Proceed(ctx context.Context) error {
+	inslogger.FromContext(ctx).Debug("processing replication")
 	pl, err := payload.Unmarshal(p.message.Payload)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal payload")
@@ -93,19 +94,23 @@ func (p *Replication) store(
 	ctx context.Context,
 	msg *payload.Replication,
 ) error {
+	inslogger.FromContext(ctx).Debug("storing records")
 	if err := storeRecords(ctx, p.dep.records, p.dep.recordsPositions, p.dep.pcs, msg.Pulse, msg.Records); err != nil {
 		return errors.Wrap(err, "failed to store records")
 	}
 
+	inslogger.FromContext(ctx).Debug("storing indexes")
 	if err := storeIndexes(ctx, p.dep.indexes, msg.Indexes, msg.Pulse); err != nil {
 		return errors.Wrap(err, "failed to store indexes")
 	}
 
+	inslogger.FromContext(ctx).Debug("storing drop")
 	dr, err := storeDrop(ctx, p.dep.drops, msg.Drop)
 	if err != nil {
 		return errors.Wrap(err, "failed to store drop")
 	}
 
+	inslogger.FromContext(ctx).Debug("storing drop confirmation")
 	if err := p.dep.keeper.AddDropConfirmation(ctx, dr.Pulse, dr.JetID, dr.Split); err != nil {
 		return errors.Wrapf(err, "failed to add drop confirmation for jet=%v", dr.JetID.DebugString())
 	}
