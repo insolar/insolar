@@ -40,7 +40,7 @@ import (
 type Dispatcher interface {
 	BeginPulse(ctx context.Context, pulse insolar.Pulse)
 	ClosePulse(ctx context.Context, pulse insolar.Pulse)
-	Process(msg *message.Message) ([]*message.Message, error)
+	Process(msg *message.Message) error
 }
 
 type dispatcher struct {
@@ -118,7 +118,7 @@ func (d *dispatcher) InnerSubscriber(msg *message.Message) ([]*message.Message, 
 }
 
 // Process handles incoming message.
-func (d *dispatcher) Process(msg *message.Message) ([]*message.Message, error) {
+func (d *dispatcher) Process(msg *message.Message) error {
 	ctx := context.Background()
 	ctx = inslogger.ContextWithTrace(ctx, msg.Metadata.Get(bus.MetaTraceID))
 
@@ -133,7 +133,7 @@ func (d *dispatcher) Process(msg *message.Message) ([]*message.Message, error) {
 	pn, err := insolar.NewPulseNumberFromStr(msg.Metadata.Get(bus.MetaPulse))
 	if err != nil {
 		logger.Error("failed to handle message: ", err)
-		return nil, nil
+		return nil
 	}
 	ctx = pulse.ContextWith(ctx, pn)
 	parentSpan := instracer.MustDeserialize([]byte(msg.Metadata.Get(bus.MetaSpanData)))
@@ -147,7 +147,7 @@ func (d *dispatcher) Process(msg *message.Message) ([]*message.Message, error) {
 			logger.Error(errors.Wrap(err, "Handling failed: "))
 		}
 	}()
-	return nil, nil
+	return nil
 }
 
 func pulseFromString(p string) (insolar.PulseNumber, error) {

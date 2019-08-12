@@ -113,7 +113,7 @@ func TestSendMessageHandler_ReceiverNotSet(t *testing.T) {
 
 	inMsg := message.NewMessage(watermill.NewUUID(), data)
 
-	_, err = serviceNetwork.SendMessageHandler(inMsg)
+	err = serviceNetwork.SendMessageHandler(inMsg)
 	require.Error(t, err)
 }
 
@@ -147,9 +147,8 @@ func TestSendMessageHandler_SameNode(t *testing.T) {
 
 	inMsg := message.NewMessage(watermill.NewUUID(), data)
 
-	outMsgs, err := serviceNetwork.SendMessageHandler(inMsg)
+	err = serviceNetwork.SendMessageHandler(inMsg)
 	require.NoError(t, err)
-	require.Nil(t, outMsgs)
 }
 
 func TestSendMessageHandler_SendError(t *testing.T) {
@@ -186,7 +185,7 @@ func TestSendMessageHandler_SendError(t *testing.T) {
 
 	inMsg := message.NewMessage(watermill.NewUUID(), data)
 
-	_, err = serviceNetwork.SendMessageHandler(inMsg)
+	err = serviceNetwork.SendMessageHandler(inMsg)
 	require.Error(t, err)
 }
 
@@ -224,7 +223,7 @@ func TestSendMessageHandler_WrongReply(t *testing.T) {
 
 	inMsg := message.NewMessage(watermill.NewUUID(), data)
 
-	_, err = serviceNetwork.SendMessageHandler(inMsg)
+	err = serviceNetwork.SendMessageHandler(inMsg)
 	require.Error(t, err)
 }
 
@@ -260,9 +259,8 @@ func TestSendMessageHandler(t *testing.T) {
 
 	inMsg := message.NewMessage(watermill.NewUUID(), data)
 
-	outMsgs, err := serviceNetwork.SendMessageHandler(inMsg)
+	err = serviceNetwork.SendMessageHandler(inMsg)
 	require.NoError(t, err)
-	require.Nil(t, outMsgs)
 }
 
 type stater struct{}

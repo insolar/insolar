@@ -96,7 +96,7 @@ func TestDispatcher_Process(t *testing.T) {
 
 	msg := makeMessage(t, ctx, currentPulse.PulseNumber)
 
-	_, err := d.Process(msg)
+	err := d.Process(msg)
 	require.NoError(t, err)
 	rep := <-replyChan
 	require.Equal(t, reply, rep)
@@ -122,7 +122,7 @@ func TestDispatcher_Process_ReplyError(t *testing.T) {
 
 	msg := makeMessage(t, ctx, currentPulse.PulseNumber)
 
-	_, err := d.Process(msg)
+	err := d.Process(msg)
 	require.NoError(t, err)
 	rep := <-replyChan
 	require.Error(t, rep)
@@ -150,7 +150,7 @@ func TestDispatcher_Process_CallFutureDispatcher(t *testing.T) {
 
 	msg := makeMessage(t, ctx, currentPulse.PulseNumber+1)
 
-	_, err := d.Process(msg)
+	err := d.Process(msg)
 	require.NoError(t, err)
 	rep := <-replyChan
 	require.Equal(t, reply, rep)

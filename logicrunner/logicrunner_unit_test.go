@@ -231,7 +231,7 @@ func (suite *LogicRunnerTestSuite) TestSagaCallAcceptNotificationHandler() {
 		return nil
 	})
 
-	_, err = suite.lr.FlowDispatcher.Process(msg)
+	err = suite.lr.FlowDispatcher.Process(msg)
 	suite.Require().NoError(err)
 
 	<-callMethodChan
@@ -391,7 +391,7 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 			wmMsg.Metadata.Set(bus.MetaType, fmt.Sprintf("%s", msg.Type()))
 			wmMsg.Metadata.Set(bus.MetaTraceID, "req-"+strconv.Itoa(i))
 
-			_, err = suite.lr.FlowDispatcher.Process(wmMsg)
+			err = suite.lr.FlowDispatcher.Process(wmMsg)
 			require.NoError(syncT, err)
 		}(i)
 	}
