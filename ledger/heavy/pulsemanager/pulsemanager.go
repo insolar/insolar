@@ -18,8 +18,9 @@ package pulsemanager
 
 import (
 	"context"
-	"github.com/insolar/insolar/network"
 	"sync"
+
+	"github.com/insolar/insolar/network"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
@@ -172,14 +173,6 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 		logger.Error(err)
 		instracer.AddError(span, err)
 		return errors.Wrap(err, "call of SetActiveNodes failed")
-	}
-
-	logger.Debug("calling to JetModifier.Clone")
-	err = m.JetModifier.Clone(ctx, storagePulse.PulseNumber, newPulse.PulseNumber, true)
-	if err != nil {
-		logger.Error(err)
-		instracer.AddError(span, err)
-		return errors.Wrapf(err, "failed to clone jet.Tree fromPulse=%v toPulse=%v", storagePulse.PulseNumber, newPulse.PulseNumber)
 	}
 
 	if oldPulse != nil {
