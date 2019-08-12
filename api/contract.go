@@ -18,11 +18,7 @@ package api
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"net/http"
-
-	"github.com/insolar/rpc/v2/json2"
 
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/insolar/utils"
@@ -40,7 +36,11 @@ func NewContractService(runner *Runner) *ContractService {
 	return &ContractService{runner: runner}
 }
 
-func (cs *ContractService) Call(req *http.Request, args *requester.Params, fullRequest *json2.ServerRequest, result *requester.Result) error {
+type RequestBody struct {
+	Raw []byte
+}
+
+func (cs *ContractService) Call(req *http.Request, args *requester.Params, requestBody *RequestBody, result *requester.Result) error {
 	traceID := utils.RandTraceID()
 	ctx, insLog := inslogger.WithTraceField(context.Background(), traceID)
 
@@ -53,26 +53,7 @@ func (cs *ContractService) Call(req *http.Request, args *requester.Params, fullR
 		insLog.Infof("Request related to %s", args.Test)
 	}
 
-	var id uint64
-	if err := json.Unmarshal([]byte(*fullRequest.Id), &id); err != nil {
-		fmt.Println(err)
-	}
-	var params requester.Params
-	if err := json.Unmarshal([]byte(*fullRequest.Params), &params); err != nil {
-		fmt.Println(err)
-	}
-
-	rawBody, err := json.Marshal(requester.Request{
-		Version: fullRequest.Version,
-		ID:      id,
-		Method:  fullRequest.Method,
-		Params:  params,
-	})
-	if err != nil {
-		return err
-	}
-
-	signature, err := validateRequestHeaders(req.Header.Get(requester.Digest), req.Header.Get(requester.Signature), rawBody)
+	signature, err := validateRequestHeaders(req.Header.Get(requester.Digest), req.Header.Get(requester.Signature), requestBody.Raw)
 	if err != nil {
 		return err
 	}
@@ -84,7 +65,7 @@ func (cs *ContractService) Call(req *http.Request, args *requester.Params, fullR
 
 	setRootReferenceIfNeeded(args)
 
-	callResult, err := cs.runner.makeCall(ctx, "contract.call", *args, rawBody, signature, 0, seedPulse)
+	callResult, err := cs.runner.makeCall(ctx, "contract.call", *args, requestBody.Raw, signature, 0, seedPulse)
 	if err != nil {
 		return err
 	}

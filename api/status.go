@@ -25,7 +25,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/insolar/insolar/version"
-	"github.com/insolar/rpc/v2/json2"
 )
 
 type Node struct {
@@ -50,7 +49,7 @@ type StatusReply struct {
 }
 
 // Get returns status info
-func (s *NodeService) GetStatus(r *http.Request, args *interface{}, fullReq *json2.ServerRequest, reply *StatusReply) error {
+func (s *NodeService) GetStatus(r *http.Request, args *interface{}, requestBody *RequestBody, reply *StatusReply) error {
 	traceID := utils.RandTraceID()
 	ctx, inslog := inslogger.WithTraceField(context.Background(), traceID)
 

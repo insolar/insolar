@@ -25,7 +25,6 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/application/extractor"
 	"github.com/insolar/insolar/insolar"
 	insolarApi "github.com/insolar/insolar/insolar/api"
@@ -37,7 +36,6 @@ import (
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
 	"github.com/insolar/insolar/testutils"
-	"github.com/insolar/rpc/v2/json2"
 )
 
 // FuncTestContractService is a service that provides ability to add custom contracts
@@ -64,7 +62,7 @@ type UploadReply struct {
 }
 
 // Upload builds code and return prototype ref
-func (s *FuncTestContractService) Upload(r *http.Request, args *UploadArgs, fullReq *json2.ServerRequest, reply *UploadReply) error {
+func (s *FuncTestContractService) Upload(r *http.Request, args *UploadArgs, requestBody *RequestBody, reply *UploadReply) error {
 	ctx, inslog := inslogger.WithTraceField(context.Background(), utils.RandTraceID())
 	reply.TraceID = utils.TraceID(ctx)
 
@@ -109,7 +107,7 @@ type CallConstructorArgs struct {
 }
 
 // CallConstructor make an object from its prototype
-func (s *FuncTestContractService) CallConstructor(r *http.Request, args *CallConstructorArgs, fullReq *requester.Request, reply *CallMethodReply) error {
+func (s *FuncTestContractService) CallConstructor(r *http.Request, args *CallConstructorArgs, requestBody *RequestBody, reply *CallMethodReply) error {
 	ctx, inslog := inslogger.WithTraceField(context.Background(), utils.RandTraceID())
 	reply.TraceID = utils.TraceID(ctx)
 
@@ -170,7 +168,7 @@ type CallMethodReply struct {
 }
 
 // CallConstructor make an object from its prototype
-func (s *FuncTestContractService) CallMethod(r *http.Request, args *CallMethodArgs, fullReq *requester.Request, re *CallMethodReply) error {
+func (s *FuncTestContractService) CallMethod(r *http.Request, args *CallMethodArgs, requestBody *RequestBody, re *CallMethodReply) error {
 	ctx, inslog := inslogger.WithTraceField(context.Background(), utils.RandTraceID())
 	re.TraceID = utils.TraceID(ctx)
 
