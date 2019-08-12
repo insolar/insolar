@@ -81,7 +81,11 @@ func OfUnixTime(u int64) Number {
 }
 
 func (n Number) AsApproximateTime() time.Time {
-	return timeOfMinTimePulse.Add(time.Second * time.Duration(n))
+	if !n.IsTimePulse() {
+		panic("illegal state")
+	}
+
+	return timeOfMinTimePulse.Add(time.Second * time.Duration(n-MinTimePulse))
 }
 
 func (n Number) IsTimePulse() bool {
