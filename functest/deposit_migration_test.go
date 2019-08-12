@@ -38,6 +38,11 @@ func TestMigrationToken(t *testing.T) {
 
 	deposit := migrate(t, member.ref, "1000", "Test_TxHash", migrationAddress, 0)
 
+	firstMemberBalance := deposit["balance"].(string)
+	require.Equal(t, firstMemberBalance, "0")
+	firstMABalance := getBalanceNoErr(t, &migrationAdmin, migrationAdmin.ref)
+	require.Equal(t, firstMABalance.String(), "100000000000000000000")
+
 	confirmerReferences, ok := deposit["confirmerReferences"].([]interface{})
 	require.True(t, ok, fmt.Sprintf("failed to cast result: expected []string, got %T", deposit["confirmerReferences"]))
 	require.Equal(t, confirmerReferences[0], migrationDaemons[0].ref)
@@ -56,6 +61,13 @@ func TestMigrationToken(t *testing.T) {
 	require.Equal(t, confirmerReferences[0], migrationDaemons[0].ref)
 	require.Equal(t, confirmerReferences[1], migrationDaemons[1].ref)
 	require.Equal(t, confirmerReferences[2], migrationDaemons[2].ref)
+
+	require.Equal(t, deposit["balance"], "1000")
+
+	secondMemberBalance := deposit["balance"].(string)
+	require.Equal(t, secondMemberBalance, "1000")
+	secondMABalance1 := getBalanceNoErr(t, &migrationAdmin, migrationAdmin.ref)
+	require.Equal(t, secondMABalance1.String(), "99999999999999999000")
 }
 
 func TestMigrationTokenOnDifferentDeposits(t *testing.T) {

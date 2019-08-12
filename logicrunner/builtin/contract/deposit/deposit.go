@@ -76,6 +76,7 @@ func New(migrationDaemonConfirms [3]string, txHash string, amount string) (*Depo
 		return nil, fmt.Errorf("failed to get current pulse: %s", err.Error())
 	}
 	return &Deposit{
+		Balance:                 "0",
 		PulseDepositCreate:      currentPulse,
 		MigrationDaemonConfirms: migrationDaemonConfirms,
 		Amount:                  amount,
