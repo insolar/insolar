@@ -19,8 +19,9 @@ package heavy
 import (
 	"context"
 	"fmt"
-	"github.com/insolar/insolar/network"
 	"net"
+
+	"github.com/insolar/insolar/network"
 
 	"github.com/insolar/insolar/ledger/heavy/exporter"
 	"google.golang.org/grpc"
@@ -72,12 +73,13 @@ import (
 )
 
 type components struct {
-	cmp       component.Manager
-	NodeRef   string
-	NodeRole  string
-	rollback  *executor.DBRollback
-	inRouter  *watermillMsg.Router
-	outRouter *watermillMsg.Router
+	cmp         component.Manager
+	NodeRef     string
+	NodeRole    string
+	rollback    *executor.DBRollback
+	stateKeeper *executor.InitialStateKeeper
+	inRouter    *watermillMsg.Router
+	outRouter   *watermillMsg.Router
 }
 
 func newComponents(ctx context.Context, cfg configuration.Configuration, genesisCfg insolar.GenesisHeavyConfig) (*components, error) {
@@ -248,6 +250,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		jets := jet.NewDBStore(DB)
 		JetKeeper = executor.NewJetKeeper(jets, DB, Pulses)
 		c.rollback = executor.NewDBRollback(JetKeeper, Pulses, drops, Records, indexes, jets, Pulses)
+		c.stateKeeper = executor.NewInitialStateKeeper()
 
 		sp := pulse.NewStartPulse()
 
@@ -378,7 +381,12 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 func (c *components) Start(ctx context.Context) error {
 	err := c.rollback.Start(ctx)
 	if err != nil {
-		return errors.Wrap(err, "rollback.Start return error: ")
+		return errors.Wrapf(err, "rollback.Start return error: %s", err.Error())
+	}
+
+	err = c.stateKeeper.Start(ctx)
+	if err != nil {
+		return errors.Wrapf(err, "stateKeeper.Start return error: %s", err.Error())
 	}
 	return c.cmp.Start(ctx)
 }

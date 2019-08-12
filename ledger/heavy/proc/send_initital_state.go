@@ -134,6 +134,7 @@ func (p *SendInitialState) sendForNetworkStart(
 		JetIDs:       IDs,
 		Drops:        drops,
 		Pulse:        *pulse.ToProto(&topSyncPulse),
+		Indexes:      nil,
 	})
 	if err != nil {
 		logger.Fatal("Couldn't make message", err)
