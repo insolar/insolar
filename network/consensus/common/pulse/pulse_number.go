@@ -159,6 +159,6 @@ func OfUint32(n uint32) Number {
 	return Number(n) & MaxTimePulse
 }
 
-func FlagsOf(n int) uint {
+func FlagsOf(n uint32) uint {
 	return uint(n) >> 30
 }
