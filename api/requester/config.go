@@ -30,10 +30,10 @@ import (
 
 // Request is a representation of request struct to api
 type Request struct {
-	Version  string `json:"jsonrpc"`
-	ID       uint64 `json:"id"`
-	Method   string `json:"method"`
-	Params   Params `json:"params,omitempty"`
+	Version string `json:"jsonrpc"`
+	ID      uint64 `json:"id"`
+	Method  string `json:"method"`
+	Params  Params `json:"params,omitempty"`
 }
 
 type Params struct {
