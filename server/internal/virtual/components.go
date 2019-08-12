@@ -43,6 +43,8 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/logicrunner/artifacts"
+	"github.com/insolar/insolar/logicrunner/logicexecutor"
+	"github.com/insolar/insolar/logicrunner/machinesmanager"
 	"github.com/insolar/insolar/logicrunner/pulsemanager"
 	"github.com/insolar/insolar/messagebus"
 	"github.com/insolar/insolar/metrics"
@@ -174,9 +176,9 @@ func initComponents(
 		keyProcessor,
 		certManager,
 		logicRunner,
-		logicrunner.NewLogicExecutor(),
+		logicexecutor.NewLogicExecutor(),
 		logicrunner.NewRequestsExecutor(),
-		logicrunner.NewMachinesManager(),
+		machinesmanager.NewMachinesManager(),
 		apiRunner,
 		nodeNetwork,
 		nw,

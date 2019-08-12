@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package logicrunner
+package executionarchive
 
 import (
 	"strings"
@@ -30,15 +30,16 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/logicrunner/common"
 )
 
 type ExecutionArchiveSuite struct{ suite.Suite }
 
 func TestExecutionArchive(t *testing.T) { suite.Run(t, new(ExecutionArchiveSuite)) }
 
-func (s *ExecutionArchiveSuite) genTranscriptForObject() *Transcript {
+func (s *ExecutionArchiveSuite) genTranscriptForObject() *common.Transcript {
 	ctx := inslogger.TestContext(s.T())
-	return NewTranscript(ctx, gen.Reference(), record.IncomingRequest{
+	return common.NewTranscript(ctx, gen.Reference(), record.IncomingRequest{
 		ReturnMode:   record.ReturnResult,
 		APIRequestID: s.genAPIRequestID(),
 	})
@@ -59,7 +60,7 @@ func (s *ExecutionArchiveSuite) TestArchive() {
 	objectRef := gen.Reference()
 	jc := jet.NewCoordinatorMock(mc)
 
-	archiveI := NewExecutionArchive(objectRef, jc)
+	archiveI := New(objectRef, jc)
 	archive := archiveI.(*executionArchive)
 	firstTranscript := s.genTranscriptForObject()
 
@@ -85,7 +86,7 @@ func (s *ExecutionArchiveSuite) TestDone() {
 	objectRef := gen.Reference()
 	jc := jet.NewCoordinatorMock(mc)
 
-	archiveI := NewExecutionArchive(objectRef, jc)
+	archiveI := New(objectRef, jc)
 	archive := archiveI.(*executionArchive)
 	T1, T2, T3 := s.genTranscriptForObject(), s.genTranscriptForObject(), s.genTranscriptForObject()
 
@@ -109,7 +110,7 @@ func (s *ExecutionArchiveSuite) TestIsEmpty() {
 	objectRef := gen.Reference()
 	jc := jet.NewCoordinatorMock(mc)
 
-	archiveI := NewExecutionArchive(objectRef, jc)
+	archiveI := New(objectRef, jc)
 	archive := archiveI.(*executionArchive)
 
 	s.True(archiveI.IsEmpty())
@@ -135,7 +136,7 @@ func (s *ExecutionArchiveSuite) TestOnPulse() {
 	jc := jet.NewCoordinatorMock(mc).
 		MeMock.Return(meRef)
 
-	archiveI := NewExecutionArchive(objectRef, jc)
+	archiveI := New(objectRef, jc)
 	{
 		msgs := archiveI.OnPulse(ctx)
 		s.Len(msgs, 0)
@@ -184,14 +185,14 @@ func (s *ExecutionArchiveSuite) TestFindRequestLoop() {
 	objRef := gen.Reference()
 	reqRef := gen.Reference()
 
-	archiveI := NewExecutionArchive(objRef, jc)
+	archiveI := New(objRef, jc)
 	{ // no requests with current apirequestid
 		id := s.genAPIRequestID()
 
 		s.False(archiveI.FindRequestLoop(ctx, reqRef, id))
 
 		// cleanup after
-		archiveI.(*executionArchive).archive = make(map[insolar.Reference]*Transcript)
+		archiveI.(*executionArchive).archive = make(map[insolar.Reference]*common.Transcript)
 	}
 
 	T := s.genTranscriptForObject()
@@ -201,7 +202,7 @@ func (s *ExecutionArchiveSuite) TestFindRequestLoop() {
 		s.True(archiveI.FindRequestLoop(ctx, reqRef, T.Request.APIRequestID))
 
 		// cleanup after
-		archiveI.(*executionArchive).archive = make(map[insolar.Reference]*Transcript)
+		archiveI.(*executionArchive).archive = make(map[insolar.Reference]*common.Transcript)
 	}
 
 	{ // go request with current apirequestid, but record returnnowait (loop not found)
@@ -213,7 +214,7 @@ func (s *ExecutionArchiveSuite) TestFindRequestLoop() {
 		s.False(archiveI.FindRequestLoop(ctx, reqRef, id))
 
 		// cleanup after
-		archiveI.(*executionArchive).archive = make(map[insolar.Reference]*Transcript)
+		archiveI.(*executionArchive).archive = make(map[insolar.Reference]*common.Transcript)
 	}
 
 	T1 := s.genTranscriptForObject()
@@ -230,7 +231,7 @@ func (s *ExecutionArchiveSuite) TestFindRequestLoop() {
 		s.False(archiveI.FindRequestLoop(ctx, reqRef, id))
 
 		// cleanup after
-		archiveI.(*executionArchive).archive = make(map[insolar.Reference]*Transcript)
+		archiveI.(*executionArchive).archive = make(map[insolar.Reference]*common.Transcript)
 	}
 
 	mc.Finish()
@@ -244,7 +245,7 @@ func (s *ExecutionArchiveSuite) TestGetActiveTranscript() {
 	objRef := gen.Reference()
 
 	T := s.genTranscriptForObject()
-	archiveI := NewExecutionArchive(objRef, jc)
+	archiveI := New(objRef, jc)
 	archiveI.Archive(ctx, T)
 	{ // have (put before)
 		s.NotNil(archiveI.GetActiveTranscript(T.RequestRef))

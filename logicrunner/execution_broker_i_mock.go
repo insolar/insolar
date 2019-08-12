@@ -10,6 +10,7 @@ import (
 
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/logicrunner/common"
 )
 
 // ExecutionBrokerIMock implements ExecutionBrokerI
@@ -22,26 +23,26 @@ type ExecutionBrokerIMock struct {
 	beforeAbandonedRequestsOnLedgerCounter uint64
 	AbandonedRequestsOnLedgerMock          mExecutionBrokerIMockAbandonedRequestsOnLedger
 
-	funcAddAdditionalRequestFromPrevExecutor          func(ctx context.Context, transcript *Transcript)
-	inspectFuncAddAdditionalRequestFromPrevExecutor   func(ctx context.Context, transcript *Transcript)
+	funcAddAdditionalRequestFromPrevExecutor          func(ctx context.Context, transcript *common.Transcript)
+	inspectFuncAddAdditionalRequestFromPrevExecutor   func(ctx context.Context, transcript *common.Transcript)
 	afterAddAdditionalRequestFromPrevExecutorCounter  uint64
 	beforeAddAdditionalRequestFromPrevExecutorCounter uint64
 	AddAdditionalRequestFromPrevExecutorMock          mExecutionBrokerIMockAddAdditionalRequestFromPrevExecutor
 
-	funcAddFreshRequest          func(ctx context.Context, transcript *Transcript)
-	inspectFuncAddFreshRequest   func(ctx context.Context, transcript *Transcript)
+	funcAddFreshRequest          func(ctx context.Context, transcript *common.Transcript)
+	inspectFuncAddFreshRequest   func(ctx context.Context, transcript *common.Transcript)
 	afterAddFreshRequestCounter  uint64
 	beforeAddFreshRequestCounter uint64
 	AddFreshRequestMock          mExecutionBrokerIMockAddFreshRequest
 
-	funcAddRequestsFromLedger          func(ctx context.Context, transcripts ...*Transcript)
-	inspectFuncAddRequestsFromLedger   func(ctx context.Context, transcripts ...*Transcript)
+	funcAddRequestsFromLedger          func(ctx context.Context, transcripts ...*common.Transcript)
+	inspectFuncAddRequestsFromLedger   func(ctx context.Context, transcripts ...*common.Transcript)
 	afterAddRequestsFromLedgerCounter  uint64
 	beforeAddRequestsFromLedgerCounter uint64
 	AddRequestsFromLedgerMock          mExecutionBrokerIMockAddRequestsFromLedger
 
-	funcAddRequestsFromPrevExecutor          func(ctx context.Context, transcripts ...*Transcript)
-	inspectFuncAddRequestsFromPrevExecutor   func(ctx context.Context, transcripts ...*Transcript)
+	funcAddRequestsFromPrevExecutor          func(ctx context.Context, transcripts ...*common.Transcript)
+	inspectFuncAddRequestsFromPrevExecutor   func(ctx context.Context, transcripts ...*common.Transcript)
 	afterAddRequestsFromPrevExecutorCounter  uint64
 	beforeAddRequestsFromPrevExecutorCounter uint64
 	AddRequestsFromPrevExecutorMock          mExecutionBrokerIMockAddRequestsFromPrevExecutor
@@ -52,7 +53,7 @@ type ExecutionBrokerIMock struct {
 	beforeFetchMoreRequestsFromLedgerCounter uint64
 	FetchMoreRequestsFromLedgerMock          mExecutionBrokerIMockFetchMoreRequestsFromLedger
 
-	funcGetActiveTranscript          func(req insolar.Reference) (tp1 *Transcript)
+	funcGetActiveTranscript          func(req insolar.Reference) (tp1 *common.Transcript)
 	inspectFuncGetActiveTranscript   func(req insolar.Reference)
 	afterGetActiveTranscriptCounter  uint64
 	beforeGetActiveTranscriptCounter uint64
@@ -377,11 +378,11 @@ type ExecutionBrokerIMockAddAdditionalRequestFromPrevExecutorExpectation struct 
 // ExecutionBrokerIMockAddAdditionalRequestFromPrevExecutorParams contains parameters of the ExecutionBrokerI.AddAdditionalRequestFromPrevExecutor
 type ExecutionBrokerIMockAddAdditionalRequestFromPrevExecutorParams struct {
 	ctx        context.Context
-	transcript *Transcript
+	transcript *common.Transcript
 }
 
 // Expect sets up expected params for ExecutionBrokerI.AddAdditionalRequestFromPrevExecutor
-func (mmAddAdditionalRequestFromPrevExecutor *mExecutionBrokerIMockAddAdditionalRequestFromPrevExecutor) Expect(ctx context.Context, transcript *Transcript) *mExecutionBrokerIMockAddAdditionalRequestFromPrevExecutor {
+func (mmAddAdditionalRequestFromPrevExecutor *mExecutionBrokerIMockAddAdditionalRequestFromPrevExecutor) Expect(ctx context.Context, transcript *common.Transcript) *mExecutionBrokerIMockAddAdditionalRequestFromPrevExecutor {
 	if mmAddAdditionalRequestFromPrevExecutor.mock.funcAddAdditionalRequestFromPrevExecutor != nil {
 		mmAddAdditionalRequestFromPrevExecutor.mock.t.Fatalf("ExecutionBrokerIMock.AddAdditionalRequestFromPrevExecutor mock is already set by Set")
 	}
@@ -401,7 +402,7 @@ func (mmAddAdditionalRequestFromPrevExecutor *mExecutionBrokerIMockAddAdditional
 }
 
 // Inspect accepts an inspector function that has same arguments as the ExecutionBrokerI.AddAdditionalRequestFromPrevExecutor
-func (mmAddAdditionalRequestFromPrevExecutor *mExecutionBrokerIMockAddAdditionalRequestFromPrevExecutor) Inspect(f func(ctx context.Context, transcript *Transcript)) *mExecutionBrokerIMockAddAdditionalRequestFromPrevExecutor {
+func (mmAddAdditionalRequestFromPrevExecutor *mExecutionBrokerIMockAddAdditionalRequestFromPrevExecutor) Inspect(f func(ctx context.Context, transcript *common.Transcript)) *mExecutionBrokerIMockAddAdditionalRequestFromPrevExecutor {
 	if mmAddAdditionalRequestFromPrevExecutor.mock.inspectFuncAddAdditionalRequestFromPrevExecutor != nil {
 		mmAddAdditionalRequestFromPrevExecutor.mock.t.Fatalf("Inspect function is already set for ExecutionBrokerIMock.AddAdditionalRequestFromPrevExecutor")
 	}
@@ -425,7 +426,7 @@ func (mmAddAdditionalRequestFromPrevExecutor *mExecutionBrokerIMockAddAdditional
 }
 
 //Set uses given function f to mock the ExecutionBrokerI.AddAdditionalRequestFromPrevExecutor method
-func (mmAddAdditionalRequestFromPrevExecutor *mExecutionBrokerIMockAddAdditionalRequestFromPrevExecutor) Set(f func(ctx context.Context, transcript *Transcript)) *ExecutionBrokerIMock {
+func (mmAddAdditionalRequestFromPrevExecutor *mExecutionBrokerIMockAddAdditionalRequestFromPrevExecutor) Set(f func(ctx context.Context, transcript *common.Transcript)) *ExecutionBrokerIMock {
 	if mmAddAdditionalRequestFromPrevExecutor.defaultExpectation != nil {
 		mmAddAdditionalRequestFromPrevExecutor.mock.t.Fatalf("Default expectation is already set for the ExecutionBrokerI.AddAdditionalRequestFromPrevExecutor method")
 	}
@@ -439,7 +440,7 @@ func (mmAddAdditionalRequestFromPrevExecutor *mExecutionBrokerIMockAddAdditional
 }
 
 // AddAdditionalRequestFromPrevExecutor implements ExecutionBrokerI
-func (mmAddAdditionalRequestFromPrevExecutor *ExecutionBrokerIMock) AddAdditionalRequestFromPrevExecutor(ctx context.Context, transcript *Transcript) {
+func (mmAddAdditionalRequestFromPrevExecutor *ExecutionBrokerIMock) AddAdditionalRequestFromPrevExecutor(ctx context.Context, transcript *common.Transcript) {
 	mm_atomic.AddUint64(&mmAddAdditionalRequestFromPrevExecutor.beforeAddAdditionalRequestFromPrevExecutorCounter, 1)
 	defer mm_atomic.AddUint64(&mmAddAdditionalRequestFromPrevExecutor.afterAddAdditionalRequestFromPrevExecutorCounter, 1)
 
@@ -565,11 +566,11 @@ type ExecutionBrokerIMockAddFreshRequestExpectation struct {
 // ExecutionBrokerIMockAddFreshRequestParams contains parameters of the ExecutionBrokerI.AddFreshRequest
 type ExecutionBrokerIMockAddFreshRequestParams struct {
 	ctx        context.Context
-	transcript *Transcript
+	transcript *common.Transcript
 }
 
 // Expect sets up expected params for ExecutionBrokerI.AddFreshRequest
-func (mmAddFreshRequest *mExecutionBrokerIMockAddFreshRequest) Expect(ctx context.Context, transcript *Transcript) *mExecutionBrokerIMockAddFreshRequest {
+func (mmAddFreshRequest *mExecutionBrokerIMockAddFreshRequest) Expect(ctx context.Context, transcript *common.Transcript) *mExecutionBrokerIMockAddFreshRequest {
 	if mmAddFreshRequest.mock.funcAddFreshRequest != nil {
 		mmAddFreshRequest.mock.t.Fatalf("ExecutionBrokerIMock.AddFreshRequest mock is already set by Set")
 	}
@@ -589,7 +590,7 @@ func (mmAddFreshRequest *mExecutionBrokerIMockAddFreshRequest) Expect(ctx contex
 }
 
 // Inspect accepts an inspector function that has same arguments as the ExecutionBrokerI.AddFreshRequest
-func (mmAddFreshRequest *mExecutionBrokerIMockAddFreshRequest) Inspect(f func(ctx context.Context, transcript *Transcript)) *mExecutionBrokerIMockAddFreshRequest {
+func (mmAddFreshRequest *mExecutionBrokerIMockAddFreshRequest) Inspect(f func(ctx context.Context, transcript *common.Transcript)) *mExecutionBrokerIMockAddFreshRequest {
 	if mmAddFreshRequest.mock.inspectFuncAddFreshRequest != nil {
 		mmAddFreshRequest.mock.t.Fatalf("Inspect function is already set for ExecutionBrokerIMock.AddFreshRequest")
 	}
@@ -613,7 +614,7 @@ func (mmAddFreshRequest *mExecutionBrokerIMockAddFreshRequest) Return() *Executi
 }
 
 //Set uses given function f to mock the ExecutionBrokerI.AddFreshRequest method
-func (mmAddFreshRequest *mExecutionBrokerIMockAddFreshRequest) Set(f func(ctx context.Context, transcript *Transcript)) *ExecutionBrokerIMock {
+func (mmAddFreshRequest *mExecutionBrokerIMockAddFreshRequest) Set(f func(ctx context.Context, transcript *common.Transcript)) *ExecutionBrokerIMock {
 	if mmAddFreshRequest.defaultExpectation != nil {
 		mmAddFreshRequest.mock.t.Fatalf("Default expectation is already set for the ExecutionBrokerI.AddFreshRequest method")
 	}
@@ -627,7 +628,7 @@ func (mmAddFreshRequest *mExecutionBrokerIMockAddFreshRequest) Set(f func(ctx co
 }
 
 // AddFreshRequest implements ExecutionBrokerI
-func (mmAddFreshRequest *ExecutionBrokerIMock) AddFreshRequest(ctx context.Context, transcript *Transcript) {
+func (mmAddFreshRequest *ExecutionBrokerIMock) AddFreshRequest(ctx context.Context, transcript *common.Transcript) {
 	mm_atomic.AddUint64(&mmAddFreshRequest.beforeAddFreshRequestCounter, 1)
 	defer mm_atomic.AddUint64(&mmAddFreshRequest.afterAddFreshRequestCounter, 1)
 
@@ -753,11 +754,11 @@ type ExecutionBrokerIMockAddRequestsFromLedgerExpectation struct {
 // ExecutionBrokerIMockAddRequestsFromLedgerParams contains parameters of the ExecutionBrokerI.AddRequestsFromLedger
 type ExecutionBrokerIMockAddRequestsFromLedgerParams struct {
 	ctx         context.Context
-	transcripts []*Transcript
+	transcripts []*common.Transcript
 }
 
 // Expect sets up expected params for ExecutionBrokerI.AddRequestsFromLedger
-func (mmAddRequestsFromLedger *mExecutionBrokerIMockAddRequestsFromLedger) Expect(ctx context.Context, transcripts ...*Transcript) *mExecutionBrokerIMockAddRequestsFromLedger {
+func (mmAddRequestsFromLedger *mExecutionBrokerIMockAddRequestsFromLedger) Expect(ctx context.Context, transcripts ...*common.Transcript) *mExecutionBrokerIMockAddRequestsFromLedger {
 	if mmAddRequestsFromLedger.mock.funcAddRequestsFromLedger != nil {
 		mmAddRequestsFromLedger.mock.t.Fatalf("ExecutionBrokerIMock.AddRequestsFromLedger mock is already set by Set")
 	}
@@ -777,7 +778,7 @@ func (mmAddRequestsFromLedger *mExecutionBrokerIMockAddRequestsFromLedger) Expec
 }
 
 // Inspect accepts an inspector function that has same arguments as the ExecutionBrokerI.AddRequestsFromLedger
-func (mmAddRequestsFromLedger *mExecutionBrokerIMockAddRequestsFromLedger) Inspect(f func(ctx context.Context, transcripts ...*Transcript)) *mExecutionBrokerIMockAddRequestsFromLedger {
+func (mmAddRequestsFromLedger *mExecutionBrokerIMockAddRequestsFromLedger) Inspect(f func(ctx context.Context, transcripts ...*common.Transcript)) *mExecutionBrokerIMockAddRequestsFromLedger {
 	if mmAddRequestsFromLedger.mock.inspectFuncAddRequestsFromLedger != nil {
 		mmAddRequestsFromLedger.mock.t.Fatalf("Inspect function is already set for ExecutionBrokerIMock.AddRequestsFromLedger")
 	}
@@ -801,7 +802,7 @@ func (mmAddRequestsFromLedger *mExecutionBrokerIMockAddRequestsFromLedger) Retur
 }
 
 //Set uses given function f to mock the ExecutionBrokerI.AddRequestsFromLedger method
-func (mmAddRequestsFromLedger *mExecutionBrokerIMockAddRequestsFromLedger) Set(f func(ctx context.Context, transcripts ...*Transcript)) *ExecutionBrokerIMock {
+func (mmAddRequestsFromLedger *mExecutionBrokerIMockAddRequestsFromLedger) Set(f func(ctx context.Context, transcripts ...*common.Transcript)) *ExecutionBrokerIMock {
 	if mmAddRequestsFromLedger.defaultExpectation != nil {
 		mmAddRequestsFromLedger.mock.t.Fatalf("Default expectation is already set for the ExecutionBrokerI.AddRequestsFromLedger method")
 	}
@@ -815,7 +816,7 @@ func (mmAddRequestsFromLedger *mExecutionBrokerIMockAddRequestsFromLedger) Set(f
 }
 
 // AddRequestsFromLedger implements ExecutionBrokerI
-func (mmAddRequestsFromLedger *ExecutionBrokerIMock) AddRequestsFromLedger(ctx context.Context, transcripts ...*Transcript) {
+func (mmAddRequestsFromLedger *ExecutionBrokerIMock) AddRequestsFromLedger(ctx context.Context, transcripts ...*common.Transcript) {
 	mm_atomic.AddUint64(&mmAddRequestsFromLedger.beforeAddRequestsFromLedgerCounter, 1)
 	defer mm_atomic.AddUint64(&mmAddRequestsFromLedger.afterAddRequestsFromLedgerCounter, 1)
 
@@ -941,11 +942,11 @@ type ExecutionBrokerIMockAddRequestsFromPrevExecutorExpectation struct {
 // ExecutionBrokerIMockAddRequestsFromPrevExecutorParams contains parameters of the ExecutionBrokerI.AddRequestsFromPrevExecutor
 type ExecutionBrokerIMockAddRequestsFromPrevExecutorParams struct {
 	ctx         context.Context
-	transcripts []*Transcript
+	transcripts []*common.Transcript
 }
 
 // Expect sets up expected params for ExecutionBrokerI.AddRequestsFromPrevExecutor
-func (mmAddRequestsFromPrevExecutor *mExecutionBrokerIMockAddRequestsFromPrevExecutor) Expect(ctx context.Context, transcripts ...*Transcript) *mExecutionBrokerIMockAddRequestsFromPrevExecutor {
+func (mmAddRequestsFromPrevExecutor *mExecutionBrokerIMockAddRequestsFromPrevExecutor) Expect(ctx context.Context, transcripts ...*common.Transcript) *mExecutionBrokerIMockAddRequestsFromPrevExecutor {
 	if mmAddRequestsFromPrevExecutor.mock.funcAddRequestsFromPrevExecutor != nil {
 		mmAddRequestsFromPrevExecutor.mock.t.Fatalf("ExecutionBrokerIMock.AddRequestsFromPrevExecutor mock is already set by Set")
 	}
@@ -965,7 +966,7 @@ func (mmAddRequestsFromPrevExecutor *mExecutionBrokerIMockAddRequestsFromPrevExe
 }
 
 // Inspect accepts an inspector function that has same arguments as the ExecutionBrokerI.AddRequestsFromPrevExecutor
-func (mmAddRequestsFromPrevExecutor *mExecutionBrokerIMockAddRequestsFromPrevExecutor) Inspect(f func(ctx context.Context, transcripts ...*Transcript)) *mExecutionBrokerIMockAddRequestsFromPrevExecutor {
+func (mmAddRequestsFromPrevExecutor *mExecutionBrokerIMockAddRequestsFromPrevExecutor) Inspect(f func(ctx context.Context, transcripts ...*common.Transcript)) *mExecutionBrokerIMockAddRequestsFromPrevExecutor {
 	if mmAddRequestsFromPrevExecutor.mock.inspectFuncAddRequestsFromPrevExecutor != nil {
 		mmAddRequestsFromPrevExecutor.mock.t.Fatalf("Inspect function is already set for ExecutionBrokerIMock.AddRequestsFromPrevExecutor")
 	}
@@ -989,7 +990,7 @@ func (mmAddRequestsFromPrevExecutor *mExecutionBrokerIMockAddRequestsFromPrevExe
 }
 
 //Set uses given function f to mock the ExecutionBrokerI.AddRequestsFromPrevExecutor method
-func (mmAddRequestsFromPrevExecutor *mExecutionBrokerIMockAddRequestsFromPrevExecutor) Set(f func(ctx context.Context, transcripts ...*Transcript)) *ExecutionBrokerIMock {
+func (mmAddRequestsFromPrevExecutor *mExecutionBrokerIMockAddRequestsFromPrevExecutor) Set(f func(ctx context.Context, transcripts ...*common.Transcript)) *ExecutionBrokerIMock {
 	if mmAddRequestsFromPrevExecutor.defaultExpectation != nil {
 		mmAddRequestsFromPrevExecutor.mock.t.Fatalf("Default expectation is already set for the ExecutionBrokerI.AddRequestsFromPrevExecutor method")
 	}
@@ -1003,7 +1004,7 @@ func (mmAddRequestsFromPrevExecutor *mExecutionBrokerIMockAddRequestsFromPrevExe
 }
 
 // AddRequestsFromPrevExecutor implements ExecutionBrokerI
-func (mmAddRequestsFromPrevExecutor *ExecutionBrokerIMock) AddRequestsFromPrevExecutor(ctx context.Context, transcripts ...*Transcript) {
+func (mmAddRequestsFromPrevExecutor *ExecutionBrokerIMock) AddRequestsFromPrevExecutor(ctx context.Context, transcripts ...*common.Transcript) {
 	mm_atomic.AddUint64(&mmAddRequestsFromPrevExecutor.beforeAddRequestsFromPrevExecutorCounter, 1)
 	defer mm_atomic.AddUint64(&mmAddRequestsFromPrevExecutor.afterAddRequestsFromPrevExecutorCounter, 1)
 
@@ -1320,7 +1321,7 @@ type ExecutionBrokerIMockGetActiveTranscriptParams struct {
 
 // ExecutionBrokerIMockGetActiveTranscriptResults contains results of the ExecutionBrokerI.GetActiveTranscript
 type ExecutionBrokerIMockGetActiveTranscriptResults struct {
-	tp1 *Transcript
+	tp1 *common.Transcript
 }
 
 // Expect sets up expected params for ExecutionBrokerI.GetActiveTranscript
@@ -1355,7 +1356,7 @@ func (mmGetActiveTranscript *mExecutionBrokerIMockGetActiveTranscript) Inspect(f
 }
 
 // Return sets up results that will be returned by ExecutionBrokerI.GetActiveTranscript
-func (mmGetActiveTranscript *mExecutionBrokerIMockGetActiveTranscript) Return(tp1 *Transcript) *ExecutionBrokerIMock {
+func (mmGetActiveTranscript *mExecutionBrokerIMockGetActiveTranscript) Return(tp1 *common.Transcript) *ExecutionBrokerIMock {
 	if mmGetActiveTranscript.mock.funcGetActiveTranscript != nil {
 		mmGetActiveTranscript.mock.t.Fatalf("ExecutionBrokerIMock.GetActiveTranscript mock is already set by Set")
 	}
@@ -1368,7 +1369,7 @@ func (mmGetActiveTranscript *mExecutionBrokerIMockGetActiveTranscript) Return(tp
 }
 
 //Set uses given function f to mock the ExecutionBrokerI.GetActiveTranscript method
-func (mmGetActiveTranscript *mExecutionBrokerIMockGetActiveTranscript) Set(f func(req insolar.Reference) (tp1 *Transcript)) *ExecutionBrokerIMock {
+func (mmGetActiveTranscript *mExecutionBrokerIMockGetActiveTranscript) Set(f func(req insolar.Reference) (tp1 *common.Transcript)) *ExecutionBrokerIMock {
 	if mmGetActiveTranscript.defaultExpectation != nil {
 		mmGetActiveTranscript.mock.t.Fatalf("Default expectation is already set for the ExecutionBrokerI.GetActiveTranscript method")
 	}
@@ -1397,13 +1398,13 @@ func (mmGetActiveTranscript *mExecutionBrokerIMockGetActiveTranscript) When(req 
 }
 
 // Then sets up ExecutionBrokerI.GetActiveTranscript return parameters for the expectation previously defined by the When method
-func (e *ExecutionBrokerIMockGetActiveTranscriptExpectation) Then(tp1 *Transcript) *ExecutionBrokerIMock {
+func (e *ExecutionBrokerIMockGetActiveTranscriptExpectation) Then(tp1 *common.Transcript) *ExecutionBrokerIMock {
 	e.results = &ExecutionBrokerIMockGetActiveTranscriptResults{tp1}
 	return e.mock
 }
 
 // GetActiveTranscript implements ExecutionBrokerI
-func (mmGetActiveTranscript *ExecutionBrokerIMock) GetActiveTranscript(req insolar.Reference) (tp1 *Transcript) {
+func (mmGetActiveTranscript *ExecutionBrokerIMock) GetActiveTranscript(req insolar.Reference) (tp1 *common.Transcript) {
 	mm_atomic.AddUint64(&mmGetActiveTranscript.beforeGetActiveTranscriptCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetActiveTranscript.afterGetActiveTranscriptCounter, 1)
 

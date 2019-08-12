@@ -15,6 +15,7 @@ import (
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/artifacts"
+	"github.com/insolar/insolar/logicrunner/requestresult"
 )
 
 var OutgoingRequestSenderDefaultQueueLimit = 1000
@@ -174,7 +175,7 @@ func (a *outgoingSenderActorState) sendOutgoingRequest(ctx context.Context, outg
 	}
 
 	//  Register result of the outgoing method
-	reqResult := newRequestResult(result, outgoing.Caller)
+	reqResult := requestresult.New(result, outgoing.Caller)
 	err = a.am.RegisterResult(ctx, outgoingReqRef, reqResult)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "can't register result")

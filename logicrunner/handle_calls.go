@@ -33,7 +33,9 @@ import (
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
+
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
+	"github.com/insolar/insolar/logicrunner/common"
 )
 
 type HandleCall struct {
@@ -256,7 +258,7 @@ func (h *HandleCall) sendRequestResult(
 	}
 
 	repl := &reply.CallMethod{Result: resultRecord.Payload, Object: &objRef}
-	tr := NewTranscript(ctx, reqRef, request)
+	tr := common.NewTranscript(ctx, reqRef, request)
 	h.dep.RequestsExecutor.SendReply(ctx, tr, repl, nil)
 
 	return nil
