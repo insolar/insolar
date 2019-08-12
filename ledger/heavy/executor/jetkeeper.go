@@ -236,22 +236,12 @@ func (jk *dbJetKeeper) updateTopSyncPulse(ctx context.Context, pn insolar.PulseN
 		return nil
 	}
 
-	for jk.checkPulseConsistency(ctx, pn, true) {
+	if jk.checkPulseConsistency(ctx, pn, true) {
 		err := jk.updateSyncPulse(pn)
 		if err != nil {
 			return errors.Wrapf(err, "failed to update consistent pulse")
 		}
 		logger.Debugf("pulse completed: %d", pn)
-
-		next, err := jk.pulses.Forwards(ctx, pn, 1)
-		if err == pulse.ErrNotFound {
-			logger.Info("propagateConsistency. No next pulse. Stop propagating")
-			return nil
-		}
-		if err != nil {
-			return errors.Wrapf(err, "failed to get next pulse for %d", pn)
-		}
-		pn = next.PulseNumber
 	}
 
 	return nil
@@ -261,6 +251,10 @@ func (jk *dbJetKeeper) updateTopSyncPulse(ctx context.Context, pn insolar.PulseN
 func (jk *dbJetKeeper) HasAllJetConfirms(ctx context.Context, pulse insolar.PulseNumber) bool {
 	jk.RLock()
 	defer jk.RUnlock()
+
+	if jk.topSyncPulse() >= pulse {
+		return true
+	}
 
 	return jk.checkPulseConsistency(ctx, pulse, false)
 }
@@ -355,8 +349,37 @@ func infoToList(s map[insolar.JetID]struct{}) []insolar.JetID {
 	return r
 }
 
+func (jk *dbJetKeeper) getTopSyncJets(ctx context.Context) ([]insolar.JetID, error) {
+	var result []insolar.JetID
+	top := jk.topSyncPulse()
+	if top == insolar.FirstPulseNumber {
+		return []insolar.JetID{insolar.ZeroJetID}, nil
+	}
+	jets, err := jk.get(top)
+	if err != nil {
+		return nil, errors.Wrapf(err, "can't getTopSyncJets: %d", top)
+	}
+
+	for _, ji := range jets {
+		if *ji.Split {
+			left, right := jet.Siblings(ji.JetID)
+			result = append(result, left, right)
+		} else {
+			result = append(result, ji.JetID)
+		}
+	}
+
+	return result, nil
+
+}
+
 func (jk *dbJetKeeper) checkPulseConsistency(ctx context.Context, pulse insolar.PulseNumber, checkBackup bool) bool {
-	expectedJets := jk.jetTrees.All(ctx, pulse)
+	logger := inslogger.FromContext(ctx)
+	expectedJets, err := jk.getTopSyncJets(ctx)
+	if err != nil {
+		logger.Error("can't get jets for top sync pulse: ", err)
+		return false
+	}
 	actualJets := jk.all(pulse)
 
 	actualJetsSet, allConfirmed := infoToSet(actualJets, checkBackup)
@@ -364,12 +387,12 @@ func (jk *dbJetKeeper) checkPulseConsistency(ctx context.Context, pulse insolar.
 		return false
 	}
 
-	inslogger.FromContext(ctx).Debug("expectedJets: ", insolar.JetIDCollection(expectedJets).DebugString(), "  |  ",
+	logger.Debug("expectedJets: ", insolar.JetIDCollection(expectedJets).DebugString(), "  |  ",
 		"actualJets: ", insolar.JetIDCollection(infoToList(actualJetsSet)).DebugString())
 
 	if len(actualJetsSet) != len(expectedJets) {
 		if len(actualJetsSet) > len(expectedJets) {
-			inslogger.FromContext(ctx).Warn("num actual jets is more then expected. it's too bad. Pulse: ", pulse,
+			logger.Warn("num actual jets is more then expected. it's too bad. Pulse: ", pulse,
 				". Expected: ", insolar.JetIDCollection(expectedJets).DebugString(),
 				". Actual: ", insolar.JetIDCollection(infoToList(actualJetsSet)).DebugString())
 		}
@@ -378,7 +401,7 @@ func (jk *dbJetKeeper) checkPulseConsistency(ctx context.Context, pulse insolar.
 
 	for _, expID := range expectedJets {
 		if _, ok := actualJetsSet[expID]; !ok {
-			inslogger.FromContext(ctx).Error("jet sets are different. it's too bad. Pulse: ", pulse,
+			logger.Error("jet sets are different. it's too bad. Pulse: ", pulse,
 				". Expected: ", insolar.JetIDCollection(expectedJets).DebugString(),
 				". Actual: ", insolar.JetIDCollection(infoToList(actualJetsSet)).DebugString())
 			return false
