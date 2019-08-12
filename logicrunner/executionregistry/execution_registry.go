@@ -149,5 +149,8 @@ func (ea *executionRegistry) FindRequestLoop(ctx context.Context, reqRef insolar
 }
 
 func (ea *executionRegistry) GetActiveTranscript(request insolar.Reference) *common.Transcript {
+	ea.archiveLock.Lock()
+	defer ea.archiveLock.Unlock()
+
 	return ea.archive[request]
 }

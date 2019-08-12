@@ -53,12 +53,6 @@ type ExecutionBrokerIMock struct {
 	beforeFetchMoreRequestsFromLedgerCounter uint64
 	FetchMoreRequestsFromLedgerMock          mExecutionBrokerIMockFetchMoreRequestsFromLedger
 
-	funcGetActiveTranscript          func(req insolar.Reference) (tp1 *common.Transcript)
-	inspectFuncGetActiveTranscript   func(req insolar.Reference)
-	afterGetActiveTranscriptCounter  uint64
-	beforeGetActiveTranscriptCounter uint64
-	GetActiveTranscriptMock          mExecutionBrokerIMockGetActiveTranscript
-
 	funcIsKnownRequest          func(ctx context.Context, req insolar.Reference) (b1 bool)
 	inspectFuncIsKnownRequest   func(ctx context.Context, req insolar.Reference)
 	afterIsKnownRequestCounter  uint64
@@ -138,9 +132,6 @@ func NewExecutionBrokerIMock(t minimock.Tester) *ExecutionBrokerIMock {
 
 	m.FetchMoreRequestsFromLedgerMock = mExecutionBrokerIMockFetchMoreRequestsFromLedger{mock: m}
 	m.FetchMoreRequestsFromLedgerMock.callArgs = []*ExecutionBrokerIMockFetchMoreRequestsFromLedgerParams{}
-
-	m.GetActiveTranscriptMock = mExecutionBrokerIMockGetActiveTranscript{mock: m}
-	m.GetActiveTranscriptMock.callArgs = []*ExecutionBrokerIMockGetActiveTranscriptParams{}
 
 	m.IsKnownRequestMock = mExecutionBrokerIMockIsKnownRequest{mock: m}
 	m.IsKnownRequestMock.callArgs = []*ExecutionBrokerIMockIsKnownRequestParams{}
@@ -1294,221 +1285,6 @@ func (m *ExecutionBrokerIMock) MinimockFetchMoreRequestsFromLedgerInspect() {
 	// if func was set then invocations count should be greater than zero
 	if m.funcFetchMoreRequestsFromLedger != nil && mm_atomic.LoadUint64(&m.afterFetchMoreRequestsFromLedgerCounter) < 1 {
 		m.t.Error("Expected call to ExecutionBrokerIMock.FetchMoreRequestsFromLedger")
-	}
-}
-
-type mExecutionBrokerIMockGetActiveTranscript struct {
-	mock               *ExecutionBrokerIMock
-	defaultExpectation *ExecutionBrokerIMockGetActiveTranscriptExpectation
-	expectations       []*ExecutionBrokerIMockGetActiveTranscriptExpectation
-
-	callArgs []*ExecutionBrokerIMockGetActiveTranscriptParams
-	mutex    sync.RWMutex
-}
-
-// ExecutionBrokerIMockGetActiveTranscriptExpectation specifies expectation struct of the ExecutionBrokerI.GetActiveTranscript
-type ExecutionBrokerIMockGetActiveTranscriptExpectation struct {
-	mock    *ExecutionBrokerIMock
-	params  *ExecutionBrokerIMockGetActiveTranscriptParams
-	results *ExecutionBrokerIMockGetActiveTranscriptResults
-	Counter uint64
-}
-
-// ExecutionBrokerIMockGetActiveTranscriptParams contains parameters of the ExecutionBrokerI.GetActiveTranscript
-type ExecutionBrokerIMockGetActiveTranscriptParams struct {
-	req insolar.Reference
-}
-
-// ExecutionBrokerIMockGetActiveTranscriptResults contains results of the ExecutionBrokerI.GetActiveTranscript
-type ExecutionBrokerIMockGetActiveTranscriptResults struct {
-	tp1 *common.Transcript
-}
-
-// Expect sets up expected params for ExecutionBrokerI.GetActiveTranscript
-func (mmGetActiveTranscript *mExecutionBrokerIMockGetActiveTranscript) Expect(req insolar.Reference) *mExecutionBrokerIMockGetActiveTranscript {
-	if mmGetActiveTranscript.mock.funcGetActiveTranscript != nil {
-		mmGetActiveTranscript.mock.t.Fatalf("ExecutionBrokerIMock.GetActiveTranscript mock is already set by Set")
-	}
-
-	if mmGetActiveTranscript.defaultExpectation == nil {
-		mmGetActiveTranscript.defaultExpectation = &ExecutionBrokerIMockGetActiveTranscriptExpectation{}
-	}
-
-	mmGetActiveTranscript.defaultExpectation.params = &ExecutionBrokerIMockGetActiveTranscriptParams{req}
-	for _, e := range mmGetActiveTranscript.expectations {
-		if minimock.Equal(e.params, mmGetActiveTranscript.defaultExpectation.params) {
-			mmGetActiveTranscript.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmGetActiveTranscript.defaultExpectation.params)
-		}
-	}
-
-	return mmGetActiveTranscript
-}
-
-// Inspect accepts an inspector function that has same arguments as the ExecutionBrokerI.GetActiveTranscript
-func (mmGetActiveTranscript *mExecutionBrokerIMockGetActiveTranscript) Inspect(f func(req insolar.Reference)) *mExecutionBrokerIMockGetActiveTranscript {
-	if mmGetActiveTranscript.mock.inspectFuncGetActiveTranscript != nil {
-		mmGetActiveTranscript.mock.t.Fatalf("Inspect function is already set for ExecutionBrokerIMock.GetActiveTranscript")
-	}
-
-	mmGetActiveTranscript.mock.inspectFuncGetActiveTranscript = f
-
-	return mmGetActiveTranscript
-}
-
-// Return sets up results that will be returned by ExecutionBrokerI.GetActiveTranscript
-func (mmGetActiveTranscript *mExecutionBrokerIMockGetActiveTranscript) Return(tp1 *common.Transcript) *ExecutionBrokerIMock {
-	if mmGetActiveTranscript.mock.funcGetActiveTranscript != nil {
-		mmGetActiveTranscript.mock.t.Fatalf("ExecutionBrokerIMock.GetActiveTranscript mock is already set by Set")
-	}
-
-	if mmGetActiveTranscript.defaultExpectation == nil {
-		mmGetActiveTranscript.defaultExpectation = &ExecutionBrokerIMockGetActiveTranscriptExpectation{mock: mmGetActiveTranscript.mock}
-	}
-	mmGetActiveTranscript.defaultExpectation.results = &ExecutionBrokerIMockGetActiveTranscriptResults{tp1}
-	return mmGetActiveTranscript.mock
-}
-
-//Set uses given function f to mock the ExecutionBrokerI.GetActiveTranscript method
-func (mmGetActiveTranscript *mExecutionBrokerIMockGetActiveTranscript) Set(f func(req insolar.Reference) (tp1 *common.Transcript)) *ExecutionBrokerIMock {
-	if mmGetActiveTranscript.defaultExpectation != nil {
-		mmGetActiveTranscript.mock.t.Fatalf("Default expectation is already set for the ExecutionBrokerI.GetActiveTranscript method")
-	}
-
-	if len(mmGetActiveTranscript.expectations) > 0 {
-		mmGetActiveTranscript.mock.t.Fatalf("Some expectations are already set for the ExecutionBrokerI.GetActiveTranscript method")
-	}
-
-	mmGetActiveTranscript.mock.funcGetActiveTranscript = f
-	return mmGetActiveTranscript.mock
-}
-
-// When sets expectation for the ExecutionBrokerI.GetActiveTranscript which will trigger the result defined by the following
-// Then helper
-func (mmGetActiveTranscript *mExecutionBrokerIMockGetActiveTranscript) When(req insolar.Reference) *ExecutionBrokerIMockGetActiveTranscriptExpectation {
-	if mmGetActiveTranscript.mock.funcGetActiveTranscript != nil {
-		mmGetActiveTranscript.mock.t.Fatalf("ExecutionBrokerIMock.GetActiveTranscript mock is already set by Set")
-	}
-
-	expectation := &ExecutionBrokerIMockGetActiveTranscriptExpectation{
-		mock:   mmGetActiveTranscript.mock,
-		params: &ExecutionBrokerIMockGetActiveTranscriptParams{req},
-	}
-	mmGetActiveTranscript.expectations = append(mmGetActiveTranscript.expectations, expectation)
-	return expectation
-}
-
-// Then sets up ExecutionBrokerI.GetActiveTranscript return parameters for the expectation previously defined by the When method
-func (e *ExecutionBrokerIMockGetActiveTranscriptExpectation) Then(tp1 *common.Transcript) *ExecutionBrokerIMock {
-	e.results = &ExecutionBrokerIMockGetActiveTranscriptResults{tp1}
-	return e.mock
-}
-
-// GetActiveTranscript implements ExecutionBrokerI
-func (mmGetActiveTranscript *ExecutionBrokerIMock) GetActiveTranscript(req insolar.Reference) (tp1 *common.Transcript) {
-	mm_atomic.AddUint64(&mmGetActiveTranscript.beforeGetActiveTranscriptCounter, 1)
-	defer mm_atomic.AddUint64(&mmGetActiveTranscript.afterGetActiveTranscriptCounter, 1)
-
-	if mmGetActiveTranscript.inspectFuncGetActiveTranscript != nil {
-		mmGetActiveTranscript.inspectFuncGetActiveTranscript(req)
-	}
-
-	params := &ExecutionBrokerIMockGetActiveTranscriptParams{req}
-
-	// Record call args
-	mmGetActiveTranscript.GetActiveTranscriptMock.mutex.Lock()
-	mmGetActiveTranscript.GetActiveTranscriptMock.callArgs = append(mmGetActiveTranscript.GetActiveTranscriptMock.callArgs, params)
-	mmGetActiveTranscript.GetActiveTranscriptMock.mutex.Unlock()
-
-	for _, e := range mmGetActiveTranscript.GetActiveTranscriptMock.expectations {
-		if minimock.Equal(e.params, params) {
-			mm_atomic.AddUint64(&e.Counter, 1)
-			return e.results.tp1
-		}
-	}
-
-	if mmGetActiveTranscript.GetActiveTranscriptMock.defaultExpectation != nil {
-		mm_atomic.AddUint64(&mmGetActiveTranscript.GetActiveTranscriptMock.defaultExpectation.Counter, 1)
-		want := mmGetActiveTranscript.GetActiveTranscriptMock.defaultExpectation.params
-		got := ExecutionBrokerIMockGetActiveTranscriptParams{req}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmGetActiveTranscript.t.Errorf("ExecutionBrokerIMock.GetActiveTranscript got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
-		}
-
-		results := mmGetActiveTranscript.GetActiveTranscriptMock.defaultExpectation.results
-		if results == nil {
-			mmGetActiveTranscript.t.Fatal("No results are set for the ExecutionBrokerIMock.GetActiveTranscript")
-		}
-		return (*results).tp1
-	}
-	if mmGetActiveTranscript.funcGetActiveTranscript != nil {
-		return mmGetActiveTranscript.funcGetActiveTranscript(req)
-	}
-	mmGetActiveTranscript.t.Fatalf("Unexpected call to ExecutionBrokerIMock.GetActiveTranscript. %v", req)
-	return
-}
-
-// GetActiveTranscriptAfterCounter returns a count of finished ExecutionBrokerIMock.GetActiveTranscript invocations
-func (mmGetActiveTranscript *ExecutionBrokerIMock) GetActiveTranscriptAfterCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmGetActiveTranscript.afterGetActiveTranscriptCounter)
-}
-
-// GetActiveTranscriptBeforeCounter returns a count of ExecutionBrokerIMock.GetActiveTranscript invocations
-func (mmGetActiveTranscript *ExecutionBrokerIMock) GetActiveTranscriptBeforeCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmGetActiveTranscript.beforeGetActiveTranscriptCounter)
-}
-
-// Calls returns a list of arguments used in each call to ExecutionBrokerIMock.GetActiveTranscript.
-// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
-func (mmGetActiveTranscript *mExecutionBrokerIMockGetActiveTranscript) Calls() []*ExecutionBrokerIMockGetActiveTranscriptParams {
-	mmGetActiveTranscript.mutex.RLock()
-
-	argCopy := make([]*ExecutionBrokerIMockGetActiveTranscriptParams, len(mmGetActiveTranscript.callArgs))
-	copy(argCopy, mmGetActiveTranscript.callArgs)
-
-	mmGetActiveTranscript.mutex.RUnlock()
-
-	return argCopy
-}
-
-// MinimockGetActiveTranscriptDone returns true if the count of the GetActiveTranscript invocations corresponds
-// the number of defined expectations
-func (m *ExecutionBrokerIMock) MinimockGetActiveTranscriptDone() bool {
-	for _, e := range m.GetActiveTranscriptMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			return false
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.GetActiveTranscriptMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterGetActiveTranscriptCounter) < 1 {
-		return false
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcGetActiveTranscript != nil && mm_atomic.LoadUint64(&m.afterGetActiveTranscriptCounter) < 1 {
-		return false
-	}
-	return true
-}
-
-// MinimockGetActiveTranscriptInspect logs each unmet expectation
-func (m *ExecutionBrokerIMock) MinimockGetActiveTranscriptInspect() {
-	for _, e := range m.GetActiveTranscriptMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			m.t.Errorf("Expected call to ExecutionBrokerIMock.GetActiveTranscript with params: %#v", *e.params)
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.GetActiveTranscriptMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterGetActiveTranscriptCounter) < 1 {
-		if m.GetActiveTranscriptMock.defaultExpectation.params == nil {
-			m.t.Error("Expected call to ExecutionBrokerIMock.GetActiveTranscript")
-		} else {
-			m.t.Errorf("Expected call to ExecutionBrokerIMock.GetActiveTranscript with params: %#v", *m.GetActiveTranscriptMock.defaultExpectation.params)
-		}
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcGetActiveTranscript != nil && mm_atomic.LoadUint64(&m.afterGetActiveTranscriptCounter) < 1 {
-		m.t.Error("Expected call to ExecutionBrokerIMock.GetActiveTranscript")
 	}
 }
 
@@ -3252,8 +3028,6 @@ func (m *ExecutionBrokerIMock) MinimockFinish() {
 
 		m.MinimockFetchMoreRequestsFromLedgerInspect()
 
-		m.MinimockGetActiveTranscriptInspect()
-
 		m.MinimockIsKnownRequestInspect()
 
 		m.MinimockMoreRequestsOnLedgerInspect()
@@ -3300,7 +3074,6 @@ func (m *ExecutionBrokerIMock) minimockDone() bool {
 		m.MinimockAddRequestsFromLedgerDone() &&
 		m.MinimockAddRequestsFromPrevExecutorDone() &&
 		m.MinimockFetchMoreRequestsFromLedgerDone() &&
-		m.MinimockGetActiveTranscriptDone() &&
 		m.MinimockIsKnownRequestDone() &&
 		m.MinimockMoreRequestsOnLedgerDone() &&
 		m.MinimockNoMoreRequestsOnLedgerDone() &&

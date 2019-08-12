@@ -30,7 +30,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/common"
-	"github.com/insolar/insolar/logicrunner/currentexecution"
 	"github.com/insolar/insolar/logicrunner/executionregistry"
 	"github.com/insolar/insolar/logicrunner/transcriptdequeue"
 )
@@ -50,7 +49,6 @@ type ExecutionBrokerI interface {
 	SetNotPending(ctx context.Context)
 
 	IsKnownRequest(ctx context.Context, req insolar.Reference) bool
-	GetActiveTranscript(req insolar.Reference) *common.Transcript
 
 	AbandonedRequestsOnLedger(ctx context.Context)
 	MoreRequestsOnLedger(ctx context.Context)
@@ -71,7 +69,6 @@ type ExecutionBroker struct {
 
 	outgoingSender OutgoingRequestSender
 
-	currentList       *currentexecution.List
 	executionRegistry executionregistry.ExecutionRegistry
 	requestsFetcher   RequestsFetcher
 
@@ -103,10 +100,9 @@ func NewExecutionBroker(
 	return &ExecutionBroker{
 		Ref: ref,
 
-		mutable:     transcriptdequeue.New(),
-		immutable:   transcriptdequeue.New(),
-		finished:    transcriptdequeue.New(),
-		currentList: currentexecution.NewList(),
+		mutable:   transcriptdequeue.New(),
+		immutable: transcriptdequeue.New(),
+		finished:  transcriptdequeue.New(),
 
 		outgoingSender: outgoingSender,
 
@@ -155,11 +151,6 @@ func (q *ExecutionBroker) getImmutableTask(ctx context.Context) *common.Transcri
 		return nil
 	}
 
-	err := q.currentList.SetOnce(transcript)
-	if err != nil {
-		inslogger.FromContext(ctx).Error("couldn't get immutable task: ", err.Error())
-		return nil
-	}
 	q.executionRegistry.Register(ctx, transcript)
 
 	return transcript
@@ -174,11 +165,6 @@ func (q *ExecutionBroker) getMutableTask(ctx context.Context) *common.Transcript
 		return nil
 	}
 
-	err := q.currentList.SetOnce(transcript)
-	if err != nil {
-		inslogger.FromContext(ctx).Error("couldn't get mutable task: ", err.Error())
-		return nil
-	}
 	q.executionRegistry.Register(ctx, transcript)
 
 	return transcript
@@ -192,10 +178,9 @@ func (q *ExecutionBroker) finishTask(ctx context.Context, transcript *common.Tra
 
 	q.finished.Push(transcript)
 
-	if !q.currentList.Has(transcript.RequestRef) {
-		logger.Error("[ ExecutionBroker.FinishTask ] task '%s' is not in current", transcript.RequestRef.String())
+	if q.executionRegistry.GetActiveTranscript(transcript.RequestRef) == nil {
+		logger.Error("[ ExecutionBroker.FinishTask ] task wasn't executed")
 	} else {
-		q.currentList.Delete(transcript.RequestRef)
 		q.executionRegistry.Done(transcript)
 	}
 }
@@ -293,7 +278,7 @@ func (q *ExecutionBroker) GetActiveTranscript(
 	q.stateLock.Lock()
 	defer q.stateLock.Unlock()
 
-	return q.currentList.Get(reqRef)
+	return q.executionRegistry.GetActiveTranscript(reqRef)
 }
 
 func (q *ExecutionBroker) HasLedgerRequest(_ context.Context) *common.Transcript {
@@ -444,8 +429,9 @@ func (q *ExecutionBroker) finishPendingIfNeeded(ctx context.Context) {
 	// we process mutable and immutable calls in parallel
 	// and use one pending state for all of them
 	// so pending is finished only when all calls are finished
-	if !q.currentList.Empty() {
-		inslogger.FromContext(ctx).Debug("we are in pending and still have ", q.currentList.Length(), " requests to finish")
+	if !q.executionRegistry.IsEmpty() {
+		count := q.executionRegistry.Length()
+		inslogger.FromContext(ctx).Debug("we are in pending and still have ", count, " requests to finish")
 		return
 	}
 
@@ -677,7 +663,7 @@ func (q *ExecutionBroker) AddAdditionalRequestFromPrevExecutor(
 }
 
 func (q *ExecutionBroker) isActive() bool {
-	return !q.currentList.Empty()
+	return !q.executionRegistry.IsEmpty()
 }
 
 func (q *ExecutionBroker) clarifyPendingStateFromLedger(ctx context.Context) {
