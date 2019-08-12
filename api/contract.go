@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/rpc/v2/json2"
 )
 
 // ContractService is a service that provides API for working with smart contracts.
@@ -37,7 +38,7 @@ func NewContractService(runner *Runner) *ContractService {
 	return &ContractService{runner: runner}
 }
 
-func (cs *ContractService) Call(req *http.Request, args *requester.Params, fullRequest *requester.Request, result *requester.Result) error {
+func (cs *ContractService) Call(req *http.Request, args *requester.Params, fullRequest *json2.ServerRequest, result *requester.Result) error {
 	traceID := utils.RandTraceID()
 	ctx, insLog := inslogger.WithTraceField(context.Background(), traceID)
 

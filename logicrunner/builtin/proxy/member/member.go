@@ -43,13 +43,14 @@ type Params struct {
 	CallParams interface{} `json:"callParams"`
 	Reference  string      `json:"reference"`
 	PublicKey  string      `json:"publicKey"`
+	LogLevel   string      `json:"logLevel,omitempty"`
+	Test       string      `json:"test,omitempty"`
 }
 type Request struct {
-	JSONRPC  string `json:"jsonrpc"`
-	ID       int    `json:"id"`
-	Method   string `json:"method"`
-	Params   Params `json:"params"`
-	LogLevel string `json:"logLevel,omitempty"`
+	JSONRPC string `json:"jsonrpc"`
+	ID      int    `json:"id"`
+	Method  string `json:"method"`
+	Params  Params `json:"params"`
 }
 type TransferResponse struct {
 	Fee string `json:"fee"`

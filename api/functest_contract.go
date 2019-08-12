@@ -37,6 +37,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
 	"github.com/insolar/insolar/testutils"
+	"github.com/insolar/rpc/v2/json2"
 )
 
 // FuncTestContractService is a service that provides ability to add custom contracts
@@ -63,7 +64,7 @@ type UploadReply struct {
 }
 
 // Upload builds code and return prototype ref
-func (s *FuncTestContractService) Upload(r *http.Request, args *UploadArgs, fullReq *requester.Request, reply *UploadReply) error {
+func (s *FuncTestContractService) Upload(r *http.Request, args *UploadArgs, fullReq *json2.ServerRequest, reply *UploadReply) error {
 	ctx, inslog := inslogger.WithTraceField(context.Background(), utils.RandTraceID())
 	reply.TraceID = utils.TraceID(ctx)
 
