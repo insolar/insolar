@@ -229,7 +229,7 @@ func (s *StateIniterDefault) loadStateRetry(
 		}
 	}
 
-	for _, idx := range state.Indices {
+	for _, idx := range state.Indexes {
 		s.indices.Set(ctx, pn, idx)
 	}
 

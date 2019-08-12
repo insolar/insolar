@@ -20,7 +20,7 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/insolar"
-	record "github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/insolar/record"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexModifier -o ./ -s _mock.go -g
