@@ -63,6 +63,7 @@ type MessageBus struct {
 	Network                    insolar.Network                    `inject:""`
 	JetCoordinator             jet.Coordinator                    `inject:""`
 	NodeNetwork                network.NodeNetwork                `inject:""`
+	OriginProvider             network.OriginProvider             `inject:""`
 	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
 	CryptographyService        insolar.CryptographyService        `inject:""`
 	DelegationTokenFactory     insolar.DelegationTokenFactory     `inject:""`
@@ -174,7 +175,7 @@ func (mb *MessageBus) createWatermillMessage(_ context.Context, parcel insolar.P
 
 	wmMsg.Metadata.Set(bus.MetaPulse, fmt.Sprintf("%d", currentPulse.PulseNumber))
 	wmMsg.Metadata.Set(bus.MetaType, parcel.Message().Type().String())
-	wmMsg.Metadata.Set(bus.MetaSender, mb.NodeNetwork.GetOrigin().ID().String())
+	wmMsg.Metadata.Set(bus.MetaSender, mb.OriginProvider.GetOrigin().ID().String())
 	return wmMsg
 }
 
@@ -274,7 +275,7 @@ func deserializePayload(msg *watermillMsg.Message) (insolar.Reply, error) {
 
 // CreateParcel creates signed message from provided message.
 func (mb *MessageBus) CreateParcel(ctx context.Context, msg insolar.Message, token insolar.DelegationToken, currentPulse insolar.Pulse) (insolar.Parcel, error) {
-	return mb.ParcelFactory.Create(ctx, msg, mb.NodeNetwork.GetOrigin().ID(), token, currentPulse)
+	return mb.ParcelFactory.Create(ctx, msg, mb.OriginProvider.GetOrigin().ID(), token, currentPulse)
 }
 
 // SendParcel sends provided message via network.
@@ -316,7 +317,7 @@ func (mb *MessageBus) SendParcel(
 	}
 
 	// Short path when sending to self node. Skip serialization
-	origin := mb.NodeNetwork.GetOrigin()
+	origin := mb.OriginProvider.GetOrigin()
 	if nodes[0].Equal(origin.ID()) {
 		stats.Record(ctx, statLocallyDeliveredParcelsTotal.M(1))
 		return mb.doDeliver(parcel.Context(context.Background()), parcel)
