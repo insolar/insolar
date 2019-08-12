@@ -72,9 +72,6 @@ func checkConfig(cfg *configuration.APIRunner) error {
 	if cfg.Address == "" {
 		return errors.New("[ checkConfig ] Address must not be empty")
 	}
-	if len(cfg.Call) == 0 {
-		return errors.New("[ checkConfig ] Call must exist")
-	}
 	if len(cfg.RPC) == 0 {
 		return errors.New("[ checkConfig ] RPC must exist")
 	}

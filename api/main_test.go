@@ -43,10 +43,6 @@ func (suite *MainAPISuite) TestNewApiRunnerNoRequiredParams() {
 
 	cfg.Address = "address:100"
 	_, err = NewRunner(&cfg)
-	suite.Contains(err.Error(), "Call must exist")
-
-	cfg.Call = "test"
-	_, err = NewRunner(&cfg)
 	suite.Contains(err.Error(), "RPC must exist")
 
 	cfg.RPC = "test"
