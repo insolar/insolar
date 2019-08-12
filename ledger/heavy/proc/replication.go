@@ -108,6 +108,12 @@ func (p *Replication) Proceed(ctx context.Context) error {
 		return errors.Wrapf(err, "failed to add jet to JetKeeper jet=%v", dr.JetID.DebugString())
 	}
 
+	err = p.dep.jets.Update(ctx, dr.Pulse, true, dr.JetID)
+	if err != nil {
+		return errors.Wrapf(err, "failed to update jet %s", dr.JetID.DebugString())
+
+	}
+
 	executor.FinalizePulse(ctx, p.dep.pulseCalculator, p.dep.backuper, jetKeeper, dr.Pulse)
 
 	stats.Record(ctx,

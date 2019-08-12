@@ -107,6 +107,18 @@ func (p *SendInitialState) Proceed(ctx context.Context) error {
 	return nil
 }
 
+func getPossibleJets(parentJet insolar.JetID, split bool) []insolar.JetID {
+	var possibleIDs []insolar.JetID
+	if split {
+		left, right := jet.Siblings(parentJet)
+		possibleIDs = append(possibleIDs, left, right)
+	} else {
+		possibleIDs = append(possibleIDs, parentJet)
+	}
+
+	return possibleIDs
+}
+
 func (p *SendInitialState) sendForNetworkStart(
 	ctx context.Context,
 	req *payload.GetLightInitialState,
@@ -121,21 +133,11 @@ func (p *SendInitialState) sendForNetworkStart(
 			logger.Fatal("Couldn't get drops for jet: ", id.DebugString(), " ", err)
 		}
 
-		var possibleIDs []insolar.JetID
-		if dr.Split {
-			left, right := jet.Siblings(id)
-			possibleIDs = append(possibleIDs, left, right)
-		} else {
-			possibleIDs = append(possibleIDs, id)
-		}
+		possibleIDs := getPossibleJets(id, dr.Split)
 
 		logger.Debug("Extracted drop: Split: ", dr.Split, ",  Possible jets: ", insolar.JetIDCollection(possibleIDs).DebugString())
 		var shouldAddDrop bool
 		for _, jetID := range possibleIDs {
-			err := p.dep.jetTree.Update(ctx, req.Pulse, true, jetID)
-			if err != nil {
-				logger.Fatal("Couldn't update jet tree", jetID.DebugString(), " ", err)
-			}
 			light, err := p.dep.jetCoordinator.LightExecutorForJet(ctx, insolar.ID(jetID), req.Pulse)
 			if err != nil {
 				logger.Fatal("Couldn't receive light executor for jet (jet): ", jetID.DebugString(), " ", err)
