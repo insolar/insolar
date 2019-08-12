@@ -371,7 +371,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		NodeNetwork,
 		NetworkService,
 		publisher,
-		subscriber,
 	)
 	err = c.cmp.Init(ctx)
 	if err != nil {

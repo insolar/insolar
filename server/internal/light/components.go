@@ -363,7 +363,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		NodeNetwork,
 		NetworkService,
 		publisher,
-		subscriber,
 		messagebus.NewParcelFactory(),
 	)
 

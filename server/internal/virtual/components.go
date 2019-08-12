@@ -186,7 +186,6 @@ func initComponents(
 	components := []interface{}{
 		b,
 		publisher,
-		subscriber,
 		messageBus,
 		contractRequester,
 		artifacts.NewClient(b),
