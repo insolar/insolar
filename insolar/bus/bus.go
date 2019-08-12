@@ -356,9 +356,11 @@ func (b *Bus) IncomingMessageRouter(handle message.HandlerFunc) message.HandlerF
 
 		msg.Metadata.Set("pulse", meta.Pulse.String())
 
+		logger.Debug("received message")
 		if meta.OriginHash.IsZero() {
-			logger.Debug("not a reply")
+			logger.Debug("not a reply (calling handler)")
 			_, err := handle(msg)
+			logger.Debug("handling finished")
 			if err != nil {
 				logger.Error(errors.Wrap(err, "message handler returned error"))
 			}
