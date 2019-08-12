@@ -258,6 +258,7 @@ func TestCallPulseNumber(t *testing.T) {
 
 	r.True(pulseNum > 0)
 }
+
 func TestCallHelloWorldReturnObj(t *testing.T) {
 	a, r := assert.New(t), require.New(t)
 	ctx := context.TODO()

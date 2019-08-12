@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -34,6 +35,7 @@ import (
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/artifacts"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/writecontroller"
 	"github.com/insolar/insolar/testutils"
 )
@@ -351,7 +353,7 @@ func TestHandleCall_Present(t *testing.T) {
 		objRef := gen.Reference()
 		handler := HandleCall{
 			dep: &Dependencies{
-				Publisher: nil,
+				Publisher:      nil,
 				ResultsMatcher: nil,
 				lr: &LogicRunner{
 					ArtifactManager: artifacts.NewClientMock(mc),
@@ -498,9 +500,9 @@ func TestHandleCall_Present(t *testing.T) {
 		objRef := gen.Reference()
 		reqRef := gen.Reference()
 
-		resRecord := &record.Result{Payload: []byte{3,2,1}}
+		resRecord := &record.Result{Payload: []byte{3, 2, 1}}
 		virtResRecord := record.Wrap(resRecord)
-		matRecord := record.Material{Virtual:virtResRecord}
+		matRecord := record.Material{Virtual: virtResRecord}
 		matRecordSerialized, err := matRecord.Marshal()
 		require.NoError(t, err)
 
@@ -512,9 +514,9 @@ func TestHandleCall_Present(t *testing.T) {
 			case *RegisterIncomingRequest:
 				p.result <- &payload.RequestInfo{
 					RequestID: *reqRef.Record(),
-					ObjectID: *objRef.Record(),
-					Request: []byte{1,2,3},
-					Result: matRecordSerialized,
+					ObjectID:  *objRef.Record(),
+					Request:   []byte{1, 2, 3},
+					Result:    matRecordSerialized,
 				}
 				return nil
 			case *AddFreshRequest:
@@ -546,5 +548,56 @@ func TestHandleCall_Present(t *testing.T) {
 		gotReply, err := handler.handleActual(ctx, &msg, fm)
 		require.NoError(t, err)
 		require.Equal(t, &reply.RegisterRequest{Request: reqRef}, gotReply)
+	})
+
+	t.Run("object not found during request registration", func(t *testing.T) {
+		t.Parallel()
+
+		ctx := flow.TestContextWithPulse(inslogger.TestContext(t), gen.PulseNumber())
+		mc := minimock.NewController(t)
+		defer mc.Wait(time.Minute)
+
+		objRef := gen.Reference()
+
+		fm := flow.NewFlowMock(mc)
+		fm.ProcedureMock.Set(func(ctx context.Context, proc flow.Procedure, cancelable bool) (err error) {
+			switch proc.(type) {
+			case *CheckOurRole:
+				return nil
+			case *RegisterIncomingRequest:
+				return errors.New("index not found")
+			case *AddFreshRequest:
+				return nil
+			default:
+				t.Fatalf("Unknown procedure: %T", proc)
+			}
+			return nil
+		})
+
+		handler := HandleCall{
+			dep: &Dependencies{
+				lr: &LogicRunner{
+					ArtifactManager: artifacts.NewClientMock(mc),
+				},
+			},
+			Message: payload.Meta{},
+			Parcel:  nil,
+		}
+
+		msg := message.CallMethod{
+			IncomingRequest: record.IncomingRequest{
+				CallType: record.CTMethod,
+				Object:   &objRef,
+			},
+		}
+
+		expectedResult, err := foundation.MarshalMethodErrorResult(errors.New("index not found"))
+		require.NoError(t, err)
+
+		expectedReply := &reply.CallMethod{Result: expectedResult}
+		gotReply, err := handler.handleActual(ctx, &msg, fm)
+		require.NoError(t, err)
+		require.Equal(t, expectedReply, gotReply)
+
 	})
 }

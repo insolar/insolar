@@ -19,43 +19,16 @@ package api
 import (
 	"context"
 	"net/http"
-	"reflect"
 	"testing"
 
-	"github.com/stretchr/testify/suite"
-
 	"github.com/insolar/insolar/certificate"
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/instrumentation/inslogger"
-
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/stretchr/testify/suite"
 )
 
 type MainAPISuite struct {
 	suite.Suite
-}
-
-func (suite *MainAPISuite) TestSerialization() {
-	var a uint = 1
-	var b = true
-	var c = "test"
-
-	serArgs, err := insolar.MarshalArgs(a, b, c)
-	suite.NoError(err)
-	suite.NotNil(serArgs)
-
-	var aR uint
-	var bR bool
-	var cR string
-	rowResp, err := insolar.UnMarshalResponse(serArgs, []interface{}{aR, bR, cR})
-	suite.NoError(err)
-	suite.Len(rowResp, 3)
-	suite.Equal(reflect.TypeOf(a), reflect.TypeOf(rowResp[0]))
-	suite.Equal(reflect.TypeOf(b), reflect.TypeOf(rowResp[1]))
-	suite.Equal(reflect.TypeOf(c), reflect.TypeOf(rowResp[2]))
-	suite.Equal(a, rowResp[0].(uint))
-	suite.Equal(b, rowResp[1].(bool))
-	suite.Equal(c, rowResp[2].(string))
 }
 
 func (suite *MainAPISuite) TestNewApiRunnerNilConfig() {

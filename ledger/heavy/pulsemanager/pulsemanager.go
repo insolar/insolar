@@ -91,16 +91,8 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 	)
 	defer span.End()
 
-	logger.Debug("before calling to FinalizationKeeper.OnPulse")
-	err := m.FinalizationKeeper.OnPulse(ctx, newPulse.PulseNumber)
-	if err != nil {
-		logger.Error(err)
-		instracer.AddError(span, err)
-		return errors.Wrap(err, "got error calling FinalizationKeeper.OnPulse")
-	}
-
 	logger.Debug("before calling to setUnderGilSection")
-	err = m.setUnderGilSection(ctx, newPulse)
+	err := m.setUnderGilSection(ctx, newPulse)
 	if err != nil {
 		logger.Error(err)
 		instracer.AddError(span, err)
@@ -111,6 +103,14 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 		return err
 	}
 	logger.Debug("after calling to setUnderGilSection")
+
+	logger.Debug("before calling to FinalizationKeeper.OnPulse")
+	err = m.FinalizationKeeper.OnPulse(ctx, newPulse.PulseNumber)
+	if err != nil {
+		logger.Error(err)
+		instracer.AddError(span, err)
+		return errors.Wrap(err, "got error calling FinalizationKeeper.OnPulse")
+	}
 
 	logger.Debug("before calling to StartPulse.SetStartPulse")
 	m.StartPulse.SetStartPulse(ctx, newPulse)

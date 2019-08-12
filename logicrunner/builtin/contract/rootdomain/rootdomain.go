@@ -33,42 +33,20 @@ import (
 // RootDomain is smart contract representing entrance point to system.
 type RootDomain struct {
 	foundation.BaseContract
-	RootMember             insolar.Reference
 	MigrationDaemonMembers [insolar.GenesisAmountActiveMigrationDaemonMembers]insolar.Reference
-	MigrationAdminMember   insolar.Reference
-	MigrationWallet        insolar.Reference
-	CostCenter             insolar.Reference
 	MigrationAddressShards [insolar.GenesisAmountMigrationAddressShards]insolar.Reference
 	PublicKeyShards        [insolar.GenesisAmountPublicKeyShards]insolar.Reference
 	NodeDomain             insolar.Reference
 }
 
-// GetMigrationAdminMemberRef gets migration admin member reference.
-func (rd RootDomain) GetCostCenterRef() (insolar.Reference, error) {
-	return rd.MigrationAdminMember, nil
-}
-
-// GetMigrationWalletRef gets migration wallet reference.
-func (rd RootDomain) GetMigrationWalletRef() (insolar.Reference, error) {
-	return rd.MigrationWallet, nil
-}
-
-// GetMigrationAdminMember gets migration admin member reference.
-func (rd RootDomain) GetMigrationAdminMember() (insolar.Reference, error) {
-	return rd.MigrationAdminMember, nil
-}
-
 // GetActiveMigrationDaemonMembers gets migration daemon members references.
+// ins:immutable
 func (rd RootDomain) GetActiveMigrationDaemonMembers() ([3]insolar.Reference, error) {
 	return rd.MigrationDaemonMembers, nil
 }
 
-// GetRootMemberRef gets root member reference.
-func (rd RootDomain) GetRootMemberRef() (insolar.Reference, error) {
-	return rd.RootMember, nil
-}
-
 // GetMemberByPublicKey gets member reference by public key.
+// ins:immutable
 func (rd RootDomain) GetMemberByPublicKey(publicKey string) (*insolar.Reference, error) {
 	trimmedPublicKey := trimPublicKey(publicKey)
 	i := foundation.GetShardIndex(trimmedPublicKey, insolar.GenesisAmountPublicKeyShards)
@@ -108,12 +86,8 @@ func (rd RootDomain) GetMemberByMigrationAddress(migrationAddress string) (*inso
 	return ref, nil
 }
 
-// GetCostCenter gets cost center reference.
-func (rd RootDomain) GetCostCenter() (insolar.Reference, error) {
-	return rd.CostCenter, nil
-}
-
 // GetNodeDomainRef returns reference of NodeDomain instance
+// ins:immutable
 func (rd RootDomain) GetNodeDomainRef() (insolar.Reference, error) {
 	return rd.NodeDomain, nil
 }
@@ -121,6 +95,7 @@ func (rd RootDomain) GetNodeDomainRef() (insolar.Reference, error) {
 var INSATTR_Info_API = true
 
 // Info returns information about basic objects
+// ins:immutable
 func (rd RootDomain) Info() (interface{}, error) {
 	migrationDaemonsMembersOut := []string{}
 	for _, ref := range rd.MigrationDaemonMembers {
@@ -129,9 +104,9 @@ func (rd RootDomain) Info() (interface{}, error) {
 
 	res := map[string]interface{}{
 		"rootDomain":             rd.GetReference().String(),
-		"rootMember":             rd.RootMember.String(),
+		"rootMember":             foundation.GetRootMember().String(),
 		"migrationDaemonMembers": migrationDaemonsMembersOut,
-		"migrationAdminMember":   rd.MigrationAdminMember.String(),
+		"migrationAdminMember":   foundation.GetMigrationAdminMember().String(),
 		"nodeDomain":             rd.NodeDomain.String(),
 	}
 	resJSON, err := json.Marshal(res)
@@ -154,6 +129,9 @@ func (rd *RootDomain) AddMigrationAddresses(migrationAddresses []string) error {
 	}
 
 	for i, ma := range newMA {
+		if len(ma) == 0 {
+			continue
+		}
 		s := migrationshard.GetObject(rd.MigrationAddressShards[i])
 		err := s.AddFreeMigrationAddresses(ma)
 		if err != nil {

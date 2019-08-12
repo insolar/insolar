@@ -28,6 +28,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/testutils"
 )
 
@@ -77,7 +78,7 @@ func mockInfoResult(
 		"nodeDomain":             nodeDomainRef.String(),
 	}
 	resJSON, _ := json.Marshal(result)
-	resSer, _ := insolar.MarshalArgs(resJSON, nil)
+	resSer, _ := foundation.MarshalMethodResult(resJSON, nil)
 	return &reply.CallMethod{Result: resSer}
 }
 

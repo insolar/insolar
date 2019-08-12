@@ -484,7 +484,6 @@ type OnPulseCallOrderEnum int
 const (
 	OrderInitial OnPulseCallOrderEnum = iota
 	OrderWriteControllerClose
-	OrderResultsMatcherClear
 	OrderStateStorageOnPulse
 	OrderWriteControllerOpen
 	OrderMAX
@@ -510,11 +509,6 @@ func TestLogicRunner_OnPulse_Order(t *testing.T) {
 		func(_ context.Context, _ insolar.PulseNumber) error {
 			orderChan <- OrderWriteControllerOpen
 			return nil
-		})
-	lr.ResultsMatcher = NewResultMatcherMock(mc).
-		ClearMock.Set(
-		func() {
-			orderChan <- OrderResultsMatcherClear
 		})
 	lr.StateStorage = NewStateStorageMock(mc).
 		OnPulseMock.Set(

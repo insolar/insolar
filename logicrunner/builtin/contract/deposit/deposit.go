@@ -55,12 +55,14 @@ type Deposit struct {
 }
 
 // GetTxHash gets transaction hash.
-func (d *Deposit) GetTxHash() (string, error) {
+// ins:immutable
+func (d Deposit) GetTxHash() (string, error) {
 	return d.TxHash, nil
 }
 
 // GetAmount gets amount.
-func (d *Deposit) GetAmount() (string, error) {
+// ins:immutable
+func (d Deposit) GetAmount() (string, error) {
 	return d.Amount, nil
 }
 
@@ -83,8 +85,9 @@ func calculateUnHoldPulse(currentPulse insolar.PulseNumber) insolar.PulseNumber 
 }
 
 // Itself gets deposit information.
-func (d *Deposit) Itself() (interface{}, error) {
-	return *d, nil
+// ins:immutable
+func (d Deposit) Itself() (interface{}, error) {
+	return d, nil
 }
 
 // Confirm adds confirm for deposit by migration daemon.
@@ -183,7 +186,7 @@ func (d *Deposit) Transfer(amountStr string, wallerRef insolar.Reference) (inter
 
 	w := wallet.GetObject(wallerRef)
 
-	acceptWalletErr := w.Accept(amountStr)
+	acceptWalletErr := w.Accept(amountStr, "XNS")
 	if acceptWalletErr == nil {
 		return nil, nil
 	}
