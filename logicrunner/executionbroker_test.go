@@ -28,6 +28,7 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/record"
@@ -37,7 +38,6 @@ import (
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/executionregistry"
-	"github.com/insolar/insolar/testutils"
 )
 
 type publisherMock struct{}
@@ -372,6 +372,7 @@ func (s *ExecutionBrokerSuite) TestDeduplication() {
 }
 
 func TestExecutionBroker_FinishPendingIfNeed(t *testing.T) {
+	mc := minimock.NewController(t)
 
 	tests := []struct {
 		name             string
@@ -387,7 +388,7 @@ func TestExecutionBroker_FinishPendingIfNeed(t *testing.T) {
 					Ref:     obj,
 					pending: insolar.InPending,
 
-					messageBus: testutils.NewMessageBusMock(t).SendMock.Return(&reply.OK{}, nil),
+					sender: bus.NewSenderMock(mc).SendRoleMock.Return(nil, func() { return }),
 					executionRegistry: executionregistry.NewExecutionRegistryMock(t).
 						IsEmptyMock.Return(true),
 				}
@@ -638,10 +639,9 @@ func TestExecutionBroker_AddFreshRequestWithOnPulse(t *testing.T) {
 					HasPendingsMock.Return(false, nil)
 				re := NewRequestsExecutorMock(t).
 					SendReplyMock.Return()
-				mb := testutils.NewMessageBusMock(t).
-					SendMock.Return(nil, nil)
+				sender := bus.NewSenderMock(t).SendRoleMock.Return(nil, func() { return })
 
-				broker := NewExecutionBroker(objectRef, nil, re, mb, am, er, nil)
+				broker := NewExecutionBroker(objectRef, nil, re, sender, am, er, nil)
 
 				var msgs []insolar.Message
 				re.ExecuteAndSaveMock.Set(func(ctx context.Context, tr *common.Transcript) (insolar.Reply, error) {

@@ -23,6 +23,7 @@ import (
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -45,7 +46,7 @@ type stateStorage struct {
 
 	publisher        watermillMsg.Publisher
 	requestsExecutor RequestsExecutor
-	messageBus       insolar.MessageBus
+	sender           bus.Sender
 	jetCoordinator   jet.Coordinator
 	pulseAccessor    pulse.Accessor
 	artifactsManager artifacts.Client
@@ -58,7 +59,7 @@ type stateStorage struct {
 func NewStateStorage(
 	publisher watermillMsg.Publisher,
 	requestsExecutor RequestsExecutor,
-	messageBus insolar.MessageBus,
+	sender bus.Sender,
 	jetCoordinator jet.Coordinator,
 	pulseAccessor pulse.Accessor,
 	artifactsManager artifacts.Client,
@@ -70,7 +71,7 @@ func NewStateStorage(
 
 		publisher:        publisher,
 		requestsExecutor: requestsExecutor,
-		messageBus:       messageBus,
+		sender:           sender,
 		jetCoordinator:   jetCoordinator,
 		pulseAccessor:    pulseAccessor,
 		artifactsManager: artifactsManager,
@@ -101,7 +102,7 @@ func (ss *stateStorage) UpsertExecutionState(ref insolar.Reference) ExecutionBro
 	if _, ok := ss.brokers[ref]; !ok {
 		registry := ss.upsertExecutionRegistry(ref)
 
-		ss.brokers[ref] = NewExecutionBroker(ref, ss.publisher, ss.requestsExecutor, ss.messageBus, ss.artifactsManager, registry, ss.outgoingSender)
+		ss.brokers[ref] = NewExecutionBroker(ref, ss.publisher, ss.requestsExecutor, ss.sender, ss.artifactsManager, registry, ss.outgoingSender)
 	}
 	return ss.brokers[ref]
 }

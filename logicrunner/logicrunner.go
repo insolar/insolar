@@ -107,7 +107,7 @@ func (lr *LogicRunner) Init(ctx context.Context) error {
 	lr.StateStorage = NewStateStorage(
 		lr.Publisher,
 		lr.RequestsExecutor,
-		lr.MessageBus,
+		lr.Sender,
 		lr.JetCoordinator,
 		lr.PulseAccessor,
 		lr.ArtifactManager,

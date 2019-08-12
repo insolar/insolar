@@ -25,7 +25,9 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/artifacts"
@@ -73,8 +75,8 @@ type ExecutionBroker struct {
 	requestsFetcher   RequestsFetcher
 
 	publisher        watermillMsg.Publisher
+	sender           bus.Sender
 	requestsExecutor RequestsExecutor
-	messageBus       insolar.MessageBus
 	artifactsManager artifacts.Client
 
 	pending              insolar.PendingState
@@ -92,7 +94,7 @@ func NewExecutionBroker(
 	ref insolar.Reference,
 	publisher watermillMsg.Publisher,
 	requestsExecutor RequestsExecutor,
-	messageBus insolar.MessageBus,
+	sender bus.Sender,
 	artifactsManager artifacts.Client,
 	executionRegistry executionregistry.ExecutionRegistry,
 	outgoingSender OutgoingRequestSender,
@@ -108,7 +110,7 @@ func NewExecutionBroker(
 
 		publisher:         publisher,
 		requestsExecutor:  requestsExecutor,
-		messageBus:        messageBus,
+		sender:            sender,
 		artifactsManager:  artifactsManager,
 		executionRegistry: executionRegistry,
 
@@ -406,10 +408,21 @@ func (q *ExecutionBroker) Check(ctx context.Context) bool {
 func (q *ExecutionBroker) finishPending(ctx context.Context) {
 	logger := inslogger.FromContext(ctx)
 
-	msg := message.PendingFinished{Reference: q.Ref}
-	_, err := q.messageBus.Send(ctx, &msg, nil)
+	pendingMsg, err := payload.NewMessage(&payload.PendingFinished{
+		ObjectRef: q.Ref,
+	})
 	if err != nil {
-		logger.Error("Unable to send PendingFinished message:", err)
+		logger.Error(errors.Wrap(err, "finishPending: Unable to create PendingFinished message"))
+		return
+	}
+
+	reps, done := q.sender.SendRole(ctx, pendingMsg, insolar.DynamicRoleVirtualExecutor, q.Ref)
+	defer done()
+
+	_, ok := <-reps
+	if !ok {
+		logger.Error(errors.Wrap(err, "finishPending: no reply"))
+		return
 	}
 }
 
