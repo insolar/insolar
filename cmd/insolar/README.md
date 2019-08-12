@@ -36,3 +36,23 @@ Help on any command: `./bin/insolar help COMMAND`
 ## how to generate certificate and keys for node
 
     ./bin/insolar certgen --root-keys=scripts/insolard/configs/root_member_keys.json
+
+
+## how to generate keys with P256(default) or P256K curve
+    ./bin/insolar gen-key-pair -elliptic-curve=P256K 
+
+
+## Create member example
+
+    {
+      "params": {
+        "callParams": {
+        },
+        "callSite": "member.create"
+      },
+      "method": "api.call"
+    }
+
+     ./bin/insolar send-request --root-keys=./member_keys.json --params=./bin/params.json
+
+

@@ -46,7 +46,7 @@ func main() {
 		Use:   "insolar",
 		Short: "insolar is the command line client for Insolar Platform",
 	}
-	rootCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "be verbose (default false)")
+	rootCmd.Flags().BoolVarP(&verbose, "verbose", "v", true, "be verbose (default false)")
 
 	var versionCmd = &cobra.Command{
 		Use:   "version",
@@ -81,26 +81,31 @@ func main() {
 	addURLFlag(createMemberCmd.Flags())
 	rootCmd.AddCommand(createMemberCmd)
 
+	var curve string
 	var genKeysPairCmd = &cobra.Command{
 		Use:   "gen-key-pair",
 		Short: "generates public/private keys pair",
 		Run: func(cmd *cobra.Command, args []string) {
-			generateKeysPair()
+			generateKeysPair(curve)
 		},
 	}
+	addURLFlag(rootCmd.Flags())
+	genKeysPairCmd.Flags().StringVarP(
+		&curve, "elliptic-curve", "e", "P256", "Curve for generating P256 or P256K elliptic curve public/private keys")
 	rootCmd.AddCommand(genKeysPairCmd)
 
 	var rootKeysFile string
 
 	var (
-		paramsPath   string
-		rootAsCaller bool
+		paramsPath           string
+		rootAsCaller         bool
+		migrationAdminCaller bool
 	)
 	var sendRequestCmd = &cobra.Command{
 		Use:   "send-request",
 		Short: "sends request",
 		Run: func(cmd *cobra.Command, args []string) {
-			sendRequest(sendURL, rootKeysFile, paramsPath, rootAsCaller)
+			sendRequest(sendURL, rootKeysFile, paramsPath, getUserRef(sendURL, rootAsCaller, migrationAdminCaller))
 		},
 	}
 	addURLFlag(sendRequestCmd.Flags())
@@ -110,6 +115,8 @@ func main() {
 		&paramsPath, "params", "p", "", "path to params file (default params.json)")
 	sendRequestCmd.Flags().BoolVarP(
 		&rootAsCaller, "root-caller", "r", false, "use root member as caller")
+	sendRequestCmd.Flags().BoolVarP(
+		&migrationAdminCaller, "migration-caller", "a", false, "use migration admin member as caller")
 	rootCmd.AddCommand(sendRequestCmd)
 
 	var (
@@ -230,9 +237,13 @@ func mustWrite(out io.Writer, data string) {
 	check("Can't write data to output", err)
 }
 
-func generateKeysPair() {
-	ks := platformpolicy.NewKeyProcessor()
-
+func generateKeysPair(curve string) {
+	var ks insolar.KeyProcessor
+	if curve == "P256K" {
+		ks = platformpolicy.NewKeyProcessorP256K()
+	} else {
+		ks = platformpolicy.NewKeyProcessor()
+	}
 	privKey, err := ks.GeneratePrivateKey()
 	check("Problems with generating of private key:", err)
 
@@ -242,25 +253,44 @@ func generateKeysPair() {
 	pubKeyStr, err := ks.ExportPublicKeyPEM(ks.ExtractPublicKey(privKey))
 	check("Problems with serialization of public key:", err)
 
+	err = writePublicPrivate(privKeyStr, pubKeyStr)
+	check("Problems with marshaling keys:", err)
+}
+
+func writePublicPrivate(privKeyStr, pubKeyStr []byte) error {
 	result, err := json.MarshalIndent(map[string]interface{}{
 		"private_key": string(privKeyStr),
 		"public_key":  string(pubKeyStr),
 	}, "", "    ")
-	check("Problems with marshaling keys:", err)
+	if err != nil {
+		return err
+	}
 
 	mustWrite(os.Stdout, string(result))
+	return nil
 }
 
-func sendRequest(sendURL string, rootKeysFile string, paramsPath string, rootAsCaller bool) {
+func getUserRef(sendURL string, rootMember, migrationAdmin bool) string {
+	if rootMember || migrationAdmin {
+		info, err := requester.Info(sendURL)
+		check("[ sendRequest ]", err)
+		if rootMember {
+			return info.RootMember
+		} else {
+			return info.MigrationAdminMember
+		}
+	}
+	return ""
+}
+
+func sendRequest(sendURL, rootKeysFile string, paramsPath string, memberRef string) {
 	requester.SetVerbose(verbose)
 
 	userCfg, err := requester.ReadUserConfigFromFile(rootKeysFile)
 	check("[ sendRequest ]", err)
 
-	if rootAsCaller || userCfg.Caller == "" {
-		info, err := requester.Info(sendURL)
-		check("[ sendRequest ]", err)
-		userCfg.Caller = info.RootMember
+	if memberRef != "" {
+		userCfg.Caller = memberRef
 	}
 
 	pPath := paramsPath
@@ -268,6 +298,7 @@ func sendRequest(sendURL string, rootKeysFile string, paramsPath string, rootAsC
 		pPath = rootKeysFile
 	}
 	reqCfg, err := requester.ReadRequestConfigFromFile(pPath)
+	reqCfg.Params.PublicKey = userCfg.PublicKey
 	check("[ sendRequest ]", err)
 
 	verboseInfo(fmt.Sprintln("User Config: ", userCfg))

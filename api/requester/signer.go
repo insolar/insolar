@@ -24,25 +24,27 @@ func Sign(privateKey string, data []byte) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	hash := sha256.Sum256(data)
 
 	switch curveName {
 	case "P-256":
-		return signP256(privateKeyBytes, data)
+		return signP256(privateKeyBytes, hash)
 	case "P-256K":
-		return signP256K(privateKeyBytes, data)
+		return signP256K(privateKeyBytes, hash)
 	default:
 		return "", errors.New("Unknown key format")
 	}
 }
 
 // sign with P256K elliptic curve
-func signP256K(privateKey []byte, data []byte) (string, error) {
-	privateKeyObject, err := importPrivateKeyPEM256K(privateKey)
+func signP256K(privateKey []byte, hash [32]byte) (string, error) {
+	ks := platformpolicy.NewKeyProcessorP256K()
+	privateKeyObject, err := ks.ImportPrivateKeyPEM(privateKey)
 	if err != nil {
 		return "", err
 	}
-	hash := sha256.Sum256(data)
-	r, s, err := xecdsa.Sign(rand.Reader, privateKeyObject, hash[:])
+
+	r, s, err := xecdsa.Sign(rand.Reader, privateKeyObject.(*xecdsa.PrivateKey), hash[:])
 	if err != nil {
 		return "", errors.Wrap(err, "can't sign data")
 	}
@@ -50,13 +52,13 @@ func signP256K(privateKey []byte, data []byte) (string, error) {
 }
 
 // sign with P256 elliptic curve
-func signP256(privateKey []byte, data []byte) (string, error) {
+func signP256(privateKey []byte, hash [32]byte) (string, error) {
 	ks := platformpolicy.NewKeyProcessor()
 	privateKeyObject, err := ks.ImportPrivateKeyPEM(privateKey)
 	if err != nil {
 		return "", err
 	}
-	hash := sha256.Sum256(data)
+
 	r, s, err := ecdsa.Sign(rand.Reader, privateKeyObject.(*ecdsa.PrivateKey), hash[:])
 	if err != nil {
 		return "", errors.Wrap(err, "can't sign data")
