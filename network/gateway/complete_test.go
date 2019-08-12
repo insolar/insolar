@@ -55,19 +55,17 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/insolar/insolar/network"
-
-	"github.com/insolar/insolar/network/hostnetwork/packet"
-	"github.com/insolar/insolar/network/hostnetwork/packet/types"
-
-	mock "github.com/insolar/insolar/testutils/network"
-
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/reply"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
+	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/hostnetwork/packet"
+	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 	"github.com/insolar/insolar/testutils"
+	mock "github.com/insolar/insolar/testutils/network"
 )
 
 func mockCryptographyService(t *testing.T, ok bool) insolar.CryptographyService {
@@ -132,13 +130,14 @@ func mockCertificateManager(t *testing.T, certNodeRef *insolar.Reference, discov
 }
 
 func mockReply(t *testing.T) []byte {
-	node, err := insolar.MarshalArgs(struct {
+	res := struct {
 		PublicKey string
 		Role      insolar.StaticRole
 	}{
 		PublicKey: "test_node_public_key",
 		Role:      insolar.StaticRoleVirtual,
-	}, nil)
+	}
+	node, err := foundation.MarshalMethodResult(res, nil)
 	require.NoError(t, err)
 	return node
 }
