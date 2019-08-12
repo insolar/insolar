@@ -277,7 +277,6 @@ func (g *Base) HandleNodeAuthorizeRequest(ctx context.Context, request network.R
 		}
 
 		inslogger.FromContext(ctx).Warn("AuthorizeRequest with invalid cert: ", err.Error())
-		// FIXME integr tests certs signs
 		return g.HostNetwork.BuildResponse(ctx, request, &packet.AuthorizeResponse{Code: packet.WrongMandate, Error: err.Error()}), nil
 	}
 
