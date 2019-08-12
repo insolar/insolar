@@ -19,6 +19,8 @@ package heavy
 
 import (
 	"context"
+	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/insolar/insolar/configuration"
@@ -27,13 +29,17 @@ import (
 )
 
 func TestComponents(t *testing.T) {
+	tmpdir, err := ioutil.TempDir("", "light-")
+	defer os.RemoveAll(tmpdir)
+	require.NoError(t, err)
+
 	ctx := context.Background()
 	cfg := configuration.NewConfiguration()
 	cfg.KeysPath = "testdata/bootstrap_keys.json"
 	cfg.CertificatePath = "testdata/certificate.json"
 	cfg.Metrics.ListenAddress = "0.0.0.0:0"
 	cfg.APIRunner.Address = "0.0.0.0:0"
-	cfg.Ledger.Storage.DataDirectory = cfg.Ledger.Storage.DataDirectory + "_heavy"
+	cfg.Ledger.Storage.DataDirectory = tmpdir
 
 	c, err := newComponents(ctx, cfg, insolar.GenesisHeavyConfig{Skip: true})
 	require.NoError(t, err)
