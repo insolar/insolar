@@ -269,10 +269,6 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, oldPulse insolar.Pulse, newP
 }
 
 func (lr *LogicRunner) stopIfNeeded(ctx context.Context) {
-	// lock is required to access LogicRunner.state
-	lr.StateStorage.Lock()
-	defer lr.StateStorage.Unlock()
-
 	if lr.StateStorage.IsEmpty() {
 		lr.stopLock.Lock()
 		if lr.isStopping {
