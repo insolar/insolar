@@ -120,24 +120,24 @@ func TestMigrationTokenNilValue(t *testing.T) {
 
 func TestMigrationTokenMaxAmount(t *testing.T) {
 	migrationAddress := generateMigrationAddress()
-	ref := createMigrationMemberForMA(t, migrationAddress)
+	member := createMigrationMemberForMA(t, migrationAddress)
 
 	result, err := signedRequest(t,
 		&migrationDaemons[0],
 		"deposit.migration",
 		map[string]interface{}{"amount": "500000000000000000", "ethTxHash": "ethTxHash", "migrationAddress": migrationAddress})
 	require.NoError(t, err)
-	require.Equal(t, result.(map[string]interface{})["memberReference"].(string), ref)
+	require.Equal(t, result.(map[string]interface{})["memberReference"].(string), member.ref)
 }
 
 func TestMigrationDoubleMigrationFromSameDaemon(t *testing.T) {
 	migrationAddress := generateMigrationAddress()
-	ref := createMigrationMemberForMA(t, migrationAddress)
+	member := createMigrationMemberForMA(t, migrationAddress)
 
 	resultMigr1, err := signedRequest(t,
 		&migrationDaemons[0], "deposit.migration", map[string]interface{}{"amount": "20", "ethTxHash": "ethTxHash", "migrationAddress": migrationAddress})
 	require.NoError(t, err)
-	require.Equal(t, resultMigr1.(map[string]interface{})["memberReference"].(string), ref)
+	require.Equal(t, resultMigr1.(map[string]interface{})["memberReference"].(string), member.ref)
 
 	_, err = signedRequestWithEmptyRequestRef(t,
 		&migrationDaemons[0],
@@ -149,12 +149,12 @@ func TestMigrationDoubleMigrationFromSameDaemon(t *testing.T) {
 
 func TestMigrationAnotherAmountSameTx(t *testing.T) {
 	migrationAddress := generateMigrationAddress()
-	ref := createMigrationMemberForMA(t, migrationAddress)
+	member := createMigrationMemberForMA(t, migrationAddress)
 
 	resultMigr1, err := signedRequest(t,
 		&migrationDaemons[0], "deposit.migration", map[string]interface{}{"amount": "20", "ethTxHash": "ethTxHash", "migrationAddress": migrationAddress})
 	require.NoError(t, err)
-	require.Equal(t, resultMigr1.(map[string]interface{})["memberReference"].(string), ref)
+	require.Equal(t, resultMigr1.(map[string]interface{})["memberReference"].(string), member.ref)
 
 	_, err = signedRequestWithEmptyRequestRef(t,
 		&migrationDaemons[1],
