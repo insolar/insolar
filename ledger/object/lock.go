@@ -24,7 +24,7 @@ import (
 )
 
 type mucount struct {
-	*sync.RWMutex
+	sync.Mutex
 	count int32
 }
 
@@ -38,15 +38,12 @@ type IndexLocker interface {
 
 // IndexLocker provides Lock/Unlock methods per record ID.
 type idLocker struct {
-	mu   sync.Mutex
-	muxs map[insolar.ID]*mucount
+	muxs sync.Map
 }
 
 // NewIndexLocker creates new initialized IndexLocker.
 func NewIndexLocker() IndexLocker {
-	return &idLocker{
-		muxs: make(map[insolar.ID]*mucount),
-	}
+	return &idLocker{}
 }
 
 // Lock locks mutex belonged to record ID.
@@ -55,16 +52,11 @@ func (l *idLocker) Lock(id insolar.ID) {
 	// Reset pulse. It should not be considered when locking.
 	id.SetPulse(0)
 
-	l.mu.Lock()
-	mc, ok := l.muxs[id]
-	if !ok {
-		mc = &mucount{RWMutex: &sync.RWMutex{}}
-		l.muxs[id] = mc
-	}
-	mc.count++
-	l.mu.Unlock()
+	entryI, _ := l.muxs.LoadOrStore(id, &mucount{})
+	entry := entryI.(*mucount)
 
-	mc.Lock()
+	entry.Lock()
+	entry.count++
 }
 
 // Unlock unlocks mutex belonged to record ID.
@@ -72,16 +64,16 @@ func (l *idLocker) Unlock(id insolar.ID) {
 	// Reset pulse. It should not be considered when locking.
 	id.SetPulse(0)
 
-	l.mu.Lock()
-	defer l.mu.Unlock()
-
-	mc, ok := l.muxs[id]
+	entryI, ok := l.muxs.Load(id)
 	if !ok {
 		panic(fmt.Sprintf("try to unlock not initialized mutex for ID %+v", id))
 	}
-	mc.count--
-	mc.Unlock()
-	if mc.count == 0 {
-		delete(l.muxs, id)
+	entry := entryI.(*mucount)
+
+	entry.count--
+	if entry.count == 0 {
+		l.muxs.Delete(id)
 	}
+
+	entry.Unlock()
 }
