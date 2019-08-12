@@ -51,8 +51,9 @@ func (ces *List) SetOnce(t *common.Transcript) error {
 
 func (ces *List) Delete(requestRef insolar.Reference) {
 	ces.lock.Lock()
+	defer ces.lock.Unlock()
+
 	delete(ces.executions, requestRef)
-	ces.lock.Unlock()
 }
 
 func (ces *List) GetByTraceID(traceid string) *common.Transcript {
@@ -80,8 +81,9 @@ func (ces *List) GetMutable() *common.Transcript {
 
 func (ces *List) Cleanup() {
 	ces.lock.Lock()
+	defer ces.lock.Unlock()
+
 	ces.executions = make(map[insolar.Reference]*common.Transcript)
-	ces.lock.Unlock()
 }
 
 func (ces *List) Length() int {
