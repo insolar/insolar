@@ -66,7 +66,7 @@ func (m *RPCMethods) getCurrent(
 ) {
 	switch mode {
 	case insolar.ExecuteCallMode:
-		archive := m.ss.GetExecutionArchive(obj)
+		archive := m.ss.GetExecutionRegistry(obj)
 		if archive == nil {
 			return nil, nil, errors.New("No execution archive in the state")
 		}

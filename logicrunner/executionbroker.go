@@ -31,7 +31,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/currentexecution"
-	"github.com/insolar/insolar/logicrunner/executionarchive"
+	"github.com/insolar/insolar/logicrunner/executionregistry"
 	"github.com/insolar/insolar/logicrunner/transcriptdequeue"
 )
 
@@ -71,15 +71,14 @@ type ExecutionBroker struct {
 
 	outgoingSender OutgoingRequestSender
 
-	currentList *currentexecution.List
-
-	executionArchive executionarchive.ExecutionArchive
+	currentList       *currentexecution.List
+	executionRegistry executionregistry.ExecutionRegistry
+	requestsFetcher   RequestsFetcher
 
 	publisher        watermillMsg.Publisher
 	requestsExecutor RequestsExecutor
 	messageBus       insolar.MessageBus
 	artifactsManager artifacts.Client
-	requestsFetcher  RequestsFetcher
 
 	pending              insolar.PendingState
 	PendingConfirmed     bool
@@ -98,7 +97,7 @@ func NewExecutionBroker(
 	requestsExecutor RequestsExecutor,
 	messageBus insolar.MessageBus,
 	artifactsManager artifacts.Client,
-	executionArchive executionarchive.ExecutionArchive,
+	executionRegistry executionregistry.ExecutionRegistry,
 	outgoingSender OutgoingRequestSender,
 ) *ExecutionBroker {
 	return &ExecutionBroker{
@@ -111,11 +110,11 @@ func NewExecutionBroker(
 
 		outgoingSender: outgoingSender,
 
-		publisher:        publisher,
-		requestsExecutor: requestsExecutor,
-		messageBus:       messageBus,
-		artifactsManager: artifactsManager,
-		executionArchive: executionArchive,
+		publisher:         publisher,
+		requestsExecutor:  requestsExecutor,
+		messageBus:        messageBus,
+		artifactsManager:  artifactsManager,
+		executionRegistry: executionRegistry,
 
 		processorActive: 0,
 
@@ -161,7 +160,7 @@ func (q *ExecutionBroker) getImmutableTask(ctx context.Context) *common.Transcri
 		inslogger.FromContext(ctx).Error("couldn't get immutable task: ", err.Error())
 		return nil
 	}
-	q.executionArchive.Archive(ctx, transcript)
+	q.executionRegistry.Register(ctx, transcript)
 
 	return transcript
 }
@@ -180,7 +179,7 @@ func (q *ExecutionBroker) getMutableTask(ctx context.Context) *common.Transcript
 		inslogger.FromContext(ctx).Error("couldn't get mutable task: ", err.Error())
 		return nil
 	}
-	q.executionArchive.Archive(ctx, transcript)
+	q.executionRegistry.Register(ctx, transcript)
 
 	return transcript
 }
@@ -197,7 +196,7 @@ func (q *ExecutionBroker) finishTask(ctx context.Context, transcript *common.Tra
 		logger.Error("[ ExecutionBroker.FinishTask ] task '%s' is not in current", transcript.RequestRef.String())
 	} else {
 		q.currentList.Delete(transcript.RequestRef)
-		q.executionArchive.Done(transcript)
+		q.executionRegistry.Done(transcript)
 	}
 }
 

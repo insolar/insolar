@@ -27,14 +27,14 @@ import (
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/artifacts"
-	"github.com/insolar/insolar/logicrunner/executionarchive"
+	"github.com/insolar/insolar/logicrunner/executionregistry"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/logicrunner.StateStorage -o ./ -s _mock.go -g
 type StateStorage interface {
 	UpsertExecutionState(ref insolar.Reference) ExecutionBrokerI
 	GetExecutionState(ref insolar.Reference) ExecutionBrokerI
-	GetExecutionArchive(ref insolar.Reference) executionarchive.ExecutionArchive
+	GetExecutionRegistry(ref insolar.Reference) executionregistry.ExecutionRegistry
 
 	IsEmpty() bool
 	OnPulse(ctx context.Context, pulse insolar.Pulse) []insolar.Message
@@ -52,7 +52,7 @@ type stateStorage struct {
 	outgoingSender   OutgoingRequestSender
 
 	brokers  map[insolar.Reference]ExecutionBrokerI
-	archives map[insolar.Reference]executionarchive.ExecutionArchive
+	archives map[insolar.Reference]executionregistry.ExecutionRegistry
 }
 
 func NewStateStorage(
@@ -66,7 +66,7 @@ func NewStateStorage(
 ) StateStorage {
 	ss := &stateStorage{
 		brokers:  make(map[insolar.Reference]ExecutionBrokerI),
-		archives: make(map[insolar.Reference]executionarchive.ExecutionArchive),
+		archives: make(map[insolar.Reference]executionregistry.ExecutionRegistry),
 
 		publisher:        publisher,
 		requestsExecutor: requestsExecutor,
@@ -79,12 +79,12 @@ func NewStateStorage(
 	return ss
 }
 
-func (ss *stateStorage) upsertExecutionArchive(ref insolar.Reference) executionarchive.ExecutionArchive {
+func (ss *stateStorage) upsertExecutionRegistry(ref insolar.Reference) executionregistry.ExecutionRegistry {
 	if res, ok := ss.archives[ref]; ok {
 		return res
 	}
 
-	ss.archives[ref] = executionarchive.New(ref, ss.jetCoordinator)
+	ss.archives[ref] = executionregistry.New(ref, ss.jetCoordinator)
 	return ss.archives[ref]
 }
 
@@ -99,7 +99,7 @@ func (ss *stateStorage) UpsertExecutionState(ref insolar.Reference) ExecutionBro
 	ss.Lock()
 	defer ss.Unlock()
 	if _, ok := ss.brokers[ref]; !ok {
-		archive := ss.upsertExecutionArchive(ref)
+		archive := ss.upsertExecutionRegistry(ref)
 
 		ss.brokers[ref] = NewExecutionBroker(ref, ss.publisher, ss.requestsExecutor, ss.messageBus, ss.artifactsManager, archive, ss.outgoingSender)
 	}
@@ -112,7 +112,7 @@ func (ss *stateStorage) GetExecutionState(ref insolar.Reference) ExecutionBroker
 	return ss.brokers[ref]
 }
 
-func (ss *stateStorage) GetExecutionArchive(ref insolar.Reference) executionarchive.ExecutionArchive {
+func (ss *stateStorage) GetExecutionRegistry(ref insolar.Reference) executionregistry.ExecutionRegistry {
 	ss.RLock()
 	defer ss.RUnlock()
 	return ss.archives[ref]

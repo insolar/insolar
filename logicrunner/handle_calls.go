@@ -97,7 +97,7 @@ func (h *HandleCall) checkExecutionLoop(
 		return false
 	}
 
-	archive := h.dep.StateStorage.GetExecutionArchive(*request.Object)
+	archive := h.dep.StateStorage.GetExecutionRegistry(*request.Object)
 	if archive == nil {
 		return false
 	}

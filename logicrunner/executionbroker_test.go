@@ -37,7 +37,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/currentexecution"
-	"github.com/insolar/insolar/logicrunner/executionarchive"
+	"github.com/insolar/insolar/logicrunner/executionregistry"
 	"github.com/insolar/insolar/testutils"
 )
 
@@ -117,7 +117,7 @@ func (s *ExecutionBrokerSuite) TestPut() {
 	})
 	rem.SendReplyMock.Return()
 
-	ea := executionarchive.NewExecutionArchiveMock(s.T()).ArchiveMock.Return().DoneMock.Return(true)
+	ea := executionregistry.NewExecutionRegistryMock(s.T()).RegisterMock.Return().DoneMock.Return(true)
 
 	objectRef := gen.Reference()
 	b := NewExecutionBroker(objectRef, nil, rem, nil, nil, ea, nil)
@@ -158,7 +158,7 @@ func (s *ExecutionBrokerSuite) TestPrepend() {
 	})
 	rem.SendReplyMock.Return()
 
-	ea := executionarchive.NewExecutionArchiveMock(s.T()).ArchiveMock.Return().DoneMock.Return(true)
+	ea := executionregistry.NewExecutionRegistryMock(s.T()).RegisterMock.Return().DoneMock.Return(true)
 
 	objectRef := gen.Reference()
 	b := NewExecutionBroker(objectRef, nil, rem, nil, nil, ea, nil)
@@ -202,7 +202,7 @@ func (s *ExecutionBrokerSuite) TestImmutable_NotPending() {
 	})
 	rem.SendReplyMock.Return()
 
-	ea := executionarchive.NewExecutionArchiveMock(s.T()).ArchiveMock.Return().DoneMock.Return(true)
+	ea := executionregistry.NewExecutionRegistryMock(s.T()).RegisterMock.Return().DoneMock.Return(true)
 
 	objectRef := gen.Reference()
 	b := NewExecutionBroker(objectRef, nil, rem, nil, nil, ea, nil)
@@ -247,7 +247,7 @@ func (s *ExecutionBrokerSuite) TestImmutable_InPending() {
 	})
 	rem.SendReplyMock.Return()
 
-	ea := executionarchive.NewExecutionArchiveMock(s.T()).ArchiveMock.Return().DoneMock.Return(true)
+	ea := executionregistry.NewExecutionRegistryMock(s.T()).RegisterMock.Return().DoneMock.Return(true)
 
 	objectRef := gen.Reference()
 	b := NewExecutionBroker(objectRef, nil, rem, nil, nil, ea, nil)
@@ -434,7 +434,7 @@ func TestExecutionBroker_ExecuteImmutable(t *testing.T) {
 	defer mc.Finish()
 	defer mc.Wait(1 * time.Minute)
 
-	ea := executionarchive.NewExecutionArchiveMock(mc).ArchiveMock.Return().DoneMock.Return(true)
+	ea := executionregistry.NewExecutionRegistryMock(mc).RegisterMock.Return().DoneMock.Return(true)
 
 	// prepare default object and execution state
 	objectRef := gen.Reference()
@@ -590,8 +590,8 @@ func TestExecutionBroker_AddFreshRequestWithOnPulse(t *testing.T) {
 		{
 			name: "pulse change in Execute",
 			mocks: func(ctx context.Context, t minimock.Tester) (*ExecutionBroker, *[]insolar.Message) {
-				ea := executionarchive.NewExecutionArchiveMock(t).
-					ArchiveMock.Return().
+				ea := executionregistry.NewExecutionRegistryMock(t).
+					RegisterMock.Return().
 					DoneMock.Return(true)
 				am := artifacts.NewClientMock(t).
 					HasPendingsMock.Return(false, nil)

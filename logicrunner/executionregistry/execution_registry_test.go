@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package executionarchive
+package executionregistry
 
 import (
 	"strings"
@@ -33,11 +33,11 @@ import (
 	"github.com/insolar/insolar/logicrunner/common"
 )
 
-type ExecutionArchiveSuite struct{ suite.Suite }
+type ExecutionRegistrySuite struct{ suite.Suite }
 
-func TestExecutionArchive(t *testing.T) { suite.Run(t, new(ExecutionArchiveSuite)) }
+func TestExecutionRegistry(t *testing.T) { suite.Run(t, new(ExecutionRegistrySuite)) }
 
-func (s *ExecutionArchiveSuite) genTranscriptForObject() *common.Transcript {
+func (s *ExecutionRegistrySuite) genTranscriptForObject() *common.Transcript {
 	ctx := inslogger.TestContext(s.T())
 	return common.NewTranscript(ctx, gen.Reference(), record.IncomingRequest{
 		ReturnMode:   record.ReturnResult,
@@ -45,7 +45,7 @@ func (s *ExecutionArchiveSuite) genTranscriptForObject() *common.Transcript {
 	})
 }
 
-func (s *ExecutionArchiveSuite) genAPIRequestID() string {
+func (s *ExecutionRegistrySuite) genAPIRequestID() string {
 	APIRequestID := utils.RandTraceID()
 	if strings.Contains(APIRequestID, "createRandomTraceIDFailed") {
 		panic("Failed to generate uuid: " + APIRequestID)
@@ -53,7 +53,7 @@ func (s *ExecutionArchiveSuite) genAPIRequestID() string {
 	return APIRequestID
 }
 
-func (s *ExecutionArchiveSuite) TestArchive() {
+func (s *ExecutionRegistrySuite) TestArchive() {
 	mc := minimock.NewController(s.T())
 	ctx := inslogger.TestContext(s.T())
 
@@ -61,25 +61,25 @@ func (s *ExecutionArchiveSuite) TestArchive() {
 	jc := jet.NewCoordinatorMock(mc)
 
 	archiveI := New(objectRef, jc)
-	archive := archiveI.(*executionArchive)
+	archive := archiveI.(*executionRegistry)
 	firstTranscript := s.genTranscriptForObject()
 
 	// successful archiving
-	archiveI.Archive(ctx, firstTranscript)
+	archiveI.Register(ctx, firstTranscript)
 	s.Len(archive.archive, 1)
 
 	// duplicate
-	archiveI.Archive(ctx, firstTranscript)
+	archiveI.Register(ctx, firstTranscript)
 	s.Len(archive.archive, 1)
 
 	// successful archiving
-	archiveI.Archive(ctx, s.genTranscriptForObject())
+	archiveI.Register(ctx, s.genTranscriptForObject())
 	s.Len(archive.archive, 2)
 
 	mc.Finish()
 }
 
-func (s *ExecutionArchiveSuite) TestDone() {
+func (s *ExecutionRegistrySuite) TestDone() {
 	mc := minimock.NewController(s.T())
 	ctx := inslogger.TestContext(s.T())
 
@@ -87,11 +87,11 @@ func (s *ExecutionArchiveSuite) TestDone() {
 	jc := jet.NewCoordinatorMock(mc)
 
 	archiveI := New(objectRef, jc)
-	archive := archiveI.(*executionArchive)
+	archive := archiveI.(*executionRegistry)
 	T1, T2, T3 := s.genTranscriptForObject(), s.genTranscriptForObject(), s.genTranscriptForObject()
 
-	archiveI.Archive(ctx, T1)
-	archiveI.Archive(ctx, T2)
+	archiveI.Register(ctx, T1)
+	archiveI.Register(ctx, T2)
 	s.Len(archive.archive, 2)
 
 	s.False(archiveI.Done(T3))
@@ -103,7 +103,7 @@ func (s *ExecutionArchiveSuite) TestDone() {
 	mc.Finish()
 }
 
-func (s *ExecutionArchiveSuite) TestIsEmpty() {
+func (s *ExecutionRegistrySuite) TestIsEmpty() {
 	mc := minimock.NewController(s.T())
 	ctx := inslogger.TestContext(s.T())
 
@@ -111,12 +111,12 @@ func (s *ExecutionArchiveSuite) TestIsEmpty() {
 	jc := jet.NewCoordinatorMock(mc)
 
 	archiveI := New(objectRef, jc)
-	archive := archiveI.(*executionArchive)
+	archive := archiveI.(*executionRegistry)
 
 	s.True(archiveI.IsEmpty())
 
 	T := s.genTranscriptForObject()
-	archiveI.Archive(ctx, T)
+	archiveI.Register(ctx, T)
 	s.Len(archive.archive, 1)
 	s.False(archiveI.IsEmpty())
 
@@ -127,7 +127,7 @@ func (s *ExecutionArchiveSuite) TestIsEmpty() {
 	mc.Finish()
 }
 
-func (s *ExecutionArchiveSuite) TestOnPulse() {
+func (s *ExecutionRegistrySuite) TestOnPulse() {
 	ctx := inslogger.TestContext(s.T())
 	mc := minimock.NewController(s.T())
 
@@ -144,7 +144,7 @@ func (s *ExecutionArchiveSuite) TestOnPulse() {
 
 	T1 := s.genTranscriptForObject()
 	{
-		archiveI.Archive(ctx, T1)
+		archiveI.Register(ctx, T1)
 		msgs := archiveI.OnPulse(ctx)
 		s.Len(msgs, 1)
 		msg, ok := msgs[0].(*message.StillExecuting)
@@ -156,7 +156,7 @@ func (s *ExecutionArchiveSuite) TestOnPulse() {
 
 	T2 := s.genTranscriptForObject()
 	{
-		archiveI.Archive(ctx, T2)
+		archiveI.Register(ctx, T2)
 		msgs := archiveI.OnPulse(ctx)
 		s.Len(msgs, 1)
 		msg, ok := msgs[0].(*message.StillExecuting)
@@ -177,7 +177,7 @@ func (s *ExecutionArchiveSuite) TestOnPulse() {
 	mc.Finish()
 }
 
-func (s *ExecutionArchiveSuite) TestFindRequestLoop() {
+func (s *ExecutionRegistrySuite) TestFindRequestLoop() {
 	ctx := inslogger.TestContext(s.T())
 	mc := minimock.NewController(s.T())
 
@@ -192,29 +192,29 @@ func (s *ExecutionArchiveSuite) TestFindRequestLoop() {
 		s.False(archiveI.FindRequestLoop(ctx, reqRef, id))
 
 		// cleanup after
-		archiveI.(*executionArchive).archive = make(map[insolar.Reference]*common.Transcript)
+		archiveI.(*executionRegistry).archive = make(map[insolar.Reference]*common.Transcript)
 	}
 
 	T := s.genTranscriptForObject()
 	{ // go request with current apirequestid (loop found)
-		archiveI.Archive(ctx, T)
+		archiveI.Register(ctx, T)
 
 		s.True(archiveI.FindRequestLoop(ctx, reqRef, T.Request.APIRequestID))
 
 		// cleanup after
-		archiveI.(*executionArchive).archive = make(map[insolar.Reference]*common.Transcript)
+		archiveI.(*executionRegistry).archive = make(map[insolar.Reference]*common.Transcript)
 	}
 
 	{ // go request with current apirequestid, but record returnnowait (loop not found)
 		id := s.genAPIRequestID()
 
 		T.Request.ReturnMode = record.ReturnNoWait
-		archiveI.Archive(ctx, T)
+		archiveI.Register(ctx, T)
 
 		s.False(archiveI.FindRequestLoop(ctx, reqRef, id))
 
 		// cleanup after
-		archiveI.(*executionArchive).archive = make(map[insolar.Reference]*common.Transcript)
+		archiveI.(*executionRegistry).archive = make(map[insolar.Reference]*common.Transcript)
 	}
 
 	T1 := s.genTranscriptForObject()
@@ -223,21 +223,21 @@ func (s *ExecutionArchiveSuite) TestFindRequestLoop() {
 	{ // combined test
 		id := s.genAPIRequestID()
 
-		archiveI.Archive(ctx, T1)
-		archiveI.Archive(ctx, T2)
+		archiveI.Register(ctx, T1)
+		archiveI.Register(ctx, T2)
 
 		s.False(archiveI.FindRequestLoop(ctx, reqRef, T2.Request.APIRequestID))
 		s.True(archiveI.FindRequestLoop(ctx, reqRef, T1.Request.APIRequestID))
 		s.False(archiveI.FindRequestLoop(ctx, reqRef, id))
 
 		// cleanup after
-		archiveI.(*executionArchive).archive = make(map[insolar.Reference]*common.Transcript)
+		archiveI.(*executionRegistry).archive = make(map[insolar.Reference]*common.Transcript)
 	}
 
 	mc.Finish()
 }
 
-func (s *ExecutionArchiveSuite) TestGetActiveTranscript() {
+func (s *ExecutionRegistrySuite) TestGetActiveTranscript() {
 	ctx := inslogger.TestContext(s.T())
 	mc := minimock.NewController(s.T())
 
@@ -246,7 +246,7 @@ func (s *ExecutionArchiveSuite) TestGetActiveTranscript() {
 
 	T := s.genTranscriptForObject()
 	archiveI := New(objRef, jc)
-	archiveI.Archive(ctx, T)
+	archiveI.Register(ctx, T)
 	{ // have (put before)
 		s.NotNil(archiveI.GetActiveTranscript(T.RequestRef))
 	}

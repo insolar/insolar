@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package executionarchive
+package executionregistry
 
 import (
 	"context"
@@ -28,22 +28,23 @@ import (
 	"github.com/insolar/insolar/logicrunner/common"
 )
 
-type Archiver interface {
-	Archive(transcript *common.Transcript)
+type Registry interface {
+	Register(transcript *common.Transcript)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/logicrunner/executionarchive.ExecutionArchive -o ./ -s _mock.go -g
-type ExecutionArchive interface {
-	Archive(ctx context.Context, transcript *common.Transcript)
+//go:generate minimock -i github.com/insolar/insolar/logicrunner/executionregistry.ExecutionRegistry -o ./ -s _mock.go -g
+type ExecutionRegistry interface {
+	Register(ctx context.Context, transcript *common.Transcript)
 	Done(transcript *common.Transcript) bool
 
+	Length() int
 	IsEmpty() bool
 	OnPulse(ctx context.Context) []insolar.Message
 	FindRequestLoop(ctx context.Context, reqRef insolar.Reference, apiRequestID string) bool
 	GetActiveTranscript(req insolar.Reference) *common.Transcript
 }
 
-type executionArchive struct {
+type executionRegistry struct {
 	// maps requestReference -> request to notify
 	// (StillExecuting message) that we've started to work on in previous pulses
 	objectRef   insolar.Reference
@@ -56,9 +57,9 @@ type executionArchive struct {
 func New(
 	objectRef insolar.Reference,
 	jetCoordinator jet.Coordinator,
-) ExecutionArchive {
+) ExecutionRegistry {
 
-	return &executionArchive{
+	return &executionRegistry{
 		objectRef:   objectRef,
 		archiveLock: sync.Mutex{},
 		archive:     make(map[insolar.Reference]*common.Transcript),
@@ -67,14 +68,18 @@ func New(
 	}
 }
 
-func (ea *executionArchive) IsEmpty() bool {
+func (ea *executionRegistry) Length() int {
 	ea.archiveLock.Lock()
 	defer ea.archiveLock.Unlock()
 
-	return len(ea.archive) == 0
+	return len(ea.archive)
 }
 
-func (ea *executionArchive) Archive(ctx context.Context, transcript *common.Transcript) {
+func (ea *executionRegistry) IsEmpty() bool {
+	return ea.Length() == 0
+}
+
+func (ea *executionRegistry) Register(ctx context.Context, transcript *common.Transcript) {
 	requestRef := transcript.RequestRef
 
 	ea.archiveLock.Lock()
@@ -87,7 +92,7 @@ func (ea *executionArchive) Archive(ctx context.Context, transcript *common.Tran
 	}
 }
 
-func (ea *executionArchive) Done(transcript *common.Transcript) bool {
+func (ea *executionRegistry) Done(transcript *common.Transcript) bool {
 	requestRef := transcript.RequestRef
 
 	ea.archiveLock.Lock()
@@ -102,7 +107,7 @@ func (ea *executionArchive) Done(transcript *common.Transcript) bool {
 }
 
 // constructs all StillExecuting messages
-func (ea *executionArchive) OnPulse(_ context.Context) []insolar.Message {
+func (ea *executionRegistry) OnPulse(_ context.Context) []insolar.Message {
 	ea.archiveLock.Lock()
 	defer ea.archiveLock.Unlock()
 
@@ -123,7 +128,7 @@ func (ea *executionArchive) OnPulse(_ context.Context) []insolar.Message {
 	return messages
 }
 
-func (ea *executionArchive) FindRequestLoop(ctx context.Context, reqRef insolar.Reference, apiRequestID string) bool {
+func (ea *executionRegistry) FindRequestLoop(ctx context.Context, reqRef insolar.Reference, apiRequestID string) bool {
 	ea.archiveLock.Lock()
 	defer ea.archiveLock.Unlock()
 
@@ -143,6 +148,6 @@ func (ea *executionArchive) FindRequestLoop(ctx context.Context, reqRef insolar.
 	return false
 }
 
-func (ea *executionArchive) GetActiveTranscript(request insolar.Reference) *common.Transcript {
+func (ea *executionRegistry) GetActiveTranscript(request insolar.Reference) *common.Transcript {
 	return ea.archive[request]
 }

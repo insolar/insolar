@@ -22,7 +22,6 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/common"
-	"github.com/insolar/insolar/logicrunner/executionarchive"
 )
 
 type List struct {
@@ -114,15 +113,6 @@ func (ces *List) GetAllRequestRefs() []insolar.Reference {
 		i++
 	}
 	return out
-}
-
-func (ces *List) Archive(archiver executionarchive.Archiver) {
-	ces.lock.RLock()
-	defer ces.lock.RUnlock()
-
-	for _, current := range ces.executions {
-		archiver.Archive(current)
-	}
 }
 
 func NewList() *List {

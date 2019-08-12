@@ -48,7 +48,7 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/common"
-	"github.com/insolar/insolar/logicrunner/executionarchive"
+	"github.com/insolar/insolar/logicrunner/executionregistry"
 	"github.com/insolar/insolar/logicrunner/machinesmanager"
 	"github.com/insolar/insolar/logicrunner/writecontroller"
 	"github.com/insolar/insolar/pulsar"
@@ -539,8 +539,8 @@ func TestLogicRunner_OnPulse_Order(t *testing.T) {
 }
 
 func (suite *LogicRunnerTestSuite) TestImmutableOrder() {
-	ea := executionarchive.NewExecutionArchiveMock(suite.mc).
-		ArchiveMock.Return().
+	ea := executionregistry.NewExecutionRegistryMock(suite.mc).
+		RegisterMock.Return().
 		DoneMock.Return(true)
 
 	// prepare default object and execution state
