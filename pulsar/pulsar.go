@@ -23,6 +23,7 @@ import (
 
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"go.opencensus.io/stats"
 
@@ -35,7 +36,8 @@ import (
 // Pulsar is a base struct for pulsar's node
 // It contains all the stuff, which is needed for working of a pulsar
 type Pulsar struct {
-	Config configuration.Pulsar
+	Config       configuration.Pulsar
+	PublicKeyRaw string
 
 	EntropyGenerator entropygenerator.EntropyGenerator
 
@@ -57,7 +59,7 @@ func NewPulsar(
 	keyProcessor insolar.KeyProcessor,
 	pulseDistributor insolar.PulseDistributor,
 	entropyGenerator entropygenerator.EntropyGenerator,
-) (*Pulsar, error) {
+) *Pulsar {
 
 	log.Info("[NewPulsar]")
 
@@ -70,7 +72,17 @@ func NewPulsar(
 		EntropyGenerator:           entropyGenerator,
 	}
 
-	return pulsar, nil
+	pubKey, err := cryptographyService.GetPublicKey()
+	if err != nil {
+		log.Fatal(err)
+	}
+	pubKeyRaw, err := keyProcessor.ExportPublicKeyPEM(pubKey)
+	if err != nil {
+		log.Fatal(err)
+	}
+	pulsar.PublicKeyRaw = string(pubKeyRaw)
+
+	return pulsar
 }
 
 func (p *Pulsar) Send(ctx context.Context, pulseNumber insolar.PulseNumber) error {
@@ -91,6 +103,29 @@ func (p *Pulsar) Send(ctx context.Context, pulseNumber insolar.PulseNumber) erro
 		EpochPulseNumber: int(pulseNumber),
 		OriginID:         [16]byte{206, 41, 229, 190, 7, 240, 162, 155, 121, 245, 207, 56, 161, 67, 189, 0},
 		PulseTimestamp:   time.Now().UnixNano(),
+		Signs:            map[string]insolar.PulseSenderConfirmation{},
+	}
+
+	payload := PulseSenderConfirmationPayload{PulseSenderConfirmation: insolar.PulseSenderConfirmation{
+		ChosenPublicKey: p.PublicKeyRaw,
+		Entropy:         entropy,
+		PulseNumber:     pulseNumber,
+	}}
+	hasher := platformpolicy.NewPlatformCryptographyScheme().IntegrityHasher()
+	hash, err := payload.Hash(hasher)
+	if err != nil {
+		return err
+	}
+	signature, err := p.CryptographyService.Sign(hash)
+	if err != nil {
+		return err
+	}
+
+	pulseForSending.Signs[p.PublicKeyRaw] = insolar.PulseSenderConfirmation{
+		ChosenPublicKey: p.PublicKeyRaw,
+		Signature:       signature.Bytes(),
+		Entropy:         entropy,
+		PulseNumber:     pulseNumber,
 	}
 
 	logger.Debug("Start a process of sending pulse")
@@ -125,3 +160,62 @@ func (p *Pulsar) generateNewEntropyAndSign() (insolar.Entropy, []byte, error) {
 
 	return e, sign.Bytes(), nil
 }
+
+// PulseSenderConfirmationPayload is a struct with info about pulse's confirmations
+type PulseSenderConfirmationPayload struct {
+	insolar.PulseSenderConfirmation
+}
+
+// Hash calculates hash of payload
+func (ps *PulseSenderConfirmationPayload) Hash(hashProvider insolar.Hasher) ([]byte, error) {
+	_, err := hashProvider.Write(ps.PulseNumber.Bytes())
+	if err != nil {
+		return nil, err
+	}
+	_, err = hashProvider.Write([]byte(ps.ChosenPublicKey))
+	if err != nil {
+		return nil, err
+	}
+	_, err = hashProvider.Write(ps.Entropy[:])
+	if err != nil {
+		return nil, err
+	}
+	return hashProvider.Sum(nil), nil
+}
+
+/*
+
+if currentPulsar.isStandalone() {
+currentPulsar.SetCurrentSlotEntropy(currentPulsar.GetGeneratedEntropy())
+currentPulsar.CurrentSlotPulseSender = currentPulsar.PublicKeyRaw
+
+payload := PulseSenderConfirmationPayload{insolar.PulseSenderConfirmation{
+ChosenPublicKey: currentPulsar.CurrentSlotPulseSender,
+Entropy:         *currentPulsar.GetCurrentSlotEntropy(),
+PulseNumber:     currentPulsar.ProcessingPulseNumber,
+}}
+hashProvider := currentPulsar.PlatformCryptographyScheme.IntegrityHasher()
+hash, err := payload.Hash(hashProvider)
+if err != nil {
+currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)
+return
+}
+signature, err := currentPulsar.CryptographyService.Sign(hash)
+if err != nil {
+currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)
+return
+}
+
+currentPulsar.currentSlotSenderConfirmationsLock.Lock()
+currentPulsar.CurrentSlotSenderConfirmations[currentPulsar.PublicKeyRaw] = insolar.PulseSenderConfirmation{
+ChosenPublicKey: currentPulsar.CurrentSlotPulseSender,
+Signature:       signature.Bytes(),
+Entropy:         *currentPulsar.GetCurrentSlotEntropy(),
+PulseNumber:     currentPulsar.ProcessingPulseNumber,
+}
+currentPulsar.currentSlotSenderConfirmationsLock.Unlock()
+
+currentPulsar.StateSwitcher.SwitchToState(ctx, SendingPulse, nil)
+
+return
+}*/

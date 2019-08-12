@@ -145,7 +145,7 @@ func initPulsar(ctx context.Context, cfg configuration.Configuration) (*componen
 		inslogger.FromContext(ctx).Fatal(err)
 	}
 
-	server, err := pulsar.NewPulsar(
+	server := pulsar.NewPulsar(
 		cfg.Pulsar,
 		cryptographyService,
 		cryptographyScheme,
@@ -153,11 +153,6 @@ func initPulsar(ctx context.Context, cfg configuration.Configuration) (*componen
 		pulseDistributor,
 		&entropygenerator.StandardEntropyGenerator{},
 	)
-
-	if err != nil {
-		inslogger.FromContext(ctx).Fatal(err)
-		panic(err)
-	}
 
 	return cm, server
 }
