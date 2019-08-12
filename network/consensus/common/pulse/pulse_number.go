@@ -81,7 +81,10 @@ func OfUnixTime(u int64) Number {
 }
 
 func (n Number) AsApproximateTime() time.Time {
-	return timeOfMinTimePulse.Add(time.Second * time.Duration(n))
+	if !n.IsTimePulse() {
+		panic("illegal state")
+	}
+	return timeOfMinTimePulse.Add(time.Second * time.Duration(n-MinTimePulse))
 }
 
 func (n Number) IsTimePulse() bool {
@@ -132,6 +135,16 @@ func (n Number) Prev(delta uint16) Number {
 		panic("underflow")
 	}
 	return n
+}
+
+func (n Number) WithFlags(flags uint8) uint32 {
+	if n > MaxTimePulse {
+		panic("illegal value")
+	}
+	if flags > 3 {
+		panic("illegal value")
+	}
+	return n.AsUint32() | uint32(flags)<<30
 }
 
 func IsValidAsPulseNumber(n int) bool {
