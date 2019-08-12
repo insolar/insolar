@@ -50,7 +50,7 @@ func VerifySignature(rawRequest []byte, signature string, key string, rawpublicp
 		return fmt.Errorf("cant decode signature %s", err.Error())
 	}
 
-	if key != rawpublicpem && !selfSigned {
+	if TrimPublicKey(key) != TrimPublicKey(rawpublicpem) && !selfSigned {
 		return fmt.Errorf("access denied. Key - %v", rawpublicpem)
 	}
 

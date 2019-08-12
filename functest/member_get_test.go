@@ -65,3 +65,9 @@ func TestMemberGetWrongPublicKey(t *testing.T) {
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "failed to get reference by public key: failed to get reference in shard: failed to find reference by key")
 }
+
+func TestMemberGetGenesisMember(t *testing.T) {
+	res, err := signedRequest(&migrationAdmin, "member.get", nil)
+	require.Nil(t, err)
+	require.Equal(t, migrationAdmin.ref, res.(map[string]interface{})["reference"].(string))
+}
