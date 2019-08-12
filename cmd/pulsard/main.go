@@ -19,7 +19,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"net"
 	"os"
 	"os/signal"
 	"syscall"
@@ -43,7 +42,6 @@ import (
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
-	pulsarstorage "github.com/insolar/insolar/pulsar/storage"
 	"github.com/insolar/insolar/version"
 )
 
@@ -99,20 +97,12 @@ func main() {
 	}
 	defer jaegerflush()
 
-	cm, server, storage := initPulsar(ctx, cfgHolder.Configuration)
-	server.ID = traceID
-
-	go server.StartServer(ctx)
+	cm, server := initPulsar(ctx, cfgHolder.Configuration)
 	pulseTicker, refreshTicker := runPulsar(ctx, server, cfgHolder.Configuration.Pulsar)
 
 	defer func() {
 		pulseTicker.Stop()
 		refreshTicker.Stop()
-		err = storage.Close()
-		if err != nil {
-			inslog.Error(err)
-		}
-		server.StopServer(ctx)
 		err = cm.Stop(ctx)
 		if err != nil {
 			inslog.Error(err)
@@ -126,7 +116,7 @@ func main() {
 	<-gracefulStop
 }
 
-func initPulsar(ctx context.Context, cfg configuration.Configuration) (*component.Manager, *pulsar.Pulsar, pulsarstorage.PulsarStorage) {
+func initPulsar(ctx context.Context, cfg configuration.Configuration) (*component.Manager, *pulsar.Pulsar) {
 	fmt.Println("Starts with configuration:\n", configuration.ToString(cfg))
 	fmt.Println("Version: ", version.GetFullVersion())
 
@@ -155,59 +145,39 @@ func initPulsar(ctx context.Context, cfg configuration.Configuration) (*componen
 		inslogger.FromContext(ctx).Fatal(err)
 	}
 
-	storage, err := pulsarstorage.NewStorageBadger(cfg.Pulsar, nil)
-	if err != nil {
-		inslogger.FromContext(ctx).Fatal(err)
-		panic(err)
-	}
-	switcher := &pulsar.StateSwitcherImpl{}
 	server, err := pulsar.NewPulsar(
 		cfg.Pulsar,
 		cryptographyService,
 		cryptographyScheme,
 		keyProcessor,
 		pulseDistributor,
-		storage,
-		&pulsar.RPCClientWrapperFactoryImpl{},
 		&entropygenerator.StandardEntropyGenerator{},
-		switcher,
-		net.Listen,
 	)
 
 	if err != nil {
 		inslogger.FromContext(ctx).Fatal(err)
 		panic(err)
 	}
-	switcher.SetPulsar(server)
 
-	return cm, server, storage
+	return cm, server
 }
 
 func runPulsar(ctx context.Context, server *pulsar.Pulsar, cfg configuration.Pulsar) (pulseTicker *time.Ticker, refreshTicker *time.Ticker) {
-	server.CheckConnectionsToPulsars(ctx)
-
 	nextPulseNumber := insolar.PulseNumber(pulse.OfNow())
-
-	err := server.StartConsensusProcess(ctx, nextPulseNumber)
+	err := server.Send(ctx, nextPulseNumber)
 	if err != nil {
 		inslogger.FromContext(ctx).Fatal(err)
 		panic(err)
 	}
+
 	pulseTicker = time.NewTicker(time.Duration(cfg.PulseTime) * time.Millisecond)
 	go func() {
 		for range pulseTicker.C {
-			err = server.StartConsensusProcess(ctx, server.GetLastPulse().PulseNumber+insolar.PulseNumber(cfg.NumberDelta))
+			err := server.Send(ctx, server.LastPN()+insolar.PulseNumber(cfg.NumberDelta))
 			if err != nil {
 				inslogger.FromContext(ctx).Fatal(err)
 				panic(err)
 			}
-		}
-	}()
-
-	refreshTicker = time.NewTicker(1 * time.Second)
-	go func() {
-		for range refreshTicker.C {
-			server.CheckConnectionsToPulsars(ctx)
 		}
 	}()
 
