@@ -19,8 +19,9 @@ package heavy
 import (
 	"context"
 	"fmt"
-	"github.com/insolar/insolar/network"
 	"net"
+
+	"github.com/insolar/insolar/network"
 
 	"github.com/insolar/insolar/ledger/heavy/exporter"
 	"google.golang.org/grpc"
