@@ -203,38 +203,20 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 	inslog := inslogger.FromContext(ctx)
 
 	// Hint: order matters, because of dependency contracts on each other.
-	rootDomain := contracts.RootDomain()
-	_, err := g.activateContract(ctx, rootDomain)
-	if err != nil {
-		return errors.Wrapf(err, "failed to activate contract %v", rootDomain.Name)
-	}
-	inslog.Infof("[genesis] activate contract %v", rootDomain.Name)
-
-	nodeDomain := contracts.NodeDomain()
-	_, err = g.activateContract(ctx, nodeDomain)
-	if err != nil {
-		return errors.Wrapf(err, "failed to activate contract %v", nodeDomain.Name)
-	}
-	inslog.Infof("[genesis] activate contract %v", nodeDomain.Name)
-
-	rootWallet := contracts.GetWalletGenesisContractState(g.ContractsConfig.RootBalance, insolar.GenesisNameRootWallet, insolar.GenesisNameRootDomain)
-	rwRef, err := g.activateContract(ctx, rootWallet)
-	if err != nil {
-		return errors.Wrapf(err, "failed to activate contract %v", rootWallet.Name)
-	}
-	inslog.Infof("[genesis] activate contract %v", rootWallet.Name)
-
-	migrationAdminWallet := contracts.GetWalletGenesisContractState(g.ContractsConfig.MDBalance, insolar.GenesisNameMigrationWallet, insolar.GenesisNameRootDomain)
-	mawRef, err := g.activateContract(ctx, migrationAdminWallet)
-	if err != nil {
-		return errors.Wrapf(err, "failed to activate contract %v", migrationAdminWallet.Name)
-	}
-	inslog.Infof("[genesis] activate contract %v", migrationAdminWallet.Name)
-
 	states := []insolar.GenesisContractState{
-		contracts.GetMemberGenesisContractState(g.ContractsConfig.RootPublicKey, insolar.GenesisNameRootMember, insolar.GenesisNameRootDomain, *rwRef),
-		contracts.GetMemberGenesisContractState(g.ContractsConfig.MigrationAdminPublicKey, insolar.GenesisNameMigrationAdminMember, insolar.GenesisNameRootDomain, *mawRef),
-		contracts.GetWalletGenesisContractState("0", insolar.GenesisNameFeeWallet, insolar.GenesisNameRootDomain),
+		contracts.RootDomain(),
+		contracts.NodeDomain(),
+		contracts.GetMemberGenesisContractState(g.ContractsConfig.RootPublicKey, insolar.GenesisNameRootMember, insolar.GenesisNameRootDomain, genesisrefs.ContractRootWallet),
+		contracts.GetMemberGenesisContractState(g.ContractsConfig.MigrationAdminPublicKey, insolar.GenesisNameMigrationAdminMember, insolar.GenesisNameRootDomain, genesisrefs.ContractMigrationWallet),
+
+		contracts.GetWalletGenesisContractState(insolar.GenesisNameRootWallet, insolar.GenesisNameRootDomain, genesisrefs.ContractRootAccount),
+		contracts.GetWalletGenesisContractState(insolar.GenesisNameMigrationAdminWallet, insolar.GenesisNameRootDomain, genesisrefs.ContractMigrationAccount),
+		contracts.GetWalletGenesisContractState(insolar.GenesisNameFeeWallet, insolar.GenesisNameRootDomain, genesisrefs.ContractFeeAccount),
+
+		contracts.GetAccountGenesisContractState(g.ContractsConfig.RootBalance, insolar.GenesisNameRootAccount, insolar.GenesisNameRootDomain),
+		contracts.GetAccountGenesisContractState(g.ContractsConfig.MDBalance, insolar.GenesisNameMigrationAdminAccount, insolar.GenesisNameRootDomain),
+		contracts.GetAccountGenesisContractState("0", insolar.GenesisNameFeeAccount, insolar.GenesisNameRootDomain),
+
 		contracts.GetCostCenterGenesisContractState(),
 	}
 

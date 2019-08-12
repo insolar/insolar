@@ -72,7 +72,7 @@ func TestTransferMoneyFromNotExist(t *testing.T) {
 	amount := "10"
 
 	_, err := signedRequest(firstMember, "member.transfer", map[string]interface{}{"amount": amount, "toMemberReference": secondMember.ref})
-	require.NotNil(t, err)
+	require.Error(t, err)
 	require.Contains(t, err.Error(), "index not found")
 
 	newSecondBalance := getBalanceNoErr(t, secondMember, secondMember.ref)
@@ -86,7 +86,7 @@ func TestTransferMoneyToNotExist(t *testing.T) {
 	amount := "10"
 
 	_, err := signedRequest(firstMember, "member.transfer", map[string]interface{}{"amount": amount, "toMemberReference": testutils.RandomRef().String()})
-	require.NotNil(t, err)
+	require.Error(t, err)
 	require.Contains(t, err.Error(), "index not found")
 
 	newFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
@@ -141,8 +141,8 @@ func TestTransferMoreThanAvailableAmount(t *testing.T) {
 	amount.Add(oldFirstBalance, big.NewInt(10))
 
 	_, err := signedRequest(firstMember, "member.transfer", map[string]interface{}{"amount": amount.String(), "toMemberReference": secondMember.ref})
-	require.NotNil(t, err)
-	require.Contains(t, err.Error(), "subtrahend must be smaller than minuend")
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "balance is too low")
 	newFirstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
 	newSecondBalance := getBalanceNoErr(t, secondMember, secondMember.ref)
 	require.Equal(t, oldFirstBalance, newFirstBalance)
@@ -156,7 +156,7 @@ func TestTransferToMyself(t *testing.T) {
 	amount := "20"
 
 	_, err := signedRequest(member, "member.transfer", map[string]interface{}{"amount": amount, "toMemberReference": member.ref})
-	require.NotNil(t, err)
+	require.Error(t, err)
 	require.Contains(t, err.Error(), "recipient must be different from the sender")
 	newMemberBalance := getBalanceNoErr(t, member, member.ref)
 	require.Equal(t, oldMemberBalance, newMemberBalance)

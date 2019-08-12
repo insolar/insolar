@@ -29,7 +29,7 @@ import (
 
 type OutgoingRequest struct {
 	Request   record.IncomingRequest
-	NewObject *Ref
+	NewObject *insolar.Reference
 	Response  []byte
 	Error     error
 }
@@ -64,7 +64,7 @@ func NewTranscript(
 }
 
 func (t *Transcript) AddOutgoingRequest(
-	ctx context.Context, request record.IncomingRequest, result []byte, newObject *Ref, err error,
+	ctx context.Context, request record.IncomingRequest, result []byte, newObject *insolar.Reference, err error,
 ) {
 	rec := OutgoingRequest{
 		Request:   request,

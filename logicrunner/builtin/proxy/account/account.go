@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package nodedomain
+package account
 
 import (
 	"github.com/insolar/insolar/insolar"
@@ -24,10 +24,10 @@ import (
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = insolar.NewReferenceFromBase58("111A6NKbCjpzFr9MttfcWV8vX8eFjiyGPPfSH1AMtwN.11111111111111111111111111111111")
+var PrototypeReference, _ = insolar.NewReferenceFromBase58("111A62X73fkPeY5vK6NjcXgmL9d37DgRRNtHNLGaEse.11111111111111111111111111111111")
 
-// NodeDomain holds proxy type
-type NodeDomain struct {
+// Account holds proxy type
+type Account struct {
 	Reference insolar.Reference
 	Prototype insolar.Reference
 	Code      insolar.Reference
@@ -40,7 +40,7 @@ type ContractConstructorHolder struct {
 }
 
 // AsChild saves object as child
-func (r *ContractConstructorHolder) AsChild(objRef insolar.Reference) (*NodeDomain, error) {
+func (r *ContractConstructorHolder) AsChild(objRef insolar.Reference) (*Account, error) {
 	ref, ret, err := common.CurrentProxyCtx.SaveAsChild(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
 	if err != nil {
 		return nil, err
@@ -63,12 +63,12 @@ func (r *ContractConstructorHolder) AsChild(objRef insolar.Reference) (*NodeDoma
 		return nil, constructorError
 	}
 
-	return &NodeDomain{Reference: *ref}, nil
+	return &Account{Reference: *ref}, nil
 }
 
 // GetObject returns proxy object
-func GetObject(ref insolar.Reference) (r *NodeDomain) {
-	return &NodeDomain{Reference: ref}
+func GetObject(ref insolar.Reference) (r *Account) {
+	return &Account{Reference: ref}
 }
 
 // GetPrototype returns reference to the prototype
@@ -76,9 +76,10 @@ func GetPrototype() insolar.Reference {
 	return *PrototypeReference
 }
 
-// NewNodeDomain is constructor
-func NewNodeDomain() *ContractConstructorHolder {
-	var args [0]interface{}
+// New is constructor
+func New(balance string) *ContractConstructorHolder {
+	var args [1]interface{}
+	args[0] = balance
 
 	var argsSerialized []byte
 	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
@@ -86,16 +87,16 @@ func NewNodeDomain() *ContractConstructorHolder {
 		panic(err)
 	}
 
-	return &ContractConstructorHolder{constructorName: "NewNodeDomain", argsSerialized: argsSerialized}
+	return &ContractConstructorHolder{constructorName: "New", argsSerialized: argsSerialized}
 }
 
 // GetReference returns reference of the object
-func (r *NodeDomain) GetReference() insolar.Reference {
+func (r *Account) GetReference() insolar.Reference {
 	return r.Reference
 }
 
 // GetPrototype returns reference to the code
-func (r *NodeDomain) GetPrototype() (insolar.Reference, error) {
+func (r *Account) GetPrototype() (insolar.Reference, error) {
 	if r.Prototype.IsEmpty() {
 		ret := [2]interface{}{}
 		var ret0 insolar.Reference
@@ -125,7 +126,7 @@ func (r *NodeDomain) GetPrototype() (insolar.Reference, error) {
 }
 
 // GetCode returns reference to the code
-func (r *NodeDomain) GetCode() (insolar.Reference, error) {
+func (r *Account) GetCode() (insolar.Reference, error) {
 	if r.Code.IsEmpty() {
 		ret := [2]interface{}{}
 		var ret0 insolar.Reference
@@ -153,213 +154,11 @@ func (r *NodeDomain) GetCode() (insolar.Reference, error) {
 	return r.Code, nil
 }
 
-// RegisterNode is proxy generated method
-func (r *NodeDomain) RegisterNode(publicKey string, role string) (string, error) {
+// Transfer is proxy generated method
+func (r *Account) Transfer(amountStr string, toAccount *insolar.Reference) error {
 	var args [2]interface{}
-	args[0] = publicKey
-	args[1] = role
-
-	var argsSerialized []byte
-
-	ret := make([]interface{}, 2)
-	var ret0 string
-	ret[0] = &ret0
-	var ret1 *foundation.Error
-	ret[1] = &ret1
-
-	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
-	if err != nil {
-		return ret0, err
-	}
-
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "RegisterNode", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return ret0, err
-	}
-
-	resultContainer := foundation.Result{
-		Returns: ret,
-	}
-	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
-	if err != nil {
-		return ret0, err
-	}
-	if resultContainer.Error != nil {
-		err = resultContainer.Error
-		return ret0, err
-	}
-	if ret1 != nil {
-		return ret0, ret1
-	}
-	return ret0, nil
-}
-
-// RegisterNodeNoWait is proxy generated method
-func (r *NodeDomain) RegisterNodeNoWait(publicKey string, role string) error {
-	var args [2]interface{}
-	args[0] = publicKey
-	args[1] = role
-
-	var argsSerialized []byte
-
-	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
-	if err != nil {
-		return err
-	}
-
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "RegisterNode", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// RegisterNodeAsImmutable is proxy generated method
-func (r *NodeDomain) RegisterNodeAsImmutable(publicKey string, role string) (string, error) {
-	var args [2]interface{}
-	args[0] = publicKey
-	args[1] = role
-
-	var argsSerialized []byte
-
-	ret := make([]interface{}, 2)
-	var ret0 string
-	ret[0] = &ret0
-	var ret1 *foundation.Error
-	ret[1] = &ret1
-
-	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
-	if err != nil {
-		return ret0, err
-	}
-
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "RegisterNode", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return ret0, err
-	}
-
-	resultContainer := foundation.Result{
-		Returns: ret,
-	}
-	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
-	if err != nil {
-		return ret0, err
-	}
-	if resultContainer.Error != nil {
-		err = resultContainer.Error
-		return ret0, err
-	}
-	if ret1 != nil {
-		return ret0, ret1
-	}
-	return ret0, nil
-}
-
-// GetNodeRefByPublicKey is proxy generated method
-func (r *NodeDomain) GetNodeRefByPublicKeyAsMutable(publicKey string) (string, error) {
-	var args [1]interface{}
-	args[0] = publicKey
-
-	var argsSerialized []byte
-
-	ret := make([]interface{}, 2)
-	var ret0 string
-	ret[0] = &ret0
-	var ret1 *foundation.Error
-	ret[1] = &ret1
-
-	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
-	if err != nil {
-		return ret0, err
-	}
-
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetNodeRefByPublicKey", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return ret0, err
-	}
-
-	resultContainer := foundation.Result{
-		Returns: ret,
-	}
-	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
-	if err != nil {
-		return ret0, err
-	}
-	if resultContainer.Error != nil {
-		err = resultContainer.Error
-		return ret0, err
-	}
-	if ret1 != nil {
-		return ret0, ret1
-	}
-	return ret0, nil
-}
-
-// GetNodeRefByPublicKeyNoWait is proxy generated method
-func (r *NodeDomain) GetNodeRefByPublicKeyNoWait(publicKey string) error {
-	var args [1]interface{}
-	args[0] = publicKey
-
-	var argsSerialized []byte
-
-	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
-	if err != nil {
-		return err
-	}
-
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "GetNodeRefByPublicKey", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// GetNodeRefByPublicKeyAsImmutable is proxy generated method
-func (r *NodeDomain) GetNodeRefByPublicKey(publicKey string) (string, error) {
-	var args [1]interface{}
-	args[0] = publicKey
-
-	var argsSerialized []byte
-
-	ret := make([]interface{}, 2)
-	var ret0 string
-	ret[0] = &ret0
-	var ret1 *foundation.Error
-	ret[1] = &ret1
-
-	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
-	if err != nil {
-		return ret0, err
-	}
-
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "GetNodeRefByPublicKey", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return ret0, err
-	}
-
-	resultContainer := foundation.Result{
-		Returns: ret,
-	}
-	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
-	if err != nil {
-		return ret0, err
-	}
-	if resultContainer.Error != nil {
-		err = resultContainer.Error
-		return ret0, err
-	}
-	if ret1 != nil {
-		return ret0, ret1
-	}
-	return ret0, nil
-}
-
-// RemoveNode is proxy generated method
-func (r *NodeDomain) RemoveNode(nodeRef insolar.Reference) error {
-	var args [1]interface{}
-	args[0] = nodeRef
+	args[0] = amountStr
+	args[1] = toAccount
 
 	var argsSerialized []byte
 
@@ -372,7 +171,7 @@ func (r *NodeDomain) RemoveNode(nodeRef insolar.Reference) error {
 		return err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "RemoveNode", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "Transfer", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -394,10 +193,11 @@ func (r *NodeDomain) RemoveNode(nodeRef insolar.Reference) error {
 	return nil
 }
 
-// RemoveNodeNoWait is proxy generated method
-func (r *NodeDomain) RemoveNodeNoWait(nodeRef insolar.Reference) error {
-	var args [1]interface{}
-	args[0] = nodeRef
+// TransferNoWait is proxy generated method
+func (r *Account) TransferNoWait(amountStr string, toAccount *insolar.Reference) error {
+	var args [2]interface{}
+	args[0] = amountStr
+	args[1] = toAccount
 
 	var argsSerialized []byte
 
@@ -406,7 +206,7 @@ func (r *NodeDomain) RemoveNodeNoWait(nodeRef insolar.Reference) error {
 		return err
 	}
 
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "RemoveNode", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "Transfer", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -414,10 +214,11 @@ func (r *NodeDomain) RemoveNodeNoWait(nodeRef insolar.Reference) error {
 	return nil
 }
 
-// RemoveNodeAsImmutable is proxy generated method
-func (r *NodeDomain) RemoveNodeAsImmutable(nodeRef insolar.Reference) error {
-	var args [1]interface{}
-	args[0] = nodeRef
+// TransferAsImmutable is proxy generated method
+func (r *Account) TransferAsImmutable(amountStr string, toAccount *insolar.Reference) error {
+	var args [2]interface{}
+	args[0] = amountStr
+	args[1] = toAccount
 
 	var argsSerialized []byte
 
@@ -430,7 +231,7 @@ func (r *NodeDomain) RemoveNodeAsImmutable(nodeRef insolar.Reference) error {
 		return err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "RemoveNode", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "Transfer", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -450,4 +251,220 @@ func (r *NodeDomain) RemoveNodeAsImmutable(nodeRef insolar.Reference) error {
 		return ret0
 	}
 	return nil
+}
+
+// Accept is proxy generated method
+func (r *Account) Accept(amountStr string) error {
+	var args [1]interface{}
+	args[0] = amountStr
+
+	var argsSerialized []byte
+
+	ret := make([]interface{}, 1)
+	var ret0 *foundation.Error
+	ret[0] = &ret0
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, true, false, true, "Accept", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// RollBack is proxy generated method
+func (r *Account) RollBack(amountStr string) error {
+	var args [1]interface{}
+	args[0] = amountStr
+
+	var argsSerialized []byte
+
+	ret := make([]interface{}, 1)
+	var ret0 *foundation.Error
+	ret[0] = &ret0
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "RollBack", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
+	if err != nil {
+		return err
+	}
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return err
+	}
+	if ret0 != nil {
+		return ret0
+	}
+	return nil
+}
+
+// RollBackNoWait is proxy generated method
+func (r *Account) RollBackNoWait(amountStr string) error {
+	var args [1]interface{}
+	args[0] = amountStr
+
+	var argsSerialized []byte
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "RollBack", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// RollBackAsImmutable is proxy generated method
+func (r *Account) RollBackAsImmutable(amountStr string) error {
+	var args [1]interface{}
+	args[0] = amountStr
+
+	var argsSerialized []byte
+
+	ret := make([]interface{}, 1)
+	var ret0 *foundation.Error
+	ret[0] = &ret0
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "RollBack", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
+	if err != nil {
+		return err
+	}
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return err
+	}
+	if ret0 != nil {
+		return ret0
+	}
+	return nil
+}
+
+// GetBalance is proxy generated method
+func (r *Account) GetBalanceAsMutable() (string, error) {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	ret := make([]interface{}, 2)
+	var ret0 string
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetBalance", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return ret0, err
+	}
+
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
+	if err != nil {
+		return ret0, err
+	}
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return ret0, err
+	}
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
+}
+
+// GetBalanceNoWait is proxy generated method
+func (r *Account) GetBalanceNoWait() error {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "GetBalance", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// GetBalanceAsImmutable is proxy generated method
+func (r *Account) GetBalance() (string, error) {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	ret := make([]interface{}, 2)
+	var ret0 string
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "GetBalance", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return ret0, err
+	}
+
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
+	if err != nil {
+		return ret0, err
+	}
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return ret0, err
+	}
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
 }
