@@ -98,7 +98,7 @@ func customSend(data string) (map[string]interface{}, error) {
 func TestEmptyBody(t *testing.T) {
 	res, err := customSend("")
 	require.NoError(t, err)
-	require.Equal(t, "EOF", res["error"].(map[string]interface{})["message"].(string))
+	require.Equal(t, "unexpected end of JSON input", res["error"].(map[string]interface{})["message"].(string))
 }
 
 func TestCrazyJSON(t *testing.T) {
