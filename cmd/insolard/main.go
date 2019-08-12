@@ -19,8 +19,10 @@ package main
 import (
 	"encoding/json"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 
+	"github.com/google/gops/agent"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
@@ -58,6 +60,12 @@ func main() {
 	role, err := readRole(params.configPath)
 	if err != nil {
 		log.Fatal(errors.Wrap(err, "readRole failed"))
+	}
+
+	if os.Getenv("INSOLAR_GOPS") != "" {
+		if err := agent.Listen(agent.Options{}); err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	switch role {
