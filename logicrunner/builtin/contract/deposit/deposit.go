@@ -22,6 +22,8 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation/safemath"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/account"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/member"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/wallet"
 
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
@@ -45,6 +47,7 @@ const (
 // Deposit is like wallet. It holds migrated money.
 type Deposit struct {
 	foundation.BaseContract
+	Balance                 string              `json:"balance"`
 	PulseDepositCreate      insolar.PulseNumber `json:"timestamp"`
 	PulseDepositHold        insolar.PulseNumber `json:"holdStartDate"`
 	PulseDepositUnHold      insolar.PulseNumber `json:"holdReleaseDate"`
@@ -129,6 +132,14 @@ func (d *Deposit) Confirm(migrationDaemonIndex int, migrationDaemonRef string, t
 			}
 			d.PulseDepositHold = currentPulse
 			d.PulseDepositUnHold = calculateUnHoldPulse(currentPulse)
+
+			ma := member.GetObject(foundation.GetMigrationAdminMember())
+			accountRef, err := ma.GetAccount(foundation.XNS)
+			a := account.GetObject(*accountRef)
+			err = a.TransferToDeposit(amountStr, d.GetReference())
+			if err != nil {
+				return fmt.Errorf("failed to transfer from migration wallet to deposit: %s", err.Error())
+			}
 		}
 		return nil
 	}
@@ -156,7 +167,7 @@ func (d *Deposit) canTransfer() error {
 	return nil
 }
 
-// Transfer transfers money from deposit to wallet.It can be called only after deposit hold period.
+// Transfer transfers money from deposit to wallet. It can be called only after deposit hold period.
 func (d *Deposit) Transfer(amountStr string, wallerRef insolar.Reference) (interface{}, error) {
 
 	amount, ok := new(big.Int).SetString(amountStr, 10)
@@ -186,7 +197,7 @@ func (d *Deposit) Transfer(amountStr string, wallerRef insolar.Reference) (inter
 
 	w := wallet.GetObject(wallerRef)
 
-	acceptWalletErr := w.Accept(amountStr, "XNS")
+	acceptWalletErr := w.Accept(amountStr, foundation.XNS)
 	if acceptWalletErr == nil {
 		return nil, nil
 	}
@@ -197,4 +208,29 @@ func (d *Deposit) Transfer(amountStr string, wallerRef insolar.Reference) (inter
 	}
 	d.Amount = newBalance.String()
 	return nil, fmt.Errorf("failed to transfer amount: %s", acceptWalletErr.Error())
+}
+
+// Accept accepts transfer to balance.
+// ins:saga(INS_FLAG_NO_ROLLBACK_METHOD)
+func (d *Deposit) Accept(amountStr string) error {
+
+	amount := new(big.Int)
+	amount, ok := amount.SetString(amountStr, 10)
+	if !ok {
+		return fmt.Errorf("can't parse input amount")
+	}
+
+	balance := new(big.Int)
+	balance, ok = balance.SetString(d.Balance, 10)
+	if !ok {
+		return fmt.Errorf("can't parse deposit balance")
+	}
+
+	b, err := safemath.Add(balance, amount)
+	if err != nil {
+		return fmt.Errorf("failed to add amount to balance: %s", err.Error())
+	}
+	d.Balance = b.String()
+
+	return nil
 }

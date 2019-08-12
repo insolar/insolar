@@ -51,8 +51,15 @@ func (m Member) GetName() (string, error) {
 
 // GetWallet gets wallet.
 // ins:immutable
-func (m Member) GetWallet() (insolar.Reference, error) {
-	return m.Wallet, nil
+func (m Member) GetWallet() (*insolar.Reference, error) {
+	return &m.Wallet, nil
+}
+
+// GetAccount gets account.
+// ins:immutable
+func (m Member) GetAccount(assetName string) (*insolar.Reference, error) {
+	w := wallet.GetObject(m.Wallet)
+	return w.GetAccount(assetName)
 }
 
 var INSATTR_GetPublicKey_API = true
@@ -240,10 +247,10 @@ func (m *Member) getBalanceCall(params map[string]interface{}) (interface{}, err
 		return 0, fmt.Errorf("failed to parse 'reference': %s", err.Error())
 	}
 
-	var walletRef insolar.Reference
+	var walletRef *insolar.Reference
 
 	if *reference == m.GetReference() {
-		walletRef = m.Wallet
+		walletRef = &m.Wallet
 	} else {
 		m2 := member.GetObject(*reference)
 		walletRef, err = m2.GetWallet()
@@ -252,7 +259,7 @@ func (m *Member) getBalanceCall(params map[string]interface{}) (interface{}, err
 		}
 	}
 
-	b, err := wallet.GetObject(walletRef).GetBalance("XNS")
+	b, err := wallet.GetObject(*walletRef).GetBalance(foundation.XNS)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get balance: %s", err.Error())
 	}
@@ -290,7 +297,7 @@ func (m *Member) transferCall(params map[string]interface{}) (interface{}, error
 
 	asset, ok := params["asset"].(string)
 	if !ok {
-		asset = "XNS" // set to default asset
+		asset = foundation.XNS // set to default asset
 	}
 
 	recipientReference, err := insolar.NewReferenceFromBase58(recipientReferenceStr)

@@ -27,20 +27,20 @@ import (
 
 type CostCenter struct {
 	foundation.BaseContract
-	FeeWallet insolar.Reference
+	FeeAccount insolar.Reference
 }
 
 // New creates new CostCenter.
-func New(feeWallet insolar.Reference) (*CostCenter, error) {
+func New(feeAccount insolar.Reference) (*CostCenter, error) {
 	return &CostCenter{
-		FeeWallet: feeWallet,
+		FeeAccount: feeAccount,
 	}, nil
 }
 
-// GetFeeWalletRef gets fee wallet reference.
+// GetFeeAccountRef gets fee account reference.
 // ins:immutable
-func (cc CostCenter) GetFeeWalletRef() (insolar.Reference, error) {
-	return cc.FeeWallet, nil
+func (cc CostCenter) GetFeeAccountRef() (insolar.Reference, error) {
+	return cc.FeeAccount, nil
 }
 
 func calcFeeRate(amountStr string) (string, error) {

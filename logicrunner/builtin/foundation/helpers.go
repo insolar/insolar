@@ -24,6 +24,8 @@ import (
 	"github.com/insolar/insolar/insolar/genesisrefs"
 )
 
+const XNS = "XNS"
+
 // GetPulseNumber returns current pulse from context.
 func GetPulseNumber() (insolar.PulseNumber, error) {
 	req := GetLogicalContext().Request

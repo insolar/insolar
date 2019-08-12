@@ -42,7 +42,7 @@ func New(accountReference insolar.Reference) (*Wallet, error) {
 	}
 	accounts := make(foundation.StableMap)
 	// TODO: Think about creating of new types of assets and initial balance
-	accounts["XNS"] = accountReference.String()
+	accounts[foundation.XNS] = accountReference.String()
 
 	return &Wallet{
 		Accounts: accounts,
@@ -97,14 +97,7 @@ func (w *Wallet) Transfer(rootDomainRef insolar.Reference, assetName string, amo
 		return nil, fmt.Errorf("balance is too low: %s", currentBalanceStr)
 	}
 
-	toWalletRef, err := member.GetObject(*toMember).GetWallet()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get destination member wallet: %s", err.Error())
-	}
-
-	toWallet := wallet.GetObject(toWalletRef)
-
-	toAccount, err := toWallet.GetAccount(assetName)
+	toAccount, err := member.GetObject(*toMember).GetAccount(assetName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get account by asset name: %s", err.Error())
 	}
@@ -114,12 +107,12 @@ func (w *Wallet) Transfer(rootDomainRef insolar.Reference, assetName string, amo
 		return nil, fmt.Errorf("failed to get account by asset name: %s", err.Error())
 	}
 	acc := account.GetObject(*accRef)
-	err = acc.Transfer(amountStr, toAccount)
+	err = acc.TransferToAccount(amountStr, *toAccount)
 	if err != nil {
 		return nil, fmt.Errorf("failed to transfer: %s", err.Error())
 	}
 
-	feeWalletRef, err := cc.GetFeeWalletRef()
+	feeWalletRef, err := cc.GetFeeAccountRef()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get wallet ref: %s", err.Error())
 	}
@@ -131,7 +124,7 @@ func (w *Wallet) Transfer(rootDomainRef insolar.Reference, assetName string, amo
 		return nil, fmt.Errorf("failed to get account by asset name: %s", err.Error())
 	}
 
-	err = acc.Transfer(feeStr, toFeeAccount)
+	err = acc.TransferToAccount(feeStr, *toFeeAccount)
 	if err != nil {
 		return nil, fmt.Errorf("failed to transfer: %s", err.Error())
 	}
