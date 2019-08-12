@@ -33,6 +33,7 @@ func TestComponents(t *testing.T) {
 	cfg.CertificatePath = "testdata/certificate.json"
 	cfg.Metrics.ListenAddress = "0.0.0.0:0"
 	cfg.APIRunner.Address = "0.0.0.0:0"
+	cfg.Ledger.Storage.DataDirectory = cfg.Ledger.Storage.DataDirectory + "/heavy"
 
 	c, err := newComponents(ctx, cfg, insolar.GenesisHeavyConfig{Skip: true})
 	require.NoError(t, err)
