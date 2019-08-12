@@ -43,8 +43,8 @@ func NewHostNetwork() HostNetwork {
 
 	return HostNetwork{
 		Transport:           transport,
-		MinTimeout:          1,
-		MaxTimeout:          8,
+		MinTimeout:          10,
+		MaxTimeout:          2000,
 		TimeoutMult:         2,
 		SignMessages:        false,
 		HandshakeSessionTTL: 5000,

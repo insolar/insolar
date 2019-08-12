@@ -87,9 +87,9 @@ type Options struct {
 func ConfigureOptions(conf configuration.Configuration) *Options {
 	config := conf.Host
 	return &Options{
-		TimeoutMult:         time.Duration(config.TimeoutMult) * time.Second,
-		MinTimeout:          time.Duration(config.MinTimeout) * time.Second,
-		MaxTimeout:          time.Duration(config.MaxTimeout) * time.Second,
+		TimeoutMult:         time.Duration(config.TimeoutMult) * time.Millisecond,
+		MinTimeout:          time.Duration(config.MinTimeout) * time.Millisecond,
+		MaxTimeout:          time.Duration(config.MaxTimeout) * time.Millisecond,
 		PingTimeout:         1 * time.Second,
 		PacketTimeout:       15 * time.Second,
 		AckPacketTimeout:    5 * time.Second,
