@@ -49,6 +49,7 @@ type StatusReply struct {
 
 // Get returns status info
 func (s *NodeService) GetStatus(r *http.Request, args *interface{}, reply *StatusReply) error {
+	// todo: use only insolar.NetworkStatus interface instead NodeNetwork and ServiceNetwork
 	traceID := utils.RandTraceID()
 	ctx, inslog := inslogger.WithTraceField(context.Background(), traceID)
 
