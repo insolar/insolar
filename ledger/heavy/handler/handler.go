@@ -95,12 +95,11 @@ func New(cfg configuration.Ledger) *Handler {
 				h.IndexModifier,
 				h.RecordPositions,
 				h.PCS,
-				h.PulseAccessor,
 				h.PulseCalculator,
 				h.DropModifier,
-				h.JetModifier,
 				h.JetKeeper,
 				h.BackupMaker,
+				h.JetModifier,
 			)
 		},
 		SendJet: func(p *proc.SendJet) {
@@ -130,7 +129,7 @@ func New(cfg configuration.Ledger) *Handler {
 	return h
 }
 
-func (h *Handler) Process(msg *watermillMsg.Message) ([]*watermillMsg.Message, error) {
+func (h *Handler) Process(msg *watermillMsg.Message) error {
 	ctx := inslogger.ContextWithTrace(context.Background(), msg.Metadata.Get(bus.MetaTraceID))
 	parentSpan, err := instracer.Deserialize([]byte(msg.Metadata.Get(bus.MetaSpanData)))
 	if err == nil {
@@ -158,7 +157,7 @@ func (h *Handler) Process(msg *watermillMsg.Message) ([]*watermillMsg.Message, e
 		logger.Error(errors.Wrap(err, "handle error"))
 	}
 
-	return nil, nil
+	return nil
 }
 
 func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) error {
@@ -300,8 +299,9 @@ func (h *Handler) handleGotHotConfirmation(ctx context.Context, meta payload.Met
 
 	err = h.JetKeeper.AddHotConfirmation(ctx, confirm.Pulse, confirm.JetID, confirm.Split)
 	if err != nil {
-		logger.Error(errors.Wrapf(err, "failed to add hot confitmation to JetKeeper jet=%v", confirm.String()))
+		logger.Fatalf("failed to add hot confirmation jet=%v: %v", confirm.String(), err.Error())
 	}
 
 	executor.FinalizePulse(ctx, h.PulseCalculator, h.BackupMaker, h.JetKeeper, confirm.Pulse)
+
 }

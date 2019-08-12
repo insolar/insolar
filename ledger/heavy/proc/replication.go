@@ -43,12 +43,12 @@ type Replication struct {
 		recordsPositions object.RecordPositionModifier
 		indexes          object.IndexModifier
 		pcs              insolar.PlatformCryptographyScheme
-		pulses           pulse.Accessor
 		pulseCalculator  pulse.Calculator
-		drops            drop.Modifier
-		jets             jet.Modifier
-		keeper           executor.JetKeeper
-		backuper         executor.BackupMaker
+
+		drops    drop.Modifier
+		keeper   executor.JetKeeper
+		backuper executor.BackupMaker
+		jets     jet.Modifier
 	}
 }
 
@@ -64,26 +64,26 @@ func (p *Replication) Dep(
 	indexes object.IndexModifier,
 	recordsPositions object.RecordPositionModifier,
 	pcs insolar.PlatformCryptographyScheme,
-	pulses pulse.Accessor,
 	pulseCalculator pulse.Calculator,
 	drops drop.Modifier,
-	jets jet.Modifier,
 	keeper executor.JetKeeper,
 	backuper executor.BackupMaker,
+	jets jet.Modifier,
 ) {
 	p.dep.records = records
 	p.dep.indexes = indexes
 	p.dep.recordsPositions = recordsPositions
 	p.dep.pcs = pcs
-	p.dep.pulses = pulses
+
 	p.dep.pulseCalculator = pulseCalculator
 	p.dep.drops = drops
-	p.dep.jets = jets
 	p.dep.keeper = keeper
 	p.dep.backuper = backuper
+	p.dep.jets = jets
 }
 
 func (p *Replication) Proceed(ctx context.Context) error {
+	inslogger.FromContext(ctx).Debug("processing replication")
 	pl, err := payload.Unmarshal(p.message.Payload)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal payload")
@@ -93,19 +93,40 @@ func (p *Replication) Proceed(ctx context.Context) error {
 		return fmt.Errorf("unexpected payload %T", pl)
 	}
 
-	storeRecords(ctx, p.dep.records, p.dep.recordsPositions, p.dep.pcs, msg.Pulse, msg.Records)
+	err = p.store(ctx, msg)
+	if err != nil {
+		inslogger.FromContext(ctx).Fatalf("replication fatal error: %v", err.Error())
+	}
+
+	stats.Record(ctx, statReceivedHeavyPayloadCount.M(1))
+
+	return nil
+}
+
+func (p *Replication) store(
+	ctx context.Context,
+	msg *payload.Replication,
+) error {
+	inslogger.FromContext(ctx).Debug("storing records")
+	if err := storeRecords(ctx, p.dep.records, p.dep.recordsPositions, p.dep.pcs, msg.Pulse, msg.Records); err != nil {
+		return errors.Wrap(err, "failed to store records")
+	}
+
+	inslogger.FromContext(ctx).Debug("storing indexes")
 	if err := storeIndexes(ctx, p.dep.indexes, msg.Indexes, msg.Pulse); err != nil {
 		return errors.Wrap(err, "failed to store indexes")
 	}
 
+	inslogger.FromContext(ctx).Debug("storing drop")
 	dr, err := storeDrop(ctx, p.dep.drops, msg.Drop)
 	if err != nil {
 		return errors.Wrap(err, "failed to store drop")
 	}
 
 	jetKeeper := p.dep.keeper
+	inslogger.FromContext(ctx).Debug("storing drop confirmation")
 	if err := jetKeeper.AddDropConfirmation(ctx, dr.Pulse, dr.JetID, dr.Split); err != nil {
-		return errors.Wrapf(err, "failed to add jet to JetKeeper jet=%v", dr.JetID.DebugString())
+		return errors.Wrapf(err, "failed to add drop confirmation jet=%v", dr.JetID.DebugString())
 	}
 
 	err = p.dep.jets.Update(ctx, dr.Pulse, true, dr.JetID)
@@ -132,10 +153,9 @@ func storeIndexes(
 	for _, idx := range indexes {
 		err := mod.SetIndex(ctx, pn, idx)
 		if err != nil {
-			return errors.Wrapf(err, "heavyserver: index storing failed")
+			return err
 		}
 	}
-
 	return nil
 }
 
@@ -151,7 +171,7 @@ func storeDrop(
 	}
 	err = drops.Set(ctx, *d)
 	if err != nil {
-		return nil, errors.Wrapf(err, "heavyserver: drop storing failed")
+		return nil, err
 	}
 
 	return d, nil
@@ -164,30 +184,25 @@ func storeRecords(
 	pcs insolar.PlatformCryptographyScheme,
 	pn insolar.PulseNumber,
 	records []record.Material,
-) {
-	inslog := inslogger.FromContext(ctx)
-
+) error {
 	for _, rec := range records {
 		hash := record.HashVirtual(pcs.ReferenceHasher(), rec.Virtual)
 		id := *insolar.NewID(pn, hash)
-		// FIXME: skipping errors will lead to inconsistent state.
 		if rec.ID != id {
-			inslog.Error(fmt.Errorf(
+			return fmt.Errorf(
 				"record id does not match (calculated: %s, received: %s)",
 				id.DebugString(),
 				rec.ID.DebugString(),
-			))
-			continue
+			)
 		}
-		err := recordStorage.Set(ctx, rec)
-		if err != nil {
-			inslog.Error(err, "heavyserver: store record failed")
-			continue
+
+		if err := recordStorage.Set(ctx, rec); err != nil {
+			return errors.Wrap(err, "set method failed")
 		}
-		err = recordIndex.IncrementPosition(id)
-		if err != nil {
-			inslog.Error(err, "heavyserver: fail to store record position")
-			continue
+
+		if err := recordIndex.IncrementPosition(id); err != nil {
+			return errors.Wrap(err, "fail to store record position")
 		}
 	}
+	return nil
 }

@@ -33,7 +33,9 @@ import (
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
+
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
+	"github.com/insolar/insolar/logicrunner/common"
 )
 
 type HandleCall struct {
@@ -189,7 +191,18 @@ func (h *HandleCall) handleActual(
 	}
 
 	if h.checkExecutionLoop(ctx, *requestRef, request) {
-		return nil, errors.New("loop detected")
+		proc := &RecordErrorResult{
+			err:             errors.New("loop detected"),
+			requestRef:      *requestRef,
+			objectRef:       *objRef,
+			artifactManager: lr.ArtifactManager,
+		}
+		err := f.Procedure(ctx, proc, false)
+		if err != nil {
+			return nil, errors.Wrap(err, "couldn't record error result")
+		}
+
+		return &reply.CallMethod{Object: objRef, Result: proc.result}, nil
 	}
 
 	done, err := h.dep.WriteAccessor.Begin(ctx, flow.Pulse(ctx))
@@ -256,7 +269,7 @@ func (h *HandleCall) sendRequestResult(
 	}
 
 	repl := &reply.CallMethod{Result: resultRecord.Payload, Object: &objRef}
-	tr := NewTranscript(ctx, reqRef, request)
+	tr := common.NewTranscript(ctx, reqRef, request)
 	h.dep.RequestsExecutor.SendReply(ctx, tr, repl, nil)
 
 	return nil

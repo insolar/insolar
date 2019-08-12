@@ -29,6 +29,7 @@ import (
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/logicrunner/writecontroller"
 	"github.com/insolar/insolar/testutils"
 )
 
@@ -55,6 +56,7 @@ func TestHandlePendingFinished_Present(t *testing.T) {
 								NewExecutionBrokerIMock(t).
 									PrevExecutorFinishedPendingMock.Return(nil),
 							),
+						WriteAccessor: writecontroller.NewWriteControllerMock(t).BeginMock.Return(func() {}, nil),
 					},
 					Parcel: parcel,
 				}
@@ -77,6 +79,7 @@ func TestHandlePendingFinished_Present(t *testing.T) {
 								NewExecutionBrokerIMock(t).
 									PrevExecutorFinishedPendingMock.Return(errors.New("some")),
 							),
+						WriteAccessor: writecontroller.NewWriteControllerMock(t).BeginMock.Return(func() {}, nil),
 					},
 					Parcel: parcel,
 				}
@@ -87,7 +90,7 @@ func TestHandlePendingFinished_Present(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			ctx := inslogger.TestContext(t)
+			ctx := flow.TestContextWithPulse(inslogger.TestContext(t), gen.PulseNumber())
 			mc := minimock.NewController(t)
 
 			h, f := test.mocks(mc)

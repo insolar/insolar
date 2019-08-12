@@ -55,7 +55,7 @@ func NewStateIniter(
 	pulseAppender pulse.Appender,
 	pulseAccessor pulse.Accessor,
 	calc JetCalculator,
-	indices object.MemoryIndexModifier,
+	indexes object.MemoryIndexModifier,
 ) *StateIniterDefault {
 	return &StateIniterDefault{
 		jetModifier:   jetModifier,
@@ -66,7 +66,7 @@ func NewStateIniter(
 		pulseAppender: pulseAppender,
 		pulseAccessor: pulseAccessor,
 		jetCalculator: calc,
-		indices:       indices,
+		indexes:       indexes,
 		backoff: backoff.Backoff{
 			Factor: 2,
 			Jitter: true,
@@ -87,7 +87,7 @@ type StateIniterDefault struct {
 	pulseAccessor pulse.Accessor
 	jetCalculator JetCalculator
 	backoff       backoff.Backoff
-	indices       object.MemoryIndexModifier
+	indexes       object.MemoryIndexModifier
 }
 
 func (s *StateIniterDefault) PrepareState(
@@ -231,8 +231,8 @@ func (s *StateIniterDefault) loadStateRetry(
 		}
 	}
 
-	for _, idx := range state.Indices {
-		s.indices.Set(ctx, pn, idx)
+	for _, idx := range state.Indexes {
+		s.indexes.Set(ctx, pn, idx)
 	}
 
 	return state.JetIDs, nil

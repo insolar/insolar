@@ -55,12 +55,10 @@ func NewJetKeeper(jets jet.Storage, db store.DB, pulses pulse.Calculator) JetKee
 }
 
 type dbJetKeeper struct {
+	lock     sync.RWMutex
 	jetTrees jet.Storage
-
-	pulses pulse.Calculator
-
-	sync.RWMutex
-	db store.DB
+	pulses   pulse.Calculator
+	db       store.DB
 }
 
 type jetInfo struct {
@@ -156,8 +154,8 @@ func (j *jetInfo) isConfirmed(checkBackup bool) bool {
 }
 
 func (jk *dbJetKeeper) AddHotConfirmation(ctx context.Context, pn insolar.PulseNumber, id insolar.JetID, split bool) error {
-	jk.Lock()
-	defer jk.Unlock()
+	jk.lock.Lock()
+	defer jk.lock.Unlock()
 
 	inslogger.FromContext(ctx).Debug("AddHotConfirmation. pulse: ", pn, ". ID: ", id.DebugString())
 
@@ -171,8 +169,8 @@ func (jk *dbJetKeeper) AddHotConfirmation(ctx context.Context, pn insolar.PulseN
 
 // AddDropConfirmation performs adding jet to storage and checks pulse completion.
 func (jk *dbJetKeeper) AddDropConfirmation(ctx context.Context, pn insolar.PulseNumber, id insolar.JetID, split bool) error {
-	jk.Lock()
-	defer jk.Unlock()
+	jk.lock.Lock()
+	defer jk.lock.Unlock()
 
 	inslogger.FromContext(ctx).Debug("AddDropConfirmation. pulse: ", pn, ". ID: ", id.DebugString(), ", Split: ", split)
 
@@ -187,8 +185,8 @@ func (jk *dbJetKeeper) AddDropConfirmation(ctx context.Context, pn insolar.Pulse
 
 // AddBackupConfirmation performs adding backup confirmation to storage and checks pulse completion.
 func (jk *dbJetKeeper) AddBackupConfirmation(ctx context.Context, pn insolar.PulseNumber) error {
-	jk.Lock()
-	defer jk.Unlock()
+	jk.lock.Lock()
+	defer jk.lock.Unlock()
 
 	inslogger.FromContext(ctx).Debug("AddBackupConfirmation. pulse: ", pn)
 
@@ -221,21 +219,6 @@ func (jk *dbJetKeeper) updateBackup(pulse insolar.PulseNumber) error {
 func (jk *dbJetKeeper) updateTopSyncPulse(ctx context.Context, pn insolar.PulseNumber) error {
 	logger := inslogger.FromContext(ctx)
 
-	prev, err := jk.pulses.Backwards(ctx, pn, 1)
-	if err != nil {
-		return errors.Wrapf(err, "failed to get previous pulse for %d", pn)
-	}
-
-	top := jk.topSyncPulse()
-
-	logger.Debug("propagateConsistency. pulse: ", pn, ". top: ", top, ". prev.PulseNumber: ", prev.PulseNumber)
-
-	if prev.PulseNumber != top {
-		// We should sync pulses sequentially. We can't skip.
-		logger.Info("Try to updateTopSyncPulse for future pulse. Skip it. prev.PulseNumber: ", prev.PulseNumber, ", top: ", top)
-		return nil
-	}
-
 	if jk.checkPulseConsistency(ctx, pn, true) {
 		err := jk.updateSyncPulse(pn)
 		if err != nil {
@@ -249,8 +232,8 @@ func (jk *dbJetKeeper) updateTopSyncPulse(ctx context.Context, pn insolar.PulseN
 
 // HasJetConfirms says if given pulse has drop and hot confirms. Ignore backups
 func (jk *dbJetKeeper) HasAllJetConfirms(ctx context.Context, pulse insolar.PulseNumber) bool {
-	jk.RLock()
-	defer jk.RUnlock()
+	jk.lock.RLock()
+	defer jk.lock.RUnlock()
 
 	if jk.topSyncPulse() >= pulse {
 		return true
@@ -261,8 +244,8 @@ func (jk *dbJetKeeper) HasAllJetConfirms(ctx context.Context, pulse insolar.Puls
 
 // TopSyncPulse provides access to highest synced (replicated) pulse.
 func (jk *dbJetKeeper) TopSyncPulse() insolar.PulseNumber {
-	jk.RLock()
-	defer jk.RUnlock()
+	jk.lock.RLock()
+	defer jk.lock.RUnlock()
 
 	return jk.topSyncPulse()
 }
@@ -395,6 +378,23 @@ func compareJets(what []insolar.JetID, actualJetsSet map[insolar.JetID]struct{})
 
 func (jk *dbJetKeeper) checkPulseConsistency(ctx context.Context, pulse insolar.PulseNumber, checkBackup bool) bool {
 	logger := inslogger.FromContext(ctx)
+
+	prev, err := jk.pulses.Backwards(ctx, pulse, 1)
+	if err != nil {
+		logger.Errorf("failed to get previous pulse for %d", pulse, err)
+		return false
+	}
+
+	top := jk.topSyncPulse()
+
+	logger.Debug("propagateConsistency. pulse: ", pulse, ". top: ", top, ". prev.PulseNumber: ", prev.PulseNumber)
+
+	if prev.PulseNumber != top {
+		// We should sync pulses sequentially. We can't skip.
+		logger.Info("Try to checkPulseConsistency for future pulse. Skip it. prev.PulseNumber: ", prev.PulseNumber, ", top: ", top)
+		return false
+	}
+
 	topSyncJets, err := jk.getTopSyncJets()
 	if err != nil {
 		logger.Error("can't get jets for top sync pulse: ", err)
