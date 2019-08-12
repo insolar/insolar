@@ -601,4 +601,61 @@ func TestHandleCall_Present(t *testing.T) {
 		require.Equal(t, expectedReply, gotReply)
 
 	})
+
+	t.Run("loop detected", func(t *testing.T) {
+		t.Parallel()
+
+		ctx := flow.TestContextWithPulse(inslogger.TestContext(t), gen.PulseNumber())
+		mc := minimock.NewController(t)
+		defer mc.Wait(time.Second)
+
+		objRef := gen.Reference()
+
+		fm := flow.NewFlowMock(mc)
+		fm.ProcedureMock.Set(func(ctx context.Context, proc flow.Procedure, cancelable bool) (err error) {
+			switch p := proc.(type) {
+			case *CheckOurRole:
+				return nil
+			case *RegisterIncomingRequest:
+				p.result <- &payload.RequestInfo{RequestID: gen.ID(), ObjectID: *objRef.Record()}
+				return nil
+			case *RecordErrorResult:
+				p.result = []byte{3, 2, 1}
+				return nil
+			default:
+				t.Fatalf("Unknown procedure: %T", proc)
+			}
+			return nil
+		})
+
+		handler := HandleCall{
+			dep: &Dependencies{
+				Publisher: nil,
+				StateStorage:
+				NewStateStorageMock(mc).
+					GetExecutionArchiveMock.Expect(objRef).Return(
+					executionarchive.NewExecutionArchiveMock(mc).FindRequestLoopMock.Return(true),
+				),
+				ResultsMatcher: nil,
+				lr: &LogicRunner{
+					ArtifactManager: artifacts.NewClientMock(mc),
+				},
+			},
+			Message: payload.Meta{},
+			Parcel:  nil,
+		}
+
+		msg := message.CallMethod{
+			IncomingRequest: record.IncomingRequest{
+				CallType: record.CTMethod,
+				Object:   &objRef,
+			},
+		}
+
+		expectedReply := &reply.CallMethod{Object: &objRef, Result: []byte{3, 2, 1}}
+		gotReply, err := handler.handleActual(ctx, &msg, fm)
+		require.NoError(t, err)
+		require.Equal(t, expectedReply, gotReply)
+
+	})
 }

@@ -982,6 +982,8 @@ func (r *One) Recursive() (error) {
 
 		err = resp.Error.Error()
 		if !strings.Contains(err, "timeout") {
+			// system error is not timeout, loop detected is in response
+			err = resp.Result.ExtractedError
 			break
 		}
 	}
