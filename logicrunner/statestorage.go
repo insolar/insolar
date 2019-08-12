@@ -101,17 +101,7 @@ func (ss *stateStorage) UpsertExecutionState(ref insolar.Reference) ExecutionBro
 	if _, ok := ss.brokers[ref]; !ok {
 		archive := ss.upsertExecutionArchive(ref)
 
-		ss.brokers[ref] = NewExecutionBroker(
-			ref,
-			ss.publisher,
-			ss.requestsExecutor,
-			ss.messageBus,
-			ss.jetCoordinator,
-			ss.pulseAccessor,
-			ss.artifactsManager,
-			archive,
-			ss.outgoingSender,
-		)
+		ss.brokers[ref] = NewExecutionBroker(ref, ss.publisher, ss.requestsExecutor, ss.messageBus, ss.artifactsManager, archive, ss.outgoingSender)
 	}
 	return ss.brokers[ref]
 }
@@ -157,20 +147,13 @@ func (ss *stateStorage) OnPulse(ctx context.Context, pulse insolar.Pulse) []inso
 			inslogger.FromContext(ctx).Error("exeuction broker exists, but archive doesn't")
 		}
 
-		meNext, _ := ss.jetCoordinator.IsMeAuthorizedNow(ctx, insolar.DynamicRoleVirtualExecutor, *objectRef.Record())
-
-		onPulseMessages = append(onPulseMessages, broker.OnPulse(ctx, meNext)...)
-
-		if meNext {
-			ss.brokers[objectRef] = broker
-		}
+		onPulseMessages = append(onPulseMessages, broker.OnPulse(ctx)...)
 	}
 
 	for objectRef, archive := range ss.archives {
 		onPulseMessages = append(onPulseMessages, archive.OnPulse(ctx)...)
 
-		meNext, _ := ss.jetCoordinator.IsMeAuthorizedNow(ctx, insolar.DynamicRoleVirtualExecutor, *objectRef.Record())
-		if !meNext && archive.IsEmpty() {
+		if archive.IsEmpty() {
 			delete(ss.archives, objectRef)
 		}
 	}

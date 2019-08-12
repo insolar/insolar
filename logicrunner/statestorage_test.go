@@ -25,7 +25,6 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
-	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/executionarchive"
@@ -51,10 +50,7 @@ func (s *StateStorageSuite) TestOnPulse() {
 	pulse := s.generatePulse()
 	objectRef := gen.Reference()
 
-	jc := jet.NewCoordinatorMock(mc).
-		IsMeAuthorizedNowMock.Return(false, nil)
-
-	ss := NewStateStorage(nil, nil, nil, jc, nil, nil, nil)
+	ss := NewStateStorage(nil, nil, nil, nil, nil, nil, nil)
 	rawStateStorage := ss.(*stateStorage)
 
 	{ // empty state storage
@@ -111,8 +107,6 @@ func (s *StateStorageSuite) TestOnPulse() {
 
 		delete(rawStateStorage.archives, objectRef)
 	}
-
-	jc.IsMeAuthorizedNowMock.Return(false, nil)
 
 	{ // state storage with multiple objects
 		objectRef1 := gen.Reference()
