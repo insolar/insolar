@@ -77,8 +77,8 @@ type ExecutionBrokerIMock struct {
 	beforeNoMoreRequestsOnLedgerCounter uint64
 	NoMoreRequestsOnLedgerMock          mExecutionBrokerIMockNoMoreRequestsOnLedger
 
-	funcOnPulse          func(ctx context.Context, meNext bool) (ma1 []insolar.Message)
-	inspectFuncOnPulse   func(ctx context.Context, meNext bool)
+	funcOnPulse          func(ctx context.Context) (ma1 []insolar.Message)
+	inspectFuncOnPulse   func(ctx context.Context)
 	afterOnPulseCounter  uint64
 	beforeOnPulseCounter uint64
 	OnPulseMock          mExecutionBrokerIMockOnPulse
@@ -2121,8 +2121,7 @@ type ExecutionBrokerIMockOnPulseExpectation struct {
 
 // ExecutionBrokerIMockOnPulseParams contains parameters of the ExecutionBrokerI.OnPulse
 type ExecutionBrokerIMockOnPulseParams struct {
-	ctx    context.Context
-	meNext bool
+	ctx context.Context
 }
 
 // ExecutionBrokerIMockOnPulseResults contains results of the ExecutionBrokerI.OnPulse
@@ -2131,7 +2130,7 @@ type ExecutionBrokerIMockOnPulseResults struct {
 }
 
 // Expect sets up expected params for ExecutionBrokerI.OnPulse
-func (mmOnPulse *mExecutionBrokerIMockOnPulse) Expect(ctx context.Context, meNext bool) *mExecutionBrokerIMockOnPulse {
+func (mmOnPulse *mExecutionBrokerIMockOnPulse) Expect(ctx context.Context) *mExecutionBrokerIMockOnPulse {
 	if mmOnPulse.mock.funcOnPulse != nil {
 		mmOnPulse.mock.t.Fatalf("ExecutionBrokerIMock.OnPulse mock is already set by Set")
 	}
@@ -2140,7 +2139,7 @@ func (mmOnPulse *mExecutionBrokerIMockOnPulse) Expect(ctx context.Context, meNex
 		mmOnPulse.defaultExpectation = &ExecutionBrokerIMockOnPulseExpectation{}
 	}
 
-	mmOnPulse.defaultExpectation.params = &ExecutionBrokerIMockOnPulseParams{ctx, meNext}
+	mmOnPulse.defaultExpectation.params = &ExecutionBrokerIMockOnPulseParams{ctx}
 	for _, e := range mmOnPulse.expectations {
 		if minimock.Equal(e.params, mmOnPulse.defaultExpectation.params) {
 			mmOnPulse.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmOnPulse.defaultExpectation.params)
@@ -2151,7 +2150,7 @@ func (mmOnPulse *mExecutionBrokerIMockOnPulse) Expect(ctx context.Context, meNex
 }
 
 // Inspect accepts an inspector function that has same arguments as the ExecutionBrokerI.OnPulse
-func (mmOnPulse *mExecutionBrokerIMockOnPulse) Inspect(f func(ctx context.Context, meNext bool)) *mExecutionBrokerIMockOnPulse {
+func (mmOnPulse *mExecutionBrokerIMockOnPulse) Inspect(f func(ctx context.Context)) *mExecutionBrokerIMockOnPulse {
 	if mmOnPulse.mock.inspectFuncOnPulse != nil {
 		mmOnPulse.mock.t.Fatalf("Inspect function is already set for ExecutionBrokerIMock.OnPulse")
 	}
@@ -2175,7 +2174,7 @@ func (mmOnPulse *mExecutionBrokerIMockOnPulse) Return(ma1 []insolar.Message) *Ex
 }
 
 //Set uses given function f to mock the ExecutionBrokerI.OnPulse method
-func (mmOnPulse *mExecutionBrokerIMockOnPulse) Set(f func(ctx context.Context, meNext bool) (ma1 []insolar.Message)) *ExecutionBrokerIMock {
+func (mmOnPulse *mExecutionBrokerIMockOnPulse) Set(f func(ctx context.Context) (ma1 []insolar.Message)) *ExecutionBrokerIMock {
 	if mmOnPulse.defaultExpectation != nil {
 		mmOnPulse.mock.t.Fatalf("Default expectation is already set for the ExecutionBrokerI.OnPulse method")
 	}
@@ -2190,14 +2189,14 @@ func (mmOnPulse *mExecutionBrokerIMockOnPulse) Set(f func(ctx context.Context, m
 
 // When sets expectation for the ExecutionBrokerI.OnPulse which will trigger the result defined by the following
 // Then helper
-func (mmOnPulse *mExecutionBrokerIMockOnPulse) When(ctx context.Context, meNext bool) *ExecutionBrokerIMockOnPulseExpectation {
+func (mmOnPulse *mExecutionBrokerIMockOnPulse) When(ctx context.Context) *ExecutionBrokerIMockOnPulseExpectation {
 	if mmOnPulse.mock.funcOnPulse != nil {
 		mmOnPulse.mock.t.Fatalf("ExecutionBrokerIMock.OnPulse mock is already set by Set")
 	}
 
 	expectation := &ExecutionBrokerIMockOnPulseExpectation{
 		mock:   mmOnPulse.mock,
-		params: &ExecutionBrokerIMockOnPulseParams{ctx, meNext},
+		params: &ExecutionBrokerIMockOnPulseParams{ctx},
 	}
 	mmOnPulse.expectations = append(mmOnPulse.expectations, expectation)
 	return expectation
@@ -2210,15 +2209,15 @@ func (e *ExecutionBrokerIMockOnPulseExpectation) Then(ma1 []insolar.Message) *Ex
 }
 
 // OnPulse implements ExecutionBrokerI
-func (mmOnPulse *ExecutionBrokerIMock) OnPulse(ctx context.Context, meNext bool) (ma1 []insolar.Message) {
+func (mmOnPulse *ExecutionBrokerIMock) OnPulse(ctx context.Context) (ma1 []insolar.Message) {
 	mm_atomic.AddUint64(&mmOnPulse.beforeOnPulseCounter, 1)
 	defer mm_atomic.AddUint64(&mmOnPulse.afterOnPulseCounter, 1)
 
 	if mmOnPulse.inspectFuncOnPulse != nil {
-		mmOnPulse.inspectFuncOnPulse(ctx, meNext)
+		mmOnPulse.inspectFuncOnPulse(ctx)
 	}
 
-	params := &ExecutionBrokerIMockOnPulseParams{ctx, meNext}
+	params := &ExecutionBrokerIMockOnPulseParams{ctx}
 
 	// Record call args
 	mmOnPulse.OnPulseMock.mutex.Lock()
@@ -2235,7 +2234,7 @@ func (mmOnPulse *ExecutionBrokerIMock) OnPulse(ctx context.Context, meNext bool)
 	if mmOnPulse.OnPulseMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmOnPulse.OnPulseMock.defaultExpectation.Counter, 1)
 		want := mmOnPulse.OnPulseMock.defaultExpectation.params
-		got := ExecutionBrokerIMockOnPulseParams{ctx, meNext}
+		got := ExecutionBrokerIMockOnPulseParams{ctx}
 		if want != nil && !minimock.Equal(*want, got) {
 			mmOnPulse.t.Errorf("ExecutionBrokerIMock.OnPulse got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
 		}
@@ -2247,9 +2246,9 @@ func (mmOnPulse *ExecutionBrokerIMock) OnPulse(ctx context.Context, meNext bool)
 		return (*results).ma1
 	}
 	if mmOnPulse.funcOnPulse != nil {
-		return mmOnPulse.funcOnPulse(ctx, meNext)
+		return mmOnPulse.funcOnPulse(ctx)
 	}
-	mmOnPulse.t.Fatalf("Unexpected call to ExecutionBrokerIMock.OnPulse. %v %v", ctx, meNext)
+	mmOnPulse.t.Fatalf("Unexpected call to ExecutionBrokerIMock.OnPulse. %v", ctx)
 	return
 }
 

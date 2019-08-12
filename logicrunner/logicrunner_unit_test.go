@@ -545,7 +545,7 @@ func (suite *LogicRunnerTestSuite) TestImmutableOrder() {
 
 	// prepare default object and execution state
 	objectRef := gen.Reference()
-	broker := NewExecutionBroker(objectRef, nil, suite.re, nil, nil, nil, nil, ea, nil)
+	broker := NewExecutionBroker(objectRef, nil, suite.re, nil, nil, ea, nil)
 	broker.pending = insolar.NotPending
 
 	// prepare request objects
