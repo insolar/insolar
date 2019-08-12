@@ -317,6 +317,28 @@ func TestDbJetKeeper_AddDropConfirmation(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestDbJetKeeper_CheckJetTreeFail(t *testing.T) {
+	t.Parallel()
+	ctx := inslogger.TestContext(t)
+	testPulse := insolar.GenesisPulse.PulseNumber + 10
+	ji, tmpDir, db, _, _ := initDB(t, testPulse)
+	defer os.RemoveAll(tmpDir)
+	defer db.Stop(ctx)
+
+	testJet := insolar.ZeroJetID
+
+	err := ji.AddHotConfirmation(ctx, testPulse, testJet, false)
+	require.NoError(t, err)
+	require.Equal(t, insolar.GenesisPulse.PulseNumber, ji.TopSyncPulse())
+	err = ji.AddDropConfirmation(ctx, testPulse, testJet, false)
+	require.NoError(t, err)
+	require.Equal(t, insolar.GenesisPulse.PulseNumber, ji.TopSyncPulse())
+	err = ji.AddBackupConfirmation(ctx, testPulse)
+	require.NoError(t, err)
+	require.Equal(t, insolar.GenesisPulse.PulseNumber, ji.TopSyncPulse())
+	require.False(t, false, ji.HasAllJetConfirms(ctx, testPulse))
+}
+
 func TestDbJetKeeper_TopSyncPulse(t *testing.T) {
 	t.Parallel()
 	ctx := inslogger.TestContext(t)
