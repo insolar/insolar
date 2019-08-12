@@ -1,4 +1,4 @@
-///
+// /
 // Copyright 2019 Insolar Technologies GmbH
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,20 +12,22 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-///
+// /
 
 package api
 
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
+
+	"github.com/insolar/rpc/v2/json2"
 
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/insolar/rpc/v2/json2"
 )
 
 // ContractService is a service that provides API for working with smart contracts.
@@ -51,7 +53,21 @@ func (cs *ContractService) Call(req *http.Request, args *requester.Params, fullR
 		insLog.Infof("Request related to %s", args.Test)
 	}
 
-	rawBody, err := json.Marshal(fullRequest)
+	var id uint64
+	if err := json.Unmarshal([]byte(*fullRequest.Id), &id); err != nil {
+		fmt.Println(err)
+	}
+	var params requester.Params
+	if err := json.Unmarshal([]byte(*fullRequest.Params), &params); err != nil {
+		fmt.Println(err)
+	}
+
+	rawBody, err := json.Marshal(requester.Request{
+		Version: fullRequest.Version,
+		ID:      id,
+		Method:  fullRequest.Method,
+		Params:  params,
+	})
 	if err != nil {
 		return err
 	}
