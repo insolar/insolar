@@ -127,7 +127,7 @@ func New(cfg configuration.Ledger) *Handler {
 	return h
 }
 
-func (h *Handler) Process(msg *watermillMsg.Message) ([]*watermillMsg.Message, error) {
+func (h *Handler) Process(msg *watermillMsg.Message) error {
 	ctx := inslogger.ContextWithTrace(context.Background(), msg.Metadata.Get(bus.MetaTraceID))
 	parentSpan, err := instracer.Deserialize([]byte(msg.Metadata.Get(bus.MetaSpanData)))
 	if err == nil {
@@ -155,7 +155,7 @@ func (h *Handler) Process(msg *watermillMsg.Message) ([]*watermillMsg.Message, e
 		logger.Error(errors.Wrap(err, "handle error"))
 	}
 
-	return nil, nil
+	return nil
 }
 
 func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) error {
