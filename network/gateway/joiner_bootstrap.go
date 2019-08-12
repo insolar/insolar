@@ -92,6 +92,9 @@ func (g *JoinerBootstrap) Run(ctx context.Context, p insolar.Pulse) {
 		return
 	}
 
+	// Reset backoff if not insolar.NoNetworkState.
+	g.backoff = 0
+
 	responsePulse := pulse.FromProto(&resp.Pulse)
 
 	g.bootstrapETA = time.Second * time.Duration(resp.ETASeconds)

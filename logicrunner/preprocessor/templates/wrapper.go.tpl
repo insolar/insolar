@@ -23,20 +23,7 @@ import (
 {{ if $.GenerateInitialize -}}
     XXX_insolar "github.com/insolar/insolar/insolar"
 {{- end }}
-// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
-{{ if .Methods }}
-    "strings"
-{{ end }}
-// TODO: this is the end of a horrible hack, please remove it
 )
-
-type ExtendableError struct{
-	S string
-}
-
-func ( e *ExtendableError ) Error() string{
-	return e.S
-}
 
 func INS_META_INFO() ([] map[string]string) {
 	result := make([]map[string] string, 0)
@@ -59,12 +46,12 @@ func INSMETHOD_GetCode(object []byte, data []byte) ([]byte, []byte, error) {
 	self := new({{ $.ContractType }})
 
 	if len(object) == 0 {
-		return nil, nil, &ExtendableError{ S: "[ Fake GetCode ] ( Generated Method ) Object is nil"}
+		return nil, nil, &foundation.Error{S: "[ Fake GetCode ] ( Generated Method ) Object is nil"}
 	}
 
 	err := ph.Deserialize(object, self)
 	if err != nil {
-		e := &ExtendableError{ S: "[ Fake GetCode ] ( Generated Method ) Can't deserialize args.Data: " + err.Error() }
+		e := &foundation.Error{ S: "[ Fake GetCode ] ( Generated Method ) Can't deserialize args.Data: " + err.Error() }
 		return nil, nil, e
 	}
 
@@ -85,12 +72,12 @@ func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) 
 	self := new({{ $.ContractType }})
 
 	if len(object) == 0 {
-		return nil, nil, &ExtendableError{ S: "[ Fake GetPrototype ] ( Generated Method ) Object is nil"}
+		return nil, nil, &foundation.Error{ S: "[ Fake GetPrototype ] ( Generated Method ) Object is nil"}
 	}
 
 	err := ph.Deserialize(object, self)
 	if err != nil {
-		e := &ExtendableError{ S: "[ Fake GetPrototype ] ( Generated Method ) Can't deserialize args.Data: " + err.Error() }
+		e := &foundation.Error{ S: "[ Fake GetPrototype ] ( Generated Method ) Can't deserialize args.Data: " + err.Error() }
 		return nil, nil, e
 	}
 
@@ -113,19 +100,19 @@ func INSMETHOD_{{ $method.Name }}(object []byte, data []byte) ([]byte, []byte, e
 	self := new({{ $.ContractType }})
 
 	if len(object) == 0 {
-		return nil, nil, &ExtendableError{ S: "[ Fake{{ $method.Name }} ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+		return nil, nil, &foundation.Error{ S: "[ Fake{{ $method.Name }} ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
 	}
 
 	err := ph.Deserialize(object, self)
 	if err != nil {
-		e := &ExtendableError{ S: "[ Fake{{ $method.Name }} ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error() }
+		e := &foundation.Error{ S: "[ Fake{{ $method.Name }} ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error() }
 		return nil, nil, e
 	}
 
 	{{ $method.ArgumentsZeroList }}
 	err = ph.Deserialize(data, &args)
 	if err != nil {
-		e := &ExtendableError{ S: "[ Fake{{ $method.Name }} ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error() }
+		e := &foundation.Error{ S: "[ Fake{{ $method.Name }} ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error() }
 		return nil, nil, e
 	}
 
@@ -135,15 +122,7 @@ func INSMETHOD_{{ $method.Name }}(object []byte, data []byte) ([]byte, []byte, e
 	self.{{ $method.Name }}( {{ $method.Arguments }} )
 {{ end }}
 
-// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
-	systemErr := ph.GetSystemError()
-
-	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		systemErr = nil
-	}
-// TODO: this is the end of a horrible hack, please remove it
-
-	if systemErr != nil {
+	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 
@@ -158,7 +137,13 @@ func INSMETHOD_{{ $method.Name }}(object []byte, data []byte) ([]byte, []byte, e
 {{ end }}
 
 	ret := []byte{}
-	err = ph.Serialize([]interface{} { {{ $method.Results }} }, &ret)
+	err = ph.Serialize(
+		foundation.Result{Returns:[]interface{}{ {{ $method.Results }} }},
+		&ret,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	return state, ret, err
 }
@@ -172,18 +157,25 @@ func INSCONSTRUCTOR_{{ $f.Name }}(data []byte) ([]byte, []byte, error) {
 	{{ $f.ArgumentsZeroList }}
 	err := ph.Deserialize(data, &args)
 	if err != nil {
-		e := &ExtendableError{ S: "[ Fake{{ $f.Name }} ] ( INSCONSTRUCTOR_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error() }
+		e := &foundation.Error{ S: "[ Fake{{ $f.Name }} ] ( INSCONSTRUCTOR_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error() }
 		return nil, nil, e
 	}
 
 	{{ $f.Results }} := {{ $f.Name }}( {{ $f.Arguments }} )
 	ret1 = ph.MakeErrorSerializable(ret1)
 	if ret0 == nil && ret1 == nil {
-		ret1 = &ExtendableError{ S: "constructor returned nil" }
+		ret1 = &foundation.Error{ S: "constructor returned nil" }
+	}
+
+	if ph.GetSystemError() != nil {
+		return nil, nil, ph.GetSystemError()
 	}
 
 	result := []byte{}
-	err = ph.Serialize([]interface{} { ret1 }, &result)
+	err = ph.Serialize(
+		foundation.Result{Returns:[]interface{}{ ret1 }},
+		&result,
+	)
 	if err != nil {
 		return nil, nil, err
 	}

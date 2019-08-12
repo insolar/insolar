@@ -47,16 +47,6 @@ func (e *Object) Type() insolar.ReplyType {
 	return TypeObject
 }
 
-// Delegate is delegate reference from storage.
-type Delegate struct {
-	Head insolar.Reference
-}
-
-// Type implementation of Reply interface.
-func (e *Delegate) Type() insolar.ReplyType {
-	return TypeDelegate
-}
-
 // ID is common reaction for methods returning id to lifeline states.
 type ID struct {
 	ID insolar.ID

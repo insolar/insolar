@@ -19,6 +19,7 @@ package logicrunner
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
@@ -32,6 +33,7 @@ import (
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 )
 
 type HandleCall struct {
@@ -133,11 +135,21 @@ func (h *HandleCall) handleActual(
 	request := msg.IncomingRequest
 
 	procRegisterRequest := NewRegisterIncomingRequest(request, h.dep)
-	if err := f.Procedure(ctx, procRegisterRequest, true); err != nil {
+	err := f.Procedure(ctx, procRegisterRequest, true)
+	if err != nil {
 		if err == flow.ErrCancelled {
 			inslogger.FromContext(ctx).Info("pulse change during registration, asking caller for retry")
 			// Requests need to be deduplicated. For now in case of ErrCancelled we may have 2 registered requests
 			return nil, err // message bus will retry on the calling side in ContractRequester
+		}
+		if strings.Contains(err.Error(), "index not found") {
+			inslogger.FromContext(ctx).Warn("request to not existing object")
+
+			resultWithErr, err := foundation.MarshalMethodErrorResult(err)
+			if err != nil {
+				return nil, errors.Wrap(err, "can't create error result")
+			}
+			return &reply.CallMethod{Result: resultWithErr}, nil
 		}
 		return nil, errors.Wrap(err, "[ HandleCall.handleActual ] can't create request")
 	}
