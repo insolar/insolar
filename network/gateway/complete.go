@@ -104,11 +104,6 @@ func (g *Complete) NetworkOperable() bool {
 	return true
 }
 
-// ValidateCert validates node certificate
-func (g *Complete) ValidateCert(ctx context.Context, certificate insolar.AuthorizationCertificate) (bool, error) {
-	return g.CertificateManager.VerifyAuthorizationCertificate(certificate)
-}
-
 // GetCert method generates cert by requesting signs from discovery nodes
 func (g *Complete) GetCert(ctx context.Context, registeredNodeRef *insolar.Reference) (insolar.Certificate, error) {
 	pKey, role, err := g.getNodeInfo(ctx, registeredNodeRef)
@@ -117,7 +112,7 @@ func (g *Complete) GetCert(ctx context.Context, registeredNodeRef *insolar.Refer
 	}
 
 	currentNodeCert := g.CertificateManager.GetCertificate()
-	registeredNodeCert, err := g.CertificateManager.NewUnsignedCertificate(pKey, role, registeredNodeRef.String())
+	registeredNodeCert, err := certificate.NewUnsignedCertificate(currentNodeCert, pKey, role, registeredNodeRef.String())
 	if err != nil {
 		return nil, errors.Wrap(err, "[ GetCert ] Couldn't create certificate")
 	}
@@ -134,17 +129,14 @@ func (g *Complete) GetCert(ctx context.Context, registeredNodeRef *insolar.Refer
 
 // requestCertSign method requests sign from single discovery node
 func (g *Complete) requestCertSign(ctx context.Context, discoveryNode insolar.DiscoveryNode, registeredNodeRef *insolar.Reference) ([]byte, error) {
-	var sign []byte
-	var err error
-
 	currentNodeCert := g.CertificateManager.GetCertificate()
 
 	if *discoveryNode.GetNodeRef() == *currentNodeCert.GetNodeRef() {
-		sign, err = g.signCert(ctx, registeredNodeRef)
+		sign, err := g.signCert(ctx, registeredNodeRef)
 		if err != nil {
 			return nil, err
 		}
-		return sign, nil
+		return sign.Bytes(), nil
 	}
 
 	request := &packet.SignCertRequest{
@@ -162,9 +154,7 @@ func (g *Complete) requestCertSign(ctx context.Context, discoveryNode insolar.Di
 		return nil, fmt.Errorf("[requestCertSign] Remote (%s) said %s", p.GetSender(), p.GetResponse().GetError().Error)
 	}
 
-	sign = p.GetResponse().GetSignCert().Sign
-
-	return sign, nil
+	return p.GetResponse().GetSignCert().Sign, nil
 }
 
 func (g *Complete) getNodeInfo(ctx context.Context, nodeRef *insolar.Reference) (string, string, error) {
@@ -179,20 +169,12 @@ func (g *Complete) getNodeInfo(ctx context.Context, nodeRef *insolar.Reference) 
 	return pKey, role, nil
 }
 
-// signCert returns certificate sign fore node
-func (g *Complete) signCert(ctx context.Context, registeredNodeRef *insolar.Reference) ([]byte, error) {
+func (g *Complete) signCert(ctx context.Context, registeredNodeRef *insolar.Reference) (*insolar.Signature, error) {
 	pKey, role, err := g.getNodeInfo(ctx, registeredNodeRef)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ SignCert ] Couldn't extract response")
 	}
-
-	data := []byte(pKey + registeredNodeRef.String() + role)
-	sign, err := g.CryptographyService.Sign(data)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ SignCert ] Couldn't sign")
-	}
-
-	return sign.Bytes(), nil
+	return certificate.SignCert(g.CryptographyService, pKey, role, registeredNodeRef.String())
 }
 
 // signCertHandler is handler that signs certificate for some node with node own key
@@ -205,7 +187,7 @@ func (g *Complete) signCertHandler(ctx context.Context, request network.Received
 		return g.HostNetwork.BuildResponse(ctx, request, &packet.ErrorResponse{Error: err.Error()}), nil
 	}
 
-	return g.HostNetwork.BuildResponse(ctx, request, &packet.SignCertResponse{Sign: sign}), nil
+	return g.HostNetwork.BuildResponse(ctx, request, &packet.SignCertResponse{Sign: sign.Bytes()}), nil
 }
 
 func (g *Complete) EphemeralMode(nodes []insolar.NetworkNode) bool {

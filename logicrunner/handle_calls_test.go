@@ -36,6 +36,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
+	"github.com/insolar/insolar/logicrunner/executionarchive"
 	"github.com/insolar/insolar/logicrunner/writecontroller"
 	"github.com/insolar/insolar/testutils"
 )
@@ -57,7 +58,7 @@ func TestHandleCall_CheckExecutionLoop(t *testing.T) {
 						StateStorage: NewStateStorageMock(t).
 							GetExecutionArchiveMock.Expect(obj).
 							Return(
-								NewExecutionArchiveMock(t).
+								executionarchive.NewExecutionArchiveMock(t).
 									FindRequestLoopMock.Return(true),
 							),
 					},
@@ -76,7 +77,7 @@ func TestHandleCall_CheckExecutionLoop(t *testing.T) {
 						StateStorage: NewStateStorageMock(t).
 							GetExecutionArchiveMock.Expect(obj).
 							Return(
-								NewExecutionArchiveMock(t).
+								executionarchive.NewExecutionArchiveMock(t).
 									FindRequestLoopMock.Return(false),
 							),
 					},
@@ -185,7 +186,7 @@ func TestHandleCall_Present(t *testing.T) {
 				Publisher: nil,
 				StateStorage: NewStateStorageMock(mc).
 					GetExecutionArchiveMock.Expect(objRef).Return(
-					NewExecutionArchiveMock(mc).FindRequestLoopMock.Return(false),
+					executionarchive.NewExecutionArchiveMock(mc).FindRequestLoopMock.Return(false),
 				).
 					UpsertExecutionStateMock.Expect(objRef).Return(nil),
 				ResultsMatcher: nil,
@@ -242,7 +243,7 @@ func TestHandleCall_Present(t *testing.T) {
 				Publisher: nil,
 				StateStorage: NewStateStorageMock(mc).
 					GetExecutionArchiveMock.Expect(objRef).Return(
-					NewExecutionArchiveMock(mc).FindRequestLoopMock.Return(false),
+					executionarchive.NewExecutionArchiveMock(mc).FindRequestLoopMock.Return(false),
 				),
 				ResultsMatcher: nil,
 				lr: &LogicRunner{

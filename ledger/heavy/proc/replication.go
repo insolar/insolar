@@ -22,9 +22,7 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
-	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/drop"
@@ -43,9 +41,7 @@ type Replication struct {
 		recordsPositions object.RecordPositionModifier
 		indexes          object.IndexModifier
 		pcs              insolar.PlatformCryptographyScheme
-		pulses           pulse.Accessor
 		drops            drop.Modifier
-		jets             jet.Modifier
 		keeper           executor.JetKeeper
 	}
 }
@@ -62,18 +58,14 @@ func (p *Replication) Dep(
 	indexes object.IndexModifier,
 	recordsPositions object.RecordPositionModifier,
 	pcs insolar.PlatformCryptographyScheme,
-	pulses pulse.Accessor,
 	drops drop.Modifier,
-	jets jet.Modifier,
 	keeper executor.JetKeeper,
 ) {
 	p.dep.records = records
 	p.dep.indexes = indexes
 	p.dep.recordsPositions = recordsPositions
 	p.dep.pcs = pcs
-	p.dep.pulses = pulses
 	p.dep.drops = drops
-	p.dep.jets = jets
 	p.dep.keeper = keeper
 }
 
@@ -87,7 +79,24 @@ func (p *Replication) Proceed(ctx context.Context) error {
 		return fmt.Errorf("unexpected payload %T", pl)
 	}
 
-	storeRecords(ctx, p.dep.records, p.dep.recordsPositions, p.dep.pcs, msg.Pulse, msg.Records)
+	err = p.store(ctx, msg)
+	if err != nil {
+		inslogger.FromContext(ctx).Fatalf("replication fatal error: %v", err.Error())
+	}
+
+	stats.Record(ctx, statReceivedHeavyPayloadCount.M(1))
+
+	return nil
+}
+
+func (p *Replication) store(
+	ctx context.Context,
+	msg *payload.Replication,
+) error {
+	if err := storeRecords(ctx, p.dep.records, p.dep.recordsPositions, p.dep.pcs, msg.Pulse, msg.Records); err != nil {
+		return errors.Wrap(err, "failed to store records")
+	}
+
 	if err := storeIndexes(ctx, p.dep.indexes, msg.Indexes, msg.Pulse); err != nil {
 		return errors.Wrap(err, "failed to store indexes")
 	}
@@ -98,12 +107,8 @@ func (p *Replication) Proceed(ctx context.Context) error {
 	}
 
 	if err := p.dep.keeper.AddDropConfirmation(ctx, dr.Pulse, dr.JetID, dr.Split); err != nil {
-		return errors.Wrapf(err, "failed to add jet to JetKeeper jet=%v", dr.JetID.DebugString())
+		return errors.Wrapf(err, "failed to add drop confirmation for jet=%v", dr.JetID.DebugString())
 	}
-
-	stats.Record(ctx,
-		statReceivedHeavyPayloadCount.M(1),
-	)
 
 	return nil
 }
@@ -117,10 +122,9 @@ func storeIndexes(
 	for _, idx := range indexes {
 		err := mod.SetIndex(ctx, pn, idx)
 		if err != nil {
-			return errors.Wrapf(err, "heavyserver: index storing failed")
+			return err
 		}
 	}
-
 	return nil
 }
 
@@ -136,7 +140,7 @@ func storeDrop(
 	}
 	err = drops.Set(ctx, *d)
 	if err != nil {
-		return nil, errors.Wrapf(err, "heavyserver: drop storing failed")
+		return nil, err
 	}
 
 	return d, nil
@@ -149,30 +153,25 @@ func storeRecords(
 	pcs insolar.PlatformCryptographyScheme,
 	pn insolar.PulseNumber,
 	records []record.Material,
-) {
-	inslog := inslogger.FromContext(ctx)
-
+) error {
 	for _, rec := range records {
 		hash := record.HashVirtual(pcs.ReferenceHasher(), rec.Virtual)
 		id := *insolar.NewID(pn, hash)
-		// FIXME: skipping errors will lead to inconsistent state.
 		if rec.ID != id {
-			inslog.Error(fmt.Errorf(
+			return fmt.Errorf(
 				"record id does not match (calculated: %s, received: %s)",
 				id.DebugString(),
 				rec.ID.DebugString(),
-			))
-			continue
+			)
 		}
-		err := recordStorage.Set(ctx, rec)
-		if err != nil {
-			inslog.Error(err, "heavyserver: store record failed")
-			continue
+
+		if err := recordStorage.Set(ctx, rec); err != nil {
+			return errors.Wrap(err, "set method failed")
 		}
-		err = recordIndex.IncrementPosition(id)
-		if err != nil {
-			inslog.Error(err, "heavyserver: fail to store record position")
-			continue
+
+		if err := recordIndex.IncrementPosition(id); err != nil {
+			return errors.Wrap(err, "fail to store record position")
 		}
 	}
+	return nil
 }

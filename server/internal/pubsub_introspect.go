@@ -27,9 +27,14 @@ import (
 	"golang.org/x/net/context"
 )
 
-// PubSubWrapper setups and returns introspection wrapper for message.PubSub.
-func PubSubWrapper(ctx context.Context, cm *component.Manager, cfg configuration.Introspection, pb message.PubSub) message.PubSub {
-	pw := pubsubwrap.NewPubSubWrapper(pb)
+// PublisherWrapper setups and returns introspection wrapper for message.Publisher.
+func PublisherWrapper(
+	ctx context.Context,
+	cm *component.Manager,
+	cfg configuration.Introspection,
+	pb message.Publisher,
+) message.Publisher {
+	pw := pubsubwrap.NewPublisherWrapper(pb)
 
 	// init pubsub middlewares and add them to wrapper
 	mStat := pubsubwrap.NewMessageStatByType()

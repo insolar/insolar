@@ -25,8 +25,8 @@ import (
 )
 
 func TestWrapper(t *testing.T) {
-	psMock := &pubsubMock{}
-	pw := NewPubSubWrapper(psMock)
+	pubMock := &pubMock{}
+	pw := NewPublisherWrapper(pubMock)
 
 	mi := middleware{}
 	pw.Middleware(mi)
@@ -36,7 +36,7 @@ func TestWrapper(t *testing.T) {
 	require.NoError(t, err, "should no error on publish messages")
 
 	require.Equal(t, expectAll, mi.counter(), "expect all messages are counted in middleware")
-	require.Equal(t, int(expectAll/2), psMock.published, "expect half of messages are passed wrapper")
+	require.Equal(t, int(expectAll/2), pubMock.published, "expect half of messages are passed wrapper")
 }
 
 type middleware map[string]int
@@ -55,20 +55,20 @@ func (mi middleware) Filter(m *message.Message) (*message.Message, error) {
 	return m, nil
 }
 
-type pubsubMock struct {
+type pubMock struct {
 	published int
 }
 
-func (pm *pubsubMock) Publish(topic string, messages ...*message.Message) error {
+func (pm *pubMock) Publish(topic string, messages ...*message.Message) error {
 	pm.published += len(messages)
 	return nil
 }
 
-func (pm *pubsubMock) Subscribe(ctx context.Context, topic string) (<-chan *message.Message, error) {
+func (pm *pubMock) Subscribe(ctx context.Context, topic string) (<-chan *message.Message, error) {
 	return nil, nil
 }
 
-func (pm *pubsubMock) Close() error {
+func (pm *pubMock) Close() error {
 	return nil
 }
 

@@ -29,7 +29,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
 )
 
@@ -252,19 +251,12 @@ func ReadCertificateFromReader(publicKey crypto.PublicKey, keyProcessor insolar.
 	return cert, nil
 }
 
-// NewCertificatesWithKeys generate certificate from given keys
-// DEPRECATED, this method generates invalid certificate
-func NewCertificatesWithKeys(publicKey crypto.PublicKey, keyProcessor insolar.KeyProcessor) (*Certificate, error) {
-	cert := Certificate{}
-
-	cert.Reference = testutils.RandomRef().String()
-
-	keyBytes, err := keyProcessor.ExportPublicKeyPEM(publicKey)
+// SignCert is used for signing certificate by Discovery node
+func SignCert(signer insolar.Signer, pKey, role, registeredNodeRef string) (*insolar.Signature, error) {
+	data := []byte(pKey + registeredNodeRef + role)
+	sign, err := signer.Sign(data)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ ReadCertificate ] failed to retrieve public key from node private key")
+		return nil, errors.Wrap(err, "[ SignCert ] Couldn't sign")
 	}
-
-	cert.PublicKey = string(keyBytes)
-	cert.nodePublicKey = publicKey
-	return &cert, nil
+	return sign, nil
 }

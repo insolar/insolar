@@ -27,6 +27,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
+	"github.com/insolar/insolar/logicrunner/common"
 )
 
 // ------------- CheckOurRole
@@ -107,7 +108,7 @@ type AddFreshRequest struct {
 
 func (c *AddFreshRequest) Proceed(ctx context.Context) error {
 	requestCtx := freshContextFromContext(ctx)
-	tr := NewTranscript(requestCtx, c.requestRef, c.request)
+	tr := common.NewTranscript(requestCtx, c.requestRef, c.request)
 	c.broker.AddFreshRequest(ctx, tr)
 	return nil
 }
