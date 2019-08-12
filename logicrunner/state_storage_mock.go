@@ -34,23 +34,11 @@ type StateStorageMock struct {
 	beforeIsEmptyCounter uint64
 	IsEmptyMock          mStateStorageMockIsEmpty
 
-	funcLock          func()
-	inspectFuncLock   func()
-	afterLockCounter  uint64
-	beforeLockCounter uint64
-	LockMock          mStateStorageMockLock
-
 	funcOnPulse          func(ctx context.Context, pulse insolar.Pulse) (ma1 []insolar.Message)
 	inspectFuncOnPulse   func(ctx context.Context, pulse insolar.Pulse)
 	afterOnPulseCounter  uint64
 	beforeOnPulseCounter uint64
 	OnPulseMock          mStateStorageMockOnPulse
-
-	funcUnlock          func()
-	inspectFuncUnlock   func()
-	afterUnlockCounter  uint64
-	beforeUnlockCounter uint64
-	UnlockMock          mStateStorageMockUnlock
 
 	funcUpsertExecutionState          func(ref insolar.Reference) (e1 ExecutionBrokerI)
 	inspectFuncUpsertExecutionState   func(ref insolar.Reference)
@@ -74,12 +62,8 @@ func NewStateStorageMock(t minimock.Tester) *StateStorageMock {
 
 	m.IsEmptyMock = mStateStorageMockIsEmpty{mock: m}
 
-	m.LockMock = mStateStorageMockLock{mock: m}
-
 	m.OnPulseMock = mStateStorageMockOnPulse{mock: m}
 	m.OnPulseMock.callArgs = []*StateStorageMockOnPulseParams{}
-
-	m.UnlockMock = mStateStorageMockUnlock{mock: m}
 
 	m.UpsertExecutionStateMock = mStateStorageMockUpsertExecutionState{mock: m}
 	m.UpsertExecutionStateMock.callArgs = []*StateStorageMockUpsertExecutionStateParams{}
@@ -660,141 +644,6 @@ func (m *StateStorageMock) MinimockIsEmptyInspect() {
 	}
 }
 
-type mStateStorageMockLock struct {
-	mock               *StateStorageMock
-	defaultExpectation *StateStorageMockLockExpectation
-	expectations       []*StateStorageMockLockExpectation
-}
-
-// StateStorageMockLockExpectation specifies expectation struct of the StateStorage.Lock
-type StateStorageMockLockExpectation struct {
-	mock *StateStorageMock
-
-	Counter uint64
-}
-
-// Expect sets up expected params for StateStorage.Lock
-func (mmLock *mStateStorageMockLock) Expect() *mStateStorageMockLock {
-	if mmLock.mock.funcLock != nil {
-		mmLock.mock.t.Fatalf("StateStorageMock.Lock mock is already set by Set")
-	}
-
-	if mmLock.defaultExpectation == nil {
-		mmLock.defaultExpectation = &StateStorageMockLockExpectation{}
-	}
-
-	return mmLock
-}
-
-// Inspect accepts an inspector function that has same arguments as the StateStorage.Lock
-func (mmLock *mStateStorageMockLock) Inspect(f func()) *mStateStorageMockLock {
-	if mmLock.mock.inspectFuncLock != nil {
-		mmLock.mock.t.Fatalf("Inspect function is already set for StateStorageMock.Lock")
-	}
-
-	mmLock.mock.inspectFuncLock = f
-
-	return mmLock
-}
-
-// Return sets up results that will be returned by StateStorage.Lock
-func (mmLock *mStateStorageMockLock) Return() *StateStorageMock {
-	if mmLock.mock.funcLock != nil {
-		mmLock.mock.t.Fatalf("StateStorageMock.Lock mock is already set by Set")
-	}
-
-	if mmLock.defaultExpectation == nil {
-		mmLock.defaultExpectation = &StateStorageMockLockExpectation{mock: mmLock.mock}
-	}
-
-	return mmLock.mock
-}
-
-//Set uses given function f to mock the StateStorage.Lock method
-func (mmLock *mStateStorageMockLock) Set(f func()) *StateStorageMock {
-	if mmLock.defaultExpectation != nil {
-		mmLock.mock.t.Fatalf("Default expectation is already set for the StateStorage.Lock method")
-	}
-
-	if len(mmLock.expectations) > 0 {
-		mmLock.mock.t.Fatalf("Some expectations are already set for the StateStorage.Lock method")
-	}
-
-	mmLock.mock.funcLock = f
-	return mmLock.mock
-}
-
-// Lock implements StateStorage
-func (mmLock *StateStorageMock) Lock() {
-	mm_atomic.AddUint64(&mmLock.beforeLockCounter, 1)
-	defer mm_atomic.AddUint64(&mmLock.afterLockCounter, 1)
-
-	if mmLock.inspectFuncLock != nil {
-		mmLock.inspectFuncLock()
-	}
-
-	if mmLock.LockMock.defaultExpectation != nil {
-		mm_atomic.AddUint64(&mmLock.LockMock.defaultExpectation.Counter, 1)
-
-		return
-
-	}
-	if mmLock.funcLock != nil {
-		mmLock.funcLock()
-		return
-	}
-	mmLock.t.Fatalf("Unexpected call to StateStorageMock.Lock.")
-
-}
-
-// LockAfterCounter returns a count of finished StateStorageMock.Lock invocations
-func (mmLock *StateStorageMock) LockAfterCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmLock.afterLockCounter)
-}
-
-// LockBeforeCounter returns a count of StateStorageMock.Lock invocations
-func (mmLock *StateStorageMock) LockBeforeCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmLock.beforeLockCounter)
-}
-
-// MinimockLockDone returns true if the count of the Lock invocations corresponds
-// the number of defined expectations
-func (m *StateStorageMock) MinimockLockDone() bool {
-	for _, e := range m.LockMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			return false
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.LockMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterLockCounter) < 1 {
-		return false
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcLock != nil && mm_atomic.LoadUint64(&m.afterLockCounter) < 1 {
-		return false
-	}
-	return true
-}
-
-// MinimockLockInspect logs each unmet expectation
-func (m *StateStorageMock) MinimockLockInspect() {
-	for _, e := range m.LockMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			m.t.Error("Expected call to StateStorageMock.Lock")
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.LockMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterLockCounter) < 1 {
-		m.t.Error("Expected call to StateStorageMock.Lock")
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcLock != nil && mm_atomic.LoadUint64(&m.afterLockCounter) < 1 {
-		m.t.Error("Expected call to StateStorageMock.Lock")
-	}
-}
-
 type mStateStorageMockOnPulse struct {
 	mock               *StateStorageMock
 	defaultExpectation *StateStorageMockOnPulseExpectation
@@ -1008,141 +857,6 @@ func (m *StateStorageMock) MinimockOnPulseInspect() {
 	// if func was set then invocations count should be greater than zero
 	if m.funcOnPulse != nil && mm_atomic.LoadUint64(&m.afterOnPulseCounter) < 1 {
 		m.t.Error("Expected call to StateStorageMock.OnPulse")
-	}
-}
-
-type mStateStorageMockUnlock struct {
-	mock               *StateStorageMock
-	defaultExpectation *StateStorageMockUnlockExpectation
-	expectations       []*StateStorageMockUnlockExpectation
-}
-
-// StateStorageMockUnlockExpectation specifies expectation struct of the StateStorage.Unlock
-type StateStorageMockUnlockExpectation struct {
-	mock *StateStorageMock
-
-	Counter uint64
-}
-
-// Expect sets up expected params for StateStorage.Unlock
-func (mmUnlock *mStateStorageMockUnlock) Expect() *mStateStorageMockUnlock {
-	if mmUnlock.mock.funcUnlock != nil {
-		mmUnlock.mock.t.Fatalf("StateStorageMock.Unlock mock is already set by Set")
-	}
-
-	if mmUnlock.defaultExpectation == nil {
-		mmUnlock.defaultExpectation = &StateStorageMockUnlockExpectation{}
-	}
-
-	return mmUnlock
-}
-
-// Inspect accepts an inspector function that has same arguments as the StateStorage.Unlock
-func (mmUnlock *mStateStorageMockUnlock) Inspect(f func()) *mStateStorageMockUnlock {
-	if mmUnlock.mock.inspectFuncUnlock != nil {
-		mmUnlock.mock.t.Fatalf("Inspect function is already set for StateStorageMock.Unlock")
-	}
-
-	mmUnlock.mock.inspectFuncUnlock = f
-
-	return mmUnlock
-}
-
-// Return sets up results that will be returned by StateStorage.Unlock
-func (mmUnlock *mStateStorageMockUnlock) Return() *StateStorageMock {
-	if mmUnlock.mock.funcUnlock != nil {
-		mmUnlock.mock.t.Fatalf("StateStorageMock.Unlock mock is already set by Set")
-	}
-
-	if mmUnlock.defaultExpectation == nil {
-		mmUnlock.defaultExpectation = &StateStorageMockUnlockExpectation{mock: mmUnlock.mock}
-	}
-
-	return mmUnlock.mock
-}
-
-//Set uses given function f to mock the StateStorage.Unlock method
-func (mmUnlock *mStateStorageMockUnlock) Set(f func()) *StateStorageMock {
-	if mmUnlock.defaultExpectation != nil {
-		mmUnlock.mock.t.Fatalf("Default expectation is already set for the StateStorage.Unlock method")
-	}
-
-	if len(mmUnlock.expectations) > 0 {
-		mmUnlock.mock.t.Fatalf("Some expectations are already set for the StateStorage.Unlock method")
-	}
-
-	mmUnlock.mock.funcUnlock = f
-	return mmUnlock.mock
-}
-
-// Unlock implements StateStorage
-func (mmUnlock *StateStorageMock) Unlock() {
-	mm_atomic.AddUint64(&mmUnlock.beforeUnlockCounter, 1)
-	defer mm_atomic.AddUint64(&mmUnlock.afterUnlockCounter, 1)
-
-	if mmUnlock.inspectFuncUnlock != nil {
-		mmUnlock.inspectFuncUnlock()
-	}
-
-	if mmUnlock.UnlockMock.defaultExpectation != nil {
-		mm_atomic.AddUint64(&mmUnlock.UnlockMock.defaultExpectation.Counter, 1)
-
-		return
-
-	}
-	if mmUnlock.funcUnlock != nil {
-		mmUnlock.funcUnlock()
-		return
-	}
-	mmUnlock.t.Fatalf("Unexpected call to StateStorageMock.Unlock.")
-
-}
-
-// UnlockAfterCounter returns a count of finished StateStorageMock.Unlock invocations
-func (mmUnlock *StateStorageMock) UnlockAfterCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmUnlock.afterUnlockCounter)
-}
-
-// UnlockBeforeCounter returns a count of StateStorageMock.Unlock invocations
-func (mmUnlock *StateStorageMock) UnlockBeforeCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmUnlock.beforeUnlockCounter)
-}
-
-// MinimockUnlockDone returns true if the count of the Unlock invocations corresponds
-// the number of defined expectations
-func (m *StateStorageMock) MinimockUnlockDone() bool {
-	for _, e := range m.UnlockMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			return false
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.UnlockMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterUnlockCounter) < 1 {
-		return false
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcUnlock != nil && mm_atomic.LoadUint64(&m.afterUnlockCounter) < 1 {
-		return false
-	}
-	return true
-}
-
-// MinimockUnlockInspect logs each unmet expectation
-func (m *StateStorageMock) MinimockUnlockInspect() {
-	for _, e := range m.UnlockMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			m.t.Error("Expected call to StateStorageMock.Unlock")
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.UnlockMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterUnlockCounter) < 1 {
-		m.t.Error("Expected call to StateStorageMock.Unlock")
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcUnlock != nil && mm_atomic.LoadUint64(&m.afterUnlockCounter) < 1 {
-		m.t.Error("Expected call to StateStorageMock.Unlock")
 	}
 }
 
@@ -1370,11 +1084,7 @@ func (m *StateStorageMock) MinimockFinish() {
 
 		m.MinimockIsEmptyInspect()
 
-		m.MinimockLockInspect()
-
 		m.MinimockOnPulseInspect()
-
-		m.MinimockUnlockInspect()
 
 		m.MinimockUpsertExecutionStateInspect()
 		m.t.FailNow()
@@ -1403,8 +1113,6 @@ func (m *StateStorageMock) minimockDone() bool {
 		m.MinimockGetExecutionArchiveDone() &&
 		m.MinimockGetExecutionStateDone() &&
 		m.MinimockIsEmptyDone() &&
-		m.MinimockLockDone() &&
 		m.MinimockOnPulseDone() &&
-		m.MinimockUnlockDone() &&
 		m.MinimockUpsertExecutionStateDone()
 }

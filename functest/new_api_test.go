@@ -148,5 +148,14 @@ func TestIncorrectParams(t *testing.T) {
 	firstMember := createMember(t)
 
 	_, err := signedRequest(firstMember, "member.transfer", firstMember.ref)
-	require.Contains(t, err.Error(), "failed to cast request.Params.CallParams: expected map[string]interface{}, got string")
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "failed to cast call params: expected 'map[string]interface{}', got 'string'")
+}
+
+func TestNilParams(t *testing.T) {
+	firstMember := createMember(t)
+
+	_, err := signedRequest(firstMember, "member.transfer", nil)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "call params are nil")
 }

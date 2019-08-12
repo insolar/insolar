@@ -235,10 +235,9 @@ func TestMessageBus_IncomingMessageRouter_Request(t *testing.T) {
 	require.NoError(t, err)
 	msg := message.NewMessage(string(meta.ID), buf)
 
-	res, err := b.IncomingMessageRouter(incomingHandler)(msg)
+	_, err = b.IncomingMessageRouter(incomingHandler)(msg)
 	require.NoError(t, err)
 	require.Equal(t, 1, incomingHandlerCalls)
-	require.Equal(t, []*message.Message{resMsg}, res)
 }
 
 func TestMessageBus_IncomingMessageRouter_Reply(t *testing.T) {
@@ -453,9 +452,8 @@ func TestMessageBus_Send_IncomingMessageRouter_WriteAfterTimeout(t *testing.T) {
 	buf, _ := meta.Marshal()
 	msg = message.NewMessage(msg.UUID, buf)
 
-	resHandler, err := handler(msg)
+	_, err := handler(msg)
 	require.NoError(t, err)
-	require.Equal(t, []*message.Message{resMsg}, resHandler)
 }
 
 func TestMessageBus_Send_IncomingMessageRouter_SeveralMsg(t *testing.T) {

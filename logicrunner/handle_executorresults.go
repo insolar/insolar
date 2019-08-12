@@ -70,11 +70,18 @@ type HandleExecutorResults struct {
 func (h *HandleExecutorResults) realHandleExecutorState(ctx context.Context, f flow.Flow) error {
 	msg := h.Parcel.Message().(*message.ExecutorResults)
 
+	done, err := h.dep.WriteAccessor.Begin(ctx, flow.Pulse(ctx))
+	defer done()
+
+	if err != nil {
+		return nil
+	}
+
 	procInitializeExecutionState := initializeExecutionState{
 		dep: h.dep,
 		msg: msg,
 	}
-	err := f.Procedure(ctx, &procInitializeExecutionState, true)
+	err = f.Procedure(ctx, &procInitializeExecutionState, true)
 	if err != nil {
 		if err == flow.ErrCancelled {
 			return nil

@@ -168,7 +168,7 @@ type Request interface {
 func (r *IncomingRequest) AffinityRef() *insolar.Reference {
 	// IncomingRequests are affine to the Object on which the request
 	// is going to be executed
-	// Exceptions are CTSaveAsMethod/CTSaveAsDelegate, we should
+	// Exceptions are CTSaveAsMethod, we should
 	// calculate hash of message, so call CalculateRequestAffinityRef
 	if r.IsCreationRequest() {
 		return nil
