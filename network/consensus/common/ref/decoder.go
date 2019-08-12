@@ -96,7 +96,7 @@ func (v ReferenceDecoder) Decode(ref string) (Global, error) {
 	if v.options&AllowLegacy != 0 && len(ref) >= 2*len(LegacyDomainName)+1 {
 		domainPos := strings.IndexRune(ref, '.')
 		if domainPos > len(LegacyDomainName) && ref[domainPos+1:] == LegacyDomainName {
-			return v.parseLegacyAddress(ref[:domainPos], domainPos)
+			return v.parseLegacyAddress(ref, domainPos)
 		}
 	}
 
