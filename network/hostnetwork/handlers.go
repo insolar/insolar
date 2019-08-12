@@ -90,9 +90,15 @@ func (s *StreamHandler) HandleStream(ctx context.Context, address string, reader
 	// get only log level from context, discard TraceID in favor of packet TraceID
 	packetCtx := inslogger.WithLoggerLevel(context.Background(), logLevel)
 
-	// context cancel monitoring
+	closer := make(chan struct{})
 	go func() {
-		<-ctx.Done()
+		select {
+		// transport is stopping
+		case <-ctx.Done():
+		// stream end by remote end
+		case <-closer:
+		}
+
 		network.CloseVerbose(reader)
 	}()
 
@@ -102,7 +108,7 @@ func (s *StreamHandler) HandleStream(ctx context.Context, address string, reader
 		if err != nil {
 			if err == io.EOF || err == io.ErrUnexpectedEOF {
 				mainLogger.Debug("[ HandleStream ] Connection closed by peer")
-				network.CloseVerbose(reader)
+				close(closer)
 				return
 			}
 
