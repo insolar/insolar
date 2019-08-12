@@ -142,8 +142,22 @@ func (i *IndexDB) ForID(ctx context.Context, pn insolar.PulseNumber, objID insol
 	return *buck, nil
 }
 
-func (i *IndexDB) ForPulse(ctx context.Context, pn insolar.PulseNumber) []record.Index {
-	panic("implement me")
+func (i *IndexDB) ForPulse(ctx context.Context, pn insolar.PulseNumber) ([]record.Index, error) {
+	indexes := make([]record.Index, 0)
+
+	key := &indexKey{objID: insolar.ID{}, pn: pn}
+	it := i.db.NewIterator(key, false)
+	defer it.Close()
+
+	for it.Next() {
+		key := newIndexKey(it.Key())
+		index, err := i.getBucket(key.pn, key.objID)
+		if err != nil {
+			return nil, errors.Wrap(err, "Index iterator not consistent")
+		}
+		indexes = append(indexes, *index)
+	}
+	return indexes, nil
 }
 
 func (i *IndexDB) setBucket(pn insolar.PulseNumber, objID insolar.ID, bucket *record.Index) error {

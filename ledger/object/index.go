@@ -46,7 +46,7 @@ type MemoryIndexModifier interface {
 type IndexAccessor interface {
 	ForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (record.Index, error)
 	// ForPulse returns a collection of buckets for a provided pulse number.
-	ForPulse(ctx context.Context, pn insolar.PulseNumber) []record.Index
+	ForPulse(ctx context.Context, pn insolar.PulseNumber) ([]record.Index, error)
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexStorage -o ./ -s _mock.go -g

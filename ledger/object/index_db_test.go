@@ -17,10 +17,12 @@
 package object
 
 import (
+	"bytes"
 	"context"
 	"io/ioutil"
 	"math/rand"
 	"os"
+	"sort"
 	"testing"
 	"time"
 
@@ -134,6 +136,63 @@ func TestDBIndexStorage_ForID(t *testing.T) {
 		_, err = storage.ForID(ctx, pn, id)
 
 		assert.Equal(t, ErrIndexNotFound, err)
+	})
+}
+
+func TestDBIndexStorage_ForPulse(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+	pn := gen.PulseNumber()
+
+	t.Run("empty index storage", func(t *testing.T) {
+		t.Parallel()
+
+		tmpdir, err := ioutil.TempDir("", "bdb-test-")
+		defer os.RemoveAll(tmpdir)
+		require.NoError(t, err)
+
+		db, err := store.NewBadgerDB(tmpdir)
+		require.NoError(t, err)
+		defer db.Stop(context.Background())
+		storage := NewIndexDB(db)
+
+		indexes, err := storage.ForPulse(ctx, pn)
+		require.NoError(t, err)
+		require.Equal(t, []record.Index{}, indexes)
+	})
+
+	t.Run("index storage with couple values", func(t *testing.T) {
+		t.Parallel()
+
+		tmpdir, err := ioutil.TempDir("", "bdb-test-")
+		defer os.RemoveAll(tmpdir)
+		require.NoError(t, err)
+
+		db, err := store.NewBadgerDB(tmpdir)
+		require.NoError(t, err)
+		defer db.Stop(context.Background())
+		storage := NewIndexDB(db)
+
+		var indexes []record.Index
+		for i := 0; i < 5; i++ {
+			indexes = append(indexes, record.Index{ObjID: gen.ID()})
+			err = storage.SetIndex(ctx, pn, indexes[i])
+			require.NoError(t, err)
+		}
+
+		realIndexes, err := storage.ForPulse(ctx, pn)
+		require.NoError(t, err)
+		require.Equal(t, 5, len(indexes))
+
+		sort.Slice(indexes, func(i, j int) bool {
+			cmp := bytes.Compare(indexes[i].ObjID.Bytes(), indexes[j].ObjID.Bytes())
+			return cmp < 0
+		})
+
+		for i := 0; i < 5; i++ {
+			require.Equal(t, indexes[i], realIndexes[i])
+		}
 	})
 }
 
