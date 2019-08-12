@@ -135,7 +135,7 @@ func (v ReferenceEncoder) EncodeToBuilder(ref *Global, b *strings.Builder) {
 		parity := ref.GetParity()
 		if len(parity) > 0 {
 			b.WriteByte('/')
-			v.byteEncoder(bytes.NewBuffer(parity), b)
+			v.byteEncoder(bytes.NewReader(parity), b)
 		}
 	}
 }
