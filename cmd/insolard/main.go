@@ -19,18 +19,17 @@ package main
 import (
 	"encoding/json"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 
-	"github.com/google/gops/agent"
+	"github.com/pkg/errors"
+	"github.com/spf13/cobra"
+	jww "github.com/spf13/jwalterweatherman"
+
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/server"
-	"github.com/pkg/errors"
-	"github.com/spf13/cobra"
-	jww "github.com/spf13/jwalterweatherman"
 )
 
 type inputParams struct {
@@ -53,6 +52,9 @@ func parseInputParams() inputParams {
 	return result
 }
 
+// toLaunch is an array of routines created in instrumentations
+var toLaunch []func(inputParams) error
+
 func main() {
 	params := parseInputParams()
 	jww.SetStdoutThreshold(jww.LevelDebug)
@@ -62,9 +64,9 @@ func main() {
 		log.Fatal(errors.Wrap(err, "readRole failed"))
 	}
 
-	if os.Getenv("INSOLAR_GOPS") != "" {
-		if err := agent.Listen(agent.Options{}); err != nil {
-			log.Fatal(err)
+	for _, f := range toLaunch {
+		if err := f(params); err != nil {
+			log.Warnf("Error when launch startup routine: %s", err)
 		}
 	}
 

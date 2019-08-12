@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-use 5.030;
+use 5.018;
 use Data::Dumper;
 
 my $pid = $ARGV[0];
