@@ -48,7 +48,7 @@ type Params struct {
 }
 type Request struct {
 	JSONRPC string `json:"jsonrpc"`
-	ID      int    `json:"id"`
+	ID      uint64 `json:"id"`
 	Method  string `json:"method"`
 	Params  Params `json:"params"`
 }

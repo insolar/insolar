@@ -87,7 +87,7 @@ func SetVerbose(verb bool) {
 // PlatformRequest represents params struct
 type PlatformRequest struct {
 	JSONRPC        string      `json:"jsonrpc"`
-	ID             int         `json:"id"`
+	ID             uint64      `json:"id"`
 	Method         string      `json:"method"`
 	PlatformParams interface{} `json:"params"`
 	LogLevel       string      `json:"logLevel,omitempty"`

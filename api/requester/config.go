@@ -31,7 +31,7 @@ import (
 // Request is a representation of request struct to api
 type Request struct {
 	Version string `json:"jsonrpc"`
-	ID      int    `json:"id"`
+	ID      uint64 `json:"id"`
 	Method  string `json:"method"`
 	Params  Params `json:"params,omitempty"`
 }
@@ -48,7 +48,7 @@ type Params struct {
 
 type ContractAnswer struct {
 	JSONRPC string  `json:"jsonrpc"`
-	ID      int     `json:"id"`
+	ID      uint64  `json:"id"`
 	Result  *Result `json:"result,omitempty"`
 	Error   *Error  `json:"error,omitempty"`
 }
