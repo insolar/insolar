@@ -404,27 +404,6 @@ func (q *ExecutionBroker) Check(ctx context.Context) bool {
 	return true
 }
 
-func (q *ExecutionBroker) finishPending(ctx context.Context) {
-	logger := inslogger.FromContext(ctx)
-
-	pendingMsg, err := payload.NewMessage(&payload.PendingFinished{
-		ObjectRef: q.Ref,
-	})
-	if err != nil {
-		logger.Error(errors.Wrap(err, "finishPending: Unable to create PendingFinished message"))
-		return
-	}
-
-	reps, done := q.sender.SendRole(ctx, pendingMsg, insolar.DynamicRoleVirtualExecutor, q.Ref)
-	defer done()
-
-	_, ok := <-reps
-	if !ok {
-		logger.Error(errors.Wrap(err, "finishPending: no reply"))
-		return
-	}
-}
-
 // finishPendingIfNeeded checks whether last execution was a pending one.
 // If this is true as a side effect the function sends a PendingFinished
 // message to the current executor
@@ -451,7 +430,16 @@ func (q *ExecutionBroker) finishPendingIfNeeded(ctx context.Context) {
 	q.pending = insolar.NotPending
 	q.PendingConfirmed = false
 
-	go q.finishPending(ctx)
+	pendingMsg, err := payload.NewMessage(&payload.PendingFinished{
+		ObjectRef: q.Ref,
+	})
+	if err != nil {
+		logger.Error(errors.Wrap(err, "finishPending: Unable to create PendingFinished message"))
+		return
+	}
+
+	_, done := q.sender.SendRole(ctx, pendingMsg, insolar.DynamicRoleVirtualExecutor, q.Ref)
+	done()
 }
 
 func (q *ExecutionBroker) OnPulse(ctx context.Context) []payload.Payload {

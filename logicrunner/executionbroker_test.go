@@ -399,7 +399,7 @@ func TestExecutionBroker_FinishedPendingIfNeed(t *testing.T) {
 							return nil, func() {
 								require.Equal(t, obj, objRef)
 								require.Equal(t, insolar.DynamicRoleVirtualExecutor, role, "role")
-								require.Equal(t, msg, pendingMsg)
+								require.Equal(t, msg.Payload, pendingMsg.Payload)
 							}
 						}),
 					executionRegistry: executionregistry.NewExecutionRegistryMock(t).

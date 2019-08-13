@@ -290,7 +290,7 @@ func (lr *LogicRunner) sendOnPulseMessagesAsync(ctx context.Context, messages ma
 	for ref, msg := range messages {
 		for _, msg := range msg {
 			sendWg.Add(1)
-			go lr.sendOnPulseMessage(ctx, ref, msg, &sendWg)
+			lr.sendOnPulseMessage(ctx, ref, msg, &sendWg)
 		}
 	}
 
@@ -307,11 +307,8 @@ func (lr *LogicRunner) sendOnPulseMessage(ctx context.Context, objectRef insolar
 		return
 	}
 
-	res, done := lr.Sender.SendRole(ctx, msg, insolar.DynamicRoleVirtualExecutor, objectRef)
+	_, done := lr.Sender.SendRole(ctx, msg, insolar.DynamicRoleVirtualExecutor, objectRef)
 	done()
-	if _, ok := <-res; !ok {
-		inslogger.FromContext(ctx).Error("no reply")
-	}
 }
 
 func (lr *LogicRunner) AddUnwantedResponse(ctx context.Context, msg insolar.Message) error {
