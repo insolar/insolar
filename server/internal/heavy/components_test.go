@@ -40,6 +40,7 @@ func TestComponents(t *testing.T) {
 	cfg.Metrics.ListenAddress = "0.0.0.0:0"
 	cfg.APIRunner.Address = "0.0.0.0:0"
 	cfg.Ledger.Storage.DataDirectory = tmpdir
+	cfg.Exporter.Addr = ":0"
 
 	c, err := newComponents(ctx, cfg, insolar.GenesisHeavyConfig{Skip: true})
 	require.NoError(t, err)
