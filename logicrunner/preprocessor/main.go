@@ -37,7 +37,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/insolar/genesisrefs"
 
 	"github.com/insolar/insolar/insolar"
 
@@ -48,8 +48,7 @@ var foundationPath = "github.com/insolar/insolar/logicrunner/builtin/foundation"
 var proxyctxPath = "github.com/insolar/insolar/logicrunner/common"
 var corePath = "github.com/insolar/insolar/insolar"
 
-var immutableFlag = "//ins:immutable"
-
+var immutableFlag = "ins:immutable"
 var sagaFlagStart = "ins:saga("
 var sagaFlagEnd = ")"
 var sagaFlagStartLength = len(sagaFlagStart)
@@ -349,6 +348,15 @@ func (pf *ParsedFile) checkSagaRollbackMethodsExistAndMatch(funcInfo []map[strin
 				info["Name"].(string), sagaInfo.NumArguments)
 		}
 
+		// INS_FLAG_NO_ROLLBACK_METHOD allows to make saga calls between different
+		// contract types despite of missing corresponding syntax support. Obviously
+		// if validation fail there will be no rollback method to call. Please use
+		// this flag with extra care!
+		if sagaInfo.RollbackMethodName == "INS_FLAG_NO_ROLLBACK_METHOD" {
+			// skip following semantic checks
+			continue
+		}
+
 		rollbackInfo, exists := methodNames[sagaInfo.RollbackMethodName]
 		if !exists {
 			return fmt.Errorf(
@@ -386,12 +394,6 @@ func (pf *ParsedFile) functionInfoForWrapper(list []*ast.FuncDecl) []map[string]
 	return res
 }
 
-func generateTextReference(pulse insolar.PulseNumber, code []byte) *insolar.Reference {
-	hasher := platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher()
-	codeHash := hasher.Hash(code)
-	return insolar.NewReference(*insolar.NewID(pulse, codeHash))
-}
-
 // WriteProxy generates and writes into `out` source code of contract's proxy
 func (pf *ParsedFile) WriteProxy(classReference string, out io.Writer) error {
 	proxyPackageName, err := pf.ProxyPackageName()
@@ -400,7 +402,7 @@ func (pf *ParsedFile) WriteProxy(classReference string, out io.Writer) error {
 	}
 
 	if classReference == "" {
-		classReference = generateTextReference(0, pf.code).String()
+		classReference = genesisrefs.GenerateFromCode(0, pf.code).String()
 	}
 
 	_, err = insolar.NewReferenceFromBase58(classReference)
@@ -509,6 +511,7 @@ func (pf *ParsedFile) typeName(t ast.Expr) string {
 func (pf *ParsedFile) generateImports(wrapper bool) map[string]bool {
 	imports := make(map[string]bool)
 	imports[fmt.Sprintf(`"%s"`, proxyctxPath)] = true
+	imports[fmt.Sprintf(`"%s"`, foundationPath)] = true
 	if !wrapper {
 		imports[fmt.Sprintf(`"%s"`, corePath)] = true
 	}
@@ -667,7 +670,7 @@ func generateZeroListOfTypes(parsed *ParsedFile, name string, list *ast.FieldLis
 		return fmt.Sprintf("%s := []interface{}{}\n", name)
 	}
 
-	text := fmt.Sprintf("%s := [%d]interface{}{}\n", name, list.NumFields())
+	text := fmt.Sprintf("%s := make([]interface{}, %d)\n", name, list.NumFields())
 
 	for i, arg := range list.List {
 		tname := parsed.codeOfNode(arg.Type)
@@ -766,21 +769,29 @@ func isImmutable(decl *ast.FuncDecl) bool {
 	var isImmutable = false
 	if decl.Doc != nil && decl.Doc.List != nil {
 		for _, comment := range decl.Doc.List {
-			if comment.Text == immutableFlag {
+			slice, err := skipCommentBeginning(comment.Text)
+			if err != nil {
+				// invalid comment beginning
+				continue
+			}
+			if slice == immutableFlag {
 				isImmutable = true
+				break
 			}
 		}
 	}
 	return isImmutable
 }
 
-func extractSagaInfoFromComment(comment string, info *SagaInfo) bool {
-	slice := strings.Trim(comment, " \r\n\t")
+// skipCommentBegin converts '//comment' or '//[spaces]comment' to 'comment'
+// The procedure returns an error if the string is not started with '//'
+func skipCommentBeginning(comment string) (string, error) {
+	slice := strings.TrimSpace(comment)
 	sliceLen := len(slice)
 
 	// skip '//'
 	if !strings.HasPrefix(slice, "//") {
-		return false
+		return "", fmt.Errorf("invalid comment beginning")
 	}
 	slice = slice[2:sliceLen]
 	sliceLen -= 2
@@ -791,9 +802,17 @@ func extractSagaInfoFromComment(comment string, info *SagaInfo) bool {
 		sliceLen--
 	}
 
+	return slice, nil
+}
+
+func extractSagaInfoFromComment(comment string, info *SagaInfo) bool {
+	slice, err := skipCommentBeginning(comment)
+	if err != nil {
+		return false
+	}
 	if strings.HasPrefix(slice, sagaFlagStart) &&
 		strings.HasSuffix(slice, sagaFlagEnd) {
-		rollbackName := slice[sagaFlagStartLength : sliceLen-len(sagaFlagEnd)]
+		rollbackName := slice[sagaFlagStartLength : len(slice)-len(sagaFlagEnd)]
 		rollbackNameLen := len(rollbackName)
 		if rollbackNameLen > 0 {
 			sliceCopy := make([]byte, rollbackNameLen)
@@ -837,11 +856,6 @@ const (
 	PrototypeType = "prototype"
 )
 
-func (e *ContractListEntry) GenerateReference(tp string) *insolar.Reference {
-	contractID := fmt.Sprintf("%s::%s::v%02d", tp, e.Name, e.Version)
-	return generateTextReference(insolar.BuiltinContractPulseNumber, []byte(contractID))
-}
-
 type ContractList []ContractListEntry
 
 func generateContractList(contracts ContractList) interface{} {
@@ -851,8 +865,8 @@ func generateContractList(contracts ContractList) interface{} {
 			"Name":               contract.Name,
 			"ImportName":         contract.Name,
 			"ImportPath":         contract.ImportPath,
-			"CodeReference":      contract.GenerateReference(CodeType).String(),
-			"PrototypeReference": contract.GenerateReference(PrototypeType).String(),
+			"CodeReference":      genesisrefs.GenerateFromContractID(CodeType, contract.Name, contract.Version).String(),
+			"PrototypeReference": genesisrefs.GenerateFromContractID(PrototypeType, contract.Name, contract.Version).String(),
 		}
 		importList = append(importList, data)
 	}

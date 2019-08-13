@@ -116,7 +116,7 @@ func TestBits64FixedByteSize(t *testing.T) {
 
 func TestBits64AsByteString(t *testing.T) {
 	bits := NewBits64(0x4142434445464748)
-	require.Equal(t, "HGFEDCBA", bits.AsByteString())
+	require.Equal(t, ByteString("HGFEDCBA"), bits.AsByteString())
 }
 
 func TestBits64String(t *testing.T) {
@@ -131,7 +131,7 @@ func TestBits64AsBytes(t *testing.T) {
 func TestFoldToBits64(t *testing.T) {
 	require.Equal(t, NewBits64(0x807060504030201), FoldToBits64([]byte{1, 2, 3, 4, 5, 6, 7, 8}))
 
-	require.Equal(t, NewBits64(0x1808080808080808), FoldToBits64([]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+	require.Equal(t, NewBits64(0x807060504030201), FoldToBits64([]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
 		11, 12, 13, 14, 15, 16}))
 
 	require.Panics(t, func() { FoldToBits64([]byte{1}) })
@@ -188,7 +188,7 @@ func TestBits128FoldToUint64(t *testing.T) {
 	l := uint64(0x807060504030201)
 	h := uint64(0x10F0E0D0C0B0A09)
 	bits := NewBits128(l, h)
-	require.Equal(t, uint64(0x908080808080808), bits.FoldToUint64())
+	require.Equal(t, uint64(0x807060504030201), bits.FoldToUint64())
 }
 
 func TestBits128FixedByteSize(t *testing.T) {
@@ -202,7 +202,7 @@ func TestBits128String(t *testing.T) {
 
 func TestBits128AsByteString(t *testing.T) {
 	bits := NewBits128(0x4142434445464748, 0x494A4B4C4D4E4F50)
-	require.Equal(t, "HGFEDCBAPONMLKJI", bits.AsByteString())
+	require.Equal(t, ByteString("HGFEDCBAPONMLKJI"), bits.AsByteString())
 }
 
 func TestBits128AsBytes(t *testing.T) {
@@ -268,7 +268,7 @@ func TestBits224AsByteString(t *testing.T) {
 	binary.LittleEndian.PutUint64(bits[:8], uint64(0x4142434445464748))
 	binary.LittleEndian.PutUint64(bits[8:16], uint64(0x494A4B4C4D4E4F50))
 	binary.LittleEndian.PutUint64(bits[16:24], uint64(0x5152535455565758))
-	require.Equal(t, "HGFEDCBAPONMLKJIXWVUTSRQ", bits.AsByteString())
+	require.Equal(t, ByteString("HGFEDCBAPONMLKJIXWVUTSRQ"), bits.AsByteString())
 }
 
 func TestBits224AsBytes(t *testing.T) {
@@ -322,7 +322,7 @@ func TestBits256FoldToUint64(t *testing.T) {
 	binary.LittleEndian.PutUint64(bits[8:16], uint64(0x10F0E0D0C0B0A09))
 	binary.LittleEndian.PutUint64(bits[16:24], uint64(0x0908070605040302))
 	binary.LittleEndian.PutUint64(bits[24:32], uint64(0x02010F0E0D0C0B0A))
-	require.Equal(t, uint64(0x201000000000000), bits.FoldToUint64())
+	require.Equal(t, uint64(0x807060504030201), bits.FoldToUint64())
 }
 
 func TestBits256FoldToBits128(t *testing.T) {
@@ -359,7 +359,7 @@ func TestBits256AsByteString(t *testing.T) {
 	binary.LittleEndian.PutUint64(bits[8:16], uint64(0x494A4B4C4D4E4F50))
 	binary.LittleEndian.PutUint64(bits[16:24], uint64(0x5152535455565758))
 	binary.LittleEndian.PutUint64(bits[24:32], uint64(0x595A5B5C5D5E5F60))
-	require.Equal(t, "HGFEDCBAPONMLKJIXWVUTSRQ`_^]\\[ZY", bits.AsByteString())
+	require.Equal(t, ByteString("HGFEDCBAPONMLKJIXWVUTSRQ`_^]\\[ZY"), bits.AsByteString())
 }
 
 func TestBits256AsBytes(t *testing.T) {
@@ -418,7 +418,7 @@ func TestBits512FoldToUint64(t *testing.T) {
 	binary.LittleEndian.PutUint64(bits[40:48], uint64(0x0302010F0E0D0C0B))
 	binary.LittleEndian.PutUint64(bits[48:56], uint64(0x0B0A090807060504))
 	binary.LittleEndian.PutUint64(bits[56:64], uint64(0x040302010F0E0D0C))
-	require.Equal(t, uint64(0x403020100000000), bits.FoldToUint64())
+	require.Equal(t, uint64(0x807060504030201), bits.FoldToUint64())
 }
 
 func TestBits512FoldToBits256(t *testing.T) {
@@ -468,7 +468,7 @@ func TestBits512AsByteString(t *testing.T) {
 	binary.LittleEndian.PutUint64(bits[40:48], uint64(0x696A6B6C6D6E6F70))
 	binary.LittleEndian.PutUint64(bits[48:56], uint64(0x7172737475767778))
 	binary.LittleEndian.PutUint64(bits[56:64], uint64(0x797A7B7C7D7E7F80))
-	require.Equal(t, "HGFEDCBAPONMLKJIXWVUTSRQ`_^]\\[ZYhgfedcbaponmlkjixwvutsrq\x80\u007f~}|{zy",
+	require.Equal(t, ByteString("HGFEDCBAPONMLKJIXWVUTSRQ`_^]\\[ZYhgfedcbaponmlkjixwvutsrq\x80\u007f~}|{zy"),
 		bits.AsByteString())
 }
 
@@ -490,7 +490,7 @@ func TestBits512AsBytes(t *testing.T) {
 func TestFoldedFoldToUint64(t *testing.T) {
 	require.Equal(t, uint64(0x807060504030201), FoldToUint64([]byte{1, 2, 3, 4, 5, 6, 7, 8}))
 
-	require.Equal(t, uint64(0x1808080808080808), FoldToUint64([]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+	require.Equal(t, uint64(0x807060504030201), FoldToUint64([]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
 		11, 12, 13, 14, 15, 16}))
 
 	require.Panics(t, func() { FoldToUint64([]byte{1}) })

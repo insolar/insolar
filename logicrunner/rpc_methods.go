@@ -22,22 +22,21 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
+	"github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/logicrunner.ProxyImplementation -o ./ -s _mock.go -g
 
 type ProxyImplementation interface {
-	GetCode(context.Context, *Transcript, rpctypes.UpGetCodeReq, *rpctypes.UpGetCodeResp) error
-	RouteCall(context.Context, *Transcript, rpctypes.UpRouteReq, *rpctypes.UpRouteResp) error
-	SaveAsChild(context.Context, *Transcript, rpctypes.UpSaveAsChildReq, *rpctypes.UpSaveAsChildResp) error
-	DeactivateObject(context.Context, *Transcript, rpctypes.UpDeactivateObjectReq, *rpctypes.UpDeactivateObjectResp) error
+	GetCode(context.Context, *common.Transcript, rpctypes.UpGetCodeReq, *rpctypes.UpGetCodeResp) error
+	RouteCall(context.Context, *common.Transcript, rpctypes.UpRouteReq, *rpctypes.UpRouteResp) error
+	SaveAsChild(context.Context, *common.Transcript, rpctypes.UpSaveAsChildReq, *rpctypes.UpSaveAsChildResp) error
+	DeactivateObject(context.Context, *common.Transcript, rpctypes.UpDeactivateObjectReq, *rpctypes.UpDeactivateObjectResp) error
 }
 
 type RPCMethods struct {
@@ -63,7 +62,7 @@ func NewRPCMethods(
 func (m *RPCMethods) getCurrent(
 	obj insolar.Reference, mode insolar.CallMode, reqRef insolar.Reference,
 ) (
-	ProxyImplementation, *Transcript, error,
+	ProxyImplementation, *common.Transcript, error,
 ) {
 	switch mode {
 	case insolar.ExecuteCallMode:
@@ -145,7 +144,7 @@ func NewExecutionProxyImplementation(
 }
 
 func (m *executionProxyImplementation) GetCode(
-	ctx context.Context, current *Transcript, req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp,
+	ctx context.Context, current *common.Transcript, req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp,
 ) error {
 	ctx, span := instracer.StartSpan(ctx, "service.GetCode")
 	defer span.End()
@@ -162,13 +161,9 @@ func (m *executionProxyImplementation) GetCode(
 }
 
 func (m *executionProxyImplementation) RouteCall(
-	ctx context.Context, current *Transcript, req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp,
+	ctx context.Context, current *common.Transcript, req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp,
 ) error {
 	inslogger.FromContext(ctx).Debug("RPC.RouteCall")
-
-	if current.Request.Immutable {
-		return errors.New("Try to call route from immutable method")
-	}
 
 	outgoing := buildOutgoingRequest(ctx, current, req)
 
@@ -194,7 +189,7 @@ func (m *executionProxyImplementation) RouteCall(
 	outgoingReqRef := insolar.NewReference(outReqInfo.RequestID)
 
 	var incoming *record.IncomingRequest
-	rep.Result, incoming, err = m.outgoingSender.SendOutgoingRequest(ctx, *outgoingReqRef, outgoing)
+	_, rep.Result, incoming, err = m.outgoingSender.SendOutgoingRequest(ctx, *outgoingReqRef, outgoing)
 	if incoming != nil {
 		current.AddOutgoingRequest(ctx, *incoming, rep.Result, nil, err)
 	}
@@ -203,14 +198,13 @@ func (m *executionProxyImplementation) RouteCall(
 
 // SaveAsChild is an RPC saving data as memory of a contract as child a parent
 func (m *executionProxyImplementation) SaveAsChild(
-	ctx context.Context, current *Transcript, req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveAsChildResp,
+	ctx context.Context, current *common.Transcript, req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveAsChildResp,
 ) error {
 	inslogger.FromContext(ctx).Debug("RPC.SaveAsChild")
 	ctx, span := instracer.StartSpan(ctx, "RPC.SaveAsChild")
 	defer span.End()
 
 	outgoing := buildOutgoingSaveAsChildRequest(ctx, current, req)
-	incoming := buildIncomingRequestFromOutgoing(outgoing)
 
 	// Register outgoing request
 	outReqInfo, err := m.am.RegisterOutgoingRequest(ctx, outgoing)
@@ -218,27 +212,17 @@ func (m *executionProxyImplementation) SaveAsChild(
 		return err
 	}
 
-	// Send the request
-	msg := &message.CallMethod{IncomingRequest: *incoming}
-	res, err := m.cr.Call(ctx, msg)
-	if err != nil {
-		return err
-	}
-
-	callReply := res.(*reply.CallMethod)
-	current.AddOutgoingRequest(ctx, *incoming, callReply.Result, callReply.Object, err)
-
-	rep.Reference = callReply.Object
-	rep.Result = callReply.Result
-
-	// Register result of the outgoing method
 	outgoingReqRef := insolar.NewReference(outReqInfo.RequestID)
-	reqResult := newRequestResult(rep.Result, req.Callee)
-	return m.am.RegisterResult(ctx, *outgoingReqRef, reqResult)
+	var incoming *record.IncomingRequest
+	rep.Reference, rep.Result, incoming, err = m.outgoingSender.SendOutgoingRequest(ctx, *outgoingReqRef, outgoing)
+	if incoming != nil {
+		current.AddOutgoingRequest(ctx, *incoming, rep.Result, nil, err)
+	}
+	return err
 }
 
 func (m *executionProxyImplementation) DeactivateObject(
-	ctx context.Context, current *Transcript, req rpctypes.UpDeactivateObjectReq, rep *rpctypes.UpDeactivateObjectResp,
+	ctx context.Context, current *common.Transcript, req rpctypes.UpDeactivateObjectReq, rep *rpctypes.UpDeactivateObjectResp,
 ) error {
 
 	current.Deactivate = true
@@ -259,7 +243,7 @@ func NewValidationProxyImplementation(
 }
 
 func (m *validationProxyImplementation) GetCode(
-	ctx context.Context, current *Transcript, req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp,
+	ctx context.Context, current *common.Transcript, req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp,
 ) error {
 	codeDescriptor, err := m.dc.GetCode(ctx, req.Code)
 	if err != nil {
@@ -274,7 +258,7 @@ func (m *validationProxyImplementation) GetCode(
 }
 
 func (m *validationProxyImplementation) RouteCall(
-	ctx context.Context, current *Transcript, req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp,
+	ctx context.Context, current *common.Transcript, req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp,
 ) error {
 	if current.Request.Immutable {
 		return errors.New("immutable method can't make calls")
@@ -299,7 +283,7 @@ func (m *validationProxyImplementation) RouteCall(
 }
 
 func (m *validationProxyImplementation) SaveAsChild(
-	ctx context.Context, current *Transcript, req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveAsChildResp,
+	ctx context.Context, current *common.Transcript, req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveAsChildResp,
 ) error {
 	outgoing := buildOutgoingSaveAsChildRequest(ctx, current, req)
 	incoming := buildIncomingRequestFromOutgoing(outgoing)
@@ -318,7 +302,7 @@ func (m *validationProxyImplementation) SaveAsChild(
 }
 
 func (m *validationProxyImplementation) DeactivateObject(
-	ctx context.Context, current *Transcript, req rpctypes.UpDeactivateObjectReq, rep *rpctypes.UpDeactivateObjectResp,
+	ctx context.Context, current *common.Transcript, req rpctypes.UpDeactivateObjectReq, rep *rpctypes.UpDeactivateObjectResp,
 ) error {
 
 	current.Deactivate = true
@@ -364,7 +348,7 @@ func buildIncomingRequestFromOutgoing(outgoing *record.OutgoingRequest) *record.
 }
 
 func buildOutgoingRequest(
-	_ context.Context, current *Transcript, req rpctypes.UpRouteReq,
+	_ context.Context, current *common.Transcript, req rpctypes.UpRouteReq,
 ) *record.OutgoingRequest {
 
 	current.Nonce++
@@ -397,7 +381,7 @@ func buildOutgoingRequest(
 }
 
 func buildOutgoingSaveAsChildRequest(
-	_ context.Context, current *Transcript, req rpctypes.UpSaveAsChildReq,
+	_ context.Context, current *common.Transcript, req rpctypes.UpSaveAsChildReq,
 ) *record.OutgoingRequest {
 
 	current.Nonce++

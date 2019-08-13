@@ -27,6 +27,9 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
+	"github.com/insolar/insolar/logicrunner/common"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
+	"github.com/insolar/insolar/logicrunner/requestresult"
 )
 
 // ------------- CheckOurRole
@@ -107,7 +110,40 @@ type AddFreshRequest struct {
 
 func (c *AddFreshRequest) Proceed(ctx context.Context) error {
 	requestCtx := freshContextFromContext(ctx)
-	tr := NewTranscript(requestCtx, c.requestRef, c.request)
+	tr := common.NewTranscript(requestCtx, c.requestRef, c.request)
 	c.broker.AddFreshRequest(ctx, tr)
+	return nil
+}
+
+type RecordErrorResult struct {
+	artifactManager artifacts.Client
+
+	err        error
+	objectRef  insolar.Reference
+	requestRef insolar.Reference
+
+	result []byte
+}
+
+func (r *RecordErrorResult) Proceed(ctx context.Context) error {
+	ctx, span := instracer.StartSpan(ctx, "RecordErrorResult.Proceed")
+	defer span.End()
+
+	inslogger.FromContext(ctx).Debug("recording error result")
+
+	resultWithErr, err := foundation.MarshalMethodErrorResult(r.err)
+	if err != nil {
+		return errors.Wrap(err, "couldn't marshal result")
+	}
+
+	result := requestresult.New(resultWithErr, r.objectRef)
+
+	err = r.artifactManager.RegisterResult(ctx, r.requestRef, result)
+	if err != nil {
+		return errors.Wrap(err, "couldn't register result")
+	}
+
+	r.result = resultWithErr
+
 	return nil
 }

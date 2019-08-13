@@ -61,9 +61,9 @@ func NewPulseRoundMismatchError(pn pulse.Number, msg string) error {
 	return &nextPulseRoundError{pn: pn, s: msg}
 }
 
-func NewPulseRoundMismatchErrorDef(pn pulse.Number, filterPN pulse.Number, localID insolar.ShortNodeID, from interface{}) error {
-	msg := fmt.Sprintf("packet pulse number mismatched: expected=%v, actual=%v, local=%d, from=%v",
-		filterPN, pn, localID, from)
+func NewPulseRoundMismatchErrorDef(pn pulse.Number, filterPN pulse.Number, localID insolar.ShortNodeID, from interface{}, details string) error {
+	msg := fmt.Sprintf("packet pulse number mismatched: expected=%v, actual=%v, local=%d, from=%v, details=%v",
+		filterPN, pn, localID, from, details)
 	return NewPulseRoundMismatchError(pn, msg)
 }
 

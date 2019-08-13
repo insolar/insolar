@@ -53,12 +53,13 @@ package serialization
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
 
 func TestPacketContext_InContext(t *testing.T) {
-	ctx := newPacketContext(context.Background(), &Header{})
+	ctx := newPacketContext(context.Background(), &Header{}, time.Now())
 
 	require.True(t, ctx.InContext(NoContext))
 	require.False(t, ctx.InContext(ContextMembershipAnnouncement))
@@ -72,7 +73,7 @@ func TestPacketContext_InContext(t *testing.T) {
 }
 
 func TestPacketContext_SetInContext(t *testing.T) {
-	ctx := newPacketContext(context.Background(), &Header{})
+	ctx := newPacketContext(context.Background(), &Header{}, time.Now())
 
 	require.True(t, ctx.InContext(NoContext))
 
@@ -84,27 +85,27 @@ func TestPacketContext_SetInContext(t *testing.T) {
 }
 
 func TestPacketContext_GetNeighbourNodeID(t *testing.T) {
-	ctx := newPacketContext(context.Background(), &Header{})
+	ctx := newPacketContext(context.Background(), &Header{}, time.Now())
 
 	ctx.neighbourNodeID = 123
 	require.EqualValues(t, 123, ctx.GetNeighbourNodeID())
 }
 
 func TestPacketContext_GetNeighbourNodeID_Panics(t *testing.T) {
-	ctx := newPacketContext(context.Background(), &Header{})
+	ctx := newPacketContext(context.Background(), &Header{}, time.Now())
 
 	require.Panics(t, func() { ctx.GetNeighbourNodeID() })
 }
 
 func TestPacketContext_SetNeighbourNodeID(t *testing.T) {
-	ctx := newPacketContext(context.Background(), &Header{})
+	ctx := newPacketContext(context.Background(), &Header{}, time.Now())
 
 	ctx.SetNeighbourNodeID(123)
 	require.EqualValues(t, 123, ctx.GetNeighbourNodeID())
 }
 
 func TestPacketContext_GetAnnouncedJoinerNodeID(t *testing.T) {
-	ctx := newPacketContext(context.Background(), &Header{})
+	ctx := newPacketContext(context.Background(), &Header{}, time.Now())
 
 	require.EqualValues(t, 0, ctx.GetAnnouncedJoinerNodeID())
 
@@ -113,7 +114,7 @@ func TestPacketContext_GetAnnouncedJoinerNodeID(t *testing.T) {
 }
 
 func TestPacketContext_SetAnnouncedJoinerNodeID(t *testing.T) {
-	ctx := newPacketContext(context.Background(), &Header{})
+	ctx := newPacketContext(context.Background(), &Header{}, time.Now())
 
 	require.EqualValues(t, 0, ctx.GetAnnouncedJoinerNodeID())
 

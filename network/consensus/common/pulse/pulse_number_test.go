@@ -73,8 +73,13 @@ func TestOfUnixTime(t *testing.T) {
 	require.Equal(t, Number(MinTimePulse), OfUnixTime(UnixTimeOfMinTimePulse))
 }
 
-func TestAsApproximateTime(t *testing.T) {
+func TestAsApproximateTime_Panics(t *testing.T) {
 	n := Number(0)
+	require.Panics(t, func() { n.AsApproximateTime() })
+}
+
+func TestAsApproximateTime(t *testing.T) {
+	n := Number(MinTimePulse)
 	approx := n.AsApproximateTime()
 	require.Equal(t, timeOfMinTimePulse, approx)
 }

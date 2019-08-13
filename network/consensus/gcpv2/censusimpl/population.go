@@ -221,7 +221,7 @@ func (c *ManyNodePopulation) makeCopyOfMapAndSeparateEvicts(slots map[insolar.Sh
 	localID := local.GetNodeID()
 
 	evicts, slotCount := c._filterAndFillInSlots(slots, fail)
-	c._fillInRoleStatsAndMap(localID, slotCount, false, false, fail)
+	c._fillInRoleStatsAndMap(localID, slotCount, true, false, fail)
 	evicts = c._adjustSlotsAndCopyEvicts(localID, evicts)
 
 	return evicts

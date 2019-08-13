@@ -127,7 +127,7 @@ func TestAsByteString(t *testing.T) {
 	require.Empty(t, fs.AsByteString())
 
 	fs = &fixedSize{data: []byte{'a', 'b', 'c'}}
-	require.Equal(t, "abc", fs.AsByteString())
+	require.Equal(t, ByteString("abc"), fs.AsByteString())
 }
 
 func TestWriteTo(t *testing.T) {

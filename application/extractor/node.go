@@ -19,6 +19,7 @@ package extractor
 import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
+
 	"github.com/pkg/errors"
 )
 
@@ -29,7 +30,7 @@ func NodeInfoResponse(data []byte) (string, string, error) {
 		Role      insolar.StaticRole
 	}{}
 	var contractErr *foundation.Error
-	_, err := insolar.UnMarshalResponse(data, []interface{}{&res, &contractErr})
+	err := foundation.UnmarshalMethodResultSimplified(data, &res, &contractErr)
 	if err != nil {
 		return "", "", errors.Wrap(err, "[ NodeInfoResponse ] Can't unmarshal response")
 	}

@@ -111,7 +111,7 @@ func newPacketParser(
 		receivedAt:   receivedAt,
 	}
 
-	_, err := parser.packet.DeserializeFrom(ctx, capture)
+	_, err := parser.packet.DeserializeFrom(ctx, capture, receivedAt)
 	if err != nil {
 		return nil, err
 	}

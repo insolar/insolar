@@ -160,7 +160,8 @@ func (p *PrepRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 	}
 
 	var canHandle bool
-	canHandle, err = p.coreRealm.VerifyPacketPulseNumber(ctx, packet, from, p.initialCensus.GetExpectedPulseNumber(), 0)
+	canHandle, err = p.coreRealm.VerifyPacketPulseNumber(ctx, packet, from, p.initialCensus.GetExpectedPulseNumber(), 0,
+		"prep:dispatchPacket")
 
 	if !canHandle || err != nil {
 		return err
@@ -312,7 +313,7 @@ func (p *PrepRealm) ApplyPulseData(ctx context.Context, pp transport.PulsePacket
 	// TODO blame pulsar and/or node
 	localID := p.self.GetNodeID()
 
-	return errors.NewPulseRoundMismatchErrorDef(pn, epn, localID, from)
+	return errors.NewPulseRoundMismatchErrorDef(pn, epn, localID, from, "prep:ApplyPulseData")
 }
 
 func (p *PrepRealm) _applyPulseData(_ context.Context, pdp proofs.OriginalPulsarPacket, fromPulsar bool,

@@ -75,7 +75,7 @@ func NewSha3512Digester(scheme insolar.PlatformCryptographyScheme) *Sha3512Diges
 }
 
 func (pd *Sha3512Digester) GetDigestSize() int {
-	return 64
+	return pd.scheme.IntegrityHashSize()
 }
 
 func (pd *Sha3512Digester) DigestData(reader io.Reader) cryptkit.Digest {

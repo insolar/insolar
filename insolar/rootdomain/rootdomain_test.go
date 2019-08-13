@@ -18,6 +18,7 @@ package rootdomain
 
 import (
 	"encoding/hex"
+	"github.com/insolar/insolar/insolar/genesisrefs"
 	"testing"
 
 	"github.com/insolar/insolar/insolar"
@@ -50,7 +51,7 @@ func TestGenesisRef(t *testing.T) {
 		pubKey    = "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEf+vsMVU75xH8uj5WRcOqYdHXtaHH\nN0na2RVQ1xbhsVybYPae3ujNHeQCPj+RaJyMVhb6Aj/AOsTTOPFswwIDAQ==\n-----END PUBLIC KEY-----\n"
 		pubKeyRef = "1tJCGGQmcqRD6oeNt1TPHpDshvb3YZy4NLsQcpHB9W.11111111111111111111111111111111"
 	)
-	genesisRef := GenesisRef(pubKey)
+	genesisRef := genesisrefs.GenesisRef(pubKey)
 	require.Equal(t, pubKeyRef, genesisRef.String(), "reference by name always the same")
 }
 

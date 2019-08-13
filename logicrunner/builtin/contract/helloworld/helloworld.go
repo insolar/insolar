@@ -63,7 +63,7 @@ func (hw *HelloWorld) Errored() (interface{}, error) {
 	return nil, errors.New("TestError")
 }
 
-//Get number pulse from foundation
+// Get number pulse from foundation.
 func (hw *HelloWorld) PulseNumber() (insolar.PulseNumber, error) {
 	return foundation.GetPulseNumber()
 }

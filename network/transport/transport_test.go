@@ -55,6 +55,7 @@ import (
 	"io"
 	"log"
 	"testing"
+	"time"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/stretchr/testify/suite"
@@ -80,7 +81,7 @@ type fakeNode struct {
 	tcpBuf chan []byte
 }
 
-func (f *fakeNode) HandleStream(ctx context.Context, address string, stream io.ReadWriteCloser) {
+func (f *fakeNode) HandleStream(ctx context.Context, address string, stream io.ReadWriteCloser, r time.Time) {
 	inslogger.FromContext(ctx).Infof("HandleStream from %s", address)
 
 	b := make([]byte, 3)
@@ -92,7 +93,7 @@ func (f *fakeNode) HandleStream(ctx context.Context, address string, stream io.R
 	f.tcpBuf <- b
 }
 
-func (f *fakeNode) HandleDatagram(ctx context.Context, address string, buf []byte) {
+func (f *fakeNode) HandleDatagram(ctx context.Context, address string, buf []byte, r time.Time) {
 	inslogger.FromContext(ctx).Info("HandleDatagram from %s: %v", address, buf)
 	f.udpBuf <- buf
 }

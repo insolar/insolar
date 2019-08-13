@@ -54,20 +54,21 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
-	"github.com/insolar/insolar/network"
-
-	"github.com/insolar/insolar/network/hostnetwork/packet"
-	"github.com/insolar/insolar/network/hostnetwork/packet/types"
-
-	mock "github.com/insolar/insolar/testutils/network"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/reply"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
+	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/hostnetwork/packet"
+	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 	"github.com/insolar/insolar/testutils"
+	mock "github.com/insolar/insolar/testutils/network"
 )
 
 func mockCryptographyService(t *testing.T, ok bool) insolar.CryptographyService {
@@ -91,7 +92,9 @@ func mockCertificateManager(t *testing.T, certNodeRef *insolar.Reference, discov
 				Reference: certNodeRef.String(),
 				Role:      "virtual",
 			},
-			MajorityRule: 0,
+			RootDomainReference: "test_root_domain_ref",
+			MajorityRule:        0,
+			PulsarPublicKeys:    []string{},
 			BootstrapNodes: []certificate.BootstrapNode{
 				{
 					NodeRef:     discoveryNodeRef.String(),
@@ -102,43 +105,18 @@ func mockCertificateManager(t *testing.T, certNodeRef *insolar.Reference, discov
 			},
 		}
 	})
-	cm.NewUnsignedCertificateMock.Set(func(key string, role string, nodeRef string) (insolar.Certificate, error) {
-		require.Equal(t, "test_node_public_key", key)
-		require.Equal(t, "virtual", role)
-
-		if unsignCertOk {
-			return &certificate.Certificate{
-				AuthorizationCertificate: certificate.AuthorizationCertificate{
-					PublicKey: key,
-					Reference: nodeRef,
-					Role:      role,
-				},
-				RootDomainReference: "test_root_domain_ref",
-				MajorityRule:        0,
-				PulsarPublicKeys:    []string{},
-				BootstrapNodes: []certificate.BootstrapNode{
-					{
-						PublicKey:   "test_discovery_public_key",
-						Host:        "test_discovery_host",
-						NetworkSign: []byte("test_network_sign"),
-						NodeRef:     discoveryNodeRef.String(),
-					},
-				},
-			}, nil
-		}
-		return nil, errors.New("test_error")
-	})
 	return cm
 }
 
 func mockReply(t *testing.T) []byte {
-	node, err := insolar.MarshalArgs(struct {
+	res := struct {
 		PublicKey string
 		Role      insolar.StaticRole
 	}{
 		PublicKey: "test_node_public_key",
 		Role:      insolar.StaticRoleVirtual,
-	}, nil)
+	}
+	node, err := foundation.MarshalMethodResult(res, nil)
 	require.NoError(t, err)
 	return node
 }
@@ -193,21 +171,21 @@ func TestComplete_GetCert(t *testing.T) {
 	require.NoError(t, err)
 
 	cert := result.(*certificate.Certificate)
-	require.Equal(t, "test_node_public_key", cert.PublicKey)
-	require.Equal(t, nodeRef.String(), cert.Reference)
-	require.Equal(t, "virtual", cert.Role)
-	require.Equal(t, 0, cert.MajorityRule)
-	require.Equal(t, uint(0), cert.MinRoles.Virtual)
-	require.Equal(t, uint(0), cert.MinRoles.HeavyMaterial)
-	require.Equal(t, uint(0), cert.MinRoles.LightMaterial)
-	require.Equal(t, []string{}, cert.PulsarPublicKeys)
-	require.Equal(t, "test_root_domain_ref", cert.RootDomainReference)
-	require.Equal(t, 1, len(cert.BootstrapNodes))
-	require.Equal(t, "test_discovery_public_key", cert.BootstrapNodes[0].PublicKey)
-	require.Equal(t, []byte("test_network_sign"), cert.BootstrapNodes[0].NetworkSign)
-	require.Equal(t, "test_discovery_host", cert.BootstrapNodes[0].Host)
-	require.Equal(t, []byte("test_sig"), cert.BootstrapNodes[0].NodeSign)
-	require.Equal(t, certNodeRef.String(), cert.BootstrapNodes[0].NodeRef)
+	assert.Equal(t, "test_node_public_key", cert.PublicKey)
+	assert.Equal(t, nodeRef.String(), cert.Reference)
+	assert.Equal(t, "virtual", cert.Role)
+	assert.Equal(t, 0, cert.MajorityRule)
+	assert.Equal(t, uint(0), cert.MinRoles.Virtual)
+	assert.Equal(t, uint(0), cert.MinRoles.HeavyMaterial)
+	assert.Equal(t, uint(0), cert.MinRoles.LightMaterial)
+	assert.Equal(t, []string{}, cert.PulsarPublicKeys)
+	assert.Equal(t, "test_root_domain_ref", cert.RootDomainReference)
+	assert.Equal(t, 1, len(cert.BootstrapNodes))
+	assert.Equal(t, "test_discovery_public_key", cert.BootstrapNodes[0].PublicKey)
+	assert.Equal(t, []byte("test_network_sign"), cert.BootstrapNodes[0].NetworkSign)
+	assert.Equal(t, "test_discovery_host", cert.BootstrapNodes[0].Host)
+	assert.Equal(t, []byte("test_sig"), cert.BootstrapNodes[0].NodeSign)
+	assert.Equal(t, certNodeRef.String(), cert.BootstrapNodes[0].NodeRef)
 }
 
 func TestComplete_handler(t *testing.T) {
@@ -237,7 +215,7 @@ func TestComplete_handler(t *testing.T) {
 	ge = ge.NewGateway(context.Background(), insolar.CompleteNetworkState)
 	ctx := context.Background()
 
-	p := packet.NewReceivedPacket(packet.NewPacket(nil, nil, types.SignCert, 1), nil)
+	p := packet.NewReceivedPacket(packet.NewPacket(nil, nil, types.SignCert, 1), nil, time.Now())
 	p.SetRequest(&packet.SignCertRequest{NodeRef: nodeRef})
 
 	hn.BuildResponseMock.Set(func(ctx context.Context, request network.Packet, responseData interface{}) (p1 network.Packet) {
