@@ -50,10 +50,35 @@
 
 package servicenetwork
 
-import "github.com/insolar/insolar/insolar"
+import (
+	"context"
 
-func (n *ServiceNetwork) GetNetworStatus() insolar.StatusReply {
-	panic("implement me")
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/version"
+)
+
+func (n *ServiceNetwork) GetNetworkStatus() insolar.StatusReply {
+	var reply insolar.StatusReply
+	reply.NetworkState = n.GetState()
+
+	np, err := n.PulseAccessor.GetLatestPulse(context.Background())
+	if err != nil {
+		np = *insolar.GenesisPulse
+	}
+	reply.Pulse = np
+
+	activeNodes := n.NodeKeeper.GetAccessor(np.PulseNumber).GetActiveNodes()
+	workingNodes := n.NodeKeeper.GetAccessor(np.PulseNumber).GetWorkingNodes()
+
+	reply.ActiveListSize = len(activeNodes)
+	reply.WorkingListSize = len(workingNodes)
+
+	reply.Nodes = activeNodes
+	reply.Origin = n.NodeKeeper.GetOrigin()
+
+	reply.Version = version.Version
+
+	return reply
 }
 
 func (n *ServiceNetwork) IsAlive() bool {
