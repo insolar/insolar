@@ -18,8 +18,9 @@ package bus
 
 import (
 	"context"
-	"github.com/insolar/insolar/insolar/pulse"
 	"testing"
+
+	"github.com/insolar/insolar/insolar/pulse"
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar"
@@ -42,15 +43,15 @@ func TestWaitOKSender_SendRole_RetryExceeded(t *testing.T) {
 	msg, err := payload.NewMessage(&payload.State{})
 	require.NoError(t, err)
 
-	tries := 3
+	retries := 3
 
 	pa := pulse.NewAccessorMock(t)
 	pa.LatestMock.Set(accessorMock(t).Latest)
-	c := NewWaitOKWithRetrySender(sender, pa, uint(tries))
+	c := NewWaitOKWithRetrySender(sender, pa, retries)
 
 	c.SendRole(context.Background(), msg, insolar.DynamicRoleLightExecutor, testutils.RandomRef())
 
-	require.EqualValues(t, tries, sender.SendRoleAfterCounter())
+	require.EqualValues(t, retries+1, sender.SendRoleAfterCounter())
 }
 
 func sendOK(ch chan<- *message.Message) {
