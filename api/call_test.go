@@ -93,7 +93,7 @@ func (suite *TimeoutSuite) TestRunner_callHandler_Timeout() {
 
 	seedString := base64.StdEncoding.EncodeToString(seed[:])
 
-	resp, err := requester.SendWithSeed(
+	_, err = requester.SendWithSeed(
 		suite.ctx,
 		CallUrl,
 		suite.user,
@@ -106,15 +106,7 @@ func (suite *TimeoutSuite) TestRunner_callHandler_Timeout() {
 		},
 		seedString,
 	)
-	suite.NoError(err)
-
-	close(suite.delay)
-
-	var result requester.ContractResponse
-	err = json.Unmarshal(resp, &result)
-	suite.NoError(err)
-	suite.Equal("API timeout exceeded", result.Error.Message)
-	suite.Nil(result.Result)
+	suite.Error(err, "Client.Timeout exceeded while awaiting headers")
 }
 
 func TestTimeoutSuite(t *testing.T) {
