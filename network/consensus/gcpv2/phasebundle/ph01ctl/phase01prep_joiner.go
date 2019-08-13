@@ -156,5 +156,5 @@ func (c *JoinerPhase01PrepController) DispatchHostPacket(ctx context.Context, pa
 		return err
 	}
 
-	return c.realm.ApplyPulseData(ctx, pp, false, from)
+	return c.realm.ApplyPulseData(ctx, pp, false, from, packet.GetPacketReceivedAt())
 }

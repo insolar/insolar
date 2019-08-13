@@ -84,6 +84,7 @@ type PacketParser struct {
 	digester     cryptkit.DataDigester
 	signMethod   cryptkit.SignMethod
 	keyProcessor insolar.KeyProcessor
+	receivedAt   time.Time
 }
 
 func (p *PacketParser) ParsePacketBody() (transport.PacketParser, error) {
@@ -96,6 +97,7 @@ func newPacketParser(
 	digester cryptkit.DataDigester,
 	signMethod cryptkit.SignMethod,
 	keyProcessor insolar.KeyProcessor,
+	receivedAt time.Time,
 ) (*PacketParser, error) {
 
 	capture := network.NewCapturingReader(reader)
@@ -106,6 +108,7 @@ func newPacketParser(
 		digester:     digester,
 		signMethod:   signMethod,
 		keyProcessor: keyProcessor,
+		receivedAt:   receivedAt,
 	}
 
 	_, err := parser.packet.DeserializeFrom(ctx, capture)
@@ -147,13 +150,17 @@ func NewPacketParserFactory(
 	}
 }
 
-func (f *PacketParserFactory) ParsePacket(ctx context.Context, reader io.Reader) (transport.PacketParser, error) {
-	return newPacketParser(ctx, reader, f.digester, f.signMethod, f.keyProcessor)
+func (f *PacketParserFactory) ParsePacket(ctx context.Context, reader io.Reader, receivedAt time.Time) (transport.PacketParser, error) {
+	return newPacketParser(ctx, reader, f.digester, f.signMethod, f.keyProcessor, receivedAt)
+}
+
+func (p *PacketParser) GetPacketReceivedAt() time.Time {
+	return p.receivedAt
 }
 
 func (p *PacketParser) GetPulsePacket() transport.PulsePacketReader {
 	pulsarBody := p.packet.EncryptableBody.(*PulsarPacketBody)
-	return adapters.NewPulsePacketParser(pulsarBody.getPulseData(), p.packetData.data)
+	return adapters.NewPulsePacketParser(pulsarBody.getPulseData(), p.receivedAt, p.packetData.data)
 }
 
 func (p *PacketParser) GetMemberPacket() transport.MemberPacketReader {
@@ -243,7 +250,8 @@ func (r *EmbeddedPulseReader) GetEmbeddedPulsePacket() transport.PulsePacketRead
 		return nil
 	}
 
-	return adapters.NewPulsePacketParser(r.body.PulsarPacket.PulsarPacketBody.getPulseData(), r.body.PulsarPacket.Data)
+	return adapters.NewPulsePacketParser(r.body.PulsarPacket.PulsarPacketBody.getPulseData(),
+		r.receivedAt, r.body.PulsarPacket.Data)
 }
 
 type Phase0PacketReader struct {

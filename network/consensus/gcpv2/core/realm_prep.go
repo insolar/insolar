@@ -99,7 +99,9 @@ type PrepRealm struct {
 	prepSelf           *population.NodeAppearance /* local copy to avoid race */
 }
 
-func (p *PrepRealm) init(completeFn func(successful bool)) {
+type PrepCompleteFunc func(successful bool, startedAt time.Time)
+
+func (p *PrepRealm) init(completeFn PrepCompleteFunc) {
 	p.completeFn = completeFn
 	if p.coreRealm.self == nil {
 		panic("illegal state")
@@ -255,7 +257,7 @@ func (p *PrepRealm) pushEphemeralPulse(ctx context.Context) {
 	}
 
 	pde := p.ephemeralFeeder.CreateEphemeralPulsePacket(p.initialCensus)
-	ok, pn := p._applyPulseData(ctx, pde, false)
+	ok, pn := p._applyPulseData(ctx, pde, false, time.Now())
 	if !ok && pn != pde.GetPulseNumber() {
 		inslogger.FromContext(ctx).Error("active ephemeral start has failed, going to passive")
 	}
@@ -286,7 +288,8 @@ func (p *PrepRealm) GetMandateRegistry() census.MandateRegistry {
 	return p.initialCensus.GetMandateRegistry()
 }
 
-func (p *PrepRealm) ApplyPulseData(ctx context.Context, pp transport.PulsePacketReader, fromPulsar bool, from endpoints.Inbound) error {
+func (p *PrepRealm) ApplyPulseData(ctx context.Context, pp transport.PulsePacketReader, fromPulsar bool,
+	from endpoints.Inbound, receivedAt time.Time) error {
 
 	pde := pp.GetPulseDataEvidence()
 	pd := pp.GetPulseData()
@@ -301,7 +304,7 @@ func (p *PrepRealm) ApplyPulseData(ctx context.Context, pp transport.PulsePacket
 	p.Lock()
 	defer p.Unlock()
 
-	ok, epn := p._applyPulseData(ctx, pde, fromPulsar)
+	ok, epn := p._applyPulseData(ctx, pde, fromPulsar, receivedAt)
 	if ok || !epn.IsUnknown() && epn == pn {
 		return nil
 	}
@@ -312,7 +315,8 @@ func (p *PrepRealm) ApplyPulseData(ctx context.Context, pp transport.PulsePacket
 	return errors.NewPulseRoundMismatchErrorDef(pn, epn, localID, from)
 }
 
-func (p *PrepRealm) _applyPulseData(_ context.Context, pdp proofs.OriginalPulsarPacket, fromPulsar bool) (bool, pulse.Number) {
+func (p *PrepRealm) _applyPulseData(_ context.Context, pdp proofs.OriginalPulsarPacket, fromPulsar bool,
+	receivedAt time.Time) (bool, pulse.Number) {
 
 	pd := pdp.GetPulseData()
 
@@ -359,7 +363,7 @@ func (p *PrepRealm) _applyPulseData(_ context.Context, pdp proofs.OriginalPulsar
 	p.originalPulse = pdp
 	p.pulseData = pd
 
-	p.completeFn(true)
+	p.completeFn(true, receivedAt)
 
 	return true, pd.PulseNumber
 }

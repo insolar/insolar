@@ -53,6 +53,7 @@ package hostnetwork
 import (
 	"context"
 	"io"
+	"time"
 
 	"github.com/insolar/insolar/network"
 
@@ -83,7 +84,7 @@ func NewStreamHandler(requestHandler RequestHandler, responseHandler future.Pack
 	}
 }
 
-func (s *StreamHandler) HandleStream(ctx context.Context, address string, reader io.ReadWriteCloser) {
+func (s *StreamHandler) HandleStream(ctx context.Context, address string, reader io.ReadWriteCloser, receivedAt time.Time) {
 	mainLogger := inslogger.FromContext(ctx)
 
 	logLevel := inslogger.GetLoggerLevel(ctx)
@@ -97,7 +98,7 @@ func (s *StreamHandler) HandleStream(ctx context.Context, address string, reader
 	}()
 
 	for {
-		p, err := packet.DeserializePacket(mainLogger, reader)
+		p, err := packet.DeserializePacket(mainLogger, reader, receivedAt)
 
 		if err != nil {
 			if err == io.EOF || err == io.ErrUnexpectedEOF {

@@ -56,6 +56,7 @@ import (
 	"net"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
@@ -170,7 +171,7 @@ func (t *udpTransport) loop(ctx context.Context) {
 		}
 
 		stats.Record(ctx, network.RecvSize.M(int64(n)))
-		go t.handler.HandleDatagram(ctx, addr.String(), buf[:n])
+		go t.handler.HandleDatagram(ctx, addr.String(), buf[:n], time.Now())
 	}
 }
 

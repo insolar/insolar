@@ -58,6 +58,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
+	"time"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/transport.PacketParser -o . -s _mock.go -g
@@ -74,6 +75,8 @@ type PacketParser interface {
 
 	GetPacketSignature() cryptkit.SignedDigest
 	ParsePacketBody() (PacketParser, error) // enables lazy parsing / parsing only after packet validation
+
+	GetPacketReceivedAt() time.Time
 
 	GetPulsePacket() PulsePacketReader
 	GetMemberPacket() MemberPacketReader

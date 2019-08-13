@@ -53,13 +53,14 @@ package transport
 import (
 	"context"
 	"io"
+	"time"
 
 	"github.com/insolar/insolar/component"
 )
 
 // DatagramHandler interface provides callback method to process received datagrams
 type DatagramHandler interface {
-	HandleDatagram(ctx context.Context, address string, buf []byte)
+	HandleDatagram(ctx context.Context, address string, buf []byte, receivedAt time.Time)
 }
 
 // DatagramTransport interface provides methods to send and receive datagrams
@@ -73,7 +74,7 @@ type DatagramTransport interface {
 
 // StreamHandler interface provides callback method to process data stream
 type StreamHandler interface {
-	HandleStream(ctx context.Context, address string, stream io.ReadWriteCloser)
+	HandleStream(ctx context.Context, address string, stream io.ReadWriteCloser, receivedAt time.Time)
 }
 
 //go:generate minimock -i github.com/insolar/insolar/network/transport.StreamTransport -o ../../testutils/network -s _mock.go -g

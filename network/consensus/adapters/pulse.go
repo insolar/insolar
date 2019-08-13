@@ -117,21 +117,23 @@ func CreateEphemeralPulseData(data pulse.Data) []byte {
 	insolarPulse := NewPulse(data)
 	pulsePacket := pulsenetwork.NewPulsePacket(&insolarPulse, nil, nil, 0)
 	bs, _ := packet.SerializePacket(pulsePacket)
-	receivedPacket, _ := packet.DeserializePacketRaw(bytes.NewReader(bs))
+	receivedPacket, _ := packet.DeserializePacketRaw(bytes.NewReader(bs), time.Now())
 	return receivedPacket.Bytes()
 }
 
 type PulsePacketParser struct {
 	longbits.FixedReader
-	digest cryptkit.DigestHolder
-	pulse  pulse.Data
+	digest     cryptkit.DigestHolder
+	pulse      pulse.Data
+	receivedAt time.Time
 }
 
-func NewPulsePacketParser(pulse pulse.Data, data []byte) *PulsePacketParser {
+func NewPulsePacketParser(pulse pulse.Data, receivedAt time.Time, data []byte) *PulsePacketParser {
 	return &PulsePacketParser{
 		FixedReader: longbits.NewMutableFixedSize(data),
 		digest:      NewPulseDigest(pulse).AsDigestHolder(),
 		pulse:       pulse,
+		receivedAt:  receivedAt,
 	}
 }
 
@@ -157,6 +159,10 @@ func (p *PulsePacketParser) GetTargetID() insolar.ShortNodeID {
 
 func (p *PulsePacketParser) GetPacketType() phases.PacketType {
 	return phases.PacketPulsarPulse
+}
+
+func (p *PulsePacketParser) GetPacketReceivedAt() time.Time {
+	return p.receivedAt
 }
 
 func (p *PulsePacketParser) GetPulseNumber() pulse.Number {

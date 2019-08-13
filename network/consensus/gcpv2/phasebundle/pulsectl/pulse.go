@@ -80,7 +80,7 @@ func (p *PulsePrepController) DispatchHostPacket(ctx context.Context, packet tra
 	if err != nil || !ok {
 		return err
 	}
-	return p.R.ApplyPulseData(ctx, pp, true, from)
+	return p.R.ApplyPulseData(ctx, pp, true, from, packet.GetPacketReceivedAt())
 }
 
 func (p *PulseController) DispatchHostPacket(ctx context.Context, packet transport.PacketParser,

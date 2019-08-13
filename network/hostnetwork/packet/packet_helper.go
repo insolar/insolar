@@ -55,6 +55,7 @@ import (
 	"encoding/binary"
 	"io"
 	"strconv"
+	"time"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/hostnetwork/host"
@@ -154,7 +155,7 @@ func SerializePacket(p *Packet) ([]byte, error) {
 	return result, nil
 }
 
-func DeserializePacketRaw(conn io.Reader) (*ReceivedPacket, error) {
+func DeserializePacketRaw(conn io.Reader, receivedAt time.Time) (*ReceivedPacket, error) {
 	reader := NewCapturingReader(conn)
 
 	lengthBytes := make([]byte, 8)
@@ -178,13 +179,13 @@ func DeserializePacketRaw(conn io.Reader) (*ReceivedPacket, error) {
 		return nil, errors.Wrap(err, "failed to decode packet")
 	}
 
-	receivedPacket := NewReceivedPacket(msg, reader.Captured())
+	receivedPacket := NewReceivedPacket(msg, reader.Captured(), receivedAt)
 	return receivedPacket, nil
 }
 
 // DeserializePacket reads packet from io.Reader.
-func DeserializePacket(logger insolar.Logger, conn io.Reader) (*ReceivedPacket, error) {
-	receivedPacket, err := DeserializePacketRaw(conn)
+func DeserializePacket(logger insolar.Logger, conn io.Reader, receivedAt time.Time) (*ReceivedPacket, error) {
+	receivedPacket, err := DeserializePacketRaw(conn, receivedAt)
 	if err != nil {
 		return nil, err
 	}

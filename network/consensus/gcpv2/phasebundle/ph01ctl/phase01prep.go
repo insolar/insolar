@@ -120,5 +120,5 @@ func (c *Phase01PrepController) DispatchHostPacket(ctx context.Context, packet t
 	if err != nil || !ok {
 		return err
 	}
-	return c.realm.ApplyPulseData(ctx, pp, false, from)
+	return c.realm.ApplyPulseData(ctx, pp, false, from, packet.GetPacketReceivedAt())
 }

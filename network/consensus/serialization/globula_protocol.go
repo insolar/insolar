@@ -53,8 +53,6 @@ package serialization
 import (
 	"bytes"
 	"fmt"
-	"io"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/network/consensus/adapters"
@@ -63,6 +61,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
+	"io"
 
 	"github.com/pkg/errors"
 )
@@ -351,7 +350,7 @@ func (pd *EmbeddedPulsarData) DeserializeFrom(ctx DeserializeContext, reader io.
 		return errors.Wrap(err, "failed to deserialize Data")
 	}
 
-	p, err := packet.DeserializePacketRaw(bytes.NewReader(pd.Data))
+	p, err := packet.DeserializePacketRaw(bytes.NewReader(pd.Data), ctx.GetReceivedAt())
 	if err != nil {
 		return errors.Wrap(err, "failed to deserialize PulsarPacket")
 	}

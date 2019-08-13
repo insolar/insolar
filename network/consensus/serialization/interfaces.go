@@ -53,11 +53,11 @@ package serialization
 import (
 	"context"
 	"encoding/binary"
-	"io"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
+	"io"
+	"time"
 )
 
 var (
@@ -104,6 +104,7 @@ type PacketContext interface {
 	SetNeighbourNodeID(nodeID insolar.ShortNodeID)
 	GetAnnouncedJoinerNodeID() insolar.ShortNodeID
 	SetAnnouncedJoinerNodeID(nodeID insolar.ShortNodeID)
+	GetReceivedAt() time.Time
 }
 
 type SerializeContext interface {

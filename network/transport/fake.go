@@ -56,6 +56,7 @@ import (
 	"io"
 	"net"
 	"sync"
+	"time"
 
 	"github.com/pkg/errors"
 
@@ -127,7 +128,7 @@ func (f *fakeDatagramTransport) SendDatagram(ctx context.Context, address string
 
 	h := datagramHandlers[address]
 	if h != nil {
-		go h.HandleDatagram(ctx, f.address, data)
+		go h.HandleDatagram(ctx, f.address, data, time.Now())
 	}
 
 	return nil
@@ -175,7 +176,7 @@ func (f *fakeStreamTransport) Dial(ctx context.Context, address string) (io.Read
 	}
 
 	conn1, conn2 := net.Pipe()
-	go h.HandleStream(f.ctx, f.address, conn2)
+	go h.HandleStream(f.ctx, f.address, conn2, time.Now())
 
 	return conn1, nil
 }

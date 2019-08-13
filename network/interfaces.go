@@ -117,6 +117,7 @@ type Packet interface {
 type ReceivedPacket interface {
 	Packet
 	Bytes() []byte
+	GetReceivedAt() time.Time
 }
 
 // Future allows to handle responses to a previously sent request.

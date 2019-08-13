@@ -55,6 +55,7 @@ import (
 	"crypto"
 	"crypto/rand"
 	"testing"
+	"time"
 
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/insolar"
@@ -185,7 +186,7 @@ func newPulsePacket(t *testing.T) *packet.ReceivedPacket {
 	require.NoError(t, err)
 	receiver, err := host.NewHostN("127.0.0.1:3345", insolar.Reference{1})
 	require.NoError(t, err)
-	return packet.NewReceivedPacket(packet.NewPacket(sender, receiver, types.Pulse, 1), nil)
+	return packet.NewReceivedPacket(packet.NewPacket(sender, receiver, types.Pulse, 1), nil, time.Now())
 }
 
 func TestProcessIncorrectPacket(t *testing.T) {

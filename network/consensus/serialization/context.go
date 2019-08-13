@@ -56,6 +56,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"time"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -82,6 +83,7 @@ type deserializeGetter interface {
 type packetContext struct {
 	context.Context
 	PacketHeaderAccessor
+	receivedAt time.Time
 
 	header *Header
 
@@ -90,7 +92,7 @@ type packetContext struct {
 	announcedJoinerNodeID insolar.ShortNodeID
 }
 
-func newPacketContext(ctx context.Context, header *Header) packetContext {
+func newPacketContext(ctx context.Context, header *Header, receivedAt time.Time) packetContext {
 	ctx, _ = inslogger.WithFields(ctx, map[string]interface{}{
 		"packet_flags":   fmt.Sprintf("%08b", header.PacketFlags),
 		"payload_length": header.getPayloadLength(),
@@ -100,7 +102,12 @@ func newPacketContext(ctx context.Context, header *Header) packetContext {
 		Context:              ctx,
 		PacketHeaderAccessor: header,
 		header:               header,
+		receivedAt:           receivedAt,
 	}
+}
+
+func (pc *packetContext) GetReceivedAt() time.Time {
+	return pc.receivedAt
 }
 
 func (pc *packetContext) InContext(ctx FieldContext) bool {

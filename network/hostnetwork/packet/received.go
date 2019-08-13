@@ -50,18 +50,26 @@
 
 package packet
 
+import "time"
+
 type ReceivedPacket struct {
 	*Packet
-	data []byte
+	data       []byte
+	receivedAt time.Time
 }
 
-func NewReceivedPacket(p *Packet, data []byte) *ReceivedPacket {
+func NewReceivedPacket(p *Packet, data []byte, receivedAt time.Time) *ReceivedPacket {
 	return &ReceivedPacket{
-		Packet: p,
-		data:   data,
+		Packet:     p,
+		data:       data,
+		receivedAt: receivedAt,
 	}
 }
 
 func (p *ReceivedPacket) Bytes() []byte {
 	return p.data
+}
+
+func (p *ReceivedPacket) GetReceivedAt() time.Time {
+	return p.receivedAt
 }
