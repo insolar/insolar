@@ -250,7 +250,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		jets := jet.NewDBStore(DB)
 		JetKeeper = executor.NewJetKeeper(jets, DB, Pulses)
 		c.rollback = executor.NewDBRollback(JetKeeper, Pulses, drops, Records, indexes, jets, Pulses)
-		c.stateKeeper = executor.NewInitialStateKeeper()
+		c.stateKeeper = executor.NewInitialStateKeeper(JetKeeper, jets, indexes)
 
 		sp := pulse.NewStartPulse()
 

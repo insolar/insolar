@@ -26,7 +26,7 @@ import (
 )
 
 type jet struct {
-	// Active indicates what node is approved as last one, i.e. it's leaf (ignored for non leafs if set)
+	// Actual indicates what node is approved as last one, i.e. it's leaf (ignored for non leafs if set)
 	Actual bool
 	Left   *jet
 	Right  *jet
