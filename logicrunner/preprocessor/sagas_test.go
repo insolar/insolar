@@ -180,6 +180,102 @@ func (w *SagaTestWallet) TheAcceptMethod(amount int) error {
 		"but 'TheRollbackMethod' is not declared. Maybe a typo?", err.Error())
 }
 
+// Make sure saga's accept method can't be marked as immutable
+func (s *SagasSuite) TestSagaAcceptMethodCantBeImmutable() {
+	var testSaga = `
+package main
+
+import (
+"fmt"
+"errors"
+
+"github.com/insolar/insolar/logicrunner/builtin/foundation"
+)
+
+type SagaTestWallet struct {
+	foundation.BaseContract
+	Amount int
+}
+
+//ins:immutable
+//ins:saga(TheRollbackMethod)
+func (w *SagaTestWallet) TheAcceptMethod(amount int) error {
+	w.Amount += amount
+}
+
+func (w *SagaTestWallet) TheRollbackMethod(amount int) error {
+	w.Amount -= amount
+}
+`
+	tmpDir, err := ioutil.TempDir("", "test-")
+	s.NoError(err)
+	defer os.RemoveAll(tmpDir)
+
+	testContract := "/test.go"
+	err = goplugintestutils.WriteFile(tmpDir, testContract, testSaga)
+	s.NoError(err)
+
+	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeGoPlugin)
+	s.NoError(err)
+
+	var bufProxy bytes.Buffer
+	err = parsed.WriteWrapper(&bufProxy, parsed.ContractName())
+	s.Error(err)
+	s.Equal("semantic error: 'TheAcceptMethod' can't be a saga because it's immutable", err.Error())
+
+	err = parsed.WriteProxy(gen.Reference().String(), &bufProxy)
+	s.Error(err)
+	s.Equal("semantic error: 'TheAcceptMethod' can't be a saga because it's immutable", err.Error())
+}
+
+// Make sure saga's rollback method can't be marked as immutable
+func (s *SagasSuite) TestSagaRollbackMethodCantBeImmutable() {
+	var testSaga = `
+package main
+
+import (
+"fmt"
+"errors"
+
+"github.com/insolar/insolar/logicrunner/builtin/foundation"
+)
+
+type SagaTestWallet struct {
+	foundation.BaseContract
+	Amount int
+}
+
+//ins:saga(TheRollbackMethod)
+func (w *SagaTestWallet) TheAcceptMethod(amount int) error {
+	w.Amount += amount
+}
+
+//ins:immutable
+func (w *SagaTestWallet) TheRollbackMethod(amount int) error {
+	w.Amount -= amount
+}
+`
+	tmpDir, err := ioutil.TempDir("", "test-")
+	s.NoError(err)
+	defer os.RemoveAll(tmpDir)
+
+	testContract := "/test.go"
+	err = goplugintestutils.WriteFile(tmpDir, testContract, testSaga)
+	s.NoError(err)
+
+	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeGoPlugin)
+	s.NoError(err)
+
+	var bufProxy bytes.Buffer
+	err = parsed.WriteWrapper(&bufProxy, parsed.ContractName())
+	s.Error(err)
+	s.Equal("semantic error: 'TheRollbackMethod' can't be saga's rollback method because it's immutable", err.Error())
+
+	err = parsed.WriteProxy(gen.Reference().String(), &bufProxy)
+	s.Error(err)
+	s.Equal("semantic error: 'TheRollbackMethod' can't be saga's rollback method because it's immutable", err.Error())
+}
+
 // Make sure saga compiles without a rollback method if special flag is used
 func (s *SagasSuite) TestSagaCompilesWhenRollbackIsMissingSpecialFlag() {
 	var testSaga = `
