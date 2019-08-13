@@ -43,7 +43,7 @@ func TestWaitOKSender_SendRole_RetryExceeded(t *testing.T) {
 	msg, err := payload.NewMessage(&payload.State{})
 	require.NoError(t, err)
 
-	retries := 3
+	retries := uint(3)
 
 	pa := pulse.NewAccessorMock(t)
 	pa.LatestMock.Set(accessorMock(t).Latest)

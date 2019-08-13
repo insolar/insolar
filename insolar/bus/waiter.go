@@ -36,7 +36,7 @@ type WaitOKSender struct {
 }
 
 // NewWaitOKWithRetrySender creates WaitOKSender instance with RetrySender as Sender.
-func NewWaitOKWithRetrySender(sender Sender, pulseAccessor pulse.Accessor, retries int) *WaitOKSender {
+func NewWaitOKWithRetrySender(sender Sender, pulseAccessor pulse.Accessor, retries uint) *WaitOKSender {
 	r := NewRetrySender(sender, pulseAccessor, retries)
 	c := NewWaitOKSender(r)
 	return c

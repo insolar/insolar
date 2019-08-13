@@ -34,11 +34,11 @@ import (
 type RetrySender struct {
 	sender        Sender
 	pulseAccessor pulse.Accessor
-	retries       int
+	retries       uint
 }
 
 // NewRetrySender creates RetrySender instance with provided values.
-func NewRetrySender(sender Sender, pulseAccessor pulse.Accessor, retries int) *RetrySender {
+func NewRetrySender(sender Sender, pulseAccessor pulse.Accessor, retries uint) *RetrySender {
 	r := &RetrySender{
 		sender:        sender,
 		pulseAccessor: pulseAccessor,
@@ -62,7 +62,7 @@ func (r *RetrySender) Reply(ctx context.Context, origin payload.Meta, reply *mes
 func (r *RetrySender) SendRole(
 	ctx context.Context, msg *message.Message, role insolar.DynamicRole, ref insolar.Reference,
 ) (<-chan *message.Message, func()) {
-	retries := r.retries
+	tries := r.retries + 1
 	once := sync.Once{}
 	done := make(chan struct{})
 	replyChan := make(chan *message.Message)
@@ -79,7 +79,7 @@ func (r *RetrySender) SendRole(
 		}
 
 		received := false
-		for retries >= 0 && !received {
+		for tries > 0 && !received {
 			var err error
 			lastPulse, err = r.waitForPulseChange(ctx, lastPulse)
 			if err != nil {
@@ -89,11 +89,11 @@ func (r *RetrySender) SendRole(
 
 			reps, d := r.sender.SendRole(ctx, msg, role, ref)
 			received = tryReceive(ctx, reps, done, replyChan)
-			retries--
+			tries--
 			d()
 		}
 
-		if retries < 0 && !received {
+		if tries == 0 && !received {
 			logger.Error(errors.Errorf("flow cancelled, retries exceeded"))
 		}
 	}()
