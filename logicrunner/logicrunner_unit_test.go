@@ -311,19 +311,19 @@ func WaitGroup_TimeoutWait(wg *sync.WaitGroup, timeout time.Duration) bool {
 }
 
 func (suite *LogicRunnerTestSuite) TestConcurrency() {
-	objectRef := testutils.RandomRef()
-	parentRef := testutils.RandomRef()
-	protoRef := testutils.RandomRef()
-	codeRef := testutils.RandomRef()
+	objectRef := gen.Reference()
+	parentRef := gen.Reference()
+	protoRef := gen.Reference()
+	codeRef := gen.Reference()
 
-	notMeRef := testutils.RandomRef()
+	notMeRef := gen.Reference()
 
 	pulseNum := insolar.PulseNumber(insolar.FirstPulseNumber)
 
 	suite.jc.IsMeAuthorizedNowMock.Return(true, nil)
 
 	syncT := &utils.SyncT{T: suite.T()}
-	meRef := testutils.RandomRef()
+	meRef := gen.Reference()
 	nodeMock := network.NewNetworkNodeMock(syncT)
 	nodeMock.IDMock.Return(meRef)
 

@@ -63,6 +63,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/node"
@@ -406,7 +407,7 @@ func (s *testSuite) newNetworkNodeWithRole(name string, role insolar.StaticRole)
 	address := "127.0.0.1:" + strconv.Itoa(incrementTestPort())
 
 	n := &networkNode{
-		id:                  testutils.RandomRef(),
+		id:                  gen.Reference(),
 		role:                role,
 		privateKey:          key,
 		cryptographyService: cryptography.NewKeyBoundCryptographyService(key),
