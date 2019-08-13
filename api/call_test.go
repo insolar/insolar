@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
@@ -123,7 +124,7 @@ func TestTimeoutSuite(t *testing.T) {
 	pKeyString, err := ks.ExportPublicKeyPEM(pKey)
 	require.NoError(t, err)
 
-	userRef := testutils.RandomRef().String()
+	userRef := gen.Reference().String()
 	timeoutSuite.user, err = requester.CreateUserConfig(userRef, string(sKeyString), string(pKeyString))
 
 	http.DefaultServeMux = new(http.ServeMux)

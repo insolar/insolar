@@ -58,10 +58,10 @@ import (
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -82,7 +82,7 @@ func TestNewSnapshotStorage(t *testing.T) {
 
 	ks := platformpolicy.NewKeyProcessor()
 	p1, err := ks.GeneratePrivateKey()
-	n := node.NewNode(testutils.RandomRef(), insolar.StaticRoleVirtual, ks.ExtractPublicKey(p1), "127.0.0.1:22", "ver2")
+	n := node.NewNode(gen.Reference(), insolar.StaticRoleVirtual, ks.ExtractPublicKey(p1), "127.0.0.1:22", "ver2")
 
 	pulse := insolar.Pulse{PulseNumber: 15}
 	snap := node.NewSnapshot(pulse.PulseNumber, []insolar.NetworkNode{n})
@@ -103,7 +103,7 @@ func TestNewMemorySnapshotStorage(t *testing.T) {
 
 	ks := platformpolicy.NewKeyProcessor()
 	p1, err := ks.GeneratePrivateKey()
-	n := node.NewNode(testutils.RandomRef(), insolar.StaticRoleVirtual, ks.ExtractPublicKey(p1), "127.0.0.1:22", "ver2")
+	n := node.NewNode(gen.Reference(), insolar.StaticRoleVirtual, ks.ExtractPublicKey(p1), "127.0.0.1:22", "ver2")
 
 	pulse := insolar.Pulse{PulseNumber: 15}
 	snap := node.NewSnapshot(pulse.PulseNumber, []insolar.NetworkNode{n})

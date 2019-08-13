@@ -20,13 +20,13 @@ import (
 	"context"
 	"testing"
 
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/pulse"
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/reply"
-	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/require"
 )
 
@@ -49,7 +49,7 @@ func TestWaitOKSender_SendRole_RetryExceeded(t *testing.T) {
 	pa.LatestMock.Set(accessorMock(t).Latest)
 	c := NewWaitOKWithRetrySender(sender, pa, retries)
 
-	c.SendRole(context.Background(), msg, insolar.DynamicRoleLightExecutor, testutils.RandomRef())
+	c.SendRole(context.Background(), msg, insolar.DynamicRoleLightExecutor, gen.Reference())
 
 	require.EqualValues(t, retries+1, sender.SendRoleAfterCounter())
 }
@@ -84,7 +84,7 @@ func TestWaitOKSender_SendRole_RetryOnce(t *testing.T) {
 	pa.LatestMock.Set(accessorMock(t).Latest)
 	c := NewWaitOKWithRetrySender(sender, pa, 3)
 
-	c.SendRole(context.Background(), msg, insolar.DynamicRoleLightExecutor, testutils.RandomRef())
+	c.SendRole(context.Background(), msg, insolar.DynamicRoleLightExecutor, gen.Reference())
 
 	require.EqualValues(t, 2, sender.SendRoleAfterCounter())
 }
@@ -105,7 +105,7 @@ func TestWaitOKSender_SendRole_OK(t *testing.T) {
 	pa.LatestMock.Set(accessorMock(t).Latest)
 	c := NewWaitOKWithRetrySender(sender, pa, 3)
 
-	c.SendRole(context.Background(), msg, insolar.DynamicRoleLightExecutor, testutils.RandomRef())
+	c.SendRole(context.Background(), msg, insolar.DynamicRoleLightExecutor, gen.Reference())
 
 	require.EqualValues(t, 1, sender.SendRoleAfterCounter())
 }
@@ -126,7 +126,7 @@ func TestWaitOKSender_SendRole_NotOK(t *testing.T) {
 	pa.LatestMock.Set(accessorMock(t).Latest)
 	c := NewWaitOKWithRetrySender(sender, pa, 3)
 
-	c.SendRole(context.Background(), msg, insolar.DynamicRoleLightExecutor, testutils.RandomRef())
+	c.SendRole(context.Background(), msg, insolar.DynamicRoleLightExecutor, gen.Reference())
 
 	require.EqualValues(t, 1, sender.SendRoleAfterCounter())
 }
