@@ -230,7 +230,7 @@ func (lr *LogicRunner) GracefulStop(ctx context.Context) error {
 	lr.stopLock.Lock()
 	if !lr.isStopping {
 		lr.isStopping = true
-		lr.stopChan = make(chan struct{}, 1)
+		lr.stopChan = make(chan struct{})
 	}
 	lr.stopLock.Unlock()
 
@@ -238,6 +238,21 @@ func (lr *LogicRunner) GracefulStop(ctx context.Context) error {
 	<-lr.stopChan
 	inslogger.FromContext(ctx).Debug("LogicRunner.GracefulStop ends ...")
 	return nil
+}
+
+func (lr *LogicRunner) stopIfNeeded(ctx context.Context) {
+	lr.stopLock.Lock()
+	defer lr.stopLock.Unlock()
+
+	if !lr.isStopping {
+		return
+	}
+
+	// graceful stop, waiting for all jobs to end and signaling
+	if lr.StateStorage.IsEmpty() {
+		inslogger.FromContext(ctx).Debug("LogicRunner ready to stop")
+		close(lr.stopChan)
+	}
 }
 
 func loggerWithTargetID(ctx context.Context, msg insolar.Parcel) context.Context {
@@ -268,17 +283,6 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, oldPulse insolar.Pulse, newP
 	lr.stopIfNeeded(ctx)
 
 	return nil
-}
-
-func (lr *LogicRunner) stopIfNeeded(ctx context.Context) {
-	if lr.StateStorage.IsEmpty() {
-		lr.stopLock.Lock()
-		if lr.isStopping {
-			inslogger.FromContext(ctx).Debug("LogicRunner ready to stop")
-			lr.stopChan <- struct{}{}
-		}
-		lr.stopLock.Unlock()
-	}
 }
 
 func (lr *LogicRunner) sendOnPulseMessagesAsync(ctx context.Context, messages []insolar.Message) {
