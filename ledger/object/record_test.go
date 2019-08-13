@@ -39,7 +39,7 @@ import (
 func TestRecordKey(t *testing.T) {
 	t.Parallel()
 
-	expectedKey := recordKey(testutils.RandomID())
+	expectedKey := recordKey(gen.ID())
 
 	rawID := expectedKey.ID()
 

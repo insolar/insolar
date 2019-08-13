@@ -7,7 +7,7 @@ import (
 func TestHandleAbandonedRequestsNotification_Present(t *testing.T) {
 	t.Skip("we disabled handling of this notification for now")
 
-	//objectId := testutils.RandomID()
+	//objectId := gen.ID()
 	//objectRef := *insolar.NewReference(objectId)
 	//msg := &message.AbandonedRequestsNotification{Object: objectId}
 	//parcel := &message.Parcel{Msg: msg}
@@ -72,4 +72,3 @@ func TestHandleAbandonedRequestsNotification_Present(t *testing.T) {
 	//suite.Equal(true, broker.ledgerHasMoreRequests)
 	//_ = suite.lr.Stop(suite.ctx)
 }
-

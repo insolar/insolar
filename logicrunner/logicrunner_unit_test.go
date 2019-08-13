@@ -344,7 +344,7 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 	suite.am.HasPendingsMock.Return(false, nil)
 
 	suite.am.RegisterIncomingRequestMock.Set(func(ctx context.Context, r *record.IncomingRequest) (*payload.RequestInfo, error) {
-		reqId := testutils.RandomID()
+		reqId := gen.ID()
 		return &payload.RequestInfo{RequestID: reqId, ObjectID: *objectRef.Record()}, nil
 	})
 
