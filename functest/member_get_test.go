@@ -67,7 +67,7 @@ func TestMemberGetWrongPublicKey(t *testing.T) {
 }
 
 func TestMemberGetGenesisMember(t *testing.T) {
-	res, err := signedRequest(&migrationAdmin, "member.get", nil)
+	res, err := signedRequest(t, &migrationAdmin, "member.get", nil)
 	require.Nil(t, err)
 	require.Equal(t, migrationAdmin.ref, res.(map[string]interface{})["reference"].(string))
 }
