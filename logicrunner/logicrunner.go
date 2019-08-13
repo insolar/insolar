@@ -115,8 +115,6 @@ func (lr *LogicRunner) Init(ctx context.Context) error {
 		lr.OutgoingSender,
 	)
 
-	lr.SenderWithRetry = bus.NewWaitOKWithRetrySender(lr.Sender, lr.PulseAccessor, 1)
-
 	lr.rpc = lrCommon.NewRPC(
 		NewRPCMethods(lr.ArtifactManager, lr.DescriptorsCache, lr.ContractRequester, lr.StateStorage, lr.OutgoingSender),
 		lr.Cfg,
@@ -288,8 +286,8 @@ func (lr *LogicRunner) sendOnPulseMessagesAsync(ctx context.Context, messages ma
 	var sendWg sync.WaitGroup
 
 	for ref, msg := range messages {
+		sendWg.Add(len(msg))
 		for _, msg := range msg {
-			sendWg.Add(1)
 			lr.sendOnPulseMessage(ctx, ref, msg, &sendWg)
 		}
 	}

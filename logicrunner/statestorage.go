@@ -103,7 +103,7 @@ func (ss *stateStorage) UpsertExecutionState(ref insolar.Reference) ExecutionBro
 	if _, ok := ss.brokers[ref]; !ok {
 		registry := ss.upsertExecutionRegistry(ref)
 
-		ss.brokers[ref] = NewExecutionBroker(ref, ss.publisher, ss.requestsExecutor, ss.sender, ss.artifactsManager, registry, ss.outgoingSender)
+		ss.brokers[ref] = NewExecutionBroker(ref, ss.publisher, ss.requestsExecutor, ss.sender, ss.artifactsManager, registry, ss.outgoingSender, ss.pulseAccessor)
 	}
 	return ss.brokers[ref]
 }

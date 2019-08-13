@@ -27,6 +27,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/artifacts"
@@ -73,6 +74,8 @@ type ExecutionBroker struct {
 	executionRegistry executionregistry.ExecutionRegistry
 	requestsFetcher   RequestsFetcher
 
+	pulseAccessor pulse.Accessor
+
 	publisher        watermillMsg.Publisher
 	sender           bus.Sender
 	requestsExecutor RequestsExecutor
@@ -97,6 +100,7 @@ func NewExecutionBroker(
 	artifactsManager artifacts.Client,
 	executionRegistry executionregistry.ExecutionRegistry,
 	outgoingSender OutgoingRequestSender,
+	pulseAccessor pulse.Accessor,
 ) *ExecutionBroker {
 	return &ExecutionBroker{
 		Ref: ref,
@@ -106,6 +110,7 @@ func NewExecutionBroker(
 		finished:  transcriptdequeue.New(),
 
 		outgoingSender: outgoingSender,
+		pulseAccessor:  pulseAccessor,
 
 		publisher:         publisher,
 		requestsExecutor:  requestsExecutor,
@@ -439,7 +444,7 @@ func (q *ExecutionBroker) finishPendingIfNeeded(ctx context.Context) {
 	}
 
 	// ensure OK response because we might catch flow cancelled
-	waitOKSender := bus.NewWaitOKSender(q.sender)
+	waitOKSender := bus.NewWaitOKWithRetrySender(q.sender, q.pulseAccessor, 1)
 	waitOKSender.SendRole(ctx, pendingMsg, insolar.DynamicRoleVirtualExecutor, q.Ref)
 }
 
