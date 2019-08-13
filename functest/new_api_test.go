@@ -127,15 +127,17 @@ func TestIncorrectSign(t *testing.T) {
 }
 
 func TestIncorrectMethodName(t *testing.T) {
-	ctx := context.TODO()
-	seed, err := requester.GetSeed(TestAPIURL)
-	require.NoError(t, err)
-	rootCfg, err := requester.CreateUserConfig(root.ref, root.privKey, root.pubKey)
-	require.NoError(t, err)
-	res, err := requester.SendWithSeed(ctx, TestRPCUrl, rootCfg, &requester.Params{
-		CallSite:  "member.create",
-		PublicKey: rootCfg.PublicKey},
-		seed)
+	res, err := requester.GetResponseBodyContract(
+		TestRPCUrl,
+		requester.ContractRequest{
+			Request: requester.Request{
+				Version: "2.0",
+				ID:      1,
+				Method:  "foo.bar",
+			},
+		},
+		"MEQCIAvgBR42vSccBKynBIC7gb5GffqtW8q2XWRP+DlJ0IeUAiAeKCxZNSSRSsYcz2d49CT6KlSLpr5L7VlOokOiI9dsvQ==",
+	)
 	require.NoError(t, err)
 	require.EqualError(t, contractError(res), "rpc: can't find service \"foo.bar\"")
 }
