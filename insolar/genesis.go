@@ -81,7 +81,7 @@ type genesisBinary []byte
 // GenesisRecord is initial chain record.
 var GenesisRecord genesisBinary = []byte{0xAC}
 
-// Id returns genesis record id.
+// ID returns genesis record id.
 func (r genesisBinary) ID() ID {
 	return *NewID(GenesisPulse.PulseNumber, r)
 }

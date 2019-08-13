@@ -50,7 +50,7 @@ func RandomRef() insolar.Reference {
 	return ref
 }
 
-// RandomID generates random object Id
+// RandomID generates random object ID
 func RandomID() insolar.ID {
 	id := [insolar.RecordIDSize]byte{}
 	_, err := rand.Read(id[:])
@@ -83,7 +83,7 @@ func RandomJetWithDepth(depth uint8) insolar.ID {
 	return insolar.ID(*insolar.NewJetID(depth, bits.ResetBits(jetbuf[1:], depth)))
 }
 
-// JetFromString converts string representation of Jet to insolar.Id.
+// JetFromString converts string representation of Jet to insolar.ID.
 //
 // Examples: "010" converts to Jet with depth 3 and prefix "01".
 func JetFromString(s string) insolar.ID {

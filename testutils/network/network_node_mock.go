@@ -684,7 +684,7 @@ type mNetworkNodeMockID struct {
 	expectations       []*NetworkNodeMockIDExpectation
 }
 
-// NetworkNodeMockIDExpectation specifies expectation struct of the NetworkNode.Id
+// NetworkNodeMockIDExpectation specifies expectation struct of the NetworkNode.ID
 type NetworkNodeMockIDExpectation struct {
 	mock *NetworkNodeMock
 
@@ -692,15 +692,15 @@ type NetworkNodeMockIDExpectation struct {
 	Counter uint64
 }
 
-// NetworkNodeMockIDResults contains results of the NetworkNode.Id
+// NetworkNodeMockIDResults contains results of the NetworkNode.ID
 type NetworkNodeMockIDResults struct {
 	r1 mm_insolar.Reference
 }
 
-// Expect sets up expected params for NetworkNode.Id
+// Expect sets up expected params for NetworkNode.ID
 func (mmID *mNetworkNodeMockID) Expect() *mNetworkNodeMockID {
 	if mmID.mock.funcID != nil {
-		mmID.mock.t.Fatalf("NetworkNodeMock.Id mock is already set by Set")
+		mmID.mock.t.Fatalf("NetworkNodeMock.ID mock is already set by Set")
 	}
 
 	if mmID.defaultExpectation == nil {
@@ -710,10 +710,10 @@ func (mmID *mNetworkNodeMockID) Expect() *mNetworkNodeMockID {
 	return mmID
 }
 
-// Inspect accepts an inspector function that has same arguments as the NetworkNode.Id
+// Inspect accepts an inspector function that has same arguments as the NetworkNode.ID
 func (mmID *mNetworkNodeMockID) Inspect(f func()) *mNetworkNodeMockID {
 	if mmID.mock.inspectFuncID != nil {
-		mmID.mock.t.Fatalf("Inspect function is already set for NetworkNodeMock.Id")
+		mmID.mock.t.Fatalf("Inspect function is already set for NetworkNodeMock.ID")
 	}
 
 	mmID.mock.inspectFuncID = f
@@ -721,10 +721,10 @@ func (mmID *mNetworkNodeMockID) Inspect(f func()) *mNetworkNodeMockID {
 	return mmID
 }
 
-// Return sets up results that will be returned by NetworkNode.Id
+// Return sets up results that will be returned by NetworkNode.ID
 func (mmID *mNetworkNodeMockID) Return(r1 mm_insolar.Reference) *NetworkNodeMock {
 	if mmID.mock.funcID != nil {
-		mmID.mock.t.Fatalf("NetworkNodeMock.Id mock is already set by Set")
+		mmID.mock.t.Fatalf("NetworkNodeMock.ID mock is already set by Set")
 	}
 
 	if mmID.defaultExpectation == nil {
@@ -734,21 +734,21 @@ func (mmID *mNetworkNodeMockID) Return(r1 mm_insolar.Reference) *NetworkNodeMock
 	return mmID.mock
 }
 
-//Set uses given function f to mock the NetworkNode.Id method
+//Set uses given function f to mock the NetworkNode.ID method
 func (mmID *mNetworkNodeMockID) Set(f func() (r1 mm_insolar.Reference)) *NetworkNodeMock {
 	if mmID.defaultExpectation != nil {
-		mmID.mock.t.Fatalf("Default expectation is already set for the NetworkNode.Id method")
+		mmID.mock.t.Fatalf("Default expectation is already set for the NetworkNode.ID method")
 	}
 
 	if len(mmID.expectations) > 0 {
-		mmID.mock.t.Fatalf("Some expectations are already set for the NetworkNode.Id method")
+		mmID.mock.t.Fatalf("Some expectations are already set for the NetworkNode.ID method")
 	}
 
 	mmID.mock.funcID = f
 	return mmID.mock
 }
 
-// Id implements insolar.NetworkNode
+// ID implements insolar.NetworkNode
 func (mmID *NetworkNodeMock) ID() (r1 mm_insolar.Reference) {
 	mm_atomic.AddUint64(&mmID.beforeIDCounter, 1)
 	defer mm_atomic.AddUint64(&mmID.afterIDCounter, 1)
@@ -762,28 +762,28 @@ func (mmID *NetworkNodeMock) ID() (r1 mm_insolar.Reference) {
 
 		results := mmID.IDMock.defaultExpectation.results
 		if results == nil {
-			mmID.t.Fatal("No results are set for the NetworkNodeMock.Id")
+			mmID.t.Fatal("No results are set for the NetworkNodeMock.ID")
 		}
 		return (*results).r1
 	}
 	if mmID.funcID != nil {
 		return mmID.funcID()
 	}
-	mmID.t.Fatalf("Unexpected call to NetworkNodeMock.Id.")
+	mmID.t.Fatalf("Unexpected call to NetworkNodeMock.ID.")
 	return
 }
 
-// IDAfterCounter returns a count of finished NetworkNodeMock.Id invocations
+// IDAfterCounter returns a count of finished NetworkNodeMock.ID invocations
 func (mmID *NetworkNodeMock) IDAfterCounter() uint64 {
 	return mm_atomic.LoadUint64(&mmID.afterIDCounter)
 }
 
-// IDBeforeCounter returns a count of NetworkNodeMock.Id invocations
+// IDBeforeCounter returns a count of NetworkNodeMock.ID invocations
 func (mmID *NetworkNodeMock) IDBeforeCounter() uint64 {
 	return mm_atomic.LoadUint64(&mmID.beforeIDCounter)
 }
 
-// MinimockIDDone returns true if the count of the Id invocations corresponds
+// MinimockIDDone returns true if the count of the ID invocations corresponds
 // the number of defined expectations
 func (m *NetworkNodeMock) MinimockIDDone() bool {
 	for _, e := range m.IDMock.expectations {
@@ -807,17 +807,17 @@ func (m *NetworkNodeMock) MinimockIDDone() bool {
 func (m *NetworkNodeMock) MinimockIDInspect() {
 	for _, e := range m.IDMock.expectations {
 		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			m.t.Error("Expected call to NetworkNodeMock.Id")
+			m.t.Error("Expected call to NetworkNodeMock.ID")
 		}
 	}
 
 	// if default expectation was set then invocations count should be greater than zero
 	if m.IDMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterIDCounter) < 1 {
-		m.t.Error("Expected call to NetworkNodeMock.Id")
+		m.t.Error("Expected call to NetworkNodeMock.ID")
 	}
 	// if func was set then invocations count should be greater than zero
 	if m.funcID != nil && mm_atomic.LoadUint64(&m.afterIDCounter) < 1 {
-		m.t.Error("Expected call to NetworkNodeMock.Id")
+		m.t.Error("Expected call to NetworkNodeMock.ID")
 	}
 }
 

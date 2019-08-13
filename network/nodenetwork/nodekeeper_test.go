@@ -128,11 +128,11 @@ func TestNodekeeper_GetCloudHash(t *testing.T) {
 //	nk.SetInitialSnapshot([]insolar.NetworkNode{origin, node1, node2, node3, node4})
 //	assert.Equal(t, 5, len(nk.GetAccessor().GetActiveNodes()))
 //	assert.Equal(t, 3, len(nk.GetWorkingNodes()))
-//	assert.NotNil(t, nk.GetWorkingNode(node2.Id()))
-//	assert.Nil(t, nk.GetWorkingNode(node1.Id()))
+//	assert.NotNil(t, nk.GetWorkingNode(node2.ID()))
+//	assert.Nil(t, nk.GetWorkingNode(node1.ID()))
 //
-//	assert.Nil(t, nk.GetWorkingNode(node4.Id()))
-//	assert.NotNil(t, nk.GetAccessor().GetActiveNode(node4.Id()))
+//	assert.Nil(t, nk.GetWorkingNode(node4.ID()))
+//	assert.NotNil(t, nk.GetAccessor().GetActiveNode(node4.ID()))
 //
 //	nodes := []insolar.NetworkNode{origin, node1, node2, node3}
 //	claims := []packets.ReferendumClaim{newTestJoinClaim(insolar.Reference{5})}
@@ -141,11 +141,11 @@ func TestNodekeeper_GetCloudHash(t *testing.T) {
 //	err = nk.MoveSyncToActive(context.Background(), 0)
 //	assert.NoError(t, err)
 //
-//	assert.Nil(t, nk.GetAccessor().GetActiveNode(node4.Id()))
-//	assert.Equal(t, insolar.NodeReady, nk.GetAccessor().GetActiveNode(node1.Id()).GetState())
+//	assert.Nil(t, nk.GetAccessor().GetActiveNode(node4.ID()))
+//	assert.Equal(t, insolar.NodeReady, nk.GetAccessor().GetActiveNode(node1.ID()).GetState())
 //	node5 := nk.GetAccessor().GetActiveNode(insolar.Reference{5})
 //	assert.NotNil(t, node5)
-//	assert.Nil(t, nk.GetWorkingNode(node5.Id()))
+//	assert.Nil(t, nk.GetWorkingNode(node5.ID()))
 //
 //	nodes = []insolar.NetworkNode{nk.GetOrigin(), node1, node2, node3, node5}
 //	err = nk.Sync(context.Background(), nodes, nil)
@@ -153,7 +153,7 @@ func TestNodekeeper_GetCloudHash(t *testing.T) {
 //	err = nk.MoveSyncToActive(context.Background(), 0)
 //	assert.NoError(t, err)
 //
-//	assert.Equal(t, insolar.NodeReady, nk.GetAccessor().GetActiveNode(node5.Id()).GetState())
+//	assert.Equal(t, insolar.NodeReady, nk.GetAccessor().GetActiveNode(node5.ID()).GetState())
 //
 //	nodes = []insolar.NetworkNode{node1, node2, node3, node5}
 //	err = nk.Sync(context.Background(), nodes, nil)
@@ -175,7 +175,7 @@ func TestNodekeeper_GetCloudHash(t *testing.T) {
 //	}
 //	nk.SetInitialSnapshot(nodes)
 //
-//	claims := []packets.ReferendumClaim{&packets.NodeLeaveClaim{NodeID: nk.GetOrigin().Id()}}
+//	claims := []packets.ReferendumClaim{&packets.NodeLeaveClaim{NodeID: nk.GetOrigin().ID()}}
 //	err := nk.Sync(context.Background(), nodes, claims)
 //	assert.NoError(t, err)
 //	err = nk.MoveSyncToActive(context.Background(), 0)

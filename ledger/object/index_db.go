@@ -76,7 +76,7 @@ func NewIndexDB(db store.DB) *IndexDB {
 	return &IndexDB{db: db, recordStore: NewRecordDB(db)}
 }
 
-// SetIndex adds a bucket with provided pulseNumber and Id
+// SetIndex adds a bucket with provided pulseNumber and ID
 func (i *IndexDB) SetIndex(ctx context.Context, pn insolar.PulseNumber, bucket record.Index) error {
 	i.lock.Lock()
 	defer i.lock.Unlock()

@@ -45,7 +45,7 @@ func (s *StateID) Equal(other StateID) bool {
 // State is common object state record.
 type State interface {
 	Record
-	// Id returns state id.
+	// ID returns state id.
 	ID() StateID
 	// GetImage returns state code.
 	GetImage() *insolar.Reference

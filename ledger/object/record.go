@@ -261,7 +261,7 @@ func (r *RecordDB) TruncateHead(ctx context.Context, from insolar.PulseNumber) e
 			return errors.Wrapf(err, "can't delete key: %+v", key)
 		}
 
-		inslogger.FromContext(ctx).Debugf("Erased key with pulse number: %s. Id: %s", keyID.Pulse().String(), keyID.String())
+		inslogger.FromContext(ctx).Debugf("Erased key with pulse number: %s. ID: %s", keyID.Pulse().String(), keyID.String())
 	}
 
 	if !hasKeys {

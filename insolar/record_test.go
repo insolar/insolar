@@ -27,7 +27,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-//Id and Reference serialization tests
+//ID and Reference serialization tests
 
 func TestNewIDFromBytes(t *testing.T) {
 	id := testutils.RandomID()

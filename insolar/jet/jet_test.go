@@ -37,7 +37,7 @@ func TestJet_Parent(t *testing.T) {
 
 	emptyChild := *insolar.NewJetID(0, nil)
 	emptyParent := Parent(emptyChild)
-	require.Equal(t, emptyChild, emptyParent, "for empty jet Id, got the same parent")
+	require.Equal(t, emptyChild, emptyParent, "for empty jet ID, got the same parent")
 }
 
 func TestJet_ParsePrefixAndResetBits(t *testing.T) {

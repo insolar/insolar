@@ -29,7 +29,7 @@ var (
 )
 
 func TestGenesisRecordID(t *testing.T) {
-	require.Equal(t, genesisIDHex, hex.EncodeToString(GenesisRecord.ID().Bytes()), "genesis Id should always be the same")
+	require.Equal(t, genesisIDHex, hex.EncodeToString(GenesisRecord.ID().Bytes()), "genesis ID should always be the same")
 }
 
 func TestReference(t *testing.T) {

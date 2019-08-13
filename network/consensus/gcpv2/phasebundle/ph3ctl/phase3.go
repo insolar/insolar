@@ -592,7 +592,7 @@ outer:
 		} else {
 			limitStr = fmt.Sprintf("%d+", limit)
 		}
-		tblHeader := fmt.Sprintf("%%sConsensus Node View (%%s): Id=%v Members=%d/%s Joiners=%d",
+		tblHeader := fmt.Sprintf("%%sConsensus Node View (%%s): ID=%v Members=%d/%s Joiners=%d",
 			c.R.GetSelfNodeID(), pop.GetIndexedCount(), limitStr, pop.GetJoinersCount())
 		typeHeader := "Original, Verified"
 		prev := ""

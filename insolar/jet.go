@@ -68,10 +68,10 @@ func (id JetID) IsEmpty() bool {
 	return id.Equal(JetID{})
 }
 
-// ZeroJetID is value of an empty Jet Id
+// ZeroJetID is value of an empty Jet ID
 var ZeroJetID = *NewJetID(0, nil)
 
-// NewJetID creates a new jet with provided Id and index
+// NewJetID creates a new jet with provided ID and index
 func NewJetID(depth uint8, prefix []byte) *JetID {
 	var id JetID
 	copy(id[:PulseNumberSize], PulseNumberJet.Bytes())

@@ -71,7 +71,7 @@ var (
 // Future is network response future.
 type Future interface {
 
-	// Id returns packet sequence number.
+	// ID returns packet sequence number.
 	ID() types.RequestID
 
 	// Receiver returns the initiator of the packet.

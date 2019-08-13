@@ -22,7 +22,7 @@ import (
 	"github.com/insolar/insolar/insolar/bits"
 )
 
-// Id generates random id.
+// ID generates random id.
 func ID() (id insolar.ID) {
 	fuzz.New().NilChance(0).Fuzz(&id)
 	return

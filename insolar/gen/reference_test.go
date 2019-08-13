@@ -52,16 +52,16 @@ func TestGen_IDWithPulse(t *testing.T) {
 		pulseFromIDBuf := idWithPulse[:insolar.PulseNumberSize]
 		require.Equal(t,
 			pulse.Bytes(), pulseFromIDBuf,
-			"pulse bytes should be equal pulse bytes from generated Id")
+			"pulse bytes should be equal pulse bytes from generated ID")
 
 		pulseFromID := idWithPulse.Pulse()
 		require.Equal(t,
 			pulse, pulseFromID,
-			"pulse should be equal pulse from generated Id")
+			"pulse should be equal pulse from generated ID")
 
 		idHash := idWithPulse.Hash()
 		require.NotEqual(t,
 			emptySlice, idHash,
-			"Id.Hash() should not be empty")
+			"ID.Hash() should not be empty")
 	}
 }

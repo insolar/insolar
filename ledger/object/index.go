@@ -29,7 +29,7 @@ import (
 // Lifeline contains buckets with pn->objID->Bucket hierarchy.
 // With using of IndexModifier there is a possibility to set buckets from outside of an index.
 type IndexModifier interface {
-	// SetIndex adds a bucket with provided pulseNumber and Id
+	// SetIndex adds a bucket with provided pulseNumber and ID
 	SetIndex(ctx context.Context, pn insolar.PulseNumber, index record.Index) error
 }
 

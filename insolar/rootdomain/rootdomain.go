@@ -60,7 +60,7 @@ func (r Record) Ref() insolar.Reference {
 	return *insolar.NewReference(r.ID())
 }
 
-// Id returns insolar.Id  to root domain object.
+// ID returns insolar.ID  to root domain object.
 func (r Record) ID() insolar.ID {
 	req := record.IncomingRequest{
 		CallType: record.CTGenesis,

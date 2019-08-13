@@ -100,7 +100,7 @@ type ContractRequest struct {
 
 type Request struct {
 	Version string `json:"jsonrpc"`
-	Id      uint64 `json:"id"`
+	ID      uint64 `json:"id"`
 	Method  string `json:"method"`
 }
 
@@ -138,7 +138,7 @@ func GetResponseBodyPlatform(url string, method string, params interface{}) ([]b
 	request := PlatformRequest{
 		Request: Request{
 			Version: JSONRPCVersion,
-			Id:      uint64(mathrand.Int63()),
+			ID:      uint64(mathrand.Int63()),
 			Method:  method,
 		},
 		PlatformParams: params,
@@ -225,7 +225,7 @@ func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, para
 	request := &ContractRequest{
 		Request: Request{
 			Version: JSONRPCVersion,
-			Id:      uint64(mathrand.Int63()),
+			ID:      uint64(mathrand.Int63()),
 			Method:  "contract.call",
 		},
 		Params: *params,

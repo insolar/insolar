@@ -56,7 +56,7 @@ type FilamentCalculator interface {
 	) ([]record.CompositeFilamentRecord, error)
 
 	// RequestDuplicate searches two records on objectID chain:
-	// First one with same Id as requestID param.
+	// First one with same ID as requestID param.
 	// Second is the Result record Request field of which equals requestID param.
 	// Uses request parameter to check if Reason is not empty and to set pulse for scan limit.
 	RequestDuplicate(
