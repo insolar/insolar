@@ -22,7 +22,9 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/drop"
@@ -41,8 +43,12 @@ type Replication struct {
 		recordsPositions object.RecordPositionModifier
 		indexes          object.IndexModifier
 		pcs              insolar.PlatformCryptographyScheme
-		drops            drop.Modifier
-		keeper           executor.JetKeeper
+		pulseCalculator  pulse.Calculator
+
+		drops    drop.Modifier
+		keeper   executor.JetKeeper
+		backuper executor.BackupMaker
+		jets     jet.Modifier
 	}
 }
 
@@ -58,18 +64,26 @@ func (p *Replication) Dep(
 	indexes object.IndexModifier,
 	recordsPositions object.RecordPositionModifier,
 	pcs insolar.PlatformCryptographyScheme,
+	pulseCalculator pulse.Calculator,
 	drops drop.Modifier,
 	keeper executor.JetKeeper,
+	backuper executor.BackupMaker,
+	jets jet.Modifier,
 ) {
 	p.dep.records = records
 	p.dep.indexes = indexes
 	p.dep.recordsPositions = recordsPositions
 	p.dep.pcs = pcs
+
+	p.dep.pulseCalculator = pulseCalculator
 	p.dep.drops = drops
 	p.dep.keeper = keeper
+	p.dep.backuper = backuper
+	p.dep.jets = jets
 }
 
 func (p *Replication) Proceed(ctx context.Context) error {
+	inslogger.FromContext(ctx).Debug("processing replication")
 	pl, err := payload.Unmarshal(p.message.Payload)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal payload")
@@ -93,22 +107,39 @@ func (p *Replication) store(
 	ctx context.Context,
 	msg *payload.Replication,
 ) error {
+	inslogger.FromContext(ctx).Debug("storing records")
 	if err := storeRecords(ctx, p.dep.records, p.dep.recordsPositions, p.dep.pcs, msg.Pulse, msg.Records); err != nil {
 		return errors.Wrap(err, "failed to store records")
 	}
 
+	inslogger.FromContext(ctx).Debug("storing indexes")
 	if err := storeIndexes(ctx, p.dep.indexes, msg.Indexes, msg.Pulse); err != nil {
 		return errors.Wrap(err, "failed to store indexes")
 	}
 
+	inslogger.FromContext(ctx).Debug("storing drop")
 	dr, err := storeDrop(ctx, p.dep.drops, msg.Drop)
 	if err != nil {
 		return errors.Wrap(err, "failed to store drop")
 	}
 
-	if err := p.dep.keeper.AddDropConfirmation(ctx, dr.Pulse, dr.JetID, dr.Split); err != nil {
-		return errors.Wrapf(err, "failed to add drop confirmation for jet=%v", dr.JetID.DebugString())
+	jetKeeper := p.dep.keeper
+	inslogger.FromContext(ctx).Debug("storing drop confirmation")
+	if err := jetKeeper.AddDropConfirmation(ctx, dr.Pulse, dr.JetID, dr.Split); err != nil {
+		return errors.Wrapf(err, "failed to add drop confirmation jet=%v", dr.JetID.DebugString())
 	}
+
+	err = p.dep.jets.Update(ctx, dr.Pulse, true, dr.JetID)
+	if err != nil {
+		return errors.Wrapf(err, "failed to update jet %s", dr.JetID.DebugString())
+
+	}
+
+	executor.FinalizePulse(ctx, p.dep.pulseCalculator, p.dep.backuper, jetKeeper, dr.Pulse)
+
+	stats.Record(ctx,
+		statReceivedHeavyPayloadCount.M(1),
+	)
 
 	return nil
 }

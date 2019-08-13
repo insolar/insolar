@@ -162,8 +162,8 @@ func (m *PulseManager) Start(ctx context.Context) error {
 func (m *PulseManager) Stop(ctx context.Context) error {
 	// There should not to be any Set call after Stop call
 	m.setLock.Lock()
-	m.stopped = true
-	m.setLock.Unlock()
+	defer m.setLock.Unlock()
 
+	m.stopped = true
 	return nil
 }

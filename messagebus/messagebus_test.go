@@ -25,6 +25,7 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill"
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/pkg/errors"
@@ -62,7 +63,7 @@ func prepare(t *testing.T, ctx context.Context, currentPulse int, msgPulse int) 
 
 	net := testutils.GetTestNetwork(t)
 	jc := jet.NewCoordinatorMock(t)
-	expectedRef := testutils.RandomRef()
+	expectedRef := gen.Reference()
 	jc.QueryRoleMock.Set(func(p context.Context, p1 insolar.DynamicRole, p2 insolar.ID, p3 insolar.PulseNumber) (r []insolar.Reference, r1 error) {
 		return []insolar.Reference{expectedRef}, nil
 	})
@@ -107,7 +108,7 @@ func prepare(t *testing.T, ctx context.Context, currentPulse int, msgPulse int) 
 		return testType
 	})
 	parcel.GetSenderMock.Set(func() (r insolar.Reference) {
-		return testutils.RandomRef()
+		return gen.Reference()
 	})
 	parcel.MessageMock.Return(&message.CallMethod{})
 

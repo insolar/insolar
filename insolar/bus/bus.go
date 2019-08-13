@@ -176,7 +176,7 @@ func (b *Bus) SendRole(
 		return handleError(errors.Wrap(err, "failed to calculate role"))
 	}
 
-	return b.SendTarget(ctx, msg, nodes[0])
+	return b.sendTarget(ctx, msg, nodes[0], latestPulse.PulseNumber)
 }
 
 // SendTarget sends message to a specific node. If you don't know the exact node, use SendRole.
@@ -184,6 +184,19 @@ func (b *Bus) SendRole(
 // (rep, ok := <-ch) because the channel will be closed on timeout.
 func (b *Bus) SendTarget(
 	ctx context.Context, msg *message.Message, target insolar.Reference,
+) (<-chan *message.Message, func()) {
+	var pn insolar.PulseNumber
+	latestPulse, err := b.pulses.Latest(context.Background())
+	if err == nil {
+		pn = latestPulse.PulseNumber
+	} else {
+		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to fetch pulse"))
+	}
+	return b.sendTarget(ctx, msg, target, pn)
+}
+
+func (b *Bus) sendTarget(
+	ctx context.Context, msg *message.Message, target insolar.Reference, pulse insolar.PulseNumber,
 ) (<-chan *message.Message, func()) {
 	ctx, span := instracer.StartSpan(ctx, "Bus.SendTarget")
 	span.AddAttributes(
@@ -219,7 +232,7 @@ func (b *Bus) SendTarget(
 	}
 
 	msg.SetContext(ctx)
-	wrapped, msg, err := b.wrapMeta(ctx, msg, target, payload.MessageHash{})
+	wrapped, msg, err := b.wrapMeta(ctx, msg, target, payload.MessageHash{}, pulse)
 	if err != nil {
 		instracer.AddError(span, err)
 		return handleError(errors.Wrap(err, "can't wrap meta message"))
@@ -244,7 +257,7 @@ func (b *Bus) SendTarget(
 	b.replies[msgHash] = reply
 	b.repliesMutex.Unlock()
 
-	logger.Debugf("sending message %s", msgHash.String())
+	logger.Debugf("sending message %s. uuid = ", msgHash.String(), msg.UUID)
 	err = b.pub.Publish(TopicOutgoing, msg)
 	if err != nil {
 		done()
@@ -291,7 +304,15 @@ func (b *Bus) Reply(ctx context.Context, origin payload.Meta, reply *message.Mes
 		return
 	}
 
-	wrapped, reply, err := b.wrapMeta(ctx, reply, origin.Sender, originHash)
+	var pn insolar.PulseNumber
+	latestPulse, err := b.pulses.Latest(context.Background())
+	if err == nil {
+		pn = latestPulse.PulseNumber
+	} else {
+		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to fetch pulse"))
+	}
+
+	wrapped, reply, err := b.wrapMeta(ctx, reply, origin.Sender, originHash, pn)
 	if err != nil {
 		instracer.AddError(span, err)
 		logger.Error("can't wrap meta message ", err.Error())
@@ -356,9 +377,11 @@ func (b *Bus) IncomingMessageRouter(handle message.HandlerFunc) message.HandlerF
 
 		msg.Metadata.Set("pulse", meta.Pulse.String())
 
+		logger.Debug("received message")
 		if meta.OriginHash.IsZero() {
-			logger.Debug("not a reply")
+			logger.Debug("not a reply (calling handler)")
 			_, err := handle(msg)
+			logger.Debug("handling finished")
 			if err != nil {
 				logger.Error(errors.Wrap(err, "message handler returned error"))
 			}
@@ -406,28 +429,22 @@ func (b *Bus) wrapMeta(
 	msg *message.Message,
 	receiver insolar.Reference,
 	originHash payload.MessageHash,
+	pulse insolar.PulseNumber,
 ) (payload.Meta, *message.Message, error) {
 	msg = msg.Copy()
-	var pn insolar.PulseNumber
-	latestPulse, err := b.pulses.Latest(context.Background())
-	if err == nil {
-		pn = latestPulse.PulseNumber
-	} else {
-		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to fetch pulse"))
-	}
 
 	meta := payload.Meta{
 		Payload:    msg.Payload,
 		Receiver:   receiver,
 		Sender:     b.coordinator.Me(),
-		Pulse:      pn,
+		Pulse:      pulse,
 		OriginHash: originHash,
 		ID:         []byte(msg.UUID),
 	}
 
 	buf, err := meta.Marshal()
 	if err != nil {
-		return payload.Meta{}, nil, errors.Wrap(err, "failed to wrap message")
+		return payload.Meta{}, nil, errors.Wrap(err, "wrapMeta. failed to wrap message")
 	}
 	msg.Payload = buf
 

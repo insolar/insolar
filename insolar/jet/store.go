@@ -120,10 +120,11 @@ func (s *Store) Clone(
 	newTree := s.ltreeForPulse(from).clone(keepActual)
 
 	s.Lock()
+	defer s.Unlock()
+
 	s.trees[to] = &lockedTree{
 		t: newTree,
 	}
-	s.Unlock()
 	return nil
 }
 

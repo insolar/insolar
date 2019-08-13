@@ -19,16 +19,16 @@ package internal
 import (
 	"testing"
 
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/platformpolicy/internal/hash"
 	"github.com/insolar/insolar/platformpolicy/internal/sign"
-	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestEcdsaMarshalUnmarshal(t *testing.T) {
 	count := 10000
-	data := testutils.RandomRef()
+	data := gen.Reference()
 
 	kp := platformpolicy.NewKeyProcessor()
 	provider := sign.NewECDSAProvider()

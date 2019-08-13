@@ -34,15 +34,15 @@ import (
 type RetrySender struct {
 	sender        Sender
 	pulseAccessor pulse.Accessor
-	tries         uint
+	retries       uint
 }
 
 // NewRetrySender creates RetrySender instance with provided values.
-func NewRetrySender(sender Sender, pulseAccessor pulse.Accessor, tries uint) *RetrySender {
+func NewRetrySender(sender Sender, pulseAccessor pulse.Accessor, retries uint) *RetrySender {
 	r := &RetrySender{
 		sender:        sender,
 		pulseAccessor: pulseAccessor,
-		tries:         tries,
+		retries:       retries,
 	}
 	return r
 }
@@ -62,7 +62,7 @@ func (r *RetrySender) Reply(ctx context.Context, origin payload.Meta, reply *mes
 func (r *RetrySender) SendRole(
 	ctx context.Context, msg *message.Message, role insolar.DynamicRole, ref insolar.Reference,
 ) (<-chan *message.Message, func()) {
-	tries := r.tries
+	tries := r.retries + 1
 	once := sync.Once{}
 	done := make(chan struct{})
 	replyChan := make(chan *message.Message)

@@ -221,7 +221,7 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 	}
 
 	for i, key := range g.ContractsConfig.MigrationDaemonPublicKeys {
-		states = append(states, contracts.GetMemberGenesisContractState(key, insolar.GenesisNameMigrationDaemonMembers[i], insolar.GenesisNameRootDomain, insolar.Reference{}))
+		states = append(states, contracts.GetMemberGenesisContractState(key, insolar.GenesisNameMigrationDaemonMembers[i], insolar.GenesisNameRootDomain, insolar.NewEmptyReference()))
 	}
 
 	// Split genesis members by PK shards

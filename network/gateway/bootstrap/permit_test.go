@@ -60,6 +60,7 @@ import (
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
@@ -73,9 +74,9 @@ func createCryptographyService(t *testing.T) insolar.CryptographyService {
 }
 
 func TestCreateAndVerifyPermit(t *testing.T) {
-	origin, err := host.NewHostN("127.0.0.1:123", testutils.RandomRef())
+	origin, err := host.NewHostN("127.0.0.1:123", gen.Reference())
 	assert.NoError(t, err)
-	redirect, err := host.NewHostN("127.0.0.1:321", testutils.RandomRef())
+	redirect, err := host.NewHostN("127.0.0.1:321", gen.Reference())
 	assert.NoError(t, err)
 
 	cryptographyService := createCryptographyService(t)

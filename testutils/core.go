@@ -41,6 +41,7 @@ func RandomString() string {
 }
 
 // RandomRef generates random object reference
+// Deprecated: use gen.Reference()
 func RandomRef() insolar.Reference {
 	ref := [insolar.RecordRefSize]byte{}
 	_, err := rand.Read(ref[:insolar.RecordIDSize])

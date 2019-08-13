@@ -66,7 +66,7 @@ func TestNewRefFromBase58(t *testing.T) {
 }
 
 func TestRecordRef_String(t *testing.T) {
-	ref := testutils.RandomRef()
+	ref := gen.Reference()
 	expectedRefStr := ref.Record().String() + insolar.RecordRefIDSeparator + "11111111111111111111111111111111"
 
 	assert.Equal(t, expectedRefStr, ref.String())

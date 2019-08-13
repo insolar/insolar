@@ -509,20 +509,11 @@
   version = "v1.2.1"
 
 [[projects]]
-  digest = "1:ac83cf90d08b63ad5f7e020ef480d319ae890c208f8524622a2f3136e2686b02"
-  name = "github.com/stretchr/objx"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "477a77ecc69700c7cdeb1fa9e129548e1c1c393c"
-  version = "v0.1.1"
-
-[[projects]]
   branch = "master"
-  digest = "1:561d89a769650267eca3fc63fc3f53dbbea47e51c3b51489e027c58d12994c0b"
+  digest = "1:3dcdad6d6b274aa2c2a4ed1cea17bbfdc8f6fe73e2bc146d232ba7293c6d2129"
   name = "github.com/stretchr/testify"
   packages = [
     "assert",
-    "mock",
     "require",
     "suite",
   ]
@@ -753,7 +744,6 @@
     "github.com/spf13/pflag",
     "github.com/spf13/viper",
     "github.com/stretchr/testify/assert",
-    "github.com/stretchr/testify/mock",
     "github.com/stretchr/testify/require",
     "github.com/stretchr/testify/suite",
     "github.com/tylerb/gls",

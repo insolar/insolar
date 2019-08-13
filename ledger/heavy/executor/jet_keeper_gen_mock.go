@@ -16,6 +16,12 @@ import (
 type JetKeeperMock struct {
 	t minimock.Tester
 
+	funcAddBackupConfirmation          func(ctx context.Context, pn insolar.PulseNumber) (err error)
+	inspectFuncAddBackupConfirmation   func(ctx context.Context, pn insolar.PulseNumber)
+	afterAddBackupConfirmationCounter  uint64
+	beforeAddBackupConfirmationCounter uint64
+	AddBackupConfirmationMock          mJetKeeperMockAddBackupConfirmation
+
 	funcAddDropConfirmation          func(ctx context.Context, pn insolar.PulseNumber, jet insolar.JetID, split bool) (err error)
 	inspectFuncAddDropConfirmation   func(ctx context.Context, pn insolar.PulseNumber, jet insolar.JetID, split bool)
 	afterAddDropConfirmationCounter  uint64
@@ -27,6 +33,12 @@ type JetKeeperMock struct {
 	afterAddHotConfirmationCounter  uint64
 	beforeAddHotConfirmationCounter uint64
 	AddHotConfirmationMock          mJetKeeperMockAddHotConfirmation
+
+	funcHasAllJetConfirms          func(ctx context.Context, pn insolar.PulseNumber) (b1 bool)
+	inspectFuncHasAllJetConfirms   func(ctx context.Context, pn insolar.PulseNumber)
+	afterHasAllJetConfirmsCounter  uint64
+	beforeHasAllJetConfirmsCounter uint64
+	HasAllJetConfirmsMock          mJetKeeperMockHasAllJetConfirms
 
 	funcTopSyncPulse          func() (p1 insolar.PulseNumber)
 	inspectFuncTopSyncPulse   func()
@@ -42,15 +54,237 @@ func NewJetKeeperMock(t minimock.Tester) *JetKeeperMock {
 		controller.RegisterMocker(m)
 	}
 
+	m.AddBackupConfirmationMock = mJetKeeperMockAddBackupConfirmation{mock: m}
+	m.AddBackupConfirmationMock.callArgs = []*JetKeeperMockAddBackupConfirmationParams{}
+
 	m.AddDropConfirmationMock = mJetKeeperMockAddDropConfirmation{mock: m}
 	m.AddDropConfirmationMock.callArgs = []*JetKeeperMockAddDropConfirmationParams{}
 
 	m.AddHotConfirmationMock = mJetKeeperMockAddHotConfirmation{mock: m}
 	m.AddHotConfirmationMock.callArgs = []*JetKeeperMockAddHotConfirmationParams{}
 
+	m.HasAllJetConfirmsMock = mJetKeeperMockHasAllJetConfirms{mock: m}
+	m.HasAllJetConfirmsMock.callArgs = []*JetKeeperMockHasAllJetConfirmsParams{}
+
 	m.TopSyncPulseMock = mJetKeeperMockTopSyncPulse{mock: m}
 
 	return m
+}
+
+type mJetKeeperMockAddBackupConfirmation struct {
+	mock               *JetKeeperMock
+	defaultExpectation *JetKeeperMockAddBackupConfirmationExpectation
+	expectations       []*JetKeeperMockAddBackupConfirmationExpectation
+
+	callArgs []*JetKeeperMockAddBackupConfirmationParams
+	mutex    sync.RWMutex
+}
+
+// JetKeeperMockAddBackupConfirmationExpectation specifies expectation struct of the JetKeeper.AddBackupConfirmation
+type JetKeeperMockAddBackupConfirmationExpectation struct {
+	mock    *JetKeeperMock
+	params  *JetKeeperMockAddBackupConfirmationParams
+	results *JetKeeperMockAddBackupConfirmationResults
+	Counter uint64
+}
+
+// JetKeeperMockAddBackupConfirmationParams contains parameters of the JetKeeper.AddBackupConfirmation
+type JetKeeperMockAddBackupConfirmationParams struct {
+	ctx context.Context
+	pn  insolar.PulseNumber
+}
+
+// JetKeeperMockAddBackupConfirmationResults contains results of the JetKeeper.AddBackupConfirmation
+type JetKeeperMockAddBackupConfirmationResults struct {
+	err error
+}
+
+// Expect sets up expected params for JetKeeper.AddBackupConfirmation
+func (mmAddBackupConfirmation *mJetKeeperMockAddBackupConfirmation) Expect(ctx context.Context, pn insolar.PulseNumber) *mJetKeeperMockAddBackupConfirmation {
+	if mmAddBackupConfirmation.mock.funcAddBackupConfirmation != nil {
+		mmAddBackupConfirmation.mock.t.Fatalf("JetKeeperMock.AddBackupConfirmation mock is already set by Set")
+	}
+
+	if mmAddBackupConfirmation.defaultExpectation == nil {
+		mmAddBackupConfirmation.defaultExpectation = &JetKeeperMockAddBackupConfirmationExpectation{}
+	}
+
+	mmAddBackupConfirmation.defaultExpectation.params = &JetKeeperMockAddBackupConfirmationParams{ctx, pn}
+	for _, e := range mmAddBackupConfirmation.expectations {
+		if minimock.Equal(e.params, mmAddBackupConfirmation.defaultExpectation.params) {
+			mmAddBackupConfirmation.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmAddBackupConfirmation.defaultExpectation.params)
+		}
+	}
+
+	return mmAddBackupConfirmation
+}
+
+// Inspect accepts an inspector function that has same arguments as the JetKeeper.AddBackupConfirmation
+func (mmAddBackupConfirmation *mJetKeeperMockAddBackupConfirmation) Inspect(f func(ctx context.Context, pn insolar.PulseNumber)) *mJetKeeperMockAddBackupConfirmation {
+	if mmAddBackupConfirmation.mock.inspectFuncAddBackupConfirmation != nil {
+		mmAddBackupConfirmation.mock.t.Fatalf("Inspect function is already set for JetKeeperMock.AddBackupConfirmation")
+	}
+
+	mmAddBackupConfirmation.mock.inspectFuncAddBackupConfirmation = f
+
+	return mmAddBackupConfirmation
+}
+
+// Return sets up results that will be returned by JetKeeper.AddBackupConfirmation
+func (mmAddBackupConfirmation *mJetKeeperMockAddBackupConfirmation) Return(err error) *JetKeeperMock {
+	if mmAddBackupConfirmation.mock.funcAddBackupConfirmation != nil {
+		mmAddBackupConfirmation.mock.t.Fatalf("JetKeeperMock.AddBackupConfirmation mock is already set by Set")
+	}
+
+	if mmAddBackupConfirmation.defaultExpectation == nil {
+		mmAddBackupConfirmation.defaultExpectation = &JetKeeperMockAddBackupConfirmationExpectation{mock: mmAddBackupConfirmation.mock}
+	}
+	mmAddBackupConfirmation.defaultExpectation.results = &JetKeeperMockAddBackupConfirmationResults{err}
+	return mmAddBackupConfirmation.mock
+}
+
+//Set uses given function f to mock the JetKeeper.AddBackupConfirmation method
+func (mmAddBackupConfirmation *mJetKeeperMockAddBackupConfirmation) Set(f func(ctx context.Context, pn insolar.PulseNumber) (err error)) *JetKeeperMock {
+	if mmAddBackupConfirmation.defaultExpectation != nil {
+		mmAddBackupConfirmation.mock.t.Fatalf("Default expectation is already set for the JetKeeper.AddBackupConfirmation method")
+	}
+
+	if len(mmAddBackupConfirmation.expectations) > 0 {
+		mmAddBackupConfirmation.mock.t.Fatalf("Some expectations are already set for the JetKeeper.AddBackupConfirmation method")
+	}
+
+	mmAddBackupConfirmation.mock.funcAddBackupConfirmation = f
+	return mmAddBackupConfirmation.mock
+}
+
+// When sets expectation for the JetKeeper.AddBackupConfirmation which will trigger the result defined by the following
+// Then helper
+func (mmAddBackupConfirmation *mJetKeeperMockAddBackupConfirmation) When(ctx context.Context, pn insolar.PulseNumber) *JetKeeperMockAddBackupConfirmationExpectation {
+	if mmAddBackupConfirmation.mock.funcAddBackupConfirmation != nil {
+		mmAddBackupConfirmation.mock.t.Fatalf("JetKeeperMock.AddBackupConfirmation mock is already set by Set")
+	}
+
+	expectation := &JetKeeperMockAddBackupConfirmationExpectation{
+		mock:   mmAddBackupConfirmation.mock,
+		params: &JetKeeperMockAddBackupConfirmationParams{ctx, pn},
+	}
+	mmAddBackupConfirmation.expectations = append(mmAddBackupConfirmation.expectations, expectation)
+	return expectation
+}
+
+// Then sets up JetKeeper.AddBackupConfirmation return parameters for the expectation previously defined by the When method
+func (e *JetKeeperMockAddBackupConfirmationExpectation) Then(err error) *JetKeeperMock {
+	e.results = &JetKeeperMockAddBackupConfirmationResults{err}
+	return e.mock
+}
+
+// AddBackupConfirmation implements JetKeeper
+func (mmAddBackupConfirmation *JetKeeperMock) AddBackupConfirmation(ctx context.Context, pn insolar.PulseNumber) (err error) {
+	mm_atomic.AddUint64(&mmAddBackupConfirmation.beforeAddBackupConfirmationCounter, 1)
+	defer mm_atomic.AddUint64(&mmAddBackupConfirmation.afterAddBackupConfirmationCounter, 1)
+
+	if mmAddBackupConfirmation.inspectFuncAddBackupConfirmation != nil {
+		mmAddBackupConfirmation.inspectFuncAddBackupConfirmation(ctx, pn)
+	}
+
+	params := &JetKeeperMockAddBackupConfirmationParams{ctx, pn}
+
+	// Record call args
+	mmAddBackupConfirmation.AddBackupConfirmationMock.mutex.Lock()
+	mmAddBackupConfirmation.AddBackupConfirmationMock.callArgs = append(mmAddBackupConfirmation.AddBackupConfirmationMock.callArgs, params)
+	mmAddBackupConfirmation.AddBackupConfirmationMock.mutex.Unlock()
+
+	for _, e := range mmAddBackupConfirmation.AddBackupConfirmationMock.expectations {
+		if minimock.Equal(e.params, params) {
+			mm_atomic.AddUint64(&e.Counter, 1)
+			return e.results.err
+		}
+	}
+
+	if mmAddBackupConfirmation.AddBackupConfirmationMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmAddBackupConfirmation.AddBackupConfirmationMock.defaultExpectation.Counter, 1)
+		want := mmAddBackupConfirmation.AddBackupConfirmationMock.defaultExpectation.params
+		got := JetKeeperMockAddBackupConfirmationParams{ctx, pn}
+		if want != nil && !minimock.Equal(*want, got) {
+			mmAddBackupConfirmation.t.Errorf("JetKeeperMock.AddBackupConfirmation got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		}
+
+		results := mmAddBackupConfirmation.AddBackupConfirmationMock.defaultExpectation.results
+		if results == nil {
+			mmAddBackupConfirmation.t.Fatal("No results are set for the JetKeeperMock.AddBackupConfirmation")
+		}
+		return (*results).err
+	}
+	if mmAddBackupConfirmation.funcAddBackupConfirmation != nil {
+		return mmAddBackupConfirmation.funcAddBackupConfirmation(ctx, pn)
+	}
+	mmAddBackupConfirmation.t.Fatalf("Unexpected call to JetKeeperMock.AddBackupConfirmation. %v %v", ctx, pn)
+	return
+}
+
+// AddBackupConfirmationAfterCounter returns a count of finished JetKeeperMock.AddBackupConfirmation invocations
+func (mmAddBackupConfirmation *JetKeeperMock) AddBackupConfirmationAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmAddBackupConfirmation.afterAddBackupConfirmationCounter)
+}
+
+// AddBackupConfirmationBeforeCounter returns a count of JetKeeperMock.AddBackupConfirmation invocations
+func (mmAddBackupConfirmation *JetKeeperMock) AddBackupConfirmationBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmAddBackupConfirmation.beforeAddBackupConfirmationCounter)
+}
+
+// Calls returns a list of arguments used in each call to JetKeeperMock.AddBackupConfirmation.
+// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
+func (mmAddBackupConfirmation *mJetKeeperMockAddBackupConfirmation) Calls() []*JetKeeperMockAddBackupConfirmationParams {
+	mmAddBackupConfirmation.mutex.RLock()
+
+	argCopy := make([]*JetKeeperMockAddBackupConfirmationParams, len(mmAddBackupConfirmation.callArgs))
+	copy(argCopy, mmAddBackupConfirmation.callArgs)
+
+	mmAddBackupConfirmation.mutex.RUnlock()
+
+	return argCopy
+}
+
+// MinimockAddBackupConfirmationDone returns true if the count of the AddBackupConfirmation invocations corresponds
+// the number of defined expectations
+func (m *JetKeeperMock) MinimockAddBackupConfirmationDone() bool {
+	for _, e := range m.AddBackupConfirmationMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			return false
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.AddBackupConfirmationMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterAddBackupConfirmationCounter) < 1 {
+		return false
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcAddBackupConfirmation != nil && mm_atomic.LoadUint64(&m.afterAddBackupConfirmationCounter) < 1 {
+		return false
+	}
+	return true
+}
+
+// MinimockAddBackupConfirmationInspect logs each unmet expectation
+func (m *JetKeeperMock) MinimockAddBackupConfirmationInspect() {
+	for _, e := range m.AddBackupConfirmationMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			m.t.Errorf("Expected call to JetKeeperMock.AddBackupConfirmation with params: %#v", *e.params)
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.AddBackupConfirmationMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterAddBackupConfirmationCounter) < 1 {
+		if m.AddBackupConfirmationMock.defaultExpectation.params == nil {
+			m.t.Error("Expected call to JetKeeperMock.AddBackupConfirmation")
+		} else {
+			m.t.Errorf("Expected call to JetKeeperMock.AddBackupConfirmation with params: %#v", *m.AddBackupConfirmationMock.defaultExpectation.params)
+		}
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcAddBackupConfirmation != nil && mm_atomic.LoadUint64(&m.afterAddBackupConfirmationCounter) < 1 {
+		m.t.Error("Expected call to JetKeeperMock.AddBackupConfirmation")
+	}
 }
 
 type mJetKeeperMockAddDropConfirmation struct {
@@ -489,6 +723,222 @@ func (m *JetKeeperMock) MinimockAddHotConfirmationInspect() {
 	}
 }
 
+type mJetKeeperMockHasAllJetConfirms struct {
+	mock               *JetKeeperMock
+	defaultExpectation *JetKeeperMockHasAllJetConfirmsExpectation
+	expectations       []*JetKeeperMockHasAllJetConfirmsExpectation
+
+	callArgs []*JetKeeperMockHasAllJetConfirmsParams
+	mutex    sync.RWMutex
+}
+
+// JetKeeperMockHasAllJetConfirmsExpectation specifies expectation struct of the JetKeeper.HasAllJetConfirms
+type JetKeeperMockHasAllJetConfirmsExpectation struct {
+	mock    *JetKeeperMock
+	params  *JetKeeperMockHasAllJetConfirmsParams
+	results *JetKeeperMockHasAllJetConfirmsResults
+	Counter uint64
+}
+
+// JetKeeperMockHasAllJetConfirmsParams contains parameters of the JetKeeper.HasAllJetConfirms
+type JetKeeperMockHasAllJetConfirmsParams struct {
+	ctx context.Context
+	pn  insolar.PulseNumber
+}
+
+// JetKeeperMockHasAllJetConfirmsResults contains results of the JetKeeper.HasAllJetConfirms
+type JetKeeperMockHasAllJetConfirmsResults struct {
+	b1 bool
+}
+
+// Expect sets up expected params for JetKeeper.HasAllJetConfirms
+func (mmHasAllJetConfirms *mJetKeeperMockHasAllJetConfirms) Expect(ctx context.Context, pn insolar.PulseNumber) *mJetKeeperMockHasAllJetConfirms {
+	if mmHasAllJetConfirms.mock.funcHasAllJetConfirms != nil {
+		mmHasAllJetConfirms.mock.t.Fatalf("JetKeeperMock.HasAllJetConfirms mock is already set by Set")
+	}
+
+	if mmHasAllJetConfirms.defaultExpectation == nil {
+		mmHasAllJetConfirms.defaultExpectation = &JetKeeperMockHasAllJetConfirmsExpectation{}
+	}
+
+	mmHasAllJetConfirms.defaultExpectation.params = &JetKeeperMockHasAllJetConfirmsParams{ctx, pn}
+	for _, e := range mmHasAllJetConfirms.expectations {
+		if minimock.Equal(e.params, mmHasAllJetConfirms.defaultExpectation.params) {
+			mmHasAllJetConfirms.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmHasAllJetConfirms.defaultExpectation.params)
+		}
+	}
+
+	return mmHasAllJetConfirms
+}
+
+// Inspect accepts an inspector function that has same arguments as the JetKeeper.HasAllJetConfirms
+func (mmHasAllJetConfirms *mJetKeeperMockHasAllJetConfirms) Inspect(f func(ctx context.Context, pn insolar.PulseNumber)) *mJetKeeperMockHasAllJetConfirms {
+	if mmHasAllJetConfirms.mock.inspectFuncHasAllJetConfirms != nil {
+		mmHasAllJetConfirms.mock.t.Fatalf("Inspect function is already set for JetKeeperMock.HasAllJetConfirms")
+	}
+
+	mmHasAllJetConfirms.mock.inspectFuncHasAllJetConfirms = f
+
+	return mmHasAllJetConfirms
+}
+
+// Return sets up results that will be returned by JetKeeper.HasAllJetConfirms
+func (mmHasAllJetConfirms *mJetKeeperMockHasAllJetConfirms) Return(b1 bool) *JetKeeperMock {
+	if mmHasAllJetConfirms.mock.funcHasAllJetConfirms != nil {
+		mmHasAllJetConfirms.mock.t.Fatalf("JetKeeperMock.HasAllJetConfirms mock is already set by Set")
+	}
+
+	if mmHasAllJetConfirms.defaultExpectation == nil {
+		mmHasAllJetConfirms.defaultExpectation = &JetKeeperMockHasAllJetConfirmsExpectation{mock: mmHasAllJetConfirms.mock}
+	}
+	mmHasAllJetConfirms.defaultExpectation.results = &JetKeeperMockHasAllJetConfirmsResults{b1}
+	return mmHasAllJetConfirms.mock
+}
+
+//Set uses given function f to mock the JetKeeper.HasAllJetConfirms method
+func (mmHasAllJetConfirms *mJetKeeperMockHasAllJetConfirms) Set(f func(ctx context.Context, pn insolar.PulseNumber) (b1 bool)) *JetKeeperMock {
+	if mmHasAllJetConfirms.defaultExpectation != nil {
+		mmHasAllJetConfirms.mock.t.Fatalf("Default expectation is already set for the JetKeeper.HasAllJetConfirms method")
+	}
+
+	if len(mmHasAllJetConfirms.expectations) > 0 {
+		mmHasAllJetConfirms.mock.t.Fatalf("Some expectations are already set for the JetKeeper.HasAllJetConfirms method")
+	}
+
+	mmHasAllJetConfirms.mock.funcHasAllJetConfirms = f
+	return mmHasAllJetConfirms.mock
+}
+
+// When sets expectation for the JetKeeper.HasAllJetConfirms which will trigger the result defined by the following
+// Then helper
+func (mmHasAllJetConfirms *mJetKeeperMockHasAllJetConfirms) When(ctx context.Context, pn insolar.PulseNumber) *JetKeeperMockHasAllJetConfirmsExpectation {
+	if mmHasAllJetConfirms.mock.funcHasAllJetConfirms != nil {
+		mmHasAllJetConfirms.mock.t.Fatalf("JetKeeperMock.HasAllJetConfirms mock is already set by Set")
+	}
+
+	expectation := &JetKeeperMockHasAllJetConfirmsExpectation{
+		mock:   mmHasAllJetConfirms.mock,
+		params: &JetKeeperMockHasAllJetConfirmsParams{ctx, pn},
+	}
+	mmHasAllJetConfirms.expectations = append(mmHasAllJetConfirms.expectations, expectation)
+	return expectation
+}
+
+// Then sets up JetKeeper.HasAllJetConfirms return parameters for the expectation previously defined by the When method
+func (e *JetKeeperMockHasAllJetConfirmsExpectation) Then(b1 bool) *JetKeeperMock {
+	e.results = &JetKeeperMockHasAllJetConfirmsResults{b1}
+	return e.mock
+}
+
+// HasAllJetConfirms implements JetKeeper
+func (mmHasAllJetConfirms *JetKeeperMock) HasAllJetConfirms(ctx context.Context, pn insolar.PulseNumber) (b1 bool) {
+	mm_atomic.AddUint64(&mmHasAllJetConfirms.beforeHasAllJetConfirmsCounter, 1)
+	defer mm_atomic.AddUint64(&mmHasAllJetConfirms.afterHasAllJetConfirmsCounter, 1)
+
+	if mmHasAllJetConfirms.inspectFuncHasAllJetConfirms != nil {
+		mmHasAllJetConfirms.inspectFuncHasAllJetConfirms(ctx, pn)
+	}
+
+	params := &JetKeeperMockHasAllJetConfirmsParams{ctx, pn}
+
+	// Record call args
+	mmHasAllJetConfirms.HasAllJetConfirmsMock.mutex.Lock()
+	mmHasAllJetConfirms.HasAllJetConfirmsMock.callArgs = append(mmHasAllJetConfirms.HasAllJetConfirmsMock.callArgs, params)
+	mmHasAllJetConfirms.HasAllJetConfirmsMock.mutex.Unlock()
+
+	for _, e := range mmHasAllJetConfirms.HasAllJetConfirmsMock.expectations {
+		if minimock.Equal(e.params, params) {
+			mm_atomic.AddUint64(&e.Counter, 1)
+			return e.results.b1
+		}
+	}
+
+	if mmHasAllJetConfirms.HasAllJetConfirmsMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmHasAllJetConfirms.HasAllJetConfirmsMock.defaultExpectation.Counter, 1)
+		want := mmHasAllJetConfirms.HasAllJetConfirmsMock.defaultExpectation.params
+		got := JetKeeperMockHasAllJetConfirmsParams{ctx, pn}
+		if want != nil && !minimock.Equal(*want, got) {
+			mmHasAllJetConfirms.t.Errorf("JetKeeperMock.HasAllJetConfirms got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		}
+
+		results := mmHasAllJetConfirms.HasAllJetConfirmsMock.defaultExpectation.results
+		if results == nil {
+			mmHasAllJetConfirms.t.Fatal("No results are set for the JetKeeperMock.HasAllJetConfirms")
+		}
+		return (*results).b1
+	}
+	if mmHasAllJetConfirms.funcHasAllJetConfirms != nil {
+		return mmHasAllJetConfirms.funcHasAllJetConfirms(ctx, pn)
+	}
+	mmHasAllJetConfirms.t.Fatalf("Unexpected call to JetKeeperMock.HasAllJetConfirms. %v %v", ctx, pn)
+	return
+}
+
+// HasAllJetConfirmsAfterCounter returns a count of finished JetKeeperMock.HasAllJetConfirms invocations
+func (mmHasAllJetConfirms *JetKeeperMock) HasAllJetConfirmsAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmHasAllJetConfirms.afterHasAllJetConfirmsCounter)
+}
+
+// HasAllJetConfirmsBeforeCounter returns a count of JetKeeperMock.HasAllJetConfirms invocations
+func (mmHasAllJetConfirms *JetKeeperMock) HasAllJetConfirmsBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmHasAllJetConfirms.beforeHasAllJetConfirmsCounter)
+}
+
+// Calls returns a list of arguments used in each call to JetKeeperMock.HasAllJetConfirms.
+// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
+func (mmHasAllJetConfirms *mJetKeeperMockHasAllJetConfirms) Calls() []*JetKeeperMockHasAllJetConfirmsParams {
+	mmHasAllJetConfirms.mutex.RLock()
+
+	argCopy := make([]*JetKeeperMockHasAllJetConfirmsParams, len(mmHasAllJetConfirms.callArgs))
+	copy(argCopy, mmHasAllJetConfirms.callArgs)
+
+	mmHasAllJetConfirms.mutex.RUnlock()
+
+	return argCopy
+}
+
+// MinimockHasAllJetConfirmsDone returns true if the count of the HasAllJetConfirms invocations corresponds
+// the number of defined expectations
+func (m *JetKeeperMock) MinimockHasAllJetConfirmsDone() bool {
+	for _, e := range m.HasAllJetConfirmsMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			return false
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.HasAllJetConfirmsMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterHasAllJetConfirmsCounter) < 1 {
+		return false
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcHasAllJetConfirms != nil && mm_atomic.LoadUint64(&m.afterHasAllJetConfirmsCounter) < 1 {
+		return false
+	}
+	return true
+}
+
+// MinimockHasAllJetConfirmsInspect logs each unmet expectation
+func (m *JetKeeperMock) MinimockHasAllJetConfirmsInspect() {
+	for _, e := range m.HasAllJetConfirmsMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			m.t.Errorf("Expected call to JetKeeperMock.HasAllJetConfirms with params: %#v", *e.params)
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.HasAllJetConfirmsMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterHasAllJetConfirmsCounter) < 1 {
+		if m.HasAllJetConfirmsMock.defaultExpectation.params == nil {
+			m.t.Error("Expected call to JetKeeperMock.HasAllJetConfirms")
+		} else {
+			m.t.Errorf("Expected call to JetKeeperMock.HasAllJetConfirms with params: %#v", *m.HasAllJetConfirmsMock.defaultExpectation.params)
+		}
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcHasAllJetConfirms != nil && mm_atomic.LoadUint64(&m.afterHasAllJetConfirmsCounter) < 1 {
+		m.t.Error("Expected call to JetKeeperMock.HasAllJetConfirms")
+	}
+}
+
 type mJetKeeperMockTopSyncPulse struct {
 	mock               *JetKeeperMock
 	defaultExpectation *JetKeeperMockTopSyncPulseExpectation
@@ -635,9 +1085,13 @@ func (m *JetKeeperMock) MinimockTopSyncPulseInspect() {
 // MinimockFinish checks that all mocked methods have been called the expected number of times
 func (m *JetKeeperMock) MinimockFinish() {
 	if !m.minimockDone() {
+		m.MinimockAddBackupConfirmationInspect()
+
 		m.MinimockAddDropConfirmationInspect()
 
 		m.MinimockAddHotConfirmationInspect()
+
+		m.MinimockHasAllJetConfirmsInspect()
 
 		m.MinimockTopSyncPulseInspect()
 		m.t.FailNow()
@@ -663,7 +1117,9 @@ func (m *JetKeeperMock) MinimockWait(timeout mm_time.Duration) {
 func (m *JetKeeperMock) minimockDone() bool {
 	done := true
 	return done &&
+		m.MinimockAddBackupConfirmationDone() &&
 		m.MinimockAddDropConfirmationDone() &&
 		m.MinimockAddHotConfirmationDone() &&
+		m.MinimockHasAllJetConfirmsDone() &&
 		m.MinimockTopSyncPulseDone()
 }

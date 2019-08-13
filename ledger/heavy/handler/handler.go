@@ -57,6 +57,7 @@ type Handler struct {
 	JetModifier   jet.Modifier
 	JetAccessor   jet.Accessor
 	JetKeeper     executor.JetKeeper
+	BackupMaker   executor.BackupMaker
 
 	Sender          bus.Sender
 	StartPulse      pulse.StartPulse
@@ -64,15 +65,13 @@ type Handler struct {
 	JetTree         jet.Storage
 	DropDB          *drop.DB
 
-	jetID insolar.JetID
-	dep   *proc.Dependencies
+	dep *proc.Dependencies
 }
 
 // New creates a new handler.
 func New(cfg configuration.Ledger) *Handler {
 	h := &Handler{
-		cfg:   cfg,
-		jetID: insolar.ZeroJetID,
+		cfg: cfg,
 	}
 	dep := proc.Dependencies{
 		PassState: func(p *proc.PassState) {
@@ -96,8 +95,11 @@ func New(cfg configuration.Ledger) *Handler {
 				h.IndexModifier,
 				h.RecordPositions,
 				h.PCS,
+				h.PulseCalculator,
 				h.DropModifier,
 				h.JetKeeper,
+				h.BackupMaker,
+				h.JetModifier,
 			)
 		},
 		SendJet: func(p *proc.SendJet) {
@@ -293,17 +295,13 @@ func (h *Handler) handleGotHotConfirmation(ctx context.Context, meta payload.Met
 		return
 	}
 
-	logger.Debugf("handleGotHotConfirmation. pulse=%v. jet=%v", confirm.Pulse, confirm.JetID.DebugString())
-
-	err = h.JetModifier.Update(ctx, confirm.Pulse, true, confirm.JetID)
-	if err != nil {
-		logger.Fatalf("failed to update jet=%v: %s", confirm.JetID.DebugString(), err.Error())
-	}
+	logger.Debug("handleGotHotConfirmation. pulse: ", confirm.Pulse, ". jet: ", confirm.JetID.DebugString(), ". Split: ", confirm.Split)
 
 	err = h.JetKeeper.AddHotConfirmation(ctx, confirm.Pulse, confirm.JetID, confirm.Split)
 	if err != nil {
 		logger.Fatalf("failed to add hot confirmation jet=%v: %v", confirm.String(), err.Error())
 	}
 
-	logger.Debug("got confirmation: ", confirm.String())
+	executor.FinalizePulse(ctx, h.PulseCalculator, h.BackupMaker, h.JetKeeper, confirm.Pulse)
+
 }
