@@ -310,9 +310,9 @@ func makeSignedRequest(user *user, method string, params interface{}) (interface
 			PublicKey:  user.pubKey,
 			Test:       caller})
 
-	if err != nil {
-		return nil, "", err
-	}
+		if err != nil {
+			return nil, "", err
+		}
 
 		resp = requester.ContractResponse{}
 		err = json.Unmarshal(res, &resp)
