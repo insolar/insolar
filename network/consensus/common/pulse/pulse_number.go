@@ -50,7 +50,10 @@
 
 package pulse
 
-import "time"
+import (
+	"errors"
+	"time"
+)
 
 type Number uint32
 
@@ -80,12 +83,12 @@ func OfUnixTime(u int64) Number {
 	return MinTimePulse + Number(u-UnixTimeOfMinTimePulse)
 }
 
-func (n Number) AsApproximateTime() time.Time {
+func (n Number) AsApproximateTime() (time.Time, error) {
 	if !n.IsTimePulse() {
-		panic("illegal state")
+		return timeOfMinTimePulse, errors.New("illegal state")
 	}
 
-	return timeOfMinTimePulse.Add(time.Second * time.Duration(n-MinTimePulse))
+	return timeOfMinTimePulse.Add(time.Second * time.Duration(n-MinTimePulse)), nil
 }
 
 func (n Number) IsTimePulse() bool {

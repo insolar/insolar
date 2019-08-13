@@ -75,7 +75,8 @@ func TestOfUnixTime(t *testing.T) {
 
 func TestAsApproximateTime(t *testing.T) {
 	n := Number(MinTimePulse)
-	approx := n.AsApproximateTime()
+	approx, err := n.AsApproximateTime()
+	require.NoError(t, err)
 	require.Equal(t, timeOfMinTimePulse, approx)
 }
 
