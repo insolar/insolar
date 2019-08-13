@@ -58,7 +58,6 @@ import (
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/errors"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetdispatch"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/population"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -100,7 +99,7 @@ type coreRealm struct {
 	assistant         transport.CryptographyAssistant
 	stateMachine      api.RoundStateCallback
 	roundStartedAt    time.Time
-	postponedPacketFn packetdispatch.PostponedPacketFunc
+	postponedPacketFn population.PostponedPacketFunc
 
 	expectedPopulationSize member.Index
 	nbhSizes               transport.NeighbourhoodSizes
@@ -233,7 +232,7 @@ func (r *coreRealm) AddPoll(fn api.MaintenancePollFunc) {
 }
 
 func (r *coreRealm) VerifyPacketAuthenticity(ctx context.Context, packet transport.PacketParser,
-	from endpoints.Inbound, sourceNode packetdispatch.MemberPacketReceiver, unverifiedFlag coreapi.PacketVerifyFlags,
+	from endpoints.Inbound, sourceNode population.MemberPacketReceiver, unverifiedFlag coreapi.PacketVerifyFlags,
 	pd population.PacketDispatcher, verifyFlags coreapi.PacketVerifyFlags) (coreapi.PacketVerifyFlags, error) {
 
 	if verifyFlags&(coreapi.SkipVerify|coreapi.SuccessfullyVerified) != 0 {

@@ -112,8 +112,6 @@ type DynamicRealmPopulation struct {
 	nodeIndex    []*NodeAppearance
 	nodeShuffle  []*NodeAppearance // excluding self
 	dynamicNodes map[insolar.ShortNodeID]*NodeAppearance
-	reservations int
-	// voters int
 }
 
 func (p *DynamicRealmPopulation) SealIndexed(indexedCountLimit int) bool {
@@ -232,22 +230,6 @@ func (p *DynamicRealmPopulation) GetNodeAppearance(id insolar.ShortNodeID) *Node
 	return p.dynamicNodes[id]
 }
 
-func (p *DynamicRealmPopulation) GetActiveNodeAppearance(id insolar.ShortNodeID) *NodeAppearance {
-	na := p.GetNodeAppearance(id)
-	if na == nil || na.GetProfile().IsJoiner() {
-		return nil
-	}
-	return na
-}
-
-func (p *DynamicRealmPopulation) GetJoinerNodeAppearance(id insolar.ShortNodeID) *NodeAppearance {
-	na := p.GetNodeAppearance(id)
-	if na == nil || !na.GetProfile().IsJoiner() {
-		return nil
-	}
-	return na
-}
-
 func (p *DynamicRealmPopulation) GetNodeAppearanceByIndex(idx int) *NodeAppearance {
 	if idx < 0 {
 		panic("illegal value")
@@ -353,30 +335,6 @@ func (p *DynamicRealmPopulation) AddToDynamics(ctx context.Context, na *NodeAppe
 	return nna, nil
 }
 
-func (p *DynamicRealmPopulation) AddReservation(id insolar.ShortNodeID) (bool, *NodeAppearance) {
-
-	p.rw.Lock()
-	defer p.rw.Unlock()
-
-	na, ok := p.dynamicNodes[id]
-	if ok || na != nil {
-		return false, na
-	}
-
-	p.dynamicNodes[id] = nil
-	p.reservations++
-	return true, nil
-}
-
-func (p *DynamicRealmPopulation) FindReservation(id insolar.ShortNodeID) (bool, *NodeAppearance) {
-
-	p.rw.RLock()
-	defer p.rw.RUnlock()
-
-	na, ok := p.dynamicNodes[id]
-	return ok && na == nil, na
-}
-
 func (p *DynamicRealmPopulation) silentAddToDynamics(ctx context.Context, n *NodeAppearance) (bool, *NodeAppearance) {
 
 	nip := n.GetStatic()
@@ -386,12 +344,9 @@ func (p *DynamicRealmPopulation) silentAddToDynamics(ctx context.Context, n *Nod
 	defer p.rw.Unlock()
 
 	id := nip.GetStaticNodeID()
-	na, ok := p.dynamicNodes[id]
+	na := p.dynamicNodes[id]
 	if na != nil {
 		return false, na
-	}
-	if ok {
-		p.reservations--
 	}
 
 	n.handlers = handlers

@@ -69,9 +69,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 	"github.com/insolar/insolar/network/consensus/gcpv2/censusimpl"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetdispatch"
 	pop "github.com/insolar/insolar/network/consensus/gcpv2/core/population"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core/purgatory"
 )
 
 var _ pulse.DataHolder = &FullRealm{}
@@ -90,7 +88,7 @@ type FullRealm struct {
 	census         census.Active
 	population     pop.RealmPopulation
 	populationHook *pop.Hook
-	purgatory      purgatory.RealmPurgatory
+	purgatory      pop.RealmPurgatory
 
 	packetDispatchers []pop.PacketDispatcher
 
@@ -103,7 +101,7 @@ func (r *FullRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 
 	pt := packet.GetPacketType()
 
-	var sourceNode packetdispatch.MemberPacketReceiver
+	var sourceNode pop.MemberPacketReceiver
 	var sourceID insolar.ShortNodeID
 
 	switch {
@@ -319,8 +317,7 @@ func (r *FullRealm) initPopulation(needsDynamic bool, population census.OnlinePo
 	}
 
 	r.initSelf() // should happen before notifications - just in case someone will access GetSelf
-	r.purgatory = purgatory.NewRealmPurgatory(r.population, r.profileFactory, r.assistant,
-		r.populationHook, r.postponedPacketFn)
+	r.purgatory = pop.NewRealmPurgatory(r.population, r.assistant, r.postponedPacketFn)
 
 	notifyAll()
 }
@@ -645,21 +642,21 @@ func (r *FullRealm) GetProfileFactory() profiles.Factory {
 	return r.profileFactory
 }
 
-func (r *FullRealm) GetPurgatory() *purgatory.RealmPurgatory {
+func (r *FullRealm) GetPurgatory() *pop.RealmPurgatory {
 	return &r.purgatory
 }
 
-func (r *FullRealm) getMemberReceiver(id insolar.ShortNodeID) packetdispatch.MemberPacketReceiver {
-	// Purgatory MUST be checked first to avoid "missing" a node during its transition from the purgatory to normal population
-	pn := r.GetPurgatory().GetPhantomNode(id)
-	if pn != nil {
-		return pn
+func (r *FullRealm) getMemberReceiver(id insolar.ShortNodeID) pop.MemberPacketReceiver {
+
+	mr := r.population.GetNodeAppearance(id) // gets indexed nodes of a fixed population
+	if mr != nil {
+		/*
+			Indexed nodes are looked up through a static map, so there is no racing on it
+		*/
+		return mr
 	}
-	na := r.GetPopulation().GetNodeAppearance(id)
-	if na != nil {
-		return na
-	}
-	return nil
+
+	return r.GetPurgatory().GetReceivingMember(id) // gets dynamic and phantom nodes
 }
 
 func (r *FullRealm) GetWelcomePackage() *proofs.NodeWelcomePackage {

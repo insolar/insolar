@@ -72,7 +72,7 @@ func NewFixedRealmPopulation(population census.OnlinePopulation, phase2ExtLimit 
 
 	r := &FixedRealmPopulation{
 		population: population,
-		dynPop: dynPop{DynamicRealmPopulation{
+		DynamicRealmPopulation: DynamicRealmPopulation{
 			dispatchFactory: fn,
 			shuffleFunc:     shuffleFn,
 			baselineWeight:  baselineWeight,
@@ -84,7 +84,7 @@ func NewFixedRealmPopulation(population census.OnlinePopulation, phase2ExtLimit 
 			dynamicNodes:    make(map[insolar.ShortNodeID]*NodeAppearance),
 			indexedLenSet:   true, // locks down SealIndexed
 			hook:            NewHook(nil, nil, hookCfg),
-		}},
+		},
 	}
 	r.initPopulation()
 	ShuffleNodeAppearances(shuffleFn, r.nodeShuffle)
@@ -94,10 +94,8 @@ func NewFixedRealmPopulation(population census.OnlinePopulation, phase2ExtLimit 
 
 var _ RealmPopulation = &FixedRealmPopulation{}
 
-type dynPop struct{ DynamicRealmPopulation }
-
 type FixedRealmPopulation struct {
-	dynPop
+	DynamicRealmPopulation
 	population census.OnlinePopulation
 }
 
@@ -179,7 +177,7 @@ func (r *FixedRealmPopulation) GetNodeAppearance(id insolar.ShortNodeID) *NodeAp
 	if na != nil {
 		return na
 	}
-	return r.GetJoinerNodeAppearance(id)
+	return r.DynamicRealmPopulation.GetNodeAppearance(id)
 }
 
 func (r *FixedRealmPopulation) GetNodeAppearanceByIndex(idx int) *NodeAppearance {
@@ -206,7 +204,7 @@ func (r *FixedRealmPopulation) AddToDynamics(ctx context.Context, n *NodeAppeara
 	// if !n.profile.IsJoiner() {
 	//	panic("illegal value")
 	// }
-	return r.dynPop.AddToDynamics(ctx, n)
+	return r.DynamicRealmPopulation.AddToDynamics(ctx, n)
 }
 
 func (r *FixedRealmPopulation) CreateVectorHelper() *RealmVectorHelper {

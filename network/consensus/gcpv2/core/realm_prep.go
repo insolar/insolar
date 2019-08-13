@@ -54,11 +54,11 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/common/watchdog"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetdispatch"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/population"
 
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
@@ -83,11 +83,11 @@ type PrepRealm struct {
 	/* Provided externally. Don't need mutex */
 	*coreRealm // points the core part realms, it is shared between of all Realms of a Round
 
-	completeFn func(successful bool) // MUST be called under lock, consequent calls are ignored
+	completeFn PrepCompleteFunc // MUST be called under lock, consequent calls are ignored
 
 	/* Derived from the provided externally - set at init() or start(). Don't need mutex */
 	packetDispatchers []population.PacketDispatcher
-	packetRecorder    packetdispatch.PacketRecorder
+	packetRecorder    population.PacketRecorder
 	// queueToFull       chan packetrecorder.PostponedPacket
 	// phase2ExtLimit    uint8
 
@@ -194,7 +194,7 @@ func (p *PrepRealm) beforeStart(ctx context.Context, controllers []PrepPhaseCont
 	}
 	limiter := phases.NewPacketLimiter(p.nbhSizes.ExtendingNeighbourhoodLimit)
 	packetsPerSender := limiter.GetRemainingPacketCountDefault()
-	p.packetRecorder = packetdispatch.NewPacketRecorder(int(packetsPerSender) * 100)
+	p.packetRecorder = population.NewPacketRecorder(int(packetsPerSender) * 100)
 
 	p.packetDispatchers = make([]population.PacketDispatcher, phases.PacketTypeCount)
 	for _, ctl := range controllers {

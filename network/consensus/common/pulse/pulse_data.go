@@ -83,13 +83,13 @@ type DataExt struct {
 	PulseEntropy   longbits.Bits256
 	NextPulseDelta uint16
 	PrevPulseDelta uint16
-	Timestamp      uint32
+	Timestamp      uint32 //UnixTime, seconds
 }
 
 type DataReader interface {
 	GetPulseNumber() Number
 	GetStartOfEpoch() Number
-	// GetPulseEntropy()	[4]uint64
+	// GetPulseEntropy()	longbits.Bits256
 	GetNextPulseDelta() uint16
 	GetPrevPulseDelta() uint16
 	GetTimestamp() uint64

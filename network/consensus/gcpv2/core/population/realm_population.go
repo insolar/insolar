@@ -67,8 +67,6 @@ type RealmPopulation interface {
 	SealIndexed(indexedCapacity int) bool
 
 	GetNodeAppearance(id insolar.ShortNodeID) *NodeAppearance
-	GetActiveNodeAppearance(id insolar.ShortNodeID) *NodeAppearance
-	GetJoinerNodeAppearance(id insolar.ShortNodeID) *NodeAppearance
 	GetNodeAppearanceByIndex(idx int) *NodeAppearance
 
 	GetShuffledOtherNodes() []*NodeAppearance /* excludes joiners and self */
@@ -77,10 +75,6 @@ type RealmPopulation interface {
 	GetCountAndCompleteness(includeJoiners bool) (int, bool)
 
 	GetSelf() *NodeAppearance
-
-	// CreateNodeAppearance(ctx context.Context, inp profiles.ActiveNode) *NodeAppearance
-	AddReservation(id insolar.ShortNodeID) (bool, *NodeAppearance)
-	FindReservation(id insolar.ShortNodeID) (bool, *NodeAppearance)
 
 	AddToDynamics(ctx context.Context, n *NodeAppearance) (*NodeAppearance, error)
 	GetAnyNodes(includeIndexed bool, shuffle bool) []*NodeAppearance

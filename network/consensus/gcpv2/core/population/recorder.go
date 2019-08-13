@@ -1,4 +1,4 @@
-//
+///
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -46,27 +46,105 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-//
+///
 
-package packetdispatch
+package population
 
 import (
-	"context"
+	"sync"
 
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensus/common/cryptkit"
-	"github.com/insolar/insolar/network/consensus/common/endpoints"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core/population"
+
+	"github.com/insolar/insolar/network/consensus/common/endpoints"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 )
 
-type MemberPacketReceiver interface {
-	GetNodeID() insolar.ShortNodeID
-	CanReceivePacket(pt phases.PacketType) bool
-	VerifyPacketAuthenticity(packetSignature cryptkit.SignedDigest, from endpoints.Inbound, strictFrom bool) error
-	SetPacketReceived(pt phases.PacketType) bool
-	DispatchMemberPacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound, flags coreapi.PacketVerifyFlags,
-		pd population.PacketDispatcher) error
+type PostponedPacketFunc func(packet transport.PacketParser, from endpoints.Inbound, verifyFlags coreapi.PacketVerifyFlags) bool
+
+type PostponedPacket struct {
+	Packet      transport.PacketParser
+	From        endpoints.Inbound
+	VerifyFlags coreapi.PacketVerifyFlags
+}
+
+func NewPacketRecorder(recordingSize int) PacketRecorder {
+	return PacketRecorder{pr: UnsafePacketRecorder{recordingLimit: recordingSize}}
+}
+
+func NewUnsafePacketRecorder(recordingSize int) UnsafePacketRecorder {
+	return UnsafePacketRecorder{recordingLimit: recordingSize}
+}
+
+type packetRecording struct {
+	packets []PostponedPacket
+}
+
+func (p *packetRecording) Record(packet transport.PacketParser, from endpoints.Inbound, verifyFlags coreapi.PacketVerifyFlags) {
+	p.packets = append(p.packets, PostponedPacket{packet, from, verifyFlags})
+}
+
+type PacketRecorder struct {
+	sync sync.Mutex
+	pr   UnsafePacketRecorder
+}
+
+func (p *PacketRecorder) Record(packet transport.PacketParser, from endpoints.Inbound, verifyFlags coreapi.PacketVerifyFlags) {
+	p.sync.Lock()
+	defer p.sync.Unlock()
+	p.pr.Record(packet, from, verifyFlags)
+}
+
+func (p *PacketRecorder) Playback(to PostponedPacketFunc) {
+	p.sync.Lock()
+	defer p.sync.Unlock()
+	p.pr.Playback(to)
+}
+
+type UnsafePacketRecorder struct {
+	recordingLimit int
+	playbackFn     PostponedPacketFunc
+	recordings     []packetRecording
+}
+
+func (p *UnsafePacketRecorder) IsRecording() bool {
+	return p.playbackFn == nil
+}
+
+func (p *UnsafePacketRecorder) Record(packet transport.PacketParser, from endpoints.Inbound, verifyFlags coreapi.PacketVerifyFlags) {
+	if p.playbackFn != nil {
+		go p.playbackFn(packet, from, verifyFlags)
+		return
+	}
+	last := len(p.recordings) - 1
+	if last < 0 || len(p.recordings[last].packets) >= p.recordingLimit {
+		p.recordings = append(p.recordings, packetRecording{make([]PostponedPacket, 0, p.recordingLimit)})
+		last++
+	}
+	p.recordings[last].Record(packet, from, verifyFlags)
+}
+
+func (p *UnsafePacketRecorder) Playback(to PostponedPacketFunc) {
+	if p.playbackFn != nil {
+		panic("illegal state")
+	}
+	if to == nil {
+		panic("illegal value")
+	}
+	p.playbackFn = to
+
+	recordings := p.recordings
+	p.recordings = nil
+	if len(recordings) > 0 {
+		go playbackPackets(recordings, to)
+	}
+}
+
+func playbackPackets(recordings []packetRecording, to PostponedPacketFunc) {
+	for _, p := range recordings {
+		for _, pp := range p.packets {
+			if !to(pp.Packet, pp.From, pp.VerifyFlags) {
+				return
+			}
+		}
+	}
 }

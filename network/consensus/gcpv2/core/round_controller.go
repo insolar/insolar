@@ -172,7 +172,7 @@ func (r *PhasedRoundController) PrepareConsensusRound(upstream api.UpstreamContr
 
 	r.roundWorker.init(func() {
 		// requires r.roundWorker.StartXXX to happen under lock
-		r._setStartedAt()
+		r._setStartedAtNow()
 		if r.prepR != nil { // PrepRealm can be finished before starting
 			r.prepR._startWorkers(prepCtx, preps)
 		}
@@ -212,7 +212,7 @@ func (r *PhasedRoundController) _onConsensusFinished() {
 	r.prevPulseRound = nil
 }
 
-func (r *PhasedRoundController) _setStartedAt() {
+func (r *PhasedRoundController) _setStartedAtNow() {
 	if r.realm.roundStartedAt.IsZero() { // can be called a few times
 		r.realm.roundStartedAt = time.Now()
 	}
@@ -246,7 +246,7 @@ Can be called from a polling function (for ephemeral), and happen BEFORE PrepRea
 */
 func (r *PhasedRoundController) _startFullRealm(prepWasSuccessful bool) {
 
-	r._setStartedAt()
+	r._setStartedAtNow()
 
 	if !prepWasSuccessful {
 		r.roundWorker.OnPrepRoundFailed()
@@ -374,7 +374,9 @@ func (r *PhasedRoundController) handlePacket(ctx context.Context, packet transpo
 		r.StopConsensusRound()
 		// TODO should allow some time to handover a broken population?
 		// TODO build a one-node population for Suspected mode
-	} else {
+		//} else if !r.realm.census.IsActive() {
+		//	return api.KeepRound, err
+	} else { // there is a chance of racing here, but it will be handled by member controller as well
 		expected := r.chronicle.GetExpectedCensus()
 		if expected == nil || !expected.GetOnlinePopulation().IsValid() {
 			return api.NextRoundTerminate, fmt.Errorf("next population is invalid or not ready on: %v", err)

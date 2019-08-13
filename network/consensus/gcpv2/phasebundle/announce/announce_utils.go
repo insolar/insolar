@@ -54,18 +54,16 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core/population"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core/purgatory"
-
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/population"
 )
 
 func ValidateIntrosOnMember(reader transport.ExtendedIntroReader, brief transport.BriefIntroductionReader,
-	fullIntroRequired bool, n purgatory.AnnouncingMember) error {
+	fullIntroRequired bool, n population.AnnouncingMember) error {
 
 	if reader.HasJoinerSecret() {
 		return n.Blames().NewProtocolViolation(n.GetReportProfile(), "joiner secret was not expected")
@@ -243,7 +241,7 @@ func AnnouncementFromReaderNotForJoiner(senderID insolar.ShortNodeID, ma transpo
 }
 
 type ResolvedNeighbour struct {
-	Neighbour    purgatory.AnnouncingMember
+	Neighbour    population.AnnouncingMember
 	Announcement profiles.MemberAnnouncement
 }
 

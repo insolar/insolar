@@ -52,6 +52,8 @@ package population
 
 import (
 	"context"
+	"github.com/insolar/insolar/network/consensus/common/cryptkit"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
@@ -70,3 +72,12 @@ type PacketDispatcher interface {
 }
 
 type DispatchMemberPacketFunc func(ctx context.Context, packet transport.MemberPacketReader, from *NodeAppearance) error
+
+type MemberPacketReceiver interface {
+	GetNodeID() insolar.ShortNodeID
+	CanReceivePacket(pt phases.PacketType) bool
+	VerifyPacketAuthenticity(packetSignature cryptkit.SignedDigest, from endpoints.Inbound, strictFrom bool) error
+	SetPacketReceived(pt phases.PacketType) bool
+	DispatchMemberPacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound, flags coreapi.PacketVerifyFlags,
+		pd PacketDispatcher) error
+}
