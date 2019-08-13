@@ -105,6 +105,9 @@ func (mode EphemeralMode) IsEnabled() bool {
 }
 
 type PulseControlFeeder interface {
+	/* Is called on consensus termination when nothing was send to a channel provided with UpstreamController.PreparePulseChange  */
+	OnFailedPreparePulseChange()
+
 	CanStopOnHastyPulse(pn pulse.Number, expectedEndOfConsensus time.Time) bool
 }
 
@@ -135,9 +138,6 @@ type EphemeralControlFeeder interface {
 type ConsensusControlFeeder interface {
 	TrafficControlFeeder
 	PulseControlFeeder
-
-	/* Is called on consensus termination when nothing was send to a channel provided with UpstreamController.PreparePulseChange  */
-	OnFailedPreparePulseChange()
 
 	GetRequiredPowerLevel() power.Request
 	OnAppliedMembershipProfile(mode member.OpMode, pw member.Power, effectiveSince pulse.Number)

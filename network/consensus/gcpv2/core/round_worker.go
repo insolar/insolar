@@ -83,7 +83,7 @@ var _ api.RoundStateCallback = &RoundStateMachineWorker{}
 type RoundStateMachineWorker struct {
 	worker        syncrun.SyncingWorker
 	upstream      api.UpstreamController
-	controlFeeder api.ConsensusControlFeeder
+	controlFeeder api.PulseControlFeeder
 
 	finishedFn func()
 
@@ -161,7 +161,7 @@ func (p *RoundStateMachineWorker) Stop() {
 }
 
 func (p *RoundStateMachineWorker) preInit(ctx context.Context, upstream api.UpstreamController,
-	controlFeeder api.ConsensusControlFeeder) context.Context {
+	controlFeeder api.PulseControlFeeder) context.Context {
 	p.upstream = upstream
 	p.controlFeeder = controlFeeder
 	return p.worker.AttachContext(ctx)
