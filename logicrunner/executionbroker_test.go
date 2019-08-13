@@ -22,6 +22,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ThreeDotsLabs/watermill"
 	wmMessage "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/gojuno/minimock"
 	"github.com/stretchr/testify/require"
@@ -371,7 +372,7 @@ func (s *ExecutionBrokerSuite) TestDeduplication() {
 	s.Equal(b.mutable.Length(), 1)
 }
 
-func TestExecutionBroker_FinishedPendingIfNeed(t *testing.T) {
+func TestExecutionBroker_PendingFinishedIfNeed(t *testing.T) {
 	mc := minimock.NewController(t)
 
 	tests := []struct {
@@ -394,9 +395,12 @@ func TestExecutionBroker_FinishedPendingIfNeed(t *testing.T) {
 					pending: insolar.InPending,
 
 					sender: bus.NewSenderMock(mc).SendRoleMock.Set(
-						func(_ context.Context, pendingMsg *wmMessage.Message, role insolar.DynamicRole, obj insolar.Reference) (r <-chan *wmMessage.Message, r1 func()) {
-
-							return nil, func() {
+						func(_ context.Context, pendingMsg *wmMessage.Message, role insolar.DynamicRole, obj insolar.Reference) (<-chan *wmMessage.Message, func()) {
+							r := make(chan *wmMessage.Message)
+							go func() {
+								r <- wmMessage.NewMessage(watermill.NewUUID(), nil)
+							}()
+							return r, func() {
 								require.Equal(t, obj, objRef)
 								require.Equal(t, insolar.DynamicRoleVirtualExecutor, role, "role")
 								require.Equal(t, msg.Payload, pendingMsg.Payload)

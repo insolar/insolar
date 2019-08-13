@@ -73,7 +73,7 @@ func (h *HandleCall) sendToNextExecutor(
 		ObjectReference: objectRef,
 		RequestRef:      requestRef,
 		Request:         request,
-		ServiceData:     oldDerviceDataFromContext(ctx),
+		ServiceData:     oldServiceDataFromContext(ctx),
 	}
 
 	_, err := h.dep.lr.MessageBus.Send(ctx, &additionalCallMsg, nil)

@@ -119,13 +119,11 @@ func (r *executionRegistry) OnPulse(_ context.Context) []payload.Payload {
 			requestRefs = append(requestRefs, requestRef)
 		}
 
-		if len(requestRefs) > 0 {
-			messages = append(messages, &payload.StillExecuting{
-				ObjectRef:   r.objectRef,
-				Executor:    r.jetCoordinator.Me(),
-				RequestRefs: requestRefs,
-			})
-		}
+		messages = append(messages, &payload.StillExecuting{
+			ObjectRef:   r.objectRef,
+			Executor:    r.jetCoordinator.Me(),
+			RequestRefs: requestRefs,
+		})
 	}
 	return messages
 }

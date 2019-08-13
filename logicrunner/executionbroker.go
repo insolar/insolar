@@ -46,7 +46,7 @@ type ExecutionBrokerI interface {
 	PendingState() insolar.PendingState
 	PrevExecutorStillExecuting(ctx context.Context)
 	PrevExecutorPendingResult(ctx context.Context, prevExecState insolar.PendingState)
-	PrevExecutorPendingFinished(ctx context.Context) error
+	PrevExecutorSentPendingFinished(ctx context.Context) error
 	SetNotPending(ctx context.Context)
 
 	IsKnownRequest(ctx context.Context, req insolar.Reference) bool
@@ -438,7 +438,9 @@ func (q *ExecutionBroker) finishPendingIfNeeded(ctx context.Context) {
 		return
 	}
 
-	q.sender.SendRole(ctx, pendingMsg, insolar.DynamicRoleVirtualExecutor, q.Ref)
+	// ensure OK response because we might catch flow cancelled
+	waitOKSender := bus.NewWaitOKSender(q.sender)
+	waitOKSender.SendRole(ctx, pendingMsg, insolar.DynamicRoleVirtualExecutor, q.Ref)
 }
 
 func (q *ExecutionBroker) OnPulse(ctx context.Context) []payload.Payload {
@@ -558,7 +560,7 @@ func (q *ExecutionBroker) PrevExecutorStillExecuting(ctx context.Context) {
 	}
 }
 
-func (q *ExecutionBroker) PrevExecutorPendingFinished(ctx context.Context) error {
+func (q *ExecutionBroker) PrevExecutorSentPendingFinished(ctx context.Context) error {
 	q.stateLock.Lock()
 	defer q.stateLock.Unlock()
 

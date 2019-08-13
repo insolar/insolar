@@ -307,7 +307,10 @@ func (lr *LogicRunner) sendOnPulseMessage(ctx context.Context, objectRef insolar
 		return
 	}
 
-	lr.Sender.SendRole(ctx, msg, insolar.DynamicRoleVirtualExecutor, objectRef)
+	// we dont really care about response, because we are sending this in the beginning of the pulse
+	// so flow canceled should not happened, if it does, somebody already restarted
+	_, done := lr.Sender.SendRole(ctx, msg, insolar.DynamicRoleVirtualExecutor, objectRef)
+	done()
 }
 
 func (lr *LogicRunner) AddUnwantedResponse(ctx context.Context, msg insolar.Message) error {
@@ -402,7 +405,7 @@ func serviceDataFromContext(ctx context.Context) *payload.ServiceData {
 	}
 }
 
-func oldDerviceDataFromContext(ctx context.Context) message.ServiceData {
+func oldServiceDataFromContext(ctx context.Context) message.ServiceData {
 	if ctx == nil {
 		log.Error("nil context, can't create correct ServiceData")
 		return message.ServiceData{}
