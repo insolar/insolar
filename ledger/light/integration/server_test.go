@@ -20,7 +20,6 @@ import (
 	"context"
 	"crypto"
 	"fmt"
-	"github.com/insolar/insolar/network"
 	"math"
 	"sync"
 	"time"
@@ -49,6 +48,7 @@ import (
 	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/network"
 	networknode "github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
@@ -85,6 +85,8 @@ type Server struct {
 	clientSender bus.Sender
 	replicator   executor.LightReplicator
 	cleaner      executor.Cleaner
+	serverPubSub *gochannel.GoChannel
+	clientPubSub *gochannel.GoChannel
 }
 
 func DefaultLightConfig() configuration.Configuration {
@@ -428,6 +430,8 @@ func NewServer(
 		clientSender: ClientBus,
 		replicator:   Replicator,
 		cleaner:      Cleaner,
+		serverPubSub: ServerPubSub,
+		clientPubSub: ClientPubSub,
 	}
 	return s, nil
 }
@@ -472,6 +476,14 @@ func (s *Server) Send(ctx context.Context, pl payload.Payload) (<-chan *message.
 func (s *Server) Stop() {
 	s.replicator.Stop()
 	s.cleaner.Stop()
+	err := s.clientPubSub.Close()
+	if err != nil {
+		panic(err)
+	}
+	err = s.serverPubSub.Close()
+	if err != nil {
+		panic(err)
+	}
 }
 
 type nodeMock struct {
