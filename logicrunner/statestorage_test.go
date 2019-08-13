@@ -50,7 +50,7 @@ func (s *StateStorageSuite) TestOnPulse() {
 	pulse := s.generatePulse()
 	objectRef := gen.Reference()
 
-	ss := NewStateStorage(nil, nil, nil, nil, nil, nil, nil)
+	ss := NewStateStorage(nil, nil, nil, nil, nil, nil, nil, nil)
 	rawStateStorage := ss.(*stateStorage)
 
 	{ // empty state storage
