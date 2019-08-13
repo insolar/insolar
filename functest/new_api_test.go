@@ -50,12 +50,10 @@ func TestBadSeed(t *testing.T) {
 	ctx := context.TODO()
 	rootCfg, err := requester.CreateUserConfig(root.ref, root.privKey, root.pubKey)
 	require.NoError(t, err)
-	res, err := requester.SendWithSeed(ctx, TestRPCUrl, rootCfg, &requester.ContractRequest{
-		Version: "2.0",
-		ID:      1,
-		Method:  "contract.call",
-		Params:  requester.Params{CallSite: "member.create", PublicKey: rootCfg.PublicKey},
-	}, "MTExMQ==")
+	res, err := requester.SendWithSeed(ctx, TestRPCUrl, rootCfg, &requester.Params{
+		CallSite:  "member.create",
+		PublicKey: rootCfg.PublicKey},
+		"MTExMQ==")
 	require.NoError(t, err)
 	require.EqualError(t, contractError(res), "[ checkSeed ] Bad seed param")
 }
@@ -64,12 +62,10 @@ func TestIncorrectSeed(t *testing.T) {
 	ctx := context.TODO()
 	rootCfg, err := requester.CreateUserConfig(root.ref, root.privKey, root.pubKey)
 	require.NoError(t, err)
-	res, err := requester.SendWithSeed(ctx, TestRPCUrl, rootCfg, &requester.ContractRequest{
-		Version: "2.0",
-		ID:      1,
-		Method:  "contract.call",
-		Params:  requester.Params{CallSite: "member.create", PublicKey: rootCfg.PublicKey},
-	}, "z2vgMVDXx0s+g5mkagOLqCP0q/8YTfoQkII5pjNF1ag=")
+	res, err := requester.SendWithSeed(ctx, TestRPCUrl, rootCfg, &requester.Params{
+		CallSite:  "member.create",
+		PublicKey: rootCfg.PublicKey},
+		"z2vgMVDXx0s+g5mkagOLqCP0q/8YTfoQkII5pjNF1ag=")
 	require.NoError(t, err)
 	require.EqualError(t, contractError(res), "[ checkSeed ] Incorrect seed")
 }
@@ -114,10 +110,12 @@ func TestIncorrectSign(t *testing.T) {
 	body, err := requester.GetResponseBodyContract(
 		TestRPCUrl,
 		requester.ContractRequest{
-			Version: "2.0",
-			ID:      1,
-			Method:  "contract.call",
-			Params:  requester.Params{Seed: seed, Reference: testMember.ref, PublicKey: testMember.pubKey, CallSite: "wallet.getBalance", CallParams: map[string]interface{}{"reference": testMember.ref}},
+			Request: requester.Request{
+				Version: "2.0",
+				Id:      1,
+				Method:  "contract.call",
+			},
+			Params: requester.Params{Seed: seed, Reference: testMember.ref, PublicKey: testMember.pubKey, CallSite: "wallet.getBalance", CallParams: map[string]interface{}{"reference": testMember.ref}},
 		},
 		"MEQCIAvgBR42vSccBKynBIC7gb5GffqtW8q2XWRP+DlJ0IeUAiAeKCxZNSSRSsYcz2d49CT6KlSLpr5L7VlOokOiI9dsvQ==",
 	)
@@ -134,12 +132,10 @@ func TestIncorrectMethodName(t *testing.T) {
 	require.NoError(t, err)
 	rootCfg, err := requester.CreateUserConfig(root.ref, root.privKey, root.pubKey)
 	require.NoError(t, err)
-	res, err := requester.SendWithSeed(ctx, TestRPCUrl, rootCfg, &requester.ContractRequest{
-		Version: "2.0",
-		ID:      1,
-		Method:  "foo.bar",
-		Params:  requester.Params{CallSite: "member.create", PublicKey: rootCfg.PublicKey},
-	}, seed)
+	res, err := requester.SendWithSeed(ctx, TestRPCUrl, rootCfg, &requester.Params{
+		CallSite:  "member.create",
+		PublicKey: rootCfg.PublicKey},
+		seed)
 	require.NoError(t, err)
 	require.EqualError(t, contractError(res), "rpc: can't find service \"foo.bar\"")
 }

@@ -317,12 +317,11 @@ func signedRequest(user *user, method string, params interface{}) (interface{}, 
 	var resp requester.ContractResponse
 	currentIterNum := 1
 	for ; currentIterNum <= sendRetryCount; currentIterNum++ {
-		res, err := requester.Send(ctx, TestAPIURL, rootCfg, &requester.ContractRequest{
-			Version: "2.0",
-			ID:      1,
-			Method:  "contract.call",
-			Params:  requester.Params{CallSite: method, CallParams: params, PublicKey: user.pubKey, Test: caller},
-		})
+		res, err := requester.Send(ctx, TestAPIURL, rootCfg, &requester.Params{
+			CallSite:   method,
+			CallParams: params,
+			PublicKey:  user.pubKey,
+			Test:       caller})
 
 		if err != nil {
 			return nil, err
