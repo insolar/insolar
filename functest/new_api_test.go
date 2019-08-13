@@ -155,7 +155,7 @@ func TestIncorrectParams(t *testing.T) {
 func TestNilParams(t *testing.T) {
 	firstMember := createMember(t)
 
-	_, err := signedRequest(t, firstMember, "member.transfer", nil)
+	_, err := signedRequestWithEmptyRequestRef(t, firstMember, "member.transfer", nil)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "call params are nil")
 }
