@@ -22,6 +22,10 @@ import (
 	"github.com/insolar/insolar/logicrunner/common"
 )
 
+type destination interface {
+	Accept(string) error
+}
+
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
 var PrototypeReference, _ = insolar.NewReferenceFromBase58("111A62X73fkPeY5vK6NjcXgmL9d37DgRRNtHNLGaEse.11111111111111111111111111111111")
@@ -154,105 +158,6 @@ func (r *Account) GetCode() (insolar.Reference, error) {
 	return r.Code, nil
 }
 
-// Transfer is proxy generated method
-func (r *Account) Transfer(amountStr string, toAccount *insolar.Reference) error {
-	var args [2]interface{}
-	args[0] = amountStr
-	args[1] = toAccount
-
-	var argsSerialized []byte
-
-	ret := make([]interface{}, 1)
-	var ret0 *foundation.Error
-	ret[0] = &ret0
-
-	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
-	if err != nil {
-		return err
-	}
-
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "Transfer", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return err
-	}
-
-	resultContainer := foundation.Result{
-		Returns: ret,
-	}
-	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
-	if err != nil {
-		return err
-	}
-	if resultContainer.Error != nil {
-		err = resultContainer.Error
-		return err
-	}
-	if ret0 != nil {
-		return ret0
-	}
-	return nil
-}
-
-// TransferNoWait is proxy generated method
-func (r *Account) TransferNoWait(amountStr string, toAccount *insolar.Reference) error {
-	var args [2]interface{}
-	args[0] = amountStr
-	args[1] = toAccount
-
-	var argsSerialized []byte
-
-	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
-	if err != nil {
-		return err
-	}
-
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "Transfer", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// TransferAsImmutable is proxy generated method
-func (r *Account) TransferAsImmutable(amountStr string, toAccount *insolar.Reference) error {
-	var args [2]interface{}
-	args[0] = amountStr
-	args[1] = toAccount
-
-	var argsSerialized []byte
-
-	ret := make([]interface{}, 1)
-	var ret0 *foundation.Error
-	ret[0] = &ret0
-
-	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
-	if err != nil {
-		return err
-	}
-
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "Transfer", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return err
-	}
-
-	resultContainer := foundation.Result{
-		Returns: ret,
-	}
-	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
-	if err != nil {
-		return err
-	}
-	if resultContainer.Error != nil {
-		err = resultContainer.Error
-		return err
-	}
-	if ret0 != nil {
-		return ret0
-	}
-	return nil
-}
-
 // Accept is proxy generated method
 func (r *Account) Accept(amountStr string) error {
 	var args [1]interface{}
@@ -351,6 +256,204 @@ func (r *Account) RollBackAsImmutable(amountStr string) error {
 	}
 
 	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "RollBack", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
+	if err != nil {
+		return err
+	}
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return err
+	}
+	if ret0 != nil {
+		return ret0
+	}
+	return nil
+}
+
+// TransferToAccount is proxy generated method
+func (r *Account) TransferToAccount(amountStr string, toAccount insolar.Reference) error {
+	var args [2]interface{}
+	args[0] = amountStr
+	args[1] = toAccount
+
+	var argsSerialized []byte
+
+	ret := make([]interface{}, 1)
+	var ret0 *foundation.Error
+	ret[0] = &ret0
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "TransferToAccount", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
+	if err != nil {
+		return err
+	}
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return err
+	}
+	if ret0 != nil {
+		return ret0
+	}
+	return nil
+}
+
+// TransferToAccountNoWait is proxy generated method
+func (r *Account) TransferToAccountNoWait(amountStr string, toAccount insolar.Reference) error {
+	var args [2]interface{}
+	args[0] = amountStr
+	args[1] = toAccount
+
+	var argsSerialized []byte
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "TransferToAccount", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// TransferToAccountAsImmutable is proxy generated method
+func (r *Account) TransferToAccountAsImmutable(amountStr string, toAccount insolar.Reference) error {
+	var args [2]interface{}
+	args[0] = amountStr
+	args[1] = toAccount
+
+	var argsSerialized []byte
+
+	ret := make([]interface{}, 1)
+	var ret0 *foundation.Error
+	ret[0] = &ret0
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "TransferToAccount", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
+	if err != nil {
+		return err
+	}
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return err
+	}
+	if ret0 != nil {
+		return ret0
+	}
+	return nil
+}
+
+// TransferToDeposit is proxy generated method
+func (r *Account) TransferToDeposit(amountStr string, toDeposit insolar.Reference) error {
+	var args [2]interface{}
+	args[0] = amountStr
+	args[1] = toDeposit
+
+	var argsSerialized []byte
+
+	ret := make([]interface{}, 1)
+	var ret0 *foundation.Error
+	ret[0] = &ret0
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "TransferToDeposit", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
+	if err != nil {
+		return err
+	}
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return err
+	}
+	if ret0 != nil {
+		return ret0
+	}
+	return nil
+}
+
+// TransferToDepositNoWait is proxy generated method
+func (r *Account) TransferToDepositNoWait(amountStr string, toDeposit insolar.Reference) error {
+	var args [2]interface{}
+	args[0] = amountStr
+	args[1] = toDeposit
+
+	var argsSerialized []byte
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "TransferToDeposit", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// TransferToDepositAsImmutable is proxy generated method
+func (r *Account) TransferToDepositAsImmutable(amountStr string, toDeposit insolar.Reference) error {
+	var args [2]interface{}
+	args[0] = amountStr
+	args[1] = toDeposit
+
+	var argsSerialized []byte
+
+	ret := make([]interface{}, 1)
+	var ret0 *foundation.Error
+	ret[0] = &ret0
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "TransferToDeposit", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}

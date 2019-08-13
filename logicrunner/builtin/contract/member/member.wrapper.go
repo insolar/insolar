@@ -179,6 +179,57 @@ func INSMETHOD_GetWallet(object []byte, data []byte) ([]byte, []byte, error) {
 	return state, ret, err
 }
 
+func INSMETHOD_GetAccount(object []byte, data []byte) ([]byte, []byte, error) {
+	ph := common.CurrentProxyCtx
+	ph.SetSystemError(nil)
+	self := new(Member)
+
+	if len(object) == 0 {
+		return nil, nil, &foundation.Error{S: "[ FakeGetAccount ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+	}
+
+	err := ph.Deserialize(object, self)
+	if err != nil {
+		e := &foundation.Error{S: "[ FakeGetAccount ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		return nil, nil, e
+	}
+
+	args := make([]interface{}, 1)
+	var args0 string
+	args[0] = &args0
+
+	err = ph.Deserialize(data, &args)
+	if err != nil {
+		e := &foundation.Error{S: "[ FakeGetAccount ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		return nil, nil, e
+	}
+
+	ret0, ret1 := self.GetAccount(args0)
+
+	if ph.GetSystemError() != nil {
+		return nil, nil, ph.GetSystemError()
+	}
+
+	state := []byte{}
+	err = ph.Serialize(self, &state)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	ret1 = ph.MakeErrorSerializable(ret1)
+
+	ret := []byte{}
+	err = ph.Serialize(
+		foundation.Result{Returns: []interface{}{ret0, ret1}},
+		&ret,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return state, ret, err
+}
+
 func INSMETHOD_GetPublicKey(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
@@ -542,6 +593,7 @@ func Initialize() XXX_insolar.ContractWrapper {
 		Methods: XXX_insolar.ContractMethods{
 			"GetName":        INSMETHOD_GetName,
 			"GetWallet":      INSMETHOD_GetWallet,
+			"GetAccount":     INSMETHOD_GetAccount,
 			"GetPublicKey":   INSMETHOD_GetPublicKey,
 			"Call":           INSMETHOD_Call,
 			"GetDeposits":    INSMETHOD_GetDeposits,

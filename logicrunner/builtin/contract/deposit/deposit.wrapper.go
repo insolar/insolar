@@ -26,6 +26,14 @@ import (
 func INS_META_INFO() []map[string]string {
 	result := make([]map[string]string, 0)
 
+	{
+		info := make(map[string]string, 3)
+		info["Type"] = "SagaInfo"
+		info["MethodName"] = "Accept"
+		info["RollbackMethodName"] = "INS_FLAG_NO_ROLLBACK_METHOD"
+		result = append(result, info)
+	}
+
 	return result
 }
 
@@ -338,6 +346,57 @@ func INSMETHOD_Transfer(object []byte, data []byte) ([]byte, []byte, error) {
 	return state, ret, err
 }
 
+func INSMETHOD_Accept(object []byte, data []byte) ([]byte, []byte, error) {
+	ph := common.CurrentProxyCtx
+	ph.SetSystemError(nil)
+	self := new(Deposit)
+
+	if len(object) == 0 {
+		return nil, nil, &foundation.Error{S: "[ FakeAccept ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+	}
+
+	err := ph.Deserialize(object, self)
+	if err != nil {
+		e := &foundation.Error{S: "[ FakeAccept ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		return nil, nil, e
+	}
+
+	args := make([]interface{}, 1)
+	var args0 string
+	args[0] = &args0
+
+	err = ph.Deserialize(data, &args)
+	if err != nil {
+		e := &foundation.Error{S: "[ FakeAccept ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		return nil, nil, e
+	}
+
+	ret0 := self.Accept(args0)
+
+	if ph.GetSystemError() != nil {
+		return nil, nil, ph.GetSystemError()
+	}
+
+	state := []byte{}
+	err = ph.Serialize(self, &state)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	ret0 = ph.MakeErrorSerializable(ret0)
+
+	ret := []byte{}
+	err = ph.Serialize(
+		foundation.Result{Returns: []interface{}{ret0}},
+		&ret,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return state, ret, err
+}
+
 func INSCONSTRUCTOR_New(data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
@@ -398,6 +457,7 @@ func Initialize() XXX_insolar.ContractWrapper {
 			"Itself":    INSMETHOD_Itself,
 			"Confirm":   INSMETHOD_Confirm,
 			"Transfer":  INSMETHOD_Transfer,
+			"Accept":    INSMETHOD_Accept,
 		},
 		Constructors: XXX_insolar.ContractConstructors{
 			"New": INSCONSTRUCTOR_New,
