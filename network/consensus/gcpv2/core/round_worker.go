@@ -273,8 +273,7 @@ func (p *RoundStateMachineWorker) applyState(newState RoundState) {
 
 loop:
 	for {
-		logLevel = insolar.NoLevel
-		logMsg = "state transition"
+		logLevel, logMsg = insolar.NoLevel, "state transition"
 		curState = p.GetState()
 
 		switch { // normal transitions
@@ -285,8 +284,7 @@ loop:
 			case curState > RoundConsensusFinished:
 				return // OK
 			default:
-				logLevel = insolar.WarnLevel
-				logMsg = "state self-loop transition"
+				logLevel, logMsg = insolar.WarnLevel, "state self-loop transition"
 				break loop // INCORRECT, do not apply
 			}
 		case curState+1 == newState && curState < RoundConsensusFinished:
@@ -303,20 +301,17 @@ loop:
 			return // OK
 		case curState > RoundConsensusFinished:
 			// attempt to restart from a final state
-			logLevel = insolar.ErrorLevel
-			logMsg = "state reset transition"
+			logLevel, logMsg = insolar.ErrorLevel, "state reset transition"
 			break loop // TRANSITION IS NOT ALLOWED
 		default:
 			switch {
 			case curState == RoundInactive:
-				logLevel = insolar.WarnLevel
-				logMsg = "transition from inactive state"
+				logLevel, logMsg = insolar.WarnLevel, "transition from inactive state"
 			case curState > newState:
-				logLevel = insolar.ErrorLevel
-				logMsg = "backward state transition"
+				logLevel, logMsg = insolar.ErrorLevel, "backward state transition"
 			default:
-				logMsg = "fast-forward state transition"
-				logLevel = insolar.WarnLevel // InfoLevel?
+				// DebugLevel
+				logLevel, logMsg = insolar.WarnLevel, "fast-forward state transition"
 			}
 
 			doFinish = curState < RoundConsensusFinished && newState > RoundConsensusFinished
@@ -362,6 +357,8 @@ loop:
 		log.Errorf("forbidden %s: current=%v new=%v", logMsg, curState, newState)
 	case insolar.WarnLevel:
 		log.Warnf("unexpected %s: current=%v new=%v", logMsg, curState, newState)
+	case insolar.DebugLevel:
+		log.Debugf("unexpected %s: current=%v new=%v", logMsg, curState, newState)
 	default:
 		log.Infof("unexpected %s: current=%v new=%v", logMsg, curState, newState)
 	}
