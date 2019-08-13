@@ -246,17 +246,15 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 	}
 
 	var (
-		PulseManager   insolar.PulseManager
-		Handler        *handler.Handler
-		Genesis        *genesis.Genesis
-		RecordPosition *object.RecordPositionDB
-		Records        *object.RecordDB
-		JetKeeper      executor.JetKeeper
+		PulseManager insolar.PulseManager
+		Handler      *handler.Handler
+		Genesis      *genesis.Genesis
+		Records      *object.RecordDB
+		JetKeeper    executor.JetKeeper
 	)
 	{
 		Records = object.NewRecordDB(DB)
-		RecordPosition = object.NewRecordPositionDB(DB)
-		indexes := object.NewIndexDB(DB)
+		indexes := object.NewIndexDB(DB, Records)
 		drops := drop.NewDB(DB)
 		jets := jet.NewDBStore(DB)
 		JetKeeper = executor.NewJetKeeper(jets, DB, Pulses)
@@ -277,7 +275,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 
 		h := handler.New(cfg.Ledger)
 		h.RecordAccessor = Records
-		h.RecordPositions = RecordPosition
 		h.RecordModifier = Records
 		h.JetCoordinator = Coordinator
 		h.IndexAccessor = indexes
@@ -328,7 +325,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		pulseExporter  *exporter.PulseServer
 	)
 	{
-		recordExporter = exporter.NewRecordServer(Pulses, RecordPosition, Records, JetKeeper)
+		recordExporter = exporter.NewRecordServer(Pulses, Records, Records, JetKeeper)
 		pulseExporter = exporter.NewPulseServer(Pulses, JetKeeper)
 
 		grpcServer := grpc.NewServer()

@@ -42,12 +42,11 @@ import (
 type Handler struct {
 	cfg configuration.Ledger
 
-	Bus             insolar.MessageBus
-	JetCoordinator  jet.Coordinator
-	PCS             insolar.PlatformCryptographyScheme
-	RecordAccessor  object.RecordAccessor
-	RecordModifier  object.RecordModifier
-	RecordPositions object.RecordPositionModifier
+	Bus            insolar.MessageBus
+	JetCoordinator jet.Coordinator
+	PCS            insolar.PlatformCryptographyScheme
+	RecordAccessor object.RecordAccessor
+	RecordModifier object.RecordModifier
 
 	IndexAccessor object.IndexAccessor
 	IndexModifier object.IndexModifier
@@ -94,7 +93,6 @@ func New(cfg configuration.Ledger) *Handler {
 			p.Dep(
 				h.RecordModifier,
 				h.IndexModifier,
-				h.RecordPositions,
 				h.PCS,
 				h.DropModifier,
 				h.JetKeeper,

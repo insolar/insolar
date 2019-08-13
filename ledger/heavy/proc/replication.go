@@ -37,12 +37,11 @@ type Replication struct {
 	cfg     configuration.Ledger
 
 	dep struct {
-		records          object.RecordModifier
-		recordsPositions object.RecordPositionModifier
-		indexes          object.IndexModifier
-		pcs              insolar.PlatformCryptographyScheme
-		drops            drop.Modifier
-		keeper           executor.JetKeeper
+		records object.RecordModifier
+		indexes object.IndexModifier
+		pcs     insolar.PlatformCryptographyScheme
+		drops   drop.Modifier
+		keeper  executor.JetKeeper
 	}
 }
 
@@ -56,14 +55,12 @@ func NewReplication(msg payload.Meta, cfg configuration.Ledger) *Replication {
 func (p *Replication) Dep(
 	records object.RecordModifier,
 	indexes object.IndexModifier,
-	recordsPositions object.RecordPositionModifier,
 	pcs insolar.PlatformCryptographyScheme,
 	drops drop.Modifier,
 	keeper executor.JetKeeper,
 ) {
 	p.dep.records = records
 	p.dep.indexes = indexes
-	p.dep.recordsPositions = recordsPositions
 	p.dep.pcs = pcs
 	p.dep.drops = drops
 	p.dep.keeper = keeper
@@ -95,7 +92,7 @@ func (p *Replication) store(
 	msg *payload.Replication,
 ) error {
 	inslogger.FromContext(ctx).Debug("storing records")
-	if err := storeRecords(ctx, p.dep.records, p.dep.recordsPositions, p.dep.pcs, msg.Pulse, msg.Records); err != nil {
+	if err := storeRecords(ctx, p.dep.records, p.dep.pcs, msg.Pulse, msg.Records); err != nil {
 		return errors.Wrap(err, "failed to store records")
 	}
 
@@ -154,7 +151,6 @@ func storeDrop(
 func storeRecords(
 	ctx context.Context,
 	recordStorage object.RecordModifier,
-	recordIndex object.RecordPositionModifier,
 	pcs insolar.PlatformCryptographyScheme,
 	pn insolar.PulseNumber,
 	records []record.Material,
@@ -169,14 +165,9 @@ func storeRecords(
 				rec.ID.DebugString(),
 			)
 		}
-
-		if err := recordStorage.Set(ctx, rec); err != nil {
-			return errors.Wrap(err, "set method failed")
-		}
-
-		if err := recordIndex.IncrementPosition(id); err != nil {
-			return errors.Wrap(err, "fail to store record position")
-		}
+	}
+	if err := recordStorage.BatchSet(ctx, records); err != nil {
+		return errors.Wrap(err, "set method failed")
 	}
 	return nil
 }

@@ -91,12 +91,6 @@ type RecordCleaner interface {
 	DeleteForPN(ctx context.Context, pulse insolar.PulseNumber)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/object.RecordPositionModifier -o ./ -s _mock.go
-
-type RecordPositionModifier interface {
-	IncrementPosition(recID insolar.ID) error
-}
-
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.RecordPositionAccessor -o ./ -s _mock.go
 
 type RecordPositionAccessor interface {

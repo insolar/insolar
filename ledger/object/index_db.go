@@ -72,8 +72,8 @@ func (k lastKnownIndexPNKey) ID() []byte {
 }
 
 // NewIndexDB creates a new instance of IndexDB
-func NewIndexDB(db store.DB) *IndexDB {
-	return &IndexDB{db: db, recordStore: NewRecordDB(db)}
+func NewIndexDB(db store.DB, recordStore *RecordDB) *IndexDB {
+	return &IndexDB{db: db, recordStore: recordStore}
 }
 
 // SetIndex adds a bucket with provided pulseNumber and ID

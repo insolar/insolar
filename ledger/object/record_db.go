@@ -160,13 +160,12 @@ func (r *RecordDB) BatchSet(ctx context.Context, recs []record.Material) error {
 
 	return r.db.Backend().Update(func(txn *badger.Txn) error {
 		position, err := getLastKnownPosition(txn, recs[0].ID.Pulse())
-		if err == ErrNotFound {
-			position = -1
-		}
-		if err != nil {
+		if err != nil && err != ErrNotFound {
 			return err
 		}
-		position++
+		if err == nil {
+			position++
+		}
 
 		for i, rec := range recs {
 			if rec.ID.IsEmpty() {
