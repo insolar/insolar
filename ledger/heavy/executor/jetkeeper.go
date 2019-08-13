@@ -363,6 +363,7 @@ func compareJets(what []insolar.JetID, actualJetsSet map[insolar.JetID]struct{})
 				" TopSyncJets: " + insolar.JetIDCollection(what).DebugString() +
 				". Actual: " + insolar.JetIDCollection(infoToList(actualJetsSet)).DebugString())
 		}
+		return errors.New("lengths are different")
 	}
 
 	for _, expID := range what {

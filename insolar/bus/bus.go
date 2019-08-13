@@ -257,7 +257,7 @@ func (b *Bus) sendTarget(
 	b.replies[msgHash] = reply
 	b.repliesMutex.Unlock()
 
-	logger.Debugf("sending message %s", msgHash.String())
+	logger.Debugf("sending message %s. uuid = ", msgHash.String(), msg.UUID)
 	err = b.pub.Publish(TopicOutgoing, msg)
 	if err != nil {
 		done()
