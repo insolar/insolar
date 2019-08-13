@@ -29,6 +29,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/builtin/contract/pkshard"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/rootdomain"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/wallet"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 )
 
 func RootDomain() insolar.GenesisContractState {
@@ -62,7 +63,7 @@ func NodeDomain() insolar.GenesisContractState {
 }
 
 func GetMemberGenesisContractState(publicKey string, name string, parent string, walletRef insolar.Reference) insolar.GenesisContractState {
-	m, err := member.New(genesisrefs.ContractRootDomain, name, publicKey, "", insolar.Reference{})
+	m, err := member.New(genesisrefs.ContractRootDomain, name, publicKey, "", insolar.NewEmptyReference())
 	if err != nil {
 		panic(fmt.Sprintf("'%s' member constructor failed", name))
 	}
@@ -119,8 +120,8 @@ func GetCostCenterGenesisContractState() insolar.GenesisContractState {
 	}
 }
 
-func GetPKShardGenesisContractState(name string) insolar.GenesisContractState {
-	s, err := pkshard.New()
+func GetPKShardGenesisContractState(name string, members foundation.StableMap) insolar.GenesisContractState {
+	s, err := pkshard.New(members)
 	if err != nil {
 		panic(fmt.Sprintf("'%s' shard constructor failed", name))
 	}

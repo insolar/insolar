@@ -20,6 +20,7 @@ import (
 	"crypto"
 	"testing"
 
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/message"
 
 	"github.com/insolar/insolar/component"
@@ -51,7 +52,7 @@ func Test_parcelFactory_Create_CheckLogLevel(t *testing.T) {
 	assert.NoError(t, cm.Init(ctx))
 	assert.NoError(t, cm.Start(ctx))
 
-	ref := testutils.RandomRef()
+	ref := gen.Reference()
 	pulse := insolar.Pulse{PulseNumber: 0}
 	msg := message.CallMethod{}
 

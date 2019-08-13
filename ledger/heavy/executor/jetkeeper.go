@@ -18,6 +18,7 @@ package executor
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"github.com/insolar/insolar/insolar/pulse"
@@ -37,8 +38,12 @@ type JetKeeper interface {
 	AddDropConfirmation(ctx context.Context, pn insolar.PulseNumber, jet insolar.JetID, split bool) error
 	// AddHotConfirmation performs adding hot confirmation to storage and checks pulse completion.
 	AddHotConfirmation(ctx context.Context, pn insolar.PulseNumber, jet insolar.JetID, split bool) error
+	// AddBackupConfirmation performs adding backup confirmation to storage and checks pulse completion.
+	AddBackupConfirmation(ctx context.Context, pn insolar.PulseNumber) error
 	// TopSyncPulse provides access to highest synced (replicated) pulse.
 	TopSyncPulse() insolar.PulseNumber
+	// HasJetConfirms says if given pulse has drop and hot confirms. Ignore backups
+	HasAllJetConfirms(ctx context.Context, pn insolar.PulseNumber) bool
 }
 
 func NewJetKeeper(jets jet.Storage, db store.DB, pulses pulse.Calculator) JetKeeper {
@@ -50,19 +55,27 @@ func NewJetKeeper(jets jet.Storage, db store.DB, pulses pulse.Calculator) JetKee
 }
 
 type dbJetKeeper struct {
+	lock     sync.RWMutex
 	jetTrees jet.Storage
-
-	pulses pulse.Calculator
-
-	sync.RWMutex
-	db store.DB
+	pulses   pulse.Calculator
+	db       store.DB
 }
 
 type jetInfo struct {
-	JetID         insolar.JetID
-	HotConfirmed  []insolar.JetID
-	DropConfirmed bool
-	Split         bool
+	JetID           insolar.JetID
+	HotConfirmed    []insolar.JetID
+	DropConfirmed   bool
+	BackupConfirmed bool
+	Split           *bool
+}
+
+func (j *jetInfo) updateSplit(split bool) error {
+	if j.Split == nil {
+		j.Split = &split
+	} else if *j.Split != split {
+		return errors.New(fmt.Sprintf("try to change split from %t to %t ", *j.Split, split))
+	}
+	return nil
 }
 
 func (j *jetInfo) addDrop(newJetID insolar.JetID, split bool) error {
@@ -70,7 +83,11 @@ func (j *jetInfo) addDrop(newJetID insolar.JetID, split bool) error {
 		return errors.New("addDrop. try to rewrite drop confirmation. existing: " + j.JetID.DebugString() +
 			", new: " + newJetID.DebugString())
 	}
-	j.Split = split
+
+	if err := j.updateSplit(split); err != nil {
+		return errors.Wrap(err, "updateSplit return error")
+	}
+
 	j.DropConfirmed = true
 	j.JetID = newJetID
 
@@ -90,7 +107,11 @@ func (j *jetInfo) checkIncomingHot(incomingJetID insolar.JetID) error {
 	return nil
 }
 
-func (j *jetInfo) addHot(newJetID insolar.JetID, parentID insolar.JetID) error {
+func (j *jetInfo) addBackup() {
+	j.BackupConfirmed = true
+}
+
+func (j *jetInfo) addHot(newJetID insolar.JetID, parentID insolar.JetID, split bool) error {
 	err := j.checkIncomingHot(newJetID)
 	if err != nil {
 		return errors.Wrap(err, "incorrect incoming jet")
@@ -98,11 +119,18 @@ func (j *jetInfo) addHot(newJetID insolar.JetID, parentID insolar.JetID) error {
 
 	j.HotConfirmed = append(j.HotConfirmed, newJetID)
 	j.JetID = parentID
+	if err := j.updateSplit(split); err != nil {
+		return errors.Wrap(err, "updateSplit return error")
+	}
 
 	return nil
 }
 
-func (j *jetInfo) isConfirmed() bool {
+func (j *jetInfo) isConfirmed(checkBackup bool) bool {
+	if checkBackup && !j.BackupConfirmed {
+		return false
+	}
+
 	if !j.DropConfirmed {
 		return false
 	}
@@ -111,7 +139,7 @@ func (j *jetInfo) isConfirmed() bool {
 		return false
 	}
 
-	if !j.Split {
+	if !*j.Split {
 		return j.HotConfirmed[0].Equal(j.JetID)
 	}
 
@@ -126,8 +154,8 @@ func (j *jetInfo) isConfirmed() bool {
 }
 
 func (jk *dbJetKeeper) AddHotConfirmation(ctx context.Context, pn insolar.PulseNumber, id insolar.JetID, split bool) error {
-	jk.Lock()
-	defer jk.Unlock()
+	jk.lock.Lock()
+	defer jk.lock.Unlock()
 
 	inslogger.FromContext(ctx).Debug("AddHotConfirmation. pulse: ", pn, ". ID: ", id.DebugString())
 
@@ -135,67 +163,89 @@ func (jk *dbJetKeeper) AddHotConfirmation(ctx context.Context, pn insolar.PulseN
 		return errors.Wrapf(err, "failed to save updated jets")
 	}
 
-	err := jk.updateTopSyncPulse(ctx, pn, id)
+	err := jk.updateTopSyncPulse(ctx, pn)
 	return errors.Wrapf(err, "AddHotConfirmation. propagateConsistency returns error")
 }
 
+// AddDropConfirmation performs adding jet to storage and checks pulse completion.
 func (jk *dbJetKeeper) AddDropConfirmation(ctx context.Context, pn insolar.PulseNumber, id insolar.JetID, split bool) error {
-	jk.Lock()
-	defer jk.Unlock()
+	jk.lock.Lock()
+	defer jk.lock.Unlock()
 
-	inslogger.FromContext(ctx).Debug("AddDropConfirmation. pulse: ", pn, ". ID: ", id.DebugString())
+	inslogger.FromContext(ctx).Debug("AddDropConfirmation. pulse: ", pn, ". ID: ", id.DebugString(), ", Split: ", split)
 
 	if err := jk.updateDrop(ctx, pn, id, split); err != nil {
 		return errors.Wrapf(err, "AddDropConfirmation. failed to save updated jets")
 	}
 
-	err := jk.updateTopSyncPulse(ctx, pn, id)
+	err := jk.updateTopSyncPulse(ctx, pn)
 
-	return errors.Wrap(err, "propagateConsistency returns error")
+	return errors.Wrap(err, "updateTopSyncPulse returns error")
 }
 
-func (jk *dbJetKeeper) updateTopSyncPulse(ctx context.Context, pn insolar.PulseNumber, jetID insolar.JetID) error {
+// AddBackupConfirmation performs adding backup confirmation to storage and checks pulse completion.
+func (jk *dbJetKeeper) AddBackupConfirmation(ctx context.Context, pn insolar.PulseNumber) error {
+	jk.lock.Lock()
+	defer jk.lock.Unlock()
+
+	inslogger.FromContext(ctx).Debug("AddBackupConfirmation. pulse: ", pn)
+
+	if err := jk.updateBackup(pn); err != nil {
+		return errors.Wrapf(err, "AddDropConfirmation. failed to save updated jets")
+	}
+
+	err := jk.updateTopSyncPulse(ctx, pn)
+
+	return errors.Wrap(err, "updateTopSyncPulse returns error")
+}
+
+func (jk *dbJetKeeper) updateBackup(pulse insolar.PulseNumber) error {
+	jets, err := jk.get(pulse)
+	if err != nil && err != store.ErrNotFound {
+		return errors.Wrapf(err, "updateBackup. can't get pulse: %d", pulse)
+	}
+
+	if len(jets) == 0 {
+		return errors.New("Received backup confirmation before replication data")
+	}
+
+	for i := range jets {
+		jets[i].addBackup()
+	}
+
+	return jk.set(pulse, jets)
+}
+
+func (jk *dbJetKeeper) updateTopSyncPulse(ctx context.Context, pn insolar.PulseNumber) error {
 	logger := inslogger.FromContext(ctx)
 
-	prev, err := jk.pulses.Backwards(ctx, pn, 1)
-	if err != nil {
-		return errors.Wrapf(err, "failed to get previous pulse for %d", pn)
-	}
-
-	top := jk.topSyncPulse()
-
-	logger.Debug("propagateConsistency. pulse: ", pn, ". ID: ", jetID.DebugString(),
-		". top: ", top, ". prev.PulseNumber: ", prev.PulseNumber)
-
-	if prev.PulseNumber != top {
-		// We should sync pulses sequentially. We can't skip.
-		return nil
-	}
-
-	for jk.checkPulseConsistency(ctx, pn) {
+	if jk.checkPulseConsistency(ctx, pn, true) {
 		err := jk.updateSyncPulse(pn)
 		if err != nil {
 			return errors.Wrapf(err, "failed to update consistent pulse")
 		}
 		logger.Debugf("pulse completed: %d", pn)
-
-		next, err := jk.pulses.Forwards(ctx, pn, 1)
-		if err == pulse.ErrNotFound {
-			logger.Info("propagateConsistency. No next pulse. Stop propagating")
-			return nil
-		}
-		if err != nil {
-			return errors.Wrapf(err, "failed to get next pulse for %d", pn)
-		}
-		pn = next.PulseNumber
 	}
 
 	return nil
 }
 
+// HasJetConfirms says if given pulse has drop and hot confirms. Ignore backups
+func (jk *dbJetKeeper) HasAllJetConfirms(ctx context.Context, pulse insolar.PulseNumber) bool {
+	jk.lock.RLock()
+	defer jk.lock.RUnlock()
+
+	if jk.topSyncPulse() >= pulse {
+		return true
+	}
+
+	return jk.checkPulseConsistency(ctx, pulse, false)
+}
+
+// TopSyncPulse provides access to highest synced (replicated) pulse.
 func (jk *dbJetKeeper) TopSyncPulse() insolar.PulseNumber {
-	jk.RLock()
-	defer jk.RUnlock()
+	jk.lock.RLock()
+	defer jk.lock.RUnlock()
 
 	return jk.topSyncPulse()
 }
@@ -239,7 +289,7 @@ func (jk *dbJetKeeper) updateHot(ctx context.Context, pulse insolar.PulseNumber,
 		return errors.Wrap(err, "Can't getForJet")
 	}
 
-	err = jets[idx].addHot(id, parentID)
+	err = jets[idx].addHot(id, parentID, split)
 	if err != nil {
 		return errors.Wrap(err, "can't addHot")
 	}
@@ -261,15 +311,16 @@ func (jk *dbJetKeeper) updateDrop(ctx context.Context, pulse insolar.PulseNumber
 	return jk.set(pulse, jets)
 }
 
-func infoToSet(s []jetInfo) (map[insolar.JetID]struct{}, bool) {
+// infoToSet converts given jetInfo slice to set and checks confirmations
+// if at least one jetInfo is not confirmed it returns false
+// checkBackup is used to skip checking of backup confirmation
+func infoToSet(s []jetInfo, checkBackup bool) (map[insolar.JetID]struct{}, bool) {
 	r := make(map[insolar.JetID]struct{}, len(s))
 	for _, el := range s {
-		if !el.isConfirmed() {
+		if !el.isConfirmed(checkBackup) {
 			return nil, false
 		}
-		for _, jet := range el.HotConfirmed {
-			r[jet] = struct{}{}
-		}
+		r[el.JetID] = struct{}{}
 	}
 	return r, len(r) != 0
 }
@@ -284,31 +335,96 @@ func infoToList(s map[insolar.JetID]struct{}) []insolar.JetID {
 	return r
 }
 
-func (jk *dbJetKeeper) checkPulseConsistency(ctx context.Context, pulse insolar.PulseNumber) bool {
-	expectedJets := jk.jetTrees.All(ctx, pulse)
+func (jk *dbJetKeeper) getTopSyncJets() ([]insolar.JetID, error) {
+	var result []insolar.JetID
+	top := jk.topSyncPulse()
+	if top == insolar.FirstPulseNumber {
+		return []insolar.JetID{insolar.ZeroJetID}, nil
+	}
+	jets, err := jk.get(top)
+	if err != nil {
+		return nil, errors.Wrapf(err, "can't getTopSyncJets: %d", top)
+	}
+
+	for _, ji := range jets {
+		if *ji.Split {
+			left, right := jet.Siblings(ji.JetID)
+			result = append(result, left, right)
+		} else {
+			result = append(result, ji.JetID)
+		}
+	}
+
+	return result, nil
+
+}
+
+func compareJets(what []insolar.JetID, actualJetsSet map[insolar.JetID]struct{}) error {
+	if len(actualJetsSet) != len(what) {
+		if len(actualJetsSet) > len(what) {
+			return errors.New("num actual jets is more then topSyncJets." +
+				" TopSyncJets: " + insolar.JetIDCollection(what).DebugString() +
+				". Actual: " + insolar.JetIDCollection(infoToList(actualJetsSet)).DebugString())
+		}
+		return errors.New("lengths are different")
+	}
+
+	for _, expID := range what {
+		if _, ok := actualJetsSet[expID]; !ok {
+			return errors.New("jet sets are different. it's too bad. " +
+				". TopSyncJets: " + insolar.JetIDCollection(what).DebugString() +
+				". Actual: " + insolar.JetIDCollection(infoToList(actualJetsSet)).DebugString())
+		}
+	}
+
+	return nil
+}
+
+func (jk *dbJetKeeper) checkPulseConsistency(ctx context.Context, pulse insolar.PulseNumber, checkBackup bool) bool {
+	logger := inslogger.FromContext(ctx)
+
+	prev, err := jk.pulses.Backwards(ctx, pulse, 1)
+	if err != nil {
+		logger.Errorf("failed to get previous pulse for %d", pulse, err)
+		return false
+	}
+
+	top := jk.topSyncPulse()
+
+	logger.Debug("propagateConsistency. pulse: ", pulse, ". top: ", top, ". prev.PulseNumber: ", prev.PulseNumber)
+
+	if prev.PulseNumber != top {
+		// We should sync pulses sequentially. We can't skip.
+		logger.Info("Try to checkPulseConsistency for future pulse. Skip it. prev.PulseNumber: ", prev.PulseNumber, ", top: ", top)
+		return false
+	}
+
+	topSyncJets, err := jk.getTopSyncJets()
+	if err != nil {
+		logger.Fatal("can't get jets for top sync pulse: ", err)
+		return false
+	}
 	actualJets := jk.all(pulse)
 
-	actualJetsSet, allConfirmed := infoToSet(actualJets)
+	actualJetsSet, allConfirmed := infoToSet(actualJets, checkBackup)
 	if !allConfirmed {
 		return false
 	}
 
-	if len(actualJetsSet) != len(expectedJets) {
-		if len(actualJetsSet) > len(expectedJets) {
-			inslogger.FromContext(ctx).Warn("num actual jets is more then expected. it's too bad. Pulse: ", pulse,
-				". Expected: ", insolar.JetIDCollection(expectedJets).DebugString(),
-				". Actual: ", insolar.JetIDCollection(infoToList(actualJetsSet)).DebugString())
-		}
+	logger.Debug("topSyncJets: ", insolar.JetIDCollection(topSyncJets).DebugString(), "  |  ",
+		"actualJets: ", insolar.JetIDCollection(infoToList(actualJetsSet)).DebugString())
+
+	err = compareJets(topSyncJets, actualJetsSet)
+	if err != nil {
+		logger.Error("top sync jets and actual jets are different. Pulse: ", pulse, ". Err: ", err)
 		return false
 	}
 
-	for _, expID := range expectedJets {
-		if _, ok := actualJetsSet[expID]; !ok {
-			inslogger.FromContext(ctx).Error("jet sets are different. it's too bad. Pulse: ", pulse,
-				". Expected: ", insolar.JetIDCollection(expectedJets).DebugString(),
-				". Actual: ", insolar.JetIDCollection(infoToList(actualJetsSet)).DebugString())
-			return false
-		}
+	currentJetTree := jk.jetTrees.All(ctx, pulse)
+	err = compareJets(currentJetTree, actualJetsSet)
+	if err != nil {
+		logger.Error("current jet tree and actual jets are different. Pulse: ", pulse, ". Err: ", err)
+		return false
 	}
 
 	return true

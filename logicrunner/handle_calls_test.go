@@ -36,6 +36,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
+	"github.com/insolar/insolar/logicrunner/executionregistry"
 	"github.com/insolar/insolar/logicrunner/writecontroller"
 	"github.com/insolar/insolar/testutils"
 )
@@ -55,9 +56,9 @@ func TestHandleCall_CheckExecutionLoop(t *testing.T) {
 				h := &HandleCall{
 					dep: &Dependencies{
 						StateStorage: NewStateStorageMock(t).
-							GetExecutionArchiveMock.Expect(obj).
+							GetExecutionRegistryMock.Expect(obj).
 							Return(
-								NewExecutionArchiveMock(t).
+								executionregistry.NewExecutionRegistryMock(t).
 									FindRequestLoopMock.Return(true),
 							),
 					},
@@ -74,9 +75,9 @@ func TestHandleCall_CheckExecutionLoop(t *testing.T) {
 				h := &HandleCall{
 					dep: &Dependencies{
 						StateStorage: NewStateStorageMock(t).
-							GetExecutionArchiveMock.Expect(obj).
+							GetExecutionRegistryMock.Expect(obj).
 							Return(
-								NewExecutionArchiveMock(t).
+								executionregistry.NewExecutionRegistryMock(t).
 									FindRequestLoopMock.Return(false),
 							),
 					},
@@ -93,7 +94,7 @@ func TestHandleCall_CheckExecutionLoop(t *testing.T) {
 				h := &HandleCall{
 					dep: &Dependencies{
 						StateStorage: NewStateStorageMock(t).
-							GetExecutionArchiveMock.Expect(obj).
+							GetExecutionRegistryMock.Expect(obj).
 							Return(nil),
 					},
 				}
@@ -184,8 +185,8 @@ func TestHandleCall_Present(t *testing.T) {
 			dep: &Dependencies{
 				Publisher: nil,
 				StateStorage: NewStateStorageMock(mc).
-					GetExecutionArchiveMock.Expect(objRef).Return(
-					NewExecutionArchiveMock(mc).FindRequestLoopMock.Return(false),
+					GetExecutionRegistryMock.Expect(objRef).Return(
+					executionregistry.NewExecutionRegistryMock(mc).FindRequestLoopMock.Return(false),
 				).
 					UpsertExecutionStateMock.Expect(objRef).Return(nil),
 				ResultsMatcher: nil,
@@ -241,8 +242,8 @@ func TestHandleCall_Present(t *testing.T) {
 			dep: &Dependencies{
 				Publisher: nil,
 				StateStorage: NewStateStorageMock(mc).
-					GetExecutionArchiveMock.Expect(objRef).Return(
-					NewExecutionArchiveMock(mc).FindRequestLoopMock.Return(false),
+					GetExecutionRegistryMock.Expect(objRef).Return(
+					executionregistry.NewExecutionRegistryMock(mc).FindRequestLoopMock.Return(false),
 				),
 				ResultsMatcher: nil,
 				lr: &LogicRunner{
@@ -353,7 +354,7 @@ func TestHandleCall_Present(t *testing.T) {
 		objRef := gen.Reference()
 		handler := HandleCall{
 			dep: &Dependencies{
-				Publisher: nil,
+				Publisher:      nil,
 				ResultsMatcher: nil,
 				lr: &LogicRunner{
 					ArtifactManager: artifacts.NewClientMock(mc),
@@ -431,7 +432,7 @@ func TestHandleCall_Present(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	t.Run("write accessor failed to fetch lock AND archive is empty after on pulse", func(t *testing.T) {
+	t.Run("write accessor failed to fetch lock AND registry is empty after on pulse", func(t *testing.T) {
 		t.Parallel()
 
 		ctx := flow.TestContextWithPulse(inslogger.TestContext(t), gen.PulseNumber())
@@ -460,7 +461,7 @@ func TestHandleCall_Present(t *testing.T) {
 			dep: &Dependencies{
 				Publisher: nil,
 				StateStorage: NewStateStorageMock(mc).
-					GetExecutionArchiveMock.Expect(objRef).Return(nil),
+					GetExecutionRegistryMock.Expect(objRef).Return(nil),
 				ResultsMatcher: nil,
 				lr: &LogicRunner{
 					ArtifactManager: artifacts.NewClientMock(mc),
@@ -500,9 +501,9 @@ func TestHandleCall_Present(t *testing.T) {
 		objRef := gen.Reference()
 		reqRef := gen.Reference()
 
-		resRecord := &record.Result{Payload: []byte{3,2,1}}
+		resRecord := &record.Result{Payload: []byte{3, 2, 1}}
 		virtResRecord := record.Wrap(resRecord)
-		matRecord := record.Material{Virtual:virtResRecord}
+		matRecord := record.Material{Virtual: virtResRecord}
 		matRecordSerialized, err := matRecord.Marshal()
 		require.NoError(t, err)
 
@@ -514,9 +515,9 @@ func TestHandleCall_Present(t *testing.T) {
 			case *RegisterIncomingRequest:
 				p.result <- &payload.RequestInfo{
 					RequestID: *reqRef.Record(),
-					ObjectID: *objRef.Record(),
-					Request: []byte{1,2,3},
-					Result: matRecordSerialized,
+					ObjectID:  *objRef.Record(),
+					Request:   []byte{1, 2, 3},
+					Result:    matRecordSerialized,
 				}
 				return nil
 			case *AddFreshRequest:
@@ -594,7 +595,63 @@ func TestHandleCall_Present(t *testing.T) {
 		expectedResult, err := foundation.MarshalMethodErrorResult(errors.New("index not found"))
 		require.NoError(t, err)
 
-		expectedReply :=  &reply.CallMethod{Result: expectedResult}
+		expectedReply := &reply.CallMethod{Result: expectedResult}
+		gotReply, err := handler.handleActual(ctx, &msg, fm)
+		require.NoError(t, err)
+		require.Equal(t, expectedReply, gotReply)
+
+	})
+
+	t.Run("loop detected", func(t *testing.T) {
+		t.Parallel()
+
+		ctx := flow.TestContextWithPulse(inslogger.TestContext(t), gen.PulseNumber())
+		mc := minimock.NewController(t)
+		defer mc.Wait(time.Second)
+
+		objRef := gen.Reference()
+
+		fm := flow.NewFlowMock(mc)
+		fm.ProcedureMock.Set(func(ctx context.Context, proc flow.Procedure, cancelable bool) (err error) {
+			switch p := proc.(type) {
+			case *CheckOurRole:
+				return nil
+			case *RegisterIncomingRequest:
+				p.result <- &payload.RequestInfo{RequestID: gen.ID(), ObjectID: *objRef.Record()}
+				return nil
+			case *RecordErrorResult:
+				p.result = []byte{3, 2, 1}
+				return nil
+			default:
+				t.Fatalf("Unknown procedure: %T", proc)
+			}
+			return nil
+		})
+
+		handler := HandleCall{
+			dep: &Dependencies{
+				Publisher: nil,
+				StateStorage: NewStateStorageMock(mc).
+					GetExecutionRegistryMock.Expect(objRef).Return(
+					executionregistry.NewExecutionRegistryMock(mc).FindRequestLoopMock.Return(true),
+				),
+				ResultsMatcher: nil,
+				lr: &LogicRunner{
+					ArtifactManager: artifacts.NewClientMock(mc),
+				},
+			},
+			Message: payload.Meta{},
+			Parcel:  nil,
+		}
+
+		msg := message.CallMethod{
+			IncomingRequest: record.IncomingRequest{
+				CallType: record.CTMethod,
+				Object:   &objRef,
+			},
+		}
+
+		expectedReply := &reply.CallMethod{Object: &objRef, Result: []byte{3, 2, 1}}
 		gotReply, err := handler.handleActual(ctx, &msg, fm)
 		require.NoError(t, err)
 		require.Equal(t, expectedReply, gotReply)

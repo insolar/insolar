@@ -55,7 +55,7 @@ func NewStateIniter(
 	pulseAppender pulse.Appender,
 	pulseAccessor pulse.Accessor,
 	calc JetCalculator,
-	indices object.MemoryIndexModifier,
+	indexes object.MemoryIndexModifier,
 ) *StateIniterDefault {
 	return &StateIniterDefault{
 		jetModifier:   jetModifier,
@@ -66,7 +66,7 @@ func NewStateIniter(
 		pulseAppender: pulseAppender,
 		pulseAccessor: pulseAccessor,
 		jetCalculator: calc,
-		indices:       indices,
+		indexes:       indexes,
 		backoff: backoff.Backoff{
 			Factor: 2,
 			Jitter: true,
@@ -87,7 +87,7 @@ type StateIniterDefault struct {
 	pulseAccessor pulse.Accessor
 	jetCalculator JetCalculator
 	backoff       backoff.Backoff
-	indices       object.MemoryIndexModifier
+	indexes       object.MemoryIndexModifier
 }
 
 func (s *StateIniterDefault) PrepareState(
@@ -143,10 +143,10 @@ func (s *StateIniterDefault) PrepareState(
 func (s *StateIniterDefault) heavy(pn insolar.PulseNumber) (insolar.Reference, error) {
 	candidates, err := s.nodes.InRole(pn, insolar.StaticRoleHeavyMaterial)
 	if err != nil {
-		return insolar.Reference{}, errors.Wrap(err, "failed to calculate heavy node for pulse")
+		return insolar.NewEmptyReference(), errors.Wrap(err, "failed to calculate heavy node for pulse")
 	}
 	if len(candidates) == 0 {
-		return insolar.Reference{}, errors.Wrap(err, "failed to calculate heavy node for pulse")
+		return insolar.NewEmptyReference(), errors.Wrap(err, "failed to calculate heavy node for pulse")
 	}
 	return candidates[0].ID, nil
 }
@@ -193,17 +193,19 @@ func (s *StateIniterDefault) loadStateRetry(
 		return nil, errors.Wrap(err, "failed to append pulse")
 	}
 
+	inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+		"jets":          insolar.JetIDCollection(state.JetIDs).DebugString(),
+		"prev_pulse":    prevPulse.PulseNumber,
+		"network_start": state.NetworkStart,
+	}).Debug("received initial state from heavy")
+
 	// If not network start, we should wait for other lights to give us data.
 	if !state.NetworkStart {
+		inslogger.FromContext(ctx).Info("Not network start. Wait for other light")
 		return nil, nil
 	}
 
-	inslogger.FromContext(ctx).WithFields(map[string]interface{}{
-		"jets":       insolar.JetIDCollection(state.JetIDs).DebugString(),
-		"prev_pulse": prevPulse.PulseNumber,
-	}).Debug("received initial state from heavy")
-
-	err = s.jetModifier.Update(ctx, prevPulse.PulseNumber, true, state.JetIDs...)
+	err = s.jetModifier.Update(ctx, pn, true, state.JetIDs...)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to update jets")
 	}
@@ -230,7 +232,7 @@ func (s *StateIniterDefault) loadStateRetry(
 	}
 
 	for _, idx := range state.Indexes {
-		s.indices.Set(ctx, pn, idx)
+		s.indexes.Set(ctx, pn, idx)
 	}
 
 	return state.JetIDs, nil

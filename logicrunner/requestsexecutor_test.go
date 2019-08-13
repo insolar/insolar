@@ -32,6 +32,9 @@ import (
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/artifacts"
+	"github.com/insolar/insolar/logicrunner/common"
+	"github.com/insolar/insolar/logicrunner/logicexecutor"
+	"github.com/insolar/insolar/logicrunner/requestresult"
 	"github.com/insolar/insolar/testutils"
 )
 
@@ -47,15 +50,15 @@ func TestRequestsExecutor_ExecuteAndSave(t *testing.T) {
 
 	table := []struct {
 		name       string
-		transcript *Transcript
+		transcript *common.Transcript
 		am         artifacts.Client
-		le         LogicExecutor
+		le         logicexecutor.LogicExecutor
 		reply      insolar.Reply
 		error      bool
 	}{
 		{
 			name: "success, constructor",
-			transcript: &Transcript{
+			transcript: &common.Transcript{
 				RequestRef: requestRef,
 				Request: &record.IncomingRequest{
 					CallType:  record.CTSaveAsChild,
@@ -63,12 +66,12 @@ func TestRequestsExecutor_ExecuteAndSave(t *testing.T) {
 					Prototype: &protoRef,
 				},
 			},
-			le: NewLogicExecutorMock(mc).
+			le: logicexecutor.NewLogicExecutorMock(mc).
 				ExecuteMock.
 				Return(
-					&requestResult{
-						sideEffectType:  artifacts.RequestSideEffectActivate,
-						objectReference: requestRef,
+					&requestresult.RequestResult{
+						SideEffectType:     artifacts.RequestSideEffectActivate,
+						RawObjectReference: requestRef,
 					},
 					nil,
 				),
@@ -104,36 +107,36 @@ func TestRequestsExecutor_Execute(t *testing.T) {
 
 	table := []struct {
 		name       string
-		transcript *Transcript
+		transcript *common.Transcript
 		am         artifacts.Client
-		le         LogicExecutor
+		le         logicexecutor.LogicExecutor
 		error      bool
-		result     *requestResult
+		result     *requestresult.RequestResult
 	}{
 		{
 			name: "success, constructor",
-			transcript: &Transcript{
+			transcript: &common.Transcript{
 				Request: &record.IncomingRequest{
 					CallType: record.CTSaveAsChild,
 				},
 			},
-			le:     NewLogicExecutorMock(mc).ExecuteMock.Return(&requestResult{sideEffectType: artifacts.RequestSideEffectActivate}, nil),
-			result: &requestResult{sideEffectType: artifacts.RequestSideEffectActivate},
+			le:     logicexecutor.NewLogicExecutorMock(mc).ExecuteMock.Return(&requestresult.RequestResult{SideEffectType: artifacts.RequestSideEffectActivate}, nil),
+			result: &requestresult.RequestResult{SideEffectType: artifacts.RequestSideEffectActivate},
 		},
 		{
 			name: "success, method",
-			transcript: &Transcript{
+			transcript: &common.Transcript{
 				Request: &record.IncomingRequest{
 					Object: &objRef,
 				},
 			},
 			am:     artifacts.NewClientMock(mc).GetObjectMock.Return(nil, nil),
-			le:     NewLogicExecutorMock(mc).ExecuteMock.Return(&requestResult{sideEffectType: artifacts.RequestSideEffectActivate}, nil),
-			result: &requestResult{sideEffectType: artifacts.RequestSideEffectActivate},
+			le:     logicexecutor.NewLogicExecutorMock(mc).ExecuteMock.Return(&requestresult.RequestResult{SideEffectType: artifacts.RequestSideEffectActivate}, nil),
+			result: &requestresult.RequestResult{SideEffectType: artifacts.RequestSideEffectActivate},
 		},
 		{
 			name: "method, no object",
-			transcript: &Transcript{
+			transcript: &common.Transcript{
 				Request: &record.IncomingRequest{
 					Object: &objRef,
 				},
@@ -143,13 +146,13 @@ func TestRequestsExecutor_Execute(t *testing.T) {
 		},
 		{
 			name: "method, execution error",
-			transcript: &Transcript{
+			transcript: &common.Transcript{
 				Request: &record.IncomingRequest{
 					Object: &objRef,
 				},
 			},
 			am:    artifacts.NewClientMock(mc).GetObjectMock.Return(nil, nil),
-			le:    NewLogicExecutorMock(mc).ExecuteMock.Return(nil, errors.New("some")),
+			le:    logicexecutor.NewLogicExecutorMock(mc).ExecuteMock.Return(nil, errors.New("some")),
 			error: true,
 		},
 	}
@@ -184,51 +187,51 @@ func TestRequestsExecutor_Save(t *testing.T) {
 
 	table := []struct {
 		name       string
-		result     *requestResult
-		transcript *Transcript
+		result     *requestresult.RequestResult
+		transcript *common.Transcript
 		am         artifacts.Client
 		error      bool
 		reply      insolar.Reply
 	}{
 		{
 			name: "activation",
-			transcript: &Transcript{
+			transcript: &common.Transcript{
 				RequestRef: requestRef,
 				Request: &record.IncomingRequest{
 					Base:      &baseRef,
 					Prototype: &protoRef,
 				},
 			},
-			result: &requestResult{
-				sideEffectType:  artifacts.RequestSideEffectActivate,
-				objectReference: requestRef,
+			result: &requestresult.RequestResult{
+				SideEffectType:     artifacts.RequestSideEffectActivate,
+				RawObjectReference: requestRef,
 			},
 			am:    artifacts.NewClientMock(mc).RegisterResultMock.Return(nil),
 			reply: &reply.CallMethod{Object: &requestRef},
 		},
 		{
 			name: "activation error",
-			transcript: &Transcript{
+			transcript: &common.Transcript{
 				RequestRef: requestRef,
 				Request: &record.IncomingRequest{
 					Base:      &baseRef,
 					Prototype: &protoRef,
 				},
 			},
-			result: &requestResult{sideEffectType: artifacts.RequestSideEffectActivate},
+			result: &requestresult.RequestResult{SideEffectType: artifacts.RequestSideEffectActivate},
 			am:     artifacts.NewClientMock(mc).RegisterResultMock.Return(errors.New("some error")),
 			error:  true,
 		},
 		{
 			name: "deactivation",
-			transcript: &Transcript{
+			transcript: &common.Transcript{
 				RequestRef: requestRef,
 				Request:    &record.IncomingRequest{},
 			},
-			result: &requestResult{
-				sideEffectType:  artifacts.RequestSideEffectDeactivate,
-				result:          []byte{1, 2, 3},
-				objectReference: requestRef,
+			result: &requestresult.RequestResult{
+				SideEffectType:     artifacts.RequestSideEffectDeactivate,
+				RawResult:          []byte{1, 2, 3},
+				RawObjectReference: requestRef,
 			},
 			am: artifacts.NewClientMock(mc).RegisterResultMock.Return(nil),
 			reply: &reply.CallMethod{
@@ -237,25 +240,25 @@ func TestRequestsExecutor_Save(t *testing.T) {
 		},
 		{
 			name: "deactivation error",
-			transcript: &Transcript{
+			transcript: &common.Transcript{
 				RequestRef: requestRef,
 				Request:    &record.IncomingRequest{},
 			},
-			result: &requestResult{sideEffectType: artifacts.RequestSideEffectDeactivate, result: []byte{1, 2, 3}},
+			result: &requestresult.RequestResult{SideEffectType: artifacts.RequestSideEffectDeactivate, RawResult: []byte{1, 2, 3}},
 			am:     artifacts.NewClientMock(mc).RegisterResultMock.Return(errors.New("some")),
 			error:  true,
 		},
 		{
 			name: "update",
-			transcript: &Transcript{
+			transcript: &common.Transcript{
 				RequestRef: requestRef,
 				Request:    &record.IncomingRequest{},
 			},
-			result: &requestResult{
-				sideEffectType:  artifacts.RequestSideEffectAmend,
-				memory:          []byte{3, 2, 1},
-				result:          []byte{1, 2, 3},
-				objectReference: requestRef,
+			result: &requestresult.RequestResult{
+				SideEffectType:     artifacts.RequestSideEffectAmend,
+				Memory:             []byte{3, 2, 1},
+				RawResult:          []byte{1, 2, 3},
+				RawObjectReference: requestRef,
 			},
 			am: artifacts.NewClientMock(mc).RegisterResultMock.Return(nil),
 			reply: &reply.CallMethod{
@@ -265,24 +268,24 @@ func TestRequestsExecutor_Save(t *testing.T) {
 		},
 		{
 			name: "update error",
-			transcript: &Transcript{
+			transcript: &common.Transcript{
 				RequestRef: requestRef,
 				Request:    &record.IncomingRequest{},
 			},
-			result: &requestResult{sideEffectType: artifacts.RequestSideEffectAmend, memory: []byte{3, 2, 1}, result: []byte{1, 2, 3}},
+			result: &requestresult.RequestResult{SideEffectType: artifacts.RequestSideEffectAmend, Memory: []byte{3, 2, 1}, RawResult: []byte{1, 2, 3}},
 			am:     artifacts.NewClientMock(mc).RegisterResultMock.Return(errors.New("some")),
 			error:  true,
 		},
 		{
 			name: "result without update",
-			transcript: &Transcript{
+			transcript: &common.Transcript{
 				RequestRef: requestRef,
 				Request:    &record.IncomingRequest{Object: &objRef},
 			},
-			result: &requestResult{
-				sideEffectType:  artifacts.RequestSideEffectNone,
-				result:          []byte{1, 2, 3},
-				objectReference: requestRef,
+			result: &requestresult.RequestResult{
+				SideEffectType:     artifacts.RequestSideEffectNone,
+				RawResult:          []byte{1, 2, 3},
+				RawObjectReference: requestRef,
 			},
 			am: artifacts.NewClientMock(mc).RegisterResultMock.Return(nil),
 			reply: &reply.CallMethod{
@@ -292,11 +295,11 @@ func TestRequestsExecutor_Save(t *testing.T) {
 		},
 		{
 			name: "result without update, error",
-			transcript: &Transcript{
+			transcript: &common.Transcript{
 				RequestRef: requestRef,
 				Request:    &record.IncomingRequest{Object: &objRef},
 			},
-			result: &requestResult{sideEffectType: artifacts.RequestSideEffectNone, result: []byte{1, 2, 3}},
+			result: &requestresult.RequestResult{SideEffectType: artifacts.RequestSideEffectNone, RawResult: []byte{1, 2, 3}},
 			am:     artifacts.NewClientMock(mc).RegisterResultMock.Return(errors.New("some")),
 			error:  true,
 		},
@@ -327,18 +330,18 @@ func TestRequestsExecutor_SendReply(t *testing.T) {
 
 	requestRef := gen.Reference()
 
-	reqRef := testutils.RandomRef()
+	reqRef := gen.Reference()
 
 	table := []struct {
 		name       string
 		reply      insolar.Reply
 		err        error
-		transcript *Transcript
+		transcript *common.Transcript
 		mb         insolar.MessageBus
 	}{
 		{
 			name: "success",
-			transcript: &Transcript{
+			transcript: &common.Transcript{
 				RequestRef: reqRef,
 				Request:    &record.IncomingRequest{},
 			},
@@ -353,7 +356,7 @@ func TestRequestsExecutor_SendReply(t *testing.T) {
 		},
 		{
 			name: "error",
-			transcript: &Transcript{
+			transcript: &common.Transcript{
 				RequestRef: reqRef,
 				Request:    &record.IncomingRequest{},
 			},

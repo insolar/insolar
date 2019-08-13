@@ -32,6 +32,7 @@ import (
 	"github.com/insolar/insolar/ledger/artifact"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/object"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 )
 
 // BaseRecord provides methods for genesis base record manipulation.
@@ -220,10 +221,29 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 	}
 
 	for i, key := range g.ContractsConfig.MigrationDaemonPublicKeys {
-		states = append(states, contracts.GetMemberGenesisContractState(key, insolar.GenesisNameMigrationDaemonMembers[i], insolar.GenesisNameRootDomain, insolar.Reference{}))
+		states = append(states, contracts.GetMemberGenesisContractState(key, insolar.GenesisNameMigrationDaemonMembers[i], insolar.GenesisNameRootDomain, insolar.NewEmptyReference()))
 	}
-	for _, name := range insolar.GenesisNamePublicKeyShards {
-		states = append(states, contracts.GetPKShardGenesisContractState(name))
+
+	// Split genesis members by PK shards
+	var MembersByPKShards [insolar.GenesisAmountPublicKeyShards]foundation.StableMap
+	for i := 0; i < insolar.GenesisAmountPublicKeyShards; i++ {
+		MembersByPKShards[i] = make(foundation.StableMap)
+	}
+	trimmedRootPublicKey := foundation.TrimPublicKey(g.ContractsConfig.RootPublicKey)
+	index := foundation.GetShardIndex(trimmedRootPublicKey, insolar.GenesisAmountPublicKeyShards)
+	MembersByPKShards[index][trimmedRootPublicKey] = genesisrefs.ContractRootMember.String()
+	trimmedMigrationAdminPublicKey := foundation.TrimPublicKey(g.ContractsConfig.MigrationAdminPublicKey)
+	index = foundation.GetShardIndex(trimmedMigrationAdminPublicKey, insolar.GenesisAmountPublicKeyShards)
+	MembersByPKShards[index][trimmedMigrationAdminPublicKey] = genesisrefs.ContractMigrationAdminMember.String()
+	for i, key := range g.ContractsConfig.MigrationDaemonPublicKeys {
+		trimmedMigrationDaemonPublicKey := foundation.TrimPublicKey(key)
+		index := foundation.GetShardIndex(trimmedMigrationDaemonPublicKey, insolar.GenesisAmountPublicKeyShards)
+		MembersByPKShards[index][trimmedMigrationDaemonPublicKey] = genesisrefs.ContractMigrationDaemonMembers[i].String()
+	}
+
+	// Append states for shards
+	for i, name := range insolar.GenesisNamePublicKeyShards {
+		states = append(states, contracts.GetPKShardGenesisContractState(name, MembersByPKShards[i]))
 	}
 	for _, name := range insolar.GenesisNameMigrationAddressShards {
 		states = append(states, contracts.GetMigrationShardGenesisContractState(name))

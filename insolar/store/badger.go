@@ -18,6 +18,7 @@ package store
 
 import (
 	"context"
+	"io"
 	"path/filepath"
 	"sync"
 	"time"
@@ -62,8 +63,9 @@ type state struct {
 
 func (s *state) set(val bool) {
 	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	s.state = val
-	s.mu.Unlock()
 }
 
 func (s *state) check() bool {
@@ -193,6 +195,11 @@ func (b *BadgerDB) Delete(key Key) error {
 	})
 
 	return err
+}
+
+// Backup creates backup.
+func (b *BadgerDB) Backup(w io.Writer, since uint64) (uint64, error) {
+	return b.backend.Backup(w, since)
 }
 
 // NewIterator returns new Iterator over the store.
