@@ -124,15 +124,12 @@ func (cf *ConsensusControlFeeder) OnAppliedGracefulLeave(exitCode uint32, effect
 }
 
 func (cf *ConsensusControlFeeder) SetTrafficLimit(level capacity.Level, duration time.Duration) {
-	panic("implement me")
 }
 
 func (cf *ConsensusControlFeeder) ResumeTraffic() {
-	panic("implement me")
 }
 
 func (cf *ConsensusControlFeeder) PulseDetected() {
-	panic("implement me")
 }
 
 func InterceptConsensusControl(originalFeeder *ConsensusControlFeeder) *ControlFeederInterceptor {
