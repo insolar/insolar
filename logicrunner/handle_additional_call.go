@@ -29,6 +29,7 @@ import (
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/logicrunner/common"
 )
 
 type AdditionalCallFromPreviousExecutor struct {
@@ -44,7 +45,7 @@ func (p *AdditionalCallFromPreviousExecutor) Proceed(ctx context.Context) error 
 		broker.SetNotPending(ctx)
 	}
 
-	tr := NewTranscript(freshContextFromContext(ctx), p.message.RequestRef, p.message.Request)
+	tr := common.NewTranscript(freshContextFromContext(ctx), p.message.RequestRef, p.message.Request)
 	broker.AddAdditionalRequestFromPrevExecutor(ctx, tr)
 	return nil
 }

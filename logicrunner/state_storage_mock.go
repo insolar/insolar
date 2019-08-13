@@ -10,17 +10,18 @@ import (
 
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/logicrunner/executionregistry"
 )
 
 // StateStorageMock implements StateStorage
 type StateStorageMock struct {
 	t minimock.Tester
 
-	funcGetExecutionArchive          func(ref insolar.Reference) (e1 ExecutionArchive)
-	inspectFuncGetExecutionArchive   func(ref insolar.Reference)
-	afterGetExecutionArchiveCounter  uint64
-	beforeGetExecutionArchiveCounter uint64
-	GetExecutionArchiveMock          mStateStorageMockGetExecutionArchive
+	funcGetExecutionRegistry          func(ref insolar.Reference) (e1 executionregistry.ExecutionRegistry)
+	inspectFuncGetExecutionRegistry   func(ref insolar.Reference)
+	afterGetExecutionRegistryCounter  uint64
+	beforeGetExecutionRegistryCounter uint64
+	GetExecutionRegistryMock          mStateStorageMockGetExecutionRegistry
 
 	funcGetExecutionState          func(ref insolar.Reference) (e1 ExecutionBrokerI)
 	inspectFuncGetExecutionState   func(ref insolar.Reference)
@@ -34,23 +35,11 @@ type StateStorageMock struct {
 	beforeIsEmptyCounter uint64
 	IsEmptyMock          mStateStorageMockIsEmpty
 
-	funcLock          func()
-	inspectFuncLock   func()
-	afterLockCounter  uint64
-	beforeLockCounter uint64
-	LockMock          mStateStorageMockLock
-
 	funcOnPulse          func(ctx context.Context, pulse insolar.Pulse) (ma1 []insolar.Message)
 	inspectFuncOnPulse   func(ctx context.Context, pulse insolar.Pulse)
 	afterOnPulseCounter  uint64
 	beforeOnPulseCounter uint64
 	OnPulseMock          mStateStorageMockOnPulse
-
-	funcUnlock          func()
-	inspectFuncUnlock   func()
-	afterUnlockCounter  uint64
-	beforeUnlockCounter uint64
-	UnlockMock          mStateStorageMockUnlock
 
 	funcUpsertExecutionState          func(ref insolar.Reference) (e1 ExecutionBrokerI)
 	inspectFuncUpsertExecutionState   func(ref insolar.Reference)
@@ -66,20 +55,16 @@ func NewStateStorageMock(t minimock.Tester) *StateStorageMock {
 		controller.RegisterMocker(m)
 	}
 
-	m.GetExecutionArchiveMock = mStateStorageMockGetExecutionArchive{mock: m}
-	m.GetExecutionArchiveMock.callArgs = []*StateStorageMockGetExecutionArchiveParams{}
+	m.GetExecutionRegistryMock = mStateStorageMockGetExecutionRegistry{mock: m}
+	m.GetExecutionRegistryMock.callArgs = []*StateStorageMockGetExecutionRegistryParams{}
 
 	m.GetExecutionStateMock = mStateStorageMockGetExecutionState{mock: m}
 	m.GetExecutionStateMock.callArgs = []*StateStorageMockGetExecutionStateParams{}
 
 	m.IsEmptyMock = mStateStorageMockIsEmpty{mock: m}
 
-	m.LockMock = mStateStorageMockLock{mock: m}
-
 	m.OnPulseMock = mStateStorageMockOnPulse{mock: m}
 	m.OnPulseMock.callArgs = []*StateStorageMockOnPulseParams{}
-
-	m.UnlockMock = mStateStorageMockUnlock{mock: m}
 
 	m.UpsertExecutionStateMock = mStateStorageMockUpsertExecutionState{mock: m}
 	m.UpsertExecutionStateMock.callArgs = []*StateStorageMockUpsertExecutionStateParams{}
@@ -87,218 +72,218 @@ func NewStateStorageMock(t minimock.Tester) *StateStorageMock {
 	return m
 }
 
-type mStateStorageMockGetExecutionArchive struct {
+type mStateStorageMockGetExecutionRegistry struct {
 	mock               *StateStorageMock
-	defaultExpectation *StateStorageMockGetExecutionArchiveExpectation
-	expectations       []*StateStorageMockGetExecutionArchiveExpectation
+	defaultExpectation *StateStorageMockGetExecutionRegistryExpectation
+	expectations       []*StateStorageMockGetExecutionRegistryExpectation
 
-	callArgs []*StateStorageMockGetExecutionArchiveParams
+	callArgs []*StateStorageMockGetExecutionRegistryParams
 	mutex    sync.RWMutex
 }
 
-// StateStorageMockGetExecutionArchiveExpectation specifies expectation struct of the StateStorage.GetExecutionArchive
-type StateStorageMockGetExecutionArchiveExpectation struct {
+// StateStorageMockGetExecutionRegistryExpectation specifies expectation struct of the StateStorage.GetExecutionRegistry
+type StateStorageMockGetExecutionRegistryExpectation struct {
 	mock    *StateStorageMock
-	params  *StateStorageMockGetExecutionArchiveParams
-	results *StateStorageMockGetExecutionArchiveResults
+	params  *StateStorageMockGetExecutionRegistryParams
+	results *StateStorageMockGetExecutionRegistryResults
 	Counter uint64
 }
 
-// StateStorageMockGetExecutionArchiveParams contains parameters of the StateStorage.GetExecutionArchive
-type StateStorageMockGetExecutionArchiveParams struct {
+// StateStorageMockGetExecutionRegistryParams contains parameters of the StateStorage.GetExecutionRegistry
+type StateStorageMockGetExecutionRegistryParams struct {
 	ref insolar.Reference
 }
 
-// StateStorageMockGetExecutionArchiveResults contains results of the StateStorage.GetExecutionArchive
-type StateStorageMockGetExecutionArchiveResults struct {
-	e1 ExecutionArchive
+// StateStorageMockGetExecutionRegistryResults contains results of the StateStorage.GetExecutionRegistry
+type StateStorageMockGetExecutionRegistryResults struct {
+	e1 executionregistry.ExecutionRegistry
 }
 
-// Expect sets up expected params for StateStorage.GetExecutionArchive
-func (mmGetExecutionArchive *mStateStorageMockGetExecutionArchive) Expect(ref insolar.Reference) *mStateStorageMockGetExecutionArchive {
-	if mmGetExecutionArchive.mock.funcGetExecutionArchive != nil {
-		mmGetExecutionArchive.mock.t.Fatalf("StateStorageMock.GetExecutionArchive mock is already set by Set")
+// Expect sets up expected params for StateStorage.GetExecutionRegistry
+func (mmGetExecutionRegistry *mStateStorageMockGetExecutionRegistry) Expect(ref insolar.Reference) *mStateStorageMockGetExecutionRegistry {
+	if mmGetExecutionRegistry.mock.funcGetExecutionRegistry != nil {
+		mmGetExecutionRegistry.mock.t.Fatalf("StateStorageMock.GetExecutionRegistry mock is already set by Set")
 	}
 
-	if mmGetExecutionArchive.defaultExpectation == nil {
-		mmGetExecutionArchive.defaultExpectation = &StateStorageMockGetExecutionArchiveExpectation{}
+	if mmGetExecutionRegistry.defaultExpectation == nil {
+		mmGetExecutionRegistry.defaultExpectation = &StateStorageMockGetExecutionRegistryExpectation{}
 	}
 
-	mmGetExecutionArchive.defaultExpectation.params = &StateStorageMockGetExecutionArchiveParams{ref}
-	for _, e := range mmGetExecutionArchive.expectations {
-		if minimock.Equal(e.params, mmGetExecutionArchive.defaultExpectation.params) {
-			mmGetExecutionArchive.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmGetExecutionArchive.defaultExpectation.params)
+	mmGetExecutionRegistry.defaultExpectation.params = &StateStorageMockGetExecutionRegistryParams{ref}
+	for _, e := range mmGetExecutionRegistry.expectations {
+		if minimock.Equal(e.params, mmGetExecutionRegistry.defaultExpectation.params) {
+			mmGetExecutionRegistry.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmGetExecutionRegistry.defaultExpectation.params)
 		}
 	}
 
-	return mmGetExecutionArchive
+	return mmGetExecutionRegistry
 }
 
-// Inspect accepts an inspector function that has same arguments as the StateStorage.GetExecutionArchive
-func (mmGetExecutionArchive *mStateStorageMockGetExecutionArchive) Inspect(f func(ref insolar.Reference)) *mStateStorageMockGetExecutionArchive {
-	if mmGetExecutionArchive.mock.inspectFuncGetExecutionArchive != nil {
-		mmGetExecutionArchive.mock.t.Fatalf("Inspect function is already set for StateStorageMock.GetExecutionArchive")
+// Inspect accepts an inspector function that has same arguments as the StateStorage.GetExecutionRegistry
+func (mmGetExecutionRegistry *mStateStorageMockGetExecutionRegistry) Inspect(f func(ref insolar.Reference)) *mStateStorageMockGetExecutionRegistry {
+	if mmGetExecutionRegistry.mock.inspectFuncGetExecutionRegistry != nil {
+		mmGetExecutionRegistry.mock.t.Fatalf("Inspect function is already set for StateStorageMock.GetExecutionRegistry")
 	}
 
-	mmGetExecutionArchive.mock.inspectFuncGetExecutionArchive = f
+	mmGetExecutionRegistry.mock.inspectFuncGetExecutionRegistry = f
 
-	return mmGetExecutionArchive
+	return mmGetExecutionRegistry
 }
 
-// Return sets up results that will be returned by StateStorage.GetExecutionArchive
-func (mmGetExecutionArchive *mStateStorageMockGetExecutionArchive) Return(e1 ExecutionArchive) *StateStorageMock {
-	if mmGetExecutionArchive.mock.funcGetExecutionArchive != nil {
-		mmGetExecutionArchive.mock.t.Fatalf("StateStorageMock.GetExecutionArchive mock is already set by Set")
+// Return sets up results that will be returned by StateStorage.GetExecutionRegistry
+func (mmGetExecutionRegistry *mStateStorageMockGetExecutionRegistry) Return(e1 executionregistry.ExecutionRegistry) *StateStorageMock {
+	if mmGetExecutionRegistry.mock.funcGetExecutionRegistry != nil {
+		mmGetExecutionRegistry.mock.t.Fatalf("StateStorageMock.GetExecutionRegistry mock is already set by Set")
 	}
 
-	if mmGetExecutionArchive.defaultExpectation == nil {
-		mmGetExecutionArchive.defaultExpectation = &StateStorageMockGetExecutionArchiveExpectation{mock: mmGetExecutionArchive.mock}
+	if mmGetExecutionRegistry.defaultExpectation == nil {
+		mmGetExecutionRegistry.defaultExpectation = &StateStorageMockGetExecutionRegistryExpectation{mock: mmGetExecutionRegistry.mock}
 	}
-	mmGetExecutionArchive.defaultExpectation.results = &StateStorageMockGetExecutionArchiveResults{e1}
-	return mmGetExecutionArchive.mock
+	mmGetExecutionRegistry.defaultExpectation.results = &StateStorageMockGetExecutionRegistryResults{e1}
+	return mmGetExecutionRegistry.mock
 }
 
-//Set uses given function f to mock the StateStorage.GetExecutionArchive method
-func (mmGetExecutionArchive *mStateStorageMockGetExecutionArchive) Set(f func(ref insolar.Reference) (e1 ExecutionArchive)) *StateStorageMock {
-	if mmGetExecutionArchive.defaultExpectation != nil {
-		mmGetExecutionArchive.mock.t.Fatalf("Default expectation is already set for the StateStorage.GetExecutionArchive method")
+//Set uses given function f to mock the StateStorage.GetExecutionRegistry method
+func (mmGetExecutionRegistry *mStateStorageMockGetExecutionRegistry) Set(f func(ref insolar.Reference) (e1 executionregistry.ExecutionRegistry)) *StateStorageMock {
+	if mmGetExecutionRegistry.defaultExpectation != nil {
+		mmGetExecutionRegistry.mock.t.Fatalf("Default expectation is already set for the StateStorage.GetExecutionRegistry method")
 	}
 
-	if len(mmGetExecutionArchive.expectations) > 0 {
-		mmGetExecutionArchive.mock.t.Fatalf("Some expectations are already set for the StateStorage.GetExecutionArchive method")
+	if len(mmGetExecutionRegistry.expectations) > 0 {
+		mmGetExecutionRegistry.mock.t.Fatalf("Some expectations are already set for the StateStorage.GetExecutionRegistry method")
 	}
 
-	mmGetExecutionArchive.mock.funcGetExecutionArchive = f
-	return mmGetExecutionArchive.mock
+	mmGetExecutionRegistry.mock.funcGetExecutionRegistry = f
+	return mmGetExecutionRegistry.mock
 }
 
-// When sets expectation for the StateStorage.GetExecutionArchive which will trigger the result defined by the following
+// When sets expectation for the StateStorage.GetExecutionRegistry which will trigger the result defined by the following
 // Then helper
-func (mmGetExecutionArchive *mStateStorageMockGetExecutionArchive) When(ref insolar.Reference) *StateStorageMockGetExecutionArchiveExpectation {
-	if mmGetExecutionArchive.mock.funcGetExecutionArchive != nil {
-		mmGetExecutionArchive.mock.t.Fatalf("StateStorageMock.GetExecutionArchive mock is already set by Set")
+func (mmGetExecutionRegistry *mStateStorageMockGetExecutionRegistry) When(ref insolar.Reference) *StateStorageMockGetExecutionRegistryExpectation {
+	if mmGetExecutionRegistry.mock.funcGetExecutionRegistry != nil {
+		mmGetExecutionRegistry.mock.t.Fatalf("StateStorageMock.GetExecutionRegistry mock is already set by Set")
 	}
 
-	expectation := &StateStorageMockGetExecutionArchiveExpectation{
-		mock:   mmGetExecutionArchive.mock,
-		params: &StateStorageMockGetExecutionArchiveParams{ref},
+	expectation := &StateStorageMockGetExecutionRegistryExpectation{
+		mock:   mmGetExecutionRegistry.mock,
+		params: &StateStorageMockGetExecutionRegistryParams{ref},
 	}
-	mmGetExecutionArchive.expectations = append(mmGetExecutionArchive.expectations, expectation)
+	mmGetExecutionRegistry.expectations = append(mmGetExecutionRegistry.expectations, expectation)
 	return expectation
 }
 
-// Then sets up StateStorage.GetExecutionArchive return parameters for the expectation previously defined by the When method
-func (e *StateStorageMockGetExecutionArchiveExpectation) Then(e1 ExecutionArchive) *StateStorageMock {
-	e.results = &StateStorageMockGetExecutionArchiveResults{e1}
+// Then sets up StateStorage.GetExecutionRegistry return parameters for the expectation previously defined by the When method
+func (e *StateStorageMockGetExecutionRegistryExpectation) Then(e1 executionregistry.ExecutionRegistry) *StateStorageMock {
+	e.results = &StateStorageMockGetExecutionRegistryResults{e1}
 	return e.mock
 }
 
-// GetExecutionArchive implements StateStorage
-func (mmGetExecutionArchive *StateStorageMock) GetExecutionArchive(ref insolar.Reference) (e1 ExecutionArchive) {
-	mm_atomic.AddUint64(&mmGetExecutionArchive.beforeGetExecutionArchiveCounter, 1)
-	defer mm_atomic.AddUint64(&mmGetExecutionArchive.afterGetExecutionArchiveCounter, 1)
+// GetExecutionRegistry implements StateStorage
+func (mmGetExecutionRegistry *StateStorageMock) GetExecutionRegistry(ref insolar.Reference) (e1 executionregistry.ExecutionRegistry) {
+	mm_atomic.AddUint64(&mmGetExecutionRegistry.beforeGetExecutionRegistryCounter, 1)
+	defer mm_atomic.AddUint64(&mmGetExecutionRegistry.afterGetExecutionRegistryCounter, 1)
 
-	if mmGetExecutionArchive.inspectFuncGetExecutionArchive != nil {
-		mmGetExecutionArchive.inspectFuncGetExecutionArchive(ref)
+	if mmGetExecutionRegistry.inspectFuncGetExecutionRegistry != nil {
+		mmGetExecutionRegistry.inspectFuncGetExecutionRegistry(ref)
 	}
 
-	params := &StateStorageMockGetExecutionArchiveParams{ref}
+	params := &StateStorageMockGetExecutionRegistryParams{ref}
 
 	// Record call args
-	mmGetExecutionArchive.GetExecutionArchiveMock.mutex.Lock()
-	mmGetExecutionArchive.GetExecutionArchiveMock.callArgs = append(mmGetExecutionArchive.GetExecutionArchiveMock.callArgs, params)
-	mmGetExecutionArchive.GetExecutionArchiveMock.mutex.Unlock()
+	mmGetExecutionRegistry.GetExecutionRegistryMock.mutex.Lock()
+	mmGetExecutionRegistry.GetExecutionRegistryMock.callArgs = append(mmGetExecutionRegistry.GetExecutionRegistryMock.callArgs, params)
+	mmGetExecutionRegistry.GetExecutionRegistryMock.mutex.Unlock()
 
-	for _, e := range mmGetExecutionArchive.GetExecutionArchiveMock.expectations {
+	for _, e := range mmGetExecutionRegistry.GetExecutionRegistryMock.expectations {
 		if minimock.Equal(e.params, params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return e.results.e1
 		}
 	}
 
-	if mmGetExecutionArchive.GetExecutionArchiveMock.defaultExpectation != nil {
-		mm_atomic.AddUint64(&mmGetExecutionArchive.GetExecutionArchiveMock.defaultExpectation.Counter, 1)
-		want := mmGetExecutionArchive.GetExecutionArchiveMock.defaultExpectation.params
-		got := StateStorageMockGetExecutionArchiveParams{ref}
+	if mmGetExecutionRegistry.GetExecutionRegistryMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmGetExecutionRegistry.GetExecutionRegistryMock.defaultExpectation.Counter, 1)
+		want := mmGetExecutionRegistry.GetExecutionRegistryMock.defaultExpectation.params
+		got := StateStorageMockGetExecutionRegistryParams{ref}
 		if want != nil && !minimock.Equal(*want, got) {
-			mmGetExecutionArchive.t.Errorf("StateStorageMock.GetExecutionArchive got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+			mmGetExecutionRegistry.t.Errorf("StateStorageMock.GetExecutionRegistry got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
 		}
 
-		results := mmGetExecutionArchive.GetExecutionArchiveMock.defaultExpectation.results
+		results := mmGetExecutionRegistry.GetExecutionRegistryMock.defaultExpectation.results
 		if results == nil {
-			mmGetExecutionArchive.t.Fatal("No results are set for the StateStorageMock.GetExecutionArchive")
+			mmGetExecutionRegistry.t.Fatal("No results are set for the StateStorageMock.GetExecutionRegistry")
 		}
 		return (*results).e1
 	}
-	if mmGetExecutionArchive.funcGetExecutionArchive != nil {
-		return mmGetExecutionArchive.funcGetExecutionArchive(ref)
+	if mmGetExecutionRegistry.funcGetExecutionRegistry != nil {
+		return mmGetExecutionRegistry.funcGetExecutionRegistry(ref)
 	}
-	mmGetExecutionArchive.t.Fatalf("Unexpected call to StateStorageMock.GetExecutionArchive. %v", ref)
+	mmGetExecutionRegistry.t.Fatalf("Unexpected call to StateStorageMock.GetExecutionRegistry. %v", ref)
 	return
 }
 
-// GetExecutionArchiveAfterCounter returns a count of finished StateStorageMock.GetExecutionArchive invocations
-func (mmGetExecutionArchive *StateStorageMock) GetExecutionArchiveAfterCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmGetExecutionArchive.afterGetExecutionArchiveCounter)
+// GetExecutionRegistryAfterCounter returns a count of finished StateStorageMock.GetExecutionRegistry invocations
+func (mmGetExecutionRegistry *StateStorageMock) GetExecutionRegistryAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmGetExecutionRegistry.afterGetExecutionRegistryCounter)
 }
 
-// GetExecutionArchiveBeforeCounter returns a count of StateStorageMock.GetExecutionArchive invocations
-func (mmGetExecutionArchive *StateStorageMock) GetExecutionArchiveBeforeCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmGetExecutionArchive.beforeGetExecutionArchiveCounter)
+// GetExecutionRegistryBeforeCounter returns a count of StateStorageMock.GetExecutionRegistry invocations
+func (mmGetExecutionRegistry *StateStorageMock) GetExecutionRegistryBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmGetExecutionRegistry.beforeGetExecutionRegistryCounter)
 }
 
-// Calls returns a list of arguments used in each call to StateStorageMock.GetExecutionArchive.
+// Calls returns a list of arguments used in each call to StateStorageMock.GetExecutionRegistry.
 // The list is in the same order as the calls were made (i.e. recent calls have a higher index)
-func (mmGetExecutionArchive *mStateStorageMockGetExecutionArchive) Calls() []*StateStorageMockGetExecutionArchiveParams {
-	mmGetExecutionArchive.mutex.RLock()
+func (mmGetExecutionRegistry *mStateStorageMockGetExecutionRegistry) Calls() []*StateStorageMockGetExecutionRegistryParams {
+	mmGetExecutionRegistry.mutex.RLock()
 
-	argCopy := make([]*StateStorageMockGetExecutionArchiveParams, len(mmGetExecutionArchive.callArgs))
-	copy(argCopy, mmGetExecutionArchive.callArgs)
+	argCopy := make([]*StateStorageMockGetExecutionRegistryParams, len(mmGetExecutionRegistry.callArgs))
+	copy(argCopy, mmGetExecutionRegistry.callArgs)
 
-	mmGetExecutionArchive.mutex.RUnlock()
+	mmGetExecutionRegistry.mutex.RUnlock()
 
 	return argCopy
 }
 
-// MinimockGetExecutionArchiveDone returns true if the count of the GetExecutionArchive invocations corresponds
+// MinimockGetExecutionRegistryDone returns true if the count of the GetExecutionRegistry invocations corresponds
 // the number of defined expectations
-func (m *StateStorageMock) MinimockGetExecutionArchiveDone() bool {
-	for _, e := range m.GetExecutionArchiveMock.expectations {
+func (m *StateStorageMock) MinimockGetExecutionRegistryDone() bool {
+	for _, e := range m.GetExecutionRegistryMock.expectations {
 		if mm_atomic.LoadUint64(&e.Counter) < 1 {
 			return false
 		}
 	}
 
 	// if default expectation was set then invocations count should be greater than zero
-	if m.GetExecutionArchiveMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterGetExecutionArchiveCounter) < 1 {
+	if m.GetExecutionRegistryMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterGetExecutionRegistryCounter) < 1 {
 		return false
 	}
 	// if func was set then invocations count should be greater than zero
-	if m.funcGetExecutionArchive != nil && mm_atomic.LoadUint64(&m.afterGetExecutionArchiveCounter) < 1 {
+	if m.funcGetExecutionRegistry != nil && mm_atomic.LoadUint64(&m.afterGetExecutionRegistryCounter) < 1 {
 		return false
 	}
 	return true
 }
 
-// MinimockGetExecutionArchiveInspect logs each unmet expectation
-func (m *StateStorageMock) MinimockGetExecutionArchiveInspect() {
-	for _, e := range m.GetExecutionArchiveMock.expectations {
+// MinimockGetExecutionRegistryInspect logs each unmet expectation
+func (m *StateStorageMock) MinimockGetExecutionRegistryInspect() {
+	for _, e := range m.GetExecutionRegistryMock.expectations {
 		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			m.t.Errorf("Expected call to StateStorageMock.GetExecutionArchive with params: %#v", *e.params)
+			m.t.Errorf("Expected call to StateStorageMock.GetExecutionRegistry with params: %#v", *e.params)
 		}
 	}
 
 	// if default expectation was set then invocations count should be greater than zero
-	if m.GetExecutionArchiveMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterGetExecutionArchiveCounter) < 1 {
-		if m.GetExecutionArchiveMock.defaultExpectation.params == nil {
-			m.t.Error("Expected call to StateStorageMock.GetExecutionArchive")
+	if m.GetExecutionRegistryMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterGetExecutionRegistryCounter) < 1 {
+		if m.GetExecutionRegistryMock.defaultExpectation.params == nil {
+			m.t.Error("Expected call to StateStorageMock.GetExecutionRegistry")
 		} else {
-			m.t.Errorf("Expected call to StateStorageMock.GetExecutionArchive with params: %#v", *m.GetExecutionArchiveMock.defaultExpectation.params)
+			m.t.Errorf("Expected call to StateStorageMock.GetExecutionRegistry with params: %#v", *m.GetExecutionRegistryMock.defaultExpectation.params)
 		}
 	}
 	// if func was set then invocations count should be greater than zero
-	if m.funcGetExecutionArchive != nil && mm_atomic.LoadUint64(&m.afterGetExecutionArchiveCounter) < 1 {
-		m.t.Error("Expected call to StateStorageMock.GetExecutionArchive")
+	if m.funcGetExecutionRegistry != nil && mm_atomic.LoadUint64(&m.afterGetExecutionRegistryCounter) < 1 {
+		m.t.Error("Expected call to StateStorageMock.GetExecutionRegistry")
 	}
 }
 
@@ -660,141 +645,6 @@ func (m *StateStorageMock) MinimockIsEmptyInspect() {
 	}
 }
 
-type mStateStorageMockLock struct {
-	mock               *StateStorageMock
-	defaultExpectation *StateStorageMockLockExpectation
-	expectations       []*StateStorageMockLockExpectation
-}
-
-// StateStorageMockLockExpectation specifies expectation struct of the StateStorage.Lock
-type StateStorageMockLockExpectation struct {
-	mock *StateStorageMock
-
-	Counter uint64
-}
-
-// Expect sets up expected params for StateStorage.Lock
-func (mmLock *mStateStorageMockLock) Expect() *mStateStorageMockLock {
-	if mmLock.mock.funcLock != nil {
-		mmLock.mock.t.Fatalf("StateStorageMock.Lock mock is already set by Set")
-	}
-
-	if mmLock.defaultExpectation == nil {
-		mmLock.defaultExpectation = &StateStorageMockLockExpectation{}
-	}
-
-	return mmLock
-}
-
-// Inspect accepts an inspector function that has same arguments as the StateStorage.Lock
-func (mmLock *mStateStorageMockLock) Inspect(f func()) *mStateStorageMockLock {
-	if mmLock.mock.inspectFuncLock != nil {
-		mmLock.mock.t.Fatalf("Inspect function is already set for StateStorageMock.Lock")
-	}
-
-	mmLock.mock.inspectFuncLock = f
-
-	return mmLock
-}
-
-// Return sets up results that will be returned by StateStorage.Lock
-func (mmLock *mStateStorageMockLock) Return() *StateStorageMock {
-	if mmLock.mock.funcLock != nil {
-		mmLock.mock.t.Fatalf("StateStorageMock.Lock mock is already set by Set")
-	}
-
-	if mmLock.defaultExpectation == nil {
-		mmLock.defaultExpectation = &StateStorageMockLockExpectation{mock: mmLock.mock}
-	}
-
-	return mmLock.mock
-}
-
-//Set uses given function f to mock the StateStorage.Lock method
-func (mmLock *mStateStorageMockLock) Set(f func()) *StateStorageMock {
-	if mmLock.defaultExpectation != nil {
-		mmLock.mock.t.Fatalf("Default expectation is already set for the StateStorage.Lock method")
-	}
-
-	if len(mmLock.expectations) > 0 {
-		mmLock.mock.t.Fatalf("Some expectations are already set for the StateStorage.Lock method")
-	}
-
-	mmLock.mock.funcLock = f
-	return mmLock.mock
-}
-
-// Lock implements StateStorage
-func (mmLock *StateStorageMock) Lock() {
-	mm_atomic.AddUint64(&mmLock.beforeLockCounter, 1)
-	defer mm_atomic.AddUint64(&mmLock.afterLockCounter, 1)
-
-	if mmLock.inspectFuncLock != nil {
-		mmLock.inspectFuncLock()
-	}
-
-	if mmLock.LockMock.defaultExpectation != nil {
-		mm_atomic.AddUint64(&mmLock.LockMock.defaultExpectation.Counter, 1)
-
-		return
-
-	}
-	if mmLock.funcLock != nil {
-		mmLock.funcLock()
-		return
-	}
-	mmLock.t.Fatalf("Unexpected call to StateStorageMock.Lock.")
-
-}
-
-// LockAfterCounter returns a count of finished StateStorageMock.Lock invocations
-func (mmLock *StateStorageMock) LockAfterCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmLock.afterLockCounter)
-}
-
-// LockBeforeCounter returns a count of StateStorageMock.Lock invocations
-func (mmLock *StateStorageMock) LockBeforeCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmLock.beforeLockCounter)
-}
-
-// MinimockLockDone returns true if the count of the Lock invocations corresponds
-// the number of defined expectations
-func (m *StateStorageMock) MinimockLockDone() bool {
-	for _, e := range m.LockMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			return false
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.LockMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterLockCounter) < 1 {
-		return false
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcLock != nil && mm_atomic.LoadUint64(&m.afterLockCounter) < 1 {
-		return false
-	}
-	return true
-}
-
-// MinimockLockInspect logs each unmet expectation
-func (m *StateStorageMock) MinimockLockInspect() {
-	for _, e := range m.LockMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			m.t.Error("Expected call to StateStorageMock.Lock")
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.LockMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterLockCounter) < 1 {
-		m.t.Error("Expected call to StateStorageMock.Lock")
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcLock != nil && mm_atomic.LoadUint64(&m.afterLockCounter) < 1 {
-		m.t.Error("Expected call to StateStorageMock.Lock")
-	}
-}
-
 type mStateStorageMockOnPulse struct {
 	mock               *StateStorageMock
 	defaultExpectation *StateStorageMockOnPulseExpectation
@@ -1008,141 +858,6 @@ func (m *StateStorageMock) MinimockOnPulseInspect() {
 	// if func was set then invocations count should be greater than zero
 	if m.funcOnPulse != nil && mm_atomic.LoadUint64(&m.afterOnPulseCounter) < 1 {
 		m.t.Error("Expected call to StateStorageMock.OnPulse")
-	}
-}
-
-type mStateStorageMockUnlock struct {
-	mock               *StateStorageMock
-	defaultExpectation *StateStorageMockUnlockExpectation
-	expectations       []*StateStorageMockUnlockExpectation
-}
-
-// StateStorageMockUnlockExpectation specifies expectation struct of the StateStorage.Unlock
-type StateStorageMockUnlockExpectation struct {
-	mock *StateStorageMock
-
-	Counter uint64
-}
-
-// Expect sets up expected params for StateStorage.Unlock
-func (mmUnlock *mStateStorageMockUnlock) Expect() *mStateStorageMockUnlock {
-	if mmUnlock.mock.funcUnlock != nil {
-		mmUnlock.mock.t.Fatalf("StateStorageMock.Unlock mock is already set by Set")
-	}
-
-	if mmUnlock.defaultExpectation == nil {
-		mmUnlock.defaultExpectation = &StateStorageMockUnlockExpectation{}
-	}
-
-	return mmUnlock
-}
-
-// Inspect accepts an inspector function that has same arguments as the StateStorage.Unlock
-func (mmUnlock *mStateStorageMockUnlock) Inspect(f func()) *mStateStorageMockUnlock {
-	if mmUnlock.mock.inspectFuncUnlock != nil {
-		mmUnlock.mock.t.Fatalf("Inspect function is already set for StateStorageMock.Unlock")
-	}
-
-	mmUnlock.mock.inspectFuncUnlock = f
-
-	return mmUnlock
-}
-
-// Return sets up results that will be returned by StateStorage.Unlock
-func (mmUnlock *mStateStorageMockUnlock) Return() *StateStorageMock {
-	if mmUnlock.mock.funcUnlock != nil {
-		mmUnlock.mock.t.Fatalf("StateStorageMock.Unlock mock is already set by Set")
-	}
-
-	if mmUnlock.defaultExpectation == nil {
-		mmUnlock.defaultExpectation = &StateStorageMockUnlockExpectation{mock: mmUnlock.mock}
-	}
-
-	return mmUnlock.mock
-}
-
-//Set uses given function f to mock the StateStorage.Unlock method
-func (mmUnlock *mStateStorageMockUnlock) Set(f func()) *StateStorageMock {
-	if mmUnlock.defaultExpectation != nil {
-		mmUnlock.mock.t.Fatalf("Default expectation is already set for the StateStorage.Unlock method")
-	}
-
-	if len(mmUnlock.expectations) > 0 {
-		mmUnlock.mock.t.Fatalf("Some expectations are already set for the StateStorage.Unlock method")
-	}
-
-	mmUnlock.mock.funcUnlock = f
-	return mmUnlock.mock
-}
-
-// Unlock implements StateStorage
-func (mmUnlock *StateStorageMock) Unlock() {
-	mm_atomic.AddUint64(&mmUnlock.beforeUnlockCounter, 1)
-	defer mm_atomic.AddUint64(&mmUnlock.afterUnlockCounter, 1)
-
-	if mmUnlock.inspectFuncUnlock != nil {
-		mmUnlock.inspectFuncUnlock()
-	}
-
-	if mmUnlock.UnlockMock.defaultExpectation != nil {
-		mm_atomic.AddUint64(&mmUnlock.UnlockMock.defaultExpectation.Counter, 1)
-
-		return
-
-	}
-	if mmUnlock.funcUnlock != nil {
-		mmUnlock.funcUnlock()
-		return
-	}
-	mmUnlock.t.Fatalf("Unexpected call to StateStorageMock.Unlock.")
-
-}
-
-// UnlockAfterCounter returns a count of finished StateStorageMock.Unlock invocations
-func (mmUnlock *StateStorageMock) UnlockAfterCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmUnlock.afterUnlockCounter)
-}
-
-// UnlockBeforeCounter returns a count of StateStorageMock.Unlock invocations
-func (mmUnlock *StateStorageMock) UnlockBeforeCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmUnlock.beforeUnlockCounter)
-}
-
-// MinimockUnlockDone returns true if the count of the Unlock invocations corresponds
-// the number of defined expectations
-func (m *StateStorageMock) MinimockUnlockDone() bool {
-	for _, e := range m.UnlockMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			return false
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.UnlockMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterUnlockCounter) < 1 {
-		return false
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcUnlock != nil && mm_atomic.LoadUint64(&m.afterUnlockCounter) < 1 {
-		return false
-	}
-	return true
-}
-
-// MinimockUnlockInspect logs each unmet expectation
-func (m *StateStorageMock) MinimockUnlockInspect() {
-	for _, e := range m.UnlockMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			m.t.Error("Expected call to StateStorageMock.Unlock")
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.UnlockMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterUnlockCounter) < 1 {
-		m.t.Error("Expected call to StateStorageMock.Unlock")
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcUnlock != nil && mm_atomic.LoadUint64(&m.afterUnlockCounter) < 1 {
-		m.t.Error("Expected call to StateStorageMock.Unlock")
 	}
 }
 
@@ -1364,17 +1079,13 @@ func (m *StateStorageMock) MinimockUpsertExecutionStateInspect() {
 // MinimockFinish checks that all mocked methods have been called the expected number of times
 func (m *StateStorageMock) MinimockFinish() {
 	if !m.minimockDone() {
-		m.MinimockGetExecutionArchiveInspect()
+		m.MinimockGetExecutionRegistryInspect()
 
 		m.MinimockGetExecutionStateInspect()
 
 		m.MinimockIsEmptyInspect()
 
-		m.MinimockLockInspect()
-
 		m.MinimockOnPulseInspect()
-
-		m.MinimockUnlockInspect()
 
 		m.MinimockUpsertExecutionStateInspect()
 		m.t.FailNow()
@@ -1400,11 +1111,9 @@ func (m *StateStorageMock) MinimockWait(timeout mm_time.Duration) {
 func (m *StateStorageMock) minimockDone() bool {
 	done := true
 	return done &&
-		m.MinimockGetExecutionArchiveDone() &&
+		m.MinimockGetExecutionRegistryDone() &&
 		m.MinimockGetExecutionStateDone() &&
 		m.MinimockIsEmptyDone() &&
-		m.MinimockLockDone() &&
 		m.MinimockOnPulseDone() &&
-		m.MinimockUnlockDone() &&
 		m.MinimockUpsertExecutionStateDone()
 }

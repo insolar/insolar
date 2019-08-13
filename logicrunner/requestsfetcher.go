@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/artifacts"
+	"github.com/insolar/insolar/logicrunner/common"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/logicrunner.RequestsFetcher -o ./ -s _mock.go -g
@@ -126,7 +127,7 @@ func (rf *requestsFetcher) fetch(ctx context.Context) error {
 		switch v := request.(type) {
 		case *record.IncomingRequest:
 			requestCtx := freshContextFromContextAndRequest(ctx, *v)
-			tr := NewTranscript(requestCtx, reqRef, *v)
+			tr := common.NewTranscript(requestCtx, reqRef, *v)
 			rf.broker.AddRequestsFromLedger(ctx, tr)
 		case *record.OutgoingRequest:
 			rf.os.SendAbandonedOutgoingRequest(ctx, reqRef, v)

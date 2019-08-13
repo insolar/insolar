@@ -63,6 +63,7 @@ import (
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/keystore"
 	"github.com/insolar/insolar/network"
@@ -76,7 +77,6 @@ import (
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/insolar/insolar/testutils"
 )
 
 var (
@@ -370,7 +370,7 @@ func nodesFromInfo(nodeInfos []*nodeMeta) ([]insolar.NetworkNode, []insolar.Netw
 
 func newNetworkNode(addr string, role insolar.StaticRole, pk crypto.PublicKey) node.MutableNode {
 	n := node.NewNode(
-		testutils.RandomRef(),
+		gen.Reference(),
 		role,
 		pk,
 		addr,

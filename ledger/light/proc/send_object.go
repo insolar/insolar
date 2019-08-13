@@ -43,7 +43,7 @@ type SendObject struct {
 		jets        jet.Storage
 		jetFetcher  executor.JetFetcher
 		records     object.RecordAccessor
-		indices     object.IndexAccessor
+		indexes     object.IndexAccessor
 		sender      bus.Sender
 	}
 }
@@ -63,14 +63,14 @@ func (p *SendObject) Dep(
 	jets jet.Storage,
 	jetFetcher executor.JetFetcher,
 	records object.RecordAccessor,
-	indices object.IndexAccessor,
+	indexes object.IndexAccessor,
 	sender bus.Sender,
 ) {
 	p.dep.coordinator = coordinator
 	p.dep.jets = jets
 	p.dep.jetFetcher = jetFetcher
 	p.dep.records = records
-	p.dep.indices = indices
+	p.dep.indexes = indexes
 	p.dep.sender = sender
 }
 
@@ -158,7 +158,7 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 		return nil
 	}
 
-	idx, err := p.dep.indices.ForID(ctx, flow.Pulse(ctx), p.objectID)
+	idx, err := p.dep.indexes.ForID(ctx, flow.Pulse(ctx), p.objectID)
 	if err != nil {
 		return errors.Wrap(err, "can't get index from storage")
 	}

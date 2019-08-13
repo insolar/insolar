@@ -122,7 +122,7 @@ func (js *JetSplitterDefault) Do(
 		} else {
 			dr, err := js.dropAccessor.ForPulse(ctx, jetID, endedPulse)
 			if err != nil {
-				return nil, errors.Wrap(err, "failed to fetch drop for split")
+				return nil, errors.Wrapf(err, "failed to fetch drop for split. jetID: %s, pulse: %d", jetID.DebugString(), endedPulse)
 			}
 			endedDrop = dr
 		}

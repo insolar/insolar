@@ -62,8 +62,9 @@ type Data struct {
 }
 
 type Result struct {
-	ContractResult interface{} `json:"callResult,omitempty"`
-	TraceID        string      `json:"traceID,omitempty"`
+	ContractResult   interface{} `json:"callResult,omitempty"`
+	RequestReference string      `json:"requestReference,omitempty"`
+	TraceID          string      `json:"traceID,omitempty"`
 }
 
 // UserConfigJSON holds info about user

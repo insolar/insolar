@@ -56,6 +56,7 @@ import (
 
 	"github.com/insolar/insolar/certificate"
 
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/reply"
 
 	"github.com/insolar/insolar/network"
@@ -101,7 +102,7 @@ func TestSwitch(t *testing.T) {
 
 	require.Equal(t, "CompleteNetworkState", ge.GetState().String())
 	require.False(t, gilreleased)
-	cref := testutils.RandomRef()
+	cref := gen.Reference()
 
 	for _, state := range []insolar.NetworkState{insolar.NoNetworkState,
 		insolar.JoinerBootstrap, insolar.CompleteNetworkState} {
@@ -159,7 +160,7 @@ func TestDumbComplete_GetCert(t *testing.T) {
 	require.Equal(t, "CompleteNetworkState", ge.GetState().String())
 	require.False(t, gilreleased)
 
-	cref := testutils.RandomRef()
+	cref := gen.Reference()
 
 	CR.SendRequestMock.Set(func(ctx context.Context, ref *insolar.Reference, method string, argsIn []interface{},
 	) (r insolar.Reply, r1 error) {
@@ -175,9 +176,6 @@ func TestDumbComplete_GetCert(t *testing.T) {
 	})
 
 	CM.GetCertificateMock.Set(func() (r insolar.Certificate) { return &certificate.Certificate{} })
-	CM.NewUnsignedCertificateMock.Set(func(p string, p1 string, p2 string) (r insolar.Certificate, r1 error) {
-		return &certificate.Certificate{}, nil
-	})
 	cert, err := ge.Auther().GetCert(ctx, &cref)
 
 	require.NoError(t, err)

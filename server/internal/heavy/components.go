@@ -19,15 +19,16 @@ package heavy
 import (
 	"context"
 	"fmt"
-	"github.com/insolar/insolar/network"
 	"net"
+
+	"github.com/insolar/insolar/network"
 
 	"github.com/insolar/insolar/ledger/heavy/exporter"
 	"google.golang.org/grpc"
 
 	"github.com/ThreeDotsLabs/watermill"
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
-	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
+	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
 
 	"github.com/insolar/insolar/ledger/heavy/executor"
 	"github.com/insolar/insolar/log"
@@ -123,9 +124,21 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 	c.NodeRole = CertManager.GetCertificate().GetRole().String()
 
 	logger := inslogger.FromContext(ctx)
-	wmLogger := log.NewWatermillLogAdapter(logger)
-	pubSub := gochannel.NewGoChannel(gochannel.Config{}, wmLogger)
-	pubSub = internal.PubSubWrapper(ctx, &c.cmp, cfg.Introspection, pubSub)
+
+	// Watermill stuff.
+	var (
+		wmLogger   *log.WatermillLogAdapter
+		publisher  watermillMsg.Publisher
+		subscriber watermillMsg.Subscriber
+	)
+	{
+		wmLogger = log.NewWatermillLogAdapter(logger)
+		pubsub := gochannel.NewGoChannel(gochannel.Config{}, wmLogger)
+		subscriber = pubsub
+		publisher = pubsub
+		// Wrapped watermill publisher for introspection.
+		publisher = internal.PublisherWrapper(ctx, &c.cmp, cfg.Introspection, publisher)
+	}
 
 	// Network.
 	var (
@@ -219,7 +232,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start MessageBus")
 		}
-		WmBus = bus.NewBus(cfg.Bus, pubSub, Pulses, Coordinator, CryptoScheme)
+		WmBus = bus.NewBus(cfg.Bus, publisher, Pulses, Coordinator, CryptoScheme)
 	}
 
 	metricsHandler, err := metrics.NewMetrics(
@@ -251,6 +264,11 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 
 		sp := pulse.NewStartPulse()
 
+		backupMaker, err := executor.NewBackupMaker(ctx, DB, cfg.Ledger.Backup, JetKeeper.TopSyncPulse())
+		if err != nil {
+			return nil, errors.Wrap(err, "failed create backuper")
+		}
+
 		pm := pulsemanager.NewPulseManager()
 		pm.Bus = Bus
 		pm.NodeNet = NodeNetwork
@@ -260,7 +278,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		pm.PulseAccessor = Pulses
 		pm.JetModifier = jets
 		pm.StartPulse = sp
-		pm.FinalizationKeeper = executor.NewFinalizationKeeperDefault(JetKeeper, Termination, Pulses, cfg.Ledger.LightChainLimit)
+		pm.FinalizationKeeper = executor.NewFinalizationKeeperDefault(JetKeeper, Pulses, cfg.Ledger.LightChainLimit)
 
 		h := handler.New(cfg.Ledger)
 		h.RecordAccessor = Records
@@ -280,6 +298,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		h.JetTree = jets
 		h.DropDB = drops
 		h.JetKeeper = JetKeeper
+		h.BackupMaker = backupMaker
 		h.Sender = WmBus
 
 		PulseManager = pm
@@ -357,7 +376,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		CertManager,
 		NodeNetwork,
 		NetworkService,
-		pubSub,
+		publisher,
 	)
 	err = c.cmp.Init(ctx)
 	if err != nil {
@@ -370,7 +389,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		}
 	}
 
-	c.startWatermill(ctx, wmLogger, pubSub, WmBus, NetworkService.SendMessageHandler, Handler.Process)
+	c.startWatermill(ctx, wmLogger, subscriber, WmBus, NetworkService.SendMessageHandler, Handler.Process)
 
 	return c, nil
 }
@@ -398,9 +417,9 @@ func (c *components) Stop(ctx context.Context) error {
 func (c *components) startWatermill(
 	ctx context.Context,
 	logger watermill.LoggerAdapter,
-	pubSub watermillMsg.PubSub,
+	sub watermillMsg.Subscriber,
 	b *bus.Bus,
-	outHandler, inHandler watermillMsg.HandlerFunc,
+	outHandler, inHandler watermillMsg.NoPublishHandlerFunc,
 ) {
 	inRouter, err := watermillMsg.NewRouter(watermillMsg.RouterConfig{}, logger)
 	if err != nil {
@@ -414,7 +433,7 @@ func (c *components) startWatermill(
 	outRouter.AddNoPublisherHandler(
 		"OutgoingHandler",
 		bus.TopicOutgoing,
-		pubSub,
+		sub,
 		outHandler,
 	)
 
@@ -426,7 +445,7 @@ func (c *components) startWatermill(
 	inRouter.AddNoPublisherHandler(
 		"IncomingHandler",
 		bus.TopicIncoming,
-		pubSub,
+		sub,
 		inHandler,
 	)
 
@@ -438,7 +457,7 @@ func (c *components) startWatermill(
 
 func startRouter(ctx context.Context, router *watermillMsg.Router) {
 	go func() {
-		if err := router.Run(); err != nil {
+		if err := router.Run(ctx); err != nil {
 			inslogger.FromContext(ctx).Error("Error while running router", err)
 		}
 	}()

@@ -54,22 +54,22 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/testutils"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestAccessor(t *testing.T) {
 	t.Skip("FIXME")
 
-	node := newMutableNode(testutils.RandomRef(), insolar.StaticRoleVirtual, nil, insolar.NodeReady, "127.0.0.1:0", "")
+	node := newMutableNode(gen.Reference(), insolar.StaticRoleVirtual, nil, insolar.NodeReady, "127.0.0.1:0", "")
 
-	node2 := newMutableNode(testutils.RandomRef(), insolar.StaticRoleVirtual, nil, insolar.NodePending, "127.0.0.1:0", "")
+	node2 := newMutableNode(gen.Reference(), insolar.StaticRoleVirtual, nil, insolar.NodePending, "127.0.0.1:0", "")
 	node2.SetShortID(11)
 
-	node3 := newMutableNode(testutils.RandomRef(), insolar.StaticRoleVirtual, nil, insolar.NodeLeaving, "127.0.0.1:0", "")
+	node3 := newMutableNode(gen.Reference(), insolar.StaticRoleVirtual, nil, insolar.NodeLeaving, "127.0.0.1:0", "")
 	node3.SetShortID(10)
 
-	node4 := newMutableNode(testutils.RandomRef(), insolar.StaticRoleVirtual, nil, insolar.NodeUndefined, "127.0.0.1:0", "")
+	node4 := newMutableNode(gen.Reference(), insolar.StaticRoleVirtual, nil, insolar.NodeUndefined, "127.0.0.1:0", "")
 
 	snapshot := NewSnapshot(insolar.FirstPulseNumber, []insolar.NetworkNode{node, node2, node3, node4})
 	accessor := NewAccessor(snapshot)

@@ -27,6 +27,7 @@ import (
 	"go.opencensus.io/trace"
 
 	"github.com/insolar/go-actors/actor/system"
+
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
@@ -43,6 +44,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/builtin"
 	lrCommon "github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/goplugin"
+	"github.com/insolar/insolar/logicrunner/machinesmanager"
 	"github.com/insolar/insolar/logicrunner/writecontroller"
 	"github.com/insolar/insolar/network"
 )
@@ -61,7 +63,7 @@ type LogicRunner struct {
 	DescriptorsCache           artifacts.DescriptorsCache         `inject:""`
 	JetCoordinator             jet.Coordinator                    `inject:""`
 	RequestsExecutor           RequestsExecutor                   `inject:""`
-	MachinesManager            MachinesManager                    `inject:""`
+	MachinesManager            machinesmanager.MachinesManager    `inject:""`
 	JetStorage                 jet.Storage                        `inject:""`
 	Publisher                  watermillMsg.Publisher
 	Sender                     bus.Sender
@@ -112,7 +114,7 @@ func (lr *LogicRunner) Init(ctx context.Context) error {
 		lr.OutgoingSender,
 	)
 
-	lr.SenderWithRetry = bus.NewWaitOKWithRetrySender(lr.Sender, lr.PulseAccessor, 3)
+	lr.SenderWithRetry = bus.NewWaitOKWithRetrySender(lr.Sender, lr.PulseAccessor, 1)
 
 	lr.rpc = lrCommon.NewRPC(
 		NewRPCMethods(lr.ArtifactManager, lr.DescriptorsCache, lr.ContractRequester, lr.StateStorage, lr.OutgoingSender),
@@ -269,10 +271,6 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, oldPulse insolar.Pulse, newP
 }
 
 func (lr *LogicRunner) stopIfNeeded(ctx context.Context) {
-	// lock is required to access LogicRunner.state
-	lr.StateStorage.Lock()
-	defer lr.StateStorage.Unlock()
-
 	if lr.StateStorage.IsEmpty() {
 		lr.stopLock.Lock()
 		if lr.isStopping {
@@ -311,7 +309,7 @@ func (lr *LogicRunner) AddUnwantedResponse(ctx context.Context, msg insolar.Mess
 	return lr.ResultsMatcher.AddUnwantedResponse(ctx, m)
 }
 
-func convertQueueToMessageQueue(ctx context.Context, queue []*Transcript) []message.ExecutionQueueElement {
+func convertQueueToMessageQueue(ctx context.Context, queue []*lrCommon.Transcript) []message.ExecutionQueueElement {
 	mq := make([]message.ExecutionQueueElement, 0)
 	var traces string
 	for _, elem := range queue {

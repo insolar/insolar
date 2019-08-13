@@ -309,6 +309,11 @@ func (pf *ParsedFile) WriteWrapper(out io.Writer, packageName string) error {
 		return err
 	}
 
+	err = pf.checkSagaIsNotImmutable(methodsInfo)
+	if err != nil {
+		return err
+	}
+
 	data := map[string]interface{}{
 		"Package":            packageName,
 		"ContractType":       pf.contract,
@@ -321,6 +326,31 @@ func (pf *ParsedFile) WriteWrapper(out io.Writer, packageName string) error {
 	}
 
 	return formatAndWrite(out, "wrapper", data)
+}
+
+func (pf *ParsedFile) checkSagaIsNotImmutable(methodsInfo []map[string]interface{}) error {
+	for _, mi := range methodsInfo {
+		sagaInfo := mi["SagaInfo"].(*SagaInfo)
+		if !sagaInfo.IsSaga {
+			continue
+		}
+
+		if mi["Immutable"].(bool) {
+			return fmt.Errorf("semantic error: '%s' can't be a saga because it's immutable", mi["Name"].(string))
+		}
+
+		for _, ri := range methodsInfo {
+			if ri["Name"].(string) != sagaInfo.RollbackMethodName {
+				continue
+			}
+
+			if ri["Immutable"].(bool) {
+				return fmt.Errorf("semantic error: '%s' can't be saga's rollback method because it's immutable", ri["Name"].(string))
+			}
+		}
+	}
+
+	return nil
 }
 
 func (pf *ParsedFile) checkSagaRollbackMethodsExistAndMatch(funcInfo []map[string]interface{}) error {
@@ -417,6 +447,11 @@ func (pf *ParsedFile) WriteProxy(classReference string, out io.Writer) error {
 	allMethodsProxies := pf.functionInfoForProxy(pf.methods[pf.contract])
 
 	err = pf.checkSagaRollbackMethodsExistAndMatch(allMethodsProxies)
+	if err != nil {
+		return err
+	}
+
+	err = pf.checkSagaIsNotImmutable(allMethodsProxies)
 	if err != nil {
 		return err
 	}

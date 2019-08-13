@@ -17,12 +17,11 @@
 package foundation
 
 import (
-	"crypto/md5"
+	"bytes"
 	"testing"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 type TestStable struct {
@@ -53,25 +52,33 @@ func TestStableMap_serialization(t *testing.T) {
 }
 
 func TestStableMap_is_deterministic(t *testing.T) {
-	s := TestStable{}
+	s1 := TestStable{}
+	s1.A = "foobar"
+	s1.B = make(StableMap)
+	s1.B["foo"] = "123"
+	s1.B["bar"] = "456"
+	s1.B["baz"] = "789"
+	s1.B["123"] = "foo"
+	s1.B["456"] = "bar"
+	s1.B["789"] = "baz"
+	s1.C = 123
 
-	s.A = "foobar"
-	s.B = make(StableMap)
-	s.B["foo"] = "123"
-	s.B["bar"] = "456"
-	s.B["baz"] = "789"
-	s.B["123"] = "foo"
-	s.B["456"] = "bar"
-	s.B["789"] = "baz"
-	s.C = 123
+	s2 := TestStable{}
+	s2.C = 123
+	s2.A = "foobar"
+	s2.B = make(StableMap)
+	s2.B["789"] = "baz"
+	s2.B["456"] = "bar"
+	s2.B["123"] = "foo"
+	s2.B["baz"] = "789"
+	s2.B["bar"] = "456"
+	s2.B["foo"] = "123"
 
-	buf := insolar.MustSerialize(s)
-	sum := md5.Sum(buf)
+	buf1 := insolar.MustSerialize(s1)
 
-	for i := 0; i < 10000; i++ {
-		buf = insolar.MustSerialize(s)
-		require.Equal(t, sum, md5.Sum(buf))
-	}
+	buf2 := insolar.MustSerialize(s2)
+
+	assert.Equal(t, buf1, buf2)
 }
 
 type TestMap struct {
@@ -81,7 +88,6 @@ type TestMap struct {
 }
 
 func TestStableMap_common_map_is_not_deterministic(t *testing.T) {
-	hashmap := make(map[[16]byte]uint)
 	s := TestMap{}
 
 	s.A = "foobar"
@@ -94,12 +100,13 @@ func TestStableMap_common_map_is_not_deterministic(t *testing.T) {
 	s.B["789"] = "baz"
 	s.C = 123
 
+	firstBuf := insolar.MustSerialize(s)
 	var buf []byte
 	for i := 0; i < 10000; i++ {
 		buf = insolar.MustSerialize(s)
-		sum := md5.Sum(buf)
-		hashmap[sum]++
+		if !bytes.Equal(firstBuf, buf) {
+			break
+		}
 	}
-
-	assert.Greater(t, len(hashmap), 1)
+	assert.NotEqual(t, firstBuf, buf)
 }

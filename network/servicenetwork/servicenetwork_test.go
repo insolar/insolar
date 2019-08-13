@@ -65,6 +65,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/network/node"
@@ -89,7 +90,7 @@ func prepareNetwork(t *testing.T, cfg configuration.Configuration) *ServiceNetwo
 
 	nodeKeeper := networkUtils.NewNodeKeeperMock(t)
 	nodeMock := networkUtils.NewNetworkNodeMock(t)
-	nodeMock.IDMock.Return(testutils.RandomRef())
+	nodeMock.IDMock.Return(gen.Reference())
 	nodeKeeper.GetOriginMock.Return(nodeMock)
 	serviceNetwork.NodeKeeper = nodeKeeper
 
@@ -110,14 +111,14 @@ func TestSendMessageHandler_ReceiverNotSet(t *testing.T) {
 
 	inMsg := message.NewMessage(watermill.NewUUID(), data)
 
-	_, err = serviceNetwork.SendMessageHandler(inMsg)
+	err = serviceNetwork.SendMessageHandler(inMsg)
 	require.NoError(t, err)
 }
 
 func TestSendMessageHandler_SameNode(t *testing.T) {
 	cfg := configuration.NewConfiguration()
 	serviceNetwork, err := NewServiceNetwork(cfg, &component.Manager{})
-	nodeRef := testutils.RandomRef()
+	nodeRef := gen.Reference()
 	nodeN := networkUtils.NewNodeKeeperMock(t)
 	nodeN.GetOriginMock.Set(func() (r insolar.NetworkNode) {
 		n := networkUtils.NewNetworkNodeMock(t)
@@ -143,9 +144,8 @@ func TestSendMessageHandler_SameNode(t *testing.T) {
 
 	inMsg := message.NewMessage(watermill.NewUUID(), data)
 
-	outMsgs, err := serviceNetwork.SendMessageHandler(inMsg)
+	err = serviceNetwork.SendMessageHandler(inMsg)
 	require.NoError(t, err)
-	require.Nil(t, outMsgs)
 }
 
 func TestSendMessageHandler_SendError(t *testing.T) {
@@ -157,7 +157,7 @@ func TestSendMessageHandler_SendError(t *testing.T) {
 	nodeN.GetOriginMock.Set(func() (r insolar.NetworkNode) {
 		n := networkUtils.NewNetworkNodeMock(t)
 		n.IDMock.Set(func() (r insolar.Reference) {
-			return testutils.RandomRef()
+			return gen.Reference()
 		})
 		return n
 	})
@@ -174,14 +174,14 @@ func TestSendMessageHandler_SendError(t *testing.T) {
 	p := []byte{1, 2, 3, 4, 5}
 	meta := payload.Meta{
 		Payload:  p,
-		Receiver: testutils.RandomRef(),
+		Receiver: gen.Reference(),
 	}
 	data, err := meta.Marshal()
 	require.NoError(t, err)
 
 	inMsg := message.NewMessage(watermill.NewUUID(), data)
 
-	_, err = serviceNetwork.SendMessageHandler(inMsg)
+	err = serviceNetwork.SendMessageHandler(inMsg)
 	require.NoError(t, err)
 }
 
@@ -194,7 +194,7 @@ func TestSendMessageHandler_WrongReply(t *testing.T) {
 	nodeN.GetOriginMock.Set(func() (r insolar.NetworkNode) {
 		n := networkUtils.NewNetworkNodeMock(t)
 		n.IDMock.Set(func() (r insolar.Reference) {
-			return testutils.RandomRef()
+			return gen.Reference()
 		})
 		return n
 	})
@@ -211,14 +211,14 @@ func TestSendMessageHandler_WrongReply(t *testing.T) {
 	p := []byte{1, 2, 3, 4, 5}
 	meta := payload.Meta{
 		Payload:  p,
-		Receiver: testutils.RandomRef(),
+		Receiver: gen.Reference(),
 	}
 	data, err := meta.Marshal()
 	require.NoError(t, err)
 
 	inMsg := message.NewMessage(watermill.NewUUID(), data)
 
-	_, err = serviceNetwork.SendMessageHandler(inMsg)
+	err = serviceNetwork.SendMessageHandler(inMsg)
 	require.NoError(t, err)
 }
 
@@ -229,7 +229,7 @@ func TestSendMessageHandler(t *testing.T) {
 	nodeN.GetOriginMock.Set(func() (r insolar.NetworkNode) {
 		n := networkUtils.NewNetworkNodeMock(t)
 		n.IDMock.Set(func() (r insolar.Reference) {
-			return testutils.RandomRef()
+			return gen.Reference()
 		})
 		return n
 	})
@@ -246,16 +246,15 @@ func TestSendMessageHandler(t *testing.T) {
 	p := []byte{1, 2, 3, 4, 5}
 	meta := payload.Meta{
 		Payload:  p,
-		Receiver: testutils.RandomRef(),
+		Receiver: gen.Reference(),
 	}
 	data, err := meta.Marshal()
 	require.NoError(t, err)
 
 	inMsg := message.NewMessage(watermill.NewUUID(), data)
 
-	outMsgs, err := serviceNetwork.SendMessageHandler(inMsg)
+	err = serviceNetwork.SendMessageHandler(inMsg)
 	require.NoError(t, err)
-	require.Nil(t, outMsgs)
 }
 
 type stater struct{}
@@ -267,7 +266,7 @@ func (s *stater) State() []byte {
 func TestServiceNetwork_StartStop(t *testing.T) {
 	t.Skip("fixme")
 	cm := &component.Manager{}
-	origin := insolar.Reference{}
+	origin := gen.Reference()
 	nk := nodenetwork.NewNodeKeeper(node.NewNode(origin, insolar.StaticRoleUnknown, nil, "127.0.0.1:0", ""))
 	cert := &certificate.Certificate{}
 	cert.Reference = origin.String()
