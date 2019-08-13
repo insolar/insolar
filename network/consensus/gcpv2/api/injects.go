@@ -52,10 +52,10 @@ package api
 
 import (
 	"context"
-	"time"
-
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/power"
+	"time"
+
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
@@ -135,6 +135,9 @@ type EphemeralControlFeeder interface {
 type ConsensusControlFeeder interface {
 	TrafficControlFeeder
 	PulseControlFeeder
+
+	/* Is called on consensus termination when nothing was send to a channel provided with UpstreamController.PreparePulseChange  */
+	OnFailedPreparePulseChange() // TODO implement logic to call this method
 
 	GetRequiredPowerLevel() power.Request
 	OnAppliedMembershipProfile(mode member.OpMode, pw member.Power, effectiveSince pulse.Number)

@@ -123,6 +123,9 @@ func (cf *ConsensusControlFeeder) OnAppliedMembershipProfile(mode member.OpMode,
 func (cf *ConsensusControlFeeder) OnAppliedGracefulLeave(exitCode uint32, effectiveSince pulse.Number) {
 }
 
+func (cf *ConsensusControlFeeder) OnFailedPreparePulseChange() {
+}
+
 func (cf *ConsensusControlFeeder) SetTrafficLimit(level capacity.Level, duration time.Duration) {
 	panic("implement me")
 }
