@@ -156,7 +156,7 @@ func (a *outgoingSenderActorState) sendOutgoingRequest(ctx context.Context, outg
 
 	// Actually make a call.
 	callMsg := &message.CallMethod{IncomingRequest: *incoming}
-	res, err := a.cr.Call(ctx, callMsg)
+	res, _, err := a.cr.Call(ctx, callMsg)
 	if err != nil {
 		return nil, nil, nil, err
 	}

@@ -77,21 +77,21 @@ func (ar *Runner) checkSeed(paramsSeed string) (insolar.PulseNumber, error) {
 	return 0, errors.New("[ checkSeed ] Incorrect seed")
 }
 
-func (ar *Runner) makeCall(ctx context.Context, method string, params requester.Params, rawBody []byte, signature string, pulseTimeStamp int64, seedPulse insolar.PulseNumber) (interface{}, error) {
+func (ar *Runner) makeCall(ctx context.Context, method string, params requester.Params, rawBody []byte, signature string, pulseTimeStamp int64, seedPulse insolar.PulseNumber) (interface{}, *insolar.Reference, error) {
 	ctx, span := instracer.StartSpan(ctx, "SendRequest "+method)
 	defer span.End()
 
 	reference, err := insolar.NewReferenceFromBase58(params.Reference)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ makeCall ] failed to parse params.Reference")
+		return nil, nil, errors.Wrap(err, "[ makeCall ] failed to parse params.Reference")
 	}
 
 	requestArgs, err := insolar.Serialize([]interface{}{rawBody, signature, pulseTimeStamp})
 	if err != nil {
-		return nil, errors.Wrap(err, "[ makeCall ] failed to marshal arguments")
+		return nil, nil, errors.Wrap(err, "[ makeCall ] failed to marshal arguments")
 	}
 
-	res, err := ar.ContractRequester.SendRequestWithPulse(
+	res, ref, err := ar.ContractRequester.SendRequestWithPulse(
 		ctx,
 		reference,
 		"Call",
@@ -100,20 +100,20 @@ func (ar *Runner) makeCall(ctx context.Context, method string, params requester.
 	)
 
 	if err != nil {
-		return nil, errors.Wrap(err, "[ makeCall ] Can't send request")
+		return nil, ref, errors.Wrap(err, "[ makeCall ] Can't send request")
 	}
 
 	result, contractErr, err := extractor.CallResponse(res.(*reply.CallMethod).Result)
 
 	if err != nil {
-		return nil, errors.Wrap(err, "[ makeCall ] Can't extract response")
+		return nil, ref, errors.Wrap(err, "[ makeCall ] Can't extract response")
 	}
 
 	if contractErr != nil {
-		return nil, errors.Wrap(errors.New(contractErr.S), "[ makeCall ] Error in called method")
+		return nil, ref, errors.Wrap(errors.New(contractErr.S), "[ makeCall ] Error in called method")
 	}
 
-	return result, nil
+	return result, ref, nil
 }
 
 func contains(s []string, e string) bool {

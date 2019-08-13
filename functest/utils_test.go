@@ -27,7 +27,6 @@ import (
 	"net/http"
 	"regexp"
 	"runtime"
-	"strings"
 	"testing"
 	"time"
 
@@ -104,12 +103,12 @@ type rpcStatusResponse struct {
 	Result statusResponse `json:"result"`
 }
 
-func createMember(t testing.TB) *user {
+func createMember(t *testing.T) *user {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
 	member.ref = root.ref
 
-	result, err := retryableCreateMember(member, "member.create", true)
+	result, err := signedRequest(t, member, "member.create", nil)
 	require.NoError(t, err)
 	ref, ok := result.(map[string]interface{})["reference"].(string)
 	require.True(t, ok)
@@ -117,20 +116,43 @@ func createMember(t testing.TB) *user {
 	return member
 }
 
-func addBurnAddress(t testing.TB) {
+func createMigrationMember(t *testing.T) *user {
+	migrationAddress := testutils.RandomString()
+
+	return createMigrationMemberForMA(t, migrationAddress)
+}
+
+func createMigrationMemberForMA(t *testing.T, ma string) *user {
+	member, err := newUserWithKeys()
+	require.NoError(t, err)
+	member.ref = root.ref
+
+	_, err = signedRequest(t, &migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{ma}})
+	require.NoError(t, err)
+
+	result, err := signedRequest(t, member, "member.migrationCreate", nil)
+	require.NoError(t, err)
+	ref, ok := result.(map[string]interface{})["reference"].(string)
+	require.True(t, ok)
+	member.ref = ref
+	return member
+
+}
+
+func addBurnAddress(t *testing.T) {
 	ba := testutils.RandomString()
-	_, err := signedRequest(&migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{ba}})
+	_, err := signedRequest(t, &migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{ba}})
 	require.NoError(t, err)
 }
 
-func getBalanceNoErr(t testing.TB, caller *user, reference string) *big.Int {
-	balance, err := getBalance(caller, reference)
+func getBalanceNoErr(t *testing.T, caller *user, reference string) *big.Int {
+	balance, err := getBalance(t, caller, reference)
 	require.NoError(t, err)
 	return balance
 }
 
-func getBalance(caller *user, reference string) (*big.Int, error) {
-	res, err := signedRequest(caller, "wallet.getBalance", map[string]interface{}{"reference": reference})
+func getBalance(t *testing.T, caller *user, reference string) (*big.Int, error) {
+	res, err := signedRequest(t, caller, "wallet.getBalance", map[string]interface{}{"reference": reference})
 	if err != nil {
 		return nil, err
 	}
@@ -139,6 +161,41 @@ func getBalance(caller *user, reference string) (*big.Int, error) {
 		return nil, fmt.Errorf("can't parse input amount")
 	}
 	return amount, nil
+}
+
+func migrate(t *testing.T, memberRef string, amount string, tx string, ma string, mdNum int) map[string]interface{} {
+	anotherMember := createMember(t)
+
+	_, err := signedRequest(t,
+		&migrationDaemons[mdNum],
+		"deposit.migration",
+		map[string]interface{}{"amount": amount, "ethTxHash": tx, "migrationAddress": ma})
+	require.NoError(t, err)
+	res, err := signedRequest(t, anotherMember, "wallet.getBalance", map[string]interface{}{"reference": memberRef})
+	require.NoError(t, err)
+	deposits, ok := res.(map[string]interface{})["deposits"].(map[string]interface{})
+	require.True(t, ok)
+	deposit, ok := deposits[tx].(map[string]interface{})
+	require.True(t, ok)
+	require.Equal(t, deposit["amount"], amount)
+	require.Equal(t, deposit["ethTxHash"], tx)
+
+	return deposit
+}
+
+func generateMigrationAddress() string {
+	return testutils.RandomString()
+}
+
+func fullMigration(t *testing.T, txHash string) *user {
+	migrationAddress := testutils.RandomString()
+	member := createMigrationMemberForMA(t, migrationAddress)
+
+	migrate(t, member.ref, "1000", txHash, migrationAddress, 0)
+	migrate(t, member.ref, "1000", txHash, migrationAddress, 2)
+	migrate(t, member.ref, "1000", txHash, migrationAddress, 1)
+
+	return member
 }
 
 func getRPSResponseBody(t testing.TB, postParams map[string]interface{}) []byte {
@@ -200,105 +257,35 @@ func unmarshalCallResponse(t testing.TB, body []byte, response *requester.Contra
 	require.NoError(t, err)
 }
 
-func createMemberWithMigrationAddress(migrationAddress string) (string, error) {
-	member, err := newUserWithKeys()
+func signedRequest(t *testing.T, user *user, method string, params interface{}) (interface{}, error) {
+	res, refStr, err := makeSignedRequest(user, method, params)
+
+	msg := "Ref is empty"
 	if err != nil {
-		return "", err
+		msg = msg + " because: " + err.Error()
 	}
+	require.NotEqual(t, "", refStr, msg)
+	require.NotEqual(t, "11111111111111111111111111111111.11111111111111111111111111111111", refStr, msg)
 
-	_, err = signedRequest(&migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{migrationAddress}})
-	if err != nil {
-		return "", err
-	}
+	_, err = insolar.NewReferenceFromBase58(refStr)
+	require.Nil(t, err)
 
-	_, err = retryableMemberMigrationCreate(member, true)
-	if err != nil {
-		return "", err
-	}
-
-	return member.ref, nil
+	return res, err
 }
 
-func migrate(t *testing.T, memberRef string, amount string, tx string, ma string, mdNum int) map[string]interface{} {
-	anotherMember := createMember(t)
+func signedRequestWithEmptyRequestRef(t *testing.T, user *user, method string, params interface{}) (interface{}, error) {
+	res, refStr, err := makeSignedRequest(user, method, params)
 
-	_, err := signedRequest(
-		&migrationDaemons[mdNum],
-		"deposit.migration",
-		map[string]interface{}{"amount": amount, "ethTxHash": tx, "migrationAddress": ma})
-	require.NoError(t, err)
-	res, err := signedRequest(anotherMember, "wallet.getBalance", map[string]interface{}{"reference": memberRef})
-	require.NoError(t, err)
-	deposits, ok := res.(map[string]interface{})["deposits"].(map[string]interface{})
-	require.True(t, ok)
-	deposit, ok := deposits[tx].(map[string]interface{})
-	require.True(t, ok)
-	require.Equal(t, deposit["amount"], amount)
-	require.Equal(t, deposit["ethTxHash"], tx)
+	require.Equal(t, "", refStr)
 
-	return deposit
+	return res, err
 }
 
-func generateMigrationAddress() string {
-	return testutils.RandomString()
-}
-
-func fullMigration(t *testing.T, txHash string) *user {
-
-	member, err := newUserWithKeys()
-	require.NoError(t, err)
-	migrationAddress := generateMigrationAddress()
-	_, err = signedRequest(&migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{migrationAddress}})
-	require.NoError(t, err)
-	_, err = retryableMemberMigrationCreate(member, true)
-	require.NoError(t, err)
-
-	migrate(t, member.ref, "1000", txHash, migrationAddress, 0)
-	migrate(t, member.ref, "1000", txHash, migrationAddress, 2)
-	migrate(t, member.ref, "1000", txHash, migrationAddress, 1)
-
-	return member
-}
-
-func retryableMemberCreate(user *user, updatePublicKey bool) (interface{}, error) {
-	return retryableCreateMember(user, "member.create", updatePublicKey)
-}
-
-func retryableMemberMigrationCreate(user *user, updatePublicKey bool) (interface{}, error) {
-	return retryableCreateMember(user, "member.migrationCreate", updatePublicKey)
-}
-
-func retryableCreateMember(user *user, method string, updatePublicKey bool) (interface{}, error) {
-	// TODO: delete this after deduplication (INS-2778)
-	var result interface{}
-	var err error
-	currentIterNum := 1
-	for ; currentIterNum <= sendRetryCount; currentIterNum++ {
-		result, err = signedRequest(user, method, nil)
-		if err == nil || !strings.Contains(err.Error(), "failed to set reference in public key shard: can't set reference because this key already exists") {
-			if err == nil {
-				user.ref = result.(map[string]interface{})["reference"].(string)
-			}
-			return result, err
-		}
-		fmt.Printf("CreateMember request was duplicated, retry. Attempt for duplicated: %d/%d\n", currentIterNum, sendRetryCount)
-		newUser, nErr := newUserWithKeys()
-		if nErr != nil {
-			return nil, nErr
-		}
-		user.privKey = newUser.privKey
-		if updatePublicKey {
-			user.pubKey = newUser.pubKey
-		}
-	}
-	return result, err
-}
-
-func signedRequest(user *user, method string, params interface{}) (interface{}, error) {
+func makeSignedRequest(user *user, method string, params interface{}) (interface{}, string, error) {
 	ctx := context.TODO()
 	rootCfg, err := requester.CreateUserConfig(user.ref, user.privKey, user.pubKey)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	var caller string
@@ -323,32 +310,29 @@ func signedRequest(user *user, method string, params interface{}) (interface{}, 
 			PublicKey:  user.pubKey,
 			Test:       caller})
 
-		if err != nil {
-			return nil, err
-		}
+	if err != nil {
+		return nil, "", err
+	}
 
 		resp = requester.ContractResponse{}
 		err = json.Unmarshal(res, &resp)
 		if err != nil {
-			return nil, err
+			return nil, "", err
 		}
 
 		break
 	}
 
 	if resp.Error != nil {
-		if currentIterNum > sendRetryCount {
-			return nil, errors.New("Number of retries exceeded. " + resp.Error.Message)
-		}
-
-		return nil, errors.New(resp.Error.Message)
-	} else {
-		if resp.Result == nil {
-			return nil, errors.New("Error and result are nil")
-		} else {
-			return resp.Result.ContractResult, nil
-		}
+		return nil, "", errors.New(resp.Error.Message)
 	}
+
+	if resp.Result == nil {
+		return nil, "", errors.New("Error and result are nil")
+	}
+
+	return resp.Result.ContractResult, resp.Result.RequestReference, nil
+
 }
 
 func newUserWithKeys() (*user, error) {

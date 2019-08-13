@@ -62,7 +62,7 @@ func (cs *ContractService) Call(req *http.Request, args *requester.Params, reque
 
 	setRootReferenceIfNeeded(args)
 
-	callResult, err := cs.runner.makeCall(ctx, "contract.call", *args, requestBody.Raw, signature, 0, seedPulse)
+	callResult, _, err := cs.runner.makeCall(ctx, "contract.call", *args, requestBody.Raw, signature, 0, seedPulse)
 	if err != nil {
 		return err
 	}

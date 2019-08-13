@@ -204,7 +204,7 @@ func TestContractRequester_Call_Timeout(t *testing.T) {
 		},
 	}
 
-	_, err = cr.Call(ctx, msg)
+	_, _, err = cr.Call(ctx, msg)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "canceled")
 	require.Contains(t, err.Error(), "timeout")
