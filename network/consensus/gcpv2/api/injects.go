@@ -109,6 +109,14 @@ type PulseControlFeeder interface {
 	OnFailedPreparePulseChange()
 
 	CanStopOnHastyPulse(pn pulse.Number, expectedEndOfConsensus time.Time) bool
+
+	/* These methods are called IN SYNC with consensus workers and before relevant UpstreamController methods */
+	OnPreparePulseChange(report UpstreamReport)
+	OnCommitPulseChange(report UpstreamReport, pulseData pulse.Data, activeCensus census.Operational)
+	OnCancelPulseChange()
+
+	OnConsensusFinished(report UpstreamReport, expectedCensus census.Operational)
+	OnConsensusAborted()
 }
 
 type EphemeralControlFeeder interface {

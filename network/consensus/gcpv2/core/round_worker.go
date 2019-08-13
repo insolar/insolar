@@ -100,32 +100,37 @@ func (p *RoundStateMachineWorker) OnFullRoundStarting() {
 
 func (p *RoundStateMachineWorker) PreparePulseChange(report api.UpstreamReport, ch chan<- api.UpstreamState) {
 	p.applyState(RoundPulsePreparing)
+	p.controlFeeder.OnPreparePulseChange(report)
 	p.upstream.PreparePulseChange(report, ch)
+}
+
+func (p *RoundStateMachineWorker) CommitPulseChangeByStateless(report api.UpstreamReport, pd pulse.Data, activeCensus census.Operational) {
+	p.applyState(RoundPulsePreparing) // simulate prepare, but ignore upstream
+	p.controlFeeder.OnPreparePulseChange(report)
+	p.CommitPulseChange(report, pd, activeCensus)
 }
 
 func (p *RoundStateMachineWorker) CommitPulseChange(report api.UpstreamReport, pd pulse.Data, activeCensus census.Operational) {
 	p.applyState(RoundPulseCommitted)
-	p.upstream.CommitPulseChange(report, pd, activeCensus)
-}
-
-func (p *RoundStateMachineWorker) CommitPulseChangeByStateless(report api.UpstreamReport, pd pulse.Data, activeCensus census.Operational) {
-	p.applyState(RoundPulsePreparing)
-	p.applyState(RoundPulseCommitted)
+	p.controlFeeder.OnCommitPulseChange(report, pd, activeCensus)
 	p.upstream.CommitPulseChange(report, pd, activeCensus)
 }
 
 func (p *RoundStateMachineWorker) CancelPulseChange() {
 	p.applyState(RoundPulseAccepted)
+	p.controlFeeder.OnCancelPulseChange()
 	p.upstream.CancelPulseChange()
 }
 
 func (p *RoundStateMachineWorker) ConsensusFinished(report api.UpstreamReport, expectedCensus census.Operational) {
 	p.applyState(RoundConsensusFinished)
+	p.controlFeeder.OnConsensusFinished(report, expectedCensus)
 	p.upstream.ConsensusFinished(report, expectedCensus)
 }
 
 func (p *RoundStateMachineWorker) ConsensusAborted() {
 	p.applyState(RoundAborted)
+	p.controlFeeder.OnConsensusAborted()
 	p.upstream.ConsensusAborted()
 }
 
