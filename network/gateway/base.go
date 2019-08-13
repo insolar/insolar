@@ -57,6 +57,7 @@ import (
 	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/consensus/adapters"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
+	"github.com/insolar/insolar/network/controller/common"
 	"github.com/insolar/insolar/network/rules"
 	"github.com/insolar/insolar/network/storage"
 
@@ -97,8 +98,13 @@ type Base struct {
 	ConsensusController   consensus.Controller
 	ConsensusPulseHandler network.PulseHandler
 
+	Options *common.Options
+
 	bootstrapETA    time.Duration
 	originCandidate *adapters.Candidate
+
+	// Next request backoff.
+	backoff time.Duration // nolint
 }
 
 // NewGateway creates new gateway on top of existing
@@ -184,8 +190,8 @@ func (g *Base) GetCert(ctx context.Context, ref *insolar.Reference) (insolar.Cer
 }
 
 // ValidateCert validates node certificate
-func (g *Base) ValidateCert(ctx context.Context, certificate insolar.AuthorizationCertificate) (bool, error) {
-	return g.CertificateManager.VerifyAuthorizationCertificate(certificate)
+func (g *Base) ValidateCert(ctx context.Context, authCert insolar.AuthorizationCertificate) (bool, error) {
+	return certificate.VerifyAuthorizationCertificate(g.CryptographyService, g.CertificateManager.GetCertificate().GetDiscoveryNodes(), authCert)
 }
 
 // ============= Bootstrap =======
@@ -265,14 +271,13 @@ func (g *Base) HandleNodeAuthorizeRequest(ctx context.Context, request network.R
 	}
 
 	valid, err := g.Gatewayer.Gateway().Auther().ValidateCert(ctx, cert)
-	if !valid {
+	if err != nil || !valid {
 		if err == nil {
 			err = errors.New("Certificate validation failed")
 		}
 
-		inslogger.FromContext(ctx).Warn(err.Error())
-		// FIXME integr tests certs signs
-		// return g.HostNetwork.BuildResponse(ctx, request, &packet.AuthorizeResponse{Code: packet.WrongMandate, Error: err.Error()}), nil
+		inslogger.FromContext(ctx).Warn("AuthorizeRequest with invalid cert: ", err.Error())
+		return g.HostNetwork.BuildResponse(ctx, request, &packet.AuthorizeResponse{Code: packet.WrongMandate, Error: err.Error()}), nil
 	}
 
 	// TODO: get random reconnectHost

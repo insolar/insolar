@@ -77,6 +77,8 @@ func (m *dropStorageMemory) Set(ctx context.Context, drop Drop) error {
 // DeleteForPN methods removes a drop from a memory storage.
 func (m *dropStorageMemory) DeleteForPN(ctx context.Context, pulse insolar.PulseNumber) {
 	m.lock.Lock()
+	defer m.lock.Unlock()
+
 	for key := range m.drops {
 		if key.pulse == pulse {
 			delete(m.drops, key)
@@ -85,5 +87,4 @@ func (m *dropStorageMemory) DeleteForPN(ctx context.Context, pulse insolar.Pulse
 			)
 		}
 	}
-	m.lock.Unlock()
 }

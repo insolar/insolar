@@ -48,7 +48,7 @@ type HotObjects struct {
 
 	dep struct {
 		drops       drop.Modifier
-		indices     object.MemoryIndexModifier
+		indexes     object.MemoryIndexModifier
 		jetStorage  jet.Storage
 		jetFetcher  executor.JetFetcher
 		jetReleaser executor.JetReleaser
@@ -76,7 +76,7 @@ func NewHotObjects(
 
 func (p *HotObjects) Dep(
 	drops drop.Modifier,
-	indices object.MemoryIndexModifier,
+	indexes object.MemoryIndexModifier,
 	jStore jet.Storage,
 	jFetcher executor.JetFetcher,
 	jReleaser executor.JetReleaser,
@@ -85,7 +85,7 @@ func (p *HotObjects) Dep(
 	sender bus.Sender,
 ) {
 	p.dep.drops = drops
-	p.dep.indices = indices
+	p.dep.indexes = indexes
 	p.dep.jetStorage = jStore
 	p.dep.jetFetcher = jFetcher
 	p.dep.jetReleaser = jReleaser
@@ -133,7 +133,7 @@ func (p *HotObjects) Proceed(ctx context.Context) error {
 			continue
 		}
 
-		p.dep.indices.Set(
+		p.dep.indexes.Set(
 			ctx,
 			p.pulse,
 			record.Index{

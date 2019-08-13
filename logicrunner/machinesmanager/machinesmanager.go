@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package logicrunner
+package machinesmanager
 
 import (
 	"github.com/pkg/errors"
@@ -22,7 +22,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/logicrunner.MachinesManager -o ./ -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/logicrunner/machinesmanager.MachinesManager -o ./ -s _mock.go -g
 
 type MachinesManager interface {
 	RegisterExecutor(t insolar.MachineType, e insolar.MachineLogicExecutor) error

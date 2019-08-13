@@ -58,30 +58,3 @@ func MustDeserialize(data []byte, to interface{}) {
 		panic(err)
 	}
 }
-
-// MarshalArgs marshals arguments by cbor
-func MarshalArgs(args ...interface{}) (Arguments, error) {
-	var argsSerialized []byte
-
-	argsSerialized, err := Serialize(args)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ MarshalArgs ]")
-	}
-
-	result := Arguments(argsSerialized)
-
-	return result, nil
-}
-
-// UnMarshalResponse unmarshals return values by cbor
-func UnMarshalResponse(resp []byte, typeHolders []interface{}) ([]interface{}, error) {
-	var marshRes []interface{}
-	marshRes = append(marshRes, typeHolders...)
-
-	err := Deserialize(resp, marshRes)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ UnMarshalResponse ]")
-	}
-
-	return marshRes, nil
-}

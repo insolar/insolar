@@ -162,8 +162,12 @@ func ShortNodeIDAsByteString(nodeID insolar.ShortNodeID) string {
 		string([]byte{byte(nodeID), byte(nodeID >> 8), byte(nodeID >> 16), byte(nodeID >> 24)}))
 }
 
-func (v *InboundConnection) AsByteString() string {
+func (v InboundConnection) String() string {
 	return fmt.Sprintf("name:%s", v.Addr)
+}
+
+func (v *InboundConnection) AsByteString() string {
+	return v.String()
 }
 
 func (v *InboundConnection) GetNameAddress() Name {

@@ -321,7 +321,7 @@ func (r *PhasedRoundController) handlePacket(ctx context.Context, packet transpo
 	if prev != nil && filterPN > pn { // TODO fix as filterPN can be zero during ephemeral transition
 		// something from a previous round?
 		_, err := prev.HandlePacket(ctx, packet, from)
-		return api.KeepRound, err
+		return api.KeepRound, fmt.Errorf("on prev round: %v", err)
 		// defaultOptions = coreapi.SkipVerify // validation was done by the prev controller
 	}
 
@@ -374,6 +374,7 @@ func (r *PhasedRoundController) handlePacket(ctx context.Context, packet transpo
 			r.roundWorker.onUnexpectedPulse(pn)
 			return api.KeepRound, err
 		}
+		inslogger.FromContext(ctx).Debug("stopping round by changed pulse")
 		r.StopConsensusRound()
 		// TODO should allow some time to handover a broken population?
 		// TODO build a one-node population for Suspected mode

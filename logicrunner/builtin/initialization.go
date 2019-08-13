@@ -21,6 +21,7 @@ package builtin
 import (
 	"github.com/pkg/errors"
 
+	account "github.com/insolar/insolar/logicrunner/builtin/contract/account"
 	costcenter "github.com/insolar/insolar/logicrunner/builtin/contract/costcenter"
 	deposit "github.com/insolar/insolar/logicrunner/builtin/contract/deposit"
 	helloworld "github.com/insolar/insolar/logicrunner/builtin/contract/helloworld"
@@ -39,6 +40,7 @@ import (
 
 func InitializeContractMethods() map[string]XXX_insolar.ContractWrapper {
 	return map[string]XXX_insolar.ContractWrapper{
+		"account":        account.Initialize(),
 		"costcenter":     costcenter.Initialize(),
 		"deposit":        deposit.Initialize(),
 		"helloworld":     helloworld.Initialize(),
@@ -63,6 +65,7 @@ func shouldLoadRef(strRef string) XXX_insolar.Reference {
 func InitializeCodeRefs() map[XXX_insolar.Reference]string {
 	rv := make(map[XXX_insolar.Reference]string, 0)
 
+	rv[shouldLoadRef("111A7rimrANEAnwBT1kvAhHeHp9NPTFJMLKVng8GLH5.11111111111111111111111111111111")] = "account"
 	rv[shouldLoadRef("111A7tUo1FeZ5DSoroiinMCKwzLacaYBAAcwAaNj6bc.11111111111111111111111111111111")] = "costcenter"
 	rv[shouldLoadRef("111A79KGpeDUjYhRJP1n1AwYgwU9KEWmc2TNNc3KQjV.11111111111111111111111111111111")] = "deposit"
 	rv[shouldLoadRef("111A5w1GcnTsht82duVrnWdVHVNyrxCUVcSPLtgQCPR.11111111111111111111111111111111")] = "helloworld"
@@ -80,6 +83,12 @@ func InitializeCodeRefs() map[XXX_insolar.Reference]string {
 func InitializeCodeDescriptors() []XXX_artifacts.CodeDescriptor {
 	rv := make([]XXX_artifacts.CodeDescriptor, 0)
 
+	// account
+	rv = append(rv, XXX_artifacts.NewCodeDescriptor(
+		/* code:        */ nil,
+		/* machineType: */ XXX_insolar.MachineTypeBuiltin,
+		/* ref:         */ shouldLoadRef("111A7rimrANEAnwBT1kvAhHeHp9NPTFJMLKVng8GLH5.11111111111111111111111111111111"),
+	))
 	// costcenter
 	rv = append(rv, XXX_artifacts.NewCodeDescriptor(
 		/* code:        */ nil,
@@ -146,6 +155,20 @@ func InitializeCodeDescriptors() []XXX_artifacts.CodeDescriptor {
 
 func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
 	rv := make([]XXX_artifacts.ObjectDescriptor, 0)
+
+	{ // account
+		pRef := shouldLoadRef("111A62X73fkPeY5vK6NjcXgmL9d37DgRRNtHNLGaEse.11111111111111111111111111111111")
+		cRef := shouldLoadRef("111A7rimrANEAnwBT1kvAhHeHp9NPTFJMLKVng8GLH5.11111111111111111111111111111111")
+		rv = append(rv, XXX_artifacts.NewObjectDescriptor(
+			/* head:         */ pRef,
+			/* state:        */ *pRef.Record(),
+			/* prototype:    */ &cRef,
+			/* isPrototype:  */ true,
+			/* childPointer: */ nil,
+			/* memory:       */ nil,
+			/* parent:       */ XXX_rootdomain.RootDomain.Ref(),
+		))
+	}
 
 	{ // costcenter
 		pRef := shouldLoadRef("111A62HrJvAimG7M1r8XdeBVMw4X6ge8hGzVStfnn4e.11111111111111111111111111111111")

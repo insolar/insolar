@@ -43,9 +43,16 @@ func (h *HandlePendingFinished) Present(ctx context.Context, _ flow.Flow) error 
 
 	msg := h.Parcel.Message().(*message.PendingFinished)
 
+	done, err := h.dep.WriteAccessor.Begin(ctx, flow.Pulse(ctx))
+	defer done()
+
+	if err != nil {
+		return nil
+	}
+
 	broker := h.dep.StateStorage.UpsertExecutionState(msg.Reference)
 
-	err := broker.PrevExecutorFinishedPending(ctx)
+	err = broker.PrevExecutorFinishedPending(ctx)
 	if err != nil {
 		err = errors.Wrap(err, "can not finish pending")
 		inslogger.FromContext(ctx).Error(err.Error())
