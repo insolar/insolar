@@ -66,14 +66,14 @@ func (m *RPCMethods) getCurrent(
 ) {
 	switch mode {
 	case insolar.ExecuteCallMode:
-		archive := m.ss.GetExecutionArchive(obj)
-		if archive == nil {
-			return nil, nil, errors.New("No execution archive in the state")
+		registry := m.ss.GetExecutionRegistry(obj)
+		if registry == nil {
+			return nil, nil, errors.New("No execution registry in the state")
 		}
 
-		transcript := archive.GetActiveTranscript(reqRef)
+		transcript := registry.GetActiveTranscript(reqRef)
 		if transcript == nil {
-			return nil, nil, errors.New("No execution archive in the state")
+			return nil, nil, errors.New("No transcript in the execution registry")
 		}
 
 		return m.execution, transcript, nil
