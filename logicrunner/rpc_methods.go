@@ -212,6 +212,7 @@ func (m *executionProxyImplementation) SaveAsChild(
 		return err
 	}
 
+	// Register result of the outgoing method
 	outgoingReqRef := insolar.NewReference(outReqInfo.RequestID)
 	var incoming *record.IncomingRequest
 	rep.Reference, rep.Result, incoming, err = m.outgoingSender.SendOutgoingRequest(ctx, *outgoingReqRef, outgoing)
