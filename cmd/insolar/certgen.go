@@ -78,22 +78,15 @@ func (g *certGen) registerNode() insolar.Reference {
 
 	keySerialized, err := g.keyProcessor.ExportPublicKeyPEM(g.pubKey)
 	checkError("Failed to export public key:", err)
-	request := requester.ContractRequest{
-		Request: requester.Request{
-			Version: JSONRPCVersion,
-			Id:      1,
-			Method:  "contract.call",
-		},
-		Params: requester.Params{
-			CallSite:   "contract.registerNode",
-			CallParams: map[string]string{"publicKey": string(keySerialized), "role": g.staticRole.String()},
-			PublicKey:  userCfg.PublicKey,
-		},
+	params := requester.Params{
+		CallSite:   "contract.registerNode",
+		CallParams: map[string]string{"publicKey": string(keySerialized), "role": g.staticRole.String()},
+		PublicKey:  userCfg.PublicKey,
 	}
 
 	ctx := inslogger.ContextWithTrace(context.Background(), "insolarUtility")
-	response, err := requester.Send(ctx, g.API, userCfg, &request)
-	checkError("Failed to execute register node request", err)
+	response, err := requester.Send(ctx, g.API, userCfg, &params)
+	checkError("Failed to execute register node params", err)
 
 	return extractReference(response, "registerNode")
 }
@@ -115,14 +108,7 @@ type GetCertificateResponse struct {
 
 func (g *certGen) fetchCertificate(ref insolar.Reference) []byte {
 
-	response, err := requester.GetResponseBodyPlatform(g.API+"/rpc", requester.PlatformRequest{
-		Request: requester.Request{
-			Version: JSONRPCVersion,
-			Method:  "cert.get",
-			Id:      1,
-		},
-		PlatformParams: map[string]string{"ref": ref.String()},
-	})
+	response, err := requester.GetResponseBodyPlatform(g.API+"/rpc", "cert.get", map[string]string{"ref": ref.String()})
 	checkError("Failed to get certificate for the registered node:", err)
 
 	r := GetCertificateResponse{}
@@ -198,21 +184,14 @@ func (g *certGen) getNodeRefByPublicKey() insolar.Reference {
 
 	keySerialized, err := g.keyProcessor.ExportPublicKeyPEM(g.privKey)
 	checkError("Failed to export public key:", err)
-	request := requester.ContractRequest{
-		Request: requester.Request{
-			Version: JSONRPCVersion,
-			Id:      1,
-			Method:  "contract.call",
-		},
-		Params: requester.Params{
-			CallSite:   "contract.getNodeRef",
-			CallParams: []interface{}{keySerialized},
-			PublicKey:  userCfg.PublicKey,
-		},
+	params := requester.Params{
+		CallSite:   "contract.getNodeRef",
+		CallParams: []interface{}{keySerialized},
+		PublicKey:  userCfg.PublicKey,
 	}
 
 	ctx := inslogger.ContextWithTrace(context.Background(), "insolarUtility")
-	response, err := requester.Send(ctx, g.API, userCfg, &request)
+	response, err := requester.Send(ctx, g.API, userCfg, &params)
 	checkError("Failed to execute GetNodeRefByPublicKey node request", err)
 
 	fmt.Println("Extract node by public key")

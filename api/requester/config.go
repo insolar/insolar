@@ -86,15 +86,15 @@ func ReadUserConfigFromFile(file string) (*UserConfigJSON, error) {
 	return cfgJSON, nil
 }
 
-// ReadRequestConfigFromFile read request config from file
-func ReadRequestConfigFromFile(path string) (*ContractRequest, error) {
-	rConfig := &ContractRequest{}
-	err := readFile(path, rConfig)
+// ReadRequestParamsFromFile read request config from file
+func ReadRequestParamsFromFile(path string) (*Params, error) {
+	rParams := &Params{}
+	err := readFile(path, rParams)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ readRequesterConfigFromFile ] ")
+		return nil, errors.Wrap(err, "failed to read call params from file")
 	}
 
-	return rConfig, nil
+	return rParams, nil
 }
 
 // CreateUserConfig creates user config from arguments

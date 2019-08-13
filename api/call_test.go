@@ -65,14 +65,7 @@ func (suite *TimeoutSuite) TestRunner_callHandler_NoTimeout() {
 		suite.ctx,
 		CallUrl,
 		suite.user,
-		&requester.ContractRequest{
-			Request: requester.Request{
-				Version: "2.0",
-				Id:      1,
-				Method:  "contract.call",
-			},
-			Params: requester.Params{CallSite: "member.create", CallParams: map[string]interface{}{}, PublicKey: suite.user.PublicKey},
-		},
+		&requester.Params{CallSite: "member.create", CallParams: map[string]interface{}{}, PublicKey: suite.user.PublicKey},
 		seedString,
 	)
 	suite.NoError(err)
@@ -97,13 +90,7 @@ func (suite *TimeoutSuite) TestRunner_callHandler_Timeout() {
 		suite.ctx,
 		CallUrl,
 		suite.user,
-		&requester.ContractRequest{
-			Request: requester.Request{
-				Version: requester.JSONRPCVersion,
-				Id:      1,
-				Method:  "contract.call",
-			},
-		},
+		nil,
 		seedString,
 	)
 	suite.Error(err, "Client.Timeout exceeded while awaiting headers")

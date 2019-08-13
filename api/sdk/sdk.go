@@ -131,12 +131,9 @@ func (sdk *SDK) SetLogLevel(logLevel string) error {
 }
 
 func (sdk *SDK) sendRequest(ctx context.Context, method string, params map[string]interface{}, userCfg *requester.UserConfigJSON) ([]byte, error) {
-	reqCfg := &requester.ContractRequest{
-		Request: requester.Request{Method: "contract.call"},
-		Params:  requester.Params{CallParams: params, CallSite: method, PublicKey: userCfg.PublicKey, LogLevel: sdk.logLevel.(string)},
-	}
+	reqParams := requester.Params{CallParams: params, CallSite: method, PublicKey: userCfg.PublicKey, LogLevel: sdk.logLevel.(string)}
 
-	body, err := requester.Send(ctx, sdk.apiURLs.next(), userCfg, reqCfg)
+	body, err := requester.Send(ctx, sdk.apiURLs.next(), userCfg, &reqParams)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to send request")
 	}

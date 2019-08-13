@@ -29,6 +29,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math/big"
+	mathrand "math/rand"
 	"net/http"
 	"strconv"
 	"time"
@@ -133,8 +134,17 @@ func GetResponseBodyContract(url string, postP ContractRequest, signature string
 }
 
 // GetResponseBodyContract makes request to platform and extracts body
-func GetResponseBodyPlatform(url string, postP PlatformRequest) ([]byte, error) {
-	req, _, err := prepareReq(url, postP)
+func GetResponseBodyPlatform(url string, method string, params interface{}) ([]byte, error) {
+	request := PlatformRequest{
+		Request: Request{
+			Version: JSONRPCVersion,
+			Id:      uint64(mathrand.Int63()),
+			Method:  method,
+		},
+		PlatformParams: params,
+	}
+
+	req, _, err := prepareReq(url, request)
 	if err != nil {
 		return nil, errors.Wrap(err, "problem with preparing platform request")
 	}
@@ -182,13 +192,7 @@ func doReq(req *http.Request) ([]byte, error) {
 
 // GetSeed makes rpc request to node.getSeed method and extracts it
 func GetSeed(url string) (string, error) {
-	body, err := GetResponseBodyPlatform(url+"/rpc", PlatformRequest{
-		Request: Request{
-			Version: JSONRPCVersion,
-			Method:  "node.getSeed",
-			Id:      1,
-		},
-	})
+	body, err := GetResponseBodyPlatform(url+"/rpc", "node.getSeed", nil)
 	if err != nil {
 		return "", errors.Wrap(err, "[ GetSeed ] seed request")
 	}
@@ -210,16 +214,25 @@ func GetSeed(url string) (string, error) {
 }
 
 // SendWithSeed sends request with known seed
-func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, reqCfg *ContractRequest, seed string) ([]byte, error) {
-	if userCfg == nil || reqCfg == nil {
+func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, params *Params, seed string) ([]byte, error) {
+	if userCfg == nil || params == nil {
 		return nil, errors.New("[ SendWithSeed ] Configs must be initialized")
 	}
 
-	reqCfg.Params.Reference = userCfg.Caller
-	reqCfg.Params.Seed = seed
+	params.Reference = userCfg.Caller
+	params.Seed = seed
+
+	request := &ContractRequest{
+		Request: Request{
+			Version: JSONRPCVersion,
+			Id:      uint64(mathrand.Int63()),
+			Method:  "contract.call",
+		},
+		Params: *params,
+	}
 
 	verboseInfo(ctx, "Signing request ...")
-	dataToSign, err := json.Marshal(reqCfg)
+	dataToSign, err := json.Marshal(request)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ SendWithSeed ] Config request marshaling failed")
 	}
@@ -229,7 +242,7 @@ func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, reqC
 	}
 	verboseInfo(ctx, "Signing request completed")
 
-	body, err := GetResponseBodyContract(url, *reqCfg, signature)
+	body, err := GetResponseBodyContract(url, *request, signature)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ SendWithSeed ] Problem with sending target request")
 	}
@@ -264,7 +277,7 @@ func marshalSig(r, s *big.Int) (string, error) {
 }
 
 // Send first gets seed and after that makes target request
-func Send(ctx context.Context, url string, userCfg *UserConfigJSON, reqCfg *ContractRequest) ([]byte, error) {
+func Send(ctx context.Context, url string, userCfg *UserConfigJSON, params *Params) ([]byte, error) {
 	verboseInfo(ctx, "Sending GETSEED request ...")
 	seed, err := GetSeed(url)
 	if err != nil {
@@ -272,7 +285,7 @@ func Send(ctx context.Context, url string, userCfg *UserConfigJSON, reqCfg *Cont
 	}
 	verboseInfo(ctx, "GETSEED request completed. seed: "+seed)
 
-	response, err := SendWithSeed(ctx, url+"/rpc", userCfg, reqCfg, seed)
+	response, err := SendWithSeed(ctx, url+"/rpc", userCfg, params, seed)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Send ]")
 	}
@@ -280,21 +293,9 @@ func Send(ctx context.Context, url string, userCfg *UserConfigJSON, reqCfg *Cont
 	return response, nil
 }
 
-func getDefaultRPCParams(method string) PlatformRequest {
-	return PlatformRequest{
-		Request: Request{
-			Version: JSONRPCVersion,
-			Id:      1,
-			Method:  method,
-		},
-	}
-}
-
 // Info makes rpc request to network.getInfo method and extracts it
 func Info(url string) (*InfoResponse, error) {
-	params := getDefaultRPCParams("network.getInfo")
-
-	body, err := GetResponseBodyPlatform(url+"/rpc", params)
+	body, err := GetResponseBodyPlatform(url+"/rpc", "network.getInfo", nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Info ]")
 	}
@@ -314,9 +315,7 @@ func Info(url string) (*InfoResponse, error) {
 
 // Status makes rpc request to node.getStatus method and extracts it
 func Status(url string) (*StatusResponse, error) {
-	params := getDefaultRPCParams("node.getStatus")
-
-	body, err := GetResponseBodyPlatform(url+"/rpc", params)
+	body, err := GetResponseBodyPlatform(url+"/rpc", "node.getStatus", nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Status ]")
 	}

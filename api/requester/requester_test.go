@@ -81,7 +81,7 @@ func FakeRPCHandler(response http.ResponseWriter, req *http.Request) {
 		rpcResponse.Result = testInfoResponse
 	case "node.getSeed":
 		rpcResponse.Result = testSeedResponse
-	case "member.create":
+	case "contract.call":
 		rpcResponse.Result = TESTREFERENCE
 	default:
 		rpcResponse.Result = TESTSEED
@@ -178,12 +178,12 @@ func TestGetSeed(t *testing.T) {
 }
 
 func TestGetResponseBodyEmpty(t *testing.T) {
-	_, err := GetResponseBodyPlatform("test", PlatformRequest{})
+	_, err := GetResponseBodyPlatform("test", "", nil)
 	require.EqualError(t, err, "problem with sending request: Post test: unsupported protocol scheme \"\"")
 }
 
 func TestGetResponseBodyBadHttpStatus(t *testing.T) {
-	_, err := GetResponseBodyPlatform(URL+"TEST", PlatformRequest{})
+	_, err := GetResponseBodyPlatform(URL+"TEST", "", nil)
 	require.EqualError(t, err, "bad http response code: 404")
 }
 
@@ -203,10 +203,10 @@ func TestSetVerbose(t *testing.T) {
 	SetVerbose(false)
 }
 
-func readConfigs(t *testing.T) (*UserConfigJSON, *ContractRequest) {
+func readConfigs(t *testing.T) (*UserConfigJSON, *Params) {
 	userConf, err := ReadUserConfigFromFile("testdata/userConfig.json")
 	require.NoError(t, err)
-	reqConf, err := ReadRequestConfigFromFile("testdata/requestConfig.json")
+	reqConf, err := ReadRequestParamsFromFile("testdata/requestConfig.json")
 	require.NoError(t, err)
 
 	return userConf, reqConf
@@ -214,18 +214,18 @@ func readConfigs(t *testing.T) (*UserConfigJSON, *ContractRequest) {
 
 func TestSend(t *testing.T) {
 	ctx := inslogger.ContextWithTrace(context.Background(), "TestSend")
-	userConf, reqConf := readConfigs(t)
-	reqConf.Method = "member.create"
-	resp, err := Send(ctx, URL, userConf, reqConf)
+	userConf, reqParams := readConfigs(t)
+	reqParams.CallSite = "member.create"
+	resp, err := Send(ctx, URL, userConf, reqParams)
 	require.NoError(t, err)
 	require.Contains(t, string(resp), TESTREFERENCE)
 }
 
 func TestSendWithSeed(t *testing.T) {
 	ctx := inslogger.ContextWithTrace(context.Background(), "TestSendWithSeed")
-	userConf, reqConf := readConfigs(t)
-	reqConf.Method = "member.create"
-	resp, err := SendWithSeed(ctx, URL+"/rpc", userConf, reqConf, TESTSEED)
+	userConf, reqParams := readConfigs(t)
+	reqParams.CallSite = "member.create"
+	resp, err := SendWithSeed(ctx, URL+"/rpc", userConf, reqParams, TESTSEED)
 	require.NoError(t, err)
 	require.Contains(t, string(resp), TESTREFERENCE)
 }
