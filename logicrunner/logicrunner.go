@@ -307,8 +307,7 @@ func (lr *LogicRunner) sendOnPulseMessage(ctx context.Context, objectRef insolar
 		return
 	}
 
-	_, done := lr.Sender.SendRole(ctx, msg, insolar.DynamicRoleVirtualExecutor, objectRef)
-	done()
+	lr.Sender.SendRole(ctx, msg, insolar.DynamicRoleVirtualExecutor, objectRef)
 }
 
 func (lr *LogicRunner) AddUnwantedResponse(ctx context.Context, msg insolar.Message) error {

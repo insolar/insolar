@@ -438,8 +438,7 @@ func (q *ExecutionBroker) finishPendingIfNeeded(ctx context.Context) {
 		return
 	}
 
-	_, done := q.sender.SendRole(ctx, pendingMsg, insolar.DynamicRoleVirtualExecutor, q.Ref)
-	done()
+	q.sender.SendRole(ctx, pendingMsg, insolar.DynamicRoleVirtualExecutor, q.Ref)
 }
 
 func (q *ExecutionBroker) OnPulse(ctx context.Context) []payload.Payload {
