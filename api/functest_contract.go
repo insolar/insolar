@@ -25,9 +25,12 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/insolar/rpc/v2"
+
 	"github.com/insolar/insolar/application/extractor"
 	"github.com/insolar/insolar/insolar"
 	insolarApi "github.com/insolar/insolar/insolar/api"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
@@ -35,8 +38,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
-	"github.com/insolar/insolar/testutils"
-	"github.com/insolar/rpc/v2"
 )
 
 // FuncTestContractService is a service that provides ability to add custom contracts
@@ -134,7 +135,7 @@ func (s *FuncTestContractService) CallConstructor(r *http.Request, args *CallCon
 			Method:          args.Method,
 			Arguments:       args.MethodArgs,
 			Base:            &base,
-			CallerPrototype: testutils.RandomRef(),
+			CallerPrototype: gen.Reference(),
 			Prototype:       protoRef,
 			CallType:        record.CTSaveAsChild,
 			APIRequestID:    utils.TraceID(ctx),
