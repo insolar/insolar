@@ -154,8 +154,8 @@ func (r *CostCenter) GetCode() (insolar.Reference, error) {
 	return r.Code, nil
 }
 
-// GetFeeAccountRef is proxy generated method
-func (r *CostCenter) GetFeeAccountRefAsMutable() (insolar.Reference, error) {
+// GetFeeAccount is proxy generated method
+func (r *CostCenter) GetFeeAccountAsMutable() (insolar.Reference, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -171,7 +171,7 @@ func (r *CostCenter) GetFeeAccountRefAsMutable() (insolar.Reference, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetFeeAccountRef", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetFeeAccount", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -193,8 +193,8 @@ func (r *CostCenter) GetFeeAccountRefAsMutable() (insolar.Reference, error) {
 	return ret0, nil
 }
 
-// GetFeeAccountRefNoWait is proxy generated method
-func (r *CostCenter) GetFeeAccountRefNoWait() error {
+// GetFeeAccountNoWait is proxy generated method
+func (r *CostCenter) GetFeeAccountNoWait() error {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -204,7 +204,7 @@ func (r *CostCenter) GetFeeAccountRefNoWait() error {
 		return err
 	}
 
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "GetFeeAccountRef", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "GetFeeAccount", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -212,8 +212,8 @@ func (r *CostCenter) GetFeeAccountRefNoWait() error {
 	return nil
 }
 
-// GetFeeAccountRefAsImmutable is proxy generated method
-func (r *CostCenter) GetFeeAccountRef() (insolar.Reference, error) {
+// GetFeeAccountAsImmutable is proxy generated method
+func (r *CostCenter) GetFeeAccount() (insolar.Reference, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -229,7 +229,7 @@ func (r *CostCenter) GetFeeAccountRef() (insolar.Reference, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "GetFeeAccountRef", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "GetFeeAccount", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}

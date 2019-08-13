@@ -62,8 +62,6 @@ func TestMigrationToken(t *testing.T) {
 	require.Equal(t, confirmerReferences[1], migrationDaemons[1].ref)
 	require.Equal(t, confirmerReferences[2], migrationDaemons[2].ref)
 
-	require.Equal(t, deposit["balance"], "1000")
-
 	secondMemberBalance := deposit["balance"].(string)
 	require.Equal(t, secondMemberBalance, "1000")
 	secondMABalance1 := getBalanceNoErr(t, &migrationAdmin, migrationAdmin.ref)

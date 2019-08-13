@@ -37,9 +37,9 @@ func New(feeAccount insolar.Reference) (*CostCenter, error) {
 	}, nil
 }
 
-// GetFeeAccountRef gets fee account reference.
+// GetFeeAccount gets fee account reference.
 // ins:immutable
-func (cc CostCenter) GetFeeAccountRef() (insolar.Reference, error) {
+func (cc CostCenter) GetFeeAccount() (insolar.Reference, error) {
 	return cc.FeeAccount, nil
 }
 

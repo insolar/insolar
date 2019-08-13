@@ -26,7 +26,6 @@ import (
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/account"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/costcenter"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/member"
-	"github.com/insolar/insolar/logicrunner/builtin/proxy/wallet"
 )
 
 // Wallet - basic wallet contract.
@@ -114,19 +113,12 @@ func (w *Wallet) Transfer(rootDomainRef insolar.Reference, assetName string, amo
 		return nil, fmt.Errorf("failed to transfer: %s", err.Error())
 	}
 
-	feeWalletRef, err := cc.GetFeeAccountRef()
+	toFeeAccount, err := cc.GetFeeAccount()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get wallet ref: %s", err.Error())
+		return nil, fmt.Errorf("failed to get fee account: %s", err.Error())
 	}
 
-	toFeeWallet := wallet.GetObject(feeWalletRef)
-
-	toFeeAccount, err := toFeeWallet.GetAccount(assetName)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get account by asset name: %s", err.Error())
-	}
-
-	err = acc.TransferToAccount(feeStr, *toFeeAccount)
+	err = acc.TransferToAccount(feeStr, toFeeAccount)
 	if err != nil {
 		return nil, fmt.Errorf("failed to transfer: %s", err.Error())
 	}
