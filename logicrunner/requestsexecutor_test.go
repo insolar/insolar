@@ -330,7 +330,7 @@ func TestRequestsExecutor_SendReply(t *testing.T) {
 
 	requestRef := gen.Reference()
 
-	reqRef := testutils.RandomRef()
+	reqRef := gen.Reference()
 
 	table := []struct {
 		name       string

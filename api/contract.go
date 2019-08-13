@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"reflect"
 
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/application/extractor"
@@ -35,7 +36,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
-	"github.com/insolar/insolar/testutils"
 )
 
 // ContractService is a service that provides ability to add custom contracts
@@ -133,7 +133,7 @@ func (s *ContractService) CallConstructor(r *http.Request, args *CallConstructor
 			Method:          args.Method,
 			Arguments:       args.MethodArgs,
 			Base:            &base,
-			CallerPrototype: testutils.RandomRef(),
+			CallerPrototype: gen.Reference(),
 			Prototype:       protoRef,
 			CallType:        record.CTSaveAsChild,
 			APIRequestID:    utils.TraceID(ctx),
@@ -211,7 +211,7 @@ func (s *ContractService) CallMethod(r *http.Request, args *CallMethodArgs, re *
 func (s *ContractService) call(ctx context.Context, msg insolar.Message, re *CallMethodReply) error {
 	inslog := inslogger.FromContext(ctx)
 
-	callReply, err := s.runner.ContractRequester.Call(ctx, msg)
+	callReply, _, err := s.runner.ContractRequester.Call(ctx, msg)
 	if err != nil {
 		inslog.Error("failed to call: ", err.Error())
 		return errors.Wrap(err, "CallMethod failed with error")

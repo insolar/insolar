@@ -54,19 +54,19 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/testutils"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestNode_Version(t *testing.T) {
-	n := NewNode(testutils.RandomRef(), insolar.StaticRoleVirtual, nil, "127.0.0.1", "123")
+	n := NewNode(gen.Reference(), insolar.StaticRoleVirtual, nil, "127.0.0.1", "123")
 	assert.Equal(t, "123", n.Version())
 	n.(MutableNode).SetVersion("234")
 	assert.Equal(t, "234", n.Version())
 }
 
 func TestNode_GetState(t *testing.T) {
-	n := NewNode(testutils.RandomRef(), insolar.StaticRoleVirtual, nil, "127.0.0.1", "123")
+	n := NewNode(gen.Reference(), insolar.StaticRoleVirtual, nil, "127.0.0.1", "123")
 	assert.Equal(t, insolar.NodeReady, n.GetState())
 	n.(MutableNode).SetState(insolar.NodeUndefined)
 	assert.Equal(t, insolar.NodeUndefined, n.GetState())
@@ -79,12 +79,12 @@ func TestNode_GetState(t *testing.T) {
 }
 
 func TestNode_GetGlobuleID(t *testing.T) {
-	n := NewNode(testutils.RandomRef(), insolar.StaticRoleVirtual, nil, "127.0.0.1", "123")
+	n := NewNode(gen.Reference(), insolar.StaticRoleVirtual, nil, "127.0.0.1", "123")
 	assert.EqualValues(t, 0, n.GetGlobuleID())
 }
 
 func TestNode_LeavingETA(t *testing.T) {
-	n := NewNode(testutils.RandomRef(), insolar.StaticRoleVirtual, nil, "127.0.0.1", "123")
+	n := NewNode(gen.Reference(), insolar.StaticRoleVirtual, nil, "127.0.0.1", "123")
 	assert.Equal(t, insolar.NodeReady, n.GetState())
 	n.(MutableNode).SetLeavingETA(25)
 	assert.Equal(t, insolar.NodeLeaving, n.GetState())
@@ -92,7 +92,7 @@ func TestNode_LeavingETA(t *testing.T) {
 }
 
 func TestNode_ShortID(t *testing.T) {
-	n := NewNode(testutils.RandomRef(), insolar.StaticRoleVirtual, nil, "127.0.0.1", "123")
+	n := NewNode(gen.Reference(), insolar.StaticRoleVirtual, nil, "127.0.0.1", "123")
 	assert.EqualValues(t, GenerateUintShortID(n.ID()), n.ShortID())
 	n.(MutableNode).SetShortID(11)
 	assert.EqualValues(t, 11, n.ShortID())

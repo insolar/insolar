@@ -97,12 +97,12 @@ func (h *HandleCall) checkExecutionLoop(
 		return false
 	}
 
-	archive := h.dep.StateStorage.GetExecutionArchive(*request.Object)
-	if archive == nil {
+	registry := h.dep.StateStorage.GetExecutionRegistry(*request.Object)
+	if registry == nil {
 		return false
 	}
 
-	if !archive.FindRequestLoop(ctx, reqRef, request.APIRequestID) {
+	if !registry.FindRequestLoop(ctx, reqRef, request.APIRequestID) {
 		return false
 	}
 
@@ -191,7 +191,18 @@ func (h *HandleCall) handleActual(
 	}
 
 	if h.checkExecutionLoop(ctx, *requestRef, request) {
-		return nil, errors.New("loop detected")
+		proc := &RecordErrorResult{
+			err:             errors.New("loop detected"),
+			requestRef:      *requestRef,
+			objectRef:       *objRef,
+			artifactManager: lr.ArtifactManager,
+		}
+		err := f.Procedure(ctx, proc, false)
+		if err != nil {
+			return nil, errors.Wrap(err, "couldn't record error result")
+		}
+
+		return &reply.CallMethod{Object: objRef, Result: proc.result}, nil
 	}
 
 	done, err := h.dep.WriteAccessor.Begin(ctx, flow.Pulse(ctx))
