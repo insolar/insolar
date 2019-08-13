@@ -18,12 +18,10 @@ package foundation
 
 import (
 	"bytes"
-	"crypto/md5"
 	"testing"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 type TestStable struct {
@@ -76,13 +74,11 @@ func TestStableMap_is_deterministic(t *testing.T) {
 	s2.B["bar"] = "456"
 	s2.B["foo"] = "123"
 
-	buf := insolar.MustSerialize(s1)
-	sum1 := md5.Sum(buf)
+	buf1 := insolar.MustSerialize(s1)
 
-	buf = insolar.MustSerialize(s2)
-	sum2 := md5.Sum(buf)
+	buf2 := insolar.MustSerialize(s2)
 
-	require.Equal(t, sum1, sum2)
+	assert.Equal(t, buf1, buf2)
 }
 
 type TestMap struct {
@@ -104,15 +100,13 @@ func TestStableMap_common_map_is_not_deterministic(t *testing.T) {
 	s.B["789"] = "baz"
 	s.C = 123
 
-	buf := insolar.MustSerialize(s)
-	firstSum := md5.Sum(buf)
-	var sum [16]byte
+	firstBuf := insolar.MustSerialize(s)
+	var buf []byte
 	for i := 0; i < 10000; i++ {
 		buf = insolar.MustSerialize(s)
-		sum = md5.Sum(buf)
-		if !bytes.Equal(firstSum[:], sum[:]) {
+		if !bytes.Equal(firstBuf, buf) {
 			break
 		}
 	}
-	assert.NotEqual(t, firstSum, sum)
+	assert.NotEqual(t, firstBuf, buf)
 }
