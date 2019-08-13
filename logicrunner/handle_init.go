@@ -115,6 +115,18 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 			Message: meta,
 		}
 		return f.Handle(ctx, h.Present)
+	case payload.TypeExecutorResults:
+		h := &HandleExecutorResults{
+			dep:     s.dep,
+			Message: meta,
+		}
+		return f.Handle(ctx, h.Present)
+	case payload.TypeStillExecuting:
+		h := &HandleStillExecuting{
+			dep:     s.dep,
+			Message: meta,
+		}
+		return f.Handle(ctx, h.Present)
 	default:
 		return fmt.Errorf("[ Init.Present ] no handler for message type %s", msgType)
 	}
@@ -153,13 +165,6 @@ func (s *Init) handleParcel(ctx context.Context, f flow.Flow) error {
 		return f.Handle(ctx, h.Present)
 	case insolar.TypeStillExecuting.String():
 		h := &HandleStillExecuting{
-			dep:     s.dep,
-			Message: meta,
-			Parcel:  parcel,
-		}
-		return f.Handle(ctx, h.Present)
-	case insolar.TypeExecutorResults.String():
-		h := &HandleExecutorResults{
 			dep:     s.dep,
 			Message: meta,
 			Parcel:  parcel,

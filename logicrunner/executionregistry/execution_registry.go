@@ -22,7 +22,7 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
-	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/common"
@@ -39,7 +39,7 @@ type ExecutionRegistry interface {
 
 	Length() int
 	IsEmpty() bool
-	OnPulse(ctx context.Context) []insolar.Message
+	OnPulse(ctx context.Context) []payload.Payload
 	FindRequestLoop(ctx context.Context, reqRef insolar.Reference, apiRequestID string) bool
 	GetActiveTranscript(req insolar.Reference) *common.Transcript
 }
@@ -107,23 +107,25 @@ func (r *executionRegistry) Done(transcript *common.Transcript) bool {
 }
 
 // constructs all StillExecuting messages
-func (r *executionRegistry) OnPulse(_ context.Context) []insolar.Message {
+func (r *executionRegistry) OnPulse(_ context.Context) []payload.Payload {
 	r.registryLock.Lock()
 	defer r.registryLock.Unlock()
 
 	// TODO: this should return delegation token to continue execution of the pending
-	messages := make([]insolar.Message, 0)
+	messages := make([]payload.Payload, 0)
 	if len(r.registry) != 0 {
 		requestRefs := make([]insolar.Reference, 0, len(r.registry))
 		for requestRef := range r.registry {
 			requestRefs = append(requestRefs, requestRef)
 		}
 
-		messages = append(messages, &message.StillExecuting{
-			Reference:   r.objectRef,
-			Executor:    r.jetCoordinator.Me(),
-			RequestRefs: requestRefs,
-		})
+		if len(requestRefs) > 0 {
+			messages = append(messages, &payload.StillExecuting{
+				ObjectRef:   r.objectRef,
+				Executor:    r.jetCoordinator.Me(),
+				RequestRefs: requestRefs,
+			})
+		}
 	}
 	return messages
 }

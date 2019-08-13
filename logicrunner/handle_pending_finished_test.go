@@ -56,7 +56,7 @@ func TestHandlePendingFinished_Present(t *testing.T) {
 							UpsertExecutionStateMock.Expect(obj).
 							Return(
 								NewExecutionBrokerIMock(t).
-									PrevExecutorFinishedPendingMock.Return(nil),
+									PrevExecutorPendingFinishedMock.Return(nil),
 							),
 						WriteAccessor: writecontroller.NewWriteControllerMock(t).BeginMock.Return(func() {}, nil),
 					},
@@ -84,7 +84,7 @@ func TestHandlePendingFinished_Present(t *testing.T) {
 							UpsertExecutionStateMock.Expect(obj).
 							Return(
 								NewExecutionBrokerIMock(t).
-									PrevExecutorFinishedPendingMock.Return(errors.New("some")),
+									PrevExecutorPendingFinishedMock.Return(errors.New("some")),
 							),
 						WriteAccessor: writecontroller.NewWriteControllerMock(t).BeginMock.Return(func() {}, nil),
 					},

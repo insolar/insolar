@@ -30,7 +30,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/gen"
-	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/insolar/utils"
@@ -371,7 +371,7 @@ func (s *ExecutionBrokerSuite) TestDeduplication() {
 	s.Equal(b.mutable.Length(), 1)
 }
 
-func TestExecutionBroker_FinishPendingIfNeed(t *testing.T) {
+func TestExecutionBroker_FinishedPendingIfNeed(t *testing.T) {
 	mc := minimock.NewController(t)
 
 	tests := []struct {
@@ -383,12 +383,25 @@ func TestExecutionBroker_FinishPendingIfNeed(t *testing.T) {
 		{
 			name: "success, complete",
 			mocks: func(t minimock.Tester) *ExecutionBroker {
-				obj := gen.Reference()
+				objRef := gen.Reference()
+
+				msg, err := payload.NewMessage(&payload.PendingFinished{
+					ObjectRef: objRef,
+				})
+				require.NoError(t, err, "NewMessage")
 				broker := &ExecutionBroker{
-					Ref:     obj,
+					Ref:     objRef,
 					pending: insolar.InPending,
 
-					sender: bus.NewSenderMock(mc).SendRoleMock.Return(nil, func() { return }),
+					sender: bus.NewSenderMock(mc).SendRoleMock.Set(
+						func(_ context.Context, pendingMsg *wmMessage.Message, role insolar.DynamicRole, obj insolar.Reference) (r <-chan *wmMessage.Message, r1 func()) {
+
+							return nil, func() {
+								require.Equal(t, obj, objRef)
+								require.Equal(t, insolar.DynamicRoleVirtualExecutor, role, "role")
+								require.Equal(t, msg, pendingMsg)
+							}
+						}),
 					executionRegistry: executionregistry.NewExecutionRegistryMock(t).
 						IsEmptyMock.Return(true),
 				}
@@ -597,28 +610,28 @@ func TestExecutionBroker_AddFreshRequestWithOnPulse(t *testing.T) {
 
 	table := []struct {
 		name   string
-		mocks  func(ctx context.Context, t minimock.Tester) (*ExecutionBroker, *[]insolar.Message)
-		checks func(ctx context.Context, t *testing.T, msgs []insolar.Message)
+		mocks  func(ctx context.Context, t minimock.Tester) (*ExecutionBroker, *[]payload.Payload)
+		checks func(ctx context.Context, t *testing.T, msgs []payload.Payload)
 	}{
 		{
 			name: "pulse change in HasPendings",
-			mocks: func(ctx context.Context, t minimock.Tester) (*ExecutionBroker, *[]insolar.Message) {
+			mocks: func(ctx context.Context, t minimock.Tester) (*ExecutionBroker, *[]payload.Payload) {
 				am := artifacts.NewClientMock(t)
 
 				er := executionregistry.NewExecutionRegistryMock(t).
 					IsEmptyMock.Return(true)
 				broker := NewExecutionBroker(objectRef, nil, nil, nil, am, er, nil)
 
-				var msgs []insolar.Message
+				var msgs []payload.Payload
 				am.HasPendingsMock.Set(func(ctx context.Context, ref insolar.Reference) (bool, error) {
 					msgs = broker.OnPulse(ctx)
 					return false, nil
 				})
 				return broker, &msgs
 			},
-			checks: func(ctx context.Context, t *testing.T, msgs []insolar.Message) {
+			checks: func(ctx context.Context, t *testing.T, msgs []payload.Payload) {
 				require.Len(t, msgs, 1)
-				results, ok := msgs[0].(*message.ExecutorResults)
+				results, ok := msgs[0].(*payload.ExecutorResults)
 				require.True(t, ok)
 
 				require.False(t, results.LedgerHasMoreRequests)
@@ -628,7 +641,7 @@ func TestExecutionBroker_AddFreshRequestWithOnPulse(t *testing.T) {
 		},
 		{
 			name: "pulse change in Execute",
-			mocks: func(ctx context.Context, t minimock.Tester) (*ExecutionBroker, *[]insolar.Message) {
+			mocks: func(ctx context.Context, t minimock.Tester) (*ExecutionBroker, *[]payload.Payload) {
 				doneCalled := false
 				er := executionregistry.NewExecutionRegistryMock(t).
 					IsEmptyMock.Set(func() bool { return doneCalled }).
@@ -643,17 +656,17 @@ func TestExecutionBroker_AddFreshRequestWithOnPulse(t *testing.T) {
 
 				broker := NewExecutionBroker(objectRef, nil, re, sender, am, er, nil)
 
-				var msgs []insolar.Message
+				var msgs []payload.Payload
 				re.ExecuteAndSaveMock.Set(func(ctx context.Context, tr *common.Transcript) (insolar.Reply, error) {
 					msgs = broker.OnPulse(ctx)
 					return &reply.OK{}, nil
 				})
 				return broker, &msgs
 			},
-			checks: func(ctx context.Context, t *testing.T, msgs []insolar.Message) {
+			checks: func(ctx context.Context, t *testing.T, msgs []payload.Payload) {
 				require.Len(t, msgs, 1)
 
-				results, ok := msgs[0].(*message.ExecutorResults)
+				results, ok := msgs[0].(*payload.ExecutorResults)
 				require.True(t, ok)
 				require.False(t, results.LedgerHasMoreRequests)
 				require.Equal(t, insolar.InPending, results.Pending)

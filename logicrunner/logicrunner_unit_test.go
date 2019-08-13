@@ -431,12 +431,14 @@ func TestLogicRunner_OnPulse(t *testing.T) {
 
 				lr.initHandlers()
 
-				lr.MessageBus = testutils.NewMessageBusMock(mc).
-					SendMock.Return(&reply.OK{}, nil)
+				lr.Sender = bus.NewSenderMock(t).SendRoleMock.Set(
+					func(ctx context.Context, msg *message2.Message, role insolar.DynamicRole, obj insolar.Reference) (ch1 <-chan *message2.Message, f1 func()) {
+						return nil, func() {}
+					})
 
 				lr.StateStorage = NewStateStorageMock(mc).
 					IsEmptyMock.Return(false).
-					OnPulseMock.Return([]insolar.Message{&message.ExecutorResults{}})
+					OnPulseMock.Return(map[insolar.Reference][]payload.Payload{gen.Reference(): {&payload.ExecutorResults{}}})
 
 				lr.WriteController = writecontroller.NewWriteController()
 				_ = lr.WriteController.Open(ctx, insolar.FirstPulseNumber)
@@ -454,7 +456,7 @@ func TestLogicRunner_OnPulse(t *testing.T) {
 
 				lr.StateStorage = NewStateStorageMock(mc).
 					IsEmptyMock.Return(true).
-					OnPulseMock.Return([]insolar.Message{})
+					OnPulseMock.Return(map[insolar.Reference][]payload.Payload{})
 
 				lr.WriteController = writecontroller.NewWriteController()
 				_ = lr.WriteController.Open(ctx, insolar.FirstPulseNumber)
@@ -512,9 +514,9 @@ func TestLogicRunner_OnPulse_Order(t *testing.T) {
 		})
 	lr.StateStorage = NewStateStorageMock(mc).
 		OnPulseMock.Set(
-		func(_ context.Context, _ insolar.Pulse) []insolar.Message {
+		func(_ context.Context, _ insolar.Pulse) map[insolar.Reference][]payload.Payload {
 			orderChan <- OrderStateStorageOnPulse
-			return []insolar.Message{}
+			return map[insolar.Reference][]payload.Payload{}
 		}).
 		IsEmptyMock.Return(true)
 

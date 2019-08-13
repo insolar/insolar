@@ -26,7 +26,6 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
-	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -47,7 +46,7 @@ type ExecutionBrokerI interface {
 	PendingState() insolar.PendingState
 	PrevExecutorStillExecuting(ctx context.Context)
 	PrevExecutorPendingResult(ctx context.Context, prevExecState insolar.PendingState)
-	PrevExecutorFinishedPending(ctx context.Context) error
+	PrevExecutorPendingFinished(ctx context.Context) error
 	SetNotPending(ctx context.Context)
 
 	IsKnownRequest(ctx context.Context, req insolar.Reference) bool
@@ -57,7 +56,7 @@ type ExecutionBrokerI interface {
 	NoMoreRequestsOnLedger(ctx context.Context)
 	FetchMoreRequestsFromLedger(ctx context.Context)
 
-	OnPulse(ctx context.Context) []insolar.Message
+	OnPulse(ctx context.Context) []payload.Payload
 }
 
 type ExecutionBroker struct {
@@ -455,7 +454,7 @@ func (q *ExecutionBroker) finishPendingIfNeeded(ctx context.Context) {
 	go q.finishPending(ctx)
 }
 
-func (q *ExecutionBroker) OnPulse(ctx context.Context) []insolar.Message {
+func (q *ExecutionBroker) OnPulse(ctx context.Context) []payload.Payload {
 	logger := inslogger.FromContext(ctx)
 	q.stateLock.Lock()
 	defer q.stateLock.Unlock()
@@ -478,7 +477,7 @@ func (q *ExecutionBroker) OnPulse(ctx context.Context) []insolar.Message {
 		sendExecResults = true
 	}
 
-	messages := make([]insolar.Message, 0)
+	messages := make([]payload.Payload, 0)
 
 	// rotation results also contain finished requests
 	if sendExecResults {
@@ -487,7 +486,7 @@ func (q *ExecutionBroker) OnPulse(ctx context.Context) []insolar.Message {
 		messagesQueue := convertQueueToMessageQueue(ctx, rotationResults.Requests)
 		ledgerHasMoreRequests := q.ledgerHasMoreRequests || rotationResults.LedgerHasMoreRequests
 
-		messages = append(messages, &message.ExecutorResults{
+		messages = append(messages, &payload.ExecutorResults{
 			RecordRef:             q.Ref,
 			Pending:               q.pending,
 			Queue:                 messagesQueue,
@@ -572,7 +571,7 @@ func (q *ExecutionBroker) PrevExecutorStillExecuting(ctx context.Context) {
 	}
 }
 
-func (q *ExecutionBroker) PrevExecutorFinishedPending(ctx context.Context) error {
+func (q *ExecutionBroker) PrevExecutorPendingFinished(ctx context.Context) error {
 	q.stateLock.Lock()
 	defer q.stateLock.Unlock()
 

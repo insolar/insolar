@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/artifacts"
@@ -38,7 +39,7 @@ type StateStorage interface {
 	GetExecutionRegistry(ref insolar.Reference) executionregistry.ExecutionRegistry
 
 	IsEmpty() bool
-	OnPulse(ctx context.Context, pulse insolar.Pulse) []insolar.Message
+	OnPulse(ctx context.Context, pulse insolar.Pulse) map[insolar.Reference][]payload.Payload
 }
 
 type stateStorage struct {
@@ -135,8 +136,8 @@ func (ss *stateStorage) IsEmpty() bool {
 	return true
 }
 
-func (ss *stateStorage) OnPulse(ctx context.Context, pulse insolar.Pulse) []insolar.Message {
-	onPulseMessages := make([]insolar.Message, 0)
+func (ss *stateStorage) OnPulse(ctx context.Context, pulse insolar.Pulse) map[insolar.Reference][]payload.Payload {
+	onPulseMessages := make(map[insolar.Reference][]payload.Payload)
 
 	ss.Lock()
 	defer ss.Unlock()
@@ -148,11 +149,17 @@ func (ss *stateStorage) OnPulse(ctx context.Context, pulse insolar.Pulse) []inso
 			inslogger.FromContext(ctx).Error("exeuction broker exists, but registry doesn't")
 		}
 
-		onPulseMessages = append(onPulseMessages, broker.OnPulse(ctx)...)
+		messages := broker.OnPulse(ctx)
+		if len(messages) > 0 {
+			onPulseMessages[objectRef] = append(onPulseMessages[objectRef], messages...)
+		}
 	}
 
 	for objectRef, registry := range ss.registries {
-		onPulseMessages = append(onPulseMessages, registry.OnPulse(ctx)...)
+		messages := registry.OnPulse(ctx)
+		if len(messages) > 0 {
+			onPulseMessages[objectRef] = append(onPulseMessages[objectRef], messages...)
+		}
 
 		if registry.IsEmpty() {
 			delete(ss.registries, objectRef)
