@@ -196,6 +196,21 @@ type InternalControlFeederAdapter struct {
 	leavingChannel   chan struct{}
 }
 
+func (cf *InternalControlFeederAdapter) OnPreparePulseChange(report api.UpstreamReport) {
+}
+
+func (cf *InternalControlFeederAdapter) OnCommitPulseChange(report api.UpstreamReport, pulseData pulse.Data, activeCensus census.Operational) {
+}
+
+func (cf *InternalControlFeederAdapter) OnCancelPulseChange() {
+}
+
+func (cf *InternalControlFeederAdapter) OnConsensusFinished(report api.UpstreamReport, expectedCensus census.Operational) {
+}
+
+func (cf *InternalControlFeederAdapter) OnConsensusAborted() {
+}
+
 func (cf *InternalControlFeederAdapter) CanStopOnHastyPulse(pn pulse.Number, expectedEndOfConsensus time.Time) bool {
 	return true
 }
