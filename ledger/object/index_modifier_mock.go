@@ -10,7 +10,7 @@ import (
 
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/insolar"
-	record "github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/insolar/record"
 )
 
 // IndexModifierMock implements IndexModifier

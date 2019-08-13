@@ -70,13 +70,13 @@ func (isk *InitialStateKeeper) Start(ctx context.Context) error {
 		logger.Warnf("[ InitialStateKeeper ] No object indexes found in lastSyncPulseNumber: %s", isk.syncPulse.String())
 	}
 
-	// Build empty map for with all known JetIDs
+	// Build empty map with all known JetIDs
 	knownJets := isk.jetAccessor.All(ctx, isk.syncPulse)
 	for _, jetID := range knownJets {
 		isk.abandonRequests[jetID] = []record.Index{}
 	}
 
-	// Fill abandonRequests with pending indexes
+	// Fill map with pending indexes
 	for i := 0; i < len(indexes); i++ {
 		index := indexes[i]
 
