@@ -54,6 +54,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/version"
 
 	"github.com/stretchr/testify/require"
@@ -111,4 +113,21 @@ func TestGetNetworkStatus(t *testing.T) {
 	require.Equal(t, ppn, ns.Pulse.PulseNumber)
 
 	require.Equal(t, version.Version, ns.Version)
+
+	pa.GetLatestPulseMock.Set(func(context.Context) (insolar.Pulse, error) { return pulse, errors.New("test") })
+	ns = sn.GetNetworkStatus()
+	require.Equal(t, ins, ns.NetworkState)
+
+	require.Equal(t, nn, ns.Origin)
+
+	require.Equal(t, activeLen, ns.ActiveListSize)
+
+	require.Equal(t, workingLen, ns.WorkingListSize)
+
+	require.Len(t, ns.Nodes, activeLen)
+
+	require.Equal(t, insolar.GenesisPulse.PulseNumber, ns.Pulse.PulseNumber)
+
+	require.Equal(t, version.Version, ns.Version)
+
 }
