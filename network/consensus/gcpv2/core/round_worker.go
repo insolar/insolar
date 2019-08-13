@@ -53,8 +53,8 @@ package core
 import (
 	"context"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensus/common/syncrun"
 	"github.com/insolar/insolar/network/consensus/common/capacity"
+	"github.com/insolar/insolar/network/consensus/common/syncrun"
 	"sync/atomic"
 	"time"
 
@@ -82,14 +82,13 @@ const (
 var _ api.RoundStateCallback = &RoundStateMachineWorker{}
 
 type RoundStateMachineWorker struct {
-	worker        syncrun.SyncingWorker
-	upstream      api.UpstreamController
-	controlFeeder api.PulseControlFeeder
+	worker                  syncrun.SyncingWorker
+	upstream                api.UpstreamController
+	controlFeeder           api.PulseControlFeeder
 	trafficControl          api.TrafficControlFeeder
 	trafficThrottleDuration time.Duration
 
 	finishedFn func()
-
 
 	roundState uint32
 }
@@ -97,6 +96,7 @@ type RoundStateMachineWorker struct {
 func (p *RoundStateMachineWorker) OnPulseDetected() {
 	p.applyState(RoundPulseDetected)
 	p.trafficControl.SetTrafficLimit(capacity.LevelMinimal, p.trafficThrottleDuration)
+	//p.controlFeeder.
 }
 
 func (p *RoundStateMachineWorker) OnFullRoundStarting() {
@@ -287,16 +287,13 @@ loop:
 			default:
 				logLevel = insolar.WarnLevel
 				logMsg = "state self-loop transition"
-				break loop
+				break loop // INCORRECT, do not apply
 			}
 		case curState+1 == newState && curState < RoundConsensusFinished:
 			// next step from a non-stopped state
 			if newState == RoundConsensusFinished {
 				transitionCompletionAction = p.finishedFn
 			}
-		case curState == RoundInactive:
-			logMsg = "transition from inactive state"
-			logLevel = insolar.WarnLevel
 		case curState == RoundConsensusFinished && newState > RoundConsensusFinished:
 			// classification of stop
 		case curState == RoundPulsePreparing && newState == RoundPulseAccepted:
@@ -308,12 +305,16 @@ loop:
 			// attempt to restart from a final state
 			logLevel = insolar.ErrorLevel
 			logMsg = "state reset transition"
-			break loop // NOT ALLOWED
+			break loop // TRANSITION IS NOT ALLOWED
 		default:
-			if curState > newState {
+			switch {
+			case curState == RoundInactive:
+				logLevel = insolar.WarnLevel
+				logMsg = "transition from inactive state"
+			case curState > newState:
 				logLevel = insolar.ErrorLevel
 				logMsg = "backward state transition"
-			} else {
+			default:
 				logMsg = "fast-forward state transition"
 				logLevel = insolar.WarnLevel // InfoLevel?
 			}
@@ -321,15 +322,19 @@ loop:
 			doFinish = curState < RoundConsensusFinished && newState > RoundConsensusFinished
 
 			switch { // transition from a state that require cancellation
-			case curState == RoundPulsePreparing:
-				if newState >= RoundConsensusFinished {
-					transitionCompletionAction = func() {
-						p.controlFeeder.OnFailedPreparePulseChange()
-						p.upstream.CancelPulseChange()
-					}
-				} else {
-					transitionCompletionAction = p.upstream.CancelPulseChange
+			case curState == RoundPulsePreparing && newState > RoundConsensusFinished:
+				transitionCompletionAction = func() {
+					p.controlFeeder.OnFailedPreparePulseChange()
+					p.upstream.CancelPulseChange()
+					p.upstream.ConsensusAborted()
 				}
+			case curState == RoundPulsePreparing && newState == RoundConsensusFinished:
+				transitionCompletionAction = func() {
+					p.controlFeeder.OnFailedPreparePulseChange()
+					p.upstream.CancelPulseChange()
+				}
+			case curState == RoundPulsePreparing:
+				transitionCompletionAction = p.upstream.CancelPulseChange
 			case curState < RoundConsensusFinished && newState > RoundConsensusFinished:
 				transitionCompletionAction = p.upstream.ConsensusAborted
 			}
