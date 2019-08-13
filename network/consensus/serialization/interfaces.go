@@ -53,11 +53,12 @@ package serialization
 import (
 	"context"
 	"encoding/binary"
+	"io"
+	"time"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
-	"io"
-	"time"
 )
 
 var (
@@ -125,7 +126,7 @@ type ContextSerializerTo interface {
 }
 
 type DeserializerFrom interface {
-	DeserializeFrom(ctx context.Context, reader io.Reader) (int64, error)
+	DeserializeFrom(ctx context.Context, reader io.Reader, receivedAt time.Time) (int64, error)
 }
 
 type ContextDeserializerFrom interface {

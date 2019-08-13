@@ -116,7 +116,7 @@ func TestFuture_SetResponse(t *testing.T) {
 
 	require.Empty(t, f.Response())
 
-	receivedPacket := packet.NewReceivedPacket(m, nil)
+	receivedPacket := packet.NewReceivedPacket(m, nil, time.Now())
 	go f.SetResponse(receivedPacket)
 
 	m2 := <-f.Response() // Response() call closes channel
@@ -193,7 +193,7 @@ func TestFuture_WaitResponse_Success(t *testing.T) {
 		cancelCallback: func(f Future) {},
 	}
 
-	p := packet.NewReceivedPacket(&packet.Packet{}, nil)
+	p := packet.NewReceivedPacket(&packet.Packet{}, nil, time.Now())
 	c <- p
 
 	res, err := f.WaitResponse(time.Minute)
@@ -219,7 +219,7 @@ func TestFuture_SetResponse_Cancel_Concurrency(t *testing.T) {
 		wg.Done()
 	}()
 	go func() {
-		f.SetResponse(packet.NewReceivedPacket(&packet.Packet{}, nil))
+		f.SetResponse(packet.NewReceivedPacket(&packet.Packet{}, nil, time.Now()))
 		wg.Done()
 	}()
 

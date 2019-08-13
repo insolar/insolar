@@ -87,7 +87,7 @@ func TestSha3512Digester_GetDigestOf(t *testing.T) {
 	_, _ = rand.Read(b)
 	reader := bytes.NewReader(b)
 
-	digest := digester.GetDigestOf(reader)
+	digest := digester.DigestData(reader)
 	require.Equal(t, digest.FixedByteSize(), scheme.IntegrityHashSize())
 
 	expected := scheme.IntegrityHasher().Hash(b)
@@ -156,7 +156,7 @@ func TestECDSADigestSigner_SignDigest(t *testing.T) {
 	_, _ = rand.Read(b)
 	reader := bytes.NewReader(b)
 
-	digest := digester.GetDigestOf(reader)
+	digest := digester.DigestData(reader)
 	digestBytes := digest.AsBytes()
 
 	signature := ds.SignDigest(digest)
@@ -221,7 +221,7 @@ func TestECDSASignatureVerifier_IsValidDigestSignature(t *testing.T) {
 	_, _ = rand.Read(b)
 	reader := bytes.NewReader(b)
 
-	digest := digester.GetDigestOf(reader)
+	digest := digester.DigestData(reader)
 	digestBytes := digest.AsBytes()
 
 	signature, _ := signer.Sign(digestBytes)
@@ -241,7 +241,7 @@ func TestECDSASignatureVerifier_IsValidDigestSignature_InvalidMethod(t *testing.
 	_, _ = rand.Read(b)
 	reader := bytes.NewReader(b)
 
-	digest := digester.GetDigestOf(reader)
+	digest := digester.DigestData(reader)
 	digestBytes := digest.AsBytes()
 
 	signature, _ := signer.Sign(digestBytes)
@@ -270,7 +270,7 @@ func TestECDSASignatureVerifier_IsValidDataSignature(t *testing.T) {
 	_, _ = rand.Read(b)
 	reader := bytes.NewReader(b)
 
-	digest := digester.GetDigestOf(reader)
+	digest := digester.DigestData(reader)
 	digestBytes := digest.AsBytes()
 
 	signature, _ := signer.Sign(digestBytes)
@@ -291,7 +291,7 @@ func TestECDSASignatureVerifier_IsValidDataSignature_InvalidMethod(t *testing.T)
 	_, _ = rand.Read(b)
 	reader := bytes.NewReader(b)
 
-	digest := digester.GetDigestOf(reader)
+	digest := digester.DigestData(reader)
 	digestBytes := digest.AsBytes()
 
 	signature, _ := signer.Sign(digestBytes)

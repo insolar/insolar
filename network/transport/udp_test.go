@@ -54,6 +54,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/stretchr/testify/assert"
@@ -67,7 +68,7 @@ type testNode struct {
 	address string
 }
 
-func (t *testNode) HandleDatagram(ctx context.Context, address string, buf []byte) {
+func (t *testNode) HandleDatagram(ctx context.Context, address string, buf []byte, r time.Time) {
 	inslogger.FromContext(ctx).Info("Handle Datagram ", buf)
 }
 

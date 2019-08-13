@@ -87,7 +87,7 @@ func TestPacketHandler_Handle_Response(t *testing.T) {
 	resp.Sender = req.Receiver
 	resp.SetResponse(&packet.BasicResponse{})
 
-	receivedPacket := packet.NewReceivedPacket(resp, nil)
+	receivedPacket := packet.NewReceivedPacket(resp, nil, time.Now())
 	ph.Handle(context.Background(), receivedPacket)
 
 	res, err := future.WaitResponse(time.Minute)
@@ -107,7 +107,7 @@ func TestPacketHandler_Handle_NotResponse(t *testing.T) {
 	resp.Receiver = req.Sender
 	resp.Sender = req.Receiver
 
-	ph.Handle(context.Background(), packet.NewReceivedPacket(resp, nil))
+	ph.Handle(context.Background(), packet.NewReceivedPacket(resp, nil, time.Now()))
 
 	_, err := future.WaitResponse(time.Second)
 
@@ -126,7 +126,7 @@ func TestPacketHandler_Handle_NotProcessable(t *testing.T) {
 	resp := newPacket()
 	resp.SetResponse(&packet.BasicResponse{})
 
-	ph.Handle(context.Background(), packet.NewReceivedPacket(resp, nil))
+	ph.Handle(context.Background(), packet.NewReceivedPacket(resp, nil, time.Now()))
 
 	_, err := future.WaitResponse(time.Minute)
 
@@ -144,7 +144,7 @@ func TestShouldProcessPacket(t *testing.T) {
 	resp.Receiver = req.Sender
 	resp.Sender = req.Receiver
 
-	require.True(t, shouldProcessPacket(future, packet.NewReceivedPacket(resp, nil)))
+	require.True(t, shouldProcessPacket(future, packet.NewReceivedPacket(resp, nil, time.Now())))
 }
 
 func TestShouldProcessPacket_WrongType(t *testing.T) {
@@ -158,7 +158,7 @@ func TestShouldProcessPacket_WrongType(t *testing.T) {
 	resp.Sender = req.Receiver
 	resp.Type = uint32(types.RPC)
 
-	require.False(t, shouldProcessPacket(future, packet.NewReceivedPacket(resp, nil)))
+	require.False(t, shouldProcessPacket(future, packet.NewReceivedPacket(resp, nil, time.Now())))
 }
 
 func TestShouldProcessPacket_WrongSender(t *testing.T) {
@@ -167,7 +167,7 @@ func TestShouldProcessPacket_WrongSender(t *testing.T) {
 	req := newPacket()
 	future := m.Create(req)
 
-	require.False(t, shouldProcessPacket(future, packet.NewReceivedPacket(req, nil)))
+	require.False(t, shouldProcessPacket(future, packet.NewReceivedPacket(req, nil, time.Now())))
 }
 
 func TestShouldProcessPacket_WrongSenderPing(t *testing.T) {
@@ -179,5 +179,5 @@ func TestShouldProcessPacket_WrongSenderPing(t *testing.T) {
 	resp := newPacket()
 	resp.SetResponse(&packet.Ping{})
 
-	require.False(t, shouldProcessPacket(future, packet.NewReceivedPacket(resp, nil)))
+	require.False(t, shouldProcessPacket(future, packet.NewReceivedPacket(resp, nil, time.Now())))
 }

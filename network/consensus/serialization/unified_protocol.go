@@ -322,14 +322,13 @@ func (p *Packet) SerializeTo(ctx context.Context, writer io.Writer, digester cry
 	return serializeCtx.Finalize()
 }
 
-func (p *Packet) DeserializeFrom(ctx context.Context, reader io.Reader) (int64, error) {
+func (p *Packet) DeserializeFrom(ctx context.Context, reader io.Reader, receivedAt time.Time) (int64, error) {
 	r := newTrackableReader(reader)
 
 	if err := p.Header.DeserializeFrom(nil, r); err != nil {
 		return r.totalRead, ErrMalformedHeader(err)
 	}
 
-	receivedAt := time.Now() // TODO pull it up through the context
 	packetCtx := newPacketContext(ctx, &p.Header, receivedAt)
 	deserializeCtx := newDeserializeContext(packetCtx, r, &p.Header)
 

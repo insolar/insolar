@@ -4,6 +4,7 @@ package transport
 
 import (
 	mm_atomic "sync/atomic"
+	"time"
 	mm_time "time"
 
 	"github.com/gojuno/minimock"
@@ -22,6 +23,12 @@ type PacketParserMock struct {
 	afterGetMemberPacketCounter  uint64
 	beforeGetMemberPacketCounter uint64
 	GetMemberPacketMock          mPacketParserMockGetMemberPacket
+
+	funcGetPacketReceivedAt          func() (t1 time.Time)
+	inspectFuncGetPacketReceivedAt   func()
+	afterGetPacketReceivedAtCounter  uint64
+	beforeGetPacketReceivedAtCounter uint64
+	GetPacketReceivedAtMock          mPacketParserMockGetPacketReceivedAt
 
 	funcGetPacketSignature          func() (s1 cryptkit.SignedDigest)
 	inspectFuncGetPacketSignature   func()
@@ -86,6 +93,8 @@ func NewPacketParserMock(t minimock.Tester) *PacketParserMock {
 	}
 
 	m.GetMemberPacketMock = mPacketParserMockGetMemberPacket{mock: m}
+
+	m.GetPacketReceivedAtMock = mPacketParserMockGetPacketReceivedAt{mock: m}
 
 	m.GetPacketSignatureMock = mPacketParserMockGetPacketSignature{mock: m}
 
@@ -248,6 +257,149 @@ func (m *PacketParserMock) MinimockGetMemberPacketInspect() {
 	// if func was set then invocations count should be greater than zero
 	if m.funcGetMemberPacket != nil && mm_atomic.LoadUint64(&m.afterGetMemberPacketCounter) < 1 {
 		m.t.Error("Expected call to PacketParserMock.GetMemberPacket")
+	}
+}
+
+type mPacketParserMockGetPacketReceivedAt struct {
+	mock               *PacketParserMock
+	defaultExpectation *PacketParserMockGetPacketReceivedAtExpectation
+	expectations       []*PacketParserMockGetPacketReceivedAtExpectation
+}
+
+// PacketParserMockGetPacketReceivedAtExpectation specifies expectation struct of the PacketParser.GetPacketReceivedAt
+type PacketParserMockGetPacketReceivedAtExpectation struct {
+	mock *PacketParserMock
+
+	results *PacketParserMockGetPacketReceivedAtResults
+	Counter uint64
+}
+
+// PacketParserMockGetPacketReceivedAtResults contains results of the PacketParser.GetPacketReceivedAt
+type PacketParserMockGetPacketReceivedAtResults struct {
+	t1 time.Time
+}
+
+// Expect sets up expected params for PacketParser.GetPacketReceivedAt
+func (mmGetPacketReceivedAt *mPacketParserMockGetPacketReceivedAt) Expect() *mPacketParserMockGetPacketReceivedAt {
+	if mmGetPacketReceivedAt.mock.funcGetPacketReceivedAt != nil {
+		mmGetPacketReceivedAt.mock.t.Fatalf("PacketParserMock.GetPacketReceivedAt mock is already set by Set")
+	}
+
+	if mmGetPacketReceivedAt.defaultExpectation == nil {
+		mmGetPacketReceivedAt.defaultExpectation = &PacketParserMockGetPacketReceivedAtExpectation{}
+	}
+
+	return mmGetPacketReceivedAt
+}
+
+// Inspect accepts an inspector function that has same arguments as the PacketParser.GetPacketReceivedAt
+func (mmGetPacketReceivedAt *mPacketParserMockGetPacketReceivedAt) Inspect(f func()) *mPacketParserMockGetPacketReceivedAt {
+	if mmGetPacketReceivedAt.mock.inspectFuncGetPacketReceivedAt != nil {
+		mmGetPacketReceivedAt.mock.t.Fatalf("Inspect function is already set for PacketParserMock.GetPacketReceivedAt")
+	}
+
+	mmGetPacketReceivedAt.mock.inspectFuncGetPacketReceivedAt = f
+
+	return mmGetPacketReceivedAt
+}
+
+// Return sets up results that will be returned by PacketParser.GetPacketReceivedAt
+func (mmGetPacketReceivedAt *mPacketParserMockGetPacketReceivedAt) Return(t1 time.Time) *PacketParserMock {
+	if mmGetPacketReceivedAt.mock.funcGetPacketReceivedAt != nil {
+		mmGetPacketReceivedAt.mock.t.Fatalf("PacketParserMock.GetPacketReceivedAt mock is already set by Set")
+	}
+
+	if mmGetPacketReceivedAt.defaultExpectation == nil {
+		mmGetPacketReceivedAt.defaultExpectation = &PacketParserMockGetPacketReceivedAtExpectation{mock: mmGetPacketReceivedAt.mock}
+	}
+	mmGetPacketReceivedAt.defaultExpectation.results = &PacketParserMockGetPacketReceivedAtResults{t1}
+	return mmGetPacketReceivedAt.mock
+}
+
+//Set uses given function f to mock the PacketParser.GetPacketReceivedAt method
+func (mmGetPacketReceivedAt *mPacketParserMockGetPacketReceivedAt) Set(f func() (t1 time.Time)) *PacketParserMock {
+	if mmGetPacketReceivedAt.defaultExpectation != nil {
+		mmGetPacketReceivedAt.mock.t.Fatalf("Default expectation is already set for the PacketParser.GetPacketReceivedAt method")
+	}
+
+	if len(mmGetPacketReceivedAt.expectations) > 0 {
+		mmGetPacketReceivedAt.mock.t.Fatalf("Some expectations are already set for the PacketParser.GetPacketReceivedAt method")
+	}
+
+	mmGetPacketReceivedAt.mock.funcGetPacketReceivedAt = f
+	return mmGetPacketReceivedAt.mock
+}
+
+// GetPacketReceivedAt implements PacketParser
+func (mmGetPacketReceivedAt *PacketParserMock) GetPacketReceivedAt() (t1 time.Time) {
+	mm_atomic.AddUint64(&mmGetPacketReceivedAt.beforeGetPacketReceivedAtCounter, 1)
+	defer mm_atomic.AddUint64(&mmGetPacketReceivedAt.afterGetPacketReceivedAtCounter, 1)
+
+	if mmGetPacketReceivedAt.inspectFuncGetPacketReceivedAt != nil {
+		mmGetPacketReceivedAt.inspectFuncGetPacketReceivedAt()
+	}
+
+	if mmGetPacketReceivedAt.GetPacketReceivedAtMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmGetPacketReceivedAt.GetPacketReceivedAtMock.defaultExpectation.Counter, 1)
+
+		results := mmGetPacketReceivedAt.GetPacketReceivedAtMock.defaultExpectation.results
+		if results == nil {
+			mmGetPacketReceivedAt.t.Fatal("No results are set for the PacketParserMock.GetPacketReceivedAt")
+		}
+		return (*results).t1
+	}
+	if mmGetPacketReceivedAt.funcGetPacketReceivedAt != nil {
+		return mmGetPacketReceivedAt.funcGetPacketReceivedAt()
+	}
+	mmGetPacketReceivedAt.t.Fatalf("Unexpected call to PacketParserMock.GetPacketReceivedAt.")
+	return
+}
+
+// GetPacketReceivedAtAfterCounter returns a count of finished PacketParserMock.GetPacketReceivedAt invocations
+func (mmGetPacketReceivedAt *PacketParserMock) GetPacketReceivedAtAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmGetPacketReceivedAt.afterGetPacketReceivedAtCounter)
+}
+
+// GetPacketReceivedAtBeforeCounter returns a count of PacketParserMock.GetPacketReceivedAt invocations
+func (mmGetPacketReceivedAt *PacketParserMock) GetPacketReceivedAtBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmGetPacketReceivedAt.beforeGetPacketReceivedAtCounter)
+}
+
+// MinimockGetPacketReceivedAtDone returns true if the count of the GetPacketReceivedAt invocations corresponds
+// the number of defined expectations
+func (m *PacketParserMock) MinimockGetPacketReceivedAtDone() bool {
+	for _, e := range m.GetPacketReceivedAtMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			return false
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.GetPacketReceivedAtMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterGetPacketReceivedAtCounter) < 1 {
+		return false
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcGetPacketReceivedAt != nil && mm_atomic.LoadUint64(&m.afterGetPacketReceivedAtCounter) < 1 {
+		return false
+	}
+	return true
+}
+
+// MinimockGetPacketReceivedAtInspect logs each unmet expectation
+func (m *PacketParserMock) MinimockGetPacketReceivedAtInspect() {
+	for _, e := range m.GetPacketReceivedAtMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			m.t.Error("Expected call to PacketParserMock.GetPacketReceivedAt")
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.GetPacketReceivedAtMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterGetPacketReceivedAtCounter) < 1 {
+		m.t.Error("Expected call to PacketParserMock.GetPacketReceivedAt")
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcGetPacketReceivedAt != nil && mm_atomic.LoadUint64(&m.afterGetPacketReceivedAtCounter) < 1 {
+		m.t.Error("Expected call to PacketParserMock.GetPacketReceivedAt")
 	}
 }
 
@@ -1544,6 +1696,8 @@ func (m *PacketParserMock) MinimockFinish() {
 	if !m.minimockDone() {
 		m.MinimockGetMemberPacketInspect()
 
+		m.MinimockGetPacketReceivedAtInspect()
+
 		m.MinimockGetPacketSignatureInspect()
 
 		m.MinimockGetPacketTypeInspect()
@@ -1585,6 +1739,7 @@ func (m *PacketParserMock) minimockDone() bool {
 	done := true
 	return done &&
 		m.MinimockGetMemberPacketDone() &&
+		m.MinimockGetPacketReceivedAtDone() &&
 		m.MinimockGetPacketSignatureDone() &&
 		m.MinimockGetPacketTypeDone() &&
 		m.MinimockGetPulseNumberDone() &&

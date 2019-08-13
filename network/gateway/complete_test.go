@@ -53,8 +53,10 @@ package gateway
 import (
 	"context"
 	"errors"
-	"github.com/stretchr/testify/assert"
 	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/stretchr/testify/require"
 
@@ -213,7 +215,7 @@ func TestComplete_handler(t *testing.T) {
 	ge = ge.NewGateway(context.Background(), insolar.CompleteNetworkState)
 	ctx := context.Background()
 
-	p := packet.NewReceivedPacket(packet.NewPacket(nil, nil, types.SignCert, 1), nil)
+	p := packet.NewReceivedPacket(packet.NewPacket(nil, nil, types.SignCert, 1), nil, time.Now())
 	p.SetRequest(&packet.SignCertRequest{NodeRef: nodeRef})
 
 	hn.BuildResponseMock.Set(func(ctx context.Context, request network.Packet, responseData interface{}) (p1 network.Packet) {

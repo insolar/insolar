@@ -55,6 +55,7 @@ import (
 	"context"
 	"crypto/rand"
 	"testing"
+	"time"
 
 	"github.com/insolar/insolar/network/consensus/adapters"
 	"github.com/insolar/insolar/network/consensus/common/longbits"
@@ -98,8 +99,11 @@ func TestEmbeddedPulsarData_DeserializeFrom(t *testing.T) {
 	err = pd1.SerializeTo(nil, buf)
 	require.NoError(t, err)
 
+	pCtx := newPacketContext(context.Background(), &Header{}, time.Now())
+	dCtx := newDeserializeContext(pCtx, newTrackableReader(buf), nil)
+
 	pd2 := EmbeddedPulsarData{}
-	err = pd2.DeserializeFrom(nil, buf)
+	err = pd2.DeserializeFrom(dCtx, buf)
 	require.NoError(t, err)
 
 	// require.Equal(t, p.Header, pd.Header)
@@ -233,7 +237,7 @@ func TestGlobulaConsensusPacket_DeserializeFrom(t *testing.T) {
 
 	p2 := Packet{}
 
-	_, err = p2.DeserializeFrom(context.Background(), buf)
+	_, err = p2.DeserializeFrom(context.Background(), buf, time.Now())
 	require.NoError(t, err)
 
 	require.Equal(t, p1, p2)
@@ -289,7 +293,7 @@ func TestGlobulaConsensusPacketBody_Phases(t *testing.T) {
 
 			p2 := Packet{}
 
-			_, err = p2.DeserializeFrom(context.Background(), buf)
+			_, err = p2.DeserializeFrom(context.Background(), buf, time.Now())
 			require.NoError(t, err)
 
 			require.Equal(t, p, p2)
@@ -373,7 +377,7 @@ func TestGlobulaConsensusPacketBody_Phases_Flag0(t *testing.T) {
 
 			p2 := Packet{}
 
-			_, err = p2.DeserializeFrom(context.Background(), buf)
+			_, err = p2.DeserializeFrom(context.Background(), buf, time.Now())
 			require.NoError(t, err)
 		})
 	}
@@ -458,7 +462,7 @@ func TestGlobulaConsensusPacketBody_Phases_Flag0Reset(t *testing.T) {
 
 			p2 := Packet{}
 
-			_, err = p2.DeserializeFrom(context.Background(), buf)
+			_, err = p2.DeserializeFrom(context.Background(), buf, time.Now())
 			require.NoError(t, err)
 		})
 	}
@@ -530,7 +534,7 @@ func TestGlobulaConsensusPacketBody_Phases_Flag1(t *testing.T) {
 
 			p2 := Packet{}
 
-			_, err = p2.DeserializeFrom(context.Background(), buf)
+			_, err = p2.DeserializeFrom(context.Background(), buf, time.Now())
 			require.NoError(t, err)
 
 			p2.EncryptableBody.(*GlobulaConsensusPacketBody).BriefSelfIntro.JoinerData = nil
@@ -607,7 +611,7 @@ func TestGlobulaConsensusPacketBody_Phases_Flag2(t *testing.T) {
 
 			p2 := Packet{}
 
-			_, err = p2.DeserializeFrom(context.Background(), buf)
+			_, err = p2.DeserializeFrom(context.Background(), buf, time.Now())
 			require.NoError(t, err)
 
 			p2.EncryptableBody.(*GlobulaConsensusPacketBody).BriefSelfIntro.JoinerData = nil
@@ -685,7 +689,7 @@ func TestGlobulaConsensusPacketBody_Phases_Flag12(t *testing.T) {
 
 			p2 := Packet{}
 
-			_, err = p2.DeserializeFrom(context.Background(), buf)
+			_, err = p2.DeserializeFrom(context.Background(), buf, time.Now())
 			require.NoError(t, err)
 
 			p2.EncryptableBody.(*GlobulaConsensusPacketBody).BriefSelfIntro.JoinerData = nil

@@ -56,6 +56,7 @@ import (
 	"crypto/rand"
 	"math"
 	"testing"
+	"time"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 
@@ -66,7 +67,7 @@ func TestNodeVectors_SerializeTo(t *testing.T) {
 	nv := NodeVectors{}
 
 	header := Header{}
-	packetCtx := newPacketContext(context.Background(), &header)
+	packetCtx := newPacketContext(context.Background(), &header, time.Now())
 	serializeCtx := newSerializeContext(packetCtx, nil, nil, nil, nil)
 
 	buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
@@ -78,7 +79,7 @@ func TestNodeVectors_DeserializeFrom(t *testing.T) {
 	nv := NodeVectors{}
 
 	header := Header{}
-	packetCtx := newPacketContext(context.Background(), &header)
+	packetCtx := newPacketContext(context.Background(), &header, time.Now())
 	serializeCtx := newSerializeContext(packetCtx, nil, nil, nil, nil)
 
 	buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))
@@ -104,7 +105,7 @@ func TestNodeVectors_AdditionalVectors(t *testing.T) {
 	header.ClearFlag(1)
 	header.SetFlag(2)
 
-	packetCtx := newPacketContext(context.Background(), &header)
+	packetCtx := newPacketContext(context.Background(), &header, time.Now())
 	serializeCtx := newSerializeContext(packetCtx, nil, nil, nil, nil)
 
 	buf := bytes.NewBuffer(make([]byte, 0, packetMaxSize))

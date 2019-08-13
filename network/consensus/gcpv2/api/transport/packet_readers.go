@@ -51,6 +51,8 @@
 package transport
 
 import (
+	"time"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
@@ -58,7 +60,6 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
-	"time"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/transport.PacketParser -o . -s _mock.go -g
