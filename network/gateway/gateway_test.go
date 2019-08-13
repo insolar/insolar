@@ -176,9 +176,6 @@ func TestDumbComplete_GetCert(t *testing.T) {
 	})
 
 	CM.GetCertificateMock.Set(func() (r insolar.Certificate) { return &certificate.Certificate{} })
-	CM.NewUnsignedCertificateMock.Set(func(p string, p1 string, p2 string) (r insolar.Certificate, r1 error) {
-		return &certificate.Certificate{}, nil
-	})
 	cert, err := ge.Auther().GetCert(ctx, &cref)
 
 	require.NoError(t, err)

@@ -29,23 +29,25 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
+	"github.com/insolar/insolar/logicrunner/common"
+	"github.com/insolar/insolar/logicrunner/logicexecutor"
 	"github.com/insolar/insolar/messagebus"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/logicrunner.RequestsExecutor -o ./ -s _mock.go -g
 
 type RequestsExecutor interface {
-	ExecuteAndSave(ctx context.Context, current *Transcript) (insolar.Reply, error)
-	Execute(ctx context.Context, current *Transcript) (artifacts.RequestResult, error)
-	Save(ctx context.Context, current *Transcript, res artifacts.RequestResult) (insolar.Reply, error)
-	SendReply(ctx context.Context, current *Transcript, re insolar.Reply, err error)
+	ExecuteAndSave(ctx context.Context, current *common.Transcript) (insolar.Reply, error)
+	Execute(ctx context.Context, current *common.Transcript) (artifacts.RequestResult, error)
+	Save(ctx context.Context, current *common.Transcript, res artifacts.RequestResult) (insolar.Reply, error)
+	SendReply(ctx context.Context, current *common.Transcript, re insolar.Reply, err error)
 }
 
 type requestsExecutor struct {
-	MessageBus      insolar.MessageBus `inject:""`
-	LogicExecutor   LogicExecutor      `inject:""`
-	ArtifactManager artifacts.Client   `inject:""`
-	PulseAccessor   pulse.Accessor     `inject:""`
+	MessageBus      insolar.MessageBus          `inject:""`
+	LogicExecutor   logicexecutor.LogicExecutor `inject:""`
+	ArtifactManager artifacts.Client            `inject:""`
+	PulseAccessor   pulse.Accessor              `inject:""`
 }
 
 func NewRequestsExecutor() RequestsExecutor {
@@ -53,7 +55,7 @@ func NewRequestsExecutor() RequestsExecutor {
 }
 
 func (e *requestsExecutor) ExecuteAndSave(
-	ctx context.Context, transcript *Transcript,
+	ctx context.Context, transcript *common.Transcript,
 ) (
 	insolar.Reply, error,
 ) {
@@ -76,7 +78,7 @@ func (e *requestsExecutor) ExecuteAndSave(
 }
 
 func (e *requestsExecutor) Execute(
-	ctx context.Context, transcript *Transcript,
+	ctx context.Context, transcript *common.Transcript,
 ) (
 	artifacts.RequestResult, error,
 ) {
@@ -102,7 +104,7 @@ func (e *requestsExecutor) Execute(
 }
 
 func (e *requestsExecutor) Save(
-	ctx context.Context, transcript *Transcript, res artifacts.RequestResult,
+	ctx context.Context, transcript *common.Transcript, res artifacts.RequestResult,
 ) (
 	insolar.Reply, error,
 ) {
@@ -118,7 +120,7 @@ func (e *requestsExecutor) Save(
 }
 
 func (e *requestsExecutor) SendReply(
-	ctx context.Context, transcript *Transcript, re insolar.Reply, err error,
+	ctx context.Context, transcript *common.Transcript, re insolar.Reply, err error,
 ) {
 	if rm := transcript.Request.ReturnMode; rm != record.ReturnResult {
 		inslogger.FromContext(ctx).Debug(

@@ -29,7 +29,7 @@ type DispatcherMock struct {
 	beforeClosePulseCounter uint64
 	ClosePulseMock          mDispatcherMockClosePulse
 
-	funcProcess          func(msg *message.Message) (mpa1 []*message.Message, err error)
+	funcProcess          func(msg *message.Message) (err error)
 	inspectFuncProcess   func(msg *message.Message)
 	afterProcessCounter  uint64
 	beforeProcessCounter uint64
@@ -455,8 +455,7 @@ type DispatcherMockProcessParams struct {
 
 // DispatcherMockProcessResults contains results of the Dispatcher.Process
 type DispatcherMockProcessResults struct {
-	mpa1 []*message.Message
-	err  error
+	err error
 }
 
 // Expect sets up expected params for Dispatcher.Process
@@ -491,7 +490,7 @@ func (mmProcess *mDispatcherMockProcess) Inspect(f func(msg *message.Message)) *
 }
 
 // Return sets up results that will be returned by Dispatcher.Process
-func (mmProcess *mDispatcherMockProcess) Return(mpa1 []*message.Message, err error) *DispatcherMock {
+func (mmProcess *mDispatcherMockProcess) Return(err error) *DispatcherMock {
 	if mmProcess.mock.funcProcess != nil {
 		mmProcess.mock.t.Fatalf("DispatcherMock.Process mock is already set by Set")
 	}
@@ -499,12 +498,12 @@ func (mmProcess *mDispatcherMockProcess) Return(mpa1 []*message.Message, err err
 	if mmProcess.defaultExpectation == nil {
 		mmProcess.defaultExpectation = &DispatcherMockProcessExpectation{mock: mmProcess.mock}
 	}
-	mmProcess.defaultExpectation.results = &DispatcherMockProcessResults{mpa1, err}
+	mmProcess.defaultExpectation.results = &DispatcherMockProcessResults{err}
 	return mmProcess.mock
 }
 
 //Set uses given function f to mock the Dispatcher.Process method
-func (mmProcess *mDispatcherMockProcess) Set(f func(msg *message.Message) (mpa1 []*message.Message, err error)) *DispatcherMock {
+func (mmProcess *mDispatcherMockProcess) Set(f func(msg *message.Message) (err error)) *DispatcherMock {
 	if mmProcess.defaultExpectation != nil {
 		mmProcess.mock.t.Fatalf("Default expectation is already set for the Dispatcher.Process method")
 	}
@@ -533,13 +532,13 @@ func (mmProcess *mDispatcherMockProcess) When(msg *message.Message) *DispatcherM
 }
 
 // Then sets up Dispatcher.Process return parameters for the expectation previously defined by the When method
-func (e *DispatcherMockProcessExpectation) Then(mpa1 []*message.Message, err error) *DispatcherMock {
-	e.results = &DispatcherMockProcessResults{mpa1, err}
+func (e *DispatcherMockProcessExpectation) Then(err error) *DispatcherMock {
+	e.results = &DispatcherMockProcessResults{err}
 	return e.mock
 }
 
 // Process implements Dispatcher
-func (mmProcess *DispatcherMock) Process(msg *message.Message) (mpa1 []*message.Message, err error) {
+func (mmProcess *DispatcherMock) Process(msg *message.Message) (err error) {
 	mm_atomic.AddUint64(&mmProcess.beforeProcessCounter, 1)
 	defer mm_atomic.AddUint64(&mmProcess.afterProcessCounter, 1)
 
@@ -557,7 +556,7 @@ func (mmProcess *DispatcherMock) Process(msg *message.Message) (mpa1 []*message.
 	for _, e := range mmProcess.ProcessMock.expectations {
 		if minimock.Equal(e.params, params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
-			return e.results.mpa1, e.results.err
+			return e.results.err
 		}
 	}
 
@@ -573,7 +572,7 @@ func (mmProcess *DispatcherMock) Process(msg *message.Message) (mpa1 []*message.
 		if results == nil {
 			mmProcess.t.Fatal("No results are set for the DispatcherMock.Process")
 		}
-		return (*results).mpa1, (*results).err
+		return (*results).err
 	}
 	if mmProcess.funcProcess != nil {
 		return mmProcess.funcProcess(msg)

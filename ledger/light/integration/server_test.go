@@ -27,8 +27,8 @@ import (
 	"github.com/insolar/insolar/network"
 
 	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
+	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/cryptography"
@@ -191,7 +191,7 @@ func NewServer(
 	// Communication.
 	var (
 		ServerBus, ClientBus       *bus.Bus
-		ServerPubSub, ClientPubSub message.PubSub
+		ServerPubSub, ClientPubSub *gochannel.GoChannel
 	)
 	{
 		ServerPubSub = gochannel.NewGoChannel(gochannel.Config{}, logger)
@@ -329,7 +329,7 @@ func NewServer(
 
 	// Start routers with handlers.
 	{
-		outHandler := func(msg *message.Message) ([]*message.Message, error) {
+		outHandler := func(msg *message.Message) error {
 			meta := payload.Meta{}
 			err := meta.Unmarshal(msg.Payload)
 			if err != nil {
@@ -363,7 +363,7 @@ func NewServer(
 				if err != nil {
 					panic(err)
 				}
-				return nil, nil
+				return nil
 			}
 
 			// todo Add check that heavy is not available in test
@@ -377,7 +377,7 @@ func NewServer(
 			if err != nil {
 				panic(err)
 			}
-			return nil, nil
+			return nil
 		}
 
 		inRouter, err := message.NewRouter(message.RouterConfig{}, logger)
@@ -435,7 +435,7 @@ func NewServer(
 
 func startRouter(ctx context.Context, router *message.Router) {
 	go func() {
-		if err := router.Run(); err != nil {
+		if err := router.Run(ctx); err != nil {
 			inslogger.FromContext(ctx).Error("Error while running router", err)
 		}
 	}()

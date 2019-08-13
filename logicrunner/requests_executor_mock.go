@@ -11,32 +11,33 @@ import (
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/artifacts"
+	"github.com/insolar/insolar/logicrunner/common"
 )
 
 // RequestsExecutorMock implements RequestsExecutor
 type RequestsExecutorMock struct {
 	t minimock.Tester
 
-	funcExecute          func(ctx context.Context, current *Transcript) (r1 artifacts.RequestResult, err error)
-	inspectFuncExecute   func(ctx context.Context, current *Transcript)
+	funcExecute          func(ctx context.Context, current *common.Transcript) (r1 artifacts.RequestResult, err error)
+	inspectFuncExecute   func(ctx context.Context, current *common.Transcript)
 	afterExecuteCounter  uint64
 	beforeExecuteCounter uint64
 	ExecuteMock          mRequestsExecutorMockExecute
 
-	funcExecuteAndSave          func(ctx context.Context, current *Transcript) (r1 insolar.Reply, err error)
-	inspectFuncExecuteAndSave   func(ctx context.Context, current *Transcript)
+	funcExecuteAndSave          func(ctx context.Context, current *common.Transcript) (r1 insolar.Reply, err error)
+	inspectFuncExecuteAndSave   func(ctx context.Context, current *common.Transcript)
 	afterExecuteAndSaveCounter  uint64
 	beforeExecuteAndSaveCounter uint64
 	ExecuteAndSaveMock          mRequestsExecutorMockExecuteAndSave
 
-	funcSave          func(ctx context.Context, current *Transcript, res artifacts.RequestResult) (r1 insolar.Reply, err error)
-	inspectFuncSave   func(ctx context.Context, current *Transcript, res artifacts.RequestResult)
+	funcSave          func(ctx context.Context, current *common.Transcript, res artifacts.RequestResult) (r1 insolar.Reply, err error)
+	inspectFuncSave   func(ctx context.Context, current *common.Transcript, res artifacts.RequestResult)
 	afterSaveCounter  uint64
 	beforeSaveCounter uint64
 	SaveMock          mRequestsExecutorMockSave
 
-	funcSendReply          func(ctx context.Context, current *Transcript, re insolar.Reply, err error)
-	inspectFuncSendReply   func(ctx context.Context, current *Transcript, re insolar.Reply, err error)
+	funcSendReply          func(ctx context.Context, current *common.Transcript, re insolar.Reply, err error)
+	inspectFuncSendReply   func(ctx context.Context, current *common.Transcript, re insolar.Reply, err error)
 	afterSendReplyCounter  uint64
 	beforeSendReplyCounter uint64
 	SendReplyMock          mRequestsExecutorMockSendReply
@@ -84,7 +85,7 @@ type RequestsExecutorMockExecuteExpectation struct {
 // RequestsExecutorMockExecuteParams contains parameters of the RequestsExecutor.Execute
 type RequestsExecutorMockExecuteParams struct {
 	ctx     context.Context
-	current *Transcript
+	current *common.Transcript
 }
 
 // RequestsExecutorMockExecuteResults contains results of the RequestsExecutor.Execute
@@ -94,7 +95,7 @@ type RequestsExecutorMockExecuteResults struct {
 }
 
 // Expect sets up expected params for RequestsExecutor.Execute
-func (mmExecute *mRequestsExecutorMockExecute) Expect(ctx context.Context, current *Transcript) *mRequestsExecutorMockExecute {
+func (mmExecute *mRequestsExecutorMockExecute) Expect(ctx context.Context, current *common.Transcript) *mRequestsExecutorMockExecute {
 	if mmExecute.mock.funcExecute != nil {
 		mmExecute.mock.t.Fatalf("RequestsExecutorMock.Execute mock is already set by Set")
 	}
@@ -114,7 +115,7 @@ func (mmExecute *mRequestsExecutorMockExecute) Expect(ctx context.Context, curre
 }
 
 // Inspect accepts an inspector function that has same arguments as the RequestsExecutor.Execute
-func (mmExecute *mRequestsExecutorMockExecute) Inspect(f func(ctx context.Context, current *Transcript)) *mRequestsExecutorMockExecute {
+func (mmExecute *mRequestsExecutorMockExecute) Inspect(f func(ctx context.Context, current *common.Transcript)) *mRequestsExecutorMockExecute {
 	if mmExecute.mock.inspectFuncExecute != nil {
 		mmExecute.mock.t.Fatalf("Inspect function is already set for RequestsExecutorMock.Execute")
 	}
@@ -138,7 +139,7 @@ func (mmExecute *mRequestsExecutorMockExecute) Return(r1 artifacts.RequestResult
 }
 
 //Set uses given function f to mock the RequestsExecutor.Execute method
-func (mmExecute *mRequestsExecutorMockExecute) Set(f func(ctx context.Context, current *Transcript) (r1 artifacts.RequestResult, err error)) *RequestsExecutorMock {
+func (mmExecute *mRequestsExecutorMockExecute) Set(f func(ctx context.Context, current *common.Transcript) (r1 artifacts.RequestResult, err error)) *RequestsExecutorMock {
 	if mmExecute.defaultExpectation != nil {
 		mmExecute.mock.t.Fatalf("Default expectation is already set for the RequestsExecutor.Execute method")
 	}
@@ -153,7 +154,7 @@ func (mmExecute *mRequestsExecutorMockExecute) Set(f func(ctx context.Context, c
 
 // When sets expectation for the RequestsExecutor.Execute which will trigger the result defined by the following
 // Then helper
-func (mmExecute *mRequestsExecutorMockExecute) When(ctx context.Context, current *Transcript) *RequestsExecutorMockExecuteExpectation {
+func (mmExecute *mRequestsExecutorMockExecute) When(ctx context.Context, current *common.Transcript) *RequestsExecutorMockExecuteExpectation {
 	if mmExecute.mock.funcExecute != nil {
 		mmExecute.mock.t.Fatalf("RequestsExecutorMock.Execute mock is already set by Set")
 	}
@@ -173,7 +174,7 @@ func (e *RequestsExecutorMockExecuteExpectation) Then(r1 artifacts.RequestResult
 }
 
 // Execute implements RequestsExecutor
-func (mmExecute *RequestsExecutorMock) Execute(ctx context.Context, current *Transcript) (r1 artifacts.RequestResult, err error) {
+func (mmExecute *RequestsExecutorMock) Execute(ctx context.Context, current *common.Transcript) (r1 artifacts.RequestResult, err error) {
 	mm_atomic.AddUint64(&mmExecute.beforeExecuteCounter, 1)
 	defer mm_atomic.AddUint64(&mmExecute.afterExecuteCounter, 1)
 
@@ -301,7 +302,7 @@ type RequestsExecutorMockExecuteAndSaveExpectation struct {
 // RequestsExecutorMockExecuteAndSaveParams contains parameters of the RequestsExecutor.ExecuteAndSave
 type RequestsExecutorMockExecuteAndSaveParams struct {
 	ctx     context.Context
-	current *Transcript
+	current *common.Transcript
 }
 
 // RequestsExecutorMockExecuteAndSaveResults contains results of the RequestsExecutor.ExecuteAndSave
@@ -311,7 +312,7 @@ type RequestsExecutorMockExecuteAndSaveResults struct {
 }
 
 // Expect sets up expected params for RequestsExecutor.ExecuteAndSave
-func (mmExecuteAndSave *mRequestsExecutorMockExecuteAndSave) Expect(ctx context.Context, current *Transcript) *mRequestsExecutorMockExecuteAndSave {
+func (mmExecuteAndSave *mRequestsExecutorMockExecuteAndSave) Expect(ctx context.Context, current *common.Transcript) *mRequestsExecutorMockExecuteAndSave {
 	if mmExecuteAndSave.mock.funcExecuteAndSave != nil {
 		mmExecuteAndSave.mock.t.Fatalf("RequestsExecutorMock.ExecuteAndSave mock is already set by Set")
 	}
@@ -331,7 +332,7 @@ func (mmExecuteAndSave *mRequestsExecutorMockExecuteAndSave) Expect(ctx context.
 }
 
 // Inspect accepts an inspector function that has same arguments as the RequestsExecutor.ExecuteAndSave
-func (mmExecuteAndSave *mRequestsExecutorMockExecuteAndSave) Inspect(f func(ctx context.Context, current *Transcript)) *mRequestsExecutorMockExecuteAndSave {
+func (mmExecuteAndSave *mRequestsExecutorMockExecuteAndSave) Inspect(f func(ctx context.Context, current *common.Transcript)) *mRequestsExecutorMockExecuteAndSave {
 	if mmExecuteAndSave.mock.inspectFuncExecuteAndSave != nil {
 		mmExecuteAndSave.mock.t.Fatalf("Inspect function is already set for RequestsExecutorMock.ExecuteAndSave")
 	}
@@ -355,7 +356,7 @@ func (mmExecuteAndSave *mRequestsExecutorMockExecuteAndSave) Return(r1 insolar.R
 }
 
 //Set uses given function f to mock the RequestsExecutor.ExecuteAndSave method
-func (mmExecuteAndSave *mRequestsExecutorMockExecuteAndSave) Set(f func(ctx context.Context, current *Transcript) (r1 insolar.Reply, err error)) *RequestsExecutorMock {
+func (mmExecuteAndSave *mRequestsExecutorMockExecuteAndSave) Set(f func(ctx context.Context, current *common.Transcript) (r1 insolar.Reply, err error)) *RequestsExecutorMock {
 	if mmExecuteAndSave.defaultExpectation != nil {
 		mmExecuteAndSave.mock.t.Fatalf("Default expectation is already set for the RequestsExecutor.ExecuteAndSave method")
 	}
@@ -370,7 +371,7 @@ func (mmExecuteAndSave *mRequestsExecutorMockExecuteAndSave) Set(f func(ctx cont
 
 // When sets expectation for the RequestsExecutor.ExecuteAndSave which will trigger the result defined by the following
 // Then helper
-func (mmExecuteAndSave *mRequestsExecutorMockExecuteAndSave) When(ctx context.Context, current *Transcript) *RequestsExecutorMockExecuteAndSaveExpectation {
+func (mmExecuteAndSave *mRequestsExecutorMockExecuteAndSave) When(ctx context.Context, current *common.Transcript) *RequestsExecutorMockExecuteAndSaveExpectation {
 	if mmExecuteAndSave.mock.funcExecuteAndSave != nil {
 		mmExecuteAndSave.mock.t.Fatalf("RequestsExecutorMock.ExecuteAndSave mock is already set by Set")
 	}
@@ -390,7 +391,7 @@ func (e *RequestsExecutorMockExecuteAndSaveExpectation) Then(r1 insolar.Reply, e
 }
 
 // ExecuteAndSave implements RequestsExecutor
-func (mmExecuteAndSave *RequestsExecutorMock) ExecuteAndSave(ctx context.Context, current *Transcript) (r1 insolar.Reply, err error) {
+func (mmExecuteAndSave *RequestsExecutorMock) ExecuteAndSave(ctx context.Context, current *common.Transcript) (r1 insolar.Reply, err error) {
 	mm_atomic.AddUint64(&mmExecuteAndSave.beforeExecuteAndSaveCounter, 1)
 	defer mm_atomic.AddUint64(&mmExecuteAndSave.afterExecuteAndSaveCounter, 1)
 
@@ -518,7 +519,7 @@ type RequestsExecutorMockSaveExpectation struct {
 // RequestsExecutorMockSaveParams contains parameters of the RequestsExecutor.Save
 type RequestsExecutorMockSaveParams struct {
 	ctx     context.Context
-	current *Transcript
+	current *common.Transcript
 	res     artifacts.RequestResult
 }
 
@@ -529,7 +530,7 @@ type RequestsExecutorMockSaveResults struct {
 }
 
 // Expect sets up expected params for RequestsExecutor.Save
-func (mmSave *mRequestsExecutorMockSave) Expect(ctx context.Context, current *Transcript, res artifacts.RequestResult) *mRequestsExecutorMockSave {
+func (mmSave *mRequestsExecutorMockSave) Expect(ctx context.Context, current *common.Transcript, res artifacts.RequestResult) *mRequestsExecutorMockSave {
 	if mmSave.mock.funcSave != nil {
 		mmSave.mock.t.Fatalf("RequestsExecutorMock.Save mock is already set by Set")
 	}
@@ -549,7 +550,7 @@ func (mmSave *mRequestsExecutorMockSave) Expect(ctx context.Context, current *Tr
 }
 
 // Inspect accepts an inspector function that has same arguments as the RequestsExecutor.Save
-func (mmSave *mRequestsExecutorMockSave) Inspect(f func(ctx context.Context, current *Transcript, res artifacts.RequestResult)) *mRequestsExecutorMockSave {
+func (mmSave *mRequestsExecutorMockSave) Inspect(f func(ctx context.Context, current *common.Transcript, res artifacts.RequestResult)) *mRequestsExecutorMockSave {
 	if mmSave.mock.inspectFuncSave != nil {
 		mmSave.mock.t.Fatalf("Inspect function is already set for RequestsExecutorMock.Save")
 	}
@@ -573,7 +574,7 @@ func (mmSave *mRequestsExecutorMockSave) Return(r1 insolar.Reply, err error) *Re
 }
 
 //Set uses given function f to mock the RequestsExecutor.Save method
-func (mmSave *mRequestsExecutorMockSave) Set(f func(ctx context.Context, current *Transcript, res artifacts.RequestResult) (r1 insolar.Reply, err error)) *RequestsExecutorMock {
+func (mmSave *mRequestsExecutorMockSave) Set(f func(ctx context.Context, current *common.Transcript, res artifacts.RequestResult) (r1 insolar.Reply, err error)) *RequestsExecutorMock {
 	if mmSave.defaultExpectation != nil {
 		mmSave.mock.t.Fatalf("Default expectation is already set for the RequestsExecutor.Save method")
 	}
@@ -588,7 +589,7 @@ func (mmSave *mRequestsExecutorMockSave) Set(f func(ctx context.Context, current
 
 // When sets expectation for the RequestsExecutor.Save which will trigger the result defined by the following
 // Then helper
-func (mmSave *mRequestsExecutorMockSave) When(ctx context.Context, current *Transcript, res artifacts.RequestResult) *RequestsExecutorMockSaveExpectation {
+func (mmSave *mRequestsExecutorMockSave) When(ctx context.Context, current *common.Transcript, res artifacts.RequestResult) *RequestsExecutorMockSaveExpectation {
 	if mmSave.mock.funcSave != nil {
 		mmSave.mock.t.Fatalf("RequestsExecutorMock.Save mock is already set by Set")
 	}
@@ -608,7 +609,7 @@ func (e *RequestsExecutorMockSaveExpectation) Then(r1 insolar.Reply, err error) 
 }
 
 // Save implements RequestsExecutor
-func (mmSave *RequestsExecutorMock) Save(ctx context.Context, current *Transcript, res artifacts.RequestResult) (r1 insolar.Reply, err error) {
+func (mmSave *RequestsExecutorMock) Save(ctx context.Context, current *common.Transcript, res artifacts.RequestResult) (r1 insolar.Reply, err error) {
 	mm_atomic.AddUint64(&mmSave.beforeSaveCounter, 1)
 	defer mm_atomic.AddUint64(&mmSave.afterSaveCounter, 1)
 
@@ -736,13 +737,13 @@ type RequestsExecutorMockSendReplyExpectation struct {
 // RequestsExecutorMockSendReplyParams contains parameters of the RequestsExecutor.SendReply
 type RequestsExecutorMockSendReplyParams struct {
 	ctx     context.Context
-	current *Transcript
+	current *common.Transcript
 	re      insolar.Reply
 	err     error
 }
 
 // Expect sets up expected params for RequestsExecutor.SendReply
-func (mmSendReply *mRequestsExecutorMockSendReply) Expect(ctx context.Context, current *Transcript, re insolar.Reply, err error) *mRequestsExecutorMockSendReply {
+func (mmSendReply *mRequestsExecutorMockSendReply) Expect(ctx context.Context, current *common.Transcript, re insolar.Reply, err error) *mRequestsExecutorMockSendReply {
 	if mmSendReply.mock.funcSendReply != nil {
 		mmSendReply.mock.t.Fatalf("RequestsExecutorMock.SendReply mock is already set by Set")
 	}
@@ -762,7 +763,7 @@ func (mmSendReply *mRequestsExecutorMockSendReply) Expect(ctx context.Context, c
 }
 
 // Inspect accepts an inspector function that has same arguments as the RequestsExecutor.SendReply
-func (mmSendReply *mRequestsExecutorMockSendReply) Inspect(f func(ctx context.Context, current *Transcript, re insolar.Reply, err error)) *mRequestsExecutorMockSendReply {
+func (mmSendReply *mRequestsExecutorMockSendReply) Inspect(f func(ctx context.Context, current *common.Transcript, re insolar.Reply, err error)) *mRequestsExecutorMockSendReply {
 	if mmSendReply.mock.inspectFuncSendReply != nil {
 		mmSendReply.mock.t.Fatalf("Inspect function is already set for RequestsExecutorMock.SendReply")
 	}
@@ -786,7 +787,7 @@ func (mmSendReply *mRequestsExecutorMockSendReply) Return() *RequestsExecutorMoc
 }
 
 //Set uses given function f to mock the RequestsExecutor.SendReply method
-func (mmSendReply *mRequestsExecutorMockSendReply) Set(f func(ctx context.Context, current *Transcript, re insolar.Reply, err error)) *RequestsExecutorMock {
+func (mmSendReply *mRequestsExecutorMockSendReply) Set(f func(ctx context.Context, current *common.Transcript, re insolar.Reply, err error)) *RequestsExecutorMock {
 	if mmSendReply.defaultExpectation != nil {
 		mmSendReply.mock.t.Fatalf("Default expectation is already set for the RequestsExecutor.SendReply method")
 	}
@@ -800,7 +801,7 @@ func (mmSendReply *mRequestsExecutorMockSendReply) Set(f func(ctx context.Contex
 }
 
 // SendReply implements RequestsExecutor
-func (mmSendReply *RequestsExecutorMock) SendReply(ctx context.Context, current *Transcript, re insolar.Reply, err error) {
+func (mmSendReply *RequestsExecutorMock) SendReply(ctx context.Context, current *common.Transcript, re insolar.Reply, err error) {
 	mm_atomic.AddUint64(&mmSendReply.beforeSendReplyCounter, 1)
 	defer mm_atomic.AddUint64(&mmSendReply.afterSendReplyCounter, 1)
 

@@ -29,9 +29,9 @@ type PKShard struct {
 }
 
 // New creates new member.
-func New() (*PKShard, error) {
+func New(members foundation.StableMap) (*PKShard, error) {
 	return &PKShard{
-		Map: make(foundation.StableMap),
+		Map: members,
 	}, nil
 }
 

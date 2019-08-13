@@ -37,6 +37,14 @@ type HandleStillExecuting struct {
 func (h *HandleStillExecuting) Present(ctx context.Context, f flow.Flow) error {
 	ctx = loggerWithTargetID(ctx, h.Parcel)
 	msg := h.Parcel.Message().(*message.StillExecuting)
+
+	done, err := h.dep.WriteAccessor.Begin(ctx, flow.Pulse(ctx))
+	defer done()
+
+	if err != nil {
+		return nil
+	}
+
 	h.dep.ResultsMatcher.AddStillExecution(ctx, msg)
 
 	broker := h.dep.StateStorage.UpsertExecutionState(msg.Reference)

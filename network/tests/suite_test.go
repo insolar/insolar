@@ -479,7 +479,12 @@ func (s *testSuite) initCrypto(node *networkNode) (*certificate.CertificateManag
 			string(pubKeyBuf[:]),
 			b.host,
 			b.id.String(),
-			b.role.String())
+			b.role.String(),
+		)
+
+		sign, err := certificate.SignCert(b.cryptographyService, cert.PublicKey, cert.Role, cert.Reference)
+		require.NoError(s.t, err)
+		bootstrapNode.NodeSign = sign.Bytes()
 
 		cert.BootstrapNodes = append(cert.BootstrapNodes, *bootstrapNode)
 	}

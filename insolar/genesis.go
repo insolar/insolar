@@ -29,6 +29,8 @@ const (
 	GenesisNameMember = "member"
 	// GenesisNameWallet is the name of wallet contract for genesis record.
 	GenesisNameWallet = "wallet"
+	// GenesisNameAccount is the name of wallet contract for genesis record.
+	GenesisNameAccount = "account"
 	// GenesisNameDeposit is the name of deposit contract for genesis record.
 	GenesisNameDeposit = "deposit"
 	// GenesisNameCostCenter is the name of cost center contract for genesis record.
@@ -38,11 +40,14 @@ const (
 	// GenesisNameMigrationShard is the name of migration address shard contract for genesis record.
 	GenesisNameMigrationShard = "migrationshard"
 
-	GenesisNameRootMember           = "root" + GenesisNameMember
-	GenesisNameRootWallet           = "root" + GenesisNameWallet
-	GenesisNameMigrationAdminMember = "migrationadmin" + GenesisNameMember
-	GenesisNameMigrationWallet      = "migration" + GenesisNameWallet
-	GenesisNameFeeWallet            = "fee" + GenesisNameWallet
+	GenesisNameRootMember            = "root" + GenesisNameMember
+	GenesisNameRootWallet            = "root" + GenesisNameWallet
+	GenesisNameRootAccount           = "root" + GenesisNameAccount
+	GenesisNameMigrationAdminMember  = "migration" + GenesisNameMember
+	GenesisNameMigrationAdminWallet  = "migration" + GenesisNameWallet
+	GenesisNameMigrationAdminAccount = "migration" + GenesisNameAccount
+	GenesisNameFeeWallet             = "fee" + GenesisNameWallet
+	GenesisNameFeeAccount            = "fee" + GenesisNameAccount
 
 	GenesisAmountMigrationDaemonMembers       = 10
 	GenesisAmountActiveMigrationDaemonMembers = 3

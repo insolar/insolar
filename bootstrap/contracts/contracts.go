@@ -21,6 +21,7 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/genesisrefs"
+	"github.com/insolar/insolar/logicrunner/builtin/contract/account"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/costcenter"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/member"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/migrationshard"
@@ -28,6 +29,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/builtin/contract/pkshard"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/rootdomain"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/wallet"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 )
 
 func RootDomain() insolar.GenesisContractState {
@@ -76,8 +78,8 @@ func GetMemberGenesisContractState(publicKey string, name string, parent string,
 	}
 }
 
-func GetWalletGenesisContractState(balance string, name string, parent string) insolar.GenesisContractState {
-	w, err := wallet.New(balance)
+func GetWalletGenesisContractState(name string, parent string, accountRef insolar.Reference) insolar.GenesisContractState {
+	w, err := wallet.New(accountRef)
 	if err != nil {
 		panic("failed to create ` " + name + "` wallet instance")
 	}
@@ -85,6 +87,20 @@ func GetWalletGenesisContractState(balance string, name string, parent string) i
 	return insolar.GenesisContractState{
 		Name:       name,
 		Prototype:  insolar.GenesisNameWallet,
+		ParentName: parent,
+		Memory:     mustGenMemory(w),
+	}
+}
+
+func GetAccountGenesisContractState(balance string, name string, parent string) insolar.GenesisContractState {
+	w, err := account.New(balance)
+	if err != nil {
+		panic("failed to create ` " + name + "` account instance")
+	}
+
+	return insolar.GenesisContractState{
+		Name:       name,
+		Prototype:  insolar.GenesisNameAccount,
 		ParentName: parent,
 		Memory:     mustGenMemory(w),
 	}
@@ -104,8 +120,8 @@ func GetCostCenterGenesisContractState() insolar.GenesisContractState {
 	}
 }
 
-func GetPKShardGenesisContractState(name string) insolar.GenesisContractState {
-	s, err := pkshard.New()
+func GetPKShardGenesisContractState(name string, members foundation.StableMap) insolar.GenesisContractState {
+	s, err := pkshard.New(members)
 	if err != nil {
 		panic(fmt.Sprintf("'%s' shard constructor failed", name))
 	}

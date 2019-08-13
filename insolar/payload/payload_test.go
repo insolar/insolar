@@ -18,6 +18,7 @@ package payload_test
 
 import (
 	"math/rand"
+	"reflect"
 	"testing"
 
 	"github.com/gogo/protobuf/proto"
@@ -58,10 +59,15 @@ func TestMarshalUnmarshal(t *testing.T) {
 		if expectedType == payload.TypeUnknown {
 			continue
 		}
+
 		typeBuf, err := payload.MarshalType(expectedType)
 		require.NoError(t, err)
 		pl, err := payload.Unmarshal(typeBuf)
 		require.NoError(t, err, "Unmarshal() unknown type %s", expectedType.String())
+		r := reflect.ValueOf(pl)
+		f := reflect.Indirect(r).FieldByName("Polymorph")
+		require.Equal(t, uint32(expectedType), uint32(f.Uint()), "Unmarshal() failed on type %s", expectedType.String())
+
 		buf, err := payload.Marshal(pl)
 		require.NoError(t, err, "Marshal() unknown type %s", expectedType.String())
 		tp, err := payload.UnmarshalType(buf)

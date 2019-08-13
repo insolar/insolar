@@ -25,7 +25,9 @@ import (
 	"golang.org/x/net/context"
 )
 
-// PubSubWrapper stub for message.PubSub introspection wrapper for binaries without introspection API.
-func PubSubWrapper(ctx context.Context, cm *component.Manager, cfg configuration.Introspection, pb message.PubSub) message.PubSub {
+// PublisherWrapper stub for message.Publisher introspection wrapper for binaries without introspection API.
+func PublisherWrapper(
+	ctx context.Context, cm *component.Manager, cfg configuration.Introspection, pb message.Publisher,
+) message.Publisher {
 	return pb
 }

@@ -376,7 +376,7 @@ func (r *RecordPositionDB) AtPosition(pn insolar.PulseNumber, position uint32) (
 	r.lock.RLock()
 	defer r.lock.RUnlock()
 
-	lastKnownPosition, err := r.LastKnownPosition(pn)
+	lastKnownPosition, err := r.lastKnownPosition(pn)
 	if err != nil {
 		return insolar.ID{}, err
 	}

@@ -1,4 +1,3 @@
-//
 // Copyright 2019 Insolar Technologies GmbH
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -201,23 +200,23 @@ func unmarshalCallResponse(t testing.TB, body []byte, response *requester.Contra
 	require.NoError(t, err)
 }
 
-func createMemberWithMigrationAddress(migrationAddress string) error {
+func createMemberWithMigrationAddress(migrationAddress string) (string, error) {
 	member, err := newUserWithKeys()
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	_, err = signedRequest(&migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{migrationAddress}})
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	_, err = retryableMemberMigrationCreate(member, true)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	return nil
+	return member.ref, nil
 }
 
 func migrate(t *testing.T, memberRef string, amount string, tx string, ma string, mdNum int) map[string]interface{} {
@@ -533,18 +532,14 @@ func waitUntilRequestProcessed(
 
 func waitForFunction(customFunction func() api.CallMethodReply, functionTimeout time.Duration) (*api.CallMethodReply, error) {
 	ch := make(chan api.CallMethodReply, 1)
-	defer close(ch)
 	go func() {
 		ch <- customFunction()
 	}()
 
-	timer := time.NewTimer(functionTimeout)
-	defer timer.Stop()
-
 	select {
 	case result := <-ch:
 		return &result, nil
-	case <-timer.C:
+	case <-time.After(functionTimeout):
 		return nil, errors.New("timeout was exceeded")
 	}
 }

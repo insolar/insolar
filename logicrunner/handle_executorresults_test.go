@@ -29,6 +29,7 @@ import (
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/logicrunner/writecontroller"
 	"github.com/insolar/insolar/testutils"
 )
 
@@ -46,8 +47,8 @@ func TestHandleExecutorResults_Present(t *testing.T) {
 					DefaultTargetMock.Return(&obj).
 					MessageMock.Return(
 					&message.ExecutorResults{
-						RecordRef: obj,
-						Pending: insolar.NotPending,
+						RecordRef:             obj,
+						Pending:               insolar.NotPending,
 						LedgerHasMoreRequests: true,
 						Queue: []message.ExecutionQueueElement{
 							{
@@ -62,7 +63,8 @@ func TestHandleExecutorResults_Present(t *testing.T) {
 
 				h := &HandleExecutorResults{
 					dep: &Dependencies{
-						Sender: bus.NewSenderMock(t).ReplyMock.Return(),
+						Sender:        bus.NewSenderMock(t).ReplyMock.Return(),
+						WriteAccessor: writecontroller.NewWriteControllerMock(t).BeginMock.Return(func() {}, nil),
 					},
 					Parcel: parcel,
 				}
@@ -73,7 +75,7 @@ func TestHandleExecutorResults_Present(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			ctx := inslogger.TestContext(t)
+			ctx := flow.TestContextWithPulse(inslogger.TestContext(t), gen.PulseNumber())
 			mc := minimock.NewController(t)
 
 			h, f := test.mocks(mc)

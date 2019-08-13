@@ -25,6 +25,9 @@ import (
 type CreateResponse struct {
 	Reference string `json:"reference"`
 }
+type DepositMigrationResult struct {
+	Reference string `json:"memberReference"`
+}
 type GetBalanceResponse struct {
 	Balance  string                 `json:"balance"`
 	Deposits map[string]interface{} `json:"deposits"`
@@ -40,7 +43,7 @@ type MigrationCreateResponse struct {
 type Params struct {
 	Seed       string      `json:"seed"`
 	CallSite   string      `json:"callSite"`
-	CallParams interface{} `json:"callParams"`
+	CallParams interface{} `json:"callParams,omitempty"`
 	Reference  string      `json:"reference"`
 	PublicKey  string      `json:"publicKey"`
 }
