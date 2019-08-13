@@ -62,7 +62,7 @@ func TestJetTreeUpdater_otherNodesForPulse(t *testing.T) {
 		require.Empty(t, nodes)
 	})
 
-	meRef := testutils.RandomRef()
+	meRef := gen.Reference()
 	jc.MeMock.Return(meRef)
 
 	t.Run("no active nodes at all", func(t *testing.T) {
@@ -132,7 +132,7 @@ func TestJetTreeUpdater_fetchActualJetFromOtherNodes(t *testing.T) {
 	mc := minimock.NewController(t)
 	defer mc.Finish()
 
-	meRef := testutils.RandomRef()
+	meRef := gen.Reference()
 	expectJetID := insolar.ID(*insolar.NewJetID(0, nil))
 
 	js := jet.NewStorageMock(mc)
@@ -329,7 +329,7 @@ func TestJetTreeUpdater_fetchJet(t *testing.T) {
 	})
 
 	t.Run("fetch jet from friends", func(t *testing.T) {
-		meRef := testutils.RandomRef()
+		meRef := gen.Reference()
 		jc.MeMock.Return(meRef)
 
 		getNodes := func() []insolar.Node {
@@ -397,7 +397,7 @@ func TestJetTreeUpdater_Concurrency(t *testing.T) {
 		sequencer:   map[seqKey]*seqEntry{},
 	}
 
-	meRef := testutils.RandomRef()
+	meRef := gen.Reference()
 	jc.MeMock.Return(meRef)
 
 	nodes := []insolar.Node{{ID: gen.Reference()}, {ID: gen.Reference()}, {ID: gen.Reference()}}

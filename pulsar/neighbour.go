@@ -104,8 +104,9 @@ func (impl *RPCClientWrapperImpl) Go(serviceMethod string, args interface{}, rep
 // ResetClient clears rpc-client
 func (impl *RPCClientWrapperImpl) ResetClient() {
 	impl.Lock()
+	defer impl.Unlock()
+
 	impl.Client = nil
-	impl.Unlock()
 }
 
 // Neighbour is a helper struct, which contains info about pulsar-neighbour

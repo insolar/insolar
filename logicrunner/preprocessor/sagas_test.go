@@ -27,8 +27,8 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
-	"github.com/insolar/insolar/testutils"
 )
 
 type SagasSuite struct {
@@ -81,7 +81,7 @@ func (s *SagasSuite) TestSagaAdditionalMethodsAreMissingInProxy() {
 	s.NoError(err)
 
 	var bufProxy bytes.Buffer
-	err = parsed.WriteProxy(testutils.RandomRef().String(), &bufProxy)
+	err = parsed.WriteProxy(gen.Reference().String(), &bufProxy)
 	s.NoError(err)
 	proxyCode := bufProxy.String()
 
@@ -174,7 +174,7 @@ func (w *SagaTestWallet) TheAcceptMethod(amount int) error {
 	s.Equal("Semantic error: 'TheAcceptMethod' is a saga with rollback method 'TheRollbackMethod', "+
 		"but 'TheRollbackMethod' is not declared. Maybe a typo?", err.Error())
 
-	err = parsed.WriteProxy(testutils.RandomRef().String(), &bufProxy)
+	err = parsed.WriteProxy(gen.Reference().String(), &bufProxy)
 	s.Error(err)
 	s.Equal("Semantic error: 'TheAcceptMethod' is a saga with rollback method 'TheRollbackMethod', "+
 		"but 'TheRollbackMethod' is not declared. Maybe a typo?", err.Error())
@@ -224,7 +224,7 @@ func (w *SagaTestWallet) TheAcceptMethod(amount int) error {
 	s.NotContains(wrapperCode, "TheAcceptMethodAsImmutable")
 
 	var bufProxy bytes.Buffer
-	err = parsed.WriteProxy(testutils.RandomRef().String(), &bufProxy)
+	err = parsed.WriteProxy(gen.Reference().String(), &bufProxy)
 	s.NoError(err)
 	proxyCode := bufProxy.String()
 
@@ -276,7 +276,7 @@ func (w *SagaTestWallet) TheRollbackMethod(arg1 int, arg2 string) error {
 	s.Equal("Semantic error: 'TheAcceptMethod' is a saga with 2 arguments. Currently only one argument is allowed.",
 		err.Error())
 
-	err = parsed.WriteProxy(testutils.RandomRef().String(), &bufProxy)
+	err = parsed.WriteProxy(gen.Reference().String(), &bufProxy)
 	s.Error(err)
 	s.Equal("Semantic error: 'TheAcceptMethod' is a saga with 2 arguments. Currently only one argument is allowed.",
 		err.Error())
@@ -327,7 +327,7 @@ func (w *SagaTestWallet) TheRollbackMethod(amount string) error {
 		"'TheRollbackMethod', but 'TheRollbackMethod' arguments 'amount string' dont't match. "+
 		"They should be exactly the same.", err.Error())
 
-	err = parsed.WriteProxy(testutils.RandomRef().String(), &bufProxy)
+	err = parsed.WriteProxy(gen.Reference().String(), &bufProxy)
 	s.Error(err)
 	s.Equal("Semantic error: 'TheAcceptMethod' is a saga with arguments 'amount int' and rollback method "+
 		"'TheRollbackMethod', but 'TheRollbackMethod' arguments 'amount string' dont't match. "+
@@ -377,7 +377,7 @@ func (w *TestSagaSimpleCallContract) GetBalance() (int, error) {
 	s.Error(err)
 	s.Equal("semantic error: 'New' can't be a saga because it's a constructor", err.Error())
 
-	err = parsed.WriteProxy(testutils.RandomRef().String(), &bufProxy)
+	err = parsed.WriteProxy(gen.Reference().String(), &bufProxy)
 	s.Error(err)
 	s.Equal("semantic error: 'New' can't be a saga because it's a constructor", err.Error())
 }

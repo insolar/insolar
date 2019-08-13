@@ -24,6 +24,7 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/logicrunner/common"
 
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
@@ -49,10 +50,10 @@ func (p *initializeExecutionState) Proceed(ctx context.Context) error {
 	}
 
 	if len(p.msg.Queue) > 0 {
-		transcripts := make([]*Transcript, len(p.msg.Queue))
+		transcripts := make([]*common.Transcript, len(p.msg.Queue))
 		for i, qe := range p.msg.Queue {
 			requestCtx := contextFromServiceData(qe.ServiceData)
-			transcripts[i] = NewTranscript(requestCtx, qe.RequestRef, qe.Request)
+			transcripts[i] = common.NewTranscript(requestCtx, qe.RequestRef, qe.Request)
 		}
 		broker.AddRequestsFromPrevExecutor(ctx, transcripts...)
 	}
@@ -70,11 +71,18 @@ type HandleExecutorResults struct {
 func (h *HandleExecutorResults) realHandleExecutorState(ctx context.Context, f flow.Flow) error {
 	msg := h.Parcel.Message().(*message.ExecutorResults)
 
+	done, err := h.dep.WriteAccessor.Begin(ctx, flow.Pulse(ctx))
+	defer done()
+
+	if err != nil {
+		return nil
+	}
+
 	procInitializeExecutionState := initializeExecutionState{
 		dep: h.dep,
 		msg: msg,
 	}
-	err := f.Procedure(ctx, &procInitializeExecutionState, true)
+	err = f.Procedure(ctx, &procInitializeExecutionState, true)
 	if err != nil {
 		if err == flow.ErrCancelled {
 			return nil

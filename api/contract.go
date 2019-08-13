@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"reflect"
 
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/application/extractor"
@@ -35,7 +36,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
-	"github.com/insolar/insolar/testutils"
 )
 
 // ContractService is a service that provides ability to add custom contracts
@@ -133,7 +133,7 @@ func (s *ContractService) CallConstructor(r *http.Request, args *CallConstructor
 			Method:          args.Method,
 			Arguments:       args.MethodArgs,
 			Base:            &base,
-			CallerPrototype: testutils.RandomRef(),
+			CallerPrototype: gen.Reference(),
 			Prototype:       protoRef,
 			CallType:        record.CTSaveAsChild,
 			APIRequestID:    utils.TraceID(ctx),

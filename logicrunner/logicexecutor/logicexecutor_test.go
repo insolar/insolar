@@ -1,4 +1,4 @@
-//
+///
 // Copyright 2019 Insolar Technologies GmbH
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,9 +12,9 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
+///
 
-package logicrunner
+package logicexecutor
 
 import (
 	"testing"
@@ -28,6 +28,9 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/artifacts"
+	"github.com/insolar/insolar/logicrunner/common"
+	"github.com/insolar/insolar/logicrunner/machinesmanager"
+	"github.com/insolar/insolar/logicrunner/requestresult"
 	"github.com/insolar/insolar/testutils"
 )
 
@@ -41,7 +44,7 @@ func TestLogicExecutor_Execute(t *testing.T) {
 	// success tested in ExecuteMethod and ExecuteConstructor
 	ctx := inslogger.TestContext(t)
 	le := &logicExecutor{}
-	res, err := le.Execute(ctx, &Transcript{Request: &record.IncomingRequest{CallType: 322}})
+	res, err := le.Execute(ctx, &common.Transcript{Request: &record.IncomingRequest{CallType: 322}})
 	require.Error(t, err)
 	require.Nil(t, res)
 }
@@ -57,15 +60,15 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 
 	tests := []struct {
 		name       string
-		transcript *Transcript
+		transcript *common.Transcript
 		error      bool
 		dc         artifacts.DescriptorsCache
-		mm         MachinesManager
+		mm         machinesmanager.MachinesManager
 		res        artifacts.RequestResult
 	}{
 		{
 			name: "success",
-			transcript: &Transcript{
+			transcript: &common.Transcript{
 				ObjectDescriptor: artifacts.NewObjectDescriptorMock(mc).
 					ParentMock.Return(nil).
 					MemoryMock.Return(nil).
@@ -76,7 +79,7 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 					Prototype: &protoRef,
 				},
 			},
-			mm: NewMachinesManagerMock(mc).
+			mm: machinesmanager.NewMachinesManagerMock(mc).
 				GetExecutorMock.
 				Return(
 					testutils.NewMachineLogicExecutorMock(mc).
@@ -93,18 +96,18 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 						MachineTypeMock.Return(insolar.MachineTypeBuiltin),
 					nil,
 				),
-			res: &requestResult{
-				objectReference: objRef,
-				objectImage:     protoRef,
-				objectStateID:   objRecordID,
-				sideEffectType:  artifacts.RequestSideEffectAmend,
-				memory:          []byte{1, 2, 3},
-				result:          []byte{3, 2, 1},
+			res: &requestresult.RequestResult{
+				RawObjectReference: objRef,
+				ObjectImage:        protoRef,
+				ObjectStateID:      objRecordID,
+				SideEffectType:     artifacts.RequestSideEffectAmend,
+				Memory:             []byte{1, 2, 3},
+				RawResult:          []byte{3, 2, 1},
 			},
 		},
 		{
-			name: "success, no memory change",
-			transcript: &Transcript{
+			name: "success, no  Memory change",
+			transcript: &common.Transcript{
 				ObjectDescriptor: artifacts.NewObjectDescriptorMock(mc).
 					ParentMock.Return(nil).
 					MemoryMock.Return([]byte{1, 2, 3}).
@@ -113,7 +116,7 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 					Prototype: &protoRef,
 				},
 			},
-			mm: NewMachinesManagerMock(mc).
+			mm: machinesmanager.NewMachinesManagerMock(mc).
 				GetExecutorMock.
 				Return(
 					testutils.NewMachineLogicExecutorMock(mc).
@@ -130,15 +133,15 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 						MachineTypeMock.Return(insolar.MachineTypeBuiltin),
 					nil,
 				),
-			res: &requestResult{
-				sideEffectType:  artifacts.RequestSideEffectNone,
-				result:          []byte{3, 2, 1},
-				objectReference: objRef,
+			res: &requestresult.RequestResult{
+				SideEffectType:     artifacts.RequestSideEffectNone,
+				RawResult:          []byte{3, 2, 1},
+				RawObjectReference: objRef,
 			},
 		},
 		{
 			name: "success, immutable call, no change",
-			transcript: &Transcript{
+			transcript: &common.Transcript{
 				ObjectDescriptor: artifacts.NewObjectDescriptorMock(mc).
 					ParentMock.Return(nil).
 					MemoryMock.Return([]byte{1, 2, 3}).
@@ -148,7 +151,7 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 					Immutable: true,
 				},
 			},
-			mm: NewMachinesManagerMock(mc).
+			mm: machinesmanager.NewMachinesManagerMock(mc).
 				GetExecutorMock.
 				Return(
 					testutils.NewMachineLogicExecutorMock(mc).
@@ -165,15 +168,15 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 						MachineTypeMock.Return(insolar.MachineTypeBuiltin),
 					nil,
 				),
-			res: &requestResult{
-				sideEffectType:  artifacts.RequestSideEffectNone,
-				result:          []byte{3, 2, 1},
-				objectReference: objRef,
+			res: &requestresult.RequestResult{
+				SideEffectType:     artifacts.RequestSideEffectNone,
+				RawResult:          []byte{3, 2, 1},
+				RawObjectReference: objRef,
 			},
 		},
 		{
 			name: "success, deactivation",
-			transcript: &Transcript{
+			transcript: &common.Transcript{
 				ObjectDescriptor: artifacts.NewObjectDescriptorMock(mc).
 					ParentMock.Return(nil).
 					MemoryMock.Return(nil).
@@ -184,7 +187,7 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 				},
 				Deactivate: true, // this a bit hacky
 			},
-			mm: NewMachinesManagerMock(mc).
+			mm: machinesmanager.NewMachinesManagerMock(mc).
 				GetExecutorMock.
 				Return(
 					testutils.NewMachineLogicExecutorMock(mc).
@@ -201,22 +204,22 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 						MachineTypeMock.Return(insolar.MachineTypeBuiltin),
 					nil,
 				),
-			res: &requestResult{
-				sideEffectType:  artifacts.RequestSideEffectDeactivate,
-				result:          []byte{3, 2, 1},
-				objectStateID:   objRecordID,
-				objectReference: objRef,
+			res: &requestresult.RequestResult{
+				SideEffectType:     artifacts.RequestSideEffectDeactivate,
+				RawResult:          []byte{3, 2, 1},
+				ObjectStateID:      objRecordID,
+				RawObjectReference: objRef,
 			},
 		},
 		{
 			name: "parent mismatch",
-			transcript: &Transcript{
+			transcript: &common.Transcript{
 				ObjectDescriptor: artifacts.NewObjectDescriptorMock(mc),
 				Request: &record.IncomingRequest{
 					Prototype: &insolar.Reference{},
 				},
 			},
-			mm: NewMachinesManagerMock(mc),
+			mm: machinesmanager.NewMachinesManagerMock(mc),
 			dc: artifacts.NewDescriptorsCacheMock(mc).
 				ByObjectDescriptorMock.
 				Return(
@@ -228,13 +231,13 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 		},
 		{
 			name: "error, descriptors trouble",
-			transcript: &Transcript{
+			transcript: &common.Transcript{
 				ObjectDescriptor: artifacts.NewObjectDescriptorMock(mc),
 				Request: &record.IncomingRequest{
 					Prototype: &protoRef,
 				},
 			},
-			mm: NewMachinesManagerMock(mc),
+			mm: machinesmanager.NewMachinesManagerMock(mc),
 			dc: artifacts.NewDescriptorsCacheMock(mc).
 				ByObjectDescriptorMock.
 				Return(
@@ -244,13 +247,13 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 		},
 		{
 			name: "error, no such machine executor",
-			transcript: &Transcript{
+			transcript: &common.Transcript{
 				ObjectDescriptor: artifacts.NewObjectDescriptorMock(mc),
 				Request: &record.IncomingRequest{
 					Prototype: &protoRef,
 				},
 			},
-			mm: NewMachinesManagerMock(mc).
+			mm: machinesmanager.NewMachinesManagerMock(mc).
 				GetExecutorMock.
 				Return(
 					nil, errors.New("some"),
@@ -268,7 +271,7 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 		},
 		{
 			name: "error, execution failed",
-			transcript: &Transcript{
+			transcript: &common.Transcript{
 				ObjectDescriptor: artifacts.NewObjectDescriptorMock(mc).
 					ParentMock.Return(nil).
 					MemoryMock.Return(nil).
@@ -277,7 +280,7 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 					Prototype: &protoRef,
 				},
 			},
-			mm: NewMachinesManagerMock(mc).
+			mm: machinesmanager.NewMachinesManagerMock(mc).
 				GetExecutorMock.
 				Return(
 					testutils.NewMachineLogicExecutorMock(mc).
@@ -326,15 +329,15 @@ func TestLogicExecutor_ExecuteConstructor(t *testing.T) {
 
 	tests := []struct {
 		name       string
-		transcript *Transcript
+		transcript *common.Transcript
 		error      bool
 		dc         artifacts.DescriptorsCache
-		mm         MachinesManager
-		res        *requestResult
+		mm         machinesmanager.MachinesManager
+		res        *requestresult.RequestResult
 	}{
 		{
 			name: "success",
-			transcript: &Transcript{
+			transcript: &common.Transcript{
 				Request: &record.IncomingRequest{
 					Base:      &baseRef,
 					CallType:  record.CTSaveAsChild,
@@ -342,7 +345,7 @@ func TestLogicExecutor_ExecuteConstructor(t *testing.T) {
 					Prototype: &protoRef,
 				},
 			},
-			mm: NewMachinesManagerMock(mc).
+			mm: machinesmanager.NewMachinesManagerMock(mc).
 				GetExecutorMock.
 				Return(
 					testutils.NewMachineLogicExecutorMock(mc).
@@ -359,17 +362,17 @@ func TestLogicExecutor_ExecuteConstructor(t *testing.T) {
 						MachineTypeMock.Return(insolar.MachineTypeBuiltin),
 					nil,
 				),
-			res: &requestResult{
-				sideEffectType:  artifacts.RequestSideEffectActivate,
-				result:          []byte{3, 2, 1},
-				memory:          []byte{1, 2, 3},
-				parentReference: baseRef,
-				objectImage:     protoRef,
+			res: &requestresult.RequestResult{
+				SideEffectType:  artifacts.RequestSideEffectActivate,
+				RawResult:       []byte{3, 2, 1},
+				Memory:          []byte{1, 2, 3},
+				ParentReference: baseRef,
+				ObjectImage:     protoRef,
 			},
 		},
 		{
 			name: "error, executor problem",
-			transcript: &Transcript{
+			transcript: &common.Transcript{
 				Request: &record.IncomingRequest{
 					Base:      &baseRef,
 					CallType:  record.CTSaveAsChild,
@@ -377,7 +380,7 @@ func TestLogicExecutor_ExecuteConstructor(t *testing.T) {
 					Prototype: &protoRef,
 				},
 			},
-			mm: NewMachinesManagerMock(mc).
+			mm: machinesmanager.NewMachinesManagerMock(mc).
 				GetExecutorMock.
 				Return(
 					testutils.NewMachineLogicExecutorMock(mc).
@@ -400,7 +403,7 @@ func TestLogicExecutor_ExecuteConstructor(t *testing.T) {
 		},
 		{
 			name: "error, no machine type executor",
-			transcript: &Transcript{
+			transcript: &common.Transcript{
 				Request: &record.IncomingRequest{
 					Base:      &baseRef,
 					CallType:  record.CTSaveAsChild,
@@ -408,7 +411,7 @@ func TestLogicExecutor_ExecuteConstructor(t *testing.T) {
 					Prototype: &protoRef,
 				},
 			},
-			mm: NewMachinesManagerMock(mc).
+			mm: machinesmanager.NewMachinesManagerMock(mc).
 				GetExecutorMock.
 				Return(nil, errors.New("some")),
 			dc: artifacts.NewDescriptorsCacheMock(mc).
@@ -423,14 +426,14 @@ func TestLogicExecutor_ExecuteConstructor(t *testing.T) {
 		},
 		{
 			name: "error, no descriptors",
-			transcript: &Transcript{
+			transcript: &common.Transcript{
 				Request: &record.IncomingRequest{
 					CallType:  record.CTSaveAsChild,
 					Caller:    gen.Reference(),
 					Prototype: &protoRef,
 				},
 			},
-			mm: NewMachinesManagerMock(mc),
+			mm: machinesmanager.NewMachinesManagerMock(mc),
 			dc: artifacts.NewDescriptorsCacheMock(mc).
 				ByPrototypeRefMock.
 				Return(
@@ -440,7 +443,7 @@ func TestLogicExecutor_ExecuteConstructor(t *testing.T) {
 		},
 		{
 			name: "error, nil prototype",
-			transcript: &Transcript{
+			transcript: &common.Transcript{
 				Request: &record.IncomingRequest{
 					CallType:  record.CTSaveAsChild,
 					Caller:    gen.Reference(),

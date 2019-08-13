@@ -62,8 +62,9 @@ type state struct {
 
 func (s *state) set(val bool) {
 	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	s.state = val
-	s.mu.Unlock()
 }
 
 func (s *state) check() bool {

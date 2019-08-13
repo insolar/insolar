@@ -23,7 +23,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/testutils"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/stretchr/testify/require"
 )
 
@@ -64,7 +64,7 @@ func TestTransferMoney(t *testing.T) {
 
 func TestTransferMoneyFromNotExist(t *testing.T) {
 	firstMember := createMember(t)
-	firstMember.ref = testutils.RandomRef().String()
+	firstMember.ref = gen.Reference().String()
 
 	secondMember := createMember(t)
 	oldSecondBalance := getBalanceNoErr(t, secondMember, secondMember.ref)
@@ -85,7 +85,7 @@ func TestTransferMoneyToNotExist(t *testing.T) {
 
 	amount := "10"
 
-	_, err := signedRequestWithEmptyRequestRef(t, firstMember, "member.transfer", map[string]interface{}{"amount": amount, "toMemberReference": testutils.RandomRef().String()})
+	_, err := signedRequestWithEmptyRequestRef(t, firstMember, "member.transfer", map[string]interface{}{"amount": amount, "toMemberReference": gen.Reference().String()})
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "index not found")
 

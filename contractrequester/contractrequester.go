@@ -245,8 +245,9 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (i
 		return ret.Reply, &r.Request, nil
 	case <-ctx.Done():
 		cr.ResultMutex.Lock()
+		defer cr.ResultMutex.Unlock()
+
 		delete(cr.ResultMap, reqHash)
-		cr.ResultMutex.Unlock()
 		logger.Error("Request timeout")
 		return nil, nil, errors.Errorf("request to contract was canceled: timeout of %s was exceeded", cr.callTimeout)
 	}

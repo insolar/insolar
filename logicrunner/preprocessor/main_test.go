@@ -32,8 +32,8 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
-	"github.com/insolar/insolar/testutils"
 )
 
 type PreprocessorSuite struct {
@@ -141,7 +141,7 @@ func (s *PreprocessorSuite) TestBasicGeneration() {
 		a := assert.New(t)
 
 		buf := bytes.Buffer{}
-		err := parsed.WriteProxy(testutils.RandomRef().String(), &buf)
+		err := parsed.WriteProxy(gen.Reference().String(), &buf)
 		a.NoError(err)
 
 		code, err := ioutil.ReadAll(&buf)
@@ -244,7 +244,7 @@ func (s *PreprocessorSuite) TestCompileContractProxy() {
 	parsed, err := ParseFile(filepath.Join(tmpDir, "/contracts/secondary/main.go"), insolar.MachineTypeGoPlugin)
 	s.NoError(err)
 
-	err = parsed.WriteProxy(testutils.RandomRef().String(), proxyFh)
+	err = parsed.WriteProxy(gen.Reference().String(), proxyFh)
 	s.NoError(err)
 
 	err = proxyFh.Close()
@@ -318,7 +318,7 @@ func ( a *A ) Get(
 	s.NoError(err)
 
 	var bufProxy bytes.Buffer
-	err = parsed.WriteProxy(testutils.RandomRef().String(), &bufProxy)
+	err = parsed.WriteProxy(gen.Reference().String(), &bufProxy)
 	s.NoError(err)
 	s.Contains(bufProxy.String(), "var ret0 int")
 	s.Contains(bufProxy.String(), "ret[0] = &ret0")
@@ -488,7 +488,7 @@ func ( A ) GetPointer(i *pointerPath.SomeType) error {
 	s.NoError(err)
 
 	var bufProxy bytes.Buffer
-	err = parsed.WriteProxy(testutils.RandomRef().String(), &bufProxy)
+	err = parsed.WriteProxy(gen.Reference().String(), &bufProxy)
 	s.NoError(err)
 	s.Contains(bufProxy.String(), `"some/test/import/path"`)
 	s.Contains(bufProxy.String(), `"some/test/import/pointerPath"`)
@@ -531,7 +531,7 @@ func ( A ) Get(i someAlias.SomeType) error {
 	s.NoError(err)
 
 	var bufProxy bytes.Buffer
-	err = parsed.WriteProxy(testutils.RandomRef().String(), &bufProxy)
+	err = parsed.WriteProxy(gen.Reference().String(), &bufProxy)
 	s.NoError(err)
 	s.Contains(bufProxy.String(), `someAlias "some/test/import/path"`)
 	s.Contains(bufProxy.String(), `"github.com/insolar/insolar/logicrunner/common"`)
@@ -574,7 +574,7 @@ func ( A ) Get() error {
 	s.NoError(err)
 
 	var bufProxy bytes.Buffer
-	err = parsed.WriteProxy(testutils.RandomRef().String(), &bufProxy)
+	err = parsed.WriteProxy(gen.Reference().String(), &bufProxy)
 	s.NoError(err)
 	s.NotContains(bufProxy.String(), `"some/test/import/path"`)
 	code, err := ioutil.ReadAll(&bufProxy)
@@ -615,7 +615,7 @@ func ( A ) Get() (path.SomeValue, error) {
 	s.NoError(err)
 
 	var bufProxy bytes.Buffer
-	err = parsed.WriteProxy(testutils.RandomRef().String(), &bufProxy)
+	err = parsed.WriteProxy(gen.Reference().String(), &bufProxy)
 	s.NoError(err)
 	s.Contains(bufProxy.String(), `"some/test/import/path"`)
 	code, err := ioutil.ReadAll(&bufProxy)
@@ -647,7 +647,7 @@ type A struct{
 	s.NoError(err)
 
 	var bufProxy bytes.Buffer
-	err = parsed.WriteProxy(testutils.RandomRef().String(), &bufProxy)
+	err = parsed.WriteProxy(gen.Reference().String(), &bufProxy)
 	s.EqualError(err, "couldn't match filename without extension and path")
 }
 

@@ -55,7 +55,7 @@ func NewStateIniter(
 	pulseAppender pulse.Appender,
 	pulseAccessor pulse.Accessor,
 	calc JetCalculator,
-	indices object.MemoryIndexModifier,
+	indexes object.MemoryIndexModifier,
 ) *StateIniterDefault {
 	return &StateIniterDefault{
 		jetModifier:   jetModifier,
@@ -66,7 +66,7 @@ func NewStateIniter(
 		pulseAppender: pulseAppender,
 		pulseAccessor: pulseAccessor,
 		jetCalculator: calc,
-		indices:       indices,
+		indexes:       indexes,
 		backoff: backoff.Backoff{
 			Factor: 2,
 			Jitter: true,
@@ -87,7 +87,7 @@ type StateIniterDefault struct {
 	pulseAccessor pulse.Accessor
 	jetCalculator JetCalculator
 	backoff       backoff.Backoff
-	indices       object.MemoryIndexModifier
+	indexes       object.MemoryIndexModifier
 }
 
 func (s *StateIniterDefault) PrepareState(
@@ -143,10 +143,10 @@ func (s *StateIniterDefault) PrepareState(
 func (s *StateIniterDefault) heavy(pn insolar.PulseNumber) (insolar.Reference, error) {
 	candidates, err := s.nodes.InRole(pn, insolar.StaticRoleHeavyMaterial)
 	if err != nil {
-		return insolar.Reference{}, errors.Wrap(err, "failed to calculate heavy node for pulse")
+		return insolar.NewEmptyReference(), errors.Wrap(err, "failed to calculate heavy node for pulse")
 	}
 	if len(candidates) == 0 {
-		return insolar.Reference{}, errors.Wrap(err, "failed to calculate heavy node for pulse")
+		return insolar.NewEmptyReference(), errors.Wrap(err, "failed to calculate heavy node for pulse")
 	}
 	return candidates[0].ID, nil
 }
@@ -229,8 +229,8 @@ func (s *StateIniterDefault) loadStateRetry(
 		}
 	}
 
-	for _, idx := range state.Indices {
-		s.indices.Set(ctx, pn, idx)
+	for _, idx := range state.Indexes {
+		s.indexes.Set(ctx, pn, idx)
 	}
 
 	return state.JetIDs, nil

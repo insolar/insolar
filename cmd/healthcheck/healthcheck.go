@@ -20,13 +20,13 @@ import (
 	"net/rpc"
 	"os"
 
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/pkg/errors"
 	"github.com/spf13/pflag"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
-	"github.com/insolar/insolar/testutils"
 )
 
 func main() {
@@ -54,7 +54,7 @@ func main() {
 
 	empty, _ := insolar.Serialize([]interface{}{})
 
-	caller := testutils.RandomRef()
+	caller := gen.Reference()
 	res := rpctypes.DownCallMethodResp{}
 	req := rpctypes.DownCallMethodReq{
 		Context:   &insolar.LogicCallContext{Caller: &caller},

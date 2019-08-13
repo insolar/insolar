@@ -29,29 +29,27 @@ type FilterMiddleware interface {
 	Filter(m *message.Message) (*message.Message, error)
 }
 
-// PubSubWrapper wraps message Publisher and Subscriber.
-type PubSubWrapper struct {
-	message.Subscriber
+// PublisherWrapper wraps message Publisher.
+type PublisherWrapper struct {
 	pub message.Publisher
 
 	filters []FilterMiddleware
 }
 
-// NewPubSubWrapper creates new message.PubSub wrapper.
-func NewPubSubWrapper(pubsub message.PubSub) *PubSubWrapper {
-	return &PubSubWrapper{
-		Subscriber: pubsub,
-		pub:        pubsub,
+// NewPublisherWrapper creates new message.Publisher wrapper.
+func NewPublisherWrapper(pb message.Publisher) *PublisherWrapper {
+	return &PublisherWrapper{
+		pub: pb,
 	}
 }
 
 // Middleware adds middleware filters (order matters!).
-func (p *PubSubWrapper) Middleware(fm ...FilterMiddleware) {
+func (p *PublisherWrapper) Middleware(fm ...FilterMiddleware) {
 	p.filters = append(p.filters, fm...)
 }
 
 // Publish wraps message.Publish method, i.e. applies all middleware filters for every message.
-func (p *PubSubWrapper) Publish(topic string, messages ...*message.Message) error {
+func (p *PublisherWrapper) Publish(topic string, messages ...*message.Message) error {
 	if topic == bus.TopicOutgoing {
 		return p.pub.Publish(topic, messages...)
 	}
@@ -85,6 +83,6 @@ func (p *PubSubWrapper) Publish(topic string, messages ...*message.Message) erro
 }
 
 // Close wraps message.Close method.
-func (p *PubSubWrapper) Close() error {
+func (p *PublisherWrapper) Close() error {
 	return p.pub.Close()
 }

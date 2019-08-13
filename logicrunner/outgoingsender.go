@@ -3,6 +3,7 @@ package logicrunner
 import (
 	"context"
 	"fmt"
+	"sync/atomic"
 
 	"github.com/pkg/errors"
 
@@ -14,9 +15,11 @@ import (
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/artifacts"
+	"github.com/insolar/insolar/logicrunner/requestresult"
 )
 
 var OutgoingRequestSenderDefaultQueueLimit = 1000
+var OutgoingRequestSenderDefaultGoroutineLimit = int32(5000)
 
 //go:generate minimock -i github.com/insolar/insolar/logicrunner.OutgoingRequestSender -o ./ -s _mock.go -g
 
@@ -33,8 +36,9 @@ type outgoingRequestSender struct {
 
 // Currently actor has only one state.
 type outgoingSenderActorState struct {
-	cr insolar.ContractRequester
-	am artifacts.Client
+	cr                            insolar.ContractRequester
+	am                            artifacts.Client
+	atomicRunningGoroutineCounter int32
 }
 
 type sendOutgoingResult struct {
@@ -98,7 +102,7 @@ func (rs *outgoingRequestSender) SendAbandonedOutgoingRequest(ctx context.Contex
 	if err != nil {
 		// Actor's mailbox is most likely full. This is OK to lost an abandoned OutgoingRequest
 		// in this case, LME will  re-send a corresponding notification anyway.
-		inslogger.FromContext(ctx).Errorf("EnqueueAbandonedOutgoingRequest failed: %v", err)
+		inslogger.FromContext(ctx).Errorf("SendAbandonedOutgoingRequest failed: %v", err)
 	}
 }
 
@@ -109,12 +113,24 @@ func newOutgoingSenderActorState(cr insolar.ContractRequester, am artifacts.Clie
 func (a *outgoingSenderActorState) Receive(message actor.Message) (actor.Actor, error) {
 	switch v := message.(type) {
 	case sendOutgoingRequestMessage:
-		// Currently it's possible to create an infinite number of goroutines here.
-		// This number can be somehow limited in the future. The reason why a goroutine is
-		// needed here is that an outgoing request can result in creating a new outgoing request
-		// that can be directed to the same VE which would be waiting for a reply for a first
-		// request, i.e. a deadlock situation.
+		if atomic.LoadInt32(&a.atomicRunningGoroutineCounter) >= OutgoingRequestSenderDefaultGoroutineLimit {
+			var res sendOutgoingResult
+			res.err = fmt.Errorf("OutgoingRequestActor: goroutine limit exceeded")
+			v.resultChan <- res
+			return a, nil
+		}
+
+		// The reason why a goroutine is needed here is that an outgoing request can result in
+		// creating a new outgoing request that can be directed to the same VE which would be
+		// waiting for a reply for a first request, i.e. a deadlock situation.
+		// We limit the number of simultaneously running goroutines to prevent resource leakage.
+		// It's OK to use atomics here because Receive is always executed by one goroutine. Thus
+		// it's impossible to exceed the limit. It's possible that for a short period of time we'll
+		// allow to create a little less goroutines that the limit says, but that's fine.
+		atomic.AddInt32(&a.atomicRunningGoroutineCounter, 1)
 		go func() {
+			defer atomic.AddInt32(&a.atomicRunningGoroutineCounter, -1)
+
 			var res sendOutgoingResult
 			res.object, res.result, res.incoming, res.err = a.sendOutgoingRequest(v.ctx, v.requestReference, v.outgoingRequest)
 			v.resultChan <- res
@@ -124,11 +140,11 @@ func (a *outgoingSenderActorState) Receive(message actor.Message) (actor.Actor, 
 		_, _, _, err := a.sendOutgoingRequest(v.ctx, v.requestReference, v.outgoingRequest)
 		// It's OK to just log an error,  LME will re-send a corresponding notification anyway.
 		if err != nil {
-			inslogger.FromContext(context.Background()).Errorf("abandonedOutgoingRequestActor: sendOutgoingRequest failed %v", err)
+			inslogger.FromContext(context.Background()).Errorf("OutgoingRequestActor: sendOutgoingRequest failed %v", err)
 		}
 		return a, nil
 	default:
-		inslogger.FromContext(context.Background()).Errorf("abandonedOutgoingRequestActor: unexpected message %v", v)
+		inslogger.FromContext(context.Background()).Errorf("OutgoingRequestActor: unexpected message %v", v)
 		return a, nil
 	}
 }
@@ -159,7 +175,7 @@ func (a *outgoingSenderActorState) sendOutgoingRequest(ctx context.Context, outg
 	}
 
 	//  Register result of the outgoing method
-	reqResult := newRequestResult(result, outgoing.Caller)
+	reqResult := requestresult.New(result, outgoing.Caller)
 	err = a.am.RegisterResult(ctx, outgoingReqRef, reqResult)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "can't register result")
