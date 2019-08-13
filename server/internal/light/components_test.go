@@ -32,7 +32,6 @@ func TestComponents(t *testing.T) {
 	cfg.CertificatePath = "testdata/certificate.json"
 	cfg.Metrics.ListenAddress = "0.0.0.0:0"
 	cfg.APIRunner.Address = "0.0.0.0:0"
-	cfg.Exporter.Addr = ":0"
 
 	c, err := newComponents(ctx, cfg)
 	require.NoError(t, err)
