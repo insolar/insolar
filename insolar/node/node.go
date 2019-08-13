@@ -106,6 +106,7 @@ func (a *Storage) InRole(pulse insolar.PulseNumber, role insolar.StaticRole) ([]
 // DeleteForPN erases nodes for specified pulse.
 func (a *Storage) DeleteForPN(pulse insolar.PulseNumber) {
 	a.lock.Lock()
+	defer a.lock.Unlock()
+
 	delete(a.nodes, pulse)
-	a.lock.Unlock()
 }

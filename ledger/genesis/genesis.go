@@ -27,12 +27,12 @@ import (
 	"github.com/insolar/insolar/insolar/genesisrefs"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/insolar/rootdomain"
 	"github.com/insolar/insolar/insolar/store"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/artifact"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/object"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 )
 
 // BaseRecord provides methods for genesis base record manipulation.
@@ -203,46 +203,47 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 	inslog := inslogger.FromContext(ctx)
 
 	// Hint: order matters, because of dependency contracts on each other.
-	rootDomain := contracts.RootDomain()
-	_, err := g.activateContract(ctx, rootDomain)
-	if err != nil {
-		return errors.Wrapf(err, "failed to activate contract %v", rootDomain.Name)
-	}
-	inslog.Infof("[genesis] activate contract %v", rootDomain.Name)
-
-	nodeDomain := contracts.NodeDomain()
-	_, err = g.activateContract(ctx, nodeDomain)
-	if err != nil {
-		return errors.Wrapf(err, "failed to activate contract %v", nodeDomain.Name)
-	}
-	inslog.Infof("[genesis] activate contract %v", nodeDomain.Name)
-
-	rootWallet := contracts.GetWalletGenesisContractState(g.ContractsConfig.RootBalance, insolar.GenesisNameRootWallet, insolar.GenesisNameRootDomain)
-	rwRef, err := g.activateContract(ctx, rootWallet)
-	if err != nil {
-		return errors.Wrapf(err, "failed to activate contract %v", rootWallet.Name)
-	}
-	inslog.Infof("[genesis] activate contract %v", rootWallet.Name)
-
-	migrationAdminWallet := contracts.GetWalletGenesisContractState(g.ContractsConfig.MDBalance, insolar.GenesisNameMigrationWallet, insolar.GenesisNameRootDomain)
-	mawRef, err := g.activateContract(ctx, migrationAdminWallet)
-	if err != nil {
-		return errors.Wrapf(err, "failed to activate contract %v", migrationAdminWallet.Name)
-	}
-	inslog.Infof("[genesis] activate contract %v", migrationAdminWallet.Name)
-
 	states := []insolar.GenesisContractState{
-		contracts.GetMemberGenesisContractState(g.ContractsConfig.RootPublicKey, insolar.GenesisNameRootMember, insolar.GenesisNameRootDomain, *rwRef),
-		contracts.GetMemberGenesisContractState(g.ContractsConfig.MigrationAdminPublicKey, insolar.GenesisNameMigrationAdminMember, insolar.GenesisNameRootDomain, *mawRef),
-		contracts.GetWalletGenesisContractState("0", insolar.GenesisNameFeeWallet, insolar.GenesisNameRootDomain),
+		contracts.RootDomain(),
+		contracts.NodeDomain(),
+		contracts.GetMemberGenesisContractState(g.ContractsConfig.RootPublicKey, insolar.GenesisNameRootMember, insolar.GenesisNameRootDomain, genesisrefs.ContractRootWallet),
+		contracts.GetMemberGenesisContractState(g.ContractsConfig.MigrationAdminPublicKey, insolar.GenesisNameMigrationAdminMember, insolar.GenesisNameRootDomain, genesisrefs.ContractMigrationWallet),
+
+		contracts.GetWalletGenesisContractState(insolar.GenesisNameRootWallet, insolar.GenesisNameRootDomain, genesisrefs.ContractRootAccount),
+		contracts.GetWalletGenesisContractState(insolar.GenesisNameMigrationAdminWallet, insolar.GenesisNameRootDomain, genesisrefs.ContractMigrationAccount),
+		contracts.GetWalletGenesisContractState(insolar.GenesisNameFeeWallet, insolar.GenesisNameRootDomain, genesisrefs.ContractFeeAccount),
+
+		contracts.GetAccountGenesisContractState(g.ContractsConfig.RootBalance, insolar.GenesisNameRootAccount, insolar.GenesisNameRootDomain),
+		contracts.GetAccountGenesisContractState(g.ContractsConfig.MDBalance, insolar.GenesisNameMigrationAdminAccount, insolar.GenesisNameRootDomain),
+		contracts.GetAccountGenesisContractState("0", insolar.GenesisNameFeeAccount, insolar.GenesisNameRootDomain),
+
 		contracts.GetCostCenterGenesisContractState(),
 	}
 
 	for i, key := range g.ContractsConfig.MigrationDaemonPublicKeys {
 		states = append(states, contracts.GetMemberGenesisContractState(key, insolar.GenesisNameMigrationDaemonMembers[i], insolar.GenesisNameRootDomain, insolar.Reference{}))
 	}
-	for _, name := range insolar.GenesisNamePublicKeyShards {
-		states = append(states, contracts.GetPKShardGenesisContractState(name))
+
+	// Split genesis members by PK shards
+	var MembersByPKShards [insolar.GenesisAmountPublicKeyShards]foundation.StableMap
+	for i := 0; i < insolar.GenesisAmountPublicKeyShards; i++ {
+		MembersByPKShards[i] = make(foundation.StableMap)
+	}
+	trimmedRootPublicKey := foundation.TrimPublicKey(g.ContractsConfig.RootPublicKey)
+	index := foundation.GetShardIndex(trimmedRootPublicKey, insolar.GenesisAmountPublicKeyShards)
+	MembersByPKShards[index][trimmedRootPublicKey] = genesisrefs.ContractRootMember.String()
+	trimmedMigrationAdminPublicKey := foundation.TrimPublicKey(g.ContractsConfig.MigrationAdminPublicKey)
+	index = foundation.GetShardIndex(trimmedMigrationAdminPublicKey, insolar.GenesisAmountPublicKeyShards)
+	MembersByPKShards[index][trimmedMigrationAdminPublicKey] = genesisrefs.ContractMigrationAdminMember.String()
+	for i, key := range g.ContractsConfig.MigrationDaemonPublicKeys {
+		trimmedMigrationDaemonPublicKey := foundation.TrimPublicKey(key)
+		index := foundation.GetShardIndex(trimmedMigrationDaemonPublicKey, insolar.GenesisAmountPublicKeyShards)
+		MembersByPKShards[index][trimmedMigrationDaemonPublicKey] = genesisrefs.ContractMigrationDaemonMembers[i].String()
+	}
+
+	// Append states for shards
+	for i, name := range insolar.GenesisNamePublicKeyShards {
+		states = append(states, contracts.GetPKShardGenesisContractState(name, MembersByPKShards[i]))
 	}
 	for _, name := range insolar.GenesisNameMigrationAddressShards {
 		states = append(states, contracts.GetMigrationShardGenesisContractState(name))
@@ -259,10 +260,10 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 
 func (g *Genesis) activateContract(ctx context.Context, state insolar.GenesisContractState) (*insolar.Reference, error) {
 	name := state.Name
-	objRef := rootdomain.GenesisRef(name)
+	objRef := genesisrefs.GenesisRef(name)
 
-	protoName := name + rootdomain.GenesisPrototypeSuffix
-	protoRef := rootdomain.GenesisRef(protoName)
+	protoName := name + genesisrefs.PrototypeSuffix
+	protoRef := genesisrefs.GenesisRef(protoName)
 
 	reqID, err := g.ArtifactManager.RegisterRequest(
 		ctx,
@@ -277,7 +278,7 @@ func (g *Genesis) activateContract(ctx context.Context, state insolar.GenesisCon
 
 	parentRef := insolar.GenesisRecord.Ref()
 	if state.ParentName != "" {
-		parentRef = rootdomain.GenesisRef(state.ParentName)
+		parentRef = genesisrefs.GenesisRef(state.ParentName)
 	}
 
 	err = g.ArtifactManager.ActivateObject(

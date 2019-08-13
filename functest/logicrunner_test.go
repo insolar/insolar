@@ -25,13 +25,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/api"
-	"github.com/insolar/insolar/insolar/utils"
-
 	"github.com/stretchr/testify/require"
 
+	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
+	"github.com/insolar/insolar/insolar/utils"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 )
 
 func TestSingleContract(t *testing.T) {
@@ -253,14 +252,11 @@ func (r *Two) GetPayloadString() (string, error) {
 		Str string
 	}
 
-	expected := []interface{}{Payload{Int: 10, Str: "HiHere"}, nil}
+	expected, err := foundation.MarshalMethodResult(Payload{Int: 10, Str: "HiHere"}, nil)
+	require.NoError(t, err)
 
 	resp = callMethod(t, objectRef, "TestPayload")
-	require.Equal(
-		t,
-		goplugintestutils.CBORMarshal(t, expected),
-		resp.Result,
-	)
+	require.Equal(t, expected, resp.Result)
 
 	resp = callMethod(t, objectRef, "ManyTimes")
 	require.Empty(t, resp.Error)
@@ -987,6 +983,8 @@ func (r *One) Recursive() (error) {
 
 		err = resp.Error.Error()
 		if !strings.Contains(err, "timeout") {
+			// system error is not timeout, loop detected is in response
+			err = resp.Result.ExtractedError
 			break
 		}
 	}
@@ -1271,7 +1269,7 @@ func (r *One) ExternalImmutableCall() (int, error) {
 	holder := two.New()
 	objTwo, err := holder.AsChild(r.GetReference())
 	if err != nil {
-		return 0, err
+		return -1, err
 	}
 	return objTwo.ReturnNumberAsImmutable()
 }
@@ -1309,7 +1307,7 @@ func (r *Two) ReturnNumber() (int, error) {
 }
 
 var INSATTR_Immutable_API = true
-//ins:immutable
+// ins:immutable
 func (r *Two) Immutable() (error) {
 	holder := three.New()
 	objThree, err := holder.AsChild(r.GetReference())
@@ -1347,6 +1345,7 @@ func (r *Three) DoNothing() (error) {
 
 	resp := callMethod(t, obj, "ExternalImmutableCall")
 	require.Empty(t, resp.Error)
+	require.Empty(t, resp.ExtractedError)
 	require.Equal(t, float64(42), resp.ExtractedReply)
 
 	resp = callMethod(t, obj, "ExternalImmutableCallMakesExternalCall")

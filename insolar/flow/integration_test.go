@@ -67,7 +67,7 @@ func TestEmptyHandle(t *testing.T) {
 
 	msg := makeMessage(t, ctx, currentPulse.PulseNumber)
 
-	_, err := disp.Process(msg)
+	err := disp.Process(msg)
 	require.NoError(t, err)
 	reply := <-replyChan
 	require.Equal(t, testReply, reply)
@@ -98,7 +98,7 @@ func TestCallEmptyProcedure(t *testing.T) {
 
 	msg := makeMessage(t, ctx, currentPulse.PulseNumber)
 
-	_, err := disp.Process(msg)
+	err := disp.Process(msg)
 	require.NoError(t, err)
 	reply := <-replyChan
 	require.Equal(t, testReply, reply)
@@ -130,7 +130,7 @@ func TestProcedureReturnError(t *testing.T) {
 
 	msg := makeMessage(t, ctx, currentPulse.PulseNumber)
 
-	_, err := disp.Process(msg)
+	err := disp.Process(msg)
 	require.NoError(t, err)
 	reply := <-replyChan
 	require.Equal(t, testReply, reply)
@@ -172,7 +172,7 @@ func TestClosePulse(t *testing.T) {
 
 		msg := makeMessage(t, ctx, currentPulse.PulseNumber)
 
-		_, err := disp.Process(msg)
+		err := disp.Process(msg)
 		require.NoError(t, err)
 		reply := <-replyChan
 		require.Equal(t, testReply, reply)
@@ -225,7 +225,7 @@ func TestChangePulseAndMigrate(t *testing.T) {
 
 		msg := makeMessage(t, ctx, currentPulse.PulseNumber)
 
-		_, err := disp.Process(msg)
+		err := disp.Process(msg)
 		require.NoError(t, err)
 		reply := <-replyChan
 		require.Equal(t, testReply, reply)

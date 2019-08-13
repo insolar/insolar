@@ -19,9 +19,10 @@ package extractor
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
-	"github.com/stretchr/testify/require"
 )
 
 func TestNodeInfoResponse(t *testing.T) {
@@ -36,7 +37,7 @@ func TestNodeInfoResponse(t *testing.T) {
 		Role:      testRole,
 	}
 
-	data, err := insolar.Serialize([]interface{}{testValue, nil})
+	data, err := foundation.MarshalMethodResult(testValue, nil)
 	require.NoError(t, err)
 
 	pk, role, err := NodeInfoResponse(data)
@@ -59,11 +60,12 @@ func TestNodeInfoResponse_ErrorResponse(t *testing.T) {
 	}
 	contractErr := &foundation.Error{S: "Custom test error"}
 
-	data, err := insolar.Serialize([]interface{}{testValue, contractErr})
+	data, err := foundation.MarshalMethodResult(testValue, contractErr)
 	require.NoError(t, err)
 
 	pk, role, err := NodeInfoResponse(data)
 
+	require.Error(t, err)
 	require.Contains(t, err.Error(), "Has error in response")
 	require.Contains(t, err.Error(), "Custom test error")
 	require.Equal(t, "", pk)
@@ -78,6 +80,7 @@ func TestNodeInfoResponse_UnmarshalError(t *testing.T) {
 
 	pk, role, err := NodeInfoResponse(data)
 
+	require.Error(t, err)
 	require.Contains(t, err.Error(), "Can't unmarshal response")
 	require.Equal(t, "", pk)
 	require.Equal(t, "", role)

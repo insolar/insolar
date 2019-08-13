@@ -177,7 +177,7 @@ func Test_AbandonedNotification_WhenLightInit(t *testing.T) {
 				Drops: [][]byte{
 					drop.MustEncode(&drop.Drop{JetID: insolar.ZeroJetID, Pulse: insolar.FirstPulseNumber}),
 				},
-				Indices: []record.Index{
+				Indexes: []record.Index{
 					{Lifeline: record.Lifeline{EarliestOpenRequest: &pn}, ObjID: objectID},
 				},
 			}}

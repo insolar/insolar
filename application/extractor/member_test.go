@@ -27,7 +27,7 @@ import (
 func TestPublicKeyResponse(t *testing.T) {
 	testValue := "test_public_key"
 
-	data, err := insolar.Serialize([]interface{}{testValue, nil})
+	data, err := foundation.MarshalMethodResult(testValue, nil)
 	require.NoError(t, err)
 
 	result, err := PublicKeyResponse(data)
@@ -40,11 +40,12 @@ func TestPublicKeyResponse_ErrorResponse(t *testing.T) {
 	testValue := "test_public_key"
 	contractErr := &foundation.Error{S: "Custom test error"}
 
-	data, err := insolar.Serialize([]interface{}{testValue, contractErr})
+	data, err := foundation.MarshalMethodResult(testValue, contractErr)
 	require.NoError(t, err)
 
 	result, err := PublicKeyResponse(data)
 
+	require.Error(t, err)
 	require.Contains(t, err.Error(), "Has error in response")
 	require.Contains(t, err.Error(), "Custom test error")
 	require.Equal(t, "", result)
@@ -57,7 +58,7 @@ func TestPublicKeyResponse_UnmarshalError(t *testing.T) {
 	require.NoError(t, err)
 
 	result, err := PublicKeyResponse(data)
-
+	require.Error(t, err)
 	require.Contains(t, err.Error(), "Can't unmarshal")
 	require.Equal(t, "", result)
 }
@@ -68,7 +69,7 @@ func TestCallResponse(t *testing.T) {
 		"int_value":    uint64(1),
 	}
 
-	data, err := insolar.Serialize([]interface{}{testValue, nil})
+	data, err := foundation.MarshalMethodResult(testValue, nil)
 	require.NoError(t, err)
 
 	result, contractErr, err := CallResponse(data)
@@ -86,6 +87,7 @@ func TestCallResponse_UnmarshalError(t *testing.T) {
 
 	result, contractErr, err := CallResponse(data)
 
+	require.Error(t, err)
 	require.Contains(t, err.Error(), "Can't unmarshal response")
 	require.Nil(t, contractErr)
 	require.Nil(t, result)

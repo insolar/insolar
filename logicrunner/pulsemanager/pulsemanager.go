@@ -18,8 +18,10 @@ package pulsemanager
 
 import (
 	"context"
-	"github.com/insolar/insolar/network"
 	"sync"
+
+	"github.com/insolar/insolar/logicrunner"
+	"github.com/insolar/insolar/network"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow/dispatcher"
@@ -45,6 +47,7 @@ type PulseManager struct {
 	PulseAppender  pulse.Appender            `inject:""`
 	JetModifier    jet.Modifier              `inject:""`
 	FlowDispatcher dispatcher.Dispatcher
+	resultsMatcher logicrunner.ResultMatcher
 
 	currentPulse insolar.Pulse
 
@@ -55,9 +58,10 @@ type PulseManager struct {
 }
 
 // NewPulseManager creates PulseManager instance.
-func NewPulseManager() *PulseManager {
+func NewPulseManager(resultsMatcher logicrunner.ResultMatcher) *PulseManager {
 	pm := &PulseManager{
-		currentPulse: *insolar.GenesisPulse,
+		resultsMatcher: resultsMatcher,
+		currentPulse:   *insolar.GenesisPulse,
 	}
 	return pm
 }
@@ -141,6 +145,11 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 		return nil, errors.Wrap(err, "call of AddPulse failed")
 	}
 
+	// We must clear resultsMatcher before any ReturnResults or StillExecution messages for new pulse will be received
+	// StillExecution messages use Dispatcher for processing, so we must do Dispatcher.BeginPulse AFTER clear
+	// ReturnResults messages use MessageBus for processing, which use GIL for stopping messages. So we must do unlock GIL AFTER clear
+	m.resultsMatcher.Clear()
+
 	return &storagePulse, nil
 }
 
@@ -153,8 +162,8 @@ func (m *PulseManager) Start(ctx context.Context) error {
 func (m *PulseManager) Stop(ctx context.Context) error {
 	// There should not to be any Set call after Stop call
 	m.setLock.Lock()
-	m.stopped = true
-	m.setLock.Unlock()
+	defer m.setLock.Unlock()
 
+	m.stopped = true
 	return nil
 }

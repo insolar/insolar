@@ -50,12 +50,10 @@ func NewJetKeeper(jets jet.Storage, db store.DB, pulses pulse.Calculator) JetKee
 }
 
 type dbJetKeeper struct {
+	lock     sync.RWMutex
 	jetTrees jet.Storage
-
-	pulses pulse.Calculator
-
-	sync.RWMutex
-	db store.DB
+	pulses   pulse.Calculator
+	db       store.DB
 }
 
 type jetInfo struct {
@@ -126,8 +124,8 @@ func (j *jetInfo) isConfirmed() bool {
 }
 
 func (jk *dbJetKeeper) AddHotConfirmation(ctx context.Context, pn insolar.PulseNumber, id insolar.JetID, split bool) error {
-	jk.Lock()
-	defer jk.Unlock()
+	jk.lock.Lock()
+	defer jk.lock.Unlock()
 
 	inslogger.FromContext(ctx).Debug("AddHotConfirmation. pulse: ", pn, ". ID: ", id.DebugString())
 
@@ -140,8 +138,8 @@ func (jk *dbJetKeeper) AddHotConfirmation(ctx context.Context, pn insolar.PulseN
 }
 
 func (jk *dbJetKeeper) AddDropConfirmation(ctx context.Context, pn insolar.PulseNumber, id insolar.JetID, split bool) error {
-	jk.Lock()
-	defer jk.Unlock()
+	jk.lock.Lock()
+	defer jk.lock.Unlock()
 
 	inslogger.FromContext(ctx).Debug("AddDropConfirmation. pulse: ", pn, ". ID: ", id.DebugString())
 
@@ -194,8 +192,8 @@ func (jk *dbJetKeeper) updateTopSyncPulse(ctx context.Context, pn insolar.PulseN
 }
 
 func (jk *dbJetKeeper) TopSyncPulse() insolar.PulseNumber {
-	jk.RLock()
-	defer jk.RUnlock()
+	jk.lock.RLock()
+	defer jk.lock.RUnlock()
 
 	return jk.topSyncPulse()
 }

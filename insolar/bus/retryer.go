@@ -18,9 +18,10 @@ package bus
 
 import (
 	"context"
-	"github.com/insolar/insolar/insolar/pulse"
 	"sync"
 	"time"
+
+	"github.com/insolar/insolar/insolar/pulse"
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar"
@@ -114,7 +115,7 @@ func (r *RetrySender) waitForPulseChange(ctx context.Context, lastPulse insolar.
 		}
 
 		if currentPulse.PulseNumber == lastPulse {
-			logger.Debugf("wait for pulse change in RetrySender. Current: %d", currentPulse)
+			logger.Debugf("wait for pulse change in RetrySender. Current: %d", currentPulse.PulseNumber)
 			time.Sleep(100 * time.Millisecond)
 			continue
 		}

@@ -40,7 +40,7 @@ type EnsureIndex struct {
 
 	dep struct {
 		indexLocker object.IndexLocker
-		indices     object.MemoryIndexStorage
+		indexes     object.MemoryIndexStorage
 		coordinator jet.Coordinator
 		sender      bus.Sender
 	}
@@ -61,7 +61,7 @@ func (p *EnsureIndex) Dep(
 	s bus.Sender,
 ) {
 	p.dep.indexLocker = il
-	p.dep.indices = idxs
+	p.dep.indexes = idxs
 	p.dep.coordinator = c
 	p.dep.sender = s
 }
@@ -91,10 +91,10 @@ func (p *EnsureIndex) process(ctx context.Context) error {
 	p.dep.indexLocker.Lock(p.object)
 	defer p.dep.indexLocker.Unlock(p.object)
 
-	idx, err := p.dep.indices.ForID(ctx, flow.Pulse(ctx), p.object)
+	idx, err := p.dep.indexes.ForID(ctx, flow.Pulse(ctx), p.object)
 	if err == nil {
 		idx.LifelineLastUsed = flow.Pulse(ctx)
-		p.dep.indices.Set(ctx, flow.Pulse(ctx), idx)
+		p.dep.indexes.Set(ctx, flow.Pulse(ctx), idx)
 		return nil
 	}
 	if err != object.ErrIndexNotFound {
@@ -134,7 +134,7 @@ func (p *EnsureIndex) process(ctx context.Context) error {
 			return errors.Wrap(err, "EnsureIndex: failed to decode index")
 		}
 
-		p.dep.indices.Set(ctx, flow.Pulse(ctx), record.Index{
+		p.dep.indexes.Set(ctx, flow.Pulse(ctx), record.Index{
 			LifelineLastUsed: flow.Pulse(ctx),
 			Lifeline:         idx,
 			PendingRecords:   []insolar.ID{},
