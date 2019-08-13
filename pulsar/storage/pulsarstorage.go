@@ -14,21 +14,17 @@
 // limitations under the License.
 //
 
-// Package pulsartestutil - test utils for pulsar package
-package pulsartestutils
+package pulsarstorage
 
 import (
 	"github.com/insolar/insolar/insolar"
 )
 
-// MockEntropy for pulsar's tests
-var MockEntropy = [64]byte{1, 2, 3, 4, 5, 6, 7, 8}
+//go:generate minimock -i github.com/insolar/insolar/pulsar/storage.PulsarStorage -o ../pulsartestutils -s _mock.go -g
 
-// MockEntropyGenerator implements EntropyGenerator and is being used for tests
-type MockEntropyGenerator struct {
-}
-
-// GenerateEntropy returns mocked entropy
-func (MockEntropyGenerator) GenerateEntropy() insolar.Entropy {
-	return MockEntropy
+type PulsarStorage interface {
+	GetLastPulse() (*insolar.Pulse, error)
+	SetLastPulse(pulse *insolar.Pulse) error
+	SavePulse(pulse *insolar.Pulse) error
+	Close() error
 }
