@@ -82,10 +82,8 @@ type distributor struct {
 	transport   transport.StreamTransport
 	idGenerator sequence.Generator
 
-	pingRequestTimeout        time.Duration
-	randomHostsRequestTimeout time.Duration
-	pulseRequestTimeout       time.Duration
-	randomNodesCount          int
+	pulseRequestTimeout time.Duration
+	randomNodesCount    int
 
 	publicAddress   string
 	pulsarHost      *host.Host
@@ -103,10 +101,7 @@ func NewDistributor(conf configuration.PulseDistributor) (insolar.PulseDistribut
 	result := &distributor{
 		idGenerator: sequence.NewGenerator(),
 
-		pingRequestTimeout:        time.Duration(conf.PingRequestTimeout) * time.Millisecond,
-		randomHostsRequestTimeout: time.Duration(conf.RandomHostsRequestTimeout) * time.Millisecond,
-		pulseRequestTimeout:       time.Duration(conf.PulseRequestTimeout) * time.Millisecond,
-		randomNodesCount:          conf.RandomNodesCount,
+		pulseRequestTimeout: time.Duration(conf.PulseRequestTimeout) * time.Millisecond,
 
 		bootstrapHosts:  conf.BootstrapHosts,
 		futureManager:   futureManager,
