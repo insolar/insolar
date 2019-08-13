@@ -47,7 +47,7 @@ func TestWrongJson(t *testing.T) {
 	body, err := ioutil.ReadAll(postResp.Body)
 	require.NoError(t, err)
 
-	response := &requester.ContractAnswer{}
+	response := &requester.ContractResponse{}
 	unmarshalCallResponse(t, body, response)
 	require.NotNil(t, response.Error)
 

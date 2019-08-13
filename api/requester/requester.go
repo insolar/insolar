@@ -86,15 +86,35 @@ func SetVerbose(verb bool) {
 
 // PlatformRequest represents params struct
 type PlatformRequest struct {
-	JSONRPC        string      `json:"jsonrpc"`
-	ID             uint64      `json:"id"`
-	Method         string      `json:"method"`
+	Request
 	PlatformParams interface{} `json:"params"`
 	LogLevel       string      `json:"logLevel,omitempty"`
 }
 
+// ContractRequest is a representation of request struct to api
+type ContractRequest struct {
+	Request
+	Params Params `json:"params,omitempty"`
+}
+
+type Request struct {
+	Version string `json:"jsonrpc"`
+	Id      uint64 `json:"id"`
+	Method  string `json:"method"`
+}
+
+type Params struct {
+	Seed       string      `json:"seed"`
+	CallSite   string      `json:"callSite"`
+	CallParams interface{} `json:"callParams,omitempty"`
+	Reference  string      `json:"reference"`
+	PublicKey  string      `json:"publicKey"`
+	LogLevel   string      `json:"logLevel,omitempty"`
+	Test       string      `json:"test,omitempty"`
+}
+
 // GetResponseBodyContract makes request to contract and extracts body
-func GetResponseBodyContract(url string, postP Request, signature string) ([]byte, error) {
+func GetResponseBodyContract(url string, postP ContractRequest, signature string) ([]byte, error) {
 	req, jsonValue, err := prepareReq(url, postP)
 	if err != nil {
 		return nil, errors.Wrap(err, "problem with preparing contract request")
@@ -163,9 +183,11 @@ func doReq(req *http.Request) ([]byte, error) {
 // GetSeed makes rpc request to node.getSeed method and extracts it
 func GetSeed(url string) (string, error) {
 	body, err := GetResponseBodyPlatform(url+"/rpc", PlatformRequest{
-		JSONRPC: JSONRPCVersion,
-		Method:  "node.getSeed",
-		ID:      1,
+		Request: Request{
+			Version: JSONRPCVersion,
+			Method:  "node.getSeed",
+			Id:      1,
+		},
 	})
 	if err != nil {
 		return "", errors.Wrap(err, "[ GetSeed ] seed request")
@@ -188,7 +210,7 @@ func GetSeed(url string) (string, error) {
 }
 
 // SendWithSeed sends request with known seed
-func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, reqCfg *Request, seed string) ([]byte, error) {
+func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, reqCfg *ContractRequest, seed string) ([]byte, error) {
 	if userCfg == nil || reqCfg == nil {
 		return nil, errors.New("[ SendWithSeed ] Configs must be initialized")
 	}
@@ -242,7 +264,7 @@ func marshalSig(r, s *big.Int) (string, error) {
 }
 
 // Send first gets seed and after that makes target request
-func Send(ctx context.Context, url string, userCfg *UserConfigJSON, reqCfg *Request) ([]byte, error) {
+func Send(ctx context.Context, url string, userCfg *UserConfigJSON, reqCfg *ContractRequest) ([]byte, error) {
 	verboseInfo(ctx, "Sending GETSEED request ...")
 	seed, err := GetSeed(url)
 	if err != nil {
@@ -260,9 +282,11 @@ func Send(ctx context.Context, url string, userCfg *UserConfigJSON, reqCfg *Requ
 
 func getDefaultRPCParams(method string) PlatformRequest {
 	return PlatformRequest{
-		JSONRPC: JSONRPCVersion,
-		ID:      1,
-		Method:  method,
+		Request: Request{
+			Version: JSONRPCVersion,
+			Id:      1,
+			Method:  method,
+		},
 	}
 }
 

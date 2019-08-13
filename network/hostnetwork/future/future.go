@@ -82,7 +82,7 @@ func NewFuture(requestID types.RequestID, receiver *host.Host, packet *packet.Pa
 	}
 }
 
-// ID returns RequestID of packet.
+// Id returns RequestID of packet.
 func (f *future) ID() types.RequestID {
 	return f.requestID
 }

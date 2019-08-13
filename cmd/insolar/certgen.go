@@ -56,11 +56,11 @@ func (g *certGen) loadKeys() {
 }
 
 func extractReference(response []byte, requestTypeMsg string) insolar.Reference {
-	r := requester.ContractAnswer{}
+	r := requester.ContractResponse{}
 	err := json.Unmarshal(response, &r)
 	checkError(fmt.Sprintf("Failed to parse response from '%s' node request", requestTypeMsg), err)
 	if verbose {
-		fmt.Println("Response:", string(response))
+		fmt.Println("ContractResponse:", string(response))
 	}
 	if r.Error != nil {
 		fmt.Printf("Error while '%s' occured : %s \n", requestTypeMsg, r.Error.Message)
@@ -78,10 +78,12 @@ func (g *certGen) registerNode() insolar.Reference {
 
 	keySerialized, err := g.keyProcessor.ExportPublicKeyPEM(g.pubKey)
 	checkError("Failed to export public key:", err)
-	request := requester.Request{
-		Version: JSONRPCVersion,
-		ID:      1,
-		Method:  "contract.call",
+	request := requester.ContractRequest{
+		Request: requester.Request{
+			Version: JSONRPCVersion,
+			Id:      1,
+			Method:  "contract.call",
+		},
 		Params: requester.Params{
 			CallSite:   "contract.registerNode",
 			CallParams: map[string]string{"publicKey": string(keySerialized), "role": g.staticRole.String()},
@@ -114,9 +116,11 @@ type GetCertificateResponse struct {
 func (g *certGen) fetchCertificate(ref insolar.Reference) []byte {
 
 	response, err := requester.GetResponseBodyPlatform(g.API+"/rpc", requester.PlatformRequest{
-		JSONRPC:        JSONRPCVersion,
-		Method:         "cert.get",
-		ID:             1,
+		Request: requester.Request{
+			Version: JSONRPCVersion,
+			Method:  "cert.get",
+			Id:      1,
+		},
 		PlatformParams: map[string]string{"ref": ref.String()},
 	})
 	checkError("Failed to get certificate for the registered node:", err)
@@ -194,10 +198,12 @@ func (g *certGen) getNodeRefByPublicKey() insolar.Reference {
 
 	keySerialized, err := g.keyProcessor.ExportPublicKeyPEM(g.privKey)
 	checkError("Failed to export public key:", err)
-	request := requester.Request{
-		Version: JSONRPCVersion,
-		ID:      1,
-		Method:  "contract.call",
+	request := requester.ContractRequest{
+		Request: requester.Request{
+			Version: JSONRPCVersion,
+			Id:      1,
+			Method:  "contract.call",
+		},
 		Params: requester.Params{
 			CallSite:   "contract.getNodeRef",
 			CallParams: []interface{}{keySerialized},

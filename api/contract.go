@@ -37,7 +37,7 @@ func NewContractService(runner *Runner) *ContractService {
 	return &ContractService{runner: runner}
 }
 
-func (cs *ContractService) Call(req *http.Request, args *requester.Params, requestBody *rpc.RequestBody, result *requester.Result) error {
+func (cs *ContractService) Call(req *http.Request, args *requester.Params, requestBody *rpc.RequestBody, result *requester.ContractResult) error {
 	traceID := utils.RandTraceID()
 	ctx, insLog := inslogger.WithTraceField(context.Background(), traceID)
 
@@ -47,7 +47,7 @@ func (cs *ContractService) Call(req *http.Request, args *requester.Params, reque
 	insLog.Infof("[ ContractService.Call ] Incoming request: %s", req.RequestURI)
 
 	if args.Test != "" {
-		insLog.Infof("Request related to %s", args.Test)
+		insLog.Infof("ContractRequest related to %s", args.Test)
 	}
 
 	signature, err := validateRequestHeaders(req.Header.Get(requester.Digest), req.Header.Get(requester.Signature), requestBody.Raw)

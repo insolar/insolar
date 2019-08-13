@@ -70,7 +70,7 @@ func displayResultsTable(results [][]string, ready bool, buffer *bytes.Buffer) {
 	table.SetHeader([]string{
 		"URL",
 		"Network State",
-		"ID",
+		"Id",
 		"Network Pulse Number",
 		"Pulse Number",
 		"Active List Size",

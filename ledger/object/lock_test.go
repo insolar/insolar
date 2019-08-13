@@ -62,7 +62,7 @@ func TestIdLocker_Lock_PulseDoesntMatter(t *testing.T) {
 	select {
 	case <-end:
 	case <-time.After(5 * time.Second):
-		// Different record.ID should not lock each other.
+		// Different record.Id should not lock each other.
 		// 5s should be enough for any slow test environment.
 		t.Fatalf(
 			"Probably got deadlock (id1=%v, id2=%v).",
@@ -86,7 +86,7 @@ func Test_IDLockDifferent(t *testing.T) {
 	select {
 	case <-end:
 	case <-time.After(5 * time.Second):
-		// Different record.ID should not lock each other.
+		// Different record.Id should not lock each other.
 		// 5s should be enough for any slow test environment.
 		t.Fatalf(
 			"Probably got deadlock (id1=%v, id2=%v).",

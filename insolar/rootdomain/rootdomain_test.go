@@ -18,8 +18,9 @@ package rootdomain
 
 import (
 	"encoding/hex"
-	"github.com/insolar/insolar/insolar/genesisrefs"
 	"testing"
+
+	"github.com/insolar/insolar/insolar/genesisrefs"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/platformpolicy"
@@ -35,7 +36,7 @@ func TestID(t *testing.T) {
 	rootRecord := &Record{
 		PCS: initPCS(),
 	}
-	require.Equal(t, idHex, hex.EncodeToString(rootRecord.ID().Bytes()), "root domain ID should always be the same")
+	require.Equal(t, idHex, hex.EncodeToString(rootRecord.ID().Bytes()), "root domain Id should always be the same")
 }
 
 func TestReference(t *testing.T) {

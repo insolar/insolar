@@ -47,11 +47,6 @@ var testSeedResponse = seedResponse{Seed: "Test", TraceID: "testTraceID"}
 var testInfoResponse = InfoResponse{RootMember: "root_member_ref", RootDomain: "root_domain_ref", NodeDomain: "node_domain_ref"}
 var testStatusResponse = StatusResponse{NetworkState: "OK"}
 
-type rpcRequest struct {
-	RPCVersion string `json:"jsonrpc"`
-	Method     string `json:"method"`
-}
-
 func writeReponse(response http.ResponseWriter, answer interface{}) {
 	serJSON, err := json.MarshalIndent(answer, "", "    ")
 	if err != nil {
@@ -64,52 +59,37 @@ func writeReponse(response http.ResponseWriter, answer interface{}) {
 	}
 }
 
-func FakeHandler(response http.ResponseWriter, req *http.Request) {
-	response.Header().Add("Content-Type", "application/json")
-
-	params := Request{}
-	_, err := unmarshalRequest(req, &params)
-	if err != nil {
-		log.Errorf("Can't read request\n")
-		return
-	}
-
-	var respData = Result{}
-
-	if params.Method == "member.create" {
-		respData.ContractResult = TESTREFERENCE
-	} else {
-		respData.ContractResult = TESTSEED
-	}
-
-	writeReponse(response, respData)
+type RPCResponse struct {
+	Response
+	Result interface{} `json:"result,omitempty"`
 }
 
 func FakeRPCHandler(response http.ResponseWriter, req *http.Request) {
 	response.Header().Add("Content-Type", "application/json")
-	answer := map[string]interface{}{
-		"jsonrpc": "2.0",
-		"id":      "",
-	}
-	rpcReq := rpcRequest{}
-	_, err := unmarshalRequest(req, &rpcReq)
+	rpcResponse := RPCResponse{}
+	request := Request{}
+	_, err := unmarshalRequest(req, &request)
 	if err != nil {
 		log.Errorf("Can't read request\n")
 		return
 	}
 
-	switch rpcReq.Method {
+	switch request.Method {
 	case "node.getStatus":
-		answer["result"] = testStatusResponse
+		rpcResponse.Result = testStatusResponse
 	case "network.getInfo":
-		answer["result"] = testInfoResponse
+		rpcResponse.Result = testInfoResponse
 	case "node.getSeed":
-		answer["result"] = testSeedResponse
+		rpcResponse.Result = testSeedResponse
+	case "member.create":
+		rpcResponse.Result = TESTREFERENCE
+	default:
+		rpcResponse.Result = TESTSEED
+
 	}
-	writeReponse(response, answer)
+	writeReponse(response, rpcResponse)
 }
 
-const callLOCATION = "/api/call"
 const rpcLOCATION = "/api/rpc"
 const PORT = "12221"
 const HOST = "127.0.0.1"
@@ -146,9 +126,7 @@ func startServer() error {
 }
 
 func setup() error {
-	fh := FakeHandler
 	fRPCh := FakeRPCHandler
-	http.HandleFunc(callLOCATION, fh)
 	http.HandleFunc(rpcLOCATION, fRPCh)
 	log.Info("Starting Test api server ...")
 
@@ -175,7 +153,6 @@ func teardown() {
 	err := server.Shutdown(ctx)
 	if err != nil {
 		fmt.Println("STOPPING TEST SERVER:", err)
-
 	}
 }
 
@@ -211,11 +188,11 @@ func TestGetResponseBodyBadHttpStatus(t *testing.T) {
 }
 
 func TestGetResponseBody(t *testing.T) {
-	data, err := GetResponseBodyContract(URL+"/call", Request{}, "")
-	result := Result{}
-	_ = json.Unmarshal(data, &result)
+	data, err := GetResponseBodyContract(URL+"/rpc", ContractRequest{}, "")
+	response := RPCResponse{}
+	_ = json.Unmarshal(data, &response)
 	require.NoError(t, err)
-	require.Contains(t, result.ContractResult, "VGVzdA==")
+	require.Contains(t, response.Result, TESTSEED)
 }
 
 func TestSetVerbose(t *testing.T) {
@@ -226,7 +203,7 @@ func TestSetVerbose(t *testing.T) {
 	SetVerbose(false)
 }
 
-func readConfigs(t *testing.T) (*UserConfigJSON, *Request) {
+func readConfigs(t *testing.T) (*UserConfigJSON, *ContractRequest) {
 	userConf, err := ReadUserConfigFromFile("testdata/userConfig.json")
 	require.NoError(t, err)
 	reqConf, err := ReadRequestConfigFromFile("testdata/requestConfig.json")
@@ -248,7 +225,7 @@ func TestSendWithSeed(t *testing.T) {
 	ctx := inslogger.ContextWithTrace(context.Background(), "TestSendWithSeed")
 	userConf, reqConf := readConfigs(t)
 	reqConf.Method = "member.create"
-	resp, err := SendWithSeed(ctx, URL+"/call", userConf, reqConf, TESTSEED)
+	resp, err := SendWithSeed(ctx, URL+"/rpc", userConf, reqConf, TESTSEED)
 	require.NoError(t, err)
 	require.Contains(t, string(resp), TESTREFERENCE)
 }

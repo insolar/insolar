@@ -129,7 +129,7 @@ func (jk *dbJetKeeper) AddHotConfirmation(ctx context.Context, pn insolar.PulseN
 	jk.Lock()
 	defer jk.Unlock()
 
-	inslogger.FromContext(ctx).Debug("AddHotConfirmation. pulse: ", pn, ". ID: ", id.DebugString())
+	inslogger.FromContext(ctx).Debug("AddHotConfirmation. pulse: ", pn, ". Id: ", id.DebugString())
 
 	if err := jk.updateHot(ctx, pn, id, split); err != nil {
 		return errors.Wrapf(err, "failed to save updated jets")
@@ -143,7 +143,7 @@ func (jk *dbJetKeeper) AddDropConfirmation(ctx context.Context, pn insolar.Pulse
 	jk.Lock()
 	defer jk.Unlock()
 
-	inslogger.FromContext(ctx).Debug("AddDropConfirmation. pulse: ", pn, ". ID: ", id.DebugString())
+	inslogger.FromContext(ctx).Debug("AddDropConfirmation. pulse: ", pn, ". Id: ", id.DebugString())
 
 	if err := jk.updateDrop(ctx, pn, id, split); err != nil {
 		return errors.Wrapf(err, "AddDropConfirmation. failed to save updated jets")
@@ -164,7 +164,7 @@ func (jk *dbJetKeeper) updateTopSyncPulse(ctx context.Context, pn insolar.PulseN
 
 	top := jk.topSyncPulse()
 
-	logger.Debug("propagateConsistency. pulse: ", pn, ". ID: ", jetID.DebugString(),
+	logger.Debug("propagateConsistency. pulse: ", pn, ". Id: ", jetID.DebugString(),
 		". top: ", top, ". prev.PulseNumber: ", prev.PulseNumber)
 
 	if prev.PulseNumber != top {

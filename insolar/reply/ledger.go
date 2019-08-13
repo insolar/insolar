@@ -47,7 +47,7 @@ func (e *Object) Type() insolar.ReplyType {
 	return TypeObject
 }
 
-// ID is common reaction for methods returning id to lifeline states.
+// Id is common reaction for methods returning id to lifeline states.
 type ID struct {
 	ID insolar.ID
 }
@@ -57,7 +57,7 @@ func (e *ID) Type() insolar.ReplyType {
 	return TypeID
 }
 
-// ID is common reaction for methods returning id to lifeline states.
+// Id is common reaction for methods returning id to lifeline states.
 type IDs struct {
 	IDs []insolar.ID
 }

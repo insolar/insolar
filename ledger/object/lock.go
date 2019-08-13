@@ -30,13 +30,13 @@ type mucount struct {
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexLocker -o ./ -s _mock.go -g
 
-// IndexLocker provides Lock/Unlock methods per record ID.
+// IndexLocker provides Lock/Unlock methods per record Id.
 type IndexLocker interface {
 	Lock(id insolar.ID)
 	Unlock(id insolar.ID)
 }
 
-// IndexLocker provides Lock/Unlock methods per record ID.
+// IndexLocker provides Lock/Unlock methods per record Id.
 type idLocker struct {
 	mu   sync.Mutex
 	muxs map[insolar.ID]*mucount
@@ -49,7 +49,7 @@ func NewIndexLocker() IndexLocker {
 	}
 }
 
-// Lock locks mutex belonged to record ID.
+// Lock locks mutex belonged to record Id.
 // If mutex does not exist, it will be created in concurrent safe fashion.
 func (l *idLocker) Lock(id insolar.ID) {
 	// Reset pulse. It should not be considered when locking.
@@ -67,7 +67,7 @@ func (l *idLocker) Lock(id insolar.ID) {
 	mc.Lock()
 }
 
-// Unlock unlocks mutex belonged to record ID.
+// Unlock unlocks mutex belonged to record Id.
 func (l *idLocker) Unlock(id insolar.ID) {
 	// Reset pulse. It should not be considered when locking.
 	id.SetPulse(0)
@@ -77,7 +77,7 @@ func (l *idLocker) Unlock(id insolar.ID) {
 
 	mc, ok := l.muxs[id]
 	if !ok {
-		panic(fmt.Sprintf("try to unlock not initialized mutex for ID %+v", id))
+		panic(fmt.Sprintf("try to unlock not initialized mutex for Id %+v", id))
 	}
 	mc.count--
 	mc.Unlock()

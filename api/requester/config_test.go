@@ -37,7 +37,7 @@ func TestReadRequestConfigFromFile(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "contract.call", conf.Method)
 
-	require.Equal(t, "wallet.CreateMember", conf.Params.CallSite)
+	require.Equal(t, "member.create", conf.Params.CallSite)
 }
 
 func TestReadUserConfigFromFile(t *testing.T) {

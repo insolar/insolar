@@ -6,15 +6,16 @@ package payload
 import (
 	bytes "bytes"
 	fmt "fmt"
+	io "io"
+	math "math"
+	reflect "reflect"
+	strings "strings"
+
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
 	github_com_insolar_insolar_insolar "github.com/insolar/insolar/insolar"
 	pulse "github.com/insolar/insolar/insolar/pulse"
 	record "github.com/insolar/insolar/insolar/record"
-	io "io"
-	math "math"
-	reflect "reflect"
-	strings "strings"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -34,7 +35,7 @@ type Meta struct {
 	Sender     github_com_insolar_insolar_insolar.Reference   `protobuf:"bytes,21,opt,name=Sender,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Sender"`
 	Receiver   github_com_insolar_insolar_insolar.Reference   `protobuf:"bytes,22,opt,name=Receiver,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Receiver"`
 	Pulse      github_com_insolar_insolar_insolar.PulseNumber `protobuf:"bytes,23,opt,name=Pulse,proto3,customtype=github.com/insolar/insolar/insolar.PulseNumber" json:"Pulse"`
-	ID         []byte                                         `protobuf:"bytes,24,opt,name=ID,proto3" json:"ID,omitempty"`
+	ID         []byte                                         `protobuf:"bytes,24,opt,name=Id,proto3" json:"Id,omitempty"`
 	OriginHash MessageHash                                    `protobuf:"bytes,25,opt,name=OriginHash,proto3,customtype=MessageHash" json:"OriginHash"`
 }
 
@@ -152,8 +153,8 @@ func (m *Error) GetText() string {
 
 type GetObject struct {
 	Polymorph       uint32                                `protobuf:"varint,16,opt,name=Polymorph,proto3" json:"Polymorph,omitempty"`
-	ObjectID        github_com_insolar_insolar_insolar.ID `protobuf:"bytes,20,opt,name=ObjectID,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"ObjectID"`
-	ObjectRequestID github_com_insolar_insolar_insolar.ID `protobuf:"bytes,21,opt,name=ObjectRequestID,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"ObjectRequestID"`
+	ObjectID        github_com_insolar_insolar_insolar.ID `protobuf:"bytes,20,opt,name=ObjectID,proto3,customtype=github.com/insolar/insolar/insolar.Id" json:"ObjectID"`
+	ObjectRequestID github_com_insolar_insolar_insolar.ID `protobuf:"bytes,21,opt,name=ObjectRequestID,proto3,customtype=github.com/insolar/insolar/insolar.Id" json:"ObjectRequestID"`
 }
 
 func (m *GetObject) Reset()      { *m = GetObject{} }
@@ -197,7 +198,7 @@ func (m *GetObject) GetPolymorph() uint32 {
 
 type GetCode struct {
 	Polymorph uint32                                `protobuf:"varint,16,opt,name=Polymorph,proto3" json:"Polymorph,omitempty"`
-	CodeID    github_com_insolar_insolar_insolar.ID `protobuf:"bytes,20,opt,name=CodeID,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"CodeID"`
+	CodeID    github_com_insolar_insolar_insolar.ID `protobuf:"bytes,20,opt,name=CodeID,proto3,customtype=github.com/insolar/insolar/insolar.Id" json:"CodeID"`
 }
 
 func (m *GetCode) Reset()      { *m = GetCode{} }
@@ -242,7 +243,7 @@ func (m *GetCode) GetPolymorph() uint32 {
 type PassState struct {
 	Polymorph uint32                                `protobuf:"varint,16,opt,name=Polymorph,proto3" json:"Polymorph,omitempty"`
 	Origin    []byte                                `protobuf:"bytes,20,opt,name=Origin,proto3" json:"Origin,omitempty"`
-	StateID   github_com_insolar_insolar_insolar.ID `protobuf:"bytes,21,opt,name=StateID,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"StateID"`
+	StateID   github_com_insolar_insolar_insolar.ID `protobuf:"bytes,21,opt,name=StateID,proto3,customtype=github.com/insolar/insolar/insolar.Id" json:"StateID"`
 }
 
 func (m *PassState) Reset()      { *m = PassState{} }
@@ -556,7 +557,7 @@ func (m *State) GetMemory() []byte {
 
 type ID struct {
 	Polymorph uint32                                `protobuf:"varint,16,opt,name=Polymorph,proto3" json:"Polymorph,omitempty"`
-	ID        github_com_insolar_insolar_insolar.ID `protobuf:"bytes,20,opt,name=ID,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"ID"`
+	ID        github_com_insolar_insolar_insolar.ID `protobuf:"bytes,20,opt,name=Id,proto3,customtype=github.com/insolar/insolar/insolar.Id" json:"Id"`
 }
 
 func (m *ID) Reset()      { *m = ID{} }
@@ -600,7 +601,7 @@ func (m *ID) GetPolymorph() uint32 {
 
 type IDs struct {
 	Polymorph uint32                                  `protobuf:"varint,16,opt,name=Polymorph,proto3" json:"Polymorph,omitempty"`
-	IDs       []github_com_insolar_insolar_insolar.ID `protobuf:"bytes,20,rep,name=IDs,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"IDs"`
+	IDs       []github_com_insolar_insolar_insolar.ID `protobuf:"bytes,20,rep,name=IDs,proto3,customtype=github.com/insolar/insolar/insolar.Id" json:"IDs"`
 }
 
 func (m *IDs) Reset()      { *m = IDs{} }
@@ -799,10 +800,10 @@ func (m *SetOutgoingRequest) GetRequest() record.Virtual {
 // SagaCallAcceptNotification informs virtual node that it's time to call saga Accept method.
 type SagaCallAcceptNotification struct {
 	Polymorph uint32                                `protobuf:"varint,16,opt,name=Polymorph,proto3" json:"Polymorph,omitempty"`
-	ObjectID  github_com_insolar_insolar_insolar.ID `protobuf:"bytes,20,opt,name=ObjectID,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"ObjectID"`
+	ObjectID  github_com_insolar_insolar_insolar.ID `protobuf:"bytes,20,opt,name=ObjectID,proto3,customtype=github.com/insolar/insolar/insolar.Id" json:"ObjectID"`
 	// OutgoingReqID contains the id of registered outgoing request.
 	// VE needs it to register the result of the outgoing request.
-	DetachedRequestID github_com_insolar_insolar_insolar.ID `protobuf:"bytes,21,opt,name=DetachedRequestID,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"DetachedRequestID"`
+	DetachedRequestID github_com_insolar_insolar_insolar.ID `protobuf:"bytes,21,opt,name=DetachedRequestID,proto3,customtype=github.com/insolar/insolar/insolar.Id" json:"DetachedRequestID"`
 	// Request contains original OutgoingRequest registered by VE
 	Request []byte `protobuf:"bytes,22,opt,name=Request,proto3" json:"Request,omitempty"`
 }
@@ -1083,8 +1084,8 @@ func (m *Update) GetResult() []byte {
 
 type GetFilament struct {
 	Polymorph uint32                                         `protobuf:"varint,16,opt,name=Polymorph,proto3" json:"Polymorph,omitempty"`
-	ObjectID  github_com_insolar_insolar_insolar.ID          `protobuf:"bytes,20,opt,name=ObjectID,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"ObjectID"`
-	StartFrom github_com_insolar_insolar_insolar.ID          `protobuf:"bytes,21,opt,name=StartFrom,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"StartFrom"`
+	ObjectID  github_com_insolar_insolar_insolar.ID          `protobuf:"bytes,20,opt,name=ObjectID,proto3,customtype=github.com/insolar/insolar/insolar.Id" json:"ObjectID"`
+	StartFrom github_com_insolar_insolar_insolar.ID          `protobuf:"bytes,21,opt,name=StartFrom,proto3,customtype=github.com/insolar/insolar/insolar.Id" json:"StartFrom"`
 	ReadUntil github_com_insolar_insolar_insolar.PulseNumber `protobuf:"bytes,22,opt,name=ReadUntil,proto3,customtype=github.com/insolar/insolar/insolar.PulseNumber" json:"ReadUntil"`
 }
 
@@ -1129,7 +1130,7 @@ func (m *GetFilament) GetPolymorph() uint32 {
 
 type FilamentSegment struct {
 	Polymorph uint32                                `protobuf:"varint,16,opt,name=Polymorph,proto3" json:"Polymorph,omitempty"`
-	ObjectID  github_com_insolar_insolar_insolar.ID `protobuf:"bytes,20,opt,name=ObjectID,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"ObjectID"`
+	ObjectID  github_com_insolar_insolar_insolar.ID `protobuf:"bytes,20,opt,name=ObjectID,proto3,customtype=github.com/insolar/insolar/insolar.Id" json:"ObjectID"`
 	Records   []record.CompositeFilamentRecord      `protobuf:"bytes,21,rep,name=Records,proto3" json:"Records"`
 }
 
@@ -1181,8 +1182,8 @@ func (m *FilamentSegment) GetRecords() []record.CompositeFilamentRecord {
 
 type RequestInfo struct {
 	Polymorph uint32                                `protobuf:"varint,16,opt,name=Polymorph,proto3" json:"Polymorph,omitempty"`
-	ObjectID  github_com_insolar_insolar_insolar.ID `protobuf:"bytes,20,opt,name=ObjectID,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"ObjectID"`
-	RequestID github_com_insolar_insolar_insolar.ID `protobuf:"bytes,21,opt,name=RequestID,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"RequestID"`
+	ObjectID  github_com_insolar_insolar_insolar.ID `protobuf:"bytes,20,opt,name=ObjectID,proto3,customtype=github.com/insolar/insolar/insolar.Id" json:"ObjectID"`
+	RequestID github_com_insolar_insolar_insolar.ID `protobuf:"bytes,21,opt,name=RequestID,proto3,customtype=github.com/insolar/insolar/insolar.Id" json:"RequestID"`
 	Request   []byte                                `protobuf:"bytes,22,opt,name=Request,proto3" json:"Request,omitempty"`
 	Result    []byte                                `protobuf:"bytes,23,opt,name=Result,proto3" json:"Result,omitempty"`
 }
@@ -1295,8 +1296,8 @@ func (m *GotHotConfirmation) GetSplit() bool {
 
 type ResultInfo struct {
 	Polymorph uint32                                `protobuf:"varint,16,opt,name=Polymorph,proto3" json:"Polymorph,omitempty"`
-	ObjectID  github_com_insolar_insolar_insolar.ID `protobuf:"bytes,20,opt,name=ObjectID,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"ObjectID"`
-	ResultID  github_com_insolar_insolar_insolar.ID `protobuf:"bytes,21,opt,name=ResultID,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"ResultID"`
+	ObjectID  github_com_insolar_insolar_insolar.ID `protobuf:"bytes,20,opt,name=ObjectID,proto3,customtype=github.com/insolar/insolar/insolar.Id" json:"ObjectID"`
+	ResultID  github_com_insolar_insolar_insolar.ID `protobuf:"bytes,21,opt,name=ResultID,proto3,customtype=github.com/insolar/insolar/insolar.Id" json:"ResultID"`
 	Result    []byte                                `protobuf:"bytes,22,opt,name=Result,proto3" json:"Result,omitempty"`
 }
 
@@ -1409,8 +1410,8 @@ func (m *HotObjects) GetIndexes() []record.Index {
 
 type GetRequest struct {
 	Polymorph uint32                                `protobuf:"varint,16,opt,name=Polymorph,proto3" json:"Polymorph,omitempty"`
-	ObjectID  github_com_insolar_insolar_insolar.ID `protobuf:"bytes,20,opt,name=ObjectID,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"ObjectID"`
-	RequestID github_com_insolar_insolar_insolar.ID `protobuf:"bytes,21,opt,name=RequestID,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"RequestID"`
+	ObjectID  github_com_insolar_insolar_insolar.ID `protobuf:"bytes,20,opt,name=ObjectID,proto3,customtype=github.com/insolar/insolar/insolar.Id" json:"ObjectID"`
+	RequestID github_com_insolar_insolar_insolar.ID `protobuf:"bytes,21,opt,name=RequestID,proto3,customtype=github.com/insolar/insolar/insolar.Id" json:"RequestID"`
 }
 
 func (m *GetRequest) Reset()      { *m = GetRequest{} }
@@ -1454,7 +1455,7 @@ func (m *GetRequest) GetPolymorph() uint32 {
 
 type Request struct {
 	Polymorph uint32                                `protobuf:"varint,16,opt,name=Polymorph,proto3" json:"Polymorph,omitempty"`
-	RequestID github_com_insolar_insolar_insolar.ID `protobuf:"bytes,20,opt,name=RequestID,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"RequestID"`
+	RequestID github_com_insolar_insolar_insolar.ID `protobuf:"bytes,20,opt,name=RequestID,proto3,customtype=github.com/insolar/insolar/insolar.Id" json:"RequestID"`
 	Request   record.Virtual                        `protobuf:"bytes,21,opt,name=Request,proto3" json:"Request"`
 }
 
@@ -1951,7 +1952,7 @@ func (m *StillExecuting) GetPolymorph() uint32 {
 
 type GetPendings struct {
 	Polymorph uint32                                `protobuf:"varint,16,opt,name=Polymorph,proto3" json:"Polymorph,omitempty"`
-	ObjectID  github_com_insolar_insolar_insolar.ID `protobuf:"bytes,20,opt,name=ObjectID,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"ObjectID"`
+	ObjectID  github_com_insolar_insolar_insolar.ID `protobuf:"bytes,20,opt,name=ObjectID,proto3,customtype=github.com/insolar/insolar/insolar.Id" json:"ObjectID"`
 }
 
 func (m *GetPendings) Reset()      { *m = GetPendings{} }
@@ -1995,7 +1996,7 @@ func (m *GetPendings) GetPolymorph() uint32 {
 
 type HasPendings struct {
 	Polymorph uint32                                `protobuf:"varint,16,opt,name=Polymorph,proto3" json:"Polymorph,omitempty"`
-	ObjectID  github_com_insolar_insolar_insolar.ID `protobuf:"bytes,20,opt,name=ObjectID,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"ObjectID"`
+	ObjectID  github_com_insolar_insolar_insolar.ID `protobuf:"bytes,20,opt,name=ObjectID,proto3,customtype=github.com/insolar/insolar/insolar.Id" json:"ObjectID"`
 }
 
 func (m *HasPendings) Reset()      { *m = HasPendings{} }
@@ -2159,7 +2160,7 @@ func (m *Replication) GetDrop() []byte {
 
 type GetJet struct {
 	Polymorph   uint32                                         `protobuf:"varint,16,opt,name=Polymorph,proto3" json:"Polymorph,omitempty"`
-	ObjectID    github_com_insolar_insolar_insolar.ID          `protobuf:"bytes,20,opt,name=ObjectID,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"ObjectID"`
+	ObjectID    github_com_insolar_insolar_insolar.ID          `protobuf:"bytes,20,opt,name=ObjectID,proto3,customtype=github.com/insolar/insolar/insolar.Id" json:"ObjectID"`
 	PulseNumber github_com_insolar_insolar_insolar.PulseNumber `protobuf:"varint,21,opt,name=PulseNumber,proto3,customtype=github.com/insolar/insolar/insolar.PulseNumber" json:"PulseNumber"`
 }
 
@@ -2204,7 +2205,7 @@ func (m *GetJet) GetPolymorph() uint32 {
 
 type AbandonedRequestsNotification struct {
 	Polymorph uint32                                `protobuf:"varint,16,opt,name=Polymorph,proto3" json:"Polymorph,omitempty"`
-	ObjectID  github_com_insolar_insolar_insolar.ID `protobuf:"bytes,20,opt,name=ObjectID,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"ObjectID"`
+	ObjectID  github_com_insolar_insolar_insolar.ID `protobuf:"bytes,20,opt,name=ObjectID,proto3,customtype=github.com/insolar/insolar/insolar.Id" json:"ObjectID"`
 }
 
 func (m *AbandonedRequestsNotification) Reset()      { *m = AbandonedRequestsNotification{} }
@@ -2368,7 +2369,7 @@ func (m *LightInitialState) GetPulse() pulse.PulseProto {
 
 type GetIndex struct {
 	Polymorph uint32                                `protobuf:"varint,16,opt,name=Polymorph,proto3" json:"Polymorph,omitempty"`
-	ObjectID  github_com_insolar_insolar_insolar.ID `protobuf:"bytes,20,opt,name=ObjectID,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"ObjectID"`
+	ObjectID  github_com_insolar_insolar_insolar.ID `protobuf:"bytes,20,opt,name=ObjectID,proto3,customtype=github.com/insolar/insolar/insolar.Id" json:"ObjectID"`
 }
 
 func (m *GetIndex) Reset()      { *m = GetIndex{} }
@@ -2466,7 +2467,7 @@ func init() {
 	proto.RegisterType((*Index)(nil), "payload.Index")
 	proto.RegisterType((*Code)(nil), "payload.Code")
 	proto.RegisterType((*State)(nil), "payload.State")
-	proto.RegisterType((*ID)(nil), "payload.ID")
+	proto.RegisterType((*ID)(nil), "payload.Id")
 	proto.RegisterType((*IDs)(nil), "payload.IDs")
 	proto.RegisterType((*Jet)(nil), "payload.Jet")
 	proto.RegisterType((*SetIncomingRequest)(nil), "payload.SetIncomingRequest")
@@ -4083,7 +4084,7 @@ func (this *Meta) GoString() string {
 	s = append(s, "Sender: "+fmt.Sprintf("%#v", this.Sender)+",\n")
 	s = append(s, "Receiver: "+fmt.Sprintf("%#v", this.Receiver)+",\n")
 	s = append(s, "Pulse: "+fmt.Sprintf("%#v", this.Pulse)+",\n")
-	s = append(s, "ID: "+fmt.Sprintf("%#v", this.ID)+",\n")
+	s = append(s, "Id: "+fmt.Sprintf("%#v", this.ID)+",\n")
 	s = append(s, "OriginHash: "+fmt.Sprintf("%#v", this.OriginHash)+",\n")
 	s = append(s, "}")
 	return strings.Join(s, "")
@@ -4196,9 +4197,9 @@ func (this *ID) GoString() string {
 		return "nil"
 	}
 	s := make([]string, 0, 6)
-	s = append(s, "&payload.ID{")
+	s = append(s, "&payload.Id{")
 	s = append(s, "Polymorph: "+fmt.Sprintf("%#v", this.Polymorph)+",\n")
-	s = append(s, "ID: "+fmt.Sprintf("%#v", this.ID)+",\n")
+	s = append(s, "Id: "+fmt.Sprintf("%#v", this.ID)+",\n")
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
@@ -7733,7 +7734,7 @@ func (this *Meta) String() string {
 		`Sender:` + fmt.Sprintf("%v", this.Sender) + `,`,
 		`Receiver:` + fmt.Sprintf("%v", this.Receiver) + `,`,
 		`Pulse:` + fmt.Sprintf("%v", this.Pulse) + `,`,
-		`ID:` + fmt.Sprintf("%v", this.ID) + `,`,
+		`Id:` + fmt.Sprintf("%v", this.ID) + `,`,
 		`OriginHash:` + fmt.Sprintf("%v", this.OriginHash) + `,`,
 		`}`,
 	}, "")
@@ -7846,9 +7847,9 @@ func (this *ID) String() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&ID{`,
+	s := strings.Join([]string{`&Id{`,
 		`Polymorph:` + fmt.Sprintf("%v", this.Polymorph) + `,`,
-		`ID:` + fmt.Sprintf("%v", this.ID) + `,`,
+		`Id:` + fmt.Sprintf("%v", this.ID) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -8476,7 +8477,7 @@ func (m *Meta) Unmarshal(dAtA []byte) error {
 			iNdEx = postIndex
 		case 24:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ID", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Id", wireType)
 			}
 			var byteLen int
 			for shift := uint(0); ; shift += 7 {
@@ -9657,10 +9658,10 @@ func (m *ID) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: ID: wiretype end group for non-group")
+			return fmt.Errorf("proto: Id: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ID: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: Id: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 16:
@@ -9684,7 +9685,7 @@ func (m *ID) Unmarshal(dAtA []byte) error {
 			}
 		case 20:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ID", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Id", wireType)
 			}
 			var byteLen int
 			for shift := uint(0); ; shift += 7 {

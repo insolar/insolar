@@ -24,7 +24,7 @@ const (
 	ShortNodeIDSize = 4
 )
 
-// ShortNodeID is the shortened ID of node that is unique inside the globe
+// ShortNodeID is the shortened Id of node that is unique inside the globe
 type ShortNodeID uint32 // ZERO is RESERVED
 
 const AbsentShortNodeID ShortNodeID = 0
@@ -33,7 +33,7 @@ func (v ShortNodeID) IsAbsent() bool { return v == AbsentShortNodeID }
 
 func (v ShortNodeID) Equal(other ShortNodeID) bool { return v == other }
 
-// GlobuleID is the ID of the globe
+// GlobuleID is the Id of the globe
 type GlobuleID uint32
 
 // NodeState is the state of the node
@@ -57,9 +57,9 @@ const (
 //go:generate minimock -i github.com/insolar/insolar/insolar.NetworkNode -o ../testutils/network -s _mock.go -g
 
 type NetworkNode interface {
-	// ID is the unique identifier of the node
+	// Id is the unique identifier of the node
 	ID() Reference
-	// ShortID get short ID of node
+	// ShortID get short Id of node
 	ShortID() ShortNodeID
 	// Role is the candidate Role for the node
 	Role() StaticRole

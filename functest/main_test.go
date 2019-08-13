@@ -35,7 +35,7 @@ import (
 	"testing"
 	"time"
 
-	"gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v2"
 
 	"github.com/pkg/errors"
 
@@ -273,10 +273,10 @@ func waitForNet() error {
 				break
 			}
 			if resp.NetworkState != insolar.CompleteNetworkState.String() {
-				fmt.Println("[ waitForNet ] Good response from port " + port + ". Net is not ready. Response: " + resp.NetworkState)
+				fmt.Println("[ waitForNet ] Good response from port " + port + ". Net is not ready. ContractResponse: " + resp.NetworkState)
 				break
 			}
-			fmt.Println("[ waitForNet ] Good response from port " + port + ". Net is ready. Response: " + resp.NetworkState)
+			fmt.Println("[ waitForNet ] Good response from port " + port + ". Net is ready. ContractResponse: " + resp.NetworkState)
 			currentOk++
 		}
 		if currentOk == numNodes {

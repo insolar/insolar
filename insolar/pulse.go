@@ -160,7 +160,7 @@ type PulseSenderConfirmation struct {
 const (
 	// FirstPulseNumber is the hardcoded first pulse number. Because first 65536 numbers are saved for the system's needs
 	FirstPulseNumber = pulse.MinTimePulse
-	// PulseNumberJet is a special pulse number value that signifies jet ID.
+	// PulseNumberJet is a special pulse number value that signifies jet Id.
 	PulseNumberJet = PulseNumber(1)
 	// BuiltinContractPulseNumber declares special pulse number that creates namespace for builtin contracts
 	BuiltinContractPulseNumber = PulseNumber(200)

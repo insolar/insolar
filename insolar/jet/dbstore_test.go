@@ -128,7 +128,7 @@ func TestDBStorage_Empty(t *testing.T) {
 	s := NewDBStore(db)
 
 	all := s.All(ctx, insolar.FirstPulseNumber)
-	require.Equal(t, 1, len(all), "should be just one jet ID")
+	require.Equal(t, 1, len(all), "should be just one jet Id")
 	require.Equal(t, insolar.ZeroJetID, all[0], "JetID should be a zero on empty storage")
 }
 

@@ -131,9 +131,9 @@ func (sdk *SDK) SetLogLevel(logLevel string) error {
 }
 
 func (sdk *SDK) sendRequest(ctx context.Context, method string, params map[string]interface{}, userCfg *requester.UserConfigJSON) ([]byte, error) {
-	reqCfg := &requester.Request{
-		Params: requester.Params{CallParams: params, CallSite: method, PublicKey: userCfg.PublicKey, LogLevel: sdk.logLevel.(string)},
-		Method: "contract.call",
+	reqCfg := &requester.ContractRequest{
+		Request: requester.Request{Method: "contract.call"},
+		Params:  requester.Params{CallParams: params, CallSite: method, PublicKey: userCfg.PublicKey, LogLevel: sdk.logLevel.(string)},
 	}
 
 	body, err := requester.Send(ctx, sdk.apiURLs.next(), userCfg, reqCfg)
@@ -144,8 +144,8 @@ func (sdk *SDK) sendRequest(ctx context.Context, method string, params map[strin
 	return body, nil
 }
 
-func (sdk *SDK) getResponse(body []byte) (*requester.ContractAnswer, error) {
-	res := &requester.ContractAnswer{}
+func (sdk *SDK) getResponse(body []byte) (*requester.ContractResponse, error) {
+	res := &requester.ContractResponse{}
 	err := json.Unmarshal(body, &res)
 	if err != nil {
 		return nil, errors.Wrap(err, "problems with unmarshal response")
@@ -262,7 +262,7 @@ func (sdk *SDK) GetBalance(m *Member) (*big.Int, error) {
 	return result, nil
 }
 
-func (sdk *SDK) DoRequest(user *requester.UserConfigJSON, method string, params map[string]interface{}) (*requester.Result, error) {
+func (sdk *SDK) DoRequest(user *requester.UserConfigJSON, method string, params map[string]interface{}) (*requester.ContractResult, error) {
 	ctx := inslogger.ContextWithTrace(context.Background(), method)
 
 	body, err := sdk.sendRequest(ctx, method, params, user)

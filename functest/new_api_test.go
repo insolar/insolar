@@ -50,7 +50,7 @@ func TestBadSeed(t *testing.T) {
 	ctx := context.TODO()
 	rootCfg, err := requester.CreateUserConfig(root.ref, root.privKey, root.pubKey)
 	require.NoError(t, err)
-	res, err := requester.SendWithSeed(ctx, TestRPCUrl, rootCfg, &requester.Request{
+	res, err := requester.SendWithSeed(ctx, TestRPCUrl, rootCfg, &requester.ContractRequest{
 		Version: "2.0",
 		ID:      1,
 		Method:  "contract.call",
@@ -64,7 +64,7 @@ func TestIncorrectSeed(t *testing.T) {
 	ctx := context.TODO()
 	rootCfg, err := requester.CreateUserConfig(root.ref, root.privKey, root.pubKey)
 	require.NoError(t, err)
-	res, err := requester.SendWithSeed(ctx, TestRPCUrl, rootCfg, &requester.Request{
+	res, err := requester.SendWithSeed(ctx, TestRPCUrl, rootCfg, &requester.ContractRequest{
 		Version: "2.0",
 		ID:      1,
 		Method:  "contract.call",
@@ -113,7 +113,7 @@ func TestIncorrectSign(t *testing.T) {
 	require.NoError(t, err)
 	body, err := requester.GetResponseBodyContract(
 		TestRPCUrl,
-		requester.Request{
+		requester.ContractRequest{
 			Version: "2.0",
 			ID:      1,
 			Method:  "contract.call",
@@ -122,7 +122,7 @@ func TestIncorrectSign(t *testing.T) {
 		"MEQCIAvgBR42vSccBKynBIC7gb5GffqtW8q2XWRP+DlJ0IeUAiAeKCxZNSSRSsYcz2d49CT6KlSLpr5L7VlOokOiI9dsvQ==",
 	)
 	require.NoError(t, err)
-	var res requester.ContractAnswer
+	var res requester.ContractResponse
 	err = json.Unmarshal(body, &res)
 	require.NoError(t, err)
 	require.Contains(t, res.Error.Message, "invalid signature")
@@ -134,7 +134,7 @@ func TestIncorrectMethodName(t *testing.T) {
 	require.NoError(t, err)
 	rootCfg, err := requester.CreateUserConfig(root.ref, root.privKey, root.pubKey)
 	require.NoError(t, err)
-	res, err := requester.SendWithSeed(ctx, TestRPCUrl, rootCfg, &requester.Request{
+	res, err := requester.SendWithSeed(ctx, TestRPCUrl, rootCfg, &requester.ContractRequest{
 		Version: "2.0",
 		ID:      1,
 		Method:  "foo.bar",

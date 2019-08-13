@@ -65,17 +65,19 @@ func (suite *TimeoutSuite) TestRunner_callHandler_NoTimeout() {
 		suite.ctx,
 		CallUrl,
 		suite.user,
-		&requester.Request{
-			Version: "2.0",
-			ID:      1,
-			Method:  "contract.call",
-			Params:  requester.Params{CallSite: "member.create", CallParams: map[string]interface{}{}, PublicKey: suite.user.PublicKey},
+		&requester.ContractRequest{
+			Request: requester.Request{
+				Version: "2.0",
+				Id:      1,
+				Method:  "contract.call",
+			},
+			Params: requester.Params{CallSite: "member.create", CallParams: map[string]interface{}{}, PublicKey: suite.user.PublicKey},
 		},
 		seedString,
 	)
 	suite.NoError(err)
 
-	var result requester.ContractAnswer
+	var result requester.ContractResponse
 	err = json.Unmarshal(resp, &result)
 	suite.NoError(err)
 	suite.Nil(result.Error)
@@ -95,14 +97,20 @@ func (suite *TimeoutSuite) TestRunner_callHandler_Timeout() {
 		suite.ctx,
 		CallUrl,
 		suite.user,
-		&requester.Request{Method: "contract.call"},
+		&requester.ContractRequest{
+			Request: requester.Request{
+				Version: requester.JSONRPCVersion,
+				Id:      1,
+				Method:  "contract.call",
+			},
+		},
 		seedString,
 	)
 	suite.NoError(err)
 
 	close(suite.delay)
 
-	var result requester.ContractAnswer
+	var result requester.ContractResponse
 	err = json.Unmarshal(resp, &result)
 	suite.NoError(err)
 	suite.Equal("API timeout exceeded", result.Error.Message)

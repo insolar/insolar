@@ -21,6 +21,8 @@ package api
 import (
 	"errors"
 	"net/http"
+
+	"github.com/insolar/rpc/v2"
 )
 
 // FuncTestContractService is a service that provides ability to add custom contracts
@@ -40,14 +42,14 @@ type UploadReply struct {
 	PrototypeRef string `json:"PrototypeRef"`
 }
 
-func (s *FuncTestContractService) Upload(r *http.Request, args *DummyArgs, reply *DummyReply) error {
+func (s *FuncTestContractService) Upload(r *http.Request, args *DummyArgs, requestBody *rpc.RequestBody, reply *DummyReply) error {
 	return errors.New("method allowed only in build with functest tag")
 }
 
-func (s *FuncTestContractService) CallConstructor(r *http.Request, args *DummyArgs, reply *DummyReply) error {
+func (s *FuncTestContractService) CallConstructor(r *http.Request, args *DummyArgs, requestBody *rpc.RequestBody, reply *DummyReply) error {
 	return errors.New("method allowed only in build with functest tag")
 }
 
-func (s *FuncTestContractService) CallMethod(r *http.Request, args *DummyArgs, reply *DummyReply) error {
+func (s *FuncTestContractService) CallMethod(r *http.Request, args *DummyArgs, requestBody *rpc.RequestBody, reply *DummyReply) error {
 	return errors.New("method allowed only in build with functest tag")
 }

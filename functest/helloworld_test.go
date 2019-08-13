@@ -43,7 +43,7 @@ func NewHelloWorld(ctx context.Context) (*HelloWorldInstance, error) {
 	}
 
 	rootCfg, err := requester.CreateUserConfig(root.ref, root.privKey, root.pubKey)
-	res, err := requester.SendWithSeed(ctx, TestRPCUrl, rootCfg, &requester.Request{
+	res, err := requester.SendWithSeed(ctx, TestRPCUrl, rootCfg, &requester.ContractRequest{
 		Version: "2.0",
 		ID:      1,
 		Method:  "contract.call",
@@ -53,7 +53,7 @@ func NewHelloWorld(ctx context.Context) (*HelloWorldInstance, error) {
 		return nil, err
 	}
 
-	var result requester.ContractAnswer
+	var result requester.ContractResponse
 	err = json.Unmarshal(res, &result)
 	if err != nil {
 		return nil, err
@@ -84,7 +84,7 @@ func (i *HelloWorldInstance) Greet(ctx context.Context, name string) (string, er
 	rootCfg, err := requester.CreateUserConfig(i.Ref.String(), root.privKey, root.pubKey)
 	callParams := make(foundation.StableMap)
 	callParams["name"] = name
-	res, err := requester.SendWithSeed(ctx, TestRPCUrl, rootCfg, &requester.Request{
+	res, err := requester.SendWithSeed(ctx, TestRPCUrl, rootCfg, &requester.ContractRequest{
 		Version: "2.0",
 		ID:      1,
 		Method:  "contract.call",
@@ -94,7 +94,7 @@ func (i *HelloWorldInstance) Greet(ctx context.Context, name string) (string, er
 		return "", err
 	}
 
-	var result requester.ContractAnswer
+	var result requester.ContractResponse
 	err = json.Unmarshal(res, &result)
 	if err != nil {
 		return "", err
@@ -116,7 +116,7 @@ func (i *HelloWorldInstance) Count(ctx context.Context) (int, error) {
 	}
 
 	rootCfg, err := requester.CreateUserConfig(i.Ref.String(), root.privKey, root.pubKey)
-	res, err := requester.SendWithSeed(ctx, TestRPCUrl, rootCfg, &requester.Request{
+	res, err := requester.SendWithSeed(ctx, TestRPCUrl, rootCfg, &requester.ContractRequest{
 		Version: "2.0",
 		ID:      1,
 		Method:  "contract.call",
@@ -126,7 +126,7 @@ func (i *HelloWorldInstance) Count(ctx context.Context) (int, error) {
 		return 0, err
 	}
 
-	var result requester.ContractAnswer
+	var result requester.ContractResponse
 	err = json.Unmarshal(res, &result)
 	if err != nil {
 		return 0, err
@@ -161,7 +161,7 @@ func (i *HelloWorldInstance) CreateChild(ctx context.Context) (*HelloWorldInstan
 	}
 
 	rootCfg, err := requester.CreateUserConfig(i.Ref.String(), root.privKey, root.pubKey)
-	res, err := requester.SendWithSeed(ctx, TestRPCUrl, rootCfg, &requester.Request{
+	res, err := requester.SendWithSeed(ctx, TestRPCUrl, rootCfg, &requester.ContractRequest{
 		Version: "2.0",
 		ID:      1,
 		Method:  "contract.call",
@@ -171,7 +171,7 @@ func (i *HelloWorldInstance) CreateChild(ctx context.Context) (*HelloWorldInstan
 		return nil, err
 	}
 
-	var result requester.ContractAnswer
+	var result requester.ContractResponse
 	err = json.Unmarshal(res, &result)
 	if err != nil {
 		return nil, err
@@ -200,7 +200,7 @@ func (i *HelloWorldInstance) ReturnObj(ctx context.Context) (map[string]interfac
 	}
 
 	rootCfg, err := requester.CreateUserConfig(i.Ref.String(), root.privKey, root.pubKey)
-	res, err := requester.SendWithSeed(ctx, TestRPCUrl, rootCfg, &requester.Request{
+	res, err := requester.SendWithSeed(ctx, TestRPCUrl, rootCfg, &requester.ContractRequest{
 		Version: "2.0",
 		ID:      1,
 		Method:  "contract.call",
@@ -210,7 +210,7 @@ func (i *HelloWorldInstance) ReturnObj(ctx context.Context) (map[string]interfac
 		return nil, err
 	}
 
-	var result requester.ContractAnswer
+	var result requester.ContractResponse
 	err = json.Unmarshal(res, &result)
 	if err != nil {
 		return nil, err

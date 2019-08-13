@@ -36,7 +36,7 @@ type Iterator interface {
 	Next() bool
 	// Close frees resources within the iterator and invalidates it.
 	Close()
-	// Key returns only the second part of the composite key - (ID) without scope id.
+	// Key returns only the second part of the composite key - (Id) without scope id.
 	// Warning: Key is only valid as long as item is valid (until iterator.Next() called), or transaction is valid.
 	// If you need to use it outside its validity, please copy the key.
 	Key() []byte
@@ -51,7 +51,7 @@ type Iterator interface {
 type Key interface {
 	// Scope returns a first part for constructing a composite key for storing record in db
 	Scope() Scope
-	// ID returns a second part for constructing a composite key for storing record in db
+	// Id returns a second part for constructing a composite key for storing record in db
 	ID() []byte
 }
 

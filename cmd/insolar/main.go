@@ -191,10 +191,12 @@ func createMember(sendURL string, userName string, serverLogLevel string) {
 	check("Problems with creating user config:", err)
 
 	ctx := inslogger.ContextWithTrace(context.Background(), "insolarUtility")
-	req := requester.Request{
-		Version: "2.0",
-		ID:      1,
-		Method:  "contract.call",
+	req := requester.ContractRequest{
+		Request: requester.Request{
+			Version: "2.0",
+			Id:      1,
+			Method:  "contract.call",
+		},
 		Params: requester.Params{
 			CallSite:   "member.create",
 			CallParams: []interface{}{userName, cfg.PublicKey},

@@ -195,7 +195,7 @@ func unmarshalRPCResponse(t testing.TB, body []byte, response RPCResponseInterfa
 	require.Nil(t, response.getError())
 }
 
-func unmarshalCallResponse(t testing.TB, body []byte, response *requester.ContractAnswer) {
+func unmarshalCallResponse(t testing.TB, body []byte, response *requester.ContractResponse) {
 	err := json.Unmarshal(body, &response)
 	require.NoError(t, err)
 }
@@ -314,10 +314,10 @@ func signedRequest(user *user, method string, params interface{}) (interface{}, 
 		caller = ""
 	}
 
-	var resp requester.ContractAnswer
+	var resp requester.ContractResponse
 	currentIterNum := 1
 	for ; currentIterNum <= sendRetryCount; currentIterNum++ {
-		res, err := requester.Send(ctx, TestAPIURL, rootCfg, &requester.Request{
+		res, err := requester.Send(ctx, TestAPIURL, rootCfg, &requester.ContractRequest{
 			Version: "2.0",
 			ID:      1,
 			Method:  "contract.call",
@@ -328,7 +328,7 @@ func signedRequest(user *user, method string, params interface{}) (interface{}, 
 			return nil, err
 		}
 
-		resp = requester.ContractAnswer{}
+		resp = requester.ContractResponse{}
 		err = json.Unmarshal(res, &resp)
 		if err != nil {
 			return nil, err
