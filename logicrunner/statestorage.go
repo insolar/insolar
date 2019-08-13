@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/executionregistry"
 	"github.com/insolar/insolar/logicrunner/shutdown"
@@ -93,6 +94,10 @@ func (ss *stateStorage) upsertExecutionRegistry(ref insolar.Reference) execution
 }
 
 func (ss *stateStorage) UpsertExecutionState(ref insolar.Reference) ExecutionBrokerI {
+	if ss.shutdownFlag.IsStopped() {
+		log.Warn("UpsertExecutionState after shutdown was triggered for ", ref.String())
+	}
+
 	ss.RLock()
 	if res, ok := ss.brokers[ref]; ok {
 		ss.RUnlock()
@@ -111,12 +116,20 @@ func (ss *stateStorage) UpsertExecutionState(ref insolar.Reference) ExecutionBro
 }
 
 func (ss *stateStorage) GetExecutionState(ref insolar.Reference) ExecutionBrokerI {
+	if ss.shutdownFlag.IsStopped() {
+		log.Warn("GetExecutionState after shutdown was triggered for ", ref.String())
+	}
+
 	ss.RLock()
 	defer ss.RUnlock()
 	return ss.brokers[ref]
 }
 
 func (ss *stateStorage) GetExecutionRegistry(ref insolar.Reference) executionregistry.ExecutionRegistry {
+	if ss.shutdownFlag.IsStopped() {
+		log.Warn("GetExecutionRegistry after shutdown was triggered for ", ref.String())
+	}
+
 	ss.RLock()
 	defer ss.RUnlock()
 	return ss.registries[ref]
