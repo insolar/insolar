@@ -53,28 +53,28 @@ func (s *ExecutionRegistrySuite) genAPIRequestID() string {
 	return APIRequestID
 }
 
-func (s *ExecutionRegistrySuite) TestArchive() {
+func (s *ExecutionRegistrySuite) TestRegister() {
 	mc := minimock.NewController(s.T())
 	ctx := inslogger.TestContext(s.T())
 
 	objectRef := gen.Reference()
 	jc := jet.NewCoordinatorMock(mc)
 
-	archiveI := New(objectRef, jc)
-	archive := archiveI.(*executionRegistry)
+	registryI := New(objectRef, jc)
+	registry := registryI.(*executionRegistry)
 	firstTranscript := s.genTranscriptForObject()
 
 	// successful archiving
-	archiveI.Register(ctx, firstTranscript)
-	s.Len(archive.archive, 1)
+	registryI.Register(ctx, firstTranscript)
+	s.Len(registry.registry, 1)
 
 	// duplicate
-	archiveI.Register(ctx, firstTranscript)
-	s.Len(archive.archive, 1)
+	registryI.Register(ctx, firstTranscript)
+	s.Len(registry.registry, 1)
 
 	// successful archiving
-	archiveI.Register(ctx, s.genTranscriptForObject())
-	s.Len(archive.archive, 2)
+	registryI.Register(ctx, s.genTranscriptForObject())
+	s.Len(registry.registry, 2)
 
 	mc.Finish()
 }
@@ -86,19 +86,19 @@ func (s *ExecutionRegistrySuite) TestDone() {
 	objectRef := gen.Reference()
 	jc := jet.NewCoordinatorMock(mc)
 
-	archiveI := New(objectRef, jc)
-	archive := archiveI.(*executionRegistry)
+	registryI := New(objectRef, jc)
+	registry := registryI.(*executionRegistry)
 	T1, T2, T3 := s.genTranscriptForObject(), s.genTranscriptForObject(), s.genTranscriptForObject()
 
-	archiveI.Register(ctx, T1)
-	archiveI.Register(ctx, T2)
-	s.Len(archive.archive, 2)
+	registryI.Register(ctx, T1)
+	registryI.Register(ctx, T2)
+	s.Len(registry.registry, 2)
 
-	s.False(archiveI.Done(T3))
-	s.True(archiveI.Done(T2))
-	s.False(archiveI.Done(T2))
-	s.True(archiveI.Done(T1))
-	s.False(archiveI.Done(T1))
+	s.False(registryI.Done(T3))
+	s.True(registryI.Done(T2))
+	s.False(registryI.Done(T2))
+	s.True(registryI.Done(T1))
+	s.False(registryI.Done(T1))
 
 	mc.Finish()
 }
@@ -110,19 +110,19 @@ func (s *ExecutionRegistrySuite) TestIsEmpty() {
 	objectRef := gen.Reference()
 	jc := jet.NewCoordinatorMock(mc)
 
-	archiveI := New(objectRef, jc)
-	archive := archiveI.(*executionRegistry)
+	registryI := New(objectRef, jc)
+	registry := registryI.(*executionRegistry)
 
-	s.True(archiveI.IsEmpty())
+	s.True(registryI.IsEmpty())
 
 	T := s.genTranscriptForObject()
-	archiveI.Register(ctx, T)
-	s.Len(archive.archive, 1)
-	s.False(archiveI.IsEmpty())
+	registryI.Register(ctx, T)
+	s.Len(registry.registry, 1)
+	s.False(registryI.IsEmpty())
 
-	s.True(archiveI.Done(T))
-	s.Len(archive.archive, 0)
-	s.True(archiveI.IsEmpty())
+	s.True(registryI.Done(T))
+	s.Len(registry.registry, 0)
+	s.True(registryI.IsEmpty())
 
 	mc.Finish()
 }
@@ -136,16 +136,16 @@ func (s *ExecutionRegistrySuite) TestOnPulse() {
 	jc := jet.NewCoordinatorMock(mc).
 		MeMock.Return(meRef)
 
-	archiveI := New(objectRef, jc)
+	registryI := New(objectRef, jc)
 	{
-		msgs := archiveI.OnPulse(ctx)
+		msgs := registryI.OnPulse(ctx)
 		s.Len(msgs, 0)
 	}
 
 	T1 := s.genTranscriptForObject()
 	{
-		archiveI.Register(ctx, T1)
-		msgs := archiveI.OnPulse(ctx)
+		registryI.Register(ctx, T1)
+		msgs := registryI.OnPulse(ctx)
 		s.Len(msgs, 1)
 		msg, ok := msgs[0].(*message.StillExecuting)
 		s.Truef(ok, "expected message to be message.StillExecuting, got %T", msgs[0])
@@ -156,8 +156,8 @@ func (s *ExecutionRegistrySuite) TestOnPulse() {
 
 	T2 := s.genTranscriptForObject()
 	{
-		archiveI.Register(ctx, T2)
-		msgs := archiveI.OnPulse(ctx)
+		registryI.Register(ctx, T2)
+		msgs := registryI.OnPulse(ctx)
 		s.Len(msgs, 1)
 		msg, ok := msgs[0].(*message.StillExecuting)
 		s.Truef(ok, "expected message to be message.StillExecuting, got %T", msgs[0])
@@ -167,10 +167,10 @@ func (s *ExecutionRegistrySuite) TestOnPulse() {
 		s.Equal(meRef, msg.Executor)
 	}
 
-	archiveI.Done(T2)
-	archiveI.Done(T1)
+	registryI.Done(T2)
+	registryI.Done(T1)
 	{
-		msgs := archiveI.OnPulse(ctx)
+		msgs := registryI.OnPulse(ctx)
 		s.Len(msgs, 0)
 	}
 
@@ -185,36 +185,36 @@ func (s *ExecutionRegistrySuite) TestFindRequestLoop() {
 	objRef := gen.Reference()
 	reqRef := gen.Reference()
 
-	archiveI := New(objRef, jc)
+	registryI := New(objRef, jc)
 	{ // no requests with current apirequestid
 		id := s.genAPIRequestID()
 
-		s.False(archiveI.FindRequestLoop(ctx, reqRef, id))
+		s.False(registryI.FindRequestLoop(ctx, reqRef, id))
 
 		// cleanup after
-		archiveI.(*executionRegistry).archive = make(map[insolar.Reference]*common.Transcript)
+		registryI.(*executionRegistry).registry = make(map[insolar.Reference]*common.Transcript)
 	}
 
 	T := s.genTranscriptForObject()
 	{ // go request with current apirequestid (loop found)
-		archiveI.Register(ctx, T)
+		registryI.Register(ctx, T)
 
-		s.True(archiveI.FindRequestLoop(ctx, reqRef, T.Request.APIRequestID))
+		s.True(registryI.FindRequestLoop(ctx, reqRef, T.Request.APIRequestID))
 
 		// cleanup after
-		archiveI.(*executionRegistry).archive = make(map[insolar.Reference]*common.Transcript)
+		registryI.(*executionRegistry).registry = make(map[insolar.Reference]*common.Transcript)
 	}
 
 	{ // go request with current apirequestid, but record returnnowait (loop not found)
 		id := s.genAPIRequestID()
 
 		T.Request.ReturnMode = record.ReturnNoWait
-		archiveI.Register(ctx, T)
+		registryI.Register(ctx, T)
 
-		s.False(archiveI.FindRequestLoop(ctx, reqRef, id))
+		s.False(registryI.FindRequestLoop(ctx, reqRef, id))
 
 		// cleanup after
-		archiveI.(*executionRegistry).archive = make(map[insolar.Reference]*common.Transcript)
+		registryI.(*executionRegistry).registry = make(map[insolar.Reference]*common.Transcript)
 	}
 
 	T1 := s.genTranscriptForObject()
@@ -223,15 +223,15 @@ func (s *ExecutionRegistrySuite) TestFindRequestLoop() {
 	{ // combined test
 		id := s.genAPIRequestID()
 
-		archiveI.Register(ctx, T1)
-		archiveI.Register(ctx, T2)
+		registryI.Register(ctx, T1)
+		registryI.Register(ctx, T2)
 
-		s.False(archiveI.FindRequestLoop(ctx, reqRef, T2.Request.APIRequestID))
-		s.True(archiveI.FindRequestLoop(ctx, reqRef, T1.Request.APIRequestID))
-		s.False(archiveI.FindRequestLoop(ctx, reqRef, id))
+		s.False(registryI.FindRequestLoop(ctx, reqRef, T2.Request.APIRequestID))
+		s.True(registryI.FindRequestLoop(ctx, reqRef, T1.Request.APIRequestID))
+		s.False(registryI.FindRequestLoop(ctx, reqRef, id))
 
 		// cleanup after
-		archiveI.(*executionRegistry).archive = make(map[insolar.Reference]*common.Transcript)
+		registryI.(*executionRegistry).registry = make(map[insolar.Reference]*common.Transcript)
 	}
 
 	mc.Finish()
@@ -245,17 +245,17 @@ func (s *ExecutionRegistrySuite) TestGetActiveTranscript() {
 	objRef := gen.Reference()
 
 	T := s.genTranscriptForObject()
-	archiveI := New(objRef, jc)
-	archiveI.Register(ctx, T)
+	registryI := New(objRef, jc)
+	registryI.Register(ctx, T)
 	{ // have (put before)
-		s.NotNil(archiveI.GetActiveTranscript(T.RequestRef))
+		s.NotNil(registryI.GetActiveTranscript(T.RequestRef))
 	}
 	{ // don't have
-		s.Nil(archiveI.GetActiveTranscript(gen.Reference()))
+		s.Nil(registryI.GetActiveTranscript(gen.Reference()))
 	}
 
-	archiveI.Done(T)
+	registryI.Done(T)
 	{ // don't have (done task)
-		s.Nil(archiveI.GetActiveTranscript(T.RequestRef))
+		s.Nil(registryI.GetActiveTranscript(T.RequestRef))
 	}
 }

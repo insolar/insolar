@@ -51,8 +51,8 @@ type stateStorage struct {
 	artifactsManager artifacts.Client
 	outgoingSender   OutgoingRequestSender
 
-	brokers  map[insolar.Reference]ExecutionBrokerI
-	archives map[insolar.Reference]executionregistry.ExecutionRegistry
+	brokers    map[insolar.Reference]ExecutionBrokerI
+	registries map[insolar.Reference]executionregistry.ExecutionRegistry
 }
 
 func NewStateStorage(
@@ -65,8 +65,8 @@ func NewStateStorage(
 	outgoingSender OutgoingRequestSender,
 ) StateStorage {
 	ss := &stateStorage{
-		brokers:  make(map[insolar.Reference]ExecutionBrokerI),
-		archives: make(map[insolar.Reference]executionregistry.ExecutionRegistry),
+		brokers:    make(map[insolar.Reference]ExecutionBrokerI),
+		registries: make(map[insolar.Reference]executionregistry.ExecutionRegistry),
 
 		publisher:        publisher,
 		requestsExecutor: requestsExecutor,
@@ -80,12 +80,12 @@ func NewStateStorage(
 }
 
 func (ss *stateStorage) upsertExecutionRegistry(ref insolar.Reference) executionregistry.ExecutionRegistry {
-	if res, ok := ss.archives[ref]; ok {
+	if res, ok := ss.registries[ref]; ok {
 		return res
 	}
 
-	ss.archives[ref] = executionregistry.New(ref, ss.jetCoordinator)
-	return ss.archives[ref]
+	ss.registries[ref] = executionregistry.New(ref, ss.jetCoordinator)
+	return ss.registries[ref]
 }
 
 func (ss *stateStorage) UpsertExecutionState(ref insolar.Reference) ExecutionBrokerI {
@@ -99,9 +99,9 @@ func (ss *stateStorage) UpsertExecutionState(ref insolar.Reference) ExecutionBro
 	ss.Lock()
 	defer ss.Unlock()
 	if _, ok := ss.brokers[ref]; !ok {
-		archive := ss.upsertExecutionRegistry(ref)
+		registry := ss.upsertExecutionRegistry(ref)
 
-		ss.brokers[ref] = NewExecutionBroker(ref, ss.publisher, ss.requestsExecutor, ss.messageBus, ss.artifactsManager, archive, ss.outgoingSender)
+		ss.brokers[ref] = NewExecutionBroker(ref, ss.publisher, ss.requestsExecutor, ss.messageBus, ss.artifactsManager, registry, ss.outgoingSender)
 	}
 	return ss.brokers[ref]
 }
@@ -115,18 +115,18 @@ func (ss *stateStorage) GetExecutionState(ref insolar.Reference) ExecutionBroker
 func (ss *stateStorage) GetExecutionRegistry(ref insolar.Reference) executionregistry.ExecutionRegistry {
 	ss.RLock()
 	defer ss.RUnlock()
-	return ss.archives[ref]
+	return ss.registries[ref]
 }
 
 func (ss *stateStorage) IsEmpty() bool {
 	ss.RLock()
 	defer ss.RUnlock()
 
-	if len(ss.brokers) == 0 && len(ss.archives) == 0 {
+	if len(ss.brokers) == 0 && len(ss.registries) == 0 {
 		return true
 	}
 
-	for _, el := range ss.archives {
+	for _, el := range ss.registries {
 		if !el.IsEmpty() {
 			return false
 		}
@@ -143,18 +143,18 @@ func (ss *stateStorage) OnPulse(ctx context.Context, pulse insolar.Pulse) []inso
 	oldBrokers := ss.brokers
 	ss.brokers = make(map[insolar.Reference]ExecutionBrokerI)
 	for objectRef, broker := range oldBrokers {
-		if _, ok := ss.archives[objectRef]; !ok {
-			inslogger.FromContext(ctx).Error("exeuction broker exists, but archive doesn't")
+		if _, ok := ss.registries[objectRef]; !ok {
+			inslogger.FromContext(ctx).Error("exeuction broker exists, but registry doesn't")
 		}
 
 		onPulseMessages = append(onPulseMessages, broker.OnPulse(ctx)...)
 	}
 
-	for objectRef, archive := range ss.archives {
-		onPulseMessages = append(onPulseMessages, archive.OnPulse(ctx)...)
+	for objectRef, registry := range ss.registries {
+		onPulseMessages = append(onPulseMessages, registry.OnPulse(ctx)...)
 
-		if archive.IsEmpty() {
-			delete(ss.archives, objectRef)
+		if registry.IsEmpty() {
+			delete(ss.registries, objectRef)
 		}
 	}
 

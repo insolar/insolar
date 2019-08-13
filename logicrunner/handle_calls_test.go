@@ -432,7 +432,7 @@ func TestHandleCall_Present(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	t.Run("write accessor failed to fetch lock AND archive is empty after on pulse", func(t *testing.T) {
+	t.Run("write accessor failed to fetch lock AND registry is empty after on pulse", func(t *testing.T) {
 		t.Parallel()
 
 		ctx := flow.TestContextWithPulse(inslogger.TestContext(t), gen.PulseNumber())
