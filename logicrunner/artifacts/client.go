@@ -174,7 +174,7 @@ func (m *client) RegisterIncomingRequest(ctx context.Context, request *record.In
 func (m *client) RegisterOutgoingRequest(ctx context.Context, request *record.OutgoingRequest) (*payload.RequestInfo, error) {
 	outgoingRequest := &payload.SetOutgoingRequest{Request: record.Wrap(request)}
 	res, err := m.registerRequest(
-		ctx, request, outgoingRequest, bus.NewRetrySender(m.sender, m.PulseAccessor, 3),
+		ctx, request, outgoingRequest, bus.NewRetrySender(m.sender, m.PulseAccessor, 1),
 	)
 	if err != nil {
 		return nil, errors.Wrap(err, "RegisterOutgoingRequest")
@@ -211,7 +211,7 @@ func (m *client) GetCode(
 	getCodePl := &payload.GetCode{CodeID: *code.Record()}
 
 	pl, err := m.sendToLight(
-		ctx, bus.NewRetrySender(m.sender, m.PulseAccessor, 3), getCodePl, code,
+		ctx, bus.NewRetrySender(m.sender, m.PulseAccessor, 1), getCodePl, code,
 	)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to send GetCode")
@@ -282,7 +282,7 @@ func (m *client) GetObject(
 		return nil, errors.Wrap(err, "failed to marshal message")
 	}
 
-	r := bus.NewRetrySender(m.sender, m.PulseAccessor, 3)
+	r := bus.NewRetrySender(m.sender, m.PulseAccessor, 1)
 	reps, done := r.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, head)
 	defer done()
 
@@ -534,7 +534,7 @@ func (m *client) DeployCode(
 	}
 
 	pl, err := m.sendToLight(
-		ctx, bus.NewRetrySender(m.sender, m.PulseAccessor, 3),
+		ctx, bus.NewRetrySender(m.sender, m.PulseAccessor, 1),
 		psc, *insolar.NewReference(recID),
 	)
 	if err != nil {
@@ -630,7 +630,7 @@ func (m *client) activateObject(
 		Result: resultBuf,
 	}
 
-	pl, err := m.sendToLight(ctx, bus.NewRetrySender(m.sender, m.PulseAccessor, 3), pa, obj)
+	pl, err := m.sendToLight(ctx, bus.NewRetrySender(m.sender, m.PulseAccessor, 1), pa, obj)
 	if err != nil {
 		return errors.Wrap(err, "can't send activation and result records")
 	}
@@ -670,7 +670,7 @@ func (m *client) RegisterResult(
 	) (*insolar.ID, error) {
 
 		payloadOutput, err := m.sendToLight(
-			ctx, bus.NewRetrySender(m.sender, m.PulseAccessor, 3), payloadInput, obj,
+			ctx, bus.NewRetrySender(m.sender, m.PulseAccessor, 1), payloadInput, obj,
 		)
 		if err != nil {
 			return nil, err

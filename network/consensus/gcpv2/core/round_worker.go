@@ -54,6 +54,7 @@ import (
 	"context"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/syncrun"
+	"github.com/insolar/insolar/network/consensus/common/capacity"
 	"sync/atomic"
 	"time"
 
@@ -84,14 +85,18 @@ type RoundStateMachineWorker struct {
 	worker        syncrun.SyncingWorker
 	upstream      api.UpstreamController
 	controlFeeder api.PulseControlFeeder
+	trafficControl          api.TrafficControlFeeder
+	trafficThrottleDuration time.Duration
 
 	finishedFn func()
+
 
 	roundState uint32
 }
 
 func (p *RoundStateMachineWorker) OnPulseDetected() {
 	p.applyState(RoundPulseDetected)
+	p.trafficControl.SetTrafficLimit(capacity.LevelMinimal, p.trafficThrottleDuration)
 }
 
 func (p *RoundStateMachineWorker) OnFullRoundStarting() {
@@ -100,6 +105,7 @@ func (p *RoundStateMachineWorker) OnFullRoundStarting() {
 
 func (p *RoundStateMachineWorker) PreparePulseChange(report api.UpstreamReport, ch chan<- api.UpstreamState) {
 	p.applyState(RoundPulsePreparing)
+	p.trafficControl.SetTrafficLimit(capacity.LevelZero, p.trafficThrottleDuration)
 	p.controlFeeder.OnPreparePulseChange(report)
 	p.upstream.PreparePulseChange(report, ch)
 }
@@ -112,24 +118,28 @@ func (p *RoundStateMachineWorker) CommitPulseChangeByStateless(report api.Upstre
 
 func (p *RoundStateMachineWorker) CommitPulseChange(report api.UpstreamReport, pd pulse.Data, activeCensus census.Operational) {
 	p.applyState(RoundPulseCommitted)
+	p.trafficControl.SetTrafficLimit(capacity.LevelReduced, p.trafficThrottleDuration)
 	p.controlFeeder.OnCommitPulseChange(report, pd, activeCensus)
 	p.upstream.CommitPulseChange(report, pd, activeCensus)
 }
 
 func (p *RoundStateMachineWorker) CancelPulseChange() {
 	p.applyState(RoundPulseAccepted)
+	p.trafficControl.SetTrafficLimit(capacity.LevelMinimal, p.trafficThrottleDuration)
 	p.controlFeeder.OnCancelPulseChange()
 	p.upstream.CancelPulseChange()
 }
 
 func (p *RoundStateMachineWorker) ConsensusFinished(report api.UpstreamReport, expectedCensus census.Operational) {
 	p.applyState(RoundConsensusFinished)
+	p.trafficControl.ResumeTraffic()
 	p.controlFeeder.OnConsensusFinished(report, expectedCensus)
 	p.upstream.ConsensusFinished(report, expectedCensus)
 }
 
 func (p *RoundStateMachineWorker) ConsensusAborted() {
 	p.applyState(RoundAborted)
+	p.trafficControl.ResumeTraffic()
 	p.controlFeeder.OnConsensusAborted()
 	p.upstream.ConsensusAborted()
 }
@@ -166,9 +176,14 @@ func (p *RoundStateMachineWorker) Stop() {
 }
 
 func (p *RoundStateMachineWorker) preInit(ctx context.Context, upstream api.UpstreamController,
-	controlFeeder api.PulseControlFeeder) context.Context {
+	controlFeeder api.PulseControlFeeder, trafficControl api.TrafficControlFeeder,
+	trafficThrottleDuration time.Duration) context.Context {
+
 	p.upstream = upstream
 	p.controlFeeder = controlFeeder
+	p.trafficControl = trafficControl
+	p.trafficThrottleDuration = trafficThrottleDuration
+
 	return p.worker.AttachContext(ctx)
 }
 

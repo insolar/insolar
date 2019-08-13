@@ -122,12 +122,14 @@ func (r *PhasedRoundController) PrepareConsensusRound(upstream api.UpstreamContr
 	r.rw.Lock()
 	defer r.rw.Unlock()
 
+	ctlFeeder := r.realm.coreRealm.controlFeeder
+
 	r.realm.coreRealm.roundContext = r.roundWorker.preInit(
 		r.realm.coreRealm.strategy.ConfigureRoundContext(
 			r.realm.config.GetParentContext(),
 			r.realm.initialCensus.GetExpectedPulseNumber(),
 			r.realm.GetLocalProfile(),
-		), upstream, r.realm.coreRealm.controlFeeder)
+		), upstream, ctlFeeder, ctlFeeder, time.Second*2) // TODO parameterize the constant
 
 	r.realm.coreRealm.stateMachine = &r.roundWorker
 

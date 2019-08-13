@@ -127,16 +127,27 @@ func (id *ID) MarshalJSON() ([]byte, error) {
 // Reference is a unified record reference.
 type Reference [RecordRefSize]byte
 
-// NewReference returns Reference composed from domain and record
-func NewReference(record ID) *Reference {
+// NewReference returns Reference composed from domain and record.
+func NewReference(id ID) *Reference {
 	var ref Reference
-	ref.SetRecord(record)
+	ref.SetRecord(id)
+	// ref.SetDomain(id)
 	return &ref
+}
+
+// NewEmptyReference returns empty Reference.
+func NewEmptyReference() Reference {
+	return Reference{}
 }
 
 // SetRecord set record's ID.
 func (ref *Reference) SetRecord(recID ID) {
 	copy(ref[:RecordIDSize], recID[:])
+}
+
+// SetDomain set record's Domain.
+func (ref *Reference) SetDomain(domainID ID) {
+	copy(ref[RecordIDSize:], domainID[:])
 }
 
 // domain returns domain ID part of reference.
@@ -181,7 +192,7 @@ func (ref Reference) Equal(other Reference) bool {
 
 // IsEmpty - check for void
 func (ref Reference) IsEmpty() bool {
-	return ref.Equal(Reference{})
+	return ref.Equal(NewEmptyReference())
 }
 
 // Compare compares two record references

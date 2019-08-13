@@ -77,6 +77,7 @@ func (n *ServiceNetwork) SendMessageHandler(msg *message.Message) error {
 	} else {
 		inslogger.FromContext(ctx).Error(err)
 	}
+	inslogger.FromContext(ctx).Debug("Request comes to service network. uuid = ", msg.UUID)
 	err = n.sendMessage(ctx, msg)
 	if err != nil {
 		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to send message"))

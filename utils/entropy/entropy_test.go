@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
@@ -98,7 +99,7 @@ func TestSelectByEntropy_SelectsCorrectElement(t *testing.T) {
 
 	var values []insolar.Reference
 	for i := 0; i < 100; i++ {
-		values = append(values, testutils.RandomRef())
+		values = append(values, gen.Reference())
 	}
 	in := make([]interface{}, len(values))
 	for i, v := range values {

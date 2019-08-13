@@ -67,7 +67,7 @@ func (m Member) GetPublicKey() (string, error) {
 func New(rootDomain insolar.Reference, name string, key string, burnAddress string, walletRef insolar.Reference) (*Member, error) {
 	return &Member{
 		RootDomain:       rootDomain,
-		Deposits:         map[string]insolar.Reference{},
+		Deposits:         make(map[string]insolar.Reference),
 		Name:             name,
 		PublicKey:        key,
 		MigrationAddress: burnAddress,

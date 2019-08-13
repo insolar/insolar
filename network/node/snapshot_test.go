@@ -54,8 +54,8 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -85,8 +85,8 @@ func TestSnapshotEncodeDecode(t *testing.T) {
 	p2, err := ks.GeneratePrivateKey()
 	assert.NoError(t, err)
 
-	n1 := newMutableNode(testutils.RandomRef(), insolar.StaticRoleVirtual, ks.ExtractPublicKey(p1), insolar.NodeReady, "127.0.0.1:22", "ver2")
-	n2 := newMutableNode(testutils.RandomRef(), insolar.StaticRoleHeavyMaterial, ks.ExtractPublicKey(p2), insolar.NodeLeaving, "127.0.0.1:33", "ver5")
+	n1 := newMutableNode(gen.Reference(), insolar.StaticRoleVirtual, ks.ExtractPublicKey(p1), insolar.NodeReady, "127.0.0.1:22", "ver2")
+	n2 := newMutableNode(gen.Reference(), insolar.StaticRoleHeavyMaterial, ks.ExtractPublicKey(p2), insolar.NodeLeaving, "127.0.0.1:33", "ver5")
 
 	s := Snapshot{}
 	s.pulse = 22

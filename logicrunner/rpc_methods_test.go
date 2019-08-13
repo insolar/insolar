@@ -35,7 +35,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/common"
-	"github.com/insolar/insolar/logicrunner/executionarchive"
+	"github.com/insolar/insolar/logicrunner/executionregistry"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 	"github.com/insolar/insolar/testutils"
 )
@@ -60,7 +60,7 @@ func TestRPCMethods_DeactivateObject(t *testing.T) {
 
 	tr := &common.Transcript{RequestRef: reqRef}
 
-	executionArchive := executionarchive.NewExecutionArchiveMock(mc).GetActiveTranscriptMock.Set(
+	executionRegistry := executionregistry.NewExecutionRegistryMock(mc).GetActiveTranscriptMock.Set(
 		func(ref insolar.Reference) (r *common.Transcript) {
 			if ref.Equal(reqRef) {
 				return tr
@@ -70,10 +70,10 @@ func TestRPCMethods_DeactivateObject(t *testing.T) {
 		},
 	)
 
-	ss := NewStateStorageMock(t).GetExecutionArchiveMock.Set(
-		func(ref insolar.Reference) (r executionarchive.ExecutionArchive) {
+	ss := NewStateStorageMock(t).GetExecutionRegistryMock.Set(
+		func(ref insolar.Reference) (r executionregistry.ExecutionRegistry) {
 			if ref.Equal(objRef) {
-				return executionArchive
+				return executionRegistry
 			} else {
 				return nil
 			}

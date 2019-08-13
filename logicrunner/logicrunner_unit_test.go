@@ -48,7 +48,7 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/common"
-	"github.com/insolar/insolar/logicrunner/executionarchive"
+	"github.com/insolar/insolar/logicrunner/executionregistry"
 	"github.com/insolar/insolar/logicrunner/machinesmanager"
 	"github.com/insolar/insolar/logicrunner/writecontroller"
 	"github.com/insolar/insolar/pulsar"
@@ -311,19 +311,19 @@ func WaitGroup_TimeoutWait(wg *sync.WaitGroup, timeout time.Duration) bool {
 }
 
 func (suite *LogicRunnerTestSuite) TestConcurrency() {
-	objectRef := testutils.RandomRef()
-	parentRef := testutils.RandomRef()
-	protoRef := testutils.RandomRef()
-	codeRef := testutils.RandomRef()
+	objectRef := gen.Reference()
+	parentRef := gen.Reference()
+	protoRef := gen.Reference()
+	codeRef := gen.Reference()
 
-	notMeRef := testutils.RandomRef()
+	notMeRef := gen.Reference()
 
 	pulseNum := insolar.PulseNumber(insolar.FirstPulseNumber)
 
 	suite.jc.IsMeAuthorizedNowMock.Return(true, nil)
 
 	syncT := &utils.SyncT{T: suite.T()}
-	meRef := testutils.RandomRef()
+	meRef := gen.Reference()
 	nodeMock := network.NewNetworkNodeMock(syncT)
 	nodeMock.IDMock.Return(meRef)
 
@@ -539,13 +539,13 @@ func TestLogicRunner_OnPulse_Order(t *testing.T) {
 }
 
 func (suite *LogicRunnerTestSuite) TestImmutableOrder() {
-	ea := executionarchive.NewExecutionArchiveMock(suite.mc).
-		ArchiveMock.Return().
+	er := executionregistry.NewExecutionRegistryMock(suite.mc).
+		RegisterMock.Return().
 		DoneMock.Return(true)
 
 	// prepare default object and execution state
 	objectRef := gen.Reference()
-	broker := NewExecutionBroker(objectRef, nil, suite.re, nil, nil, ea, nil)
+	broker := NewExecutionBroker(objectRef, nil, suite.re, nil, nil, er, nil)
 	broker.pending = insolar.NotPending
 
 	// prepare request objects
@@ -561,6 +561,7 @@ func (suite *LogicRunnerTestSuite) TestImmutableOrder() {
 		Immutable:    false,
 	}
 	mutableTranscript := common.NewTranscript(suite.ctx, mutableRequestRef, mutableRequest)
+	er.GetActiveTranscriptMock.When(mutableRequestRef).Then(mutableTranscript)
 
 	immutableRequest1 := record.IncomingRequest{
 		ReturnMode:   record.ReturnResult,
@@ -569,6 +570,7 @@ func (suite *LogicRunnerTestSuite) TestImmutableOrder() {
 		Immutable:    true,
 	}
 	immutableTranscript1 := common.NewTranscript(suite.ctx, immutableRequestRef1, immutableRequest1)
+	er.GetActiveTranscriptMock.When(immutableRequestRef1).Then(immutableTranscript1)
 
 	immutableRequest2 := record.IncomingRequest{
 		ReturnMode:   record.ReturnResult,
@@ -577,6 +579,7 @@ func (suite *LogicRunnerTestSuite) TestImmutableOrder() {
 		Immutable:    true,
 	}
 	immutableTranscript2 := common.NewTranscript(suite.ctx, immutableRequestRef2, immutableRequest2)
+	er.GetActiveTranscriptMock.When(immutableRequestRef2).Then(immutableTranscript2)
 
 	// Set custom executor, that'll:
 	// 1) mutable will start execution and wait until something will ping it on channel 1

@@ -55,16 +55,16 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
-	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/require"
 )
 
 func newPacket() *packet.Packet {
-	sender, _ := host.NewHostN("127.0.0.1:31337", testutils.RandomRef())
-	receiver, _ := host.NewHostN("127.0.0.2:31338", testutils.RandomRef())
+	sender, _ := host.NewHostN("127.0.0.1:31337", gen.Reference())
+	receiver, _ := host.NewHostN("127.0.0.2:31338", gen.Reference())
 	return packet.NewPacket(sender, receiver, types.Pulse, 123)
 }
 

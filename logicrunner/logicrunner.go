@@ -114,7 +114,7 @@ func (lr *LogicRunner) Init(ctx context.Context) error {
 		lr.OutgoingSender,
 	)
 
-	lr.SenderWithRetry = bus.NewWaitOKWithRetrySender(lr.Sender, lr.PulseAccessor, 3)
+	lr.SenderWithRetry = bus.NewWaitOKWithRetrySender(lr.Sender, lr.PulseAccessor, 1)
 
 	lr.rpc = lrCommon.NewRPC(
 		NewRPCMethods(lr.ArtifactManager, lr.DescriptorsCache, lr.ContractRequester, lr.StateStorage, lr.OutgoingSender),

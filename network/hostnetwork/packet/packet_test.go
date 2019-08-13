@@ -56,18 +56,18 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
-	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
 func testRPCPacket() *Packet {
-	sender, _ := host.NewHostN("127.0.0.1:31337", testutils.RandomRef())
-	receiver, _ := host.NewHostN("127.0.0.2:31338", testutils.RandomRef())
+	sender, _ := host.NewHostN("127.0.0.1:31337", gen.Reference())
+	receiver, _ := host.NewHostN("127.0.0.2:31338", gen.Reference())
 
 	result := NewPacket(sender, receiver, types.RPC, 123)
 	result.TraceID = "d6b44f62-7b5e-4249-90c7-ccae194a5baa"

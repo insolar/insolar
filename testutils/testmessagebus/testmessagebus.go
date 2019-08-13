@@ -24,6 +24,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/pkg/errors"
 
@@ -143,7 +144,7 @@ func (mb *TestMessageBus) Send(ctx context.Context, m insolar.Message, _ *insola
 		return nil, err
 	}
 
-	parcel, err := mb.pf.Create(ctx, m, testutils.RandomRef(), nil, insolar.Pulse{PulseNumber: currentPulse.PulseNumber, Entropy: insolar.Entropy{}})
+	parcel, err := mb.pf.Create(ctx, m, gen.Reference(), nil, insolar.Pulse{PulseNumber: currentPulse.PulseNumber, Entropy: insolar.Entropy{}})
 	if err != nil {
 		return nil, err
 	}
