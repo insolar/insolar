@@ -55,6 +55,10 @@ func NewBadgerDB(dir string) (*BadgerDB, error) {
 	return b, nil
 }
 
+func (b *BadgerDB) Backend() *badger.DB {
+	return b.backend
+}
+
 type state struct {
 	mu    sync.RWMutex
 	state bool

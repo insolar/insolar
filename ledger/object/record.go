@@ -22,6 +22,7 @@ import (
 	"encoding/binary"
 	"sync"
 
+	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
@@ -75,6 +76,7 @@ type RecordCollectionAccessor interface {
 type RecordModifier interface {
 	// Set saves new record-value in storage.
 	Set(ctx context.Context, rec record.Material) error
+	BatchSet(ctx context.Context, recs []record.Material) error
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.AtomicRecordModifier -o ./ -s _mock.go
@@ -205,8 +207,7 @@ func (m *RecordMemory) DeleteForPN(ctx context.Context, pulse insolar.PulseNumbe
 
 // RecordDB is a DB storage implementation. It saves records to disk and does not allow removal.
 type RecordDB struct {
-	lock sync.RWMutex
-	db   store.DB
+	db *store.BadgerDB
 }
 
 type recordKey insolar.ID
@@ -228,8 +229,61 @@ func newRecordKey(raw []byte) recordKey {
 }
 
 // NewRecordDB creates new DB storage instance.
-func NewRecordDB(db store.DB) *RecordDB {
+func NewRecordDB(db *store.BadgerDB) *RecordDB {
 	return &RecordDB{db: db}
+}
+
+func setRecord(tx *badger.Txn, key []byte, data []byte) error {
+	item, err := tx.Get(key)
+	if err != nil {
+		return err
+	}
+	_, err = item.ValueCopy(nil)
+	if err != nil {
+		if err == badger.ErrKeyNotFound {
+			return ErrNotFound
+		}
+		return err
+	}
+	return tx.Set(key, data)
+}
+
+func getLastKnownPosition(txn *badger.Txn, pn insolar.PulseNumber) (uint32, error) {
+	key := lastKnownRecordPositionKey{pn: pn}
+	fullKey := append(key.Scope().Bytes(), key.ID()...)
+	raw, err := txn.Get(fullKey)
+	if err == nil {
+		buf, err := raw.ValueCopy(nil)
+		if err != nil {
+			if err == badger.ErrKeyNotFound {
+				return 0, ErrNotFound
+			}
+			return 0, err
+		}
+		return binary.BigEndian.Uint32(buf), nil
+
+	}
+	if err != badger.ErrKeyNotFound {
+		return 0, err
+	}
+
+	return 0, nil
+}
+
+func setLastKnownPosition(txn *badger.Txn, pn insolar.PulseNumber, position uint32) error {
+	lastPositionKey := lastKnownRecordPositionKey{pn: pn}
+	fullKey := append(lastPositionKey.Scope().Bytes(), lastPositionKey.ID()...)
+	parsedPosition := make([]byte, 4)
+	binary.BigEndian.PutUint32(parsedPosition, position)
+
+	return setRecord(txn, fullKey, parsedPosition)
+}
+
+func setPosition(txn *badger.Txn, recID insolar.ID, position uint32) error {
+	positionKey := newRecordPositionKey(recID.Pulse(), position)
+	fullKey := append(positionKey.Scope().Bytes(), positionKey.ID()...)
+
+	return setRecord(txn, fullKey, recID.Bytes())
 }
 
 // Set saves new record-value in storage.
@@ -237,17 +291,70 @@ func (r *RecordDB) Set(ctx context.Context, rec record.Material) error {
 	if rec.ID.IsEmpty() {
 		return errors.New("id is empty")
 	}
-	r.lock.Lock()
-	defer r.lock.Unlock()
 
-	return r.set(rec)
+	key := recordKey(rec.ID)
+	data, err := rec.Marshal()
+	if err != nil {
+		return err
+	}
+	fullKey := append(key.Scope().Bytes(), key.ID()...)
+
+	return r.db.Backend().Update(func(txn *badger.Txn) error {
+		return setRecord(txn, fullKey, data)
+	})
+}
+
+func (r *RecordDB) BatchSet(ctx context.Context, recs []record.Material) error {
+	if len(recs) == 0 {
+		return nil
+	}
+	if recs[0].ID.IsEmpty() {
+		return errors.New("id is empty")
+	}
+
+	return r.db.Backend().Update(func(txn *badger.Txn) error {
+
+		position, err := getLastKnownPosition(txn, recs[0].ID.Pulse())
+		if err != nil {
+			return err
+		}
+		position++
+
+		for i, rec := range recs {
+			if rec.ID.IsEmpty() {
+				return errors.New("id is empty")
+			}
+
+			key := recordKey(rec.ID)
+			data, err := rec.Marshal()
+			if err != nil {
+				return err
+			}
+			fullKey := append(key.Scope().Bytes(), key.ID()...)
+			err = setRecord(txn, fullKey, data)
+			if err != nil {
+				return err
+			}
+
+			position += uint32(i)
+
+			err = setPosition(txn, rec.ID, position)
+			if err != nil {
+				return err
+			}
+
+			err = setLastKnownPosition(txn, rec.ID.Pulse(), position)
+			if err != nil {
+				return nil
+			}
+		}
+
+		return nil
+	})
 }
 
 // TruncateHead remove all records after lastPulse
 func (r *RecordDB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
-	r.lock.Lock()
-	defer r.lock.Unlock()
-
 	it := r.db.NewIterator(recordKey(*insolar.NewID(from, nil)), false)
 	defer it.Close()
 
@@ -273,26 +380,7 @@ func (r *RecordDB) TruncateHead(ctx context.Context, from insolar.PulseNumber) e
 
 // ForID returns record for provided id.
 func (r *RecordDB) ForID(ctx context.Context, id insolar.ID) (record.Material, error) {
-	r.lock.RLock()
-	defer r.lock.RUnlock()
-
 	return r.get(id)
-}
-
-func (r *RecordDB) set(rec record.Material) error {
-	key := recordKey(rec.ID)
-
-	_, err := r.db.Get(key)
-	if err == nil {
-		return ErrOverride
-	}
-
-	data, err := rec.Marshal()
-	if err != nil {
-		return err
-	}
-
-	return r.db.Set(key, data)
 }
 
 func (r *RecordDB) get(id insolar.ID) (record.Material, error) {
