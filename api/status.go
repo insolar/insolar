@@ -23,7 +23,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/insolar/insolar/version"
 )
 
@@ -54,7 +53,7 @@ func (s *NodeService) GetStatus(r *http.Request, args *interface{}, reply *Statu
 
 	inslog.Infof("[ NodeService.GetStatus ] Incoming request: %s", r.RequestURI)
 
-	statusReply := s.runner.ServiceNetwork.(*servicenetwork.ServiceNetwork).GetNetworkStatus()
+	statusReply := s.runner.NetworkStatus.GetNetworkStatus()
 
 	reply.NetworkState = statusReply.NetworkState.String()
 	reply.ActiveListSize = statusReply.ActiveListSize

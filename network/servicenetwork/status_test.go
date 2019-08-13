@@ -129,5 +129,4 @@ func TestGetNetworkStatus(t *testing.T) {
 	require.Equal(t, insolar.GenesisPulse.PulseNumber, ns.Pulse.PulseNumber)
 
 	require.Equal(t, version.Version, ns.Version)
-
 }

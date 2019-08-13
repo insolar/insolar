@@ -53,7 +53,7 @@ type StatusReply struct {
 }
 
 type NetworkStatus interface {
-	GetNetworStatus() StatusReply
+	GetNetworkStatus() StatusReply
 }
 
 //go:generate minimock -i github.com/insolar/insolar/insolar.Network -o ../testutils -s _mock.go -g
