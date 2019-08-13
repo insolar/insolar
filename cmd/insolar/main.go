@@ -46,7 +46,7 @@ func main() {
 		Use:   "insolar",
 		Short: "insolar is the command line client for Insolar Platform",
 	}
-	rootCmd.Flags().BoolVarP(&verbose, "verbose", "v", true, "be verbose (default false)")
+	rootCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "be verbose (default false)")
 
 	var versionCmd = &cobra.Command{
 		Use:   "version",
