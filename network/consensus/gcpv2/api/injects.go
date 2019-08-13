@@ -137,7 +137,7 @@ type ConsensusControlFeeder interface {
 	PulseControlFeeder
 
 	/* Is called on consensus termination when nothing was send to a channel provided with UpstreamController.PreparePulseChange  */
-	OnFailedPreparePulseChange() // TODO implement logic to call this method
+	OnFailedPreparePulseChange()
 
 	GetRequiredPowerLevel() power.Request
 	OnAppliedMembershipProfile(mode member.OpMode, pw member.Power, effectiveSince pulse.Number)

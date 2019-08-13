@@ -81,8 +81,9 @@ const (
 var _ api.RoundStateCallback = &RoundStateMachineWorker{}
 
 type RoundStateMachineWorker struct {
-	worker   syncrun.SyncingWorker
-	upstream api.UpstreamController
+	worker        syncrun.SyncingWorker
+	upstream      api.UpstreamController
+	controlFeeder api.ConsensusControlFeeder
 
 	finishedFn func()
 
@@ -159,8 +160,10 @@ func (p *RoundStateMachineWorker) Stop() {
 	p.worker.Stop()
 }
 
-func (p *RoundStateMachineWorker) preInit(ctx context.Context, upstream api.UpstreamController) context.Context {
+func (p *RoundStateMachineWorker) preInit(ctx context.Context, upstream api.UpstreamController,
+	controlFeeder api.ConsensusControlFeeder) context.Context {
 	p.upstream = upstream
+	p.controlFeeder = controlFeeder
 	return p.worker.AttachContext(ctx)
 }
 
@@ -243,6 +246,7 @@ func (p *RoundStateMachineWorker) applyState(newState RoundState) {
 
 	var transitionCompletionAction func()
 	var curState RoundState
+	doFinish := false
 
 	logLevel := insolar.NoLevel
 	logMsg := ""
@@ -294,23 +298,31 @@ loop:
 				logLevel = insolar.WarnLevel // InfoLevel?
 			}
 
+			doFinish = curState < RoundConsensusFinished && newState > RoundConsensusFinished
+
 			switch { // transition from a state that require cancellation
 			case curState == RoundPulsePreparing:
-				transitionCompletionAction = p.upstream.CancelPulseChange
-			case curState < RoundConsensusFinished && newState > RoundConsensusFinished:
-				transitionCompletionAction = func() {
-					if p.finishedFn != nil {
-						p.finishedFn()
+				if newState >= RoundConsensusFinished {
+					transitionCompletionAction = func() {
+						p.controlFeeder.OnFailedPreparePulseChange()
+						p.upstream.CancelPulseChange()
 					}
-					p.upstream.ConsensusAborted()
+				} else {
+					transitionCompletionAction = p.upstream.CancelPulseChange
 				}
+			case curState < RoundConsensusFinished && newState > RoundConsensusFinished:
+				transitionCompletionAction = p.upstream.ConsensusAborted
 			}
 		}
 
 		if atomic.CompareAndSwapUint32(&p.roundState, uint32(curState), uint32(newState)) {
+			if doFinish && p.finishedFn != nil {
+				p.finishedFn()
+			}
 			if transitionCompletionAction != nil {
 				transitionCompletionAction()
 			}
+
 			break loop
 		}
 	}

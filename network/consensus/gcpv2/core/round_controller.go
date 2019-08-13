@@ -127,7 +127,7 @@ func (r *PhasedRoundController) PrepareConsensusRound(upstream api.UpstreamContr
 			r.realm.config.GetParentContext(),
 			r.realm.initialCensus.GetExpectedPulseNumber(),
 			r.realm.GetLocalProfile(),
-		), upstream)
+		), upstream, r.realm.coreRealm.controlFeeder)
 
 	r.realm.coreRealm.stateMachine = &r.roundWorker
 
