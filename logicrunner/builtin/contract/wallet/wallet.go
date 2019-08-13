@@ -35,6 +35,8 @@ type Wallet struct {
 	Accounts foundation.StableMap
 }
 
+const XNS = "XNS"
+
 // New creates new wallet.
 func New(accountReference insolar.Reference) (*Wallet, error) {
 	if accountReference.IsEmpty() {
@@ -42,7 +44,7 @@ func New(accountReference insolar.Reference) (*Wallet, error) {
 	}
 	accounts := make(foundation.StableMap)
 	// TODO: Think about creating of new types of assets and initial balance
-	accounts[foundation.XNS] = accountReference.String()
+	accounts[XNS] = accountReference.String()
 
 	return &Wallet{
 		Accounts: accounts,

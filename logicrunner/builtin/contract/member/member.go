@@ -43,6 +43,8 @@ type Member struct {
 	Wallet           insolar.Reference
 }
 
+const XNS = "XNS"
+
 // GetName gets name.
 // ins:immutable
 func (m Member) GetName() (string, error) {
@@ -259,7 +261,7 @@ func (m *Member) getBalanceCall(params map[string]interface{}) (interface{}, err
 		}
 	}
 
-	b, err := wallet.GetObject(*walletRef).GetBalance(foundation.XNS)
+	b, err := wallet.GetObject(*walletRef).GetBalance(XNS)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get balance: %s", err.Error())
 	}
@@ -297,7 +299,7 @@ func (m *Member) transferCall(params map[string]interface{}) (interface{}, error
 
 	asset, ok := params["asset"].(string)
 	if !ok {
-		asset = foundation.XNS // set to default asset
+		asset = XNS // set to default asset
 	}
 
 	recipientReference, err := insolar.NewReferenceFromBase58(recipientReferenceStr)

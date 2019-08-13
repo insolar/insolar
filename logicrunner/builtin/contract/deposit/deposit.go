@@ -42,6 +42,8 @@ const (
 	statusOpen    status = "Open"
 	statusHolding status = "Holding"
 	statusClose   status = "Close"
+
+	XNS = "XNS"
 )
 
 // Deposit is like wallet. It holds migrated money.
@@ -135,7 +137,7 @@ func (d *Deposit) Confirm(migrationDaemonIndex int, migrationDaemonRef string, t
 			d.PulseDepositUnHold = calculateUnHoldPulse(currentPulse)
 
 			ma := member.GetObject(foundation.GetMigrationAdminMember())
-			accountRef, err := ma.GetAccount(foundation.XNS)
+			accountRef, err := ma.GetAccount(XNS)
 			a := account.GetObject(*accountRef)
 			err = a.TransferToDeposit(amountStr, d.GetReference())
 			if err != nil {
