@@ -42,8 +42,9 @@ func (s *stat) get(typ payload.Type) int64 {
 
 func (s *stat) inc(typ payload.Type) {
 	s.Lock()
+	defer s.Unlock()
+
 	s.counters[typ]++
-	s.Unlock()
 }
 
 type MessageLockerByType struct {

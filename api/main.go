@@ -209,7 +209,8 @@ func (ar *Runner) getMemberPubKey(ctx context.Context, ref string) (crypto.Publi
 	}
 
 	ar.cacheLock.Lock()
+	defer ar.cacheLock.Unlock()
+
 	ar.keyCache[ref] = publicKey
-	ar.cacheLock.Unlock()
 	return publicKey, nil
 }

@@ -48,8 +48,9 @@ func (ms *MessageStatByType) Filter(m *message.Message) (*message.Message, error
 		}
 	}
 	ms.Lock()
+	defer ms.Unlock()
+
 	ms.stat[key]++
-	ms.Unlock()
 	return m, err
 }
 
