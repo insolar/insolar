@@ -92,12 +92,6 @@ func (cm *CallMethod) Type() insolar.MessageType {
 	return insolar.TypeCallMethod
 }
 
-type ExecutionQueueElement struct {
-	RequestRef  insolar.Reference
-	Request     record.IncomingRequest
-	ServiceData ServiceData
-}
-
 type ValidationResults struct {
 	Caller           insolar.Reference
 	RecordRef        insolar.Reference

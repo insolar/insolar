@@ -163,13 +163,6 @@ func (s *Init) handleParcel(ctx context.Context, f flow.Flow) error {
 			Parcel:  parcel,
 		}
 		return f.Handle(ctx, h.Present)
-	case insolar.TypeStillExecuting.String():
-		h := &HandleStillExecuting{
-			dep:     s.dep,
-			Message: meta,
-			Parcel:  parcel,
-		}
-		return f.Handle(ctx, h.Present)
 	default:
 		return fmt.Errorf("[ Init.handleParcel ] no handler for message type %s", msgType)
 	}
