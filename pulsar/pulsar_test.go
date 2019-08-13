@@ -30,7 +30,6 @@ import (
 )
 
 func TestPulsar_Send(t *testing.T) {
-	t.Skip()
 	distMock := testutils.NewPulseDistributorMock(t)
 	pn := insolar.PulseNumber(123)
 
@@ -41,6 +40,10 @@ func TestPulsar_Send(t *testing.T) {
 	pcs := platformpolicy.NewPlatformCryptographyScheme()
 	crypto := testutils.NewCryptographyServiceMock(t)
 	crypto.SignMock.Return(&insolar.Signature{}, nil)
+	proc := platformpolicy.NewKeyProcessor()
+	key, err := proc.GeneratePrivateKey()
+	require.NoError(t, err)
+	crypto.GetPublicKeyMock.Return(proc.ExtractPublicKey(key), nil)
 
 	p := NewPulsar(
 		configuration.NewPulsar(),
@@ -51,7 +54,7 @@ func TestPulsar_Send(t *testing.T) {
 		&entropygenerator.StandardEntropyGenerator{},
 	)
 
-	err := p.Send(context.TODO(), pn)
+	err = p.Send(context.TODO(), pn)
 
 	require.NoError(t, err)
 	require.Equal(t, pn, p.LastPN())
