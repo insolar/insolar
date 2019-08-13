@@ -20,8 +20,6 @@ import (
 	"context"
 	"sync"
 
-	"github.com/insolar/insolar/network"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/node"
@@ -29,6 +27,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/heavy/executor"
+	"github.com/insolar/insolar/network"
 
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"

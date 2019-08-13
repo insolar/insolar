@@ -89,7 +89,7 @@ type Backup struct {
 	// and it contains:
 	// incr.bkp - backup file
 	// MetaInfoFile - meta info about current backup
-	// ConfirmFile - must be set from inside. When it appear it means that we successfully saved the backup
+	// ConfirmFile - must be set from outside. When it appear it means that we successfully saved the backup
 }
 
 // NewLedger creates new default Ledger configuration.

@@ -52,10 +52,14 @@ var (
 
 // BackupInfo contains meta information about current incremental backup
 type BackupInfo struct {
-	SHA256              string
-	Pulse               insolar.PulseNumber
+	// SHA256 is hash of backup file
+	SHA256 string
+	// Pulse is number of backuped pulse
+	Pulse insolar.PulseNumber
+	// LastBackupedVersion is last backaped badger's version\timestamp
 	LastBackupedVersion uint64
-	Since               uint64
+	// Since is badger's version\timestamp from which we started backup
+	Since uint64
 }
 
 // BackupMakerDefault is component which does incremental backups by consequent invoke MakeBackup()
@@ -80,10 +84,10 @@ func isPathExists(dirName string) error {
 
 func checkConfig(config configuration.Backup) error {
 	if err := isPathExists(config.TmpDirectory); err != nil {
-		return errors.Wrap(err, "checkDirectory returns error")
+		return errors.Wrap(err, "check TmpDirectory returns error")
 	}
 	if err := isPathExists(config.TargetDirectory); err != nil {
-		return errors.Wrap(err, "checkDirectory returns error")
+		return errors.Wrap(err, "check TargetDirectory returns error")
 	}
 	if len(config.ConfirmFile) == 0 {
 		return errors.New("ConfirmFile can't be empty")
@@ -123,11 +127,8 @@ func NewBackupMaker(ctx context.Context, backuper store.Backuper, config configu
 func move(ctx context.Context, what string, toDirectory string) error {
 	inslogger.FromContext(ctx).Debugf("backuper. move %s -> %s", what, toDirectory)
 	err := os.Rename(what, toDirectory)
-	if err != nil {
-		return errors.Wrapf(err, "can't move %s to %s", what, toDirectory)
-	}
 
-	return nil
+	return errors.Wrapf(err, "can't move %s to %s", what, toDirectory)
 }
 
 // waitForFile waits for file filePath appearance
@@ -180,17 +181,17 @@ func (b *BackupMakerDefault) prepareBackup(dirHolder *tmpDirHolder, pulse insola
 		return 0, errors.Wrap(err, "Backup return error")
 	}
 
-	if err := dirHolder.reopenFile(); err != nil {
+	if err := dirHolder.reopenTmpFile(); err != nil {
 		return 0, errors.Wrap(err, "reopenFile return error")
 	}
 
-	md5sum, err := calculateFileHash(dirHolder.tmpFile)
+	fileHash, err := calculateFileHash(dirHolder.tmpFile)
 	if err != nil {
 		return 0, errors.Wrap(err, "calculateFileHash return error")
 	}
 
 	metaInfoFile := filepath.Join(dirHolder.tmpDir, b.config.MetaInfoFile)
-	err = writeBackupInfoFile(md5sum, pulse, b.lastBackupedVersion, currentBT, metaInfoFile)
+	err = writeBackupInfoFile(fileHash, pulse, b.lastBackupedVersion, currentBT, metaInfoFile)
 	if err != nil {
 		return 0, errors.Wrap(err, "writeBackupInfoFile return error")
 	}
@@ -215,7 +216,7 @@ func (t *tmpDirHolder) release(ctx context.Context) {
 	}
 }
 
-func (t *tmpDirHolder) reopenFile() error {
+func (t *tmpDirHolder) reopenTmpFile() error {
 	if err := t.tmpFile.Close(); err != nil {
 		return errors.Wrapf(err, "can't close file %s", t.tmpFile.Name())
 	}
@@ -229,31 +230,31 @@ func (t *tmpDirHolder) reopenFile() error {
 	return nil
 }
 
-func (t *tmpDirHolder) create(where string, pulse insolar.PulseNumber) (func(context.Context), error) {
+func (t *tmpDirHolder) create(where string, pulse insolar.PulseNumber) error {
 	tmpDir, err := ioutil.TempDir(where, "tmp-bkp-"+pulse.String()+"-")
 	if err != nil {
-		return nil, errors.Wrapf(err, "can't create tmp dir: %s", where)
+		return errors.Wrapf(err, "can't create tmp dir: %s", where)
 	}
 
 	file, err := os.OpenFile(tmpDir+"/incr.bkp", os.O_CREATE|os.O_WRONLY|os.O_EXCL, 0600)
 	if err != nil {
-		return nil, errors.Wrapf(err, "can't create tmp file. dir: %s", tmpDir)
+		return errors.Wrapf(err, "can't create tmp file. dir: %s", tmpDir)
 	}
 
 	t.tmpDir = tmpDir
 	t.tmpFile = file
 
-	return t.release, nil
+	return nil
 }
 
 func (b *BackupMakerDefault) doBackup(ctx context.Context, lastFinalizedPulse insolar.PulseNumber) (uint64, error) {
 
 	dirHolder := &tmpDirHolder{}
-	closer, err := dirHolder.create(b.config.TmpDirectory, lastFinalizedPulse)
+	err := dirHolder.create(b.config.TmpDirectory, lastFinalizedPulse)
 	if err != nil {
 		return 0, errors.Wrap(err, "can't create tmp dir")
 	}
-	defer closer(ctx)
+	defer dirHolder.release(ctx)
 
 	currentBkpVersion, err := b.prepareBackup(dirHolder, lastFinalizedPulse)
 	if err != nil {

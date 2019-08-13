@@ -54,11 +54,11 @@ func TestBackuper_BadConfig(t *testing.T) {
 
 	cfg := configuration.Backup{TmpDirectory: "-----", Enabled: true}
 	_, err = executor.NewBackupMaker(context.Background(), nil, cfg, testPulse)
-	require.Contains(t, err.Error(), "checkDirectory returns error: stat -----: no such file or directory")
+	require.Contains(t, err.Error(), "check TmpDirectory returns error: stat -----: no such file or directory")
 
 	cfg = configuration.Backup{TmpDirectory: existingDir, TargetDirectory: "+_+_+_+", Enabled: true}
 	_, err = executor.NewBackupMaker(context.Background(), nil, cfg, testPulse)
-	require.Contains(t, err.Error(), "checkDirectory returns error: stat +_+_+_+: no such file or directory")
+	require.Contains(t, err.Error(), "check TargetDirectory returns error: stat +_+_+_+: no such file or directory")
 
 	cfg.TargetDirectory = existingDir
 	_, err = executor.NewBackupMaker(context.Background(), nil, cfg, testPulse)

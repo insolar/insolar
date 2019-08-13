@@ -311,6 +311,9 @@ func (jk *dbJetKeeper) updateDrop(ctx context.Context, pulse insolar.PulseNumber
 	return jk.set(pulse, jets)
 }
 
+// infoToSet converts given jetInfo slice to set and checks confirmations
+// if at least one jetInfo is not confirmed it returns false
+// checkBackup is used to skip checking of backup confirmation
 func infoToSet(s []jetInfo, checkBackup bool) (map[insolar.JetID]struct{}, bool) {
 	r := make(map[insolar.JetID]struct{}, len(s))
 	for _, el := range s {
@@ -398,7 +401,7 @@ func (jk *dbJetKeeper) checkPulseConsistency(ctx context.Context, pulse insolar.
 
 	topSyncJets, err := jk.getTopSyncJets()
 	if err != nil {
-		logger.Error("can't get jets for top sync pulse: ", err)
+		logger.Fatal("can't get jets for top sync pulse: ", err)
 		return false
 	}
 	actualJets := jk.all(pulse)
