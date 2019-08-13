@@ -219,24 +219,49 @@ func createMemberWithMigrationAddress(migrationAddress string) (string, error) {
 	return member.ref, nil
 }
 
-func migrate(t *testing.T, memberRef string, amount string, tx string, ma string, mdNum int) map[string]interface{} {
-	anotherMember := createMember(t)
+func migrate(memberRef string, amount string, tx string, ma string, mdNum int, anotherMember user) (map[string]interface{}, error) {
 
 	_, err := signedRequest(
 		&migrationDaemons[mdNum],
 		"deposit.migration",
 		map[string]interface{}{"amount": amount, "ethTxHash": tx, "migrationAddress": ma})
-	require.NoError(t, err)
-	res, err := signedRequest(anotherMember, "wallet.getBalance", map[string]interface{}{"reference": memberRef})
-	require.NoError(t, err)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed send request 'wdeposit.migration'  %s", memberRef)
+	}
+	res, err := signedRequest(&anotherMember, "wallet.getBalance", map[string]interface{}{"reference": memberRef})
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed send request 'wallet.getBalance'  %s", memberRef)
+	}
 	deposits, ok := res.(map[string]interface{})["deposits"].(map[string]interface{})
-	require.True(t, ok)
+	if !ok {
+		return nil, errors.Wrapf(err, "failed cast deposits to map[string]interface{} ")
+	}
 	deposit, ok := deposits[tx].(map[string]interface{})
-	require.True(t, ok)
-	require.Equal(t, deposit["amount"], amount)
-	require.Equal(t, deposit["ethTxHash"], tx)
+	return deposit, nil
+}
 
-	return deposit
+func getDeposit(memberRef string, tx string, anotherMember user) (map[string]interface{}, error) {
+	res, err := signedRequest(&anotherMember, "wallet.getBalance", map[string]interface{}{"reference": memberRef})
+	fmt.Print(res)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed send request 'wallet.getBalance'  %s", memberRef)
+	}
+	deposits, ok := res.(map[string]interface{})["deposits"].(map[string]interface{})
+	if !ok {
+		return nil, errors.Wrapf(err, "failed cast deposits to map[string]interface{} ")
+	}
+	deposit, ok := deposits[tx].(map[string]interface{})
+	return deposit, nil
+}
+
+func activateDaemons() error {
+	for _, user := range migrationDaemons {
+		_, err := signedRequest(&migrationAdmin, "migration.activateDaemon", map[string]interface{}{"reference": user.ref})
+		if err != nil {
+			return errors.Wrapf(err, "failed activate migration daemon %s", user.ref)
+		}
+	}
+	return nil
 }
 
 func generateMigrationAddress() string {
@@ -252,11 +277,13 @@ func fullMigration(t *testing.T, txHash string) *user {
 	require.NoError(t, err)
 	_, err = retryableMemberMigrationCreate(member, true)
 	require.NoError(t, err)
-
-	migrate(t, member.ref, "1000", txHash, migrationAddress, 0)
-	migrate(t, member.ref, "1000", txHash, migrationAddress, 2)
-	migrate(t, member.ref, "1000", txHash, migrationAddress, 1)
-
+	anotherMember := *createMember(t)
+	_, err = migrate(member.ref, "1000", txHash, migrationAddress, 0, anotherMember)
+	require.NoError(t, err)
+	_, err = migrate(member.ref, "1000", txHash, migrationAddress, 2, anotherMember)
+	require.NoError(t, err)
+	_, err = migrate(member.ref, "1000", txHash, migrationAddress, 1, anotherMember)
+	require.NoError(t, err)
 	return member
 }
 
@@ -542,4 +569,16 @@ func waitForFunction(customFunction func() api.CallMethodReply, functionTimeout 
 	case <-time.After(functionTimeout):
 		return nil, errors.New("timeout was exceeded")
 	}
+}
+
+func getMigrationDaemonsRef() error {
+	for i, user := range migrationDaemons {
+		user.ref = root.ref
+		res, err := signedRequest(&user, "member.get", nil)
+		if err != nil {
+			return errors.Wrap(err, "[ setup ] get member by public key failed ,key ")
+		}
+		migrationDaemons[i].ref = res.(map[string]interface{})["reference"].(string)
+	}
+	return nil
 }

@@ -418,8 +418,9 @@ func setup() error {
 	fmt.Println("[ setup ] references successfully received")
 	root.ref = info.RootMember
 	migrationAdmin.ref = info.MigrationAdminMember
-	for i := range migrationDaemons {
-		migrationDaemons[i].ref = info.MigrationDaemonMembers[i]
+	err = getMigrationDaemonsRef()
+	if err != nil {
+		return errors.Wrap(err, "[ setup ] get reference daemons by public key failed ")
 	}
 
 	contracts = make(map[string]*contractInfo)

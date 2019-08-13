@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"strings"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/member/signer"
@@ -27,6 +28,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/account"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/deposit"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/member"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/migrationadmin"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/nodedomain"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/rootdomain"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/wallet"
@@ -144,7 +146,6 @@ func (m *Member) Call(signedRequest []byte) (interface{}, error) {
 	case "member.get":
 		return m.memberGet(request.Params.PublicKey)
 	}
-
 	if request.Params.CallParams == nil {
 		return nil, fmt.Errorf("call params are nil")
 	}
@@ -154,13 +155,18 @@ func (m *Member) Call(signedRequest []byte) (interface{}, error) {
 		return nil, fmt.Errorf("failed to cast call params: expected 'map[string]interface{}', got '%T'", request.Params.CallParams)
 	}
 
+	callSiteArgs := strings.Split(request.Params.CallSite, ".")
+	if len(callSiteArgs) == 2 && callSiteArgs[0] == "migration" {
+		return m.migrationAdminCall(params, callSiteArgs[1])
+	}
+
 	switch request.Params.CallSite {
 	case "contract.registerNode":
 		return m.registerNodeCall(params)
 	case "contract.getNodeRef":
 		return m.getNodeRefCall(params)
 	case "migration.addBurnAddresses":
-		return m.addBurnAddressesCall(params)
+		return m.addMigrationAddressesCall(params)
 	case "wallet.getBalance":
 		return m.getBalanceCall(params)
 	case "member.transfer":
@@ -197,9 +203,35 @@ func (m *Member) registerNodeCall(params map[string]interface{}) (interface{}, e
 
 	return m.registerNode(publicKey, role)
 }
-func (m *Member) addBurnAddressesCall(params map[string]interface{}) (interface{}, error) {
 
-	burnAddressesI, ok := params["burnAddresses"].([]interface{})
+func (m *Member) migrationAdminCall(params map[string]interface{}, nameMethod string) (interface{}, error) {
+	migrationAdminContract := migrationadmin.GetObject(foundation.GetMigrationAdmin())
+
+	switch nameMethod {
+	case "getInfo":
+		return migrationAdminContract.Info()
+	case "addBurnAddresses":
+		return m.addMigrationAddressesCall(params)
+
+	case "activateDaemon":
+		migrationDaemon, ok := params["reference"].(string)
+		if !ok && len(migrationDaemon) == 0 {
+			return nil, fmt.Errorf("incorect input: failed to get 'reference' param")
+		}
+		return migrationAdminContract.ActivateDaemon(migrationDaemon, migrationAdminContract.GetReference()), nil
+
+	case "deactivateDaemon":
+		migrationDaemon, ok := params["reference"].(string)
+		if !ok && len(migrationDaemon) == 0 {
+			return nil, fmt.Errorf("incorect input: failed to get 'reference' param")
+		}
+		return migrationAdminContract.DeactivateDaemon(migrationDaemon, migrationAdminContract.GetReference()), nil
+	}
+	return nil, fmt.Errorf("unknown method: migration.'%s'", nameMethod)
+}
+
+func (m *Member) addMigrationAddressesCall(params map[string]interface{}) (interface{}, error) {
+	migrationAddresses, ok := params["burnAddresses"].([]interface{})
 	if !ok {
 		return nil, fmt.Errorf("incorect input: failed to get 'burnAddresses' param")
 	}
@@ -211,14 +243,14 @@ func (m *Member) addBurnAddressesCall(params map[string]interface{}) (interface{
 		return nil, fmt.Errorf("only migration daemon admin can call this method")
 	}
 
-	burnAddressesStr := make([]string, len(burnAddressesI))
-	for i, ba := range burnAddressesI {
-		burnAddressesStr[i] = ba.(string)
-	}
+	migrationAddressesStr := make([]string, len(migrationAddresses))
 
-	err := rootDomain.AddMigrationAddresses(burnAddressesStr)
+	for i, ba := range migrationAddresses {
+		migrationAddressesStr[i] = ba.(string)
+	}
+	err := rootDomain.AddMigrationAddresses(migrationAddressesStr)
 	if err != nil {
-		return nil, fmt.Errorf("failed to add burn address: %s", err.Error())
+		return nil, fmt.Errorf("failed to add migration address: %s", err.Error())
 	}
 
 	return nil, nil
@@ -466,31 +498,19 @@ type DepositMigrationResult struct {
 	Reference string `json:"memberReference"`
 }
 
-func (m *Member) depositMigration(txHash string, burnAddress string, amount *big.Int) (*DepositMigrationResult, error) {
+func (m *Member) depositMigration(txHash string, migrationAddress string, amount *big.Int) (*DepositMigrationResult, error) {
 	rd := rootdomain.GetObject(m.RootDomain)
+	migrationAdminContract := migrationadmin.GetObject(foundation.GetMigrationAdmin())
 
-	// Get migration daemon members
-	migrationDaemonMembers, err := rd.GetActiveMigrationDaemonMembers()
+	_, err := migrationAdminContract.CheckActiveDaemon(m.GetReference().String())
 	if err != nil {
-		return nil, fmt.Errorf("failed to get migraion daemons: %s", err.Error())
-	}
-
-	// Check that caller is migration daemon
-	mdIndex := -1
-	for i, mdRef := range migrationDaemonMembers {
-		if mdRef == m.GetReference() {
-			mdIndex = i
-
-		}
-	}
-	if mdIndex == -1 {
-		return nil, fmt.Errorf("this migration daemon is not in the list of active daemons")
+		return nil, fmt.Errorf("this migration daemon is not in the list of active daemons: %s", err.Error())
 	}
 
 	// Get member by migration address
-	tokenHolderRef, err := rd.GetMemberByMigrationAddress(burnAddress)
+	tokenHolderRef, err := rd.GetMemberByMigrationAddress(migrationAddress)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get member by burn address")
+		return nil, fmt.Errorf("failed to get member by migration address")
 	}
 	tokenHolder := member.GetObject(*tokenHolderRef)
 
@@ -503,9 +523,8 @@ func (m *Member) depositMigration(txHash string, burnAddress string, amount *big
 	depositMigrationResult := &DepositMigrationResult{Reference: tokenHolderRef.String()}
 	// If deposit doesn't exist - create new deposit
 	if !found {
-		migrationDaemonConfirms := [3]string{}
-		migrationDaemonConfirms[mdIndex] = m.GetReference().String()
-		dHolder := deposit.New(migrationDaemonConfirms, txHash, amount.String())
+
+		dHolder := deposit.New(m.GetReference(), txHash, amount.String())
 		txDeposit, err := dHolder.AsChild(*tokenHolderRef)
 		if err != nil {
 			return nil, fmt.Errorf("failed to save as child: %s", err.Error())
@@ -517,9 +536,13 @@ func (m *Member) depositMigration(txHash string, burnAddress string, amount *big
 		}
 		return depositMigrationResult, nil
 	}
-	// Confirm transaction by migration daemon
 	txDeposit := deposit.GetObject(txDepositRef)
-	err = txDeposit.Confirm(mdIndex, m.GetReference().String(), txHash, amount.String())
+	unHoldPulse, err := txDeposit.GetPulseUnHold()
+	if unHoldPulse != 0 {
+		return nil, fmt.Errorf(" Migration is done for this deposit: %s", txHash)
+	}
+	// Confirm transaction by migration daemon
+	err = txDeposit.Confirm(m.GetReference().String(), txHash, amount.String())
 	if err != nil {
 		return nil, fmt.Errorf("confirmed failed: %s", err.Error())
 	}

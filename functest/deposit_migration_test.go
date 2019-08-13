@@ -19,9 +19,10 @@
 package functest
 
 import (
-	"fmt"
+	"encoding/base64"
 	"testing"
 
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/testutils"
@@ -35,27 +36,28 @@ func TestMigrationToken(t *testing.T) {
 	require.NoError(t, err)
 	_, err = retryableMemberMigrationCreate(member, true)
 	require.NoError(t, err)
+	err = activateDaemons()
+	require.NoError(t, err)
 
-	deposit := migrate(t, member.ref, "1000", "Test_TxHash", migrationAddress, 0)
+	anotherMember := *createMember(t)
+	for i := 0; i < 3; i++ {
+		_, err = migrate(member.ref, "1000", "Test_TxHash", migrationAddress, i, anotherMember)
+		require.NoError(t, err)
+	}
 
-	confirmerReferences, ok := deposit["confirmerReferences"].([]interface{})
-	require.True(t, ok, fmt.Sprintf("failed to cast result: expected []string, got %T", deposit["confirmerReferences"]))
-	require.Equal(t, confirmerReferences[0], migrationDaemons[0].ref)
+	deposit, err := getDeposit(member.ref, "Test_TxHash", anotherMember)
+	confirmerReferencesMap := deposit["confirmerReferences"].(string)
 
-	deposit = migrate(t, member.ref, "1000", "Test_TxHash", migrationAddress, 2)
+	sm := make(foundation.StableMap)
+	decoded, err := base64.StdEncoding.DecodeString(confirmerReferencesMap)
+	require.NoError(t, err)
+	err = sm.UnmarshalBinary(decoded)
 
-	confirmerReferences, ok = deposit["confirmerReferences"].([]interface{})
-	require.True(t, ok)
-	require.Equal(t, confirmerReferences[0], migrationDaemons[0].ref)
-	require.Equal(t, confirmerReferences[2], migrationDaemons[2].ref)
-
-	deposit = migrate(t, member.ref, "1000", "Test_TxHash", migrationAddress, 1)
-
-	confirmerReferences, ok = deposit["confirmerReferences"].([]interface{})
-	require.True(t, ok)
-	require.Equal(t, confirmerReferences[0], migrationDaemons[0].ref)
-	require.Equal(t, confirmerReferences[1], migrationDaemons[1].ref)
-	require.Equal(t, confirmerReferences[2], migrationDaemons[2].ref)
+	for i := 0; i < 3; i++ {
+		require.Equal(t, sm[migrationDaemons[i].ref], "1000")
+	}
+	require.Equal(t, deposit["ethTxHash"], "Test_TxHash")
+	require.Equal(t, deposit["amount"], "1000")
 }
 
 func TestMigrationTokenOnDifferentDeposits(t *testing.T) {
@@ -66,18 +68,24 @@ func TestMigrationTokenOnDifferentDeposits(t *testing.T) {
 	require.NoError(t, err)
 	_, err = retryableMemberMigrationCreate(member, true)
 	require.NoError(t, err)
+	anotherMember := *createMember(t)
 
-	deposit := migrate(t, member.ref, "1000", "Test_TxHash1", migrationAddress, 1)
+	deposit, err := migrate(member.ref, "1000", "Test_TxHash1", migrationAddress, 1, anotherMember)
+	confirmerReferencesMap := deposit["confirmerReferences"].(string)
+	sm := make(foundation.StableMap)
+	decoded, err := base64.StdEncoding.DecodeString(confirmerReferencesMap)
+	require.NoError(t, err)
+	err = sm.UnmarshalBinary(decoded)
+	require.Equal(t, sm[migrationDaemons[1].ref], "1000")
 
-	confirmerReferences, ok := deposit["confirmerReferences"].([]interface{})
-	require.True(t, ok, fmt.Sprintf("failed to cast result: expected []string, got %T", deposit["confirmerReferences"]))
-	require.Equal(t, confirmerReferences[1], migrationDaemons[1].ref)
+	secondDeposit, err := migrate(member.ref, "1000", "Test_TxHash2", migrationAddress, 1, anotherMember)
+	confirmerReferencesMap = secondDeposit["confirmerReferences"].(string)
+	sm = make(foundation.StableMap)
+	decoded, err = base64.StdEncoding.DecodeString(confirmerReferencesMap)
+	require.NoError(t, err)
 
-	deposit = migrate(t, member.ref, "1000", "Test_TxHash2", migrationAddress, 1)
-
-	confirmerReferences, ok = deposit["confirmerReferences"].([]interface{})
-	require.True(t, ok)
-	require.Equal(t, confirmerReferences[1], migrationDaemons[1].ref)
+	err = sm.UnmarshalBinary(decoded)
+	require.Equal(t, sm[migrationDaemons[1].ref], "1000")
 }
 
 func TestMigrationTokenNotInTheList(t *testing.T) {
@@ -159,23 +167,26 @@ func TestMigrationDoubleMigrationFromSameDaemon(t *testing.T) {
 		"deposit.migration",
 		map[string]interface{}{"amount": "20", "ethTxHash": "ethTxHash", "migrationAddress": migrationAddress})
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "confirmed failed: confirm from the")
+	require.Contains(t, err.Error(), "confirm from this migration daemon already exists")
 }
 
 func TestMigrationAnotherAmountSameTx(t *testing.T) {
-	migrationAddress := generateMigrationAddress()
-	ref, err := createMemberWithMigrationAddress(migrationAddress)
-	require.NoError(t, err)
 
-	resultMigr1, err := signedRequest(
-		&migrationDaemons[0], "deposit.migration", map[string]interface{}{"amount": "20", "ethTxHash": "ethTxHash", "migrationAddress": migrationAddress})
+	migrationAddress := generateMigrationAddress()
+	_, err := createMemberWithMigrationAddress(migrationAddress)
+
 	require.NoError(t, err)
-	require.Equal(t, resultMigr1.(map[string]interface{})["memberReference"].(string), ref)
 
 	_, err = signedRequest(
-		&migrationDaemons[1],
-		"deposit.migration",
-		map[string]interface{}{"amount": "30", "ethTxHash": "ethTxHash", "migrationAddress": migrationAddress})
+		&migrationDaemons[0], "deposit.migration", map[string]interface{}{"amount": "20", "ethTxHash": "ethTxHash", "migrationAddress": migrationAddress})
+	require.NoError(t, err)
+
+	for i := 1; i < 3; i++ {
+		_, err = signedRequest(
+			&migrationDaemons[i],
+			"deposit.migration",
+			map[string]interface{}{"amount": "30", "ethTxHash": "ethTxHash", "migrationAddress": migrationAddress})
+	}
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "deposit with this transaction hash has different amount")
+	require.Contains(t, err.Error(), "failed to check amount in confirmation from migration daemon")
 }

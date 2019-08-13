@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/migrationadmin"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -33,16 +34,9 @@ import (
 // RootDomain is smart contract representing entrance point to system.
 type RootDomain struct {
 	foundation.BaseContract
-	MigrationDaemonMembers [insolar.GenesisAmountActiveMigrationDaemonMembers]insolar.Reference
 	MigrationAddressShards [insolar.GenesisAmountMigrationAddressShards]insolar.Reference
 	PublicKeyShards        [insolar.GenesisAmountPublicKeyShards]insolar.Reference
 	NodeDomain             insolar.Reference
-}
-
-// GetActiveMigrationDaemonMembers gets migration daemon members references.
-// ins:immutable
-func (rd RootDomain) GetActiveMigrationDaemonMembers() ([3]insolar.Reference, error) {
-	return rd.MigrationDaemonMembers, nil
 }
 
 // GetMemberByPublicKey gets member reference by public key.
@@ -97,11 +91,11 @@ var INSATTR_Info_API = true
 // Info returns information about basic objects
 // ins:immutable
 func (rd RootDomain) Info() (interface{}, error) {
-	migrationDaemonsMembersOut := []string{}
-	for _, ref := range rd.MigrationDaemonMembers {
-		migrationDaemonsMembersOut = append(migrationDaemonsMembersOut, ref.String())
+	migrationAdminContract := migrationadmin.GetObject(foundation.GetMigrationAdmin())
+	migrationDaemonsMembersOut, err := migrationAdminContract.GetActiveDaemons()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get active migration daemon from foundation: %s", err.Error())
 	}
-
 	res := map[string]interface{}{
 		"rootDomain":             rd.GetReference().String(),
 		"rootMember":             foundation.GetRootMember().String(),
