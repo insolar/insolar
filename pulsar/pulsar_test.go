@@ -35,6 +35,7 @@ func TestPulsar_Send(t *testing.T) {
 
 	distMock.DistributeMock.Set(func(ctx context.Context, p1 insolar.Pulse) {
 		require.Equal(t, pn, p1.PulseNumber)
+		require.NotNil(t, p1.Entropy)
 	})
 
 	pcs := platformpolicy.NewPlatformCryptographyScheme()
