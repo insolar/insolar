@@ -233,7 +233,7 @@ func NewRecordDB(db *store.BadgerDB) *RecordDB {
 	return &RecordDB{db: db}
 }
 
-func setRecord(tx *badger.Txn, key []byte, data []byte) error {
+func setRecord(tx *badger.Txn, key []byte, record []byte) error {
 	item, err := tx.Get(key)
 	if err != nil {
 		return err
@@ -245,45 +245,34 @@ func setRecord(tx *badger.Txn, key []byte, data []byte) error {
 		}
 		return err
 	}
-	return tx.Set(key, data)
+	return tx.Set(key, record)
 }
 
 func getLastKnownPosition(txn *badger.Txn, pn insolar.PulseNumber) (uint32, error) {
 	key := lastKnownRecordPositionKey{pn: pn}
-	fullKey := append(key.Scope().Bytes(), key.ID()...)
-	raw, err := txn.Get(fullKey)
-	if err == nil {
-		buf, err := raw.ValueCopy(nil)
-		if err != nil {
-			if err == badger.ErrKeyNotFound {
-				return 0, ErrNotFound
-			}
-			return 0, err
-		}
-		return binary.BigEndian.Uint32(buf), nil
-
+	raw, err := store.TransactionalGet(txn, key)
+	if err == ErrNotFound {
+		return 0, nil
 	}
-	if err != badger.ErrKeyNotFound {
+	if err != nil {
 		return 0, err
 	}
 
-	return 0, nil
+	return binary.BigEndian.Uint32(raw), nil
 }
 
 func setLastKnownPosition(txn *badger.Txn, pn insolar.PulseNumber, position uint32) error {
 	lastPositionKey := lastKnownRecordPositionKey{pn: pn}
-	fullKey := append(lastPositionKey.Scope().Bytes(), lastPositionKey.ID()...)
 	parsedPosition := make([]byte, 4)
 	binary.BigEndian.PutUint32(parsedPosition, position)
 
-	return setRecord(txn, fullKey, parsedPosition)
+	return store.TransactionalSet(txn, lastPositionKey, parsedPosition)
 }
 
 func setPosition(txn *badger.Txn, recID insolar.ID, position uint32) error {
 	positionKey := newRecordPositionKey(recID.Pulse(), position)
-	fullKey := append(positionKey.Scope().Bytes(), positionKey.ID()...)
 
-	return setRecord(txn, fullKey, recID.Bytes())
+	return store.TransactionalSet(txn, positionKey, recID.Bytes())
 }
 
 // Set saves new record-value in storage.
@@ -313,7 +302,6 @@ func (r *RecordDB) BatchSet(ctx context.Context, recs []record.Material) error {
 	}
 
 	return r.db.Backend().Update(func(txn *badger.Txn) error {
-
 		position, err := getLastKnownPosition(txn, recs[0].ID.Pulse())
 		if err != nil {
 			return err
