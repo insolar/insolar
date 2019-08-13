@@ -43,15 +43,15 @@ func TestWaitOKSender_SendRole_RetryExceeded(t *testing.T) {
 	msg, err := payload.NewMessage(&payload.State{})
 	require.NoError(t, err)
 
-	tries := 3
+	retries := uint(3)
 
 	pa := pulse.NewAccessorMock(t)
 	pa.LatestMock.Set(accessorMock(t).Latest)
-	c := NewWaitOKWithRetrySender(sender, pa, uint(tries))
+	c := NewWaitOKWithRetrySender(sender, pa, retries)
 
 	c.SendRole(context.Background(), msg, insolar.DynamicRoleLightExecutor, gen.Reference())
 
-	require.EqualValues(t, tries, sender.SendRoleAfterCounter())
+	require.EqualValues(t, retries+1, sender.SendRoleAfterCounter())
 }
 
 func sendOK(ch chan<- *message.Message) {
