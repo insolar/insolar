@@ -18,17 +18,24 @@
 package pulsartestutils
 
 import (
-	"github.com/insolar/insolar/insolar"
+	"net"
+
+	"github.com/stretchr/testify/mock"
 )
 
-// MockEntropy for pulsar's tests
-var MockEntropy = [64]byte{1, 2, 3, 4, 5, 6, 7, 8}
-
-// MockEntropyGenerator implements EntropyGenerator and is being used for tests
-type MockEntropyGenerator struct {
+// MockListener mocks net.Listener interface
+type MockListener struct {
+	mock.Mock
 }
 
-// GenerateEntropy returns mocked entropy
-func (MockEntropyGenerator) GenerateEntropy() insolar.Entropy {
-	return MockEntropy
+func (mock *MockListener) Accept() (net.Conn, error) {
+	panic("implement me")
+}
+
+func (mock *MockListener) Close() error {
+	panic("implement me")
+}
+
+func (mock *MockListener) Addr() net.Addr {
+	panic("implement me")
 }
