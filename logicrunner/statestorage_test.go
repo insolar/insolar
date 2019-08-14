@@ -25,7 +25,7 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
-	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/executionregistry"
 )
@@ -50,7 +50,7 @@ func (s *StateStorageSuite) TestOnPulse() {
 	pulse := s.generatePulse()
 	objectRef := gen.Reference()
 
-	ss := NewStateStorage(nil, nil, nil, nil, nil, nil, nil)
+	ss := NewStateStorage(nil, nil, nil, nil, nil, nil, nil, nil)
 	rawStateStorage := ss.(*stateStorage)
 
 	{ // empty state storage
@@ -72,7 +72,7 @@ func (s *StateStorageSuite) TestOnPulse() {
 
 	{ // state storage with non-empty execution registry
 		rawStateStorage.registries[objectRef] = executionregistry.NewExecutionRegistryMock(mc).
-			OnPulseMock.Return([]insolar.Message{&message.StillExecuting{}}).
+			OnPulseMock.Return([]payload.Payload{&payload.StillExecuting{}}).
 			IsEmptyMock.Return(false)
 		msgs := rawStateStorage.OnPulse(ctx, pulse)
 		s.Len(msgs, 1)
@@ -87,7 +87,7 @@ func (s *StateStorageSuite) TestOnPulse() {
 			OnPulseMock.Return(nil).
 			IsEmptyMock.Return(true)
 		rawStateStorage.brokers[objectRef] = NewExecutionBrokerIMock(mc).
-			OnPulseMock.Return([]insolar.Message{&message.ExecutorResults{}})
+			OnPulseMock.Return([]payload.Payload{&payload.ExecutorResults{}})
 		msgs := rawStateStorage.OnPulse(ctx, pulse)
 		s.Len(msgs, 1)
 		s.Len(rawStateStorage.brokers, 0)
@@ -96,12 +96,12 @@ func (s *StateStorageSuite) TestOnPulse() {
 
 	{ // state storage with multiple objects
 		rawStateStorage.brokers[objectRef] = NewExecutionBrokerIMock(mc).
-			OnPulseMock.Return([]insolar.Message{&message.ExecutorResults{}})
+			OnPulseMock.Return([]payload.Payload{&payload.ExecutorResults{}})
 		rawStateStorage.registries[objectRef] = executionregistry.NewExecutionRegistryMock(mc).
-			OnPulseMock.Return([]insolar.Message{&message.StillExecuting{}}).
+			OnPulseMock.Return([]payload.Payload{&payload.StillExecuting{}}).
 			IsEmptyMock.Return(false)
 		msgs := rawStateStorage.OnPulse(ctx, pulse)
-		s.Len(msgs, 2)
+		s.Len(msgs[objectRef], 2)
 		s.Len(rawStateStorage.brokers, 0)
 		s.Len(rawStateStorage.registries, 1)
 
@@ -113,19 +113,21 @@ func (s *StateStorageSuite) TestOnPulse() {
 		objectRef2 := gen.Reference()
 
 		rawStateStorage.brokers[objectRef1] = NewExecutionBrokerIMock(mc).
-			OnPulseMock.Return([]insolar.Message{&message.ExecutorResults{}})
+			OnPulseMock.Return([]payload.Payload{&payload.ExecutorResults{}})
 		rawStateStorage.registries[objectRef1] = executionregistry.NewExecutionRegistryMock(mc).
 			OnPulseMock.Return(nil).
 			IsEmptyMock.Return(true)
 
 		rawStateStorage.brokers[objectRef2] = NewExecutionBrokerIMock(mc).
-			OnPulseMock.Return([]insolar.Message{&message.ExecutorResults{}})
+			OnPulseMock.Return([]payload.Payload{&payload.ExecutorResults{}})
 		rawStateStorage.registries[objectRef2] = executionregistry.NewExecutionRegistryMock(mc).
-			OnPulseMock.Return([]insolar.Message{&message.StillExecuting{}}).
+			OnPulseMock.Return([]payload.Payload{&payload.StillExecuting{}}).
 			IsEmptyMock.Return(false)
 
 		msgs := rawStateStorage.OnPulse(ctx, pulse)
-		s.Len(msgs, 3)
+		s.Len(msgs, 2)
+		s.Len(msgs[objectRef1], 1)
+		s.Len(msgs[objectRef2], 2)
 		s.Len(rawStateStorage.brokers, 0)
 		s.Len(rawStateStorage.registries, 1)
 		s.NotNil(rawStateStorage.registries[objectRef2])

@@ -467,12 +467,12 @@ func (w *SagaTestWallet) TheRollbackMethod(arg1 int, arg2 string) error {
 	var bufProxy bytes.Buffer
 	err = parsed.WriteWrapper(&bufProxy, parsed.ContractName())
 	s.Error(err)
-	s.Equal("Semantic error: 'TheAcceptMethod' is a saga with 2 arguments. Currently only one argument is allowed.",
+	s.Equal("Semantic error: 'TheAcceptMethod' is a saga with 2 arguments. Currently only one argument is allowed (hint: use a structure).",
 		err.Error())
 
 	err = parsed.WriteProxy(gen.Reference().String(), &bufProxy)
 	s.Error(err)
-	s.Equal("Semantic error: 'TheAcceptMethod' is a saga with 2 arguments. Currently only one argument is allowed.",
+	s.Equal("Semantic error: 'TheAcceptMethod' is a saga with 2 arguments. Currently only one argument is allowed (hint: use a structure).",
 		err.Error())
 }
 

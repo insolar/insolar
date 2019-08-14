@@ -25,7 +25,9 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/artifacts"
@@ -45,7 +47,7 @@ type ExecutionBrokerI interface {
 	PendingState() insolar.PendingState
 	PrevExecutorStillExecuting(ctx context.Context)
 	PrevExecutorPendingResult(ctx context.Context, prevExecState insolar.PendingState)
-	PrevExecutorFinishedPending(ctx context.Context) error
+	PrevExecutorSentPendingFinished(ctx context.Context) error
 	SetNotPending(ctx context.Context)
 
 	IsKnownRequest(ctx context.Context, req insolar.Reference) bool
@@ -55,7 +57,7 @@ type ExecutionBrokerI interface {
 	NoMoreRequestsOnLedger(ctx context.Context)
 	FetchMoreRequestsFromLedger(ctx context.Context)
 
-	OnPulse(ctx context.Context) []insolar.Message
+	OnPulse(ctx context.Context) []payload.Payload
 }
 
 type ExecutionBroker struct {
@@ -72,9 +74,11 @@ type ExecutionBroker struct {
 	executionRegistry executionregistry.ExecutionRegistry
 	requestsFetcher   RequestsFetcher
 
+	pulseAccessor pulse.Accessor
+
 	publisher        watermillMsg.Publisher
+	sender           bus.Sender
 	requestsExecutor RequestsExecutor
-	messageBus       insolar.MessageBus
 	artifactsManager artifacts.Client
 
 	pending              insolar.PendingState
@@ -92,10 +96,11 @@ func NewExecutionBroker(
 	ref insolar.Reference,
 	publisher watermillMsg.Publisher,
 	requestsExecutor RequestsExecutor,
-	messageBus insolar.MessageBus,
+	sender bus.Sender,
 	artifactsManager artifacts.Client,
 	executionRegistry executionregistry.ExecutionRegistry,
 	outgoingSender OutgoingRequestSender,
+	pulseAccessor pulse.Accessor,
 ) *ExecutionBroker {
 	return &ExecutionBroker{
 		Ref: ref,
@@ -105,10 +110,11 @@ func NewExecutionBroker(
 		finished:  transcriptdequeue.New(),
 
 		outgoingSender: outgoingSender,
+		pulseAccessor:  pulseAccessor,
 
 		publisher:         publisher,
 		requestsExecutor:  requestsExecutor,
-		messageBus:        messageBus,
+		sender:            sender,
 		artifactsManager:  artifactsManager,
 		executionRegistry: executionRegistry,
 
@@ -403,16 +409,6 @@ func (q *ExecutionBroker) Check(ctx context.Context) bool {
 	return true
 }
 
-func (q *ExecutionBroker) finishPending(ctx context.Context) {
-	logger := inslogger.FromContext(ctx)
-
-	msg := message.PendingFinished{Reference: q.Ref}
-	_, err := q.messageBus.Send(ctx, &msg, nil)
-	if err != nil {
-		logger.Error("Unable to send PendingFinished message:", err)
-	}
-}
-
 // finishPendingIfNeeded checks whether last execution was a pending one.
 // If this is true as a side effect the function sends a PendingFinished
 // message to the current executor
@@ -439,10 +435,20 @@ func (q *ExecutionBroker) finishPendingIfNeeded(ctx context.Context) {
 	q.pending = insolar.NotPending
 	q.PendingConfirmed = false
 
-	go q.finishPending(ctx)
+	pendingMsg, err := payload.NewMessage(&payload.PendingFinished{
+		ObjectRef: q.Ref,
+	})
+	if err != nil {
+		logger.Error(errors.Wrap(err, "finishPending: Unable to create PendingFinished message"))
+		return
+	}
+
+	// ensure OK response because we might catch flow cancelled
+	waitOKSender := bus.NewWaitOKWithRetrySender(q.sender, q.pulseAccessor, 1)
+	waitOKSender.SendRole(ctx, pendingMsg, insolar.DynamicRoleVirtualExecutor, q.Ref)
 }
 
-func (q *ExecutionBroker) OnPulse(ctx context.Context) []insolar.Message {
+func (q *ExecutionBroker) OnPulse(ctx context.Context) []payload.Payload {
 	logger := inslogger.FromContext(ctx)
 	q.stateLock.Lock()
 	defer q.stateLock.Unlock()
@@ -465,7 +471,7 @@ func (q *ExecutionBroker) OnPulse(ctx context.Context) []insolar.Message {
 		sendExecResults = true
 	}
 
-	messages := make([]insolar.Message, 0)
+	messages := make([]payload.Payload, 0)
 
 	// rotation results also contain finished requests
 	if sendExecResults {
@@ -474,7 +480,7 @@ func (q *ExecutionBroker) OnPulse(ctx context.Context) []insolar.Message {
 		messagesQueue := convertQueueToMessageQueue(ctx, rotationResults.Requests)
 		ledgerHasMoreRequests := q.ledgerHasMoreRequests || rotationResults.LedgerHasMoreRequests
 
-		messages = append(messages, &message.ExecutorResults{
+		messages = append(messages, &payload.ExecutorResults{
 			RecordRef:             q.Ref,
 			Pending:               q.pending,
 			Queue:                 messagesQueue,
@@ -559,7 +565,7 @@ func (q *ExecutionBroker) PrevExecutorStillExecuting(ctx context.Context) {
 	}
 }
 
-func (q *ExecutionBroker) PrevExecutorFinishedPending(ctx context.Context) error {
+func (q *ExecutionBroker) PrevExecutorSentPendingFinished(ctx context.Context) error {
 	q.stateLock.Lock()
 	defer q.stateLock.Unlock()
 
