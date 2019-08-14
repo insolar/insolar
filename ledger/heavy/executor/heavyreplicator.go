@@ -78,6 +78,9 @@ func NewHeavyReplicatorDefault(
 		keeper:          keeper,
 		backuper:        backuper,
 		jets:            jets,
+
+		syncWaitingData: make(chan *payload.Replication),
+		done:            make(chan struct{}),
 	}
 }
 
@@ -91,6 +94,7 @@ func (h *HeavyReplicatorDefault) NotifyAboutMessage(ctx context.Context, msg *pa
 		"pulse":  msg.Pulse,
 	})
 	logger.Info("heavy replicator got a new message")
+	h.syncWaitingData <- msg
 }
 
 func (h *HeavyReplicatorDefault) Stop() {
@@ -105,39 +109,44 @@ func (h *HeavyReplicatorDefault) sync(ctx context.Context) {
 		})
 		logger.Info("heavy replicator starts replication")
 
-		logger.Debug("storing records")
+		logger.Debug("heavy replicator storing records")
 		if err := storeRecords(ctx, h.records, h.pcs, msg.Pulse, msg.Records); err != nil {
 			logger.Error(errors.Wrap(err, "failed to store records"))
+			panic("1")
 			return
 		}
 
-		logger.Debug("storing indexes")
+		logger.Debug("heavy replicator storing indexes")
 		if err := storeIndexes(ctx, h.indexes, msg.Indexes, msg.Pulse); err != nil {
 			logger.Error(errors.Wrap(err, "failed to store indexes"))
+			panic("1")
 			return
 		}
 
-		logger.Debug("storing drop")
+		logger.Debug("heavy replicator storing drop")
 		dr, err := storeDrop(ctx, h.drops, msg.Drop)
 		if err != nil {
+			panic("1")
 			logger.Error(errors.Wrap(err, "failed to store drop"))
 			return
 		}
 
-		logger.Debug("storing drop confirmation")
+		logger.Debug("heavy replicator storing drop confirmation")
 		if err := h.keeper.AddDropConfirmation(ctx, dr.Pulse, dr.JetID, dr.Split); err != nil {
 			logger.Error(errors.Wrapf(err, "failed to add drop confirmation jet=%v", dr.JetID.DebugString()))
+			panic("1")
 			return
 		}
 
-		logger.Debug("update jets")
+		logger.Debug("heavy replicator update jets")
 		err = h.jets.Update(ctx, dr.Pulse, true, dr.JetID)
 		if err != nil {
 			logger.Error(errors.Wrapf(err, "failed to update jet %s", dr.JetID.DebugString()))
+			panic("1")
 			return
 		}
 
-		logger.Debug("finalize pulse")
+		logger.Debug("heavy replicator finalize pulse")
 		FinalizePulse(ctx, h.pulseCalculator, h.backuper, h.keeper, dr.Pulse)
 	}
 
