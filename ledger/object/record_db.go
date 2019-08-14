@@ -123,22 +123,28 @@ func (r *RecordDB) BatchSet(ctx context.Context, recs []record.Material) error {
 	if len(recs) == 0 {
 		return nil
 	}
-	for _, rec := range recs {
-		if rec.ID.IsEmpty() {
-			return errors.New("id is empty")
-		}
 
-		err := r.db.Backend().Update(func(txn *badger.Txn) error {
-			return setRecord(txn, recordKey(rec.ID), rec)
-		})
-		if err != nil {
-			return err
-		}
+	lastKnowPulse := insolar.PulseNumber(0)
+	position := uint32(0)
 
-		err = r.db.Backend().Update(func(txn *badger.Txn) error {
-			position, err := getLastKnownPosition(txn, rec.ID.Pulse())
-			if err != nil && err != store.ErrNotFound {
+	err := r.db.Backend().Update(func(txn *badger.Txn) error {
+		for _, rec := range recs {
+			if rec.ID.IsEmpty() {
+				return errors.New("id is empty")
+			}
+
+			err := setRecord(txn, recordKey(rec.ID), rec)
+			if err != nil {
 				return err
+			}
+
+			// For cross-pulse batches
+			if lastKnowPulse != rec.ID.Pulse() {
+				position, err = getLastKnownPosition(txn, rec.ID.Pulse())
+				if err != nil && err != store.ErrNotFound {
+					return err
+				}
+				lastKnowPulse = rec.ID.Pulse()
 			}
 
 			position++
@@ -148,11 +154,16 @@ func (r *RecordDB) BatchSet(ctx context.Context, recs []record.Material) error {
 				return err
 			}
 
-			return setLastKnownPosition(txn, rec.ID.Pulse(), position)
-		})
-		if err != nil {
-			return err
+			err = setLastKnownPosition(txn, rec.ID.Pulse(), position)
+			if err != nil {
+				return err
+			}
 		}
+
+		return nil
+	})
+	if err != nil {
+		return err
 	}
 
 	return nil
