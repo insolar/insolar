@@ -21,6 +21,11 @@ import (
 	"sync"
 	"time"
 
+	base58 "github.com/jbenet/go-base58"
+	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
+	"go.opencensus.io/trace"
+
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/configuration"
@@ -30,10 +35,8 @@ import (
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/instrumentation/instracer"
-	base58 "github.com/jbenet/go-base58"
-	"github.com/pkg/errors"
-	"go.opencensus.io/trace"
 )
 
 const (
@@ -198,6 +201,7 @@ func (b *Bus) SendTarget(
 func (b *Bus) sendTarget(
 	ctx context.Context, msg *message.Message, target insolar.Reference, pulse insolar.PulseNumber,
 ) (<-chan *message.Message, func()) {
+	start := time.Now()
 	ctx, span := instracer.StartSpan(ctx, "Bus.SendTarget")
 	span.AddAttributes(
 		trace.StringAttribute("type", "bus"),
@@ -213,14 +217,26 @@ func (b *Bus) sendTarget(
 	}
 	ctx, _ = inslogger.WithField(ctx, "sending_type", msg.Metadata.Get(MetaType))
 	payloadType, err := payload.UnmarshalType(msg.Payload)
+	msgType := "unknown"
 	if err == nil {
-		ctx, _ = inslogger.WithField(ctx, "sending_type", payloadType.String())
+		msgType = payloadType.String()
 	}
+
+	// metrics per message type
+	mctx := insmetrics.InsertTag(ctx, tagMessageType, msgType)
+	stats.Record(mctx, statSent.M(int64(len(msg.Payload))))
+	defer func() {
+		stats.Record(mctx, statSentTime.M(float64(time.Since(start).Nanoseconds())/1e6))
+	}()
+
+	// configure logger
+	ctx, _ = inslogger.WithField(ctx, "sending_type", msgType)
 	logger := inslogger.FromContext(ctx)
 	span.AddAttributes(
 		trace.StringAttribute("sending_type", msg.Metadata.Get(MetaType)),
 	)
 
+	// tracing setup
 	msg.Metadata.Set(MetaTraceID, inslogger.TraceID(ctx))
 
 	sp, err := instracer.Serialize(ctx)
@@ -231,6 +247,7 @@ func (b *Bus) sendTarget(
 		logger.Error(err)
 	}
 
+	// send message and start reply goroutine
 	msg.SetContext(ctx)
 	wrapped, msg, err := b.wrapMeta(ctx, msg, target, payload.MessageHash{}, pulse)
 	if err != nil {
