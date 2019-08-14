@@ -302,6 +302,6 @@ func (h *Handler) handleGotHotConfirmation(ctx context.Context, meta payload.Met
 		logger.Fatalf("failed to add hot confirmation jet=%v: %v", confirm.String(), err.Error())
 	}
 
-	executor.FinalizePulse(ctx, h.PulseCalculator, h.BackupMaker, h.JetKeeper, confirm.Pulse)
+	executor.FinalizePulse(ctx, h.PulseCalculator, h.BackupMaker, h.JetKeeper, h.IndexModifier, confirm.Pulse)
 
 }

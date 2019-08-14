@@ -135,7 +135,7 @@ func (p *Replication) store(
 
 	}
 
-	executor.FinalizePulse(ctx, p.dep.pulseCalculator, p.dep.backuper, jetKeeper, dr.Pulse)
+	executor.FinalizePulse(ctx, p.dep.pulseCalculator, p.dep.backuper, jetKeeper, p.dep.indexes, dr.Pulse)
 
 	stats.Record(ctx,
 		statReceivedHeavyPayloadCount.M(1),
