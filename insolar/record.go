@@ -153,9 +153,9 @@ func (ref *Reference) setRecord(recID ID) {
 }
 
 // setDomain set record's Domain.
-func (ref *Reference) setDomain(domainID ID) {
-	copy(ref[RecordIDSize:], domainID[:])
-}
+// func (ref *Reference) setDomain(domainID ID) {
+// 	copy(ref[RecordIDSize:], domainID[:])
+// }
 
 // Domain returns domain ID part of reference.
 func (ref Reference) Domain() *ID {
