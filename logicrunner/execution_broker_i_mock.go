@@ -10,6 +10,7 @@ import (
 
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/logicrunner/common"
 )
 
@@ -53,12 +54,6 @@ type ExecutionBrokerIMock struct {
 	beforeFetchMoreRequestsFromLedgerCounter uint64
 	FetchMoreRequestsFromLedgerMock          mExecutionBrokerIMockFetchMoreRequestsFromLedger
 
-	funcGetActiveTranscript          func(req insolar.Reference) (tp1 *common.Transcript)
-	inspectFuncGetActiveTranscript   func(req insolar.Reference)
-	afterGetActiveTranscriptCounter  uint64
-	beforeGetActiveTranscriptCounter uint64
-	GetActiveTranscriptMock          mExecutionBrokerIMockGetActiveTranscript
-
 	funcIsKnownRequest          func(ctx context.Context, req insolar.Reference) (b1 bool)
 	inspectFuncIsKnownRequest   func(ctx context.Context, req insolar.Reference)
 	afterIsKnownRequestCounter  uint64
@@ -77,7 +72,7 @@ type ExecutionBrokerIMock struct {
 	beforeNoMoreRequestsOnLedgerCounter uint64
 	NoMoreRequestsOnLedgerMock          mExecutionBrokerIMockNoMoreRequestsOnLedger
 
-	funcOnPulse          func(ctx context.Context) (ma1 []insolar.Message)
+	funcOnPulse          func(ctx context.Context) (pa1 []payload.Payload)
 	inspectFuncOnPulse   func(ctx context.Context)
 	afterOnPulseCounter  uint64
 	beforeOnPulseCounter uint64
@@ -89,17 +84,17 @@ type ExecutionBrokerIMock struct {
 	beforePendingStateCounter uint64
 	PendingStateMock          mExecutionBrokerIMockPendingState
 
-	funcPrevExecutorFinishedPending          func(ctx context.Context) (err error)
-	inspectFuncPrevExecutorFinishedPending   func(ctx context.Context)
-	afterPrevExecutorFinishedPendingCounter  uint64
-	beforePrevExecutorFinishedPendingCounter uint64
-	PrevExecutorFinishedPendingMock          mExecutionBrokerIMockPrevExecutorFinishedPending
-
 	funcPrevExecutorPendingResult          func(ctx context.Context, prevExecState insolar.PendingState)
 	inspectFuncPrevExecutorPendingResult   func(ctx context.Context, prevExecState insolar.PendingState)
 	afterPrevExecutorPendingResultCounter  uint64
 	beforePrevExecutorPendingResultCounter uint64
 	PrevExecutorPendingResultMock          mExecutionBrokerIMockPrevExecutorPendingResult
+
+	funcPrevExecutorSentPendingFinished          func(ctx context.Context) (err error)
+	inspectFuncPrevExecutorSentPendingFinished   func(ctx context.Context)
+	afterPrevExecutorSentPendingFinishedCounter  uint64
+	beforePrevExecutorSentPendingFinishedCounter uint64
+	PrevExecutorSentPendingFinishedMock          mExecutionBrokerIMockPrevExecutorSentPendingFinished
 
 	funcPrevExecutorStillExecuting          func(ctx context.Context)
 	inspectFuncPrevExecutorStillExecuting   func(ctx context.Context)
@@ -139,9 +134,6 @@ func NewExecutionBrokerIMock(t minimock.Tester) *ExecutionBrokerIMock {
 	m.FetchMoreRequestsFromLedgerMock = mExecutionBrokerIMockFetchMoreRequestsFromLedger{mock: m}
 	m.FetchMoreRequestsFromLedgerMock.callArgs = []*ExecutionBrokerIMockFetchMoreRequestsFromLedgerParams{}
 
-	m.GetActiveTranscriptMock = mExecutionBrokerIMockGetActiveTranscript{mock: m}
-	m.GetActiveTranscriptMock.callArgs = []*ExecutionBrokerIMockGetActiveTranscriptParams{}
-
 	m.IsKnownRequestMock = mExecutionBrokerIMockIsKnownRequest{mock: m}
 	m.IsKnownRequestMock.callArgs = []*ExecutionBrokerIMockIsKnownRequestParams{}
 
@@ -156,11 +148,11 @@ func NewExecutionBrokerIMock(t minimock.Tester) *ExecutionBrokerIMock {
 
 	m.PendingStateMock = mExecutionBrokerIMockPendingState{mock: m}
 
-	m.PrevExecutorFinishedPendingMock = mExecutionBrokerIMockPrevExecutorFinishedPending{mock: m}
-	m.PrevExecutorFinishedPendingMock.callArgs = []*ExecutionBrokerIMockPrevExecutorFinishedPendingParams{}
-
 	m.PrevExecutorPendingResultMock = mExecutionBrokerIMockPrevExecutorPendingResult{mock: m}
 	m.PrevExecutorPendingResultMock.callArgs = []*ExecutionBrokerIMockPrevExecutorPendingResultParams{}
+
+	m.PrevExecutorSentPendingFinishedMock = mExecutionBrokerIMockPrevExecutorSentPendingFinished{mock: m}
+	m.PrevExecutorSentPendingFinishedMock.callArgs = []*ExecutionBrokerIMockPrevExecutorSentPendingFinishedParams{}
 
 	m.PrevExecutorStillExecutingMock = mExecutionBrokerIMockPrevExecutorStillExecuting{mock: m}
 	m.PrevExecutorStillExecutingMock.callArgs = []*ExecutionBrokerIMockPrevExecutorStillExecutingParams{}
@@ -1297,221 +1289,6 @@ func (m *ExecutionBrokerIMock) MinimockFetchMoreRequestsFromLedgerInspect() {
 	}
 }
 
-type mExecutionBrokerIMockGetActiveTranscript struct {
-	mock               *ExecutionBrokerIMock
-	defaultExpectation *ExecutionBrokerIMockGetActiveTranscriptExpectation
-	expectations       []*ExecutionBrokerIMockGetActiveTranscriptExpectation
-
-	callArgs []*ExecutionBrokerIMockGetActiveTranscriptParams
-	mutex    sync.RWMutex
-}
-
-// ExecutionBrokerIMockGetActiveTranscriptExpectation specifies expectation struct of the ExecutionBrokerI.GetActiveTranscript
-type ExecutionBrokerIMockGetActiveTranscriptExpectation struct {
-	mock    *ExecutionBrokerIMock
-	params  *ExecutionBrokerIMockGetActiveTranscriptParams
-	results *ExecutionBrokerIMockGetActiveTranscriptResults
-	Counter uint64
-}
-
-// ExecutionBrokerIMockGetActiveTranscriptParams contains parameters of the ExecutionBrokerI.GetActiveTranscript
-type ExecutionBrokerIMockGetActiveTranscriptParams struct {
-	req insolar.Reference
-}
-
-// ExecutionBrokerIMockGetActiveTranscriptResults contains results of the ExecutionBrokerI.GetActiveTranscript
-type ExecutionBrokerIMockGetActiveTranscriptResults struct {
-	tp1 *common.Transcript
-}
-
-// Expect sets up expected params for ExecutionBrokerI.GetActiveTranscript
-func (mmGetActiveTranscript *mExecutionBrokerIMockGetActiveTranscript) Expect(req insolar.Reference) *mExecutionBrokerIMockGetActiveTranscript {
-	if mmGetActiveTranscript.mock.funcGetActiveTranscript != nil {
-		mmGetActiveTranscript.mock.t.Fatalf("ExecutionBrokerIMock.GetActiveTranscript mock is already set by Set")
-	}
-
-	if mmGetActiveTranscript.defaultExpectation == nil {
-		mmGetActiveTranscript.defaultExpectation = &ExecutionBrokerIMockGetActiveTranscriptExpectation{}
-	}
-
-	mmGetActiveTranscript.defaultExpectation.params = &ExecutionBrokerIMockGetActiveTranscriptParams{req}
-	for _, e := range mmGetActiveTranscript.expectations {
-		if minimock.Equal(e.params, mmGetActiveTranscript.defaultExpectation.params) {
-			mmGetActiveTranscript.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmGetActiveTranscript.defaultExpectation.params)
-		}
-	}
-
-	return mmGetActiveTranscript
-}
-
-// Inspect accepts an inspector function that has same arguments as the ExecutionBrokerI.GetActiveTranscript
-func (mmGetActiveTranscript *mExecutionBrokerIMockGetActiveTranscript) Inspect(f func(req insolar.Reference)) *mExecutionBrokerIMockGetActiveTranscript {
-	if mmGetActiveTranscript.mock.inspectFuncGetActiveTranscript != nil {
-		mmGetActiveTranscript.mock.t.Fatalf("Inspect function is already set for ExecutionBrokerIMock.GetActiveTranscript")
-	}
-
-	mmGetActiveTranscript.mock.inspectFuncGetActiveTranscript = f
-
-	return mmGetActiveTranscript
-}
-
-// Return sets up results that will be returned by ExecutionBrokerI.GetActiveTranscript
-func (mmGetActiveTranscript *mExecutionBrokerIMockGetActiveTranscript) Return(tp1 *common.Transcript) *ExecutionBrokerIMock {
-	if mmGetActiveTranscript.mock.funcGetActiveTranscript != nil {
-		mmGetActiveTranscript.mock.t.Fatalf("ExecutionBrokerIMock.GetActiveTranscript mock is already set by Set")
-	}
-
-	if mmGetActiveTranscript.defaultExpectation == nil {
-		mmGetActiveTranscript.defaultExpectation = &ExecutionBrokerIMockGetActiveTranscriptExpectation{mock: mmGetActiveTranscript.mock}
-	}
-	mmGetActiveTranscript.defaultExpectation.results = &ExecutionBrokerIMockGetActiveTranscriptResults{tp1}
-	return mmGetActiveTranscript.mock
-}
-
-//Set uses given function f to mock the ExecutionBrokerI.GetActiveTranscript method
-func (mmGetActiveTranscript *mExecutionBrokerIMockGetActiveTranscript) Set(f func(req insolar.Reference) (tp1 *common.Transcript)) *ExecutionBrokerIMock {
-	if mmGetActiveTranscript.defaultExpectation != nil {
-		mmGetActiveTranscript.mock.t.Fatalf("Default expectation is already set for the ExecutionBrokerI.GetActiveTranscript method")
-	}
-
-	if len(mmGetActiveTranscript.expectations) > 0 {
-		mmGetActiveTranscript.mock.t.Fatalf("Some expectations are already set for the ExecutionBrokerI.GetActiveTranscript method")
-	}
-
-	mmGetActiveTranscript.mock.funcGetActiveTranscript = f
-	return mmGetActiveTranscript.mock
-}
-
-// When sets expectation for the ExecutionBrokerI.GetActiveTranscript which will trigger the result defined by the following
-// Then helper
-func (mmGetActiveTranscript *mExecutionBrokerIMockGetActiveTranscript) When(req insolar.Reference) *ExecutionBrokerIMockGetActiveTranscriptExpectation {
-	if mmGetActiveTranscript.mock.funcGetActiveTranscript != nil {
-		mmGetActiveTranscript.mock.t.Fatalf("ExecutionBrokerIMock.GetActiveTranscript mock is already set by Set")
-	}
-
-	expectation := &ExecutionBrokerIMockGetActiveTranscriptExpectation{
-		mock:   mmGetActiveTranscript.mock,
-		params: &ExecutionBrokerIMockGetActiveTranscriptParams{req},
-	}
-	mmGetActiveTranscript.expectations = append(mmGetActiveTranscript.expectations, expectation)
-	return expectation
-}
-
-// Then sets up ExecutionBrokerI.GetActiveTranscript return parameters for the expectation previously defined by the When method
-func (e *ExecutionBrokerIMockGetActiveTranscriptExpectation) Then(tp1 *common.Transcript) *ExecutionBrokerIMock {
-	e.results = &ExecutionBrokerIMockGetActiveTranscriptResults{tp1}
-	return e.mock
-}
-
-// GetActiveTranscript implements ExecutionBrokerI
-func (mmGetActiveTranscript *ExecutionBrokerIMock) GetActiveTranscript(req insolar.Reference) (tp1 *common.Transcript) {
-	mm_atomic.AddUint64(&mmGetActiveTranscript.beforeGetActiveTranscriptCounter, 1)
-	defer mm_atomic.AddUint64(&mmGetActiveTranscript.afterGetActiveTranscriptCounter, 1)
-
-	if mmGetActiveTranscript.inspectFuncGetActiveTranscript != nil {
-		mmGetActiveTranscript.inspectFuncGetActiveTranscript(req)
-	}
-
-	params := &ExecutionBrokerIMockGetActiveTranscriptParams{req}
-
-	// Record call args
-	mmGetActiveTranscript.GetActiveTranscriptMock.mutex.Lock()
-	mmGetActiveTranscript.GetActiveTranscriptMock.callArgs = append(mmGetActiveTranscript.GetActiveTranscriptMock.callArgs, params)
-	mmGetActiveTranscript.GetActiveTranscriptMock.mutex.Unlock()
-
-	for _, e := range mmGetActiveTranscript.GetActiveTranscriptMock.expectations {
-		if minimock.Equal(e.params, params) {
-			mm_atomic.AddUint64(&e.Counter, 1)
-			return e.results.tp1
-		}
-	}
-
-	if mmGetActiveTranscript.GetActiveTranscriptMock.defaultExpectation != nil {
-		mm_atomic.AddUint64(&mmGetActiveTranscript.GetActiveTranscriptMock.defaultExpectation.Counter, 1)
-		want := mmGetActiveTranscript.GetActiveTranscriptMock.defaultExpectation.params
-		got := ExecutionBrokerIMockGetActiveTranscriptParams{req}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmGetActiveTranscript.t.Errorf("ExecutionBrokerIMock.GetActiveTranscript got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
-		}
-
-		results := mmGetActiveTranscript.GetActiveTranscriptMock.defaultExpectation.results
-		if results == nil {
-			mmGetActiveTranscript.t.Fatal("No results are set for the ExecutionBrokerIMock.GetActiveTranscript")
-		}
-		return (*results).tp1
-	}
-	if mmGetActiveTranscript.funcGetActiveTranscript != nil {
-		return mmGetActiveTranscript.funcGetActiveTranscript(req)
-	}
-	mmGetActiveTranscript.t.Fatalf("Unexpected call to ExecutionBrokerIMock.GetActiveTranscript. %v", req)
-	return
-}
-
-// GetActiveTranscriptAfterCounter returns a count of finished ExecutionBrokerIMock.GetActiveTranscript invocations
-func (mmGetActiveTranscript *ExecutionBrokerIMock) GetActiveTranscriptAfterCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmGetActiveTranscript.afterGetActiveTranscriptCounter)
-}
-
-// GetActiveTranscriptBeforeCounter returns a count of ExecutionBrokerIMock.GetActiveTranscript invocations
-func (mmGetActiveTranscript *ExecutionBrokerIMock) GetActiveTranscriptBeforeCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmGetActiveTranscript.beforeGetActiveTranscriptCounter)
-}
-
-// Calls returns a list of arguments used in each call to ExecutionBrokerIMock.GetActiveTranscript.
-// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
-func (mmGetActiveTranscript *mExecutionBrokerIMockGetActiveTranscript) Calls() []*ExecutionBrokerIMockGetActiveTranscriptParams {
-	mmGetActiveTranscript.mutex.RLock()
-
-	argCopy := make([]*ExecutionBrokerIMockGetActiveTranscriptParams, len(mmGetActiveTranscript.callArgs))
-	copy(argCopy, mmGetActiveTranscript.callArgs)
-
-	mmGetActiveTranscript.mutex.RUnlock()
-
-	return argCopy
-}
-
-// MinimockGetActiveTranscriptDone returns true if the count of the GetActiveTranscript invocations corresponds
-// the number of defined expectations
-func (m *ExecutionBrokerIMock) MinimockGetActiveTranscriptDone() bool {
-	for _, e := range m.GetActiveTranscriptMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			return false
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.GetActiveTranscriptMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterGetActiveTranscriptCounter) < 1 {
-		return false
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcGetActiveTranscript != nil && mm_atomic.LoadUint64(&m.afterGetActiveTranscriptCounter) < 1 {
-		return false
-	}
-	return true
-}
-
-// MinimockGetActiveTranscriptInspect logs each unmet expectation
-func (m *ExecutionBrokerIMock) MinimockGetActiveTranscriptInspect() {
-	for _, e := range m.GetActiveTranscriptMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			m.t.Errorf("Expected call to ExecutionBrokerIMock.GetActiveTranscript with params: %#v", *e.params)
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.GetActiveTranscriptMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterGetActiveTranscriptCounter) < 1 {
-		if m.GetActiveTranscriptMock.defaultExpectation.params == nil {
-			m.t.Error("Expected call to ExecutionBrokerIMock.GetActiveTranscript")
-		} else {
-			m.t.Errorf("Expected call to ExecutionBrokerIMock.GetActiveTranscript with params: %#v", *m.GetActiveTranscriptMock.defaultExpectation.params)
-		}
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcGetActiveTranscript != nil && mm_atomic.LoadUint64(&m.afterGetActiveTranscriptCounter) < 1 {
-		m.t.Error("Expected call to ExecutionBrokerIMock.GetActiveTranscript")
-	}
-}
-
 type mExecutionBrokerIMockIsKnownRequest struct {
 	mock               *ExecutionBrokerIMock
 	defaultExpectation *ExecutionBrokerIMockIsKnownRequestExpectation
@@ -2126,7 +1903,7 @@ type ExecutionBrokerIMockOnPulseParams struct {
 
 // ExecutionBrokerIMockOnPulseResults contains results of the ExecutionBrokerI.OnPulse
 type ExecutionBrokerIMockOnPulseResults struct {
-	ma1 []insolar.Message
+	pa1 []payload.Payload
 }
 
 // Expect sets up expected params for ExecutionBrokerI.OnPulse
@@ -2161,7 +1938,7 @@ func (mmOnPulse *mExecutionBrokerIMockOnPulse) Inspect(f func(ctx context.Contex
 }
 
 // Return sets up results that will be returned by ExecutionBrokerI.OnPulse
-func (mmOnPulse *mExecutionBrokerIMockOnPulse) Return(ma1 []insolar.Message) *ExecutionBrokerIMock {
+func (mmOnPulse *mExecutionBrokerIMockOnPulse) Return(pa1 []payload.Payload) *ExecutionBrokerIMock {
 	if mmOnPulse.mock.funcOnPulse != nil {
 		mmOnPulse.mock.t.Fatalf("ExecutionBrokerIMock.OnPulse mock is already set by Set")
 	}
@@ -2169,12 +1946,12 @@ func (mmOnPulse *mExecutionBrokerIMockOnPulse) Return(ma1 []insolar.Message) *Ex
 	if mmOnPulse.defaultExpectation == nil {
 		mmOnPulse.defaultExpectation = &ExecutionBrokerIMockOnPulseExpectation{mock: mmOnPulse.mock}
 	}
-	mmOnPulse.defaultExpectation.results = &ExecutionBrokerIMockOnPulseResults{ma1}
+	mmOnPulse.defaultExpectation.results = &ExecutionBrokerIMockOnPulseResults{pa1}
 	return mmOnPulse.mock
 }
 
 //Set uses given function f to mock the ExecutionBrokerI.OnPulse method
-func (mmOnPulse *mExecutionBrokerIMockOnPulse) Set(f func(ctx context.Context) (ma1 []insolar.Message)) *ExecutionBrokerIMock {
+func (mmOnPulse *mExecutionBrokerIMockOnPulse) Set(f func(ctx context.Context) (pa1 []payload.Payload)) *ExecutionBrokerIMock {
 	if mmOnPulse.defaultExpectation != nil {
 		mmOnPulse.mock.t.Fatalf("Default expectation is already set for the ExecutionBrokerI.OnPulse method")
 	}
@@ -2203,13 +1980,13 @@ func (mmOnPulse *mExecutionBrokerIMockOnPulse) When(ctx context.Context) *Execut
 }
 
 // Then sets up ExecutionBrokerI.OnPulse return parameters for the expectation previously defined by the When method
-func (e *ExecutionBrokerIMockOnPulseExpectation) Then(ma1 []insolar.Message) *ExecutionBrokerIMock {
-	e.results = &ExecutionBrokerIMockOnPulseResults{ma1}
+func (e *ExecutionBrokerIMockOnPulseExpectation) Then(pa1 []payload.Payload) *ExecutionBrokerIMock {
+	e.results = &ExecutionBrokerIMockOnPulseResults{pa1}
 	return e.mock
 }
 
 // OnPulse implements ExecutionBrokerI
-func (mmOnPulse *ExecutionBrokerIMock) OnPulse(ctx context.Context) (ma1 []insolar.Message) {
+func (mmOnPulse *ExecutionBrokerIMock) OnPulse(ctx context.Context) (pa1 []payload.Payload) {
 	mm_atomic.AddUint64(&mmOnPulse.beforeOnPulseCounter, 1)
 	defer mm_atomic.AddUint64(&mmOnPulse.afterOnPulseCounter, 1)
 
@@ -2227,7 +2004,7 @@ func (mmOnPulse *ExecutionBrokerIMock) OnPulse(ctx context.Context) (ma1 []insol
 	for _, e := range mmOnPulse.OnPulseMock.expectations {
 		if minimock.Equal(e.params, params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
-			return e.results.ma1
+			return e.results.pa1
 		}
 	}
 
@@ -2243,7 +2020,7 @@ func (mmOnPulse *ExecutionBrokerIMock) OnPulse(ctx context.Context) (ma1 []insol
 		if results == nil {
 			mmOnPulse.t.Fatal("No results are set for the ExecutionBrokerIMock.OnPulse")
 		}
-		return (*results).ma1
+		return (*results).pa1
 	}
 	if mmOnPulse.funcOnPulse != nil {
 		return mmOnPulse.funcOnPulse(ctx)
@@ -2460,221 +2237,6 @@ func (m *ExecutionBrokerIMock) MinimockPendingStateInspect() {
 	}
 }
 
-type mExecutionBrokerIMockPrevExecutorFinishedPending struct {
-	mock               *ExecutionBrokerIMock
-	defaultExpectation *ExecutionBrokerIMockPrevExecutorFinishedPendingExpectation
-	expectations       []*ExecutionBrokerIMockPrevExecutorFinishedPendingExpectation
-
-	callArgs []*ExecutionBrokerIMockPrevExecutorFinishedPendingParams
-	mutex    sync.RWMutex
-}
-
-// ExecutionBrokerIMockPrevExecutorFinishedPendingExpectation specifies expectation struct of the ExecutionBrokerI.PrevExecutorFinishedPending
-type ExecutionBrokerIMockPrevExecutorFinishedPendingExpectation struct {
-	mock    *ExecutionBrokerIMock
-	params  *ExecutionBrokerIMockPrevExecutorFinishedPendingParams
-	results *ExecutionBrokerIMockPrevExecutorFinishedPendingResults
-	Counter uint64
-}
-
-// ExecutionBrokerIMockPrevExecutorFinishedPendingParams contains parameters of the ExecutionBrokerI.PrevExecutorFinishedPending
-type ExecutionBrokerIMockPrevExecutorFinishedPendingParams struct {
-	ctx context.Context
-}
-
-// ExecutionBrokerIMockPrevExecutorFinishedPendingResults contains results of the ExecutionBrokerI.PrevExecutorFinishedPending
-type ExecutionBrokerIMockPrevExecutorFinishedPendingResults struct {
-	err error
-}
-
-// Expect sets up expected params for ExecutionBrokerI.PrevExecutorFinishedPending
-func (mmPrevExecutorFinishedPending *mExecutionBrokerIMockPrevExecutorFinishedPending) Expect(ctx context.Context) *mExecutionBrokerIMockPrevExecutorFinishedPending {
-	if mmPrevExecutorFinishedPending.mock.funcPrevExecutorFinishedPending != nil {
-		mmPrevExecutorFinishedPending.mock.t.Fatalf("ExecutionBrokerIMock.PrevExecutorFinishedPending mock is already set by Set")
-	}
-
-	if mmPrevExecutorFinishedPending.defaultExpectation == nil {
-		mmPrevExecutorFinishedPending.defaultExpectation = &ExecutionBrokerIMockPrevExecutorFinishedPendingExpectation{}
-	}
-
-	mmPrevExecutorFinishedPending.defaultExpectation.params = &ExecutionBrokerIMockPrevExecutorFinishedPendingParams{ctx}
-	for _, e := range mmPrevExecutorFinishedPending.expectations {
-		if minimock.Equal(e.params, mmPrevExecutorFinishedPending.defaultExpectation.params) {
-			mmPrevExecutorFinishedPending.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmPrevExecutorFinishedPending.defaultExpectation.params)
-		}
-	}
-
-	return mmPrevExecutorFinishedPending
-}
-
-// Inspect accepts an inspector function that has same arguments as the ExecutionBrokerI.PrevExecutorFinishedPending
-func (mmPrevExecutorFinishedPending *mExecutionBrokerIMockPrevExecutorFinishedPending) Inspect(f func(ctx context.Context)) *mExecutionBrokerIMockPrevExecutorFinishedPending {
-	if mmPrevExecutorFinishedPending.mock.inspectFuncPrevExecutorFinishedPending != nil {
-		mmPrevExecutorFinishedPending.mock.t.Fatalf("Inspect function is already set for ExecutionBrokerIMock.PrevExecutorFinishedPending")
-	}
-
-	mmPrevExecutorFinishedPending.mock.inspectFuncPrevExecutorFinishedPending = f
-
-	return mmPrevExecutorFinishedPending
-}
-
-// Return sets up results that will be returned by ExecutionBrokerI.PrevExecutorFinishedPending
-func (mmPrevExecutorFinishedPending *mExecutionBrokerIMockPrevExecutorFinishedPending) Return(err error) *ExecutionBrokerIMock {
-	if mmPrevExecutorFinishedPending.mock.funcPrevExecutorFinishedPending != nil {
-		mmPrevExecutorFinishedPending.mock.t.Fatalf("ExecutionBrokerIMock.PrevExecutorFinishedPending mock is already set by Set")
-	}
-
-	if mmPrevExecutorFinishedPending.defaultExpectation == nil {
-		mmPrevExecutorFinishedPending.defaultExpectation = &ExecutionBrokerIMockPrevExecutorFinishedPendingExpectation{mock: mmPrevExecutorFinishedPending.mock}
-	}
-	mmPrevExecutorFinishedPending.defaultExpectation.results = &ExecutionBrokerIMockPrevExecutorFinishedPendingResults{err}
-	return mmPrevExecutorFinishedPending.mock
-}
-
-//Set uses given function f to mock the ExecutionBrokerI.PrevExecutorFinishedPending method
-func (mmPrevExecutorFinishedPending *mExecutionBrokerIMockPrevExecutorFinishedPending) Set(f func(ctx context.Context) (err error)) *ExecutionBrokerIMock {
-	if mmPrevExecutorFinishedPending.defaultExpectation != nil {
-		mmPrevExecutorFinishedPending.mock.t.Fatalf("Default expectation is already set for the ExecutionBrokerI.PrevExecutorFinishedPending method")
-	}
-
-	if len(mmPrevExecutorFinishedPending.expectations) > 0 {
-		mmPrevExecutorFinishedPending.mock.t.Fatalf("Some expectations are already set for the ExecutionBrokerI.PrevExecutorFinishedPending method")
-	}
-
-	mmPrevExecutorFinishedPending.mock.funcPrevExecutorFinishedPending = f
-	return mmPrevExecutorFinishedPending.mock
-}
-
-// When sets expectation for the ExecutionBrokerI.PrevExecutorFinishedPending which will trigger the result defined by the following
-// Then helper
-func (mmPrevExecutorFinishedPending *mExecutionBrokerIMockPrevExecutorFinishedPending) When(ctx context.Context) *ExecutionBrokerIMockPrevExecutorFinishedPendingExpectation {
-	if mmPrevExecutorFinishedPending.mock.funcPrevExecutorFinishedPending != nil {
-		mmPrevExecutorFinishedPending.mock.t.Fatalf("ExecutionBrokerIMock.PrevExecutorFinishedPending mock is already set by Set")
-	}
-
-	expectation := &ExecutionBrokerIMockPrevExecutorFinishedPendingExpectation{
-		mock:   mmPrevExecutorFinishedPending.mock,
-		params: &ExecutionBrokerIMockPrevExecutorFinishedPendingParams{ctx},
-	}
-	mmPrevExecutorFinishedPending.expectations = append(mmPrevExecutorFinishedPending.expectations, expectation)
-	return expectation
-}
-
-// Then sets up ExecutionBrokerI.PrevExecutorFinishedPending return parameters for the expectation previously defined by the When method
-func (e *ExecutionBrokerIMockPrevExecutorFinishedPendingExpectation) Then(err error) *ExecutionBrokerIMock {
-	e.results = &ExecutionBrokerIMockPrevExecutorFinishedPendingResults{err}
-	return e.mock
-}
-
-// PrevExecutorFinishedPending implements ExecutionBrokerI
-func (mmPrevExecutorFinishedPending *ExecutionBrokerIMock) PrevExecutorFinishedPending(ctx context.Context) (err error) {
-	mm_atomic.AddUint64(&mmPrevExecutorFinishedPending.beforePrevExecutorFinishedPendingCounter, 1)
-	defer mm_atomic.AddUint64(&mmPrevExecutorFinishedPending.afterPrevExecutorFinishedPendingCounter, 1)
-
-	if mmPrevExecutorFinishedPending.inspectFuncPrevExecutorFinishedPending != nil {
-		mmPrevExecutorFinishedPending.inspectFuncPrevExecutorFinishedPending(ctx)
-	}
-
-	params := &ExecutionBrokerIMockPrevExecutorFinishedPendingParams{ctx}
-
-	// Record call args
-	mmPrevExecutorFinishedPending.PrevExecutorFinishedPendingMock.mutex.Lock()
-	mmPrevExecutorFinishedPending.PrevExecutorFinishedPendingMock.callArgs = append(mmPrevExecutorFinishedPending.PrevExecutorFinishedPendingMock.callArgs, params)
-	mmPrevExecutorFinishedPending.PrevExecutorFinishedPendingMock.mutex.Unlock()
-
-	for _, e := range mmPrevExecutorFinishedPending.PrevExecutorFinishedPendingMock.expectations {
-		if minimock.Equal(e.params, params) {
-			mm_atomic.AddUint64(&e.Counter, 1)
-			return e.results.err
-		}
-	}
-
-	if mmPrevExecutorFinishedPending.PrevExecutorFinishedPendingMock.defaultExpectation != nil {
-		mm_atomic.AddUint64(&mmPrevExecutorFinishedPending.PrevExecutorFinishedPendingMock.defaultExpectation.Counter, 1)
-		want := mmPrevExecutorFinishedPending.PrevExecutorFinishedPendingMock.defaultExpectation.params
-		got := ExecutionBrokerIMockPrevExecutorFinishedPendingParams{ctx}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmPrevExecutorFinishedPending.t.Errorf("ExecutionBrokerIMock.PrevExecutorFinishedPending got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
-		}
-
-		results := mmPrevExecutorFinishedPending.PrevExecutorFinishedPendingMock.defaultExpectation.results
-		if results == nil {
-			mmPrevExecutorFinishedPending.t.Fatal("No results are set for the ExecutionBrokerIMock.PrevExecutorFinishedPending")
-		}
-		return (*results).err
-	}
-	if mmPrevExecutorFinishedPending.funcPrevExecutorFinishedPending != nil {
-		return mmPrevExecutorFinishedPending.funcPrevExecutorFinishedPending(ctx)
-	}
-	mmPrevExecutorFinishedPending.t.Fatalf("Unexpected call to ExecutionBrokerIMock.PrevExecutorFinishedPending. %v", ctx)
-	return
-}
-
-// PrevExecutorFinishedPendingAfterCounter returns a count of finished ExecutionBrokerIMock.PrevExecutorFinishedPending invocations
-func (mmPrevExecutorFinishedPending *ExecutionBrokerIMock) PrevExecutorFinishedPendingAfterCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmPrevExecutorFinishedPending.afterPrevExecutorFinishedPendingCounter)
-}
-
-// PrevExecutorFinishedPendingBeforeCounter returns a count of ExecutionBrokerIMock.PrevExecutorFinishedPending invocations
-func (mmPrevExecutorFinishedPending *ExecutionBrokerIMock) PrevExecutorFinishedPendingBeforeCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmPrevExecutorFinishedPending.beforePrevExecutorFinishedPendingCounter)
-}
-
-// Calls returns a list of arguments used in each call to ExecutionBrokerIMock.PrevExecutorFinishedPending.
-// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
-func (mmPrevExecutorFinishedPending *mExecutionBrokerIMockPrevExecutorFinishedPending) Calls() []*ExecutionBrokerIMockPrevExecutorFinishedPendingParams {
-	mmPrevExecutorFinishedPending.mutex.RLock()
-
-	argCopy := make([]*ExecutionBrokerIMockPrevExecutorFinishedPendingParams, len(mmPrevExecutorFinishedPending.callArgs))
-	copy(argCopy, mmPrevExecutorFinishedPending.callArgs)
-
-	mmPrevExecutorFinishedPending.mutex.RUnlock()
-
-	return argCopy
-}
-
-// MinimockPrevExecutorFinishedPendingDone returns true if the count of the PrevExecutorFinishedPending invocations corresponds
-// the number of defined expectations
-func (m *ExecutionBrokerIMock) MinimockPrevExecutorFinishedPendingDone() bool {
-	for _, e := range m.PrevExecutorFinishedPendingMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			return false
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.PrevExecutorFinishedPendingMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterPrevExecutorFinishedPendingCounter) < 1 {
-		return false
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcPrevExecutorFinishedPending != nil && mm_atomic.LoadUint64(&m.afterPrevExecutorFinishedPendingCounter) < 1 {
-		return false
-	}
-	return true
-}
-
-// MinimockPrevExecutorFinishedPendingInspect logs each unmet expectation
-func (m *ExecutionBrokerIMock) MinimockPrevExecutorFinishedPendingInspect() {
-	for _, e := range m.PrevExecutorFinishedPendingMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			m.t.Errorf("Expected call to ExecutionBrokerIMock.PrevExecutorFinishedPending with params: %#v", *e.params)
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.PrevExecutorFinishedPendingMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterPrevExecutorFinishedPendingCounter) < 1 {
-		if m.PrevExecutorFinishedPendingMock.defaultExpectation.params == nil {
-			m.t.Error("Expected call to ExecutionBrokerIMock.PrevExecutorFinishedPending")
-		} else {
-			m.t.Errorf("Expected call to ExecutionBrokerIMock.PrevExecutorFinishedPending with params: %#v", *m.PrevExecutorFinishedPendingMock.defaultExpectation.params)
-		}
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcPrevExecutorFinishedPending != nil && mm_atomic.LoadUint64(&m.afterPrevExecutorFinishedPendingCounter) < 1 {
-		m.t.Error("Expected call to ExecutionBrokerIMock.PrevExecutorFinishedPending")
-	}
-}
-
 type mExecutionBrokerIMockPrevExecutorPendingResult struct {
 	mock               *ExecutionBrokerIMock
 	defaultExpectation *ExecutionBrokerIMockPrevExecutorPendingResultExpectation
@@ -2860,6 +2422,221 @@ func (m *ExecutionBrokerIMock) MinimockPrevExecutorPendingResultInspect() {
 	// if func was set then invocations count should be greater than zero
 	if m.funcPrevExecutorPendingResult != nil && mm_atomic.LoadUint64(&m.afterPrevExecutorPendingResultCounter) < 1 {
 		m.t.Error("Expected call to ExecutionBrokerIMock.PrevExecutorPendingResult")
+	}
+}
+
+type mExecutionBrokerIMockPrevExecutorSentPendingFinished struct {
+	mock               *ExecutionBrokerIMock
+	defaultExpectation *ExecutionBrokerIMockPrevExecutorSentPendingFinishedExpectation
+	expectations       []*ExecutionBrokerIMockPrevExecutorSentPendingFinishedExpectation
+
+	callArgs []*ExecutionBrokerIMockPrevExecutorSentPendingFinishedParams
+	mutex    sync.RWMutex
+}
+
+// ExecutionBrokerIMockPrevExecutorSentPendingFinishedExpectation specifies expectation struct of the ExecutionBrokerI.PrevExecutorSentPendingFinished
+type ExecutionBrokerIMockPrevExecutorSentPendingFinishedExpectation struct {
+	mock    *ExecutionBrokerIMock
+	params  *ExecutionBrokerIMockPrevExecutorSentPendingFinishedParams
+	results *ExecutionBrokerIMockPrevExecutorSentPendingFinishedResults
+	Counter uint64
+}
+
+// ExecutionBrokerIMockPrevExecutorSentPendingFinishedParams contains parameters of the ExecutionBrokerI.PrevExecutorSentPendingFinished
+type ExecutionBrokerIMockPrevExecutorSentPendingFinishedParams struct {
+	ctx context.Context
+}
+
+// ExecutionBrokerIMockPrevExecutorSentPendingFinishedResults contains results of the ExecutionBrokerI.PrevExecutorSentPendingFinished
+type ExecutionBrokerIMockPrevExecutorSentPendingFinishedResults struct {
+	err error
+}
+
+// Expect sets up expected params for ExecutionBrokerI.PrevExecutorSentPendingFinished
+func (mmPrevExecutorSentPendingFinished *mExecutionBrokerIMockPrevExecutorSentPendingFinished) Expect(ctx context.Context) *mExecutionBrokerIMockPrevExecutorSentPendingFinished {
+	if mmPrevExecutorSentPendingFinished.mock.funcPrevExecutorSentPendingFinished != nil {
+		mmPrevExecutorSentPendingFinished.mock.t.Fatalf("ExecutionBrokerIMock.PrevExecutorSentPendingFinished mock is already set by Set")
+	}
+
+	if mmPrevExecutorSentPendingFinished.defaultExpectation == nil {
+		mmPrevExecutorSentPendingFinished.defaultExpectation = &ExecutionBrokerIMockPrevExecutorSentPendingFinishedExpectation{}
+	}
+
+	mmPrevExecutorSentPendingFinished.defaultExpectation.params = &ExecutionBrokerIMockPrevExecutorSentPendingFinishedParams{ctx}
+	for _, e := range mmPrevExecutorSentPendingFinished.expectations {
+		if minimock.Equal(e.params, mmPrevExecutorSentPendingFinished.defaultExpectation.params) {
+			mmPrevExecutorSentPendingFinished.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmPrevExecutorSentPendingFinished.defaultExpectation.params)
+		}
+	}
+
+	return mmPrevExecutorSentPendingFinished
+}
+
+// Inspect accepts an inspector function that has same arguments as the ExecutionBrokerI.PrevExecutorSentPendingFinished
+func (mmPrevExecutorSentPendingFinished *mExecutionBrokerIMockPrevExecutorSentPendingFinished) Inspect(f func(ctx context.Context)) *mExecutionBrokerIMockPrevExecutorSentPendingFinished {
+	if mmPrevExecutorSentPendingFinished.mock.inspectFuncPrevExecutorSentPendingFinished != nil {
+		mmPrevExecutorSentPendingFinished.mock.t.Fatalf("Inspect function is already set for ExecutionBrokerIMock.PrevExecutorSentPendingFinished")
+	}
+
+	mmPrevExecutorSentPendingFinished.mock.inspectFuncPrevExecutorSentPendingFinished = f
+
+	return mmPrevExecutorSentPendingFinished
+}
+
+// Return sets up results that will be returned by ExecutionBrokerI.PrevExecutorSentPendingFinished
+func (mmPrevExecutorSentPendingFinished *mExecutionBrokerIMockPrevExecutorSentPendingFinished) Return(err error) *ExecutionBrokerIMock {
+	if mmPrevExecutorSentPendingFinished.mock.funcPrevExecutorSentPendingFinished != nil {
+		mmPrevExecutorSentPendingFinished.mock.t.Fatalf("ExecutionBrokerIMock.PrevExecutorSentPendingFinished mock is already set by Set")
+	}
+
+	if mmPrevExecutorSentPendingFinished.defaultExpectation == nil {
+		mmPrevExecutorSentPendingFinished.defaultExpectation = &ExecutionBrokerIMockPrevExecutorSentPendingFinishedExpectation{mock: mmPrevExecutorSentPendingFinished.mock}
+	}
+	mmPrevExecutorSentPendingFinished.defaultExpectation.results = &ExecutionBrokerIMockPrevExecutorSentPendingFinishedResults{err}
+	return mmPrevExecutorSentPendingFinished.mock
+}
+
+//Set uses given function f to mock the ExecutionBrokerI.PrevExecutorSentPendingFinished method
+func (mmPrevExecutorSentPendingFinished *mExecutionBrokerIMockPrevExecutorSentPendingFinished) Set(f func(ctx context.Context) (err error)) *ExecutionBrokerIMock {
+	if mmPrevExecutorSentPendingFinished.defaultExpectation != nil {
+		mmPrevExecutorSentPendingFinished.mock.t.Fatalf("Default expectation is already set for the ExecutionBrokerI.PrevExecutorSentPendingFinished method")
+	}
+
+	if len(mmPrevExecutorSentPendingFinished.expectations) > 0 {
+		mmPrevExecutorSentPendingFinished.mock.t.Fatalf("Some expectations are already set for the ExecutionBrokerI.PrevExecutorSentPendingFinished method")
+	}
+
+	mmPrevExecutorSentPendingFinished.mock.funcPrevExecutorSentPendingFinished = f
+	return mmPrevExecutorSentPendingFinished.mock
+}
+
+// When sets expectation for the ExecutionBrokerI.PrevExecutorSentPendingFinished which will trigger the result defined by the following
+// Then helper
+func (mmPrevExecutorSentPendingFinished *mExecutionBrokerIMockPrevExecutorSentPendingFinished) When(ctx context.Context) *ExecutionBrokerIMockPrevExecutorSentPendingFinishedExpectation {
+	if mmPrevExecutorSentPendingFinished.mock.funcPrevExecutorSentPendingFinished != nil {
+		mmPrevExecutorSentPendingFinished.mock.t.Fatalf("ExecutionBrokerIMock.PrevExecutorSentPendingFinished mock is already set by Set")
+	}
+
+	expectation := &ExecutionBrokerIMockPrevExecutorSentPendingFinishedExpectation{
+		mock:   mmPrevExecutorSentPendingFinished.mock,
+		params: &ExecutionBrokerIMockPrevExecutorSentPendingFinishedParams{ctx},
+	}
+	mmPrevExecutorSentPendingFinished.expectations = append(mmPrevExecutorSentPendingFinished.expectations, expectation)
+	return expectation
+}
+
+// Then sets up ExecutionBrokerI.PrevExecutorSentPendingFinished return parameters for the expectation previously defined by the When method
+func (e *ExecutionBrokerIMockPrevExecutorSentPendingFinishedExpectation) Then(err error) *ExecutionBrokerIMock {
+	e.results = &ExecutionBrokerIMockPrevExecutorSentPendingFinishedResults{err}
+	return e.mock
+}
+
+// PrevExecutorSentPendingFinished implements ExecutionBrokerI
+func (mmPrevExecutorSentPendingFinished *ExecutionBrokerIMock) PrevExecutorSentPendingFinished(ctx context.Context) (err error) {
+	mm_atomic.AddUint64(&mmPrevExecutorSentPendingFinished.beforePrevExecutorSentPendingFinishedCounter, 1)
+	defer mm_atomic.AddUint64(&mmPrevExecutorSentPendingFinished.afterPrevExecutorSentPendingFinishedCounter, 1)
+
+	if mmPrevExecutorSentPendingFinished.inspectFuncPrevExecutorSentPendingFinished != nil {
+		mmPrevExecutorSentPendingFinished.inspectFuncPrevExecutorSentPendingFinished(ctx)
+	}
+
+	params := &ExecutionBrokerIMockPrevExecutorSentPendingFinishedParams{ctx}
+
+	// Record call args
+	mmPrevExecutorSentPendingFinished.PrevExecutorSentPendingFinishedMock.mutex.Lock()
+	mmPrevExecutorSentPendingFinished.PrevExecutorSentPendingFinishedMock.callArgs = append(mmPrevExecutorSentPendingFinished.PrevExecutorSentPendingFinishedMock.callArgs, params)
+	mmPrevExecutorSentPendingFinished.PrevExecutorSentPendingFinishedMock.mutex.Unlock()
+
+	for _, e := range mmPrevExecutorSentPendingFinished.PrevExecutorSentPendingFinishedMock.expectations {
+		if minimock.Equal(e.params, params) {
+			mm_atomic.AddUint64(&e.Counter, 1)
+			return e.results.err
+		}
+	}
+
+	if mmPrevExecutorSentPendingFinished.PrevExecutorSentPendingFinishedMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmPrevExecutorSentPendingFinished.PrevExecutorSentPendingFinishedMock.defaultExpectation.Counter, 1)
+		want := mmPrevExecutorSentPendingFinished.PrevExecutorSentPendingFinishedMock.defaultExpectation.params
+		got := ExecutionBrokerIMockPrevExecutorSentPendingFinishedParams{ctx}
+		if want != nil && !minimock.Equal(*want, got) {
+			mmPrevExecutorSentPendingFinished.t.Errorf("ExecutionBrokerIMock.PrevExecutorSentPendingFinished got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		}
+
+		results := mmPrevExecutorSentPendingFinished.PrevExecutorSentPendingFinishedMock.defaultExpectation.results
+		if results == nil {
+			mmPrevExecutorSentPendingFinished.t.Fatal("No results are set for the ExecutionBrokerIMock.PrevExecutorSentPendingFinished")
+		}
+		return (*results).err
+	}
+	if mmPrevExecutorSentPendingFinished.funcPrevExecutorSentPendingFinished != nil {
+		return mmPrevExecutorSentPendingFinished.funcPrevExecutorSentPendingFinished(ctx)
+	}
+	mmPrevExecutorSentPendingFinished.t.Fatalf("Unexpected call to ExecutionBrokerIMock.PrevExecutorSentPendingFinished. %v", ctx)
+	return
+}
+
+// PrevExecutorSentPendingFinishedAfterCounter returns a count of finished ExecutionBrokerIMock.PrevExecutorSentPendingFinished invocations
+func (mmPrevExecutorSentPendingFinished *ExecutionBrokerIMock) PrevExecutorSentPendingFinishedAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmPrevExecutorSentPendingFinished.afterPrevExecutorSentPendingFinishedCounter)
+}
+
+// PrevExecutorSentPendingFinishedBeforeCounter returns a count of ExecutionBrokerIMock.PrevExecutorSentPendingFinished invocations
+func (mmPrevExecutorSentPendingFinished *ExecutionBrokerIMock) PrevExecutorSentPendingFinishedBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmPrevExecutorSentPendingFinished.beforePrevExecutorSentPendingFinishedCounter)
+}
+
+// Calls returns a list of arguments used in each call to ExecutionBrokerIMock.PrevExecutorSentPendingFinished.
+// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
+func (mmPrevExecutorSentPendingFinished *mExecutionBrokerIMockPrevExecutorSentPendingFinished) Calls() []*ExecutionBrokerIMockPrevExecutorSentPendingFinishedParams {
+	mmPrevExecutorSentPendingFinished.mutex.RLock()
+
+	argCopy := make([]*ExecutionBrokerIMockPrevExecutorSentPendingFinishedParams, len(mmPrevExecutorSentPendingFinished.callArgs))
+	copy(argCopy, mmPrevExecutorSentPendingFinished.callArgs)
+
+	mmPrevExecutorSentPendingFinished.mutex.RUnlock()
+
+	return argCopy
+}
+
+// MinimockPrevExecutorSentPendingFinishedDone returns true if the count of the PrevExecutorSentPendingFinished invocations corresponds
+// the number of defined expectations
+func (m *ExecutionBrokerIMock) MinimockPrevExecutorSentPendingFinishedDone() bool {
+	for _, e := range m.PrevExecutorSentPendingFinishedMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			return false
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.PrevExecutorSentPendingFinishedMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterPrevExecutorSentPendingFinishedCounter) < 1 {
+		return false
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcPrevExecutorSentPendingFinished != nil && mm_atomic.LoadUint64(&m.afterPrevExecutorSentPendingFinishedCounter) < 1 {
+		return false
+	}
+	return true
+}
+
+// MinimockPrevExecutorSentPendingFinishedInspect logs each unmet expectation
+func (m *ExecutionBrokerIMock) MinimockPrevExecutorSentPendingFinishedInspect() {
+	for _, e := range m.PrevExecutorSentPendingFinishedMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			m.t.Errorf("Expected call to ExecutionBrokerIMock.PrevExecutorSentPendingFinished with params: %#v", *e.params)
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.PrevExecutorSentPendingFinishedMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterPrevExecutorSentPendingFinishedCounter) < 1 {
+		if m.PrevExecutorSentPendingFinishedMock.defaultExpectation.params == nil {
+			m.t.Error("Expected call to ExecutionBrokerIMock.PrevExecutorSentPendingFinished")
+		} else {
+			m.t.Errorf("Expected call to ExecutionBrokerIMock.PrevExecutorSentPendingFinished with params: %#v", *m.PrevExecutorSentPendingFinishedMock.defaultExpectation.params)
+		}
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcPrevExecutorSentPendingFinished != nil && mm_atomic.LoadUint64(&m.afterPrevExecutorSentPendingFinishedCounter) < 1 {
+		m.t.Error("Expected call to ExecutionBrokerIMock.PrevExecutorSentPendingFinished")
 	}
 }
 
@@ -3252,8 +3029,6 @@ func (m *ExecutionBrokerIMock) MinimockFinish() {
 
 		m.MinimockFetchMoreRequestsFromLedgerInspect()
 
-		m.MinimockGetActiveTranscriptInspect()
-
 		m.MinimockIsKnownRequestInspect()
 
 		m.MinimockMoreRequestsOnLedgerInspect()
@@ -3264,9 +3039,9 @@ func (m *ExecutionBrokerIMock) MinimockFinish() {
 
 		m.MinimockPendingStateInspect()
 
-		m.MinimockPrevExecutorFinishedPendingInspect()
-
 		m.MinimockPrevExecutorPendingResultInspect()
+
+		m.MinimockPrevExecutorSentPendingFinishedInspect()
 
 		m.MinimockPrevExecutorStillExecutingInspect()
 
@@ -3300,14 +3075,13 @@ func (m *ExecutionBrokerIMock) minimockDone() bool {
 		m.MinimockAddRequestsFromLedgerDone() &&
 		m.MinimockAddRequestsFromPrevExecutorDone() &&
 		m.MinimockFetchMoreRequestsFromLedgerDone() &&
-		m.MinimockGetActiveTranscriptDone() &&
 		m.MinimockIsKnownRequestDone() &&
 		m.MinimockMoreRequestsOnLedgerDone() &&
 		m.MinimockNoMoreRequestsOnLedgerDone() &&
 		m.MinimockOnPulseDone() &&
 		m.MinimockPendingStateDone() &&
-		m.MinimockPrevExecutorFinishedPendingDone() &&
 		m.MinimockPrevExecutorPendingResultDone() &&
+		m.MinimockPrevExecutorSentPendingFinishedDone() &&
 		m.MinimockPrevExecutorStillExecutingDone() &&
 		m.MinimockSetNotPendingDone()
 }

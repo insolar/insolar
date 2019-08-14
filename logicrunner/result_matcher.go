@@ -23,6 +23,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/messagebus"
@@ -32,7 +33,7 @@ import (
 //go:generate minimock -i github.com/insolar/insolar/logicrunner.ResultMatcher -o ./ -s _mock.go -g
 
 type ResultMatcher interface {
-	AddStillExecution(ctx context.Context, msg *message.StillExecuting)
+	AddStillExecution(ctx context.Context, msg *payload.StillExecuting)
 	AddUnwantedResponse(ctx context.Context, msg *message.ReturnResults) error
 	Clear()
 }
@@ -72,7 +73,7 @@ func (rm *resultsMatcher) send(ctx context.Context, msg insolar.Message, receive
 	}
 }
 
-func (rm *resultsMatcher) AddStillExecution(ctx context.Context, msg *message.StillExecuting) {
+func (rm *resultsMatcher) AddStillExecution(ctx context.Context, msg *payload.StillExecuting) {
 	rm.lock.Lock()
 	defer rm.lock.Unlock()
 

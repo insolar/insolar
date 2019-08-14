@@ -107,7 +107,7 @@ func GetAccountGenesisContractState(balance string, name string, parent string) 
 }
 
 func GetCostCenterGenesisContractState() insolar.GenesisContractState {
-	cc, err := costcenter.New(genesisrefs.ContractFeeWallet)
+	cc, err := costcenter.New(genesisrefs.ContractFeeAccount)
 	if err != nil {
 		panic("failed to create cost center instance")
 	}

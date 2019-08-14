@@ -132,9 +132,8 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 	{
 		m.dispatcher.ClosePulse(ctx, newPulse)
 
-		createDrops := !justJoined
-
 		if !justJoined {
+
 			for _, jet := range jets {
 				received, err := m.hotStatusChecker.IsReceived(ctx, jet, endedPulse.PulseNumber)
 				if err != nil {
@@ -144,11 +143,11 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 					log.Fatal("hot data for jet:%v and pulse:%v wasn't received", jet.DebugString(), endedPulse.PulseNumber)
 				}
 			}
-		}
 
-		jets, err = m.jetSplitter.Do(ctx, endedPulse.PulseNumber, newPulse.PulseNumber, jets, createDrops)
-		if err != nil {
-			panic(errors.Wrap(err, "failed to split jets"))
+			jets, err = m.jetSplitter.Do(ctx, endedPulse.PulseNumber, newPulse.PulseNumber, jets, true)
+			if err != nil {
+				panic(errors.Wrap(err, "failed to split jets"))
+			}
 		}
 
 		m.jetReleaser.CloseAllUntil(ctx, endedPulse.PulseNumber)

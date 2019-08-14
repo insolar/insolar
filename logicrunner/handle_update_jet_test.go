@@ -23,6 +23,7 @@ func Test_HandleUpdateJet_Present(t *testing.T) {
 		JetID: gen.JetID(),
 	}
 	buf, err := payload.Marshal(&receivedPayload)
+	require.NoError(t, err, "marshal")
 	h := HandleUpdateJet{
 		dep: &Dependencies{JetStorage: jets},
 		meta: payload.Meta{

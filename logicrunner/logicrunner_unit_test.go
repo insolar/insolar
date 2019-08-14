@@ -48,8 +48,9 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/common"
-	"github.com/insolar/insolar/logicrunner/executionarchive"
+	"github.com/insolar/insolar/logicrunner/executionregistry"
 	"github.com/insolar/insolar/logicrunner/machinesmanager"
+	"github.com/insolar/insolar/logicrunner/shutdown"
 	"github.com/insolar/insolar/logicrunner/writecontroller"
 	"github.com/insolar/insolar/pulsar"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
@@ -210,7 +211,7 @@ func (suite *LogicRunnerTestSuite) TestSagaCallAcceptNotificationHandler() {
 	var usedReason insolar.Reference
 	var usedReturnMode record.ReturnMode
 
-	suite.cr.CallMock.Set(func(ctx context.Context, msg insolar.Message) (insolar.Reply, error) {
+	suite.cr.CallMock.Set(func(ctx context.Context, msg insolar.Message) (insolar.Reply, *insolar.Reference, error) {
 		suite.Require().Equal(insolar.TypeCallMethod, msg.Type())
 		cm := msg.(*message.CallMethod)
 		usedCaller = cm.Caller
@@ -221,7 +222,7 @@ func (suite *LogicRunnerTestSuite) TestSagaCallAcceptNotificationHandler() {
 			Request: dummyRequestRef,
 		}
 		callMethodChan <- struct{}{}
-		return result, nil
+		return result, nil, nil
 	})
 
 	registerResultChan := make(chan struct{})
@@ -344,7 +345,7 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 	suite.am.HasPendingsMock.Return(false, nil)
 
 	suite.am.RegisterIncomingRequestMock.Set(func(ctx context.Context, r *record.IncomingRequest) (*payload.RequestInfo, error) {
-		reqId := testutils.RandomID()
+		reqId := gen.ID()
 		return &payload.RequestInfo{RequestID: reqId, ObjectID: *objectRef.Record()}, nil
 	})
 
@@ -431,15 +432,22 @@ func TestLogicRunner_OnPulse(t *testing.T) {
 
 				lr.initHandlers()
 
-				lr.MessageBus = testutils.NewMessageBusMock(mc).
-					SendMock.Return(&reply.OK{}, nil)
+				lr.Sender = bus.NewSenderMock(t).SendRoleMock.Set(
+					func(ctx context.Context, msg *message2.Message, role insolar.DynamicRole, obj insolar.Reference) (ch1 <-chan *message2.Message, f1 func()) {
+						return nil, func() {}
+					})
 
 				lr.StateStorage = NewStateStorageMock(mc).
 					IsEmptyMock.Return(false).
-					OnPulseMock.Return([]insolar.Message{&message.ExecutorResults{}})
+					OnPulseMock.Return(map[insolar.Reference][]payload.Payload{gen.Reference(): {&payload.ExecutorResults{}}})
 
 				lr.WriteController = writecontroller.NewWriteController()
 				_ = lr.WriteController.Open(ctx, insolar.FirstPulseNumber)
+				lr.ShutdownFlag = shutdown.NewFlagMock(mc).
+					DoneMock.Set(
+					func(ctx context.Context, isDone func() bool) {
+						isDone()
+					})
 
 				return lr
 			},
@@ -454,10 +462,15 @@ func TestLogicRunner_OnPulse(t *testing.T) {
 
 				lr.StateStorage = NewStateStorageMock(mc).
 					IsEmptyMock.Return(true).
-					OnPulseMock.Return([]insolar.Message{})
+					OnPulseMock.Return(map[insolar.Reference][]payload.Payload{})
 
 				lr.WriteController = writecontroller.NewWriteController()
 				_ = lr.WriteController.Open(ctx, insolar.FirstPulseNumber)
+				lr.ShutdownFlag = shutdown.NewFlagMock(mc).
+					DoneMock.Set(
+					func(ctx context.Context, isDone func() bool) {
+						isDone()
+					})
 
 				return lr
 			},
@@ -486,6 +499,8 @@ const (
 	OrderWriteControllerClose
 	OrderStateStorageOnPulse
 	OrderWriteControllerOpen
+	OrderFlagDone
+	OrderStateStorageIsEmpty
 	OrderMAX
 )
 
@@ -512,11 +527,21 @@ func TestLogicRunner_OnPulse_Order(t *testing.T) {
 		})
 	lr.StateStorage = NewStateStorageMock(mc).
 		OnPulseMock.Set(
-		func(_ context.Context, _ insolar.Pulse) []insolar.Message {
+		func(_ context.Context, _ insolar.Pulse) map[insolar.Reference][]payload.Payload {
 			orderChan <- OrderStateStorageOnPulse
-			return []insolar.Message{}
+			return map[insolar.Reference][]payload.Payload{}
 		}).
-		IsEmptyMock.Return(true)
+		IsEmptyMock.Set(
+		func() (b1 bool) {
+			orderChan <- OrderStateStorageIsEmpty
+			return true
+		})
+	lr.ShutdownFlag = shutdown.NewFlagMock(mc).
+		DoneMock.Set(
+		func(ctx context.Context, isDone func() bool) {
+			orderChan <- OrderFlagDone
+			isDone()
+		})
 
 	oldPulse := insolar.Pulse{PulseNumber: insolar.FirstPulseNumber}
 	newPulse := insolar.Pulse{PulseNumber: insolar.FirstPulseNumber + 1}
@@ -539,13 +564,13 @@ func TestLogicRunner_OnPulse_Order(t *testing.T) {
 }
 
 func (suite *LogicRunnerTestSuite) TestImmutableOrder() {
-	ea := executionarchive.NewExecutionArchiveMock(suite.mc).
-		ArchiveMock.Return().
+	er := executionregistry.NewExecutionRegistryMock(suite.mc).
+		RegisterMock.Return().
 		DoneMock.Return(true)
 
 	// prepare default object and execution state
 	objectRef := gen.Reference()
-	broker := NewExecutionBroker(objectRef, nil, suite.re, nil, nil, ea, nil)
+	broker := NewExecutionBroker(objectRef, nil, suite.re, nil, nil, er, nil, nil)
 	broker.pending = insolar.NotPending
 
 	// prepare request objects
@@ -561,6 +586,7 @@ func (suite *LogicRunnerTestSuite) TestImmutableOrder() {
 		Immutable:    false,
 	}
 	mutableTranscript := common.NewTranscript(suite.ctx, mutableRequestRef, mutableRequest)
+	er.GetActiveTranscriptMock.When(mutableRequestRef).Then(mutableTranscript)
 
 	immutableRequest1 := record.IncomingRequest{
 		ReturnMode:   record.ReturnResult,
@@ -569,6 +595,7 @@ func (suite *LogicRunnerTestSuite) TestImmutableOrder() {
 		Immutable:    true,
 	}
 	immutableTranscript1 := common.NewTranscript(suite.ctx, immutableRequestRef1, immutableRequest1)
+	er.GetActiveTranscriptMock.When(immutableRequestRef1).Then(immutableTranscript1)
 
 	immutableRequest2 := record.IncomingRequest{
 		ReturnMode:   record.ReturnResult,
@@ -577,6 +604,7 @@ func (suite *LogicRunnerTestSuite) TestImmutableOrder() {
 		Immutable:    true,
 	}
 	immutableTranscript2 := common.NewTranscript(suite.ctx, immutableRequestRef2, immutableRequest2)
+	er.GetActiveTranscriptMock.When(immutableRequestRef2).Then(immutableTranscript2)
 
 	// Set custom executor, that'll:
 	// 1) mutable will start execution and wait until something will ping it on channel 1

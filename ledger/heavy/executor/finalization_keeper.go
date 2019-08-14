@@ -39,10 +39,9 @@ type FinalizationKeeperDefault struct {
 	pulseCalculator pulse.Calculator
 }
 
-func NewFinalizationKeeperDefault(jk JetKeeper, ns insolar.TerminationHandler, pc pulse.Calculator, limit int) *FinalizationKeeperDefault {
+func NewFinalizationKeeperDefault(jk JetKeeper, pc pulse.Calculator, limit int) *FinalizationKeeperDefault {
 	return &FinalizationKeeperDefault{
 		jetKeeper:       jk,
-		networkStopper:  ns,
 		limit:           limit,
 		pulseCalculator: pc,
 	}

@@ -186,6 +186,18 @@
   revision = "24818f796faf91cd76ec7bddd72458fbced7a6c1"
 
 [[projects]]
+  digest = "1:aebccac5eae98c77bbdf314428fb06ec1c1b4bee91589c3624d7facba176b8a6"
+  name = "github.com/google/gops"
+  packages = [
+    "agent",
+    "internal",
+    "signal",
+  ]
+  pruneopts = "UT"
+  revision = "9fda3b87c7b32caeeb2974e7cc2e71e60a597fdf"
+  version = "v0.3.6"
+
+[[projects]]
   digest = "1:582b704bebaa06b48c29b0cec224a6058a09c86883aaddabde889cd1a5f73e1b"
   name = "github.com/google/uuid"
   packages = ["."]
@@ -303,6 +315,14 @@
   packages = ["."]
   pruneopts = "UT"
   revision = "6237cf65f3a6f7111cd8a42be3590df99a66bc7d"
+
+[[projects]]
+  branch = "master"
+  digest = "1:f433da6fbabb0bd1bd730fd340782015c644123d02eb78c20c69ce03352daad1"
+  name = "github.com/kardianos/osext"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "2bc1f35cddc0cc527b4bc3dce8578fc2a6c11384"
 
 [[projects]]
   digest = "1:c568d7727aa262c32bdf8a3f7db83614f7af0ed661474b24588de635c20024c7"
@@ -722,6 +742,7 @@
     "github.com/gojuno/minimock",
     "github.com/golang/protobuf/proto",
     "github.com/google/gofuzz",
+    "github.com/google/gops/agent",
     "github.com/grpc-ecosystem/grpc-gateway/runtime",
     "github.com/grpc-ecosystem/grpc-gateway/utilities",
     "github.com/insolar/go-actors/actor",

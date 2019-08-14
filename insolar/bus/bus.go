@@ -257,7 +257,7 @@ func (b *Bus) sendTarget(
 	b.replies[msgHash] = reply
 	b.repliesMutex.Unlock()
 
-	logger.Debugf("sending message %s", msgHash.String())
+	logger.Debugf("sending message %s. uuid = ", msgHash.String(), msg.UUID)
 	err = b.pub.Publish(TopicOutgoing, msg)
 	if err != nil {
 		done()
@@ -432,6 +432,7 @@ func (b *Bus) wrapMeta(
 	pulse insolar.PulseNumber,
 ) (payload.Meta, *message.Message, error) {
 	msg = msg.Copy()
+
 	meta := payload.Meta{
 		Payload:    msg.Payload,
 		Receiver:   receiver,
@@ -443,7 +444,7 @@ func (b *Bus) wrapMeta(
 
 	buf, err := meta.Marshal()
 	if err != nil {
-		return payload.Meta{}, nil, errors.Wrap(err, "failed to wrap message")
+		return payload.Meta{}, nil, errors.Wrap(err, "wrapMeta. failed to wrap message")
 	}
 	msg.Payload = buf
 
