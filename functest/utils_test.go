@@ -127,7 +127,7 @@ func createMigrationMemberForMA(t *testing.T, ma string) *user {
 	require.NoError(t, err)
 	member.ref = root.ref
 
-	_, err = signedRequest(t, &migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{ma}})
+	_, err = signedRequest(t, &migrationAdmin, "migration.addAddresses", map[string]interface{}{"migrationAddresses": []string{ma}})
 	require.NoError(t, err)
 
 	result, err := signedRequest(t, member, "member.migrationCreate", nil)
@@ -141,7 +141,7 @@ func createMigrationMemberForMA(t *testing.T, ma string) *user {
 
 func addBurnAddress(t *testing.T) {
 	ba := testutils.RandomString()
-	_, err := signedRequest(t, &migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{ba}})
+	_, err := signedRequest(t, &migrationAdmin, "migration.addAddresses", map[string]interface{}{"migrationAddresses": []string{ba}})
 	require.NoError(t, err)
 }
 
@@ -152,7 +152,7 @@ func getBalanceNoErr(t *testing.T, caller *user, reference string) *big.Int {
 }
 
 func getBalance(t *testing.T, caller *user, reference string) (*big.Int, error) {
-	res, err := signedRequest(t, caller, "wallet.getBalance", map[string]interface{}{"reference": reference})
+	res, err := signedRequest(t, caller, "member.getBalance", map[string]interface{}{"reference": reference})
 	if err != nil {
 		return nil, err
 	}
@@ -171,7 +171,7 @@ func migrate(t *testing.T, memberRef string, amount string, tx string, ma string
 		"deposit.migration",
 		map[string]interface{}{"amount": amount, "ethTxHash": tx, "migrationAddress": ma})
 	require.NoError(t, err)
-	res, err := signedRequest(t, anotherMember, "wallet.getBalance", map[string]interface{}{"reference": memberRef})
+	res, err := signedRequest(t, anotherMember, "member.getBalance", map[string]interface{}{"reference": memberRef})
 	require.NoError(t, err)
 	deposits, ok := res.(map[string]interface{})["deposits"].(map[string]interface{})
 	require.True(t, ok)

@@ -41,7 +41,7 @@ func TestMigrationMemberGet(t *testing.T) {
 	member1, _ := newUserWithKeys()
 
 	ba := testutils.RandomString()
-	_, _ = signedRequest(t, &migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{ba}})
+	_, _ = signedRequest(t, &migrationAdmin, "migration.addAddresses", map[string]interface{}{"migrationAddresses": []string{ba}})
 
 	res1, err := signedRequest(t, member1, "member.migrationCreate", nil)
 	require.Nil(t, err)

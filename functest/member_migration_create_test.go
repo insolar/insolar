@@ -31,7 +31,7 @@ func TestMemberMigrationCreate(t *testing.T) {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
 	ba := testutils.RandomString()
-	_, err = signedRequest(t, &migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{ba}})
+	_, err = signedRequest(t, &migrationAdmin, "migration.addAddresses", map[string]interface{}{"migrationAddresses": []string{ba}})
 	require.NoError(t, err)
 	result, err := signedRequest(t, member, "member.migrationCreate", nil)
 	require.NoError(t, err)
@@ -41,7 +41,7 @@ func TestMemberMigrationCreate(t *testing.T) {
 	require.Equal(t, ba, output["migrationAddress"])
 }
 
-func TestMemberMigrationCreateWhenNoBurnAddressesLeft(t *testing.T) {
+func TestMemberMigrationCreateWhenNomigrationAddressesLeft(t *testing.T) {
 	member1, err := newUserWithKeys()
 	require.NoError(t, err)
 	addBurnAddress(t)
@@ -91,7 +91,7 @@ func TestMemberMigrationCreateWithSameBurnAddress(t *testing.T) {
 	require.NoError(t, err)
 
 	ba := testutils.RandomString()
-	_, _ = signedRequest(t, &migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{ba, ba}})
+	_, _ = signedRequest(t, &migrationAdmin, "migration.addAddresses", map[string]interface{}{"migrationAddresses": []string{ba, ba}})
 
 	_, err = signedRequest(t, member1, "member.migrationCreate", nil)
 	require.NoError(t, err)
