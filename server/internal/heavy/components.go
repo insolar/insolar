@@ -300,6 +300,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		h.JetTree = jets
 		h.DropDB = drops
 		h.JetKeeper = JetKeeper
+		h.InitialStateReader = c.stateKeeper
 		h.BackupMaker = backupMaker
 		h.Sender = WmBus
 

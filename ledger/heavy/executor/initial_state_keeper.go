@@ -24,18 +24,27 @@ import (
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/object"
 )
 
-type InitialStateReader interface {
-	ReadForJetID(context.Context, insolar.JetID) ([]record.Index, error)
+type InitialStateAccessor interface {
+	ReadForJetID(context.Context, insolar.JetID) []record.Index
+}
+
+type InitialState struct {
+	JetIDs  []insolar.JetID
+	Drops   [][]byte
+	Indexes []record.Index
 }
 
 type InitialStateKeeper struct {
 	jetAccessor  jet.Accessor
 	indexStorage object.IndexAccessor
+	dropStorage  drop.Accessor
 
 	syncPulse       insolar.PulseNumber
+	jetDrops        map[insolar.JetID][]byte
 	abandonRequests map[insolar.JetID][]record.Index
 }
 
@@ -59,35 +68,56 @@ func (isk *InitialStateKeeper) Start(ctx context.Context) error {
 		return nil
 	}
 
-	logger.Debug("[ InitialStateKeeper ] Preparing initial state")
-	indexes, err := isk.indexStorage.ForPulse(ctx, isk.syncPulse)
+	logger.Debug("[ InitialStateKeeper ] prepareDrops")
+	isk.prepareDrops(ctx)
+	logger.Debug("[ InitialStateKeeper ] prepareAbandonRequests")
+	isk.prepareAbandonRequests(ctx)
+	logger.Debug("[ InitialStateKeeper ] Initial state prepared")
 
+	return nil
+}
+
+func (isk *InitialStateKeeper) prepareDrops(ctx context.Context) {
+	for _, jetID := range isk.jetAccessor.All(ctx, isk.syncPulse) {
+		dr, err := isk.dropStorage.ForPulse(ctx, jetID, isk.syncPulse)
+		if err != nil {
+			// TODO: panic
+		}
+
+		jetDrop := drop.MustEncode(&dr)
+
+		if dr.Split {
+			left, right := jet.Siblings(jetID)
+			isk.jetDrops[left] = jetDrop
+			isk.jetDrops[right] = jetDrop
+		} else {
+			isk.jetDrops[jetID] = jetDrop
+		}
+	}
+}
+
+func (isk *InitialStateKeeper) prepareAbandonRequests(ctx context.Context) {
+	logger := inslogger.FromContext(ctx)
+
+	for jetID := range isk.jetDrops {
+		isk.abandonRequests[jetID] = []record.Index{}
+	}
+
+	indexes, err := isk.indexStorage.ForPulse(ctx, isk.syncPulse)
 	if err != nil {
 		panic(fmt.Sprintf("[ InitialStateKeeper ] Cant recieve initial state indexes: %s", err.Error()))
 	}
-
 	if len(indexes) == 0 {
 		logger.Warnf("[ InitialStateKeeper ] No object indexes found in lastSyncPulseNumber: %s", isk.syncPulse.String())
 	}
 
-	// Build empty map with all known JetIDs
-	knownJets := isk.jetAccessor.All(ctx, isk.syncPulse)
-	for _, jetID := range knownJets {
-		isk.abandonRequests[jetID] = []record.Index{}
-	}
+	// Fill map
+	for _, index := range indexes {
 
-	// Fill map with pending indexes
-	for i := 0; i < len(indexes); i++ {
-		index := indexes[i]
-
-		// Check if lifeline has open pending requests
 		if index.Lifeline.EarliestOpenRequest != nil {
 			isk.addIndexToState(ctx, index)
 		}
 	}
-
-	logger.Debug("[ InitialStateKeeper ] Initial state prepared")
-	return nil
 }
 
 func (isk *InitialStateKeeper) addIndexToState(ctx context.Context, index record.Index) {
@@ -98,16 +128,20 @@ func (isk *InitialStateKeeper) addIndexToState(ctx context.Context, index record
 		// If this ever happens - we need to stop network
 		panic(fmt.Sprintf("[ InitialStateKeeper ] Jet tree changed on preparing state. New jet: %s", indexJet))
 	}
-
 	isk.abandonRequests[indexJet] = append(indexes, index)
 }
 
-func (isk *InitialStateKeeper) ReadForJetID(ctx context.Context, jetID insolar.JetID) ([]record.Index, error) {
+func (isk *InitialStateKeeper) Get(ctx context.Context, lightExecutor insolar.Reference) *InitialState {
+
+	return &InitialState{}
+}
+
+func (isk *InitialStateKeeper) ReadForJetID(ctx context.Context, jetID insolar.JetID) []record.Index {
 	indexes, ok := isk.abandonRequests[jetID]
 	if !ok {
 		// Someone changed jetTree in sync pulse while starting network
 		// If this ever happens - we need to stop network
 		panic(fmt.Sprintf("[ InitialStateKeeper ] Jet is not known: %s", jetID))
 	}
-	return indexes, nil
+	return indexes
 }

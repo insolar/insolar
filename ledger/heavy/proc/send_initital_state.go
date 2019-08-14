@@ -36,6 +36,7 @@ type SendInitialState struct {
 	dep struct {
 		startPulse     pulse.StartPulse
 		jetKeeper      executor.JetKeeper
+		initialState   executor.InitialStateAccessor
 		jetTree        jet.Storage
 		jetCoordinator jet.Coordinator
 		dropDB         *drop.DB
@@ -47,6 +48,7 @@ type SendInitialState struct {
 func (p *SendInitialState) Dep(
 	startPulse pulse.StartPulse,
 	jetKeeper executor.JetKeeper,
+	initialState executor.InitialStateAccessor,
 	jetTree jet.Storage,
 	jetCoordinator jet.Coordinator,
 	dropDB *drop.DB,
@@ -55,6 +57,7 @@ func (p *SendInitialState) Dep(
 ) {
 	p.dep.startPulse = startPulse
 	p.dep.jetKeeper = jetKeeper
+	p.dep.initialState = initialState
 	p.dep.jetTree = jetTree
 	p.dep.jetCoordinator = jetCoordinator
 	p.dep.dropDB = dropDB
@@ -71,6 +74,7 @@ func NewSendInitialState(meta payload.Meta) *SendInitialState {
 func (p *SendInitialState) Proceed(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
 	startPulse, err := p.dep.startPulse.PulseNumber()
+
 	if err != nil {
 		errStr := "Couldn't get start pulse"
 		msg, newErr := payload.NewMessage(&payload.Error{Text: errStr, Code: uint32(payload.CodeNoStartPulse)})
@@ -84,6 +88,7 @@ func (p *SendInitialState) Proceed(ctx context.Context) error {
 	if err != nil {
 		logger.Fatal("Couldn't unmarshall request", err)
 	}
+
 	req, ok := msg.(*payload.GetLightInitialState)
 	if !ok {
 		return fmt.Errorf("unexpected payload type %T", msg)
