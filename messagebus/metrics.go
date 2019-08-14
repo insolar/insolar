@@ -50,7 +50,7 @@ func init() {
 	err := view.Register(
 		&view.View{
 			Measure:     statParcelsSentTotal,
-			Aggregation: view.Sum(),
+			Aggregation: view.Count(),
 			TagKeys:     []tag.Key{tagMessageType},
 		},
 		&view.View{
