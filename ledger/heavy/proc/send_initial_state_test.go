@@ -28,7 +28,6 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message"
 	"context"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/store"
 )
@@ -102,7 +101,7 @@ func TestSendInitialState_ProceedForNetworkStart(t *testing.T) {
 	jetID := gen.JetID()
 	jetTree := jet.NewStorageMock(t)
 	jetTree.AllMock.Return([]insolar.JetID{ jetID })
-	light := testutils.RandomRef()
+	light := gen.Reference()
 	jetCoordinator := jet.NewCoordinatorMock(t)
 	jetCoordinator.LightExecutorForJetMock.Return(&light, nil)
 	dropItem := drop.MustEncode(&drop.Drop{
@@ -151,7 +150,7 @@ func TestSendInitialState_ProceedForJoiner(t *testing.T) {
 	jetKeeper.TopSyncPulseMock.Return(topSyncPulse.PulseNumber)
 	pulseAccessor := pulse.NewAccessorMock(t)
 	pulseAccessor.ForPulseNumberMock.Return(topSyncPulse, nil)
-	light := testutils.RandomRef()
+	light := gen.Reference()
 	sender := bus.NewSenderMock(t)
 	sender.ReplyMock.Set(func(ctx context.Context, origin payload.Meta, reply *message.Message) {
 		result, err := payload.Unmarshal(reply.Payload)
