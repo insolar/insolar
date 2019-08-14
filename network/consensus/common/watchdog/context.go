@@ -83,7 +83,7 @@ func Call(ctx context.Context, frameName string, fn func(context.Context)) {
 
 	frame := from(ctx)
 	if frame == nil {
-		go fn(ctx)
+		fn(ctx)
 		return
 	}
 
