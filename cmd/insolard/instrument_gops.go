@@ -14,17 +14,19 @@
 // limitations under the License.
 //
 
-package insolar
+// +build debug
+
+package main
 
 import (
-	"context"
+	"github.com/google/gops/agent"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/insolar.ContractRequester -o ../testutils -s _mock.go -g
-
-// ContractRequester is the global contract requester handler. Other system parts communicate with contract requester through it.
-type ContractRequester interface {
-	Call(ctx context.Context, msg Message) (Reply, *Reference, error)
-	SendRequest(ctx context.Context, ref *Reference, method string, argsIn []interface{}) (Reply, error)
-	SendRequestWithPulse(ctx context.Context, ref *Reference, method string, argsIn []interface{}, pulse PulseNumber) (Reply, *Reference, error)
+func init() {
+	toLaunch = append(toLaunch, func(params inputParams) error {
+		if err := agent.Listen(agent.Options{}); err != nil {
+			return err
+		}
+		return nil
+	})
 }

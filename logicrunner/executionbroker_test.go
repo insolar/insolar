@@ -203,15 +203,15 @@ func (s *ExecutionBrokerSuite) TestImmutable_NotPending() {
 	waitImmutableChannel := make(chan struct{})
 
 	rem := NewRequestsExecutorMock(s.T())
-	rem.ExecuteAndSaveMock.Set(func(_ context.Context, t *common.Transcript) (r insolar.Reply, r1 error) {
-		if !t.Request.Immutable {
+	rem.ExecuteAndSaveMock.Return(nil, nil)
+
+	rem.SendReplyMock.Set(func(ctx context.Context, current *common.Transcript, re insolar.Reply, err error) {
+		if !current.Request.Immutable {
 			waitMutableChannel <- struct{}{}
 		} else {
 			waitImmutableChannel <- struct{}{}
 		}
-		return nil, nil
 	})
-	rem.SendReplyMock.Return()
 
 	er := executionregistry.NewExecutionRegistryMock(s.T()).
 		RegisterMock.Return().
@@ -237,9 +237,9 @@ func (s *ExecutionBrokerSuite) TestImmutable_NotPending() {
 	s.Require().True(wait(processorStatus, b, false))
 	s.Require().Empty(waitMutableChannel)
 
-	s.Equal(b.mutable.Length(), 0)
-	s.Equal(b.immutable.Length(), 0)
-	s.Equal(b.finished.Length(), 2)
+	s.Equal(0, b.mutable.Length())
+	s.Equal(0, b.immutable.Length())
+	s.Equal(2, b.finished.Length())
 
 	rotationResults := b.rotate(10)
 	s.Len(rotationResults.Requests, 0)

@@ -75,6 +75,7 @@ type tcpTransport struct {
 	fixedPublicAddress string
 	handler            StreamHandler
 	cancel             context.CancelFunc
+	dialer             net.Dialer
 }
 
 func newTCPTransport(listenAddress, fixedPublicAddress string, handler StreamHandler) *tcpTransport {
@@ -82,6 +83,7 @@ func newTCPTransport(listenAddress, fixedPublicAddress string, handler StreamHan
 		address:            listenAddress,
 		fixedPublicAddress: fixedPublicAddress,
 		handler:            handler,
+		dialer:             net.Dialer{Timeout: 3 * time.Second},
 	}
 }
 
@@ -91,18 +93,14 @@ func (t *tcpTransport) Address() string {
 
 func (t *tcpTransport) Dial(ctx context.Context, address string) (io.ReadWriteCloser, error) {
 	logger := inslogger.FromContext(ctx).WithField("address", address)
-	tcpAddress, err := net.ResolveTCPAddr("tcp", address)
-	if err != nil {
-		return nil, errors.New("[ Dial ] Failed to get tcp address")
-	}
 
-	conn, err := net.DialTCP("tcp", nil, tcpAddress)
+	conn, err := t.dialer.Dial("tcp", address)
 	if err != nil {
 		logger.Warn("[ Dial ] Failed to open connection: ", err)
 		return nil, errors.Wrap(err, "[ Dial ] Failed to open connection")
 	}
 
-	setupConnection(ctx, conn)
+	setupConnection(ctx, conn.(*net.TCPConn))
 
 	return conn, nil
 }

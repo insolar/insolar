@@ -268,7 +268,7 @@ func TestJetCoordinator_NodeForJet_GoToHeavy(t *testing.T) {
 	generator := entropygenerator.StandardEntropyGenerator{}
 	pulseAccessor.LatestMock.Return(insolar.Pulse{PulseNumber: insolar.FirstPulseNumber, Entropy: generator.GenerateEntropy()}, nil)
 
-	expectedID := insolar.NewReference(testutils.RandomID())
+	expectedID := insolar.NewReference(gen.ID())
 	activeNodesStorageMock := node.NewAccessorMock(t)
 	activeNodesStorageMock.InRoleMock.Set(func(p insolar.PulseNumber, p1 insolar.StaticRole) (r []insolar.Node, r1 error) {
 		require.Equal(t, insolar.FirstPulseNumber, int(p))
@@ -302,7 +302,7 @@ func TestJetCoordinator_NodeForJet_GoToLight(t *testing.T) {
 	generator := entropygenerator.StandardEntropyGenerator{}
 	pulseAccessor.LatestMock.Return(insolar.Pulse{PulseNumber: insolar.PulseNumber(insolar.FirstPulseNumber + 1), Entropy: generator.GenerateEntropy()}, nil)
 
-	expectedID := insolar.NewReference(testutils.RandomID())
+	expectedID := insolar.NewReference(gen.ID())
 	activeNodesStorageMock := node.NewAccessorMock(t)
 	activeNodesStorageMock.InRoleMock.Set(func(p insolar.PulseNumber, p1 insolar.StaticRole) (r []insolar.Node, r1 error) {
 		require.Equal(t, insolar.FirstPulseNumber+1, int(p))

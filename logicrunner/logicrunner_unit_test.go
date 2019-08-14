@@ -210,7 +210,7 @@ func (suite *LogicRunnerTestSuite) TestSagaCallAcceptNotificationHandler() {
 	var usedReason insolar.Reference
 	var usedReturnMode record.ReturnMode
 
-	suite.cr.CallMock.Set(func(ctx context.Context, msg insolar.Message) (insolar.Reply, error) {
+	suite.cr.CallMock.Set(func(ctx context.Context, msg insolar.Message) (insolar.Reply, *insolar.Reference, error) {
 		suite.Require().Equal(insolar.TypeCallMethod, msg.Type())
 		cm := msg.(*message.CallMethod)
 		usedCaller = cm.Caller
@@ -221,7 +221,7 @@ func (suite *LogicRunnerTestSuite) TestSagaCallAcceptNotificationHandler() {
 			Request: dummyRequestRef,
 		}
 		callMethodChan <- struct{}{}
-		return result, nil
+		return result, nil, nil
 	})
 
 	registerResultChan := make(chan struct{})
@@ -344,7 +344,7 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 	suite.am.HasPendingsMock.Return(false, nil)
 
 	suite.am.RegisterIncomingRequestMock.Set(func(ctx context.Context, r *record.IncomingRequest) (*payload.RequestInfo, error) {
-		reqId := testutils.RandomID()
+		reqId := gen.ID()
 		return &payload.RequestInfo{RequestID: reqId, ObjectID: *objectRef.Record()}, nil
 	})
 

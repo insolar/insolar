@@ -54,6 +54,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/misbehavior"
+	"math"
 	"sync"
 	"time"
 
@@ -233,17 +234,40 @@ func (p *PrepRealm) prepareEphemeralPolling(ctxPrep context.Context) {
 		return
 	}
 
+	minDuration := p.ephemeralFeeder.GetMinDuration()
+	beforeNextRound := p.ephemeralFeeder.GetMaxDuration()
+
+	var startTimer *time.Timer
+	var startCh <-chan time.Time
+
+	if beforeNextRound < math.MaxInt64 {
+		if beforeNextRound < minDuration {
+			beforeNextRound = minDuration
+		}
+
+		if beforeNextRound < time.Second {
+			beforeNextRound = time.Second
+		}
+
+		startTimer = time.NewTimer(beforeNextRound)
+		startCh = startTimer.C
+	}
+
 	p.AddPoll(func(ctxOfPolling context.Context) bool {
 		select {
 		case <-ctxOfPolling.Done():
 		case <-ctxPrep.Done():
-			// stop polling when prep is finished
+		case <-startCh:
+			go p.pushEphemeralPulse(ctxPrep)
 		default:
-			if !p.checkEphemeralStart(ctxPrep) {
+			if !p.checkEphemeralStartByCandidate(ctxPrep) {
 				return true // stay in polling
 			}
 			go watchdog.Call(ctxPrep, "pushEphemeralPulse", p.pushEphemeralPulse)
 			// stop polling anyway - repeating of unsuccessful is bad
+		}
+		if startTimer != nil {
+			startTimer.Stop()
 		}
 		return false
 	})
@@ -265,7 +289,7 @@ func (p *PrepRealm) pushEphemeralPulse(ctx context.Context) {
 	}
 }
 
-func (p *PrepRealm) checkEphemeralStart(ctx context.Context) bool {
+func (p *PrepRealm) checkEphemeralStartByCandidate(ctx context.Context) bool {
 	jc, _ := p.candidateFeeder.PickNextJoinCandidate()
 	if jc != nil {
 		inslogger.FromContext(ctx).Debug("ephemeral polling has found a candidate: ", jc)

@@ -52,6 +52,7 @@ package adapters
 
 import (
 	"context"
+	"math"
 	"sync"
 	"time"
 
@@ -310,6 +311,10 @@ func (f *EphemeralControlFeeder) CanAcceptTimePulseToStopEphemeral(pd pulse.Data
 
 func (f *EphemeralControlFeeder) GetMinDuration() time.Duration {
 	return f.pulseDuration
+}
+
+func (f *EphemeralControlFeeder) GetMaxDuration() time.Duration {
+	return math.MaxInt64
 }
 
 func (f *EphemeralControlFeeder) OnNonEphemeralPacket(ctx context.Context, parser transport.PacketParser, inbound endpoints.Inbound) error {
