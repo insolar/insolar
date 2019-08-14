@@ -99,6 +99,7 @@ type Base struct {
 
 	Options *network.Options
 
+	authorizeTime   time.Time
 	bootstrapETA    time.Duration
 	originCandidate *adapters.Candidate
 

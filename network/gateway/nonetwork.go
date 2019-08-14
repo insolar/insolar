@@ -88,6 +88,7 @@ func (g *NoNetwork) pause() time.Duration {
 }
 
 func (g *NoNetwork) Run(ctx context.Context, pulse insolar.Pulse) {
+	g.authorizeTime = time.Time{}
 	cert := g.CertificateManager.GetCertificate()
 	origin := g.NodeKeeper.GetOrigin()
 	discoveryNodes := network.ExcludeOrigin(cert.GetDiscoveryNodes(), origin.ID())

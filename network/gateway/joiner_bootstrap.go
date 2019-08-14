@@ -131,6 +131,7 @@ func (g *JoinerBootstrap) authorize(ctx context.Context) (*packet.Permit, error)
 			continue
 		}
 
+		logger.Infof("Trying to authorize to node: %s", h.String())
 		res, err := g.BootstrapRequester.Authorize(ctx, h, cert)
 		if err != nil {
 			logger.Warnf("Error authorizing to host %s: %s", h.String(), err.Error())

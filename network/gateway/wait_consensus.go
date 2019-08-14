@@ -69,6 +69,7 @@ type WaitConsensus struct {
 }
 
 func (g *WaitConsensus) Run(ctx context.Context, pulse insolar.Pulse) {
+	g.authorizeTime = time.Now()
 	select {
 	case <-time.After(g.bootstrapETA):
 		g.Gatewayer.SwitchState(ctx, insolar.NoNetworkState, pulse)
