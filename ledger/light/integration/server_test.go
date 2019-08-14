@@ -24,13 +24,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/insolar/insolar/network"
+	"github.com/pkg/errors"
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
-	"github.com/pkg/errors"
-
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
+
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/cryptography"
@@ -52,6 +51,7 @@ import (
 	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/network"
 	networknode "github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/platformpolicy"
 )
