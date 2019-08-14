@@ -30,6 +30,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/api"
+
 	pulsewatcher "github.com/insolar/insolar/cmd/pulsewatcher/config"
 	"github.com/insolar/insolar/insolar"
 	"github.com/olekukonko/tablewriter"
@@ -76,6 +78,7 @@ func displayResultsTable(results [][]string, ready bool, buffer *bytes.Buffer) {
 		"Active List Size",
 		"Working List Size",
 		"Role",
+		"Timestamp",
 		"Error",
 	})
 	table.SetBorder(false)
@@ -96,7 +99,8 @@ func displayResultsTable(results [][]string, ready bool, buffer *bytes.Buffer) {
 	table.SetFooter([]string{
 		"", "", "", "", "",
 		"Insolar State", stateString,
-		"Time", time.Now().Format(time.RFC3339),
+		"Time", time.Now().Format("2006-01-02 15:04:05.999999"),
+		"",
 	})
 	table.SetFooterColor(
 		tablewriter.Colors{},
@@ -110,6 +114,7 @@ func displayResultsTable(results [][]string, ready bool, buffer *bytes.Buffer) {
 
 		tablewriter.Colors{},
 		tablewriter.Colors{},
+		tablewriter.Colors{},
 	)
 	table.SetColumnColor(
 		tablewriter.Colors{},
@@ -118,6 +123,7 @@ func displayResultsTable(results [][]string, ready bool, buffer *bytes.Buffer) {
 		tablewriter.Colors{},
 		tablewriter.Colors{},
 
+		tablewriter.Colors{},
 		tablewriter.Colors{},
 		tablewriter.Colors{},
 		tablewriter.Colors{},
@@ -147,6 +153,7 @@ func displayResultsJSON(results [][]string, _ bool, _ *bytes.Buffer) {
 		ActiveListSize     int64
 		WorkingListSize    int64
 		Role               string
+		Timestamp          string
 		Error              string
 	}
 
@@ -161,7 +168,8 @@ func displayResultsJSON(results [][]string, _ bool, _ *bytes.Buffer) {
 		doc[i].ActiveListSize = parseInt64(res[5])
 		doc[i].WorkingListSize = parseInt64(res[6])
 		doc[i].Role = res[7]
-		doc[i].Error = res[8]
+		doc[i].Timestamp = res[8]
+		doc[i].Error = res[9]
 	}
 
 	jsonDoc, err := json.MarshalIndent(doc, "", "    ")
@@ -200,7 +208,7 @@ func collectNodesStatuses(conf *pulsewatcher.Config, lastResults [][]string) ([]
 					results[i][0] = url
 					results[i][len(results[i])-1] = errStr
 				} else {
-					results[i] = []string{url, "", "", "", "", "", "", "", errStr}
+					results[i] = []string{url, "", "", "", "", "", "", "", "", errStr}
 				}
 				errored++
 				lock.Unlock()
@@ -223,6 +231,8 @@ func collectNodesStatuses(conf *pulsewatcher.Config, lastResults [][]string) ([]
 					}
 					ActiveListSize  int
 					WorkingListSize int
+					Nodes           []api.Node
+					Timestamp       string
 				}
 			}
 			err = json.Unmarshal(data, &out)
@@ -240,6 +250,7 @@ func collectNodesStatuses(conf *pulsewatcher.Config, lastResults [][]string) ([]
 				strconv.Itoa(out.Result.ActiveListSize),
 				strconv.Itoa(out.Result.WorkingListSize),
 				out.Result.Origin.Role,
+				out.Result.Timestamp,
 				"",
 			}
 			state = state && out.Result.NetworkState == insolar.CompleteNetworkState.String()

@@ -52,6 +52,7 @@ package servicenetwork
 
 import (
 	"context"
+	"time"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/version"
@@ -77,6 +78,8 @@ func (n *ServiceNetwork) GetNetworkStatus() insolar.StatusReply {
 	reply.Origin = n.NodeKeeper.GetOrigin()
 
 	reply.Version = version.Version
+
+	reply.Timestamp = time.Now()
 
 	return reply
 }
