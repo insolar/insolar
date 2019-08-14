@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
@@ -29,12 +30,6 @@ import (
 
 // SeedArgs is arguments that Seed service accepts.
 type SeedArgs struct{}
-
-// SeedReply is reply for Seed service requests.
-type SeedReply struct {
-	Seed    []byte
-	TraceID string
-}
 
 // NodeService is a service that provides API for getting new seed and status.
 type NodeService struct {
@@ -65,7 +60,7 @@ func NewNodeService(runner *Runner) *NodeService {
 // 		"id": str|int|null // same as in request
 // 	}
 //
-func (s *NodeService) GetSeed(r *http.Request, args *SeedArgs, reply *SeedReply) error {
+func (s *NodeService) GetSeed(r *http.Request, args *SeedArgs, reply *requester.SeedReply) error {
 	traceID := utils.RandTraceID()
 	ctx, inslog := inslogger.WithTraceField(context.Background(), traceID)
 

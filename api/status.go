@@ -20,34 +20,15 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/version"
 )
 
-type Node struct {
-	Reference string
-	Role      string
-	IsWorking bool
-	ID        uint32
-}
-
-// StatusReply is reply for Status service requests.
-type StatusReply struct {
-	NetworkState       string
-	Origin             Node
-	ActiveListSize     int
-	WorkingListSize    int
-	Nodes              []Node
-	PulseNumber        uint32
-	NetworkPulseNumber uint32
-	Entropy            []byte
-	Version            string
-}
-
 // Get returns status info
-func (s *NodeService) GetStatus(r *http.Request, args *interface{}, reply *StatusReply) error {
+func (s *NodeService) GetStatus(r *http.Request, args *interface{}, reply *requester.StatusResponse) error {
 	traceID := utils.RandTraceID()
 	ctx, inslog := inslogger.WithTraceField(context.Background(), traceID)
 
@@ -59,9 +40,9 @@ func (s *NodeService) GetStatus(r *http.Request, args *interface{}, reply *Statu
 	reply.ActiveListSize = statusReply.ActiveListSize
 	reply.WorkingListSize = statusReply.WorkingListSize
 
-	nodes := make([]Node, reply.ActiveListSize)
+	nodes := make([]requester.Node, reply.ActiveListSize)
 	for i, node := range statusReply.Nodes {
-		nodes[i] = Node{
+		nodes[i] = requester.Node{
 			Reference: node.ID().String(),
 			Role:      node.Role().String(),
 			IsWorking: node.GetPower() > 0,
@@ -70,7 +51,7 @@ func (s *NodeService) GetStatus(r *http.Request, args *interface{}, reply *Statu
 	}
 	reply.Nodes = nodes
 
-	reply.Origin = Node{
+	reply.Origin = requester.Node{
 		Reference: statusReply.Origin.ID().String(),
 		Role:      statusReply.Origin.Role().String(),
 		IsWorking: statusReply.Origin.GetPower() > 0,

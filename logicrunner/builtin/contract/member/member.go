@@ -168,9 +168,9 @@ func (m *Member) Call(signedRequest []byte) (interface{}, error) {
 		return m.registerNodeCall(params)
 	case "contract.getNodeRef":
 		return m.getNodeRefCall(params)
-	case "migration.addBurnAddresses":
-		return m.addBurnAddressesCall(params)
-	case "wallet.getBalance":
+	case "migration.addAddresses":
+		return m.addAddressesCall(params)
+	case "member.getBalance":
 		return m.getBalanceCall(params)
 	case "member.transfer":
 		return m.transferCall(params)
@@ -206,11 +206,11 @@ func (m *Member) registerNodeCall(params map[string]interface{}) (interface{}, e
 
 	return m.registerNode(publicKey, role)
 }
-func (m *Member) addBurnAddressesCall(params map[string]interface{}) (interface{}, error) {
+func (m *Member) addAddressesCall(params map[string]interface{}) (interface{}, error) {
 
-	burnAddressesI, ok := params["burnAddresses"].([]interface{})
+	migrationAddressesI, ok := params["migrationAddresses"].([]interface{})
 	if !ok {
-		return nil, fmt.Errorf("incorect input: failed to get 'burnAddresses' param")
+		return nil, fmt.Errorf("incorect input: failed to get 'migrationAddresses' param")
 	}
 
 	rootDomain := rootdomain.GetObject(m.RootDomain)
@@ -220,14 +220,14 @@ func (m *Member) addBurnAddressesCall(params map[string]interface{}) (interface{
 		return nil, fmt.Errorf("only migration daemon admin can call this method")
 	}
 
-	burnAddressesStr := make([]string, len(burnAddressesI))
-	for i, ba := range burnAddressesI {
-		burnAddressesStr[i] = ba.(string)
+	migrationAddressesStr := make([]string, len(migrationAddressesI))
+	for i, ba := range migrationAddressesI {
+		migrationAddressesStr[i] = ba.(string)
 	}
 
-	err := rootDomain.AddMigrationAddresses(burnAddressesStr)
+	err := rootDomain.AddMigrationAddresses(migrationAddressesStr)
 	if err != nil {
-		return nil, fmt.Errorf("failed to add burn address: %s", err.Error())
+		return nil, fmt.Errorf("failed to add migration addresses: %s", err.Error())
 	}
 
 	return nil, nil
