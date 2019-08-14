@@ -44,8 +44,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-const sendRetryCount = 5
-
 type contractInfo struct {
 	reference *insolar.Reference
 	testName  string
@@ -301,26 +299,20 @@ func makeSignedRequest(user *user, method string, params interface{}) (interface
 		caller = ""
 	}
 
-	var resp requester.ContractResponse
-	currentIterNum := 1
-	for ; currentIterNum <= sendRetryCount; currentIterNum++ {
-		res, err := requester.Send(ctx, TestAPIURL, rootCfg, &requester.Params{
-			CallSite:   method,
-			CallParams: params,
-			PublicKey:  user.pubKey,
-			Test:       caller})
+	res, err := requester.Send(ctx, TestAPIURL, rootCfg, &requester.Params{
+		CallSite:   method,
+		CallParams: params,
+		PublicKey:  user.pubKey,
+		Test:       caller})
 
-		if err != nil {
-			return nil, "", err
-		}
+	if err != nil {
+		return nil, "", err
+	}
 
-		resp = requester.ContractResponse{}
-		err = json.Unmarshal(res, &resp)
-		if err != nil {
-			return nil, "", err
-		}
-
-		break
+	resp := requester.ContractResponse{}
+	err = json.Unmarshal(res, &resp)
+	if err != nil {
+		return nil, "", err
 	}
 
 	if resp.Error != nil {
@@ -331,7 +323,7 @@ func makeSignedRequest(user *user, method string, params interface{}) (interface
 		return nil, "", errors.New("Error and result are nil")
 	}
 
-	return resp.Result.ContractResult, resp.Result.RequestReference, nil
+	return resp.Result.CallResult, resp.Result.RequestReference, nil
 
 }
 

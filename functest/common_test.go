@@ -30,6 +30,13 @@ import (
 	"github.com/insolar/insolar/api/requester"
 )
 
+func TestGetRequest(t *testing.T) {
+	postResp, err := http.Get(TestRPCUrl)
+	defer postResp.Body.Close()
+	require.NoError(t, err)
+	require.Equal(t, http.StatusMethodNotAllowed, postResp.StatusCode)
+}
+
 func TestWrongUrl(t *testing.T) {
 	jsonValue, _ := json.Marshal(postParams{})
 	testURL := HOST + "/not_api"

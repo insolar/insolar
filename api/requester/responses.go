@@ -38,7 +38,7 @@ type ContractResponse struct {
 }
 
 type ContractResult struct {
-	ContractResult   interface{} `json:"callResult,omitempty"`
+	CallResult       interface{} `json:"callResult,omitempty"`
 	RequestReference string      `json:"requestReference,omitempty"`
 	TraceID          string      `json:"traceID,omitempty"`
 }

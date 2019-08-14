@@ -75,7 +75,7 @@ func (suite *TimeoutSuite) TestRunner_callHandler_NoTimeout() {
 	err = json.Unmarshal(resp, &result)
 	suite.NoError(err)
 	suite.Nil(result.Error)
-	suite.Equal("OK", result.Result.ContractResult)
+	suite.Equal("OK", result.Result.CallResult)
 }
 
 func (suite *TimeoutSuite) TestRunner_callHandler_Timeout() {

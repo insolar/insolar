@@ -67,7 +67,7 @@ func extractReference(response []byte, requestTypeMsg string) insolar.Reference 
 		os.Exit(1)
 	}
 
-	ref, err := insolar.NewReferenceFromBase58(r.Result.ContractResult.(string))
+	ref, err := insolar.NewReferenceFromBase58(r.Result.CallResult.(string))
 	checkError(fmt.Sprintf("Failed to construct ref from '%s' node response", requestTypeMsg), err)
 
 	return *ref
@@ -86,7 +86,7 @@ func (g *certGen) registerNode() insolar.Reference {
 
 	ctx := inslogger.ContextWithTrace(context.Background(), "insolarUtility")
 	response, err := requester.Send(ctx, g.API, userCfg, &params)
-	checkError("Failed to execute register node params", err)
+	checkError("Failed to execute register node request", err)
 
 	return extractReference(response, "registerNode")
 }

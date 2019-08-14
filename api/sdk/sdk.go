@@ -189,8 +189,8 @@ func (sdk *SDK) CreateMember() (*Member, string, error) {
 	var memberRef string
 	var contractResultCasted map[string]interface{}
 	var ok bool
-	if contractResultCasted, ok = response.ContractResult.(map[string]interface{}); !ok {
-		return nil, "", errors.Errorf("failed to cast result: expected map[string]interface{}, got %T", response.ContractResult)
+	if contractResultCasted, ok = response.CallResult.(map[string]interface{}); !ok {
+		return nil, "", errors.Errorf("failed to cast result: expected map[string]interface{}, got %T", response.CallResult)
 	}
 	if memberRef, ok = contractResultCasted["reference"].(string); !ok {
 		return nil, "", errors.Errorf("failed to cast reference: expected string, got %T", contractResultCasted["reference"])
@@ -251,7 +251,7 @@ func (sdk *SDK) GetBalance(m *Member) (*big.Int, error) {
 		return nil, errors.Wrap(err, "request was failed ")
 	}
 
-	result, ok := new(big.Int).SetString(response.ContractResult.(map[string]interface{})["balance"].(string), 10)
+	result, ok := new(big.Int).SetString(response.CallResult.(map[string]interface{})["balance"].(string), 10)
 	if !ok {
 		return nil, errors.Errorf("can't parse returned balance")
 	}

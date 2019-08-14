@@ -273,10 +273,10 @@ func waitForNet() error {
 				break
 			}
 			if resp.NetworkState != insolar.CompleteNetworkState.String() {
-				fmt.Println("[ waitForNet ] Good response from port " + port + ". Net is not ready. ContractResponse: " + resp.NetworkState)
+				fmt.Println("[ waitForNet ] Good response from port " + port + ". Net is not ready. Response: " + resp.NetworkState)
 				break
 			}
-			fmt.Println("[ waitForNet ] Good response from port " + port + ". Net is ready. ContractResponse: " + resp.NetworkState)
+			fmt.Println("[ waitForNet ] Good response from port " + port + ". Net is ready. Response: " + resp.NetworkState)
 			currentOk++
 		}
 		if currentOk == numNodes {

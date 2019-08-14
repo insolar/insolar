@@ -67,7 +67,7 @@ func (cs *ContractService) Call(req *http.Request, args *requester.Params, reque
 		return err
 	}
 
-	result.ContractResult = callResult
+	result.CallResult = callResult
 	result.TraceID = traceID
 
 	return nil
