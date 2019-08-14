@@ -141,9 +141,9 @@ func (i *HelloWorldInstance) Count(ctx context.Context) (int, error) {
 	return int(rv), nil
 }
 
-func (i *HelloWorldInstance) PulseNumber(ctx context.Context) (int, error) {
+func (i *HelloWorldInstance) PulseNumber(t *testing.T, ctx context.Context) (int, error) {
 	member := &user{i.Ref.String(), root.privKey, root.pubKey}
-	result, err := signedRequest(member, "PulseNumber", nil)
+	result, err := signedRequest(t, member, "PulseNumber", nil)
 	if err != nil {
 		return 0, err
 	}
@@ -253,7 +253,7 @@ func TestCallPulseNumber(t *testing.T) {
 	hw, err := NewHelloWorld(ctx)
 	r.NoError(err, "Unexpected error")
 	a.NotEmpty(hw.Ref, "Ref doesn't exists")
-	pulseNum, err := hw.PulseNumber(ctx)
+	pulseNum, err := hw.PulseNumber(t, ctx)
 	r.NoError(err)
 
 	r.True(pulseNum > 0)

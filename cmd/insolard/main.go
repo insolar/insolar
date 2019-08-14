@@ -21,14 +21,15 @@ import (
 	"io/ioutil"
 	"path/filepath"
 
+	"github.com/pkg/errors"
+	"github.com/spf13/cobra"
+	jww "github.com/spf13/jwalterweatherman"
+
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/server"
-	"github.com/pkg/errors"
-	"github.com/spf13/cobra"
-	jww "github.com/spf13/jwalterweatherman"
 )
 
 type inputParams struct {
@@ -51,6 +52,9 @@ func parseInputParams() inputParams {
 	return result
 }
 
+// toLaunch is an array of routines created in instrumentations
+var toLaunch []func(inputParams) error
+
 func main() {
 	params := parseInputParams()
 	jww.SetStdoutThreshold(jww.LevelDebug)
@@ -58,6 +62,12 @@ func main() {
 	role, err := readRole(params.configPath)
 	if err != nil {
 		log.Fatal(errors.Wrap(err, "readRole failed"))
+	}
+
+	for _, f := range toLaunch {
+		if err := f(params); err != nil {
+			log.Warnf("Error when launch startup routine: %s", err)
+		}
 	}
 
 	switch role {

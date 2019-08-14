@@ -25,6 +25,7 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/log"
 
 	"github.com/stretchr/testify/require"
 
@@ -67,7 +68,7 @@ func TestRetryerSend_SendErrored(t *testing.T) {
 
 	pa := pulse.NewAccessorMock(t)
 	pa.LatestMock.Set(accessorMock(t).Latest)
-	r := NewRetrySender(sender, pa, 3)
+	r := NewRetrySender(sender, pa, 3, 1)
 	reps, done := r.SendRole(context.Background(), msg, insolar.DynamicRoleLightExecutor, gen.Reference())
 	defer done()
 	for range reps {
@@ -100,7 +101,7 @@ func TestRetryerSend_Send_Timeout(t *testing.T) {
 
 	pa := pulse.NewAccessorMock(t)
 	pa.LatestMock.Set(accessorMock(t).Latest)
-	r := NewRetrySender(sender, pa, 3)
+	r := NewRetrySender(sender, pa, 3, 1)
 	reps, _ := r.SendRole(context.Background(), msg, insolar.DynamicRoleLightExecutor, gen.Reference())
 	close(ch)
 	select {
@@ -133,11 +134,54 @@ func TestRetryerSend(t *testing.T) {
 
 	pa := pulse.NewAccessorMock(t)
 	pa.LatestMock.Set(accessorMock(t).Latest)
-	r := NewRetrySender(sender, pa, 3)
+	r := NewRetrySender(sender, pa, 3, 1)
 	reps, done := r.SendRole(context.Background(), msg, insolar.DynamicRoleLightExecutor, gen.Reference())
 
 	isDone := make(chan<- interface{})
 	go sendTestReply(&payload.Error{Text: "object is deactivated", Code: payload.CodeUnknown}, innerReps, isDone)
+
+	var success bool
+	for rep := range reps {
+		replyPayload, err := payload.UnmarshalFromMeta(rep.Payload)
+		require.Nil(t, err)
+
+		switch p := replyPayload.(type) {
+		case *payload.Error:
+			switch p.Code {
+			case payload.CodeUnknown:
+				success = true
+			}
+		}
+
+		if success {
+			break
+		}
+	}
+	done()
+
+	require.True(t, waitForChannelClosed(innerReps))
+}
+
+// Send msg, get one response (non-retryable error, do not expect second message)
+func TestRetryerSend_ExpectTwoResponse_GotOneError(t *testing.T) {
+	sender := NewSenderMock(t)
+	innerReps := make(chan *message.Message)
+	sender.SendRoleMock.Set(func(p context.Context, p1 *message.Message, p2 insolar.DynamicRole, p3 insolar.Reference) (r <-chan *message.Message, r1 func()) {
+		return innerReps, func() { close(innerReps) }
+	})
+
+	msg, err := payload.NewMessage(&payload.State{})
+	require.NoError(t, err)
+
+	pa := pulse.NewAccessorMock(t)
+	pa.LatestMock.Set(accessorMock(t).Latest)
+	r := NewRetrySender(sender, pa, 3, 2)
+	reps, done := r.SendRole(context.Background(), msg, insolar.DynamicRoleLightExecutor, gen.Reference())
+
+	isDone := make(chan<- interface{})
+	go func() {
+		sendTestReply(&payload.Error{Text: "object is deactivated", Code: payload.CodeUnknown}, innerReps, isDone)
+	}()
 
 	var success bool
 	for rep := range reps {
@@ -182,7 +226,7 @@ func TestRetryerSend_FlowCancelled_Once(t *testing.T) {
 
 	pa := pulse.NewAccessorMock(t)
 	pa.LatestMock.Set(accessorMock(t).Latest)
-	r := NewRetrySender(sender, pa, 3)
+	r := NewRetrySender(sender, pa, 3, 1)
 
 	reps, done := r.SendRole(context.Background(), msg, insolar.DynamicRoleLightExecutor, gen.Reference())
 	defer done()
@@ -211,8 +255,10 @@ func TestRetryerSend_FlowCancelled_Once_SeveralReply(t *testing.T) {
 	sender.SendRoleMock.Set(func(p context.Context, p1 *message.Message, p2 insolar.DynamicRole, p3 insolar.Reference) (r <-chan *message.Message, r1 func()) {
 		innerReps = make(chan *message.Message)
 		if sender.SendRoleAfterCounter() == 0 {
+			log.Error("send test error code flow canceled")
 			go sendTestReply(&payload.Error{Text: "test error", Code: payload.CodeFlowCanceled}, innerReps, make(chan<- interface{}))
 		} else {
+			log.Error("send test error code flow not-canceled")
 			go sendTestReply(&payload.State{}, innerReps, make(chan<- interface{}))
 			go sendTestReply(&payload.State{}, innerReps, make(chan<- interface{}))
 		}
@@ -225,7 +271,7 @@ func TestRetryerSend_FlowCancelled_Once_SeveralReply(t *testing.T) {
 
 	pa := pulse.NewAccessorMock(t)
 	pa.LatestMock.Set(accessorMock(t).Latest)
-	r := NewRetrySender(sender, pa, 3)
+	r := NewRetrySender(sender, pa, 3, 2)
 
 	reps, done := r.SendRole(context.Background(), msg, insolar.DynamicRoleLightExecutor, gen.Reference())
 	for rep := range reps {
@@ -262,7 +308,7 @@ func TestRetryerSend_FlowCancelled_RetryExceeded(t *testing.T) {
 
 	pa := pulse.NewAccessorMock(t)
 	pa.LatestMock.Set(accessorMock(t).Latest)
-	r := NewRetrySender(sender, pa, 3)
+	r := NewRetrySender(sender, pa, 3, 1)
 
 	reps, done := r.SendRole(context.Background(), msg, insolar.DynamicRoleLightExecutor, gen.Reference())
 	for range reps {
@@ -307,7 +353,7 @@ func TestRetryerSend_FlowCancelled_Between(t *testing.T) {
 
 	pa := pulse.NewAccessorMock(t)
 	pa.LatestMock.Set(accessorMock(t).Latest)
-	r := NewRetrySender(sender, pa, 3)
+	r := NewRetrySender(sender, pa, 3, 2)
 
 	reps, done := r.SendRole(context.Background(), msg, insolar.DynamicRoleLightExecutor, gen.Reference())
 	for rep := range reps {

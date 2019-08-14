@@ -21,13 +21,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/insolar/insolar/insolar/pulse"
-
 	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/pkg/errors"
 )
 
 // RetrySender allows to send messaged via provided Sender with retries.
@@ -35,16 +35,17 @@ type RetrySender struct {
 	sender        Sender
 	pulseAccessor pulse.Accessor
 	retries       uint
+	responseCount uint
 }
 
 // NewRetrySender creates RetrySender instance with provided values.
-func NewRetrySender(sender Sender, pulseAccessor pulse.Accessor, retries uint) *RetrySender {
-	r := &RetrySender{
+func NewRetrySender(sender Sender, pulseAccessor pulse.Accessor, retries uint, responseCount uint) *RetrySender {
+	return &RetrySender{
 		sender:        sender,
 		pulseAccessor: pulseAccessor,
 		retries:       retries,
+		responseCount: responseCount,
 	}
-	return r
 }
 
 func (r *RetrySender) SendTarget(ctx context.Context, msg *message.Message, target insolar.Reference) (<-chan *message.Message, func()) {
@@ -72,12 +73,6 @@ func (r *RetrySender) SendRole(
 		logger := inslogger.FromContext(ctx)
 		var lastPulse insolar.PulseNumber
 
-		select {
-		case <-done:
-			return
-		default:
-		}
-
 		received := false
 		for tries > 0 && !received {
 			var err error
@@ -88,7 +83,7 @@ func (r *RetrySender) SendRole(
 			}
 
 			reps, d := r.sender.SendRole(ctx, msg, role, ref)
-			received = tryReceive(ctx, reps, done, replyChan)
+			received = tryReceive(ctx, reps, done, replyChan, r.responseCount)
 			tries--
 			d()
 		}
@@ -123,39 +118,64 @@ func (r *RetrySender) waitForPulseChange(ctx context.Context, lastPulse insolar.
 	}
 }
 
+type messageType int
+
+const (
+	messageTypeNotError messageType = iota
+	messageTypeErrorRetryable
+	messageTypeErrorNonRetryable
+)
+
 // tryReceive returns false if we get retryable error,
 // and true if reply was successfully received or client don't want anymore replies
-func tryReceive(ctx context.Context, reps <-chan *message.Message, done chan struct{}, receiver chan<- *message.Message) bool {
-	for {
+func tryReceive(
+	ctx context.Context,
+	reps <-chan *message.Message,
+	done chan struct{},
+	receiver chan<- *message.Message,
+	responseCount uint,
+) bool {
+	for i := uint(0); i < responseCount; i++ {
+		rep, ok := <-reps
+		if !ok {
+			return true
+		}
+
+		var leave bool
+		switch getErrorType(ctx, rep) {
+		case messageTypeErrorRetryable:
+			return false
+		case messageTypeErrorNonRetryable:
+			leave = true
+		default:
+		}
+
 		select {
 		case <-done:
-			return true
-		case rep, ok := <-reps:
-			if !ok {
-				return true
-			}
-			if isRetryableError(ctx, rep) {
-				return false
-			}
-
-			select {
-			case <-done:
-				return true
-			case receiver <- rep:
-			}
+		case receiver <- rep:
+		}
+		if leave {
+			break
 		}
 	}
+
+	return true
 }
 
-func isRetryableError(ctx context.Context, rep *message.Message) bool {
+func getErrorType(ctx context.Context, rep *message.Message) messageType {
 	replyPayload, err := payload.UnmarshalFromMeta(rep.Payload)
 	if err != nil {
-		return false
+		return messageTypeNotError
 	}
+
 	p, ok := replyPayload.(*payload.Error)
-	if ok && (p.Code == payload.CodeFlowCanceled) {
-		inslogger.FromContext(ctx).Errorf("flow cancelled, retrying (error message - %s)", p.Text)
-		return true
+	if ok {
+		if p.Code == payload.CodeFlowCanceled {
+			inslogger.FromContext(ctx).Errorf("flow cancelled, retrying (error message - %s)", p.Text)
+			return messageTypeErrorRetryable
+		}
+
+		return messageTypeErrorNonRetryable
 	}
-	return false
+	return messageTypeNotError
 }

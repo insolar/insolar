@@ -35,6 +35,7 @@ import (
 	"github.com/insolar/insolar/insolar/flow/dispatcher"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -107,14 +108,12 @@ func (lr *LogicRunner) Init(ctx context.Context) error {
 	lr.StateStorage = NewStateStorage(
 		lr.Publisher,
 		lr.RequestsExecutor,
-		lr.MessageBus,
+		lr.Sender,
 		lr.JetCoordinator,
 		lr.PulseAccessor,
 		lr.ArtifactManager,
 		lr.OutgoingSender,
 	)
-
-	lr.SenderWithRetry = bus.NewWaitOKWithRetrySender(lr.Sender, lr.PulseAccessor, 1)
 
 	lr.rpc = lrCommon.NewRPC(
 		NewRPCMethods(lr.ArtifactManager, lr.DescriptorsCache, lr.ContractRequester, lr.StateStorage, lr.OutgoingSender),
@@ -255,7 +254,6 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, oldPulse insolar.Pulse, newP
 	}
 
 	messages := lr.StateStorage.OnPulse(ctx, newPulse)
-
 	err = lr.WriteController.Open(ctx, newPulse.PulseNumber)
 	if err != nil {
 		return errors.Wrap(err, "failed to start new pulse on write controller")
@@ -281,27 +279,36 @@ func (lr *LogicRunner) stopIfNeeded(ctx context.Context) {
 	}
 }
 
-func (lr *LogicRunner) sendOnPulseMessagesAsync(ctx context.Context, messages []insolar.Message) {
+func (lr *LogicRunner) sendOnPulseMessagesAsync(ctx context.Context, messages map[insolar.Reference][]payload.Payload) {
 	ctx, spanMessages := instracer.StartSpan(ctx, "pulse.logicrunner sending messages")
 	spanMessages.AddAttributes(trace.StringAttribute("numMessages", strconv.Itoa(len(messages))))
 
 	var sendWg sync.WaitGroup
-	sendWg.Add(len(messages))
 
-	for _, msg := range messages {
-		go lr.sendOnPulseMessage(ctx, msg, &sendWg)
+	for ref, msg := range messages {
+		sendWg.Add(len(msg))
+		for _, msg := range msg {
+			lr.sendOnPulseMessage(ctx, ref, msg, &sendWg)
+		}
 	}
 
 	sendWg.Wait()
 	spanMessages.End()
 }
 
-func (lr *LogicRunner) sendOnPulseMessage(ctx context.Context, msg insolar.Message, sendWg *sync.WaitGroup) {
+func (lr *LogicRunner) sendOnPulseMessage(ctx context.Context, objectRef insolar.Reference, payloadObj payload.Payload, sendWg *sync.WaitGroup) {
 	defer sendWg.Done()
-	_, err := lr.MessageBus.Send(ctx, msg, nil)
+
+	msg, err := payload.NewMessage(payloadObj)
 	if err != nil {
-		inslogger.FromContext(ctx).Error(errors.Wrap(err, "error while sending validation data on pulse"))
+		inslogger.FromContext(ctx).Error("failed to serialize message: " + err.Error())
+		return
 	}
+
+	// we dont really care about response, because we are sending this in the beginning of the pulse
+	// so flow canceled should not happened, if it does, somebody already restarted
+	_, done := lr.Sender.SendRole(ctx, msg, insolar.DynamicRoleVirtualExecutor, objectRef)
+	done()
 }
 
 func (lr *LogicRunner) AddUnwantedResponse(ctx context.Context, msg insolar.Message) error {
@@ -309,13 +316,13 @@ func (lr *LogicRunner) AddUnwantedResponse(ctx context.Context, msg insolar.Mess
 	return lr.ResultsMatcher.AddUnwantedResponse(ctx, m)
 }
 
-func convertQueueToMessageQueue(ctx context.Context, queue []*lrCommon.Transcript) []message.ExecutionQueueElement {
-	mq := make([]message.ExecutionQueueElement, 0)
+func convertQueueToMessageQueue(ctx context.Context, queue []*lrCommon.Transcript) []*payload.ExecutionQueueElement {
+	mq := make([]*payload.ExecutionQueueElement, 0)
 	var traces string
 	for _, elem := range queue {
-		mq = append(mq, message.ExecutionQueueElement{
+		mq = append(mq, &payload.ExecutionQueueElement{
 			RequestRef:  elem.RequestRef,
-			Request:     *elem.Request,
+			Incoming:    elem.Request,
 			ServiceData: serviceDataFromContext(elem.Context),
 		})
 
@@ -338,7 +345,7 @@ func contextWithServiceData(ctx context.Context, data message.ServiceData) conte
 	return ctx
 }
 
-func contextFromServiceData(data message.ServiceData) context.Context {
+func contextFromServiceData(data payload.ServiceData) context.Context {
 	ctx := inslogger.ContextWithTrace(context.Background(), data.LogTraceID)
 	ctx = inslogger.WithLoggerLevel(ctx, data.LogLevel)
 	if data.TraceSpanData != nil {
@@ -384,7 +391,19 @@ func freshContextFromContextAndRequest(ctx context.Context, req record.IncomingR
 	return res
 }
 
-func serviceDataFromContext(ctx context.Context) message.ServiceData {
+func serviceDataFromContext(ctx context.Context) *payload.ServiceData {
+	if ctx == nil {
+		log.Error("nil context, can't create correct ServiceData")
+		return &payload.ServiceData{}
+	}
+	return &payload.ServiceData{
+		LogTraceID:    inslogger.TraceID(ctx),
+		LogLevel:      inslogger.GetLoggerLevel(ctx),
+		TraceSpanData: instracer.MustSerialize(ctx),
+	}
+}
+
+func oldServiceDataFromContext(ctx context.Context) message.ServiceData {
 	if ctx == nil {
 		log.Error("nil context, can't create correct ServiceData")
 		return message.ServiceData{}
