@@ -27,7 +27,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-// RandomString generates random uuid and return it as a string
+// RandomString generates random uuid and return it as a string.
 func RandomString() string {
 	newUUID, err := uuid.NewV4()
 	if err != nil {
