@@ -54,6 +54,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/insolar/insolar/network/consensus/common/watchdog"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
 	"sync"
 	"time"
 
@@ -143,7 +144,7 @@ func (c *Phase3PacketDispatcher) DispatchMemberPacket(ctx context.Context, reade
 		statevector.NewSubVector(p3.GetDoubtedGlobulaAnnouncementHash(), p3.GetDoubtedGlobulaStateSignature(), nil, p3.GetDoubtedExpectedRank())))
 
 	if iv == nil || iv.HasSenderFault() {
-		return n.RegisterFraud(n.Frauds().NewMismatchedMembershipRank(n.GetProfile(), n.GetNodeMembershipProfileOrEmpty()))
+		return coreapi.Frauds().NewMismatchedMembershipRank(n.GetProfile(), n.GetNodeMembershipProfileOrEmpty())
 	}
 	c.ctl.queuePh3Recv <- iv
 

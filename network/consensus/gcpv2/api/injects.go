@@ -110,6 +110,11 @@ type PulseControlFeeder interface {
 
 	CanStopOnHastyPulse(pn pulse.Number, expectedEndOfConsensus time.Time) bool
 
+	/* Called on receiving seem-to-be-valid Pulsar or Phase0 packets. Can be called multiple time in sequence.
+	Application MUST NOT consider it as a new pulse. */
+	OnPulseDetected()
+	OnFullRoundStarting()
+
 	/* These methods are called IN SYNC with consensus workers and before relevant UpstreamController methods */
 	OnPreparePulseChange(report UpstreamReport)
 	OnCommitPulseChange(report UpstreamReport, pulseData pulse.Data, activeCensus census.Operational)

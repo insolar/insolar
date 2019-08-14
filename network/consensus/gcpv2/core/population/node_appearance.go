@@ -170,7 +170,7 @@ type NodeAppearance struct {
 	requestedLeave       bool                // one-time set
 	requestedLeaveReason uint32              // one-time set
 
-	firstFraudDetails *misbehavior.FraudError
+	firstFraudDetails misbehavior.Report
 
 	neighbourWeight uint32
 
@@ -372,14 +372,6 @@ func (c *NodeAppearance) updateNodeTrustLevel(trustBefore, trust member.TrustLev
 	return modified
 }
 
-func (c *NodeAppearance) Frauds() misbehavior.FraudFactory {
-	return c.hook.GetFraudFactory()
-}
-
-func (c *NodeAppearance) Blames() misbehavior.BlameFactory {
-	return c.hook.GetBlameFactory()
-}
-
 func (c *NodeAppearance) IsStateful() bool {
 	return !c.hook.GetEphemeralMode().IsEnabled() && c.profile.IsStateful()
 }
@@ -414,7 +406,7 @@ func (c *NodeAppearance) _applyState(ma profiles.MemberAnnouncement,
 			}
 		}
 		lma := c.getMembershipAnnouncement()
-		return c.registerFraud(c.Frauds().NewInconsistentMembershipAnnouncement(c.GetProfile(), lma, ma.MembershipAnnouncement))
+		return c.registerFraud(coreapi.Frauds().NewInconsistentMembershipAnnouncement(c.GetProfile(), lma, ma.MembershipAnnouncement))
 	}
 
 	updVersion := c.hook.UpdatePopulationVersion()
@@ -423,44 +415,44 @@ func (c *NodeAppearance) _applyState(ma profiles.MemberAnnouncement,
 	case ma.IsLeaving:
 		switch {
 		case c.IsJoiner():
-			c.RegisterBlame(c.Blames().NewProtocolViolation(c.profile, "joiner can't request leave"))
+			c.registerBlame(coreapi.Blames().NewProtocolViolation(c.profile, "joiner can't request leave"))
 		case !ma.JoinerID.IsAbsent():
-			c.RegisterBlame(c.Blames().NewProtocolViolation(c.profile, "leaver can't introduce a joiner"))
+			c.registerBlame(coreapi.Blames().NewProtocolViolation(c.profile, "leaver can't introduce a joiner"))
 		case !ma.Joiner.IsEmpty():
-			c.RegisterBlame(c.Blames().NewProtocolViolation(c.profile, "joiner announcement was not expected"))
+			c.registerBlame(coreapi.Blames().NewProtocolViolation(c.profile, "joiner announcement was not expected"))
 		default:
 			c.requestedLeave = true
 			c.requestedLeaveReason = ma.LeaveReason
 		}
 	case ma.JoinerID.IsAbsent() != ma.Joiner.IsEmpty():
 		if ma.JoinerID.IsAbsent() && !c.IsJoiner() {
-			c.RegisterBlame(c.Blames().NewProtocolViolation(c.profile, "joiner announcement was provided but a joiner was not declared"))
+			c.registerBlame(coreapi.Blames().NewProtocolViolation(c.profile, "joiner announcement was provided but a joiner was not declared"))
 			// } else {
-			//	c.RegisterBlame(c.Blames().NewProtocolViolation(c.profile, "joiner was declared but an announcement was not provided"))
+			//	c.registerBlame(core.Blames().NewProtocolViolation(c.profile, "joiner was declared but an announcement was not provided"))
 		}
 	case c.CanIntroduceJoiner() || ma.JoinerID.IsAbsent():
 	case c.IsJoiner():
-		c.RegisterBlame(c.Blames().NewProtocolViolation(c.profile, "joiner can't add a joiner"))
+		c.registerBlame(coreapi.Blames().NewProtocolViolation(c.profile, "joiner can't add a joiner"))
 	default:
-		c.RegisterBlame(c.Blames().NewProtocolViolation(c.profile, "restricted/suspended nodes can't add a joiner"))
+		c.registerBlame(coreapi.Blames().NewProtocolViolation(c.profile, "restricted/suspended nodes can't add a joiner"))
 	}
 
 	switch {
 	case c.IsJoiner():
 		sp := c.profile.GetStatic().GetStartPower()
 		if ma.Membership.RequestedPower != sp {
-			c.RegisterBlame(c.Blames().NewProtocolViolation(c.profile, "start power is different"))
+			c.registerBlame(coreapi.Blames().NewProtocolViolation(c.profile, "start power is different"))
 		}
 		ma.Membership.RequestedPower = sp
 	case ma.Membership.RequestedPower == 0:
 		break
 	case c.profile.GetStatic().GetExtension() == nil:
 		if ma.Membership.RequestedPower != c.profile.GetStatic().GetStartPower() {
-			c.RegisterBlame(c.Blames().NewProtocolViolation(c.profile, "unable to verify power"))
+			c.registerBlame(coreapi.Blames().NewProtocolViolation(c.profile, "unable to verify power"))
 			// return false, nil // let the node to be "unset" // TODO handle properly
 		}
 	case !c.profile.GetStatic().GetExtension().GetPowerLevels().IsAllowed(ma.Membership.RequestedPower):
-		return false, c.RegisterFraud(c.Frauds().NewInvalidPowerLevel(c.profile))
+		return false, coreapi.Frauds().NewInvalidPowerLevel(c.profile)
 	}
 
 	if applyAfterChecks != nil {
@@ -598,37 +590,47 @@ func (c *NodeAppearance) GetNeighbourWeight() uint32 {
 	return c.neighbourWeight
 }
 
+func (c *NodeAppearance) CaptureMisbehavior(ctx context.Context, report misbehavior.Report) {
+
+	/* Here the pointer comparison is intentional to ensure exact ActiveNode, as it may change across rounds etc */
+	if report.ViolatorNode() != c.GetProfile() {
+		panic(fmt.Sprintf("misplaced misbehavior report: node=%v report=%v", c, report))
+	}
+
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	_, _ = c.captureMisbehavior(report)
+}
+
+func (c *NodeAppearance) captureMisbehavior(report misbehavior.Report) (bool, misbehavior.Report) {
+
+	report = misbehavior.MarkCaptured(report, "captured")
+
+	trustUpd := false
+	if report.MisbehaviorType().Category() == misbehavior.Fraud {
+		prevTrust := c.trust
+		if c.trust.Update(member.FraudByThisNode) {
+			trustUpd = true
+			updVersion := c.hook.UpdatePopulationVersion()
+			c.firstFraudDetails = report
+			c.hook.OnTrustUpdated(updVersion, c, prevTrust, c.trust, c.profile.HasFullProfile())
+		}
+	}
+	// TODO registerBlame
+
+	return trustUpd, report
+}
+
 func (c *NodeAppearance) registerFraud(fraud misbehavior.FraudError) (bool, error) {
 	if fraud.IsUnknown() {
 		panic("empty fraud")
 	}
 
-	prevTrust := c.trust
-	if c.trust.Update(member.FraudByThisNode) {
-		updVersion := c.hook.UpdatePopulationVersion()
-		c.firstFraudDetails = &fraud
-		c.hook.OnTrustUpdated(updVersion, c, prevTrust, c.trust, c.profile.HasFullProfile())
-		return true, fraud
-	}
-	return false, fraud
+	return c.captureMisbehavior(&fraud)
 }
 
-func (c *NodeAppearance) RegisterFraud(fraud misbehavior.FraudError) error {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-
-	/* Here the pointer comparison is intentional to ensure exact ActiveNode, as it may change across rounds etc */
-	if fraud.ViolatorNode() != c.GetProfile() {
-		panic("misplaced fraud")
-	}
-
-	_, err := c.registerFraud(fraud)
-	return err
-}
-
-func (c *NodeAppearance) RegisterBlame(blame misbehavior.BlameError) {
-	// TODO RegisterBlame
-	// inslogger.FromContext(ctx).Error(blame)
+func (c *NodeAppearance) registerBlame(blame misbehavior.BlameError) {
+	_, _ = c.captureMisbehavior(&blame)
 }
 
 func (c *NodeAppearance) getMembership() profiles.MembershipProfile {
@@ -704,9 +706,9 @@ func (c *NodeAppearance) GetRequestedAnnouncement() profiles.MembershipAnnouncem
 	return c.getMembershipAnnouncement()
 }
 
-/* deprecated */ // replace with DispatchAnnouncement
+/* deprecated */
 func (c *NodeAppearance) UpgradeDynamicNodeProfile(ctx context.Context, full transport.FullIntroductionReader) bool {
-	return c.upgradeDynamicNodeProfile(ctx, full, full)
+	return c.upgradeDynamicNodeProfile(ctx, full, full) // replace with DispatchAnnouncement
 }
 
 func (c *NodeAppearance) upgradeDynamicNodeProfile(ctx context.Context, brief profiles.BriefCandidateProfile, ext profiles.CandidateProfileExtension) bool {

@@ -196,6 +196,12 @@ type InternalControlFeederAdapter struct {
 	leavingChannel   chan struct{}
 }
 
+func (cf *InternalControlFeederAdapter) OnPulseDetected() {
+}
+
+func (cf *InternalControlFeederAdapter) OnFullRoundStarting() {
+}
+
 func (cf *InternalControlFeederAdapter) OnPreparePulseChange(report api.UpstreamReport) {
 }
 

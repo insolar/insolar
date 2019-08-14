@@ -63,7 +63,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/misbehavior"
 )
 
 func NewHook(localNode profiles.ActiveNode, eventDispatcher EventDispatcher, hookCfg SharedNodeContext) Hook {
@@ -82,8 +81,6 @@ func NewHook(localNode profiles.ActiveNode, eventDispatcher EventDispatcher, hoo
 var _ EventDispatcher = &Hook{}
 
 type SharedNodeContext struct {
-	FraudFactory     misbehavior.FraudFactory
-	BlameFactory     misbehavior.BlameFactory
 	Assistant        transport.CryptographyAssistant
 	PulseData        pulse.DataHolder
 	NbTrustThreshold uint8
@@ -91,10 +88,8 @@ type SharedNodeContext struct {
 }
 
 func NewSharedNodeContext(assistant transport.CryptographyAssistant, pdh pulse.DataHolder, nbTrustThreshold uint8,
-	ephemeralMode api.EphemeralMode, capture misbehavior.ReportFunc) SharedNodeContext {
+	ephemeralMode api.EphemeralMode) SharedNodeContext {
 	return SharedNodeContext{
-		misbehavior.NewFraudFactory(capture),
-		misbehavior.NewBlameFactory(capture),
 		assistant,
 		pdh,
 		nbTrustThreshold,
@@ -103,10 +98,8 @@ func NewSharedNodeContext(assistant transport.CryptographyAssistant, pdh pulse.D
 }
 
 func NewSharedNodeContextByPulseNumber(assistant transport.CryptographyAssistant, pn pulse.Number, nbTrustThreshold uint8,
-	ephemeralMode api.EphemeralMode, capture misbehavior.ReportFunc) SharedNodeContext {
+	ephemeralMode api.EphemeralMode) SharedNodeContext {
 	return SharedNodeContext{
-		misbehavior.NewFraudFactory(capture),
-		misbehavior.NewBlameFactory(capture),
 		assistant,
 		pulseDataHolder{pn},
 		nbTrustThreshold,
@@ -160,14 +153,6 @@ func (p *Hook) GetNeighbourhoodTrustThreshold() uint8 {
 		panic("illegal state: not allowed for PrepRealm")
 	}
 	return p.config.NbTrustThreshold
-}
-
-func (p *Hook) GetFraudFactory() misbehavior.FraudFactory {
-	return p.config.FraudFactory
-}
-
-func (p *Hook) GetBlameFactory() misbehavior.BlameFactory {
-	return p.config.BlameFactory
 }
 
 func (p *Hook) GetCryptographyAssistant() transport.CryptographyAssistant {

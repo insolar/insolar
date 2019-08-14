@@ -118,7 +118,7 @@ func (p FraudError) Error() string {
 	if c == nil {
 		c = ""
 	}
-	return fmt.Sprintf("fraud: type=%v(%v)%v, violator=%v, details=%+v", p.fraudType, p.msg, c, v, p.details)
+	return fmt.Sprintf("fraud: type=%v(%v), mark=%v, violator=%v, details=%+v", p.fraudType, p.msg, c, v, p.details)
 }
 
 const (

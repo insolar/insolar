@@ -67,7 +67,6 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/misbehavior"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 )
@@ -160,13 +159,7 @@ func (r *coreRealm) initBeforePopulation(nbhSizes transport.NeighbourhoodSizes) 
 	/* Will only be used during PrepRealm */
 	selfNodeHookTmp := population.NewHook(profile,
 		population.NewPanicDispatcher("updates of stub-self are not allowed"),
-		population.NewSharedNodeContextByPulseNumber(r.assistant, pn, 0, r.getEphemeralMode(),
-			func(report misbehavior.Report) interface{} {
-				inslogger.FromContext(r.roundContext).Warnf("Got Report: %+v", report)
-				r.initialCensus.GetMisbehaviorRegistry().AddReport(report)
-				return nil
-			},
-		))
+		population.NewSharedNodeContextByPulseNumber(r.assistant, pn, 0, r.getEphemeralMode()))
 
 	powerRequest := r.controlFeeder.GetRequiredPowerLevel()
 	r.requestedPowerFlag = !powerRequest.IsEmpty()

@@ -53,6 +53,7 @@ package core
 import (
 	"context"
 	"fmt"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/misbehavior"
 	"sync"
 	"time"
 
@@ -313,6 +314,22 @@ func (r *PhasedRoundController) HandlePacket(ctx context.Context, packet transpo
 func (r *PhasedRoundController) handlePacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound,
 	verifyFlags coreapi.PacketVerifyFlags) (api.RoundControlCode, error) {
 
+	rcc, prep, err := r._handlePacket(ctx, packet, from, verifyFlags)
+
+	if report, isReport := err.(misbehavior.Report); isReport && report.CaptureMark() == nil {
+		if prep != nil {
+			prep.captureReport(ctx, report)
+		} else {
+			r.realm.captureReport(ctx, report)
+		}
+	}
+
+	return rcc, err
+}
+
+func (r *PhasedRoundController) _handlePacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound,
+	verifyFlags coreapi.PacketVerifyFlags) (api.RoundControlCode, *PrepRealm, error) {
+
 	pn := packet.GetPulseNumber()
 	/* a separate method with lock is to ensure that further packet processing is not connected to a lock */
 	prep, filterPN, _, prev := r.beforeHandlePacket()
@@ -323,7 +340,7 @@ func (r *PhasedRoundController) handlePacket(ctx context.Context, packet transpo
 	if prev != nil && filterPN > pn { // TODO fix as filterPN can be zero during ephemeral transition
 		// something from a previous round?
 		_, err := prev.HandlePacket(ctx, packet, from)
-		return api.KeepRound, fmt.Errorf("on prev round: %v", err)
+		return api.KeepRound, prep, fmt.Errorf("on prev round: %v", err)
 		// defaultOptions = coreapi.SkipVerify // validation was done by the prev controller
 	}
 
@@ -333,7 +350,7 @@ func (r *PhasedRoundController) handlePacket(ctx context.Context, packet transpo
 		if err == nil {
 			err = r.realm.ephemeralFeeder.OnNonEphemeralPacket(ctx, packet, from)
 		}
-		return api.KeepRound, err
+		return api.KeepRound, prep, err
 	}
 
 	var err error
@@ -348,17 +365,18 @@ func (r *PhasedRoundController) handlePacket(ctx context.Context, packet transpo
 		err = prep.dispatchPacket(ctx, packet, from, defaultOptions) // prep realm can't inherit flags
 	} else {
 		err = r.realm.dispatchPacket(ctx, packet, from, verifyFlags|defaultOptions)
+
 	}
 
 	isPulse := false
 	isPulse, pn = errors2.IsMismatchPulseError(err)
 	if !isPulse {
-		return api.KeepRound, err
+		return api.KeepRound, prep, err
 	}
 
 	if !r.chronicle.GetLatestCensus().GetPulseNumber().IsUnknownOrEqualTo(pn) {
 		r.roundWorker.onUnexpectedPulse(pn)
-		return api.KeepRound, err
+		return api.KeepRound, prep, err
 	}
 
 	if r.roundWorker.IsRunning() {
@@ -374,7 +392,7 @@ func (r *PhasedRoundController) handlePacket(ctx context.Context, packet transpo
 
 		if !canStop {
 			r.roundWorker.onUnexpectedPulse(pn)
-			return api.KeepRound, err
+			return api.KeepRound, prep, err
 		}
 		inslogger.FromContext(ctx).Debug("stopping round by changed pulse")
 		r.StopConsensusRound()
@@ -385,12 +403,12 @@ func (r *PhasedRoundController) handlePacket(ctx context.Context, packet transpo
 	} else { // there is a chance of racing here, but it will be handled by member controller as well
 		expected := r.chronicle.GetExpectedCensus()
 		if expected == nil || !expected.GetOnlinePopulation().IsValid() {
-			return api.NextRoundTerminate, fmt.Errorf("next population is invalid or not ready on: %v", err)
+			return api.NextRoundTerminate, prep, fmt.Errorf("next population is invalid or not ready on: %v", err)
 		}
 	}
 	r.roundWorker.onNextPulse(pn)
 	warnMsg := errors2.PulseRoundErrorMessageToWarn(err.Error())
 	inslogger.FromContext(ctx).Debug(warnMsg)
 
-	return api.StartNextRound, nil
+	return api.StartNextRound, prep, nil
 }

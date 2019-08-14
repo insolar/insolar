@@ -62,7 +62,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/misbehavior"
 	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/announce"
 
 	"github.com/insolar/insolar/network/consensus/common/lazyhead"
@@ -151,10 +150,6 @@ func (c *Phase2PacketDispatcher) DispatchMemberPacket(ctx context.Context, reade
 	neighbours, err := announce.VerifyNeighbourhood(ctx, neighbourhood, sender, announcedJoiner, realm)
 
 	if err != nil {
-		rep := misbehavior.FraudOf(err) // TODO unify approach to fraud registration
-		if rep != nil {
-			return sender.RegisterFraud(*rep)
-		}
 		return err
 	}
 

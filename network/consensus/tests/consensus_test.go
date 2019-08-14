@@ -231,6 +231,30 @@ type EmuControlFeeder struct {
 	leaveReason uint32
 }
 
+func (p *EmuControlFeeder) OnFailedPreparePulseChange() {
+}
+
+func (p *EmuControlFeeder) OnPulseDetected() {
+}
+
+func (p *EmuControlFeeder) OnFullRoundStarting() {
+}
+
+func (p *EmuControlFeeder) OnPreparePulseChange(report api.UpstreamReport) {
+}
+
+func (p *EmuControlFeeder) OnCommitPulseChange(report api.UpstreamReport, pulseData pulse.Data, activeCensus census.Operational) {
+}
+
+func (p *EmuControlFeeder) OnCancelPulseChange() {
+}
+
+func (p *EmuControlFeeder) OnConsensusFinished(report api.UpstreamReport, expectedCensus census.Operational) {
+}
+
+func (p *EmuControlFeeder) OnConsensusAborted() {
+}
+
 func (p *EmuControlFeeder) CanStopOnHastyPulse(pn pulse.Number, expectedEndOfConsensus time.Time) bool {
 	return false
 }

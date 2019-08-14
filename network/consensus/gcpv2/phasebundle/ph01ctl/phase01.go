@@ -54,6 +54,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/insolar/insolar/network/consensus/common/watchdog"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
 	"time"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
@@ -84,7 +85,7 @@ func (p *packetPhase0Dispatcher) DispatchMemberPacket(ctx context.Context, packe
 	nr := p0.GetNodeRank()
 
 	if n.GetRank(p.ctl.R.GetNodeCount()) != nr {
-		return n.Frauds().NewMismatchedNeighbourRank(n.GetReportProfile())
+		return coreapi.Frauds().NewMismatchedNeighbourRank(n.GetReportProfile())
 	}
 
 	pp := p0.GetEmbeddedPulsePacket()
@@ -157,7 +158,7 @@ func (c *Phase01Controller) handlePulseData(ctx context.Context, pp transport.Pu
 	if c.R.GetPulseData() == pp.GetPulseData() {
 		return nil
 	}
-	return n.Blames().NewMismatchedPulsePacket(n.GetProfile(), c.R.GetOriginalPulse(), pp.GetPulseDataEvidence())
+	return coreapi.Blames().NewMismatchedPulsePacket(n.GetProfile(), c.R.GetOriginalPulse(), pp.GetPulseDataEvidence())
 }
 
 var _ core.PhaseController = &Phase01Controller{}

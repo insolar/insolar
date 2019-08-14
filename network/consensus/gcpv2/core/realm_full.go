@@ -53,6 +53,7 @@ package core
 import (
 	"context"
 	"fmt"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/misbehavior"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -62,7 +63,6 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/misbehavior"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
@@ -277,14 +277,7 @@ func (r *FullRealm) initPopulation(needsDynamic bool, population census.OnlinePo
 
 	var notifyAll func()
 
-	log := inslogger.FromContext(r.roundContext)
-
-	hookCfg := pop.NewSharedNodeContext(r.assistant, r, uint8(r.nbhSizes.NeighbourhoodTrustThreshold), r.getEphemeralMode(),
-		func(report misbehavior.Report) interface{} {
-			log.Warnf("Got Report: %+v", report)
-			r.census.GetMisbehaviorRegistry().AddReport(report)
-			return nil
-		})
+	hookCfg := pop.NewSharedNodeContext(r.assistant, r, uint8(r.nbhSizes.NeighbourhoodTrustThreshold), r.getEphemeralMode())
 
 	if needsDynamic {
 		expectedSize := r.expectedPopulationSize.AsInt()
@@ -368,14 +361,6 @@ func (r *FullRealm) registerNextJoinCandidate() (*pop.NodeAppearance, cryptkit.D
 
 		r.candidateFeeder.RemoveJoinCandidate(false, cp.GetStaticNodeID())
 	}
-}
-
-func (r *FullRealm) Frauds() misbehavior.FraudFactory {
-	return r.populationHook.GetFraudFactory()
-}
-
-func (r *FullRealm) Blames() misbehavior.BlameFactory {
-	return r.populationHook.GetBlameFactory()
 }
 
 func (r *FullRealm) GetSelf() *pop.NodeAppearance {
@@ -725,9 +710,22 @@ func (r *FullRealm) BuildNextPopulation(ctx context.Context, ranks []profiles.Po
 
 func (r *FullRealm) MonitorOtherPulses(packet transport.PulsePacketReader, from endpoints.Inbound) error {
 
-	return r.Blames().NewMismatchedPulsarPacket(from, r.GetOriginalPulse(), packet.GetPulseDataEvidence())
+	return coreapi.Blames().NewMismatchedPulsarPacket(from, r.GetOriginalPulse(), packet.GetPulseDataEvidence())
 }
 
 func (r *FullRealm) NotifyRoundStopped(ctx context.Context) {
 	r.stateMachine.OnRoundStopped(ctx)
+}
+
+func (r *FullRealm) captureReport(ctx context.Context, report misbehavior.Report) {
+	node := report.ViolatorNode()
+	if node != nil {
+		mr := r.getMemberReceiver(node.GetNodeID())
+		if mr != nil {
+			inslogger.FromContext(ctx).Debugf("[ FullRealm ] got a misbehavior report: report=%v", report)
+			mr.CaptureMisbehavior(ctx, report)
+			return
+		}
+	}
+	inslogger.FromContext(ctx).Warnf("[ FullRealm ] unable to attach a misbehavior report: report=%v", report)
 }

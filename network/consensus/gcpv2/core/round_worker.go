@@ -96,11 +96,12 @@ type RoundStateMachineWorker struct {
 func (p *RoundStateMachineWorker) OnPulseDetected() {
 	p.applyState(RoundPulseDetected)
 	p.trafficControl.SetTrafficLimit(capacity.LevelMinimal, p.trafficThrottleDuration)
-	//p.controlFeeder.
+	p.controlFeeder.OnPulseDetected()
 }
 
 func (p *RoundStateMachineWorker) OnFullRoundStarting() {
 	p.applyState(RoundPulseAccepted)
+	p.controlFeeder.OnFullRoundStarting()
 }
 
 func (p *RoundStateMachineWorker) PreparePulseChange(report api.UpstreamReport, ch chan<- api.UpstreamState) {

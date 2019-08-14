@@ -167,7 +167,7 @@ func (p *VectorAnalyzer) fillByMask(mask longbits.ByteString, maskBits uint16) *
 
 func (p *VectorAnalyzer) CalculateVector(dataEntries []*nodeset.VectorEntryData, m *MaskInfo) {
 	// do calc
-	m.setReady(calculatedEntry, p)
+	//m.setReady(calculatedEntry, p)
 }
 
 func (p *VectorAnalyzer) InspectEntry(entry InspectedEntry, calcEntry CalculatedEntry) {

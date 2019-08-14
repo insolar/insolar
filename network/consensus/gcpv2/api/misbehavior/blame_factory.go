@@ -107,7 +107,7 @@ func (p BlameError) Error() string {
 	if c == nil {
 		c = ""
 	}
-	return fmt.Sprintf("blame: type=%v(%v)%v, violator=%v, details=%+v", p.blameType, p.msg, c, v, p.details)
+	return fmt.Sprintf("blame: type=%v(%v), mark=%v, violator=%v, details=%+v", p.blameType, p.msg, c, v, p.details)
 }
 
 const (

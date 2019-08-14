@@ -1,4 +1,4 @@
-//
+///
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -46,41 +46,28 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-//
+///
 
-package population
+package coreapi
 
-import (
-	"context"
-	"github.com/insolar/insolar/network/consensus/common/cryptkit"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/misbehavior"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
+import "github.com/insolar/insolar/network/consensus/gcpv2/api/misbehavior"
 
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensus/common/endpoints"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
-)
+var blames misbehavior.BlameFactory
+var frauds misbehavior.FraudFactory
 
-type PacketDispatcher interface {
-	HasCustomVerifyForHost(from endpoints.Inbound, verifyFlags coreapi.PacketVerifyFlags) bool
-
-	DispatchHostPacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound, flags coreapi.PacketVerifyFlags) error
-
-	/* This method can validate and create a member, but MUST NOT apply any changes to members etc */
-	TriggerUnknownMember(ctx context.Context, memberID insolar.ShortNodeID, packet transport.MemberPacketReader, from endpoints.Inbound) (bool, error)
-	DispatchMemberPacket(ctx context.Context, packet transport.MemberPacketReader, source *NodeAppearance) error
+func Blames() misbehavior.BlameFactory {
+	return blames
 }
 
-type DispatchMemberPacketFunc func(ctx context.Context, packet transport.MemberPacketReader, from *NodeAppearance) error
+func Frauds() misbehavior.FraudFactory {
+	return frauds
+}
 
-type MemberPacketReceiver interface {
-	GetNodeID() insolar.ShortNodeID
-	CanReceivePacket(pt phases.PacketType) bool
-	VerifyPacketAuthenticity(packetSignature cryptkit.SignedDigest, from endpoints.Inbound, strictFrom bool) error
-	SetPacketReceived(pt phases.PacketType) bool
-	DispatchMemberPacket(ctx context.Context, packet transport.PacketParser, from endpoints.Inbound, flags coreapi.PacketVerifyFlags,
-		pd PacketDispatcher) error
+func SetMisbehaviorCapture(capture misbehavior.ReportFunc) {
+	blames = misbehavior.NewBlameFactory(capture)
+	frauds = misbehavior.NewFraudFactory(capture)
+}
 
-	CaptureMisbehavior(ctx context.Context, report misbehavior.Report)
+func init() {
+	SetMisbehaviorCapture(nil)
 }

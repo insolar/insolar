@@ -53,6 +53,7 @@ package core
 import (
 	"context"
 	"fmt"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/misbehavior"
 	"sync"
 	"time"
 
@@ -380,4 +381,8 @@ func (p *PrepRealm) ApplyCloudIntro(lastCloudStateHash cryptkit.DigestHolder, po
 	}
 
 	p.lastCloudStateHash = lastCloudStateHash
+}
+
+func (p *PrepRealm) captureReport(ctx context.Context, report misbehavior.Report) {
+	inslogger.FromContext(ctx).Warnf("[ PrepRealm ] unable to attach a misbehavior report: report=%v", report)
 }

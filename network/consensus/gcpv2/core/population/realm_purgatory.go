@@ -57,7 +57,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/misbehavior"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/censusimpl"
 )
@@ -83,8 +82,6 @@ func NewRealmPurgatory(population RealmPopulation, svf cryptkit.SignatureVerifie
 type AnnouncingMember interface {
 	IsJoiner() bool
 	GetNodeID() insolar.ShortNodeID
-	Blames() misbehavior.BlameFactory
-	Frauds() misbehavior.FraudFactory
 	GetReportProfile() profiles.BaseNode
 
 	DispatchAnnouncement(ctx context.Context, rank member.Rank, profile profiles.StaticProfile,
@@ -299,12 +296,4 @@ func (p *RealmPurgatory) UnknownFromNeighbourhood(ctx context.Context, rank memb
 
 func (p *RealmPurgatory) GetLocalNodeID() insolar.ShortNodeID {
 	return p.population.hook.GetLocalNodeID()
-}
-
-func (p *RealmPurgatory) Blames() misbehavior.BlameFactory {
-	return p.population.hook.GetBlameFactory()
-}
-
-func (p *RealmPurgatory) Frauds() misbehavior.FraudFactory {
-	return p.population.hook.GetFraudFactory()
 }

@@ -58,6 +58,7 @@ import (
 //go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/misbehavior.Report -o . -s _mock.go -g
 
 type Report interface {
+	error
 	CaptureMark() interface{}
 	Details() []interface{}
 	ViolatorNode() profiles.BaseNode
@@ -99,4 +100,29 @@ func (c Type) Type() int {
 
 func (c Category) Of(misbehavior int) Type {
 	return Type(c<<32) | Type(misbehavior&(1<<32-1))
+}
+
+func Capture(report Report, fn ReportFunc) Report {
+	if report.CaptureMark() != nil {
+		return report
+	}
+
+	captureMark := fn(report)
+	return MarkCaptured(report, captureMark)
+}
+
+func MarkCaptured(report Report, captureMark interface{}) Report {
+	if report.CaptureMark() != nil || captureMark == nil {
+		return report
+	}
+
+	if blame, isBlame := report.(*BlameError); isBlame {
+		cp := *blame
+		cp.captureMark = captureMark
+		return &cp
+	} else {
+		cp := *(report.(*FraudError))
+		cp.captureMark = captureMark
+		return &cp
+	}
 }

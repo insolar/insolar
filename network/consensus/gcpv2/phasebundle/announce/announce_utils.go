@@ -53,6 +53,7 @@ package announce
 import (
 	"context"
 	"fmt"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -66,30 +67,30 @@ func ValidateIntrosOnMember(reader transport.ExtendedIntroReader, brief transpor
 	fullIntroRequired bool, n population.AnnouncingMember) error {
 
 	if reader.HasJoinerSecret() {
-		return n.Blames().NewProtocolViolation(n.GetReportProfile(), "joiner secret was not expected")
+		return coreapi.Blames().NewProtocolViolation(n.GetReportProfile(), "joiner secret was not expected")
 	}
 
 	if reader.HasCloudIntro() {
-		return n.Blames().NewProtocolViolation(n.GetReportProfile(), "cloud intro can NOT be sent by joiner")
+		return coreapi.Blames().NewProtocolViolation(n.GetReportProfile(), "cloud intro can NOT be sent by joiner")
 	}
 
 	if reader.HasFullIntro() || brief != nil {
 		if !n.IsJoiner() {
-			return n.Blames().NewProtocolViolation(n.GetReportProfile(), "intro(s) were not expected")
+			return coreapi.Blames().NewProtocolViolation(n.GetReportProfile(), "intro(s) were not expected")
 		}
 		if reader.HasFullIntro() {
 			return nil
 		}
 		if fullIntroRequired {
-			return n.Blames().NewProtocolViolation(n.GetReportProfile(), "joiner MUST send a full intro")
+			return coreapi.Blames().NewProtocolViolation(n.GetReportProfile(), "joiner MUST send a full intro")
 		}
 		if brief == nil {
-			return n.Blames().NewProtocolViolation(n.GetReportProfile(), "joiner MUST send at least a brief intro")
+			return coreapi.Blames().NewProtocolViolation(n.GetReportProfile(), "joiner MUST send at least a brief intro")
 		}
 		return nil
 	}
 	if n.IsJoiner() {
-		return n.Blames().NewProtocolViolation(n.GetReportProfile(), "joiner MUST send a brief or a full intro")
+		return coreapi.Blames().NewProtocolViolation(n.GetReportProfile(), "joiner MUST send a brief or a full intro")
 	}
 	return nil
 }
@@ -143,7 +144,7 @@ func ApplyMemberAnnouncement(ctx context.Context, reader transport.AnnouncementP
 	nr := na.GetNodeRank()
 
 	if n.GetRank(realm.GetNodeCount()) != nr {
-		return false, nil, n.Frauds().NewMismatchedNeighbourRank(n.GetReportProfile())
+		return false, nil, coreapi.Frauds().NewMismatchedNeighbourRank(n.GetReportProfile())
 	}
 
 	var err error
@@ -156,6 +157,7 @@ func ApplyMemberAnnouncement(ctx context.Context, reader transport.AnnouncementP
 	if reader.HasFullIntro() {
 		full := reader.GetFullIntroduction()
 		// TODO change to use DispatchAnnouncement
+
 		matches = n.UpgradeDynamicNodeProfile(ctx, full)
 		profile = n.GetStatic()
 	} else if brief != nil {
@@ -164,13 +166,13 @@ func ApplyMemberAnnouncement(ctx context.Context, reader transport.AnnouncementP
 	}
 	if !matches {
 		// TODO should be fraud
-		return false, nil, n.Blames().NewProtocolViolation(n.GetReportProfile(), "announcement is incorrect")
+		return false, nil, coreapi.Blames().NewProtocolViolation(n.GetReportProfile(), "announcement is incorrect")
 	}
 
 	var ma profiles.MemberAnnouncement
 	if nr.IsJoiner() {
 		if profile == nil {
-			return false, nil, n.Blames().NewProtocolViolation(n.GetReportProfile(), "joiner announcement is incorrect")
+			return false, nil, coreapi.Blames().NewProtocolViolation(n.GetReportProfile(), "joiner announcement is incorrect")
 		}
 		ma = profiles.NewJoinerAnnouncement(profile, announcerID)
 	} else {
@@ -178,12 +180,12 @@ func ApplyMemberAnnouncement(ctx context.Context, reader transport.AnnouncementP
 		ma, joinerID = AnnouncementFromReaderNotForJoiner(n.GetNodeID(), na, announcerID, realm.GetProfileFactory())
 
 		if !joinerID.IsAbsent() && joinerID != ma.JoinerID {
-			return false, nil, n.Blames().NewProtocolViolation(n.GetReportProfile(), "announced joiner id and joiner profile mismatched")
+			return false, nil, coreapi.Blames().NewProtocolViolation(n.GetReportProfile(), "announced joiner id and joiner profile mismatched")
 		}
 	}
 
 	if !n.CanIntroduceJoiner() && !ma.JoinerID.IsAbsent() {
-		return false, nil, n.Blames().NewProtocolViolation(n.GetReportProfile(), "node is not allowed to add a joiner")
+		return false, nil, coreapi.Blames().NewProtocolViolation(n.GetReportProfile(), "node is not allowed to add a joiner")
 	}
 
 	if ma.JoinerID == announcerID {
@@ -283,22 +285,22 @@ func VerifyNeighbourhood(ctx context.Context, neighbourhood []transport.Membersh
 			ma, joinerID := AnnouncementFromReaderNotForJoiner(nid, nb, senderID, pf)
 
 			if !joinerID.IsAbsent() && joinerID != ma.JoinerID {
-				return nil, n.Blames().NewProtocolViolation(n.GetReportProfile(), "announced joiner id and joiner profile mismatched")
+				return nil, coreapi.Blames().NewProtocolViolation(n.GetReportProfile(), "announced joiner id and joiner profile mismatched")
 			}
 
 			if ma.JoinerID.IsAbsent() {
 				if !ma.Joiner.IsEmpty() {
 					// TODO fraud
-					return nil, n.Blames().NewProtocolViolation(n.GetReportProfile(), "joiner profile is unexpected on neighbourhood")
+					return nil, coreapi.Blames().NewProtocolViolation(n.GetReportProfile(), "joiner profile is unexpected on neighbourhood")
 				}
 			} else {
 				if nb.IsLeaving() || !nr.GetMode().CanIntroduceJoiner(false) {
 					// TODO fraud
-					return nil, n.Blames().NewProtocolViolation(n.GetReportProfile(), "member is not allowed to introduce joiner")
+					return nil, coreapi.Blames().NewProtocolViolation(n.GetReportProfile(), "member is not allowed to introduce joiner")
 				}
 				if !ma.Joiner.IsEmpty() /* && ma.JoinerID != announcedJoinerID */ {
 					// TODO fraud
-					return nil, n.Blames().NewProtocolViolation(n.GetReportProfile(), "joiner profile was not expected in neighbourhood")
+					return nil, coreapi.Blames().NewProtocolViolation(n.GetReportProfile(), "joiner profile was not expected in neighbourhood")
 				}
 			}
 
@@ -306,7 +308,7 @@ func VerifyNeighbourhood(ctx context.Context, neighbourhood []transport.Membersh
 		} else {
 			if nb.IsLeaving() || !nb.GetJoinerID().IsAbsent() {
 				// TODO fraud
-				return nil, n.Blames().NewProtocolViolation(n.GetReportProfile(), "joiner is not allowed to leave or to introduce joiner")
+				return nil, coreapi.Blames().NewProtocolViolation(n.GetReportProfile(), "joiner is not allowed to leave or to introduce joiner")
 			}
 
 			introducedBy := senderID
@@ -317,14 +319,14 @@ func VerifyNeighbourhood(ctx context.Context, neighbourhood []transport.Membersh
 				if jar != nil {
 					// TODO fraud
 					log.Error("joiner profile is duplicated in neighbourhood")
-					// return nil, n.Blames().NewProtocolViolation(n.GetReportProfile(), "joiner profile is duplicated in neighbourhood")
+					// return nil, coreapi.Blames().NewProtocolViolation(n.GetReportProfile(), "joiner profile is duplicated in neighbourhood")
 				}
 				joinerProfile = announcedJoiner
 			} else {
 				ja := nb.GetJoinerAnnouncement()
 				if ja == nil {
 					// TODO fraud
-					return nil, n.Blames().NewProtocolViolation(n.GetReportProfile(), "joiner profile is missing in neighbourhood")
+					return nil, coreapi.Blames().NewProtocolViolation(n.GetReportProfile(), "joiner profile is missing in neighbourhood")
 				}
 				introducedBy = ja.GetJoinerIntroducedByID()
 				joinerProfile = pf.CreateUpgradableIntroProfile(ja.GetBriefIntroduction())
@@ -338,11 +340,11 @@ func VerifyNeighbourhood(ctx context.Context, neighbourhood []transport.Membersh
 
 	if !hasThis || hasSelf {
 		// TODO Fraud proofs
-		return nil, n.Frauds().NewNeighbourMissingTarget(n.GetReportProfile())
+		return nil, coreapi.Frauds().NewNeighbourMissingTarget(n.GetReportProfile())
 	}
 	if hasSelf {
 		// TODO Fraud proofs
-		return nil, n.Frauds().NewNeighbourContainsSource(n.GetReportProfile())
+		return nil, coreapi.Frauds().NewNeighbourContainsSource(n.GetReportProfile())
 	}
 
 	return neighbours, nil

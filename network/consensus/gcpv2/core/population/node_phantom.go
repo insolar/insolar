@@ -53,6 +53,7 @@ package population
 import (
 	"context"
 	"fmt"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/misbehavior"
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
@@ -60,7 +61,6 @@ import (
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/misbehavior"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
@@ -93,18 +93,15 @@ type NodePhantom struct {
 	// figments map[string]*figment
 }
 
+func (p *NodePhantom) CaptureMisbehavior(ctx context.Context, report misbehavior.Report) {
+
+	// ignored - will be repeated
+}
+
 func (p *NodePhantom) ApplyNeighbourEvidence(n *NodeAppearance, ma profiles.MemberAnnouncement,
 	cappedTrust bool, applyAfterChecks MembershipApplyFunc) (bool, error) {
 
 	return false, nil
-}
-
-func (p *NodePhantom) Blames() misbehavior.BlameFactory {
-	return p.purgatory.Blames()
-}
-
-func (p *NodePhantom) Frauds() misbehavior.FraudFactory {
-	return p.purgatory.Frauds()
 }
 
 func (p *NodePhantom) GetReportProfile() profiles.BaseNode {
