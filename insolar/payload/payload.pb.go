@@ -6,16 +6,15 @@ package payload
 import (
 	bytes "bytes"
 	fmt "fmt"
-	io "io"
-	math "math"
-	reflect "reflect"
-	strings "strings"
-
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
 	github_com_insolar_insolar_insolar "github.com/insolar/insolar/insolar"
 	pulse "github.com/insolar/insolar/insolar/pulse"
 	record "github.com/insolar/insolar/insolar/record"
+	io "io"
+	math "math"
+	reflect "reflect"
+	strings "strings"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
