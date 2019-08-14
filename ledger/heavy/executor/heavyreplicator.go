@@ -59,6 +59,28 @@ type HeavyReplicatorDefault struct {
 	syncWaitingData chan *payload.Replication
 }
 
+func NewHeavyReplicatorDefault(
+	records object.RecordModifier,
+	indexes object.IndexModifier,
+	pcs insolar.PlatformCryptographyScheme,
+	pulseCalculator pulse.Calculator,
+	drops drop.Modifier,
+	keeper JetKeeper,
+	backuper BackupMaker,
+	jets jet.Modifier,
+) *HeavyReplicatorDefault {
+	return &HeavyReplicatorDefault{
+		records:         records,
+		indexes:         indexes,
+		pcs:             pcs,
+		pulseCalculator: pulseCalculator,
+		drops:           drops,
+		keeper:          keeper,
+		backuper:        backuper,
+		jets:            jets,
+	}
+}
+
 func (h *HeavyReplicatorDefault) NotifyAboutMessage(ctx context.Context, msg *payload.Replication) {
 	h.once.Do(func() {
 		go h.sync(context.Background())

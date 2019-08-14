@@ -64,6 +64,8 @@ type Handler struct {
 	JetTree         jet.Storage
 	DropDB          *drop.DB
 
+	Replicator executor.HeavyReplicator
+
 	dep *proc.Dependencies
 }
 
@@ -90,14 +92,7 @@ func New(cfg configuration.Ledger) *Handler {
 		},
 		Replication: func(p *proc.Replication) {
 			p.Dep(
-				h.RecordModifier,
-				h.IndexModifier,
-				h.PCS,
-				h.PulseCalculator,
-				h.DropModifier,
-				h.JetKeeper,
-				h.BackupMaker,
-				h.JetModifier,
+				h.Replicator,
 			)
 		},
 		SendJet: func(p *proc.SendJet) {
