@@ -60,20 +60,31 @@ var stdin io.WriteCloser
 var stdout io.ReadCloser
 var stderr io.ReadCloser
 
-var (
-	insolarRootMemberKeysPath           = launchnetPath("configs", insolarRootMemberKeys)
-	insolarMigrationAdminMemberKeysPath = launchnetPath("configs", insolarMigrationAdminMemberKeys)
-	insolarBootstrapConfigPath          = launchnetPath("bootstrap.yaml")
-)
+func launchnetPath(a ...string) (string, error) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return "", errors.Wrap(err, "[ startNet ] Can't get current working directory")
+	}
+	cwdList := strings.Split(cwd, "/")
+	var count int
+	for i := len(cwdList); i >= 0; i-- {
+		if cwdList[i-1] == "insolar" && cwdList[i-2] == "insolar" {
+			break
+		}
+		count++
+	}
+	var dirUp []string
+	for i := 0; i < count; i++ {
+		dirUp = append(dirUp, "..")
+	}
 
-func launchnetPath(a ...string) string {
 	d := defaults.LaunchnetDir()
-	parts := []string{"..", d}
+	parts := append(dirUp, d)
 	if strings.HasPrefix(d, "/") {
 		parts = []string{d}
 	}
 	parts = append(parts, a...)
-	return filepath.Join(parts...)
+	return filepath.Join(parts...), nil
 }
 
 var info *requester.InfoResponse
@@ -94,7 +105,11 @@ func getNumberNodes() (int, error) {
 
 	var conf nodesConf
 
-	buff, err := ioutil.ReadFile(insolarBootstrapConfigPath)
+	path, err := launchnetPath("configs", insolarMigrationAdminMemberKeys)
+	if err != nil {
+		return 0, err
+	}
+	buff, err := ioutil.ReadFile(path)
 	if err != nil {
 		return 0, errors.Wrap(err, "[ getNumberNodes ] Can't read bootstrap config")
 	}
@@ -143,16 +158,28 @@ func loadMemberKeys(keysPath string, member *user) error {
 }
 
 func loadAllMembersKeys() error {
-	err := loadMemberKeys(insolarRootMemberKeysPath, &root)
+	path, err := launchnetPath("configs", insolarRootMemberKeys)
 	if err != nil {
 		return err
 	}
-	err = loadMemberKeys(insolarMigrationAdminMemberKeysPath, &migrationAdmin)
+	err = loadMemberKeys(path, &root)
+	if err != nil {
+		return err
+	}
+	path, err = launchnetPath("configs", insolarMigrationAdminMemberKeys)
+	if err != nil {
+		return err
+	}
+	err = loadMemberKeys(path, &migrationAdmin)
 	if err != nil {
 		return err
 	}
 	for i, md := range migrationDaemons {
-		err = loadMemberKeys(launchnetPath("configs", "migration_daemon_"+strconv.Itoa(i)+"_member_keys.json"), &md)
+		path, err := launchnetPath("configs", "migration_daemon_"+strconv.Itoa(i)+"_member_keys.json")
+		if err != nil {
+			return err
+		}
+		err = loadMemberKeys(path, &md)
 		if err != nil {
 			return err
 		}
@@ -296,16 +323,35 @@ func waitForNet() error {
 	return nil
 }
 
+func getPwd() (string, error) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return "", errors.Wrap(err, "[ startNet ] Can't get current working directory")
+	}
+	return cwd, nil
+}
+
 func startNet() error {
+
 	cwd, err := os.Getwd()
 	if err != nil {
 		return errors.Wrap(err, "[ startNet ] Can't get current working directory")
 	}
 	defer os.Chdir(cwd)
 
-	err = os.Chdir("../")
+	for cwd[len(cwd)-15:] != "insolar/insolar" {
+		err = os.Chdir("../")
+		if err != nil {
+			return errors.Wrap(err, "[ startNet  ] Can't change dir")
+		}
+		cwd, err = os.Getwd()
+		if err != nil {
+			return errors.Wrap(err, "[ startNet ] Can't get current working directory")
+		}
+	}
+
 	if err != nil {
-		return errors.Wrap(err, "[ startNet  ] Can't change dir")
+		return errors.Wrap(err, "[ startNet ] Unable to change to Insolar dir: ")
 	}
 
 	// If you want to add -n flag here please make sure that insgorund will
@@ -422,7 +468,7 @@ func setup() error {
 		migrationDaemons[i].ref = info.MigrationDaemonMembers[i]
 	}
 
-	contracts = make(map[string]*contractInfo)
+	Contracts = make(map[string]*ContractInfo)
 
 	return nil
 }
@@ -455,7 +501,7 @@ func teardown() {
 	fmt.Println("[ teardown ] directory for contracts cache was successfully deleted")
 }
 
-func testMainWrapper(m *testing.M) int {
+func TestsMainWrapper(m *testing.M) int {
 	err := setup()
 	defer teardown()
 	if err != nil {
@@ -491,8 +537,4 @@ func testMainWrapper(m *testing.M) int {
 		fmt.Println(string(out))
 	}
 	return code
-}
-
-func TestMain(m *testing.M) {
-	os.Exit(testMainWrapper(m))
 }
