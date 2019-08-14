@@ -19,9 +19,9 @@ package artifacts
 import (
 	"context"
 	"fmt"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
@@ -137,7 +137,11 @@ func (m *client) registerRequest(
 	case *payload.RequestInfo:
 		return p, nil
 	case *payload.Error:
-		err = errors.New(p.Text)
+		if p.Code == payload.CodeFlowCanceled {
+			err = flow.ErrCancelled
+		} else {
+			err = errors.New(p.Text)
+		}
 		return nil, err
 	default:
 		err = fmt.Errorf("registerRequest: unexpected reply: %#v", p)

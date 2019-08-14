@@ -154,7 +154,7 @@ func isRetryableError(ctx context.Context, rep *message.Message) bool {
 	}
 	p, ok := replyPayload.(*payload.Error)
 	if ok && (p.Code == payload.CodeFlowCanceled) {
-		inslogger.FromContext(ctx).Errorf("flow cancelled, retrying (error message - %s)", p.Text)
+		inslogger.FromContext(ctx).Debugf("flow cancelled, retrying (error message - %s)", p.Text)
 		return true
 	}
 	return false
