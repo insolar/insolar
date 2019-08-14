@@ -31,6 +31,7 @@ type HealthChecker struct {
 	CertificateManager insolar.CertificateManager
 	NodeNetwork        network.NodeNetwork
 	PulseAccessor      pulse.Accessor
+	// todo: use insolar.HealthChecker
 }
 
 // NewHealthChecker creates new HealthChecker.
