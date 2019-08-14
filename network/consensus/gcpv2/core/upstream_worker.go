@@ -58,8 +58,10 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 )
 
-func NewUpstreamStateMachine(upstream api.UpstreamController) UpstreamStateMachine {
-	return UpstreamStateMachine{upstream: upstream}
+func NewUpstreamStateMachine(upstream api.UpstreamController) *UpstreamStateMachine {
+	r := &UpstreamStateMachine{upstream: upstream}
+	r.Init(20, nil, nil)
+	return r
 }
 
 var _ api.UpstreamController = &UpstreamStateMachine{}
