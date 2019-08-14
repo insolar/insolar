@@ -18,323 +18,204 @@ package pulsar
 
 import (
 	"context"
-	"crypto"
-	"encoding/gob"
-	"net"
-	"net/rpc"
 	"sync"
+	"time"
 
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
-	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 
 	"github.com/insolar/insolar/log"
-	pulsarstorage "github.com/insolar/insolar/pulsar/storage"
 )
 
 // Pulsar is a base struct for pulsar's node
 // It contains all the stuff, which is needed for working of a pulsar
 type Pulsar struct {
-	ID string
-
-	Sock               net.Listener
-	SockConnectionType configuration.ConnectionType
-	RPCServer          *rpc.Server
-
-	Neighbours map[string]*Neighbour
-
-	PublicKey    crypto.PublicKey
+	Config       configuration.Pulsar
 	PublicKeyRaw string
 
-	Config configuration.Pulsar
-
-	Storage          pulsarstorage.PulsarStorage
 	EntropyGenerator entropygenerator.EntropyGenerator
 
-	StartProcessLock sync.Mutex
-
-	generatedEntropy     *insolar.Entropy
-	generatedEntropyLock sync.RWMutex
-
-	GeneratedEntropySign []byte
-
-	currentSlotEntropy     *insolar.Entropy
-	currentSlotEntropyLock sync.RWMutex
-
-	CurrentSlotPulseSender string
-
-	currentSlotSenderConfirmationsLock sync.RWMutex
-	CurrentSlotSenderConfirmations     map[string]insolar.PulseSenderConfirmation
-
-	ProcessingPulseNumber insolar.PulseNumber
-
-	lastPulseLock sync.RWMutex
-	lastPulse     *insolar.Pulse
-
-	ownedBtfRowLock sync.RWMutex
-	ownedBftRow     map[string]*BftCell
-
-	bftGrid     map[string]map[string]*BftCell
-	BftGridLock sync.RWMutex
-
-	StateSwitcher              StateSwitcher
 	Certificate                certificate.Certificate
 	CryptographyService        insolar.CryptographyService
 	PlatformCryptographyScheme insolar.PlatformCryptographyScheme
 	KeyProcessor               insolar.KeyProcessor
 	PulseDistributor           insolar.PulseDistributor
+
+	lastPNMutex sync.RWMutex
+	lastPN      insolar.PulseNumber
 }
 
 // NewPulsar creates a new pulse with using of custom GeneratedEntropy Generator
 func NewPulsar(
-	// TODO: refactor constructor; inject components. INS-939 - @dmitry-panchenko 11.Dec.2018
 	configuration configuration.Pulsar,
 	cryptographyService insolar.CryptographyService,
 	scheme insolar.PlatformCryptographyScheme,
 	keyProcessor insolar.KeyProcessor,
 	pulseDistributor insolar.PulseDistributor,
-	storage pulsarstorage.PulsarStorage,
-	rpcWrapperFactory RPCClientWrapperFactory,
 	entropyGenerator entropygenerator.EntropyGenerator,
-	stateSwitcher StateSwitcher,
-	listener func(string, string) (net.Listener, error)) (*Pulsar, error) {
+) *Pulsar {
 
-	log.Debug("[NewPulsar]")
-
-	// Listen for incoming connections.
-	listenerImpl, err := listener(configuration.ConnectionType.String(), configuration.MainListenerAddress)
-	if err != nil {
-		return nil, err
-	}
+	log.Info("[NewPulsar]")
 
 	pulsar := &Pulsar{
-		Sock:                       listenerImpl,
-		Neighbours:                 map[string]*Neighbour{},
 		CryptographyService:        cryptographyService,
 		PlatformCryptographyScheme: scheme,
 		KeyProcessor:               keyProcessor,
 		PulseDistributor:           pulseDistributor,
 		Config:                     configuration,
-		Storage:                    storage,
 		EntropyGenerator:           entropyGenerator,
-		StateSwitcher:              stateSwitcher,
 	}
-	pulsar.clearState()
 
 	pubKey, err := cryptographyService.GetPublicKey()
 	if err != nil {
 		log.Fatal(err)
 	}
-	pulsar.PublicKey = pubKey
-
 	pubKeyRaw, err := keyProcessor.ExportPublicKeyPEM(pubKey)
 	if err != nil {
 		log.Fatal(err)
 	}
 	pulsar.PublicKeyRaw = string(pubKeyRaw)
 
-	lastPulse, err := storage.GetLastPulse()
-	if err != nil {
-		log.Fatal(err)
-	}
-	pulsar.SetLastPulse(lastPulse)
-
-	// Adding other pulsars
-	for _, neighbour := range configuration.Neighbours {
-		currentMap := map[string]*BftCell{}
-		for _, gridColumn := range configuration.Neighbours {
-			currentMap[gridColumn.PublicKey] = nil
-		}
-		pulsar.SetBftGridItem(neighbour.PublicKey, currentMap)
-
-		if len(neighbour.PublicKey) == 0 {
-			continue
-		}
-		publicKey, err := keyProcessor.ImportPublicKeyPEM([]byte(neighbour.PublicKey))
-		if err != nil {
-			continue
-		}
-
-		pulsar.Neighbours[neighbour.PublicKey] = &Neighbour{
-			ConnectionType:    neighbour.ConnectionType,
-			ConnectionAddress: neighbour.Address,
-			PublicKey:         publicKey,
-			OutgoingClient:    rpcWrapperFactory.CreateWrapper(),
-		}
-		pulsar.AddItemToVector(neighbour.PublicKey, nil)
-	}
-
-	gob.Register(Payload{})
-	gob.Register(&HandshakePayload{})
-	gob.Register(&EntropySignaturePayload{})
-	gob.Register(&EntropyPayload{})
-	gob.Register(&VectorPayload{})
-	gob.Register(insolar.PulseSenderConfirmation{})
-	gob.Register(&PulsePayload{})
-	gob.Register(&PulseSenderConfirmationPayload{})
-
-	return pulsar, nil
+	return pulsar
 }
 
-// StartServer starts listening of the rpc-server
-func (currentPulsar *Pulsar) StartServer(ctx context.Context) {
-	inslogger.FromContext(ctx).Debugf("[StartServer] address - %v", currentPulsar.Config.MainListenerAddress)
-	server := rpc.NewServer()
-
-	err := server.RegisterName("Pulsar", NewHandler(currentPulsar))
-	if err != nil {
-		inslogger.FromContext(ctx).Fatal(err)
-	}
-	currentPulsar.RPCServer = server
-	server.Accept(currentPulsar.Sock)
-}
-
-// StopServer stops listening of the rpc-server
-func (currentPulsar *Pulsar) StopServer(ctx context.Context) {
-	inslogger.FromContext(ctx).Debugf("[StopServer] address - %v", currentPulsar.Config.MainListenerAddress)
-	for _, neighbour := range currentPulsar.Neighbours {
-		if neighbour.OutgoingClient != nil && neighbour.OutgoingClient.IsInitialised() {
-			err := neighbour.OutgoingClient.Close()
-			if err != nil {
-				inslogger.FromContext(ctx).Error(err)
-			}
-		}
-	}
-
-	err := currentPulsar.Sock.Close()
-	if err != nil {
-		inslogger.FromContext(ctx).Error(err)
-	}
-}
-
-// EstablishConnectionToPulsar is a method for creating connection to another pulsar
-func (currentPulsar *Pulsar) EstablishConnectionToPulsar(ctx context.Context, pubKey string) error {
-	inslogger.FromContext(ctx).Debug("[EstablishConnectionToPulsar]")
-	neighbour, err := currentPulsar.FetchNeighbour(pubKey)
-	if err != nil {
-		return err
-	}
-
-	neighbour.OutgoingClient.Lock()
-	if neighbour.OutgoingClient.IsInitialised() {
-		neighbour.OutgoingClient.Unlock()
-		return nil
-	}
-	err = neighbour.OutgoingClient.CreateConnection(neighbour.ConnectionType, neighbour.ConnectionAddress)
-	neighbour.OutgoingClient.Unlock()
-	if err != nil {
-		return err
-	}
-
-	var rep Payload
-	message, err := currentPulsar.preparePayload(&HandshakePayload{Entropy: currentPulsar.EntropyGenerator.GenerateEntropy()})
-	if err != nil {
-		return err
-	}
-	handshakeCall := neighbour.OutgoingClient.Go(Handshake.String(), message, &rep, nil)
-	reply := <-handshakeCall.Done
-	if reply.Error != nil {
-		return reply.Error
-	}
-	casted := reply.Reply.(*Payload)
-
-	result, err := currentPulsar.checkPayloadSignature(casted)
-	if err != nil {
-		return err
-	}
-	if !result {
-		return errors.New("signature check Failed")
-	}
-
-	inslogger.FromContext(ctx).Infof("pulsar - %v connected to - %v", currentPulsar.Config.MainListenerAddress, neighbour.ConnectionAddress)
-	return nil
-}
-
-// CheckConnectionsToPulsars is a method refreshing connections between pulsars
-func (currentPulsar *Pulsar) CheckConnectionsToPulsars(ctx context.Context) {
+func (p *Pulsar) Send(ctx context.Context, pulseNumber insolar.PulseNumber) error {
 	logger := inslogger.FromContext(ctx)
-	for pubKey, neighbour := range currentPulsar.Neighbours {
-		logger.Debugf("[CheckConnectionsToPulsars] refresh with %v", neighbour.ConnectionAddress)
-		if neighbour.OutgoingClient == nil || !neighbour.OutgoingClient.IsInitialised() {
-			err := currentPulsar.EstablishConnectionToPulsar(ctx, pubKey)
-			if err != nil {
-				inslogger.FromContext(ctx).Error(err)
-				continue
-			}
-		}
+	logger.Info("before sending new pulseNumber: %v", pulseNumber)
 
-		healthCheckCall := neighbour.OutgoingClient.Go(HealthCheck.String(), nil, nil, nil)
-		replyCall := <-healthCheckCall.Done
-		if replyCall.Error != nil {
-			logger.Warnf("Problems with connection to %v, with error - %v", neighbour.ConnectionAddress, replyCall.Error)
-			neighbour.OutgoingClient.ResetClient()
-			err := currentPulsar.EstablishConnectionToPulsar(ctx, pubKey)
-			if err != nil {
-				logger.Errorf("Attempt of connection to %v Failed with error - %v", neighbour.ConnectionAddress, err)
-				neighbour.OutgoingClient.ResetClient()
-				continue
-			}
-		}
-	}
-}
-
-// StartConsensusProcess starts process of calculating consensus between pulsars
-func (currentPulsar *Pulsar) StartConsensusProcess(ctx context.Context, pulseNumber insolar.PulseNumber) error {
-	logger := inslogger.FromContext(ctx)
-	logger.Debugf("[StartConsensusProcess] pulse number - %v, host - %v", pulseNumber, currentPulsar.Config.MainListenerAddress)
-	logger.Debugf("[Before StartProcessLock]")
-	currentPulsar.StartProcessLock.Lock()
-	logger.Debugf("[After StartProcessLock]")
-
-	if pulseNumber == currentPulsar.ProcessingPulseNumber {
-		logger.Debugf("[pulseNumber == currentPulsar.ProcessingPulseNumber] return nil")
-		currentPulsar.StartProcessLock.Unlock()
-		return nil
-	}
-
-	logger.Debugf("currentPulsar.StateSwitcher.GetState() > WaitingForStart")
-	if currentPulsar.StateSwitcher.GetState() > WaitingForStart || (currentPulsar.ProcessingPulseNumber != 0 && pulseNumber < currentPulsar.ProcessingPulseNumber) {
-		logger.Debugf("currentPulsar.StartProcessLock.Unlock()")
-		currentPulsar.StartProcessLock.Unlock()
-		err := errors.Errorf(
-			"wrong state status or pulse number, state - %v, received pulse - %v, last pulse - %v, processing pulse - %v",
-			currentPulsar.StateSwitcher.GetState().String(),
-			pulseNumber, currentPulsar.GetLastPulse().PulseNumber,
-			currentPulsar.ProcessingPulseNumber)
+	entropy, _, err := p.generateNewEntropyAndSign()
+	if err != nil {
 		logger.Error(err)
 		return err
 	}
-	currentPulsar.ProcessingPulseNumber = pulseNumber
 
-	inslog := inslogger.FromContext(ctx)
+	pulseForSending := insolar.Pulse{
+		PulseNumber:      pulseNumber,
+		Entropy:          entropy,
+		NextPulseNumber:  pulseNumber + insolar.PulseNumber(p.Config.NumberDelta),
+		PrevPulseNumber:  p.lastPN,
+		EpochPulseNumber: int(pulseNumber),
+		OriginID:         [16]byte{206, 41, 229, 190, 7, 240, 162, 155, 121, 245, 207, 56, 161, 67, 189, 0},
+		PulseTimestamp:   time.Now().UnixNano(),
+		Signs:            map[string]insolar.PulseSenderConfirmation{},
+	}
 
-	logger.Debugf("before GenerateEntropy")
-	currentPulsar.StateSwitcher.setState(GenerateEntropy)
-
-	logger.Debugf("before generateNewEntropyAndSign")
-	err := currentPulsar.generateNewEntropyAndSign()
+	payload := PulseSenderConfirmationPayload{PulseSenderConfirmation: insolar.PulseSenderConfirmation{
+		ChosenPublicKey: p.PublicKeyRaw,
+		Entropy:         entropy,
+		PulseNumber:     pulseNumber,
+	}}
+	hasher := platformpolicy.NewPlatformCryptographyScheme().IntegrityHasher()
+	hash, err := payload.Hash(hasher)
 	if err != nil {
-		logger.Debugf("currentPulsar.StartProcessLock.Unlock() && currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)")
-		currentPulsar.StartProcessLock.Unlock()
-		currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)
 		return err
 	}
-	inslog.Debugf("Entropy generated - %v", currentPulsar.GetGeneratedEntropy())
-	inslog.Debugf("Entropy sign generated - %v", currentPulsar.GeneratedEntropySign)
+	signature, err := p.CryptographyService.Sign(hash)
+	if err != nil {
+		return err
+	}
 
-	currentPulsar.AddItemToVector(currentPulsar.PublicKeyRaw, &BftCell{
-		Entropy:           *currentPulsar.GetGeneratedEntropy(),
-		IsEntropyReceived: true,
-		Sign:              currentPulsar.GeneratedEntropySign,
-	})
+	pulseForSending.Signs[p.PublicKeyRaw] = insolar.PulseSenderConfirmation{
+		ChosenPublicKey: p.PublicKeyRaw,
+		Signature:       signature.Bytes(),
+		Entropy:         entropy,
+		PulseNumber:     pulseNumber,
+	}
 
-	currentPulsar.StartProcessLock.Unlock()
+	logger.Debug("Start a process of sending pulse")
+	go func() {
+		logger.Debug("Before sending to network")
+		p.PulseDistributor.Distribute(ctx, pulseForSending)
+	}()
 
-	currentPulsar.broadcastSignatureOfEntropy(ctx)
-	currentPulsar.StateSwitcher.SwitchToState(ctx, WaitingForEntropySigns, nil)
+	p.lastPNMutex.Lock()
+	p.lastPN = pulseNumber
+	p.lastPNMutex.Unlock()
+	logger.Infof("set latest pulse: %v", pulseForSending.PulseNumber)
+
+	stats.Record(ctx, statPulseGenerated.M(1))
 	return nil
 }
+
+func (p *Pulsar) LastPN() insolar.PulseNumber {
+	p.lastPNMutex.RLock()
+	defer p.lastPNMutex.RUnlock()
+
+	return p.lastPN
+}
+
+func (p *Pulsar) generateNewEntropyAndSign() (insolar.Entropy, []byte, error) {
+	e := p.EntropyGenerator.GenerateEntropy()
+
+	sign, err := p.CryptographyService.Sign(e[:])
+	if err != nil {
+		return insolar.Entropy{}, nil, err
+	}
+
+	return e, sign.Bytes(), nil
+}
+
+// PulseSenderConfirmationPayload is a struct with info about pulse's confirmations
+type PulseSenderConfirmationPayload struct {
+	insolar.PulseSenderConfirmation
+}
+
+// Hash calculates hash of payload
+func (ps *PulseSenderConfirmationPayload) Hash(hashProvider insolar.Hasher) ([]byte, error) {
+	_, err := hashProvider.Write(ps.PulseNumber.Bytes())
+	if err != nil {
+		return nil, err
+	}
+	_, err = hashProvider.Write([]byte(ps.ChosenPublicKey))
+	if err != nil {
+		return nil, err
+	}
+	_, err = hashProvider.Write(ps.Entropy[:])
+	if err != nil {
+		return nil, err
+	}
+	return hashProvider.Sum(nil), nil
+}
+
+/*
+
+if currentPulsar.isStandalone() {
+currentPulsar.SetCurrentSlotEntropy(currentPulsar.GetGeneratedEntropy())
+currentPulsar.CurrentSlotPulseSender = currentPulsar.PublicKeyRaw
+
+payload := PulseSenderConfirmationPayload{insolar.PulseSenderConfirmation{
+ChosenPublicKey: currentPulsar.CurrentSlotPulseSender,
+Entropy:         *currentPulsar.GetCurrentSlotEntropy(),
+PulseNumber:     currentPulsar.ProcessingPulseNumber,
+}}
+hashProvider := currentPulsar.PlatformCryptographyScheme.IntegrityHasher()
+hash, err := payload.Hash(hashProvider)
+if err != nil {
+currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)
+return
+}
+signature, err := currentPulsar.CryptographyService.Sign(hash)
+if err != nil {
+currentPulsar.StateSwitcher.SwitchToState(ctx, Failed, err)
+return
+}
+
+currentPulsar.currentSlotSenderConfirmationsLock.Lock()
+currentPulsar.CurrentSlotSenderConfirmations[currentPulsar.PublicKeyRaw] = insolar.PulseSenderConfirmation{
+ChosenPublicKey: currentPulsar.CurrentSlotPulseSender,
+Signature:       signature.Bytes(),
+Entropy:         *currentPulsar.GetCurrentSlotEntropy(),
+PulseNumber:     currentPulsar.ProcessingPulseNumber,
+}
+currentPulsar.currentSlotSenderConfirmationsLock.Unlock()
+
+currentPulsar.StateSwitcher.SwitchToState(ctx, SendingPulse, nil)
+
+return
+}*/

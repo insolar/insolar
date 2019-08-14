@@ -97,12 +97,12 @@ func (h *HandleCall) checkExecutionLoop(
 		return false
 	}
 
-	archive := h.dep.StateStorage.GetExecutionArchive(*request.Object)
-	if archive == nil {
+	registry := h.dep.StateStorage.GetExecutionRegistry(*request.Object)
+	if registry == nil {
 		return false
 	}
 
-	if !archive.FindRequestLoop(ctx, reqRef, request.APIRequestID) {
+	if !registry.FindRequestLoop(ctx, reqRef, request.APIRequestID) {
 		return false
 	}
 

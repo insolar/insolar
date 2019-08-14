@@ -18,17 +18,13 @@ package testutils
 
 import (
 	"crypto"
-	"crypto/rand"
-	"fmt"
 	"hash"
-	"math/big"
 
 	"github.com/gojuno/minimock"
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 	"golang.org/x/crypto/sha3"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/bits"
 )
 
 // RandomString generates random uuid and return it as a string
@@ -38,72 +34,6 @@ func RandomString() string {
 		panic(err)
 	}
 	return newUUID.String()
-}
-
-// RandomRef generates random object reference
-func RandomRef() insolar.Reference {
-	ref := [insolar.RecordRefSize]byte{}
-	_, err := rand.Read(ref[:insolar.RecordIDSize])
-	if err != nil {
-		panic(err)
-	}
-	return ref
-}
-
-// RandomID generates random object ID
-func RandomID() insolar.ID {
-	id := [insolar.RecordIDSize]byte{}
-	_, err := rand.Read(id[:])
-	if err != nil {
-		panic(err)
-	}
-	return id
-}
-
-// RandomJet generates random jet with random depth.
-// DEPRECATED: use gen.JetID
-func RandomJet() insolar.ID {
-	// don't be too huge (i.e. 255)
-	n, err := rand.Int(rand.Reader, big.NewInt(128))
-	if err != nil {
-		panic(err)
-	}
-
-	depth := uint8(n.Int64())
-	return RandomJetWithDepth(depth)
-}
-
-// RandomJetWithDepth generates random jet with provided depth.
-func RandomJetWithDepth(depth uint8) insolar.ID {
-	jetbuf := make([]byte, insolar.RecordHashSize)
-	_, err := rand.Read(jetbuf)
-	if err != nil {
-		panic(err)
-	}
-	return insolar.ID(*insolar.NewJetID(depth, bits.ResetBits(jetbuf[1:], depth)))
-}
-
-// JetFromString converts string representation of Jet to insolar.ID.
-//
-// Examples: "010" converts to Jet with depth 3 and prefix "01".
-func JetFromString(s string) insolar.ID {
-	jetPrefix := make([]byte, insolar.JetPrefixSize)
-	depth := uint8(len(s))
-	for i, char := range s {
-		byteOffset := i / 8
-		bitsOffset := 7 - uint(i%8)
-		switch char {
-		case '0':
-		case '1':
-			add := uint8(1 << bitsOffset)
-			jetPrefix[byteOffset] += add
-		default:
-			panic(fmt.Errorf(
-				"%v character is non 0 or 1, but %v (input string='%v')", i, char, s))
-		}
-	}
-	return insolar.ID(*insolar.NewJetID(depth, jetPrefix))
-
 }
 
 type cryptographySchemeMock struct{}

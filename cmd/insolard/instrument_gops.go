@@ -14,28 +14,19 @@
 // limitations under the License.
 //
 
-// Package pulsartestutil - test utils for pulsar package
-package pulsartestutils
+// +build debug
+
+package main
 
 import (
-	"net"
-
-	"github.com/stretchr/testify/mock"
+	"github.com/google/gops/agent"
 )
 
-// MockListener mocks net.Listener interface
-type MockListener struct {
-	mock.Mock
-}
-
-func (mock *MockListener) Accept() (net.Conn, error) {
-	panic("implement me")
-}
-
-func (mock *MockListener) Close() error {
-	panic("implement me")
-}
-
-func (mock *MockListener) Addr() net.Addr {
-	panic("implement me")
+func init() {
+	toLaunch = append(toLaunch, func(params inputParams) error {
+		if err := agent.Listen(agent.Options{}); err != nil {
+			return err
+		}
+		return nil
+	})
 }

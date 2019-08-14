@@ -55,6 +55,7 @@ type Runner struct {
 	PulseAccessor       pulse.Accessor              `inject:""`
 	ArtifactManager     artifacts.Client            `inject:""`
 	JetCoordinator      jet.Coordinator             `inject:""`
+	NetworkStatus       insolar.NetworkStatus       `inject:""`
 	server              *http.Server
 	rpcServer           *rpc.Server
 	cfg                 *configuration.APIRunner

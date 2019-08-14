@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package executionarchive
+package executionregistry
 
 import (
 	"context"
@@ -28,27 +28,28 @@ import (
 	"github.com/insolar/insolar/logicrunner/common"
 )
 
-type Archiver interface {
-	Archive(transcript *common.Transcript)
+type Registry interface {
+	Register(transcript *common.Transcript)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/logicrunner/executionarchive.ExecutionArchive -o ./ -s _mock.go -g
-type ExecutionArchive interface {
-	Archive(ctx context.Context, transcript *common.Transcript)
+//go:generate minimock -i github.com/insolar/insolar/logicrunner/executionregistry.ExecutionRegistry -o ./ -s _mock.go -g
+type ExecutionRegistry interface {
+	Register(ctx context.Context, transcript *common.Transcript)
 	Done(transcript *common.Transcript) bool
 
+	Length() int
 	IsEmpty() bool
 	OnPulse(ctx context.Context) []insolar.Message
 	FindRequestLoop(ctx context.Context, reqRef insolar.Reference, apiRequestID string) bool
 	GetActiveTranscript(req insolar.Reference) *common.Transcript
 }
 
-type executionArchive struct {
+type executionRegistry struct {
 	// maps requestReference -> request to notify
 	// (StillExecuting message) that we've started to work on in previous pulses
-	objectRef   insolar.Reference
-	archiveLock sync.Mutex
-	archive     map[insolar.Reference]*common.Transcript
+	objectRef    insolar.Reference
+	registryLock sync.Mutex
+	registry     map[insolar.Reference]*common.Transcript
 
 	jetCoordinator jet.Coordinator
 }
@@ -56,84 +57,88 @@ type executionArchive struct {
 func New(
 	objectRef insolar.Reference,
 	jetCoordinator jet.Coordinator,
-) ExecutionArchive {
+) ExecutionRegistry {
 
-	return &executionArchive{
-		objectRef:   objectRef,
-		archiveLock: sync.Mutex{},
-		archive:     make(map[insolar.Reference]*common.Transcript),
+	return &executionRegistry{
+		objectRef:    objectRef,
+		registryLock: sync.Mutex{},
+		registry:     make(map[insolar.Reference]*common.Transcript),
 
 		jetCoordinator: jetCoordinator,
 	}
 }
 
-func (ea *executionArchive) IsEmpty() bool {
-	ea.archiveLock.Lock()
-	defer ea.archiveLock.Unlock()
+func (r *executionRegistry) Length() int {
+	r.registryLock.Lock()
+	defer r.registryLock.Unlock()
 
-	return len(ea.archive) == 0
+	return len(r.registry)
 }
 
-func (ea *executionArchive) Archive(ctx context.Context, transcript *common.Transcript) {
+func (r *executionRegistry) IsEmpty() bool {
+	return r.Length() == 0
+}
+
+func (r *executionRegistry) Register(ctx context.Context, transcript *common.Transcript) {
 	requestRef := transcript.RequestRef
 
-	ea.archiveLock.Lock()
-	defer ea.archiveLock.Unlock()
+	r.registryLock.Lock()
+	defer r.registryLock.Unlock()
 
-	if _, ok := ea.archive[requestRef]; !ok {
-		ea.archive[requestRef] = transcript
+	if _, ok := r.registry[requestRef]; !ok {
+		r.registry[requestRef] = transcript
 	} else {
-		inslogger.FromContext(ctx).Error("Trying to archive task that is already archived")
+		inslogger.FromContext(ctx).Error("Trying to register task that is already registered")
 	}
 }
 
-func (ea *executionArchive) Done(transcript *common.Transcript) bool {
+func (r *executionRegistry) Done(transcript *common.Transcript) bool {
 	requestRef := transcript.RequestRef
 
-	ea.archiveLock.Lock()
-	defer ea.archiveLock.Unlock()
+	r.registryLock.Lock()
+	defer r.registryLock.Unlock()
 
-	if _, ok := ea.archive[requestRef]; !ok {
+	if _, ok := r.registry[requestRef]; !ok {
 		return false
 	}
 
-	delete(ea.archive, requestRef)
+	delete(r.registry, requestRef)
 	return true
 }
 
 // constructs all StillExecuting messages
-func (ea *executionArchive) OnPulse(_ context.Context) []insolar.Message {
-	ea.archiveLock.Lock()
-	defer ea.archiveLock.Unlock()
+func (r *executionRegistry) OnPulse(_ context.Context) []insolar.Message {
+	r.registryLock.Lock()
+	defer r.registryLock.Unlock()
 
 	// TODO: this should return delegation token to continue execution of the pending
 	messages := make([]insolar.Message, 0)
-	if len(ea.archive) != 0 {
-		requestRefs := make([]insolar.Reference, 0, len(ea.archive))
-		for requestRef := range ea.archive {
+	if len(r.registry) != 0 {
+		requestRefs := make([]insolar.Reference, 0, len(r.registry))
+		for requestRef := range r.registry {
 			requestRefs = append(requestRefs, requestRef)
 		}
 
 		messages = append(messages, &message.StillExecuting{
-			Reference:   ea.objectRef,
-			Executor:    ea.jetCoordinator.Me(),
+			Reference:   r.objectRef,
+			Executor:    r.jetCoordinator.Me(),
 			RequestRefs: requestRefs,
 		})
 	}
 	return messages
 }
 
-func (ea *executionArchive) FindRequestLoop(ctx context.Context, reqRef insolar.Reference, apiRequestID string) bool {
-	ea.archiveLock.Lock()
-	defer ea.archiveLock.Unlock()
+func (r *executionRegistry) FindRequestLoop(ctx context.Context, reqRef insolar.Reference, apiRequestID string) bool {
+	r.registryLock.Lock()
+	defer r.registryLock.Unlock()
 
-	if _, ok := ea.archive[reqRef]; ok {
+	if _, ok := r.registry[reqRef]; ok {
 		// we're executing this request right now
 		// de-duplication should deal with this case
 		return false
 	}
 
-	for _, transcript := range ea.archive {
+	for _, transcript := range r.registry {
 		req := transcript.Request
 		if req.APIRequestID == apiRequestID && req.ReturnMode != record.ReturnNoWait {
 			return true
@@ -143,6 +148,9 @@ func (ea *executionArchive) FindRequestLoop(ctx context.Context, reqRef insolar.
 	return false
 }
 
-func (ea *executionArchive) GetActiveTranscript(request insolar.Reference) *common.Transcript {
-	return ea.archive[request]
+func (r *executionRegistry) GetActiveTranscript(request insolar.Reference) *common.Transcript {
+	r.registryLock.Lock()
+	defer r.registryLock.Unlock()
+
+	return r.registry[request]
 }

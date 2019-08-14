@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
@@ -123,7 +124,7 @@ func TestTimeoutSuite(t *testing.T) {
 	pKeyString, err := ks.ExportPublicKeyPEM(pKey)
 	require.NoError(t, err)
 
-	userRef := testutils.RandomRef().String()
+	userRef := gen.Reference().String()
 	timeoutSuite.user, err = requester.CreateUserConfig(userRef, string(sKeyString), string(pKeyString))
 
 	http.DefaultServeMux = new(http.ServeMux)
@@ -134,21 +135,22 @@ func TestTimeoutSuite(t *testing.T) {
 	timeoutSuite.api.timeout = 1 * time.Second
 
 	cr := testutils.NewContractRequesterMock(timeoutSuite.mc)
-	cr.SendRequestWithPulseMock.Set(func(p context.Context, p1 *insolar.Reference, method string, p3 []interface{}, p4 insolar.PulseNumber) (insolar.Reply, error) {
+	cr.SendRequestWithPulseMock.Set(func(p context.Context, p1 *insolar.Reference, method string, p3 []interface{}, p4 insolar.PulseNumber) (insolar.Reply, *insolar.Reference, error) {
+		requestReference, _ := insolar.NewReferenceFromBase58("4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.4FFB8zfQoGznSmzDxwv4njX1aR9ioL8GHSH17QXH2AFa")
 		switch method {
 		case "GetPublicKey":
 			var result = string(pKeyString)
 			data, _ := foundation.MarshalMethodResult(result, nil)
 			return &reply.CallMethod{
 				Result: data,
-			}, nil
+			}, requestReference, nil
 		default:
 			<-timeoutSuite.delay
 			var result = "OK"
 			data, _ := foundation.MarshalMethodResult(result, nil)
 			return &reply.CallMethod{
 				Result: data,
-			}, nil
+			}, requestReference, nil
 		}
 	})
 

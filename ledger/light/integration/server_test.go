@@ -466,7 +466,7 @@ func (s *Server) Send(ctx context.Context, pl payload.Payload) (<-chan *message.
 	if err != nil {
 		panic(err)
 	}
-	return s.clientSender.SendTarget(ctx, msg, insolar.Reference{})
+	return s.clientSender.SendTarget(ctx, msg, gen.Reference())
 }
 
 func (s *Server) Stop() {

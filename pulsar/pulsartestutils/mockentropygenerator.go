@@ -14,7 +14,6 @@
 // limitations under the License.
 //
 
-// Package pulsartestutil - test utils for pulsar package
 package pulsartestutils
 
 import (
