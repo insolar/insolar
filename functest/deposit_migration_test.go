@@ -20,6 +20,7 @@ package functest
 
 import (
 	"fmt"
+	"math/big"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -34,9 +35,8 @@ func TestMigrationToken(t *testing.T) {
 	deposit := migrate(t, member.ref, "1000", "Test_TxHash", migrationAddress, 0)
 
 	firstMemberBalance := deposit["balance"].(string)
-	require.Equal(t, firstMemberBalance, "0")
+	require.Equal(t, "0", firstMemberBalance)
 	firstMABalance := getBalanceNoErr(t, &migrationAdmin, migrationAdmin.ref)
-	require.Equal(t, firstMABalance.String(), "100000000000000000000")
 
 	confirmerReferences, ok := deposit["confirmerReferences"].([]interface{})
 	require.True(t, ok, fmt.Sprintf("failed to cast result: expected []string, got %T", deposit["confirmerReferences"]))
@@ -58,9 +58,10 @@ func TestMigrationToken(t *testing.T) {
 	require.Equal(t, confirmerReferences[2], migrationDaemons[2].ref)
 
 	secondMemberBalance := deposit["balance"].(string)
-	require.Equal(t, secondMemberBalance, "1000")
-	secondMABalance1 := getBalanceNoErr(t, &migrationAdmin, migrationAdmin.ref)
-	require.Equal(t, secondMABalance1.String(), "99999999999999999000")
+	require.Equal(t, "1000", secondMemberBalance)
+	secondMABalance := getBalanceNoErr(t, &migrationAdmin, migrationAdmin.ref)
+	dif := new(big.Int).Sub(firstMABalance, secondMABalance)
+	require.Equal(t, "1000", dif.String())
 }
 
 func TestMigrationTokenOnDifferentDeposits(t *testing.T) {
