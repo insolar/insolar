@@ -21,15 +21,9 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
-	"github.com/insolar/insolar/insolar/pulse"
-	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/heavy/executor"
-	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 )
@@ -39,14 +33,7 @@ type Replication struct {
 	cfg     configuration.Ledger
 
 	dep struct {
-		records         object.RecordModifier
-		indexes         object.IndexModifier
-		pcs             insolar.PlatformCryptographyScheme
-		pulseCalculator pulse.Calculator
-		drops           drop.Modifier
-		keeper          executor.JetKeeper
-		backuper        executor.BackupMaker
-		jets            jet.Modifier
+		replicator executor.HeavyReplicator
 	}
 }
 
@@ -58,24 +45,9 @@ func NewReplication(msg payload.Meta, cfg configuration.Ledger) *Replication {
 }
 
 func (p *Replication) Dep(
-	records object.RecordModifier,
-	indexes object.IndexModifier,
-	pcs insolar.PlatformCryptographyScheme,
-	pulseCalculator pulse.Calculator,
-	drops drop.Modifier,
-	keeper executor.JetKeeper,
-	backuper executor.BackupMaker,
-	jets jet.Modifier,
+	replicator executor.HeavyReplicator,
 ) {
-	p.dep.records = records
-	p.dep.indexes = indexes
-	p.dep.pcs = pcs
-
-	p.dep.pulseCalculator = pulseCalculator
-	p.dep.drops = drops
-	p.dep.keeper = keeper
-	p.dep.backuper = backuper
-	p.dep.jets = jets
+	p.dep.replicator = replicator
 }
 
 func (p *Replication) Proceed(ctx context.Context) error {
@@ -89,111 +61,9 @@ func (p *Replication) Proceed(ctx context.Context) error {
 		return fmt.Errorf("unexpected payload %T", pl)
 	}
 
-	err = p.store(ctx, msg)
-	if err != nil {
-		panic(fmt.Errorf("replication fatal error: %v", err.Error()))
-		// inslogger.FromContext(ctx).Fatalf()
-	}
+	go p.dep.replicator.NotifyAboutMessage(ctx, msg)
 
 	stats.Record(ctx, statReceivedHeavyPayloadCount.M(1))
 
-	return nil
-}
-
-func (p *Replication) store(
-	ctx context.Context,
-	msg *payload.Replication,
-) error {
-	inslogger.FromContext(ctx).Debug("storing records")
-	if err := storeRecords(ctx, p.dep.records, p.dep.pcs, msg.Pulse, msg.Records); err != nil {
-		return errors.Wrap(err, "failed to store records")
-	}
-
-	inslogger.FromContext(ctx).Debug("storing indexes")
-	if err := storeIndexes(ctx, p.dep.indexes, msg.Indexes, msg.Pulse); err != nil {
-		return errors.Wrap(err, "failed to store indexes")
-	}
-
-	inslogger.FromContext(ctx).Debug("storing drop")
-	dr, err := storeDrop(ctx, p.dep.drops, msg.Drop)
-	if err != nil {
-		return errors.Wrap(err, "failed to store drop")
-	}
-
-	jetKeeper := p.dep.keeper
-	inslogger.FromContext(ctx).Debug("storing drop confirmation")
-	if err := jetKeeper.AddDropConfirmation(ctx, dr.Pulse, dr.JetID, dr.Split); err != nil {
-		return errors.Wrapf(err, "failed to add drop confirmation jet=%v", dr.JetID.DebugString())
-	}
-
-	err = p.dep.jets.Update(ctx, dr.Pulse, true, dr.JetID)
-	if err != nil {
-		return errors.Wrapf(err, "failed to update jet %s", dr.JetID.DebugString())
-
-	}
-
-	executor.FinalizePulse(ctx, p.dep.pulseCalculator, p.dep.backuper, jetKeeper, dr.Pulse)
-
-	stats.Record(ctx,
-		statReceivedHeavyPayloadCount.M(1),
-	)
-
-	return nil
-}
-
-func storeIndexes(
-	ctx context.Context,
-	mod object.IndexModifier,
-	indexes []record.Index,
-	pn insolar.PulseNumber,
-) error {
-	for _, idx := range indexes {
-		err := mod.SetIndex(ctx, pn, idx)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func storeDrop(
-	ctx context.Context,
-	drops drop.Modifier,
-	rawDrop []byte,
-) (*drop.Drop, error) {
-	d, err := drop.Decode(rawDrop)
-	if err != nil {
-		inslogger.FromContext(ctx).Error(err)
-		return nil, err
-	}
-	err = drops.Set(ctx, *d)
-	if err != nil {
-		return nil, err
-	}
-
-	return d, nil
-}
-
-func storeRecords(
-	ctx context.Context,
-	recordStorage object.RecordModifier,
-	pcs insolar.PlatformCryptographyScheme,
-	pn insolar.PulseNumber,
-	records []record.Material,
-) error {
-	for _, rec := range records {
-		hash := record.HashVirtual(pcs.ReferenceHasher(), rec.Virtual)
-		id := *insolar.NewID(pn, hash)
-		if rec.ID != id {
-			return fmt.Errorf(
-				"record id does not match (calculated: %s, received: %s)",
-				id.DebugString(),
-				rec.ID.DebugString(),
-			)
-		}
-	}
-	if err := recordStorage.BatchSet(ctx, records); err != nil {
-		return errors.Wrap(err, "set method failed")
-	}
 	return nil
 }

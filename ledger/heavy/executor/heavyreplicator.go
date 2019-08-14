@@ -28,11 +28,12 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/drop"
-	"github.com/insolar/insolar/ledger/heavy/executor"
+
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
 )
 
+// HeavyReplicator is a base interface for a heavy sync component
 type HeavyReplicator interface {
 	// NotifyAboutMessage is method for notifying a sync component about new data
 	NotifyAboutMessage(context.Context, *payload.Replication)
@@ -41,6 +42,7 @@ type HeavyReplicator interface {
 	Stop()
 }
 
+// HeavyReplicatorDefault is a base impl for HeavyReplicator
 type HeavyReplicatorDefault struct {
 	once sync.Once
 	done chan struct{}
@@ -114,7 +116,7 @@ func (h *HeavyReplicatorDefault) sync(ctx context.Context) {
 		}
 
 		logger.Debug("finalize pulse")
-		executor.FinalizePulse(ctx, h.pulseCalculator, h.backuper, h.keeper, dr.Pulse)
+		FinalizePulse(ctx, h.pulseCalculator, h.backuper, h.keeper, dr.Pulse)
 	}
 
 	for {
