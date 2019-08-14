@@ -37,7 +37,8 @@ func NewEmoji() *Emoji {
 	}
 }
 
-func (e *Emoji) RegisterNode(n api.Node) {
+//todo: one url has many shortISs if node restart
+func (e *Emoji) RegisterNode(url string, n api.Node) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
@@ -50,6 +51,7 @@ func (e *Emoji) RegisterNode(n api.Node) {
 	case "heavy_material":
 		e.registred[n.ID] = "😈"
 	case "light_material":
+		// pop front
 		x, e.light = e.light[0], e.light[1:]
 		e.registred[n.ID] = x
 	case "virtual":

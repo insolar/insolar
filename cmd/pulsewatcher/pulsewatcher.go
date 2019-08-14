@@ -80,6 +80,8 @@ func displayResultsTable(results []nodeStatus, ready bool, buffer *bytes.Buffer)
 		"Working Count",
 		"Role",
 		"Timestamp",
+		"Restart Count",
+		"Uptime/Pulses",
 		"Error",
 	})
 	table.SetBorder(false)
@@ -97,11 +99,13 @@ func displayResultsTable(results []nodeStatus, ready bool, buffer *bytes.Buffer)
 		color = tablewriter.FgHiRedColor
 	}
 
+	totalUptime := time.Hour + time.Minute*15
+
 	table.SetFooter([]string{
 		"", "", "", "", "",
 		"Insolar State", stateString,
 		"Time", time.Now().Format("2006-01-02 15:04:05.999999"),
-		"",
+		"Total Uptime / Total Pulses", totalUptime.String(), "",
 	})
 	table.SetFooterColor(
 		tablewriter.Colors{},
@@ -113,6 +117,8 @@ func displayResultsTable(results []nodeStatus, ready bool, buffer *bytes.Buffer)
 		tablewriter.Colors{},
 		tablewriter.Colors{color},
 
+		tablewriter.Colors{},
+		tablewriter.Colors{},
 		tablewriter.Colors{},
 		tablewriter.Colors{},
 		tablewriter.Colors{},
@@ -128,11 +134,20 @@ func displayResultsTable(results []nodeStatus, ready bool, buffer *bytes.Buffer)
 		tablewriter.Colors{},
 		tablewriter.Colors{},
 		tablewriter.Colors{},
+		tablewriter.Colors{},
+		tablewriter.Colors{tablewriter.FgHiRedColor},
 		tablewriter.Colors{tablewriter.FgHiRedColor},
 	)
 
+	intToString := func(n int) string {
+		if n == 0 {
+			return ""
+		}
+		return strconv.Itoa(n)
+	}
+
 	for _, row := range results {
-		emoji.RegisterNode(row.reply.Origin)
+		emoji.RegisterNode(row.url, row.reply.Origin)
 	}
 
 	for _, row := range results {
@@ -144,26 +159,20 @@ func displayResultsTable(results []nodeStatus, ready bool, buffer *bytes.Buffer)
 		table.Append([]string{
 			row.url,
 			row.reply.NetworkState,
-			fmt.Sprintf(" %s %d", emoji.GetEmoji(row.reply.Origin), row.reply.Origin.ID),
-			strconv.Itoa(int(row.reply.NetworkPulseNumber)),
-			strconv.Itoa(int(row.reply.PulseNumber)),
+			fmt.Sprintf(" %s %s", emoji.GetEmoji(row.reply.Origin), intToString(int(row.reply.Origin.ID))),
+			intToString(int(row.reply.NetworkPulseNumber)),
+			intToString(int(row.reply.PulseNumber)),
 			fmt.Sprintf("%d %s", row.reply.ActiveListSize, activeNodeEmoji),
-			fmt.Sprintf("%d", row.reply.WorkingListSize),
+			intToString(row.reply.WorkingListSize),
 			row.reply.Origin.Role,
 			row.reply.Timestamp,
-			"",
+			"", // uptime
+			intToString(row.restartCount),
+			row.errStr,
 		})
 	}
 	table.Render()
 	fmt.Print(buffer)
-}
-
-func parseInt64(str string) int64 {
-	res, err := strconv.ParseInt(str, 10, 64)
-	if err != nil {
-		res = -1
-	}
-	return res
 }
 
 func displayResultsJSON(results []nodeStatus) {
@@ -224,7 +233,7 @@ func collectNodesStatuses(conf *pulsewatcher.Config) ([]nodeStatus, bool) {
 					errStr = "NODE IS DOWN"
 				}
 				lock.Lock()
-				results[i] = nodeStatus{url, api.StatusReply{}, errStr}
+				results[i] = nodeStatus{url, api.StatusReply{}, errStr, 0}
 				errored++
 				lock.Unlock()
 				wg.Done()
@@ -245,7 +254,7 @@ func collectNodesStatuses(conf *pulsewatcher.Config) ([]nodeStatus, bool) {
 			}
 			lock.Lock()
 
-			results[i] = nodeStatus{url, out.Result, ""}
+			results[i] = nodeStatus{url, out.Result, "", 0}
 			state = state && out.Result.NetworkState == insolar.CompleteNetworkState.String()
 			lock.Unlock()
 			wg.Done()
@@ -258,9 +267,10 @@ func collectNodesStatuses(conf *pulsewatcher.Config) ([]nodeStatus, bool) {
 }
 
 type nodeStatus struct {
-	url    string
-	reply  api.StatusReply
-	errStr string
+	url          string
+	reply        api.StatusReply
+	errStr       string
+	restartCount int
 }
 
 func main() {
