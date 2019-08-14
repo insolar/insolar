@@ -151,10 +151,9 @@ func (lr *LightReplicatorDefault) sync(ctx context.Context) {
 			err = lr.sendToHeavy(ctx, msg)
 			if err != nil {
 				instracer.AddError(span, err)
-
-				logger.Errorf("[Replicator][sync]  Problems with sending msg to a heavy node", err)
+				logger.Fatalf("[Replicator][sync] Problem with sending payload to a heavy node", err)
 			} else {
-				logger.Debugf("[Replicator][sync]  Data has been sent to a heavy. pn - %v, jetID - %v", msg.Pulse, msg.JetID.DebugString())
+				logger.Debugf("[Replicator][sync] Data has been sent to a heavy. pn - %v, jetID - %v", msg.Pulse, msg.JetID.DebugString())
 			}
 		}
 

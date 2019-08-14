@@ -41,7 +41,7 @@ import (
 	"github.com/insolar/insolar/testutils"
 )
 
-const CallUrl = "http://localhost:19192/api/call"
+const CallUrl = "http://localhost:19192/api/rpc"
 
 type TimeoutSuite struct {
 	suite.Suite
@@ -66,21 +66,16 @@ func (suite *TimeoutSuite) TestRunner_callHandler_NoTimeout() {
 		suite.ctx,
 		CallUrl,
 		suite.user,
-		&requester.Request{
-			JSONRPC: "2.0",
-			ID:      1,
-			Method:  "api.call",
-			Params:  requester.Params{CallSite: "member.create", CallParams: map[string]interface{}{}, PublicKey: suite.user.PublicKey},
-		},
+		&requester.Params{CallSite: "member.create", CallParams: map[string]interface{}{}, PublicKey: suite.user.PublicKey},
 		seedString,
 	)
 	suite.NoError(err)
 
-	var result requester.ContractAnswer
+	var result requester.ContractResponse
 	err = json.Unmarshal(resp, &result)
 	suite.NoError(err)
 	suite.Nil(result.Error)
-	suite.Equal("OK", result.Result.ContractResult)
+	suite.Equal("OK", result.Result.CallResult)
 }
 
 func (suite *TimeoutSuite) TestRunner_callHandler_Timeout() {
@@ -92,22 +87,14 @@ func (suite *TimeoutSuite) TestRunner_callHandler_Timeout() {
 
 	seedString := base64.StdEncoding.EncodeToString(seed[:])
 
-	resp, err := requester.SendWithSeed(
+	_, err = requester.SendWithSeed(
 		suite.ctx,
 		CallUrl,
 		suite.user,
-		&requester.Request{Method: "api.call"},
+		nil,
 		seedString,
 	)
-	suite.NoError(err)
-
-	close(suite.delay)
-
-	var result requester.ContractAnswer
-	err = json.Unmarshal(resp, &result)
-	suite.NoError(err)
-	suite.Equal("API timeout exceeded", result.Error.Message)
-	suite.Nil(result.Result)
+	suite.Error(err, "Client.Timeout exceeded while awaiting headers")
 }
 
 func TestTimeoutSuite(t *testing.T) {

@@ -21,11 +21,13 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/pkg/errors"
+
+	"github.com/insolar/insolar/instrumentation/instracer"
 
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/rpc/v2"
 )
 
 // InfoArgs is arguments that Info service accepts.
@@ -79,7 +81,7 @@ func NewInfoService(runner *Runner) *InfoService {
 // 		"id": str|int|null // same as in request
 // 	}
 //
-func (s *InfoService) GetInfo(r *http.Request, args *InfoArgs, reply *InfoReply) error {
+func (s *InfoService) GetInfo(r *http.Request, args *InfoArgs, requestBody *rpc.RequestBody, reply *InfoReply) error {
 	ctx, inslog := inslogger.WithTraceField(context.Background(), utils.RandTraceID())
 
 	inslog.Infof("[ INFO ] Incoming request: %s", r.RequestURI)

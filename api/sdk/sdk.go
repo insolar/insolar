@@ -131,13 +131,9 @@ func (sdk *SDK) SetLogLevel(logLevel string) error {
 }
 
 func (sdk *SDK) sendRequest(ctx context.Context, method string, params map[string]interface{}, userCfg *requester.UserConfigJSON) ([]byte, error) {
-	reqCfg := &requester.Request{
-		Params:   requester.Params{CallParams: params, CallSite: method, PublicKey: userCfg.PublicKey},
-		Method:   "api.call",
-		LogLevel: sdk.logLevel.(string),
-	}
+	reqParams := requester.Params{CallParams: params, CallSite: method, PublicKey: userCfg.PublicKey, LogLevel: sdk.logLevel.(string)}
 
-	body, err := requester.Send(ctx, sdk.apiURLs.next(), userCfg, reqCfg)
+	body, err := requester.Send(ctx, sdk.apiURLs.next(), userCfg, &reqParams)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to send request")
 	}
@@ -145,8 +141,8 @@ func (sdk *SDK) sendRequest(ctx context.Context, method string, params map[strin
 	return body, nil
 }
 
-func (sdk *SDK) getResponse(body []byte) (*requester.ContractAnswer, error) {
-	res := &requester.ContractAnswer{}
+func (sdk *SDK) getResponse(body []byte) (*requester.ContractResponse, error) {
+	res := &requester.ContractResponse{}
 	err := json.Unmarshal(body, &res)
 	if err != nil {
 		return nil, errors.Wrap(err, "problems with unmarshal response")
@@ -193,8 +189,8 @@ func (sdk *SDK) CreateMember() (*Member, string, error) {
 	var memberRef string
 	var contractResultCasted map[string]interface{}
 	var ok bool
-	if contractResultCasted, ok = response.ContractResult.(map[string]interface{}); !ok {
-		return nil, "", errors.Errorf("failed to cast result: expected map[string]interface{}, got %T", response.ContractResult)
+	if contractResultCasted, ok = response.CallResult.(map[string]interface{}); !ok {
+		return nil, "", errors.Errorf("failed to cast result: expected map[string]interface{}, got %T", response.CallResult)
 	}
 	if memberRef, ok = contractResultCasted["reference"].(string); !ok {
 		return nil, "", errors.Errorf("failed to cast reference: expected string, got %T", contractResultCasted["reference"])
@@ -255,7 +251,7 @@ func (sdk *SDK) GetBalance(m *Member) (*big.Int, error) {
 		return nil, errors.Wrap(err, "request was failed ")
 	}
 
-	result, ok := new(big.Int).SetString(response.ContractResult.(map[string]interface{})["balance"].(string), 10)
+	result, ok := new(big.Int).SetString(response.CallResult.(map[string]interface{})["balance"].(string), 10)
 	if !ok {
 		return nil, errors.Errorf("can't parse returned balance")
 	}
@@ -263,7 +259,7 @@ func (sdk *SDK) GetBalance(m *Member) (*big.Int, error) {
 	return result, nil
 }
 
-func (sdk *SDK) DoRequest(user *requester.UserConfigJSON, method string, params map[string]interface{}) (*requester.Result, error) {
+func (sdk *SDK) DoRequest(user *requester.UserConfigJSON, method string, params map[string]interface{}) (*requester.ContractResult, error) {
 	ctx := inslogger.ContextWithTrace(context.Background(), method)
 
 	body, err := sdk.sendRequest(ctx, method, params, user)

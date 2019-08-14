@@ -26,7 +26,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/jet"
-	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -147,8 +147,8 @@ func (s *ExecutionRegistrySuite) TestOnPulse() {
 		registryI.Register(ctx, T1)
 		msgs := registryI.OnPulse(ctx)
 		s.Len(msgs, 1)
-		msg, ok := msgs[0].(*message.StillExecuting)
-		s.Truef(ok, "expected message to be message.StillExecuting, got %T", msgs[0])
+		msg, ok := msgs[0].(*payload.StillExecuting)
+		s.Truef(ok, "expected message to be payload.StillExecuting, got %T", msgs[0])
 		s.Len(msg.RequestRefs, 1)
 		s.Contains(msg.RequestRefs, T1.RequestRef)
 		s.Equal(meRef, msg.Executor)
@@ -159,7 +159,7 @@ func (s *ExecutionRegistrySuite) TestOnPulse() {
 		registryI.Register(ctx, T2)
 		msgs := registryI.OnPulse(ctx)
 		s.Len(msgs, 1)
-		msg, ok := msgs[0].(*message.StillExecuting)
+		msg, ok := msgs[0].(*payload.StillExecuting)
 		s.Truef(ok, "expected message to be message.StillExecuting, got %T", msgs[0])
 		s.Len(msg.RequestRefs, 2)
 		s.Contains(msg.RequestRefs, T1.RequestRef)
