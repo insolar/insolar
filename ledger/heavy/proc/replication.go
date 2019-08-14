@@ -39,14 +39,14 @@ type Replication struct {
 	cfg     configuration.Ledger
 
 	dep struct {
-		records object.RecordModifier
-		indexes object.IndexModifier
-		pcs     insolar.PlatformCryptographyScheme
-		pulseCalculator  pulse.Calculator
-		drops   drop.Modifier
-		keeper  executor.JetKeeper
-		backuper executor.BackupMaker
-		jets     jet.Modifier
+		records         object.RecordModifier
+		indexes         object.IndexModifier
+		pcs             insolar.PlatformCryptographyScheme
+		pulseCalculator pulse.Calculator
+		drops           drop.Modifier
+		keeper          executor.JetKeeper
+		backuper        executor.BackupMaker
+		jets            jet.Modifier
 	}
 }
 
