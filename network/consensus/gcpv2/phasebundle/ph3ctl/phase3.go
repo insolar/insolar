@@ -168,7 +168,7 @@ func (c *Phase3Controller) StartWorker(ctx context.Context, realm *core.FullReal
 	c.queuePh3Recv = make(chan inspectors.InspectedVector, c.R.GetNodeCount())
 	c.inspector = inspectors.NewBypassInspector()
 
-	watchdog.Go(ctx, "workerPhase3", c.workerPhase3)
+	go watchdog.Call(ctx, "workerPhase3", c.workerPhase3)
 }
 
 func (c *Phase3Controller) workerPhase3(ctx context.Context) {
@@ -190,7 +190,7 @@ func (c *Phase3Controller) workerPhase3(ctx context.Context) {
 		// joiner has no vote in consensus, hence there is no reason to send Phase3 from it
 		localHashedVector := localInspector.CreateVector(c.R.GetSigner())
 		inslogger.FromContext(ctx).Debugf(">>>>workerPhase3: calculated local vectors: %+v", localHashedVector)
-		watchdog.Go(ctx, "workerSendPhase3", func(ctx context.Context) {
+		go watchdog.Call(ctx, "workerSendPhase3", func(ctx context.Context) {
 			c.workerSendPhase3(ctx, localHashedVector)
 		})
 	}
@@ -321,7 +321,7 @@ outer:
 
 				didFastPhase3 = true
 				log.Debugf(">>>>workerPrePhase3: try FastPhase3: %d", c.R.GetSelfNodeID())
-				watchdog.Go(ctx, "workerSendFastPhase3", c.workerSendFastPhase3)
+				go watchdog.Call(ctx, "workerSendFastPhase3", c.workerSendFastPhase3)
 			}
 
 			if chasingDelayTimer.IsEnabled() {

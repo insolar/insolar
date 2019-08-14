@@ -195,7 +195,7 @@ func (c *Phase2PacketDispatcher) TriggerUnknownMember(ctx context.Context, membe
 
 func (c *Phase2Controller) StartWorker(ctx context.Context, realm *core.FullRealm) {
 	c.R = realm
-	watchdog.Go(ctx, "workerPhase2", c.workerPhase2)
+	go watchdog.Call(ctx, "workerPhase2", c.workerPhase2)
 }
 
 func (c *Phase2Controller) workerPhase2(ctx context.Context) {
@@ -347,7 +347,7 @@ func (c *Phase2Controller) workerPhase2(ctx context.Context) {
 				nh[i] = np.(*population.NodeAppearance)
 			}
 
-			watchdog.Go(ctx, fmt.Sprintf("sendPhase2(nbh=%d)", neighbourhoodID), func(ctx context.Context) {
+			go watchdog.Call(ctx, fmt.Sprintf("sendPhase2(nbh=%d)", neighbourhoodID), func(ctx context.Context) {
 				c.sendPhase2(ctx, nh)
 			})
 

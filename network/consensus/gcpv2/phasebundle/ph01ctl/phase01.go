@@ -198,7 +198,7 @@ func (c *Phase01Controller) sendReqReply(ctx context.Context, target *population
 
 func (c *Phase01Controller) StartWorker(ctx context.Context, realm *core.FullRealm) {
 	c.R = realm
-	watchdog.Go(ctx, "workerPhase01", c.workerPhase01)
+	go watchdog.Call(ctx, "workerPhase01", c.workerPhase01)
 }
 
 func (c *Phase01Controller) workerPhase01(ctx context.Context) {
@@ -229,7 +229,7 @@ func (c *Phase01Controller) workerPhase01(ctx context.Context) {
 	updated := c.R.ApplyLocalState(nsh)
 	inslogger.FromContext(ctx).Debugf(">>>>>>workerPhase01: after NSH update: updated=%v, nsh=%v, self=%+v", updated, nsh, c.R.GetSelf())
 
-	watchdog.Go(ctx, "workerSendPhase1ToFixed", func(ctx context.Context) {
+	go watchdog.Call(ctx, "workerSendPhase1ToFixed", func(ctx context.Context) {
 		c.workerSendPhase1ToFixed(ctx, startIndex, nodes)
 	})
 

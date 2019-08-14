@@ -74,7 +74,7 @@ func (p *PollingWorker) Start(ctx context.Context, pollingInterval time.Duration
 	p.pollCmd = make(chan api.MaintenancePollFunc, 10)
 	p.pollingInterval = pollingInterval
 
-	watchdog.Go(ctx, "PollingWorker", p.pollingWorker)
+	go watchdog.Call(ctx, "PollingWorker", p.pollingWorker)
 }
 
 func (p *PollingWorker) AddPoll(fn api.MaintenancePollFunc) {

@@ -242,7 +242,7 @@ func (p *PrepRealm) prepareEphemeralPolling(ctxPrep context.Context) {
 			if !p.checkEphemeralStart(ctxPrep) {
 				return true // stay in polling
 			}
-			watchdog.Go(ctxPrep, "pushEphemeralPulse", p.pushEphemeralPulse)
+			go watchdog.Call(ctxPrep, "pushEphemeralPulse", p.pushEphemeralPulse)
 			// stop polling anyway - repeating of unsuccessful is bad
 		}
 		return false

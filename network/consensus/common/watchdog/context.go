@@ -79,23 +79,11 @@ func WithFrame(ctx context.Context, frameName string) context.Context {
 	return ctx
 }
 
-func Go(ctx context.Context, frameName string, fn func(context.Context)) {
-
-	frame := from(ctx)
-	if frame == nil {
-		go fn(ctx)
-		return
-	}
-
-	h := frame.root.createSubFrame(ctx, frameName, frame)
-	go h.call(fn)
-}
-
 func Call(ctx context.Context, frameName string, fn func(context.Context)) {
 
 	frame := from(ctx)
 	if frame == nil {
-		fn(ctx)
+		go fn(ctx)
 		return
 	}
 
