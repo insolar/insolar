@@ -41,6 +41,7 @@ import (
 
 var client http.Client
 var emoji *Emoji
+var startTime time.Time
 
 const (
 	esc        = "\x1b%s"
@@ -100,13 +101,11 @@ func displayResultsTable(results []nodeStatus, ready bool, buffer *bytes.Buffer)
 		color = tablewriter.FgHiRedColor
 	}
 
-	totalUptime := time.Hour + time.Minute*15
-
 	table.SetFooter([]string{
 		"", "", "", "", "",
 		"Insolar State", stateString,
 		"Time", time.Now().Format(timeFormat),
-		"Total Uptime / Pulses", totalUptime.String(), "",
+		"Total Uptime/Pulses", time.Since(startTime).Round(time.Second).String(), "",
 	})
 	table.SetFooterColor(
 		tablewriter.Colors{},
@@ -135,8 +134,8 @@ func displayResultsTable(results []nodeStatus, ready bool, buffer *bytes.Buffer)
 		tablewriter.Colors{},
 		tablewriter.Colors{},
 		tablewriter.Colors{},
-		tablewriter.Colors{},
 		tablewriter.Colors{tablewriter.FgHiRedColor},
+		tablewriter.Colors{},
 		tablewriter.Colors{tablewriter.FgHiRedColor},
 	)
 
@@ -145,6 +144,19 @@ func displayResultsTable(results []nodeStatus, ready bool, buffer *bytes.Buffer)
 			return ""
 		}
 		return strconv.Itoa(n)
+	}
+
+	shortRole := func(r string) string {
+		switch r {
+		case "virtual":
+			return "Virtual"
+		case "heavy_material":
+			return "Heavy"
+		case "light_material":
+			return "Light"
+		default:
+			return r
+		}
 	}
 
 	for _, row := range results {
@@ -165,7 +177,7 @@ func displayResultsTable(results []nodeStatus, ready bool, buffer *bytes.Buffer)
 			intToString(int(row.reply.PulseNumber)),
 			fmt.Sprintf("%d %s", row.reply.ActiveListSize, activeNodeEmoji),
 			intToString(row.reply.WorkingListSize),
-			row.reply.Origin.Role,
+			shortRole(row.reply.Origin.Role),
 			row.reply.Timestamp.Format(timeFormat),
 			intToString(row.restartCount),
 			time.Since(row.reply.StartTime).Round(time.Second).String(),
@@ -305,6 +317,7 @@ func main() {
 	emoji = NewEmoji()
 	var results []nodeStatus
 	var ready bool
+	startTime = time.Now()
 	for {
 		results, ready = collectNodesStatuses(conf)
 		if useJSONFormat {
