@@ -117,7 +117,7 @@ func (mmBatchSet *mRecordModifierMockBatchSet) Return(err error) *RecordModifier
 	return mmBatchSet.mock
 }
 
-// Set uses given function f to mock the RecordModifier.BatchSet method
+//Set uses given function f to mock the RecordModifier.BatchSet method
 func (mmBatchSet *mRecordModifierMockBatchSet) Set(f func(ctx context.Context, recs []record.Material) (err error)) *RecordModifierMock {
 	if mmBatchSet.defaultExpectation != nil {
 		mmBatchSet.mock.t.Fatalf("Default expectation is already set for the RecordModifier.BatchSet method")
