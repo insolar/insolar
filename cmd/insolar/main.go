@@ -238,11 +238,9 @@ func mustWrite(out io.Writer, data string) {
 }
 
 func generateKeysPair(curve string) {
-	var ks insolar.KeyProcessor
+	ks := platformpolicy.NewKeyProcessor()
 	if curve == "P256K" {
 		ks = platformpolicy.NewKeyProcessorP256K()
-	} else {
-		ks = platformpolicy.NewKeyProcessor()
 	}
 	privKey, err := ks.GeneratePrivateKey()
 	check("Problems with generating of private key:", err)
