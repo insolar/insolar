@@ -122,8 +122,15 @@ func TestDBRollback_HappyPath(t *testing.T) {
 	})
 
 	drops := drop.NewDB(db)
-	records := object.NewRecordDB(nil)
-	indexes := object.NewIndexDB(db, records)
+
+	records := NewHeadTruncaterMock(t)
+	records.TruncateHeadMock.Set(func(ctx context.Context, from insolar.PulseNumber) (err error) {
+		hits[store.ScopeRecord] = 1
+		return nil
+	})
+
+	indexes := object.NewIndexDB(db, nil)
+
 	jets := jet.NewDBStore(db)
 	pulses := pulse.NewDB(db)
 
