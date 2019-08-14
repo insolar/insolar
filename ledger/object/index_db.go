@@ -90,8 +90,29 @@ func (i *IndexDB) SetIndex(ctx context.Context, pn insolar.PulseNumber, bucket r
 		statBucketAddedCount.M(1),
 	)
 
-	inslogger.FromContext(ctx).Debugf("[SetIndex] bucket for obj - %v was set successfully", bucket.ObjID.DebugString())
-	return i.setLastKnownPN(pn, bucket.ObjID)
+	inslogger.FromContext(ctx).Debugf("[SetIndex] bucket for obj - %v was set successfully. Pulse: %d", bucket.ObjID.DebugString(), pn)
+
+	return nil
+}
+
+// UpdateLastKnownPulse must be called after updating TopSyncPulse
+func (i *IndexDB) UpdateLastKnownPulse(ctx context.Context, topSyncPulse insolar.PulseNumber) error {
+	i.lock.Lock()
+	defer i.lock.Unlock()
+
+	indeces := i.ForPulse(ctx, topSyncPulse)
+	if indeces == nil {
+		return errors.New("No indices for top sync pulse: " + topSyncPulse.String())
+	}
+
+	for idx, _ := range indeces {
+		inslogger.FromContext(ctx).Debugf("UpdateLastKnownPulse. pulse: %d, object: %s", topSyncPulse, indeces[idx].ObjID.DebugString())
+		if err := i.setLastKnownPN(topSyncPulse, indeces[idx].ObjID); err != nil {
+			return errors.Wrapf(err, "can't setLastKnownPN. objId: %s. pulse: %d", indeces[idx].ObjID.DebugString(), topSyncPulse)
+		}
+	}
+
+	return nil
 }
 
 // TruncateHead remove all records after lastPulse
@@ -143,7 +164,21 @@ func (i *IndexDB) ForID(ctx context.Context, pn insolar.PulseNumber, objID insol
 }
 
 func (i *IndexDB) ForPulse(ctx context.Context, pn insolar.PulseNumber) []record.Index {
-	panic("implement me")
+	indexes := make([]record.Index, 0)
+
+	key := &indexKey{objID: insolar.ID{}, pn: pn}
+	it := i.db.NewIterator(key, false)
+	defer it.Close()
+
+	for it.Next() {
+		key := newIndexKey(it.Key())
+		index, err := i.getBucket(key.pn, key.objID)
+		if err != nil {
+			panic("Index iterator not consistent")
+		}
+		indexes = append(indexes, *index)
+	}
+	return indexes
 }
 
 func (i *IndexDB) setBucket(pn insolar.PulseNumber, objID insolar.ID, bucket *record.Index) error {
