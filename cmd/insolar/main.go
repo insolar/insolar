@@ -274,9 +274,8 @@ func getUserRef(sendURL string, rootMember, migrationAdmin bool) string {
 		check("[ sendRequest ]", err)
 		if rootMember {
 			return info.RootMember
-		} else {
-			return info.MigrationAdminMember
 		}
+		return info.MigrationAdminMember
 	}
 	return ""
 }
