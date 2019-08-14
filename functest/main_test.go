@@ -418,7 +418,7 @@ func setup() error {
 	fmt.Println("[ setup ] references successfully received")
 	root.ref = info.RootMember
 	migrationAdmin.ref = info.MigrationAdminMember
-	err = getMigrationDaemonsRef()
+	err = setMigrationDaemonsRef()
 	if err != nil {
 		return errors.Wrap(err, "[ setup ] get reference daemons by public key failed ")
 	}

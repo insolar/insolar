@@ -208,8 +208,6 @@ func (m *Member) migrationAdminCall(params map[string]interface{}, nameMethod st
 	migrationAdminContract := migrationadmin.GetObject(foundation.GetMigrationAdmin())
 
 	switch nameMethod {
-	case "getInfo":
-		return migrationAdminContract.Info()
 	case "addBurnAddresses":
 		return m.addMigrationAddressesCall(params)
 
@@ -218,14 +216,15 @@ func (m *Member) migrationAdminCall(params map[string]interface{}, nameMethod st
 		if !ok && len(migrationDaemon) == 0 {
 			return nil, fmt.Errorf("incorect input: failed to get 'reference' param")
 		}
-		return migrationAdminContract.ActivateDaemon(migrationDaemon, migrationAdminContract.GetReference()), nil
+		return migrationAdminContract.ActivateDaemon(strings.TrimSpace(migrationDaemon), migrationAdminContract.GetReference()), nil
 
 	case "deactivateDaemon":
 		migrationDaemon, ok := params["reference"].(string)
+
 		if !ok && len(migrationDaemon) == 0 {
 			return nil, fmt.Errorf("incorect input: failed to get 'reference' param")
 		}
-		return migrationAdminContract.DeactivateDaemon(migrationDaemon, migrationAdminContract.GetReference()), nil
+		return migrationAdminContract.DeactivateDaemon(strings.TrimSpace(migrationDaemon), migrationAdminContract.GetReference()), nil
 	}
 	return nil, fmt.Errorf("unknown method: migration.'%s'", nameMethod)
 }
@@ -246,7 +245,11 @@ func (m *Member) addMigrationAddressesCall(params map[string]interface{}) (inter
 	migrationAddressesStr := make([]string, len(migrationAddresses))
 
 	for i, ba := range migrationAddresses {
-		migrationAddressesStr[i] = ba.(string)
+		migrationAddress, ok := ba.(string)
+		if !ok {
+			return nil, fmt.Errorf("failed to 'burnAddresses' param")
+		}
+		migrationAddressesStr[i] = migrationAddress
 	}
 	err := rootDomain.AddMigrationAddresses(migrationAddressesStr)
 	if err != nil {

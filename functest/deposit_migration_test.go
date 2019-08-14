@@ -31,27 +31,22 @@ import (
 func TestMigrationToken(t *testing.T) {
 	migrationAddress := testutils.RandomString()
 	member := createMigrationMemberForMA(t, migrationAddress)
-	//_, err = signedRequest(&migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{migrationAddress}})
-	//require.NoError(t, err)
-	//_, err = retryableMemberMigrationCreate(member, true)
-	//require.NoError(t, err)
-	err = activateDaemons()
+	err := activateDaemons(t)
 	require.NoError(t, err)
 
 	anotherMember := *createMember(t)
 	for i := 0; i < 3; i++ {
-		_, err = migrate(member.ref, "1000", "Test_TxHash", migrationAddress, i, anotherMember)
-		require.NoError(t, err)
+		_ = migrate(t, member.ref, "1000", "Test_TxHash", migrationAddress, i)
 	}
 
-	deposit, err := getDeposit(member.ref, "Test_TxHash", anotherMember)
+	deposit, err := getDeposit(t, member.ref, "Test_TxHash", anotherMember)
 	confirmerReferencesMap := deposit["confirmerReferences"].(string)
 
 	sm := make(foundation.StableMap)
 	decoded, err := base64.StdEncoding.DecodeString(confirmerReferencesMap)
 	require.NoError(t, err)
 	err = sm.UnmarshalBinary(decoded)
-
+	require.NoError(t, err)
 	for i := 0; i < 3; i++ {
 		require.Equal(t, sm[migrationDaemons[i].ref], "1000")
 	}
@@ -63,21 +58,14 @@ func TestMigrationTokenOnDifferentDeposits(t *testing.T) {
 	migrationAddress := testutils.RandomString()
 	member := createMigrationMemberForMA(t, migrationAddress)
 
-	deposit, err := migrate(member.ref, "1000", "Test_TxHash1", migrationAddress, 1, anotherMember)
-	confirmerReferencesMap := deposit["confirmerReferences"].(string)
+	_ = migrate(t, member.ref, "1000", "Test_TxHash", migrationAddress, 0)
+	secondDeposit := migrate(t, member.ref, "1000", "Test_TxHash", migrationAddress, 1)
 	sm := make(foundation.StableMap)
+	confirmerReferencesMap := secondDeposit["confirmerReferences"].(string)
 	decoded, err := base64.StdEncoding.DecodeString(confirmerReferencesMap)
-	require.NoError(t, err)
 	err = sm.UnmarshalBinary(decoded)
-	require.Equal(t, sm[migrationDaemons[1].ref], "1000")
-
-	secondDeposit, err := migrate(member.ref, "1000", "Test_TxHash2", migrationAddress, 1, anotherMember)
-	confirmerReferencesMap = secondDeposit["confirmerReferences"].(string)
-	sm = make(foundation.StableMap)
-	decoded, err = base64.StdEncoding.DecodeString(confirmerReferencesMap)
 	require.NoError(t, err)
-
-	err = sm.UnmarshalBinary(decoded)
+	require.Equal(t, sm[migrationDaemons[0].ref], "1000")
 	require.Equal(t, sm[migrationDaemons[1].ref], "1000")
 }
 
@@ -161,21 +149,22 @@ func TestMigrationDoubleMigrationFromSameDaemon(t *testing.T) {
 func TestMigrationAnotherAmountSameTx(t *testing.T) {
 
 	migrationAddress := generateMigrationAddress()
-	_, err := createMemberWithMigrationAddress(migrationAddress)
+	_ = createMigrationMemberForMA(t, migrationAddress)
 
+	_, err := signedRequest(t,
+		&migrationDaemons[0], "deposit.migration", map[string]interface{}{"amount": "20", "ethTxHash": "ethTxHash", "migrationAddress": migrationAddress})
 	require.NoError(t, err)
 
 	_, err = signedRequest(t,
-		&migrationDaemons[0], "deposit.migration", map[string]interface{}{"amount": "20", "ethTxHash": "ethTxHash", "migrationAddress": migrationAddress})
+		&migrationDaemons[1],
+		"deposit.migration",
+		map[string]interface{}{"amount": "30", "ethTxHash": "ethTxHash", "migrationAddress": migrationAddress})
 	require.NoError(t, err)
-	require.Equal(t, resultMigr1.(map[string]interface{})["memberReference"].(string), member.ref)
 
-	for i := 1; i < 3; i++ {
-		_, err = signedRequestWithEmptyRequestRef(t,
-			&migrationDaemons[i],
-			"deposit.migration",
-			map[string]interface{}{"amount": "30", "ethTxHash": "ethTxHash", "migrationAddress": migrationAddress})
-	}
+	_, _, err = makeSignedRequest(
+		&migrationDaemons[2],
+		"deposit.migration",
+		map[string]interface{}{"amount": "30", "ethTxHash": "ethTxHash", "migrationAddress": migrationAddress})
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "failed to check amount in confirmation from migration daemon")
 }

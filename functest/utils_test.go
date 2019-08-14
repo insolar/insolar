@@ -20,6 +20,7 @@ package functest
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -32,6 +33,7 @@ import (
 
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/testutils"
 
 	"github.com/insolar/rpc/v2/json2"
@@ -176,9 +178,14 @@ func migrate(t *testing.T, memberRef string, amount string, tx string, ma string
 	deposits, ok := res.(map[string]interface{})["deposits"].(map[string]interface{})
 	require.True(t, ok)
 	deposit, ok := deposits[tx].(map[string]interface{})
+	sm := make(foundation.StableMap)
+	require.NoError(t, err)
+	confirmerReferencesMap := deposit["confirmerReferences"].(string)
+	decoded, err := base64.StdEncoding.DecodeString(confirmerReferencesMap)
+	require.NoError(t, err)
+	err = sm.UnmarshalBinary(decoded)
 	require.True(t, ok)
-	require.Equal(t, deposit["amount"], amount)
-	require.Equal(t, deposit["ethTxHash"], tx)
+	require.Equal(t, sm[migrationDaemons[mdNum].ref], "1000")
 
 	return deposit
 }
@@ -245,6 +252,16 @@ func getStatus(t testing.TB) statusResponse {
 	return rpcStatusResponse.Result
 }
 
+func activateDaemons(t *testing.T) error {
+	for _, user := range migrationDaemons {
+		_, err := signedRequest(t, &migrationAdmin, "migration.activateDaemon", map[string]interface{}{"reference": user.ref})
+		if err != nil {
+			return errors.Wrapf(err, "failed activate migration daemon %s", user.ref)
+		}
+	}
+	return nil
+}
+
 func unmarshalRPCResponse(t testing.TB, body []byte, response RPCResponseInterface) {
 	err := json.Unmarshal(body, &response)
 	require.NoError(t, err)
@@ -279,58 +296,6 @@ func signedRequestWithEmptyRequestRef(t *testing.T, user *user, method string, p
 	require.Equal(t, "", refStr)
 
 	return res, err
-}
-
-func migrate(memberRef string, amount string, tx string, ma string, mdNum int, anotherMember user) (map[string]interface{}, error) {
-
-	_, err := signedRequest(
-		&migrationDaemons[mdNum],
-		"deposit.migration",
-		map[string]interface{}{"amount": amount, "ethTxHash": tx, "migrationAddress": ma})
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed send request 'wdeposit.migration'  %s", memberRef)
-	}
-	res, err := signedRequest(&anotherMember, "wallet.getBalance", map[string]interface{}{"reference": memberRef})
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed send request 'wallet.getBalance'  %s", memberRef)
-	}
-	deposits, ok := res.(map[string]interface{})["deposits"].(map[string]interface{})
-	if !ok {
-		return nil, errors.Wrapf(err, "failed cast deposits to map[string]interface{} ")
-	}
-	deposit, ok := deposits[tx].(map[string]interface{})
-	return deposit, nil
-}
-
-func signedRequestWithEmptyRequestRef(t *testing.T, user *user, method string, params interface{}) (interface{}, error) {
-	res, refStr, err := makeSignedRequest(user, method, params)
-
-	require.Equal(t, "", refStr)
-
-	return res, err
-}
-
-func fullMigration(t *testing.T, txHash string) *user {
-
-	member, err := newUserWithKeys()
-	require.NoError(t, err)
-	migrationAddress := generateMigrationAddress()
-	_, err = signedRequest(&migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{migrationAddress}})
-	require.NoError(t, err)
-	_, err = retryableMemberMigrationCreate(member, true)
-	require.NoError(t, err)
-	anotherMember := *createMember(t)
-	_, err = migrate(member.ref, "1000", txHash, migrationAddress, 0, anotherMember)
-	require.NoError(t, err)
-	_, err = migrate(member.ref, "1000", txHash, migrationAddress, 2, anotherMember)
-	require.NoError(t, err)
-	_, err = migrate(member.ref, "1000", txHash, migrationAddress, 1, anotherMember)
-	require.NoError(t, err)
-	return member
-}
-
-func retryableMemberCreate(user *user, updatePublicKey bool) (interface{}, error) {
-	return retryableCreateMember(user, "member.create", updatePublicKey)
 }
 
 func makeSignedRequest(user *user, method string, params interface{}) (interface{}, string, error) {
@@ -575,10 +540,23 @@ func waitForFunction(customFunction func() api.CallMethodReply, functionTimeout 
 	}
 }
 
-func getMigrationDaemonsRef() error {
+func getDeposit(t *testing.T, memberRef string, tx string, anotherMember user) (map[string]interface{}, error) {
+	res, err := signedRequest(t, &anotherMember, "wallet.getBalance", map[string]interface{}{"reference": memberRef})
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed send request 'wallet.getBalance'  %s", memberRef)
+	}
+	deposits, ok := res.(map[string]interface{})["deposits"].(map[string]interface{})
+	if !ok {
+		return nil, errors.Wrapf(err, "failed cast deposits to map[string]interface{} ")
+	}
+	deposit, ok := deposits[tx].(map[string]interface{})
+	return deposit, nil
+}
+
+func setMigrationDaemonsRef() error {
 	for i, user := range migrationDaemons {
 		user.ref = root.ref
-		res, err := signedRequest(&user, "member.get", nil)
+		res, _, err := makeSignedRequest(&user, "member.get", nil)
 		if err != nil {
 			return errors.Wrap(err, "[ setup ] get member by public key failed ,key ")
 		}

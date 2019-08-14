@@ -17,7 +17,6 @@
 package migrationadmin
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/insolar/insolar/insolar"
@@ -93,20 +92,6 @@ func (mA MigrationAdmin) CheckActiveDaemon(daemonMember string) (bool, error) {
 		return true, nil
 	}
 	return false, fmt.Errorf(" this referense is not  active daemon member %s", daemonMember)
-}
-
-// Return Information about migration admin and migration daemons.
-func (mA MigrationAdmin) Info() ([]byte, error) {
-
-	res := map[string]interface{}{
-		"migrationAdminMember":   mA.MigrationAdminMember,
-		"migrationDaemonMembers": mA.MigrationDaemon,
-	}
-	resJSON, err := json.Marshal(res)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal result: %s", err.Error())
-	}
-	return resJSON, nil
 }
 
 // Return only active daemons.
