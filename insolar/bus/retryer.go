@@ -93,7 +93,6 @@ func (r *RetrySender) SendRole(
 			tries--
 			d()
 			// update message UUID
-			msg := msg.Copy()
 			msg.UUID = watermill.NewUUID()
 		}
 
