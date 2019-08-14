@@ -190,6 +190,10 @@ func (g *Genesis) Start(ctx context.Context) error {
 		panic(fmt.Sprintf("[genesis] store discovery nodes failed: %v", err))
 	}
 
+	if err := g.BaseRecord.IndexModifier.UpdateLastKnownPulse(ctx, insolar.FirstPulseNumber); err != nil {
+		panic("can't update last known pulse on genesis")
+	}
+
 	inslog.Info("[genesis] finalize genesis record")
 	err = g.BaseRecord.Done(ctx)
 	if err != nil {
