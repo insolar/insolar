@@ -100,7 +100,7 @@ func (r *RecordDB) Set(ctx context.Context, rec record.Material) error {
 	}
 	return r.db.Backend().Update(func(txn *badger.Txn) error {
 		position, err := getLastKnownPosition(txn, rec.ID.Pulse())
-		if err != nil && err != store.ErrNotFound {
+		if err != nil && err != ErrNotFound {
 			return err
 		}
 		position++
@@ -141,7 +141,7 @@ func (r *RecordDB) BatchSet(ctx context.Context, recs []record.Material) error {
 			// For cross-pulse batches
 			if lastKnowPulse != rec.ID.Pulse() {
 				position, err = getLastKnownPosition(txn, rec.ID.Pulse())
-				if err != nil && err != store.ErrNotFound {
+				if err != nil && err != ErrNotFound {
 					return err
 				}
 				lastKnowPulse = rec.ID.Pulse()
@@ -169,26 +169,44 @@ func (r *RecordDB) BatchSet(ctx context.Context, recs []record.Material) error {
 	return nil
 }
 
-func setRecord(tx *badger.Txn, key store.Key, record record.Material) error {
+func setRecord(txn *badger.Txn, key store.Key, record record.Material) error {
 	data, err := record.Marshal()
 	if err != nil {
 		return err
 	}
-	_, err = store.TransactionalGet(tx, key)
+
+	fullKey := append(key.Scope().Bytes(), key.ID()...)
+
+	_, err = txn.Get(fullKey)
+	if err != nil && err != badger.ErrKeyNotFound {
+		return err
+	}
 	if err == nil {
 		return ErrOverride
 	}
-	return store.TransactionalSet(tx, key, data)
+
+	return txn.Set(fullKey, data)
 }
 
 func getLastKnownPosition(txn *badger.Txn, pn insolar.PulseNumber) (uint32, error) {
 	key := lastKnownRecordPositionKey{pn: pn}
-	raw, err := store.TransactionalGet(txn, key)
+
+	fullKey := append(key.Scope().Bytes(), key.ID()...)
+
+	item, err := txn.Get(fullKey)
+	if err != nil {
+		if err == badger.ErrKeyNotFound {
+			return 0, ErrNotFound
+		}
+		return 0, err
+	}
+
+	buff, err := item.ValueCopy(nil)
 	if err != nil {
 		return 0, err
 	}
 
-	return binary.BigEndian.Uint32(raw), nil
+	return binary.BigEndian.Uint32(buff), nil
 }
 
 func setLastKnownPosition(txn *badger.Txn, pn insolar.PulseNumber, position uint32) error {
@@ -196,13 +214,16 @@ func setLastKnownPosition(txn *badger.Txn, pn insolar.PulseNumber, position uint
 	parsedPosition := make([]byte, 4)
 	binary.BigEndian.PutUint32(parsedPosition, position)
 
-	return store.TransactionalSet(txn, lastPositionKey, parsedPosition)
+	fullKey := append(lastPositionKey.Scope().Bytes(), lastPositionKey.ID()...)
+
+	return txn.Set(fullKey, parsedPosition)
 }
 
 func setPosition(txn *badger.Txn, recID insolar.ID, position uint32) error {
 	positionKey := newRecordPositionKey(recID.Pulse(), position)
+	fullKey := append(positionKey.Scope().Bytes(), positionKey.ID()...)
 
-	return store.TransactionalSet(txn, positionKey, recID.Bytes())
+	return txn.Set(fullKey, recID.Bytes())
 }
 
 // TruncateHead remove all records after lastPulse
@@ -217,7 +238,8 @@ func (r *RecordDB) TruncateHead(ctx context.Context, from insolar.PulseNumber) e
 		keyID := insolar.ID(key)
 
 		err := r.db.Backend().Update(func(txn *badger.Txn) error {
-			return store.TransactionalDelete(txn, key)
+			fullKey := append(key.Scope().Bytes(), key.ID()...)
+			return txn.Delete(fullKey)
 		})
 		if err != nil {
 			return errors.Wrapf(err, "can't delete key: %+v", key)
@@ -241,10 +263,18 @@ func (r *RecordDB) get(id insolar.ID) (record.Material, error) {
 	var buff []byte
 	var err error
 	err = r.db.Backend().View(func(txn *badger.Txn) error {
-		buff, err = store.TransactionalGet(txn, recordKey(id))
-		if err == store.ErrNotFound {
-			return ErrNotFound
+		key := recordKey(id)
+		fullKey := append(key.Scope().Bytes(), key.ID()...)
+
+		item, err := txn.Get(fullKey)
+		if err != nil {
+			if err == badger.ErrKeyNotFound {
+				return ErrNotFound
+			}
+			return err
 		}
+
+		buff, err = item.ValueCopy(nil)
 		return err
 	})
 	if err != nil {
@@ -278,10 +308,19 @@ func (r *RecordDB) AtPosition(pn insolar.PulseNumber, position uint32) (insolar.
 		}
 
 		if position > lastKnownPosition {
-			return store.ErrNotFound
+			return ErrNotFound
 		}
 		positionKey := newRecordPositionKey(pn, position)
-		rawID, err := store.TransactionalGet(txn, positionKey)
+		fullKey := append(positionKey.Scope().Bytes(), positionKey.ID()...)
+
+		item, err := txn.Get(fullKey)
+		if err != nil {
+			if err == badger.ErrKeyNotFound {
+				return ErrNotFound
+			}
+			return err
+		}
+		rawID, err := item.ValueCopy(nil)
 		if err != nil {
 			return err
 		}

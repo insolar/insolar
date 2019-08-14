@@ -408,7 +408,7 @@ func TestRecordPositionDB(t *testing.T) {
 		position, err := recordStorage.LastKnownPosition(pn)
 
 		require.Error(t, err)
-		require.Equal(t, err.Error(), store.ErrNotFound.Error())
+		require.Equal(t, err.Error(), ErrNotFound.Error())
 		require.Equal(t, uint32(0), position)
 	})
 
@@ -553,7 +553,7 @@ func TestRecordPositionDB(t *testing.T) {
 
 		_, err = recordStorage.AtPosition(pn, 1)
 		require.Error(t, err)
-		require.Equal(t, err, store.ErrNotFound)
+		require.Equal(t, err, ErrNotFound)
 
 		id := gen.ID()
 		id.SetPulse(pn)

@@ -180,28 +180,6 @@ func (b *BadgerDB) Get(key Key) (value []byte, err error) {
 	return
 }
 
-func TransactionalGet(txn *badger.Txn, key Key) ([]byte, error) {
-	fullKey := append(key.Scope().Bytes(), key.ID()...)
-
-	item, err := txn.Get(fullKey)
-	if err != nil {
-		if err == badger.ErrKeyNotFound {
-			return nil, ErrNotFound
-		}
-		return nil, err
-	}
-
-	value, err := item.ValueCopy(nil)
-	if err != nil {
-		if err == badger.ErrKeyNotFound {
-			return nil, ErrNotFound
-		}
-		return nil, err
-	}
-
-	return value, nil
-}
-
 // Set stores value for a key.
 func (b *BadgerDB) Set(key Key, value []byte) error {
 	fullKey := append(key.Scope().Bytes(), key.ID()...)
@@ -211,12 +189,6 @@ func (b *BadgerDB) Set(key Key, value []byte) error {
 	})
 
 	return err
-}
-
-func TransactionalSet(txn *badger.Txn, key Key, value []byte) error {
-	fullKey := append(key.Scope().Bytes(), key.ID()...)
-
-	return txn.Set(fullKey, value)
 }
 
 // Delete deletes value for a key.
@@ -232,12 +204,6 @@ func (b *BadgerDB) Delete(key Key) error {
 // Backup creates backup.
 func (b *BadgerDB) Backup(w io.Writer, since uint64) (uint64, error) {
 	return b.backend.Backup(w, since)
-}
-
-// TransactionalDelete deletes value for a key.
-func TransactionalDelete(txn *badger.Txn, key Key) error {
-	fullKey := append(key.Scope().Bytes(), key.ID()...)
-	return txn.Delete(fullKey)
 }
 
 // NewReadIterator returns new Iterator over the store.
