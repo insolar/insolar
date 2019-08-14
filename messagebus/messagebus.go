@@ -506,12 +506,11 @@ func (mb *MessageBus) checkParcel(ctx context.Context, parcel insolar.Parcel) er
 	sender := parcel.GetSender()
 
 	if mb.signmessages {
-		p, err := mb.PulseAccessor.Latest(ctx)
-		if err != nil {
-			return errors.Wrap(err, "failed to get latest pulse")
+		n := mb.NodeNetwork.GetAccessor(parcel.Pulse()).GetWorkingNode(sender)
+		if n == nil {
+			return errors.New("failed to check a message sign: node not found in working list")
 		}
-
-		senderKey := mb.NodeNetwork.GetAccessor(p.PulseNumber).GetWorkingNode(sender).PublicKey()
+		senderKey := n.PublicKey()
 		if err := mb.ParcelFactory.Validate(senderKey, parcel); err != nil {
 			return errors.Wrap(err, "failed to check a message sign")
 		}
