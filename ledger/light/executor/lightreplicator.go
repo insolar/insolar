@@ -42,6 +42,7 @@ type LightReplicator interface {
 	// NotifyAboutPulse is method for notifying a sync component about new pulse
 	NotifyAboutPulse(ctx context.Context, pn insolar.PulseNumber)
 
+	// Stop stops the component
 	Stop()
 }
 

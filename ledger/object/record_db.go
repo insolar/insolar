@@ -123,36 +123,21 @@ func (r *RecordDB) BatchSet(ctx context.Context, recs []record.Material) error {
 	if len(recs) == 0 {
 		return nil
 	}
-	if recs[0].ID.IsEmpty() {
-		return errors.New("id is empty")
-	}
+	for _, rec := range recs {
+		if rec.ID.IsEmpty() {
+			return errors.New("id is empty")
+		}
 
-	return r.db.Backend().Update(func(txn *badger.Txn) error {
-		position, err := getLastKnownPosition(txn, recs[0].ID.Pulse())
-		if err != nil && err != store.ErrNotFound {
+		err := r.db.Backend().Update(func(txn *badger.Txn) error {
+			return setRecord(txn, recordKey(rec.ID), rec)
+		})
+		if err != nil {
 			return err
 		}
-		lastIDPn := recs[0].ID.Pulse()
 
-		for _, rec := range recs {
-
-			if rec.ID.IsEmpty() {
-				return errors.New("id is empty")
-			}
-
-			// Because records can be from different pulses
-			// And we want to order them, we need to check record's pulse
-			// If pulse is changed during loop, we change current position
-			if rec.ID.Pulse() != lastIDPn {
-				position, err = getLastKnownPosition(txn, rec.ID.Pulse())
-				if err != nil && err != store.ErrNotFound {
-					return err
-				}
-				lastIDPn = rec.ID.Pulse()
-			}
-
-			err = setRecord(txn, recordKey(rec.ID), rec)
-			if err != nil {
+		err = r.db.Backend().Update(func(txn *badger.Txn) error {
+			position, err := getLastKnownPosition(txn, rec.ID.Pulse())
+			if err != nil && err != store.ErrNotFound {
 				return err
 			}
 
@@ -163,14 +148,14 @@ func (r *RecordDB) BatchSet(ctx context.Context, recs []record.Material) error {
 				return err
 			}
 
-			err = setLastKnownPosition(txn, rec.ID.Pulse(), position)
-			if err != nil {
-				return nil
-			}
+			return setLastKnownPosition(txn, rec.ID.Pulse(), position)
+		})
+		if err != nil {
+			return err
 		}
+	}
 
-		return nil
-	})
+	return nil
 }
 
 func setRecord(tx *badger.Txn, key store.Key, record record.Material) error {

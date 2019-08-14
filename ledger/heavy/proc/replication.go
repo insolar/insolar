@@ -91,7 +91,8 @@ func (p *Replication) Proceed(ctx context.Context) error {
 
 	err = p.store(ctx, msg)
 	if err != nil {
-		inslogger.FromContext(ctx).Fatalf("replication fatal error: %v", err.Error())
+		panic(fmt.Errorf("replication fatal error: %v", err.Error()))
+		// inslogger.FromContext(ctx).Fatalf()
 	}
 
 	stats.Record(ctx, statReceivedHeavyPayloadCount.M(1))
