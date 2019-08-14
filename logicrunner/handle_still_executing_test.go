@@ -26,10 +26,9 @@ import (
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/gen"
-	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/writecontroller"
-	"github.com/insolar/insolar/testutils"
 )
 
 func TestHandleStillExecuting_Present(t *testing.T) {
@@ -41,9 +40,12 @@ func TestHandleStillExecuting_Present(t *testing.T) {
 			name: "success",
 			mocks: func(t minimock.Tester) (*HandleStillExecuting, flow.Flow) {
 				obj := gen.Reference()
-				parcel := testutils.NewParcelMock(t).
-					DefaultTargetMock.Return(&obj).
-					MessageMock.Return(&message.StillExecuting{Reference: obj})
+				receivedPayload := &payload.StillExecuting{
+					ObjectRef: obj,
+				}
+
+				buf, err := payload.Marshal(receivedPayload)
+				require.NoError(t, err, "marshal")
 
 				h := &HandleStillExecuting{
 					dep: &Dependencies{
@@ -58,7 +60,7 @@ func TestHandleStillExecuting_Present(t *testing.T) {
 							AddStillExecutionMock.Return(),
 						WriteAccessor: writecontroller.NewWriteControllerMock(t).BeginMock.Return(func() {}, nil),
 					},
-					Parcel: parcel,
+					Message: payload.Meta{Payload: buf},
 				}
 				return h, flow.NewFlowMock(t)
 			},

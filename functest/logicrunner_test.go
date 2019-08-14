@@ -352,6 +352,213 @@ func (w *TestSagaSimpleCallContract) Rollback(amount int) error {
 	require.True(t, checkPassed)
 }
 
+// Make sure a contract can make a saga call from a saga accept method
+func TestSagaCallFromSagaAcceptMethod(t *testing.T) {
+	balance := float64(100)
+	amount := float64(10)
+	var contractCode = `
+package main
+
+import (
+"github.com/insolar/insolar/insolar"
+"github.com/insolar/insolar/logicrunner/builtin/foundation"
+"github.com/insolar/insolar/application/proxy/test_saga_call_from_accept_method"
+)
+
+type TestSagaCallFromAcceptMethodContract struct {
+	foundation.BaseContract
+	Friend insolar.Reference
+	Amount int
+}
+
+func New() (*TestSagaCallFromAcceptMethodContract, error) {
+	return &TestSagaCallFromAcceptMethodContract{Amount: 100}, nil
+}
+
+type StepOneArgs struct {
+	CallerRef insolar.Reference
+	Amount int
+}
+
+var INSATTR_Transfer_API = true
+func (r *TestSagaCallFromAcceptMethodContract) Transfer(n int) (string, error) {
+	second := test_saga_call_from_accept_method.New()
+	w2, err := second.AsChild(r.GetReference())
+	if err != nil {
+		return "1", err
+	}
+
+	// first saga call
+	args := &test_saga_call_from_accept_method.StepOneArgs{
+		CallerRef: r.GetReference(),
+		Amount: n,
+	}
+	err = w2.AcceptStepOne(args)
+	if err != nil {
+		return "2", err
+	}
+	return w2.GetReference().String(), nil
+}
+
+var INSATTR_GetBalance_API = true
+func (w *TestSagaCallFromAcceptMethodContract) GetBalance() (int, error) {
+	return w.Amount, nil
+}
+
+//ins:saga(RollbackStepOne)
+func (w *TestSagaCallFromAcceptMethodContract) AcceptStepOne(a *StepOneArgs) error {
+	w.Amount += a.Amount
+
+	// second saga call from the accept method
+	first := test_saga_call_from_accept_method.GetObject(a.CallerRef)
+	return first.AcceptStepTwo(a.Amount)
+}
+
+func (w *TestSagaCallFromAcceptMethodContract) RollbackStepOne(a *StepOneArgs) error {
+	w.Amount -= a.Amount
+	return nil
+}
+
+//ins:saga(RollbackStepTwo)
+func (w *TestSagaCallFromAcceptMethodContract) AcceptStepTwo(amount int) error {
+	w.Amount -= amount
+	return nil
+}
+
+func (w *TestSagaCallFromAcceptMethodContract) RollbackStepTwo(amount int) error {
+	w.Amount += amount
+	return nil
+}
+`
+	prototype := uploadContractOnce(t, "test_saga_call_from_accept_method", contractCode)
+	firstWalletRef := callConstructor(t, prototype, "New")
+	resp := callMethod(t, firstWalletRef, "Transfer", int(amount))
+	require.Empty(t, resp.Error)
+
+	secondWalletRef, err := insolar.NewReferenceFromBase58(resp.ExtractedReply.(string))
+	require.NoError(t, err)
+
+	checkPassed := false
+
+	for attempt := 0; attempt <= 10; attempt++ {
+		bal2 := callMethod(t, secondWalletRef, "GetBalance")
+		require.Empty(t, bal2.Error)
+		if bal2.ExtractedReply.(float64) != balance+amount {
+			// money are not accepted yet
+			time.Sleep(10 * time.Millisecond)
+			continue
+		}
+
+		bal1 := callMethod(t, firstWalletRef, "GetBalance")
+		require.Empty(t, bal1.Error)
+		require.Equal(t, balance-amount, bal1.ExtractedReply.(float64))
+		require.Equal(t, balance+amount, bal2.ExtractedReply.(float64))
+
+		checkPassed = true
+		break
+	}
+
+	require.True(t, checkPassed)
+}
+
+// Make sure a contract can make multiple saga calls in one method
+func TestSagaMultipleCalls(t *testing.T) {
+	balance := float64(100)
+	amount := float64(10)
+	var contractCode = `
+package main
+
+import (
+"github.com/insolar/insolar/insolar"
+"github.com/insolar/insolar/logicrunner/builtin/foundation"
+"github.com/insolar/insolar/application/proxy/test_saga_multiple_calls"
+)
+
+type TestSagaMultipleCallsContract struct {
+	foundation.BaseContract
+	Friend insolar.Reference
+	Amount int
+}
+
+func New() (*TestSagaMultipleCallsContract, error) {
+	return &TestSagaMultipleCallsContract{Amount: 100}, nil
+}
+
+var INSATTR_Transfer_API = true
+func (r *TestSagaMultipleCallsContract) Transfer(n int) (string, error) {
+	second := test_saga_multiple_calls.New()
+	w2, err := second.AsChild(r.GetReference())
+	if err != nil {
+		return "1", err
+	}
+
+	r.Amount -= n
+
+	// first saga call
+	fst := n/2
+	err = w2.Accept(fst)
+	if err != nil {
+		return "2", err
+	}
+
+	// second saga call
+	err = w2.Accept(n - fst)
+	if err != nil {
+		return "3", err
+	}
+
+	return w2.GetReference().String(), nil
+}
+
+var INSATTR_GetBalance_API = true
+func (w *TestSagaMultipleCallsContract) GetBalance() (int, error) {
+	return w.Amount, nil
+}
+
+var INSATTR_Accept_API = true
+//ins:saga(Rollback)
+func (w *TestSagaMultipleCallsContract) Accept(amount int) error {
+	w.Amount += amount
+	return nil
+}
+
+var INSATTR_Rollback_API = true
+func (w *TestSagaMultipleCallsContract) Rollback(amount int) error {
+	w.Amount -= amount
+	return nil
+}
+`
+	prototype := uploadContractOnce(t, "test_saga_multiple_calls", contractCode)
+	firstWalletRef := callConstructor(t, prototype, "New")
+	resp := callMethod(t, firstWalletRef, "Transfer", int(amount))
+	require.Empty(t, resp.Error)
+
+	secondWalletRef, err := insolar.NewReferenceFromBase58(resp.ExtractedReply.(string))
+	require.NoError(t, err)
+
+	checkPassed := false
+
+	for attempt := 0; attempt <= 10; attempt++ {
+		bal2 := callMethod(t, secondWalletRef, "GetBalance")
+		require.Empty(t, bal2.Error)
+		if bal2.ExtractedReply.(float64) != balance+amount {
+			// money are not accepted yet
+			time.Sleep(10 * time.Millisecond)
+			continue
+		}
+
+		bal1 := callMethod(t, firstWalletRef, "GetBalance")
+		require.Empty(t, bal1.Error)
+		require.Equal(t, balance-amount, bal1.ExtractedReply.(float64))
+		require.Equal(t, balance+amount, bal2.ExtractedReply.(float64))
+
+		checkPassed = true
+		break
+	}
+
+	require.True(t, checkPassed)
+}
+
 // Make sure a contract can make a saga call to another _type_ of contract
 // without a rollback method using a special flag.
 func TestSagaCallBetweenContractsWithoutRollback(t *testing.T) {
