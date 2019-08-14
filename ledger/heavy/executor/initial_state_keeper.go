@@ -29,7 +29,7 @@ import (
 )
 
 type InitialStateAccessor interface {
-	ReadForJetID(context.Context, insolar.JetID) []record.Index
+	Get(ctx context.Context, lightExecutor insolar.Reference, pulse insolar.PulseNumber) *InitialState
 }
 
 type InitialState struct {
@@ -39,23 +39,33 @@ type InitialState struct {
 }
 
 type InitialStateKeeper struct {
-	jetAccessor  jet.Accessor
-	indexStorage object.IndexAccessor
-	dropStorage  drop.Accessor
+	jetAccessor    jet.Accessor
+	jetCoordinator jet.Coordinator
+	indexStorage   object.IndexAccessor
+	dropStorage    drop.Accessor
 
-	syncPulse       insolar.PulseNumber
-	jetDrops        map[insolar.JetID][]byte
-	abandonRequests map[insolar.JetID][]record.Index
+	syncPulse             insolar.PulseNumber
+	jetDrops              map[insolar.JetID][]byte
+	abandonRequestIndexes map[insolar.JetID][]record.Index
 }
 
-func NewInitialStateKeeper(jetKeeper JetKeeper, jetAccessor jet.Accessor, indexStorage object.IndexAccessor) *InitialStateKeeper {
+func NewInitialStateKeeper(
+	jetKeeper JetKeeper,
+	jetAccessor jet.Accessor,
+	jetCoordinator jet.Coordinator,
+	indexStorage object.IndexAccessor,
+	dropStorage drop.Accessor,
+) *InitialStateKeeper {
 	lastSyncPulseNumber := jetKeeper.TopSyncPulse()
 
 	return &InitialStateKeeper{
-		jetAccessor:     jetAccessor,
-		indexStorage:    indexStorage,
-		syncPulse:       lastSyncPulseNumber,
-		abandonRequests: make(map[insolar.JetID][]record.Index),
+		jetAccessor:           jetAccessor,
+		jetCoordinator:        jetCoordinator,
+		indexStorage:          indexStorage,
+		dropStorage:           dropStorage,
+		syncPulse:             lastSyncPulseNumber,
+		jetDrops:              make(map[insolar.JetID][]byte),
+		abandonRequestIndexes: make(map[insolar.JetID][]record.Index),
 	}
 }
 
@@ -100,7 +110,7 @@ func (isk *InitialStateKeeper) prepareAbandonRequests(ctx context.Context) {
 	logger := inslogger.FromContext(ctx)
 
 	for jetID := range isk.jetDrops {
-		isk.abandonRequests[jetID] = []record.Index{}
+		isk.abandonRequestIndexes[jetID] = []record.Index{}
 	}
 
 	indexes, err := isk.indexStorage.ForPulse(ctx, isk.syncPulse)
@@ -111,7 +121,7 @@ func (isk *InitialStateKeeper) prepareAbandonRequests(ctx context.Context) {
 		logger.Warnf("[ InitialStateKeeper ] No object indexes found in lastSyncPulseNumber: %s", isk.syncPulse.String())
 	}
 
-	// Fill map
+	// Fill the map of indexes with abandon requests
 	for _, index := range indexes {
 
 		if index.Lifeline.EarliestOpenRequest != nil {
@@ -122,26 +132,43 @@ func (isk *InitialStateKeeper) prepareAbandonRequests(ctx context.Context) {
 
 func (isk *InitialStateKeeper) addIndexToState(ctx context.Context, index record.Index) {
 	indexJet, _ := isk.jetAccessor.ForID(ctx, isk.syncPulse, index.ObjID)
-	indexes, ok := isk.abandonRequests[indexJet]
+	indexes, ok := isk.abandonRequestIndexes[indexJet]
 	if !ok {
 		// Someone changed jetTree in sync pulse while starting heavy material node
 		// If this ever happens - we need to stop network
 		panic(fmt.Sprintf("[ InitialStateKeeper ] Jet tree changed on preparing state. New jet: %s", indexJet))
 	}
-	isk.abandonRequests[indexJet] = append(indexes, index)
+	isk.abandonRequestIndexes[indexJet] = append(indexes, index)
 }
 
-func (isk *InitialStateKeeper) Get(ctx context.Context, lightExecutor insolar.Reference) *InitialState {
+func (isk *InitialStateKeeper) Get(ctx context.Context, lightExecutor insolar.Reference, pulse insolar.PulseNumber) *InitialState {
+	logger := inslogger.FromContext(ctx)
 
-	return &InitialState{}
-}
+	var jetIDs []insolar.JetID
+	var drops [][]byte
+	var indexes []record.Index
 
-func (isk *InitialStateKeeper) ReadForJetID(ctx context.Context, jetID insolar.JetID) []record.Index {
-	indexes, ok := isk.abandonRequests[jetID]
-	if !ok {
-		// Someone changed jetTree in sync pulse while starting network
-		// If this ever happens - we need to stop network
-		panic(fmt.Sprintf("[ InitialStateKeeper ] Jet is not known: %s", jetID))
+	logger.Debugf("[ InitialStateKeeper ] Getting drops for: %s in pulse: %s", lightExecutor.String(), pulse.String())
+	for id, jetDrop := range isk.jetDrops {
+		light, err := isk.jetCoordinator.LightExecutorForJet(ctx, insolar.ID(id), pulse)
+		if err != nil {
+			// TODO: panic
+		}
+
+		if light.Equal(lightExecutor) {
+			jetIDs = append(jetIDs, id)
+			drops = append(drops, jetDrop)
+		}
 	}
-	return indexes
+
+	logger.Debugf("[ InitialStateKeeper ] Getting indexes for: %s in pulse: %s", lightExecutor.String(), pulse.String())
+	for _, id := range jetIDs {
+		indexes = append(indexes, isk.abandonRequestIndexes[id]...)
+	}
+
+	return &InitialState{
+		JetIDs:  jetIDs,
+		Drops:   drops,
+		Indexes: indexes,
+	}
 }
