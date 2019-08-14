@@ -141,6 +141,16 @@ func (n Number) Prev(delta uint16) Number {
 	return n
 }
 
+func (n Number) WithFlags(flags uint8) uint32 {
+	if n > MaxTimePulse {
+		panic("illegal value")
+	}
+	if flags > 3 {
+		panic("illegal value")
+	}
+	return n.AsUint32() | uint32(flags)<<30
+}
+
 func IsValidAsPulseNumber(n int) bool {
 	return n >= MinTimePulse && n <= MaxTimePulse
 }
@@ -153,6 +163,6 @@ func OfUint32(n uint32) Number {
 	return Number(n) & MaxTimePulse
 }
 
-func FlagsOf(n int) uint {
+func FlagsOf(n uint32) uint {
 	return uint(n) >> 30
 }

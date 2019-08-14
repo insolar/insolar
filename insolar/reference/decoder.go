@@ -1,0 +1,264 @@
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+package reference
+
+import (
+	"bytes"
+	"errors"
+	"fmt"
+	"io"
+	"strings"
+)
+
+type ByteDecodeFunc func(s string, target io.ByteWriter) (stringRead int, err error)
+type IdentityDecoder func(base *Global, name string) *Global
+
+type ByteDecoderFactory interface {
+	GetByteDecoder(encodingName string) ByteDecodeFunc
+}
+
+type DecoderOptions uint8
+
+const (
+	AllowLegacy DecoderOptions = 1 << iota
+	AllowRecords
+	IgnoreParity
+)
+
+type Decoder struct {
+	byteDecoderFactory ByteDecoderFactory
+	legacyDecoder      ByteDecodeFunc
+	defaultDecoder     ByteDecodeFunc
+
+	nameDecoder IdentityDecoder
+	options     DecoderOptions
+}
+
+func (v Decoder) Decode(ref string) (Global, error) {
+	schemaPos := strings.IndexRune(ref, ':')
+	if schemaPos >= 0 {
+		decoder, err := v.parseSchema(ref[:schemaPos], ref)
+		if err != nil {
+			return Global{}, err
+		}
+		return v.parseReference(ref[schemaPos+1:], decoder)
+	}
+
+	// try to parse the legacy format
+	if v.options&AllowLegacy != 0 && len(ref) >= 2*len(LegacyDomainName)+1 {
+		domainPos := strings.IndexRune(ref, '.')
+		if domainPos > len(LegacyDomainName) && ref[domainPos+1:] == LegacyDomainName {
+			return v.parseLegacyAddress(ref, domainPos)
+		}
+	}
+
+	return v.parseReference(ref, v.defaultDecoder)
+}
+
+func (v Decoder) parseLegacyAddress(ref string, domainPos int) (Global, error) {
+	var result Global
+
+	w := result.addressLocal.asWriter()
+	_, err := v.legacyDecoder(ref[:domainPos], w)
+
+	switch {
+	case err != nil:
+		break
+	case !w.isFull():
+		err = errors.New("insufficient length")
+	case result.addressLocal.getScope() != 0: // there is no scope for legacy
+		err = errors.New("invalid scope")
+	case !result.tryConvertToSelf():
+		err = errors.New("invalid self reference")
+	default:
+		return result, nil
+	}
+	return result, fmt.Errorf("unable to parse legacy reference, %s: ref=%s", err.Error(), ref)
+}
+
+func (v Decoder) parseSchema(scheme, refFull string) (ByteDecodeFunc, error) {
+	parts := strings.Split(scheme, "+")
+	switch len(parts) {
+	case 1:
+		if parts[0] == SchemaV1 {
+			return v.defaultDecoder, nil
+		}
+	case 2:
+		switch {
+		case parts[0] == SchemaV1:
+			parts[0] = parts[1]
+		case parts[1] == SchemaV1:
+			//
+		default:
+			return nil, fmt.Errorf("unsupported scheme: scheme=%s, ref=%s", scheme, refFull)
+		}
+	default:
+		return nil, fmt.Errorf("invalid scheme: scheme=%s", scheme)
+	}
+	decoder := v.byteDecoderFactory.GetByteDecoder(parts[0])
+	if decoder == nil {
+		return nil, fmt.Errorf("unknown decoder: scheme=%s, decoder=%s, ref=%s", scheme, parts[0], refFull)
+	}
+	return decoder, nil
+}
+
+func (v Decoder) parseAuthority(ref string) (authority string, remaining string) {
+	if len(ref) < 3 || ref[:2] != "//" {
+		return "", ref
+	}
+	ref = ref[2:]
+
+	pos := strings.IndexRune(ref, '/')
+	if pos < 0 {
+		return ref, ""
+	}
+
+	return ref[:pos], ref[pos+1:]
+}
+
+func (v Decoder) parseReference(refFull string, byteDecoder ByteDecodeFunc) (Global, error) {
+	_, ref := v.parseAuthority(refFull)
+	if len(ref) == 0 {
+		return Global{}, fmt.Errorf("empty reference body: ref=%s", refFull)
+	}
+
+	parityPos := strings.IndexRune(ref, '/')
+	var parity []byte
+	switch {
+	case parityPos == 0:
+		return Global{}, fmt.Errorf("empty reference body: ref=%s", refFull)
+	case parityPos > 0:
+		buf := bytes.NewBuffer(make([]byte, 0, pulseAndScopeSize))
+		_, err := byteDecoder(ref[parityPos+1:], buf)
+		if err != nil {
+			return Global{}, fmt.Errorf("unable to decode parity: ref=%s, err=%v", refFull, err)
+		}
+		ref = ref[:parityPos]
+		if v.options&IgnoreParity == 0 {
+			parity = buf.Bytes()
+		}
+	}
+
+	var result Global
+	err := v.parseAddress(ref, byteDecoder, &result)
+
+	if err == nil && parity != nil {
+		err = result.CheckParity(parity)
+	}
+	if err == nil {
+		return result, nil
+	}
+
+	return result, fmt.Errorf("invalid reference, %s: ref=%s", err.Error(), refFull)
+}
+
+func (v Decoder) parseAddress(ref string, byteDecoder ByteDecodeFunc, result *Global) error {
+
+	domainPos := strings.IndexRune(ref, '.')
+	switch {
+	case domainPos == 0:
+		return errors.New("empty reference body")
+	case domainPos > 0:
+		domainName := ref[domainPos+1:]
+		localAddrName := ref[:domainPos]
+		switch domainName {
+		case "":
+			return errors.New("empty domain name")
+		case RecordDomainName:
+			if v.options&AllowRecords == 0 {
+				return errors.New("record reference is not allowed")
+			}
+			return v.parseBinaryAddress(localAddrName, byteDecoder, &result.addressLocal)
+		case LegacyDomainName:
+			return errors.New("legacy domain name")
+		default:
+			if v.nameDecoder == nil {
+				return errors.New("aliases are not allowed")
+			}
+			resolveBase := v.nameDecoder(nil, domainName)
+			if resolveBase == nil {
+				return errors.New("unknown domain alias")
+			}
+			return v.parseAddressWithBase(localAddrName, resolveBase, byteDecoder, result)
+		}
+	default:
+		return v.parseAddressWithBase(ref, &Global{}, byteDecoder, result)
+	}
+}
+
+func (v Decoder) parseAddressWithBase(name string, base *Global, byteDecoder ByteDecodeFunc, result *Global) error {
+	err := v.parseBinaryAddress(name, byteDecoder, &result.addressLocal)
+
+	switch {
+	case err != nil:
+		if err != aliasedReferenceError {
+			return err
+		}
+		if v.nameDecoder == nil {
+			return errors.New("aliases are not allowed")
+		}
+		resolved := v.nameDecoder(base, name)
+		if resolved == nil {
+			return errors.New("unknown object alias")
+		}
+		*result = *resolved
+	case base.IsEmpty():
+		if result.IsEmpty() {
+			return nil
+		}
+		if !result.tryConvertToSelf() {
+			return errors.New("invalid self reference")
+		}
+	case result.addressLocal.IsEmpty():
+		return errors.New("empty local part of reference")
+	default:
+		if !result.tryApplyBase(base) {
+			return errors.New("scope mismatch between base and local parts of address")
+		}
+	}
+	return nil
+}
+
+var aliasedReferenceError = errors.New("record reference alias")
+
+func (v Decoder) parseBinaryAddress(name string, byteDecoder ByteDecodeFunc, result *Local) error {
+
+	switch name[0] {
+	case '0':
+		if len(name) == 1 {
+			return nil
+		}
+		_, err := byteDecoder(name[1:], result.asWriter())
+		if err != nil {
+			return err
+		}
+	case '1':
+		w := result.asWriter()
+		_, err := byteDecoder(name[1:], w)
+		if err != nil {
+			return err
+		}
+		if w.isFull() {
+			return errors.New("insufficient address length")
+		}
+	case '2', '3', '4', '5', '6', '7', '8', '9':
+		return errors.New("unsupported address prefix")
+	default:
+		return aliasedReferenceError
+	}
+	return nil
+}
