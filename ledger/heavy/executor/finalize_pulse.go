@@ -62,6 +62,7 @@ func FinalizePulse(ctx context.Context, pulses pulse.Calculator, backuper Backup
 		if err != nil {
 			panic("Can't add backup confirmation: " + err.Error())
 		}
+
 		newTopSyncPulse := jetKeeper.TopSyncPulse()
 
 		if newPulse != newTopSyncPulse {

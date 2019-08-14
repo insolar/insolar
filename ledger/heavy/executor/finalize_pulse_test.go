@@ -17,6 +17,8 @@
 package executor_test
 
 import (
+	"context"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -24,6 +26,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/heavy/executor"
+	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/testutils/network"
 	"github.com/pkg/errors"
 )
@@ -44,11 +47,41 @@ func TestFinalizePulse_HappyPath(t *testing.T) {
 	bkp.MakeBackupMock.Return(nil)
 
 	jk := executor.NewJetKeeperMock(mc)
-	jk.HasAllJetConfirmsMock.Return(true)
-	jk.TopSyncPulseMock.Return(testPulse)
+	var hasConfirmCount uint32
+	hasConfirm := func(ctx context.Context, pulse insolar.PulseNumber) bool {
+		var p bool
+		switch atomic.LoadUint32(&hasConfirmCount) {
+		case 0:
+			p = true
+		case 1:
+			p = false
+		}
+		atomic.AddUint32(&hasConfirmCount, 1)
+		return p
+	}
+
+	jk.HasAllJetConfirmsMock.Set(hasConfirm)
+
+	var topSyncCount uint32
+	topSync := func() insolar.PulseNumber {
+		var p insolar.PulseNumber
+		switch atomic.LoadUint32(&topSyncCount) {
+		case 0:
+			p = testPulse
+		case 1:
+			p = targetPulse
+		}
+		atomic.AddUint32(&topSyncCount, 1)
+		return p
+	}
+
+	jk.TopSyncPulseMock.Set(topSync)
 	jk.AddBackupConfirmationMock.Return(nil)
 
-	executor.FinalizePulse(ctx, pc, bkp, jk, targetPulse)
+	indices := object.NewIndexModifierMock(mc)
+	indices.UpdateLastKnownPulseMock.Return(nil)
+
+	executor.FinalizePulse(ctx, pc, bkp, jk, indices, targetPulse)
 }
 
 func TestFinalizePulse_JetIsNotConfirmed(t *testing.T) {
@@ -62,7 +95,7 @@ func TestFinalizePulse_JetIsNotConfirmed(t *testing.T) {
 	jk := executor.NewJetKeeperMock(mc)
 	jk.HasAllJetConfirmsMock.Return(false)
 
-	executor.FinalizePulse(ctx, nil, nil, jk, testPulse)
+	executor.FinalizePulse(ctx, nil, nil, jk, nil, testPulse)
 }
 
 func TestFinalizePulse_CantGteNextPulse(t *testing.T) {
@@ -80,7 +113,7 @@ func TestFinalizePulse_CantGteNextPulse(t *testing.T) {
 	pc := network.NewPulseCalculatorMock(mc)
 	pc.ForwardsMock.Return(insolar.Pulse{}, errors.New("Test"))
 
-	executor.FinalizePulse(ctx, pc, nil, jk, testPulse)
+	executor.FinalizePulse(ctx, pc, nil, jk, nil, testPulse)
 }
 
 func TestFinalizePulse_BackupError(t *testing.T) {
@@ -102,6 +135,6 @@ func TestFinalizePulse_BackupError(t *testing.T) {
 	bkp := executor.NewBackupMakerMock(mc)
 	bkp.MakeBackupMock.Return(executor.ErrAlreadyDone)
 
-	executor.FinalizePulse(ctx, pc, bkp, jk, targetPulse)
+	executor.FinalizePulse(ctx, pc, bkp, jk, nil, targetPulse)
 
 }
