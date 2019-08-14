@@ -209,12 +209,6 @@ func (c *RequestCheckerDefault) getRequest(ctx context.Context, reasonObjectID, 
 }
 
 func (c *RequestCheckerDefault) getRequestLocal(ctx context.Context, reasonObjectID, reasonID insolar.ID) (payload.RequestInfo, error) {
-
-	defaultResp := payload.RequestInfo{
-		ObjectID:  reasonObjectID,
-		RequestID: reasonID,
-	}
-
 	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
 		"request_id":    reasonID.DebugString(),
 		"object_id":     reasonObjectID.DebugString(),
@@ -228,24 +222,26 @@ func (c *RequestCheckerDefault) getRequestLocal(ctx context.Context, reasonObjec
 	)
 	foundRequest, foundResult, err := c.filaments.RequestInfo(ctx, reasonObjectID, reasonID)
 	if err != nil {
-		return defaultResp, errors.Wrap(err, "failed to get local request info")
+		return payload.RequestInfo{}, errors.Wrap(err, "failed to get local request info")
 	}
+
+	var reqInfo payload.RequestInfo
 
 	if foundRequest != nil {
 		reqBuf, err = foundRequest.Record.Marshal()
 		if err != nil {
-			return defaultResp, errors.Wrap(err, "failed to marshal local request record")
+			return payload.RequestInfo{}, errors.Wrap(err, "failed to marshal local request record")
 		}
-		defaultResp.Request = reqBuf
+		reqInfo.Request = reqBuf
 
 	}
 
 	if foundResult != nil {
 		resBuf, err = foundResult.Record.Marshal()
 		if err != nil {
-			return defaultResp, errors.Wrap(err, "failed to marshal local result record")
+			return payload.RequestInfo{}, errors.Wrap(err, "failed to marshal local result record")
 		}
-		defaultResp.Result = resBuf
+		reqInfo.Result = resBuf
 	}
 
 	logger.WithFields(map[string]interface{}{
@@ -253,7 +249,7 @@ func (c *RequestCheckerDefault) getRequestLocal(ctx context.Context, reasonObjec
 		"has_result": foundResult != nil,
 	}).Debug("local result info found")
 
-	return defaultResp, nil
+	return reqInfo, nil
 }
 
 func findRecord(filamentRecords []record.CompositeFilamentRecord, requestID insolar.ID) (record.CompositeFilamentRecord, bool) {
