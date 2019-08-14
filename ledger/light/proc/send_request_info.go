@@ -57,8 +57,8 @@ func (p *SendRequestInfo) Dep(
 
 func (p *SendRequestInfo) Proceed(ctx context.Context) error {
 
-	if p.requestID.IsEmpty() {
-		return errors.New("request id is empty")
+	if p.requestID.IsEmpty() || p.objectID.IsEmpty() {
+		return errors.New("request id or object id is empty")
 	}
 
 	objectID := p.objectID

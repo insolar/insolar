@@ -124,13 +124,14 @@ func (c *RequestCheckerDefault) checkIncomingRequest(ctx context.Context, incomi
 
 	if !incomingRequest.IsCreationRequest() {
 		if incomingRequest.AffinityRef().Equal(reasonObject) {
+			// If reasonObject is same as requestObject then go local
 			makeLocalRequest = true
 			// return &payload.CodedError{Text: "request and reason objects can't be the same", Code: payload.CodeIncomingRequestIsWrong}
 		}
 	}
 
 	if makeLocalRequest {
-		reasonRequest, err = c.getRequestLocal(ctx, reasonID, incomingRequest, requestID)
+		reasonRequest, err = c.getRequestLocal(ctx, *reasonObject.Record(), reasonID)
 	} else {
 		reasonRequest, err = c.getRequest(ctx, *reasonObject.Record(), reasonID, requestID.Pulse())
 	}
@@ -207,63 +208,52 @@ func (c *RequestCheckerDefault) getRequest(ctx context.Context, reasonObjectID, 
 	}
 }
 
-func (c *RequestCheckerDefault) getRequestLocal(ctx context.Context, reasonID insolar.ID, incomingRequest *record.IncomingRequest, requestID insolar.ID) (payload.RequestInfo, error) {
+func (c *RequestCheckerDefault) getRequestLocal(ctx context.Context, reasonObjectID, reasonID insolar.ID) (payload.RequestInfo, error) {
 
-	// objectID := *request.AffinityRef().Record()
-	object := incomingRequest.ReasonAffinityRef()
-	objectID := *object.Record()
-	emptyResp := payload.RequestInfo{
-		ObjectID:  *object.Record(),
-		RequestID: requestID,
+	defaultResp := payload.RequestInfo{
+		ObjectID:  reasonObjectID,
+		RequestID: reasonID,
 	}
 
 	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
-		"request_id": requestID.DebugString(),
-		"object_id":  objectID.DebugString(),
+		"request_id":    reasonID.DebugString(),
+		"object_id":     reasonObjectID.DebugString(),
+		"local_request": "true",
 	})
 
-	// Searching for request
-	{
-		var (
-			reqBuf []byte
-			resBuf []byte
-		)
-		foundRequest, foundResult, err := c.filaments.RequestInfo(ctx, objectID, requestID)
-		if err != nil {
-			return emptyResp, errors.Wrap(err, "failed to get local request info")
-		}
-		if foundRequest != nil || foundResult != nil {
-			if foundRequest != nil {
-				reqBuf, err = foundRequest.Record.Marshal()
-				if err != nil {
-					return emptyResp, errors.Wrap(err, "failed to marshal local request record")
-				}
-				requestID = foundRequest.RecordID
-			}
-			if foundResult != nil {
-				resBuf, err = foundResult.Record.Marshal()
-				if err != nil {
-					return emptyResp, errors.Wrap(err, "failed to marshal local result record")
-				}
-			}
-
-			msg := payload.RequestInfo{
-				ObjectID:  objectID,
-				RequestID: requestID,
-				Request:   reqBuf,
-				Result:    resBuf,
-			}
-
-			logger.WithFields(map[string]interface{}{
-				"request":    foundRequest != nil,
-				"has_result": foundResult != nil,
-			}).Debug("local result info found")
-
-			return msg, nil
-		}
+	// Searching for request info
+	var (
+		reqBuf []byte
+		resBuf []byte
+	)
+	foundRequest, foundResult, err := c.filaments.RequestInfo(ctx, reasonObjectID, reasonID)
+	if err != nil {
+		return defaultResp, errors.Wrap(err, "failed to get local request info")
 	}
 
-	return emptyResp, &payload.CodedError{Text: "local requestInfo not found", Code: payload.CodeRequestNotFound}
+	if foundRequest != nil {
+		reqBuf, err = foundRequest.Record.Marshal()
+		if err != nil {
+			return defaultResp, errors.Wrap(err, "failed to marshal local request record")
+		}
+		defaultResp.Request = reqBuf
+
+	}
+
+	if foundResult != nil {
+		resBuf, err = foundResult.Record.Marshal()
+		if err != nil {
+			return defaultResp, errors.Wrap(err, "failed to marshal local result record")
+		}
+		defaultResp.Result = resBuf
+	}
+
+	logger.WithFields(map[string]interface{}{
+		"request":    foundRequest != nil,
+		"has_result": foundResult != nil,
+	}).Debug("local result info found")
+
+	return defaultResp, nil
 }
 
 func findRecord(filamentRecords []record.CompositeFilamentRecord, requestID insolar.ID) (record.CompositeFilamentRecord, bool) {

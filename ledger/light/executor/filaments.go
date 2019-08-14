@@ -395,7 +395,7 @@ func (c *FilamentCalculatorDefault) RequestInfo(
 
 	l, err := c.indexes.ForID(ctx, requestID.Pulse(), objectID)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, errors.Wrap(err, fmt.Sprintf("object: %s", objectID.DebugString()))
 	}
 	lifeline = l.Lifeline
 

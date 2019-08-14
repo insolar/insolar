@@ -47,7 +47,7 @@ func (s *GetRequestInfo) Present(ctx context.Context, f flow.Flow) error {
 	case *payload.GetRequestInfo:
 		msg = *concrete
 	default:
-		return errors.Wrap(err, "failed to unmarshal RequestInfo message")
+		return errors.Wrap(err, "failed to unmarshal GetRequestInfo message")
 	}
 
 	ctx, _ = inslogger.WithField(ctx, "object", msg.ObjectID.DebugString())
