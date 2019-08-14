@@ -55,6 +55,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/common/timer"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
+	"math"
 	"time"
 )
 
@@ -65,6 +66,26 @@ func NewRoundTimingsHelper(timings api.RoundTimings, startedAt time.Time) RoundT
 type roundTimingsHelper struct {
 	timings   api.RoundTimings
 	startedAt time.Time
+}
+
+func (p *roundTimingsHelper) StartOfIdleEphemeral() timer.Occasion {
+
+	beforeNextRound := p.timings.EphemeralMaxDuration
+	if beforeNextRound == math.MaxInt64 {
+		return timer.NeverOccasion()
+	}
+	if beforeNextRound < p.timings.EphemeralMinDuration {
+		beforeNextRound = p.timings.EphemeralMinDuration
+	}
+	if beforeNextRound < time.Second {
+		beforeNextRound = time.Second
+	}
+
+	return timer.NewOccasion(p.startedAt.Add(beforeNextRound))
+}
+
+func (p *roundTimingsHelper) StartOfPollEphemeral() timer.Occasion {
+	return timer.NewOccasion(p.startedAt.Add(p.timings.EphemeralMinDuration))
 }
 
 func (p *roundTimingsHelper) StartOfPhase0() timer.Occasion {

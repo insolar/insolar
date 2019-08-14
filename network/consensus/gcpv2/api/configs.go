@@ -85,4 +85,10 @@ type RoundTimings struct {
 
 	// Hard stop for all consensus operations
 	EndOfConsensus time.Duration
+
+	// Time since start of last consensus round, before a next round can be triggered by a new joiner candidate
+	EphemeralMinDuration time.Duration
+
+	// Time since end of last consensus round to start a next round without a new joiner candidate
+	EphemeralMaxDuration time.Duration
 }

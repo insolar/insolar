@@ -599,7 +599,9 @@ func (r *FullRealm) finishRound(ctx context.Context, builder census.Builder, csh
 	r.stateMachine.ConsensusFinished(report, expected)
 
 	if r.ephemeralFeeder != nil {
-		r.ephemeralFeeder.EphemeralConsensusFinished(isNextEphemeral, r.roundStartedAt, expected)
+		pollingStart := r.timings.StartOfPollEphemeral()
+
+		r.ephemeralFeeder.EphemeralConsensusFinished(isNextEphemeral, pollingStart, expected)
 		if !isNextEphemeral {
 			r.ephemeralFeeder.OnEphemeralCancelled()
 			r.ephemeralFeeder = nil

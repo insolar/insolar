@@ -52,6 +52,7 @@ package adapters
 
 import (
 	"context"
+	"github.com/insolar/insolar/network/consensus/common/timer"
 	"math"
 	"sync"
 	"time"
@@ -351,7 +352,7 @@ func (f *EphemeralControlFeeder) TryConvertFromEphemeral(ctx context.Context, ex
 	return true, expected.Rebuild(expectedRealPulse).MakeExpected()
 }
 
-func (f *EphemeralControlFeeder) EphemeralConsensusFinished(isNextEphemeral bool, roundStartedAt time.Time, expected census.Operational) {
+func (f *EphemeralControlFeeder) EphemeralConsensusFinished(isNextEphemeral bool, pollingStart timer.Occasion, expected census.Operational) {
 }
 
 func (f *EphemeralControlFeeder) GetEphemeralTimings(config api.LocalNodeConfiguration) api.RoundTimings {

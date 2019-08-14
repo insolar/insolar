@@ -54,15 +54,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core"
-	"sync"
-	"time"
-
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
+	"github.com/insolar/insolar/network/consensus/common/timer"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core"
+	"sync"
 )
 
 func NewConsensusMemberController(chronicle api.ConsensusChronicles, upstream api.UpstreamController,
@@ -259,10 +258,10 @@ func (p *ephemeralInterceptor) _cancelled() api.EphemeralControlFeeder {
 	return feeder
 }
 
-func (p *ephemeralInterceptor) EphemeralConsensusFinished(isNextEphemeral bool, roundStartedAt time.Time,
+func (p *ephemeralInterceptor) EphemeralConsensusFinished(isNextEphemeral bool, pollingStart timer.Occasion,
 	expected census.Operational) {
 
-	p.EphemeralControlFeeder.EphemeralConsensusFinished(isNextEphemeral, roundStartedAt, expected)
+	p.EphemeralControlFeeder.EphemeralConsensusFinished(isNextEphemeral, pollingStart, expected)
 
 	p.controller.mutex.Lock()
 	defer p.controller.mutex.Unlock()
@@ -271,12 +270,7 @@ func (p *ephemeralInterceptor) EphemeralConsensusFinished(isNextEphemeral bool, 
 		return
 	}
 
-	untilNextStart := time.Until(roundStartedAt.Add(p.GetMinDuration()))
-	if untilNextStart > 0 {
-		time.AfterFunc(untilNextStart, p.startNext)
-	} else {
-		go p.startNext()
-	}
+	pollingStart.NewFunc(p.startNext)
 }
 
 func (p *ephemeralInterceptor) prepare(controller *ConsensusMemberController) api.EphemeralControlFeeder {

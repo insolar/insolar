@@ -52,6 +52,7 @@ package api
 
 import (
 	"context"
+	"github.com/insolar/insolar/network/consensus/common/timer"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/power"
 	"time"
@@ -126,10 +127,6 @@ type PulseControlFeeder interface {
 
 type EphemeralControlFeeder interface {
 	GetEphemeralTimings(LocalNodeConfiguration) RoundTimings
-	/* Minimum time after the last ephemeral round before checking for another candidate */
-	GetMinDuration() time.Duration
-	/* Maximum time to wait for a candidate before starting a next ephemeral round */
-	GetMaxDuration() time.Duration
 
 	/* if true, then a new round can be triggered by a joiner candidate */
 	IsActive() bool
@@ -143,7 +140,7 @@ type EphemeralControlFeeder interface {
 
 	TryConvertFromEphemeral(ctx context.Context, expected census.Expected) (wasConverted bool, converted census.Expected)
 
-	EphemeralConsensusFinished(isNextEphemeral bool, roundStartedAt time.Time, expected census.Operational)
+	EphemeralConsensusFinished(isNextEphemeral bool, pollingStart timer.Occasion, expected census.Operational)
 	/* is called:
 		(1) immediately after TryConvertFromEphemeral returned true
 	    (2) at start of full realm, when ephemeral mode was cancelled by Phase0/Phase1 packets

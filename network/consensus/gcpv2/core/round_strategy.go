@@ -84,6 +84,9 @@ type RoundTimingsHelper interface {
 	CreatePhase2Scaler() TimeScaler
 	CreatePhase2Chaser() chaser.ChasingTimer
 	CreatePhase3Chaser() chaser.ChasingTimer
+
+	StartOfIdleEphemeral() timer.Occasion
+	StartOfPollEphemeral() timer.Occasion
 }
 
 type TimeScaler interface {

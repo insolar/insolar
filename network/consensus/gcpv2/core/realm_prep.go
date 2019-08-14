@@ -54,7 +54,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/misbehavior"
-	"math"
 	"sync"
 	"time"
 
@@ -234,30 +233,16 @@ func (p *PrepRealm) prepareEphemeralPolling(ctxPrep context.Context) {
 		return
 	}
 
-	minDuration := p.ephemeralFeeder.GetMinDuration()
-	beforeNextRound := p.ephemeralFeeder.GetMaxDuration()
+	timings := p.strategy.CreateConsensusTimingsHelper(
+		p.ephemeralFeeder.GetEphemeralTimings(p.config), time.Now())
 
-	var startTimer *time.Timer
-	var startCh <-chan time.Time
-
-	if beforeNextRound < math.MaxInt64 {
-		if beforeNextRound < minDuration {
-			beforeNextRound = minDuration
-		}
-
-		if beforeNextRound < time.Second {
-			beforeNextRound = time.Second
-		}
-
-		startTimer = time.NewTimer(beforeNextRound)
-		startCh = startTimer.C
-	}
+	start := timings.StartOfIdleEphemeral().NewTimer()
 
 	p.AddPoll(func(ctxOfPolling context.Context) bool {
 		select {
 		case <-ctxOfPolling.Done():
 		case <-ctxPrep.Done():
-		case <-startCh:
+		case <-start.Channel():
 			go p.pushEphemeralPulse(ctxPrep)
 		default:
 			if !p.checkEphemeralStartByCandidate(ctxPrep) {
@@ -266,9 +251,7 @@ func (p *PrepRealm) prepareEphemeralPolling(ctxPrep context.Context) {
 			go watchdog.Call(ctxPrep, "pushEphemeralPulse", p.pushEphemeralPulse)
 			// stop polling anyway - repeating of unsuccessful is bad
 		}
-		if startTimer != nil {
-			startTimer.Stop()
-		}
+		start.Stop()
 		return false
 	})
 }
