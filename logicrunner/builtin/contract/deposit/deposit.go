@@ -32,7 +32,9 @@ import (
 type status string
 
 const (
-	day   = 24 * 60 * 60
+	// TODO: https://insolar.atlassian.net/browse/WLT-768
+	// day   = 24 * 60 * 60
+	day   = 10
 	month = 30 * day
 
 	vestingPeriodInDays = 360
@@ -170,8 +172,7 @@ func (d *Deposit) canTransfer(transferAmount *big.Int) error {
 		return fmt.Errorf("hold period didn't end")
 	}
 
-	// spentPeriodInDays := big.NewInt(int64((currentPulse - d.PulseDepositUnHold) / day)) // TODO: https://insolar.atlassian.net/browse/WLT-768
-	spentPeriodInDays := big.NewInt(int64((currentPulse - d.PulseDepositUnHold) / 10))
+	spentPeriodInDays := big.NewInt(int64((currentPulse - d.PulseDepositUnHold) / day))
 	amount, ok := new(big.Int).SetString(d.Amount, 10)
 	if !ok {
 		return fmt.Errorf("can't parse derposit amount")
