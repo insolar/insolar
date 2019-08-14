@@ -21,6 +21,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ThreeDotsLabs/watermill"
 	"github.com/insolar/insolar/insolar/pulse"
 
 	"github.com/ThreeDotsLabs/watermill/message"
@@ -91,6 +92,9 @@ func (r *RetrySender) SendRole(
 			received = tryReceive(ctx, reps, done, replyChan)
 			tries--
 			d()
+			// update message UUID
+			msg := msg.Copy()
+			msg.UUID = watermill.NewUUID()
 		}
 
 		if tries == 0 && !received {
