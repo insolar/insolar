@@ -257,6 +257,10 @@ func (*EmuControlFeeder) OnAppliedGracefulLeave(exitCode uint32, effectiveSince 
 
 type EmuEphemeralFeeder struct{}
 
+func (e EmuEphemeralFeeder) GetMaxDuration() time.Duration {
+	panic("implement me")
+}
+
 func (e EmuEphemeralFeeder) OnEphemeralCancelled() {
 	panic("implement me")
 }
