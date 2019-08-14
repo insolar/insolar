@@ -10,6 +10,7 @@ import (
 
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/logicrunner/common"
 )
 
@@ -47,7 +48,7 @@ type ExecutionRegistryMock struct {
 	beforeLengthCounter uint64
 	LengthMock          mExecutionRegistryMockLength
 
-	funcOnPulse          func(ctx context.Context) (ma1 []insolar.Message)
+	funcOnPulse          func(ctx context.Context) (pa1 []payload.Payload)
 	inspectFuncOnPulse   func(ctx context.Context)
 	afterOnPulseCounter  uint64
 	beforeOnPulseCounter uint64
@@ -1046,7 +1047,7 @@ type ExecutionRegistryMockOnPulseParams struct {
 
 // ExecutionRegistryMockOnPulseResults contains results of the ExecutionRegistry.OnPulse
 type ExecutionRegistryMockOnPulseResults struct {
-	ma1 []insolar.Message
+	pa1 []payload.Payload
 }
 
 // Expect sets up expected params for ExecutionRegistry.OnPulse
@@ -1081,7 +1082,7 @@ func (mmOnPulse *mExecutionRegistryMockOnPulse) Inspect(f func(ctx context.Conte
 }
 
 // Return sets up results that will be returned by ExecutionRegistry.OnPulse
-func (mmOnPulse *mExecutionRegistryMockOnPulse) Return(ma1 []insolar.Message) *ExecutionRegistryMock {
+func (mmOnPulse *mExecutionRegistryMockOnPulse) Return(pa1 []payload.Payload) *ExecutionRegistryMock {
 	if mmOnPulse.mock.funcOnPulse != nil {
 		mmOnPulse.mock.t.Fatalf("ExecutionRegistryMock.OnPulse mock is already set by Set")
 	}
@@ -1089,12 +1090,12 @@ func (mmOnPulse *mExecutionRegistryMockOnPulse) Return(ma1 []insolar.Message) *E
 	if mmOnPulse.defaultExpectation == nil {
 		mmOnPulse.defaultExpectation = &ExecutionRegistryMockOnPulseExpectation{mock: mmOnPulse.mock}
 	}
-	mmOnPulse.defaultExpectation.results = &ExecutionRegistryMockOnPulseResults{ma1}
+	mmOnPulse.defaultExpectation.results = &ExecutionRegistryMockOnPulseResults{pa1}
 	return mmOnPulse.mock
 }
 
 //Set uses given function f to mock the ExecutionRegistry.OnPulse method
-func (mmOnPulse *mExecutionRegistryMockOnPulse) Set(f func(ctx context.Context) (ma1 []insolar.Message)) *ExecutionRegistryMock {
+func (mmOnPulse *mExecutionRegistryMockOnPulse) Set(f func(ctx context.Context) (pa1 []payload.Payload)) *ExecutionRegistryMock {
 	if mmOnPulse.defaultExpectation != nil {
 		mmOnPulse.mock.t.Fatalf("Default expectation is already set for the ExecutionRegistry.OnPulse method")
 	}
@@ -1123,13 +1124,13 @@ func (mmOnPulse *mExecutionRegistryMockOnPulse) When(ctx context.Context) *Execu
 }
 
 // Then sets up ExecutionRegistry.OnPulse return parameters for the expectation previously defined by the When method
-func (e *ExecutionRegistryMockOnPulseExpectation) Then(ma1 []insolar.Message) *ExecutionRegistryMock {
-	e.results = &ExecutionRegistryMockOnPulseResults{ma1}
+func (e *ExecutionRegistryMockOnPulseExpectation) Then(pa1 []payload.Payload) *ExecutionRegistryMock {
+	e.results = &ExecutionRegistryMockOnPulseResults{pa1}
 	return e.mock
 }
 
 // OnPulse implements ExecutionRegistry
-func (mmOnPulse *ExecutionRegistryMock) OnPulse(ctx context.Context) (ma1 []insolar.Message) {
+func (mmOnPulse *ExecutionRegistryMock) OnPulse(ctx context.Context) (pa1 []payload.Payload) {
 	mm_atomic.AddUint64(&mmOnPulse.beforeOnPulseCounter, 1)
 	defer mm_atomic.AddUint64(&mmOnPulse.afterOnPulseCounter, 1)
 
@@ -1147,7 +1148,7 @@ func (mmOnPulse *ExecutionRegistryMock) OnPulse(ctx context.Context) (ma1 []inso
 	for _, e := range mmOnPulse.OnPulseMock.expectations {
 		if minimock.Equal(e.params, params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
-			return e.results.ma1
+			return e.results.pa1
 		}
 	}
 
@@ -1163,7 +1164,7 @@ func (mmOnPulse *ExecutionRegistryMock) OnPulse(ctx context.Context) (ma1 []inso
 		if results == nil {
 			mmOnPulse.t.Fatal("No results are set for the ExecutionRegistryMock.OnPulse")
 		}
-		return (*results).ma1
+		return (*results).pa1
 	}
 	if mmOnPulse.funcOnPulse != nil {
 		return mmOnPulse.funcOnPulse(ctx)
