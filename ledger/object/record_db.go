@@ -93,19 +93,16 @@ func NewRecordDB(db *store.BadgerDB) *RecordDB {
 	return &RecordDB{db: db}
 }
 
-func setRecord(tx *badger.Txn, key []byte, record []byte) error {
-	item, err := tx.Get(key)
+func setRecord(tx *badger.Txn, key store.Key, record record.Material) error {
+	data, err := record.Marshal()
 	if err != nil {
 		return err
 	}
-	_, err = item.ValueCopy(nil)
-	if err != nil {
-		if err == badger.ErrKeyNotFound {
-			return ErrNotFound
-		}
-		return err
+	_, err = store.TransactionalGet(tx, key)
+	if err == nil {
+		return ErrOverride
 	}
-	return tx.Set(key, record)
+	return store.TransactionalSet(tx, key, data)
 }
 
 func getLastKnownPosition(txn *badger.Txn, pn insolar.PulseNumber) (uint32, error) {
@@ -137,16 +134,24 @@ func (r *RecordDB) Set(ctx context.Context, rec record.Material) error {
 	if rec.ID.IsEmpty() {
 		return errors.New("id is empty")
 	}
-
-	key := recordKey(rec.ID)
-	data, err := rec.Marshal()
-	if err != nil {
-		return err
-	}
-	fullKey := append(key.Scope().Bytes(), key.ID()...)
-
 	return r.db.Backend().Update(func(txn *badger.Txn) error {
-		return setRecord(txn, fullKey, data)
+		position, err := getLastKnownPosition(txn, rec.ID.Pulse())
+		if err != nil && err != store.ErrNotFound {
+			return err
+		}
+		position++
+
+		err = setRecord(txn, recordKey(rec.ID), rec)
+		if err != nil {
+			return err
+		}
+
+		err = setPosition(txn, rec.ID, position)
+		if err != nil {
+			return err
+		}
+
+		return setLastKnownPosition(txn, rec.ID.Pulse(), position)
 	})
 }
 
@@ -164,6 +169,9 @@ func (r *RecordDB) BatchSet(ctx context.Context, recs []record.Material) error {
 			return err
 		}
 		if err == nil {
+			// because first index of recs array is zero
+			// and we want to increment index, with using of i.
+			// example: position += uint32(i)
 			position++
 		}
 
@@ -172,13 +180,7 @@ func (r *RecordDB) BatchSet(ctx context.Context, recs []record.Material) error {
 				return errors.New("id is empty")
 			}
 
-			key := recordKey(rec.ID)
-			data, err := rec.Marshal()
-			if err != nil {
-				return err
-			}
-			fullKey := append(key.Scope().Bytes(), key.ID()...)
-			err = setRecord(txn, fullKey, data)
+			err = setRecord(txn, recordKey(rec.ID), rec)
 			if err != nil {
 				return err
 			}
@@ -249,13 +251,11 @@ func (r *RecordDB) get(id insolar.ID) (record.Material, error) {
 func (r *RecordDB) LastKnownPosition(pn insolar.PulseNumber) (uint32, error) {
 	var position uint32
 	var err error
+
 	err = r.db.Backend().View(func(txn *badger.Txn) error {
 		position, err = getLastKnownPosition(txn, pn)
-		return nil
+		return err
 	})
-	if err != nil {
-		return 0, err
-	}
 
 	return position, err
 }

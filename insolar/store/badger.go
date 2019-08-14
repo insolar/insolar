@@ -184,8 +184,12 @@ func TransactionalGet(txn *badger.Txn, key Key) ([]byte, error) {
 
 	item, err := txn.Get(fullKey)
 	if err != nil {
+		if err == badger.ErrKeyNotFound {
+			return nil, ErrNotFound
+		}
 		return nil, err
 	}
+
 	value, err := item.ValueCopy(nil)
 	if err != nil {
 		if err == badger.ErrKeyNotFound {

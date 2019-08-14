@@ -355,7 +355,7 @@ func TestRecordServer_Export(t *testing.T) {
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 
-		recordPosition := object.NewRecordPositionDB(db)
+		recordPosition := object.NewRecordDB(db)
 		pulses := pulse.NewDB(db)
 
 		recordServer := NewRecordServer(pulses, recordPosition, nil, jetKeeper)
@@ -443,22 +443,16 @@ func TestRecordServer_Export_Composite(t *testing.T) {
 
 	pulseStorage := pulse.NewDB(db)
 	recordStorage := object.NewRecordDB(db)
-	recordPosition := object.NewRecordPositionDB(db)
+	recordPosition := object.NewRecordDB(db)
 
 	// Save records to DB
 	err = recordStorage.Set(ctx, firstRec)
 	require.NoError(t, err)
-	err = recordPosition.IncrementPosition(firstID)
-	require.NoError(t, err)
 
 	err = recordStorage.Set(ctx, secondRec)
 	require.NoError(t, err)
-	err = recordPosition.IncrementPosition(secondID)
-	require.NoError(t, err)
 
 	err = recordStorage.Set(ctx, thirdRec)
-	require.NoError(t, err)
-	err = recordPosition.IncrementPosition(thirdID)
 	require.NoError(t, err)
 
 	// Pulses

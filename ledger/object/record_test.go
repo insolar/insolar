@@ -363,7 +363,7 @@ func TestRecordPositionDB(t *testing.T) {
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 
-		recordStorage := NewRecordPositionDB(db)
+		recordStorage := NewRecordDB(db)
 		pn := gen.PulseNumber()
 
 		position, err := recordStorage.LastKnownPosition(pn)
@@ -382,13 +382,13 @@ func TestRecordPositionDB(t *testing.T) {
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 
-		recordStorage := NewRecordPositionDB(db)
+		recordStorage := NewRecordDB(db)
 		pn := gen.PulseNumber()
 
 		id := gen.ID()
 		id.SetPulse(pn)
 
-		err = recordStorage.IncrementPosition(id)
+		err = recordStorage.Set(context.TODO(), record.Material{ID: id})
 		require.NoError(t, err)
 
 		next, err := recordStorage.LastKnownPosition(pn)
@@ -406,7 +406,7 @@ func TestRecordPositionDB(t *testing.T) {
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 
-		recordStorage := NewRecordPositionDB(db)
+		recordStorage := NewRecordDB(db)
 		pn := gen.PulseNumber()
 
 		id := gen.ID()
@@ -416,11 +416,11 @@ func TestRecordPositionDB(t *testing.T) {
 		tID := gen.ID()
 		tID.SetPulse(pn)
 
-		err = recordStorage.IncrementPosition(id)
+		err = recordStorage.Set(context.TODO(), record.Material{ID: id})
 		require.NoError(t, err)
-		err = recordStorage.IncrementPosition(sID)
+		err = recordStorage.Set(context.TODO(), record.Material{ID: sID})
 		require.NoError(t, err)
-		err = recordStorage.IncrementPosition(tID)
+		err = recordStorage.Set(context.TODO(), record.Material{ID: tID})
 		require.NoError(t, err)
 
 		next, err := recordStorage.LastKnownPosition(pn)
@@ -438,7 +438,7 @@ func TestRecordPositionDB(t *testing.T) {
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 
-		recordStorage := NewRecordPositionDB(db)
+		recordStorage := NewRecordDB(db)
 		pn := gen.PulseNumber()
 
 		id := gen.ID()
@@ -448,19 +448,19 @@ func TestRecordPositionDB(t *testing.T) {
 		tID := gen.ID()
 		tID.SetPulse(pn)
 
-		err = recordStorage.IncrementPosition(id)
+		err = recordStorage.Set(context.TODO(), record.Material{ID: id})
 		require.NoError(t, err)
 		savedID, err := recordStorage.AtPosition(pn, 1)
 		require.NoError(t, err)
 		require.Equal(t, id, savedID)
 
-		err = recordStorage.IncrementPosition(sID)
+		err = recordStorage.Set(context.TODO(), record.Material{ID: sID})
 		require.NoError(t, err)
 		savedID, err = recordStorage.AtPosition(pn, 2)
 		require.NoError(t, err)
 		require.Equal(t, sID, savedID)
 
-		err = recordStorage.IncrementPosition(tID)
+		err = recordStorage.Set(context.TODO(), record.Material{ID: tID})
 		require.NoError(t, err)
 		savedID, err = recordStorage.AtPosition(pn, 3)
 		require.NoError(t, err)
@@ -476,7 +476,7 @@ func TestRecordPositionDB(t *testing.T) {
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 
-		recordStorage := NewRecordPositionDB(db)
+		recordStorage := NewRecordDB(db)
 		pn := gen.PulseNumber()
 
 		_, err = recordStorage.AtPosition(pn, 1)
@@ -486,7 +486,7 @@ func TestRecordPositionDB(t *testing.T) {
 		id := gen.ID()
 		id.SetPulse(pn)
 
-		err = recordStorage.IncrementPosition(id)
+		err = recordStorage.Set(context.TODO(), record.Material{ID: id})
 		require.NoError(t, err)
 		savedID, err := recordStorage.AtPosition(pn, 1)
 		require.NoError(t, err)
