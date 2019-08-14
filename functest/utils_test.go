@@ -262,7 +262,7 @@ func signedRequest(t *testing.T, user *user, method string, params interface{}) 
 	if err != nil {
 		errMsg = err.Error()
 	}
-	emptyRef := insolar.Reference{}
+	emptyRef := insolar.NewEmptyReference()
 
 	require.NotEqual(t, "", refStr, "request ref is empty: %s", errMsg)
 	require.NotEqual(t, emptyRef.String(), refStr, "request ref is zero: %s", errMsg)
