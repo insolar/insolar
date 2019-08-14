@@ -396,7 +396,7 @@ func uploadContract(t testing.TB, contractName string, contractCode string) *ins
 	require.NoError(t, err)
 
 	emptyRef := make([]byte, insolar.RecordRefSize)
-	require.NotEqual(t, insolar.Reference{}.FromSlice(emptyRef), prototypeRef)
+	require.NotEqual(t, insolar.NewReferenceFromBytes(emptyRef), prototypeRef)
 
 	return prototypeRef
 }
@@ -433,7 +433,7 @@ func callConstructor(t testing.TB, prototypeRef *insolar.Reference, method strin
 	objectRef, err := insolar.NewReferenceFromBase58(callConstructorRes.Result.Object)
 	require.NoError(t, err)
 
-	require.NotEqual(t, insolar.Reference{}.FromSlice(make([]byte, insolar.RecordRefSize)), objectRef)
+	require.NotEqual(t, insolar.NewReferenceFromBytes(make([]byte, insolar.RecordRefSize)), objectRef)
 
 	return objectRef
 }

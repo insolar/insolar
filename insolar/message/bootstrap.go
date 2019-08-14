@@ -41,7 +41,7 @@ func (*GenesisRequest) DefaultRole() insolar.DynamicRole {
 
 // DefaultTarget returns of target of this event.
 func (gr *GenesisRequest) DefaultTarget() *insolar.Reference {
-	return &insolar.Reference{}
+	return insolar.NewEmptyReference()
 }
 
 // Type implementation for genesis request.
