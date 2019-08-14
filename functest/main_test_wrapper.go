@@ -323,14 +323,6 @@ func waitForNet() error {
 	return nil
 }
 
-func getPwd() (string, error) {
-	cwd, err := os.Getwd()
-	if err != nil {
-		return "", errors.Wrap(err, "[ startNet ] Can't get current working directory")
-	}
-	return cwd, nil
-}
-
 func startNet() error {
 
 	cwd, err := os.Getwd()
@@ -350,19 +342,12 @@ func startNet() error {
 		}
 	}
 
-	if err != nil {
-		return errors.Wrap(err, "[ startNet ] Unable to change to Insolar dir: ")
-	}
-
 	// If you want to add -n flag here please make sure that insgorund will
 	// be eventually started with --log-level=debug. Otherwise someone will spent
 	// a lot of time trying to figure out why insgorund debug logs are missing
 	// during execution of functests.
 	cmd = exec.Command("./scripts/insolard/launchnet.sh", "-gw")
 	stdout, _ = cmd.StdoutPipe()
-	if err != nil {
-		return errors.Wrap(err, "[ startNet ] could't set stdout: ")
-	}
 
 	stderr, err = cmd.StderrPipe()
 	if err != nil {
