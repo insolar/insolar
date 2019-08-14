@@ -37,16 +37,10 @@ func getEmptyMessage(mt insolar.MessageType) (insolar.Message, error) {
 		return &CallMethod{}, nil
 	case insolar.TypeReturnResults:
 		return &ReturnResults{}, nil
-	case insolar.TypeExecutorResults:
-		return &ExecutorResults{}, nil
 	case insolar.TypeValidationResults:
 		return &ValidationResults{}, nil
-	case insolar.TypePendingFinished:
-		return &PendingFinished{}, nil
 	case insolar.TypeAdditionalCallFromPreviousExecutor:
 		return &AdditionalCallFromPreviousExecutor{}, nil
-	case insolar.TypeStillExecuting:
-		return &StillExecuting{}, nil
 
 	// Genesis
 	case insolar.TypeGenesisRequest:
@@ -112,11 +106,8 @@ func init() {
 	// Logicrunner
 	gob.Register(&CallMethod{})
 	gob.Register(&ReturnResults{})
-	gob.Register(&ExecutorResults{})
 	gob.Register(&AdditionalCallFromPreviousExecutor{})
 	gob.Register(&ValidationResults{})
-	gob.Register(&PendingFinished{})
-	gob.Register(&StillExecuting{})
 
 	// Bootstrap
 	gob.Register(&GenesisRequest{})
