@@ -65,5 +65,5 @@ func (e *Emoji) GetEmoji(n api.Node) string {
 	if res, ok := e.registred[n.ID]; ok {
 		return res
 	}
-	return "️"
+	return "️⛔️"
 }
