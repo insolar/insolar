@@ -125,16 +125,13 @@ func (r *PhasedRoundController) PrepareConsensusRound(upstream api.UpstreamContr
 
 	ctlFeeder := r.realm.coreRealm.controlFeeder
 
-	upstreamSM := NewUpstreamStateMachine(upstream) // isolates consensus from upstream delays
-
 	r.realm.coreRealm.roundContext = r.roundWorker.preInit(
 		r.realm.coreRealm.strategy.ConfigureRoundContext(
 			r.realm.config.GetParentContext(),
 			r.realm.initialCensus.GetExpectedPulseNumber(),
 			r.realm.GetLocalProfile(),
 		),
-		upstreamSM,
-		ctlFeeder, ctlFeeder, time.Second*2) // TODO parametrize the constant
+		upstream, ctlFeeder, ctlFeeder, time.Second*2) // TODO parametrize the constant
 
 	r.realm.coreRealm.stateMachine = &r.roundWorker
 
@@ -183,7 +180,6 @@ func (r *PhasedRoundController) PrepareConsensusRound(upstream api.UpstreamContr
 	r.roundWorker.init(func() {
 		// requires r.roundWorker.StartXXX to happen under lock
 		r._setStartedAtNow()
-		upstreamSM.TryStart(r.realm.roundContext)
 		if r.prepR != nil { // PrepRealm can be finished before starting
 			r.prepR._startWorkers(prepCtx, preps)
 		}

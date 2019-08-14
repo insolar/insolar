@@ -189,19 +189,20 @@ func (p *RoundStateMachineWorker) preInit(ctx context.Context, upstream api.Upst
 }
 
 func (p *RoundStateMachineWorker) init(starterFn func(), stopperFn func(), finishedFn func()) {
-	p.worker.Init(10,
-		func(ctx context.Context) {
+	p.worker.Init(syncrun.SyncingWorkerConfig{
+		QueueLen: 10,
+		BeforeStartFn: func(ctx context.Context) {
 			if starterFn != nil {
 				starterFn()
 			}
 			atomic.CompareAndSwapUint32(&p.roundState, uint32(RoundInactive), uint32(RoundAwaitingPulse))
 		},
-		func(ctx context.Context, err interface{}) {
+		AfterStopFn: func(ctx context.Context, err interface{}) {
 			if stopperFn != nil {
 				stopperFn()
 			}
 			p.applyFinishStatus(err)
-		})
+		}})
 	p.finishedFn = finishedFn
 }
 

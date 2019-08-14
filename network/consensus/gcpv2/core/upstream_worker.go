@@ -59,21 +59,32 @@ import (
 )
 
 func NewUpstreamStateMachine(upstream api.UpstreamController) *UpstreamStateMachine {
-	r := &UpstreamStateMachine{upstream: upstream}
-	r.Init(20, nil, nil)
-	return r
+	return &UpstreamStateMachine{upstream: upstream}
 }
 
 var _ api.UpstreamController = &UpstreamStateMachine{}
 
 /* Ensures that all methods are called in the exact sequence */
 type UpstreamStateMachine struct {
-	syncrun.SyncingWorker
+	worker   syncrun.SyncingWorker
 	upstream api.UpstreamController
 }
 
+func (p *UpstreamStateMachine) TryStart(ctx context.Context) bool {
+	if !p.worker.TryInit(syncrun.SyncingWorkerConfig{QueueLen: 20}).IsUninitialized() {
+		return false
+	}
+	return p.worker.TryStart(ctx).IsRunning()
+}
+
+func (p *UpstreamStateMachine) Start(ctx context.Context) {
+	if !p.TryStart(ctx) {
+		panic("illegal state")
+	}
+}
+
 func (p *UpstreamStateMachine) async(fn func()) {
-	p.AsyncCall(func(context context.Context) error {
+	p.worker.AsyncCall(func(context context.Context) error {
 		fn()
 		return nil
 	})
@@ -99,10 +110,10 @@ func (p *UpstreamStateMachine) ConsensusFinished(report api.UpstreamReport, expe
 	p.async(func() {
 		p.upstream.ConsensusFinished(report, expectedCensus)
 	})
-	p.AsyncStop()
+	p.worker.AsyncStop()
 }
 
 func (p *UpstreamStateMachine) ConsensusAborted() {
 	p.async(p.upstream.ConsensusAborted)
-	p.AsyncStop()
+	p.worker.AsyncStop()
 }

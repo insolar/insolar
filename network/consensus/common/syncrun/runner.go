@@ -69,6 +69,10 @@ const (
 
 type Status uint8
 
+func (v Status) IsUninitialized() bool {
+	return v == runStatusUninitialized
+}
+
 func (v Status) IsRunning() bool {
 	return v == runStatusStarted
 }
@@ -91,36 +95,50 @@ func (v Status) WasInitialized() bool {
 
 type WorkFunc func(context.Context) error
 
-/* Ensures that all methods are called in the exact sequence */
-type SyncingWorker struct {
-	runStatus     int32 // atomic
-	ctx           context.Context
-	cancelFn      func()
-	beforeStartFn func(context.Context)
-	afterStopFn   func(context.Context, interface{})
-	asyncCmd      chan WorkFunc
-	timeout       *time.Timer
+type SyncingWorkerConfig struct {
+	QueueLen       int
+	WaitOnOverflow bool
+	BeforeStartFn  func(context.Context)
+	AfterStopFn    func(context.Context, interface{})
 }
 
-func (p *SyncingWorker) Init(queueLen int, beforeStartFn func(context.Context), afterStopFn func(context.Context, interface{})) {
-	if queueLen <= 0 {
+/* Ensures that all methods are called in the exact sequence */
+type SyncingWorker struct {
+	runStatus int32 // atomic
+	ctx       context.Context
+	cancelFn  func()
+	asyncCmd  chan WorkFunc
+	timeout   *time.Timer
+	config    SyncingWorkerConfig
+}
+
+func (p *SyncingWorker) Init(config SyncingWorkerConfig) {
+	if p.TryInit(config) != runStatusUninitialized {
+		panic("illegal state")
+	}
+}
+
+func (p *SyncingWorker) TryInit(config SyncingWorkerConfig) Status {
+	if config.QueueLen <= 0 {
 		panic("illegal value")
 	}
 
 	if !atomic.CompareAndSwapInt32(&p.runStatus, runStatusUninitialized, runStatusInitialized) {
-		panic("illegal state")
+		return p.GetStatus()
 	}
 
-	p.asyncCmd = make(chan WorkFunc, queueLen)
+	p.asyncCmd = make(chan WorkFunc, config.QueueLen)
 
-	if beforeStartFn == nil {
-		beforeStartFn = func(context.Context) {}
+	p.config = config
+
+	if p.config.BeforeStartFn == nil {
+		p.config.BeforeStartFn = func(context.Context) {}
 	}
-	if afterStopFn == nil {
-		afterStopFn = func(context.Context, interface{}) {}
+	if p.config.AfterStopFn == nil {
+		p.config.AfterStopFn = func(context.Context, interface{}) {}
 	}
-	p.beforeStartFn = beforeStartFn
-	p.afterStopFn = afterStopFn
+
+	return runStatusUninitialized
 }
 
 func (p *SyncingWorker) GetStatus() Status {
@@ -204,8 +222,8 @@ func (p *SyncingWorker) TryStartAttached() Status {
 }
 
 func (p *SyncingWorker) run() {
-	p.beforeStartFn(p.ctx)
-	p.beforeStartFn = nil //avoid unnecessary retention
+	p.config.BeforeStartFn(p.ctx)
+	p.config.BeforeStartFn = nil //avoid unnecessary retention
 
 	go p._run()
 }
@@ -213,8 +231,8 @@ func (p *SyncingWorker) run() {
 func (p *SyncingWorker) _run() {
 	err := p.runCommandsAndCleanup()
 
-	p.afterStopFn(p.ctx, err)
-	p.afterStopFn = nil
+	p.config.AfterStopFn(p.ctx, err)
+	p.config.AfterStopFn = nil
 	atomic.StoreInt32(&p.runStatus, runStatusStopped)
 }
 
@@ -301,7 +319,17 @@ func (p *SyncingWorker) AsyncCall(fn func(context.Context) error) (successful bo
 		_ = recover()
 		successful = false
 	}()
-	p.asyncCmd <- fn
+
+	if p.config.WaitOnOverflow {
+		p.asyncCmd <- fn
+	} else {
+		select {
+		case p.asyncCmd <- fn:
+		default:
+			panic("overflow")
+		}
+	}
+
 	return true
 }
 
@@ -342,22 +370,11 @@ func (p *SyncingWorker) closeQueue() {
 	defer func() {
 		_ = recover()
 	}()
-
 	close(p.asyncCmd)
 }
 
 func (p *SyncingWorker) AsyncStop() {
-	if p.asyncCmd == nil {
-		return
-	}
-	defer func() {
-		_ = recover()
-	}()
-	p.asyncCmd <- func(context.Context) error {
-		p.Stop()
-		return nil
-	}
-	close(p.asyncCmd)
+	p.closeQueue()
 }
 
 func (p *SyncingWorker) GetContext() context.Context {

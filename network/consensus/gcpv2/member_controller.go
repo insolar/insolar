@@ -54,6 +54,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 	"sync"
 	"time"
 
@@ -69,7 +70,7 @@ func NewConsensusMemberController(chronicle api.ConsensusChronicles, upstream ap
 	controlFeeder api.ConsensusControlFeeder, ephemeralFeeder api.EphemeralControlFeeder) api.ConsensusController {
 
 	return &ConsensusMemberController{
-		upstream:             upstream,
+		upstream:             core.NewUpstreamStateMachine(upstream), // isolates consensus from upstream delays
 		chronicle:            chronicle,
 		roundFactory:         roundFactory,
 		candidateFeeder:      candidateFeeder,
@@ -84,7 +85,7 @@ type ConsensusMemberController struct {
 	chronicle            api.ConsensusChronicles
 	roundFactory         api.RoundControllerFactory
 	candidateFeeder      api.CandidateControlFeeder
-	upstream             api.UpstreamController
+	upstream             *core.UpstreamStateMachine
 	controlFeeder        api.ConsensusControlFeeder
 	ephemeralInterceptor ephemeralInterceptor
 
@@ -127,6 +128,8 @@ func (h *ConsensusMemberController) getOrCreateInternal() (api.RoundController, 
 	if h.isTerminated {
 		return nil, false
 	}
+
+	h.upstream.TryStart(h.roundFactory.GetLocalConfiguration().GetParentContext())
 
 	ephemeralFeeder := h.ephemeralInterceptor.prepare(h)
 
