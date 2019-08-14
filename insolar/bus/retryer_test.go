@@ -65,6 +65,7 @@ func TestRetryerSend_SendErrored(t *testing.T) {
 
 	msg, err := payload.NewMessage(&payload.State{})
 	require.NoError(t, err)
+	firstUUID := msg.UUID
 
 	pa := pulse.NewAccessorMock(t)
 	pa.LatestMock.Set(accessorMock(t).Latest)
@@ -74,6 +75,8 @@ func TestRetryerSend_SendErrored(t *testing.T) {
 	for range reps {
 		require.Fail(t, "we are not expect any replays")
 	}
+	lastUUID := msg.UUID
+	require.Equal(t, firstUUID, lastUUID)
 
 	require.Equal(t, uint64(1), pa.LatestAfterCounter())
 }
@@ -98,6 +101,7 @@ func TestRetryerSend_Send_Timeout(t *testing.T) {
 
 	msg, err := payload.NewMessage(&payload.State{})
 	require.NoError(t, err)
+	firstUUID := msg.UUID
 
 	pa := pulse.NewAccessorMock(t)
 	pa.LatestMock.Set(accessorMock(t).Latest)
@@ -108,6 +112,8 @@ func TestRetryerSend_Send_Timeout(t *testing.T) {
 	case _, ok := <-reps:
 		require.False(t, ok, "channel with replies must be closed, without any messages received")
 	}
+	lastUUID := msg.UUID
+	require.Equal(t, firstUUID, lastUUID)
 }
 
 func sendTestReply(pl payload.Payload, ch chan<- *message.Message, isDone chan<- interface{}) {
@@ -131,6 +137,7 @@ func TestRetryerSend(t *testing.T) {
 
 	msg, err := payload.NewMessage(&payload.State{})
 	require.NoError(t, err)
+	firstUUID := msg.UUID
 
 	pa := pulse.NewAccessorMock(t)
 	pa.LatestMock.Set(accessorMock(t).Latest)
@@ -158,6 +165,8 @@ func TestRetryerSend(t *testing.T) {
 		}
 	}
 	done()
+	lastUUID := msg.UUID
+	require.Equal(t, firstUUID, lastUUID)
 
 	require.True(t, waitForChannelClosed(innerReps))
 }
@@ -172,6 +181,7 @@ func TestRetryerSend_ExpectTwoResponse_GotOneError(t *testing.T) {
 
 	msg, err := payload.NewMessage(&payload.State{})
 	require.NoError(t, err)
+	firstUUID := msg.UUID
 
 	pa := pulse.NewAccessorMock(t)
 	pa.LatestMock.Set(accessorMock(t).Latest)
@@ -201,6 +211,8 @@ func TestRetryerSend_ExpectTwoResponse_GotOneError(t *testing.T) {
 		}
 	}
 	done()
+	lastUUID := msg.UUID
+	require.Equal(t, firstUUID, lastUUID)
 
 	require.True(t, waitForChannelClosed(innerReps))
 }
@@ -223,6 +235,7 @@ func TestRetryerSend_FlowCancelled_Once(t *testing.T) {
 	var success bool
 	msg, err := payload.NewMessage(&payload.State{})
 	require.NoError(t, err)
+	firstUUID := msg.UUID
 
 	pa := pulse.NewAccessorMock(t)
 	pa.LatestMock.Set(accessorMock(t).Latest)
@@ -243,6 +256,8 @@ func TestRetryerSend_FlowCancelled_Once(t *testing.T) {
 		}
 	}
 	done()
+	lastUUID := msg.UUID
+	require.NotEqual(t, firstUUID, lastUUID)
 
 	require.True(t, waitForChannelClosed(innerReps))
 }
@@ -268,6 +283,7 @@ func TestRetryerSend_FlowCancelled_Once_SeveralReply(t *testing.T) {
 	var success int
 	msg, err := payload.NewMessage(&payload.State{})
 	require.NoError(t, err)
+	firstUUID := msg.UUID
 
 	pa := pulse.NewAccessorMock(t)
 	pa.LatestMock.Set(accessorMock(t).Latest)
@@ -287,6 +303,8 @@ func TestRetryerSend_FlowCancelled_Once_SeveralReply(t *testing.T) {
 		}
 	}
 	done()
+	lastUUID := msg.UUID
+	require.NotEqual(t, firstUUID, lastUUID)
 
 	require.True(t, waitForChannelClosed(innerReps))
 }
@@ -305,6 +323,7 @@ func TestRetryerSend_FlowCancelled_RetryExceeded(t *testing.T) {
 	var success bool
 	msg, err := payload.NewMessage(&payload.State{})
 	require.NoError(t, err)
+	firstUUID := msg.UUID
 
 	pa := pulse.NewAccessorMock(t)
 	pa.LatestMock.Set(accessorMock(t).Latest)
@@ -318,6 +337,8 @@ func TestRetryerSend_FlowCancelled_RetryExceeded(t *testing.T) {
 	require.False(t, success)
 
 	done()
+	lastUUID := msg.UUID
+	require.NotEqual(t, firstUUID, lastUUID)
 
 	require.True(t, waitForChannelClosed(innerReps))
 }
@@ -350,6 +371,7 @@ func TestRetryerSend_FlowCancelled_Between(t *testing.T) {
 	var success int
 	msg, err := payload.NewMessage(&payload.State{})
 	require.NoError(t, err)
+	firstUUID := msg.UUID
 
 	pa := pulse.NewAccessorMock(t)
 	pa.LatestMock.Set(accessorMock(t).Latest)
@@ -371,6 +393,8 @@ func TestRetryerSend_FlowCancelled_Between(t *testing.T) {
 	}
 
 	done()
+	lastUUID := msg.UUID
+	require.NotEqual(t, firstUUID, lastUUID)
 
 	require.True(t, waitForChannelClosed(innerReps))
 }
