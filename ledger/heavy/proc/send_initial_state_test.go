@@ -140,6 +140,61 @@ func TestSendInitialState_ProceedForNetworkStart(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestSendInitialState_ProceedForNetworkStartWithSplit(t *testing.T) {
+	p, err := payload.Marshal(&payload.GetLightInitialState{ Pulse: 1000 })
+	require.NoError(t, err)
+	startPulse := pulse.NewStartPulse()
+	startPulse.SetStartPulse(context.Background(), insolar.Pulse{ PulseNumber: 1000 })
+	topSyncPulse := insolar.Pulse{ PulseNumber: 999}
+	jetKeeper := executor.NewJetKeeperMock(t)
+	jetKeeper.TopSyncPulseMock.Return(topSyncPulse.PulseNumber)
+	pulseAccessor := pulse.NewAccessorMock(t)
+	pulseAccessor.ForPulseNumberMock.Return(topSyncPulse, nil)
+	jetID := gen.JetID()
+	jetTree := jet.NewStorageMock(t)
+	jetTree.AllMock.Return([]insolar.JetID{ jetID })
+	light := gen.Reference()
+	jetCoordinator := jet.NewCoordinatorMock(t)
+	jetCoordinator.LightExecutorForJetMock.Return(&light, nil)
+	dropItem := drop.MustEncode(&drop.Drop{
+		Pulse: 999,
+		JetID: jetID,
+		Split: true,
+	})
+	db := store.NewDBMock(t)
+	db.GetMock.Return(dropItem, nil)
+	dropDB := drop.NewDB(db)
+	sender := bus.NewSenderMock(t)
+	sender.ReplyMock.Set(func(ctx context.Context, origin payload.Meta, reply *message.Message) {
+		result, err := payload.Unmarshal(reply.Payload)
+		require.NoError(t, err)
+		state, ok := result.(*payload.LightInitialState)
+		require.True(t, ok)
+		require.Equal(t, topSyncPulse.PulseNumber, state.Pulse.PulseNumber)
+		require.Equal(t, 2, len(state.JetIDs))
+		left, right := jet.Siblings(jetID)
+		require.Equal(t, left, state.JetIDs[0])
+		require.Equal(t, right, state.JetIDs[1])
+		require.Equal(t, 1, len(state.Drops))
+		require.Equal(t, dropItem, state.Drops[0])
+		require.True(t, state.NetworkStart)
+	})
+	is := NewSendInitialState(payload.Meta{
+		Payload: p,
+		Sender: light,
+		Pulse: 1000,
+	})
+	is.dep.startPulse = startPulse
+	is.dep.jetKeeper = jetKeeper
+	is.dep.pulseAccessor = pulseAccessor
+	is.dep.jetTree = jetTree
+	is.dep.jetCoordinator = jetCoordinator
+	is.dep.dropDB = dropDB
+	is.dep.sender = sender
+	err = is.Proceed(context.Background())
+	require.NoError(t, err)
+}
+
 func TestSendInitialState_ProceedForJoiner(t *testing.T) {
 	p, err := payload.Marshal(&payload.GetLightInitialState{ Pulse: 1001 })
 	require.NoError(t, err)
