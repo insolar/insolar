@@ -143,10 +143,15 @@ func Test_IncomingRequest_Duplicate(t *testing.T) {
 		msg, _ := MakeSetIncomingRequestFromAPI(gen.ID(), gen.IDWithPulse(s.Pulse()), true)
 		rep := SendMessage(ctx, s, &msg)
 		RequireNotError(rep)
+		rootObject := rep.(*payload.RequestInfo).ObjectID
 		reasonID := rep.(*payload.RequestInfo).RequestID
-		objectID := reasonID
 
-		msg, _ = MakeSetIncomingRequest(objectID, reasonID, objectID, false, false)
+		msg, _ = MakeSetIncomingRequestFromAPI(gen.ID(), gen.IDWithPulse(s.Pulse()), true)
+		rep = SendMessage(ctx, s, &msg)
+		RequireNotError(rep)
+		objectID := rep.(*payload.RequestInfo).ObjectID
+
+		msg, _ = MakeSetIncomingRequest(objectID, reasonID, rootObject, false, false)
 
 		// Set first request.
 		rep = SendMessage(ctx, s, &msg)
@@ -171,10 +176,15 @@ func Test_IncomingRequest_Duplicate(t *testing.T) {
 		msg, _ := MakeSetIncomingRequestFromAPI(gen.ID(), gen.IDWithPulse(s.Pulse()), true)
 		rep := SendMessage(ctx, s, &msg)
 		RequireNotError(rep)
+		rootObject := rep.(*payload.RequestInfo).ObjectID
 		reasonID := rep.(*payload.RequestInfo).RequestID
-		objectID := reasonID
 
-		requestMsg, _ := MakeSetIncomingRequest(objectID, reasonID, objectID, false, false)
+		msg, _ = MakeSetIncomingRequestFromAPI(gen.ID(), gen.IDWithPulse(s.Pulse()), true)
+		rep = SendMessage(ctx, s, &msg)
+		RequireNotError(rep)
+		objectID := rep.(*payload.RequestInfo).ObjectID
+
+		requestMsg, _ := MakeSetIncomingRequest(objectID, reasonID, rootObject, false, false)
 
 		// Set first request.
 		rep = SendMessage(ctx, s, &requestMsg)

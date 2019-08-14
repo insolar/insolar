@@ -39,7 +39,7 @@ type SendRequestInfo struct {
 	}
 }
 
-func NewGetRequestInfo(msg payload.Meta, objectID insolar.ID, requestID insolar.ID) *SendRequestInfo {
+func NewSendRequestInfo(msg payload.Meta, objectID insolar.ID, requestID insolar.ID) *SendRequestInfo {
 	return &SendRequestInfo{
 		message:   msg,
 		objectID:  objectID,

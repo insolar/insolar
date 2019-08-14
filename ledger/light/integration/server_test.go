@@ -20,10 +20,11 @@ import (
 	"context"
 	"crypto"
 	"fmt"
-	"github.com/insolar/insolar/network"
 	"math"
 	"sync"
 	"time"
+
+	"github.com/insolar/insolar/network"
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"

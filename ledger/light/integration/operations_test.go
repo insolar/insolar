@@ -87,16 +87,19 @@ func MakeSetIncomingRequest(objectID, reasonID insolar.ID, reasonObjectID insola
 		Arguments: args,
 		Reason:    *insolar.NewReference(reasonID),
 	}
+
 	if isCreation {
 		req.CallType = record.CTSaveAsChild
 	} else {
 		req.Object = insolar.NewReference(objectID)
 	}
+
 	if isAPI {
 		req.APINode = gen.Reference()
 	} else {
 		req.Caller = *insolar.NewReference(reasonObjectID)
 	}
+
 	rec := record.Wrap(&req)
 	pl := payload.SetIncomingRequest{
 		Request: rec,

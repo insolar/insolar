@@ -22,12 +22,13 @@ import (
 
 	wmessage "github.com/ThreeDotsLabs/watermill/message"
 
+	"github.com/pkg/errors"
+
 	wbus "github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/light/proc"
-	"github.com/pkg/errors"
 )
 
 type Init struct {
@@ -82,7 +83,7 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 		h := NewGetRequest(s.dep, meta, false)
 		err = f.Handle(ctx, h.Present)
 	case payload.TypeGetRequestInfo:
-		h := NewGetRequestInfo(s.dep, meta, false)
+		h := NewGetRequestInfo(s.dep, meta)
 		err = f.Handle(ctx, h.Present)
 	case payload.TypeGetFilament:
 		h := NewGetRequests(s.dep, meta)
@@ -267,6 +268,7 @@ func (s *Init) Past(ctx context.Context, f flow.Flow) error {
 		payload.TypeGetJet,
 		payload.TypeGetRequest,
 		payload.TypePassState,
+		payload.TypeGetRequestInfo,
 		payload.TypeGetFilament:
 		return s.Present(ctx, f)
 	}

@@ -70,16 +70,9 @@ func (c *RequestCheckerDefault) CheckRequest(ctx context.Context, requestID inso
 
 	switch r := request.(type) {
 	case *record.IncomingRequest:
-		if !r.IsValid() {
-			return &payload.CodedError{Text: fmt.Sprintf("incoming request is not valid (got mode %v)", r.ReturnMode), Code: payload.CodeIncomingRequestIsWrong}
-		}
-
-		// FIXME: replace with remote request check.
-		if !request.IsAPIRequest() {
-			err := c.checkIncomingReason(ctx, r, reasonID)
-			if err != nil {
-				return errors.Wrap(err, "reason is wrong")
-			}
+		err := c.checkIncomingRequest(ctx, r, reasonID, requestID)
+		if err != nil {
+			return errors.Wrap(err, "reason is wrong")
 		}
 
 	case *record.OutgoingRequest:
@@ -107,13 +100,41 @@ func (c *RequestCheckerDefault) CheckRequest(ctx context.Context, requestID inso
 	return nil
 }
 
-func (c *RequestCheckerDefault) checkIncomingReason(ctx context.Context, incomingRequest *record.IncomingRequest, reasonID insolar.ID) error {
+func (c *RequestCheckerDefault) checkIncomingRequest(ctx context.Context, incomingRequest *record.IncomingRequest, reasonID, requestID insolar.ID) error {
+
+	if !incomingRequest.IsValid() {
+		return &payload.CodedError{Text: fmt.Sprintf("incoming request is not valid (got mode %v)", incomingRequest.ReturnMode), Code: payload.CodeIncomingRequestIsWrong}
+	}
+
+	if incomingRequest.IsAPIRequest() {
+		return nil
+	}
+
 	reasonObject := incomingRequest.ReasonAffinityRef()
 	if reasonObject.IsEmpty() {
 		return &payload.CodedError{Text: "reason affinity is not set on incoming request", Code: payload.CodeReasonIsWrong}
 	}
 
-	reasonRequest, err := c.getRequest(ctx, *reasonObject.Record(), reasonID)
+	// fixme: remove local request searching
+	var (
+		makeLocalRequest bool
+		reasonRequest    payload.RequestInfo
+		err              error
+	)
+
+	if !incomingRequest.IsCreationRequest() {
+		if incomingRequest.AffinityRef().Equal(reasonObject) {
+			makeLocalRequest = true
+			// return &payload.CodedError{Text: "request and reason objects can't be the same", Code: payload.CodeIncomingRequestIsWrong}
+		}
+	}
+
+	if makeLocalRequest {
+		reasonRequest, err = c.getRequestLocal(ctx, reasonID, incomingRequest, requestID)
+	} else {
+		reasonRequest, err = c.getRequest(ctx, *reasonObject.Record(), reasonID, requestID.Pulse())
+	}
+
 	if err != nil {
 		return errors.Wrap(err, "reason request not found")
 	}
@@ -141,31 +162,22 @@ func (c *RequestCheckerDefault) checkIncomingReason(ctx context.Context, incomin
 	return nil
 }
 
-func (c *RequestCheckerDefault) getRequest(ctx context.Context, objectID insolar.ID, reasonID insolar.ID) (payload.RequestInfo, error) {
+func (c *RequestCheckerDefault) getRequest(ctx context.Context, reasonObjectID, reasonID insolar.ID, currentPulse insolar.PulseNumber) (payload.RequestInfo, error) {
 	emptyResp := payload.RequestInfo{}
-	isBeyond, err := c.coordinator.IsBeyondLimit(ctx, reasonID.Pulse())
-	if err != nil {
-		return emptyResp, errors.Wrap(err, "failed to calculate limit")
-	}
 	var node *insolar.Reference
-	if isBeyond {
-		node, err = c.coordinator.Heavy(ctx)
-		if err != nil {
-			return emptyResp, errors.Wrap(err, "failed to calculate node")
-		}
-	} else {
-		jetID, err := c.fetcher.Fetch(ctx, objectID, reasonID.Pulse())
-		if err != nil {
-			return emptyResp, errors.Wrap(err, "failed to fetch jet")
-		}
-		node, err = c.coordinator.NodeForJet(ctx, *jetID, reasonID.Pulse())
-		if err != nil {
-			return emptyResp, errors.Wrap(err, "failed to calculate node")
-		}
+
+	jetID, err := c.fetcher.Fetch(ctx, reasonObjectID, currentPulse)
+	if err != nil {
+		return emptyResp, errors.Wrap(err, "failed to fetch jet")
 	}
+	node, err = c.coordinator.LightExecutorForJet(ctx, *jetID, currentPulse)
+	if err != nil {
+		return emptyResp, errors.Wrap(err, "failed to calculate node")
+	}
+
 	inslogger.FromContext(ctx).Debug("check reason. request: ", reasonID.DebugString())
 	msg, err := payload.NewMessage(&payload.GetRequestInfo{
-		ObjectID:  objectID,
+		ObjectID:  reasonObjectID,
 		RequestID: reasonID,
 	})
 	if err != nil {
@@ -188,10 +200,70 @@ func (c *RequestCheckerDefault) getRequest(ctx context.Context, objectID insolar
 	case *payload.RequestInfo:
 		return *concrete, nil
 	case *payload.Error:
+		inslogger.FromContext(ctx).Debug("SendTarget failed: ", reasonObjectID.DebugString(), currentPulse.String())
 		return emptyResp, errors.New(concrete.Text)
 	default:
 		return emptyResp, fmt.Errorf("unexpected reply %T", pl)
 	}
+}
+
+func (c *RequestCheckerDefault) getRequestLocal(ctx context.Context, reasonID insolar.ID, incomingRequest *record.IncomingRequest, requestID insolar.ID) (payload.RequestInfo, error) {
+
+	// objectID := *request.AffinityRef().Record()
+	object := incomingRequest.ReasonAffinityRef()
+	objectID := *object.Record()
+	emptyResp := payload.RequestInfo{
+		ObjectID:  *object.Record(),
+		RequestID: requestID,
+	}
+
+	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+		"request_id": requestID.DebugString(),
+		"object_id":  objectID.DebugString(),
+	})
+
+	// Searching for request
+	{
+		var (
+			reqBuf []byte
+			resBuf []byte
+		)
+		foundRequest, foundResult, err := c.filaments.RequestInfo(ctx, objectID, requestID)
+		if err != nil {
+			return emptyResp, errors.Wrap(err, "failed to get local request info")
+		}
+		if foundRequest != nil || foundResult != nil {
+			if foundRequest != nil {
+				reqBuf, err = foundRequest.Record.Marshal()
+				if err != nil {
+					return emptyResp, errors.Wrap(err, "failed to marshal local request record")
+				}
+				requestID = foundRequest.RecordID
+			}
+			if foundResult != nil {
+				resBuf, err = foundResult.Record.Marshal()
+				if err != nil {
+					return emptyResp, errors.Wrap(err, "failed to marshal local result record")
+				}
+			}
+
+			msg := payload.RequestInfo{
+				ObjectID:  objectID,
+				RequestID: requestID,
+				Request:   reqBuf,
+				Result:    resBuf,
+			}
+
+			logger.WithFields(map[string]interface{}{
+				"request":    foundRequest != nil,
+				"has_result": foundResult != nil,
+			}).Debug("local result info found")
+
+			return msg, nil
+		}
+	}
+
+	return emptyResp, &payload.CodedError{Text: "local requestInfo not found", Code: payload.CodeRequestNotFound}
 }
 
 func findRecord(filamentRecords []record.CompositeFilamentRecord, requestID insolar.ID) (record.CompositeFilamentRecord, bool) {

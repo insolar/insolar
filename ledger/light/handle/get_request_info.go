@@ -23,31 +23,55 @@ import (
 
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/light/proc"
 )
 
 type GetRequestInfo struct {
-	dep    *proc.Dependencies
-	meta   payload.Meta
-	passed bool
+	dep  *proc.Dependencies
+	meta payload.Meta
 }
 
-func NewGetRequestInfo(dep *proc.Dependencies, meta payload.Meta, passed bool) *GetRequestInfo {
+func NewGetRequestInfo(dep *proc.Dependencies, meta payload.Meta) *GetRequestInfo {
 	return &GetRequestInfo{
-		dep:    dep,
-		meta:   meta,
-		passed: passed,
+		dep:  dep,
+		meta: meta,
 	}
 }
 
 func (s *GetRequestInfo) Present(ctx context.Context, f flow.Flow) error {
-	msg := payload.RequestInfo{}
-	err := msg.Unmarshal(s.meta.Payload)
-	if err != nil {
+	msg := payload.GetRequestInfo{}
+
+	pl, err := payload.Unmarshal(s.meta.Payload)
+	switch concrete := pl.(type) {
+	case *payload.GetRequestInfo:
+		msg = *concrete
+	default:
 		return errors.Wrap(err, "failed to unmarshal RequestInfo message")
 	}
 
-	request := proc.NewGetRequestInfo(s.meta, msg.ObjectID, msg.RequestID)
+	ctx, _ = inslogger.WithField(ctx, "object", msg.ObjectID.DebugString())
+
+	jet := proc.NewFetchJet(msg.ObjectID, flow.Pulse(ctx), s.meta, false)
+	s.dep.FetchJet(jet)
+	if err := f.Procedure(ctx, jet, false); err != nil {
+		return err
+	}
+	objJetID := jet.Result.Jet
+
+	hot := proc.NewWaitHot(objJetID, flow.Pulse(ctx), s.meta)
+	s.dep.WaitHot(hot)
+	if err := f.Procedure(ctx, hot, false); err != nil {
+		return err
+	}
+
+	ensureIdx := proc.NewEnsureIndex(msg.ObjectID, objJetID, s.meta)
+	s.dep.EnsureIndex(ensureIdx)
+	if err := f.Procedure(ctx, ensureIdx, false); err != nil {
+		return err
+	}
+
+	request := proc.NewSendRequestInfo(s.meta, msg.ObjectID, msg.RequestID)
 	s.dep.GetRequestInfo(request)
 	return f.Procedure(ctx, request, false)
 }
