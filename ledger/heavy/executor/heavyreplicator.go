@@ -104,8 +104,8 @@ func (h *HeavyReplicatorDefault) Stop() {
 func (h *HeavyReplicatorDefault) sync(ctx context.Context) {
 	work := func(msg *payload.Replication) {
 		logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
-			"jet_id": msg.JetID.DebugString(),
-			"pulse":  msg.Pulse,
+			"jet_id":    msg.JetID.DebugString(),
+			"msg_pulse": msg.Pulse,
 		})
 		logger.Info("heavy replicator starts replication")
 
@@ -130,6 +130,7 @@ func (h *HeavyReplicatorDefault) sync(ctx context.Context) {
 			logger.Error(errors.Wrap(err, "failed to store drop"))
 			return
 		}
+		logger = logger.WithField("drop_pulse", dr.Pulse)
 
 		logger.Debug("heavy replicator storing drop confirmation")
 		if err := h.keeper.AddDropConfirmation(ctx, dr.Pulse, dr.JetID, dr.Split); err != nil {
