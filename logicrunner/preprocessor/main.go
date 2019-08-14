@@ -411,7 +411,7 @@ func (pf *ParsedFile) checkSagaRollbackMethodsExistAndMatch(funcInfo []map[strin
 		if sagaInfo.NumArguments != 1 {
 			return fmt.Errorf(
 				"Semantic error: '%v' is a saga with %v arguments. "+
-					"Currently only one argument is allowed.",
+					"Currently only one argument is allowed (hint: use a structure).",
 				info["Name"].(string), sagaInfo.NumArguments)
 		}
 
