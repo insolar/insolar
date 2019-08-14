@@ -22,10 +22,13 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/object"
 )
 
+var count = 0
+
 // FinalizePulse starts backup process if needed
-func FinalizePulse(ctx context.Context, pulses pulse.Calculator, backuper BackupMaker, jetKeeper JetKeeper, newPulse insolar.PulseNumber) {
+func FinalizePulse(ctx context.Context, pulses pulse.Calculator, backuper BackupMaker, jetKeeper JetKeeper, indexes object.IndexModifier, newPulse insolar.PulseNumber) {
 	logger := inslogger.FromContext(ctx)
 	if !jetKeeper.HasAllJetConfirms(ctx, newPulse) {
 		logger.Debug("not all jets confirmed. Do nothing. Pulse: ", newPulse)
@@ -59,18 +62,26 @@ func FinalizePulse(ctx context.Context, pulses pulse.Calculator, backuper Backup
 		if err != nil {
 			panic("Can't add backup confirmation: " + err.Error())
 		}
+		newTopSyncPulse := jetKeeper.TopSyncPulse()
+
+		if newPulse != newTopSyncPulse {
+			logger.Fatal("Pulse has not been changed after adding backup confirmation. newTopSyncPulse: ", newTopSyncPulse, ", newPulse: ", newPulse)
+		}
+		if err := indexes.UpdateLastKnownPulse(ctx, newTopSyncPulse); err != nil {
+			logger.Fatal("Can't update indices for last sync pulse: ", err)
+		}
 
 		inslogger.FromContext(ctx).Infof("Pulse %d completely finalized ( drops + hots + backup )", newPulse)
 
-		nextTop, err := pulses.Forwards(ctx, jetKeeper.TopSyncPulse(), 1)
+		nextTop, err := pulses.Forwards(ctx, newTopSyncPulse, 1)
 		if err != nil && err != pulse.ErrNotFound {
-			panic("pulses.Forwards topSynk: " + jetKeeper.TopSyncPulse().String())
+			panic("pulses.Forwards topSynk: " + newTopSyncPulse.String())
 		}
 		if err == pulse.ErrNotFound {
 			logger.Info("Stop propagating of backups")
 			return
 		}
 		logger.Info("Propagating finalization to next pulse: ", nextTop.PulseNumber)
-		go FinalizePulse(ctx, pulses, backuper, jetKeeper, nextTop.PulseNumber)
+		go FinalizePulse(ctx, pulses, backuper, jetKeeper, indexes, nextTop.PulseNumber)
 	}()
 }
