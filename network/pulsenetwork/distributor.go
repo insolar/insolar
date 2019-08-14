@@ -83,7 +83,6 @@ type distributor struct {
 	idGenerator sequence.Generator
 
 	pulseRequestTimeout time.Duration
-	randomNodesCount    int
 
 	publicAddress   string
 	pulsarHost      *host.Host
