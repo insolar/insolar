@@ -722,6 +722,7 @@ func (r *FullRealm) captureReport(ctx context.Context, report misbehavior.Report
 	if node != nil {
 		mr := r.getMemberReceiver(node.GetNodeID())
 		if mr != nil {
+			r.census.GetMisbehaviorRegistry().AddReport(report)
 			inslogger.FromContext(ctx).Debugf("[ FullRealm ] got a misbehavior report: report=%v", report)
 			mr.CaptureMisbehavior(ctx, report)
 			return

@@ -384,5 +384,6 @@ func (p *PrepRealm) ApplyCloudIntro(lastCloudStateHash cryptkit.DigestHolder, po
 }
 
 func (p *PrepRealm) captureReport(ctx context.Context, report misbehavior.Report) {
+	p.initialCensus.GetMisbehaviorRegistry().AddReport(report)
 	inslogger.FromContext(ctx).Warnf("[ PrepRealm ] unable to attach a misbehavior report: report=%v", report)
 }
