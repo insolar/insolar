@@ -1457,11 +1457,11 @@ type Two struct {
 
 
 func New() (*Two, error) {
-	return &Two{Number: 10, OneRef: insolar.NewEmptyReference()}, nil
+	return &Two{Number: 10, OneRef: *insolar.NewEmptyReference()}, nil
 }
 
 func NewWithOne(oneNumber int) (*Two, error) {
-	return &Two{Number: oneNumber, OneRef: insolar.NewEmptyReference() }, nil
+	return &Two{Number: oneNumber, OneRef: *insolar.NewEmptyReference() }, nil
 }
 
 var INSATTR_Get_API = true
