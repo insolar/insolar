@@ -34,7 +34,7 @@ func TestDepositTransferToken(t *testing.T) {
 	member := fullMigration(t, "Eth_TxHash_test")
 
 	firstBalance := getBalanceNoErr(t, member, member.ref)
-	secondBalance := new(big.Int).Add(firstBalance, big.NewInt(100))
+	secondBalance := new(big.Int).Add(firstBalance, big.NewInt(1000))
 
 	var err error
 	for i := 0; i <= 20; i++ {
