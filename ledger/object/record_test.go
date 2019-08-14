@@ -77,10 +77,12 @@ func TestRecordStorage_TruncateHead(t *testing.T) {
 		pulse := startPulseNumber + insolar.PulseNumber(idx)
 		ids[idx] = *insolar.NewID(pulse, []byte(testutils.RandomString()))
 
-		recordStore.Set(ctx, record.Material{JetID: *insolar.NewJetID(uint8(idx), nil), ID: ids[idx]})
+		err := recordStore.Set(ctx, record.Material{JetID: *insolar.NewJetID(uint8(idx), nil), ID: ids[idx]})
+		require.NoError(t, err)
 
 		for i := 0; i < 5; i++ {
-			recordStore.Set(ctx, record.Material{JetID: *insolar.NewJetID(uint8(i), nil), ID: ids[idx]})
+			err = recordStore.Set(ctx, record.Material{JetID: *insolar.NewJetID(uint8(i), nil), ID: ids[idx]})
+			require.NoError(t, err)
 		}
 
 		require.NoError(t, err)
@@ -243,6 +245,27 @@ func TestRecordStorage_DB_Set(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("saves correct record-value. batch version", func(t *testing.T) {
+		t.Parallel()
+
+		id := gen.ID()
+		rec := getMaterialRecord()
+
+		tmpdir, err := ioutil.TempDir("", "bdb-test-")
+		defer os.RemoveAll(tmpdir)
+		require.NoError(t, err)
+
+		db, err := store.NewBadgerDB(tmpdir)
+		require.NoError(t, err)
+		defer db.Stop(context.Background())
+
+		recordStorage := NewRecordDB(db)
+
+		rec.ID = id
+		err = recordStorage.BatchSet(ctx, []record.Material{rec})
+		require.NoError(t, err)
+	})
+
 	t.Run("returns override error when saving with the same id", func(t *testing.T) {
 		t.Parallel()
 
@@ -266,6 +289,29 @@ func TestRecordStorage_DB_Set(t *testing.T) {
 		err = recordStorage.Set(ctx, rec)
 		require.Error(t, err)
 		assert.Equal(t, ErrOverride, err)
+	})
+
+	t.Run("returns override error when saving with the same id. batch version", func(t *testing.T) {
+		t.Parallel()
+
+		id := gen.ID()
+		rec := getMaterialRecord()
+
+		tmpdir, err := ioutil.TempDir("", "bdb-test-")
+		defer os.RemoveAll(tmpdir)
+		require.NoError(t, err)
+
+		db, err := store.NewBadgerDB(tmpdir)
+		require.NoError(t, err)
+		defer db.Stop(context.Background())
+
+		recordStorage := NewRecordDB(db)
+
+		rec.ID = id
+
+		err = recordStorage.BatchSet(ctx, []record.Material{rec, rec})
+
+		require.Equal(t, ErrOverride, err)
 	})
 }
 
@@ -421,6 +467,39 @@ func TestRecordPositionDB(t *testing.T) {
 		err = recordStorage.Set(context.TODO(), record.Material{ID: sID})
 		require.NoError(t, err)
 		err = recordStorage.Set(context.TODO(), record.Material{ID: tID})
+		require.NoError(t, err)
+
+		next, err := recordStorage.LastKnownPosition(pn)
+
+		require.NoError(t, err)
+		require.Equal(t, uint32(3), next)
+	})
+
+	t.Run("IncrementPosition works fine. batch version", func(t *testing.T) {
+		tmpdir, err := ioutil.TempDir("", "bdb-test-")
+		defer os.RemoveAll(tmpdir)
+		require.NoError(t, err)
+
+		db, err := store.NewBadgerDB(tmpdir)
+		require.NoError(t, err)
+		defer db.Stop(context.Background())
+
+		recordStorage := NewRecordDB(db)
+		pn := gen.PulseNumber()
+
+		id := gen.ID()
+		id.SetPulse(pn)
+		sID := gen.ID()
+		sID.SetPulse(pn)
+		tID := gen.ID()
+		tID.SetPulse(pn)
+
+		err = recordStorage.BatchSet(
+			context.TODO(), []record.Material{
+				{ID: id},
+				{ID: sID},
+				{ID: tID},
+			})
 		require.NoError(t, err)
 
 		next, err := recordStorage.LastKnownPosition(pn)

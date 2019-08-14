@@ -165,19 +165,26 @@ func (r *RecordDB) BatchSet(ctx context.Context, recs []record.Material) error {
 
 	return r.db.Backend().Update(func(txn *badger.Txn) error {
 		position, err := getLastKnownPosition(txn, recs[0].ID.Pulse())
-		if err != nil && err != ErrNotFound {
+		if err != nil && err != store.ErrNotFound {
 			return err
 		}
-		if err == nil {
-			// because first index of recs array is zero
-			// and we want to increment index, with using of i.
-			// example: position += uint32(i)
-			position++
-		}
+		lastIDPn := recs[0].ID.Pulse()
 
-		for i, rec := range recs {
+		for _, rec := range recs {
+
 			if rec.ID.IsEmpty() {
 				return errors.New("id is empty")
+			}
+
+			// Because records can be from different pulses
+			// And we want to order them, we need to check record's pulse
+			// If pulse is changed during loop, we change current position
+			if rec.ID.Pulse() != lastIDPn {
+				position, err = getLastKnownPosition(txn, rec.ID.Pulse())
+				if err != nil && err != store.ErrNotFound {
+					return err
+				}
+				lastIDPn = rec.ID.Pulse()
 			}
 
 			err = setRecord(txn, recordKey(rec.ID), rec)
@@ -185,7 +192,7 @@ func (r *RecordDB) BatchSet(ctx context.Context, recs []record.Material) error {
 				return err
 			}
 
-			position += uint32(i)
+			position++
 
 			err = setPosition(txn, rec.ID, position)
 			if err != nil {

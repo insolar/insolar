@@ -122,8 +122,8 @@ func TestDBRollback_HappyPath(t *testing.T) {
 	})
 
 	drops := drop.NewDB(db)
-	records := object.NewRecordDB(db)
-	indexes := object.NewIndexDB(db)
+	records := object.NewRecordDB(nil)
+	indexes := object.NewIndexDB(db, records)
 	jets := jet.NewDBStore(db)
 	pulses := pulse.NewDB(db)
 
