@@ -43,9 +43,10 @@ var client http.Client
 var emoji *Emoji
 
 const (
-	esc       = "\x1b%s"
-	moveUp    = "[%dA"
-	clearDown = "[0J"
+	esc        = "\x1b%s"
+	moveUp     = "[%dA"
+	clearDown  = "[0J"
+	timeFormat = "15:04:05.999999"
 )
 
 const (
@@ -104,8 +105,8 @@ func displayResultsTable(results []nodeStatus, ready bool, buffer *bytes.Buffer)
 	table.SetFooter([]string{
 		"", "", "", "", "",
 		"Insolar State", stateString,
-		"Time", time.Now().Format("2006-01-02 15:04:05.999999"),
-		"Total Uptime / Total Pulses", totalUptime.String(), "",
+		"Time", time.Now().Format(timeFormat),
+		"Total Uptime / Pulses", totalUptime.String(), "",
 	})
 	table.SetFooterColor(
 		tablewriter.Colors{},
@@ -165,9 +166,9 @@ func displayResultsTable(results []nodeStatus, ready bool, buffer *bytes.Buffer)
 			fmt.Sprintf("%d %s", row.reply.ActiveListSize, activeNodeEmoji),
 			intToString(row.reply.WorkingListSize),
 			row.reply.Origin.Role,
-			row.reply.Timestamp,
-			"", // uptime
+			row.reply.Timestamp.Format(timeFormat),
 			intToString(row.restartCount),
+			time.Since(row.reply.StartTime).Round(time.Second).String(),
 			row.errStr,
 		})
 	}
@@ -200,7 +201,7 @@ func displayResultsJSON(results []nodeStatus) {
 		doc[i].ActiveListSize = res.reply.ActiveListSize
 		doc[i].WorkingListSize = res.reply.WorkingListSize
 		doc[i].Role = res.reply.Origin.Role
-		doc[i].Timestamp = res.reply.Timestamp
+		doc[i].Timestamp = res.reply.Timestamp.Format(timeFormat)
 		doc[i].Error = res.errStr
 	}
 

@@ -52,6 +52,7 @@ type StatusReply struct {
 	Pulse           Pulse
 	Version         string
 	Timestamp       time.Time
+	StartTime       time.Time
 }
 
 type NetworkStatus interface {
