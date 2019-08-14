@@ -75,7 +75,7 @@ type RoundStrategy interface {
 
 type RoundTimingsHelper interface {
 	StartOfPhase0() timer.Occasion
-	StartOfPhase1Retry() timer.Occasion //timings.StartPhase1RetryAt
+	StartOfPhase1Retry() timer.Occasion
 
 	EndOfPhase2() timer.Occasion
 	EndOfPhase3() timer.Occasion
