@@ -258,12 +258,14 @@ func unmarshalCallResponse(t testing.TB, body []byte, response *requester.Contra
 func signedRequest(t *testing.T, user *user, method string, params interface{}) (interface{}, error) {
 	res, refStr, err := makeSignedRequest(user, method, params)
 
-	msg := "Ref is empty"
+	var errMsg string
 	if err != nil {
-		msg = msg + " because: " + err.Error()
+		errMsg = err.Error()
 	}
-	require.NotEqual(t, "", refStr, msg)
-	require.NotEqual(t, "11111111111111111111111111111111.11111111111111111111111111111111", refStr, msg)
+	emptyRef := insolar.Reference{}
+
+	require.NotEqual(t, "", refStr, "request ref is empty: %s", errMsg)
+	require.NotEqual(t, emptyRef.String(), refStr, "request ref is zero: %s", errMsg)
 
 	_, err = insolar.NewReferenceFromBase58(refStr)
 	require.Nil(t, err)

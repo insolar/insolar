@@ -49,15 +49,15 @@ func NewContractService(runner *Runner) *ContractService {
 
 func (cs *ContractService) Call(req *http.Request, args *requester.Params, requestBody *rpc.RequestBody, result *requester.ContractResult) error {
 	traceID := utils.RandTraceID()
-	ctx, insLog := inslogger.WithTraceField(context.Background(), traceID)
+	ctx, logger := inslogger.WithTraceField(context.Background(), traceID)
 
 	ctx, span := instracer.StartSpan(ctx, "Call")
 	defer span.End()
 
-	insLog.Infof("[ ContractService.Call ] Incoming request: %s", req.RequestURI)
+	logger.Infof("[ ContractService.Call ] Incoming request: %s", req.RequestURI)
 
 	if args.Test != "" {
-		insLog.Infof("ContractRequest related to %s", args.Test)
+		logger.Infof("ContractRequest related to %s", args.Test)
 	}
 
 	signature, err := validateRequestHeaders(req.Header.Get(requester.Digest), req.Header.Get(requester.Signature), requestBody.Raw)
@@ -72,11 +72,14 @@ func (cs *ContractService) Call(req *http.Request, args *requester.Params, reque
 
 	setRootReferenceIfNeeded(args)
 
-	callResult, _, err := cs.runner.makeCall(ctx, "contract.call", *args, requestBody.Raw, signature, 0, seedPulse)
+	callResult, requestRef, err := cs.runner.makeCall(ctx, "contract.call", *args, requestBody.Raw, signature, 0, seedPulse)
 	if err != nil {
 		return err
 	}
 
+	if requestRef != nil {
+		result.RequestReference = requestRef.String()
+	}
 	result.CallResult = callResult
 	result.TraceID = traceID
 
