@@ -80,6 +80,7 @@ func (r *RetrySender) SendRole(
 		}
 
 		received := false
+		updateUUID := false
 		for tries > 0 && !received {
 			var err error
 			lastPulse, err = r.waitForPulseChange(ctx, lastPulse)
@@ -88,12 +89,14 @@ func (r *RetrySender) SendRole(
 				break
 			}
 
+			if updateUUID {
+				msg.UUID = watermill.NewUUID()
+			}
 			reps, d := r.sender.SendRole(ctx, msg, role, ref)
 			received = tryReceive(ctx, reps, done, replyChan)
 			tries--
+			updateUUID = true
 			d()
-			// update message UUID
-			msg.UUID = watermill.NewUUID()
 		}
 
 		if tries == 0 && !received {
