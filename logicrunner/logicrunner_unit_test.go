@@ -50,6 +50,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/executionregistry"
 	"github.com/insolar/insolar/logicrunner/machinesmanager"
+	"github.com/insolar/insolar/logicrunner/shutdown"
 	"github.com/insolar/insolar/logicrunner/writecontroller"
 	"github.com/insolar/insolar/pulsar"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
@@ -442,6 +443,11 @@ func TestLogicRunner_OnPulse(t *testing.T) {
 
 				lr.WriteController = writecontroller.NewWriteController()
 				_ = lr.WriteController.Open(ctx, insolar.FirstPulseNumber)
+				lr.ShutdownFlag = shutdown.NewFlagMock(mc).
+					DoneMock.Set(
+					func(ctx context.Context, isDone func() bool) {
+						isDone()
+					})
 
 				return lr
 			},
@@ -460,6 +466,11 @@ func TestLogicRunner_OnPulse(t *testing.T) {
 
 				lr.WriteController = writecontroller.NewWriteController()
 				_ = lr.WriteController.Open(ctx, insolar.FirstPulseNumber)
+				lr.ShutdownFlag = shutdown.NewFlagMock(mc).
+					DoneMock.Set(
+					func(ctx context.Context, isDone func() bool) {
+						isDone()
+					})
 
 				return lr
 			},
@@ -488,6 +499,8 @@ const (
 	OrderWriteControllerClose
 	OrderStateStorageOnPulse
 	OrderWriteControllerOpen
+	OrderFlagDone
+	OrderStateStorageIsEmpty
 	OrderMAX
 )
 
@@ -518,7 +531,17 @@ func TestLogicRunner_OnPulse_Order(t *testing.T) {
 			orderChan <- OrderStateStorageOnPulse
 			return map[insolar.Reference][]payload.Payload{}
 		}).
-		IsEmptyMock.Return(true)
+		IsEmptyMock.Set(
+		func() (b1 bool) {
+			orderChan <- OrderStateStorageIsEmpty
+			return true
+		})
+	lr.ShutdownFlag = shutdown.NewFlagMock(mc).
+		DoneMock.Set(
+		func(ctx context.Context, isDone func() bool) {
+			orderChan <- OrderFlagDone
+			isDone()
+		})
 
 	oldPulse := insolar.Pulse{PulseNumber: insolar.FirstPulseNumber}
 	newPulse := insolar.Pulse{PulseNumber: insolar.FirstPulseNumber + 1}

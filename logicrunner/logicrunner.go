@@ -46,6 +46,7 @@ import (
 	lrCommon "github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/goplugin"
 	"github.com/insolar/insolar/logicrunner/machinesmanager"
+	"github.com/insolar/insolar/logicrunner/shutdown"
 	"github.com/insolar/insolar/logicrunner/writecontroller"
 	"github.com/insolar/insolar/network"
 )
@@ -74,14 +75,11 @@ type LogicRunner struct {
 	OutgoingSender             OutgoingRequestSender
 	WriteController            writecontroller.WriteController
 	FlowDispatcher             dispatcher.Dispatcher
+	ShutdownFlag               shutdown.Flag
 
 	Cfg *configuration.LogicRunner
 
 	rpc *lrCommon.RPC
-
-	stopLock   sync.Mutex
-	isStopping bool
-	stopChan   chan struct{}
 }
 
 // NewLogicRunner is constructor for LogicRunner
@@ -102,6 +100,8 @@ func NewLogicRunner(cfg *configuration.LogicRunner, publisher watermillMsg.Publi
 func (lr *LogicRunner) LRI() {}
 
 func (lr *LogicRunner) Init(ctx context.Context) error {
+	lr.ShutdownFlag = shutdown.NewFlag()
+
 	as := system.New()
 	lr.OutgoingSender = NewOutgoingRequestSender(as, lr.ContractRequester, lr.ArtifactManager)
 
@@ -113,10 +113,17 @@ func (lr *LogicRunner) Init(ctx context.Context) error {
 		lr.PulseAccessor,
 		lr.ArtifactManager,
 		lr.OutgoingSender,
+		lr.ShutdownFlag,
 	)
 
 	lr.rpc = lrCommon.NewRPC(
-		NewRPCMethods(lr.ArtifactManager, lr.DescriptorsCache, lr.ContractRequester, lr.StateStorage, lr.OutgoingSender),
+		NewRPCMethods(
+			lr.ArtifactManager,
+			lr.DescriptorsCache,
+			lr.ContractRequester,
+			lr.StateStorage,
+			lr.OutgoingSender,
+		),
 		lr.Cfg,
 	)
 
@@ -224,18 +231,9 @@ func (lr *LogicRunner) Stop(ctx context.Context) error {
 }
 
 func (lr *LogicRunner) GracefulStop(ctx context.Context) error {
-	inslogger.FromContext(ctx).Debug("LogicRunner.GracefulStop starts ...")
+	waitFunction := lr.ShutdownFlag.Stop(ctx)
+	waitFunction()
 
-	lr.stopLock.Lock()
-	if !lr.isStopping {
-		lr.isStopping = true
-		lr.stopChan = make(chan struct{}, 1)
-	}
-	lr.stopLock.Unlock()
-
-	inslogger.FromContext(ctx).Debug("LogicRunner.GracefulStop wait ...")
-	<-lr.stopChan
-	inslogger.FromContext(ctx).Debug("LogicRunner.GracefulStop ends ...")
 	return nil
 }
 
@@ -269,14 +267,9 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, oldPulse insolar.Pulse, newP
 }
 
 func (lr *LogicRunner) stopIfNeeded(ctx context.Context) {
-	if lr.StateStorage.IsEmpty() {
-		lr.stopLock.Lock()
-		if lr.isStopping {
-			inslogger.FromContext(ctx).Debug("LogicRunner ready to stop")
-			lr.stopChan <- struct{}{}
-		}
-		lr.stopLock.Unlock()
-	}
+	lr.ShutdownFlag.Done(ctx, func() bool {
+		return lr.StateStorage.IsEmpty()
+	})
 }
 
 func (lr *LogicRunner) sendOnPulseMessagesAsync(ctx context.Context, messages map[insolar.Reference][]payload.Payload) {
