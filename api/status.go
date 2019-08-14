@@ -44,6 +44,7 @@ type StatusReply struct {
 	NetworkPulseNumber uint32
 	Entropy            []byte
 	Version            string
+	Timestamp          string
 }
 
 // Get returns status info
@@ -87,6 +88,8 @@ func (s *NodeService) GetStatus(r *http.Request, args *interface{}, reply *Statu
 
 	reply.Entropy = statusReply.Pulse.Entropy[:]
 	reply.Version = version.Version
+
+	reply.Timestamp = statusReply.Timestamp.Format("2006-01-02 15:04:05.999999")
 
 	return nil
 }
