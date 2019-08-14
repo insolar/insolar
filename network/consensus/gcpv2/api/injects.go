@@ -110,7 +110,10 @@ type PulseControlFeeder interface {
 
 type EphemeralControlFeeder interface {
 	GetEphemeralTimings(LocalNodeConfiguration) RoundTimings
+	/* Minimum time after the last ephemeral round before checking for another candidate */
 	GetMinDuration() time.Duration
+	/* Maximum time to wait for a candidate before starting a next ephemeral round */
+	GetMaxDuration() time.Duration
 
 	/* if true, then a new round can be triggered by a joiner candidate */
 	IsActive() bool

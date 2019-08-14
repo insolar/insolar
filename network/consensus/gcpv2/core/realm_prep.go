@@ -53,7 +53,9 @@ package core
 import (
 	"context"
 	"fmt"
+	"math"
 	"sync"
+	"time"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
@@ -229,29 +231,52 @@ func (p *PrepRealm) prepareEphemeralPolling(ctxPrep context.Context) {
 		return
 	}
 
+	minDuration := p.ephemeralFeeder.GetMinDuration()
+	beforeNextRound := p.ephemeralFeeder.GetMaxDuration()
+
+	var startTimer *time.Timer
+	var startCh <-chan time.Time
+
+	if beforeNextRound < math.MaxInt64 {
+		if beforeNextRound < minDuration {
+			beforeNextRound = minDuration
+		}
+
+		if beforeNextRound < time.Second {
+			beforeNextRound = time.Second
+		}
+
+		startTimer = time.NewTimer(beforeNextRound)
+		startCh = startTimer.C
+	}
+
 	p.AddPoll(func(ctxOfPolling context.Context) bool {
 		select {
 		case <-ctxOfPolling.Done():
 		case <-ctxPrep.Done():
-			// stop polling when prep is finished
+		case <-startCh:
+			go p.pushEphemeralPulse(ctxPrep)
 		default:
-			if !p.checkEphemeralStart(ctxPrep) {
+			if !p.checkEphemeralStartByCandidate(ctxPrep) {
 				return true // stay in polling
 			}
 			go p.pushEphemeralPulse(ctxPrep)
 			// stop polling anyway - repeating of unsuccessful is bad
 		}
+		if startTimer != nil {
+			startTimer.Stop()
+		}
 		return false
 	})
 }
 
-func (p *PrepRealm) pushEphemeralPulse(ctx context.Context) bool {
+func (p *PrepRealm) pushEphemeralPulse(ctx context.Context) {
 
 	p.Lock()
 	defer p.Unlock()
 
 	if p.disableEphemeral {
-		return false // ephemeral mode was deactivated
+		return // ephemeral mode was deactivated
 	}
 
 	pde := p.ephemeralFeeder.CreateEphemeralPulsePacket(p.initialCensus)
@@ -259,10 +284,9 @@ func (p *PrepRealm) pushEphemeralPulse(ctx context.Context) bool {
 	if !ok && pn != pde.GetPulseNumber() {
 		inslogger.FromContext(ctx).Error("active ephemeral start has failed, going to passive")
 	}
-	return ok
 }
 
-func (p *PrepRealm) checkEphemeralStart(ctx context.Context) bool {
+func (p *PrepRealm) checkEphemeralStartByCandidate(ctx context.Context) bool {
 	jc, _ := p.candidateFeeder.PickNextJoinCandidate()
 	if jc != nil {
 		inslogger.FromContext(ctx).Debug("ephemeral polling has found a candidate: ", jc)
