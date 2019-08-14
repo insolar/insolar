@@ -78,10 +78,11 @@ type FilamentCalculator interface {
 		err error,
 	)
 
-	// RequestInfo is searching for request and result by objectID and requestID
+	// RequestInfo is searching for request and result by objectID, requestID and pulse number
 	RequestInfo(
 		ctx context.Context,
 		objectID, requestID insolar.ID,
+		pulse insolar.PulseNumber,
 	) (
 		foundRequest *record.CompositeFilamentRecord,
 		foundResult *record.CompositeFilamentRecord,
@@ -378,6 +379,7 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 func (c *FilamentCalculatorDefault) RequestInfo(
 	ctx context.Context,
 	objectID, requestID insolar.ID,
+	pulse insolar.PulseNumber,
 ) (
 	*record.CompositeFilamentRecord,
 	*record.CompositeFilamentRecord,
@@ -393,7 +395,7 @@ func (c *FilamentCalculatorDefault) RequestInfo(
 
 	var lifeline record.Lifeline
 
-	l, err := c.indexes.ForID(ctx, requestID.Pulse(), objectID)
+	l, err := c.indexes.ForID(ctx, pulse, objectID)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, fmt.Sprintf("object: %s", objectID.DebugString()))
 	}

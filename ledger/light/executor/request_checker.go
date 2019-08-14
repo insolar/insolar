@@ -111,31 +111,30 @@ func (c *RequestCheckerDefault) checkIncomingRequest(ctx context.Context, incomi
 	}
 
 	reasonObject := incomingRequest.ReasonAffinityRef()
+	reasonObjectID := reasonObject.Record()
 	if reasonObject.IsEmpty() {
-		return &payload.CodedError{Text: "reason affinity is not set on incoming request", Code: payload.CodeReasonIsWrong}
+		return &payload.CodedError{Text: "reason object is not set on incoming request", Code: payload.CodeReasonIsWrong}
 	}
 
-	// fixme: remove local request searching
 	var (
-		makeLocalRequest bool
-		reasonRequest    payload.RequestInfo
+		makeLocalRequest = false
+		reasonRequest    *payload.RequestInfo
 		err              error
 	)
 
 	if !incomingRequest.IsCreationRequest() {
 		if incomingRequest.AffinityRef().Equal(reasonObject) {
-			// If reasonObject is same as requestObject then go local
+			// If reasonObject is same as requestObject then go local, this fixes deadlock in saga requests
 			makeLocalRequest = true
 			// return &payload.CodedError{Text: "request and reason objects can't be the same", Code: payload.CodeIncomingRequestIsWrong}
 		}
 	}
 
 	if makeLocalRequest {
-		reasonRequest, err = c.getRequestLocal(ctx, *reasonObject.Record(), reasonID)
+		reasonRequest, err = c.getRequestLocal(ctx, *reasonObjectID, reasonID, requestID.Pulse())
 	} else {
-		reasonRequest, err = c.getRequest(ctx, *reasonObject.Record(), reasonID, requestID.Pulse())
+		reasonRequest, err = c.getRequest(ctx, *reasonObjectID, reasonID, requestID.Pulse())
 	}
-
 	if err != nil {
 		return errors.Wrap(err, "reason request not found")
 	}
@@ -163,52 +162,54 @@ func (c *RequestCheckerDefault) checkIncomingRequest(ctx context.Context, incomi
 	return nil
 }
 
-func (c *RequestCheckerDefault) getRequest(ctx context.Context, reasonObjectID, reasonID insolar.ID, currentPulse insolar.PulseNumber) (payload.RequestInfo, error) {
-	emptyResp := payload.RequestInfo{}
-	var node *insolar.Reference
+func (c *RequestCheckerDefault) getRequest(ctx context.Context, reasonObjectID, reasonID insolar.ID, currentPulse insolar.PulseNumber) (*payload.RequestInfo, error) {
+	inslogger.FromContext(ctx).Debug("check reason. request: ", reasonID.DebugString())
 
+	// Fetching message target node
+	var node *insolar.Reference
 	jetID, err := c.fetcher.Fetch(ctx, reasonObjectID, currentPulse)
 	if err != nil {
-		return emptyResp, errors.Wrap(err, "failed to fetch jet")
+		return nil, errors.Wrap(err, "failed to fetch jet")
 	}
 	node, err = c.coordinator.LightExecutorForJet(ctx, *jetID, currentPulse)
 	if err != nil {
-		return emptyResp, errors.Wrap(err, "failed to calculate node")
+		return nil, errors.Wrap(err, "failed to calculate node")
 	}
 
-	inslogger.FromContext(ctx).Debug("check reason. request: ", reasonID.DebugString())
+	// Sending message
 	msg, err := payload.NewMessage(&payload.GetRequestInfo{
 		ObjectID:  reasonObjectID,
 		RequestID: reasonID,
+		Pulse:     currentPulse,
 	})
 	if err != nil {
-		return emptyResp, errors.Wrap(err, "failed to check an object existence")
+		return nil, errors.Wrap(err, "failed to check an object existence")
 	}
 
 	reps, done := c.sender.SendTarget(ctx, msg, *node)
 	defer done()
 	res, ok := <-reps
 	if !ok {
-		return emptyResp, errors.New("no reply for reason check")
+		return nil, errors.New("no reply for request reason check")
 	}
 
 	pl, err := payload.UnmarshalFromMeta(res.Payload)
 	if err != nil {
-		return emptyResp, errors.Wrap(err, "failed to unmarshal reply")
+		return nil, errors.Wrap(err, "failed to unmarshal reply")
 	}
 
 	switch concrete := pl.(type) {
 	case *payload.RequestInfo:
-		return *concrete, nil
+		return concrete, nil
 	case *payload.Error:
 		inslogger.FromContext(ctx).Debug("SendTarget failed: ", reasonObjectID.DebugString(), currentPulse.String())
-		return emptyResp, errors.New(concrete.Text)
+		return nil, errors.New(concrete.Text)
 	default:
-		return emptyResp, fmt.Errorf("unexpected reply %T", pl)
+		return nil, fmt.Errorf("unexpected reply %T", pl)
 	}
 }
 
-func (c *RequestCheckerDefault) getRequestLocal(ctx context.Context, reasonObjectID, reasonID insolar.ID) (payload.RequestInfo, error) {
+func (c *RequestCheckerDefault) getRequestLocal(ctx context.Context, reasonObjectID, reasonID insolar.ID, currentPulse insolar.PulseNumber) (*payload.RequestInfo, error) {
 	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
 		"request_id":    reasonID.DebugString(),
 		"object_id":     reasonObjectID.DebugString(),
@@ -220,9 +221,9 @@ func (c *RequestCheckerDefault) getRequestLocal(ctx context.Context, reasonObjec
 		reqBuf []byte
 		resBuf []byte
 	)
-	foundRequest, foundResult, err := c.filaments.RequestInfo(ctx, reasonObjectID, reasonID)
+	foundRequest, foundResult, err := c.filaments.RequestInfo(ctx, reasonObjectID, reasonID, currentPulse)
 	if err != nil {
-		return payload.RequestInfo{}, errors.Wrap(err, "failed to get local request info")
+		return nil, errors.Wrap(err, "failed to get local request info")
 	}
 
 	var reqInfo payload.RequestInfo
@@ -230,7 +231,7 @@ func (c *RequestCheckerDefault) getRequestLocal(ctx context.Context, reasonObjec
 	if foundRequest != nil {
 		reqBuf, err = foundRequest.Record.Marshal()
 		if err != nil {
-			return payload.RequestInfo{}, errors.Wrap(err, "failed to marshal local request record")
+			return nil, errors.Wrap(err, "failed to marshal local request record")
 		}
 		reqInfo.Request = reqBuf
 
@@ -239,7 +240,7 @@ func (c *RequestCheckerDefault) getRequestLocal(ctx context.Context, reasonObjec
 	if foundResult != nil {
 		resBuf, err = foundResult.Record.Marshal()
 		if err != nil {
-			return payload.RequestInfo{}, errors.Wrap(err, "failed to marshal local result record")
+			return nil, errors.Wrap(err, "failed to marshal local result record")
 		}
 		reqInfo.Result = resBuf
 	}
@@ -249,7 +250,7 @@ func (c *RequestCheckerDefault) getRequestLocal(ctx context.Context, reasonObjec
 		"has_result": foundResult != nil,
 	}).Debug("local result info found")
 
-	return reqInfo, nil
+	return &reqInfo, nil
 }
 
 func findRecord(filamentRecords []record.CompositeFilamentRecord, requestID insolar.ID) (record.CompositeFilamentRecord, bool) {

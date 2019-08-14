@@ -151,6 +151,7 @@ func NewDependencies(
 			p.Dep(
 				filaments,
 				sender,
+				indexLocker,
 			)
 		},
 		GetPendings: func(p *GetPendings) {

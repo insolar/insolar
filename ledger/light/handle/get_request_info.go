@@ -50,16 +50,17 @@ func (s *GetRequestInfo) Present(ctx context.Context, f flow.Flow) error {
 		return errors.Wrap(err, "failed to unmarshal GetRequestInfo message")
 	}
 
+	pulse := msg.Pulse
 	ctx, _ = inslogger.WithField(ctx, "object", msg.ObjectID.DebugString())
 
-	jet := proc.NewFetchJet(msg.ObjectID, flow.Pulse(ctx), s.meta, false)
+	jet := proc.NewFetchJet(msg.ObjectID, pulse, s.meta, false)
 	s.dep.FetchJet(jet)
 	if err := f.Procedure(ctx, jet, false); err != nil {
 		return err
 	}
 	objJetID := jet.Result.Jet
 
-	hot := proc.NewWaitHot(objJetID, flow.Pulse(ctx), s.meta)
+	hot := proc.NewWaitHot(objJetID, pulse, s.meta)
 	s.dep.WaitHot(hot)
 	if err := f.Procedure(ctx, hot, false); err != nil {
 		return err
@@ -71,7 +72,7 @@ func (s *GetRequestInfo) Present(ctx context.Context, f flow.Flow) error {
 		return err
 	}
 
-	request := proc.NewSendRequestInfo(s.meta, msg.ObjectID, msg.RequestID)
+	request := proc.NewSendRequestInfo(s.meta, msg.ObjectID, msg.RequestID, pulse)
 	s.dep.GetRequestInfo(request)
 	return f.Procedure(ctx, request, false)
 }

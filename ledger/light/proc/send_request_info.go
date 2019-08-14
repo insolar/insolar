@@ -26,99 +26,109 @@ import (
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/light/executor"
+	"github.com/insolar/insolar/ledger/object"
 )
 
 type SendRequestInfo struct {
 	message   payload.Meta
 	objectID  insolar.ID
 	requestID insolar.ID
+	pulse     insolar.PulseNumber
 
 	dep struct {
 		filament executor.FilamentCalculator
 		sender   bus.Sender
+		locker   object.IndexLocker
 	}
 }
 
-func NewSendRequestInfo(msg payload.Meta, objectID insolar.ID, requestID insolar.ID) *SendRequestInfo {
+func NewSendRequestInfo(msg payload.Meta, objectID insolar.ID, requestID insolar.ID, pulse insolar.PulseNumber) *SendRequestInfo {
 	return &SendRequestInfo{
 		message:   msg,
 		objectID:  objectID,
 		requestID: requestID,
+		pulse:     pulse,
 	}
 }
 
 func (p *SendRequestInfo) Dep(
 	filament executor.FilamentCalculator,
 	sender bus.Sender,
+	locker object.IndexLocker,
 ) {
 	p.dep.filament = filament
 	p.dep.sender = sender
+	p.dep.locker = locker
 }
 
 func (p *SendRequestInfo) Proceed(ctx context.Context) error {
 
-	if p.requestID.IsEmpty() || p.objectID.IsEmpty() {
-		return errors.New("request id or object id is empty")
+	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+		"request_id":     p.requestID.DebugString(),
+		"object_id":      p.objectID.DebugString(),
+		"pulse_received": p.pulse,
+	})
+	logger.Debug("send request info started")
+
+	err := p.checkRequest()
+	if err != nil {
+		return errors.Wrap(err, "SendRequestInfo has wrong params")
 	}
 
-	objectID := p.objectID
+	// Prevent concurrent object modifications.
+	p.dep.locker.Lock(p.objectID)
+	defer p.dep.locker.Unlock(p.objectID)
 
-	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
-		"request_id": p.requestID.DebugString(),
-		"object_id":  objectID.DebugString(),
-	})
+	var (
+		reqBuf []byte
+		resBuf []byte
+	)
+	foundRequest, foundResult, err := p.dep.filament.RequestInfo(ctx, p.objectID, p.requestID, p.pulse)
+	if err != nil {
+		return errors.Wrap(err, "failed to get request info")
+	}
 
-	// Searching for request
-	{
-		var (
-			reqBuf []byte
-			resBuf []byte
-		)
-		requestID := p.requestID
-		foundRequest, foundResult, err := p.dep.filament.RequestInfo(ctx, objectID, requestID)
+	if foundRequest != nil {
+		reqBuf, err = foundRequest.Record.Marshal()
 		if err != nil {
-			return errors.Wrap(err, "failed to get request info")
+			return errors.Wrap(err, "failed to marshal request record")
 		}
-		if foundRequest != nil || foundResult != nil {
-			if foundRequest != nil {
-				reqBuf, err = foundRequest.Record.Marshal()
-				if err != nil {
-					return errors.Wrap(err, "failed to marshal request record")
-				}
-				requestID = foundRequest.RecordID
-			}
-			if foundResult != nil {
-				resBuf, err = foundResult.Record.Marshal()
-				if err != nil {
-					return errors.Wrap(err, "failed to marshal result record")
-				}
-			}
-
-			msg, err := payload.NewMessage(&payload.RequestInfo{
-				ObjectID:  objectID,
-				RequestID: requestID,
-				Request:   reqBuf,
-				Result:    resBuf,
-			})
-			if err != nil {
-				return errors.Wrap(err, "failed to create reply")
-			}
-			p.dep.sender.Reply(ctx, p.message, msg)
-			logger.WithFields(map[string]interface{}{
-				"request":    foundRequest != nil,
-				"has_result": foundResult != nil,
-			}).Debug("result info found")
-			return nil
+	}
+	if foundResult != nil {
+		resBuf, err = foundResult.Record.Marshal()
+		if err != nil {
+			return errors.Wrap(err, "failed to marshal result record")
 		}
 	}
 
 	msg, err := payload.NewMessage(&payload.RequestInfo{
-		ObjectID:  objectID,
+		ObjectID:  p.objectID,
 		RequestID: p.requestID,
+		Request:   reqBuf,
+		Result:    resBuf,
 	})
 	if err != nil {
 		return errors.Wrap(err, "failed to create reply")
 	}
+
 	p.dep.sender.Reply(ctx, p.message, msg)
+
+	logger.WithFields(map[string]interface{}{
+		"request":    foundRequest != nil,
+		"has_result": foundResult != nil,
+	}).Debug("send request info finished")
+	return nil
+}
+
+func (p *SendRequestInfo) checkRequest() error {
+	if p.requestID.IsEmpty() {
+		return errors.New("requestID is empty")
+	}
+	if p.objectID.IsEmpty() {
+		return errors.New("objectID is empty")
+	}
+	if p.pulse < insolar.FirstPulseNumber {
+		return errors.New("pulse is wrong")
+	}
 	return nil
 }
