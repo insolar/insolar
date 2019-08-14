@@ -112,6 +112,7 @@ type Params struct {
 }
 
 // Call returns response on request. Method for authorized calls.
+// ins:immutable
 func (m *Member) Call(signedRequest []byte) (interface{}, error) {
 	var signature string
 	var pulseTimeStamp int64
