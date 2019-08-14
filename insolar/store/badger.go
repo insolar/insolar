@@ -228,6 +228,22 @@ func (b *BadgerDB) Delete(key Key) error {
 	return err
 }
 
+// TransactionalDelete deletes value for a key.
+func TransactionalDelete(txn *badger.Txn, key Key) error {
+	fullKey := append(key.Scope().Bytes(), key.ID()...)
+	return txn.Delete(fullKey)
+}
+
+// NewReadIterator returns new Iterator over the store.
+func NewReadIterator(db *badger.DB, pivot Key, reverse bool) Iterator {
+	bi := badgerIterator{pivot: pivot, reverse: reverse}
+	bi.txn = db.NewTransaction(false)
+	opts := badger.DefaultIteratorOptions
+	opts.Reverse = reverse
+	bi.it = bi.txn.NewIterator(opts)
+	return &bi
+}
+
 // NewIterator returns new Iterator over the store.
 func (b *BadgerDB) NewIterator(pivot Key, reverse bool) Iterator {
 	bi := badgerIterator{pivot: pivot, reverse: reverse}

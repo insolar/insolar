@@ -79,13 +79,6 @@ func TestRecordStorage_TruncateHead(t *testing.T) {
 
 		err := recordStore.Set(ctx, record.Material{JetID: *insolar.NewJetID(uint8(idx), nil), ID: ids[idx]})
 		require.NoError(t, err)
-
-		for i := 0; i < 5; i++ {
-			err = recordStore.Set(ctx, record.Material{JetID: *insolar.NewJetID(uint8(i), nil), ID: ids[idx]})
-			require.NoError(t, err)
-		}
-
-		require.NoError(t, err)
 	}
 
 	for i := 0; i < numElements; i++ {

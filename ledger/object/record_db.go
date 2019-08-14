@@ -93,42 +93,6 @@ func NewRecordDB(db *store.BadgerDB) *RecordDB {
 	return &RecordDB{db: db}
 }
 
-func setRecord(tx *badger.Txn, key store.Key, record record.Material) error {
-	data, err := record.Marshal()
-	if err != nil {
-		return err
-	}
-	_, err = store.TransactionalGet(tx, key)
-	if err == nil {
-		return ErrOverride
-	}
-	return store.TransactionalSet(tx, key, data)
-}
-
-func getLastKnownPosition(txn *badger.Txn, pn insolar.PulseNumber) (uint32, error) {
-	key := lastKnownRecordPositionKey{pn: pn}
-	raw, err := store.TransactionalGet(txn, key)
-	if err != nil {
-		return 0, err
-	}
-
-	return binary.BigEndian.Uint32(raw), nil
-}
-
-func setLastKnownPosition(txn *badger.Txn, pn insolar.PulseNumber, position uint32) error {
-	lastPositionKey := lastKnownRecordPositionKey{pn: pn}
-	parsedPosition := make([]byte, 4)
-	binary.BigEndian.PutUint32(parsedPosition, position)
-
-	return store.TransactionalSet(txn, lastPositionKey, parsedPosition)
-}
-
-func setPosition(txn *badger.Txn, recID insolar.ID, position uint32) error {
-	positionKey := newRecordPositionKey(recID.Pulse(), position)
-
-	return store.TransactionalSet(txn, positionKey, recID.Bytes())
-}
-
 // Set saves new record-value in storage.
 func (r *RecordDB) Set(ctx context.Context, rec record.Material) error {
 	if rec.ID.IsEmpty() {
@@ -209,9 +173,45 @@ func (r *RecordDB) BatchSet(ctx context.Context, recs []record.Material) error {
 	})
 }
 
+func setRecord(tx *badger.Txn, key store.Key, record record.Material) error {
+	data, err := record.Marshal()
+	if err != nil {
+		return err
+	}
+	_, err = store.TransactionalGet(tx, key)
+	if err == nil {
+		return ErrOverride
+	}
+	return store.TransactionalSet(tx, key, data)
+}
+
+func getLastKnownPosition(txn *badger.Txn, pn insolar.PulseNumber) (uint32, error) {
+	key := lastKnownRecordPositionKey{pn: pn}
+	raw, err := store.TransactionalGet(txn, key)
+	if err != nil {
+		return 0, err
+	}
+
+	return binary.BigEndian.Uint32(raw), nil
+}
+
+func setLastKnownPosition(txn *badger.Txn, pn insolar.PulseNumber, position uint32) error {
+	lastPositionKey := lastKnownRecordPositionKey{pn: pn}
+	parsedPosition := make([]byte, 4)
+	binary.BigEndian.PutUint32(parsedPosition, position)
+
+	return store.TransactionalSet(txn, lastPositionKey, parsedPosition)
+}
+
+func setPosition(txn *badger.Txn, recID insolar.ID, position uint32) error {
+	positionKey := newRecordPositionKey(recID.Pulse(), position)
+
+	return store.TransactionalSet(txn, positionKey, recID.Bytes())
+}
+
 // TruncateHead remove all records after lastPulse
 func (r *RecordDB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
-	it := r.db.NewIterator(recordKey(*insolar.NewID(from, nil)), false)
+	it := store.NewReadIterator(r.db.Backend(), recordKey(*insolar.NewID(from, nil)), false)
 	defer it.Close()
 
 	var hasKeys bool
@@ -219,11 +219,13 @@ func (r *RecordDB) TruncateHead(ctx context.Context, from insolar.PulseNumber) e
 		hasKeys = true
 		key := newRecordKey(it.Key())
 		keyID := insolar.ID(key)
-		err := r.db.Delete(&key)
+
+		err := r.db.Backend().Update(func(txn *badger.Txn) error {
+			return store.TransactionalDelete(txn, key)
+		})
 		if err != nil {
 			return errors.Wrapf(err, "can't delete key: %+v", key)
 		}
-
 		inslogger.FromContext(ctx).Debugf("Erased key with pulse number: %s. ID: %s", keyID.Pulse().String(), keyID.String())
 	}
 
@@ -240,11 +242,15 @@ func (r *RecordDB) ForID(ctx context.Context, id insolar.ID) (record.Material, e
 }
 
 func (r *RecordDB) get(id insolar.ID) (record.Material, error) {
-	buff, err := r.db.Get(recordKey(id))
-	if err == store.ErrNotFound {
-		err = ErrNotFound
-		return record.Material{}, err
-	}
+	var buff []byte
+	var err error
+	err = r.db.Backend().View(func(txn *badger.Txn) error {
+		buff, err = store.TransactionalGet(txn, recordKey(id))
+		if err == store.ErrNotFound {
+			return ErrNotFound
+		}
+		return err
+	})
 	if err != nil {
 		return record.Material{}, err
 	}
