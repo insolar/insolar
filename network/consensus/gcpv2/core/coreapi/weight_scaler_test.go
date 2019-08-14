@@ -1,4 +1,4 @@
-//
+///
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -46,70 +46,67 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-//
+///
 
-package chaser
+package coreapi
 
 import (
-	"github.com/insolar/insolar/network/consensus/common/timer"
-	"time"
+	"math"
+	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
-func NewChasingTimer(chasingDelay time.Duration) ChasingTimer {
-	return ChasingTimer{chasingDelay: chasingDelay}
+func TestNewNeighbourWeightScalerInt64(t *testing.T) {
+	require.Panics(t, func() { NewScalerInt64(-1) })
+
+	fullRange := int64(0)
+	n1 := NewScalerInt64(fullRange)
+	require.Equal(t, uint32(fullRange), n1.max)
+
+	require.Equal(t, uint8(0), n1.shift)
+
+	fullRange = int64(1 << 32)
+	n2 := NewScalerInt64(fullRange)
+	require.Equal(t, uint8(1), n2.shift)
+
+	require.Equal(t, uint32(fullRange>>1), n2.max)
 }
 
-var _ timer.Holder = &ChasingTimer{}
+func TestNewNeighbourWeightScalerUint64(t *testing.T) {
+	fullRange := uint64(0)
+	n1 := NewScalerUint64(0, fullRange)
+	require.Equal(t, uint32(fullRange), n1.max)
 
-type ChasingTimer struct {
-	chasingDelay time.Duration
-	timer        *time.Timer
-	wasCleared   bool
+	require.Equal(t, uint8(0), n1.shift)
+
+	fullRange = uint64(1 << 32)
+	n2 := NewScalerUint64(0, fullRange)
+	require.Equal(t, uint8(1), n2.shift)
+
+	require.Equal(t, uint32(fullRange>>1), n2.max)
 }
 
-func (c *ChasingTimer) Stop() {
-	if c.timer == nil {
-		return
-	}
-	c.timer.Stop()
-	c.timer = nil
-	c.wasCleared = false
+func TestScaleInt64(t *testing.T) {
+	n1 := NewScalerInt64(0)
+	require.Equal(t, uint32(0), n1.ScaleInt64(-1))
+
+	require.Equal(t, uint32(0), n1.ScaleInt64(0))
+	require.Equal(t, uint32(math.MaxUint32), n1.ScaleInt64(1))
+
+	n2 := NewScalerInt64(1 << 32)
+	require.Equal(t, uint32(math.MaxUint32), n2.ScaleInt64(1<<32))
+
+	require.Equal(t, uint32(0x3fffffff), n2.ScaleInt64(1<<30))
 }
 
-func (c *ChasingTimer) IsEnabled() bool {
-	return c.chasingDelay > 0
-}
+func TestScaleUint64(t *testing.T) {
+	n1 := NewScalerUint64(0, 0)
+	require.Equal(t, uint32(0), n1.ScaleUint64(0))
+	require.Equal(t, uint32(math.MaxUint32), n1.ScaleUint64(1))
 
-func (c *ChasingTimer) WasStarted() bool {
-	return c.timer != nil
-}
+	n2 := NewScalerUint64(0, 1<<32)
+	require.Equal(t, uint32(math.MaxUint32), n2.ScaleUint64(1<<32))
 
-func (c *ChasingTimer) RestartChase() {
-
-	if c.chasingDelay <= 0 {
-		return
-	}
-
-	if c.timer == nil {
-		c.timer = time.NewTimer(c.chasingDelay)
-		return
-	}
-
-	// Restart chasing timer from this moment
-	if !c.wasCleared && !c.timer.Stop() {
-		<-c.timer.C
-	}
-	c.wasCleared = false
-	c.timer.Reset(c.chasingDelay)
-}
-
-func (c *ChasingTimer) Channel() <-chan time.Time {
-	if c.timer == nil {
-		return nil // receiver will wait indefinitely
-	}
-	return c.timer.C
-}
-
-func (c *ChasingTimer) ClearExpired() {
-	c.wasCleared = true
+	require.Equal(t, uint32(0x3fffffff), n2.ScaleUint64(1<<30))
 }

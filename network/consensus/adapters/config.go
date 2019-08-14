@@ -61,7 +61,7 @@ import (
 )
 
 var defaultRoundTimings = api.RoundTimings{
-	StartPhase0At: 100 * time.Millisecond, // Not scaled
+	StartPhase0At: 100 * time.Millisecond, // Not scaled by pulse duration
 
 	StartPhase1RetryAt: 200 * time.Millisecond, // 0 for no retries
 	EndOfPhase1:        250 * time.Millisecond,
@@ -69,8 +69,11 @@ var defaultRoundTimings = api.RoundTimings{
 	EndOfPhase3:        500 * time.Millisecond,
 	EndOfConsensus:     600 * time.Millisecond,
 
-	BeforeInPhase2ChasingDelay: 0 * time.Millisecond,
-	BeforeInPhase3ChasingDelay: 0 * time.Millisecond,
+	BeforeInPhase2ChasingDelay: 0 * time.Millisecond, // 0 for no chasing
+	BeforeInPhase3ChasingDelay: 0 * time.Millisecond, // 0 for no chasing
+
+	EphemeralMinDuration: 500 * time.Millisecond, // Not scaled by pulse duration
+	EphemeralMaxDuration: 15 * time.Second,       // Not scaled by pulse duration
 }
 
 type LocalNodeConfiguration struct {

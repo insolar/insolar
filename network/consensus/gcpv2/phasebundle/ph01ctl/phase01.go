@@ -54,10 +54,8 @@ import (
 	"context"
 	"fmt"
 	"github.com/insolar/insolar/network/consensus/common/watchdog"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
-	"time"
-
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/population"
 
 	"github.com/insolar/insolar/insolar"
@@ -248,7 +246,7 @@ func (c *Phase01Controller) workerSendPhase0(ctx context.Context, nodes []*popul
 	select {
 	case <-ctx.Done():
 		return nil, -1
-	case <-time.After(c.R.AdjustedAfter(c.R.GetTimings().StartPhase0At)):
+	case <-c.R.GetTimings().StartOfPhase0().NewTimer().Channel():
 		break
 	case nsh := <-nshChannel:
 		return nsh.NodeState, 0

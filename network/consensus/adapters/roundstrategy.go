@@ -52,7 +52,9 @@ package adapters
 
 import (
 	"context"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 	"math/rand"
+	"time"
 
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
@@ -92,5 +94,6 @@ func (rs *RoundStrategy) ShuffleNodeSequence(n int, swap func(i, j int)) {
 	rand.Shuffle(n, swap)
 }
 
-func (rs *RoundStrategy) AdjustConsensusTimings(timings *api.RoundTimings) {
+func (rs *RoundStrategy) CreateConsensusTimingsHelper(timings api.RoundTimings, startedAt time.Time) core.RoundTimingsHelper {
+	return core.NewRoundTimingsHelper(timings, startedAt)
 }

@@ -1,4 +1,4 @@
-//
+///
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -46,70 +46,46 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-//
+///
 
-package chaser
+package core
 
 import (
+	"context"
+	"github.com/insolar/insolar/network/consensus/common/chaser"
+	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/common/timer"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"time"
 )
 
-func NewChasingTimer(chasingDelay time.Duration) ChasingTimer {
-	return ChasingTimer{chasingDelay: chasingDelay}
+type RoundStrategyFactory interface {
+	CreateRoundStrategy(chronicle api.ConsensusChronicles, config api.LocalNodeConfiguration) (RoundStrategy, PhaseControllersBundle)
 }
 
-var _ timer.Holder = &ChasingTimer{}
+type RoundStrategy interface {
+	GetBaselineWeightForNeighbours() uint32
+	ShuffleNodeSequence(n int, swap func(i, j int))
 
-type ChasingTimer struct {
-	chasingDelay time.Duration
-	timer        *time.Timer
-	wasCleared   bool
+	ConfigureRoundContext(ctx context.Context, expectedPulse pulse.Number, self profiles.LocalNode) context.Context
+	CreateConsensusTimingsHelper(timings api.RoundTimings, startedAt time.Time) RoundTimingsHelper
+	//IsWatchdogEnabled() bool
 }
 
-func (c *ChasingTimer) Stop() {
-	if c.timer == nil {
-		return
-	}
-	c.timer.Stop()
-	c.timer = nil
-	c.wasCleared = false
+type RoundTimingsHelper interface {
+	StartOfPhase0() timer.Occasion
+	StartOfPhase1Retry() timer.Occasion //timings.StartPhase1RetryAt
+
+	EndOfPhase2() timer.Occasion
+	EndOfPhase3() timer.Occasion
+	EndOfConsensus() timer.Occasion
+
+	CreatePhase2Scaler() TimeScaler
+	CreatePhase2Chaser() chaser.ChasingTimer
+	CreatePhase3Chaser() chaser.ChasingTimer
 }
 
-func (c *ChasingTimer) IsEnabled() bool {
-	return c.chasingDelay > 0
-}
-
-func (c *ChasingTimer) WasStarted() bool {
-	return c.timer != nil
-}
-
-func (c *ChasingTimer) RestartChase() {
-
-	if c.chasingDelay <= 0 {
-		return
-	}
-
-	if c.timer == nil {
-		c.timer = time.NewTimer(c.chasingDelay)
-		return
-	}
-
-	// Restart chasing timer from this moment
-	if !c.wasCleared && !c.timer.Stop() {
-		<-c.timer.C
-	}
-	c.wasCleared = false
-	c.timer.Reset(c.chasingDelay)
-}
-
-func (c *ChasingTimer) Channel() <-chan time.Time {
-	if c.timer == nil {
-		return nil // receiver will wait indefinitely
-	}
-	return c.timer.C
-}
-
-func (c *ChasingTimer) ClearExpired() {
-	c.wasCleared = true
+type TimeScaler interface {
+	GetScale() uint32
 }

@@ -64,24 +64,10 @@ import (
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 
 	errors2 "github.com/insolar/insolar/network/consensus/gcpv2/core/errors"
 )
-
-type RoundStrategyFactory interface {
-	CreateRoundStrategy(chronicle api.ConsensusChronicles, config api.LocalNodeConfiguration) (RoundStrategy, PhaseControllersBundle)
-}
-
-type RoundStrategy interface {
-	GetBaselineWeightForNeighbours() uint32
-	ShuffleNodeSequence(n int, swap func(i, j int))
-
-	ConfigureRoundContext(ctx context.Context, expectedPulse pulse.Number, self profiles.LocalNode) context.Context
-	AdjustConsensusTimings(timings *api.RoundTimings)
-	//IsWatchdogEnabled() bool
-}
 
 var _ api.RoundController = &PhasedRoundController{}
 
@@ -291,7 +277,7 @@ func (r *PhasedRoundController) _startFullRealm(prepWasSuccessful bool) {
 	}
 
 	r.realm.start(active, active.GetOnlinePopulation(), r.bundle)
-	r.roundWorker.SetTimeout(r.realm.roundStartedAt.Add(r.realm.timings.EndOfConsensus))
+	r.roundWorker.SetTimeoutTimer(r.realm.timings.EndOfConsensus().NewTimer())
 }
 
 func (r *PhasedRoundController) ensureStarted() bool {
@@ -382,12 +368,16 @@ func (r *PhasedRoundController) _handlePacket(ctx context.Context, packet transp
 
 	if r.roundWorker.IsRunning() {
 		canStop := true
-		endOfConsensus := r.realm.GetStartedAt().Add(r.realm.timings.EndOfConsensus)
-		if time.Now().Before(endOfConsensus) {
+		//endOfConsensus := r.realm.GetStartedAt().Add(r.realm.timings.EndOfConsensus)
+		//if time.Now().Before(endOfConsensus) {
+
+		end := r.realm.timings.EndOfConsensus()
+
+		if !end.IsExpired() {
 			if r.realm.ephemeralFeeder != nil {
-				canStop = r.realm.ephemeralFeeder.CanStopOnHastyPulse(pn, endOfConsensus)
+				canStop = r.realm.ephemeralFeeder.CanStopOnHastyPulse(pn, end.Deadline())
 			} else {
-				canStop = r.realm.controlFeeder.CanStopOnHastyPulse(pn, endOfConsensus)
+				canStop = r.realm.controlFeeder.CanStopOnHastyPulse(pn, end.Deadline())
 			}
 		}
 

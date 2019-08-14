@@ -55,6 +55,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/capacity"
 	"github.com/insolar/insolar/network/consensus/common/syncrun"
+	"github.com/insolar/insolar/network/consensus/common/timer"
 	"sync/atomic"
 	"time"
 
@@ -145,8 +146,8 @@ func (p *RoundStateMachineWorker) ConsensusAborted() {
 	p.upstream.ConsensusAborted()
 }
 
-func (p *RoundStateMachineWorker) SetTimeout(deadline time.Time) {
-	p.worker.SetDynamicDeadline(deadline)
+func (p *RoundStateMachineWorker) SetTimeoutTimer(deadline timer.Holder) {
+	p.worker.SetDynamicDeadlineTimer(deadline)
 }
 
 func (p *RoundStateMachineWorker) OnRoundStopped(ctx context.Context) {

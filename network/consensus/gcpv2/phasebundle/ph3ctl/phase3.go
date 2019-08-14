@@ -65,7 +65,6 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/consensus"
 	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/inspectors"
 
-	"github.com/insolar/insolar/network/consensus/common/chaser"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/statevector"
@@ -231,8 +230,10 @@ func (c *Phase3Controller) workerPrePhase3(ctx context.Context) inspectors.Vecto
 	log.Debug(">>>>workerPrePhase3: begin")
 
 	timings := c.R.GetTimings()
-	startOfPhase3 := time.After(c.R.AdjustedAfter(timings.EndOfPhase2))
-	chasingDelayTimer := chaser.NewChasingTimer(timings.BeforeInPhase2ChasingDelay)
+	startOfPhase3 := timings.EndOfPhase2().NewTimer()
+	defer startOfPhase3.Stop()
+
+	chasingDelayTimer := timings.CreatePhase2Chaser() // chaser.NewChasingTimer(timings.BeforeInPhase2ChasingDelay)
 
 	var countAnnouncedJoiners = 0
 	var countPurgatory = 0
@@ -261,7 +262,7 @@ outer:
 			chasingDelayTimer.ClearExpired()
 			log.Debug(">>>>workerPrePhase3: chaseExpired")
 			break outer
-		case <-startOfPhase3:
+		case <-startOfPhase3.Channel():
 			log.Debug(">>>>workerPrePhase3: startOfPhase3")
 			break outer
 		case upd := <-c.queueTrustUpdated:
@@ -413,8 +414,10 @@ func (c *Phase3Controller) workerRecvPhase3(ctx context.Context, localInspector 
 	var queueMissing chan inspectors.InspectedVector
 
 	timings := c.R.GetTimings()
-	softDeadline := time.After(c.R.AdjustedAfter(timings.EndOfPhase3))
-	chasingDelayTimer := chaser.NewChasingTimer(timings.BeforeInPhase3ChasingDelay)
+	softDeadline := timings.EndOfPhase3().NewTimer()
+	defer softDeadline.Stop()
+
+	chasingDelayTimer := timings.CreatePhase3Chaser() // chaser.NewChasingTimer(timings.BeforeInPhase3ChasingDelay)
 
 	verifiedStatTbl := nodeset.NewConsensusStatTable(c.R.GetNodeCount())
 	originalStatTbl := nodeset.NewConsensusStatTable(c.R.GetNodeCount())
@@ -459,7 +462,7 @@ outer:
 		case <-ctx.Done():
 			log.Debug("Phase3 cancelled")
 			return false
-		case <-softDeadline:
+		case <-softDeadline.Channel():
 			log.Debug("Phase3 deadline")
 			consensusSelection = c.consensusStrategy.SelectOnStopped(&verifiedStatTbl, true, consensuskit.BftMajority(popCount))
 			break outer

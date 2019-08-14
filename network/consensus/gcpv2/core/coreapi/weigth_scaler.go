@@ -1,4 +1,4 @@
-//
+///
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -46,46 +46,46 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-//
+///
 
-package ph2ctl
+package coreapi
 
 import (
 	"math"
 	"math/bits"
 )
 
-type Scaler struct {
+type WeightScaler struct {
 	base  uint64
 	max   uint32
 	shift uint8
 }
 
-func NewScalerInt64(fullRange int64) Scaler {
+func NewScalerInt64(fullRange int64) WeightScaler {
 	if fullRange < 0 {
 		panic("negative range")
 	}
 	return NewScalerUint64(0, uint64(fullRange))
 }
 
-func NewScalerUint64(base uint64, fullRange uint64) Scaler {
+func NewScalerUint64(base uint64, fullRange uint64) WeightScaler {
 	var shift = uint8(bits.Len64(fullRange))
 	if shift > 32 {
 		shift -= 32
 	} else {
 		shift = 0
 	}
-	return Scaler{base: base, shift: shift, max: uint32(fullRange >> shift)}
+	return WeightScaler{base: base, shift: shift, max: uint32(fullRange >> shift)}
 }
 
-func (r Scaler) ScaleInt64(v int64) uint32 {
+func (r WeightScaler) ScaleInt64(v int64) uint32 {
 	if v < 0 {
 		return 0
 	}
 	return r.ScaleUint64(uint64(v))
 }
 
-func (r Scaler) ScaleUint64(v uint64) uint32 {
+func (r WeightScaler) ScaleUint64(v uint64) uint32 {
 	if v <= r.base {
 		return 0
 	}

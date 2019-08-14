@@ -202,18 +202,13 @@ func (c *Phase2Controller) workerPhase2(ctx context.Context) {
 
 	log := inslogger.FromContext(ctx)
 
-	// This duration is a soft timeout - the worker will attempt to send all data in the queue before stopping.
 	timings := c.R.GetTimings()
-	// endOfPhase := time.After(c.R.AdjustedAfter(timings.EndOfPhase2))
-	weightScaler := NewScalerInt64(timings.EndOfPhase1.Nanoseconds())
-	startedAt := c.R.GetStartedAt()
+	// This duration is a soft timeout - the worker will attempt to send all data in the queue before stopping.
+	weightScaler := timings.CreatePhase2Scaler() //NewScalerInt64(timings.EndOfPhase1.Nanoseconds())
 
-	if timings.StartPhase1RetryAt > 0 {
-		timer := time.AfterFunc(c.R.AdjustedAfter(timings.StartPhase1RetryAt), func() {
-			c.workerRetryOnMissingNodes(ctx)
-		})
-		defer timer.Stop()
-	}
+	defer timings.StartOfPhase1Retry().NewFunc(func() {
+		c.workerRetryOnMissingNodes(ctx)
+	}).Stop()
 
 	neighbourSizes := c.R.GetNeighbourhoodSizes()
 	neighbourSizes.VerifySizes()
@@ -279,7 +274,7 @@ func (c *Phase2Controller) workerPhase2(ctx context.Context) {
 			continue
 		}
 
-		maxWeight := weightScaler.ScaleInt64(time.Since(startedAt).Nanoseconds())
+		maxWeight := weightScaler.GetScale() //ScaleInt64(time.Since(startedAt).Nanoseconds())
 
 		pop := c.R.GetPopulation()
 		nodeCount, isComplete := pop.GetCountAndCompleteness(false)

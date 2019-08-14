@@ -1,4 +1,4 @@
-//
+///
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -46,70 +46,137 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-//
+///
 
-package chaser
+package timer
 
-import (
-	"github.com/insolar/insolar/network/consensus/common/timer"
-	"time"
-)
+import "time"
 
-func NewChasingTimer(chasingDelay time.Duration) ChasingTimer {
-	return ChasingTimer{chasingDelay: chasingDelay}
+type Occasion interface {
+	Deadline() time.Time
+	NewTimer() Holder
+	NewFunc(fn func()) Holder
+	IsExpired() bool
 }
 
-var _ timer.Holder = &ChasingTimer{}
-
-type ChasingTimer struct {
-	chasingDelay time.Duration
-	timer        *time.Timer
-	wasCleared   bool
+type Holder interface {
+	Channel() <-chan time.Time
+	Stop()
 }
 
-func (c *ChasingTimer) Stop() {
-	if c.timer == nil {
+func Never() Holder {
+	return (*timerWithChan)(nil)
+}
+
+func New(d time.Duration) Holder {
+	return &timerWithChan{time.NewTimer(d)}
+}
+
+func NewWithFunc(d time.Duration, fn func()) Holder {
+	return &timerWithFn{time.AfterFunc(d, fn)}
+}
+
+type timerWithChan struct {
+	t *time.Timer
+}
+
+func (p *timerWithChan) Channel() <-chan time.Time {
+	if p == nil || p.t == nil {
+		return nil
+	}
+	return p.t.C
+}
+
+func (p *timerWithChan) Stop() {
+	if p == nil || p.t == nil {
 		return
 	}
-	c.timer.Stop()
-	c.timer = nil
-	c.wasCleared = false
+	p.t.Stop()
 }
 
-func (c *ChasingTimer) IsEnabled() bool {
-	return c.chasingDelay > 0
+type timerWithFn struct {
+	t *time.Timer
 }
 
-func (c *ChasingTimer) WasStarted() bool {
-	return c.timer != nil
+func (p *timerWithFn) Channel() <-chan time.Time {
+	panic("illegal state")
 }
 
-func (c *ChasingTimer) RestartChase() {
-
-	if c.chasingDelay <= 0 {
-		return
-	}
-
-	if c.timer == nil {
-		c.timer = time.NewTimer(c.chasingDelay)
-		return
-	}
-
-	// Restart chasing timer from this moment
-	if !c.wasCleared && !c.timer.Stop() {
-		<-c.timer.C
-	}
-	c.wasCleared = false
-	c.timer.Reset(c.chasingDelay)
+func (p *timerWithFn) Stop() {
+	p.t.Stop()
 }
 
-func (c *ChasingTimer) Channel() <-chan time.Time {
-	if c.timer == nil {
-		return nil // receiver will wait indefinitely
-	}
-	return c.timer.C
+func NewOccasion(deadline time.Time) Occasion {
+	return &factory{deadline}
 }
 
-func (c *ChasingTimer) ClearExpired() {
-	c.wasCleared = true
+func NewOccasionAfter(d time.Duration) Occasion {
+	return &factory{time.Now().Add(d)}
+}
+
+type factory struct {
+	d time.Time
+}
+
+func (p *factory) IsExpired() bool {
+	return p.d.Before(time.Now())
+}
+
+func (p *factory) Deadline() time.Time {
+	return p.d
+}
+
+func (p *factory) NewTimer() Holder {
+	return New(time.Until(p.d))
+}
+
+func (p *factory) NewFunc(fn func()) Holder {
+	return NewWithFunc(time.Until(p.d), fn)
+}
+
+func NeverOccasion() Occasion {
+	return &factoryNever{}
+}
+
+type factoryNever struct {
+}
+
+func (*factoryNever) IsExpired() bool {
+	return false
+}
+
+func (*factoryNever) Deadline() time.Time {
+	return time.Time{}
+}
+
+func (*factoryNever) NewTimer() Holder {
+	return Never()
+}
+
+func (*factoryNever) NewFunc(fn func()) Holder {
+	return Never()
+}
+
+func EverOccasion() Occasion {
+	return &factoryEver{}
+}
+
+type factoryEver struct {
+}
+
+func (*factoryEver) IsExpired() bool {
+	return true
+}
+
+func (*factoryEver) Deadline() time.Time {
+	return time.Time{}
+}
+
+func (*factoryEver) NewTimer() Holder {
+	return New(0)
+}
+
+func (*factoryEver) NewFunc(fn func()) Holder {
+	go fn()
+	return Never()
 }

@@ -95,7 +95,7 @@ type EmuPulsarNetPacket struct {
 }
 
 func (r *EmuPulsarNetPacket) GetPacketReceivedAt() time.Time {
-	panic("implement me")
+	return time.Now()
 }
 
 func (r *EmuPulsarNetPacket) GetPulseDataDigest() cryptkit.DigestHolder {
@@ -195,6 +195,10 @@ type basePacket struct {
 
 	profiles.BriefCandidateProfile
 	profiles.CandidateProfileExtension
+}
+
+func (r *basePacket) GetPacketReceivedAt() time.Time {
+	return time.Now()
 }
 
 func (r *basePacket) GetLastCloudStateHash() cryptkit.DigestHolder {
@@ -381,10 +385,6 @@ type EmuPhase0NetPacket struct {
 	pn          pulse.Number
 }
 
-func (r *EmuPhase0NetPacket) GetPacketReceivedAt() time.Time {
-	panic("implement me")
-}
-
 func (r *EmuPhase0NetPacket) GetPacketType() phases.PacketType {
 	return phases.PacketPhase0
 }
@@ -467,10 +467,6 @@ type EmuPhase2NetPacket struct {
 	neighbourhood []transport.MembershipAnnouncementReader
 }
 
-func (r *EmuPhase2NetPacket) GetPacketReceivedAt() time.Time {
-	panic("implement me")
-}
-
 func (r *EmuPhase2NetPacket) GetBriefIntroduction() transport.BriefIntroductionReader {
 	return r.BriefCandidateProfile
 }
@@ -515,10 +511,6 @@ type EmuPhase3NetPacket struct {
 	basePacket
 	pulseNumber pulse.Number
 	vectors     statevector.Vector
-}
-
-func (r *EmuPhase3NetPacket) GetPacketReceivedAt() time.Time {
-	panic("implement me")
 }
 
 func (r *EmuPhase3NetPacket) GetTrustedExpectedRank() member.Rank {

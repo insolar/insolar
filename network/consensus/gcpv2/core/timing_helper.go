@@ -1,4 +1,4 @@
-//
+///
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -46,67 +46,67 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-//
+///
 
-package ph2ctl
+package core
 
 import (
-	"math"
-	"testing"
-
-	"github.com/stretchr/testify/require"
+	"github.com/insolar/insolar/network/consensus/common/chaser"
+	"github.com/insolar/insolar/network/consensus/common/timer"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
+	"time"
 )
 
-func TestNewNeighbourWeightScalerInt64(t *testing.T) {
-	require.Panics(t, func() { NewScalerInt64(-1) })
-
-	fullRange := int64(0)
-	n1 := NewScalerInt64(fullRange)
-	require.Equal(t, uint32(fullRange), n1.max)
-
-	require.Equal(t, uint8(0), n1.shift)
-
-	fullRange = int64(1 << 32)
-	n2 := NewScalerInt64(fullRange)
-	require.Equal(t, uint8(1), n2.shift)
-
-	require.Equal(t, uint32(fullRange>>1), n2.max)
+func NewRoundTimingsHelper(timings api.RoundTimings, startedAt time.Time) RoundTimingsHelper {
+	return &roundTimingsHelper{timings, startedAt}
 }
 
-func TestNewNeighbourWeightScalerUint64(t *testing.T) {
-	fullRange := uint64(0)
-	n1 := NewScalerUint64(0, fullRange)
-	require.Equal(t, uint32(fullRange), n1.max)
-
-	require.Equal(t, uint8(0), n1.shift)
-
-	fullRange = uint64(1 << 32)
-	n2 := NewScalerUint64(0, fullRange)
-	require.Equal(t, uint8(1), n2.shift)
-
-	require.Equal(t, uint32(fullRange>>1), n2.max)
+type roundTimingsHelper struct {
+	timings   api.RoundTimings
+	startedAt time.Time
 }
 
-func TestScaleInt64(t *testing.T) {
-	n1 := NewScalerInt64(0)
-	require.Equal(t, uint32(0), n1.ScaleInt64(-1))
-
-	require.Equal(t, uint32(0), n1.ScaleInt64(0))
-	require.Equal(t, uint32(math.MaxUint32), n1.ScaleInt64(1))
-
-	n2 := NewScalerInt64(1 << 32)
-	require.Equal(t, uint32(math.MaxUint32), n2.ScaleInt64(1<<32))
-
-	require.Equal(t, uint32(0x3fffffff), n2.ScaleInt64(1<<30))
+func (p *roundTimingsHelper) StartOfPhase0() timer.Occasion {
+	return timer.NewOccasion(p.startedAt.Add(p.timings.StartPhase0At))
 }
 
-func TestScaleUint64(t *testing.T) {
-	n1 := NewScalerUint64(0, 0)
-	require.Equal(t, uint32(0), n1.ScaleUint64(0))
-	require.Equal(t, uint32(math.MaxUint32), n1.ScaleUint64(1))
+func (p *roundTimingsHelper) StartOfPhase1Retry() timer.Occasion {
+	return timer.NewOccasion(p.startedAt.Add(p.timings.StartPhase1RetryAt))
+}
 
-	n2 := NewScalerUint64(0, 1<<32)
-	require.Equal(t, uint32(math.MaxUint32), n2.ScaleUint64(1<<32))
+func (p *roundTimingsHelper) EndOfPhase2() timer.Occasion {
+	return timer.NewOccasion(p.startedAt.Add(p.timings.EndOfPhase2))
+}
 
-	require.Equal(t, uint32(0x3fffffff), n2.ScaleUint64(1<<30))
+func (p *roundTimingsHelper) EndOfPhase3() timer.Occasion {
+	return timer.NewOccasion(p.startedAt.Add(p.timings.EndOfPhase3))
+}
+
+func (p *roundTimingsHelper) EndOfConsensus() timer.Occasion {
+	return timer.NewOccasion(p.startedAt.Add(p.timings.EndOfConsensus))
+}
+
+func (p *roundTimingsHelper) CreatePhase2Chaser() chaser.ChasingTimer {
+	return chaser.NewChasingTimer(p.timings.BeforeInPhase2ChasingDelay)
+}
+
+func (p *roundTimingsHelper) CreatePhase3Chaser() chaser.ChasingTimer {
+	return chaser.NewChasingTimer(p.timings.BeforeInPhase3ChasingDelay)
+}
+
+func (p *roundTimingsHelper) CreatePhase2Scaler() TimeScaler {
+	return &timeScaler{
+		WeightScaler: coreapi.NewScalerInt64(p.timings.EndOfPhase1.Nanoseconds()),
+		startedAt:    p.startedAt,
+	}
+}
+
+type timeScaler struct {
+	coreapi.WeightScaler
+	startedAt time.Time
+}
+
+func (p *timeScaler) GetScale() uint32 {
+	return p.ScaleInt64(time.Since(p.startedAt).Nanoseconds())
 }

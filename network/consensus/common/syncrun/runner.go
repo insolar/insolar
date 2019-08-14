@@ -54,6 +54,7 @@ import (
 	"context"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/network/consensus/common/timer"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -100,6 +101,7 @@ type SyncingWorkerConfig struct {
 	WaitOnOverflow bool
 	BeforeStartFn  func(context.Context)
 	AfterStopFn    func(context.Context, interface{})
+	Timeout        time.Duration
 }
 
 /* Ensures that all methods are called in the exact sequence */
@@ -108,7 +110,7 @@ type SyncingWorker struct {
 	ctx       context.Context
 	cancelFn  func()
 	asyncCmd  chan WorkFunc
-	timeout   *time.Timer
+	timeout   timer.Holder
 	config    SyncingWorkerConfig
 }
 
@@ -224,6 +226,11 @@ func (p *SyncingWorker) TryStartAttached() Status {
 func (p *SyncingWorker) run() {
 	p.config.BeforeStartFn(p.ctx)
 	p.config.BeforeStartFn = nil //avoid unnecessary retention
+	if p.config.Timeout == 0 {
+		p.timeout = timer.Never()
+	} else {
+		p.timeout = timer.New(p.config.Timeout)
+	}
 
 	go p._run()
 }
@@ -245,9 +252,7 @@ func (p *SyncingWorker) runCommandsAndCleanup() (result interface{}) {
 			p.closeQueue()
 		}
 		p.cancelFn()
-		if p.timeout != nil {
-			p.timeout.Stop()
-		}
+		p.timeout.Stop()
 	}
 
 	defer func() {
@@ -289,15 +294,10 @@ func (p *SyncingWorker) runCommands() (result interface{}) {
 	}()
 
 	for {
-		var expired <-chan time.Time
-		if p.timeout != nil {
-			expired = p.timeout.C
-		}
-
 		select {
 		case <-p.ctx.Done():
 			return p.ctx.Err()
-		case <-expired:
+		case <-p.timeout.Channel():
 			return context.DeadlineExceeded
 		case cmd, ok := <-p.asyncCmd:
 			if !ok {
@@ -335,10 +335,19 @@ func (p *SyncingWorker) AsyncCall(fn func(context.Context) error) (successful bo
 
 func (p *SyncingWorker) SetDynamicDeadline(d time.Time) bool {
 	return p.SyncCall(func(context.Context) error {
-		if p.timeout != nil {
-			p.timeout.Stop()
-		}
-		p.timeout = time.NewTimer(time.Until(d))
+		p.timeout.Stop()
+		p.timeout = timer.New(time.Until(d))
+		return nil
+	})
+}
+
+func (p *SyncingWorker) SetDynamicDeadlineTimer(t timer.Holder) bool {
+	if t == nil {
+		panic("illegal value")
+	}
+	return p.SyncCall(func(context.Context) error {
+		p.timeout.Stop()
+		p.timeout = t
 		return nil
 	})
 }

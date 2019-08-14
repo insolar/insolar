@@ -83,7 +83,7 @@ type FullRealm struct {
 	packetSender   transport.PacketSender
 	profileFactory profiles.Factory
 
-	timings api.RoundTimings
+	timings RoundTimingsHelper
 
 	census         census.Active
 	population     pop.RealmPopulation
@@ -195,11 +195,6 @@ func (r *FullRealm) start(census census.Active, population census.OnlinePopulati
 
 func (r *FullRealm) initBefore(transport transport.Factory) transport.NeighbourhoodSizes {
 
-	if r.ephemeralFeeder != nil {
-		r.timings = r.ephemeralFeeder.GetEphemeralTimings(r.config)
-		r.strategy.AdjustConsensusTimings(&r.timings)
-	}
-
 	r.packetSender = transport.GetPacketSender()
 	r.packetBuilder = transport.GetPacketBuilder(r.signer)
 	return r.packetBuilder.GetNeighbourhoodSize()
@@ -210,14 +205,17 @@ func (r *FullRealm) initBasics(census census.Active) {
 	r.census = census
 	r.profileFactory = census.GetProfileFactory(r.assistant)
 
-	if r.ephemeralFeeder == nil { // ephemeral timings are initialized earlier, in initBefore()
-		r.timings = r.config.GetConsensusTimings(r.pulseData.NextPulseDelta)
-		r.strategy.AdjustConsensusTimings(&r.timings)
-	}
-
 	if r.expectedPopulationSize == 0 {
 		r.expectedPopulationSize = member.AsIndex(r.config.GetNodeCountHint())
 	}
+
+	var timings api.RoundTimings
+	if r.ephemeralFeeder == nil {
+		timings = r.config.GetConsensusTimings(r.pulseData.NextPulseDelta)
+	} else {
+		timings = r.ephemeralFeeder.GetEphemeralTimings(r.config)
+	}
+	r.timings = r.strategy.CreateConsensusTimingsHelper(timings, r.GetStartedAt())
 }
 
 func (r *FullRealm) initHandlers(needsDynamic bool, populationCount int,
@@ -457,7 +455,10 @@ func (r *FullRealm) CommitPulseChange() {
 	r.stateMachine.CommitPulseChange(report, r.pulseData, r.census)
 }
 
-func (r *FullRealm) GetTimings() api.RoundTimings {
+func (r *FullRealm) GetTimings() RoundTimingsHelper {
+	if r.timings == nil {
+		panic("illegal state")
+	}
 	return r.timings
 }
 

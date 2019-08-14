@@ -206,6 +206,10 @@ func (p *EmuRoundStrategyFactory) CreateRoundStrategy(chronicle api.ConsensusChr
 type EmuRoundStrategy struct {
 }
 
+func (*EmuRoundStrategy) CreateConsensusTimingsHelper(timings api.RoundTimings, startedAt time.Time) core.RoundTimingsHelper {
+	return core.NewRoundTimingsHelper(timings, startedAt)
+}
+
 func (*EmuRoundStrategy) IsEphemeralPulseAllowed() bool {
 	return false
 }
@@ -220,9 +224,6 @@ func (*EmuRoundStrategy) GetBaselineWeightForNeighbours() uint32 {
 
 func (*EmuRoundStrategy) ShuffleNodeSequence(n int, swap func(i, j int)) {
 	rand.Shuffle(n, swap)
-}
-
-func (*EmuRoundStrategy) AdjustConsensusTimings(timings *api.RoundTimings) {
 }
 
 var _ api.ConsensusControlFeeder = &EmuControlFeeder{}
