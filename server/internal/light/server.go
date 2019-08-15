@@ -55,7 +55,6 @@ func (s *Server) Serve() {
 		log.Warn("failed to load configuration from file: ", err.Error())
 	}
 	cfg := &cfgHolder.Configuration
-	cfg.Metrics.Namespace = "insolard"
 
 	fmt.Println("Starts with configuration:\n", configuration.ToString(cfgHolder.Configuration))
 

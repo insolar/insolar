@@ -95,12 +95,16 @@ func (n *gatewayer) SwitchState(ctx context.Context, state insolar.NetworkState,
 	n.gateway = n.gateway.NewGateway(ctx, state)
 
 	operable := n.gateway.NetworkOperable()
+	operableChanged := false
+	if n.isOperable != operable {
+		n.isOperable = operable
+		operableChanged = true
+	}
 
 	go func() {
 		n.gateway.Run(ctx, pulse)
 
-		if n.isOperable != operable {
-			n.isOperable = operable
+		if operableChanged {
 			n.operableFunc(ctx, n.isOperable)
 		}
 	}()
