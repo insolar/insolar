@@ -113,7 +113,7 @@ func (r *RecordDB) BatchSet(ctx context.Context, recs []record.Material) error {
 	// It's possible, that in the batch can be records from different pulses
 	// because of that we need to track a current pulse and position
 	// for different pulses position is requested from db
-	// We can get position on every loop, but we SHOULDn't do this
+	// We can get position on every loop, but we SHOULDN'T do this
 	// Because it isn't efficient
 	lastKnowPulse := insolar.PulseNumber(0)
 	position := uint32(0)
