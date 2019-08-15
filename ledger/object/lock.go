@@ -53,13 +53,13 @@ func NewIndexLocker() IndexLocker {
 // If mutex does not exist, it will be created in concurrent safe fashion.
 func (l *idLocker) Lock(id insolar.ID) {
 	// Reset pulse. It should not be considered when locking.
-	zeroID := *insolar.NewID(0, id.Hash())
+	normailzedID := *insolar.NewID(0, id.Hash())
 
 	l.mu.Lock()
-	mc, ok := l.muxs[zeroID]
+	mc, ok := l.muxs[normailzedID]
 	if !ok {
 		mc = &mucount{RWMutex: &sync.RWMutex{}}
-		l.muxs[zeroID] = mc
+		l.muxs[normailzedID] = mc
 	}
 	mc.count++
 	l.mu.Unlock()
