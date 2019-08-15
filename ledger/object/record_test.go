@@ -263,12 +263,8 @@ func TestRecordStorage_DB_Set(t *testing.T) {
 		t.Parallel()
 
 		id := gen.ID()
-
-		sID := gen.ID()
-		sID.SetPulse(id.Pulse() + 1)
-
-		tID := gen.ID()
-		tID.SetPulse(id.Pulse() + 2)
+		sID := *insolar.NewID(id.Pulse()+1, []byte{2})
+		tID := *insolar.NewID(id.Pulse()+2, []byte{3})
 
 		rec := getMaterialRecord()
 		rec.ID = id
@@ -531,12 +527,9 @@ func TestRecordPositionDB(t *testing.T) {
 		recordStorage := NewRecordDB(db)
 		pn := gen.PulseNumber()
 
-		id := gen.ID()
-		id.SetPulse(pn)
-		sID := gen.ID()
-		sID.SetPulse(pn)
-		tID := gen.ID()
-		tID.SetPulse(pn)
+		id := *insolar.NewID(pn, []byte{1})
+		sID := *insolar.NewID(pn, []byte{2})
+		tID := *insolar.NewID(pn, []byte{3})
 
 		err = recordStorage.BatchSet(
 			context.TODO(), []record.Material{

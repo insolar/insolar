@@ -582,18 +582,15 @@ func TestRecordServer_Export_Composite_BatchVersion(t *testing.T) {
 	jetKeeper.TopSyncPulseMock.Return(secondPN)
 
 	// IDs and Records
-	firstID := gen.ID()
-	firstID.SetPulse(firstPN)
+	firstID := *insolar.NewID(firstPN, []byte{1})
 	firstRec := getMaterialRecord()
 	firstRec.ID = firstID
 
-	secondID := gen.ID()
-	secondID.SetPulse(firstPN)
+	secondID := *insolar.NewID(firstPN, []byte{2})
 	secondRec := getMaterialRecord()
 	secondRec.ID = secondID
 
-	thirdID := gen.ID()
-	thirdID.SetPulse(secondPN)
+	thirdID := *insolar.NewID(secondPN, []byte{1})
 	thirdRec := getMaterialRecord()
 	thirdRec.ID = thirdID
 
