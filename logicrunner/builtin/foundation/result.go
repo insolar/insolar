@@ -26,7 +26,7 @@ import (
 type Result struct {
 	// Error - logic error, this field is not NIL if error is created outside
 	// contract code, for example "object not found"
-	Error   *Error
+	Error *Error
 	// Returns - all return values of contract's method, whatever it returns,
 	// including errors
 	Returns []interface{}

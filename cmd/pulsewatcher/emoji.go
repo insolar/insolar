@@ -24,7 +24,6 @@ import (
 type Emoji struct {
 	mu        sync.RWMutex
 	registred map[uint32]string
-	heavy     []string
 	light     []string
 	virtual   []string
 }
@@ -38,7 +37,7 @@ func NewEmoji() *Emoji {
 }
 
 //todo: one url has many shortISs if node restart
-func (e *Emoji) RegisterNode(url string, n api.Node) {
+func (e *Emoji) RegisterNode(_ string, n api.Node) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 

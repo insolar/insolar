@@ -23,11 +23,15 @@ import (
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/executionregistry"
+	"github.com/insolar/insolar/logicrunner/shutdown"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/logicrunner.StateStorage -o ./ -s _mock.go -g
@@ -37,7 +41,7 @@ type StateStorage interface {
 	GetExecutionRegistry(ref insolar.Reference) executionregistry.ExecutionRegistry
 
 	IsEmpty() bool
-	OnPulse(ctx context.Context, pulse insolar.Pulse) []insolar.Message
+	OnPulse(ctx context.Context, pulse insolar.Pulse) map[insolar.Reference][]payload.Payload
 }
 
 type stateStorage struct {
@@ -45,11 +49,12 @@ type stateStorage struct {
 
 	publisher        watermillMsg.Publisher
 	requestsExecutor RequestsExecutor
-	messageBus       insolar.MessageBus
+	sender           bus.Sender
 	jetCoordinator   jet.Coordinator
 	pulseAccessor    pulse.Accessor
 	artifactsManager artifacts.Client
 	outgoingSender   OutgoingRequestSender
+	shutdownFlag     shutdown.Flag
 
 	brokers    map[insolar.Reference]ExecutionBrokerI
 	registries map[insolar.Reference]executionregistry.ExecutionRegistry
@@ -58,11 +63,12 @@ type stateStorage struct {
 func NewStateStorage(
 	publisher watermillMsg.Publisher,
 	requestsExecutor RequestsExecutor,
-	messageBus insolar.MessageBus,
+	sender bus.Sender,
 	jetCoordinator jet.Coordinator,
 	pulseAccessor pulse.Accessor,
 	artifactsManager artifacts.Client,
 	outgoingSender OutgoingRequestSender,
+	shutdownFlag shutdown.Flag,
 ) StateStorage {
 	ss := &stateStorage{
 		brokers:    make(map[insolar.Reference]ExecutionBrokerI),
@@ -70,11 +76,12 @@ func NewStateStorage(
 
 		publisher:        publisher,
 		requestsExecutor: requestsExecutor,
-		messageBus:       messageBus,
+		sender:           sender,
 		jetCoordinator:   jetCoordinator,
 		pulseAccessor:    pulseAccessor,
 		artifactsManager: artifactsManager,
 		outgoingSender:   outgoingSender,
+		shutdownFlag:     shutdownFlag,
 	}
 	return ss
 }
@@ -89,6 +96,10 @@ func (ss *stateStorage) upsertExecutionRegistry(ref insolar.Reference) execution
 }
 
 func (ss *stateStorage) UpsertExecutionState(ref insolar.Reference) ExecutionBrokerI {
+	if ss.shutdownFlag.IsStopped() {
+		log.Warn("UpsertExecutionState after shutdown was triggered for ", ref.String())
+	}
+
 	ss.RLock()
 	if res, ok := ss.brokers[ref]; ok {
 		ss.RUnlock()
@@ -101,18 +112,26 @@ func (ss *stateStorage) UpsertExecutionState(ref insolar.Reference) ExecutionBro
 	if _, ok := ss.brokers[ref]; !ok {
 		registry := ss.upsertExecutionRegistry(ref)
 
-		ss.brokers[ref] = NewExecutionBroker(ref, ss.publisher, ss.requestsExecutor, ss.messageBus, ss.artifactsManager, registry, ss.outgoingSender)
+		ss.brokers[ref] = NewExecutionBroker(ref, ss.publisher, ss.requestsExecutor, ss.sender, ss.artifactsManager, registry, ss.outgoingSender, ss.pulseAccessor)
 	}
 	return ss.brokers[ref]
 }
 
 func (ss *stateStorage) GetExecutionState(ref insolar.Reference) ExecutionBrokerI {
+	if ss.shutdownFlag.IsStopped() {
+		log.Warn("GetExecutionState after shutdown was triggered for ", ref.String())
+	}
+
 	ss.RLock()
 	defer ss.RUnlock()
 	return ss.brokers[ref]
 }
 
 func (ss *stateStorage) GetExecutionRegistry(ref insolar.Reference) executionregistry.ExecutionRegistry {
+	if ss.shutdownFlag.IsStopped() {
+		log.Warn("GetExecutionRegistry after shutdown was triggered for ", ref.String())
+	}
+
 	ss.RLock()
 	defer ss.RUnlock()
 	return ss.registries[ref]
@@ -134,8 +153,8 @@ func (ss *stateStorage) IsEmpty() bool {
 	return true
 }
 
-func (ss *stateStorage) OnPulse(ctx context.Context, pulse insolar.Pulse) []insolar.Message {
-	onPulseMessages := make([]insolar.Message, 0)
+func (ss *stateStorage) OnPulse(ctx context.Context, pulse insolar.Pulse) map[insolar.Reference][]payload.Payload {
+	onPulseMessages := make(map[insolar.Reference][]payload.Payload)
 
 	ss.Lock()
 	defer ss.Unlock()
@@ -147,11 +166,17 @@ func (ss *stateStorage) OnPulse(ctx context.Context, pulse insolar.Pulse) []inso
 			inslogger.FromContext(ctx).Error("exeuction broker exists, but registry doesn't")
 		}
 
-		onPulseMessages = append(onPulseMessages, broker.OnPulse(ctx)...)
+		messages := broker.OnPulse(ctx)
+		if len(messages) > 0 {
+			onPulseMessages[objectRef] = append(onPulseMessages[objectRef], messages...)
+		}
 	}
 
 	for objectRef, registry := range ss.registries {
-		onPulseMessages = append(onPulseMessages, registry.OnPulse(ctx)...)
+		messages := registry.OnPulse(ctx)
+		if len(messages) > 0 {
+			onPulseMessages[objectRef] = append(onPulseMessages[objectRef], messages...)
+		}
 
 		if registry.IsEmpty() {
 			delete(ss.registries, objectRef)

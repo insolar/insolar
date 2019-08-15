@@ -98,7 +98,7 @@ type Base struct {
 	ConsensusPulseHandler network.PulseHandler
 
 	Options         *network.Options
-	bootstrapTimer  *time.Timer
+	bootstrapTimer  *time.Timer // nolint
 	bootstrapETA    time.Duration
 	originCandidate *adapters.Candidate
 

@@ -274,15 +274,15 @@
   revision = "2fcc7bfc8ff98e6900dacde00aadb2a77d547a9e"
 
 [[projects]]
-  digest = "1:d585d1cae389b646325b7ef48032cdc9b58e68cd88c1fdc5da795eabb2114455"
+  branch = "v1"
+  digest = "1:6e66547dc669a6bf80df8ed8d5ee45c51753a4d81511cf6161614b69934928cc"
   name = "github.com/insolar/rpc"
   packages = [
     "v2",
     "v2/json2",
   ]
   pruneopts = "UT"
-  revision = "60ccffd3c0df575286752c08ae3d6312f728291d"
-  version = "v1.2.1"
+  revision = "c27e1d218f1f41c684884521f111cb1c78d0f7fa"
 
 [[projects]]
   digest = "1:9f86b5f5862a8ae44a5e2461619ac8f0fd1c75d670b735e40c4319f61bcb4bd3"

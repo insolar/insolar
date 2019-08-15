@@ -47,11 +47,6 @@ var testSeedResponse = seedResponse{Seed: "Test", TraceID: "testTraceID"}
 var testInfoResponse = InfoResponse{RootMember: "root_member_ref", RootDomain: "root_domain_ref", NodeDomain: "node_domain_ref"}
 var testStatusResponse = StatusResponse{NetworkState: "OK"}
 
-type rpcRequest struct {
-	RPCVersion string `json:"jsonrpc"`
-	Method     string `json:"method"`
-}
-
 func writeReponse(response http.ResponseWriter, answer interface{}) {
 	serJSON, err := json.MarshalIndent(answer, "", "    ")
 	if err != nil {
@@ -64,52 +59,37 @@ func writeReponse(response http.ResponseWriter, answer interface{}) {
 	}
 }
 
-func FakeHandler(response http.ResponseWriter, req *http.Request) {
-	response.Header().Add("Content-Type", "application/json")
-
-	params := Request{}
-	_, err := unmarshalRequest(req, &params)
-	if err != nil {
-		log.Errorf("Can't read request\n")
-		return
-	}
-
-	var respData = Result{}
-
-	if params.Method == "member.create" {
-		respData.ContractResult = TESTREFERENCE
-	} else {
-		respData.ContractResult = TESTSEED
-	}
-
-	writeReponse(response, respData)
+type RPCResponse struct {
+	Response
+	Result interface{} `json:"result,omitempty"`
 }
 
 func FakeRPCHandler(response http.ResponseWriter, req *http.Request) {
 	response.Header().Add("Content-Type", "application/json")
-	answer := map[string]interface{}{
-		"jsonrpc": "2.0",
-		"id":      "",
-	}
-	rpcReq := rpcRequest{}
-	_, err := unmarshalRequest(req, &rpcReq)
+	rpcResponse := RPCResponse{}
+	request := Request{}
+	_, err := unmarshalRequest(req, &request)
 	if err != nil {
 		log.Errorf("Can't read request\n")
 		return
 	}
 
-	switch rpcReq.Method {
+	switch request.Method {
 	case "node.getStatus":
-		answer["result"] = testStatusResponse
+		rpcResponse.Result = testStatusResponse
 	case "network.getInfo":
-		answer["result"] = testInfoResponse
+		rpcResponse.Result = testInfoResponse
 	case "node.getSeed":
-		answer["result"] = testSeedResponse
+		rpcResponse.Result = testSeedResponse
+	case "contract.call":
+		rpcResponse.Result = TESTREFERENCE
+	default:
+		rpcResponse.Result = TESTSEED
+
 	}
-	writeReponse(response, answer)
+	writeReponse(response, rpcResponse)
 }
 
-const callLOCATION = "/api/call"
 const rpcLOCATION = "/api/rpc"
 const PORT = "12221"
 const HOST = "127.0.0.1"
@@ -146,9 +126,7 @@ func startServer() error {
 }
 
 func setup() error {
-	fh := FakeHandler
 	fRPCh := FakeRPCHandler
-	http.HandleFunc(callLOCATION, fh)
 	http.HandleFunc(rpcLOCATION, fRPCh)
 	log.Info("Starting Test api server ...")
 
@@ -175,7 +153,6 @@ func teardown() {
 	err := server.Shutdown(ctx)
 	if err != nil {
 		fmt.Println("STOPPING TEST SERVER:", err)
-
 	}
 }
 
@@ -201,21 +178,21 @@ func TestGetSeed(t *testing.T) {
 }
 
 func TestGetResponseBodyEmpty(t *testing.T) {
-	_, err := GetResponseBodyPlatform("test", PlatformRequest{})
-	require.EqualError(t, err, "[ GetResponseBodyPlatform ] Problem with sending request: Post test: unsupported protocol scheme \"\"")
+	_, err := GetResponseBodyPlatform("test", "", nil)
+	require.EqualError(t, err, "problem with sending request: Post test: unsupported protocol scheme \"\"")
 }
 
 func TestGetResponseBodyBadHttpStatus(t *testing.T) {
-	_, err := GetResponseBodyPlatform(URL+"TEST", PlatformRequest{})
-	require.EqualError(t, err, "[ GetResponseBodyPlatform ] Bad http response code: 404")
+	_, err := GetResponseBodyPlatform(URL+"TEST", "", nil)
+	require.EqualError(t, err, "bad http response code: 404")
 }
 
 func TestGetResponseBody(t *testing.T) {
-	data, err := GetResponseBodyContract(URL+"/call", Request{}, "")
-	result := Result{}
-	_ = json.Unmarshal(data, &result)
+	data, err := GetResponseBodyContract(URL+"/rpc", ContractRequest{}, "")
+	response := RPCResponse{}
+	_ = json.Unmarshal(data, &response)
 	require.NoError(t, err)
-	require.Contains(t, result.ContractResult, "VGVzdA==")
+	require.Contains(t, response.Result, TESTSEED)
 }
 
 func TestSetVerbose(t *testing.T) {
@@ -226,10 +203,10 @@ func TestSetVerbose(t *testing.T) {
 	SetVerbose(false)
 }
 
-func readConfigs(t *testing.T) (*UserConfigJSON, *Request) {
+func readConfigs(t *testing.T) (*UserConfigJSON, *Params) {
 	userConf, err := ReadUserConfigFromFile("testdata/userConfig.json")
 	require.NoError(t, err)
-	reqConf, err := ReadRequestConfigFromFile("testdata/requestConfig.json")
+	reqConf, err := ReadRequestParamsFromFile("testdata/requestConfig.json")
 	require.NoError(t, err)
 
 	return userConf, reqConf
@@ -237,18 +214,18 @@ func readConfigs(t *testing.T) (*UserConfigJSON, *Request) {
 
 func TestSend(t *testing.T) {
 	ctx := inslogger.ContextWithTrace(context.Background(), "TestSend")
-	userConf, reqConf := readConfigs(t)
-	reqConf.Method = "member.create"
-	resp, err := Send(ctx, URL, userConf, reqConf)
+	userConf, reqParams := readConfigs(t)
+	reqParams.CallSite = "member.create"
+	resp, err := Send(ctx, URL, userConf, reqParams)
 	require.NoError(t, err)
 	require.Contains(t, string(resp), TESTREFERENCE)
 }
 
 func TestSendWithSeed(t *testing.T) {
 	ctx := inslogger.ContextWithTrace(context.Background(), "TestSendWithSeed")
-	userConf, reqConf := readConfigs(t)
-	reqConf.Method = "member.create"
-	resp, err := SendWithSeed(ctx, URL+"/call", userConf, reqConf, TESTSEED)
+	userConf, reqParams := readConfigs(t)
+	reqParams.CallSite = "member.create"
+	resp, err := SendWithSeed(ctx, URL+"/rpc", userConf, reqParams, TESTSEED)
 	require.NoError(t, err)
 	require.Contains(t, string(resp), TESTREFERENCE)
 }
@@ -257,7 +234,7 @@ func TestSendWithSeed_WithBadUrl(t *testing.T) {
 	ctx := inslogger.ContextWithTrace(context.Background(), "TestSendWithSeed_WithBadUrl")
 	userConf, reqConf := readConfigs(t)
 	_, err := SendWithSeed(ctx, URL+"TTT", userConf, reqConf, TESTSEED)
-	require.EqualError(t, err, "[ SendWithSeed ] Problem with sending target request: [ getResponseBodyContract ] Bad http response code: 404")
+	require.EqualError(t, err, "[ SendWithSeed ] Problem with sending target request: bad http response code: 404")
 }
 
 func TestSendWithSeed_NilConfigs(t *testing.T) {
@@ -298,19 +275,19 @@ func TestMarshalSig(t *testing.T) {
 	require.Equal(t, s1, s2, errors.Errorf("Invalid R number"))
 }
 
-// UnmarshalRequest unmarshals request to api
+// unmarshalRequest unmarshals request to api
 func unmarshalRequest(req *http.Request, params interface{}) ([]byte, error) {
 	body, err := ioutil.ReadAll(req.Body)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ UnmarshalRequest ] Can't read body. So strange")
+		return nil, errors.Wrap(err, "[ unmarshalRequest ] Can't read body. So strange")
 	}
 	if len(body) == 0 {
-		return nil, errors.New("[ UnmarshalRequest ] Empty body")
+		return nil, errors.New("[ unmarshalRequest ] Empty body")
 	}
 
 	err = json.Unmarshal(body, &params)
 	if err != nil {
-		return body, errors.Wrap(err, "[ UnmarshalRequest ] Can't unmarshal input params")
+		return body, errors.Wrap(err, "[ unmarshalRequest ] Can't unmarshal input params")
 	}
 	return body, nil
 }

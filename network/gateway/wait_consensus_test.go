@@ -70,6 +70,7 @@ func TestWaitConsensus_ConsensusNotHappenedInETA(t *testing.T) {
 	waitConsensus := newWaitConsensus(&Base{})
 	waitConsensus.Gatewayer = gatewayer
 	waitConsensus.bootstrapETA = time.Millisecond
+	waitConsensus.bootstrapTimer = time.NewTimer(waitConsensus.bootstrapETA)
 
 	waitConsensus.Run(context.Background(), *insolar.EphemeralPulse)
 }
