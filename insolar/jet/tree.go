@@ -25,13 +25,6 @@ import (
 	"github.com/insolar/insolar/insolar/bits"
 )
 
-// type jet struct {
-// 	// Active indicates what node is approved as last one, i.e. it's leaf (ignored for non leafs if set)
-// 	Actual bool
-// 	Left   *jet
-// 	Right  *jet
-// }
-
 // Find returns jet for provided reference.
 func (j *Jet) Find(val []byte, depth uint8) (*Jet, uint8) {
 	if j == nil || val == nil {
@@ -105,11 +98,6 @@ func (j *Jet) ExtractLeafIDs(ids *[]insolar.JetID, path []byte, depth uint8) {
 		j.Right.ExtractLeafIDs(ids, rightPath, depth+1)
 	}
 }
-
-// // Tree represents jets tree.
-// type Tree struct {
-// 	Head *jet
-// }
 
 // NewTree creates new tree.
 func NewTree(isActual bool) *Tree {
