@@ -361,7 +361,7 @@ func (p *PrepRealm) _applyPulseData(_ context.Context, pdp proofs.OriginalPulsar
 		if fromPulsar { // we cant receive pulsar packets directly from pulsars when ephemeral
 			panic("illegal state")
 		}
-		if !p.ephemeralFeeder.CanAcceptTimePulseToStopEphemeral(pd) {
+		if !p.ephemeralFeeder.CanStopEphemeralByPulse(pd, p.prepSelf.GetProfile()) {
 			return false, pulse.Unknown
 		}
 		p.disableEphemeral = true

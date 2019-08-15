@@ -106,9 +106,11 @@ func (mode EphemeralMode) IsEnabled() bool {
 
 type PulseControlFeeder interface {
 	CanStopOnHastyPulse(pn pulse.Number, expectedEndOfConsensus time.Time) bool
+	CanFastForwardPulse(expected, received pulse.Number, lastPulseData pulse.Data) bool
 }
 
 type EphemeralControlFeeder interface {
+	PulseControlFeeder
 	GetEphemeralTimings(LocalNodeConfiguration) RoundTimings
 	/* Minimum time after the last ephemeral round before checking for another candidate */
 	GetMinDuration() time.Duration
@@ -120,12 +122,11 @@ type EphemeralControlFeeder interface {
 	CreateEphemeralPulsePacket(census census.Operational) proofs.OriginalPulsarPacket
 
 	OnNonEphemeralPacket(ctx context.Context, parser transport.PacketParser, inbound endpoints.Inbound) error
-	CanStopOnHastyPulse(pn pulse.Number, expectedEndOfConsensus time.Time) bool
 
-	/* When a joiner gets a non-ephemeral pulse data from a member */
-	CanAcceptTimePulseToStopEphemeral(pd pulse.Data /*, sourceNode profiles.ActiveNode*/) bool
-
-	TryConvertFromEphemeral(ctx context.Context, expected census.Expected) (wasConverted bool, converted census.Expected)
+	/* Applied when an ephemeral node gets a non-ephemeral pulse data from another member */
+	CanStopEphemeralByPulse(pd pulse.Data, localNode profiles.ActiveNode) bool
+	/* Applied when an ephemeral node finishes consensus */
+	CanStopEphemeralByCensus(expected census.Expected) bool
 
 	EphemeralConsensusFinished(isNextEphemeral bool, roundStartedAt time.Time, expected census.Operational)
 	/* is called:
@@ -144,6 +145,8 @@ type ConsensusControlFeeder interface {
 
 	GetRequiredGracefulLeave() (bool, uint32)
 	OnAppliedGracefulLeave(exitCode uint32, effectiveSince pulse.Number)
+
+	OnPulseDetected() // this method is not currently invoked
 }
 
 type MaintenancePollFunc func(ctx context.Context) bool
