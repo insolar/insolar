@@ -44,11 +44,6 @@ const (
 // ID is a unified record ID.
 type ID [RecordIDSize]byte
 
-// String implements stringer on ID and returns base58 encoded value
-func (id ID) String() string {
-	return base58.Encode(id[:])
-}
-
 // NewID generates ID byte representation.
 func NewID(pulse PulseNumber, hash []byte) *ID {
 	var id ID
@@ -57,11 +52,28 @@ func NewID(pulse PulseNumber, hash []byte) *ID {
 	return &id
 }
 
+// NewIDFromBytes converts byte slice to ID.
 func NewIDFromBytes(raw []byte) *ID {
 	id := ID{}
 	copy(id[:], raw)
 
 	return &id
+}
+
+// NewIDFromBase58 deserializes ID from base58 encoded string.
+func NewIDFromBase58(str string) (*ID, error) {
+	decoded := base58.Decode(str)
+	if len(decoded) != RecordIDSize {
+		return nil, errors.New("bad ID size")
+	}
+	var id ID
+	copy(id[:], decoded)
+	return &id, nil
+}
+
+// String implements stringer on ID and returns base58 encoded value
+func (id ID) String() string {
+	return base58.Encode(id[:])
 }
 
 // Bytes returns byte slice of ID.
@@ -73,11 +85,6 @@ func (id ID) Bytes() []byte {
 func (id *ID) Pulse() PulseNumber {
 	pulse := binary.BigEndian.Uint32(id[:PulseNumberSize])
 	return PulseNumber(pulse)
-}
-
-// SetPulse sets IDs pulse.
-func (id *ID) SetPulse(pn PulseNumber) {
-	copy(id[:PulseNumberSize], pn.Bytes())
 }
 
 // Hash returns a copy of Hash part of ID.
@@ -105,17 +112,6 @@ func (id ID) NotEmpty() bool {
 	return !id.IsEmpty()
 }
 
-// NewIDFromBase58 deserializes ID from base58 encoded string.
-func NewIDFromBase58(str string) (*ID, error) {
-	decoded := base58.Decode(str)
-	if len(decoded) != RecordIDSize {
-		return nil, errors.New("bad ID size")
-	}
-	var id ID
-	copy(id[:], decoded)
-	return &id, nil
-}
-
 // MarshalJSON serializes ID into JSONFormat.
 func (id *ID) MarshalJSON() ([]byte, error) {
 	if id == nil {
@@ -130,7 +126,7 @@ type Reference [RecordRefSize]byte
 // NewReference returns Reference composed from domain and record.
 func NewReference(id ID) *Reference {
 	var ref Reference
-	ref.setRecord(id)
+	copy(ref[:RecordIDSize], id[:])
 	// ref.setDomain(id)
 	return &ref
 }
@@ -147,15 +143,22 @@ func NewReferenceFromBytes(from []byte) *Reference {
 	return &ref
 }
 
-// setRecord set record's ID.
-func (ref *Reference) setRecord(recID ID) {
-	copy(ref[:RecordIDSize], recID[:])
+// NewReferenceFromBase58 deserializes reference from base58 encoded string.
+func NewReferenceFromBase58(str string) (*Reference, error) {
+	parts := strings.SplitN(str, RecordRefIDSeparator, 2)
+	if len(parts) < 2 {
+		return nil, errors.New("bad reference format")
+	}
+	recordID, err := NewIDFromBase58(parts[0])
+	if err != nil {
+		return nil, errors.Wrap(err, "bad record part")
+	}
+	_, err = NewIDFromBase58(parts[1])
+	if err != nil {
+		return nil, errors.Wrap(err, "bad domain part")
+	}
+	return NewReference(*recordID), nil
 }
-
-// setDomain set record's Domain.
-// func (ref *Reference) setDomain(domainID ID) {
-// 	copy(ref[RecordIDSize:], domainID[:])
-// }
 
 // Domain returns domain ID part of reference.
 func (ref Reference) Domain() *ID {
@@ -199,23 +202,6 @@ func (ref Reference) Compare(other Reference) int {
 	return bytes.Compare(ref.Bytes(), other.Bytes())
 }
 
-// NewReferenceFromBase58 deserializes reference from base58 encoded string.
-func NewReferenceFromBase58(str string) (*Reference, error) {
-	parts := strings.SplitN(str, RecordRefIDSeparator, 2)
-	if len(parts) < 2 {
-		return nil, errors.New("bad reference format")
-	}
-	recordID, err := NewIDFromBase58(parts[0])
-	if err != nil {
-		return nil, errors.Wrap(err, "bad record part")
-	}
-	_, err = NewIDFromBase58(parts[1])
-	if err != nil {
-		return nil, errors.Wrap(err, "bad domain part")
-	}
-	return NewReference(*recordID), nil
-}
-
 // MarshalJSON serializes reference into JSONFormat.
 func (ref *Reference) MarshalJSON() ([]byte, error) {
 	if ref == nil {
@@ -240,16 +226,20 @@ func (ref *Reference) Unmarshal(data []byte) error {
 	copy(ref[:], data)
 	return nil
 }
+
 func (ref *Reference) UnmarshalJSON(data []byte) error {
 	return json.Unmarshal(data, ref)
 }
+
 func (ref *Reference) Size() int { return RecordRefSize }
 
 func (id ID) Marshal() ([]byte, error) { return id[:], nil }
+
 func (id *ID) MarshalTo(data []byte) (int, error) {
 	copy(data, id[:])
 	return RecordIDSize, nil
 }
+
 func (id *ID) Unmarshal(data []byte) error {
 	if len(data) != RecordIDSize {
 		return errors.New("Not enough bytes to unpack ID")
@@ -257,10 +247,13 @@ func (id *ID) Unmarshal(data []byte) error {
 	copy(id[:], data)
 	return nil
 }
+
 func (id *ID) UnmarshalJSON(data []byte) error {
 	return json.Unmarshal(data, id)
 }
+
 func (id *ID) Size() int { return RecordIDSize }
+
 func (id ID) Compare(other ID) int {
 	return bytes.Compare(id.Bytes(), other.Bytes())
 }
@@ -306,7 +299,3 @@ func (id *ID) DebugString() string {
 
 	return fmt.Sprintf("[%d | %s]", id.Pulse(), id.String())
 }
-
-var (
-	DomainID = *NewID(0, nil)
-)

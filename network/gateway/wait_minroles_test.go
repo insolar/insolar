@@ -53,16 +53,18 @@ package gateway
 import (
 	"context"
 	"github.com/gojuno/minimock"
-	"testing"
-	"time"
-
+	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/node"
 	mock "github.com/insolar/insolar/testutils/network"
 	"github.com/stretchr/testify/assert"
+	"testing"
+	"time"
 )
 
-func TestWaitConsensus_ConsensusNotHappenedInETA(t *testing.T) {
+func TestWaitMinroles_MinrolesNotHappenedInETA(t *testing.T) {
 	mc := minimock.NewController(t)
 	defer mc.Finish()
 	defer mc.Wait(time.Minute)
@@ -72,34 +74,76 @@ func TestWaitConsensus_ConsensusNotHappenedInETA(t *testing.T) {
 		assert.Equal(t, insolar.NoNetworkState, state)
 	})
 
-	waitConsensus := newWaitConsensus(&Base{})
-	waitConsensus.Gatewayer = gatewayer
-	waitConsensus.bootstrapETA = time.Millisecond
-	waitConsensus.bootstrapTimer = time.NewTimer(waitConsensus.bootstrapETA)
+	nodeKeeper := mock.NewNodeKeeperMock(mc)
+	nodeKeeper.GetAccessorMock.Set(func(p1 insolar.PulseNumber) (a1 network.Accessor) {
+		accessor := mock.NewAccessorMock(mc)
+		accessor.GetWorkingNodesMock.Set(func() (na1 []insolar.NetworkNode) {
+			return []insolar.NetworkNode{}
+		})
+		return accessor
+	})
 
-	waitConsensus.Run(context.Background(), *insolar.EphemeralPulse)
+	cert := &certificate.Certificate{}
+	cert.MinRoles.HeavyMaterial = 1
+	waitMinRoles := newWaitMinRoles(&Base{
+		CertificateManager: certificate.NewCertificateManager(cert),
+		NodeKeeper:         nodeKeeper,
+	})
+	waitMinRoles.Gatewayer = gatewayer
+	waitMinRoles.bootstrapETA = time.Millisecond
+	waitMinRoles.bootstrapTimer = time.NewTimer(waitMinRoles.bootstrapETA)
+
+	waitMinRoles.Run(context.Background(), *insolar.EphemeralPulse)
 }
 
-func TestWaitConsensus_ConsensusHappenedInETA(t *testing.T) {
+func TestWaitMinroles_MinrolesHappenedInETA(t *testing.T) {
 	mc := minimock.NewController(t)
 	defer mc.Finish()
 	defer mc.Wait(time.Minute)
 
 	gatewayer := mock.NewGatewayerMock(mc)
 	gatewayer.SwitchStateMock.Set(func(ctx context.Context, state insolar.NetworkState, pulse insolar.Pulse) {
-		assert.Equal(t, insolar.WaitMajority, state)
+		assert.Equal(t, insolar.CompleteNetworkState, state)
 	})
 
-	waitConsensus := newWaitConsensus(&Base{})
-	waitConsensus.Gatewayer = gatewayer
-	accessorMock := mock.NewPulseAccessorMock(mc)
-	accessorMock.GetPulseMock.Set(func(ctx context.Context, p1 insolar.PulseNumber) (p2 insolar.Pulse, err error) {
-		return *insolar.EphemeralPulse, nil
-	})
-	waitConsensus.PulseAccessor = accessorMock
-	waitConsensus.bootstrapETA = time.Second
-	waitConsensus.bootstrapTimer = time.NewTimer(waitConsensus.bootstrapETA)
-	waitConsensus.OnConsensusFinished(context.Background(), network.Report{})
+	ref := gen.Reference()
+	nodeKeeper := mock.NewNodeKeeperMock(mc)
+	nodeKeeper.GetAccessorMock.Set(func(p insolar.PulseNumber) (a1 network.Accessor) {
+		accessor := mock.NewAccessorMock(mc)
+		if p == insolar.FirstPulseNumber {
+			accessor.GetWorkingNodesMock.Set(func() (na1 []insolar.NetworkNode) {
+				return []insolar.NetworkNode{}
+			})
+		} else {
+			accessor.GetWorkingNodesMock.Set(func() (na1 []insolar.NetworkNode) {
+				n := node.NewNode(ref, insolar.StaticRoleLightMaterial, nil, "127.0.0.1:123", "")
+				return []insolar.NetworkNode{n}
+			})
+		}
 
-	waitConsensus.Run(context.Background(), *insolar.EphemeralPulse)
+		return accessor
+	})
+
+	discoveryNode := certificate.BootstrapNode{NodeRef: ref.String()}
+	cert := &certificate.Certificate{MajorityRule: 1, BootstrapNodes: []certificate.BootstrapNode{discoveryNode}}
+	cert.MinRoles.LightMaterial = 1
+	pulseAccessor := mock.NewPulseAccessorMock(mc)
+	pulseAccessor.GetPulseMock.Set(func(ctx context.Context, p1 insolar.PulseNumber) (p2 insolar.Pulse, err error) {
+		p := *insolar.GenesisPulse
+		p.PulseNumber += 10
+		return p, nil
+	})
+	waitMinRoles := newWaitMinRoles(&Base{
+		CertificateManager: certificate.NewCertificateManager(cert),
+		NodeKeeper:         nodeKeeper,
+		PulseAccessor:      pulseAccessor,
+	})
+	waitMinRoles.Gatewayer = gatewayer
+	waitMinRoles.bootstrapETA = time.Second * 2
+	waitMinRoles.bootstrapTimer = time.NewTimer(waitMinRoles.bootstrapETA)
+
+	go waitMinRoles.Run(context.Background(), *insolar.EphemeralPulse)
+	time.Sleep(100 * time.Millisecond)
+
+	waitMinRoles.OnConsensusFinished(context.Background(), network.Report{PulseNumber: insolar.FirstPulseNumber + 10})
 }
