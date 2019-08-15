@@ -129,7 +129,6 @@ func (r *RecordDB) BatchSet(ctx context.Context, recs []record.Material) error {
 
 	err := r.db.Backend().Update(func(txn *badger.Txn) error {
 		for _, rec := range recs {
-			rec := rec
 			if rec.ID.IsEmpty() {
 				return errors.New("id is empty")
 			}
