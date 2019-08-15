@@ -93,7 +93,7 @@ func ConfigureOptions(conf configuration.Configuration) *Options {
 		PingTimeout:         1 * time.Second,
 		PacketTimeout:       15 * time.Second,
 		AckPacketTimeout:    5 * time.Second,
-		BootstrapTimeout:    60 * time.Second,
+		BootstrapTimeout:    90 * time.Second,
 		HandshakeSessionTTL: time.Duration(config.HandshakeSessionTTL) * time.Millisecond,
 	}
 }

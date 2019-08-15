@@ -85,6 +85,7 @@ type Complete struct {
 }
 
 func (g *Complete) Run(ctx context.Context, pulse insolar.Pulse) {
+	g.bootstrapTimer.Stop()
 	if pulse.EpochPulseNumber > insolar.EphemeralPulseEpoch {
 		err := g.PulseManager.Set(ctx, pulse)
 		if err != nil {

@@ -98,6 +98,7 @@ func (g *JoinerBootstrap) Run(ctx context.Context, p insolar.Pulse) {
 	responsePulse := pulse.FromProto(&resp.Pulse)
 
 	g.bootstrapETA = time.Second * time.Duration(resp.ETASeconds)
+	g.bootstrapTimer = time.NewTimer(g.bootstrapETA)
 	g.Gatewayer.SwitchState(ctx, insolar.WaitConsensus, *responsePulse)
 }
 

@@ -52,6 +52,7 @@ package gateway
 
 import (
 	"context"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network"
@@ -59,15 +60,24 @@ import (
 )
 
 func newWaitMinRoles(b *Base) *WaitMinRoles {
-	return &WaitMinRoles{b}
+	return &WaitMinRoles{b, make(chan insolar.Pulse, 1)}
 }
 
 type WaitMinRoles struct {
 	*Base
+	minrolesComplete chan insolar.Pulse
 }
 
 func (g *WaitMinRoles) Run(ctx context.Context, pulse insolar.Pulse) {
 	g.switchOnMinRoles(ctx, pulse)
+
+	select {
+	case <-g.bootstrapTimer.C:
+		inslogger.FromContext(ctx).Warn("WaitMinRoles timeout, going to NoNetworkState")
+		g.Gatewayer.SwitchState(ctx, insolar.NoNetworkState, pulse)
+	case newPulse := <-g.minrolesComplete:
+		g.Gatewayer.SwitchState(ctx, insolar.CompleteNetworkState, newPulse)
+	}
 }
 
 func (g *WaitMinRoles) GetState() insolar.NetworkState {
@@ -85,6 +95,7 @@ func (g *WaitMinRoles) switchOnMinRoles(ctx context.Context, pulse insolar.Pulse
 	)
 
 	if minRole {
-		g.Gatewayer.SwitchState(ctx, insolar.CompleteNetworkState, pulse)
+		g.minrolesComplete <- pulse
+		close(g.minrolesComplete)
 	}
 }

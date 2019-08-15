@@ -52,6 +52,7 @@ package gateway
 
 import (
 	"context"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network"
@@ -59,15 +60,24 @@ import (
 )
 
 func newWaitMajority(b *Base) *WaitMajority {
-	return &WaitMajority{b}
+	return &WaitMajority{b, make(chan insolar.Pulse, 1)}
 }
 
 type WaitMajority struct {
 	*Base
+	majorityComplete chan insolar.Pulse
 }
 
 func (g *WaitMajority) Run(ctx context.Context, pulse insolar.Pulse) {
 	g.switchOnMajorityRule(ctx, pulse)
+
+	select {
+	case <-g.bootstrapTimer.C:
+		inslogger.FromContext(ctx).Warn("WaitMajority timeout, going to NoNetworkState")
+		g.Gatewayer.SwitchState(ctx, insolar.NoNetworkState, pulse)
+	case newPulse := <-g.majorityComplete:
+		g.Gatewayer.SwitchState(ctx, insolar.WaitMinRoles, newPulse)
+	}
 }
 
 func (g *WaitMajority) GetState() insolar.NetworkState {
@@ -85,6 +95,7 @@ func (g *WaitMajority) switchOnMajorityRule(ctx context.Context, pulse insolar.P
 	)
 
 	if majorityRule {
-		g.Gatewayer.SwitchState(ctx, insolar.WaitMinRoles, pulse)
+		g.majorityComplete <- pulse
+		close(g.majorityComplete)
 	}
 }
