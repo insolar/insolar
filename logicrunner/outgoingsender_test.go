@@ -5,6 +5,7 @@ import (
 	"math/rand"
 	"testing"
 
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/reply"
 
 	"github.com/stretchr/testify/require"
@@ -68,7 +69,7 @@ func TestOutgoingSenderSendRegularOutgoing(t *testing.T) {
 		resultChan:       resultChan,
 	}
 
-	cr.CallMock.Return(&reply.CallMethod{}, nil)
+	cr.CallMock.Return(&reply.CallMethod{}, insolar.NewEmptyReference(), nil)
 	am.RegisterResultMock.Return(nil)
 
 	_, err := sender.Receive(msg)
@@ -101,7 +102,7 @@ func TestOutgoingSenderSendSagaOutgoing(t *testing.T) {
 		resultChan:       resultChan,
 	}
 
-	cr.CallMock.Return(&reply.CallMethod{}, nil)
+	cr.CallMock.Return(&reply.CallMethod{}, insolar.NewEmptyReference(), nil)
 	am.RegisterResultMock.Return(nil)
 
 	_, err := sender.Receive(msg)
@@ -127,7 +128,7 @@ func TestOutgoingSenderSendAbandonedOutgoing(t *testing.T) {
 		outgoingRequest:  outgoing,
 	}
 
-	cr.CallMock.Return(&reply.CallMethod{}, nil)
+	cr.CallMock.Return(&reply.CallMethod{}, insolar.NewEmptyReference(), nil)
 	am.RegisterResultMock.Return(nil)
 
 	_, err := sender.Receive(msg)

@@ -32,13 +32,13 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/api"
 	"github.com/insolar/insolar/insolar/flow"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/artifacts"
-	"github.com/insolar/insolar/testutils"
 )
 
 // PrependGoPath prepends `path` to GOPATH environment variable
@@ -112,7 +112,7 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]stri
 	logger := inslogger.FromContext(ctx)
 
 	for name := range contracts {
-		nonce := testutils.RandomRef()
+		nonce := gen.Reference()
 		pulse, err := cb.pulseAccessor.Latest(ctx)
 		if err != nil {
 			return errors.Wrap(err, "can't get current pulse")
@@ -167,7 +167,7 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]stri
 		logger.Debug("Deploying code for contract ", name)
 		codeID, err := cb.artifactManager.DeployCode(
 			ctx,
-			insolar.Reference{}, insolar.Reference{},
+			*insolar.NewEmptyReference(), *insolar.NewEmptyReference(),
 			pluginBinary, insolar.MachineTypeGoPlugin,
 		)
 		if err != nil {

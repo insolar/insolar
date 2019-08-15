@@ -14,34 +14,32 @@
 // limitations under the License.
 //
 
-// +build functest
-
 package api
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/base64"
 	"net/http"
-	"reflect"
+	"strings"
 
-	"github.com/pkg/errors"
-
+	"github.com/insolar/insolar/api/requester"
+	"github.com/insolar/insolar/api/seedmanager"
 	"github.com/insolar/insolar/application/extractor"
 	"github.com/insolar/insolar/insolar"
-	insolarApi "github.com/insolar/insolar/insolar/api"
-	"github.com/insolar/insolar/insolar/message"
-	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/insolar/genesisrefs"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/logicrunner/builtin/foundation"
-	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
-	"github.com/insolar/insolar/testutils"
+	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/rpc/v2"
+	"github.com/pkg/errors"
 )
 
-// ContractService is a service that provides ability to add custom contracts
+// ContractService is a service that provides API for working with smart contracts.
 type ContractService struct {
 	runner *Runner
-	cb     *goplugintestutils.ContractsBuilder
 }
 
 // NewContractService creates new Contract service instance.
@@ -49,202 +47,168 @@ func NewContractService(runner *Runner) *ContractService {
 	return &ContractService{runner: runner}
 }
 
-// UploadArgs is arguments that Contract.Upload accepts.
-type UploadArgs struct {
-	Code string
-	Name string
-}
+func (cs *ContractService) Call(req *http.Request, args *requester.Params, requestBody *rpc.RequestBody, result *requester.ContractResult) error {
+	traceID := utils.RandTraceID()
+	ctx, logger := inslogger.WithTraceField(context.Background(), traceID)
 
-// UploadReply is reply that Contract.Upload returns
-type UploadReply struct {
-	PrototypeRef string `json:"PrototypeRef"`
-	TraceID      string `json:"TraceID"`
-}
+	ctx, span := instracer.StartSpan(ctx, "Call")
+	defer span.End()
 
-// Upload builds code and return prototype ref
-func (s *ContractService) Upload(r *http.Request, args *UploadArgs, reply *UploadReply) error {
-	ctx, inslog := inslogger.WithTraceField(context.Background(), utils.RandTraceID())
-	reply.TraceID = utils.TraceID(ctx)
+	logger.Infof("[ ContractService.Call ] Incoming request: %s", req.RequestURI)
 
-	inslog.Infof("[ ContractService.Upload ] Incoming request: %s", r.RequestURI)
-
-	if len(args.Name) == 0 {
-		return errors.New("params.name is missing")
+	if args.Test != "" {
+		logger.Infof("ContractRequest related to %s", args.Test)
 	}
 
-	if len(args.Code) == 0 {
-		return errors.New("params.code is missing")
-	}
-
-	if s.cb == nil {
-		insgocc, err := goplugintestutils.BuildPreprocessor()
-		if err != nil {
-			inslog.Infof("[ ContractService.Upload ] can't build preprocessor %#v", err)
-			return errors.Wrap(err, "can't build preprocessor")
-		}
-		s.cb = goplugintestutils.NewContractBuilder(
-			insgocc, s.runner.ArtifactManager, s.runner.PulseAccessor, s.runner.JetCoordinator,
-		)
-	}
-
-	contractMap := make(map[string]string)
-	contractMap[args.Name] = args.Code
-
-	err := s.cb.Build(ctx, contractMap)
-	if err != nil {
-		return errors.Wrap(err, "can't build contract")
-	}
-	reference := *s.cb.Prototypes[args.Name]
-	reply.PrototypeRef = reference.String()
-	return nil
-}
-
-// CallConstructorArgs is arguments that Contract.CallConstructor accepts.
-type CallConstructorArgs struct {
-	PrototypeRefString string
-	Method             string
-	MethodArgs         []byte
-}
-
-// CallConstructor make an object from its prototype
-func (s *ContractService) CallConstructor(r *http.Request, args *CallConstructorArgs, reply *CallMethodReply) error {
-	ctx, inslog := inslogger.WithTraceField(context.Background(), utils.RandTraceID())
-	reply.TraceID = utils.TraceID(ctx)
-
-	inslog.Infof("[ ContractService.CallConstructor ] Incoming request: %s", r.RequestURI)
-
-	if len(args.PrototypeRefString) == 0 {
-		return errors.New("params.PrototypeRefString is missing")
-	}
-
-	protoRef, err := insolar.NewReferenceFromBase58(args.PrototypeRefString)
-	if err != nil {
-		return errors.Wrap(err, "can't get protoRef")
-	}
-
-	pulse, err := s.runner.PulseAccessor.Latest(ctx)
-	if err != nil {
-		return errors.Wrap(err, "can't get current pulse")
-	}
-
-	base := insolar.GenesisRecord.Ref()
-	msg := &message.CallMethod{
-		IncomingRequest: record.IncomingRequest{
-			Method:          args.Method,
-			Arguments:       args.MethodArgs,
-			Base:            &base,
-			CallerPrototype: testutils.RandomRef(),
-			Prototype:       protoRef,
-			CallType:        record.CTSaveAsChild,
-			APIRequestID:    utils.TraceID(ctx),
-			Reason:          insolarApi.MakeReason(pulse.PulseNumber, args.MethodArgs),
-			APINode:         s.runner.JetCoordinator.Me(),
-		},
-	}
-
-	err = s.call(ctx, msg, reply)
+	signature, err := validateRequestHeaders(req.Header.Get(requester.Digest), req.Header.Get(requester.Signature), requestBody.Raw)
 	if err != nil {
 		return err
 	}
 
-	return nil
-}
-
-// CallMethodArgs is arguments that Contract.CallMethod accepts.
-type CallMethodArgs struct {
-	ObjectRefString string
-	Method          string
-	MethodArgs      []byte
-}
-
-// CallMethodReply is reply that Contract.CallMethod returns
-type CallMethodReply struct {
-	Object         string            `json:"ObjectRef"`
-	Result         []byte            `json:"Result"`
-	ExtractedReply interface{}       `json:"ExtractedReply"`
-	ExtractedError string            `json:"ExtractedError"`
-	Error          *foundation.Error `json:"FoundationError"`
-	TraceID        string            `json:"TraceID"`
-}
-
-// CallConstructor make an object from its prototype
-func (s *ContractService) CallMethod(r *http.Request, args *CallMethodArgs, re *CallMethodReply) error {
-	ctx, inslog := inslogger.WithTraceField(context.Background(), utils.RandTraceID())
-	re.TraceID = utils.TraceID(ctx)
-
-	inslog.Infof("[ ContractService.CallMethod ] Incoming request: %s", r.RequestURI)
-
-	if len(args.ObjectRefString) == 0 {
-		return errors.New("params.ObjectRefString is missing")
-	}
-
-	objectRef, err := insolar.NewReferenceFromBase58(args.ObjectRefString)
-	if err != nil {
-		return errors.Wrap(err, "can't get objectRef")
-	}
-
-	pulse, err := s.runner.PulseAccessor.Latest(ctx)
-	if err != nil {
-		return errors.Wrap(err, "can't get current pulse")
-	}
-
-	msg := &message.CallMethod{
-		IncomingRequest: record.IncomingRequest{
-			Object:       objectRef,
-			Method:       args.Method,
-			Arguments:    args.MethodArgs,
-			APIRequestID: utils.TraceID(ctx),
-			Reason:       insolarApi.MakeReason(pulse.PulseNumber, args.MethodArgs),
-			APINode:      s.runner.JetCoordinator.Me(),
-		},
-	}
-
-	err = s.call(ctx, msg, re)
+	seedPulse, err := cs.runner.checkSeed(args.Seed)
 	if err != nil {
 		return err
 	}
 
+	setRootReferenceIfNeeded(args)
+
+	callResult, requestRef, err := cs.runner.makeCall(ctx, "contract.call", *args, requestBody.Raw, signature, 0, seedPulse)
+	if err != nil {
+		return err
+	}
+
+	if requestRef != nil {
+		result.RequestReference = requestRef.String()
+	}
+	result.CallResult = callResult
+	result.TraceID = traceID
+
 	return nil
 }
 
-// CallConstructor make an object from its prototype
-func (s *ContractService) call(ctx context.Context, msg insolar.Message, re *CallMethodReply) error {
-	inslog := inslogger.FromContext(ctx)
-
-	callReply, err := s.runner.ContractRequester.Call(ctx, msg)
+func (ar *Runner) checkSeed(paramsSeed string) (insolar.PulseNumber, error) {
+	decoded, err := base64.StdEncoding.DecodeString(paramsSeed)
 	if err != nil {
-		inslog.Error("failed to call: ", err.Error())
-		return errors.Wrap(err, "CallMethod failed with error")
+		return 0, errors.New("[ checkSeed ] Failed to decode seed from string")
+	}
+	seed := seedmanager.SeedFromBytes(decoded)
+	if seed == nil {
+		return 0, errors.New("[ checkSeed ] Bad seed param")
 	}
 
-	typedReply := callReply.(*reply.CallMethod)
-	if typedReply.Object != nil {
-		re.Object = typedReply.Object.String()
+	if pulse, ok := ar.SeedManager.Pop(*seed); ok {
+		return pulse, nil
 	}
-	re.Result = typedReply.Result
 
-	extractedReply, foundationError, err := extractor.CallResponse(re.Result)
+	return 0, errors.New("[ checkSeed ] Incorrect seed")
+}
+
+func (ar *Runner) makeCall(ctx context.Context, method string, params requester.Params, rawBody []byte, signature string, pulseTimeStamp int64, seedPulse insolar.PulseNumber) (interface{}, *insolar.Reference, error) {
+	ctx, span := instracer.StartSpan(ctx, "SendRequest "+method)
+	defer span.End()
+
+	reference, err := insolar.NewReferenceFromBase58(params.Reference)
 	if err != nil {
-		return errors.Wrap(err, "Can't extract response")
+		return nil, nil, errors.Wrap(err, "[ makeCall ] failed to parse params.Reference")
 	}
 
-	// TODO need to understand why sometimes errors goes to reply
-	// see tests TestConstructorReturnNil, TestContractCallingContract, TestPrototypeMismatch
-	switch extractedReply.(type) {
-	case map[string]interface{}:
-		replyMap := extractedReply.(map[string]interface{})
-		if len(replyMap) == 1 {
-			for k, v := range replyMap {
-				if reflect.ValueOf(k).String() == "S" && len(reflect.TypeOf(v).String()) > 0 {
-					re.ExtractedError = reflect.ValueOf(v).String()
-				}
-			}
+	requestArgs, err := insolar.Serialize([]interface{}{rawBody, signature, pulseTimeStamp})
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "[ makeCall ] failed to marshal arguments")
+	}
+
+	res, ref, err := ar.ContractRequester.SendRequestWithPulse(
+		ctx,
+		reference,
+		"Call",
+		[]interface{}{requestArgs},
+		seedPulse,
+	)
+
+	if err != nil {
+		return nil, ref, errors.Wrap(err, "[ makeCall ] Can't send request")
+	}
+
+	result, contractErr, err := extractor.CallResponse(res.(*reply.CallMethod).Result)
+
+	if err != nil {
+		return nil, ref, errors.Wrap(err, "[ makeCall ] Can't extract response")
+	}
+
+	if contractErr != nil {
+		return nil, ref, errors.Wrap(errors.New(contractErr.S), "[ makeCall ] Error in called method")
+	}
+
+	return result, ref, nil
+}
+
+func contains(s []string, e string) bool {
+	for _, a := range s {
+		if a == e {
+			return true
 		}
-	default:
-		re.ExtractedReply = extractedReply
+	}
+	return false
+}
+
+func setRootReferenceIfNeeded(params *requester.Params) {
+	if params.Reference != "" {
+		return
+	}
+	methods := []string{"member.create", "member.migrationCreate", "member.get"}
+	if contains(methods, params.CallSite) {
+		params.Reference = genesisrefs.ContractRootMember.String()
+	}
+}
+
+func validateRequestHeaders(digest string, signature string, body []byte) (string, error) {
+	// Digest = "SHA-256=<hashString>"
+	// Signature = "keyId="member-pub-key", algorithm="ecdsa", headers="digest", signature=<signatureString>"
+	if len(digest) < 15 || strings.Count(digest, "=") < 2 || len(signature) == 15 ||
+		strings.Count(signature, "=") < 4 || len(body) == 0 {
+		return "", errors.Errorf("invalid input data length digest: %d, signature: %d, body: %d", len(digest),
+			len(signature), len(body))
+	}
+	h := sha256.New()
+	_, err := h.Write(body)
+	if err != nil {
+		return "", errors.Wrap(err, "cant calculate hash")
+	}
+	calculatedHash := h.Sum(nil)
+	digest, err = parseDigest(digest)
+	if err != nil {
+		return "", err
+	}
+	incomingHash, err := base64.StdEncoding.DecodeString(digest)
+	if err != nil {
+		return "", errors.Wrap(err, "cant decode digest")
 	}
 
-	re.Error = foundationError
+	if !bytes.Equal(calculatedHash, incomingHash) {
+		return "", errors.New("incorrect digest")
+	}
 
-	return nil
+	signature, err = parseSignature(signature)
+	if err != nil {
+		return "", err
+	}
+	return signature, nil
+}
+
+func parseDigest(digest string) (string, error) {
+	index := strings.IndexByte(digest, '=')
+	if index < 1 || (index+1) >= len(digest) {
+		return "", errors.New("invalid digest")
+	}
+
+	return digest[index+1:], nil
+}
+
+func parseSignature(signature string) (string, error) {
+	index := strings.Index(signature, "signature=")
+	if index < 1 || (index+10) >= len(signature) {
+		return "", errors.New("invalid signature")
+	}
+
+	return signature[index+10:], nil
 }

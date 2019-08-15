@@ -35,7 +35,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/common"
-	"github.com/insolar/insolar/logicrunner/executionarchive"
+	"github.com/insolar/insolar/logicrunner/executionregistry"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 	"github.com/insolar/insolar/testutils"
 )
@@ -60,7 +60,7 @@ func TestRPCMethods_DeactivateObject(t *testing.T) {
 
 	tr := &common.Transcript{RequestRef: reqRef}
 
-	executionArchive := executionarchive.NewExecutionArchiveMock(mc).GetActiveTranscriptMock.Set(
+	executionRegistry := executionregistry.NewExecutionRegistryMock(mc).GetActiveTranscriptMock.Set(
 		func(ref insolar.Reference) (r *common.Transcript) {
 			if ref.Equal(reqRef) {
 				return tr
@@ -70,10 +70,10 @@ func TestRPCMethods_DeactivateObject(t *testing.T) {
 		},
 	)
 
-	ss := NewStateStorageMock(t).GetExecutionArchiveMock.Set(
-		func(ref insolar.Reference) (r executionarchive.ExecutionArchive) {
+	ss := NewStateStorageMock(t).GetExecutionRegistryMock.Set(
+		func(ref insolar.Reference) (r executionregistry.ExecutionRegistry) {
 			if ref.Equal(objRef) {
-				return executionArchive
+				return executionRegistry
 			} else {
 				return nil
 			}
@@ -164,7 +164,7 @@ func TestProxyImplementation_GetCode(t *testing.T) {
 		{
 			name:       "success",
 			transcript: &common.Transcript{},
-			req:        rpctypes.UpGetCodeReq{Code: insolar.Reference{1, 2, 3}},
+			req:        rpctypes.UpGetCodeReq{Code: gen.Reference()},
 			dc: artifacts.NewDescriptorsCacheMock(mc).
 				GetCodeMock.
 				Return(
@@ -177,7 +177,7 @@ func TestProxyImplementation_GetCode(t *testing.T) {
 		{
 			name:       "no code descriptor",
 			transcript: &common.Transcript{},
-			req:        rpctypes.UpGetCodeReq{Code: insolar.Reference{1, 2, 3}},
+			req:        rpctypes.UpGetCodeReq{Code: gen.Reference()},
 			dc: artifacts.NewDescriptorsCacheMock(mc).
 				GetCodeMock.Return(nil, errors.New("some")),
 			error: true,
@@ -185,7 +185,7 @@ func TestProxyImplementation_GetCode(t *testing.T) {
 		{
 			name:       "no code",
 			transcript: &common.Transcript{},
-			req:        rpctypes.UpGetCodeReq{Code: insolar.Reference{1, 2, 3}},
+			req:        rpctypes.UpGetCodeReq{Code: gen.Reference()},
 			dc: artifacts.NewDescriptorsCacheMock(mc).
 				GetCodeMock.Return(
 				artifacts.NewCodeDescriptorMock(mc).
@@ -337,7 +337,8 @@ func TestRouteCallRegistersOutgoingRequestWithValidReason(t *testing.T) {
 		return &payload.RequestInfo{RequestID: id}, nil
 	})
 
-	cr.CallMock.Return(&reply.CallMethod{}, nil)
+	ref := gen.Reference()
+	cr.CallMock.Return(&reply.CallMethod{}, &ref, nil)
 	// Make sure the result of the outgoing request is registered as well
 	am.RegisterResultMock.Set(func(ctx context.Context, reqref insolar.Reference, result artifacts.RequestResult) (r error) {
 		require.Equal(t, outgoingReqRef, &reqref)

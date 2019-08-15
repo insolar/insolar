@@ -73,7 +73,7 @@ func (h *HandleCall) sendToNextExecutor(
 		ObjectReference: objectRef,
 		RequestRef:      requestRef,
 		Request:         request,
-		ServiceData:     serviceDataFromContext(ctx),
+		ServiceData:     oldServiceDataFromContext(ctx),
 	}
 
 	_, err := h.dep.lr.MessageBus.Send(ctx, &additionalCallMsg, nil)
@@ -97,12 +97,12 @@ func (h *HandleCall) checkExecutionLoop(
 		return false
 	}
 
-	archive := h.dep.StateStorage.GetExecutionArchive(*request.Object)
-	if archive == nil {
+	registry := h.dep.StateStorage.GetExecutionRegistry(*request.Object)
+	if registry == nil {
 		return false
 	}
 
-	if !archive.FindRequestLoop(ctx, reqRef, request.APIRequestID) {
+	if !registry.FindRequestLoop(ctx, reqRef, request.APIRequestID) {
 		return false
 	}
 

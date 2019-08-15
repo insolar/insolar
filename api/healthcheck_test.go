@@ -18,10 +18,12 @@ package api
 
 import (
 	"context"
-	"github.com/insolar/insolar/insolar/pulse"
 	"net/http"
 	"strconv"
 	"testing"
+
+	"github.com/insolar/insolar/insolar/gen"
+	"github.com/insolar/insolar/insolar/pulse"
 
 	"github.com/insolar/insolar/insolar"
 	network2 "github.com/insolar/insolar/network"
@@ -60,7 +62,7 @@ func randomNodeList(t *testing.T, size int) []insolar.DiscoveryNode {
 	list := make([]insolar.DiscoveryNode, size)
 	for i := 0; i < size; i++ {
 		dn := testutils.NewDiscoveryNodeMock(t)
-		r := testutils.RandomRef()
+		r := gen.Reference()
 		dn.GetNodeRefMock.Set(func() *insolar.Reference {
 			return &r
 		})

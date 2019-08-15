@@ -73,9 +73,6 @@ func checkConfig(cfg *configuration.APIRunner) error {
 	if cfg.Address == "" {
 		return errors.New("[ checkConfig ] Address must not be empty")
 	}
-	if len(cfg.Call) == 0 {
-		return errors.New("[ checkConfig ] Call must exist")
-	}
 	if len(cfg.RPC) == 0 {
 		return errors.New("[ checkConfig ] RPC must exist")
 	}
@@ -97,6 +94,11 @@ func (ar *Runner) registerServices(rpcServer *rpc.Server) error {
 	err = rpcServer.RegisterService(NewNodeCertService(ar), "cert")
 	if err != nil {
 		return errors.Wrap(err, "[ registerServices ] Can't RegisterService: cert")
+	}
+
+	err = rpcServer.RegisterService(NewFuncTestContractService(ar), "funcTestContract")
+	if err != nil {
+		return errors.Wrap(err, "[ registerServices ] Can't RegisterService: funcTestContract")
 	}
 
 	err = rpcServer.RegisterService(NewContractService(ar), "contract")
@@ -148,7 +150,6 @@ func (ar *Runner) Start(ctx context.Context) error {
 	ar.SeedManager = seedmanager.New()
 
 	router.HandleFunc("/healthcheck", hc.CheckHandler)
-	router.HandleFunc(ar.cfg.Call, ar.callHandler())
 	router.Handle(ar.cfg.RPC, ar.rpcServer)
 
 	inslog := inslogger.FromContext(ctx)
@@ -210,7 +211,8 @@ func (ar *Runner) getMemberPubKey(ctx context.Context, ref string) (crypto.Publi
 	}
 
 	ar.cacheLock.Lock()
+	defer ar.cacheLock.Unlock()
+
 	ar.keyCache[ref] = publicKey
-	ar.cacheLock.Unlock()
 	return publicKey, nil
 }

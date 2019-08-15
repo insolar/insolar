@@ -75,8 +75,15 @@ func UniqueJetIDs(jets ...*insolar.JetID) {
 }
 
 // Reference generates random reference.
-func Reference() (ref insolar.Reference) {
-	id := ID()
-	copy(ref[:insolar.RecordIDSize], id[:])
-	return
+func Reference() insolar.Reference {
+	return *insolar.NewReference(ID())
+}
+
+// References generates multiple random references.
+func References(a int) []insolar.Reference {
+	refs := make([]insolar.Reference, a)
+	for i := 0; i < a; i++ {
+		refs[i] = Reference()
+	}
+	return refs
 }

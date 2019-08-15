@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
@@ -40,7 +41,7 @@ import (
 	"github.com/insolar/insolar/testutils"
 )
 
-const CallUrl = "http://localhost:19192/api/call"
+const CallUrl = "http://localhost:19192/api/rpc"
 
 type TimeoutSuite struct {
 	suite.Suite
@@ -65,21 +66,16 @@ func (suite *TimeoutSuite) TestRunner_callHandler_NoTimeout() {
 		suite.ctx,
 		CallUrl,
 		suite.user,
-		&requester.Request{
-			JSONRPC: "2.0",
-			ID:      1,
-			Method:  "api.call",
-			Params:  requester.Params{CallSite: "member.create", CallParams: map[string]interface{}{}, PublicKey: suite.user.PublicKey},
-		},
+		&requester.Params{CallSite: "member.create", CallParams: map[string]interface{}{}, PublicKey: suite.user.PublicKey},
 		seedString,
 	)
 	suite.NoError(err)
 
-	var result requester.ContractAnswer
+	var result requester.ContractResponse
 	err = json.Unmarshal(resp, &result)
 	suite.NoError(err)
 	suite.Nil(result.Error)
-	suite.Equal("OK", result.Result.ContractResult)
+	suite.Equal("OK", result.Result.CallResult)
 }
 
 func (suite *TimeoutSuite) TestRunner_callHandler_Timeout() {
@@ -91,22 +87,14 @@ func (suite *TimeoutSuite) TestRunner_callHandler_Timeout() {
 
 	seedString := base64.StdEncoding.EncodeToString(seed[:])
 
-	resp, err := requester.SendWithSeed(
+	_, err = requester.SendWithSeed(
 		suite.ctx,
 		CallUrl,
 		suite.user,
-		&requester.Request{Method: "api.call"},
+		nil,
 		seedString,
 	)
-	suite.NoError(err)
-
-	close(suite.delay)
-
-	var result requester.ContractAnswer
-	err = json.Unmarshal(resp, &result)
-	suite.NoError(err)
-	suite.Equal("API timeout exceeded", result.Error.Message)
-	suite.Nil(result.Result)
+	suite.Error(err, "Client.Timeout exceeded while awaiting headers")
 }
 
 func TestTimeoutSuite(t *testing.T) {
@@ -123,7 +111,7 @@ func TestTimeoutSuite(t *testing.T) {
 	pKeyString, err := ks.ExportPublicKeyPEM(pKey)
 	require.NoError(t, err)
 
-	userRef := testutils.RandomRef().String()
+	userRef := gen.Reference().String()
 	timeoutSuite.user, err = requester.CreateUserConfig(userRef, string(sKeyString), string(pKeyString))
 
 	http.DefaultServeMux = new(http.ServeMux)
@@ -134,21 +122,22 @@ func TestTimeoutSuite(t *testing.T) {
 	timeoutSuite.api.timeout = 1 * time.Second
 
 	cr := testutils.NewContractRequesterMock(timeoutSuite.mc)
-	cr.SendRequestWithPulseMock.Set(func(p context.Context, p1 *insolar.Reference, method string, p3 []interface{}, p4 insolar.PulseNumber) (insolar.Reply, error) {
+	cr.SendRequestWithPulseMock.Set(func(p context.Context, p1 *insolar.Reference, method string, p3 []interface{}, p4 insolar.PulseNumber) (insolar.Reply, *insolar.Reference, error) {
+		requestReference, _ := insolar.NewReferenceFromBase58("4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.4FFB8zfQoGznSmzDxwv4njX1aR9ioL8GHSH17QXH2AFa")
 		switch method {
 		case "GetPublicKey":
 			var result = string(pKeyString)
 			data, _ := foundation.MarshalMethodResult(result, nil)
 			return &reply.CallMethod{
 				Result: data,
-			}, nil
+			}, requestReference, nil
 		default:
 			<-timeoutSuite.delay
 			var result = "OK"
 			data, _ := foundation.MarshalMethodResult(result, nil)
 			return &reply.CallMethod{
 				Result: data,
-			}, nil
+			}, requestReference, nil
 		}
 	})
 

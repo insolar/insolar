@@ -33,7 +33,6 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/testutils"
 )
 
 func TestJetTreeUpdater_otherNodesForPulse(t *testing.T) {
@@ -62,7 +61,7 @@ func TestJetTreeUpdater_otherNodesForPulse(t *testing.T) {
 		require.Empty(t, nodes)
 	})
 
-	meRef := testutils.RandomRef()
+	meRef := gen.Reference()
 	jc.MeMock.Return(meRef)
 
 	t.Run("no active nodes at all", func(t *testing.T) {
@@ -132,7 +131,7 @@ func TestJetTreeUpdater_fetchActualJetFromOtherNodes(t *testing.T) {
 	mc := minimock.NewController(t)
 	defer mc.Finish()
 
-	meRef := testutils.RandomRef()
+	meRef := gen.Reference()
 	expectJetID := insolar.ID(*insolar.NewJetID(0, nil))
 
 	js := jet.NewStorageMock(mc)
@@ -155,7 +154,7 @@ func TestJetTreeUpdater_fetchActualJetFromOtherNodes(t *testing.T) {
 	}
 
 	t.Run("MB error on fetching actual jet", func(t *testing.T) {
-		target := testutils.RandomID()
+		target := gen.ID()
 		jtu := &fetcher{
 			Nodes:       initNodes(mc),
 			JetStorage:  js,
@@ -175,7 +174,7 @@ func TestJetTreeUpdater_fetchActualJetFromOtherNodes(t *testing.T) {
 	})
 
 	t.Run("MB got one not actual jet", func(t *testing.T) {
-		objectID := testutils.RandomID()
+		objectID := gen.ID()
 		jtu := &fetcher{
 			Nodes:       initNodes(mc),
 			JetStorage:  js,
@@ -211,7 +210,7 @@ func TestJetTreeUpdater_fetchActualJetFromOtherNodes(t *testing.T) {
 	})
 
 	t.Run("MB got one actual jet ( from light )", func(t *testing.T) {
-		objectID := testutils.RandomID()
+		objectID := gen.ID()
 		jtu := &fetcher{
 			Nodes:       initNodes(mc),
 			JetStorage:  js,
@@ -250,7 +249,7 @@ func TestJetTreeUpdater_fetchActualJetFromOtherNodes(t *testing.T) {
 
 	t.Run("MB got one actual jet ( from other light )", func(t *testing.T) {
 		ans := node.NewAccessorMock(mc)
-		objectID := testutils.RandomID()
+		objectID := gen.ID()
 		target := insolar.NewReference(objectID)
 		ans.InRoleMock.Expect(
 			100, insolar.StaticRoleLightMaterial,
@@ -318,7 +317,7 @@ func TestJetTreeUpdater_fetchJet(t *testing.T) {
 		sequencer:   map[seqKey]*seqEntry{},
 	}
 
-	target := testutils.RandomID()
+	target := gen.ID()
 
 	t.Run("quick reply, data is up to date", func(t *testing.T) {
 		fjmr := *insolar.NewJetID(0, nil)
@@ -329,7 +328,7 @@ func TestJetTreeUpdater_fetchJet(t *testing.T) {
 	})
 
 	t.Run("fetch jet from friends", func(t *testing.T) {
-		meRef := testutils.RandomRef()
+		meRef := gen.Reference()
 		jc.MeMock.Return(meRef)
 
 		getNodes := func() []insolar.Node {
@@ -397,7 +396,7 @@ func TestJetTreeUpdater_Concurrency(t *testing.T) {
 		sequencer:   map[seqKey]*seqEntry{},
 	}
 
-	meRef := testutils.RandomRef()
+	meRef := gen.Reference()
 	jc.MeMock.Return(meRef)
 
 	nodes := []insolar.Node{{ID: gen.Reference()}, {ID: gen.Reference()}, {ID: gen.Reference()}}

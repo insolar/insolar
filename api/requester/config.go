@@ -28,46 +28,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Request is a representation of request struct to api
-type Request struct {
-	JSONRPC  string `json:"jsonrpc"`
-	ID       int    `json:"id"`
-	Method   string `json:"method"`
-	Params   Params `json:"params,omitempty"`
-	LogLevel string `json:"logLevel,omitempty"`
-	Test     string `json:"test,omitempty"`
-}
-
-type Params struct {
-	Seed       string      `json:"seed"`
-	CallSite   string      `json:"callSite"`
-	CallParams interface{} `json:"callParams,omitempty"`
-	Reference  string      `json:"reference"`
-	PublicKey  string      `json:"publicKey"`
-}
-
-type ContractAnswer struct {
-	JSONRPC string  `json:"jsonrpc"`
-	ID      int     `json:"id"`
-	Result  *Result `json:"result,omitempty"`
-	Error   *Error  `json:"error,omitempty"`
-}
-
-type Error struct {
-	Code    int    `json:"code,omitempty"`
-	Message string `json:"message,omitempty"`
-	Data    Data   `json:"data,omitempty"`
-}
-
-type Data struct {
-	TraceID string `json:"traceID,omitempty"`
-}
-
-type Result struct {
-	ContractResult interface{} `json:"callResult,omitempty"`
-	TraceID        string      `json:"traceID,omitempty"`
-}
-
 // UserConfigJSON holds info about user
 type UserConfigJSON struct {
 	PrivateKey       string `json:"private_key"`
@@ -126,15 +86,15 @@ func ReadUserConfigFromFile(file string) (*UserConfigJSON, error) {
 	return cfgJSON, nil
 }
 
-// ReadRequestConfigFromFile read request config from file
-func ReadRequestConfigFromFile(path string) (*Request, error) {
-	rConfig := &Request{}
-	err := readFile(path, rConfig)
+// ReadRequestParamsFromFile read request config from file
+func ReadRequestParamsFromFile(path string) (*Params, error) {
+	rParams := &Params{}
+	err := readFile(path, rParams)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ readRequesterConfigFromFile ] ")
+		return nil, errors.Wrap(err, "failed to read call params from file")
 	}
 
-	return rConfig, nil
+	return rParams, nil
 }
 
 // CreateUserConfig creates user config from arguments

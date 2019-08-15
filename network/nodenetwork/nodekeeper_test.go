@@ -58,6 +58,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
@@ -70,7 +71,7 @@ func TestNewNodeNetwork(t *testing.T) {
 	certMock := testutils.NewCertificateMock(t)
 	certMock.GetRoleMock.Set(func() insolar.StaticRole { return insolar.StaticRoleUnknown })
 	certMock.GetPublicKeyMock.Set(func() crypto.PublicKey { return nil })
-	certMock.GetNodeRefMock.Set(func() *insolar.Reference { return &insolar.Reference{0} })
+	certMock.GetNodeRefMock.Set(func() *insolar.Reference { ref := gen.Reference(); return &ref })
 	certMock.GetDiscoveryNodesMock.Set(func() []insolar.DiscoveryNode { return nil })
 	_, err := NewNodeNetwork(cfg, certMock)
 	assert.Error(t, err)
@@ -92,7 +93,7 @@ func newNodeKeeper(t *testing.T, service insolar.CryptographyService) network.No
 	require.NoError(t, err)
 	certMock.GetRoleMock.Set(func() insolar.StaticRole { return insolar.StaticRoleUnknown })
 	certMock.GetPublicKeyMock.Set(func() crypto.PublicKey { return pk })
-	certMock.GetNodeRefMock.Set(func() *insolar.Reference { return &insolar.Reference{137} })
+	certMock.GetNodeRefMock.Set(func() *insolar.Reference { ref := gen.Reference(); return &ref })
 	certMock.GetDiscoveryNodesMock.Set(func() []insolar.DiscoveryNode { return nil })
 	nw, err := NewNodeNetwork(cfg, certMock)
 	require.NoError(t, err)
@@ -114,72 +115,3 @@ func TestNodekeeper_GetCloudHash(t *testing.T) {
 	nk.SetCloudHash(0, cloudHash)
 	assert.Equal(t, cloudHash, nk.GetCloudHash(0))
 }
-
-// func TestNodekeeper_GetWorkingNodes(t *testing.T) {
-//	nk := newNodeKeeper(t, nil)
-//	assert.Empty(t, nk.GetAccessor().GetActiveNodes())
-//	assert.Empty(t, nk.GetWorkingNodes())
-//	origin, node1, node2, node3, node4 :=
-//		newTestNodeWithRole(insolar.Reference{137}, insolar.NodeReady, insolar.StaticRoleUnknown),
-//		newTestNode(insolar.Reference{1}, insolar.NodePending),
-//		newTestNodeWithRole(insolar.Reference{2}, insolar.NodeReady, insolar.StaticRoleLightMaterial),
-//		newTestNodeWithRole(insolar.Reference{3}, insolar.NodeReady, insolar.StaticRoleVirtual),
-//		newTestNode(insolar.Reference{4}, insolar.NodeLeaving)
-//	nk.SetInitialSnapshot([]insolar.NetworkNode{origin, node1, node2, node3, node4})
-//	assert.Equal(t, 5, len(nk.GetAccessor().GetActiveNodes()))
-//	assert.Equal(t, 3, len(nk.GetWorkingNodes()))
-//	assert.NotNil(t, nk.GetWorkingNode(node2.ID()))
-//	assert.Nil(t, nk.GetWorkingNode(node1.ID()))
-//
-//	assert.Nil(t, nk.GetWorkingNode(node4.ID()))
-//	assert.NotNil(t, nk.GetAccessor().GetActiveNode(node4.ID()))
-//
-//	nodes := []insolar.NetworkNode{origin, node1, node2, node3}
-//	claims := []packets.ReferendumClaim{newTestJoinClaim(insolar.Reference{5})}
-//	err := nk.Sync(context.Background(), nodes, claims)
-//	assert.NoError(t, err)
-//	err = nk.MoveSyncToActive(context.Background(), 0)
-//	assert.NoError(t, err)
-//
-//	assert.Nil(t, nk.GetAccessor().GetActiveNode(node4.ID()))
-//	assert.Equal(t, insolar.NodeReady, nk.GetAccessor().GetActiveNode(node1.ID()).GetState())
-//	node5 := nk.GetAccessor().GetActiveNode(insolar.Reference{5})
-//	assert.NotNil(t, node5)
-//	assert.Nil(t, nk.GetWorkingNode(node5.ID()))
-//
-//	nodes = []insolar.NetworkNode{nk.GetOrigin(), node1, node2, node3, node5}
-//	err = nk.Sync(context.Background(), nodes, nil)
-//	assert.NoError(t, err)
-//	err = nk.MoveSyncToActive(context.Background(), 0)
-//	assert.NoError(t, err)
-//
-//	assert.Equal(t, insolar.NodeReady, nk.GetAccessor().GetActiveNode(node5.ID()).GetState())
-//
-//	nodes = []insolar.NetworkNode{node1, node2, node3, node5}
-//	err = nk.Sync(context.Background(), nodes, nil)
-//	assert.Error(t, err)
-// }
-
-// func TestNodekeeper_GracefulStop(t *testing.T) {
-//	nk := newNodeKeeper(t, nil)
-//	nodeLeaveTriggered := false
-//	handler := testutils.NewTerminationHandlerMock(t)
-//	handler.OnLeaveApprovedFunc = func(context.Context) {
-//		nodeLeaveTriggered = true
-//	}
-//	nk.(*nodekeeper).TerminationHandler = handler
-//	nodes := []insolar.NetworkNode{
-//		nk.GetOrigin(),
-//		newTestNode(insolar.Reference{1}, insolar.NodeReady),
-//		newTestNode(insolar.Reference{2}, insolar.NodeReady),
-//	}
-//	nk.SetInitialSnapshot(nodes)
-//
-//	claims := []packets.ReferendumClaim{&packets.NodeLeaveClaim{NodeID: nk.GetOrigin().ID()}}
-//	err := nk.Sync(context.Background(), nodes, claims)
-//	assert.NoError(t, err)
-//	err = nk.MoveSyncToActive(context.Background(), 0)
-//	assert.NoError(t, err)
-//
-//	assert.True(t, nodeLeaveTriggered)
-// }

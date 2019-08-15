@@ -26,6 +26,7 @@ import (
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
@@ -98,10 +99,10 @@ func TestNew(t *testing.T) {
 
 func TestGenesisDataProvider_setInfo(t *testing.T) {
 	ctx := inslogger.TestContext(t)
-	rootMemberRef := testutils.RandomRef()
-	migrationAdminMemberRef := testutils.RandomRef()
-	migrationDaemonMembersRefs := []insolar.Reference{testutils.RandomRef()}
-	nodeDomainRef := testutils.RandomRef()
+	rootMemberRef := gen.Reference()
+	migrationAdminMemberRef := gen.Reference()
+	migrationDaemonMembersRefs := []insolar.Reference{gen.Reference()}
+	nodeDomainRef := gen.Reference()
 
 	infoRes := mockInfoResult(rootMemberRef, migrationAdminMemberRef, migrationDaemonMembersRefs, nodeDomainRef)
 
@@ -139,7 +140,7 @@ func TestGenesisDataProvider_setInfo_ErrorSendRequest(t *testing.T) {
 
 func TestGenesisDataProvider_GetRootDomain(t *testing.T) {
 	ctx := inslogger.TestContext(t)
-	rootDomainRef := testutils.RandomRef()
+	rootDomainRef := gen.Reference()
 
 	gdp := &GenesisDataProvider{
 		CertificateManager: mockCertificateManager(t, &rootDomainRef),
@@ -152,10 +153,10 @@ func TestGenesisDataProvider_GetRootDomain(t *testing.T) {
 
 func TestGenesisDataProvider_GetRootMember(t *testing.T) {
 	ctx := inslogger.TestContext(t)
-	rootMemberRef := testutils.RandomRef()
-	migrationAdminMemberRef := testutils.RandomRef()
-	migrationDaemonMembersRefs := []insolar.Reference{testutils.RandomRef()}
-	nodeDomainRef := testutils.RandomRef()
+	rootMemberRef := gen.Reference()
+	migrationAdminMemberRef := gen.Reference()
+	migrationDaemonMembersRefs := []insolar.Reference{gen.Reference()}
+	nodeDomainRef := gen.Reference()
 
 	infoRes := mockInfoResult(rootMemberRef, migrationAdminMemberRef, migrationDaemonMembersRefs, nodeDomainRef)
 
@@ -172,12 +173,12 @@ func TestGenesisDataProvider_GetRootMember(t *testing.T) {
 
 func TestGenesisDataProvider_GetMembers_AlreadySet(t *testing.T) {
 	ctx := inslogger.TestContext(t)
-	rootMemberRef := testutils.RandomRef()
-	migrationAdminMemberRef := testutils.RandomRef()
-	migrationDaemonMembersRefs := []insolar.Reference{testutils.RandomRef()}
-	nodeDomainRef := testutils.RandomRef()
+	rootMemberRef := gen.Reference()
+	migrationAdminMemberRef := gen.Reference()
+	migrationDaemonMembersRefs := []insolar.Reference{gen.Reference()}
+	nodeDomainRef := gen.Reference()
 
-	newRootMemberRef := testutils.RandomRef()
+	newRootMemberRef := gen.Reference()
 	infoRes := mockInfoResult(rootMemberRef, migrationAdminMemberRef, migrationDaemonMembersRefs, nodeDomainRef)
 
 	gdp := &GenesisDataProvider{
@@ -218,10 +219,10 @@ func TestGenesisDataProvider_GetRootMember_Error(t *testing.T) {
 
 func TestGenesisDataProvider_GetNodeDomain(t *testing.T) {
 	ctx := inslogger.TestContext(t)
-	rootMemberRef := testutils.RandomRef()
-	migrationAdminMemberRef := testutils.RandomRef()
-	migrationDaemonMembersRefs := []insolar.Reference{testutils.RandomRef()}
-	nodeDomainRef := testutils.RandomRef()
+	rootMemberRef := gen.Reference()
+	migrationAdminMemberRef := gen.Reference()
+	migrationDaemonMembersRefs := []insolar.Reference{gen.Reference()}
+	nodeDomainRef := gen.Reference()
 
 	infoRes := mockInfoResult(rootMemberRef, migrationAdminMemberRef, migrationDaemonMembersRefs, nodeDomainRef)
 
@@ -238,12 +239,12 @@ func TestGenesisDataProvider_GetNodeDomain(t *testing.T) {
 
 func TestGenesisDataProvider_GetNodeDomain_AlreadySet(t *testing.T) {
 	ctx := inslogger.TestContext(t)
-	rootMemberRef := testutils.RandomRef()
-	migrationAdminMemberRef := testutils.RandomRef()
-	migrationDaemonMembersRefs := []insolar.Reference{testutils.RandomRef()}
-	nodeDomainRef := testutils.RandomRef()
+	rootMemberRef := gen.Reference()
+	migrationAdminMemberRef := gen.Reference()
+	migrationDaemonMembersRefs := []insolar.Reference{gen.Reference()}
+	nodeDomainRef := gen.Reference()
 
-	newNodeDomainRef := testutils.RandomRef()
+	newNodeDomainRef := gen.Reference()
 	infoRes := mockInfoResult(rootMemberRef, migrationAdminMemberRef, migrationDaemonMembersRefs, nodeDomainRef)
 
 	gdp := &GenesisDataProvider{

@@ -25,6 +25,7 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill"
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/pkg/errors"
@@ -62,7 +63,7 @@ func prepare(t *testing.T, ctx context.Context, currentPulse int, msgPulse int) 
 
 	net := testutils.GetTestNetwork(t)
 	jc := jet.NewCoordinatorMock(t)
-	expectedRef := testutils.RandomRef()
+	expectedRef := gen.Reference()
 	jc.QueryRoleMock.Set(func(p context.Context, p1 insolar.DynamicRole, p2 insolar.ID, p3 insolar.PulseNumber) (r []insolar.Reference, r1 error) {
 		return []insolar.Reference{expectedRef}, nil
 	})
@@ -70,7 +71,7 @@ func prepare(t *testing.T, ctx context.Context, currentPulse int, msgPulse int) 
 	nn := network.NewNodeNetworkMock(t)
 	nn.GetOriginMock.Set(func() (r insolar.NetworkNode) {
 		n := network.NewNetworkNodeMock(t)
-		n.IDMock.Return(insolar.Reference{})
+		n.IDMock.Return(*insolar.NewEmptyReference())
 		return n
 	})
 
@@ -107,7 +108,7 @@ func prepare(t *testing.T, ctx context.Context, currentPulse int, msgPulse int) 
 		return testType
 	})
 	parcel.GetSenderMock.Set(func() (r insolar.Reference) {
-		return testutils.RandomRef()
+		return gen.Reference()
 	})
 	parcel.MessageMock.Return(&message.CallMethod{})
 
@@ -220,7 +221,7 @@ func TestMessageBus_createWatermillMessage(t *testing.T) {
 	require.NotNil(t, msg)
 	require.NotNil(t, msg.Payload)
 	require.Equal(t, parcel.Msg.Type().String(), msg.Metadata.Get(bus.MetaType))
-	require.Equal(t, insolar.Reference{}.String(), msg.Metadata.Get(bus.MetaSender))
+	require.Equal(t, insolar.NewEmptyReference().String(), msg.Metadata.Get(bus.MetaSender))
 }
 
 func TestMessageBus_deserializePayload_GetReply(t *testing.T) {

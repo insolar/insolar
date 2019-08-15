@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation/safemath"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/account"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/deposit"
 )
 
 type Account struct {
@@ -35,8 +36,12 @@ func New(balance string) (*Account, error) {
 	return &Account{Balance: balance}, nil
 }
 
+type destination interface {
+	Accept(string) error
+}
+
 // Transfer transfers funds to giver reference.
-func (a *Account) Transfer(amountStr string, toAccount *insolar.Reference) error {
+func (a *Account) transfer(amountStr string, destinationObject destination) error {
 	amount, ok := new(big.Int).SetString(amountStr, 10)
 	if !ok {
 		return fmt.Errorf("can't parse amountStr")
@@ -51,8 +56,7 @@ func (a *Account) Transfer(amountStr string, toAccount *insolar.Reference) error
 		return fmt.Errorf("not enough balance for transfer: %s", err.Error())
 	}
 	a.Balance = newBalance.String()
-	destWallet := account.GetObject(*toAccount)
-	return destWallet.Accept(amountStr)
+	return destinationObject.Accept(amountStr)
 }
 
 // Accept accepts transfer to balance.
@@ -102,6 +106,18 @@ func (a *Account) RollBack(amountStr string) error {
 	a.Balance = b.String()
 
 	return nil
+}
+
+// TransferToAccount transfers funds to account.
+func (a *Account) TransferToAccount(amountStr string, toAccount insolar.Reference) error {
+	to := account.GetObject(toAccount)
+	return a.transfer(amountStr, to)
+}
+
+// TransferToDeposit transfers funds to deposit.
+func (a *Account) TransferToDeposit(amountStr string, toDeposit insolar.Reference) error {
+	to := deposit.GetObject(toDeposit)
+	return a.transfer(amountStr, to)
 }
 
 // GetBalance gets total balance.

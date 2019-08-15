@@ -309,6 +309,16 @@ func (pf *ParsedFile) WriteWrapper(out io.Writer, packageName string) error {
 		return err
 	}
 
+	err = pf.checkSagaIsNotImmutable(methodsInfo)
+	if err != nil {
+		return err
+	}
+
+	err = pf.checkSagaMethodsReturnOnlySingleErrorValue(methodsInfo)
+	if err != nil {
+		return err
+	}
+
 	data := map[string]interface{}{
 		"Package":            packageName,
 		"ContractType":       pf.contract,
@@ -321,6 +331,63 @@ func (pf *ParsedFile) WriteWrapper(out io.Writer, packageName string) error {
 	}
 
 	return formatAndWrite(out, "wrapper", data)
+}
+
+func (pf *ParsedFile) checkSagaIsNotImmutable(methodsInfo []map[string]interface{}) error {
+	for _, mi := range methodsInfo {
+		sagaInfo := mi["SagaInfo"].(*SagaInfo)
+		if !sagaInfo.IsSaga {
+			continue
+		}
+
+		if mi["Immutable"].(bool) {
+			return fmt.Errorf("semantic error: '%s' can't be a saga because it's immutable", mi["Name"].(string))
+		}
+
+		for _, ri := range methodsInfo {
+			if ri["Name"].(string) != sagaInfo.RollbackMethodName {
+				continue
+			}
+
+			if ri["Immutable"].(bool) {
+				return fmt.Errorf("semantic error: '%s' can't be saga's rollback method because it's immutable", ri["Name"].(string))
+			}
+		}
+	}
+
+	return nil
+}
+
+func (pf *ParsedFile) checkSagaMethodsReturnOnlySingleErrorValue(methodsInfo []map[string]interface{}) error {
+	returnsOnlyError := func(info map[string]interface{}) bool {
+		return info["Results"].(string) == "ret0" &&
+			len(info["ErrorInterfaceInRes"].([]int)) == 1 &&
+			info["ErrorInterfaceInRes"].([]int)[0] == 0
+	}
+	for _, mi := range methodsInfo {
+		sagaInfo := mi["SagaInfo"].(*SagaInfo)
+		if !sagaInfo.IsSaga {
+			continue
+		}
+
+		if !returnsOnlyError(mi) {
+			return fmt.Errorf("semantic error: '%s' is a saga accept method and thus should return only a single `error` value",
+				mi["Name"].(string))
+		}
+
+		for _, ri := range methodsInfo {
+			if ri["Name"].(string) != sagaInfo.RollbackMethodName {
+				continue
+			}
+
+			if !returnsOnlyError(ri) {
+				return fmt.Errorf("semantic error: '%s' is a saga rollback method and thus should return only a single `error` value",
+					ri["Name"].(string))
+			}
+		}
+	}
+
+	return nil
 }
 
 func (pf *ParsedFile) checkSagaRollbackMethodsExistAndMatch(funcInfo []map[string]interface{}) error {
@@ -344,7 +411,7 @@ func (pf *ParsedFile) checkSagaRollbackMethodsExistAndMatch(funcInfo []map[strin
 		if sagaInfo.NumArguments != 1 {
 			return fmt.Errorf(
 				"Semantic error: '%v' is a saga with %v arguments. "+
-					"Currently only one argument is allowed.",
+					"Currently only one argument is allowed (hint: use a structure).",
 				info["Name"].(string), sagaInfo.NumArguments)
 		}
 
@@ -421,6 +488,16 @@ func (pf *ParsedFile) WriteProxy(classReference string, out io.Writer) error {
 		return err
 	}
 
+	err = pf.checkSagaIsNotImmutable(allMethodsProxies)
+	if err != nil {
+		return err
+	}
+
+	err = pf.checkSagaMethodsReturnOnlySingleErrorValue(allMethodsProxies)
+	if err != nil {
+		return err
+	}
+
 	constructorProxies := pf.functionInfoForProxy(pf.constructors[pf.contract])
 	for _, fi := range constructorProxies {
 		if fi["SagaInfo"].(*SagaInfo).IsSaga {
@@ -469,17 +546,18 @@ func (pf *ParsedFile) functionInfoForProxy(list []*ast.FuncDecl) []map[string]in
 
 	for _, fun := range list {
 		info := map[string]interface{}{
-			"Name":            fun.Name.Name,
-			"Arguments":       genFieldList(pf, fun.Type.Params, true),
-			"InitArgs":        generateInitArguments(fun.Type.Params),
-			"ResultZeroList":  generateZeroListOfTypes(pf, "ret", fun.Type.Results),
-			"Results":         numberedVars(fun.Type.Results, "ret"),
-			"ErrorVar":        fmt.Sprintf("ret%d", fun.Type.Results.NumFields()-1),
-			"ResultsWithErr":  commaAppend(numberedVarsI(fun.Type.Results.NumFields()-1, "ret"), "err"),
-			"ResultsNilError": commaAppend(numberedVarsI(fun.Type.Results.NumFields()-1, "ret"), "nil"),
-			"ResultsTypes":    genFieldList(pf, fun.Type.Results, false),
-			"Immutable":       isImmutable(fun),
-			"SagaInfo":        sagaInfo(pf, fun),
+			"Name":                fun.Name.Name,
+			"Arguments":           genFieldList(pf, fun.Type.Params, true),
+			"InitArgs":            generateInitArguments(fun.Type.Params),
+			"ResultZeroList":      generateZeroListOfTypes(pf, "ret", fun.Type.Results),
+			"Results":             numberedVars(fun.Type.Results, "ret"),
+			"ErrorVar":            fmt.Sprintf("ret%d", fun.Type.Results.NumFields()-1),
+			"ResultsWithErr":      commaAppend(numberedVarsI(fun.Type.Results.NumFields()-1, "ret"), "err"),
+			"ResultsNilError":     commaAppend(numberedVarsI(fun.Type.Results.NumFields()-1, "ret"), "nil"),
+			"ResultsTypes":        genFieldList(pf, fun.Type.Results, false),
+			"ErrorInterfaceInRes": typeIndexes(pf, fun.Type.Results, errorType),
+			"Immutable":           isImmutable(fun),
+			"SagaInfo":            sagaInfo(pf, fun),
 		}
 		res = append(res, info)
 	}

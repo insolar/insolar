@@ -39,7 +39,7 @@ import (
 func TestRecordKey(t *testing.T) {
 	t.Parallel()
 
-	expectedKey := recordKey(testutils.RandomID())
+	expectedKey := recordKey(gen.ID())
 
 	rawID := expectedKey.ID()
 
@@ -385,8 +385,7 @@ func TestRecordPositionDB(t *testing.T) {
 		recordStorage := NewRecordPositionDB(db)
 		pn := gen.PulseNumber()
 
-		id := gen.ID()
-		id.SetPulse(pn)
+		id := gen.IDWithPulse(pn)
 
 		err = recordStorage.IncrementPosition(id)
 		require.NoError(t, err)
@@ -409,12 +408,9 @@ func TestRecordPositionDB(t *testing.T) {
 		recordStorage := NewRecordPositionDB(db)
 		pn := gen.PulseNumber()
 
-		id := gen.ID()
-		id.SetPulse(pn)
-		sID := gen.ID()
-		sID.SetPulse(pn)
-		tID := gen.ID()
-		tID.SetPulse(pn)
+		id := gen.IDWithPulse(pn)
+		sID := gen.IDWithPulse(pn)
+		tID := gen.IDWithPulse(pn)
 
 		err = recordStorage.IncrementPosition(id)
 		require.NoError(t, err)
@@ -441,12 +437,9 @@ func TestRecordPositionDB(t *testing.T) {
 		recordStorage := NewRecordPositionDB(db)
 		pn := gen.PulseNumber()
 
-		id := gen.ID()
-		id.SetPulse(pn)
-		sID := gen.ID()
-		sID.SetPulse(pn)
-		tID := gen.ID()
-		tID.SetPulse(pn)
+		id := gen.IDWithPulse(pn)
+		sID := gen.IDWithPulse(pn)
+		tID := gen.IDWithPulse(pn)
 
 		err = recordStorage.IncrementPosition(id)
 		require.NoError(t, err)
@@ -483,8 +476,7 @@ func TestRecordPositionDB(t *testing.T) {
 		require.Error(t, err)
 		require.Equal(t, err, store.ErrNotFound)
 
-		id := gen.ID()
-		id.SetPulse(pn)
+		id := gen.IDWithPulse(pn)
 
 		err = recordStorage.IncrementPosition(id)
 		require.NoError(t, err)
