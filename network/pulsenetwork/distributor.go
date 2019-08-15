@@ -135,7 +135,7 @@ func (d *distributor) Start(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "[ NewDistributor ] failed to create pulsar host")
 	}
-	pulsarHost.NodeID = insolar.NewEmptyReference()
+	pulsarHost.NodeID = *insolar.NewEmptyReference()
 
 	d.pulsarHost = pulsarHost
 	return nil

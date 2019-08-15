@@ -17,14 +17,15 @@
 package certificate
 
 import (
-	"github.com/insolar/insolar/cryptography"
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/platformpolicy"
-	"github.com/insolar/insolar/testutils"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"strings"
 	"testing"
+
+	"github.com/insolar/insolar/cryptography"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/gen"
+	"github.com/insolar/insolar/platformpolicy"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewManagerReadCertificate(t *testing.T) {
@@ -45,7 +46,7 @@ func newDiscovery() (*BootstrapNode, insolar.CryptographyService) {
 	cs := cryptography.NewKeyBoundCryptographyService(key)
 	pk, _ := cs.GetPublicKey()
 	pubKeyBuf, _ := kp.ExportPublicKeyPEM(pk)
-	ref := testutils.RandomRef().String()
+	ref := gen.Reference().String()
 	n := NewBootstrapNode(pk, string(pubKeyBuf), " ", ref, insolar.StaticRoleVirtual.String())
 	return n, cs
 }
@@ -62,7 +63,7 @@ func TestSignAndVerifyCertificate(t *testing.T) {
 
 	cert := &Certificate{}
 	cert.PublicKey = string(publicKey[:])
-	cert.Reference = testutils.RandomRef().String()
+	cert.Reference = gen.Reference().String()
 	cert.Role = insolar.StaticRoleHeavyMaterial.String()
 	cert.MinRoles.HeavyMaterial = 1
 	cert.MinRoles.Virtual = 4

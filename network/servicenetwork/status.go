@@ -48,30 +48,39 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package gateway
+package servicenetwork
 
 import (
-	"testing"
-	"time"
+	"context"
 
-	"github.com/insolar/insolar/network/controller/common"
-
-	"github.com/stretchr/testify/require"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/version"
 )
 
-func TestPause(t *testing.T) {
-	minTimeout := time.Duration(1)
-	maxTimeout := time.Duration(6)
-	timeoutMult := time.Duration(2)
-	options := common.Options{MinTimeout: minTimeout, MaxTimeout: maxTimeout, TimeoutMult: timeoutMult}
-	nn := NoNetwork{Base: &Base{Options: &options}}
-	require.Zero(t, nn.pause())
+func (n *ServiceNetwork) GetNetworkStatus() insolar.StatusReply {
+	var reply insolar.StatusReply
+	reply.NetworkState = n.GetState()
 
-	require.Equal(t, minTimeout, nn.pause())
+	np, err := n.PulseAccessor.GetLatestPulse(context.Background())
+	if err != nil {
+		np = *insolar.GenesisPulse
+	}
+	reply.Pulse = np
 
-	require.Equal(t, timeoutMult*minTimeout, nn.pause())
+	activeNodes := n.NodeKeeper.GetAccessor(np.PulseNumber).GetActiveNodes()
+	workingNodes := n.NodeKeeper.GetAccessor(np.PulseNumber).GetWorkingNodes()
 
-	require.Equal(t, timeoutMult*timeoutMult*minTimeout, nn.pause())
+	reply.ActiveListSize = len(activeNodes)
+	reply.WorkingListSize = len(workingNodes)
 
-	require.Equal(t, maxTimeout, nn.pause())
+	reply.Nodes = activeNodes
+	reply.Origin = n.NodeKeeper.GetOrigin()
+
+	reply.Version = version.Version
+
+	return reply
+}
+
+func (n *ServiceNetwork) IsAlive() bool {
+	panic("implement me")
 }

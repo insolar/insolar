@@ -45,7 +45,7 @@ const (
 type ID [RecordIDSize]byte
 
 // String implements stringer on ID and returns base58 encoded value
-func (id *ID) String() string {
+func (id ID) String() string {
 	return base58.Encode(id[:])
 }
 
@@ -130,28 +130,35 @@ type Reference [RecordRefSize]byte
 // NewReference returns Reference composed from domain and record.
 func NewReference(id ID) *Reference {
 	var ref Reference
-	ref.SetRecord(id)
-	// ref.SetDomain(id)
+	ref.setRecord(id)
+	// ref.setDomain(id)
 	return &ref
 }
 
 // NewEmptyReference returns empty Reference.
-func NewEmptyReference() Reference {
-	return Reference{}
+func NewEmptyReference() *Reference {
+	return &Reference{}
 }
 
-// SetRecord set record's ID.
-func (ref *Reference) SetRecord(recID ID) {
+// NewReferenceFromBytes : After CBOR Marshal/Unmarshal Ref can be converted to byte slice, this converts it back
+func NewReferenceFromBytes(from []byte) *Reference {
+	var ref Reference
+	copy(ref[:], from)
+	return &ref
+}
+
+// setRecord set record's ID.
+func (ref *Reference) setRecord(recID ID) {
 	copy(ref[:RecordIDSize], recID[:])
 }
 
-// SetDomain set record's Domain.
-func (ref *Reference) SetDomain(domainID ID) {
-	copy(ref[RecordIDSize:], domainID[:])
-}
+// setDomain set record's Domain.
+// func (ref *Reference) setDomain(domainID ID) {
+// 	copy(ref[RecordIDSize:], domainID[:])
+// }
 
-// domain returns domain ID part of reference.
-func (ref Reference) domain() *ID {
+// Domain returns domain ID part of reference.
+func (ref Reference) Domain() *ID {
 	var id ID
 	copy(id[:], ref[RecordIDSize:])
 	return &id
@@ -169,15 +176,7 @@ func (ref *Reference) Record() *ID {
 
 // String outputs base58 Reference representation.
 func (ref Reference) String() string {
-	return ref.Record().String() + RecordRefIDSeparator + ref.domain().String()
-}
-
-// FromSlice : After CBOR Marshal/Unmarshal Ref can be converted to byte slice, this converts it back
-func (ref Reference) FromSlice(from []byte) Reference {
-	for i := 0; i < RecordRefSize; i++ {
-		ref[i] = from[i]
-	}
-	return ref
+	return ref.Record().String() + RecordRefIDSeparator + ref.Domain().String()
 }
 
 // Bytes returns byte slice of Reference.
@@ -192,7 +191,7 @@ func (ref Reference) Equal(other Reference) bool {
 
 // IsEmpty - check for void
 func (ref Reference) IsEmpty() bool {
-	return ref.Equal(NewEmptyReference())
+	return ref.Equal(*NewEmptyReference())
 }
 
 // Compare compares two record references
