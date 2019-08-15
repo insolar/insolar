@@ -79,6 +79,8 @@ type components struct {
 	rollback  *executor.DBRollback
 	inRouter  *watermillMsg.Router
 	outRouter *watermillMsg.Router
+
+	replicator executor.HeavyReplicator
 }
 
 func newComponents(ctx context.Context, cfg configuration.Configuration, genesisCfg insolar.GenesisHeavyConfig) (*components, error) {
@@ -277,6 +279,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		pm.FinalizationKeeper = executor.NewFinalizationKeeperDefault(JetKeeper, Pulses, cfg.Ledger.LightChainLimit)
 
 		replicator := executor.NewHeavyReplicatorDefault(Records, indexes, CryptoScheme, Pulses, drops, JetKeeper, backupMaker, Jets)
+		c.replicator = replicator
 
 		h := handler.New(cfg.Ledger)
 		h.RecordAccessor = Records
@@ -409,6 +412,7 @@ func (c *components) Stop(ctx context.Context) error {
 	if err != nil {
 		inslogger.FromContext(ctx).Error("Error while closing router", err)
 	}
+	c.replicator.Stop()
 	return c.cmp.Stop(ctx)
 }
 
