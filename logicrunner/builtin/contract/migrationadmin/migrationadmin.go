@@ -87,6 +87,7 @@ func (mA MigrationAdmin) DeactivateDaemon(daemonMember string, caller insolar.Re
 }
 
 // Check this member is migration daemon or mot.
+// ins:immutable
 func (mA MigrationAdmin) CheckActiveDaemon(daemonMember string) (bool, error) {
 	status := mA.MigrationDaemon[daemonMember]
 	if status == StatusActive {
