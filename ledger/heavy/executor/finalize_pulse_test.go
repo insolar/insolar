@@ -78,10 +78,10 @@ func TestFinalizePulse_HappyPath(t *testing.T) {
 	jk.TopSyncPulseMock.Set(topSync)
 	jk.AddBackupConfirmationMock.Return(nil)
 
-	indices := object.NewIndexModifierMock(mc)
-	indices.UpdateLastKnownPulseMock.Return(nil)
+	indexes := object.NewIndexModifierMock(mc)
+	indexes.UpdateLastKnownPulseMock.Return(nil)
 
-	executor.FinalizePulse(ctx, pc, bkp, jk, indices, targetPulse)
+	executor.FinalizePulse(ctx, pc, bkp, jk, indexes, targetPulse)
 }
 
 func TestFinalizePulse_JetIsNotConfirmed(t *testing.T) {

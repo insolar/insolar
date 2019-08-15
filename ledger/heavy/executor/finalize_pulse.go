@@ -25,8 +25,6 @@ import (
 	"github.com/insolar/insolar/ledger/object"
 )
 
-var count = 0
-
 // FinalizePulse starts backup process if needed
 func FinalizePulse(ctx context.Context, pulses pulse.Calculator, backuper BackupMaker, jetKeeper JetKeeper, indexes object.IndexModifier, newPulse insolar.PulseNumber) {
 	logger := inslogger.FromContext(ctx)
@@ -69,7 +67,7 @@ func FinalizePulse(ctx context.Context, pulses pulse.Calculator, backuper Backup
 			logger.Fatal("Pulse has not been changed after adding backup confirmation. newTopSyncPulse: ", newTopSyncPulse, ", newPulse: ", newPulse)
 		}
 		if err := indexes.UpdateLastKnownPulse(ctx, newTopSyncPulse); err != nil {
-			logger.Fatal("Can't update indices for last sync pulse: ", err)
+			logger.Fatal("Can't update indexes for last sync pulse: ", err)
 		}
 
 		inslogger.FromContext(ctx).Infof("Pulse %d completely finalized ( drops + hots + backup )", newPulse)

@@ -100,15 +100,12 @@ func (i *IndexDB) UpdateLastKnownPulse(ctx context.Context, topSyncPulse insolar
 	i.lock.Lock()
 	defer i.lock.Unlock()
 
-	indeces := i.ForPulse(ctx, topSyncPulse)
-	if indeces == nil {
-		return errors.New("No indices for top sync pulse: " + topSyncPulse.String())
-	}
+	indexes := i.ForPulse(ctx, topSyncPulse)
 
-	for idx, _ := range indeces {
-		inslogger.FromContext(ctx).Debugf("UpdateLastKnownPulse. pulse: %d, object: %s", topSyncPulse, indeces[idx].ObjID.DebugString())
-		if err := i.setLastKnownPN(topSyncPulse, indeces[idx].ObjID); err != nil {
-			return errors.Wrapf(err, "can't setLastKnownPN. objId: %s. pulse: %d", indeces[idx].ObjID.DebugString(), topSyncPulse)
+	for idx := range indexes {
+		inslogger.FromContext(ctx).Debugf("UpdateLastKnownPulse. pulse: %d, object: %s", topSyncPulse, indexes[idx].ObjID.DebugString())
+		if err := i.setLastKnownPN(topSyncPulse, indexes[idx].ObjID); err != nil {
+			return errors.Wrapf(err, "can't setLastKnownPN. objId: %s. pulse: %d", indexes[idx].ObjID.DebugString(), topSyncPulse)
 		}
 	}
 
@@ -171,12 +168,16 @@ func (i *IndexDB) ForPulse(ctx context.Context, pn insolar.PulseNumber) []record
 	defer it.Close()
 
 	for it.Next() {
-		key := newIndexKey(it.Key())
-		index, err := i.getBucket(key.pn, key.objID)
+		bucket := record.Index{}
+		rawIndex, err := it.Value()
 		if err != nil {
-			panic("Index iterator not consistent")
+			panic("can't get value: " + err.Error())
 		}
-		indexes = append(indexes, *index)
+		err = bucket.Unmarshal(rawIndex)
+		if err != nil {
+			panic("Can't unmarshal raw index: " + err.Error())
+		}
+		indexes = append(indexes, bucket)
 	}
 	return indexes
 }

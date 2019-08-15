@@ -68,12 +68,12 @@ func (d *DBRollback) Start(ctx context.Context) error {
 	}
 
 	for idx, db := range d.dbs {
-		switch concretDB := db.(type) {
-		case object.IndexModifier:
-			if err := concretDB.UpdateLastKnownPulse(ctx, lastSincPulseNumber); err != nil {
+		if indexDB, ok := db.(object.IndexModifier); ok {
+			if err := indexDB.UpdateLastKnownPulse(ctx, lastSincPulseNumber); err != nil {
 				return errors.Wrap(err, "can't update last sync pulse")
 			}
 		}
+
 		err := db.TruncateHead(ctx, pn.PulseNumber)
 		if err != nil {
 			return errors.Wrapf(err, "can't truncate %d db to pulse: %d", idx, pn.PulseNumber)
