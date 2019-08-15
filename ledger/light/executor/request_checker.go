@@ -58,28 +58,35 @@ func NewRequestChecker(
 }
 
 func (c *RequestCheckerDefault) CheckRequest(ctx context.Context, requestID insolar.ID, request record.Request) error {
-	if request.ReasonRef().IsEmpty() {
-		return &payload.CodedError{Text: "reason id is empty", Code: payload.CodeReasonIsWrong}
+	if err := request.Validate(); err != nil {
+		return &payload.CodedError{
+			Text: err.Error(),
+			Code: payload.CodeInvalidRequest,
+		}
 	}
+
 	reasonRef := request.ReasonRef()
 	reasonID := *reasonRef.Record()
 
 	if reasonID.Pulse() > requestID.Pulse() {
-		return &payload.CodedError{Text: "request is older than its reason", Code: payload.CodeReasonIsWrong}
+		return &payload.CodedError{
+			Text: "request is older than its reason",
+			Code: payload.CodeInvalidRequest,
+		}
 	}
 
 	switch r := request.(type) {
 	case *record.IncomingRequest:
-		err := c.checkIncomingRequest(ctx, r, reasonID, requestID)
-		if err != nil {
-			return errors.Wrap(err, "reason is wrong")
+		if !r.IsAPIRequest() {
+			err := c.checkReasonForIncomingRequest(ctx, r, reasonID, requestID)
+			if err != nil {
+				return &payload.CodedError{
+					Text: err.Error(),
+					Code: payload.CodeReasonIsWrong,
+				}
+			}
 		}
-
 	case *record.OutgoingRequest:
-		if !r.IsValid() {
-			return &payload.CodedError{Text: "outgoing cannot be creating request", Code: payload.CodeReasonIsWrong}
-		}
-
 		// FIXME: replace with "FindRequest" calculator method.
 		requests, err := c.filaments.OpenedRequests(
 			ctx,
@@ -88,11 +95,14 @@ func (c *RequestCheckerDefault) CheckRequest(ctx context.Context, requestID inso
 			true,
 		)
 		if err != nil {
-			return errors.Wrap(err, "failed fetch pending requests")
+			return &payload.CodedError{
+				Text: "failed fetch pending requests",
+				Code: payload.CodeReasonNotFound,
+			}
 		}
 
-		_, ok := findRecord(requests, reasonID)
-		if !ok {
+		found := findRecord(requests, reasonID)
+		if !found {
 			return &payload.CodedError{
 				Text: "request reason not found in opened requests",
 				Code: payload.CodeReasonNotFound,
@@ -103,82 +113,52 @@ func (c *RequestCheckerDefault) CheckRequest(ctx context.Context, requestID inso
 	return nil
 }
 
-func (c *RequestCheckerDefault) checkIncomingRequest(
+func (c *RequestCheckerDefault) checkReasonForIncomingRequest(
 	ctx context.Context,
 	incomingRequest *record.IncomingRequest,
 	reasonID insolar.ID,
 	requestID insolar.ID,
 ) error {
-	if !incomingRequest.IsValid() {
-		return &payload.CodedError{
-			Text: fmt.Sprintf("incoming request is not valid (got mode %v)", incomingRequest.ReturnMode),
-			Code: payload.CodeIncomingRequestIsWrong,
-		}
-	}
-
-	if incomingRequest.IsAPIRequest() {
-		return nil
-	}
-
-	reasonObject := incomingRequest.ReasonAffinityRef()
-	reasonObjectID := reasonObject.Record()
-	if reasonObject.IsEmpty() {
-		return &payload.CodedError{
-			Text: "reason object is not set on incoming request",
-			Code: payload.CodeReasonIsWrong,
-		}
-	}
-
 	var (
-		makeLocalRequest = false
-		reasonRequest    *payload.RequestInfo
-		err              error
+		reasonInfo *payload.RequestInfo
+		err        error
 	)
+	reasonObject := incomingRequest.ReasonAffinityRef()
 
-	if !incomingRequest.IsCreationRequest() {
-		if incomingRequest.AffinityRef().Equal(reasonObject) {
-			// If reasonObject is same as requestObject then go local, this fixes deadlock in saga requests.
-			makeLocalRequest = true
-		}
-	}
-
-	if makeLocalRequest {
-		reasonRequest, err = c.getRequestLocal(ctx, *reasonObjectID, reasonID, requestID.Pulse())
+	objectID := reasonObject.Record()
+	// If reasonObject is same as requestObject then go local
+	// (this fixes deadlock in saga requests).
+	if !incomingRequest.IsCreationRequest() && incomingRequest.AffinityRef().Equal(reasonObject) {
+		reasonInfo, err = c.getRequestLocal(ctx, *objectID, reasonID, requestID.Pulse())
 	} else {
-		reasonRequest, err = c.getRequest(ctx, *reasonObjectID, reasonID, requestID.Pulse())
+		reasonInfo, err = c.getRequest(ctx, *objectID, reasonID, requestID.Pulse())
 	}
 	if err != nil {
 		return errors.Wrap(err, "reason request not found")
 	}
 
 	rec := record.Material{}
-	err = rec.Unmarshal(reasonRequest.Request)
+	err = rec.Unmarshal(reasonInfo.Request)
 	if err != nil {
-		return errors.Wrap(err, "Can't unmarshal reason request")
+		return errors.Wrap(err, "can't unmarshal reason request")
 	}
 
-	if !isIncomingRequest(rec.Virtual) {
-		return &payload.CodedError{
-			Text: fmt.Sprintf("reason request must be Incoming, %T received", rec.Virtual.Union),
-			Code: payload.CodeReasonIsWrong,
-		}
+	_, ok := rec.Virtual.Union.(*record.Virtual_IncomingRequest)
+	if !ok {
+		return fmt.Errorf("reason request must be Incoming, %T received", rec.Virtual.Union)
 	}
 
-	isClosed := len(reasonRequest.Result) != 0
+	isClosed := len(reasonInfo.Result) != 0
 	if !incomingRequest.IsDetachedCall() && isClosed {
 		// This is regular request, should NOT have closed reason.
-		return &payload.CodedError{
-			Text: "reason request is closed for a regular (not detached) call",
-			Code: payload.CodeReasonIsWrong,
-		}
-
-	} else if incomingRequest.IsDetachedCall() && !isClosed {
-		// This is "detached incoming request", should have closed reason.
-		return &payload.CodedError{
-			Text: "reason request is not closed for a detached call",
-			Code: payload.CodeReasonIsWrong,
-		}
+		return errors.New("reason request is closed for a regular (not detached) call")
 	}
+
+	if incomingRequest.IsDetachedCall() && !isClosed {
+		// This is "detached incoming request", should have closed reason.
+		return errors.New("reason request is not closed for a detached call")
+	}
+
 	return nil
 }
 
@@ -286,16 +266,11 @@ func (c *RequestCheckerDefault) getRequestLocal(
 func findRecord(
 	filamentRecords []record.CompositeFilamentRecord,
 	requestID insolar.ID,
-) (record.CompositeFilamentRecord, bool) {
+) bool {
 	for _, p := range filamentRecords {
 		if p.RecordID == requestID {
-			return p, true
+			return true
 		}
 	}
-	return record.CompositeFilamentRecord{}, false
-}
-
-func isIncomingRequest(rec record.Virtual) bool {
-	_, ok := rec.Union.(*record.Virtual_IncomingRequest)
-	return ok
+	return false
 }

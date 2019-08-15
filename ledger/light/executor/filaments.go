@@ -81,7 +81,8 @@ type FilamentCalculator interface {
 	// RequestInfo is searching for request and result by objectID, requestID and pulse number
 	RequestInfo(
 		ctx context.Context,
-		objectID, requestID insolar.ID,
+		objectID insolar.ID,
+		requestID insolar.ID,
 		pulse insolar.PulseNumber,
 	) (
 		foundRequest *record.CompositeFilamentRecord,
@@ -378,7 +379,8 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 
 func (c *FilamentCalculatorDefault) RequestInfo(
 	ctx context.Context,
-	objectID, requestID insolar.ID,
+	objectID insolar.ID,
+	requestID insolar.ID,
 	pulse insolar.PulseNumber,
 ) (
 	*record.CompositeFilamentRecord,
@@ -393,16 +395,13 @@ func (c *FilamentCalculatorDefault) RequestInfo(
 	logger.Debug("start searching request info")
 	defer logger.Debug("finished searching request info")
 
-	var lifeline record.Lifeline
-
-	l, err := c.indexes.ForID(ctx, pulse, objectID)
+	idx, err := c.indexes.ForID(ctx, pulse, objectID)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, fmt.Sprintf("object: %s", objectID.DebugString()))
 	}
-	lifeline = l.Lifeline
 
-	if lifeline.LatestRequest == nil {
-		return nil, nil, nil
+	if idx.Lifeline.LatestRequest == nil {
+		return nil, nil, errors.Wrap(err, "latest request in lifeline is empty")
 	}
 
 	cache := c.cache.Get(objectID)
@@ -413,7 +412,7 @@ func (c *FilamentCalculatorDefault) RequestInfo(
 		ctx,
 		cache,
 		objectID,
-		*lifeline.LatestRequest,
+		*idx.Lifeline.LatestRequest,
 		requestID.Pulse(),
 		c.jetFetcher,
 		c.coordinator,
@@ -426,7 +425,7 @@ func (c *FilamentCalculatorDefault) RequestInfo(
 	for iter.HasPrev() {
 		rec, err := iter.Prev(ctx)
 		if err != nil {
-			return nil, nil, errors.Wrap(err, "failed to calculate pending")
+			return nil, nil, errors.Wrap(err, "failed to calculate filament")
 		}
 
 		if rec.RecordID == requestID {

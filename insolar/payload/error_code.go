@@ -17,16 +17,16 @@
 package payload
 
 const (
-	CodeUnknown                = 1000
-	CodeDeactivated            = 1001
-	CodeFlowCanceled           = 1002
-	CodeNotFound               = 1003
-	CodeNoPendings             = 1004
-	CodeNoStartPulse           = 1005
-	CodeReasonNotFound         = 1006
-	CodeReasonIsWrong          = 1007
-	CodeIncomingRequestIsWrong = 1008
-	CodeRequestNotFound        = 1009
+	CodeUnknown         = 1000
+	CodeDeactivated     = 1001
+	CodeFlowCanceled    = 1002
+	CodeNotFound        = 1003
+	CodeNoPendings      = 1004
+	CodeNoStartPulse    = 1005
+	CodeRequestNotFound = 1006
+	CodeInvalidRequest  = 1007
+	CodeReasonNotFound  = 1008
+	CodeReasonIsWrong   = 1009
 )
 
 type CodedError struct {
