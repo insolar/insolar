@@ -37,7 +37,7 @@ func TestDepositTransferToken(t *testing.T) {
 	secondBalance := new(big.Int).Add(firstBalance, big.NewInt(1000))
 
 	var err error
-	for i := 0; i <= 20; i++ {
+	for i := 0; i <= 11; i++ {
 		time.Sleep(time.Second)
 		_, _, err = makeSignedRequest(member, "deposit.transfer", map[string]interface{}{"amount": "1000", "ethTxHash": "Eth_TxHash_test"})
 		require.Error(t, err)
@@ -47,15 +47,8 @@ func TestDepositTransferToken(t *testing.T) {
 	}
 	require.Contains(t, err.Error(), "not enough unholded balance for transfer")
 
-	for i := 0; i <= 20; i++ {
-		time.Sleep(time.Second)
-		_, _, err = makeSignedRequest(member, "deposit.transfer", map[string]interface{}{"amount": "1000", "ethTxHash": "Eth_TxHash_test"})
-		if err != nil {
-			require.Contains(t, err.Error(), "not enough unholded balance for transfer")
-		} else {
-			break
-		}
-	}
+	time.Sleep(11 * time.Second)
+	_, _, err = makeSignedRequest(member, "deposit.transfer", map[string]interface{}{"amount": "1000", "ethTxHash": "Eth_TxHash_test"})
 	require.NoError(t, err)
 
 	finalBalance := getBalanceNoErr(t, member, member.ref)
