@@ -123,6 +123,10 @@ type EmuVersionedRegistries struct {
 	primingCloudStateHash proofs.CloudStateHash
 }
 
+func (c *EmuVersionedRegistries) GetNearestValidPulseData() pulse.Data {
+	panic("implement me")
+}
+
 func (c *EmuVersionedRegistries) GetCloudIdentity() cryptkit.DigestHolder {
 	return c.primingCloudStateHash
 }
@@ -264,7 +268,7 @@ func (c *EmuNodeIntro) GetStartPower() member.Power {
 }
 
 func (c *EmuNodeIntro) GetReference() insolar.Reference {
-	return insolar.Reference{}
+	return *insolar.NewEmptyReference()
 }
 
 func (c *EmuNodeIntro) ConvertPowerRequest(request power.Request) member.Power {

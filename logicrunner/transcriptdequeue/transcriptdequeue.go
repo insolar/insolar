@@ -1,4 +1,4 @@
-//
+///
 // Copyright 2019 Insolar Technologies GmbH
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,7 +12,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
+///
 
 package transcriptdequeue
 
@@ -20,13 +20,13 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/logicrunner/transcript"
+	"github.com/insolar/insolar/logicrunner/common"
 )
 
 type Element struct {
 	prev  *Element
 	next  *Element
-	value *transcript.Transcript
+	value *common.Transcript
 }
 
 // TODO: probably it's better to rewrite it using linked list
@@ -37,7 +37,7 @@ type TranscriptDequeue struct {
 	length int
 }
 
-func NewTranscriptDequeue() *TranscriptDequeue {
+func New() *TranscriptDequeue {
 	return &TranscriptDequeue{
 		lock:   &sync.Mutex{},
 		first:  nil,
@@ -46,7 +46,7 @@ func NewTranscriptDequeue() *TranscriptDequeue {
 	}
 }
 
-func (d *TranscriptDequeue) pushOne(el *transcript.Transcript) {
+func (d *TranscriptDequeue) pushOne(el *common.Transcript) {
 	newElement := &Element{value: el}
 	lastElement := d.last
 
@@ -61,7 +61,7 @@ func (d *TranscriptDequeue) pushOne(el *transcript.Transcript) {
 	d.length++
 }
 
-func (d *TranscriptDequeue) Push(els ...*transcript.Transcript) {
+func (d *TranscriptDequeue) Push(els ...*common.Transcript) {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 
@@ -70,7 +70,7 @@ func (d *TranscriptDequeue) Push(els ...*transcript.Transcript) {
 	}
 }
 
-func (d *TranscriptDequeue) prependOne(el *transcript.Transcript) {
+func (d *TranscriptDequeue) prependOne(el *common.Transcript) {
 	newElement := &Element{value: el}
 	firstElement := d.first
 
@@ -85,7 +85,7 @@ func (d *TranscriptDequeue) prependOne(el *transcript.Transcript) {
 	d.length++
 }
 
-func (d *TranscriptDequeue) Prepend(els ...*transcript.Transcript) {
+func (d *TranscriptDequeue) Prepend(els ...*common.Transcript) {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 
@@ -94,7 +94,7 @@ func (d *TranscriptDequeue) Prepend(els ...*transcript.Transcript) {
 	}
 }
 
-func (d *TranscriptDequeue) Pop() *transcript.Transcript {
+func (d *TranscriptDequeue) Pop() *common.Transcript {
 	elements := d.Take(1)
 	if len(elements) == 0 {
 		return nil
@@ -114,7 +114,7 @@ func (d *TranscriptDequeue) Has(ref insolar.Reference) bool {
 	return false
 }
 
-func (d *TranscriptDequeue) PopByReference(ref insolar.Reference) *transcript.Transcript {
+func (d *TranscriptDequeue) PopByReference(ref insolar.Reference) *common.Transcript {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 
@@ -140,7 +140,7 @@ func (d *TranscriptDequeue) PopByReference(ref insolar.Reference) *transcript.Tr
 	return nil
 }
 
-func (d *TranscriptDequeue) HasFromLedger() *transcript.Transcript {
+func (d *TranscriptDequeue) HasFromLedger() *common.Transcript {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 
@@ -152,12 +152,12 @@ func (d *TranscriptDequeue) HasFromLedger() *transcript.Transcript {
 	return nil
 }
 
-func (d *TranscriptDequeue) commonPeek(count int) (*Element, []*transcript.Transcript) {
+func (d *TranscriptDequeue) commonPeek(count int) (*Element, []*common.Transcript) {
 	if d.length < count {
 		count = d.length
 	}
 
-	rv := make([]*transcript.Transcript, count)
+	rv := make([]*common.Transcript, count)
 
 	var lastElement *Element
 	for i := 0; i < count; i++ {
@@ -172,7 +172,7 @@ func (d *TranscriptDequeue) commonPeek(count int) (*Element, []*transcript.Trans
 	return lastElement, rv
 }
 
-func (d *TranscriptDequeue) take(count int) []*transcript.Transcript {
+func (d *TranscriptDequeue) take(count int) []*common.Transcript {
 	lastElement, rv := d.commonPeek(count)
 	if lastElement != nil {
 		if lastElement.next == nil {
@@ -188,7 +188,7 @@ func (d *TranscriptDequeue) take(count int) []*transcript.Transcript {
 	return rv
 }
 
-func (d *TranscriptDequeue) Peek(count int) []*transcript.Transcript {
+func (d *TranscriptDequeue) Peek(count int) []*common.Transcript {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 
@@ -196,14 +196,14 @@ func (d *TranscriptDequeue) Peek(count int) []*transcript.Transcript {
 	return rv
 }
 
-func (d *TranscriptDequeue) Take(count int) []*transcript.Transcript {
+func (d *TranscriptDequeue) Take(count int) []*common.Transcript {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 
 	return d.take(count)
 }
 
-func (d *TranscriptDequeue) Rotate() []*transcript.Transcript {
+func (d *TranscriptDequeue) Rotate() []*common.Transcript {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 

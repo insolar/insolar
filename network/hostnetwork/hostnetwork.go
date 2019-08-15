@@ -59,6 +59,7 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network"
@@ -161,6 +162,11 @@ func (hn *hostNetwork) buildRequest(ctx context.Context, packetType types.Packet
 
 	result := packet.NewPacket(hn.getOrigin(), receiver, packetType, uint64(hn.sequenceGenerator.Generate()))
 	result.TraceID = inslogger.TraceID(ctx)
+	var err error
+	result.TraceSpanData, err = instracer.Serialize(ctx)
+	if err != nil {
+		inslogger.FromContext(ctx).Warn("Network request without span")
+	}
 	result.SetRequest(requestData)
 	return result
 }
@@ -244,6 +250,11 @@ func (hn *hostNetwork) RegisterPacketHandler(t types.PacketType, handler network
 func (hn *hostNetwork) BuildResponse(ctx context.Context, request network.Packet, responseData interface{}) network.Packet {
 	result := packet.NewPacket(hn.getOrigin(), request.GetSenderHost(), request.GetType(), uint64(request.GetRequestID()))
 	result.TraceID = inslogger.TraceID(ctx)
+	var err error
+	result.TraceSpanData, err = instracer.Serialize(ctx)
+	if err != nil {
+		inslogger.FromContext(ctx).Warn("Network response without span")
+	}
 	result.SetResponse(responseData)
 	return result
 }
@@ -262,7 +273,6 @@ func (hn *hostNetwork) SendRequest(ctx context.Context, packetType types.PacketT
 // RegisterRequestHandler register a handler function to process incoming requests of a specific type.
 func (hn *hostNetwork) RegisterRequestHandler(t types.PacketType, handler network.RequestHandler) {
 	f := func(ctx context.Context, request network.ReceivedPacket) (network.Packet, error) {
-		hn.Resolver.AddToKnownHosts(request.GetSenderHost())
 		return handler(ctx, request)
 	}
 	hn.RegisterPacketHandler(t, f)

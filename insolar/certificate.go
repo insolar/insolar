@@ -43,6 +43,7 @@ type Certificate interface {
 type DiscoveryNode interface {
 	NodeMeta
 
+	GetRole() StaticRole
 	GetHost() string
 }
 
@@ -60,6 +61,4 @@ type AuthorizationCertificate interface {
 // CertificateManager interface provides methods to manage nodes certificate
 type CertificateManager interface {
 	GetCertificate() Certificate
-	VerifyAuthorizationCertificate(authCert AuthorizationCertificate) (bool, error)
-	NewUnsignedCertificate(pKey string, role string, nodeRef string) (Certificate, error)
 }

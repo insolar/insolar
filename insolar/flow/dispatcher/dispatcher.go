@@ -36,35 +36,51 @@ import (
 	"github.com/insolar/insolar/insolar/flow/internal/thread"
 )
 
-type Dispatcher struct {
+//go:generate minimock -i github.com/insolar/insolar/insolar/flow/dispatcher.Dispatcher -o ./ -s _mock.go -g
+type Dispatcher interface {
+	BeginPulse(ctx context.Context, pulse insolar.Pulse)
+	ClosePulse(ctx context.Context, pulse insolar.Pulse)
+	Process(msg *message.Message) error
+}
+
+type dispatcher struct {
 	handles struct {
 		present flow.MakeHandle
 		future  flow.MakeHandle
 		past    flow.MakeHandle
 	}
-	controller    *thread.Controller
-	PulseAccessor insPulse.Accessor
+	controller *thread.Controller
+	pulses     insPulse.Accessor
 }
 
-func NewDispatcher(present flow.MakeHandle, future flow.MakeHandle, past flow.MakeHandle) *Dispatcher {
-	d := &Dispatcher{
+func NewDispatcher(pulseAccessor insPulse.Accessor, present flow.MakeHandle, future flow.MakeHandle, past flow.MakeHandle) Dispatcher {
+	d := &dispatcher{
 		controller: thread.NewController(),
+		pulses:     pulseAccessor,
 	}
+
 	d.handles.present = present
 	d.handles.future = future
 	d.handles.past = past
+
 	return d
 }
 
-// ChangePulse is a handle for pulse change vent.
-func (d *Dispatcher) ChangePulse(ctx context.Context, pulse insolar.Pulse) {
-	d.controller.Pulse()
-	inslogger.FromContext(ctx).Debugf("Pulse was changed to %s", pulse.PulseNumber)
+// BeginPulse is a handle for pulse begin event.
+func (d *dispatcher) BeginPulse(ctx context.Context, pulse insolar.Pulse) {
+	d.controller.BeginPulse()
+	inslogger.FromContext(ctx).Debugf("Pulse was changed to %s in dispatcher", pulse.PulseNumber)
 }
 
-func (d *Dispatcher) getHandleByPulse(ctx context.Context, msgPulseNumber insolar.PulseNumber) flow.MakeHandle {
+// ClosePulse is a handle for pulse close event.
+func (d *dispatcher) ClosePulse(ctx context.Context, pulse insolar.Pulse) {
+	d.controller.ClosePulse()
+	inslogger.FromContext(ctx).Debugf("Pulse %s was closed in dispatcher", pulse.PulseNumber)
+}
+
+func (d *dispatcher) getHandleByPulse(ctx context.Context, msgPulseNumber insolar.PulseNumber) flow.MakeHandle {
 	currentPulseNumber := insolar.PulseNumber(insolar.FirstPulseNumber)
-	p, err := d.PulseAccessor.Latest(ctx)
+	p, err := d.pulses.Latest(ctx)
 	if err == nil {
 		currentPulseNumber = p.PulseNumber
 	} else {
@@ -81,28 +97,8 @@ func (d *Dispatcher) getHandleByPulse(ctx context.Context, msgPulseNumber insola
 	return d.handles.present
 }
 
-func (d *Dispatcher) InnerSubscriber(msg *message.Message) ([]*message.Message, error) {
-	ctx := context.Background()
-	ctx = inslogger.ContextWithTrace(ctx, msg.Metadata.Get(bus.MetaTraceID))
-	parentSpan, err := instracer.Deserialize([]byte(msg.Metadata.Get(bus.MetaSpanData)))
-	if err == nil {
-		ctx = instracer.WithParentSpan(ctx, parentSpan)
-	} else {
-		inslogger.FromContext(ctx).Error(err)
-	}
-	logger := inslogger.FromContext(ctx)
-	go func() {
-		f := thread.NewThread(msg, d.controller)
-		err := f.Run(ctx, d.handles.present(msg))
-		if err != nil {
-			logger.Error("Handling failed: ", err)
-		}
-	}()
-	return nil, nil
-}
-
 // Process handles incoming message.
-func (d *Dispatcher) Process(msg *message.Message) ([]*message.Message, error) {
+func (d *dispatcher) Process(msg *message.Message) error {
 	ctx := context.Background()
 	ctx = inslogger.ContextWithTrace(ctx, msg.Metadata.Get(bus.MetaTraceID))
 
@@ -117,12 +113,13 @@ func (d *Dispatcher) Process(msg *message.Message) ([]*message.Message, error) {
 	pn, err := insolar.NewPulseNumberFromStr(msg.Metadata.Get(bus.MetaPulse))
 	if err != nil {
 		logger.Error("failed to handle message: ", err)
-		return nil, nil
+		return nil
 	}
 	ctx = pulse.ContextWith(ctx, pn)
 	parentSpan := instracer.MustDeserialize([]byte(msg.Metadata.Get(bus.MetaSpanData)))
 	ctx = instracer.WithParentSpan(ctx, parentSpan)
 	go func() {
+		<-d.controller.CanProcess()
 		f := thread.NewThread(msg, d.controller)
 		handle := d.getHandleByPulse(ctx, pn)
 		err := f.Run(ctx, handle(msg))
@@ -130,7 +127,7 @@ func (d *Dispatcher) Process(msg *message.Message) ([]*message.Message, error) {
 			logger.Error(errors.Wrap(err, "Handling failed: "))
 		}
 	}()
-	return nil, nil
+	return nil
 }
 
 func pulseFromString(p string) (insolar.PulseNumber, error) {

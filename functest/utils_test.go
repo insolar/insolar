@@ -1,4 +1,3 @@
-//
 // Copyright 2019 Insolar Technologies GmbH
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,7 +27,6 @@ import (
 	"net/http"
 	"regexp"
 	"runtime"
-	"strings"
 	"testing"
 	"time"
 
@@ -45,8 +43,6 @@ import (
 
 	"github.com/pkg/errors"
 )
-
-const sendRetryCount = 5
 
 type contractInfo struct {
 	reference *insolar.Reference
@@ -105,12 +101,12 @@ type rpcStatusResponse struct {
 	Result statusResponse `json:"result"`
 }
 
-func createMember(t testing.TB) *user {
+func createMember(t *testing.T) *user {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
 	member.ref = root.ref
 
-	result, err := retryableCreateMember(member, "member.create", true)
+	result, err := signedRequest(t, member, "member.create", nil)
 	require.NoError(t, err)
 	ref, ok := result.(map[string]interface{})["reference"].(string)
 	require.True(t, ok)
@@ -118,20 +114,43 @@ func createMember(t testing.TB) *user {
 	return member
 }
 
-func addBurnAddress(t testing.TB) {
+func createMigrationMember(t *testing.T) *user {
+	migrationAddress := testutils.RandomString()
+
+	return createMigrationMemberForMA(t, migrationAddress)
+}
+
+func createMigrationMemberForMA(t *testing.T, ma string) *user {
+	member, err := newUserWithKeys()
+	require.NoError(t, err)
+	member.ref = root.ref
+
+	_, err = signedRequest(t, &migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{ma}})
+	require.NoError(t, err)
+
+	result, err := signedRequest(t, member, "member.migrationCreate", nil)
+	require.NoError(t, err)
+	ref, ok := result.(map[string]interface{})["reference"].(string)
+	require.True(t, ok)
+	member.ref = ref
+	return member
+
+}
+
+func addBurnAddress(t *testing.T) {
 	ba := testutils.RandomString()
-	_, err := signedRequest(&migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{ba}})
+	_, err := signedRequest(t, &migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{ba}})
 	require.NoError(t, err)
 }
 
-func getBalanceNoErr(t testing.TB, caller *user, reference string) *big.Int {
-	balance, err := getBalance(caller, reference)
+func getBalanceNoErr(t *testing.T, caller *user, reference string) *big.Int {
+	balance, err := getBalance(t, caller, reference)
 	require.NoError(t, err)
 	return balance
 }
 
-func getBalance(caller *user, reference string) (*big.Int, error) {
-	res, err := signedRequest(caller, "wallet.getBalance", map[string]interface{}{"reference": reference})
+func getBalance(t *testing.T, caller *user, reference string) (*big.Int, error) {
+	res, err := signedRequest(t, caller, "wallet.getBalance", map[string]interface{}{"reference": reference})
 	if err != nil {
 		return nil, err
 	}
@@ -140,6 +159,41 @@ func getBalance(caller *user, reference string) (*big.Int, error) {
 		return nil, fmt.Errorf("can't parse input amount")
 	}
 	return amount, nil
+}
+
+func migrate(t *testing.T, memberRef string, amount string, tx string, ma string, mdNum int) map[string]interface{} {
+	anotherMember := createMember(t)
+
+	_, err := signedRequest(t,
+		&migrationDaemons[mdNum],
+		"deposit.migration",
+		map[string]interface{}{"amount": amount, "ethTxHash": tx, "migrationAddress": ma})
+	require.NoError(t, err)
+	res, err := signedRequest(t, anotherMember, "wallet.getBalance", map[string]interface{}{"reference": memberRef})
+	require.NoError(t, err)
+	deposits, ok := res.(map[string]interface{})["deposits"].(map[string]interface{})
+	require.True(t, ok)
+	deposit, ok := deposits[tx].(map[string]interface{})
+	require.True(t, ok)
+	require.Equal(t, deposit["amount"], amount)
+	require.Equal(t, deposit["ethTxHash"], tx)
+
+	return deposit
+}
+
+func generateMigrationAddress() string {
+	return testutils.RandomString()
+}
+
+func fullMigration(t *testing.T, txHash string) *user {
+	migrationAddress := testutils.RandomString()
+	member := createMigrationMemberForMA(t, migrationAddress)
+
+	migrate(t, member.ref, "1000", txHash, migrationAddress, 0)
+	migrate(t, member.ref, "1000", txHash, migrationAddress, 2)
+	migrate(t, member.ref, "1000", txHash, migrationAddress, 1)
+
+	return member
 }
 
 func getRPSResponseBody(t testing.TB, postParams map[string]interface{}) []byte {
@@ -196,110 +250,42 @@ func unmarshalRPCResponse(t testing.TB, body []byte, response RPCResponseInterfa
 	require.Nil(t, response.getError())
 }
 
-func unmarshalCallResponse(t testing.TB, body []byte, response *requester.ContractAnswer) {
+func unmarshalCallResponse(t testing.TB, body []byte, response *requester.ContractResponse) {
 	err := json.Unmarshal(body, &response)
 	require.NoError(t, err)
 }
 
-func createMemberWithMigrationAddress(migrationAddress string) error {
-	member, err := newUserWithKeys()
+func signedRequest(t *testing.T, user *user, method string, params interface{}) (interface{}, error) {
+	res, refStr, err := makeSignedRequest(user, method, params)
+
+	var errMsg string
 	if err != nil {
-		return err
+		errMsg = err.Error()
 	}
+	emptyRef := insolar.NewEmptyReference()
 
-	_, err = signedRequest(&migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{migrationAddress}})
-	if err != nil {
-		return err
-	}
+	require.NotEqual(t, "", refStr, "request ref is empty: %s", errMsg)
+	require.NotEqual(t, emptyRef.String(), refStr, "request ref is zero: %s", errMsg)
 
-	_, err = retryableMemberMigrationCreate(member, true)
-	if err != nil {
-		return err
-	}
+	_, err = insolar.NewReferenceFromBase58(refStr)
+	require.Nil(t, err)
 
-	return nil
+	return res, err
 }
 
-func migrate(t *testing.T, memberRef string, amount string, tx string, ma string, mdNum int) map[string]interface{} {
-	anotherMember := createMember(t)
+func signedRequestWithEmptyRequestRef(t *testing.T, user *user, method string, params interface{}) (interface{}, error) {
+	res, refStr, err := makeSignedRequest(user, method, params)
 
-	_, err := signedRequest(
-		&migrationDaemons[mdNum],
-		"deposit.migration",
-		map[string]interface{}{"amount": amount, "ethTxHash": tx, "migrationAddress": ma})
-	require.NoError(t, err)
-	res, err := signedRequest(anotherMember, "wallet.getBalance", map[string]interface{}{"reference": memberRef})
-	require.NoError(t, err)
-	deposits, ok := res.(map[string]interface{})["deposits"].(map[string]interface{})
-	require.True(t, ok)
-	deposit, ok := deposits[tx].(map[string]interface{})
-	require.True(t, ok)
-	require.Equal(t, deposit["amount"], amount)
-	require.Equal(t, deposit["ethTxHash"], tx)
+	require.Equal(t, "", refStr)
 
-	return deposit
+	return res, err
 }
 
-func generateMigrationAddress() string {
-	return testutils.RandomString()
-}
-
-func fullMigration(t *testing.T, txHash string) *user {
-
-	member, err := newUserWithKeys()
-	require.NoError(t, err)
-	migrationAddress := generateMigrationAddress()
-	_, err = signedRequest(&migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{migrationAddress}})
-	require.NoError(t, err)
-	_, err = retryableMemberMigrationCreate(member, true)
-	require.NoError(t, err)
-
-	migrate(t, member.ref, "1000", txHash, migrationAddress, 0)
-	migrate(t, member.ref, "1000", txHash, migrationAddress, 2)
-	migrate(t, member.ref, "1000", txHash, migrationAddress, 1)
-
-	return member
-}
-
-func retryableMemberCreate(user *user, updatePublicKey bool) (interface{}, error) {
-	return retryableCreateMember(user, "member.create", updatePublicKey)
-}
-
-func retryableMemberMigrationCreate(user *user, updatePublicKey bool) (interface{}, error) {
-	return retryableCreateMember(user, "member.migrationCreate", updatePublicKey)
-}
-
-func retryableCreateMember(user *user, method string, updatePublicKey bool) (interface{}, error) {
-	// TODO: delete this after deduplication (INS-2778)
-	var result interface{}
-	var err error
-	currentIterNum := 1
-	for ; currentIterNum <= sendRetryCount; currentIterNum++ {
-		result, err = signedRequest(user, method, nil)
-		if err == nil || !strings.Contains(err.Error(), "failed to set reference in public key shard: can't set reference because this key already exists") {
-			if err == nil {
-				user.ref = result.(map[string]interface{})["reference"].(string)
-			}
-			return result, err
-		}
-		fmt.Printf("CreateMember request was duplicated, retry. Attempt for duplicated: %d/%d\n", currentIterNum, sendRetryCount)
-		newUser, nErr := newUserWithKeys()
-		if nErr != nil {
-			return nil, nErr
-		}
-		user.privKey = newUser.privKey
-		if updatePublicKey {
-			user.pubKey = newUser.pubKey
-		}
-	}
-	return result, err
-}
-
-func signedRequest(user *user, method string, params interface{}) (interface{}, error) {
+func makeSignedRequest(user *user, method string, params interface{}) (interface{}, string, error) {
 	ctx := context.TODO()
 	rootCfg, err := requester.CreateUserConfig(user.ref, user.privKey, user.pubKey)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	var caller string
@@ -315,43 +301,32 @@ func signedRequest(user *user, method string, params interface{}) (interface{}, 
 		caller = ""
 	}
 
-	var resp requester.ContractAnswer
-	currentIterNum := 1
-	for ; currentIterNum <= sendRetryCount; currentIterNum++ {
-		res, err := requester.Send(ctx, TestAPIURL, rootCfg, &requester.Request{
-			JSONRPC: "2.0",
-			ID:      1,
-			Method:  "api.call",
-			Params:  requester.Params{CallSite: method, CallParams: params, PublicKey: user.pubKey},
-			Test:    caller,
-		})
+	res, err := requester.Send(ctx, TestAPIURL, rootCfg, &requester.Params{
+		CallSite:   method,
+		CallParams: params,
+		PublicKey:  user.pubKey,
+		Test:       caller})
 
-		if err != nil {
-			return nil, err
-		}
+	if err != nil {
+		return nil, "", err
+	}
 
-		resp = requester.ContractAnswer{}
-		err = json.Unmarshal(res, &resp)
-		if err != nil {
-			return nil, err
-		}
-
-		break
+	resp := requester.ContractResponse{}
+	err = json.Unmarshal(res, &resp)
+	if err != nil {
+		return nil, "", err
 	}
 
 	if resp.Error != nil {
-		if currentIterNum > sendRetryCount {
-			return nil, errors.New("Number of retries exceeded. " + resp.Error.Message)
-		}
-
-		return nil, errors.New(resp.Error.Message)
-	} else {
-		if resp.Result == nil {
-			return nil, errors.New("Error and result are nil")
-		} else {
-			return resp.Result.ContractResult, nil
-		}
+		return nil, "", errors.New(resp.Error.Message)
 	}
+
+	if resp.Result == nil {
+		return nil, "", errors.New("Error and result are nil")
+	}
+
+	return resp.Result.CallResult, resp.Result.RequestReference, nil
+
 }
 
 func newUserWithKeys() (*user, error) {
@@ -397,7 +372,7 @@ func uploadContractOnce(t testing.TB, name string, code string) *insolar.Referen
 func uploadContract(t testing.TB, contractName string, contractCode string) *insolar.Reference {
 	uploadBody := getRPSResponseBody(t, postParams{
 		"jsonrpc": "2.0",
-		"method":  "contract.upload",
+		"method":  "funcTestContract.upload",
 		"id":      "",
 		"params": map[string]string{
 			"name": contractName,
@@ -421,7 +396,7 @@ func uploadContract(t testing.TB, contractName string, contractCode string) *ins
 	require.NoError(t, err)
 
 	emptyRef := make([]byte, insolar.RecordRefSize)
-	require.NotEqual(t, insolar.Reference{}.FromSlice(emptyRef), prototypeRef)
+	require.NotEqual(t, insolar.NewReferenceFromBytes(emptyRef), prototypeRef)
 
 	return prototypeRef
 }
@@ -432,7 +407,7 @@ func callConstructor(t testing.TB, prototypeRef *insolar.Reference, method strin
 
 	objectBody := getRPSResponseBody(t, postParams{
 		"jsonrpc": "2.0",
-		"method":  "contract.callConstructor",
+		"method":  "funcTestContract.callConstructor",
 		"id":      "",
 		"params": map[string]interface{}{
 			"PrototypeRefString": prototypeRef.String(),
@@ -458,7 +433,7 @@ func callConstructor(t testing.TB, prototypeRef *insolar.Reference, method strin
 	objectRef, err := insolar.NewReferenceFromBase58(callConstructorRes.Result.Object)
 	require.NoError(t, err)
 
-	require.NotEqual(t, insolar.Reference{}.FromSlice(make([]byte, insolar.RecordRefSize)), objectRef)
+	require.NotEqual(t, insolar.NewReferenceFromBytes(make([]byte, insolar.RecordRefSize)), objectRef)
 
 	return objectRef
 }
@@ -490,7 +465,7 @@ func callMethodNoChecks(t testing.TB, objectRef *insolar.Reference, method strin
 
 	respBody := getRPSResponseBody(t, postParams{
 		"jsonrpc": "2.0",
-		"method":  "contract.callMethod",
+		"method":  "funcTestContract.callMethod",
 		"id":      "",
 		"params": map[string]interface{}{
 			"ObjectRefString": objectRef.String(),
@@ -533,18 +508,14 @@ func waitUntilRequestProcessed(
 
 func waitForFunction(customFunction func() api.CallMethodReply, functionTimeout time.Duration) (*api.CallMethodReply, error) {
 	ch := make(chan api.CallMethodReply, 1)
-	defer close(ch)
 	go func() {
 		ch <- customFunction()
 	}()
 
-	timer := time.NewTimer(functionTimeout)
-	defer timer.Stop()
-
 	select {
 	case result := <-ch:
 		return &result, nil
-	case <-timer.C:
+	case <-time.After(functionTimeout):
 		return nil, errors.New("timeout was exceeded")
 	}
 }

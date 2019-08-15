@@ -51,8 +51,9 @@
 package population
 
 import (
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"sync/atomic"
+
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 )
 
 var _ EventDispatcher = &AtomicEventStats{}

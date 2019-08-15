@@ -28,7 +28,7 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/internal/ledger/store"
+	"github.com/insolar/insolar/insolar/store"
 )
 
 // TypeID encodes a record object type.
@@ -376,7 +376,7 @@ func (r *RecordPositionDB) AtPosition(pn insolar.PulseNumber, position uint32) (
 	r.lock.RLock()
 	defer r.lock.RUnlock()
 
-	lastKnownPosition, err := r.LastKnownPosition(pn)
+	lastKnownPosition, err := r.lastKnownPosition(pn)
 	if err != nil {
 		return insolar.ID{}, err
 	}

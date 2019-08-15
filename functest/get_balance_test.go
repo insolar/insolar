@@ -22,8 +22,7 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/insolar/insolar/testutils"
-
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/stretchr/testify/require"
 )
 
@@ -35,7 +34,7 @@ func TestGetBalance(t *testing.T) {
 }
 
 func TestGetBalanceWrongRef(t *testing.T) {
-	_, err := getBalance(&root, testutils.RandomRef().String())
-	require.NotNil(t, err)
+	_, err := signedRequestWithEmptyRequestRef(t, &root, "wallet.getBalance", map[string]interface{}{"reference": gen.Reference().String()})
+	require.Error(t, err)
 	require.Contains(t, err.Error(), "index not found")
 }

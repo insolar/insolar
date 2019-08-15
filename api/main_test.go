@@ -18,55 +18,17 @@ package api
 
 import (
 	"context"
-	"io/ioutil"
 	"net/http"
-	"reflect"
 	"testing"
 
 	"github.com/insolar/insolar/certificate"
-	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/stretchr/testify/suite"
-
-	"github.com/insolar/insolar/configuration"
 )
-
-const HOST = "http://localhost:19101"
-const TestUrl = HOST + "/api/call"
 
 type MainAPISuite struct {
 	suite.Suite
-}
-
-func (suite *MainAPISuite) TestGetRequest() {
-	resp, err := http.Get(TestUrl)
-	suite.NoError(err)
-	body, err := ioutil.ReadAll(resp.Body)
-	suite.NoError(err)
-	suite.Contains(string(body[:]), `failed to unmarshal request: [ UnmarshalRequest ] Empty body`)
-}
-
-func (suite *MainAPISuite) TestSerialization() {
-	var a uint = 1
-	var b = true
-	var c = "test"
-
-	serArgs, err := insolar.MarshalArgs(a, b, c)
-	suite.NoError(err)
-	suite.NotNil(serArgs)
-
-	var aR uint
-	var bR bool
-	var cR string
-	rowResp, err := insolar.UnMarshalResponse(serArgs, []interface{}{aR, bR, cR})
-	suite.NoError(err)
-	suite.Len(rowResp, 3)
-	suite.Equal(reflect.TypeOf(a), reflect.TypeOf(rowResp[0]))
-	suite.Equal(reflect.TypeOf(b), reflect.TypeOf(rowResp[1]))
-	suite.Equal(reflect.TypeOf(c), reflect.TypeOf(rowResp[2]))
-	suite.Equal(a, rowResp[0].(uint))
-	suite.Equal(b, rowResp[1].(bool))
-	suite.Equal(c, rowResp[2].(string))
 }
 
 func (suite *MainAPISuite) TestNewApiRunnerNilConfig() {
@@ -80,10 +42,6 @@ func (suite *MainAPISuite) TestNewApiRunnerNoRequiredParams() {
 	suite.Contains(err.Error(), "Address must not be empty")
 
 	cfg.Address = "address:100"
-	_, err = NewRunner(&cfg)
-	suite.Contains(err.Error(), "Call must exist")
-
-	cfg.Call = "test"
 	_, err = NewRunner(&cfg)
 	suite.Contains(err.Error(), "RPC must exist")
 

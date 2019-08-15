@@ -27,9 +27,8 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/insolar/store"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/internal/ledger/store"
-	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -38,7 +37,7 @@ func TestIndexKey(t *testing.T) {
 	t.Parallel()
 
 	testPulseNumber := insolar.GenesisPulse.PulseNumber
-	expectedKey := indexKey{objID: testutils.RandomID(), pn: testPulseNumber}
+	expectedKey := indexKey{objID: gen.ID(), pn: testPulseNumber}
 
 	rawID := expectedKey.ID()
 

@@ -18,7 +18,6 @@ package exporter
 
 import (
 	"context"
-	"errors"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -27,11 +26,12 @@ import (
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/insolar/store"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/insolar/insolar/ledger/heavy/executor"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/testutils/network"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/metadata"
 )
@@ -124,16 +124,18 @@ func TestRecordIterator_HasNext(t *testing.T) {
 			require.False(t, hasNext)
 		})
 
-		t.Run("no data in the current. has more synce pulses. returns true", func(t *testing.T) {
-			pn := gen.PulseNumber()
-			positionAccessor := object.NewRecordPositionAccessorMock(t)
-			positionAccessor.LastKnownPositionMock.Expect(pn).Return(1, nil)
+		t.Run("no data in the current. has more synced pulses. returns true", func(t *testing.T) {
+			pn := insolar.PulseNumber(99)
 
 			pulseCalculator := network.NewPulseCalculatorMock(t)
 			pulseCalculator.ForwardsMock.Expect(ctx, pn, 1).Return(insolar.Pulse{PulseNumber: 100}, nil)
 
 			jetKeeper := executor.NewJetKeeperMock(t)
 			jetKeeper.TopSyncPulseMock.Return(101)
+
+			positionAccessor := object.NewRecordPositionAccessorMock(t)
+			positionAccessor.LastKnownPositionMock.When(99).Then(2, nil)
+			positionAccessor.LastKnownPositionMock.Expect(100).Return(1, nil)
 
 			iter := newRecordIterator(pn, 2, 0, positionAccessor, nil, jetKeeper, pulseCalculator)
 			iter.read = 10
@@ -204,8 +206,7 @@ func TestRecordIterator_Next(t *testing.T) {
 
 	t.Run("reading data works", func(t *testing.T) {
 		pn := gen.PulseNumber()
-		id := gen.ID()
-		id.SetPulse(pn)
+		id := gen.IDWithPulse(pn)
 
 		positionAccessor := object.NewRecordPositionAccessorMock(t)
 		positionAccessor.LastKnownPositionMock.Expect(pn).Return(10, nil)
@@ -248,9 +249,8 @@ func TestRecordIterator_Next(t *testing.T) {
 
 		t.Run("Changing pulse works successfully", func(t *testing.T) {
 			firstPN := gen.PulseNumber()
-			nextPN := insolar.PulseNumber(firstPN + 10)
-			id := gen.ID()
-			id.SetPulse(nextPN)
+			nextPN := firstPN + 10
+			id := gen.IDWithPulse(nextPN)
 
 			jetKeeper := executor.NewJetKeeperMock(t)
 			jetKeeper.TopSyncPulseMock.Return(nextPN)
@@ -261,12 +261,12 @@ func TestRecordIterator_Next(t *testing.T) {
 
 			positionAccessor.AtPositionMock.Expect(nextPN, uint32(1)).Return(id, nil)
 
-			record := record.Material{
+			rec := record.Material{
 				JetID: gen.JetID(),
 				ID:    id,
 			}
 			recordsAccessor := object.NewRecordAccessorMock(t)
-			recordsAccessor.ForIDMock.Expect(ctx, id).Return(record, nil)
+			recordsAccessor.ForIDMock.Expect(ctx, id).Return(rec, nil)
 
 			pulseCalculator := network.NewPulseCalculatorMock(t)
 			pulseCalculator.ForwardsMock.Expect(ctx, firstPN, 1).Return(insolar.Pulse{PulseNumber: nextPN}, nil)
@@ -281,7 +281,7 @@ func TestRecordIterator_Next(t *testing.T) {
 			require.Equal(t, nextPN, next.Record.ID.Pulse())
 			require.Equal(t, uint32(1), next.RecordNumber)
 			require.Equal(t, id, next.Record.ID)
-			require.Equal(t, record, next.Record)
+			require.Equal(t, rec, next.Record)
 		})
 	})
 }
@@ -415,18 +415,15 @@ func TestRecordServer_Export_Composite(t *testing.T) {
 	jetKeeper.TopSyncPulseMock.Return(secondPN)
 
 	// IDs and Records
-	firstID := gen.ID()
-	firstID.SetPulse(firstPN)
+	firstID := gen.IDWithPulse(firstPN)
 	firstRec := getMaterialRecord()
 	firstRec.ID = firstID
 
-	secondID := gen.ID()
-	secondID.SetPulse(firstPN)
+	secondID := gen.IDWithPulse(firstPN)
 	secondRec := getMaterialRecord()
 	secondRec.ID = secondID
 
-	thirdID := gen.ID()
-	thirdID.SetPulse(secondPN)
+	thirdID := gen.IDWithPulse(secondPN)
 	thirdRec := getMaterialRecord()
 	thirdRec.ID = thirdID
 

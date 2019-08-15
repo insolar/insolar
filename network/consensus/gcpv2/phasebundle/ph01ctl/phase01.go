@@ -206,15 +206,26 @@ func (c *Phase01Controller) workerPhase01(ctx context.Context) {
 	var nsh proofs.NodeStateHash
 	startIndex := 0
 
-	if ok, nshChannel := c.R.CommitAndPreparePulseChange(); ok {
+	if ok, nshChannel := c.R.PreparePulseChange(); ok {
 		nsh, startIndex = c.workerSendPhase0(ctx, nodes, nshChannel)
 		if startIndex < 0 {
 			// stopped via context
+			inslogger.FromContext(ctx).Error(">>>>>>workerPhase01: was stopped via context")
 			return
 		}
+		if nsh == nil {
+			panic(">>>>>>workerPhase01: empty NSH")
+			// return
+		}
+		c.R.CommitPulseChange()
 	}
 
-	c.R.ApplyLocalState(nsh)
+	if nsh == nil {
+		inslogger.FromContext(ctx).Debugf(">>>>>>workerPhase01: NSH is empty: stateful=%v", c.R.IsLocalStateful())
+	}
+	inslogger.FromContext(ctx).Debugf(">>>>>>workerPhase01: before NSH update: nsh=%v, self=%+v", nsh, c.R.GetSelf())
+	updated := c.R.ApplyLocalState(nsh)
+	inslogger.FromContext(ctx).Debugf(">>>>>>workerPhase01: after NSH update: updated=%v, nsh=%v, self=%+v", updated, nsh, c.R.GetSelf())
 
 	go c.workerSendPhase1ToFixed(ctx, startIndex, nodes)
 	c.workerSendPhase1ToDynamics(ctx)

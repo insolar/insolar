@@ -53,10 +53,10 @@ package future
 import (
 	"testing"
 
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
-	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/require"
 )
 
@@ -69,8 +69,8 @@ func TestNewManager(t *testing.T) {
 func TestFutureManager_Create(t *testing.T) {
 	m := NewManager()
 
-	sender, _ := host.NewHostN("127.0.0.1:31337", testutils.RandomRef())
-	receiver, _ := host.NewHostN("127.0.0.2:31338", testutils.RandomRef())
+	sender, _ := host.NewHostN("127.0.0.1:31337", gen.Reference())
+	receiver, _ := host.NewHostN("127.0.0.2:31338", gen.Reference())
 
 	p := packet.NewPacket(sender, receiver, types.Ping, 123)
 	future := m.Create(p)
@@ -83,8 +83,8 @@ func TestFutureManager_Create(t *testing.T) {
 func TestFutureManager_Get(t *testing.T) {
 	m := NewManager()
 
-	sender, _ := host.NewHostN("127.0.0.1:31337", testutils.RandomRef())
-	receiver, _ := host.NewHostN("127.0.0.2:31338", testutils.RandomRef())
+	sender, _ := host.NewHostN("127.0.0.1:31337", gen.Reference())
+	receiver, _ := host.NewHostN("127.0.0.2:31338", gen.Reference())
 
 	p := packet.NewPacket(sender, receiver, types.Ping, 123)
 
@@ -99,8 +99,8 @@ func TestFutureManager_Get(t *testing.T) {
 func TestFutureManager_Canceler(t *testing.T) {
 	m := NewManager()
 
-	sender, _ := host.NewHostN("127.0.0.1:31337", testutils.RandomRef())
-	receiver, _ := host.NewHostN("127.0.0.2:31338", testutils.RandomRef())
+	sender, _ := host.NewHostN("127.0.0.1:31337", gen.Reference())
+	receiver, _ := host.NewHostN("127.0.0.2:31338", gen.Reference())
 
 	p := packet.NewPacket(sender, receiver, types.Ping, 123)
 

@@ -25,14 +25,15 @@ import (
 	"sync"
 	"time"
 
+	"github.com/insolar/rpc/v2"
+	jsonrpc "github.com/insolar/rpc/v2/json2"
+	"github.com/pkg/errors"
+
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/network"
 
 	"github.com/insolar/insolar/application/extractor"
 	"github.com/insolar/insolar/insolar/jet"
-	"github.com/insolar/insolar/insolar/pulse"
-	"github.com/insolar/rpc/v2"
-	jsonrpc "github.com/insolar/rpc/v2/json2"
-	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/api/seedmanager"
 
@@ -49,12 +50,12 @@ type Runner struct {
 	CertificateManager  insolar.CertificateManager  `inject:""`
 	ContractRequester   insolar.ContractRequester   `inject:""`
 	GenesisDataProvider insolar.GenesisDataProvider `inject:""`
-	NodeNetwork         insolar.NodeNetwork         `inject:""`
-	Gatewayer           network.Gatewayer           `inject:""`
+	NodeNetwork         network.NodeNetwork         `inject:""`
 	ServiceNetwork      insolar.Network             `inject:""`
 	PulseAccessor       pulse.Accessor              `inject:""`
 	ArtifactManager     artifacts.Client            `inject:""`
 	JetCoordinator      jet.Coordinator             `inject:""`
+	NetworkStatus       insolar.NetworkStatus       `inject:""`
 	server              *http.Server
 	rpcServer           *rpc.Server
 	cfg                 *configuration.APIRunner
@@ -71,9 +72,6 @@ func checkConfig(cfg *configuration.APIRunner) error {
 	}
 	if cfg.Address == "" {
 		return errors.New("[ checkConfig ] Address must not be empty")
-	}
-	if len(cfg.Call) == 0 {
-		return errors.New("[ checkConfig ] Call must exist")
 	}
 	if len(cfg.RPC) == 0 {
 		return errors.New("[ checkConfig ] RPC must exist")
@@ -96,6 +94,11 @@ func (ar *Runner) registerServices(rpcServer *rpc.Server) error {
 	err = rpcServer.RegisterService(NewNodeCertService(ar), "cert")
 	if err != nil {
 		return errors.Wrap(err, "[ registerServices ] Can't RegisterService: cert")
+	}
+
+	err = rpcServer.RegisterService(NewFuncTestContractService(ar), "funcTestContract")
+	if err != nil {
+		return errors.Wrap(err, "[ registerServices ] Can't RegisterService: funcTestContract")
 	}
 
 	err = rpcServer.RegisterService(NewContractService(ar), "contract")
@@ -140,14 +143,13 @@ func (ar *Runner) IsAPIRunner() bool {
 
 // Start runs api server
 func (ar *Runner) Start(ctx context.Context) error {
-	hc := NewHealthChecker(ar.CertificateManager, ar.NodeNetwork)
+	hc := NewHealthChecker(ar.CertificateManager, ar.NodeNetwork, ar.PulseAccessor)
 
 	router := http.NewServeMux()
 	ar.server.Handler = router
 	ar.SeedManager = seedmanager.New()
 
 	router.HandleFunc("/healthcheck", hc.CheckHandler)
-	router.HandleFunc(ar.cfg.Call, ar.callHandler())
 	router.Handle(ar.cfg.RPC, ar.rpcServer)
 
 	inslog := inslogger.FromContext(ctx)
@@ -209,7 +211,8 @@ func (ar *Runner) getMemberPubKey(ctx context.Context, ref string) (crypto.Publi
 	}
 
 	ar.cacheLock.Lock()
+	defer ar.cacheLock.Unlock()
+
 	ar.keyCache[ref] = publicKey
-	ar.cacheLock.Unlock()
 	return publicKey, nil
 }

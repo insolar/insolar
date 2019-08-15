@@ -148,7 +148,7 @@ func (r *recordIterator) checkNextPulse(ctx context.Context) bool {
 		if topPulse < nextPulse.PulseNumber {
 			return false
 		}
-		_, err = r.recordIndex.LastKnownPosition(currentPulse)
+		_, err = r.recordIndex.LastKnownPosition(nextPulse.PulseNumber)
 		if err != nil {
 			currentPulse = nextPulse.PulseNumber
 		} else {
@@ -196,7 +196,7 @@ func (r *recordIterator) setNextPulse(ctx context.Context) error {
 		}
 		topPulse := r.jetKeeper.TopSyncPulse()
 		if topPulse < nextPulse.PulseNumber {
-			return err
+			return errors.New("there are no synced pulses")
 		}
 		_, err = r.recordIndex.LastKnownPosition(nextPulse.PulseNumber)
 		if err != nil {

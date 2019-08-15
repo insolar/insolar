@@ -32,6 +32,12 @@ type DiscoveryNodeMock struct {
 	afterGetPublicKeyCounter  uint64
 	beforeGetPublicKeyCounter uint64
 	GetPublicKeyMock          mDiscoveryNodeMockGetPublicKey
+
+	funcGetRole          func() (s1 mm_insolar.StaticRole)
+	inspectFuncGetRole   func()
+	afterGetRoleCounter  uint64
+	beforeGetRoleCounter uint64
+	GetRoleMock          mDiscoveryNodeMockGetRole
 }
 
 // NewDiscoveryNodeMock returns a mock for insolar.DiscoveryNode
@@ -46,6 +52,8 @@ func NewDiscoveryNodeMock(t minimock.Tester) *DiscoveryNodeMock {
 	m.GetNodeRefMock = mDiscoveryNodeMockGetNodeRef{mock: m}
 
 	m.GetPublicKeyMock = mDiscoveryNodeMockGetPublicKey{mock: m}
+
+	m.GetRoleMock = mDiscoveryNodeMockGetRole{mock: m}
 
 	return m
 }
@@ -479,6 +487,149 @@ func (m *DiscoveryNodeMock) MinimockGetPublicKeyInspect() {
 	}
 }
 
+type mDiscoveryNodeMockGetRole struct {
+	mock               *DiscoveryNodeMock
+	defaultExpectation *DiscoveryNodeMockGetRoleExpectation
+	expectations       []*DiscoveryNodeMockGetRoleExpectation
+}
+
+// DiscoveryNodeMockGetRoleExpectation specifies expectation struct of the DiscoveryNode.GetRole
+type DiscoveryNodeMockGetRoleExpectation struct {
+	mock *DiscoveryNodeMock
+
+	results *DiscoveryNodeMockGetRoleResults
+	Counter uint64
+}
+
+// DiscoveryNodeMockGetRoleResults contains results of the DiscoveryNode.GetRole
+type DiscoveryNodeMockGetRoleResults struct {
+	s1 mm_insolar.StaticRole
+}
+
+// Expect sets up expected params for DiscoveryNode.GetRole
+func (mmGetRole *mDiscoveryNodeMockGetRole) Expect() *mDiscoveryNodeMockGetRole {
+	if mmGetRole.mock.funcGetRole != nil {
+		mmGetRole.mock.t.Fatalf("DiscoveryNodeMock.GetRole mock is already set by Set")
+	}
+
+	if mmGetRole.defaultExpectation == nil {
+		mmGetRole.defaultExpectation = &DiscoveryNodeMockGetRoleExpectation{}
+	}
+
+	return mmGetRole
+}
+
+// Inspect accepts an inspector function that has same arguments as the DiscoveryNode.GetRole
+func (mmGetRole *mDiscoveryNodeMockGetRole) Inspect(f func()) *mDiscoveryNodeMockGetRole {
+	if mmGetRole.mock.inspectFuncGetRole != nil {
+		mmGetRole.mock.t.Fatalf("Inspect function is already set for DiscoveryNodeMock.GetRole")
+	}
+
+	mmGetRole.mock.inspectFuncGetRole = f
+
+	return mmGetRole
+}
+
+// Return sets up results that will be returned by DiscoveryNode.GetRole
+func (mmGetRole *mDiscoveryNodeMockGetRole) Return(s1 mm_insolar.StaticRole) *DiscoveryNodeMock {
+	if mmGetRole.mock.funcGetRole != nil {
+		mmGetRole.mock.t.Fatalf("DiscoveryNodeMock.GetRole mock is already set by Set")
+	}
+
+	if mmGetRole.defaultExpectation == nil {
+		mmGetRole.defaultExpectation = &DiscoveryNodeMockGetRoleExpectation{mock: mmGetRole.mock}
+	}
+	mmGetRole.defaultExpectation.results = &DiscoveryNodeMockGetRoleResults{s1}
+	return mmGetRole.mock
+}
+
+//Set uses given function f to mock the DiscoveryNode.GetRole method
+func (mmGetRole *mDiscoveryNodeMockGetRole) Set(f func() (s1 mm_insolar.StaticRole)) *DiscoveryNodeMock {
+	if mmGetRole.defaultExpectation != nil {
+		mmGetRole.mock.t.Fatalf("Default expectation is already set for the DiscoveryNode.GetRole method")
+	}
+
+	if len(mmGetRole.expectations) > 0 {
+		mmGetRole.mock.t.Fatalf("Some expectations are already set for the DiscoveryNode.GetRole method")
+	}
+
+	mmGetRole.mock.funcGetRole = f
+	return mmGetRole.mock
+}
+
+// GetRole implements insolar.DiscoveryNode
+func (mmGetRole *DiscoveryNodeMock) GetRole() (s1 mm_insolar.StaticRole) {
+	mm_atomic.AddUint64(&mmGetRole.beforeGetRoleCounter, 1)
+	defer mm_atomic.AddUint64(&mmGetRole.afterGetRoleCounter, 1)
+
+	if mmGetRole.inspectFuncGetRole != nil {
+		mmGetRole.inspectFuncGetRole()
+	}
+
+	if mmGetRole.GetRoleMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmGetRole.GetRoleMock.defaultExpectation.Counter, 1)
+
+		results := mmGetRole.GetRoleMock.defaultExpectation.results
+		if results == nil {
+			mmGetRole.t.Fatal("No results are set for the DiscoveryNodeMock.GetRole")
+		}
+		return (*results).s1
+	}
+	if mmGetRole.funcGetRole != nil {
+		return mmGetRole.funcGetRole()
+	}
+	mmGetRole.t.Fatalf("Unexpected call to DiscoveryNodeMock.GetRole.")
+	return
+}
+
+// GetRoleAfterCounter returns a count of finished DiscoveryNodeMock.GetRole invocations
+func (mmGetRole *DiscoveryNodeMock) GetRoleAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmGetRole.afterGetRoleCounter)
+}
+
+// GetRoleBeforeCounter returns a count of DiscoveryNodeMock.GetRole invocations
+func (mmGetRole *DiscoveryNodeMock) GetRoleBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmGetRole.beforeGetRoleCounter)
+}
+
+// MinimockGetRoleDone returns true if the count of the GetRole invocations corresponds
+// the number of defined expectations
+func (m *DiscoveryNodeMock) MinimockGetRoleDone() bool {
+	for _, e := range m.GetRoleMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			return false
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.GetRoleMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterGetRoleCounter) < 1 {
+		return false
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcGetRole != nil && mm_atomic.LoadUint64(&m.afterGetRoleCounter) < 1 {
+		return false
+	}
+	return true
+}
+
+// MinimockGetRoleInspect logs each unmet expectation
+func (m *DiscoveryNodeMock) MinimockGetRoleInspect() {
+	for _, e := range m.GetRoleMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			m.t.Error("Expected call to DiscoveryNodeMock.GetRole")
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.GetRoleMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterGetRoleCounter) < 1 {
+		m.t.Error("Expected call to DiscoveryNodeMock.GetRole")
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcGetRole != nil && mm_atomic.LoadUint64(&m.afterGetRoleCounter) < 1 {
+		m.t.Error("Expected call to DiscoveryNodeMock.GetRole")
+	}
+}
+
 // MinimockFinish checks that all mocked methods have been called the expected number of times
 func (m *DiscoveryNodeMock) MinimockFinish() {
 	if !m.minimockDone() {
@@ -487,6 +638,8 @@ func (m *DiscoveryNodeMock) MinimockFinish() {
 		m.MinimockGetNodeRefInspect()
 
 		m.MinimockGetPublicKeyInspect()
+
+		m.MinimockGetRoleInspect()
 		m.t.FailNow()
 	}
 }
@@ -512,5 +665,6 @@ func (m *DiscoveryNodeMock) minimockDone() bool {
 	return done &&
 		m.MinimockGetHostDone() &&
 		m.MinimockGetNodeRefDone() &&
-		m.MinimockGetPublicKeyDone()
+		m.MinimockGetPublicKeyDone() &&
+		m.MinimockGetRoleDone()
 }

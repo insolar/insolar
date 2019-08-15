@@ -97,7 +97,7 @@ type Active interface {
 type Prime interface {
 	Active
 	BuildCopy(pd pulse.Data, csh proofs.CloudStateHash, gsh proofs.GlobulaStateHash) Built
-	//MakeExpected(pn pulse.Number, csh proofs.CloudStateHash, gsh proofs.GlobulaStateHash) Expected
+	// MakeExpected(pn pulse.Number, csh proofs.CloudStateHash, gsh proofs.GlobulaStateHash) Expected
 }
 
 //go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/census.Expected -o . -s _mock.go -g
@@ -124,9 +124,9 @@ type Built interface {
 type Builder interface {
 	GetPopulationBuilder() PopulationBuilder
 
-	//GetCensusState() State
+	// GetCensusState() State
 	GetPulseNumber() pulse.Number
-	//IsEphemeralAllowed() bool
+	// IsEphemeralAllowed() bool
 
 	GetGlobulaStateHash() proofs.GlobulaStateHash
 	SetGlobulaStateHash(gsh proofs.GlobulaStateHash)
@@ -136,8 +136,8 @@ type Builder interface {
 
 	Build(csh proofs.CloudStateHash) Built
 	BuildAsBroken(csh proofs.CloudStateHash) Built
-	//BuildAndMakeExpected(csh proofs.CloudStateHash) Expected
-	//BuildAndMakeBrokenExpected(csh proofs.CloudStateHash) Expected
+	// BuildAndMakeExpected(csh proofs.CloudStateHash) Expected
+	// BuildAndMakeBrokenExpected(csh proofs.CloudStateHash) Expected
 }
 
 type State uint8

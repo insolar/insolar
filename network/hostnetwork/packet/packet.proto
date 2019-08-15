@@ -4,6 +4,7 @@ package packet;
 
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 import "github.com/insolar/insolar/insolar/pulse/pulse.proto";
+import "github.com/insolar/insolar/network/consensus/adapters/candidate/profile.proto";
 
 option (gogoproto.goproto_getters_all) = false;
 option (gogoproto.populate_all) = false;
@@ -15,11 +16,14 @@ message Packet {
     bytes Receiver = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/network/hostnetwork/host.Host"];
     uint64 RequestID = 22;
     string TraceID = 23;
-    uint32 Type = 24;
+    bytes TraceSpanData = 24;
+
+    uint32 Type = 26;
+
 
     oneof Payload {
-        Request Request = 25;
-        Response Response = 26;
+        Request Request = 27;
+        Response Response = 28;
     }
 }
 
@@ -31,9 +35,9 @@ message Request {
         PulseRequest Pulse = 4;
         BootstrapRequest Bootstrap = 5;
         AuthorizeRequest Authorize = 6;
-        RegisterRequest Register = 7;
-        GenesisRequest Genesis = 8;
-        SignCertRequest SignCert = 9;
+        SignCertRequest SignCert = 7;
+        UpdateScheduleRequest UpdateSchedule = 8;
+        ReconnectRequest Reconnect = 9;
     }
 }
 
@@ -44,10 +48,10 @@ message Response {
         BasicResponse Basic = 3; // response for Cascade and Pulse requests
         BootstrapResponse Bootstrap = 4;
         AuthorizeResponse Authorize = 5;
-        RegisterResponse Register = 6;
-        GenesisResponse Genesis = 7;
-        SignCertResponse SignCert = 8;
-        ErrorResponse Error = 9;
+        SignCertResponse SignCert = 6;
+        ErrorResponse Error = 7;
+        UpdateScheduleResponse UpdateSchedule = 8;
+        ReconnectResponse Reconnect = 9;
     }
 }
 
@@ -74,28 +78,33 @@ message CascadeRequest {
 
 message PulseRequest {
     pulse.PulseProto Pulse = 1;
-    bytes TraceSpanData = 2;
+}
+
+message UpdateScheduleRequest {
+    uint32 LastNodePulse = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
+    Permit Permit = 2;
+}
+
+message ReconnectRequest {
+    bytes ReconnectTo = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/network/hostnetwork/host.Host", (gogoproto.nullable) = false];
+    Permit Permit = 2;
 }
 
 message BootstrapRequest {
-    bytes JoinClaim = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/network/consensusv1/packets.NodeJoinClaim"];
-    uint32 LastNodePulse = 2 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
-    Permission Permission = 3;
+    candidate.Profile CandidateProfile = 2 [(gogoproto.nullable) = false];
+    pulse.PulseProto Pulse = 3 [(gogoproto.nullable) = false];
+    Permit Permit = 4;
+}
+
+message AuthorizeData {
+    bytes Certificate = 1;
+    int64 Timestamp = 2;
+    string Version = 3;
 }
 
 message AuthorizeRequest {
-    bytes Certificate = 1;
-}
-
-message RegisterRequest {
-    uint64 SessionID = 1;
-    string Version = 2;
-    bytes JoinClaim = 3 [(gogoproto.customtype) = "github.com/insolar/insolar/network/consensusv1/packets.NodeJoinClaim"];
-}
-
-message GenesisRequest {
-    uint32 LastPulse = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
-    bytes Discovery = 2 [(gogoproto.customtype) = "github.com/insolar/insolar/network/consensusv1/packets.NodeJoinClaim"];
+    AuthorizeData AuthorizeData = 1;
+    bytes Signature = 2;
 }
 
 
@@ -108,35 +117,29 @@ message RPCResponse {
     string Error = 2;
 }
 
-enum ResponseCode {
+enum BootstrapResponseCode {
     Accepted = 0;
-    Rejected = 1;
-    Redirected = 2;
-    ReconnectRequired = 3;
-    UpdateSchedule = 4;
+    UpdateSchedule = 1;
+    UpdateShortID = 2;
+    Reject = 3;
 }
 
-message Permission {
-    PermissionPayload Payload = 1 [(gogoproto.nullable) = false];
+message Permit {
+    PermitPayload Payload = 1 [(gogoproto.nullable) = false];
     bytes Signature = 2;
 }
 
-message PermissionPayload {
+message PermitPayload {
     bytes JoinerPublicKey = 1;
-	int64 UTC = 2;
-    string ReconnectTo = 3;
-    bytes DiscoveryRef = 4 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
+	int64 ExpireTimestamp = 2;
+    bytes ReconnectTo = 3 [(gogoproto.customtype) = "github.com/insolar/insolar/network/hostnetwork/host.Host"];
+    bytes AuthorityNodeRef = 4 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
 }
 
 message BootstrapResponse {
-    ResponseCode Code = 1;
-    string RejectReason = 2;
-    uint32 ETA = 3;
-    uint32 AssignShortID = 4;
-    uint32 UpdateSincePulse = 5 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
-    string RedirectHost = 6;
-    uint32 NetworkSize = 7;
-    Permission Permission = 8;
+    BootstrapResponseCode Code = 1;
+    uint32 ETASeconds = 2;
+    pulse.PulseProto Pulse = 3 [(gogoproto.nullable) = false];
 }
 
 message BasicResponse {
@@ -144,32 +147,20 @@ message BasicResponse {
     string Error = 2;
 }
 
-enum BasicResponseCode {
-    Confirmed = 0;
-    Denied = 1;
-    Retry = 2;
+enum AuthorizeResponseCode {
+    Success = 0;
+    WrongTimestamp = 2;
+    WrongMandate = 3;
+    WrongVersion = 4;
 }
 
 message AuthorizeResponse {
-    BasicResponseCode Code = 1;
-    string Error = 2;
-    AuthorizationData Data = 3;
-}
-
-message AuthorizationData {
-    uint64 SessionID = 1;
-    uint32 AssignShortID = 2;
-}
-
-message RegisterResponse {
-    BasicResponseCode Code = 1;
-    int64 RetryIn = 2;
+    AuthorizeResponseCode Code = 1;
+    int64 Timestamp = 2;
     string Error = 3;
-}
-
-message GenesisResponse {
-    GenesisRequest Response = 1;
-    string Error = 2;
+    Permit Permit = 4;
+    uint32 DiscoveryCount = 5;
+    pulse.PulseProto Pulse = 6;
 }
 
 message SignCertResponse {
@@ -178,4 +169,12 @@ message SignCertResponse {
 
 message ErrorResponse {
     string Error = 1;
+}
+
+message UpdateScheduleResponse {
+    // nuff said
+}
+
+message ReconnectResponse {
+// nuff said
 }

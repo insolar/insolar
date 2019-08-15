@@ -22,11 +22,11 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/insolar/go-actors/actor/system"
-
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
+
+	"github.com/insolar/go-actors/actor/system"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
@@ -35,56 +35,51 @@ import (
 	"github.com/insolar/insolar/insolar/flow/dispatcher"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/builtin"
 	lrCommon "github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/goplugin"
-	"github.com/insolar/insolar/logicrunner/handles"
 	"github.com/insolar/insolar/logicrunner/machinesmanager"
-	"github.com/insolar/insolar/logicrunner/outgoingsender"
-	"github.com/insolar/insolar/logicrunner/requestsexecutor"
-	"github.com/insolar/insolar/logicrunner/resultmatcher"
-	"github.com/insolar/insolar/logicrunner/statestorage"
+	"github.com/insolar/insolar/logicrunner/shutdown"
 	"github.com/insolar/insolar/logicrunner/writecontroller"
+	"github.com/insolar/insolar/network"
 )
+
+const maxQueueLength = 10
 
 // LogicRunner is a general interface of contract executor
 type LogicRunner struct {
 	MessageBus                 insolar.MessageBus                 `inject:""`
 	ContractRequester          insolar.ContractRequester          `inject:""`
-	NodeNetwork                insolar.NodeNetwork                `inject:""`
+	NodeNetwork                network.NodeNetwork                `inject:""`
 	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
 	ParcelFactory              message.ParcelFactory              `inject:""`
 	PulseAccessor              pulse.Accessor                     `inject:""`
 	ArtifactManager            artifacts.Client                   `inject:""`
 	DescriptorsCache           artifacts.DescriptorsCache         `inject:""`
 	JetCoordinator             jet.Coordinator                    `inject:""`
-	RequestsExecutor           requestsexecutor.RequestsExecutor  `inject:""`
+	RequestsExecutor           RequestsExecutor                   `inject:""`
 	MachinesManager            machinesmanager.MachinesManager    `inject:""`
 	JetStorage                 jet.Storage                        `inject:""`
 	Publisher                  watermillMsg.Publisher
 	Sender                     bus.Sender
 	SenderWithRetry            *bus.WaitOKSender
-	StateStorage               statestorage.StateStorage
-	ResultsMatcher             resultmatcher.ResultMatcher
-	OutgoingSender             outgoingsender.OutgoingRequestSender
-	WriteController            *writecontroller.WriteController
+	StateStorage               StateStorage
+	ResultsMatcher             ResultMatcher
+	OutgoingSender             OutgoingRequestSender
+	WriteController            writecontroller.WriteController
+	FlowDispatcher             dispatcher.Dispatcher
+	ShutdownFlag               shutdown.Flag
 
 	Cfg *configuration.LogicRunner
 
 	rpc *lrCommon.RPC
-
-	stopLock   sync.Mutex
-	isStopping bool
-	stopChan   chan struct{}
-
-	// Inner dispatcher will be merged with FlowDispatcher after
-	// complete migration to watermill.
-	FlowDispatcher      *dispatcher.Dispatcher
-	InnerFlowDispatcher *dispatcher.Dispatcher
 }
 
 // NewLogicRunner is constructor for LogicRunner
@@ -93,35 +88,42 @@ func NewLogicRunner(cfg *configuration.LogicRunner, publisher watermillMsg.Publi
 		return nil, errors.New("LogicRunner have nil configuration")
 	}
 	res := LogicRunner{
-		Cfg:             cfg,
-		Publisher:       publisher,
-		Sender:          sender,
-		SenderWithRetry: bus.NewWaitOKWithRetrySender(sender, 3),
+		Cfg:       cfg,
+		Publisher: publisher,
+		Sender:    sender,
 	}
 
+	res.ResultsMatcher = newResultsMatcher(&res)
 	return &res, nil
 }
 
 func (lr *LogicRunner) LRI() {}
 
 func (lr *LogicRunner) Init(ctx context.Context) error {
-	lr.ResultsMatcher = resultmatcher.NewResultsMatcher(lr.MessageBus, lr.PulseAccessor, lr.JetCoordinator)
+	lr.ShutdownFlag = shutdown.NewFlag()
 
 	as := system.New()
-	lr.OutgoingSender = outgoingsender.NewOutgoingRequestSender(as, lr.ContractRequester, lr.ArtifactManager)
+	lr.OutgoingSender = NewOutgoingRequestSender(as, lr.ContractRequester, lr.ArtifactManager)
 
-	lr.StateStorage = statestorage.NewStateStorage(
+	lr.StateStorage = NewStateStorage(
 		lr.Publisher,
 		lr.RequestsExecutor,
-		lr.MessageBus,
+		lr.Sender,
 		lr.JetCoordinator,
 		lr.PulseAccessor,
 		lr.ArtifactManager,
 		lr.OutgoingSender,
+		lr.ShutdownFlag,
 	)
 
 	lr.rpc = lrCommon.NewRPC(
-		NewRPCMethods(lr.ArtifactManager, lr.DescriptorsCache, lr.ContractRequester, lr.StateStorage, lr.OutgoingSender),
+		NewRPCMethods(
+			lr.ArtifactManager,
+			lr.DescriptorsCache,
+			lr.ContractRequester,
+			lr.StateStorage,
+			lr.OutgoingSender,
+		),
 		lr.Cfg,
 	)
 
@@ -137,51 +139,32 @@ func (lr *LogicRunner) Init(ctx context.Context) error {
 }
 
 func (lr *LogicRunner) initHandlers() {
-	dep := &handles.Dependencies{
-		Publisher:         lr.Publisher,
-		StateStorage:      lr.StateStorage,
-		ResultsMatcher:    lr.ResultsMatcher,
-		JetCoordinator:    lr.JetCoordinator,
-		ArtifactManager:   lr.ArtifactManager,
-		ContractRequester: lr.ContractRequester,
-		MessageBus:        lr.MessageBus,
-		Sender:            lr.Sender,
-		JetStorage:        lr.JetStorage,
-		WriteAccessor:     lr.WriteController,
+	dep := &Dependencies{
+		Publisher:        lr.Publisher,
+		StateStorage:     lr.StateStorage,
+		ResultsMatcher:   lr.ResultsMatcher,
+		lr:               lr,
+		Sender:           lr.Sender,
+		JetStorage:       lr.JetStorage,
+		WriteAccessor:    lr.WriteController,
+		OutgoingSender:   lr.OutgoingSender,
+		RequestsExecutor: lr.RequestsExecutor,
 	}
 
-	initHandle := func(msg *watermillMsg.Message) *handles.Init {
-		return &handles.Init{
-			Dep:     dep,
+	initHandle := func(msg *watermillMsg.Message) *Init {
+		return &Init{
+			dep:     dep,
 			Message: msg,
 		}
 	}
-	lr.FlowDispatcher = dispatcher.NewDispatcher(
+	lr.FlowDispatcher = dispatcher.NewDispatcher(lr.PulseAccessor,
 		func(msg *watermillMsg.Message) flow.Handle {
 			return initHandle(msg).Present
-		},
-		func(msg *watermillMsg.Message) flow.Handle {
+		}, func(msg *watermillMsg.Message) flow.Handle {
 			return initHandle(msg).Future
-		},
-		func(msg *watermillMsg.Message) flow.Handle {
+		}, func(msg *watermillMsg.Message) flow.Handle {
 			return initHandle(msg).Past
-		},
-	)
-
-	innerInitHandle := func(msg *watermillMsg.Message) *handles.InnerInit {
-		return &handles.InnerInit{
-			Dep:     dep,
-			Message: msg,
-		}
-	}
-
-	lr.InnerFlowDispatcher = dispatcher.NewDispatcher(func(msg *watermillMsg.Message) flow.Handle {
-		return innerInitHandle(msg).Present
-	}, func(msg *watermillMsg.Message) flow.Handle {
-		return innerInitHandle(msg).Present
-	}, func(msg *watermillMsg.Message) flow.Handle {
-		return innerInitHandle(msg).Present
-	})
+		})
 }
 
 func (lr *LogicRunner) initializeBuiltin(_ context.Context) error {
@@ -233,7 +216,6 @@ func (lr *LogicRunner) Start(ctx context.Context) error {
 	}
 
 	lr.ArtifactManager.InjectFinish()
-	lr.FlowDispatcher.PulseAccessor = lr.PulseAccessor
 
 	return nil
 }
@@ -249,19 +231,15 @@ func (lr *LogicRunner) Stop(ctx context.Context) error {
 }
 
 func (lr *LogicRunner) GracefulStop(ctx context.Context) error {
-	inslogger.FromContext(ctx).Debug("LogicRunner.GracefulStop starts ...")
+	waitFunction := lr.ShutdownFlag.Stop(ctx)
+	waitFunction()
 
-	lr.stopLock.Lock()
-	if !lr.isStopping {
-		lr.isStopping = true
-		lr.stopChan = make(chan struct{}, 1)
-	}
-	lr.stopLock.Unlock()
-
-	inslogger.FromContext(ctx).Debug("LogicRunner.GracefulStop wait ...")
-	<-lr.stopChan
-	inslogger.FromContext(ctx).Debug("LogicRunner.GracefulStop ends ...")
 	return nil
+}
+
+func loggerWithTargetID(ctx context.Context, msg insolar.Parcel) context.Context {
+	ctx, _ = inslogger.WithField(ctx, "targetid", msg.DefaultTarget().String())
+	return ctx
 }
 
 func (lr *LogicRunner) OnPulse(ctx context.Context, oldPulse insolar.Pulse, newPulse insolar.Pulse) error {
@@ -273,13 +251,7 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, oldPulse insolar.Pulse, newP
 		return errors.Wrap(err, "failed to close pulse on write controller")
 	}
 
-	lr.ResultsMatcher.Clear()
-
 	messages := lr.StateStorage.OnPulse(ctx, newPulse)
-
-	lr.FlowDispatcher.ChangePulse(ctx, newPulse)
-	lr.InnerFlowDispatcher.ChangePulse(ctx, newPulse)
-
 	err = lr.WriteController.Open(ctx, newPulse.PulseNumber)
 	if err != nil {
 		return errors.Wrap(err, "failed to start new pulse on write controller")
@@ -295,44 +267,143 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, oldPulse insolar.Pulse, newP
 }
 
 func (lr *LogicRunner) stopIfNeeded(ctx context.Context) {
-	// lock is required to access LogicRunner.state
-	lr.StateStorage.Lock()
-	defer lr.StateStorage.Unlock()
-
-	if lr.StateStorage.IsEmpty() {
-		lr.stopLock.Lock()
-		if lr.isStopping {
-			inslogger.FromContext(ctx).Debug("LogicRunner ready to stop")
-			lr.stopChan <- struct{}{}
-		}
-		lr.stopLock.Unlock()
-	}
+	lr.ShutdownFlag.Done(ctx, func() bool {
+		return lr.StateStorage.IsEmpty()
+	})
 }
 
-func (lr *LogicRunner) sendOnPulseMessagesAsync(ctx context.Context, messages []insolar.Message) {
+func (lr *LogicRunner) sendOnPulseMessagesAsync(ctx context.Context, messages map[insolar.Reference][]payload.Payload) {
 	ctx, spanMessages := instracer.StartSpan(ctx, "pulse.logicrunner sending messages")
 	spanMessages.AddAttributes(trace.StringAttribute("numMessages", strconv.Itoa(len(messages))))
 
 	var sendWg sync.WaitGroup
-	sendWg.Add(len(messages))
 
-	for _, msg := range messages {
-		go lr.sendOnPulseMessage(ctx, msg, &sendWg)
+	for ref, msg := range messages {
+		sendWg.Add(len(msg))
+		for _, msg := range msg {
+			lr.sendOnPulseMessage(ctx, ref, msg, &sendWg)
+		}
 	}
 
 	sendWg.Wait()
 	spanMessages.End()
 }
 
-func (lr *LogicRunner) sendOnPulseMessage(ctx context.Context, msg insolar.Message, sendWg *sync.WaitGroup) {
+func (lr *LogicRunner) sendOnPulseMessage(ctx context.Context, objectRef insolar.Reference, payloadObj payload.Payload, sendWg *sync.WaitGroup) {
 	defer sendWg.Done()
-	_, err := lr.MessageBus.Send(ctx, msg, nil)
+
+	msg, err := payload.NewMessage(payloadObj)
 	if err != nil {
-		inslogger.FromContext(ctx).Error(errors.Wrap(err, "error while sending validation data on pulse"))
+		inslogger.FromContext(ctx).Error("failed to serialize message: " + err.Error())
+		return
 	}
+
+	// we dont really care about response, because we are sending this in the beginning of the pulse
+	// so flow canceled should not happened, if it does, somebody already restarted
+	_, done := lr.Sender.SendRole(ctx, msg, insolar.DynamicRoleVirtualExecutor, objectRef)
+	done()
 }
 
 func (lr *LogicRunner) AddUnwantedResponse(ctx context.Context, msg insolar.Message) error {
 	m := msg.(*message.ReturnResults)
 	return lr.ResultsMatcher.AddUnwantedResponse(ctx, m)
+}
+
+func convertQueueToMessageQueue(ctx context.Context, queue []*lrCommon.Transcript) []*payload.ExecutionQueueElement {
+	mq := make([]*payload.ExecutionQueueElement, 0)
+	var traces string
+	for _, elem := range queue {
+		mq = append(mq, &payload.ExecutionQueueElement{
+			RequestRef:  elem.RequestRef,
+			Incoming:    elem.Request,
+			ServiceData: serviceDataFromContext(elem.Context),
+		})
+
+		traces += inslogger.TraceID(elem.Context) + ", "
+	}
+
+	inslogger.FromContext(ctx).Debug("convertQueueToMessageQueue: ", traces)
+
+	return mq
+}
+
+func contextWithServiceData(ctx context.Context, data message.ServiceData) context.Context {
+	// ctx := inslogger.ContextWithTrace(context.Background(), data.LogTraceID)
+	ctx = inslogger.ContextWithTrace(ctx, data.LogTraceID)
+	ctx = inslogger.WithLoggerLevel(ctx, data.LogLevel)
+	if data.TraceSpanData != nil {
+		parentSpan := instracer.MustDeserialize(data.TraceSpanData)
+		return instracer.WithParentSpan(ctx, parentSpan)
+	}
+	return ctx
+}
+
+func contextFromServiceData(data payload.ServiceData) context.Context {
+	ctx := inslogger.ContextWithTrace(context.Background(), data.LogTraceID)
+	ctx = inslogger.WithLoggerLevel(ctx, data.LogLevel)
+	if data.TraceSpanData != nil {
+		parentSpan := instracer.MustDeserialize(data.TraceSpanData)
+		return instracer.WithParentSpan(ctx, parentSpan)
+	}
+	return ctx
+}
+
+func freshContextFromContext(ctx context.Context) context.Context {
+	res := inslogger.ContextWithTrace(
+		context.Background(),
+		inslogger.TraceID(ctx),
+	)
+	//FIXME: need way to get level out of context
+	//res = inslogger.WithLoggerLevel(res, data.LogLevel)
+	parentSpan, ok := instracer.ParentSpan(ctx)
+	if ok {
+		res = instracer.WithParentSpan(res, parentSpan)
+	}
+
+	if pctx := trace.FromContext(ctx); pctx != nil {
+		res = trace.NewContext(res, pctx)
+	}
+
+	return res
+}
+
+func freshContextFromContextAndRequest(ctx context.Context, req record.IncomingRequest) context.Context {
+	res := inslogger.ContextWithTrace(
+		context.Background(),
+		req.APIRequestID, // this is HACK based on awareness, we just know how trace id is formed
+	)
+	//FIXME: need way to get level out of context
+	//res = inslogger.WithLoggerLevel(res, data.LogLevel)
+	parentSpan, ok := instracer.ParentSpan(ctx)
+	if ok {
+		res = instracer.WithParentSpan(res, parentSpan)
+	}
+	if pctx := trace.FromContext(ctx); pctx != nil {
+		res = trace.NewContext(res, pctx)
+	}
+	return res
+}
+
+func serviceDataFromContext(ctx context.Context) *payload.ServiceData {
+	if ctx == nil {
+		log.Error("nil context, can't create correct ServiceData")
+		return &payload.ServiceData{}
+	}
+	return &payload.ServiceData{
+		LogTraceID:    inslogger.TraceID(ctx),
+		LogLevel:      inslogger.GetLoggerLevel(ctx),
+		TraceSpanData: instracer.MustSerialize(ctx),
+	}
+}
+
+func oldServiceDataFromContext(ctx context.Context) message.ServiceData {
+	if ctx == nil {
+		log.Error("nil context, can't create correct ServiceData")
+		return message.ServiceData{}
+	}
+	return message.ServiceData{
+		LogTraceID:    inslogger.TraceID(ctx),
+		LogLevel:      inslogger.GetLoggerLevel(ctx),
+		TraceSpanData: instracer.MustSerialize(ctx),
+	}
 }

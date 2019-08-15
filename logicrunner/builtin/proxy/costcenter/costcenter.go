@@ -47,9 +47,16 @@ func (r *ContractConstructorHolder) AsChild(objRef insolar.Reference) (*CostCent
 	}
 
 	var constructorError *foundation.Error
-	err = common.CurrentProxyCtx.Deserialize(ret, []interface{}{&constructorError})
+	resultContainer := foundation.Result{
+		Returns: []interface{}{&constructorError},
+	}
+	err = common.CurrentProxyCtx.Deserialize(ret, &resultContainer)
 	if err != nil {
 		return nil, err
+	}
+
+	if resultContainer.Error != nil {
+		return nil, resultContainer.Error
 	}
 
 	if constructorError != nil {
@@ -70,9 +77,9 @@ func GetPrototype() insolar.Reference {
 }
 
 // New is constructor
-func New(feeWallet insolar.Reference) *ContractConstructorHolder {
+func New(feeAccount insolar.Reference) *ContractConstructorHolder {
 	var args [1]interface{}
-	args[0] = feeWallet
+	args[0] = feeAccount
 
 	var argsSerialized []byte
 	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
@@ -147,13 +154,13 @@ func (r *CostCenter) GetCode() (insolar.Reference, error) {
 	return r.Code, nil
 }
 
-// GetFeeWalletRef is proxy generated method
-func (r *CostCenter) GetFeeWalletRef() (insolar.Reference, error) {
+// GetFeeAccount is proxy generated method
+func (r *CostCenter) GetFeeAccountAsMutable() (insolar.Reference, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
-	ret := [2]interface{}{}
+	ret := make([]interface{}, 2)
 	var ret0 insolar.Reference
 	ret[0] = &ret0
 	var ret1 *foundation.Error
@@ -164,24 +171,30 @@ func (r *CostCenter) GetFeeWalletRef() (insolar.Reference, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetFeeWalletRef", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetFeeAccount", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
 
-	err = common.CurrentProxyCtx.Deserialize(res, &ret)
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
 	if err != nil {
 		return ret0, err
 	}
-
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return ret0, err
+	}
 	if ret1 != nil {
 		return ret0, ret1
 	}
 	return ret0, nil
 }
 
-// GetFeeWalletRefNoWait is proxy generated method
-func (r *CostCenter) GetFeeWalletRefNoWait() error {
+// GetFeeAccountNoWait is proxy generated method
+func (r *CostCenter) GetFeeAccountNoWait() error {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -191,7 +204,7 @@ func (r *CostCenter) GetFeeWalletRefNoWait() error {
 		return err
 	}
 
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "GetFeeWalletRef", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "GetFeeAccount", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -199,13 +212,13 @@ func (r *CostCenter) GetFeeWalletRefNoWait() error {
 	return nil
 }
 
-// GetFeeWalletRefAsImmutable is proxy generated method
-func (r *CostCenter) GetFeeWalletRefAsImmutable() (insolar.Reference, error) {
+// GetFeeAccountAsImmutable is proxy generated method
+func (r *CostCenter) GetFeeAccount() (insolar.Reference, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
-	ret := [2]interface{}{}
+	ret := make([]interface{}, 2)
 	var ret0 insolar.Reference
 	ret[0] = &ret0
 	var ret1 *foundation.Error
@@ -216,16 +229,22 @@ func (r *CostCenter) GetFeeWalletRefAsImmutable() (insolar.Reference, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "GetFeeWalletRef", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "GetFeeAccount", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
 
-	err = common.CurrentProxyCtx.Deserialize(res, &ret)
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
 	if err != nil {
 		return ret0, err
 	}
-
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return ret0, err
+	}
 	if ret1 != nil {
 		return ret0, ret1
 	}
@@ -233,13 +252,13 @@ func (r *CostCenter) GetFeeWalletRefAsImmutable() (insolar.Reference, error) {
 }
 
 // CalcFee is proxy generated method
-func (r *CostCenter) CalcFee(amountStr string) (string, error) {
+func (r *CostCenter) CalcFeeAsMutable(amountStr string) (string, error) {
 	var args [1]interface{}
 	args[0] = amountStr
 
 	var argsSerialized []byte
 
-	ret := [2]interface{}{}
+	ret := make([]interface{}, 2)
 	var ret0 string
 	ret[0] = &ret0
 	var ret1 *foundation.Error
@@ -255,11 +274,17 @@ func (r *CostCenter) CalcFee(amountStr string) (string, error) {
 		return ret0, err
 	}
 
-	err = common.CurrentProxyCtx.Deserialize(res, &ret)
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
 	if err != nil {
 		return ret0, err
 	}
-
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return ret0, err
+	}
 	if ret1 != nil {
 		return ret0, ret1
 	}
@@ -287,13 +312,13 @@ func (r *CostCenter) CalcFeeNoWait(amountStr string) error {
 }
 
 // CalcFeeAsImmutable is proxy generated method
-func (r *CostCenter) CalcFeeAsImmutable(amountStr string) (string, error) {
+func (r *CostCenter) CalcFee(amountStr string) (string, error) {
 	var args [1]interface{}
 	args[0] = amountStr
 
 	var argsSerialized []byte
 
-	ret := [2]interface{}{}
+	ret := make([]interface{}, 2)
 	var ret0 string
 	ret[0] = &ret0
 	var ret1 *foundation.Error
@@ -309,11 +334,17 @@ func (r *CostCenter) CalcFeeAsImmutable(amountStr string) (string, error) {
 		return ret0, err
 	}
 
-	err = common.CurrentProxyCtx.Deserialize(res, &ret)
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
 	if err != nil {
 		return ret0, err
 	}
-
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return ret0, err
+	}
 	if ret1 != nil {
 		return ret0, ret1
 	}

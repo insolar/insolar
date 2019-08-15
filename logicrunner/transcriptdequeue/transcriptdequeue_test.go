@@ -1,4 +1,4 @@
-//
+///
 // Copyright 2019 Insolar Technologies GmbH
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,7 +12,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
+///
 
 package transcriptdequeue
 
@@ -22,7 +22,7 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/insolar/insolar/insolar/gen"
-	"github.com/insolar/insolar/logicrunner/transcript"
+	"github.com/insolar/insolar/logicrunner/common"
 )
 
 type TranscriptDequeueSuite struct{ suite.Suite }
@@ -30,11 +30,11 @@ type TranscriptDequeueSuite struct{ suite.Suite }
 func TestTranscriptDequeue(t *testing.T) { suite.Run(t, new(TranscriptDequeueSuite)) }
 
 func (s *TranscriptDequeueSuite) TestBasic() {
-	d := NewTranscriptDequeue()
+	d := New()
 	s.Require().NotNil(d)
 
 	// [] + [1, 2]
-	d.Push(&transcript.Transcript{Nonce: 1}, &transcript.Transcript{Nonce: 2})
+	d.Push(&common.Transcript{Nonce: 1}, &common.Transcript{Nonce: 2})
 
 	// 1, [2]
 	tr := d.Pop()
@@ -42,7 +42,7 @@ func (s *TranscriptDequeueSuite) TestBasic() {
 	s.Equal(uint64(1), tr.Nonce)
 
 	// [3, 4] + [2]
-	d.Prepend(&transcript.Transcript{Nonce: 3}, &transcript.Transcript{Nonce: 4})
+	d.Prepend(&common.Transcript{Nonce: 3}, &common.Transcript{Nonce: 4})
 
 	// 3, [4, 2]
 	tr = d.Pop()
@@ -64,10 +64,10 @@ func (s *TranscriptDequeueSuite) TestBasic() {
 }
 
 func (s *TranscriptDequeueSuite) TestRotate() {
-	d := NewTranscriptDequeue()
+	d := New()
 	s.Require().NotNil(d)
 
-	d.Push(&transcript.Transcript{Nonce: 1}, &transcript.Transcript{Nonce: 2})
+	d.Push(&common.Transcript{Nonce: 1}, &common.Transcript{Nonce: 2})
 
 	rotated := d.Rotate()
 	s.Require().Len(rotated, 2)
@@ -81,29 +81,29 @@ func (s *TranscriptDequeueSuite) TestRotate() {
 }
 
 func (s *TranscriptDequeueSuite) TestHasFromLedger() {
-	d := NewTranscriptDequeue()
+	d := New()
 	s.Require().NotNil(d)
 
-	d.Prepend(&transcript.Transcript{Nonce: 3}, &transcript.Transcript{Nonce: 4})
+	d.Prepend(&common.Transcript{Nonce: 3}, &common.Transcript{Nonce: 4})
 	s.False(d.HasFromLedger() != nil)
 
-	d.Push(&transcript.Transcript{FromLedger: true})
+	d.Push(&common.Transcript{FromLedger: true})
 	s.True(d.HasFromLedger() != nil)
 
-	d.Push(&transcript.Transcript{FromLedger: true})
+	d.Push(&common.Transcript{FromLedger: true})
 	s.True(d.HasFromLedger() != nil)
 }
 
 func (s *TranscriptDequeueSuite) TestPopByReference() {
-	d := NewTranscriptDequeue()
+	d := New()
 	s.Require().NotNil(d)
 
 	ref1, ref2, ref3 := gen.Reference(), gen.Reference(), gen.Reference()
 
 	d.Prepend(
-		&transcript.Transcript{Nonce: 3, RequestRef: ref1},
-		&transcript.Transcript{Nonce: 4, RequestRef: ref2},
-		&transcript.Transcript{Nonce: 5, RequestRef: ref3},
+		&common.Transcript{Nonce: 3, RequestRef: ref1},
+		&common.Transcript{Nonce: 4, RequestRef: ref2},
+		&common.Transcript{Nonce: 5, RequestRef: ref3},
 	)
 
 	tr := d.PopByReference(ref2)
@@ -124,13 +124,13 @@ func (s *TranscriptDequeueSuite) TestPopByReference() {
 }
 
 func (s *TranscriptDequeueSuite) TestPopByReferenceHead() {
-	d := NewTranscriptDequeue()
+	d := New()
 	s.Require().NotNil(d)
 
 	ref1, ref2, ref3 := gen.Reference(), gen.Reference(), gen.Reference()
-	el1 := &transcript.Transcript{Nonce: 3, RequestRef: ref1}
-	el2 := &transcript.Transcript{Nonce: 4, RequestRef: ref2}
-	el3 := &transcript.Transcript{Nonce: 5, RequestRef: ref3}
+	el1 := &common.Transcript{Nonce: 3, RequestRef: ref1}
+	el2 := &common.Transcript{Nonce: 4, RequestRef: ref2}
+	el3 := &common.Transcript{Nonce: 5, RequestRef: ref3}
 	d.Prepend(el1, el2, el3)
 
 	tr := d.PopByReference(ref1)
@@ -148,13 +148,13 @@ func (s *TranscriptDequeueSuite) TestPopByReferenceHead() {
 }
 
 func (s *TranscriptDequeueSuite) TestPopByReferenceTail() {
-	d := NewTranscriptDequeue()
+	d := New()
 	s.Require().NotNil(d)
 
 	ref1, ref2, ref3 := gen.Reference(), gen.Reference(), gen.Reference()
-	el1 := &transcript.Transcript{Nonce: 3, RequestRef: ref1}
-	el2 := &transcript.Transcript{Nonce: 4, RequestRef: ref2}
-	el3 := &transcript.Transcript{Nonce: 5, RequestRef: ref3}
+	el1 := &common.Transcript{Nonce: 3, RequestRef: ref1}
+	el2 := &common.Transcript{Nonce: 4, RequestRef: ref2}
+	el3 := &common.Transcript{Nonce: 5, RequestRef: ref3}
 	d.Prepend(el1, el2, el3)
 
 	tr := d.PopByReference(ref3)
@@ -172,13 +172,13 @@ func (s *TranscriptDequeueSuite) TestPopByReferenceTail() {
 }
 
 func (s *TranscriptDequeueSuite) TestPopByReferenceOneElement() {
-	d := NewTranscriptDequeue()
+	d := New()
 	s.Require().NotNil(d)
 
 	ref1 := gen.Reference()
 
 	d.Prepend(
-		&transcript.Transcript{Nonce: 3, RequestRef: ref1},
+		&common.Transcript{Nonce: 3, RequestRef: ref1},
 	)
 
 	tr := d.PopByReference(ref1)
@@ -191,11 +191,11 @@ func (s *TranscriptDequeueSuite) TestPopByReferenceOneElement() {
 }
 
 func (s *TranscriptDequeueSuite) TestTake() {
-	d := NewTranscriptDequeue()
+	d := New()
 	s.Require().NotNil(d)
 
 	for i := 0; i < 15; i++ {
-		d.Push(&transcript.Transcript{Nonce: uint64(i)})
+		d.Push(&common.Transcript{Nonce: uint64(i)})
 	}
 
 	trs := d.Take(0)

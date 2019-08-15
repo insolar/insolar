@@ -73,7 +73,7 @@ func (s *jetCoordinatorSuite) BeforeTest(suiteName, testName string) {
 	s.jetStorage = storage
 	s.nodeStorage = node.NewAccessorMock(s.T())
 	s.coordinator = NewJetCoordinator(5)
-	s.coordinator.NodeNet = network.NewNodeNetworkMock(s.T())
+	s.coordinator.OriginProvider = network.NewOriginProviderMock(s.T())
 
 	s.cm.Inject(
 		testutils.NewPlatformCryptographyScheme(),
@@ -129,13 +129,13 @@ func (s *jetCoordinatorSuite) TestJetCoordinator_QueryRole() {
 func TestJetCoordinator_Me(t *testing.T) {
 	t.Parallel()
 	// Arrange
-	expectedID := testutils.RandomRef()
+	expectedID := gen.Reference()
 	nodeNet := network.NewNodeNetworkMock(t)
 	node := network.NewNetworkNodeMock(t)
 	nodeNet.GetOriginMock.Return(node)
 	node.IDMock.Return(expectedID)
 	jc := NewJetCoordinator(1)
-	jc.NodeNet = nodeNet
+	jc.OriginProvider = nodeNet
 
 	// Act
 	resultID := jc.Me()
@@ -251,7 +251,7 @@ func TestJetCoordinator_NodeForJet_CheckLimitFailed(t *testing.T) {
 	calc.PulseAccessor = pulseAccessor
 
 	// Act
-	res, err := calc.NodeForJet(ctx, testutils.RandomJet(), insolar.FirstPulseNumber+1)
+	res, err := calc.NodeForJet(ctx, insolar.ID(gen.JetID()), insolar.FirstPulseNumber+1)
 
 	// Assert
 	require.NotNil(t, err)
@@ -268,7 +268,7 @@ func TestJetCoordinator_NodeForJet_GoToHeavy(t *testing.T) {
 	generator := entropygenerator.StandardEntropyGenerator{}
 	pulseAccessor.LatestMock.Return(insolar.Pulse{PulseNumber: insolar.FirstPulseNumber, Entropy: generator.GenerateEntropy()}, nil)
 
-	expectedID := insolar.NewReference(testutils.RandomID())
+	expectedID := insolar.NewReference(gen.ID())
 	activeNodesStorageMock := node.NewAccessorMock(t)
 	activeNodesStorageMock.InRoleMock.Set(func(p insolar.PulseNumber, p1 insolar.StaticRole) (r []insolar.Node, r1 error) {
 		require.Equal(t, insolar.FirstPulseNumber, int(p))
@@ -302,7 +302,7 @@ func TestJetCoordinator_NodeForJet_GoToLight(t *testing.T) {
 	generator := entropygenerator.StandardEntropyGenerator{}
 	pulseAccessor.LatestMock.Return(insolar.Pulse{PulseNumber: insolar.PulseNumber(insolar.FirstPulseNumber + 1), Entropy: generator.GenerateEntropy()}, nil)
 
-	expectedID := insolar.NewReference(testutils.RandomID())
+	expectedID := insolar.NewReference(gen.ID())
 	activeNodesStorageMock := node.NewAccessorMock(t)
 	activeNodesStorageMock.InRoleMock.Set(func(p insolar.PulseNumber, p1 insolar.StaticRole) (r []insolar.Node, r1 error) {
 		require.Equal(t, insolar.FirstPulseNumber+1, int(p))
@@ -318,7 +318,7 @@ func TestJetCoordinator_NodeForJet_GoToLight(t *testing.T) {
 	coord.PlatformCryptographyScheme = platformpolicy.NewPlatformCryptographyScheme()
 
 	// Act
-	resNode, err := coord.NodeForJet(ctx, testutils.RandomJet(), insolar.FirstPulseNumber+1)
+	resNode, err := coord.NodeForJet(ctx, insolar.ID(gen.JetID()), insolar.FirstPulseNumber+1)
 
 	// Assert
 	require.Nil(t, err)

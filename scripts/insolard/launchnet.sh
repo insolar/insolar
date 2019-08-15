@@ -11,7 +11,7 @@ INSOLAR_LOG_LEVEL=${INSOLAR_LOG_LEVEL:-"debug"}
 GORUND_LOG_LEVEL=${GORUND_LOG_LEVEL:-${INSOLAR_LOG_LEVEL}}
 # we can skip build binaries (by default in CI environment they skips)
 SKIP_BUILD=${SKIP_BUILD:-${CI_ENV}}
-BUILD_TAGS=${BUILD_TAGS:-'-tags "functest"'}
+BUILD_TAGS=${BUILD_TAGS:-'-tags "debug functest"'}
 
 # predefined/dependent environment variables
 
@@ -299,7 +299,7 @@ wait_for_complete_network_state()
 {
     while true
     do
-        num=`scripts/insolard/check_status.sh 2>/dev/null | grep "NodeReady" | wc -l`
+        num=`scripts/insolard/check_status.sh 2>/dev/null | grep "CompleteNetworkState" | wc -l`
         echo "$num/$NUM_DISCOVERY_NODES discovery nodes ready"
         if [[ "$num" -eq "$NUM_DISCOVERY_NODES" ]]
         then

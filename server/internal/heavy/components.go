@@ -21,13 +21,14 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/insolar/insolar/network"
+
 	"github.com/insolar/insolar/ledger/heavy/exporter"
-	"github.com/insolar/insolar/network/rules"
 	"google.golang.org/grpc"
 
 	"github.com/ThreeDotsLabs/watermill"
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
-	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
+	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
 
 	"github.com/insolar/insolar/ledger/heavy/executor"
 	"github.com/insolar/insolar/log"
@@ -36,7 +37,7 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/internal/ledger/artifact"
+	"github.com/insolar/insolar/ledger/artifact"
 	"github.com/insolar/insolar/ledger/genesis"
 
 	"github.com/pkg/errors"
@@ -56,7 +57,7 @@ import (
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/node"
 	"github.com/insolar/insolar/insolar/pulse"
-	"github.com/insolar/insolar/internal/ledger/store"
+	"github.com/insolar/insolar/insolar/store"
 	"github.com/insolar/insolar/keystore"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/heavy/handler"
@@ -123,14 +124,26 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 	c.NodeRole = CertManager.GetCertificate().GetRole().String()
 
 	logger := inslogger.FromContext(ctx)
-	wmLogger := log.NewWatermillLogAdapter(logger)
-	pubSub := gochannel.NewGoChannel(gochannel.Config{}, wmLogger)
-	pubSub = internal.PubSubWrapper(ctx, &c.cmp, cfg.Introspection, pubSub)
+
+	// Watermill stuff.
+	var (
+		wmLogger   *log.WatermillLogAdapter
+		publisher  watermillMsg.Publisher
+		subscriber watermillMsg.Subscriber
+	)
+	{
+		wmLogger = log.NewWatermillLogAdapter(logger)
+		pubsub := gochannel.NewGoChannel(gochannel.Config{}, wmLogger)
+		subscriber = pubsub
+		publisher = pubsub
+		// Wrapped watermill publisher for introspection.
+		publisher = internal.PublisherWrapper(ctx, &c.cmp, cfg.Introspection, publisher)
+	}
 
 	// Network.
 	var (
 		NetworkService *servicenetwork.ServiceNetwork
-		NodeNetwork    insolar.NodeNetwork
+		NodeNetwork    network.NodeNetwork
 		Termination    insolar.TerminationHandler
 	)
 	{
@@ -197,7 +210,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		c.PulseCalculator = Pulses
 		c.PulseAccessor = Pulses
 		c.JetAccessor = Jets
-		c.NodeNet = NodeNetwork
+		c.OriginProvider = NodeNetwork
 		c.PlatformCryptographyScheme = CryptoScheme
 		c.Nodes = Nodes
 
@@ -219,7 +232,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start MessageBus")
 		}
-		WmBus = bus.NewBus(cfg.Bus, pubSub, Pulses, Coordinator, CryptoScheme)
+		WmBus = bus.NewBus(cfg.Bus, publisher, Pulses, Coordinator, CryptoScheme)
 	}
 
 	metricsHandler, err := metrics.NewMetrics(
@@ -251,6 +264,11 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 
 		sp := pulse.NewStartPulse()
 
+		backupMaker, err := executor.NewBackupMaker(ctx, DB, cfg.Ledger.Backup, JetKeeper.TopSyncPulse())
+		if err != nil {
+			return nil, errors.Wrap(err, "failed create backuper")
+		}
+
 		pm := pulsemanager.NewPulseManager()
 		pm.Bus = Bus
 		pm.NodeNet = NodeNetwork
@@ -260,7 +278,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		pm.PulseAccessor = Pulses
 		pm.JetModifier = jets
 		pm.StartPulse = sp
-		pm.FinalizationKeeper = executor.NewFinalizationKeeperDefault(JetKeeper, Termination, Pulses, cfg.Ledger.LightChainLimit)
+		pm.FinalizationKeeper = executor.NewFinalizationKeeperDefault(JetKeeper, Pulses, cfg.Ledger.LightChainLimit)
 
 		h := handler.New(cfg.Ledger)
 		h.RecordAccessor = Records
@@ -280,6 +298,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		h.JetTree = jets
 		h.DropDB = drops
 		h.JetKeeper = JetKeeper
+		h.BackupMaker = backupMaker
 		h.Sender = WmBus
 
 		PulseManager = pm
@@ -312,15 +331,21 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 	// Exporter
 	var (
 		recordExporter *exporter.RecordServer
+		pulseExporter  *exporter.PulseServer
 	)
 	{
 		recordExporter = exporter.NewRecordServer(Pulses, RecordPosition, Records, JetKeeper)
+		pulseExporter = exporter.NewPulseServer(Pulses, JetKeeper)
+
+		grpcServer := grpc.NewServer()
+		exporter.RegisterRecordExporterServer(grpcServer, recordExporter)
+		exporter.RegisterPulseExporterServer(grpcServer, pulseExporter)
+
 		lis, err := net.Listen("tcp", cfg.Exporter.Addr)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to open port for Exporter")
 		}
-		grpcServer := grpc.NewServer()
-		exporter.RegisterRecordExporterServer(grpcServer, recordExporter)
+
 		go func() {
 			if err := grpcServer.Serve(lis); err != nil {
 				panic(fmt.Errorf("exporter failed to serve: %s", err))
@@ -351,8 +376,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		CertManager,
 		NodeNetwork,
 		NetworkService,
-		pubSub,
-		rules.NewRules(),
+		publisher,
 	)
 	err = c.cmp.Init(ctx)
 	if err != nil {
@@ -365,7 +389,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		}
 	}
 
-	c.startWatermill(ctx, wmLogger, pubSub, WmBus, NetworkService.SendMessageHandler, Handler.Process)
+	c.startWatermill(ctx, wmLogger, subscriber, WmBus, NetworkService.SendMessageHandler, Handler.Process)
 
 	return c, nil
 }
@@ -393,9 +417,9 @@ func (c *components) Stop(ctx context.Context) error {
 func (c *components) startWatermill(
 	ctx context.Context,
 	logger watermill.LoggerAdapter,
-	pubSub watermillMsg.PubSub,
+	sub watermillMsg.Subscriber,
 	b *bus.Bus,
-	outHandler, inHandler watermillMsg.HandlerFunc,
+	outHandler, inHandler watermillMsg.NoPublishHandlerFunc,
 ) {
 	inRouter, err := watermillMsg.NewRouter(watermillMsg.RouterConfig{}, logger)
 	if err != nil {
@@ -409,7 +433,7 @@ func (c *components) startWatermill(
 	outRouter.AddNoPublisherHandler(
 		"OutgoingHandler",
 		bus.TopicOutgoing,
-		pubSub,
+		sub,
 		outHandler,
 	)
 
@@ -421,7 +445,7 @@ func (c *components) startWatermill(
 	inRouter.AddNoPublisherHandler(
 		"IncomingHandler",
 		bus.TopicIncoming,
-		pubSub,
+		sub,
 		inHandler,
 	)
 
@@ -433,7 +457,7 @@ func (c *components) startWatermill(
 
 func startRouter(ctx context.Context, router *watermillMsg.Router) {
 	go func() {
-		if err := router.Run(); err != nil {
+		if err := router.Run(ctx); err != nil {
 			inslogger.FromContext(ctx).Error("Error while running router", err)
 		}
 	}()

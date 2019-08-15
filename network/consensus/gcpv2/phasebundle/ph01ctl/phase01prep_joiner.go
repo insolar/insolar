@@ -53,6 +53,7 @@ package ph01ctl
 import (
 	"context"
 	"fmt"
+
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/population"
@@ -155,5 +156,5 @@ func (c *JoinerPhase01PrepController) DispatchHostPacket(ctx context.Context, pa
 		return err
 	}
 
-	return c.realm.ApplyPulseData(pp, false, from)
+	return c.realm.ApplyPulseData(ctx, pp, false, from)
 }

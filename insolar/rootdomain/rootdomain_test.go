@@ -20,6 +20,8 @@ import (
 	"encoding/hex"
 	"testing"
 
+	"github.com/insolar/insolar/insolar/genesisrefs"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/stretchr/testify/require"
@@ -50,7 +52,7 @@ func TestGenesisRef(t *testing.T) {
 		pubKey    = "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEf+vsMVU75xH8uj5WRcOqYdHXtaHH\nN0na2RVQ1xbhsVybYPae3ujNHeQCPj+RaJyMVhb6Aj/AOsTTOPFswwIDAQ==\n-----END PUBLIC KEY-----\n"
 		pubKeyRef = "1tJCGGQmcqRD6oeNt1TPHpDshvb3YZy4NLsQcpHB9W.11111111111111111111111111111111"
 	)
-	genesisRef := GenesisRef(pubKey)
+	genesisRef := genesisrefs.GenesisRef(pubKey)
 	require.Equal(t, pubKeyRef, genesisRef.String(), "reference by name always the same")
 }
 

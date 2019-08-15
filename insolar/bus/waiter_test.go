@@ -20,18 +20,19 @@ import (
 	"context"
 	"testing"
 
+	"github.com/insolar/insolar/insolar/gen"
+	"github.com/insolar/insolar/insolar/pulse"
+
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/reply"
-	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/require"
 )
 
 // Send msg, bus.Sender gets error and closes resp chan
 func TestWaitOKSender_SendRole_RetryExceeded(t *testing.T) {
 	sender := NewSenderMock(t)
-	sender.LatestPulseMock.Set(accessorMock(t).Latest)
 
 	innerReps := make(chan *message.Message)
 	sender.SendRoleMock.Set(func(p context.Context, p1 *message.Message, p2 insolar.DynamicRole, p3 insolar.Reference) (r <-chan *message.Message, r1 func()) {
@@ -42,12 +43,15 @@ func TestWaitOKSender_SendRole_RetryExceeded(t *testing.T) {
 	msg, err := payload.NewMessage(&payload.State{})
 	require.NoError(t, err)
 
-	tries := 3
-	c := NewWaitOKWithRetrySender(sender, uint(tries))
+	retries := uint(3)
 
-	c.SendRole(context.Background(), msg, insolar.DynamicRoleLightExecutor, testutils.RandomRef())
+	pa := pulse.NewAccessorMock(t)
+	pa.LatestMock.Set(accessorMock(t).Latest)
+	c := NewWaitOKWithRetrySender(sender, pa, retries)
 
-	require.EqualValues(t, tries, sender.SendRoleAfterCounter())
+	c.SendRole(context.Background(), msg, insolar.DynamicRoleLightExecutor, gen.Reference())
+
+	require.EqualValues(t, retries+1, sender.SendRoleAfterCounter())
 }
 
 func sendOK(ch chan<- *message.Message) {
@@ -62,7 +66,6 @@ func sendOK(ch chan<- *message.Message) {
 
 func TestWaitOKSender_SendRole_RetryOnce(t *testing.T) {
 	sender := NewSenderMock(t)
-	sender.LatestPulseMock.Set(accessorMock(t).Latest)
 
 	innerReps := make(chan *message.Message)
 	sender.SendRoleMock.Set(func(p context.Context, p1 *message.Message, p2 insolar.DynamicRole, p3 insolar.Reference) (r <-chan *message.Message, r1 func()) {
@@ -76,16 +79,18 @@ func TestWaitOKSender_SendRole_RetryOnce(t *testing.T) {
 	})
 	msg, err := payload.NewMessage(&payload.State{})
 	require.NoError(t, err)
-	c := NewWaitOKWithRetrySender(sender, 3)
 
-	c.SendRole(context.Background(), msg, insolar.DynamicRoleLightExecutor, testutils.RandomRef())
+	pa := pulse.NewAccessorMock(t)
+	pa.LatestMock.Set(accessorMock(t).Latest)
+	c := NewWaitOKWithRetrySender(sender, pa, 3)
+
+	c.SendRole(context.Background(), msg, insolar.DynamicRoleLightExecutor, gen.Reference())
 
 	require.EqualValues(t, 2, sender.SendRoleAfterCounter())
 }
 
 func TestWaitOKSender_SendRole_OK(t *testing.T) {
 	sender := NewSenderMock(t)
-	sender.LatestPulseMock.Set(accessorMock(t).Latest)
 
 	innerReps := make(chan *message.Message)
 	sender.SendRoleMock.Set(func(p context.Context, p1 *message.Message, p2 insolar.DynamicRole, p3 insolar.Reference) (r <-chan *message.Message, r1 func()) {
@@ -96,16 +101,17 @@ func TestWaitOKSender_SendRole_OK(t *testing.T) {
 
 	msg, err := payload.NewMessage(&payload.State{})
 	require.NoError(t, err)
-	c := NewWaitOKWithRetrySender(sender, 3)
+	pa := pulse.NewAccessorMock(t)
+	pa.LatestMock.Set(accessorMock(t).Latest)
+	c := NewWaitOKWithRetrySender(sender, pa, 3)
 
-	c.SendRole(context.Background(), msg, insolar.DynamicRoleLightExecutor, testutils.RandomRef())
+	c.SendRole(context.Background(), msg, insolar.DynamicRoleLightExecutor, gen.Reference())
 
 	require.EqualValues(t, 1, sender.SendRoleAfterCounter())
 }
 
 func TestWaitOKSender_SendRole_NotOK(t *testing.T) {
 	sender := NewSenderMock(t)
-	sender.LatestPulseMock.Set(accessorMock(t).Latest)
 
 	innerReps := make(chan *message.Message)
 	sender.SendRoleMock.Set(func(p context.Context, p1 *message.Message, p2 insolar.DynamicRole, p3 insolar.Reference) (r <-chan *message.Message, r1 func()) {
@@ -116,9 +122,11 @@ func TestWaitOKSender_SendRole_NotOK(t *testing.T) {
 
 	msg, err := payload.NewMessage(&payload.State{})
 	require.NoError(t, err)
-	c := NewWaitOKWithRetrySender(sender, 3)
+	pa := pulse.NewAccessorMock(t)
+	pa.LatestMock.Set(accessorMock(t).Latest)
+	c := NewWaitOKWithRetrySender(sender, pa, 3)
 
-	c.SendRole(context.Background(), msg, insolar.DynamicRoleLightExecutor, testutils.RandomRef())
+	c.SendRole(context.Background(), msg, insolar.DynamicRoleLightExecutor, gen.Reference())
 
 	require.EqualValues(t, 1, sender.SendRoleAfterCounter())
 }

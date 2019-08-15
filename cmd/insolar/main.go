@@ -191,19 +191,14 @@ func createMember(sendURL string, userName string, serverLogLevel string) {
 	check("Problems with creating user config:", err)
 
 	ctx := inslogger.ContextWithTrace(context.Background(), "insolarUtility")
-	req := requester.Request{
-		JSONRPC: "2.0",
-		ID:      1,
-		Method:  "api.call",
-		Params: requester.Params{
-			CallSite:   "member.create",
-			CallParams: []interface{}{userName, cfg.PublicKey},
-			PublicKey:  ucfg.PublicKey,
-		},
-		LogLevel: logLevelInsolar.String(),
+	params := requester.Params{
+		CallSite:   "member.create",
+		CallParams: []interface{}{userName, cfg.PublicKey},
+		PublicKey:  ucfg.PublicKey,
+		LogLevel:   logLevelInsolar.String(),
 	}
 
-	r, err := requester.Send(ctx, sendURL, ucfg, &req)
+	r, err := requester.Send(ctx, sendURL, ucfg, &params)
 	check("Problems with sending request", err)
 
 	var rStruct struct {
@@ -267,7 +262,7 @@ func sendRequest(sendURL string, rootKeysFile string, paramsPath string, rootAsC
 	if len(pPath) == 0 {
 		pPath = rootKeysFile
 	}
-	reqCfg, err := requester.ReadRequestConfigFromFile(pPath)
+	reqCfg, err := requester.ReadRequestParamsFromFile(pPath)
 	check("[ sendRequest ]", err)
 
 	verboseInfo(fmt.Sprintln("User Config: ", userCfg))

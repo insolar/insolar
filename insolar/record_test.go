@@ -21,8 +21,7 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
-	"github.com/insolar/insolar/testutils"
-	"github.com/jbenet/go-base58"
+	base58 "github.com/jbenet/go-base58"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -30,7 +29,7 @@ import (
 //ID and Reference serialization tests
 
 func TestNewIDFromBytes(t *testing.T) {
-	id := testutils.RandomID()
+	id := gen.ID()
 	actualID := *insolar.NewIDFromBytes(id.Bytes())
 	require.Equal(t, id, actualID)
 
@@ -38,7 +37,7 @@ func TestNewIDFromBytes(t *testing.T) {
 }
 
 func TestNewIDFromBase58(t *testing.T) {
-	id := testutils.RandomID()
+	id := gen.ID()
 	idStr := base58.Encode(id[:])
 	id2, err := insolar.NewIDFromBase58(idStr)
 	require.NoError(t, err)
@@ -47,15 +46,15 @@ func TestNewIDFromBase58(t *testing.T) {
 }
 
 func TestRecordID_String(t *testing.T) {
-	id := testutils.RandomID()
+	id := gen.ID()
 	idStr := base58.Encode(id[:])
 
 	assert.Equal(t, idStr, id.String())
 }
 
 func TestNewRefFromBase58(t *testing.T) {
-	recordID := testutils.RandomID()
-	domainID := testutils.RandomID()
+	recordID := gen.ID()
+	domainID := gen.ID()
 	refStr := recordID.String() + insolar.RecordRefIDSeparator + domainID.String()
 
 	expectedRef := insolar.NewReference(recordID)
@@ -66,7 +65,7 @@ func TestNewRefFromBase58(t *testing.T) {
 }
 
 func TestRecordRef_String(t *testing.T) {
-	ref := testutils.RandomRef()
+	ref := gen.Reference()
 	expectedRefStr := ref.Record().String() + insolar.RecordRefIDSeparator + "11111111111111111111111111111111"
 
 	assert.Equal(t, expectedRefStr, ref.String())

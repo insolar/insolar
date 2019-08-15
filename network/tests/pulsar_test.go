@@ -79,11 +79,10 @@ type TestPulsar interface {
 	component.Stopper
 }
 
-func NewTestPulsar(pulseTimeMs, requestsTimeoutMs, pulseDelta int32) (TestPulsar, error) {
+func NewTestPulsar(requestsTimeoutMs, pulseDelta int32) (TestPulsar, error) {
 
 	return &testPulsar{
 		generator:         &entropygenerator.StandardEntropyGenerator{},
-		pulseTimeMs:       pulseTimeMs,
 		reqTimeoutMs:      requestsTimeoutMs,
 		pulseDelta:        pulseDelta,
 		cancellationToken: make(chan struct{}),
@@ -97,7 +96,6 @@ type testPulsar struct {
 
 	activityMutex sync.Mutex
 
-	pulseTimeMs  int32
 	reqTimeoutMs int32
 	pulseDelta   int32
 
@@ -107,11 +105,8 @@ type testPulsar struct {
 func (tp *testPulsar) Start(ctx context.Context, bootstrapHosts []string) error {
 
 	distributorCfg := configuration.PulseDistributor{
-		BootstrapHosts:            bootstrapHosts,
-		PingRequestTimeout:        tp.reqTimeoutMs,
-		RandomHostsRequestTimeout: tp.reqTimeoutMs,
-		PulseRequestTimeout:       tp.reqTimeoutMs,
-		RandomNodesCount:          1,
+		BootstrapHosts:      bootstrapHosts,
+		PulseRequestTimeout: tp.reqTimeoutMs,
 	}
 
 	var err error
@@ -156,7 +151,7 @@ func (tp *testPulsar) distribute(ctx context.Context) {
 		Entropy:          tp.generator.GenerateEntropy(),
 		NextPulseNumber:  pulseNumber + insolar.PulseNumber(tp.pulseDelta),
 		PrevPulseNumber:  pulseNumber - insolar.PulseNumber(tp.pulseDelta),
-		EpochPulseNumber: 1,
+		EpochPulseNumber: int(pulseNumber),
 		OriginID:         [16]byte{206, 41, 229, 190, 7, 240, 162, 155, 121, 245, 207, 56, 161, 67, 189, 0},
 	}
 
@@ -168,7 +163,7 @@ func (tp *testPulsar) distribute(ctx context.Context) {
 
 	for {
 		select {
-		case <-time.After(time.Duration(tp.pulseTimeMs) * time.Millisecond):
+		case <-time.After(time.Duration(tp.pulseDelta) * time.Second):
 			go func(pulse insolar.Pulse) {
 				tp.activityMutex.Lock()
 				defer tp.activityMutex.Unlock()

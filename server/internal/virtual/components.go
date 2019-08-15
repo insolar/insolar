@@ -22,7 +22,7 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
+	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
 
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/certificate"
@@ -43,15 +43,12 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/logicrunner/artifacts"
-	"github.com/insolar/insolar/logicrunner/handles"
 	"github.com/insolar/insolar/logicrunner/logicexecutor"
 	"github.com/insolar/insolar/logicrunner/machinesmanager"
 	"github.com/insolar/insolar/logicrunner/pulsemanager"
-	"github.com/insolar/insolar/logicrunner/requestsexecutor"
 	"github.com/insolar/insolar/messagebus"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/nodenetwork"
-	"github.com/insolar/insolar/network/rules"
 	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/insolar/insolar/network/termination"
 	"github.com/insolar/insolar/platformpolicy"
@@ -90,7 +87,6 @@ func initBootstrapComponents(ctx context.Context, cfg configuration.Configuratio
 func initCertificateManager(
 	ctx context.Context,
 	cfg configuration.Configuration,
-	isBootstrap bool,
 	cryptographyService insolar.CryptographyService,
 	keyProcessor insolar.KeyProcessor,
 ) *certificate.CertificateManager {
@@ -100,13 +96,8 @@ func initCertificateManager(
 	publicKey, err := cryptographyService.GetPublicKey()
 	checkError(ctx, err, "failed to retrieve node public key")
 
-	if isBootstrap {
-		certManager, err = certificate.NewManagerCertificateWithKeys(publicKey, keyProcessor)
-		checkError(ctx, err, "failed to start Certificate (bootstrap mode)")
-	} else {
-		certManager, err = certificate.NewManagerReadCertificate(publicKey, keyProcessor, cfg.CertificatePath)
-		checkError(ctx, err, "failed to start Certificate")
-	}
+	certManager, err = certificate.NewManagerReadCertificate(publicKey, keyProcessor, cfg.CertificatePath)
+	checkError(ctx, err, "failed to start Certificate")
 
 	return certManager
 }
@@ -124,9 +115,20 @@ func initComponents(
 ) (*component.Manager, insolar.TerminationHandler, func()) {
 	cm := component.Manager{}
 
-	logger := log.NewWatermillLogAdapter(inslogger.FromContext(ctx))
-	pubSub := gochannel.NewGoChannel(gochannel.Config{}, logger)
-	pubSub = internal.PubSubWrapper(ctx, &cm, cfg.Introspection, pubSub)
+	// Watermill.
+	var (
+		wmLogger   *log.WatermillLogAdapter
+		publisher  message.Publisher
+		subscriber message.Subscriber
+	)
+	{
+		wmLogger = log.NewWatermillLogAdapter(inslogger.FromContext(ctx))
+		pubsub := gochannel.NewGoChannel(gochannel.Config{}, wmLogger)
+		subscriber = pubsub
+		publisher = pubsub
+		// Wrapped watermill Publisher for introspection.
+		publisher = internal.PublisherWrapper(ctx, &cm, cfg.Introspection, publisher)
+	}
 
 	nodeNetwork, err := nodenetwork.NewNodeNetwork(cfg.Host.Transport, certManager.GetCertificate())
 	checkError(ctx, err, "failed to start NodeNetwork")
@@ -156,13 +158,15 @@ func initComponents(
 
 	jc := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit)
 	pulses := pulse.NewStorageMem()
-	b := bus.NewBus(cfg.Bus, pubSub, pulses, jc, pcs)
+	b := bus.NewBus(cfg.Bus, publisher, pulses, jc, pcs)
 
-	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner, pubSub, b)
+	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner, publisher, b)
 	checkError(ctx, err, "failed to start LogicRunner")
 
 	contractRequester, err := contractrequester.New(logicRunner)
 	checkError(ctx, err, "failed to start ContractRequester")
+
+	pm := pulsemanager.NewPulseManager(logicRunner.ResultsMatcher)
 
 	cm.Register(
 		terminationHandler,
@@ -173,17 +177,17 @@ func initComponents(
 		certManager,
 		logicRunner,
 		logicexecutor.NewLogicExecutor(),
-		requestsexecutor.NewRequestsExecutor(),
+		logicrunner.NewRequestsExecutor(),
 		machinesmanager.NewMachinesManager(),
+		apiRunner,
 		nodeNetwork,
 		nw,
-		pulsemanager.NewPulseManager(),
-		rules.NewRules(),
+		pm,
 	)
 
 	components := []interface{}{
 		b,
-		pubSub,
+		publisher,
 		messageBus,
 		contractRequester,
 		artifacts.NewClient(b),
@@ -197,7 +201,6 @@ func initComponents(
 	}
 	components = append(components, []interface{}{
 		genesisDataProvider,
-		apiRunner,
 		metricsHandler,
 		cryptographyService,
 		keyProcessor,
@@ -208,11 +211,12 @@ func initComponents(
 	err = cm.Init(ctx)
 	checkError(ctx, err, "failed to init components")
 
+	pm.FlowDispatcher = logicRunner.FlowDispatcher
+
 	stopper := startWatermill(
-		ctx, logger, pubSub, b,
+		ctx, wmLogger, subscriber, b,
 		nw.SendMessageHandler,
 		logicRunner.FlowDispatcher.Process,
-		logicRunner.InnerFlowDispatcher.InnerSubscriber,
 	)
 
 	return &cm, terminationHandler, stopper
@@ -221,9 +225,9 @@ func initComponents(
 func startWatermill(
 	ctx context.Context,
 	logger watermill.LoggerAdapter,
-	pubSub message.Subscriber,
+	sub message.Subscriber,
 	b *bus.Bus,
-	outHandler, inHandler, lrHandler message.HandlerFunc,
+	outHandler, inHandler message.NoPublishHandlerFunc,
 ) func() {
 	inRouter, err := message.NewRouter(message.RouterConfig{}, logger)
 	if err != nil {
@@ -233,16 +237,10 @@ func startWatermill(
 	if err != nil {
 		panic(err)
 	}
-
-	lrRouter, err := message.NewRouter(message.RouterConfig{}, logger)
-	if err != nil {
-		panic(err)
-	}
-
 	outRouter.AddNoPublisherHandler(
 		"OutgoingHandler",
 		bus.TopicOutgoing,
-		pubSub,
+		sub,
 		outHandler,
 	)
 
@@ -253,27 +251,19 @@ func startWatermill(
 	inRouter.AddNoPublisherHandler(
 		"IncomingHandler",
 		bus.TopicIncoming,
-		pubSub,
+		sub,
 		inHandler,
-	)
-
-	lrRouter.AddNoPublisherHandler(
-		"InnerMsgHandler",
-		handles.InnerMsgTopic,
-		pubSub,
-		lrHandler,
 	)
 
 	startRouter(ctx, inRouter)
 	startRouter(ctx, outRouter)
-	startRouter(ctx, lrRouter)
 
-	return stopWatermill(ctx, inRouter, outRouter, lrRouter)
+	return stopWatermill(ctx, inRouter, outRouter)
 }
 
 func startRouter(ctx context.Context, router *message.Router) {
 	go func() {
-		if err := router.Run(); err != nil {
+		if err := router.Run(ctx); err != nil {
 			inslogger.FromContext(ctx).Error("Error while running router", err)
 		}
 	}()

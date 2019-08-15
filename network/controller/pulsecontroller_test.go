@@ -58,16 +58,15 @@ import (
 
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/pulse"
 	network2 "github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
-	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
-	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/network"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -183,9 +182,10 @@ func randomEntropy() [64]byte {
 }
 
 func newPulsePacket(t *testing.T) *packet.ReceivedPacket {
-	sender, err := host.NewHostN("127.0.0.1:3344", insolar.Reference{0})
+	refs := gen.References(2)
+	sender, err := host.NewHostN("127.0.0.1:3344", refs[0])
 	require.NoError(t, err)
-	receiver, err := host.NewHostN("127.0.0.1:3345", insolar.Reference{1})
+	receiver, err := host.NewHostN("127.0.0.1:3345", refs[1])
 	require.NoError(t, err)
 	return packet.NewReceivedPacket(packet.NewPacket(sender, receiver, types.Pulse, 1), nil)
 }
@@ -233,51 +233,10 @@ func newSignedPulse(t *testing.T) *insolar.Pulse {
 func TestProcessPulseHappyPath(t *testing.T) {
 	controller := getController(t)
 
-	nk := network.NewNodeKeeperMock(t)
-	nk.GetConsensusInfoMock.Return(nodenetwork.NewConsensusInfo())
-	controller.NodeKeeper = nk
-
 	request := newPulsePacket(t)
 	request.SetRequest(&packet.PulseRequest{
 		Pulse: pulse.ToProto(newSignedPulse(t)),
 	})
 	_, err := controller.processPulse(context.Background(), request)
 	assert.NoError(t, err)
-}
-
-func TestProcessPulseIgnoreCase(t *testing.T) {
-	controller := getController(t)
-
-	nk := network.NewNodeKeeperMock(t)
-	consensusInfo := nodenetwork.NewConsensusInfo()
-	consensusInfo.SetIsJoiner(true)
-	nk.GetConsensusInfoMock.Return(consensusInfo)
-	controller.NodeKeeper = nk
-
-	aborted := false
-	th := testutils.NewTerminationHandlerMock(t)
-	th.AbortMock.Set(func(string) {
-		aborted = true
-	})
-	controller.TerminationHandler = th
-
-	pulseHandler := network.NewPulseHandlerMock(t)
-	pulseHandler.HandlePulseMock.Set(func(context.Context, insolar.Pulse, network2.ReceivedPacket) {})
-	controller.PulseHandler = pulseHandler
-
-	request := newPulsePacket(t)
-	request.SetRequest(&packet.PulseRequest{
-		Pulse: pulse.ToProto(newSignedPulse(t)),
-	})
-
-	for i := 0; i < skippedPulsesLimit-1; i++ {
-		_, err := controller.processPulse(context.Background(), request)
-		assert.NoError(t, err)
-		assert.False(t, aborted)
-	}
-
-	_, err := controller.processPulse(context.Background(), request)
-	assert.NoError(t, err)
-	assert.True(t, aborted)
-	assert.EqualValues(t, 0, pulseHandler.HandlePulseAfterCounter())
 }

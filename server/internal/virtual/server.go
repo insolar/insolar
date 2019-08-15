@@ -57,7 +57,6 @@ func (s *Server) Serve() {
 	}
 
 	cfg := &cfgHolder.Configuration
-	cfg.Metrics.Namespace = "insolard"
 
 	traceID := "main_" + utils.RandTraceID()
 	ctx, inslog := initLogger(context.Background(), cfg.Log, traceID)
@@ -68,7 +67,6 @@ func (s *Server) Serve() {
 	certManager := initCertificateManager(
 		ctx,
 		*cfg,
-		false,
 		bootstrapComponents.CryptographyService,
 		bootstrapComponents.KeyProcessor,
 	)

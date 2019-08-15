@@ -19,19 +19,19 @@
   revision = "343706a395b76e5ca5c7dca46a5d937b48febc74"
 
 [[projects]]
-  digest = "1:60ddeb8548faba8198ced684ac98020a91c60fbe9e944341afed82a4d7c3b7c6"
+  digest = "1:dee9c323f0354bffc74b18df50c19dc572476a8fce8a66cbfbddc0843514f83c"
   name = "github.com/ThreeDotsLabs/watermill"
   packages = [
     ".",
     "internal",
-    "internal/sync",
     "message",
-    "message/infrastructure/gochannel",
     "message/router/middleware",
+    "pubsub/gochannel",
+    "pubsub/sync",
   ]
   pruneopts = "UT"
-  revision = "b39a48a1c9edad83d74898f3bf96adedd18ece81"
-  version = "v0.4.0"
+  revision = "577f2aca3bdaa3b2ba8a64ccaf39c67b82022400"
+  version = "v1.0.0-rc.1"
 
 [[projects]]
   branch = "master"
@@ -48,6 +48,14 @@
   pruneopts = "UT"
   revision = "2ee87856327ba09384cabd113bc6b5d174e9ec0f"
   version = "v3.5.1"
+
+[[projects]]
+  digest = "1:c1100fc71e23b6a32b2c68a5202a848fd13811d5a10b12edb8019c3667d1cd9a"
+  name = "github.com/cenkalti/backoff"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "4b4cebaf850ec58f1bb1fec5bdebdf8501c2bc3f"
+  version = "v3.0.0"
 
 [[projects]]
   digest = "1:ffe9824d294da03b391f44e1ae8281281b4afc1bdaa9588c9097785e3af10cec"
@@ -178,6 +186,18 @@
   revision = "24818f796faf91cd76ec7bddd72458fbced7a6c1"
 
 [[projects]]
+  digest = "1:aebccac5eae98c77bbdf314428fb06ec1c1b4bee91589c3624d7facba176b8a6"
+  name = "github.com/google/gops"
+  packages = [
+    "agent",
+    "internal",
+    "signal",
+  ]
+  pruneopts = "UT"
+  revision = "9fda3b87c7b32caeeb2974e7cc2e71e60a597fdf"
+  version = "v0.3.6"
+
+[[projects]]
   digest = "1:582b704bebaa06b48c29b0cec224a6058a09c86883aaddabde889cd1a5f73e1b"
   name = "github.com/google/uuid"
   packages = ["."]
@@ -254,15 +274,15 @@
   revision = "2fcc7bfc8ff98e6900dacde00aadb2a77d547a9e"
 
 [[projects]]
-  digest = "1:d585d1cae389b646325b7ef48032cdc9b58e68cd88c1fdc5da795eabb2114455"
+  branch = "v1"
+  digest = "1:6e66547dc669a6bf80df8ed8d5ee45c51753a4d81511cf6161614b69934928cc"
   name = "github.com/insolar/rpc"
   packages = [
     "v2",
     "v2/json2",
   ]
   pruneopts = "UT"
-  revision = "60ccffd3c0df575286752c08ae3d6312f728291d"
-  version = "v1.2.1"
+  revision = "c27e1d218f1f41c684884521f111cb1c78d0f7fa"
 
 [[projects]]
   digest = "1:9f86b5f5862a8ae44a5e2461619ac8f0fd1c75d670b735e40c4319f61bcb4bd3"
@@ -295,6 +315,14 @@
   packages = ["."]
   pruneopts = "UT"
   revision = "6237cf65f3a6f7111cd8a42be3590df99a66bc7d"
+
+[[projects]]
+  branch = "master"
+  digest = "1:f433da6fbabb0bd1bd730fd340782015c644123d02eb78c20c69ce03352daad1"
+  name = "github.com/kardianos/osext"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "2bc1f35cddc0cc527b4bc3dce8578fc2a6c11384"
 
 [[projects]]
   digest = "1:c568d7727aa262c32bdf8a3f7db83614f7af0ed661474b24588de635c20024c7"
@@ -501,20 +529,11 @@
   version = "v1.2.1"
 
 [[projects]]
-  digest = "1:ac83cf90d08b63ad5f7e020ef480d319ae890c208f8524622a2f3136e2686b02"
-  name = "github.com/stretchr/objx"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "477a77ecc69700c7cdeb1fa9e129548e1c1c393c"
-  version = "v0.1.1"
-
-[[projects]]
   branch = "master"
-  digest = "1:561d89a769650267eca3fc63fc3f53dbbea47e51c3b51489e027c58d12994c0b"
+  digest = "1:3dcdad6d6b274aa2c2a4ed1cea17bbfdc8f6fe73e2bc146d232ba7293c6d2129"
   name = "github.com/stretchr/testify"
   packages = [
     "assert",
-    "mock",
     "require",
     "suite",
   ]
@@ -711,8 +730,8 @@
   input-imports = [
     "github.com/ThreeDotsLabs/watermill",
     "github.com/ThreeDotsLabs/watermill/message",
-    "github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel",
     "github.com/ThreeDotsLabs/watermill/message/router/middleware",
+    "github.com/ThreeDotsLabs/watermill/pubsub/gochannel",
     "github.com/blang/semver",
     "github.com/dgraph-io/badger",
     "github.com/fortytw2/leaktest",
@@ -723,6 +742,7 @@
     "github.com/gojuno/minimock",
     "github.com/golang/protobuf/proto",
     "github.com/google/gofuzz",
+    "github.com/google/gops/agent",
     "github.com/grpc-ecosystem/grpc-gateway/runtime",
     "github.com/grpc-ecosystem/grpc-gateway/utilities",
     "github.com/insolar/go-actors/actor",
@@ -748,7 +768,6 @@
     "github.com/spf13/pflag",
     "github.com/spf13/viper",
     "github.com/stretchr/testify/assert",
-    "github.com/stretchr/testify/mock",
     "github.com/stretchr/testify/require",
     "github.com/stretchr/testify/suite",
     "github.com/tylerb/gls",

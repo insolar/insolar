@@ -221,7 +221,7 @@ func (c *ManyNodePopulation) makeCopyOfMapAndSeparateEvicts(slots map[insolar.Sh
 	localID := local.GetNodeID()
 
 	evicts, slotCount := c._filterAndFillInSlots(slots, fail)
-	c._fillInRoleStatsAndMap(localID, slotCount, false, false, fail)
+	c._fillInRoleStatsAndMap(localID, slotCount, true, false, fail)
 	evicts = c._adjustSlotsAndCopyEvicts(localID, evicts)
 
 	return evicts
@@ -477,14 +477,6 @@ func (c *DynamicPopulation) GetCount() int {
 }
 
 type LessFunc func(c profiles.ActiveNode, o profiles.ActiveNode) bool
-
-func (c *DynamicPopulation) Sort(lessFn LessFunc) {
-	sorter := slotSorter{values: c.getUnorderedSlots(), lessFn: lessFn}
-	sort.Sort(&sorter)
-	for i, v := range sorter.values {
-		v.SetIndex(member.AsIndex(i))
-	}
-}
 
 func (c *DynamicPopulation) GetProfiles() []profiles.ActiveNode {
 	r := make([]profiles.ActiveNode, len(c.slotByID))

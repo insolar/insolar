@@ -86,7 +86,7 @@ func (a *Accessor) GetActiveNode(ref insolar.Reference) insolar.NetworkNode {
 
 func (a *Accessor) GetWorkingNode(ref insolar.Reference) insolar.NetworkNode {
 	node := a.GetActiveNode(ref)
-	if node == nil || node.GetState() != insolar.NodeReady {
+	if node == nil || node.GetPower() == 0 {
 		return nil
 	}
 	return node
@@ -102,24 +102,23 @@ func (a *Accessor) GetWorkingNodes() []insolar.NetworkNode {
 	return result
 }
 
-func (a *Accessor) GetWorkingNodesByRole(role insolar.DynamicRole) []insolar.Reference {
-	staticRole := dynamicToStaticRole(role)
-	nodes := a.roleIndex[staticRole]
-	if nodes == nil {
-		return []insolar.Reference{}
-	}
-	return nodes.Collect()
-}
-
 func GetSnapshotActiveNodes(snapshot *Snapshot) []insolar.NetworkNode {
 	joining := snapshot.nodeList[ListJoiner]
+	idle := snapshot.nodeList[ListIdle]
 	working := snapshot.nodeList[ListWorking]
 	leaving := snapshot.nodeList[ListLeaving]
 
-	result := make([]insolar.NetworkNode, len(joining)+len(working)+len(leaving))
-	copy(result[:len(joining)], joining)
-	copy(result[len(joining):len(joining)+len(working)], working)
-	copy(result[len(joining)+len(working):], leaving)
+	joinersCount := len(joining)
+	idlersCount := len(idle)
+	workingCount := len(working)
+	leavingCount := len(leaving)
+
+	result := make([]insolar.NetworkNode, joinersCount+idlersCount+workingCount+leavingCount)
+
+	copy(result[:joinersCount], joining)
+	copy(result[joinersCount:joinersCount+idlersCount], idle)
+	copy(result[joinersCount+idlersCount:joinersCount+idlersCount+workingCount], working)
+	copy(result[joinersCount+idlersCount+workingCount:], leaving)
 
 	return result
 }
@@ -129,7 +128,7 @@ func (a *Accessor) addToIndex(node insolar.NetworkNode) {
 	a.sidIndex[node.ShortID()] = node
 	a.addrIndex[node.Address()] = node
 
-	if node.GetState() != insolar.NodeReady {
+	if node.GetPower() == 0 {
 		return
 	}
 
@@ -155,21 +154,4 @@ func NewAccessor(snapshot *Snapshot) *Accessor {
 		result.addToIndex(node)
 	}
 	return result
-}
-
-func dynamicToStaticRole(role insolar.DynamicRole) insolar.StaticRole {
-	switch role {
-	case insolar.DynamicRoleVirtualExecutor:
-		return insolar.StaticRoleVirtual
-	case insolar.DynamicRoleVirtualValidator:
-		return insolar.StaticRoleVirtual
-	case insolar.DynamicRoleLightExecutor:
-		return insolar.StaticRoleLightMaterial
-	case insolar.DynamicRoleLightValidator:
-		return insolar.StaticRoleLightMaterial
-	case insolar.DynamicRoleHeavyExecutor:
-		return insolar.StaticRoleHeavyMaterial
-	default:
-		return insolar.StaticRoleUnknown
-	}
 }

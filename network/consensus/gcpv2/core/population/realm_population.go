@@ -52,6 +52,7 @@ package population
 
 import (
 	"context"
+
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
 
 	"github.com/insolar/insolar/insolar"
@@ -60,7 +61,7 @@ import (
 type RealmPopulation interface {
 	GetIndexedCount() int
 	GetJoinersCount() int
-	//GetVotersCount() int
+	// GetVotersCount() int
 
 	GetSealedCapacity() (int, bool)
 	SealIndexed(indexedCapacity int) bool
@@ -77,7 +78,7 @@ type RealmPopulation interface {
 
 	GetSelf() *NodeAppearance
 
-	//CreateNodeAppearance(ctx context.Context, inp profiles.ActiveNode) *NodeAppearance
+	// CreateNodeAppearance(ctx context.Context, inp profiles.ActiveNode) *NodeAppearance
 	AddReservation(id insolar.ShortNodeID) (bool, *NodeAppearance)
 	FindReservation(id insolar.ShortNodeID) (bool, *NodeAppearance)
 

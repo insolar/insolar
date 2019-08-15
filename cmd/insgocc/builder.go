@@ -26,7 +26,7 @@ import (
 	"strings"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/rootdomain"
+	"github.com/insolar/insolar/insolar/genesisrefs"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/preprocessor"
@@ -157,7 +157,7 @@ func (cb *contractsBuilder) prepare(ctx context.Context, names ...string) error 
 			if err != nil {
 				return errors.Wrap(err, "can't open proxy file")
 			}
-			protoRef := rootdomain.GenesisRef(name + rootdomain.GenesisPrototypeSuffix)
+			protoRef := genesisrefs.GenesisRef(name + genesisrefs.PrototypeSuffix)
 			err = code.WriteProxy(protoRef.String(), proxy)
 			closeAndCheck(proxy)
 			if err != nil {

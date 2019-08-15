@@ -23,7 +23,7 @@ import (
 	"testing"
 
 	"github.com/google/gofuzz"
-	"github.com/insolar/insolar/internal/ledger/store"
+	"github.com/insolar/insolar/insolar/store"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"

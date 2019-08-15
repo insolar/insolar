@@ -51,99 +51,51 @@
 package routing
 
 import (
+	"context"
 	"strconv"
 	"testing"
 
+	"github.com/insolar/insolar/insolar/gen"
+	"github.com/insolar/insolar/network"
+	mock "github.com/insolar/insolar/testutils/network"
+
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/node"
-	"github.com/insolar/insolar/network/nodenetwork"
-	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func newNode(id int) insolar.NetworkNode {
-	ref := insolar.Reference{byte(id)}
+func newNode(ref insolar.Reference, id int) insolar.NetworkNode {
 	address := "127.0.0.1:" + strconv.Itoa(id)
 	result := node.NewNode(ref, insolar.StaticRoleUnknown, nil, address, "")
 	result.(node.MutableNode).SetShortID(insolar.ShortNodeID(id))
 	return result
 }
 
-func newTable() *Table {
-	return &Table{NodeKeeper: nodenetwork.NewNodeKeeper(newNode(1))}
-}
-
 func TestTable_Resolve(t *testing.T) {
-	table := newTable()
-	table.NodeKeeper.SetInitialSnapshot([]insolar.NetworkNode{
-		newNode(2),
+	table := Table{}
+
+	refs := gen.References(2)
+	pulse := insolar.GenesisPulse
+	nodeKeeperMock := mock.NewNodeKeeperMock(t)
+	nodeKeeperMock.GetAccessorMock.Set(func(p1 insolar.PulseNumber) network.Accessor {
+		n := newNode(refs[0], 123)
+		return node.NewAccessor(node.NewSnapshot(pulse.PulseNumber, []insolar.NetworkNode{n}))
 	})
-	host, err := table.Resolve(insolar.Reference{2})
-	require.NoError(t, err)
-	assert.EqualValues(t, 2, host.ShortID)
-	assert.Equal(t, "127.0.0.1:2", host.Address.String())
 
-	_, err = table.Resolve(insolar.Reference{4})
-	assert.Error(t, err)
-}
-
-func TestTable_AddToKnownHosts(t *testing.T) {
-	table := newTable()
-	h, err := host.NewHostN("127.0.0.1:234", testutils.RandomRef())
-	require.NoError(t, err)
-	table.AddToKnownHosts(h)
-}
-
-func TestTable_ResolveConsensus_equal(t *testing.T) {
-	table := newTable()
-	table.NodeKeeper.SetInitialSnapshot([]insolar.NetworkNode{
-		newNode(2),
+	pulseAccessorMock := mock.NewPulseAccessorMock(t)
+	pulseAccessorMock.GetLatestPulseMock.Set(func(ctx context.Context) (p1 insolar.Pulse, err error) {
+		return *pulse, nil
 	})
-	h, err := table.ResolveConsensusRef(insolar.Reference{2})
-	require.NoError(t, err)
-	h2, err := table.Resolve(insolar.Reference{2})
-	require.NoError(t, err)
-	assert.True(t, h.Equal(*h2))
-}
 
-func TestTable_ResolveConsensus_equal2(t *testing.T) {
-	table := newTable()
-	table.NodeKeeper.SetInitialSnapshot([]insolar.NetworkNode{
-		newNode(2),
-	})
-	h, err := table.ResolveConsensusRef(insolar.Reference{2})
-	require.NoError(t, err)
-	h2, err := table.ResolveConsensus(2)
-	require.NoError(t, err)
-	assert.True(t, h.Equal(*h2))
-}
+	table.PulseAccessor = pulseAccessorMock
+	table.NodeKeeper = nodeKeeperMock
 
-func TestTable_ResolveConsensus(t *testing.T) {
-	table := newTable()
-	table.NodeKeeper.SetInitialSnapshot([]insolar.NetworkNode{
-		newNode(2),
-	})
-	table.NodeKeeper.GetConsensusInfo().AddTemporaryMapping(insolar.Reference{3}, 3, "127.0.0.1:3")
-	h, err := table.ResolveConsensusRef(insolar.Reference{2})
+	h, err := table.Resolve(refs[0])
 	require.NoError(t, err)
-	h2, err := table.ResolveConsensus(2)
-	require.NoError(t, err)
-	assert.True(t, h.Equal(*h2))
-	assert.EqualValues(t, 2, h.ShortID)
-	assert.Equal(t, "127.0.0.1:2", h.Address.String())
+	assert.EqualValues(t, 123, h.ShortID)
+	assert.Equal(t, "127.0.0.1:123", h.Address.String())
 
-	h, err = table.ResolveConsensusRef(insolar.Reference{3})
-	require.NoError(t, err)
-	h2, err = table.ResolveConsensus(3)
-	require.NoError(t, err)
-	assert.True(t, h.Equal(*h2))
-	assert.EqualValues(t, 3, h.ShortID)
-	assert.Equal(t, "127.0.0.1:3", h.Address.String())
-
-	_, err = table.ResolveConsensusRef(insolar.Reference{4})
-	assert.Error(t, err)
-	_, err = table.ResolveConsensus(4)
+	_, err = table.Resolve(refs[1])
 	assert.Error(t, err)
 }

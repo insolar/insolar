@@ -24,7 +24,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/internal/ledger/store"
+	"github.com/insolar/insolar/insolar/store"
 )
 
 type DBStore struct {

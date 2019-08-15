@@ -79,10 +79,10 @@ func TestNewPulseStorage(t *testing.T) {
 	cm.Inject()
 
 	pulse := insolar.Pulse{PulseNumber: 15}
-	err = ps.Append(ctx, pulse)
+	err = ps.AppendPulse(ctx, pulse)
 	assert.NoError(t, err)
 
-	pulse2, err := ps.Latest(ctx)
+	pulse2, err := ps.GetLatestPulse(ctx)
 	assert.NoError(t, err)
 
 	assert.Equal(t, pulse2, pulse)

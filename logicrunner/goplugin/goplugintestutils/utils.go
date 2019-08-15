@@ -25,22 +25,20 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-	"testing"
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/api"
 	"github.com/insolar/insolar/insolar/flow"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/artifacts"
-	"github.com/insolar/insolar/testutils"
 )
 
 // PrependGoPath prepends `path` to GOPATH environment variable
@@ -63,13 +61,6 @@ func WriteFile(dir string, name string, text string) error {
 		return err
 	}
 	return ioutil.WriteFile(filepath.Join(dir, name), []byte(text), 0644)
-}
-
-// CBORMarshal - testing serialize helper
-func CBORMarshal(t testing.TB, o interface{}) []byte {
-	data, err := insolar.Serialize(o)
-	assert.NoError(t, err, "Marshal")
-	return data
 }
 
 // ContractsBuilder for tests
@@ -121,7 +112,7 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]stri
 	logger := inslogger.FromContext(ctx)
 
 	for name := range contracts {
-		nonce := testutils.RandomRef()
+		nonce := gen.Reference()
 		pulse, err := cb.pulseAccessor.Latest(ctx)
 		if err != nil {
 			return errors.Wrap(err, "can't get current pulse")
@@ -176,7 +167,7 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]stri
 		logger.Debug("Deploying code for contract ", name)
 		codeID, err := cb.artifactManager.DeployCode(
 			ctx,
-			insolar.Reference{}, insolar.Reference{},
+			*insolar.NewEmptyReference(), *insolar.NewEmptyReference(),
 			pluginBinary, insolar.MachineTypeGoPlugin,
 		)
 		if err != nil {
@@ -214,8 +205,7 @@ func (cb *ContractsBuilder) registerRequest(ctx context.Context, request *record
 	logger := inslogger.FromContext(ctx)
 
 	if cb.pulseAccessor == nil {
-		logger.Warnf("[ registerRequest ] No pulse accessor passed: no retries for register request")
-		return cb.artifactManager.RegisterIncomingRequest(ctx, request)
+		return nil, errors.New("No pulse accessor")
 	}
 
 	for current := 1; current <= retries; current++ {
@@ -225,15 +215,16 @@ func (cb *ContractsBuilder) registerRequest(ctx context.Context, request *record
 		}
 
 		if currentPulse.PulseNumber == lastPulse {
-			logger.Debugf("[ registerRequest ]  wait for pulse change. Current: %d", currentPulse)
+			logger.Debugf("[ registerRequest ]  wait for pulse change. Current: %d", currentPulse.PulseNumber)
 			time.Sleep(100 * time.Millisecond)
 			continue
 		}
 		lastPulse = currentPulse.PulseNumber
 
-		contractID, err := cb.artifactManager.RegisterIncomingRequest(ctx, request)
+		reqInfo, err := cb.artifactManager.RegisterIncomingRequest(ctx, request)
 		if err == nil || !strings.Contains(err.Error(), flow.ErrCancelled.Error()) {
-			return contractID, err
+			reqID := reqInfo.RequestID
+			return &reqID, err
 		}
 
 		logger.Debugf("[ registerRequest ] retry. attempt: %d/%d", current, retries)
