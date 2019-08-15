@@ -18,6 +18,7 @@ package artifacts
 
 import (
 	"context"
+	"github.com/insolar/insolar/insolar/flow"
 	"time"
 
 	"go.opencensus.io/stats"
@@ -52,7 +53,7 @@ func (mi *methodInstrumenter) end() {
 	inslog := inslogger.FromContext(mi.ctx)
 
 	code := "2xx"
-	if mi.errlink != nil && *mi.errlink != nil {
+	if mi.errlink != nil && *mi.errlink != nil && *mi.errlink != flow.ErrCancelled {
 		code = "5xx"
 		inslog.Error(*mi.errlink)
 	}
