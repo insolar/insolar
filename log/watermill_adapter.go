@@ -56,5 +56,8 @@ func (w *WatermillLogAdapter) Debug(msg string, fields watermill.LogFields) {
 }
 
 func (w *WatermillLogAdapter) Trace(msg string, fields watermill.LogFields) {
-	w.Debug(msg, fields)
+	// don't use w.Debug(), value of the "file=..." field would be incorrect
+	// in the output
+	logger := w.addFields(fields)
+	logger.Debug(msg)
 }
