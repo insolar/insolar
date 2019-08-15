@@ -25,15 +25,8 @@ import (
 	"github.com/insolar/insolar/insolar/bits"
 )
 
-type jet struct {
-	// Active indicates what node is approved as last one, i.e. it's leaf (ignored for non leafs if set)
-	Actual bool
-	Left   *jet
-	Right  *jet
-}
-
 // Find returns jet for provided reference.
-func (j *jet) Find(val []byte, depth uint8) (*jet, uint8) {
+func (j *Jet) Find(val []byte, depth uint8) (*Jet, uint8) {
 	if j == nil || val == nil {
 		return nil, 0
 	}
@@ -51,7 +44,7 @@ func (j *jet) Find(val []byte, depth uint8) (*jet, uint8) {
 }
 
 // Update add missing tree branches for provided prefix.
-func (j *jet) Update(prefix []byte, setActual bool, maxDepth, depth uint8) {
+func (j *Jet) Update(prefix []byte, setActual bool, maxDepth, depth uint8) {
 	if depth == maxDepth {
 		if setActual {
 			j.Actual = true
@@ -60,10 +53,10 @@ func (j *jet) Update(prefix []byte, setActual bool, maxDepth, depth uint8) {
 	}
 
 	if j.Right == nil {
-		j.Right = &jet{}
+		j.Right = &Jet{}
 	}
 	if j.Left == nil {
-		j.Left = &jet{}
+		j.Left = &Jet{}
 	}
 	if getBit(prefix, depth) {
 		j.Right.Update(prefix, setActual, maxDepth, depth+1)
@@ -73,8 +66,8 @@ func (j *jet) Update(prefix []byte, setActual bool, maxDepth, depth uint8) {
 }
 
 // Clone clones tree either keeping actuality state or resetting it to false.
-func (j *jet) Clone(keep bool) *jet {
-	res := &jet{
+func (j *Jet) Clone(keep bool) *Jet {
+	res := &Jet{
 		Actual: keep && j.Actual,
 	}
 	if j.Left != nil {
@@ -86,7 +79,7 @@ func (j *jet) Clone(keep bool) *jet {
 	return res
 }
 
-func (j *jet) ExtractLeafIDs(ids *[]insolar.JetID, path []byte, depth uint8) {
+func (j *Jet) ExtractLeafIDs(ids *[]insolar.JetID, path []byte, depth uint8) {
 	if j == nil {
 		return
 	}
@@ -106,15 +99,10 @@ func (j *jet) ExtractLeafIDs(ids *[]insolar.JetID, path []byte, depth uint8) {
 	}
 }
 
-// Tree represents jets tree.
-type Tree struct {
-	Head *jet
-}
-
 // NewTree creates new tree.
 func NewTree(isActual bool) *Tree {
 	return &Tree{
-		Head: &jet{
+		Head: &Jet{
 			Actual: isActual,
 		},
 	}
@@ -156,8 +144,8 @@ func (t *Tree) Split(id insolar.JetID) (insolar.JetID, insolar.JetID, error) {
 	}
 
 	left, right := Siblings(id)
-	j.Left = &jet{Actual: true}
-	j.Right = &jet{Actual: true}
+	j.Left = &Jet{Actual: true}
+	j.Right = &Jet{Actual: true}
 	return left, right, nil
 }
 
@@ -199,7 +187,7 @@ func (t Tree) String() string {
 	return nodeDeepFmt(0, "", t.Head)
 }
 
-func nodeDeepFmt(deep int, binPrefix string, node *jet) string {
+func nodeDeepFmt(deep int, binPrefix string, node *Jet) string {
 	prefix := strings.Repeat(" ", deep)
 	if deep == 0 {
 		prefix = "root"
