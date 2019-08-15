@@ -71,7 +71,7 @@ func prepare(t *testing.T, ctx context.Context, currentPulse int, msgPulse int) 
 	nn := network.NewNodeNetworkMock(t)
 	nn.GetOriginMock.Set(func() (r insolar.NetworkNode) {
 		n := network.NewNetworkNodeMock(t)
-		n.IDMock.Return(insolar.Reference{})
+		n.IDMock.Return(*insolar.NewEmptyReference())
 		return n
 	})
 
@@ -221,7 +221,7 @@ func TestMessageBus_createWatermillMessage(t *testing.T) {
 	require.NotNil(t, msg)
 	require.NotNil(t, msg.Payload)
 	require.Equal(t, parcel.Msg.Type().String(), msg.Metadata.Get(bus.MetaType))
-	require.Equal(t, insolar.Reference{}.String(), msg.Metadata.Get(bus.MetaSender))
+	require.Equal(t, insolar.NewEmptyReference().String(), msg.Metadata.Get(bus.MetaSender))
 }
 
 func TestMessageBus_deserializePayload_GetReply(t *testing.T) {
