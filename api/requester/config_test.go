@@ -33,11 +33,10 @@ func TestReadFile_NotJson(t *testing.T) {
 }
 
 func TestReadRequestConfigFromFile(t *testing.T) {
-	conf, err := ReadRequestConfigFromFile("testdata/requestConfig.json")
+	params, err := ReadRequestParamsFromFile("testdata/requestConfig.json")
 	require.NoError(t, err)
-	require.Equal(t, "api.call", conf.Method)
 
-	require.Equal(t, "wallet.CreateMember", conf.Params.CallSite)
+	require.Equal(t, "member.create", params.CallSite)
 }
 
 func TestReadUserConfigFromFile(t *testing.T) {
