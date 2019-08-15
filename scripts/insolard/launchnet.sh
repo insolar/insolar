@@ -277,7 +277,7 @@ launch_insgorund()
             --rpc ${host}:${rpc_port} \
             --log-level=${GORUND_LOG_LEVEL} \
             --metrics :${metrics_port} \
-            &>> ${INSGORUND_LOGS}${rpc_port}.log &
+            &> ${INSGORUND_LOGS}${rpc_port}.log &
 
     done < "${INSGORUND_PORT_FILE}"
 }
