@@ -44,12 +44,6 @@ type RequestMock struct {
 	beforeIsTemporaryUploadCodeCounter uint64
 	IsTemporaryUploadCodeMock          mRequestMockIsTemporaryUploadCode
 
-	funcIsValid          func() (b1 bool)
-	inspectFuncIsValid   func()
-	afterIsValidCounter  uint64
-	beforeIsValidCounter uint64
-	IsValidMock          mRequestMockIsValid
-
 	funcMarshal          func() (dAtA []byte, err error)
 	inspectFuncMarshal   func()
 	afterMarshalCounter  uint64
@@ -67,6 +61,12 @@ type RequestMock struct {
 	afterReasonRefCounter  uint64
 	beforeReasonRefCounter uint64
 	ReasonRefMock          mRequestMockReasonRef
+
+	funcValidate          func() (err error)
+	inspectFuncValidate   func()
+	afterValidateCounter  uint64
+	beforeValidateCounter uint64
+	ValidateMock          mRequestMockValidate
 }
 
 // NewRequestMock returns a mock for Request
@@ -86,13 +86,13 @@ func NewRequestMock(t minimock.Tester) *RequestMock {
 
 	m.IsTemporaryUploadCodeMock = mRequestMockIsTemporaryUploadCode{mock: m}
 
-	m.IsValidMock = mRequestMockIsValid{mock: m}
-
 	m.MarshalMock = mRequestMockMarshal{mock: m}
 
 	m.ReasonAffinityRefMock = mRequestMockReasonAffinityRef{mock: m}
 
 	m.ReasonRefMock = mRequestMockReasonRef{mock: m}
+
+	m.ValidateMock = mRequestMockValidate{mock: m}
 
 	return m
 }
@@ -812,149 +812,6 @@ func (m *RequestMock) MinimockIsTemporaryUploadCodeInspect() {
 	}
 }
 
-type mRequestMockIsValid struct {
-	mock               *RequestMock
-	defaultExpectation *RequestMockIsValidExpectation
-	expectations       []*RequestMockIsValidExpectation
-}
-
-// RequestMockIsValidExpectation specifies expectation struct of the Request.IsValid
-type RequestMockIsValidExpectation struct {
-	mock *RequestMock
-
-	results *RequestMockIsValidResults
-	Counter uint64
-}
-
-// RequestMockIsValidResults contains results of the Request.IsValid
-type RequestMockIsValidResults struct {
-	b1 bool
-}
-
-// Expect sets up expected params for Request.IsValid
-func (mmIsValid *mRequestMockIsValid) Expect() *mRequestMockIsValid {
-	if mmIsValid.mock.funcIsValid != nil {
-		mmIsValid.mock.t.Fatalf("RequestMock.IsValid mock is already set by Set")
-	}
-
-	if mmIsValid.defaultExpectation == nil {
-		mmIsValid.defaultExpectation = &RequestMockIsValidExpectation{}
-	}
-
-	return mmIsValid
-}
-
-// Inspect accepts an inspector function that has same arguments as the Request.IsValid
-func (mmIsValid *mRequestMockIsValid) Inspect(f func()) *mRequestMockIsValid {
-	if mmIsValid.mock.inspectFuncIsValid != nil {
-		mmIsValid.mock.t.Fatalf("Inspect function is already set for RequestMock.IsValid")
-	}
-
-	mmIsValid.mock.inspectFuncIsValid = f
-
-	return mmIsValid
-}
-
-// Return sets up results that will be returned by Request.IsValid
-func (mmIsValid *mRequestMockIsValid) Return(b1 bool) *RequestMock {
-	if mmIsValid.mock.funcIsValid != nil {
-		mmIsValid.mock.t.Fatalf("RequestMock.IsValid mock is already set by Set")
-	}
-
-	if mmIsValid.defaultExpectation == nil {
-		mmIsValid.defaultExpectation = &RequestMockIsValidExpectation{mock: mmIsValid.mock}
-	}
-	mmIsValid.defaultExpectation.results = &RequestMockIsValidResults{b1}
-	return mmIsValid.mock
-}
-
-//Set uses given function f to mock the Request.IsValid method
-func (mmIsValid *mRequestMockIsValid) Set(f func() (b1 bool)) *RequestMock {
-	if mmIsValid.defaultExpectation != nil {
-		mmIsValid.mock.t.Fatalf("Default expectation is already set for the Request.IsValid method")
-	}
-
-	if len(mmIsValid.expectations) > 0 {
-		mmIsValid.mock.t.Fatalf("Some expectations are already set for the Request.IsValid method")
-	}
-
-	mmIsValid.mock.funcIsValid = f
-	return mmIsValid.mock
-}
-
-// IsValid implements Request
-func (mmIsValid *RequestMock) IsValid() (b1 bool) {
-	mm_atomic.AddUint64(&mmIsValid.beforeIsValidCounter, 1)
-	defer mm_atomic.AddUint64(&mmIsValid.afterIsValidCounter, 1)
-
-	if mmIsValid.inspectFuncIsValid != nil {
-		mmIsValid.inspectFuncIsValid()
-	}
-
-	if mmIsValid.IsValidMock.defaultExpectation != nil {
-		mm_atomic.AddUint64(&mmIsValid.IsValidMock.defaultExpectation.Counter, 1)
-
-		results := mmIsValid.IsValidMock.defaultExpectation.results
-		if results == nil {
-			mmIsValid.t.Fatal("No results are set for the RequestMock.IsValid")
-		}
-		return (*results).b1
-	}
-	if mmIsValid.funcIsValid != nil {
-		return mmIsValid.funcIsValid()
-	}
-	mmIsValid.t.Fatalf("Unexpected call to RequestMock.IsValid.")
-	return
-}
-
-// IsValidAfterCounter returns a count of finished RequestMock.IsValid invocations
-func (mmIsValid *RequestMock) IsValidAfterCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmIsValid.afterIsValidCounter)
-}
-
-// IsValidBeforeCounter returns a count of RequestMock.IsValid invocations
-func (mmIsValid *RequestMock) IsValidBeforeCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmIsValid.beforeIsValidCounter)
-}
-
-// MinimockIsValidDone returns true if the count of the IsValid invocations corresponds
-// the number of defined expectations
-func (m *RequestMock) MinimockIsValidDone() bool {
-	for _, e := range m.IsValidMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			return false
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.IsValidMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterIsValidCounter) < 1 {
-		return false
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcIsValid != nil && mm_atomic.LoadUint64(&m.afterIsValidCounter) < 1 {
-		return false
-	}
-	return true
-}
-
-// MinimockIsValidInspect logs each unmet expectation
-func (m *RequestMock) MinimockIsValidInspect() {
-	for _, e := range m.IsValidMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			m.t.Error("Expected call to RequestMock.IsValid")
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.IsValidMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterIsValidCounter) < 1 {
-		m.t.Error("Expected call to RequestMock.IsValid")
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcIsValid != nil && mm_atomic.LoadUint64(&m.afterIsValidCounter) < 1 {
-		m.t.Error("Expected call to RequestMock.IsValid")
-	}
-}
-
 type mRequestMockMarshal struct {
 	mock               *RequestMock
 	defaultExpectation *RequestMockMarshalExpectation
@@ -1385,6 +1242,149 @@ func (m *RequestMock) MinimockReasonRefInspect() {
 	}
 }
 
+type mRequestMockValidate struct {
+	mock               *RequestMock
+	defaultExpectation *RequestMockValidateExpectation
+	expectations       []*RequestMockValidateExpectation
+}
+
+// RequestMockValidateExpectation specifies expectation struct of the Request.Validate
+type RequestMockValidateExpectation struct {
+	mock *RequestMock
+
+	results *RequestMockValidateResults
+	Counter uint64
+}
+
+// RequestMockValidateResults contains results of the Request.Validate
+type RequestMockValidateResults struct {
+	err error
+}
+
+// Expect sets up expected params for Request.Validate
+func (mmValidate *mRequestMockValidate) Expect() *mRequestMockValidate {
+	if mmValidate.mock.funcValidate != nil {
+		mmValidate.mock.t.Fatalf("RequestMock.Validate mock is already set by Set")
+	}
+
+	if mmValidate.defaultExpectation == nil {
+		mmValidate.defaultExpectation = &RequestMockValidateExpectation{}
+	}
+
+	return mmValidate
+}
+
+// Inspect accepts an inspector function that has same arguments as the Request.Validate
+func (mmValidate *mRequestMockValidate) Inspect(f func()) *mRequestMockValidate {
+	if mmValidate.mock.inspectFuncValidate != nil {
+		mmValidate.mock.t.Fatalf("Inspect function is already set for RequestMock.Validate")
+	}
+
+	mmValidate.mock.inspectFuncValidate = f
+
+	return mmValidate
+}
+
+// Return sets up results that will be returned by Request.Validate
+func (mmValidate *mRequestMockValidate) Return(err error) *RequestMock {
+	if mmValidate.mock.funcValidate != nil {
+		mmValidate.mock.t.Fatalf("RequestMock.Validate mock is already set by Set")
+	}
+
+	if mmValidate.defaultExpectation == nil {
+		mmValidate.defaultExpectation = &RequestMockValidateExpectation{mock: mmValidate.mock}
+	}
+	mmValidate.defaultExpectation.results = &RequestMockValidateResults{err}
+	return mmValidate.mock
+}
+
+//Set uses given function f to mock the Request.Validate method
+func (mmValidate *mRequestMockValidate) Set(f func() (err error)) *RequestMock {
+	if mmValidate.defaultExpectation != nil {
+		mmValidate.mock.t.Fatalf("Default expectation is already set for the Request.Validate method")
+	}
+
+	if len(mmValidate.expectations) > 0 {
+		mmValidate.mock.t.Fatalf("Some expectations are already set for the Request.Validate method")
+	}
+
+	mmValidate.mock.funcValidate = f
+	return mmValidate.mock
+}
+
+// Validate implements Request
+func (mmValidate *RequestMock) Validate() (err error) {
+	mm_atomic.AddUint64(&mmValidate.beforeValidateCounter, 1)
+	defer mm_atomic.AddUint64(&mmValidate.afterValidateCounter, 1)
+
+	if mmValidate.inspectFuncValidate != nil {
+		mmValidate.inspectFuncValidate()
+	}
+
+	if mmValidate.ValidateMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmValidate.ValidateMock.defaultExpectation.Counter, 1)
+
+		results := mmValidate.ValidateMock.defaultExpectation.results
+		if results == nil {
+			mmValidate.t.Fatal("No results are set for the RequestMock.Validate")
+		}
+		return (*results).err
+	}
+	if mmValidate.funcValidate != nil {
+		return mmValidate.funcValidate()
+	}
+	mmValidate.t.Fatalf("Unexpected call to RequestMock.Validate.")
+	return
+}
+
+// ValidateAfterCounter returns a count of finished RequestMock.Validate invocations
+func (mmValidate *RequestMock) ValidateAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmValidate.afterValidateCounter)
+}
+
+// ValidateBeforeCounter returns a count of RequestMock.Validate invocations
+func (mmValidate *RequestMock) ValidateBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmValidate.beforeValidateCounter)
+}
+
+// MinimockValidateDone returns true if the count of the Validate invocations corresponds
+// the number of defined expectations
+func (m *RequestMock) MinimockValidateDone() bool {
+	for _, e := range m.ValidateMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			return false
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.ValidateMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterValidateCounter) < 1 {
+		return false
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcValidate != nil && mm_atomic.LoadUint64(&m.afterValidateCounter) < 1 {
+		return false
+	}
+	return true
+}
+
+// MinimockValidateInspect logs each unmet expectation
+func (m *RequestMock) MinimockValidateInspect() {
+	for _, e := range m.ValidateMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			m.t.Error("Expected call to RequestMock.Validate")
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.ValidateMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterValidateCounter) < 1 {
+		m.t.Error("Expected call to RequestMock.Validate")
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcValidate != nil && mm_atomic.LoadUint64(&m.afterValidateCounter) < 1 {
+		m.t.Error("Expected call to RequestMock.Validate")
+	}
+}
+
 // MinimockFinish checks that all mocked methods have been called the expected number of times
 func (m *RequestMock) MinimockFinish() {
 	if !m.minimockDone() {
@@ -1398,13 +1398,13 @@ func (m *RequestMock) MinimockFinish() {
 
 		m.MinimockIsTemporaryUploadCodeInspect()
 
-		m.MinimockIsValidInspect()
-
 		m.MinimockMarshalInspect()
 
 		m.MinimockReasonAffinityRefInspect()
 
 		m.MinimockReasonRefInspect()
+
+		m.MinimockValidateInspect()
 		m.t.FailNow()
 	}
 }
@@ -1433,8 +1433,8 @@ func (m *RequestMock) minimockDone() bool {
 		m.MinimockIsAPIRequestDone() &&
 		m.MinimockIsCreationRequestDone() &&
 		m.MinimockIsTemporaryUploadCodeDone() &&
-		m.MinimockIsValidDone() &&
 		m.MinimockMarshalDone() &&
 		m.MinimockReasonAffinityRefDone() &&
-		m.MinimockReasonRefDone()
+		m.MinimockReasonRefDone() &&
+		m.MinimockValidateDone()
 }
