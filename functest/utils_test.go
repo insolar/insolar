@@ -537,15 +537,15 @@ func waitForFunction(customFunction func() api.CallMethodReply, functionTimeout 
 	}
 }
 
-func getDeposit(t *testing.T, memberRef string, tx string, anotherMember user) (map[string]interface{}, error) {
-	res, err := signedRequest(t, &anotherMember, "wallet.getBalance", map[string]interface{}{"reference": memberRef})
+func unmarshalStableMap(data []byte) (map[string]string, error) {
+	res := make([][2]string, 0)
+	err := insolar.Deserialize(data, &res)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed send request 'wallet.getBalance'  %s", memberRef)
+		return nil, err
 	}
-	deposits, ok := res.(map[string]interface{})["deposits"].(map[string]interface{})
-	if !ok {
-		return nil, errors.Wrapf(err, "failed cast deposits to map[string]interface{} ")
+	m := make(map[string]string)
+	for _, pair := range res {
+		m[pair[0]] = pair[1]
 	}
-	deposit, ok := deposits[tx].(map[string]interface{})
-	return deposit, nil
+	return m, nil
 }

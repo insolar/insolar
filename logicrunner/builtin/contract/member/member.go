@@ -175,8 +175,6 @@ func (m *Member) Call(signedRequest []byte) (interface{}, error) {
 		return m.registerNodeCall(params)
 	case "contract.getNodeRef":
 		return m.getNodeRefCall(params)
-	case "migration.addBurnAddresses":
-		return m.addMigrationAddressesCall(params)
 	case "wallet.getBalance":
 		return m.getBalanceCall(params)
 	case "member.transfer":
@@ -215,28 +213,37 @@ func (m *Member) registerNodeCall(params map[string]interface{}) (interface{}, e
 }
 
 func (m *Member) migrationAdminCall(params map[string]interface{}, nameMethod string) (interface{}, error) {
-	migrationAdminContract := migrationadmin.GetObject(foundation.GetMigrationAdmin())
 
 	switch nameMethod {
 	case "addBurnAddresses":
 		return m.addMigrationAddressesCall(params)
 
 	case "activateDaemon":
-		migrationDaemon, ok := params["reference"].(string)
-		if !ok && len(migrationDaemon) == 0 {
-			return nil, fmt.Errorf("incorect input: failed to get 'reference' param")
-		}
-		return migrationAdminContract.ActivateDaemon(strings.TrimSpace(migrationDaemon), m.GetReference()), nil
+		return m.activateDaemonCall(params)
 
 	case "deactivateDaemon":
-		migrationDaemon, ok := params["reference"].(string)
-
-		if !ok && len(migrationDaemon) == 0 {
-			return nil, fmt.Errorf("incorect input: failed to get 'reference' param")
-		}
-		return migrationAdminContract.DeactivateDaemon(strings.TrimSpace(migrationDaemon), m.GetReference()), nil
+		return m.deactivateDaemonCall(params)
 	}
 	return nil, fmt.Errorf("unknown method: migration.'%s'", nameMethod)
+}
+
+func (m *Member) activateDaemonCall(params map[string]interface{}) (interface{}, error) {
+	migrationAdminContract := migrationadmin.GetObject(foundation.GetMigrationAdmin())
+	migrationDaemon, ok := params["reference"].(string)
+	if !ok && len(migrationDaemon) == 0 {
+		return nil, fmt.Errorf("incorect input: failed to get 'reference' param")
+	}
+	return migrationAdminContract.ActivateDaemon(strings.TrimSpace(migrationDaemon), m.GetReference()), nil
+}
+
+func (m *Member) deactivateDaemonCall(params map[string]interface{}) (interface{}, error) {
+	migrationAdminContract := migrationadmin.GetObject(foundation.GetMigrationAdmin())
+	migrationDaemon, ok := params["reference"].(string)
+
+	if !ok && len(migrationDaemon) == 0 {
+		return nil, fmt.Errorf("incorect input: failed to get 'reference' param")
+	}
+	return migrationAdminContract.DeactivateDaemon(strings.TrimSpace(migrationDaemon), m.GetReference()), nil
 }
 
 func (m *Member) addMigrationAddressesCall(params map[string]interface{}) (interface{}, error) {

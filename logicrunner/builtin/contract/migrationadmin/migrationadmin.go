@@ -45,6 +45,7 @@ func New(migrationDaemons [insolar.GenesisAmountMigrationDaemonMembers]insolar.R
 }
 
 // Return stable map migration daemon.
+// ins:immutable
 func (mA MigrationAdmin) GetAllMigrationDaemon() (foundation.StableMap, error) {
 	sizeMap := len(mA.MigrationDaemon)
 	if sizeMap != insolar.GenesisAmountMigrationDaemonMembers {
@@ -95,6 +96,7 @@ func (mA MigrationAdmin) CheckActiveDaemon(daemonMember string) (bool, error) {
 }
 
 // Return only active daemons.
+// ins:immutable
 func (mA MigrationAdmin) GetActiveDaemons() ([]string, error) {
 	var activeDaemons []string
 	for daemonsRef, status := range mA.MigrationDaemon {

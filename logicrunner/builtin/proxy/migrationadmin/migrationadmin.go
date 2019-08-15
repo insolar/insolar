@@ -76,8 +76,8 @@ func GetPrototype() insolar.Reference {
 	return *PrototypeReference
 }
 
-// NewMigrationAdmin is constructor
-func NewMigrationAdmin(migrationDaemons [insolar.GenesisAmountMigrationDaemonMembers]insolar.Reference, migrationAdminMember insolar.Reference) *ContractConstructorHolder {
+// New is constructor
+func New(migrationDaemons [insolar.GenesisAmountMigrationDaemonMembers]insolar.Reference, migrationAdminMember insolar.Reference) *ContractConstructorHolder {
 	var args [2]interface{}
 	args[0] = migrationDaemons
 	args[1] = migrationAdminMember
@@ -88,7 +88,7 @@ func NewMigrationAdmin(migrationDaemons [insolar.GenesisAmountMigrationDaemonMem
 		panic(err)
 	}
 
-	return &ContractConstructorHolder{constructorName: "NewMigrationAdmin", argsSerialized: argsSerialized}
+	return &ContractConstructorHolder{constructorName: "New", argsSerialized: argsSerialized}
 }
 
 // GetReference returns reference of the object
@@ -156,7 +156,7 @@ func (r *MigrationAdmin) GetCode() (insolar.Reference, error) {
 }
 
 // GetAllMigrationDaemon is proxy generated method
-func (r *MigrationAdmin) GetAllMigrationDaemon() (foundation.StableMap, error) {
+func (r *MigrationAdmin) GetAllMigrationDaemonAsMutable() (foundation.StableMap, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -214,7 +214,7 @@ func (r *MigrationAdmin) GetAllMigrationDaemonNoWait() error {
 }
 
 // GetAllMigrationDaemonAsImmutable is proxy generated method
-func (r *MigrationAdmin) GetAllMigrationDaemonAsImmutable() (foundation.StableMap, error) {
+func (r *MigrationAdmin) GetAllMigrationDaemon() (foundation.StableMap, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -551,7 +551,7 @@ func (r *MigrationAdmin) CheckActiveDaemonAsImmutable(daemonMember string) (bool
 }
 
 // GetActiveDaemons is proxy generated method
-func (r *MigrationAdmin) GetActiveDaemons() ([]string, error) {
+func (r *MigrationAdmin) GetActiveDaemonsAsMutable() ([]string, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -609,7 +609,7 @@ func (r *MigrationAdmin) GetActiveDaemonsNoWait() error {
 }
 
 // GetActiveDaemonsAsImmutable is proxy generated method
-func (r *MigrationAdmin) GetActiveDaemonsAsImmutable() ([]string, error) {
+func (r *MigrationAdmin) GetActiveDaemons() ([]string, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte

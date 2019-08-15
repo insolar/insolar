@@ -336,7 +336,7 @@ func INSMETHOD_GetActiveDaemons(object []byte, data []byte) ([]byte, []byte, err
 	return state, ret, err
 }
 
-func INSCONSTRUCTOR_NewMigrationAdmin(data []byte) ([]byte, []byte, error) {
+func INSCONSTRUCTOR_New(data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
 	args := make([]interface{}, 2)
@@ -347,11 +347,11 @@ func INSCONSTRUCTOR_NewMigrationAdmin(data []byte) ([]byte, []byte, error) {
 
 	err := ph.Deserialize(data, &args)
 	if err != nil {
-		e := &foundation.Error{S: "[ FakeNewMigrationAdmin ] ( INSCONSTRUCTOR_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		e := &foundation.Error{S: "[ FakeNew ] ( INSCONSTRUCTOR_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
 		return nil, nil, e
 	}
 
-	ret0, ret1 := NewMigrationAdmin(args0, args1)
+	ret0, ret1 := New(args0, args1)
 	ret1 = ph.MakeErrorSerializable(ret1)
 	if ret0 == nil && ret1 == nil {
 		ret1 = &foundation.Error{S: "constructor returned nil"}
@@ -396,7 +396,7 @@ func Initialize() XXX_insolar.ContractWrapper {
 			"GetActiveDaemons":      INSMETHOD_GetActiveDaemons,
 		},
 		Constructors: XXX_insolar.ContractConstructors{
-			"NewMigrationAdmin": INSCONSTRUCTOR_NewMigrationAdmin,
+			"New": INSCONSTRUCTOR_New,
 		},
 	}
 }

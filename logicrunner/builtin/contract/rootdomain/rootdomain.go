@@ -21,12 +21,12 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/insolar/insolar/logicrunner/builtin/proxy/migrationadmin"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/helloworld"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/migrationadmin"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/migrationshard"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/pkshard"
 )
