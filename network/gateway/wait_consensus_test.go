@@ -89,6 +89,7 @@ func TestWaitConsensus_ConsensusHappenedInETA(t *testing.T) {
 	})
 	waitConsensus.PulseAccessor = accessorMock
 	waitConsensus.bootstrapETA = time.Second
+	waitConsensus.bootstrapTimer = time.NewTimer(waitConsensus.bootstrapETA)
 	waitConsensus.OnConsensusFinished(context.Background(), network.Report{})
 
 	waitConsensus.Run(context.Background(), *insolar.EphemeralPulse)
