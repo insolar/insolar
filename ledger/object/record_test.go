@@ -479,8 +479,7 @@ func TestRecordPositionDB(t *testing.T) {
 		recordStorage := NewRecordDB(db)
 		pn := gen.PulseNumber()
 
-		id := gen.ID()
-		id.SetPulse(pn)
+		id := gen.IDWithPulse(pn)
 
 		err = recordStorage.Set(context.TODO(), record.Material{ID: id})
 		require.NoError(t, err)
@@ -503,12 +502,9 @@ func TestRecordPositionDB(t *testing.T) {
 		recordStorage := NewRecordDB(db)
 		pn := gen.PulseNumber()
 
-		id := gen.ID()
-		id.SetPulse(pn)
-		sID := gen.ID()
-		sID.SetPulse(pn)
-		tID := gen.ID()
-		tID.SetPulse(pn)
+		id := gen.IDWithPulse(pn)
+		sID := gen.IDWithPulse(pn)
+		tID := gen.IDWithPulse(pn)
 
 		err = recordStorage.Set(context.TODO(), record.Material{ID: id})
 		require.NoError(t, err)
@@ -568,12 +564,9 @@ func TestRecordPositionDB(t *testing.T) {
 		recordStorage := NewRecordDB(db)
 		pn := gen.PulseNumber()
 
-		id := gen.ID()
-		id.SetPulse(pn)
-		sID := gen.ID()
-		sID.SetPulse(pn)
-		tID := gen.ID()
-		tID.SetPulse(pn)
+		id := gen.IDWithPulse(pn)
+		sID := gen.IDWithPulse(pn)
+		tID := gen.IDWithPulse(pn)
 
 		err = recordStorage.Set(context.TODO(), record.Material{ID: id})
 		require.NoError(t, err)
@@ -610,8 +603,7 @@ func TestRecordPositionDB(t *testing.T) {
 		require.Error(t, err)
 		require.Equal(t, err, ErrNotFound)
 
-		id := gen.ID()
-		id.SetPulse(pn)
+		id := gen.IDWithPulse(pn)
 
 		err = recordStorage.Set(context.TODO(), record.Material{ID: id})
 		require.NoError(t, err)

@@ -35,14 +35,13 @@ import (
 	"testing"
 	"time"
 
-	yaml "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v2"
 
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/defaults"
-	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
 )
 
 const HOST = "http://localhost:19102"
@@ -170,13 +169,6 @@ func setInfo() error {
 	return nil
 }
 
-var insgorundPath string
-
-func buildGinsiderCLI() (err error) {
-	insgorundPath, _, err = goplugintestutils.Build()
-	return errors.Wrap(err, "[ buildGinsiderCLI ] could't build ginsider CLI: ")
-}
-
 func stopInsolard() error {
 	if stdin != nil {
 		defer stdin.Close()
@@ -204,64 +196,22 @@ func stopInsolard() error {
 	return nil
 }
 
-var insgorundCleaner func()
-var secondInsgorundCleaner func()
-
-func makeInsgorundOutputDir() (string, error) {
-	p, err := build.Default.Import("github.com/insolar/insolar", "", build.FindOnly)
-	if err != nil {
-		return "", errors.Wrap(err, "Couldn't receive path to github.com/insolar/insolar")
-	}
-	outputDir := filepath.Join(p.Dir, ".artifacts", "launchnet", "insgorund_logs")
-	err = os.MkdirAll(outputDir, os.ModePerm)
-	if err != nil {
-		return "", errors.Wrap(err, "[ startInsgorund ] couldn't create dir for insgorund output")
-	}
-	return outputDir, nil
-}
-
-func startInsgorund(listenPort string, upstreamPort string, combinedOutputDir string) (func(), error) {
-	// It starts on ports of "virtual" node
-	cleaner, err := goplugintestutils.StartInsgorund(insgorundPath, "tcp", "127.0.0.1:"+listenPort, "tcp", "127.0.0.1:"+upstreamPort, false, filepath.Join(combinedOutputDir, listenPort+".log"))
-	if err != nil {
-		return cleaner, errors.Wrap(err, "[ startInsgorund ] couldn't wait for insolard to start completely: ")
-	}
-	return cleaner, nil
-}
-
-func startAllInsgorunds() error {
-	combinedOutputDir, err := makeInsgorundOutputDir()
-	if err != nil {
-		return errors.Wrap(err, "[ startInsgorund ] couldn't create dir for insgorund output")
-	}
-	insgorundCleaner, err = startInsgorund("33305", "33306", combinedOutputDir)
-	if err != nil {
-		return errors.Wrap(err, "[ setup ] could't start insgorund: ")
-	}
-	fmt.Println("[ startAllInsgorunds ] insgorund was successfully started")
-
-	secondInsgorundCleaner, err = startInsgorund("33327", "33328", combinedOutputDir)
-	if err != nil {
-		return errors.Wrap(err, "[ setup ] could't start second insgorund: ")
-	}
-	fmt.Println("[ startAllInsgorunds ] second insgorund was successfully started")
-
-	return nil
-}
-
-func stopAllInsgorunds() error {
-	if insgorundCleaner == nil || secondInsgorundCleaner == nil {
-		return errors.New("[ stopInsgorund ] cleaner func not found")
-	}
-	insgorundCleaner()
-	secondInsgorundCleaner()
-	return nil
-}
-
 func waitForNet() error {
 	numAttempts := 90
 	// TODO: read ports from bootstrap config
-	ports := []string{"19101", "19102", "19103", "19104", "19105", "19106", "19107", "19108", "19109", "19110", "19111"}
+	ports := []string{
+		"19101",
+		"19102",
+		"19103",
+		"19104",
+		"19105",
+		// "19106",
+		// "19107",
+		// "19108",
+		// "19109",
+		// "19110",
+		// "19111",
+	}
 	numNodes := len(ports)
 	currentOk := 0
 	for i := 0; i < numAttempts; i++ {
@@ -377,19 +327,7 @@ func waitForLaunch() error {
 }
 
 func setup() error {
-	err := buildGinsiderCLI()
-	if err != nil {
-		return errors.Wrap(err, "[ setup ] could't build ginsider CLI: ")
-	}
-	fmt.Println("[ setup ] ginsider CLI was successfully builded")
-
-	err = startAllInsgorunds()
-	if err != nil {
-		return errors.Wrap(err, "[ setup ] could't start insgorund: ")
-	}
-	fmt.Println("[ setup ] insgorund was successfully started")
-
-	err = startNet()
+	err := startNet()
 	if err != nil {
 		return errors.Wrap(err, "[ setup ] could't startNet")
 	}
@@ -444,14 +382,6 @@ func teardown() {
 		fmt.Println("[ teardown ]  failed to stop insolard: ", err)
 	}
 	fmt.Println("[ teardown ] insolard was successfully stoped")
-
-	err = stopAllInsgorunds()
-	if err != nil {
-		fmt.Println("[ teardown ]  failed to stop all insgrounds: ", err)
-	}
-	fmt.Println("[ teardown ] insgorund was successfully stoped")
-
-	fmt.Println("[ teardown ] directory for contracts cache was successfully deleted")
 }
 
 func testMainWrapper(m *testing.M) int {
