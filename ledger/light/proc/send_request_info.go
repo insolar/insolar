@@ -42,7 +42,12 @@ type SendRequestInfo struct {
 	}
 }
 
-func NewSendRequestInfo(msg payload.Meta, objectID insolar.ID, requestID insolar.ID, pulse insolar.PulseNumber) *SendRequestInfo {
+func NewSendRequestInfo(
+	msg payload.Meta,
+	objectID insolar.ID,
+	requestID insolar.ID,
+	pulse insolar.PulseNumber,
+) *SendRequestInfo {
 	return &SendRequestInfo{
 		message:   msg,
 		objectID:  objectID,
@@ -62,6 +67,15 @@ func (p *SendRequestInfo) Dep(
 }
 
 func (p *SendRequestInfo) Proceed(ctx context.Context) error {
+	if p.requestID.IsEmpty() {
+		return errors.New("requestID is empty")
+	}
+	if p.objectID.IsEmpty() {
+		return errors.New("objectID is empty")
+	}
+	if p.pulse < insolar.FirstPulseNumber {
+		return errors.New("pulse is wrong")
+	}
 
 	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
 		"request_id":     p.requestID.DebugString(),
@@ -69,11 +83,6 @@ func (p *SendRequestInfo) Proceed(ctx context.Context) error {
 		"pulse_received": p.pulse,
 	})
 	logger.Debug("send request info started")
-
-	err := p.checkRequest()
-	if err != nil {
-		return errors.Wrap(err, "SendRequestInfo has wrong params")
-	}
 
 	// Prevent concurrent object modifications.
 	p.dep.locker.Lock(p.objectID)
@@ -117,18 +126,5 @@ func (p *SendRequestInfo) Proceed(ctx context.Context) error {
 		"request":    foundRequest != nil,
 		"has_result": foundResult != nil,
 	}).Debug("send request info finished")
-	return nil
-}
-
-func (p *SendRequestInfo) checkRequest() error {
-	if p.requestID.IsEmpty() {
-		return errors.New("requestID is empty")
-	}
-	if p.objectID.IsEmpty() {
-		return errors.New("objectID is empty")
-	}
-	if p.pulse < insolar.FirstPulseNumber {
-		return errors.New("pulse is wrong")
-	}
 	return nil
 }

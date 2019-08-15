@@ -816,18 +816,6 @@ func (r *Two) GetValue() (int, error) {
 	resp := callMethodNoChecks(t, obj, "Hello")
 	require.NotEmpty(t, resp.Error)
 	require.Contains(t, resp.Error.Error(), "reason is wrong: reason request is not closed for a detached call")
-
-	// for i := 0; i < 25; i++ {
-	// 	resp = callMethod(t, obj, "Value")
-	// 	require.Empty(t, resp.Error)
-	//
-	// 	if float64(322) != resp.ExtractedReply {
-	// 		break
-	// 	}
-	// 	time.Sleep(1000 * time.Millisecond)
-	// }
-	//
-	// require.Equal(t, float64(644), resp.ExtractedReply)
 }
 
 func TestContextPassing(t *testing.T) {

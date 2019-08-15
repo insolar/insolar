@@ -18,6 +18,7 @@ package handle
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
 
@@ -40,14 +41,13 @@ func NewGetRequestInfo(dep *proc.Dependencies, meta payload.Meta) *GetRequestInf
 }
 
 func (s *GetRequestInfo) Present(ctx context.Context, f flow.Flow) error {
-	msg := payload.GetRequestInfo{}
-
 	pl, err := payload.Unmarshal(s.meta.Payload)
-	switch concrete := pl.(type) {
-	case *payload.GetRequestInfo:
-		msg = *concrete
-	default:
-		return errors.Wrap(err, "failed to unmarshal GetRequestInfo message")
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal payload")
+	}
+	msg, ok := pl.(*payload.GetRequestInfo)
+	if !ok {
+		return fmt.Errorf("unexpected payload type %T", pl)
 	}
 
 	pulse := msg.Pulse

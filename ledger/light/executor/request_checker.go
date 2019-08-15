@@ -93,17 +93,27 @@ func (c *RequestCheckerDefault) CheckRequest(ctx context.Context, requestID inso
 
 		_, ok := findRecord(requests, reasonID)
 		if !ok {
-			return &payload.CodedError{Text: "request reason not found in opened requests", Code: payload.CodeReasonNotFound}
+			return &payload.CodedError{
+				Text: "request reason not found in opened requests",
+				Code: payload.CodeReasonNotFound,
+			}
 		}
 	}
 
 	return nil
 }
 
-func (c *RequestCheckerDefault) checkIncomingRequest(ctx context.Context, incomingRequest *record.IncomingRequest, reasonID, requestID insolar.ID) error {
-
+func (c *RequestCheckerDefault) checkIncomingRequest(
+	ctx context.Context,
+	incomingRequest *record.IncomingRequest,
+	reasonID insolar.ID,
+	requestID insolar.ID,
+) error {
 	if !incomingRequest.IsValid() {
-		return &payload.CodedError{Text: fmt.Sprintf("incoming request is not valid (got mode %v)", incomingRequest.ReturnMode), Code: payload.CodeIncomingRequestIsWrong}
+		return &payload.CodedError{
+			Text: fmt.Sprintf("incoming request is not valid (got mode %v)", incomingRequest.ReturnMode),
+			Code: payload.CodeIncomingRequestIsWrong,
+		}
 	}
 
 	if incomingRequest.IsAPIRequest() {
@@ -113,7 +123,10 @@ func (c *RequestCheckerDefault) checkIncomingRequest(ctx context.Context, incomi
 	reasonObject := incomingRequest.ReasonAffinityRef()
 	reasonObjectID := reasonObject.Record()
 	if reasonObject.IsEmpty() {
-		return &payload.CodedError{Text: "reason object is not set on incoming request", Code: payload.CodeReasonIsWrong}
+		return &payload.CodedError{
+			Text: "reason object is not set on incoming request",
+			Code: payload.CodeReasonIsWrong,
+		}
 	}
 
 	var (
@@ -124,9 +137,8 @@ func (c *RequestCheckerDefault) checkIncomingRequest(ctx context.Context, incomi
 
 	if !incomingRequest.IsCreationRequest() {
 		if incomingRequest.AffinityRef().Equal(reasonObject) {
-			// If reasonObject is same as requestObject then go local, this fixes deadlock in saga requests
+			// If reasonObject is same as requestObject then go local, this fixes deadlock in saga requests.
 			makeLocalRequest = true
-			// return &payload.CodedError{Text: "request and reason objects can't be the same", Code: payload.CodeIncomingRequestIsWrong}
 		}
 	}
 
@@ -146,23 +158,36 @@ func (c *RequestCheckerDefault) checkIncomingRequest(ctx context.Context, incomi
 	}
 
 	if !isIncomingRequest(rec.Virtual) {
-		return &payload.CodedError{Text: fmt.Sprintf("reason request must be Incoming, %T received", rec.Virtual.Union), Code: payload.CodeReasonIsWrong}
+		return &payload.CodedError{
+			Text: fmt.Sprintf("reason request must be Incoming, %T received", rec.Virtual.Union),
+			Code: payload.CodeReasonIsWrong,
+		}
 	}
 
 	isClosed := len(reasonRequest.Result) != 0
 	if !incomingRequest.IsDetachedCall() && isClosed {
-		// This is regular request, should NOT have closed reason
-		return &payload.CodedError{Text: "reason request is closed for a regular (not detached) call", Code: payload.CodeReasonIsWrong}
+		// This is regular request, should NOT have closed reason.
+		return &payload.CodedError{
+			Text: "reason request is closed for a regular (not detached) call",
+			Code: payload.CodeReasonIsWrong,
+		}
 
 	} else if incomingRequest.IsDetachedCall() && !isClosed {
-		// This is "detached incoming request", should have closed reason
-		return &payload.CodedError{Text: "reason request is not closed for a detached call", Code: payload.CodeReasonIsWrong}
+		// This is "detached incoming request", should have closed reason.
+		return &payload.CodedError{
+			Text: "reason request is not closed for a detached call",
+			Code: payload.CodeReasonIsWrong,
+		}
 	}
-
 	return nil
 }
 
-func (c *RequestCheckerDefault) getRequest(ctx context.Context, reasonObjectID, reasonID insolar.ID, currentPulse insolar.PulseNumber) (*payload.RequestInfo, error) {
+func (c *RequestCheckerDefault) getRequest(
+	ctx context.Context,
+	reasonObjectID insolar.ID,
+	reasonID insolar.ID,
+	currentPulse insolar.PulseNumber,
+) (*payload.RequestInfo, error) {
 	inslogger.FromContext(ctx).Debug("check reason. request: ", reasonID.DebugString())
 
 	// Fetching message target node
@@ -176,7 +201,7 @@ func (c *RequestCheckerDefault) getRequest(ctx context.Context, reasonObjectID, 
 		return nil, errors.Wrap(err, "failed to calculate node")
 	}
 
-	// Sending message
+	// Sending message.
 	msg, err := payload.NewMessage(&payload.GetRequestInfo{
 		ObjectID:  reasonObjectID,
 		RequestID: reasonID,
@@ -209,14 +234,19 @@ func (c *RequestCheckerDefault) getRequest(ctx context.Context, reasonObjectID, 
 	}
 }
 
-func (c *RequestCheckerDefault) getRequestLocal(ctx context.Context, reasonObjectID, reasonID insolar.ID, currentPulse insolar.PulseNumber) (*payload.RequestInfo, error) {
+func (c *RequestCheckerDefault) getRequestLocal(
+	ctx context.Context,
+	reasonObjectID insolar.ID,
+	reasonID insolar.ID,
+	currentPulse insolar.PulseNumber,
+) (*payload.RequestInfo, error) {
 	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
 		"request_id":    reasonID.DebugString(),
 		"object_id":     reasonObjectID.DebugString(),
 		"local_request": "true",
 	})
 
-	// Searching for request info
+	// Searching for request info.
 	var (
 		reqBuf []byte
 		resBuf []byte
@@ -253,7 +283,10 @@ func (c *RequestCheckerDefault) getRequestLocal(ctx context.Context, reasonObjec
 	return &reqInfo, nil
 }
 
-func findRecord(filamentRecords []record.CompositeFilamentRecord, requestID insolar.ID) (record.CompositeFilamentRecord, bool) {
+func findRecord(
+	filamentRecords []record.CompositeFilamentRecord,
+	requestID insolar.ID,
+) (record.CompositeFilamentRecord, bool) {
 	for _, p := range filamentRecords {
 		if p.RecordID == requestID {
 			return p, true

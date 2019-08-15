@@ -43,13 +43,13 @@ func Test_IncomingRequest_Check(t *testing.T) {
 	s.SetPulse(ctx)
 
 	t.Run("registered is older than reason returns error", func(t *testing.T) {
-		msg, _ := MakeSetIncomingRequestFromAPI(gen.ID(), gen.IDWithPulse(s.Pulse()+1), true)
+		msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()+1), insolar.ID{}, true, true)
 		rep := SendMessage(ctx, s, &msg)
 		RequireErrorCode(rep, payload.CodeReasonIsWrong)
 	})
 
 	t.Run("detached returns error", func(t *testing.T) {
-		msg, _ := MakeSetIncomingRequestFromAPI(gen.ID(), gen.IDWithPulse(s.Pulse()), true)
+		msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), insolar.ID{}, true, true)
 		// Faking detached request.
 		record.Unwrap(&msg.Request).(*record.IncomingRequest).ReturnMode = record.ReturnSaga
 		rep := SendMessage(ctx, s, &msg)
@@ -57,7 +57,7 @@ func Test_IncomingRequest_Check(t *testing.T) {
 	})
 
 	t.Run("registered API request appears in pendings", func(t *testing.T) {
-		msg, _ := MakeSetIncomingRequestFromAPI(gen.ID(), gen.IDWithPulse(s.Pulse()), true)
+		msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), insolar.ID{}, true, true)
 		rep := SendMessage(ctx, s, &msg)
 		RequireNotError(rep)
 		reqInfo := rep.(*payload.RequestInfo)
@@ -70,7 +70,7 @@ func Test_IncomingRequest_Check(t *testing.T) {
 	})
 
 	t.Run("registered request appears in pendings", func(t *testing.T) {
-		msg, _ := MakeSetIncomingRequestFromAPI(gen.ID(), gen.IDWithPulse(s.Pulse()), true)
+		msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), insolar.ID{}, true, true)
 		firstObjP := SendMessage(ctx, s, &msg)
 		RequireNotError(firstObjP)
 		reqInfo := firstObjP.(*payload.RequestInfo)
@@ -88,7 +88,7 @@ func Test_IncomingRequest_Check(t *testing.T) {
 	})
 
 	t.Run("closed request does not appear in pendings", func(t *testing.T) {
-		msg, _ := MakeSetIncomingRequestFromAPI(gen.ID(), gen.IDWithPulse(s.Pulse()), true)
+		msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), insolar.ID{}, true, true)
 		rep := SendMessage(ctx, s, &msg)
 		RequireNotError(rep)
 		reqInfo := rep.(*payload.RequestInfo)
@@ -118,7 +118,7 @@ func Test_IncomingRequest_Duplicate(t *testing.T) {
 	s.SetPulse(ctx)
 
 	t.Run("creation request duplicate found", func(t *testing.T) {
-		msg, _ := MakeSetIncomingRequestFromAPI(gen.ID(), gen.IDWithPulse(s.Pulse()), true)
+		msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), insolar.ID{}, true, true)
 
 		// Set first request.
 		rep := SendMessage(ctx, s, &msg)
@@ -140,13 +140,13 @@ func Test_IncomingRequest_Duplicate(t *testing.T) {
 	})
 
 	t.Run("method request duplicate found", func(t *testing.T) {
-		msg, _ := MakeSetIncomingRequestFromAPI(gen.ID(), gen.IDWithPulse(s.Pulse()), true)
+		msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), insolar.ID{}, true, true)
 		rep := SendMessage(ctx, s, &msg)
 		RequireNotError(rep)
 		rootObject := rep.(*payload.RequestInfo).ObjectID
 		reasonID := rep.(*payload.RequestInfo).RequestID
 
-		msg, _ = MakeSetIncomingRequestFromAPI(gen.ID(), gen.IDWithPulse(s.Pulse()), true)
+		msg, _ = MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), insolar.ID{}, true, true)
 		rep = SendMessage(ctx, s, &msg)
 		RequireNotError(rep)
 		objectID := rep.(*payload.RequestInfo).ObjectID
@@ -173,13 +173,13 @@ func Test_IncomingRequest_Duplicate(t *testing.T) {
 	})
 
 	t.Run("method request duplicate with result found", func(t *testing.T) {
-		msg, _ := MakeSetIncomingRequestFromAPI(gen.ID(), gen.IDWithPulse(s.Pulse()), true)
+		msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), insolar.ID{}, true, true)
 		rep := SendMessage(ctx, s, &msg)
 		RequireNotError(rep)
 		rootObject := rep.(*payload.RequestInfo).ObjectID
 		reasonID := rep.(*payload.RequestInfo).RequestID
 
-		msg, _ = MakeSetIncomingRequestFromAPI(gen.ID(), gen.IDWithPulse(s.Pulse()), true)
+		msg, _ = MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), insolar.ID{}, true, true)
 		rep = SendMessage(ctx, s, &msg)
 		RequireNotError(rep)
 		objectID := rep.(*payload.RequestInfo).ObjectID
@@ -311,12 +311,12 @@ func Test_DetachedRequest_notification(t *testing.T) {
 	s.SetPulse(ctx)
 
 	t.Run("detached notification sent on detached reason close", func(t *testing.T) {
-		msg, _ := MakeSetIncomingRequestFromAPI(gen.ID(), gen.IDWithPulse(s.Pulse()), true)
+		msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), insolar.ID{}, true, true)
 		rep := SendMessage(ctx, s, &msg)
 		RequireNotError(rep)
 		objectID := rep.(*payload.RequestInfo).ObjectID
 
-		msg, _ = MakeSetIncomingRequestFromAPI(objectID, gen.IDWithPulse(s.Pulse()), false)
+		msg, _ = MakeSetIncomingRequest(objectID, gen.IDWithPulse(s.Pulse()), insolar.ID{}, false, true)
 		rep = SendMessage(ctx, s, &msg)
 		RequireNotError(rep)
 		reasonID := rep.(*payload.RequestInfo).RequestID
@@ -354,7 +354,7 @@ func Test_Result_Duplicate(t *testing.T) {
 	// Second pulse goes in storage and starts processing, including pulse change in flow dispatcher.
 	s.SetPulse(ctx)
 
-	msg, _ := MakeSetIncomingRequestFromAPI(gen.ID(), gen.IDWithPulse(s.Pulse()), true)
+	msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), insolar.ID{}, true, true)
 
 	// Set request.
 	rep := SendMessage(ctx, s, &msg)
@@ -403,7 +403,7 @@ func Test_IncomingRequest_ClosedReason(t *testing.T) {
 
 		// Creating root reason request.
 		{
-			msg, _ := MakeSetIncomingRequestFromAPI(gen.ID(), gen.IDWithPulse(s.Pulse()), true)
+			msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), insolar.ID{}, true, true)
 			rep := SendMessage(ctx, s, &msg)
 			RequireNotError(rep)
 			reasonID = rep.(*payload.RequestInfo).RequestID
@@ -447,7 +447,7 @@ func Test_OutgoingRequest_ClosedReason(t *testing.T) {
 	t.Run("Outgoing request can't be created w closed reason", func(t *testing.T) {
 		// Creating root reason request.
 		{
-			msg, _ := MakeSetIncomingRequestFromAPI(gen.ID(), gen.IDWithPulse(s.Pulse()), true)
+			msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), insolar.ID{}, true, true)
 			rep := SendMessage(ctx, s, &msg)
 			RequireNotError(rep)
 			reasonID = rep.(*payload.RequestInfo).RequestID
@@ -489,7 +489,7 @@ func Test_Requests_OutgoingReason(t *testing.T) {
 
 		// Creating root reason request.
 		{
-			msg, _ := MakeSetIncomingRequestFromAPI(gen.ID(), gen.IDWithPulse(s.Pulse()), true)
+			msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), insolar.ID{}, true, true)
 			rep := SendMessage(ctx, s, &msg)
 			RequireNotError(rep)
 			rootID = rep.(*payload.RequestInfo).RequestID
@@ -539,13 +539,13 @@ func Test_OutgoingRequests_DifferentObjects(t *testing.T) {
 
 		// Creating root reason request.
 		{
-			msg, _ := MakeSetIncomingRequestFromAPI(gen.ID(), gen.IDWithPulse(s.Pulse()), true)
+			msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), insolar.ID{}, true, true)
 			rep := SendMessage(ctx, s, &msg)
 			RequireNotError(rep)
 			rootID = rep.(*payload.RequestInfo).RequestID
 		}
 		{
-			msg, _ := MakeSetIncomingRequestFromAPI(gen.ID(), gen.IDWithPulse(s.Pulse()), true)
+			msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), insolar.ID{}, true, true)
 			rep := SendMessage(ctx, s, &msg)
 			RequireNotError(rep)
 			rootID2 = rep.(*payload.RequestInfo).RequestID
@@ -578,7 +578,7 @@ func Test_OutgoingDetached_InPendings(t *testing.T) {
 
 	// Creating root reason request.
 	{
-		msg, _ := MakeSetIncomingRequestFromAPI(gen.ID(), gen.IDWithPulse(s.Pulse()), true)
+		msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), insolar.ID{}, true, true)
 		rep := SendMessage(ctx, s, &msg)
 		RequireNotError(rep)
 		rootID = rep.(*payload.RequestInfo).RequestID
@@ -637,7 +637,7 @@ func Test_IncomingRequest_DifferentResults(t *testing.T) {
 	t.Run("Incoming request can't have several different results", func(t *testing.T) {
 		// Creating root reason request.
 		{
-			msg, _ := MakeSetIncomingRequestFromAPI(gen.ID(), gen.IDWithPulse(s.Pulse()), true)
+			msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), insolar.ID{}, true, true)
 			rep := SendMessage(ctx, s, &msg)
 			RequireNotError(rep)
 			reasonID = rep.(*payload.RequestInfo).RequestID

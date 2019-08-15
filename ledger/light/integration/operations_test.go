@@ -74,9 +74,9 @@ func CallGetCode(ctx context.Context, s *Server, id insolar.ID) payload.Payload 
 	return nil
 }
 
-func MakeSetIncomingRequestFromAPI(objectID, reasonID insolar.ID, isCreation bool) (payload.SetIncomingRequest, record.Virtual) {
-	return MakeSetIncomingRequest(objectID, reasonID, insolar.ID{}, isCreation, true)
-}
+// func MakeSetIncomingRequestFromAPI(objectID, reasonID insolar.ID, isCreation bool) (payload.SetIncomingRequest, record.Virtual) {
+// 	return MakeSetIncomingRequest(objectID, reasonID, insolar.ID{}, isCreation, true)
+// }
 
 func MakeSetIncomingRequest(objectID, reasonID insolar.ID, reasonObjectID insolar.ID, isCreation, isAPI bool) (payload.SetIncomingRequest, record.Virtual) {
 	args := make([]byte, 100)

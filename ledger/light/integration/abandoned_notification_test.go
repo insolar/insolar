@@ -102,7 +102,7 @@ func Test_AbandonedNotification(t *testing.T) {
 
 	t.Run("abandoned notification", func(t *testing.T) {
 		// Set incoming request.
-		msg, _ := MakeSetIncomingRequestFromAPI(gen.ID(), gen.IDWithPulse(s.Pulse()), true)
+		msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), insolar.ID{}, true, true)
 		rep := SendMessage(ctx, s, &msg)
 		RequireNotError(rep)
 		reqInfo := rep.(*payload.RequestInfo)
