@@ -34,7 +34,7 @@ type status string
 const (
 	confirms uint = 3
 	// TODO: https://insolar.atlassian.net/browse/WLT-768
-	// offsetDepositPulse insolar.PulseNumber = 270 * day
+	// offsetDepositPulse insolar.PulseNumber = 366 * day
 	offsetDepositPulse insolar.PulseNumber = 10
 
 	statusOpen    status = "Open"
