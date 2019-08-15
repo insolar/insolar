@@ -30,26 +30,26 @@ import (
 )
 
 func TestMigrationToken(t *testing.T) {
-	migrationAddress := testutils.RandomString()
-	member := createMigrationMemberForMA(t, migrationAddress)
 	err := activateDaemons(t)
 	require.NoError(t, err)
+	migrationAddress := testutils.RandomString()
+	member := createMigrationMemberForMA(t, migrationAddress)
 
+	deposit := migrate(t, member.ref, "1000", "Test_TxHash", migrationAddress, 0)
 	firstMemberBalance := deposit["balance"].(string)
+
 	require.Equal(t, "0", firstMemberBalance)
 	firstMABalance := getBalanceNoErr(t, &migrationAdmin, migrationAdmin.ref)
 
-	confirmerReferences, ok := deposit["confirmerReferences"].([]interface{})
-	require.True(t, ok, fmt.Sprintf("failed to cast result: expected []string, got %T", deposit["confirmerReferences"]))
-	require.Equal(t, confirmerReferences[0], migrationDaemons[0].ref)
-
+	deposit = migrate(t, member.ref, "1000", "Test_TxHash", migrationAddress, 1)
 	deposit = migrate(t, member.ref, "1000", "Test_TxHash", migrationAddress, 2)
-
+	confirmerReferencesMap := deposit["confirmerReferences"].(string)
 	sm := make(foundation.StableMap)
 	decoded, err := base64.StdEncoding.DecodeString(confirmerReferencesMap)
 	require.NoError(t, err)
 	err = sm.UnmarshalBinary(decoded)
 	require.NoError(t, err)
+
 	for i := 0; i < 3; i++ {
 		require.Equal(t, sm[migrationDaemons[i].ref], "1000")
 	}
