@@ -119,6 +119,7 @@ func (r *RecordDB) Set(ctx context.Context, rec record.Material) error {
 	})
 }
 
+// BatchSet saves a batch of records to storage with order-processing.
 func (r *RecordDB) BatchSet(ctx context.Context, recs []record.Material) error {
 	if len(recs) == 0 {
 		return nil
@@ -169,6 +170,7 @@ func (r *RecordDB) BatchSet(ctx context.Context, recs []record.Material) error {
 	return nil
 }
 
+// setRecord is a helper method for storaging record to db in scope of txn.
 func setRecord(txn *badger.Txn, key store.Key, record record.Material) error {
 	data, err := record.Marshal()
 	if err != nil {
@@ -188,6 +190,7 @@ func setRecord(txn *badger.Txn, key store.Key, record record.Material) error {
 	return txn.Set(fullKey, data)
 }
 
+// setRecord is a helper method for getting last known position of record to db in scope of txn and pulse.
 func getLastKnownPosition(txn *badger.Txn, pn insolar.PulseNumber) (uint32, error) {
 	key := lastKnownRecordPositionKey{pn: pn}
 
@@ -209,6 +212,7 @@ func getLastKnownPosition(txn *badger.Txn, pn insolar.PulseNumber) (uint32, erro
 	return binary.BigEndian.Uint32(buff), nil
 }
 
+// setLastKnownPosition is a helper method for setting last known position of record to db in scope of txn and pulse.
 func setLastKnownPosition(txn *badger.Txn, pn insolar.PulseNumber, position uint32) error {
 	lastPositionKey := lastKnownRecordPositionKey{pn: pn}
 	parsedPosition := make([]byte, 4)

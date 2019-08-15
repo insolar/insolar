@@ -33,12 +33,12 @@ import (
 	"github.com/pkg/errors"
 )
 
-// HeavyReplicator is a base interface for a heavy sync component
+// HeavyReplicator is a base interface for a heavy sync component.
 type HeavyReplicator interface {
-	// NotifyAboutMessage is method for notifying a sync component about new data
+	// NotifyAboutMessage is method for notifying a sync component about new data.
 	NotifyAboutMessage(context.Context, *payload.Replication)
 
-	// Stop stops the component
+	// Stop stops the component.
 	Stop()
 }
 
@@ -59,6 +59,7 @@ type HeavyReplicatorDefault struct {
 	syncWaitingData chan *payload.Replication
 }
 
+// NewHeavyReplicatorDefault creates new instance of HeavyReplicatorDefault.
 func NewHeavyReplicatorDefault(
 	records object.RecordModifier,
 	indexes object.IndexModifier,
@@ -84,6 +85,7 @@ func NewHeavyReplicatorDefault(
 	}
 }
 
+// NotifyAboutMessage is method for notifying a sync component about new data.
 func (h *HeavyReplicatorDefault) NotifyAboutMessage(ctx context.Context, msg *payload.Replication) {
 	h.once.Do(func() {
 		go h.sync(context.Background())
@@ -97,6 +99,7 @@ func (h *HeavyReplicatorDefault) NotifyAboutMessage(ctx context.Context, msg *pa
 	h.syncWaitingData <- msg
 }
 
+// Stop stops the component.
 func (h *HeavyReplicatorDefault) Stop() {
 	close(h.done)
 }

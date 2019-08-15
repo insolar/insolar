@@ -70,8 +70,9 @@ type RecordCollectionAccessor interface {
 
 // RecordModifier provides methods for setting record-values to storage.
 type RecordModifier interface {
-	// Set saves new record-value in storage.
+	// Set saves new record-value in storage with order-processing.
 	Set(ctx context.Context, rec record.Material) error
+	// BatchSet saves a batch of records to storage with order-processing.
 	BatchSet(ctx context.Context, recs []record.Material) error
 }
 
