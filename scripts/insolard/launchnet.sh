@@ -220,6 +220,7 @@ usage()
     echo -e "\t-b - do bootstrap only and exit, show bootstrap logs"
     echo -e "\t-l - clear all and exit"
     echo -e "\t-C - generate configs only"
+    echo -e "\t-w - start without pulse watcher"
 }
 
 process_input_params()
@@ -276,7 +277,7 @@ launch_insgorund()
             --rpc ${host}:${rpc_port} \
             --log-level=${GORUND_LOG_LEVEL} \
             --metrics :${metrics_port} \
-            &> ${INSGORUND_LOGS}${rpc_port}.log &
+            &>> ${INSGORUND_LOGS}${rpc_port}.log &
 
     done < "${INSGORUND_PORT_FILE}"
 }
