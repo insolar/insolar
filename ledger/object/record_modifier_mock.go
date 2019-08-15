@@ -16,6 +16,12 @@ import (
 type RecordModifierMock struct {
 	t minimock.Tester
 
+	funcBatchSet          func(ctx context.Context, recs []record.Material) (err error)
+	inspectFuncBatchSet   func(ctx context.Context, recs []record.Material)
+	afterBatchSetCounter  uint64
+	beforeBatchSetCounter uint64
+	BatchSetMock          mRecordModifierMockBatchSet
+
 	funcSet          func(ctx context.Context, rec record.Material) (err error)
 	inspectFuncSet   func(ctx context.Context, rec record.Material)
 	afterSetCounter  uint64
@@ -30,10 +36,229 @@ func NewRecordModifierMock(t minimock.Tester) *RecordModifierMock {
 		controller.RegisterMocker(m)
 	}
 
+	m.BatchSetMock = mRecordModifierMockBatchSet{mock: m}
+	m.BatchSetMock.callArgs = []*RecordModifierMockBatchSetParams{}
+
 	m.SetMock = mRecordModifierMockSet{mock: m}
 	m.SetMock.callArgs = []*RecordModifierMockSetParams{}
 
 	return m
+}
+
+type mRecordModifierMockBatchSet struct {
+	mock               *RecordModifierMock
+	defaultExpectation *RecordModifierMockBatchSetExpectation
+	expectations       []*RecordModifierMockBatchSetExpectation
+
+	callArgs []*RecordModifierMockBatchSetParams
+	mutex    sync.RWMutex
+}
+
+// RecordModifierMockBatchSetExpectation specifies expectation struct of the RecordModifier.BatchSet
+type RecordModifierMockBatchSetExpectation struct {
+	mock    *RecordModifierMock
+	params  *RecordModifierMockBatchSetParams
+	results *RecordModifierMockBatchSetResults
+	Counter uint64
+}
+
+// RecordModifierMockBatchSetParams contains parameters of the RecordModifier.BatchSet
+type RecordModifierMockBatchSetParams struct {
+	ctx  context.Context
+	recs []record.Material
+}
+
+// RecordModifierMockBatchSetResults contains results of the RecordModifier.BatchSet
+type RecordModifierMockBatchSetResults struct {
+	err error
+}
+
+// Expect sets up expected params for RecordModifier.BatchSet
+func (mmBatchSet *mRecordModifierMockBatchSet) Expect(ctx context.Context, recs []record.Material) *mRecordModifierMockBatchSet {
+	if mmBatchSet.mock.funcBatchSet != nil {
+		mmBatchSet.mock.t.Fatalf("RecordModifierMock.BatchSet mock is already set by Set")
+	}
+
+	if mmBatchSet.defaultExpectation == nil {
+		mmBatchSet.defaultExpectation = &RecordModifierMockBatchSetExpectation{}
+	}
+
+	mmBatchSet.defaultExpectation.params = &RecordModifierMockBatchSetParams{ctx, recs}
+	for _, e := range mmBatchSet.expectations {
+		if minimock.Equal(e.params, mmBatchSet.defaultExpectation.params) {
+			mmBatchSet.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmBatchSet.defaultExpectation.params)
+		}
+	}
+
+	return mmBatchSet
+}
+
+// Inspect accepts an inspector function that has same arguments as the RecordModifier.BatchSet
+func (mmBatchSet *mRecordModifierMockBatchSet) Inspect(f func(ctx context.Context, recs []record.Material)) *mRecordModifierMockBatchSet {
+	if mmBatchSet.mock.inspectFuncBatchSet != nil {
+		mmBatchSet.mock.t.Fatalf("Inspect function is already set for RecordModifierMock.BatchSet")
+	}
+
+	mmBatchSet.mock.inspectFuncBatchSet = f
+
+	return mmBatchSet
+}
+
+// Return sets up results that will be returned by RecordModifier.BatchSet
+func (mmBatchSet *mRecordModifierMockBatchSet) Return(err error) *RecordModifierMock {
+	if mmBatchSet.mock.funcBatchSet != nil {
+		mmBatchSet.mock.t.Fatalf("RecordModifierMock.BatchSet mock is already set by Set")
+	}
+
+	if mmBatchSet.defaultExpectation == nil {
+		mmBatchSet.defaultExpectation = &RecordModifierMockBatchSetExpectation{mock: mmBatchSet.mock}
+	}
+	mmBatchSet.defaultExpectation.results = &RecordModifierMockBatchSetResults{err}
+	return mmBatchSet.mock
+}
+
+//Set uses given function f to mock the RecordModifier.BatchSet method
+func (mmBatchSet *mRecordModifierMockBatchSet) Set(f func(ctx context.Context, recs []record.Material) (err error)) *RecordModifierMock {
+	if mmBatchSet.defaultExpectation != nil {
+		mmBatchSet.mock.t.Fatalf("Default expectation is already set for the RecordModifier.BatchSet method")
+	}
+
+	if len(mmBatchSet.expectations) > 0 {
+		mmBatchSet.mock.t.Fatalf("Some expectations are already set for the RecordModifier.BatchSet method")
+	}
+
+	mmBatchSet.mock.funcBatchSet = f
+	return mmBatchSet.mock
+}
+
+// When sets expectation for the RecordModifier.BatchSet which will trigger the result defined by the following
+// Then helper
+func (mmBatchSet *mRecordModifierMockBatchSet) When(ctx context.Context, recs []record.Material) *RecordModifierMockBatchSetExpectation {
+	if mmBatchSet.mock.funcBatchSet != nil {
+		mmBatchSet.mock.t.Fatalf("RecordModifierMock.BatchSet mock is already set by Set")
+	}
+
+	expectation := &RecordModifierMockBatchSetExpectation{
+		mock:   mmBatchSet.mock,
+		params: &RecordModifierMockBatchSetParams{ctx, recs},
+	}
+	mmBatchSet.expectations = append(mmBatchSet.expectations, expectation)
+	return expectation
+}
+
+// Then sets up RecordModifier.BatchSet return parameters for the expectation previously defined by the When method
+func (e *RecordModifierMockBatchSetExpectation) Then(err error) *RecordModifierMock {
+	e.results = &RecordModifierMockBatchSetResults{err}
+	return e.mock
+}
+
+// BatchSet implements RecordModifier
+func (mmBatchSet *RecordModifierMock) BatchSet(ctx context.Context, recs []record.Material) (err error) {
+	mm_atomic.AddUint64(&mmBatchSet.beforeBatchSetCounter, 1)
+	defer mm_atomic.AddUint64(&mmBatchSet.afterBatchSetCounter, 1)
+
+	if mmBatchSet.inspectFuncBatchSet != nil {
+		mmBatchSet.inspectFuncBatchSet(ctx, recs)
+	}
+
+	params := &RecordModifierMockBatchSetParams{ctx, recs}
+
+	// Record call args
+	mmBatchSet.BatchSetMock.mutex.Lock()
+	mmBatchSet.BatchSetMock.callArgs = append(mmBatchSet.BatchSetMock.callArgs, params)
+	mmBatchSet.BatchSetMock.mutex.Unlock()
+
+	for _, e := range mmBatchSet.BatchSetMock.expectations {
+		if minimock.Equal(e.params, params) {
+			mm_atomic.AddUint64(&e.Counter, 1)
+			return e.results.err
+		}
+	}
+
+	if mmBatchSet.BatchSetMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmBatchSet.BatchSetMock.defaultExpectation.Counter, 1)
+		want := mmBatchSet.BatchSetMock.defaultExpectation.params
+		got := RecordModifierMockBatchSetParams{ctx, recs}
+		if want != nil && !minimock.Equal(*want, got) {
+			mmBatchSet.t.Errorf("RecordModifierMock.BatchSet got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		}
+
+		results := mmBatchSet.BatchSetMock.defaultExpectation.results
+		if results == nil {
+			mmBatchSet.t.Fatal("No results are set for the RecordModifierMock.BatchSet")
+		}
+		return (*results).err
+	}
+	if mmBatchSet.funcBatchSet != nil {
+		return mmBatchSet.funcBatchSet(ctx, recs)
+	}
+	mmBatchSet.t.Fatalf("Unexpected call to RecordModifierMock.BatchSet. %v %v", ctx, recs)
+	return
+}
+
+// BatchSetAfterCounter returns a count of finished RecordModifierMock.BatchSet invocations
+func (mmBatchSet *RecordModifierMock) BatchSetAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmBatchSet.afterBatchSetCounter)
+}
+
+// BatchSetBeforeCounter returns a count of RecordModifierMock.BatchSet invocations
+func (mmBatchSet *RecordModifierMock) BatchSetBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmBatchSet.beforeBatchSetCounter)
+}
+
+// Calls returns a list of arguments used in each call to RecordModifierMock.BatchSet.
+// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
+func (mmBatchSet *mRecordModifierMockBatchSet) Calls() []*RecordModifierMockBatchSetParams {
+	mmBatchSet.mutex.RLock()
+
+	argCopy := make([]*RecordModifierMockBatchSetParams, len(mmBatchSet.callArgs))
+	copy(argCopy, mmBatchSet.callArgs)
+
+	mmBatchSet.mutex.RUnlock()
+
+	return argCopy
+}
+
+// MinimockBatchSetDone returns true if the count of the BatchSet invocations corresponds
+// the number of defined expectations
+func (m *RecordModifierMock) MinimockBatchSetDone() bool {
+	for _, e := range m.BatchSetMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			return false
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.BatchSetMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterBatchSetCounter) < 1 {
+		return false
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcBatchSet != nil && mm_atomic.LoadUint64(&m.afterBatchSetCounter) < 1 {
+		return false
+	}
+	return true
+}
+
+// MinimockBatchSetInspect logs each unmet expectation
+func (m *RecordModifierMock) MinimockBatchSetInspect() {
+	for _, e := range m.BatchSetMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			m.t.Errorf("Expected call to RecordModifierMock.BatchSet with params: %#v", *e.params)
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.BatchSetMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterBatchSetCounter) < 1 {
+		if m.BatchSetMock.defaultExpectation.params == nil {
+			m.t.Error("Expected call to RecordModifierMock.BatchSet")
+		} else {
+			m.t.Errorf("Expected call to RecordModifierMock.BatchSet with params: %#v", *m.BatchSetMock.defaultExpectation.params)
+		}
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcBatchSet != nil && mm_atomic.LoadUint64(&m.afterBatchSetCounter) < 1 {
+		m.t.Error("Expected call to RecordModifierMock.BatchSet")
+	}
 }
 
 type mRecordModifierMockSet struct {
@@ -255,6 +480,8 @@ func (m *RecordModifierMock) MinimockSetInspect() {
 // MinimockFinish checks that all mocked methods have been called the expected number of times
 func (m *RecordModifierMock) MinimockFinish() {
 	if !m.minimockDone() {
+		m.MinimockBatchSetInspect()
+
 		m.MinimockSetInspect()
 		m.t.FailNow()
 	}
@@ -279,5 +506,6 @@ func (m *RecordModifierMock) MinimockWait(timeout mm_time.Duration) {
 func (m *RecordModifierMock) minimockDone() bool {
 	done := true
 	return done &&
+		m.MinimockBatchSetDone() &&
 		m.MinimockSetDone()
 }
