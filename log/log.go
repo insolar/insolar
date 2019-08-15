@@ -90,16 +90,15 @@ var GlobalLogger = func() insolar.Logger {
 	if err != nil {
 		stdlog.Println("warning:", err.Error())
 	}
-
-	logger, err = logger.WithLevel(holder.Configuration.Log.Level)
-	if err != nil {
-		stdlog.Println("warning:", err.Error())
+	if logger == nil {
+		panic("couldn't initialize global logger with default config")
 	}
-	return logger.WithCaller(true).WithSkipFrameCount(1)
+
+	return logger.WithCaller(true).WithSkipFrameCount(1).WithField("loginstance", "global_default")
 }()
 
 func SetGlobalLogger(logger insolar.Logger) {
-	GlobalLogger = logger
+	GlobalLogger = logger.WithSkipFrameCount(1).WithField("loginstance", "global")
 }
 
 // SetLevel lets log level for global logger
