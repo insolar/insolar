@@ -97,10 +97,7 @@ func TestSelectByEntropy_SelectsCorrectElement(t *testing.T) {
 	scheme := testutils.NewPlatformCryptographyScheme()
 	entropy := []byte{1, 2, 3, 4, 6}
 
-	var values []insolar.Reference
-	for i := 0; i < 100; i++ {
-		values = append(values, gen.Reference())
-	}
+	values := gen.References(100)
 	in := make([]interface{}, len(values))
 	for i, v := range values {
 		in[i] = v

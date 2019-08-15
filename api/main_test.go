@@ -18,30 +18,17 @@ package api
 
 import (
 	"context"
-	"io/ioutil"
 	"net/http"
 	"testing"
-
-	"github.com/stretchr/testify/suite"
 
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/stretchr/testify/suite"
 )
-
-const HOST = "http://localhost:19101"
-const TestUrl = HOST + "/api/call"
 
 type MainAPISuite struct {
 	suite.Suite
-}
-
-func (suite *MainAPISuite) TestGetRequest() {
-	resp, err := http.Get(TestUrl)
-	suite.NoError(err)
-	body, err := ioutil.ReadAll(resp.Body)
-	suite.NoError(err)
-	suite.Contains(string(body[:]), `failed to unmarshal request: [ UnmarshalRequest ] Empty body`)
 }
 
 func (suite *MainAPISuite) TestNewApiRunnerNilConfig() {
@@ -55,10 +42,6 @@ func (suite *MainAPISuite) TestNewApiRunnerNoRequiredParams() {
 	suite.Contains(err.Error(), "Address must not be empty")
 
 	cfg.Address = "address:100"
-	_, err = NewRunner(&cfg)
-	suite.Contains(err.Error(), "Call must exist")
-
-	cfg.Call = "test"
 	_, err = NewRunner(&cfg)
 	suite.Contains(err.Error(), "RPC must exist")
 

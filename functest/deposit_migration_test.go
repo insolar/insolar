@@ -20,6 +20,7 @@ package functest
 
 import (
 	"encoding/base64"
+	"math/big"
 	"testing"
 
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
@@ -34,13 +35,15 @@ func TestMigrationToken(t *testing.T) {
 	err := activateDaemons(t)
 	require.NoError(t, err)
 
-	anotherMember := *createMember(t)
-	for i := 0; i < 3; i++ {
-		_ = migrate(t, member.ref, "1000", "Test_TxHash", migrationAddress, i)
-	}
+	firstMemberBalance := deposit["balance"].(string)
+	require.Equal(t, "0", firstMemberBalance)
+	firstMABalance := getBalanceNoErr(t, &migrationAdmin, migrationAdmin.ref)
 
-	deposit, err := getDeposit(t, member.ref, "Test_TxHash", anotherMember)
-	confirmerReferencesMap := deposit["confirmerReferences"].(string)
+	confirmerReferences, ok := deposit["confirmerReferences"].([]interface{})
+	require.True(t, ok, fmt.Sprintf("failed to cast result: expected []string, got %T", deposit["confirmerReferences"]))
+	require.Equal(t, confirmerReferences[0], migrationDaemons[0].ref)
+
+	deposit = migrate(t, member.ref, "1000", "Test_TxHash", migrationAddress, 2)
 
 	sm := make(foundation.StableMap)
 	decoded, err := base64.StdEncoding.DecodeString(confirmerReferencesMap)
@@ -52,6 +55,12 @@ func TestMigrationToken(t *testing.T) {
 	}
 	require.Equal(t, deposit["ethTxHash"], "Test_TxHash")
 	require.Equal(t, deposit["amount"], "1000")
+
+	secondMemberBalance := deposit["balance"].(string)
+	require.Equal(t, "1000", secondMemberBalance)
+	secondMABalance := getBalanceNoErr(t, &migrationAdmin, migrationAdmin.ref)
+	dif := new(big.Int).Sub(firstMABalance, secondMABalance)
+	require.Equal(t, "1000", dif.String())
 }
 
 func TestMigrationTokenOnDifferentDeposits(t *testing.T) {

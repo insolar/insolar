@@ -74,9 +74,24 @@ func TestOfUnixTime(t *testing.T) {
 }
 
 func TestAsApproximateTime(t *testing.T) {
-	n := Number(0)
-	approx := n.AsApproximateTime()
-	require.Equal(t, timeOfMinTimePulse, approx)
+	t.Run("pulse less than minimal", func(t *testing.T) {
+		n := Number(0)
+		_, err := n.AsApproximateTime()
+		require.Error(t, err)
+	})
+
+	t.Run("pulse greater than maximal", func(t *testing.T) {
+		n := Number(0xFFFFFFFF)
+		_, err := n.AsApproximateTime()
+		require.Error(t, err)
+	})
+
+	t.Run("ordinary", func(t *testing.T) {
+		n := Number(MinTimePulse)
+		approx, err := n.AsApproximateTime()
+		require.NoError(t, err)
+		require.Equal(t, timeOfMinTimePulse, approx)
+	})
 }
 
 func TestIsTimePulse(t *testing.T) {

@@ -45,6 +45,8 @@ type Member struct {
 	Wallet           insolar.Reference
 }
 
+const XNS = "XNS"
+
 // GetName gets name.
 // ins:immutable
 func (m Member) GetName() (string, error) {
@@ -53,8 +55,15 @@ func (m Member) GetName() (string, error) {
 
 // GetWallet gets wallet.
 // ins:immutable
-func (m Member) GetWallet() (insolar.Reference, error) {
-	return m.Wallet, nil
+func (m Member) GetWallet() (*insolar.Reference, error) {
+	return &m.Wallet, nil
+}
+
+// GetAccount gets account.
+// ins:immutable
+func (m Member) GetAccount(assetName string) (*insolar.Reference, error) {
+	w := wallet.GetObject(m.Wallet)
+	return w.GetAccount(assetName)
 }
 
 var INSATTR_GetPublicKey_API = true
@@ -89,11 +98,10 @@ func (m *Member) verifySig(request Request, rawRequest []byte, signature string,
 var INSATTR_Call_API = true
 
 type Request struct {
-	JSONRPC  string `json:"jsonrpc"`
-	ID       int    `json:"id"`
-	Method   string `json:"method"`
-	Params   Params `json:"params"`
-	LogLevel string `json:"logLevel,omitempty"`
+	JSONRPC string `json:"jsonrpc"`
+	ID      uint64 `json:"id"`
+	Method  string `json:"method"`
+	Params  Params `json:"params"`
 }
 
 type Params struct {
@@ -102,6 +110,8 @@ type Params struct {
 	CallParams interface{} `json:"callParams,omitempty"`
 	Reference  string      `json:"reference"`
 	PublicKey  string      `json:"publicKey"`
+	LogLevel   string      `json:"logLevel,omitempty"`
+	Test       string      `json:"test,omitempty"`
 }
 
 // Call returns response on request. Method for authorized calls.
@@ -275,10 +285,10 @@ func (m *Member) getBalanceCall(params map[string]interface{}) (interface{}, err
 		return 0, fmt.Errorf("failed to parse 'reference': %s", err.Error())
 	}
 
-	var walletRef insolar.Reference
+	var walletRef *insolar.Reference
 
 	if *reference == m.GetReference() {
-		walletRef = m.Wallet
+		walletRef = &m.Wallet
 	} else {
 		m2 := member.GetObject(*reference)
 		walletRef, err = m2.GetWallet()
@@ -287,7 +297,7 @@ func (m *Member) getBalanceCall(params map[string]interface{}) (interface{}, err
 		}
 	}
 
-	b, err := wallet.GetObject(walletRef).GetBalance("XNS")
+	b, err := wallet.GetObject(*walletRef).GetBalance(XNS)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get balance: %s", err.Error())
 	}
@@ -325,7 +335,7 @@ func (m *Member) transferCall(params map[string]interface{}) (interface{}, error
 
 	asset, ok := params["asset"].(string)
 	if !ok {
-		asset = "XNS" // set to default asset
+		asset = XNS // set to default asset
 	}
 
 	recipientReference, err := insolar.NewReferenceFromBase58(recipientReferenceStr)
@@ -581,7 +591,7 @@ func (m *Member) FindDeposit(transactionsHash string) (bool, insolar.Reference, 
 		return true, dRef, nil
 	}
 
-	return false, insolar.Reference{}, nil
+	return false, *insolar.NewEmptyReference(), nil
 }
 
 // SetDeposit method stores deposit reference in member it belongs to

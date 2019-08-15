@@ -43,17 +43,16 @@ func NewHelloWorld(ctx context.Context) (*HelloWorldInstance, error) {
 	}
 
 	rootCfg, err := requester.CreateUserConfig(root.ref, root.privKey, root.pubKey)
-	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
-		JSONRPC: "2.0",
-		ID:      1,
-		Method:  "api.call",
-		Params:  requester.Params{CallSite: "CreateHelloWorld", CallParams: make(foundation.StableMap), PublicKey: rootCfg.PublicKey},
-	}, seed)
+	res, err := requester.SendWithSeed(ctx, TestRPCUrl, rootCfg, &requester.Params{
+		CallSite:   "CreateHelloWorld",
+		CallParams: make(foundation.StableMap),
+		PublicKey:  rootCfg.PublicKey},
+		seed)
 	if err != nil {
 		return nil, err
 	}
 
-	var result requester.ContractAnswer
+	var result requester.ContractResponse
 	err = json.Unmarshal(res, &result)
 	if err != nil {
 		return nil, err
@@ -61,7 +60,7 @@ func NewHelloWorld(ctx context.Context) (*HelloWorldInstance, error) {
 		return nil, errors.Errorf("[ NewHelloWorld ] Failed to execute: %s", result.Error.Message)
 	}
 
-	rv, ok := result.Result.ContractResult.(string)
+	rv, ok := result.Result.CallResult.(string)
 	if !ok {
 		return nil, errors.Errorf("[ NewHelloWorld ] Failed to decode: expected string, got %T", result.Result)
 	}
@@ -84,17 +83,16 @@ func (i *HelloWorldInstance) Greet(ctx context.Context, name string) (string, er
 	rootCfg, err := requester.CreateUserConfig(i.Ref.String(), root.privKey, root.pubKey)
 	callParams := make(foundation.StableMap)
 	callParams["name"] = name
-	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
-		JSONRPC: "2.0",
-		ID:      1,
-		Method:  "api.call",
-		Params:  requester.Params{CallSite: "Greet", CallParams: callParams, PublicKey: rootCfg.PublicKey},
-	}, seed)
+	res, err := requester.SendWithSeed(ctx, TestRPCUrl, rootCfg, &requester.Params{
+		CallSite:   "Greet",
+		CallParams: callParams,
+		PublicKey:  rootCfg.PublicKey},
+		seed)
 	if err != nil {
 		return "", err
 	}
 
-	var result requester.ContractAnswer
+	var result requester.ContractResponse
 	err = json.Unmarshal(res, &result)
 	if err != nil {
 		return "", err
@@ -102,7 +100,7 @@ func (i *HelloWorldInstance) Greet(ctx context.Context, name string) (string, er
 		return "", errors.Errorf("[ Greet ] Failed to execute: %s", result.Error.Message)
 	}
 
-	rv, ok := result.Result.ContractResult.(string)
+	rv, ok := result.Result.CallResult.(string)
 	if !ok {
 		return "", errors.Errorf("[ Greet ] Failed to decode: expected string, got %T", result.Result)
 	}
@@ -116,17 +114,16 @@ func (i *HelloWorldInstance) Count(ctx context.Context) (int, error) {
 	}
 
 	rootCfg, err := requester.CreateUserConfig(i.Ref.String(), root.privKey, root.pubKey)
-	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
-		JSONRPC: "2.0",
-		ID:      1,
-		Method:  "api.call",
-		Params:  requester.Params{CallSite: "Count", CallParams: make(foundation.StableMap), PublicKey: rootCfg.PublicKey},
-	}, seed)
+	res, err := requester.SendWithSeed(ctx, TestRPCUrl, rootCfg, &requester.Params{
+		CallSite:   "Count",
+		CallParams: make(foundation.StableMap),
+		PublicKey:  rootCfg.PublicKey},
+		seed)
 	if err != nil {
 		return 0, err
 	}
 
-	var result requester.ContractAnswer
+	var result requester.ContractResponse
 	err = json.Unmarshal(res, &result)
 	if err != nil {
 		return 0, err
@@ -134,7 +131,7 @@ func (i *HelloWorldInstance) Count(ctx context.Context) (int, error) {
 		return 0, errors.Errorf("[ Count ] Failed to execute: %s", result.Error.Message)
 	}
 
-	rv, ok := result.Result.ContractResult.(float64)
+	rv, ok := result.Result.CallResult.(float64)
 	if !ok {
 		return 0, errors.Errorf("[ Count ] Failed to decode: expected float64, got %T", result.Result)
 	}
@@ -161,17 +158,16 @@ func (i *HelloWorldInstance) CreateChild(ctx context.Context) (*HelloWorldInstan
 	}
 
 	rootCfg, err := requester.CreateUserConfig(i.Ref.String(), root.privKey, root.pubKey)
-	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
-		JSONRPC: "2.0",
-		ID:      1,
-		Method:  "api.call",
-		Params:  requester.Params{CallSite: "CreateChild", CallParams: make(foundation.StableMap), PublicKey: rootCfg.PublicKey},
-	}, seed)
+	res, err := requester.SendWithSeed(ctx, TestRPCUrl, rootCfg, &requester.Params{
+		CallSite:   "CreateChild",
+		CallParams: make(foundation.StableMap),
+		PublicKey:  rootCfg.PublicKey},
+		seed)
 	if err != nil {
 		return nil, err
 	}
 
-	var result requester.ContractAnswer
+	var result requester.ContractResponse
 	err = json.Unmarshal(res, &result)
 	if err != nil {
 		return nil, err
@@ -179,7 +175,7 @@ func (i *HelloWorldInstance) CreateChild(ctx context.Context) (*HelloWorldInstan
 		return nil, errors.Errorf("[ CreateChild ] Failed to execute: %s", result.Error.Message)
 	}
 
-	rv, ok := result.Result.ContractResult.(string)
+	rv, ok := result.Result.CallResult.(string)
 	if !ok {
 		return nil, errors.Errorf("[ CreateChild ] Failed to decode: expected string, got %T", result.Result)
 	}
@@ -200,17 +196,16 @@ func (i *HelloWorldInstance) ReturnObj(ctx context.Context) (map[string]interfac
 	}
 
 	rootCfg, err := requester.CreateUserConfig(i.Ref.String(), root.privKey, root.pubKey)
-	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
-		JSONRPC: "2.0",
-		ID:      1,
-		Method:  "api.call",
-		Params:  requester.Params{CallSite: "ReturnObj", CallParams: make(foundation.StableMap), PublicKey: rootCfg.PublicKey},
-	}, seed)
+	res, err := requester.SendWithSeed(ctx, TestRPCUrl, rootCfg, &requester.Params{
+		CallSite:   "ReturnObj",
+		CallParams: make(foundation.StableMap),
+		PublicKey:  rootCfg.PublicKey},
+		seed)
 	if err != nil {
 		return nil, err
 	}
 
-	var result requester.ContractAnswer
+	var result requester.ContractResponse
 	err = json.Unmarshal(res, &result)
 	if err != nil {
 		return nil, err
@@ -218,9 +213,9 @@ func (i *HelloWorldInstance) ReturnObj(ctx context.Context) (map[string]interfac
 		return nil, errors.Errorf("[ ReturnObj ] Failed to execute: %s", result.Error.Message)
 	}
 
-	rv, ok := result.Result.ContractResult.(map[string]interface{})
+	rv, ok := result.Result.CallResult.(map[string]interface{})
 	if !ok {
-		return nil, errors.Errorf("[ ReturnObj ] Failed to decode result: expected map[string]interface{}, got %T", result.Result.ContractResult)
+		return nil, errors.Errorf("[ ReturnObj ] Failed to decode result: expected map[string]interface{}, got %T", result.Result.CallResult)
 	}
 	return rv, nil
 }

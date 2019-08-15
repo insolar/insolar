@@ -10,6 +10,7 @@ import (
 
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/logicrunner/executionregistry"
 )
 
@@ -35,7 +36,7 @@ type StateStorageMock struct {
 	beforeIsEmptyCounter uint64
 	IsEmptyMock          mStateStorageMockIsEmpty
 
-	funcOnPulse          func(ctx context.Context, pulse insolar.Pulse) (ma1 []insolar.Message)
+	funcOnPulse          func(ctx context.Context, pulse insolar.Pulse) (m1 map[insolar.Reference][]payload.Payload)
 	inspectFuncOnPulse   func(ctx context.Context, pulse insolar.Pulse)
 	afterOnPulseCounter  uint64
 	beforeOnPulseCounter uint64
@@ -670,7 +671,7 @@ type StateStorageMockOnPulseParams struct {
 
 // StateStorageMockOnPulseResults contains results of the StateStorage.OnPulse
 type StateStorageMockOnPulseResults struct {
-	ma1 []insolar.Message
+	m1 map[insolar.Reference][]payload.Payload
 }
 
 // Expect sets up expected params for StateStorage.OnPulse
@@ -705,7 +706,7 @@ func (mmOnPulse *mStateStorageMockOnPulse) Inspect(f func(ctx context.Context, p
 }
 
 // Return sets up results that will be returned by StateStorage.OnPulse
-func (mmOnPulse *mStateStorageMockOnPulse) Return(ma1 []insolar.Message) *StateStorageMock {
+func (mmOnPulse *mStateStorageMockOnPulse) Return(m1 map[insolar.Reference][]payload.Payload) *StateStorageMock {
 	if mmOnPulse.mock.funcOnPulse != nil {
 		mmOnPulse.mock.t.Fatalf("StateStorageMock.OnPulse mock is already set by Set")
 	}
@@ -713,12 +714,12 @@ func (mmOnPulse *mStateStorageMockOnPulse) Return(ma1 []insolar.Message) *StateS
 	if mmOnPulse.defaultExpectation == nil {
 		mmOnPulse.defaultExpectation = &StateStorageMockOnPulseExpectation{mock: mmOnPulse.mock}
 	}
-	mmOnPulse.defaultExpectation.results = &StateStorageMockOnPulseResults{ma1}
+	mmOnPulse.defaultExpectation.results = &StateStorageMockOnPulseResults{m1}
 	return mmOnPulse.mock
 }
 
 //Set uses given function f to mock the StateStorage.OnPulse method
-func (mmOnPulse *mStateStorageMockOnPulse) Set(f func(ctx context.Context, pulse insolar.Pulse) (ma1 []insolar.Message)) *StateStorageMock {
+func (mmOnPulse *mStateStorageMockOnPulse) Set(f func(ctx context.Context, pulse insolar.Pulse) (m1 map[insolar.Reference][]payload.Payload)) *StateStorageMock {
 	if mmOnPulse.defaultExpectation != nil {
 		mmOnPulse.mock.t.Fatalf("Default expectation is already set for the StateStorage.OnPulse method")
 	}
@@ -747,13 +748,13 @@ func (mmOnPulse *mStateStorageMockOnPulse) When(ctx context.Context, pulse insol
 }
 
 // Then sets up StateStorage.OnPulse return parameters for the expectation previously defined by the When method
-func (e *StateStorageMockOnPulseExpectation) Then(ma1 []insolar.Message) *StateStorageMock {
-	e.results = &StateStorageMockOnPulseResults{ma1}
+func (e *StateStorageMockOnPulseExpectation) Then(m1 map[insolar.Reference][]payload.Payload) *StateStorageMock {
+	e.results = &StateStorageMockOnPulseResults{m1}
 	return e.mock
 }
 
 // OnPulse implements StateStorage
-func (mmOnPulse *StateStorageMock) OnPulse(ctx context.Context, pulse insolar.Pulse) (ma1 []insolar.Message) {
+func (mmOnPulse *StateStorageMock) OnPulse(ctx context.Context, pulse insolar.Pulse) (m1 map[insolar.Reference][]payload.Payload) {
 	mm_atomic.AddUint64(&mmOnPulse.beforeOnPulseCounter, 1)
 	defer mm_atomic.AddUint64(&mmOnPulse.afterOnPulseCounter, 1)
 
@@ -771,7 +772,7 @@ func (mmOnPulse *StateStorageMock) OnPulse(ctx context.Context, pulse insolar.Pu
 	for _, e := range mmOnPulse.OnPulseMock.expectations {
 		if minimock.Equal(e.params, params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
-			return e.results.ma1
+			return e.results.m1
 		}
 	}
 
@@ -787,7 +788,7 @@ func (mmOnPulse *StateStorageMock) OnPulse(ctx context.Context, pulse insolar.Pu
 		if results == nil {
 			mmOnPulse.t.Fatal("No results are set for the StateStorageMock.OnPulse")
 		}
-		return (*results).ma1
+		return (*results).m1
 	}
 	if mmOnPulse.funcOnPulse != nil {
 		return mmOnPulse.funcOnPulse(ctx, pulse)

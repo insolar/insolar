@@ -216,7 +216,7 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 			transcript: &common.Transcript{
 				ObjectDescriptor: artifacts.NewObjectDescriptorMock(mc),
 				Request: &record.IncomingRequest{
-					Prototype: &insolar.Reference{},
+					Prototype: insolar.NewEmptyReference(),
 				},
 			},
 			mm: machinesmanager.NewMachinesManagerMock(mc),

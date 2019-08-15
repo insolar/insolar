@@ -750,3 +750,26 @@ func (r *Deposit) TransferAsImmutable(amountStr string, wallerRef insolar.Refere
 	}
 	return ret0, nil
 }
+
+// Accept is proxy generated method
+func (r *Deposit) Accept(amountStr string) error {
+	var args [1]interface{}
+	args[0] = amountStr
+
+	var argsSerialized []byte
+
+	ret := make([]interface{}, 1)
+	var ret0 *foundation.Error
+	ret[0] = &ret0
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, true, false, true, "Accept", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+	return nil
+}

@@ -23,8 +23,8 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/insolar/insolar/version"
+	"github.com/insolar/rpc/v2"
 )
 
 type Node struct {
@@ -48,32 +48,20 @@ type StatusReply struct {
 }
 
 // Get returns status info
-func (s *NodeService) GetStatus(r *http.Request, args *interface{}, reply *StatusReply) error {
+func (s *NodeService) GetStatus(r *http.Request, args *interface{}, requestBody *rpc.RequestBody, reply *StatusReply) error {
 	traceID := utils.RandTraceID()
 	ctx, inslog := inslogger.WithTraceField(context.Background(), traceID)
 
 	inslog.Infof("[ NodeService.GetStatus ] Incoming request: %s", r.RequestURI)
 
-	reply.NetworkState = s.runner.ServiceNetwork.GetState().String()
+	statusReply := s.runner.NetworkStatus.GetNetworkStatus()
 
-	np, err := s.runner.ServiceNetwork.(*servicenetwork.ServiceNetwork).PulseAccessor.GetLatestPulse(ctx)
-	if err != nil {
-		np = *insolar.GenesisPulse
-	}
-
-	p, err := s.runner.PulseAccessor.Latest(ctx)
-	if err != nil {
-		p = *insolar.GenesisPulse
-	}
-
-	activeNodes := s.runner.NodeNetwork.GetAccessor(np.PulseNumber).GetActiveNodes()
-	workingNodes := s.runner.NodeNetwork.GetAccessor(np.PulseNumber).GetWorkingNodes()
-
-	reply.ActiveListSize = len(activeNodes)
-	reply.WorkingListSize = len(workingNodes)
+	reply.NetworkState = statusReply.NetworkState.String()
+	reply.ActiveListSize = statusReply.ActiveListSize
+	reply.WorkingListSize = statusReply.WorkingListSize
 
 	nodes := make([]Node, reply.ActiveListSize)
-	for i, node := range activeNodes {
+	for i, node := range statusReply.Nodes {
 		nodes[i] = Node{
 			Reference: node.ID().String(),
 			Role:      node.Role().String(),
@@ -81,19 +69,24 @@ func (s *NodeService) GetStatus(r *http.Request, args *interface{}, reply *Statu
 			ID:        uint32(node.ShortID()),
 		}
 	}
-
 	reply.Nodes = nodes
-	origin := s.runner.NodeNetwork.GetOrigin()
+
 	reply.Origin = Node{
-		Reference: origin.ID().String(),
-		Role:      origin.Role().String(),
-		IsWorking: origin.GetPower() > 0,
-		ID:        uint32(origin.ShortID()),
+		Reference: statusReply.Origin.ID().String(),
+		Role:      statusReply.Origin.Role().String(),
+		IsWorking: statusReply.Origin.GetPower() > 0,
+		ID:        uint32(statusReply.Origin.ShortID()),
 	}
 
-	reply.NetworkPulseNumber = uint32(np.PulseNumber)
+	reply.NetworkPulseNumber = uint32(statusReply.Pulse.PulseNumber)
+
+	p, err := s.runner.PulseAccessor.Latest(ctx)
+	if err != nil {
+		p = *insolar.GenesisPulse
+	}
 	reply.PulseNumber = uint32(p.PulseNumber)
-	reply.Entropy = np.Entropy[:]
+
+	reply.Entropy = statusReply.Pulse.Entropy[:]
 	reply.Version = version.Version
 
 	return nil
