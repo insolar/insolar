@@ -29,7 +29,7 @@ import (
 func TestGetBalance(t *testing.T) {
 	firstMember := createMember(t)
 	firstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
-	r := big.NewInt(1000000000)
+	r := big.NewInt(88005553535)
 	require.Equal(t, r, firstBalance)
 }
 
