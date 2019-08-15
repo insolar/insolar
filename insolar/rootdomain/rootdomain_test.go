@@ -18,8 +18,9 @@ package rootdomain
 
 import (
 	"encoding/hex"
-	"github.com/insolar/insolar/insolar/genesisrefs"
 	"testing"
+
+	"github.com/insolar/insolar/insolar/genesisrefs"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/platformpolicy"

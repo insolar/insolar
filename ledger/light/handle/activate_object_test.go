@@ -124,7 +124,7 @@ func TestActivateObject_EmptyActivateRequestField(t *testing.T) {
 	virtual := record.Virtual{
 		Union: &record.Virtual_Activate{
 			Activate: &record.Activate{
-				Request: insolar.Reference{},
+				Request: *insolar.NewEmptyReference(),
 			},
 		},
 	}
