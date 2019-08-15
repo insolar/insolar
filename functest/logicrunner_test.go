@@ -308,14 +308,12 @@ func (w *TestSagaSimpleCallContract) GetBalance() (int, error) {
 	return w.Amount, nil
 }
 
-var INSATTR_Accept_API = true
 //ins:saga(Rollback)
 func (w *TestSagaSimpleCallContract) Accept(amount int) error {
 	w.Amount += amount
 	return nil
 }
 
-var INSATTR_Rollback_API = true
 func (w *TestSagaSimpleCallContract) Rollback(amount int) error {
 	w.Amount -= amount
 	return nil
@@ -515,14 +513,12 @@ func (w *TestSagaMultipleCallsContract) GetBalance() (int, error) {
 	return w.Amount, nil
 }
 
-var INSATTR_Accept_API = true
 //ins:saga(Rollback)
 func (w *TestSagaMultipleCallsContract) Accept(amount int) error {
 	w.Amount += amount
 	return nil
 }
 
-var INSATTR_Rollback_API = true
 func (w *TestSagaMultipleCallsContract) Rollback(amount int) error {
 	w.Amount -= amount
 	return nil
@@ -626,7 +622,6 @@ func (w *SagaMagicFlagTwo) GetBalance() (int, error) {
 	return w.Amount, nil
 }
 
-var INSATTR_Accept_API = true
 //ins:saga(INS_FLAG_NO_ROLLBACK_METHOD)
 func (w *SagaMagicFlagTwo) Accept(amount int) error {
 	w.Amount += amount
@@ -699,14 +694,12 @@ func (c *TestSagaSelfCallContract) GetSagaCallsNum() (int, error) {
 	return c.SagaCallsNum, nil
 }
 
-var INSATTR_Accept_API = true
 //ins:saga(Rollback)
 func (c *TestSagaSelfCallContract) Accept(delta int) error {
 	c.SagaCallsNum += delta
 	return nil
 }
 
-var INSATTR_Rollback_API = true
 func (c *TestSagaSelfCallContract) Rollback(delta int) error {
 	c.SagaCallsNum -= delta
 	return nil
