@@ -120,6 +120,7 @@ func TestDBRollback_HappyPath(t *testing.T) {
 
 		iterMock.KeyMock.Return(p.ID())
 		iterMock.CloseMock.Return()
+		iterMock.ValueMock.Return([]byte{}, nil)
 		return iterMock
 	})
 
