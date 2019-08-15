@@ -24,6 +24,7 @@ import (
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/payload"
@@ -92,6 +93,10 @@ func (r *RetrySender) SendRole(
 			tries--
 			updateUUID = true
 			d()
+		}
+
+		if tries < r.retries {
+			stats.Record(ctx, statRetries.M(int64(r.retries-tries)))
 		}
 
 		if tries == 0 && !received {

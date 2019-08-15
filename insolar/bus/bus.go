@@ -217,9 +217,13 @@ func (b *Bus) sendTarget(
 	}
 	ctx, _ = inslogger.WithField(ctx, "sending_type", msg.Metadata.Get(MetaType))
 	payloadType, err := payload.UnmarshalType(msg.Payload)
-	msgType := "unknown"
+
+	msgType := "malformed"
 	if err == nil {
 		msgType = payloadType.String()
+	} else {
+		inslogger.FromContext(ctx).Errorf("failed to unmarshal message type: %v (UUID=%v, metadata=%#v)",
+			err.Error(), msg.UUID, msg.Metadata)
 	}
 
 	// metrics per message type
@@ -283,11 +287,19 @@ func (b *Bus) sendTarget(
 	}
 
 	go func() {
+		replyStart := time.Now()
+		defer func() {
+			stats.Record(mctx,
+				statReplyTime.M(float64(time.Since(replyStart).Nanoseconds())/1e6),
+				statReply.M(1))
+		}()
+
 		logger.Debug("waiting for reply")
 		select {
 		case <-reply.done:
 			logger.Debugf("Done waiting replies for message with hash %s", msgHash.String())
 		case <-time.After(b.timeout):
+			stats.Record(mctx, statReplyTimeouts.M(1))
 			logger.Error(
 				errors.Errorf(
 					"can't return result for message with hash %s: timeout for reading (%s) was exceeded",
