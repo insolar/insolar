@@ -105,11 +105,8 @@ type testPulsar struct {
 func (tp *testPulsar) Start(ctx context.Context, bootstrapHosts []string) error {
 
 	distributorCfg := configuration.PulseDistributor{
-		BootstrapHosts:            bootstrapHosts,
-		PingRequestTimeout:        tp.reqTimeoutMs,
-		RandomHostsRequestTimeout: tp.reqTimeoutMs,
-		PulseRequestTimeout:       tp.reqTimeoutMs,
-		RandomNodesCount:          1,
+		BootstrapHosts:      bootstrapHosts,
+		PulseRequestTimeout: tp.reqTimeoutMs,
 	}
 
 	var err error

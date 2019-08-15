@@ -98,11 +98,10 @@ func main() {
 	defer jaegerflush()
 
 	cm, server := initPulsar(ctx, cfgHolder.Configuration)
-	pulseTicker, refreshTicker := runPulsar(ctx, server, cfgHolder.Configuration.Pulsar)
+	pulseTicker := runPulsar(ctx, server, cfgHolder.Configuration.Pulsar)
 
 	defer func() {
 		pulseTicker.Stop()
-		refreshTicker.Stop()
 		err = cm.Stop(ctx)
 		if err != nil {
 			inslog.Error(err)
@@ -157,7 +156,7 @@ func initPulsar(ctx context.Context, cfg configuration.Configuration) (*componen
 	return cm, server
 }
 
-func runPulsar(ctx context.Context, server *pulsar.Pulsar, cfg configuration.Pulsar) (pulseTicker *time.Ticker, refreshTicker *time.Ticker) {
+func runPulsar(ctx context.Context, server *pulsar.Pulsar, cfg configuration.Pulsar) *time.Ticker {
 	nextPulseNumber := insolar.PulseNumber(pulse.OfNow())
 	err := server.Send(ctx, nextPulseNumber)
 	if err != nil {
@@ -165,7 +164,7 @@ func runPulsar(ctx context.Context, server *pulsar.Pulsar, cfg configuration.Pul
 		panic(err)
 	}
 
-	pulseTicker = time.NewTicker(time.Duration(cfg.PulseTime) * time.Millisecond)
+	pulseTicker := time.NewTicker(time.Duration(cfg.PulseTime) * time.Millisecond)
 	go func() {
 		for range pulseTicker.C {
 			err := server.Send(ctx, server.LastPN()+insolar.PulseNumber(cfg.NumberDelta))
@@ -176,7 +175,7 @@ func runPulsar(ctx context.Context, server *pulsar.Pulsar, cfg configuration.Pul
 		}
 	}()
 
-	return
+	return pulseTicker
 }
 
 func initLogger(ctx context.Context, cfg configuration.Log, traceid string) (context.Context, insolar.Logger) {
