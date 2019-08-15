@@ -175,6 +175,9 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (i
 		msg.Nonce = randomUint64()
 	}
 
+	logger := inslogger.FromContext(ctx)
+	logger.Debug("about to send call to method ", msg.Method)
+
 	err := cr.checkCall(ctx, msg)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "incorrect request")
@@ -203,7 +206,7 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (i
 	}
 
 	if _, earlyResult := res.(*reply.CallMethod); earlyResult {
-		inslogger.FromContext(ctx).Debug("early result for request, not registered")
+		logger.Debug("early result for request, not registered")
 		if !async {
 			cr.ResultMutex.Lock()
 			defer cr.ResultMutex.Unlock()
@@ -231,14 +234,18 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (i
 	ctx, cancel := context.WithTimeout(ctx, cr.callTimeout)
 	defer cancel()
 
-	ctx, _ = inslogger.WithField(ctx, "request", r.Request.String())
-	ctx, logger := inslogger.WithField(ctx, "method", msg.Method)
-
-	logger.Debug("Waiting results of request")
+	ctx, logger = inslogger.WithFields(
+		ctx,
+		map[string]interface{}{
+			"called_request": r.Request.String(),
+			"called_method": msg.Method,
+		},
+	)
+	logger.Debug("waiting results of request")
 
 	select {
 	case ret := <-ch:
-		logger.Debug("Got results of request")
+		logger.Debug("got results of request")
 		if ret.Error != "" {
 			return nil, &r.Request, errors.Wrap(errors.New(ret.Error), "CallMethod returns error")
 		}
@@ -248,7 +255,7 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (i
 		defer cr.ResultMutex.Unlock()
 
 		delete(cr.ResultMap, reqHash)
-		logger.Error("Request timeout")
+		logger.Error("request timeout")
 		return nil, &r.Request, errors.Errorf("request to contract was canceled: timeout of %s was exceeded", cr.callTimeout)
 	}
 }
