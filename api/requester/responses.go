@@ -16,9 +16,31 @@
 
 package requester
 
-type rpcResponse struct {
-	RPCVersion string                 `json:"jsonrpc"`
-	Error      map[string]interface{} `json:"error"`
+type Response struct {
+	JSONRPC string `json:"jsonrpc"`
+	ID      uint64 `json:"id"`
+	Error   *Error `json:"error,omitempty"`
+}
+
+type Error struct {
+	Code    int    `json:"code,omitempty"`
+	Message string `json:"message,omitempty"`
+	Data    Data   `json:"data,omitempty"`
+}
+
+type Data struct {
+	TraceID string `json:"traceID,omitempty"`
+}
+
+type ContractResponse struct {
+	Response
+	Result *ContractResult `json:"result,omitempty"`
+}
+
+type ContractResult struct {
+	CallResult       interface{} `json:"callResult,omitempty"`
+	RequestReference string      `json:"requestReference,omitempty"`
+	TraceID          string      `json:"traceID,omitempty"`
 }
 
 type seedResponse struct {
@@ -26,7 +48,7 @@ type seedResponse struct {
 	TraceID string `json:"traceID"`
 }
 type rpcSeedResponse struct {
-	rpcResponse
+	Response
 	Result seedResponse `json:"result"`
 }
 
@@ -37,7 +59,7 @@ type SeedReply struct {
 }
 
 type rpcStatusResponse struct {
-	rpcResponse
+	Response
 	Result StatusResponse `json:"result"`
 }
 
@@ -72,6 +94,6 @@ type InfoResponse struct {
 }
 
 type rpcInfoResponse struct {
-	rpcResponse
+	Response
 	Result InfoResponse `json:"result"`
 }

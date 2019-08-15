@@ -44,8 +44,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-const sendRetryCount = 5
-
 type contractInfo struct {
 	reference *insolar.Reference
 	testName  string
@@ -252,7 +250,7 @@ func unmarshalRPCResponse(t testing.TB, body []byte, response RPCResponseInterfa
 	require.Nil(t, response.getError())
 }
 
-func unmarshalCallResponse(t testing.TB, body []byte, response *requester.ContractAnswer) {
+func unmarshalCallResponse(t testing.TB, body []byte, response *requester.ContractResponse) {
 	err := json.Unmarshal(body, &response)
 	require.NoError(t, err)
 }
@@ -260,12 +258,14 @@ func unmarshalCallResponse(t testing.TB, body []byte, response *requester.Contra
 func signedRequest(t *testing.T, user *user, method string, params interface{}) (interface{}, error) {
 	res, refStr, err := makeSignedRequest(user, method, params)
 
-	msg := "Ref is empty"
+	var errMsg string
 	if err != nil {
-		msg = msg + " because: " + err.Error()
+		errMsg = err.Error()
 	}
-	require.NotEqual(t, "", refStr, msg)
-	require.NotEqual(t, "11111111111111111111111111111111.11111111111111111111111111111111", refStr, msg)
+	emptyRef := insolar.NewEmptyReference()
+
+	require.NotEqual(t, "", refStr, "request ref is empty: %s", errMsg)
+	require.NotEqual(t, emptyRef.String(), refStr, "request ref is zero: %s", errMsg)
 
 	_, err = insolar.NewReferenceFromBase58(refStr)
 	require.Nil(t, err)
@@ -301,20 +301,17 @@ func makeSignedRequest(user *user, method string, params interface{}) (interface
 		caller = ""
 	}
 
-	var resp requester.ContractAnswer
-	res, err := requester.Send(ctx, TestAPIURL, rootCfg, &requester.Request{
-		JSONRPC: "2.0",
-		ID:      1,
-		Method:  "api.call",
-		Params:  requester.Params{CallSite: method, CallParams: params, PublicKey: user.pubKey},
-		Test:    caller,
-	})
+	res, err := requester.Send(ctx, TestAPIURL, rootCfg, &requester.Params{
+		CallSite:   method,
+		CallParams: params,
+		PublicKey:  user.pubKey,
+		Test:       caller})
 
 	if err != nil {
 		return nil, "", err
 	}
 
-	resp = requester.ContractAnswer{}
+	resp := requester.ContractResponse{}
 	err = json.Unmarshal(res, &resp)
 	if err != nil {
 		return nil, "", err
@@ -328,7 +325,7 @@ func makeSignedRequest(user *user, method string, params interface{}) (interface
 		return nil, "", errors.New("Error and result are nil")
 	}
 
-	return resp.Result.ContractResult, resp.Result.RequestReference, nil
+	return resp.Result.CallResult, resp.Result.RequestReference, nil
 
 }
 
@@ -375,7 +372,7 @@ func uploadContractOnce(t testing.TB, name string, code string) *insolar.Referen
 func uploadContract(t testing.TB, contractName string, contractCode string) *insolar.Reference {
 	uploadBody := getRPSResponseBody(t, postParams{
 		"jsonrpc": "2.0",
-		"method":  "contract.upload",
+		"method":  "funcTestContract.upload",
 		"id":      "",
 		"params": map[string]string{
 			"name": contractName,
@@ -399,7 +396,7 @@ func uploadContract(t testing.TB, contractName string, contractCode string) *ins
 	require.NoError(t, err)
 
 	emptyRef := make([]byte, insolar.RecordRefSize)
-	require.NotEqual(t, insolar.Reference{}.FromSlice(emptyRef), prototypeRef)
+	require.NotEqual(t, insolar.NewReferenceFromBytes(emptyRef), prototypeRef)
 
 	return prototypeRef
 }
@@ -410,7 +407,7 @@ func callConstructor(t testing.TB, prototypeRef *insolar.Reference, method strin
 
 	objectBody := getRPSResponseBody(t, postParams{
 		"jsonrpc": "2.0",
-		"method":  "contract.callConstructor",
+		"method":  "funcTestContract.callConstructor",
 		"id":      "",
 		"params": map[string]interface{}{
 			"PrototypeRefString": prototypeRef.String(),
@@ -436,7 +433,7 @@ func callConstructor(t testing.TB, prototypeRef *insolar.Reference, method strin
 	objectRef, err := insolar.NewReferenceFromBase58(callConstructorRes.Result.Object)
 	require.NoError(t, err)
 
-	require.NotEqual(t, insolar.Reference{}.FromSlice(make([]byte, insolar.RecordRefSize)), objectRef)
+	require.NotEqual(t, insolar.NewReferenceFromBytes(make([]byte, insolar.RecordRefSize)), objectRef)
 
 	return objectRef
 }
@@ -468,7 +465,7 @@ func callMethodNoChecks(t testing.TB, objectRef *insolar.Reference, method strin
 
 	respBody := getRPSResponseBody(t, postParams{
 		"jsonrpc": "2.0",
-		"method":  "contract.callMethod",
+		"method":  "funcTestContract.callMethod",
 		"id":      "",
 		"params": map[string]interface{}{
 			"ObjectRefString": objectRef.String(),

@@ -25,10 +25,11 @@ import (
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/version"
+	"github.com/insolar/rpc/v2"
 )
 
 // Get returns status info
-func (s *NodeService) GetStatus(r *http.Request, args *interface{}, reply *requester.StatusResponse) error {
+func (s *NodeService) GetStatus(r *http.Request, args *interface{}, requestBody *rpc.RequestBody, reply *requester.StatusResponse) error {
 	traceID := utils.RandTraceID()
 	ctx, inslog := inslogger.WithTraceField(context.Background(), traceID)
 
