@@ -18,6 +18,7 @@ package insolar
 
 import (
 	"context"
+	"time"
 )
 
 // Cascade contains routing data for cascade sending
@@ -47,9 +48,14 @@ type StatusReply struct {
 	Origin          NetworkNode
 	ActiveListSize  int
 	WorkingListSize int
-	Nodes           []NetworkNode
-	Pulse           Pulse
-	Version         string
+	// Nodes from active list
+	Nodes []NetworkNode
+	// Pulse from network pulse storage
+	Pulse     Pulse
+	Version   string
+	Timestamp time.Time
+	// node start timestamp for uptime duration
+	StartTime time.Time
 }
 
 type NetworkStatus interface {
