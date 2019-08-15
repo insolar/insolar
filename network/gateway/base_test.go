@@ -48,91 +48,57 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package servicenetwork
+package gateway
 
 import (
-	"context"
 	"testing"
-
-	"github.com/pkg/errors"
-
-	"github.com/insolar/insolar/network/gateway"
-	"github.com/insolar/insolar/version"
-
-	"github.com/stretchr/testify/require"
+	"time"
 
 	"github.com/insolar/insolar/insolar"
 
-	"github.com/insolar/insolar/network"
-
-	testutils "github.com/insolar/insolar/testutils/network"
+	"github.com/stretchr/testify/require"
 )
 
-func TestGetNetworkStatus(t *testing.T) {
-	sn := &ServiceNetwork{}
-	gwer := testutils.NewGatewayerMock(t)
-	gw := testutils.NewGatewayMock(t)
-	ins := insolar.NetworkState(1)
-	gw.GetStateMock.Set(func() insolar.NetworkState { return ins })
-	gwer.GatewayMock.Set(func() network.Gateway { return gw })
-	sn.Gatewayer = gwer
+func TestCheckIsAlive(t *testing.T) {
+	b := Base{isAlive: true}
+	pu := insolar.Pulse{PulseNumber: 10, NextPulseNumber: 20, EpochPulseNumber: insolar.EphemeralPulseEpoch}
+	b.checkIsAlive(pu)
+	require.True(t, b.IsAlive())
 
-	pa := testutils.NewPulseAccessorMock(t)
-	ppn := insolar.PulseNumber(2)
-	pulse := insolar.Pulse{PulseNumber: 2}
-	pa.GetLatestPulseMock.Set(func(context.Context) (insolar.Pulse, error) { return pulse, nil })
-	sn.PulseAccessor = pa
+	b.checkIsAlive(pu)
+	require.True(t, b.IsAlive())
 
-	nk := testutils.NewNodeKeeperMock(t)
-	a := testutils.NewAccessorMock(t)
-	activeLen := 1
-	active := make([]insolar.NetworkNode, activeLen)
-	a.GetActiveNodesMock.Set(func() []insolar.NetworkNode { return active })
+	b.lastAliveStateTime = time.Now().Add(-time.Duration(2.1*float64(pu.NextPulseNumber-pu.PulseNumber+1)) * time.Second)
+	b.checkIsAlive(pu)
+	require.False(t, b.IsAlive())
 
-	workingLen := 2
-	working := make([]insolar.NetworkNode, workingLen)
-	a.GetWorkingNodesMock.Set(func() []insolar.NetworkNode { return working })
+	b.checkIsAlive(pu)
+	require.False(t, b.IsAlive())
 
-	nk.GetAccessorMock.Set(func(insolar.PulseNumber) network.Accessor { return a })
+	b.checkIsAlive(pu)
+	require.False(t, b.IsAlive())
 
-	nn := testutils.NewNetworkNodeMock(t)
-	nk.GetOriginMock.Set(func() insolar.NetworkNode { return nn })
+	pu.EpochPulseNumber = 1
+	b.isAlive = true
+	b.lastAliveStateTime = time.Time{}
+	b.checkIsAlive(pu)
+	require.True(t, b.IsAlive())
 
-	sn.NodeKeeper = nk
+	b.lastAliveStateTime = time.Now().Add(-time.Duration(2.6*float64(pu.NextPulseNumber-pu.PulseNumber+1)) * time.Second)
+	b.checkIsAlive(pu)
+	require.False(t, b.IsAlive())
 
-	ns := sn.GetNetworkStatus()
-	require.Equal(t, ins, ns.NetworkState)
+	b.checkIsAlive(pu)
+	require.False(t, b.IsAlive())
 
-	require.Equal(t, nn, ns.Origin)
-
-	require.Equal(t, activeLen, ns.ActiveListSize)
-
-	require.Equal(t, workingLen, ns.WorkingListSize)
-
-	require.Len(t, ns.Nodes, activeLen)
-
-	require.Equal(t, ppn, ns.Pulse.PulseNumber)
-
-	require.Equal(t, version.Version, ns.Version)
-
-	pa.GetLatestPulseMock.Set(func(context.Context) (insolar.Pulse, error) { return pulse, errors.New("test") })
-	ns = sn.GetNetworkStatus()
-	require.Equal(t, ins, ns.NetworkState)
-
-	require.Equal(t, nn, ns.Origin)
-
-	require.Equal(t, activeLen, ns.ActiveListSize)
-
-	require.Equal(t, workingLen, ns.WorkingListSize)
-
-	require.Len(t, ns.Nodes, activeLen)
-
-	require.Equal(t, insolar.GenesisPulse.PulseNumber, ns.Pulse.PulseNumber)
-
-	require.Equal(t, version.Version, ns.Version)
+	b.checkIsAlive(pu)
+	require.False(t, b.IsAlive())
 }
 
 func TestIsAlive(t *testing.T) {
-	sn := &ServiceNetwork{BaseGateway: &gateway.Base{}}
-	require.False(t, sn.BaseGateway.IsAlive())
+	b := Base{}
+	require.False(t, b.IsAlive())
+
+	b.isAlive = true
+	require.True(t, b.IsAlive())
 }

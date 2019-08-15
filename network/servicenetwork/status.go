@@ -85,5 +85,5 @@ func (n *ServiceNetwork) GetNetworkStatus() insolar.StatusReply {
 }
 
 func (n *ServiceNetwork) IsAlive() bool {
-	panic("implement me")
+	return n.BaseGateway.IsAlive()
 }

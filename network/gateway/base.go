@@ -105,6 +105,9 @@ type Base struct {
 
 	// Next request backoff.
 	backoff time.Duration // nolint
+
+	lastAliveStateTime time.Time
+	isAlive            bool
 }
 
 // NewGateway creates new gateway on top of existing
@@ -140,6 +143,7 @@ func (g *Base) Init(ctx context.Context) error {
 
 	g.createCandidateProfile()
 	g.bootstrapETA = 0
+	g.isAlive = true
 	return nil
 }
 
@@ -153,7 +157,7 @@ func (g *Base) OnPulseFromConsensus(ctx context.Context, pu insolar.Pulse) {
 	if err != nil {
 		panic("failed to append pulse:" + err.Error())
 	}
-
+	g.checkIsAlive(pu)
 	nodes := g.NodeKeeper.GetAccessor(pu.PulseNumber).GetActiveNodes()
 	inslogger.FromContext(ctx).Debugf("OnPulseFromConsensus: %d : epoch %d : nodes %d", pu.PulseNumber, pu.EpochPulseNumber, len(nodes))
 }
@@ -357,4 +361,25 @@ func (g *Base) EphemeralMode(nodes []insolar.NetworkNode) bool {
 	minRole := rules.CheckMinRole(g.CertificateManager.GetCertificate(), nodes)
 
 	return !majority || !minRole
+}
+
+func (g *Base) checkIsAlive(pu insolar.Pulse) {
+	now := time.Now()
+	if g.lastAliveStateTime.Equal(time.Time{}) {
+		g.lastAliveStateTime = now
+	} else if g.isAlive {
+		delta := pu.NextPulseNumber - pu.PulseNumber
+		realDelta := now.Sub(g.lastAliveStateTime)
+		periods := 2.5
+		if pu.EpochPulseNumber == insolar.EphemeralPulseEpoch {
+			periods = 2
+		}
+		if realDelta > time.Duration(periods*float64(delta))*time.Second {
+			g.isAlive = false
+		}
+	}
+}
+
+func (g *Base) IsAlive() bool {
+	return g.isAlive
 }
