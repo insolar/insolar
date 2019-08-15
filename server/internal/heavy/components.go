@@ -192,9 +192,9 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 	var (
 		Coordinator jet.Coordinator
 		Pulses      *pulse.DB
-		Jets        jet.Storage
 		Nodes       *node.Storage
 		DB          *store.BadgerDB
+		Jets        *jet.DBStore
 	)
 	{
 		var err error
@@ -204,7 +204,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		}
 		Nodes = node.NewStorage()
 		Pulses = pulse.NewDB(DB)
-		Jets = jet.NewStore()
 
 		c := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit)
 		c.PulseCalculator = Pulses
@@ -256,9 +255,8 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		Records = object.NewRecordDB(DB)
 		indexes := object.NewIndexDB(DB, Records)
 		drops := drop.NewDB(DB)
-		jets := jet.NewDBStore(DB)
-		JetKeeper = executor.NewJetKeeper(jets, DB, Pulses)
-		c.rollback = executor.NewDBRollback(JetKeeper, Pulses, drops, Records, indexes, jets, Pulses)
+		JetKeeper = executor.NewJetKeeper(Jets, DB, Pulses)
+		c.rollback = executor.NewDBRollback(JetKeeper, Pulses, drops, Records, indexes, Jets, Pulses)
 
 		sp := pulse.NewStartPulse()
 
@@ -274,11 +272,11 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		pm.Nodes = Nodes
 		pm.PulseAppender = Pulses
 		pm.PulseAccessor = Pulses
-		pm.JetModifier = jets
+		pm.JetModifier = Jets
 		pm.StartPulse = sp
 		pm.FinalizationKeeper = executor.NewFinalizationKeeperDefault(JetKeeper, Pulses, cfg.Ledger.LightChainLimit)
 
-		replicator := executor.NewHeavyReplicatorDefault(Records, indexes, CryptoScheme, Pulses, drops, JetKeeper, backupMaker, jets)
+		replicator := executor.NewHeavyReplicatorDefault(Records, indexes, CryptoScheme, Pulses, drops, JetKeeper, backupMaker, Jets)
 
 		h := handler.New(cfg.Ledger)
 		h.RecordAccessor = Records
@@ -292,9 +290,9 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		h.PulseAccessor = Pulses
 		h.PulseCalculator = Pulses
 		h.StartPulse = sp
-		h.JetModifier = jets
-		h.JetAccessor = jets
-		h.JetTree = jets
+		h.JetModifier = Jets
+		h.JetAccessor = Jets
+		h.JetTree = Jets
 		h.DropDB = drops
 		h.JetKeeper = JetKeeper
 		h.BackupMaker = backupMaker
