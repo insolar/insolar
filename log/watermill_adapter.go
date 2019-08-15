@@ -32,12 +32,7 @@ func NewWatermillLogAdapter(log insolar.Logger) *WatermillLogAdapter {
 }
 
 func (w *WatermillLogAdapter) addFields(fields watermill.LogFields) insolar.Logger {
-	l := w.log
-	for key, val := range fields {
-		l = l.WithField(key, val)
-	}
-
-	return l
+	return w.log.WithFields(fields)
 }
 
 func (w *WatermillLogAdapter) With(fields watermill.LogFields) watermill.LoggerAdapter {
