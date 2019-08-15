@@ -259,6 +259,61 @@ func TestRecordStorage_DB_Set(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("saves correct record-value. batch version. cross-pulses", func(t *testing.T) {
+		t.Parallel()
+
+		id := gen.ID()
+
+		sID := gen.ID()
+		sID.SetPulse(id.Pulse() + 1)
+
+		tID := gen.ID()
+		tID.SetPulse(id.Pulse() + 2)
+
+		rec := getMaterialRecord()
+		rec.ID = id
+		sRec := getMaterialRecord()
+		sRec.ID = sID
+
+		tRec := getMaterialRecord()
+		tRec.ID = tID
+
+		tmpdir, err := ioutil.TempDir("", "bdb-test-")
+		defer os.RemoveAll(tmpdir)
+		require.NoError(t, err)
+
+		db, err := store.NewBadgerDB(tmpdir)
+		require.NoError(t, err)
+		defer db.Stop(context.Background())
+
+		recordStorage := NewRecordDB(db)
+
+		rec.ID = id
+		err = recordStorage.BatchSet(ctx, []record.Material{rec, sRec, tRec})
+		require.NoError(t, err)
+
+		position, err := recordStorage.LastKnownPosition(id.Pulse())
+		require.NoError(t, err)
+		require.Equal(t, uint32(1), position)
+		savedID, err := recordStorage.AtPosition(id.Pulse(), position)
+		require.NoError(t, err)
+		require.Equal(t, id, savedID)
+
+		position, err = recordStorage.LastKnownPosition(sID.Pulse())
+		require.NoError(t, err)
+		require.Equal(t, uint32(1), position)
+		savedID, err = recordStorage.AtPosition(sID.Pulse(), position)
+		require.NoError(t, err)
+		require.Equal(t, sID, savedID)
+
+		position, err = recordStorage.LastKnownPosition(tID.Pulse())
+		require.NoError(t, err)
+		require.Equal(t, uint32(1), position)
+		savedID, err = recordStorage.AtPosition(tID.Pulse(), position)
+		require.NoError(t, err)
+		require.Equal(t, tID, savedID)
+	})
+
 	t.Run("returns override error when saving with the same id", func(t *testing.T) {
 		t.Parallel()
 

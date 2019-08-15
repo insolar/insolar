@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
+	"sync"
 
 	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/insolar"
@@ -31,6 +32,8 @@ import (
 
 // RecordDB is a DB storage implementation. It saves records to disk and does not allow removal.
 type RecordDB struct {
+	batchLock sync.Mutex
+
 	db *store.BadgerDB
 }
 
@@ -95,28 +98,7 @@ func NewRecordDB(db *store.BadgerDB) *RecordDB {
 
 // Set saves new record-value in storage.
 func (r *RecordDB) Set(ctx context.Context, rec record.Material) error {
-	if rec.ID.IsEmpty() {
-		return errors.New("id is empty")
-	}
-	return r.db.Backend().Update(func(txn *badger.Txn) error {
-		position, err := getLastKnownPosition(txn, rec.ID.Pulse())
-		if err != nil && err != ErrNotFound {
-			return err
-		}
-		position++
-
-		err = setRecord(txn, recordKey(rec.ID), rec)
-		if err != nil {
-			return err
-		}
-
-		err = setPosition(txn, rec.ID, position)
-		if err != nil {
-			return err
-		}
-
-		return setLastKnownPosition(txn, rec.ID.Pulse(), position)
-	})
+	return r.BatchSet(ctx, []record.Material{rec})
 }
 
 // BatchSet saves a batch of records to storage with order-processing.
@@ -125,6 +107,14 @@ func (r *RecordDB) BatchSet(ctx context.Context, recs []record.Material) error {
 		return nil
 	}
 
+	r.batchLock.Lock()
+	defer r.batchLock.Unlock()
+
+	// It's possible, that in the batch can be records from different pulses
+	// because of that we need to track a current pulse and position
+	// for different pulses position is requested from db
+	// We can get position on every loop, but we SHOULDn't do this
+	// Because it isn't efficient
 	lastKnowPulse := insolar.PulseNumber(0)
 	position := uint32(0)
 
@@ -141,6 +131,13 @@ func (r *RecordDB) BatchSet(ctx context.Context, recs []record.Material) error {
 
 			// For cross-pulse batches
 			if lastKnowPulse != rec.ID.Pulse() {
+				// Set last known before changing pulse/position
+				err := setLastKnownPosition(txn, lastKnowPulse, position)
+				if err != nil {
+					return err
+				}
+
+				// fetch position for a new pulse
 				position, err = getLastKnownPosition(txn, rec.ID.Pulse())
 				if err != nil && err != ErrNotFound {
 					return err
@@ -155,10 +152,12 @@ func (r *RecordDB) BatchSet(ctx context.Context, recs []record.Material) error {
 				return err
 			}
 
-			err = setLastKnownPosition(txn, rec.ID.Pulse(), position)
-			if err != nil {
-				return err
-			}
+		}
+
+		// set position for last record
+		err := setLastKnownPosition(txn, lastKnowPulse, position)
+		if err != nil {
+			return err
 		}
 
 		return nil
@@ -263,6 +262,7 @@ func (r *RecordDB) ForID(ctx context.Context, id insolar.ID) (record.Material, e
 	return r.get(id)
 }
 
+// get loads record.Material from DB
 func (r *RecordDB) get(id insolar.ID) (record.Material, error) {
 	var buff []byte
 	var err error
@@ -291,6 +291,7 @@ func (r *RecordDB) get(id insolar.ID) (record.Material, error) {
 	return rec, err
 }
 
+// LastKnownPosition returns last known position of record in Pulse.
 func (r *RecordDB) LastKnownPosition(pn insolar.PulseNumber) (uint32, error) {
 	var position uint32
 	var err error
@@ -303,6 +304,7 @@ func (r *RecordDB) LastKnownPosition(pn insolar.PulseNumber) (uint32, error) {
 	return position, err
 }
 
+// AtPosition returns record ID for a specific pulse and a position
 func (r *RecordDB) AtPosition(pn insolar.PulseNumber, position uint32) (insolar.ID, error) {
 	var recID insolar.ID
 	err := r.db.Backend().View(func(txn *badger.Txn) error {

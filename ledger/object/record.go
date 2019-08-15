@@ -94,8 +94,11 @@ type RecordCleaner interface {
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.RecordPositionAccessor -o ./ -s _mock.go
 
+// RecordPositionAccessor provides an interface for fetcing position of records.
 type RecordPositionAccessor interface {
+	// LastKnownPosition returns last known position of record in Pulse.
 	LastKnownPosition(pn insolar.PulseNumber) (uint32, error)
+	// AtPosition returns record ID for a specific pulse and a position
 	AtPosition(pn insolar.PulseNumber, position uint32) (insolar.ID, error)
 }
 
