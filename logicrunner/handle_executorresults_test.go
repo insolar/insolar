@@ -27,10 +27,9 @@ import (
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/gen"
-	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/writecontroller"
-	"github.com/insolar/insolar/testutils"
 )
 
 func TestHandleExecutorResults_Present(t *testing.T) {
@@ -43,30 +42,29 @@ func TestHandleExecutorResults_Present(t *testing.T) {
 			name: "success",
 			mocks: func(t minimock.Tester) (*HandleExecutorResults, flow.Flow) {
 				obj := gen.Reference()
-				parcel := testutils.NewParcelMock(t).
-					DefaultTargetMock.Return(&obj).
-					MessageMock.Return(
-					&message.ExecutorResults{
-						RecordRef:             obj,
-						Pending:               insolar.NotPending,
-						LedgerHasMoreRequests: true,
-						Queue: []message.ExecutionQueueElement{
-							{
-								RequestRef: gen.Reference(),
-							},
-							{
-								RequestRef: gen.Reference(),
-							},
+				receivedPayload := &payload.ExecutorResults{
+					RecordRef:             obj,
+					Pending:               insolar.NotPending,
+					LedgerHasMoreRequests: true,
+					Queue: []*payload.ExecutionQueueElement{
+						{
+							RequestRef: gen.Reference(),
+						},
+						{
+							RequestRef: gen.Reference(),
 						},
 					},
-				)
+				}
+
+				buf, err := payload.Marshal(receivedPayload)
+				require.NoError(t, err, "marshal")
 
 				h := &HandleExecutorResults{
 					dep: &Dependencies{
 						Sender:        bus.NewSenderMock(t).ReplyMock.Return(),
 						WriteAccessor: writecontroller.NewWriteControllerMock(t).BeginMock.Return(func() {}, nil),
 					},
-					Parcel: parcel,
+					Message: payload.Meta{Payload: buf},
 				}
 				f := flow.NewFlowMock(t).ProcedureMock.Return(nil)
 				return h, f
