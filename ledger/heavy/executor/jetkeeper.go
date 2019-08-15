@@ -421,7 +421,6 @@ func (jk *dbJetKeeper) checkPulseConsistency(ctx context.Context, pulse insolar.
 	}
 
 	currentJetTree := jk.jetTrees.All(ctx, pulse)
-	logger.Debugf("heavy replicator %v, pn %v", insolar.JetIDCollection(currentJetTree).DebugString(), pulse)
 	err = compareJets(currentJetTree, actualJetsSet)
 	if err != nil {
 		logger.Error("current jet tree and actual jets are different. Pulse: ", pulse, ". Err: ", err)
