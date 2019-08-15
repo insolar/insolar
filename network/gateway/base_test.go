@@ -68,7 +68,7 @@ func TestCheckIsAlive(t *testing.T) {
 	b.checkIsAlive(pu)
 	require.True(t, b.IsAlive())
 
-	b.lastAliveStateTime = time.Now().Add(-time.Duration(2.1*float64(pu.NextPulseNumber-pu.PulseNumber+1)) * time.Second)
+	b.lastAliveStateTime = time.Now().Add(-time.Duration(2.1*float64(pu.NextPulseNumber-pu.PulseNumber)) * time.Second)
 	b.checkIsAlive(pu)
 	require.False(t, b.IsAlive())
 
@@ -84,7 +84,7 @@ func TestCheckIsAlive(t *testing.T) {
 	b.checkIsAlive(pu)
 	require.True(t, b.IsAlive())
 
-	b.lastAliveStateTime = time.Now().Add(-time.Duration(2.6*float64(pu.NextPulseNumber-pu.PulseNumber+1)) * time.Second)
+	b.lastAliveStateTime = time.Now().Add(-time.Duration(2.6*float64(pu.NextPulseNumber-pu.PulseNumber)) * time.Second)
 	b.checkIsAlive(pu)
 	require.False(t, b.IsAlive())
 
