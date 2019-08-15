@@ -206,6 +206,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		}
 		Nodes = node.NewStorage()
 		Pulses = pulse.NewDB(DB)
+		Jets = jet.NewDBStore(DB)
 
 		c := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit)
 		c.PulseCalculator = Pulses
