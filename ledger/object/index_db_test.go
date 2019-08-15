@@ -45,6 +45,52 @@ func TestIndexKey(t *testing.T) {
 	require.Equal(t, expectedKey, actualKey)
 }
 
+func TestIndexDB_DontLooseIndexAfterTruncate(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+	tmpdir, err := ioutil.TempDir("", "bdb-test-")
+	defer os.RemoveAll(tmpdir)
+	assert.NoError(t, err)
+
+	dbMock, err := store.NewBadgerDB(tmpdir)
+	defer dbMock.Stop(ctx)
+	require.NoError(t, err)
+
+	indexStore := NewIndexDB(dbMock, nil)
+
+	testPulse := insolar.GenesisPulse.PulseNumber
+	nextPulse := testPulse + 1
+	bucket := record.Index{}
+	bucket.ObjID = gen.ID()
+
+	err = indexStore.SetIndex(ctx, testPulse, bucket)
+	require.NoError(t, err)
+	_, err = indexStore.ForID(ctx, testPulse, bucket.ObjID)
+	require.NoError(t, err)
+
+	err = indexStore.SetIndex(ctx, nextPulse, bucket)
+	require.NoError(t, err)
+
+	_, err = indexStore.ForID(ctx, nextPulse, bucket.ObjID)
+	require.NoError(t, err)
+
+	err = indexStore.TruncateHead(ctx, nextPulse)
+	require.NoError(t, err)
+
+	_, err = indexStore.ForID(ctx, nextPulse, bucket.ObjID)
+	require.EqualError(t, err, ErrIndexNotFound.Error())
+
+	// no update such object in that pulse -> try to get last known pulse but it refers to nextPulse
+	// , but we Truncate index with that pulse -> couldn't find that object
+	_, err = indexStore.ForID(ctx, nextPulse+1, bucket.ObjID)
+	require.EqualError(t, err, ErrIndexNotFound.Error())
+
+	indexStore.UpdateLastKnownPulse(ctx, testPulse)
+	_, err = indexStore.ForID(ctx, testPulse+2, bucket.ObjID)
+	require.NoError(t, err)
+}
+
 func TestIndexDB_TruncateHead(t *testing.T) {
 	t.Parallel()
 

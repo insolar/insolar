@@ -91,7 +91,7 @@ func Test_DifferentSplitFlagsInDropsAndHots(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 	defer db.Stop(ctx)
 
-	testJet := gen.JetID()
+	testJet := insolar.ZeroJetID
 
 	// AddHotConfirmation: 'true' come first
 	err := ji.AddDropConfirmation(ctx, testPulse, testJet, true)
