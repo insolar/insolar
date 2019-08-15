@@ -48,9 +48,7 @@ func TestDepositTransferToken(t *testing.T) {
 	}
 	require.NoError(t, err)
 
-	finalBalance := getBalanceNoErr(t, member, member.ref)
-
-	require.Equal(t, secondBalance, finalBalance)
+	checkBalanceFewTimes(t, member, member.ref, secondBalance)
 }
 
 func TestDepositTransferBeforeUnhold(t *testing.T) {
