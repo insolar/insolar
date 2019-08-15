@@ -118,7 +118,6 @@ func (h *HeavyReplicatorDefault) sync(ctx context.Context) {
 		logger.Debug("heavy replicator storing indexes")
 		if err := storeIndexes(ctx, h.indexes, msg.Indexes, msg.Pulse); err != nil {
 			logger.Error(errors.Wrap(err, "heavy replicator failed to store indexes"))
-			panic("1")
 			return
 		}
 
