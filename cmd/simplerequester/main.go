@@ -3,12 +3,10 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"os"
-
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/log"
 	"github.com/spf13/pflag"
+	"io/ioutil"
 )
 
 var (
@@ -38,35 +36,35 @@ func main() {
 	parseInputParams()
 	err := log.SetLevel("error")
 	check("can't set 'error' level on logger: ", err)
-	request := &requester.Request{
-		JSONRPC: "2.0",
-		ID:      0,
-		Method:  "api.call",
+	request := &requester.ContractRequest{
+		Request: requester.Request{
+			Version: "2.0",
+			ID:      0,
+			Method:  "contract.call",
+		},
 	}
+	params := requester.Params{}
 
 	if paramsFile != "" {
 		request, err = readRequestParams(paramsFile)
 		check("[ simpleRequester ]", err)
 	} else {
 		if method != "" {
-			request.Params.CallSite = method
+			params.CallSite = method
 		}
-		if params != "" {
-			request.Params.CallParams = params
-		}
-		request.Params.Reference = memberRef
+		params.Reference = memberRef
 	}
 
-	if request.Params.Reference == "" {
+	if params.Reference == "" {
 		response, err := requester.Info(apiURL)
 		check("[ simpleRequester ]", err)
-		request.Params.Reference = response.RootMember
+		params.Reference = response.RootMember
 	}
-
-	if request.Params.CallSite == "" {
-		fmt.Println("Method cannot be null", err)
-		os.Exit(1)
-	}
+	// fmt.Println()
+	// if params.CallSite == "" {
+	// 	fmt.Println("Method cannot be null", err)
+	// 	os.Exit(1)
+	// }
 
 	rawConf, err := ioutil.ReadFile(memberKeysPath)
 	check("[ simpleRequester ]", err)

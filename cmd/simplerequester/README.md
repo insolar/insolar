@@ -61,7 +61,7 @@ Usage
     {
       "jsonrpc": "2.0",
       "id": 1,
-      "method": "api.call",
+      "method": "contract.call",
       "params": {
         "callSite": "contract.createMember",
         "callParams": {
@@ -79,7 +79,7 @@ Usage
     {
       "jsonrpc": "2.0",
       "id": 1,
-      "method": "api.call",
+      "method": "contract.call",
       "params": {
         "callSite": "wallet.addBurnAddresses",
         "reference": "1tJCnAptaXWX2hopa2hxWN3AJ3f84YZCYkVbqJeJSV.11111111111111111111111111111111",

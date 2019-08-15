@@ -59,11 +59,13 @@ func TestCreateMemberP256K(t *testing.T) {
 		CallParams: map[string]interface{}{},
 		Reference:  rootMemberRef,
 	}
-	datas := requester.Request{
-		JSONRPC: "2.0",
-		ID:      0,
-		Method:  "api.call",
-		Params:  params,
+	datas := requester.ContractRequest{
+		Request: requester.Request{
+			Version: "2.0",
+			ID:      0,
+			Method:  "contract.call",
+		},
+		Params: params,
 	}
 	response, err := execute(TestUrl, memberKeys{string(privateKeyPem), string(publicKeyPem)}, datas)
 	require.NoError(t, err)
@@ -90,11 +92,13 @@ func TestCreateMemberP256(t *testing.T) {
 		CallParams: map[string]interface{}{"publicKey": publicKeyPem},
 		Reference:  rootMemberRef,
 	}
-	datas := requester.Request{
-		JSONRPC: "2.0",
-		ID:      0,
-		Method:  "api.call",
-		Params:  params,
+	datas := requester.ContractRequest{
+		Request: requester.Request{
+			Version: "2.0",
+			ID:      0,
+			Method:  "contract.call",
+		},
+		Params: params,
 	}
 	response, err := execute(TestUrl, memberKeys{string(privateKeyPem), string(publicKeyPem)}, datas)
 	require.NoError(t, err)

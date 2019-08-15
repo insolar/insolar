@@ -33,10 +33,12 @@ func main() {
 	parseInputParams()
 	err := log.SetLevel("error")
 	check("can't set 'error' level on logger: ", err)
-	request := &requester.Request{
-		JSONRPC: "2.0",
-		ID:      0,
-		Method:  "api.call",
+	request := &requester.ContractRequest{
+		Request: requester.Request{
+			Version: "2.0",
+			ID:      0,
+			Method:  "api.call",
+		},
 	}
 	if paramsFile != "" {
 		request, err = readRequestParams(paramsFile)

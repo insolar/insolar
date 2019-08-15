@@ -27,9 +27,9 @@ type memberKeys struct {
 	Public  string `json:"public_key"`
 }
 
-func readRequestParams(path string) (*requester.Request, error) {
+func readRequestParams(path string) (*requester.ContractRequest, error) {
 
-	fileParams := &requester.Request{}
+	fileParams := &requester.ContractRequest{}
 	err := readFile(path, fileParams)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ readRequestParams ] ")
@@ -65,7 +65,7 @@ func check(msg string, err error) {
 	}
 }
 
-func execute(url string, keys memberKeys, request requester.Request) (string, error) {
+func execute(url string, keys memberKeys, request requester.ContractRequest) (string, error) {
 	seed, err := requester.GetSeed(url)
 	check("[Execute]", err)
 	request.Params.PublicKey = keys.Public
