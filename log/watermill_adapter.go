@@ -27,7 +27,7 @@ type WatermillLogAdapter struct {
 
 func NewWatermillLogAdapter(log insolar.Logger) *WatermillLogAdapter {
 	return &WatermillLogAdapter{
-		log: log.WithField("service", "watermill"),
+		log: log.WithField("service", "watermill").WithSkipFrameCount(1),
 	}
 }
 
