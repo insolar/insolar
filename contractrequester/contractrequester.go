@@ -225,7 +225,7 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (i
 	}
 
 	if !bytes.Equal(r.Request.Record().Hash(), reqHash[:]) {
-		return nil, nil, errors.New("Registered request has different hash")
+		return nil, &r.Request, errors.New("Registered request has different hash")
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, cr.callTimeout)
@@ -240,7 +240,7 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (i
 	case ret := <-ch:
 		logger.Debug("Got results of request")
 		if ret.Error != "" {
-			return nil, nil, errors.Wrap(errors.New(ret.Error), "CallMethod returns error")
+			return nil, &r.Request, errors.Wrap(errors.New(ret.Error), "CallMethod returns error")
 		}
 		return ret.Reply, &r.Request, nil
 	case <-ctx.Done():
@@ -249,7 +249,7 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (i
 
 		delete(cr.ResultMap, reqHash)
 		logger.Error("Request timeout")
-		return nil, nil, errors.Errorf("request to contract was canceled: timeout of %s was exceeded", cr.callTimeout)
+		return nil, &r.Request, errors.Errorf("request to contract was canceled: timeout of %s was exceeded", cr.callTimeout)
 	}
 }
 

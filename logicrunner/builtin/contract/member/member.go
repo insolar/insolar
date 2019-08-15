@@ -565,7 +565,7 @@ func (m *Member) FindDeposit(transactionsHash string) (bool, insolar.Reference, 
 		return true, dRef, nil
 	}
 
-	return false, insolar.Reference{}, nil
+	return false, *insolar.NewEmptyReference(), nil
 }
 
 // SetDeposit method stores deposit reference in member it belongs to

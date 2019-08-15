@@ -82,10 +82,7 @@ type distributor struct {
 	transport   transport.StreamTransport
 	idGenerator sequence.Generator
 
-	pingRequestTimeout        time.Duration
-	randomHostsRequestTimeout time.Duration
-	pulseRequestTimeout       time.Duration
-	randomNodesCount          int
+	pulseRequestTimeout time.Duration
 
 	publicAddress   string
 	pulsarHost      *host.Host
@@ -103,10 +100,7 @@ func NewDistributor(conf configuration.PulseDistributor) (insolar.PulseDistribut
 	result := &distributor{
 		idGenerator: sequence.NewGenerator(),
 
-		pingRequestTimeout:        time.Duration(conf.PingRequestTimeout) * time.Millisecond,
-		randomHostsRequestTimeout: time.Duration(conf.RandomHostsRequestTimeout) * time.Millisecond,
-		pulseRequestTimeout:       time.Duration(conf.PulseRequestTimeout) * time.Millisecond,
-		randomNodesCount:          conf.RandomNodesCount,
+		pulseRequestTimeout: time.Duration(conf.PulseRequestTimeout) * time.Millisecond,
 
 		bootstrapHosts:  conf.BootstrapHosts,
 		futureManager:   futureManager,
@@ -141,7 +135,7 @@ func (d *distributor) Start(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "[ NewDistributor ] failed to create pulsar host")
 	}
-	pulsarHost.NodeID = insolar.NewEmptyReference()
+	pulsarHost.NodeID = *insolar.NewEmptyReference()
 
 	d.pulsarHost = pulsarHost
 	return nil
