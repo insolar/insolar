@@ -261,7 +261,19 @@ func stopAllInsgorunds() error {
 func waitForNet() error {
 	numAttempts := 90
 	// TODO: read ports from bootstrap config
-	ports := []string{"19101", "19102", "19103", "19104", "19105", "19106", "19107", "19108", "19109", "19110", "19111"}
+	ports := []string{
+		"19101",
+		"19102",
+		"19103",
+		"19104",
+		"19105",
+		// "19106",
+		// "19107",
+		// "19108",
+		// "19109",
+		// "19110",
+		// "19111",
+	}
 	numNodes := len(ports)
 	currentOk := 0
 	for i := 0; i < numAttempts; i++ {
