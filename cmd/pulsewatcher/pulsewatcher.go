@@ -83,7 +83,7 @@ func displayResultsTable(results []nodeStatus, ready bool, buffer *bytes.Buffer)
 		"Role",
 		"Timestamp",
 		"Restart Count",
-		"Uptime/Pulses",
+		"Uptime",
 		"Error",
 	})
 	table.SetBorder(false)
@@ -105,7 +105,7 @@ func displayResultsTable(results []nodeStatus, ready bool, buffer *bytes.Buffer)
 		"", "", "", "", "",
 		"Insolar State", stateString,
 		"Time", time.Now().Format(timeFormat),
-		"Total Uptime/Pulses", time.Since(startTime).Round(time.Second).String(), "",
+		"Insolar Uptime", time.Since(startTime).Round(time.Second).String(), "",
 	})
 	table.SetFooterColor(
 		tablewriter.Colors{},
@@ -169,6 +169,13 @@ func displayResultsTable(results []nodeStatus, ready bool, buffer *bytes.Buffer)
 			activeNodeEmoji += emoji.GetEmoji(n)
 		}
 
+		var uptime string
+		var timestamp string
+		if row.errStr == "" {
+			uptime = time.Since(row.reply.StartTime).Round(time.Second).String()
+			timestamp = row.reply.Timestamp.Format(timeFormat)
+		}
+
 		table.Append([]string{
 			row.url,
 			row.reply.NetworkState,
@@ -178,9 +185,9 @@ func displayResultsTable(results []nodeStatus, ready bool, buffer *bytes.Buffer)
 			fmt.Sprintf("%d %s", row.reply.ActiveListSize, activeNodeEmoji),
 			intToString(row.reply.WorkingListSize),
 			shortRole(row.reply.Origin.Role),
-			row.reply.Timestamp.Format(timeFormat),
+			timestamp,
 			intToString(row.restartCount),
-			time.Since(row.reply.StartTime).Round(time.Second).String(),
+			uptime,
 			row.errStr,
 		})
 	}
