@@ -42,12 +42,11 @@ import (
 type Handler struct {
 	cfg configuration.Ledger
 
-	Bus             insolar.MessageBus
-	JetCoordinator  jet.Coordinator
-	PCS             insolar.PlatformCryptographyScheme
-	RecordAccessor  object.RecordAccessor
-	RecordModifier  object.RecordModifier
-	RecordPositions object.RecordPositionModifier
+	Bus            insolar.MessageBus
+	JetCoordinator jet.Coordinator
+	PCS            insolar.PlatformCryptographyScheme
+	RecordAccessor object.RecordAccessor
+	RecordModifier object.RecordModifier
 
 	IndexAccessor object.IndexAccessor
 	IndexModifier object.IndexModifier
@@ -64,6 +63,8 @@ type Handler struct {
 	PulseCalculator pulse.Calculator
 	JetTree         jet.Storage
 	DropDB          *drop.DB
+
+	Replicator executor.HeavyReplicator
 
 	dep *proc.Dependencies
 }
@@ -91,15 +92,7 @@ func New(cfg configuration.Ledger) *Handler {
 		},
 		Replication: func(p *proc.Replication) {
 			p.Dep(
-				h.RecordModifier,
-				h.IndexModifier,
-				h.RecordPositions,
-				h.PCS,
-				h.PulseCalculator,
-				h.DropModifier,
-				h.JetKeeper,
-				h.BackupMaker,
-				h.JetModifier,
+				h.Replicator,
 			)
 		},
 		SendJet: func(p *proc.SendJet) {
