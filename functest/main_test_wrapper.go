@@ -104,7 +104,7 @@ func getNumberNodes() (int, error) {
 
 	var conf nodesConf
 
-	path, err := launchnetPath("configs", insolarMigrationAdminMemberKeys)
+	path, err := launchnetPath("bootstrap.yaml")
 	if err != nil {
 		return 0, err
 	}
