@@ -79,14 +79,9 @@ func (s *Server) Serve() {
 	fatal(ctx, err, "failed to create components")
 
 	traceID := "main_" + utils.RandTraceID()
-	ctx, inslog := internal.Logger(ctx, cfg.Log, traceID, cmp.NodeRef, cmp.NodeRole)
+	ctx, inslog := inslogger.InitNodeLogger(ctx, cfg.Log, traceID, cmp.NodeRef, cmp.NodeRole)
 	ctx, jaegerFlush := internal.Jaeger(ctx, cfg.Tracer.Jaeger, traceID, cmp.NodeRef, cmp.NodeRole)
 	defer jaegerFlush()
-
-	ctx, inslog = inslogger.WithField(ctx, "nodeid", cmp.NodeRef)
-	ctx, inslog = inslogger.WithField(ctx, "role", cmp.NodeRole)
-	ctx = inslogger.SetLogger(ctx, inslog)
-	log.SetGlobalLogger(inslog)
 
 	var gracefulStop = make(chan os.Signal, 1)
 	signal.Notify(gracefulStop, syscall.SIGTERM)
