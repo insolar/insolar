@@ -183,6 +183,7 @@ func getBit(value []byte, index uint8) bool {
 // Panics if index is out of range (value size * 8).
 func setBit(value []byte, index uint8) {
 	if uint(index) >= uint(len(value)*8) {
+		// Usually, it's because of you try to split too deep
 		panic("index overflow")
 	}
 	byteIndex := uint(index / 8)
