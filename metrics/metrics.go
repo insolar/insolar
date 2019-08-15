@@ -36,7 +36,8 @@ import (
 	"github.com/insolar/insolar/log"
 )
 
-const insolarNamespace = "insolar"
+var insolarNamespace = "insolar"
+
 const insgorundNamespace = "insgorund"
 
 // Metrics is a component which serve metrics data to Prometheus.
@@ -52,6 +53,8 @@ type Metrics struct {
 
 // NewMetrics creates new Metrics component.
 func NewMetrics(ctx context.Context, cfg configuration.Metrics, registry *prometheus.Registry, nodeRole string) (*Metrics, error) {
+	insolarNamespace = cfg.Namespace
+
 	errlogger := &errorLogger{inslogger.FromContext(ctx)}
 	promhandler := promhttp.HandlerFor(registry, promhttp.HandlerOpts{ErrorLog: errlogger})
 
