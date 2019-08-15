@@ -222,3 +222,8 @@ func (s *Snapshot) Decode(buff []byte) error {
 
 	return nil
 }
+
+func SelectWorking(nodes []insolar.NetworkNode) []insolar.NetworkNode {
+	lists := splitNodes(nodes)
+	return lists[ListWorking]
+}
