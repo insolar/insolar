@@ -226,7 +226,7 @@ func (m *Member) migrationAdminCall(params map[string]interface{}, nameMethod st
 		if !ok && len(migrationDaemon) == 0 {
 			return nil, fmt.Errorf("incorect input: failed to get 'reference' param")
 		}
-		return migrationAdminContract.ActivateDaemon(strings.TrimSpace(migrationDaemon), migrationAdminContract.GetReference()), nil
+		return migrationAdminContract.ActivateDaemon(strings.TrimSpace(migrationDaemon), m.GetReference()), nil
 
 	case "deactivateDaemon":
 		migrationDaemon, ok := params["reference"].(string)
@@ -234,7 +234,7 @@ func (m *Member) migrationAdminCall(params map[string]interface{}, nameMethod st
 		if !ok && len(migrationDaemon) == 0 {
 			return nil, fmt.Errorf("incorect input: failed to get 'reference' param")
 		}
-		return migrationAdminContract.DeactivateDaemon(strings.TrimSpace(migrationDaemon), migrationAdminContract.GetReference()), nil
+		return migrationAdminContract.DeactivateDaemon(strings.TrimSpace(migrationDaemon), m.GetReference()), nil
 	}
 	return nil, fmt.Errorf("unknown method: migration.'%s'", nameMethod)
 }

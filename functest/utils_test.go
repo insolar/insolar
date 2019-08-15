@@ -549,15 +549,3 @@ func getDeposit(t *testing.T, memberRef string, tx string, anotherMember user) (
 	deposit, ok := deposits[tx].(map[string]interface{})
 	return deposit, nil
 }
-
-func setMigrationDaemonsRef() error {
-	for i, user := range migrationDaemons {
-		user.ref = root.ref
-		res, _, err := makeSignedRequest(&user, "member.get", nil)
-		if err != nil {
-			return errors.Wrap(err, "[ setup ] get member by public key failed ,key ")
-		}
-		migrationDaemons[i].ref = res.(map[string]interface{})["reference"].(string)
-	}
-	return nil
-}

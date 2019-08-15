@@ -35,7 +35,7 @@ import (
 	"testing"
 	"time"
 
-	yaml "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v2"
 
 	"github.com/pkg/errors"
 
@@ -175,6 +175,18 @@ var insgorundPath string
 func buildGinsiderCLI() (err error) {
 	insgorundPath, _, err = goplugintestutils.Build()
 	return errors.Wrap(err, "[ buildGinsiderCLI ] could't build ginsider CLI: ")
+}
+
+func setMigrationDaemonsRef() error {
+	for i, user := range migrationDaemons {
+		user.ref = root.ref
+		res, _, err := makeSignedRequest(&user, "member.get", nil)
+		if err != nil {
+			return errors.Wrap(err, "[ setup ] get member by public key failed ,key ")
+		}
+		migrationDaemons[i].ref = res.(map[string]interface{})["reference"].(string)
+	}
+	return nil
 }
 
 func stopInsolard() error {

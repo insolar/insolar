@@ -36,7 +36,7 @@ const (
 )
 
 // Create new Migration admin in genesis.
-func NewMigrationAdmin(migrationDaemons [insolar.GenesisAmountMigrationDaemonMembers]insolar.Reference, migrationAdminMember insolar.Reference) (*MigrationAdmin, error) {
+func New(migrationDaemons [insolar.GenesisAmountMigrationDaemonMembers]insolar.Reference, migrationAdminMember insolar.Reference) (*MigrationAdmin, error) {
 	daemonMigration := make(foundation.StableMap)
 	for i := 0; i < insolar.GenesisAmountMigrationDaemonMembers; i++ {
 		daemonMigration[migrationDaemons[i].String()] = StatusInactivate
@@ -55,7 +55,7 @@ func (mA MigrationAdmin) GetAllMigrationDaemon() (foundation.StableMap, error) {
 
 // Activate migration daemon.
 func (mA MigrationAdmin) ActivateDaemon(daemonMember string, caller insolar.Reference) error {
-	if caller == mA.MigrationAdminMember {
+	if caller != mA.MigrationAdminMember {
 		return fmt.Errorf(" only migration admin can activate migration demons ")
 	}
 	switch mA.MigrationDaemon[daemonMember] {
@@ -71,7 +71,7 @@ func (mA MigrationAdmin) ActivateDaemon(daemonMember string, caller insolar.Refe
 
 // Deactivate migration daemon.
 func (mA MigrationAdmin) DeactivateDaemon(daemonMember string, caller insolar.Reference) error {
-	if caller == mA.MigrationAdminMember {
+	if caller != mA.MigrationAdminMember {
 		return fmt.Errorf(" only migration admin can deactivate migration demons ")
 	}
 	switch mA.MigrationDaemon[daemonMember] {

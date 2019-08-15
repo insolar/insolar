@@ -145,7 +145,7 @@ func GetMigrationShardGenesisContractState(name string) insolar.GenesisContractS
 }
 
 func GetMigrationAdminGenesisContractState() insolar.GenesisContractState {
-	ma, err := migrationadmin.NewMigrationAdmin(genesisrefs.ContractMigrationDaemonMembers, genesisrefs.ContractMigrationAdminMember)
+	ma, err := migrationadmin.New(genesisrefs.ContractMigrationDaemonMembers, genesisrefs.ContractMigrationAdminMember)
 
 	if err != nil {
 		panic("failed to create migration admin contract instance")
