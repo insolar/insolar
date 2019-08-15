@@ -57,7 +57,7 @@ func TestIndexDB_DontLooseIndexAfterTruncate(t *testing.T) {
 	defer dbMock.Stop(ctx)
 	require.NoError(t, err)
 
-	indexStore := NewIndexDB(dbMock)
+	indexStore := NewIndexDB(dbMock, nil)
 
 	testPulse := insolar.GenesisPulse.PulseNumber
 	nextPulse := testPulse + 1
