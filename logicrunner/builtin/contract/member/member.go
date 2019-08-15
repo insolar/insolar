@@ -96,11 +96,10 @@ func (m *Member) verifySig(request Request, rawRequest []byte, signature string,
 var INSATTR_Call_API = true
 
 type Request struct {
-	JSONRPC  string `json:"jsonrpc"`
-	ID       int    `json:"id"`
-	Method   string `json:"method"`
-	Params   Params `json:"params"`
-	LogLevel string `json:"logLevel,omitempty"`
+	JSONRPC string `json:"jsonrpc"`
+	ID      uint64 `json:"id"`
+	Method  string `json:"method"`
+	Params  Params `json:"params"`
 }
 
 type Params struct {
@@ -109,6 +108,8 @@ type Params struct {
 	CallParams interface{} `json:"callParams,omitempty"`
 	Reference  string      `json:"reference"`
 	PublicKey  string      `json:"publicKey"`
+	LogLevel   string      `json:"logLevel,omitempty"`
+	Test       string      `json:"test,omitempty"`
 }
 
 // Call returns response on request. Method for authorized calls.
@@ -564,7 +565,7 @@ func (m *Member) FindDeposit(transactionsHash string) (bool, insolar.Reference, 
 		return true, dRef, nil
 	}
 
-	return false, insolar.Reference{}, nil
+	return false, *insolar.NewEmptyReference(), nil
 }
 
 // SetDeposit method stores deposit reference in member it belongs to

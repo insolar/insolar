@@ -21,6 +21,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/pkg/errors"
 
@@ -74,6 +75,7 @@ func (r *RetrySender) SendRole(
 		var lastPulse insolar.PulseNumber
 
 		received := false
+		updateUUID := false
 		for tries > 0 && !received {
 			var err error
 			lastPulse, err = r.waitForPulseChange(ctx, lastPulse)
@@ -82,9 +84,13 @@ func (r *RetrySender) SendRole(
 				break
 			}
 
+			if updateUUID {
+				msg.UUID = watermill.NewUUID()
+			}
 			reps, d := r.sender.SendRole(ctx, msg, role, ref)
 			received = tryReceive(ctx, reps, done, replyChan, r.responseCount)
 			tries--
+			updateUUID = true
 			d()
 		}
 

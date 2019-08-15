@@ -21,10 +21,11 @@ import (
 	"context"
 	"encoding/gob"
 	"fmt"
-	"github.com/insolar/insolar/network"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/insolar/insolar/network"
 
 	"github.com/ThreeDotsLabs/watermill"
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
@@ -190,7 +191,7 @@ func (mb *MessageBus) getReceiverNodes(ctx context.Context, parcel insolar.Parce
 		target := parcel.DefaultTarget()
 		// FIXME: @andreyromancev. 21.12.18. Temp hack. All messages should have a default target.
 		if target == nil {
-			target = &insolar.Reference{}
+			target = insolar.NewEmptyReference()
 		}
 		nodes, err = mb.JetCoordinator.QueryRole(ctx, parcel.DefaultRole(), *target.Record(), currentPulse.PulseNumber)
 		if err != nil {
