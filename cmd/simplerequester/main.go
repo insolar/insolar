@@ -2,11 +2,21 @@ package main
 
 import (
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
+	"io/ioutil"
+	"math/big"
+	"os"
+
+	"github.com/insolar/x-crypto/elliptic"
+
+	"github.com/insolar/x-crypto/x509"
+
+	"github.com/insolar/x-crypto/ecdsa"
+
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/log"
 	"github.com/spf13/pflag"
-	"io/ioutil"
 )
 
 var (
@@ -23,7 +33,7 @@ const defaultURL = "http://localhost:19101/api"
 
 func parseInputParams() {
 	pflag.StringVarP(&memberKeysPath, "memberkeys", "k", "", "path to file with Member keys")
-	pflag.StringVarP(&privateKeyHex, "privateKeyHex", "h", "", "private key in hex foramt")
+	pflag.StringVarP(&privateKeyHex, "privateKeyHex", "h", "", "private key in hex format")
 	pflag.StringVarP(&apiURL, "url", "u", defaultURL, "api url")
 	pflag.StringVarP(&paramsFile, "paramsFile", "f", "", "json file params")
 

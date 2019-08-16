@@ -1,14 +1,13 @@
 {
   "jsonrpc": "2.0",
   "id": 1,
-  "method": "api.call",
+  "method": "contract.call",
   "params": {
     "seed": "",
     "callSite": "wallet.getBalance",
     "callParams": {
-      "reference": "7gZQVdsiAanEnCFsENbuwobRssmDVQ4BTpMm7VvGzqG.11111111111111111111111111111111"
+      "reference": "5bFpwtZk7KG2ZiN1dxVtYB3WyCQiKip27758R2hBvxc.11111111111111111111111111111111"
     },
-
-    "reference": ""
+    "reference": "5bFpwtZk7KG2ZiN1dxVtYB3WyCQiKip27758R2hBvxc.11111111111111111111111111111111"
   }
 }
