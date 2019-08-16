@@ -289,10 +289,11 @@ func findClosed(reqs []record.CompositeFilamentRecord, result record.Result) (re
 		}
 	}
 
-	return record.CompositeFilamentRecord{}, fmt.Errorf(
-		"request %s not found",
-		result.Request.Record().DebugString(),
-	)
+	return record.CompositeFilamentRecord{},
+		&payload.CodedError{
+			Text: fmt.Sprintf("request %s not found", result.Request.Record().DebugString()),
+			Code: payload.CodeRequestNotFound,
+		}
 }
 
 // NotifyDetached sends notifications about detached requests that are ready for execution.
