@@ -55,6 +55,8 @@ import (
 	"math"
 	"time"
 
+	"github.com/insolar/insolar/log"
+
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/population"
 
 	"github.com/insolar/insolar/insolar"
@@ -373,6 +375,7 @@ func readQueueOrDone(ctx context.Context, needsSleep bool, sleep time.Duration,
 		case <-ctx.Done():
 			return nil, true // ctx.Err() ?
 		case np = <-q:
+			log.Warnf("REDCYR p.qForPhase2(%p) ->", q)
 			return np, false
 		case <-time.After(sleep):
 			return nil, false
@@ -382,6 +385,7 @@ func readQueueOrDone(ctx context.Context, needsSleep bool, sleep time.Duration,
 		case <-ctx.Done():
 			return nil, true // ctx.Err() ?
 		case np = <-q:
+			log.Warnf("REDCYR p.qForPhase2(%p) ->", q)
 			return np, false
 		default:
 			return nil, false

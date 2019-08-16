@@ -55,6 +55,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/insolar/insolar/log"
+
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/population"
 
@@ -326,10 +328,12 @@ func (c *Phase01Controller) workerSendPhase1ToDynamics(ctx context.Context) {
 
 	selfID := c.R.GetSelfNodeID()
 	for {
+		log.Warnf("REDCYR p.qForPhase1(%p)", c.qIntro)
 		select {
 		case <-ctx.Done():
 			return
 		case introTo := <-c.qIntro:
+			log.Warnf("REDCYR p.qForPhase1(%p) ->", c.qIntro)
 			if selfID == introTo.GetNodeID() {
 				continue
 			}

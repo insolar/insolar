@@ -56,6 +56,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/log"
+
 	"github.com/insolar/insolar/network/consensus/common/args"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/population"
 
@@ -214,6 +216,7 @@ func workerQueueFlusher(realm *core.FullRealm, q0 chan inspectors.InspectedVecto
 	realm.AddPoll(func(ctx context.Context) bool {
 		select {
 		case _, ok := <-q1:
+			log.Warnf("REDCYR p.qForPhase3(%p) ->", q1)
 			return ok
 		default:
 			return q1 != nil
@@ -261,6 +264,7 @@ outer:
 			log.Debug(">>>>workerPrePhase3: startOfPhase3")
 			break outer
 		case upd := <-c.queueTrustUpdated:
+			log.Warnf("REDCYR p.qForPhase3(%p) ->", c.queueTrustUpdated)
 			switch {
 			case upd.IsPingSignal(): // ping indicates arrival of Phase2 packet, to support chasing
 				// TODO chasing
@@ -342,6 +346,7 @@ outer:
 			log.Debug(">>>>workerPrePhase3: ctx.Done")
 			return nil // ctx.Err() ?
 		case <-c.queueTrustUpdated:
+			log.Warnf("REDCYR p.qForPhase3(%p) ->", c.queueTrustUpdated)
 		case <-time.After(c.loopingMinimalDelay):
 		}
 	}
@@ -364,6 +369,7 @@ func (c *Phase3Controller) workerRescanForMissing(ctx context.Context, missing c
 		case <-ctx.Done():
 			return
 		case sig := <-c.queueTrustUpdated:
+			log.Warnf("REDCYR p.qForPhase3(%p) ->", c.queueTrustUpdated)
 			if sig.IsPingSignal() {
 				continue
 			}

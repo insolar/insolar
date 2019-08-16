@@ -53,6 +53,8 @@ package phasebundle
 import (
 	"fmt"
 
+	"github.com/insolar/insolar/log"
+
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/population"
 	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/ph2ctl"
@@ -83,6 +85,7 @@ type populationEventHandler struct {
 func (p *populationEventHandler) queueToPhase1(n population.MemberPacketSender) {
 	select {
 	case p.qForPhase1 <- n:
+		log.Warnf("REDCYR p.qForPhase1(%p) <- n", p.qForPhase1)
 	default:
 		panic("channel overflow: qForPhase1")
 	}
@@ -91,6 +94,7 @@ func (p *populationEventHandler) queueToPhase1(n population.MemberPacketSender) 
 func (p *populationEventHandler) queueToPhase2(n *population.NodeAppearance) {
 	select {
 	case p.qForPhase2 <- n:
+		log.Warnf("REDCYR p.qForPhase2(%p) <- n", p.qForPhase2)
 	default:
 		panic("channel overflow: qForPhase2")
 	}
@@ -99,6 +103,7 @@ func (p *populationEventHandler) queueToPhase2(n *population.NodeAppearance) {
 func (p *populationEventHandler) queueToPhase3(v ph2ctl.UpdateSignal) {
 	select {
 	case p.qForPhase3 <- v:
+		log.Warnf("REDCYR p.qForPhase3(%p) <- n", p.qForPhase3)
 	default:
 		panic("channel overflow: qForPhase3")
 	}
