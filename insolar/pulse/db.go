@@ -28,10 +28,10 @@ import (
 
 // DB is a DB storage implementation. It saves pulses to disk and does not allow removal.
 type DB struct {
-	db store.DB
+	lock sync.RWMutex
+	db   store.DB
 
 	latest *insolar.Pulse
-	lock   sync.RWMutex
 }
 
 type pulseKey insolar.PulseNumber
