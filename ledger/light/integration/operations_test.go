@@ -27,7 +27,7 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 )
 
-func callSetCode(ctx context.Context, s *Server) (payload.Payload, record.Virtual) {
+func CallSetCode(ctx context.Context, s *Server) (payload.Payload, record.Virtual) {
 	code := make([]byte, 100)
 	_, err := rand.Read(code)
 	panicIfErr(err)
@@ -54,7 +54,7 @@ func callSetCode(ctx context.Context, s *Server) (payload.Payload, record.Virtua
 	return nil, rec
 }
 
-func callGetCode(ctx context.Context, s *Server, id insolar.ID) payload.Payload {
+func CallGetCode(ctx context.Context, s *Server, id insolar.ID) payload.Payload {
 	reps, done := s.Send(ctx, &payload.GetCode{
 		CodeID: id,
 	})
@@ -74,9 +74,11 @@ func callGetCode(ctx context.Context, s *Server, id insolar.ID) payload.Payload 
 	return nil
 }
 
-func callSetIncomingRequest(
-	ctx context.Context, s *Server, objectID, reasonID insolar.ID, isCreation, isAPI bool,
-) (payload.Payload, record.Virtual) {
+// func MakeSetIncomingRequestFromAPI(objectID, reasonID insolar.ID, isCreation bool) (payload.SetIncomingRequest, record.Virtual) {
+// 	return MakeSetIncomingRequest(objectID, reasonID, insolar.ID{}, isCreation, true)
+// }
+
+func MakeSetIncomingRequest(objectID, reasonID insolar.ID, reasonObjectID insolar.ID, isCreation, isAPI bool) (payload.SetIncomingRequest, record.Virtual) {
 	args := make([]byte, 100)
 	_, err := rand.Read(args)
 	panicIfErr(err)
@@ -85,36 +87,54 @@ func callSetIncomingRequest(
 		Arguments: args,
 		Reason:    *insolar.NewReference(reasonID),
 	}
+
 	if isCreation {
 		req.CallType = record.CTSaveAsChild
 	} else {
 		req.Object = insolar.NewReference(objectID)
 	}
+
 	if isAPI {
 		req.APINode = gen.Reference()
+	} else {
+		req.Caller = *insolar.NewReference(reasonObjectID)
 	}
+
 	rec := record.Wrap(&req)
-	reps, done := s.Send(ctx, &payload.SetIncomingRequest{
+	pl := payload.SetIncomingRequest{
 		Request: rec,
-	})
-	defer done()
-
-	rep := <-reps
-	pl, err := payload.UnmarshalFromMeta(rep.Payload)
-	panicIfErr(err)
-	switch pl.(type) {
-	case *payload.Error:
-		return pl, rec
-	case *payload.RequestInfo:
-		return pl, rec
-	default:
-		panic(fmt.Sprintf("received unexpected reply %T", pl))
 	}
-
-	return nil, record.Virtual{}
+	return pl, rec
 }
 
-func callSetOutgoingRequest(
+func MakeSetOutgoingRequest(
+	objectID, reasonID insolar.ID, detached bool,
+) (payload.SetOutgoingRequest, record.Virtual) {
+	args := make([]byte, 100)
+	_, err := rand.Read(args)
+	panicIfErr(err)
+
+	rm := record.ReturnResult
+	if detached {
+		rm = record.ReturnSaga
+	}
+	req := record.OutgoingRequest{
+		Caller:     *insolar.NewReference(objectID),
+		Arguments:  args,
+		ReturnMode: rm,
+		Reason:     *insolar.NewReference(reasonID),
+		APINode:    gen.Reference(),
+	}
+
+	rec := record.Wrap(&req)
+
+	pl := payload.SetOutgoingRequest{
+		Request: rec,
+	}
+	return pl, rec
+}
+
+func CallSetOutgoingRequest(
 	ctx context.Context, s *Server, objectID, reasonID insolar.ID, detached bool,
 ) (payload.Payload, record.Virtual) {
 	args := make([]byte, 100)
@@ -151,9 +171,7 @@ func callSetOutgoingRequest(
 	return nil, record.Virtual{}
 }
 
-func callSetResult(
-	ctx context.Context, s *Server, objectID, requestID insolar.ID,
-) (payload.Payload, record.Virtual) {
+func MakeSetResult(objectID, requestID insolar.ID) (payload.SetResult, record.Virtual) {
 	data := make([]byte, 100)
 	_, err := rand.Read(data)
 	panicIfErr(err)
@@ -164,39 +182,28 @@ func callSetResult(
 	})
 	buf, err := rec.Marshal()
 	panicIfErr(err)
-	reps, done := s.Send(ctx, &payload.SetResult{
+	pl := payload.SetResult{
 		Result: buf,
-	})
-	defer done()
-
-	rep := <-reps
-	pl, err := payload.UnmarshalFromMeta(rep.Payload)
-	panicIfErr(err)
-	switch pl.(type) {
-	case *payload.Error:
-		return pl, rec
-	case *payload.ResultInfo:
-		return pl, rec
-	default:
-		panic(fmt.Sprintf("received unexpected reply %T", pl))
 	}
-
-	return nil, record.Virtual{}
+	return pl, rec
 }
 
-func sendMessage(
+func SendMessage(
 	ctx context.Context, s *Server, msg payload.Payload,
 ) payload.Payload {
 	reps, done := s.Send(ctx, msg)
 	defer done()
 
-	rep := <-reps
+	rep, ok := <-reps
+	if !ok {
+		panic("no reply")
+	}
 	pl, err := payload.UnmarshalFromMeta(rep.Payload)
 	panicIfErr(err)
-
 	return pl
 }
-func callGetRequest(ctx context.Context, s *Server, requestID insolar.ID) payload.Payload {
+
+func CallGetRequest(ctx context.Context, s *Server, requestID insolar.ID) payload.Payload {
 	reps, done := s.Send(ctx, &payload.GetRequest{
 		RequestID: requestID,
 	})
@@ -217,7 +224,7 @@ func callGetRequest(ctx context.Context, s *Server, requestID insolar.ID) payloa
 	return nil
 }
 
-func callActivateObject(ctx context.Context, s *Server, objectID insolar.ID) (payload.Payload, record.Virtual) {
+func CallActivateObject(ctx context.Context, s *Server, objectID insolar.ID) (payload.Payload, record.Virtual) {
 	mem := make([]byte, 100)
 	_, err := rand.Read(mem)
 	panicIfErr(err)
@@ -258,7 +265,7 @@ func callActivateObject(ctx context.Context, s *Server, objectID insolar.ID) (pa
 	return nil, rec
 }
 
-func callAmendObject(ctx context.Context, s *Server, objectID, requestID insolar.ID) (payload.Payload, record.Virtual) {
+func CallAmendObject(ctx context.Context, s *Server, objectID, requestID insolar.ID) (payload.Payload, record.Virtual) {
 	mem := make([]byte, 100)
 	_, err := rand.Read(mem)
 	panicIfErr(err)
@@ -298,7 +305,7 @@ func callAmendObject(ctx context.Context, s *Server, objectID, requestID insolar
 	return nil, rec
 }
 
-func callDeactivateObject(ctx context.Context, s *Server, objectID, requestID insolar.ID) (payload.Payload, record.Virtual) {
+func CallDeactivateObject(ctx context.Context, s *Server, objectID, requestID insolar.ID) (payload.Payload, record.Virtual) {
 	mem := make([]byte, 100)
 	_, err := rand.Read(mem)
 	panicIfErr(err)
@@ -338,7 +345,7 @@ func callDeactivateObject(ctx context.Context, s *Server, objectID, requestID in
 	return pl, rec
 }
 
-func callGetObject(ctx context.Context, s *Server, objectID insolar.ID) (payload.Payload, payload.Payload) {
+func CallGetObject(ctx context.Context, s *Server, objectID insolar.ID) (payload.Payload, payload.Payload) {
 	reps, d := s.Send(ctx, &payload.GetObject{
 		ObjectID: objectID,
 	})
@@ -374,7 +381,7 @@ func callGetObject(ctx context.Context, s *Server, objectID insolar.ID) (payload
 	return lifeline, state
 }
 
-func callGetPendings(ctx context.Context, s *Server, objectID insolar.ID) payload.Payload {
+func CallGetPendings(ctx context.Context, s *Server, objectID insolar.ID) payload.Payload {
 	reps, done := s.Send(ctx, &payload.GetPendings{
 		ObjectID: objectID,
 	})
@@ -398,5 +405,25 @@ func callGetPendings(ctx context.Context, s *Server, objectID insolar.ID) payloa
 func panicIfErr(err error) {
 	if err != nil {
 		panic(err)
+	}
+}
+
+func RequireNotError(pl payload.Payload) {
+	if err, ok := pl.(*payload.Error); ok {
+		panic(err.Text)
+	}
+}
+
+func RequireError(pl payload.Payload) {
+	if _, ok := pl.(*payload.Error); !ok {
+		panic("expected error")
+	}
+}
+
+func RequireErrorCode(pl payload.Payload, expectedCode uint32) {
+	RequireError(pl)
+	err, _ := pl.(*payload.Error)
+	if err.Code != expectedCode {
+		panic(fmt.Sprintf("expected error code %d, got %d", expectedCode, err.Code))
 	}
 }

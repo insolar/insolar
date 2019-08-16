@@ -1,128 +1,118 @@
-/*
- * The Clear BSD License
- *
- * Copyright (c) 2019 Insolar Technologies
- *
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without modification, are permitted (subject to the limitations in the disclaimer below) provided that the following conditions are met:
- *
- *  Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
- *  Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
- *  Neither the name of Insolar Technologies nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
- *
- * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- */
+//
+// Modified BSD 3-Clause Clear License
+//
+// Copyright (c) 2019 Insolar Technologies GmbH
+//
+// All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without modification,
+// are permitted (subject to the limitations in the disclaimer below) provided that
+// the following conditions are met:
+//  * Redistributions of source code must retain the above copyright notice, this list
+//    of conditions and the following disclaimer.
+//  * Redistributions in binary form must reproduce the above copyright notice, this list
+//    of conditions and the following disclaimer in the documentation and/or other materials
+//    provided with the distribution.
+//  * Neither the name of Insolar Technologies GmbH nor the names of its contributors
+//    may be used to endorse or promote products derived from this software without
+//    specific prior written permission.
+//
+// NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED
+// BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS
+// AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+// INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY
+// AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL
+// THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+// INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+// OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+//
+// Notwithstanding any other provisions of this license, it is prohibited to:
+//    (a) use this software,
+//
+//    (b) prepare modifications and derivative works of this software,
+//
+//    (c) distribute this software (including without limitation in source code, binary or
+//        object code form), and
+//
+//    (d) reproduce copies of this software
+//
+//    for any commercial purposes, and/or
+//
+//    for the purposes of making available this software to third parties as a service,
+//    including, without limitation, any software-as-a-service, platform-as-a-service,
+//    infrastructure-as-a-service or other similar online service, irrespective of
+//    whether it competes with the products or services of Insolar Technologies GmbH.
+//
 
 package rules
 
 import (
 	"testing"
 
-	network2 "github.com/insolar/insolar/network"
-
-	node2 "github.com/insolar/insolar/network/node"
+	"github.com/insolar/insolar/insolar/gen"
+	"github.com/insolar/insolar/network/node"
 
 	"github.com/insolar/insolar/certificate"
-	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/testutils"
-	"github.com/insolar/insolar/testutils/network"
 	"github.com/stretchr/testify/assert"
 )
 
-var nilref = insolar.Reference{}
-
 func TestRules_CheckMinRole(t *testing.T) {
-	cm := component.Manager{}
-	r := NewRules()
-	certManager := testutils.NewCertificateManagerMock(t)
 	cert := testutils.NewCertificateMock(t)
-	nodeKeeper := network.NewNodeKeeperMock(t)
-	accessor := network.NewAccessorMock(t)
-	nodeKeeper.GetAccessorFunc = func() (r network2.Accessor) { return accessor }
-	accessor.GetActiveNodesFunc = func() []insolar.NetworkNode {
-		return []insolar.NetworkNode{
-			node2.NewNode(nilref, insolar.StaticRoleHeavyMaterial, nil, "", ""),
-			node2.NewNode(nilref, insolar.StaticRoleLightMaterial, nil, "", ""),
-			node2.NewNode(nilref, insolar.StaticRoleLightMaterial, nil, "", ""),
-			node2.NewNode(nilref, insolar.StaticRoleVirtual, nil, "", ""),
-			node2.NewNode(nilref, insolar.StaticRoleVirtual, nil, "", ""),
-		}
+	nodes := []insolar.NetworkNode{
+		node.NewNode(gen.Reference(), insolar.StaticRoleHeavyMaterial, nil, "", ""),
+		node.NewNode(gen.Reference(), insolar.StaticRoleLightMaterial, nil, "", ""),
+		node.NewNode(gen.Reference(), insolar.StaticRoleLightMaterial, nil, "", ""),
+		node.NewNode(gen.Reference(), insolar.StaticRoleVirtual, nil, "", ""),
+		node.NewNode(gen.Reference(), insolar.StaticRoleVirtual, nil, "", ""),
 	}
-	cm.Inject(r, certManager, nodeKeeper)
-
-	certManager.GetCertificateMock.Set(func() (r insolar.Certificate) {
-		return cert
-	})
 
 	cert.GetMinRolesMock.Set(func() (r uint, r1 uint, r2 uint) {
 		return 1, 0, 0
 	})
 
-	nodeKeeper.GetWorkingNodesMock.Set(func() (r []insolar.NetworkNode) {
-		nodes, _ := getDiscoveryNodes(5)
-		nodes = append(nodes, newNode(250))
-		return nodes
-	})
-
-	result := r.CheckMinRole()
+	result := CheckMinRole(cert, nodes)
 	assert.True(t, result)
 }
 
 func TestRules_CheckMajorityRule(t *testing.T) {
-	cm := component.Manager{}
-	r := NewRules()
-	certManager := testutils.NewCertificateManagerMock(t)
+	netNodes, discoveryNodes := getDiscoveryNodes(5)
 	cert := testutils.NewCertificateMock(t)
-
-	certManager.GetCertificateMock.Set(func() (r insolar.Certificate) {
-		return cert
-	})
-
 	cert.GetDiscoveryNodesMock.Set(func() (r []insolar.DiscoveryNode) {
-		_, nodes := getDiscoveryNodes(5)
-		return nodes
+		return discoveryNodes
 	})
 
 	cert.GetMajorityRuleMock.Set(func() (r int) {
 		return 4
 	})
 
-	a := network.NewAccessorMock(t)
+	netNodes = append(netNodes, newNode(gen.Reference()))
 
-	nodeKeeper := network.NewNodeKeeperMock(t)
-	nodeKeeper.GetAccessorFunc = func() (r network2.Accessor) { return a }
-	a.GetActiveNodesFunc = func() (r []insolar.NetworkNode) {
-		nodes, _ := getDiscoveryNodes(5)
-		nodes = append(nodes, newNode(250))
-		return nodes
-	}
-
-	cm.Inject(r, certManager, nodeKeeper)
-
-	result, count := r.CheckMajorityRule()
+	result, count := CheckMajorityRule(cert, netNodes)
 	assert.True(t, result)
 	assert.Equal(t, 5, count)
 }
 
 func getDiscoveryNodes(count int) ([]insolar.NetworkNode, []insolar.DiscoveryNode) {
-	result1 := make([]insolar.NetworkNode, count)
-	result2 := make([]insolar.DiscoveryNode, count)
+	netNodes := make([]insolar.NetworkNode, count)
+	discoveryNodes := make([]insolar.DiscoveryNode, count)
 
 	for i := 0; i < count; i++ {
-		n := newNode(i)
-		d := certificate.NewBootstrapNode(nil, "", "127.0.0.1:3000", n.ID().String())
-		result1[i] = n
-		result2[i] = d
+		n := newNode(gen.Reference())
+		d := certificate.NewBootstrapNode(nil, "", "127.0.0.1:3000", n.ID().String(), n.Role().String())
+		netNodes[i] = n
+		discoveryNodes[i] = d
 	}
 
-	return result1, result2
+	return netNodes, discoveryNodes
 }
 
-func newNode(id int) insolar.NetworkNode {
-	recordRef := insolar.Reference{byte(id)}
-	node := node2.NewNode(recordRef, insolar.StaticRoleVirtual, nil, "127.0.0.1:3000", "")
-	return node
+func newNode(ref insolar.Reference) insolar.NetworkNode {
+	n := node.NewNode(ref, insolar.StaticRoleVirtual, nil, "127.0.0.1:3000", "")
+	return n
 }

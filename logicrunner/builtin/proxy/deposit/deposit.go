@@ -43,11 +43,29 @@ type ContractConstructorHolder struct {
 
 // AsChild saves object as child
 func (r *ContractConstructorHolder) AsChild(objRef insolar.Reference) (*Deposit, error) {
-	ref, err := common.CurrentProxyCtx.SaveAsChild(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
+	ref, ret, err := common.CurrentProxyCtx.SaveAsChild(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
 	if err != nil {
 		return nil, err
 	}
-	return &Deposit{Reference: ref}, nil
+
+	var constructorError *foundation.Error
+	resultContainer := foundation.Result{
+		Returns: []interface{}{&constructorError},
+	}
+	err = common.CurrentProxyCtx.Deserialize(ret, &resultContainer)
+	if err != nil {
+		return nil, err
+	}
+
+	if resultContainer.Error != nil {
+		return nil, resultContainer.Error
+	}
+
+	if constructorError != nil {
+		return nil, constructorError
+	}
+
+	return &Deposit{Reference: *ref}, nil
 }
 
 // GetObject returns proxy object
@@ -141,12 +159,12 @@ func (r *Deposit) GetCode() (insolar.Reference, error) {
 }
 
 // GetTxHash is proxy generated method
-func (r *Deposit) GetTxHash() (string, error) {
+func (r *Deposit) GetTxHashAsMutable() (string, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
-	ret := [2]interface{}{}
+	ret := make([]interface{}, 2)
 	var ret0 string
 	ret[0] = &ret0
 	var ret1 *foundation.Error
@@ -162,11 +180,17 @@ func (r *Deposit) GetTxHash() (string, error) {
 		return ret0, err
 	}
 
-	err = common.CurrentProxyCtx.Deserialize(res, &ret)
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
 	if err != nil {
 		return ret0, err
 	}
-
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return ret0, err
+	}
 	if ret1 != nil {
 		return ret0, ret1
 	}
@@ -193,12 +217,12 @@ func (r *Deposit) GetTxHashNoWait() error {
 }
 
 // GetTxHashAsImmutable is proxy generated method
-func (r *Deposit) GetTxHashAsImmutable() (string, error) {
+func (r *Deposit) GetTxHash() (string, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
-	ret := [2]interface{}{}
+	ret := make([]interface{}, 2)
 	var ret0 string
 	ret[0] = &ret0
 	var ret1 *foundation.Error
@@ -214,11 +238,17 @@ func (r *Deposit) GetTxHashAsImmutable() (string, error) {
 		return ret0, err
 	}
 
-	err = common.CurrentProxyCtx.Deserialize(res, &ret)
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
 	if err != nil {
 		return ret0, err
 	}
-
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return ret0, err
+	}
 	if ret1 != nil {
 		return ret0, ret1
 	}
@@ -226,12 +256,12 @@ func (r *Deposit) GetTxHashAsImmutable() (string, error) {
 }
 
 // GetAmount is proxy generated method
-func (r *Deposit) GetAmount() (string, error) {
+func (r *Deposit) GetAmountAsMutable() (string, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
-	ret := [2]interface{}{}
+	ret := make([]interface{}, 2)
 	var ret0 string
 	ret[0] = &ret0
 	var ret1 *foundation.Error
@@ -247,11 +277,17 @@ func (r *Deposit) GetAmount() (string, error) {
 		return ret0, err
 	}
 
-	err = common.CurrentProxyCtx.Deserialize(res, &ret)
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
 	if err != nil {
 		return ret0, err
 	}
-
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return ret0, err
+	}
 	if ret1 != nil {
 		return ret0, ret1
 	}
@@ -278,12 +314,12 @@ func (r *Deposit) GetAmountNoWait() error {
 }
 
 // GetAmountAsImmutable is proxy generated method
-func (r *Deposit) GetAmountAsImmutable() (string, error) {
+func (r *Deposit) GetAmount() (string, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
-	ret := [2]interface{}{}
+	ret := make([]interface{}, 2)
 	var ret0 string
 	ret[0] = &ret0
 	var ret1 *foundation.Error
@@ -299,11 +335,17 @@ func (r *Deposit) GetAmountAsImmutable() (string, error) {
 		return ret0, err
 	}
 
-	err = common.CurrentProxyCtx.Deserialize(res, &ret)
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
 	if err != nil {
 		return ret0, err
 	}
-
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return ret0, err
+	}
 	if ret1 != nil {
 		return ret0, ret1
 	}
@@ -311,12 +353,12 @@ func (r *Deposit) GetAmountAsImmutable() (string, error) {
 }
 
 // Itself is proxy generated method
-func (r *Deposit) Itself() (interface{}, error) {
+func (r *Deposit) ItselfAsMutable() (interface{}, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
-	ret := [2]interface{}{}
+	ret := make([]interface{}, 2)
 	var ret0 interface{}
 	ret[0] = &ret0
 	var ret1 *foundation.Error
@@ -332,11 +374,17 @@ func (r *Deposit) Itself() (interface{}, error) {
 		return ret0, err
 	}
 
-	err = common.CurrentProxyCtx.Deserialize(res, &ret)
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
 	if err != nil {
 		return ret0, err
 	}
-
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return ret0, err
+	}
 	if ret1 != nil {
 		return ret0, ret1
 	}
@@ -363,12 +411,12 @@ func (r *Deposit) ItselfNoWait() error {
 }
 
 // ItselfAsImmutable is proxy generated method
-func (r *Deposit) ItselfAsImmutable() (interface{}, error) {
+func (r *Deposit) Itself() (interface{}, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
-	ret := [2]interface{}{}
+	ret := make([]interface{}, 2)
 	var ret0 interface{}
 	ret[0] = &ret0
 	var ret1 *foundation.Error
@@ -384,11 +432,17 @@ func (r *Deposit) ItselfAsImmutable() (interface{}, error) {
 		return ret0, err
 	}
 
-	err = common.CurrentProxyCtx.Deserialize(res, &ret)
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
 	if err != nil {
 		return ret0, err
 	}
-
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return ret0, err
+	}
 	if ret1 != nil {
 		return ret0, ret1
 	}
@@ -405,7 +459,7 @@ func (r *Deposit) Confirm(migrationDaemonIndex int, migrationDaemonRef string, t
 
 	var argsSerialized []byte
 
-	ret := [1]interface{}{}
+	ret := make([]interface{}, 1)
 	var ret0 *foundation.Error
 	ret[0] = &ret0
 
@@ -419,11 +473,17 @@ func (r *Deposit) Confirm(migrationDaemonIndex int, migrationDaemonRef string, t
 		return err
 	}
 
-	err = common.CurrentProxyCtx.Deserialize(res, &ret)
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
 	if err != nil {
 		return err
 	}
-
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return err
+	}
 	if ret0 != nil {
 		return ret0
 	}
@@ -463,7 +523,7 @@ func (r *Deposit) ConfirmAsImmutable(migrationDaemonIndex int, migrationDaemonRe
 
 	var argsSerialized []byte
 
-	ret := [1]interface{}{}
+	ret := make([]interface{}, 1)
 	var ret0 *foundation.Error
 	ret[0] = &ret0
 
@@ -477,13 +537,145 @@ func (r *Deposit) ConfirmAsImmutable(migrationDaemonIndex int, migrationDaemonRe
 		return err
 	}
 
-	err = common.CurrentProxyCtx.Deserialize(res, &ret)
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
+	if err != nil {
+		return err
+	}
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return err
+	}
+	if ret0 != nil {
+		return ret0
+	}
+	return nil
+}
+
+// Transfer is proxy generated method
+func (r *Deposit) Transfer(amountStr string, wallerRef insolar.Reference) (interface{}, error) {
+	var args [2]interface{}
+	args[0] = amountStr
+	args[1] = wallerRef
+
+	var argsSerialized []byte
+
+	ret := make([]interface{}, 2)
+	var ret0 interface{}
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "Transfer", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return ret0, err
+	}
+
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
+	if err != nil {
+		return ret0, err
+	}
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return ret0, err
+	}
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
+}
+
+// TransferNoWait is proxy generated method
+func (r *Deposit) TransferNoWait(amountStr string, wallerRef insolar.Reference) error {
+	var args [2]interface{}
+	args[0] = amountStr
+	args[1] = wallerRef
+
+	var argsSerialized []byte
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
 	if err != nil {
 		return err
 	}
 
-	if ret0 != nil {
-		return ret0
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "Transfer", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// TransferAsImmutable is proxy generated method
+func (r *Deposit) TransferAsImmutable(amountStr string, wallerRef insolar.Reference) (interface{}, error) {
+	var args [2]interface{}
+	args[0] = amountStr
+	args[1] = wallerRef
+
+	var argsSerialized []byte
+
+	ret := make([]interface{}, 2)
+	var ret0 interface{}
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "Transfer", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return ret0, err
+	}
+
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
+	if err != nil {
+		return ret0, err
+	}
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return ret0, err
+	}
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
+}
+
+// Accept is proxy generated method
+func (r *Deposit) Accept(amountStr string) error {
+	var args [1]interface{}
+	args[0] = amountStr
+
+	var argsSerialized []byte
+
+	ret := make([]interface{}, 1)
+	var ret0 *foundation.Error
+	ret[0] = &ret0
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, true, false, true, "Accept", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
 	}
 	return nil
 }

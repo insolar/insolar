@@ -61,21 +61,21 @@ func TestNew(t *testing.T) {
 func mockPulseAccessor(t minimock.Tester) pulse.Accessor {
 	pulseAccessor := pulse.NewAccessorMock(t)
 	currentPulse := insolar.FirstPulseNumber
-	pulseAccessor.LatestFunc = func(p context.Context) (r insolar.Pulse, r1 error) {
+	pulseAccessor.LatestMock.Set(func(p context.Context) (r insolar.Pulse, r1 error) {
 		return insolar.Pulse{
 			PulseNumber:     insolar.PulseNumber(currentPulse),
 			NextPulseNumber: insolar.PulseNumber(currentPulse + 1),
 		}, nil
-	}
+	})
 
 	return pulseAccessor
 }
 
 func mockJetCoordinator(t minimock.Tester) jet.Coordinator {
 	coordinator := jet.NewCoordinatorMock(t)
-	coordinator.MeFunc = func() (r insolar.Reference) {
-		return testutils.RandomRef()
-	}
+	coordinator.MeMock.Set(func() (r insolar.Reference) {
+		return gen.Reference()
+	})
 	return coordinator
 }
 
@@ -163,7 +163,7 @@ func TestContractRequester_SendRequest(t *testing.T) {
 	}
 }
 
-func TestContractRequester_CallMethod_Timeout(t *testing.T) {
+func TestContractRequester_Call_Timeout(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	mc := minimock.NewController(t)
 	defer mc.Finish()
@@ -178,12 +178,12 @@ func TestContractRequester_CallMethod_Timeout(t *testing.T) {
 	cr.PulseAccessor = mockPulseAccessor(mc)
 	cr.JetCoordinator = jet.NewCoordinatorMock(t)
 
-	ref := testutils.RandomRef()
-	prototypeRef := testutils.RandomRef()
+	ref := gen.Reference()
+	prototypeRef := gen.Reference()
 	method := testutils.RandomString()
 
 	mb := testutils.NewMessageBusMock(mc)
-	mb.SendFunc = func(ctx context.Context, m insolar.Message, opt *insolar.MessageSendOptions) (insolar.Reply, error) {
+	mb.SendMock.Set(func(ctx context.Context, m insolar.Message, opt *insolar.MessageSendOptions) (insolar.Reply, error) {
 		request := m.(*message.CallMethod).IncomingRequest
 
 		hash, err := cr.calcRequestHash(request)
@@ -191,7 +191,7 @@ func TestContractRequester_CallMethod_Timeout(t *testing.T) {
 		requestRef := insolar.NewReference(*insolar.NewID(insolar.FirstPulseNumber, hash[:]))
 
 		return &reply.RegisterRequest{Request: *requestRef}, nil
-	}
+	})
 	cr.MessageBus = mb
 
 	msg := &message.CallMethod{
@@ -204,7 +204,7 @@ func TestContractRequester_CallMethod_Timeout(t *testing.T) {
 		},
 	}
 
-	_, err = cr.CallMethod(ctx, msg)
+	_, _, err = cr.Call(ctx, msg)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "canceled")
 	require.Contains(t, err.Error(), "timeout")
@@ -221,7 +221,7 @@ func TestReceiveResult(t *testing.T) {
 	mc := minimock.NewController(t)
 	defer mc.Finish()
 
-	reqRef := testutils.RandomRef()
+	reqRef := gen.Reference()
 	var reqHash [insolar.RecordHashSize]byte
 	copy(reqHash[:], reqRef.Record().Hash())
 

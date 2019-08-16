@@ -16,10 +16,6 @@
 
 package configuration
 
-import (
-	"time"
-)
-
 // Storage configures Ledger's storage.
 type Storage struct {
 	// DataDirectory is a directory where database's files live.
@@ -39,23 +35,6 @@ type JetSplit struct {
 	DepthLimit uint8
 }
 
-// Backoff configures retry backoff algorithm
-type Backoff struct {
-	Factor float64
-	// Jitter eases contention by randomizing backoff steps
-	Jitter bool
-	// Min and Max are the minimum and maximum values of the counter
-	Min, Max time.Duration
-	// MaxAttempts holds max count of attempts for a instance of Backoff
-	MaxAttempts int
-}
-
-// Exporter holds configuration of Exporter
-type Exporter struct {
-	// ExportLag is lag in second before we start to export pulse
-	ExportLag uint32
-}
-
 // Ledger holds configuration for ledger.
 type Ledger struct {
 	// Storage defines storage configuration.
@@ -71,8 +50,46 @@ type Ledger struct {
 	// IMPORTANT: It should be the same on ALL nodes.
 	LightChainLimit int
 
-	// Exporter holds configuration of Exporter
-	Exporter Exporter
+	// Backup holds configuration of BackupMaker
+	Backup Backup
+
+	// CleanerDelay holds value of pulses, that should happen before end of LightChainLimit and start
+	// of LME's data cleaning
+	CleanerDelay int
+}
+
+// Backup holds configuration for backuping.
+type Backup struct {
+	// Enabled switches on backuping
+	Enabled bool
+
+	// TmpDirectory is directory for tmp storage of backup data. Must be created
+	TmpDirectory string
+
+	// TargetDirectory is directory where backups will be moved to
+	TargetDirectory string
+
+	// MetaInfoFile contains meta info about backup. It will be in json format
+	MetaInfoFile string
+
+	// ConfirmFile: we wait this file being created when backup was saved on remote host
+	ConfirmFile string
+
+	// BackupFile is file with incremental backup data
+	BackupFile string
+
+	// DirNameTemplate is template for saving current incremental backup. Should be like "pulse-%d"
+	DirNameTemplate string
+
+	// BackupWaitPeriod - how much time we will wait for appearing of file ConfirmFile
+	BackupWaitPeriod uint
+
+	// Paths:
+	// Every incremental backup live in  TargetDirectory/"DirNameTemplate"%<pulse_number>
+	// and it contains:
+	// incr.bkp - backup file
+	// MetaInfoFile - meta info about current backup
+	// ConfirmFile - must be set from outside. When it appear it means that we successfully saved the backup
 }
 
 // NewLedger creates new default Ledger configuration.
@@ -91,8 +108,14 @@ func NewLedger() Ledger {
 		},
 		LightChainLimit: 5, // 5 pulses
 
-		Exporter: Exporter{
-			ExportLag: 40, // 40 seconds
+		Backup: Backup{
+			Enabled:          false,
+			DirNameTemplate:  "pulse-%d",
+			BackupWaitPeriod: 60,
+			MetaInfoFile:     "meta.json",
+			BackupFile:       "incr.bkp",
 		},
+
+		CleanerDelay: 3, // 3 pulses
 	}
 }

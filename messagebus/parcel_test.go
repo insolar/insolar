@@ -20,6 +20,7 @@ import (
 	"crypto"
 	"testing"
 
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/message"
 
 	"github.com/insolar/insolar/component"
@@ -35,13 +36,13 @@ func Test_parcelFactory_Create_CheckLogLevel(t *testing.T) {
 
 	/* Prepare CryptographyService mock, Parcel factory, DelegationToken factory */
 	mock := testutils.NewCryptographyServiceMock(t)
-	mock.SignFunc = func(p []byte) (r *insolar.Signature, r1 error) {
+	mock.SignMock.Set(func(p []byte) (r *insolar.Signature, r1 error) {
 		signature := insolar.SignatureFromBytes(nil)
 		return &signature, nil
-	}
-	mock.GetPublicKeyFunc = func() (r crypto.PublicKey, r1 error) {
+	})
+	mock.GetPublicKeyMock.Set(func() (r crypto.PublicKey, r1 error) {
 		return nil, nil
-	}
+	})
 
 	parcelFactory := NewParcelFactory()
 
@@ -51,7 +52,7 @@ func Test_parcelFactory_Create_CheckLogLevel(t *testing.T) {
 	assert.NoError(t, cm.Init(ctx))
 	assert.NoError(t, cm.Start(ctx))
 
-	ref := testutils.RandomRef()
+	ref := gen.Reference()
 	pulse := insolar.Pulse{PulseNumber: 0}
 	msg := message.CallMethod{}
 

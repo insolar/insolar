@@ -25,22 +25,20 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-	"testing"
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/api"
 	"github.com/insolar/insolar/insolar/flow"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/artifacts"
-	"github.com/insolar/insolar/testutils"
 )
 
 // PrependGoPath prepends `path` to GOPATH environment variable
@@ -63,13 +61,6 @@ func WriteFile(dir string, name string, text string) error {
 		return err
 	}
 	return ioutil.WriteFile(filepath.Join(dir, name), []byte(text), 0644)
-}
-
-// CBORMarshal - testing serialize helper
-func CBORMarshal(t testing.TB, o interface{}) []byte {
-	data, err := insolar.Serialize(o)
-	assert.NoError(t, err, "Marshal")
-	return data
 }
 
 // ContractsBuilder for tests
@@ -118,14 +109,16 @@ func (cb *ContractsBuilder) Clean() {
 
 // Build ...
 func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]string) error {
+	logger := inslogger.FromContext(ctx)
+
 	for name := range contracts {
-		nonce := testutils.RandomRef()
+		nonce := gen.Reference()
 		pulse, err := cb.pulseAccessor.Latest(ctx)
 		if err != nil {
 			return errors.Wrap(err, "can't get current pulse")
 		}
 		request := record.IncomingRequest{
-			CallType:  record.CTSaveAsChild,
+			CallType:  record.CTDeployPrototype,
 			Prototype: &nonce,
 			Reason:    api.MakeReason(pulse.PulseNumber, []byte(name)),
 			APINode:   cb.jetCoordinator.Me(),
@@ -135,11 +128,9 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]stri
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't RegisterIncomingRequest")
 		}
-
-		protoRef := insolar.Reference{}
-		protoRef.SetRecord(*protoID)
-		log.Debugf("Registered prototype %q for contract %q in %q", protoRef.String(), name, cb.root)
-		cb.Prototypes[name] = &protoRef
+		protoRef := insolar.NewReference(*protoID)
+		logger.Debugf("Registered prototype %q for contract %q in %q", protoRef.String(), name, cb.root)
+		cb.Prototypes[name] = protoRef
 	}
 
 	re := regexp.MustCompile(`package\s+\S+`)
@@ -160,50 +151,32 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]stri
 	}
 
 	for name := range contracts {
-		log.Debugf("Building plugin for contract %q in %q", name, cb.root)
+		logger.Debug("Building plugin for contract ", name, " in ", cb.root)
+
 		err := cb.plugin(name)
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't call plugin")
 		}
-		log.Debugf("Built plugin for contract %q", name)
+		logger.Debug("Built plugin for contract ", name)
 
 		pluginBinary, err := ioutil.ReadFile(filepath.Join(cb.root, "plugins", name+".so"))
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't ReadFile")
 		}
 
-		nonce := testutils.RandomRef()
-		pulse, err := cb.pulseAccessor.Latest(ctx)
-		if err != nil {
-			return errors.Wrap(err, "can't get current pulse")
-		}
-
-		req := record.IncomingRequest{
-			CallType:  record.CTSaveAsChild,
-			Prototype: &nonce,
-			Reason:    api.MakeReason(pulse.PulseNumber, []byte(name)),
-			APINode:   cb.jetCoordinator.Me(),
-		}
-
-		codeReq, err := cb.registerRequest(ctx, &req)
-		if err != nil {
-			return errors.Wrap(err, "[ Build ] Can't register request")
-		}
-
-		log.Debugf("Deploying code for contract %q", name)
+		logger.Debug("Deploying code for contract ", name)
 		codeID, err := cb.artifactManager.DeployCode(
 			ctx,
-			insolar.Reference{}, *insolar.NewReference(*codeReq),
+			*insolar.NewEmptyReference(), *insolar.NewEmptyReference(),
 			pluginBinary, insolar.MachineTypeGoPlugin,
 		)
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] DeployCode returns error")
 		}
 
-		codeRef := &insolar.Reference{}
-		codeRef.SetRecord(*codeID)
+		codeRef := insolar.NewReference(*codeID)
 
-		log.Debugf("Deployed code %q for contract %q in %q", codeRef.String(), name, cb.root)
+		logger.Debugf("Deployed code %q for contract %q in %q", codeRef.String(), name, cb.root)
 		cb.Codes[name] = codeRef
 
 		// FIXME: It's a temporary fix and should not be here. Ii will NOT work properly on production. Remove it ASAP!
@@ -232,8 +205,7 @@ func (cb *ContractsBuilder) registerRequest(ctx context.Context, request *record
 	logger := inslogger.FromContext(ctx)
 
 	if cb.pulseAccessor == nil {
-		logger.Warnf("[ registerRequest ] No pulse accessor passed: no retries for register request")
-		return cb.artifactManager.RegisterIncomingRequest(ctx, request)
+		return nil, errors.New("No pulse accessor")
 	}
 
 	for current := 1; current <= retries; current++ {
@@ -243,15 +215,16 @@ func (cb *ContractsBuilder) registerRequest(ctx context.Context, request *record
 		}
 
 		if currentPulse.PulseNumber == lastPulse {
-			logger.Debugf("[ registerRequest ]  wait for pulse change. Current: %d", currentPulse)
+			logger.Debugf("[ registerRequest ]  wait for pulse change. Current: %d", currentPulse.PulseNumber)
 			time.Sleep(100 * time.Millisecond)
 			continue
 		}
 		lastPulse = currentPulse.PulseNumber
 
-		contractID, err := cb.artifactManager.RegisterIncomingRequest(ctx, request)
+		reqInfo, err := cb.artifactManager.RegisterIncomingRequest(ctx, request)
 		if err == nil || !strings.Contains(err.Error(), flow.ErrCancelled.Error()) {
-			return contractID, err
+			reqID := reqInfo.RequestID
+			return &reqID, err
 		}
 
 		logger.Debugf("[ registerRequest ] retry. attempt: %d/%d", current, retries)

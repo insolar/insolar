@@ -56,23 +56,29 @@ type Handler struct {
 	JetModifier   jet.Modifier
 	JetAccessor   jet.Accessor
 	JetKeeper     executor.JetKeeper
+	BackupMaker   executor.BackupMaker
 
-	Sender bus.Sender
+	Sender          bus.Sender
+	StartPulse      pulse.StartPulse
+	PulseCalculator pulse.Calculator
+	JetTree         jet.Storage
+	DropDB          *drop.DB
 
-	jetID insolar.JetID
-	dep   *proc.Dependencies
+	Replicator executor.HeavyReplicator
+
+	dep *proc.Dependencies
 }
 
 // New creates a new handler.
 func New(cfg configuration.Ledger) *Handler {
 	h := &Handler{
-		cfg:   cfg,
-		jetID: insolar.ZeroJetID,
+		cfg: cfg,
 	}
 	dep := proc.Dependencies{
 		PassState: func(p *proc.PassState) {
 			p.Dep.Records = h.RecordAccessor
 			p.Dep.Sender = h.Sender
+			p.Dep.Pulses = h.PulseAccessor
 		},
 		SendCode: func(p *proc.SendCode) {
 			p.Dep.Sender = h.Sender
@@ -86,13 +92,7 @@ func New(cfg configuration.Ledger) *Handler {
 		},
 		Replication: func(p *proc.Replication) {
 			p.Dep(
-				h.RecordModifier,
-				h.IndexModifier,
-				h.PCS,
-				h.PulseAccessor,
-				h.DropModifier,
-				h.JetModifier,
-				h.JetKeeper,
+				h.Replicator,
 			)
 		},
 		SendJet: func(p *proc.SendJet) {
@@ -106,12 +106,23 @@ func New(cfg configuration.Ledger) *Handler {
 				h.Sender,
 			)
 		},
+		SendInitialState: func(p *proc.SendInitialState) {
+			p.Dep(
+				h.StartPulse,
+				h.JetKeeper,
+				h.JetTree,
+				h.JetCoordinator,
+				h.DropDB,
+				h.PulseAccessor,
+				h.Sender,
+			)
+		},
 	}
 	h.dep = &dep
 	return h
 }
 
-func (h *Handler) Process(msg *watermillMsg.Message) ([]*watermillMsg.Message, error) {
+func (h *Handler) Process(msg *watermillMsg.Message) error {
 	ctx := inslogger.ContextWithTrace(context.Background(), msg.Metadata.Get(bus.MetaTraceID))
 	parentSpan, err := instracer.Deserialize([]byte(msg.Metadata.Get(bus.MetaSpanData)))
 	if err == nil {
@@ -139,7 +150,7 @@ func (h *Handler) Process(msg *watermillMsg.Message) ([]*watermillMsg.Message, e
 		logger.Error(errors.Wrap(err, "handle error"))
 	}
 
-	return nil, nil
+	return nil
 }
 
 func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) error {
@@ -155,6 +166,9 @@ func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) error {
 		return errors.Wrap(err, "failed to unmarshal payload type")
 	}
 	ctx, _ = inslogger.WithField(ctx, "msg_type", payloadType.String())
+
+	ctx, span := instracer.StartSpan(ctx, payloadType.String())
+	defer span.End()
 
 	switch payloadType {
 	case payload.TypeGetRequest:
@@ -191,10 +205,15 @@ func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) error {
 		h.handleError(ctx, meta)
 	case payload.TypeGotHotConfirmation:
 		h.handleGotHotConfirmation(ctx, meta)
+	case payload.TypeGetLightInitialState:
+		p := proc.NewSendInitialState(meta)
+		h.dep.SendInitialState(p)
+		err = p.Proceed(ctx)
 	default:
 		err = fmt.Errorf("no handler for message type %s", payloadType.String())
 	}
 	if err != nil {
+		instracer.AddError(span, err)
 		h.replyError(ctx, meta, err)
 	}
 	return err
@@ -269,18 +288,13 @@ func (h *Handler) handleGotHotConfirmation(ctx context.Context, meta payload.Met
 		return
 	}
 
-	logger.Debug("handleGotHotConfirmation. pulse: ", confirm.Pulse, ". jet: ", confirm.JetID.DebugString())
-
-	err = h.JetModifier.Update(ctx, confirm.Pulse, true, confirm.JetID)
-	if err != nil {
-		logger.Error(errors.Wrapf(err, "failed to update jet %s", confirm.JetID.DebugString()))
-		return
-	}
+	logger.Debug("handleGotHotConfirmation. pulse: ", confirm.Pulse, ". jet: ", confirm.JetID.DebugString(), ". Split: ", confirm.Split)
 
 	err = h.JetKeeper.AddHotConfirmation(ctx, confirm.Pulse, confirm.JetID, confirm.Split)
 	if err != nil {
-		logger.Error(errors.Wrapf(err, "failed to add hot confitmation to JetKeeper jet=%v", confirm.String()))
-	} else {
-		logger.Debug("got confirmation: ", confirm.String())
+		logger.Fatalf("failed to add hot confirmation jet=%v: %v", confirm.String(), err.Error())
 	}
+
+	executor.FinalizePulse(ctx, h.PulseCalculator, h.BackupMaker, h.JetKeeper, h.IndexModifier, confirm.Pulse)
+
 }

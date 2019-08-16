@@ -18,20 +18,9 @@ package noderecord
 
 import (
 	XXX_insolar "github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/common"
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
-
-	"strings"
-	// TODO: this is the end of a horrible hack, please remove it
 )
-
-type ExtendableError struct {
-	S string
-}
-
-func (e *ExtendableError) Error() string {
-	return e.S
-}
 
 func INS_META_INFO() []map[string]string {
 	result := make([]map[string]string, 0)
@@ -44,12 +33,12 @@ func INSMETHOD_GetCode(object []byte, data []byte) ([]byte, []byte, error) {
 	self := new(NodeRecord)
 
 	if len(object) == 0 {
-		return nil, nil, &ExtendableError{S: "[ Fake GetCode ] ( Generated Method ) Object is nil"}
+		return nil, nil, &foundation.Error{S: "[ Fake GetCode ] ( Generated Method ) Object is nil"}
 	}
 
 	err := ph.Deserialize(object, self)
 	if err != nil {
-		e := &ExtendableError{S: "[ Fake GetCode ] ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		e := &foundation.Error{S: "[ Fake GetCode ] ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
 		return nil, nil, e
 	}
 
@@ -70,12 +59,12 @@ func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) 
 	self := new(NodeRecord)
 
 	if len(object) == 0 {
-		return nil, nil, &ExtendableError{S: "[ Fake GetPrototype ] ( Generated Method ) Object is nil"}
+		return nil, nil, &foundation.Error{S: "[ Fake GetPrototype ] ( Generated Method ) Object is nil"}
 	}
 
 	err := ph.Deserialize(object, self)
 	if err != nil {
-		e := &ExtendableError{S: "[ Fake GetPrototype ] ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		e := &foundation.Error{S: "[ Fake GetPrototype ] ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
 		return nil, nil, e
 	}
 
@@ -97,12 +86,12 @@ func INSMETHOD_GetNodeInfo(object []byte, data []byte) ([]byte, []byte, error) {
 	self := new(NodeRecord)
 
 	if len(object) == 0 {
-		return nil, nil, &ExtendableError{S: "[ FakeGetNodeInfo ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+		return nil, nil, &foundation.Error{S: "[ FakeGetNodeInfo ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
 	}
 
 	err := ph.Deserialize(object, self)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeGetNodeInfo ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		e := &foundation.Error{S: "[ FakeGetNodeInfo ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
 		return nil, nil, e
 	}
 
@@ -110,22 +99,13 @@ func INSMETHOD_GetNodeInfo(object []byte, data []byte) ([]byte, []byte, error) {
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeGetNodeInfo ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		e := &foundation.Error{S: "[ FakeGetNodeInfo ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
 		return nil, nil, e
 	}
 
 	ret0, ret1 := self.GetNodeInfo()
 
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
-	systemErr := ph.GetSystemError()
-
-	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		ret1 = systemErr
-		systemErr = nil
-	}
-	// TODO: this is the end of a horrible hack, please remove it
-
-	if systemErr != nil {
+	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 
@@ -138,7 +118,13 @@ func INSMETHOD_GetNodeInfo(object []byte, data []byte) ([]byte, []byte, error) {
 	ret1 = ph.MakeErrorSerializable(ret1)
 
 	ret := []byte{}
-	err = ph.Serialize([]interface{}{ret0, ret1}, &ret)
+	err = ph.Serialize(
+		foundation.Result{Returns: []interface{}{ret0, ret1}},
+		&ret,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	return state, ret, err
 }
@@ -149,12 +135,12 @@ func INSMETHOD_GetPublicKey(object []byte, data []byte) ([]byte, []byte, error) 
 	self := new(NodeRecord)
 
 	if len(object) == 0 {
-		return nil, nil, &ExtendableError{S: "[ FakeGetPublicKey ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+		return nil, nil, &foundation.Error{S: "[ FakeGetPublicKey ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
 	}
 
 	err := ph.Deserialize(object, self)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeGetPublicKey ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		e := &foundation.Error{S: "[ FakeGetPublicKey ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
 		return nil, nil, e
 	}
 
@@ -162,22 +148,13 @@ func INSMETHOD_GetPublicKey(object []byte, data []byte) ([]byte, []byte, error) 
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeGetPublicKey ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		e := &foundation.Error{S: "[ FakeGetPublicKey ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
 		return nil, nil, e
 	}
 
 	ret0, ret1 := self.GetPublicKey()
 
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
-	systemErr := ph.GetSystemError()
-
-	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		ret1 = systemErr
-		systemErr = nil
-	}
-	// TODO: this is the end of a horrible hack, please remove it
-
-	if systemErr != nil {
+	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 
@@ -190,7 +167,13 @@ func INSMETHOD_GetPublicKey(object []byte, data []byte) ([]byte, []byte, error) 
 	ret1 = ph.MakeErrorSerializable(ret1)
 
 	ret := []byte{}
-	err = ph.Serialize([]interface{}{ret0, ret1}, &ret)
+	err = ph.Serialize(
+		foundation.Result{Returns: []interface{}{ret0, ret1}},
+		&ret,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	return state, ret, err
 }
@@ -201,12 +184,12 @@ func INSMETHOD_GetRole(object []byte, data []byte) ([]byte, []byte, error) {
 	self := new(NodeRecord)
 
 	if len(object) == 0 {
-		return nil, nil, &ExtendableError{S: "[ FakeGetRole ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+		return nil, nil, &foundation.Error{S: "[ FakeGetRole ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
 	}
 
 	err := ph.Deserialize(object, self)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeGetRole ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		e := &foundation.Error{S: "[ FakeGetRole ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
 		return nil, nil, e
 	}
 
@@ -214,22 +197,13 @@ func INSMETHOD_GetRole(object []byte, data []byte) ([]byte, []byte, error) {
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeGetRole ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		e := &foundation.Error{S: "[ FakeGetRole ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
 		return nil, nil, e
 	}
 
 	ret0, ret1 := self.GetRole()
 
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
-	systemErr := ph.GetSystemError()
-
-	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		ret1 = systemErr
-		systemErr = nil
-	}
-	// TODO: this is the end of a horrible hack, please remove it
-
-	if systemErr != nil {
+	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 
@@ -242,7 +216,13 @@ func INSMETHOD_GetRole(object []byte, data []byte) ([]byte, []byte, error) {
 	ret1 = ph.MakeErrorSerializable(ret1)
 
 	ret := []byte{}
-	err = ph.Serialize([]interface{}{ret0, ret1}, &ret)
+	err = ph.Serialize(
+		foundation.Result{Returns: []interface{}{ret0, ret1}},
+		&ret,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	return state, ret, err
 }
@@ -253,12 +233,12 @@ func INSMETHOD_Destroy(object []byte, data []byte) ([]byte, []byte, error) {
 	self := new(NodeRecord)
 
 	if len(object) == 0 {
-		return nil, nil, &ExtendableError{S: "[ FakeDestroy ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+		return nil, nil, &foundation.Error{S: "[ FakeDestroy ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
 	}
 
 	err := ph.Deserialize(object, self)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeDestroy ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		e := &foundation.Error{S: "[ FakeDestroy ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
 		return nil, nil, e
 	}
 
@@ -266,22 +246,13 @@ func INSMETHOD_Destroy(object []byte, data []byte) ([]byte, []byte, error) {
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeDestroy ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		e := &foundation.Error{S: "[ FakeDestroy ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
 		return nil, nil, e
 	}
 
 	ret0 := self.Destroy()
 
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
-	systemErr := ph.GetSystemError()
-
-	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		ret0 = systemErr
-		systemErr = nil
-	}
-	// TODO: this is the end of a horrible hack, please remove it
-
-	if systemErr != nil {
+	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 
@@ -294,15 +265,21 @@ func INSMETHOD_Destroy(object []byte, data []byte) ([]byte, []byte, error) {
 	ret0 = ph.MakeErrorSerializable(ret0)
 
 	ret := []byte{}
-	err = ph.Serialize([]interface{}{ret0}, &ret)
+	err = ph.Serialize(
+		foundation.Result{Returns: []interface{}{ret0}},
+		&ret,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	return state, ret, err
 }
 
-func INSCONSTRUCTOR_NewNodeRecord(data []byte) ([]byte, error, error) {
+func INSCONSTRUCTOR_NewNodeRecord(data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
-	args := [2]interface{}{}
+	args := make([]interface{}, 2)
 	var args0 string
 	args[0] = &args0
 	var args1 string
@@ -310,32 +287,41 @@ func INSCONSTRUCTOR_NewNodeRecord(data []byte) ([]byte, error, error) {
 
 	err := ph.Deserialize(data, &args)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeNewNodeRecord ] ( INSCONSTRUCTOR_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		e := &foundation.Error{S: "[ FakeNewNodeRecord ] ( INSCONSTRUCTOR_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
 		return nil, nil, e
 	}
 
 	ret0, ret1 := NewNodeRecord(args0, args1)
+	ret1 = ph.MakeErrorSerializable(ret1)
+	if ret0 == nil && ret1 == nil {
+		ret1 = &foundation.Error{S: "constructor returned nil"}
+	}
+
 	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()
 	}
-	if ret1 != nil {
-		// logical error, the result should be registered with type RequestSideEffectNone
-		return nil, ret1, nil
-	}
 
-	if ret0 == nil {
-		// logical error, the result should be registered with type RequestSideEffectNone
-		e := &ExtendableError{S: "[ FakeNewNodeRecord ] ( INSCONSTRUCTOR_* ) ( Generated Method ) Constructor returns nil"}
-		return nil, e, nil
-	}
-
-	ret := []byte{}
-	err = ph.Serialize(ret0, &ret)
+	result := []byte{}
+	err = ph.Serialize(
+		foundation.Result{Returns: []interface{}{ret1}},
+		&result,
+	)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return ret, nil, err
+	if ret1 != nil {
+		// logical error, the result should be registered with type RequestSideEffectNone
+		return nil, result, nil
+	}
+
+	state := []byte{}
+	err = ph.Serialize(ret0, &state)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return state, result, nil
 }
 
 func Initialize() XXX_insolar.ContractWrapper {

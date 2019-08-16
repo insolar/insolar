@@ -22,31 +22,32 @@ import (
 	"fmt"
 
 	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/insolar/insolar/insolar/jet"
-	"github.com/pkg/errors"
 
-	"github.com/insolar/insolar/insolar/payload"
-	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/logicrunner/writecontroller"
+
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
+	"github.com/insolar/insolar/insolar/jet"
 	insolarMsg "github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
 const InnerMsgTopic = "InnerMsg"
 
-const (
-	getLedgerPendingRequestMsg = "GetLedgerPendingRequest"
-)
-
 type Dependencies struct {
-	Publisher      message.Publisher
-	StateStorage   StateStorage
-	ResultsMatcher ResultMatcher
-	lr             *LogicRunner
-	Sender         bus.Sender
-	JetStorage     jet.Storage
+	Publisher        message.Publisher
+	StateStorage     StateStorage
+	ResultsMatcher   ResultMatcher
+	lr               *LogicRunner
+	Sender           bus.Sender
+	JetStorage       jet.Storage
+	WriteAccessor    writecontroller.Accessor
+	OutgoingSender   OutgoingRequestSender
+	RequestsExecutor RequestsExecutor
 }
 
 type Init struct {
@@ -57,6 +58,16 @@ type Init struct {
 
 func (s *Init) Future(ctx context.Context, f flow.Flow) error {
 	return f.Migrate(ctx, s.Present)
+}
+
+func sendErrorMessage(ctx context.Context, sender bus.Sender, meta payload.Meta, err error) error {
+	repMsg, err := payload.NewMessage(&payload.Error{Text: err.Error()})
+	if err != nil {
+		return err
+	}
+
+	go sender.Reply(ctx, meta, repMsg)
+	return nil
 }
 
 func (s *Init) Present(ctx context.Context, f flow.Flow) error {
@@ -98,6 +109,24 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 			meta: meta,
 		}
 		return f.Handle(ctx, h.Present)
+	case payload.TypePendingFinished:
+		h := &HandlePendingFinished{
+			dep:     s.dep,
+			Message: meta,
+		}
+		return f.Handle(ctx, h.Present)
+	case payload.TypeExecutorResults:
+		h := &HandleExecutorResults{
+			dep:     s.dep,
+			Message: meta,
+		}
+		return f.Handle(ctx, h.Present)
+	case payload.TypeStillExecuting:
+		h := &HandleStillExecuting{
+			dep:     s.dep,
+			Message: meta,
+		}
+		return f.Handle(ctx, h.Present)
 	default:
 		return fmt.Errorf("[ Init.Present ] no handler for message type %s", msgType)
 	}
@@ -134,27 +163,6 @@ func (s *Init) handleParcel(ctx context.Context, f flow.Flow) error {
 			Parcel:  parcel,
 		}
 		return f.Handle(ctx, h.Present)
-	case insolar.TypePendingFinished.String():
-		h := &HandlePendingFinished{
-			dep:     s.dep,
-			Message: meta,
-			Parcel:  parcel,
-		}
-		return f.Handle(ctx, h.Present)
-	case insolar.TypeStillExecuting.String():
-		h := &HandleStillExecuting{
-			dep:     s.dep,
-			Message: meta,
-			Parcel:  parcel,
-		}
-		return f.Handle(ctx, h.Present)
-	case insolar.TypeExecutorResults.String():
-		h := &HandleExecutorResults{
-			dep:     s.dep,
-			Message: meta,
-			Parcel:  parcel,
-		}
-		return f.Handle(ctx, h.Present)
 	default:
 		return fmt.Errorf("[ Init.handleParcel ] no handler for message type %s", msgType)
 	}
@@ -181,17 +189,4 @@ func (s *Init) Past(ctx context.Context, f flow.Flow) error {
 	}
 
 	return s.Present(ctx, f)
-}
-
-type InnerInit struct {
-	dep *Dependencies
-
-	Message *message.Message
-}
-
-func (s *InnerInit) Present(ctx context.Context, f flow.Flow) error {
-	switch s.Message.Metadata.Get(bus.MetaType) {
-	default:
-		return fmt.Errorf("[ InnerInit.Present ] no handler for message type %s", s.Message.Metadata.Get("Type"))
-	}
 }

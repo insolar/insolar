@@ -16,7 +16,9 @@
 
 package gen
 
-import fuzz "github.com/google/gofuzz"
+import (
+	fuzz "github.com/google/gofuzz"
+)
 
 // StringFromBytes generates random id with length from 0 to maxcount randomly filled by provided symbols.
 func StringFromBytes(symbols []byte, maxcount int) string {

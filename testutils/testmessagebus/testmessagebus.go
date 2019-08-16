@@ -24,6 +24,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/pkg/errors"
 
@@ -85,10 +86,10 @@ func (mb *TestMessageBus) NewRecorder(ctx context.Context, currentPulse insolar.
 
 func NewTestMessageBus(t *testing.T) *TestMessageBus {
 	cryptoServiceMock := testutils.NewCryptographyServiceMock(t)
-	cryptoServiceMock.SignFunc = func(p []byte) (r *insolar.Signature, r1 error) {
+	cryptoServiceMock.SignMock.Set(func(p []byte) (r *insolar.Signature, r1 error) {
 		signature := insolar.SignatureFromBytes(nil)
 		return &signature, nil
-	}
+	})
 
 	delegationTokenFactory := delegationtoken.NewDelegationTokenFactory()
 
@@ -143,7 +144,7 @@ func (mb *TestMessageBus) Send(ctx context.Context, m insolar.Message, _ *insola
 		return nil, err
 	}
 
-	parcel, err := mb.pf.Create(ctx, m, testutils.RandomRef(), nil, insolar.Pulse{PulseNumber: currentPulse.PulseNumber, Entropy: insolar.Entropy{}})
+	parcel, err := mb.pf.Create(ctx, m, gen.Reference(), nil, insolar.Pulse{PulseNumber: currentPulse.PulseNumber, Entropy: insolar.Entropy{}})
 	if err != nil {
 		return nil, err
 	}

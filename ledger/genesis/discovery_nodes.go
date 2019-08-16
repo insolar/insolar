@@ -22,9 +22,8 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/genesisrefs"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/insolar/rootdomain"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/internal/ledger/artifact"
+	"github.com/insolar/insolar/ledger/artifact"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/nodedomain"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/noderecord"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
@@ -143,10 +142,10 @@ func (nm *DiscoveryNodeManager) activateNodeRecord(
 	contract := insolar.NewReference(*nodeID)
 	err = nm.artifactManager.ActivateObject(
 		ctx,
-		insolar.Reference{},
+		*insolar.NewEmptyReference(),
 		*contract,
 		genesisrefs.ContractNodeDomain,
-		rootdomain.GenesisRef(insolar.GenesisNameNodeRecord+"_proto"),
+		genesisrefs.GenesisRef(insolar.GenesisNameNodeRecord+"_proto"),
 		nodeData,
 	)
 	if err != nil {

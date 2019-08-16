@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package jet;
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+option (gogoproto.goproto_getters_all) = false;
+
+message jet {
+    int32 polymorph = 16;
+
+    bool Actual = 20;
+    jet Left = 21;
+    jet Right = 22;
+}
+
+message Tree {
+    option (gogoproto.stringer) = false;
+    int32 polymorph = 16;
+
+    jet Head = 20;
+}

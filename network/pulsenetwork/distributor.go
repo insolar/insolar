@@ -82,10 +82,7 @@ type distributor struct {
 	transport   transport.StreamTransport
 	idGenerator sequence.Generator
 
-	pingRequestTimeout        time.Duration
-	randomHostsRequestTimeout time.Duration
-	pulseRequestTimeout       time.Duration
-	randomNodesCount          int
+	pulseRequestTimeout time.Duration
 
 	publicAddress   string
 	pulsarHost      *host.Host
@@ -103,10 +100,7 @@ func NewDistributor(conf configuration.PulseDistributor) (insolar.PulseDistribut
 	result := &distributor{
 		idGenerator: sequence.NewGenerator(),
 
-		pingRequestTimeout:        time.Duration(conf.PingRequestTimeout) * time.Millisecond,
-		randomHostsRequestTimeout: time.Duration(conf.RandomHostsRequestTimeout) * time.Millisecond,
-		pulseRequestTimeout:       time.Duration(conf.PulseRequestTimeout) * time.Millisecond,
-		randomNodesCount:          conf.RandomNodesCount,
+		pulseRequestTimeout: time.Duration(conf.PulseRequestTimeout) * time.Millisecond,
 
 		bootstrapHosts:  conf.BootstrapHosts,
 		futureManager:   futureManager,
@@ -141,10 +135,14 @@ func (d *distributor) Start(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "[ NewDistributor ] failed to create pulsar host")
 	}
-	pulsarHost.NodeID = insolar.Reference{}
+	pulsarHost.NodeID = *insolar.NewEmptyReference()
 
 	d.pulsarHost = pulsarHost
 	return nil
+}
+
+func (d *distributor) Stop(ctx context.Context) error {
+	return d.transport.Stop(ctx)
 }
 
 // Distribute starts a fire-and-forget process of pulse distribution to bootstrap hosts
@@ -170,14 +168,14 @@ func (d *distributor) Distribute(ctx context.Context, pulse insolar.Pulse) {
 	for _, node := range d.bootstrapHosts {
 		bootstrapHost, err := host.NewHost(node)
 		if err != nil {
-			logger.Error(err, "[ Distribute ] failed to create bootstrap node host")
+			logger.Warn(err, "failed to create bootstrap node host")
 			continue
 		}
 		bootstrapHosts = append(bootstrapHosts, bootstrapHost)
 	}
 
 	if len(bootstrapHosts) == 0 {
-		logger.Error("[ Distribute ] no bootstrap hosts to distribute")
+		logger.Warn("No bootstrap hosts to distribute")
 		return
 	}
 
@@ -192,10 +190,10 @@ func (d *distributor) Distribute(ctx context.Context, pulse insolar.Pulse) {
 
 			err := d.sendPulseToHost(ctx, &pulse, bootstrapHost)
 			if err != nil {
-				logger.Errorf("[ Distribute pulse %d ] Failed to send pulse: %s", pulse.PulseNumber, err)
+				logger.Warnf("Failed to send pulse %d to host: %s %s", pulse.PulseNumber, bootstrapHost.Address.String(), err)
 				return
 			}
-			logger.Infof("[ Distribute pulse %d ] Successfully sent pulse to node %s", pulse.PulseNumber, bootstrapHost)
+			logger.Infof("Successfully sent pulse %d to node %s", pulse.PulseNumber, bootstrapHost)
 		}(ctx, pulse, bootstrapHost)
 	}
 
@@ -204,34 +202,6 @@ func (d *distributor) Distribute(ctx context.Context, pulse insolar.Pulse) {
 
 func (d *distributor) generateID() types.RequestID {
 	return types.RequestID(d.idGenerator.Generate())
-}
-
-func (d *distributor) pingHost(ctx context.Context, host *host.Host) error {
-	logger := inslogger.FromContext(ctx)
-
-	ctx, span := instracer.StartSpan(ctx, "distributor.pingHost")
-	defer span.End()
-
-	pingPacket := packet.NewPacket(d.pulsarHost, host, types.Ping, uint64(d.generateID()))
-	pingPacket.SetRequest(&packet.Ping{})
-	pingCall, err := d.sendRequestToHost(ctx, pingPacket, host)
-	if err != nil {
-		logger.Error(err)
-		return errors.Wrap(err, "[ pingHost ] failed to send ping request")
-	}
-
-	logger.Debugf("before ping request")
-	result, err := pingCall.WaitResponse(d.pingRequestTimeout)
-	if err != nil {
-		logger.Error(err)
-		panic(err.Error())
-		return errors.Wrap(err, "[ pingHost ] failed to get ping result")
-	}
-
-	host.NodeID = result.GetSender()
-	logger.Debugf("ping request is done")
-
-	return nil
 }
 
 func (d *distributor) sendPulseToHost(ctx context.Context, p *insolar.Pulse, host *host.Host) error {
@@ -245,7 +215,7 @@ func (d *distributor) sendPulseToHost(ctx context.Context, p *insolar.Pulse, hos
 	ctx, span := instracer.StartSpan(ctx, "distributor.sendPulseToHosts")
 	defer span.End()
 
-	pulseRequest := NewPulsePacket(ctx, p, d.pulsarHost, host, uint64(d.generateID()))
+	pulseRequest := NewPulsePacketWithTrace(ctx, p, d.pulsarHost, host, uint64(d.generateID()))
 
 	_, err := d.sendRequestToHost(ctx, pulseRequest, host)
 	if err != nil {
@@ -266,12 +236,17 @@ func (d *distributor) sendRequestToHost(ctx context.Context, packet *packet.Pack
 	return nil, nil
 }
 
-func NewPulsePacket(ctx context.Context, p *insolar.Pulse, pulsarHost, to *host.Host, id uint64) *packet.Packet {
+func NewPulsePacket(p *insolar.Pulse, pulsarHost, to *host.Host, id uint64) *packet.Packet {
 	pulseRequest := packet.NewPacket(pulsarHost, to, types.Pulse, id)
 	request := &packet.PulseRequest{
-		TraceSpanData: instracer.MustSerialize(ctx),
-		Pulse:         pulse.ToProto(p),
+		Pulse: pulse.ToProto(p),
 	}
 	pulseRequest.SetRequest(request)
 	return pulseRequest
+}
+
+func NewPulsePacketWithTrace(ctx context.Context, p *insolar.Pulse, pulsarHost, to *host.Host, id uint64) *packet.Packet {
+	pulsePacket := NewPulsePacket(p, pulsarHost, to, id)
+	pulsePacket.TraceSpanData = instracer.MustSerialize(ctx)
+	return pulsePacket
 }

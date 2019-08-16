@@ -21,6 +21,8 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/insolar/flow"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/pkg/errors"
 
@@ -41,7 +43,7 @@ type SendObject struct {
 		jets        jet.Storage
 		jetFetcher  executor.JetFetcher
 		records     object.RecordAccessor
-		indices     object.IndexAccessor
+		indexes     object.IndexAccessor
 		sender      bus.Sender
 	}
 }
@@ -61,14 +63,14 @@ func (p *SendObject) Dep(
 	jets jet.Storage,
 	jetFetcher executor.JetFetcher,
 	records object.RecordAccessor,
-	indices object.IndexAccessor,
+	indexes object.IndexAccessor,
 	sender bus.Sender,
 ) {
 	p.dep.coordinator = coordinator
 	p.dep.jets = jets
 	p.dep.jetFetcher = jetFetcher
 	p.dep.records = records
-	p.dep.indices = indices
+	p.dep.indexes = indexes
 	p.dep.sender = sender
 }
 
@@ -107,6 +109,9 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 	}
 
 	sendPassState := func(stateID insolar.ID) error {
+		ctx, span := instracer.StartSpan(ctx, "SendObject.sendPassState")
+		defer span.End()
+
 		buf, err := p.message.Marshal()
 		if err != nil {
 			return errors.Wrap(err, "failed to marshal origin meta message")
@@ -125,12 +130,15 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 		}
 		var node insolar.Reference
 		if onHeavy {
+			inslogger.FromContext(ctx).Warnf("State not found on light. Go to heavy. StateID:%v, CurrentPN:%v", stateID.DebugString(), flow.Pulse(ctx))
 			h, err := p.dep.coordinator.Heavy(ctx)
 			if err != nil {
 				return errors.Wrap(err, "failed to calculate heavy")
 			}
 			node = *h
+			span.Annotate(nil, fmt.Sprintf("Send StateID:%v to heavy", stateID.DebugString()))
 		} else {
+			inslogger.FromContext(ctx).Warnf("State not found on light. Go to light. StateID:%v, CurrentPN:%v", stateID.DebugString(), flow.Pulse(ctx))
 			jetID, err := p.dep.jetFetcher.Fetch(ctx, p.objectID, stateID.Pulse())
 			if err != nil {
 				return errors.Wrap(err, "failed to fetch jet")
@@ -140,6 +148,7 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 				return errors.Wrap(err, "failed to calculate role")
 			}
 			node = *l
+			span.Annotate(nil, fmt.Sprintf("Send StateID:%v to light", stateID.DebugString()))
 		}
 
 		go func() {
@@ -149,7 +158,7 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 		return nil
 	}
 
-	idx, err := p.dep.indices.ForID(ctx, flow.Pulse(ctx), p.objectID)
+	idx, err := p.dep.indexes.ForID(ctx, flow.Pulse(ctx), p.objectID)
 	if err != nil {
 		return errors.Wrap(err, "can't get index from storage")
 	}

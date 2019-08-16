@@ -28,7 +28,7 @@ type mucount struct {
 	count int32
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexLocker -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexLocker -o ./ -s _mock.go -g
 
 // IndexLocker provides Lock/Unlock methods per record ID.
 type IndexLocker interface {
@@ -53,13 +53,13 @@ func NewIndexLocker() IndexLocker {
 // If mutex does not exist, it will be created in concurrent safe fashion.
 func (l *idLocker) Lock(id insolar.ID) {
 	// Reset pulse. It should not be considered when locking.
-	id.SetPulse(0)
+	normalizedID := *insolar.NewID(0, id.Hash())
 
 	l.mu.Lock()
-	mc, ok := l.muxs[id]
+	mc, ok := l.muxs[normalizedID]
 	if !ok {
 		mc = &mucount{RWMutex: &sync.RWMutex{}}
-		l.muxs[id] = mc
+		l.muxs[normalizedID] = mc
 	}
 	mc.count++
 	l.mu.Unlock()
@@ -70,18 +70,18 @@ func (l *idLocker) Lock(id insolar.ID) {
 // Unlock unlocks mutex belonged to record ID.
 func (l *idLocker) Unlock(id insolar.ID) {
 	// Reset pulse. It should not be considered when locking.
-	id.SetPulse(0)
+	zeroID := *insolar.NewID(0, id.Hash())
 
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	mc, ok := l.muxs[id]
+	mc, ok := l.muxs[zeroID]
 	if !ok {
-		panic(fmt.Sprintf("try to unlock not initialized mutex for ID %+v", id))
+		panic(fmt.Sprintf("try to unlock not initialized mutex for ID %+v", zeroID))
 	}
 	mc.count--
 	mc.Unlock()
 	if mc.count == 0 {
-		delete(l.muxs, id)
+		delete(l.muxs, zeroID)
 	}
 }

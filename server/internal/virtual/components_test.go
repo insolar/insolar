@@ -25,7 +25,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestInitComponents(t *testing.T) {
+func TestComponents(t *testing.T) {
 	ctx := context.Background()
 	cfg := configuration.NewConfiguration()
 	cfg.KeysPath = "testdata/bootstrap_keys.json"
@@ -37,7 +37,6 @@ func TestInitComponents(t *testing.T) {
 	cert := initCertificateManager(
 		ctx,
 		cfg,
-		false,
 		bootstrapComponents.CryptographyService,
 		bootstrapComponents.KeyProcessor,
 	)

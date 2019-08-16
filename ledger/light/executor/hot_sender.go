@@ -107,22 +107,26 @@ func (m *HotSenderDefault) filterAndGroupIndexes(
 func (m *HotSenderDefault) SendHot(
 	ctx context.Context, currentPulse, newPulse insolar.PulseNumber, jets []insolar.JetID,
 ) error {
-	ctx, span := instracer.StartSpan(ctx, "hot_sender.start")
+	ctx, span := instracer.StartSpan(ctx, "HotSenderDefault.SendHot")
 	defer span.End()
 	logger := inslogger.FromContext(ctx)
 
 	idxByJet, err := m.filterAndGroupIndexes(ctx, currentPulse, newPulse)
 	if err != nil {
-		return errors.Wrapf(err, "failed to get filament indexes for %v pulse", newPulse)
+		err = errors.Wrapf(err, "failed to get filament indexes for %v pulse", newPulse)
+		instracer.AddError(span, err)
+		return err
 	}
 
 	for _, id := range jets {
 		jetID := id
-		logger := logger.WithSkipFrameCount(1).WithField("jetID", jetID.DebugString())
+		logger := logger.WithField("jetID", jetID.DebugString())
 
 		block, err := m.findDrop(ctx, currentPulse, jetID)
 		if err != nil {
-			return errors.Wrapf(err, "get drop for pulse %v and jet %v failed", currentPulse, jetID.DebugString())
+			err = errors.Wrapf(err, "get drop for pulse %v and jet %v failed", currentPulse, jetID.DebugString())
+			instracer.AddError(span, err)
+			return err
 		}
 		logger.Infof("save drop for pulse %v", currentPulse)
 

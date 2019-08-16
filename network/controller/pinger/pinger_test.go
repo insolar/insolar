@@ -56,9 +56,9 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/future"
-	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 
@@ -75,7 +75,7 @@ import (
 func TestPing_Errors(t *testing.T) {
 	cm := component.NewManager(nil)
 	f := transport.NewFactory(configuration.NewHostNetwork().Transport)
-	n, err := hostnetwork.NewHostNetwork(insolar.Reference{}.String())
+	n, err := hostnetwork.NewHostNetwork(insolar.NewEmptyReference().String())
 	require.NoError(t, err)
 	cm.Inject(f, n, testutils.NewRoutingTableMock(t))
 
@@ -88,17 +88,17 @@ func TestPing_Errors(t *testing.T) {
 
 func TestPing_HappyPath(t *testing.T) {
 	ctx := context.Background()
+	refs := gen.References(2)
 
 	cm2 := component.NewManager(nil)
 	f2 := transport.NewFactory(configuration.NewHostNetwork().Transport)
-	n2, err := hostnetwork.NewHostNetwork(insolar.Reference{23}.String())
+	n2, err := hostnetwork.NewHostNetwork(refs[1].String())
 	require.NoError(t, err)
 	defer n2.Stop(ctx)
 	n2.RegisterRequestHandler(types.Ping, func(ctx context.Context, request network.ReceivedPacket) (network.Packet, error) {
 		return n2.BuildResponse(ctx, request, &packet.Ping{}), nil
 	})
 	resolver2 := testutils.NewRoutingTableMock(t)
-	resolver2.AddToKnownHostsFunc = func(*host.Host) {}
 	cm2.Inject(f2, n2, resolver2)
 	err = cm2.Init(ctx)
 	require.NoError(t, err)
@@ -107,11 +107,10 @@ func TestPing_HappyPath(t *testing.T) {
 
 	cm := component.NewManager(nil)
 	f := transport.NewFactory(configuration.NewHostNetwork().Transport)
-	n, err := hostnetwork.NewHostNetwork(insolar.Reference{12}.String())
+	n, err := hostnetwork.NewHostNetwork(refs[0].String())
 	defer n.Stop(ctx)
 	require.NoError(t, err)
 	resolver := testutils.NewRoutingTableMock(t)
-	resolver.AddToKnownHostsFunc = func(*host.Host) {}
 	cm.Inject(f, n, resolver)
 	err = cm.Init(ctx)
 	require.NoError(t, err)
@@ -126,10 +125,11 @@ func TestPing_HappyPath(t *testing.T) {
 
 func TestPing_Timeout(t *testing.T) {
 	ctx := context.Background()
+	refs := gen.References(2)
 
 	cm2 := component.NewManager(nil)
 	f2 := transport.NewFactory(configuration.NewHostNetwork().Transport)
-	n2, err := hostnetwork.NewHostNetwork(insolar.Reference{23}.String())
+	n2, err := hostnetwork.NewHostNetwork(refs[1].String())
 	require.NoError(t, err)
 	defer n2.Stop(ctx)
 
@@ -143,7 +143,6 @@ func TestPing_Timeout(t *testing.T) {
 		return n2.BuildResponse(ctx, request, &packet.Ping{}), nil
 	})
 	resolver2 := testutils.NewRoutingTableMock(t)
-	resolver2.AddToKnownHostsFunc = func(*host.Host) {}
 	cm2.Inject(f2, n2, resolver2)
 	err = cm2.Init(ctx)
 	require.NoError(t, err)
@@ -152,11 +151,10 @@ func TestPing_Timeout(t *testing.T) {
 
 	cm := component.NewManager(nil)
 	f := transport.NewFactory(configuration.NewHostNetwork().Transport)
-	n, err := hostnetwork.NewHostNetwork(insolar.Reference{12}.String())
+	n, err := hostnetwork.NewHostNetwork(refs[0].String())
 	defer n.Stop(ctx)
 	require.NoError(t, err)
 	resolver := testutils.NewRoutingTableMock(t)
-	resolver.AddToKnownHostsFunc = func(*host.Host) {}
 	cm.Inject(f, n, resolver)
 	err = cm.Init(ctx)
 	require.NoError(t, err)

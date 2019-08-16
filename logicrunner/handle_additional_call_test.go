@@ -30,17 +30,17 @@ import (
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/logicrunner/writecontroller"
 	"github.com/insolar/insolar/testutils"
 )
 
 func TestHandleAdditionalCallFromPreviousExecutor_Present(t *testing.T) {
 	table := []struct {
-		name                           string
-		clarifyPendingStateResult      error
-		startQueueProcessorResult      error
-		expectedStartQueueProcessorCtr int32
-		mocks                          func(t minimock.Tester) (*HandleAdditionalCallFromPreviousExecutor, flow.Flow)
-		error                          bool
+		name                      string
+		clarifyPendingStateResult error
+		startQueueProcessorResult error
+		mocks                     func(t minimock.Tester) (*HandleAdditionalCallFromPreviousExecutor, flow.Flow)
+		error                     bool
 	}{
 		{
 			name: "Happy path",
@@ -62,17 +62,12 @@ func TestHandleAdditionalCallFromPreviousExecutor_Present(t *testing.T) {
 				h := &HandleAdditionalCallFromPreviousExecutor{
 					dep: &Dependencies{
 						Sender: bus.NewSenderMock(t).ReplyMock.Return(),
-						StateStorage: NewStateStorageMock(t).
-							UpsertExecutionStateMock.Expect(obj).
-							Return(
-								NewExecutionBrokerIMock(t).
-									AddAdditionalRequestFromPrevExecutorMock.Return().
-									SetNotPendingMock.Return(),
-							),
+						WriteAccessor: writecontroller.NewAccessorMock(t).
+							BeginMock.Return(func() {}, nil),
 					},
 					Parcel: parcel,
 				}
-				f := flow.NewFlowMock(t)
+				f := flow.NewFlowMock(t).ProcedureMock.Return(nil)
 				return h, f
 			},
 		},
@@ -81,7 +76,7 @@ func TestHandleAdditionalCallFromPreviousExecutor_Present(t *testing.T) {
 	for _, test := range table {
 		test := test
 		t.Run(test.name, func(t *testing.T) {
-			ctx := inslogger.TestContext(t)
+			ctx := flow.TestContextWithPulse(inslogger.TestContext(t), gen.PulseNumber())
 			mc := minimock.NewController(t)
 
 			h, f := test.mocks(mc)
@@ -92,8 +87,74 @@ func TestHandleAdditionalCallFromPreviousExecutor_Present(t *testing.T) {
 				require.NoError(t, err)
 			}
 
-			mc.Wait(1 * time.Minute)
+			mc.Wait(2 * time.Minute)
 			mc.Finish()
 		})
 	}
+}
+
+func TestAdditionalCallFromPreviousExecutor_Proceed(t *testing.T) {
+
+	t.Run("Proceed without pending", func(t *testing.T) {
+		t.Parallel()
+
+		mc := minimock.NewController(t)
+
+		ctx := inslogger.TestContext(t)
+		obj := gen.Reference()
+		reqRef := gen.Reference()
+
+		msg := &message.AdditionalCallFromPreviousExecutor{
+			ObjectReference: obj,
+			RequestRef:      reqRef,
+			Request:         record.IncomingRequest{},
+			Pending:         insolar.NotPending,
+		}
+
+		stateStorage := NewStateStorageMock(t).
+			UpsertExecutionStateMock.Expect(obj).Return(
+			NewExecutionBrokerIMock(t).
+				AddAdditionalRequestFromPrevExecutorMock.Return().
+				SetNotPendingMock.Return(),
+		)
+
+		proc := AdditionalCallFromPreviousExecutor{stateStorage: stateStorage, message: msg}
+		err := proc.Proceed(ctx)
+
+		require.NoError(t, err)
+
+		mc.Wait(2 * time.Minute)
+		mc.Finish()
+	})
+
+	t.Run("Proceed with pending", func(t *testing.T) {
+		t.Parallel()
+
+		mc := minimock.NewController(t)
+
+		ctx := inslogger.TestContext(t)
+		obj := gen.Reference()
+		reqRef := gen.Reference()
+
+		msg := &message.AdditionalCallFromPreviousExecutor{
+			ObjectReference: obj,
+			RequestRef:      reqRef,
+			Request:         record.IncomingRequest{},
+			Pending:         insolar.InPending,
+		}
+
+		stateStorage := NewStateStorageMock(t).
+			UpsertExecutionStateMock.Expect(obj).Return(
+			NewExecutionBrokerIMock(t).
+				AddAdditionalRequestFromPrevExecutorMock.Return(),
+		)
+
+		proc := AdditionalCallFromPreviousExecutor{stateStorage: stateStorage, message: msg}
+		err := proc.Proceed(ctx)
+
+		require.NoError(t, err)
+
+		mc.Wait(2 * time.Minute)
+		mc.Finish()
+	})
 }

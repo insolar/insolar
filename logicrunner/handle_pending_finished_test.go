@@ -27,9 +27,9 @@ import (
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/gen"
-	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/testutils"
+	"github.com/insolar/insolar/logicrunner/writecontroller"
 )
 
 func TestHandlePendingFinished_Present(t *testing.T) {
@@ -42,9 +42,12 @@ func TestHandlePendingFinished_Present(t *testing.T) {
 			name: "success",
 			mocks: func(t minimock.Tester) (*HandlePendingFinished, flow.Flow) {
 				obj := gen.Reference()
-				parcel := testutils.NewParcelMock(t).
-					DefaultTargetMock.Return(&obj).
-					MessageMock.Return(&message.PendingFinished{Reference: obj})
+				receivedPayload := payload.PendingFinished{
+					ObjectRef: obj,
+				}
+
+				buf, err := payload.Marshal(&receivedPayload)
+				require.NoError(t, err, "marshal")
 
 				h := &HandlePendingFinished{
 					dep: &Dependencies{
@@ -53,10 +56,13 @@ func TestHandlePendingFinished_Present(t *testing.T) {
 							UpsertExecutionStateMock.Expect(obj).
 							Return(
 								NewExecutionBrokerIMock(t).
-									PrevExecutorFinishedPendingMock.Return(nil),
+									PrevExecutorSentPendingFinishedMock.Return(nil),
 							),
+						WriteAccessor: writecontroller.NewWriteControllerMock(t).BeginMock.Return(func() {}, nil),
 					},
-					Parcel: parcel,
+					Message: payload.Meta{
+						Payload: buf,
+					},
 				}
 				return h, flow.NewFlowMock(t)
 			},
@@ -65,9 +71,12 @@ func TestHandlePendingFinished_Present(t *testing.T) {
 			name: "error",
 			mocks: func(t minimock.Tester) (*HandlePendingFinished, flow.Flow) {
 				obj := gen.Reference()
-				parcel := testutils.NewParcelMock(t).
-					DefaultTargetMock.Return(&obj).
-					MessageMock.Return(&message.PendingFinished{Reference: obj})
+				receivedPayload := payload.PendingFinished{
+					ObjectRef: obj,
+				}
+
+				buf, err := payload.Marshal(&receivedPayload)
+				require.NoError(t, err, "marshal")
 
 				h := &HandlePendingFinished{
 					dep: &Dependencies{
@@ -75,10 +84,13 @@ func TestHandlePendingFinished_Present(t *testing.T) {
 							UpsertExecutionStateMock.Expect(obj).
 							Return(
 								NewExecutionBrokerIMock(t).
-									PrevExecutorFinishedPendingMock.Return(errors.New("some")),
+									PrevExecutorSentPendingFinishedMock.Return(errors.New("some")),
 							),
+						WriteAccessor: writecontroller.NewWriteControllerMock(t).BeginMock.Return(func() {}, nil),
 					},
-					Parcel: parcel,
+					Message: payload.Meta{
+						Payload: buf,
+					},
 				}
 				return h, flow.NewFlowMock(t)
 			},
@@ -87,7 +99,7 @@ func TestHandlePendingFinished_Present(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			ctx := inslogger.TestContext(t)
+			ctx := flow.TestContextWithPulse(inslogger.TestContext(t), gen.PulseNumber())
 			mc := minimock.NewController(t)
 
 			h, f := test.mocks(mc)

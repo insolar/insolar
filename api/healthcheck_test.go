@@ -17,13 +17,19 @@
 package api
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 	"testing"
 
+	"github.com/insolar/insolar/insolar/gen"
+	"github.com/insolar/insolar/insolar/pulse"
+
 	"github.com/insolar/insolar/insolar"
+	network2 "github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/network"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -56,10 +62,10 @@ func randomNodeList(t *testing.T, size int) []insolar.DiscoveryNode {
 	list := make([]insolar.DiscoveryNode, size)
 	for i := 0; i < size; i++ {
 		dn := testutils.NewDiscoveryNodeMock(t)
-		r := testutils.RandomRef()
-		dn.GetNodeRefFunc = func() *insolar.Reference {
+		r := gen.Reference()
+		dn.GetNodeRefMock.Set(func() *insolar.Reference {
 			return &r
-		}
+		})
 		list[i] = dn
 	}
 	return list
@@ -67,13 +73,13 @@ func randomNodeList(t *testing.T, size int) []insolar.DiscoveryNode {
 
 func mockCertManager(t *testing.T, nodeList []insolar.DiscoveryNode) *testutils.CertificateManagerMock {
 	cm := testutils.NewCertificateManagerMock(t)
-	cm.GetCertificateFunc = func() insolar.Certificate {
+	cm.GetCertificateMock.Set(func() insolar.Certificate {
 		c := testutils.NewCertificateMock(t)
-		c.GetDiscoveryNodesFunc = func() []insolar.DiscoveryNode {
+		c.GetDiscoveryNodesMock.Set(func() []insolar.DiscoveryNode {
 			return nodeList
-		}
+		})
 		return c
-	}
+	})
 	return cm
 }
 
@@ -83,13 +89,28 @@ func mockNodeNetwork(t *testing.T, nodeList []insolar.DiscoveryNode) *network.No
 	for _, node := range nodeList {
 		nodeMap[*node.GetNodeRef()] = node
 	}
-	nn.GetWorkingNodeFunc = func(ref insolar.Reference) insolar.NetworkNode {
+
+	accessorMock := network.NewAccessorMock(t)
+	accessorMock.GetWorkingNodeMock.Set(func(ref insolar.Reference) insolar.NetworkNode {
 		if _, ok := nodeMap[ref]; ok {
 			return network.NewNetworkNodeMock(t)
 		}
 		return nil
-	}
+	})
+
+	nn.GetAccessorMock.Set(func(p1 insolar.PulseNumber) network2.Accessor {
+		return accessorMock
+	})
+
 	return nn
+}
+
+func mockPulseAccessor(t *testing.T) *pulse.AccessorMock {
+	pa := pulse.NewAccessorMock(t)
+	pa.LatestMock.Set(func(context.Context) (insolar.Pulse, error) {
+		return *insolar.GenesisPulse, nil
+	})
+	return pa
 }
 
 func TestHealthChecker_CheckHandler(t *testing.T) {
@@ -109,6 +130,7 @@ func TestHealthChecker_CheckHandler(t *testing.T) {
 			hc := NewHealthChecker(
 				mockCertManager(t, nodes[:20]),
 				mockNodeNetwork(t, nodes[test.from:test.to]),
+				mockPulseAccessor(t),
 			)
 			w := newMockResponseWriter()
 			hc.CheckHandler(w, new(http.Request))

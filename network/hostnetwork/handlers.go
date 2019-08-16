@@ -54,11 +54,12 @@ import (
 	"context"
 	"io"
 
-	"github.com/insolar/insolar/network/utils"
+	"github.com/insolar/insolar/network"
 
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/hostnetwork/future"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
@@ -89,10 +90,16 @@ func (s *StreamHandler) HandleStream(ctx context.Context, address string, reader
 	// get only log level from context, discard TraceID in favor of packet TraceID
 	packetCtx := inslogger.WithLoggerLevel(context.Background(), logLevel)
 
-	// context cancel monitoring
+	closer := make(chan struct{})
 	go func() {
-		<-ctx.Done()
-		utils.CloseVerbose(reader)
+		select {
+		// transport is stopping
+		case <-ctx.Done():
+		// stream end by remote end
+		case <-closer:
+		}
+
+		network.CloseVerbose(reader)
 	}()
 
 	for {
@@ -100,19 +107,25 @@ func (s *StreamHandler) HandleStream(ctx context.Context, address string, reader
 
 		if err != nil {
 			if err == io.EOF || err == io.ErrUnexpectedEOF {
-				mainLogger.Info("[ HandleStream ] Connection closed by peer")
-				utils.CloseVerbose(reader)
+				mainLogger.Debug("[ HandleStream ] Connection closed by peer")
+				close(closer)
 				return
 			}
 
-			if utils.IsConnectionClosed(err) || utils.IsClosedPipe(err) {
+			if network.IsConnectionClosed(err) || network.IsClosedPipe(err) {
 				mainLogger.Info("[ HandleStream ] Connection closed.")
 				return
 			}
 
-			mainLogger.Error("[ HandleStream ] Failed to deserialize packet: ", err.Error())
+			mainLogger.Warnf("[ HandleStream ] Failed to deserialize packet: ", err.Error())
 		} else {
 			packetCtx, logger := inslogger.WithTraceField(packetCtx, p.TraceID)
+			span, err := instracer.Deserialize(p.TraceSpanData)
+			if err == nil {
+				packetCtx = instracer.WithParentSpan(packetCtx, span)
+			} else {
+				inslogger.FromContext(packetCtx).Warn("Incoming packet without span")
+			}
 			logger.Debugf("[ HandleStream ] Handling packet RequestID = %d", p.RequestID)
 
 			if p.IsResponse() {

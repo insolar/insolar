@@ -62,11 +62,29 @@ type ContractConstructorHolder struct {
 
 // AsChild saves object as child
 func (r *ContractConstructorHolder) AsChild(objRef insolar.Reference) (*HelloWorld, error) {
-	ref, err := common.CurrentProxyCtx.SaveAsChild(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
+	ref, ret, err := common.CurrentProxyCtx.SaveAsChild(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
 	if err != nil {
 		return nil, err
 	}
-	return &HelloWorld{Reference: ref}, nil
+
+	var constructorError *foundation.Error
+	resultContainer := foundation.Result{
+		Returns: []interface{}{&constructorError},
+	}
+	err = common.CurrentProxyCtx.Deserialize(ret, &resultContainer)
+	if err != nil {
+		return nil, err
+	}
+
+	if resultContainer.Error != nil {
+		return nil, resultContainer.Error
+	}
+
+	if constructorError != nil {
+		return nil, constructorError
+	}
+
+	return &HelloWorld{Reference: *ref}, nil
 }
 
 // GetObject returns proxy object
@@ -162,7 +180,7 @@ func (r *HelloWorld) ReturnObj() (interface{}, error) {
 
 	var argsSerialized []byte
 
-	ret := [2]interface{}{}
+	ret := make([]interface{}, 2)
 	var ret0 interface{}
 	ret[0] = &ret0
 	var ret1 *foundation.Error
@@ -178,11 +196,17 @@ func (r *HelloWorld) ReturnObj() (interface{}, error) {
 		return ret0, err
 	}
 
-	err = common.CurrentProxyCtx.Deserialize(res, &ret)
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
 	if err != nil {
 		return ret0, err
 	}
-
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return ret0, err
+	}
 	if ret1 != nil {
 		return ret0, ret1
 	}
@@ -214,7 +238,7 @@ func (r *HelloWorld) ReturnObjAsImmutable() (interface{}, error) {
 
 	var argsSerialized []byte
 
-	ret := [2]interface{}{}
+	ret := make([]interface{}, 2)
 	var ret0 interface{}
 	ret[0] = &ret0
 	var ret1 *foundation.Error
@@ -230,11 +254,17 @@ func (r *HelloWorld) ReturnObjAsImmutable() (interface{}, error) {
 		return ret0, err
 	}
 
-	err = common.CurrentProxyCtx.Deserialize(res, &ret)
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
 	if err != nil {
 		return ret0, err
 	}
-
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return ret0, err
+	}
 	if ret1 != nil {
 		return ret0, ret1
 	}
@@ -248,7 +278,7 @@ func (r *HelloWorld) Greet(name string) (interface{}, error) {
 
 	var argsSerialized []byte
 
-	ret := [2]interface{}{}
+	ret := make([]interface{}, 2)
 	var ret0 interface{}
 	ret[0] = &ret0
 	var ret1 *foundation.Error
@@ -264,11 +294,17 @@ func (r *HelloWorld) Greet(name string) (interface{}, error) {
 		return ret0, err
 	}
 
-	err = common.CurrentProxyCtx.Deserialize(res, &ret)
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
 	if err != nil {
 		return ret0, err
 	}
-
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return ret0, err
+	}
 	if ret1 != nil {
 		return ret0, ret1
 	}
@@ -302,7 +338,7 @@ func (r *HelloWorld) GreetAsImmutable(name string) (interface{}, error) {
 
 	var argsSerialized []byte
 
-	ret := [2]interface{}{}
+	ret := make([]interface{}, 2)
 	var ret0 interface{}
 	ret[0] = &ret0
 	var ret1 *foundation.Error
@@ -318,11 +354,17 @@ func (r *HelloWorld) GreetAsImmutable(name string) (interface{}, error) {
 		return ret0, err
 	}
 
-	err = common.CurrentProxyCtx.Deserialize(res, &ret)
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
 	if err != nil {
 		return ret0, err
 	}
-
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return ret0, err
+	}
 	if ret1 != nil {
 		return ret0, ret1
 	}
@@ -335,7 +377,7 @@ func (r *HelloWorld) Count() (interface{}, error) {
 
 	var argsSerialized []byte
 
-	ret := [2]interface{}{}
+	ret := make([]interface{}, 2)
 	var ret0 interface{}
 	ret[0] = &ret0
 	var ret1 *foundation.Error
@@ -351,11 +393,17 @@ func (r *HelloWorld) Count() (interface{}, error) {
 		return ret0, err
 	}
 
-	err = common.CurrentProxyCtx.Deserialize(res, &ret)
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
 	if err != nil {
 		return ret0, err
 	}
-
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return ret0, err
+	}
 	if ret1 != nil {
 		return ret0, ret1
 	}
@@ -387,7 +435,7 @@ func (r *HelloWorld) CountAsImmutable() (interface{}, error) {
 
 	var argsSerialized []byte
 
-	ret := [2]interface{}{}
+	ret := make([]interface{}, 2)
 	var ret0 interface{}
 	ret[0] = &ret0
 	var ret1 *foundation.Error
@@ -403,11 +451,17 @@ func (r *HelloWorld) CountAsImmutable() (interface{}, error) {
 		return ret0, err
 	}
 
-	err = common.CurrentProxyCtx.Deserialize(res, &ret)
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
 	if err != nil {
 		return ret0, err
 	}
-
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return ret0, err
+	}
 	if ret1 != nil {
 		return ret0, ret1
 	}
@@ -420,7 +474,7 @@ func (r *HelloWorld) Errored() (interface{}, error) {
 
 	var argsSerialized []byte
 
-	ret := [2]interface{}{}
+	ret := make([]interface{}, 2)
 	var ret0 interface{}
 	ret[0] = &ret0
 	var ret1 *foundation.Error
@@ -436,11 +490,17 @@ func (r *HelloWorld) Errored() (interface{}, error) {
 		return ret0, err
 	}
 
-	err = common.CurrentProxyCtx.Deserialize(res, &ret)
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
 	if err != nil {
 		return ret0, err
 	}
-
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return ret0, err
+	}
 	if ret1 != nil {
 		return ret0, ret1
 	}
@@ -472,7 +532,7 @@ func (r *HelloWorld) ErroredAsImmutable() (interface{}, error) {
 
 	var argsSerialized []byte
 
-	ret := [2]interface{}{}
+	ret := make([]interface{}, 2)
 	var ret0 interface{}
 	ret[0] = &ret0
 	var ret1 *foundation.Error
@@ -488,11 +548,17 @@ func (r *HelloWorld) ErroredAsImmutable() (interface{}, error) {
 		return ret0, err
 	}
 
-	err = common.CurrentProxyCtx.Deserialize(res, &ret)
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
 	if err != nil {
 		return ret0, err
 	}
-
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return ret0, err
+	}
 	if ret1 != nil {
 		return ret0, ret1
 	}
@@ -505,7 +571,7 @@ func (r *HelloWorld) PulseNumber() (insolar.PulseNumber, error) {
 
 	var argsSerialized []byte
 
-	ret := [2]interface{}{}
+	ret := make([]interface{}, 2)
 	var ret0 insolar.PulseNumber
 	ret[0] = &ret0
 	var ret1 *foundation.Error
@@ -521,11 +587,17 @@ func (r *HelloWorld) PulseNumber() (insolar.PulseNumber, error) {
 		return ret0, err
 	}
 
-	err = common.CurrentProxyCtx.Deserialize(res, &ret)
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
 	if err != nil {
 		return ret0, err
 	}
-
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return ret0, err
+	}
 	if ret1 != nil {
 		return ret0, ret1
 	}
@@ -557,7 +629,7 @@ func (r *HelloWorld) PulseNumberAsImmutable() (insolar.PulseNumber, error) {
 
 	var argsSerialized []byte
 
-	ret := [2]interface{}{}
+	ret := make([]interface{}, 2)
 	var ret0 insolar.PulseNumber
 	ret[0] = &ret0
 	var ret1 *foundation.Error
@@ -573,11 +645,17 @@ func (r *HelloWorld) PulseNumberAsImmutable() (insolar.PulseNumber, error) {
 		return ret0, err
 	}
 
-	err = common.CurrentProxyCtx.Deserialize(res, &ret)
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
 	if err != nil {
 		return ret0, err
 	}
-
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return ret0, err
+	}
 	if ret1 != nil {
 		return ret0, ret1
 	}
@@ -590,7 +668,7 @@ func (r *HelloWorld) CreateChild() (interface{}, error) {
 
 	var argsSerialized []byte
 
-	ret := [2]interface{}{}
+	ret := make([]interface{}, 2)
 	var ret0 interface{}
 	ret[0] = &ret0
 	var ret1 *foundation.Error
@@ -606,11 +684,17 @@ func (r *HelloWorld) CreateChild() (interface{}, error) {
 		return ret0, err
 	}
 
-	err = common.CurrentProxyCtx.Deserialize(res, &ret)
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
 	if err != nil {
 		return ret0, err
 	}
-
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return ret0, err
+	}
 	if ret1 != nil {
 		return ret0, ret1
 	}
@@ -642,7 +726,7 @@ func (r *HelloWorld) CreateChildAsImmutable() (interface{}, error) {
 
 	var argsSerialized []byte
 
-	ret := [2]interface{}{}
+	ret := make([]interface{}, 2)
 	var ret0 interface{}
 	ret[0] = &ret0
 	var ret1 *foundation.Error
@@ -658,11 +742,17 @@ func (r *HelloWorld) CreateChildAsImmutable() (interface{}, error) {
 		return ret0, err
 	}
 
-	err = common.CurrentProxyCtx.Deserialize(res, &ret)
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
 	if err != nil {
 		return ret0, err
 	}
-
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return ret0, err
+	}
 	if ret1 != nil {
 		return ret0, ret1
 	}
@@ -676,7 +766,7 @@ func (r *HelloWorld) Call(signedRequest []byte) (interface{}, error) {
 
 	var argsSerialized []byte
 
-	ret := [2]interface{}{}
+	ret := make([]interface{}, 2)
 	var ret0 interface{}
 	ret[0] = &ret0
 	var ret1 *foundation.Error
@@ -692,11 +782,17 @@ func (r *HelloWorld) Call(signedRequest []byte) (interface{}, error) {
 		return ret0, err
 	}
 
-	err = common.CurrentProxyCtx.Deserialize(res, &ret)
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
 	if err != nil {
 		return ret0, err
 	}
-
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return ret0, err
+	}
 	if ret1 != nil {
 		return ret0, ret1
 	}
@@ -730,7 +826,7 @@ func (r *HelloWorld) CallAsImmutable(signedRequest []byte) (interface{}, error) 
 
 	var argsSerialized []byte
 
-	ret := [2]interface{}{}
+	ret := make([]interface{}, 2)
 	var ret0 interface{}
 	ret[0] = &ret0
 	var ret1 *foundation.Error
@@ -746,11 +842,17 @@ func (r *HelloWorld) CallAsImmutable(signedRequest []byte) (interface{}, error) 
 		return ret0, err
 	}
 
-	err = common.CurrentProxyCtx.Deserialize(res, &ret)
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
 	if err != nil {
 		return ret0, err
 	}
-
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return ret0, err
+	}
 	if ret1 != nil {
 		return ret0, ret1
 	}

@@ -21,14 +21,15 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
+	"github.com/pkg/errors"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.JetCalculator -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.JetCalculator -o ./ -s _mock.go -g
 
 // JetCalculator provides get jets method for provided pulse.
 type JetCalculator interface {
 	// MineForPulse returns current node's jets for a provided pulse
-	MineForPulse(ctx context.Context, pn insolar.PulseNumber) []insolar.JetID
+	MineForPulse(ctx context.Context, pn insolar.PulseNumber) ([]insolar.JetID, error)
 }
 
 // JetCalculatorDefault implements JetCalculator.
@@ -46,7 +47,7 @@ func NewJetCalculator(jetCoordinator jet.Coordinator, jetAccessor jet.Accessor) 
 }
 
 // MineForPulse returns current node's jets for a provided pulse.
-func (c *JetCalculatorDefault) MineForPulse(ctx context.Context, pn insolar.PulseNumber) []insolar.JetID {
+func (c *JetCalculatorDefault) MineForPulse(ctx context.Context, pn insolar.PulseNumber) ([]insolar.JetID, error) {
 	var res []insolar.JetID
 
 	jetIDs := c.jetAccessor.All(ctx, pn)
@@ -55,12 +56,12 @@ func (c *JetCalculatorDefault) MineForPulse(ctx context.Context, pn insolar.Puls
 	for _, jetID := range jetIDs {
 		executor, err := c.jetCoordinator.LightExecutorForJet(ctx, insolar.ID(jetID), pn)
 		if err != nil {
-			continue
+			return nil, errors.Wrap(err, "failed to calculate executor")
 		}
 		if *executor == me {
 			res = append(res, jetID)
 		}
 	}
 
-	return res
+	return res, nil
 }

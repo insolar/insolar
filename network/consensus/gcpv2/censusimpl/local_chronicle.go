@@ -77,14 +77,14 @@ type localActiveCensus interface {
 	census.Active
 	getVersionedRegistries() census.VersionedRegistries
 	setVersionedRegistries(vr census.VersionedRegistries)
+	onMadeActive()
 }
 
 type localChronicles struct {
-	rw                  sync.RWMutex
-	active              localActiveCensus
-	expected            census.Expected
-	expectedPulseNumber pulse.Number
-	profileFactory      profiles.Factory
+	rw             sync.RWMutex
+	active         localActiveCensus
+	expected       census.Expected
+	profileFactory profiles.Factory
 }
 
 func (c *localChronicles) GetLatestCensus() census.Operational {
@@ -132,46 +132,79 @@ func (c *localChronicles) makeActive(ce census.Expected, ca localActiveCensus) {
 	if c.expected != ce {
 		panic("illegal state")
 	}
-	if !c.expectedPulseNumber.IsUnknown() && c.expectedPulseNumber != ca.GetPulseNumber() {
-		panic("unexpected pulse number")
-	}
-	pd := ca.GetPulseData()
 
-	if c.active != nil {
-		pd.EnsurePulseData()
-		registries := c.active.getVersionedRegistries().CommitNextPulse(pd, ca.GetOnlinePopulation())
-		c.expectedPulseNumber = pd.GetNextPulseNumber() // should go before any updates as it may panic
-		ca.setVersionedRegistries(registries)
-	} else {
-		switch {
-		case ca.getVersionedRegistries() == nil:
-			panic("versioned registries are nil")
-		case pd.IsExpectedPulse():
-			c.expectedPulseNumber = pd.GetPulseNumber()
-		case pd.IsValidPulseData():
-			c.expectedPulseNumber = pd.GetNextPulseNumber()
-		default:
-			c.expectedPulseNumber = pulse.Unknown
+	if c.active == nil {
+		// priming
+		if ce != nil {
+			panic("illegal state")
 		}
+		if ca.getVersionedRegistries() == nil {
+			panic("versioned registries are missing")
+		}
+	} else {
+		pd := ca.GetPulseData()
+		if pd.IsEmpty() {
+			panic("illegal value")
+		}
+
+		lastRealPulse := c.active.getVersionedRegistries().GetNearestValidPulseData()
+
+		pda := c.active.GetPulseData()
+
+		checkExpectedPulse := true
+		switch {
+		case pda.PulseEpoch == pulse.EphemeralPulseEpoch: // supports empty with ephemeral
+			if pd.IsFromEphemeral() {
+				if !pda.IsEmpty() && !pda.IsValidNext(pd) {
+					panic("illegal value - ephemeral pulses must be consecutive")
+				}
+				break
+			}
+			// we can't check it vs last ephemeral, so lets take the last real one
+			pda = lastRealPulse
+			checkExpectedPulse = false
+			fallthrough
+		case pda.IsFromPulsar() || pda.IsEmpty():
+			// must be regular pulse
+			if !pd.IsValidPulsarData() {
+				panic("illegal value")
+			}
+
+			if !pda.IsEmpty() && pd.PulseNumber < pda.GetNextPulseNumber() {
+				panic("illegal value - pulse retroactive")
+			}
+		}
+
+		if checkExpectedPulse && !ce.GetPulseNumber().IsUnknownOrEqualTo(pd.PulseNumber) {
+			panic("illegal value")
+		}
+
+		registries := c.active.getVersionedRegistries()
+		if pd.IsFromPulsar() {
+			registries = registries.CommitNextPulse(pd, ca.GetOnlinePopulation())
+		}
+		ca.setVersionedRegistries(registries)
 	}
 
 	c.active = ca
 	c.expected = nil
+	ca.onMadeActive()
 }
 
-func (c *localChronicles) makeExpected(ce census.Expected) {
+func (c *localChronicles) makeExpected(ce census.Expected) census.Expected {
 	c.rw.Lock()
 	defer c.rw.Unlock()
 
-	if c.expected != nil {
+	if c.active != ce.GetPrevious() {
 		panic("illegal state")
 	}
 
-	if !c.expectedPulseNumber.IsUnknown() && c.expectedPulseNumber != ce.GetPulseNumber() {
-		panic("unexpected pulse number")
+	if c.expected != nil && c.expected.GetOnlinePopulation() != ce.GetOnlinePopulation() {
+		panic("illegal state")
 	}
 
 	c.expected = ce
+	return ce
 }
 
 func (c *localChronicles) GetProfileFactory(factory cryptkit.KeyStoreFactory) profiles.Factory {

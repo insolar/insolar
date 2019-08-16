@@ -57,9 +57,9 @@ import (
 )
 
 func TestAbs(t *testing.T) {
-	require.Equal(t, int8(1), FraudBySome.abs())
+	require.Equal(t, int8(2), FraudBySome.abs())
 
-	require.Equal(t, int8(1), TrustBySome.abs())
+	require.Equal(t, int8(2), TrustBySome.abs())
 }
 
 func TestUpdate(t *testing.T) {

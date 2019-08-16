@@ -50,12 +50,10 @@ func TestBadSeed(t *testing.T) {
 	ctx := context.TODO()
 	rootCfg, err := requester.CreateUserConfig(root.ref, root.privKey, root.pubKey)
 	require.NoError(t, err)
-	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
-		JSONRPC: "2.0",
-		ID:      1,
-		Method:  "api.call",
-		Params:  requester.Params{CallSite: "member.create", PublicKey: rootCfg.PublicKey},
-	}, "MTExMQ==")
+	res, err := requester.SendWithSeed(ctx, TestRPCUrl, rootCfg, &requester.Params{
+		CallSite:  "member.create",
+		PublicKey: rootCfg.PublicKey},
+		"MTExMQ==")
 	require.NoError(t, err)
 	require.EqualError(t, contractError(res), "[ checkSeed ] Bad seed param")
 }
@@ -64,18 +62,16 @@ func TestIncorrectSeed(t *testing.T) {
 	ctx := context.TODO()
 	rootCfg, err := requester.CreateUserConfig(root.ref, root.privKey, root.pubKey)
 	require.NoError(t, err)
-	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
-		JSONRPC: "2.0",
-		ID:      1,
-		Method:  "api.call",
-		Params:  requester.Params{CallSite: "member.create", PublicKey: rootCfg.PublicKey},
-	}, "z2vgMVDXx0s+g5mkagOLqCP0q/8YTfoQkII5pjNF1ag=")
+	res, err := requester.SendWithSeed(ctx, TestRPCUrl, rootCfg, &requester.Params{
+		CallSite:  "member.create",
+		PublicKey: rootCfg.PublicKey},
+		"z2vgMVDXx0s+g5mkagOLqCP0q/8YTfoQkII5pjNF1ag=")
 	require.NoError(t, err)
 	require.EqualError(t, contractError(res), "[ checkSeed ] Incorrect seed")
 }
 
 func customSend(data string) (map[string]interface{}, error) {
-	req, err := http.NewRequest("POST", TestCallUrl, strings.NewReader(data))
+	req, err := http.NewRequest("POST", TestRPCUrl, strings.NewReader(data))
 	if err != nil {
 		return nil, err
 	}
@@ -98,13 +94,13 @@ func customSend(data string) (map[string]interface{}, error) {
 func TestEmptyBody(t *testing.T) {
 	res, err := customSend("")
 	require.NoError(t, err)
-	require.Equal(t, "failed to unmarshal request: [ UnmarshalRequest ] Empty body", res["error"].(map[string]interface{})["message"].(string))
+	require.Equal(t, "unexpected end of JSON input", res["error"].(map[string]interface{})["message"].(string))
 }
 
 func TestCrazyJSON(t *testing.T) {
 	res, err := customSend("[dh")
 	require.NoError(t, err)
-	require.Contains(t, res["error"].(map[string]interface{})["message"].(string), "[ UnmarshalRequest ] Can't unmarshal input params: invalid")
+	require.Contains(t, res["error"].(map[string]interface{})["message"].(string), "looking for beginning of value")
 }
 
 func TestIncorrectSign(t *testing.T) {
@@ -112,34 +108,63 @@ func TestIncorrectSign(t *testing.T) {
 	seed, err := requester.GetSeed(TestAPIURL)
 	require.NoError(t, err)
 	body, err := requester.GetResponseBodyContract(
-		TestCallUrl,
-		requester.Request{
-			JSONRPC: "2.0",
-			ID:      1,
-			Method:  "api.call",
-			Params:  requester.Params{Seed: seed, Reference: testMember.ref, PublicKey: testMember.pubKey, CallSite: "wallet.getBalance", CallParams: map[string]interface{}{"reference": testMember.ref}},
+		TestRPCUrl,
+		requester.ContractRequest{
+			Request: requester.Request{
+				Version: "2.0",
+				ID:      1,
+				Method:  "contract.call",
+			},
+			Params: requester.Params{Seed: seed, Reference: testMember.ref, PublicKey: testMember.pubKey, CallSite: "wallet.getBalance", CallParams: map[string]interface{}{"reference": testMember.ref}},
 		},
 		"MEQCIAvgBR42vSccBKynBIC7gb5GffqtW8q2XWRP+DlJ0IeUAiAeKCxZNSSRSsYcz2d49CT6KlSLpr5L7VlOokOiI9dsvQ==",
 	)
 	require.NoError(t, err)
-	var res requester.ContractAnswer
+	var res requester.ContractResponse
 	err = json.Unmarshal(body, &res)
 	require.NoError(t, err)
 	require.Contains(t, res.Error.Message, "invalid signature")
 }
 
 func TestIncorrectMethodName(t *testing.T) {
-	ctx := context.TODO()
-	seed, err := requester.GetSeed(TestAPIURL)
+	res, err := requester.GetResponseBodyContract(
+		TestRPCUrl,
+		requester.ContractRequest{
+			Request: requester.Request{
+				Version: "2.0",
+				ID:      1,
+				Method:  "foo.bar",
+			},
+		},
+		"MEQCIAvgBR42vSccBKynBIC7gb5GffqtW8q2XWRP+DlJ0IeUAiAeKCxZNSSRSsYcz2d49CT6KlSLpr5L7VlOokOiI9dsvQ==",
+	)
 	require.NoError(t, err)
-	rootCfg, err := requester.CreateUserConfig(root.ref, root.privKey, root.pubKey)
+	require.EqualError(t, contractError(res), "rpc: can't find service \"foo.bar\"")
+}
+
+func TestIncorrectParams(t *testing.T) {
+	firstMember := createMember(t)
+
+	_, err := signedRequestWithEmptyRequestRef(t, firstMember, "member.transfer", firstMember.ref)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "failed to cast call params: expected 'map[string]interface{}', got 'string'")
+}
+
+func TestNilParams(t *testing.T) {
+	firstMember := createMember(t)
+
+	_, err := signedRequestWithEmptyRequestRef(t, firstMember, "member.transfer", nil)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "call params are nil")
+}
+
+func TestRequestReference(t *testing.T) {
+	firstMember := createMember(t)
+	secondMember := createMember(t)
+	amount := "10"
+
+	_, ref, err := makeSignedRequest(firstMember, "member.transfer", map[string]interface{}{"amount": amount, "toMemberReference": secondMember.ref})
 	require.NoError(t, err)
-	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
-		JSONRPC: "2.0",
-		ID:      1,
-		Method:  "foo.bar",
-		Params:  requester.Params{CallSite: "member.create", PublicKey: rootCfg.PublicKey},
-	}, seed)
-	require.NoError(t, err)
-	require.EqualError(t, contractError(res), "rpc method does not exist")
+	require.NotEqual(t, "", ref)
+	require.NotEqual(t, "11111111111111111111111111111111.11111111111111111111111111111111", ref)
 }

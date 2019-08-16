@@ -56,25 +56,19 @@ import (
 	"io"
 	"time"
 
+	"github.com/insolar/insolar/network"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/adapters"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
-	"github.com/insolar/insolar/network/consensus/common/longbits"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
-	"github.com/insolar/insolar/network/utils"
 )
-
-type originalPulsarPacket struct {
-	longbits.FixedReader
-}
-
-func (p *originalPulsarPacket) OriginalPulsarPacket() {}
 
 type packetData struct {
 	data   []byte
@@ -104,7 +98,7 @@ func newPacketParser(
 	keyProcessor insolar.KeyProcessor,
 ) (*PacketParser, error) {
 
-	capture := utils.NewCapturingReader(reader)
+	capture := network.NewCapturingReader(reader)
 	parser := &PacketParser{
 		packetData: packetData{
 			packet: new(Packet),
@@ -126,7 +120,7 @@ func newPacketParser(
 	})
 
 	if logger.Is(insolar.DebugLevel) {
-		logger.Debugf("Received packet s:%d t:%d payload:{%s}", parser.GetSourceID(), parser.GetTargetID(), parser.packet)
+		logger.Debugf("Received packet %s", parser.packet)
 	}
 
 	parser.data = capture.Captured()
@@ -158,10 +152,8 @@ func (f *PacketParserFactory) ParsePacket(ctx context.Context, reader io.Reader)
 }
 
 func (p *PacketParser) GetPulsePacket() transport.PulsePacketReader {
-	return &PulsePacketReader{
-		data: p.packetData.data,
-		body: p.packet.EncryptableBody.(*PulsarPacketBody),
-	}
+	pulsarBody := p.packet.EncryptableBody.(*PulsarPacketBody)
+	return adapters.NewPulsePacketParser(pulsarBody.getPulseData(), p.packetData.data)
 }
 
 func (p *PacketParser) GetMemberPacket() transport.MemberPacketReader {
@@ -197,21 +189,6 @@ func (p *PacketParser) GetPacketSignature() cryptkit.SignedDigest {
 	signature := cryptkit.NewSignature(&p.packet.PacketSignature, p.digester.GetDigestMethod().SignedBy(p.signMethod))
 	digest := p.digester.GetDigestOf(payloadReader)
 	return cryptkit.NewSignedDigest(digest, signature)
-}
-
-type PulsePacketReader struct {
-	data []byte
-	body *PulsarPacketBody
-}
-
-func (r *PulsePacketReader) GetPulseData() pulse.Data {
-	return r.body.getPulseData()
-}
-
-func (r *PulsePacketReader) GetPulseDataEvidence() proofs.OriginalPulsarPacket {
-	return &originalPulsarPacket{
-		FixedReader: longbits.NewFixedReader(r.data),
-	}
 }
 
 type MemberPacketReader struct {
@@ -266,10 +243,7 @@ func (r *EmbeddedPulseReader) GetEmbeddedPulsePacket() transport.PulsePacketRead
 		return nil
 	}
 
-	return &PulsePacketReader{
-		data: r.body.PulsarPacket.Data,
-		body: &r.body.PulsarPacket.PulsarPacketBody,
-	}
+	return adapters.NewPulsePacketParser(r.body.PulsarPacket.PulsarPacketBody.getPulseData(), r.body.PulsarPacket.Data)
 }
 
 type Phase0PacketReader struct {
@@ -518,12 +492,10 @@ func (r *FullIntroductionReader) GetExtraEndpoints() []endpoints.Outbound {
 
 func (r *FullIntroductionReader) GetReference() insolar.Reference {
 	if r.body.FullSelfIntro.ProofLen > 0 {
-		ref := insolar.Reference{}
-		copy(ref[:], r.intro.NodeRefProof[0].AsBytes())
-		return ref
+		return *insolar.NewReferenceFromBytes(r.intro.NodeRefProof[0].AsBytes())
 	}
 
-	return insolar.Reference{}
+	return *insolar.NewEmptyReference()
 }
 
 func (r *FullIntroductionReader) GetIssuerID() insolar.ShortNodeID {
@@ -564,7 +536,7 @@ func (r *MembershipAnnouncementReader) GetNodeStateHashEvidence() proofs.NodeSta
 
 	return cryptkit.NewSignedDigest(
 		cryptkit.NewDigest(&r.body.Announcement.Member.NodeState.NodeStateHash, r.digester.GetDigestMethod()),
-		cryptkit.NewSignature(&r.body.Announcement.Member.NodeState.GlobulaNodeStateSignature, r.digester.GetDigestMethod().SignedBy(r.signMethod)),
+		cryptkit.NewSignature(&r.body.Announcement.Member.NodeState.NodeStateHashSignature, r.digester.GetDigestMethod().SignedBy(r.signMethod)),
 	).AsSignedDigestHolder()
 }
 
@@ -648,6 +620,10 @@ func (r *JoinerAnnouncementReader) HasFullIntro() bool {
 }
 
 func (r *JoinerAnnouncementReader) GetFullIntroduction() transport.FullIntroductionReader {
+	if !r.HasFullIntro() {
+		return nil
+	}
+
 	return &FullIntroductionReader{
 		MemberPacketReader: r.MemberPacketReader,
 		intro: NodeFullIntro{
@@ -692,7 +668,7 @@ func (r *NeighbourAnnouncementReader) GetRequestedPower() member.Power {
 func (r *NeighbourAnnouncementReader) GetNodeStateHashEvidence() proofs.NodeStateHashEvidence {
 	return cryptkit.NewSignedDigest(
 		cryptkit.NewDigest(&r.neighbour.Member.NodeState.NodeStateHash, r.digester.GetDigestMethod()),
-		cryptkit.NewSignature(&r.neighbour.Member.NodeState.GlobulaNodeStateSignature, r.digester.GetDigestMethod().SignedBy(r.signMethod)),
+		cryptkit.NewSignature(&r.neighbour.Member.NodeState.NodeStateHashSignature, r.digester.GetDigestMethod().SignedBy(r.signMethod)),
 	).AsSignedDigestHolder()
 }
 
@@ -732,6 +708,18 @@ func (r *NeighbourAnnouncementReader) GetJoinerID() insolar.ShortNodeID {
 }
 
 func (r *NeighbourAnnouncementReader) GetJoinerAnnouncement() transport.JoinerAnnouncementReader {
+	if !r.isJoiner() {
+		return nil
+	}
+
+	if r.IsLeaving() {
+		return nil
+	}
+
+	if r.neighbour.NeighbourNodeID == r.body.Announcement.Member.AnnounceID {
+		return nil
+	}
+
 	return &JoinerAnnouncementReader{
 		MemberPacketReader: r.MemberPacketReader,
 		joiner:             r.neighbour.Joiner,

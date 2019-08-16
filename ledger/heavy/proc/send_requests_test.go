@@ -67,11 +67,11 @@ func TestSendRequests_Proceed(t *testing.T) {
 		receivedMeta := payload.Meta{Payload: buf}
 		p = newProc(receivedMeta)
 
-		indexes.ForIDFunc = func(_ context.Context, pn insolar.PulseNumber, id insolar.ID) (record.Index, error) {
+		indexes.ForIDMock.Set(func(_ context.Context, pn insolar.PulseNumber, id insolar.ID) (record.Index, error) {
 			require.Equal(t, msg.StartFrom.Pulse(), pn)
 			require.Equal(t, msg.ObjectID, id)
 			return record.Index{}, nil
-		}
+		})
 
 		err = p.Proceed(ctx)
 		assert.Error(t, err)
@@ -96,13 +96,13 @@ func TestSendRequests_Proceed(t *testing.T) {
 		receivedMeta := payload.Meta{Payload: buf}
 		p = newProc(receivedMeta)
 
-		indexes.ForIDFunc = func(_ context.Context, pn insolar.PulseNumber, id insolar.ID) (record.Index, error) {
+		indexes.ForIDMock.Set(func(_ context.Context, pn insolar.PulseNumber, id insolar.ID) (record.Index, error) {
 			require.Equal(t, msg.StartFrom.Pulse(), pn)
 			require.Equal(t, msg.ObjectID, id)
 			return record.Index{}, nil
-		}
+		})
 
-		sender.ReplyFunc = func(_ context.Context, origin payload.Meta, rep *message.Message) {
+		sender.ReplyMock.Set(func(_ context.Context, origin payload.Meta, rep *message.Message) {
 			require.Equal(t, receivedMeta, origin)
 
 			resp, err := payload.Unmarshal(rep.Payload)
@@ -112,7 +112,7 @@ func TestSendRequests_Proceed(t *testing.T) {
 			require.True(t, ok)
 			assert.Equal(t, msg.ObjectID, filaments.ObjectID)
 			assert.Equal(t, []record.CompositeFilamentRecord{rec3, rec2, rec1}, filaments.Records)
-		}
+		})
 
 		err = p.Proceed(ctx)
 		assert.NoError(t, err)

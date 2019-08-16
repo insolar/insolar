@@ -19,12 +19,14 @@ package logicrunner
 import (
 	"context"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/reply"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
 type HandleStillExecuting struct {
@@ -35,11 +37,26 @@ type HandleStillExecuting struct {
 }
 
 func (h *HandleStillExecuting) Present(ctx context.Context, f flow.Flow) error {
-	ctx = loggerWithTargetID(ctx, h.Parcel)
-	msg := h.Parcel.Message().(*message.StillExecuting)
-	h.dep.ResultsMatcher.AddStillExecution(ctx, msg)
+	logger := inslogger.FromContext(ctx)
 
-	broker := h.dep.StateStorage.UpsertExecutionState(msg.Reference)
+	logger.Debug("HandleExecutorResults.Present starts ...")
+
+	message := payload.StillExecuting{}
+	err := message.Unmarshal(h.Message.Payload)
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal message")
+	}
+
+	done, err := h.dep.WriteAccessor.Begin(ctx, flow.Pulse(ctx))
+	defer done()
+
+	if err != nil {
+		return nil
+	}
+
+	h.dep.ResultsMatcher.AddStillExecution(ctx, &message)
+
+	broker := h.dep.StateStorage.UpsertExecutionState(message.ObjectRef)
 	broker.PrevExecutorStillExecuting(ctx)
 
 	replyOk := bus.ReplyAsMessage(ctx, &reply.OK{})

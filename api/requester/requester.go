@@ -29,6 +29,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math/big"
+	mathrand "math/rand"
 	"net/http"
 	"strconv"
 	"time"
@@ -86,25 +87,39 @@ func SetVerbose(verb bool) {
 
 // PlatformRequest represents params struct
 type PlatformRequest struct {
-	JSONRPC        string      `json:"jsonrpc"`
-	ID             int         `json:"id"`
-	Method         string      `json:"method"`
+	Request
 	PlatformParams interface{} `json:"params"`
 	LogLevel       string      `json:"logLevel,omitempty"`
 }
 
-// GetResponseBodyContract makes request to contract and extracts body
-func GetResponseBodyContract(url string, postP Request, signature string) ([]byte, error) {
-	jsonValue, err := json.Marshal(postP)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ GetResponseBodyContract ] Problem with marshaling params")
-	}
+// ContractRequest is a representation of request struct to api
+type ContractRequest struct {
+	Request
+	Params Params `json:"params,omitempty"`
+}
 
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonValue))
+type Request struct {
+	Version string `json:"jsonrpc"`
+	ID      uint64 `json:"id"`
+	Method  string `json:"method"`
+}
+
+type Params struct {
+	Seed       string      `json:"seed"`
+	CallSite   string      `json:"callSite"`
+	CallParams interface{} `json:"callParams,omitempty"`
+	Reference  string      `json:"reference"`
+	PublicKey  string      `json:"publicKey"`
+	LogLevel   string      `json:"logLevel,omitempty"`
+	Test       string      `json:"test,omitempty"`
+}
+
+// GetResponseBodyContract makes request to contract and extracts body
+func GetResponseBodyContract(url string, postP ContractRequest, signature string) ([]byte, error) {
+	req, jsonValue, err := prepareReq(url, postP)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ GetResponseBodyContract ] Problem with creating request")
+		return nil, errors.Wrap(err, "problem with preparing contract request")
 	}
-	req.Header.Set(ContentType, "application/json")
 
 	h := sha256.New()
 	_, err = h.Write(jsonValue)
@@ -114,57 +129,62 @@ func GetResponseBodyContract(url string, postP Request, signature string) ([]byt
 	sha := base64.StdEncoding.EncodeToString(h.Sum(nil))
 	req.Header.Set(Digest, "SHA-256="+sha)
 	req.Header.Set(Signature, "keyId=\"member-pub-key\", algorithm=\"ecdsa\", headers=\"digest\", signature="+signature)
-	postResp, err := httpClient.Do(req)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ GetResponseBodyContract ] Problem with sending request")
-	}
 
-	if postResp == nil {
-		return nil, errors.New("[ GetResponseBodyContract ] Response is nil")
-	}
-
-	defer postResp.Body.Close()
-	if http.StatusOK != postResp.StatusCode {
-		return nil, errors.New("[ getResponseBodyContract ] Bad http response code: " + strconv.Itoa(postResp.StatusCode))
-	}
-
-	body, err := ioutil.ReadAll(postResp.Body)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ GetResponseBodyContract ] Problem with reading body")
-	}
-
-	return body, nil
+	return doReq(req)
 }
 
 // GetResponseBodyContract makes request to platform and extracts body
-func GetResponseBodyPlatform(url string, postP PlatformRequest) ([]byte, error) {
+func GetResponseBodyPlatform(url string, method string, params interface{}) ([]byte, error) {
+	request := PlatformRequest{
+		Request: Request{
+			Version: JSONRPCVersion,
+			ID:      uint64(mathrand.Int63()),
+			Method:  method,
+		},
+		PlatformParams: params,
+	}
+
+	req, _, err := prepareReq(url, request)
+	if err != nil {
+		return nil, errors.Wrap(err, "problem with preparing platform request")
+	}
+
+	return doReq(req)
+}
+
+func prepareReq(url string, postP interface{}) (*http.Request, []byte, error) {
 	jsonValue, err := json.Marshal(postP)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ GetResponseBodyPlatform ] Problem with marshaling params")
+		return nil, nil, errors.Wrap(err, "problem with marshaling params")
 	}
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonValue))
 	if err != nil {
-		return nil, errors.Wrap(err, "[ GetResponseBodyPlatform ] Problem with creating request")
+		return nil, nil, errors.Wrap(err, "problem with creating request")
 	}
 	req.Header.Set(ContentType, "application/json")
+
+	return req, jsonValue, nil
+}
+
+func doReq(req *http.Request) ([]byte, error) {
 	postResp, err := httpClient.Do(req)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ GetResponseBodyPlatform ] Problem with sending request")
+		return nil, errors.Wrap(err, "problem with sending request")
 	}
 
 	if postResp == nil {
-		return nil, errors.New("[ GetResponseBodyPlatform ] Response is nil")
+		return nil, errors.New("response is nil")
 	}
 
 	defer postResp.Body.Close()
 	if http.StatusOK != postResp.StatusCode {
-		return nil, errors.New("[ GetResponseBodyPlatform ] Bad http response code: " + strconv.Itoa(postResp.StatusCode))
+		return nil, errors.New("bad http response code: " + strconv.Itoa(postResp.StatusCode))
 	}
 
 	body, err := ioutil.ReadAll(postResp.Body)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ GetResponseBodyPlatform ] Problem with reading body")
+		return nil, errors.Wrap(err, "problem with reading body")
 	}
 
 	return body, nil
@@ -172,11 +192,7 @@ func GetResponseBodyPlatform(url string, postP PlatformRequest) ([]byte, error) 
 
 // GetSeed makes rpc request to node.getSeed method and extracts it
 func GetSeed(url string) (string, error) {
-	body, err := GetResponseBodyPlatform(url+"/rpc", PlatformRequest{
-		JSONRPC: JSONRPCVersion,
-		Method:  "node.getSeed",
-		ID:      1,
-	})
+	body, err := GetResponseBodyPlatform(url+"/rpc", "node.getSeed", nil)
 	if err != nil {
 		return "", errors.Wrap(err, "[ GetSeed ] seed request")
 	}
@@ -198,16 +214,25 @@ func GetSeed(url string) (string, error) {
 }
 
 // SendWithSeed sends request with known seed
-func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, reqCfg *Request, seed string) ([]byte, error) {
-	if userCfg == nil || reqCfg == nil {
+func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, params *Params, seed string) ([]byte, error) {
+	if userCfg == nil || params == nil {
 		return nil, errors.New("[ SendWithSeed ] Configs must be initialized")
 	}
 
-	reqCfg.Params.Reference = userCfg.Caller
-	reqCfg.Params.Seed = seed
+	params.Reference = userCfg.Caller
+	params.Seed = seed
+
+	request := &ContractRequest{
+		Request: Request{
+			Version: JSONRPCVersion,
+			ID:      uint64(mathrand.Int63()),
+			Method:  "contract.call",
+		},
+		Params: *params,
+	}
 
 	verboseInfo(ctx, "Signing request ...")
-	dataToSign, err := json.Marshal(reqCfg)
+	dataToSign, err := json.Marshal(request)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ SendWithSeed ] Config request marshaling failed")
 	}
@@ -217,7 +242,7 @@ func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, reqC
 	}
 	verboseInfo(ctx, "Signing request completed")
 
-	body, err := GetResponseBodyContract(url, *reqCfg, signature)
+	body, err := GetResponseBodyContract(url, *request, signature)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ SendWithSeed ] Problem with sending target request")
 	}
@@ -252,7 +277,7 @@ func marshalSig(r, s *big.Int) (string, error) {
 }
 
 // Send first gets seed and after that makes target request
-func Send(ctx context.Context, url string, userCfg *UserConfigJSON, reqCfg *Request) ([]byte, error) {
+func Send(ctx context.Context, url string, userCfg *UserConfigJSON, params *Params) ([]byte, error) {
 	verboseInfo(ctx, "Sending GETSEED request ...")
 	seed, err := GetSeed(url)
 	if err != nil {
@@ -260,7 +285,7 @@ func Send(ctx context.Context, url string, userCfg *UserConfigJSON, reqCfg *Requ
 	}
 	verboseInfo(ctx, "GETSEED request completed. seed: "+seed)
 
-	response, err := SendWithSeed(ctx, url+"/call", userCfg, reqCfg, seed)
+	response, err := SendWithSeed(ctx, url+"/rpc", userCfg, params, seed)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Send ]")
 	}
@@ -268,19 +293,9 @@ func Send(ctx context.Context, url string, userCfg *UserConfigJSON, reqCfg *Requ
 	return response, nil
 }
 
-func getDefaultRPCParams(method string) PlatformRequest {
-	return PlatformRequest{
-		JSONRPC: JSONRPCVersion,
-		ID:      1,
-		Method:  method,
-	}
-}
-
 // Info makes rpc request to network.getInfo method and extracts it
 func Info(url string) (*InfoResponse, error) {
-	params := getDefaultRPCParams("network.getInfo")
-
-	body, err := GetResponseBodyPlatform(url+"/rpc", params)
+	body, err := GetResponseBodyPlatform(url+"/rpc", "network.getInfo", nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Info ]")
 	}
@@ -298,11 +313,9 @@ func Info(url string) (*InfoResponse, error) {
 	return &infoResp.Result, nil
 }
 
-// Status makes rpc request to info.Status method and extracts it
+// Status makes rpc request to node.getStatus method and extracts it
 func Status(url string) (*StatusResponse, error) {
-	params := getDefaultRPCParams("node.getStatus")
-
-	body, err := GetResponseBodyPlatform(url+"/rpc", params)
+	body, err := GetResponseBodyPlatform(url+"/rpc", "node.getStatus", nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Status ]")
 	}

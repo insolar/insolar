@@ -28,43 +28,59 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_IncomingRequests(t *testing.T) {
+func Test_IncomingRequest_Check(t *testing.T) {
 	t.Parallel()
 
 	ctx := inslogger.TestContext(t)
 	cfg := DefaultLightConfig()
 	s, err := NewServer(ctx, cfg, nil)
 	require.NoError(t, err)
+	defer s.Stop()
 
 	// First pulse goes in storage then interrupts.
-	s.Pulse(ctx)
+	s.SetPulse(ctx)
 	// Second pulse goes in storage and starts processing, including pulse change in flow dispatcher.
-	s.Pulse(ctx)
+	s.SetPulse(ctx)
+
+	t.Run("registered is older than reason returns error", func(t *testing.T) {
+		msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()+1), insolar.ID{}, true, true)
+		rep := SendMessage(ctx, s, &msg)
+		RequireErrorCode(rep, payload.CodeInvalidRequest)
+	})
+
+	t.Run("detached returns error", func(t *testing.T) {
+		msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), insolar.ID{}, true, true)
+		// Faking detached request.
+		record.Unwrap(&msg.Request).(*record.IncomingRequest).ReturnMode = record.ReturnSaga
+		rep := SendMessage(ctx, s, &msg)
+		RequireErrorCode(rep, payload.CodeInvalidRequest)
+	})
 
 	t.Run("registered API request appears in pendings", func(t *testing.T) {
-		p, _ := callSetIncomingRequest(ctx, s, gen.ID(), gen.ID(), true, true)
-		requireNotError(t, p)
-		reqInfo := p.(*payload.RequestInfo)
-		p = callGetPendings(ctx, s, reqInfo.RequestID)
-		requireNotError(t, p)
+		msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), insolar.ID{}, true, true)
+		rep := SendMessage(ctx, s, &msg)
+		RequireNotError(rep)
+		reqInfo := rep.(*payload.RequestInfo)
+		rep = CallGetPendings(ctx, s, reqInfo.RequestID)
+		RequireNotError(rep)
 
-		ids := p.(*payload.IDs)
+		ids := rep.(*payload.IDs)
 		require.Equal(t, 1, len(ids.IDs))
 		require.Equal(t, reqInfo.RequestID, ids.IDs[0])
 	})
 
 	t.Run("registered request appears in pendings", func(t *testing.T) {
-		firstObjP, _ := callSetIncomingRequest(ctx, s, gen.ID(), gen.ID(), true, true)
-		requireNotError(t, firstObjP)
+		msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), insolar.ID{}, true, true)
+		firstObjP := SendMessage(ctx, s, &msg)
+		RequireNotError(firstObjP)
 		reqInfo := firstObjP.(*payload.RequestInfo)
-		firstObjP, _ = callActivateObject(ctx, s, reqInfo.RequestID)
-		requireNotError(t, firstObjP)
 
-		secondObjP, _ := callSetIncomingRequest(ctx, s, gen.ID(), reqInfo.RequestID, true, false)
-		requireNotError(t, secondObjP)
+		msg, _ = MakeSetIncomingRequest(gen.ID(), reqInfo.RequestID, reqInfo.RequestID, true, false)
+		secondObjP := SendMessage(ctx, s, &msg)
+		RequireNotError(secondObjP)
 		secondReqInfo := secondObjP.(*payload.RequestInfo)
-		secondPendings := callGetPendings(ctx, s, secondReqInfo.RequestID)
-		requireNotError(t, secondPendings)
+		secondPendings := CallGetPendings(ctx, s, secondReqInfo.RequestID)
+		RequireNotError(secondPendings)
 
 		ids := secondPendings.(*payload.IDs)
 		require.Equal(t, 1, len(ids.IDs))
@@ -72,115 +88,152 @@ func Test_IncomingRequests(t *testing.T) {
 	})
 
 	t.Run("closed request does not appear in pendings", func(t *testing.T) {
-		p, _ := callSetIncomingRequest(ctx, s, gen.ID(), gen.ID(), true, true)
-		requireNotError(t, p)
-		reqInfo := p.(*payload.RequestInfo)
+		msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), insolar.ID{}, true, true)
+		rep := SendMessage(ctx, s, &msg)
+		RequireNotError(rep)
+		reqInfo := rep.(*payload.RequestInfo)
 
-		p, _ = callActivateObject(ctx, s, reqInfo.RequestID)
-		requireNotError(t, p)
+		p, _ := CallActivateObject(ctx, s, reqInfo.RequestID)
+		RequireNotError(p)
 
-		p = callGetPendings(ctx, s, reqInfo.RequestID)
+		p = CallGetPendings(ctx, s, reqInfo.RequestID)
 
 		err := p.(*payload.Error)
 		require.Equal(t, insolar.ErrNoPendingRequest.Error(), err.Text)
 	})
 }
 
-func Test_OutgoingRequests(t *testing.T) {
-	t.Parallel()
-
-	ctx := inslogger.TestContext(t)
-	cfg := DefaultLightConfig()
-
-	received := make(chan payload.SagaCallAcceptNotification)
-	s, err := NewServer(ctx, cfg, func(meta payload.Meta, pl payload.Payload) {
-		if notification, ok := pl.(*payload.SagaCallAcceptNotification); ok {
-			received <- *notification
-		}
-	})
-	require.NoError(t, err)
-
-	// First pulse goes in storage then interrupts.
-	s.Pulse(ctx)
-	// Second pulse goes in storage and starts processing, including pulse change in flow dispatcher.
-	s.Pulse(ctx)
-
-	t.Run("detached notification sent on detached reason close", func(t *testing.T) {
-		p, _ := callSetIncomingRequest(ctx, s, gen.ID(), gen.ID(), true, true)
-		requireNotError(t, p)
-		objectID := p.(*payload.RequestInfo).ObjectID
-
-		p, _ = callSetIncomingRequest(ctx, s, objectID, gen.ID(), false, true)
-		requireNotError(t, p)
-		reasonID := p.(*payload.RequestInfo).RequestID
-
-		p, detachedRec := callSetOutgoingRequest(ctx, s, objectID, reasonID, true)
-		requireNotError(t, p)
-		detachedID := p.(*payload.RequestInfo).RequestID
-
-		p, _ = callSetResult(ctx, s, objectID, reasonID)
-		requireNotError(t, p)
-
-		notification := <-received
-		require.Equal(t, objectID, notification.ObjectID)
-		require.Equal(t, detachedID, notification.DetachedRequestID)
-
-		receivedRec := record.Virtual{}
-		err := receivedRec.Unmarshal(notification.Request)
-		require.NoError(t, err)
-		require.Equal(t, detachedRec, receivedRec)
-	})
-}
-
-func Test_DuplicatedRequests(t *testing.T) {
+func Test_IncomingRequest_Duplicate(t *testing.T) {
 	t.Parallel()
 
 	ctx := inslogger.TestContext(t)
 	cfg := DefaultLightConfig()
 	s, err := NewServer(ctx, cfg, nil)
 	require.NoError(t, err)
+	defer s.Stop()
 
 	// First pulse goes in storage then interrupts.
-	s.Pulse(ctx)
+	s.SetPulse(ctx)
 	// Second pulse goes in storage and starts processing, including pulse change in flow dispatcher.
-	s.Pulse(ctx)
+	s.SetPulse(ctx)
 
-	t.Run("try to register request twice. no result", func(t *testing.T) {
-		args := make([]byte, 100)
-		_, err := rand.Read(args)
-		initReq := record.IncomingRequest{
-			Object:    insolar.NewReference(gen.ID()),
-			Arguments: args,
-			CallType:  record.CTSaveAsChild,
-			Reason:    *insolar.NewReference(*insolar.NewID(s.pulse.PulseNumber, []byte{1, 2, 3})),
-			APINode:   gen.Reference(),
-		}
-		initReqMsg := &payload.SetIncomingRequest{
-			Request: record.Wrap(&initReq),
-		}
+	t.Run("creation request duplicate found", func(t *testing.T) {
+		msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), insolar.ID{}, true, true)
 
-		// Set first request
-		p := sendMessage(ctx, s, initReqMsg)
-		requireNotError(t, p)
-		reqInfo := p.(*payload.RequestInfo)
-		require.Nil(t, reqInfo.Request)
-		require.Nil(t, reqInfo.Result)
+		// Set first request.
+		rep := SendMessage(ctx, s, &msg)
+		RequireNotError(rep)
+		require.Nil(t, rep.(*payload.RequestInfo).Request)
+		require.Nil(t, rep.(*payload.RequestInfo).Result)
 
-		// Try to set it again
-		secondP := sendMessage(ctx, s, initReqMsg)
-		requireNotError(t, secondP)
-		reqInfo = secondP.(*payload.RequestInfo)
-		require.NotNil(t, reqInfo.Request)
-		require.Nil(t, reqInfo.Result)
+		// Try to set it again.
+		rep = SendMessage(ctx, s, &msg)
+		RequireNotError(rep)
+		require.NotNil(t, rep.(*payload.RequestInfo).Request)
+		require.Nil(t, rep.(*payload.RequestInfo).Result)
 
-		// Check for the result
+		// Check for result.
 		receivedDuplicate := record.Material{}
-		err = receivedDuplicate.Unmarshal(reqInfo.Request)
+		err = receivedDuplicate.Unmarshal(rep.(*payload.RequestInfo).Request)
 		require.NoError(t, err)
-		require.Equal(t, &initReq, record.Unwrap(&receivedDuplicate.Virtual))
+		require.Equal(t, msg.Request, receivedDuplicate.Virtual)
 	})
 
-	t.Run("try to register outgoing request twice. no result", func(t *testing.T) {
+	t.Run("method request duplicate found", func(t *testing.T) {
+		msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), insolar.ID{}, true, true)
+		rep := SendMessage(ctx, s, &msg)
+		RequireNotError(rep)
+		rootObject := rep.(*payload.RequestInfo).ObjectID
+		reasonID := rep.(*payload.RequestInfo).RequestID
+
+		msg, _ = MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), insolar.ID{}, true, true)
+		rep = SendMessage(ctx, s, &msg)
+		RequireNotError(rep)
+		objectID := rep.(*payload.RequestInfo).ObjectID
+
+		msg, _ = MakeSetIncomingRequest(objectID, reasonID, rootObject, false, false)
+
+		// Set first request.
+		rep = SendMessage(ctx, s, &msg)
+		RequireNotError(rep)
+		require.Nil(t, rep.(*payload.RequestInfo).Request)
+		require.Nil(t, rep.(*payload.RequestInfo).Result)
+
+		// Try to set it again.
+		rep = SendMessage(ctx, s, &msg)
+		RequireNotError(rep)
+		require.NotNil(t, rep.(*payload.RequestInfo).Request)
+		require.Nil(t, rep.(*payload.RequestInfo).Result)
+
+		// Check for found duplicate.
+		receivedDuplicate := record.Material{}
+		err = receivedDuplicate.Unmarshal(rep.(*payload.RequestInfo).Request)
+		require.NoError(t, err)
+		require.Equal(t, msg.Request, receivedDuplicate.Virtual)
+	})
+
+	t.Run("method request duplicate with result found", func(t *testing.T) {
+		msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), insolar.ID{}, true, true)
+		rep := SendMessage(ctx, s, &msg)
+		RequireNotError(rep)
+		rootObject := rep.(*payload.RequestInfo).ObjectID
+		reasonID := rep.(*payload.RequestInfo).RequestID
+
+		msg, _ = MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), insolar.ID{}, true, true)
+		rep = SendMessage(ctx, s, &msg)
+		RequireNotError(rep)
+		objectID := rep.(*payload.RequestInfo).ObjectID
+
+		requestMsg, _ := MakeSetIncomingRequest(objectID, reasonID, rootObject, false, false)
+
+		// Set first request.
+		rep = SendMessage(ctx, s, &requestMsg)
+		RequireNotError(rep)
+		require.Nil(t, rep.(*payload.RequestInfo).Request)
+		require.Nil(t, rep.(*payload.RequestInfo).Result)
+		requestID := rep.(*payload.RequestInfo).RequestID
+
+		// Set result.
+		resMsg, resultVirtual := MakeSetResult(objectID, requestID)
+		rep = SendMessage(ctx, s, &resMsg)
+		RequireNotError(rep)
+
+		// Try to set request again.
+		rep = SendMessage(ctx, s, &requestMsg)
+		RequireNotError(rep)
+		requestInfo := rep.(*payload.RequestInfo)
+		require.NotNil(t, requestInfo.Request)
+		require.NotNil(t, requestInfo.Result)
+
+		// Check for found duplicate.
+		receivedDuplicate := record.Material{}
+		err = receivedDuplicate.Unmarshal(requestInfo.Request)
+		require.NoError(t, err)
+		require.Equal(t, requestMsg.Request, receivedDuplicate.Virtual)
+
+		// Check for result duplicate.
+		receivedResult := record.Material{}
+		err = receivedResult.Unmarshal(requestInfo.Result)
+		require.NoError(t, err)
+		require.Equal(t, resultVirtual, receivedResult.Virtual)
+	})
+}
+
+func Test_OutgoingRequest_Duplicate(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+	cfg := DefaultLightConfig()
+	s, err := NewServer(ctx, cfg, nil)
+	require.NoError(t, err)
+	defer s.Stop()
+
+	// First pulse goes in storage then interrupts.
+	s.SetPulse(ctx)
+	// Second pulse goes in storage and starts processing, including pulse change in flow dispatcher.
+	s.SetPulse(ctx)
+
+	t.Run("method request duplicate found", func(t *testing.T) {
 		args := make([]byte, 100)
 		_, err := rand.Read(args)
 		initReq := record.IncomingRequest{
@@ -195,8 +248,8 @@ func Test_DuplicatedRequests(t *testing.T) {
 		}
 
 		// Set first request
-		p := sendMessage(ctx, s, initReqMsg)
-		requireNotError(t, p)
+		p := SendMessage(ctx, s, initReqMsg)
+		RequireNotError(p)
 		reqInfo := p.(*payload.RequestInfo)
 		require.Nil(t, reqInfo.Request)
 		require.Nil(t, reqInfo.Result)
@@ -212,15 +265,15 @@ func Test_DuplicatedRequests(t *testing.T) {
 		}
 
 		// Set outgoing request
-		outP := sendMessage(ctx, s, outgoingReqMsg)
-		requireNotError(t, outP)
-		outReqInfo := p.(*payload.RequestInfo)
+		outP := SendMessage(ctx, s, outgoingReqMsg)
+		RequireNotError(outP)
+		outReqInfo := outP.(*payload.RequestInfo)
 		require.Nil(t, outReqInfo.Request)
 		require.Nil(t, outReqInfo.Result)
 
 		// Try to set an outgoing again
-		outSecondP := sendMessage(ctx, s, outgoingReqMsg)
-		requireNotError(t, outSecondP)
+		outSecondP := SendMessage(ctx, s, outgoingReqMsg)
+		RequireNotError(outSecondP)
 		outReqSecondInfo := outSecondP.(*payload.RequestInfo)
 		require.NotNil(t, outReqSecondInfo.Request)
 		require.Nil(t, outReqSecondInfo.Result)
@@ -231,151 +284,376 @@ func Test_DuplicatedRequests(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, &outgoingReq, record.Unwrap(&receivedDuplicate.Virtual))
 	})
+}
 
-	t.Run("try to register request twice. when there is result", func(t *testing.T) {
-		args := make([]byte, 100)
-		_, err := rand.Read(args)
-		initReq := record.IncomingRequest{
-			Object:    insolar.NewReference(gen.ID()),
-			Arguments: args,
-			CallType:  record.CTSaveAsChild,
-			Reason:    *insolar.NewReference(*insolar.NewID(s.pulse.PulseNumber, []byte{1, 2, 3})),
-			APINode:   gen.Reference(),
+func Test_DetachedRequest_notification(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+	cfg := DefaultLightConfig()
+
+	received := make(chan payload.SagaCallAcceptNotification)
+	s, err := NewServer(ctx, cfg, func(meta payload.Meta, pl payload.Payload) []payload.Payload {
+		if notification, ok := pl.(*payload.SagaCallAcceptNotification); ok {
+			received <- *notification
 		}
-		initReqMsg := &payload.SetIncomingRequest{
-			Request: record.Wrap(&initReq),
+		if meta.Receiver == NodeHeavy() {
+			return DefaultHeavyResponse(pl)
 		}
-
-		// Set first request
-		p := sendMessage(ctx, s, initReqMsg)
-		requireNotError(t, p)
-		reqInfo := p.(*payload.RequestInfo)
-
-		// Set result for the request
-		p, _ = callActivateObject(ctx, s, reqInfo.RequestID)
-		requireNotError(t, p)
-
-		// Try to set it again
-		secondP := sendMessage(ctx, s, initReqMsg)
-		requireNotError(t, secondP)
-		secondReqInfo := secondP.(*payload.RequestInfo)
-		require.NotNil(t, secondReqInfo.Request)
-		require.NotNil(t, secondReqInfo.Result)
-
-		// Check for the request
-		receivedDuplicateReq := record.Material{}
-		err = receivedDuplicateReq.Unmarshal(secondReqInfo.Request)
-		require.NoError(t, err)
-		require.Equal(t, &initReq, record.Unwrap(&receivedDuplicateReq.Virtual))
-
-		// Check for the result
-		receivedDuplicateRes := record.Material{}
-		err = receivedDuplicateRes.Unmarshal(secondReqInfo.Result)
-		require.NoError(t, err)
-		resultRecord := record.Unwrap(&receivedDuplicateRes.Virtual).(*record.Result)
-		require.Equal(t, *insolar.NewReference(reqInfo.RequestID), resultRecord.Request)
-		require.Equal(t, reqInfo.RequestID, resultRecord.Object)
+		return nil
 	})
+	require.NoError(t, err)
+	defer s.Stop()
 
-	t.Run("try to register result twice", func(t *testing.T) {
-		args := make([]byte, 100)
-		_, err := rand.Read(args)
-		initReq := record.IncomingRequest{
-			Object:    insolar.NewReference(gen.ID()),
-			Arguments: args,
-			CallType:  record.CTSaveAsChild,
-			Reason:    *insolar.NewReference(*insolar.NewID(s.pulse.PulseNumber, []byte{1, 2, 3})),
-			APINode:   gen.Reference(),
-		}
-		initReqMsg := &payload.SetIncomingRequest{
-			Request: record.Wrap(&initReq),
-		}
+	// First pulse goes in storage then interrupts.
+	s.SetPulse(ctx)
+	// Second pulse goes in storage and starts processing, including pulse change in flow dispatcher.
+	s.SetPulse(ctx)
 
-		// Set first request
-		p := sendMessage(ctx, s, initReqMsg)
-		requireNotError(t, p)
-		reqInfo := p.(*payload.RequestInfo)
+	t.Run("detached notification sent on detached reason close", func(t *testing.T) {
+		msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), insolar.ID{}, true, true)
+		rep := SendMessage(ctx, s, &msg)
+		RequireNotError(rep)
+		objectID := rep.(*payload.RequestInfo).ObjectID
 
-		// Set result for the request
-		mem := make([]byte, 100)
-		_, err = rand.Read(mem)
+		msg, _ = MakeSetIncomingRequest(objectID, gen.IDWithPulse(s.Pulse()), insolar.ID{}, false, true)
+		rep = SendMessage(ctx, s, &msg)
+		RequireNotError(rep)
+		reasonID := rep.(*payload.RequestInfo).RequestID
+
+		p, detachedRec := CallSetOutgoingRequest(ctx, s, objectID, reasonID, true)
+		RequireNotError(p)
+		detachedID := p.(*payload.RequestInfo).RequestID
+
+		resMsg, _ := MakeSetResult(objectID, reasonID)
+		rep = SendMessage(ctx, s, &resMsg)
+		RequireNotError(rep)
+
+		notification := <-received
+		require.Equal(t, objectID, notification.ObjectID)
+		require.Equal(t, detachedID, notification.DetachedRequestID)
+
+		receivedRec := record.Virtual{}
+		err := receivedRec.Unmarshal(notification.Request)
 		require.NoError(t, err)
-		rec := record.Wrap(&record.Activate{
-			Request: *insolar.NewReference(reqInfo.RequestID),
-			Memory:  mem,
-		})
-		buf, err := rec.Marshal()
-		require.NoError(t, err)
-		res := make([]byte, 100)
-		_, err = rand.Read(res)
-		require.NoError(t, err)
-		resultRecord := record.Wrap(&record.Result{
-			Request: *insolar.NewReference(reqInfo.RequestID),
-			Object:  reqInfo.RequestID,
-			Payload: res,
-		})
-		resBuf, err := resultRecord.Marshal()
-		require.NoError(t, err)
-
-		p = sendMessage(ctx, s, &payload.Activate{
-			Record: buf,
-			Result: resBuf,
-		})
-		requireNotError(t, p)
-
-		// Try to set it again
-		secondResP := sendMessage(ctx, s, &payload.Activate{
-			Record: buf,
-			Result: resBuf,
-		})
-		requireNotError(t, secondResP)
-		secondReqInfo := secondResP.(*payload.ResultInfo)
-		require.NotNil(t, secondReqInfo.Result)
-
-		// Check for the result
-		returnedResult := record.Material{}
-		err = returnedResult.Unmarshal(secondReqInfo.Result)
-		require.NoError(t, err)
-		returnedRes := record.Unwrap(&returnedResult.Virtual).(*record.Result)
-		require.Equal(t, *insolar.NewReference(reqInfo.RequestID), returnedRes.Request)
-		require.Equal(t, reqInfo.RequestID, returnedRes.Object)
+		require.Equal(t, detachedRec, receivedRec)
 	})
 }
 
-func Test_CheckRequests(t *testing.T) {
+func Test_Result_Duplicate(t *testing.T) {
 	t.Parallel()
 
 	ctx := inslogger.TestContext(t)
 	cfg := DefaultLightConfig()
 	s, err := NewServer(ctx, cfg, nil)
 	require.NoError(t, err)
+	defer s.Stop()
 
 	// First pulse goes in storage then interrupts.
-	s.Pulse(ctx)
+	s.SetPulse(ctx)
 	// Second pulse goes in storage and starts processing, including pulse change in flow dispatcher.
-	s.Pulse(ctx)
+	s.SetPulse(ctx)
 
-	t.Run("detached incoming fails with error", func(t *testing.T) {
-		args := make([]byte, 100)
-		_, err := rand.Read(args)
-		require.NoError(t, err)
-		initReq := record.IncomingRequest{
-			Object:    insolar.NewReference(gen.ID()),
-			Arguments: args,
-			CallType:  record.CTSaveAsChild,
-			Reason:    *insolar.NewReference(*insolar.NewID(s.pulse.PulseNumber, []byte{1, 2, 3})),
-			APINode:   gen.Reference(),
-			// Incoming can't be a detached request
-			ReturnMode: record.ReturnSaga,
-		}
-		initReqMsg := &payload.SetIncomingRequest{
-			Request: record.Wrap(&initReq),
+	msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), insolar.ID{}, true, true)
+
+	// Set request.
+	rep := SendMessage(ctx, s, &msg)
+	RequireNotError(rep)
+	require.Nil(t, rep.(*payload.RequestInfo).Request)
+	require.Nil(t, rep.(*payload.RequestInfo).Result)
+	requestID := rep.(*payload.RequestInfo).RequestID
+	objectID := requestID
+
+	resMsg, resultVirtual := MakeSetResult(objectID, requestID)
+	// Set result.
+	rep = SendMessage(ctx, s, &resMsg)
+	RequireNotError(rep)
+
+	// Try to set it again.
+	rep = SendMessage(ctx, s, &resMsg)
+	RequireNotError(rep)
+
+	resultInfo := rep.(*payload.ResultInfo)
+	require.NotNil(t, resultInfo.Result)
+
+	// Check duplicate.
+	receivedResult := record.Material{}
+	err = receivedResult.Unmarshal(resultInfo.Result)
+	require.NoError(t, err)
+	require.Equal(t, resultVirtual, receivedResult.Virtual)
+}
+
+func Test_IncomingRequest_ClosedReason(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+	cfg := DefaultLightConfig()
+	s, err := NewServer(ctx, cfg, nil)
+	require.NoError(t, err)
+	defer s.Stop()
+
+	// First pulse goes in storage then interrupts.
+	s.SetPulse(ctx)
+	// Second pulse goes in storage and starts processing, including pulse change in flow dispatcher.
+	s.SetPulse(ctx)
+
+	var reasonID insolar.ID
+
+	t.Run("Incoming request can't be created w closed reason", func(t *testing.T) {
+
+		// Creating root reason request.
+		{
+			msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), insolar.ID{}, true, true)
+			rep := SendMessage(ctx, s, &msg)
+			RequireNotError(rep)
+			reasonID = rep.(*payload.RequestInfo).RequestID
 		}
 
-		// Set first request
-		p := sendMessage(ctx, s, initReqMsg)
-		errP, ok := p.(*payload.Error)
-		require.Equal(t, true, ok)
-		require.NotNil(t, errP)
+		// Closing request
+		{
+			objectID := reasonID
+
+			resMsg, _ := MakeSetResult(objectID, reasonID)
+			// Set result.
+			rep := SendMessage(ctx, s, &resMsg)
+			RequireNotError(rep)
+		}
+
+		// Creating incoming w closed reason request.
+		{
+			msg, _ := MakeSetIncomingRequest(gen.ID(), reasonID, reasonID, true, false)
+			rep := SendMessage(ctx, s, &msg)
+			RequireErrorCode(rep, payload.CodeReasonIsWrong)
+		}
+	})
+}
+
+func Test_OutgoingRequest_ClosedReason(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+	cfg := DefaultLightConfig()
+	s, err := NewServer(ctx, cfg, nil)
+	require.NoError(t, err)
+	defer s.Stop()
+
+	// First pulse goes in storage then interrupts.
+	s.SetPulse(ctx)
+	// Second pulse goes in storage and starts processing, including pulse change in flow dispatcher.
+	s.SetPulse(ctx)
+
+	var reasonID insolar.ID
+
+	t.Run("Outgoing request can't be created w closed reason", func(t *testing.T) {
+		// Creating root reason request.
+		{
+			msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), insolar.ID{}, true, true)
+			rep := SendMessage(ctx, s, &msg)
+			RequireNotError(rep)
+			reasonID = rep.(*payload.RequestInfo).RequestID
+		}
+
+		// Closing request
+		{
+			resMsg, _ := MakeSetResult(reasonID, reasonID)
+			// Set result.
+			rep := SendMessage(ctx, s, &resMsg)
+			RequireNotError(rep)
+		}
+
+		{
+			pl, _ := MakeSetOutgoingRequest(reasonID, reasonID, false)
+			rep := SendMessage(ctx, s, &pl)
+			RequireErrorCode(rep, payload.CodeReasonNotFound)
+		}
+	})
+}
+
+func Test_Requests_OutgoingReason(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+	cfg := DefaultLightConfig()
+	s, err := NewServer(ctx, cfg, nil)
+	require.NoError(t, err)
+	defer s.Stop()
+
+	// First pulse goes in storage then interrupts.
+	s.SetPulse(ctx)
+	// Second pulse goes in storage and starts processing, including pulse change in flow dispatcher.
+	s.SetPulse(ctx)
+
+	var rootID, reasonID insolar.ID
+
+	t.Run("Incoming/Outgoing request can't be created w outgoing reason", func(t *testing.T) {
+
+		// Creating root reason request.
+		{
+			msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), insolar.ID{}, true, true)
+			rep := SendMessage(ctx, s, &msg)
+			RequireNotError(rep)
+			rootID = rep.(*payload.RequestInfo).RequestID
+		}
+
+		// Creating outgoing
+		{
+			pl, _ := MakeSetOutgoingRequest(rootID, rootID, false)
+			rep := SendMessage(ctx, s, &pl)
+			RequireNotError(rep)
+			reasonID = rep.(*payload.RequestInfo).RequestID
+		}
+
+		// Creating wrong incoming
+		{
+			msg, _ := MakeSetIncomingRequest(gen.ID(), reasonID, rootID, true, false)
+			rep := SendMessage(ctx, s, &msg)
+			RequireErrorCode(rep, payload.CodeReasonIsWrong)
+		}
+
+		// Creating wrong outgoing
+		{
+			msg, _ := MakeSetOutgoingRequest(rootID, reasonID, false)
+			rep := SendMessage(ctx, s, &msg)
+			RequireErrorCode(rep, payload.CodeReasonNotFound)
+		}
+	})
+}
+
+func Test_OutgoingRequests_DifferentObjects(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+	cfg := DefaultLightConfig()
+	s, err := NewServer(ctx, cfg, nil)
+	require.NoError(t, err)
+	defer s.Stop()
+
+	// First pulse goes in storage then interrupts.
+	s.SetPulse(ctx)
+	// Second pulse goes in storage and starts processing, including pulse change in flow dispatcher.
+	s.SetPulse(ctx)
+
+	var rootID, rootID2 insolar.ID
+
+	t.Run("Outgoing request can't be created w different from once object", func(t *testing.T) {
+
+		// Creating root reason request.
+		{
+			msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), insolar.ID{}, true, true)
+			rep := SendMessage(ctx, s, &msg)
+			RequireNotError(rep)
+			rootID = rep.(*payload.RequestInfo).RequestID
+		}
+		{
+			msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), insolar.ID{}, true, true)
+			rep := SendMessage(ctx, s, &msg)
+			RequireNotError(rep)
+			rootID2 = rep.(*payload.RequestInfo).RequestID
+		}
+
+		// Creating outgoing
+		{
+			pl, _ := MakeSetOutgoingRequest(rootID, rootID2, false)
+			rep := SendMessage(ctx, s, &pl)
+			RequireErrorCode(rep, payload.CodeReasonNotFound)
+		}
+	})
+}
+
+func Test_OutgoingDetached_InPendings(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+	cfg := DefaultLightConfig()
+	s, err := NewServer(ctx, cfg, nil)
+	require.NoError(t, err)
+	defer s.Stop()
+
+	// First pulse goes in storage then interrupts.
+	s.SetPulse(ctx)
+	// Second pulse goes in storage and starts processing, including pulse change in flow dispatcher.
+	s.SetPulse(ctx)
+
+	var rootID, secondReqId insolar.ID
+
+	// Creating root reason request.
+	{
+		msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), insolar.ID{}, true, true)
+		rep := SendMessage(ctx, s, &msg)
+		RequireNotError(rep)
+		rootID = rep.(*payload.RequestInfo).RequestID
+	}
+
+	t.Run("detached request not appears in pendings", func(t *testing.T) {
+
+		// Creating outgoing
+		pl, _ := MakeSetOutgoingRequest(rootID, rootID, true)
+		rep := SendMessage(ctx, s, &pl)
+		RequireNotError(rep)
+		secondReqId = rep.(*payload.RequestInfo).RequestID
+
+		firstPendings := CallGetPendings(ctx, s, rootID)
+		RequireNotError(firstPendings)
+
+		ids := firstPendings.(*payload.IDs)
+		require.Equal(t, 1, len(ids.IDs))
+		require.NotEqual(t, secondReqId, ids.IDs[0])
+	})
+
+	t.Run("detached request appears in pendings after closing root request", func(t *testing.T) {
+
+		// Closing reason request
+		{
+			resMsg, _ := MakeSetResult(rootID, rootID)
+			rep := SendMessage(ctx, s, &resMsg)
+			RequireNotError(rep)
+		}
+
+		secondPendings := CallGetPendings(ctx, s, rootID)
+		RequireNotError(secondPendings)
+
+		ids := secondPendings.(*payload.IDs)
+		require.Equal(t, 1, len(ids.IDs))
+		require.Equal(t, secondReqId, ids.IDs[0])
+	})
+}
+
+func Test_IncomingRequest_DifferentResults(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+	cfg := DefaultLightConfig()
+	s, err := NewServer(ctx, cfg, nil)
+	require.NoError(t, err)
+	defer s.Stop()
+
+	// First pulse goes in storage then interrupts.
+	s.SetPulse(ctx)
+	// Second pulse goes in storage and starts processing, including pulse change in flow dispatcher.
+	s.SetPulse(ctx)
+
+	var reasonID insolar.ID
+
+	t.Run("Incoming request can't have several different results", func(t *testing.T) {
+		// Creating root reason request.
+		{
+			msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), insolar.ID{}, true, true)
+			rep := SendMessage(ctx, s, &msg)
+			RequireNotError(rep)
+			reasonID = rep.(*payload.RequestInfo).RequestID
+		}
+
+		// Closing request
+		{
+			resMsg, _ := MakeSetResult(reasonID, reasonID)
+			rep := SendMessage(ctx, s, &resMsg)
+			RequireNotError(rep)
+		}
+
+		{
+			resMsg, _ := MakeSetResult(reasonID, reasonID)
+			rep := SendMessage(ctx, s, &resMsg)
+			RequireErrorCode(rep, payload.CodeRequestNotFound)
+		}
 	})
 }

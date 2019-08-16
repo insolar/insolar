@@ -4,6 +4,7 @@ package payload;
 
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 import "github.com/insolar/insolar/insolar/record/record.proto";
+import "github.com/insolar/insolar/insolar/pulse/pulse.proto";
 
 
 message Meta {
@@ -162,6 +163,14 @@ message FilamentSegment {
     repeated record.CompositeFilamentRecord Records = 21 [(gogoproto.nullable) = false];
 }
 
+message GetRequestInfo {
+    uint32 Polymorph = 16;
+
+    bytes ObjectID  = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+    bytes RequestID = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+    bytes Pulse = 22 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
+}
+
 message RequestInfo {
     uint32 Polymorph = 16;
 
@@ -198,7 +207,7 @@ message HotObjects {
 message GetRequest {
     uint32 Polymorph = 16;
 
-    bytes ObjectID  = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+    bytes ObjectID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
     bytes RequestID = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
 }
 
@@ -271,6 +280,8 @@ message StillExecuting {
     uint32 Polymorph = 16;
 
     bytes ObjectRef = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
+    bytes Executor = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
+    repeated bytes RequestRefs = 22 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
 }
 
 message GetPendings {
@@ -323,8 +334,11 @@ message GetLightInitialState {
 message LightInitialState {
     uint32 Polymorph = 16;
 
-    repeated bytes JetIDs = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.JetID", (gogoproto.nullable) = false];
-    repeated bytes Drops = 21;
+    bool NetworkStart = 20;
+    repeated bytes JetIDs = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.JetID", (gogoproto.nullable) = false];
+    repeated bytes Drops = 22;
+    repeated record.Index Indexes = 23 [(gogoproto.nullable) = false];
+    pulse.PulseProto Pulse = 24 [ (gogoproto.nullable) = false];
 }
 
 message GetIndex {

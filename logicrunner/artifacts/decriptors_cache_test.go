@@ -59,7 +59,7 @@ func Test_descriptorsCache(t *testing.T) {
 			name: "success",
 			obj:  NewObjectDescriptorMock(mc).PrototypeMock.Return(&protoRef, nil),
 			fields: fields{
-				protoCache: NewcacheMock(mc).getMock.Return(
+				protoCache: NewCacheMock(mc).getMock.Return(
 					NewObjectDescriptorMock(mc).
 						IsPrototypeMock.Return(true).
 						CodeMock.Return(&codeRef, nil).
@@ -67,7 +67,7 @@ func Test_descriptorsCache(t *testing.T) {
 
 					nil,
 				),
-				codeCache: NewcacheMock(mc).getMock.Return(
+				codeCache: NewCacheMock(mc).getMock.Return(
 					NewCodeDescriptorMock(mc).RefMock.Return(&codeRef), nil,
 				),
 			},
@@ -82,7 +82,7 @@ func Test_descriptorsCache(t *testing.T) {
 			err:  true,
 			obj:  NewObjectDescriptorMock(mc).PrototypeMock.Return(&protoRef, nil),
 			fields: fields{
-				protoCache: NewcacheMock(mc).getMock.Return(
+				protoCache: NewCacheMock(mc).getMock.Return(
 					nil, errors.New("no proto"),
 				),
 			},
@@ -92,7 +92,7 @@ func Test_descriptorsCache(t *testing.T) {
 			err:  true,
 			obj:  NewObjectDescriptorMock(mc).PrototypeMock.Return(&protoRef, nil),
 			fields: fields{
-				protoCache: NewcacheMock(mc).getMock.Return(
+				protoCache: NewCacheMock(mc).getMock.Return(
 					NewObjectDescriptorMock(mc).
 						IsPrototypeMock.Return(false),
 					nil,
@@ -104,7 +104,7 @@ func Test_descriptorsCache(t *testing.T) {
 			err:  true,
 			obj:  NewObjectDescriptorMock(mc).PrototypeMock.Return(&protoRef, nil),
 			fields: fields{
-				protoCache: NewcacheMock(mc).getMock.Return(
+				protoCache: NewCacheMock(mc).getMock.Return(
 					NewObjectDescriptorMock(mc).
 						IsPrototypeMock.Return(true).
 						CodeMock.Return(nil, errors.New("no code")),
@@ -117,13 +117,13 @@ func Test_descriptorsCache(t *testing.T) {
 			err:  true,
 			obj:  NewObjectDescriptorMock(mc).PrototypeMock.Return(&protoRef, nil),
 			fields: fields{
-				protoCache: NewcacheMock(mc).getMock.Return(
+				protoCache: NewCacheMock(mc).getMock.Return(
 					NewObjectDescriptorMock(mc).
 						IsPrototypeMock.Return(true).
 						CodeMock.Return(&codeRef, nil),
 					nil,
 				),
-				codeCache: NewcacheMock(mc).getMock.Return(
+				codeCache: NewCacheMock(mc).getMock.Return(
 					nil, errors.New("no code"),
 				),
 			},

@@ -23,9 +23,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
-	"time"
 
 	"github.com/insolar/insolar/insolar/utils"
+	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/pkg/errors"
 )
 
@@ -68,7 +68,7 @@ func (entropy Entropy) Equal(other Entropy) bool {
 // Upper 2 bits are reserved for use in references (scope), must be zero otherwise.
 // Valid Absolute PulseNumber must be >65536.
 // If PulseNumber <65536 it is a relative PulseNumber
-type PulseNumber uint32
+type PulseNumber pulse.Number
 
 // NewPulseNumber creates pulse number from bytes.
 func NewPulseNumber(buf []byte) PulseNumber {
@@ -114,7 +114,7 @@ func (pn PulseNumber) Size() int {
 	return len(pn.Bytes())
 }
 
-//go:generate minimock -i github.com/insolar/insolar/insolar.PulseManager -o ../testutils -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/insolar.PulseManager -o ../testutils -s _mock.go -g
 
 // PulseManager provides Ledger's methods related to Pulse.
 type PulseManager interface {
@@ -157,16 +157,16 @@ type PulseSenderConfirmation struct {
 	Signature       []byte
 }
 
-// FirstPulseDate is the hardcoded date of the first pulse
-const firstPulseDate = 1535760000 //09/01/2018 @ 12:00am (UTC)
-
 const (
 	// FirstPulseNumber is the hardcoded first pulse number. Because first 65536 numbers are saved for the system's needs
-	FirstPulseNumber = 65537
+	FirstPulseNumber = pulse.MinTimePulse
 	// PulseNumberJet is a special pulse number value that signifies jet ID.
 	PulseNumberJet = PulseNumber(1)
 	// BuiltinContractPulseNumber declares special pulse number that creates namespace for builtin contracts
 	BuiltinContractPulseNumber = PulseNumber(200)
+
+	InvalidPulseEpoch   int = 0
+	EphemeralPulseEpoch     = InvalidPulseEpoch + 1
 )
 
 // GenesisPulse is a first pulse for the system
@@ -175,11 +175,14 @@ const (
 var GenesisPulse = &Pulse{
 	PulseNumber:      FirstPulseNumber,
 	Entropy:          [EntropySize]byte{},
-	EpochPulseNumber: 1,
-	PulseTimestamp:   firstPulseDate,
+	EpochPulseNumber: FirstPulseNumber,
+	PulseTimestamp:   pulse.UnixTimeOfMinTimePulse,
 }
 
-// CalculatePulseNumber is helper for calculating next pulse number, when a network is being started
-func CalculatePulseNumber(now time.Time) PulseNumber {
-	return PulseNumber(now.Unix() - firstPulseDate + FirstPulseNumber)
+// EphemeralPulse is used for discovery network bootstrap
+var EphemeralPulse = &Pulse{
+	PulseNumber:      FirstPulseNumber,
+	Entropy:          [EntropySize]byte{},
+	EpochPulseNumber: EphemeralPulseEpoch,
+	PulseTimestamp:   pulse.UnixTimeOfMinTimePulse,
 }

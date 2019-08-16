@@ -29,7 +29,26 @@ import (
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/logicrunner/common"
 )
+
+type AdditionalCallFromPreviousExecutor struct {
+	stateStorage StateStorage
+
+	message *message.AdditionalCallFromPreviousExecutor
+}
+
+func (p *AdditionalCallFromPreviousExecutor) Proceed(ctx context.Context) error {
+	broker := p.stateStorage.UpsertExecutionState(p.message.ObjectReference)
+
+	if p.message.Pending == insolar.NotPending {
+		broker.SetNotPending(ctx)
+	}
+
+	tr := common.NewTranscript(freshContextFromContext(ctx), p.message.RequestRef, p.message.Request)
+	broker.AddAdditionalRequestFromPrevExecutor(ctx, tr)
+	return nil
+}
 
 type HandleAdditionalCallFromPreviousExecutor struct {
 	dep *Dependencies
@@ -38,34 +57,18 @@ type HandleAdditionalCallFromPreviousExecutor struct {
 	Parcel  insolar.Parcel
 }
 
-// This is basically a simplified version of HandleCall.handleActual().
 // Please note that currently we lack any fraud detection here.
-// Ideally we should check that the previous executor was really an executor
-// during previous pulse, that the request was really registered, etc.
-// Also we don't handle case when pulse changes during execution of this handle.
-// In this scenario user is in a bad luck. The request will be lost and user will have
-// to re-send it after some timeout.
-func (h *HandleAdditionalCallFromPreviousExecutor) handleActual(
-	ctx context.Context,
-	msg *message.AdditionalCallFromPreviousExecutor,
-	_ flow.Flow,
-) {
-	broker := h.dep.StateStorage.UpsertExecutionState(msg.ObjectReference)
-
-	if msg.Pending == insolar.NotPending {
-		broker.SetNotPending(ctx)
-	}
-
-	tr := NewTranscript(freshContextFromContext(ctx), msg.RequestRef, msg.Request)
-	broker.AddAdditionalRequestFromPrevExecutor(ctx, tr)
-}
-
+// Ideally we should check that the previous executor was really an executor during previous pulse,
+// that the request was really registered, etc. Also we don't handle case when pulse changes during
+// execution of this handle. In this scenario user is in a bad luck. The request will be lost and
+// user will have to re-send it after some timeout.
 func (h *HandleAdditionalCallFromPreviousExecutor) Present(ctx context.Context, f flow.Flow) error {
 	ctx = loggerWithTargetID(ctx, h.Parcel)
-	inslogger.FromContext(ctx).Debug("HandleAdditionalCallFromPreviousExecutor.Present starts ...")
-
 	msg := h.Parcel.Message().(*message.AdditionalCallFromPreviousExecutor)
-	ctx = contextFromServiceData(msg.ServiceData)
+	ctx = contextWithServiceData(ctx, msg.ServiceData)
+
+	logger := inslogger.FromContext(ctx)
+	logger.Debug("additional call from previous executor")
 
 	ctx, span := instracer.StartSpan(ctx, "HandleAdditionalCallFromPreviousExecutor.Present")
 	span.AddAttributes(
@@ -73,12 +76,25 @@ func (h *HandleAdditionalCallFromPreviousExecutor) Present(ctx context.Context, 
 	)
 	defer span.End()
 
-	h.handleActual(ctx, msg, f)
+	done, err := h.dep.WriteAccessor.Begin(ctx, flow.Pulse(ctx))
+	if err != nil { // pulse changed, send that message to next executor
+		_, err := h.dep.lr.MessageBus.Send(ctx, msg, nil)
+		if err != nil {
+			logger.Error("MessageBus.Send failed: ", err)
+		}
+		return nil
+	}
+	defer done()
+
+	proc := &AdditionalCallFromPreviousExecutor{
+		stateStorage: h.dep.StateStorage,
+		message:      msg,
+	}
+	if err := f.Procedure(ctx, proc, false); err != nil {
+		return err
+	}
 
 	// we never return any other replies
-	repMsg := bus.ReplyAsMessage(ctx, &reply.OK{})
-	h.dep.Sender.Reply(ctx, h.Message, repMsg)
-
+	h.dep.Sender.Reply(ctx, h.Message, bus.ReplyAsMessage(ctx, &reply.OK{}))
 	return nil
 }
-

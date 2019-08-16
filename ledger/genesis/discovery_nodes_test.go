@@ -27,10 +27,9 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/genesisrefs"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/insolar/rootdomain"
 	"github.com/insolar/insolar/insolar/secrets"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/internal/ledger/artifact"
+	"github.com/insolar/insolar/ledger/artifact"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/nodedomain"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/noderecord"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
@@ -82,7 +81,7 @@ func TestData_WriteNodeDomainData(t *testing.T) {
 
 	for _, n := range nodes {
 		pKey := platformpolicy.MustPublicKeyToString(n.key)
-		ref := rootdomain.GenesisRef(pKey)
+		ref := genesisrefs.GenesisRef(pKey)
 		expectIndexMap[pKey] = ref.String()
 
 		nodeObjDesc, err := am.GetObject(ctx, ref)
@@ -103,33 +102,33 @@ func initArtifactManager(t *testing.T) artifact.Manager {
 	indexMap := make(foundation.StableMap)
 	activatedMemory := map[insolar.Reference][]byte{}
 
-	amMock.GetObjectFunc = func(_ context.Context, ref insolar.Reference) (artifact.ObjectDescriptor, error) {
+	amMock.GetObjectMock.Set(func(_ context.Context, ref insolar.Reference) (artifact.ObjectDescriptor, error) {
 		descMock := artifact.NewObjectDescriptorMock(t)
 		if ref == genesisrefs.ContractNodeDomain {
-			descMock.MemoryFunc = func() []byte {
+			descMock.MemoryMock.Set(func() []byte {
 				return insolar.MustSerialize(&nodedomain.NodeDomain{
 					NodeIndexPublicKey: indexMap,
 				})
-			}
+			})
 		} else {
-			descMock.MemoryFunc = func() []byte {
+			descMock.MemoryMock.Set(func() []byte {
 				b := activatedMemory[ref]
 				return b
-			}
+			})
 		}
 		return descMock, nil
-	}
+	})
 
-	amMock.RegisterRequestFunc = func(
+	amMock.RegisterRequestMock.Set(func(
 		_ context.Context,
 		req record.IncomingRequest,
 	) (*insolar.ID, error) {
 		virtRec := record.Wrap(&req)
 		hash := record.HashVirtual(pcs.ReferenceHasher(), virtRec)
 		return insolar.NewID(insolar.FirstPulseNumber, hash), nil
-	}
+	})
 
-	amMock.UpdateObjectFunc = func(
+	amMock.UpdateObjectMock.Set(func(
 		_ context.Context,
 		domain insolar.Reference,
 		request insolar.Reference,
@@ -146,15 +145,15 @@ func initArtifactManager(t *testing.T) artifact.Manager {
 		insolar.MustDeserialize(memory, &rec)
 		indexMap = rec.NodeIndexPublicKey
 		return nil
-	}
-	amMock.ActivateObjectFunc = func(
+	})
+	amMock.ActivateObjectMock.Set(func(
 		_ context.Context,
 		domain, obj, parent, prototype insolar.Reference,
 		memory []byte,
 	) error {
 		activatedMemory[obj] = memory
 		return nil
-	}
+	})
 
 	amMock.RegisterResultMock.Return(nil, nil)
 	return amMock

@@ -20,33 +20,34 @@ import (
 	"context"
 	"sync"
 
+	"github.com/insolar/insolar/logicrunner"
+	"github.com/insolar/insolar/network"
+
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/flow/dispatcher"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/node"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
+
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 )
 
-// ActiveListSwapper is required by network to swap active list.
-type ActiveListSwapper interface {
-	MoveSyncToActive(ctx context.Context, number insolar.PulseNumber) error
-}
-
 // PulseManager implements insolar.PulseManager.
 type PulseManager struct {
-	LR                insolar.LogicRunner       `inject:""`
-	Bus               insolar.MessageBus        `inject:""`
-	NodeNet           insolar.NodeNetwork       `inject:""`
-	GIL               insolar.GlobalInsolarLock `inject:""`
-	ActiveListSwapper ActiveListSwapper         `inject:""`
-	NodeSetter        node.Modifier             `inject:""`
-	Nodes             node.Accessor             `inject:""`
-	PulseAccessor     pulse.Accessor            `inject:""`
-	PulseAppender     pulse.Appender            `inject:""`
-	JetModifier       jet.Modifier              `inject:""`
+	LR             insolar.LogicRunner       `inject:""`
+	Bus            insolar.MessageBus        `inject:""`
+	NodeNet        network.NodeNetwork       `inject:""`
+	GIL            insolar.GlobalInsolarLock `inject:""`
+	NodeSetter     node.Modifier             `inject:""`
+	Nodes          node.Accessor             `inject:""`
+	PulseAccessor  pulse.Accessor            `inject:""`
+	PulseAppender  pulse.Appender            `inject:""`
+	JetModifier    jet.Modifier              `inject:""`
+	FlowDispatcher dispatcher.Dispatcher
+	resultsMatcher logicrunner.ResultMatcher
 
 	currentPulse insolar.Pulse
 
@@ -57,9 +58,10 @@ type PulseManager struct {
 }
 
 // NewPulseManager creates PulseManager instance.
-func NewPulseManager() *PulseManager {
+func NewPulseManager(resultsMatcher logicrunner.ResultMatcher) *PulseManager {
 	pm := &PulseManager{
-		currentPulse: *insolar.GenesisPulse,
+		resultsMatcher: resultsMatcher,
+		currentPulse:   *insolar.GenesisPulse,
 	}
 	return pm
 }
@@ -80,7 +82,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 	)
 	defer span.End()
 
-	err := m.setUnderGilSection(ctx, newPulse)
+	oldPulse, err := m.setUnderGilSection(ctx, newPulse)
 	if err != nil {
 		return err
 	}
@@ -90,15 +92,17 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 		inslogger.FromContext(ctx).Error(errors.Wrap(err, "MessageBus OnPulse() returns error"))
 	}
 
-	err = m.LR.OnPulse(ctx, newPulse)
+	err = m.LR.OnPulse(ctx, *oldPulse, newPulse)
 	if err != nil {
 		return err
 	}
 
+	m.FlowDispatcher.BeginPulse(ctx, newPulse)
+
 	return nil
 }
 
-func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.Pulse) error {
+func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.Pulse) (*insolar.Pulse, error) {
 	m.GIL.Acquire(ctx)
 	ctx, span := instracer.StartSpan(ctx, "pulse.gil_locked")
 
@@ -106,7 +110,7 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 	if err == pulse.ErrNotFound {
 		storagePulse = *insolar.GenesisPulse
 	} else if err != nil {
-		return errors.Wrap(err, "call of GetLatestPulseNumber failed")
+		return nil, errors.Wrap(err, "call of GetLatestPulseNumber failed")
 	}
 
 	defer span.End()
@@ -115,37 +119,38 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 	logger := inslogger.FromContext(ctx)
 	logger.WithFields(map[string]interface{}{
 		"new_pulse": newPulse.PulseNumber,
-	}).Debugf("received pulse")
+	}).Debug("received pulse")
 
 	// swap pulse
 	m.currentPulse = newPulse
 
-	// swap active nodes
-	err = m.ActiveListSwapper.MoveSyncToActive(ctx, newPulse.PulseNumber)
-	if err != nil {
-		return errors.Wrap(err, "failed to apply new active node list")
-	}
-
-	fromNetwork := m.NodeNet.GetWorkingNodes()
+	fromNetwork := m.NodeNet.GetAccessor(m.currentPulse.PulseNumber).GetWorkingNodes()
 	toSet := make([]insolar.Node, 0, len(fromNetwork))
 	for _, n := range fromNetwork {
 		toSet = append(toSet, insolar.Node{ID: n.ID(), Role: n.Role()})
 	}
 	err = m.NodeSetter.Set(newPulse.PulseNumber, toSet)
 	if err != nil {
-		return errors.Wrap(err, "call of SetActiveNodes failed")
+		return nil, errors.Wrap(err, "call of SetActiveNodes failed")
 	}
 
 	err = m.JetModifier.Clone(ctx, storagePulse.PulseNumber, newPulse.PulseNumber, false)
 	if err != nil {
-		return errors.Wrapf(err, "failed to clone jet.Tree fromPulse=%v toPulse=%v", storagePulse.PulseNumber, newPulse.PulseNumber)
+		return nil, errors.Wrapf(err, "failed to clone jet.Tree fromPulse=%v toPulse=%v", storagePulse.PulseNumber, newPulse.PulseNumber)
 	}
+
+	m.FlowDispatcher.ClosePulse(ctx, storagePulse)
 
 	if err := m.PulseAppender.Append(ctx, newPulse); err != nil {
-		return errors.Wrap(err, "call of AddPulse failed")
+		return nil, errors.Wrap(err, "call of AddPulse failed")
 	}
 
-	return nil
+	// We must clear resultsMatcher before any ReturnResults or StillExecution messages for new pulse will be received
+	// StillExecution messages use Dispatcher for processing, so we must do Dispatcher.BeginPulse AFTER clear
+	// ReturnResults messages use MessageBus for processing, which use GIL for stopping messages. So we must do unlock GIL AFTER clear
+	m.resultsMatcher.Clear()
+
+	return &storagePulse, nil
 }
 
 // Start starts pulse manager.
@@ -157,8 +162,8 @@ func (m *PulseManager) Start(ctx context.Context) error {
 func (m *PulseManager) Stop(ctx context.Context) error {
 	// There should not to be any Set call after Stop call
 	m.setLock.Lock()
-	m.stopped = true
-	m.setLock.Unlock()
+	defer m.setLock.Unlock()
 
+	m.stopped = true
 	return nil
 }

@@ -31,11 +31,16 @@ const AbsentShortNodeID ShortNodeID = 0
 
 func (v ShortNodeID) IsAbsent() bool { return v == AbsentShortNodeID }
 
+func (v ShortNodeID) Equal(other ShortNodeID) bool { return v == other }
+
 // GlobuleID is the ID of the globe
 type GlobuleID uint32
 
 // NodeState is the state of the node
 type NodeState uint8
+
+// Power is node power
+type Power uint8
 
 //go:generate stringer -type=NodeState
 const (
@@ -49,7 +54,7 @@ const (
 	NodeLeaving
 )
 
-//go:generate minimock -i github.com/insolar/insolar/insolar.NetworkNode -o ../testutils/network -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/insolar.NetworkNode -o ../testutils/network -s _mock.go -g
 
 type NetworkNode interface {
 	// ID is the unique identifier of the node
@@ -70,17 +75,6 @@ type NetworkNode interface {
 	LeavingETA() PulseNumber
 	// GetState get state of the node
 	GetState() NodeState
-}
-
-//go:generate minimock -i github.com/insolar/insolar/insolar.NodeNetwork -o ../testutils/network -s _mock.go
-
-type NodeNetwork interface {
-	// GetOrigin get origin node for the current insolard. Returns nil if the current insolard is not a working node.
-	GetOrigin() NetworkNode
-	// GetWorkingNode get working node by its reference. Returns nil if node is not found or is not working.
-	GetWorkingNode(ref Reference) NetworkNode
-	// GetWorkingNodes returns sorted list of all working nodes.
-	GetWorkingNodes() []NetworkNode
-	// GetWorkingNodesByRole get working nodes by role.
-	GetWorkingNodesByRole(role DynamicRole) []Reference
+	// GetPower get power of node
+	GetPower() Power
 }

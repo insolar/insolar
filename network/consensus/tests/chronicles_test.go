@@ -55,8 +55,6 @@ import (
 	"math"
 	"time"
 
-	"github.com/insolar/insolar/network/consensus/gcpv2/core"
-
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/common/longbits"
@@ -83,12 +81,12 @@ func NewEmuChronicles(intros []profiles.StaticProfile, localNodeIndex int, asJoi
 		if len(intros) != 1 && localNodeIndex != 0 {
 			panic("illegal state")
 		}
-		localCensus = censusimpl.NewPrimingCensusForJoiner(intros[localNodeIndex], registries, EmuDefaultCryptography)
+		localCensus = censusimpl.NewPrimingCensusForJoiner(intros[localNodeIndex], registries, EmuDefaultCryptography, true)
 	} else {
-		localCensus = censusimpl.NewPrimingCensus(intros, intros[localNodeIndex], registries, EmuDefaultCryptography)
+		localCensus = censusimpl.NewPrimingCensus(intros, intros[localNodeIndex], registries, EmuDefaultCryptography, true)
 	}
 
-	chronicles := censusimpl.NewLocalChronicles(core.NewSimpleProfileIntroFactory(EmuDefaultCryptography))
+	chronicles := censusimpl.NewLocalChronicles(profiles.NewSimpleProfileIntroFactory(EmuDefaultCryptography))
 	localCensus.SetAsActiveTo(chronicles)
 	return chronicles
 }
@@ -123,6 +121,10 @@ func NewEmuNodeIntroByName(id int, name string) *EmuNodeIntro {
 type EmuVersionedRegistries struct {
 	pd                    pulse.Data
 	primingCloudStateHash proofs.CloudStateHash
+}
+
+func (c *EmuVersionedRegistries) GetNearestValidPulseData() pulse.Data {
+	panic("implement me")
 }
 
 func (c *EmuVersionedRegistries) GetCloudIdentity() cryptkit.DigestHolder {
@@ -266,7 +268,7 @@ func (c *EmuNodeIntro) GetStartPower() member.Power {
 }
 
 func (c *EmuNodeIntro) GetReference() insolar.Reference {
-	return insolar.Reference{}
+	return *insolar.NewEmptyReference()
 }
 
 func (c *EmuNodeIntro) ConvertPowerRequest(request power.Request) member.Power {

@@ -54,13 +54,13 @@ func TestGetRequest_Proceed(t *testing.T) {
 
 	resetComponents()
 	t.Run("request does not exist", func(t *testing.T) {
-		sender.ReplyFunc = func(_ context.Context, _ payload.Meta, msg *message.Message) {
+		sender.ReplyMock.Set(func(_ context.Context, _ payload.Meta, msg *message.Message) {
 			rep := payload.Error{}
 			err := rep.Unmarshal(msg.Payload)
 			require.NoError(t, err)
 			require.Equal(t, int(rep.Code), payload.CodeNotFound)
 			require.Equal(t, rep.Text, object.ErrNotFound.Error())
-		}
+		})
 		p := newProc(payload.Meta{})
 		records.ForIDMock.Return(record.Material{}, object.ErrNotFound)
 
@@ -93,7 +93,7 @@ func TestGetRequest_Proceed(t *testing.T) {
 		records.ForIDMock.Return(record.Material{
 			Virtual: req,
 		}, nil)
-		sender.ReplyFunc = func(_ context.Context, origin payload.Meta, rep *message.Message) {
+		sender.ReplyMock.Set(func(_ context.Context, origin payload.Meta, rep *message.Message) {
 			require.Equal(t, receivedMeta, origin)
 
 			resp, err := payload.Unmarshal(rep.Payload)
@@ -103,7 +103,7 @@ func TestGetRequest_Proceed(t *testing.T) {
 			require.True(t, ok)
 			require.Equal(t, msg.RequestID, res.RequestID)
 			require.Equal(t, req, res.Request)
-		}
+		})
 
 		err = p.Proceed(ctx)
 		require.NoError(t, err)

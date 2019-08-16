@@ -42,8 +42,9 @@ func (s *stat) get(typ payload.Type) int64 {
 
 func (s *stat) inc(typ payload.Type) {
 	s.Lock()
+	defer s.Unlock()
+
 	s.counters[typ]++
-	s.Unlock()
 }
 
 type MessageLockerByType struct {
@@ -117,13 +118,14 @@ func (ml *MessageLockerByType) GetMessagesFilters(ctx context.Context, in *intro
 	ml.Lock()
 	defer ml.Unlock()
 
-	filters := make(map[string]*introproto.MessageFilterWithStat)
+	var filters []*introproto.MessageFilterWithStat
 	for name, typ := range payload.TypesMap {
 		_, ok := ml.types[typ]
-		filters[name] = &introproto.MessageFilterWithStat{
+		filters = append(filters, &introproto.MessageFilterWithStat{
+			Name:     name,
 			Enable:   ok,
 			Filtered: ml.stat.get(typ),
-		}
+		})
 	}
 
 	return &introproto.AllMessageFilterStats{

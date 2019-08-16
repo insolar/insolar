@@ -17,24 +17,22 @@
 package deposit
 
 import (
+	"github.com/insolar/insolar/insolar"
 	XXX_insolar "github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/common"
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
-
-	"strings"
-	// TODO: this is the end of a horrible hack, please remove it
 )
-
-type ExtendableError struct {
-	S string
-}
-
-func (e *ExtendableError) Error() string {
-	return e.S
-}
 
 func INS_META_INFO() []map[string]string {
 	result := make([]map[string]string, 0)
+
+	{
+		info := make(map[string]string, 3)
+		info["Type"] = "SagaInfo"
+		info["MethodName"] = "Accept"
+		info["RollbackMethodName"] = "INS_FLAG_NO_ROLLBACK_METHOD"
+		result = append(result, info)
+	}
 
 	return result
 }
@@ -44,12 +42,12 @@ func INSMETHOD_GetCode(object []byte, data []byte) ([]byte, []byte, error) {
 	self := new(Deposit)
 
 	if len(object) == 0 {
-		return nil, nil, &ExtendableError{S: "[ Fake GetCode ] ( Generated Method ) Object is nil"}
+		return nil, nil, &foundation.Error{S: "[ Fake GetCode ] ( Generated Method ) Object is nil"}
 	}
 
 	err := ph.Deserialize(object, self)
 	if err != nil {
-		e := &ExtendableError{S: "[ Fake GetCode ] ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		e := &foundation.Error{S: "[ Fake GetCode ] ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
 		return nil, nil, e
 	}
 
@@ -70,12 +68,12 @@ func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) 
 	self := new(Deposit)
 
 	if len(object) == 0 {
-		return nil, nil, &ExtendableError{S: "[ Fake GetPrototype ] ( Generated Method ) Object is nil"}
+		return nil, nil, &foundation.Error{S: "[ Fake GetPrototype ] ( Generated Method ) Object is nil"}
 	}
 
 	err := ph.Deserialize(object, self)
 	if err != nil {
-		e := &ExtendableError{S: "[ Fake GetPrototype ] ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		e := &foundation.Error{S: "[ Fake GetPrototype ] ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
 		return nil, nil, e
 	}
 
@@ -97,12 +95,12 @@ func INSMETHOD_GetTxHash(object []byte, data []byte) ([]byte, []byte, error) {
 	self := new(Deposit)
 
 	if len(object) == 0 {
-		return nil, nil, &ExtendableError{S: "[ FakeGetTxHash ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+		return nil, nil, &foundation.Error{S: "[ FakeGetTxHash ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
 	}
 
 	err := ph.Deserialize(object, self)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeGetTxHash ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		e := &foundation.Error{S: "[ FakeGetTxHash ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
 		return nil, nil, e
 	}
 
@@ -110,22 +108,13 @@ func INSMETHOD_GetTxHash(object []byte, data []byte) ([]byte, []byte, error) {
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeGetTxHash ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		e := &foundation.Error{S: "[ FakeGetTxHash ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
 		return nil, nil, e
 	}
 
 	ret0, ret1 := self.GetTxHash()
 
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
-	systemErr := ph.GetSystemError()
-
-	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		ret1 = systemErr
-		systemErr = nil
-	}
-	// TODO: this is the end of a horrible hack, please remove it
-
-	if systemErr != nil {
+	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 
@@ -138,7 +127,13 @@ func INSMETHOD_GetTxHash(object []byte, data []byte) ([]byte, []byte, error) {
 	ret1 = ph.MakeErrorSerializable(ret1)
 
 	ret := []byte{}
-	err = ph.Serialize([]interface{}{ret0, ret1}, &ret)
+	err = ph.Serialize(
+		foundation.Result{Returns: []interface{}{ret0, ret1}},
+		&ret,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	return state, ret, err
 }
@@ -149,12 +144,12 @@ func INSMETHOD_GetAmount(object []byte, data []byte) ([]byte, []byte, error) {
 	self := new(Deposit)
 
 	if len(object) == 0 {
-		return nil, nil, &ExtendableError{S: "[ FakeGetAmount ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+		return nil, nil, &foundation.Error{S: "[ FakeGetAmount ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
 	}
 
 	err := ph.Deserialize(object, self)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeGetAmount ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		e := &foundation.Error{S: "[ FakeGetAmount ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
 		return nil, nil, e
 	}
 
@@ -162,22 +157,13 @@ func INSMETHOD_GetAmount(object []byte, data []byte) ([]byte, []byte, error) {
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeGetAmount ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		e := &foundation.Error{S: "[ FakeGetAmount ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
 		return nil, nil, e
 	}
 
 	ret0, ret1 := self.GetAmount()
 
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
-	systemErr := ph.GetSystemError()
-
-	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		ret1 = systemErr
-		systemErr = nil
-	}
-	// TODO: this is the end of a horrible hack, please remove it
-
-	if systemErr != nil {
+	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 
@@ -190,7 +176,13 @@ func INSMETHOD_GetAmount(object []byte, data []byte) ([]byte, []byte, error) {
 	ret1 = ph.MakeErrorSerializable(ret1)
 
 	ret := []byte{}
-	err = ph.Serialize([]interface{}{ret0, ret1}, &ret)
+	err = ph.Serialize(
+		foundation.Result{Returns: []interface{}{ret0, ret1}},
+		&ret,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	return state, ret, err
 }
@@ -201,12 +193,12 @@ func INSMETHOD_Itself(object []byte, data []byte) ([]byte, []byte, error) {
 	self := new(Deposit)
 
 	if len(object) == 0 {
-		return nil, nil, &ExtendableError{S: "[ FakeItself ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+		return nil, nil, &foundation.Error{S: "[ FakeItself ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
 	}
 
 	err := ph.Deserialize(object, self)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeItself ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		e := &foundation.Error{S: "[ FakeItself ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
 		return nil, nil, e
 	}
 
@@ -214,22 +206,13 @@ func INSMETHOD_Itself(object []byte, data []byte) ([]byte, []byte, error) {
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeItself ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		e := &foundation.Error{S: "[ FakeItself ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
 		return nil, nil, e
 	}
 
 	ret0, ret1 := self.Itself()
 
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
-	systemErr := ph.GetSystemError()
-
-	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		ret1 = systemErr
-		systemErr = nil
-	}
-	// TODO: this is the end of a horrible hack, please remove it
-
-	if systemErr != nil {
+	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 
@@ -242,7 +225,13 @@ func INSMETHOD_Itself(object []byte, data []byte) ([]byte, []byte, error) {
 	ret1 = ph.MakeErrorSerializable(ret1)
 
 	ret := []byte{}
-	err = ph.Serialize([]interface{}{ret0, ret1}, &ret)
+	err = ph.Serialize(
+		foundation.Result{Returns: []interface{}{ret0, ret1}},
+		&ret,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	return state, ret, err
 }
@@ -253,16 +242,16 @@ func INSMETHOD_Confirm(object []byte, data []byte) ([]byte, []byte, error) {
 	self := new(Deposit)
 
 	if len(object) == 0 {
-		return nil, nil, &ExtendableError{S: "[ FakeConfirm ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+		return nil, nil, &foundation.Error{S: "[ FakeConfirm ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
 	}
 
 	err := ph.Deserialize(object, self)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeConfirm ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		e := &foundation.Error{S: "[ FakeConfirm ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
 		return nil, nil, e
 	}
 
-	args := [4]interface{}{}
+	args := make([]interface{}, 4)
 	var args0 int
 	args[0] = &args0
 	var args1 string
@@ -274,22 +263,13 @@ func INSMETHOD_Confirm(object []byte, data []byte) ([]byte, []byte, error) {
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeConfirm ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		e := &foundation.Error{S: "[ FakeConfirm ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
 		return nil, nil, e
 	}
 
 	ret0 := self.Confirm(args0, args1, args2, args3)
 
-	// TODO: this is a part of horrible hack for making "index not found" error NOT system error. You MUST remove it in INS-3099
-	systemErr := ph.GetSystemError()
-
-	if systemErr != nil && strings.Contains(systemErr.Error(), "index not found") {
-		ret0 = systemErr
-		systemErr = nil
-	}
-	// TODO: this is the end of a horrible hack, please remove it
-
-	if systemErr != nil {
+	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 
@@ -302,15 +282,125 @@ func INSMETHOD_Confirm(object []byte, data []byte) ([]byte, []byte, error) {
 	ret0 = ph.MakeErrorSerializable(ret0)
 
 	ret := []byte{}
-	err = ph.Serialize([]interface{}{ret0}, &ret)
+	err = ph.Serialize(
+		foundation.Result{Returns: []interface{}{ret0}},
+		&ret,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	return state, ret, err
 }
 
-func INSCONSTRUCTOR_New(data []byte) ([]byte, error, error) {
+func INSMETHOD_Transfer(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
-	args := [3]interface{}{}
+	self := new(Deposit)
+
+	if len(object) == 0 {
+		return nil, nil, &foundation.Error{S: "[ FakeTransfer ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+	}
+
+	err := ph.Deserialize(object, self)
+	if err != nil {
+		e := &foundation.Error{S: "[ FakeTransfer ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		return nil, nil, e
+	}
+
+	args := make([]interface{}, 2)
+	var args0 string
+	args[0] = &args0
+	var args1 insolar.Reference
+	args[1] = &args1
+
+	err = ph.Deserialize(data, &args)
+	if err != nil {
+		e := &foundation.Error{S: "[ FakeTransfer ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		return nil, nil, e
+	}
+
+	ret0, ret1 := self.Transfer(args0, args1)
+
+	if ph.GetSystemError() != nil {
+		return nil, nil, ph.GetSystemError()
+	}
+
+	state := []byte{}
+	err = ph.Serialize(self, &state)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	ret1 = ph.MakeErrorSerializable(ret1)
+
+	ret := []byte{}
+	err = ph.Serialize(
+		foundation.Result{Returns: []interface{}{ret0, ret1}},
+		&ret,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return state, ret, err
+}
+
+func INSMETHOD_Accept(object []byte, data []byte) ([]byte, []byte, error) {
+	ph := common.CurrentProxyCtx
+	ph.SetSystemError(nil)
+	self := new(Deposit)
+
+	if len(object) == 0 {
+		return nil, nil, &foundation.Error{S: "[ FakeAccept ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+	}
+
+	err := ph.Deserialize(object, self)
+	if err != nil {
+		e := &foundation.Error{S: "[ FakeAccept ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		return nil, nil, e
+	}
+
+	args := make([]interface{}, 1)
+	var args0 string
+	args[0] = &args0
+
+	err = ph.Deserialize(data, &args)
+	if err != nil {
+		e := &foundation.Error{S: "[ FakeAccept ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		return nil, nil, e
+	}
+
+	ret0 := self.Accept(args0)
+
+	if ph.GetSystemError() != nil {
+		return nil, nil, ph.GetSystemError()
+	}
+
+	state := []byte{}
+	err = ph.Serialize(self, &state)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	ret0 = ph.MakeErrorSerializable(ret0)
+
+	ret := []byte{}
+	err = ph.Serialize(
+		foundation.Result{Returns: []interface{}{ret0}},
+		&ret,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return state, ret, err
+}
+
+func INSCONSTRUCTOR_New(data []byte) ([]byte, []byte, error) {
+	ph := common.CurrentProxyCtx
+	ph.SetSystemError(nil)
+	args := make([]interface{}, 3)
 	var args0 [3]string
 	args[0] = &args0
 	var args1 string
@@ -320,32 +410,41 @@ func INSCONSTRUCTOR_New(data []byte) ([]byte, error, error) {
 
 	err := ph.Deserialize(data, &args)
 	if err != nil {
-		e := &ExtendableError{S: "[ FakeNew ] ( INSCONSTRUCTOR_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		e := &foundation.Error{S: "[ FakeNew ] ( INSCONSTRUCTOR_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
 		return nil, nil, e
 	}
 
 	ret0, ret1 := New(args0, args1, args2)
+	ret1 = ph.MakeErrorSerializable(ret1)
+	if ret0 == nil && ret1 == nil {
+		ret1 = &foundation.Error{S: "constructor returned nil"}
+	}
+
 	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()
 	}
-	if ret1 != nil {
-		// logical error, the result should be registered with type RequestSideEffectNone
-		return nil, ret1, nil
-	}
 
-	if ret0 == nil {
-		// logical error, the result should be registered with type RequestSideEffectNone
-		e := &ExtendableError{S: "[ FakeNew ] ( INSCONSTRUCTOR_* ) ( Generated Method ) Constructor returns nil"}
-		return nil, e, nil
-	}
-
-	ret := []byte{}
-	err = ph.Serialize(ret0, &ret)
+	result := []byte{}
+	err = ph.Serialize(
+		foundation.Result{Returns: []interface{}{ret1}},
+		&result,
+	)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return ret, nil, err
+	if ret1 != nil {
+		// logical error, the result should be registered with type RequestSideEffectNone
+		return nil, result, nil
+	}
+
+	state := []byte{}
+	err = ph.Serialize(ret0, &state)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return state, result, nil
 }
 
 func Initialize() XXX_insolar.ContractWrapper {
@@ -357,6 +456,8 @@ func Initialize() XXX_insolar.ContractWrapper {
 			"GetAmount": INSMETHOD_GetAmount,
 			"Itself":    INSMETHOD_Itself,
 			"Confirm":   INSMETHOD_Confirm,
+			"Transfer":  INSMETHOD_Transfer,
+			"Accept":    INSMETHOD_Accept,
 		},
 		Constructors: XXX_insolar.ContractConstructors{
 			"New": INSCONSTRUCTOR_New,

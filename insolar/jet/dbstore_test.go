@@ -28,8 +28,8 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
+	"github.com/insolar/insolar/insolar/store"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/internal/ledger/store"
 )
 
 // helper for tests
@@ -41,7 +41,7 @@ func dbTreeForPulse(s *DBStore, pulse insolar.PulseNumber) *Tree {
 	}
 
 	recovered := &Tree{}
-	err = insolar.Deserialize(serializedTree, recovered)
+	err = recovered.Unmarshal(serializedTree)
 	if err != nil {
 		return nil
 	}
@@ -170,10 +170,10 @@ func TestDBStorage_SplitJetTree(t *testing.T) {
 	var (
 		expectedLeft  = insolar.JetID{0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 		expectedRight = insolar.JetID{0, 0, 0, 1, 1, 128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
-		expectedLeafs = Tree{Head: &jet{
+		expectedLeafs = Tree{Head: &Jet{
 			Actual: false,
-			Left:   &jet{Actual: true},
-			Right:  &jet{Actual: true},
+			Left:   &Jet{Actual: true},
+			Right:  &Jet{Actual: true},
 		}}
 	)
 
