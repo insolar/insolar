@@ -109,11 +109,3 @@ func (n *gatewayer) SwitchState(ctx context.Context, state insolar.NetworkState,
 		}
 	}()
 }
-
-func (n *gatewayer) GetState() insolar.NetworkState {
-	g := n.Gateway()
-	if g == nil {
-		return insolar.NoNetworkState
-	}
-	return g.GetState()
-}

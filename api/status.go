@@ -19,6 +19,7 @@ package api
 import (
 	"context"
 	"net/http"
+	"time"
 
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/insolar"
@@ -27,6 +28,28 @@ import (
 	"github.com/insolar/insolar/version"
 	"github.com/insolar/rpc/v2"
 )
+
+type Node struct {
+	Reference string
+	Role      string
+	IsWorking bool
+	ID        uint32
+}
+
+// StatusReply is reply for Status service requests.
+type StatusReply struct {
+	NetworkState       string
+	Origin             Node
+	ActiveListSize     int
+	WorkingListSize    int
+	Nodes              []Node
+	PulseNumber        uint32
+	NetworkPulseNumber uint32
+	Entropy            []byte
+	Version            string
+	Timestamp          time.Time
+	StartTime          time.Time
+}
 
 // Get returns status info
 func (s *NodeService) GetStatus(r *http.Request, args *interface{}, requestBody *rpc.RequestBody, reply *requester.StatusResponse) error {
@@ -69,6 +92,8 @@ func (s *NodeService) GetStatus(r *http.Request, args *interface{}, requestBody 
 
 	reply.Entropy = statusReply.Pulse.Entropy[:]
 	reply.Version = version.Version
+	reply.StartTime = statusReply.StartTime
+	reply.Timestamp = statusReply.Timestamp
 
 	return nil
 }

@@ -17,6 +17,7 @@
 package log
 
 import (
+	"fmt"
 	"io"
 	stdlog "log"
 	"os"
@@ -31,6 +32,8 @@ import (
 
 const timestampFormat = "2006-01-02T15:04:05.000000000Z07:00"
 
+const defaultCallerSkipFrameCount = 3
+
 var fieldsOrder = []string{
 	zerolog.TimestampFieldName,
 	zerolog.LevelFieldName,
@@ -38,7 +41,16 @@ var fieldsOrder = []string{
 	zerolog.CallerFieldName,
 }
 
-const defaultCallerSkipFrameCount = 3
+var cwd string
+
+func init() {
+	var err error
+	cwd, err = os.Getwd()
+	if err != nil {
+		cwd = ""
+		fmt.Println("couldn't get current working directory: ", err.Error())
+	}
+}
 
 func formatCaller() zerolog.Formatter {
 	return func(i interface{}) string {
@@ -47,8 +59,7 @@ func formatCaller() zerolog.Formatter {
 			c = cc
 		}
 		if len(c) > 0 {
-			cwd, err := os.Getwd()
-			if err == nil {
+			if len(cwd) > 0 {
 				c = strings.TrimPrefix(c, cwd)
 				c = strings.TrimPrefix(c, "/")
 			}

@@ -52,10 +52,13 @@ package servicenetwork
 
 import (
 	"context"
+	"time"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/version"
 )
+
+var startTime time.Time
 
 func (n *ServiceNetwork) GetNetworkStatus() insolar.StatusReply {
 	var reply insolar.StatusReply
@@ -78,9 +81,16 @@ func (n *ServiceNetwork) GetNetworkStatus() insolar.StatusReply {
 
 	reply.Version = version.Version
 
+	reply.Timestamp = time.Now()
+	reply.StartTime = startTime
+
 	return reply
 }
 
 func (n *ServiceNetwork) IsAlive() bool {
 	panic("implement me")
+}
+
+func init() {
+	startTime = time.Now()
 }
