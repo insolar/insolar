@@ -28,8 +28,10 @@ import (
 
 // DB is a DB storage implementation. It saves pulses to disk and does not allow removal.
 type DB struct {
-	db   store.DB
-	lock sync.RWMutex
+	db store.DB
+
+	latest *insolar.Pulse
+	lock   sync.RWMutex
 }
 
 type pulseKey insolar.PulseNumber
@@ -71,6 +73,10 @@ func (s *DB) Latest(ctx context.Context) (pulse insolar.Pulse, err error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
+	if s.latest != nil {
+		return *s.latest, nil
+	}
+
 	head, err := s.head()
 	if err != nil {
 		return
@@ -86,6 +92,10 @@ func (s *DB) Latest(ctx context.Context) (pulse insolar.Pulse, err error) {
 func (s *DB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
 	it := s.db.NewIterator(pulseKey(from), false)
 	defer it.Close()
+
+	s.lock.Lock()
+	s.latest = nil
+	s.lock.Unlock()
 
 	var hasKeys bool
 	for it.Next() {
@@ -138,13 +148,21 @@ func (s *DB) Append(ctx context.Context, pulse insolar.Pulse) error {
 
 	head, err := s.head()
 	if err == ErrNotFound {
-		return insertWithoutHead()
+		err := insertWithoutHead()
+		if err == nil {
+			s.latest = &pulse
+		}
+		return err
 	}
 
 	if pulse.PulseNumber <= head {
 		return ErrBadPulse
 	}
-	return insertWithHead(head)
+	err = insertWithHead(head)
+	if err == nil {
+		s.latest = &pulse
+	}
+	return err
 }
 
 // Forwards calculates steps pulses forwards from provided pulse. If calculated pulse does not exist, ErrNotFound will
