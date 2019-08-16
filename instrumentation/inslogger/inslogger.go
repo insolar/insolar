@@ -20,6 +20,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/utils"
 	logger "github.com/insolar/insolar/log"
@@ -27,6 +28,34 @@ import (
 
 type loggerKey struct{}
 type loggerLevelKey struct{}
+
+func InitNodeLogger(
+	ctx context.Context,
+	cfg configuration.Log,
+	traceID, nodeRef, nodeRole string,
+) (
+	context.Context, insolar.Logger,
+) {
+	inslog, err := logger.NewLog(cfg)
+	if err != nil {
+		panic(err)
+	}
+
+	ctx = SetLogger(ctx, inslog)
+	ctx, _ = WithTraceField(ctx, traceID)
+	if nodeRef != "" {
+		ctx, _ = WithField(ctx, "nodeid", nodeRef)
+	}
+	if nodeRole != "" {
+		ctx, inslog = WithField(ctx, "role", nodeRole)
+	}
+
+	logger.SetGlobalLogger(inslog)
+
+	ctx, inslog = WithField(ctx, "loginstance", "node")
+
+	return ctx, inslog
+}
 
 func TraceID(ctx context.Context) string {
 	return utils.TraceID(ctx)
@@ -86,7 +115,7 @@ func ContextWithTrace(ctx context.Context, traceid string) context.Context {
 func getLogger(ctx context.Context) insolar.Logger {
 	val := ctx.Value(loggerKey{})
 	if val == nil {
-		return logger.GlobalLogger.WithSkipFrameCount(1)
+		val = logger.GlobalLogger.WithSkipFrameCount(-1)
 	}
 	l := val.(insolar.Logger)
 	ln := GetLoggerLevel(ctx)
