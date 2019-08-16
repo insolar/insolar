@@ -87,7 +87,6 @@ func displayResultsTable(results []nodeStatus, ready bool, buffer *bytes.Buffer)
 		"Error",
 	})
 	table.SetBorder(false)
-https://github.com/insolar/insolar/pull/2485/conflict?name=cmd%252Fpulsewatcher%252Fpulsewatcher.go&ancestor_oid=9d5541dacc8704b615fd9bdcf3598f0a4420e2b7&base_oid=d8e33e060d7743c12fe9de123c365bd4264d3088&head_oid=65dd312bac775803c45b16b7dd9f9053f7c7eca1
 	table.ClearRows()
 	table.ClearFooter()
 

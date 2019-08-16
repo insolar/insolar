@@ -94,7 +94,5 @@ func (s *NodeService) GetStatus(r *http.Request, args *interface{}, requestBody 
 	reply.StartTime = statusReply.StartTime
 	reply.Timestamp = statusReply.Timestamp
 
-	reply.Timestamp = statusReply.Timestamp.Format("2006-01-02 15:04:05.999999")
-
 	return nil
 }
