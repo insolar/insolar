@@ -163,8 +163,9 @@ func (c *RequestCheckerDefault) checkReasonForIncomingRequest(
 		reasonInfo *payload.RequestInfo
 		err        error
 	)
+	reasonObject := incomingRequest.ReasonAffinityRef()
 
-	reasonObjectID := *incomingRequest.ReasonAffinityRef().Record()
+	reasonObjectID := *reasonObject.Record()
 	// If reasonObject is same as requestObject then go local
 	// (this fixes deadlock in saga requests).
 	if objectID.Equal(reasonObjectID) {
