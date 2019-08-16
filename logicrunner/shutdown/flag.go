@@ -32,16 +32,17 @@ type Flag interface {
 }
 
 type flag struct {
-	stopLock    sync.Mutex
+	stopLock  sync.Mutex
+	isStopped bool
+
 	stopChannel chan struct{}
-	isStopped   bool
 }
 
 func NewFlag() Flag {
 	return &flag{
 		stopLock:    sync.Mutex{},
 		isStopped:   false,
-		stopChannel: make(chan struct{}, 1),
+		stopChannel: make(chan struct{}),
 	}
 }
 
@@ -76,6 +77,14 @@ func (g *flag) Done(ctx context.Context, isDone func() bool) {
 
 	if g.isStopped && isDone() {
 		logger.Debug("ready to shut down")
-		g.stopChannel <- struct{}{}
+
+		select {
+		case _, ok := <-g.stopChannel:
+			if ok {
+				panic("unexpected message was written to channel")
+			}
+		default:
+			close(g.stopChannel)
+		}
 	}
 }
