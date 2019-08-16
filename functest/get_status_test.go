@@ -21,6 +21,8 @@ package functest
 import (
 	"testing"
 
+	"github.com/insolar/insolar/testutils/launchnet"
+
 	"github.com/stretchr/testify/require"
 )
 
@@ -28,7 +30,7 @@ func TestGetStatus(t *testing.T) {
 	status := getStatus(t)
 	require.NotNil(t, status)
 
-	numNodes, err := getNumberNodes()
+	numNodes, err := launchnet.GetNumberNodes()
 	require.NoError(t, err)
 
 	require.Equal(t, "CompleteNetworkState", status.NetworkState)

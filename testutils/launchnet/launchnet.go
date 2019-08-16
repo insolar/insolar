@@ -1,28 +1,11 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-
-// +build functest
-
-package functest
+package launchnet
 
 import (
 	"bufio"
 	"encoding/json"
 	"fmt"
 	"go/build"
+	"gopkg.in/yaml.v2"
 	"io"
 	"io/ioutil"
 	"os"
@@ -32,16 +15,12 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
-	"testing"
 	"time"
-
-	"gopkg.in/yaml.v2"
-
-	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/defaults"
+	"github.com/pkg/errors"
 )
 
 const HOST = "http://localhost:19102"
@@ -57,6 +36,57 @@ var cmdCompleted = make(chan error, 1)
 var stdin io.WriteCloser
 var stdout io.ReadCloser
 var stderr io.ReadCloser
+
+var info *requester.InfoResponse
+var Root User
+var MigrationAdmin User
+var MigrationDaemons [insolar.GenesisAmountActiveMigrationDaemonMembers]User
+
+type User struct {
+	Ref     string
+	PrivKey string
+	PubKey  string
+}
+
+// Run starts launchnet before callback and stop after it.
+// Return callback exit code.
+func Run(cb func() int) int {
+	err := setup()
+	defer teardown()
+	if err != nil {
+		fmt.Println("error while setup, skip tests: ", err)
+		return 1
+	}
+
+	c := make(chan os.Signal)
+	signal.Notify(c, os.Interrupt)
+
+	go func() {
+		select {
+		case sig := <-c:
+			fmt.Printf("Got %s signal. Aborting...\n", sig)
+			teardown()
+		}
+	}()
+
+	pulseWatcher, config, err := pulseWatcherPath()
+	if err != nil {
+		fmt.Println("PulseWatcher not found: ", err)
+		return 1
+	}
+
+	code := cb()
+
+	if code != 0 {
+		out, err := exec.Command(pulseWatcher, "-c", config, "-s").CombinedOutput()
+		if err != nil {
+			fmt.Println("PulseWatcher execution error: ", err)
+			return 1
+		}
+		fmt.Println(string(out))
+	}
+	return code
+}
 
 func launchnetPath(a ...string) (string, error) {
 	cwd, err := os.Getwd()
@@ -85,18 +115,7 @@ func launchnetPath(a ...string) (string, error) {
 	return filepath.Join(parts...), nil
 }
 
-var info *requester.InfoResponse
-var root user
-var migrationAdmin user
-var migrationDaemons [insolar.GenesisAmountActiveMigrationDaemonMembers]user
-
-type user struct {
-	ref     string
-	privKey string
-	pubKey  string
-}
-
-func getNumberNodes() (int, error) {
+func GetNumberNodes() (int, error) {
 	type nodesConf struct {
 		DiscoverNodes []interface{} `yaml:"discovery_nodes"`
 	}
@@ -120,23 +139,7 @@ func getNumberNodes() (int, error) {
 	return len(conf.DiscoverNodes), nil
 }
 
-func functestPath() string {
-	p, err := build.Default.Import("github.com/insolar/insolar", "", build.FindOnly)
-	if err != nil {
-		panic(err)
-	}
-	return filepath.Join(p.Dir, "functest")
-}
-
-func envVarWithDefault(name string, defaultValue string) string {
-	value := os.Getenv(name)
-	if value != "" {
-		return value
-	}
-	return defaultValue
-}
-
-func loadMemberKeys(keysPath string, member *user) error {
+func loadMemberKeys(keysPath string, member *User) error {
 	text, err := ioutil.ReadFile(keysPath)
 	if err != nil {
 		return errors.Wrapf(err, "[ loadMemberKeys ] could't load member keys")
@@ -149,8 +152,8 @@ func loadMemberKeys(keysPath string, member *user) error {
 	if data["private_key"] == "" || data["public_key"] == "" {
 		return errors.New("[ loadMemberKeys ] could't find any keys")
 	}
-	member.privKey = data["private_key"]
-	member.pubKey = data["public_key"]
+	member.PrivKey = data["private_key"]
+	member.PubKey = data["public_key"]
 
 	return nil
 }
@@ -160,7 +163,7 @@ func loadAllMembersKeys() error {
 	if err != nil {
 		return err
 	}
-	err = loadMemberKeys(path, &root)
+	err = loadMemberKeys(path, &Root)
 	if err != nil {
 		return err
 	}
@@ -168,11 +171,11 @@ func loadAllMembersKeys() error {
 	if err != nil {
 		return err
 	}
-	err = loadMemberKeys(path, &migrationAdmin)
+	err = loadMemberKeys(path, &MigrationAdmin)
 	if err != nil {
 		return err
 	}
-	for i, md := range migrationDaemons {
+	for i, md := range MigrationDaemons {
 		path, err := launchnetPath("configs", "migration_daemon_"+strconv.Itoa(i)+"_member_keys.json")
 		if err != nil {
 			return err
@@ -181,7 +184,7 @@ func loadAllMembersKeys() error {
 		if err != nil {
 			return err
 		}
-		migrationDaemons[i] = md
+		MigrationDaemons[i] = md
 	}
 
 	return nil
@@ -380,17 +383,17 @@ func setup() error {
 		time.Sleep(time.Second)
 	}
 	if err != nil {
-		return errors.Wrap(err, "[ setup ] could't receive root reference ")
+		return errors.Wrap(err, "[ setup ] could't receive Root reference ")
 	}
 
 	fmt.Println("[ setup ] references successfully received")
-	root.ref = info.RootMember
-	migrationAdmin.ref = info.MigrationAdminMember
-	for i := range migrationDaemons {
-		migrationDaemons[i].ref = info.MigrationDaemonMembers[i]
+	Root.Ref = info.RootMember
+	MigrationAdmin.Ref = info.MigrationAdminMember
+	for i := range MigrationDaemons {
+		MigrationDaemons[i].Ref = info.MigrationDaemonMembers[i]
 	}
 
-	Contracts = make(map[string]*contractInfo)
+	//Contracts = make(map[string]*contractInfo)
 
 	return nil
 }
@@ -413,42 +416,4 @@ func teardown() {
 		fmt.Println("[ teardown ]  failed to stop insolard: ", err)
 	}
 	fmt.Println("[ teardown ] insolard was successfully stoped")
-}
-
-func TestsMainWrapper(m *testing.M) int {
-	err := setup()
-	defer teardown()
-	if err != nil {
-		fmt.Println("error while setup, skip tests: ", err)
-		return 1
-	}
-
-	c := make(chan os.Signal)
-	signal.Notify(c, os.Interrupt)
-
-	go func() {
-		select {
-		case sig := <-c:
-			fmt.Printf("Got %s signal. Aborting...\n", sig)
-			teardown()
-		}
-	}()
-
-	pulseWatcher, config, err := pulseWatcherPath()
-	if err != nil {
-		fmt.Println("PulseWatcher not found: ", err)
-		return 1
-	}
-
-	code := m.Run()
-
-	if code != 0 {
-		out, err := exec.Command(pulseWatcher, "-c", config, "-s").CombinedOutput()
-		if err != nil {
-			fmt.Println("PulseWatcher execution error: ", err)
-			return 1
-		}
-		fmt.Println(string(out))
-	}
-	return code
 }

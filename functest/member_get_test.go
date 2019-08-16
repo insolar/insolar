@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/testutils"
+	"github.com/insolar/insolar/testutils/launchnet"
 
 	"github.com/stretchr/testify/require"
 )
@@ -30,18 +31,18 @@ import (
 func TestMemberGet(t *testing.T) {
 	member1 := *createMember(t)
 	member2, _ := newUserWithKeys()
-	member2.pubKey = member1.pubKey
-	member2.privKey = member1.privKey
+	member2.PubKey = member1.PubKey
+	member2.PrivKey = member1.PrivKey
 	res, err := signedRequest(t, member2, "member.get", nil)
 	require.Nil(t, err)
-	require.Equal(t, member1.ref, res.(map[string]interface{})["reference"].(string))
+	require.Equal(t, member1.Ref, res.(map[string]interface{})["reference"].(string))
 }
 
 func TestMigrationMemberGet(t *testing.T) {
 	member1, _ := newUserWithKeys()
 
 	ba := testutils.RandomString()
-	_, _ = signedRequest(t, &migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{ba}})
+	_, _ = signedRequest(t, &launchnet.MigrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{ba}})
 
 	res1, err := signedRequest(t, member1, "member.migrationCreate", nil)
 	require.Nil(t, err)
@@ -67,7 +68,7 @@ func TestMemberGetWrongPublicKey(t *testing.T) {
 }
 
 func TestMemberGetGenesisMember(t *testing.T) {
-	res, err := signedRequest(t, &migrationAdmin, "member.get", nil)
+	res, err := signedRequest(t, &launchnet.MigrationAdmin, "member.get", nil)
 	require.Nil(t, err)
-	require.Equal(t, migrationAdmin.ref, res.(map[string]interface{})["reference"].(string))
+	require.Equal(t, launchnet.MigrationAdmin.Ref, res.(map[string]interface{})["reference"].(string))
 }
