@@ -67,11 +67,9 @@ func Run(cb func() int) int {
 	signal.Notify(c, os.Interrupt)
 
 	go func() {
-		select {
-		case sig := <-c:
-			fmt.Printf("Got %s signal. Aborting...\n", sig)
-			teardown()
-		}
+		sig := <-c
+		fmt.Printf("Got %s signal. Aborting...\n", sig)
+		teardown()
 	}()
 
 	pulseWatcher, config, err := pulseWatcherPath()
