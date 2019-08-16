@@ -92,7 +92,7 @@ func CreateDefaultBundleConfig() BundleConfig {
 		false,
 		false,
 		true,
-		false,
+		true,
 	}
 }
 
