@@ -185,13 +185,15 @@ func generateMigrationAddress() string {
 	return testutils.RandomString()
 }
 
+const migrationAmount = "360000"
+
 func fullMigration(t *testing.T, txHash string) *user {
 	migrationAddress := testutils.RandomString()
 	member := createMigrationMemberForMA(t, migrationAddress)
 
-	migrate(t, member.ref, "1000", txHash, migrationAddress, 0)
-	migrate(t, member.ref, "1000", txHash, migrationAddress, 2)
-	migrate(t, member.ref, "1000", txHash, migrationAddress, 1)
+	migrate(t, member.ref, migrationAmount, txHash, migrationAddress, 0)
+	migrate(t, member.ref, migrationAmount, txHash, migrationAddress, 2)
+	migrate(t, member.ref, migrationAmount, txHash, migrationAddress, 1)
 
 	return member
 }

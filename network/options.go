@@ -48,7 +48,7 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package common
+package network
 
 import (
 	"time"
@@ -67,7 +67,7 @@ type Options struct {
 	// The maximum time to wait for a response to ack packet.
 	AckPacketTimeout time.Duration
 
-	// Bootstrap reconnect timeout
+	// Bootstrap ETA for join the Insolar network
 	BootstrapTimeout time.Duration
 
 	// Min bootstrap retry timeout
@@ -93,7 +93,7 @@ func ConfigureOptions(conf configuration.Configuration) *Options {
 		PingTimeout:         1 * time.Second,
 		PacketTimeout:       15 * time.Second,
 		AckPacketTimeout:    5 * time.Second,
-		BootstrapTimeout:    10 * time.Second,
+		BootstrapTimeout:    90 * time.Second,
 		HandshakeSessionTTL: time.Duration(config.HandshakeSessionTTL) * time.Millisecond,
 	}
 }

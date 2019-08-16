@@ -69,7 +69,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/cascade"
-	"github.com/insolar/insolar/network/controller/common"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 )
 
@@ -85,11 +84,11 @@ type RPCController interface {
 }
 
 type rpcController struct {
-	Scheme      insolar.PlatformCryptographyScheme `inject:""`
-	Network     network.HostNetwork                `inject:""`
-	NodeNetwork network.NodeNetwork                `inject:""`
+	Scheme         insolar.PlatformCryptographyScheme `inject:""`
+	Network        network.HostNetwork                `inject:""`
+	OriginProvider network.OriginProvider             `inject:""`
 
-	options     *common.Options
+	options     *network.Options
 	methodTable map[string]insolar.RemoteProcedure
 }
 
@@ -139,7 +138,7 @@ func (rpc *rpcController) initCascadeSendMessage(ctx context.Context, data insol
 	var err error
 
 	if findCurrentNode {
-		nodeID := rpc.NodeNetwork.GetOrigin().ID()
+		nodeID := rpc.OriginProvider.GetOrigin().ID()
 		nextNodes, err = cascade.CalculateNextNodes(rpc.Scheme, data, &nodeID)
 	} else {
 		nextNodes, err = cascade.CalculateNextNodes(rpc.Scheme, data, nil)
@@ -331,6 +330,6 @@ func (rpc *rpcController) Init(ctx context.Context) error {
 	return nil
 }
 
-func NewRPCController(options *common.Options) RPCController {
+func NewRPCController(options *network.Options) RPCController {
 	return &rpcController{options: options, methodTable: make(map[string]insolar.RemoteProcedure)}
 }
