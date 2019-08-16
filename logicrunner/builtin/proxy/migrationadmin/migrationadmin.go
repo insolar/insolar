@@ -451,7 +451,7 @@ func (r *MigrationAdmin) DeactivateDaemonAsImmutable(daemonMember string, caller
 }
 
 // CheckActiveDaemon is proxy generated method
-func (r *MigrationAdmin) CheckActiveDaemon(daemonMember string) (bool, error) {
+func (r *MigrationAdmin) CheckActiveDaemonAsMutable(daemonMember string) (bool, error) {
 	var args [1]interface{}
 	args[0] = daemonMember
 
@@ -511,7 +511,7 @@ func (r *MigrationAdmin) CheckActiveDaemonNoWait(daemonMember string) error {
 }
 
 // CheckActiveDaemonAsImmutable is proxy generated method
-func (r *MigrationAdmin) CheckActiveDaemonAsImmutable(daemonMember string) (bool, error) {
+func (r *MigrationAdmin) CheckActiveDaemon(daemonMember string) (bool, error) {
 	var args [1]interface{}
 	args[0] = daemonMember
 

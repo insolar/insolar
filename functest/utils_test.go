@@ -183,7 +183,7 @@ func migrate(t *testing.T, memberRef string, amount string, tx string, ma string
 	require.NoError(t, err)
 	err = sm.UnmarshalBinary(decoded)
 	require.True(t, ok)
-	require.Equal(t, sm[migrationDaemons[mdNum].ref], "1000")
+	require.Equal(t, sm[migrationDaemons[mdNum].ref], amount)
 
 	return deposit
 }

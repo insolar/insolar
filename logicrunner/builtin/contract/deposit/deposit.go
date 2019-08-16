@@ -44,19 +44,13 @@ const (
 	// offsetDepositPulse insolar.PulseNumber = 6 * month
 	offsetDepositPulse insolar.PulseNumber = 10
 
-	statusOpen    status = "Open"
-	statusHolding status = "Holding"
-	statusClose   status = "Close"
-
 	XNS = "XNS"
 )
 
 // Deposit is like wallet. It holds migrated money.
 type Deposit struct {
 	foundation.BaseContract
-	Balance                 string              `json:"balance"`
-	PulseDepositCreate      insolar.PulseNumber  `json:"timestamp"`
-	PulseDepositHold        insolar.PulseNumber  `json:"holdStartDate"`
+	Balance                 string               `json:"balance"`
 	PulseDepositUnHold      insolar.PulseNumber  `json:"holdReleaseDate"`
 	MigrationDaemonConfirms foundation.StableMap `json:"confirmerReferences"`
 	Amount                  string               `json:"amount"`
@@ -84,17 +78,12 @@ func (d *Deposit) GetPulseUnHold() (insolar.PulseNumber, error) {
 
 // New creates new deposit.
 func New(migrationDaemonRef insolar.Reference, txHash string, amount string) (*Deposit, error) {
-	currentPulse, err := foundation.GetPulseNumber()
-	migrationDaemonConfirms := make(foundation.StableMap)
 
-	if err != nil {
-		return nil, fmt.Errorf("failed to get current pulse: %s", err.Error())
-	}
+	migrationDaemonConfirms := make(foundation.StableMap)
 	migrationDaemonConfirms[migrationDaemonRef.String()] = amount
 
 	return &Deposit{
 		Balance:                 "0",
-		PulseDepositCreate:      currentPulse,
 		MigrationDaemonConfirms: migrationDaemonConfirms,
 		Amount:                  "0",
 		TxHash:                  txHash,
@@ -135,12 +124,14 @@ func (d *Deposit) Confirm(migrationDaemonRef string, txHash string, amountStr st
 		if err != nil {
 			return fmt.Errorf("failed to get current pulse: %s", err.Error())
 		}
-		d.PulseDepositHold = currentPulse
 		d.Amount = amountStr
 		d.PulseDepositUnHold = calculateUnHoldPulse(currentPulse)
 
 		ma := member.GetObject(foundation.GetMigrationAdminMember())
 		accountRef, err := ma.GetAccount(XNS)
+		if err != nil {
+			return fmt.Errorf("get account ref failed: %s", err.Error())
+		}
 		a := account.GetObject(*accountRef)
 		err = a.TransferToDeposit(amountStr, d.GetReference())
 		if err != nil {
