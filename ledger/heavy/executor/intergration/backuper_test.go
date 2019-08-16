@@ -13,7 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// +build slowtest
 
 package intergration
 
@@ -27,6 +26,7 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -124,7 +124,7 @@ func TestBackuper(t *testing.T) {
 	}()
 
 	wgBackup := sync.WaitGroup{}
-	numIterations := 5
+	numIterations := 15
 
 	wgBackup.Add(numIterations)
 	// doing backups
@@ -176,9 +176,6 @@ func TestBackuper(t *testing.T) {
 		recovTmpDir, err := ioutil.TempDir("", "bdb-test-")
 		defer os.RemoveAll(recovTmpDir)
 		require.NoError(t, err)
-		recoveredDB, err := makeRawBadger(recovTmpDir)
-		require.NoError(t, err)
-		defer recoveredDB.Close()
 
 		for i := 0; i < numIterations+1; i++ {
 			bkpFileName := filepath.Join(
@@ -186,13 +183,15 @@ func TestBackuper(t *testing.T) {
 				fmt.Sprintf(cfg.DirNameTemplate, testPulse+insolar.PulseNumber(i)),
 				cfg.BackupFile,
 			)
-			bkpFile, err := os.Open(bkpFileName)
-			require.NoError(t, err)
-			err = recoveredDB.Load(bkpFile, 2)
-			require.NoError(t, err)
+
+			loadIncrementalBackup(t, recovTmpDir, bkpFileName)
 		}
 
 		require.NotEqual(t, 0, len(savedKeys))
+
+		recoveredDB, err := makeRawBadger(recovTmpDir)
+		require.NoError(t, err)
+		defer recoveredDB.Close()
 
 		for k, v := range savedKeys {
 			gotRawValue, err := getFromDB(recoveredDB, k)
@@ -201,7 +200,34 @@ func TestBackuper(t *testing.T) {
 			require.Equal(t, v, gotPulseNumber)
 		}
 	}
+}
 
+var binaryPath string
+
+func init() {
+	var ok bool
+
+	binaryPath, ok = os.LookupEnv("BIN_DIR")
+	if !ok {
+		wd, err := os.Getwd()
+		binaryPath = filepath.Join(wd, "..", "..", "..", "..", "bin")
+
+		if err != nil {
+			panic(err.Error())
+		}
+	}
+}
+
+func loadIncrementalBackup(t *testing.T, dbDir string, backupFile string) {
+	println("=====> Start loading backup")
+	cmd := exec.Command(binaryPath+"/backupmerger", "-t", dbDir, "-n", backupFile)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err := cmd.Start()
+	require.NoError(t, err)
+	err = cmd.Wait()
+	require.NoError(t, err)
+	println("<===== Finish loading backup")
 }
 
 func makeRawBadger(dir string) (*badger.DB, error) {
