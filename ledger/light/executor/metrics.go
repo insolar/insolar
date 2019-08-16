@@ -22,23 +22,12 @@ import (
 )
 
 var (
-	statHotObjectsTotal   = stats.Int64("hotdata/objects/total", "Amount of hot records for next executors", stats.UnitDimensionless)
-	statHotObjectsSend    = stats.Int64("hotdata/objects/send", "Amount of hot records actually sent to next executors", stats.UnitDimensionless)
-	statHeavyPayloadCount = stats.Int64(
-		"lightsyncer/heavypayload/count",
-		"How many heavy-payload messages were sent to a heavy node",
-		stats.UnitDimensionless,
-	)
-	statErrHeavyPayloadCount = stats.Int64(
-		"lightsyncer/failedheavypayload/count",
-		"How many heavy-payload messages were failed",
-		stats.UnitDimensionless,
-	)
+	statHotObjectsTotal = stats.Int64("hotdata/objects/total", "Amount of hot records for next executors", stats.UnitDimensionless)
+	statHotObjectsSend  = stats.Int64("hotdata/objects/send", "Amount of hot records actually sent to next executors", stats.UnitDimensionless)
 )
 
 func init() {
 	err := view.Register(
-
 		&view.View{
 			Name:        statHotObjectsTotal.Name(),
 			Description: statHotObjectsTotal.Description(),
@@ -51,18 +40,6 @@ func init() {
 			Description: statHotObjectsSend.Description(),
 			Measure:     statHotObjectsSend,
 			Aggregation: view.Sum(),
-		},
-		&view.View{
-			Name:        statHeavyPayloadCount.Name(),
-			Description: statHeavyPayloadCount.Description(),
-			Measure:     statHeavyPayloadCount,
-			Aggregation: view.Count(),
-		},
-		&view.View{
-			Name:        statErrHeavyPayloadCount.Name(),
-			Description: statErrHeavyPayloadCount.Description(),
-			Measure:     statErrHeavyPayloadCount,
-			Aggregation: view.Count(),
 		},
 	)
 	if err != nil {
