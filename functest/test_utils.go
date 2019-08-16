@@ -44,12 +44,12 @@ import (
 	"github.com/pkg/errors"
 )
 
-type ContractInfo struct {
+type contractInfo struct {
 	reference *insolar.Reference
 	testName  string
 }
 
-var Contracts map[string]*ContractInfo
+var Contracts map[string]*contractInfo
 
 type postParams map[string]interface{}
 
@@ -359,7 +359,7 @@ func newUserWithKeys() (*user, error) {
 func uploadContractOnce(t testing.TB, name string, code string) *insolar.Reference {
 	if _, ok := Contracts[name]; !ok {
 		ref := uploadContract(t, name, code)
-		Contracts[name] = &ContractInfo{
+		Contracts[name] = &contractInfo{
 			reference: ref,
 			testName:  t.Name(),
 		}

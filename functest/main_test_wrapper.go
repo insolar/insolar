@@ -390,7 +390,7 @@ func setup() error {
 		migrationDaemons[i].ref = info.MigrationDaemonMembers[i]
 	}
 
-	Contracts = make(map[string]*ContractInfo)
+	Contracts = make(map[string]*contractInfo)
 
 	return nil
 }
