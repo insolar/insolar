@@ -98,6 +98,7 @@ func (g *JoinerBootstrap) Run(ctx context.Context, p insolar.Pulse) {
 	responsePulse := pulse.FromProto(&resp.Pulse)
 
 	g.bootstrapETA = time.Second * time.Duration(resp.ETASeconds)
+	g.bootstrapTimer = time.NewTimer(g.bootstrapETA)
 	g.Gatewayer.SwitchState(ctx, insolar.WaitConsensus, *responsePulse)
 }
 
@@ -131,6 +132,7 @@ func (g *JoinerBootstrap) authorize(ctx context.Context) (*packet.Permit, error)
 			continue
 		}
 
+		logger.Infof("Trying to authorize to node: %s", h.String())
 		res, err := g.BootstrapRequester.Authorize(ctx, h, cert)
 		if err != nil {
 			logger.Warnf("Error authorizing to host %s: %s", h.String(), err.Error())

@@ -79,6 +79,8 @@ type components struct {
 	rollback  *executor.DBRollback
 	inRouter  *watermillMsg.Router
 	outRouter *watermillMsg.Router
+
+	replicator executor.HeavyReplicator
 }
 
 func newComponents(ctx context.Context, cfg configuration.Configuration, genesisCfg insolar.GenesisHeavyConfig) (*components, error) {
@@ -192,9 +194,9 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 	var (
 		Coordinator jet.Coordinator
 		Pulses      *pulse.DB
-		Jets        jet.Storage
 		Nodes       *node.Storage
 		DB          *store.BadgerDB
+		Jets        *jet.DBStore
 	)
 	{
 		var err error
@@ -204,7 +206,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		}
 		Nodes = node.NewStorage()
 		Pulses = pulse.NewDB(DB)
-		Jets = jet.NewStore()
+		Jets = jet.NewDBStore(DB)
 
 		c := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit)
 		c.PulseCalculator = Pulses
@@ -246,21 +248,18 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 	}
 
 	var (
-		PulseManager   insolar.PulseManager
-		Handler        *handler.Handler
-		Genesis        *genesis.Genesis
-		RecordPosition *object.RecordPositionDB
-		Records        *object.RecordDB
-		JetKeeper      executor.JetKeeper
+		PulseManager insolar.PulseManager
+		Handler      *handler.Handler
+		Genesis      *genesis.Genesis
+		Records      *object.RecordDB
+		JetKeeper    executor.JetKeeper
 	)
 	{
 		Records = object.NewRecordDB(DB)
-		RecordPosition = object.NewRecordPositionDB(DB)
-		indexes := object.NewIndexDB(DB)
+		indexes := object.NewIndexDB(DB, Records)
 		drops := drop.NewDB(DB)
-		jets := jet.NewDBStore(DB)
-		JetKeeper = executor.NewJetKeeper(jets, DB, Pulses)
-		c.rollback = executor.NewDBRollback(JetKeeper, Pulses, drops, Records, indexes, jets, Pulses)
+		JetKeeper = executor.NewJetKeeper(Jets, DB, Pulses)
+		c.rollback = executor.NewDBRollback(JetKeeper, Pulses, drops, Records, indexes, Jets, Pulses)
 
 		sp := pulse.NewStartPulse()
 
@@ -276,13 +275,15 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		pm.Nodes = Nodes
 		pm.PulseAppender = Pulses
 		pm.PulseAccessor = Pulses
-		pm.JetModifier = jets
+		pm.JetModifier = Jets
 		pm.StartPulse = sp
 		pm.FinalizationKeeper = executor.NewFinalizationKeeperDefault(JetKeeper, Pulses, cfg.Ledger.LightChainLimit)
 
+		replicator := executor.NewHeavyReplicatorDefault(Records, indexes, CryptoScheme, Pulses, drops, JetKeeper, backupMaker, Jets)
+		c.replicator = replicator
+
 		h := handler.New(cfg.Ledger)
 		h.RecordAccessor = Records
-		h.RecordPositions = RecordPosition
 		h.RecordModifier = Records
 		h.JetCoordinator = Coordinator
 		h.IndexAccessor = indexes
@@ -293,13 +294,14 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		h.PulseAccessor = Pulses
 		h.PulseCalculator = Pulses
 		h.StartPulse = sp
-		h.JetModifier = jets
-		h.JetAccessor = jets
-		h.JetTree = jets
+		h.JetModifier = Jets
+		h.JetAccessor = Jets
+		h.JetTree = Jets
 		h.DropDB = drops
 		h.JetKeeper = JetKeeper
 		h.BackupMaker = backupMaker
 		h.Sender = WmBus
+		h.Replicator = replicator
 
 		PulseManager = pm
 		Handler = h
@@ -334,7 +336,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		pulseExporter  *exporter.PulseServer
 	)
 	{
-		recordExporter = exporter.NewRecordServer(Pulses, RecordPosition, Records, JetKeeper)
+		recordExporter = exporter.NewRecordServer(Pulses, Records, Records, JetKeeper)
 		pulseExporter = exporter.NewPulseServer(Pulses, JetKeeper)
 
 		grpcServer := grpc.NewServer()
@@ -411,6 +413,7 @@ func (c *components) Stop(ctx context.Context) error {
 	if err != nil {
 		inslogger.FromContext(ctx).Error("Error while closing router", err)
 	}
+	c.replicator.Stop()
 	return c.cmp.Stop(ctx)
 }
 

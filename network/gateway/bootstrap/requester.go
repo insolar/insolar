@@ -65,7 +65,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/controller/common"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
@@ -78,7 +77,7 @@ type Requester interface {
 	Reconnect(context.Context, *host.Host, *packet.Permit) (*packet.ReconnectResponse, error)
 }
 
-func NewRequester(options *common.Options) Requester {
+func NewRequester(options *network.Options) Requester {
 	return &requester{options: options}
 }
 
@@ -87,7 +86,7 @@ type requester struct {
 	OriginProvider      network.OriginProvider      `inject:""`
 	CryptographyService insolar.CryptographyService `inject:""`
 
-	options *common.Options
+	options *network.Options
 }
 
 func (ac *requester) Authorize(ctx context.Context, host *host.Host, cert insolar.AuthorizationCertificate) (*packet.AuthorizeResponse, error) {

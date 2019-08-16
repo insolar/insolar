@@ -48,10 +48,14 @@ type StatusReply struct {
 	Origin          NetworkNode
 	ActiveListSize  int
 	WorkingListSize int
-	Nodes           []NetworkNode
-	Pulse           Pulse
-	Version         string
-	Timestamp       time.Time
+	// Nodes from active list
+	Nodes []NetworkNode
+	// Pulse from network pulse storage
+	Pulse     Pulse
+	Version   string
+	Timestamp time.Time
+	// node start timestamp for uptime duration
+	StartTime time.Time
 }
 
 type NetworkStatus interface {

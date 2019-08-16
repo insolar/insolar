@@ -57,7 +57,6 @@ import (
 	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/consensus/adapters"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
-	"github.com/insolar/insolar/network/controller/common"
 	"github.com/insolar/insolar/network/rules"
 	"github.com/insolar/insolar/network/storage"
 
@@ -98,8 +97,8 @@ type Base struct {
 	ConsensusController   consensus.Controller
 	ConsensusPulseHandler network.PulseHandler
 
-	Options *common.Options
-
+	Options         *network.Options
+	bootstrapTimer  *time.Timer // nolint
 	bootstrapETA    time.Duration
 	originCandidate *adapters.Candidate
 
@@ -237,7 +236,7 @@ func (g *Base) HandleNodeBootstrapRequest(ctx context.Context, request network.R
 		&packet.BootstrapResponse{
 			Code:       packet.Accepted,
 			Pulse:      *pulse.ToProto(&bootstrapPulse),
-			ETASeconds: uint32(30), // TODO: move ETA to config
+			ETASeconds: uint32(g.bootstrapETA.Seconds()),
 		}), nil
 }
 

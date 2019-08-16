@@ -58,6 +58,8 @@ import (
 	"github.com/insolar/insolar/version"
 )
 
+var startTime time.Time
+
 func (n *ServiceNetwork) GetNetworkStatus() insolar.StatusReply {
 	var reply insolar.StatusReply
 	reply.NetworkState = n.GetState()
@@ -80,10 +82,15 @@ func (n *ServiceNetwork) GetNetworkStatus() insolar.StatusReply {
 	reply.Version = version.Version
 
 	reply.Timestamp = time.Now()
+	reply.StartTime = startTime
 
 	return reply
 }
 
 func (n *ServiceNetwork) IsAlive() bool {
 	return n.BaseGateway.IsAlive()
+}
+
+func init() {
+	startTime = time.Now()
 }

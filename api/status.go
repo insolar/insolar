@@ -19,6 +19,7 @@ package api
 import (
 	"context"
 	"net/http"
+	"time"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/utils"
@@ -45,7 +46,8 @@ type StatusReply struct {
 	NetworkPulseNumber uint32
 	Entropy            []byte
 	Version            string
-	Timestamp          string
+	Timestamp          time.Time
+	StartTime          time.Time
 }
 
 // Get returns status info
@@ -89,6 +91,8 @@ func (s *NodeService) GetStatus(r *http.Request, args *interface{}, requestBody 
 
 	reply.Entropy = statusReply.Pulse.Entropy[:]
 	reply.Version = version.Version
+	reply.StartTime = statusReply.StartTime
+	reply.Timestamp = statusReply.Timestamp
 
 	reply.Timestamp = statusReply.Timestamp.Format("2006-01-02 15:04:05.999999")
 
