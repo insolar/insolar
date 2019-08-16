@@ -39,6 +39,7 @@ func byteDecodeBase58(s string, target io.ByteWriter) (stringRead int, err error
 	if len(s) > 0 && len(bytes) == 0 {
 		return 0, errors.New("input string contains bad charachters")
 	}
+
 	for _, b := range bytes {
 		err := target.WriteByte(b)
 		if err != nil {

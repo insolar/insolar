@@ -19,14 +19,12 @@ package reference
 import (
 	"bytes"
 	"fmt"
-	"io"
 	"strings"
 )
 
-type ByteEncodeFunc func(source io.ByteReader, b *strings.Builder)
 type IdentityEncoder func(ref *Global) (domain, object string)
 
-const NilRef = "<nil>" //non-parsable
+const NilRef = "<nil>" // non-parsable
 
 type EncoderOptions uint8
 
@@ -44,6 +42,26 @@ type Encoder struct {
 	byteEncoderName string
 	authorityName   string
 	options         EncoderOptions
+}
+
+func NewBase58Encoder(opts EncoderOptions) *Encoder {
+	return &Encoder{
+		nameEncoder:     nil,
+		byteEncoder:     byteEncodeBase58,
+		byteEncoderName: "base58",
+		authorityName:   "",
+		options:         opts,
+	}
+}
+
+func NewBase64Encoder(opts EncoderOptions) *Encoder {
+	return &Encoder{
+		nameEncoder:     nil,
+		byteEncoder:     byteEncodeBase64,
+		byteEncoderName: "base64",
+		authorityName:   "",
+		options:         opts,
+	}
 }
 
 func (v Encoder) Encode(ref *Global) string {
@@ -132,7 +150,7 @@ func (v Encoder) encodeBinary(rec *Local, b *strings.Builder) {
 	switch {
 	case pn.IsTimePulse():
 		b.WriteByte('1')
-		//full encode
+		// full encode
 		v.byteEncoder(rec.AsReader(), b)
 
 	case pn.IsSpecial():

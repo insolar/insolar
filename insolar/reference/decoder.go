@@ -21,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"runtime/debug"
 	"strings"
 )
 
@@ -143,7 +142,6 @@ func (v decoder) parseAuthority(ref string) (authority string, remaining string)
 }
 
 func (v decoder) parseReference(refFull string, byteDecoder ByteDecodeFunc) (Global, error) {
-	debug.PrintStack()
 	_, ref := v.parseAuthority(refFull)
 	if len(ref) == 0 {
 		return Global{}, fmt.Errorf("empty reference body: ref=%s", refFull)
@@ -199,12 +197,24 @@ func (v decoder) parseAddress(ref string, byteDecoder ByteDecodeFunc, result *Gl
 		case LegacyDomainName:
 			return errors.New("legacy domain name")
 		default:
-			if v.nameDecoder == nil {
-				return errors.New("aliases are not allowed")
-			}
-			resolveBase := v.nameDecoder(nil, domainName)
-			if resolveBase == nil {
-				return errors.New("unknown domain alias")
+			resolveBase := &Global{}
+
+			err := v.parseBinaryAddress(domainName, byteDecoder, &resolveBase.addressLocal)
+			switch {
+			case err == nil:
+				if !resolveBase.tryConvertToSelf() {
+					return errors.New("invalid self reference")
+				}
+			case err == aliasedReferenceError:
+				if v.nameDecoder == nil {
+					return errors.New("aliases are not allowed")
+				}
+				resolveBase = v.nameDecoder(nil, domainName)
+				if resolveBase == nil {
+					return errors.New("unknown domain alias")
+				}
+			default:
+				return err
 			}
 			return v.parseAddressWithBase(localAddrName, resolveBase, byteDecoder, result)
 		}
@@ -265,7 +275,7 @@ func (v decoder) parseBinaryAddress(name string, byteDecoder ByteDecodeFunc, res
 		if err != nil {
 			return err
 		}
-		if w.isFull() {
+		if !w.isFull() {
 			return errors.New("insufficient address length")
 		}
 	case '2', '3', '4', '5', '6', '7', '8', '9':

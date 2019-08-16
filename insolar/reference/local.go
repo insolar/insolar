@@ -131,7 +131,7 @@ type byteReader struct {
 func (p *byteReader) ReadByte() (byte, error) {
 	switch p.o {
 	case 0, 1, 2, 3:
-		v := byte(p.v.pulseAndScope >> (p.o << 3))
+		v := byte(p.v.pulseAndScope >> ((3 - p.o) << 3))
 		p.o++
 		return v, nil
 	default:
@@ -153,8 +153,8 @@ type byteWriter struct {
 func (p *byteWriter) WriteByte(c byte) error {
 	switch p.o {
 	case 0, 1, 2, 3:
-		shift := p.o << 3
-		p.v.pulseAndScope = uint32(c)<<shift | p.v.pulseAndScope&^0xFF<<shift
+		shift := (3 - p.o) << 3
+		p.v.pulseAndScope = uint32(c)<<shift | p.v.pulseAndScope&^(0xFF<<shift)
 	default:
 		if p.isFull() {
 			return io.ErrUnexpectedEOF
