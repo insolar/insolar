@@ -214,11 +214,16 @@ func (s *Snapshot) Decode(buff []byte) error {
 				return errors.Wrap(err, "Failed to ImportPublicKeyBinary")
 			}
 
-			ref := insolar.Reference{}.FromSlice(n.NodeID)
-			nodeList[i] = newMutableNode(ref, insolar.StaticRole(n.NodeRole), pk, insolar.NodeState(n.State), n.NodeAddress, n.NodeVersion)
+			ref := insolar.NewReferenceFromBytes(n.NodeID)
+			nodeList[i] = newMutableNode(*ref, insolar.StaticRole(n.NodeRole), pk, insolar.NodeState(n.State), n.NodeAddress, n.NodeVersion)
 		}
 		s.nodeList[t] = nodeList
 	}
 
 	return nil
+}
+
+func SelectWorking(nodes []insolar.NetworkNode) []insolar.NetworkNode {
+	lists := splitNodes(nodes)
+	return lists[ListWorking]
 }

@@ -31,6 +31,8 @@ import (
 type IndexModifier interface {
 	// SetIndex adds a bucket with provided pulseNumber and ID
 	SetIndex(ctx context.Context, pn insolar.PulseNumber, index record.Index) error
+	// UpdateLastKnownPulse updates last know pulse to given one for all objects from this pulse
+	UpdateLastKnownPulse(ctx context.Context, pn insolar.PulseNumber) error
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.MemoryIndexModifier -o ./ -s _mock.go

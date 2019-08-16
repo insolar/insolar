@@ -280,13 +280,14 @@ func (b *BackupMakerDefault) MakeBackup(ctx context.Context, lastFinalizedPulse 
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	if !b.config.Enabled {
-		inslogger.FromContext(ctx).Info("Trying to do backup, but it's disabled. Do nothing")
-		return ErrBackupDisabled
-	}
-
 	if lastFinalizedPulse <= b.lastBackupedPulse {
 		return ErrAlreadyDone
+	}
+
+	if !b.config.Enabled {
+		inslogger.FromContext(ctx).Info("Trying to do backup, but it's disabled. Do nothing")
+		b.lastBackupedPulse = lastFinalizedPulse
+		return ErrBackupDisabled
 	}
 
 	currentBkpVersion, err := b.doBackup(ctx, lastFinalizedPulse)

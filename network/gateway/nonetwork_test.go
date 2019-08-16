@@ -1,4 +1,4 @@
-///
+//
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -46,15 +46,14 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-///
+//
 
 package gateway
 
 import (
+	"github.com/insolar/insolar/network"
 	"testing"
 	"time"
-
-	"github.com/insolar/insolar/network/controller/common"
 
 	"github.com/stretchr/testify/require"
 )
@@ -63,7 +62,7 @@ func TestPause(t *testing.T) {
 	minTimeout := time.Duration(1)
 	maxTimeout := time.Duration(6)
 	timeoutMult := time.Duration(2)
-	options := common.Options{MinTimeout: minTimeout, MaxTimeout: maxTimeout, TimeoutMult: timeoutMult}
+	options := network.Options{MinTimeout: minTimeout, MaxTimeout: maxTimeout, TimeoutMult: timeoutMult}
 	nn := NoNetwork{Base: &Base{Options: &options}}
 	require.Zero(t, nn.pause())
 

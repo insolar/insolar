@@ -59,6 +59,7 @@ import (
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
+	"github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/network/rules"
 	"go.opencensus.io/trace"
 
@@ -85,6 +86,7 @@ type Complete struct {
 }
 
 func (g *Complete) Run(ctx context.Context, pulse insolar.Pulse) {
+	g.bootstrapTimer.Stop()
 	if pulse.EpochPulseNumber > insolar.EphemeralPulseEpoch {
 		err := g.PulseManager.Set(ctx, pulse)
 		if err != nil {
@@ -197,11 +199,13 @@ func (g *Complete) EphemeralMode(nodes []insolar.NetworkNode) bool {
 func (g *Complete) UpdateState(ctx context.Context, pulseNumber insolar.PulseNumber, nodes []insolar.NetworkNode, cloudStateHash []byte) {
 	logger := inslogger.FromContext(ctx)
 
-	if ok, _ := rules.CheckMajorityRule(g.CertificateManager.GetCertificate(), nodes); !ok {
+	workingNodes := node.SelectWorking(nodes)
+
+	if ok, _ := rules.CheckMajorityRule(g.CertificateManager.GetCertificate(), workingNodes); !ok {
 		logger.Fatal("MajorityRule failed")
 	}
 
-	if !rules.CheckMinRole(g.CertificateManager.GetCertificate(), nodes) {
+	if !rules.CheckMinRole(g.CertificateManager.GetCertificate(), workingNodes) {
 		logger.Fatal("MinRole failed")
 	}
 

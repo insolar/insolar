@@ -28,6 +28,9 @@ import (
 	"github.com/insolar/insolar/ledger/object"
 )
 
+//go:generate minimock -i github.com/insolar/insolar/ledger/heavy/executor.InitialStateAccessor -o ./ -s _mock.go -g
+
+// InitialStateAccessor
 type InitialStateAccessor interface {
 	Get(ctx context.Context, lightExecutor insolar.Reference, pulse insolar.PulseNumber) *InitialState
 }

@@ -34,6 +34,12 @@ type IndexStorageMock struct {
 	afterSetIndexCounter  uint64
 	beforeSetIndexCounter uint64
 	SetIndexMock          mIndexStorageMockSetIndex
+
+	funcUpdateLastKnownPulse          func(ctx context.Context, pn insolar.PulseNumber) (err error)
+	inspectFuncUpdateLastKnownPulse   func(ctx context.Context, pn insolar.PulseNumber)
+	afterUpdateLastKnownPulseCounter  uint64
+	beforeUpdateLastKnownPulseCounter uint64
+	UpdateLastKnownPulseMock          mIndexStorageMockUpdateLastKnownPulse
 }
 
 // NewIndexStorageMock returns a mock for IndexStorage
@@ -51,6 +57,9 @@ func NewIndexStorageMock(t minimock.Tester) *IndexStorageMock {
 
 	m.SetIndexMock = mIndexStorageMockSetIndex{mock: m}
 	m.SetIndexMock.callArgs = []*IndexStorageMockSetIndexParams{}
+
+	m.UpdateLastKnownPulseMock = mIndexStorageMockUpdateLastKnownPulse{mock: m}
+	m.UpdateLastKnownPulseMock.callArgs = []*IndexStorageMockUpdateLastKnownPulseParams{}
 
 	return m
 }
@@ -707,6 +716,222 @@ func (m *IndexStorageMock) MinimockSetIndexInspect() {
 	}
 }
 
+type mIndexStorageMockUpdateLastKnownPulse struct {
+	mock               *IndexStorageMock
+	defaultExpectation *IndexStorageMockUpdateLastKnownPulseExpectation
+	expectations       []*IndexStorageMockUpdateLastKnownPulseExpectation
+
+	callArgs []*IndexStorageMockUpdateLastKnownPulseParams
+	mutex    sync.RWMutex
+}
+
+// IndexStorageMockUpdateLastKnownPulseExpectation specifies expectation struct of the IndexStorage.UpdateLastKnownPulse
+type IndexStorageMockUpdateLastKnownPulseExpectation struct {
+	mock    *IndexStorageMock
+	params  *IndexStorageMockUpdateLastKnownPulseParams
+	results *IndexStorageMockUpdateLastKnownPulseResults
+	Counter uint64
+}
+
+// IndexStorageMockUpdateLastKnownPulseParams contains parameters of the IndexStorage.UpdateLastKnownPulse
+type IndexStorageMockUpdateLastKnownPulseParams struct {
+	ctx context.Context
+	pn  insolar.PulseNumber
+}
+
+// IndexStorageMockUpdateLastKnownPulseResults contains results of the IndexStorage.UpdateLastKnownPulse
+type IndexStorageMockUpdateLastKnownPulseResults struct {
+	err error
+}
+
+// Expect sets up expected params for IndexStorage.UpdateLastKnownPulse
+func (mmUpdateLastKnownPulse *mIndexStorageMockUpdateLastKnownPulse) Expect(ctx context.Context, pn insolar.PulseNumber) *mIndexStorageMockUpdateLastKnownPulse {
+	if mmUpdateLastKnownPulse.mock.funcUpdateLastKnownPulse != nil {
+		mmUpdateLastKnownPulse.mock.t.Fatalf("IndexStorageMock.UpdateLastKnownPulse mock is already set by Set")
+	}
+
+	if mmUpdateLastKnownPulse.defaultExpectation == nil {
+		mmUpdateLastKnownPulse.defaultExpectation = &IndexStorageMockUpdateLastKnownPulseExpectation{}
+	}
+
+	mmUpdateLastKnownPulse.defaultExpectation.params = &IndexStorageMockUpdateLastKnownPulseParams{ctx, pn}
+	for _, e := range mmUpdateLastKnownPulse.expectations {
+		if minimock.Equal(e.params, mmUpdateLastKnownPulse.defaultExpectation.params) {
+			mmUpdateLastKnownPulse.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmUpdateLastKnownPulse.defaultExpectation.params)
+		}
+	}
+
+	return mmUpdateLastKnownPulse
+}
+
+// Inspect accepts an inspector function that has same arguments as the IndexStorage.UpdateLastKnownPulse
+func (mmUpdateLastKnownPulse *mIndexStorageMockUpdateLastKnownPulse) Inspect(f func(ctx context.Context, pn insolar.PulseNumber)) *mIndexStorageMockUpdateLastKnownPulse {
+	if mmUpdateLastKnownPulse.mock.inspectFuncUpdateLastKnownPulse != nil {
+		mmUpdateLastKnownPulse.mock.t.Fatalf("Inspect function is already set for IndexStorageMock.UpdateLastKnownPulse")
+	}
+
+	mmUpdateLastKnownPulse.mock.inspectFuncUpdateLastKnownPulse = f
+
+	return mmUpdateLastKnownPulse
+}
+
+// Return sets up results that will be returned by IndexStorage.UpdateLastKnownPulse
+func (mmUpdateLastKnownPulse *mIndexStorageMockUpdateLastKnownPulse) Return(err error) *IndexStorageMock {
+	if mmUpdateLastKnownPulse.mock.funcUpdateLastKnownPulse != nil {
+		mmUpdateLastKnownPulse.mock.t.Fatalf("IndexStorageMock.UpdateLastKnownPulse mock is already set by Set")
+	}
+
+	if mmUpdateLastKnownPulse.defaultExpectation == nil {
+		mmUpdateLastKnownPulse.defaultExpectation = &IndexStorageMockUpdateLastKnownPulseExpectation{mock: mmUpdateLastKnownPulse.mock}
+	}
+	mmUpdateLastKnownPulse.defaultExpectation.results = &IndexStorageMockUpdateLastKnownPulseResults{err}
+	return mmUpdateLastKnownPulse.mock
+}
+
+//Set uses given function f to mock the IndexStorage.UpdateLastKnownPulse method
+func (mmUpdateLastKnownPulse *mIndexStorageMockUpdateLastKnownPulse) Set(f func(ctx context.Context, pn insolar.PulseNumber) (err error)) *IndexStorageMock {
+	if mmUpdateLastKnownPulse.defaultExpectation != nil {
+		mmUpdateLastKnownPulse.mock.t.Fatalf("Default expectation is already set for the IndexStorage.UpdateLastKnownPulse method")
+	}
+
+	if len(mmUpdateLastKnownPulse.expectations) > 0 {
+		mmUpdateLastKnownPulse.mock.t.Fatalf("Some expectations are already set for the IndexStorage.UpdateLastKnownPulse method")
+	}
+
+	mmUpdateLastKnownPulse.mock.funcUpdateLastKnownPulse = f
+	return mmUpdateLastKnownPulse.mock
+}
+
+// When sets expectation for the IndexStorage.UpdateLastKnownPulse which will trigger the result defined by the following
+// Then helper
+func (mmUpdateLastKnownPulse *mIndexStorageMockUpdateLastKnownPulse) When(ctx context.Context, pn insolar.PulseNumber) *IndexStorageMockUpdateLastKnownPulseExpectation {
+	if mmUpdateLastKnownPulse.mock.funcUpdateLastKnownPulse != nil {
+		mmUpdateLastKnownPulse.mock.t.Fatalf("IndexStorageMock.UpdateLastKnownPulse mock is already set by Set")
+	}
+
+	expectation := &IndexStorageMockUpdateLastKnownPulseExpectation{
+		mock:   mmUpdateLastKnownPulse.mock,
+		params: &IndexStorageMockUpdateLastKnownPulseParams{ctx, pn},
+	}
+	mmUpdateLastKnownPulse.expectations = append(mmUpdateLastKnownPulse.expectations, expectation)
+	return expectation
+}
+
+// Then sets up IndexStorage.UpdateLastKnownPulse return parameters for the expectation previously defined by the When method
+func (e *IndexStorageMockUpdateLastKnownPulseExpectation) Then(err error) *IndexStorageMock {
+	e.results = &IndexStorageMockUpdateLastKnownPulseResults{err}
+	return e.mock
+}
+
+// UpdateLastKnownPulse implements IndexStorage
+func (mmUpdateLastKnownPulse *IndexStorageMock) UpdateLastKnownPulse(ctx context.Context, pn insolar.PulseNumber) (err error) {
+	mm_atomic.AddUint64(&mmUpdateLastKnownPulse.beforeUpdateLastKnownPulseCounter, 1)
+	defer mm_atomic.AddUint64(&mmUpdateLastKnownPulse.afterUpdateLastKnownPulseCounter, 1)
+
+	if mmUpdateLastKnownPulse.inspectFuncUpdateLastKnownPulse != nil {
+		mmUpdateLastKnownPulse.inspectFuncUpdateLastKnownPulse(ctx, pn)
+	}
+
+	params := &IndexStorageMockUpdateLastKnownPulseParams{ctx, pn}
+
+	// Record call args
+	mmUpdateLastKnownPulse.UpdateLastKnownPulseMock.mutex.Lock()
+	mmUpdateLastKnownPulse.UpdateLastKnownPulseMock.callArgs = append(mmUpdateLastKnownPulse.UpdateLastKnownPulseMock.callArgs, params)
+	mmUpdateLastKnownPulse.UpdateLastKnownPulseMock.mutex.Unlock()
+
+	for _, e := range mmUpdateLastKnownPulse.UpdateLastKnownPulseMock.expectations {
+		if minimock.Equal(e.params, params) {
+			mm_atomic.AddUint64(&e.Counter, 1)
+			return e.results.err
+		}
+	}
+
+	if mmUpdateLastKnownPulse.UpdateLastKnownPulseMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmUpdateLastKnownPulse.UpdateLastKnownPulseMock.defaultExpectation.Counter, 1)
+		want := mmUpdateLastKnownPulse.UpdateLastKnownPulseMock.defaultExpectation.params
+		got := IndexStorageMockUpdateLastKnownPulseParams{ctx, pn}
+		if want != nil && !minimock.Equal(*want, got) {
+			mmUpdateLastKnownPulse.t.Errorf("IndexStorageMock.UpdateLastKnownPulse got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		}
+
+		results := mmUpdateLastKnownPulse.UpdateLastKnownPulseMock.defaultExpectation.results
+		if results == nil {
+			mmUpdateLastKnownPulse.t.Fatal("No results are set for the IndexStorageMock.UpdateLastKnownPulse")
+		}
+		return (*results).err
+	}
+	if mmUpdateLastKnownPulse.funcUpdateLastKnownPulse != nil {
+		return mmUpdateLastKnownPulse.funcUpdateLastKnownPulse(ctx, pn)
+	}
+	mmUpdateLastKnownPulse.t.Fatalf("Unexpected call to IndexStorageMock.UpdateLastKnownPulse. %v %v", ctx, pn)
+	return
+}
+
+// UpdateLastKnownPulseAfterCounter returns a count of finished IndexStorageMock.UpdateLastKnownPulse invocations
+func (mmUpdateLastKnownPulse *IndexStorageMock) UpdateLastKnownPulseAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmUpdateLastKnownPulse.afterUpdateLastKnownPulseCounter)
+}
+
+// UpdateLastKnownPulseBeforeCounter returns a count of IndexStorageMock.UpdateLastKnownPulse invocations
+func (mmUpdateLastKnownPulse *IndexStorageMock) UpdateLastKnownPulseBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmUpdateLastKnownPulse.beforeUpdateLastKnownPulseCounter)
+}
+
+// Calls returns a list of arguments used in each call to IndexStorageMock.UpdateLastKnownPulse.
+// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
+func (mmUpdateLastKnownPulse *mIndexStorageMockUpdateLastKnownPulse) Calls() []*IndexStorageMockUpdateLastKnownPulseParams {
+	mmUpdateLastKnownPulse.mutex.RLock()
+
+	argCopy := make([]*IndexStorageMockUpdateLastKnownPulseParams, len(mmUpdateLastKnownPulse.callArgs))
+	copy(argCopy, mmUpdateLastKnownPulse.callArgs)
+
+	mmUpdateLastKnownPulse.mutex.RUnlock()
+
+	return argCopy
+}
+
+// MinimockUpdateLastKnownPulseDone returns true if the count of the UpdateLastKnownPulse invocations corresponds
+// the number of defined expectations
+func (m *IndexStorageMock) MinimockUpdateLastKnownPulseDone() bool {
+	for _, e := range m.UpdateLastKnownPulseMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			return false
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.UpdateLastKnownPulseMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterUpdateLastKnownPulseCounter) < 1 {
+		return false
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcUpdateLastKnownPulse != nil && mm_atomic.LoadUint64(&m.afterUpdateLastKnownPulseCounter) < 1 {
+		return false
+	}
+	return true
+}
+
+// MinimockUpdateLastKnownPulseInspect logs each unmet expectation
+func (m *IndexStorageMock) MinimockUpdateLastKnownPulseInspect() {
+	for _, e := range m.UpdateLastKnownPulseMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			m.t.Errorf("Expected call to IndexStorageMock.UpdateLastKnownPulse with params: %#v", *e.params)
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.UpdateLastKnownPulseMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterUpdateLastKnownPulseCounter) < 1 {
+		if m.UpdateLastKnownPulseMock.defaultExpectation.params == nil {
+			m.t.Error("Expected call to IndexStorageMock.UpdateLastKnownPulse")
+		} else {
+			m.t.Errorf("Expected call to IndexStorageMock.UpdateLastKnownPulse with params: %#v", *m.UpdateLastKnownPulseMock.defaultExpectation.params)
+		}
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcUpdateLastKnownPulse != nil && mm_atomic.LoadUint64(&m.afterUpdateLastKnownPulseCounter) < 1 {
+		m.t.Error("Expected call to IndexStorageMock.UpdateLastKnownPulse")
+	}
+}
+
 // MinimockFinish checks that all mocked methods have been called the expected number of times
 func (m *IndexStorageMock) MinimockFinish() {
 	if !m.minimockDone() {
@@ -715,6 +940,8 @@ func (m *IndexStorageMock) MinimockFinish() {
 		m.MinimockForPulseInspect()
 
 		m.MinimockSetIndexInspect()
+
+		m.MinimockUpdateLastKnownPulseInspect()
 		m.t.FailNow()
 	}
 }
@@ -740,5 +967,6 @@ func (m *IndexStorageMock) minimockDone() bool {
 	return done &&
 		m.MinimockForIDDone() &&
 		m.MinimockForPulseDone() &&
-		m.MinimockSetIndexDone()
+		m.MinimockSetIndexDone() &&
+		m.MinimockUpdateLastKnownPulseDone()
 }

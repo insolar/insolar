@@ -18,6 +18,7 @@ package insolar
 
 import (
 	"context"
+	"time"
 )
 
 // Cascade contains routing data for cascade sending
@@ -35,6 +36,31 @@ type RemoteProcedure func(ctx context.Context, args []byte) ([]byte, error)
 
 // NetworkOperableCallback is callback for notifying is network is operable or not
 type NetworkOperableCallback func(ctx context.Context, isNetworkOperable bool)
+
+// HealthChecker interface provides method to check network health
+type HealthChecker interface {
+	// IsAlive returns true if todo: fix requirements
+	IsAlive() bool
+}
+
+type StatusReply struct {
+	NetworkState    NetworkState
+	Origin          NetworkNode
+	ActiveListSize  int
+	WorkingListSize int
+	// Nodes from active list
+	Nodes []NetworkNode
+	// Pulse from network pulse storage
+	Pulse     Pulse
+	Version   string
+	Timestamp time.Time
+	// node start timestamp for uptime duration
+	StartTime time.Time
+}
+
+type NetworkStatus interface {
+	GetNetworkStatus() StatusReply
+}
 
 //go:generate minimock -i github.com/insolar/insolar/insolar.Network -o ../testutils -s _mock.go -g
 

@@ -124,7 +124,11 @@ func (d *dispatcher) Process(msg *message.Message) error {
 		handle := d.getHandleByPulse(ctx, pn)
 		err := f.Run(ctx, handle(msg))
 		if err != nil {
-			logger.Error(errors.Wrap(err, "Handling failed: "))
+			if err == flow.ErrCancelled {
+				logger.Info(errors.Wrap(err, "Handling failed: "))
+			} else {
+				logger.Error(errors.Wrap(err, "Handling failed: "))
+			}
 		}
 	}()
 	return nil

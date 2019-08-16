@@ -55,6 +55,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/network"
 	mock "github.com/insolar/insolar/testutils/network"
 
@@ -64,8 +65,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func newNode(id int) insolar.NetworkNode {
-	ref := insolar.Reference{byte(id)}
+func newNode(ref insolar.Reference, id int) insolar.NetworkNode {
 	address := "127.0.0.1:" + strconv.Itoa(id)
 	result := node.NewNode(ref, insolar.StaticRoleUnknown, nil, address, "")
 	result.(node.MutableNode).SetShortID(insolar.ShortNodeID(id))
@@ -75,10 +75,11 @@ func newNode(id int) insolar.NetworkNode {
 func TestTable_Resolve(t *testing.T) {
 	table := Table{}
 
+	refs := gen.References(2)
 	pulse := insolar.GenesisPulse
 	nodeKeeperMock := mock.NewNodeKeeperMock(t)
 	nodeKeeperMock.GetAccessorMock.Set(func(p1 insolar.PulseNumber) network.Accessor {
-		n := newNode(2)
+		n := newNode(refs[0], 123)
 		return node.NewAccessor(node.NewSnapshot(pulse.PulseNumber, []insolar.NetworkNode{n}))
 	})
 
@@ -90,11 +91,11 @@ func TestTable_Resolve(t *testing.T) {
 	table.PulseAccessor = pulseAccessorMock
 	table.NodeKeeper = nodeKeeperMock
 
-	h, err := table.Resolve(insolar.Reference{2})
+	h, err := table.Resolve(refs[0])
 	require.NoError(t, err)
-	assert.EqualValues(t, 2, h.ShortID)
-	assert.Equal(t, "127.0.0.1:2", h.Address.String())
+	assert.EqualValues(t, 123, h.ShortID)
+	assert.Equal(t, "127.0.0.1:123", h.Address.String())
 
-	_, err = table.Resolve(insolar.Reference{4})
+	_, err = table.Resolve(refs[1])
 	assert.Error(t, err)
 }

@@ -48,52 +48,85 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package common
+package servicenetwork
 
 import (
-	"time"
+	"context"
+	"testing"
 
-	"github.com/insolar/insolar/configuration"
+	"github.com/pkg/errors"
+
+	"github.com/insolar/insolar/version"
+
+	"github.com/stretchr/testify/require"
+
+	"github.com/insolar/insolar/insolar"
+
+	"github.com/insolar/insolar/network"
+
+	testutils "github.com/insolar/insolar/testutils/network"
 )
 
-// Options contains configuration options for the local host.
-type Options struct {
-	// The maximum time to wait for a response to ping request.
-	PingTimeout time.Duration
+func TestGetNetworkStatus(t *testing.T) {
+	sn := &ServiceNetwork{}
+	gwer := testutils.NewGatewayerMock(t)
+	gw := testutils.NewGatewayMock(t)
+	ins := insolar.NetworkState(1)
+	gw.GetStateMock.Set(func() insolar.NetworkState { return ins })
+	gwer.GatewayMock.Set(func() network.Gateway { return gw })
+	sn.Gatewayer = gwer
 
-	// The maximum time to wait for a response to any packet.
-	PacketTimeout time.Duration
+	pa := testutils.NewPulseAccessorMock(t)
+	ppn := insolar.PulseNumber(2)
+	pulse := insolar.Pulse{PulseNumber: 2}
+	pa.GetLatestPulseMock.Set(func(context.Context) (insolar.Pulse, error) { return pulse, nil })
+	sn.PulseAccessor = pa
 
-	// The maximum time to wait for a response to ack packet.
-	AckPacketTimeout time.Duration
+	nk := testutils.NewNodeKeeperMock(t)
+	a := testutils.NewAccessorMock(t)
+	activeLen := 1
+	active := make([]insolar.NetworkNode, activeLen)
+	a.GetActiveNodesMock.Set(func() []insolar.NetworkNode { return active })
 
-	// Bootstrap reconnect timeout
-	BootstrapTimeout time.Duration
+	workingLen := 2
+	working := make([]insolar.NetworkNode, workingLen)
+	a.GetWorkingNodesMock.Set(func() []insolar.NetworkNode { return working })
 
-	// Min bootstrap retry timeout
-	MinTimeout time.Duration
+	nk.GetAccessorMock.Set(func(insolar.PulseNumber) network.Accessor { return a })
 
-	// Max bootstrap retry timeout
-	MaxTimeout time.Duration
+	nn := testutils.NewNetworkNodeMock(t)
+	nk.GetOriginMock.Set(func() insolar.NetworkNode { return nn })
 
-	// Multiplier for boostrap retry time
-	TimeoutMult time.Duration
+	sn.NodeKeeper = nk
 
-	// HandshakeSession TTL
-	HandshakeSessionTTL time.Duration
-}
+	ns := sn.GetNetworkStatus()
+	require.Equal(t, ins, ns.NetworkState)
 
-// ConfigureOptions convert daemon configuration to controller options
-func ConfigureOptions(conf configuration.Configuration) *Options {
-	config := conf.Host
-	return &Options{
-		TimeoutMult:         time.Duration(config.TimeoutMult) * time.Millisecond,
-		MinTimeout:          time.Duration(config.MinTimeout) * time.Millisecond,
-		MaxTimeout:          time.Duration(config.MaxTimeout) * time.Millisecond,
-		PingTimeout:         1 * time.Second,
-		PacketTimeout:       15 * time.Second,
-		AckPacketTimeout:    5 * time.Second,
-		BootstrapTimeout:    10 * time.Second,
-		HandshakeSessionTTL: time.Duration(config.HandshakeSessionTTL) * time.Millisecond,
-	}
+	require.Equal(t, nn, ns.Origin)
+
+	require.Equal(t, activeLen, ns.ActiveListSize)
+
+	require.Equal(t, workingLen, ns.WorkingListSize)
+
+	require.Len(t, ns.Nodes, activeLen)
+
+	require.Equal(t, ppn, ns.Pulse.PulseNumber)
+
+	require.Equal(t, version.Version, ns.Version)
+
+	pa.GetLatestPulseMock.Set(func(context.Context) (insolar.Pulse, error) { return pulse, errors.New("test") })
+	ns = sn.GetNetworkStatus()
+	require.Equal(t, ins, ns.NetworkState)
+
+	require.Equal(t, nn, ns.Origin)
+
+	require.Equal(t, activeLen, ns.ActiveListSize)
+
+	require.Equal(t, workingLen, ns.WorkingListSize)
+
+	require.Len(t, ns.Nodes, activeLen)
+
+	require.Equal(t, insolar.GenesisPulse.PulseNumber, ns.Pulse.PulseNumber)
+
+	require.Equal(t, version.Version, ns.Version)
 }

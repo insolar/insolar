@@ -163,7 +163,10 @@ func (m *executionProxyImplementation) GetCode(
 func (m *executionProxyImplementation) RouteCall(
 	ctx context.Context, current *common.Transcript, req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp,
 ) error {
-	inslogger.FromContext(ctx).Debug("RPC.RouteCall")
+	inslogger.FromContext(ctx).Debug(
+		"call to others contract method ", req.Method,
+		" on object ", req.Object,
+	)
 
 	outgoing := buildOutgoingRequest(ctx, current, req)
 
@@ -200,7 +203,10 @@ func (m *executionProxyImplementation) RouteCall(
 func (m *executionProxyImplementation) SaveAsChild(
 	ctx context.Context, current *common.Transcript, req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveAsChildResp,
 ) error {
-	inslogger.FromContext(ctx).Debug("RPC.SaveAsChild")
+	inslogger.FromContext(ctx).Debug(
+		"call to others contract constructor ", req.ConstructorName,
+		" on prototype ", req.Prototype.String(),
+	)
 	ctx, span := instracer.StartSpan(ctx, "RPC.SaveAsChild")
 	defer span.End()
 
@@ -212,6 +218,7 @@ func (m *executionProxyImplementation) SaveAsChild(
 		return err
 	}
 
+	// Register result of the outgoing method
 	outgoingReqRef := insolar.NewReference(outReqInfo.RequestID)
 	var incoming *record.IncomingRequest
 	rep.Reference, rep.Result, incoming, err = m.outgoingSender.SendOutgoingRequest(ctx, *outgoingReqRef, outgoing)
@@ -224,6 +231,7 @@ func (m *executionProxyImplementation) SaveAsChild(
 func (m *executionProxyImplementation) DeactivateObject(
 	ctx context.Context, current *common.Transcript, req rpctypes.UpDeactivateObjectReq, rep *rpctypes.UpDeactivateObjectResp,
 ) error {
+	inslogger.FromContext(ctx).Debug("contract deactivating itself")
 
 	current.Deactivate = true
 

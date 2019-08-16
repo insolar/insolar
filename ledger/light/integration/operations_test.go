@@ -74,7 +74,11 @@ func CallGetCode(ctx context.Context, s *Server, id insolar.ID) payload.Payload 
 	return nil
 }
 
-func MakeSetIncomingRequest(objectID, reasonID insolar.ID, isCreation, isAPI bool) (payload.SetIncomingRequest, record.Virtual) {
+// func MakeSetIncomingRequestFromAPI(objectID, reasonID insolar.ID, isCreation bool) (payload.SetIncomingRequest, record.Virtual) {
+// 	return MakeSetIncomingRequest(objectID, reasonID, insolar.ID{}, isCreation, true)
+// }
+
+func MakeSetIncomingRequest(objectID, reasonID insolar.ID, reasonObjectID insolar.ID, isCreation, isAPI bool) (payload.SetIncomingRequest, record.Virtual) {
 	args := make([]byte, 100)
 	_, err := rand.Read(args)
 	panicIfErr(err)
@@ -83,16 +87,19 @@ func MakeSetIncomingRequest(objectID, reasonID insolar.ID, isCreation, isAPI boo
 		Arguments: args,
 		Reason:    *insolar.NewReference(reasonID),
 	}
+
 	if isCreation {
 		req.CallType = record.CTSaveAsChild
 	} else {
 		req.Object = insolar.NewReference(objectID)
 	}
+
 	if isAPI {
 		req.APINode = gen.Reference()
 	} else {
-		req.Caller = gen.Reference()
+		req.Caller = *insolar.NewReference(reasonObjectID)
 	}
+
 	rec := record.Wrap(&req)
 	pl := payload.SetIncomingRequest{
 		Request: rec,
@@ -410,5 +417,13 @@ func RequireNotError(pl payload.Payload) {
 func RequireError(pl payload.Payload) {
 	if _, ok := pl.(*payload.Error); !ok {
 		panic("expected error")
+	}
+}
+
+func RequireErrorCode(pl payload.Payload, expectedCode uint32) {
+	RequireError(pl)
+	err, _ := pl.(*payload.Error)
+	if err.Code != expectedCode {
+		panic(fmt.Sprintf("expected error code %d, got %d", expectedCode, err.Code))
 	}
 }

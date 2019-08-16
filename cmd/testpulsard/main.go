@@ -21,10 +21,12 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/spf13/cobra"
+	jww "github.com/spf13/jwalterweatherman"
+
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/cryptography"
-	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/keystore"
@@ -35,8 +37,6 @@ import (
 	"github.com/insolar/insolar/pulsar"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/insolar/insolar/version"
-	"github.com/spf13/cobra"
-	jww "github.com/spf13/jwalterweatherman"
 )
 
 type inputParams struct {
@@ -71,8 +71,8 @@ func main() {
 	}
 
 	traceID := utils.RandTraceID()
-	ctx, inslog := initLogger(context.Background(), cfgHolder.Configuration.Log, traceID)
-	log.SetGlobalLogger(inslog)
+	ctx := context.Background()
+	ctx, _ = inslogger.InitNodeLogger(ctx, cfgHolder.Configuration.Log, traceID, "", "test_pulsar")
 	testPulsar := initPulsar(ctx, cfgHolder.Configuration)
 
 	http.HandleFunc("/pulse", func(writer http.ResponseWriter, request *http.Request) {
@@ -126,21 +126,4 @@ func initPulsar(ctx context.Context, cfg configuration.Configuration) *pulsar.Te
 	}
 
 	return pulsar.NewTestPulsar(cfg.Pulsar, pulseDistributor, &entropygenerator.StandardEntropyGenerator{})
-}
-
-func initLogger(ctx context.Context, cfg configuration.Log, traceid string) (context.Context, insolar.Logger) {
-	inslog, err := log.NewLog(cfg)
-	if err != nil {
-		panic(err)
-	}
-
-	if newInslog, err := inslog.WithLevel(cfg.Level); err != nil {
-		inslog.Error(err.Error())
-	} else {
-		inslog = newInslog
-	}
-
-	ctx = inslogger.SetLogger(ctx, inslog)
-	ctx, inslog = inslogger.WithTraceField(ctx, traceid)
-	return ctx, inslog
 }

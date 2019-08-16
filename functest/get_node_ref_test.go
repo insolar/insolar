@@ -26,8 +26,8 @@ import (
 
 const NOTEXISTINGPUBLICKEY = "not_existing_public_key"
 
-func getNodeRefSignedCall(params map[string]interface{}) (string, error) {
-	res, err := signedRequest(&root, "contract.getNodeRef", params)
+func getNodeRefSignedCall(t *testing.T, params map[string]interface{}) (string, error) {
+	res, err := signedRequest(t, &root, "contract.getNodeRef", params)
 	if err != nil {
 		return "", err
 	}
@@ -36,35 +36,33 @@ func getNodeRefSignedCall(params map[string]interface{}) (string, error) {
 
 func TestGetNodeRefByPublicKey(t *testing.T) {
 	const testRole = "light_material"
-	ref, err := registerNodeSignedCall(map[string]interface{}{"publicKey": TESTPUBLICKEY, "role": testRole})
+	ref, err := registerNodeSignedCall(t, map[string]interface{}{"publicKey": TESTPUBLICKEY, "role": testRole})
 	require.NoError(t, err)
 	require.NotNil(t, ref)
 
-	nodeRef, err := getNodeRefSignedCall(map[string]interface{}{"publicKey": TESTPUBLICKEY})
+	nodeRef, err := getNodeRefSignedCall(t, map[string]interface{}{"publicKey": TESTPUBLICKEY})
 	require.NoError(t, err)
 	require.Equal(t, ref, nodeRef)
 }
 
 func TestGetNodeRefByNotExistsPK(t *testing.T) {
 	const testRole = "light_material"
-	ref, err := registerNodeSignedCall(map[string]interface{}{"publicKey": TESTPUBLICKEY, "role": testRole})
+	ref, err := registerNodeSignedCall(t, map[string]interface{}{"publicKey": TESTPUBLICKEY, "role": testRole})
 	require.NoError(t, err)
 	require.NotNil(t, ref)
 
-	nodeRef, err := getNodeRefSignedCall(map[string]interface{}{"publicKey": NOTEXISTINGPUBLICKEY})
-	require.Equal(t, "", nodeRef)
+	_, err = signedRequestWithEmptyRequestRef(t, &root, "contract.getNodeRef", map[string]interface{}{"publicKey": NOTEXISTINGPUBLICKEY})
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "network node was not found by public key:")
 }
 
 func TestGetNodeRefInvalidParams(t *testing.T) {
 	const testRole = "light_material"
-	ref, err := registerNodeSignedCall(map[string]interface{}{"publicKey": TESTPUBLICKEY, "role": testRole})
+	ref, err := registerNodeSignedCall(t, map[string]interface{}{"publicKey": TESTPUBLICKEY, "role": testRole})
 	require.NoError(t, err)
 	require.NotNil(t, ref)
 
-	nodeRef, err := getNodeRefSignedCall(map[string]interface{}{"publicKey": 123})
-	require.Equal(t, "", nodeRef)
+	_, err = signedRequestWithEmptyRequestRef(t, &root, "contract.getNodeRef", map[string]interface{}{"publicKey": 123})
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "incorect input: failed to get 'publicKey' param")
 }

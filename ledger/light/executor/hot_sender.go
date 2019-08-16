@@ -127,7 +127,7 @@ func (m *HotSenderDefault) SendHot(
 
 	for _, id := range jets {
 		jetID := id
-		logger := logger.WithSkipFrameCount(1).WithField("jetID", jetID.DebugString())
+		logger := logger.WithField("jetID", jetID.DebugString())
 
 		block, err := m.findDrop(ctx, currentPulse, jetID)
 		if err != nil {

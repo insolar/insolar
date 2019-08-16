@@ -19,9 +19,9 @@ package artifacts
 import (
 	"context"
 	"fmt"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
@@ -137,7 +137,11 @@ func (m *client) registerRequest(
 	case *payload.RequestInfo:
 		return p, nil
 	case *payload.Error:
-		err = errors.New(p.Text)
+		if p.Code == payload.CodeFlowCanceled {
+			err = flow.ErrCancelled
+		} else {
+			err = errors.New(p.Text)
+		}
 		return nil, err
 	default:
 		err = fmt.Errorf("registerRequest: unexpected reply: %#v", p)
@@ -174,7 +178,7 @@ func (m *client) RegisterIncomingRequest(ctx context.Context, request *record.In
 func (m *client) RegisterOutgoingRequest(ctx context.Context, request *record.OutgoingRequest) (*payload.RequestInfo, error) {
 	outgoingRequest := &payload.SetOutgoingRequest{Request: record.Wrap(request)}
 	res, err := m.registerRequest(
-		ctx, request, outgoingRequest, bus.NewRetrySender(m.sender, m.PulseAccessor, 1),
+		ctx, request, outgoingRequest, bus.NewRetrySender(m.sender, m.PulseAccessor, 1, 1),
 	)
 	if err != nil {
 		return nil, errors.Wrap(err, "RegisterOutgoingRequest")
@@ -211,7 +215,7 @@ func (m *client) GetCode(
 	getCodePl := &payload.GetCode{CodeID: *code.Record()}
 
 	pl, err := m.sendToLight(
-		ctx, bus.NewRetrySender(m.sender, m.PulseAccessor, 1), getCodePl, code,
+		ctx, bus.NewRetrySender(m.sender, m.PulseAccessor, 1, 1), getCodePl, code,
 	)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to send GetCode")
@@ -282,7 +286,7 @@ func (m *client) GetObject(
 		return nil, errors.Wrap(err, "failed to marshal message")
 	}
 
-	r := bus.NewRetrySender(m.sender, m.PulseAccessor, 1)
+	r := bus.NewRetrySender(m.sender, m.PulseAccessor, 1, 2)
 	reps, done := r.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, head)
 	defer done()
 
@@ -534,7 +538,7 @@ func (m *client) DeployCode(
 	}
 
 	pl, err := m.sendToLight(
-		ctx, bus.NewRetrySender(m.sender, m.PulseAccessor, 1),
+		ctx, bus.NewRetrySender(m.sender, m.PulseAccessor, 1, 1),
 		psc, *insolar.NewReference(recID),
 	)
 	if err != nil {
@@ -630,7 +634,7 @@ func (m *client) activateObject(
 		Result: resultBuf,
 	}
 
-	pl, err := m.sendToLight(ctx, bus.NewRetrySender(m.sender, m.PulseAccessor, 1), pa, obj)
+	pl, err := m.sendToLight(ctx, bus.NewRetrySender(m.sender, m.PulseAccessor, 1, 1), pa, obj)
 	if err != nil {
 		return errors.Wrap(err, "can't send activation and result records")
 	}
@@ -670,7 +674,7 @@ func (m *client) RegisterResult(
 	) (*insolar.ID, error) {
 
 		payloadOutput, err := m.sendToLight(
-			ctx, bus.NewRetrySender(m.sender, m.PulseAccessor, 1), payloadInput, obj,
+			ctx, bus.NewRetrySender(m.sender, m.PulseAccessor, 1, 1), payloadInput, obj,
 		)
 		if err != nil {
 			return nil, err

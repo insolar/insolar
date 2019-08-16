@@ -72,8 +72,8 @@ func (k lastKnownIndexPNKey) ID() []byte {
 }
 
 // NewIndexDB creates a new instance of IndexDB
-func NewIndexDB(db store.DB) *IndexDB {
-	return &IndexDB{db: db, recordStore: NewRecordDB(db)}
+func NewIndexDB(db store.DB, recordStore *RecordDB) *IndexDB {
+	return &IndexDB{db: db, recordStore: recordStore}
 }
 
 // SetIndex adds a bucket with provided pulseNumber and ID
@@ -90,8 +90,29 @@ func (i *IndexDB) SetIndex(ctx context.Context, pn insolar.PulseNumber, bucket r
 		statBucketAddedCount.M(1),
 	)
 
-	inslogger.FromContext(ctx).Debugf("[SetIndex] bucket for obj - %v was set successfully", bucket.ObjID.DebugString())
-	return i.setLastKnownPN(pn, bucket.ObjID)
+	inslogger.FromContext(ctx).Debugf("[SetIndex] bucket for obj - %v was set successfully. Pulse: %d", bucket.ObjID.DebugString(), pn)
+
+	return nil
+}
+
+// UpdateLastKnownPulse must be called after updating TopSyncPulse
+func (i *IndexDB) UpdateLastKnownPulse(ctx context.Context, topSyncPulse insolar.PulseNumber) error {
+	i.lock.Lock()
+	defer i.lock.Unlock()
+
+	indexes, err := i.ForPulse(ctx, topSyncPulse)
+	if err != nil && err != ErrIndexNotFound {
+		return errors.Wrapf(err, "failed to get indexes for pulse: %d", topSyncPulse)
+	}
+
+	for idx := range indexes {
+		inslogger.FromContext(ctx).Debugf("UpdateLastKnownPulse. pulse: %d, object: %s", topSyncPulse, indexes[idx].ObjID.DebugString())
+		if err := i.setLastKnownPN(topSyncPulse, indexes[idx].ObjID); err != nil {
+			return errors.Wrapf(err, "can't setLastKnownPN. objId: %s. pulse: %d", indexes[idx].ObjID.DebugString(), topSyncPulse)
+		}
+	}
+
+	return nil
 }
 
 // TruncateHead remove all records after lastPulse

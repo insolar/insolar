@@ -22,12 +22,13 @@ import (
 
 	wmessage "github.com/ThreeDotsLabs/watermill/message"
 
+	"github.com/pkg/errors"
+
 	wbus "github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/light/proc"
-	"github.com/pkg/errors"
 )
 
 type Init struct {
@@ -52,7 +53,11 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 	logger := inslogger.FromContext(ctx)
 	err := s.handle(ctx, f)
 	if err != nil {
-		logger.Error(errors.Wrap(err, "handling error"))
+		if err == flow.ErrCancelled {
+			logger.Info(errors.Wrap(err, "handling error"))
+		} else {
+			logger.Error(errors.Wrap(err, "handling error"))
+		}
 	}
 	return err
 }
@@ -80,6 +85,9 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 		err = f.Handle(ctx, h.Present)
 	case payload.TypeGetRequest:
 		h := NewGetRequest(s.dep, meta, false)
+		err = f.Handle(ctx, h.Present)
+	case payload.TypeGetRequestInfo:
+		h := NewGetRequestInfo(s.dep, meta)
 		err = f.Handle(ctx, h.Present)
 	case payload.TypeGetFilament:
 		h := NewGetRequests(s.dep, meta)
@@ -264,6 +272,7 @@ func (s *Init) Past(ctx context.Context, f flow.Flow) error {
 		payload.TypeGetJet,
 		payload.TypeGetRequest,
 		payload.TypePassState,
+		payload.TypeGetRequestInfo,
 		payload.TypeGetFilament:
 		return s.Present(ctx, f)
 	}
@@ -273,11 +282,20 @@ func (s *Init) Past(ctx context.Context, f flow.Flow) error {
 }
 
 func (s *Init) replyError(ctx context.Context, replyTo payload.Meta, err error) {
-	errCode := payload.CodeUnknown
-	if err == flow.ErrCancelled {
-		errCode = payload.CodeFlowCanceled
+	errCode := uint32(payload.CodeUnknown)
+
+	// Throwing custom error code
+	cause := errors.Cause(err)
+	insError, ok := cause.(*payload.CodedError)
+	if ok {
+		errCode = insError.GetCode()
 	}
-	errMsg, newErr := payload.NewMessage(&payload.Error{Text: err.Error(), Code: uint32(errCode)})
+
+	// todo refactor this #INS-3191
+	if err == flow.ErrCancelled {
+		errCode = uint32(payload.CodeFlowCanceled)
+	}
+	errMsg, newErr := payload.NewMessage(&payload.Error{Text: err.Error(), Code: errCode})
 	if newErr != nil {
 		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to reply error"))
 	}

@@ -10,14 +10,15 @@ import (
 
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
 )
 
 // ResultMatcherMock implements ResultMatcher
 type ResultMatcherMock struct {
 	t minimock.Tester
 
-	funcAddStillExecution          func(ctx context.Context, msg *message.StillExecuting)
-	inspectFuncAddStillExecution   func(ctx context.Context, msg *message.StillExecuting)
+	funcAddStillExecution          func(ctx context.Context, msg *payload.StillExecuting)
+	inspectFuncAddStillExecution   func(ctx context.Context, msg *payload.StillExecuting)
 	afterAddStillExecutionCounter  uint64
 	beforeAddStillExecutionCounter uint64
 	AddStillExecutionMock          mResultMatcherMockAddStillExecution
@@ -73,11 +74,11 @@ type ResultMatcherMockAddStillExecutionExpectation struct {
 // ResultMatcherMockAddStillExecutionParams contains parameters of the ResultMatcher.AddStillExecution
 type ResultMatcherMockAddStillExecutionParams struct {
 	ctx context.Context
-	msg *message.StillExecuting
+	msg *payload.StillExecuting
 }
 
 // Expect sets up expected params for ResultMatcher.AddStillExecution
-func (mmAddStillExecution *mResultMatcherMockAddStillExecution) Expect(ctx context.Context, msg *message.StillExecuting) *mResultMatcherMockAddStillExecution {
+func (mmAddStillExecution *mResultMatcherMockAddStillExecution) Expect(ctx context.Context, msg *payload.StillExecuting) *mResultMatcherMockAddStillExecution {
 	if mmAddStillExecution.mock.funcAddStillExecution != nil {
 		mmAddStillExecution.mock.t.Fatalf("ResultMatcherMock.AddStillExecution mock is already set by Set")
 	}
@@ -97,7 +98,7 @@ func (mmAddStillExecution *mResultMatcherMockAddStillExecution) Expect(ctx conte
 }
 
 // Inspect accepts an inspector function that has same arguments as the ResultMatcher.AddStillExecution
-func (mmAddStillExecution *mResultMatcherMockAddStillExecution) Inspect(f func(ctx context.Context, msg *message.StillExecuting)) *mResultMatcherMockAddStillExecution {
+func (mmAddStillExecution *mResultMatcherMockAddStillExecution) Inspect(f func(ctx context.Context, msg *payload.StillExecuting)) *mResultMatcherMockAddStillExecution {
 	if mmAddStillExecution.mock.inspectFuncAddStillExecution != nil {
 		mmAddStillExecution.mock.t.Fatalf("Inspect function is already set for ResultMatcherMock.AddStillExecution")
 	}
@@ -121,7 +122,7 @@ func (mmAddStillExecution *mResultMatcherMockAddStillExecution) Return() *Result
 }
 
 //Set uses given function f to mock the ResultMatcher.AddStillExecution method
-func (mmAddStillExecution *mResultMatcherMockAddStillExecution) Set(f func(ctx context.Context, msg *message.StillExecuting)) *ResultMatcherMock {
+func (mmAddStillExecution *mResultMatcherMockAddStillExecution) Set(f func(ctx context.Context, msg *payload.StillExecuting)) *ResultMatcherMock {
 	if mmAddStillExecution.defaultExpectation != nil {
 		mmAddStillExecution.mock.t.Fatalf("Default expectation is already set for the ResultMatcher.AddStillExecution method")
 	}
@@ -135,7 +136,7 @@ func (mmAddStillExecution *mResultMatcherMockAddStillExecution) Set(f func(ctx c
 }
 
 // AddStillExecution implements ResultMatcher
-func (mmAddStillExecution *ResultMatcherMock) AddStillExecution(ctx context.Context, msg *message.StillExecuting) {
+func (mmAddStillExecution *ResultMatcherMock) AddStillExecution(ctx context.Context, msg *payload.StillExecuting) {
 	mm_atomic.AddUint64(&mmAddStillExecution.beforeAddStillExecutionCounter, 1)
 	defer mm_atomic.AddUint64(&mmAddStillExecution.afterAddStillExecutionCounter, 1)
 
