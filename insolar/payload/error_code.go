@@ -17,10 +17,26 @@
 package payload
 
 const (
-	CodeUnknown      = 0
-	CodeDeactivated  = 1
-	CodeFlowCanceled = 2
-	CodeNotFound     = 3
-	CodeNoPendings   = 4
-	CodeNoStartPulse = 5
+	CodeUnknown         = 1000
+	CodeDeactivated     = 1001
+	CodeFlowCanceled    = 1002
+	CodeNotFound        = 1003
+	CodeNoPendings      = 1004
+	CodeNoStartPulse    = 1005
+	CodeRequestNotFound = 1006
+	CodeInvalidRequest  = 1007
+	CodeReasonNotFound  = 1008
+	CodeReasonIsWrong   = 1009
 )
+
+type CodedError struct {
+	Text string
+	Code uint32
+}
+
+func (e *CodedError) GetCode() uint32 {
+	return e.Code
+}
+func (e *CodedError) Error() string {
+	return e.Text
+}

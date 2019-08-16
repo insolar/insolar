@@ -27,22 +27,23 @@ import (
 )
 
 type Dependencies struct {
-	FetchJet     func(*FetchJet)
-	WaitHot      func(*WaitHot)
-	EnsureIndex  func(*EnsureIndex)
-	SendObject   func(*SendObject)
-	GetCode      func(*GetCode)
-	GetRequest   func(*GetRequest)
-	SetRequest   func(*SetRequest)
-	SetResult    func(*SetResult)
-	GetPendings  func(*GetPendings)
-	GetJet       func(*GetJet)
-	HotObjects   func(*HotObjects)
-	PassState    func(*PassState)
-	CalculateID  func(*CalculateID)
-	SetCode      func(*SetCode)
-	SendRequests func(*SendRequests)
-	HasPendings  func(*HasPendings)
+	FetchJet       func(*FetchJet)
+	WaitHot        func(*WaitHot)
+	EnsureIndex    func(*EnsureIndex)
+	SendObject     func(*SendObject)
+	GetCode        func(*GetCode)
+	GetRequest     func(*GetRequest)
+	GetRequestInfo func(*SendRequestInfo)
+	SetRequest     func(*SetRequest)
+	SetResult      func(*SetResult)
+	GetPendings    func(*GetPendings)
+	GetJet         func(*GetJet)
+	HotObjects     func(*HotObjects)
+	PassState      func(*PassState)
+	CalculateID    func(*CalculateID)
+	SetCode        func(*SetCode)
+	SendRequests   func(*SendRequests)
+	HasPendings    func(*HasPendings)
 }
 
 func NewDependencies(
@@ -144,6 +145,13 @@ func NewDependencies(
 				sender,
 				jetCoordinator,
 				jetFetcher,
+			)
+		},
+		GetRequestInfo: func(p *SendRequestInfo) {
+			p.Dep(
+				filaments,
+				sender,
+				indexLocker,
 			)
 		},
 		GetPendings: func(p *GetPendings) {
