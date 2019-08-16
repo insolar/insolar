@@ -18,10 +18,12 @@ package object
 
 import (
 	"context"
+	"runtime/debug"
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/log"
 	"go.opencensus.io/stats"
 )
 
@@ -77,6 +79,52 @@ func (i *IndexStorageMemory) Set(ctx context.Context, pn insolar.PulseNumber, bu
 	_, ok := i.buckets[pn]
 	if !ok {
 		i.buckets[pn] = map[insolar.ID]*record.Index{}
+	}
+
+	if i.buckets[pn][bucket.ObjID] != nil {
+		savedBuck := i.buckets[pn][bucket.ObjID]
+		if savedBuck.LifelineLastUsed > bucket.LifelineLastUsed {
+			debug.PrintStack()
+			log.Fatal("savedBuck.LifelineLastUsed > bucket.LifelineLastUsed")
+		}
+		if len(savedBuck.PendingRecords) > len(bucket.PendingRecords) {
+			debug.PrintStack()
+			log.Fatal("len(savedBuck.PendingRecords) > len(bucket.PendingRecords)")
+		}
+
+		if savedBuck.Lifeline.EarliestOpenRequest != nil && bucket.Lifeline.EarliestOpenRequest == nil {
+			debug.PrintStack()
+			log.Fatal("savedBuck.Lifeline.EarliestOpenRequest != nil && bucket.Lifeline.EarliestOpenRequest == nil")
+		}
+
+		if savedBuck.Lifeline.EarliestOpenRequest != nil && bucket.Lifeline.EarliestOpenRequest != nil &&
+			*savedBuck.Lifeline.EarliestOpenRequest > *bucket.Lifeline.EarliestOpenRequest {
+			debug.PrintStack()
+			log.Fatal("*savedBuck.Lifeline.EarliestOpenRequest > *bucket.Lifeline.EarliestOpenRequest")
+		}
+		if savedBuck.Lifeline.Parent != bucket.Lifeline.Parent {
+			debug.PrintStack()
+			log.Fatal("savedBuck.Lifeline.Parent != bucket.Lifeline.Parent")
+		}
+
+		if savedBuck.Lifeline.LatestRequest != nil && bucket.Lifeline.LatestRequest == nil {
+			debug.PrintStack()
+			log.Fatal("savedBuck.Lifeline.LatestRequest != nil && bucket.Lifeline.LatestRequest == nil")
+		}
+		if savedBuck.Lifeline.LatestRequest != nil && savedBuck.Lifeline.LatestRequest.Pulse() < bucket.Lifeline.LatestRequest.Pulse() {
+			debug.PrintStack()
+			log.Fatal("savedBuck.Lifeline.LatestRequest.Pulse() < bucket.Lifeline.LatestRequest.Pulse()")
+		}
+
+		if savedBuck.Lifeline.LatestState != nil && bucket.Lifeline.LatestState == nil {
+			debug.PrintStack()
+			log.Fatal("savedBuck.Lifeline.LatestState != nil && bucket.Lifeline.LatestState == nil")
+		}
+		if savedBuck.Lifeline.LatestState != nil && savedBuck.Lifeline.LatestState.Pulse() < bucket.Lifeline.LatestState.Pulse() {
+			debug.PrintStack()
+			log.Fatal("savedBuck.Lifeline.LatestState.Pulse() < bucket.Lifeline.LatestState.Pulse()")
+		}
+
 	}
 
 	i.buckets[pn][bucket.ObjID] = &bucket
