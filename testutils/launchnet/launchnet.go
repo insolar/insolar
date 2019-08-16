@@ -1,3 +1,19 @@
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
 package launchnet
 
 import (
@@ -37,17 +53,6 @@ var stdin io.WriteCloser
 var stdout io.ReadCloser
 var stderr io.ReadCloser
 
-var info *requester.InfoResponse
-var Root User
-var MigrationAdmin User
-var MigrationDaemons [insolar.GenesisAmountActiveMigrationDaemonMembers]User
-
-type User struct {
-	Ref     string
-	PrivKey string
-	PubKey  string
-}
-
 // Run starts launchnet before callback and stop after it.
 // Return callback exit code.
 func Run(cb func() int) int {
@@ -86,6 +91,17 @@ func Run(cb func() int) int {
 		fmt.Println(string(out))
 	}
 	return code
+}
+
+var info *requester.InfoResponse
+var Root User
+var MigrationAdmin User
+var MigrationDaemons [insolar.GenesisAmountActiveMigrationDaemonMembers]User
+
+type User struct {
+	Ref     string
+	PrivKey string
+	PubKey  string
 }
 
 func launchnetPath(a ...string) (string, error) {
