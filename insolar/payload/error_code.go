@@ -14,25 +14,29 @@
 // limitations under the License.
 //
 
-// +build functest
+package payload
 
-package functest
-
-import (
-	"testing"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+const (
+	CodeUnknown         = 1000
+	CodeDeactivated     = 1001
+	CodeFlowCanceled    = 1002
+	CodeNotFound        = 1003
+	CodeNoPendings      = 1004
+	CodeNoStartPulse    = 1005
+	CodeRequestNotFound = 1006
+	CodeInvalidRequest  = 1007
+	CodeReasonNotFound  = 1008
+	CodeReasonIsWrong   = 1009
 )
 
-func TestInsgorundReload(t *testing.T) {
-	_ = getBalanceNoErr(t, &root, root.ref)
-	err := stopAllInsgorunds()
-	// No need to stop test if this fails. All tests may stack
-	assert.NoError(t, err)
+type CodedError struct {
+	Text string
+	Code uint32
+}
 
-	err = startAllInsgorunds()
-	require.NoError(t, err)
-
-	_ = getBalanceNoErr(t, &root, root.ref)
+func (e *CodedError) GetCode() uint32 {
+	return e.Code
+}
+func (e *CodedError) Error() string {
+	return e.Text
 }

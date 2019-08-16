@@ -42,12 +42,11 @@ import (
 type Handler struct {
 	cfg configuration.Ledger
 
-	Bus             insolar.MessageBus
-	JetCoordinator  jet.Coordinator
-	PCS             insolar.PlatformCryptographyScheme
-	RecordAccessor  object.RecordAccessor
-	RecordModifier  object.RecordModifier
-	RecordPositions object.RecordPositionModifier
+	Bus            insolar.MessageBus
+	JetCoordinator jet.Coordinator
+	PCS            insolar.PlatformCryptographyScheme
+	RecordAccessor object.RecordAccessor
+	RecordModifier object.RecordModifier
 
 	IndexAccessor object.IndexAccessor
 	IndexModifier object.IndexModifier
@@ -64,6 +63,8 @@ type Handler struct {
 	PulseCalculator pulse.Calculator
 	JetTree         jet.Storage
 	DropDB          *drop.DB
+
+	Replicator executor.HeavyReplicator
 
 	dep *proc.Dependencies
 }
@@ -91,15 +92,7 @@ func New(cfg configuration.Ledger) *Handler {
 		},
 		Replication: func(p *proc.Replication) {
 			p.Dep(
-				h.RecordModifier,
-				h.IndexModifier,
-				h.RecordPositions,
-				h.PCS,
-				h.PulseCalculator,
-				h.DropModifier,
-				h.JetKeeper,
-				h.BackupMaker,
-				h.JetModifier,
+				h.Replicator,
 			)
 		},
 		SendJet: func(p *proc.SendJet) {
@@ -162,14 +155,17 @@ func (h *Handler) Process(msg *watermillMsg.Message) error {
 
 func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) error {
 	var err error
+	logger := inslogger.FromContext(ctx)
 
 	meta := payload.Meta{}
 	err = meta.Unmarshal(msg.Payload)
 	if err != nil {
+		logger.Error(err)
 		return errors.Wrap(err, "failed to unmarshal meta")
 	}
 	payloadType, err := payload.UnmarshalType(meta.Payload)
 	if err != nil {
+		logger.Error(err)
 		return errors.Wrap(err, "failed to unmarshal payload type")
 	}
 	ctx, _ = inslogger.WithField(ctx, "msg_type", payloadType.String())
@@ -295,13 +291,13 @@ func (h *Handler) handleGotHotConfirmation(ctx context.Context, meta payload.Met
 		return
 	}
 
-	logger.Debug("handleGotHotConfirmation. pulse: ", confirm.Pulse, ". jet: ", confirm.JetID.DebugString(), ". Split: ", confirm.Split)
+	logger.Info("handleGotHotConfirmation. pulse: ", confirm.Pulse, ". jet: ", confirm.JetID.DebugString(), ". Split: ", confirm.Split)
 
 	err = h.JetKeeper.AddHotConfirmation(ctx, confirm.Pulse, confirm.JetID, confirm.Split)
 	if err != nil {
 		logger.Fatalf("failed to add hot confirmation jet=%v: %v", confirm.String(), err.Error())
 	}
 
-	executor.FinalizePulse(ctx, h.PulseCalculator, h.BackupMaker, h.JetKeeper, confirm.Pulse)
-
+	executor.FinalizePulse(ctx, h.PulseCalculator, h.BackupMaker, h.JetKeeper, h.IndexModifier, confirm.Pulse)
+	logger.Info("handleGotHotConfirmation finish. pulse: ", confirm.Pulse, ". jet: ", confirm.JetID.DebugString(), ". Split: ", confirm.Split)
 }

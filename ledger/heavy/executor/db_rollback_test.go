@@ -104,6 +104,8 @@ func TestDBRollback_HappyPath(t *testing.T) {
 	hits := make(map[store.Scope]int)
 	db.SetMock.Return(nil)
 
+	db.GetMock.Return([]byte{}, nil)
+
 	db.DeleteMock.Return(nil)
 	iterNum := 0
 	db.NewIteratorMock.Set(func(p store.Key, p1 bool) (r store.Iterator) {
@@ -118,12 +120,20 @@ func TestDBRollback_HappyPath(t *testing.T) {
 
 		iterMock.KeyMock.Return(p.ID())
 		iterMock.CloseMock.Return()
+		iterMock.ValueMock.Return([]byte{}, nil)
 		return iterMock
 	})
 
 	drops := drop.NewDB(db)
-	records := object.NewRecordDB(db)
-	indexes := object.NewIndexDB(db)
+
+	records := NewHeadTruncaterMock(t)
+	records.TruncateHeadMock.Set(func(ctx context.Context, from insolar.PulseNumber) (err error) {
+		hits[store.ScopeRecord] = 1
+		return nil
+	})
+
+	indexes := object.NewIndexDB(db, nil)
+
 	jets := jet.NewDBStore(db)
 	pulses := pulse.NewDB(db)
 
@@ -141,7 +151,7 @@ func TestDBRollback_HappyPath(t *testing.T) {
 	}{
 		{store.ScopeJetDrop, 1},
 		{store.ScopeRecord, 1},
-		{store.ScopeIndex, 1},
+		{store.ScopeIndex, 2},
 		{store.ScopeJetTree, 1},
 		{store.ScopePulse, 1}}
 	for _, s := range expectedScopes {

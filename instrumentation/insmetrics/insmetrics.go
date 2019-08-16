@@ -46,7 +46,7 @@ func InsertTag(ctx context.Context, key tag.Key, value string) context.Context {
 	return ChangeTags(ctx, tag.Insert(key, value))
 }
 
-// ChangeTags wrapper around opencensus tag.New for tags modifiacations.
+// ChangeTags wrapper around opencensus tag.New which panics on any tag creation error.
 //
 // Panics on errors.
 func ChangeTags(ctx context.Context, mutator ...tag.Mutator) context.Context {

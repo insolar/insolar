@@ -1,0 +1,14 @@
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "api.call",
+  "params": {
+    "seed": "",
+    "callSite": "wallet.getBalance",
+    "callParams": {
+      "reference": "7gZQVdsiAanEnCFsENbuwobRssmDVQ4BTpMm7VvGzqG.11111111111111111111111111111111"
+    },
+
+    "reference": ""
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "jsonrpc": "2.0",
+  "method": "api.call",
+  "id": 1,
+  "params": {
+
+    "callSite": "contract.createMember",
+    "callParams": {}
+
+  }
+}

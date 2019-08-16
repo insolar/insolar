@@ -18,6 +18,7 @@ package record
 
 import (
 	"github.com/insolar/insolar/insolar"
+	"github.com/pkg/errors"
 )
 
 type Record interface {
@@ -158,18 +159,18 @@ type Request interface {
 	IsAPIRequest() bool
 	// IsCreationRequest checks a request-type.
 	IsCreationRequest() bool
-	// IsDetached check is request has detached state.
-	IsDetached() bool
+	// Validate validates request params and its combinations.
+	Validate() error
 	// IsTemporaryUploadCode tells us that that request is temporary hack
-	// for uploading code
+	// for uploading code.
 	IsTemporaryUploadCode() bool
 }
 
 func (r *IncomingRequest) AffinityRef() *insolar.Reference {
 	// IncomingRequests are affine to the Object on which the request
-	// is going to be executed
+	// is going to be executed.
 	// Exceptions are CTSaveAsMethod, we should
-	// calculate hash of message, so call CalculateRequestAffinityRef
+	// calculate hash of message, so call CalculateRequestAffinityRef.
 	if r.IsCreationRequest() {
 		return nil
 	}
@@ -192,9 +193,26 @@ func (r *IncomingRequest) IsCreationRequest() bool {
 	return r.GetCallType() == CTSaveAsChild || r.GetCallType() == CTDeployPrototype
 }
 
-func (r *IncomingRequest) IsDetached() bool {
-	// incoming requests never should't be in detached state, app code should check it and raise some kind of error.
-	return isDetached(r.ReturnMode)
+func (r *IncomingRequest) Validate() error {
+	// Incoming requests never should't be in detached state,
+	// app code should check it and raise some kind of error.
+	if r.ReturnMode == ReturnSaga {
+		return errors.New("return mode is a return saga")
+	}
+	if r.IsAPIRequest() {
+		return nil
+	}
+	if r.ReasonAffinityRef().IsEmpty() {
+		return errors.New("reason object is not set on incoming request")
+	}
+	if r.ReasonRef().IsEmpty() {
+		return errors.New("reason ref is empty")
+	}
+	return nil
+}
+
+func (r *IncomingRequest) IsDetachedCall() bool {
+	return r.ReturnMode == ReturnNoWait
 }
 
 func (r *IncomingRequest) IsTemporaryUploadCode() bool {
@@ -223,15 +241,22 @@ func (r *OutgoingRequest) IsCreationRequest() bool {
 }
 
 func (r *OutgoingRequest) IsDetached() bool {
-	return isDetached(r.ReturnMode)
+	return r.ReturnMode == ReturnSaga
+}
+
+func (r *OutgoingRequest) Validate() error {
+	if r.IsCreationRequest() {
+		return errors.New("outgoing request cannot be creating request")
+	}
+	if r.ReasonRef().IsEmpty() {
+		return errors.New("reason ref is empty")
+	}
+
+	return nil
 }
 
 func (r *OutgoingRequest) IsTemporaryUploadCode() bool {
 	return false
-}
-
-func isDetached(rm ReturnMode) bool {
-	return rm == ReturnSaga
 }
 
 func CalculateRequestAffinityRef(

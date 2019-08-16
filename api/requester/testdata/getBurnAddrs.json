@@ -1,0 +1,12 @@
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "api.call",
+  "params": {
+    "seed": "+zlBjHtnOVokvxur4d+Bay4I9nuDASKePR3p2m5BP48=",
+    "callSite": "migration.getBurnAddressCount",
+    "callParams": {},
+    "reference": "1tJBqpFDFVRnHghz4bFtZx5Cidnf3U5vvVqgxMBKKX.11111111111111111111111111111111",
+    "memberPublicKey": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEqOSlZ+BjlAk5IXl365zFGrWZN7B6\nEmP/0mrzgJ9PGN13T19rmn5LUNoLVsnNhgQinL/UuiO8W2PvNUDtOIww8w==\n-----END PUBLIC KEY-----"
+  }
+}

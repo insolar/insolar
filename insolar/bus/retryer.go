@@ -24,11 +24,13 @@ import (
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/insmetrics"
 )
 
 // RetrySender allows to send messaged via provided Sender with retries.
@@ -92,6 +94,11 @@ func (r *RetrySender) SendRole(
 			tries--
 			updateUUID = true
 			d()
+		}
+
+		if tries < r.retries {
+			mctx := insmetrics.InsertTag(ctx, tagMessageType, getMessageType(msg))
+			stats.Record(mctx, statRetries.M(int64(r.retries-tries)))
 		}
 
 		if tries == 0 && !received {
@@ -177,7 +184,7 @@ func getErrorType(ctx context.Context, rep *message.Message) messageType {
 	p, ok := replyPayload.(*payload.Error)
 	if ok {
 		if p.Code == payload.CodeFlowCanceled {
-			inslogger.FromContext(ctx).Errorf("flow cancelled, retrying (error message - %s)", p.Text)
+			inslogger.FromContext(ctx).Infof("flow cancelled, retrying (error message - %s)", p.Text)
 			return messageTypeErrorRetryable
 		}
 
