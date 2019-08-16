@@ -27,7 +27,7 @@ import (
 )
 
 func TestTree_Update(t *testing.T) {
-	tree := Tree{Head: &jet{}}
+	tree := Tree{Head: &Jet{}}
 	var (
 		depth  uint8
 		prefix []byte
@@ -67,15 +67,15 @@ func TestTree_Update(t *testing.T) {
 
 func TestTree_Find(t *testing.T) {
 	tree := Tree{
-		Head: &jet{
-			Left: &jet{},
-			Right: &jet{
-				Right: &jet{
-					Left: &jet{
-						Left:  &jet{},
-						Right: &jet{},
+		Head: &Jet{
+			Left: &Jet{},
+			Right: &Jet{
+				Right: &Jet{
+					Left: &Jet{
+						Left:  &Jet{},
+						Right: &Jet{},
 					},
-					Right: &jet{},
+					Right: &Jet{},
 				},
 			},
 		},
@@ -98,10 +98,10 @@ func TestTree_Find(t *testing.T) {
 
 func TestTree_Split(t *testing.T) {
 	tree := Tree{
-		Head: &jet{
-			Left: &jet{},
-			Right: &jet{
-				Right: &jet{},
+		Head: &Jet{
+			Left: &Jet{},
+			Right: &Jet{
+				Right: &Jet{},
 			},
 		},
 	}
@@ -136,18 +136,18 @@ func TestTree_Split(t *testing.T) {
 
 func TestTree_String(t *testing.T) {
 	tree := Tree{
-		Head: &jet{
-			Left: &jet{
+		Head: &Jet{
+			Left: &Jet{
 				Actual: true,
-				Right: &jet{
+				Right: &Jet{
 					Actual: true,
-					Left:   &jet{Actual: true},
-					Right:  &jet{},
+					Left:   &Jet{Actual: true},
+					Right:  &Jet{},
 				},
 			},
-			Right: &jet{
-				Left:  &jet{},
-				Right: &jet{},
+			Right: &Jet{
+				Left:  &Jet{},
+				Right: &Jet{},
 			},
 		},
 	}
@@ -164,22 +164,22 @@ func TestTree_String(t *testing.T) {
 	assert.Equal(t, treeOut, tree.String())
 
 	emptyTree := Tree{
-		Head: &jet{},
+		Head: &Jet{},
 	}
 	assert.Equal(t, "root (level=0 actual=false)\n", emptyTree.String())
 }
 
 func TestTree_LeafIDs(t *testing.T) {
 	tree := Tree{
-		Head: &jet{
-			Left: &jet{Actual: true},
-			Right: &jet{
-				Right: &jet{
-					Left: &jet{
-						Left:  &jet{Actual: false},
-						Right: &jet{Actual: true},
+		Head: &Jet{
+			Left: &Jet{Actual: true},
+			Right: &Jet{
+				Right: &Jet{
+					Left: &Jet{
+						Left:  &Jet{Actual: false},
+						Right: &Jet{Actual: true},
 					},
-					Right: &jet{Actual: true},
+					Right: &Jet{Actual: true},
 				},
 			},
 		},

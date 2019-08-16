@@ -51,10 +51,9 @@
 package gateway
 
 import (
+	"github.com/insolar/insolar/network"
 	"testing"
 	"time"
-
-	"github.com/insolar/insolar/network/controller/common"
 
 	"github.com/stretchr/testify/require"
 )
@@ -63,7 +62,7 @@ func TestPause(t *testing.T) {
 	minTimeout := time.Duration(1)
 	maxTimeout := time.Duration(6)
 	timeoutMult := time.Duration(2)
-	options := common.Options{MinTimeout: minTimeout, MaxTimeout: maxTimeout, TimeoutMult: timeoutMult}
+	options := network.Options{MinTimeout: minTimeout, MaxTimeout: maxTimeout, TimeoutMult: timeoutMult}
 	nn := NoNetwork{Base: &Base{Options: &options}}
 	require.Zero(t, nn.pause())
 

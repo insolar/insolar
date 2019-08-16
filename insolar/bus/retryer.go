@@ -177,7 +177,7 @@ func getErrorType(ctx context.Context, rep *message.Message) messageType {
 	p, ok := replyPayload.(*payload.Error)
 	if ok {
 		if p.Code == payload.CodeFlowCanceled {
-			inslogger.FromContext(ctx).Errorf("flow cancelled, retrying (error message - %s)", p.Text)
+			inslogger.FromContext(ctx).Infof("flow cancelled, retrying (error message - %s)", p.Text)
 			return messageTypeErrorRetryable
 		}
 

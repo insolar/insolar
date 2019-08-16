@@ -73,7 +73,6 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/serialization"
 	"github.com/insolar/insolar/network/controller"
-	"github.com/insolar/insolar/network/controller/common"
 	"github.com/insolar/insolar/network/gateway"
 	"github.com/insolar/insolar/network/gateway/bootstrap"
 	"github.com/insolar/insolar/network/hostnetwork"
@@ -157,7 +156,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	}
 	n.HostNetwork = hostNetwork
 
-	options := common.ConfigureOptions(n.cfg)
+	options := network.ConfigureOptions(n.cfg)
 
 	cert := n.CertificateManager.GetCertificate()
 

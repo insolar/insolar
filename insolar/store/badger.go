@@ -56,6 +56,10 @@ func NewBadgerDB(dir string) (*BadgerDB, error) {
 	return b, nil
 }
 
+func (b *BadgerDB) Backend() *badger.DB {
+	return b.backend
+}
+
 type state struct {
 	mu    sync.RWMutex
 	state bool
@@ -200,6 +204,16 @@ func (b *BadgerDB) Delete(key Key) error {
 // Backup creates backup.
 func (b *BadgerDB) Backup(w io.Writer, since uint64) (uint64, error) {
 	return b.backend.Backup(w, since)
+}
+
+// NewReadIterator returns new Iterator over the store.
+func NewReadIterator(db *badger.DB, pivot Key, reverse bool) Iterator {
+	bi := badgerIterator{pivot: pivot, reverse: reverse}
+	bi.txn = db.NewTransaction(false)
+	opts := badger.DefaultIteratorOptions
+	opts.Reverse = reverse
+	bi.it = bi.txn.NewIterator(opts)
+	return &bi
 }
 
 // NewIterator returns new Iterator over the store.

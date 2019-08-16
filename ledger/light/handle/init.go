@@ -52,7 +52,11 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 	logger := inslogger.FromContext(ctx)
 	err := s.handle(ctx, f)
 	if err != nil {
-		logger.Error(errors.Wrap(err, "handling error"))
+		if err == flow.ErrCancelled {
+			logger.Info(errors.Wrap(err, "handling error"))
+		} else {
+			logger.Error(errors.Wrap(err, "handling error"))
+		}
 	}
 	return err
 }
