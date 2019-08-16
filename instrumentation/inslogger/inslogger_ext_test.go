@@ -24,12 +24,12 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/log"
 )
 
 // Beware, test results there depends on test file and package names!
@@ -52,14 +52,9 @@ func logFields(t *testing.T, b []byte) loggerField {
 	return lf
 }
 
-func logFromContextWithSkip(ctx context.Context) insolar.Logger {
-	// skip testing.go & runtime wrappers
-	return inslogger.FromContext(ctx).WithSkipFrameCount(-2)
-}
-
 func TestExt_Global(t *testing.T) {
 
-	l := logFromContextWithSkip(context.Background())
+	l := inslogger.FromContext(context.Background())
 	l, _ = l.WithLevel("info")
 	var b bytes.Buffer
 	l = l.WithOutput(&b)
@@ -73,7 +68,7 @@ func TestExt_Global(t *testing.T) {
 }
 
 func TestExt_Global_WithFunc(t *testing.T) {
-	l := logFromContextWithSkip(context.Background())
+	l := inslogger.FromContext(context.Background())
 	var b bytes.Buffer
 	l = l.WithOutput(&b)
 	l = l.WithFuncName(true)
@@ -163,7 +158,7 @@ func TestExt_Global_SubCall(t *testing.T) {
 }
 
 func logCallerGlobal(ctx context.Context, t *testing.T) (loggerField, string) {
-	l := inslogger.FromContext(ctx).WithSkipFrameCount(-2)
+	l := inslogger.FromContext(ctx)
 	l, _ = l.WithLevel("info")
 
 	var b bytes.Buffer
