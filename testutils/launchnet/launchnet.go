@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"go/build"
-	"gopkg.in/yaml.v2"
 	"io"
 	"io/ioutil"
 	"os"
@@ -32,6 +31,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"gopkg.in/yaml.v2"
 
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/insolar"
@@ -53,8 +54,8 @@ var stdin io.WriteCloser
 var stdout io.ReadCloser
 var stderr io.ReadCloser
 
-// Run starts launchnet before callback and stop after it.
-// Return callback exit code.
+// Method starts launchnet before execution of callback function (cb) and stops launchnet after.
+// Returns exit code as a result from calling callback function.
 func Run(cb func() int) int {
 	err := setup()
 	defer teardown()
@@ -129,7 +130,7 @@ func launchnetPath(a ...string) (string, error) {
 	return filepath.Join(parts...), nil
 }
 
-func GetNumberNodes() (int, error) {
+func GetNodesCount() (int, error) {
 	type nodesConf struct {
 		DiscoverNodes []interface{} `yaml:"discovery_nodes"`
 	}

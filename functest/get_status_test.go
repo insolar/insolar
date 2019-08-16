@@ -30,7 +30,7 @@ func TestGetStatus(t *testing.T) {
 	status := getStatus(t)
 	require.NotNil(t, status)
 
-	numNodes, err := launchnet.GetNumberNodes()
+	numNodes, err := launchnet.GetNodesCount()
 	require.NoError(t, err)
 
 	require.Equal(t, "CompleteNetworkState", status.NetworkState)
