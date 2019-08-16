@@ -191,7 +191,7 @@ func loadAllMembersKeys() error {
 	if err != nil {
 		return err
 	}
-	for i, _ := range MigrationDaemons {
+	for i := range MigrationDaemons {
 		path, err := launchnetPath("configs", "migration_daemon_"+strconv.Itoa(i)+"_member_keys.json")
 		if err != nil {
 			return err
