@@ -91,12 +91,6 @@ func (i *IndexStorageMemory) Set(ctx context.Context, pn insolar.PulseNumber, bu
 			debug.PrintStack()
 			log.Fatal("len(savedBuck.PendingRecords) > len(bucket.PendingRecords)")
 		}
-
-		if savedBuck.Lifeline.EarliestOpenRequest != nil && bucket.Lifeline.EarliestOpenRequest == nil {
-			debug.PrintStack()
-			log.Fatal("savedBuck.Lifeline.EarliestOpenRequest != nil && bucket.Lifeline.EarliestOpenRequest == nil")
-		}
-
 		if savedBuck.Lifeline.EarliestOpenRequest != nil && bucket.Lifeline.EarliestOpenRequest != nil &&
 			*savedBuck.Lifeline.EarliestOpenRequest > *bucket.Lifeline.EarliestOpenRequest {
 			debug.PrintStack()
@@ -111,7 +105,7 @@ func (i *IndexStorageMemory) Set(ctx context.Context, pn insolar.PulseNumber, bu
 			debug.PrintStack()
 			log.Fatal("savedBuck.Lifeline.LatestRequest != nil && bucket.Lifeline.LatestRequest == nil")
 		}
-		if savedBuck.Lifeline.LatestRequest != nil && savedBuck.Lifeline.LatestRequest.Pulse() < bucket.Lifeline.LatestRequest.Pulse() {
+		if savedBuck.Lifeline.LatestRequest != nil && savedBuck.Lifeline.LatestRequest.Pulse() > bucket.Lifeline.LatestRequest.Pulse() {
 			debug.PrintStack()
 			log.Fatal("savedBuck.Lifeline.LatestRequest.Pulse() < bucket.Lifeline.LatestRequest.Pulse()")
 		}
@@ -120,7 +114,7 @@ func (i *IndexStorageMemory) Set(ctx context.Context, pn insolar.PulseNumber, bu
 			debug.PrintStack()
 			log.Fatal("savedBuck.Lifeline.LatestState != nil && bucket.Lifeline.LatestState == nil")
 		}
-		if savedBuck.Lifeline.LatestState != nil && savedBuck.Lifeline.LatestState.Pulse() < bucket.Lifeline.LatestState.Pulse() {
+		if savedBuck.Lifeline.LatestState != nil && savedBuck.Lifeline.LatestState.Pulse() > bucket.Lifeline.LatestState.Pulse() {
 			debug.PrintStack()
 			log.Fatal("savedBuck.Lifeline.LatestState.Pulse() < bucket.Lifeline.LatestState.Pulse()")
 		}
