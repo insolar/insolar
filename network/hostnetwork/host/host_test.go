@@ -51,6 +51,7 @@
 package host
 
 import (
+	"fmt"
 	"net"
 	"testing"
 
@@ -113,7 +114,7 @@ func TestNewHostNS_Error(t *testing.T) {
 func TestHost_String(t *testing.T) {
 	nd, _ := NewHost("127.0.0.1:31337")
 	nd.NodeID = gen.Reference()
-	string := nd.NodeID.String() + " (" + nd.Address.String() + ")"
+	string := "id: " + fmt.Sprintf("%d", nd.ShortID) + " ref: " + nd.NodeID.String() + " addr: " + nd.Address.String()
 
 	require.Equal(t, string, nd.String())
 }
