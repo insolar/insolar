@@ -95,6 +95,7 @@ func init() {
 			Description: "sent messages retries count",
 			Measure:     statRetries,
 			Aggregation: view.Sum(),
+			TagKeys:     []tag.Key{tagMessageType},
 		},
 		// reply stats
 		&view.View{

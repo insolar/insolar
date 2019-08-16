@@ -215,18 +215,9 @@ func (b *Bus) sendTarget(
 		close(res)
 		return res, func() {}
 	}
-	ctx, _ = inslogger.WithField(ctx, "sending_type", msg.Metadata.Get(MetaType))
-	payloadType, err := payload.UnmarshalType(msg.Payload)
 
-	msgType := "malformed"
-	if err == nil {
-		msgType = payloadType.String()
-	} else {
-		inslogger.FromContext(ctx).Errorf("failed to unmarshal message type: %v (UUID=%v, metadata=%#v)",
-			err.Error(), msg.UUID, msg.Metadata)
-	}
+	msgType := getMessageType(msg)
 
-	// metrics per message type
 	mctx := insmetrics.InsertTag(ctx, tagMessageType, msgType)
 	stats.Record(mctx, statSent.M(int64(len(msg.Payload))))
 	defer func() {
@@ -312,6 +303,15 @@ func (b *Bus) sendTarget(
 	}()
 
 	return reply.messages, done
+}
+
+func getMessageType(msg *message.Message) string {
+	payloadType, err := payload.UnmarshalType(msg.Payload)
+	if err != nil {
+		// branch for legacy messages format: INS-2973
+		return msg.Metadata.Get(MetaType)
+	}
+	return payloadType.String()
 }
 
 // Reply sends message in response to another message.
