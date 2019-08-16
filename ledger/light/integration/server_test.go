@@ -24,11 +24,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/insolar/insolar/network"
+	"github.com/pkg/errors"
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
+
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/cryptography"
@@ -50,9 +51,9 @@ import (
 	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/network"
 	networknode "github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/pkg/errors"
 )
 
 var (
@@ -233,7 +234,13 @@ func NewServer(
 			ServerBus,
 			Pulses,
 		)
-		requestChecker := executor.NewRequestChecker(filamentCalculator, Coordinator, jetFetcher, ServerBus)
+		requestChecker := executor.NewRequestChecker(
+			filamentCalculator,
+			Coordinator,
+			jetFetcher,
+			CryptoScheme.ReferenceHasher(),
+			ServerBus,
+		)
 
 		jetCalculator := executor.NewJetCalculator(Coordinator, Jets)
 		lightCleaner := executor.NewCleaner(
@@ -365,8 +372,6 @@ func NewServer(
 				}
 				return nil
 			}
-
-			// todo Add check that heavy is not available in test
 
 			clientHandler := func(msg *message.Message) (messages []*message.Message, e error) {
 				return nil, nil

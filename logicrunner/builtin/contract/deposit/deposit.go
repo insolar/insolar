@@ -33,7 +33,12 @@ import (
 type status string
 
 const (
-	month = 30 * 24 * 60 * 60
+	// TODO: https://insolar.atlassian.net/browse/WLT-768
+	// day   = 24 * 60 * 60
+	day   = 10
+	month = 30 * day
+
+	vestingPeriodInDays = 360
 
 	// TODO: https://insolar.atlassian.net/browse/WLT-768
 	// offsetDepositPulse insolar.PulseNumber = 6 * month
@@ -158,7 +163,7 @@ func (d *Deposit) checkAmount(activeDaemons []string) error {
 	}
 	return fmt.Errorf(" list with migration daemons member is empty ")
 }
-func (d *Deposit) canTransfer() error {
+func (d *Deposit) canTransfer(transferAmount *big.Int) error {
 	c := 0
 	for _, r := range d.MigrationDaemonConfirms {
 		if r != "" {
@@ -169,12 +174,34 @@ func (d *Deposit) canTransfer() error {
 		return fmt.Errorf("number of confirms is less then 3")
 	}
 
-	p, err := foundation.GetPulseNumber()
+	currentPulse, err := foundation.GetPulseNumber()
 	if err != nil {
 		return fmt.Errorf("failed to get pulse number: %s", err.Error())
 	}
-	if d.PulseDepositUnHold > p {
+	if d.PulseDepositUnHold > currentPulse {
 		return fmt.Errorf("hold period didn't end")
+	}
+
+	spentPeriodInDays := big.NewInt(int64((currentPulse - d.PulseDepositUnHold) / day))
+	amount, ok := new(big.Int).SetString(d.Amount, 10)
+	if !ok {
+		return fmt.Errorf("can't parse derposit amount")
+	}
+	balance, ok := new(big.Int).SetString(d.Balance, 10)
+	if !ok {
+		return fmt.Errorf("can't parse derposit balance")
+	}
+
+	// How much can we transfer for this time
+	availableForNow := new(big.Int).Div(
+		new(big.Int).Mul(amount, spentPeriodInDays),
+		big.NewInt(vestingPeriodInDays),
+	)
+
+	if new(big.Int).Sub(amount, availableForNow).Cmp(
+		new(big.Int).Sub(balance, transferAmount),
+	) == 1 {
+		return fmt.Errorf("not enough unholded balance for transfer")
 	}
 
 	return nil
@@ -201,7 +228,7 @@ func (d *Deposit) Transfer(amountStr string, wallerRef insolar.Reference) (inter
 		return nil, fmt.Errorf("not enough balance for transfer: %s", err.Error())
 	}
 
-	err = d.canTransfer()
+	err = d.canTransfer(amount)
 	if err != nil {
 		return nil, fmt.Errorf("can't start transfer: %s", err.Error())
 	}
