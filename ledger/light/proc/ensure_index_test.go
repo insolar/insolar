@@ -20,8 +20,8 @@ import (
 )
 
 func TestEnsureIndex_Proceed(t *testing.T) {
-	s := proc.NewTestRunner(t)
 	ctx := inslogger.TestContext(t)
+	mc := minimock.NewController(t)
 
 	var (
 		locker  *object.IndexLockerMock
@@ -29,70 +29,65 @@ func TestEnsureIndex_Proceed(t *testing.T) {
 		cord    *jet.CoordinatorMock
 		sender  *bus.SenderMock
 	)
-
-	mc := minimock.NewController(t)
-
-	s.Before(func() {
+	setup := func() {
 		locker = object.NewIndexLockerMock(mc)
 		indexes = object.NewMemoryIndexStorageMock(mc)
 		cord = jet.NewCoordinatorMock(mc)
 		sender = bus.NewSenderMock(mc)
-	})
-	s.After(func() {
-		mc.Finish()
-	})
 
-	s.Run(func() {
-		t.Run("returns CodeNotFound if no index", func(t *testing.T) {
-			locker.LockMock.Return()
-			locker.UnlockMock.Return()
-			indexes.ForIDMock.Return(record.Index{}, object.ErrIndexNotFound)
-			cord.HeavyMock.Return(&insolar.Reference{}, nil)
-			reps := make(chan *message.Message, 1)
-			reps <- payload.MustNewMessage(&payload.Meta{
-				Payload: payload.MustMarshal(&payload.Error{
-					Code: payload.CodeNotFound,
-				}),
-			})
-			sender.SendTargetMock.Return(reps, func() {})
+		locker.LockMock.Return()
+		locker.UnlockMock.Return()
+	}
 
-			p := proc.NewEnsureIndex(gen.ID(), gen.JetID(), payload.Meta{}, insolar.FirstPulseNumber)
-			p.Dep(locker, indexes, cord, sender)
-			err := p.Proceed(ctx)
-			assert.Error(t, err)
-			coded, ok := err.(*payload.CodedError)
-			require.True(t, ok, "wrong error type")
-			assert.Equal(t, uint32(payload.CodeNotFound), coded.Code, "wrong error code")
+	t.Run("returns CodeNotFound if no index", func(t *testing.T) {
+		setup()
+		defer mc.Finish()
+
+		indexes.ForIDMock.Return(record.Index{}, object.ErrIndexNotFound)
+		cord.HeavyMock.Return(&insolar.Reference{}, nil)
+		reps := make(chan *message.Message, 1)
+		reps <- payload.MustNewMessage(&payload.Meta{
+			Payload: payload.MustMarshal(&payload.Error{
+				Code: payload.CodeNotFound,
+			}),
 		})
+		sender.SendTargetMock.Return(reps, func() {})
+
+		p := proc.NewEnsureIndex(gen.ID(), gen.JetID(), payload.Meta{}, insolar.FirstPulseNumber)
+		p.Dep(locker, indexes, cord, sender)
+		err := p.Proceed(ctx)
+		assert.Error(t, err)
+		coded, ok := err.(*payload.CodedError)
+		require.True(t, ok, "wrong error type")
+		assert.Equal(t, uint32(payload.CodeNotFound), coded.Code, "wrong error code")
 	})
 
-	s.Run(func() {
-		t.Run("fetches from heavy if not found", func(t *testing.T) {
-			locker.LockMock.Return()
-			locker.UnlockMock.Return()
-			objectID := gen.ID()
-			indexes.ForIDMock.Set(func(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (record.Index, error) {
-				assert.Equal(t, insolar.GenesisPulse.PulseNumber, pn)
-				assert.Equal(t, objectID, objID)
+	t.Run("fetches from heavy if not found", func(t *testing.T) {
+		setup()
+		defer mc.Finish()
 
-				return record.Index{}, object.ErrIndexNotFound
-			})
-			cord.HeavyMock.Return(&insolar.Reference{}, nil)
-			reps := make(chan *message.Message, 1)
-			reps <- payload.MustNewMessage(&payload.Meta{
-				Payload: payload.MustMarshal(&payload.Error{
-					Code: payload.CodeNotFound,
-				}),
-			})
-			sender.SendTargetMock.Return(reps, func() {})
+		objectID := gen.ID()
+		indexes.ForIDMock.Set(func(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (record.Index, error) {
+			assert.Equal(t, insolar.GenesisPulse.PulseNumber, pn)
+			assert.Equal(t, objectID, objID)
 
-			p := proc.NewEnsureIndex(objectID, gen.JetID(), payload.Meta{}, insolar.FirstPulseNumber)
-			p.Dep(locker, indexes, cord, sender)
-			err := p.Proceed(ctx)
-			assert.Error(t, err)
-			coded, ok := err.(*payload.CodedError)
-			require.True(t, ok, "wrong error type")
-			assert.Equal(t, uint32(payload.CodeNotFound), coded.Code, "wrong error code")
+			return record.Index{}, object.ErrIndexNotFound
 		})
+		cord.HeavyMock.Return(&insolar.Reference{}, nil)
+		reps := make(chan *message.Message, 1)
+		reps <- payload.MustNewMessage(&payload.Meta{
+			Payload: payload.MustMarshal(&payload.Error{
+				Code: payload.CodeNotFound,
+			}),
+		})
+		sender.SendTargetMock.Return(reps, func() {})
+
+		p := proc.NewEnsureIndex(objectID, gen.JetID(), payload.Meta{}, insolar.FirstPulseNumber)
+		p.Dep(locker, indexes, cord, sender)
+		err := p.Proceed(ctx)
+		assert.Error(t, err)
+		coded, ok := err.(*payload.CodedError)
+		require.True(t, ok, "wrong error type")
+		assert.Equal(t, uint32(payload.CodeNotFound), coded.Code, "wrong error code")
 	})
 }
