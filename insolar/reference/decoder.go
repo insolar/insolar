@@ -21,15 +21,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"runtime/debug"
 	"strings"
 )
 
 type ByteDecodeFunc func(s string, target io.ByteWriter) (stringRead int, err error)
 type IdentityDecoder func(base *Global, name string) *Global
-
-type ByteDecoderFactory interface {
-	GetByteDecoder(encodingName string) ByteDecodeFunc
-}
 
 type DecoderOptions uint8
 
@@ -39,7 +36,11 @@ const (
 	IgnoreParity
 )
 
-type Decoder struct {
+type GlobalDecoder interface {
+	Decode(ref string) (Global, error)
+}
+
+type decoder struct {
 	byteDecoderFactory ByteDecoderFactory
 	legacyDecoder      ByteDecodeFunc
 	defaultDecoder     ByteDecodeFunc
@@ -48,7 +49,18 @@ type Decoder struct {
 	options     DecoderOptions
 }
 
-func (v Decoder) Decode(ref string) (Global, error) {
+func NewDecoder(options DecoderOptions) GlobalDecoder {
+	byteDecoderFactory := NewByteDecoderFactory()
+	return &decoder{
+		byteDecoderFactory: byteDecoderFactory,
+		legacyDecoder:      byteDecoderFactory.LegacyDecoder(),
+		defaultDecoder:     byteDecoderFactory.DefaultDecoder(),
+
+		options: options,
+	}
+}
+
+func (v decoder) Decode(ref string) (Global, error) {
 	schemaPos := strings.IndexRune(ref, ':')
 	if schemaPos >= 0 {
 		decoder, err := v.parseSchema(ref[:schemaPos], ref)
@@ -61,7 +73,7 @@ func (v Decoder) Decode(ref string) (Global, error) {
 	// try to parse the legacy format
 	if v.options&AllowLegacy != 0 && len(ref) >= 2*len(LegacyDomainName)+1 {
 		domainPos := strings.IndexRune(ref, '.')
-		if domainPos > len(LegacyDomainName) && ref[domainPos+1:] == LegacyDomainName {
+		if domainPos >= len(LegacyDomainName) && ref[domainPos+1:] == LegacyDomainName {
 			return v.parseLegacyAddress(ref, domainPos)
 		}
 	}
@@ -69,7 +81,7 @@ func (v Decoder) Decode(ref string) (Global, error) {
 	return v.parseReference(ref, v.defaultDecoder)
 }
 
-func (v Decoder) parseLegacyAddress(ref string, domainPos int) (Global, error) {
+func (v decoder) parseLegacyAddress(ref string, domainPos int) (Global, error) {
 	var result Global
 
 	w := result.addressLocal.asWriter()
@@ -90,7 +102,7 @@ func (v Decoder) parseLegacyAddress(ref string, domainPos int) (Global, error) {
 	return result, fmt.Errorf("unable to parse legacy reference, %s: ref=%s", err.Error(), ref)
 }
 
-func (v Decoder) parseSchema(scheme, refFull string) (ByteDecodeFunc, error) {
+func (v decoder) parseSchema(scheme, refFull string) (ByteDecodeFunc, error) {
 	parts := strings.Split(scheme, "+")
 	switch len(parts) {
 	case 1:
@@ -116,7 +128,7 @@ func (v Decoder) parseSchema(scheme, refFull string) (ByteDecodeFunc, error) {
 	return decoder, nil
 }
 
-func (v Decoder) parseAuthority(ref string) (authority string, remaining string) {
+func (v decoder) parseAuthority(ref string) (authority string, remaining string) {
 	if len(ref) < 3 || ref[:2] != "//" {
 		return "", ref
 	}
@@ -130,7 +142,8 @@ func (v Decoder) parseAuthority(ref string) (authority string, remaining string)
 	return ref[:pos], ref[pos+1:]
 }
 
-func (v Decoder) parseReference(refFull string, byteDecoder ByteDecodeFunc) (Global, error) {
+func (v decoder) parseReference(refFull string, byteDecoder ByteDecodeFunc) (Global, error) {
+	debug.PrintStack()
 	_, ref := v.parseAuthority(refFull)
 	if len(ref) == 0 {
 		return Global{}, fmt.Errorf("empty reference body: ref=%s", refFull)
@@ -166,7 +179,7 @@ func (v Decoder) parseReference(refFull string, byteDecoder ByteDecodeFunc) (Glo
 	return result, fmt.Errorf("invalid reference, %s: ref=%s", err.Error(), refFull)
 }
 
-func (v Decoder) parseAddress(ref string, byteDecoder ByteDecodeFunc, result *Global) error {
+func (v decoder) parseAddress(ref string, byteDecoder ByteDecodeFunc, result *Global) error {
 
 	domainPos := strings.IndexRune(ref, '.')
 	switch {
@@ -200,7 +213,7 @@ func (v Decoder) parseAddress(ref string, byteDecoder ByteDecodeFunc, result *Gl
 	}
 }
 
-func (v Decoder) parseAddressWithBase(name string, base *Global, byteDecoder ByteDecodeFunc, result *Global) error {
+func (v decoder) parseAddressWithBase(name string, base *Global, byteDecoder ByteDecodeFunc, result *Global) error {
 	err := v.parseBinaryAddress(name, byteDecoder, &result.addressLocal)
 
 	switch {
@@ -235,7 +248,7 @@ func (v Decoder) parseAddressWithBase(name string, base *Global, byteDecoder Byt
 
 var aliasedReferenceError = errors.New("record reference alias")
 
-func (v Decoder) parseBinaryAddress(name string, byteDecoder ByteDecodeFunc, result *Local) error {
+func (v decoder) parseBinaryAddress(name string, byteDecoder ByteDecodeFunc, result *Local) error {
 
 	switch name[0] {
 	case '0':

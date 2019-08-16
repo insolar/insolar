@@ -127,7 +127,7 @@ func (v *Bits128) AsBytes() []byte {
 	return v[:]
 }
 
-type Bits224 [24]byte
+type Bits224 [28]byte
 
 func (v *Bits224) WriteTo(w io.Writer) (int64, error) {
 	n, err := w.Write((*v)[:])
