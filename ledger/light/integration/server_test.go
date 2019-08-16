@@ -234,7 +234,13 @@ func NewServer(
 			ServerBus,
 			Pulses,
 		)
-		requestChecker := executor.NewRequestChecker(filamentCalculator, Coordinator, jetFetcher, ServerBus)
+		requestChecker := executor.NewRequestChecker(
+			filamentCalculator,
+			Coordinator,
+			jetFetcher,
+			CryptoScheme.ReferenceHasher(),
+			ServerBus,
+		)
 
 		jetCalculator := executor.NewJetCalculator(Coordinator, Jets)
 		lightCleaner := executor.NewCleaner(

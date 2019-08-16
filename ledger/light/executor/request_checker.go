@@ -19,6 +19,7 @@ package executor
 import (
 	"context"
 	"fmt"
+	"hash"
 
 	"github.com/pkg/errors"
 
@@ -40,6 +41,7 @@ type RequestCheckerDefault struct {
 	filaments   FilamentCalculator
 	coordinator jet.Coordinator
 	fetcher     JetFetcher
+	hasher      hash.Hash
 	sender      bus.Sender
 }
 
@@ -47,12 +49,14 @@ func NewRequestChecker(
 	fc FilamentCalculator,
 	c jet.Coordinator,
 	jf JetFetcher,
+	hasher hash.Hash,
 	sender bus.Sender,
 ) *RequestCheckerDefault {
 	return &RequestCheckerDefault{
 		filaments:   fc,
 		coordinator: c,
 		fetcher:     jf,
+		hasher:      hasher,
 		sender:      sender,
 	}
 }
@@ -87,26 +91,43 @@ func (c *RequestCheckerDefault) CheckRequest(ctx context.Context, requestID inso
 			}
 		}
 	case *record.OutgoingRequest:
-		// FIXME: replace with "FindRequest" calculator method.
-		requests, err := c.filaments.OpenedRequests(
-			ctx,
-			requestID.Pulse(),
-			*request.AffinityRef().Record(),
-			true,
-		)
+		err := c.checkReasonForOutgoingRequest(ctx, r, reasonID, requestID)
 		if err != nil {
 			return &payload.CodedError{
-				Text: "failed fetch pending requests",
+				Text: err.Error(),
 				Code: payload.CodeReasonNotFound,
 			}
 		}
+	}
 
-		found := findRecord(requests, reasonID)
-		if !found {
-			return &payload.CodedError{
-				Text: "request reason not found in opened requests",
-				Code: payload.CodeReasonNotFound,
-			}
+	return nil
+}
+
+func (c *RequestCheckerDefault) checkReasonForOutgoingRequest(
+	ctx context.Context,
+	outgoingRequest *record.OutgoingRequest,
+	reasonID insolar.ID,
+	requestID insolar.ID,
+) error {
+	// FIXME: replace with "FindRequest" calculator method.
+	requests, err := c.filaments.OpenedRequests(
+		ctx,
+		requestID.Pulse(),
+		*outgoingRequest.AffinityRef().Record(),
+		true,
+	)
+	if err != nil {
+		return &payload.CodedError{
+			Text: "failed fetch pending requests",
+			Code: payload.CodeReasonNotFound,
+		}
+	}
+
+	found := findRecord(requests, reasonID)
+	if !found {
+		return &payload.CodedError{
+			Text: "request reason not found in opened requests",
+			Code: payload.CodeReasonNotFound,
 		}
 	}
 
@@ -119,19 +140,39 @@ func (c *RequestCheckerDefault) checkReasonForIncomingRequest(
 	reasonID insolar.ID,
 	requestID insolar.ID,
 ) error {
+	var objectRef insolar.Reference
+
+	if incomingRequest.IsCreationRequest() {
+		virt := record.Wrap(incomingRequest)
+		buf, err := virt.Marshal()
+		if err != nil {
+			return err
+		}
+
+		_, err = c.hasher.Write(buf)
+		if err != nil {
+			return errors.Wrap(err, "failed to calculate id")
+		}
+
+		objectID := *insolar.NewID(requestID.Pulse(), c.hasher.Sum(nil))
+		objectRef = *insolar.NewReference(objectID)
+	} else {
+		objectRef = *incomingRequest.AffinityRef()
+	}
+
 	var (
 		reasonInfo *payload.RequestInfo
 		err        error
 	)
 	reasonObject := incomingRequest.ReasonAffinityRef()
 
-	objectID := reasonObject.Record()
+	reasonObjectID := reasonObject.Record()
 	// If reasonObject is same as requestObject then go local
 	// (this fixes deadlock in saga requests).
-	if !incomingRequest.IsCreationRequest() && incomingRequest.AffinityRef().Equal(reasonObject) {
-		reasonInfo, err = c.getRequestLocal(ctx, *objectID, reasonID, requestID.Pulse())
+	if objectRef.Equal(reasonObject) {
+		reasonInfo, err = c.getRequestLocal(ctx, *reasonObjectID, reasonID, requestID.Pulse())
 	} else {
-		reasonInfo, err = c.getRequest(ctx, *objectID, reasonID, requestID.Pulse())
+		reasonInfo, err = c.getRequest(ctx, *reasonObjectID, reasonID, requestID.Pulse())
 	}
 	if err != nil {
 		return errors.Wrap(err, "reason request not found")
