@@ -140,7 +140,7 @@ func (c *RequestCheckerDefault) checkReasonForIncomingRequest(
 	reasonID insolar.ID,
 	requestID insolar.ID,
 ) error {
-	var objectRef insolar.Reference
+	var objectID insolar.ID
 
 	if incomingRequest.IsCreationRequest() {
 		virt := record.Wrap(incomingRequest)
@@ -154,25 +154,23 @@ func (c *RequestCheckerDefault) checkReasonForIncomingRequest(
 			return errors.Wrap(err, "failed to calculate id")
 		}
 
-		objectID := *insolar.NewID(requestID.Pulse(), c.hasher.Sum(nil))
-		objectRef = *insolar.NewReference(objectID)
+		objectID = *insolar.NewID(requestID.Pulse(), c.hasher.Sum(nil))
 	} else {
-		objectRef = *incomingRequest.AffinityRef()
+		objectID = *incomingRequest.AffinityRef().Record()
 	}
 
 	var (
 		reasonInfo *payload.RequestInfo
 		err        error
 	)
-	reasonObject := incomingRequest.ReasonAffinityRef()
 
-	reasonObjectID := reasonObject.Record()
+	reasonObjectID := *incomingRequest.ReasonAffinityRef().Record()
 	// If reasonObject is same as requestObject then go local
 	// (this fixes deadlock in saga requests).
-	if objectRef.Equal(reasonObject) {
-		reasonInfo, err = c.getRequestLocal(ctx, *reasonObjectID, reasonID, requestID.Pulse())
+	if objectID.Equal(reasonObjectID) {
+		reasonInfo, err = c.getRequestLocal(ctx, reasonObjectID, reasonID, requestID.Pulse())
 	} else {
-		reasonInfo, err = c.getRequest(ctx, *reasonObjectID, reasonID, requestID.Pulse())
+		reasonInfo, err = c.getRequest(ctx, reasonObjectID, reasonID, requestID.Pulse())
 	}
 	if err != nil {
 		return errors.Wrap(err, "reason request not found")
