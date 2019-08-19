@@ -1,0 +1,28 @@
+version: 2
+mergeable:
+  - when: schedule.repository
+    validate:
+      - do: stale
+        days: 20
+        type: pull_request
+    pass:
+      - do: comment
+        payload:
+          body: This pull request is old. Please consider merging or closing it.
+
+  - when: pull_request.*
+    validate:
+      - do: description
+        no_empty:
+          enabled: true
+          message: Description matter and should not be empty. Provide detail with **what** was changed, **why** it was changed, and **how** it was changed.
+      - do: title
+        must_exclude:
+          regex: \bWIP\b
+      - do: label
+        must_exclude:
+          regex: 'wip'
+      - do: approvals
+        required:
+          assignees: true
+          message: 'All assignees must approve this PR before merging.'
