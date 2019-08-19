@@ -168,7 +168,7 @@ func (c *Phase3Controller) setInspector(inspector inspectors.VectorInspector) {
 
 func (c *Phase3Controller) StartWorker(ctx context.Context, realm *core.FullRealm) {
 	c.R = realm
-	c.queuePh3Recv = make(chan inspectors.InspectedVector, c.R.GetNodeCount())
+	c.queuePh3Recv = make(chan inspectors.InspectedVector, 1+c.R.GetNodeCount()*3)
 	c.inspector = inspectors.NewBypassInspector()
 
 	go c.workerPhase3(ctx)
