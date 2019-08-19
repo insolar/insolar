@@ -287,9 +287,6 @@ func Test_LightStartsFromInitialState(t *testing.T) {
 	var replication = make(chan insolar.JetID)
 	var hotObjectConfirm = make(chan insolar.JetID)
 
-	var pulsesQuantity = 10
-	var recordsOnPulse = 30
-	var splitOnPulse = 3
 	var initialSplits = 3
 	var jetTree = jet.NewTree(true)
 
@@ -358,83 +355,36 @@ func Test_LightStartsFromInitialState(t *testing.T) {
 	require.NoError(t, err)
 	defer s.Stop()
 
-	calculateExpectedJetsByTree := func(splittingJets map[insolar.JetID]int, jetTree *jet.Tree, depthLimit uint8, thresholdRecordsCount int) []insolar.JetID {
-
-		for jetID, val := range splittingJets {
-			if val >= thresholdRecordsCount && jetID.Depth() < depthLimit {
-				_, _, _ = jetTree.Split(jetID)
-			}
-		}
-		return jetTree.LeafIDs()
-	}
-
-	sendMessages := func(jetTree *jet.Tree) map[insolar.JetID]int {
-		updatedJets := make(map[insolar.JetID]int)
-		// Save code.
-		for i := 0; i < recordsOnPulse; i++ {
-			{
-				p, _ := CallSetCode(ctx, s)
-				RequireNotError(p)
-				jetID, _ := jetTree.Find(p.(*payload.ID).ID)
-				updatedJets[jetID]++
-			}
-		}
-		return updatedJets
-	}
-
 	// First pulse goes in storage then interrupts.
 	s.SetPulse(ctx)
+	s.SetPulse(ctx)
 
-	{
-		expectedJets := initialJets
-		updatedJets := make(map[insolar.JetID]int)
-
-		for i := 0; i < pulsesQuantity; i++ {
-
-			s.SetPulse(ctx)
-
-			// Saving previous for Replication check
-			previousPulseJets := expectedJets
-
-			// Starting to split test jet tree
-			if i > splitOnPulse {
-				expectedJets = calculateExpectedJetsByTree(updatedJets, jetTree, cfg.Ledger.JetSplit.DepthLimit, cfg.Ledger.JetSplit.ThresholdRecordsCount)
-			}
-
-			// Starting to send messages
-			if i >= splitOnPulse {
-				updatedJets = sendMessages(jetTree)
-			}
-
-			hotObjectsReceived := make(map[insolar.JetID]struct{})
-			hotObjectsConfirmReceived := make(map[insolar.JetID]struct{})
-
-			// collecting HO and HCO
-			for range expectedJets {
-				hotObjectsReceived[<-hotObjects] = struct{}{}
-				hotObjectsConfirmReceived[<-hotObjectConfirm] = struct{}{}
-			}
-
-			for _, expectedJetId := range expectedJets {
-
-				_, ok := hotObjectsReceived[expectedJetId]
-				require.True(t, ok, "No expected jetId %s in hotObjectsReceived", expectedJetId.DebugString())
-
-				_, ok = hotObjectsConfirmReceived[expectedJetId]
-				require.True(t, ok, "No expected jetId %s in hotObjectsConfirmReceived", expectedJetId.DebugString())
-			}
-
-			// collecting Replication
-			replicationObjectsReceived := make(map[insolar.JetID]struct{})
-			for range previousPulseJets {
-				replicationObjectsReceived[<-replication] = struct{}{}
-			}
-
-			for _, expectedJetId := range previousPulseJets {
-				_, ok := replicationObjectsReceived[expectedJetId]
-				require.True(t, ok, "No expected jetId %s in replicationObjectsReceived", expectedJetId.DebugString())
-			}
-
-		}
+	for i := 0; i < 10; i++ {
+		p, _ := CallSetCode(ctx, s)
+		RequireNotError(p)
 	}
+
+	hotObjectsReceived := make(map[insolar.JetID]struct{})
+	hotObjectsConfirmReceived := make(map[insolar.JetID]struct{})
+	replicationObjectsReceived := make(map[insolar.JetID]struct{})
+
+	// collecting HO and HCO and Replication
+	for range initialJets {
+		hotObjectsReceived[<-hotObjects] = struct{}{}
+		hotObjectsConfirmReceived[<-hotObjectConfirm] = struct{}{}
+
+		replicationObjectsReceived[<-replication] = struct{}{}
+	}
+
+	for _, expectedJetId := range initialJets {
+		_, ok := hotObjectsReceived[expectedJetId]
+		require.True(t, ok, "No expected jetId %s in hotObjectsReceived", expectedJetId.DebugString())
+
+		_, ok = hotObjectsConfirmReceived[expectedJetId]
+		require.True(t, ok, "No expected jetId %s in hotObjectsConfirmReceived", expectedJetId.DebugString())
+
+		_, ok = replicationObjectsReceived[expectedJetId]
+		require.True(t, ok, "No expected jetId %s in replicationObjectsReceived", expectedJetId.DebugString())
+	}
+
 }
