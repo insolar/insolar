@@ -60,7 +60,7 @@ type SDK struct {
 	rootMember             *requester.UserConfigJSON
 	migrationAdminMember   *requester.UserConfigJSON
 	migrationDaemonMembers []*requester.UserConfigJSON
-	logLevel               interface{}
+	logLevel               string
 }
 
 // NewSDK creates insSDK object
@@ -103,7 +103,7 @@ func NewSDK(urls []string, memberKeysDirPath string) (*SDK, error) {
 		rootMember:             rootMember,
 		migrationAdminMember:   migrationAdminMember,
 		migrationDaemonMembers: []*requester.UserConfigJSON{},
-		logLevel:               nil,
+		logLevel:               "",
 	}
 
 	if len(response.MigrationDaemonMembers) < insolar.GenesisAmountActiveMigrationDaemonMembers {
