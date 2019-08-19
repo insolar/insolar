@@ -67,10 +67,7 @@ install-godep: ## install dep tool
 
 .PHONY: install-build-tools
 install-build-tools: ## install tools for codegen
-	go clean -modcache
-	./scripts/build/fetchdeps golang.org/x/tools/cmd/stringer 63e6ed9258fa6cbc90aab9b1eef3e0866e89b874
-	./scripts/build/fetchdeps github.com/gojuno/minimock/cmd/minimock v2.1.8
-	./scripts/build/fetchdeps github.com/gogo/protobuf/protoc-gen-gogoslick v1.2.1
+	./scripts/build/install_build_tools.sh
 
 .PHONY: install-deps
 install-deps: install-godep install-build-tools ## install dep and codegen tools
