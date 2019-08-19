@@ -62,16 +62,13 @@ import (
 )
 
 type RoundStrategy struct {
-	chronicle   api.ConsensusChronicles
 	localConfig api.LocalNodeConfiguration
 }
 
 func NewRoundStrategy(
-	chronicle api.ConsensusChronicles,
 	localConfig api.LocalNodeConfiguration,
 ) *RoundStrategy {
 	return &RoundStrategy{
-		chronicle:   chronicle,
 		localConfig: localConfig,
 	}
 }
