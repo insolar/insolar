@@ -19,9 +19,27 @@ mergeable:
         must_exclude:
           regex: 'wip'
       - do: description
-          no_empty:
-            enabled: true
-            message: 'Description matter and should not be empty. Provide detail with **what** was changed, **why** it was changed, and **how** it was changed.'
+        no_empty:
+          enabled: true
+          message: 'Description matter and should not be empty. Provide detail with **what** was changed, **why** it was changed, and **how** it was changed.'
+    pass:
+      - do: checks
+        status: success
+        payload:
+          title: 'PR format'
+          summary: 'PR is correctly formatted and can be merged'
+    fail:
+      - do: checks
+        status: failure
+        payload:
+          title: 'PR format'
+          summary: 'PR is formatted incorrectly'
+    error:
+      - do: checks
+        status: failure
+        payload:
+          title: 'PR format'
+          summary: 'Failed to check PR format'
 
   - when: pull_request.*, pull_request_review.*
     validate:
