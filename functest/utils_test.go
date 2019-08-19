@@ -33,7 +33,6 @@ import (
 
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/testutils"
 
 	"github.com/insolar/rpc/v2/json2"
@@ -176,12 +175,10 @@ func migrate(t *testing.T, memberRef string, amount string, tx string, ma string
 	deposits, ok := res.(map[string]interface{})["deposits"].(map[string]interface{})
 	require.True(t, ok)
 	deposit, ok := deposits[tx].(map[string]interface{})
-	sm := make(foundation.StableMap)
+	decoded, err := base64.StdEncoding.DecodeString(deposit["confirmerReferences"].(string))
 	require.NoError(t, err)
-	confirmerReferencesMap := deposit["confirmerReferences"].(string)
-	decoded, err := base64.StdEncoding.DecodeString(confirmerReferencesMap)
-	require.NoError(t, err)
-	err = sm.UnmarshalBinary(decoded)
+	sm, err := unmarshalStableMap(decoded)
+
 	require.True(t, ok)
 	require.Equal(t, sm[migrationDaemons[mdNum].ref], amount)
 
