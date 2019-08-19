@@ -19,6 +19,8 @@ package integration_test
 import (
 	"context"
 	"crypto"
+	"io/ioutil"
+	"os"
 	"sync"
 
 	"github.com/insolar/insolar/network"
@@ -89,16 +91,21 @@ type Server struct {
 	clientSender bus.Sender
 }
 
+// After using it you have to remove directory configuration.Storage.DataDirectory by yourself
 func DefaultHeavyConfig() configuration.Configuration {
+	tmpDir, err := ioutil.TempDir("", "heavy-integr-test-")
+	if err != nil {
+		panic(err)
+	}
 	cfg := configuration.Configuration{}
-	cfg.KeysPath = "../../light/integration/testdata/bootstrap_keys.json"
+	cfg.KeysPath = "testdata/bootstrap_keys.json"
 	cfg.Ledger.LightChainLimit = math.MaxInt32
 	cfg.Ledger.JetSplit.DepthLimit = math.MaxUint8
 	cfg.Ledger.JetSplit.ThresholdOverflowCount = math.MaxInt32
 	cfg.Ledger.JetSplit.ThresholdRecordsCount = math.MaxInt32
 	cfg.Bus.ReplyTimeout = time.Minute
 	cfg.Ledger.Storage = configuration.Storage{
-		DataDirectory: "./db",
+		DataDirectory: tmpDir,
 	}
 	return cfg
 }
@@ -107,8 +114,11 @@ func defaultReceiveCallback(meta payload.Meta, pl payload.Payload) []payload.Pay
 	return nil
 }
 
-func Test_test(t *testing.T) {
-	s, err := NewServer(context.Background(), DefaultHeavyConfig(), insolar.GenesisHeavyConfig{}, nil)
+func TestStartStop(t *testing.T) {
+	cfg := DefaultHeavyConfig()
+	defer os.RemoveAll(cfg.Ledger.Storage.DataDirectory)
+
+	s, err := NewServer(context.Background(), cfg, insolar.GenesisHeavyConfig{}, nil)
 	assert.NoError(t, err)
 	s.Stop()
 }
