@@ -8,30 +8,26 @@ mergeable:
     pass:
       - do: comment
         payload:
-          body: This pull request is old. Please consider merging or closing it.
-
-  - when: pull_request.*
-    validate:
-      - do: description
-        no_empty:
-          enabled: true
-          message: Description matter and should not be empty. Provide detail with **what** was changed, **why** it was changed, and **how** it was changed.
+          body: 'This pull request is old. Please consider merging or closing it.'
 
   - when: pull_request.*
     validate:
       - do: title
         must_exclude:
           regex: '\bWIP\b'
-
-  - when: pull_request.*
-    validate:
       - do: label
         must_exclude:
           regex: 'wip'
+      - do: description
+          no_empty:
+            enabled: true
+            message: 'Description matter and should not be empty. Provide detail with **what** was changed, **why** it was changed, and **how** it was changed.'
 
   - when: pull_request.*, pull_request_review.*
     validate:
       - do: approvals
+        min:
+          count: 1
         required:
           assignees: true
           message: 'All assignees must approve this PR before merging.'
