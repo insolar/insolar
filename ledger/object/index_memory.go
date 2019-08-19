@@ -96,9 +96,9 @@ func (i *IndexStorageMemory) Set(ctx context.Context, pn insolar.PulseNumber, bu
 			debug.PrintStack()
 			log.Fatal("*savedBuck.Lifeline.EarliestOpenRequest > *bucket.Lifeline.EarliestOpenRequest")
 		}
-		if savedBuck.Lifeline.Parent != bucket.Lifeline.Parent {
+		if !savedBuck.Lifeline.Parent.IsEmpty() && savedBuck.Lifeline.Parent != bucket.Lifeline.Parent {
 			debug.PrintStack()
-			log.Fatal("savedBuck.Lifeline.Parent != bucket.Lifeline.Parent")
+			log.Fatalf("savedBuck.Lifeline.Parent:%v != bucket.Lifeline.Parent:%v", savedBuck.Lifeline.Parent, bucket.Lifeline.Parent)
 		}
 
 		if savedBuck.Lifeline.LatestRequest != nil && bucket.Lifeline.LatestRequest == nil {
