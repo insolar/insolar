@@ -134,8 +134,8 @@ func GetPKShardGenesisContractState(name string, members foundation.StableMap) i
 	}
 }
 
-func GetMigrationShardGenesisContractState(name string) insolar.GenesisContractState {
-	s, err := migrationshard.New()
+func GetMigrationShardGenesisContractState(name string, migrationAddresses []string) insolar.GenesisContractState {
+	s, err := migrationshard.New(migrationAddresses)
 	if err != nil {
 		panic(fmt.Sprintf("'%s' shard constructor failed", name))
 	}

@@ -112,6 +112,7 @@ type GenesisContractsConfig struct {
 	RootPublicKey             string
 	MigrationAdminPublicKey   string
 	MigrationDaemonPublicKeys []string
+	MigrationAddresses        [GenesisAmountMigrationAddressShards][]string
 }
 
 // GenesisHeavyConfig carries data required for initial genesis on heavy node.
