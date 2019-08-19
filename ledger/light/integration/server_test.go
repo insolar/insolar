@@ -100,21 +100,25 @@ func DefaultLightConfig() configuration.Configuration {
 	return cfg
 }
 
+func DefaultLightInitialState() *payload.LightInitialState {
+	return &payload.LightInitialState{
+		NetworkStart: true,
+		JetIDs:       []insolar.JetID{insolar.ZeroJetID},
+		Pulse: pulse.PulseProto{
+			PulseNumber: insolar.FirstPulseNumber,
+		},
+		Drops: [][]byte{
+			drop.MustEncode(&drop.Drop{JetID: insolar.ZeroJetID, Pulse: insolar.FirstPulseNumber}),
+		},
+	}
+}
+
 func DefaultHeavyResponse(pl payload.Payload) []payload.Payload {
 	switch pl.(type) {
 	case *payload.Replication, *payload.GotHotConfirmation:
 		return nil
 	case *payload.GetLightInitialState:
-		return []payload.Payload{&payload.LightInitialState{
-			NetworkStart: true,
-			JetIDs:       []insolar.JetID{insolar.ZeroJetID},
-			Pulse: pulse.PulseProto{
-				PulseNumber: insolar.FirstPulseNumber,
-			},
-			Drops: [][]byte{
-				drop.MustEncode(&drop.Drop{JetID: insolar.ZeroJetID, Pulse: insolar.FirstPulseNumber}),
-			},
-		}}
+		return []payload.Payload{DefaultLightInitialState()}
 	}
 
 	panic(fmt.Sprintf("unexpected message to heavy %T", pl))
