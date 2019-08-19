@@ -49,3 +49,21 @@ mergeable:
         required:
           assignees: true
           message: 'All assignees must approve this PR before merging.'
+    pass:
+      - do: checks
+        status: success
+        payload:
+          title: 'Approvals'
+          summary: 'PR is approved by all assignees and can be merged'
+    fail:
+      - do: checks
+        status: failure
+        payload:
+          title: 'Approvals'
+          summary: 'PR is not approved by all assignees'
+    error:
+      - do: checks
+        status: failure
+        payload:
+          title: 'Approvals'
+          summary: 'Failed to check approvals'
