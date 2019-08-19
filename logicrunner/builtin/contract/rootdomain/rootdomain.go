@@ -92,9 +92,13 @@ var INSATTR_Info_API = true
 // ins:immutable
 func (rd RootDomain) Info() (interface{}, error) {
 	migrationAdminContract := migrationadmin.GetObject(foundation.GetMigrationAdmin())
-	migrationDaemonsMembersOut, err := migrationAdminContract.GetActiveDaemons()
+	migrationDaemonsMembers, err := migrationAdminContract.GetAllMigrationDaemon()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get active migration daemon from foundation: %s", err.Error())
+	}
+	migrationDaemonsMembersOut := []string{}
+	for ref := range migrationDaemonsMembers {
+		migrationDaemonsMembersOut = append(migrationDaemonsMembersOut, ref)
 	}
 	res := map[string]interface{}{
 		"rootDomain":             rd.GetReference().String(),
