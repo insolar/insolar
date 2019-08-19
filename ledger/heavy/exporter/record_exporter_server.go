@@ -21,6 +21,7 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/heavy/executor"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
@@ -48,6 +49,9 @@ func NewRecordServer(
 }
 
 func (r *RecordServer) Export(getRecords *GetRecords, stream RecordExporter_ExportServer) error {
+	ctx := stream.Context()
+	logger := inslogger.FromContext(ctx)
+
 	if getRecords.Count == 0 {
 		return errors.New("count can't be 0")
 	}
@@ -74,11 +78,13 @@ func (r *RecordServer) Export(getRecords *GetRecords, stream RecordExporter_Expo
 	for iter.HasNext(stream.Context()) {
 		record, err := iter.Next(stream.Context())
 		if err != nil {
+			logger.Error(err)
 			return err
 		}
 
 		err = stream.Send(record)
 		if err != nil {
+			logger.Error(err)
 			return err
 		}
 	}

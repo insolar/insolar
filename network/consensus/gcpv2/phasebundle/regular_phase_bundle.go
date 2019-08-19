@@ -98,8 +98,9 @@ func (r *RegularPhaseBundle) CreateFullPhaseControllers(nodeCount int) ([]core.P
 	return []core.PhaseController{
 		pulsectl.NewPulseController(r.IgnoreHostVerificationForPulses),
 		ph01ctl.NewPhase01Controller(packetPrepareOptions, rcb.qForPhase1),
-		ph2ctl.NewPhase2Controller(r.LoopingMinimalDelay, packetPrepareOptions, rcb.qForPhase2),
+		ph2ctl.NewPhase2Controller(r.LoopingMinimalDelay, packetPrepareOptions, rcb.qForPhase2,
+			r.LockOSThreadForWorker),
 		ph3ctl.NewPhase3Controller(r.LoopingMinimalDelay, packetPrepareOptions, rcb.qForPhase3,
-			r.ConsensusStrategy, r.VectorInspection, r.EnableFastPhase3),
+			r.ConsensusStrategy, r.VectorInspection, r.EnableFastPhase3, r.LockOSThreadForWorker),
 	}, rcb
 }

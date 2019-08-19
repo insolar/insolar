@@ -404,6 +404,8 @@ func (c *FilamentCalculatorDefault) RequestInfo(
 		return nil, nil, errors.Wrap(err, "latest request in lifeline is empty")
 	}
 
+	logger.Debugf("latest request from index %s", idx.Lifeline.LatestRequest.DebugString())
+
 	cache := c.cache.Get(objectID)
 	cache.Lock()
 	defer cache.Unlock()
