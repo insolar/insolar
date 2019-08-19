@@ -208,8 +208,8 @@ func (sdk *SDK) AddBurnAddresses(burnAddresses []string) (string, error) {
 
 	response, err := sdk.DoRequest(
 		userConfig,
-		"migration.addBurnAddresses",
-		map[string]interface{}{"burnAddresses": burnAddresses},
+		"migration.addAddresses",
+		map[string]interface{}{"migrationAddresses": burnAddresses},
 	)
 	if err != nil {
 		return "", errors.Wrap(err, "request was failed ")
@@ -244,7 +244,7 @@ func (sdk *SDK) GetBalance(m *Member) (*big.Int, error) {
 	}
 	response, err := sdk.DoRequest(
 		userConfig,
-		"wallet.getBalance",
+		"member.getBalance",
 		map[string]interface{}{"reference": m.Reference},
 	)
 	if err != nil {
