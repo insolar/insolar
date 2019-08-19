@@ -1,4 +1,3 @@
-
 //
 // Copyright 2019 Insolar Technologies GmbH
 //
@@ -21,7 +20,12 @@ import (
 	"context"
 	"crypto"
 	"sync"
+
 	"github.com/insolar/insolar/network"
+
+	"math"
+	"testing"
+	"time"
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
@@ -37,24 +41,21 @@ import (
 	"github.com/insolar/insolar/insolar/node"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/insolar/store"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/keystore"
+	"github.com/insolar/insolar/ledger/artifact"
 	"github.com/insolar/insolar/ledger/drop"
+	"github.com/insolar/insolar/ledger/genesis"
 	"github.com/insolar/insolar/ledger/heavy/executor"
+	"github.com/insolar/insolar/ledger/heavy/handler"
+	"github.com/insolar/insolar/ledger/heavy/pulsemanager"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/log"
 	networknode "github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
-	"testing"
 	"github.com/stretchr/testify/assert"
-	"time"
-	"math"
-	"github.com/insolar/insolar/insolar/store"
-	"github.com/insolar/insolar/ledger/heavy/handler"
-	"github.com/insolar/insolar/ledger/genesis"
-	"github.com/insolar/insolar/ledger/artifact"
-	"github.com/insolar/insolar/ledger/heavy/pulsemanager"
 )
 
 var (
@@ -102,30 +103,7 @@ func DefaultHeavyConfig() configuration.Configuration {
 	return cfg
 }
 
-// func DefaultHeavyResponse(pl payload.Payload) []payload.Payload {
-// 	switch pl.(type) {
-// 	case *payload.Replication, *payload.GotHotConfirmation:
-// 		return nil
-// 	case *payload.GetLightInitialState:
-// 		return []payload.Payload{&payload.LightInitialState{
-// 			NetworkStart: true,
-// 			JetIDs:       []insolar.JetID{insolar.ZeroJetID},
-// 			Pulse: pulse.PulseProto{
-// 				PulseNumber: insolar.FirstPulseNumber,
-// 			},
-// 			Drops: [][]byte{
-// 				drop.MustEncode(&drop.Drop{JetID: insolar.ZeroJetID, Pulse: insolar.FirstPulseNumber}),
-// 			},
-// 		}}
-// 	}
-//
-// 	panic(fmt.Sprintf("unexpected message to heavy %T", pl))
-// }
-
 func defaultReceiveCallback(meta payload.Meta, pl payload.Payload) []payload.Payload {
-	// if meta.Receiver == NodeHeavy() {
-	// 	return DefaultHeavyResponse(pl)
-	// }
 	return nil
 }
 
@@ -133,7 +111,6 @@ func Test_test(t *testing.T) {
 	s, err := NewServer(context.Background(), DefaultHeavyConfig(), insolar.GenesisHeavyConfig{}, nil)
 	assert.NoError(t, err)
 	s.Stop()
-
 }
 
 func NewServer(
@@ -181,7 +158,6 @@ func NewServer(
 		Jets        jet.Storage
 		Nodes       *node.Storage
 		DB          *store.BadgerDB
-
 	)
 	{
 		var err error
@@ -227,17 +203,15 @@ func NewServer(
 
 	// Heavy components.
 	var (
-		PulseManager   insolar.PulseManager
-		Handler        *handler.Handler
-		Genesis        *genesis.Genesis
-		RecordPosition *object.RecordPositionDB
-		Records        *object.RecordDB
-		JetKeeper      executor.JetKeeper
+		PulseManager insolar.PulseManager
+		Handler      *handler.Handler
+		Genesis      *genesis.Genesis
+		Records      *object.RecordDB
+		JetKeeper    executor.JetKeeper
 	)
 	{
 		Records = object.NewRecordDB(DB)
-		RecordPosition = object.NewRecordPositionDB(DB)
-		indexes := object.NewIndexDB(DB)
+		indexes := object.NewIndexDB(DB, Records)
 		drops := drop.NewDB(DB)
 		jets := jet.NewDBStore(DB)
 		JetKeeper = executor.NewJetKeeper(jets, DB, Pulses)
@@ -263,7 +237,6 @@ func NewServer(
 
 		h := handler.New(cfg.Ledger)
 		h.RecordAccessor = Records
-		h.RecordPositions = RecordPosition
 		h.RecordModifier = Records
 		h.JetCoordinator = Coordinator
 		h.IndexAccessor = indexes
@@ -312,14 +285,6 @@ func NewServer(
 		_ = Handler
 	}
 
-
-
-		// conf := cfg.Ledger
-		// idLocker := object.NewIndexLocker()
-		// drops := drop.NewStorageMemory()
-		// records := object.NewRecordMemory()
-		// indexes := object.NewIndexStorageMemory()
-
 	// Start routers with handlers.
 	{
 		outHandler := func(msg *message.Message) error {
@@ -349,17 +314,6 @@ func NewServer(
 					ClientBus.Reply(context.Background(), meta, msg)
 				}
 			}()
-
-			// Republish as incoming to self.
-			if meta.Receiver == light.ID() {
-				err = ServerPubSub.Publish(bus.TopicIncoming, msg)
-				if err != nil {
-					panic(err)
-				}
-				return nil
-			}
-
-			// todo Add check that heavy is not available in test
 
 			clientHandler := func(msg *message.Message) (messages []*message.Message, e error) {
 				return nil, nil
@@ -393,18 +347,6 @@ func NewServer(
 			middleware.InstantAck,
 			ServerBus.IncomingMessageRouter,
 		)
-		// inRouter.AddNoPublisherHandler(
-		// 	"Incoming",
-		// 	bus.TopicIncoming,
-		// 	ServerPubSub,
-		// 	FlowDispatcher.Process,
-		// )
-		// inRouter.AddNoPublisherHandler(
-		// 	"OutgoingFromClient",
-		// 	bus.TopicOutgoing,
-		// 	ClientPubSub,
-		// 	FlowDispatcher.Process,
-		// )
 
 		startRouter(ctx, inRouter)
 		startRouter(ctx, outRouter)
@@ -420,13 +362,10 @@ func NewServer(
 		log.Fatalf("genesis failed on heavy with error: %v", err)
 	}
 
-
 	s := &Server{
 		pm:           PulseManager,
 		pulse:        *insolar.GenesisPulse,
 		clientSender: ClientBus,
-		// replicator:   Replicator,
-		// cleaner:      Cleaner,
 	}
 	return s, nil
 }
@@ -469,8 +408,6 @@ func (s *Server) Send(ctx context.Context, pl payload.Payload) (<-chan *message.
 }
 
 func (s *Server) Stop() {
-	// s.replicator.Stop()
-	// s.cleaner.Stop()
 }
 
 type nodeMock struct {
