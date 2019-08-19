@@ -33,7 +33,7 @@ import (
 func TestDepositTransferToken(t *testing.T) {
 	member := fullMigration(t, "Eth_TxHash_test")
 
-	firstBalance := getBalanceNoErr(t, member, member.ref)
+	firstBalance := getBalanceNoErr(t, member, member.Ref)
 	secondBalance := new(big.Int).Add(firstBalance, big.NewInt(1000))
 
 	var err error
@@ -51,7 +51,7 @@ func TestDepositTransferToken(t *testing.T) {
 	_, _, err = makeSignedRequest(member, "deposit.transfer", map[string]interface{}{"amount": "1000", "ethTxHash": "Eth_TxHash_test"})
 	require.NoError(t, err)
 
-	checkBalanceFewTimes(t, member, member.ref, secondBalance)
+	checkBalanceFewTimes(t, member, member.Ref, secondBalance)
 }
 
 func TestDepositTransferBeforeUnhold(t *testing.T) {
@@ -90,8 +90,8 @@ func TestDepositTransferNotEnoughConfirms(t *testing.T) {
 	migrationAddress := testutils.RandomString()
 	member := createMigrationMemberForMA(t, migrationAddress)
 
-	migrate(t, member.ref, "1000", "Eth_TxHash_test", migrationAddress, 2)
-	migrate(t, member.ref, "1000", "Eth_TxHash_test", migrationAddress, 0)
+	migrate(t, member.Ref, "1000", "Eth_TxHash_test", migrationAddress, 2)
+	migrate(t, member.Ref, "1000", "Eth_TxHash_test", migrationAddress, 0)
 
 	_, err := signedRequestWithEmptyRequestRef(t, member, "deposit.transfer", map[string]interface{}{"amount": "100", "ethTxHash": "Eth_TxHash_test"})
 	require.Error(t, err)
