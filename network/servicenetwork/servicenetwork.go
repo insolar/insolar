@@ -312,7 +312,7 @@ func (n *ServiceNetwork) SetOperableFunc(f insolar.NetworkOperableCallback) {
 
 // HandlePulse process pulse from PulseController
 func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse insolar.Pulse, originalPacket network.ReceivedPacket) {
-	n.Gatewayer.Gateway().OnPulseFromPulsar(ctx, pulse, originalPacket)
+	n.BaseGateway.OnPulseFromPulsar(ctx, pulse, originalPacket)
 }
 
 // consensus handlers here

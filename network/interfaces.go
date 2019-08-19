@@ -217,7 +217,6 @@ type Gateway interface {
 	GetState() insolar.NetworkState
 	NewGateway(context.Context, insolar.NetworkState) Gateway
 
-	OnPulseFromPulsar(context.Context, insolar.Pulse, ReceivedPacket)
 	OnPulseFromConsensus(context.Context, insolar.Pulse)
 	OnConsensusFinished(ctx context.Context, report Report)
 
