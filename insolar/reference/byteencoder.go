@@ -33,7 +33,7 @@ func byteEncodeBase58(source io.ByteReader, b *strings.Builder) error {
 	for byte, err := source.ReadByte(); err == nil; byte, err = source.ReadByte() {
 		err := buff.WriteByte(byte)
 		if err != nil {
-			return errors.Wrap(err, "")
+			return errors.Wrap(err, "failed to write base58 encoded data to string builder")
 		}
 	}
 	_, err := b.Write([]byte(base58.Encode(buff.Bytes())))
@@ -45,7 +45,7 @@ func byteEncodeBase64(source io.ByteReader, b *strings.Builder) error {
 	for byte, err := source.ReadByte(); err == nil; byte, err = source.ReadByte() {
 		buff.WriteByte(byte)
 	}
-	encoder := base64.NewEncoder(base64.URLEncoding, b)
+	encoder := base64.NewEncoder(base64.RawURLEncoding, b)
 	_, err := encoder.Write(buff.Bytes())
 	if err != nil {
 		return errors.Wrap(err, "failed to write base64 encoded data to string builder")

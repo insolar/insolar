@@ -60,7 +60,7 @@ func NewBase64Encoder(opts EncoderOptions) *Encoder {
 		byteEncoder:     byteEncodeBase64,
 		byteEncoderName: "base64",
 		authorityName:   "",
-		options:         opts,
+		options:         opts & FormatSchema,
 	}
 }
 
