@@ -75,13 +75,14 @@ import (
 )
 
 func NewPhase2Controller(loopingMinimalDelay time.Duration, packetPrepareOptions transport.PacketPrepareOptions,
-	queueNshReady <-chan *population.NodeAppearance, lockOSThread bool) *Phase2Controller {
+	queueNshReady <-chan *population.NodeAppearance, lockOSThread bool, hotRun bool) *Phase2Controller {
 
 	return &Phase2Controller{
 		packetPrepareOptions: packetPrepareOptions,
 		queueNshReady:        queueNshReady,
 		loopingMinimalDelay:  loopingMinimalDelay,
 		lockOSThread:         lockOSThread,
+		hotRun:               hotRun,
 	}
 }
 
@@ -94,6 +95,7 @@ type Phase2Controller struct {
 	queueNshReady        <-chan *population.NodeAppearance
 	loopingMinimalDelay  time.Duration
 	lockOSThread         bool
+	hotRun               bool
 }
 
 type Phase2PacketDispatcher struct {
@@ -258,7 +260,7 @@ func (c *Phase2Controller) workerPhase2(ctx context.Context) {
 			/*	This loop attempts to reads all messages from the channel before passing out
 				Also it does some waiting on idle loops, but such waiting should be minimal, as queue weights are time-based.
 			*/
-			np, done := readQueueOrDone(ctx, idleLoop, c.loopingMinimalDelay, c.queueNshReady)
+			np, done := readQueueOrDone(ctx, idleLoop && !c.hotRun, c.loopingMinimalDelay, c.queueNshReady)
 			switch {
 			case done:
 				log.Debug(">>>>workerPhase2: Done")

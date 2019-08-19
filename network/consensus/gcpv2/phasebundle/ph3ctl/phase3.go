@@ -80,7 +80,7 @@ import (
 
 func NewPhase3Controller(loopingMinimalDelay time.Duration, packetPrepareOptions transport.PacketPrepareOptions,
 	queueTrustUpdated <-chan ph2ctl.UpdateSignal, consensusStrategy consensus.SelectionStrategy,
-	inspectionFactory inspectors.VectorInspection, enabledFast, lockOSThread bool) *Phase3Controller {
+	inspectionFactory inspectors.VectorInspection, enabledFast, lockOSThread bool, hotRun bool) *Phase3Controller {
 	return &Phase3Controller{
 		packetPrepareOptions: packetPrepareOptions,
 		queueTrustUpdated:    queueTrustUpdated,
@@ -89,6 +89,7 @@ func NewPhase3Controller(loopingMinimalDelay time.Duration, packetPrepareOptions
 		inspectionFactory:    inspectionFactory,
 		isFastPacketEnabled:  enabledFast,
 		lockOSThread:         lockOSThread,
+		hotRun:               hotRun,
 	}
 }
 
@@ -101,6 +102,7 @@ type Phase3Controller struct {
 	loopingMinimalDelay  time.Duration
 	isFastPacketEnabled  bool
 	lockOSThread         bool
+	hotRun               bool
 
 	inspectionFactory inspectors.VectorInspection
 	R                 *core.FullRealm
@@ -255,6 +257,11 @@ func (c *Phase3Controller) workerPrePhase3(ctx context.Context) inspectors.Vecto
 	pop := c.R.GetPopulation()
 	didFastPhase3 := false
 
+	hotRunChan := make(chan struct{})
+	if c.hotRun {
+		close(hotRunChan)
+	}
+
 outer:
 	for {
 		select {
@@ -268,6 +275,8 @@ outer:
 		case <-startOfPhase3:
 			log.Debug(">>>>workerPrePhase3: startOfPhase3")
 			break outer
+		case <-hotRunChan:
+			continue
 		case upd := <-c.queueTrustUpdated:
 			switch {
 			case upd.IsPingSignal(): // ping indicates arrival of Phase2 packet, to support chasing
