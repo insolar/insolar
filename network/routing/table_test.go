@@ -75,7 +75,7 @@ func newNode(ref insolar.Reference, id int) insolar.NetworkNode {
 func TestTable_Resolve(t *testing.T) {
 	table := Table{}
 
-	refs := gen.References(2)
+	refs := gen.UniqueReferences(2)
 	pulse := insolar.GenesisPulse
 	nodeKeeperMock := mock.NewNodeKeeperMock(t)
 	nodeKeeperMock.GetAccessorMock.Set(func(p1 insolar.PulseNumber) network.Accessor {

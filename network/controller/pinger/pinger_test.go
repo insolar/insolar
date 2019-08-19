@@ -88,7 +88,7 @@ func TestPing_Errors(t *testing.T) {
 
 func TestPing_HappyPath(t *testing.T) {
 	ctx := context.Background()
-	refs := gen.References(2)
+	refs := gen.UniqueReferences(2)
 
 	cm2 := component.NewManager(nil)
 	f2 := transport.NewFactory(configuration.NewHostNetwork().Transport)
@@ -125,7 +125,7 @@ func TestPing_HappyPath(t *testing.T) {
 
 func TestPing_Timeout(t *testing.T) {
 	ctx := context.Background()
-	refs := gen.References(2)
+	refs := gen.UniqueReferences(2)
 
 	cm2 := component.NewManager(nil)
 	f2 := transport.NewFactory(configuration.NewHostNetwork().Transport)
