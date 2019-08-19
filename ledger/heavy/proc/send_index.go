@@ -60,7 +60,7 @@ func (p *SendIndex) Proceed(ctx context.Context) error {
 	if err == object.ErrIndexNotFound {
 		return &payload.CodedError{
 			Code: payload.CodeNotFound,
-			Text: fmt.Sprintf("index nod found for %v", ensureIndex.ObjectID.DebugString()),
+			Text: fmt.Sprintf("index not found for %v", ensureIndex.ObjectID.DebugString()),
 		}
 	}
 	if err != nil {
