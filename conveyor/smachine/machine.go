@@ -66,10 +66,10 @@ type SlotMachineConfig struct {
 func NewSlotMachine(config SlotMachineConfig) SlotMachine {
 	return SlotMachine{
 		config:       config,
-		unusedSlots:  NewListHead(UnusedList),
-		activeSlots:  NewListHead(ActiveList),
-		workingSlots: NewListHead(ActiveList),
-		pollingSlots: NewListHead(PollingList),
+		unusedSlots:  NewQueueHead(UnusedList),
+		activeSlots:  NewQueueHead(ActiveList),
+		workingSlots: NewQueueHead(ActiveList),
+		pollingSlots: NewQueueHead(PollingList),
 		syncQueue:    NewSyncQueue(&sync.Mutex{}),
 	}
 }
@@ -85,11 +85,11 @@ type SlotMachine struct {
 
 	migrationCount uint16
 
-	unusedSlots  ListHead
-	workingSlots ListHead //slots are currently in processing
+	unusedSlots  QueueHead
+	workingSlots QueueHead //slots are currently in processing
 
-	activeSlots  ListHead //they are are moved to workingSlots on every Scan
-	pollingSlots ListHead
+	activeSlots  QueueHead //they are are moved to workingSlots on every Scan
+	pollingSlots QueueHead
 	nextPollTime time.Time
 
 	syncQueue    SyncQueue // for detached/async ops, queued functions MUST BE panic-safe
@@ -178,7 +178,7 @@ func (m *SlotMachine) scanWorkingSlots(workCtl WorkerController) {
 	}
 }
 
-func (m *SlotMachine) flushPollingSlotsTo(target *ListHead) {
+func (m *SlotMachine) flushPollingSlotsTo(target *QueueHead) {
 	m.nextPollTime = time.Time{}
 	target.AppendAll(&m.pollingSlots)
 }
