@@ -38,10 +38,10 @@ func TestMemberCreate(t *testing.T) {
 func TestMemberCreateWithBadKey(t *testing.T) {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
-	member.pubKey = "fake"
+	member.PubKey = "fake"
 	_, err = signedRequestWithEmptyRequestRef(t, member, "member.create", nil)
 	require.Error(t, err)
-	require.Contains(t, err.Error(), fmt.Sprintf("problems with decoding. Key - %s", member.pubKey))
+	require.Contains(t, err.Error(), fmt.Sprintf("problems with decoding. Key - %s", member.PubKey))
 }
 
 func TestMemberCreateWithSamePublicKey(t *testing.T) {

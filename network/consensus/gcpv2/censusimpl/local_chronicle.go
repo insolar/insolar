@@ -87,14 +87,14 @@ type localChronicles struct {
 	profileFactory profiles.Factory
 }
 
-func (c *localChronicles) GetLatestCensus() census.Operational {
+func (c *localChronicles) GetLatestCensus() (census.Operational, bool) {
 	c.rw.RLock()
 	defer c.rw.RUnlock()
 
 	if c.expected != nil {
-		return c.expected
+		return c.expected, true
 	}
-	return c.active
+	return c.active, false
 }
 
 func (c *localChronicles) GetRecentCensus(pn pulse.Number) census.Operational {

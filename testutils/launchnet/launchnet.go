@@ -14,9 +14,7 @@
 // limitations under the License.
 //
 
-// +build functest
-
-package functest
+package launchnet
 
 import (
 	"bufio"
@@ -32,16 +30,14 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
-	"testing"
 	"time"
 
 	"gopkg.in/yaml.v2"
 
-	"github.com/pkg/errors"
-
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/defaults"
+	"github.com/pkg/errors"
 )
 
 const HOST = "http://localhost:19102"
@@ -58,41 +54,94 @@ var stdin io.WriteCloser
 var stdout io.ReadCloser
 var stderr io.ReadCloser
 
-var (
-	insolarRootMemberKeysPath           = launchnetPath("configs", insolarRootMemberKeys)
-	insolarMigrationAdminMemberKeysPath = launchnetPath("configs", insolarMigrationAdminMemberKeys)
-	insolarBootstrapConfigPath          = launchnetPath("bootstrap.yaml")
-)
+// Method starts launchnet before execution of callback function (cb) and stops launchnet after.
+// Returns exit code as a result from calling callback function.
+func Run(cb func() int) int {
+	err := setup()
+	defer teardown()
+	if err != nil {
+		fmt.Println("error while setup, skip tests: ", err)
+		return 1
+	}
 
-func launchnetPath(a ...string) string {
+	c := make(chan os.Signal)
+	signal.Notify(c, os.Interrupt)
+
+	go func() {
+		sig := <-c
+		fmt.Printf("Got %s signal. Aborting...\n", sig)
+		teardown()
+	}()
+
+	pulseWatcher, config, err := pulseWatcherPath()
+	if err != nil {
+		fmt.Println("PulseWatcher not found: ", err)
+		return 1
+	}
+
+	code := cb()
+
+	if code != 0 {
+		out, err := exec.Command(pulseWatcher, "-c", config, "-s").CombinedOutput()
+		if err != nil {
+			fmt.Println("PulseWatcher execution error: ", err)
+			return 1
+		}
+		fmt.Println(string(out))
+	}
+	return code
+}
+
+var info *requester.InfoResponse
+var Root User
+var MigrationAdmin User
+var MigrationDaemons [insolar.GenesisAmountActiveMigrationDaemonMembers]User
+
+type User struct {
+	Ref     string
+	PrivKey string
+	PubKey  string
+}
+
+func launchnetPath(a ...string) (string, error) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return "", errors.Wrap(err, "[ startNet ] Can't get current working directory")
+	}
+	cwdList := strings.Split(cwd, "/")
+	var count int
+	for i := len(cwdList); i >= 0; i-- {
+		if cwdList[i-1] == "insolar" && cwdList[i-2] == "insolar" {
+			break
+		}
+		count++
+	}
+	var dirUp []string
+	for i := 0; i < count; i++ {
+		dirUp = append(dirUp, "..")
+	}
+
 	d := defaults.LaunchnetDir()
-	parts := []string{"..", d}
+	parts := append(dirUp, d)
 	if strings.HasPrefix(d, "/") {
 		parts = []string{d}
 	}
 	parts = append(parts, a...)
-	return filepath.Join(parts...)
+	return filepath.Join(parts...), nil
 }
 
-var info *requester.InfoResponse
-var root user
-var migrationAdmin user
-var migrationDaemons [insolar.GenesisAmountActiveMigrationDaemonMembers]user
-
-type user struct {
-	ref     string
-	privKey string
-	pubKey  string
-}
-
-func getNumberNodes() (int, error) {
+func GetNodesCount() (int, error) {
 	type nodesConf struct {
 		DiscoverNodes []interface{} `yaml:"discovery_nodes"`
 	}
 
 	var conf nodesConf
 
-	buff, err := ioutil.ReadFile(insolarBootstrapConfigPath)
+	path, err := launchnetPath("bootstrap.yaml")
+	if err != nil {
+		return 0, err
+	}
+	buff, err := ioutil.ReadFile(path)
 	if err != nil {
 		return 0, errors.Wrap(err, "[ getNumberNodes ] Can't read bootstrap config")
 	}
@@ -105,23 +154,7 @@ func getNumberNodes() (int, error) {
 	return len(conf.DiscoverNodes), nil
 }
 
-func functestPath() string {
-	p, err := build.Default.Import("github.com/insolar/insolar", "", build.FindOnly)
-	if err != nil {
-		panic(err)
-	}
-	return filepath.Join(p.Dir, "functest")
-}
-
-func envVarWithDefault(name string, defaultValue string) string {
-	value := os.Getenv(name)
-	if value != "" {
-		return value
-	}
-	return defaultValue
-}
-
-func loadMemberKeys(keysPath string, member *user) error {
+func loadMemberKeys(keysPath string, member *User) error {
 	text, err := ioutil.ReadFile(keysPath)
 	if err != nil {
 		return errors.Wrapf(err, "[ loadMemberKeys ] could't load member keys")
@@ -134,27 +167,40 @@ func loadMemberKeys(keysPath string, member *user) error {
 	if data["private_key"] == "" || data["public_key"] == "" {
 		return errors.New("[ loadMemberKeys ] could't find any keys")
 	}
-	member.privKey = data["private_key"]
-	member.pubKey = data["public_key"]
+	member.PrivKey = data["private_key"]
+	member.PubKey = data["public_key"]
 
 	return nil
 }
 
 func loadAllMembersKeys() error {
-	err := loadMemberKeys(insolarRootMemberKeysPath, &root)
+	path, err := launchnetPath("configs", insolarRootMemberKeys)
 	if err != nil {
 		return err
 	}
-	err = loadMemberKeys(insolarMigrationAdminMemberKeysPath, &migrationAdmin)
+	err = loadMemberKeys(path, &Root)
 	if err != nil {
 		return err
 	}
-	for i, md := range migrationDaemons {
-		err = loadMemberKeys(launchnetPath("configs", "migration_daemon_"+strconv.Itoa(i)+"_member_keys.json"), &md)
+	path, err = launchnetPath("configs", insolarMigrationAdminMemberKeys)
+	if err != nil {
+		return err
+	}
+	err = loadMemberKeys(path, &MigrationAdmin)
+	if err != nil {
+		return err
+	}
+	for i := range MigrationDaemons {
+		path, err := launchnetPath("configs", "migration_daemon_"+strconv.Itoa(i)+"_member_keys.json")
 		if err != nil {
 			return err
 		}
-		migrationDaemons[i] = md
+		var md User
+		err = loadMemberKeys(path, &md)
+		if err != nil {
+			return err
+		}
+		MigrationDaemons[i] = md
 	}
 
 	return nil
@@ -258,15 +304,22 @@ func waitForNet() error {
 }
 
 func startNet() error {
+
 	cwd, err := os.Getwd()
 	if err != nil {
 		return errors.Wrap(err, "[ startNet ] Can't get current working directory")
 	}
 	defer os.Chdir(cwd)
 
-	err = os.Chdir("../")
-	if err != nil {
-		return errors.Wrap(err, "[ startNet  ] Can't change dir")
+	for cwd[len(cwd)-15:] != "insolar/insolar" {
+		err = os.Chdir("../")
+		if err != nil {
+			return errors.Wrap(err, "[ startNet  ] Can't change dir")
+		}
+		cwd, err = os.Getwd()
+		if err != nil {
+			return errors.Wrap(err, "[ startNet ] Can't get current working directory")
+		}
 	}
 
 	// If you want to add -n flag here please make sure that insgorund will
@@ -275,9 +328,6 @@ func startNet() error {
 	// during execution of functests.
 	cmd = exec.Command("./scripts/insolard/launchnet.sh", "-gw")
 	stdout, _ = cmd.StdoutPipe()
-	if err != nil {
-		return errors.Wrap(err, "[ startNet ] could't set stdout: ")
-	}
 
 	stderr, err = cmd.StderrPipe()
 	if err != nil {
@@ -361,18 +411,18 @@ func setup() error {
 		time.Sleep(time.Second)
 	}
 	if err != nil {
-		return errors.Wrap(err, "[ setup ] could't receive root reference ")
+		return errors.Wrap(err, "[ setup ] could't receive Root reference ")
 	}
 
 	fmt.Println("[ setup ] references successfully received")
-	root.ref = info.RootMember
-	migrationAdmin.ref = info.MigrationAdminMember
+	Root.Ref = info.RootMember
+	migrationAdmin.Ref = info.MigrationAdminMember
 	err = setMigrationDaemonsRef()
 	if err != nil {
 		return errors.Wrap(err, "[ setup ] get reference daemons by public key failed ")
 	}
 
-	contracts = make(map[string]*contractInfo)
+	//Contracts = make(map[string]*contractInfo)
 
 	return nil
 }
@@ -395,46 +445,4 @@ func teardown() {
 		fmt.Println("[ teardown ]  failed to stop insolard: ", err)
 	}
 	fmt.Println("[ teardown ] insolard was successfully stoped")
-}
-
-func testMainWrapper(m *testing.M) int {
-	err := setup()
-	defer teardown()
-	if err != nil {
-		fmt.Println("error while setup, skip tests: ", err)
-		return 1
-	}
-
-	c := make(chan os.Signal)
-	signal.Notify(c, os.Interrupt)
-
-	go func() {
-		select {
-		case sig := <-c:
-			fmt.Printf("Got %s signal. Aborting...\n", sig)
-			teardown()
-		}
-	}()
-
-	pulseWatcher, config, err := pulseWatcherPath()
-	if err != nil {
-		fmt.Println("PulseWatcher not found: ", err)
-		return 1
-	}
-
-	code := m.Run()
-
-	if code != 0 {
-		out, err := exec.Command(pulseWatcher, "-c", config, "-s").CombinedOutput()
-		if err != nil {
-			fmt.Println("PulseWatcher execution error: ", err)
-			return 1
-		}
-		fmt.Println(string(out))
-	}
-	return code
-}
-
-func TestMain(m *testing.M) {
-	os.Exit(testMainWrapper(m))
 }

@@ -25,6 +25,7 @@ import (
 
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/testutils"
+	"github.com/insolar/insolar/testutils/launchnet"
 	"github.com/stretchr/testify/require"
 )
 
@@ -34,14 +35,14 @@ func TestMigrationToken(t *testing.T) {
 	migrationAddress := testutils.RandomString()
 	member := createMigrationMemberForMA(t, migrationAddress)
 
-	deposit := migrate(t, member.ref, "1000", "Test_TxHash", migrationAddress, 0)
+	deposit := migrate(t, member.Ref, "1000", "Test_TxHash", migrationAddress, 0)
 	firstMemberBalance := deposit["balance"].(string)
 
 	require.Equal(t, "0", firstMemberBalance)
-	firstMABalance := getBalanceNoErr(t, &migrationAdmin, migrationAdmin.ref)
+	firstMABalance := getBalanceNoErr(t, &launchnet.MigrationAdmin, launchnet.MigrationAdmin.Ref)
 
-	deposit = migrate(t, member.ref, "1000", "Test_TxHash", migrationAddress, 1)
-	deposit = migrate(t, member.ref, "1000", "Test_TxHash", migrationAddress, 2)
+	deposit = migrate(t, member.Ref, "1000", "Test_TxHash", migrationAddress, 1)
+	deposit = migrate(t, member.Ref, "1000", "Test_TxHash", migrationAddress, 2)
 
 	sm := make(foundation.StableMap)
 	confirmerReferencesMap := deposit["confirmerReferences"].(string)
@@ -51,14 +52,14 @@ func TestMigrationToken(t *testing.T) {
 	err = sm.UnmarshalBinary(decoded)
 
 	for i := 0; i < 3; i++ {
-		require.Equal(t, sm[migrationDaemons[i].ref], "1000")
+		require.Equal(t, sm[launchnet.MigrationDaemons[i].Ref], "1000")
 	}
 	require.Equal(t, deposit["ethTxHash"], "Test_TxHash")
 	require.Equal(t, deposit["amount"], "1000")
 
 	secondMemberBalance := deposit["balance"].(string)
 	require.Equal(t, "1000", secondMemberBalance)
-	secondMABalance := getBalanceNoErr(t, &migrationAdmin, migrationAdmin.ref)
+	secondMABalance := getBalanceNoErr(t, &launchnet.MigrationAdmin, launchnet.MigrationAdmin.Ref)
 	dif := new(big.Int).Sub(firstMABalance, secondMABalance)
 	require.Equal(t, "1000", dif.String())
 }
@@ -67,7 +68,7 @@ func TestMigrationTokenOnDifferentDeposits(t *testing.T) {
 	migrationAddress := testutils.RandomString()
 	member := createMigrationMemberForMA(t, migrationAddress)
 
-	_ = migrate(t, member.ref, "1000", "Test_TxHash", migrationAddress, 0)
+	_ = migrate(t, member.Ref, "1000", "Test_TxHash", migrationAddress, 0)
 	secondDeposit := migrate(t, member.ref, "1000", "Test_TxHash", migrationAddress, 1)
 
 	sm := make(foundation.StableMap)
@@ -79,13 +80,13 @@ func TestMigrationTokenOnDifferentDeposits(t *testing.T) {
 	require.NoError(t, err)
 
 	require.NoError(t, err)
-	require.Equal(t, sm[migrationDaemons[0].ref], "1000")
-	require.Equal(t, sm[migrationDaemons[1].ref], "1000")
+	require.Equal(t, sm[launchnet.MigrationDaemons[0].Ref], "1000")
+	require.Equal(t, sm[launchnet.MigrationDaemons[1].Ref], "1000")
 }
 
 func TestMigrationTokenNotInTheList(t *testing.T) {
 	migrationAddress := generateMigrationAddress()
-	_, err := signedRequestWithEmptyRequestRef(t, &migrationAdmin,
+	_, err := signedRequestWithEmptyRequestRef(t, &launchnet.MigrationAdmin,
 		"deposit.migration",
 		map[string]interface{}{"amount": "1000", "ethTxHash": "TxHash", "migrationAddress": migrationAddress})
 	require.Error(t, err)
@@ -97,7 +98,7 @@ func TestMigrationTokenZeroAmount(t *testing.T) {
 	_ = createMigrationMemberForMA(t, migrationAddress)
 
 	result, err := signedRequestWithEmptyRequestRef(t,
-		&migrationDaemons[0],
+		&launchnet.MigrationDaemons[0],
 		"deposit.migration",
 		map[string]interface{}{"amount": "0", "ethTxHash": "TxHash", "migrationAddress": migrationAddress})
 
@@ -112,7 +113,7 @@ func TestMigrationTokenMistakeField(t *testing.T) {
 	_ = createMigrationMemberForMA(t, migrationAddress)
 
 	result, err := signedRequestWithEmptyRequestRef(t,
-		&migrationDaemons[0],
+		&launchnet.MigrationDaemons[0],
 		"deposit.migration",
 		map[string]interface{}{"amount1": "0", "ethTxHash": "TxHash", "migrationAddress": migrationAddress})
 	require.Error(t, err)
@@ -124,7 +125,7 @@ func TestMigrationTokenNilValue(t *testing.T) {
 	migrationAddress := generateMigrationAddress()
 	_ = createMigrationMemberForMA(t, migrationAddress)
 
-	result, err := signedRequestWithEmptyRequestRef(t, &migrationDaemons[0], "deposit.migration", map[string]interface{}{"amount": "20", "ethTxHash": nil, "migrationAddress": migrationAddress})
+	result, err := signedRequestWithEmptyRequestRef(t, &launchnet.MigrationDaemons[0], "deposit.migration", map[string]interface{}{"amount": "20", "ethTxHash": nil, "migrationAddress": migrationAddress})
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "failed to get 'ethTxHash' param")
 	require.Nil(t, result)
@@ -136,11 +137,11 @@ func TestMigrationTokenMaxAmount(t *testing.T) {
 	member := createMigrationMemberForMA(t, migrationAddress)
 
 	result, err := signedRequest(t,
-		&migrationDaemons[0],
+		&launchnet.MigrationDaemons[0],
 		"deposit.migration",
 		map[string]interface{}{"amount": "500000000000000000", "ethTxHash": "ethTxHash", "migrationAddress": migrationAddress})
 	require.NoError(t, err)
-	require.Equal(t, result.(map[string]interface{})["memberReference"].(string), member.ref)
+	require.Equal(t, result.(map[string]interface{})["memberReference"].(string), member.Ref)
 }
 
 func TestMigrationDoubleMigrationFromSameDaemon(t *testing.T) {
@@ -148,12 +149,12 @@ func TestMigrationDoubleMigrationFromSameDaemon(t *testing.T) {
 	member := createMigrationMemberForMA(t, migrationAddress)
 
 	resultMigr1, err := signedRequest(t,
-		&migrationDaemons[0], "deposit.migration", map[string]interface{}{"amount": "20", "ethTxHash": "ethTxHash", "migrationAddress": migrationAddress})
+		&launchnet.MigrationDaemons[0], "deposit.migration", map[string]interface{}{"amount": "20", "ethTxHash": "ethTxHash", "migrationAddress": migrationAddress})
 	require.NoError(t, err)
-	require.Equal(t, resultMigr1.(map[string]interface{})["memberReference"].(string), member.ref)
+	require.Equal(t, resultMigr1.(map[string]interface{})["memberReference"].(string), member.Ref)
 
 	_, err = signedRequestWithEmptyRequestRef(t,
-		&migrationDaemons[0],
+		&launchnet.MigrationDaemons[0],
 		"deposit.migration",
 		map[string]interface{}{"amount": "20", "ethTxHash": "ethTxHash", "migrationAddress": migrationAddress})
 	require.Error(t, err)
@@ -166,11 +167,11 @@ func TestMigrationAnotherAmountSameTx(t *testing.T) {
 	_ = createMigrationMemberForMA(t, migrationAddress)
 
 	_, err := signedRequest(t,
-		&migrationDaemons[0], "deposit.migration", map[string]interface{}{"amount": "20", "ethTxHash": "ethTxHash", "migrationAddress": migrationAddress})
+		&launchnet.MigrationDaemons[0], "deposit.migration", map[string]interface{}{"amount": "20", "ethTxHash": "ethTxHash", "migrationAddress": migrationAddress})
 	require.NoError(t, err)
 
 	_, err = signedRequest(t,
-		&migrationDaemons[1],
+		&launchnet.MigrationDaemons[1],
 		"deposit.migration",
 		map[string]interface{}{"amount": "30", "ethTxHash": "ethTxHash", "migrationAddress": migrationAddress})
 	require.NoError(t, err)

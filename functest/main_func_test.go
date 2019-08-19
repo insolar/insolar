@@ -19,24 +19,14 @@
 package functest
 
 import (
-	"math/big"
+	"os"
 	"testing"
 
-	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/testutils/launchnet"
-
-	"github.com/stretchr/testify/require"
 )
 
-func TestGetBalance(t *testing.T) {
-	firstMember := createMember(t)
-	firstBalance := getBalanceNoErr(t, firstMember, firstMember.Ref)
-	r := big.NewInt(1000000000)
-	require.Equal(t, r, firstBalance)
-}
-
-func TestGetBalanceWrongRef(t *testing.T) {
-	_, err := signedRequestWithEmptyRequestRef(t, &launchnet.Root, "wallet.getBalance", map[string]interface{}{"reference": gen.Reference().String()})
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "index not found")
+func TestMain(m *testing.M) {
+	os.Exit(launchnet.Run(func() int {
+		return m.Run()
+	}))
 }
