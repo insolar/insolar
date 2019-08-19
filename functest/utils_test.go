@@ -33,6 +33,7 @@ import (
 
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/testutils"
 
 	"github.com/insolar/rpc/v2/json2"
@@ -175,10 +176,12 @@ func migrate(t *testing.T, memberRef string, amount string, tx string, ma string
 	deposits, ok := res.(map[string]interface{})["deposits"].(map[string]interface{})
 	require.True(t, ok)
 	deposit, ok := deposits[tx].(map[string]interface{})
-	decoded, err := base64.StdEncoding.DecodeString(deposit["confirmerReferences"].(string))
+	sm := make(foundation.StableMap)
 	require.NoError(t, err)
-	sm, err := unmarshalStableMap(decoded)
-
+	confirmerReferencesMap := deposit["confirmerReferences"].(string)
+	decoded, err := base64.StdEncoding.DecodeString(confirmerReferencesMap)
+	require.NoError(t, err)
+	err = sm.UnmarshalBinary(decoded)
 	require.True(t, ok)
 	require.Equal(t, sm[migrationDaemons[mdNum].ref], amount)
 
@@ -534,17 +537,4 @@ func waitForFunction(customFunction func() api.CallMethodReply, functionTimeout 
 	case <-time.After(functionTimeout):
 		return nil, errors.New("timeout was exceeded")
 	}
-}
-
-func unmarshalStableMap(data []byte) (map[string]string, error) {
-	res := make([][2]string, 0)
-	err := insolar.Deserialize(data, &res)
-	if err != nil {
-		return nil, err
-	}
-	m := make(map[string]string)
-	for _, pair := range res {
-		m[pair[0]] = pair[1]
-	}
-	return m, nil
 }

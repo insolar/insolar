@@ -23,6 +23,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/require"
 )
@@ -42,10 +43,12 @@ func TestMigrationToken(t *testing.T) {
 	deposit = migrate(t, member.ref, "1000", "Test_TxHash", migrationAddress, 1)
 	deposit = migrate(t, member.ref, "1000", "Test_TxHash", migrationAddress, 2)
 
-	decoded, err := base64.StdEncoding.DecodeString(deposit["confirmerReferences"].(string))
+	sm := make(foundation.StableMap)
+	confirmerReferencesMap := deposit["confirmerReferences"].(string)
+	decoded, err := base64.StdEncoding.DecodeString(confirmerReferencesMap)
 	require.NoError(t, err)
-	sm, err := unmarshalStableMap(decoded)
-	require.NoError(t, err)
+
+	err = sm.UnmarshalBinary(decoded)
 
 	for i := 0; i < 3; i++ {
 		require.Equal(t, sm[migrationDaemons[i].ref], "1000")
@@ -67,9 +70,12 @@ func TestMigrationTokenOnDifferentDeposits(t *testing.T) {
 	_ = migrate(t, member.ref, "1000", "Test_TxHash", migrationAddress, 0)
 	secondDeposit := migrate(t, member.ref, "1000", "Test_TxHash", migrationAddress, 1)
 
-	decoded, err := base64.StdEncoding.DecodeString(secondDeposit["confirmerReferences"].(string))
+	sm := make(foundation.StableMap)
+	confirmerReferencesMap := secondDeposit["confirmerReferences"].(string)
+	decoded, err := base64.StdEncoding.DecodeString(confirmerReferencesMap)
 	require.NoError(t, err)
-	sm, err := unmarshalStableMap(decoded)
+
+	err = sm.UnmarshalBinary(decoded)
 	require.NoError(t, err)
 
 	require.NoError(t, err)
