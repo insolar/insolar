@@ -269,7 +269,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		}
 
 		pm := pulsemanager.NewPulseManager()
-		pm.Bus = Bus
 		pm.NodeNet = NodeNetwork
 		pm.NodeSetter = Nodes
 		pm.Nodes = Nodes
@@ -288,7 +287,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		h.JetCoordinator = Coordinator
 		h.IndexAccessor = indexes
 		h.IndexModifier = indexes
-		h.Bus = Bus
 		h.DropModifier = drops
 		h.PCS = CryptoScheme
 		h.PulseAccessor = Pulses

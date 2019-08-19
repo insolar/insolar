@@ -42,7 +42,6 @@ import (
 type Handler struct {
 	cfg configuration.Ledger
 
-	Bus            insolar.MessageBus
 	JetCoordinator jet.Coordinator
 	PCS            insolar.PlatformCryptographyScheme
 	RecordAccessor object.RecordAccessor
