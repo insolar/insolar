@@ -21,14 +21,15 @@ import (
 	"testing"
 
 	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
-	"github.com/insolar/insolar/insolar/store"
-	"github.com/insolar/insolar/ledger/drop"
+	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/heavy/executor"
 	"github.com/stretchr/testify/require"
 )
@@ -60,6 +61,7 @@ func TestSendInitialState_Dep(t *testing.T) {
 }
 
 func TestSendInitialState_ProceedNoPulse(t *testing.T) {
+	ctx := inslogger.TestContext(t)
 	sender := bus.NewSenderMock(t)
 	sender.ReplyMock.Set(func(ctx context.Context, origin payload.Meta, reply *message.Message) {
 		result, err := payload.Unmarshal(reply.Payload)
@@ -72,92 +74,53 @@ func TestSendInitialState_ProceedNoPulse(t *testing.T) {
 	is := NewSendInitialState(payload.Meta{})
 	is.dep.startPulse = pulse.NewStartPulse()
 	is.dep.sender = sender
-	err := is.Proceed(context.Background())
+	err := is.Proceed(ctx)
 	require.NoError(t, err)
 }
 
 func TestSendInitialState_ProceedUnknownRequest(t *testing.T) {
+	ctx := inslogger.TestContext(t)
 	p, err := payload.Marshal(&payload.Request{})
 	require.NoError(t, err)
 	is := NewSendInitialState(payload.Meta{Payload: p})
 	is.dep.startPulse = pulse.NewStartPulse()
-	is.dep.startPulse.SetStartPulse(context.Background(), insolar.Pulse{PulseNumber: 1000})
-	err = is.Proceed(context.Background())
+	is.dep.startPulse.SetStartPulse(ctx, insolar.Pulse{PulseNumber: 1000})
+
+	err = is.Proceed(ctx)
 	require.EqualError(t, err, "unexpected payload type *payload.Request")
 }
 
 func TestSendInitialState_ProceedForNetworkStart(t *testing.T) {
-	p, err := payload.Marshal(&payload.GetLightInitialState{Pulse: 1000})
-	require.NoError(t, err)
-	startPulse := pulse.NewStartPulse()
-	startPulse.SetStartPulse(context.Background(), insolar.Pulse{PulseNumber: 1000})
-	topSyncPulse := insolar.Pulse{PulseNumber: 999}
-	jetKeeper := executor.NewJetKeeperMock(t)
-	jetKeeper.TopSyncPulseMock.Return(topSyncPulse.PulseNumber)
-	pulseAccessor := pulse.NewAccessorMock(t)
-	pulseAccessor.ForPulseNumberMock.Return(topSyncPulse, nil)
-	jetID := gen.JetID()
-	jetTree := jet.NewStorageMock(t)
-	jetTree.AllMock.Return([]insolar.JetID{jetID})
-	light := gen.Reference()
-	jetCoordinator := jet.NewCoordinatorMock(t)
-	jetCoordinator.LightExecutorForJetMock.Return(&light, nil)
-	dropItem := drop.MustEncode(&drop.Drop{
-		Pulse: 999,
-		JetID: jetID,
-	})
-	db := store.NewDBMock(t)
-	db.GetMock.Return(dropItem, nil)
-	sender := bus.NewSenderMock(t)
-	sender.ReplyMock.Set(func(ctx context.Context, origin payload.Meta, reply *message.Message) {
-		result, err := payload.Unmarshal(reply.Payload)
-		require.NoError(t, err)
-		state, ok := result.(*payload.LightInitialState)
-		require.True(t, ok)
-		require.Equal(t, topSyncPulse.PulseNumber, state.Pulse.PulseNumber)
-		require.Equal(t, 1, len(state.JetIDs))
-		require.Equal(t, jetID, state.JetIDs[0])
-		require.Equal(t, 1, len(state.Drops))
-		require.Equal(t, dropItem, state.Drops[0])
-		require.True(t, state.NetworkStart)
-	})
-	is := NewSendInitialState(payload.Meta{
-		Payload: p,
-		Sender:  light,
-		Pulse:   1000,
-	})
-	is.dep.startPulse = startPulse
-	is.dep.jetKeeper = jetKeeper
-	is.dep.pulseAccessor = pulseAccessor
-	is.dep.jetTree = jetTree
-	is.dep.sender = sender
-	err = is.Proceed(context.Background())
-	require.NoError(t, err)
-}
+	mc := minimock.NewController(t)
+	defer mc.Finish()
+	ctx := inslogger.TestContext(t)
 
-func TestSendInitialState_ProceedForNetworkStartWithSplit(t *testing.T) {
 	p, err := payload.Marshal(&payload.GetLightInitialState{Pulse: 1000})
 	require.NoError(t, err)
+
+	sp := insolar.Pulse{PulseNumber: 1000}
 	startPulse := pulse.NewStartPulse()
-	startPulse.SetStartPulse(context.Background(), insolar.Pulse{PulseNumber: 1000})
+	startPulse.SetStartPulse(ctx, sp)
+
 	topSyncPulse := insolar.Pulse{PulseNumber: 999}
-	jetKeeper := executor.NewJetKeeperMock(t)
+	jetKeeper := executor.NewJetKeeperMock(mc)
 	jetKeeper.TopSyncPulseMock.Return(topSyncPulse.PulseNumber)
-	pulseAccessor := pulse.NewAccessorMock(t)
+
+	pulseAccessor := pulse.NewAccessorMock(mc)
 	pulseAccessor.ForPulseNumberMock.Return(topSyncPulse, nil)
-	jetID := gen.JetID()
-	jetTree := jet.NewStorageMock(t)
-	jetTree.AllMock.Return([]insolar.JetID{jetID})
+
 	light := gen.Reference()
-	jetCoordinator := jet.NewCoordinatorMock(t)
-	jetCoordinator.LightExecutorForJetMock.Return(&light, nil)
-	dropItem := drop.MustEncode(&drop.Drop{
-		Pulse: 999,
-		JetID: jetID,
-		Split: true,
+
+	JetIDs := make([]insolar.JetID, 0)
+	Drops := make([][]byte, 0)
+	Indexes := make([]record.Index, 0)
+	initialStateAccessor := executor.NewInitialStateAccessorMock(mc)
+	initialStateAccessor.GetMock.Expect(ctx, light, sp.PulseNumber).Return(&executor.InitialState{
+		JetIDs:  JetIDs,
+		Drops:   Drops,
+		Indexes: Indexes,
 	})
-	db := store.NewDBMock(t)
-	db.GetMock.Return(dropItem, nil)
+
 	sender := bus.NewSenderMock(t)
 	sender.ReplyMock.Set(func(ctx context.Context, origin payload.Meta, reply *message.Message) {
 		result, err := payload.Unmarshal(reply.Payload)
@@ -165,14 +128,12 @@ func TestSendInitialState_ProceedForNetworkStartWithSplit(t *testing.T) {
 		state, ok := result.(*payload.LightInitialState)
 		require.True(t, ok)
 		require.Equal(t, topSyncPulse.PulseNumber, state.Pulse.PulseNumber)
-		require.Equal(t, 2, len(state.JetIDs))
-		left, right := jet.Siblings(jetID)
-		require.Equal(t, left, state.JetIDs[0])
-		require.Equal(t, right, state.JetIDs[1])
-		require.Equal(t, 1, len(state.Drops))
-		require.Equal(t, dropItem, state.Drops[0])
+		require.Equal(t, 0, len(state.JetIDs))
+		require.Equal(t, 0, len(state.Drops))
+		require.Equal(t, 0, len(state.Indexes))
 		require.True(t, state.NetworkStart)
 	})
+
 	is := NewSendInitialState(payload.Meta{
 		Payload: p,
 		Sender:  light,
@@ -181,22 +142,31 @@ func TestSendInitialState_ProceedForNetworkStartWithSplit(t *testing.T) {
 	is.dep.startPulse = startPulse
 	is.dep.jetKeeper = jetKeeper
 	is.dep.pulseAccessor = pulseAccessor
-	is.dep.jetTree = jetTree
 	is.dep.sender = sender
-	err = is.Proceed(context.Background())
+	is.dep.initialState = initialStateAccessor
+
+	err = is.Proceed(ctx)
 	require.NoError(t, err)
 }
 
 func TestSendInitialState_ProceedForJoiner(t *testing.T) {
+	mc := minimock.NewController(t)
+	defer mc.Finish()
+	ctx := inslogger.TestContext(t)
+
 	p, err := payload.Marshal(&payload.GetLightInitialState{Pulse: 1001})
 	require.NoError(t, err)
+
 	startPulse := pulse.NewStartPulse()
-	startPulse.SetStartPulse(context.Background(), insolar.Pulse{PulseNumber: 1000})
+	startPulse.SetStartPulse(ctx, insolar.Pulse{PulseNumber: 1000})
+
 	topSyncPulse := insolar.Pulse{PulseNumber: 999}
-	jetKeeper := executor.NewJetKeeperMock(t)
+	jetKeeper := executor.NewJetKeeperMock(mc)
 	jetKeeper.TopSyncPulseMock.Return(topSyncPulse.PulseNumber)
-	pulseAccessor := pulse.NewAccessorMock(t)
-	pulseAccessor.ForPulseNumberMock.Return(topSyncPulse, nil)
+
+	pulseAccessor := pulse.NewAccessorMock(mc)
+	pulseAccessor.ForPulseNumberMock.Expect(ctx, topSyncPulse.PulseNumber).Return(topSyncPulse, nil)
+
 	light := gen.Reference()
 	sender := bus.NewSenderMock(t)
 	sender.ReplyMock.Set(func(ctx context.Context, origin payload.Meta, reply *message.Message) {
@@ -207,15 +177,18 @@ func TestSendInitialState_ProceedForJoiner(t *testing.T) {
 		require.Equal(t, topSyncPulse.PulseNumber, state.Pulse.PulseNumber)
 		require.False(t, state.NetworkStart)
 	})
+
 	is := NewSendInitialState(payload.Meta{
 		Payload: p,
 		Sender:  light,
 		Pulse:   1001,
 	})
+
 	is.dep.startPulse = startPulse
 	is.dep.jetKeeper = jetKeeper
 	is.dep.pulseAccessor = pulseAccessor
 	is.dep.sender = sender
-	err = is.Proceed(context.Background())
+
+	err = is.Proceed(ctx)
 	require.NoError(t, err)
 }
