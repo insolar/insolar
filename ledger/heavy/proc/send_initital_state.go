@@ -112,57 +112,20 @@ func (p *SendInitialState) Proceed(ctx context.Context) error {
 	return nil
 }
 
-func getPossibleJets(parentJet insolar.JetID, split bool) []insolar.JetID {
-	var possibleIDs []insolar.JetID
-	if split {
-		left, right := jet.Siblings(parentJet)
-		possibleIDs = append(possibleIDs, left, right)
-	} else {
-		possibleIDs = append(possibleIDs, parentJet)
-	}
-
-	return possibleIDs
-}
-
 func (p *SendInitialState) sendForNetworkStart(
 	ctx context.Context,
 	req *payload.GetLightInitialState,
 	topSyncPulse insolar.Pulse,
 ) {
 	logger := inslogger.FromContext(ctx)
-	var IDs []insolar.JetID
-	var drops [][]byte
-	for _, id := range p.dep.jetTree.All(ctx, topSyncPulse.PulseNumber) {
-		dr, err := p.dep.dropDB.ForPulse(ctx, id, topSyncPulse.PulseNumber)
-		if err != nil {
-			logger.Fatal("Couldn't get drops for jet: ", id.DebugString(), " ", err)
-		}
+	state := p.dep.initialState.Get(ctx, p.meta.Sender, req.Pulse)
 
-		possibleIDs := getPossibleJets(id, dr.Split)
-
-		logger.Debug("Extracted drop: Split: ", dr.Split, ",  Possible jets: ", insolar.JetIDCollection(possibleIDs).DebugString())
-		var shouldAddDrop bool
-		for _, jetID := range possibleIDs {
-			light, err := p.dep.jetCoordinator.LightExecutorForJet(ctx, insolar.ID(jetID), req.Pulse)
-			if err != nil {
-				logger.Fatal("Couldn't receive light executor for jet (jet): ", jetID.DebugString(), " ", err)
-			}
-			if light.Equal(p.meta.Sender) {
-				shouldAddDrop = true
-				IDs = append(IDs, jetID)
-			}
-		}
-		// we should do it once to prevent override
-		if shouldAddDrop {
-			drops = append(drops, drop.MustEncode(&dr))
-		}
-	}
 	msg, err := payload.NewMessage(&payload.LightInitialState{
 		NetworkStart: true,
-		JetIDs:       IDs,
-		Drops:        drops,
+		JetIDs:       state.JetIDs,
+		Drops:        state.Drops,
+		Indexes:      state.Indexes,
 		Pulse:        *pulse.ToProto(&topSyncPulse),
-		Indexes:      nil,
 	})
 	if err != nil {
 		logger.Fatal("Couldn't make message", err)

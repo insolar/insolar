@@ -75,17 +75,17 @@ func NewInitialStateKeeper(
 func (isk *InitialStateKeeper) Start(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
 
-	logger.Debugf("[ InitialStateKeeper ] Last finalized pulse number: %s", isk.syncPulse.String())
-	if isk.syncPulse == insolar.GenesisPulse.PulseNumber {
-		logger.Debug("[ InitialStateKeeper ] First start. No need to prepare state")
-		return nil
-	}
+	// logger.Debugf("[ InitialStateKeeper ] Last finalized pulse number: %s", isk.syncPulse.String())
+	// if isk.syncPulse == insolar.GenesisPulse.PulseNumber {
+	// 	logger.Debug("[ InitialStateKeeper ] First start. No need to prepare state")
+	// 	return nil
+	// }
 
 	logger.Debug("[ InitialStateKeeper ] prepareDrops")
 	isk.prepareDrops(ctx)
 	logger.Debug("[ InitialStateKeeper ] prepareAbandonRequests")
 	isk.prepareAbandonRequests(ctx)
-	logger.Debug("[ InitialStateKeeper ] Initial state prepared")
+	logger.Debug("[ InitialStateKeeper ] initial state prepared")
 
 	return nil
 }
@@ -94,7 +94,7 @@ func (isk *InitialStateKeeper) prepareDrops(ctx context.Context) {
 	for _, jetID := range isk.jetAccessor.All(ctx, isk.syncPulse) {
 		dr, err := isk.dropStorage.ForPulse(ctx, jetID, isk.syncPulse)
 		if err != nil {
-			// TODO: panic
+			panic(fmt.Sprintf("No drop found for pulse: %s", isk.syncPulse.String()))
 		}
 
 		jetDrop := drop.MustEncode(&dr)
@@ -155,7 +155,7 @@ func (isk *InitialStateKeeper) Get(ctx context.Context, lightExecutor insolar.Re
 	for id, jetDrop := range isk.jetDrops {
 		light, err := isk.jetCoordinator.LightExecutorForJet(ctx, insolar.ID(id), pulse)
 		if err != nil {
-			// TODO: panic
+			panic(fmt.Sprintf("No drop found for pulse: %s", isk.syncPulse.String()))
 		}
 
 		if light.Equal(lightExecutor) {
