@@ -1,4 +1,4 @@
-///
+//
 // Copyright 2019 Insolar Technologies GmbH
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,7 +12,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-///
+//
 
 package executor
 
@@ -24,7 +24,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/pulse"
-	"github.com/insolar/insolar/internal/ledger/store"
+	"github.com/insolar/insolar/insolar/store"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/stretchr/testify/require"
@@ -104,6 +104,8 @@ func TestDBRollback_HappyPath(t *testing.T) {
 	hits := make(map[store.Scope]int)
 	db.SetMock.Return(nil)
 
+	db.GetMock.Return([]byte{}, nil)
+
 	db.DeleteMock.Return(nil)
 	iterNum := 0
 	db.NewIteratorMock.Set(func(p store.Key, p1 bool) (r store.Iterator) {
@@ -118,12 +120,20 @@ func TestDBRollback_HappyPath(t *testing.T) {
 
 		iterMock.KeyMock.Return(p.ID())
 		iterMock.CloseMock.Return()
+		iterMock.ValueMock.Return([]byte{}, nil)
 		return iterMock
 	})
 
 	drops := drop.NewDB(db)
-	records := object.NewRecordDB(db)
-	indexes := object.NewIndexDB(db)
+
+	records := NewHeadTruncaterMock(t)
+	records.TruncateHeadMock.Set(func(ctx context.Context, from insolar.PulseNumber) (err error) {
+		hits[store.ScopeRecord] = 1
+		return nil
+	})
+
+	indexes := object.NewIndexDB(db, nil)
+
 	jets := jet.NewDBStore(db)
 	pulses := pulse.NewDB(db)
 
@@ -141,7 +151,7 @@ func TestDBRollback_HappyPath(t *testing.T) {
 	}{
 		{store.ScopeJetDrop, 1},
 		{store.ScopeRecord, 1},
-		{store.ScopeIndex, 1},
+		{store.ScopeIndex, 2},
 		{store.ScopeJetTree, 1},
 		{store.ScopePulse, 1}}
 	for _, s := range expectedScopes {

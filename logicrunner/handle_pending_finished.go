@@ -21,10 +21,8 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -34,18 +32,29 @@ type HandlePendingFinished struct {
 	dep *Dependencies
 
 	Message payload.Meta
-	Parcel  insolar.Parcel
 }
 
 func (h *HandlePendingFinished) Present(ctx context.Context, _ flow.Flow) error {
-	ctx = loggerWithTargetID(ctx, h.Parcel)
-	inslogger.FromContext(ctx).Debug("HandlePendingFinished.Present starts ...")
+	logger := inslogger.FromContext(ctx)
 
-	msg := h.Parcel.Message().(*message.PendingFinished)
+	logger.Debug("HandlePendingFinished.Present starts ...")
 
-	broker := h.dep.StateStorage.UpsertExecutionState(msg.Reference)
+	message := payload.PendingFinished{}
+	err := message.Unmarshal(h.Message.Payload)
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal message")
+	}
 
-	err := broker.PrevExecutorFinishedPending(ctx)
+	done, err := h.dep.WriteAccessor.Begin(ctx, flow.Pulse(ctx))
+	defer done()
+
+	if err != nil {
+		return nil
+	}
+
+	broker := h.dep.StateStorage.UpsertExecutionState(message.ObjectRef)
+
+	err = broker.PrevExecutorSentPendingFinished(ctx)
 	if err != nil {
 		err = errors.Wrap(err, "can not finish pending")
 		inslogger.FromContext(ctx).Error(err.Error())

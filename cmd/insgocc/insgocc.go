@@ -30,6 +30,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/genesisrefs"
 	"github.com/insolar/insolar/logicrunner/preprocessor"
 )
 
@@ -349,8 +350,7 @@ func main() {
 				output := newOutputFlag("")
 				err := openDefaultProxyPath(output, insolar.MachineTypeBuiltin, contract.Parsed)
 				checkError(err)
-
-				reference := contract.GenerateReference(preprocessor.PrototypeType)
+				reference := genesisrefs.GenerateFromContractID(preprocessor.PrototypeType, contract.Name, contract.Version)
 				err = contract.Parsed.WriteProxy(reference.String(), output.writer)
 				checkError(err)
 

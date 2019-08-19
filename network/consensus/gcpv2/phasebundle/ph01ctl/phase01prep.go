@@ -55,7 +55,8 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetrecorder"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/population"
 	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/pulsectl"
 
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
@@ -78,7 +79,7 @@ type Phase01PrepController struct {
 	pulseStrategy pulsectl.PulseSelectionStrategy
 }
 
-func (c *Phase01PrepController) CreatePacketDispatcher(pt phases.PacketType, realm *core.PrepRealm) core.PacketDispatcher {
+func (c *Phase01PrepController) CreatePacketDispatcher(pt phases.PacketType, realm *core.PrepRealm) population.PacketDispatcher {
 	c.realm = realm
 	return c
 }
@@ -88,7 +89,7 @@ func (c *Phase01PrepController) GetPacketType() []phases.PacketType {
 }
 
 func (c *Phase01PrepController) DispatchHostPacket(ctx context.Context, packet transport.PacketParser,
-	from endpoints.Inbound, flags packetrecorder.PacketVerifyFlags) error {
+	from endpoints.Inbound, flags coreapi.PacketVerifyFlags) error {
 
 	var pp transport.PulsePacketReader
 	var nr member.Rank
@@ -100,9 +101,9 @@ func (c *Phase01PrepController) DispatchHostPacket(ctx context.Context, packet t
 		pp = p0.GetEmbeddedPulsePacket()
 	case phases.PacketPhase1:
 		p1 := packet.GetMemberPacket().AsPhase1Packet()
-		if p1.HasFullIntro() || p1.HasCloudIntro() || p1.HasJoinerSecret() {
-			return fmt.Errorf("introduction data were not expected: from=%v", from)
-		}
+		// if p1.HasFullIntro() || p1.HasCloudIntro() || p1.HasJoinerSecret() {
+		//	return fmt.Errorf("introduction data were not expected: from=%v", from)
+		// }
 		nr = p1.GetAnnouncementReader().GetNodeRank()
 		if p1.HasPulseData() {
 			pp = p1.GetEmbeddedPulsePacket()
@@ -119,5 +120,5 @@ func (c *Phase01PrepController) DispatchHostPacket(ctx context.Context, packet t
 	if err != nil || !ok {
 		return err
 	}
-	return c.realm.ApplyPulseData(pp, false, from)
+	return c.realm.ApplyPulseData(ctx, pp, false, from)
 }

@@ -23,29 +23,25 @@ import (
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/artifacts"
+	"github.com/insolar/insolar/logicrunner/executionregistry"
+	"github.com/insolar/insolar/logicrunner/shutdown"
 )
-
-// Context of one contract execution
-type ObjectState struct {
-	sync.Mutex
-
-	ExecutionBroker  ExecutionBrokerI
-	ExecutionArchive ExecutionArchive
-}
 
 //go:generate minimock -i github.com/insolar/insolar/logicrunner.StateStorage -o ./ -s _mock.go -g
 type StateStorage interface {
-	sync.Locker
-
 	UpsertExecutionState(ref insolar.Reference) ExecutionBrokerI
 	GetExecutionState(ref insolar.Reference) ExecutionBrokerI
-	GetExecutionArchive(ref insolar.Reference) ExecutionArchive
+	GetExecutionRegistry(ref insolar.Reference) executionregistry.ExecutionRegistry
 
 	IsEmpty() bool
-	OnPulse(ctx context.Context, pulse insolar.Pulse) []insolar.Message
+	OnPulse(ctx context.Context, pulse insolar.Pulse) map[insolar.Reference][]payload.Payload
 }
 
 type stateStorage struct {
@@ -53,97 +49,59 @@ type stateStorage struct {
 
 	publisher        watermillMsg.Publisher
 	requestsExecutor RequestsExecutor
-	messageBus       insolar.MessageBus
+	sender           bus.Sender
 	jetCoordinator   jet.Coordinator
 	pulseAccessor    pulse.Accessor
 	artifactsManager artifacts.Client
+	outgoingSender   OutgoingRequestSender
+	shutdownFlag     shutdown.Flag
 
-	state map[insolar.Reference]*ObjectState // if object exists, we are validating or executing it right now
+	brokers    map[insolar.Reference]ExecutionBrokerI
+	registries map[insolar.Reference]executionregistry.ExecutionRegistry
 }
 
 func NewStateStorage(
 	publisher watermillMsg.Publisher,
 	requestsExecutor RequestsExecutor,
-	messageBus insolar.MessageBus,
+	sender bus.Sender,
 	jetCoordinator jet.Coordinator,
 	pulseAccessor pulse.Accessor,
 	artifactsManager artifacts.Client,
-
+	outgoingSender OutgoingRequestSender,
+	shutdownFlag shutdown.Flag,
 ) StateStorage {
 	ss := &stateStorage{
-		state: make(map[insolar.Reference]*ObjectState),
+		brokers:    make(map[insolar.Reference]ExecutionBrokerI),
+		registries: make(map[insolar.Reference]executionregistry.ExecutionRegistry),
 
 		publisher:        publisher,
 		requestsExecutor: requestsExecutor,
-		messageBus:       messageBus,
+		sender:           sender,
 		jetCoordinator:   jetCoordinator,
 		pulseAccessor:    pulseAccessor,
 		artifactsManager: artifactsManager,
+		outgoingSender:   outgoingSender,
+		shutdownFlag:     shutdownFlag,
 	}
 	return ss
 }
 
+func (ss *stateStorage) upsertExecutionRegistry(ref insolar.Reference) executionregistry.ExecutionRegistry {
+	if res, ok := ss.registries[ref]; ok {
+		return res
+	}
+
+	ss.registries[ref] = executionregistry.New(ref, ss.jetCoordinator)
+	return ss.registries[ref]
+}
+
 func (ss *stateStorage) UpsertExecutionState(ref insolar.Reference) ExecutionBrokerI {
-	os := ss.upsertObjectState(ref)
-
-	os.Lock()
-	defer os.Unlock()
-
-	if os.ExecutionArchive == nil {
-		os.ExecutionArchive = NewExecutionArchive(ref, ss.jetCoordinator)
-	}
-	if os.ExecutionBroker == nil {
-		os.ExecutionBroker = NewExecutionBroker(
-			ref,
-			ss.publisher,
-			ss.requestsExecutor,
-			ss.messageBus,
-			ss.jetCoordinator,
-			ss.pulseAccessor,
-			ss.artifactsManager,
-			os.ExecutionArchive,
-		)
-	}
-	return os.ExecutionBroker
-}
-
-func (ss *stateStorage) GetExecutionState(ref insolar.Reference) ExecutionBrokerI {
-	os := ss.getObjectState(ref)
-	if os == nil {
-		return nil
+	if ss.shutdownFlag.IsStopped() {
+		log.Warn("UpsertExecutionState after shutdown was triggered for ", ref.String())
 	}
 
-	os.Lock()
-	defer os.Unlock()
-
-	return os.ExecutionBroker
-}
-
-func (ss *stateStorage) GetExecutionArchive(ref insolar.Reference) ExecutionArchive {
-	os := ss.getObjectState(ref)
-	if os == nil {
-		return nil
-	}
-
-	os.Lock()
-	defer os.Unlock()
-
-	return os.ExecutionArchive
-}
-
-func (ss *stateStorage) getObjectState(ref insolar.Reference) *ObjectState {
 	ss.RLock()
-	res, ok := ss.state[ref]
-	ss.RUnlock()
-	if !ok {
-		return nil
-	}
-	return res
-}
-
-func (ss *stateStorage) upsertObjectState(ref insolar.Reference) *ObjectState {
-	ss.RLock()
-	if res, ok := ss.state[ref]; ok {
+	if res, ok := ss.brokers[ref]; ok {
 		ss.RUnlock()
 		return res
 	}
@@ -151,50 +109,78 @@ func (ss *stateStorage) upsertObjectState(ref insolar.Reference) *ObjectState {
 
 	ss.Lock()
 	defer ss.Unlock()
-	if _, ok := ss.state[ref]; !ok {
-		ss.state[ref] = &ObjectState{}
+	if _, ok := ss.brokers[ref]; !ok {
+		registry := ss.upsertExecutionRegistry(ref)
+
+		ss.brokers[ref] = NewExecutionBroker(ref, ss.publisher, ss.requestsExecutor, ss.sender, ss.artifactsManager, registry, ss.outgoingSender, ss.pulseAccessor)
 	}
-	return ss.state[ref]
+	return ss.brokers[ref]
+}
+
+func (ss *stateStorage) GetExecutionState(ref insolar.Reference) ExecutionBrokerI {
+	if ss.shutdownFlag.IsStopped() {
+		log.Warn("GetExecutionState after shutdown was triggered for ", ref.String())
+	}
+
+	ss.RLock()
+	defer ss.RUnlock()
+	return ss.brokers[ref]
+}
+
+func (ss *stateStorage) GetExecutionRegistry(ref insolar.Reference) executionregistry.ExecutionRegistry {
+	if ss.shutdownFlag.IsStopped() {
+		log.Warn("GetExecutionRegistry after shutdown was triggered for ", ref.String())
+	}
+
+	ss.RLock()
+	defer ss.RUnlock()
+	return ss.registries[ref]
 }
 
 func (ss *stateStorage) IsEmpty() bool {
-	return len(ss.state) == 0
+	ss.RLock()
+	defer ss.RUnlock()
+
+	if len(ss.brokers) == 0 && len(ss.registries) == 0 {
+		return true
+	}
+
+	for _, el := range ss.registries {
+		if !el.IsEmpty() {
+			return false
+		}
+	}
+	return true
 }
 
-func (ss *stateStorage) OnPulse(ctx context.Context, pulse insolar.Pulse) []insolar.Message {
+func (ss *stateStorage) OnPulse(ctx context.Context, pulse insolar.Pulse) map[insolar.Reference][]payload.Payload {
+	onPulseMessages := make(map[insolar.Reference][]payload.Payload)
+
 	ss.Lock()
 	defer ss.Unlock()
 
-	onPulseMessages := make([]insolar.Message, 0)
-
-	oldState := ss.state
-	ss.state = make(map[insolar.Reference]*ObjectState)
-	for objectRef, objectState := range oldState {
-		objectState.Lock()
-
-		meNext, _ := ss.jetCoordinator.IsMeAuthorizedNow(ctx, insolar.DynamicRoleVirtualExecutor, *objectRef.Record())
-
-		if broker := objectState.ExecutionBroker; broker != nil {
-			onPulseMessages = append(onPulseMessages, broker.OnPulse(ctx, meNext)...)
+	oldBrokers := ss.brokers
+	ss.brokers = make(map[insolar.Reference]ExecutionBrokerI)
+	for objectRef, broker := range oldBrokers {
+		if _, ok := ss.registries[objectRef]; !ok {
+			inslogger.FromContext(ctx).Error("exeuction broker exists, but registry doesn't")
 		}
 
-		if archive := objectState.ExecutionArchive; archive != nil {
-			onPulseMessages = append(onPulseMessages, archive.OnPulse(ctx)...)
+		messages := broker.OnPulse(ctx)
+		if len(messages) > 0 {
+			onPulseMessages[objectRef] = append(onPulseMessages[objectRef], messages...)
+		}
+	}
+
+	for objectRef, registry := range ss.registries {
+		messages := registry.OnPulse(ctx)
+		if len(messages) > 0 {
+			onPulseMessages[objectRef] = append(onPulseMessages[objectRef], messages...)
 		}
 
-		if meNext && objectState.ExecutionArchive != nil {
-			ss.state[objectRef] = &ObjectState{
-				ExecutionArchive: objectState.ExecutionArchive,
-				ExecutionBroker:  objectState.ExecutionBroker,
-			}
-		} else if objectState.ExecutionArchive != nil && !objectState.ExecutionArchive.IsEmpty() {
-			// import previous ExecutionArchive if it's not empty
-			ss.state[objectRef] = &ObjectState{
-				ExecutionArchive: objectState.ExecutionArchive,
-			}
+		if registry.IsEmpty() {
+			delete(ss.registries, objectRef)
 		}
-
-		objectState.Unlock()
 	}
 
 	return onPulseMessages

@@ -22,6 +22,8 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation/safemath"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/account"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/member"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/wallet"
 
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
@@ -30,7 +32,12 @@ import (
 type status string
 
 const (
-	month = 30 * 24 * 60 * 60
+	// TODO: https://insolar.atlassian.net/browse/WLT-768
+	// day   = 24 * 60 * 60
+	day   = 10
+	month = 30 * day
+
+	vestingPeriodInDays = 360
 
 	confirms uint = 3
 	// TODO: https://insolar.atlassian.net/browse/WLT-768
@@ -40,11 +47,14 @@ const (
 	statusOpen    status = "Open"
 	statusHolding status = "Holding"
 	statusClose   status = "Close"
+
+	XNS = "XNS"
 )
 
 // Deposit is like wallet. It holds migrated money.
 type Deposit struct {
 	foundation.BaseContract
+	Balance                 string              `json:"balance"`
 	PulseDepositCreate      insolar.PulseNumber `json:"timestamp"`
 	PulseDepositHold        insolar.PulseNumber `json:"holdStartDate"`
 	PulseDepositUnHold      insolar.PulseNumber `json:"holdReleaseDate"`
@@ -55,12 +65,14 @@ type Deposit struct {
 }
 
 // GetTxHash gets transaction hash.
-func (d *Deposit) GetTxHash() (string, error) {
+// ins:immutable
+func (d Deposit) GetTxHash() (string, error) {
 	return d.TxHash, nil
 }
 
 // GetAmount gets amount.
-func (d *Deposit) GetAmount() (string, error) {
+// ins:immutable
+func (d Deposit) GetAmount() (string, error) {
 	return d.Amount, nil
 }
 
@@ -71,6 +83,7 @@ func New(migrationDaemonConfirms [3]string, txHash string, amount string) (*Depo
 		return nil, fmt.Errorf("failed to get current pulse: %s", err.Error())
 	}
 	return &Deposit{
+		Balance:                 "0",
 		PulseDepositCreate:      currentPulse,
 		MigrationDaemonConfirms: migrationDaemonConfirms,
 		Amount:                  amount,
@@ -83,8 +96,9 @@ func calculateUnHoldPulse(currentPulse insolar.PulseNumber) insolar.PulseNumber 
 }
 
 // Itself gets deposit information.
-func (d *Deposit) Itself() (interface{}, error) {
-	return *d, nil
+// ins:immutable
+func (d Deposit) Itself() (interface{}, error) {
+	return d, nil
 }
 
 // Confirm adds confirm for deposit by migration daemon.
@@ -126,12 +140,20 @@ func (d *Deposit) Confirm(migrationDaemonIndex int, migrationDaemonRef string, t
 			}
 			d.PulseDepositHold = currentPulse
 			d.PulseDepositUnHold = calculateUnHoldPulse(currentPulse)
+
+			ma := member.GetObject(foundation.GetMigrationAdminMember())
+			accountRef, err := ma.GetAccount(XNS)
+			a := account.GetObject(*accountRef)
+			err = a.TransferToDeposit(amountStr, d.GetReference())
+			if err != nil {
+				return fmt.Errorf("failed to transfer from migration wallet to deposit: %s", err.Error())
+			}
 		}
 		return nil
 	}
 }
 
-func (d *Deposit) canTransfer() error {
+func (d *Deposit) canTransfer(transferAmount *big.Int) error {
 	c := 0
 	for _, r := range d.MigrationDaemonConfirms {
 		if r != "" {
@@ -142,18 +164,40 @@ func (d *Deposit) canTransfer() error {
 		return fmt.Errorf("number of confirms is less then 3")
 	}
 
-	p, err := foundation.GetPulseNumber()
+	currentPulse, err := foundation.GetPulseNumber()
 	if err != nil {
 		return fmt.Errorf("failed to get pulse number: %s", err.Error())
 	}
-	if d.PulseDepositUnHold > p {
+	if d.PulseDepositUnHold > currentPulse {
 		return fmt.Errorf("hold period didn't end")
+	}
+
+	spentPeriodInDays := big.NewInt(int64((currentPulse - d.PulseDepositUnHold) / day))
+	amount, ok := new(big.Int).SetString(d.Amount, 10)
+	if !ok {
+		return fmt.Errorf("can't parse derposit amount")
+	}
+	balance, ok := new(big.Int).SetString(d.Balance, 10)
+	if !ok {
+		return fmt.Errorf("can't parse derposit balance")
+	}
+
+	// How much can we transfer for this time
+	availableForNow := new(big.Int).Div(
+		new(big.Int).Mul(amount, spentPeriodInDays),
+		big.NewInt(vestingPeriodInDays),
+	)
+
+	if new(big.Int).Sub(amount, availableForNow).Cmp(
+		new(big.Int).Sub(balance, transferAmount),
+	) == 1 {
+		return fmt.Errorf("not enough unholded balance for transfer")
 	}
 
 	return nil
 }
 
-// Transfer transfers money from deposit to wallet.It can be called only after deposit hold period.
+// Transfer transfers money from deposit to wallet. It can be called only after deposit hold period.
 func (d *Deposit) Transfer(amountStr string, wallerRef insolar.Reference) (interface{}, error) {
 
 	amount, ok := new(big.Int).SetString(amountStr, 10)
@@ -174,7 +218,7 @@ func (d *Deposit) Transfer(amountStr string, wallerRef insolar.Reference) (inter
 		return nil, fmt.Errorf("not enough balance for transfer: %s", err.Error())
 	}
 
-	err = d.canTransfer()
+	err = d.canTransfer(amount)
 	if err != nil {
 		return nil, fmt.Errorf("can't start transfer: %s", err.Error())
 	}
@@ -183,7 +227,7 @@ func (d *Deposit) Transfer(amountStr string, wallerRef insolar.Reference) (inter
 
 	w := wallet.GetObject(wallerRef)
 
-	acceptWalletErr := w.Accept(amountStr)
+	acceptWalletErr := w.Accept(amountStr, XNS)
 	if acceptWalletErr == nil {
 		return nil, nil
 	}
@@ -194,4 +238,29 @@ func (d *Deposit) Transfer(amountStr string, wallerRef insolar.Reference) (inter
 	}
 	d.Amount = newBalance.String()
 	return nil, fmt.Errorf("failed to transfer amount: %s", acceptWalletErr.Error())
+}
+
+// Accept accepts transfer to balance.
+// ins:saga(INS_FLAG_NO_ROLLBACK_METHOD)
+func (d *Deposit) Accept(amountStr string) error {
+
+	amount := new(big.Int)
+	amount, ok := amount.SetString(amountStr, 10)
+	if !ok {
+		return fmt.Errorf("can't parse input amount")
+	}
+
+	balance := new(big.Int)
+	balance, ok = balance.SetString(d.Balance, 10)
+	if !ok {
+		return fmt.Errorf("can't parse deposit balance")
+	}
+
+	b, err := safemath.Add(balance, amount)
+	if err != nil {
+		return fmt.Errorf("failed to add amount to balance: %s", err.Error())
+	}
+	d.Balance = b.String()
+
+	return nil
 }

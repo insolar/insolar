@@ -28,7 +28,6 @@ import (
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/internal/thread"
 	"github.com/insolar/insolar/insolar/pulse"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
@@ -54,12 +53,13 @@ func TestNewDispatcher(t *testing.T) {
 	}
 	require.False(t, ok)
 
-	d := NewDispatcher(f, f, f)
+	dInterface := NewDispatcher(nil, f, f, f)
+	d := dInterface.(*dispatcher)
 	require.NotNil(t, d.controller)
 
 	ctx := context.Background()
 	currentPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(100)}
-	d.PulseAccessor = pulse.NewAccessorMock(t).LatestMock.Return(currentPulse, nil)
+	d.pulses = pulse.NewAccessorMock(t).LatestMock.Return(currentPulse, nil)
 
 	msg := makeMessage(t, ctx, currentPulse.PulseNumber)
 
@@ -77,7 +77,7 @@ func (replyMock) Type() insolar.ReplyType {
 func TestDispatcher_Process(t *testing.T) {
 	t.Parallel()
 
-	d := &Dispatcher{
+	d := &dispatcher{
 		controller: thread.NewController(),
 	}
 	reply := replyMock(42)
@@ -91,11 +91,11 @@ func TestDispatcher_Process(t *testing.T) {
 
 	ctx := context.Background()
 	currentPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(100)}
-	d.PulseAccessor = pulse.NewAccessorMock(t).LatestMock.Return(currentPulse, nil)
+	d.pulses = pulse.NewAccessorMock(t).LatestMock.Return(currentPulse, nil)
 
 	msg := makeMessage(t, ctx, currentPulse.PulseNumber)
 
-	_, err := d.Process(msg)
+	err := d.Process(msg)
 	require.NoError(t, err)
 	rep := <-replyChan
 	require.Equal(t, reply, rep)
@@ -104,7 +104,7 @@ func TestDispatcher_Process(t *testing.T) {
 func TestDispatcher_Process_ReplyError(t *testing.T) {
 	t.Parallel()
 
-	d := &Dispatcher{
+	d := &dispatcher{
 		controller: thread.NewController(),
 	}
 	replyChan := make(chan error, 1)
@@ -117,11 +117,11 @@ func TestDispatcher_Process_ReplyError(t *testing.T) {
 
 	ctx := context.Background()
 	currentPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(100)}
-	d.PulseAccessor = pulse.NewAccessorMock(t).LatestMock.Return(currentPulse, nil)
+	d.pulses = pulse.NewAccessorMock(t).LatestMock.Return(currentPulse, nil)
 
 	msg := makeMessage(t, ctx, currentPulse.PulseNumber)
 
-	_, err := d.Process(msg)
+	err := d.Process(msg)
 	require.NoError(t, err)
 	rep := <-replyChan
 	require.Error(t, rep)
@@ -130,7 +130,7 @@ func TestDispatcher_Process_ReplyError(t *testing.T) {
 
 func TestDispatcher_Process_CallFutureDispatcher(t *testing.T) {
 	t.Parallel()
-	d := &Dispatcher{
+	d := &dispatcher{
 		controller: thread.NewController(),
 	}
 
@@ -145,61 +145,14 @@ func TestDispatcher_Process_CallFutureDispatcher(t *testing.T) {
 
 	ctx := context.Background()
 	currentPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(100)}
-	d.PulseAccessor = pulse.NewAccessorMock(t).LatestMock.Return(currentPulse, nil)
+	d.pulses = pulse.NewAccessorMock(t).LatestMock.Return(currentPulse, nil)
 
 	msg := makeMessage(t, ctx, currentPulse.PulseNumber+1)
 
-	_, err := d.Process(msg)
+	err := d.Process(msg)
 	require.NoError(t, err)
 	rep := <-replyChan
 	require.Equal(t, reply, rep)
-}
-
-func makeWMMessage(ctx context.Context, payLoad message.Payload) *message.Message {
-	wmMsg := message.NewMessage(watermill.NewUUID(), payLoad)
-	wmMsg.Metadata.Set("TraceID", inslogger.TraceID(ctx))
-
-	return wmMsg
-}
-
-func TestDispatcher_InnerSubscriber(t *testing.T) {
-	t.Parallel()
-	d := &Dispatcher{
-		controller: thread.NewController(),
-	}
-
-	testResult := 77
-	result := make(chan int)
-
-	d.handles.present = func(msg *message.Message) flow.Handle {
-		return func(ctx context.Context, f flow.Flow) error {
-			result <- testResult
-			return nil
-		}
-	}
-
-	_, err := d.InnerSubscriber(makeWMMessage(context.Background(), nil))
-	require.NoError(t, err)
-	require.Equal(t, testResult, <-result)
-}
-
-func TestDispatcher_InnerSubscriber_Error(t *testing.T) {
-	t.Parallel()
-	d := &Dispatcher{
-		controller: thread.NewController(),
-	}
-	testResult := 77
-	result := make(chan int)
-
-	d.handles.present = func(msg *message.Message) flow.Handle {
-		return func(ctx context.Context, f flow.Flow) error {
-			result <- testResult
-			return errors.New("some error.")
-		}
-	}
-	_, err := d.InnerSubscriber(makeWMMessage(context.Background(), nil))
-	require.NoError(t, err)
-	require.Equal(t, testResult, <-result)
 }
 
 func TestDispatcher_pulseFromString(t *testing.T) {

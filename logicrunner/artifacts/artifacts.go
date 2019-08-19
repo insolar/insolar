@@ -20,6 +20,7 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 )
 
@@ -28,15 +29,15 @@ import (
 // Client is a high level storage interface.
 type Client interface {
 	// RegisterIncomingRequest creates an incoming request record in storage.
-	RegisterIncomingRequest(ctx context.Context, request *record.IncomingRequest) (*insolar.ID, error)
+	RegisterIncomingRequest(ctx context.Context, request *record.IncomingRequest) (*payload.RequestInfo, error)
 	// RegisterIncomingRequest creates an outgoing request record in storage.
-	RegisterOutgoingRequest(ctx context.Context, request *record.OutgoingRequest) (*insolar.ID, error)
+	RegisterOutgoingRequest(ctx context.Context, request *record.OutgoingRequest) (*payload.RequestInfo, error)
 
 	// RegisterResult saves VM method call result and side-effect
 	RegisterResult(ctx context.Context, request insolar.Reference, result RequestResult) error
 
-	// GetIncomingRequest returns an incoming request for an object.
-	GetIncomingRequest(ctx context.Context, objectRef, reqRef insolar.Reference) (*record.IncomingRequest, error)
+	// GetAbandonedRequest returns an incoming or outgoing request for an object.
+	GetAbandonedRequest(ctx context.Context, objectRef, reqRef insolar.Reference) (record.Request, error)
 
 	// GetPendings returns pending request IDs of an object.
 	GetPendings(ctx context.Context, objectRef insolar.Reference) ([]insolar.Reference, error)
@@ -174,5 +175,4 @@ type RequestResult interface {
 
 	Result() []byte
 	ObjectReference() insolar.Reference
-	ConstructorError() string
 }

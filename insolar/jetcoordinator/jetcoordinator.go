@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/insolar/insolar/network"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/node"
@@ -33,7 +35,7 @@ import (
 
 // Coordinator is responsible for all jet interactions
 type Coordinator struct {
-	NodeNet                    insolar.NodeNetwork                `inject:""`
+	OriginProvider             network.OriginProvider             `inject:""`
 	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
 
 	PulseAccessor   pulse.Accessor   `inject:""`
@@ -61,7 +63,7 @@ const (
 
 // Me returns current node.
 func (jc *Coordinator) Me() insolar.Reference {
-	return jc.NodeNet.GetOrigin().ID()
+	return jc.OriginProvider.GetOrigin().ID()
 }
 
 // IsAuthorized checks for role on concrete pulse for the address.
@@ -97,7 +99,6 @@ func (jc *Coordinator) IsMeAuthorizedNow(
 	}
 	return jc.IsAuthorized(ctx, role, obj, p.PulseNumber, jc.Me())
 }
-
 
 // QueryRole returns node refs responsible for role bound operations for given object and pulse.
 func (jc *Coordinator) QueryRole(
@@ -259,20 +260,30 @@ func (jc *Coordinator) IsBeyondLimit(ctx context.Context, targetPN insolar.Pulse
 	if err != nil {
 		return false, errors.Wrap(err, "failed to fetch pulse")
 	}
-	backPN, err := jc.PulseCalculator.Backwards(ctx, latest.PulseNumber, jc.lightChainLimit)
-	// We are not aware of pulses beyond limit. Returning false is the only way when the network is less than limit
-	// pulses old.
-	if err == pulse.ErrNotFound {
-		return false, nil
-	}
-	if err != nil {
-		return false, errors.Wrap(err, "failed to calculate pulse")
-	}
 
-	if backPN.PulseNumber < targetPN {
+	// Out target on the latest pulse. It's within limit.
+	if latest.PulseNumber <= targetPN {
 		return false, nil
 	}
 
+	iter := latest.PulseNumber
+	for i := 1; i <= jc.lightChainLimit; i++ {
+		stepBack, err := jc.PulseCalculator.Backwards(ctx, latest.PulseNumber, i)
+		// We could not reach our target and ran out of known pulses. It means it's beyond limit.
+		if err == pulse.ErrNotFound {
+			return true, nil
+		}
+		if err != nil {
+			return false, errors.Wrap(err, "failed to calculate pulse")
+		}
+		// We reached our target. It's within limit.
+		if iter <= targetPN {
+			return false, nil
+		}
+
+		iter = stepBack.PulseNumber
+	}
+	// We iterated limit back. It means our data is further back and beyond limit.
 	return true, nil
 }
 

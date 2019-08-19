@@ -27,10 +27,9 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/genesisrefs"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/insolar/rootdomain"
 	"github.com/insolar/insolar/insolar/secrets"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/internal/ledger/artifact"
+	"github.com/insolar/insolar/ledger/artifact"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/nodedomain"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/noderecord"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
@@ -82,7 +81,7 @@ func TestData_WriteNodeDomainData(t *testing.T) {
 
 	for _, n := range nodes {
 		pKey := platformpolicy.MustPublicKeyToString(n.key)
-		ref := rootdomain.GenesisRef(pKey)
+		ref := genesisrefs.GenesisRef(pKey)
 		expectIndexMap[pKey] = ref.String()
 
 		nodeObjDesc, err := am.GetObject(ctx, ref)

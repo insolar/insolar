@@ -19,16 +19,13 @@ package logicrunner
 import (
 	"context"
 
-	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/pkg/errors"
-	"go.opencensus.io/trace"
 
-	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/logicrunner/common"
 
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
@@ -36,11 +33,11 @@ import (
 
 type initializeExecutionState struct {
 	dep *Dependencies
-	msg *message.ExecutorResults
+	msg *payload.ExecutorResults
 }
 
 func (p *initializeExecutionState) Proceed(ctx context.Context) error {
-	ref := p.msg.GetReference()
+	ref := p.msg.RecordRef
 
 	broker := p.dep.StateStorage.UpsertExecutionState(ref)
 	broker.PrevExecutorPendingResult(ctx, p.msg.Pending)
@@ -50,10 +47,10 @@ func (p *initializeExecutionState) Proceed(ctx context.Context) error {
 	}
 
 	if len(p.msg.Queue) > 0 {
-		transcripts := make([]*Transcript, len(p.msg.Queue))
+		transcripts := make([]*common.Transcript, len(p.msg.Queue))
 		for i, qe := range p.msg.Queue {
-			requestCtx := contextFromServiceData(qe.ServiceData)
-			transcripts[i] = NewTranscript(requestCtx, qe.RequestRef, qe.Request)
+			requestCtx := contextFromServiceData(*qe.ServiceData)
+			transcripts[i] = common.NewTranscript(requestCtx, qe.RequestRef, *qe.Incoming)
 		}
 		broker.AddRequestsFromPrevExecutor(ctx, transcripts...)
 	}
@@ -65,17 +62,21 @@ type HandleExecutorResults struct {
 	dep *Dependencies
 
 	Message payload.Meta
-	Parcel  insolar.Parcel
 }
 
-func (h *HandleExecutorResults) realHandleExecutorState(ctx context.Context, f flow.Flow) error {
-	msg := h.Parcel.Message().(*message.ExecutorResults)
+func (h *HandleExecutorResults) realHandleExecutorState(ctx context.Context, f flow.Flow, msg payload.ExecutorResults) error {
+	done, err := h.dep.WriteAccessor.Begin(ctx, flow.Pulse(ctx))
+	defer done()
+
+	if err != nil {
+		return nil
+	}
 
 	procInitializeExecutionState := initializeExecutionState{
 		dep: h.dep,
-		msg: msg,
+		msg: &msg,
 	}
-	err := f.Procedure(ctx, &procInitializeExecutionState, true)
+	err = f.Procedure(ctx, &procInitializeExecutionState, true)
 	if err != nil {
 		if err == flow.ErrCancelled {
 			return nil
@@ -88,33 +89,23 @@ func (h *HandleExecutorResults) realHandleExecutorState(ctx context.Context, f f
 }
 
 func (h *HandleExecutorResults) Present(ctx context.Context, f flow.Flow) error {
-	ctx = loggerWithTargetID(ctx, h.Parcel)
 	logger := inslogger.FromContext(ctx)
 
 	logger.Debug("HandleExecutorResults.Present starts ...")
 
-	msg, ok := h.Parcel.Message().(*message.ExecutorResults)
-	if !ok {
-		return errors.New("HandleExecutorResults( ! message.ExecutorResults )")
+	message := payload.ExecutorResults{}
+	err := message.Unmarshal(h.Message.Payload)
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal message")
 	}
 
 	ctx, span := instracer.StartSpan(ctx, "HandleExecutorResults.Present")
-	span.AddAttributes(trace.StringAttribute("msg.Type", msg.Type().String()))
 	defer span.End()
 
-	err := h.realHandleExecutorState(ctx, f)
-
-	var rep *watermillMsg.Message
+	err = h.realHandleExecutorState(ctx, f, message)
 	if err != nil {
-		var newErr error
-		rep, newErr = payload.NewMessage(&payload.Error{Text: err.Error()})
-		if newErr != nil {
-			return newErr
-		}
-	} else {
-		rep = bus.ReplyAsMessage(ctx, &reply.OK{})
+		return sendErrorMessage(ctx, h.dep.Sender, h.Message, err)
 	}
-	h.dep.Sender.Reply(ctx, h.Message, rep)
-
-	return err
+	go h.dep.Sender.Reply(ctx, h.Message, bus.ReplyAsMessage(ctx, &reply.OK{}))
+	return nil
 }

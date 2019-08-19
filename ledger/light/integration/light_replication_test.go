@@ -42,7 +42,7 @@ func Test_LightReplication(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	cfg := DefaultLightConfig()
 
-	s, err := NewServer(ctx, cfg, func(meta payload.Meta, pl payload.Payload) {
+	s, err := NewServer(ctx, cfg, func(meta payload.Meta, pl payload.Payload) []payload.Payload {
 		switch p := pl.(type) {
 		case *payload.Replication:
 			if p.Pulse == secondPulseNumber {
@@ -52,15 +52,26 @@ func Test_LightReplication(t *testing.T) {
 			}
 
 		}
+		if meta.Receiver == NodeHeavy() {
+			return DefaultHeavyResponse(pl)
+		}
+		return nil
 	})
 
 	require.NoError(t, err)
+	defer s.Stop()
 
 	// First pulse goes in storage then interrupts.
-	s.Pulse(ctx)
+	s.SetPulse(ctx)
 
 	// Second pulse goes in storage and starts processing, including pulse change in flow dispatcher.
-	s.Pulse(ctx)
+	s.SetPulse(ctx)
+
+	t.Run("messages after two pulses return result", func(t *testing.T) {
+		p, _ := CallSetCode(ctx, s)
+		RequireNotError(p)
+		expectedIds = append(expectedIds, p.(*payload.ID).ID)
+	})
 
 	cryptographyScheme := platformpolicy.NewPlatformCryptographyScheme()
 
@@ -69,9 +80,10 @@ func Test_LightReplication(t *testing.T) {
 
 		// Creating root reason request.
 		{
-			pl, _ := callSetIncomingRequest(ctx, s, gen.ID(), gen.ID(), true, true)
-			requireNotError(t, pl)
-			reasonID = pl.(*payload.RequestInfo).RequestID
+			msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), insolar.ID{}, true, true)
+			rep := SendMessage(ctx, s, &msg)
+			RequireNotError(rep)
+			reasonID = rep.(*payload.RequestInfo).RequestID
 			expectedIds = append(expectedIds, reasonID)
 
 			// Creating filament hash.
@@ -89,17 +101,18 @@ func Test_LightReplication(t *testing.T) {
 
 		// Save and check code.
 		{
-			p, _ := callSetCode(ctx, s)
-			requireNotError(t, p)
+			p, _ := CallSetCode(ctx, s)
+			RequireNotError(p)
 			payloadId := p.(*payload.ID).ID
 			expectedIds = append(expectedIds, payloadId)
 		}
 
 		// Set, get request.
 		{
-			p, _ := callSetIncomingRequest(ctx, s, gen.ID(), reasonID, true, true)
-			requireNotError(t, p)
-			expectedObjectID = p.(*payload.RequestInfo).RequestID
+			msg, _ := MakeSetIncomingRequest(gen.ID(), reasonID, insolar.ID{}, true, true)
+			rep := SendMessage(ctx, s, &msg)
+			RequireNotError(rep)
+			expectedObjectID = rep.(*payload.RequestInfo).RequestID
 			expectedIds = append(expectedIds, expectedObjectID)
 
 			// Creating filament hash.
@@ -117,8 +130,8 @@ func Test_LightReplication(t *testing.T) {
 
 		// Activate object.
 		{
-			p, requestRec := callActivateObject(ctx, s, expectedObjectID)
-			requireNotError(t, p)
+			p, requestRec := CallActivateObject(ctx, s, expectedObjectID)
+			RequireNotError(p)
 
 			payloadId := p.(*payload.ResultInfo).ResultID
 			expectedIds = append(expectedIds, payloadId)
@@ -146,10 +159,11 @@ func Test_LightReplication(t *testing.T) {
 		}
 		// Amend and check object.
 		{
-			p, _ := callSetIncomingRequest(ctx, s, expectedObjectID, reasonID, false, true)
-			requireNotError(t, p)
+			msg, _ := MakeSetIncomingRequest(expectedObjectID, reasonID, insolar.ID{}, false, true)
+			rep := SendMessage(ctx, s, &msg)
+			RequireNotError(rep)
 
-			reqId := p.(*payload.RequestInfo).RequestID
+			reqId := rep.(*payload.RequestInfo).RequestID
 			expectedIds = append(expectedIds, reqId)
 
 			// Create filament id.
@@ -164,8 +178,8 @@ func Test_LightReplication(t *testing.T) {
 				expectedIds = append(expectedIds, lastFilament)
 			}
 
-			p, amendRec := callAmendObject(ctx, s, expectedObjectID, reqId)
-			requireNotError(t, p)
+			p, amendRec := CallAmendObject(ctx, s, expectedObjectID, reqId)
+			RequireNotError(p)
 
 			reqId = p.(*payload.ResultInfo).ResultID
 			expectedIds = append(expectedIds, reqId)
@@ -197,7 +211,7 @@ func Test_LightReplication(t *testing.T) {
 	}
 
 	// Third pulse activate replication of second's pulse records
-	s.Pulse(ctx)
+	s.SetPulse(ctx)
 
 	{
 		replicationPayload := <-receivedMessage

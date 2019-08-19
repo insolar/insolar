@@ -27,7 +27,6 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/light/executor"
-	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
 )
@@ -39,7 +38,7 @@ type SetResult struct {
 	sideEffect record.State
 
 	dep struct {
-		writer   hot.WriteAccessor
+		writer   executor.WriteAccessor
 		filament executor.FilamentCalculator
 		sender   bus.Sender
 		locker   object.IndexLocker
@@ -64,7 +63,7 @@ func NewSetResult(
 }
 
 func (p *SetResult) Dep(
-	w hot.WriteAccessor,
+	w executor.WriteAccessor,
 	s bus.Sender,
 	l object.IndexLocker,
 	f executor.FilamentCalculator,
@@ -158,7 +157,7 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 		// Start writing to db.
 		done, err := p.dep.writer.Begin(ctx, flow.Pulse(ctx))
 		if err != nil {
-			if err == hot.ErrWriteClosed {
+			if err == executor.ErrWriteClosed {
 				return flow.ErrCancelled
 			}
 			return err
@@ -167,9 +166,10 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 
 		// Create result record
 		Result := record.Material{
-			Virtual: record.Wrap(&p.result),
-			ID:      resultID,
-			JetID:   p.jetID,
+			Virtual:  record.Wrap(&p.result),
+			ID:       resultID,
+			ObjectID: objectID,
+			JetID:    p.jetID,
 		}
 
 		// Create filament record.
@@ -182,9 +182,10 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 			hash := record.HashVirtual(p.dep.pcs.ReferenceHasher(), virtual)
 			id := *insolar.NewID(resultID.Pulse(), hash)
 			material := record.Material{
-				Virtual: virtual,
-				ID:      id,
-				JetID:   p.jetID,
+				Virtual:  virtual,
+				ID:       id,
+				ObjectID: objectID,
+				JetID:    p.jetID,
 			}
 			Filament = material
 		}
@@ -197,9 +198,10 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 				hash := record.HashVirtual(p.dep.pcs.ReferenceHasher(), virtual)
 				id := *insolar.NewID(resultID.Pulse(), hash)
 				material := record.Material{
-					Virtual: virtual,
-					ID:      id,
-					JetID:   p.jetID,
+					Virtual:  virtual,
+					ID:       id,
+					ObjectID: objectID,
+					JetID:    p.jetID,
 				}
 
 				toSave = append(toSave, material)
@@ -287,10 +289,11 @@ func findClosed(reqs []record.CompositeFilamentRecord, result record.Result) (re
 		}
 	}
 
-	return record.CompositeFilamentRecord{}, fmt.Errorf(
-		"request %s not found",
-		result.Request.Record().DebugString(),
-	)
+	return record.CompositeFilamentRecord{},
+		&payload.CodedError{
+			Text: fmt.Sprintf("request %s not found", result.Request.Record().DebugString()),
+			Code: payload.CodeRequestNotFound,
+		}
 }
 
 // NotifyDetached sends notifications about detached requests that are ready for execution.

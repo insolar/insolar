@@ -18,6 +18,7 @@ package proc
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/payload"
@@ -29,16 +30,16 @@ type SendIndex struct {
 	meta payload.Meta
 
 	dep struct {
-		indices object.IndexAccessor
+		indexes object.IndexAccessor
 		sender  bus.Sender
 	}
 }
 
 func (p *SendIndex) Dep(
-	indices object.IndexAccessor,
+	indexes object.IndexAccessor,
 	sender bus.Sender,
 ) {
-	p.dep.indices = indices
+	p.dep.indexes = indexes
 	p.dep.sender = sender
 }
 
@@ -55,7 +56,13 @@ func (p *SendIndex) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "failed to unmarshal ensureIndex message")
 	}
 
-	idx, err := p.dep.indices.ForID(ctx, p.meta.Pulse, ensureIndex.ObjectID)
+	idx, err := p.dep.indexes.ForID(ctx, p.meta.Pulse, ensureIndex.ObjectID)
+	if err == object.ErrIndexNotFound {
+		return &payload.CodedError{
+			Code: payload.CodeNotFound,
+			Text: fmt.Sprintf("index not found for %v", ensureIndex.ObjectID.DebugString()),
+		}
+	}
 	if err != nil {
 		return errors.Wrapf(
 			err,

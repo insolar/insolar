@@ -18,12 +18,16 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/pkg/errors"
 
+	"github.com/insolar/insolar/instrumentation/instracer"
+
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/rpc/v2"
 )
 
 // InfoArgs is arguments that Info service accepts.
@@ -77,32 +81,44 @@ func NewInfoService(runner *Runner) *InfoService {
 // 		"id": str|int|null // same as in request
 // 	}
 //
-func (s *InfoService) GetInfo(r *http.Request, args *InfoArgs, reply *InfoReply) error {
+func (s *InfoService) GetInfo(r *http.Request, args *InfoArgs, requestBody *rpc.RequestBody, reply *InfoReply) error {
 	ctx, inslog := inslogger.WithTraceField(context.Background(), utils.RandTraceID())
 
 	inslog.Infof("[ INFO ] Incoming request: %s", r.RequestURI)
+
+	_, span := instracer.StartSpan(ctx, "InfoService.GetInfo")
+	defer span.End()
+
+	span.Annotate(nil, fmt.Sprintf("Incoming request: %s", r.RequestURI))
 
 	rootDomain := s.runner.GenesisDataProvider.GetRootDomain(ctx)
 	if rootDomain == nil {
 		msg := "[ INFO ] rootDomain ref is nil"
 		inslog.Error(msg)
-		return errors.New(msg)
+		err := errors.New(msg)
+		instracer.AddError(span, err)
+		return err
 	}
 	rootMember, err := s.runner.GenesisDataProvider.GetRootMember(ctx)
 	if err != nil {
 		msg := "[ INFO ] Can't get rootMember ref"
 		inslog.Error(errors.Wrap(err, msg))
-		return errors.Wrap(err, msg)
+		err := errors.Wrap(err, msg)
+		instracer.AddError(span, err)
+		return err
 	}
 	if rootMember == nil {
 		msg := "[ INFO ] rootMember ref is nil"
 		inslog.Error(msg)
-		return errors.New(msg)
+		err := errors.New(msg)
+		instracer.AddError(span, err)
+		return err
 	}
 	migrationDaemonMembers, err := s.runner.GenesisDataProvider.GetMigrationDaemonMembers(ctx)
 	if err != nil {
 		msg := "[ INFO ] Can't get migration daemon members refs"
 		inslog.Error(errors.Wrap(err, msg))
+		instracer.AddError(span, err)
 		return errors.Wrap(err, msg)
 	}
 	migrationDaemonMembersStrs := []string{}
@@ -110,6 +126,7 @@ func (s *InfoService) GetInfo(r *http.Request, args *InfoArgs, reply *InfoReply)
 		if r == nil {
 			msg := "[ INFO ] migration daemon members refs are nil"
 			inslog.Error(msg)
+			instracer.AddError(span, err)
 			return errors.New(msg)
 		}
 		migrationDaemonMembersStrs = append(migrationDaemonMembersStrs, r.String())
@@ -118,23 +135,29 @@ func (s *InfoService) GetInfo(r *http.Request, args *InfoArgs, reply *InfoReply)
 	if err != nil {
 		msg := "[ INFO ] Can't get migration admin member ref"
 		inslog.Error(errors.Wrap(err, msg))
+		instracer.AddError(span, err)
 		return errors.Wrap(err, msg)
 	}
 	if migrationAdminMember == nil {
 		msg := "[ INFO ] migration admin member ref is nil"
 		inslog.Error(msg)
-		return errors.New(msg)
+		err := errors.New(msg)
+		instracer.AddError(span, err)
+		return err
 	}
 	nodeDomain, err := s.runner.GenesisDataProvider.GetNodeDomain(ctx)
 	if err != nil {
 		msg := "[ INFO ] Can't get nodeDomain ref"
 		inslog.Error(errors.Wrap(err, msg))
+		instracer.AddError(span, err)
 		return errors.Wrap(err, msg)
 	}
 	if nodeDomain == nil {
 		msg := "[ INFO ] nodeDomain ref is nil"
 		inslog.Error(msg)
-		return errors.New(msg)
+		err := errors.New(msg)
+		instracer.AddError(span, err)
+		return err
 	}
 
 	reply.RootDomain = rootDomain.String()

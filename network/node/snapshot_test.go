@@ -54,10 +54,29 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 )
+
+func NewMutator(snapshot *Snapshot) *Mutator {
+	return &Mutator{Accessor: NewAccessor(snapshot)}
+}
+
+type Mutator struct {
+	*Accessor
+}
+
+func (m *Mutator) AddWorkingNode(n insolar.NetworkNode) {
+	if _, ok := m.refIndex[n.ID()]; ok {
+		return
+	}
+	mutableNode := n.(MutableNode)
+	m.addToIndex(mutableNode)
+	listType := nodeStateToListType(mutableNode)
+	m.snapshot.nodeList[listType] = append(m.snapshot.nodeList[listType], n)
+	m.active = append(m.active, n)
+}
 
 func TestSnapshotEncodeDecode(t *testing.T) {
 
@@ -66,8 +85,8 @@ func TestSnapshotEncodeDecode(t *testing.T) {
 	p2, err := ks.GeneratePrivateKey()
 	assert.NoError(t, err)
 
-	n1 := newMutableNode(testutils.RandomRef(), insolar.StaticRoleVirtual, ks.ExtractPublicKey(p1), insolar.NodeReady, "127.0.0.1:22", "ver2")
-	n2 := newMutableNode(testutils.RandomRef(), insolar.StaticRoleHeavyMaterial, ks.ExtractPublicKey(p2), insolar.NodeLeaving, "127.0.0.1:33", "ver5")
+	n1 := newMutableNode(gen.Reference(), insolar.StaticRoleVirtual, ks.ExtractPublicKey(p1), insolar.NodeReady, "127.0.0.1:22", "ver2")
+	n2 := newMutableNode(gen.Reference(), insolar.StaticRoleHeavyMaterial, ks.ExtractPublicKey(p2), insolar.NodeLeaving, "127.0.0.1:33", "ver5")
 
 	s := Snapshot{}
 	s.pulse = 22
@@ -94,13 +113,15 @@ func TestSnapshot_Decode(t *testing.T) {
 func TestSnapshot_Copy(t *testing.T) {
 	snapshot := NewSnapshot(insolar.FirstPulseNumber, nil)
 	mutator := NewMutator(snapshot)
-	node1 := newMutableNode(insolar.Reference{22}, insolar.StaticRoleVirtual, nil, insolar.NodeReady, "127.0.0.1:0", "")
+	ref1 := gen.Reference()
+	node1 := newMutableNode(ref1, insolar.StaticRoleVirtual, nil, insolar.NodeReady, "127.0.0.1:0", "")
 	mutator.AddWorkingNode(node1)
 
 	snapshot2 := snapshot.Copy()
 	accessor := NewAccessor(snapshot2)
 
-	node2 := newMutableNode(insolar.Reference{11}, insolar.StaticRoleLightMaterial, nil, insolar.NodeReady, "127.0.0.1:0", "")
+	ref2 := gen.Reference()
+	node2 := newMutableNode(ref2, insolar.StaticRoleLightMaterial, nil, insolar.NodeReady, "127.0.0.1:0", "")
 	mutator.AddWorkingNode(node2)
 
 	// mutator and accessor observe different copies of snapshot and don't affect each other
@@ -128,9 +149,10 @@ func TestSnapshot_Equal(t *testing.T) {
 			nil, insolar.NodeReady, "127.0.0.1:0", "")
 	}
 
-	node1 := genNodeCopy(insolar.Reference{11})
-	node2 := genNodeCopy(insolar.Reference{22})
-	node3 := genNodeCopy(insolar.Reference{22})
+	refs := gen.References(2)
+	node1 := genNodeCopy(refs[0])
+	node2 := genNodeCopy(refs[1])
+	node3 := genNodeCopy(refs[1])
 
 	mutator := NewMutator(snapshot)
 	mutator.AddWorkingNode(node1)

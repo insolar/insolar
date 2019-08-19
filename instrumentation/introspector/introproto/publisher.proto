@@ -41,7 +41,7 @@ message EmptyArgs {
 
 // AllMessageFilterStats map of MessageFilterWithStat per message type.
 message AllMessageFilterStats {
-    map<string, MessageFilterWithStat> Filters = 1;
+    repeated MessageFilterWithStat Filters = 1;
 }
 
 // MessageFilterByType represents filter state for message type.
@@ -52,6 +52,7 @@ message MessageFilterByType {
 
 // MessageFilterWithStat represents filter state and count of filtered messages.
 message MessageFilterWithStat {
+    string Name = 1;
     bool Enable = 2;
     int64 Filtered = 3;
 }

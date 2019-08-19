@@ -51,11 +51,12 @@
 package host
 
 import (
+	"fmt"
 	"net"
 	"testing"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/testutils"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -74,7 +75,7 @@ func TestNewHost_Error(t *testing.T) {
 }
 
 func TestNewHostN(t *testing.T) {
-	ref := testutils.RandomRef()
+	ref := gen.Reference()
 
 	actualHost, _ := NewHostN("127.0.0.1:31337", ref)
 	expectedHost, _ := NewHostN("127.0.0.1:31337", ref)
@@ -86,13 +87,13 @@ func TestNewHostN(t *testing.T) {
 }
 
 func TestNewHostN_Error(t *testing.T) {
-	_, err := NewHostN("invalid_addr", testutils.RandomRef())
+	_, err := NewHostN("invalid_addr", gen.Reference())
 
 	require.Error(t, err)
 }
 
 func TestNewHostNS(t *testing.T) {
-	ref := testutils.RandomRef()
+	ref := gen.Reference()
 	shortID := insolar.ShortNodeID(123)
 
 	actualHost, _ := NewHostNS("127.0.0.1:31337", ref, shortID)
@@ -105,23 +106,23 @@ func TestNewHostNS(t *testing.T) {
 }
 
 func TestNewHostNS_Error(t *testing.T) {
-	_, err := NewHostNS("invalid_addr", testutils.RandomRef(), insolar.ShortNodeID(123))
+	_, err := NewHostNS("invalid_addr", gen.Reference(), insolar.ShortNodeID(123))
 
 	require.Error(t, err)
 }
 
 func TestHost_String(t *testing.T) {
 	nd, _ := NewHost("127.0.0.1:31337")
-	nd.NodeID = testutils.RandomRef()
-	string := nd.NodeID.String() + " (" + nd.Address.String() + ")"
+	nd.NodeID = gen.Reference()
+	string := "id: " + fmt.Sprintf("%d", nd.ShortID) + " ref: " + nd.NodeID.String() + " addr: " + nd.Address.String()
 
 	require.Equal(t, string, nd.String())
 }
 
 func TestHost_Equal(t *testing.T) {
-	id1 := testutils.RandomRef()
-	id2 := testutils.RandomRef()
-	idNil := insolar.Reference{}
+	id1 := gen.Reference()
+	id2 := gen.Reference()
+	idNil := *insolar.NewEmptyReference()
 	addr1, _ := NewAddress("127.0.0.1:31337")
 	addr2, _ := NewAddress("10.10.11.11:12345")
 
@@ -158,7 +159,7 @@ func marshalUnmarshalHost(t *testing.T, h *Host) *Host {
 }
 
 func TestHost_Marshal(t *testing.T) {
-	ref := testutils.RandomRef()
+	ref := gen.Reference()
 	sid := insolar.ShortNodeID(137)
 	h := Host{}
 	h.NodeID = ref
@@ -172,7 +173,7 @@ func TestHost_Marshal(t *testing.T) {
 }
 
 func TestHost_Marshal2(t *testing.T) {
-	ref := testutils.RandomRef()
+	ref := gen.Reference()
 	sid := insolar.ShortNodeID(138)
 	ip := []byte{10, 11, 0, 56}
 	port := 5432

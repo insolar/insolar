@@ -30,6 +30,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/api"
+
 	pulsewatcher "github.com/insolar/insolar/cmd/pulsewatcher/config"
 	"github.com/insolar/insolar/insolar"
 	"github.com/olekukonko/tablewriter"
@@ -38,11 +40,14 @@ import (
 )
 
 var client http.Client
+var emoji *Emoji
+var startTime time.Time
 
 const (
-	esc       = "\x1b%s"
-	moveUp    = "[%dA"
-	clearDown = "[0J"
+	esc        = "\x1b%s"
+	moveUp     = "[%dA"
+	clearDown  = "[0J"
+	timeFormat = "15:04:05.999999"
 )
 
 const (
@@ -65,16 +70,20 @@ func moveBack(reader io.Reader) {
 	fmt.Print(escape(clearDown))
 }
 
-func displayResultsTable(results [][]string, ready bool, buffer *bytes.Buffer) {
+func displayResultsTable(results []nodeStatus, ready bool, buffer *bytes.Buffer) {
 	table := tablewriter.NewWriter(buffer)
 	table.SetHeader([]string{
 		"URL",
-		"Network State",
-		"NetworkNode State",
-		"Pulse Number",
-		"Active List Size",
-		"Working List Size",
+		"State",
+		"ID",
+		"Network Pulse",
+		"Pulse",
+		"Active List",
+		"Working Count",
 		"Role",
+		"Timestamp",
+		"Restart Count",
+		"Uptime",
 		"Error",
 	})
 	table.SetBorder(false)
@@ -93,11 +102,13 @@ func displayResultsTable(results [][]string, ready bool, buffer *bytes.Buffer) {
 	}
 
 	table.SetFooter([]string{
-		"", "", "", "",
+		"", "", "", "", "",
 		"Insolar State", stateString,
-		"Time", time.Now().Format(time.RFC3339),
+		"Time", time.Now().Format(timeFormat),
+		"Insolar Uptime", time.Since(startTime).Round(time.Second).String(), "",
 	})
 	table.SetFooterColor(
+		tablewriter.Colors{},
 		tablewriter.Colors{},
 		tablewriter.Colors{},
 		tablewriter.Colors{},
@@ -108,44 +119,109 @@ func displayResultsTable(results [][]string, ready bool, buffer *bytes.Buffer) {
 
 		tablewriter.Colors{},
 		tablewriter.Colors{},
+		tablewriter.Colors{},
+		tablewriter.Colors{},
+		tablewriter.Colors{},
+	)
+	table.SetColumnColor(
+		tablewriter.Colors{},
+		tablewriter.Colors{},
+		tablewriter.Colors{},
+		tablewriter.Colors{},
+		tablewriter.Colors{},
+
+		tablewriter.Colors{},
+		tablewriter.Colors{},
+		tablewriter.Colors{},
+		tablewriter.Colors{},
+		tablewriter.Colors{tablewriter.FgHiRedColor},
+		tablewriter.Colors{},
+		tablewriter.Colors{tablewriter.FgHiRedColor},
 	)
 
-	table.AppendBulk(results)
+	intToString := func(n int) string {
+		if n == 0 {
+			return ""
+		}
+		return strconv.Itoa(n)
+	}
+
+	shortRole := func(r string) string {
+		switch r {
+		case "virtual":
+			return "Virtual"
+		case "heavy_material":
+			return "Heavy"
+		case "light_material":
+			return "Light"
+		default:
+			return r
+		}
+	}
+
+	for _, row := range results {
+		emoji.RegisterNode(row.url, row.reply.Origin)
+	}
+
+	for _, row := range results {
+		var activeNodeEmoji string
+		for _, n := range row.reply.Nodes {
+			activeNodeEmoji += emoji.GetEmoji(n)
+		}
+
+		var uptime string
+		var timestamp string
+		if row.errStr == "" {
+			uptime = time.Since(row.reply.StartTime).Round(time.Second).String()
+			timestamp = row.reply.Timestamp.Format(timeFormat)
+		}
+
+		table.Append([]string{
+			row.url,
+			row.reply.NetworkState,
+			fmt.Sprintf(" %s %s", emoji.GetEmoji(row.reply.Origin), intToString(int(row.reply.Origin.ID))),
+			intToString(int(row.reply.NetworkPulseNumber)),
+			intToString(int(row.reply.PulseNumber)),
+			fmt.Sprintf("%d %s", row.reply.ActiveListSize, activeNodeEmoji),
+			intToString(row.reply.WorkingListSize),
+			shortRole(row.reply.Origin.Role),
+			timestamp,
+			intToString(row.restartCount),
+			uptime,
+			row.errStr,
+		})
+	}
 	table.Render()
 	fmt.Print(buffer)
 }
 
-func parseInt64(str string) int64 {
-	res, err := strconv.ParseInt(str, 10, 64)
-	if err != nil {
-		res = -1
-	}
-	return res
-}
-
-func displayResultsJSON(results [][]string, _ bool, _ *bytes.Buffer) {
+func displayResultsJSON(results []nodeStatus) {
 	type DocumentItem struct {
-		URL             string
-		NetworkState    string
-		NodeState       string
-		PulseNumber     int64
-		ActiveListSize  int64
-		WorkingListSize int64
-		Role            string
-		Error           string
+		URL                string
+		NetworkState       string
+		ID                 uint32
+		NetworkPulseNumber uint32
+		PulseNumber        uint32
+		ActiveListSize     int
+		WorkingListSize    int
+		Role               string
+		Timestamp          string
+		Error              string
 	}
 
 	doc := make([]DocumentItem, len(results))
 
 	for i, res := range results {
-		doc[i].URL = res[0]
-		doc[i].NetworkState = res[1]
-		doc[i].NodeState = res[2]
-		doc[i].PulseNumber = parseInt64(res[3])
-		doc[i].ActiveListSize = parseInt64(res[4])
-		doc[i].WorkingListSize = parseInt64(res[5])
-		doc[i].Role = res[6]
-		doc[i].Error = res[7]
+		doc[i].URL = res.url
+		doc[i].NetworkState = res.reply.NetworkState
+		doc[i].ID = res.reply.Origin.ID
+		doc[i].NetworkPulseNumber = res.reply.NetworkPulseNumber
+		doc[i].PulseNumber = res.reply.PulseNumber
+		doc[i].ActiveListSize = res.reply.ActiveListSize
+		doc[i].WorkingListSize = res.reply.WorkingListSize
+		doc[i].Role = res.reply.Origin.Role
+		doc[i].Timestamp = res.reply.Timestamp.Format(timeFormat)
+		doc[i].Error = res.errStr
 	}
 
 	jsonDoc, err := json.MarshalIndent(doc, "", "    ")
@@ -156,10 +232,10 @@ func displayResultsJSON(results [][]string, _ bool, _ *bytes.Buffer) {
 	fmt.Print("\n\n")
 }
 
-func collectNodesStatuses(conf *pulsewatcher.Config) ([][]string, bool) {
+func collectNodesStatuses(conf *pulsewatcher.Config) ([]nodeStatus, bool) {
 	state := true
 	errored := 0
-	results := make([][]string, len(conf.Nodes))
+	results := make([]nodeStatus, len(conf.Nodes))
 	lock := &sync.Mutex{}
 
 	wg := &sync.WaitGroup{}
@@ -169,8 +245,15 @@ func collectNodesStatuses(conf *pulsewatcher.Config) ([][]string, bool) {
 			res, err := client.Post("http://"+url+"/api/rpc", "application/json",
 				strings.NewReader(`{"jsonrpc": "2.0", "method": "node.getStatus", "id": 0}`))
 			if err != nil {
+				errStr := err.Error()
+				if strings.Contains(errStr, "connection refused") ||
+					strings.Contains(errStr, "request canceled while waiting for connection") {
+					// Print compact error string when node is down.
+					// This prevents table distortion on small screens.
+					errStr = "NODE IS DOWN"
+				}
 				lock.Lock()
-				results[i] = []string{url, "", "", "", "", "", "", err.Error()}
+				results[i] = nodeStatus{url, api.StatusReply{}, errStr, 0}
 				errored++
 				lock.Unlock()
 				wg.Done()
@@ -182,16 +265,7 @@ func collectNodesStatuses(conf *pulsewatcher.Config) ([][]string, bool) {
 				log.Fatal(err)
 			}
 			var out struct {
-				Result struct {
-					PulseNumber  uint32
-					NetworkState string
-					NodeState    string
-					Origin       struct {
-						Role string
-					}
-					ActiveListSize  int
-					WorkingListSize int
-				}
+				Result api.StatusReply
 			}
 			err = json.Unmarshal(data, &out)
 			if err != nil {
@@ -199,18 +273,9 @@ func collectNodesStatuses(conf *pulsewatcher.Config) ([][]string, bool) {
 				log.Fatal(err)
 			}
 			lock.Lock()
-			results[i] = []string{
-				url,
-				out.Result.NetworkState,
-				out.Result.NodeState,
-				strconv.Itoa(int(out.Result.PulseNumber)),
-				strconv.Itoa(out.Result.ActiveListSize),
-				strconv.Itoa(out.Result.WorkingListSize),
-				out.Result.Origin.Role,
-				"",
-			}
-			state = state && out.Result.NetworkState == insolar.CompleteNetworkState.String() &&
-				out.Result.NodeState == insolar.NodeReady.String()
+
+			results[i] = nodeStatus{url, out.Result, "", 0}
+			state = state && out.Result.NetworkState == insolar.CompleteNetworkState.String()
 			lock.Unlock()
 			wg.Done()
 		}(url, i)
@@ -219,6 +284,13 @@ func collectNodesStatuses(conf *pulsewatcher.Config) ([][]string, bool) {
 
 	ready := state && errored != len(conf.Nodes)
 	return results, ready
+}
+
+type nodeStatus struct {
+	url          string
+	reply        api.StatusReply
+	errStr       string
+	restartCount int
 }
 
 func main() {
@@ -249,10 +321,14 @@ func main() {
 		Timeout:   conf.Timeout,
 	}
 
+	emoji = NewEmoji()
+	var results []nodeStatus
+	var ready bool
+	startTime = time.Now()
 	for {
-		results, ready := collectNodesStatuses(conf)
+		results, ready = collectNodesStatuses(conf)
 		if useJSONFormat {
-			displayResultsJSON(results, ready, buffer)
+			displayResultsJSON(results)
 		} else {
 			displayResultsTable(results, ready, buffer)
 		}

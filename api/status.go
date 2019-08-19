@@ -19,74 +19,80 @@ package api
 import (
 	"context"
 	"net/http"
+	"time"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/version"
+	"github.com/insolar/rpc/v2"
 )
 
 type Node struct {
 	Reference string
 	Role      string
 	IsWorking bool
+	ID        uint32
 }
 
 // StatusReply is reply for Status service requests.
 type StatusReply struct {
-	NetworkState    string
-	Origin          Node
-	ActiveListSize  int
-	WorkingListSize int
-	Nodes           []Node
-	PulseNumber     uint32
-	Entropy         []byte
-	NodeState       string
-	Version         string
+	NetworkState       string
+	Origin             Node
+	ActiveListSize     int
+	WorkingListSize    int
+	Nodes              []Node
+	PulseNumber        uint32
+	NetworkPulseNumber uint32
+	Entropy            []byte
+	Version            string
+	Timestamp          time.Time
+	StartTime          time.Time
 }
 
 // Get returns status info
-func (s *NodeService) GetStatus(r *http.Request, args *interface{}, reply *StatusReply) error {
+func (s *NodeService) GetStatus(r *http.Request, args *interface{}, requestBody *rpc.RequestBody, reply *StatusReply) error {
 	traceID := utils.RandTraceID()
 	ctx, inslog := inslogger.WithTraceField(context.Background(), traceID)
 
 	inslog.Infof("[ NodeService.GetStatus ] Incoming request: %s", r.RequestURI)
 
-	reply.NetworkState = s.runner.ServiceNetwork.GetState().String()
-	reply.NodeState = s.runner.NodeNetwork.GetOrigin().GetState().String()
+	statusReply := s.runner.NetworkStatus.GetNetworkStatus()
 
-	activeNodes := s.runner.NodeNetwork.(network.NodeKeeper).GetAccessor().GetActiveNodes()
-	workingNodes := s.runner.NodeNetwork.GetWorkingNodes()
-
-	reply.ActiveListSize = len(activeNodes)
-	reply.WorkingListSize = len(workingNodes)
+	reply.NetworkState = statusReply.NetworkState.String()
+	reply.ActiveListSize = statusReply.ActiveListSize
+	reply.WorkingListSize = statusReply.WorkingListSize
 
 	nodes := make([]Node, reply.ActiveListSize)
-	for i, node := range activeNodes {
+	for i, node := range statusReply.Nodes {
 		nodes[i] = Node{
 			Reference: node.ID().String(),
 			Role:      node.Role().String(),
-			IsWorking: node.GetState() == insolar.NodeReady,
+			IsWorking: node.GetPower() > 0,
+			ID:        uint32(node.ShortID()),
 		}
 	}
-
 	reply.Nodes = nodes
-	origin := s.runner.NodeNetwork.GetOrigin()
+
 	reply.Origin = Node{
-		Reference: origin.ID().String(),
-		Role:      origin.Role().String(),
-		IsWorking: origin.GetState() == insolar.NodeReady,
+		Reference: statusReply.Origin.ID().String(),
+		Role:      statusReply.Origin.Role().String(),
+		IsWorking: statusReply.Origin.GetPower() > 0,
+		ID:        uint32(statusReply.Origin.ShortID()),
 	}
 
-	pulse, err := s.runner.PulseAccessor.Latest(ctx)
+	reply.NetworkPulseNumber = uint32(statusReply.Pulse.PulseNumber)
+
+	p, err := s.runner.PulseAccessor.Latest(ctx)
 	if err != nil {
-		return err
+		p = *insolar.GenesisPulse
 	}
+	reply.PulseNumber = uint32(p.PulseNumber)
 
-	reply.PulseNumber = uint32(pulse.PulseNumber)
-	reply.Entropy = pulse.Entropy[:]
+	reply.Entropy = statusReply.Pulse.Entropy[:]
 	reply.Version = version.Version
+	reply.StartTime = statusReply.StartTime
+	reply.Timestamp = statusReply.Timestamp
 
 	return nil
 }

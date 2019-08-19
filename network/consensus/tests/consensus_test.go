@@ -56,13 +56,14 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle"
 
 	"github.com/insolar/insolar/network/consensus/common/capacity"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/power"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
@@ -87,7 +88,7 @@ type EmuHostConsensusAdapter struct {
 
 func (h *EmuHostConsensusAdapter) ConnectTo(chronicles api.ConsensusChronicles, network *EmuNetwork,
 	strategyFactory core.RoundStrategyFactory, candidateFeeder api.CandidateControlFeeder,
-	controlFeeder api.ConsensusControlFeeder, config api.LocalNodeConfiguration) {
+	controlFeeder api.ConsensusControlFeeder, ephemeralFeeder api.EphemeralControlFeeder, config api.LocalNodeConfiguration) {
 
 	ctx := network.ctx
 	// &EmuConsensusStrategy{ctx: ctx}
@@ -98,6 +99,7 @@ func (h *EmuHostConsensusAdapter) ConnectTo(chronicles api.ConsensusChronicles, 
 		core.NewPhasedRoundControllerFactory(config, NewEmuTransport(h), strategyFactory),
 		candidateFeeder,
 		controlFeeder,
+		ephemeralFeeder,
 	)
 
 	h.inbound, h.outbound = network.AddHost(ctx, h.hostAddr)
@@ -173,7 +175,7 @@ func (h *EmuHostConsensusAdapter) send(target endpoints.Outbound, payload interf
 	}()
 	parser := payload.(transport.PacketParser)
 	pkt := Packet{Host: target.GetNameAddress(), Payload: WrapPacketParser(parser)}
-	//fmt.Println(">SEND> ", pkt)
+	// fmt.Println(">SEND> ", pkt)
 	h.outbound <- pkt
 }
 
@@ -196,7 +198,8 @@ func (p *EmuRoundStrategyFactory) CreateRoundStrategy(chronicle api.ConsensusChr
 		p.bundleFactory = phasebundle.NewStandardBundleFactoryDefault()
 	}
 
-	pop := chronicle.GetLatestCensus().GetOnlinePopulation()
+	lastCensus, _ := chronicle.GetLatestCensus()
+	pop := lastCensus.GetOnlinePopulation()
 	bundle := p.bundleFactory.CreateControllersBundle(pop, config)
 	return &p.roundStrategy, bundle
 }
@@ -229,6 +232,18 @@ type EmuControlFeeder struct {
 	leaveReason uint32
 }
 
+func (p *EmuControlFeeder) CanFastForwardPulse(expected, received pulse.Number, lastPulseData pulse.Data) bool {
+	panic("implement me")
+}
+
+func (p *EmuControlFeeder) OnPulseDetected() {
+	panic("implement me")
+}
+
+func (p *EmuControlFeeder) CanStopOnHastyPulse(pn pulse.Number, expectedEndOfConsensus time.Time) bool {
+	return false
+}
+
 func (p *EmuControlFeeder) OnAppliedMembershipProfile(mode member.OpMode, pw member.Power, effectiveSince pulse.Number) {
 }
 
@@ -236,12 +251,6 @@ func (*EmuControlFeeder) SetTrafficLimit(level capacity.Level, duration time.Dur
 }
 
 func (*EmuControlFeeder) ResumeTraffic() {
-}
-
-func (*EmuControlFeeder) PulseDetected() {
-}
-
-func (*EmuControlFeeder) ConsensusFinished(report api.UpstreamReport, expectedCensus census.Operational) {
 }
 
 func (*EmuControlFeeder) GetRequiredPowerLevel() power.Request {
@@ -253,4 +262,53 @@ func (p *EmuControlFeeder) GetRequiredGracefulLeave() (bool, uint32) {
 }
 
 func (*EmuControlFeeder) OnAppliedGracefulLeave(exitCode uint32, effectiveSince pulse.Number) {
+}
+
+type EmuEphemeralFeeder struct{}
+
+func (e EmuEphemeralFeeder) CanFastForwardPulse(expected, received pulse.Number, lastPulseData pulse.Data) bool {
+	panic("implement me")
+}
+
+func (e EmuEphemeralFeeder) CanStopEphemeralByPulse(pd pulse.Data, localNode profiles.ActiveNode) bool {
+	panic("implement me")
+}
+
+func (e EmuEphemeralFeeder) CanStopEphemeralByCensus(expected census.Expected) bool {
+	panic("implement me")
+}
+
+func (e EmuEphemeralFeeder) GetMaxDuration() time.Duration {
+	panic("implement me")
+}
+
+func (e EmuEphemeralFeeder) OnEphemeralCancelled() {
+	panic("implement me")
+}
+
+func (e EmuEphemeralFeeder) GetMinDuration() time.Duration {
+	return 2 * time.Second
+}
+
+func (e EmuEphemeralFeeder) OnNonEphemeralPacket(ctx context.Context, parser transport.PacketParser, inbound endpoints.Inbound) error {
+	return nil
+}
+
+func (e EmuEphemeralFeeder) EphemeralConsensusFinished(isNextEphemeral bool, roundStartedAt time.Time, expected census.Operational) {
+}
+
+func (e EmuEphemeralFeeder) GetEphemeralTimings(c api.LocalNodeConfiguration) api.RoundTimings {
+	return c.GetConsensusTimings(2)
+}
+
+func (e EmuEphemeralFeeder) IsActive() bool {
+	return false
+}
+
+func (e EmuEphemeralFeeder) CreateEphemeralPulsePacket(census census.Operational) proofs.OriginalPulsarPacket {
+	return nil
+}
+
+func (e EmuEphemeralFeeder) CanStopOnHastyPulse(pn pulse.Number, expectedEndOfConsensus time.Time) bool {
+	return false
 }

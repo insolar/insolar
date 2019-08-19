@@ -52,7 +52,10 @@ package adapters
 
 import (
 	"context"
+	"sync"
 
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/longbits"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
@@ -60,7 +63,6 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/utils"
 )
 
 type StateGetter interface {
@@ -75,29 +77,41 @@ type StateUpdater interface {
 	UpdateState(ctx context.Context, pulseNumber insolar.PulseNumber, nodes []insolar.NetworkNode, cloudStateHash []byte)
 }
 
-type UpstreamPulseController struct {
+type UpstreamController struct {
 	stateGetter  StateGetter
 	pulseChanger PulseChanger
 	stateUpdater StateUpdater
+
+	mu         *sync.RWMutex
+	onFinished network.OnConsensusFinished
 }
 
-func NewUpstreamPulseController(stateGetter StateGetter, pulseChanger PulseChanger, stateUpdater StateUpdater) *UpstreamPulseController {
-	return &UpstreamPulseController{
+func NewUpstreamPulseController(stateGetter StateGetter, pulseChanger PulseChanger, stateUpdater StateUpdater) *UpstreamController {
+	return &UpstreamController{
 		stateGetter:  stateGetter,
 		pulseChanger: pulseChanger,
 		stateUpdater: stateUpdater,
+
+		mu:         &sync.RWMutex{},
+		onFinished: func(ctx context.Context, report network.Report) {},
 	}
 }
 
-func (u *UpstreamPulseController) ConsensusFinished(report api.UpstreamReport, expectedCensus census.Operational) {
+func (u *UpstreamController) ConsensusFinished(report api.UpstreamReport, expectedCensus census.Operational) {
 	ctx := contextFromReport(report)
-
-	if report.MemberMode.IsEvicted() {
-		return
-	}
-
+	logger := inslogger.FromContext(ctx)
 	population := expectedCensus.GetOnlinePopulation()
-	networkNodes := NewNetworkNodeList(population.GetProfiles())
+
+	var networkNodes []insolar.NetworkNode
+	if report.MemberMode.IsEvicted() || report.MemberMode.IsSuspended() || !population.IsValid() {
+		logger.Warnf("Consensus finished unexpectedly mode: %s, population: %v", report.MemberMode, expectedCensus)
+
+		networkNodes = []insolar.NetworkNode{
+			NewNetworkNode(expectedCensus.GetOnlinePopulation().GetLocalProfile()),
+		}
+	} else {
+		networkNodes = NewNetworkNodeList(population.GetProfiles())
+	}
 
 	u.stateUpdater.UpdateState(
 		ctx,
@@ -105,21 +119,48 @@ func (u *UpstreamPulseController) ConsensusFinished(report api.UpstreamReport, e
 		networkNodes,
 		expectedCensus.GetCloudStateHash().AsBytes(),
 	)
+
+	if _, pd := expectedCensus.GetNearestPulseData(); pd.IsFromEphemeral() {
+		// Fix bootstrap. Commit active list right after consensus finished
+		u.CommitPulseChange(report, pd, expectedCensus)
+	}
+
+	u.mu.RLock()
+	defer u.mu.RUnlock()
+
+	u.onFinished(ctx, network.Report{
+		PulseNumber:     insolar.PulseNumber(report.PulseNumber),
+		MemberPower:     report.MemberPower,
+		MemberMode:      report.MemberMode,
+		IsJoiner:        report.IsJoiner,
+		PopulationValid: population.IsValid(),
+	})
 }
 
-func (u *UpstreamPulseController) PreparePulseChange(report api.UpstreamReport, ch chan<- api.UpstreamState) {
+func (u *UpstreamController) ConsensusAborted() {
+	// TODO implement
+}
+
+func (u *UpstreamController) PreparePulseChange(report api.UpstreamReport, ch chan<- api.UpstreamState) {
 	go awaitState(ch, u.stateGetter)
 }
 
-func (u *UpstreamPulseController) CommitPulseChange(report api.UpstreamReport, pulseData pulse.Data, activeCensus census.Operational) {
+func (u *UpstreamController) CommitPulseChange(report api.UpstreamReport, pulseData pulse.Data, activeCensus census.Operational) {
 	ctx := contextFromReport(report)
 	p := NewPulse(pulseData)
 
-	u.pulseChanger.ChangePulse(ctx, p)
+	go u.pulseChanger.ChangePulse(ctx, p)
 }
 
-func (u *UpstreamPulseController) CancelPulseChange() {
-	panic("implement me")
+func (u *UpstreamController) CancelPulseChange() {
+	// TODO implement
+}
+
+func (u *UpstreamController) SetOnFinished(f network.OnConsensusFinished) {
+	u.mu.Lock()
+	defer u.mu.Unlock()
+
+	u.onFinished = f
 }
 
 func awaitState(c chan<- api.UpstreamState, stater StateGetter) {
@@ -129,5 +170,5 @@ func awaitState(c chan<- api.UpstreamState, stater StateGetter) {
 }
 
 func contextFromReport(report api.UpstreamReport) context.Context {
-	return utils.NewPulseContext(context.Background(), uint32(report.PulseNumber))
+	return network.NewPulseContext(context.Background(), uint32(report.PulseNumber))
 }

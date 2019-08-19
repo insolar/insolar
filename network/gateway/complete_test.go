@@ -53,20 +53,21 @@ package gateway
 import (
 	"context"
 	"errors"
+	"github.com/stretchr/testify/assert"
 	"testing"
 
-	inet "github.com/insolar/insolar/network"
-
-	"github.com/insolar/insolar/network/hostnetwork/packet"
-	"github.com/insolar/insolar/network/hostnetwork/packet/types"
-
-	"github.com/insolar/insolar/testutils/network"
+	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/reply"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
+	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/hostnetwork/packet"
+	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 	"github.com/insolar/insolar/testutils"
-	"github.com/stretchr/testify/require"
+	mock "github.com/insolar/insolar/testutils/network"
 )
 
 func mockCryptographyService(t *testing.T, ok bool) insolar.CryptographyService {
@@ -90,7 +91,9 @@ func mockCertificateManager(t *testing.T, certNodeRef *insolar.Reference, discov
 				Reference: certNodeRef.String(),
 				Role:      "virtual",
 			},
-			MajorityRule: 0,
+			RootDomainReference: "test_root_domain_ref",
+			MajorityRule:        0,
+			PulsarPublicKeys:    []string{},
 			BootstrapNodes: []certificate.BootstrapNode{
 				{
 					NodeRef:     discoveryNodeRef.String(),
@@ -101,53 +104,28 @@ func mockCertificateManager(t *testing.T, certNodeRef *insolar.Reference, discov
 			},
 		}
 	})
-	cm.NewUnsignedCertificateMock.Set(func(key string, role string, nodeRef string) (insolar.Certificate, error) {
-		require.Equal(t, "test_node_public_key", key)
-		require.Equal(t, "virtual", role)
-
-		if unsignCertOk {
-			return &certificate.Certificate{
-				AuthorizationCertificate: certificate.AuthorizationCertificate{
-					PublicKey: key,
-					Reference: nodeRef,
-					Role:      role,
-				},
-				RootDomainReference: "test_root_domain_ref",
-				MajorityRule:        0,
-				PulsarPublicKeys:    []string{},
-				BootstrapNodes: []certificate.BootstrapNode{
-					{
-						PublicKey:   "test_discovery_public_key",
-						Host:        "test_discovery_host",
-						NetworkSign: []byte("test_network_sign"),
-						NodeRef:     discoveryNodeRef.String(),
-					},
-				},
-			}, nil
-		}
-		return nil, errors.New("test_error")
-	})
 	return cm
 }
 
 func mockReply(t *testing.T) []byte {
-	node, err := insolar.MarshalArgs(struct {
+	res := struct {
 		PublicKey string
 		Role      insolar.StaticRole
 	}{
 		PublicKey: "test_node_public_key",
 		Role:      insolar.StaticRoleVirtual,
-	}, nil)
+	}
+	node, err := foundation.MarshalMethodResult(res, nil)
 	require.NoError(t, err)
-	return []byte(node)
+	return node
 }
 
 func mockContractRequester(t *testing.T, nodeRef insolar.Reference, ok bool, r []byte) insolar.ContractRequester {
 	cr := testutils.NewContractRequesterMock(t)
-	cr.SendRequestMock.Set(func(ctx context.Context, ref *insolar.Reference, method string, args []interface{}) (insolar.Reply, error) {
+	cr.SendRequestMock.Set(func(ctx context.Context, ref *insolar.Reference, method string, argsIn []interface{}) (r1 insolar.Reply, err error) {
 		require.Equal(t, nodeRef, *ref)
 		require.Equal(t, "GetNodeInfo", method)
-		require.Equal(t, 0, len(args))
+		require.Equal(t, 0, len(argsIn))
 		if ok {
 			return &reply.CallMethod{
 				Result: r,
@@ -164,64 +142,82 @@ func mockPulseManager(t *testing.T) insolar.PulseManager {
 }
 
 func TestComplete_GetCert(t *testing.T) {
-	nodeRef := testutils.RandomRef()
-	certNodeRef := testutils.RandomRef()
+	nodeRef := gen.Reference()
+	certNodeRef := gen.Reference()
 
-	gatewayer := network.NewGatewayerMock(t)
-	nodekeeper := network.NewNodeKeeperMock(t)
-	hn := network.NewHostNetworkMock(t)
+	gatewayer := mock.NewGatewayerMock(t)
+	nodekeeper := mock.NewNodeKeeperMock(t)
+	hn := mock.NewHostNetworkMock(t)
 
 	cr := mockContractRequester(t, nodeRef, true, mockReply(t))
 	cm := mockCertificateManager(t, &certNodeRef, &certNodeRef, true)
 	cs := mockCryptographyService(t, true)
 	pm := mockPulseManager(t)
 
-	ge := NewNoNetwork(gatewayer, pm, nodekeeper, cr, cs, hn, cm)
-	ge = ge.NewGateway(insolar.CompleteNetworkState)
+	var ge network.Gateway
+	ge = newNoNetwork(&Base{
+		Gatewayer:           gatewayer,
+		NodeKeeper:          nodekeeper,
+		HostNetwork:         hn,
+		ContractRequester:   cr,
+		CertificateManager:  cm,
+		CryptographyService: cs,
+		PulseManager:        pm,
+	})
+	ge = ge.NewGateway(context.Background(), insolar.CompleteNetworkState)
 	ctx := context.Background()
 	result, err := ge.Auther().GetCert(ctx, &nodeRef)
 	require.NoError(t, err)
 
 	cert := result.(*certificate.Certificate)
-	require.Equal(t, "test_node_public_key", cert.PublicKey)
-	require.Equal(t, nodeRef.String(), cert.Reference)
-	require.Equal(t, "virtual", cert.Role)
-	require.Equal(t, 0, cert.MajorityRule)
-	require.Equal(t, uint(0), cert.MinRoles.Virtual)
-	require.Equal(t, uint(0), cert.MinRoles.HeavyMaterial)
-	require.Equal(t, uint(0), cert.MinRoles.LightMaterial)
-	require.Equal(t, []string{}, cert.PulsarPublicKeys)
-	require.Equal(t, "test_root_domain_ref", cert.RootDomainReference)
-	require.Equal(t, 1, len(cert.BootstrapNodes))
-	require.Equal(t, "test_discovery_public_key", cert.BootstrapNodes[0].PublicKey)
-	require.Equal(t, []byte("test_network_sign"), cert.BootstrapNodes[0].NetworkSign)
-	require.Equal(t, "test_discovery_host", cert.BootstrapNodes[0].Host)
-	require.Equal(t, []byte("test_sig"), cert.BootstrapNodes[0].NodeSign)
-	require.Equal(t, certNodeRef.String(), cert.BootstrapNodes[0].NodeRef)
+	assert.Equal(t, "test_node_public_key", cert.PublicKey)
+	assert.Equal(t, nodeRef.String(), cert.Reference)
+	assert.Equal(t, "virtual", cert.Role)
+	assert.Equal(t, 0, cert.MajorityRule)
+	assert.Equal(t, uint(0), cert.MinRoles.Virtual)
+	assert.Equal(t, uint(0), cert.MinRoles.HeavyMaterial)
+	assert.Equal(t, uint(0), cert.MinRoles.LightMaterial)
+	assert.Equal(t, []string{}, cert.PulsarPublicKeys)
+	assert.Equal(t, "test_root_domain_ref", cert.RootDomainReference)
+	assert.Equal(t, 1, len(cert.BootstrapNodes))
+	assert.Equal(t, "test_discovery_public_key", cert.BootstrapNodes[0].PublicKey)
+	assert.Equal(t, []byte("test_network_sign"), cert.BootstrapNodes[0].NetworkSign)
+	assert.Equal(t, "test_discovery_host", cert.BootstrapNodes[0].Host)
+	assert.Equal(t, []byte("test_sig"), cert.BootstrapNodes[0].NodeSign)
+	assert.Equal(t, certNodeRef.String(), cert.BootstrapNodes[0].NodeRef)
 }
 
 func TestComplete_handler(t *testing.T) {
-	nodeRef := testutils.RandomRef()
-	certNodeRef := testutils.RandomRef()
+	nodeRef := gen.Reference()
+	certNodeRef := gen.Reference()
 
-	gatewayer := network.NewGatewayerMock(t)
-	nodekeeper := network.NewNodeKeeperMock(t)
+	gatewayer := mock.NewGatewayerMock(t)
+	nodekeeper := mock.NewNodeKeeperMock(t)
 
 	cr := mockContractRequester(t, nodeRef, true, mockReply(t))
 	cm := mockCertificateManager(t, &certNodeRef, &certNodeRef, true)
 	cs := mockCryptographyService(t, true)
 	pm := mockPulseManager(t)
 
-	hn := network.NewHostNetworkMock(t)
+	hn := mock.NewHostNetworkMock(t)
 
-	ge := NewNoNetwork(gatewayer, pm, nodekeeper, cr, cs, hn, cm)
-	ge = ge.NewGateway(insolar.CompleteNetworkState)
+	var ge network.Gateway
+	ge = newNoNetwork(&Base{
+		Gatewayer:           gatewayer,
+		NodeKeeper:          nodekeeper,
+		HostNetwork:         hn,
+		ContractRequester:   cr,
+		CertificateManager:  cm,
+		CryptographyService: cs,
+		PulseManager:        pm,
+	})
+	ge = ge.NewGateway(context.Background(), insolar.CompleteNetworkState)
 	ctx := context.Background()
 
 	p := packet.NewReceivedPacket(packet.NewPacket(nil, nil, types.SignCert, 1), nil)
 	p.SetRequest(&packet.SignCertRequest{NodeRef: nodeRef})
 
-	hn.BuildResponseMock.Set(func(p context.Context, p1 inet.Packet, p2 interface{}) inet.Packet {
+	hn.BuildResponseMock.Set(func(ctx context.Context, request network.Packet, responseData interface{}) (p1 network.Packet) {
 		r := packet.NewPacket(nil, nil, types.SignCert, 1)
 		r.SetResponse(&packet.SignCertResponse{Sign: []byte("test_sig")})
 		return r

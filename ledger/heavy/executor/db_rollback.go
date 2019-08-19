@@ -1,4 +1,4 @@
-///
+//
 // Copyright 2019 Insolar Technologies GmbH
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,7 +12,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-///
+//
 
 package executor
 
@@ -22,6 +22,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
 )
 
@@ -67,6 +68,12 @@ func (d *DBRollback) Start(ctx context.Context) error {
 	}
 
 	for idx, db := range d.dbs {
+		if indexDB, ok := db.(object.IndexModifier); ok {
+			if err := indexDB.UpdateLastKnownPulse(ctx, lastSincPulseNumber); err != nil {
+				return errors.Wrap(err, "can't update last sync pulse")
+			}
+		}
+
 		err := db.TruncateHead(ctx, pn.PulseNumber)
 		if err != nil {
 			return errors.Wrapf(err, "can't truncate %d db to pulse: %d", idx, pn.PulseNumber)

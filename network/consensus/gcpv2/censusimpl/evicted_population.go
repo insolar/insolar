@@ -51,6 +51,9 @@
 package censusimpl
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
@@ -61,7 +64,7 @@ import (
 func newEvictedPopulation(evicts []*updatableSlot, detectedErrors census.RecoverableErrorTypes) evictedPopulation {
 
 	if len(evicts) == 0 {
-		return evictedPopulation{}
+		return evictedPopulation{detectedErrors: detectedErrors}
 	}
 	evictedNodes := make(map[insolar.ShortNodeID]profiles.EvictedNode, len(evicts))
 
@@ -79,6 +82,30 @@ var _ census.EvictedPopulation = &evictedPopulation{}
 type evictedPopulation struct {
 	profiles       map[insolar.ShortNodeID]profiles.EvictedNode
 	detectedErrors census.RecoverableErrorTypes
+}
+
+func (p evictedPopulation) String() string {
+	if p.detectedErrors == 0 && len(p.profiles) == 0 {
+		return "[]"
+	}
+
+	b := strings.Builder{}
+	if p.detectedErrors != 0 {
+		b.WriteString(fmt.Sprintf("errors:%v ", p.detectedErrors.String()))
+	}
+	if len(p.profiles) > 0 {
+		b.WriteString(fmt.Sprintf("profiles:%d[", len(p.profiles)))
+
+		if len(p.profiles) < 50 {
+			for id := range p.profiles {
+				b.WriteString(fmt.Sprintf(" %04d ", id))
+			}
+		} else {
+			b.WriteString("too many")
+		}
+		b.WriteRune(']')
+	}
+	return b.String()
 }
 
 func (p *evictedPopulation) IsValid() bool {

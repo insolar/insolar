@@ -69,6 +69,7 @@ type VersionedRegistries interface {
 	GetMandateRegistry() MandateRegistry
 	GetOfflinePopulation() OfflinePopulation
 	GetVersionPulseData() pulse.Data
+	GetNearestValidPulseData() pulse.Data
 }
 
 //go:generate minimock -i github.com/insolar/insolar/network/consensus/gcpv2/api/census.MisbehaviorRegistry -o . -s _mock.go -g

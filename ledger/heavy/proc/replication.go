@@ -21,15 +21,9 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
-	"github.com/insolar/insolar/insolar/pulse"
-	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/heavy/executor"
-	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 )
@@ -39,13 +33,7 @@ type Replication struct {
 	cfg     configuration.Ledger
 
 	dep struct {
-		records object.RecordModifier
-		indexes object.IndexModifier
-		pcs     insolar.PlatformCryptographyScheme
-		pulses  pulse.Accessor
-		drops   drop.Modifier
-		jets    jet.Modifier
-		keeper  executor.JetKeeper
+		replicator executor.HeavyReplicator
 	}
 }
 
@@ -57,113 +45,30 @@ func NewReplication(msg payload.Meta, cfg configuration.Ledger) *Replication {
 }
 
 func (p *Replication) Dep(
-	records object.RecordModifier,
-	indexes object.IndexModifier,
-	pcs insolar.PlatformCryptographyScheme,
-	pulses pulse.Accessor,
-	drops drop.Modifier,
-	jets jet.Modifier,
-	keeper executor.JetKeeper,
+	replicator executor.HeavyReplicator,
 ) {
-	p.dep.records = records
-	p.dep.indexes = indexes
-	p.dep.pcs = pcs
-	p.dep.pulses = pulses
-	p.dep.drops = drops
-	p.dep.jets = jets
-	p.dep.keeper = keeper
+	p.dep.replicator = replicator
 }
 
 func (p *Replication) Proceed(ctx context.Context) error {
+	logger := inslogger.FromContext(ctx)
+	logger.Info("got replication msg")
+
 	pl, err := payload.Unmarshal(p.message.Payload)
 	if err != nil {
+		logger.Error(err)
 		return errors.Wrap(err, "failed to unmarshal payload")
 	}
 	msg, ok := pl.(*payload.Replication)
 	if !ok {
+		logger.Error(err)
 		return fmt.Errorf("unexpected payload %T", pl)
 	}
 
-	storeRecords(ctx, p.dep.records, p.dep.pcs, msg.Pulse, msg.Records)
-	if err := storeIndexes(ctx, p.dep.indexes, msg.Indexes, msg.Pulse); err != nil {
-		return errors.Wrap(err, "failed to store indexes")
-	}
+	logger.Debugf("notify heavy replicator about jetID:%v, pn:%v", msg.JetID.DebugString(), msg.Pulse)
+	go p.dep.replicator.NotifyAboutMessage(ctx, msg)
 
-	dr, err := storeDrop(ctx, p.dep.drops, msg.Drop)
-	if err != nil {
-		return errors.Wrap(err, "failed to store drop")
-	}
-
-	if err := p.dep.keeper.AddDropConfirmation(ctx, dr.Pulse, dr.JetID, dr.Split); err != nil {
-		return errors.Wrapf(err, "failed to add jet to JetKeeper jet=%v", dr.JetID.DebugString())
-	}
-
-	stats.Record(ctx,
-		statReceivedHeavyPayloadCount.M(1),
-	)
+	stats.Record(ctx, statReceivedHeavyPayloadCount.M(1))
 
 	return nil
-}
-
-func storeIndexes(
-	ctx context.Context,
-	mod object.IndexModifier,
-	indexes []record.Index,
-	pn insolar.PulseNumber,
-) error {
-	for _, idx := range indexes {
-		err := mod.SetIndex(ctx, pn, idx)
-		if err != nil {
-			return errors.Wrapf(err, "heavyserver: index storing failed")
-		}
-	}
-
-	return nil
-}
-
-func storeDrop(
-	ctx context.Context,
-	drops drop.Modifier,
-	rawDrop []byte,
-) (*drop.Drop, error) {
-	d, err := drop.Decode(rawDrop)
-	if err != nil {
-		inslogger.FromContext(ctx).Error(err)
-		return nil, err
-	}
-	err = drops.Set(ctx, *d)
-	if err != nil {
-		return nil, errors.Wrapf(err, "heavyserver: drop storing failed")
-	}
-
-	return d, nil
-}
-
-func storeRecords(
-	ctx context.Context,
-	mod object.RecordModifier,
-	pcs insolar.PlatformCryptographyScheme,
-	pn insolar.PulseNumber,
-	records []record.Material,
-) {
-	inslog := inslogger.FromContext(ctx)
-
-	for _, rec := range records {
-		hash := record.HashVirtual(pcs.ReferenceHasher(), rec.Virtual)
-		id := *insolar.NewID(pn, hash)
-		// FIXME: skipping errors will lead to inconsistent state.
-		if rec.ID != id {
-			inslog.Error(fmt.Errorf(
-				"record id does not match (calculated: %s, received: %s)",
-				id.DebugString(),
-				rec.ID.DebugString(),
-			))
-			continue
-		}
-		err := mod.Set(ctx, rec)
-		if err != nil {
-			inslog.Error(err, "heavyserver: store record failed")
-			continue
-		}
-	}
 }

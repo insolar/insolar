@@ -28,7 +28,7 @@ import (
 func TestMemberCreate(t *testing.T) {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
-	result, err := retryableMemberCreate(member, true)
+	result, err := signedRequest(t, member, "member.create", nil)
 	require.NoError(t, err)
 	output, ok := result.(map[string]interface{})
 	require.True(t, ok)
@@ -39,8 +39,8 @@ func TestMemberCreateWithBadKey(t *testing.T) {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
 	member.pubKey = "fake"
-	_, err = retryableMemberCreate(member, false)
-	require.NotNil(t, err)
+	_, err = signedRequestWithEmptyRequestRef(t, member, "member.create", nil)
+	require.Error(t, err)
 	require.Contains(t, err.Error(), fmt.Sprintf("problems with decoding. Key - %s", member.pubKey))
 }
 
@@ -48,10 +48,10 @@ func TestMemberCreateWithSamePublicKey(t *testing.T) {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
 
-	_, err = retryableMemberCreate(member, true)
+	_, err = signedRequest(t, member, "member.create", nil)
 	require.NoError(t, err)
 
-	_, err = signedRequest(member, "member.create", map[string]interface{}{})
-	require.NotNil(t, err)
-	require.Contains(t, err.Error(), "member for this publicKey already exist")
+	_, err = signedRequestWithEmptyRequestRef(t, member, "member.create", nil)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "failed to set reference in public key shard: can't set reference because this key already exists")
 }

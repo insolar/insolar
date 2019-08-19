@@ -64,21 +64,14 @@ import (
 type Factory interface {
 	GetPacketSender() PacketSender
 	GetPacketBuilder(signer cryptkit.DigestSigner) PacketBuilder
-	GetCryptographyFactory() CryptographyFactory
-}
-
-type CryptographyFactory interface {
-	cryptkit.SignatureVerifierFactory
-	cryptkit.KeyStoreFactory
-	GetDigestFactory() ConsensusDigestFactory
-	GetNodeSigner(sks cryptkit.SecretKeyStore) cryptkit.DigestSigner
+	GetCryptographyFactory() CryptographyAssistant
 }
 
 type TargetProfile interface {
 	GetNodeID() insolar.ShortNodeID
 	GetStatic() profiles.StaticProfile
 	IsJoiner() bool
-	//GetOpMode() member.OpMode
+	// GetOpMode() member.OpMode
 	EncryptJoinerSecret(joinerSecret cryptkit.DigestHolder) cryptkit.DigestHolder
 }
 

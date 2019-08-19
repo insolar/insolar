@@ -19,16 +19,15 @@ package logicrunner
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/gojuno/minimock"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
-	"github.com/insolar/insolar/insolar/jet"
-	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/logicrunner/executionregistry"
 )
 
 type StateStorageSuite struct{ suite.Suite }
@@ -45,108 +44,95 @@ func (s *StateStorageSuite) generatePulse() insolar.Pulse {
 
 func (s *StateStorageSuite) TestOnPulse() {
 	mc := minimock.NewController(s.T())
-	defer mc.Wait(2 * time.Second)
+	defer mc.Finish()
 
 	ctx := s.generateContext()
 	pulse := s.generatePulse()
 	objectRef := gen.Reference()
 
-	jc := jet.NewCoordinatorMock(mc).
-		IsMeAuthorizedNowMock.Return(false, nil)
-
-	ss := NewStateStorage(nil, nil, nil, jc, nil, nil)
+	ss := NewStateStorage(nil, nil, nil, nil, nil, nil, nil, nil)
 	rawStateStorage := ss.(*stateStorage)
 
 	{ // empty state storage
 		msgs := ss.OnPulse(ctx, pulse)
 		s.Len(msgs, 0)
-		s.Len(rawStateStorage.state, 0)
+		s.Len(rawStateStorage.brokers, 0)
+		s.Len(rawStateStorage.registries, 0)
 	}
 
-	{ // state storage with empty object
-		rawStateStorage.state[objectRef] = &ObjectState{}
+	{ // state storage with empty execution registry
+		rawStateStorage.registries[objectRef] = executionregistry.NewExecutionRegistryMock(mc).
+			OnPulseMock.Return(nil).
+			IsEmptyMock.Return(true)
 		msgs := rawStateStorage.OnPulse(ctx, pulse)
 		s.Len(msgs, 0)
-		s.Len(rawStateStorage.state, 0)
+		s.Len(rawStateStorage.brokers, 0)
+		s.Len(rawStateStorage.registries, 0)
 	}
 
-	{ // state storage with empty execution archive
-		rawStateStorage.state[objectRef] = &ObjectState{
-			ExecutionArchive: NewExecutionArchiveMock(mc).
-				OnPulseMock.Return(nil).
-				IsEmptyMock.Return(true),
-		}
-		msgs := rawStateStorage.OnPulse(ctx, pulse)
-		s.Len(msgs, 0)
-		s.Len(rawStateStorage.state, 0)
-	}
-
-	{ // state storage with non-empty execution archive
-		rawStateStorage.state[objectRef] = &ObjectState{
-			ExecutionArchive: NewExecutionArchiveMock(mc).
-				OnPulseMock.Return([]insolar.Message{&message.StillExecuting{}}).
-				IsEmptyMock.Return(false),
-		}
+	{ // state storage with non-empty execution registry
+		rawStateStorage.registries[objectRef] = executionregistry.NewExecutionRegistryMock(mc).
+			OnPulseMock.Return([]payload.Payload{&payload.StillExecuting{}}).
+			IsEmptyMock.Return(false)
 		msgs := rawStateStorage.OnPulse(ctx, pulse)
 		s.Len(msgs, 1)
-		s.Len(rawStateStorage.state, 1)
+		s.Len(rawStateStorage.brokers, 0)
+		s.Len(rawStateStorage.registries, 1)
 
-		delete(rawStateStorage.state, objectRef)
+		delete(rawStateStorage.registries, objectRef)
 	}
 
-	{ // state storage with execution archive and execution broker
-		rawStateStorage.state[objectRef] = &ObjectState{
-			ExecutionBroker: NewExecutionBrokerIMock(mc).
-				OnPulseMock.Return([]insolar.Message{&message.ExecutorResults{}}),
-			ExecutionArchive: NewExecutionArchiveMock(mc).
-				OnPulseMock.Return(nil).
-				IsEmptyMock.Return(true),
-		}
+	{ // state storage with execution registry and execution broker
+		rawStateStorage.registries[objectRef] = executionregistry.NewExecutionRegistryMock(mc).
+			OnPulseMock.Return(nil).
+			IsEmptyMock.Return(true)
+		rawStateStorage.brokers[objectRef] = NewExecutionBrokerIMock(mc).
+			OnPulseMock.Return([]payload.Payload{&payload.ExecutorResults{}})
 		msgs := rawStateStorage.OnPulse(ctx, pulse)
 		s.Len(msgs, 1)
-		s.Len(rawStateStorage.state, 0)
+		s.Len(rawStateStorage.brokers, 0)
+		s.Len(rawStateStorage.registries, 0)
 	}
 
 	{ // state storage with multiple objects
-		rawStateStorage.state[objectRef] = &ObjectState{
-			ExecutionBroker: NewExecutionBrokerIMock(mc).
-				OnPulseMock.Return([]insolar.Message{&message.ExecutorResults{}}),
-			ExecutionArchive: NewExecutionArchiveMock(mc).
-				OnPulseMock.Return([]insolar.Message{&message.StillExecuting{}}).
-				IsEmptyMock.Return(false),
-		}
+		rawStateStorage.brokers[objectRef] = NewExecutionBrokerIMock(mc).
+			OnPulseMock.Return([]payload.Payload{&payload.ExecutorResults{}})
+		rawStateStorage.registries[objectRef] = executionregistry.NewExecutionRegistryMock(mc).
+			OnPulseMock.Return([]payload.Payload{&payload.StillExecuting{}}).
+			IsEmptyMock.Return(false)
 		msgs := rawStateStorage.OnPulse(ctx, pulse)
-		s.Len(msgs, 2)
-		s.Len(rawStateStorage.state, 1)
+		s.Len(msgs[objectRef], 2)
+		s.Len(rawStateStorage.brokers, 0)
+		s.Len(rawStateStorage.registries, 1)
 
-		delete(rawStateStorage.state, objectRef)
+		delete(rawStateStorage.registries, objectRef)
 	}
-
-	jc.IsMeAuthorizedNowMock.Return(false, nil)
 
 	{ // state storage with multiple objects
 		objectRef1 := gen.Reference()
 		objectRef2 := gen.Reference()
-		rawStateStorage.state[objectRef1] = &ObjectState{
-			ExecutionBroker: NewExecutionBrokerIMock(mc).
-				OnPulseMock.Return([]insolar.Message{&message.ExecutorResults{}}),
-			ExecutionArchive: NewExecutionArchiveMock(mc).
-				OnPulseMock.Return(nil).
-				IsEmptyMock.Return(true),
-		}
-		rawStateStorage.state[objectRef2] = &ObjectState{
-			ExecutionBroker: NewExecutionBrokerIMock(mc).
-				OnPulseMock.Return([]insolar.Message{&message.ExecutorResults{}}),
-			ExecutionArchive: NewExecutionArchiveMock(mc).
-				OnPulseMock.Return([]insolar.Message{&message.StillExecuting{}}).
-				IsEmptyMock.Return(false),
-		}
-		msgs := rawStateStorage.OnPulse(ctx, pulse)
-		s.Len(msgs, 3)
-		s.Len(rawStateStorage.state, 1)
-		s.NotNil(rawStateStorage.state[objectRef2].ExecutionArchive)
-		s.Nil(rawStateStorage.state[objectRef2].ExecutionBroker)
 
-		delete(rawStateStorage.state, objectRef2)
+		rawStateStorage.brokers[objectRef1] = NewExecutionBrokerIMock(mc).
+			OnPulseMock.Return([]payload.Payload{&payload.ExecutorResults{}})
+		rawStateStorage.registries[objectRef1] = executionregistry.NewExecutionRegistryMock(mc).
+			OnPulseMock.Return(nil).
+			IsEmptyMock.Return(true)
+
+		rawStateStorage.brokers[objectRef2] = NewExecutionBrokerIMock(mc).
+			OnPulseMock.Return([]payload.Payload{&payload.ExecutorResults{}})
+		rawStateStorage.registries[objectRef2] = executionregistry.NewExecutionRegistryMock(mc).
+			OnPulseMock.Return([]payload.Payload{&payload.StillExecuting{}}).
+			IsEmptyMock.Return(false)
+
+		msgs := rawStateStorage.OnPulse(ctx, pulse)
+		s.Len(msgs, 2)
+		s.Len(msgs[objectRef1], 1)
+		s.Len(msgs[objectRef2], 2)
+		s.Len(rawStateStorage.brokers, 0)
+		s.Len(rawStateStorage.registries, 1)
+		s.NotNil(rawStateStorage.registries[objectRef2])
+		s.Nil(rawStateStorage.brokers[objectRef2])
+
+		delete(rawStateStorage.registries, objectRef2)
 	}
 }

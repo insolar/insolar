@@ -21,8 +21,10 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/artifacts"
+	"github.com/insolar/insolar/logicrunner/common"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/logicrunner.RequestsFetcher -o ./ -s _mock.go -g
@@ -41,15 +43,17 @@ type requestsFetcher struct {
 
 	broker ExecutionBrokerI
 	am     artifacts.Client
+	os     OutgoingRequestSender
 }
 
 func NewRequestsFetcher(
-	obj insolar.Reference, am artifacts.Client, br ExecutionBrokerI,
+	obj insolar.Reference, am artifacts.Client, br ExecutionBrokerI, os OutgoingRequestSender,
 ) RequestsFetcher {
 	return &requestsFetcher{
 		object: obj,
 		broker: br,
 		am:     am,
+		os:     os,
 	}
 }
 
@@ -107,7 +111,7 @@ func (rf *requestsFetcher) fetch(ctx context.Context) error {
 			continue
 		}
 
-		request, err := rf.am.GetIncomingRequest(ctx, rf.object, reqRef)
+		request, err := rf.am.GetAbandonedRequest(ctx, rf.object, reqRef)
 		if err != nil {
 			logger.Error("couldn't get request: ", err.Error())
 			continue
@@ -120,9 +124,16 @@ func (rf *requestsFetcher) fetch(ctx context.Context) error {
 		default:
 		}
 
-		requestCtx := freshContextFromContextAndRequest(ctx, *request)
-		tr := NewTranscript(requestCtx, reqRef, *request)
-		rf.broker.AddRequestsFromLedger(ctx, tr)
+		switch v := request.(type) {
+		case *record.IncomingRequest:
+			requestCtx := freshContextFromContextAndRequest(ctx, *v)
+			tr := common.NewTranscript(requestCtx, reqRef, *v)
+			rf.broker.AddRequestsFromLedger(ctx, tr)
+		case *record.OutgoingRequest:
+			rf.os.SendAbandonedOutgoingRequest(ctx, reqRef, v)
+		default:
+			logger.Error("requestsFetcher.fetch: request is nor IncomingRequest or OutgoingRequest")
+		}
 	}
 
 	return nil

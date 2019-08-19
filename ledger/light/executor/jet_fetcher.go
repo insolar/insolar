@@ -98,7 +98,7 @@ func NewFetcher(
 func (tu *fetcher) Fetch(
 	ctx context.Context, target insolar.ID, pulse insolar.PulseNumber,
 ) (*insolar.ID, error) {
-	ctx, span := instracer.StartSpan(ctx, "jet_tree_updater.fetch_jet")
+	ctx, span := instracer.StartSpan(ctx, "jet_fetcher.Fetch")
 	defer span.End()
 
 	// Special case for genesis pulse. No one was executor at that time, so anyone can fetch data from it.
@@ -198,7 +198,7 @@ func (tu *fetcher) Release(ctx context.Context, jetID insolar.JetID, pulse insol
 func (tu *fetcher) fetch(
 	ctx context.Context, target insolar.ID, pulse insolar.PulseNumber,
 ) (*insolar.ID, error) {
-	ctx, span := instracer.StartSpan(ctx, "jet_tree_updater.fetch_jet_from_other_nodes")
+	ctx, span := instracer.StartSpan(ctx, "jet_fetcher.fetch")
 	defer span.End()
 
 	// Fetching result will be written here.
@@ -223,7 +223,7 @@ func (tu *fetcher) fetch(
 		for i, node := range nodes {
 			// Asking all the nodes concurrently.
 			go func(i int, node insolar.Node) {
-				ctx, span := instracer.StartSpan(ctx, "jet_tree_updater.one_node_get_jet")
+				ctx, span := instracer.StartSpan(ctx, "jet_fetcher.one_node_get_jet")
 				defer span.End()
 
 				defer wg.Done()
@@ -319,7 +319,7 @@ func (tu *fetcher) fetch(
 
 // All light materials except ourselves.
 func (tu *fetcher) nodesForPulse(ctx context.Context, pulse insolar.PulseNumber) ([]insolar.Node, error) {
-	ctx, span := instracer.StartSpan(ctx, "jet_tree_updater.other_nodes_for_pulse")
+	ctx, span := instracer.StartSpan(ctx, "jet_fetcher.nodesForPulse")
 	defer span.End()
 
 	res, err := tu.Nodes.InRole(pulse, insolar.StaticRoleLightMaterial)

@@ -51,13 +51,13 @@
 package phasebundle
 
 import (
-	"fmt"
 	"time"
+
+	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core"
 	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/consensus"
 	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/inspectors"
 	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/pulsectl"
@@ -91,19 +91,23 @@ func CreateDefaultBundleConfig() BundleConfig {
 		false,
 		false,
 		false,
+		true,
+		true,
 	}
 }
 
 type BundleConfig struct {
 	LoopingMinimalDelay time.Duration
 
-	MemberOptions                   transport.PacketPrepareOptions
-	JoinerOptions                   transport.PacketPrepareOptions
+	MemberPacketOptions             transport.PacketPrepareOptions
+	JoinerPacketOptions             transport.PacketPrepareOptions
 	VectorInspectInliningLimit      int
 	DisableVectorInspectionOnJoiner bool
 	EnableFastPhase3                bool
 	IgnoreVectorHashes              bool
 	DisableAggressivePhasing        bool
+	IgnoreHostVerificationForPulses bool
+	LockOSThreadForWorker           bool
 }
 
 type BundleFactories struct {
@@ -130,7 +134,7 @@ func (p *standardBundleFactory) CreateControllersBundle(population census.Online
 	mode := lp.GetOpMode()
 
 	bundleConfig := p.configTemplate
-	//strategy.AdjustBundleConfig(&bundleConfig)
+	// strategy.AdjustBundleConfig(&bundleConfig)
 
 	aggressivePhasing := !bundleConfig.DisableAggressivePhasing && population.IsValid() &&
 		population.GetSuspendedCount() == 0 && population.GetMistrustedCount() == 0
@@ -143,23 +147,16 @@ func (p *standardBundleFactory) CreateControllersBundle(population census.Online
 
 	switch {
 	case mode.IsEvicted():
-		lockDown("EVICTED DETECTED")
-		panic("consensus can NOT be started for an evicted node")
+		panic("EVICTED DETECTED: consensus can NOT be started for an evicted node")
 	case lp.IsJoiner():
 		if population.GetIndexedCapacity() != 0 {
 			panic("joiner can only start with a zero node population")
 		}
 		return NewJoinerPhaseBundle(bf, bundleConfig)
 	case mode.IsSuspended() || !population.IsValid():
-		lockDown("SUSPENDED DETECTED")
+		panic("SUSPENDED DETECTED: not implemented")
 		// TODO work as suspected
-		return nil
 	default:
 		return NewRegularPhaseBundle(bf, bundleConfig)
 	}
-}
-
-func lockDown(msg string) { // TODO must be removed after debugging
-	fmt.Println(">>>>>>>>>>>>>>>>>>>>>>>>>>> DEBUG LOCK: ", msg)
-	<-(<-chan struct{})(nil)
 }

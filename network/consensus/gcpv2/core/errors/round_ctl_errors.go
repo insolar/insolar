@@ -52,7 +52,9 @@ package errors
 
 import (
 	"fmt"
+	"strings"
 
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 )
 
@@ -60,28 +62,31 @@ func NewPulseRoundMismatchError(pn pulse.Number, msg string) error {
 	return &nextPulseRoundError{pn: pn, s: msg}
 }
 
-func NewNextPulseArrivedError(pn pulse.Number) error {
-	return &nextPulseRoundError{pn: pn, nextPulse: true, s: fmt.Sprintf("possible next pulse: %v", pn)}
+func NewPulseRoundMismatchErrorDef(pn pulse.Number, filterPN pulse.Number, localID insolar.ShortNodeID, from interface{}, details string) error {
+	msg := fmt.Sprintf("packet pulse number mismatched: expected=%v, actual=%v, local=%d, from=%v, details=%v",
+		filterPN, pn, localID, from, details)
+	return NewPulseRoundMismatchError(pn, msg)
 }
 
-func IsNextPulseArrivedError(err error) (bool, pulse.Number) {
+func PulseRoundErrorMessageToWarn(msg string) string {
+	pos := strings.IndexRune(msg, ':')
+	if pos < 0 {
+		return msg
+	}
+	return "pulse number change detected" + msg[pos:]
+}
+
+func IsMismatchPulseError(err error) (bool, pulse.Number) {
 	pr, ok := err.(*nextPulseRoundError)
 	if !ok {
 		return false, pulse.Unknown
 	}
-	return pr.nextPulse, pr.pn
+	return !pr.pn.IsUnknown(), pr.pn
 }
 
-func IsNextPulseError(err error) bool {
-	_, ok := err.(*nextPulseRoundError)
-	return ok
-}
-
-// errorString is a trivial implementation of error.
 type nextPulseRoundError struct {
-	pn        pulse.Number
-	s         string
-	nextPulse bool
+	pn pulse.Number
+	s  string
 }
 
 func (e *nextPulseRoundError) Error() string {

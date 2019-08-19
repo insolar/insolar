@@ -28,7 +28,6 @@ var (
 
 func init() {
 	err := view.Register(
-
 		&view.View{
 			Name:        statHotObjectsTotal.Name(),
 			Description: statHotObjectsTotal.Description(),

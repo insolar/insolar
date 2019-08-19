@@ -55,7 +55,6 @@ func (s *Server) Serve() {
 		log.Warn("failed to load configuration from file: ", err.Error())
 	}
 	cfg := &cfgHolder.Configuration
-	cfg.Metrics.Namespace = "insolard"
 
 	fmt.Println("Starts with configuration:\n", configuration.ToString(cfgHolder.Configuration))
 
@@ -64,7 +63,7 @@ func (s *Server) Serve() {
 	fatal(ctx, err, "failed to create components")
 
 	traceID := "main_" + utils.RandTraceID()
-	ctx, inslog := internal.Logger(ctx, cfg.Log, traceID, cmp.NodeRef, cmp.NodeRole)
+	ctx, inslog := inslogger.InitNodeLogger(ctx, cfg.Log, traceID, cmp.NodeRef, cmp.NodeRole)
 	ctx, jaegerFlush := internal.Jaeger(ctx, cfg.Tracer.Jaeger, traceID, cmp.NodeRef, cmp.NodeRole)
 	defer jaegerFlush()
 

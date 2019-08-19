@@ -77,6 +77,18 @@ type FilamentCalculator interface {
 		foundResult *record.CompositeFilamentRecord,
 		err error,
 	)
+
+	// RequestInfo is searching for request and result by objectID, requestID and pulse number
+	RequestInfo(
+		ctx context.Context,
+		objectID insolar.ID,
+		requestID insolar.ID,
+		pulse insolar.PulseNumber,
+	) (
+		foundRequest *record.CompositeFilamentRecord,
+		foundResult *record.CompositeFilamentRecord,
+		err error,
+	)
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.FilamentCleaner -o ./ -s _mock.go -g
@@ -298,7 +310,7 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 	})
 
 	logger.Debug("started to search for duplicated requests")
-	defer logger.Debug("finished to search for duplicated requests")
+	defer logger.Debug("finished searching for duplicated requests")
 
 	reasonRef := request.ReasonRef()
 	reasonID := *reasonRef.Record()
@@ -356,6 +368,77 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 		virtual := record.Unwrap(&rec.Record.Virtual)
 		if r, ok := virtual.(*record.Result); ok {
 			if bytes.Equal(r.Request.Record().Hash(), requestID.Hash()) {
+				foundResult = &rec
+				logger.Debugf("found result %s", rec.RecordID.DebugString())
+			}
+		}
+	}
+
+	return foundRequest, foundResult, nil
+}
+
+func (c *FilamentCalculatorDefault) RequestInfo(
+	ctx context.Context,
+	objectID insolar.ID,
+	requestID insolar.ID,
+	pulse insolar.PulseNumber,
+) (
+	*record.CompositeFilamentRecord,
+	*record.CompositeFilamentRecord,
+	error,
+) {
+	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+		"object_id":  objectID.DebugString(),
+		"request_id": requestID.DebugString(),
+	})
+
+	logger.Debug("start searching request info")
+	defer logger.Debug("finished searching request info")
+
+	idx, err := c.indexes.ForID(ctx, pulse, objectID)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, fmt.Sprintf("object: %s", objectID.DebugString()))
+	}
+
+	if idx.Lifeline.LatestRequest == nil {
+		return nil, nil, errors.Wrap(err, "latest request in lifeline is empty")
+	}
+
+	logger.Debugf("latest request from index %s", idx.Lifeline.LatestRequest.DebugString())
+
+	cache := c.cache.Get(objectID)
+	cache.Lock()
+	defer cache.Unlock()
+
+	iter := newFetchingIterator(
+		ctx,
+		cache,
+		objectID,
+		*idx.Lifeline.LatestRequest,
+		requestID.Pulse(),
+		c.jetFetcher,
+		c.coordinator,
+		c.sender,
+	)
+
+	var foundRequest *record.CompositeFilamentRecord
+	var foundResult *record.CompositeFilamentRecord
+
+	for iter.HasPrev() {
+		rec, err := iter.Prev(ctx)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "failed to calculate filament")
+		}
+
+		if rec.RecordID == requestID {
+			foundRequest = &rec
+			logger.Debugf("found request %s", rec.RecordID.DebugString())
+		}
+
+		virtual := record.Unwrap(&rec.Record.Virtual)
+		if r, ok := virtual.(*record.Result); ok {
+
+			if *r.Request.Record() == requestID {
 				foundResult = &rec
 				logger.Debugf("found result %s", rec.RecordID.DebugString())
 			}
@@ -600,25 +683,30 @@ func (i *fetchingIterator) fetchFromNetwork(
 
 	isBeyond, err := i.coordinator.IsBeyondLimit(ctx, forID.Pulse())
 	if err != nil {
+		instracer.AddError(span, err)
 		return nil, errors.Wrap(err, "failed to calculate limit")
 	}
 	var node *insolar.Reference
 	if isBeyond {
 		node, err = i.coordinator.Heavy(ctx)
 		if err != nil {
+			instracer.AddError(span, err)
 			return nil, errors.Wrap(err, "failed to calculate node")
 		}
 	} else {
 		jetID, err := i.jetFetcher.Fetch(ctx, i.objectID, forID.Pulse())
 		if err != nil {
+			instracer.AddError(span, err)
 			return nil, errors.Wrap(err, "failed to fetch jet")
 		}
 		node, err = i.coordinator.NodeForJet(ctx, *jetID, forID.Pulse())
 		if err != nil {
+			instracer.AddError(span, err)
 			return nil, errors.Wrap(err, "failed to calculate node")
 		}
 	}
 	if *node == i.coordinator.Me() {
+		instracer.AddError(span, errors.New("tried to send message to self"))
 		return nil, errors.New("tried to send message to self")
 	}
 
@@ -634,22 +722,28 @@ func (i *fetchingIterator) fetchFromNetwork(
 		ReadUntil: i.readUntil,
 	})
 	if err != nil {
+		instracer.AddError(span, err)
 		return nil, errors.Wrap(err, "failed to create fetching message")
 	}
 	reps, done := i.sender.SendTarget(ctx, msg, *node)
 	defer done()
 	res, ok := <-reps
 	if !ok {
+		instracer.AddError(span, errors.New("no reply for filament fetch"))
 		return nil, errors.New("no reply for filament fetch")
 	}
 
 	pl, err := payload.UnmarshalFromMeta(res.Payload)
 	if err != nil {
+		instracer.AddError(span, err)
 		return nil, errors.Wrap(err, "failed to unmarshal reply")
 	}
-	filaments, ok := pl.(*payload.FilamentSegment)
-	if !ok {
-		return nil, fmt.Errorf("unexpected reply %T", pl)
+	switch p := pl.(type) {
+	case *payload.FilamentSegment:
+		return p.Records, nil
+	case *payload.Error:
+		return nil, errors.New(p.Text)
 	}
-	return filaments.Records, nil
+	instracer.AddError(span, fmt.Errorf("unexpected reply %T", pl))
+	return nil, fmt.Errorf("unexpected reply %T", pl)
 }

@@ -17,17 +17,15 @@
 package object
 
 import (
-	"bytes"
 	"context"
 	"sync"
 
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/internal/ledger/store"
+	"github.com/insolar/insolar/insolar/store"
 )
 
 // TypeID encodes a record object type.
@@ -72,8 +70,10 @@ type RecordCollectionAccessor interface {
 
 // RecordModifier provides methods for setting record-values to storage.
 type RecordModifier interface {
-	// Set saves new record-value in storage.
+	// Set saves new record-value in storage with order-processing.
 	Set(ctx context.Context, rec record.Material) error
+	// BatchSet saves a batch of records to storage with order-processing.
+	BatchSet(ctx context.Context, recs []record.Material) error
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.AtomicRecordModifier -o ./ -s _mock.go
@@ -90,6 +90,16 @@ type AtomicRecordModifier interface {
 type RecordCleaner interface {
 	// DeleteForPN method removes records from a storage for a pulse
 	DeleteForPN(ctx context.Context, pulse insolar.PulseNumber)
+}
+
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.RecordPositionAccessor -o ./ -s _mock.go
+
+// RecordPositionAccessor provides an interface for fetcing position of records.
+type RecordPositionAccessor interface {
+	// LastKnownPosition returns last known position of record in Pulse.
+	LastKnownPosition(pn insolar.PulseNumber) (uint32, error)
+	// AtPosition returns record ID for a specific pulse and a position
+	AtPosition(pn insolar.PulseNumber, position uint32) (insolar.ID, error)
 }
 
 // RecordMemory is an in-indexStorage struct for record-storage.
@@ -187,112 +197,4 @@ func (m *RecordMemory) DeleteForPN(ctx context.Context, pulse insolar.PulseNumbe
 			statRecordInMemoryRemovedCount.M(1),
 		)
 	}
-}
-
-// RecordDB is a DB storage implementation. It saves records to disk and does not allow removal.
-type RecordDB struct {
-	lock sync.RWMutex
-	db   store.DB
-}
-
-type recordKey insolar.ID
-
-func (k recordKey) Scope() store.Scope {
-	return store.ScopeRecord
-}
-
-func (k recordKey) ID() []byte {
-	id := insolar.ID(k)
-	return bytes.Join([][]byte{id.Pulse().Bytes(), id.Hash()}, nil)
-}
-
-func newRecordKey(raw []byte) recordKey {
-	pulse := insolar.NewPulseNumber(raw)
-	hash := raw[pulse.Size():]
-
-	return recordKey(*insolar.NewID(pulse, hash))
-}
-
-// NewRecordDB creates new DB storage instance.
-func NewRecordDB(db store.DB) *RecordDB {
-	return &RecordDB{db: db}
-}
-
-// Set saves new record-value in storage.
-func (r *RecordDB) Set(ctx context.Context, rec record.Material) error {
-	if rec.ID.IsEmpty() {
-		return errors.New("id is empty")
-	}
-	r.lock.Lock()
-	defer r.lock.Unlock()
-
-	return r.set(rec)
-}
-
-// TruncateHead remove all records after lastPulse
-func (r *RecordDB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
-	r.lock.Lock()
-	defer r.lock.Unlock()
-
-	it := r.db.NewIterator(recordKey(*insolar.NewID(from, nil)), false)
-	defer it.Close()
-
-	var hasKeys bool
-	for it.Next() {
-		hasKeys = true
-		key := newRecordKey(it.Key())
-		keyID := insolar.ID(key)
-		err := r.db.Delete(&key)
-		if err != nil {
-			return errors.Wrapf(err, "can't delete key: %+v", key)
-		}
-
-		inslogger.FromContext(ctx).Debugf("Erased key with pulse number: %s. ID: %s", keyID.Pulse().String(), keyID.String())
-	}
-
-	if !hasKeys {
-		inslogger.FromContext(ctx).Infof("No records. Nothing done. Pulse number: %s", from.String())
-	}
-
-	return nil
-}
-
-// ForID returns record for provided id.
-func (r *RecordDB) ForID(ctx context.Context, id insolar.ID) (record.Material, error) {
-	r.lock.RLock()
-	defer r.lock.RUnlock()
-
-	return r.get(id)
-}
-
-func (r *RecordDB) set(rec record.Material) error {
-	key := recordKey(rec.ID)
-
-	_, err := r.db.Get(key)
-	if err == nil {
-		return ErrOverride
-	}
-
-	data, err := rec.Marshal()
-	if err != nil {
-		return err
-	}
-
-	return r.db.Set(key, data)
-}
-
-func (r *RecordDB) get(id insolar.ID) (record.Material, error) {
-	buff, err := r.db.Get(recordKey(id))
-	if err == store.ErrNotFound {
-		err = ErrNotFound
-		return record.Material{}, err
-	}
-	if err != nil {
-		return record.Material{}, err
-	}
-
-	rec := record.Material{}
-	err = rec.Unmarshal(buff)
-
-	return rec, err
 }

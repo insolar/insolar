@@ -18,7 +18,6 @@ package certificate
 
 import (
 	"crypto"
-	"io"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/pkg/errors"
@@ -26,7 +25,6 @@ import (
 
 // CertificateManager is a component for working with current node certificate
 type CertificateManager struct { // nolint: golint
-	CS          insolar.CryptographyService `inject:""`
 	certificate insolar.Certificate
 }
 
@@ -41,15 +39,14 @@ func (m *CertificateManager) GetCertificate() insolar.Certificate {
 }
 
 // VerifyAuthorizationCertificate verifies certificate from some node
-func (m *CertificateManager) VerifyAuthorizationCertificate(authCert insolar.AuthorizationCertificate) (bool, error) {
-	discoveryNodes := m.certificate.GetDiscoveryNodes()
+func VerifyAuthorizationCertificate(cs insolar.CryptographyService, discoveryNodes []insolar.DiscoveryNode, authCert insolar.AuthorizationCertificate) (bool, error) {
 	if len(discoveryNodes) != len(authCert.GetDiscoverySigns()) {
 		return false, nil
 	}
 	data := authCert.SerializeNodePart()
 	for _, node := range discoveryNodes {
 		sign := authCert.GetDiscoverySigns()[*node.GetNodeRef()]
-		ok := m.CS.Verify(node.GetPublicKey(), insolar.SignatureFromBytes(sign), data)
+		ok := cs.Verify(node.GetPublicKey(), insolar.SignatureFromBytes(sign), data)
 		if !ok {
 			return false, nil
 		}
@@ -57,9 +54,9 @@ func (m *CertificateManager) VerifyAuthorizationCertificate(authCert insolar.Aut
 	return true, nil
 }
 
-// NewUnsignedCertificate returns new certificate
-func (m *CertificateManager) NewUnsignedCertificate(pKey string, role string, ref string) (insolar.Certificate, error) {
-	cert := m.certificate.(*Certificate)
+// NewUnsignedCertificate creates new unsigned certificate by copying
+func NewUnsignedCertificate(baseCert insolar.Certificate, pKey string, role string, ref string) (insolar.Certificate, error) {
+	cert := baseCert.(*Certificate)
 	newCert := Certificate{
 		MajorityRule: cert.MajorityRule,
 		MinRoles:     cert.MinRoles,
@@ -77,6 +74,7 @@ func (m *CertificateManager) NewUnsignedCertificate(pKey string, role string, re
 		newCert.BootstrapNodes[i].NodeRef = node.NodeRef
 		newCert.BootstrapNodes[i].PublicKey = node.PublicKey
 		newCert.BootstrapNodes[i].NetworkSign = node.NetworkSign
+		newCert.BootstrapNodes[i].NodeRole = node.NodeRole
 	}
 	return &newCert, nil
 }
@@ -86,27 +84,6 @@ func NewManagerReadCertificate(publicKey crypto.PublicKey, keyProcessor insolar.
 	cert, err := ReadCertificate(publicKey, keyProcessor, certPath)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NewManagerReadCertificate ] failed to read certificate:")
-	}
-	certManager := NewCertificateManager(cert)
-	return certManager, nil
-}
-
-// NewManagerReadCertificateFromReader constructor creates new CertificateManager component
-func NewManagerReadCertificateFromReader(publicKey crypto.PublicKey, keyProcessor insolar.KeyProcessor, reader io.Reader) (*CertificateManager, error) {
-	cert, err := ReadCertificateFromReader(publicKey, keyProcessor, reader)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ NewManagerReadCertificateFromReader ] failed to read certificate data:")
-	}
-	certManager := NewCertificateManager(cert)
-	return certManager, nil
-}
-
-// NewManagerCertificateWithKeys generate manager with certificate from given keys
-// DEPRECATED, this method generates invalid certificate, remove it after pulsar tests refactor
-func NewManagerCertificateWithKeys(publicKey crypto.PublicKey, keyProcessor insolar.KeyProcessor) (*CertificateManager, error) {
-	cert, err := NewCertificatesWithKeys(publicKey, keyProcessor)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ NewManagerCertificateWithKeys ] failed to create certificate:")
 	}
 	certManager := NewCertificateManager(cert)
 	return certManager, nil

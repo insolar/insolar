@@ -56,8 +56,6 @@ const (
 	TypeCode
 	// TypeObject is object from storage.
 	TypeObject
-	// TypeDelegate is delegate reference from storage.
-	TypeDelegate
 	// TypeID is common reply for methods returning id to lifeline states.
 	TypeID
 	// TypeChildren is a reply for fetching objects children in chunks.
@@ -99,16 +97,12 @@ func getEmptyReply(t insolar.ReplyType) (insolar.Reply, error) {
 	switch t {
 	case TypeCallMethod:
 		return &CallMethod{}, nil
-	case TypeCallConstructor:
-		return &CallConstructor{}, nil
 	case TypeRegisterRequest:
 		return &RegisterRequest{}, nil
 	case TypeCode:
 		return &Code{}, nil
 	case TypeObject:
 		return &Object{}, nil
-	case TypeDelegate:
-		return &Delegate{}, nil
 	case TypeID:
 		return &ID{}, nil
 	case TypeIDs:
@@ -178,11 +172,9 @@ func ToBytes(rep insolar.Reply) []byte {
 
 func init() {
 	gob.Register(&CallMethod{})
-	gob.Register(&CallConstructor{})
 	gob.Register(&RegisterRequest{})
 	gob.Register(&Code{})
 	gob.Register(&Object{})
-	gob.Register(&Delegate{})
 	gob.Register(&ID{})
 	gob.Register(&IDs{})
 	gob.Register(&Children{})

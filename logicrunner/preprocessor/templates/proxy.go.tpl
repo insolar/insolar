@@ -46,11 +46,29 @@ type ContractConstructorHolder struct {
 
 // AsChild saves object as child
 func (r *ContractConstructorHolder) AsChild(objRef insolar.Reference) (*{{ .ContractType }}, error) {
-	ref, err := common.CurrentProxyCtx.SaveAsChild(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
+	ref, ret, err := common.CurrentProxyCtx.SaveAsChild(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
 	if err != nil {
 		return nil, err
 	}
-	return &{{ .ContractType }}{Reference: ref}, nil
+
+	var constructorError *foundation.Error
+	resultContainer := foundation.Result{
+		Returns: []interface{}{ &constructorError },
+	}
+	err = common.CurrentProxyCtx.Deserialize(ret, &resultContainer)
+	if err != nil {
+		return nil, err
+	}
+
+	if resultContainer.Error != nil {
+		return nil, resultContainer.Error
+	}
+
+	if constructorError != nil {
+		return nil, constructorError
+	}
+
+	return &{{ .ContractType }}{Reference: *ref}, nil
 }
 
 // GetObject returns proxy object
@@ -167,11 +185,17 @@ func (r *{{ $.ContractType }}) {{ $method.Name }}{{if $method.Immutable}}AsMutab
 		return {{ $method.ResultsWithErr }}
 	}
 
-	err = common.CurrentProxyCtx.Deserialize(res, &ret)
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
 	if err != nil {
 		return {{ $method.ResultsWithErr }}
 	}
-
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return {{ $method.ResultsWithErr }}
+	}
 	if {{ $method.ErrorVar }} != nil {
 		return {{ $method.Results }}
 	}
@@ -216,11 +240,17 @@ func (r *{{ $.ContractType }}) {{ $method.Name }}{{if not $method.Immutable}}AsI
 		return {{ $method.ResultsWithErr }}
 	}
 
-	err = common.CurrentProxyCtx.Deserialize(res, &ret)
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
 	if err != nil {
 		return {{ $method.ResultsWithErr }}
 	}
-
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return {{ $method.ResultsWithErr }}
+	}
 	if {{ $method.ErrorVar }} != nil {
 		return {{ $method.Results }}
 	}

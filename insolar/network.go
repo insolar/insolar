@@ -18,6 +18,7 @@ package insolar
 
 import (
 	"context"
+	"time"
 )
 
 // Cascade contains routing data for cascade sending
@@ -32,6 +33,34 @@ type Cascade struct {
 
 // RemoteProcedure is remote procedure call function.
 type RemoteProcedure func(ctx context.Context, args []byte) ([]byte, error)
+
+// NetworkOperableCallback is callback for notifying is network is operable or not
+type NetworkOperableCallback func(ctx context.Context, isNetworkOperable bool)
+
+// HealthChecker interface provides method to check network health
+type HealthChecker interface {
+	// IsAlive returns true if todo: fix requirements
+	IsAlive() bool
+}
+
+type StatusReply struct {
+	NetworkState    NetworkState
+	Origin          NetworkNode
+	ActiveListSize  int
+	WorkingListSize int
+	// Nodes from active list
+	Nodes []NetworkNode
+	// Pulse from network pulse storage
+	Pulse     Pulse
+	Version   string
+	Timestamp time.Time
+	// node start timestamp for uptime duration
+	StartTime time.Time
+}
+
+type NetworkStatus interface {
+	GetNetworkStatus() StatusReply
+}
 
 //go:generate minimock -i github.com/insolar/insolar/insolar.Network -o ../testutils -s _mock.go -g
 
@@ -48,7 +77,8 @@ type Network interface {
 	// GetState returns our current thoughs about whole network
 	GetState() NetworkState
 	// SetOperableFunc registers callback for notifying of network state
-	SetOperableFunc(f func(ctx context.Context, isNetworkOperable bool))
+	SetOperableFunc(NetworkOperableCallback)
+	GetCert(context.Context, *Reference) (Certificate, error)
 }
 
 //go:generate minimock -i github.com/insolar/insolar/insolar.PulseDistributor -o ../testutils -s _mock.go -g
@@ -66,12 +96,9 @@ type NetworkState int
 const (
 	// NoNetworkState state means that nodes doesn`t match majority_rule
 	NoNetworkState NetworkState = iota
-	// VoidNetworkState state means that nodes have not complete min_role_count rule for proper work
-	VoidNetworkState
-	// JetlessNetworkState state means that every Jet need proof completeness of stored data
-	JetlessNetworkState
-	// AuthorizationNetworkState state means that every node need to validate ActiveNodeList using NodeDomain
-	AuthorizationNetworkState
-	// CompleteNetworkState state means network is ok and ready for proper work
+	JoinerBootstrap
+	WaitConsensus
+	WaitMajority
+	WaitMinRoles
 	CompleteNetworkState
 )

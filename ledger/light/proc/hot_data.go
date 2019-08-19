@@ -32,7 +32,6 @@ import (
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/drop"
-	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/insolar/insolar/ledger/object"
 )
 
@@ -49,10 +48,10 @@ type HotObjects struct {
 
 	dep struct {
 		drops       drop.Modifier
-		indices     object.MemoryIndexModifier
+		indexes     object.MemoryIndexModifier
 		jetStorage  jet.Storage
 		jetFetcher  executor.JetFetcher
-		jetReleaser hot.JetReleaser
+		jetReleaser executor.JetReleaser
 		coordinator jet.Coordinator
 		calculator  pulse.Calculator
 		sender      wbus.Sender
@@ -77,16 +76,16 @@ func NewHotObjects(
 
 func (p *HotObjects) Dep(
 	drops drop.Modifier,
-	indices object.MemoryIndexModifier,
+	indexes object.MemoryIndexModifier,
 	jStore jet.Storage,
 	jFetcher executor.JetFetcher,
-	jReleaser hot.JetReleaser,
+	jReleaser executor.JetReleaser,
 	coordinator jet.Coordinator,
 	pCalc pulse.Calculator,
 	sender bus.Sender,
 ) {
 	p.dep.drops = drops
-	p.dep.indices = indices
+	p.dep.indexes = indexes
 	p.dep.jetStorage = jStore
 	p.dep.jetFetcher = jFetcher
 	p.dep.jetReleaser = jReleaser
@@ -96,7 +95,7 @@ func (p *HotObjects) Dep(
 }
 
 func (p *HotObjects) Proceed(ctx context.Context) error {
-	inslogger.FromContext(ctx).Debug("Get hot. pulse: ", p.drop.Pulse, " jet: ", p.drop.JetID.DebugString())
+	inslogger.FromContext(ctx).Debug("Get executor. pulse: ", p.drop.Pulse, " jet: ", p.drop.JetID.DebugString())
 
 	err := p.dep.drops.Set(ctx, p.drop)
 	if err == drop.ErrOverride {
@@ -134,7 +133,7 @@ func (p *HotObjects) Proceed(ctx context.Context) error {
 			continue
 		}
 
-		p.dep.indices.Set(
+		p.dep.indexes.Set(
 			ctx,
 			p.pulse,
 			record.Index{
