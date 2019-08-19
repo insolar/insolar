@@ -60,17 +60,12 @@ clean: ## run all cleanup tasks
 	rm -rf $(BIN_DIR)
 	./scripts/insolard/launchnet.sh -l
 
-
-.PHONY: install-godep
-install-godep: ## install dep tool
-	./scripts/build/fetchdeps github.com/golang/dep/cmd/dep v0.5.3
-
 .PHONY: install-build-tools
 install-build-tools: ## install tools for codegen
 	./scripts/build/install_build_tools.sh
 
 .PHONY: install-deps
-install-deps: install-godep install-build-tools ## install dep and codegen tools
+install-deps: install-build-tools ## install dep and codegen tools
 
 .PHONY: pre-build
 pre-build: ensure generate regen-builtin ## install dependencies, (re)generates all code
