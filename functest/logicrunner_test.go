@@ -1,4 +1,4 @@
-///
+//
 // Copyright 2019 Insolar Technologies GmbH
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,7 +12,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-///
+//
 
 // +build functest
 
@@ -308,14 +308,12 @@ func (w *TestSagaSimpleCallContract) GetBalance() (int, error) {
 	return w.Amount, nil
 }
 
-var INSATTR_Accept_API = true
 //ins:saga(Rollback)
 func (w *TestSagaSimpleCallContract) Accept(amount int) error {
 	w.Amount += amount
 	return nil
 }
 
-var INSATTR_Rollback_API = true
 func (w *TestSagaSimpleCallContract) Rollback(amount int) error {
 	w.Amount -= amount
 	return nil
@@ -515,14 +513,12 @@ func (w *TestSagaMultipleCallsContract) GetBalance() (int, error) {
 	return w.Amount, nil
 }
 
-var INSATTR_Accept_API = true
 //ins:saga(Rollback)
 func (w *TestSagaMultipleCallsContract) Accept(amount int) error {
 	w.Amount += amount
 	return nil
 }
 
-var INSATTR_Rollback_API = true
 func (w *TestSagaMultipleCallsContract) Rollback(amount int) error {
 	w.Amount -= amount
 	return nil
@@ -626,7 +622,6 @@ func (w *SagaMagicFlagTwo) GetBalance() (int, error) {
 	return w.Amount, nil
 }
 
-var INSATTR_Accept_API = true
 //ins:saga(INS_FLAG_NO_ROLLBACK_METHOD)
 func (w *SagaMagicFlagTwo) Accept(amount int) error {
 	w.Amount += amount
@@ -699,14 +694,12 @@ func (c *TestSagaSelfCallContract) GetSagaCallsNum() (int, error) {
 	return c.SagaCallsNum, nil
 }
 
-var INSATTR_Accept_API = true
 //ins:saga(Rollback)
 func (c *TestSagaSelfCallContract) Accept(delta int) error {
 	c.SagaCallsNum += delta
 	return nil
 }
 
-var INSATTR_Rollback_API = true
 func (c *TestSagaSelfCallContract) Rollback(delta int) error {
 	c.SagaCallsNum -= delta
 	return nil
@@ -813,20 +806,9 @@ func (r *Two) GetValue() (int, error) {
 	uploadContractOnce(t, "basic_notification_call_two", contractTwoCode)
 	obj := callConstructor(t, uploadContractOnce(t, "basic_notification_call_one", contractOneCode), "New")
 
-	resp := callMethod(t, obj, "Hello")
-	require.Empty(t, resp.Error)
-
-	for i := 0; i < 25; i++ {
-		resp = callMethod(t, obj, "Value")
-		require.Empty(t, resp.Error)
-
-		if float64(322) != resp.ExtractedReply {
-			break
-		}
-		time.Sleep(1000 * time.Millisecond)
-	}
-
-	require.Equal(t, float64(644), resp.ExtractedReply)
+	resp := callMethodNoChecks(t, obj, "Hello")
+	require.NotEmpty(t, resp.Error)
+	require.Contains(t, resp.Error.Error(), "reason request is not closed for a detached call")
 }
 
 func TestContextPassing(t *testing.T) {
@@ -1375,8 +1357,9 @@ func (r *Two) GetCounter() (int, error) {
 	uploadContractOnce(t, "no_loops_while_notification_call_two", contractTwoCode)
 	obj := callConstructor(t, uploadContractOnce(t, "no_loops_while_notification_call_one", contractOneCode), "New")
 
-	resp := callMethod(t, obj, "IncrementBy100")
-	require.Empty(t, resp.Error)
+	resp := callMethodNoChecks(t, obj, "IncrementBy100")
+	require.NotEmpty(t, resp.Error)
+	require.Contains(t, resp.Error.Error(), "reason request is not closed for a detached call")
 }
 
 func TestPrototypeMismatch(t *testing.T) {
@@ -1664,11 +1647,11 @@ type Two struct {
 
 
 func New() (*Two, error) {
-	return &Two{Number: 10, OneRef: insolar.NewEmptyReference()}, nil
+	return &Two{Number: 10, OneRef: *insolar.NewEmptyReference()}, nil
 }
 
 func NewWithOne(oneNumber int) (*Two, error) {
-	return &Two{Number: oneNumber, OneRef: insolar.NewEmptyReference() }, nil
+	return &Two{Number: oneNumber, OneRef: *insolar.NewEmptyReference() }, nil
 }
 
 var INSATTR_Get_API = true
@@ -1704,10 +1687,9 @@ func (r *Two) DoNothing() (error) {
 
 	contractTwoRef := uploadContractOnce(t, "second_contract", contractTwoCode)
 	secondObjRef := callConstructor(t, contractTwoRef, "NewWithOne", 100)
-	secondRresult := callMethod(t, secondObjRef, "Get")
-	require.Empty(t, secondRresult.Error)
-
-	require.Equal(t, 0.0, secondRresult.ExtractedReply)
+	secondRresult := callMethodNoChecks(t, secondObjRef, "Get")
+	require.NotEmpty(t, secondRresult.Error)
+	require.Contains(t, secondRresult.Error.Error(), "reason request is not closed for a detached call")
 }
 
 func TestMultiplyNoWaitCallsOnSomeObject(t *testing.T) {
@@ -1808,8 +1790,9 @@ func (r *Two) NoWaitGet(OneRef insolar.Reference) (int, error) {
 		for i := 0; i < 10; i++ {
 			go func() {
 				defer wg.Done()
-				result := callMethod(syncT, objectRef, "NoWaitGet", firstObjRef)
-				require.Empty(syncT, result.Error)
+				result := callMethodNoChecks(syncT, objectRef, "NoWaitGet", firstObjRef)
+				require.NotEmpty(t, result.Error)
+				require.Contains(t, result.Error.Error(), "reason request is not closed for a detached call")
 			}()
 		}
 		wg.Wait()

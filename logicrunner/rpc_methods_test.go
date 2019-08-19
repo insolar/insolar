@@ -164,7 +164,7 @@ func TestProxyImplementation_GetCode(t *testing.T) {
 		{
 			name:       "success",
 			transcript: &common.Transcript{},
-			req:        rpctypes.UpGetCodeReq{Code: insolar.Reference{1, 2, 3}},
+			req:        rpctypes.UpGetCodeReq{Code: gen.Reference()},
 			dc: artifacts.NewDescriptorsCacheMock(mc).
 				GetCodeMock.
 				Return(
@@ -177,7 +177,7 @@ func TestProxyImplementation_GetCode(t *testing.T) {
 		{
 			name:       "no code descriptor",
 			transcript: &common.Transcript{},
-			req:        rpctypes.UpGetCodeReq{Code: insolar.Reference{1, 2, 3}},
+			req:        rpctypes.UpGetCodeReq{Code: gen.Reference()},
 			dc: artifacts.NewDescriptorsCacheMock(mc).
 				GetCodeMock.Return(nil, errors.New("some")),
 			error: true,
@@ -185,7 +185,7 @@ func TestProxyImplementation_GetCode(t *testing.T) {
 		{
 			name:       "no code",
 			transcript: &common.Transcript{},
-			req:        rpctypes.UpGetCodeReq{Code: insolar.Reference{1, 2, 3}},
+			req:        rpctypes.UpGetCodeReq{Code: gen.Reference()},
 			dc: artifacts.NewDescriptorsCacheMock(mc).
 				GetCodeMock.Return(
 				artifacts.NewCodeDescriptorMock(mc).
@@ -337,7 +337,8 @@ func TestRouteCallRegistersOutgoingRequestWithValidReason(t *testing.T) {
 		return &payload.RequestInfo{RequestID: id}, nil
 	})
 
-	cr.CallMock.Return(&reply.CallMethod{}, &insolar.Reference{}, nil)
+	ref := gen.Reference()
+	cr.CallMock.Return(&reply.CallMethod{}, &ref, nil)
 	// Make sure the result of the outgoing request is registered as well
 	am.RegisterResultMock.Set(func(ctx context.Context, reqref insolar.Reference, result artifacts.RequestResult) (r error) {
 		require.Equal(t, outgoingReqRef, &reqref)

@@ -33,7 +33,6 @@ import (
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
-	"go.opencensus.io/stats"
 	"go.opencensus.io/trace"
 )
 
@@ -42,6 +41,7 @@ type LightReplicator interface {
 	// NotifyAboutPulse is method for notifying a sync component about new pulse
 	NotifyAboutPulse(ctx context.Context, pn insolar.PulseNumber)
 
+	// Stop stops the component
 	Stop()
 }
 
@@ -178,9 +178,6 @@ func (lr *LightReplicatorDefault) sync(ctx context.Context) {
 func (lr *LightReplicatorDefault) sendToHeavy(ctx context.Context, pl payload.Replication) error {
 	msg, err := payload.NewMessage(&pl)
 	if err != nil {
-		stats.Record(ctx,
-			statErrHeavyPayloadCount.M(1),
-		)
 		return err
 	}
 
@@ -189,9 +186,6 @@ func (lr *LightReplicatorDefault) sendToHeavy(ctx context.Context, pl payload.Re
 	_, done := lr.sender.SendRole(ctx, msg, insolar.DynamicRoleHeavyExecutor, *insolar.NewReference(insolar.ID(pl.JetID)))
 	done()
 
-	stats.Record(ctx,
-		statHeavyPayloadCount.M(1),
-	)
 	return nil
 }
 

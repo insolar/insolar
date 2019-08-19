@@ -52,6 +52,7 @@ package gateway
 
 import (
 	"context"
+	"github.com/gojuno/minimock"
 	"testing"
 	"time"
 
@@ -62,7 +63,11 @@ import (
 )
 
 func TestWaitConsensus_ConsensusNotHappenedInETA(t *testing.T) {
-	gatewayer := mock.NewGatewayerMock(t)
+	mc := minimock.NewController(t)
+	defer mc.Finish()
+	defer mc.Wait(time.Minute)
+
+	gatewayer := mock.NewGatewayerMock(mc)
 	gatewayer.SwitchStateMock.Set(func(ctx context.Context, state insolar.NetworkState, pulse insolar.Pulse) {
 		assert.Equal(t, insolar.NoNetworkState, state)
 	})
@@ -70,24 +75,30 @@ func TestWaitConsensus_ConsensusNotHappenedInETA(t *testing.T) {
 	waitConsensus := newWaitConsensus(&Base{})
 	waitConsensus.Gatewayer = gatewayer
 	waitConsensus.bootstrapETA = time.Millisecond
+	waitConsensus.bootstrapTimer = time.NewTimer(waitConsensus.bootstrapETA)
 
 	waitConsensus.Run(context.Background(), *insolar.EphemeralPulse)
 }
 
 func TestWaitConsensus_ConsensusHappenedInETA(t *testing.T) {
-	gatewayer := mock.NewGatewayerMock(t)
+	mc := minimock.NewController(t)
+	defer mc.Finish()
+	defer mc.Wait(time.Minute)
+
+	gatewayer := mock.NewGatewayerMock(mc)
 	gatewayer.SwitchStateMock.Set(func(ctx context.Context, state insolar.NetworkState, pulse insolar.Pulse) {
 		assert.Equal(t, insolar.WaitMajority, state)
 	})
 
 	waitConsensus := newWaitConsensus(&Base{})
 	waitConsensus.Gatewayer = gatewayer
-	accessorMock := mock.NewPulseAccessorMock(t)
+	accessorMock := mock.NewPulseAccessorMock(mc)
 	accessorMock.GetPulseMock.Set(func(ctx context.Context, p1 insolar.PulseNumber) (p2 insolar.Pulse, err error) {
 		return *insolar.EphemeralPulse, nil
 	})
 	waitConsensus.PulseAccessor = accessorMock
 	waitConsensus.bootstrapETA = time.Second
+	waitConsensus.bootstrapTimer = time.NewTimer(waitConsensus.bootstrapETA)
 	waitConsensus.OnConsensusFinished(context.Background(), network.Report{})
 
 	waitConsensus.Run(context.Background(), *insolar.EphemeralPulse)

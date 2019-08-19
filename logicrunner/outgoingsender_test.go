@@ -69,7 +69,7 @@ func TestOutgoingSenderSendRegularOutgoing(t *testing.T) {
 		resultChan:       resultChan,
 	}
 
-	cr.CallMock.Return(&reply.CallMethod{}, &insolar.Reference{}, nil)
+	cr.CallMock.Return(&reply.CallMethod{}, insolar.NewEmptyReference(), nil)
 	am.RegisterResultMock.Return(nil)
 
 	_, err := sender.Receive(msg)
@@ -102,7 +102,7 @@ func TestOutgoingSenderSendSagaOutgoing(t *testing.T) {
 		resultChan:       resultChan,
 	}
 
-	cr.CallMock.Return(&reply.CallMethod{}, &insolar.Reference{}, nil)
+	cr.CallMock.Return(&reply.CallMethod{}, insolar.NewEmptyReference(), nil)
 	am.RegisterResultMock.Return(nil)
 
 	_, err := sender.Receive(msg)
@@ -128,7 +128,7 @@ func TestOutgoingSenderSendAbandonedOutgoing(t *testing.T) {
 		outgoingRequest:  outgoing,
 	}
 
-	cr.CallMock.Return(&reply.CallMethod{}, &insolar.Reference{}, nil)
+	cr.CallMock.Return(&reply.CallMethod{}, insolar.NewEmptyReference(), nil)
 	am.RegisterResultMock.Return(nil)
 
 	_, err := sender.Receive(msg)

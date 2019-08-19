@@ -185,13 +185,15 @@ func generateMigrationAddress() string {
 	return testutils.RandomString()
 }
 
+const migrationAmount = "360000"
+
 func fullMigration(t *testing.T, txHash string) *user {
 	migrationAddress := testutils.RandomString()
 	member := createMigrationMemberForMA(t, migrationAddress)
 
-	migrate(t, member.ref, "1000", txHash, migrationAddress, 0)
-	migrate(t, member.ref, "1000", txHash, migrationAddress, 2)
-	migrate(t, member.ref, "1000", txHash, migrationAddress, 1)
+	migrate(t, member.ref, migrationAmount, txHash, migrationAddress, 0)
+	migrate(t, member.ref, migrationAmount, txHash, migrationAddress, 2)
+	migrate(t, member.ref, migrationAmount, txHash, migrationAddress, 1)
 
 	return member
 }
@@ -258,12 +260,14 @@ func unmarshalCallResponse(t testing.TB, body []byte, response *requester.Contra
 func signedRequest(t *testing.T, user *user, method string, params interface{}) (interface{}, error) {
 	res, refStr, err := makeSignedRequest(user, method, params)
 
-	msg := "Ref is empty"
+	var errMsg string
 	if err != nil {
-		msg = msg + " because: " + err.Error()
+		errMsg = err.Error()
 	}
-	require.NotEqual(t, "", refStr, msg)
-	require.NotEqual(t, "11111111111111111111111111111111.11111111111111111111111111111111", refStr, msg)
+	emptyRef := insolar.NewEmptyReference()
+
+	require.NotEqual(t, "", refStr, "request ref is empty: %s", errMsg)
+	require.NotEqual(t, emptyRef.String(), refStr, "request ref is zero: %s", errMsg)
 
 	_, err = insolar.NewReferenceFromBase58(refStr)
 	require.Nil(t, err)
@@ -394,7 +398,7 @@ func uploadContract(t testing.TB, contractName string, contractCode string) *ins
 	require.NoError(t, err)
 
 	emptyRef := make([]byte, insolar.RecordRefSize)
-	require.NotEqual(t, insolar.Reference{}.FromSlice(emptyRef), prototypeRef)
+	require.NotEqual(t, insolar.NewReferenceFromBytes(emptyRef), prototypeRef)
 
 	return prototypeRef
 }
@@ -431,7 +435,7 @@ func callConstructor(t testing.TB, prototypeRef *insolar.Reference, method strin
 	objectRef, err := insolar.NewReferenceFromBase58(callConstructorRes.Result.Object)
 	require.NoError(t, err)
 
-	require.NotEqual(t, insolar.Reference{}.FromSlice(make([]byte, insolar.RecordRefSize)), objectRef)
+	require.NotEqual(t, insolar.NewReferenceFromBytes(make([]byte, insolar.RecordRefSize)), objectRef)
 
 	return objectRef
 }

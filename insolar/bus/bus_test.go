@@ -387,7 +387,7 @@ func TestMessageBus_Send_IncomingMessageRouter_ReadAfterTimeout(t *testing.T) {
 	pulseMock.LatestMock.Return(*insolar.GenesisPulse, nil)
 
 	coordinatorMock := jet.NewCoordinatorMock(t)
-	coordinatorMock.MeMock.Return(insolar.Reference{})
+	coordinatorMock.MeMock.Return(gen.Reference())
 
 	pcs := testutils.NewPlatformCryptographyScheme()
 
@@ -421,7 +421,7 @@ func TestMessageBus_Send_IncomingMessageRouter_WriteAfterTimeout(t *testing.T) {
 	pulseMock.LatestMock.Return(*insolar.GenesisPulse, nil)
 
 	coordinatorMock := jet.NewCoordinatorMock(t)
-	coordinatorMock.MeMock.Return(insolar.Reference{})
+	coordinatorMock.MeMock.Return(gen.Reference())
 
 	pcs := testutils.NewPlatformCryptographyScheme()
 
@@ -464,7 +464,7 @@ func TestMessageBus_Send_IncomingMessageRouter_SeveralMsg(t *testing.T) {
 	pulseMock := pulse.NewAccessorMock(t)
 	pulseMock.LatestMock.Return(*insolar.GenesisPulse, nil)
 	coordinatorMock := jet.NewCoordinatorMock(t)
-	coordinatorMock.MeMock.Return(insolar.Reference{})
+	coordinatorMock.MeMock.Return(gen.Reference())
 	pcs := testutils.NewPlatformCryptographyScheme()
 	cfg := defaultConfig
 	cfg.ReplyTimeout = time.Minute
@@ -553,7 +553,7 @@ func TestMessageBus_Send_IncomingMessageRouter_SeveralMsgForOneSend(t *testing.T
 	pulseMock.LatestMock.Return(*insolar.GenesisPulse, nil)
 
 	coordinatorMock := jet.NewCoordinatorMock(t)
-	coordinatorMock.MeMock.Return(insolar.Reference{})
+	coordinatorMock.MeMock.Return(gen.Reference())
 
 	pcs := testutils.NewPlatformCryptographyScheme()
 

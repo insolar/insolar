@@ -206,8 +206,7 @@ func TestRecordIterator_Next(t *testing.T) {
 
 	t.Run("reading data works", func(t *testing.T) {
 		pn := gen.PulseNumber()
-		id := gen.ID()
-		id.SetPulse(pn)
+		id := gen.IDWithPulse(pn)
 
 		positionAccessor := object.NewRecordPositionAccessorMock(t)
 		positionAccessor.LastKnownPositionMock.Expect(pn).Return(10, nil)
@@ -250,9 +249,8 @@ func TestRecordIterator_Next(t *testing.T) {
 
 		t.Run("Changing pulse works successfully", func(t *testing.T) {
 			firstPN := gen.PulseNumber()
-			nextPN := insolar.PulseNumber(firstPN + 10)
-			id := gen.ID()
-			id.SetPulse(nextPN)
+			nextPN := firstPN + 10
+			id := gen.IDWithPulse(nextPN)
 
 			jetKeeper := executor.NewJetKeeperMock(t)
 			jetKeeper.TopSyncPulseMock.Return(nextPN)
@@ -263,12 +261,12 @@ func TestRecordIterator_Next(t *testing.T) {
 
 			positionAccessor.AtPositionMock.Expect(nextPN, uint32(1)).Return(id, nil)
 
-			record := record.Material{
+			rec := record.Material{
 				JetID: gen.JetID(),
 				ID:    id,
 			}
 			recordsAccessor := object.NewRecordAccessorMock(t)
-			recordsAccessor.ForIDMock.Expect(ctx, id).Return(record, nil)
+			recordsAccessor.ForIDMock.Expect(ctx, id).Return(rec, nil)
 
 			pulseCalculator := network.NewPulseCalculatorMock(t)
 			pulseCalculator.ForwardsMock.Expect(ctx, firstPN, 1).Return(insolar.Pulse{PulseNumber: nextPN}, nil)
@@ -283,7 +281,7 @@ func TestRecordIterator_Next(t *testing.T) {
 			require.Equal(t, nextPN, next.Record.ID.Pulse())
 			require.Equal(t, uint32(1), next.RecordNumber)
 			require.Equal(t, id, next.Record.ID)
-			require.Equal(t, record, next.Record)
+			require.Equal(t, rec, next.Record)
 		})
 	})
 }
@@ -326,7 +324,7 @@ func TestRecordServer_Export(t *testing.T) {
 	t.Run("count can't be 0", func(t *testing.T) {
 		server := &RecordServer{}
 
-		err := server.Export(&GetRecords{Count: 0}, nil)
+		err := server.Export(&GetRecords{Count: 0}, &streamMock{})
 
 		require.Error(t, err)
 	})
@@ -338,7 +336,7 @@ func TestRecordServer_Export(t *testing.T) {
 			jetKeeper: jetKeeper,
 		}
 
-		err := server.Export(&GetRecords{Count: 1, PulseNumber: insolar.FirstPulseNumber}, nil)
+		err := server.Export(&GetRecords{Count: 1, PulseNumber: insolar.FirstPulseNumber}, &streamMock{})
 
 		require.Error(t, err)
 	})
@@ -355,7 +353,7 @@ func TestRecordServer_Export(t *testing.T) {
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 
-		recordPosition := object.NewRecordPositionDB(db)
+		recordPosition := object.NewRecordDB(db)
 		pulses := pulse.NewDB(db)
 
 		recordServer := NewRecordServer(pulses, recordPosition, nil, jetKeeper)
@@ -417,18 +415,15 @@ func TestRecordServer_Export_Composite(t *testing.T) {
 	jetKeeper.TopSyncPulseMock.Return(secondPN)
 
 	// IDs and Records
-	firstID := gen.ID()
-	firstID.SetPulse(firstPN)
+	firstID := gen.IDWithPulse(firstPN)
 	firstRec := getMaterialRecord()
 	firstRec.ID = firstID
 
-	secondID := gen.ID()
-	secondID.SetPulse(firstPN)
+	secondID := gen.IDWithPulse(firstPN)
 	secondRec := getMaterialRecord()
 	secondRec.ID = secondID
 
-	thirdID := gen.ID()
-	thirdID.SetPulse(secondPN)
+	thirdID := gen.IDWithPulse(secondPN)
 	thirdRec := getMaterialRecord()
 	thirdRec.ID = thirdID
 
@@ -443,22 +438,177 @@ func TestRecordServer_Export_Composite(t *testing.T) {
 
 	pulseStorage := pulse.NewDB(db)
 	recordStorage := object.NewRecordDB(db)
-	recordPosition := object.NewRecordPositionDB(db)
+	recordPosition := object.NewRecordDB(db)
 
 	// Save records to DB
 	err = recordStorage.Set(ctx, firstRec)
 	require.NoError(t, err)
-	err = recordPosition.IncrementPosition(firstID)
-	require.NoError(t, err)
 
 	err = recordStorage.Set(ctx, secondRec)
-	require.NoError(t, err)
-	err = recordPosition.IncrementPosition(secondID)
 	require.NoError(t, err)
 
 	err = recordStorage.Set(ctx, thirdRec)
 	require.NoError(t, err)
-	err = recordPosition.IncrementPosition(thirdID)
+
+	// Pulses
+
+	// Trash pulses without data
+	err = pulseStorage.Append(ctx, insolar.Pulse{PulseNumber: insolar.FirstPulseNumber})
+	require.NoError(t, err)
+	err = pulseStorage.Append(ctx, insolar.Pulse{PulseNumber: insolar.FirstPulseNumber + 10})
+	require.NoError(t, err)
+	err = pulseStorage.Append(ctx, insolar.Pulse{PulseNumber: insolar.FirstPulseNumber + 20})
+	require.NoError(t, err)
+
+	// LegalInfo
+	err = pulseStorage.Append(ctx, insolar.Pulse{PulseNumber: firstPN})
+	require.NoError(t, err)
+	err = pulseStorage.Append(ctx, insolar.Pulse{PulseNumber: secondPN})
+	require.NoError(t, err)
+
+	recordServer := NewRecordServer(pulseStorage, recordPosition, recordStorage, jetKeeper)
+
+	t.Run("export 1 of 3. first pulse", func(t *testing.T) {
+		var recs []*Record
+		streamMock := &streamMock{checker: func(i *Record) error {
+			recs = append(recs, i)
+			return nil
+		}}
+
+		err := recordServer.Export(&GetRecords{
+			PulseNumber:  firstPN,
+			RecordNumber: 0,
+			Count:        1,
+		}, streamMock)
+		require.NoError(t, err)
+		require.Equal(t, 1, len(recs))
+
+		resRecord := recs[0]
+		require.Equal(t, firstPN, resRecord.Record.ID.Pulse())
+		require.Equal(t, uint32(1), resRecord.RecordNumber)
+		require.Equal(t, firstID, resRecord.Record.ID)
+		require.Equal(t, firstRec, resRecord.Record)
+	})
+
+	t.Run("export 1 of 3. second pulse", func(t *testing.T) {
+		var recs []*Record
+		streamMock := &streamMock{checker: func(i *Record) error {
+			recs = append(recs, i)
+			return nil
+		}}
+
+		err := recordServer.Export(&GetRecords{
+			PulseNumber:  secondPN,
+			RecordNumber: 0,
+			Count:        1,
+		}, streamMock)
+		require.NoError(t, err)
+		require.Equal(t, 1, len(recs))
+
+		resRecord := recs[0]
+		require.Equal(t, secondPN, resRecord.Record.ID.Pulse())
+		require.Equal(t, uint32(1), resRecord.RecordNumber)
+		require.Equal(t, thirdID, resRecord.Record.ID)
+		require.Equal(t, thirdRec, resRecord.Record)
+	})
+
+	t.Run("export 3 of 3. first pulse", func(t *testing.T) {
+		var recs []*Record
+		streamMock := &streamMock{checker: func(i *Record) error {
+			recs = append(recs, i)
+			return nil
+		}}
+
+		err := recordServer.Export(&GetRecords{
+			PulseNumber:  firstPN,
+			RecordNumber: 0,
+			Count:        5,
+		}, streamMock)
+		require.NoError(t, err)
+		require.Equal(t, 3, len(recs))
+	})
+
+	t.Run("export 3 of 3. zero pulse", func(t *testing.T) {
+		var recs []*Record
+		streamMock := &streamMock{checker: func(i *Record) error {
+			recs = append(recs, i)
+			return nil
+		}}
+
+		err := recordServer.Export(&GetRecords{
+			PulseNumber:  0,
+			RecordNumber: 0,
+			Count:        5,
+		}, streamMock)
+		require.NoError(t, err)
+		require.Equal(t, 3, len(recs))
+	})
+
+	t.Run("export 2d. first pulse, set previousRecordNumber", func(t *testing.T) {
+		var recs []*Record
+		streamMock := &streamMock{checker: func(i *Record) error {
+			recs = append(recs, i)
+			return nil
+		}}
+
+		err := recordServer.Export(&GetRecords{
+			PulseNumber:  firstPN,
+			RecordNumber: 1,
+			Count:        1,
+		}, streamMock)
+		require.NoError(t, err)
+		require.Equal(t, 1, len(recs))
+
+		resRecord := recs[0]
+		require.Equal(t, firstPN, resRecord.Record.ID.Pulse())
+		require.Equal(t, uint32(2), resRecord.RecordNumber)
+		require.Equal(t, secondID, resRecord.Record.ID)
+		require.Equal(t, secondRec, resRecord.Record)
+	})
+
+}
+
+func TestRecordServer_Export_Composite_BatchVersion(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+
+	// Pulses
+	firstPN := insolar.PulseNumber(insolar.FirstPulseNumber + 100)
+	secondPN := insolar.PulseNumber(firstPN + 10)
+
+	// JetKeeper
+	jetKeeper := executor.NewJetKeeperMock(t)
+	jetKeeper.TopSyncPulseMock.Return(secondPN)
+
+	// IDs and Records
+	firstID := *insolar.NewID(firstPN, []byte{1})
+	firstRec := getMaterialRecord()
+	firstRec.ID = firstID
+
+	secondID := *insolar.NewID(firstPN, []byte{2})
+	secondRec := getMaterialRecord()
+	secondRec.ID = secondID
+
+	thirdID := *insolar.NewID(secondPN, []byte{1})
+	thirdRec := getMaterialRecord()
+	thirdRec.ID = thirdID
+
+	// TempDB
+	tmpdir, err := ioutil.TempDir("", "bdb-test-")
+	defer os.RemoveAll(tmpdir)
+	require.NoError(t, err)
+
+	db, err := store.NewBadgerDB(tmpdir)
+	require.NoError(t, err)
+	defer db.Stop(context.Background())
+
+	pulseStorage := pulse.NewDB(db)
+	recordStorage := object.NewRecordDB(db)
+	recordPosition := object.NewRecordDB(db)
+
+	// Save records to DB
+	err = recordStorage.BatchSet(ctx, []record.Material{firstRec, secondRec, thirdRec})
 	require.NoError(t, err)
 
 	// Pulses
