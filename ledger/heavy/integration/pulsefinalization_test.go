@@ -49,9 +49,11 @@ func Test_FinalizePulse(t *testing.T) {
 	s.SetPulse(ctx)
 	s.SetPulse(ctx)
 
+	targetPulse := s.Pulse() - PulseStep
+
 	_, done := s.Send(ctx, &payload.GotHotConfirmation{
 		JetID: insolar.ZeroJetID,
-		Pulse: s.Pulse() - PulseStep,
+		Pulse: targetPulse,
 		Split: false,
 	})
 	done()
@@ -59,14 +61,14 @@ func Test_FinalizePulse(t *testing.T) {
 	require.Equal(t, insolar.GenesisPulse.PulseNumber, s.JetKeeper.TopSyncPulse())
 
 	d := drop.Drop{
-		Pulse: s.Pulse() - PulseStep,
+		Pulse: targetPulse,
 		JetID: insolar.ZeroJetID,
 		Split: false,
 	}
 
 	_, done = s.Send(ctx, &payload.Replication{
 		JetID: insolar.ZeroJetID,
-		Pulse: s.Pulse() - PulseStep,
+		Pulse: targetPulse,
 		Drop:  drop.MustEncode(&d),
 	})
 	done()
@@ -76,5 +78,5 @@ func Test_FinalizePulse(t *testing.T) {
 		time.Sleep(500 * time.Millisecond)
 		numIterations--
 	}
-	require.Equal(t, s.Pulse()-PulseStep, s.JetKeeper.TopSyncPulse())
+	require.Equal(t, targetPulse, s.JetKeeper.TopSyncPulse())
 }
