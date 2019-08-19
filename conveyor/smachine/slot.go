@@ -68,13 +68,18 @@ type Slot struct {
 	workState      slotWorkState
 
 	/* -----------------------------------
+	   Slot fields to support processing queue
+	   ----------------------------------- */
+	prevInQueue *Slot
+	nextInQueue *Slot
+	queue       *QueueHead
+
+	/* -----------------------------------
 	   Slot fields to support linked list
 	   ----------------------------------- */
-	slotType DependencyType // MUST = 0 for a regular slot
-	depCount int
-	prev     *Slot
-	next     *Slot
-	head     *Slot
+	prevDependency *Slot
+	nextDependency *Slot
+	headDependency *DependencyHead
 }
 
 type slotWorkState uint8
@@ -85,13 +90,13 @@ const (
 )
 
 func (s *Slot) ensureNotInList() {
-	if s.next != nil || s.prev != nil || s.head != nil {
+	if s.nextDependency != nil || s.prevDependency != nil || s.headDependency != nil {
 		panic("illegal state")
 	}
 }
 
 func (s *Slot) ensureInList() {
-	if s.next == nil || s.prev == nil || s.head == nil {
+	if s.nextDependency == nil || s.prevDependency == nil || s.headDependency == nil {
 		panic("illegal state")
 	}
 }
