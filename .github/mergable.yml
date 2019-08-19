@@ -16,12 +16,21 @@ mergeable:
         no_empty:
           enabled: true
           message: Description matter and should not be empty. Provide detail with **what** was changed, **why** it was changed, and **how** it was changed.
+
+  - when: pull_request.*
+    validate:
       - do: title
         must_exclude:
-          regex: \bWIP\b
+          regex: '\bWIP\b'
+
+  - when: pull_request.*
+    validate:
       - do: label
         must_exclude:
           regex: 'wip'
+
+  - when: pull_request.*, pull_request_review.*
+    validate:
       - do: approvals
         required:
           assignees: true
