@@ -597,9 +597,8 @@ func (r *FullRealm) finishRound(ctx context.Context, builder census.Builder, csh
 
 	isNextEphemeral := false
 	if r.ephemeralFeeder != nil {
-		wasConverted, convertedExpected := r.ephemeralFeeder.TryConvertFromEphemeral(ctx, expected)
-		if wasConverted {
-			expected = convertedExpected
+		if r.ephemeralFeeder.CanStopEphemeralByCensus(expected) {
+			expected = expected.Rebuild(pulse.Unknown).MakeExpected()
 		} else {
 			isNextEphemeral = true
 		}
