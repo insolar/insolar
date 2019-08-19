@@ -19,11 +19,14 @@ package integration_test
 import (
 	"os"
 	"testing"
+	"time"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/drop"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func panicIfErr(err error) {
@@ -32,7 +35,7 @@ func panicIfErr(err error) {
 	}
 }
 
-func Test_GotHotConfirmation(t *testing.T) {
+func Test_FinalizePulse(t *testing.T) {
 	t.Parallel()
 
 	ctx := inslogger.TestContext(t)
@@ -45,12 +48,33 @@ func Test_GotHotConfirmation(t *testing.T) {
 
 	s.SetPulse(ctx)
 	s.SetPulse(ctx)
-	s.SetPulse(ctx)
 
 	_, done := s.Send(ctx, &payload.GotHotConfirmation{
 		JetID: insolar.ZeroJetID,
-		Pulse: s.Pulse(),
+		Pulse: s.Pulse() - PulseStep,
 		Split: false,
 	})
 	done()
+
+	require.Equal(t, insolar.GenesisPulse.PulseNumber, s.JetKeeper.TopSyncPulse())
+
+	d := drop.Drop{
+		Pulse: s.Pulse() - PulseStep,
+		JetID: insolar.ZeroJetID,
+		Split: false,
+	}
+
+	_, done = s.Send(ctx, &payload.Replication{
+		JetID: insolar.ZeroJetID,
+		Pulse: s.Pulse() - PulseStep,
+		Drop:  drop.MustEncode(&d),
+	})
+	done()
+
+	numIterations := 20
+	for s.JetKeeper.TopSyncPulse() == insolar.GenesisPulse.PulseNumber && numIterations > 0 {
+		time.Sleep(500 * time.Millisecond)
+		numIterations--
+	}
+	require.Equal(t, s.Pulse()-PulseStep, s.JetKeeper.TopSyncPulse())
 }
