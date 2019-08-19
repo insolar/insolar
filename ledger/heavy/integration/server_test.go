@@ -89,6 +89,8 @@ type Server struct {
 	pulse        insolar.Pulse
 	lock         sync.RWMutex
 	clientSender bus.Sender
+	JetKeeper    executor.JetKeeper
+	replicator   executor.HeavyReplicator
 }
 
 // After using it you have to remove directory configuration.Storage.DataDirectory by yourself
@@ -211,6 +213,8 @@ func NewServer(
 		ClientBus = bus.NewBus(cfg.Bus, ClientPubSub, Pulses, c, CryptoScheme)
 	}
 
+	var replicator executor.HeavyReplicator
+
 	// Heavy components.
 	var (
 		PulseManager insolar.PulseManager
@@ -223,8 +227,7 @@ func NewServer(
 		Records = object.NewRecordDB(DB)
 		indexes := object.NewIndexDB(DB, Records)
 		drops := drop.NewDB(DB)
-		jets := jet.NewDBStore(DB)
-		JetKeeper = executor.NewJetKeeper(jets, DB, Pulses)
+		JetKeeper = executor.NewJetKeeper(Jets, DB, Pulses)
 		// c.rollback = executor.NewDBRollback(JetKeeper, Pulses, drops, Records, indexes, jets, Pulses)
 
 		sp := pulse.NewStartPulse()
@@ -234,14 +237,15 @@ func NewServer(
 			return nil, errors.Wrap(err, "failed create backuper")
 		}
 
+		replicator = executor.NewHeavyReplicatorDefault(Records, indexes, CryptoScheme, Pulses, drops, JetKeeper, backupMaker, Jets)
+
 		pm := pulsemanager.NewPulseManager()
-		// pm.Bus = Bus
 		pm.NodeNet = NodeNetwork
 		pm.NodeSetter = Nodes
 		pm.Nodes = Nodes
 		pm.PulseAppender = Pulses
 		pm.PulseAccessor = Pulses
-		pm.JetModifier = jets
+		pm.JetModifier = Jets
 		pm.StartPulse = sp
 		pm.FinalizationKeeper = executor.NewFinalizationKeeperDefault(JetKeeper, Pulses, cfg.Ledger.LightChainLimit)
 
@@ -257,13 +261,14 @@ func NewServer(
 		h.PulseAccessor = Pulses
 		h.PulseCalculator = Pulses
 		h.StartPulse = sp
-		h.JetModifier = jets
-		h.JetAccessor = jets
-		h.JetTree = jets
+		h.JetModifier = Jets
+		h.JetAccessor = Jets
+		h.JetTree = Jets
 		h.DropDB = drops
 		h.JetKeeper = JetKeeper
 		h.BackupMaker = backupMaker
 		h.Sender = ClientBus
+		h.Replicator = replicator
 
 		PulseManager = pm
 		Handler = h
@@ -357,6 +362,12 @@ func NewServer(
 			middleware.InstantAck,
 			ServerBus.IncomingMessageRouter,
 		)
+		inRouter.AddNoPublisherHandler(
+			"OutgoingFromClient",
+			bus.TopicOutgoing,
+			ClientPubSub,
+			Handler.Process,
+		)
 
 		startRouter(ctx, inRouter)
 		startRouter(ctx, outRouter)
@@ -376,6 +387,8 @@ func NewServer(
 		pm:           PulseManager,
 		pulse:        *insolar.GenesisPulse,
 		clientSender: ClientBus,
+		JetKeeper:    JetKeeper,
+		replicator:   replicator,
 	}
 	return s, nil
 }
