@@ -52,8 +52,8 @@ package conveyor
 
 import (
 	"fmt"
+	"github.com/insolar/insolar/conveyor/smachine"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
-	"github.com/insolar/insolar/network/consensus/conveyor/smachine"
 	"sync"
 )
 
@@ -84,7 +84,7 @@ type PulseConveyor struct {
 
 func (p *PulseConveyor) ScanOnce(workCtl smachine.WorkerController) bool {
 	if p.slotMachine.IsEmpty() {
-		p.slotMachine.AddNew(smachine.NoLink(), &PastPulseSM{pulseSMTemplate{&p.antique, &p.pulseService}})
+		p.slotMachine.AddNew(smachine.NoLink(), &PastPulseSM{pulseSMTemplate{ps: &p.antique, psa: &p.pulseService}})
 	}
 
 	return p.slotMachine.ScanOnce(workCtl)
@@ -146,14 +146,14 @@ func (p *PulseConveyor) CommitPulseChange(pd pulse.Data) {
 			pd:         pd,
 			inputQueue: NewInputQueue(p.signalBroadcast),
 		}
-		p.slotMachine.AddNew(smachine.NoLink(), &PresentPulseSM{pulseSMTemplate{p.present, &p.pulseService}})
+		p.slotMachine.AddNew(smachine.NoLink(), &PresentPulseSM{pulseSMTemplate{ps: p.present, psa: &p.pulseService}})
 	}
 
 	p.future = &PulseSlot{
 		pd:         pd.CreateNextExpected(),
 		inputQueue: NewInputQueue(p.signalBroadcast),
 	}
-	p.slotMachine.AddNew(smachine.NoLink(), &FuturePulseSM{pulseSMTemplate{p.future, &p.pulseService}})
+	p.slotMachine.AddNew(smachine.NoLink(), &FuturePulseSM{pulseSMTemplate{ps: p.future, psa: &p.pulseService}})
 
 	p.past[p.future.pd.PulseNumber] = p.future
 }
