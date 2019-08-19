@@ -20,7 +20,9 @@ import (
 	"context"
 	"sync"
 
-	"github.com/insolar/insolar/network"
+	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
+	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow/dispatcher"
@@ -29,8 +31,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
-	"github.com/pkg/errors"
-	"go.opencensus.io/trace"
+	"github.com/insolar/insolar/network"
 )
 
 // PulseManager implements insolar.PulseManager.
@@ -123,6 +124,8 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 	if err != nil {
 		panic(errors.Wrap(err, "failed to prepare light for start"))
 	}
+	stats.Record(ctx, statJets.M(int64(len(jets))))
+
 	endedPulse, err := m.pulseAccessor.Latest(ctx)
 	if err != nil {
 		panic(errors.Wrap(err, "failed to fetch ended pulse"))
