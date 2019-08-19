@@ -26,7 +26,6 @@ import (
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/heavy/executor"
 )
 
@@ -34,14 +33,12 @@ type SendInitialState struct {
 	meta payload.Meta
 
 	dep struct {
-		startPulse     pulse.StartPulse
-		jetKeeper      executor.JetKeeper
-		initialState   executor.InitialStateAccessor
-		jetTree        jet.Storage
-		jetCoordinator jet.Coordinator
-		dropDB         *drop.DB
-		pulseAccessor  pulse.Accessor
-		sender         bus.Sender
+		startPulse    pulse.StartPulse
+		jetKeeper     executor.JetKeeper
+		initialState  executor.InitialStateAccessor
+		jetTree       jet.Storage
+		pulseAccessor pulse.Accessor
+		sender        bus.Sender
 	}
 }
 
@@ -49,18 +46,12 @@ func (p *SendInitialState) Dep(
 	startPulse pulse.StartPulse,
 	jetKeeper executor.JetKeeper,
 	initialState executor.InitialStateAccessor,
-	jetTree jet.Storage,
-	jetCoordinator jet.Coordinator,
-	dropDB *drop.DB,
 	pulseAccessor pulse.Accessor,
 	sender bus.Sender,
 ) {
 	p.dep.startPulse = startPulse
 	p.dep.jetKeeper = jetKeeper
 	p.dep.initialState = initialState
-	p.dep.jetTree = jetTree
-	p.dep.jetCoordinator = jetCoordinator
-	p.dep.dropDB = dropDB
 	p.dep.pulseAccessor = pulseAccessor
 	p.dep.sender = sender
 }

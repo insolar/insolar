@@ -45,20 +45,16 @@ func TestNewSendInitialState(t *testing.T) {
 func TestSendInitialState_Dep(t *testing.T) {
 	startPulse := pulse.NewStartPulse()
 	jetKeeper := executor.NewJetKeeperMock(t)
-	stateAccessor := executor.NewInitialStateAccessorMock()
+	stateAccessor := executor.NewInitialStateAccessorMock(t)
 	jetTree := jet.NewStorageMock(t)
-	jetCoordinator := jet.NewCoordinatorMock(t)
-	dropDB := &drop.DB{}
 	pulseAccessor := pulse.NewAccessorMock(t)
 	sender := bus.NewSenderMock(t)
 
 	is := NewSendInitialState(payload.Meta{})
-	is.Dep(startPulse, jetKeeper, stateAccessor, jetTree, jetCoordinator, dropDB, pulseAccessor, sender)
+	is.Dep(startPulse, jetKeeper, stateAccessor, pulseAccessor, sender)
 	require.Equal(t, startPulse, is.dep.startPulse)
 	require.Equal(t, jetKeeper, is.dep.jetKeeper)
 	require.Equal(t, jetTree, is.dep.jetTree)
-	require.Equal(t, jetCoordinator, is.dep.jetCoordinator)
-	require.Equal(t, dropDB, is.dep.dropDB)
 	require.Equal(t, pulseAccessor, is.dep.pulseAccessor)
 	require.Equal(t, sender, is.dep.sender)
 }
@@ -112,7 +108,6 @@ func TestSendInitialState_ProceedForNetworkStart(t *testing.T) {
 	})
 	db := store.NewDBMock(t)
 	db.GetMock.Return(dropItem, nil)
-	dropDB := drop.NewDB(db)
 	sender := bus.NewSenderMock(t)
 	sender.ReplyMock.Set(func(ctx context.Context, origin payload.Meta, reply *message.Message) {
 		result, err := payload.Unmarshal(reply.Payload)
@@ -135,8 +130,6 @@ func TestSendInitialState_ProceedForNetworkStart(t *testing.T) {
 	is.dep.jetKeeper = jetKeeper
 	is.dep.pulseAccessor = pulseAccessor
 	is.dep.jetTree = jetTree
-	is.dep.jetCoordinator = jetCoordinator
-	is.dep.dropDB = dropDB
 	is.dep.sender = sender
 	err = is.Proceed(context.Background())
 	require.NoError(t, err)
@@ -165,7 +158,6 @@ func TestSendInitialState_ProceedForNetworkStartWithSplit(t *testing.T) {
 	})
 	db := store.NewDBMock(t)
 	db.GetMock.Return(dropItem, nil)
-	dropDB := drop.NewDB(db)
 	sender := bus.NewSenderMock(t)
 	sender.ReplyMock.Set(func(ctx context.Context, origin payload.Meta, reply *message.Message) {
 		result, err := payload.Unmarshal(reply.Payload)
@@ -190,8 +182,6 @@ func TestSendInitialState_ProceedForNetworkStartWithSplit(t *testing.T) {
 	is.dep.jetKeeper = jetKeeper
 	is.dep.pulseAccessor = pulseAccessor
 	is.dep.jetTree = jetTree
-	is.dep.jetCoordinator = jetCoordinator
-	is.dep.dropDB = dropDB
 	is.dep.sender = sender
 	err = is.Proceed(context.Background())
 	require.NoError(t, err)

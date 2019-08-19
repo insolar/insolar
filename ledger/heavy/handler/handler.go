@@ -112,9 +112,6 @@ func New(cfg configuration.Ledger) *Handler {
 				h.StartPulse,
 				h.JetKeeper,
 				h.InitialStateReader,
-				h.JetTree,
-				h.JetCoordinator,
-				h.DropDB,
 				h.PulseAccessor,
 				h.Sender,
 			)
