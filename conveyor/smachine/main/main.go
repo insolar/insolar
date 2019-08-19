@@ -52,7 +52,8 @@ package main
 
 import (
 	"fmt"
-	"github.com/insolar/insolar/network/consensus/conveyor/smachine"
+	"github.com/insolar/insolar/conveyor/smachine"
+	"github.com/insolar/insolar/conveyor/smachine/main/example"
 	"time"
 )
 
@@ -61,7 +62,7 @@ func main() {
 		SlotPageSize: 10,
 	})
 
-	sm.AddNew(smachine.NoLink(), &StateMachine1{})
+	sm.AddNew(smachine.NoLink(), &example.StateMachine1{})
 
 	for {
 		if !sm.ScanOnce(nil) {

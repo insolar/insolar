@@ -50,7 +50,7 @@
 
 package conveyor
 
-import "github.com/insolar/insolar/network/consensus/conveyor/smachine"
+import "github.com/insolar/insolar/conveyor/smachine"
 
 type PulseService struct {
 }
