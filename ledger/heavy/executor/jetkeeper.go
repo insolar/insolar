@@ -163,8 +163,7 @@ func (jk *dbJetKeeper) AddHotConfirmation(ctx context.Context, pn insolar.PulseN
 		return errors.Wrapf(err, "failed to save updated jets")
 	}
 
-	err := jk.updateTopSyncPulse(ctx, pn)
-	return errors.Wrapf(err, "AddHotConfirmation. propagateConsistency returns error")
+	return nil
 }
 
 // AddDropConfirmation performs adding jet to storage and checks pulse completion.
@@ -178,9 +177,7 @@ func (jk *dbJetKeeper) AddDropConfirmation(ctx context.Context, pn insolar.Pulse
 		return errors.Wrapf(err, "AddDropConfirmation. failed to save updated jets")
 	}
 
-	err := jk.updateTopSyncPulse(ctx, pn)
-
-	return errors.Wrap(err, "updateTopSyncPulse returns error")
+	return nil
 }
 
 // AddBackupConfirmation performs adding backup confirmation to storage and checks pulse completion.
