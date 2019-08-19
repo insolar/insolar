@@ -115,7 +115,7 @@ func TestTimeoutSuite(t *testing.T) {
 	timeoutSuite.user, err = requester.CreateUserConfig(userRef, string(sKeyString), string(pKeyString))
 
 	http.DefaultServeMux = new(http.ServeMux)
-	cfg := configuration.NewAPIRunner()
+	cfg := configuration.NewAPIRunner(false)
 	cfg.Address = "localhost:19192"
 	timeoutSuite.api, err = NewRunner(&cfg)
 	require.NoError(t, err)

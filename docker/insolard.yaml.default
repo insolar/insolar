@@ -29,8 +29,12 @@ logicrunner:
     runnerprotocol: tcp
 apirunner:
   address: ""
-  call: /api/call
   rpc: /api/rpc
+  ispublic: true
+apiinternalrunner:
+  address: ""
+  rpc: /admin-api/rpc
+  ispublic: false
 versionmanager:
   minalowedversion: v0.3.0
 keyspath: ""

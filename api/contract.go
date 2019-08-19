@@ -56,6 +56,13 @@ func (cs *ContractService) Call(req *http.Request, args *requester.Params, reque
 
 	logger.Infof("[ ContractService.Call ] Incoming request: %s", req.RequestURI)
 
+	if !cs.runner.cfg.IsPublic {
+		switch args.CallSite {
+		case "member.getBalance", "migration.deactivateDaemon", "migration.activateDaemon", "migration.checkDaemon", "migration.addAddresses":
+			return errors.New("method not allowed")
+		}
+	}
+
 	if args.Test != "" {
 		logger.Infof("ContractRequest related to %s", args.Test)
 	}

@@ -81,19 +81,21 @@ func checkConfig(cfg *configuration.APIRunner) error {
 }
 
 func (ar *Runner) registerServices(rpcServer *rpc.Server) error {
+	if !ar.cfg.IsPublic {
+		err := rpcServer.RegisterService(NewInfoService(ar), "network")
+		if err != nil {
+			return errors.Wrap(err, "[ registerServices ] Can't RegisterService: network")
+		}
+
+		err = rpcServer.RegisterService(NewNodeCertService(ar), "cert")
+		if err != nil {
+			return errors.Wrap(err, "[ registerServices ] Can't RegisterService: cert")
+		}
+
+	}
 	err := rpcServer.RegisterService(NewNodeService(ar), "node")
 	if err != nil {
 		return errors.Wrap(err, "[ registerServices ] Can't RegisterService: node")
-	}
-
-	err = rpcServer.RegisterService(NewInfoService(ar), "network")
-	if err != nil {
-		return errors.Wrap(err, "[ registerServices ] Can't RegisterService: network")
-	}
-
-	err = rpcServer.RegisterService(NewNodeCertService(ar), "cert")
-	if err != nil {
-		return errors.Wrap(err, "[ registerServices ] Can't RegisterService: cert")
 	}
 
 	err = rpcServer.RegisterService(NewFuncTestContractService(ar), "funcTestContract")

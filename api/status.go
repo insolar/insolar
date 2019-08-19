@@ -18,6 +18,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"time"
 
@@ -52,11 +53,15 @@ type StatusReply struct {
 
 // Get returns status info
 func (s *NodeService) GetStatus(r *http.Request, args *interface{}, requestBody *rpc.RequestBody, reply *StatusReply) error {
+
+	if s.runner.cfg.IsPublic {
+		return errors.New("method not allowed")
+	}
+
 	traceID := utils.RandTraceID()
 	ctx, inslog := inslogger.WithTraceField(context.Background(), traceID)
 
 	inslog.Infof("[ NodeService.GetStatus ] Incoming request: %s", r.RequestURI)
-
 	statusReply := s.runner.NetworkStatus.GetNetworkStatus()
 
 	reply.NetworkState = statusReply.NetworkState.String()

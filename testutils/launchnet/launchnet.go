@@ -32,7 +32,7 @@ import (
 	"syscall"
 	"time"
 
-	"gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v2"
 
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/insolar"
@@ -40,9 +40,9 @@ import (
 	"github.com/pkg/errors"
 )
 
-const HOST = "http://localhost:19102"
+const HOST = "http://localhost:19002"
 const HOST_DEBUG = "http://localhost:8001"
-const TestAPIURL = HOST + "/api"
+const TestAPIURL = HOST + "/admin-api"
 const TestRPCUrl = TestAPIURL + "/rpc"
 
 const insolarRootMemberKeys = "root_member_keys.json"
@@ -246,11 +246,11 @@ func waitForNet() error {
 	numAttempts := 90
 	// TODO: read ports from bootstrap config
 	ports := []string{
-		"19101",
-		"19102",
-		"19103",
-		"19104",
-		"19105",
+		"19001",
+		"19002",
+		"19003",
+		"19004",
+		"19005",
 		// "19106",
 		// "19107",
 		// "19108",
@@ -263,7 +263,7 @@ func waitForNet() error {
 	for i := 0; i < numAttempts; i++ {
 		currentOk = 0
 		for _, port := range ports {
-			resp, err := requester.Status(fmt.Sprintf("http://127.0.0.1:%s/api", port))
+			resp, err := requester.Status(fmt.Sprintf("http://127.0.0.1:%s/admin-api", port))
 			if err != nil {
 				fmt.Println("[ waitForNet ] Problem with port " + port + ". Err: " + err.Error())
 				break
