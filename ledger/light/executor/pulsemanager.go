@@ -140,7 +140,12 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 		if !justJoined {
 			logger.Debug("before parsing jets")
 			for _, jet := range jets {
-				logger.Debugf("before hotStatusChecker.IsReceived jet:%v, pn:%v", jet, endedPulse)
+
+				logger.WithFields(map[string]interface{}{
+					"jet_id":     jet.DebugString(),
+					"endedPulse": endedPulse.PulseNumber,
+				}).Debug("before hotStatusChecker.IsReceived")
+
 				received, err := m.hotStatusChecker.IsReceived(ctx, jet, endedPulse.PulseNumber)
 				if err != nil {
 					panic(errors.Wrap(err, "can't find waiter for pn/jet"))
@@ -150,34 +155,41 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 				}
 			}
 
-			logger.Debugf("before jetSplitter.Do endedPulse.PulseNumber:%v, newPulse.PulseNumber:%v", endedPulse.PulseNumber, newPulse.PulseNumber)
+			logger.WithFields(map[string]interface{}{
+				"newPulse":   newPulse.PulseNumber,
+				"endedPulse": endedPulse.PulseNumber,
+			}).Debug("before jetSplitter.Do")
 			jets, err = m.jetSplitter.Do(ctx, endedPulse.PulseNumber, newPulse.PulseNumber, jets, true)
 			if err != nil {
 				panic(errors.Wrap(err, "failed to split jets"))
 			}
 		}
 
-		logger.Debugf("before jetReleaser.CloseAllUntil endedPulse.PulseNumber:%v", endedPulse.PulseNumber)
+		logger.WithFields(map[string]interface{}{
+			"endedPulse": endedPulse.PulseNumber,
+		}).Debugf("before jetReleaser.CloseAllUntil")
 		m.jetReleaser.CloseAllUntil(ctx, endedPulse.PulseNumber)
 
-		logger.Debugf("before writeManager.CloseAndWait endedPulse.PulseNumber:%v", endedPulse.PulseNumber)
+		logger.WithFields(map[string]interface{}{
+			"endedPulse": endedPulse.PulseNumber,
+		}).Debugf("before writeManager.CloseAndWait")
 		err = m.writeManager.CloseAndWait(ctx, endedPulse.PulseNumber)
 		if err != nil {
 			panic(errors.Wrap(err, "can't close pulse for writing"))
 		}
 
-		logger.Debugf("before writeManager.Open newPulse.PulseNumber:%v", newPulse.PulseNumber)
+		logger.WithField("newPulse.PulseNumber", newPulse.PulseNumber).Debug("before writeManager.Open")
 		err = m.writeManager.Open(ctx, newPulse.PulseNumber)
 		if err != nil {
 			panic(errors.Wrap(err, "failed to open pulse for writing"))
 		}
 
-		logger.Debugf("before pulseAppender.Append pn:%v", newPulse)
+		logger.WithField("newPulse.PulseNumber", newPulse.PulseNumber).Debug("before pulseAppender.Append")
 		if err := m.pulseAppender.Append(ctx, newPulse); err != nil {
 			panic(errors.Wrap(err, "failed to add pulse"))
 		}
 
-		logger.Debugf("before dispatcher.BeginPulse newPulse:%v", newPulse)
+		logger.WithField("newPulse", newPulse.PulseNumber).Debugf("before dispatcher.BeginPulse", newPulse)
 		m.dispatcher.BeginPulse(ctx, newPulse)
 	}
 
