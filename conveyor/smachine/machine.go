@@ -370,9 +370,9 @@ func safeSlotCall(slot *Slot, fn func(*Slot)) (err error) {
 	return nil
 }
 
-func (m *SlotMachine) applyAsyncStateUpdate(slotLink SlotLink, resultFn AsyncResultFunc) {
+func (m *SlotMachine) applyAsyncStateUpdate(stepLink StepLink, resultFn AsyncResultFunc) {
 
-	m.syncSafe(slotLink, func(slot *Slot) {
+	m.syncSafe(stepLink.SlotLink, func(slot *Slot) {
 		if !slot.isWorking() {
 			m._applyAsyncStateUpdate(slot, resultFn)
 			return
@@ -382,13 +382,13 @@ func (m *SlotMachine) applyAsyncStateUpdate(slotLink SlotLink, resultFn AsyncRes
 			m.detachQueues = make(map[SlotID]SyncFuncList)
 		}
 
-		dq := m.detachQueues[slotLink.SlotID()]
+		dq := m.detachQueues[stepLink.SlotID()]
 		dq = append(dq, func() {
-			m.safeWrapAndHandleError(slotLink, func(slot *Slot) {
+			m.safeWrapAndHandleError(stepLink.SlotLink, func(slot *Slot) {
 				m._applyAsyncStateUpdate(slot, resultFn)
 			})
 		})
-		m.detachQueues[slotLink.SlotID()] = dq
+		m.detachQueues[stepLink.SlotID()] = dq
 	})
 }
 
