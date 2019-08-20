@@ -102,7 +102,7 @@ func TestDropStorageDB_TruncateHead(t *testing.T) {
 
 	dropStore := NewDB(dbMock)
 
-	numElements := 100
+	numElements := 10
 
 	// it's used for writing pulses in random order to db
 	indexes := make([]int, numElements)
