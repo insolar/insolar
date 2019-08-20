@@ -20,7 +20,9 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"path/filepath"
 
+	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/network"
 
 	"github.com/insolar/insolar/ledger/heavy/exporter"
@@ -200,7 +202,11 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 	)
 	{
 		var err error
-		DB, err = store.NewBadgerDB(cfg.Ledger.Storage.DataDirectory)
+		fullDataDirectoryPath, err := filepath.Abs(cfg.Ledger.Storage.DataDirectory)
+		if err != nil {
+			panic(errors.Wrap(err, "failed to get absolute path for DataDirectory"))
+		}
+		DB, err = store.NewBadgerDB(badger.DefaultOptions(fullDataDirectoryPath))
 		if err != nil {
 			panic(errors.Wrap(err, "failed to initialize DB"))
 		}
