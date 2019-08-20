@@ -566,7 +566,7 @@ func TestHandleCall_Present(t *testing.T) {
 			case *CheckOurRole:
 				return nil
 			case *RegisterIncomingRequest:
-				return errors.New("index not found")
+				return &payload.CodedError{Code: payload.CodeNotFound, Text: "index not found"}
 			case *AddFreshRequest:
 				return nil
 			default:
