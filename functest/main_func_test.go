@@ -14,26 +14,25 @@
 // limitations under the License.
 //
 
-package testutils
+// +build functest
+
+package functest
 
 import (
 	"fmt"
+	"os"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/insolar/insolar/testutils/launchnet"
+	"github.com/pkg/errors"
 )
 
-func TestRecorderWriter(t *testing.T) {
-	recorder := NewRecoder()
-	fmt.Fprintln(recorder, "line1")
-	fmt.Fprintf(recorder, "line2\nline3")
-	fmt.Fprintf(recorder, "line4\nabc line5")
-	expect := []string{
-		"line1",
-		"line2",
-		"line3",
-		"line4",
-		"abc line5",
-	}
-	assert.Equal(t, expect, recorder.Items())
+func TestMain(m *testing.M) {
+	os.Exit(launchnet.Run(func() int {
+		err := setMigrationDaemonsRef()
+		if err != nil {
+			fmt.Println(errors.Wrap(err, "[ setup ] get reference daemons by public key failed ").Error())
+		}
+		return m.Run()
+	}))
 }

@@ -53,6 +53,7 @@ package ph3ctl
 import (
 	"context"
 	"fmt"
+	"runtime"
 	"sync"
 	"time"
 
@@ -79,7 +80,7 @@ import (
 
 func NewPhase3Controller(loopingMinimalDelay time.Duration, packetPrepareOptions transport.PacketPrepareOptions,
 	queueTrustUpdated <-chan ph2ctl.UpdateSignal, consensusStrategy consensus.SelectionStrategy,
-	inspectionFactory inspectors.VectorInspection, enabledFast bool) *Phase3Controller {
+	inspectionFactory inspectors.VectorInspection, enabledFast, lockOSThread bool) *Phase3Controller {
 	return &Phase3Controller{
 		packetPrepareOptions: packetPrepareOptions,
 		queueTrustUpdated:    queueTrustUpdated,
@@ -87,6 +88,7 @@ func NewPhase3Controller(loopingMinimalDelay time.Duration, packetPrepareOptions
 		loopingMinimalDelay:  loopingMinimalDelay,
 		inspectionFactory:    inspectionFactory,
 		isFastPacketEnabled:  enabledFast,
+		lockOSThread:         lockOSThread,
 	}
 }
 
@@ -98,6 +100,7 @@ type Phase3Controller struct {
 	consensusStrategy    consensus.SelectionStrategy
 	loopingMinimalDelay  time.Duration
 	isFastPacketEnabled  bool
+	lockOSThread         bool
 
 	inspectionFactory inspectors.VectorInspection
 	R                 *core.FullRealm
@@ -172,6 +175,11 @@ func (c *Phase3Controller) StartWorker(ctx context.Context, realm *core.FullReal
 func (c *Phase3Controller) workerPhase3(ctx context.Context) {
 
 	defer c.R.NotifyRoundStopped(ctx)
+
+	if c.lockOSThread {
+		runtime.LockOSThread()
+		defer runtime.UnlockOSThread()
+	}
 
 	localInspector := c.workerPrePhase3(ctx)
 	if localInspector == nil {

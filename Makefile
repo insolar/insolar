@@ -8,6 +8,7 @@ TESTPULSARD = testpulsard
 INSGORUND = insgorund
 BENCHMARK = benchmark
 PULSEWATCHER = pulsewatcher
+BACKUPMERGER = backupmerger
 APIREQUESTER = apirequester
 HEALTHCHECK = healthcheck
 
@@ -60,20 +61,12 @@ clean: ## run all cleanup tasks
 	rm -rf $(BIN_DIR)
 	./scripts/insolard/launchnet.sh -l
 
-
-.PHONY: install-godep
-install-godep: ## install dep tool
-	./scripts/build/fetchdeps github.com/golang/dep/cmd/dep v0.5.3
-
 .PHONY: install-build-tools
 install-build-tools: ## install tools for codegen
-	go clean -modcache
-	./scripts/build/fetchdeps golang.org/x/tools/cmd/stringer 63e6ed9258fa6cbc90aab9b1eef3e0866e89b874
-	./scripts/build/fetchdeps github.com/gojuno/minimock/cmd/minimock v2.1.8
-	./scripts/build/fetchdeps github.com/gogo/protobuf/protoc-gen-gogoslick v1.2.1
+	./scripts/build/install_build_tools.sh
 
 .PHONY: install-deps
-install-deps: install-godep install-build-tools ## install dep and codegen tools
+install-deps: install-build-tools ## install dep and codegen tools
 
 .PHONY: pre-build
 pre-build: ensure generate regen-builtin ## install dependencies, (re)generates all code
@@ -91,7 +84,7 @@ ensure: ## install all dependencies
 	dep ensure
 
 .PHONY: build
-build: $(BIN_DIR) $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(TESTPULSARD) $(INSGORUND) $(HEALTHCHECK) $(BENCHMARK) $(APIREQUESTER) $(PULSEWATCHER) ## build all binaries
+build: $(BIN_DIR) $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(TESTPULSARD) $(INSGORUND) $(HEALTHCHECK) $(BENCHMARK) $(APIREQUESTER) $(PULSEWATCHER) $(BACKUPMERGER) ## build all binaries
 
 $(BIN_DIR):
 	mkdir -p $(BIN_DIR)
@@ -129,6 +122,10 @@ $(BENCHMARK):
 .PHONY: $(PULSEWATCHER)
 $(PULSEWATCHER):
 	$(GOBUILD) -o $(BIN_DIR)/$(PULSEWATCHER) -ldflags "${LDFLAGS}" cmd/pulsewatcher/*.go
+
+.PHONY: $(BACKUPMERGER)
+$(BACKUPMERGER):
+	$(GOBUILD) -o $(BIN_DIR)/$(BACKUPMERGER) -ldflags "${LDFLAGS}" cmd/backupmerger/*.go
 
 .PHONY: $(APIREQUESTER)
 $(APIREQUESTER):

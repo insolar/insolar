@@ -35,10 +35,13 @@ import (
 
 func capture(f func()) string {
 	var buf bytes.Buffer
-	SetOutput(&buf)
-	defer SetOutput(os.Stderr)
+
+	orig := GlobalLogger
+	GlobalLogger = GlobalLogger.WithOutput(&buf)
+	defer func() { GlobalLogger = orig }()
 
 	f()
+
 	return buf.String()
 }
 
