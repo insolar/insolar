@@ -58,7 +58,7 @@ import (
 )
 
 func TestRecordRefSet_Collect(t *testing.T) {
-	refs := gen.References(3)
+	refs := gen.UniqueReferences(3)
 	r := newRefSet()
 	assert.Equal(t, 0, len(r.Collect()))
 	r.Add(refs[0])

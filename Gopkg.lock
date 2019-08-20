@@ -458,10 +458,12 @@
   version = "v3.0.3"
 
 [[projects]]
-  digest = "1:ff8c32bee60523e39cd04e58b14fae0c3d6adcbc419e9e0c3d991af0390ab270"
+  digest = "1:c5670264a83df105fabb1577aeacf89da55faac9ef18cebfc2640f7b27e74407"
   name = "github.com/rs/zerolog"
   packages = [
     ".",
+    "diode",
+    "diode/internal/diodes",
     "internal/cbor",
     "internal/json",
   ]
@@ -759,6 +761,7 @@
     "github.com/prometheus/client_golang/prometheus",
     "github.com/prometheus/client_golang/prometheus/promhttp",
     "github.com/rs/zerolog",
+    "github.com/rs/zerolog/diode",
     "github.com/satori/go.uuid",
     "github.com/spf13/cobra",
     "github.com/spf13/jwalterweatherman",

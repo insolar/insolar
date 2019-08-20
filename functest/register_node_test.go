@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/testutils/launchnet"
 	"github.com/stretchr/testify/require"
 )
 
@@ -34,7 +35,7 @@ var keyProcessor = platformpolicy.NewKeyProcessor()
 const TESTPUBLICKEY = "some_fancy_public_key"
 
 func registerNodeSignedCall(t *testing.T, params map[string]interface{}) (string, error) {
-	res, err := signedRequest(t, &root, "contract.registerNode", params)
+	res, err := signedRequest(t, &launchnet.Root, "contract.registerNode", params)
 	if err != nil {
 		return "", err
 	}
@@ -66,7 +67,7 @@ func TestRegisterNodeLightMaterial(t *testing.T) {
 }
 
 func TestRegisterNodeNotExistRole(t *testing.T) {
-	_, err := signedRequestWithEmptyRequestRef(t, &root, "contract.registerNode", map[string]interface{}{"publicKey": TESTPUBLICKEY, "role": "some_not_fancy_role"})
+	_, err := signedRequestWithEmptyRequestRef(t, &launchnet.Root, "contract.registerNode", map[string]interface{}{"publicKey": TESTPUBLICKEY, "role": "some_not_fancy_role"})
 	require.Error(t, err)
 	require.Contains(t, err.Error(),
 		"role is not supported: some_not_fancy_role")

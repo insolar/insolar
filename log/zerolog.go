@@ -26,6 +26,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/diode"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
@@ -145,6 +146,14 @@ func newZerologAdapter(cfg configuration.Log) (*zerologAdapter, error) {
 	output, err := selectFormatter(format)
 	if err != nil {
 		return nil, err
+	}
+
+	if cfg.BufferSize > 0 {
+		output = diode.NewWriter(
+			output,
+			cfg.BufferSize, 0,
+			func(missed int) { panic(fmt.Errorf("logger dropped %d messages", missed)) },
+		)
 	}
 
 	logger := zerolog.New(output).Level(zerolog.InfoLevel).With().Timestamp().Logger()

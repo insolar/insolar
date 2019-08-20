@@ -149,7 +149,7 @@ func TestSnapshot_Equal(t *testing.T) {
 			nil, insolar.NodeReady, "127.0.0.1:0", "")
 	}
 
-	refs := gen.References(2)
+	refs := gen.UniqueReferences(2)
 	node1 := genNodeCopy(refs[0])
 	node2 := genNodeCopy(refs[1])
 	node3 := genNodeCopy(refs[1])
