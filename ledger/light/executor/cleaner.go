@@ -170,7 +170,7 @@ func (c *LightCleaner) cleanPulse(ctx context.Context, pn insolar.PulseNumber) {
 		}
 
 	} else if err != object.ErrIndexNotFound {
-		logger.Errorf("[Cleaner][cleanPulse] Can't get indexes for pulse: %s", err)
+		logger.Errorf("Can't get indexes for pulse: %s", err)
 	}
 
 	c.indexCleaner.DeleteForPN(ctx, pn)
