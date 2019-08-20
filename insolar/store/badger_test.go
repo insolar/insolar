@@ -55,7 +55,9 @@ func TestBadgerDB_Get(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	db, err := NewBadgerDB(tmpdir)
+	ops := badger.DefaultOptions(tmpdir)
+	ops.CompactL0OnClose = false
+	db, err := NewBadgerDB(ops)
 	defer db.Stop(ctx)
 	require.NoError(t, err)
 
@@ -84,7 +86,9 @@ func TestBadgerDB_Set(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	db, err := NewBadgerDB(tmpdir)
+	ops := badger.DefaultOptions(tmpdir)
+	ops.CompactL0OnClose = false
+	db, err := NewBadgerDB(ops)
 	defer db.Stop(ctx)
 	require.NoError(t, err)
 
@@ -119,7 +123,9 @@ func TestBadgerDB_Delete(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	assert.NoError(t, err)
 
-	db, err := NewBadgerDB(tmpdir)
+	ops := badger.DefaultOptions(tmpdir)
+	ops.CompactL0OnClose = false
+	db, err := NewBadgerDB(ops)
 	defer db.Stop(ctx)
 	require.NoError(t, err)
 
@@ -170,7 +176,9 @@ func TestBadgerDB_NewIterator(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	db, err := NewBadgerDB(tmpdir)
+	ops := badger.DefaultOptions(tmpdir)
+	ops.CompactL0OnClose = false
+	db, err := NewBadgerDB(ops)
 	defer db.Stop(ctx)
 	require.NoError(t, err)
 
@@ -270,7 +278,9 @@ func TestBadgerDB_NewReverseIterator(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	db, err := NewBadgerDB(tmpdir)
+	ops := badger.DefaultOptions(tmpdir)
+	ops.CompactL0OnClose = false
+	db, err := NewBadgerDB(ops)
 	defer db.Stop(ctx)
 	require.NoError(t, err)
 
@@ -372,7 +382,9 @@ func TestBadgerDB_SimpleReverse(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	db, err := NewBadgerDB(tmpdir)
+	ops := badger.DefaultOptions(tmpdir)
+	ops.CompactL0OnClose = false
+	db, err := NewBadgerDB(ops)
 	defer db.Stop(ctx)
 	require.NoError(t, err)
 
