@@ -200,7 +200,8 @@ func newSerializeContext(ctx packetContext, writer *trackableWriter, digester cr
 }
 
 func (ctx *serializeContext) Write(p []byte) (int, error) {
-	inslogger.FromContext(ctx).WithSkipFrameCount(3).Debugf("Serializing bytes %d", len(p))
+	// Uncomment on debug. Too verbose
+	// inslogger.FromContext(ctx).WithSkipFrameCount(3).Debugf("Serializing bytes %d", len(p))
 
 	return ctx.bodyTracker.Write(p)
 }
