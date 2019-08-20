@@ -167,7 +167,7 @@ func migrate(t *testing.T, memberRef string, amount string, tx string, ma string
 	anotherMember := createMember(t)
 
 	_, err := signedRequest(t,
-		&launchnet.MigrationDaemons[mdNum],
+		launchnet.MigrationDaemons[mdNum],
 		"deposit.migration",
 		map[string]interface{}{"amount": amount, "ethTxHash": tx, "migrationAddress": ma})
 	require.NoError(t, err)
