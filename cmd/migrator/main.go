@@ -37,7 +37,7 @@ func main() {
 		Request: requester.Request{
 			Version: "2.0",
 			ID:      0,
-			Method:  "api.call",
+			Method:  "contract.call",
 		},
 	}
 	if paramsFile != "" {
