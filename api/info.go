@@ -82,10 +82,6 @@ func NewInfoService(runner *Runner) *InfoService {
 // 	}
 //
 func (s *InfoService) GetInfo(r *http.Request, args *InfoArgs, requestBody *rpc.RequestBody, reply *InfoReply) error {
-	if s.runner.cfg.IsPublic {
-		return errors.New("method not allowed")
-	}
-
 	ctx, inslog := inslogger.WithTraceField(context.Background(), utils.RandTraceID())
 
 	inslog.Infof("[ INFO ] Incoming request: %s", r.RequestURI)

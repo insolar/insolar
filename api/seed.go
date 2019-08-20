@@ -38,7 +38,7 @@ type SeedReply struct {
 	TraceID string
 }
 
-// NodeService is a service that provides API for getting new seed and status.
+// NodeService is a service that provides API for getting new seed.
 type NodeService struct {
 	runner *Runner
 }

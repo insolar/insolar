@@ -39,12 +39,21 @@ import (
 
 // ContractService is a service that provides API for working with smart contracts.
 type ContractService struct {
-	runner *Runner
+	runner         *Runner
+	allowedMethods map[string]bool
 }
 
 // NewContractService creates new Contract service instance.
 func NewContractService(runner *Runner) *ContractService {
-	return &ContractService{runner: runner}
+	methods := map[string]bool{
+		"deposit.migration":      true,
+		"member.create":          true,
+		"member.get":             true,
+		"member.transfer":        true,
+		"member.migrationCreate": true,
+		"deposit.transfer":       true,
+	}
+	return &ContractService{runner: runner, allowedMethods: methods}
 }
 
 func (cs *ContractService) Call(req *http.Request, args *requester.Params, requestBody *rpc.RequestBody, result *requester.ContractResult) error {
@@ -56,11 +65,9 @@ func (cs *ContractService) Call(req *http.Request, args *requester.Params, reque
 
 	logger.Infof("[ ContractService.Call ] Incoming request: %s", req.RequestURI)
 
-	if !cs.runner.cfg.IsPublic {
-		switch args.CallSite {
-		case "member.getBalance", "migration.deactivateDaemon", "migration.activateDaemon", "migration.checkDaemon", "migration.addAddresses":
-			return errors.New("method not allowed")
-		}
+	_, ok := cs.allowedMethods[args.CallSite]
+	if !ok {
+		return errors.New("method not allowed")
 	}
 
 	if args.Test != "" {

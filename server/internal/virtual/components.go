@@ -150,8 +150,8 @@ func initComponents(
 	apiRunner, err := api.NewRunner(&cfg.APIRunner)
 	checkError(ctx, err, "failed to start ApiRunner")
 
-	apiInternalRunner, err := api.NewRunner(&cfg.APIInternalRunner)
-	checkError(ctx, err, "failed to start APIInternalRunner")
+	adminAPIRunner, err := api.NewRunner(&cfg.AdminAPIRunner)
+	checkError(ctx, err, "failed to start AdminAPIRunner")
 
 	metricsHandler, err := metrics.NewMetrics(ctx, cfg.Metrics, metrics.GetInsolarRegistry("virtual"), "virtual")
 	checkError(ctx, err, "failed to start Metrics")
@@ -183,7 +183,7 @@ func initComponents(
 		logicrunner.NewRequestsExecutor(),
 		machinesmanager.NewMachinesManager(),
 		apiRunner,
-		apiInternalRunner,
+		adminAPIRunner,
 		nodeNetwork,
 		nw,
 		pm,

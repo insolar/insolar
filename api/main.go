@@ -81,7 +81,7 @@ func checkConfig(cfg *configuration.APIRunner) error {
 }
 
 func (ar *Runner) registerServices(rpcServer *rpc.Server) error {
-	if !ar.cfg.IsPublic {
+	if ar.cfg.IsAdmin {
 		err := rpcServer.RegisterService(NewInfoService(ar), "network")
 		if err != nil {
 			return errors.Wrap(err, "[ registerServices ] Can't RegisterService: network")
@@ -92,20 +92,30 @@ func (ar *Runner) registerServices(rpcServer *rpc.Server) error {
 			return errors.Wrap(err, "[ registerServices ] Can't RegisterService: cert")
 		}
 
-	}
-	err := rpcServer.RegisterService(NewNodeService(ar), "node")
-	if err != nil {
-		return errors.Wrap(err, "[ registerServices ] Can't RegisterService: node")
-	}
+		err = rpcServer.RegisterService(NewNodeAdminService(ar), "node")
+		if err != nil {
+			return errors.Wrap(err, "[ registerServices ] Can't RegisterService: node")
+		}
 
-	err = rpcServer.RegisterService(NewFuncTestContractService(ar), "funcTestContract")
-	if err != nil {
-		return errors.Wrap(err, "[ registerServices ] Can't RegisterService: funcTestContract")
-	}
+		err = rpcServer.RegisterService(NewAdminContractService(ar), "contract")
+		if err != nil {
+			return errors.Wrap(err, "[ registerServices ] Can't RegisterService: contract")
+		}
+	} else {
+		err := rpcServer.RegisterService(NewNodeService(ar), "node")
+		if err != nil {
+			return errors.Wrap(err, "[ registerServices ] Can't RegisterService: node")
+		}
 
-	err = rpcServer.RegisterService(NewContractService(ar), "contract")
-	if err != nil {
-		return errors.Wrap(err, "[ registerServices ] Can't RegisterService: contract")
+		err = rpcServer.RegisterService(NewFuncTestContractService(ar), "funcTestContract")
+		if err != nil {
+			return errors.Wrap(err, "[ registerServices ] Can't RegisterService: funcTestContract")
+		}
+
+		err = rpcServer.RegisterService(NewContractService(ar), "contract")
+		if err != nil {
+			return errors.Wrap(err, "[ registerServices ] Can't RegisterService: contract")
+		}
 	}
 
 	return nil

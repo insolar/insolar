@@ -28,22 +28,22 @@ import (
 
 // Configuration contains configuration params for all Insolar components
 type Configuration struct {
-	Host              HostNetwork
-	Service           ServiceNetwork
-	Ledger            Ledger
-	Log               Log
-	Metrics           Metrics
-	LogicRunner       LogicRunner
-	APIRunner         APIRunner
-	APIInternalRunner APIRunner
-	Pulsar            Pulsar
-	VersionManager    VersionManager
-	KeysPath          string
-	CertificatePath   string
-	Tracer            Tracer
-	Introspection     Introspection
-	Exporter          Exporter
-	Bus               Bus
+	Host            HostNetwork
+	Service         ServiceNetwork
+	Ledger          Ledger
+	Log             Log
+	Metrics         Metrics
+	LogicRunner     LogicRunner
+	APIRunner       APIRunner
+	AdminAPIRunner  APIRunner
+	Pulsar          Pulsar
+	VersionManager  VersionManager
+	KeysPath        string
+	CertificatePath string
+	Tracer          Tracer
+	Introspection   Introspection
+	Exporter        Exporter
+	Bus             Bus
 }
 
 // Holder provides methods to manage configuration
@@ -55,22 +55,22 @@ type Holder struct {
 // NewConfiguration creates new default configuration
 func NewConfiguration() Configuration {
 	cfg := Configuration{
-		Host:              NewHostNetwork(),
-		Service:           NewServiceNetwork(),
-		Ledger:            NewLedger(),
-		Log:               NewLog(),
-		Metrics:           NewMetrics(),
-		LogicRunner:       NewLogicRunner(),
-		APIRunner:         NewAPIRunner(false),
-		APIInternalRunner: NewAPIRunner(true),
-		Pulsar:            NewPulsar(),
-		VersionManager:    NewVersionManager(),
-		KeysPath:          "./",
-		CertificatePath:   "",
-		Tracer:            NewTracer(),
-		Introspection:     NewIntrospection(),
-		Exporter:          NewExporter(),
-		Bus:               NewBus(),
+		Host:            NewHostNetwork(),
+		Service:         NewServiceNetwork(),
+		Ledger:          NewLedger(),
+		Log:             NewLog(),
+		Metrics:         NewMetrics(),
+		LogicRunner:     NewLogicRunner(),
+		APIRunner:       NewAPIRunner(false),
+		AdminAPIRunner:  NewAPIRunner(true),
+		Pulsar:          NewPulsar(),
+		VersionManager:  NewVersionManager(),
+		KeysPath:        "./",
+		CertificatePath: "",
+		Tracer:          NewTracer(),
+		Introspection:   NewIntrospection(),
+		Exporter:        NewExporter(),
+		Bus:             NewBus(),
 	}
 
 	return cfg

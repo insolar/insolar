@@ -22,28 +22,28 @@ import (
 
 // APIRunner holds configuration for api
 type APIRunner struct {
-	Address  string
-	RPC      string
-	IsPublic bool
+	Address string
+	RPC     string
+	IsAdmin bool
 }
 
 // NewAPIRunner creates new api config
-func NewAPIRunner(isInternal bool) APIRunner {
-	if isInternal {
+func NewAPIRunner(admin bool) APIRunner {
+	if admin {
 		return APIRunner{
-			Address:  "localhost:19100",
-			RPC:      "/admin-api/rpc",
-			IsPublic: false,
+			Address: "localhost:19100",
+			RPC:     "/admin-api/rpc",
+			IsAdmin: true,
 		}
 	}
 	return APIRunner{
-		Address:  "localhost:19101",
-		RPC:      "/api/rpc",
-		IsPublic: true,
+		Address: "localhost:19101",
+		RPC:     "/api/rpc",
+		IsAdmin: false,
 	}
 }
 
 func (ar *APIRunner) String() string {
-	res := fmt.Sprintln("Addr ->", ar.Address, ", RPC ->", ar.RPC, ", IsPublic ->", ar.IsPublic)
+	res := fmt.Sprintln("Addr ->", ar.Address, ", RPC ->", ar.RPC, ", IsAdmin ->", ar.IsAdmin)
 	return res
 }

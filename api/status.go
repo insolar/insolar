@@ -18,7 +18,6 @@ package api
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"time"
 
@@ -51,13 +50,18 @@ type StatusReply struct {
 	StartTime          time.Time
 }
 
+// NodeAdminService is a service that provides API for getting status.
+type NodeAdminService struct {
+	runner *Runner
+}
+
+// NewNodeAdminService creates new NodeAdmin service instance.
+func NewNodeAdminService(runner *Runner) *NodeAdminService {
+	return &NodeAdminService{runner: runner}
+}
+
 // Get returns status info
-func (s *NodeService) GetStatus(r *http.Request, args *interface{}, requestBody *rpc.RequestBody, reply *StatusReply) error {
-
-	if s.runner.cfg.IsPublic {
-		return errors.New("method not allowed")
-	}
-
+func (s *NodeAdminService) GetStatus(r *http.Request, args *interface{}, requestBody *rpc.RequestBody, reply *StatusReply) error {
 	traceID := utils.RandTraceID()
 	ctx, inslog := inslogger.WithTraceField(context.Background(), traceID)
 

@@ -149,10 +149,10 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 
 	// API.
 	var (
-		Requester   insolar.ContractRequester
-		Genesis     insolar.GenesisDataProvider
-		API         insolar.APIRunner
-		APIInternal insolar.APIRunner
+		Requester      insolar.ContractRequester
+		Genesis        insolar.GenesisDataProvider
+		API            insolar.APIRunner
+		AdminAPIRunner insolar.APIRunner
 	)
 	{
 		var err error
@@ -170,9 +170,9 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start ApiRunner")
 		}
-		APIInternal, err = api.NewRunner(&cfg.APIInternalRunner)
+		AdminAPIRunner, err = api.NewRunner(&cfg.AdminAPIRunner)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to start APIInternal")
+			return nil, errors.Wrap(err, "failed to start AdminAPIRunner")
 		}
 	}
 
@@ -366,7 +366,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		artifacts.NewClient(Sender),
 		Genesis,
 		API,
-		APIInternal,
+		AdminAPIRunner,
 		KeyProcessor,
 		Termination,
 		CryptoScheme,
