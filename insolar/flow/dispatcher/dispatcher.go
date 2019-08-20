@@ -173,5 +173,10 @@ func messagePayloadTypeName(msg *message.Message) string {
 		fmt.Println("meta decoding failed:", err)
 		return "unknown"
 	}
-	return bus.MessagePayloadTypeName(msg)
+	payloadType, err := payload.UnmarshalType(meta.Payload)
+	if err != nil {
+		// branch for legacy messages format: INS-2973
+		return msg.Metadata.Get(bus.MetaType)
+	}
+	return payloadType.String()
 }

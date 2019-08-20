@@ -216,7 +216,7 @@ func (b *Bus) sendTarget(
 		return res, func() {}
 	}
 
-	msgType := MessagePayloadTypeName(msg)
+	msgType := messagePayloadTypeName(msg)
 
 	mctx := insmetrics.InsertTag(ctx, tagMessageType, msgType)
 	stats.Record(mctx, statSent.M(int64(len(msg.Payload))))
@@ -305,9 +305,9 @@ func (b *Bus) sendTarget(
 	return reply.messages, done
 }
 
-// MessagePayloadTypeName returns message type.
+// messagePayloadTypeName returns message type.
 // Parses type from payload if failed returns type from metadata field 'type'.
-func MessagePayloadTypeName(msg *message.Message) string {
+func messagePayloadTypeName(msg *message.Message) string {
 	payloadType, err := payload.UnmarshalType(msg.Payload)
 	if err != nil {
 		// branch for legacy messages format: INS-2973
