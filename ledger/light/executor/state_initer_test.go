@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package executor
+package executor_test
 
 import (
 	"testing"
@@ -32,80 +32,9 @@ import (
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/drop"
+	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/object"
 )
-
-func TestStateIniterDefault_heavy(t *testing.T) {
-	mc := minimock.NewController(t)
-
-	var (
-		jetModifier   *jet.ModifierMock
-		jetReleaser   *JetReleaserMock
-		drops         *drop.ModifierMock
-		nodes         *node.AccessorMock
-		sender        *bus.SenderMock
-		pulseAppender *pulse.AppenderMock
-		pulseAccessor *pulse.AccessorMock
-		jetCalculator *JetCalculatorMock
-		indexes       *object.MemoryIndexModifierMock
-	)
-
-	setup := func() {
-		jetModifier = jet.NewModifierMock(mc)
-		jetReleaser = NewJetReleaserMock(mc)
-		drops = drop.NewModifierMock(mc)
-		nodes = node.NewAccessorMock(mc)
-		sender = bus.NewSenderMock(mc)
-		pulseAppender = pulse.NewAppenderMock(mc)
-		pulseAccessor = pulse.NewAccessorMock(mc)
-		jetCalculator = NewJetCalculatorMock(mc)
-		indexes = object.NewMemoryIndexModifierMock(mc)
-	}
-
-	t.Run("basic error", func(t *testing.T) {
-		setup()
-		nodes = nodes.InRoleMock.Return([]insolar.Node{}, nil)
-
-		s := NewStateIniter(
-			jetModifier,
-			jetReleaser,
-			drops,
-			nodes,
-			sender,
-			pulseAppender,
-			pulseAccessor,
-			jetCalculator,
-			indexes,
-		)
-
-		ref, err := s.heavy(insolar.FirstPulseNumber)
-		assert.Equal(t, *insolar.NewEmptyReference(), ref)
-		assert.Error(t, err, "must return error 'failed to calculate heavy node for pulse'")
-	})
-
-	t.Run("basic ok", func(t *testing.T) {
-		setup()
-		heavy := insolar.NewReference(gen.ID())
-		heavyNodes := []insolar.Node{{*heavy, insolar.StaticRoleHeavyMaterial}}
-		nodes = nodes.InRoleMock.Return(heavyNodes, nil)
-
-		s := NewStateIniter(
-			jetModifier,
-			jetReleaser,
-			drops,
-			nodes,
-			sender,
-			pulseAppender,
-			pulseAccessor,
-			jetCalculator,
-			indexes,
-		)
-
-		ref, err := s.heavy(insolar.FirstPulseNumber)
-		assert.Equal(t, *heavy, ref)
-		assert.NoError(t, err, "must be empty")
-	})
-}
 
 func TestStateIniterDefault_PrepareState(t *testing.T) {
 	ctx := inslogger.TestContext(t)
@@ -113,31 +42,33 @@ func TestStateIniterDefault_PrepareState(t *testing.T) {
 
 	var (
 		jetModifier   *jet.ModifierMock
-		jetReleaser   *JetReleaserMock
+		jetReleaser   *executor.JetReleaserMock
 		drops         *drop.ModifierMock
 		nodes         *node.AccessorMock
 		sender        *bus.SenderMock
 		pulseAppender *pulse.AppenderMock
 		pulseAccessor *pulse.AccessorMock
-		jetCalculator *JetCalculatorMock
+		jetCalculator *executor.JetCalculatorMock
 		indexes       *object.MemoryIndexModifierMock
 	)
 
 	setup := func() {
 		jetModifier = jet.NewModifierMock(mc)
-		jetReleaser = NewJetReleaserMock(mc)
+		jetReleaser = executor.NewJetReleaserMock(mc)
 		drops = drop.NewModifierMock(mc)
 		nodes = node.NewAccessorMock(mc)
 		sender = bus.NewSenderMock(mc)
 		pulseAppender = pulse.NewAppenderMock(mc)
 		pulseAccessor = pulse.NewAccessorMock(mc)
-		jetCalculator = NewJetCalculatorMock(mc)
+		jetCalculator = executor.NewJetCalculatorMock(mc)
 		indexes = object.NewMemoryIndexModifierMock(mc)
 	}
 
 	t.Run("wrong pulse", func(t *testing.T) {
 		setup()
-		s := NewStateIniter(
+		defer mc.Finish()
+
+		s := executor.NewStateIniter(
 			jetModifier,
 			jetReleaser,
 			drops,
@@ -153,11 +84,35 @@ func TestStateIniterDefault_PrepareState(t *testing.T) {
 		assert.Error(t, err, "must return error 'invalid pulse'")
 	})
 
+	t.Run("wrong heavy", func(t *testing.T) {
+		setup()
+		defer mc.Finish()
+
+		var heavy []insolar.Node
+		s := executor.NewStateIniter(
+			jetModifier,
+			jetReleaser,
+			drops,
+			nodes.InRoleMock.Return(heavy, nil),
+			sender,
+			pulseAppender,
+			pulseAccessor.LatestMock.Return(insolar.Pulse{}, pulse.ErrNotFound),
+			jetCalculator,
+			indexes,
+		)
+
+		justAdded, jetsReturned, err := s.PrepareState(ctx, insolar.FirstPulseNumber)
+		assert.Error(t, err, "must return error 'failed to calculate heavy node for pulse'")
+		assert.Nil(t, jetsReturned)
+		assert.False(t, justAdded)
+	})
+
 	t.Run("no need to fetch init data", func(t *testing.T) {
 		setup()
+		defer mc.Finish()
 
 		jets := []insolar.JetID{gen.JetID(), gen.JetID(), gen.JetID()}
-		s := NewStateIniter(
+		s := executor.NewStateIniter(
 			jetModifier,
 			jetReleaser,
 			drops,
@@ -177,6 +132,7 @@ func TestStateIniterDefault_PrepareState(t *testing.T) {
 
 	t.Run("fetching init data failing on heavy", func(t *testing.T) {
 		setup()
+		defer mc.Finish()
 
 		reps := make(chan *message.Message, 1)
 		reps <- payload.MustNewMessage(&payload.Meta{
@@ -187,7 +143,7 @@ func TestStateIniterDefault_PrepareState(t *testing.T) {
 		sender.SendTargetMock.Return(reps, func() {})
 
 		heavy := []insolar.Node{{*insolar.NewReference(gen.ID()), insolar.StaticRoleHeavyMaterial}}
-		s := NewStateIniter(
+		s := executor.NewStateIniter(
 			jetModifier,
 			jetReleaser,
 			drops,
@@ -207,6 +163,8 @@ func TestStateIniterDefault_PrepareState(t *testing.T) {
 
 	t.Run("fetching init data", func(t *testing.T) {
 		setup()
+		defer mc.Finish()
+
 		j1 := gen.JetID()
 		j2 := gen.JetID()
 
@@ -227,18 +185,17 @@ func TestStateIniterDefault_PrepareState(t *testing.T) {
 				},
 			}),
 		})
-		sender.SendTargetMock.Return(reps, func() {})
 
-		s := NewStateIniter(
+		s := executor.NewStateIniter(
 			jetModifier.UpdateMock.Return(nil),
 			jetReleaser.UnlockMock.Return(nil),
 			drops.SetMock.Return(nil),
 			nodes.InRoleMock.Return(heavy, nil),
-			sender,
+			sender.SendTargetMock.Return(reps, func() {}),
 			pulseAppender.AppendMock.Return(nil),
 			pulseAccessor.LatestMock.Return(insolar.Pulse{}, pulse.ErrNotFound),
 			jetCalculator,
-			indexes.SetMock.Return(),
+			indexes,
 		)
 
 		justAdded, jetsReturned, err := s.PrepareState(ctx, insolar.FirstPulseNumber+10)

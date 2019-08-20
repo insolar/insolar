@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package handle
+package handle_test
 
 import (
 	"testing"
@@ -27,6 +27,7 @@ import (
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/light/handle"
 	"github.com/insolar/insolar/ledger/light/proc"
 )
 
@@ -45,6 +46,8 @@ func TestGetRequestInfo_Present(t *testing.T) {
 
 	t.Run("basic ok", func(t *testing.T) {
 		setup()
+		defer mc.Finish()
+
 		meta = payload.Meta{
 			Polymorph: uint32(payload.TypeMeta),
 			Payload: payload.MustMarshal(&payload.GetRequestInfo{
@@ -56,7 +59,7 @@ func TestGetRequestInfo_Present(t *testing.T) {
 			ID: []byte{1, 1, 1},
 		}
 
-		handler := NewGetRequestInfo(dep, meta)
+		handler := handle.NewGetRequestInfo(dep, meta)
 		flowMock := flow.NewFlowMock(mc).ProcedureMock.Return(nil)
 		err := handler.Present(ctx, flowMock)
 		assert.NoError(t, err)
@@ -64,6 +67,8 @@ func TestGetRequestInfo_Present(t *testing.T) {
 
 	t.Run("error wrong payload", func(t *testing.T) {
 		setup()
+		defer mc.Finish()
+
 		meta = payload.Meta{
 			Polymorph: uint32(payload.TypeMeta),
 			Payload: payload.MustMarshal(&payload.SetIncomingRequest{
@@ -73,8 +78,8 @@ func TestGetRequestInfo_Present(t *testing.T) {
 			ID: []byte{1, 1, 1},
 		}
 
-		handler := NewGetRequestInfo(dep, meta)
-		flowMock := flow.NewFlowMock(mc).ProcedureMock.Return(nil)
+		handler := handle.NewGetRequestInfo(dep, meta)
+		flowMock := flow.NewFlowMock(mc)
 		err := handler.Present(ctx, flowMock)
 		assert.Error(t, err, "expected error 'unexpected payload type'")
 	})

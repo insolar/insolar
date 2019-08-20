@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package proc
+package proc_test
 
 import (
 	"context"
@@ -31,6 +31,7 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/light/executor"
+	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/insolar/insolar/ledger/object"
 )
 
@@ -48,25 +49,23 @@ func TestSendRequestInfo_Proceed(t *testing.T) {
 		filament = executor.NewFilamentCalculatorMock(mc)
 		sender = bus.NewSenderMock(mc)
 		locker = object.NewIndexLockerMock(mc)
-
-		locker.UnlockMock.Return()
-		locker.LockMock.Return()
 	}
 
 	t.Run("basic fail", func(t *testing.T) {
 		setup()
+		defer mc.Finish()
 
-		p := NewSendRequestInfo(payload.Meta{}, gen.ID(), insolar.ID{}, insolar.FirstPulseNumber)
+		p := proc.NewSendRequestInfo(payload.Meta{}, gen.ID(), insolar.ID{}, insolar.FirstPulseNumber)
 		p.Dep(filament, sender, locker)
 		err := p.Proceed(ctx)
 		assert.Error(t, err, "expected error 'requestID is empty'")
 
-		p = NewSendRequestInfo(payload.Meta{}, insolar.ID{}, gen.ID(), insolar.FirstPulseNumber)
+		p = proc.NewSendRequestInfo(payload.Meta{}, insolar.ID{}, gen.ID(), insolar.FirstPulseNumber)
 		p.Dep(filament, sender, locker)
 		err = p.Proceed(ctx)
 		assert.Error(t, err, "expected error 'objectID is empty'")
 
-		p = NewSendRequestInfo(payload.Meta{}, gen.ID(), gen.ID(), insolar.FirstPulseNumber-10)
+		p = proc.NewSendRequestInfo(payload.Meta{}, gen.ID(), gen.ID(), insolar.FirstPulseNumber-10)
 		p.Dep(filament, sender, locker)
 		err = p.Proceed(ctx)
 		assert.Error(t, err, "expected error 'pulse is wrong'")
@@ -75,6 +74,7 @@ func TestSendRequestInfo_Proceed(t *testing.T) {
 
 	t.Run("basic ok", func(t *testing.T) {
 		setup()
+		defer mc.Finish()
 
 		reqID := gen.ID()
 		resID := gen.ID()
@@ -106,7 +106,10 @@ func TestSendRequestInfo_Proceed(t *testing.T) {
 			assert.Equal(t, reply.Metadata, replyMsg.Metadata)
 		}).Return()
 
-		p := NewSendRequestInfo(msg, objID, reqID, insolar.FirstPulseNumber)
+		locker.UnlockMock.Return()
+		locker.LockMock.Return()
+
+		p := proc.NewSendRequestInfo(msg, objID, reqID, insolar.FirstPulseNumber)
 		p.Dep(filament, sender, locker)
 		err = p.Proceed(ctx)
 
