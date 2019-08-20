@@ -101,7 +101,7 @@ type RequestDoer func(user *User, method string, params interface{}) (interface{
 var info *requester.InfoResponse
 var Root User
 var MigrationAdmin User
-var MigrationDaemons [insolar.GenesisAmountActiveMigrationDaemonMembers]User
+var MigrationDaemons [insolar.GenesisAmountActiveMigrationDaemonMembers]*User
 
 type User struct {
 	Ref     string
@@ -206,7 +206,7 @@ func loadAllMembersKeys() error {
 		if err != nil {
 			return err
 		}
-		MigrationDaemons[i] = md
+		MigrationDaemons[i] = &md
 	}
 
 	return nil
@@ -221,10 +221,10 @@ func setInfo() error {
 	return nil
 }
 
-func setMigrationDaemonsRef(makeRequest func(user *User, method string, params interface{}) (interface{}, string, error)) error {
+func setMigrationDaemonsRef(makeRequest RequestDoer) error {
 	for i, mDaemon := range MigrationDaemons {
 		mDaemon.Ref = Root.Ref
-		res, _, err := makeRequest(&mDaemon, "member.get", nil)
+		res, _, err := makeRequest(mDaemon, "member.get", nil)
 		if err != nil {
 			return errors.Wrap(err, "[ setup ] get member by public key failed ,key ")
 		}
