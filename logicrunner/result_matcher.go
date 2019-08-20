@@ -24,7 +24,6 @@ import (
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/payload"
-	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/messagebus"
 	"github.com/pkg/errors"
@@ -38,16 +37,16 @@ type ResultMatcher interface {
 	Clear()
 }
 
-type resultWithTraceID struct {
-	traceID string
-	result  message.ReturnResults
+type resultWithContext struct {
+	ctx    context.Context
+	result message.ReturnResults
 }
 
 type resultsMatcher struct {
 	lr                *LogicRunner
 	lock              sync.RWMutex
 	executionNodes    map[insolar.Reference]insolar.Reference
-	unwantedResponses map[insolar.Reference]resultWithTraceID
+	unwantedResponses map[insolar.Reference]resultWithContext
 }
 
 func newResultsMatcher(lr *LogicRunner) *resultsMatcher {
@@ -55,7 +54,7 @@ func newResultsMatcher(lr *LogicRunner) *resultsMatcher {
 		lr:                lr,
 		lock:              sync.RWMutex{},
 		executionNodes:    make(map[insolar.Reference]insolar.Reference),
-		unwantedResponses: make(map[insolar.Reference]resultWithTraceID),
+		unwantedResponses: make(map[insolar.Reference]resultWithContext),
 	}
 }
 
@@ -79,7 +78,7 @@ func (rm *resultsMatcher) AddStillExecution(ctx context.Context, msg *payload.St
 
 	for _, reqRef := range msg.RequestRefs {
 		if response, ok := rm.unwantedResponses[reqRef]; ok {
-			ctx = inslogger.ContextWithTrace(ctx, response.traceID)
+			ctx := response.ctx
 			inslogger.FromContext(ctx).Debug("[ resultsMatcher::AddStillExecution ] resend unwanted response ", reqRef)
 			go rm.send(ctx, &response.result, &msg.Executor)
 		}
@@ -103,7 +102,10 @@ func (rm *resultsMatcher) AddUnwantedResponse(ctx context.Context, msg *message.
 		delete(rm.unwantedResponses, msg.Reason)
 		return nil
 	}
-	rm.unwantedResponses[msg.Reason] = resultWithTraceID{utils.TraceID(ctx), *msg}
+	rm.unwantedResponses[msg.Reason] = resultWithContext{
+		ctx:    ctx,
+		result: *msg,
+	}
 
 	return rm.isStillExecutor(ctx, object)
 }
@@ -128,5 +130,5 @@ func (rm *resultsMatcher) Clear() {
 	rm.lock.Lock()
 	defer rm.lock.Unlock()
 	rm.executionNodes = make(map[insolar.Reference]insolar.Reference)
-	rm.unwantedResponses = make(map[insolar.Reference]resultWithTraceID)
+	rm.unwantedResponses = make(map[insolar.Reference]resultWithContext)
 }
