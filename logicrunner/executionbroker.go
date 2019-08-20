@@ -235,6 +235,8 @@ func (q *ExecutionBroker) Prepend(ctx context.Context, start bool, transcripts .
 			continue
 		}
 
+		inslogger.FromContext(transcript.Context).Debug("prepending request to queue")
+
 		var list *transcriptdequeue.TranscriptDequeue
 		if transcript.Request.Immutable {
 			list = q.immutable
@@ -254,6 +256,8 @@ func (q *ExecutionBroker) Put(ctx context.Context, start bool, transcripts ...*c
 		if q.storeWithoutDuplication(ctx, transcript) {
 			continue
 		}
+
+		inslogger.FromContext(transcript.Context).Debug("appending request to queue")
 
 		var list *transcriptdequeue.TranscriptDequeue
 		if transcript.Request.Immutable {

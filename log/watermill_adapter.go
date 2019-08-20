@@ -27,17 +27,12 @@ type WatermillLogAdapter struct {
 
 func NewWatermillLogAdapter(log insolar.Logger) *WatermillLogAdapter {
 	return &WatermillLogAdapter{
-		log: log.WithField("service", "watermill"),
+		log: log.WithField("service", "watermill").WithSkipFrameCount(1),
 	}
 }
 
 func (w *WatermillLogAdapter) addFields(fields watermill.LogFields) insolar.Logger {
-	l := w.log
-	for key, val := range fields {
-		l = l.WithField(key, val)
-	}
-
-	return l
+	return w.log.WithFields(fields)
 }
 
 func (w *WatermillLogAdapter) With(fields watermill.LogFields) watermill.LoggerAdapter {
@@ -61,5 +56,8 @@ func (w *WatermillLogAdapter) Debug(msg string, fields watermill.LogFields) {
 }
 
 func (w *WatermillLogAdapter) Trace(msg string, fields watermill.LogFields) {
-	w.Debug(msg, fields)
+	// don't use w.Debug(), value of the "file=..." field would be incorrect
+	// in the output
+	logger := w.addFields(fields)
+	logger.Debug(msg)
 }

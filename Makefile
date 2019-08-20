@@ -60,20 +60,12 @@ clean: ## run all cleanup tasks
 	rm -rf $(BIN_DIR)
 	./scripts/insolard/launchnet.sh -l
 
-
-.PHONY: install-godep
-install-godep: ## install dep tool
-	./scripts/build/fetchdeps github.com/golang/dep/cmd/dep v0.5.3
-
 .PHONY: install-build-tools
 install-build-tools: ## install tools for codegen
-	go clean -modcache
-	./scripts/build/fetchdeps golang.org/x/tools/cmd/stringer 63e6ed9258fa6cbc90aab9b1eef3e0866e89b874
-	./scripts/build/fetchdeps github.com/gojuno/minimock/cmd/minimock v2.1.8
-	./scripts/build/fetchdeps github.com/gogo/protobuf/protoc-gen-gogoslick v1.2.1
+	./scripts/build/install_build_tools.sh
 
 .PHONY: install-deps
-install-deps: install-godep install-build-tools ## install dep and codegen tools
+install-deps: install-build-tools ## install dep and codegen tools
 
 .PHONY: pre-build
 pre-build: ensure generate regen-builtin ## install dependencies, (re)generates all code
@@ -224,6 +216,7 @@ docker: docker-insolard docker-insgorund ## build insolard and insgorund docker 
 generate-protobuf: ## generate protobuf structs
 	protoc -I./vendor -I./ --gogoslick_out=./ network/node/internal/node/node.proto
 	protoc -I./vendor -I./ --gogoslick_out=./ insolar/record/record.proto
+	protoc -I./vendor -I./ --gogoslick_out=./ insolar/jet/jet.proto
 	protoc -I./vendor -I./ --gogoslick_out=./ --proto_path=${GOPATH}/src insolar/payload/payload.proto
 	protoc -I./vendor -I./ --gogoslick_out=./ insolar/pulse/pulse.proto
 	protoc -I./vendor -I./ --gogoslick_out=./ --proto_path=${GOPATH}/src network/hostnetwork/packet/packet.proto

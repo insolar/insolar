@@ -20,6 +20,7 @@ package functest
 
 import (
 	"math/big"
+	"strings"
 	"testing"
 	"time"
 
@@ -32,25 +33,25 @@ import (
 func TestDepositTransferToken(t *testing.T) {
 	member := fullMigration(t, "Eth_TxHash_test")
 
-	firstBalance := getBalanceNoErr(t, member, member.ref)
-	secondBalance := new(big.Int).Add(firstBalance, big.NewInt(100))
+	firstBalance := getBalanceNoErr(t, member, member.Ref)
+	secondBalance := new(big.Int).Add(firstBalance, big.NewInt(1000))
 
 	var err error
-	for i := 0; i <= 20; i++ {
+	for i := 0; i <= 11; i++ {
 		time.Sleep(time.Second)
-		_, _, err = makeSignedRequest(member, "deposit.transfer", map[string]interface{}{"amount": "100", "ethTxHash": "Eth_TxHash_test"})
-		if err != nil {
-			require.Error(t, err)
-			require.Contains(t, err.Error(), "hold period didn't end")
-		} else {
+		_, _, err = makeSignedRequest(member, "deposit.transfer", map[string]interface{}{"amount": "1000", "ethTxHash": "Eth_TxHash_test"})
+		require.Error(t, err)
+		if !strings.Contains(err.Error(), "hold period didn't end") {
 			break
 		}
 	}
+	require.Contains(t, err.Error(), "not enough unholded balance for transfer")
+
+	time.Sleep(11 * time.Second)
+	_, _, err = makeSignedRequest(member, "deposit.transfer", map[string]interface{}{"amount": "1000", "ethTxHash": "Eth_TxHash_test"})
 	require.NoError(t, err)
 
-	finalBalance := getBalanceNoErr(t, member, member.ref)
-
-	require.Equal(t, secondBalance, finalBalance)
+	checkBalanceFewTimes(t, member, member.Ref, secondBalance)
 }
 
 func TestDepositTransferBeforeUnhold(t *testing.T) {
@@ -64,7 +65,7 @@ func TestDepositTransferBeforeUnhold(t *testing.T) {
 func TestDepositTransferBiggerAmount(t *testing.T) {
 	member := fullMigration(t, "Eth_TxHash_test")
 
-	_, err := signedRequestWithEmptyRequestRef(t, member, "deposit.transfer", map[string]interface{}{"amount": "1001", "ethTxHash": "Eth_TxHash_test"})
+	_, err := signedRequestWithEmptyRequestRef(t, member, "deposit.transfer", map[string]interface{}{"amount": "10000000000000", "ethTxHash": "Eth_TxHash_test"})
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "not enough balance for transfer")
 }
@@ -89,8 +90,8 @@ func TestDepositTransferNotEnoughConfirms(t *testing.T) {
 	migrationAddress := testutils.RandomString()
 	member := createMigrationMemberForMA(t, migrationAddress)
 
-	migrate(t, member.ref, "1000", "Eth_TxHash_test", migrationAddress, 2)
-	migrate(t, member.ref, "1000", "Eth_TxHash_test", migrationAddress, 0)
+	migrate(t, member.Ref, "1000", "Eth_TxHash_test", migrationAddress, 2)
+	migrate(t, member.Ref, "1000", "Eth_TxHash_test", migrationAddress, 0)
 
 	_, err := signedRequestWithEmptyRequestRef(t, member, "deposit.transfer", map[string]interface{}{"amount": "100", "ethTxHash": "Eth_TxHash_test"})
 	require.Error(t, err)

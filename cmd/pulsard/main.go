@@ -80,8 +80,8 @@ func main() {
 	}
 
 	traceID := utils.RandTraceID()
-	ctx, inslog := initLogger(context.Background(), cfgHolder.Configuration.Log, traceID)
-	log.SetGlobalLogger(inslog)
+	ctx := context.Background()
+	ctx, inslog := inslogger.InitNodeLogger(ctx, cfgHolder.Configuration.Log, traceID, "", "pulsar")
 
 	jaegerflush := func() {}
 	if params.traceEnabled {
@@ -176,21 +176,4 @@ func runPulsar(ctx context.Context, server *pulsar.Pulsar, cfg configuration.Pul
 	}()
 
 	return pulseTicker
-}
-
-func initLogger(ctx context.Context, cfg configuration.Log, traceid string) (context.Context, insolar.Logger) {
-	inslog, err := log.NewLog(cfg)
-	if err != nil {
-		panic(err)
-	}
-
-	if newInslog, err := inslog.WithLevel(cfg.Level); err != nil {
-		inslog.Error(err.Error())
-	} else {
-		inslog = newInslog
-	}
-
-	ctx = inslogger.SetLogger(ctx, inslog)
-	ctx, inslog = inslogger.WithTraceField(ctx, traceid)
-	return ctx, inslog
 }
