@@ -19,7 +19,6 @@ package log
 import (
 	"bytes"
 	"io"
-	"os"
 	"regexp"
 	"testing"
 
