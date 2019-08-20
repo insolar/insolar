@@ -50,78 +50,22 @@
 
 package smachine
 
-import (
-	"sync"
-)
-
-type WorkerController interface {
-	startWorkerDetachment(worker *SlotWorker)
-	endWorkerDetachment(worker *SlotWorker)
+type StepSyncCatalog struct {
+	keys map[string]*SortedSlotDependencies
 }
 
-type SlotWorker struct {
-	workCtl WorkerController
-	machine *SlotMachine
-
-	mutex sync.Mutex
-	cond  *sync.Cond
+func (p *StepSyncCatalog) Join(slot *Slot, key string, weight int32, receiveFunc BroadcastReceiveFunc) Syncronizer {
+	panic("not implemented")
+	//head := p.keys[key]
+	//if head == nil {
+	//	p.keys[key] = slot
+	//	return
+	//}
+	//p.keys[key] = head
 }
 
-//func (p *SlotWorker) startSyncCall(ctx *slotContext) int32 {
-//	if p.detachTimer != nil {
-//		panic("illegal state")
-//	}
-//	lastState := atomic.LoadInt32(&p.detachedWorker)
+//var _ Syncronizer = &stepSync{}
 //
-//	timeout := p.machine.config.BeforeDetach
-//	if timeout == 0 || timeout == math.MaxInt64 {
-//		return lastState
-//	}
+//type stepSync struct {
 //
-//	p.detachTimer = time.AfterFunc(timeout, func() {
-//		p.workCtl.startWorkerDetachment(p)
-//		if !atomic.CompareAndSwapInt32(&p.detachedWorker, lastState, -1) {
-//			p.workCtl.endWorkerDetachment(p)
-//			return
-//		}
-//
-//	})
-//	return lastState
 //}
-//
-//func (p *SlotWorker) endSyncCall(lastState int32) {
-//	atomic.CompareAndSwapInt32(&p.detachedWorker, lastState, lastState+1)
-//	p.detachTimer.Stop()
-//	p.detachTimer = nil
-//}
-
-func (p *SlotWorker) getCond() *sync.Cond {
-	if p.cond != nil {
-		return p.cond
-	}
-
-	p.mutex.Lock()
-	defer p.mutex.Unlock()
-
-	if p.cond == nil {
-		p.cond = sync.NewCond(&p.mutex)
-	}
-	return p.cond
-}
-
-func (p *SlotWorker) HasSignal() bool {
-	return false
-}
-
-func (p *SlotWorker) GetLoopLimit() int {
-	return 5
-}
-
-func (p *SlotWorker) detachableCall(fn func()) (wasDetached bool, err error) {
-	defer func() {
-		err = recoverToErr("slot execution has failed", recover(), err)
-	}()
-
-	fn()
-	return false, nil
-}

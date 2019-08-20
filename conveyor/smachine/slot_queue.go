@@ -55,86 +55,111 @@ type QueueType int8
 const (
 	InvalidQueue QueueType = iota
 
-	UnusedList
-	ActiveList
-	PollingList
+	AnotherSlotQueue
+
+	UnusedSlots
+	ActiveSlots
+	PollingSlots
 )
 
 const NoQueue QueueType = -1
 
-func NewQueueHead(t QueueType) QueueHead {
+func NewSlotQueue(t QueueType) SlotQueue {
 	if t <= InvalidQueue {
 		panic("illegal value")
 	}
-	return QueueHead{Slot{queueType: t}}
+	qh := SlotQueue{QueueHead: QueueHead{queueType: t}}
+	qh.head = &qh.slot
+	return qh
+}
+
+type SlotQueue struct {
+	QueueHead
+	slot Slot
+}
+
+func (p *SlotQueue) AppendAll(anotherQueue *SlotQueue) {
+	p.QueueHead.AppendAll(&anotherQueue.QueueHead)
 }
 
 type QueueHead struct {
-	head Slot
+	head      *Slot
+	queueType QueueType
+	count     int
 }
 
 func (p *QueueHead) QueueType() QueueType {
 	p.initEmpty()
-	return p.head.queueType
+	return p.queueType
 }
 
 func (p *QueueHead) Count() int {
-	return p.head.listCount
+	return p.count
 }
 
 func (p *QueueHead) First() *Slot {
-	return p.head.Next()
+	return p.head.QueueNext()
 }
 
 func (p *QueueHead) Last() *Slot {
-	return p.head.Prev()
+	return p.head.QueuePrev()
+}
+
+func (p *QueueHead) IsZero() bool {
+	return p.head.nextInQueue == nil
 }
 
 func (p *QueueHead) IsEmpty() bool {
-	return p.head.next == nil || p.head.next == &p.head
+	return p.head.nextInQueue == nil || p.head.nextInQueue.isQueueHead()
 }
 
 func (p *QueueHead) initEmpty() {
-	if p.head.headDependency == nil {
-		if p.head.slotType <= AnotherSlot {
-			panic("illegal state")
-		}
-		p.head.headDependency = &p.head
-		p.head.next = &p.head
-		p.head.prevDependency = &p.head
+	if p.head.queue == nil {
+		p.head.nextInQueue = p.head
+		p.head.prevInQueue = p.head
+		p.head.queue = p
 	}
 }
 
 func (p *QueueHead) AddFirst(slot *Slot) {
 	p.initEmpty()
-	p.head.insertAsNext(slot)
-	slot.headDependency = &p.head
+	slot.ensureNotInQueue()
+
+	p.head.nextInQueue._addQueuePrev(slot, slot)
+	slot.queue = p
+	p.count++
 }
 
 func (p *QueueHead) AddLast(slot *Slot) {
 	p.initEmpty()
-	p.head.insertAsPrev(slot)
-	slot.headDependency = &p.head
+	slot.ensureNotInQueue()
+
+	p.head._addQueuePrev(slot, slot)
+	slot.queue = p
+	p.count++
 }
 
-func (p *QueueHead) AppendAll(anotherList *QueueHead) {
+func (p *QueueHead) AppendAll(anotherQueue *QueueHead) {
 	p.initEmpty()
-	if anotherList.IsEmpty() {
+	if anotherQueue.IsEmpty() {
 		return
 	}
 
-	anotherHead := &anotherList.head
-	next := anotherHead.next
-	prev := anotherHead.prevDependency
-	c := anotherHead.depCount
+	next := anotherQueue.head.nextInQueue
+	prev := anotherQueue.head.prevInQueue
 
-	anotherHead.depCount = 0
-	anotherHead.next = anotherHead
-	anotherHead.prevDependency = anotherHead
+	c := anotherQueue.count
 
-	p.head.prevDependency._insertAllAsNext(next, prev)
-	_updateHeads(next, prev, &p.head)
-	p.head.depCount += c
+	anotherQueue.count = 0
+	anotherQueue.head.nextInQueue = anotherQueue.head
+	anotherQueue.head.prevInQueue = anotherQueue.head
+
+	for n := next; n != anotherQueue.head; n = n.nextInQueue {
+		n.queue = p
+	}
+
+	p.head._addQueuePrev(next, prev)
+	p.count += c
 }
 
 func (p *QueueHead) RemoveAll() {
@@ -143,18 +168,19 @@ func (p *QueueHead) RemoveAll() {
 		return
 	}
 
-	next := p.head.next
+	next := p.head.nextInQueue
+	p.count = 0
 
-	p.head.depCount = 0
-	p.head.next = &p.head
-	p.head.prevDependency = &p.head
+	p.head.nextInQueue = p.head
+	p.head.prevInQueue = p.head
 
-	for next != &p.head {
+	for next != p.head {
 		prev := next
-		next = next.next
-		prev.prevDependency = nil
-		prev.prevDependency = nil
-		prev.head = nil
+		next = next.nextInQueue
+
+		prev.nextInQueue = nil
+		prev.prevInQueue = nil
+		prev.queue = nil
 
 		if prev == next {
 			break
@@ -168,100 +194,82 @@ Slot methods to support linked list
 -----------------------------------
 */
 
-func (s *Slot) insertAsNext(slot *Slot) {
-	slot.ensureNotInList()
-	s._insertAllAsNext(slot, slot)
-	slot.headDependency = s.headDependency
-	s.headDependency.depCount++
+func (s *Slot) isQueueHead() bool {
+	return s.queue != nil && s == s.queue.head
 }
 
-func (s *Slot) insertAsPrev(slot *Slot) {
-	s.prevDependency.insertAsNext(slot)
-}
-
-func (s *Slot) _insertAllAsNext(chainHead, chainTail *Slot) {
-	s.ensureInList()
-
-	chainTail.next = s.next
-	chainHead.prevDependency = s.next.prevDependency
-
-	s.next.prevDependency = chainTail
-	s.next = chainHead
-}
-
-func _updateHeads(chainHead, chainTail, newHead *Slot) {
-	for {
-		chainHead.headDependency = newHead
-		next := chainHead.next
-		if next == chainTail || next == chainHead {
-			return
-		}
-		chainHead = next
-	}
-}
-
-func _updateHeadsAndCounts(chainHead, chainTail, newHead *Slot) {
-	for {
-		if chainHead.headDependency != nil {
-			chainHead.headDependency.depCount--
-		}
-		chainHead.headDependency = newHead
-		newHead.depCount++
-
-		next := chainHead.next
-		if next == chainTail || next == chainHead {
-			return
-		}
-		chainHead = next
-	}
-}
-
-func (s *Slot) ensureInQueue(inQueue bool) {
-	next := s.nextInQueue
-	prev := s.prevInQueue
-	if (next == nil) != (prev == nil) {
-		panic("illegal state - inconsistent")
-	}
-	if (next != nil) != inQueue {
+func (s *Slot) vacateQueueHead() {
+	if s.queue == nil || s.queue.head != s || s.nextInQueue != s || s.prevInQueue != s {
 		panic("illegal state")
 	}
+
+	s.queue.head = nil
+	s.queue = nil
+	s.nextInQueue = nil
+	s.prevInQueue = nil
 }
 
-func (s *Slot) removeFromQueue() {
-	next := s.nextInQueue
+func (s *Slot) makeQueueHead() {
+	s.ensureNotInQueue()
+
+	s.queue = &QueueHead{head: s, queueType: AnotherSlotQueue}
+	s.nextInQueue = s
+	s.prevInQueue = s
+}
+
+func (s *Slot) _addQueuePrev(chainHead, chainTail *Slot) {
+	s.ensureInQueue()
+
 	prev := s.prevInQueue
-	if (next == nil) != (prev == nil) {
-		panic("illegal state - inconsistent")
-	}
-	if s.queueType != NoQueue {
-		panic("illegal state")
-	}
-	if prev == nil && next == nil {
-		return
-	}
 
-	s.headDependency.listCount--
+	chainHead.prevInQueue = prev
+	chainTail.nextInQueue = s
 
-	next.prevDependency = prev
-	prev.next = next
-
-	s.headDependency = nil
-	s.next = nil
-	s.prevDependency = nil
+	s.prevInQueue = chainTail
+	prev.nextInQueue = chainHead
 }
 
-func (s *Slot) NextInQueue() *Slot {
+func (s *Slot) QueueType() QueueType {
+	if s.queue == nil {
+		return NoQueue
+	}
+	return s.queue.queueType
+}
+
+func (s *Slot) QueueNext() *Slot {
 	next := s.nextInQueue
-	if next == nil || next.queueType != InvalidQueue {
+	if next == nil || next.isQueueHead() {
 		return nil
 	}
 	return next
 }
 
-func (s *Slot) PrevInQueue() *Slot {
+func (s *Slot) QueuePrev() *Slot {
 	prev := s.prevInQueue
-	if prev == nil || prev.queueType != InvalidQueue {
+	if prev == nil || prev.isQueueHead() {
 		return nil
 	}
 	return prev
+}
+
+func (s *Slot) removeFromQueue() {
+	if s.queue == nil {
+		s.ensureNotInQueue()
+		return
+	}
+	if s.isQueueHead() {
+		panic("illegal state")
+	}
+	s.ensureInQueue()
+
+	next := s.nextInQueue
+	prev := s.prevInQueue
+
+	next.prevInQueue = prev
+	prev.nextInQueue = next
+
+	s.queue.count--
+	s.queue = nil
+	s.nextInQueue = nil
+	s.prevInQueue = nil
 }

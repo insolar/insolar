@@ -66,10 +66,10 @@ type SlotMachineConfig struct {
 func NewSlotMachine(config SlotMachineConfig) SlotMachine {
 	return SlotMachine{
 		config:       config,
-		unusedSlots:  NewQueueHead(UnusedList),
-		activeSlots:  NewQueueHead(ActiveList),
-		workingSlots: NewQueueHead(ActiveList),
-		pollingSlots: NewQueueHead(PollingList),
+		unusedSlots:  NewSlotQueue(UnusedSlots),
+		activeSlots:  NewSlotQueue(ActiveSlots),
+		workingSlots: NewSlotQueue(ActiveSlots),
+		pollingSlots: NewSlotQueue(PollingSlots),
 		syncQueue:    NewSyncQueue(&sync.Mutex{}),
 	}
 }
@@ -85,15 +85,17 @@ type SlotMachine struct {
 
 	migrationCount uint16
 
-	unusedSlots  QueueHead
-	workingSlots QueueHead //slots are currently in processing
+	unusedSlots  SlotQueue
+	workingSlots SlotQueue //slots are currently in processing
 
-	activeSlots  QueueHead //they are are moved to workingSlots on every Scan
-	pollingSlots QueueHead
+	activeSlots  SlotQueue //they are are moved to workingSlots on every Scan
+	pollingSlots SlotQueue
 	nextPollTime time.Time
 
 	syncQueue    SyncQueue // for detached/async ops, queued functions MUST BE panic-safe
 	detachQueues map[SlotID]SyncFuncList
+
+	stepSync StepSyncCatalog
 }
 
 func (m *SlotMachine) OccupiedSlotCount() int {
@@ -145,7 +147,7 @@ func (m *SlotMachine) scanWorkingSlots(workCtl WorkerController) {
 		if currentSlot == nil {
 			return
 		}
-		currentSlot.remove()
+		currentSlot.removeFromQueue()
 		slotLink := currentSlot.NewLink()
 
 		stopNow := false
@@ -178,7 +180,7 @@ func (m *SlotMachine) scanWorkingSlots(workCtl WorkerController) {
 	}
 }
 
-func (m *SlotMachine) flushPollingSlotsTo(target *QueueHead) {
+func (m *SlotMachine) flushPollingSlotsTo(target *SlotQueue) {
 	m.nextPollTime = time.Time{}
 	target.AppendAll(&m.pollingSlots)
 }
@@ -293,7 +295,7 @@ func (m *SlotMachine) allocateSlot() (slot *Slot) {
 	switch {
 	case !m.unusedSlots.IsEmpty():
 		slot = m.unusedSlots.First()
-		slot.remove()
+		slot.removeFromQueue()
 	case m.slots == nil:
 		m.slots = make([][]Slot, 1)
 		m.slots[0] = make([]Slot, m.config.SlotPageSize)
@@ -310,10 +312,6 @@ func (m *SlotMachine) allocateSlot() (slot *Slot) {
 		m.slotPgPos++
 	}
 	return slot
-}
-
-func (m *SlotMachine) beforeSlotStop(slot *Slot) {
-	// TODO inform adapters
 }
 
 func (m *SlotMachine) setNextPollingTime(nextPollingOfSlot time.Time) {
@@ -339,8 +337,7 @@ func (m *SlotMachine) syncSafe(slotLink SlotLink, fn func(*Slot)) {
 }
 
 func (m *SlotMachine) safeWrapAndHandleError(slotLink SlotLink, fn func(*Slot)) {
-	slot := slotLink.Get()
-	if slot == nil {
+	if !slotLink.IsValid() {
 		m.getDetachQueue(slotLink.SlotID()) // cleanup
 
 		stateUpdate := StateUpdate{flags: stateUpdateNoChange, param: fn}
@@ -348,14 +345,14 @@ func (m *SlotMachine) safeWrapAndHandleError(slotLink SlotLink, fn func(*Slot)) 
 		return
 	}
 
-	err := safeSlotCall(slot, fn)
+	err := safeSlotCall(slotLink.s, fn)
 	if err == nil {
 		return
 	}
 
 	stateUpdate := StateUpdate{flags: stateUpdateFailed, param: err}
-	m.slotAccessError("adapter callback panic", slot.NewLink(), stateUpdate)
-	m.applyStateUpdate(slot, stateUpdate)
+	m.slotAccessError("adapter callback panic", slotLink, stateUpdate)
+	m.applyStateUpdate(slotLink.s, stateUpdate)
 }
 
 func recoverToErr(msg string, recovered interface{}, defErr error) error {
@@ -385,13 +382,13 @@ func (m *SlotMachine) applyAsyncStateUpdate(slotLink SlotLink, resultFn AsyncRes
 			m.detachQueues = make(map[SlotID]SyncFuncList)
 		}
 
-		dq := m.detachQueues[slot.slotID]
+		dq := m.detachQueues[slotLink.SlotID()]
 		dq = append(dq, func() {
 			m.safeWrapAndHandleError(slotLink, func(slot *Slot) {
 				m._applyAsyncStateUpdate(slot, resultFn)
 			})
 		})
-		m.detachQueues[slot.slotID] = dq
+		m.detachQueues[slotLink.SlotID()] = dq
 	})
 }
 
@@ -415,15 +412,15 @@ func (m *SlotMachine) _applyAsyncStateUpdate(slot *Slot, resultFn AsyncResultFun
 		return
 	}
 
-	switch slot.DependencyType() {
-	case ActiveList:
+	switch slot.QueueType() {
+	case ActiveSlots:
 		// do nothing
 	//case AnotherSlot:
 	//	// can't wake up?
-	case UnusedList:
+	case UnusedSlots:
 		panic("illegal state")
 	default:
-		slot.remove()
+		slot.removeFromQueue()
 		m.activeSlots.AddLast(slot)
 	}
 }
@@ -461,13 +458,13 @@ func (m *SlotMachine) applyStateUpdate(slot *Slot, stateUpdate StateUpdate) bool
 			panic("illegal state")
 		}
 		slot.nextState = stateUpdate.nextStep
-		m.activeSlots.AddLast(slot)
+		m.addSlotToQueue(slot, &m.activeSlots)
 		return true
 	case stateUpdateRepeat:
 		if slot.nextState.transition == nil {
 			panic("illegal state")
 		}
-		m.activeSlots.AddLast(slot)
+		m.addSlotToQueue(slot, &m.activeSlots)
 		return true
 	case stateUpdateReplace:
 		fn := stateUpdate.getCreateFn()
@@ -481,17 +478,20 @@ func (m *SlotMachine) applyStateUpdate(slot *Slot, stateUpdate StateUpdate) bool
 
 		ok, _ := m.applySlotCreate(slot, parent, fn) // recursive call inside
 		return ok
-	case stateUpdateStop, stateUpdateFailed:
+	case stateUpdateFailed:
+		fmt.Printf("slot fail: %v %+v", slot.GetID(), stateUpdate)
+		fallthrough
+	case stateUpdateStop:
 		if !slot.isEmpty() {
 			m.beforeSlotStop(slot)
 			slot.dispose()
 		}
-		slot.remove()
+		// TODO remove/release dependencies
 		m.unusedSlots.AddLast(slot)
 		return false
 	case stateUpdateHotWait:
 		m.setNextPollingTime(stateUpdate.wakeupTime)
-		m.pollingSlots.AddLast(slot)
+		m.addSlotToQueue(slot, &m.pollingSlots)
 		return true
 	case stateUpdateColdWait:
 		// don't add anywhere
@@ -511,9 +511,46 @@ func (m *SlotMachine) applySlotCreate(slot *Slot, parent SlotLink, fnCreate Crea
 
 func (m *SlotMachine) slotAccessError(msg string, link SlotLink, update StateUpdate) {
 	// TODO logging
+	fmt.Printf("%s: %+v %+v", msg, link, update)
 }
 
 func (m *SlotMachine) ScanOnceAsNested(context ExecutionContext) bool {
 	workCtl := context.(*executionContext).worker.workCtl
 	return m.ScanOnce(workCtl)
+}
+
+func (m *SlotMachine) removeSlotFromQueue(slot *Slot) {
+	switch {
+	case slot.QueueType() != AnotherSlotQueue:
+		break
+	case slot.isQueueHead():
+		for {
+			next := slot.QueueNext()
+			if next == nil {
+				break
+			}
+			next.removeFromQueue()
+			m.addSlotToQueue(next, &m.activeSlots)
+		}
+		slot.vacateQueueHead()
+	default:
+		slot.removeFromQueue()
+	}
+}
+
+func (m *SlotMachine) addSlotToQueue(slot *Slot, queue *SlotQueue) {
+	m.removeSlotFromQueue(slot)
+	queue.AddLast(slot)
+}
+
+func (m *SlotMachine) beforeSlotStop(slot *Slot) {
+	// TODO inform adapters
+	m.removeSlotFromQueue(slot)
+
+	//if slot.IsDependencyHead() {
+	//
+	//} else {
+	//
+	//}
+
 }

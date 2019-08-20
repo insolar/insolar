@@ -62,5 +62,6 @@ type AdapterCallbackFunc func(AsyncResultFunc)
 type AdapterCallFunc func() AsyncResultFunc
 
 type ExecutionAdapterSink interface {
-	CallAsync(slotLink SlotLink, fn AdapterCallFunc, callback AdapterCallbackFunc) context.CancelFunc
+	CallAsync(stepLink StepLink, fn AdapterCallFunc, callback AdapterCallbackFunc)
+	CallAsyncWithCancel(stepLink StepLink, fn AdapterCallFunc, callback AdapterCallbackFunc) context.CancelFunc
 }

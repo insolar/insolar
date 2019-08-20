@@ -16,101 +16,116 @@
 
 package smachine
 
-type DependencyHead struct {
-	head Slot
+import "sort"
+
+type SortedSlotDependencies struct {
+	key          string
+	items        []*SlotDep
+	removedCount uint32
+	hasAdded     bool
 }
 
-func (p *DependencyHead) isHead(slot *Slot) bool {
-	if p == nil {
-		panic("illegal state")
+func (p *SortedSlotDependencies) Add(slot *Slot, weight int32, fn BroadcastReceiveFunc) SlotDependency {
+	if slot == nil {
+		panic("illegal value")
 	}
-	return slot == &p.head
+	p.hasAdded = len(p.items) > 0
+	r := &SlotDep{s: slot, fn: fn, c: p, w: weight}
+	p.items = append(p.items, r)
+	return r
 }
 
-/*
------------------------------------
-Slot methods to support linked list
------------------------------------
-*/
-
-//func (s *Slot) insertAsNext(slot *Slot) {
-//	slot.ensureNotInList()
-//	s._insertAllAsNext(slot, slot)
-//	slot.headDependency = s.headDependency
-//	s.headDependency.depCount++
-//}
-//
-//func (s *Slot) insertAsPrev(slot *Slot) {
-//	s.prevDependency.insertAsNext(slot)
-//}
-//
-//func (s *Slot) _insertAllAsNext(chainHead, chainTail *Slot) {
-//	s.ensureInList()
-//
-//	chainTail.next = s.next
-//	chainHead.prevDependency = s.next.prevDependency
-//
-//	s.next.prevDependency = chainTail
-//	s.next = chainHead
-//}
-//
-//func _updateHeads(chainHead, chainTail, newHead *Slot) {
-//	for {
-//		chainHead.headDependency = newHead
-//		next := chainHead.next
-//		if next == chainTail || next == chainHead {
-//			return
-//		}
-//		chainHead = next
-//	}
-//}
-//
-//func _updateHeadsAndCounts(chainHead, chainTail, newHead *Slot) {
-//	for {
-//		if chainHead.headDependency != nil {
-//			chainHead.headDependency.depCount--
-//		}
-//		chainHead.headDependency = newHead
-//		newHead.depCount++
-//
-//		next := chainHead.next
-//		if next == chainTail || next == chainHead {
-//			return
-//		}
-//		chainHead = next
-//	}
-//}
-//
-//func (s *Slot) remove() {
-//	if s.headDependency == nil || s.headDependency == s {
-//		return
-//	}
-//
-//	next := s.next
-//	prev := s.prevDependency
-//	s.headDependency.depCount--
-//
-//	next.prevDependency = prev
-//	prev.next = next
-//
-//	s.headDependency = nil
-//	s.next = nil
-//	s.prevDependency = nil
-//}
-//
-
-func (s *Slot) NextDependency() *Slot {
-	next := s.nextDependency
-	if next == nil || s.headDependency.isHead(next) {
+func (p *SortedSlotDependencies) GetHead() SlotDependency {
+	switch {
+	case p.hasAdded:
+		p.hasAdded = false
+		break
+	case len(p.items) == 0:
+		return nil
+	case p.items[0].s != nil:
+		return p.items[0]
+	}
+	p.sort()
+	if len(p.items) == 0 {
 		return nil
 	}
-	return next
+	return p.items[0]
 }
 
-func (s *Slot) PrevDependency() *Slot {
-	prev := s.prevDependency
-	if prev == nil || s.headDependency.isHead(prev) {
-		return nil
+func (p *SortedSlotDependencies) sort() {
+	if uint32(len(p.items)) == p.removedCount {
+		p.removedCount = 0
+		p.items = nil
+		return
 	}
-	return prev
+	sort.Stable(depSortHelper{p.items})
+	if p.removedCount == 0 {
+		return
+	}
+	p.items = p.items[:uint32(len(p.items))-p.removedCount]
+	p.removedCount = 0
+}
+
+var _ sort.Interface = &depSortHelper{}
+
+type depSortHelper struct {
+	items []*SlotDep
+}
+
+func (d depSortHelper) Len() int {
+	return len(d.items)
+}
+
+func (d depSortHelper) Less(i, j int) bool {
+	switch {
+	case d.items[j].s == nil:
+		return d.items[i].s != nil
+	case d.items[i].s == nil:
+		return false
+	default:
+		return d.items[i].w > d.items[j].w
+	}
+}
+
+func (d depSortHelper) Swap(i, j int) {
+	d.items[i], d.items[j] = d.items[j], d.items[i]
+}
+
+var _ SlotDependency = &SlotDep{}
+
+type SlotDep struct {
+	w  int32
+	s  *Slot
+	fn BroadcastReceiveFunc
+	c  *SortedSlotDependencies
+}
+
+func (s *SlotDep) GetWeight() int32 {
+	return s.w
+}
+
+func (s *SlotDep) Remove() {
+	s.c.removedCount++
+	s.s = nil
+	s.fn = nil
+}
+
+func (s *SlotDep) GetKey() string {
+	return s.c.key
+}
+
+func (s *SlotDep) OnStepChanged() {
+	panic("implement me")
+}
+
+func (s *SlotDep) OnSlotDisposed() {
+	panic("implement me")
+}
+
+func (s *SlotDep) OnBroadcast(payload interface{}) (accepted, wakeup bool) {
+	if s.fn == nil {
+		return false, false
+	}
+	ac := asyncResultContext{slot: s.s}
+	return ac.executeBroadcast(payload, s.fn)
 }

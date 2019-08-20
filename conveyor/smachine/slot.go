@@ -55,8 +55,8 @@ import (
 )
 
 type Slot struct {
-	slotID SlotID
-	parent SlotLink
+	idAndStep uint64 //atomic access
+	parent    SlotLink
 
 	machine StateMachineDeclaration
 
@@ -67,19 +67,25 @@ type Slot struct {
 	migrationCount uint16
 	workState      slotWorkState
 
+	dependency SlotDependency
+
 	/* -----------------------------------
 	   Slot fields to support processing queue
 	   ----------------------------------- */
 	prevInQueue *Slot
 	nextInQueue *Slot
 	queue       *QueueHead
+}
 
-	/* -----------------------------------
-	   Slot fields to support linked list
-	   ----------------------------------- */
-	prevDependency *Slot
-	nextDependency *Slot
-	headDependency *DependencyHead
+type SlotDependency interface {
+	GetKey() string
+	GetWeight() int32
+
+	OnStepChanged()
+	OnSlotDisposed()
+	OnBroadcast(payload interface{}) (accepted, wakeup bool)
+
+	Remove()
 }
 
 type slotWorkState uint8
@@ -89,17 +95,32 @@ const (
 	Working
 )
 
-func (s *Slot) ensureNotInList() {
-	if s.nextDependency != nil || s.prevDependency != nil || s.headDependency != nil {
+func (s *Slot) ensureNotInQueue() {
+	if s.queue != nil || s.nextInQueue != nil || s.prevInQueue != nil {
 		panic("illegal state")
 	}
 }
 
-func (s *Slot) ensureInList() {
-	if s.nextDependency == nil || s.prevDependency == nil || s.headDependency == nil {
+func (s *Slot) ensureInQueue() {
+	if s.queue == nil || s.nextInQueue == nil || s.prevInQueue == nil {
 		panic("illegal state")
 	}
 }
+
+func (s *Slot) GetID() SlotID {
+	return SlotID(s.idAndStep)
+}
+
+func (s *Slot) GetStep() uint32 {
+	return uint32(s.idAndStep >> 32)
+}
+
+func (s *Slot) GetAtomicIDAndStep() (SlotID, uint32) {
+	v := atomic.LoadUint64(&s.idAndStep)
+	return SlotID(v), uint32(v >> 32)
+}
+
+const stepIncrement = 1 << 32
 
 func (s *Slot) init(id SlotID, parent SlotLink, machine StateMachineDeclaration) {
 	if machine == nil {
@@ -108,20 +129,44 @@ func (s *Slot) init(id SlotID, parent SlotLink, machine StateMachineDeclaration)
 	if id.IsUnknown() {
 		panic("illegal value")
 	}
-	s.ensureNotInList()
-	atomic.StoreUint32((*uint32)(&s.slotID), uint32(id))
+	s.ensureNotInQueue()
+	atomic.StoreUint64(&s.idAndStep, uint64(id)+stepIncrement)
 	s.parent = parent
 	s.machine = machine
 }
 
+func (s *Slot) incStep(slotID SlotID) bool {
+	for {
+		v := atomic.LoadUint64(&s.idAndStep)
+		if v == 0 || SlotID(v) != slotID {
+			return false
+		}
+		update := v + stepIncrement
+		if update < stepIncrement {
+			// overflow, skip 0 step value
+			update += stepIncrement
+		}
+		if atomic.CompareAndSwapUint64(&s.idAndStep, v, update) {
+			return true
+		}
+	}
+}
+
 func (s *Slot) dispose() {
-	s.ensureNotInList()
-	atomic.StoreUint32((*uint32)(&s.slotID), 0)
+	s.ensureNotInQueue()
+	if s.dependency != nil {
+		panic("illegal state")
+	}
+	atomic.StoreUint64(&s.idAndStep, 0)
 	*s = Slot{}
 }
 
 func (s *Slot) NewLink() SlotLink {
-	return NewSlotLink(s)
+	return SlotLink{s.GetID(), s}
+}
+
+func (s *Slot) NewStepLink() StepLink {
+	return StepLink{s.NewLink(), s.GetStep()}
 }
 
 func (s *Slot) isEmpty() bool {
@@ -133,6 +178,9 @@ func (s *Slot) isWorking() bool {
 }
 
 func (s *Slot) setWorking() {
+	if s.workState != NotWorking {
+		panic("illegal state")
+	}
 	s.workState = Working
 }
 
