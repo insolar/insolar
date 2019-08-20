@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/builtin/contract/account"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/costcenter"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/member"
+	"github.com/insolar/insolar/logicrunner/builtin/contract/migrationadmin"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/migrationshard"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/nodedomain"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/pkshard"
@@ -33,10 +34,6 @@ import (
 )
 
 func RootDomain() insolar.GenesisContractState {
-	var activeMigrationDaemonMembers [insolar.GenesisAmountActiveMigrationDaemonMembers]insolar.Reference
-	for i := 0; i < insolar.GenesisAmountActiveMigrationDaemonMembers; i++ {
-		activeMigrationDaemonMembers[i] = genesisrefs.ContractMigrationDaemonMembers[i]
-	}
 
 	return insolar.GenesisContractState{
 		Name:       insolar.GenesisNameRootDomain,
@@ -44,7 +41,6 @@ func RootDomain() insolar.GenesisContractState {
 		ParentName: "",
 
 		Memory: mustGenMemory(&rootdomain.RootDomain{
-			MigrationDaemonMembers: activeMigrationDaemonMembers,
 			MigrationAddressShards: genesisrefs.ContractMigrationAddressShards,
 			PublicKeyShards:        genesisrefs.ContractPublicKeyShards,
 			NodeDomain:             genesisrefs.ContractNodeDomain,
@@ -145,6 +141,21 @@ func GetMigrationShardGenesisContractState(name string) insolar.GenesisContractS
 		Prototype:  insolar.GenesisNameMigrationShard,
 		ParentName: insolar.GenesisNameRootDomain,
 		Memory:     mustGenMemory(s),
+	}
+}
+
+func GetMigrationAdminGenesisContractState() insolar.GenesisContractState {
+	ma, err := migrationadmin.New(genesisrefs.ContractMigrationDaemonMembers, genesisrefs.ContractMigrationAdminMember)
+
+	if err != nil {
+		panic("failed to create migration admin contract instance")
+	}
+
+	return insolar.GenesisContractState{
+		Name:       insolar.GenesisNameMigrationAdmin,
+		Prototype:  insolar.GenesisNameMigrationAdmin,
+		ParentName: insolar.GenesisNameRootDomain,
+		Memory:     mustGenMemory(ma),
 	}
 }
 
