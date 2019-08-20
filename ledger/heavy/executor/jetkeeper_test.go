@@ -22,6 +22,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/dgraph-io/badger"
 	fuzz "github.com/google/gofuzz"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/pulse"
@@ -40,7 +41,9 @@ func initDB(t *testing.T, testPulse insolar.PulseNumber) (executor.JetKeeper, st
 
 	require.NoError(t, err)
 
-	db, err := store.NewBadgerDB(tmpdir)
+	ops := badger.DefaultOptions(tmpdir)
+	ops.CompactL0OnClose = false
+	db, err := store.NewBadgerDB(ops)
 	require.NoError(t, err)
 
 	jets := jet.NewDBStore(db)
@@ -230,7 +233,9 @@ func TestNewJetKeeper(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	db, err := store.NewBadgerDB(tmpdir)
+	ops := badger.DefaultOptions(tmpdir)
+	ops.CompactL0OnClose = false
+	db, err := store.NewBadgerDB(ops)
 	require.NoError(t, err)
 	defer db.Stop(context.Background())
 	jets := jet.NewDBStore(db)
@@ -296,7 +301,9 @@ func TestDbJetKeeper_AddDropConfirmation(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	db, err := store.NewBadgerDB(tmpdir)
+	ops := badger.DefaultOptions(tmpdir)
+	ops.CompactL0OnClose = false
+	db, err := store.NewBadgerDB(ops)
 	require.NoError(t, err)
 	defer db.Stop(context.Background())
 	jets := jet.NewDBStore(db)
@@ -347,7 +354,9 @@ func TestDbJetKeeper_TopSyncPulse(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	db, err := store.NewBadgerDB(tmpdir)
+	ops := badger.DefaultOptions(tmpdir)
+	ops.CompactL0OnClose = false
+	db, err := store.NewBadgerDB(ops)
 	require.NoError(t, err)
 	defer db.Stop(context.Background())
 	jets := jet.NewDBStore(db)
@@ -415,7 +424,9 @@ func TestDbJetKeeper_LostDataOnNextPulseAfterSplit(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	db, err := store.NewBadgerDB(tmpdir)
+	ops := badger.DefaultOptions(tmpdir)
+	ops.CompactL0OnClose = false
+	db, err := store.NewBadgerDB(ops)
 	require.NoError(t, err)
 	defer db.Stop(context.Background())
 	jets := jet.NewDBStore(db)

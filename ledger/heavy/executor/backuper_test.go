@@ -25,6 +25,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/store"
@@ -132,7 +133,9 @@ func TestBackuper_BackupWaitPeriodExpired(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	db, err := store.NewBadgerDB(tmpdir)
+	ops := badger.DefaultOptions(tmpdir)
+	ops.CompactL0OnClose = false
+	db, err := store.NewBadgerDB(ops)
 	require.NoError(t, err)
 	bm, err := executor.NewBackupMaker(context.Background(), db, cfg, testPulse)
 	require.NoError(t, err)
@@ -151,7 +154,9 @@ func TestBackuper_CantMoveToTargetDir(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	db, err := store.NewBadgerDB(tmpdir)
+	ops := badger.DefaultOptions(tmpdir)
+	ops.CompactL0OnClose = false
+	db, err := store.NewBadgerDB(ops)
 	require.NoError(t, err)
 	bm, err := executor.NewBackupMaker(context.Background(), db, cfg, 0)
 	require.NoError(t, err)

@@ -22,6 +22,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/pulse"
@@ -349,7 +350,9 @@ func TestRecordServer_Export(t *testing.T) {
 		defer os.RemoveAll(tmpdir)
 		require.NoError(t, err)
 
-		db, err := store.NewBadgerDB(tmpdir)
+		ops := badger.DefaultOptions(tmpdir)
+		ops.CompactL0OnClose = false
+		db, err := store.NewBadgerDB(ops)
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 
@@ -432,7 +435,9 @@ func TestRecordServer_Export_Composite(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	db, err := store.NewBadgerDB(tmpdir)
+	ops := badger.DefaultOptions(tmpdir)
+	ops.CompactL0OnClose = false
+	db, err := store.NewBadgerDB(ops)
 	require.NoError(t, err)
 	defer db.Stop(context.Background())
 
@@ -599,7 +604,9 @@ func TestRecordServer_Export_Composite_BatchVersion(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	db, err := store.NewBadgerDB(tmpdir)
+	ops := badger.DefaultOptions(tmpdir)
+	ops.CompactL0OnClose = false
+	db, err := store.NewBadgerDB(ops)
 	require.NoError(t, err)
 	defer db.Stop(context.Background())
 
