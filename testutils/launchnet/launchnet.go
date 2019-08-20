@@ -222,9 +222,9 @@ func setInfo() error {
 }
 
 func setMigrationDaemonsRef(makeRequest func(user *User, method string, params interface{}) (interface{}, string, error)) error {
-	for i, user := range MigrationDaemons {
-		user.Ref = Root.Ref
-		res, _, err := makeRequest(&user, "member.get", nil)
+	for i, mDaemon := range MigrationDaemons {
+		mDaemon.Ref = Root.Ref
+		res, _, err := makeRequest(&mDaemon, "member.get", nil)
 		if err != nil {
 			return errors.Wrap(err, "[ setup ] get member by public key failed ,key ")
 		}
