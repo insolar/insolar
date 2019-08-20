@@ -30,6 +30,6 @@ func NewLog() Log {
 		Level: "Info",
 		Adapter: "zerolog",
 		Formatter: "json",
-		BufferSize: 128*1024,
+		BufferSize: 10*1024*1024,
 	}
 }
