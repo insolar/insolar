@@ -141,7 +141,7 @@ func (r *PhasedRoundController) PrepareConsensusRound(upstream api.UpstreamContr
 		return true
 	}
 
-	inslogger.FromContext(r.realm.roundContext).Debugf(
+	inslogger.FromContext(r.realm.roundContext).Warnf(
 		"Starting consensus round: self={%v}, ephemeral=%v, bundle=%v, census=%+v", r.realm.GetLocalProfile(),
 		r.realm.ephemeralFeeder != nil, r.bundle, r.realm.initialCensus)
 
@@ -189,7 +189,7 @@ func (r *PhasedRoundController) PrepareConsensusRound(upstream api.UpstreamContr
 func (r *PhasedRoundController) onConsensusStopper() {
 	latest, _ := r.chronicle.GetLatestCensus()
 
-	inslogger.FromContext(r.realm.roundContext).Debugf(
+	inslogger.FromContext(r.realm.roundContext).Warnf(
 		"Stopping consensus round: self={%v}, ephemeral=%v, bundle=%v, census=%+v", r.realm.GetLocalProfile(),
 		r.realm.ephemeralFeeder != nil, r.bundle, latest)
 

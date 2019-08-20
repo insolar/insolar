@@ -388,10 +388,10 @@ func TestRecordStorage_Delete(t *testing.T) {
 			err := recordStorage.SetAtomic(ctx, record.Material{ID: *id})
 			require.NoError(t, err)
 		}
-		assert.Equal(t, countFirstPulse+countSecondPulse, int32(len(recordStorage.recsStor)))
+		require.Equal(t, countFirstPulse+countSecondPulse, int32(len(recordStorage.recsStor)))
 
 		recordStorage.DeleteForPN(ctx, firstPulse)
-		assert.Equal(t, countSecondPulse, int32(len(recordStorage.recsStor)))
+		require.Equal(t, countSecondPulse, int32(len(recordStorage.recsStor)))
 	})
 }
 

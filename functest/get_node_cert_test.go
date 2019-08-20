@@ -21,13 +21,15 @@ package functest
 import (
 	"testing"
 
+	"github.com/insolar/insolar/testutils/launchnet"
+
 	"github.com/stretchr/testify/require"
 )
 
 func TestNodeCert(t *testing.T) {
 	const TESTPUBLICKEY = "some_fancy_public_key"
 	const testRole = "virtual"
-	res, err := signedRequest(t, &root, "contract.registerNode", map[string]interface{}{"publicKey": TESTPUBLICKEY, "role": testRole})
+	res, err := signedRequest(t, &launchnet.Root, "contract.registerNode", map[string]interface{}{"publicKey": TESTPUBLICKEY, "role": testRole})
 	require.NoError(t, err)
 
 	body := getRPSResponseBody(t, postParams{
