@@ -23,6 +23,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/dgraph-io/badger"
 	fuzz "github.com/google/gofuzz"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -43,7 +44,9 @@ func TestPulse_Components(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	db, err := store.NewBadgerDB(tmpdir)
+	ops := badger.DefaultOptions(tmpdir)
+	ops.CompactL0OnClose = false
+	db, err := store.NewBadgerDB(ops)
 	require.NoError(t, err)
 	defer db.Stop(ctx)
 	dbStorage := pulse.NewDB(db)
