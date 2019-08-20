@@ -14,27 +14,29 @@
 // limitations under the License.
 //
 
-package reply
+package payload
 
-import (
-	"fmt"
-
-	"github.com/insolar/insolar/insolar"
+const (
+	CodeUnknown         = 1000
+	CodeDeactivated     = 1001
+	CodeFlowCanceled    = 1002
+	CodeNotFound        = 1003
+	CodeNoPendings      = 1004
+	CodeNoStartPulse    = 1005
+	CodeRequestNotFound = 1006
+	CodeInvalidRequest  = 1007
+	CodeReasonNotFound  = 1008
+	CodeReasonIsWrong   = 1009
 )
 
-// HeavyError carries heavy sync error information.
-type HeavyError struct {
-	Message  string
-	JetID    insolar.JetID
-	PulseNum insolar.PulseNumber
+type CodedError struct {
+	Text string
+	Code uint32
 }
 
-// Type implementation of Reply interface.
-func (e *HeavyError) Type() insolar.ReplyType {
-	return TypeHeavyError
+func (e *CodedError) GetCode() uint32 {
+	return e.Code
 }
-
-// Error returns error message for stored type.
-func (e *HeavyError) Error() string {
-	return fmt.Sprintf("%v (JetID=%v, PulseNum=%v)", e.Message, e.JetID, e.PulseNum)
+func (e *CodedError) Error() string {
+	return e.Text
 }

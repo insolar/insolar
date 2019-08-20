@@ -22,23 +22,18 @@ import (
 )
 
 var (
-	statHotObjectsTotal   = stats.Int64("hotdata/objects/total", "Amount of hot records for next executors", stats.UnitDimensionless)
-	statHotObjectsSend    = stats.Int64("hotdata/objects/send", "Amount of hot records actually sent to next executors", stats.UnitDimensionless)
-	statHeavyPayloadCount = stats.Int64(
-		"lightsyncer/heavypayload/count",
-		"How many heavy-payload messages were sent to a heavy node",
-		stats.UnitDimensionless,
-	)
-	statErrHeavyPayloadCount = stats.Int64(
-		"lightsyncer/failedheavypayload/count",
-		"How many heavy-payload messages were failed",
-		stats.UnitDimensionless,
-	)
+	statHotObjectsTotal = stats.Int64("hotdata/objects/total", "Amount of hot records for next executors", stats.UnitDimensionless)
+	statHotObjectsSend  = stats.Int64("hotdata/objects/send", "Amount of hot records actually sent to next executors", stats.UnitDimensionless)
+
+	statJets      = stats.Int64("jets", "jets counter", stats.UnitDimensionless)
+	statJetSplits = stats.Int64("jet/splits", "jet splits counter", stats.UnitDimensionless)
+
+	statDrop        = stats.Int64("drops", "How many drop records have created", stats.UnitDimensionless)
+	statDropRecords = stats.Int64("drop/records", "Amount of records in drop", stats.UnitDimensionless)
 )
 
 func init() {
 	err := view.Register(
-
 		&view.View{
 			Name:        statHotObjectsTotal.Name(),
 			Description: statHotObjectsTotal.Description(),
@@ -52,17 +47,31 @@ func init() {
 			Measure:     statHotObjectsSend,
 			Aggregation: view.Sum(),
 		},
+
 		&view.View{
-			Name:        statHeavyPayloadCount.Name(),
-			Description: statHeavyPayloadCount.Description(),
-			Measure:     statHeavyPayloadCount,
-			Aggregation: view.Count(),
+			Name:        "jets_counter",
+			Description: "how many jets on start of pulse",
+			Measure:     statJets,
+			Aggregation: view.LastValue(),
 		},
 		&view.View{
-			Name:        statErrHeavyPayloadCount.Name(),
-			Description: statErrHeavyPayloadCount.Description(),
-			Measure:     statErrHeavyPayloadCount,
-			Aggregation: view.Count(),
+			Name:        "jet_splits_total",
+			Description: "how many jet splits performed",
+			Measure:     statJetSplits,
+			Aggregation: view.Sum(),
+		},
+
+		&view.View{
+			Name:        "drops_total",
+			Description: statDrop.Description(),
+			Measure:     statDrop,
+			Aggregation: view.Sum(),
+		},
+		&view.View{
+			Name:        "drop_records_total",
+			Description: statDropRecords.Description(),
+			Measure:     statDropRecords,
+			Aggregation: view.Sum(),
 		},
 	)
 	if err != nil {

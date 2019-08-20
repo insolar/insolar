@@ -106,11 +106,11 @@ func NewSDK(urls []string, memberKeysDirPath string) (*SDK, error) {
 		logLevel:               "",
 	}
 
-	if len(response.MigrationDaemonMembers) < insolar.GenesisAmountActiveMigrationDaemonMembers {
+	if len(response.MigrationDaemonMembers) < insolar.GenesisAmountMigrationDaemonMembers {
 		return nil, errors.New(fmt.Sprintf("need at least '%d' migration daemons", insolar.GenesisAmountActiveMigrationDaemonMembers))
 	}
 
-	for i := 0; i < insolar.GenesisAmountActiveMigrationDaemonMembers; i++ {
+	for i := 0; i < insolar.GenesisAmountMigrationDaemonMembers; i++ {
 		m, err := getMember(memberKeysDirPath+bootstrap.GetMigrationDaemonPath(i), response.MigrationDaemonMembers[i])
 		if err != nil {
 			return nil, errors.Wrap(err, fmt.Sprintf("failed to get migration daemon member; member's index: '%d'", i))

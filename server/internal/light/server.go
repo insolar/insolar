@@ -63,7 +63,7 @@ func (s *Server) Serve() {
 	fatal(ctx, err, "failed to create components")
 
 	traceID := "main_" + utils.RandTraceID()
-	ctx, inslog := internal.Logger(ctx, cfg.Log, traceID, cmp.NodeRef, cmp.NodeRole)
+	ctx, inslog := inslogger.InitNodeLogger(ctx, cfg.Log, traceID, cmp.NodeRef, cmp.NodeRole)
 	ctx, jaegerFlush := internal.Jaeger(ctx, cfg.Tracer.Jaeger, traceID, cmp.NodeRef, cmp.NodeRole)
 	defer jaegerFlush()
 

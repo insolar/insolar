@@ -63,6 +63,11 @@ func GetRootMember() insolar.Reference {
 	return genesisrefs.ContractRootMember
 }
 
+// Get reference on  MigrationAdmin contract.
+func GetMigrationAdmin() insolar.Reference {
+	return genesisrefs.ContractMigrationAdmin
+}
+
 // TrimPublicKey trim public key
 func TrimPublicKey(publicKey string) string {
 	return TrimAddress(between(publicKey, "KEY-----", "-----END"))

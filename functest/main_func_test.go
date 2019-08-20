@@ -14,13 +14,25 @@
 // limitations under the License.
 //
 
-package payload
+// +build functest
 
-const (
-	CodeUnknown      = 0
-	CodeDeactivated  = 1
-	CodeFlowCanceled = 2
-	CodeNotFound     = 3
-	CodeNoPendings   = 4
-	CodeNoStartPulse = 5
+package functest
+
+import (
+	"fmt"
+	"os"
+	"testing"
+
+	"github.com/insolar/insolar/testutils/launchnet"
+	"github.com/pkg/errors"
 )
+
+func TestMain(m *testing.M) {
+	os.Exit(launchnet.Run(func() int {
+		err := setMigrationDaemonsRef()
+		if err != nil {
+			fmt.Println(errors.Wrap(err, "[ setup ] get reference daemons by public key failed ").Error())
+		}
+		return m.Run()
+	}))
+}
