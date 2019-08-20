@@ -30,17 +30,24 @@ import (
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/heavy/executor.InitialStateAccessor -o ./ -s _mock.go -g
 
-// InitialStateAccessor
+// InitialStateAccessor interface can receive initial state for lights
 type InitialStateAccessor interface {
+	// Get method returns InitialState filled only with data for passed light node
+	// If node isn't lightExecutor for any jets - arrays in InitialState will be empty
+	// Passed pulse is current pulse for checking light executor for jets (not a topSyncPulse)
 	Get(ctx context.Context, lightExecutor insolar.Reference, pulse insolar.PulseNumber) *InitialState
 }
 
 type InitialState struct {
-	JetIDs  []insolar.JetID
-	Drops   [][]byte
+	// JetIds for passed executor (not all ids). Jets need to be split included
+	JetIDs []insolar.JetID
+	// Drops for JetIDs above
+	Drops [][]byte
+	// Indexes only for Lifelines that has pending requests
 	Indexes []record.Index
 }
 
+// InitialStateKeeper prepares state for LMEs
 type InitialStateKeeper struct {
 	jetAccessor    jet.Accessor
 	jetCoordinator jet.Coordinator
@@ -72,6 +79,7 @@ func NewInitialStateKeeper(
 	}
 }
 
+// Start method prepares state before network starts
 func (isk *InitialStateKeeper) Start(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
 
