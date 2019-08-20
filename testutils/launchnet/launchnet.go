@@ -56,12 +56,16 @@ var stderr io.ReadCloser
 
 // Method starts launchnet before execution of callback function (cb) and stops launchnet after.
 // Returns exit code as a result from calling callback function.
-func Run(cb func() int) int {
+func Run(makeRequest RequestDoer, cb func() int) int {
 	err := setup()
 	defer teardown()
 	if err != nil {
 		fmt.Println("error while setup, skip tests: ", err)
 		return 1
+	}
+	err = setMigrationDaemonsRef(makeRequest)
+	if err != nil {
+		fmt.Println(errors.Wrap(err, "[ setup ] get reference daemons by public key failed ").Error())
 	}
 
 	c := make(chan os.Signal)
@@ -91,6 +95,8 @@ func Run(cb func() int) int {
 	}
 	return code
 }
+
+type RequestDoer func(user *User, method string, params interface{}) (interface{}, string, error)
 
 var info *requester.InfoResponse
 var Root User
@@ -215,14 +221,14 @@ func setInfo() error {
 	return nil
 }
 
-func setMigrationDaemonsRef() error {
-	for i, user := range migrationDaemons {
-		user.ref = root.ref
-		res, _, err := makeSignedRequest(&user, "member.get", nil)
+func setMigrationDaemonsRef(makeRequest func(user *User, method string, params interface{}) (interface{}, string, error)) error {
+	for i, user := range MigrationDaemons {
+		user.Ref = Root.Ref
+		res, _, err := makeRequest(&user, "member.get", nil)
 		if err != nil {
 			return errors.Wrap(err, "[ setup ] get member by public key failed ,key ")
 		}
-		migrationDaemons[i].ref = res.(map[string]interface{})["reference"].(string)
+		MigrationDaemons[i].Ref = res.(map[string]interface{})["reference"].(string)
 	}
 	return nil
 }
@@ -416,11 +422,7 @@ func setup() error {
 
 	fmt.Println("[ setup ] references successfully received")
 	Root.Ref = info.RootMember
-	migrationAdmin.Ref = info.MigrationAdminMember
-	err = setMigrationDaemonsRef()
-	if err != nil {
-		return errors.Wrap(err, "[ setup ] get reference daemons by public key failed ")
-	}
+	MigrationAdmin.Ref = info.MigrationAdminMember
 
 	//Contracts = make(map[string]*contractInfo)
 

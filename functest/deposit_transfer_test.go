@@ -89,7 +89,7 @@ func TestDepositTransferWrongValueAmount(t *testing.T) {
 func TestDepositTransferNotEnoughConfirms(t *testing.T) {
 	migrationAddress := testutils.RandomString()
 	member := createMigrationMemberForMA(t, migrationAddress)
-	_ = migrate(t, member.ref, "1000", "Eth_TxHash_test", migrationAddress, 2)
+	_ = migrate(t, member.Ref, "1000", "Eth_TxHash_test", migrationAddress, 2)
 
 	_ = migrate(t, member.Ref, "1000", "Eth_TxHash_test", migrationAddress, 0)
 

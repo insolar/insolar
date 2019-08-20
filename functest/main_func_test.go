@@ -26,7 +26,7 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	os.Exit(launchnet.Run(func() int {
+	os.Exit(launchnet.Run(makeSignedRequest, func() int {
 		return m.Run()
 	}))
 }

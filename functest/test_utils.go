@@ -183,7 +183,7 @@ func migrate(t *testing.T, memberRef string, amount string, tx string, ma string
 	require.NoError(t, err)
 	err = sm.UnmarshalBinary(decoded)
 	require.True(t, ok)
-	require.Equal(t, sm[launchnet.MigrationDaemons[mdNum].ref], amount)
+	require.Equal(t, sm[launchnet.MigrationDaemons[mdNum].Ref], amount)
 
 	return deposit
 }
@@ -253,10 +253,10 @@ func getStatus(t testing.TB) statusResponse {
 }
 
 func activateDaemons(t *testing.T) error {
-	for _, user := range migrationDaemons {
-		_, err := signedRequest(t, &launchnet.MigrationAdmin, "migration.activateDaemon", map[string]interface{}{"reference": user.ref})
+	for _, user := range launchnet.MigrationDaemons {
+		_, err := signedRequest(t, &launchnet.MigrationAdmin, "migration.activateDaemon", map[string]interface{}{"reference": user.Ref})
 		if err != nil {
-			return errors.Wrapf(err, "failed activate migration daemon %s", user.ref)
+			return errors.Wrapf(err, "failed activate migration daemon %s", user.Ref)
 		}
 	}
 	return nil

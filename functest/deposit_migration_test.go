@@ -69,7 +69,7 @@ func TestMigrationTokenOnDifferentDeposits(t *testing.T) {
 	member := createMigrationMemberForMA(t, migrationAddress)
 
 	_ = migrate(t, member.Ref, "1000", "Test_TxHash", migrationAddress, 0)
-	secondDeposit := migrate(t, member.ref, "1000", "Test_TxHash", migrationAddress, 1)
+	secondDeposit := migrate(t, member.Ref, "1000", "Test_TxHash", migrationAddress, 1)
 
 	sm := make(foundation.StableMap)
 	confirmerReferencesMap := secondDeposit["confirmerReferences"].(string)
@@ -177,7 +177,7 @@ func TestMigrationAnotherAmountSameTx(t *testing.T) {
 	require.NoError(t, err)
 
 	_, _, err = makeSignedRequest(
-		&migrationDaemons[2],
+		&launchnet.MigrationDaemons[2],
 		"deposit.migration",
 		map[string]interface{}{"amount": "30", "ethTxHash": "ethTxHash", "migrationAddress": migrationAddress})
 	require.Error(t, err)
