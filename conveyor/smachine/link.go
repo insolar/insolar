@@ -80,15 +80,16 @@ func (p *SlotLink) IsValid() bool {
 
 type StepLink struct {
 	SlotLink
-	step uint32
+	step       uint32
+	cancelMark *uint32
 }
 
 func (p *StepLink) IsAtStep() bool {
 	if p.s == nil {
 		return false
 	}
-	v := atomic.LoadUint64(&p.s.idAndStep)
-	return p.id == SlotID(v) && uint32(v>>32) == atomic.LoadUint32(&p.step)
+	id, step := p.s.GetAtomicIDAndStep()
+	return p.id == id && (p.step == 0 || p.step == step)
 }
 
 func (p *StepLink) setCancelled() {
@@ -99,6 +100,9 @@ func (p *StepLink) IsCancelled() bool {
 	if p.s == nil {
 		return false
 	}
-	v := atomic.LoadUint64(&p.s.idAndStep)
-	return p.id != SlotID(v) || uint32(v>>32) == 0 || atomic.LoadUint32(&p.step) == 0
+	if p.cancelMark != nil && atomic.LoadUint32(p.cancelMark) != 0 {
+		return true
+	}
+	id, step := p.s.GetAtomicIDAndStep()
+	return p.id != id || p.step != 0 && p.step != step
 }
