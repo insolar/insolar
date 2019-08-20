@@ -268,14 +268,14 @@ outer:
 	for {
 		select {
 		case <-ctx.Done():
-			log.Debug(">>>>workerPrePhase3: ctx.Done")
+			log.Warn(">>>>workerPrePhase3: ctx.Done")
 			return nil // ctx.Err() ?
 		case <-chasingDelayTimer.Channel():
 			chasingDelayTimer.ClearExpired()
 			log.Debug(">>>>workerPrePhase3: chaseExpired")
 			break outer
 		case <-startOfPhase3:
-			log.Debug(">>>>workerPrePhase3: startOfPhase3")
+			log.Warn(">>>>workerPrePhase3: startOfPhase3")
 			break outer
 		case upd := <-c.queueTrustUpdated:
 			switch {
@@ -362,6 +362,7 @@ outer:
 		case <-time.After(c.loopingMinimalDelay):
 		}
 	}
+	log.Warn(">>>>workerPrePhase3: nsh available")
 
 	vectorHelper := c.R.GetPopulation().CreateVectorHelper()
 	localProjection := vectorHelper.CreateProjection()
