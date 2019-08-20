@@ -33,6 +33,7 @@ import (
 	"github.com/insolar/insolar/insolar/store"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/testutils"
+	"github.com/insolar/insolar/testutils/testbadger"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -56,8 +57,7 @@ func TestRecordStorage_TruncateHead(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	assert.NoError(t, err)
 
-	ops := badger.DefaultOptions(tmpdir)
-	ops.CompactL0OnClose = false
+	ops := testbadger.BadgerDefaultOptions(tmpdir)
 	dbMock, err := store.NewBadgerDB(ops)
 	defer dbMock.Stop(ctx)
 	require.NoError(t, err)

@@ -31,6 +31,7 @@ import (
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/store"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/testutils/testbadger"
 )
 
 // helper for tests
@@ -68,8 +69,7 @@ func TestDBStore_TruncateHead(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	assert.NoError(t, err)
 
-	ops := badger.DefaultOptions(tmpdir)
-	ops.CompactL0OnClose = false
+	ops := testbadger.BadgerDefaultOptions(tmpdir)
 	dbMock, err := store.NewBadgerDB(ops)
 
 	defer dbMock.Stop(ctx)
@@ -126,8 +126,7 @@ func TestDBStorage_Empty(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	ops := badger.DefaultOptions(tmpdir)
-	ops.CompactL0OnClose = false
+	ops := testbadger.BadgerDefaultOptions(tmpdir)
 	db, err := store.NewBadgerDB(ops)
 	require.NoError(t, err)
 	defer db.Stop(ctx)
@@ -145,8 +144,7 @@ func TestDBStorage_UpdateJetTree(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	ops := badger.DefaultOptions(tmpdir)
-	ops.CompactL0OnClose = false
+	ops := testbadger.BadgerDefaultOptions(tmpdir)
 	db, err := store.NewBadgerDB(ops)
 	require.NoError(t, err)
 	defer db.Stop(ctx)
@@ -170,8 +168,7 @@ func TestDBStorage_SplitJetTree(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	ops := badger.DefaultOptions(tmpdir)
-	ops.CompactL0OnClose = false
+	ops := testbadger.BadgerDefaultOptions(tmpdir)
 	db, err := store.NewBadgerDB(ops)
 	require.NoError(t, err)
 	defer db.Stop(ctx)
@@ -205,8 +202,7 @@ func TestDBStorage_CloneJetTree(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	ops := badger.DefaultOptions(tmpdir)
-	ops.CompactL0OnClose = false
+	ops := testbadger.BadgerDefaultOptions(tmpdir)
 	db, err := store.NewBadgerDB(ops)
 	require.NoError(t, err)
 	defer db.Stop(ctx)

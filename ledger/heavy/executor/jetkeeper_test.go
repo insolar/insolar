@@ -22,11 +22,11 @@ import (
 	"os"
 	"testing"
 
-	"github.com/dgraph-io/badger"
 	fuzz "github.com/google/gofuzz"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/ledger/heavy/executor"
+	"github.com/insolar/insolar/testutils/testbadger"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"
@@ -41,8 +41,7 @@ func initDB(t *testing.T, testPulse insolar.PulseNumber) (executor.JetKeeper, st
 
 	require.NoError(t, err)
 
-	ops := badger.DefaultOptions(tmpdir)
-	ops.CompactL0OnClose = false
+	ops := testbadger.BadgerDefaultOptions(tmpdir)
 	db, err := store.NewBadgerDB(ops)
 	require.NoError(t, err)
 
@@ -233,8 +232,7 @@ func TestNewJetKeeper(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	ops := badger.DefaultOptions(tmpdir)
-	ops.CompactL0OnClose = false
+	ops := testbadger.BadgerDefaultOptions(tmpdir)
 	db, err := store.NewBadgerDB(ops)
 	require.NoError(t, err)
 	defer db.Stop(context.Background())
@@ -301,8 +299,7 @@ func TestDbJetKeeper_AddDropConfirmation(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	ops := badger.DefaultOptions(tmpdir)
-	ops.CompactL0OnClose = false
+	ops := testbadger.BadgerDefaultOptions(tmpdir)
 	db, err := store.NewBadgerDB(ops)
 	require.NoError(t, err)
 	defer db.Stop(context.Background())
@@ -354,8 +351,7 @@ func TestDbJetKeeper_TopSyncPulse(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	ops := badger.DefaultOptions(tmpdir)
-	ops.CompactL0OnClose = false
+	ops := testbadger.BadgerDefaultOptions(tmpdir)
 	db, err := store.NewBadgerDB(ops)
 	require.NoError(t, err)
 	defer db.Stop(context.Background())
@@ -424,8 +420,7 @@ func TestDbJetKeeper_LostDataOnNextPulseAfterSplit(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	ops := badger.DefaultOptions(tmpdir)
-	ops.CompactL0OnClose = false
+	ops := testbadger.BadgerDefaultOptions(tmpdir)
 	db, err := store.NewBadgerDB(ops)
 	require.NoError(t, err)
 	defer db.Stop(context.Background())

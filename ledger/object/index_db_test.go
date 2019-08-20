@@ -30,6 +30,7 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/store"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/testutils/testbadger"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -54,8 +55,7 @@ func TestIndexDB_DontLooseIndexAfterTruncate(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	assert.NoError(t, err)
 
-	ops := badger.DefaultOptions(tmpdir)
-	ops.CompactL0OnClose = false
+	ops := testbadger.BadgerDefaultOptions(tmpdir)
 	dbMock, err := store.NewBadgerDB(ops)
 	require.NoError(t, err)
 	defer dbMock.Stop(ctx)
@@ -103,8 +103,7 @@ func TestIndexDB_TruncateHead(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	assert.NoError(t, err)
 
-	ops := badger.DefaultOptions(tmpdir)
-	ops.CompactL0OnClose = false
+	ops := testbadger.BadgerDefaultOptions(tmpdir)
 	dbMock, err := store.NewBadgerDB(ops)
 	require.NoError(t, err)
 	defer dbMock.Stop(ctx)
@@ -211,10 +210,11 @@ func TestDBIndex_SetBucket(t *testing.T) {
 		defer os.RemoveAll(tmpdir)
 		require.NoError(t, err)
 
-		ops := badger.DefaultOptions(tmpdir)
-		ops.CompactL0OnClose = false
+		ops := testbadger.BadgerDefaultOptions(tmpdir)
 		db, err := store.NewBadgerDB(ops)
+		require.NoError(t, err)
 		defer db.Stop(context.Background())
+
 		index := NewIndexDB(db, NewRecordDB(db))
 
 		err = index.SetIndex(ctx, pn, buck)
@@ -272,8 +272,7 @@ func TestIndexDB_FetchFilament(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	ops := badger.DefaultOptions(tmpdir)
-	ops.CompactL0OnClose = false
+	ops := testbadger.BadgerDefaultOptions(tmpdir)
 	db, err := store.NewBadgerDB(ops)
 	require.NoError(t, err)
 	defer db.Stop(context.Background())
