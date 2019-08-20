@@ -20,14 +20,11 @@ import (
 	"context"
 	"crypto"
 	"io/ioutil"
-	"os"
+	"math"
 	"sync"
+	"time"
 
 	"github.com/insolar/insolar/network"
-
-	"math"
-	"testing"
-	"time"
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
@@ -57,7 +54,6 @@ import (
 	networknode "github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
-	"github.com/stretchr/testify/assert"
 )
 
 var (
@@ -91,6 +87,7 @@ type Server struct {
 	clientSender bus.Sender
 	JetKeeper    executor.JetKeeper
 	replicator   executor.HeavyReplicator
+	dbRollback   *executor.DBRollback
 }
 
 // After using it you have to remove directory configuration.Storage.DataDirectory by yourself
@@ -102,9 +99,6 @@ func DefaultHeavyConfig() configuration.Configuration {
 	cfg := configuration.Configuration{}
 	cfg.KeysPath = "testdata/bootstrap_keys.json"
 	cfg.Ledger.LightChainLimit = math.MaxInt32
-	cfg.Ledger.JetSplit.DepthLimit = math.MaxUint8
-	cfg.Ledger.JetSplit.ThresholdOverflowCount = math.MaxInt32
-	cfg.Ledger.JetSplit.ThresholdRecordsCount = math.MaxInt32
 	cfg.Bus.ReplyTimeout = time.Minute
 	cfg.Ledger.Storage = configuration.Storage{
 		DataDirectory: tmpDir,
@@ -114,15 +108,6 @@ func DefaultHeavyConfig() configuration.Configuration {
 
 func defaultReceiveCallback(meta payload.Meta, pl payload.Payload) []payload.Payload {
 	return nil
-}
-
-func TestStartStop(t *testing.T) {
-	cfg := DefaultHeavyConfig()
-	defer os.RemoveAll(cfg.Ledger.Storage.DataDirectory)
-
-	s, err := NewServer(context.Background(), cfg, insolar.GenesisHeavyConfig{}, nil)
-	assert.NoError(t, err)
-	s.Stop()
 }
 
 func NewServer(
@@ -167,9 +152,10 @@ func NewServer(
 	var (
 		Coordinator jet.Coordinator
 		Pulses      *pulse.DB
-		Jets        jet.Storage
+		Jets        *jet.DBStore
 		Nodes       *node.Storage
 		DB          *store.BadgerDB
+		DBRollback  *executor.DBRollback
 	)
 	{
 		var err error
@@ -179,7 +165,7 @@ func NewServer(
 		}
 		Nodes = node.NewStorage()
 		Pulses = pulse.NewDB(DB)
-		Jets = jet.NewStore()
+		Jets = jet.NewDBStore(DB)
 
 		c := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit)
 		c.PulseCalculator = Pulses
@@ -228,7 +214,7 @@ func NewServer(
 		indexes := object.NewIndexDB(DB, Records)
 		drops := drop.NewDB(DB)
 		JetKeeper = executor.NewJetKeeper(Jets, DB, Pulses)
-		// c.rollback = executor.NewDBRollback(JetKeeper, Pulses, drops, Records, indexes, jets, Pulses)
+		DBRollback = executor.NewDBRollback(JetKeeper, Pulses, drops, Records, indexes, Jets, Pulses)
 
 		sp := pulse.NewStartPulse()
 
@@ -255,7 +241,6 @@ func NewServer(
 		h.JetCoordinator = Coordinator
 		h.IndexAccessor = indexes
 		h.IndexModifier = indexes
-		// h.Bus = Bus
 		h.DropModifier = drops
 		h.PCS = CryptoScheme
 		h.PulseAccessor = Pulses
@@ -295,9 +280,6 @@ func NewServer(
 			DiscoveryNodes:  genesisCfg.DiscoveryNodes,
 			ContractsConfig: genesisCfg.ContractsConfig,
 		}
-
-		_ = Genesis
-		_ = Handler
 	}
 
 	// Start routers with handlers.
@@ -383,12 +365,18 @@ func NewServer(
 		log.Fatalf("genesis failed on heavy with error: %v", err)
 	}
 
+	err := DBRollback.Start(ctx)
+	if err != nil {
+		log.Fatalf("rollback.Start return error: %v", err)
+	}
+
 	s := &Server{
 		pm:           PulseManager,
 		pulse:        *insolar.GenesisPulse,
 		clientSender: ClientBus,
 		JetKeeper:    JetKeeper,
 		replicator:   replicator,
+		dbRollback:   DBRollback,
 	}
 	return s, nil
 }
