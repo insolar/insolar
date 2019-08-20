@@ -457,7 +457,9 @@ func (c *FilamentCalculatorDefault) findLifeline(
 ) (record.Lifeline, error) {
 	iter := requestID.Pulse()
 	for {
-		idx, err := c.indexes.ForID(ctx, iter, requestID)
+		// We should find lifeline for `iter` pulse,
+		// because requestID.Pulse() may be different.
+		idx, err := c.indexes.ForID(ctx, iter, *insolar.NewID(iter, requestID.Hash()))
 		if err != nil && err != object.ErrIndexNotFound {
 			return record.Lifeline{}, errors.Wrap(err, "failed to fetch index")
 		}

@@ -28,6 +28,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// For better coverage of corner cases (pulse changing, messages from different pulses, etc)
+// Server.SetPulse() should be put between logical ledger actions (set request, send message, set result, etc).
+// But we can't cover all combinations here anyway. This should be done in unit tests.
+
 func Test_IncomingRequest_Check(t *testing.T) {
 	t.Parallel()
 
@@ -61,6 +65,9 @@ func Test_IncomingRequest_Check(t *testing.T) {
 		rep := SendMessage(ctx, s, &msg)
 		RequireNotError(rep)
 		reqInfo := rep.(*payload.RequestInfo)
+
+		s.SetPulse(ctx)
+
 		rep = CallGetPendings(ctx, s, reqInfo.RequestID)
 		RequireNotError(rep)
 
@@ -75,10 +82,15 @@ func Test_IncomingRequest_Check(t *testing.T) {
 		RequireNotError(firstObjP)
 		reqInfo := firstObjP.(*payload.RequestInfo)
 
+		s.SetPulse(ctx)
+
 		msg, _ = MakeSetIncomingRequest(gen.ID(), reqInfo.RequestID, reqInfo.RequestID, true, false)
 		secondObjP := SendMessage(ctx, s, &msg)
 		RequireNotError(secondObjP)
 		secondReqInfo := secondObjP.(*payload.RequestInfo)
+
+		s.SetPulse(ctx)
+
 		secondPendings := CallGetPendings(ctx, s, secondReqInfo.RequestID)
 		RequireNotError(secondPendings)
 
@@ -93,8 +105,12 @@ func Test_IncomingRequest_Check(t *testing.T) {
 		RequireNotError(rep)
 		reqInfo := rep.(*payload.RequestInfo)
 
+		s.SetPulse(ctx)
+
 		p, _ := CallActivateObject(ctx, s, reqInfo.RequestID)
 		RequireNotError(p)
+
+		s.SetPulse(ctx)
 
 		p = CallGetPendings(ctx, s, reqInfo.RequestID)
 
@@ -126,6 +142,8 @@ func Test_IncomingRequest_Duplicate(t *testing.T) {
 		require.Nil(t, rep.(*payload.RequestInfo).Request)
 		require.Nil(t, rep.(*payload.RequestInfo).Result)
 
+		s.SetPulse(ctx)
+
 		// Try to set it again.
 		rep = SendMessage(ctx, s, &msg)
 		RequireNotError(rep)
@@ -146,10 +164,14 @@ func Test_IncomingRequest_Duplicate(t *testing.T) {
 		rootObject := rep.(*payload.RequestInfo).ObjectID
 		reasonID := rep.(*payload.RequestInfo).RequestID
 
+		s.SetPulse(ctx)
+
 		msg, _ = MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), insolar.ID{}, true, true)
 		rep = SendMessage(ctx, s, &msg)
 		RequireNotError(rep)
 		objectID := rep.(*payload.RequestInfo).ObjectID
+
+		s.SetPulse(ctx)
 
 		msg, _ = MakeSetIncomingRequest(objectID, reasonID, rootObject, false, false)
 
@@ -158,6 +180,8 @@ func Test_IncomingRequest_Duplicate(t *testing.T) {
 		RequireNotError(rep)
 		require.Nil(t, rep.(*payload.RequestInfo).Request)
 		require.Nil(t, rep.(*payload.RequestInfo).Result)
+
+		s.SetPulse(ctx)
 
 		// Try to set it again.
 		rep = SendMessage(ctx, s, &msg)
@@ -179,10 +203,14 @@ func Test_IncomingRequest_Duplicate(t *testing.T) {
 		rootObject := rep.(*payload.RequestInfo).ObjectID
 		reasonID := rep.(*payload.RequestInfo).RequestID
 
+		s.SetPulse(ctx)
+
 		msg, _ = MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), insolar.ID{}, true, true)
 		rep = SendMessage(ctx, s, &msg)
 		RequireNotError(rep)
 		objectID := rep.(*payload.RequestInfo).ObjectID
+
+		s.SetPulse(ctx)
 
 		requestMsg, _ := MakeSetIncomingRequest(objectID, reasonID, rootObject, false, false)
 
@@ -193,10 +221,14 @@ func Test_IncomingRequest_Duplicate(t *testing.T) {
 		require.Nil(t, rep.(*payload.RequestInfo).Result)
 		requestID := rep.(*payload.RequestInfo).RequestID
 
+		s.SetPulse(ctx)
+
 		// Set result.
 		resMsg, resultVirtual := MakeSetResult(objectID, requestID)
 		rep = SendMessage(ctx, s, &resMsg)
 		RequireNotError(rep)
+
+		s.SetPulse(ctx)
 
 		// Try to set request again.
 		rep = SendMessage(ctx, s, &requestMsg)
@@ -254,6 +286,8 @@ func Test_OutgoingRequest_Duplicate(t *testing.T) {
 		require.Nil(t, reqInfo.Request)
 		require.Nil(t, reqInfo.Result)
 
+		s.SetPulse(ctx)
+
 		outgoingReq := record.OutgoingRequest{
 			Object:   insolar.NewReference(reqInfo.RequestID),
 			Reason:   *insolar.NewReference(reqInfo.RequestID),
@@ -270,6 +304,8 @@ func Test_OutgoingRequest_Duplicate(t *testing.T) {
 		outReqInfo := outP.(*payload.RequestInfo)
 		require.Nil(t, outReqInfo.Request)
 		require.Nil(t, outReqInfo.Result)
+
+		s.SetPulse(ctx)
 
 		// Try to set an outgoing again
 		outSecondP := SendMessage(ctx, s, outgoingReqMsg)
@@ -316,14 +352,20 @@ func Test_DetachedRequest_notification(t *testing.T) {
 		RequireNotError(rep)
 		objectID := rep.(*payload.RequestInfo).ObjectID
 
+		s.SetPulse(ctx)
+
 		msg, _ = MakeSetIncomingRequest(objectID, gen.IDWithPulse(s.Pulse()), insolar.ID{}, false, true)
 		rep = SendMessage(ctx, s, &msg)
 		RequireNotError(rep)
 		reasonID := rep.(*payload.RequestInfo).RequestID
 
+		s.SetPulse(ctx)
+
 		p, detachedRec := CallSetOutgoingRequest(ctx, s, objectID, reasonID, true)
 		RequireNotError(p)
 		detachedID := p.(*payload.RequestInfo).RequestID
+
+		s.SetPulse(ctx)
 
 		resMsg, _ := MakeSetResult(objectID, reasonID)
 		rep = SendMessage(ctx, s, &resMsg)
@@ -364,10 +406,14 @@ func Test_Result_Duplicate(t *testing.T) {
 	requestID := rep.(*payload.RequestInfo).RequestID
 	objectID := requestID
 
+	s.SetPulse(ctx)
+
 	resMsg, resultVirtual := MakeSetResult(objectID, requestID)
 	// Set result.
 	rep = SendMessage(ctx, s, &resMsg)
 	RequireNotError(rep)
+
+	s.SetPulse(ctx)
 
 	// Try to set it again.
 	rep = SendMessage(ctx, s, &resMsg)
@@ -409,6 +455,8 @@ func Test_IncomingRequest_ClosedReason(t *testing.T) {
 			reasonID = rep.(*payload.RequestInfo).RequestID
 		}
 
+		s.SetPulse(ctx)
+
 		// Closing request
 		{
 			objectID := reasonID
@@ -418,6 +466,8 @@ func Test_IncomingRequest_ClosedReason(t *testing.T) {
 			rep := SendMessage(ctx, s, &resMsg)
 			RequireNotError(rep)
 		}
+
+		s.SetPulse(ctx)
 
 		// Creating incoming w closed reason request.
 		{
@@ -453,6 +503,8 @@ func Test_OutgoingRequest_ClosedReason(t *testing.T) {
 			reasonID = rep.(*payload.RequestInfo).RequestID
 		}
 
+		s.SetPulse(ctx)
+
 		// Closing request
 		{
 			resMsg, _ := MakeSetResult(reasonID, reasonID)
@@ -460,6 +512,8 @@ func Test_OutgoingRequest_ClosedReason(t *testing.T) {
 			rep := SendMessage(ctx, s, &resMsg)
 			RequireNotError(rep)
 		}
+
+		s.SetPulse(ctx)
 
 		{
 			pl, _ := MakeSetOutgoingRequest(reasonID, reasonID, false)
@@ -495,6 +549,8 @@ func Test_Requests_OutgoingReason(t *testing.T) {
 			rootID = rep.(*payload.RequestInfo).RequestID
 		}
 
+		s.SetPulse(ctx)
+
 		// Creating outgoing
 		{
 			pl, _ := MakeSetOutgoingRequest(rootID, rootID, false)
@@ -503,12 +559,16 @@ func Test_Requests_OutgoingReason(t *testing.T) {
 			reasonID = rep.(*payload.RequestInfo).RequestID
 		}
 
+		s.SetPulse(ctx)
+
 		// Creating wrong incoming
 		{
 			msg, _ := MakeSetIncomingRequest(gen.ID(), reasonID, rootID, true, false)
 			rep := SendMessage(ctx, s, &msg)
 			RequireErrorCode(rep, payload.CodeReasonIsWrong)
 		}
+
+		s.SetPulse(ctx)
 
 		// Creating wrong outgoing
 		{
@@ -551,6 +611,8 @@ func Test_OutgoingRequests_DifferentObjects(t *testing.T) {
 			rootID2 = rep.(*payload.RequestInfo).RequestID
 		}
 
+		s.SetPulse(ctx)
+
 		// Creating outgoing
 		{
 			pl, _ := MakeSetOutgoingRequest(rootID, rootID2, false)
@@ -586,11 +648,15 @@ func Test_OutgoingDetached_InPendings(t *testing.T) {
 
 	t.Run("detached request not appears in pendings", func(t *testing.T) {
 
+		s.SetPulse(ctx)
+
 		// Creating outgoing
 		pl, _ := MakeSetOutgoingRequest(rootID, rootID, true)
 		rep := SendMessage(ctx, s, &pl)
 		RequireNotError(rep)
 		secondReqId = rep.(*payload.RequestInfo).RequestID
+
+		s.SetPulse(ctx)
 
 		firstPendings := CallGetPendings(ctx, s, rootID)
 		RequireNotError(firstPendings)
@@ -608,6 +674,8 @@ func Test_OutgoingDetached_InPendings(t *testing.T) {
 			rep := SendMessage(ctx, s, &resMsg)
 			RequireNotError(rep)
 		}
+
+		s.SetPulse(ctx)
 
 		secondPendings := CallGetPendings(ctx, s, rootID)
 		RequireNotError(secondPendings)
@@ -643,12 +711,16 @@ func Test_IncomingRequest_DifferentResults(t *testing.T) {
 			reasonID = rep.(*payload.RequestInfo).RequestID
 		}
 
+		s.SetPulse(ctx)
+
 		// Closing request
 		{
 			resMsg, _ := MakeSetResult(reasonID, reasonID)
 			rep := SendMessage(ctx, s, &resMsg)
 			RequireNotError(rep)
 		}
+
+		s.SetPulse(ctx)
 
 		{
 			resMsg, _ := MakeSetResult(reasonID, reasonID)
