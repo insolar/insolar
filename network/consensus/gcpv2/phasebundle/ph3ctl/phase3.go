@@ -455,16 +455,16 @@ outer:
 			consensusSelection = c.consensusStrategy.SelectOnStopped(&verifiedStatTbl, false,
 				consensuskit.BftMajority(popCount))
 
-			log.Debug("Phase3 done all")
+			log.Warn("Phase3 done all")
 			break outer
 		}
 
 		select {
 		case <-ctx.Done():
-			log.Debug("Phase3 cancelled")
+			log.Warn("Phase3 cancelled")
 			return false
 		case <-softDeadline:
-			log.Debug("Phase3 deadline")
+			log.Warn("Phase3 deadline")
 			consensusSelection = c.consensusStrategy.SelectOnStopped(&verifiedStatTbl, true, consensuskit.BftMajority(popCount))
 			break outer
 		case <-chasingDelayTimer.Channel():
@@ -473,6 +473,7 @@ outer:
 			consensusSelection = c.consensusStrategy.SelectOnStopped(&verifiedStatTbl, true, consensuskit.BftMajority(popCount))
 			break outer
 		case d := <-c.queuePh3Recv:
+			log.Warnf("Phase3 queue receive from %d", d.GetNode().GetNodeID())
 			switch {
 			case d.HasMissingMembers():
 				if queueMissing == nil {
@@ -565,6 +566,8 @@ outer:
 					if nodeStats.HasAllValuesOf(nodeset.ConsensusStatTrusted, nodeset.ConsensusStatDoubted) {
 						processedNodesFlawlessly++
 					}
+					log.Warnf("Phase3 processed %d", d.GetNode().GetNodeID())
+
 				} else {
 					break
 				}
