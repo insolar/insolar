@@ -278,6 +278,7 @@ outer:
 			log.Warn(">>>>workerPrePhase3: startOfPhase3")
 			break outer
 		case upd := <-c.queueTrustUpdated:
+			log.Warn(">>>>workerPrePhase3: c.queueTrustUpdated")
 			switch {
 			case upd.IsPingSignal(): // ping indicates arrival of Phase2 packet, to support chasing
 				// TODO chasing
