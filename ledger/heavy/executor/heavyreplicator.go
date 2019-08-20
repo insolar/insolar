@@ -142,6 +142,8 @@ func (h *HeavyReplicatorDefault) sync(ctx context.Context) {
 
 		logger.Debug("heavy replicator finalize pulse")
 		FinalizePulse(ctx, h.pulseCalculator, h.backuper, h.keeper, h.indexes, dr.Pulse)
+
+		logger.Info("heavy replicator stops replication")
 	}
 
 	for {

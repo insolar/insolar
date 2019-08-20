@@ -25,13 +25,14 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/testutils"
+	"github.com/insolar/insolar/testutils/launchnet"
 )
 
 func TestMemberMigrationCreate(t *testing.T) {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
 	ba := testutils.RandomString()
-	_, err = signedRequest(t, &migrationAdmin, "migration.addAddresses", map[string]interface{}{"migrationAddresses": []string{ba}})
+	_, err = signedRequest(t, &launchnet.MigrationAdmin, "migration.addAddresses", map[string]interface{}{"migrationAddresses": []string{ba}})
 	require.NoError(t, err)
 	result, err := signedRequest(t, member, "member.migrationCreate", nil)
 	require.NoError(t, err)
@@ -59,10 +60,10 @@ func TestMemberMigrationCreateWhenNomigrationAddressesLeft(t *testing.T) {
 func TestMemberMigrationCreateWithBadKey(t *testing.T) {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
-	member.pubKey = "fake"
+	member.PubKey = "fake"
 	_, err = signedRequestWithEmptyRequestRef(t, member, "member.migrationCreate", nil)
 	require.Error(t, err)
-	require.Contains(t, err.Error(), fmt.Sprintf("problems with decoding. Key - %s", member.pubKey))
+	require.Contains(t, err.Error(), fmt.Sprintf("problems with decoding. Key - %s", member.PubKey))
 }
 
 func TestMemberMigrationCreateWithSamePublicKey(t *testing.T) {
@@ -91,7 +92,7 @@ func TestMemberMigrationCreateWithSameBurnAddress(t *testing.T) {
 	require.NoError(t, err)
 
 	ba := testutils.RandomString()
-	_, _ = signedRequest(t, &migrationAdmin, "migration.addAddresses", map[string]interface{}{"migrationAddresses": []string{ba, ba}})
+	_, _ = signedRequest(t, &launchnet.MigrationAdmin, "migration.addAddresses", map[string]interface{}{"migrationAddresses": []string{ba, ba}})
 
 	_, err = signedRequest(t, member1, "member.migrationCreate", nil)
 	require.NoError(t, err)

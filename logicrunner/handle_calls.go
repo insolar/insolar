@@ -19,7 +19,6 @@ package logicrunner
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
@@ -144,7 +143,7 @@ func (h *HandleCall) handleActual(
 			// Requests need to be deduplicated. For now in case of ErrCancelled we may have 2 registered requests
 			return nil, err // message bus will retry on the calling side in ContractRequester
 		}
-		if strings.Contains(err.Error(), "index not found") {
+		if e, ok := errors.Cause(err).(*payload.CodedError); ok && e.Code == payload.CodeNotFound {
 			inslogger.FromContext(ctx).Warn("request to not existing object")
 
 			resultWithErr, err := foundation.MarshalMethodErrorResult(err)
@@ -159,9 +158,6 @@ func (h *HandleCall) handleActual(
 	reqInfo := procRegisterRequest.getResult()
 	requestRef := insolar.NewReference(reqInfo.RequestID)
 
-	ctx, logger := inslogger.WithField(ctx, "request", requestRef.String())
-	logger.Debug("registered request")
-
 	objRef := request.Object
 	if request.CallType != record.CTMethod {
 		objRef = requestRef
@@ -169,6 +165,17 @@ func (h *HandleCall) handleActual(
 	if objRef == nil {
 		return nil, errors.New("can't get object reference")
 	}
+
+	ctx, logger := inslogger.WithFields(
+		ctx,
+		map[string]interface{}{
+			"object": objRef.String(),
+			"request": requestRef.String(),
+			"method": request.Method,
+		},
+	)
+	logger.Debug("registered request")
+
 	if !objRef.Record().Equal(reqInfo.ObjectID) {
 		return nil, errors.New("object id we calculated doesn't match ledger")
 	}
@@ -180,7 +187,7 @@ func (h *HandleCall) handleActual(
 	}
 
 	if len(reqInfo.Result) != 0 {
-		logger.Debug("request has result already")
+		logger.Debug("request already has result on ledger, returning it")
 		go func() {
 			err := h.sendRequestResult(ctx, *objRef, *requestRef, request, *reqInfo)
 			if err != nil {
@@ -239,11 +246,12 @@ func (h *HandleCall) Present(ctx context.Context, f flow.Flow) error {
 	defer span.End()
 
 	rep, err := h.handleActual(ctx, msg, f)
-
 	if err != nil {
 		return sendErrorMessage(ctx, h.dep.Sender, h.Message, err)
 	}
-	go h.dep.Sender.Reply(ctx, h.Message, bus.ReplyAsMessage(ctx, rep))
+
+	h.dep.Sender.Reply(ctx, h.Message, bus.ReplyAsMessage(ctx, rep))
+
 	return nil
 }
 
@@ -255,7 +263,7 @@ func (h *HandleCall) sendRequestResult(
 	reqInfo payload.RequestInfo,
 ) error {
 	logger := inslogger.FromContext(ctx)
-	logger.Debug("sending earlier")
+	logger.Debug("sending earlier computed result")
 
 	rec := record.Material{}
 	err := rec.Unmarshal(reqInfo.Result)

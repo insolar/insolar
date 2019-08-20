@@ -324,7 +324,7 @@ func TestRecordServer_Export(t *testing.T) {
 	t.Run("count can't be 0", func(t *testing.T) {
 		server := &RecordServer{}
 
-		err := server.Export(&GetRecords{Count: 0}, nil)
+		err := server.Export(&GetRecords{Count: 0}, &streamMock{})
 
 		require.Error(t, err)
 	})
@@ -336,7 +336,7 @@ func TestRecordServer_Export(t *testing.T) {
 			jetKeeper: jetKeeper,
 		}
 
-		err := server.Export(&GetRecords{Count: 1, PulseNumber: insolar.FirstPulseNumber}, nil)
+		err := server.Export(&GetRecords{Count: 1, PulseNumber: insolar.FirstPulseNumber}, &streamMock{})
 
 		require.Error(t, err)
 	})

@@ -246,7 +246,13 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			Sender,
 			Pulses,
 		)
-		requestChecker := executor.NewRequestChecker(filamentCalculator, Coordinator, jetFetcher, Sender)
+		requestChecker := executor.NewRequestChecker(
+			filamentCalculator,
+			Coordinator,
+			jetFetcher,
+			CryptoScheme.ReferenceHasher(),
+			Sender,
+		)
 
 		jetCalculator := executor.NewJetCalculator(Coordinator, Jets)
 		lightCleaner := executor.NewCleaner(

@@ -155,14 +155,17 @@ func (h *Handler) Process(msg *watermillMsg.Message) error {
 
 func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) error {
 	var err error
+	logger := inslogger.FromContext(ctx)
 
 	meta := payload.Meta{}
 	err = meta.Unmarshal(msg.Payload)
 	if err != nil {
+		logger.Error(err)
 		return errors.Wrap(err, "failed to unmarshal meta")
 	}
 	payloadType, err := payload.UnmarshalType(meta.Payload)
 	if err != nil {
+		logger.Error(err)
 		return errors.Wrap(err, "failed to unmarshal payload type")
 	}
 	ctx, _ = inslogger.WithField(ctx, "msg_type", payloadType.String())
@@ -220,14 +223,16 @@ func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) error {
 }
 
 func (h *Handler) handleError(ctx context.Context, msg payload.Meta) {
+	logger := inslogger.FromContext(ctx)
+
 	pl := payload.Error{}
 	err := pl.Unmarshal(msg.Payload)
 	if err != nil {
-		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to unmarshal error"))
+		logger.Error(errors.Wrap(err, "failed to unmarshal error"))
 		return
 	}
 
-	inslogger.FromContext(ctx).Error("received error: ", pl.Text)
+	logger.Error("received error: ", pl.Text)
 }
 
 func (h *Handler) handlePass(ctx context.Context, meta payload.Meta) error {
@@ -281,6 +286,8 @@ func (h *Handler) Init(ctx context.Context) error {
 
 func (h *Handler) handleGotHotConfirmation(ctx context.Context, meta payload.Meta) {
 	logger := inslogger.FromContext(ctx)
+	logger.Info("handleGotHotConfirmation got new message")
+
 	confirm := payload.GotHotConfirmation{}
 	err := confirm.Unmarshal(meta.Payload)
 	if err != nil {
@@ -288,7 +295,7 @@ func (h *Handler) handleGotHotConfirmation(ctx context.Context, meta payload.Met
 		return
 	}
 
-	logger.Debug("handleGotHotConfirmation. pulse: ", confirm.Pulse, ". jet: ", confirm.JetID.DebugString(), ". Split: ", confirm.Split)
+	logger.Info("handleGotHotConfirmation. pulse: ", confirm.Pulse, ". jet: ", confirm.JetID.DebugString(), ". Split: ", confirm.Split)
 
 	err = h.JetKeeper.AddHotConfirmation(ctx, confirm.Pulse, confirm.JetID, confirm.Split)
 	if err != nil {
@@ -296,5 +303,5 @@ func (h *Handler) handleGotHotConfirmation(ctx context.Context, meta payload.Met
 	}
 
 	executor.FinalizePulse(ctx, h.PulseCalculator, h.BackupMaker, h.JetKeeper, h.IndexModifier, confirm.Pulse)
-
+	logger.Info("handleGotHotConfirmation finish. pulse: ", confirm.Pulse, ". jet: ", confirm.JetID.DebugString(), ". Split: ", confirm.Split)
 }

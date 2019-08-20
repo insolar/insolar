@@ -30,6 +30,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/api/requester"
+	"github.com/insolar/insolar/testutils/launchnet"
 )
 
 func contractError(body []byte) error {
@@ -48,9 +49,9 @@ func contractError(body []byte) error {
 
 func TestBadSeed(t *testing.T) {
 	ctx := context.TODO()
-	rootCfg, err := requester.CreateUserConfig(root.ref, root.privKey, root.pubKey)
+	rootCfg, err := requester.CreateUserConfig(launchnet.Root.Ref, launchnet.Root.PrivKey, launchnet.Root.PubKey)
 	require.NoError(t, err)
-	res, err := requester.SendWithSeed(ctx, TestRPCUrl, rootCfg, &requester.Params{
+	res, err := requester.SendWithSeed(ctx, launchnet.TestRPCUrl, rootCfg, &requester.Params{
 		CallSite:  "member.create",
 		PublicKey: rootCfg.PublicKey},
 		"MTExMQ==")
@@ -60,9 +61,9 @@ func TestBadSeed(t *testing.T) {
 
 func TestIncorrectSeed(t *testing.T) {
 	ctx := context.TODO()
-	rootCfg, err := requester.CreateUserConfig(root.ref, root.privKey, root.pubKey)
+	rootCfg, err := requester.CreateUserConfig(launchnet.Root.Ref, launchnet.Root.PrivKey, launchnet.Root.PubKey)
 	require.NoError(t, err)
-	res, err := requester.SendWithSeed(ctx, TestRPCUrl, rootCfg, &requester.Params{
+	res, err := requester.SendWithSeed(ctx, launchnet.TestRPCUrl, rootCfg, &requester.Params{
 		CallSite:  "member.create",
 		PublicKey: rootCfg.PublicKey},
 		"z2vgMVDXx0s+g5mkagOLqCP0q/8YTfoQkII5pjNF1ag=")
@@ -71,7 +72,7 @@ func TestIncorrectSeed(t *testing.T) {
 }
 
 func customSend(data string) (map[string]interface{}, error) {
-	req, err := http.NewRequest("POST", TestRPCUrl, strings.NewReader(data))
+	req, err := http.NewRequest("POST", launchnet.TestRPCUrl, strings.NewReader(data))
 	if err != nil {
 		return nil, err
 	}
@@ -105,17 +106,17 @@ func TestCrazyJSON(t *testing.T) {
 
 func TestIncorrectSign(t *testing.T) {
 	testMember := createMember(t)
-	seed, err := requester.GetSeed(TestAPIURL)
+	seed, err := requester.GetSeed(launchnet.TestAPIURL)
 	require.NoError(t, err)
 	body, err := requester.GetResponseBodyContract(
-		TestRPCUrl,
+		launchnet.TestRPCUrl,
 		requester.ContractRequest{
 			Request: requester.Request{
 				Version: "2.0",
 				ID:      1,
 				Method:  "contract.call",
 			},
-			Params: requester.Params{Seed: seed, Reference: testMember.ref, PublicKey: testMember.pubKey, CallSite: "member.getBalance", CallParams: map[string]interface{}{"reference": testMember.ref}},
+			Params: requester.Params{Seed: seed, Reference: testMember.Ref, PublicKey: testMember.PubKey, CallSite: "member.getBalance", CallParams: map[string]interface{}{"reference": testMember.Ref}},
 		},
 		"MEQCIAvgBR42vSccBKynBIC7gb5GffqtW8q2XWRP+DlJ0IeUAiAeKCxZNSSRSsYcz2d49CT6KlSLpr5L7VlOokOiI9dsvQ==",
 	)
@@ -128,7 +129,7 @@ func TestIncorrectSign(t *testing.T) {
 
 func TestIncorrectMethodName(t *testing.T) {
 	res, err := requester.GetResponseBodyContract(
-		TestRPCUrl,
+		launchnet.TestRPCUrl,
 		requester.ContractRequest{
 			Request: requester.Request{
 				Version: "2.0",
@@ -145,7 +146,7 @@ func TestIncorrectMethodName(t *testing.T) {
 func TestIncorrectParams(t *testing.T) {
 	firstMember := createMember(t)
 
-	_, err := signedRequestWithEmptyRequestRef(t, firstMember, "member.transfer", firstMember.ref)
+	_, err := signedRequestWithEmptyRequestRef(t, firstMember, "member.transfer", firstMember.Ref)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "failed to cast call params: expected 'map[string]interface{}', got 'string'")
 }
@@ -163,7 +164,7 @@ func TestRequestReference(t *testing.T) {
 	secondMember := createMember(t)
 	amount := "10"
 
-	_, ref, err := makeSignedRequest(firstMember, "member.transfer", map[string]interface{}{"amount": amount, "toMemberReference": secondMember.ref})
+	_, ref, err := makeSignedRequest(firstMember, "member.transfer", map[string]interface{}{"amount": amount, "toMemberReference": secondMember.Ref})
 	require.NoError(t, err)
 	require.NotEqual(t, "", ref)
 	require.NotEqual(t, "11111111111111111111111111111111.11111111111111111111111111111111", ref)
