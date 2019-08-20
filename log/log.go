@@ -18,7 +18,6 @@ package log
 
 import (
 	"fmt"
-	"io"
 	stdlog "log"
 	"os"
 	"strings"
@@ -180,9 +179,4 @@ func Panic(args ...interface{}) {
 // Panicf logs a message at level Panic to the global logger.
 func Panicf(format string, args ...interface{}) {
 	GlobalLogger.Panicf(format, args...)
-}
-
-// SetOutput sets the output destination for the logger.
-func SetOutput(w io.Writer) {
-	GlobalLogger = GlobalLogger.WithOutput(w)
 }

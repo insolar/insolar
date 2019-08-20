@@ -18,22 +18,25 @@ package dispatcher
 
 import (
 	"context"
+	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/pkg/errors"
-
-	"github.com/insolar/insolar/insolar/bus"
-	"github.com/insolar/insolar/instrumentation/instracer"
-
-	"github.com/insolar/insolar/instrumentation/inslogger"
+	"go.opencensus.io/stats"
+	"go.opencensus.io/tag"
 
 	"github.com/insolar/insolar/insolar"
-	insPulse "github.com/insolar/insolar/insolar/pulse"
-
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/internal/pulse"
 	"github.com/insolar/insolar/insolar/flow/internal/thread"
+	"github.com/insolar/insolar/insolar/payload"
+	insPulse "github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/insmetrics"
+	"github.com/insolar/insolar/instrumentation/instracer"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/insolar/flow/dispatcher.Dispatcher -o ./ -s _mock.go -g
@@ -99,6 +102,7 @@ func (d *dispatcher) getHandleByPulse(ctx context.Context, msgPulseNumber insola
 
 // Process handles incoming message.
 func (d *dispatcher) Process(msg *message.Message) error {
+	processStart := time.Now()
 	ctx := context.Background()
 	ctx = inslogger.ContextWithTrace(ctx, msg.Metadata.Get(bus.MetaTraceID))
 
@@ -118,18 +122,37 @@ func (d *dispatcher) Process(msg *message.Message) error {
 	ctx = pulse.ContextWith(ctx, pn)
 	parentSpan := instracer.MustDeserialize([]byte(msg.Metadata.Get(bus.MetaSpanData)))
 	ctx = instracer.WithParentSpan(ctx, parentSpan)
+
+	msgType := messagePayloadTypeName(msg)
+
 	go func() {
 		<-d.controller.CanProcess()
+		runStart := time.Now()
+
 		f := thread.NewThread(msg, d.controller)
 		handle := d.getHandleByPulse(ctx, pn)
 		err := f.Run(ctx, handle(msg))
+
+		runDuration := time.Since(runStart)
+		procDuration := time.Since(processStart)
+		result := "ok"
 		if err != nil {
 			if err == flow.ErrCancelled {
-				logger.Info(errors.Wrap(err, "Handling failed: "))
+				result = "cancelled"
+				logger.Info(errors.Wrap(err, "flow handling failed"))
 			} else {
-				logger.Error(errors.Wrap(err, "Handling failed: "))
+				result = "error"
+				logger.Error(errors.Wrap(err, "flow handling failed"))
 			}
 		}
+
+		ctx = insmetrics.ChangeTags(ctx,
+			tag.Insert(tagMessageType, msgType),
+			tag.Insert(tagResult, result),
+		)
+		stats.Record(ctx,
+			statHandlerTime.M(float64(runDuration.Nanoseconds())/1e6),
+			statProcessTime.M(float64(procDuration.Nanoseconds())/1e6))
 	}()
 	return nil
 }
@@ -141,4 +164,19 @@ func pulseFromString(p string) (insolar.PulseNumber, error) {
 	}
 	pInt := uint32(u64)
 	return insolar.PulseNumber(pInt), nil
+}
+
+func messagePayloadTypeName(msg *message.Message) string {
+	meta := payload.Meta{}
+	err := meta.Unmarshal(msg.Payload)
+	if err != nil {
+		fmt.Println("meta decoding failed:", err)
+		return "unknown"
+	}
+	payloadType, err := payload.UnmarshalType(meta.Payload)
+	if err != nil {
+		// branch for legacy messages format: INS-2973
+		return msg.Metadata.Get(bus.MetaType)
+	}
+	return payloadType.String()
 }
