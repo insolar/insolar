@@ -538,3 +538,16 @@ func waitForFunction(customFunction func() api.CallMethodReply, functionTimeout 
 		return nil, errors.New("timeout was exceeded")
 	}
 }
+
+func setMigrationDaemonsRef() error {
+	for i, mDaemon := range launchnet.MigrationDaemons {
+		daemon := mDaemon
+		daemon.Ref = launchnet.Root.Ref
+		res, _, err := makeSignedRequest(daemon, "member.get", nil)
+		if err != nil {
+			return errors.Wrap(err, "[ setup ] get member by public key failed ,key ")
+		}
+		launchnet.MigrationDaemons[i].Ref = res.(map[string]interface{})["reference"].(string)
+	}
+	return nil
+}

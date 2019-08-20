@@ -56,16 +56,12 @@ var stderr io.ReadCloser
 
 // Method starts launchnet before execution of callback function (cb) and stops launchnet after.
 // Returns exit code as a result from calling callback function.
-func Run(makeRequest RequestDoer, cb func() int) int {
+func Run(cb func() int) int {
 	err := setup()
 	defer teardown()
 	if err != nil {
 		fmt.Println("error while setup, skip tests: ", err)
 		return 1
-	}
-	err = setMigrationDaemonsRef(makeRequest)
-	if err != nil {
-		fmt.Println(errors.Wrap(err, "[ setup ] get reference daemons by public key failed ").Error())
 	}
 
 	c := make(chan os.Signal)
@@ -95,8 +91,6 @@ func Run(makeRequest RequestDoer, cb func() int) int {
 	}
 	return code
 }
-
-type RequestDoer func(user *User, method string, params interface{}) (interface{}, string, error)
 
 var info *requester.InfoResponse
 var Root User
@@ -217,18 +211,6 @@ func setInfo() error {
 	info, err = requester.Info(TestAPIURL)
 	if err != nil {
 		return errors.Wrap(err, "[ setInfo ] error sending request")
-	}
-	return nil
-}
-
-func setMigrationDaemonsRef(makeRequest RequestDoer) error {
-	for i, mDaemon := range MigrationDaemons {
-		mDaemon.Ref = Root.Ref
-		res, _, err := makeRequest(mDaemon, "member.get", nil)
-		if err != nil {
-			return errors.Wrap(err, "[ setup ] get member by public key failed ,key ")
-		}
-		MigrationDaemons[i].Ref = res.(map[string]interface{})["reference"].(string)
 	}
 	return nil
 }
