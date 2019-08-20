@@ -18,12 +18,18 @@ package configuration
 
 // Log holds configuration for logging
 type Log struct {
-	Level     string
-	Adapter   string
-	Formatter string
+	Level      string
+	Adapter    string
+	Formatter  string
+	BufferSize int
 }
 
 // NewLog creates new default configuration for logging
 func NewLog() Log {
-	return Log{Level: "Info", Adapter: "zerolog", Formatter: "json"}
+	return Log{
+		Level: "Info",
+		Adapter: "zerolog",
+		Formatter: "json",
+		BufferSize: 10*1024*1024,
+	}
 }
