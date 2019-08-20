@@ -57,6 +57,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/log"
+
 	"github.com/insolar/insolar/network/consensus/common/args"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/population"
 
@@ -136,6 +138,8 @@ func (*Phase3Controller) GetPacketType() []phases.PacketType {
 
 func (c *Phase3PacketDispatcher) DispatchMemberPacket(ctx context.Context, reader transport.MemberPacketReader, n *population.NodeAppearance) error {
 
+	log.Warn("Phase3 packet received")
+
 	p3 := reader.AsPhase3Packet()
 
 	// TODO validations
@@ -147,8 +151,13 @@ func (c *Phase3PacketDispatcher) DispatchMemberPacket(ctx context.Context, reade
 	if iv == nil || iv.HasSenderFault() {
 		return n.RegisterFraud(n.Frauds().NewMismatchedMembershipRank(n.GetProfile(), n.GetNodeMembershipProfileOrEmpty()))
 	}
-	c.ctl.queuePh3Recv <- iv
+	log.Warn("Phase3 packet to queue")
 
+	select {
+	case c.ctl.queuePh3Recv <- iv:
+	default:
+		panic("overflow")
+	}
 	return nil
 }
 
@@ -405,12 +414,15 @@ func (c *Phase3Controller) workerSendPhase3(ctx context.Context, selfData statev
 			if np.GetNodeID() == selfID || !np.SetPacketSent(phases.PacketPhase3) {
 				return nil, 0
 			}
+			log.Warnf("Phase3 sent to %d", np.GetNodeID())
 
 			return np, sendOptions
 		})
 }
 
 func (c *Phase3Controller) workerRecvPhase3(ctx context.Context, localInspector inspectors.VectorInspector) bool {
+
+	log.Warn("Phase3 start receive entry")
 
 	log := inslogger.FromContext(ctx)
 
@@ -445,6 +457,8 @@ func (c *Phase3Controller) workerRecvPhase3(ctx context.Context, localInspector 
 
 	// alteredDoubtedGshCount := 0
 	var consensusSelection consensus.Selection
+
+	log.Warn("Phase3 start receive loop")
 
 outer:
 	for {
