@@ -178,7 +178,7 @@ func (h *ConsensusMemberController) terminate(toBeDiscarded api.RoundController)
 func (h *ConsensusMemberController) processPacket(ctx context.Context, round api.RoundController,
 	payload transport.PacketParser, from endpoints.Inbound) (api.RoundControlCode, error) {
 
-	inslogger.FromContext(ctx).Warnf("processPacket %+v", payload)
+	inslogger.FromContext(ctx).Warnf("processPacket %v", payload)
 
 	code, err := round.HandlePacket(ctx, payload, from)
 
