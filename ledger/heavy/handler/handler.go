@@ -168,11 +168,12 @@ func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) error {
 		logger.Error(err)
 		return errors.Wrap(err, "failed to unmarshal payload type")
 	}
-	ctx, _ = inslogger.WithField(ctx, "msg_type", payloadType.String())
+	ctx, logger = inslogger.WithField(ctx, "msg_type", payloadType.String())
 
 	ctx, span := instracer.StartSpan(ctx, payloadType.String())
 	defer span.End()
 
+	logger.Debug("starting procedure")
 	switch payloadType {
 	case payload.TypeGetRequest:
 		p := proc.NewSendRequest(meta)
@@ -223,14 +224,16 @@ func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) error {
 }
 
 func (h *Handler) handleError(ctx context.Context, msg payload.Meta) {
+	logger := inslogger.FromContext(ctx)
+
 	pl := payload.Error{}
 	err := pl.Unmarshal(msg.Payload)
 	if err != nil {
-		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to unmarshal error"))
+		logger.Error(errors.Wrap(err, "failed to unmarshal error"))
 		return
 	}
 
-	inslogger.FromContext(ctx).Error("received error: ", pl.Text)
+	logger.Error("received error: ", pl.Text)
 }
 
 func (h *Handler) handlePass(ctx context.Context, meta payload.Meta) error {
@@ -284,6 +287,8 @@ func (h *Handler) Init(ctx context.Context) error {
 
 func (h *Handler) handleGotHotConfirmation(ctx context.Context, meta payload.Meta) {
 	logger := inslogger.FromContext(ctx)
+	logger.Info("handleGotHotConfirmation got new message")
+
 	confirm := payload.GotHotConfirmation{}
 	err := confirm.Unmarshal(meta.Payload)
 	if err != nil {
