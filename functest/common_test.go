@@ -28,10 +28,11 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/api/requester"
+	"github.com/insolar/insolar/testutils/launchnet"
 )
 
 func TestGetRequest(t *testing.T) {
-	postResp, err := http.Get(TestRPCUrl)
+	postResp, err := http.Get(launchnet.TestRPCUrl)
 	defer postResp.Body.Close()
 	require.NoError(t, err)
 	require.Equal(t, http.StatusMethodNotAllowed, postResp.StatusCode)
@@ -39,7 +40,7 @@ func TestGetRequest(t *testing.T) {
 
 func TestWrongUrl(t *testing.T) {
 	jsonValue, _ := json.Marshal(postParams{})
-	testURL := HOST + "/not_api"
+	testURL := launchnet.HOST + "/not_api"
 	postResp, err := http.Post(testURL, "application/json", bytes.NewBuffer(jsonValue))
 	defer postResp.Body.Close()
 	require.NoError(t, err)
@@ -47,7 +48,7 @@ func TestWrongUrl(t *testing.T) {
 }
 
 func TestWrongJson(t *testing.T) {
-	postResp, err := http.Post(TestRPCUrl, "application/json", bytes.NewBuffer([]byte("some not json value")))
+	postResp, err := http.Post(launchnet.TestRPCUrl, "application/json", bytes.NewBuffer([]byte("some not json value")))
 	defer postResp.Body.Close()
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, postResp.StatusCode)

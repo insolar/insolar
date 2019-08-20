@@ -729,3 +729,39 @@ func Test_IncomingRequest_DifferentResults(t *testing.T) {
 		}
 	})
 }
+
+func Test_SetRequest_NoObjectReturnsError(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+	cfg := DefaultLightConfig()
+	s, err := NewServer(ctx, cfg, func(meta payload.Meta, pl payload.Payload) []payload.Payload {
+		if meta.Receiver == NodeHeavy() {
+			switch pl.(type) {
+			case *payload.Replication, *payload.GotHotConfirmation:
+				return nil
+			case *payload.GetLightInitialState:
+				return []payload.Payload{DefaultLightInitialState()}
+			case *payload.GetIndex:
+				return []payload.Payload{&payload.Error{Code: payload.CodeNotFound}}
+			}
+		}
+		return nil
+	})
+	require.NoError(t, err)
+	defer s.Stop()
+
+	s.SetPulse(ctx)
+
+	t.Run("incoming no object returns error", func(t *testing.T) {
+		msg, _ := MakeSetIncomingRequest(gen.ID(), gen.ID(), insolar.ID{}, false, true)
+		rep := SendMessage(ctx, s, &msg)
+		RequireErrorCode(rep, payload.CodeNotFound)
+	})
+
+	t.Run("outgoing no object returns error", func(t *testing.T) {
+		msg, _ := MakeSetOutgoingRequest(gen.ID(), gen.ID(), false)
+		rep := SendMessage(ctx, s, &msg)
+		RequireErrorCode(rep, payload.CodeNotFound)
+	})
+}

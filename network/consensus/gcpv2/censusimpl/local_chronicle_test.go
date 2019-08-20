@@ -73,16 +73,19 @@ func TestNewLocalChronicles(t *testing.T) {
 
 func TestGetLatestCensus(t *testing.T) {
 	lc := localChronicles{}
-	require.Nil(t, lc.GetLatestCensus())
+	latestCensus, _ := lc.GetLatestCensus()
+	require.Nil(t, latestCensus)
 
 	exp := census.NewExpectedMock(t)
 	lc.expected = exp
-	require.Equal(t, exp, lc.GetLatestCensus())
+	latestCensus, _ = lc.GetLatestCensus()
+	require.Equal(t, exp, latestCensus)
 
 	lc.expected = nil
 	pct := &PrimingCensusTemplate{CensusTemplate{pd: pulse.Data{PulseNumber: 1}}}
 	lc.active = pct
-	require.Equal(t, pct, lc.GetLatestCensus())
+	latestCensus, _ = lc.GetLatestCensus()
+	require.Equal(t, pct, latestCensus)
 }
 
 func TestGetRecentCensus(t *testing.T) {

@@ -31,15 +31,15 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/api"
+	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
+	"github.com/insolar/insolar/testutils/launchnet"
 
 	"github.com/insolar/rpc/v2/json2"
 
 	"github.com/stretchr/testify/require"
-
-	"github.com/insolar/insolar/api/requester"
-	"github.com/insolar/insolar/platformpolicy"
 
 	"github.com/pkg/errors"
 )
@@ -49,7 +49,7 @@ type contractInfo struct {
 	testName  string
 }
 
-var contracts map[string]*contractInfo
+var contracts = map[string]*contractInfo{}
 
 type postParams map[string]interface{}
 
@@ -101,55 +101,55 @@ type rpcStatusResponse struct {
 	Result statusResponse `json:"result"`
 }
 
-func createMember(t *testing.T) *user {
+func createMember(t *testing.T) *launchnet.User {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
-	member.ref = root.ref
+	member.Ref = launchnet.Root.Ref
 
 	result, err := signedRequest(t, member, "member.create", nil)
 	require.NoError(t, err)
 	ref, ok := result.(map[string]interface{})["reference"].(string)
 	require.True(t, ok)
-	member.ref = ref
+	member.Ref = ref
 	return member
 }
 
-func createMigrationMember(t *testing.T) *user {
+func createMigrationMember(t *testing.T) *launchnet.User {
 	migrationAddress := testutils.RandomString()
 
 	return createMigrationMemberForMA(t, migrationAddress)
 }
 
-func createMigrationMemberForMA(t *testing.T, ma string) *user {
+func createMigrationMemberForMA(t *testing.T, ma string) *launchnet.User {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
-	member.ref = root.ref
+	member.Ref = launchnet.Root.Ref
 
-	_, err = signedRequest(t, &migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{ma}})
+	_, err = signedRequest(t, &launchnet.MigrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{ma}})
 	require.NoError(t, err)
 
 	result, err := signedRequest(t, member, "member.migrationCreate", nil)
 	require.NoError(t, err)
 	ref, ok := result.(map[string]interface{})["reference"].(string)
 	require.True(t, ok)
-	member.ref = ref
+	member.Ref = ref
 	return member
 
 }
 
 func addBurnAddress(t *testing.T) {
 	ba := testutils.RandomString()
-	_, err := signedRequest(t, &migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{ba}})
+	_, err := signedRequest(t, &launchnet.MigrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{ba}})
 	require.NoError(t, err)
 }
 
-func getBalanceNoErr(t *testing.T, caller *user, reference string) *big.Int {
+func getBalanceNoErr(t *testing.T, caller *launchnet.User, reference string) *big.Int {
 	balance, err := getBalance(t, caller, reference)
 	require.NoError(t, err)
 	return balance
 }
 
-func getBalance(t *testing.T, caller *user, reference string) (*big.Int, error) {
+func getBalance(t *testing.T, caller *launchnet.User, reference string) (*big.Int, error) {
 	res, err := signedRequest(t, caller, "wallet.getBalance", map[string]interface{}{"reference": reference})
 	if err != nil {
 		return nil, err
@@ -165,7 +165,7 @@ func migrate(t *testing.T, memberRef string, amount string, tx string, ma string
 	anotherMember := createMember(t)
 
 	_, err := signedRequest(t,
-		&migrationDaemons[mdNum],
+		&launchnet.MigrationDaemons[mdNum],
 		"deposit.migration",
 		map[string]interface{}{"amount": amount, "ethTxHash": tx, "migrationAddress": ma})
 	require.NoError(t, err)
@@ -187,20 +187,20 @@ func generateMigrationAddress() string {
 
 const migrationAmount = "360000"
 
-func fullMigration(t *testing.T, txHash string) *user {
+func fullMigration(t *testing.T, txHash string) *launchnet.User {
 	migrationAddress := testutils.RandomString()
 	member := createMigrationMemberForMA(t, migrationAddress)
 
-	migrate(t, member.ref, migrationAmount, txHash, migrationAddress, 0)
-	migrate(t, member.ref, migrationAmount, txHash, migrationAddress, 2)
-	migrate(t, member.ref, migrationAmount, txHash, migrationAddress, 1)
+	migrate(t, member.Ref, migrationAmount, txHash, migrationAddress, 0)
+	migrate(t, member.Ref, migrationAmount, txHash, migrationAddress, 2)
+	migrate(t, member.Ref, migrationAmount, txHash, migrationAddress, 1)
 
 	return member
 }
 
 func getRPSResponseBody(t testing.TB, postParams map[string]interface{}) []byte {
 	jsonValue, _ := json.Marshal(postParams)
-	postResp, err := http.Post(TestRPCUrl, "application/json", bytes.NewBuffer(jsonValue))
+	postResp, err := http.Post(launchnet.TestRPCUrl, "application/json", bytes.NewBuffer(jsonValue))
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, postResp.StatusCode)
 	body, err := ioutil.ReadAll(postResp.Body)
@@ -257,7 +257,7 @@ func unmarshalCallResponse(t testing.TB, body []byte, response *requester.Contra
 	require.NoError(t, err)
 }
 
-func signedRequest(t *testing.T, user *user, method string, params interface{}) (interface{}, error) {
+func signedRequest(t *testing.T, user *launchnet.User, method string, params interface{}) (interface{}, error) {
 	res, refStr, err := makeSignedRequest(user, method, params)
 
 	var errMsg string
@@ -275,7 +275,7 @@ func signedRequest(t *testing.T, user *user, method string, params interface{}) 
 	return res, err
 }
 
-func signedRequestWithEmptyRequestRef(t *testing.T, user *user, method string, params interface{}) (interface{}, error) {
+func signedRequestWithEmptyRequestRef(t *testing.T, user *launchnet.User, method string, params interface{}) (interface{}, error) {
 	res, refStr, err := makeSignedRequest(user, method, params)
 
 	require.Equal(t, "", refStr)
@@ -283,9 +283,9 @@ func signedRequestWithEmptyRequestRef(t *testing.T, user *user, method string, p
 	return res, err
 }
 
-func makeSignedRequest(user *user, method string, params interface{}) (interface{}, string, error) {
+func makeSignedRequest(user *launchnet.User, method string, params interface{}) (interface{}, string, error) {
 	ctx := context.TODO()
-	rootCfg, err := requester.CreateUserConfig(user.ref, user.privKey, user.pubKey)
+	rootCfg, err := requester.CreateUserConfig(user.Ref, user.PrivKey, user.PubKey)
 	if err != nil {
 		return nil, "", err
 	}
@@ -303,10 +303,10 @@ func makeSignedRequest(user *user, method string, params interface{}) (interface
 		caller = ""
 	}
 
-	res, err := requester.Send(ctx, TestAPIURL, rootCfg, &requester.Params{
+	res, err := requester.Send(ctx, launchnet.TestAPIURL, rootCfg, &requester.Params{
 		CallSite:   method,
 		CallParams: params,
-		PublicKey:  user.pubKey,
+		PublicKey:  user.PubKey,
 		Test:       caller})
 
 	if err != nil {
@@ -331,7 +331,7 @@ func makeSignedRequest(user *user, method string, params interface{}) (interface
 
 }
 
-func newUserWithKeys() (*user, error) {
+func newUserWithKeys() (*launchnet.User, error) {
 	ks := platformpolicy.NewKeyProcessor()
 
 	privateKey, err := ks.GeneratePrivateKey()
@@ -348,9 +348,9 @@ func newUserWithKeys() (*user, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &user{
-		privKey: string(privKeyStr),
-		pubKey:  string(pubKeyStr),
+	return &launchnet.User{
+		PrivKey: string(privKeyStr),
+		PubKey:  string(pubKeyStr),
 	}, nil
 }
 

@@ -313,6 +313,14 @@ func Marshal(payload Payload) ([]byte, error) {
 	return nil, errors.New("unknown payload type")
 }
 
+func MustMarshal(p Payload) []byte {
+	buf, err := Marshal(p)
+	if err != nil {
+		panic(err)
+	}
+	return buf
+}
+
 func Unmarshal(data []byte) (Payload, error) {
 	tp, err := UnmarshalType(data)
 	if err != nil {

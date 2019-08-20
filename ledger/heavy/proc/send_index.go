@@ -18,6 +18,7 @@ package proc
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/payload"
@@ -56,6 +57,12 @@ func (p *SendIndex) Proceed(ctx context.Context) error {
 	}
 
 	idx, err := p.dep.indexes.ForID(ctx, p.meta.Pulse, ensureIndex.ObjectID)
+	if err == object.ErrIndexNotFound {
+		return &payload.CodedError{
+			Code: payload.CodeNotFound,
+			Text: fmt.Sprintf("index not found for %v", ensureIndex.ObjectID.DebugString()),
+		}
+	}
 	if err != nil {
 		return errors.Wrapf(
 			err,

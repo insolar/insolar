@@ -60,11 +60,11 @@ func TestInMemoryIndex_SetIndex(t *testing.T) {
 
 		index.Set(ctx, pn, buck)
 
-		sLlflID := gen.ID()
+		sLlflID := insolar.NewID(lflID.Pulse()+1, lflID.Hash())
 		sBuck := record.Index{
 			ObjID: objID,
 			Lifeline: record.Lifeline{
-				LatestState: &sLlflID,
+				LatestState: sLlflID,
 			},
 		}
 
