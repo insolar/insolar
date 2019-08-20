@@ -75,17 +75,11 @@ func NewInitialStateKeeper(
 func (isk *InitialStateKeeper) Start(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
 
-	// logger.Debugf("[ InitialStateKeeper ] Last finalized pulse number: %s", isk.syncPulse.String())
-	// if isk.syncPulse == insolar.GenesisPulse.PulseNumber {
-	// 	logger.Debug("[ InitialStateKeeper ] First start. No need to prepare state")
-	// 	return nil
-	// }
-
-	logger.Debug("[ InitialStateKeeper ] prepareDrops")
+	logger.Debug("[ InitialStateKeeper ] Prepare drops for JetIds")
 	isk.prepareDrops(ctx)
-	logger.Debug("[ InitialStateKeeper ] prepareAbandonRequests")
+	logger.Debug("[ InitialStateKeeper ] Prepare abandon request indexes")
 	isk.prepareAbandonRequests(ctx)
-	logger.Debug("[ InitialStateKeeper ] initial state prepared")
+	logger.Debug("[ InitialStateKeeper ] Initial state prepared")
 
 	return nil
 }
