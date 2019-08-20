@@ -60,6 +60,7 @@ type StateFunc func(ctx ExecutionContext) StateUpdate
 type MigrateFunc func(ctx MigrationContext) StateUpdate
 type CreateFunc func(ctx ConstructionContext) StateMachine
 type AsyncResultFunc func(ctx AsyncResultContext)
+type BroadcastReceiveFunc func(ctx AsyncResultContext, payload interface{}) bool
 
 type BasicContext interface {
 	GetSlotID() SlotID
@@ -70,7 +71,7 @@ type ConstructionContext interface {
 	BasicContext
 }
 
-type syncContext interface {
+type stepContext interface {
 	BasicContext
 
 	GetSelf() SlotLink
@@ -84,18 +85,21 @@ type syncContext interface {
 }
 
 type InitializationContext interface {
-	syncContext
+	stepContext
 }
 
 type MigrationContext interface {
-	syncContext
+	stepContext
 
 	Replace(CreateFunc) StateUpdate
 	Same() StateUpdate
 }
 
 type ExecutionContext interface {
-	syncContext
+	stepContext
+
+	SyncOneStep(key string, weight int32, broadcastFn BroadcastReceiveFunc) Syncronizer
+	//SyncManySteps(key string)
 
 	NewChild(CreateFunc) SlotLink
 
@@ -110,6 +114,13 @@ type ExecutionContext interface {
 	Repeat(limit int) StateUpdate
 
 	//Before(d time.Time) StateUpdate
+	//WaitActive(slot SlotLink) StateUpdate
+}
+
+type Syncronizer interface {
+	IsFirst() bool
+	Broadcast(payload interface{}) (total, accepted int)
+	ReleaseAll()
 }
 
 type AsyncResultContext interface {

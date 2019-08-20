@@ -64,44 +64,11 @@ func main() {
 
 	sm.AddNew(smachine.NoLink(), &example.StateMachine1{})
 
-	for {
+	for i := 0; ; i++ {
 		if !sm.ScanOnce(nil) {
 			break
 		}
-		fmt.Printf("%v: slots=%v\n", time.Now(), sm.OccupiedSlotCount())
+		fmt.Printf("%03d %v: slots=%v\n", i, time.Now(), sm.OccupiedSlotCount())
 		time.Sleep(100 * time.Millisecond)
 	}
 }
-
-//func test() {
-//v := reflect.ValueOf(main)
-//fmt.Println(v, v.Kind(), v.Pointer())
-//test()
-//	pc, file, line, ok, f, entry := Caller(0)
-//	fmt.Println(pc, file, line, ok, f, entry)
-//
-//	pc, file, line, ok, f, entry = Caller(1)
-//	fmt.Println(pc, file, line, ok, f, entry)
-//
-//	pc, file, line, ok, f, entry = Caller(2)
-//	fmt.Println(pc, file, line, ok, f, entry)
-//
-//	pc, file, line, ok, f, entry = Caller(3)
-//	fmt.Println(pc, file, line, ok, f, entry)
-//
-//	pc, file, line, ok, f, entry = Caller(4)
-//	fmt.Println(pc, file, line, ok, f, entry)
-//
-//	pc, file, line, ok, f, entry = Caller(0)
-//	fmt.Println(pc, file, line, ok, f, entry)
-//}
-//
-//func Caller(skip int) (pc uintptr, file string, line int, ok bool, f *runtime.Func, entry uintptr) {
-//	rpc := make([]uintptr, 1)
-//	n := runtime.Callers(skip, rpc[:])
-//	if n < 1 {
-//		return
-//	}
-//	frame, _ := runtime.CallersFrames(rpc).Next()
-//	return frame.PC, frame.File, frame.Line, frame.PC != 0, frame.Func, frame.Entry
-//}

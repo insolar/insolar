@@ -86,13 +86,21 @@ func (c *ChannelAdapter) Close() {
 	close(c.c)
 }
 
-func (c *ChannelAdapter) CallAsync(slotLink SlotLink, fn AdapterCallFunc, callback AdapterCallbackFunc) (cancelFn context.CancelFunc) {
-	r := ChannelRecord{slotLink, fn, callback}
+func (c *ChannelAdapter) CallAsync(stepLink StepLink, fn AdapterCallFunc, callback AdapterCallbackFunc) {
+	r := ChannelRecord{stepLink, fn, callback}
 
 	if !c.append(r, false) || !c.send(r) {
 		c.append(r, true)
 	}
-	return cancelFn
+}
+
+func (c *ChannelAdapter) CallAsyncWithCancel(stepLink StepLink, fn AdapterCallFunc, callback AdapterCallbackFunc) (cancelFn context.CancelFunc) {
+	r := ChannelRecord{stepLink, fn, callback}
+
+	if !c.append(r, false) || !c.send(r) {
+		c.append(r, true)
+	}
+	return nil // TODO
 }
 
 func (c *ChannelAdapter) append(r ChannelRecord, force bool) bool {
@@ -154,13 +162,13 @@ func (c *ChannelAdapter) sendWorker() {
 }
 
 type ChannelRecord struct {
-	slotLink SlotLink
+	stepLink StepLink
 	callFunc AdapterCallFunc
 	callback AdapterCallbackFunc
 }
 
 func (c ChannelRecord) IsCancelled() bool {
-	return !c.slotLink.IsActive() // || cancelled
+	return !c.slotLink.IsValid() // || cancelled
 }
 
 func (c ChannelRecord) RunCall() AsyncResultFunc {
@@ -181,9 +189,9 @@ func (c ChannelRecord) SendCancel() {
 }
 
 func (c ChannelRecord) RunAndSendResult() bool {
-	if c.slotLink.IsActive() {
+	if c.slotLink.IsValid() {
 		result := c.callFunc()
-		if c.slotLink.IsActive() {
+		if c.slotLink.IsValid() {
 			if result == nil {
 				c.callback(func(ctx AsyncResultContext) {
 				})

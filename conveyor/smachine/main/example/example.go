@@ -28,6 +28,7 @@ type StateMachine1 struct {
 	smachine.StateMachineDeclTemplate
 
 	serviceA *ServiceAdapterA // inject
+	mutexB   *MutexAdapterB   // inject
 
 	result string
 	count  int
@@ -99,6 +100,19 @@ func (s *StateMachine1) State5(ctx smachine.ExecutionContext) smachine.StateUpda
 	return ctx.WaitAny()
 }
 
+func (s *StateMachine1) State6(ctx smachine.ExecutionContext) smachine.StateUpdate {
+
+	//mx := s.mutexB.JoinMutex(ctx, "mutex Key", mutexCallback)
+	//if !mx.IsHolder() {
+	//	return ctx.WaitAny()
+	//}
+	//
+	//mb.Broadcast(info)
+	//// do something
+
+	return ctx.Next(nil)
+}
+
 // ------------------------------------------
 
 /* Actual service */
@@ -126,4 +140,7 @@ func (a *ServiceAdapterA) AsyncCall(ctx smachine.ExecutionContext, fn func(svc S
 	return ctx.AdapterAsyncCall(a.exec, func() smachine.AsyncResultFunc {
 		return fn(a.svc)
 	})
+}
+
+type MutexAdapterB struct {
 }

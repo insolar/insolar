@@ -220,6 +220,10 @@ type executionContext struct {
 	countAsyncCalls uint32
 }
 
+func (p *executionContext) SyncOneStep(key string, weight int32, broadcastFn BroadcastReceiveFunc) Syncronizer {
+	return p.worker.machine.stepSync.Join(p.s, key, weight, broadcastFn)
+}
+
 func (p *executionContext) NewChild(fn CreateFunc) SlotLink {
 	p.ensureExactState(execContext)
 	if fn == nil {
@@ -376,4 +380,10 @@ func (p *asyncResultContext) WakeUp() {
 func (p *asyncResultContext) executeResult(fn AsyncResultFunc) bool {
 	fn(p)
 	return p.wakeup
+}
+
+func (p *asyncResultContext) executeBroadcast(payload interface{}, fn BroadcastReceiveFunc) (accepted, wakeup bool) {
+	accepted = fn(p, payload)
+	wakeup = p.wakeup
+	return
 }

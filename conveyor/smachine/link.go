@@ -54,13 +54,6 @@ import (
 	"sync/atomic"
 )
 
-func NewSlotLink(slot *Slot) SlotLink {
-	if slot.slotID == 0 {
-		panic("illegal value")
-	}
-	return SlotLink{slot.slotID, slot}
-}
-
 func NoLink() SlotLink {
 	return SlotLink{}
 }
@@ -78,21 +71,34 @@ func (p *SlotLink) IsEmpty() bool {
 	return p.s == nil
 }
 
-func (p *SlotLink) IsActive() bool {
+func (p *SlotLink) IsValid() bool {
 	if p.s == nil {
 		return false
 	}
-	return uint32(p.id) == atomic.LoadUint32((*uint32)(&p.s.slotID))
+	return p.id == SlotID(atomic.LoadUint64(&p.s.idAndStep))
 }
 
-func (p *SlotLink) Get() *Slot {
-	slot := p.s
-	if slot == nil {
-		return nil
+type StepLink struct {
+	SlotLink
+	step uint32
+}
+
+func (p *StepLink) IsAtStep() bool {
+	if p.s == nil {
+		return false
 	}
-	id := atomic.LoadUint32((*uint32)(&slot.slotID))
-	if id == uint32(p.id) {
-		return slot
+	v := atomic.LoadUint64(&p.s.idAndStep)
+	return p.id == SlotID(v) && uint32(v>>32) == atomic.LoadUint32(&p.step)
+}
+
+func (p *StepLink) setCancelled() {
+	atomic.StoreUint32(&p.step, 0)
+}
+
+func (p *StepLink) IsCancelled() bool {
+	if p.s == nil {
+		return false
 	}
-	return nil
+	v := atomic.LoadUint64(&p.s.idAndStep)
+	return p.id != SlotID(v) || uint32(v>>32) == 0 || atomic.LoadUint32(&p.step) == 0
 }
