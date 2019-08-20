@@ -168,7 +168,7 @@ type ChannelRecord struct {
 }
 
 func (c ChannelRecord) IsCancelled() bool {
-	return !c.slotLink.IsValid() // || cancelled
+	return c.stepLink.IsCancelled()
 }
 
 func (c ChannelRecord) RunCall() AsyncResultFunc {
@@ -189,18 +189,24 @@ func (c ChannelRecord) SendCancel() {
 }
 
 func (c ChannelRecord) RunAndSendResult() bool {
-	if c.slotLink.IsValid() {
-		result := c.callFunc()
-		if c.slotLink.IsValid() {
-			if result == nil {
-				c.callback(func(ctx AsyncResultContext) {
-				})
-			} else {
-				c.callback(result)
-			}
-			return true
-		}
+	if c.stepLink.IsCancelled() {
+		c.callback(nil)
+		return false
 	}
-	c.callback(nil)
-	return false
+
+	result := c.callFunc()
+
+	if c.stepLink.IsCancelled() {
+		c.callback(nil)
+		return false
+	}
+
+	stepLink := c.stepLink
+	c.callback(func(ctx AsyncResultContext) {
+		if result == nil || stepLink.IsCancelled() {
+			return
+		}
+		result(ctx)
+	})
+	return true
 }

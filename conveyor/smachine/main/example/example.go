@@ -136,8 +136,14 @@ func (a *ServiceAdapterA) Call(ctx smachine.ExecutionContext, fn func(svc Servic
 	}
 }
 
-func (a *ServiceAdapterA) AsyncCall(ctx smachine.ExecutionContext, fn func(svc ServiceA) smachine.AsyncResultFunc) context.CancelFunc {
-	return ctx.AdapterAsyncCall(a.exec, func() smachine.AsyncResultFunc {
+func (a *ServiceAdapterA) AsyncCall(ctx smachine.ExecutionContext, fn func(svc ServiceA) smachine.AsyncResultFunc) {
+	ctx.AdapterAsyncCall(a.exec, func() smachine.AsyncResultFunc {
+		return fn(a.svc)
+	})
+}
+
+func (a *ServiceAdapterA) AsyncCallWithCancel(ctx smachine.ExecutionContext, fn func(svc ServiceA) smachine.AsyncResultFunc) context.CancelFunc {
+	return ctx.AdapterAsyncCallWithCancel(a.exec, func() smachine.AsyncResultFunc {
 		return fn(a.svc)
 	})
 }

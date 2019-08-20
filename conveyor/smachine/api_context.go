@@ -105,7 +105,8 @@ type ExecutionContext interface {
 
 	/* In-state call to adapter */
 	AdapterSyncCall(a ExecutionAdapter, fn AdapterCallFunc) bool
-	AdapterAsyncCall(a ExecutionAdapter, fn AdapterCallFunc) context.CancelFunc
+	AdapterAsyncCall(a ExecutionAdapter, fn AdapterCallFunc)
+	AdapterAsyncCallWithCancel(a ExecutionAdapter, fn AdapterCallFunc) context.CancelFunc
 	NextAdapterCall(a ExecutionAdapter, fn AdapterCallFunc, resultState StateFunc) (StateUpdate, context.CancelFunc)
 
 	Replace(CreateFunc) StateUpdate

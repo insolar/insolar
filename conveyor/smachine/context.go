@@ -52,6 +52,7 @@ package smachine
 
 import (
 	"context"
+	"sync/atomic"
 )
 
 type slotContextMode uint8
@@ -94,7 +95,7 @@ type slotContext struct {
 }
 
 func (p *slotContext) GetSlotID() SlotID {
-	return p.s.slotID
+	return p.s.GetID()
 }
 
 func (p *slotContext) GetSelf() SlotLink {
@@ -242,14 +243,14 @@ func (p *executionContext) NextAdapterCall(a ExecutionAdapter, fn AdapterCallFun
 
 	cf := &indirectCancel{}
 
-	slotLink := NewSlotLink(p.s)
+	stepLink := p.s.NewStepLink()
 	return StateUpdate{marker: &p.marker,
 		flags:    stateUpdateColdWait | stateUpdateHasAsync,
 		nextStep: SlotStep{transition: resultState},
 
 		param: func() {
-			cf.set(aq.CallAsync(slotLink, fn, func(fn AsyncResultFunc) {
-				p.worker.machine.applyAsyncStateUpdate(slotLink, fn)
+			cf.set(aq.CallAsyncWithCancel(stepLink, fn, func(fn AsyncResultFunc) {
+				p.worker.machine.applyAsyncStateUpdate(stepLink, fn)
 			}))
 		}}, cf.cancel
 }
@@ -285,10 +286,14 @@ func (p *executionContext) AdapterSyncCall(a ExecutionAdapter, fn AdapterCallFun
 	wc := p.worker.getCond()
 
 	var resultFn AsyncResultFunc
-	hasResult := false
-	cancelFn := aq.CallAsync(p.s.NewLink(), fn, func(fn AsyncResultFunc) {
-		hasResult = true
+	var stateFlag uint32
+
+	stepLink := p.s.NewStepLink()
+	aq.CallAsync(stepLink, fn, func(fn AsyncResultFunc) {
 		resultFn = fn
+		if !atomic.CompareAndSwapUint32(&stateFlag, 0, 1) {
+			return
+		}
 		wc.L.Lock()
 		wc.Broadcast()
 		wc.L.Unlock()
@@ -298,9 +303,8 @@ func (p *executionContext) AdapterSyncCall(a ExecutionAdapter, fn AdapterCallFun
 	wc.Wait()
 	wc.L.Unlock()
 
-	if !hasResult && cancelFn != nil {
-		// get a signal of something else
-		cancelFn()
+	if atomic.CompareAndSwapUint32(&stateFlag, 0, 2) {
+		stepLink.setCancelled()
 		return false
 	}
 	if resultFn == nil {
@@ -312,15 +316,27 @@ func (p *executionContext) AdapterSyncCall(a ExecutionAdapter, fn AdapterCallFun
 	return true
 }
 
-func (p *executionContext) AdapterAsyncCall(a ExecutionAdapter, fn AdapterCallFunc) context.CancelFunc {
+func (p *executionContext) AdapterAsyncCall(a ExecutionAdapter, fn AdapterCallFunc) {
 	p.ensureExactState(execContext)
 	aq := p.worker.machine.GetAdapterQueue(a)
 
-	slotLink := p.s.NewLink()
+	stepLink := p.s.NewStepLink()
 	p.countAsyncCalls++
 
-	return aq.CallAsync(slotLink, fn, func(fn AsyncResultFunc) {
-		p.worker.machine.applyAsyncStateUpdate(slotLink, fn)
+	aq.CallAsync(stepLink, fn, func(fn AsyncResultFunc) {
+		p.worker.machine.applyAsyncStateUpdate(stepLink, fn)
+	})
+}
+
+func (p *executionContext) AdapterAsyncCallWithCancel(a ExecutionAdapter, fn AdapterCallFunc) context.CancelFunc {
+	p.ensureExactState(execContext)
+	aq := p.worker.machine.GetAdapterQueue(a)
+
+	stepLink := p.s.NewStepLink()
+	p.countAsyncCalls++
+
+	return aq.CallAsyncWithCancel(stepLink, fn, func(fn AsyncResultFunc) {
+		p.worker.machine.applyAsyncStateUpdate(stepLink, fn)
 	})
 }
 
@@ -366,7 +382,7 @@ type asyncResultContext struct {
 }
 
 func (p *asyncResultContext) GetSlotID() SlotID {
-	return p.slot.slotID
+	return p.slot.GetID()
 }
 
 func (p *asyncResultContext) GetParent() SlotLink {
