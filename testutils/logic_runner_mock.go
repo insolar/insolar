@@ -16,12 +16,6 @@ import (
 type LogicRunnerMock struct {
 	t minimock.Tester
 
-	funcAddUnwantedResponse          func(ctx context.Context, msg mm_insolar.Message) (err error)
-	inspectFuncAddUnwantedResponse   func(ctx context.Context, msg mm_insolar.Message)
-	afterAddUnwantedResponseCounter  uint64
-	beforeAddUnwantedResponseCounter uint64
-	AddUnwantedResponseMock          mLogicRunnerMockAddUnwantedResponse
-
 	funcLRI          func()
 	inspectFuncLRI   func()
 	afterLRICounter  uint64
@@ -42,231 +36,12 @@ func NewLogicRunnerMock(t minimock.Tester) *LogicRunnerMock {
 		controller.RegisterMocker(m)
 	}
 
-	m.AddUnwantedResponseMock = mLogicRunnerMockAddUnwantedResponse{mock: m}
-	m.AddUnwantedResponseMock.callArgs = []*LogicRunnerMockAddUnwantedResponseParams{}
-
 	m.LRIMock = mLogicRunnerMockLRI{mock: m}
 
 	m.OnPulseMock = mLogicRunnerMockOnPulse{mock: m}
 	m.OnPulseMock.callArgs = []*LogicRunnerMockOnPulseParams{}
 
 	return m
-}
-
-type mLogicRunnerMockAddUnwantedResponse struct {
-	mock               *LogicRunnerMock
-	defaultExpectation *LogicRunnerMockAddUnwantedResponseExpectation
-	expectations       []*LogicRunnerMockAddUnwantedResponseExpectation
-
-	callArgs []*LogicRunnerMockAddUnwantedResponseParams
-	mutex    sync.RWMutex
-}
-
-// LogicRunnerMockAddUnwantedResponseExpectation specifies expectation struct of the LogicRunner.AddUnwantedResponse
-type LogicRunnerMockAddUnwantedResponseExpectation struct {
-	mock    *LogicRunnerMock
-	params  *LogicRunnerMockAddUnwantedResponseParams
-	results *LogicRunnerMockAddUnwantedResponseResults
-	Counter uint64
-}
-
-// LogicRunnerMockAddUnwantedResponseParams contains parameters of the LogicRunner.AddUnwantedResponse
-type LogicRunnerMockAddUnwantedResponseParams struct {
-	ctx context.Context
-	msg mm_insolar.Message
-}
-
-// LogicRunnerMockAddUnwantedResponseResults contains results of the LogicRunner.AddUnwantedResponse
-type LogicRunnerMockAddUnwantedResponseResults struct {
-	err error
-}
-
-// Expect sets up expected params for LogicRunner.AddUnwantedResponse
-func (mmAddUnwantedResponse *mLogicRunnerMockAddUnwantedResponse) Expect(ctx context.Context, msg mm_insolar.Message) *mLogicRunnerMockAddUnwantedResponse {
-	if mmAddUnwantedResponse.mock.funcAddUnwantedResponse != nil {
-		mmAddUnwantedResponse.mock.t.Fatalf("LogicRunnerMock.AddUnwantedResponse mock is already set by Set")
-	}
-
-	if mmAddUnwantedResponse.defaultExpectation == nil {
-		mmAddUnwantedResponse.defaultExpectation = &LogicRunnerMockAddUnwantedResponseExpectation{}
-	}
-
-	mmAddUnwantedResponse.defaultExpectation.params = &LogicRunnerMockAddUnwantedResponseParams{ctx, msg}
-	for _, e := range mmAddUnwantedResponse.expectations {
-		if minimock.Equal(e.params, mmAddUnwantedResponse.defaultExpectation.params) {
-			mmAddUnwantedResponse.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmAddUnwantedResponse.defaultExpectation.params)
-		}
-	}
-
-	return mmAddUnwantedResponse
-}
-
-// Inspect accepts an inspector function that has same arguments as the LogicRunner.AddUnwantedResponse
-func (mmAddUnwantedResponse *mLogicRunnerMockAddUnwantedResponse) Inspect(f func(ctx context.Context, msg mm_insolar.Message)) *mLogicRunnerMockAddUnwantedResponse {
-	if mmAddUnwantedResponse.mock.inspectFuncAddUnwantedResponse != nil {
-		mmAddUnwantedResponse.mock.t.Fatalf("Inspect function is already set for LogicRunnerMock.AddUnwantedResponse")
-	}
-
-	mmAddUnwantedResponse.mock.inspectFuncAddUnwantedResponse = f
-
-	return mmAddUnwantedResponse
-}
-
-// Return sets up results that will be returned by LogicRunner.AddUnwantedResponse
-func (mmAddUnwantedResponse *mLogicRunnerMockAddUnwantedResponse) Return(err error) *LogicRunnerMock {
-	if mmAddUnwantedResponse.mock.funcAddUnwantedResponse != nil {
-		mmAddUnwantedResponse.mock.t.Fatalf("LogicRunnerMock.AddUnwantedResponse mock is already set by Set")
-	}
-
-	if mmAddUnwantedResponse.defaultExpectation == nil {
-		mmAddUnwantedResponse.defaultExpectation = &LogicRunnerMockAddUnwantedResponseExpectation{mock: mmAddUnwantedResponse.mock}
-	}
-	mmAddUnwantedResponse.defaultExpectation.results = &LogicRunnerMockAddUnwantedResponseResults{err}
-	return mmAddUnwantedResponse.mock
-}
-
-//Set uses given function f to mock the LogicRunner.AddUnwantedResponse method
-func (mmAddUnwantedResponse *mLogicRunnerMockAddUnwantedResponse) Set(f func(ctx context.Context, msg mm_insolar.Message) (err error)) *LogicRunnerMock {
-	if mmAddUnwantedResponse.defaultExpectation != nil {
-		mmAddUnwantedResponse.mock.t.Fatalf("Default expectation is already set for the LogicRunner.AddUnwantedResponse method")
-	}
-
-	if len(mmAddUnwantedResponse.expectations) > 0 {
-		mmAddUnwantedResponse.mock.t.Fatalf("Some expectations are already set for the LogicRunner.AddUnwantedResponse method")
-	}
-
-	mmAddUnwantedResponse.mock.funcAddUnwantedResponse = f
-	return mmAddUnwantedResponse.mock
-}
-
-// When sets expectation for the LogicRunner.AddUnwantedResponse which will trigger the result defined by the following
-// Then helper
-func (mmAddUnwantedResponse *mLogicRunnerMockAddUnwantedResponse) When(ctx context.Context, msg mm_insolar.Message) *LogicRunnerMockAddUnwantedResponseExpectation {
-	if mmAddUnwantedResponse.mock.funcAddUnwantedResponse != nil {
-		mmAddUnwantedResponse.mock.t.Fatalf("LogicRunnerMock.AddUnwantedResponse mock is already set by Set")
-	}
-
-	expectation := &LogicRunnerMockAddUnwantedResponseExpectation{
-		mock:   mmAddUnwantedResponse.mock,
-		params: &LogicRunnerMockAddUnwantedResponseParams{ctx, msg},
-	}
-	mmAddUnwantedResponse.expectations = append(mmAddUnwantedResponse.expectations, expectation)
-	return expectation
-}
-
-// Then sets up LogicRunner.AddUnwantedResponse return parameters for the expectation previously defined by the When method
-func (e *LogicRunnerMockAddUnwantedResponseExpectation) Then(err error) *LogicRunnerMock {
-	e.results = &LogicRunnerMockAddUnwantedResponseResults{err}
-	return e.mock
-}
-
-// AddUnwantedResponse implements insolar.LogicRunner
-func (mmAddUnwantedResponse *LogicRunnerMock) AddUnwantedResponse(ctx context.Context, msg mm_insolar.Message) (err error) {
-	mm_atomic.AddUint64(&mmAddUnwantedResponse.beforeAddUnwantedResponseCounter, 1)
-	defer mm_atomic.AddUint64(&mmAddUnwantedResponse.afterAddUnwantedResponseCounter, 1)
-
-	if mmAddUnwantedResponse.inspectFuncAddUnwantedResponse != nil {
-		mmAddUnwantedResponse.inspectFuncAddUnwantedResponse(ctx, msg)
-	}
-
-	params := &LogicRunnerMockAddUnwantedResponseParams{ctx, msg}
-
-	// Record call args
-	mmAddUnwantedResponse.AddUnwantedResponseMock.mutex.Lock()
-	mmAddUnwantedResponse.AddUnwantedResponseMock.callArgs = append(mmAddUnwantedResponse.AddUnwantedResponseMock.callArgs, params)
-	mmAddUnwantedResponse.AddUnwantedResponseMock.mutex.Unlock()
-
-	for _, e := range mmAddUnwantedResponse.AddUnwantedResponseMock.expectations {
-		if minimock.Equal(e.params, params) {
-			mm_atomic.AddUint64(&e.Counter, 1)
-			return e.results.err
-		}
-	}
-
-	if mmAddUnwantedResponse.AddUnwantedResponseMock.defaultExpectation != nil {
-		mm_atomic.AddUint64(&mmAddUnwantedResponse.AddUnwantedResponseMock.defaultExpectation.Counter, 1)
-		want := mmAddUnwantedResponse.AddUnwantedResponseMock.defaultExpectation.params
-		got := LogicRunnerMockAddUnwantedResponseParams{ctx, msg}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmAddUnwantedResponse.t.Errorf("LogicRunnerMock.AddUnwantedResponse got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
-		}
-
-		results := mmAddUnwantedResponse.AddUnwantedResponseMock.defaultExpectation.results
-		if results == nil {
-			mmAddUnwantedResponse.t.Fatal("No results are set for the LogicRunnerMock.AddUnwantedResponse")
-		}
-		return (*results).err
-	}
-	if mmAddUnwantedResponse.funcAddUnwantedResponse != nil {
-		return mmAddUnwantedResponse.funcAddUnwantedResponse(ctx, msg)
-	}
-	mmAddUnwantedResponse.t.Fatalf("Unexpected call to LogicRunnerMock.AddUnwantedResponse. %v %v", ctx, msg)
-	return
-}
-
-// AddUnwantedResponseAfterCounter returns a count of finished LogicRunnerMock.AddUnwantedResponse invocations
-func (mmAddUnwantedResponse *LogicRunnerMock) AddUnwantedResponseAfterCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmAddUnwantedResponse.afterAddUnwantedResponseCounter)
-}
-
-// AddUnwantedResponseBeforeCounter returns a count of LogicRunnerMock.AddUnwantedResponse invocations
-func (mmAddUnwantedResponse *LogicRunnerMock) AddUnwantedResponseBeforeCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmAddUnwantedResponse.beforeAddUnwantedResponseCounter)
-}
-
-// Calls returns a list of arguments used in each call to LogicRunnerMock.AddUnwantedResponse.
-// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
-func (mmAddUnwantedResponse *mLogicRunnerMockAddUnwantedResponse) Calls() []*LogicRunnerMockAddUnwantedResponseParams {
-	mmAddUnwantedResponse.mutex.RLock()
-
-	argCopy := make([]*LogicRunnerMockAddUnwantedResponseParams, len(mmAddUnwantedResponse.callArgs))
-	copy(argCopy, mmAddUnwantedResponse.callArgs)
-
-	mmAddUnwantedResponse.mutex.RUnlock()
-
-	return argCopy
-}
-
-// MinimockAddUnwantedResponseDone returns true if the count of the AddUnwantedResponse invocations corresponds
-// the number of defined expectations
-func (m *LogicRunnerMock) MinimockAddUnwantedResponseDone() bool {
-	for _, e := range m.AddUnwantedResponseMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			return false
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.AddUnwantedResponseMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterAddUnwantedResponseCounter) < 1 {
-		return false
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcAddUnwantedResponse != nil && mm_atomic.LoadUint64(&m.afterAddUnwantedResponseCounter) < 1 {
-		return false
-	}
-	return true
-}
-
-// MinimockAddUnwantedResponseInspect logs each unmet expectation
-func (m *LogicRunnerMock) MinimockAddUnwantedResponseInspect() {
-	for _, e := range m.AddUnwantedResponseMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			m.t.Errorf("Expected call to LogicRunnerMock.AddUnwantedResponse with params: %#v", *e.params)
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.AddUnwantedResponseMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterAddUnwantedResponseCounter) < 1 {
-		if m.AddUnwantedResponseMock.defaultExpectation.params == nil {
-			m.t.Error("Expected call to LogicRunnerMock.AddUnwantedResponse")
-		} else {
-			m.t.Errorf("Expected call to LogicRunnerMock.AddUnwantedResponse with params: %#v", *m.AddUnwantedResponseMock.defaultExpectation.params)
-		}
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcAddUnwantedResponse != nil && mm_atomic.LoadUint64(&m.afterAddUnwantedResponseCounter) < 1 {
-		m.t.Error("Expected call to LogicRunnerMock.AddUnwantedResponse")
-	}
 }
 
 type mLogicRunnerMockLRI struct {
@@ -624,8 +399,6 @@ func (m *LogicRunnerMock) MinimockOnPulseInspect() {
 // MinimockFinish checks that all mocked methods have been called the expected number of times
 func (m *LogicRunnerMock) MinimockFinish() {
 	if !m.minimockDone() {
-		m.MinimockAddUnwantedResponseInspect()
-
 		m.MinimockLRIInspect()
 
 		m.MinimockOnPulseInspect()
@@ -652,7 +425,6 @@ func (m *LogicRunnerMock) MinimockWait(timeout mm_time.Duration) {
 func (m *LogicRunnerMock) minimockDone() bool {
 	done := true
 	return done &&
-		m.MinimockAddUnwantedResponseDone() &&
 		m.MinimockLRIDone() &&
 		m.MinimockOnPulseDone()
 }

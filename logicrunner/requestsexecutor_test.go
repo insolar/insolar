@@ -21,12 +21,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/gojuno/minimock"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/gen"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
@@ -35,7 +38,6 @@ import (
 	"github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/logicexecutor"
 	"github.com/insolar/insolar/logicrunner/requestresult"
-	"github.com/insolar/insolar/testutils"
 )
 
 func TestRequestsExecutor_ExecuteAndSave(t *testing.T) {
@@ -337,7 +339,7 @@ func TestRequestsExecutor_SendReply(t *testing.T) {
 		reply      insolar.Reply
 		err        error
 		transcript *common.Transcript
-		mb         insolar.MessageBus
+		sender     bus.Sender
 	}{
 		{
 			name: "success",
@@ -346,11 +348,22 @@ func TestRequestsExecutor_SendReply(t *testing.T) {
 				Request:    &record.IncomingRequest{},
 			},
 			reply: &reply.CallMethod{Object: &requestRef},
-			mb: testutils.NewMessageBusMock(mc).SendMock.Set(
-				func(
-					ctx context.Context, msg insolar.Message, opt *insolar.MessageSendOptions,
-				) (insolar.Reply, error) {
-					return nil, nil
+			sender: bus.NewSenderMock(t).SendTargetMock.Set(
+				func(ctx context.Context, msg *message.Message, target insolar.Reference) (<-chan *message.Message, func()) {
+					res := make(chan *message.Message)
+					go func() {
+						replyMsg, err := payload.NewMessage(&payload.Error{Text: "test error", Code: payload.CodeUnknown})
+						require.NoError(t, err)
+						meta := payload.Meta{
+							Payload: msg.Payload,
+						}
+						buf, _ := meta.Marshal()
+						replyMsg.Payload = buf
+						res <- replyMsg
+					}()
+					return res, func() {
+						close(res)
+					}
 				},
 			),
 		},
@@ -361,11 +374,17 @@ func TestRequestsExecutor_SendReply(t *testing.T) {
 				Request:    &record.IncomingRequest{},
 			},
 			reply: &reply.CallMethod{Object: &requestRef},
-			mb: testutils.NewMessageBusMock(mc).SendMock.Set(
-				func(
-					ctx context.Context, msg insolar.Message, opt *insolar.MessageSendOptions,
-				) (insolar.Reply, error) {
-					return nil, errors.New("some error")
+			sender: bus.NewSenderMock(t).SendTargetMock.Set(
+				func(ctx context.Context, msg *message.Message, target insolar.Reference) (<-chan *message.Message, func()) {
+					res := make(chan *message.Message, 1)
+					msg, err := payload.NewMessage(&payload.Error{Text: "object is deactivated", Code: payload.CodeUnknown})
+					require.NoError(t, err, "newMessage")
+					go func() {
+						res <- msg
+					}()
+					return res, func() {
+						close(res)
+					}
 				},
 			),
 		},
@@ -380,7 +399,7 @@ func TestRequestsExecutor_SendReply(t *testing.T) {
 					PulseNumber: 1000,
 				}, nil
 			})
-			re := &requestsExecutor{MessageBus: test.mb, PulseAccessor: pa}
+			re := &requestsExecutor{Sender: test.sender, PulseAccessor: pa}
 			re.SendReply(ctx, test.transcript, test.reply, test.err)
 		})
 	}

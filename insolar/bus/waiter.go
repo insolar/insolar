@@ -79,6 +79,34 @@ func (c *WaitOKSender) SendRole(
 	checkReply(ctx, rep)
 }
 
+// SendTarget sends message to specified target, using provided Sender.SendTarget. It waiting for one reply and
+// close replies channel after getting it. If reply is not reply.OK, it logs error message.
+func (c *WaitOKSender) SendTarget(
+	ctx context.Context, msg *message.Message, target insolar.Reference) {
+	msgType := msg.Metadata.Get(MetaType)
+	if msgType == "" {
+		payloadType, err := payload.UnmarshalType(msg.Payload)
+		if err != nil {
+			inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to unmarshal payload type"))
+		}
+		msgType = payloadType.String()
+	}
+	ctx, _ = inslogger.WithField(ctx, "msg_type", msgType)
+
+	reps, done := c.sender.SendTarget(ctx, msg, target)
+	defer done()
+
+	rep, ok := <-reps
+
+	if !ok {
+		logger := inslogger.FromContext(ctx)
+		logger.Errorf("reply channel was closed before we get any valid replies")
+		return
+	}
+
+	checkReply(ctx, rep)
+}
+
 func checkReply(ctx context.Context, rep *message.Message) {
 	logger := inslogger.FromContext(ctx)
 

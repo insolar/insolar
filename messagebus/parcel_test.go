@@ -54,7 +54,7 @@ func Test_parcelFactory_Create_CheckLogLevel(t *testing.T) {
 
 	ref := gen.Reference()
 	pulse := insolar.Pulse{PulseNumber: 0}
-	msg := message.CallMethod{}
+	msg := message.GenesisRequest{}
 
 	parcel, err := parcelFactory.Create(ctx, &msg, ref, nil, pulse)
 

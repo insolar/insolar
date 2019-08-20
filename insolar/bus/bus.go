@@ -21,13 +21,13 @@ import (
 	"sync"
 	"time"
 
-	base58 "github.com/jbenet/go-base58"
+	"github.com/ThreeDotsLabs/watermill"
+	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/trace"
 
-	"github.com/ThreeDotsLabs/watermill"
-	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
@@ -45,6 +45,11 @@ const (
 
 	// TopicIncoming is topic for incoming calls
 	TopicIncoming = "TopicIncoming"
+
+	// TopicIncomingRequestResponse is topic for handling incoming RequestResponse messages
+	TopicIncomingRequestResults = "TopicIncomingRequestResults"
+
+	TopicOutgoingRequestResults = "TopicOutgoingRequestResults"
 )
 
 const (
@@ -219,16 +224,19 @@ func (b *Bus) sendTarget(
 		return res, func() {}
 	}
 
-	msgType := messagePayloadTypeName(msg)
+	payloadType, err := payload.UnmarshalType(msg.Payload)
+	if err != nil {
+		inslogger.FromContext(ctx).Warn("deprecated message")
+	}
 
-	mctx := insmetrics.InsertTag(ctx, tagMessageType, msgType)
+	mctx := insmetrics.InsertTag(ctx, tagMessageType, payloadType.String())
 	stats.Record(mctx, statSent.M(int64(len(msg.Payload))))
 	defer func() {
 		stats.Record(mctx, statSentTime.M(float64(time.Since(start).Nanoseconds())/1e6))
 	}()
 
 	// configure logger
-	ctx, _ = inslogger.WithField(ctx, "sending_type", msgType)
+	ctx, _ = inslogger.WithField(ctx, "sending_type", payloadType.String())
 	logger := inslogger.FromContext(ctx)
 	span.AddAttributes(
 		trace.StringAttribute("sending_type", msg.Metadata.Get(MetaType)),
@@ -272,12 +280,14 @@ func (b *Bus) sendTarget(
 	b.replies[msgHash] = reply
 	b.repliesMutex.Unlock()
 
-	logger.Debugf("sending message %s. uuid = ", msgHash.String(), msg.UUID)
-	err = b.pub.Publish(TopicOutgoing, msg)
+	topic := getTopic(payloadType)
+
+	logger.Debugf("sending message %s. uuid = %s", msgHash.String(), msg.UUID)
+	err = b.pub.Publish(topic, msg)
 	if err != nil {
 		done()
 		instracer.AddError(span, err)
-		return handleError(errors.Wrapf(err, "can't publish message to %s topic", TopicOutgoing))
+		return handleError(errors.Wrapf(err, "can't publish message to %s topic", topic))
 	}
 
 	go func() {
@@ -306,17 +316,6 @@ func (b *Bus) sendTarget(
 	}()
 
 	return reply.messages, done
-}
-
-// messagePayloadTypeName returns message type.
-// Parses type from payload if failed returns type from metadata field 'type'.
-func messagePayloadTypeName(msg *message.Message) string {
-	payloadType, err := payload.UnmarshalType(msg.Payload)
-	if err != nil {
-		// branch for legacy messages format: INS-2973
-		return msg.Metadata.Get(MetaType)
-	}
-	return payloadType.String()
 }
 
 // Reply sends message in response to another message.
@@ -483,4 +482,14 @@ func (b *Bus) wrapMeta(
 	msg.Payload = buf
 
 	return meta, msg, nil
+}
+
+func getTopic(payloadType payload.Type) string {
+	topicName := TopicOutgoing
+
+	if payloadType == payload.TypeReturnResults {
+		topicName = TopicOutgoingRequestResults
+	}
+
+	return topicName
 }

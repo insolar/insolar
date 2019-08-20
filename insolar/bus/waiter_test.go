@@ -37,7 +37,7 @@ func TestWaitOKSender_SendRole_RetryExceeded(t *testing.T) {
 	innerReps := make(chan *message.Message)
 	sender.SendRoleMock.Set(func(p context.Context, p1 *message.Message, p2 insolar.DynamicRole, p3 insolar.Reference) (r <-chan *message.Message, r1 func()) {
 		innerReps = make(chan *message.Message)
-		go sendTestReply(&payload.Error{Text: "test error", Code: payload.CodeFlowCanceled}, innerReps, make(chan<- interface{}))
+		go SendTestReply(&payload.Error{Text: "test error", Code: payload.CodeFlowCanceled}, innerReps, make(chan<- interface{}))
 		return innerReps, func() { close(innerReps) }
 	})
 	msg, err := payload.NewMessage(&payload.State{})
@@ -71,7 +71,7 @@ func TestWaitOKSender_SendRole_RetryOnce(t *testing.T) {
 	sender.SendRoleMock.Set(func(p context.Context, p1 *message.Message, p2 insolar.DynamicRole, p3 insolar.Reference) (r <-chan *message.Message, r1 func()) {
 		innerReps = make(chan *message.Message)
 		if sender.SendRoleAfterCounter() == 0 {
-			go sendTestReply(&payload.Error{Text: "test error", Code: payload.CodeFlowCanceled}, innerReps, make(chan<- interface{}))
+			go SendTestReply(&payload.Error{Text: "test error", Code: payload.CodeFlowCanceled}, innerReps, make(chan<- interface{}))
 		} else {
 			go sendOK(innerReps)
 		}
@@ -118,7 +118,7 @@ func TestWaitOKSender_SendRole_NotOK(t *testing.T) {
 		return innerReps, func() { close(innerReps) }
 	})
 
-	go sendTestReply(&payload.Error{Text: "test error", Code: payload.CodeUnknown}, innerReps, make(chan<- interface{}))
+	go SendTestReply(&payload.Error{Text: "test error", Code: payload.CodeUnknown}, innerReps, make(chan<- interface{}))
 
 	msg, err := payload.NewMessage(&payload.State{})
 	require.NoError(t, err)

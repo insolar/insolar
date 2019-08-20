@@ -17,21 +17,20 @@
 package logicrunner
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 
 	"github.com/ThreeDotsLabs/watermill/message"
+	"go.opencensus.io/trace"
 
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/writecontroller"
 
 	"github.com/pkg/errors"
 
-	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/jet"
-	insolarMsg "github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
@@ -73,7 +72,7 @@ func sendErrorMessage(ctx context.Context, sender bus.Sender, meta payload.Meta,
 func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 	msgType := s.Message.Metadata.Get(bus.MetaType)
 	if msgType != "" {
-		return s.handleParcel(ctx, f)
+		return fmt.Errorf("[ Init.handleParcel ] no handler for message type %s", s.Message.Metadata.Get(bus.MetaType))
 	}
 
 	var err error
@@ -85,10 +84,17 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 	}
 	payloadType, err := payload.UnmarshalType(meta.Payload)
 	if err != nil {
+		inslogger.FromContext(ctx).WithField("metaPayload", meta.Payload).Info("payload")
 		return errors.Wrap(err, "failed to unmarshal payload type")
 	}
 
 	ctx, _ = inslogger.WithField(ctx, "msg_type", payloadType.String())
+
+	ctx, span := instracer.StartSpan(ctx, "HandleCall.Present")
+	span.AddAttributes(
+		trace.StringAttribute("msg.Type", payloadType.String()),
+	)
+	defer span.End()
 
 	switch payloadType {
 	case payload.TypeSagaCallAcceptNotification:
@@ -127,12 +133,29 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 			Message: meta,
 		}
 		return f.Handle(ctx, h.Present)
+	case payload.TypeCallMethod:
+		h := &HandleCall{
+			dep:     s.dep,
+			Message: meta,
+		}
+		return f.Handle(ctx, h.Present)
+	case payload.TypeAdditionalCallFromPreviousExecutor:
+		h := &HandleAdditionalCallFromPreviousExecutor{
+			dep:     s.dep,
+			Message: meta,
+		}
+		return f.Handle(ctx, h.Present)
 	default:
 		return fmt.Errorf("[ Init.Present ] no handler for message type %s", msgType)
 	}
 }
 
-func (s *Init) handleParcel(ctx context.Context, f flow.Flow) error {
+func (s *Init) Past(ctx context.Context, f flow.Flow) error {
+	msgType := s.Message.Metadata.Get(bus.MetaType)
+	if msgType != "" {
+		return fmt.Errorf("[ Init.handleParcel ] no handler for message type %s", s.Message.Metadata.Get(bus.MetaType))
+	}
+
 	var err error
 
 	meta := payload.Meta{}
@@ -140,38 +163,14 @@ func (s *Init) handleParcel(ctx context.Context, f flow.Flow) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal meta")
 	}
-
-	parcel, err := insolarMsg.DeserializeParcel(bytes.NewBuffer(meta.Payload))
+	payloadType, err := payload.UnmarshalType(meta.Payload)
 	if err != nil {
-		return errors.Wrap(err, "can't deserialize payload")
+		return errors.Wrap(err, "failed to unmarshal payload type")
 	}
 
-	msgType := s.Message.Metadata.Get(bus.MetaType)
+	ctx, _ = inslogger.WithField(ctx, "msg_type", payloadType.String())
 
-	switch msgType {
-	case insolar.TypeCallMethod.String():
-		h := &HandleCall{
-			dep:     s.dep,
-			Message: meta,
-			Parcel:  parcel,
-		}
-		return f.Handle(ctx, h.Present)
-	case insolar.TypeAdditionalCallFromPreviousExecutor.String():
-		h := &HandleAdditionalCallFromPreviousExecutor{
-			dep:     s.dep,
-			Message: meta,
-			Parcel:  parcel,
-		}
-		return f.Handle(ctx, h.Present)
-	default:
-		return fmt.Errorf("[ Init.handleParcel ] no handler for message type %s", msgType)
-	}
-}
-
-func (s *Init) Past(ctx context.Context, f flow.Flow) error {
-	msgType := s.Message.Metadata.Get(bus.MetaType)
-
-	if msgType == insolar.TypeCallMethod.String() {
+	if payloadType == payload.TypeCallMethod {
 		meta := payload.Meta{}
 		err := meta.Unmarshal(s.Message.Payload)
 		if err != nil {

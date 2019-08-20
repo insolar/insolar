@@ -19,10 +19,12 @@ package logicrunner
 import (
 	"context"
 
+	message2 "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
@@ -31,7 +33,6 @@ import (
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/logicexecutor"
-	"github.com/insolar/insolar/messagebus"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/logicrunner.RequestsExecutor -o ./ -s _mock.go -g
@@ -44,7 +45,7 @@ type RequestsExecutor interface {
 }
 
 type requestsExecutor struct {
-	MessageBus      insolar.MessageBus          `inject:""`
+	Sender          bus.Sender                  `inject:""`
 	LogicExecutor   logicexecutor.LogicExecutor `inject:""`
 	ArtifactManager artifacts.Client            `inject:""`
 	PulseAccessor   pulse.Accessor              `inject:""`
@@ -131,42 +132,38 @@ func (e *requestsExecutor) SendReply(
 
 	inslogger.FromContext(ctx).Debug("Returning result")
 
-	errstr := ""
+	errStr := ""
 	if err != nil {
-		errstr = err.Error()
+		errStr = err.Error()
 	}
-	sender := messagebus.BuildSender(
-		e.MessageBus.Send,
-		messagebus.RetryIncorrectPulse(e.PulseAccessor),
-		messagebus.RetryFlowCancelled(e.PulseAccessor),
+	sender := bus.NewWaitOKWithRetrySender(e.Sender, e.PulseAccessor, 1)
+
+	var (
+		msg    *message2.Message
+		target insolar.Reference
 	)
 
 	if transcript.Request.APINode.IsEmpty() {
-		_, err = sender(
-			ctx,
-			&message.ReturnResults{
-				Target:     transcript.Request.Caller,
-				RequestRef: transcript.RequestRef,
-				Reason:     transcript.Request.Reason,
-				Reply:      re,
-				Error:      errstr,
-			},
-			&insolar.MessageSendOptions{},
-		)
+		msg, err = payload.NewMessage(&payload.ReturnResults{
+			Target:     transcript.Request.Caller,
+			RequestRef: transcript.RequestRef,
+			Reason:     transcript.Request.Reason,
+			Reply:      reply.ToBytes(re),
+			Error:      errStr,
+		})
+		target = transcript.Request.Caller
 	} else {
-		_, err = sender(
-			ctx,
-			&message.ReturnResults{
-				RequestRef: transcript.RequestRef,
-				Reply:      re,
-				Error:      errstr,
-			},
-			&insolar.MessageSendOptions{
-				Receiver: &transcript.Request.APINode,
-			},
-		)
+		msg, err = payload.NewMessage(&payload.ReturnResults{
+			RequestRef: transcript.RequestRef,
+			Reason:     insolar.Reference{},
+			Reply:      reply.ToBytes(re),
+			Error:      errStr,
+		})
+		target = transcript.Request.APINode
 	}
 	if err != nil {
-		inslogger.FromContext(ctx).Error("couldn't deliver results: ", err)
+		inslogger.FromContext(ctx).Error("couldn't serialize message: ", err)
+		return
 	}
+	sender.SendTarget(ctx, msg, target)
 }

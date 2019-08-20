@@ -63,6 +63,8 @@ type components struct {
 	NodeRef, NodeRole string
 	replicator        executor.LightReplicator
 	cleaner           executor.Cleaner
+
+	contractRequester *contractrequester.ContractRequester
 }
 
 func newComponents(ctx context.Context, cfg configuration.Configuration) (*components, error) {
@@ -153,10 +155,11 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 	)
 	{
 		var err error
-		Requester, err = contractrequester.New(nil)
+		comps.contractRequester, err = contractrequester.New(ctx, NetworkService)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start ContractRequester")
 		}
+		Requester = comps.contractRequester
 
 		API, err = api.NewRunner(&cfg.APIRunner)
 		if err != nil {
@@ -381,6 +384,9 @@ func (c *components) Start(ctx context.Context) error {
 func (c *components) Stop(ctx context.Context) error {
 	c.replicator.Stop()
 	c.cleaner.Stop()
+	if err := c.contractRequester.Stop(); err != nil {
+		inslogger.FromContext(ctx).Error("Error while stopping contractRequester", err)
+	}
 	return c.cmp.Stop(ctx)
 }
 

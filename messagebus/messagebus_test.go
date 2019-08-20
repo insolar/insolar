@@ -110,7 +110,7 @@ func prepare(t *testing.T, ctx context.Context, currentPulse int, msgPulse int) 
 	parcel.GetSenderMock.Set(func() (r insolar.Reference) {
 		return gen.Reference()
 	})
-	parcel.MessageMock.Return(&message.CallMethod{})
+	parcel.MessageMock.Return(&message.GenesisRequest{})
 
 	return mb, ps, parcel, expectedRef
 }
@@ -213,7 +213,7 @@ func TestMessageBus_createWatermillMessage(t *testing.T) {
 		PulseNumber: insolar.PulseNumber(100),
 	}
 	parcel := &message.Parcel{
-		Msg: &message.CallMethod{},
+		Msg: &message.GenesisRequest{},
 	}
 
 	msg := mb.createWatermillMessage(ctx, parcel, pulse)

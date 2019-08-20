@@ -58,8 +58,8 @@ func TestMessageBus_SendTarget(t *testing.T) {
 	externalMsgCh, err := pubsub.Subscribe(ctx, TopicOutgoing)
 	require.NoError(t, err)
 
-	p := []byte{1, 2, 3, 4, 5}
-	msg := message.NewMessage(watermill.NewUUID(), p)
+	msg, err := payload.NewMessage(&payload.CallMethod{})
+	require.NoError(t, err)
 
 	mapSizeBefore := len(b.replies)
 	results, done := b.SendTarget(ctx, msg, gen.Reference())
@@ -69,7 +69,40 @@ func TestMessageBus_SendTarget(t *testing.T) {
 	require.Equal(t, mapSizeBefore+1, len(b.replies))
 	externalMsg := <-externalMsgCh
 	require.Equal(t, msg.Metadata, externalMsg.Metadata)
-	require.Equal(t, p, []byte(msg.Payload))
+	require.Equal(t, msg.UUID, externalMsg.UUID)
+}
+
+func TestMessageBus_SendRequestResponseTarget(t *testing.T) {
+	ctx := context.Background()
+	logger := log.NewWatermillLogAdapter(inslogger.FromContext(ctx))
+	pubsub := gochannel.NewGoChannel(gochannel.Config{}, logger)
+
+	pulseMock := pulse.NewAccessorMock(t)
+	pulseMock.LatestMock.Return(*insolar.GenesisPulse, nil)
+
+	coordinatorMock := jet.NewCoordinatorMock(t)
+	coordinatorMock.MeMock.Return(gen.Reference())
+
+	pcs := testutils.NewPlatformCryptographyScheme()
+
+	b := NewBus(defaultConfig, pubsub, pulseMock, coordinatorMock, pcs)
+	externalMsgCh, err := pubsub.Subscribe(ctx, TopicOutgoingRequestResults)
+	require.NoError(t, err)
+
+	payloadResult := &payload.ReturnResults{
+		Reply: []byte{0x1, 0x2, 0x3, 0x4, 0x5},
+	}
+	msg, err := payload.NewMessage(payloadResult)
+	require.NoError(t, err)
+
+	mapSizeBefore := len(b.replies)
+	results, done := b.SendTarget(ctx, msg, gen.Reference())
+
+	require.NotNil(t, results)
+	require.NotNil(t, done)
+	require.Equal(t, mapSizeBefore+1, len(b.replies))
+	externalMsg := <-externalMsgCh
+	require.Equal(t, msg.Metadata, externalMsg.Metadata)
 	require.Equal(t, msg.UUID, externalMsg.UUID)
 }
 
