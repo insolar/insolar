@@ -168,7 +168,7 @@ func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) error {
 		logger.Error(err)
 		return errors.Wrap(err, "failed to unmarshal payload type")
 	}
-	ctx, logger = inslogger.WithField(ctx, "msg_type", payloadType.String())
+	ctx, _ = inslogger.WithField(ctx, "msg_type", payloadType.String())
 
 	ctx, span := instracer.StartSpan(ctx, payloadType.String())
 	defer span.End()
