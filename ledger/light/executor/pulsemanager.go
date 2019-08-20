@@ -86,9 +86,14 @@ func NewPulseManager(
 // Set set's new pulse and closes current jet drop.
 func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 	logger := inslogger.FromContext(ctx)
+	logger.WithFields(map[string]interface{}{
+		"new_pulse": newPulse.PulseNumber,
+	}).Info("trying to set new pulse")
 
 	m.setLock.Lock()
 	defer m.setLock.Unlock()
+
+	logger.Debug("behind set lock")
 
 	ctx, span := instracer.StartSpan(
 		ctx, "PulseManager.Set", trace.WithSampler(trace.AlwaysSample()),
@@ -98,11 +103,8 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 	)
 	defer span.End()
 
-	logger.WithFields(map[string]interface{}{
-		"new_pulse": newPulse.PulseNumber,
-	}).Debugf("received pulse")
-
 	// Dealing with node lists.
+	logger.Debug("dealing with node lists.")
 	{
 		fromNetwork := m.nodeNet.GetAccessor(newPulse.PulseNumber).GetWorkingNodes()
 		if len(fromNetwork) == 0 {
@@ -119,6 +121,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 		}
 	}
 
+	logger.Debug("before preparing state")
 	justJoined, jets, err := m.stateIniter.PrepareState(ctx, newPulse.PulseNumber)
 	if err != nil {
 		panic(errors.Wrap(err, "failed to prepare light for start"))
@@ -129,12 +132,15 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 	}
 
 	// Changing pulse.
+	logger.Debug("before changing pulse")
 	{
+		logger.Debug("before dispatcher closePulse")
 		m.dispatcher.ClosePulse(ctx, newPulse)
 
 		if !justJoined {
-
+			logger.Debug("before parsing jets")
 			for _, jet := range jets {
+				logger.Debugf("before hotStatusChecker.IsReceived jet:%v, pn:%v", jet, endedPulse)
 				received, err := m.hotStatusChecker.IsReceived(ctx, jet, endedPulse.PulseNumber)
 				if err != nil {
 					panic(errors.Wrap(err, "can't find waiter for pn/jet"))
@@ -144,40 +150,49 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 				}
 			}
 
+			logger.Debugf("before jetSplitter.Do endedPulse.PulseNumber:%v, newPulse.PulseNumber:%v", endedPulse.PulseNumber, newPulse.PulseNumber)
 			jets, err = m.jetSplitter.Do(ctx, endedPulse.PulseNumber, newPulse.PulseNumber, jets, true)
 			if err != nil {
 				panic(errors.Wrap(err, "failed to split jets"))
 			}
 		}
 
+		logger.Debugf("before jetReleaser.CloseAllUntil endedPulse.PulseNumber:%v", endedPulse.PulseNumber)
 		m.jetReleaser.CloseAllUntil(ctx, endedPulse.PulseNumber)
 
+		logger.Debugf("before writeManager.CloseAndWait endedPulse.PulseNumber:%v", endedPulse.PulseNumber)
 		err = m.writeManager.CloseAndWait(ctx, endedPulse.PulseNumber)
 		if err != nil {
 			panic(errors.Wrap(err, "can't close pulse for writing"))
 		}
 
+		logger.Debugf("before writeManager.Open newPulse.PulseNumber:%v", newPulse.PulseNumber)
 		err = m.writeManager.Open(ctx, newPulse.PulseNumber)
 		if err != nil {
 			panic(errors.Wrap(err, "failed to open pulse for writing"))
 		}
 
+		logger.Debugf("before pulseAppender.Append pn:%v", newPulse)
 		if err := m.pulseAppender.Append(ctx, newPulse); err != nil {
 			panic(errors.Wrap(err, "failed to add pulse"))
 		}
 
+		logger.Debugf("before dispatcher.BeginPulse newPulse:%v", newPulse)
 		m.dispatcher.BeginPulse(ctx, newPulse)
 	}
 
 	if !justJoined {
+		logger.Info("going to send hots")
 		go func() {
 			err = m.hotSender.SendHot(ctx, endedPulse.PulseNumber, newPulse.PulseNumber, jets)
 			if err != nil {
 				logger.Error("send Hot failed: ", err)
 			}
 		}()
+		logger.Info("going to notify cleaner about new pulse")
 		go m.lightReplicator.NotifyAboutPulse(ctx, newPulse.PulseNumber)
 	}
 
+	logger.Info("new pulse is set")
 	return nil
 }
