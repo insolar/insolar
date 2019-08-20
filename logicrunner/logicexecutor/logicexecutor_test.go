@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/gojuno/minimock"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 
@@ -214,7 +215,7 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 		{
 			name: "parent mismatch",
 			transcript: &common.Transcript{
-				ObjectDescriptor: artifacts.NewObjectDescriptorMock(mc),
+				ObjectDescriptor: artifacts.NewObjectDescriptorMock(mc).HeadRefMock.Return(&objRef),
 				Request: &record.IncomingRequest{
 					Prototype: insolar.NewEmptyReference(),
 				},
@@ -227,7 +228,18 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 					artifacts.NewCodeDescriptorMock(mc),
 					nil,
 				),
-			error: true,
+			error: false,
+			res: &requestresult.RequestResult{
+				RawResult: func() []byte {
+					err := errors.New("proxy call error: try to call method of prototype as method of another prototype")
+					errResBuf, err := foundation.MarshalMethodErrorResult(err)
+					if err != nil {
+						require.NoError(t, err)
+					}
+					return errResBuf
+				}(),
+				RawObjectReference: objRef,
+			},
 		},
 		{
 			name: "error, descriptors trouble",
