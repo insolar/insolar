@@ -173,7 +173,6 @@ func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) error {
 	ctx, span := instracer.StartSpan(ctx, payloadType.String())
 	defer span.End()
 
-	logger.Debug("starting procedure")
 	switch payloadType {
 	case payload.TypeGetRequest:
 		p := proc.NewSendRequest(meta)
