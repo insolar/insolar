@@ -355,9 +355,8 @@ func (f *EphemeralControlFeeder) CreateEphemeralPulsePacket(census census.Operat
 		pd = pulse.NewFirstEphemeralData()
 	}
 	pd = pd.CreateNextEphemeralPulse()
-	data := CreateEphemeralPulseData(pd)
 
-	return NewPulsePacketParser(pd, data)
+	return NewPulsePacketParser(pd)
 }
 
 func (f *EphemeralControlFeeder) CanStopOnHastyPulse(pn pulse.Number, expectedEndOfConsensus time.Time) bool {
