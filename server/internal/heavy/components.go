@@ -48,7 +48,6 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/contractrequester"
 	"github.com/insolar/insolar/cryptography"
-	"github.com/insolar/insolar/genesisdataprovider"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/delegationtoken"
@@ -168,20 +167,14 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 
 	// API.
 	var (
-		Requester       insolar.ContractRequester
-		GenesisProvider insolar.GenesisDataProvider
-		API             insolar.APIRunner
+		Requester insolar.ContractRequester
+		API       insolar.APIRunner
 	)
 	{
 		var err error
 		Requester, err = contractrequester.New(nil)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start ContractRequester")
-		}
-
-		GenesisProvider, err = genesisdataprovider.New()
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to start GenesisDataProvider")
 		}
 
 		API, err = api.NewRunner(&cfg.APIRunner)
@@ -369,7 +362,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		Tokens,
 		Parcels,
 		artifacts.NewClient(WmBus),
-		GenesisProvider,
 		API,
 		KeyProcessor,
 		Termination,

@@ -81,6 +81,61 @@ func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) 
 	return state, ret, err
 }
 
+func INSMETHOD_MigrationAdminCall(object []byte, data []byte) ([]byte, []byte, error) {
+	ph := common.CurrentProxyCtx
+	ph.SetSystemError(nil)
+	self := new(MigrationAdmin)
+
+	if len(object) == 0 {
+		return nil, nil, &foundation.Error{S: "[ FakeMigrationAdminCall ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+	}
+
+	err := ph.Deserialize(object, self)
+	if err != nil {
+		e := &foundation.Error{S: "[ FakeMigrationAdminCall ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		return nil, nil, e
+	}
+
+	args := make([]interface{}, 3)
+	var args0 map[string]interface{}
+	args[0] = &args0
+	var args1 string
+	args[1] = &args1
+	var args2 insolar.Reference
+	args[2] = &args2
+
+	err = ph.Deserialize(data, &args)
+	if err != nil {
+		e := &foundation.Error{S: "[ FakeMigrationAdminCall ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		return nil, nil, e
+	}
+
+	ret0, ret1 := self.MigrationAdminCall(args0, args1, args2)
+
+	if ph.GetSystemError() != nil {
+		return nil, nil, ph.GetSystemError()
+	}
+
+	state := []byte{}
+	err = ph.Serialize(self, &state)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	ret1 = ph.MakeErrorSerializable(ret1)
+
+	ret := []byte{}
+	err = ph.Serialize(
+		foundation.Result{Returns: []interface{}{ret0, ret1}},
+		&ret,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return state, ret, err
+}
+
 func INSMETHOD_GetAllMigrationDaemon(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
@@ -236,18 +291,18 @@ func INSMETHOD_DeactivateDaemon(object []byte, data []byte) ([]byte, []byte, err
 	return state, ret, err
 }
 
-func INSMETHOD_CheckActiveDaemon(object []byte, data []byte) ([]byte, []byte, error) {
+func INSMETHOD_CheckDaemon(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
 	self := new(MigrationAdmin)
 
 	if len(object) == 0 {
-		return nil, nil, &foundation.Error{S: "[ FakeCheckActiveDaemon ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+		return nil, nil, &foundation.Error{S: "[ FakeCheckDaemon ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
 	}
 
 	err := ph.Deserialize(object, self)
 	if err != nil {
-		e := &foundation.Error{S: "[ FakeCheckActiveDaemon ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		e := &foundation.Error{S: "[ FakeCheckDaemon ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
 		return nil, nil, e
 	}
 
@@ -257,11 +312,11 @@ func INSMETHOD_CheckActiveDaemon(object []byte, data []byte) ([]byte, []byte, er
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
-		e := &foundation.Error{S: "[ FakeCheckActiveDaemon ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		e := &foundation.Error{S: "[ FakeCheckDaemon ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
 		return nil, nil, e
 	}
 
-	ret0, ret1 := self.CheckActiveDaemon(args0)
+	ret0, ret1 := self.CheckDaemon(args0)
 
 	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()
@@ -389,10 +444,11 @@ func Initialize() XXX_insolar.ContractWrapper {
 		GetCode:      INSMETHOD_GetCode,
 		GetPrototype: INSMETHOD_GetPrototype,
 		Methods: XXX_insolar.ContractMethods{
+			"MigrationAdminCall":    INSMETHOD_MigrationAdminCall,
 			"GetAllMigrationDaemon": INSMETHOD_GetAllMigrationDaemon,
 			"ActivateDaemon":        INSMETHOD_ActivateDaemon,
 			"DeactivateDaemon":      INSMETHOD_DeactivateDaemon,
-			"CheckActiveDaemon":     INSMETHOD_CheckActiveDaemon,
+			"CheckDaemon":           INSMETHOD_CheckDaemon,
 			"GetActiveDaemons":      INSMETHOD_GetActiveDaemons,
 		},
 		Constructors: XXX_insolar.ContractConstructors{

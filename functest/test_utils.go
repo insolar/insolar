@@ -252,14 +252,19 @@ func getStatus(t testing.TB) statusResponse {
 	return rpcStatusResponse.Result
 }
 
-func activateDaemons(t *testing.T) error {
-	for _, user := range launchnet.MigrationDaemons {
-		_, err := signedRequest(t, &launchnet.MigrationAdmin, "migration.activateDaemon", map[string]interface{}{"reference": user.Ref})
-		if err != nil {
-			return errors.Wrapf(err, "failed activate migration daemon %s", user.Ref)
+func activateDaemons(t *testing.T) {
+	if len(launchnet.MigrationDaemons[0].Ref) > 0 {
+		res, err := signedRequest(t, &launchnet.MigrationAdmin, "migration.checkDaemon", map[string]interface{}{"reference": launchnet.MigrationDaemons[0].Ref})
+		require.NoError(t, err)
+		status := res.(map[string]interface{})["status"].(string)
+		if status == "inactive" {
+			for _, user := range launchnet.MigrationDaemons {
+				_, err := signedRequest(t, &launchnet.MigrationAdmin, "migration.activateDaemon", map[string]interface{}{"reference": user.Ref})
+				require.NoError(t, err)
+			}
 		}
 	}
-	return nil
+
 }
 
 func unmarshalRPCResponse(t testing.TB, body []byte, response RPCResponseInterface) {
