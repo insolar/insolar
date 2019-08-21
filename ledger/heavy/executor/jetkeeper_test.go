@@ -35,7 +35,7 @@ import (
 )
 
 func Test_JetKeeperKey(t *testing.T) {
-	k := executor.JetKeeperKey(19679249)
+	k := executor.JetKeeperKey(insolar.GenesisPulse.PulseNumber)
 	d := k.ID()
 	require.Equal(t, k, executor.NewJetKeeperKey(d))
 }
@@ -62,17 +62,35 @@ func initDB(t *testing.T, testPulse insolar.PulseNumber) (executor.JetKeeper, st
 	return jetKeeper, tmpdir, db, jets, pulses
 }
 
-func Test_TruncateHead(t *testing.T) {
+func Test_TruncateHead_TryToTruncateTopSync(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	testPulse := insolar.GenesisPulse.PulseNumber + 10
 	ji, tmpDir, db, _, _ := initDB(t, testPulse)
 	defer os.RemoveAll(tmpDir)
 	defer db.Stop(ctx)
+	err := ji.(*executor.DBJetKeeper).TruncateHead(ctx, 1)
+	require.EqualError(t, err, "try to truncate top sync pulse")
+}
 
-	err := ji.AddHotConfirmation(ctx, testPulse, gen.JetID(), true)
+func Test_TruncateHead(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+	testPulse := insolar.GenesisPulse.PulseNumber + 10
+	ji, tmpDir, db, jets, _ := initDB(t, testPulse)
+	defer os.RemoveAll(tmpDir)
+	defer db.Stop(ctx)
+
+	testJet := insolar.ZeroJetID
+
+	err := jets.Update(ctx, testPulse, true, testJet)
 	require.NoError(t, err)
-	err = ji.AddDropConfirmation(ctx, testPulse, gen.JetID(), true)
+	err = ji.AddHotConfirmation(ctx, testPulse, testJet, false)
 	require.NoError(t, err)
+	err = ji.AddDropConfirmation(ctx, testPulse, testJet, false)
+	require.NoError(t, err)
+	err = ji.AddBackupConfirmation(ctx, testPulse)
+	require.NoError(t, err)
+
+	require.Equal(t, testPulse, ji.TopSyncPulse())
 
 	_, err = db.Get(executor.JetKeeperKey(testPulse))
 	require.NoError(t, err)
@@ -82,7 +100,6 @@ func Test_TruncateHead(t *testing.T) {
 
 	_, err = db.Get(executor.JetKeeperKey(testPulse))
 	require.EqualError(t, err, "value not found")
-
 }
 
 func TestJetInfoIsConfirmed_OneDropOneHot(t *testing.T) {
