@@ -232,10 +232,14 @@ func TestDBIndexStorage_ForPulse(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, indexCount, len(indexes))
 
-		sort.Slice(indexes, func(i, j int) bool {
+		// Sort indexes for proper compare
+		// For now badger iterator already sorted by key but this behavior can change
+		indexCmp := func(i, j int) bool {
 			cmp := bytes.Compare(indexes[i].ObjID.Bytes(), indexes[j].ObjID.Bytes())
 			return cmp < 0
-		})
+		}
+		sort.Slice(realIndexes, indexCmp)
+		sort.Slice(indexes, indexCmp)
 
 		for i := 0; i < indexCount; i++ {
 			require.Equal(t, indexes[i], realIndexes[i])
