@@ -22,7 +22,6 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
-	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -36,7 +35,6 @@ type SendInitialState struct {
 		startPulse    pulse.StartPulse
 		jetKeeper     executor.JetKeeper
 		initialState  executor.InitialStateAccessor
-		jetTree       jet.Storage
 		pulseAccessor pulse.Accessor
 		sender        bus.Sender
 	}
