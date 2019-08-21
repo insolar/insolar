@@ -304,7 +304,6 @@ func (c *Phase01Controller) workerSendPhase1ToFixed(ctx context.Context, startIn
 func prepareTarget(target *population.NodeAppearance,
 	sendOptions transport.PacketSendOptions) (transport.TargetProfile, transport.PacketSendOptions) {
 
-	target.SetPacketSent(phases.PacketPhase1)
 	if !target.SetPacketSent(phases.PacketPhase1) {
 		return nil, 0
 	}
