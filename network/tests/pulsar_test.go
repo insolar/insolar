@@ -57,9 +57,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/insolar/insolar/network/consensus/common/pulse"
-	"github.com/insolar/insolar/network/transport"
 	"github.com/pkg/errors"
+
+	"github.com/insolar/insolar/network/transport"
+	"github.com/insolar/insolar/pulse"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"

@@ -24,9 +24,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
+
+	"github.com/insolar/insolar/pulse"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"

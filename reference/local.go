@@ -22,7 +22,7 @@ import (
 	"io"
 
 	"github.com/insolar/insolar/insolar/longbits"
-	"github.com/insolar/insolar/network/consensus/common/pulse"
+	"github.com/insolar/insolar/pulse"
 )
 
 var byteOrder = binary.BigEndian

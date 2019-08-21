@@ -21,7 +21,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/insolar/insolar/network/consensus/common/pulse"
+	"github.com/insolar/insolar/pulse"
 )
 
 func TestDecoder_Decode_legacy(t *testing.T) {

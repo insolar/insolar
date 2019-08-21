@@ -66,7 +66,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/insolar/insolar/network/consensus/common/pulse"
+	"github.com/insolar/insolar/pulse"
 )
 
 func TestNewLocalCensusBuilder(t *testing.T) {

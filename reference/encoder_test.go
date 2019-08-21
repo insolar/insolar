@@ -23,7 +23,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/insolar/longbits"
-	"github.com/insolar/insolar/network/consensus/common/pulse"
+	"github.com/insolar/insolar/pulse"
 )
 
 func generateBits224(zeroBytes int) longbits.Bits224 {
