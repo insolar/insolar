@@ -18,7 +18,6 @@ package executor
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
@@ -93,10 +92,11 @@ func (isk *InitialStateKeeper) Start(ctx context.Context) error {
 }
 
 func (isk *InitialStateKeeper) prepareDrops(ctx context.Context) {
+	logger := inslogger.FromContext(ctx)
 	for _, jetID := range isk.jetAccessor.All(ctx, isk.syncPulse) {
 		dr, err := isk.dropStorage.ForPulse(ctx, jetID, isk.syncPulse)
 		if err != nil {
-			panic(fmt.Sprintf("No drop found for pulse: %s", isk.syncPulse.String()))
+			logger.Fatal("No drop found for pulse: ", isk.syncPulse.String())
 		}
 
 		jetDrop := drop.MustEncode(&dr)
@@ -120,7 +120,7 @@ func (isk *InitialStateKeeper) prepareAbandonRequests(ctx context.Context) {
 
 	indexes, err := isk.indexStorage.ForPulse(ctx, isk.syncPulse)
 	if err != nil {
-		panic(fmt.Sprintf("[ InitialStateKeeper ] Cant recieve initial state indexes: %s", err.Error()))
+		logger.Fatal("Cant receive initial state indexes: ", err.Error())
 	}
 	if len(indexes) == 0 {
 		logger.Warnf("[ InitialStateKeeper ] No object indexes found in lastSyncPulseNumber: %s", isk.syncPulse.String())
@@ -136,12 +136,13 @@ func (isk *InitialStateKeeper) prepareAbandonRequests(ctx context.Context) {
 }
 
 func (isk *InitialStateKeeper) addIndexToState(ctx context.Context, index record.Index) {
+	logger := inslogger.FromContext(ctx)
 	indexJet, _ := isk.jetAccessor.ForID(ctx, isk.syncPulse, index.ObjID)
 	indexes, ok := isk.abandonRequestIndexes[indexJet]
 	if !ok {
 		// Someone changed jetTree in sync pulse while starting heavy material node
 		// If this ever happens - we need to stop network
-		panic(fmt.Sprintf("[ InitialStateKeeper ] Jet tree changed on preparing state. New jet: %s", indexJet))
+		logger.Fatal("Jet tree changed on preparing state. New jet: ", indexJet)
 	}
 	isk.abandonRequestIndexes[indexJet] = append(indexes, index)
 }
@@ -157,7 +158,7 @@ func (isk *InitialStateKeeper) Get(ctx context.Context, lightExecutor insolar.Re
 	for id, jetDrop := range isk.jetDrops {
 		light, err := isk.jetCoordinator.LightExecutorForJet(ctx, insolar.ID(id), pulse)
 		if err != nil {
-			panic(fmt.Sprintf("No drop found for pulse: %s", isk.syncPulse.String()))
+			logger.Fatal("No drop found for pulse ", isk.syncPulse.String())
 		}
 
 		if light.Equal(lightExecutor) {
