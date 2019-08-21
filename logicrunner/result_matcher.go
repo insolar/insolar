@@ -26,7 +26,6 @@ import (
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/payload"
-	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/messagebus"
 )
@@ -39,16 +38,16 @@ type ResultMatcher interface {
 	Clear(ctx context.Context)
 }
 
-type resultWithTraceID struct {
-	traceID string
-	result  message.ReturnResults
+type resultWithContext struct {
+	ctx    context.Context
+	result message.ReturnResults
 }
 
 type resultsMatcher struct {
 	lr                *LogicRunner
 	lock              sync.RWMutex
 	executionNodes    map[insolar.Reference]insolar.Reference
-	unwantedResponses map[insolar.Reference]resultWithTraceID
+	unwantedResponses map[insolar.Reference]resultWithContext
 }
 
 func newResultsMatcher(lr *LogicRunner) *resultsMatcher {
@@ -56,7 +55,7 @@ func newResultsMatcher(lr *LogicRunner) *resultsMatcher {
 		lr:                lr,
 		lock:              sync.RWMutex{},
 		executionNodes:    make(map[insolar.Reference]insolar.Reference),
-		unwantedResponses: make(map[insolar.Reference]resultWithTraceID),
+		unwantedResponses: make(map[insolar.Reference]resultWithContext),
 	}
 }
 
@@ -86,7 +85,7 @@ func (rm *resultsMatcher) AddStillExecution(ctx context.Context, msg *payload.St
 
 	for _, reqRef := range msg.RequestRefs {
 		if response, ok := rm.unwantedResponses[reqRef]; ok {
-			ctx = inslogger.ContextWithTrace(ctx, response.traceID)
+			ctx := response.ctx
 			go rm.send(ctx, &response.result, msg.Executor)
 			delete(rm.unwantedResponses, reqRef)
 		}
@@ -110,7 +109,10 @@ func (rm *resultsMatcher) AddUnwantedResponse(ctx context.Context, msg *message.
 		go rm.send(ctx, msg, node)
 		return nil
 	}
-	rm.unwantedResponses[msg.Reason] = resultWithTraceID{utils.TraceID(ctx), *msg}
+	rm.unwantedResponses[msg.Reason] = resultWithContext{
+		ctx:    ctx,
+		result: *msg,
+	}
 
 	return rm.isStillExecutor(ctx, object)
 }
@@ -141,5 +143,5 @@ func (rm *resultsMatcher) Clear(ctx context.Context) {
 	for reqRef := range rm.unwantedResponses {
 		logger.Warn("not claimed response to request ", reqRef.String(), ", not confirmed pending?")
 	}
-	rm.unwantedResponses = make(map[insolar.Reference]resultWithTraceID)
+	rm.unwantedResponses = make(map[insolar.Reference]resultWithContext)
 }
