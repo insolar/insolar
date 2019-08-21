@@ -31,7 +31,7 @@ type APIRunner struct {
 func NewAPIRunner(admin bool) APIRunner {
 	if admin {
 		return APIRunner{
-			Address: "localhost:19100",
+			Address: "localhost:19001",
 			RPC:     "/admin-api/rpc",
 			IsAdmin: true,
 		}
