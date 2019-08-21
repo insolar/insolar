@@ -436,11 +436,6 @@ func (jk *DBJetKeeper) all(pulse insolar.PulseNumber) []jetInfo {
 	return jets
 }
 
-const (
-	jetKeeperKeyPrefix = 0x01
-	syncPulseKeyPrefix = 0x02
-)
-
 type JetKeeperKey insolar.PulseNumber
 
 func (k JetKeeperKey) Scope() store.Scope {
@@ -448,21 +443,21 @@ func (k JetKeeperKey) Scope() store.Scope {
 }
 
 func (k JetKeeperKey) ID() []byte {
-	return append([]byte{jetKeeperKeyPrefix}, insolar.PulseNumber(k).Bytes()...)
+	return insolar.PulseNumber(k).Bytes()
 }
 
 func NewJetKeeperKey(raw []byte) JetKeeperKey {
-	return JetKeeperKey(binary.BigEndian.Uint32(raw[jetKeeperKeyPrefix:]))
+	return JetKeeperKey(binary.BigEndian.Uint32(raw))
 }
 
 type syncPulseKey struct{}
 
 func (k syncPulseKey) Scope() store.Scope {
-	return store.ScopeJetKeeper
+	return store.ScopeJetKeeperSyncPulse
 }
 
 func (k syncPulseKey) ID() []byte {
-	return []byte{syncPulseKeyPrefix}
+	return []byte{}
 }
 
 func (jk *DBJetKeeper) get(pn insolar.PulseNumber) ([]jetInfo, error) {
@@ -502,13 +497,16 @@ func (jk *DBJetKeeper) TruncateHead(ctx context.Context, from insolar.PulseNumbe
 	jk.lock.Lock()
 	defer jk.lock.Unlock()
 
+	if from <= jk.topSyncPulse() {
+		return errors.New("try to truncate top sync pulse")
+	}
+
 	it := jk.db.NewIterator(JetKeeperKey(from), false)
 	defer it.Close()
 
 	var hasKeys bool
 	for it.Next() {
 		hasKeys = true
-		fmt.Printf(">>>>>>>>>>>>>>>>>>>>>>>>>>: %#v\n", it.Key())
 		key := NewJetKeeperKey(it.Key())
 		err := jk.db.Delete(&key)
 		if err != nil {
