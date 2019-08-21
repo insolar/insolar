@@ -17,13 +17,9 @@
 package drop
 
 import (
-	"context"
-	"io/ioutil"
-	"os"
 	"testing"
 
-	"github.com/google/gofuzz"
-	"github.com/insolar/insolar/insolar/store"
+	fuzz "github.com/google/gofuzz"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"
@@ -75,88 +71,4 @@ func TestDropStorageMemory(t *testing.T) {
 		_, err := ms.ForPulse(ctx, inp.jetID, inp.pn)
 		require.Error(t, err, ErrNotFound)
 	}
-}
-
-func TestDropStorageDB(t *testing.T) {
-	ctx := inslogger.TestContext(t)
-	tmpdir, err := ioutil.TempDir("", "bdb-test-")
-	defer os.RemoveAll(tmpdir)
-	require.NoError(t, err)
-
-	db, err := store.NewBadgerDB(tmpdir)
-	require.NoError(t, err)
-	defer db.Stop(context.Background())
-	ds := NewDB(db)
-
-	var drops []Drop
-	genInputs := map[jetPulse]struct{}{}
-	f := fuzz.New().Funcs(func(jd *Drop, c fuzz.Continue) {
-		pn := gen.PulseNumber()
-		jd.Pulse = pn
-
-		jetID := gen.JetID()
-		jd.JetID = jetID
-
-		genInputs[jetPulse{jetID: jetID, pn: pn}] = struct{}{}
-	}).NumElements(5, 1000)
-	f.Fuzz(&drops)
-
-	// Add
-	for _, dr := range drops {
-		err := ds.Set(ctx, dr)
-		require.NoError(t, err)
-	}
-
-	// Fetch
-	for inp := range genInputs {
-		_, err := ds.ForPulse(ctx, inp.jetID, inp.pn)
-		require.NoError(t, err)
-	}
-}
-
-func TestDropStorageCompare(t *testing.T) {
-	ctx := inslogger.TestContext(t)
-
-	tmpdir, err := ioutil.TempDir("", "bdb-test-")
-	defer os.RemoveAll(tmpdir)
-	require.NoError(t, err)
-
-	db, err := store.NewBadgerDB(tmpdir)
-	require.NoError(t, err)
-	defer db.Stop(context.Background())
-	ds := NewDB(db)
-	ms := NewStorageMemory()
-
-	var drops []Drop
-	genInputs := map[jetPulse]struct{}{}
-	f := fuzz.New().Funcs(func(jd *Drop, c fuzz.Continue) {
-		pn := gen.PulseNumber()
-		jd.Pulse = pn
-
-		jetID := gen.JetID()
-		jd.JetID = jetID
-
-		genInputs[jetPulse{jetID: jetID, pn: pn}] = struct{}{}
-	}).NumElements(5, 1000)
-	f.Fuzz(&drops)
-
-	// Add
-	for _, dr := range drops {
-		err := ds.Set(ctx, dr)
-		require.NoError(t, err)
-		err = ms.Set(ctx, dr)
-		require.NoError(t, err)
-	}
-
-	// Fetch
-	for inp := range genInputs {
-		dbDrop, err := ds.ForPulse(ctx, inp.jetID, inp.pn)
-		require.NoError(t, err)
-
-		memDrop, err := ms.ForPulse(ctx, inp.jetID, inp.pn)
-		require.NoError(t, err)
-
-		require.Equal(t, dbDrop, memDrop)
-	}
-
 }

@@ -23,7 +23,6 @@ import (
 	"math/rand"
 	"os"
 	"testing"
-	"time"
 
 	fuzz "github.com/google/gofuzz"
 	"github.com/insolar/insolar/insolar"
@@ -31,7 +30,6 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/store"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -45,60 +43,6 @@ func TestRecordKey(t *testing.T) {
 
 	actualKey := newRecordKey(rawID)
 	require.Equal(t, expectedKey, actualKey)
-}
-
-func TestRecordStorage_TruncateHead(t *testing.T) {
-	t.Parallel()
-
-	ctx := inslogger.TestContext(t)
-	tmpdir, err := ioutil.TempDir("", "bdb-test-")
-	defer os.RemoveAll(tmpdir)
-	assert.NoError(t, err)
-
-	dbMock, err := store.NewBadgerDB(tmpdir)
-	defer dbMock.Stop(ctx)
-	require.NoError(t, err)
-
-	recordStore := NewRecordDB(dbMock)
-
-	numElements := 100
-
-	// it's used for writing pulses in random order to db
-	indexes := make([]int, numElements)
-	for i := 0; i < numElements; i++ {
-		indexes[i] = i
-	}
-	rand.Seed(time.Now().UnixNano())
-	rand.Shuffle(len(indexes), func(i, j int) { indexes[i], indexes[j] = indexes[j], indexes[i] })
-
-	startPulseNumber := insolar.GenesisPulse.PulseNumber
-	ids := make([]insolar.ID, numElements)
-	for _, idx := range indexes {
-		pulse := startPulseNumber + insolar.PulseNumber(idx)
-		ids[idx] = *insolar.NewID(pulse, []byte(testutils.RandomString()))
-
-		err := recordStore.Set(ctx, record.Material{JetID: *insolar.NewJetID(uint8(idx), nil), ID: ids[idx]})
-		require.NoError(t, err)
-	}
-
-	for i := 0; i < numElements; i++ {
-		_, err := recordStore.ForID(ctx, ids[i])
-		require.NoError(t, err)
-	}
-
-	numLeftElements := numElements / 2
-	err = recordStore.TruncateHead(ctx, startPulseNumber+insolar.PulseNumber(numLeftElements))
-	require.NoError(t, err)
-
-	for i := 0; i < numLeftElements; i++ {
-		_, err := recordStore.ForID(ctx, ids[i])
-		require.NoError(t, err)
-	}
-
-	for i := numElements - 1; i >= numLeftElements; i-- {
-		_, err := recordStore.ForID(ctx, ids[i])
-		require.EqualError(t, err, ErrNotFound.Error())
-	}
 }
 
 func TestRecordStorage_NewStorageMemory(t *testing.T) {
