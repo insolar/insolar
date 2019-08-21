@@ -18,6 +18,7 @@ package executor
 
 import (
 	"context"
+	"sync"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
@@ -53,6 +54,7 @@ type InitialStateKeeper struct {
 	indexStorage   object.IndexAccessor
 	dropStorage    drop.Accessor
 
+	lock                  sync.RWMutex
 	syncPulse             insolar.PulseNumber
 	jetDrops              map[insolar.JetID][]byte
 	abandonRequestIndexes map[insolar.JetID][]record.Index
@@ -79,6 +81,9 @@ func NewInitialStateKeeper(
 // Start method prepares state before network starts
 func (isk *InitialStateKeeper) Start(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
+
+	isk.lock.Lock()
+	defer isk.lock.Unlock()
 
 	logger.Debug("[ InitialStateKeeper ] Prepare drops for JetIds")
 	isk.prepareDrops(ctx)
@@ -147,6 +152,9 @@ func (isk *InitialStateKeeper) addIndexToState(ctx context.Context, index record
 
 func (isk *InitialStateKeeper) Get(ctx context.Context, lightExecutor insolar.Reference, pulse insolar.PulseNumber) *InitialState {
 	logger := inslogger.FromContext(ctx)
+
+	isk.lock.RLock()
+	defer isk.lock.RUnlock()
 
 	var jetIDs []insolar.JetID
 	var drops [][]byte
