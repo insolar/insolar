@@ -200,6 +200,13 @@ func (g *Base) ValidateCert(ctx context.Context, authCert insolar.AuthorizationC
 // ============= Bootstrap =======
 
 func (g *Base) canAnnounceCandidate(ctx context.Context) bool {
+	// 1. Current node is heavy:
+	// 		could announce candidate when network is initialized
+	// 		NB: announcing in WaitConsensus state is allowed
+	// 2. Otherwise:
+	// 		could announce candidate when heavy node found in *active* list and initial consensus passed
+	// 		NB: announcing in WaitConsensus state is *NOT* allowed
+
 	state := g.Gatewayer.Gateway().GetState()
 
 	if g.NodeKeeper.GetOrigin().Role() == insolar.StaticRoleHeavyMaterial {
