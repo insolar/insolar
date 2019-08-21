@@ -14,27 +14,25 @@
 // limitations under the License.
 //
 
-package reply
+// +build functest
+
+package functest
 
 import (
 	"fmt"
+	"os"
+	"testing"
 
-	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/testutils/launchnet"
+	"github.com/pkg/errors"
 )
 
-// HeavyError carries heavy sync error information.
-type HeavyError struct {
-	Message  string
-	JetID    insolar.JetID
-	PulseNum insolar.PulseNumber
-}
-
-// Type implementation of Reply interface.
-func (e *HeavyError) Type() insolar.ReplyType {
-	return TypeHeavyError
-}
-
-// Error returns error message for stored type.
-func (e *HeavyError) Error() string {
-	return fmt.Sprintf("%v (JetID=%v, PulseNum=%v)", e.Message, e.JetID, e.PulseNum)
+func TestMain(m *testing.M) {
+	os.Exit(launchnet.Run(func() int {
+		err := setMigrationDaemonsRef()
+		if err != nil {
+			fmt.Println(errors.Wrap(err, "[ setup ] get reference daemons by public key failed ").Error())
+		}
+		return m.Run()
+	}))
 }

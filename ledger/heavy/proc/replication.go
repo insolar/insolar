@@ -70,5 +70,7 @@ func (p *Replication) Proceed(ctx context.Context) error {
 
 	stats.Record(ctx, statReceivedHeavyPayloadCount.M(1))
 
+	logger.Info("finish replication msg processing")
+
 	return nil
 }

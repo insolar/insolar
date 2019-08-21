@@ -51,7 +51,6 @@
 package adapters
 
 import (
-	"bytes"
 	"time"
 
 	"github.com/insolar/insolar/insolar"
@@ -61,8 +60,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
-	"github.com/insolar/insolar/network/hostnetwork/packet"
-	"github.com/insolar/insolar/network/pulsenetwork"
+	"github.com/insolar/insolar/network/consensus/serialization/pulseserialization"
 )
 
 const nanosecondsInSecond = int64(time.Second / time.Nanosecond)
@@ -113,21 +111,18 @@ func NewPulseDigest(data pulse.Data) cryptkit.Digest {
 	return cryptkit.NewDigest(&bits, SHA3512Digest)
 }
 
-func CreateEphemeralPulseData(data pulse.Data) []byte {
-	insolarPulse := NewPulse(data)
-	pulsePacket := pulsenetwork.NewPulsePacket(&insolarPulse, nil, nil, 0)
-	bs, _ := packet.SerializePacket(pulsePacket)
-	receivedPacket, _ := packet.DeserializePacketRaw(bytes.NewReader(bs))
-	return receivedPacket.Bytes()
-}
-
 type PulsePacketParser struct {
 	longbits.FixedReader
 	digest cryptkit.DigestHolder
 	pulse  pulse.Data
 }
 
-func NewPulsePacketParser(pulse pulse.Data, data []byte) *PulsePacketParser {
+func NewPulsePacketParser(pulse pulse.Data) *PulsePacketParser {
+	data, err := pulseserialization.Serialize(pulse)
+	if err != nil {
+		panic(err.Error())
+	}
+
 	return &PulsePacketParser{
 		FixedReader: longbits.NewFixedReader(data),
 		digest:      NewPulseDigest(pulse).AsDigestHolder(),

@@ -220,7 +220,7 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 		contracts.GetAccountGenesisContractState(g.ContractsConfig.RootBalance, insolar.GenesisNameRootAccount, insolar.GenesisNameRootDomain),
 		contracts.GetAccountGenesisContractState(g.ContractsConfig.MDBalance, insolar.GenesisNameMigrationAdminAccount, insolar.GenesisNameRootDomain),
 		contracts.GetAccountGenesisContractState("0", insolar.GenesisNameFeeAccount, insolar.GenesisNameRootDomain),
-
+		contracts.GetMigrationAdminGenesisContractState(),
 		contracts.GetCostCenterGenesisContractState(),
 	}
 
