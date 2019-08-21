@@ -89,6 +89,7 @@ func NewDependencies(
 				indexStorage,
 				jetCoordinator,
 				sender,
+				writeAccessor,
 			)
 		},
 		SetRequest: func(p *SetRequest) {
