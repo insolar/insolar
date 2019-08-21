@@ -20,15 +20,13 @@ import (
 	"context"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus"
-	censusprom "go.opencensus.io/exporter/prometheus"
+	prometheusclient "github.com/prometheus/client_golang/prometheus"
+	"go.opencensus.io/exporter/prometheus"
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
 
-	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/insolar"
 )
-
-var TagNodeStaticRole = MustTagKey("role")
 
 // MustTagKey creates new tag.Key, panics on error
 func MustTagKey(key string) tag.Key {
@@ -59,20 +57,19 @@ func ChangeTags(ctx context.Context, mutator ...tag.Mutator) context.Context {
 
 // RegisterPrometheus creates prometheus exporter and registers it in opencensus view lib.
 func RegisterPrometheus(
-	ctx context.Context,
 	namespace string,
-	registry *prometheus.Registry,
+	registry *prometheusclient.Registry,
 	reportperiod time.Duration,
+	inslog insolar.Logger,
 	nodeRole string,
-) (*censusprom.Exporter, error) {
-	inslog := inslogger.FromContext(ctx)
-	exporter, err := censusprom.NewExporter(censusprom.Options{
+) (*prometheus.Exporter, error) {
+	exporter, err := prometheus.NewExporter(prometheus.Options{
 		Namespace: namespace,
 		Registry:  registry,
 		OnError: func(err error) {
 			inslog.Error("Failed to export to Prometheus: ", err)
 		},
-		ConstLabels: prometheus.Labels{"role": nodeRole},
+		ConstLabels: prometheusclient.Labels{"role": nodeRole},
 	})
 	if err != nil {
 		return nil, err

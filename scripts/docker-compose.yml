@@ -1,7 +1,7 @@
 version: '3.7'
 services:
   prometheus:
-    image: "prom/prometheus:v2.7.0"
+    image: "prom/prometheus:v2.12.0"
     volumes:
       - ${PROMETHEUS_CONFIG_DIR}:/etc/prometheus:ro
     command:
@@ -10,7 +10,7 @@ services:
       - '9090:9090'
 
   grafana:
-    image: grafana/grafana:5.4.2
+    image: grafana/grafana:6.3.3
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=pass
       - GF_EXPLORE_ENABLED=true
@@ -27,6 +27,8 @@ services:
 # but they provide more powerful  search and analysis than Jaeger's UI (augments it actually).
   elasticsearch:
     image: "docker.elastic.co/elasticsearch/elasticsearch:6.5.4"
+    # update blocked by https://github.com/jaegertracing/jaeger/issues/1474:
+#    image: "docker.elastic.co/elasticsearch/elasticsearch:7.3.0"
     ports:
       - "9200:9200"
       - "9300:9300"
@@ -44,13 +46,14 @@ services:
 
   kibana:
     image: "docker.elastic.co/kibana/kibana:6.5.4"
+# update blocked by https://github.com/jaegertracing/jaeger/issues/1474:
+#    image: "docker.elastic.co/kibana/kibana:7.3.0"
     ports:
       - "5601:5601"
     depends_on:
       - elasticsearch
-
   jaeger:
-    image: "jaegertracing/all-in-one:1.13"
+    image: "jaegertracing/all-in-one:1.13.1"
     ports:
       - "6831:6831/udp"
       - "16686:16686"
