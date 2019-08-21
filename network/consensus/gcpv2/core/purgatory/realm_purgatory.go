@@ -215,7 +215,7 @@ func (p *RealmPurgatory) getMember(id insolar.ShortNodeID, introducedBy insolar.
 	return na, na
 }
 
-func (p *RealmPurgatory) ascendFromPurgatory(ctx context.Context, id insolar.ShortNodeID, nsp profiles.StaticProfile,
+func (p *RealmPurgatory) ascendFromPurgatory(ctx context.Context, phantom *NodePhantom, nsp profiles.StaticProfile,
 	rank member.Rank, sv cryptkit.SignatureVerifier) {
 
 	if sv == nil {
@@ -229,13 +229,14 @@ func (p *RealmPurgatory) ascendFromPurgatory(ctx context.Context, id insolar.Sho
 		np = censusimpl.NewNodeProfileExt(rank.GetIndex(), nsp, sv, rank.GetPower(), rank.GetMode())
 	}
 
-	nav := population.NewEmptyNodeAppearance(&np)
+	nav := population.NewNodeAppearance(&np, 0, phantom.limiter, nil, nil)
 	na := &nav
 
 	p.rw.Lock()
 	defer p.rw.Unlock()
-	p.phantomByID[id] = nil // leave marker
+	p.phantomByID[phantom.nodeID] = nil // leave marker
 	// delete(p.phantomByEP, ...)
+
 	na, _ = p.population.AddToDynamics(ctx, na)
 
 	inslogger.FromContext(ctx).Debugf("Candidate/joiner has ascended as dynamic node: s=%d, t=%d, full=%v",

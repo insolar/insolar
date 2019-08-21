@@ -217,6 +217,11 @@ func (p PacketLimiter) GetRemainingPacketCountDefault() uint8 {
 	return p.GetRemainingPacketCount(5)
 }
 
+func (p PacketLimiter) MergeSent(limiter PacketLimiter) PacketLimiter {
+	p.sent |= limiter.sent
+	return p
+}
+
 func fmtNodeStatePhases(b *strings.Builder, prefix byte, ns uint16, limits *LimitCounters) {
 
 	if ns == 0 {
