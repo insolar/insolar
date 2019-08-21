@@ -259,10 +259,10 @@ func (p *RoundStateMachineWorker) runToLastState() (exitState RoundState) {
 			exitState = RoundAborted
 			// TODO log
 		}
+		p.trafficControl.ResumeTraffic()
 		if p.stopperFn != nil {
 			p.stopperFn()
 		}
-		p.trafficControl.ResumeTraffic()
 	}()
 
 	exitState = RoundAborted

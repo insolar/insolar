@@ -379,6 +379,10 @@ func (p *PrepRealm) _applyPulseData(_ context.Context, pdp proofs.OriginalPulsar
 		}
 	}
 
+	if p.pulseData == pd {
+		return false, pd.PulseNumber
+	}
+
 	p.originalPulse = pdp
 	p.pulseData = pd
 

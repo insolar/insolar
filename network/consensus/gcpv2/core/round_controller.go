@@ -187,11 +187,18 @@ func (r *PhasedRoundController) PrepareConsensusRound(upstream api.UpstreamContr
 }
 
 func (r *PhasedRoundController) onConsensusStopper() {
+	if !r.realm.census.IsActive() {
+		inslogger.FromContext(r.realm.roundContext).Warnf(
+			"Stopping previous consensus round: self={%v}, ephemeral=%v, bundle=%v, census=%+v", r.realm.GetLocalProfile(),
+			r.realm.ephemeralFeeder != nil, r.bundle, r.realm.census)
+		return
+	}
+
 	latest, _ := r.chronicle.GetLatestCensus()
 
 	inslogger.FromContext(r.realm.roundContext).Warnf(
-		"Stopping consensus round: self={%v}, ephemeral=%v, bundle=%v, census=%+v", r.realm.GetLocalProfile(),
-		r.realm.ephemeralFeeder != nil, r.bundle, latest)
+		"Stopping consensus round: self={%v}, ephemeral=%v, bundle=%v, roundCensus=%v, latestCensus=%+v", r.realm.GetLocalProfile(),
+		r.realm.ephemeralFeeder != nil, r.bundle, r.realm.census, latest)
 
 	if latest.GetOnlinePopulation().GetLocalProfile().IsJoiner() {
 		panic("DEBUG FAIL-FAST: local remains as joiner")
