@@ -177,9 +177,10 @@ func (r *FullRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 		}
 	}
 
-	if !sourceNode.SetPacketReceived(pt) {
-		return fmt.Errorf("packet type (%v) limit exceeded: from=%v(%v)", pt, sourceNode.GetNodeID(), from)
-	}
+	// todo fixme
+	//if !sourceNode.SetPacketReceived(pt) {
+	//	return fmt.Errorf("packet type (%v) limit exceeded: from=%v(%v)", pt, sourceNode.GetNodeID(), from)
+	//}
 
 	return sourceNode.DispatchMemberPacket(ctx, packet, from, verifyFlags, pd)
 }
