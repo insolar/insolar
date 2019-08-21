@@ -35,6 +35,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const indexCount = 5
+
 func TestIndexKey(t *testing.T) {
 	t.Parallel()
 
@@ -128,7 +130,7 @@ func TestIndexDB_TruncateHead(t *testing.T) {
 		bucket.ObjID = objects[idx]
 		indexStore.SetIndex(ctx, pulse, bucket)
 
-		for i := 0; i < 5; i++ {
+		for i := 0; i < indexCount; i++ {
 			bucket := record.Index{}
 
 			bucket.ObjID = gen.ID()
@@ -220,7 +222,7 @@ func TestDBIndexStorage_ForPulse(t *testing.T) {
 		storage := NewIndexDB(db, nil)
 
 		var indexes []record.Index
-		for i := 0; i < 5; i++ {
+		for i := 0; i < indexCount; i++ {
 			indexes = append(indexes, record.Index{ObjID: gen.ID()})
 			err = storage.SetIndex(ctx, pn, indexes[i])
 			require.NoError(t, err)
@@ -228,14 +230,14 @@ func TestDBIndexStorage_ForPulse(t *testing.T) {
 
 		realIndexes, err := storage.ForPulse(ctx, pn)
 		require.NoError(t, err)
-		require.Equal(t, 5, len(indexes))
+		require.Equal(t, indexCount, len(indexes))
 
 		sort.Slice(indexes, func(i, j int) bool {
 			cmp := bytes.Compare(indexes[i].ObjID.Bytes(), indexes[j].ObjID.Bytes())
 			return cmp < 0
 		})
 
-		for i := 0; i < 5; i++ {
+		for i := 0; i < indexCount; i++ {
 			require.Equal(t, indexes[i], realIndexes[i])
 		}
 	})
