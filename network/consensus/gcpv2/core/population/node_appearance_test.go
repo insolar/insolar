@@ -331,10 +331,13 @@ func TestSetPacketReceived(t *testing.T) {
 	hook := &Hook{}
 	na := NodeAppearance{limiter: phases.PacketLimiter{}, hook: hook}
 	require.True(t, na.SetPacketReceived(pt))
+
 	require.False(t, na.SetPacketReceived(pt))
+
 	require.False(t, na.SetPacketReceived(pt))
 
 	pt = phases.PacketPhase2
 	require.True(t, na.SetPacketReceived(pt))
+
 	require.False(t, na.SetPacketReceived(pt))
 }
