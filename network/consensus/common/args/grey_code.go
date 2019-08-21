@@ -82,5 +82,5 @@ func GreyIncBit(v uint) uint8 {
 	if r < 4 { // quick path
 		return r
 	}
-	return uint8(bits.Len(GreyInc(v)))
+	return uint8(bits.Len(GreyInc(v)) - 1)
 }
