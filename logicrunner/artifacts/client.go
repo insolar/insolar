@@ -85,7 +85,6 @@ func newLocalStorage() *localStorage {
 // Client provides concrete API to storage for processing module.
 type client struct {
 	JetStorage     jet.Storage                        `inject:""`
-	DefaultBus     insolar.MessageBus                 `inject:""`
 	PCS            insolar.PlatformCryptographyScheme `inject:""`
 	PulseAccessor  pulse.Accessor                     `inject:""`
 	JetCoordinator jet.Coordinator                    `inject:""`

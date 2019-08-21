@@ -102,11 +102,7 @@ func (n *ServiceNetwork) sendMessage(ctx context.Context, msg *message.Message) 
 	// Short path when sending to self node. Skip serialization
 	origin := n.NodeKeeper.GetOrigin()
 	if node.Equal(origin.ID()) {
-		topic := bus.TopicIncoming
-		if msg.Metadata.Get(busMeta.Type) == busMeta.TypeReturnResults {
-			topic = bus.TopicIncomingRequestResults
-		}
-		err := n.Pub.Publish(topic, msg)
+		err := n.Pub.Publish(getIncomingTopic(msg), msg)
 		if err != nil {
 			return errors.Wrap(err, "error while publish msg to TopicIncoming")
 		}
@@ -140,12 +136,7 @@ func (n *ServiceNetwork) processIncoming(ctx context.Context, args []byte) ([]by
 	}
 	// TODO: check pulse here
 
-	topic := bus.TopicIncoming
-	if msg.Metadata.Get(busMeta.Type) == busMeta.TypeReturnResults {
-		topic = bus.TopicIncomingRequestResults
-	}
-
-	err = n.Pub.Publish(topic, msg)
+	err = n.Pub.Publish(getIncomingTopic(msg), msg)
 	if err != nil {
 		err = errors.Wrap(err, "error while publish msg to TopicIncoming")
 		logger.Error(err)
@@ -153,4 +144,12 @@ func (n *ServiceNetwork) processIncoming(ctx context.Context, args []byte) ([]by
 	}
 
 	return ack, nil
+}
+
+func getIncomingTopic(msg *message.Message) string {
+	topic := bus.TopicIncoming
+	if msg.Metadata.Get(busMeta.Type) == busMeta.TypeReturnResults {
+		topic = bus.TopicIncomingRequestResults
+	}
+	return topic
 }

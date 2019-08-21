@@ -22,7 +22,6 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
-	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
@@ -92,12 +91,6 @@ func (rm *resultsMatcher) AddUnwantedResponse(ctx context.Context, msg *payload.
 	rm.lock.Lock()
 	defer rm.lock.Unlock()
 
-	object := *msg.Target.Record()
-	err := rm.isStillExecutor(ctx, object)
-	if err != nil {
-		return err
-	}
-
 	inslogger.FromContext(ctx).Debug("got unwanted response to request ", msg.RequestRef.String())
 
 	if node, ok := rm.executionNodes[msg.Reason]; ok {
@@ -109,22 +102,6 @@ func (rm *resultsMatcher) AddUnwantedResponse(ctx context.Context, msg *payload.
 		result: *msg,
 	}
 
-	return rm.isStillExecutor(ctx, object)
-}
-
-// isStillExecutor is tmp solution. Needs to be moved on flow
-func (rm *resultsMatcher) isStillExecutor(ctx context.Context, object insolar.ID) error {
-	pulse, err := rm.lr.PulseAccessor.Latest(ctx)
-	if err != nil {
-		return flow.ErrCancelled
-	}
-	node, err := rm.lr.JetCoordinator.VirtualExecutorForObject(ctx, object, pulse.PulseNumber)
-	if err != nil {
-		return flow.ErrCancelled
-	}
-	if *node != rm.lr.JetCoordinator.Me() {
-		return flow.ErrCancelled
-	}
 	return nil
 }
 

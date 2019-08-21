@@ -201,19 +201,16 @@ func (b *Bus) sendTarget(
 		return res, func() {}
 	}
 
-	payloadType, err := payload.UnmarshalType(msg.Payload)
-	if err != nil {
-		inslogger.FromContext(ctx).Warn("deprecated message")
-	}
+	msgType := messagePayloadTypeName(msg)
 
-	mctx := insmetrics.InsertTag(ctx, tagMessageType, payloadType.String())
+	mctx := insmetrics.InsertTag(ctx, tagMessageType, msgType)
 	stats.Record(mctx, statSent.M(int64(len(msg.Payload))))
 	defer func() {
 		stats.Record(mctx, statSentTime.M(float64(time.Since(start).Nanoseconds())/1e6))
 	}()
 
 	// configure logger
-	ctx, _ = inslogger.WithField(ctx, "sending_type", payloadType.String())
+	ctx, _ = inslogger.WithField(ctx, "sending_type", msgType)
 	logger := inslogger.FromContext(ctx)
 	span.AddAttributes(
 		trace.StringAttribute("sending_type", msg.Metadata.Get(meta.Type)),
@@ -457,4 +454,15 @@ func (b *Bus) wrapMeta(
 	msg.Payload = buf
 
 	return meta, msg, nil
+}
+
+// messagePayloadTypeName returns message type.
+// Parses type from payload if failed returns type from metadata field 'type'.
+func messagePayloadTypeName(msg *message.Message) string {
+	payloadType, err := payload.UnmarshalType(msg.Payload)
+	if err != nil {
+		// branch for legacy messages format: INS-2973
+		return msg.Metadata.Get(meta.Type)
+	}
+	return payloadType.String()
 }

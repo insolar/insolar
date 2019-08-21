@@ -142,11 +142,18 @@ func (e *requestsExecutor) SendReply(
 		msg *message2.Message
 	)
 
+	var replyBytes []byte
+
+	if re != nil {
+		replyBytes = reply.ToBytes(re)
+	}
+
 	if transcript.Request.APINode.IsEmpty() {
 		msg, err = payload.NewResultMessage(&payload.ReturnResults{
+			Target:     transcript.Request.Caller,
 			RequestRef: transcript.RequestRef,
 			Reason:     transcript.Request.Reason,
-			Reply:      reply.ToBytes(re),
+			Reply:      replyBytes,
 			Error:      errStr,
 		})
 		if err != nil {
@@ -161,7 +168,7 @@ func (e *requestsExecutor) SendReply(
 
 	msg, err = payload.NewResultMessage(&payload.ReturnResults{
 		RequestRef: transcript.RequestRef,
-		Reply:      reply.ToBytes(re),
+		Reply:      replyBytes,
 		Error:      errStr,
 	})
 	sender.SendTarget(ctx, msg, transcript.Request.APINode)

@@ -111,7 +111,7 @@ func initComponents(
 	keyProcessor insolar.KeyProcessor,
 	certManager insolar.CertificateManager,
 
-) (*component.Manager, insolar.TerminationHandler, func(context.Context)) {
+) (*component.Manager, insolar.TerminationHandler, func()) {
 	cm := component.Manager{}
 
 	// Watermill.
@@ -159,10 +159,10 @@ func initComponents(
 	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner, publisher, b)
 	checkError(ctx, err, "failed to start LogicRunner")
 
-	contractRequester, err := contractrequester.New(ctx, subscriber, b)
+	contractRequester, err := contractrequester.New()
 	checkError(ctx, err, "failed to start ContractRequester")
 
-	contractRequester.UnwantedResponseCallback = logicrunner.UnwantedResponseHandler(logicRunner)
+	contractRequester.LR = logicRunner
 
 	pm := pulsemanager.NewPulseManager(logicRunner.ResultsMatcher)
 
@@ -210,18 +210,12 @@ func initComponents(
 
 	pm.FlowDispatcher = logicRunner.FlowDispatcher
 
-	stopper := startWatermill(
+	return &cm, terminationHandler, startWatermill(
 		ctx, wmLogger, subscriber, b,
 		nw.SendMessageHandler,
 		logicRunner.FlowDispatcher.Process,
+		contractRequester.ReceiveResult,
 	)
-
-	return &cm, terminationHandler, func(ctx context.Context) {
-		if err := contractRequester.Stop(); err != nil {
-			inslogger.FromContext(ctx).Error("Error while stopping contractRequester", err)
-		}
-		stopper()
-	}
 }
 
 func startWatermill(
@@ -229,7 +223,7 @@ func startWatermill(
 	logger watermill.LoggerAdapter,
 	sub message.Subscriber,
 	b *bus.Bus,
-	outHandler, inHandler message.NoPublishHandlerFunc,
+	outHandler, inHandler, resultsHandler message.NoPublishHandlerFunc,
 ) func() {
 	inRouter, err := message.NewRouter(message.RouterConfig{}, logger)
 	if err != nil {
@@ -258,19 +252,16 @@ func startWatermill(
 		inHandler,
 	)
 
+	inRouter.AddNoPublisherHandler(
+		"IncomingRequestResultHandler",
+		bus.TopicIncomingRequestResults,
+		sub,
+		resultsHandler)
+
 	startRouter(ctx, inRouter)
 	startRouter(ctx, outRouter)
 
 	return stopWatermill(ctx, inRouter, outRouter)
-}
-
-func startRouter(ctx context.Context, router *message.Router) {
-	go func() {
-		if err := router.Run(ctx); err != nil {
-			inslogger.FromContext(ctx).Error("Error while running router", err)
-		}
-	}()
-	<-router.Running()
 }
 
 func stopWatermill(ctx context.Context, routers ...io.Closer) func() {
@@ -282,4 +273,13 @@ func stopWatermill(ctx context.Context, routers ...io.Closer) func() {
 			}
 		}
 	}
+}
+
+func startRouter(ctx context.Context, router *message.Router) {
+	go func() {
+		if err := router.Run(ctx); err != nil {
+			inslogger.FromContext(ctx).Error("Error while running router", err)
+		}
+	}()
+	<-router.Running()
 }

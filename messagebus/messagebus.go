@@ -399,16 +399,6 @@ func (mb *MessageBus) checkPulse(ctx context.Context, parcel insolar.Parcel, loc
 				ppn, pulse.PulseNumber, parcel.Message(),
 			)
 		}
-
-		// Parcel is from past. Return error for some messages, allow for others.
-		switch parcel.Message().(type) {
-		// case
-		// 	*message.CallMethod:
-		// 	inslogger.FromContext(ctx).Errorf("[ checkPulse ] Incorrect message pulse (parcel: %d, current: %d) Msg: %s", ppn, pulse.PulseNumber, parcel.Message().Type().String())
-		// 	return fmt.Errorf("[ checkPulse ] Incorrect message pulse (parcel: %d, current: %d)  Msg: %s", ppn, pulse.PulseNumber, parcel.Message().Type().String())
-		default:
-			return fmt.Errorf("[ checkPulse ] should not be called")
-		}
 	}
 
 	return nil

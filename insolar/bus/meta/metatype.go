@@ -4,7 +4,8 @@ const (
 	// TypeReply is Type for messages with insolar.Reply in Payload
 	TypeReply = "reply"
 
-	// MetaReturnResult
+	// TypeReturnResults is Type of messages with *payload.ReturnResults in Payload
+	// should be handled by contractrequester
 	TypeReturnResults = "returnresults"
 )
 

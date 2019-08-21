@@ -29,7 +29,6 @@ import (
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/common"
@@ -190,7 +189,6 @@ func (q *ExecutionBroker) processTranscript(ctx context.Context, transcript *com
 	replyData, err := q.requestsExecutor.ExecuteAndSave(ctx, transcript)
 	if err != nil {
 		logger.Warn("contract execution error: ", err)
-		replyData = &reply.Error{}
 	}
 
 	q.finishTask(ctx, transcript)

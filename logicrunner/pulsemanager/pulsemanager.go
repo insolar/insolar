@@ -38,7 +38,6 @@ import (
 // PulseManager implements insolar.PulseManager.
 type PulseManager struct {
 	LR             insolar.LogicRunner       `inject:""`
-	Bus            insolar.MessageBus        `inject:""`
 	NodeNet        network.NodeNetwork       `inject:""`
 	GIL            insolar.GlobalInsolarLock `inject:""`
 	NodeSetter     node.Modifier             `inject:""`
@@ -85,11 +84,6 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 	oldPulse, err := m.setUnderGilSection(ctx, newPulse)
 	if err != nil {
 		return err
-	}
-
-	err = m.Bus.OnPulse(ctx, newPulse)
-	if err != nil {
-		inslogger.FromContext(ctx).Error(errors.Wrap(err, "MessageBus OnPulse() returns error"))
 	}
 
 	err = m.LR.OnPulse(ctx, *oldPulse, newPulse)

@@ -119,15 +119,6 @@ func prepare(t *testing.T, ctx context.Context, currentPulse int, msgPulse int) 
 	return mb, ps, parcel, expectedRef
 }
 
-func TestMessageBus_doDeliver_PrevPulse(t *testing.T) {
-	ctx := context.Background()
-	mb, _, parcel, _ := prepare(t, ctx, 100, 99)
-
-	result, err := mb.doDeliver(ctx, parcel)
-	require.Error(t, err)
-	require.Nil(t, result)
-}
-
 func TestMessageBus_doDeliver_SamePulse(t *testing.T) {
 	ctx := context.Background()
 	mb, _, parcel, _ := prepare(t, ctx, 100, 100)

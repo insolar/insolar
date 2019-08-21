@@ -34,7 +34,6 @@ import (
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/dispatcher"
 	"github.com/insolar/insolar/insolar/jet"
-	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -49,15 +48,11 @@ import (
 	"github.com/insolar/insolar/network"
 )
 
-var _ insolar.LogicRunner = &LogicRunner{}
-
 // LogicRunner is a general interface of contract executor
 type LogicRunner struct {
-	MessageBus                 insolar.MessageBus                 `inject:""`
 	ContractRequester          insolar.ContractRequester          `inject:""`
 	NodeNetwork                network.NodeNetwork                `inject:""`
 	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
-	ParcelFactory              message.ParcelFactory              `inject:""`
 	PulseAccessor              pulse.Accessor                     `inject:""`
 	ArtifactManager            artifacts.Client                   `inject:""`
 	DescriptorsCache           artifacts.DescriptorsCache         `inject:""`
@@ -183,7 +178,7 @@ func (lr *LogicRunner) initializeGoPlugin(ctx context.Context) error {
 		logger.Error("Starting goplugin VM with RPC turned off")
 	}
 
-	gp, err := goplugin.NewGoPlugin(lr.Cfg, lr.MessageBus, lr.ArtifactManager)
+	gp, err := goplugin.NewGoPlugin(lr.Cfg, lr.ArtifactManager)
 	if err != nil {
 		return err
 	}
@@ -313,9 +308,17 @@ func contextWithServiceData(ctx context.Context, data *payload.ServiceData) cont
 	return ctx
 }
 
-func UnwantedResponseHandler(lr *LogicRunner) func(ctx context.Context, msg payload.Payload) error {
-	return func(ctx context.Context, msg payload.Payload) error {
-		m := msg.(*payload.ReturnResults)
-		return lr.ResultsMatcher.AddUnwantedResponse(ctx, m)
+func (lr *LogicRunner) AddUnwantedResponse(ctx context.Context, msg insolar.Payload) error {
+	m := msg.(*payload.ReturnResults)
+	currentPulse, err := lr.PulseAccessor.Latest(ctx)
+	if err != nil {
+		return errors.Wrap(err, "failed to get current pulse")
 	}
+	done, err := lr.WriteController.Begin(ctx, currentPulse.PulseNumber)
+	defer done()
+	if err != nil {
+		return flow.ErrCancelled
+	}
+
+	return lr.ResultsMatcher.AddUnwantedResponse(ctx, m)
 }

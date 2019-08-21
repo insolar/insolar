@@ -61,7 +61,10 @@ type HandleAdditionalCallFromPreviousExecutor struct {
 // execution of this handle. In this scenario user is in a bad luck. The request will be lost and
 // user will have to re-send it after some timeout.
 func (h *HandleAdditionalCallFromPreviousExecutor) Present(ctx context.Context, f flow.Flow) error {
-	logger := inslogger.FromContext(ctx).WithField("handler", "HandleAdditionalCallFromPreviousExecutor")
+	ctx, logger := inslogger.WithFields(ctx, map[string]interface{}{
+		"handler": "HandleAdditionalCallFromPreviousExecutor",
+	})
+
 	logger.Debug("Handler.Present starts")
 
 	message := payload.AdditionalCallFromPreviousExecutor{}
@@ -72,7 +75,7 @@ func (h *HandleAdditionalCallFromPreviousExecutor) Present(ctx context.Context, 
 
 	ctx = contextWithServiceData(ctx, message.ServiceData)
 
-	ctx, logger = inslogger.WithFields(ctx, map[string]interface{}{
+	ctx, _ = inslogger.WithFields(ctx, map[string]interface{}{
 		"object":  message.ObjectReference.String(),
 		"request": message.Request.String(),
 	})

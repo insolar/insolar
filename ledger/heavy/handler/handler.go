@@ -140,14 +140,14 @@ func (h *Handler) Process(msg *watermillMsg.Message) error {
 	}
 	logger := inslogger.FromContext(ctx)
 
-	meta := payload.Meta{}
-	err = meta.Unmarshal(msg.Payload)
+	metaPayload := payload.Meta{}
+	err = metaPayload.Unmarshal(msg.Payload)
 	if err != nil {
-		logger.Error(err)
+		logger.Error(errors.Wrap(err, "failed to unmarshal payload"))
 		return nil
 	}
 
-	err = h.handle(ctx, meta)
+	err = h.handle(ctx, metaPayload)
 	if err != nil {
 		logger.Error(errors.Wrap(err, "handle error"))
 	}

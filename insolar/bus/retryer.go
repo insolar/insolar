@@ -58,7 +58,7 @@ func (r *RetrySender) SendTarget(ctx context.Context, msg *message.Message, targ
 }
 
 func (r *RetrySender) Reply(ctx context.Context, origin payload.Meta, reply *message.Message) {
-	r.sender.Reply(ctx, origin, reply)
+	panic("not implemented")
 }
 
 // SendRole sends message to specified role, using provided Sender.SendRole. If error with CodeFlowCanceled
@@ -105,11 +105,7 @@ func (r *RetrySender) retryWrapper(ctx context.Context, msg *message.Message, ca
 		}
 
 		if tries < r.retries {
-			payloadType, err := payload.UnmarshalType(msg.Payload)
-			if err != nil {
-				logger.Error(errors.Errorf("unknown payload type"))
-			}
-			mctx := insmetrics.InsertTag(ctx, tagMessageType, payloadType.String())
+			mctx := insmetrics.InsertTag(ctx, tagMessageType, messagePayloadTypeName(msg))
 			stats.Record(mctx, statRetries.M(int64(r.retries-tries)))
 		}
 

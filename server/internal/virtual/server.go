@@ -102,7 +102,7 @@ func (s *Server) Serve() {
 		err = cm.GracefulStop(ctx)
 		checkError(ctx, err, "failed to graceful stop components")
 
-		stopWatermill(ctx)
+		stopWatermill()
 
 		err = cm.Stop(ctx)
 		checkError(ctx, err, "failed to stop components")

@@ -114,7 +114,7 @@ func TestRetryerSend_Send_Timeout(t *testing.T) {
 	require.Equal(t, firstUUID, lastUUID)
 }
 
-func SendTestReply(pl payload.Payload, ch chan<- *message.Message, isDone chan<- interface{}) {
+func sendTestReply(pl payload.Payload, ch chan<- *message.Message, isDone chan<- interface{}) {
 	msg, _ := payload.NewMessage(pl)
 	meta := payload.Meta{
 		Payload: msg.Payload,
@@ -143,7 +143,7 @@ func TestRetryerSend(t *testing.T) {
 	reps, done := r.SendRole(context.Background(), msg, insolar.DynamicRoleLightExecutor, gen.Reference())
 
 	isDone := make(chan<- interface{})
-	go SendTestReply(&payload.Error{Text: "object is deactivated", Code: payload.CodeUnknown}, innerReps, isDone)
+	go sendTestReply(&payload.Error{Text: "object is deactivated", Code: payload.CodeUnknown}, innerReps, isDone)
 
 	var success bool
 	for rep := range reps {
@@ -188,7 +188,7 @@ func TestRetryerSend_ExpectTwoResponse_GotOneError(t *testing.T) {
 
 	isDone := make(chan<- interface{})
 	go func() {
-		SendTestReply(&payload.Error{Text: "object is deactivated", Code: payload.CodeUnknown}, innerReps, isDone)
+		sendTestReply(&payload.Error{Text: "object is deactivated", Code: payload.CodeUnknown}, innerReps, isDone)
 	}()
 
 	var success bool
@@ -223,9 +223,9 @@ func TestRetryerSend_FlowCancelled_Once(t *testing.T) {
 	sender.SendRoleMock.Set(func(p context.Context, p1 *message.Message, p2 insolar.DynamicRole, p3 insolar.Reference) (r <-chan *message.Message, r1 func()) {
 		innerReps = make(chan *message.Message)
 		if sender.SendRoleAfterCounter() == 0 {
-			go SendTestReply(&payload.Error{Text: "test error", Code: payload.CodeFlowCanceled}, innerReps, make(chan<- interface{}))
+			go sendTestReply(&payload.Error{Text: "test error", Code: payload.CodeFlowCanceled}, innerReps, make(chan<- interface{}))
 		} else {
-			go SendTestReply(&payload.State{}, innerReps, make(chan<- interface{}))
+			go sendTestReply(&payload.State{}, innerReps, make(chan<- interface{}))
 		}
 		return innerReps, func() { close(innerReps) }
 	})
@@ -269,11 +269,11 @@ func TestRetryerSend_FlowCancelled_Once_SeveralReply(t *testing.T) {
 		innerReps = make(chan *message.Message)
 		if sender.SendRoleAfterCounter() == 0 {
 			log.Error("send test error code flow canceled")
-			go SendTestReply(&payload.Error{Text: "test error", Code: payload.CodeFlowCanceled}, innerReps, make(chan<- interface{}))
+			go sendTestReply(&payload.Error{Text: "test error", Code: payload.CodeFlowCanceled}, innerReps, make(chan<- interface{}))
 		} else {
 			log.Error("send test error code flow not-canceled")
-			go SendTestReply(&payload.State{}, innerReps, make(chan<- interface{}))
-			go SendTestReply(&payload.State{}, innerReps, make(chan<- interface{}))
+			go sendTestReply(&payload.State{}, innerReps, make(chan<- interface{}))
+			go sendTestReply(&payload.State{}, innerReps, make(chan<- interface{}))
 		}
 		return innerReps, func() { close(innerReps) }
 	})
@@ -314,7 +314,7 @@ func TestRetryerSend_FlowCancelled_RetryExceeded(t *testing.T) {
 	innerReps := make(chan *message.Message)
 	sender.SendRoleMock.Set(func(p context.Context, p1 *message.Message, p2 insolar.DynamicRole, p3 insolar.Reference) (r <-chan *message.Message, r1 func()) {
 		innerReps = make(chan *message.Message)
-		go SendTestReply(&payload.Error{Text: "test error", Code: payload.CodeFlowCanceled}, innerReps, make(chan<- interface{}))
+		go sendTestReply(&payload.Error{Text: "test error", Code: payload.CodeFlowCanceled}, innerReps, make(chan<- interface{}))
 		return innerReps, func() { close(innerReps) }
 	})
 
@@ -351,16 +351,16 @@ func TestRetryerSend_FlowCancelled_Between(t *testing.T) {
 		if sender.SendRoleAfterCounter() == 0 {
 			go func() {
 				isDone := make(chan interface{})
-				go SendTestReply(&payload.State{}, innerReps, isDone)
+				go sendTestReply(&payload.State{}, innerReps, isDone)
 				<-isDone
-				go SendTestReply(&payload.Error{Text: "test error", Code: payload.CodeFlowCanceled}, innerReps, make(chan<- interface{}))
+				go sendTestReply(&payload.Error{Text: "test error", Code: payload.CodeFlowCanceled}, innerReps, make(chan<- interface{}))
 			}()
 		} else {
 			go func() {
 				isDone := make(chan interface{})
-				go SendTestReply(&payload.State{}, innerReps, isDone)
+				go sendTestReply(&payload.State{}, innerReps, isDone)
 				<-isDone
-				go SendTestReply(&payload.State{}, innerReps, make(chan<- interface{}))
+				go sendTestReply(&payload.State{}, innerReps, make(chan<- interface{}))
 			}()
 		}
 		return innerReps, func() { close(innerReps) }

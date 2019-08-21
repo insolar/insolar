@@ -39,7 +39,6 @@ import (
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/executionregistry"
 	"github.com/insolar/insolar/logicrunner/writecontroller"
-	"github.com/insolar/insolar/testutils"
 )
 
 func TestHandleCall_CheckExecutionLoop(t *testing.T) {
@@ -308,7 +307,6 @@ func TestHandleCall_Present(t *testing.T) {
 				ResultsMatcher: nil,
 				lr: &LogicRunner{
 					ArtifactManager: artifacts.NewClientMock(mc),
-					MessageBus:      testutils.NewMessageBusMock(mc),
 				},
 				Sender:        nil,
 				JetStorage:    nil,
@@ -360,7 +358,6 @@ func TestHandleCall_Present(t *testing.T) {
 				ResultsMatcher: nil,
 				lr: &LogicRunner{
 					ArtifactManager: artifacts.NewClientMock(mc),
-					MessageBus:      testutils.NewMessageBusMock(mc),
 				},
 				Sender:        nil,
 				JetStorage:    nil,
@@ -412,7 +409,6 @@ func TestHandleCall_Present(t *testing.T) {
 				ResultsMatcher: nil,
 				lr: &LogicRunner{
 					ArtifactManager: artifacts.NewClientMock(mc),
-					MessageBus:      testutils.NewMessageBusMock(mc),
 				},
 				Sender:        nil,
 				JetStorage:    nil,

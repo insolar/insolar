@@ -56,48 +56,29 @@ func NewWaitOKSender(sender Sender) *WaitOKSender {
 func (c *WaitOKSender) SendRole(
 	ctx context.Context, msg *message.Message, role insolar.DynamicRole, ref insolar.Reference,
 ) {
-	msgType := msg.Metadata.Get(busMeta.Type)
-	if msgType == "" {
-		payloadType, err := payload.UnmarshalType(msg.Payload)
-		if err != nil {
-			inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to unmarshal payload type"))
-		}
-		msgType = payloadType.String()
-	}
-	ctx, _ = inslogger.WithField(ctx, "msg_type", msgType)
+	ctx, _ = inslogger.WithField(ctx, "msg_type", messagePayloadTypeName(msg))
 
 	reps, done := c.sender.SendRole(ctx, msg, role, ref)
 	defer done()
 
-	rep, ok := <-reps
-
-	if !ok {
-		logger := inslogger.FromContext(ctx)
-		logger.Errorf("reply channel was closed before we get any valid replies")
-		return
-	}
-
-	checkReply(ctx, rep)
+	processResult(ctx, reps)
 }
 
 // SendTarget sends message to specified target, using provided Sender.SendTarget. It waiting for one reply and
 // close replies channel after getting it. If reply is not reply.OK, it logs error message.
 func (c *WaitOKSender) SendTarget(
 	ctx context.Context, msg *message.Message, target insolar.Reference) {
-	msgType := msg.Metadata.Get(busMeta.Type)
-	if msgType == "" {
-		payloadType, err := payload.UnmarshalType(msg.Payload)
-		if err != nil {
-			inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to unmarshal payload type"))
-		}
-		msgType = payloadType.String()
-	}
-	ctx, _ = inslogger.WithField(ctx, "msg_type", msgType)
+
+	ctx, _ = inslogger.WithField(ctx, "msg_type", messagePayloadTypeName(msg))
 
 	reps, done := c.sender.SendTarget(ctx, msg, target)
 	defer done()
 
-	rep, ok := <-reps
+	processResult(ctx, reps)
+}
+
+func processResult(ctx context.Context, responses <-chan *message.Message) {
+	rep, ok := <-responses
 
 	if !ok {
 		logger := inslogger.FromContext(ctx)

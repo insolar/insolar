@@ -58,6 +58,8 @@ import (
 	"github.com/insolar/insolar/testutils/network"
 )
 
+var _ insolar.LogicRunner = &LogicRunner{}
+
 type LogicRunnerCommonTestSuite struct {
 	suite.Suite
 
@@ -105,7 +107,6 @@ func (suite *LogicRunnerCommonTestSuite) SetupLogicRunner() {
 	suite.lr, _ = NewLogicRunner(&configuration.LogicRunner{}, suite.pub, suite.sender)
 	suite.lr.ArtifactManager = suite.am
 	suite.lr.DescriptorsCache = suite.dc
-	suite.lr.MessageBus = suite.mb
 	suite.lr.MachinesManager = suite.mm
 	suite.lr.JetCoordinator = suite.jc
 	suite.lr.PulseAccessor = suite.ps
@@ -276,8 +277,6 @@ func (suite *LogicRunnerTestSuite) TestStartStop() {
 	}, suite.pub, suite.sender)
 	suite.Require().NoError(err)
 	suite.Require().NotNil(lr)
-
-	lr.MessageBus = suite.mb
 
 	lr.MachinesManager = suite.mm
 
