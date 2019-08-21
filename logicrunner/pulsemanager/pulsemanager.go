@@ -148,7 +148,7 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 	// We must clear resultsMatcher before any ReturnResults or StillExecution messages for new pulse will be received
 	// StillExecution messages use Dispatcher for processing, so we must do Dispatcher.BeginPulse AFTER clear
 	// ReturnResults messages use MessageBus for processing, which use GIL for stopping messages. So we must do unlock GIL AFTER clear
-	m.resultsMatcher.Clear()
+	m.resultsMatcher.Clear(ctx)
 
 	return &storagePulse, nil
 }

@@ -20,13 +20,14 @@ import (
 	"context"
 	"sync"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/messagebus"
-	"github.com/pkg/errors"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/logicrunner.ResultMatcher -o ./ -s _mock.go -g
@@ -34,7 +35,7 @@ import (
 type ResultMatcher interface {
 	AddStillExecution(ctx context.Context, msg *payload.StillExecuting)
 	AddUnwantedResponse(ctx context.Context, msg *message.ReturnResults) error
-	Clear()
+	Clear(ctx context.Context)
 }
 
 type resultWithContext struct {
@@ -58,17 +59,21 @@ func newResultsMatcher(lr *LogicRunner) *resultsMatcher {
 	}
 }
 
-func (rm *resultsMatcher) send(ctx context.Context, msg insolar.Message, receiver *insolar.Reference) {
+func (rm *resultsMatcher) send(ctx context.Context, msg *message.ReturnResults, receiver insolar.Reference) {
+	logger := inslogger.FromContext(ctx)
+
+	logger.Debug("resending result of request ", msg.RequestRef.String(), " to ", receiver.String())
+
 	sender := messagebus.BuildSender(
 		rm.lr.MessageBus.Send,
 		messagebus.RetryIncorrectPulse(rm.lr.PulseAccessor),
 		messagebus.RetryFlowCancelled(rm.lr.PulseAccessor),
 	)
 	_, err := sender(ctx, msg, &insolar.MessageSendOptions{
-		Receiver: receiver,
+		Receiver: &receiver,
 	})
 	if err != nil {
-		inslogger.FromContext(ctx).Warn(errors.Wrap(err, "[ resultsMatcher::send ] Couldn't resend response"))
+		logger.Error(errors.Wrap(err, "couldn't resend response"))
 	}
 }
 
@@ -76,11 +81,13 @@ func (rm *resultsMatcher) AddStillExecution(ctx context.Context, msg *payload.St
 	rm.lock.Lock()
 	defer rm.lock.Unlock()
 
+	inslogger.FromContext(ctx).Debug("got pendings confirmation")
+
 	for _, reqRef := range msg.RequestRefs {
 		if response, ok := rm.unwantedResponses[reqRef]; ok {
 			ctx := response.ctx
-			inslogger.FromContext(ctx).Debug("[ resultsMatcher::AddStillExecution ] resend unwanted response ", reqRef)
-			go rm.send(ctx, &response.result, &msg.Executor)
+			go rm.send(ctx, &response.result, msg.Executor)
+			delete(rm.unwantedResponses, reqRef)
 		}
 		rm.executionNodes[reqRef] = msg.Executor
 	}
@@ -89,17 +96,17 @@ func (rm *resultsMatcher) AddStillExecution(ctx context.Context, msg *payload.St
 func (rm *resultsMatcher) AddUnwantedResponse(ctx context.Context, msg *message.ReturnResults) error {
 	rm.lock.Lock()
 	defer rm.lock.Unlock()
-	object := *msg.Target.Record()
 
+	object := *msg.Target.Record()
 	err := rm.isStillExecutor(ctx, object)
 	if err != nil {
 		return err
 	}
 
+	inslogger.FromContext(ctx).Debug("got unwanted response to request ", msg.RequestRef.String())
+
 	if node, ok := rm.executionNodes[msg.Reason]; ok {
-		inslogger.FromContext(ctx).Debug("[ resultsMatcher::AddUnwantedResponse ] resend unwanted response ", msg.Reason)
-		go rm.send(ctx, msg, &node)
-		delete(rm.unwantedResponses, msg.Reason)
+		go rm.send(ctx, msg, node)
 		return nil
 	}
 	rm.unwantedResponses[msg.Reason] = resultWithContext{
@@ -126,9 +133,19 @@ func (rm *resultsMatcher) isStillExecutor(ctx context.Context, object insolar.ID
 	return nil
 }
 
-func (rm *resultsMatcher) Clear() {
+func (rm *resultsMatcher) Clear(ctx context.Context) {
 	rm.lock.Lock()
 	defer rm.lock.Unlock()
+
 	rm.executionNodes = make(map[insolar.Reference]insolar.Reference)
+	<<<<<<< HEAD
 	rm.unwantedResponses = make(map[insolar.Reference]resultWithContext)
+	====== =
+
+	logger := inslogger.FromContext(ctx)
+	for reqRef := range rm.unwantedResponses {
+		logger.Warn("not claimed response to request ", reqRef.String(), ", not confirmed pending?")
+	}
+	rm.unwantedResponses = make(map[insolar.Reference]resultWithTraceID)
+	>>>>>>> cfa7720c382d509e765b919a445992716ccd2f75
 }

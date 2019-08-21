@@ -48,59 +48,29 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package gateway
+package pulseserialization
 
 import (
-	"context"
-	"github.com/gojuno/minimock"
-	"testing"
-	"time"
+	"bytes"
+	"encoding/binary"
 
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network"
-	mock "github.com/insolar/insolar/testutils/network"
-	"github.com/stretchr/testify/assert"
+	"github.com/insolar/insolar/network/consensus/common/pulse"
 )
 
-func TestWaitConsensus_ConsensusNotHappenedInETA(t *testing.T) {
-	mc := minimock.NewController(t)
-	defer mc.Finish()
-	defer mc.Wait(time.Minute)
+func Serialize(p pulse.Data) ([]byte, error) {
+	buf := bytes.Buffer{}
+	if err := binary.Write(&buf, binary.BigEndian, p); err != nil {
+		return nil, err
+	}
 
-	gatewayer := mock.NewGatewayerMock(mc)
-	gatewayer.SwitchStateMock.Set(func(ctx context.Context, state insolar.NetworkState, pulse insolar.Pulse) {
-		assert.Equal(t, insolar.NoNetworkState, state)
-	})
-
-	waitConsensus := newWaitConsensus(&Base{})
-	waitConsensus.Gatewayer = gatewayer
-	waitConsensus.bootstrapETA = time.Millisecond
-	waitConsensus.bootstrapTimer = time.NewTimer(waitConsensus.bootstrapETA)
-
-	waitConsensus.Run(context.Background(), *insolar.EphemeralPulse)
+	return buf.Bytes(), nil
 }
 
-func TestWaitConsensus_ConsensusHappenedInETA(t *testing.T) {
-	mc := minimock.NewController(t)
-	defer mc.Finish()
-	defer mc.Wait(time.Minute)
+func Deserialize(b []byte) (pulse.Data, error) {
+	d := pulse.Data{}
+	if err := binary.Read(bytes.NewReader(b), binary.BigEndian, &d); err != nil {
+		return d, err
+	}
 
-	gatewayer := mock.NewGatewayerMock(mc)
-	gatewayer.SwitchStateMock.Set(func(ctx context.Context, state insolar.NetworkState, pulse insolar.Pulse) {
-		assert.Equal(t, insolar.WaitMajority, state)
-	})
-
-	waitConsensus := newWaitConsensus(&Base{})
-	assert.Equal(t, insolar.WaitConsensus, waitConsensus.GetState())
-	waitConsensus.Gatewayer = gatewayer
-	accessorMock := mock.NewPulseAccessorMock(mc)
-	accessorMock.GetPulseMock.Set(func(ctx context.Context, p1 insolar.PulseNumber) (p2 insolar.Pulse, err error) {
-		return *insolar.EphemeralPulse, nil
-	})
-	waitConsensus.PulseAccessor = accessorMock
-	waitConsensus.bootstrapETA = time.Second
-	waitConsensus.bootstrapTimer = time.NewTimer(waitConsensus.bootstrapETA)
-	waitConsensus.OnConsensusFinished(context.Background(), network.Report{})
-
-	waitConsensus.Run(context.Background(), *insolar.EphemeralPulse)
+	return d, nil
 }
