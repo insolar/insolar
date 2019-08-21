@@ -80,18 +80,20 @@ func TestEncoder_Encode(t *testing.T) {
 
 	{
 		enc := NewBase58Encoder(0)
-		assert.Equal(t, NilRef, enc.Encode(nil))
+		result, _ := enc.Encode(nil)
+		assert.Equal(t, NilRef, result)
 	}
 
 	{
 		enc := NewBase58Encoder(0)
-		assert.Equal(t, "00", enc.Encode(&Global{}))
+		result, _ := enc.Encode(&Global{})
+		assert.Equal(t, "00", result)
 	}
 
 	{
 		g := createRandomSelfReference()
 		enc := NewBase58Encoder(0)
-		result := enc.Encode(g)
+		result, _ := enc.Encode(g)
 		assert.NotContains(t, result, '.')
 		assert.NotContains(t, result, ':')
 		assert.NotContains(t, result, '/')
@@ -101,7 +103,7 @@ func TestEncoder_Encode(t *testing.T) {
 	{
 		g := createRandomSelfReference()
 		enc := NewBase58Encoder(FormatSchema)
-		result := enc.Encode(g)
+		result, _ := enc.Encode(g)
 		assert.NotContains(t, result, '.')
 		assert.Contains(t, result, "base58+insolarv1:")
 	}
@@ -109,7 +111,7 @@ func TestEncoder_Encode(t *testing.T) {
 	{
 		g := createRandomSelfReference()
 		enc := NewBase58Encoder(EncodingSchema)
-		result := enc.Encode(g)
+		result, _ := enc.Encode(g)
 		assert.NotContains(t, result, '.')
 		assert.Contains(t, result, "base58:")
 	}
@@ -118,7 +120,7 @@ func TestEncoder_Encode(t *testing.T) {
 		g := createRandomSelfReference()
 		enc := NewBase58Encoder(0)
 		enc.authorityName = "someAuthority"
-		result := enc.Encode(g)
+		result, _ := enc.Encode(g)
 		assert.NotContains(t, result, '.')
 		assert.Contains(t, result, "//someAuthority/")
 	}
@@ -126,7 +128,7 @@ func TestEncoder_Encode(t *testing.T) {
 	{
 		g := createRandomSelfReferenceWithSpecialPulse()
 		enc := NewBase58Encoder(0)
-		result := enc.Encode(g)
+		result, _ := enc.Encode(g)
 		assert.Regexp(t, "^0.*", result)
 	}
 }
@@ -136,18 +138,19 @@ func TestEncoder_EncodeRecord(t *testing.T) {
 
 	{
 		enc := NewBase58Encoder(0)
-		assert.Equal(t, NilRef, enc.EncodeRecord(nil))
+		result, _ := enc.EncodeRecord(nil)
+		assert.Equal(t, NilRef, result)
 	}
 
 	{
 		enc := NewBase58Encoder(0)
 
 		g := Global{}
-		result := enc.EncodeRecord(&g.addressLocal)
+		result, _ := enc.EncodeRecord(&g.addressLocal)
 		assert.Equal(t, "0.record", result)
 
 		g.addressLocal.hash = generateBits224(0)
-		result = enc.EncodeRecord(&g.addressLocal)
+		result, _ = enc.EncodeRecord(&g.addressLocal)
 		assert.Equal(t, "0.record", result)
 
 	}
@@ -155,28 +158,28 @@ func TestEncoder_EncodeRecord(t *testing.T) {
 	{
 		g := createRandomSelfReferenceWithSpecialPulse()
 		enc := NewBase58Encoder(0)
-		result := enc.EncodeRecord(&g.addressLocal)
+		result, _ := enc.EncodeRecord(&g.addressLocal)
 		assert.Regexp(t, "^0.*.record", result)
 	}
 
 	{
 		g := createRandomSelfReference()
 		enc := NewBase58Encoder(0)
-		result := enc.EncodeRecord(&g.addressLocal)
+		result, _ := enc.EncodeRecord(&g.addressLocal)
 		assert.Regexp(t, "^1.*.record", result)
 	}
 
 	{
 		g := createRandomSelfReference()
 		enc := NewBase58Encoder(EncodingSchema)
-		result := enc.EncodeRecord(&g.addressLocal)
+		result, _ := enc.EncodeRecord(&g.addressLocal)
 		assert.Contains(t, result, "base58:")
 	}
 
 	{
 		g := createRandomSelfReference()
 		enc := NewBase58Encoder(FormatSchema)
-		result := enc.EncodeRecord(&g.addressLocal)
+		result, _ := enc.EncodeRecord(&g.addressLocal)
 		assert.Contains(t, result, "base58+insolarv1:")
 	}
 
@@ -184,7 +187,7 @@ func TestEncoder_EncodeRecord(t *testing.T) {
 		g := createRandomSelfReference()
 		enc := NewBase58Encoder(0)
 		enc.authorityName = "someAuthority"
-		result := enc.EncodeRecord(&g.addressLocal)
+		result, _ := enc.EncodeRecord(&g.addressLocal)
 		assert.NotContains(t, result, '.')
 		assert.Contains(t, result, "//someAuthority/")
 	}
@@ -193,10 +196,12 @@ func TestEncoder_EncodeRecord(t *testing.T) {
 		g := createRandomSelfReferenceWithSpecialPulse()
 		enc := NewBase58Encoder(0)
 
-		maxLen := len(enc.EncodeRecord(&g.addressLocal))
+		res1, _ := enc.EncodeRecord(&g.addressLocal)
+		maxLen := len(res1)
 
 		g.addressLocal.hash = generateBits224(13)
-		assert.Greater(t, maxLen, len(enc.EncodeRecord(&g.addressLocal)))
+		res2, _ := enc.EncodeRecord(&g.addressLocal)
+		assert.Greater(t, maxLen, len(res2))
 	}
 }
 
@@ -206,7 +211,7 @@ func TestNewBase64Encoder(t *testing.T) {
 	{
 		g := createRandomSelfReference()
 		enc := NewBase64Encoder(FormatSchema)
-		result := enc.EncodeRecord(&g.addressLocal)
+		result, _ := enc.EncodeRecord(&g.addressLocal)
 		assert.Contains(t, result, "base64+insolarv1:")
 	}
 }

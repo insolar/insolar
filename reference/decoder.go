@@ -205,7 +205,7 @@ func (v decoder) parseAddress(ref string, byteDecoder ByteDecodeFunc, result *Gl
 				if !resolveBase.tryConvertToSelf() {
 					return errors.New("invalid self reference")
 				}
-			case err == aliasedReferenceError:
+			case err == errAliasedReference:
 				if v.nameDecoder == nil {
 					return errors.New("aliases are not allowed")
 				}
@@ -228,7 +228,7 @@ func (v decoder) parseAddressWithBase(name string, base *Global, byteDecoder Byt
 
 	switch {
 	case err != nil:
-		if err != aliasedReferenceError {
+		if err != errAliasedReference {
 			return err
 		}
 		if v.nameDecoder == nil {
@@ -256,7 +256,7 @@ func (v decoder) parseAddressWithBase(name string, base *Global, byteDecoder Byt
 	return nil
 }
 
-var aliasedReferenceError = errors.New("record reference alias")
+var errAliasedReference = errors.New("record reference alias")
 
 func (v decoder) parseBinaryAddress(name string, byteDecoder ByteDecodeFunc, result *Local) error {
 
@@ -281,7 +281,7 @@ func (v decoder) parseBinaryAddress(name string, byteDecoder ByteDecodeFunc, res
 	case '2', '3', '4', '5', '6', '7', '8', '9':
 		return errors.New("unsupported address prefix")
 	default:
-		return aliasedReferenceError
+		return errAliasedReference
 	}
 	return nil
 }

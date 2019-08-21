@@ -18,8 +18,9 @@ package reference
 
 import (
 	"bytes"
-	"fmt"
 	"strings"
+
+	"github.com/pkg/errors"
 )
 
 type IdentityEncoder func(ref *Global) (domain, object string)
@@ -64,16 +65,16 @@ func NewBase64Encoder(opts EncoderOptions) *Encoder {
 	}
 }
 
-func (v Encoder) Encode(ref *Global) string {
+func (v Encoder) Encode(ref *Global) (string, error) {
 	b := strings.Builder{}
-	v.EncodeToBuilder(ref, &b)
-	return b.String()
+	err := v.EncodeToBuilder(ref, &b)
+	return b.String(), err
 }
 
-func (v Encoder) EncodeToBuilder(ref *Global, b *strings.Builder) {
+func (v Encoder) EncodeToBuilder(ref *Global, b *strings.Builder) error {
 	if ref == nil {
 		b.WriteString(NilRef)
-		return
+		return nil
 	}
 
 	v.appendPrefix(b)
@@ -82,8 +83,7 @@ func (v Encoder) EncodeToBuilder(ref *Global, b *strings.Builder) {
 		b.WriteString("0")
 	}
 	if ref.IsRecordScope() {
-		v.encodeRecord(&ref.addressLocal, b)
-		return
+		return v.encodeRecord(&ref.addressLocal, b)
 	}
 
 	var domainName, objectName string
@@ -94,17 +94,20 @@ func (v Encoder) EncodeToBuilder(ref *Global, b *strings.Builder) {
 
 	if objectName != "" {
 		if IsReservedName(objectName) || !IsValidObjectName(objectName) {
-			panic(fmt.Errorf("illegal object name from IdentityEncoder: ref=%v, domain='%s', object='%s'", ref, domainName, objectName))
+			return errors.Errorf("illegal object name from IdentityEncoder: ref=%v, domain='%s', object='%s'", ref, domainName, objectName)
 		}
 		b.WriteString(objectName)
 	} else {
-		v.encodeBinary(&ref.addressLocal, b)
+		err := v.encodeBinary(&ref.addressLocal, b)
+		if err != nil {
+			return err
+		}
 	}
 
 	switch {
 	case domainName != "":
 		if IsReservedName(domainName) || !IsValidDomainName(domainName) {
-			panic(fmt.Errorf("illegal domain name from IdentityEncoder: ref=%v, domain='%s', object='%s'", ref, domainName, objectName))
+			return errors.Errorf("illegal domain name from IdentityEncoder: ref=%v, domain='%s', object='%s'", ref, domainName, objectName)
 		}
 		b.WriteByte('.')
 		b.WriteString(domainName)
@@ -112,16 +115,24 @@ func (v Encoder) EncodeToBuilder(ref *Global, b *strings.Builder) {
 		// nothing
 	default:
 		b.WriteByte('.')
-		v.encodeBinary(&ref.addressBase, b)
+		err := v.encodeBinary(&ref.addressBase, b)
+		if err != nil {
+			return err
+		}
 	}
 
 	if v.options&Parity != 0 {
 		parity := ref.GetParity()
 		if len(parity) > 0 {
 			b.WriteByte('/')
-			v.byteEncoder(bytes.NewReader(parity), b)
+			err := v.byteEncoder(bytes.NewReader(parity), b)
+			if err != nil {
+				return err
+			}
 		}
 	}
+
+	return nil
 }
 
 func (v Encoder) appendPrefix(b *strings.Builder) {
@@ -141,17 +152,20 @@ func (v Encoder) appendPrefix(b *strings.Builder) {
 	}
 }
 
-func (v Encoder) encodeBinary(rec *Local, b *strings.Builder) {
+func (v Encoder) encodeBinary(rec *Local, b *strings.Builder) error {
 	if rec.IsEmpty() {
 		b.WriteByte('0')
-		return
+		return nil
 	}
 	pn := rec.GetPulseNumber()
 	switch {
 	case pn.IsTimePulse():
 		b.WriteByte('1')
 		// full encode
-		v.byteEncoder(rec.AsReader(), b)
+		err := v.byteEncoder(rec.AsReader(), b)
+		if err != nil {
+			return err
+		}
 
 	case pn.IsSpecial():
 		b.WriteString("0")
@@ -161,30 +175,39 @@ func (v Encoder) encodeBinary(rec *Local, b *strings.Builder) {
 		}
 		limit += 1 + pulseAndScopeSize
 
-		v.byteEncoder(rec.asReader(uint8(limit)), b)
+		err := v.byteEncoder(rec.asReader(uint8(limit)), b)
+		if err != nil {
+			return err
+		}
 	default:
 		panic("unexpected")
 	}
+	return nil
 }
 
-func (v Encoder) encodeRecord(rec *Local, b *strings.Builder) {
+func (v Encoder) encodeRecord(rec *Local, b *strings.Builder) error {
 	if rec.IsEmpty() {
 		b.WriteString("0." + RecordDomainName)
-		return
+		return nil
 	}
 	if rec.getScope() != 0 {
 		panic("illegal value")
 	}
-	v.encodeBinary(rec, b)
+	err := v.encodeBinary(rec, b)
+	if err != nil {
+		return err
+	}
 	b.WriteString("." + RecordDomainName)
+
+	return nil
 }
 
-func (v Encoder) EncodeRecord(rec *Local) string {
+func (v Encoder) EncodeRecord(rec *Local) (string, error) {
 	if rec == nil {
-		return NilRef
+		return NilRef, nil
 	}
 	b := strings.Builder{}
 	v.appendPrefix(&b)
-	v.encodeRecord(rec, &b)
-	return b.String()
+	err := v.encodeRecord(rec, &b)
+	return b.String(), err
 }
