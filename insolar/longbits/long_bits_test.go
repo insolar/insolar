@@ -181,7 +181,7 @@ func TestBits224WriteTo(t *testing.T) {
 	n, err := bits.WriteTo(&writerToComparer{other: &bits})
 	require.Equal(t, nil, err)
 
-	require.Equal(t, int64(24), n)
+	require.Equal(t, int64(28), n)
 
 	require.Equal(t, uint8(1), bits.AsBytes()[0])
 
@@ -198,11 +198,11 @@ func TestBits224Read(t *testing.T) {
 
 	require.Equal(t, uint8(1), dest[0])
 
-	dest = make([]byte, 25)
+	dest = make([]byte, 29)
 	n, err = bits.Read(dest)
 	require.Nil(t, err)
 
-	require.Equal(t, 24, n)
+	require.Equal(t, 28, n)
 
 	require.Equal(t, uint8(1), dest[0])
 
@@ -222,7 +222,7 @@ func TestBits224FoldToUint64(t *testing.T) {
 
 func TestBits224FixedByteSize(t *testing.T) {
 	bits := Bits224{}
-	require.Equal(t, 24, bits.FixedByteSize())
+	require.Equal(t, 28, bits.FixedByteSize())
 }
 
 func TestBits224String(t *testing.T) {
@@ -234,7 +234,8 @@ func TestBits224AsByteString(t *testing.T) {
 	binary.LittleEndian.PutUint64(bits[:8], uint64(0x4142434445464748))
 	binary.LittleEndian.PutUint64(bits[8:16], uint64(0x494A4B4C4D4E4F50))
 	binary.LittleEndian.PutUint64(bits[16:24], uint64(0x5152535455565758))
-	require.Equal(t, ByteString("HGFEDCBAPONMLKJIXWVUTSRQ"), bits.AsByteString())
+	binary.LittleEndian.PutUint32(bits[24:28], uint32(0x41424344))
+	require.Equal(t, ByteString("HGFEDCBAPONMLKJIXWVUTSRQDCBA"), bits.AsByteString())
 }
 
 func TestBits224AsBytes(t *testing.T) {
@@ -242,8 +243,9 @@ func TestBits224AsBytes(t *testing.T) {
 	binary.LittleEndian.PutUint64(bits[:8], uint64(0x807060504030201))
 	binary.LittleEndian.PutUint64(bits[8:16], uint64(0x10F0E0D0C0B0A09))
 	binary.LittleEndian.PutUint64(bits[16:24], uint64(0x908070605040302))
+	binary.LittleEndian.PutUint32(bits[24:28], uint32(0x80706050))
 	require.Equal(t, []uint8{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
-		1, 2, 3, 4, 5, 6, 7, 8, 9}, bits.AsBytes())
+		1, 2, 3, 4, 5, 6, 7, 8, 9, 0x50, 0x60, 0x70, 0x80}, bits.AsBytes())
 }
 
 func TestBits256WriteTo(t *testing.T) {
@@ -307,7 +309,7 @@ func TestBits256FoldToBits224(t *testing.T) {
 	binary.LittleEndian.PutUint64(bits[16:24], uint64(0x0908070605040302))
 	binary.LittleEndian.PutUint64(bits[24:32], uint64(0x02010F0E0D0C0B0A))
 	require.Equal(t, Bits224{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
-		1, 2, 3, 4, 5, 6, 7, 8, 9}, bits.FoldToBits224())
+		1, 2, 3, 4, 5, 6, 7, 8, 9, 0x0a, 0x0b, 0x0c, 0x0d}, bits.FoldToBits224())
 }
 
 func TestBits256FixedByteSize(t *testing.T) {
@@ -412,7 +414,7 @@ func TestBits512FoldToBits224(t *testing.T) {
 	binary.LittleEndian.PutUint64(bits[48:56], uint64(0x0B0A090807060504))
 	binary.LittleEndian.PutUint64(bits[56:64], uint64(0x040302010F0E0D0C))
 	require.Equal(t, Bits224{2, 6, 6, 2, 2, 14, 14, 2, 2, 6, 6, 2, 2, 15, 13, 2, 6, 6, 2, 2, 14, 14,
-		2, 2}, bits.FoldToBits224())
+		2, 2, 6, 6, 2, 2}, bits.FoldToBits224())
 }
 
 func TestBits512FixedByteSize(t *testing.T) {
@@ -559,7 +561,7 @@ func TestNewBits128FromBytes(t *testing.T) {
 
 func TestNewBits224FromBytes(t *testing.T) {
 	var bytes []byte
-	for i := 0; i < 24; i++ {
+	for i := 0; i < 28; i++ {
 		bytes = append(bytes, byte(i%8))
 	}
 	bits := NewBits224FromBytes(bytes)

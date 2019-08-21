@@ -284,7 +284,7 @@ func TestDecoder_Decode_parity(t *testing.T) {
 
 		_, err = dec.Decode(newReference_with_badParity)
 		if assert.Error(t, err) {
-			assert.Contains(t, err.Error(), "unable to dec.Decode parity")
+			assert.Contains(t, err.Error(), "unable to decode parity")
 		}
 
 		_, err = dec.Decode(newReference_with_emptyBodyAndParity)
