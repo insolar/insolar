@@ -331,7 +331,6 @@ func (cr *ContractRequester) ReceiveResult(msg *message.Message) error {
 	}
 
 	ctx := inslogger.ContextWithTrace(context.Background(), msg.Metadata.Get(busMeta.TraceID))
-	logger := inslogger.FromContext(ctx)
 
 	parentSpan, err := instracer.Deserialize([]byte(msg.Metadata.Get(busMeta.SpanData)))
 	if err == nil {
@@ -358,7 +357,7 @@ func (cr *ContractRequester) ReceiveResult(msg *message.Message) error {
 		return errors.Wrap(err, "failed to unmarshal payload type")
 	}
 
-	ctx, logger = inslogger.WithField(ctx, "msg_type", payloadType.String())
+	ctx, logger := inslogger.WithField(ctx, "msg_type", payloadType.String())
 
 	logger.Debug("Start to handle new message")
 
