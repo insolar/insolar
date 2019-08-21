@@ -148,7 +148,7 @@ func (p PacketLimiter) CanReceivePacket(pt PacketType) bool {
 }
 
 func (p PacketLimiter) SetPacketReceived(pt PacketType) (bool, PacketLimiter) {
-	res := p.received&1<<pt == 0
+	res := p.received&(1<<pt) == 0
 	p.received |= 1 << pt
 	switch pt.GetLimitPerSender() {
 	case 1:
