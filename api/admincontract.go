@@ -38,6 +38,7 @@ type AdminContractService struct {
 func NewAdminContractService(runner *Runner) *AdminContractService {
 	methods := map[string]bool{
 		"member.getBalance":          true,
+		"wallet.getBalance":          true,
 		"migration.getInfo":          true,
 		"migration.deactivateDaemon": true,
 		"migration.activateDaemon":   true,
@@ -50,6 +51,13 @@ func NewAdminContractService(runner *Runner) *AdminContractService {
 		"member.transfer":            true,
 		"member.migrationCreate":     true,
 		"deposit.transfer":           true,
+		"contract.getNodeRef":        true,
+		"CreateHelloWorld":           true,
+		"Greet":                      true,
+		"Count":                      true,
+		"CreateChild":                true,
+		"ReturnObj":                  true,
+		"PulseNumber":                true,
 	}
 	return &AdminContractService{runner: runner, allowedMethods: methods}
 }

@@ -106,7 +106,7 @@ func TestCrazyJSON(t *testing.T) {
 
 func TestIncorrectSign(t *testing.T) {
 	testMember := createMember(t)
-	seed, err := requester.GetSeed(launchnet.TestAPIURL)
+	seed, err := requester.GetSeed(launchnet.TestRPCUrl)
 	require.NoError(t, err)
 	body, err := requester.GetResponseBodyContract(
 		launchnet.TestRPCUrl,
@@ -168,4 +168,13 @@ func TestRequestReference(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEqual(t, "", ref)
 	require.NotEqual(t, "11111111111111111111111111111111.11111111111111111111111111111111", ref)
+}
+
+func TestNotAllowedMethod(t *testing.T) {
+	member := createMember(t)
+
+	_, _, err := makeSignedRequest(launchnet.TestRPCUrlPublic, member, "member.getBalance",
+		map[string]interface{}{"reference": member.Ref})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "method not allowed")
 }

@@ -92,7 +92,7 @@ func (ar *Runner) registerServices(rpcServer *rpc.Server) error {
 			return errors.Wrap(err, "[ registerServices ] Can't RegisterService: cert")
 		}
 
-		err = rpcServer.RegisterService(NewNodeAdminService(ar), "node")
+		err = rpcServer.RegisterService(NewNodeService(ar), "node")
 		if err != nil {
 			return errors.Wrap(err, "[ registerServices ] Can't RegisterService: node")
 		}
@@ -101,15 +101,15 @@ func (ar *Runner) registerServices(rpcServer *rpc.Server) error {
 		if err != nil {
 			return errors.Wrap(err, "[ registerServices ] Can't RegisterService: contract")
 		}
-	} else {
-		err := rpcServer.RegisterService(NewNodeService(ar), "node")
-		if err != nil {
-			return errors.Wrap(err, "[ registerServices ] Can't RegisterService: node")
-		}
 
 		err = rpcServer.RegisterService(NewFuncTestContractService(ar), "funcTestContract")
 		if err != nil {
 			return errors.Wrap(err, "[ registerServices ] Can't RegisterService: funcTestContract")
+		}
+	} else {
+		err := rpcServer.RegisterService(NewNodeService(ar), "node")
+		if err != nil {
+			return errors.Wrap(err, "[ registerServices ] Can't RegisterService: node")
 		}
 
 		err = rpcServer.RegisterService(NewContractService(ar), "contract")

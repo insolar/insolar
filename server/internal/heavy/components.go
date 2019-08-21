@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/insolar/insolar/api/seedmanager"
+
 	"github.com/insolar/insolar/network"
 
 	"github.com/insolar/insolar/ledger/heavy/exporter"
@@ -185,14 +187,19 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 			return nil, errors.Wrap(err, "failed to start GenesisDataProvider")
 		}
 
-		API, err = api.NewRunner(&cfg.APIRunner)
+		seedManager := seedmanager.New()
+		publicAPI, err := api.NewRunner(&cfg.APIRunner)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start ApiRunner")
 		}
-		AdminAPIRunner, err = api.NewRunner(&cfg.AdminAPIRunner)
+		adminAPI, err := api.NewRunner(&cfg.AdminAPIRunner)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start AdminAPIRunner")
 		}
+		publicAPI.SeedManager = seedManager
+		adminAPI.SeedManager = seedManager
+		API = publicAPI
+		AdminAPIRunner = adminAPI
 	}
 
 	// Storage.

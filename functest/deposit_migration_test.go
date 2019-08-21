@@ -115,7 +115,7 @@ func TestMigrationTokenMistakeField(t *testing.T) {
 		"deposit.migration",
 		map[string]interface{}{"amount1": "0", "ethTxHash": "TxHash", "migrationAddress": migrationAddress})
 	require.Error(t, err)
-	require.Contains(t, err.Error(), " incorect input: failed to get 'amount' param")
+	require.Contains(t, err.Error(), " incorrect input: failed to get 'amount' param")
 	require.Nil(t, result)
 }
 

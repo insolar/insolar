@@ -187,7 +187,7 @@ func (m *Member) getNodeRefCall(params map[string]interface{}) (interface{}, err
 
 	publicKey, ok := params["publicKey"].(string)
 	if !ok {
-		return nil, fmt.Errorf("incorect input: failed to get 'publicKey' param")
+		return nil, fmt.Errorf("incorrect input: failed to get 'publicKey' param")
 	}
 
 	return m.getNodeRef(publicKey)
@@ -197,12 +197,12 @@ func (m *Member) registerNodeCall(params map[string]interface{}) (interface{}, e
 
 	publicKey, ok := params["publicKey"].(string)
 	if !ok {
-		return nil, fmt.Errorf("incorect input: failed to get 'publicKey' param")
+		return nil, fmt.Errorf("incorrect input: failed to get 'publicKey' param")
 	}
 
 	role, ok := params["role"].(string)
 	if !ok {
-		return nil, fmt.Errorf("incorect input: failed to get 'role' param")
+		return nil, fmt.Errorf("incorrect input: failed to get 'role' param")
 	}
 
 	return m.registerNode(publicKey, role)
@@ -211,7 +211,7 @@ func (m *Member) addBurnAddressesCall(params map[string]interface{}) (interface{
 
 	burnAddressesI, ok := params["burnAddresses"].([]interface{})
 	if !ok {
-		return nil, fmt.Errorf("incorect input: failed to get 'burnAddresses' param")
+		return nil, fmt.Errorf("incorrect input: failed to get 'burnAddresses' param")
 	}
 
 	rootDomain := rootdomain.GetObject(m.RootDomain)
@@ -242,7 +242,7 @@ type GetBalanceResponse struct {
 func (m *Member) getBalanceCall(params map[string]interface{}) (interface{}, error) {
 	referenceStr, ok := params["reference"].(string)
 	if !ok {
-		return nil, fmt.Errorf("incorect input: failed to get 'reference' param")
+		return nil, fmt.Errorf("incorrect input: failed to get 'reference' param")
 	}
 
 	reference, err := insolar.NewReferenceFromBase58(referenceStr)
@@ -290,12 +290,12 @@ type TransferResponse struct {
 func (m *Member) transferCall(params map[string]interface{}) (interface{}, error) {
 	recipientReferenceStr, ok := params["toMemberReference"].(string)
 	if !ok {
-		return nil, fmt.Errorf("incorect input: failed to get 'toMemberReference' param")
+		return nil, fmt.Errorf("incorrect input: failed to get 'toMemberReference' param")
 	}
 
 	amount, ok := params["amount"].(string)
 	if !ok {
-		return nil, fmt.Errorf("incorect input: failed to get 'amount' param")
+		return nil, fmt.Errorf("incorrect input: failed to get 'amount' param")
 	}
 
 	asset, ok := params["asset"].(string)
@@ -318,12 +318,12 @@ func (m *Member) depositTransferCall(params map[string]interface{}) (interface{}
 
 	ethTxHash, ok := params["ethTxHash"].(string)
 	if !ok {
-		return nil, fmt.Errorf("incorect input: failed to get 'ethTxHash' param")
+		return nil, fmt.Errorf("incorrect input: failed to get 'ethTxHash' param")
 	}
 
 	amount, ok := params["amount"].(string)
 	if !ok {
-		return nil, fmt.Errorf("incorect input: failed to get 'amount' param")
+		return nil, fmt.Errorf("incorrect input: failed to get 'amount' param")
 	}
 
 	find, dRef, err := m.FindDeposit(ethTxHash)
@@ -342,7 +342,7 @@ func (m *Member) depositMigrationCall(params map[string]interface{}) (*DepositMi
 
 	amountStr, ok := params["amount"].(string)
 	if !ok {
-		return nil, fmt.Errorf("incorect input: failed to get 'amount' param")
+		return nil, fmt.Errorf("incorrect input: failed to get 'amount' param")
 	}
 
 	amount := new(big.Int)
@@ -355,12 +355,12 @@ func (m *Member) depositMigrationCall(params map[string]interface{}) (*DepositMi
 	}
 	txId, ok := params["ethTxHash"].(string)
 	if !ok {
-		return nil, fmt.Errorf("incorect input: failed to get 'ethTxHash' param")
+		return nil, fmt.Errorf("incorrect input: failed to get 'ethTxHash' param")
 	}
 
 	burnAddress, ok := params["migrationAddress"].(string)
 	if !ok {
-		return nil, fmt.Errorf("incorect input: failed to get 'migrationAddress' param")
+		return nil, fmt.Errorf("incorrect input: failed to get 'migrationAddress' param")
 	}
 
 	return m.depositMigration(txId, burnAddress, amount)

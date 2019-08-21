@@ -32,7 +32,8 @@ func TestMemberMigrationCreate(t *testing.T) {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
 	ba := testutils.RandomString()
-	_, err = signedRequest(t, &launchnet.MigrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{ba}})
+	_, err = signedRequest(t, launchnet.TestRPCUrl, &launchnet.MigrationAdmin,
+		"migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{ba}})
 	require.NoError(t, err)
 	result, err := signedRequest(t, member, "member.migrationCreate", nil)
 	require.NoError(t, err)
@@ -92,7 +93,8 @@ func TestMemberMigrationCreateWithSameBurnAddress(t *testing.T) {
 	require.NoError(t, err)
 
 	ba := testutils.RandomString()
-	_, _ = signedRequest(t, &launchnet.MigrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{ba, ba}})
+	_, _ = signedRequest(t, launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.addBurnAddresses",
+		map[string]interface{}{"burnAddresses": []string{ba, ba}})
 
 	_, err = signedRequest(t, member1, "member.migrationCreate", nil)
 	require.NoError(t, err)

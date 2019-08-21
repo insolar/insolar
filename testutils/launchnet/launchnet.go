@@ -40,10 +40,12 @@ import (
 	"github.com/pkg/errors"
 )
 
-const HOST = "http://localhost:19002"
-const HOST_DEBUG = "http://localhost:8001"
-const TestAPIURL = HOST + "/admin-api"
-const TestRPCUrl = TestAPIURL + "/rpc"
+const HOST = "http://localhost:"
+const AdminPort = "19002"
+const PublicPort = "19102"
+const HostDebug = "http://localhost:8001"
+const TestRPCUrl = HOST + AdminPort + "/admin-api/rpc"
+const TestRPCUrlPublic = HOST + PublicPort + "/api/rpc"
 
 const insolarRootMemberKeys = "root_member_keys.json"
 const insolarMigrationAdminMemberKeys = "migration_admin_member_keys.json"
@@ -208,7 +210,7 @@ func loadAllMembersKeys() error {
 
 func setInfo() error {
 	var err error
-	info, err = requester.Info(TestAPIURL)
+	info, err = requester.Info(TestRPCUrl)
 	if err != nil {
 		return errors.Wrap(err, "[ setInfo ] error sending request")
 	}
@@ -263,7 +265,7 @@ func waitForNet() error {
 	for i := 0; i < numAttempts; i++ {
 		currentOk = 0
 		for _, port := range ports {
-			resp, err := requester.Status(fmt.Sprintf("http://127.0.0.1:%s/admin-api", port))
+			resp, err := requester.Status(fmt.Sprintf("http://127.0.0.1:%s/admin-api/rpc", port))
 			if err != nil {
 				fmt.Println("[ waitForNet ] Problem with port " + port + ". Err: " + err.Error())
 				break
