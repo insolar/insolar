@@ -129,8 +129,12 @@ func (g *Base) NewGateway(ctx context.Context, state insolar.NetworkState) netwo
 }
 
 func (g *Base) Init(ctx context.Context) error {
-	g.HostNetwork.RegisterRequestHandler(types.Authorize, g.HandleNodeAuthorizeRequest) // validate cert
-	g.HostNetwork.RegisterRequestHandler(types.Bootstrap, g.HandleNodeBootstrapRequest) // provide joiner claim
+	g.HostNetwork.RegisterRequestHandler(
+		types.Authorize, g.discoveryMiddleware(g.announceMiddleware(g.HandleNodeAuthorizeRequest)), // validate cert
+	)
+	g.HostNetwork.RegisterRequestHandler(
+		types.Bootstrap, g.announceMiddleware(g.HandleNodeBootstrapRequest), // provide joiner claim
+	)
 	g.HostNetwork.RegisterRequestHandler(types.UpdateSchedule, g.HandleUpdateSchedule)
 	g.HostNetwork.RegisterRequestHandler(types.Reconnect, g.HandleReconnect)
 	g.HostNetwork.RegisterRequestHandler(types.Ping, func(ctx context.Context, req network.ReceivedPacket) (network.Packet, error) {
@@ -195,12 +199,54 @@ func (g *Base) ValidateCert(ctx context.Context, authCert insolar.AuthorizationC
 
 // ============= Bootstrap =======
 
-func (g *Base) HandleNodeBootstrapRequest(ctx context.Context, request network.ReceivedPacket) (network.Packet, error) {
+func (g *Base) canAnnounceCandidate(ctx context.Context) bool {
+	// 1. Current node is heavy:
+	// 		could announce candidate when network is initialized
+	// 		NB: announcing in WaitConsensus state is allowed
+	// 2. Otherwise:
+	// 		could announce candidate when heavy node found in *active* list and initial consensus passed
+	// 		NB: announcing in WaitConsensus state is *NOT* allowed
+
 	state := g.Gatewayer.Gateway().GetState()
-	if g.NodeKeeper.GetOrigin().Role() != insolar.StaticRoleHeavyMaterial && state <= insolar.WaitConsensus {
-		return nil, errors.Errorf("can't handle bootstrap in state: %s", state.String())
+
+	if g.NodeKeeper.GetOrigin().Role() == insolar.StaticRoleHeavyMaterial {
+		return state >= insolar.WaitConsensus
 	}
 
+	bootstrapPulse := GetBootstrapPulse(ctx, g.PulseAccessor)
+	nodes := g.NodeKeeper.GetAccessor(bootstrapPulse.PulseNumber).GetActiveNodes()
+
+	var hasHeavy bool
+
+	for _, n := range nodes {
+		if n.Role() == insolar.StaticRoleHeavyMaterial {
+			hasHeavy = true
+			break
+		}
+	}
+
+	return hasHeavy && state > insolar.WaitConsensus
+}
+
+func (g *Base) announceMiddleware(handler network.RequestHandler) network.RequestHandler {
+	return func(ctx context.Context, request network.ReceivedPacket) (network.Packet, error) {
+		if !g.canAnnounceCandidate(ctx) {
+			return nil, errors.New("can't announce candidate")
+		}
+		return handler(ctx, request)
+	}
+}
+
+func (g *Base) discoveryMiddleware(handler network.RequestHandler) network.RequestHandler {
+	return func(ctx context.Context, request network.ReceivedPacket) (network.Packet, error) {
+		if !network.OriginIsDiscovery(g.CertificateManager.GetCertificate()) {
+			return nil, errors.New("only discovery nodes could authorize other nodes, this is not a discovery node")
+		}
+		return handler(ctx, request)
+	}
+}
+
+func (g *Base) HandleNodeBootstrapRequest(ctx context.Context, request network.ReceivedPacket) (network.Packet, error) {
 	if request.GetRequest() == nil || request.GetRequest().GetBootstrap() == nil {
 		return nil, errors.Errorf("process bootstrap: got invalid protobuf request message: %s", request)
 	}
@@ -242,10 +288,6 @@ func validateTimestamp(timestamp int64, delta time.Duration) bool {
 }
 
 func (g *Base) HandleNodeAuthorizeRequest(ctx context.Context, request network.ReceivedPacket) (network.Packet, error) {
-	if !network.OriginIsDiscovery(g.CertificateManager.GetCertificate()) {
-		return nil, errors.New("only discovery nodes could authorize other nodes, this is not a discovery node")
-	}
-
 	if request.GetRequest() == nil || request.GetRequest().GetAuthorize() == nil {
 		return nil, errors.Errorf("process authorize: got invalid protobuf request message: %s", request)
 	}
