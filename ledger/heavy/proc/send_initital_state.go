@@ -70,6 +70,8 @@ func NewSendInitialState(meta payload.Meta) *SendInitialState {
 
 func (p *SendInitialState) Proceed(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
+	logger.Info("SendInitialState starts working")
+
 	startPulse, err := p.dep.startPulse.PulseNumber()
 	if err != nil {
 		errStr := "Couldn't get start pulse"
@@ -80,6 +82,8 @@ func (p *SendInitialState) Proceed(ctx context.Context) error {
 		p.dep.sender.Reply(ctx, p.meta, msg)
 		return nil
 	}
+	logger = logger.WithField("startPulse", startPulse)
+
 	msg, err := payload.Unmarshal(p.meta.Payload)
 	if err != nil {
 		logger.Fatal("Couldn't unmarshall request", err)
@@ -104,6 +108,7 @@ func (p *SendInitialState) Proceed(ctx context.Context) error {
 		logger.Fatal("received initial state request from the past")
 	}
 
+	logger.Info("SendInitialState finishes working")
 	return nil
 }
 
