@@ -38,7 +38,7 @@ type InitialStateAccessor interface {
 }
 
 type InitialState struct {
-	// JetIds for passed executor (not all ids). Jets need to be split included
+	// JetIds for passed executor (not all ids). If JetDrop for this jet has Split flag - both jets will be in slice
 	JetIDs []insolar.JetID
 	// Drops for JetIDs above
 	Drops [][]byte
