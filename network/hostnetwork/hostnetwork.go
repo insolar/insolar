@@ -185,7 +185,7 @@ func (hn *hostNetwork) handleRequest(ctx context.Context, p *packet.ReceivedPack
 	hn.muHandlers.RUnlock()
 
 	if !exist {
-		logger.Errorf("No handler set for packet type %s from node %s", p.GetType(), p.Sender.NodeID)
+		logger.Warnf("No handler set for packet type %s from node %s", p.GetType(), p.Sender.NodeID)
 		ep := hn.BuildResponse(ctx, p, &packet.ErrorResponse{Error: "UNKNOWN RPC ENDPOINT"}).(*packet.Packet)
 		ep.RequestID = p.RequestID
 		if err := SendPacket(ctx, hn.pool, ep); err != nil {
@@ -195,7 +195,7 @@ func (hn *hostNetwork) handleRequest(ctx context.Context, p *packet.ReceivedPack
 	}
 	response, err := handler(ctx, p)
 	if err != nil {
-		logger.Errorf("Error handling request %s from node %s: %s", p.GetType(), p.Sender.NodeID, err)
+		logger.Warnf("Error handling request %s from node %s: %s", p.GetType(), p.Sender.NodeID, err)
 		ep := hn.BuildResponse(ctx, p, &packet.ErrorResponse{Error: err.Error()}).(*packet.Packet)
 		ep.RequestID = p.RequestID
 		if err = SendPacket(ctx, hn.pool, ep); err != nil {

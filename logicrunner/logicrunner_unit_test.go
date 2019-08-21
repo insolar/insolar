@@ -50,6 +50,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/executionregistry"
 	"github.com/insolar/insolar/logicrunner/machinesmanager"
+	"github.com/insolar/insolar/logicrunner/requestsqueue"
 	"github.com/insolar/insolar/logicrunner/shutdown"
 	"github.com/insolar/insolar/logicrunner/writecontroller"
 	"github.com/insolar/insolar/pulsar"
@@ -658,8 +659,9 @@ func (suite *LogicRunnerTestSuite) TestImmutableOrder() {
 		return &reply.CallMethod{Result: []byte{1, 2, 3}}, nil
 	})
 
-	broker.Put(suite.ctx, true, mutableTranscript)
-	broker.Put(suite.ctx, true, immutableTranscript1, immutableTranscript2)
+	broker.add(suite.ctx, requestsqueue.FromLedger, mutableTranscript)
+	broker.add(suite.ctx, requestsqueue.FromLedger, immutableTranscript1, immutableTranscript2)
+	broker.StartProcessorsIfNeeded(suite.ctx)
 
 	suite.True(wait(finishedCount, broker, 3))
 }

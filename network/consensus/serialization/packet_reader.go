@@ -153,7 +153,7 @@ func (f *PacketParserFactory) ParsePacket(ctx context.Context, reader io.Reader)
 
 func (p *PacketParser) GetPulsePacket() transport.PulsePacketReader {
 	pulsarBody := p.packet.EncryptableBody.(*PulsarPacketBody)
-	return adapters.NewPulsePacketParser(pulsarBody.getPulseData(), p.packetData.data)
+	return adapters.NewPulsePacketParser(pulsarBody.getPulseData())
 }
 
 func (p *PacketParser) GetMemberPacket() transport.MemberPacketReader {
@@ -243,7 +243,7 @@ func (r *EmbeddedPulseReader) GetEmbeddedPulsePacket() transport.PulsePacketRead
 		return nil
 	}
 
-	return adapters.NewPulsePacketParser(r.body.PulsarPacket.PulsarPacketBody.getPulseData(), r.body.PulsarPacket.Data)
+	return adapters.NewPulsePacketParser(r.body.PulsarPacket.PulsarPacketBody.getPulseData())
 }
 
 type Phase0PacketReader struct {
