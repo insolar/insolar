@@ -34,6 +34,12 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
+func Test_JetKeeperKey(t *testing.T) {
+	k := executor.JetKeeperKey(19679249)
+	d := k.ID()
+	require.Equal(t, k, executor.NewJetKeeperKey(d))
+}
+
 func initDB(t *testing.T, testPulse insolar.PulseNumber) (executor.JetKeeper, string, *store.BadgerDB, *jet.DBStore, *pulse.DB) {
 	ctx := inslogger.TestContext(t)
 	tmpdir, err := ioutil.TempDir("", "bdb-test-")
@@ -54,6 +60,29 @@ func initDB(t *testing.T, testPulse insolar.PulseNumber) (executor.JetKeeper, st
 	jetKeeper := executor.NewJetKeeper(jets, db, pulses)
 
 	return jetKeeper, tmpdir, db, jets, pulses
+}
+
+func Test_TruncateHead(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+	testPulse := insolar.GenesisPulse.PulseNumber + 10
+	ji, tmpDir, db, _, _ := initDB(t, testPulse)
+	defer os.RemoveAll(tmpDir)
+	defer db.Stop(ctx)
+
+	err := ji.AddHotConfirmation(ctx, testPulse, gen.JetID(), true)
+	require.NoError(t, err)
+	err = ji.AddDropConfirmation(ctx, testPulse, gen.JetID(), true)
+	require.NoError(t, err)
+
+	_, err = db.Get(executor.JetKeeperKey(testPulse))
+	require.NoError(t, err)
+
+	err = ji.(*executor.DBJetKeeper).TruncateHead(ctx, testPulse)
+	require.NoError(t, err)
+
+	_, err = db.Get(executor.JetKeeperKey(testPulse))
+	require.EqualError(t, err, "value not found")
+
 }
 
 func TestJetInfoIsConfirmed_OneDropOneHot(t *testing.T) {
