@@ -90,10 +90,10 @@ func FakeRPCHandler(response http.ResponseWriter, req *http.Request) {
 	writeReponse(response, rpcResponse)
 }
 
-const rpcLOCATION = "/api/rpc"
+const rpcLOCATION = "/admin-api/rpc"
 const PORT = "12221"
 const HOST = "127.0.0.1"
-const URL = "http://" + HOST + ":" + PORT + "/api"
+const URL = "http://" + HOST + ":" + PORT + "/admin-api/rpc"
 
 var server = &http.Server{Addr: ":" + PORT}
 
@@ -188,7 +188,7 @@ func TestGetResponseBodyBadHttpStatus(t *testing.T) {
 }
 
 func TestGetResponseBody(t *testing.T) {
-	data, err := GetResponseBodyContract(URL+"/rpc", ContractRequest{}, "")
+	data, err := GetResponseBodyContract(URL, ContractRequest{}, "")
 	response := RPCResponse{}
 	_ = json.Unmarshal(data, &response)
 	require.NoError(t, err)
@@ -225,7 +225,7 @@ func TestSendWithSeed(t *testing.T) {
 	ctx := inslogger.ContextWithTrace(context.Background(), "TestSendWithSeed")
 	userConf, reqParams := readConfigs(t)
 	reqParams.CallSite = "member.create"
-	resp, err := SendWithSeed(ctx, URL+"/rpc", userConf, reqParams, TESTSEED)
+	resp, err := SendWithSeed(ctx, URL, userConf, reqParams, TESTSEED)
 	require.NoError(t, err)
 	require.Contains(t, string(resp), TESTREFERENCE)
 }

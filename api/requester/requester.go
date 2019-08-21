@@ -285,7 +285,7 @@ func Send(ctx context.Context, url string, userCfg *UserConfigJSON, params *Para
 	}
 	verboseInfo(ctx, "GETSEED request completed. seed: "+seed)
 
-	response, err := SendWithSeed(ctx, url+"/rpc", userCfg, params, seed)
+	response, err := SendWithSeed(ctx, url, userCfg, params, seed)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Send ]")
 	}
