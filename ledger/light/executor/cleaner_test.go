@@ -89,6 +89,7 @@ func TestCleaner_clean(t *testing.T) {
 	limit := 123
 
 	ctrl := minimock.NewController(t)
+	defer ctrl.Finish()
 
 	jm := jet.NewCleanerMock(ctrl)
 	jm.DeleteForPNFunc = DeleteForPNMock(t, calculatedPulse.PulseNumber)
@@ -136,7 +137,7 @@ func TestCleaner_clean(t *testing.T) {
 	go cleaner.clean(ctx)
 	cleaner.pulseForClean <- inputPulse.PulseNumber
 
-	ctrl.Wait(time.Minute)
+	ctrl.Wait(time.Minute * 10)
 }
 
 func TestLightCleaner_NotifyAboutPulse(t *testing.T) {
