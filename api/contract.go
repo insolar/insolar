@@ -46,7 +46,6 @@ type ContractService struct {
 // NewContractService creates new Contract service instance.
 func NewContractService(runner *Runner) *ContractService {
 	methods := map[string]bool{
-		"deposit.migration":      true,
 		"member.create":          true,
 		"member.get":             true,
 		"member.transfer":        true,

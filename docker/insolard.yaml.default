@@ -30,11 +30,11 @@ logicrunner:
 apirunner:
   address: ""
   rpc: /api/rpc
-  ispublic: true
-apiinternalrunner:
+  isadmin: false
+adminapirunner:
   address: ""
   rpc: /admin-api/rpc
-  ispublic: false
+  isadmin: true
 versionmanager:
   minalowedversion: v0.3.0
 keyspath: ""
