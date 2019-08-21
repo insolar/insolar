@@ -310,13 +310,13 @@ type ExpectedCensusTemplate struct {
 
 func (c *ExpectedCensusTemplate) Rebuild(pn pulse.Number) census.Built {
 
-	if !pn.IsUnknown() && (!pn.IsTimePulse() || !c.GetExpectedPulseNumber().IsUnknownOrEqualTo(pn)) {
-		panic("illegal value")
+	if pn.IsUnknown() || pn.IsTimePulse() && pn >= c.GetExpectedPulseNumber() {
+		cp := BuiltCensusTemplate{*c}
+		cp.expected.pn = pn
+		return &cp
 	}
 
-	cp := BuiltCensusTemplate{*c}
-	cp.expected.pn = pn
-	return &cp
+	panic(fmt.Sprintf("illegal value: %v, %v", c.GetExpectedPulseNumber(), pn))
 }
 
 func (c *ExpectedCensusTemplate) GetNearestPulseData() (bool, pulse.Data) {
