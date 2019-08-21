@@ -106,7 +106,7 @@ func createMember(t *testing.T) *launchnet.User {
 	require.NoError(t, err)
 	member.Ref = launchnet.Root.Ref
 
-	result, err := signedRequest(t, member, "member.create", nil)
+	result, err := signedRequest(t, launchnet.TestRPCUrl, member, "member.create", nil)
 	require.NoError(t, err)
 	ref, ok := result.(map[string]interface{})["reference"].(string)
 	require.True(t, ok)
@@ -125,10 +125,11 @@ func createMigrationMemberForMA(t *testing.T, ma string) *launchnet.User {
 	require.NoError(t, err)
 	member.Ref = launchnet.Root.Ref
 
-	_, err = signedRequest(t, &launchnet.MigrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{ma}})
+	_, err = signedRequest(t, launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.addBurnAddresses",
+		map[string]interface{}{"burnAddresses": []string{ma}})
 	require.NoError(t, err)
 
-	result, err := signedRequest(t, member, "member.migrationCreate", nil)
+	result, err := signedRequest(t, launchnet.TestRPCUrl, member, "member.migrationCreate", nil)
 	require.NoError(t, err)
 	ref, ok := result.(map[string]interface{})["reference"].(string)
 	require.True(t, ok)
@@ -139,7 +140,8 @@ func createMigrationMemberForMA(t *testing.T, ma string) *launchnet.User {
 
 func addBurnAddress(t *testing.T) {
 	ba := testutils.RandomString()
-	_, err := signedRequest(t, &launchnet.MigrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{ba}})
+	_, err := signedRequest(t, launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.addBurnAddresses",
+		map[string]interface{}{"burnAddresses": []string{ba}})
 	require.NoError(t, err)
 }
 
@@ -150,7 +152,7 @@ func getBalanceNoErr(t *testing.T, caller *launchnet.User, reference string) *bi
 }
 
 func getBalance(t *testing.T, caller *launchnet.User, reference string) (*big.Int, error) {
-	res, err := signedRequest(t, caller, "wallet.getBalance", map[string]interface{}{"reference": reference})
+	res, err := signedRequest(t, launchnet.TestRPCUrl, caller, "wallet.getBalance", map[string]interface{}{"reference": reference})
 	if err != nil {
 		return nil, err
 	}

@@ -68,5 +68,5 @@ func TestGetNodeRefInvalidParams(t *testing.T) {
 	_, err = signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, &launchnet.Root,
 		"contract.getNodeRef", map[string]interface{}{"publicKey": 123})
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "incorect input: failed to get 'publicKey' param")
+	require.Contains(t, err.Error(), "incorrect input: failed to get 'publicKey' param")
 }

@@ -24,6 +24,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/testutils/launchnet"
+
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/testutils"
@@ -39,7 +41,8 @@ func TestDepositTransferToken(t *testing.T) {
 	var err error
 	for i := 0; i <= 11; i++ {
 		time.Sleep(time.Second)
-		_, _, err = makeSignedRequest(member, "deposit.transfer", map[string]interface{}{"amount": "1000", "ethTxHash": "Eth_TxHash_test"})
+		_, _, err = makeSignedRequest(launchnet.TestRPCUrl, member,
+			"deposit.transfer", map[string]interface{}{"amount": "1000", "ethTxHash": "Eth_TxHash_test"})
 		require.Error(t, err)
 		if !strings.Contains(err.Error(), "hold period didn't end") {
 			break
@@ -48,7 +51,8 @@ func TestDepositTransferToken(t *testing.T) {
 	require.Contains(t, err.Error(), "not enough unholded balance for transfer")
 
 	time.Sleep(11 * time.Second)
-	_, _, err = makeSignedRequest(member, "deposit.transfer", map[string]interface{}{"amount": "1000", "ethTxHash": "Eth_TxHash_test"})
+	_, _, err = makeSignedRequest(launchnet.TestRPCUrl, member,
+		"deposit.transfer", map[string]interface{}{"amount": "1000", "ethTxHash": "Eth_TxHash_test"})
 	require.NoError(t, err)
 
 	checkBalanceFewTimes(t, member, member.Ref, secondBalance)
@@ -57,7 +61,8 @@ func TestDepositTransferToken(t *testing.T) {
 func TestDepositTransferBeforeUnhold(t *testing.T) {
 	member := fullMigration(t, "Eth_TxHash_test")
 
-	_, err := signedRequestWithEmptyRequestRef(t, member, "deposit.transfer", map[string]interface{}{"amount": "100", "ethTxHash": "Eth_TxHash_test"})
+	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, member,
+		"deposit.transfer", map[string]interface{}{"amount": "100", "ethTxHash": "Eth_TxHash_test"})
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "hold period didn't end")
 }
@@ -65,7 +70,8 @@ func TestDepositTransferBeforeUnhold(t *testing.T) {
 func TestDepositTransferBiggerAmount(t *testing.T) {
 	member := fullMigration(t, "Eth_TxHash_test")
 
-	_, err := signedRequestWithEmptyRequestRef(t, member, "deposit.transfer", map[string]interface{}{"amount": "10000000000000", "ethTxHash": "Eth_TxHash_test"})
+	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, member,
+		"deposit.transfer", map[string]interface{}{"amount": "10000000000000", "ethTxHash": "Eth_TxHash_test"})
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "not enough balance for transfer")
 }
@@ -73,7 +79,8 @@ func TestDepositTransferBiggerAmount(t *testing.T) {
 func TestDepositTransferAnotherTx(t *testing.T) {
 	member := fullMigration(t, "Eth_TxHash_test")
 
-	_, err := signedRequestWithEmptyRequestRef(t, member, "deposit.transfer", map[string]interface{}{"amount": "100", "ethTxHash": "Eth_TxHash_foo"})
+	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, member,
+		"deposit.transfer", map[string]interface{}{"amount": "100", "ethTxHash": "Eth_TxHash_foo"})
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "can't find deposit")
 }
@@ -81,7 +88,8 @@ func TestDepositTransferAnotherTx(t *testing.T) {
 func TestDepositTransferWrongValueAmount(t *testing.T) {
 	member := fullMigration(t, "Eth_TxHash_test")
 
-	_, err := signedRequestWithEmptyRequestRef(t, member, "deposit.transfer", map[string]interface{}{"amount": "foo", "ethTxHash": "Eth_TxHash_test"})
+	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, member,
+		"deposit.transfer", map[string]interface{}{"amount": "foo", "ethTxHash": "Eth_TxHash_test"})
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "can't parse input amount")
 }
@@ -93,7 +101,8 @@ func TestDepositTransferNotEnoughConfirms(t *testing.T) {
 	migrate(t, member.Ref, "1000", "Eth_TxHash_test", migrationAddress, 2)
 	migrate(t, member.Ref, "1000", "Eth_TxHash_test", migrationAddress, 0)
 
-	_, err := signedRequestWithEmptyRequestRef(t, member, "deposit.transfer", map[string]interface{}{"amount": "100", "ethTxHash": "Eth_TxHash_test"})
+	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, member,
+		"deposit.transfer", map[string]interface{}{"amount": "100", "ethTxHash": "Eth_TxHash_test"})
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "number of confirms is less then 3")
 }
