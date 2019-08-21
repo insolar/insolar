@@ -171,13 +171,19 @@ func (i *IndexDB) ForPulse(ctx context.Context, pn insolar.PulseNumber) ([]recor
 	defer it.Close()
 
 	for it.Next() {
-		key := newIndexKey(it.Key())
-		index, err := i.getBucket(key.pn, key.objID)
+		index := record.Index{}
+		rawIndex, err := it.Value()
+		err = index.Unmarshal(rawIndex)
 		if err != nil {
-			return nil, errors.Wrap(err, "Index iterator not consistent")
+			return nil, errors.Wrap(err, "Can't unmarshal index")
 		}
-		indexes = append(indexes, *index)
+		indexes = append(indexes, index)
 	}
+
+	if len(indexes) == 0 {
+		return nil, ErrIndexNotFound
+	}
+
 	return indexes, nil
 }
 
