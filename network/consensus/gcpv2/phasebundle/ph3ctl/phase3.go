@@ -411,7 +411,7 @@ func (c *Phase3Controller) workerSendPhase3(ctx context.Context, selfData statev
 	nodes := c.R.GetPopulation().GetAnyNodes(true, true)
 
 	// todo: hack send to all twice
-	for i := 0; i < 2; i++ {
+	for i := 0; i < 1; i++ {
 		p3.SendToMany(ctx, len(nodes), c.R.GetPacketSender(),
 			func(ctx context.Context, targetIdx int) (transport.TargetProfile, transport.PacketSendOptions) {
 				np := nodes[targetIdx]
