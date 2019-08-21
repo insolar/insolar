@@ -55,6 +55,7 @@ import (
 	"math"
 	"time"
 
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/longbits"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
@@ -67,8 +68,6 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 	"github.com/insolar/insolar/network/consensus/gcpv2/censusimpl"
 	"github.com/insolar/insolar/pulse"
-
-	"github.com/insolar/insolar/insolar"
 )
 
 func NewEmuChronicles(intros []profiles.StaticProfile, localNodeIndex int, asJoiner bool,

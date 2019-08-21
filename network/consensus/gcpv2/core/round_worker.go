@@ -55,9 +55,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/insolar/insolar/network/consensus/common/capacity"
-
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/network/consensus/common/capacity"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/pulse"

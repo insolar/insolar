@@ -56,11 +56,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core/errors"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetdispatch"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core/population"
-
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
@@ -70,6 +65,10 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/misbehavior"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/errors"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetdispatch"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/population"
 	"github.com/insolar/insolar/pulse"
 )
 

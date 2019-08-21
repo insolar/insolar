@@ -54,6 +54,7 @@ import (
 	"context"
 	"sync"
 
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/longbits"
 	"github.com/insolar/insolar/network"
@@ -61,8 +62,6 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/pulse"
-
-	"github.com/insolar/insolar/insolar"
 )
 
 type StateGetter interface {

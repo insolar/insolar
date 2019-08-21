@@ -53,11 +53,9 @@ package endpoints
 import (
 	"fmt"
 
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/longbits"
 	"github.com/insolar/insolar/network/consensus/common/args"
-
-	"github.com/insolar/insolar/insolar"
-
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 )
 

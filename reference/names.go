@@ -16,7 +16,9 @@
 
 package reference
 
-import "regexp"
+import (
+	"regexp"
+)
 
 const LegacyDomainName = "11111111111111111111111111111111"
 const RecordDomainName = "record"

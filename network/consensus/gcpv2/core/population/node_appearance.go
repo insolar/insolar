@@ -56,9 +56,6 @@ import (
 	"math"
 	"sync"
 
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/power"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/longbits"
@@ -68,9 +65,11 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/misbehavior"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/power"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
 )
 
 func NewNodeAppearanceAsSelf(np profiles.LocalNode, powerRequest power.Request, hook *Hook) NodeAppearance {

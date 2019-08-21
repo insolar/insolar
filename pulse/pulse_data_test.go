@@ -19,9 +19,9 @@ package pulse
 import (
 	"testing"
 
-	"github.com/insolar/insolar/longbits"
-
 	"github.com/stretchr/testify/require"
+
+	"github.com/insolar/insolar/longbits"
 )
 
 func TestNewFirstPulsarData(t *testing.T) {

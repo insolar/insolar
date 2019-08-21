@@ -56,6 +56,8 @@ import (
 	"crypto/rand"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/insolar/insolar/longbits"
 	"github.com/insolar/insolar/network/consensus/adapters"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
@@ -63,8 +65,6 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/pulsenetwork"
 	"github.com/insolar/insolar/pulse"
-
-	"github.com/stretchr/testify/require"
 )
 
 func TestEmbeddedPulsarData_SerializeTo(t *testing.T) {
