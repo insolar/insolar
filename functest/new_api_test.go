@@ -146,7 +146,7 @@ func TestIncorrectMethodName(t *testing.T) {
 func TestIncorrectParams(t *testing.T) {
 	firstMember := createMember(t)
 
-	_, err := signedRequestWithEmptyRequestRef(t, firstMember, "member.transfer", firstMember.Ref)
+	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, firstMember, "member.transfer", firstMember.Ref)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "failed to cast call params: expected 'map[string]interface{}', got 'string'")
 }
@@ -154,7 +154,7 @@ func TestIncorrectParams(t *testing.T) {
 func TestNilParams(t *testing.T) {
 	firstMember := createMember(t)
 
-	_, err := signedRequestWithEmptyRequestRef(t, firstMember, "member.transfer", nil)
+	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, firstMember, "member.transfer", nil)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "call params are nil")
 }
@@ -164,7 +164,8 @@ func TestRequestReference(t *testing.T) {
 	secondMember := createMember(t)
 	amount := "10"
 
-	_, ref, err := makeSignedRequest(firstMember, "member.transfer", map[string]interface{}{"amount": amount, "toMemberReference": secondMember.Ref})
+	_, ref, err := makeSignedRequest(launchnet.TestRPCUrl, firstMember, "member.transfer",
+		map[string]interface{}{"amount": amount, "toMemberReference": secondMember.Ref})
 	require.NoError(t, err)
 	require.NotEqual(t, "", ref)
 	require.NotEqual(t, "11111111111111111111111111111111.11111111111111111111111111111111", ref)

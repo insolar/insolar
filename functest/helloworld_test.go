@@ -141,7 +141,7 @@ func (i *HelloWorldInstance) Count(ctx context.Context) (int, error) {
 
 func (i *HelloWorldInstance) PulseNumber(t *testing.T, ctx context.Context) (int, error) {
 	member := &launchnet.User{i.Ref.String(), launchnet.Root.PrivKey, launchnet.Root.PubKey}
-	result, err := signedRequest(t, member, "PulseNumber", nil)
+	result, err := signedRequest(t, launchnet.TestRPCUrl, member, "PulseNumber", nil)
 	if err != nil {
 		return 0, err
 	}
