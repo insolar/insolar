@@ -135,12 +135,14 @@ func (r *executionRegistry) FindRequestLoop(ctx context.Context, reqRef insolar.
 	if _, ok := r.registry[reqRef]; ok {
 		// we're executing this request right now
 		// de-duplication should deal with this case
+		inslogger.FromContext(ctx).Info("already executing exactly this request")
 		return false
 	}
 
 	for _, transcript := range r.registry {
 		req := transcript.Request
 		if req.APIRequestID == apiRequestID && req.ReturnMode != record.ReturnNoWait {
+			inslogger.FromContext(ctx).Error("execution loop detected with request ", transcript.RequestRef.String())
 			return true
 		}
 	}
