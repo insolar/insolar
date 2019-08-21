@@ -138,14 +138,10 @@ func (rm *resultsMatcher) Clear(ctx context.Context) {
 	defer rm.lock.Unlock()
 
 	rm.executionNodes = make(map[insolar.Reference]insolar.Reference)
-	<<<<<<< HEAD
-	rm.unwantedResponses = make(map[insolar.Reference]resultWithContext)
-	====== =
 
 	logger := inslogger.FromContext(ctx)
 	for reqRef := range rm.unwantedResponses {
 		logger.Warn("not claimed response to request ", reqRef.String(), ", not confirmed pending?")
 	}
-	rm.unwantedResponses = make(map[insolar.Reference]resultWithTraceID)
-	>>>>>>> cfa7720c382d509e765b919a445992716ccd2f75
+	rm.unwantedResponses = make(map[insolar.Reference]resultWithContext)
 }
