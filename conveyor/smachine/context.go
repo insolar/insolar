@@ -51,8 +51,7 @@
 package smachine
 
 import (
-	"context"
-	"sync/atomic"
+	"time"
 )
 
 type slotContextMode uint8
@@ -106,14 +105,17 @@ func (p *slotContext) GetParent() SlotLink {
 	return p.s.parent
 }
 
-//func (p *slotContext) SetMigrationForStep(fn MigrateFunc) {
-//	p.ensureAtLeastState(initContext)
-//	p.migrateState = fn
-//}
-
-func (p *slotContext) SetMigration(fn MigrateFunc) {
+func (p *slotContext) SetDefaultMigration(fn MigrateFunc) {
 	p.ensureAtLeastState(initContext)
 	p.s.migrateSlot = fn
+}
+
+func (p *slotContext) NextWithMigrate(fn StateFunc, mf MigrateFunc) StateUpdate {
+	p.ensureAtLeastState(initContext)
+	if fn == nil {
+		panic("illegal value")
+	}
+	return stateUpdateNextOnly(&p.marker, fn, mf)
 }
 
 func (p *slotContext) Next(fn StateFunc) StateUpdate {
@@ -121,12 +123,12 @@ func (p *slotContext) Next(fn StateFunc) StateUpdate {
 	if fn == nil {
 		panic("illegal value")
 	}
-	return StateUpdate{marker: &p.marker, flags: stateUpdateNext, nextStep: SlotStep{transition: fn}}
+	return stateUpdateNextOnly(&p.marker, fn, nil)
 }
 
 func (p *slotContext) Stop() StateUpdate {
 	p.ensureAtLeastState(initContext)
-	return StateUpdate{marker: &p.marker, flags: stateUpdateStop}
+	return stateUpdateStop(&p.marker)
 }
 
 func (p *slotContext) Replace(fn CreateFunc) StateUpdate {
@@ -134,27 +136,17 @@ func (p *slotContext) Replace(fn CreateFunc) StateUpdate {
 	if fn == nil {
 		panic("illegal value")
 	}
-	return StateUpdate{marker: &p.marker, flags: stateUpdateReplace, param: fn}
-}
-
-func (p *slotContext) WaitAny() StateUpdate {
-	p.ensureExactState(execContext)
-	return StateUpdate{marker: &p.marker, flags: stateUpdateHotWait}
-}
-
-func (p *slotContext) WaitAdapter() StateUpdate {
-	p.ensureExactState(execContext)
-	return StateUpdate{marker: &p.marker, flags: stateUpdateColdWait}
+	return stateUpdateReplace(&p.marker, fn)
 }
 
 func (p *slotContext) Repeat(limit int) StateUpdate {
 	p.ensureExactState(execContext)
-	return StateUpdate{marker: &p.marker, flags: stateUpdateRepeat, param: limit}
+	return stateUpdateRepeat(&p.marker, limit)
 }
 
 func (p *slotContext) Yield() StateUpdate {
 	p.ensureExactState(execContext)
-	return StateUpdate{marker: &p.marker, flags: stateUpdateRepeat | stateUpdateYield, param: nil}
+	return stateUpdateRepeat(&p.marker, 0)
 }
 
 var _ ConstructionContext = &constructionContext{}
@@ -190,7 +182,7 @@ type migrationContext struct {
 }
 
 func (p *migrationContext) Same() StateUpdate {
-	return StateUpdate{marker: &p.marker, flags: stateUpdateNoChange}
+	return stateUpdateNoChange(&p.marker)
 }
 
 func (p *migrationContext) executeMigrate(fn MigrateFunc) StateUpdate {
@@ -218,7 +210,12 @@ var _ ExecutionContext = &executionContext{}
 type executionContext struct {
 	slotContext
 	worker          *SlotWorker
-	countAsyncCalls uint32
+	countAsyncCalls uint16
+}
+
+func (p *executionContext) WaitAny() ConditionalUpdate {
+	p.ensureExactState(execContext)
+	return &conditionalUpdate{template: stateUpdateDeactivateTemplate(&p.marker)}
 }
 
 func (p *executionContext) SyncOneStep(key string, weight int32, broadcastFn BroadcastReceiveFunc) Syncronizer {
@@ -234,119 +231,119 @@ func (p *executionContext) NewChild(fn CreateFunc) SlotLink {
 	return link
 }
 
-func (p *executionContext) NextAdapterCall(a ExecutionAdapter, fn AdapterCallFunc, resultState StateFunc) (StateUpdate, context.CancelFunc) {
-	p.ensureExactState(execContext)
-	if resultState == nil {
-		panic("illegal value")
-	}
-	aq := p.worker.machine.GetAdapterQueue(a)
+//func (p *executionContext) NextAdapterCall(a ExecutionAdapter, fn AdapterCallFunc, resultState StateFunc) (StateUpdate, context.CancelFunc) {
+//	p.ensureExactState(execContext)
+//	if resultState == nil {
+//		panic("illegal value")
+//	}
+//	aq := p.worker.machine.GetAdapterQueue(a)
+//
+//	cf := &indirectCancel{}
+//
+//	stepLink := p.s.NewStepLink()
+//	return StateUpdate{marker: &p.marker,
+//		flags:    stateUpdateColdWait | stateUpdateHasAsync,
+//		nextStep: SlotStep{transition: resultState},
+//
+//		param: func() {
+//			cf.set(aq.CallAsyncWithCancel(stepLink, fn, func(fn AsyncResultFunc) {
+//				p.worker.machine.applyAsyncStateUpdate(stepLink, fn)
+//			}))
+//		}}, cf.cancel
+//}
+//
+//type indirectCancel struct {
+//	cancelled bool
+//	cancelFn  context.CancelFunc
+//}
+//
+//func (p *indirectCancel) cancel() {
+//	p.cancelled = true
+//	if p.cancelFn != nil {
+//		p.cancelFn()
+//	}
+//}
+//
+//func (p *indirectCancel) set(cancel context.CancelFunc) {
+//	if p.cancelFn != nil {
+//		panic("illegal state")
+//	}
+//	if cancel == nil {
+//		return
+//	}
+//	if p.cancelled {
+//		p.cancel()
+//	}
+//}
+//
+//func (p *executionContext) AdapterSyncCall(a ExecutionAdapter, fn AdapterCallFunc) bool {
+//	p.ensureExactState(execContext)
+//	aq := p.worker.machine.GetAdapterQueue(a)
+//
+//	wc := p.worker.getCond()
+//
+//	var resultFn AsyncResultFunc
+//	var stateFlag uint32
+//
+//	stepLink := p.s.NewStepLink()
+//	aq.CallAsync(stepLink, fn, func(fn AsyncResultFunc) {
+//		resultFn = fn
+//		if !atomic.CompareAndSwapUint32(&stateFlag, 0, 1) {
+//			return
+//		}
+//		wc.L.Lock()
+//		wc.Broadcast()
+//		wc.L.Unlock()
+//	})
+//
+//	wc.L.Lock()
+//	wc.Wait()
+//	wc.L.Unlock()
+//
+//	if atomic.CompareAndSwapUint32(&stateFlag, 0, 2) {
+//		stepLink.setCancelled()
+//		return false
+//	}
+//	if resultFn == nil {
+//		return false
+//	}
+//
+//	rc := asyncResultContext{slot: p.s}
+//	rc.executeResult(resultFn)
+//	return true
+//}
+//
+//func (p *executionContext) AdapterAsyncCall(a ExecutionAdapter, fn AdapterCallFunc) {
+//	p.ensureExactState(execContext)
+//	aq := p.worker.machine.GetAdapterQueue(a)
+//
+//	stepLink := p.s.NewStepLink()
+//	p.countAsyncCalls++
+//
+//	aq.CallAsync(stepLink, fn, func(fn AsyncResultFunc) {
+//		p.worker.machine.applyAsyncStateUpdate(stepLink, fn)
+//	})
+//}
+//
+//func (p *executionContext) AdapterAsyncCallWithCancel(a ExecutionAdapter, fn AdapterCallFunc) context.CancelFunc {
+//	p.ensureExactState(execContext)
+//	aq := p.worker.machine.GetAdapterQueue(a)
+//
+//	stepLink := p.s.NewStepLink()
+//	p.countAsyncCalls++
+//
+//	return aq.CallAsyncWithCancel(stepLink, fn, func(fn AsyncResultFunc) {
+//		p.worker.machine.applyAsyncStateUpdate(stepLink, fn)
+//	})
+//}
 
-	cf := &indirectCancel{}
-
-	stepLink := p.s.NewStepLink()
-	return StateUpdate{marker: &p.marker,
-		flags:    stateUpdateColdWait | stateUpdateHasAsync,
-		nextStep: SlotStep{transition: resultState},
-
-		param: func() {
-			cf.set(aq.CallAsyncWithCancel(stepLink, fn, func(fn AsyncResultFunc) {
-				p.worker.machine.applyAsyncStateUpdate(stepLink, fn)
-			}))
-		}}, cf.cancel
-}
-
-type indirectCancel struct {
-	cancelled bool
-	cancelFn  context.CancelFunc
-}
-
-func (p *indirectCancel) cancel() {
-	p.cancelled = true
-	if p.cancelFn != nil {
-		p.cancelFn()
-	}
-}
-
-func (p *indirectCancel) set(cancel context.CancelFunc) {
-	if p.cancelFn != nil {
-		panic("illegal state")
-	}
-	if cancel == nil {
-		return
-	}
-	if p.cancelled {
-		p.cancel()
-	}
-}
-
-func (p *executionContext) AdapterSyncCall(a ExecutionAdapter, fn AdapterCallFunc) bool {
-	p.ensureExactState(execContext)
-	aq := p.worker.machine.GetAdapterQueue(a)
-
-	wc := p.worker.getCond()
-
-	var resultFn AsyncResultFunc
-	var stateFlag uint32
-
-	stepLink := p.s.NewStepLink()
-	aq.CallAsync(stepLink, fn, func(fn AsyncResultFunc) {
-		resultFn = fn
-		if !atomic.CompareAndSwapUint32(&stateFlag, 0, 1) {
-			return
-		}
-		wc.L.Lock()
-		wc.Broadcast()
-		wc.L.Unlock()
-	})
-
-	wc.L.Lock()
-	wc.Wait()
-	wc.L.Unlock()
-
-	if atomic.CompareAndSwapUint32(&stateFlag, 0, 2) {
-		stepLink.setCancelled()
-		return false
-	}
-	if resultFn == nil {
-		return false
-	}
-
-	rc := asyncResultContext{slot: p.s}
-	rc.executeResult(resultFn)
-	return true
-}
-
-func (p *executionContext) AdapterAsyncCall(a ExecutionAdapter, fn AdapterCallFunc) {
-	p.ensureExactState(execContext)
-	aq := p.worker.machine.GetAdapterQueue(a)
-
-	stepLink := p.s.NewStepLink()
-	p.countAsyncCalls++
-
-	aq.CallAsync(stepLink, fn, func(fn AsyncResultFunc) {
-		p.worker.machine.applyAsyncStateUpdate(stepLink, fn)
-	})
-}
-
-func (p *executionContext) AdapterAsyncCallWithCancel(a ExecutionAdapter, fn AdapterCallFunc) context.CancelFunc {
-	p.ensureExactState(execContext)
-	aq := p.worker.machine.GetAdapterQueue(a)
-
-	stepLink := p.s.NewStepLink()
-	p.countAsyncCalls++
-
-	return aq.CallAsyncWithCancel(stepLink, fn, func(fn AsyncResultFunc) {
-		p.worker.machine.applyAsyncStateUpdate(stepLink, fn)
-	})
-}
-
-func (p *executionContext) executeNextStep() (stopNow bool, stateUpdate StateUpdate, asyncCount uint32) {
+func (p *executionContext) executeNextStep() (stopNow bool, stateUpdate StateUpdate, asyncCount uint16) {
 	p.setState(inactiveContext, execContext)
 	defer p.setState(execContext, discardedContext)
 
 	loopLimit := p.worker.GetLoopLimit()
 
-	for loopCount := 0; loopCount < loopLimit; loopCount++ {
+	for loopCount := uint32(0); loopCount < loopLimit; loopCount++ {
 		if p.worker.HasSignal() {
 			return true, stateUpdate, p.countAsyncCalls
 		}
@@ -355,16 +352,15 @@ func (p *executionContext) executeNextStep() (stopNow bool, stateUpdate StateUpd
 		stateUpdate = current.transition(p)
 		stateUpdate.ensureContext(&p.marker)
 
-		switch stateUpdate.getMode() { // fast path(s)
-		case stateUpdateRepeat:
-			if loopCount < stateUpdate.getInt() {
+		switch stateUpdate.updType { // fast path(s)
+		case stateUpdRepeat:
+			limit := stateUpdate.param.(uint32)
+			if loopCount < limit {
 				continue
 			}
-		case stateUpdateNext:
-			if !stateUpdate.hasAny(stateUpdateHasAsync|stateUpdateYield) &&
-				p.s.machine.IsConsecutive(current.transition, stateUpdate.nextStep.transition) {
-
-				p.s.nextState = stateUpdate.nextStep
+		case stateUpdNextOnly:
+			if p.countAsyncCalls == 0 && p.s.machine.IsConsecutive(current.transition, stateUpdate.step.transition) {
+				p.s.nextState = stateUpdate.step
 				continue
 			}
 		}
@@ -402,4 +398,68 @@ func (p *asyncResultContext) executeBroadcast(payload interface{}, fn BroadcastR
 	accepted = fn(p, payload)
 	wakeup = p.wakeup
 	return
+}
+
+var _ ConditionalUpdate = &conditionalUpdate{}
+
+type conditionalUpdate struct {
+	template   StateUpdate
+	dependency SlotLink
+}
+
+func (c *conditionalUpdate) Deadline(d time.Time) ConditionalUpdate {
+	r := *c
+	r.template.step.wakeupTime = toUnixNano(d)
+	return &r
+}
+
+func (c *conditionalUpdate) Active(dependency SlotLink) ConditionalUpdate {
+	r := *c
+	r.dependency = dependency
+	return &r
+}
+
+func (c *conditionalUpdate) Wakeup(enable bool) ConditionalUpdate {
+	r := *c
+	if enable {
+		r.template.flags &^= stateUpdateNoWakeup
+	} else {
+		r.template.flags |= stateUpdateNoWakeup
+	}
+	return &r
+}
+
+func (c *conditionalUpdate) ThenNext(fn StateFunc) StateUpdate {
+	if fn == nil {
+		panic("illegal value")
+	}
+	return c.then(fn, nil)
+}
+
+func (c *conditionalUpdate) ThenNextWithMigrate(fn StateFunc, mf MigrateFunc) StateUpdate {
+	if fn == nil {
+		panic("illegal value")
+	}
+	return c.then(fn, mf)
+}
+
+func (c *conditionalUpdate) ThenRepeat() StateUpdate {
+	return c.then(nil, nil)
+}
+
+func (c *conditionalUpdate) then(fn StateFunc, mf MigrateFunc) StateUpdate {
+	if fn == nil {
+		panic("illegal value")
+	}
+
+	r := c.template
+	if c.dependency.IsEmpty() {
+		r.param = nil
+	} else {
+		r.param = c.dependency
+	}
+
+	r.step.transition = fn
+	r.step.migration = mf
+	return r
 }

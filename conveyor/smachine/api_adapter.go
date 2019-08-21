@@ -56,6 +56,21 @@ type AdapterID uint32
 
 type ExecutionAdapter interface {
 	GetAdapterID() AdapterID
+	PrepareSync(ctx ExecutionContext, fn AdapterCallFunc) SyncCallContext
+	PrepareAsync(ctx ExecutionContext, fn AdapterCallFunc) CallContext
+}
+
+type SyncCallContext interface {
+	TryCall() bool
+	Call()
+}
+
+type CallContext interface {
+	Call()
+	CallWithCancel() context.CancelFunc
+
+	Wait() CallConditionalUpdate
+	WaitWithCancel(*context.CancelFunc) CallConditionalUpdate
 }
 
 type AdapterCallbackFunc func(AsyncResultFunc)

@@ -113,7 +113,7 @@ func (p *SlotWorker) HasSignal() bool {
 	return false
 }
 
-func (p *SlotWorker) GetLoopLimit() int {
+func (p *SlotWorker) GetLoopLimit() uint32 {
 	return 5
 }
 

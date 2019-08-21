@@ -51,7 +51,6 @@
 package smachine
 
 import (
-	"context"
 	"time"
 )
 
@@ -76,10 +75,9 @@ type stepContext interface {
 
 	GetSelf() SlotLink
 
-	//SetMigrationForStep(fn MigrateFunc)
-	SetMigration(fn MigrateFunc)
+	SetDefaultMigration(fn MigrateFunc)
 
-	//NextWithMigrate(StateFunc, MigrateFunc) StateUpdate
+	NextWithMigrate(StateFunc, MigrateFunc) StateUpdate
 	Next(StateFunc) StateUpdate
 	Stop() StateUpdate
 }
@@ -98,30 +96,39 @@ type MigrationContext interface {
 type ExecutionContext interface {
 	stepContext
 
+	//ListenBroadcast(key string, broadcastFn BroadcastReceiveFunc)
 	SyncOneStep(key string, weight int32, broadcastFn BroadcastReceiveFunc) Syncronizer
 	//SyncManySteps(key string)
 
 	NewChild(CreateFunc) SlotLink
 
-	/* In-state call to adapter */
-	AdapterSyncCall(a ExecutionAdapter, fn AdapterCallFunc) bool
-	AdapterAsyncCall(a ExecutionAdapter, fn AdapterCallFunc)
-	AdapterAsyncCallWithCancel(a ExecutionAdapter, fn AdapterCallFunc) context.CancelFunc
-	NextAdapterCall(a ExecutionAdapter, fn AdapterCallFunc, resultState StateFunc) (StateUpdate, context.CancelFunc)
-
 	Replace(CreateFunc) StateUpdate
-	WaitAny() StateUpdate
-	Yield() StateUpdate
 	Repeat(limit int) StateUpdate
+	Yield() StateUpdate
 
-	//Before(d time.Time) StateUpdate
-	//WaitActive(slot SlotLink) StateUpdate
+	WaitAny() ConditionalUpdate
+}
+
+type CallConditionalUpdate interface {
+	Deadline(d time.Time) ConditionalUpdate
+	Active(slot SlotLink) ConditionalUpdate
+
+	ThenNext(StateFunc) StateUpdate
+	ThenNextWithMigrate(StateFunc, MigrateFunc) StateUpdate
+	ThenRepeat() StateUpdate
+}
+
+type ConditionalUpdate interface {
+	Wakeup(enable bool) ConditionalUpdate
 }
 
 type Syncronizer interface {
 	IsFirst() bool
 	Broadcast(payload interface{}) (total, accepted int)
 	ReleaseAll()
+
+	Wait() StateUpdate
+	WaitOrDeadline(d time.Time) StateUpdate
 }
 
 type AsyncResultContext interface {
@@ -138,64 +145,23 @@ func (id SlotID) IsUnknown() bool {
 	return id == UnknownSlotID
 }
 
-type stateUpdateFlags uint8
-
-const (
-	stateUpdateNoChange stateUpdateFlags = iota
-	stateUpdateRepeat
-	stateUpdateNext
-	stateUpdateReplace
-	stateUpdateStop
-	stateUpdateColdWait
-	stateUpdateHotWait
-	stateUpdateFailed
-
-	stateUpdateHasAsync stateUpdateFlags = 1 << 6
-	stateUpdateYield    stateUpdateFlags = 1 << 7
-	stateUpdateMask     stateUpdateFlags = 0x0F
-)
-
 type SlotStep struct {
 	transition StateFunc
 	migration  MigrateFunc
+	wakeupTime int64 //unixNano
+	stepFlags  uint32
 }
 
 type StateUpdate struct {
-	marker     *struct{}
-	nextStep   SlotStep
-	flags      stateUpdateFlags
-	wakeupTime time.Time
-	param      interface{}
-	//prepare    func()
-	//nextCreate CreateFunc
-	//param0     int
+	marker  *struct{}
+	updType uint32
+	apply   interface{}
+	//step       SlotStep
+	param interface{}
 }
 
-func (u StateUpdate) getCreateFn() CreateFunc {
-	return u.param.(CreateFunc)
-}
-
-func (u StateUpdate) getInt() int {
-	if u.param == nil {
-		return 0
-	}
-	return u.param.(int)
-}
-
-func (u StateUpdate) getPrepare() func() {
-	return u.param.(func())
-}
-
-func (u StateUpdate) isEmpty() bool {
-	return u.marker == nil
-}
-
-func (u *StateUpdate) setYield() {
-	u.flags |= stateUpdateYield
-}
-
-func (u StateUpdate) getMode() stateUpdateFlags {
-	return u.flags & stateUpdateMask
+func (u StateUpdate) IsZero() bool {
+	return u.marker == nil && u.updType == 0
 }
 
 func (u StateUpdate) ensureContext(p *struct{}) StateUpdate {
@@ -203,8 +169,4 @@ func (u StateUpdate) ensureContext(p *struct{}) StateUpdate {
 		panic("illegal value")
 	}
 	return u
-}
-
-func (u StateUpdate) hasAny(flag stateUpdateFlags) bool {
-	return u.flags&flag != 0
 }

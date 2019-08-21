@@ -92,6 +92,8 @@ type SlotMachine struct {
 	pollingSlots SlotQueue
 	nextPollTime time.Time
 
+	timedSlots SlotQueue
+
 	syncQueue    SyncQueue // for detached/async ops, queued functions MUST BE panic-safe
 	detachQueues map[SlotID]SyncFuncList
 
@@ -156,7 +158,7 @@ func (m *SlotMachine) scanWorkingSlots(workCtl WorkerController) {
 		currentSlot.setWorking()
 		wasDetached, err := sw.detachableCall(func() {
 			ec := executionContext{worker: &sw, slotContext: slotContext{s: currentSlot}}
-			var asyncCount uint32
+			var asyncCount uint16
 			stopNow, stateUpdate, asyncCount = ec.executeNextStep()
 			currentSlot.asyncCallCount += asyncCount
 		})
@@ -442,6 +444,11 @@ func (m *SlotMachine) applyDetachedStateUpdate(slotLink SlotLink, stateUpdate St
 	})
 }
 
+func (m *SlotMachine) applyStateUpdateNext(slot *Slot, stateUpdate StateUpdate) bool {
+
+}
+
+
 func (m *SlotMachine) applyStateUpdate(slot *Slot, stateUpdate StateUpdate) bool {
 
 	if slot.isWorking() { // there must be no calls here from inside of custom handlers
@@ -473,9 +480,7 @@ func (m *SlotMachine) applyStateUpdate(slot *Slot, stateUpdate StateUpdate) bool
 		}
 
 		parent := slot.parent
-		m.beforeSlotStop(slot)
-		slot.dispose()
-
+		m.disposeSlot(slot)
 		ok, _ := m.applySlotCreate(slot, parent, fn) // recursive call inside
 		return ok
 	case stateUpdateFailed:
@@ -483,8 +488,7 @@ func (m *SlotMachine) applyStateUpdate(slot *Slot, stateUpdate StateUpdate) bool
 		fallthrough
 	case stateUpdateStop:
 		if !slot.isEmpty() {
-			m.beforeSlotStop(slot)
-			slot.dispose()
+			m.disposeSlot(slot)
 		}
 		// TODO remove/release dependencies
 		m.unusedSlots.AddLast(slot)
@@ -538,12 +542,30 @@ func (m *SlotMachine) removeSlotFromQueue(slot *Slot) {
 	}
 }
 
+func (m *SlotMachine) addSlotToWaitingQueue(slot *Slot) {
+
+	w := slot.nextState.wakeupTime
+	if w > 0 && w > slot.lastActivation {
+		switch {
+		case w <= time.Now().UnixNano():
+			m.addSlotToQueue(slot, &m.activeSlots)
+		case w < 2xPolling:
+			m.addSlotToQueue(slot, &m.pollingSlots)
+		default:
+			zz
+		}
+		return
+	}
+
+	//
+}
+
 func (m *SlotMachine) addSlotToQueue(slot *Slot, queue *SlotQueue) {
 	m.removeSlotFromQueue(slot)
 	queue.AddLast(slot)
 }
 
-func (m *SlotMachine) beforeSlotStop(slot *Slot) {
+func (m *SlotMachine) disposeSlot(slot *Slot) {
 	// TODO inform adapters
 	m.removeSlotFromQueue(slot)
 
@@ -553,4 +575,5 @@ func (m *SlotMachine) beforeSlotStop(slot *Slot) {
 	//
 	//}
 
+	slot.dispose()
 }

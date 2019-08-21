@@ -17,7 +17,6 @@
 package example
 
 import (
-	"context"
 	"fmt"
 	"github.com/insolar/insolar/conveyor/smachine"
 )
@@ -28,7 +27,7 @@ type StateMachine1 struct {
 	smachine.StateMachineDeclTemplate
 
 	serviceA *ServiceAdapterA // inject
-	mutexB   *MutexAdapterB   // inject
+	//mutexB   *MutexAdapterB   // inject
 
 	result string
 	count  int
@@ -46,61 +45,67 @@ func (s *StateMachine1) GetInitStateFor(m smachine.StateMachine) smachine.InitFu
 }
 
 func (s *StateMachine1) Init(ctx smachine.InitializationContext) smachine.StateUpdate {
-	return ctx.Next(s.State2)
+	return ctx.Next(s.State1)
 }
 
-func (s *StateMachine1) State2(ctx smachine.ExecutionContext) smachine.StateUpdate {
-	ctx.NewChild(func(ctx smachine.ConstructionContext) smachine.StateMachine {
-		return &StateMachine1{}
-	})
-	//ctx.NewChild(func(ctx smachine.ConstructionContext) smachine.StateMachine {
-	//	return &StateMachine1{}
-	//})
+func (s *StateMachine1) State1(ctx smachine.ExecutionContext) smachine.StateUpdate {
+	mutex := ctx.SyncOneStep("test", 0, nil)
+
+	if !mutex.IsFirst() {
+		return mutex.Wait()
+	}
+
+	ctx.WaitAny().Wakeup().Deadline().Active().ThenRepeat()
 
 	return ctx.Next(s.State3)
 }
 
 func (s *StateMachine1) State3(ctx smachine.ExecutionContext) smachine.StateUpdate {
-	//ctx.NewChild(func(ctx smachine.ConstructionContext) smachine.StateMachine {
-	//	return &StateMachine1{}
-	//})
 	s.count++
 	s.result = fmt.Sprint(s.count)
 	if s.count < 5 {
 		//return ctx.Yield()
 		return ctx.Repeat(0)
 	}
+	ctx.NewChild(func(ctx smachine.ConstructionContext) smachine.StateMachine {
+		return &StateMachine1{}
+	})
 
 	return ctx.Next(s.State4)
 }
 
 func (s *StateMachine1) State4(ctx smachine.ExecutionContext) smachine.StateUpdate {
+	ctx.NewChild(func(ctx smachine.ConstructionContext) smachine.StateMachine {
+		return &StateMachine1{}
+	})
 
 	fmt.Println(s.result)
 	return ctx.Stop()
 }
 
 func (s *StateMachine1) State5(ctx smachine.ExecutionContext) smachine.StateUpdate {
+	return ctx.Stop()
+}
+
+func (s *StateMachine1) State50(ctx smachine.ExecutionContext) smachine.StateUpdate {
 
 	////s.serviceA.
 	result := ""
-	s.serviceA.Call(ctx, func(svc ServiceA) {
+	s.serviceA.Prepare(ctx, func(svc ServiceA) {
 		result = svc.DoSomething("x")
-	})
+	}).Call()
 
-	s.serviceA.AsyncCall(ctx, func(svc ServiceA) smachine.AsyncResultFunc {
+	return s.serviceA.PrepareAsync(ctx, func(svc ServiceA) smachine.AsyncResultFunc {
 		asyncResult := svc.DoSomething("x")
 
 		return func(ctx smachine.AsyncResultContext) {
 			s.result = asyncResult
 			ctx.WakeUp()
 		}
-	})
-
-	return ctx.WaitAny()
+	}).Wait().Wakeup().ThenNext(s.State5)
 }
 
-func (s *StateMachine1) State6(ctx smachine.ExecutionContext) smachine.StateUpdate {
+func (s *StateMachine1) State60(ctx smachine.ExecutionContext) smachine.StateUpdate {
 
 	//mx := s.mutexB.JoinMutex(ctx, "mutex Key", mutexCallback)
 	//if !mx.IsHolder() {
@@ -127,26 +132,15 @@ type ServiceAdapterA struct {
 	exec smachine.ExecutionAdapter
 }
 
-func (a *ServiceAdapterA) Call(ctx smachine.ExecutionContext, fn func(svc ServiceA)) {
-	if !ctx.AdapterSyncCall(a.exec, func() smachine.AsyncResultFunc {
+func (a *ServiceAdapterA) Prepare(ctx smachine.ExecutionContext, fn func(svc ServiceA)) smachine.SyncCallContext {
+	return a.exec.PrepareSync(ctx, func() smachine.AsyncResultFunc {
 		fn(a.svc)
 		return nil
-	}) {
-		panic("call was cancelled")
-	}
-}
-
-func (a *ServiceAdapterA) AsyncCall(ctx smachine.ExecutionContext, fn func(svc ServiceA) smachine.AsyncResultFunc) {
-	ctx.AdapterAsyncCall(a.exec, func() smachine.AsyncResultFunc {
-		return fn(a.svc)
 	})
 }
 
-func (a *ServiceAdapterA) AsyncCallWithCancel(ctx smachine.ExecutionContext, fn func(svc ServiceA) smachine.AsyncResultFunc) context.CancelFunc {
-	return ctx.AdapterAsyncCallWithCancel(a.exec, func() smachine.AsyncResultFunc {
+func (a *ServiceAdapterA) PrepareAsync(ctx smachine.ExecutionContext, fn func(svc ServiceA) smachine.AsyncResultFunc) smachine.CallContext {
+	return a.exec.PrepareAsync(ctx, func() smachine.AsyncResultFunc {
 		return fn(a.svc)
 	})
-}
-
-type MutexAdapterB struct {
 }
