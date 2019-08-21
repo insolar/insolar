@@ -426,7 +426,7 @@ func (c *Phase3Controller) workerSendPhase3(ctx context.Context, selfData statev
 		select {
 		case <-ctx.Done():
 			return
-		case <-time.After(100 * time.Millisecond):
+		case <-time.After(500 * time.Millisecond):
 
 		}
 	}
