@@ -51,7 +51,7 @@
 package proofs
 
 import (
-	"github.com/insolar/insolar/network/consensus/common/longbits"
+	"github.com/insolar/insolar/longbits"
 	"github.com/insolar/insolar/pulse"
 )
 

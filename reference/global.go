@@ -19,7 +19,7 @@ package reference
 import (
 	"io"
 
-	"github.com/insolar/insolar/insolar/longbits"
+	"github.com/insolar/insolar/longbits"
 )
 
 /* For LIMITED USE ONLY - can only be used by observer/analytical code */

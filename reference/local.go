@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/insolar/insolar/insolar/longbits"
+	"github.com/insolar/insolar/longbits"
 	"github.com/insolar/insolar/pulse"
 )
 

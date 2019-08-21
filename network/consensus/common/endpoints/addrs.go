@@ -53,6 +53,7 @@ package endpoints
 import (
 	"fmt"
 
+	"github.com/insolar/insolar/longbits"
 	"github.com/insolar/insolar/network/consensus/common/args"
 
 	"github.com/insolar/insolar/insolar"
@@ -85,7 +86,7 @@ type Outbound interface {
 	GetRelayID() insolar.ShortNodeID
 	GetNameAddress() Name
 	GetIPAddress() IPAddress
-	AsByteString() string
+	AsByteString() longbits.ByteString
 	CanAccept(connection Inbound) bool
 }
 
@@ -138,7 +139,7 @@ type Inbound interface {
 	//	GetIPAddress() packets.IPAddress // TODO
 	GetTransportKey() cryptkit.SignatureKeyHolder
 	GetTransportCert() cryptkit.CertificateHolder
-	AsByteString() string
+	AsByteString() longbits.ByteString
 }
 
 var _ Inbound = &InboundConnection{}
@@ -166,8 +167,8 @@ func (v InboundConnection) String() string {
 	return fmt.Sprintf("name:%s", v.Addr)
 }
 
-func (v *InboundConnection) AsByteString() string {
-	return v.String()
+func (v *InboundConnection) AsByteString() longbits.ByteString {
+	return longbits.ByteString(v.String())
 }
 
 func (v *InboundConnection) GetNameAddress() Name {

@@ -7,7 +7,6 @@ import (
 	mm_time "time"
 
 	"github.com/gojuno/minimock"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"

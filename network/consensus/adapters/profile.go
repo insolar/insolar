@@ -57,9 +57,9 @@ import (
 
 	"github.com/insolar/insolar/network"
 
+	"github.com/insolar/insolar/longbits"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
-	"github.com/insolar/insolar/network/consensus/common/longbits"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/pulse"
@@ -270,8 +270,8 @@ func (p *Outbound) GetIPAddress() endpoints.IPAddress {
 	return p.addr
 }
 
-func (p *Outbound) AsByteString() string {
-	return p.addr.String()
+func (p *Outbound) AsByteString() longbits.ByteString {
+	return longbits.ByteString(p.addr.String())
 }
 
 func NewStaticProfileList(nodes []insolar.NetworkNode, certificate insolar.Certificate, keyProcessor insolar.KeyProcessor) []profiles.StaticProfile {

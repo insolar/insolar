@@ -9,6 +9,7 @@ import (
 	mm_time "time"
 
 	"github.com/gojuno/minimock"
+	"github.com/insolar/insolar/longbits"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 )
 
@@ -16,7 +17,7 @@ import (
 type MemberAnnouncementSignatureMock struct {
 	t minimock.Tester
 
-	funcAsByteString          func() (s1 string)
+	funcAsByteString          func() (b1 longbits.ByteString)
 	inspectFuncAsByteString   func()
 	afterAsByteStringCounter  uint64
 	beforeAsByteStringCounter uint64
@@ -118,7 +119,7 @@ type MemberAnnouncementSignatureMockAsByteStringExpectation struct {
 
 // MemberAnnouncementSignatureMockAsByteStringResults contains results of the MemberAnnouncementSignature.AsByteString
 type MemberAnnouncementSignatureMockAsByteStringResults struct {
-	s1 string
+	b1 longbits.ByteString
 }
 
 // Expect sets up expected params for MemberAnnouncementSignature.AsByteString
@@ -146,7 +147,7 @@ func (mmAsByteString *mMemberAnnouncementSignatureMockAsByteString) Inspect(f fu
 }
 
 // Return sets up results that will be returned by MemberAnnouncementSignature.AsByteString
-func (mmAsByteString *mMemberAnnouncementSignatureMockAsByteString) Return(s1 string) *MemberAnnouncementSignatureMock {
+func (mmAsByteString *mMemberAnnouncementSignatureMockAsByteString) Return(b1 longbits.ByteString) *MemberAnnouncementSignatureMock {
 	if mmAsByteString.mock.funcAsByteString != nil {
 		mmAsByteString.mock.t.Fatalf("MemberAnnouncementSignatureMock.AsByteString mock is already set by Set")
 	}
@@ -154,12 +155,12 @@ func (mmAsByteString *mMemberAnnouncementSignatureMockAsByteString) Return(s1 st
 	if mmAsByteString.defaultExpectation == nil {
 		mmAsByteString.defaultExpectation = &MemberAnnouncementSignatureMockAsByteStringExpectation{mock: mmAsByteString.mock}
 	}
-	mmAsByteString.defaultExpectation.results = &MemberAnnouncementSignatureMockAsByteStringResults{s1}
+	mmAsByteString.defaultExpectation.results = &MemberAnnouncementSignatureMockAsByteStringResults{b1}
 	return mmAsByteString.mock
 }
 
 //Set uses given function f to mock the MemberAnnouncementSignature.AsByteString method
-func (mmAsByteString *mMemberAnnouncementSignatureMockAsByteString) Set(f func() (s1 string)) *MemberAnnouncementSignatureMock {
+func (mmAsByteString *mMemberAnnouncementSignatureMockAsByteString) Set(f func() (b1 longbits.ByteString)) *MemberAnnouncementSignatureMock {
 	if mmAsByteString.defaultExpectation != nil {
 		mmAsByteString.mock.t.Fatalf("Default expectation is already set for the MemberAnnouncementSignature.AsByteString method")
 	}
@@ -173,7 +174,7 @@ func (mmAsByteString *mMemberAnnouncementSignatureMockAsByteString) Set(f func()
 }
 
 // AsByteString implements MemberAnnouncementSignature
-func (mmAsByteString *MemberAnnouncementSignatureMock) AsByteString() (s1 string) {
+func (mmAsByteString *MemberAnnouncementSignatureMock) AsByteString() (b1 longbits.ByteString) {
 	mm_atomic.AddUint64(&mmAsByteString.beforeAsByteStringCounter, 1)
 	defer mm_atomic.AddUint64(&mmAsByteString.afterAsByteStringCounter, 1)
 
@@ -188,7 +189,7 @@ func (mmAsByteString *MemberAnnouncementSignatureMock) AsByteString() (s1 string
 		if results == nil {
 			mmAsByteString.t.Fatal("No results are set for the MemberAnnouncementSignatureMock.AsByteString")
 		}
-		return (*results).s1
+		return (*results).b1
 	}
 	if mmAsByteString.funcAsByteString != nil {
 		return mmAsByteString.funcAsByteString()

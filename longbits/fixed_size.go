@@ -25,7 +25,7 @@ type Foldable interface {
 	FoldToUint64() uint64
 }
 
-//go:generate minimock -i github.com/insolar/insolar/insolar/longbits.FixedReader -o . -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/longbits.FixedReader -o . -s _mock.go -g
 type FixedReader interface {
 	io.WriterTo
 	io.Reader
@@ -35,7 +35,7 @@ type FixedReader interface {
 	FixedByteSize() int
 }
 
-//go:generate minimock -i github.com/insolar/insolar/insolar/longbits.FoldableReader -o . -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/longbits.FoldableReader -o . -s _mock.go -g
 type FoldableReader interface {
 	FixedReader
 	Foldable
@@ -126,6 +126,10 @@ func ReadFixedSize(v FoldableReader) []byte {
 	return data
 }
 
+func NewFixedReader(data []byte) FixedReader {
+	return &fixedSize{data: data}
+}
+
 func NewMutableFixedSize(data []byte) FixedReader {
 	return &fixedSize{data}
 }
@@ -140,4 +144,17 @@ func NewImmutableFixedSize(data []byte) FixedReader {
 
 func CopyToImmutable(v FoldableReader) FoldableReader {
 	return NewByteString(ReadFixedSize(v)).AsReader()
+}
+
+func CopyFixedSize(v FoldableReader) FoldableReader {
+	r := fixedSize{}
+	r.data = make([]byte, v.FixedByteSize())
+	n, err := v.Read(r.data)
+	if err != nil {
+		panic(err)
+	}
+	if n != len(r.data) {
+		panic("unexpected")
+	}
+	return &r
 }

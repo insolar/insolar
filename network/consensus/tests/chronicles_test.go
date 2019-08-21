@@ -55,9 +55,9 @@ import (
 	"math"
 	"time"
 
+	"github.com/insolar/insolar/longbits"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
-	"github.com/insolar/insolar/network/consensus/common/longbits"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
@@ -191,8 +191,8 @@ func (p *emuEndpoint) CanAccept(connection endpoints.Inbound) bool {
 	return p.name == connection.GetNameAddress()
 }
 
-func (p *emuEndpoint) AsByteString() string {
-	return fmt.Sprintf("out:name:%s", p.name)
+func (p *emuEndpoint) AsByteString() longbits.ByteString {
+	return longbits.ByteString(fmt.Sprintf("out:name:%s", p.name))
 }
 
 func (p *emuEndpoint) GetIPAddress() endpoints.IPAddress {

@@ -128,7 +128,7 @@ func (p *PrepRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 		}
 		limiterKey = endpoints.ShortNodeIDAsByteString(packet.GetSourceID())
 	default:
-		limiterKey = from.AsByteString()
+		limiterKey = string(from.AsByteString())
 	}
 
 	/*

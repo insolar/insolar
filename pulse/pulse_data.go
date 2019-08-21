@@ -23,7 +23,7 @@ import (
 
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 
-	"github.com/insolar/insolar/network/consensus/common/longbits"
+	"github.com/insolar/insolar/longbits"
 )
 
 const InvalidPulseEpoch uint32 = 0

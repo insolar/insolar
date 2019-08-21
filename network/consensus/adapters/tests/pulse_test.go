@@ -57,7 +57,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/insolar/insolar/network/consensus/common/longbits"
+	"github.com/insolar/insolar/longbits"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/pulsenetwork"
