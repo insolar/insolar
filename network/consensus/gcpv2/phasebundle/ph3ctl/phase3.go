@@ -415,7 +415,7 @@ func (c *Phase3Controller) workerSendPhase3(ctx context.Context, selfData statev
 		p3.SendToMany(ctx, len(nodes), c.R.GetPacketSender(),
 			func(ctx context.Context, targetIdx int) (transport.TargetProfile, transport.PacketSendOptions) {
 				np := nodes[targetIdx]
-				if np.GetNodeID() == selfID || !np.SetPacketSent(phases.PacketPhase3) {
+				if np.GetNodeID() == selfID /* || !np.SetPacketSent(phases.PacketPhase3)*/ { // TODO HACK
 					return nil, 0
 				}
 				log.Warnf("Phase3 sent to %d", np.GetNodeID())

@@ -94,7 +94,7 @@ func (p PacketLimiter) IsLocal() bool {
 }
 
 func (p PacketLimiter) HasPacketSent(pt PacketType) bool {
-	return p.sent&1<<pt != 0
+	return p.sent&(1<<pt) != 0
 }
 
 func (p PacketLimiter) HasAnyPacketReceived() bool {
@@ -102,11 +102,11 @@ func (p PacketLimiter) HasAnyPacketReceived() bool {
 }
 
 func (p PacketLimiter) HasPacketReceived(pt PacketType) bool {
-	return p.received&1<<pt != 0
+	return p.received&(1<<pt) != 0
 }
 
 func (p PacketLimiter) SetPacketSent(pt PacketType) (bool, PacketLimiter) {
-	res := p.sent&1<<pt == 0
+	res := p.sent&(1<<pt) == 0
 	p.sent |= 1 << pt
 	return res, p
 }
@@ -138,7 +138,7 @@ func (p PacketLimiter) GetRemainingPacketCount(replaceUnlimitedWith uint8) uint8
 func (p PacketLimiter) CanReceivePacket(pt PacketType) bool {
 	switch pt.GetLimitPerSender() {
 	case 1:
-		return p.received&1<<pt == 0
+		return p.received&(1<<pt) == 0
 	case 0:
 		return false
 	default:
