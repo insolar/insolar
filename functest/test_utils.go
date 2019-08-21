@@ -20,6 +20,7 @@ package functest
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -33,6 +34,7 @@ import (
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/launchnet"
@@ -165,7 +167,7 @@ func migrate(t *testing.T, memberRef string, amount string, tx string, ma string
 	anotherMember := createMember(t)
 
 	_, err := signedRequest(t,
-		&launchnet.MigrationDaemons[mdNum],
+		launchnet.MigrationDaemons[mdNum],
 		"deposit.migration",
 		map[string]interface{}{"amount": amount, "ethTxHash": tx, "migrationAddress": ma})
 	require.NoError(t, err)
@@ -174,9 +176,14 @@ func migrate(t *testing.T, memberRef string, amount string, tx string, ma string
 	deposits, ok := res.(map[string]interface{})["deposits"].(map[string]interface{})
 	require.True(t, ok)
 	deposit, ok := deposits[tx].(map[string]interface{})
+	sm := make(foundation.StableMap)
+	require.NoError(t, err)
+	confirmerReferencesMap := deposit["confirmerReferences"].(string)
+	decoded, err := base64.StdEncoding.DecodeString(confirmerReferencesMap)
+	require.NoError(t, err)
+	err = sm.UnmarshalBinary(decoded)
 	require.True(t, ok)
-	require.Equal(t, deposit["amount"], amount)
-	require.Equal(t, deposit["ethTxHash"], tx)
+	require.Equal(t, sm[launchnet.MigrationDaemons[mdNum].Ref], amount)
 
 	return deposit
 }
@@ -243,6 +250,16 @@ func getStatus(t testing.TB) statusResponse {
 	unmarshalRPCResponse(t, body, rpcStatusResponse)
 	require.NotNil(t, rpcStatusResponse.Result)
 	return rpcStatusResponse.Result
+}
+
+func activateDaemons(t *testing.T) error {
+	for _, user := range launchnet.MigrationDaemons {
+		_, err := signedRequest(t, &launchnet.MigrationAdmin, "migration.activateDaemon", map[string]interface{}{"reference": user.Ref})
+		if err != nil {
+			return errors.Wrapf(err, "failed activate migration daemon %s", user.Ref)
+		}
+	}
+	return nil
 }
 
 func unmarshalRPCResponse(t testing.TB, body []byte, response RPCResponseInterface) {
@@ -520,4 +537,17 @@ func waitForFunction(customFunction func() api.CallMethodReply, functionTimeout 
 	case <-time.After(functionTimeout):
 		return nil, errors.New("timeout was exceeded")
 	}
+}
+
+func setMigrationDaemonsRef() error {
+	for i, mDaemon := range launchnet.MigrationDaemons {
+		daemon := mDaemon
+		daemon.Ref = launchnet.Root.Ref
+		res, _, err := makeSignedRequest(daemon, "member.get", nil)
+		if err != nil {
+			return errors.Wrap(err, "[ setup ] get member by public key failed ,key ")
+		}
+		launchnet.MigrationDaemons[i].Ref = res.(map[string]interface{})["reference"].(string)
+	}
+	return nil
 }

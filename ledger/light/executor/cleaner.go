@@ -99,10 +99,13 @@ func NewCleaner(
 // pulse, which is backwards by a size of lightChainLimit. If a pulse is fetched successfully,
 // all the data for it will be cleaned
 func (c *LightCleaner) NotifyAboutPulse(ctx context.Context, pn insolar.PulseNumber) {
+	logger := inslogger.FromContext(ctx)
+	logger.Info("cleaner got notification about new pulse :%v", pn)
 	c.once.Do(func() {
 		go c.clean(context.Background())
 	})
-	inslogger.FromContext(ctx).Debugf("[Cleaner][NotifyAboutPulse] received pulse - %v", pn)
+
+	logger.Info("cleaner before pulse :%v to waiting channel", pn)
 	c.pulseForClean <- pn
 }
 
@@ -113,7 +116,7 @@ func (c *LightCleaner) Stop() {
 func (c *LightCleaner) clean(ctx context.Context) {
 	work := func(pn insolar.PulseNumber) {
 		ctx, logger := inslogger.WithTraceField(ctx, utils.RandTraceID())
-		logger.Debugf("[Cleaner][NotifyAboutPulse] start cleaning pulse - %v", pn)
+		logger.Infof("cleaner reads pn:%v from queue", pn)
 
 		// A few steps back to eliminate race conditions on pulse change.
 		// Message handlers don't hold locks on data. A particular case is when we check if data is beyond limit
@@ -148,7 +151,9 @@ func (c *LightCleaner) clean(ctx context.Context) {
 }
 
 func (c *LightCleaner) cleanPulse(ctx context.Context, pn insolar.PulseNumber) {
-	inslogger.FromContext(ctx).Debugf("[Cleaner][cleanPulse] start cleaning. pn - %v", pn)
+	logger := inslogger.FromContext(ctx)
+	logger.Infof("start cleaning pn:%v", pn)
+
 	c.nodeModifier.DeleteForPN(pn)
 	c.dropCleaner.DeleteForPN(ctx, pn)
 	c.recCleaner.DeleteForPN(ctx, pn)
@@ -166,7 +171,8 @@ func (c *LightCleaner) cleanPulse(ctx context.Context, pn insolar.PulseNumber) {
 
 	err := c.pulseShifter.Shift(ctx, pn)
 	if err != nil {
-		inslogger.FromContext(ctx).Errorf("[Cleaner][cleanPulse] Can't clean pulse-tracker from pulse: %s", err)
+		logger.Errorf("can't clean pulse-tracker from pulse: %s", err)
 	}
-	inslogger.FromContext(ctx).Debugf("[Cleaner][cleanPulse] end cleaning. pn - %v", pn)
+
+	logger.Infof("finish cleaning pn:%v", pn)
 }

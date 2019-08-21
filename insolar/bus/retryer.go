@@ -97,7 +97,7 @@ func (r *RetrySender) SendRole(
 		}
 
 		if tries < r.retries {
-			mctx := insmetrics.InsertTag(ctx, tagMessageType, getMessageType(msg))
+			mctx := insmetrics.InsertTag(ctx, tagMessageType, messagePayloadTypeName(msg))
 			stats.Record(mctx, statRetries.M(int64(r.retries-tries)))
 		}
 
