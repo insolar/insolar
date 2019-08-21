@@ -74,7 +74,7 @@ func (sm *FuturePulseSM) GetInitStateFor(machine smachine.StateMachine) smachine
 }
 
 func (sm *FuturePulseSM) Init(ctx smachine.InitializationContext) smachine.StateUpdate {
-	ctx.SetMigration(sm.PulseCommitted)
+	ctx.SetDefaultMigration(sm.PulseCommitted)
 	return ctx.Next(sm.StateWorking)
 }
 
@@ -108,7 +108,7 @@ func (sm *PresentPulseSM) GetInitStateFor(machine smachine.StateMachine) smachin
 }
 
 func (sm *PresentPulseSM) Init(ctx smachine.InitializationContext) smachine.StateUpdate {
-	ctx.SetMigration(sm.PulseCommitted)
+	ctx.SetDefaultMigration(sm.PulseCommitted)
 	sm.psa.svc.subscribe(ctx, sm.PulsePrepare, sm.PulseCancel)
 	return ctx.Next(sm.StateWorking)
 }
@@ -155,7 +155,7 @@ func (sm *PastPulseSM) GetInitStateFor(machine smachine.StateMachine) smachine.I
 }
 
 func (sm *PastPulseSM) Init(ctx smachine.InitializationContext) smachine.StateUpdate {
-	ctx.SetMigration(sm.PulseCommitted)
+	ctx.SetDefaultMigration(sm.PulseCommitted)
 	return ctx.Next(sm.StateWorking)
 }
 

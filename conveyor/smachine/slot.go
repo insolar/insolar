@@ -63,7 +63,8 @@ type Slot struct {
 	nextState   SlotStep
 	migrateSlot MigrateFunc
 
-	asyncCallCount uint32 // pending calls
+	lastActivation int64  // unix time
+	asyncCallCount uint16 // pending calls
 	migrationCount uint16
 	workState      slotWorkState
 
@@ -157,6 +158,10 @@ func (s *Slot) dispose() {
 	if s.dependency != nil {
 		panic("illegal state")
 	}
+	s.forcedDispose()
+}
+
+func (s *Slot) forcedDispose() {
 	atomic.StoreUint64(&s.idAndStep, 0)
 	*s = Slot{}
 }
@@ -166,7 +171,7 @@ func (s *Slot) NewLink() SlotLink {
 }
 
 func (s *Slot) NewStepLink() StepLink {
-	return StepLink{s.NewLink(), s.GetStep()}
+	return StepLink{s.NewLink(), s.GetStep(), nil}
 }
 
 func (s *Slot) isEmpty() bool {
