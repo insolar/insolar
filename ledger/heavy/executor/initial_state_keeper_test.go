@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package executor
+package executor_test
 
 import (
 	"testing"
@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/drop"
+	"github.com/insolar/insolar/ledger/heavy/executor"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/stretchr/testify/require"
 )
@@ -86,7 +87,7 @@ func TestInitialStateKeeper_Get_AfterRestart(t *testing.T) {
 	defer mc.Finish()
 	ctx := inslogger.TestContext(t)
 
-	jetKeeper := NewJetKeeperMock(mc)
+	jetKeeper := executor.NewJetKeeperMock(mc)
 	jetKeeper.TopSyncPulseMock.Return(topSync)
 
 	jetIDs := gen.UniqueJetIDs(3)
@@ -112,7 +113,7 @@ func TestInitialStateKeeper_Get_AfterRestart(t *testing.T) {
 
 	jetCoordinator := jet.NewCoordinatorMock(mc)
 
-	stateKeeper := NewInitialStateKeeper(jetKeeper, jetAccessor, jetCoordinator, indexAccessor, dropAccessor)
+	stateKeeper := executor.NewInitialStateKeeper(jetKeeper, jetAccessor, jetCoordinator, indexAccessor, dropAccessor)
 	err := stateKeeper.Start(ctx)
 	require.NoError(t, err)
 
