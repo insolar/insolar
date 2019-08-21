@@ -60,7 +60,7 @@ type SDK struct {
 	rootMember             *requester.UserConfigJSON
 	migrationAdminMember   *requester.UserConfigJSON
 	migrationDaemonMembers []*requester.UserConfigJSON
-	logLevel               interface{}
+	logLevel               string
 }
 
 // NewSDK creates insSDK object
@@ -103,7 +103,7 @@ func NewSDK(urls []string, memberKeysDirPath string) (*SDK, error) {
 		rootMember:             rootMember,
 		migrationAdminMember:   migrationAdminMember,
 		migrationDaemonMembers: []*requester.UserConfigJSON{},
-		logLevel:               nil,
+		logLevel:               "",
 	}
 
 	if len(response.MigrationDaemonMembers) < insolar.GenesisAmountMigrationDaemonMembers {
@@ -131,7 +131,7 @@ func (sdk *SDK) SetLogLevel(logLevel string) error {
 }
 
 func (sdk *SDK) sendRequest(ctx context.Context, method string, params map[string]interface{}, userCfg *requester.UserConfigJSON) ([]byte, error) {
-	reqParams := requester.Params{CallParams: params, CallSite: method, PublicKey: userCfg.PublicKey, LogLevel: sdk.logLevel.(string)}
+	reqParams := requester.Params{CallParams: params, CallSite: method, PublicKey: userCfg.PublicKey, LogLevel: sdk.logLevel}
 
 	body, err := requester.Send(ctx, sdk.apiURLs.next(), userCfg, &reqParams)
 	if err != nil {
