@@ -25,7 +25,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/gen"
-	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
@@ -47,7 +46,6 @@ func TestSendInitialState_Dep(t *testing.T) {
 	startPulse := pulse.NewStartPulse()
 	jetKeeper := executor.NewJetKeeperMock(t)
 	stateAccessor := executor.NewInitialStateAccessorMock(t)
-	jetTree := jet.NewStorageMock(t)
 	pulseAccessor := pulse.NewAccessorMock(t)
 	sender := bus.NewSenderMock(t)
 
@@ -55,7 +53,6 @@ func TestSendInitialState_Dep(t *testing.T) {
 	is.Dep(startPulse, jetKeeper, stateAccessor, pulseAccessor, sender)
 	require.Equal(t, startPulse, is.dep.startPulse)
 	require.Equal(t, jetKeeper, is.dep.jetKeeper)
-	require.Equal(t, jetTree, is.dep.jetTree)
 	require.Equal(t, pulseAccessor, is.dep.pulseAccessor)
 	require.Equal(t, sender, is.dep.sender)
 }
