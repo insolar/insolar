@@ -410,16 +410,26 @@ func (c *Phase3Controller) workerSendPhase3(ctx context.Context, selfData statev
 	selfID := c.R.GetSelfNodeID()
 	nodes := c.R.GetPopulation().GetAnyNodes(true, true)
 
-	p3.SendToMany(ctx, len(nodes), c.R.GetPacketSender(),
-		func(ctx context.Context, targetIdx int) (transport.TargetProfile, transport.PacketSendOptions) {
-			np := nodes[targetIdx]
-			if np.GetNodeID() == selfID || !np.SetPacketSent(phases.PacketPhase3) {
-				return nil, 0
-			}
-			log.Warnf("Phase3 sent to %d", np.GetNodeID())
+	// todo: hack send to all twice
+	for i := 0; i < 2; i++ {
+		p3.SendToMany(ctx, len(nodes), c.R.GetPacketSender(),
+			func(ctx context.Context, targetIdx int) (transport.TargetProfile, transport.PacketSendOptions) {
+				np := nodes[targetIdx]
+				if np.GetNodeID() == selfID || !np.SetPacketSent(phases.PacketPhase3) {
+					return nil, 0
+				}
+				log.Warnf("Phase3 sent to %d", np.GetNodeID())
 
-			return np, sendOptions
-		})
+				return np, sendOptions
+			})
+
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(100 * time.Millisecond):
+
+		}
+	}
 }
 
 func (c *Phase3Controller) workerRecvPhase3(ctx context.Context, localInspector inspectors.VectorInspector) bool {
