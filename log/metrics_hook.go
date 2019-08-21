@@ -24,10 +24,15 @@ import (
 	"go.opencensus.io/tag"
 )
 
-type metricsHook struct {
-	callerSkipFrameCount int
+type metricsHook struct{}
+
+// Run implements zerolog.Hook.
+func (ch *metricsHook) Run(_ *zerolog.Event, level zerolog.Level, _ string) {
+	stats.Record(contextWithLogLevel(level), statLogWrites.M(1))
 }
 
+// cache contexts with tag in map per log level to avoid context creation
+// on every log metrics measurement
 var metricContextByLevel = func() map[zerolog.Level]context.Context {
 	var levels = []zerolog.Level{
 		zerolog.DebugLevel,
@@ -48,10 +53,6 @@ var metricContextByLevel = func() map[zerolog.Level]context.Context {
 	}
 	return m
 }()
-
-func (ch *metricsHook) Run(_ *zerolog.Event, level zerolog.Level, _ string) {
-	stats.Record(contextWithLogLevel(level), statLogWrites.M(1))
-}
 
 func contextWithLogLevel(level zerolog.Level) context.Context {
 	ctx, ok := metricContextByLevel[level]
