@@ -238,7 +238,7 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (i
 		ctx,
 		map[string]interface{}{
 			"called_request": r.Request.String(),
-			"called_method": msg.Method,
+			"called_method":  msg.Method,
 		},
 	)
 	logger.Debug("waiting results of request")

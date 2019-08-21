@@ -139,7 +139,7 @@ func createMigrationMemberForMA(t *testing.T, ma string) *launchnet.User {
 
 }
 
-func addBurnAddress(t *testing.T) {
+func addMigrationAddress(t *testing.T) {
 	ba := testutils.RandomString()
 	_, err := signedRequest(t, &launchnet.MigrationAdmin, "migration.addAddresses", map[string]interface{}{"migrationAddresses": []string{ba}})
 	require.NoError(t, err)
@@ -207,6 +207,7 @@ func fullMigration(t *testing.T, txHash string) *launchnet.User {
 
 func getRPSResponseBody(t testing.TB, postParams map[string]interface{}) []byte {
 	jsonValue, _ := json.Marshal(postParams)
+
 	postResp, err := http.Post(launchnet.TestRPCUrl, "application/json", bytes.NewBuffer(jsonValue))
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, postResp.StatusCode)

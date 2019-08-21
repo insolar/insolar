@@ -35,7 +35,7 @@ type status string
 const (
 	// TODO: https://insolar.atlassian.net/browse/WLT-768
 	// day   = 24 * 60 * 60
-	day   = 10
+	day = 10
 
 	vestingPeriodInDays = 360
 
