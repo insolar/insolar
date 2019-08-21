@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
 	"github.com/gojuno/minimock"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
@@ -29,6 +30,7 @@ import (
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
+	busMeta "github.com/insolar/insolar/insolar/bus/meta"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
@@ -36,7 +38,6 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 )
@@ -48,7 +49,7 @@ func TestNew(t *testing.T) {
 	pcs := platformpolicy.NewPlatformCryptographyScheme()
 
 	ctx := inslogger.TestContext(t)
-	contractRequester, err := New(ctx, &servicenetwork.ServiceNetwork{})
+	contractRequester, err := New(ctx, gochannel.NewGoChannel(gochannel.Config{}, nil), &bus.Bus{})
 	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, contractRequester.Stop())
@@ -87,7 +88,7 @@ func TestContractRequester_Start(t *testing.T) {
 	defer mc.Finish()
 
 	ctx := inslogger.TestContext(t)
-	cReq, err := New(ctx, &servicenetwork.ServiceNetwork{})
+	cReq, err := New(ctx, gochannel.NewGoChannel(gochannel.Config{}, nil), &bus.Bus{})
 	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, cReq.Stop())
@@ -103,7 +104,7 @@ func TestContractRequester_SendRequest(t *testing.T) {
 
 	ref := gen.Reference()
 
-	cReq, err := New(ctx, &servicenetwork.ServiceNetwork{})
+	cReq, err := New(ctx, gochannel.NewGoChannel(gochannel.Config{}, nil), &bus.Bus{})
 	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, cReq.Stop())
@@ -185,7 +186,7 @@ func TestContractRequester_Call_Timeout(t *testing.T) {
 	mc := minimock.NewController(t)
 	defer mc.Finish()
 
-	cr, err := New(ctx, &servicenetwork.ServiceNetwork{})
+	cr, err := New(ctx, gochannel.NewGoChannel(gochannel.Config{}, nil), &bus.Bus{})
 	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, cr.Stop())
@@ -251,7 +252,7 @@ func TestReceiveResult(t *testing.T) {
 	ctx, cancelFunc := context.WithTimeout(ctx, time.Second*10)
 	defer cancelFunc()
 
-	cr, err := New(ctx, &servicenetwork.ServiceNetwork{})
+	cr, err := New(ctx, gochannel.NewGoChannel(gochannel.Config{}, nil), &bus.Bus{})
 	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, cr.Stop())
@@ -306,7 +307,7 @@ func serializeReply(msg *message.Message) (*message.Message, error) {
 	}
 	msg.Payload = buf
 
-	msg.Metadata.Set(bus.MetaType, bus.TypeReply)
+	msg.Metadata.Set(busMeta.Type, busMeta.TypeReply)
 
 	return msg, nil
 }

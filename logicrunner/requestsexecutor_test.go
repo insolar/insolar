@@ -334,6 +334,8 @@ func TestRequestsExecutor_SendReply(t *testing.T) {
 
 	reqRef := gen.Reference()
 
+	caller := gen.Reference()
+
 	table := []struct {
 		name       string
 		reply      insolar.Reply
@@ -345,11 +347,13 @@ func TestRequestsExecutor_SendReply(t *testing.T) {
 			name: "success",
 			transcript: &common.Transcript{
 				RequestRef: reqRef,
-				Request:    &record.IncomingRequest{},
+				Request: &record.IncomingRequest{
+					Caller: caller,
+				},
 			},
 			reply: &reply.CallMethod{Object: &requestRef},
-			sender: bus.NewSenderMock(t).SendTargetMock.Set(
-				func(ctx context.Context, msg *message.Message, target insolar.Reference) (<-chan *message.Message, func()) {
+			sender: bus.NewSenderMock(t).SendRoleMock.Set(
+				func(ctx context.Context, msg *message.Message, role insolar.DynamicRole, target insolar.Reference) (<-chan *message.Message, func()) {
 					res := make(chan *message.Message)
 					go func() {
 						replyMsg, err := payload.NewMessage(&payload.Error{Text: "test error", Code: payload.CodeUnknown})
@@ -364,8 +368,7 @@ func TestRequestsExecutor_SendReply(t *testing.T) {
 					return res, func() {
 						close(res)
 					}
-				},
-			),
+				}),
 		},
 		{
 			name: "error",
@@ -374,19 +377,23 @@ func TestRequestsExecutor_SendReply(t *testing.T) {
 				Request:    &record.IncomingRequest{},
 			},
 			reply: &reply.CallMethod{Object: &requestRef},
-			sender: bus.NewSenderMock(t).SendTargetMock.Set(
-				func(ctx context.Context, msg *message.Message, target insolar.Reference) (<-chan *message.Message, func()) {
-					res := make(chan *message.Message, 1)
-					msg, err := payload.NewMessage(&payload.Error{Text: "object is deactivated", Code: payload.CodeUnknown})
-					require.NoError(t, err, "newMessage")
+			sender: bus.NewSenderMock(t).SendRoleMock.Set(
+				func(ctx context.Context, msg *message.Message, role insolar.DynamicRole, target insolar.Reference) (<-chan *message.Message, func()) {
+					res := make(chan *message.Message)
 					go func() {
-						res <- msg
+						replyMsg, err := payload.NewMessage(&payload.Error{Text: "test error", Code: payload.CodeUnknown})
+						require.NoError(t, err)
+						meta := payload.Meta{
+							Payload: msg.Payload,
+						}
+						buf, _ := meta.Marshal()
+						replyMsg.Payload = buf
+						res <- replyMsg
 					}()
 					return res, func() {
 						close(res)
 					}
-				},
-			),
+				}),
 		},
 	}
 

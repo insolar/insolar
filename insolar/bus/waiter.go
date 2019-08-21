@@ -20,14 +20,15 @@ import (
 	"bytes"
 	"context"
 
-	"github.com/insolar/insolar/insolar/pulse"
-
 	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/insolar"
+	busMeta "github.com/insolar/insolar/insolar/bus/meta"
 	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/pkg/errors"
 )
 
 // WaitOKSender allows to send messaged via provided Sender and wait for reply.OK.
@@ -55,7 +56,7 @@ func NewWaitOKSender(sender Sender) *WaitOKSender {
 func (c *WaitOKSender) SendRole(
 	ctx context.Context, msg *message.Message, role insolar.DynamicRole, ref insolar.Reference,
 ) {
-	msgType := msg.Metadata.Get(MetaType)
+	msgType := msg.Metadata.Get(busMeta.Type)
 	if msgType == "" {
 		payloadType, err := payload.UnmarshalType(msg.Payload)
 		if err != nil {
@@ -83,7 +84,7 @@ func (c *WaitOKSender) SendRole(
 // close replies channel after getting it. If reply is not reply.OK, it logs error message.
 func (c *WaitOKSender) SendTarget(
 	ctx context.Context, msg *message.Message, target insolar.Reference) {
-	msgType := msg.Metadata.Get(MetaType)
+	msgType := msg.Metadata.Get(busMeta.Type)
 	if msgType == "" {
 		payloadType, err := payload.UnmarshalType(msg.Payload)
 		if err != nil {
@@ -117,7 +118,7 @@ func checkReply(ctx context.Context, rep *message.Message) {
 		return
 	}
 
-	if rep.Metadata.Get(MetaType) == TypeReply {
+	if rep.Metadata.Get(busMeta.Type) == busMeta.TypeReply {
 		r, err := reply.Deserialize(bytes.NewBuffer(meta.Payload))
 		if err != nil {
 			logger.Error(errors.Wrap(err, "can't deserialize payload to reply"))

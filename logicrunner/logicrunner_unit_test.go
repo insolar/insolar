@@ -34,6 +34,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/bus/meta"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
@@ -193,10 +194,10 @@ func (suite *LogicRunnerTestSuite) TestSagaCallAcceptNotificationHandler() {
 
 	suite.ps.LatestMock.Return(*pulseNum, nil)
 
-	msg.Metadata.Set(bus.MetaPulse, pulseNum.PulseNumber.String())
+	msg.Metadata.Set(meta.Pulse, pulseNum.PulseNumber.String())
 	sp, err := instracer.Serialize(context.Background())
 	suite.Require().NoError(err)
-	msg.Metadata.Set(bus.MetaSpanData, string(sp))
+	msg.Metadata.Set(meta.SpanData, string(sp))
 
 	meta := payload.Meta{
 		Payload: msg.Payload,
@@ -385,12 +386,12 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 
 			wmMsg := message2.NewMessage(watermill.NewUUID(), buf)
 			require.NoError(syncT, err, "marshal")
-			wmMsg.Metadata.Set(bus.MetaPulse, pulseNum.String())
-			wmMsg.Metadata.Set(bus.MetaSender, notMeRef.String())
+			wmMsg.Metadata.Set(meta.Pulse, pulseNum.String())
+			wmMsg.Metadata.Set(meta.Sender, notMeRef.String())
 			sp, err := instracer.Serialize(context.Background())
 			require.NoError(syncT, err)
-			wmMsg.Metadata.Set(bus.MetaSpanData, string(sp))
-			wmMsg.Metadata.Set(bus.MetaTraceID, "req-"+strconv.Itoa(i))
+			wmMsg.Metadata.Set(meta.SpanData, string(sp))
+			wmMsg.Metadata.Set(meta.TraceID, "req-"+strconv.Itoa(i))
 
 			err = suite.lr.FlowDispatcher.Process(wmMsg)
 			require.NoError(syncT, err)

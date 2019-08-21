@@ -170,25 +170,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 
 	}
 
-	// API.
-	var (
-		Requester insolar.ContractRequester
-		API       insolar.APIRunner
-	)
-	{
-		var err error
-		c.contractRequester, err = contractrequester.New(ctx, NetworkService)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to start ContractRequester")
-		}
-		Requester = c.contractRequester
-
-		API, err = api.NewRunner(&cfg.APIRunner)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to start ApiRunner")
-		}
-	}
-
 	// Storage.
 	var (
 		Coordinator jet.Coordinator
@@ -238,6 +219,25 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 			return nil, errors.Wrap(err, "failed to start MessageBus")
 		}
 		WmBus = bus.NewBus(cfg.Bus, publisher, Pulses, Coordinator, CryptoScheme)
+	}
+
+	// API.
+	var (
+		Requester insolar.ContractRequester
+		API       insolar.APIRunner
+	)
+	{
+		var err error
+		c.contractRequester, err = contractrequester.New(ctx, subscriber, WmBus)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to start ContractRequester")
+		}
+		Requester = c.contractRequester
+
+		API, err = api.NewRunner(&cfg.APIRunner)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to start ApiRunner")
+		}
 	}
 
 	metricsHandler, err := metrics.NewMetrics(

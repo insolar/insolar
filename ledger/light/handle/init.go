@@ -25,6 +25,7 @@ import (
 	"github.com/pkg/errors"
 
 	wbus "github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/bus/meta"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -223,7 +224,7 @@ func (s *Init) handlePass(ctx context.Context, f flow.Flow, meta payload.Meta) e
 }
 
 func (s *Init) Past(ctx context.Context, f flow.Flow) error {
-	msgType := s.message.Metadata.Get(wbus.MetaType)
+	msgType := s.message.Metadata.Get(meta.Type)
 	if msgType != "" {
 		return s.Present(ctx, f)
 	}

@@ -24,6 +24,7 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/bus/meta"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
@@ -123,8 +124,8 @@ func New(cfg configuration.Ledger) *Handler {
 }
 
 func (h *Handler) Process(msg *watermillMsg.Message) error {
-	ctx := inslogger.ContextWithTrace(context.Background(), msg.Metadata.Get(bus.MetaTraceID))
-	parentSpan, err := instracer.Deserialize([]byte(msg.Metadata.Get(bus.MetaSpanData)))
+	ctx := inslogger.ContextWithTrace(context.Background(), msg.Metadata.Get(meta.TraceID))
+	parentSpan, err := instracer.Deserialize([]byte(msg.Metadata.Get(meta.SpanData)))
 	if err == nil {
 		ctx = instracer.WithParentSpan(ctx, parentSpan)
 	} else {
@@ -132,7 +133,7 @@ func (h *Handler) Process(msg *watermillMsg.Message) error {
 	}
 
 	for k, v := range msg.Metadata {
-		if k == bus.MetaSpanData || k == bus.MetaTraceID {
+		if k == meta.SpanData || k == meta.TraceID {
 			continue
 		}
 		ctx, _ = inslogger.WithField(ctx, k, v)

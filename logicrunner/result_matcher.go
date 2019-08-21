@@ -63,7 +63,7 @@ func (rm *resultsMatcher) send(ctx context.Context, msg *payload.ReturnResults, 
 
 	sender := bus.NewWaitOKWithRetrySender(rm.lr.Sender, rm.lr.PulseAccessor, 1)
 
-	msgData, err := payload.NewMessage(msg)
+	msgData, err := payload.NewResultMessage(msg)
 	if err != nil {
 		inslogger.FromContext(ctx).Debug("failed to serialize message")
 		return

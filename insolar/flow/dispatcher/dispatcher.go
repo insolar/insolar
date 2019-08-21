@@ -28,7 +28,8 @@ import (
 	"go.opencensus.io/tag"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/bus/meta"
+	busMeta "github.com/insolar/insolar/insolar/bus/meta"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/internal/pulse"
 	"github.com/insolar/insolar/insolar/flow/internal/thread"
@@ -104,23 +105,23 @@ func (d *dispatcher) getHandleByPulse(ctx context.Context, msgPulseNumber insola
 func (d *dispatcher) Process(msg *message.Message) error {
 	processStart := time.Now()
 	ctx := context.Background()
-	ctx = inslogger.ContextWithTrace(ctx, msg.Metadata.Get(bus.MetaTraceID))
+	ctx = inslogger.ContextWithTrace(ctx, msg.Metadata.Get(meta.TraceID))
 
 	for k, v := range msg.Metadata {
-		if k == bus.MetaSpanData || k == bus.MetaTraceID {
+		if k == meta.SpanData || k == meta.TraceID {
 			continue
 		}
 		ctx, _ = inslogger.WithField(ctx, k, v)
 	}
 	logger := inslogger.FromContext(ctx)
 
-	pn, err := insolar.NewPulseNumberFromStr(msg.Metadata.Get(bus.MetaPulse))
+	pn, err := insolar.NewPulseNumberFromStr(msg.Metadata.Get(meta.Pulse))
 	if err != nil {
 		logger.Error("failed to handle message: ", err)
 		return nil
 	}
 	ctx = pulse.ContextWith(ctx, pn)
-	parentSpan := instracer.MustDeserialize([]byte(msg.Metadata.Get(bus.MetaSpanData)))
+	parentSpan := instracer.MustDeserialize([]byte(msg.Metadata.Get(meta.SpanData)))
 	ctx = instracer.WithParentSpan(ctx, parentSpan)
 
 	msgType := messagePayloadTypeName(msg)
@@ -176,7 +177,7 @@ func messagePayloadTypeName(msg *message.Message) string {
 	payloadType, err := payload.UnmarshalType(meta.Payload)
 	if err != nil {
 		// branch for legacy messages format: INS-2973
-		return msg.Metadata.Get(bus.MetaType)
+		return msg.Metadata.Get(busMeta.Type)
 	}
 	return payloadType.String()
 }

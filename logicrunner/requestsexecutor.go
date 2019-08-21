@@ -139,31 +139,35 @@ func (e *requestsExecutor) SendReply(
 	sender := bus.NewWaitOKWithRetrySender(e.Sender, e.PulseAccessor, 1)
 
 	var (
-		msg    *message2.Message
-		target insolar.Reference
+		msg *message2.Message
 	)
 
 	if transcript.Request.APINode.IsEmpty() {
-		msg, err = payload.NewMessage(&payload.ReturnResults{
-			Target:     transcript.Request.Caller,
+		msg, err = payload.NewResultMessage(&payload.ReturnResults{
 			RequestRef: transcript.RequestRef,
 			Reason:     transcript.Request.Reason,
 			Reply:      reply.ToBytes(re),
 			Error:      errStr,
 		})
-		target = transcript.Request.Caller
-	} else {
-		msg, err = payload.NewMessage(&payload.ReturnResults{
-			RequestRef: transcript.RequestRef,
-			Reason:     insolar.Reference{},
-			Reply:      reply.ToBytes(re),
-			Error:      errStr,
-		})
-		target = transcript.Request.APINode
+		if err != nil {
+			inslogger.FromContext(ctx).Error("couldn't serialize message: ", err)
+			return
+		}
+
+		sender.SendRole(ctx, msg, insolar.DynamicRoleVirtualExecutor, transcript.Request.Caller)
+
+		return
 	}
+
+	msg, err = payload.NewResultMessage(&payload.ReturnResults{
+		RequestRef: transcript.RequestRef,
+		Reply:      reply.ToBytes(re),
+		Error:      errStr,
+	})
+	sender.SendTarget(ctx, msg, transcript.Request.APINode)
+
 	if err != nil {
 		inslogger.FromContext(ctx).Error("couldn't serialize message: ", err)
 		return
 	}
-	sender.SendTarget(ctx, msg, target)
 }

@@ -30,6 +30,7 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/bus/meta"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
@@ -48,30 +49,6 @@ const (
 
 	// TopicIncomingRequestResponse is topic for handling incoming RequestResponse messages
 	TopicIncomingRequestResults = "TopicIncomingRequestResults"
-
-	TopicOutgoingRequestResults = "TopicOutgoingRequestResults"
-)
-
-const (
-	// MetaPulse is key for Pulse
-	MetaPulse = "pulse"
-
-	// MetaType is key for Type
-	MetaType = "type"
-
-	// MetaSender is key for Sender
-	MetaSender = "sender"
-
-	// MetaTraceID is key for traceID
-	MetaTraceID = "TraceID"
-
-	// MetaSpanData is key for a span data
-	MetaSpanData = "SpanData"
-)
-
-const (
-	// TypeReply is Type for messages with insolar.Reply in Payload
-	TypeReply = "reply"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/insolar/bus.Sender -o ./ -s _mock.go -g
@@ -148,7 +125,7 @@ func (b *Bus) removeReplyChannel(ctx context.Context, h payload.MessageHash, rep
 func ReplyAsMessage(ctx context.Context, rep insolar.Reply) *message.Message {
 	resInBytes := reply.ToBytes(rep)
 	resAsMsg := message.NewMessage(watermill.NewUUID(), resInBytes)
-	resAsMsg.Metadata.Set(MetaType, TypeReply)
+	resAsMsg.Metadata.Set(meta.Type, meta.TypeReply)
 	return resAsMsg
 }
 
@@ -239,15 +216,15 @@ func (b *Bus) sendTarget(
 	ctx, _ = inslogger.WithField(ctx, "sending_type", payloadType.String())
 	logger := inslogger.FromContext(ctx)
 	span.AddAttributes(
-		trace.StringAttribute("sending_type", msg.Metadata.Get(MetaType)),
+		trace.StringAttribute("sending_type", msg.Metadata.Get(meta.Type)),
 	)
 
 	// tracing setup
-	msg.Metadata.Set(MetaTraceID, inslogger.TraceID(ctx))
+	msg.Metadata.Set(meta.TraceID, inslogger.TraceID(ctx))
 
 	sp, err := instracer.Serialize(ctx)
 	if err == nil {
-		msg.Metadata.Set(MetaSpanData, string(sp))
+		msg.Metadata.Set(meta.SpanData, string(sp))
 	} else {
 		instracer.AddError(span, err)
 		logger.Error(err)
@@ -280,14 +257,12 @@ func (b *Bus) sendTarget(
 	b.replies[msgHash] = reply
 	b.repliesMutex.Unlock()
 
-	topic := getTopic(payloadType)
-
 	logger.Debugf("sending message %s. uuid = %s", msgHash.String(), msg.UUID)
-	err = b.pub.Publish(topic, msg)
+	err = b.pub.Publish(TopicOutgoing, msg)
 	if err != nil {
 		done()
 		instracer.AddError(span, err)
-		return handleError(errors.Wrapf(err, "can't publish message to %s topic", topic))
+		return handleError(errors.Wrapf(err, "can't publish message to %s topic", TopicOutgoing))
 	}
 
 	go func() {
@@ -354,11 +329,11 @@ func (b *Bus) Reply(ctx context.Context, origin payload.Meta, reply *message.Mes
 
 	replyHash := wrapped.ID
 
-	reply.Metadata.Set(MetaTraceID, inslogger.TraceID(ctx))
+	reply.Metadata.Set(meta.TraceID, inslogger.TraceID(ctx))
 
 	sp, err := instracer.Serialize(ctx)
 	if err == nil {
-		reply.Metadata.Set(MetaSpanData, string(sp))
+		reply.Metadata.Set(meta.SpanData, string(sp))
 	} else {
 		instracer.AddError(span, err)
 		logger.Error(err)
@@ -377,9 +352,9 @@ func (b *Bus) Reply(ctx context.Context, origin payload.Meta, reply *message.Mes
 // IncomingMessageRouter is watermill middleware for incoming messages - it decides, how to handle it: as request or as reply.
 func (b *Bus) IncomingMessageRouter(handle message.HandlerFunc) message.HandlerFunc {
 	return func(msg *message.Message) ([]*message.Message, error) {
-		ctx, logger := inslogger.WithTraceField(context.Background(), msg.Metadata.Get(MetaTraceID))
+		ctx, logger := inslogger.WithTraceField(context.Background(), msg.Metadata.Get(meta.TraceID))
 
-		parentSpan, err := instracer.Deserialize([]byte(msg.Metadata.Get(MetaSpanData)))
+		parentSpan, err := instracer.Deserialize([]byte(msg.Metadata.Get(meta.SpanData)))
 		if err == nil {
 			ctx = instracer.WithParentSpan(ctx, parentSpan)
 		} else {
@@ -482,14 +457,4 @@ func (b *Bus) wrapMeta(
 	msg.Payload = buf
 
 	return meta, msg, nil
-}
-
-func getTopic(payloadType payload.Type) string {
-	topicName := TopicOutgoing
-
-	if payloadType == payload.TypeReturnResults {
-		topicName = TopicOutgoingRequestResults
-	}
-
-	return topicName
 }

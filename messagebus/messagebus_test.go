@@ -25,15 +25,19 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill"
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
+	"github.com/pkg/errors"
+
+	"github.com/insolar/insolar/insolar/bus/meta"
+	busMeta "github.com/insolar/insolar/insolar/bus/meta"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/reply"
-	"github.com/pkg/errors"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/pulse"
-	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
@@ -220,8 +224,8 @@ func TestMessageBus_createWatermillMessage(t *testing.T) {
 
 	require.NotNil(t, msg)
 	require.NotNil(t, msg.Payload)
-	require.Equal(t, parcel.Msg.Type().String(), msg.Metadata.Get(bus.MetaType))
-	require.Equal(t, insolar.NewEmptyReference().String(), msg.Metadata.Get(bus.MetaSender))
+	require.Equal(t, parcel.Msg.Type().String(), msg.Metadata.Get(meta.Type))
+	require.Equal(t, insolar.NewEmptyReference().String(), msg.Metadata.Get(meta.Sender))
 }
 
 func TestMessageBus_deserializePayload_GetReply(t *testing.T) {
@@ -233,7 +237,7 @@ func TestMessageBus_deserializePayload_GetReply(t *testing.T) {
 	buf, err := meta.Marshal()
 	require.NoError(t, err)
 	msg := watermillMsg.NewMessage(watermill.NewUUID(), buf)
-	msg.Metadata.Set(bus.MetaType, bus.TypeReply)
+	msg.Metadata.Set(busMeta.Type, busMeta.TypeReply)
 
 	r, err := deserializePayload(msg)
 
@@ -266,7 +270,7 @@ func TestMessageBus_deserializePayload_GetReply_WrongType(t *testing.T) {
 	buf, err := meta.Marshal()
 	require.NoError(t, err)
 	msg := watermillMsg.NewMessage(watermill.NewUUID(), buf)
-	msg.Metadata.Set(bus.MetaType, bus.TypeReply)
+	msg.Metadata.Set(busMeta.Type, busMeta.TypeReply)
 
 	r, err := deserializePayload(msg)
 

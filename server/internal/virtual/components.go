@@ -159,7 +159,7 @@ func initComponents(
 	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner, publisher, b)
 	checkError(ctx, err, "failed to start LogicRunner")
 
-	contractRequester, err := contractrequester.New(ctx, nw)
+	contractRequester, err := contractrequester.New(ctx, subscriber, b)
 	checkError(ctx, err, "failed to start ContractRequester")
 
 	contractRequester.UnwantedResponseCallback = logicrunner.UnwantedResponseHandler(logicRunner)

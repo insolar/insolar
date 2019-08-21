@@ -26,12 +26,12 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
-	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/api"
 	"github.com/insolar/insolar/insolar/bus"
+	busMeta "github.com/insolar/insolar/insolar/bus/meta"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
@@ -41,7 +41,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/network/servicenetwork"
 )
 
 // ContractRequester helps to call contracts
@@ -56,8 +55,7 @@ type ContractRequester struct {
 	ResultMutex sync.Mutex
 	ResultMap   map[[insolar.RecordHashSize]byte]chan *payload.ReturnResults
 
-	outRequestResultsRouter *message.Router
-	inRequestResultsRouter  *message.Router
+	inRequestResultsRouter *message.Router
 
 	// callTimeout is mainly needed for unit tests which
 	// sometimes may unpredictably fail on CI with a default timeout
@@ -68,45 +66,31 @@ type ContractRequester struct {
 var _ insolar.ContractRequester = &ContractRequester{}
 
 // New creates new ContractRequester
-func New(ctx context.Context, networkService *servicenetwork.ServiceNetwork) (*ContractRequester, error) {
-
+func New(ctx context.Context, subscriber message.Subscriber, b *bus.Bus) (*ContractRequester, error) {
 	wmLogger := log.NewWatermillLogAdapter(inslogger.FromContext(ctx))
 	inRouter, err := message.NewRouter(message.RouterConfig{}, wmLogger)
 	if err != nil {
 		return nil, err
 	}
 
-	outRouter, err := message.NewRouter(message.RouterConfig{}, wmLogger)
-	if err != nil {
-		return nil, err
-	}
-
 	cr := &ContractRequester{
-		ResultMap:               make(map[[insolar.RecordHashSize]byte]chan *payload.ReturnResults),
-		callTimeout:             25 * time.Second,
-		outRequestResultsRouter: outRouter,
-		inRequestResultsRouter:  inRouter,
+		ResultMap:              make(map[[insolar.RecordHashSize]byte]chan *payload.ReturnResults),
+		callTimeout:            25 * time.Second,
+		inRequestResultsRouter: inRouter,
 	}
-
-	outRouter.AddNoPublisherHandler(
-		"OutgoingHandler",
-		bus.TopicOutgoingRequestResults,
-		gochannel.NewGoChannel(gochannel.Config{}, wmLogger),
-		networkService.SendMessageHandler,
-	)
 
 	inRouter.AddMiddleware(
 		middleware.InstantAck,
+		b.IncomingMessageRouter,
 	)
 
 	inRouter.AddNoPublisherHandler(
-		"IncomingHandler",
+		"IncomingRequestResults",
 		bus.TopicIncomingRequestResults,
-		gochannel.NewGoChannel(gochannel.Config{}, wmLogger),
+		subscriber,
 		cr.ReceiveResult,
 	)
 
-	startRouter(ctx, outRouter)
 	startRouter(ctx, inRouter)
 
 	return cr, nil
@@ -236,7 +220,7 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Payload) (i
 		}
 	}
 
-	sender := bus.NewRetrySender(cr.Sender, cr.PulseAccessor, 1, 1)
+	sender := bus.NewRetrySender(cr.Sender, cr.PulseAccessor, 5, 1)
 
 	message, err := payload.NewMessage(msg)
 	if err != nil {
@@ -252,7 +236,7 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Payload) (i
 
 	replyData, err := deserializePayload(rawResponse)
 	if err != nil {
-		return nil, nil, errors.Wrapf(err, "failed to deserialize payload, raw payload %+v", rawResponse)
+		return nil, nil, errors.Wrapf(err, "failed to deserialize payload")
 	}
 
 	var (
@@ -291,8 +275,7 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Payload) (i
 	ctx, cancel := context.WithTimeout(ctx, cr.callTimeout)
 	defer cancel()
 
-	ctx, logger = inslogger.WithFields(
-		ctx,
+	logger = logger.WithFields(
 		map[string]interface{}{
 			"called_request": r.Request.String(),
 			"called_method":  msg.Request.Method,
@@ -347,8 +330,10 @@ func (cr *ContractRequester) ReceiveResult(msg *message.Message) error {
 		return errors.New("can't deserialize payload of nil message")
 	}
 
-	ctx := inslogger.ContextWithTrace(context.Background(), msg.Metadata.Get(bus.MetaTraceID))
-	parentSpan, err := instracer.Deserialize([]byte(msg.Metadata.Get(bus.MetaSpanData)))
+	ctx := inslogger.ContextWithTrace(context.Background(), msg.Metadata.Get(busMeta.TraceID))
+	logger := inslogger.FromContext(ctx)
+
+	parentSpan, err := instracer.Deserialize([]byte(msg.Metadata.Get(busMeta.SpanData)))
 	if err == nil {
 		ctx = instracer.WithParentSpan(ctx, parentSpan)
 	} else {
@@ -356,7 +341,7 @@ func (cr *ContractRequester) ReceiveResult(msg *message.Message) error {
 	}
 
 	for k, v := range msg.Metadata {
-		if k == bus.MetaSpanData || k == bus.MetaTraceID {
+		if k == busMeta.SpanData || k == busMeta.TraceID {
 			continue
 		}
 		ctx, _ = inslogger.WithField(ctx, k, v)
@@ -373,7 +358,7 @@ func (cr *ContractRequester) ReceiveResult(msg *message.Message) error {
 		return errors.Wrap(err, "failed to unmarshal payload type")
 	}
 
-	ctx, logger := inslogger.WithField(ctx, "msg_type", payloadType.String())
+	ctx, logger = inslogger.WithField(ctx, "msg_type", payloadType.String())
 
 	logger.Debug("Start to handle new message")
 
@@ -397,12 +382,7 @@ func (cr *ContractRequester) ReceiveResult(msg *message.Message) error {
 }
 
 func (cr *ContractRequester) Stop() error {
-	errOut := cr.outRequestResultsRouter.Close()
 	errIn := cr.inRequestResultsRouter.Close()
-
-	if errOut != nil {
-		return errors.Wrap(errOut, "Error while closing router")
-	}
 
 	return errors.Wrap(errIn, "Error while closing router")
 }
@@ -426,7 +406,7 @@ func deserializePayload(msg *message.Message) (insolar.Reply, error) {
 		return nil, errors.Wrap(err, "can't deserialize message payload")
 	}
 
-	if msg.Metadata.Get(bus.MetaType) == bus.TypeReply {
+	if msg.Metadata.Get(busMeta.Type) == busMeta.TypeReply {
 		rep, err := reply.Deserialize(bytes.NewBuffer(meta.Payload))
 		if err != nil {
 			return nil, errors.Wrap(err, "can't deserialize payload to reply")

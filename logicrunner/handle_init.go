@@ -23,6 +23,7 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message"
 	"go.opencensus.io/trace"
 
+	"github.com/insolar/insolar/insolar/bus/meta"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/writecontroller"
 
@@ -70,9 +71,9 @@ func sendErrorMessage(ctx context.Context, sender bus.Sender, meta payload.Meta,
 }
 
 func (s *Init) Present(ctx context.Context, f flow.Flow) error {
-	msgType := s.Message.Metadata.Get(bus.MetaType)
+	msgType := s.Message.Metadata.Get(meta.Type)
 	if msgType != "" {
-		return fmt.Errorf("[ Init.handleParcel ] no handler for message type %s", s.Message.Metadata.Get(bus.MetaType))
+		return fmt.Errorf("[ Init.handleParcel ] no handler for message type %s", s.Message.Metadata.Get(meta.Type))
 	}
 
 	var err error
@@ -151,9 +152,9 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 }
 
 func (s *Init) Past(ctx context.Context, f flow.Flow) error {
-	msgType := s.Message.Metadata.Get(bus.MetaType)
+	msgType := s.Message.Metadata.Get(meta.Type)
 	if msgType != "" {
-		return fmt.Errorf("[ Init.handleParcel ] no handler for message type %s", s.Message.Metadata.Get(bus.MetaType))
+		return fmt.Errorf("[ Init.handleParcel ] no handler for message type %s", s.Message.Metadata.Get(meta.Type))
 	}
 
 	var err error
