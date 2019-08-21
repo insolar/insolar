@@ -49,20 +49,21 @@ import (
 type Runner struct {
 	CertificateManager insolar.CertificateManager `inject:""`
 	ContractRequester  insolar.ContractRequester  `inject:""`
-	NodeNetwork        network.NodeNetwork        `inject:""`
-	ServiceNetwork     insolar.Network            `inject:""`
-	PulseAccessor      pulse.Accessor             `inject:""`
-	ArtifactManager    artifacts.Client           `inject:""`
-	JetCoordinator     jet.Coordinator            `inject:""`
-	NetworkStatus      insolar.NetworkStatus      `inject:""`
-	server             *http.Server
-	rpcServer          *rpc.Server
-	cfg                *configuration.APIRunner
-	keyCache           map[string]crypto.PublicKey
-	cacheLock          *sync.RWMutex
-	timeout            time.Duration
-	SeedManager        *seedmanager.SeedManager
-	SeedGenerator      seedmanager.SeedGenerator
+	// nolint
+	NodeNetwork     network.NodeNetwork   `inject:""`
+	ServiceNetwork  insolar.Network       `inject:""`
+	PulseAccessor   pulse.Accessor        `inject:""`
+	ArtifactManager artifacts.Client      `inject:""`
+	JetCoordinator  jet.Coordinator       `inject:""`
+	NetworkStatus   insolar.NetworkStatus `inject:""`
+	server          *http.Server
+	rpcServer       *rpc.Server
+	cfg             *configuration.APIRunner
+	keyCache        map[string]crypto.PublicKey
+	cacheLock       *sync.RWMutex
+	timeout         time.Duration
+	SeedManager     *seedmanager.SeedManager
+	SeedGenerator   seedmanager.SeedGenerator
 }
 
 func checkConfig(cfg *configuration.APIRunner) error {
