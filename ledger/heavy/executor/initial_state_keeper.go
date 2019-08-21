@@ -65,14 +65,12 @@ func NewInitialStateKeeper(
 	indexStorage object.IndexAccessor,
 	dropStorage drop.Accessor,
 ) *InitialStateKeeper {
-	lastSyncPulseNumber := jetKeeper.TopSyncPulse()
-
 	return &InitialStateKeeper{
 		jetAccessor:           jetAccessor,
 		jetCoordinator:        jetCoordinator,
 		indexStorage:          indexStorage,
 		dropStorage:           dropStorage,
-		syncPulse:             lastSyncPulseNumber,
+		syncPulse:             jetKeeper.TopSyncPulse(),
 		jetDrops:              make(map[insolar.JetID][]byte),
 		abandonRequestIndexes: make(map[insolar.JetID][]record.Index),
 	}
