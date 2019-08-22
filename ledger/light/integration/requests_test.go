@@ -44,8 +44,6 @@ func Test_IncomingRequest_Check(t *testing.T) {
 
 	// First pulse goes in storage then interrupts.
 	s.SetPulse(ctx)
-	// Second pulse goes in storage and starts processing, including pulse change in flow dispatcher.
-	s.SetPulse(ctx)
 
 	t.Run("registered is older than reason returns error", func(t *testing.T) {
 		msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()+1), insolar.ID{}, true, true)
@@ -130,8 +128,6 @@ func Test_IncomingRequest_Duplicate(t *testing.T) {
 	defer s.Stop()
 
 	// First pulse goes in storage then interrupts.
-	s.SetPulse(ctx)
-	// Second pulse goes in storage and starts processing, including pulse change in flow dispatcher.
 	s.SetPulse(ctx)
 
 	t.Run("creation request duplicate found", func(t *testing.T) {
@@ -263,8 +259,6 @@ func Test_OutgoingRequest_Duplicate(t *testing.T) {
 
 	// First pulse goes in storage then interrupts.
 	s.SetPulse(ctx)
-	// Second pulse goes in storage and starts processing, including pulse change in flow dispatcher.
-	s.SetPulse(ctx)
 
 	t.Run("method request duplicate found", func(t *testing.T) {
 		args := make([]byte, 100)
@@ -344,8 +338,6 @@ func Test_DetachedRequest_notification(t *testing.T) {
 
 	// First pulse goes in storage then interrupts.
 	s.SetPulse(ctx)
-	// Second pulse goes in storage and starts processing, including pulse change in flow dispatcher.
-	s.SetPulse(ctx)
 
 	t.Run("detached notification sent on detached reason close", func(t *testing.T) {
 		msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), insolar.ID{}, true, true)
@@ -394,12 +386,9 @@ func Test_Result_Duplicate(t *testing.T) {
 
 	// First pulse goes in storage then interrupts.
 	s.SetPulse(ctx)
-	// Second pulse goes in storage and starts processing, including pulse change in flow dispatcher.
-	s.SetPulse(ctx)
-
-	msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), insolar.ID{}, true, true)
 
 	// Set request.
+	msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), insolar.ID{}, true, true)
 	rep := SendMessage(ctx, s, &msg)
 	RequireNotError(rep)
 	require.Nil(t, rep.(*payload.RequestInfo).Request)
@@ -440,8 +429,6 @@ func Test_IncomingRequest_ClosedReason(t *testing.T) {
 	defer s.Stop()
 
 	// First pulse goes in storage then interrupts.
-	s.SetPulse(ctx)
-	// Second pulse goes in storage and starts processing, including pulse change in flow dispatcher.
 	s.SetPulse(ctx)
 
 	var reasonID insolar.ID
@@ -490,8 +477,6 @@ func Test_OutgoingRequest_ClosedReason(t *testing.T) {
 
 	// First pulse goes in storage then interrupts.
 	s.SetPulse(ctx)
-	// Second pulse goes in storage and starts processing, including pulse change in flow dispatcher.
-	s.SetPulse(ctx)
 
 	var reasonID insolar.ID
 
@@ -534,8 +519,6 @@ func Test_Requests_OutgoingReason(t *testing.T) {
 	defer s.Stop()
 
 	// First pulse goes in storage then interrupts.
-	s.SetPulse(ctx)
-	// Second pulse goes in storage and starts processing, including pulse change in flow dispatcher.
 	s.SetPulse(ctx)
 
 	var rootID, reasonID insolar.ID
@@ -591,8 +574,6 @@ func Test_OutgoingRequests_DifferentObjects(t *testing.T) {
 
 	// First pulse goes in storage then interrupts.
 	s.SetPulse(ctx)
-	// Second pulse goes in storage and starts processing, including pulse change in flow dispatcher.
-	s.SetPulse(ctx)
 
 	var rootID, rootID2 insolar.ID
 
@@ -633,8 +614,6 @@ func Test_OutgoingDetached_InPendings(t *testing.T) {
 	defer s.Stop()
 
 	// First pulse goes in storage then interrupts.
-	s.SetPulse(ctx)
-	// Second pulse goes in storage and starts processing, including pulse change in flow dispatcher.
 	s.SetPulse(ctx)
 
 	var rootID, secondReqId insolar.ID
@@ -697,8 +676,6 @@ func Test_IncomingRequest_DifferentResults(t *testing.T) {
 	defer s.Stop()
 
 	// First pulse goes in storage then interrupts.
-	s.SetPulse(ctx)
-	// Second pulse goes in storage and starts processing, including pulse change in flow dispatcher.
 	s.SetPulse(ctx)
 
 	var reasonID insolar.ID
