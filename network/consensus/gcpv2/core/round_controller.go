@@ -53,6 +53,7 @@ package core
 import (
 	"context"
 	"fmt"
+	"github.com/insolar/insolar/network/consensus/common/args"
 	"sync"
 	"time"
 
@@ -304,7 +305,9 @@ func (r *PhasedRoundController) _startFullRealm(prepWasSuccessful bool) {
 	endOf := r.realm.roundStartedAt.Add(r.realm.timings.EndOfConsensus)
 	inslogger.FromContext(r.realm.roundContext).Warnf(
 		"Starting consensus full realm: self={%v}, ephemeral=%v, unsafe=%v, startedAt=%v, endOf=%v, census=%+v", r.realm.GetLocalProfile(),
-		r.realm.ephemeralFeeder != nil, r.realm.unsafeRound, briefTime{r.realm.GetStartedAt()}, briefTime{endOf}, active)
+		r.realm.ephemeralFeeder != nil, r.realm.unsafeRound,
+		args.LazyTimeFmt("15:04:05.000000", r.realm.GetStartedAt()),
+		args.LazyTimeFmt("15:04:05.000000", endOf), active)
 
 	r.realm.start(active, active.GetOnlinePopulation(), r.bundle)
 	r.roundWorker.SetTimeout(endOf)
