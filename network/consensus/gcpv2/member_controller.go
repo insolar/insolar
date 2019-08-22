@@ -54,6 +54,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"runtime/debug"
 	"sync"
 	"time"
 
@@ -142,6 +143,9 @@ func (h *ConsensusMemberController) getOrCreateInternal() (api.RoundController, 
 func (h *ConsensusMemberController) discardInternal(terminateMember bool, toBeDiscarded api.RoundController) bool {
 	h.mutex.Lock()
 	defer h.mutex.Unlock()
+
+	logger := inslogger.FromContext(context.Background())
+	logger.Debugf("round discarded: %v", string(debug.Stack()))
 
 	round := h.currentRound
 	if round == nil || toBeDiscarded != nil && toBeDiscarded != round {
