@@ -90,8 +90,8 @@ func TestExecutionBroker_AddFreshRequest(t *testing.T) {
 	transcript := common.NewTranscript(ctx, reqRef, record.IncomingRequest{})
 
 	table := []struct {
-		name   string
-		mocks  func(ctx context.Context, t minimock.Tester) *ExecutionBroker
+		name  string
+		mocks func(ctx context.Context, t minimock.Tester) *ExecutionBroker
 	}{
 		{
 			name: "happy path",
@@ -602,6 +602,92 @@ func TestExecutionBroker_AbandonedRequestsOnLedger_Integration(t *testing.T) {
 
 			mc.Wait(1 * time.Minute)
 			mc.Finish()
+		})
+	}
+}
+
+func TestExecutionBroker_PrevExecutorPendingResult(t *testing.T) {
+	objectRef := gen.Reference()
+
+	tests := []struct {
+		name   string
+		state  insolar.PendingState
+		mocks  func(t minimock.Tester) *ExecutionBroker
+		checks func(t *testing.T, b *ExecutionBroker)
+	}{
+		{
+			name:  "local unknown, using remote",
+			state: insolar.NotPending,
+			mocks: func(t minimock.Tester) *ExecutionBroker {
+				b := NewExecutionBroker(
+					objectRef, nil, nil, nil, nil, nil, nil, nil,
+				)
+				return b
+			},
+			checks: func(t *testing.T, b *ExecutionBroker) {
+				require.Equal(t, insolar.NotPending, b.pending)
+			},
+		},
+		{
+			name:  "in pending, no executions, prev said continue",
+			state: insolar.NotPending,
+			mocks: func(t minimock.Tester) *ExecutionBroker {
+				er := executionregistry.NewExecutionRegistryMock(t).IsEmptyMock.Return(true)
+				b := NewExecutionBroker(
+					objectRef, nil, nil, nil, nil, er, nil, nil,
+				)
+				b.pending = insolar.InPending
+				return b
+			},
+			checks: func(t *testing.T, b *ExecutionBroker) {
+				require.Equal(t, insolar.NotPending, b.pending)
+				require.False(t, b.PendingConfirmed)
+			},
+		},
+		{
+			name:  "local execution, in pending, ignoring",
+			state: insolar.NotPending,
+			mocks: func(t minimock.Tester) *ExecutionBroker {
+				er := executionregistry.NewExecutionRegistryMock(t).IsEmptyMock.Return(false)
+				b := NewExecutionBroker(
+					objectRef, nil, nil, nil, nil, er, nil, nil,
+				)
+				b.pending = insolar.InPending
+				return b
+			},
+			checks: func(t *testing.T, b *ExecutionBroker) {
+				require.Equal(t, insolar.InPending, b.pending)
+				require.False(t, b.PendingConfirmed)
+			},
+		},
+		{
+			name:  "local not pending, ignoring remote",
+			state: insolar.InPending,
+			mocks: func(t minimock.Tester) *ExecutionBroker {
+				b := NewExecutionBroker(
+					objectRef, nil, nil, nil, nil, nil, nil, nil,
+				)
+				b.pending = insolar.NotPending
+				return b
+			},
+			checks: func(t *testing.T, b *ExecutionBroker) {
+				require.Equal(t, insolar.NotPending, b.pending)
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctx := inslogger.TestContext(t)
+			mc := minimock.NewController(t)
+
+			broker := test.mocks(mc)
+			broker.PrevExecutorPendingResult(ctx, test.state)
+
+			mc.Wait(1 * time.Minute)
+			mc.Finish()
+
+			test.checks(t, broker)
 		})
 	}
 }
