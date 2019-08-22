@@ -54,8 +54,8 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/insolar/insolar/network/consensus/common/longbits"
-	"github.com/insolar/insolar/network/consensus/common/pulse"
+	"github.com/insolar/insolar/longbits"
+	"github.com/insolar/insolar/pulse"
 )
 
 func randBits256() longbits.Bits256 {

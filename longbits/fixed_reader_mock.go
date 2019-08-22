@@ -15,7 +15,7 @@ import (
 type FixedReaderMock struct {
 	t minimock.Tester
 
-	funcAsByteString          func() (s1 string)
+	funcAsByteString          func() (b1 ByteString)
 	inspectFuncAsByteString   func()
 	afterAsByteStringCounter  uint64
 	beforeAsByteStringCounter uint64
@@ -84,7 +84,7 @@ type FixedReaderMockAsByteStringExpectation struct {
 
 // FixedReaderMockAsByteStringResults contains results of the FixedReader.AsByteString
 type FixedReaderMockAsByteStringResults struct {
-	s1 string
+	b1 ByteString
 }
 
 // Expect sets up expected params for FixedReader.AsByteString
@@ -112,7 +112,7 @@ func (mmAsByteString *mFixedReaderMockAsByteString) Inspect(f func()) *mFixedRea
 }
 
 // Return sets up results that will be returned by FixedReader.AsByteString
-func (mmAsByteString *mFixedReaderMockAsByteString) Return(s1 string) *FixedReaderMock {
+func (mmAsByteString *mFixedReaderMockAsByteString) Return(b1 ByteString) *FixedReaderMock {
 	if mmAsByteString.mock.funcAsByteString != nil {
 		mmAsByteString.mock.t.Fatalf("FixedReaderMock.AsByteString mock is already set by Set")
 	}
@@ -120,12 +120,12 @@ func (mmAsByteString *mFixedReaderMockAsByteString) Return(s1 string) *FixedRead
 	if mmAsByteString.defaultExpectation == nil {
 		mmAsByteString.defaultExpectation = &FixedReaderMockAsByteStringExpectation{mock: mmAsByteString.mock}
 	}
-	mmAsByteString.defaultExpectation.results = &FixedReaderMockAsByteStringResults{s1}
+	mmAsByteString.defaultExpectation.results = &FixedReaderMockAsByteStringResults{b1}
 	return mmAsByteString.mock
 }
 
 //Set uses given function f to mock the FixedReader.AsByteString method
-func (mmAsByteString *mFixedReaderMockAsByteString) Set(f func() (s1 string)) *FixedReaderMock {
+func (mmAsByteString *mFixedReaderMockAsByteString) Set(f func() (b1 ByteString)) *FixedReaderMock {
 	if mmAsByteString.defaultExpectation != nil {
 		mmAsByteString.mock.t.Fatalf("Default expectation is already set for the FixedReader.AsByteString method")
 	}
@@ -139,7 +139,7 @@ func (mmAsByteString *mFixedReaderMockAsByteString) Set(f func() (s1 string)) *F
 }
 
 // AsByteString implements FixedReader
-func (mmAsByteString *FixedReaderMock) AsByteString() (s1 string) {
+func (mmAsByteString *FixedReaderMock) AsByteString() (b1 ByteString) {
 	mm_atomic.AddUint64(&mmAsByteString.beforeAsByteStringCounter, 1)
 	defer mm_atomic.AddUint64(&mmAsByteString.afterAsByteStringCounter, 1)
 
@@ -154,7 +154,7 @@ func (mmAsByteString *FixedReaderMock) AsByteString() (s1 string) {
 		if results == nil {
 			mmAsByteString.t.Fatal("No results are set for the FixedReaderMock.AsByteString")
 		}
-		return (*results).s1
+		return (*results).b1
 	}
 	if mmAsByteString.funcAsByteString != nil {
 		return mmAsByteString.funcAsByteString()

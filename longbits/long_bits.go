@@ -1,51 +1,17 @@
 //
-// Modified BSD 3-Clause Clear License
+// Copyright 2019 Insolar Technologies GmbH
 //
-// Copyright (c) 2019 Insolar Technologies GmbH
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-// All rights reserved.
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted (subject to the limitations in the disclaimer below) provided that
-// the following conditions are met:
-//  * Redistributions of source code must retain the above copyright notice, this list
-//    of conditions and the following disclaimer.
-//  * Redistributions in binary form must reproduce the above copyright notice, this list
-//    of conditions and the following disclaimer in the documentation and/or other materials
-//    provided with the distribution.
-//  * Neither the name of Insolar Technologies GmbH nor the names of its contributors
-//    may be used to endorse or promote products derived from this software without
-//    specific prior written permission.
-//
-// NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED
-// BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS
-// AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
-// INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY
-// AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL
-// THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
-// INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
-// OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-//
-// Notwithstanding any other provisions of this license, it is prohibited to:
-//    (a) use this software,
-//
-//    (b) prepare modifications and derivative works of this software,
-//
-//    (c) distribute this software (including without limitation in source code, binary or
-//        object code form), and
-//
-//    (d) reproduce copies of this software
-//
-//    for any commercial purposes, and/or
-//
-//    for the purposes of making available this software to third parties as a service,
-//    including, without limitation, any software-as-a-service, platform-as-a-service,
-//    infrastructure-as-a-service or other similar online service, irrespective of
-//    whether it competes with the products or services of Insolar Technologies GmbH.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //
 
 package longbits
@@ -88,8 +54,8 @@ func (v *Bits64) FixedByteSize() int {
 	return len(*v)
 }
 
-func (v *Bits64) AsByteString() string {
-	return string(v[:])
+func (v *Bits64) AsByteString() ByteString {
+	return ByteString(v[:])
 }
 
 func (v Bits64) String() string {
@@ -100,10 +66,17 @@ func (v *Bits64) AsBytes() []byte {
 	return v[:]
 }
 
-/* Array size must be aligned to 8 bytes */
+/* Array size doesnt need to be aligned */
 func FoldToBits64(v []byte) Bits64 {
 	var folded Bits64
-	for i := 0; i < len(v); i += len(folded) {
+	if len(v) == 0 {
+		return folded
+	}
+
+	alignedLen := len(v) & (len(folded) - 1)
+	copy(folded[alignedLen:], v)
+
+	for i := 0; i < alignedLen; i += len(folded) {
 		folded[0] ^= v[i+0]
 		folded[1] ^= v[i+1]
 		folded[2] ^= v[i+2]
@@ -146,15 +119,15 @@ func (v Bits128) String() string {
 	return bitsToStringDefault(&v)
 }
 
-func (v *Bits128) AsByteString() string {
-	return string(v[:])
+func (v *Bits128) AsByteString() ByteString {
+	return ByteString(v[:])
 }
 
 func (v *Bits128) AsBytes() []byte {
 	return v[:]
 }
 
-type Bits224 [24]byte
+type Bits224 [28]byte
 
 func (v *Bits224) WriteTo(w io.Writer) (int64, error) {
 	n, err := w.Write((*v)[:])
@@ -183,8 +156,8 @@ func (v *Bits224) AsBytes() []byte {
 	return v[:]
 }
 
-func (v *Bits224) AsByteString() string {
-	return string(v[:])
+func (v *Bits224) AsByteString() ByteString {
+	return ByteString(v[:])
 }
 
 type Bits256 [32]byte
@@ -230,8 +203,8 @@ func (v *Bits256) AsBytes() []byte {
 	return v[:]
 }
 
-func (v *Bits256) AsByteString() string {
-	return string(v[:])
+func (v *Bits256) AsByteString() ByteString {
+	return ByteString(v[:])
 }
 
 type Bits512 [64]byte
@@ -277,8 +250,8 @@ func (v *Bits512) AsBytes() []byte {
 	return v[:]
 }
 
-func (v *Bits512) AsByteString() string {
-	return string(v[:])
+func (v *Bits512) AsByteString() ByteString {
+	return ByteString(v[:])
 }
 
 /* Array size must be aligned to 8 bytes */
