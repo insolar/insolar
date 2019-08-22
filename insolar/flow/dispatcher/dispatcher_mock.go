@@ -13,7 +13,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-// DispatcherMock implements Dispatcher
+// DispatcherMock implements dispatcher.Dispatcher
 type DispatcherMock struct {
 	t minimock.Tester
 
@@ -36,7 +36,7 @@ type DispatcherMock struct {
 	ProcessMock          mDispatcherMockProcess
 }
 
-// NewDispatcherMock returns a mock for Dispatcher
+// NewDispatcherMock returns a mock for dispatcher.Dispatcher
 func NewDispatcherMock(t minimock.Tester) *DispatcherMock {
 	m := &DispatcherMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -136,7 +136,7 @@ func (mmBeginPulse *mDispatcherMockBeginPulse) Set(f func(ctx context.Context, p
 	return mmBeginPulse.mock
 }
 
-// BeginPulse implements Dispatcher
+// BeginPulse implements dispatcher.Dispatcher
 func (mmBeginPulse *DispatcherMock) BeginPulse(ctx context.Context, pulse insolar.Pulse) {
 	mm_atomic.AddUint64(&mmBeginPulse.beforeBeginPulseCounter, 1)
 	defer mm_atomic.AddUint64(&mmBeginPulse.afterBeginPulseCounter, 1)
@@ -324,7 +324,7 @@ func (mmClosePulse *mDispatcherMockClosePulse) Set(f func(ctx context.Context, p
 	return mmClosePulse.mock
 }
 
-// ClosePulse implements Dispatcher
+// ClosePulse implements dispatcher.Dispatcher
 func (mmClosePulse *DispatcherMock) ClosePulse(ctx context.Context, pulse insolar.Pulse) {
 	mm_atomic.AddUint64(&mmClosePulse.beforeClosePulseCounter, 1)
 	defer mm_atomic.AddUint64(&mmClosePulse.afterClosePulseCounter, 1)
@@ -537,7 +537,7 @@ func (e *DispatcherMockProcessExpectation) Then(err error) *DispatcherMock {
 	return e.mock
 }
 
-// Process implements Dispatcher
+// Process implements dispatcher.Dispatcher
 func (mmProcess *DispatcherMock) Process(msg *message.Message) (err error) {
 	mm_atomic.AddUint64(&mmProcess.beforeProcessCounter, 1)
 	defer mm_atomic.AddUint64(&mmProcess.afterProcessCounter, 1)

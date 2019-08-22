@@ -12,7 +12,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 )
 
-// GlobulaStateHashMock implements GlobulaStateHash
+// GlobulaStateHashMock implements proofs.GlobulaStateHash
 type GlobulaStateHashMock struct {
 	t minimock.Tester
 
@@ -77,7 +77,7 @@ type GlobulaStateHashMock struct {
 	WriteToMock          mGlobulaStateHashMockWriteTo
 }
 
-// NewGlobulaStateHashMock returns a mock for GlobulaStateHash
+// NewGlobulaStateHashMock returns a mock for proofs.GlobulaStateHash
 func NewGlobulaStateHashMock(t minimock.Tester) *GlobulaStateHashMock {
 	m := &GlobulaStateHashMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -181,7 +181,7 @@ func (mmAsByteString *mGlobulaStateHashMockAsByteString) Set(f func() (s1 string
 	return mmAsByteString.mock
 }
 
-// AsByteString implements GlobulaStateHash
+// AsByteString implements proofs.GlobulaStateHash
 func (mmAsByteString *GlobulaStateHashMock) AsByteString() (s1 string) {
 	mm_atomic.AddUint64(&mmAsByteString.beforeAsByteStringCounter, 1)
 	defer mm_atomic.AddUint64(&mmAsByteString.afterAsByteStringCounter, 1)
@@ -324,7 +324,7 @@ func (mmAsBytes *mGlobulaStateHashMockAsBytes) Set(f func() (ba1 []byte)) *Globu
 	return mmAsBytes.mock
 }
 
-// AsBytes implements GlobulaStateHash
+// AsBytes implements proofs.GlobulaStateHash
 func (mmAsBytes *GlobulaStateHashMock) AsBytes() (ba1 []byte) {
 	mm_atomic.AddUint64(&mmAsBytes.beforeAsBytesCounter, 1)
 	defer mm_atomic.AddUint64(&mmAsBytes.afterAsBytesCounter, 1)
@@ -467,7 +467,7 @@ func (mmCopyOfDigest *mGlobulaStateHashMockCopyOfDigest) Set(f func() (d1 cryptk
 	return mmCopyOfDigest.mock
 }
 
-// CopyOfDigest implements GlobulaStateHash
+// CopyOfDigest implements proofs.GlobulaStateHash
 func (mmCopyOfDigest *GlobulaStateHashMock) CopyOfDigest() (d1 cryptkit.Digest) {
 	mm_atomic.AddUint64(&mmCopyOfDigest.beforeCopyOfDigestCounter, 1)
 	defer mm_atomic.AddUint64(&mmCopyOfDigest.afterCopyOfDigestCounter, 1)
@@ -646,7 +646,7 @@ func (e *GlobulaStateHashMockEqualsExpectation) Then(b1 bool) *GlobulaStateHashM
 	return e.mock
 }
 
-// Equals implements GlobulaStateHash
+// Equals implements proofs.GlobulaStateHash
 func (mmEquals *GlobulaStateHashMock) Equals(other cryptkit.DigestHolder) (b1 bool) {
 	mm_atomic.AddUint64(&mmEquals.beforeEqualsCounter, 1)
 	defer mm_atomic.AddUint64(&mmEquals.afterEqualsCounter, 1)
@@ -825,7 +825,7 @@ func (mmFixedByteSize *mGlobulaStateHashMockFixedByteSize) Set(f func() (i1 int)
 	return mmFixedByteSize.mock
 }
 
-// FixedByteSize implements GlobulaStateHash
+// FixedByteSize implements proofs.GlobulaStateHash
 func (mmFixedByteSize *GlobulaStateHashMock) FixedByteSize() (i1 int) {
 	mm_atomic.AddUint64(&mmFixedByteSize.beforeFixedByteSizeCounter, 1)
 	defer mm_atomic.AddUint64(&mmFixedByteSize.afterFixedByteSizeCounter, 1)
@@ -968,7 +968,7 @@ func (mmFoldToUint64 *mGlobulaStateHashMockFoldToUint64) Set(f func() (u1 uint64
 	return mmFoldToUint64.mock
 }
 
-// FoldToUint64 implements GlobulaStateHash
+// FoldToUint64 implements proofs.GlobulaStateHash
 func (mmFoldToUint64 *GlobulaStateHashMock) FoldToUint64() (u1 uint64) {
 	mm_atomic.AddUint64(&mmFoldToUint64.beforeFoldToUint64Counter, 1)
 	defer mm_atomic.AddUint64(&mmFoldToUint64.afterFoldToUint64Counter, 1)
@@ -1111,7 +1111,7 @@ func (mmGetDigestMethod *mGlobulaStateHashMockGetDigestMethod) Set(f func() (d1 
 	return mmGetDigestMethod.mock
 }
 
-// GetDigestMethod implements GlobulaStateHash
+// GetDigestMethod implements proofs.GlobulaStateHash
 func (mmGetDigestMethod *GlobulaStateHashMock) GetDigestMethod() (d1 cryptkit.DigestMethod) {
 	mm_atomic.AddUint64(&mmGetDigestMethod.beforeGetDigestMethodCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetDigestMethod.afterGetDigestMethodCounter, 1)
@@ -1291,7 +1291,7 @@ func (e *GlobulaStateHashMockReadExpectation) Then(n int, err error) *GlobulaSta
 	return e.mock
 }
 
-// Read implements GlobulaStateHash
+// Read implements proofs.GlobulaStateHash
 func (mmRead *GlobulaStateHashMock) Read(p []byte) (n int, err error) {
 	mm_atomic.AddUint64(&mmRead.beforeReadCounter, 1)
 	defer mm_atomic.AddUint64(&mmRead.afterReadCounter, 1)
@@ -1506,7 +1506,7 @@ func (e *GlobulaStateHashMockSignWithExpectation) Then(s1 cryptkit.SignedDigestH
 	return e.mock
 }
 
-// SignWith implements GlobulaStateHash
+// SignWith implements proofs.GlobulaStateHash
 func (mmSignWith *GlobulaStateHashMock) SignWith(signer cryptkit.DigestSigner) (s1 cryptkit.SignedDigestHolder) {
 	mm_atomic.AddUint64(&mmSignWith.beforeSignWithCounter, 1)
 	defer mm_atomic.AddUint64(&mmSignWith.afterSignWithCounter, 1)
@@ -1722,7 +1722,7 @@ func (e *GlobulaStateHashMockWriteToExpectation) Then(n int64, err error) *Globu
 	return e.mock
 }
 
-// WriteTo implements GlobulaStateHash
+// WriteTo implements proofs.GlobulaStateHash
 func (mmWriteTo *GlobulaStateHashMock) WriteTo(w io.Writer) (n int64, err error) {
 	mm_atomic.AddUint64(&mmWriteTo.beforeWriteToCounter, 1)
 	defer mm_atomic.AddUint64(&mmWriteTo.afterWriteToCounter, 1)

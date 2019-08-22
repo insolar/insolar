@@ -12,7 +12,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-// JetCalculatorMock implements JetCalculator
+// JetCalculatorMock implements executor.JetCalculator
 type JetCalculatorMock struct {
 	t minimock.Tester
 
@@ -23,7 +23,7 @@ type JetCalculatorMock struct {
 	MineForPulseMock          mJetCalculatorMockMineForPulse
 }
 
-// NewJetCalculatorMock returns a mock for JetCalculator
+// NewJetCalculatorMock returns a mock for executor.JetCalculator
 func NewJetCalculatorMock(t minimock.Tester) *JetCalculatorMock {
 	m := &JetCalculatorMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -144,7 +144,7 @@ func (e *JetCalculatorMockMineForPulseExpectation) Then(ja1 []insolar.JetID, err
 	return e.mock
 }
 
-// MineForPulse implements JetCalculator
+// MineForPulse implements executor.JetCalculator
 func (mmMineForPulse *JetCalculatorMock) MineForPulse(ctx context.Context, pn insolar.PulseNumber) (ja1 []insolar.JetID, err error) {
 	mm_atomic.AddUint64(&mmMineForPulse.beforeMineForPulseCounter, 1)
 	defer mm_atomic.AddUint64(&mmMineForPulse.afterMineForPulseCounter, 1)

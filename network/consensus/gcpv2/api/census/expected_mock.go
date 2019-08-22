@@ -11,21 +11,22 @@ import (
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
+	mm_census "github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 )
 
-// ExpectedMock implements Expected
+// ExpectedMock implements census.Expected
 type ExpectedMock struct {
 	t minimock.Tester
 
-	funcCreateBuilder          func(ctx context.Context, pn pulse.Number) (b1 Builder)
+	funcCreateBuilder          func(ctx context.Context, pn pulse.Number) (b1 mm_census.Builder)
 	inspectFuncCreateBuilder   func(ctx context.Context, pn pulse.Number)
 	afterCreateBuilderCounter  uint64
 	beforeCreateBuilderCounter uint64
 	CreateBuilderMock          mExpectedMockCreateBuilder
 
-	funcGetCensusState          func() (s1 State)
+	funcGetCensusState          func() (s1 mm_census.State)
 	inspectFuncGetCensusState   func()
 	afterGetCensusStateCounter  uint64
 	beforeGetCensusStateCounter uint64
@@ -37,7 +38,7 @@ type ExpectedMock struct {
 	beforeGetCloudStateHashCounter uint64
 	GetCloudStateHashMock          mExpectedMockGetCloudStateHash
 
-	funcGetEvictedPopulation          func() (e1 EvictedPopulation)
+	funcGetEvictedPopulation          func() (e1 mm_census.EvictedPopulation)
 	inspectFuncGetEvictedPopulation   func()
 	afterGetEvictedPopulationCounter  uint64
 	beforeGetEvictedPopulationCounter uint64
@@ -55,13 +56,13 @@ type ExpectedMock struct {
 	beforeGetGlobulaStateHashCounter uint64
 	GetGlobulaStateHashMock          mExpectedMockGetGlobulaStateHash
 
-	funcGetMandateRegistry          func() (m1 MandateRegistry)
+	funcGetMandateRegistry          func() (m1 mm_census.MandateRegistry)
 	inspectFuncGetMandateRegistry   func()
 	afterGetMandateRegistryCounter  uint64
 	beforeGetMandateRegistryCounter uint64
 	GetMandateRegistryMock          mExpectedMockGetMandateRegistry
 
-	funcGetMisbehaviorRegistry          func() (m1 MisbehaviorRegistry)
+	funcGetMisbehaviorRegistry          func() (m1 mm_census.MisbehaviorRegistry)
 	inspectFuncGetMisbehaviorRegistry   func()
 	afterGetMisbehaviorRegistryCounter  uint64
 	beforeGetMisbehaviorRegistryCounter uint64
@@ -73,19 +74,19 @@ type ExpectedMock struct {
 	beforeGetNearestPulseDataCounter uint64
 	GetNearestPulseDataMock          mExpectedMockGetNearestPulseData
 
-	funcGetOfflinePopulation          func() (o1 OfflinePopulation)
+	funcGetOfflinePopulation          func() (o1 mm_census.OfflinePopulation)
 	inspectFuncGetOfflinePopulation   func()
 	afterGetOfflinePopulationCounter  uint64
 	beforeGetOfflinePopulationCounter uint64
 	GetOfflinePopulationMock          mExpectedMockGetOfflinePopulation
 
-	funcGetOnlinePopulation          func() (o1 OnlinePopulation)
+	funcGetOnlinePopulation          func() (o1 mm_census.OnlinePopulation)
 	inspectFuncGetOnlinePopulation   func()
 	afterGetOnlinePopulationCounter  uint64
 	beforeGetOnlinePopulationCounter uint64
 	GetOnlinePopulationMock          mExpectedMockGetOnlinePopulation
 
-	funcGetPrevious          func() (a1 Active)
+	funcGetPrevious          func() (a1 mm_census.Active)
 	inspectFuncGetPrevious   func()
 	afterGetPreviousCounter  uint64
 	beforeGetPreviousCounter uint64
@@ -109,20 +110,20 @@ type ExpectedMock struct {
 	beforeIsActiveCounter uint64
 	IsActiveMock          mExpectedMockIsActive
 
-	funcMakeActive          func(pd pulse.Data) (a1 Active)
+	funcMakeActive          func(pd pulse.Data) (a1 mm_census.Active)
 	inspectFuncMakeActive   func(pd pulse.Data)
 	afterMakeActiveCounter  uint64
 	beforeMakeActiveCounter uint64
 	MakeActiveMock          mExpectedMockMakeActive
 
-	funcRebuild          func(pn pulse.Number) (b1 Built)
+	funcRebuild          func(pn pulse.Number) (b1 mm_census.Built)
 	inspectFuncRebuild   func(pn pulse.Number)
 	afterRebuildCounter  uint64
 	beforeRebuildCounter uint64
 	RebuildMock          mExpectedMockRebuild
 }
 
-// NewExpectedMock returns a mock for Expected
+// NewExpectedMock returns a mock for census.Expected
 func NewExpectedMock(t minimock.Tester) *ExpectedMock {
 	m := &ExpectedMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -195,7 +196,7 @@ type ExpectedMockCreateBuilderParams struct {
 
 // ExpectedMockCreateBuilderResults contains results of the Expected.CreateBuilder
 type ExpectedMockCreateBuilderResults struct {
-	b1 Builder
+	b1 mm_census.Builder
 }
 
 // Expect sets up expected params for Expected.CreateBuilder
@@ -230,7 +231,7 @@ func (mmCreateBuilder *mExpectedMockCreateBuilder) Inspect(f func(ctx context.Co
 }
 
 // Return sets up results that will be returned by Expected.CreateBuilder
-func (mmCreateBuilder *mExpectedMockCreateBuilder) Return(b1 Builder) *ExpectedMock {
+func (mmCreateBuilder *mExpectedMockCreateBuilder) Return(b1 mm_census.Builder) *ExpectedMock {
 	if mmCreateBuilder.mock.funcCreateBuilder != nil {
 		mmCreateBuilder.mock.t.Fatalf("ExpectedMock.CreateBuilder mock is already set by Set")
 	}
@@ -243,7 +244,7 @@ func (mmCreateBuilder *mExpectedMockCreateBuilder) Return(b1 Builder) *ExpectedM
 }
 
 //Set uses given function f to mock the Expected.CreateBuilder method
-func (mmCreateBuilder *mExpectedMockCreateBuilder) Set(f func(ctx context.Context, pn pulse.Number) (b1 Builder)) *ExpectedMock {
+func (mmCreateBuilder *mExpectedMockCreateBuilder) Set(f func(ctx context.Context, pn pulse.Number) (b1 mm_census.Builder)) *ExpectedMock {
 	if mmCreateBuilder.defaultExpectation != nil {
 		mmCreateBuilder.mock.t.Fatalf("Default expectation is already set for the Expected.CreateBuilder method")
 	}
@@ -272,13 +273,13 @@ func (mmCreateBuilder *mExpectedMockCreateBuilder) When(ctx context.Context, pn 
 }
 
 // Then sets up Expected.CreateBuilder return parameters for the expectation previously defined by the When method
-func (e *ExpectedMockCreateBuilderExpectation) Then(b1 Builder) *ExpectedMock {
+func (e *ExpectedMockCreateBuilderExpectation) Then(b1 mm_census.Builder) *ExpectedMock {
 	e.results = &ExpectedMockCreateBuilderResults{b1}
 	return e.mock
 }
 
-// CreateBuilder implements Expected
-func (mmCreateBuilder *ExpectedMock) CreateBuilder(ctx context.Context, pn pulse.Number) (b1 Builder) {
+// CreateBuilder implements census.Expected
+func (mmCreateBuilder *ExpectedMock) CreateBuilder(ctx context.Context, pn pulse.Number) (b1 mm_census.Builder) {
 	mm_atomic.AddUint64(&mmCreateBuilder.beforeCreateBuilderCounter, 1)
 	defer mm_atomic.AddUint64(&mmCreateBuilder.afterCreateBuilderCounter, 1)
 
@@ -402,7 +403,7 @@ type ExpectedMockGetCensusStateExpectation struct {
 
 // ExpectedMockGetCensusStateResults contains results of the Expected.GetCensusState
 type ExpectedMockGetCensusStateResults struct {
-	s1 State
+	s1 mm_census.State
 }
 
 // Expect sets up expected params for Expected.GetCensusState
@@ -430,7 +431,7 @@ func (mmGetCensusState *mExpectedMockGetCensusState) Inspect(f func()) *mExpecte
 }
 
 // Return sets up results that will be returned by Expected.GetCensusState
-func (mmGetCensusState *mExpectedMockGetCensusState) Return(s1 State) *ExpectedMock {
+func (mmGetCensusState *mExpectedMockGetCensusState) Return(s1 mm_census.State) *ExpectedMock {
 	if mmGetCensusState.mock.funcGetCensusState != nil {
 		mmGetCensusState.mock.t.Fatalf("ExpectedMock.GetCensusState mock is already set by Set")
 	}
@@ -443,7 +444,7 @@ func (mmGetCensusState *mExpectedMockGetCensusState) Return(s1 State) *ExpectedM
 }
 
 //Set uses given function f to mock the Expected.GetCensusState method
-func (mmGetCensusState *mExpectedMockGetCensusState) Set(f func() (s1 State)) *ExpectedMock {
+func (mmGetCensusState *mExpectedMockGetCensusState) Set(f func() (s1 mm_census.State)) *ExpectedMock {
 	if mmGetCensusState.defaultExpectation != nil {
 		mmGetCensusState.mock.t.Fatalf("Default expectation is already set for the Expected.GetCensusState method")
 	}
@@ -456,8 +457,8 @@ func (mmGetCensusState *mExpectedMockGetCensusState) Set(f func() (s1 State)) *E
 	return mmGetCensusState.mock
 }
 
-// GetCensusState implements Expected
-func (mmGetCensusState *ExpectedMock) GetCensusState() (s1 State) {
+// GetCensusState implements census.Expected
+func (mmGetCensusState *ExpectedMock) GetCensusState() (s1 mm_census.State) {
 	mm_atomic.AddUint64(&mmGetCensusState.beforeGetCensusStateCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetCensusState.afterGetCensusStateCounter, 1)
 
@@ -599,7 +600,7 @@ func (mmGetCloudStateHash *mExpectedMockGetCloudStateHash) Set(f func() (c1 proo
 	return mmGetCloudStateHash.mock
 }
 
-// GetCloudStateHash implements Expected
+// GetCloudStateHash implements census.Expected
 func (mmGetCloudStateHash *ExpectedMock) GetCloudStateHash() (c1 proofs.CloudStateHash) {
 	mm_atomic.AddUint64(&mmGetCloudStateHash.beforeGetCloudStateHashCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetCloudStateHash.afterGetCloudStateHashCounter, 1)
@@ -688,7 +689,7 @@ type ExpectedMockGetEvictedPopulationExpectation struct {
 
 // ExpectedMockGetEvictedPopulationResults contains results of the Expected.GetEvictedPopulation
 type ExpectedMockGetEvictedPopulationResults struct {
-	e1 EvictedPopulation
+	e1 mm_census.EvictedPopulation
 }
 
 // Expect sets up expected params for Expected.GetEvictedPopulation
@@ -716,7 +717,7 @@ func (mmGetEvictedPopulation *mExpectedMockGetEvictedPopulation) Inspect(f func(
 }
 
 // Return sets up results that will be returned by Expected.GetEvictedPopulation
-func (mmGetEvictedPopulation *mExpectedMockGetEvictedPopulation) Return(e1 EvictedPopulation) *ExpectedMock {
+func (mmGetEvictedPopulation *mExpectedMockGetEvictedPopulation) Return(e1 mm_census.EvictedPopulation) *ExpectedMock {
 	if mmGetEvictedPopulation.mock.funcGetEvictedPopulation != nil {
 		mmGetEvictedPopulation.mock.t.Fatalf("ExpectedMock.GetEvictedPopulation mock is already set by Set")
 	}
@@ -729,7 +730,7 @@ func (mmGetEvictedPopulation *mExpectedMockGetEvictedPopulation) Return(e1 Evict
 }
 
 //Set uses given function f to mock the Expected.GetEvictedPopulation method
-func (mmGetEvictedPopulation *mExpectedMockGetEvictedPopulation) Set(f func() (e1 EvictedPopulation)) *ExpectedMock {
+func (mmGetEvictedPopulation *mExpectedMockGetEvictedPopulation) Set(f func() (e1 mm_census.EvictedPopulation)) *ExpectedMock {
 	if mmGetEvictedPopulation.defaultExpectation != nil {
 		mmGetEvictedPopulation.mock.t.Fatalf("Default expectation is already set for the Expected.GetEvictedPopulation method")
 	}
@@ -742,8 +743,8 @@ func (mmGetEvictedPopulation *mExpectedMockGetEvictedPopulation) Set(f func() (e
 	return mmGetEvictedPopulation.mock
 }
 
-// GetEvictedPopulation implements Expected
-func (mmGetEvictedPopulation *ExpectedMock) GetEvictedPopulation() (e1 EvictedPopulation) {
+// GetEvictedPopulation implements census.Expected
+func (mmGetEvictedPopulation *ExpectedMock) GetEvictedPopulation() (e1 mm_census.EvictedPopulation) {
 	mm_atomic.AddUint64(&mmGetEvictedPopulation.beforeGetEvictedPopulationCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetEvictedPopulation.afterGetEvictedPopulationCounter, 1)
 
@@ -885,7 +886,7 @@ func (mmGetExpectedPulseNumber *mExpectedMockGetExpectedPulseNumber) Set(f func(
 	return mmGetExpectedPulseNumber.mock
 }
 
-// GetExpectedPulseNumber implements Expected
+// GetExpectedPulseNumber implements census.Expected
 func (mmGetExpectedPulseNumber *ExpectedMock) GetExpectedPulseNumber() (n1 pulse.Number) {
 	mm_atomic.AddUint64(&mmGetExpectedPulseNumber.beforeGetExpectedPulseNumberCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetExpectedPulseNumber.afterGetExpectedPulseNumberCounter, 1)
@@ -1028,7 +1029,7 @@ func (mmGetGlobulaStateHash *mExpectedMockGetGlobulaStateHash) Set(f func() (g1 
 	return mmGetGlobulaStateHash.mock
 }
 
-// GetGlobulaStateHash implements Expected
+// GetGlobulaStateHash implements census.Expected
 func (mmGetGlobulaStateHash *ExpectedMock) GetGlobulaStateHash() (g1 proofs.GlobulaStateHash) {
 	mm_atomic.AddUint64(&mmGetGlobulaStateHash.beforeGetGlobulaStateHashCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetGlobulaStateHash.afterGetGlobulaStateHashCounter, 1)
@@ -1117,7 +1118,7 @@ type ExpectedMockGetMandateRegistryExpectation struct {
 
 // ExpectedMockGetMandateRegistryResults contains results of the Expected.GetMandateRegistry
 type ExpectedMockGetMandateRegistryResults struct {
-	m1 MandateRegistry
+	m1 mm_census.MandateRegistry
 }
 
 // Expect sets up expected params for Expected.GetMandateRegistry
@@ -1145,7 +1146,7 @@ func (mmGetMandateRegistry *mExpectedMockGetMandateRegistry) Inspect(f func()) *
 }
 
 // Return sets up results that will be returned by Expected.GetMandateRegistry
-func (mmGetMandateRegistry *mExpectedMockGetMandateRegistry) Return(m1 MandateRegistry) *ExpectedMock {
+func (mmGetMandateRegistry *mExpectedMockGetMandateRegistry) Return(m1 mm_census.MandateRegistry) *ExpectedMock {
 	if mmGetMandateRegistry.mock.funcGetMandateRegistry != nil {
 		mmGetMandateRegistry.mock.t.Fatalf("ExpectedMock.GetMandateRegistry mock is already set by Set")
 	}
@@ -1158,7 +1159,7 @@ func (mmGetMandateRegistry *mExpectedMockGetMandateRegistry) Return(m1 MandateRe
 }
 
 //Set uses given function f to mock the Expected.GetMandateRegistry method
-func (mmGetMandateRegistry *mExpectedMockGetMandateRegistry) Set(f func() (m1 MandateRegistry)) *ExpectedMock {
+func (mmGetMandateRegistry *mExpectedMockGetMandateRegistry) Set(f func() (m1 mm_census.MandateRegistry)) *ExpectedMock {
 	if mmGetMandateRegistry.defaultExpectation != nil {
 		mmGetMandateRegistry.mock.t.Fatalf("Default expectation is already set for the Expected.GetMandateRegistry method")
 	}
@@ -1171,8 +1172,8 @@ func (mmGetMandateRegistry *mExpectedMockGetMandateRegistry) Set(f func() (m1 Ma
 	return mmGetMandateRegistry.mock
 }
 
-// GetMandateRegistry implements Expected
-func (mmGetMandateRegistry *ExpectedMock) GetMandateRegistry() (m1 MandateRegistry) {
+// GetMandateRegistry implements census.Expected
+func (mmGetMandateRegistry *ExpectedMock) GetMandateRegistry() (m1 mm_census.MandateRegistry) {
 	mm_atomic.AddUint64(&mmGetMandateRegistry.beforeGetMandateRegistryCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetMandateRegistry.afterGetMandateRegistryCounter, 1)
 
@@ -1260,7 +1261,7 @@ type ExpectedMockGetMisbehaviorRegistryExpectation struct {
 
 // ExpectedMockGetMisbehaviorRegistryResults contains results of the Expected.GetMisbehaviorRegistry
 type ExpectedMockGetMisbehaviorRegistryResults struct {
-	m1 MisbehaviorRegistry
+	m1 mm_census.MisbehaviorRegistry
 }
 
 // Expect sets up expected params for Expected.GetMisbehaviorRegistry
@@ -1288,7 +1289,7 @@ func (mmGetMisbehaviorRegistry *mExpectedMockGetMisbehaviorRegistry) Inspect(f f
 }
 
 // Return sets up results that will be returned by Expected.GetMisbehaviorRegistry
-func (mmGetMisbehaviorRegistry *mExpectedMockGetMisbehaviorRegistry) Return(m1 MisbehaviorRegistry) *ExpectedMock {
+func (mmGetMisbehaviorRegistry *mExpectedMockGetMisbehaviorRegistry) Return(m1 mm_census.MisbehaviorRegistry) *ExpectedMock {
 	if mmGetMisbehaviorRegistry.mock.funcGetMisbehaviorRegistry != nil {
 		mmGetMisbehaviorRegistry.mock.t.Fatalf("ExpectedMock.GetMisbehaviorRegistry mock is already set by Set")
 	}
@@ -1301,7 +1302,7 @@ func (mmGetMisbehaviorRegistry *mExpectedMockGetMisbehaviorRegistry) Return(m1 M
 }
 
 //Set uses given function f to mock the Expected.GetMisbehaviorRegistry method
-func (mmGetMisbehaviorRegistry *mExpectedMockGetMisbehaviorRegistry) Set(f func() (m1 MisbehaviorRegistry)) *ExpectedMock {
+func (mmGetMisbehaviorRegistry *mExpectedMockGetMisbehaviorRegistry) Set(f func() (m1 mm_census.MisbehaviorRegistry)) *ExpectedMock {
 	if mmGetMisbehaviorRegistry.defaultExpectation != nil {
 		mmGetMisbehaviorRegistry.mock.t.Fatalf("Default expectation is already set for the Expected.GetMisbehaviorRegistry method")
 	}
@@ -1314,8 +1315,8 @@ func (mmGetMisbehaviorRegistry *mExpectedMockGetMisbehaviorRegistry) Set(f func(
 	return mmGetMisbehaviorRegistry.mock
 }
 
-// GetMisbehaviorRegistry implements Expected
-func (mmGetMisbehaviorRegistry *ExpectedMock) GetMisbehaviorRegistry() (m1 MisbehaviorRegistry) {
+// GetMisbehaviorRegistry implements census.Expected
+func (mmGetMisbehaviorRegistry *ExpectedMock) GetMisbehaviorRegistry() (m1 mm_census.MisbehaviorRegistry) {
 	mm_atomic.AddUint64(&mmGetMisbehaviorRegistry.beforeGetMisbehaviorRegistryCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetMisbehaviorRegistry.afterGetMisbehaviorRegistryCounter, 1)
 
@@ -1458,7 +1459,7 @@ func (mmGetNearestPulseData *mExpectedMockGetNearestPulseData) Set(f func() (b1 
 	return mmGetNearestPulseData.mock
 }
 
-// GetNearestPulseData implements Expected
+// GetNearestPulseData implements census.Expected
 func (mmGetNearestPulseData *ExpectedMock) GetNearestPulseData() (b1 bool, d1 pulse.Data) {
 	mm_atomic.AddUint64(&mmGetNearestPulseData.beforeGetNearestPulseDataCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetNearestPulseData.afterGetNearestPulseDataCounter, 1)
@@ -1547,7 +1548,7 @@ type ExpectedMockGetOfflinePopulationExpectation struct {
 
 // ExpectedMockGetOfflinePopulationResults contains results of the Expected.GetOfflinePopulation
 type ExpectedMockGetOfflinePopulationResults struct {
-	o1 OfflinePopulation
+	o1 mm_census.OfflinePopulation
 }
 
 // Expect sets up expected params for Expected.GetOfflinePopulation
@@ -1575,7 +1576,7 @@ func (mmGetOfflinePopulation *mExpectedMockGetOfflinePopulation) Inspect(f func(
 }
 
 // Return sets up results that will be returned by Expected.GetOfflinePopulation
-func (mmGetOfflinePopulation *mExpectedMockGetOfflinePopulation) Return(o1 OfflinePopulation) *ExpectedMock {
+func (mmGetOfflinePopulation *mExpectedMockGetOfflinePopulation) Return(o1 mm_census.OfflinePopulation) *ExpectedMock {
 	if mmGetOfflinePopulation.mock.funcGetOfflinePopulation != nil {
 		mmGetOfflinePopulation.mock.t.Fatalf("ExpectedMock.GetOfflinePopulation mock is already set by Set")
 	}
@@ -1588,7 +1589,7 @@ func (mmGetOfflinePopulation *mExpectedMockGetOfflinePopulation) Return(o1 Offli
 }
 
 //Set uses given function f to mock the Expected.GetOfflinePopulation method
-func (mmGetOfflinePopulation *mExpectedMockGetOfflinePopulation) Set(f func() (o1 OfflinePopulation)) *ExpectedMock {
+func (mmGetOfflinePopulation *mExpectedMockGetOfflinePopulation) Set(f func() (o1 mm_census.OfflinePopulation)) *ExpectedMock {
 	if mmGetOfflinePopulation.defaultExpectation != nil {
 		mmGetOfflinePopulation.mock.t.Fatalf("Default expectation is already set for the Expected.GetOfflinePopulation method")
 	}
@@ -1601,8 +1602,8 @@ func (mmGetOfflinePopulation *mExpectedMockGetOfflinePopulation) Set(f func() (o
 	return mmGetOfflinePopulation.mock
 }
 
-// GetOfflinePopulation implements Expected
-func (mmGetOfflinePopulation *ExpectedMock) GetOfflinePopulation() (o1 OfflinePopulation) {
+// GetOfflinePopulation implements census.Expected
+func (mmGetOfflinePopulation *ExpectedMock) GetOfflinePopulation() (o1 mm_census.OfflinePopulation) {
 	mm_atomic.AddUint64(&mmGetOfflinePopulation.beforeGetOfflinePopulationCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetOfflinePopulation.afterGetOfflinePopulationCounter, 1)
 
@@ -1690,7 +1691,7 @@ type ExpectedMockGetOnlinePopulationExpectation struct {
 
 // ExpectedMockGetOnlinePopulationResults contains results of the Expected.GetOnlinePopulation
 type ExpectedMockGetOnlinePopulationResults struct {
-	o1 OnlinePopulation
+	o1 mm_census.OnlinePopulation
 }
 
 // Expect sets up expected params for Expected.GetOnlinePopulation
@@ -1718,7 +1719,7 @@ func (mmGetOnlinePopulation *mExpectedMockGetOnlinePopulation) Inspect(f func())
 }
 
 // Return sets up results that will be returned by Expected.GetOnlinePopulation
-func (mmGetOnlinePopulation *mExpectedMockGetOnlinePopulation) Return(o1 OnlinePopulation) *ExpectedMock {
+func (mmGetOnlinePopulation *mExpectedMockGetOnlinePopulation) Return(o1 mm_census.OnlinePopulation) *ExpectedMock {
 	if mmGetOnlinePopulation.mock.funcGetOnlinePopulation != nil {
 		mmGetOnlinePopulation.mock.t.Fatalf("ExpectedMock.GetOnlinePopulation mock is already set by Set")
 	}
@@ -1731,7 +1732,7 @@ func (mmGetOnlinePopulation *mExpectedMockGetOnlinePopulation) Return(o1 OnlineP
 }
 
 //Set uses given function f to mock the Expected.GetOnlinePopulation method
-func (mmGetOnlinePopulation *mExpectedMockGetOnlinePopulation) Set(f func() (o1 OnlinePopulation)) *ExpectedMock {
+func (mmGetOnlinePopulation *mExpectedMockGetOnlinePopulation) Set(f func() (o1 mm_census.OnlinePopulation)) *ExpectedMock {
 	if mmGetOnlinePopulation.defaultExpectation != nil {
 		mmGetOnlinePopulation.mock.t.Fatalf("Default expectation is already set for the Expected.GetOnlinePopulation method")
 	}
@@ -1744,8 +1745,8 @@ func (mmGetOnlinePopulation *mExpectedMockGetOnlinePopulation) Set(f func() (o1 
 	return mmGetOnlinePopulation.mock
 }
 
-// GetOnlinePopulation implements Expected
-func (mmGetOnlinePopulation *ExpectedMock) GetOnlinePopulation() (o1 OnlinePopulation) {
+// GetOnlinePopulation implements census.Expected
+func (mmGetOnlinePopulation *ExpectedMock) GetOnlinePopulation() (o1 mm_census.OnlinePopulation) {
 	mm_atomic.AddUint64(&mmGetOnlinePopulation.beforeGetOnlinePopulationCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetOnlinePopulation.afterGetOnlinePopulationCounter, 1)
 
@@ -1833,7 +1834,7 @@ type ExpectedMockGetPreviousExpectation struct {
 
 // ExpectedMockGetPreviousResults contains results of the Expected.GetPrevious
 type ExpectedMockGetPreviousResults struct {
-	a1 Active
+	a1 mm_census.Active
 }
 
 // Expect sets up expected params for Expected.GetPrevious
@@ -1861,7 +1862,7 @@ func (mmGetPrevious *mExpectedMockGetPrevious) Inspect(f func()) *mExpectedMockG
 }
 
 // Return sets up results that will be returned by Expected.GetPrevious
-func (mmGetPrevious *mExpectedMockGetPrevious) Return(a1 Active) *ExpectedMock {
+func (mmGetPrevious *mExpectedMockGetPrevious) Return(a1 mm_census.Active) *ExpectedMock {
 	if mmGetPrevious.mock.funcGetPrevious != nil {
 		mmGetPrevious.mock.t.Fatalf("ExpectedMock.GetPrevious mock is already set by Set")
 	}
@@ -1874,7 +1875,7 @@ func (mmGetPrevious *mExpectedMockGetPrevious) Return(a1 Active) *ExpectedMock {
 }
 
 //Set uses given function f to mock the Expected.GetPrevious method
-func (mmGetPrevious *mExpectedMockGetPrevious) Set(f func() (a1 Active)) *ExpectedMock {
+func (mmGetPrevious *mExpectedMockGetPrevious) Set(f func() (a1 mm_census.Active)) *ExpectedMock {
 	if mmGetPrevious.defaultExpectation != nil {
 		mmGetPrevious.mock.t.Fatalf("Default expectation is already set for the Expected.GetPrevious method")
 	}
@@ -1887,8 +1888,8 @@ func (mmGetPrevious *mExpectedMockGetPrevious) Set(f func() (a1 Active)) *Expect
 	return mmGetPrevious.mock
 }
 
-// GetPrevious implements Expected
-func (mmGetPrevious *ExpectedMock) GetPrevious() (a1 Active) {
+// GetPrevious implements census.Expected
+func (mmGetPrevious *ExpectedMock) GetPrevious() (a1 mm_census.Active) {
 	mm_atomic.AddUint64(&mmGetPrevious.beforeGetPreviousCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetPrevious.afterGetPreviousCounter, 1)
 
@@ -2066,7 +2067,7 @@ func (e *ExpectedMockGetProfileFactoryExpectation) Then(f1 profiles.Factory) *Ex
 	return e.mock
 }
 
-// GetProfileFactory implements Expected
+// GetProfileFactory implements census.Expected
 func (mmGetProfileFactory *ExpectedMock) GetProfileFactory(ksf cryptkit.KeyStoreFactory) (f1 profiles.Factory) {
 	mm_atomic.AddUint64(&mmGetProfileFactory.beforeGetProfileFactoryCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetProfileFactory.afterGetProfileFactoryCounter, 1)
@@ -2245,7 +2246,7 @@ func (mmGetPulseNumber *mExpectedMockGetPulseNumber) Set(f func() (n1 pulse.Numb
 	return mmGetPulseNumber.mock
 }
 
-// GetPulseNumber implements Expected
+// GetPulseNumber implements census.Expected
 func (mmGetPulseNumber *ExpectedMock) GetPulseNumber() (n1 pulse.Number) {
 	mm_atomic.AddUint64(&mmGetPulseNumber.beforeGetPulseNumberCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetPulseNumber.afterGetPulseNumberCounter, 1)
@@ -2388,7 +2389,7 @@ func (mmIsActive *mExpectedMockIsActive) Set(f func() (b1 bool)) *ExpectedMock {
 	return mmIsActive.mock
 }
 
-// IsActive implements Expected
+// IsActive implements census.Expected
 func (mmIsActive *ExpectedMock) IsActive() (b1 bool) {
 	mm_atomic.AddUint64(&mmIsActive.beforeIsActiveCounter, 1)
 	defer mm_atomic.AddUint64(&mmIsActive.afterIsActiveCounter, 1)
@@ -2485,7 +2486,7 @@ type ExpectedMockMakeActiveParams struct {
 
 // ExpectedMockMakeActiveResults contains results of the Expected.MakeActive
 type ExpectedMockMakeActiveResults struct {
-	a1 Active
+	a1 mm_census.Active
 }
 
 // Expect sets up expected params for Expected.MakeActive
@@ -2520,7 +2521,7 @@ func (mmMakeActive *mExpectedMockMakeActive) Inspect(f func(pd pulse.Data)) *mEx
 }
 
 // Return sets up results that will be returned by Expected.MakeActive
-func (mmMakeActive *mExpectedMockMakeActive) Return(a1 Active) *ExpectedMock {
+func (mmMakeActive *mExpectedMockMakeActive) Return(a1 mm_census.Active) *ExpectedMock {
 	if mmMakeActive.mock.funcMakeActive != nil {
 		mmMakeActive.mock.t.Fatalf("ExpectedMock.MakeActive mock is already set by Set")
 	}
@@ -2533,7 +2534,7 @@ func (mmMakeActive *mExpectedMockMakeActive) Return(a1 Active) *ExpectedMock {
 }
 
 //Set uses given function f to mock the Expected.MakeActive method
-func (mmMakeActive *mExpectedMockMakeActive) Set(f func(pd pulse.Data) (a1 Active)) *ExpectedMock {
+func (mmMakeActive *mExpectedMockMakeActive) Set(f func(pd pulse.Data) (a1 mm_census.Active)) *ExpectedMock {
 	if mmMakeActive.defaultExpectation != nil {
 		mmMakeActive.mock.t.Fatalf("Default expectation is already set for the Expected.MakeActive method")
 	}
@@ -2562,13 +2563,13 @@ func (mmMakeActive *mExpectedMockMakeActive) When(pd pulse.Data) *ExpectedMockMa
 }
 
 // Then sets up Expected.MakeActive return parameters for the expectation previously defined by the When method
-func (e *ExpectedMockMakeActiveExpectation) Then(a1 Active) *ExpectedMock {
+func (e *ExpectedMockMakeActiveExpectation) Then(a1 mm_census.Active) *ExpectedMock {
 	e.results = &ExpectedMockMakeActiveResults{a1}
 	return e.mock
 }
 
-// MakeActive implements Expected
-func (mmMakeActive *ExpectedMock) MakeActive(pd pulse.Data) (a1 Active) {
+// MakeActive implements census.Expected
+func (mmMakeActive *ExpectedMock) MakeActive(pd pulse.Data) (a1 mm_census.Active) {
 	mm_atomic.AddUint64(&mmMakeActive.beforeMakeActiveCounter, 1)
 	defer mm_atomic.AddUint64(&mmMakeActive.afterMakeActiveCounter, 1)
 
@@ -2700,7 +2701,7 @@ type ExpectedMockRebuildParams struct {
 
 // ExpectedMockRebuildResults contains results of the Expected.Rebuild
 type ExpectedMockRebuildResults struct {
-	b1 Built
+	b1 mm_census.Built
 }
 
 // Expect sets up expected params for Expected.Rebuild
@@ -2735,7 +2736,7 @@ func (mmRebuild *mExpectedMockRebuild) Inspect(f func(pn pulse.Number)) *mExpect
 }
 
 // Return sets up results that will be returned by Expected.Rebuild
-func (mmRebuild *mExpectedMockRebuild) Return(b1 Built) *ExpectedMock {
+func (mmRebuild *mExpectedMockRebuild) Return(b1 mm_census.Built) *ExpectedMock {
 	if mmRebuild.mock.funcRebuild != nil {
 		mmRebuild.mock.t.Fatalf("ExpectedMock.Rebuild mock is already set by Set")
 	}
@@ -2748,7 +2749,7 @@ func (mmRebuild *mExpectedMockRebuild) Return(b1 Built) *ExpectedMock {
 }
 
 //Set uses given function f to mock the Expected.Rebuild method
-func (mmRebuild *mExpectedMockRebuild) Set(f func(pn pulse.Number) (b1 Built)) *ExpectedMock {
+func (mmRebuild *mExpectedMockRebuild) Set(f func(pn pulse.Number) (b1 mm_census.Built)) *ExpectedMock {
 	if mmRebuild.defaultExpectation != nil {
 		mmRebuild.mock.t.Fatalf("Default expectation is already set for the Expected.Rebuild method")
 	}
@@ -2777,13 +2778,13 @@ func (mmRebuild *mExpectedMockRebuild) When(pn pulse.Number) *ExpectedMockRebuil
 }
 
 // Then sets up Expected.Rebuild return parameters for the expectation previously defined by the When method
-func (e *ExpectedMockRebuildExpectation) Then(b1 Built) *ExpectedMock {
+func (e *ExpectedMockRebuildExpectation) Then(b1 mm_census.Built) *ExpectedMock {
 	e.results = &ExpectedMockRebuildResults{b1}
 	return e.mock
 }
 
-// Rebuild implements Expected
-func (mmRebuild *ExpectedMock) Rebuild(pn pulse.Number) (b1 Built) {
+// Rebuild implements census.Expected
+func (mmRebuild *ExpectedMock) Rebuild(pn pulse.Number) (b1 mm_census.Built) {
 	mm_atomic.AddUint64(&mmRebuild.beforeRebuildCounter, 1)
 	defer mm_atomic.AddUint64(&mmRebuild.afterRebuildCounter, 1)
 

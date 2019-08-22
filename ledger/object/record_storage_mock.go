@@ -13,7 +13,7 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 )
 
-// RecordStorageMock implements RecordStorage
+// RecordStorageMock implements object.RecordStorage
 type RecordStorageMock struct {
 	t minimock.Tester
 
@@ -36,7 +36,7 @@ type RecordStorageMock struct {
 	SetMock          mRecordStorageMockSet
 }
 
-// NewRecordStorageMock returns a mock for RecordStorage
+// NewRecordStorageMock returns a mock for object.RecordStorage
 func NewRecordStorageMock(t minimock.Tester) *RecordStorageMock {
 	m := &RecordStorageMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -162,7 +162,7 @@ func (e *RecordStorageMockBatchSetExpectation) Then(err error) *RecordStorageMoc
 	return e.mock
 }
 
-// BatchSet implements RecordStorage
+// BatchSet implements object.RecordStorage
 func (mmBatchSet *RecordStorageMock) BatchSet(ctx context.Context, recs []record.Material) (err error) {
 	mm_atomic.AddUint64(&mmBatchSet.beforeBatchSetCounter, 1)
 	defer mm_atomic.AddUint64(&mmBatchSet.afterBatchSetCounter, 1)
@@ -379,7 +379,7 @@ func (e *RecordStorageMockForIDExpectation) Then(m1 record.Material, err error) 
 	return e.mock
 }
 
-// ForID implements RecordStorage
+// ForID implements object.RecordStorage
 func (mmForID *RecordStorageMock) ForID(ctx context.Context, id insolar.ID) (m1 record.Material, err error) {
 	mm_atomic.AddUint64(&mmForID.beforeForIDCounter, 1)
 	defer mm_atomic.AddUint64(&mmForID.afterForIDCounter, 1)
@@ -595,7 +595,7 @@ func (e *RecordStorageMockSetExpectation) Then(err error) *RecordStorageMock {
 	return e.mock
 }
 
-// Set implements RecordStorage
+// Set implements object.RecordStorage
 func (mmSet *RecordStorageMock) Set(ctx context.Context, rec record.Material) (err error) {
 	mm_atomic.AddUint64(&mmSet.beforeSetCounter, 1)
 	defer mm_atomic.AddUint64(&mmSet.afterSetCounter, 1)

@@ -13,7 +13,7 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 )
 
-// RecordAccessorMock implements RecordAccessor
+// RecordAccessorMock implements object.RecordAccessor
 type RecordAccessorMock struct {
 	t minimock.Tester
 
@@ -24,7 +24,7 @@ type RecordAccessorMock struct {
 	ForIDMock          mRecordAccessorMockForID
 }
 
-// NewRecordAccessorMock returns a mock for RecordAccessor
+// NewRecordAccessorMock returns a mock for object.RecordAccessor
 func NewRecordAccessorMock(t minimock.Tester) *RecordAccessorMock {
 	m := &RecordAccessorMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -145,7 +145,7 @@ func (e *RecordAccessorMockForIDExpectation) Then(m1 record.Material, err error)
 	return e.mock
 }
 
-// ForID implements RecordAccessor
+// ForID implements object.RecordAccessor
 func (mmForID *RecordAccessorMock) ForID(ctx context.Context, id insolar.ID) (m1 record.Material, err error) {
 	mm_atomic.AddUint64(&mmForID.beforeForIDCounter, 1)
 	defer mm_atomic.AddUint64(&mmForID.afterForIDCounter, 1)

@@ -11,7 +11,7 @@ import (
 	"github.com/gojuno/minimock"
 )
 
-// FixedReaderMock implements FixedReader
+// FixedReaderMock implements longbits.FixedReader
 type FixedReaderMock struct {
 	t minimock.Tester
 
@@ -46,7 +46,7 @@ type FixedReaderMock struct {
 	WriteToMock          mFixedReaderMockWriteTo
 }
 
-// NewFixedReaderMock returns a mock for FixedReader
+// NewFixedReaderMock returns a mock for longbits.FixedReader
 func NewFixedReaderMock(t minimock.Tester) *FixedReaderMock {
 	m := &FixedReaderMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -138,7 +138,7 @@ func (mmAsByteString *mFixedReaderMockAsByteString) Set(f func() (s1 string)) *F
 	return mmAsByteString.mock
 }
 
-// AsByteString implements FixedReader
+// AsByteString implements longbits.FixedReader
 func (mmAsByteString *FixedReaderMock) AsByteString() (s1 string) {
 	mm_atomic.AddUint64(&mmAsByteString.beforeAsByteStringCounter, 1)
 	defer mm_atomic.AddUint64(&mmAsByteString.afterAsByteStringCounter, 1)
@@ -281,7 +281,7 @@ func (mmAsBytes *mFixedReaderMockAsBytes) Set(f func() (ba1 []byte)) *FixedReade
 	return mmAsBytes.mock
 }
 
-// AsBytes implements FixedReader
+// AsBytes implements longbits.FixedReader
 func (mmAsBytes *FixedReaderMock) AsBytes() (ba1 []byte) {
 	mm_atomic.AddUint64(&mmAsBytes.beforeAsBytesCounter, 1)
 	defer mm_atomic.AddUint64(&mmAsBytes.afterAsBytesCounter, 1)
@@ -424,7 +424,7 @@ func (mmFixedByteSize *mFixedReaderMockFixedByteSize) Set(f func() (i1 int)) *Fi
 	return mmFixedByteSize.mock
 }
 
-// FixedByteSize implements FixedReader
+// FixedByteSize implements longbits.FixedReader
 func (mmFixedByteSize *FixedReaderMock) FixedByteSize() (i1 int) {
 	mm_atomic.AddUint64(&mmFixedByteSize.beforeFixedByteSizeCounter, 1)
 	defer mm_atomic.AddUint64(&mmFixedByteSize.afterFixedByteSizeCounter, 1)
@@ -604,7 +604,7 @@ func (e *FixedReaderMockReadExpectation) Then(n int, err error) *FixedReaderMock
 	return e.mock
 }
 
-// Read implements FixedReader
+// Read implements longbits.FixedReader
 func (mmRead *FixedReaderMock) Read(p []byte) (n int, err error) {
 	mm_atomic.AddUint64(&mmRead.beforeReadCounter, 1)
 	defer mm_atomic.AddUint64(&mmRead.afterReadCounter, 1)
@@ -820,7 +820,7 @@ func (e *FixedReaderMockWriteToExpectation) Then(n int64, err error) *FixedReade
 	return e.mock
 }
 
-// WriteTo implements FixedReader
+// WriteTo implements longbits.FixedReader
 func (mmWriteTo *FixedReaderMock) WriteTo(w io.Writer) (n int64, err error) {
 	mm_atomic.AddUint64(&mmWriteTo.beforeWriteToCounter, 1)
 	defer mm_atomic.AddUint64(&mmWriteTo.afterWriteToCounter, 1)

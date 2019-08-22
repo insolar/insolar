@@ -11,7 +11,7 @@ import (
 	"github.com/gojuno/minimock"
 )
 
-// ProcedureMock implements Procedure
+// ProcedureMock implements flow.Procedure
 type ProcedureMock struct {
 	t minimock.Tester
 
@@ -22,7 +22,7 @@ type ProcedureMock struct {
 	ProceedMock          mProcedureMockProceed
 }
 
-// NewProcedureMock returns a mock for Procedure
+// NewProcedureMock returns a mock for flow.Procedure
 func NewProcedureMock(t minimock.Tester) *ProcedureMock {
 	m := &ProcedureMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -141,7 +141,7 @@ func (e *ProcedureMockProceedExpectation) Then(err error) *ProcedureMock {
 	return e.mock
 }
 
-// Proceed implements Procedure
+// Proceed implements flow.Procedure
 func (mmProceed *ProcedureMock) Proceed(ctx context.Context) (err error) {
 	mm_atomic.AddUint64(&mmProceed.beforeProceedCounter, 1)
 	defer mm_atomic.AddUint64(&mmProceed.afterProceedCounter, 1)

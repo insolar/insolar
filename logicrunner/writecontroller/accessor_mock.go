@@ -12,7 +12,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-// AccessorMock implements Accessor
+// AccessorMock implements writecontroller.Accessor
 type AccessorMock struct {
 	t minimock.Tester
 
@@ -29,7 +29,7 @@ type AccessorMock struct {
 	WaitOpenedMock          mAccessorMockWaitOpened
 }
 
-// NewAccessorMock returns a mock for Accessor
+// NewAccessorMock returns a mock for writecontroller.Accessor
 func NewAccessorMock(t minimock.Tester) *AccessorMock {
 	m := &AccessorMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -153,7 +153,7 @@ func (e *AccessorMockBeginExpectation) Then(done func(), err error) *AccessorMoc
 	return e.mock
 }
 
-// Begin implements Accessor
+// Begin implements writecontroller.Accessor
 func (mmBegin *AccessorMock) Begin(ctx context.Context, p1 insolar.PulseNumber) (done func(), err error) {
 	mm_atomic.AddUint64(&mmBegin.beforeBeginCounter, 1)
 	defer mm_atomic.AddUint64(&mmBegin.afterBeginCounter, 1)
@@ -342,7 +342,7 @@ func (mmWaitOpened *mAccessorMockWaitOpened) Set(f func(ctx context.Context)) *A
 	return mmWaitOpened.mock
 }
 
-// WaitOpened implements Accessor
+// WaitOpened implements writecontroller.Accessor
 func (mmWaitOpened *AccessorMock) WaitOpened(ctx context.Context) {
 	mm_atomic.AddUint64(&mmWaitOpened.beforeWaitOpenedCounter, 1)
 	defer mm_atomic.AddUint64(&mmWaitOpened.afterWaitOpenedCounter, 1)

@@ -8,9 +8,10 @@ import (
 
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/insolar"
+	mm_record "github.com/insolar/insolar/insolar/record"
 )
 
-// RequestMock implements Request
+// RequestMock implements record.Request
 type RequestMock struct {
 	t minimock.Tester
 
@@ -20,7 +21,7 @@ type RequestMock struct {
 	beforeAffinityRefCounter uint64
 	AffinityRefMock          mRequestMockAffinityRef
 
-	funcGetCallType          func() (c1 CallType)
+	funcGetCallType          func() (c1 mm_record.CallType)
 	inspectFuncGetCallType   func()
 	afterGetCallTypeCounter  uint64
 	beforeGetCallTypeCounter uint64
@@ -69,7 +70,7 @@ type RequestMock struct {
 	ValidateMock          mRequestMockValidate
 }
 
-// NewRequestMock returns a mock for Request
+// NewRequestMock returns a mock for record.Request
 func NewRequestMock(t minimock.Tester) *RequestMock {
 	m := &RequestMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -167,7 +168,7 @@ func (mmAffinityRef *mRequestMockAffinityRef) Set(f func() (rp1 *insolar.Referen
 	return mmAffinityRef.mock
 }
 
-// AffinityRef implements Request
+// AffinityRef implements record.Request
 func (mmAffinityRef *RequestMock) AffinityRef() (rp1 *insolar.Reference) {
 	mm_atomic.AddUint64(&mmAffinityRef.beforeAffinityRefCounter, 1)
 	defer mm_atomic.AddUint64(&mmAffinityRef.afterAffinityRefCounter, 1)
@@ -256,7 +257,7 @@ type RequestMockGetCallTypeExpectation struct {
 
 // RequestMockGetCallTypeResults contains results of the Request.GetCallType
 type RequestMockGetCallTypeResults struct {
-	c1 CallType
+	c1 mm_record.CallType
 }
 
 // Expect sets up expected params for Request.GetCallType
@@ -284,7 +285,7 @@ func (mmGetCallType *mRequestMockGetCallType) Inspect(f func()) *mRequestMockGet
 }
 
 // Return sets up results that will be returned by Request.GetCallType
-func (mmGetCallType *mRequestMockGetCallType) Return(c1 CallType) *RequestMock {
+func (mmGetCallType *mRequestMockGetCallType) Return(c1 mm_record.CallType) *RequestMock {
 	if mmGetCallType.mock.funcGetCallType != nil {
 		mmGetCallType.mock.t.Fatalf("RequestMock.GetCallType mock is already set by Set")
 	}
@@ -297,7 +298,7 @@ func (mmGetCallType *mRequestMockGetCallType) Return(c1 CallType) *RequestMock {
 }
 
 //Set uses given function f to mock the Request.GetCallType method
-func (mmGetCallType *mRequestMockGetCallType) Set(f func() (c1 CallType)) *RequestMock {
+func (mmGetCallType *mRequestMockGetCallType) Set(f func() (c1 mm_record.CallType)) *RequestMock {
 	if mmGetCallType.defaultExpectation != nil {
 		mmGetCallType.mock.t.Fatalf("Default expectation is already set for the Request.GetCallType method")
 	}
@@ -310,8 +311,8 @@ func (mmGetCallType *mRequestMockGetCallType) Set(f func() (c1 CallType)) *Reque
 	return mmGetCallType.mock
 }
 
-// GetCallType implements Request
-func (mmGetCallType *RequestMock) GetCallType() (c1 CallType) {
+// GetCallType implements record.Request
+func (mmGetCallType *RequestMock) GetCallType() (c1 mm_record.CallType) {
 	mm_atomic.AddUint64(&mmGetCallType.beforeGetCallTypeCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetCallType.afterGetCallTypeCounter, 1)
 
@@ -453,7 +454,7 @@ func (mmIsAPIRequest *mRequestMockIsAPIRequest) Set(f func() (b1 bool)) *Request
 	return mmIsAPIRequest.mock
 }
 
-// IsAPIRequest implements Request
+// IsAPIRequest implements record.Request
 func (mmIsAPIRequest *RequestMock) IsAPIRequest() (b1 bool) {
 	mm_atomic.AddUint64(&mmIsAPIRequest.beforeIsAPIRequestCounter, 1)
 	defer mm_atomic.AddUint64(&mmIsAPIRequest.afterIsAPIRequestCounter, 1)
@@ -596,7 +597,7 @@ func (mmIsCreationRequest *mRequestMockIsCreationRequest) Set(f func() (b1 bool)
 	return mmIsCreationRequest.mock
 }
 
-// IsCreationRequest implements Request
+// IsCreationRequest implements record.Request
 func (mmIsCreationRequest *RequestMock) IsCreationRequest() (b1 bool) {
 	mm_atomic.AddUint64(&mmIsCreationRequest.beforeIsCreationRequestCounter, 1)
 	defer mm_atomic.AddUint64(&mmIsCreationRequest.afterIsCreationRequestCounter, 1)
@@ -739,7 +740,7 @@ func (mmIsTemporaryUploadCode *mRequestMockIsTemporaryUploadCode) Set(f func() (
 	return mmIsTemporaryUploadCode.mock
 }
 
-// IsTemporaryUploadCode implements Request
+// IsTemporaryUploadCode implements record.Request
 func (mmIsTemporaryUploadCode *RequestMock) IsTemporaryUploadCode() (b1 bool) {
 	mm_atomic.AddUint64(&mmIsTemporaryUploadCode.beforeIsTemporaryUploadCodeCounter, 1)
 	defer mm_atomic.AddUint64(&mmIsTemporaryUploadCode.afterIsTemporaryUploadCodeCounter, 1)
@@ -883,7 +884,7 @@ func (mmMarshal *mRequestMockMarshal) Set(f func() (dAtA []byte, err error)) *Re
 	return mmMarshal.mock
 }
 
-// Marshal implements Request
+// Marshal implements record.Request
 func (mmMarshal *RequestMock) Marshal() (dAtA []byte, err error) {
 	mm_atomic.AddUint64(&mmMarshal.beforeMarshalCounter, 1)
 	defer mm_atomic.AddUint64(&mmMarshal.afterMarshalCounter, 1)
@@ -1026,7 +1027,7 @@ func (mmReasonAffinityRef *mRequestMockReasonAffinityRef) Set(f func() (r1 insol
 	return mmReasonAffinityRef.mock
 }
 
-// ReasonAffinityRef implements Request
+// ReasonAffinityRef implements record.Request
 func (mmReasonAffinityRef *RequestMock) ReasonAffinityRef() (r1 insolar.Reference) {
 	mm_atomic.AddUint64(&mmReasonAffinityRef.beforeReasonAffinityRefCounter, 1)
 	defer mm_atomic.AddUint64(&mmReasonAffinityRef.afterReasonAffinityRefCounter, 1)
@@ -1169,7 +1170,7 @@ func (mmReasonRef *mRequestMockReasonRef) Set(f func() (r1 insolar.Reference)) *
 	return mmReasonRef.mock
 }
 
-// ReasonRef implements Request
+// ReasonRef implements record.Request
 func (mmReasonRef *RequestMock) ReasonRef() (r1 insolar.Reference) {
 	mm_atomic.AddUint64(&mmReasonRef.beforeReasonRefCounter, 1)
 	defer mm_atomic.AddUint64(&mmReasonRef.afterReasonRefCounter, 1)
@@ -1312,7 +1313,7 @@ func (mmValidate *mRequestMockValidate) Set(f func() (err error)) *RequestMock {
 	return mmValidate.mock
 }
 
-// Validate implements Request
+// Validate implements record.Request
 func (mmValidate *RequestMock) Validate() (err error) {
 	mm_atomic.AddUint64(&mmValidate.beforeValidateCounter, 1)
 	defer mm_atomic.AddUint64(&mmValidate.afterValidateCounter, 1)

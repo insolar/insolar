@@ -12,7 +12,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-// JetKeeperMock implements JetKeeper
+// JetKeeperMock implements executor.JetKeeper
 type JetKeeperMock struct {
 	t minimock.Tester
 
@@ -47,7 +47,7 @@ type JetKeeperMock struct {
 	TopSyncPulseMock          mJetKeeperMockTopSyncPulse
 }
 
-// NewJetKeeperMock returns a mock for JetKeeper
+// NewJetKeeperMock returns a mock for executor.JetKeeper
 func NewJetKeeperMock(t minimock.Tester) *JetKeeperMock {
 	m := &JetKeeperMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -178,7 +178,7 @@ func (e *JetKeeperMockAddBackupConfirmationExpectation) Then(err error) *JetKeep
 	return e.mock
 }
 
-// AddBackupConfirmation implements JetKeeper
+// AddBackupConfirmation implements executor.JetKeeper
 func (mmAddBackupConfirmation *JetKeeperMock) AddBackupConfirmation(ctx context.Context, pn insolar.PulseNumber) (err error) {
 	mm_atomic.AddUint64(&mmAddBackupConfirmation.beforeAddBackupConfirmationCounter, 1)
 	defer mm_atomic.AddUint64(&mmAddBackupConfirmation.afterAddBackupConfirmationCounter, 1)
@@ -396,7 +396,7 @@ func (e *JetKeeperMockAddDropConfirmationExpectation) Then(err error) *JetKeeper
 	return e.mock
 }
 
-// AddDropConfirmation implements JetKeeper
+// AddDropConfirmation implements executor.JetKeeper
 func (mmAddDropConfirmation *JetKeeperMock) AddDropConfirmation(ctx context.Context, pn insolar.PulseNumber, jet insolar.JetID, split bool) (err error) {
 	mm_atomic.AddUint64(&mmAddDropConfirmation.beforeAddDropConfirmationCounter, 1)
 	defer mm_atomic.AddUint64(&mmAddDropConfirmation.afterAddDropConfirmationCounter, 1)
@@ -614,7 +614,7 @@ func (e *JetKeeperMockAddHotConfirmationExpectation) Then(err error) *JetKeeperM
 	return e.mock
 }
 
-// AddHotConfirmation implements JetKeeper
+// AddHotConfirmation implements executor.JetKeeper
 func (mmAddHotConfirmation *JetKeeperMock) AddHotConfirmation(ctx context.Context, pn insolar.PulseNumber, jet insolar.JetID, split bool) (err error) {
 	mm_atomic.AddUint64(&mmAddHotConfirmation.beforeAddHotConfirmationCounter, 1)
 	defer mm_atomic.AddUint64(&mmAddHotConfirmation.afterAddHotConfirmationCounter, 1)
@@ -830,7 +830,7 @@ func (e *JetKeeperMockHasAllJetConfirmsExpectation) Then(b1 bool) *JetKeeperMock
 	return e.mock
 }
 
-// HasAllJetConfirms implements JetKeeper
+// HasAllJetConfirms implements executor.JetKeeper
 func (mmHasAllJetConfirms *JetKeeperMock) HasAllJetConfirms(ctx context.Context, pn insolar.PulseNumber) (b1 bool) {
 	mm_atomic.AddUint64(&mmHasAllJetConfirms.beforeHasAllJetConfirmsCounter, 1)
 	defer mm_atomic.AddUint64(&mmHasAllJetConfirms.afterHasAllJetConfirmsCounter, 1)
@@ -1009,7 +1009,7 @@ func (mmTopSyncPulse *mJetKeeperMockTopSyncPulse) Set(f func() (p1 insolar.Pulse
 	return mmTopSyncPulse.mock
 }
 
-// TopSyncPulse implements JetKeeper
+// TopSyncPulse implements executor.JetKeeper
 func (mmTopSyncPulse *JetKeeperMock) TopSyncPulse() (p1 insolar.PulseNumber) {
 	mm_atomic.AddUint64(&mmTopSyncPulse.beforeTopSyncPulseCounter, 1)
 	defer mm_atomic.AddUint64(&mmTopSyncPulse.afterTopSyncPulseCounter, 1)

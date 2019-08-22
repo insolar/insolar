@@ -8,38 +8,39 @@ import (
 	mm_time "time"
 
 	"github.com/gojuno/minimock"
+	mm_store "github.com/insolar/insolar/insolar/store"
 )
 
-// DBMock implements DB
+// DBMock implements store.DB
 type DBMock struct {
 	t minimock.Tester
 
-	funcDelete          func(key Key) (err error)
-	inspectFuncDelete   func(key Key)
+	funcDelete          func(key mm_store.Key) (err error)
+	inspectFuncDelete   func(key mm_store.Key)
 	afterDeleteCounter  uint64
 	beforeDeleteCounter uint64
 	DeleteMock          mDBMockDelete
 
-	funcGet          func(key Key) (value []byte, err error)
-	inspectFuncGet   func(key Key)
+	funcGet          func(key mm_store.Key) (value []byte, err error)
+	inspectFuncGet   func(key mm_store.Key)
 	afterGetCounter  uint64
 	beforeGetCounter uint64
 	GetMock          mDBMockGet
 
-	funcNewIterator          func(pivot Key, reverse bool) (i1 Iterator)
-	inspectFuncNewIterator   func(pivot Key, reverse bool)
+	funcNewIterator          func(pivot mm_store.Key, reverse bool) (i1 mm_store.Iterator)
+	inspectFuncNewIterator   func(pivot mm_store.Key, reverse bool)
 	afterNewIteratorCounter  uint64
 	beforeNewIteratorCounter uint64
 	NewIteratorMock          mDBMockNewIterator
 
-	funcSet          func(key Key, value []byte) (err error)
-	inspectFuncSet   func(key Key, value []byte)
+	funcSet          func(key mm_store.Key, value []byte) (err error)
+	inspectFuncSet   func(key mm_store.Key, value []byte)
 	afterSetCounter  uint64
 	beforeSetCounter uint64
 	SetMock          mDBMockSet
 }
 
-// NewDBMock returns a mock for DB
+// NewDBMock returns a mock for store.DB
 func NewDBMock(t minimock.Tester) *DBMock {
 	m := &DBMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -80,7 +81,7 @@ type DBMockDeleteExpectation struct {
 
 // DBMockDeleteParams contains parameters of the DB.Delete
 type DBMockDeleteParams struct {
-	key Key
+	key mm_store.Key
 }
 
 // DBMockDeleteResults contains results of the DB.Delete
@@ -89,7 +90,7 @@ type DBMockDeleteResults struct {
 }
 
 // Expect sets up expected params for DB.Delete
-func (mmDelete *mDBMockDelete) Expect(key Key) *mDBMockDelete {
+func (mmDelete *mDBMockDelete) Expect(key mm_store.Key) *mDBMockDelete {
 	if mmDelete.mock.funcDelete != nil {
 		mmDelete.mock.t.Fatalf("DBMock.Delete mock is already set by Set")
 	}
@@ -109,7 +110,7 @@ func (mmDelete *mDBMockDelete) Expect(key Key) *mDBMockDelete {
 }
 
 // Inspect accepts an inspector function that has same arguments as the DB.Delete
-func (mmDelete *mDBMockDelete) Inspect(f func(key Key)) *mDBMockDelete {
+func (mmDelete *mDBMockDelete) Inspect(f func(key mm_store.Key)) *mDBMockDelete {
 	if mmDelete.mock.inspectFuncDelete != nil {
 		mmDelete.mock.t.Fatalf("Inspect function is already set for DBMock.Delete")
 	}
@@ -133,7 +134,7 @@ func (mmDelete *mDBMockDelete) Return(err error) *DBMock {
 }
 
 //Set uses given function f to mock the DB.Delete method
-func (mmDelete *mDBMockDelete) Set(f func(key Key) (err error)) *DBMock {
+func (mmDelete *mDBMockDelete) Set(f func(key mm_store.Key) (err error)) *DBMock {
 	if mmDelete.defaultExpectation != nil {
 		mmDelete.mock.t.Fatalf("Default expectation is already set for the DB.Delete method")
 	}
@@ -148,7 +149,7 @@ func (mmDelete *mDBMockDelete) Set(f func(key Key) (err error)) *DBMock {
 
 // When sets expectation for the DB.Delete which will trigger the result defined by the following
 // Then helper
-func (mmDelete *mDBMockDelete) When(key Key) *DBMockDeleteExpectation {
+func (mmDelete *mDBMockDelete) When(key mm_store.Key) *DBMockDeleteExpectation {
 	if mmDelete.mock.funcDelete != nil {
 		mmDelete.mock.t.Fatalf("DBMock.Delete mock is already set by Set")
 	}
@@ -167,8 +168,8 @@ func (e *DBMockDeleteExpectation) Then(err error) *DBMock {
 	return e.mock
 }
 
-// Delete implements DB
-func (mmDelete *DBMock) Delete(key Key) (err error) {
+// Delete implements store.DB
+func (mmDelete *DBMock) Delete(key mm_store.Key) (err error) {
 	mm_atomic.AddUint64(&mmDelete.beforeDeleteCounter, 1)
 	defer mm_atomic.AddUint64(&mmDelete.afterDeleteCounter, 1)
 
@@ -295,7 +296,7 @@ type DBMockGetExpectation struct {
 
 // DBMockGetParams contains parameters of the DB.Get
 type DBMockGetParams struct {
-	key Key
+	key mm_store.Key
 }
 
 // DBMockGetResults contains results of the DB.Get
@@ -305,7 +306,7 @@ type DBMockGetResults struct {
 }
 
 // Expect sets up expected params for DB.Get
-func (mmGet *mDBMockGet) Expect(key Key) *mDBMockGet {
+func (mmGet *mDBMockGet) Expect(key mm_store.Key) *mDBMockGet {
 	if mmGet.mock.funcGet != nil {
 		mmGet.mock.t.Fatalf("DBMock.Get mock is already set by Set")
 	}
@@ -325,7 +326,7 @@ func (mmGet *mDBMockGet) Expect(key Key) *mDBMockGet {
 }
 
 // Inspect accepts an inspector function that has same arguments as the DB.Get
-func (mmGet *mDBMockGet) Inspect(f func(key Key)) *mDBMockGet {
+func (mmGet *mDBMockGet) Inspect(f func(key mm_store.Key)) *mDBMockGet {
 	if mmGet.mock.inspectFuncGet != nil {
 		mmGet.mock.t.Fatalf("Inspect function is already set for DBMock.Get")
 	}
@@ -349,7 +350,7 @@ func (mmGet *mDBMockGet) Return(value []byte, err error) *DBMock {
 }
 
 //Set uses given function f to mock the DB.Get method
-func (mmGet *mDBMockGet) Set(f func(key Key) (value []byte, err error)) *DBMock {
+func (mmGet *mDBMockGet) Set(f func(key mm_store.Key) (value []byte, err error)) *DBMock {
 	if mmGet.defaultExpectation != nil {
 		mmGet.mock.t.Fatalf("Default expectation is already set for the DB.Get method")
 	}
@@ -364,7 +365,7 @@ func (mmGet *mDBMockGet) Set(f func(key Key) (value []byte, err error)) *DBMock 
 
 // When sets expectation for the DB.Get which will trigger the result defined by the following
 // Then helper
-func (mmGet *mDBMockGet) When(key Key) *DBMockGetExpectation {
+func (mmGet *mDBMockGet) When(key mm_store.Key) *DBMockGetExpectation {
 	if mmGet.mock.funcGet != nil {
 		mmGet.mock.t.Fatalf("DBMock.Get mock is already set by Set")
 	}
@@ -383,8 +384,8 @@ func (e *DBMockGetExpectation) Then(value []byte, err error) *DBMock {
 	return e.mock
 }
 
-// Get implements DB
-func (mmGet *DBMock) Get(key Key) (value []byte, err error) {
+// Get implements store.DB
+func (mmGet *DBMock) Get(key mm_store.Key) (value []byte, err error) {
 	mm_atomic.AddUint64(&mmGet.beforeGetCounter, 1)
 	defer mm_atomic.AddUint64(&mmGet.afterGetCounter, 1)
 
@@ -511,17 +512,17 @@ type DBMockNewIteratorExpectation struct {
 
 // DBMockNewIteratorParams contains parameters of the DB.NewIterator
 type DBMockNewIteratorParams struct {
-	pivot   Key
+	pivot   mm_store.Key
 	reverse bool
 }
 
 // DBMockNewIteratorResults contains results of the DB.NewIterator
 type DBMockNewIteratorResults struct {
-	i1 Iterator
+	i1 mm_store.Iterator
 }
 
 // Expect sets up expected params for DB.NewIterator
-func (mmNewIterator *mDBMockNewIterator) Expect(pivot Key, reverse bool) *mDBMockNewIterator {
+func (mmNewIterator *mDBMockNewIterator) Expect(pivot mm_store.Key, reverse bool) *mDBMockNewIterator {
 	if mmNewIterator.mock.funcNewIterator != nil {
 		mmNewIterator.mock.t.Fatalf("DBMock.NewIterator mock is already set by Set")
 	}
@@ -541,7 +542,7 @@ func (mmNewIterator *mDBMockNewIterator) Expect(pivot Key, reverse bool) *mDBMoc
 }
 
 // Inspect accepts an inspector function that has same arguments as the DB.NewIterator
-func (mmNewIterator *mDBMockNewIterator) Inspect(f func(pivot Key, reverse bool)) *mDBMockNewIterator {
+func (mmNewIterator *mDBMockNewIterator) Inspect(f func(pivot mm_store.Key, reverse bool)) *mDBMockNewIterator {
 	if mmNewIterator.mock.inspectFuncNewIterator != nil {
 		mmNewIterator.mock.t.Fatalf("Inspect function is already set for DBMock.NewIterator")
 	}
@@ -552,7 +553,7 @@ func (mmNewIterator *mDBMockNewIterator) Inspect(f func(pivot Key, reverse bool)
 }
 
 // Return sets up results that will be returned by DB.NewIterator
-func (mmNewIterator *mDBMockNewIterator) Return(i1 Iterator) *DBMock {
+func (mmNewIterator *mDBMockNewIterator) Return(i1 mm_store.Iterator) *DBMock {
 	if mmNewIterator.mock.funcNewIterator != nil {
 		mmNewIterator.mock.t.Fatalf("DBMock.NewIterator mock is already set by Set")
 	}
@@ -565,7 +566,7 @@ func (mmNewIterator *mDBMockNewIterator) Return(i1 Iterator) *DBMock {
 }
 
 //Set uses given function f to mock the DB.NewIterator method
-func (mmNewIterator *mDBMockNewIterator) Set(f func(pivot Key, reverse bool) (i1 Iterator)) *DBMock {
+func (mmNewIterator *mDBMockNewIterator) Set(f func(pivot mm_store.Key, reverse bool) (i1 mm_store.Iterator)) *DBMock {
 	if mmNewIterator.defaultExpectation != nil {
 		mmNewIterator.mock.t.Fatalf("Default expectation is already set for the DB.NewIterator method")
 	}
@@ -580,7 +581,7 @@ func (mmNewIterator *mDBMockNewIterator) Set(f func(pivot Key, reverse bool) (i1
 
 // When sets expectation for the DB.NewIterator which will trigger the result defined by the following
 // Then helper
-func (mmNewIterator *mDBMockNewIterator) When(pivot Key, reverse bool) *DBMockNewIteratorExpectation {
+func (mmNewIterator *mDBMockNewIterator) When(pivot mm_store.Key, reverse bool) *DBMockNewIteratorExpectation {
 	if mmNewIterator.mock.funcNewIterator != nil {
 		mmNewIterator.mock.t.Fatalf("DBMock.NewIterator mock is already set by Set")
 	}
@@ -594,13 +595,13 @@ func (mmNewIterator *mDBMockNewIterator) When(pivot Key, reverse bool) *DBMockNe
 }
 
 // Then sets up DB.NewIterator return parameters for the expectation previously defined by the When method
-func (e *DBMockNewIteratorExpectation) Then(i1 Iterator) *DBMock {
+func (e *DBMockNewIteratorExpectation) Then(i1 mm_store.Iterator) *DBMock {
 	e.results = &DBMockNewIteratorResults{i1}
 	return e.mock
 }
 
-// NewIterator implements DB
-func (mmNewIterator *DBMock) NewIterator(pivot Key, reverse bool) (i1 Iterator) {
+// NewIterator implements store.DB
+func (mmNewIterator *DBMock) NewIterator(pivot mm_store.Key, reverse bool) (i1 mm_store.Iterator) {
 	mm_atomic.AddUint64(&mmNewIterator.beforeNewIteratorCounter, 1)
 	defer mm_atomic.AddUint64(&mmNewIterator.afterNewIteratorCounter, 1)
 
@@ -727,7 +728,7 @@ type DBMockSetExpectation struct {
 
 // DBMockSetParams contains parameters of the DB.Set
 type DBMockSetParams struct {
-	key   Key
+	key   mm_store.Key
 	value []byte
 }
 
@@ -737,7 +738,7 @@ type DBMockSetResults struct {
 }
 
 // Expect sets up expected params for DB.Set
-func (mmSet *mDBMockSet) Expect(key Key, value []byte) *mDBMockSet {
+func (mmSet *mDBMockSet) Expect(key mm_store.Key, value []byte) *mDBMockSet {
 	if mmSet.mock.funcSet != nil {
 		mmSet.mock.t.Fatalf("DBMock.Set mock is already set by Set")
 	}
@@ -757,7 +758,7 @@ func (mmSet *mDBMockSet) Expect(key Key, value []byte) *mDBMockSet {
 }
 
 // Inspect accepts an inspector function that has same arguments as the DB.Set
-func (mmSet *mDBMockSet) Inspect(f func(key Key, value []byte)) *mDBMockSet {
+func (mmSet *mDBMockSet) Inspect(f func(key mm_store.Key, value []byte)) *mDBMockSet {
 	if mmSet.mock.inspectFuncSet != nil {
 		mmSet.mock.t.Fatalf("Inspect function is already set for DBMock.Set")
 	}
@@ -781,7 +782,7 @@ func (mmSet *mDBMockSet) Return(err error) *DBMock {
 }
 
 //Set uses given function f to mock the DB.Set method
-func (mmSet *mDBMockSet) Set(f func(key Key, value []byte) (err error)) *DBMock {
+func (mmSet *mDBMockSet) Set(f func(key mm_store.Key, value []byte) (err error)) *DBMock {
 	if mmSet.defaultExpectation != nil {
 		mmSet.mock.t.Fatalf("Default expectation is already set for the DB.Set method")
 	}
@@ -796,7 +797,7 @@ func (mmSet *mDBMockSet) Set(f func(key Key, value []byte) (err error)) *DBMock 
 
 // When sets expectation for the DB.Set which will trigger the result defined by the following
 // Then helper
-func (mmSet *mDBMockSet) When(key Key, value []byte) *DBMockSetExpectation {
+func (mmSet *mDBMockSet) When(key mm_store.Key, value []byte) *DBMockSetExpectation {
 	if mmSet.mock.funcSet != nil {
 		mmSet.mock.t.Fatalf("DBMock.Set mock is already set by Set")
 	}
@@ -815,8 +816,8 @@ func (e *DBMockSetExpectation) Then(err error) *DBMock {
 	return e.mock
 }
 
-// Set implements DB
-func (mmSet *DBMock) Set(key Key, value []byte) (err error) {
+// Set implements store.DB
+func (mmSet *DBMock) Set(key mm_store.Key, value []byte) (err error) {
 	mm_atomic.AddUint64(&mmSet.beforeSetCounter, 1)
 	defer mm_atomic.AddUint64(&mmSet.afterSetCounter, 1)
 

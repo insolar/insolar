@@ -9,9 +9,10 @@ import (
 	mm_time "time"
 
 	"github.com/gojuno/minimock"
+	mm_cryptkit "github.com/insolar/insolar/network/consensus/common/cryptkit"
 )
 
-// DigestHolderMock implements DigestHolder
+// DigestHolderMock implements cryptkit.DigestHolder
 type DigestHolderMock struct {
 	t minimock.Tester
 
@@ -27,14 +28,14 @@ type DigestHolderMock struct {
 	beforeAsBytesCounter uint64
 	AsBytesMock          mDigestHolderMockAsBytes
 
-	funcCopyOfDigest          func() (d1 Digest)
+	funcCopyOfDigest          func() (d1 mm_cryptkit.Digest)
 	inspectFuncCopyOfDigest   func()
 	afterCopyOfDigestCounter  uint64
 	beforeCopyOfDigestCounter uint64
 	CopyOfDigestMock          mDigestHolderMockCopyOfDigest
 
-	funcEquals          func(other DigestHolder) (b1 bool)
-	inspectFuncEquals   func(other DigestHolder)
+	funcEquals          func(other mm_cryptkit.DigestHolder) (b1 bool)
+	inspectFuncEquals   func(other mm_cryptkit.DigestHolder)
 	afterEqualsCounter  uint64
 	beforeEqualsCounter uint64
 	EqualsMock          mDigestHolderMockEquals
@@ -51,7 +52,7 @@ type DigestHolderMock struct {
 	beforeFoldToUint64Counter uint64
 	FoldToUint64Mock          mDigestHolderMockFoldToUint64
 
-	funcGetDigestMethod          func() (d1 DigestMethod)
+	funcGetDigestMethod          func() (d1 mm_cryptkit.DigestMethod)
 	inspectFuncGetDigestMethod   func()
 	afterGetDigestMethodCounter  uint64
 	beforeGetDigestMethodCounter uint64
@@ -63,8 +64,8 @@ type DigestHolderMock struct {
 	beforeReadCounter uint64
 	ReadMock          mDigestHolderMockRead
 
-	funcSignWith          func(signer DigestSigner) (s1 SignedDigestHolder)
-	inspectFuncSignWith   func(signer DigestSigner)
+	funcSignWith          func(signer mm_cryptkit.DigestSigner) (s1 mm_cryptkit.SignedDigestHolder)
+	inspectFuncSignWith   func(signer mm_cryptkit.DigestSigner)
 	afterSignWithCounter  uint64
 	beforeSignWithCounter uint64
 	SignWithMock          mDigestHolderMockSignWith
@@ -76,7 +77,7 @@ type DigestHolderMock struct {
 	WriteToMock          mDigestHolderMockWriteTo
 }
 
-// NewDigestHolderMock returns a mock for DigestHolder
+// NewDigestHolderMock returns a mock for cryptkit.DigestHolder
 func NewDigestHolderMock(t minimock.Tester) *DigestHolderMock {
 	m := &DigestHolderMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -180,7 +181,7 @@ func (mmAsByteString *mDigestHolderMockAsByteString) Set(f func() (s1 string)) *
 	return mmAsByteString.mock
 }
 
-// AsByteString implements DigestHolder
+// AsByteString implements cryptkit.DigestHolder
 func (mmAsByteString *DigestHolderMock) AsByteString() (s1 string) {
 	mm_atomic.AddUint64(&mmAsByteString.beforeAsByteStringCounter, 1)
 	defer mm_atomic.AddUint64(&mmAsByteString.afterAsByteStringCounter, 1)
@@ -323,7 +324,7 @@ func (mmAsBytes *mDigestHolderMockAsBytes) Set(f func() (ba1 []byte)) *DigestHol
 	return mmAsBytes.mock
 }
 
-// AsBytes implements DigestHolder
+// AsBytes implements cryptkit.DigestHolder
 func (mmAsBytes *DigestHolderMock) AsBytes() (ba1 []byte) {
 	mm_atomic.AddUint64(&mmAsBytes.beforeAsBytesCounter, 1)
 	defer mm_atomic.AddUint64(&mmAsBytes.afterAsBytesCounter, 1)
@@ -412,7 +413,7 @@ type DigestHolderMockCopyOfDigestExpectation struct {
 
 // DigestHolderMockCopyOfDigestResults contains results of the DigestHolder.CopyOfDigest
 type DigestHolderMockCopyOfDigestResults struct {
-	d1 Digest
+	d1 mm_cryptkit.Digest
 }
 
 // Expect sets up expected params for DigestHolder.CopyOfDigest
@@ -440,7 +441,7 @@ func (mmCopyOfDigest *mDigestHolderMockCopyOfDigest) Inspect(f func()) *mDigestH
 }
 
 // Return sets up results that will be returned by DigestHolder.CopyOfDigest
-func (mmCopyOfDigest *mDigestHolderMockCopyOfDigest) Return(d1 Digest) *DigestHolderMock {
+func (mmCopyOfDigest *mDigestHolderMockCopyOfDigest) Return(d1 mm_cryptkit.Digest) *DigestHolderMock {
 	if mmCopyOfDigest.mock.funcCopyOfDigest != nil {
 		mmCopyOfDigest.mock.t.Fatalf("DigestHolderMock.CopyOfDigest mock is already set by Set")
 	}
@@ -453,7 +454,7 @@ func (mmCopyOfDigest *mDigestHolderMockCopyOfDigest) Return(d1 Digest) *DigestHo
 }
 
 //Set uses given function f to mock the DigestHolder.CopyOfDigest method
-func (mmCopyOfDigest *mDigestHolderMockCopyOfDigest) Set(f func() (d1 Digest)) *DigestHolderMock {
+func (mmCopyOfDigest *mDigestHolderMockCopyOfDigest) Set(f func() (d1 mm_cryptkit.Digest)) *DigestHolderMock {
 	if mmCopyOfDigest.defaultExpectation != nil {
 		mmCopyOfDigest.mock.t.Fatalf("Default expectation is already set for the DigestHolder.CopyOfDigest method")
 	}
@@ -466,8 +467,8 @@ func (mmCopyOfDigest *mDigestHolderMockCopyOfDigest) Set(f func() (d1 Digest)) *
 	return mmCopyOfDigest.mock
 }
 
-// CopyOfDigest implements DigestHolder
-func (mmCopyOfDigest *DigestHolderMock) CopyOfDigest() (d1 Digest) {
+// CopyOfDigest implements cryptkit.DigestHolder
+func (mmCopyOfDigest *DigestHolderMock) CopyOfDigest() (d1 mm_cryptkit.Digest) {
 	mm_atomic.AddUint64(&mmCopyOfDigest.beforeCopyOfDigestCounter, 1)
 	defer mm_atomic.AddUint64(&mmCopyOfDigest.afterCopyOfDigestCounter, 1)
 
@@ -558,7 +559,7 @@ type DigestHolderMockEqualsExpectation struct {
 
 // DigestHolderMockEqualsParams contains parameters of the DigestHolder.Equals
 type DigestHolderMockEqualsParams struct {
-	other DigestHolder
+	other mm_cryptkit.DigestHolder
 }
 
 // DigestHolderMockEqualsResults contains results of the DigestHolder.Equals
@@ -567,7 +568,7 @@ type DigestHolderMockEqualsResults struct {
 }
 
 // Expect sets up expected params for DigestHolder.Equals
-func (mmEquals *mDigestHolderMockEquals) Expect(other DigestHolder) *mDigestHolderMockEquals {
+func (mmEquals *mDigestHolderMockEquals) Expect(other mm_cryptkit.DigestHolder) *mDigestHolderMockEquals {
 	if mmEquals.mock.funcEquals != nil {
 		mmEquals.mock.t.Fatalf("DigestHolderMock.Equals mock is already set by Set")
 	}
@@ -587,7 +588,7 @@ func (mmEquals *mDigestHolderMockEquals) Expect(other DigestHolder) *mDigestHold
 }
 
 // Inspect accepts an inspector function that has same arguments as the DigestHolder.Equals
-func (mmEquals *mDigestHolderMockEquals) Inspect(f func(other DigestHolder)) *mDigestHolderMockEquals {
+func (mmEquals *mDigestHolderMockEquals) Inspect(f func(other mm_cryptkit.DigestHolder)) *mDigestHolderMockEquals {
 	if mmEquals.mock.inspectFuncEquals != nil {
 		mmEquals.mock.t.Fatalf("Inspect function is already set for DigestHolderMock.Equals")
 	}
@@ -611,7 +612,7 @@ func (mmEquals *mDigestHolderMockEquals) Return(b1 bool) *DigestHolderMock {
 }
 
 //Set uses given function f to mock the DigestHolder.Equals method
-func (mmEquals *mDigestHolderMockEquals) Set(f func(other DigestHolder) (b1 bool)) *DigestHolderMock {
+func (mmEquals *mDigestHolderMockEquals) Set(f func(other mm_cryptkit.DigestHolder) (b1 bool)) *DigestHolderMock {
 	if mmEquals.defaultExpectation != nil {
 		mmEquals.mock.t.Fatalf("Default expectation is already set for the DigestHolder.Equals method")
 	}
@@ -626,7 +627,7 @@ func (mmEquals *mDigestHolderMockEquals) Set(f func(other DigestHolder) (b1 bool
 
 // When sets expectation for the DigestHolder.Equals which will trigger the result defined by the following
 // Then helper
-func (mmEquals *mDigestHolderMockEquals) When(other DigestHolder) *DigestHolderMockEqualsExpectation {
+func (mmEquals *mDigestHolderMockEquals) When(other mm_cryptkit.DigestHolder) *DigestHolderMockEqualsExpectation {
 	if mmEquals.mock.funcEquals != nil {
 		mmEquals.mock.t.Fatalf("DigestHolderMock.Equals mock is already set by Set")
 	}
@@ -645,8 +646,8 @@ func (e *DigestHolderMockEqualsExpectation) Then(b1 bool) *DigestHolderMock {
 	return e.mock
 }
 
-// Equals implements DigestHolder
-func (mmEquals *DigestHolderMock) Equals(other DigestHolder) (b1 bool) {
+// Equals implements cryptkit.DigestHolder
+func (mmEquals *DigestHolderMock) Equals(other mm_cryptkit.DigestHolder) (b1 bool) {
 	mm_atomic.AddUint64(&mmEquals.beforeEqualsCounter, 1)
 	defer mm_atomic.AddUint64(&mmEquals.afterEqualsCounter, 1)
 
@@ -824,7 +825,7 @@ func (mmFixedByteSize *mDigestHolderMockFixedByteSize) Set(f func() (i1 int)) *D
 	return mmFixedByteSize.mock
 }
 
-// FixedByteSize implements DigestHolder
+// FixedByteSize implements cryptkit.DigestHolder
 func (mmFixedByteSize *DigestHolderMock) FixedByteSize() (i1 int) {
 	mm_atomic.AddUint64(&mmFixedByteSize.beforeFixedByteSizeCounter, 1)
 	defer mm_atomic.AddUint64(&mmFixedByteSize.afterFixedByteSizeCounter, 1)
@@ -967,7 +968,7 @@ func (mmFoldToUint64 *mDigestHolderMockFoldToUint64) Set(f func() (u1 uint64)) *
 	return mmFoldToUint64.mock
 }
 
-// FoldToUint64 implements DigestHolder
+// FoldToUint64 implements cryptkit.DigestHolder
 func (mmFoldToUint64 *DigestHolderMock) FoldToUint64() (u1 uint64) {
 	mm_atomic.AddUint64(&mmFoldToUint64.beforeFoldToUint64Counter, 1)
 	defer mm_atomic.AddUint64(&mmFoldToUint64.afterFoldToUint64Counter, 1)
@@ -1056,7 +1057,7 @@ type DigestHolderMockGetDigestMethodExpectation struct {
 
 // DigestHolderMockGetDigestMethodResults contains results of the DigestHolder.GetDigestMethod
 type DigestHolderMockGetDigestMethodResults struct {
-	d1 DigestMethod
+	d1 mm_cryptkit.DigestMethod
 }
 
 // Expect sets up expected params for DigestHolder.GetDigestMethod
@@ -1084,7 +1085,7 @@ func (mmGetDigestMethod *mDigestHolderMockGetDigestMethod) Inspect(f func()) *mD
 }
 
 // Return sets up results that will be returned by DigestHolder.GetDigestMethod
-func (mmGetDigestMethod *mDigestHolderMockGetDigestMethod) Return(d1 DigestMethod) *DigestHolderMock {
+func (mmGetDigestMethod *mDigestHolderMockGetDigestMethod) Return(d1 mm_cryptkit.DigestMethod) *DigestHolderMock {
 	if mmGetDigestMethod.mock.funcGetDigestMethod != nil {
 		mmGetDigestMethod.mock.t.Fatalf("DigestHolderMock.GetDigestMethod mock is already set by Set")
 	}
@@ -1097,7 +1098,7 @@ func (mmGetDigestMethod *mDigestHolderMockGetDigestMethod) Return(d1 DigestMetho
 }
 
 //Set uses given function f to mock the DigestHolder.GetDigestMethod method
-func (mmGetDigestMethod *mDigestHolderMockGetDigestMethod) Set(f func() (d1 DigestMethod)) *DigestHolderMock {
+func (mmGetDigestMethod *mDigestHolderMockGetDigestMethod) Set(f func() (d1 mm_cryptkit.DigestMethod)) *DigestHolderMock {
 	if mmGetDigestMethod.defaultExpectation != nil {
 		mmGetDigestMethod.mock.t.Fatalf("Default expectation is already set for the DigestHolder.GetDigestMethod method")
 	}
@@ -1110,8 +1111,8 @@ func (mmGetDigestMethod *mDigestHolderMockGetDigestMethod) Set(f func() (d1 Dige
 	return mmGetDigestMethod.mock
 }
 
-// GetDigestMethod implements DigestHolder
-func (mmGetDigestMethod *DigestHolderMock) GetDigestMethod() (d1 DigestMethod) {
+// GetDigestMethod implements cryptkit.DigestHolder
+func (mmGetDigestMethod *DigestHolderMock) GetDigestMethod() (d1 mm_cryptkit.DigestMethod) {
 	mm_atomic.AddUint64(&mmGetDigestMethod.beforeGetDigestMethodCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetDigestMethod.afterGetDigestMethodCounter, 1)
 
@@ -1290,7 +1291,7 @@ func (e *DigestHolderMockReadExpectation) Then(n int, err error) *DigestHolderMo
 	return e.mock
 }
 
-// Read implements DigestHolder
+// Read implements cryptkit.DigestHolder
 func (mmRead *DigestHolderMock) Read(p []byte) (n int, err error) {
 	mm_atomic.AddUint64(&mmRead.beforeReadCounter, 1)
 	defer mm_atomic.AddUint64(&mmRead.afterReadCounter, 1)
@@ -1418,16 +1419,16 @@ type DigestHolderMockSignWithExpectation struct {
 
 // DigestHolderMockSignWithParams contains parameters of the DigestHolder.SignWith
 type DigestHolderMockSignWithParams struct {
-	signer DigestSigner
+	signer mm_cryptkit.DigestSigner
 }
 
 // DigestHolderMockSignWithResults contains results of the DigestHolder.SignWith
 type DigestHolderMockSignWithResults struct {
-	s1 SignedDigestHolder
+	s1 mm_cryptkit.SignedDigestHolder
 }
 
 // Expect sets up expected params for DigestHolder.SignWith
-func (mmSignWith *mDigestHolderMockSignWith) Expect(signer DigestSigner) *mDigestHolderMockSignWith {
+func (mmSignWith *mDigestHolderMockSignWith) Expect(signer mm_cryptkit.DigestSigner) *mDigestHolderMockSignWith {
 	if mmSignWith.mock.funcSignWith != nil {
 		mmSignWith.mock.t.Fatalf("DigestHolderMock.SignWith mock is already set by Set")
 	}
@@ -1447,7 +1448,7 @@ func (mmSignWith *mDigestHolderMockSignWith) Expect(signer DigestSigner) *mDiges
 }
 
 // Inspect accepts an inspector function that has same arguments as the DigestHolder.SignWith
-func (mmSignWith *mDigestHolderMockSignWith) Inspect(f func(signer DigestSigner)) *mDigestHolderMockSignWith {
+func (mmSignWith *mDigestHolderMockSignWith) Inspect(f func(signer mm_cryptkit.DigestSigner)) *mDigestHolderMockSignWith {
 	if mmSignWith.mock.inspectFuncSignWith != nil {
 		mmSignWith.mock.t.Fatalf("Inspect function is already set for DigestHolderMock.SignWith")
 	}
@@ -1458,7 +1459,7 @@ func (mmSignWith *mDigestHolderMockSignWith) Inspect(f func(signer DigestSigner)
 }
 
 // Return sets up results that will be returned by DigestHolder.SignWith
-func (mmSignWith *mDigestHolderMockSignWith) Return(s1 SignedDigestHolder) *DigestHolderMock {
+func (mmSignWith *mDigestHolderMockSignWith) Return(s1 mm_cryptkit.SignedDigestHolder) *DigestHolderMock {
 	if mmSignWith.mock.funcSignWith != nil {
 		mmSignWith.mock.t.Fatalf("DigestHolderMock.SignWith mock is already set by Set")
 	}
@@ -1471,7 +1472,7 @@ func (mmSignWith *mDigestHolderMockSignWith) Return(s1 SignedDigestHolder) *Dige
 }
 
 //Set uses given function f to mock the DigestHolder.SignWith method
-func (mmSignWith *mDigestHolderMockSignWith) Set(f func(signer DigestSigner) (s1 SignedDigestHolder)) *DigestHolderMock {
+func (mmSignWith *mDigestHolderMockSignWith) Set(f func(signer mm_cryptkit.DigestSigner) (s1 mm_cryptkit.SignedDigestHolder)) *DigestHolderMock {
 	if mmSignWith.defaultExpectation != nil {
 		mmSignWith.mock.t.Fatalf("Default expectation is already set for the DigestHolder.SignWith method")
 	}
@@ -1486,7 +1487,7 @@ func (mmSignWith *mDigestHolderMockSignWith) Set(f func(signer DigestSigner) (s1
 
 // When sets expectation for the DigestHolder.SignWith which will trigger the result defined by the following
 // Then helper
-func (mmSignWith *mDigestHolderMockSignWith) When(signer DigestSigner) *DigestHolderMockSignWithExpectation {
+func (mmSignWith *mDigestHolderMockSignWith) When(signer mm_cryptkit.DigestSigner) *DigestHolderMockSignWithExpectation {
 	if mmSignWith.mock.funcSignWith != nil {
 		mmSignWith.mock.t.Fatalf("DigestHolderMock.SignWith mock is already set by Set")
 	}
@@ -1500,13 +1501,13 @@ func (mmSignWith *mDigestHolderMockSignWith) When(signer DigestSigner) *DigestHo
 }
 
 // Then sets up DigestHolder.SignWith return parameters for the expectation previously defined by the When method
-func (e *DigestHolderMockSignWithExpectation) Then(s1 SignedDigestHolder) *DigestHolderMock {
+func (e *DigestHolderMockSignWithExpectation) Then(s1 mm_cryptkit.SignedDigestHolder) *DigestHolderMock {
 	e.results = &DigestHolderMockSignWithResults{s1}
 	return e.mock
 }
 
-// SignWith implements DigestHolder
-func (mmSignWith *DigestHolderMock) SignWith(signer DigestSigner) (s1 SignedDigestHolder) {
+// SignWith implements cryptkit.DigestHolder
+func (mmSignWith *DigestHolderMock) SignWith(signer mm_cryptkit.DigestSigner) (s1 mm_cryptkit.SignedDigestHolder) {
 	mm_atomic.AddUint64(&mmSignWith.beforeSignWithCounter, 1)
 	defer mm_atomic.AddUint64(&mmSignWith.afterSignWithCounter, 1)
 
@@ -1721,7 +1722,7 @@ func (e *DigestHolderMockWriteToExpectation) Then(n int64, err error) *DigestHol
 	return e.mock
 }
 
-// WriteTo implements DigestHolder
+// WriteTo implements cryptkit.DigestHolder
 func (mmWriteTo *DigestHolderMock) WriteTo(w io.Writer) (n int64, err error) {
 	mm_atomic.AddUint64(&mmWriteTo.beforeWriteToCounter, 1)
 	defer mm_atomic.AddUint64(&mmWriteTo.afterWriteToCounter, 1)

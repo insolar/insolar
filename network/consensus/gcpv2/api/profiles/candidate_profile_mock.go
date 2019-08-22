@@ -15,7 +15,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 )
 
-// CandidateProfileMock implements CandidateProfile
+// CandidateProfileMock implements profiles.CandidateProfile
 type CandidateProfileMock struct {
 	t minimock.Tester
 
@@ -104,7 +104,7 @@ type CandidateProfileMock struct {
 	GetStaticNodeIDMock          mCandidateProfileMockGetStaticNodeID
 }
 
-// NewCandidateProfileMock returns a mock for CandidateProfile
+// NewCandidateProfileMock returns a mock for profiles.CandidateProfile
 func NewCandidateProfileMock(t minimock.Tester) *CandidateProfileMock {
 	m := &CandidateProfileMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -212,7 +212,7 @@ func (mmGetBriefIntroSignedDigest *mCandidateProfileMockGetBriefIntroSignedDiges
 	return mmGetBriefIntroSignedDigest.mock
 }
 
-// GetBriefIntroSignedDigest implements CandidateProfile
+// GetBriefIntroSignedDigest implements profiles.CandidateProfile
 func (mmGetBriefIntroSignedDigest *CandidateProfileMock) GetBriefIntroSignedDigest() (s1 cryptkit.SignedDigestHolder) {
 	mm_atomic.AddUint64(&mmGetBriefIntroSignedDigest.beforeGetBriefIntroSignedDigestCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetBriefIntroSignedDigest.afterGetBriefIntroSignedDigestCounter, 1)
@@ -355,7 +355,7 @@ func (mmGetDefaultEndpoint *mCandidateProfileMockGetDefaultEndpoint) Set(f func(
 	return mmGetDefaultEndpoint.mock
 }
 
-// GetDefaultEndpoint implements CandidateProfile
+// GetDefaultEndpoint implements profiles.CandidateProfile
 func (mmGetDefaultEndpoint *CandidateProfileMock) GetDefaultEndpoint() (o1 endpoints.Outbound) {
 	mm_atomic.AddUint64(&mmGetDefaultEndpoint.beforeGetDefaultEndpointCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetDefaultEndpoint.afterGetDefaultEndpointCounter, 1)
@@ -498,7 +498,7 @@ func (mmGetExtraEndpoints *mCandidateProfileMockGetExtraEndpoints) Set(f func() 
 	return mmGetExtraEndpoints.mock
 }
 
-// GetExtraEndpoints implements CandidateProfile
+// GetExtraEndpoints implements profiles.CandidateProfile
 func (mmGetExtraEndpoints *CandidateProfileMock) GetExtraEndpoints() (oa1 []endpoints.Outbound) {
 	mm_atomic.AddUint64(&mmGetExtraEndpoints.beforeGetExtraEndpointsCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetExtraEndpoints.afterGetExtraEndpointsCounter, 1)
@@ -641,7 +641,7 @@ func (mmGetIssuedAtPulse *mCandidateProfileMockGetIssuedAtPulse) Set(f func() (n
 	return mmGetIssuedAtPulse.mock
 }
 
-// GetIssuedAtPulse implements CandidateProfile
+// GetIssuedAtPulse implements profiles.CandidateProfile
 func (mmGetIssuedAtPulse *CandidateProfileMock) GetIssuedAtPulse() (n1 pulse.Number) {
 	mm_atomic.AddUint64(&mmGetIssuedAtPulse.beforeGetIssuedAtPulseCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetIssuedAtPulse.afterGetIssuedAtPulseCounter, 1)
@@ -784,7 +784,7 @@ func (mmGetIssuedAtTime *mCandidateProfileMockGetIssuedAtTime) Set(f func() (t1 
 	return mmGetIssuedAtTime.mock
 }
 
-// GetIssuedAtTime implements CandidateProfile
+// GetIssuedAtTime implements profiles.CandidateProfile
 func (mmGetIssuedAtTime *CandidateProfileMock) GetIssuedAtTime() (t1 time.Time) {
 	mm_atomic.AddUint64(&mmGetIssuedAtTime.beforeGetIssuedAtTimeCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetIssuedAtTime.afterGetIssuedAtTimeCounter, 1)
@@ -927,7 +927,7 @@ func (mmGetIssuerID *mCandidateProfileMockGetIssuerID) Set(f func() (s1 insolar.
 	return mmGetIssuerID.mock
 }
 
-// GetIssuerID implements CandidateProfile
+// GetIssuerID implements profiles.CandidateProfile
 func (mmGetIssuerID *CandidateProfileMock) GetIssuerID() (s1 insolar.ShortNodeID) {
 	mm_atomic.AddUint64(&mmGetIssuerID.beforeGetIssuerIDCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetIssuerID.afterGetIssuerIDCounter, 1)
@@ -1070,7 +1070,7 @@ func (mmGetIssuerSignature *mCandidateProfileMockGetIssuerSignature) Set(f func(
 	return mmGetIssuerSignature.mock
 }
 
-// GetIssuerSignature implements CandidateProfile
+// GetIssuerSignature implements profiles.CandidateProfile
 func (mmGetIssuerSignature *CandidateProfileMock) GetIssuerSignature() (s1 cryptkit.SignatureHolder) {
 	mm_atomic.AddUint64(&mmGetIssuerSignature.beforeGetIssuerSignatureCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetIssuerSignature.afterGetIssuerSignatureCounter, 1)
@@ -1213,7 +1213,7 @@ func (mmGetNodePublicKey *mCandidateProfileMockGetNodePublicKey) Set(f func() (s
 	return mmGetNodePublicKey.mock
 }
 
-// GetNodePublicKey implements CandidateProfile
+// GetNodePublicKey implements profiles.CandidateProfile
 func (mmGetNodePublicKey *CandidateProfileMock) GetNodePublicKey() (s1 cryptkit.SignatureKeyHolder) {
 	mm_atomic.AddUint64(&mmGetNodePublicKey.beforeGetNodePublicKeyCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetNodePublicKey.afterGetNodePublicKeyCounter, 1)
@@ -1356,7 +1356,7 @@ func (mmGetPowerLevels *mCandidateProfileMockGetPowerLevels) Set(f func() (p1 me
 	return mmGetPowerLevels.mock
 }
 
-// GetPowerLevels implements CandidateProfile
+// GetPowerLevels implements profiles.CandidateProfile
 func (mmGetPowerLevels *CandidateProfileMock) GetPowerLevels() (p1 member.PowerSet) {
 	mm_atomic.AddUint64(&mmGetPowerLevels.beforeGetPowerLevelsCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetPowerLevels.afterGetPowerLevelsCounter, 1)
@@ -1499,7 +1499,7 @@ func (mmGetPrimaryRole *mCandidateProfileMockGetPrimaryRole) Set(f func() (p1 me
 	return mmGetPrimaryRole.mock
 }
 
-// GetPrimaryRole implements CandidateProfile
+// GetPrimaryRole implements profiles.CandidateProfile
 func (mmGetPrimaryRole *CandidateProfileMock) GetPrimaryRole() (p1 member.PrimaryRole) {
 	mm_atomic.AddUint64(&mmGetPrimaryRole.beforeGetPrimaryRoleCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetPrimaryRole.afterGetPrimaryRoleCounter, 1)
@@ -1642,7 +1642,7 @@ func (mmGetReference *mCandidateProfileMockGetReference) Set(f func() (r1 insola
 	return mmGetReference.mock
 }
 
-// GetReference implements CandidateProfile
+// GetReference implements profiles.CandidateProfile
 func (mmGetReference *CandidateProfileMock) GetReference() (r1 insolar.Reference) {
 	mm_atomic.AddUint64(&mmGetReference.beforeGetReferenceCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetReference.afterGetReferenceCounter, 1)
@@ -1785,7 +1785,7 @@ func (mmGetSpecialRoles *mCandidateProfileMockGetSpecialRoles) Set(f func() (s1 
 	return mmGetSpecialRoles.mock
 }
 
-// GetSpecialRoles implements CandidateProfile
+// GetSpecialRoles implements profiles.CandidateProfile
 func (mmGetSpecialRoles *CandidateProfileMock) GetSpecialRoles() (s1 member.SpecialRole) {
 	mm_atomic.AddUint64(&mmGetSpecialRoles.beforeGetSpecialRolesCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetSpecialRoles.afterGetSpecialRolesCounter, 1)
@@ -1928,7 +1928,7 @@ func (mmGetStartPower *mCandidateProfileMockGetStartPower) Set(f func() (p1 memb
 	return mmGetStartPower.mock
 }
 
-// GetStartPower implements CandidateProfile
+// GetStartPower implements profiles.CandidateProfile
 func (mmGetStartPower *CandidateProfileMock) GetStartPower() (p1 member.Power) {
 	mm_atomic.AddUint64(&mmGetStartPower.beforeGetStartPowerCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetStartPower.afterGetStartPowerCounter, 1)
@@ -2071,7 +2071,7 @@ func (mmGetStaticNodeID *mCandidateProfileMockGetStaticNodeID) Set(f func() (s1 
 	return mmGetStaticNodeID.mock
 }
 
-// GetStaticNodeID implements CandidateProfile
+// GetStaticNodeID implements profiles.CandidateProfile
 func (mmGetStaticNodeID *CandidateProfileMock) GetStaticNodeID() (s1 insolar.ShortNodeID) {
 	mm_atomic.AddUint64(&mmGetStaticNodeID.beforeGetStaticNodeIDCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetStaticNodeID.afterGetStaticNodeIDCounter, 1)

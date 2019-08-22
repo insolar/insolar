@@ -12,7 +12,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-// CleanerMock implements Cleaner
+// CleanerMock implements executor.Cleaner
 type CleanerMock struct {
 	t minimock.Tester
 
@@ -29,7 +29,7 @@ type CleanerMock struct {
 	StopMock          mCleanerMockStop
 }
 
-// NewCleanerMock returns a mock for Cleaner
+// NewCleanerMock returns a mock for executor.Cleaner
 func NewCleanerMock(t minimock.Tester) *CleanerMock {
 	m := &CleanerMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -125,7 +125,7 @@ func (mmNotifyAboutPulse *mCleanerMockNotifyAboutPulse) Set(f func(ctx context.C
 	return mmNotifyAboutPulse.mock
 }
 
-// NotifyAboutPulse implements Cleaner
+// NotifyAboutPulse implements executor.Cleaner
 func (mmNotifyAboutPulse *CleanerMock) NotifyAboutPulse(ctx context.Context, pn insolar.PulseNumber) {
 	mm_atomic.AddUint64(&mmNotifyAboutPulse.beforeNotifyAboutPulseCounter, 1)
 	defer mm_atomic.AddUint64(&mmNotifyAboutPulse.afterNotifyAboutPulseCounter, 1)
@@ -296,7 +296,7 @@ func (mmStop *mCleanerMockStop) Set(f func()) *CleanerMock {
 	return mmStop.mock
 }
 
-// Stop implements Cleaner
+// Stop implements executor.Cleaner
 func (mmStop *CleanerMock) Stop() {
 	mm_atomic.AddUint64(&mmStop.beforeStopCounter, 1)
 	defer mm_atomic.AddUint64(&mmStop.afterStopCounter, 1)

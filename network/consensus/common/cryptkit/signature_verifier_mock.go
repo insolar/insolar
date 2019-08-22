@@ -9,44 +9,45 @@ import (
 	mm_time "time"
 
 	"github.com/gojuno/minimock"
+	mm_cryptkit "github.com/insolar/insolar/network/consensus/common/cryptkit"
 )
 
-// SignatureVerifierMock implements SignatureVerifier
+// SignatureVerifierMock implements cryptkit.SignatureVerifier
 type SignatureVerifierMock struct {
 	t minimock.Tester
 
-	funcIsDigestMethodSupported          func(m DigestMethod) (b1 bool)
-	inspectFuncIsDigestMethodSupported   func(m DigestMethod)
+	funcIsDigestMethodSupported          func(m mm_cryptkit.DigestMethod) (b1 bool)
+	inspectFuncIsDigestMethodSupported   func(m mm_cryptkit.DigestMethod)
 	afterIsDigestMethodSupportedCounter  uint64
 	beforeIsDigestMethodSupportedCounter uint64
 	IsDigestMethodSupportedMock          mSignatureVerifierMockIsDigestMethodSupported
 
-	funcIsSignMethodSupported          func(m SignMethod) (b1 bool)
-	inspectFuncIsSignMethodSupported   func(m SignMethod)
+	funcIsSignMethodSupported          func(m mm_cryptkit.SignMethod) (b1 bool)
+	inspectFuncIsSignMethodSupported   func(m mm_cryptkit.SignMethod)
 	afterIsSignMethodSupportedCounter  uint64
 	beforeIsSignMethodSupportedCounter uint64
 	IsSignMethodSupportedMock          mSignatureVerifierMockIsSignMethodSupported
 
-	funcIsSignOfSignatureMethodSupported          func(m SignatureMethod) (b1 bool)
-	inspectFuncIsSignOfSignatureMethodSupported   func(m SignatureMethod)
+	funcIsSignOfSignatureMethodSupported          func(m mm_cryptkit.SignatureMethod) (b1 bool)
+	inspectFuncIsSignOfSignatureMethodSupported   func(m mm_cryptkit.SignatureMethod)
 	afterIsSignOfSignatureMethodSupportedCounter  uint64
 	beforeIsSignOfSignatureMethodSupportedCounter uint64
 	IsSignOfSignatureMethodSupportedMock          mSignatureVerifierMockIsSignOfSignatureMethodSupported
 
-	funcIsValidDataSignature          func(data io.Reader, signature SignatureHolder) (b1 bool)
-	inspectFuncIsValidDataSignature   func(data io.Reader, signature SignatureHolder)
+	funcIsValidDataSignature          func(data io.Reader, signature mm_cryptkit.SignatureHolder) (b1 bool)
+	inspectFuncIsValidDataSignature   func(data io.Reader, signature mm_cryptkit.SignatureHolder)
 	afterIsValidDataSignatureCounter  uint64
 	beforeIsValidDataSignatureCounter uint64
 	IsValidDataSignatureMock          mSignatureVerifierMockIsValidDataSignature
 
-	funcIsValidDigestSignature          func(digest DigestHolder, signature SignatureHolder) (b1 bool)
-	inspectFuncIsValidDigestSignature   func(digest DigestHolder, signature SignatureHolder)
+	funcIsValidDigestSignature          func(digest mm_cryptkit.DigestHolder, signature mm_cryptkit.SignatureHolder) (b1 bool)
+	inspectFuncIsValidDigestSignature   func(digest mm_cryptkit.DigestHolder, signature mm_cryptkit.SignatureHolder)
 	afterIsValidDigestSignatureCounter  uint64
 	beforeIsValidDigestSignatureCounter uint64
 	IsValidDigestSignatureMock          mSignatureVerifierMockIsValidDigestSignature
 }
 
-// NewSignatureVerifierMock returns a mock for SignatureVerifier
+// NewSignatureVerifierMock returns a mock for cryptkit.SignatureVerifier
 func NewSignatureVerifierMock(t minimock.Tester) *SignatureVerifierMock {
 	m := &SignatureVerifierMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -90,7 +91,7 @@ type SignatureVerifierMockIsDigestMethodSupportedExpectation struct {
 
 // SignatureVerifierMockIsDigestMethodSupportedParams contains parameters of the SignatureVerifier.IsDigestMethodSupported
 type SignatureVerifierMockIsDigestMethodSupportedParams struct {
-	m DigestMethod
+	m mm_cryptkit.DigestMethod
 }
 
 // SignatureVerifierMockIsDigestMethodSupportedResults contains results of the SignatureVerifier.IsDigestMethodSupported
@@ -99,7 +100,7 @@ type SignatureVerifierMockIsDigestMethodSupportedResults struct {
 }
 
 // Expect sets up expected params for SignatureVerifier.IsDigestMethodSupported
-func (mmIsDigestMethodSupported *mSignatureVerifierMockIsDigestMethodSupported) Expect(m DigestMethod) *mSignatureVerifierMockIsDigestMethodSupported {
+func (mmIsDigestMethodSupported *mSignatureVerifierMockIsDigestMethodSupported) Expect(m mm_cryptkit.DigestMethod) *mSignatureVerifierMockIsDigestMethodSupported {
 	if mmIsDigestMethodSupported.mock.funcIsDigestMethodSupported != nil {
 		mmIsDigestMethodSupported.mock.t.Fatalf("SignatureVerifierMock.IsDigestMethodSupported mock is already set by Set")
 	}
@@ -119,7 +120,7 @@ func (mmIsDigestMethodSupported *mSignatureVerifierMockIsDigestMethodSupported) 
 }
 
 // Inspect accepts an inspector function that has same arguments as the SignatureVerifier.IsDigestMethodSupported
-func (mmIsDigestMethodSupported *mSignatureVerifierMockIsDigestMethodSupported) Inspect(f func(m DigestMethod)) *mSignatureVerifierMockIsDigestMethodSupported {
+func (mmIsDigestMethodSupported *mSignatureVerifierMockIsDigestMethodSupported) Inspect(f func(m mm_cryptkit.DigestMethod)) *mSignatureVerifierMockIsDigestMethodSupported {
 	if mmIsDigestMethodSupported.mock.inspectFuncIsDigestMethodSupported != nil {
 		mmIsDigestMethodSupported.mock.t.Fatalf("Inspect function is already set for SignatureVerifierMock.IsDigestMethodSupported")
 	}
@@ -143,7 +144,7 @@ func (mmIsDigestMethodSupported *mSignatureVerifierMockIsDigestMethodSupported) 
 }
 
 //Set uses given function f to mock the SignatureVerifier.IsDigestMethodSupported method
-func (mmIsDigestMethodSupported *mSignatureVerifierMockIsDigestMethodSupported) Set(f func(m DigestMethod) (b1 bool)) *SignatureVerifierMock {
+func (mmIsDigestMethodSupported *mSignatureVerifierMockIsDigestMethodSupported) Set(f func(m mm_cryptkit.DigestMethod) (b1 bool)) *SignatureVerifierMock {
 	if mmIsDigestMethodSupported.defaultExpectation != nil {
 		mmIsDigestMethodSupported.mock.t.Fatalf("Default expectation is already set for the SignatureVerifier.IsDigestMethodSupported method")
 	}
@@ -158,7 +159,7 @@ func (mmIsDigestMethodSupported *mSignatureVerifierMockIsDigestMethodSupported) 
 
 // When sets expectation for the SignatureVerifier.IsDigestMethodSupported which will trigger the result defined by the following
 // Then helper
-func (mmIsDigestMethodSupported *mSignatureVerifierMockIsDigestMethodSupported) When(m DigestMethod) *SignatureVerifierMockIsDigestMethodSupportedExpectation {
+func (mmIsDigestMethodSupported *mSignatureVerifierMockIsDigestMethodSupported) When(m mm_cryptkit.DigestMethod) *SignatureVerifierMockIsDigestMethodSupportedExpectation {
 	if mmIsDigestMethodSupported.mock.funcIsDigestMethodSupported != nil {
 		mmIsDigestMethodSupported.mock.t.Fatalf("SignatureVerifierMock.IsDigestMethodSupported mock is already set by Set")
 	}
@@ -177,8 +178,8 @@ func (e *SignatureVerifierMockIsDigestMethodSupportedExpectation) Then(b1 bool) 
 	return e.mock
 }
 
-// IsDigestMethodSupported implements SignatureVerifier
-func (mmIsDigestMethodSupported *SignatureVerifierMock) IsDigestMethodSupported(m DigestMethod) (b1 bool) {
+// IsDigestMethodSupported implements cryptkit.SignatureVerifier
+func (mmIsDigestMethodSupported *SignatureVerifierMock) IsDigestMethodSupported(m mm_cryptkit.DigestMethod) (b1 bool) {
 	mm_atomic.AddUint64(&mmIsDigestMethodSupported.beforeIsDigestMethodSupportedCounter, 1)
 	defer mm_atomic.AddUint64(&mmIsDigestMethodSupported.afterIsDigestMethodSupportedCounter, 1)
 
@@ -305,7 +306,7 @@ type SignatureVerifierMockIsSignMethodSupportedExpectation struct {
 
 // SignatureVerifierMockIsSignMethodSupportedParams contains parameters of the SignatureVerifier.IsSignMethodSupported
 type SignatureVerifierMockIsSignMethodSupportedParams struct {
-	m SignMethod
+	m mm_cryptkit.SignMethod
 }
 
 // SignatureVerifierMockIsSignMethodSupportedResults contains results of the SignatureVerifier.IsSignMethodSupported
@@ -314,7 +315,7 @@ type SignatureVerifierMockIsSignMethodSupportedResults struct {
 }
 
 // Expect sets up expected params for SignatureVerifier.IsSignMethodSupported
-func (mmIsSignMethodSupported *mSignatureVerifierMockIsSignMethodSupported) Expect(m SignMethod) *mSignatureVerifierMockIsSignMethodSupported {
+func (mmIsSignMethodSupported *mSignatureVerifierMockIsSignMethodSupported) Expect(m mm_cryptkit.SignMethod) *mSignatureVerifierMockIsSignMethodSupported {
 	if mmIsSignMethodSupported.mock.funcIsSignMethodSupported != nil {
 		mmIsSignMethodSupported.mock.t.Fatalf("SignatureVerifierMock.IsSignMethodSupported mock is already set by Set")
 	}
@@ -334,7 +335,7 @@ func (mmIsSignMethodSupported *mSignatureVerifierMockIsSignMethodSupported) Expe
 }
 
 // Inspect accepts an inspector function that has same arguments as the SignatureVerifier.IsSignMethodSupported
-func (mmIsSignMethodSupported *mSignatureVerifierMockIsSignMethodSupported) Inspect(f func(m SignMethod)) *mSignatureVerifierMockIsSignMethodSupported {
+func (mmIsSignMethodSupported *mSignatureVerifierMockIsSignMethodSupported) Inspect(f func(m mm_cryptkit.SignMethod)) *mSignatureVerifierMockIsSignMethodSupported {
 	if mmIsSignMethodSupported.mock.inspectFuncIsSignMethodSupported != nil {
 		mmIsSignMethodSupported.mock.t.Fatalf("Inspect function is already set for SignatureVerifierMock.IsSignMethodSupported")
 	}
@@ -358,7 +359,7 @@ func (mmIsSignMethodSupported *mSignatureVerifierMockIsSignMethodSupported) Retu
 }
 
 //Set uses given function f to mock the SignatureVerifier.IsSignMethodSupported method
-func (mmIsSignMethodSupported *mSignatureVerifierMockIsSignMethodSupported) Set(f func(m SignMethod) (b1 bool)) *SignatureVerifierMock {
+func (mmIsSignMethodSupported *mSignatureVerifierMockIsSignMethodSupported) Set(f func(m mm_cryptkit.SignMethod) (b1 bool)) *SignatureVerifierMock {
 	if mmIsSignMethodSupported.defaultExpectation != nil {
 		mmIsSignMethodSupported.mock.t.Fatalf("Default expectation is already set for the SignatureVerifier.IsSignMethodSupported method")
 	}
@@ -373,7 +374,7 @@ func (mmIsSignMethodSupported *mSignatureVerifierMockIsSignMethodSupported) Set(
 
 // When sets expectation for the SignatureVerifier.IsSignMethodSupported which will trigger the result defined by the following
 // Then helper
-func (mmIsSignMethodSupported *mSignatureVerifierMockIsSignMethodSupported) When(m SignMethod) *SignatureVerifierMockIsSignMethodSupportedExpectation {
+func (mmIsSignMethodSupported *mSignatureVerifierMockIsSignMethodSupported) When(m mm_cryptkit.SignMethod) *SignatureVerifierMockIsSignMethodSupportedExpectation {
 	if mmIsSignMethodSupported.mock.funcIsSignMethodSupported != nil {
 		mmIsSignMethodSupported.mock.t.Fatalf("SignatureVerifierMock.IsSignMethodSupported mock is already set by Set")
 	}
@@ -392,8 +393,8 @@ func (e *SignatureVerifierMockIsSignMethodSupportedExpectation) Then(b1 bool) *S
 	return e.mock
 }
 
-// IsSignMethodSupported implements SignatureVerifier
-func (mmIsSignMethodSupported *SignatureVerifierMock) IsSignMethodSupported(m SignMethod) (b1 bool) {
+// IsSignMethodSupported implements cryptkit.SignatureVerifier
+func (mmIsSignMethodSupported *SignatureVerifierMock) IsSignMethodSupported(m mm_cryptkit.SignMethod) (b1 bool) {
 	mm_atomic.AddUint64(&mmIsSignMethodSupported.beforeIsSignMethodSupportedCounter, 1)
 	defer mm_atomic.AddUint64(&mmIsSignMethodSupported.afterIsSignMethodSupportedCounter, 1)
 
@@ -520,7 +521,7 @@ type SignatureVerifierMockIsSignOfSignatureMethodSupportedExpectation struct {
 
 // SignatureVerifierMockIsSignOfSignatureMethodSupportedParams contains parameters of the SignatureVerifier.IsSignOfSignatureMethodSupported
 type SignatureVerifierMockIsSignOfSignatureMethodSupportedParams struct {
-	m SignatureMethod
+	m mm_cryptkit.SignatureMethod
 }
 
 // SignatureVerifierMockIsSignOfSignatureMethodSupportedResults contains results of the SignatureVerifier.IsSignOfSignatureMethodSupported
@@ -529,7 +530,7 @@ type SignatureVerifierMockIsSignOfSignatureMethodSupportedResults struct {
 }
 
 // Expect sets up expected params for SignatureVerifier.IsSignOfSignatureMethodSupported
-func (mmIsSignOfSignatureMethodSupported *mSignatureVerifierMockIsSignOfSignatureMethodSupported) Expect(m SignatureMethod) *mSignatureVerifierMockIsSignOfSignatureMethodSupported {
+func (mmIsSignOfSignatureMethodSupported *mSignatureVerifierMockIsSignOfSignatureMethodSupported) Expect(m mm_cryptkit.SignatureMethod) *mSignatureVerifierMockIsSignOfSignatureMethodSupported {
 	if mmIsSignOfSignatureMethodSupported.mock.funcIsSignOfSignatureMethodSupported != nil {
 		mmIsSignOfSignatureMethodSupported.mock.t.Fatalf("SignatureVerifierMock.IsSignOfSignatureMethodSupported mock is already set by Set")
 	}
@@ -549,7 +550,7 @@ func (mmIsSignOfSignatureMethodSupported *mSignatureVerifierMockIsSignOfSignatur
 }
 
 // Inspect accepts an inspector function that has same arguments as the SignatureVerifier.IsSignOfSignatureMethodSupported
-func (mmIsSignOfSignatureMethodSupported *mSignatureVerifierMockIsSignOfSignatureMethodSupported) Inspect(f func(m SignatureMethod)) *mSignatureVerifierMockIsSignOfSignatureMethodSupported {
+func (mmIsSignOfSignatureMethodSupported *mSignatureVerifierMockIsSignOfSignatureMethodSupported) Inspect(f func(m mm_cryptkit.SignatureMethod)) *mSignatureVerifierMockIsSignOfSignatureMethodSupported {
 	if mmIsSignOfSignatureMethodSupported.mock.inspectFuncIsSignOfSignatureMethodSupported != nil {
 		mmIsSignOfSignatureMethodSupported.mock.t.Fatalf("Inspect function is already set for SignatureVerifierMock.IsSignOfSignatureMethodSupported")
 	}
@@ -573,7 +574,7 @@ func (mmIsSignOfSignatureMethodSupported *mSignatureVerifierMockIsSignOfSignatur
 }
 
 //Set uses given function f to mock the SignatureVerifier.IsSignOfSignatureMethodSupported method
-func (mmIsSignOfSignatureMethodSupported *mSignatureVerifierMockIsSignOfSignatureMethodSupported) Set(f func(m SignatureMethod) (b1 bool)) *SignatureVerifierMock {
+func (mmIsSignOfSignatureMethodSupported *mSignatureVerifierMockIsSignOfSignatureMethodSupported) Set(f func(m mm_cryptkit.SignatureMethod) (b1 bool)) *SignatureVerifierMock {
 	if mmIsSignOfSignatureMethodSupported.defaultExpectation != nil {
 		mmIsSignOfSignatureMethodSupported.mock.t.Fatalf("Default expectation is already set for the SignatureVerifier.IsSignOfSignatureMethodSupported method")
 	}
@@ -588,7 +589,7 @@ func (mmIsSignOfSignatureMethodSupported *mSignatureVerifierMockIsSignOfSignatur
 
 // When sets expectation for the SignatureVerifier.IsSignOfSignatureMethodSupported which will trigger the result defined by the following
 // Then helper
-func (mmIsSignOfSignatureMethodSupported *mSignatureVerifierMockIsSignOfSignatureMethodSupported) When(m SignatureMethod) *SignatureVerifierMockIsSignOfSignatureMethodSupportedExpectation {
+func (mmIsSignOfSignatureMethodSupported *mSignatureVerifierMockIsSignOfSignatureMethodSupported) When(m mm_cryptkit.SignatureMethod) *SignatureVerifierMockIsSignOfSignatureMethodSupportedExpectation {
 	if mmIsSignOfSignatureMethodSupported.mock.funcIsSignOfSignatureMethodSupported != nil {
 		mmIsSignOfSignatureMethodSupported.mock.t.Fatalf("SignatureVerifierMock.IsSignOfSignatureMethodSupported mock is already set by Set")
 	}
@@ -607,8 +608,8 @@ func (e *SignatureVerifierMockIsSignOfSignatureMethodSupportedExpectation) Then(
 	return e.mock
 }
 
-// IsSignOfSignatureMethodSupported implements SignatureVerifier
-func (mmIsSignOfSignatureMethodSupported *SignatureVerifierMock) IsSignOfSignatureMethodSupported(m SignatureMethod) (b1 bool) {
+// IsSignOfSignatureMethodSupported implements cryptkit.SignatureVerifier
+func (mmIsSignOfSignatureMethodSupported *SignatureVerifierMock) IsSignOfSignatureMethodSupported(m mm_cryptkit.SignatureMethod) (b1 bool) {
 	mm_atomic.AddUint64(&mmIsSignOfSignatureMethodSupported.beforeIsSignOfSignatureMethodSupportedCounter, 1)
 	defer mm_atomic.AddUint64(&mmIsSignOfSignatureMethodSupported.afterIsSignOfSignatureMethodSupportedCounter, 1)
 
@@ -736,7 +737,7 @@ type SignatureVerifierMockIsValidDataSignatureExpectation struct {
 // SignatureVerifierMockIsValidDataSignatureParams contains parameters of the SignatureVerifier.IsValidDataSignature
 type SignatureVerifierMockIsValidDataSignatureParams struct {
 	data      io.Reader
-	signature SignatureHolder
+	signature mm_cryptkit.SignatureHolder
 }
 
 // SignatureVerifierMockIsValidDataSignatureResults contains results of the SignatureVerifier.IsValidDataSignature
@@ -745,7 +746,7 @@ type SignatureVerifierMockIsValidDataSignatureResults struct {
 }
 
 // Expect sets up expected params for SignatureVerifier.IsValidDataSignature
-func (mmIsValidDataSignature *mSignatureVerifierMockIsValidDataSignature) Expect(data io.Reader, signature SignatureHolder) *mSignatureVerifierMockIsValidDataSignature {
+func (mmIsValidDataSignature *mSignatureVerifierMockIsValidDataSignature) Expect(data io.Reader, signature mm_cryptkit.SignatureHolder) *mSignatureVerifierMockIsValidDataSignature {
 	if mmIsValidDataSignature.mock.funcIsValidDataSignature != nil {
 		mmIsValidDataSignature.mock.t.Fatalf("SignatureVerifierMock.IsValidDataSignature mock is already set by Set")
 	}
@@ -765,7 +766,7 @@ func (mmIsValidDataSignature *mSignatureVerifierMockIsValidDataSignature) Expect
 }
 
 // Inspect accepts an inspector function that has same arguments as the SignatureVerifier.IsValidDataSignature
-func (mmIsValidDataSignature *mSignatureVerifierMockIsValidDataSignature) Inspect(f func(data io.Reader, signature SignatureHolder)) *mSignatureVerifierMockIsValidDataSignature {
+func (mmIsValidDataSignature *mSignatureVerifierMockIsValidDataSignature) Inspect(f func(data io.Reader, signature mm_cryptkit.SignatureHolder)) *mSignatureVerifierMockIsValidDataSignature {
 	if mmIsValidDataSignature.mock.inspectFuncIsValidDataSignature != nil {
 		mmIsValidDataSignature.mock.t.Fatalf("Inspect function is already set for SignatureVerifierMock.IsValidDataSignature")
 	}
@@ -789,7 +790,7 @@ func (mmIsValidDataSignature *mSignatureVerifierMockIsValidDataSignature) Return
 }
 
 //Set uses given function f to mock the SignatureVerifier.IsValidDataSignature method
-func (mmIsValidDataSignature *mSignatureVerifierMockIsValidDataSignature) Set(f func(data io.Reader, signature SignatureHolder) (b1 bool)) *SignatureVerifierMock {
+func (mmIsValidDataSignature *mSignatureVerifierMockIsValidDataSignature) Set(f func(data io.Reader, signature mm_cryptkit.SignatureHolder) (b1 bool)) *SignatureVerifierMock {
 	if mmIsValidDataSignature.defaultExpectation != nil {
 		mmIsValidDataSignature.mock.t.Fatalf("Default expectation is already set for the SignatureVerifier.IsValidDataSignature method")
 	}
@@ -804,7 +805,7 @@ func (mmIsValidDataSignature *mSignatureVerifierMockIsValidDataSignature) Set(f 
 
 // When sets expectation for the SignatureVerifier.IsValidDataSignature which will trigger the result defined by the following
 // Then helper
-func (mmIsValidDataSignature *mSignatureVerifierMockIsValidDataSignature) When(data io.Reader, signature SignatureHolder) *SignatureVerifierMockIsValidDataSignatureExpectation {
+func (mmIsValidDataSignature *mSignatureVerifierMockIsValidDataSignature) When(data io.Reader, signature mm_cryptkit.SignatureHolder) *SignatureVerifierMockIsValidDataSignatureExpectation {
 	if mmIsValidDataSignature.mock.funcIsValidDataSignature != nil {
 		mmIsValidDataSignature.mock.t.Fatalf("SignatureVerifierMock.IsValidDataSignature mock is already set by Set")
 	}
@@ -823,8 +824,8 @@ func (e *SignatureVerifierMockIsValidDataSignatureExpectation) Then(b1 bool) *Si
 	return e.mock
 }
 
-// IsValidDataSignature implements SignatureVerifier
-func (mmIsValidDataSignature *SignatureVerifierMock) IsValidDataSignature(data io.Reader, signature SignatureHolder) (b1 bool) {
+// IsValidDataSignature implements cryptkit.SignatureVerifier
+func (mmIsValidDataSignature *SignatureVerifierMock) IsValidDataSignature(data io.Reader, signature mm_cryptkit.SignatureHolder) (b1 bool) {
 	mm_atomic.AddUint64(&mmIsValidDataSignature.beforeIsValidDataSignatureCounter, 1)
 	defer mm_atomic.AddUint64(&mmIsValidDataSignature.afterIsValidDataSignatureCounter, 1)
 
@@ -951,8 +952,8 @@ type SignatureVerifierMockIsValidDigestSignatureExpectation struct {
 
 // SignatureVerifierMockIsValidDigestSignatureParams contains parameters of the SignatureVerifier.IsValidDigestSignature
 type SignatureVerifierMockIsValidDigestSignatureParams struct {
-	digest    DigestHolder
-	signature SignatureHolder
+	digest    mm_cryptkit.DigestHolder
+	signature mm_cryptkit.SignatureHolder
 }
 
 // SignatureVerifierMockIsValidDigestSignatureResults contains results of the SignatureVerifier.IsValidDigestSignature
@@ -961,7 +962,7 @@ type SignatureVerifierMockIsValidDigestSignatureResults struct {
 }
 
 // Expect sets up expected params for SignatureVerifier.IsValidDigestSignature
-func (mmIsValidDigestSignature *mSignatureVerifierMockIsValidDigestSignature) Expect(digest DigestHolder, signature SignatureHolder) *mSignatureVerifierMockIsValidDigestSignature {
+func (mmIsValidDigestSignature *mSignatureVerifierMockIsValidDigestSignature) Expect(digest mm_cryptkit.DigestHolder, signature mm_cryptkit.SignatureHolder) *mSignatureVerifierMockIsValidDigestSignature {
 	if mmIsValidDigestSignature.mock.funcIsValidDigestSignature != nil {
 		mmIsValidDigestSignature.mock.t.Fatalf("SignatureVerifierMock.IsValidDigestSignature mock is already set by Set")
 	}
@@ -981,7 +982,7 @@ func (mmIsValidDigestSignature *mSignatureVerifierMockIsValidDigestSignature) Ex
 }
 
 // Inspect accepts an inspector function that has same arguments as the SignatureVerifier.IsValidDigestSignature
-func (mmIsValidDigestSignature *mSignatureVerifierMockIsValidDigestSignature) Inspect(f func(digest DigestHolder, signature SignatureHolder)) *mSignatureVerifierMockIsValidDigestSignature {
+func (mmIsValidDigestSignature *mSignatureVerifierMockIsValidDigestSignature) Inspect(f func(digest mm_cryptkit.DigestHolder, signature mm_cryptkit.SignatureHolder)) *mSignatureVerifierMockIsValidDigestSignature {
 	if mmIsValidDigestSignature.mock.inspectFuncIsValidDigestSignature != nil {
 		mmIsValidDigestSignature.mock.t.Fatalf("Inspect function is already set for SignatureVerifierMock.IsValidDigestSignature")
 	}
@@ -1005,7 +1006,7 @@ func (mmIsValidDigestSignature *mSignatureVerifierMockIsValidDigestSignature) Re
 }
 
 //Set uses given function f to mock the SignatureVerifier.IsValidDigestSignature method
-func (mmIsValidDigestSignature *mSignatureVerifierMockIsValidDigestSignature) Set(f func(digest DigestHolder, signature SignatureHolder) (b1 bool)) *SignatureVerifierMock {
+func (mmIsValidDigestSignature *mSignatureVerifierMockIsValidDigestSignature) Set(f func(digest mm_cryptkit.DigestHolder, signature mm_cryptkit.SignatureHolder) (b1 bool)) *SignatureVerifierMock {
 	if mmIsValidDigestSignature.defaultExpectation != nil {
 		mmIsValidDigestSignature.mock.t.Fatalf("Default expectation is already set for the SignatureVerifier.IsValidDigestSignature method")
 	}
@@ -1020,7 +1021,7 @@ func (mmIsValidDigestSignature *mSignatureVerifierMockIsValidDigestSignature) Se
 
 // When sets expectation for the SignatureVerifier.IsValidDigestSignature which will trigger the result defined by the following
 // Then helper
-func (mmIsValidDigestSignature *mSignatureVerifierMockIsValidDigestSignature) When(digest DigestHolder, signature SignatureHolder) *SignatureVerifierMockIsValidDigestSignatureExpectation {
+func (mmIsValidDigestSignature *mSignatureVerifierMockIsValidDigestSignature) When(digest mm_cryptkit.DigestHolder, signature mm_cryptkit.SignatureHolder) *SignatureVerifierMockIsValidDigestSignatureExpectation {
 	if mmIsValidDigestSignature.mock.funcIsValidDigestSignature != nil {
 		mmIsValidDigestSignature.mock.t.Fatalf("SignatureVerifierMock.IsValidDigestSignature mock is already set by Set")
 	}
@@ -1039,8 +1040,8 @@ func (e *SignatureVerifierMockIsValidDigestSignatureExpectation) Then(b1 bool) *
 	return e.mock
 }
 
-// IsValidDigestSignature implements SignatureVerifier
-func (mmIsValidDigestSignature *SignatureVerifierMock) IsValidDigestSignature(digest DigestHolder, signature SignatureHolder) (b1 bool) {
+// IsValidDigestSignature implements cryptkit.SignatureVerifier
+func (mmIsValidDigestSignature *SignatureVerifierMock) IsValidDigestSignature(digest mm_cryptkit.DigestHolder, signature mm_cryptkit.SignatureHolder) (b1 bool) {
 	mm_atomic.AddUint64(&mmIsValidDigestSignature.beforeIsValidDigestSignatureCounter, 1)
 	defer mm_atomic.AddUint64(&mmIsValidDigestSignature.afterIsValidDigestSignatureCounter, 1)
 

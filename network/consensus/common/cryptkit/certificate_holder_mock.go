@@ -8,13 +8,14 @@ import (
 	mm_time "time"
 
 	"github.com/gojuno/minimock"
+	mm_cryptkit "github.com/insolar/insolar/network/consensus/common/cryptkit"
 )
 
-// CertificateHolderMock implements CertificateHolder
+// CertificateHolderMock implements cryptkit.CertificateHolder
 type CertificateHolderMock struct {
 	t minimock.Tester
 
-	funcGetPublicKey          func() (s1 SignatureKeyHolder)
+	funcGetPublicKey          func() (s1 mm_cryptkit.SignatureKeyHolder)
 	inspectFuncGetPublicKey   func()
 	afterGetPublicKeyCounter  uint64
 	beforeGetPublicKeyCounter uint64
@@ -27,7 +28,7 @@ type CertificateHolderMock struct {
 	IsValidForHostAddressMock          mCertificateHolderMockIsValidForHostAddress
 }
 
-// NewCertificateHolderMock returns a mock for CertificateHolder
+// NewCertificateHolderMock returns a mock for cryptkit.CertificateHolder
 func NewCertificateHolderMock(t minimock.Tester) *CertificateHolderMock {
 	m := &CertificateHolderMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -58,7 +59,7 @@ type CertificateHolderMockGetPublicKeyExpectation struct {
 
 // CertificateHolderMockGetPublicKeyResults contains results of the CertificateHolder.GetPublicKey
 type CertificateHolderMockGetPublicKeyResults struct {
-	s1 SignatureKeyHolder
+	s1 mm_cryptkit.SignatureKeyHolder
 }
 
 // Expect sets up expected params for CertificateHolder.GetPublicKey
@@ -86,7 +87,7 @@ func (mmGetPublicKey *mCertificateHolderMockGetPublicKey) Inspect(f func()) *mCe
 }
 
 // Return sets up results that will be returned by CertificateHolder.GetPublicKey
-func (mmGetPublicKey *mCertificateHolderMockGetPublicKey) Return(s1 SignatureKeyHolder) *CertificateHolderMock {
+func (mmGetPublicKey *mCertificateHolderMockGetPublicKey) Return(s1 mm_cryptkit.SignatureKeyHolder) *CertificateHolderMock {
 	if mmGetPublicKey.mock.funcGetPublicKey != nil {
 		mmGetPublicKey.mock.t.Fatalf("CertificateHolderMock.GetPublicKey mock is already set by Set")
 	}
@@ -99,7 +100,7 @@ func (mmGetPublicKey *mCertificateHolderMockGetPublicKey) Return(s1 SignatureKey
 }
 
 //Set uses given function f to mock the CertificateHolder.GetPublicKey method
-func (mmGetPublicKey *mCertificateHolderMockGetPublicKey) Set(f func() (s1 SignatureKeyHolder)) *CertificateHolderMock {
+func (mmGetPublicKey *mCertificateHolderMockGetPublicKey) Set(f func() (s1 mm_cryptkit.SignatureKeyHolder)) *CertificateHolderMock {
 	if mmGetPublicKey.defaultExpectation != nil {
 		mmGetPublicKey.mock.t.Fatalf("Default expectation is already set for the CertificateHolder.GetPublicKey method")
 	}
@@ -112,8 +113,8 @@ func (mmGetPublicKey *mCertificateHolderMockGetPublicKey) Set(f func() (s1 Signa
 	return mmGetPublicKey.mock
 }
 
-// GetPublicKey implements CertificateHolder
-func (mmGetPublicKey *CertificateHolderMock) GetPublicKey() (s1 SignatureKeyHolder) {
+// GetPublicKey implements cryptkit.CertificateHolder
+func (mmGetPublicKey *CertificateHolderMock) GetPublicKey() (s1 mm_cryptkit.SignatureKeyHolder) {
 	mm_atomic.AddUint64(&mmGetPublicKey.beforeGetPublicKeyCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetPublicKey.afterGetPublicKeyCounter, 1)
 
@@ -291,7 +292,7 @@ func (e *CertificateHolderMockIsValidForHostAddressExpectation) Then(b1 bool) *C
 	return e.mock
 }
 
-// IsValidForHostAddress implements CertificateHolder
+// IsValidForHostAddress implements cryptkit.CertificateHolder
 func (mmIsValidForHostAddress *CertificateHolderMock) IsValidForHostAddress(HostAddress string) (b1 bool) {
 	mm_atomic.AddUint64(&mmIsValidForHostAddress.beforeIsValidForHostAddressCounter, 1)
 	defer mm_atomic.AddUint64(&mmIsValidForHostAddress.afterIsValidForHostAddressCounter, 1)

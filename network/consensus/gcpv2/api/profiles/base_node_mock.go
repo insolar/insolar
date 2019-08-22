@@ -10,9 +10,10 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
+	mm_profiles "github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 )
 
-// BaseNodeMock implements BaseNode
+// BaseNodeMock implements profiles.BaseNode
 type BaseNodeMock struct {
 	t minimock.Tester
 
@@ -34,14 +35,14 @@ type BaseNodeMock struct {
 	beforeGetSignatureVerifierCounter uint64
 	GetSignatureVerifierMock          mBaseNodeMockGetSignatureVerifier
 
-	funcGetStatic          func() (s1 StaticProfile)
+	funcGetStatic          func() (s1 mm_profiles.StaticProfile)
 	inspectFuncGetStatic   func()
 	afterGetStaticCounter  uint64
 	beforeGetStaticCounter uint64
 	GetStaticMock          mBaseNodeMockGetStatic
 }
 
-// NewBaseNodeMock returns a mock for BaseNode
+// NewBaseNodeMock returns a mock for profiles.BaseNode
 func NewBaseNodeMock(t minimock.Tester) *BaseNodeMock {
 	m := &BaseNodeMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -129,7 +130,7 @@ func (mmGetNodeID *mBaseNodeMockGetNodeID) Set(f func() (s1 insolar.ShortNodeID)
 	return mmGetNodeID.mock
 }
 
-// GetNodeID implements BaseNode
+// GetNodeID implements profiles.BaseNode
 func (mmGetNodeID *BaseNodeMock) GetNodeID() (s1 insolar.ShortNodeID) {
 	mm_atomic.AddUint64(&mmGetNodeID.beforeGetNodeIDCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetNodeID.afterGetNodeIDCounter, 1)
@@ -272,7 +273,7 @@ func (mmGetOpMode *mBaseNodeMockGetOpMode) Set(f func() (o1 member.OpMode)) *Bas
 	return mmGetOpMode.mock
 }
 
-// GetOpMode implements BaseNode
+// GetOpMode implements profiles.BaseNode
 func (mmGetOpMode *BaseNodeMock) GetOpMode() (o1 member.OpMode) {
 	mm_atomic.AddUint64(&mmGetOpMode.beforeGetOpModeCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetOpMode.afterGetOpModeCounter, 1)
@@ -415,7 +416,7 @@ func (mmGetSignatureVerifier *mBaseNodeMockGetSignatureVerifier) Set(f func() (s
 	return mmGetSignatureVerifier.mock
 }
 
-// GetSignatureVerifier implements BaseNode
+// GetSignatureVerifier implements profiles.BaseNode
 func (mmGetSignatureVerifier *BaseNodeMock) GetSignatureVerifier() (s1 cryptkit.SignatureVerifier) {
 	mm_atomic.AddUint64(&mmGetSignatureVerifier.beforeGetSignatureVerifierCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetSignatureVerifier.afterGetSignatureVerifierCounter, 1)
@@ -504,7 +505,7 @@ type BaseNodeMockGetStaticExpectation struct {
 
 // BaseNodeMockGetStaticResults contains results of the BaseNode.GetStatic
 type BaseNodeMockGetStaticResults struct {
-	s1 StaticProfile
+	s1 mm_profiles.StaticProfile
 }
 
 // Expect sets up expected params for BaseNode.GetStatic
@@ -532,7 +533,7 @@ func (mmGetStatic *mBaseNodeMockGetStatic) Inspect(f func()) *mBaseNodeMockGetSt
 }
 
 // Return sets up results that will be returned by BaseNode.GetStatic
-func (mmGetStatic *mBaseNodeMockGetStatic) Return(s1 StaticProfile) *BaseNodeMock {
+func (mmGetStatic *mBaseNodeMockGetStatic) Return(s1 mm_profiles.StaticProfile) *BaseNodeMock {
 	if mmGetStatic.mock.funcGetStatic != nil {
 		mmGetStatic.mock.t.Fatalf("BaseNodeMock.GetStatic mock is already set by Set")
 	}
@@ -545,7 +546,7 @@ func (mmGetStatic *mBaseNodeMockGetStatic) Return(s1 StaticProfile) *BaseNodeMoc
 }
 
 //Set uses given function f to mock the BaseNode.GetStatic method
-func (mmGetStatic *mBaseNodeMockGetStatic) Set(f func() (s1 StaticProfile)) *BaseNodeMock {
+func (mmGetStatic *mBaseNodeMockGetStatic) Set(f func() (s1 mm_profiles.StaticProfile)) *BaseNodeMock {
 	if mmGetStatic.defaultExpectation != nil {
 		mmGetStatic.mock.t.Fatalf("Default expectation is already set for the BaseNode.GetStatic method")
 	}
@@ -558,8 +559,8 @@ func (mmGetStatic *mBaseNodeMockGetStatic) Set(f func() (s1 StaticProfile)) *Bas
 	return mmGetStatic.mock
 }
 
-// GetStatic implements BaseNode
-func (mmGetStatic *BaseNodeMock) GetStatic() (s1 StaticProfile) {
+// GetStatic implements profiles.BaseNode
+func (mmGetStatic *BaseNodeMock) GetStatic() (s1 mm_profiles.StaticProfile) {
 	mm_atomic.AddUint64(&mmGetStatic.beforeGetStaticCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetStatic.afterGetStaticCounter, 1)
 

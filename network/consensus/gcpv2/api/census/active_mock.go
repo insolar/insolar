@@ -11,21 +11,22 @@ import (
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
+	mm_census "github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 )
 
-// ActiveMock implements Active
+// ActiveMock implements census.Active
 type ActiveMock struct {
 	t minimock.Tester
 
-	funcCreateBuilder          func(ctx context.Context, pn pulse.Number) (b1 Builder)
+	funcCreateBuilder          func(ctx context.Context, pn pulse.Number) (b1 mm_census.Builder)
 	inspectFuncCreateBuilder   func(ctx context.Context, pn pulse.Number)
 	afterCreateBuilderCounter  uint64
 	beforeCreateBuilderCounter uint64
 	CreateBuilderMock          mActiveMockCreateBuilder
 
-	funcGetCensusState          func() (s1 State)
+	funcGetCensusState          func() (s1 mm_census.State)
 	inspectFuncGetCensusState   func()
 	afterGetCensusStateCounter  uint64
 	beforeGetCensusStateCounter uint64
@@ -37,7 +38,7 @@ type ActiveMock struct {
 	beforeGetCloudStateHashCounter uint64
 	GetCloudStateHashMock          mActiveMockGetCloudStateHash
 
-	funcGetEvictedPopulation          func() (e1 EvictedPopulation)
+	funcGetEvictedPopulation          func() (e1 mm_census.EvictedPopulation)
 	inspectFuncGetEvictedPopulation   func()
 	afterGetEvictedPopulationCounter  uint64
 	beforeGetEvictedPopulationCounter uint64
@@ -55,13 +56,13 @@ type ActiveMock struct {
 	beforeGetGlobulaStateHashCounter uint64
 	GetGlobulaStateHashMock          mActiveMockGetGlobulaStateHash
 
-	funcGetMandateRegistry          func() (m1 MandateRegistry)
+	funcGetMandateRegistry          func() (m1 mm_census.MandateRegistry)
 	inspectFuncGetMandateRegistry   func()
 	afterGetMandateRegistryCounter  uint64
 	beforeGetMandateRegistryCounter uint64
 	GetMandateRegistryMock          mActiveMockGetMandateRegistry
 
-	funcGetMisbehaviorRegistry          func() (m1 MisbehaviorRegistry)
+	funcGetMisbehaviorRegistry          func() (m1 mm_census.MisbehaviorRegistry)
 	inspectFuncGetMisbehaviorRegistry   func()
 	afterGetMisbehaviorRegistryCounter  uint64
 	beforeGetMisbehaviorRegistryCounter uint64
@@ -73,13 +74,13 @@ type ActiveMock struct {
 	beforeGetNearestPulseDataCounter uint64
 	GetNearestPulseDataMock          mActiveMockGetNearestPulseData
 
-	funcGetOfflinePopulation          func() (o1 OfflinePopulation)
+	funcGetOfflinePopulation          func() (o1 mm_census.OfflinePopulation)
 	inspectFuncGetOfflinePopulation   func()
 	afterGetOfflinePopulationCounter  uint64
 	beforeGetOfflinePopulationCounter uint64
 	GetOfflinePopulationMock          mActiveMockGetOfflinePopulation
 
-	funcGetOnlinePopulation          func() (o1 OnlinePopulation)
+	funcGetOnlinePopulation          func() (o1 mm_census.OnlinePopulation)
 	inspectFuncGetOnlinePopulation   func()
 	afterGetOnlinePopulationCounter  uint64
 	beforeGetOnlinePopulationCounter uint64
@@ -110,7 +111,7 @@ type ActiveMock struct {
 	IsActiveMock          mActiveMockIsActive
 }
 
-// NewActiveMock returns a mock for Active
+// NewActiveMock returns a mock for census.Active
 func NewActiveMock(t minimock.Tester) *ActiveMock {
 	m := &ActiveMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -177,7 +178,7 @@ type ActiveMockCreateBuilderParams struct {
 
 // ActiveMockCreateBuilderResults contains results of the Active.CreateBuilder
 type ActiveMockCreateBuilderResults struct {
-	b1 Builder
+	b1 mm_census.Builder
 }
 
 // Expect sets up expected params for Active.CreateBuilder
@@ -212,7 +213,7 @@ func (mmCreateBuilder *mActiveMockCreateBuilder) Inspect(f func(ctx context.Cont
 }
 
 // Return sets up results that will be returned by Active.CreateBuilder
-func (mmCreateBuilder *mActiveMockCreateBuilder) Return(b1 Builder) *ActiveMock {
+func (mmCreateBuilder *mActiveMockCreateBuilder) Return(b1 mm_census.Builder) *ActiveMock {
 	if mmCreateBuilder.mock.funcCreateBuilder != nil {
 		mmCreateBuilder.mock.t.Fatalf("ActiveMock.CreateBuilder mock is already set by Set")
 	}
@@ -225,7 +226,7 @@ func (mmCreateBuilder *mActiveMockCreateBuilder) Return(b1 Builder) *ActiveMock 
 }
 
 //Set uses given function f to mock the Active.CreateBuilder method
-func (mmCreateBuilder *mActiveMockCreateBuilder) Set(f func(ctx context.Context, pn pulse.Number) (b1 Builder)) *ActiveMock {
+func (mmCreateBuilder *mActiveMockCreateBuilder) Set(f func(ctx context.Context, pn pulse.Number) (b1 mm_census.Builder)) *ActiveMock {
 	if mmCreateBuilder.defaultExpectation != nil {
 		mmCreateBuilder.mock.t.Fatalf("Default expectation is already set for the Active.CreateBuilder method")
 	}
@@ -254,13 +255,13 @@ func (mmCreateBuilder *mActiveMockCreateBuilder) When(ctx context.Context, pn pu
 }
 
 // Then sets up Active.CreateBuilder return parameters for the expectation previously defined by the When method
-func (e *ActiveMockCreateBuilderExpectation) Then(b1 Builder) *ActiveMock {
+func (e *ActiveMockCreateBuilderExpectation) Then(b1 mm_census.Builder) *ActiveMock {
 	e.results = &ActiveMockCreateBuilderResults{b1}
 	return e.mock
 }
 
-// CreateBuilder implements Active
-func (mmCreateBuilder *ActiveMock) CreateBuilder(ctx context.Context, pn pulse.Number) (b1 Builder) {
+// CreateBuilder implements census.Active
+func (mmCreateBuilder *ActiveMock) CreateBuilder(ctx context.Context, pn pulse.Number) (b1 mm_census.Builder) {
 	mm_atomic.AddUint64(&mmCreateBuilder.beforeCreateBuilderCounter, 1)
 	defer mm_atomic.AddUint64(&mmCreateBuilder.afterCreateBuilderCounter, 1)
 
@@ -384,7 +385,7 @@ type ActiveMockGetCensusStateExpectation struct {
 
 // ActiveMockGetCensusStateResults contains results of the Active.GetCensusState
 type ActiveMockGetCensusStateResults struct {
-	s1 State
+	s1 mm_census.State
 }
 
 // Expect sets up expected params for Active.GetCensusState
@@ -412,7 +413,7 @@ func (mmGetCensusState *mActiveMockGetCensusState) Inspect(f func()) *mActiveMoc
 }
 
 // Return sets up results that will be returned by Active.GetCensusState
-func (mmGetCensusState *mActiveMockGetCensusState) Return(s1 State) *ActiveMock {
+func (mmGetCensusState *mActiveMockGetCensusState) Return(s1 mm_census.State) *ActiveMock {
 	if mmGetCensusState.mock.funcGetCensusState != nil {
 		mmGetCensusState.mock.t.Fatalf("ActiveMock.GetCensusState mock is already set by Set")
 	}
@@ -425,7 +426,7 @@ func (mmGetCensusState *mActiveMockGetCensusState) Return(s1 State) *ActiveMock 
 }
 
 //Set uses given function f to mock the Active.GetCensusState method
-func (mmGetCensusState *mActiveMockGetCensusState) Set(f func() (s1 State)) *ActiveMock {
+func (mmGetCensusState *mActiveMockGetCensusState) Set(f func() (s1 mm_census.State)) *ActiveMock {
 	if mmGetCensusState.defaultExpectation != nil {
 		mmGetCensusState.mock.t.Fatalf("Default expectation is already set for the Active.GetCensusState method")
 	}
@@ -438,8 +439,8 @@ func (mmGetCensusState *mActiveMockGetCensusState) Set(f func() (s1 State)) *Act
 	return mmGetCensusState.mock
 }
 
-// GetCensusState implements Active
-func (mmGetCensusState *ActiveMock) GetCensusState() (s1 State) {
+// GetCensusState implements census.Active
+func (mmGetCensusState *ActiveMock) GetCensusState() (s1 mm_census.State) {
 	mm_atomic.AddUint64(&mmGetCensusState.beforeGetCensusStateCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetCensusState.afterGetCensusStateCounter, 1)
 
@@ -581,7 +582,7 @@ func (mmGetCloudStateHash *mActiveMockGetCloudStateHash) Set(f func() (c1 proofs
 	return mmGetCloudStateHash.mock
 }
 
-// GetCloudStateHash implements Active
+// GetCloudStateHash implements census.Active
 func (mmGetCloudStateHash *ActiveMock) GetCloudStateHash() (c1 proofs.CloudStateHash) {
 	mm_atomic.AddUint64(&mmGetCloudStateHash.beforeGetCloudStateHashCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetCloudStateHash.afterGetCloudStateHashCounter, 1)
@@ -670,7 +671,7 @@ type ActiveMockGetEvictedPopulationExpectation struct {
 
 // ActiveMockGetEvictedPopulationResults contains results of the Active.GetEvictedPopulation
 type ActiveMockGetEvictedPopulationResults struct {
-	e1 EvictedPopulation
+	e1 mm_census.EvictedPopulation
 }
 
 // Expect sets up expected params for Active.GetEvictedPopulation
@@ -698,7 +699,7 @@ func (mmGetEvictedPopulation *mActiveMockGetEvictedPopulation) Inspect(f func())
 }
 
 // Return sets up results that will be returned by Active.GetEvictedPopulation
-func (mmGetEvictedPopulation *mActiveMockGetEvictedPopulation) Return(e1 EvictedPopulation) *ActiveMock {
+func (mmGetEvictedPopulation *mActiveMockGetEvictedPopulation) Return(e1 mm_census.EvictedPopulation) *ActiveMock {
 	if mmGetEvictedPopulation.mock.funcGetEvictedPopulation != nil {
 		mmGetEvictedPopulation.mock.t.Fatalf("ActiveMock.GetEvictedPopulation mock is already set by Set")
 	}
@@ -711,7 +712,7 @@ func (mmGetEvictedPopulation *mActiveMockGetEvictedPopulation) Return(e1 Evicted
 }
 
 //Set uses given function f to mock the Active.GetEvictedPopulation method
-func (mmGetEvictedPopulation *mActiveMockGetEvictedPopulation) Set(f func() (e1 EvictedPopulation)) *ActiveMock {
+func (mmGetEvictedPopulation *mActiveMockGetEvictedPopulation) Set(f func() (e1 mm_census.EvictedPopulation)) *ActiveMock {
 	if mmGetEvictedPopulation.defaultExpectation != nil {
 		mmGetEvictedPopulation.mock.t.Fatalf("Default expectation is already set for the Active.GetEvictedPopulation method")
 	}
@@ -724,8 +725,8 @@ func (mmGetEvictedPopulation *mActiveMockGetEvictedPopulation) Set(f func() (e1 
 	return mmGetEvictedPopulation.mock
 }
 
-// GetEvictedPopulation implements Active
-func (mmGetEvictedPopulation *ActiveMock) GetEvictedPopulation() (e1 EvictedPopulation) {
+// GetEvictedPopulation implements census.Active
+func (mmGetEvictedPopulation *ActiveMock) GetEvictedPopulation() (e1 mm_census.EvictedPopulation) {
 	mm_atomic.AddUint64(&mmGetEvictedPopulation.beforeGetEvictedPopulationCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetEvictedPopulation.afterGetEvictedPopulationCounter, 1)
 
@@ -867,7 +868,7 @@ func (mmGetExpectedPulseNumber *mActiveMockGetExpectedPulseNumber) Set(f func() 
 	return mmGetExpectedPulseNumber.mock
 }
 
-// GetExpectedPulseNumber implements Active
+// GetExpectedPulseNumber implements census.Active
 func (mmGetExpectedPulseNumber *ActiveMock) GetExpectedPulseNumber() (n1 pulse.Number) {
 	mm_atomic.AddUint64(&mmGetExpectedPulseNumber.beforeGetExpectedPulseNumberCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetExpectedPulseNumber.afterGetExpectedPulseNumberCounter, 1)
@@ -1010,7 +1011,7 @@ func (mmGetGlobulaStateHash *mActiveMockGetGlobulaStateHash) Set(f func() (g1 pr
 	return mmGetGlobulaStateHash.mock
 }
 
-// GetGlobulaStateHash implements Active
+// GetGlobulaStateHash implements census.Active
 func (mmGetGlobulaStateHash *ActiveMock) GetGlobulaStateHash() (g1 proofs.GlobulaStateHash) {
 	mm_atomic.AddUint64(&mmGetGlobulaStateHash.beforeGetGlobulaStateHashCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetGlobulaStateHash.afterGetGlobulaStateHashCounter, 1)
@@ -1099,7 +1100,7 @@ type ActiveMockGetMandateRegistryExpectation struct {
 
 // ActiveMockGetMandateRegistryResults contains results of the Active.GetMandateRegistry
 type ActiveMockGetMandateRegistryResults struct {
-	m1 MandateRegistry
+	m1 mm_census.MandateRegistry
 }
 
 // Expect sets up expected params for Active.GetMandateRegistry
@@ -1127,7 +1128,7 @@ func (mmGetMandateRegistry *mActiveMockGetMandateRegistry) Inspect(f func()) *mA
 }
 
 // Return sets up results that will be returned by Active.GetMandateRegistry
-func (mmGetMandateRegistry *mActiveMockGetMandateRegistry) Return(m1 MandateRegistry) *ActiveMock {
+func (mmGetMandateRegistry *mActiveMockGetMandateRegistry) Return(m1 mm_census.MandateRegistry) *ActiveMock {
 	if mmGetMandateRegistry.mock.funcGetMandateRegistry != nil {
 		mmGetMandateRegistry.mock.t.Fatalf("ActiveMock.GetMandateRegistry mock is already set by Set")
 	}
@@ -1140,7 +1141,7 @@ func (mmGetMandateRegistry *mActiveMockGetMandateRegistry) Return(m1 MandateRegi
 }
 
 //Set uses given function f to mock the Active.GetMandateRegistry method
-func (mmGetMandateRegistry *mActiveMockGetMandateRegistry) Set(f func() (m1 MandateRegistry)) *ActiveMock {
+func (mmGetMandateRegistry *mActiveMockGetMandateRegistry) Set(f func() (m1 mm_census.MandateRegistry)) *ActiveMock {
 	if mmGetMandateRegistry.defaultExpectation != nil {
 		mmGetMandateRegistry.mock.t.Fatalf("Default expectation is already set for the Active.GetMandateRegistry method")
 	}
@@ -1153,8 +1154,8 @@ func (mmGetMandateRegistry *mActiveMockGetMandateRegistry) Set(f func() (m1 Mand
 	return mmGetMandateRegistry.mock
 }
 
-// GetMandateRegistry implements Active
-func (mmGetMandateRegistry *ActiveMock) GetMandateRegistry() (m1 MandateRegistry) {
+// GetMandateRegistry implements census.Active
+func (mmGetMandateRegistry *ActiveMock) GetMandateRegistry() (m1 mm_census.MandateRegistry) {
 	mm_atomic.AddUint64(&mmGetMandateRegistry.beforeGetMandateRegistryCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetMandateRegistry.afterGetMandateRegistryCounter, 1)
 
@@ -1242,7 +1243,7 @@ type ActiveMockGetMisbehaviorRegistryExpectation struct {
 
 // ActiveMockGetMisbehaviorRegistryResults contains results of the Active.GetMisbehaviorRegistry
 type ActiveMockGetMisbehaviorRegistryResults struct {
-	m1 MisbehaviorRegistry
+	m1 mm_census.MisbehaviorRegistry
 }
 
 // Expect sets up expected params for Active.GetMisbehaviorRegistry
@@ -1270,7 +1271,7 @@ func (mmGetMisbehaviorRegistry *mActiveMockGetMisbehaviorRegistry) Inspect(f fun
 }
 
 // Return sets up results that will be returned by Active.GetMisbehaviorRegistry
-func (mmGetMisbehaviorRegistry *mActiveMockGetMisbehaviorRegistry) Return(m1 MisbehaviorRegistry) *ActiveMock {
+func (mmGetMisbehaviorRegistry *mActiveMockGetMisbehaviorRegistry) Return(m1 mm_census.MisbehaviorRegistry) *ActiveMock {
 	if mmGetMisbehaviorRegistry.mock.funcGetMisbehaviorRegistry != nil {
 		mmGetMisbehaviorRegistry.mock.t.Fatalf("ActiveMock.GetMisbehaviorRegistry mock is already set by Set")
 	}
@@ -1283,7 +1284,7 @@ func (mmGetMisbehaviorRegistry *mActiveMockGetMisbehaviorRegistry) Return(m1 Mis
 }
 
 //Set uses given function f to mock the Active.GetMisbehaviorRegistry method
-func (mmGetMisbehaviorRegistry *mActiveMockGetMisbehaviorRegistry) Set(f func() (m1 MisbehaviorRegistry)) *ActiveMock {
+func (mmGetMisbehaviorRegistry *mActiveMockGetMisbehaviorRegistry) Set(f func() (m1 mm_census.MisbehaviorRegistry)) *ActiveMock {
 	if mmGetMisbehaviorRegistry.defaultExpectation != nil {
 		mmGetMisbehaviorRegistry.mock.t.Fatalf("Default expectation is already set for the Active.GetMisbehaviorRegistry method")
 	}
@@ -1296,8 +1297,8 @@ func (mmGetMisbehaviorRegistry *mActiveMockGetMisbehaviorRegistry) Set(f func() 
 	return mmGetMisbehaviorRegistry.mock
 }
 
-// GetMisbehaviorRegistry implements Active
-func (mmGetMisbehaviorRegistry *ActiveMock) GetMisbehaviorRegistry() (m1 MisbehaviorRegistry) {
+// GetMisbehaviorRegistry implements census.Active
+func (mmGetMisbehaviorRegistry *ActiveMock) GetMisbehaviorRegistry() (m1 mm_census.MisbehaviorRegistry) {
 	mm_atomic.AddUint64(&mmGetMisbehaviorRegistry.beforeGetMisbehaviorRegistryCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetMisbehaviorRegistry.afterGetMisbehaviorRegistryCounter, 1)
 
@@ -1440,7 +1441,7 @@ func (mmGetNearestPulseData *mActiveMockGetNearestPulseData) Set(f func() (b1 bo
 	return mmGetNearestPulseData.mock
 }
 
-// GetNearestPulseData implements Active
+// GetNearestPulseData implements census.Active
 func (mmGetNearestPulseData *ActiveMock) GetNearestPulseData() (b1 bool, d1 pulse.Data) {
 	mm_atomic.AddUint64(&mmGetNearestPulseData.beforeGetNearestPulseDataCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetNearestPulseData.afterGetNearestPulseDataCounter, 1)
@@ -1529,7 +1530,7 @@ type ActiveMockGetOfflinePopulationExpectation struct {
 
 // ActiveMockGetOfflinePopulationResults contains results of the Active.GetOfflinePopulation
 type ActiveMockGetOfflinePopulationResults struct {
-	o1 OfflinePopulation
+	o1 mm_census.OfflinePopulation
 }
 
 // Expect sets up expected params for Active.GetOfflinePopulation
@@ -1557,7 +1558,7 @@ func (mmGetOfflinePopulation *mActiveMockGetOfflinePopulation) Inspect(f func())
 }
 
 // Return sets up results that will be returned by Active.GetOfflinePopulation
-func (mmGetOfflinePopulation *mActiveMockGetOfflinePopulation) Return(o1 OfflinePopulation) *ActiveMock {
+func (mmGetOfflinePopulation *mActiveMockGetOfflinePopulation) Return(o1 mm_census.OfflinePopulation) *ActiveMock {
 	if mmGetOfflinePopulation.mock.funcGetOfflinePopulation != nil {
 		mmGetOfflinePopulation.mock.t.Fatalf("ActiveMock.GetOfflinePopulation mock is already set by Set")
 	}
@@ -1570,7 +1571,7 @@ func (mmGetOfflinePopulation *mActiveMockGetOfflinePopulation) Return(o1 Offline
 }
 
 //Set uses given function f to mock the Active.GetOfflinePopulation method
-func (mmGetOfflinePopulation *mActiveMockGetOfflinePopulation) Set(f func() (o1 OfflinePopulation)) *ActiveMock {
+func (mmGetOfflinePopulation *mActiveMockGetOfflinePopulation) Set(f func() (o1 mm_census.OfflinePopulation)) *ActiveMock {
 	if mmGetOfflinePopulation.defaultExpectation != nil {
 		mmGetOfflinePopulation.mock.t.Fatalf("Default expectation is already set for the Active.GetOfflinePopulation method")
 	}
@@ -1583,8 +1584,8 @@ func (mmGetOfflinePopulation *mActiveMockGetOfflinePopulation) Set(f func() (o1 
 	return mmGetOfflinePopulation.mock
 }
 
-// GetOfflinePopulation implements Active
-func (mmGetOfflinePopulation *ActiveMock) GetOfflinePopulation() (o1 OfflinePopulation) {
+// GetOfflinePopulation implements census.Active
+func (mmGetOfflinePopulation *ActiveMock) GetOfflinePopulation() (o1 mm_census.OfflinePopulation) {
 	mm_atomic.AddUint64(&mmGetOfflinePopulation.beforeGetOfflinePopulationCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetOfflinePopulation.afterGetOfflinePopulationCounter, 1)
 
@@ -1672,7 +1673,7 @@ type ActiveMockGetOnlinePopulationExpectation struct {
 
 // ActiveMockGetOnlinePopulationResults contains results of the Active.GetOnlinePopulation
 type ActiveMockGetOnlinePopulationResults struct {
-	o1 OnlinePopulation
+	o1 mm_census.OnlinePopulation
 }
 
 // Expect sets up expected params for Active.GetOnlinePopulation
@@ -1700,7 +1701,7 @@ func (mmGetOnlinePopulation *mActiveMockGetOnlinePopulation) Inspect(f func()) *
 }
 
 // Return sets up results that will be returned by Active.GetOnlinePopulation
-func (mmGetOnlinePopulation *mActiveMockGetOnlinePopulation) Return(o1 OnlinePopulation) *ActiveMock {
+func (mmGetOnlinePopulation *mActiveMockGetOnlinePopulation) Return(o1 mm_census.OnlinePopulation) *ActiveMock {
 	if mmGetOnlinePopulation.mock.funcGetOnlinePopulation != nil {
 		mmGetOnlinePopulation.mock.t.Fatalf("ActiveMock.GetOnlinePopulation mock is already set by Set")
 	}
@@ -1713,7 +1714,7 @@ func (mmGetOnlinePopulation *mActiveMockGetOnlinePopulation) Return(o1 OnlinePop
 }
 
 //Set uses given function f to mock the Active.GetOnlinePopulation method
-func (mmGetOnlinePopulation *mActiveMockGetOnlinePopulation) Set(f func() (o1 OnlinePopulation)) *ActiveMock {
+func (mmGetOnlinePopulation *mActiveMockGetOnlinePopulation) Set(f func() (o1 mm_census.OnlinePopulation)) *ActiveMock {
 	if mmGetOnlinePopulation.defaultExpectation != nil {
 		mmGetOnlinePopulation.mock.t.Fatalf("Default expectation is already set for the Active.GetOnlinePopulation method")
 	}
@@ -1726,8 +1727,8 @@ func (mmGetOnlinePopulation *mActiveMockGetOnlinePopulation) Set(f func() (o1 On
 	return mmGetOnlinePopulation.mock
 }
 
-// GetOnlinePopulation implements Active
-func (mmGetOnlinePopulation *ActiveMock) GetOnlinePopulation() (o1 OnlinePopulation) {
+// GetOnlinePopulation implements census.Active
+func (mmGetOnlinePopulation *ActiveMock) GetOnlinePopulation() (o1 mm_census.OnlinePopulation) {
 	mm_atomic.AddUint64(&mmGetOnlinePopulation.beforeGetOnlinePopulationCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetOnlinePopulation.afterGetOnlinePopulationCounter, 1)
 
@@ -1905,7 +1906,7 @@ func (e *ActiveMockGetProfileFactoryExpectation) Then(f1 profiles.Factory) *Acti
 	return e.mock
 }
 
-// GetProfileFactory implements Active
+// GetProfileFactory implements census.Active
 func (mmGetProfileFactory *ActiveMock) GetProfileFactory(ksf cryptkit.KeyStoreFactory) (f1 profiles.Factory) {
 	mm_atomic.AddUint64(&mmGetProfileFactory.beforeGetProfileFactoryCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetProfileFactory.afterGetProfileFactoryCounter, 1)
@@ -2084,7 +2085,7 @@ func (mmGetPulseData *mActiveMockGetPulseData) Set(f func() (d1 pulse.Data)) *Ac
 	return mmGetPulseData.mock
 }
 
-// GetPulseData implements Active
+// GetPulseData implements census.Active
 func (mmGetPulseData *ActiveMock) GetPulseData() (d1 pulse.Data) {
 	mm_atomic.AddUint64(&mmGetPulseData.beforeGetPulseDataCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetPulseData.afterGetPulseDataCounter, 1)
@@ -2227,7 +2228,7 @@ func (mmGetPulseNumber *mActiveMockGetPulseNumber) Set(f func() (n1 pulse.Number
 	return mmGetPulseNumber.mock
 }
 
-// GetPulseNumber implements Active
+// GetPulseNumber implements census.Active
 func (mmGetPulseNumber *ActiveMock) GetPulseNumber() (n1 pulse.Number) {
 	mm_atomic.AddUint64(&mmGetPulseNumber.beforeGetPulseNumberCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetPulseNumber.afterGetPulseNumberCounter, 1)
@@ -2370,7 +2371,7 @@ func (mmIsActive *mActiveMockIsActive) Set(f func() (b1 bool)) *ActiveMock {
 	return mmIsActive.mock
 }
 
-// IsActive implements Active
+// IsActive implements census.Active
 func (mmIsActive *ActiveMock) IsActive() (b1 bool) {
 	mm_atomic.AddUint64(&mmIsActive.beforeIsActiveCounter, 1)
 	defer mm_atomic.AddUint64(&mmIsActive.afterIsActiveCounter, 1)

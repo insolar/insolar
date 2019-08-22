@@ -13,7 +13,7 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 )
 
-// OutgoingRequestSenderMock implements OutgoingRequestSender
+// OutgoingRequestSenderMock implements logicrunner.OutgoingRequestSender
 type OutgoingRequestSenderMock struct {
 	t minimock.Tester
 
@@ -30,7 +30,7 @@ type OutgoingRequestSenderMock struct {
 	SendOutgoingRequestMock          mOutgoingRequestSenderMockSendOutgoingRequest
 }
 
-// NewOutgoingRequestSenderMock returns a mock for OutgoingRequestSender
+// NewOutgoingRequestSenderMock returns a mock for logicrunner.OutgoingRequestSender
 func NewOutgoingRequestSenderMock(t minimock.Tester) *OutgoingRequestSenderMock {
 	m := &OutgoingRequestSenderMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -128,7 +128,7 @@ func (mmSendAbandonedOutgoingRequest *mOutgoingRequestSenderMockSendAbandonedOut
 	return mmSendAbandonedOutgoingRequest.mock
 }
 
-// SendAbandonedOutgoingRequest implements OutgoingRequestSender
+// SendAbandonedOutgoingRequest implements logicrunner.OutgoingRequestSender
 func (mmSendAbandonedOutgoingRequest *OutgoingRequestSenderMock) SendAbandonedOutgoingRequest(ctx context.Context, reqRef insolar.Reference, req *record.OutgoingRequest) {
 	mm_atomic.AddUint64(&mmSendAbandonedOutgoingRequest.beforeSendAbandonedOutgoingRequestCounter, 1)
 	defer mm_atomic.AddUint64(&mmSendAbandonedOutgoingRequest.afterSendAbandonedOutgoingRequestCounter, 1)
@@ -346,7 +346,7 @@ func (e *OutgoingRequestSenderMockSendOutgoingRequestExpectation) Then(rp1 *inso
 	return e.mock
 }
 
-// SendOutgoingRequest implements OutgoingRequestSender
+// SendOutgoingRequest implements logicrunner.OutgoingRequestSender
 func (mmSendOutgoingRequest *OutgoingRequestSenderMock) SendOutgoingRequest(ctx context.Context, reqRef insolar.Reference, req *record.OutgoingRequest) (rp1 *insolar.Reference, a1 insolar.Arguments, ip1 *record.IncomingRequest, err error) {
 	mm_atomic.AddUint64(&mmSendOutgoingRequest.beforeSendOutgoingRequestCounter, 1)
 	defer mm_atomic.AddUint64(&mmSendOutgoingRequest.afterSendOutgoingRequestCounter, 1)

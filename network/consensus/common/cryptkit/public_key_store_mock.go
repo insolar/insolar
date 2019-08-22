@@ -9,7 +9,7 @@ import (
 	"github.com/gojuno/minimock"
 )
 
-// PublicKeyStoreMock implements PublicKeyStore
+// PublicKeyStoreMock implements cryptkit.PublicKeyStore
 type PublicKeyStoreMock struct {
 	t minimock.Tester
 
@@ -20,7 +20,7 @@ type PublicKeyStoreMock struct {
 	PublicKeyStoreMock          mPublicKeyStoreMockPublicKeyStore
 }
 
-// NewPublicKeyStoreMock returns a mock for PublicKeyStore
+// NewPublicKeyStoreMock returns a mock for cryptkit.PublicKeyStore
 func NewPublicKeyStoreMock(t minimock.Tester) *PublicKeyStoreMock {
 	m := &PublicKeyStoreMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -96,7 +96,7 @@ func (mmPublicKeyStore *mPublicKeyStoreMockPublicKeyStore) Set(f func()) *Public
 	return mmPublicKeyStore.mock
 }
 
-// PublicKeyStore implements PublicKeyStore
+// PublicKeyStore implements cryptkit.PublicKeyStore
 func (mmPublicKeyStore *PublicKeyStoreMock) PublicKeyStore() {
 	mm_atomic.AddUint64(&mmPublicKeyStore.beforePublicKeyStoreCounter, 1)
 	defer mm_atomic.AddUint64(&mmPublicKeyStore.afterPublicKeyStoreCounter, 1)

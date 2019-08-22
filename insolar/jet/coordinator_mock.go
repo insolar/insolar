@@ -12,7 +12,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-// CoordinatorMock implements Coordinator
+// CoordinatorMock implements jet.Coordinator
 type CoordinatorMock struct {
 	t minimock.Tester
 
@@ -101,7 +101,7 @@ type CoordinatorMock struct {
 	VirtualValidatorsForObjectMock          mCoordinatorMockVirtualValidatorsForObject
 }
 
-// NewCoordinatorMock returns a mock for Coordinator
+// NewCoordinatorMock returns a mock for jet.Coordinator
 func NewCoordinatorMock(t minimock.Tester) *CoordinatorMock {
 	m := &CoordinatorMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -259,7 +259,7 @@ func (e *CoordinatorMockHeavyExpectation) Then(rp1 *insolar.Reference, err error
 	return e.mock
 }
 
-// Heavy implements Coordinator
+// Heavy implements jet.Coordinator
 func (mmHeavy *CoordinatorMock) Heavy(ctx context.Context) (rp1 *insolar.Reference, err error) {
 	mm_atomic.AddUint64(&mmHeavy.beforeHeavyCounter, 1)
 	defer mm_atomic.AddUint64(&mmHeavy.afterHeavyCounter, 1)
@@ -479,7 +479,7 @@ func (e *CoordinatorMockIsAuthorizedExpectation) Then(b1 bool, err error) *Coord
 	return e.mock
 }
 
-// IsAuthorized implements Coordinator
+// IsAuthorized implements jet.Coordinator
 func (mmIsAuthorized *CoordinatorMock) IsAuthorized(ctx context.Context, role insolar.DynamicRole, obj insolar.ID, pulse insolar.PulseNumber, node insolar.Reference) (b1 bool, err error) {
 	mm_atomic.AddUint64(&mmIsAuthorized.beforeIsAuthorizedCounter, 1)
 	defer mm_atomic.AddUint64(&mmIsAuthorized.afterIsAuthorizedCounter, 1)
@@ -696,7 +696,7 @@ func (e *CoordinatorMockIsBeyondLimitExpectation) Then(b1 bool, err error) *Coor
 	return e.mock
 }
 
-// IsBeyondLimit implements Coordinator
+// IsBeyondLimit implements jet.Coordinator
 func (mmIsBeyondLimit *CoordinatorMock) IsBeyondLimit(ctx context.Context, targetPN insolar.PulseNumber) (b1 bool, err error) {
 	mm_atomic.AddUint64(&mmIsBeyondLimit.beforeIsBeyondLimitCounter, 1)
 	defer mm_atomic.AddUint64(&mmIsBeyondLimit.afterIsBeyondLimitCounter, 1)
@@ -914,7 +914,7 @@ func (e *CoordinatorMockIsMeAuthorizedNowExpectation) Then(b1 bool, err error) *
 	return e.mock
 }
 
-// IsMeAuthorizedNow implements Coordinator
+// IsMeAuthorizedNow implements jet.Coordinator
 func (mmIsMeAuthorizedNow *CoordinatorMock) IsMeAuthorizedNow(ctx context.Context, role insolar.DynamicRole, obj insolar.ID) (b1 bool, err error) {
 	mm_atomic.AddUint64(&mmIsMeAuthorizedNow.beforeIsMeAuthorizedNowCounter, 1)
 	defer mm_atomic.AddUint64(&mmIsMeAuthorizedNow.afterIsMeAuthorizedNowCounter, 1)
@@ -1132,7 +1132,7 @@ func (e *CoordinatorMockLightExecutorForJetExpectation) Then(rp1 *insolar.Refere
 	return e.mock
 }
 
-// LightExecutorForJet implements Coordinator
+// LightExecutorForJet implements jet.Coordinator
 func (mmLightExecutorForJet *CoordinatorMock) LightExecutorForJet(ctx context.Context, jetID insolar.ID, pulse insolar.PulseNumber) (rp1 *insolar.Reference, err error) {
 	mm_atomic.AddUint64(&mmLightExecutorForJet.beforeLightExecutorForJetCounter, 1)
 	defer mm_atomic.AddUint64(&mmLightExecutorForJet.afterLightExecutorForJetCounter, 1)
@@ -1350,7 +1350,7 @@ func (e *CoordinatorMockLightExecutorForObjectExpectation) Then(rp1 *insolar.Ref
 	return e.mock
 }
 
-// LightExecutorForObject implements Coordinator
+// LightExecutorForObject implements jet.Coordinator
 func (mmLightExecutorForObject *CoordinatorMock) LightExecutorForObject(ctx context.Context, objID insolar.ID, pulse insolar.PulseNumber) (rp1 *insolar.Reference, err error) {
 	mm_atomic.AddUint64(&mmLightExecutorForObject.beforeLightExecutorForObjectCounter, 1)
 	defer mm_atomic.AddUint64(&mmLightExecutorForObject.afterLightExecutorForObjectCounter, 1)
@@ -1568,7 +1568,7 @@ func (e *CoordinatorMockLightValidatorsForJetExpectation) Then(ra1 []insolar.Ref
 	return e.mock
 }
 
-// LightValidatorsForJet implements Coordinator
+// LightValidatorsForJet implements jet.Coordinator
 func (mmLightValidatorsForJet *CoordinatorMock) LightValidatorsForJet(ctx context.Context, jetID insolar.ID, pulse insolar.PulseNumber) (ra1 []insolar.Reference, err error) {
 	mm_atomic.AddUint64(&mmLightValidatorsForJet.beforeLightValidatorsForJetCounter, 1)
 	defer mm_atomic.AddUint64(&mmLightValidatorsForJet.afterLightValidatorsForJetCounter, 1)
@@ -1786,7 +1786,7 @@ func (e *CoordinatorMockLightValidatorsForObjectExpectation) Then(ra1 []insolar.
 	return e.mock
 }
 
-// LightValidatorsForObject implements Coordinator
+// LightValidatorsForObject implements jet.Coordinator
 func (mmLightValidatorsForObject *CoordinatorMock) LightValidatorsForObject(ctx context.Context, objID insolar.ID, pulse insolar.PulseNumber) (ra1 []insolar.Reference, err error) {
 	mm_atomic.AddUint64(&mmLightValidatorsForObject.beforeLightValidatorsForObjectCounter, 1)
 	defer mm_atomic.AddUint64(&mmLightValidatorsForObject.afterLightValidatorsForObjectCounter, 1)
@@ -1965,7 +1965,7 @@ func (mmMe *mCoordinatorMockMe) Set(f func() (r1 insolar.Reference)) *Coordinato
 	return mmMe.mock
 }
 
-// Me implements Coordinator
+// Me implements jet.Coordinator
 func (mmMe *CoordinatorMock) Me() (r1 insolar.Reference) {
 	mm_atomic.AddUint64(&mmMe.beforeMeCounter, 1)
 	defer mm_atomic.AddUint64(&mmMe.afterMeCounter, 1)
@@ -2147,7 +2147,7 @@ func (e *CoordinatorMockNodeForJetExpectation) Then(rp1 *insolar.Reference, err 
 	return e.mock
 }
 
-// NodeForJet implements Coordinator
+// NodeForJet implements jet.Coordinator
 func (mmNodeForJet *CoordinatorMock) NodeForJet(ctx context.Context, jetID insolar.ID, targetPN insolar.PulseNumber) (rp1 *insolar.Reference, err error) {
 	mm_atomic.AddUint64(&mmNodeForJet.beforeNodeForJetCounter, 1)
 	defer mm_atomic.AddUint64(&mmNodeForJet.afterNodeForJetCounter, 1)
@@ -2365,7 +2365,7 @@ func (e *CoordinatorMockNodeForObjectExpectation) Then(rp1 *insolar.Reference, e
 	return e.mock
 }
 
-// NodeForObject implements Coordinator
+// NodeForObject implements jet.Coordinator
 func (mmNodeForObject *CoordinatorMock) NodeForObject(ctx context.Context, objectID insolar.ID, targetPN insolar.PulseNumber) (rp1 *insolar.Reference, err error) {
 	mm_atomic.AddUint64(&mmNodeForObject.beforeNodeForObjectCounter, 1)
 	defer mm_atomic.AddUint64(&mmNodeForObject.afterNodeForObjectCounter, 1)
@@ -2584,7 +2584,7 @@ func (e *CoordinatorMockQueryRoleExpectation) Then(ra1 []insolar.Reference, err 
 	return e.mock
 }
 
-// QueryRole implements Coordinator
+// QueryRole implements jet.Coordinator
 func (mmQueryRole *CoordinatorMock) QueryRole(ctx context.Context, role insolar.DynamicRole, obj insolar.ID, pulse insolar.PulseNumber) (ra1 []insolar.Reference, err error) {
 	mm_atomic.AddUint64(&mmQueryRole.beforeQueryRoleCounter, 1)
 	defer mm_atomic.AddUint64(&mmQueryRole.afterQueryRoleCounter, 1)
@@ -2802,7 +2802,7 @@ func (e *CoordinatorMockVirtualExecutorForObjectExpectation) Then(rp1 *insolar.R
 	return e.mock
 }
 
-// VirtualExecutorForObject implements Coordinator
+// VirtualExecutorForObject implements jet.Coordinator
 func (mmVirtualExecutorForObject *CoordinatorMock) VirtualExecutorForObject(ctx context.Context, objID insolar.ID, pulse insolar.PulseNumber) (rp1 *insolar.Reference, err error) {
 	mm_atomic.AddUint64(&mmVirtualExecutorForObject.beforeVirtualExecutorForObjectCounter, 1)
 	defer mm_atomic.AddUint64(&mmVirtualExecutorForObject.afterVirtualExecutorForObjectCounter, 1)
@@ -3020,7 +3020,7 @@ func (e *CoordinatorMockVirtualValidatorsForObjectExpectation) Then(ra1 []insola
 	return e.mock
 }
 
-// VirtualValidatorsForObject implements Coordinator
+// VirtualValidatorsForObject implements jet.Coordinator
 func (mmVirtualValidatorsForObject *CoordinatorMock) VirtualValidatorsForObject(ctx context.Context, objID insolar.ID, pulse insolar.PulseNumber) (ra1 []insolar.Reference, err error) {
 	mm_atomic.AddUint64(&mmVirtualValidatorsForObject.beforeVirtualValidatorsForObjectCounter, 1)
 	defer mm_atomic.AddUint64(&mmVirtualValidatorsForObject.afterVirtualValidatorsForObjectCounter, 1)

@@ -12,7 +12,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-// CalculatorMock implements Calculator
+// CalculatorMock implements pulse.Calculator
 type CalculatorMock struct {
 	t minimock.Tester
 
@@ -29,7 +29,7 @@ type CalculatorMock struct {
 	ForwardsMock          mCalculatorMockForwards
 }
 
-// NewCalculatorMock returns a mock for Calculator
+// NewCalculatorMock returns a mock for pulse.Calculator
 func NewCalculatorMock(t minimock.Tester) *CalculatorMock {
 	m := &CalculatorMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -154,7 +154,7 @@ func (e *CalculatorMockBackwardsExpectation) Then(p1 insolar.Pulse, err error) *
 	return e.mock
 }
 
-// Backwards implements Calculator
+// Backwards implements pulse.Calculator
 func (mmBackwards *CalculatorMock) Backwards(ctx context.Context, pn insolar.PulseNumber, steps int) (p1 insolar.Pulse, err error) {
 	mm_atomic.AddUint64(&mmBackwards.beforeBackwardsCounter, 1)
 	defer mm_atomic.AddUint64(&mmBackwards.afterBackwardsCounter, 1)
@@ -372,7 +372,7 @@ func (e *CalculatorMockForwardsExpectation) Then(p1 insolar.Pulse, err error) *C
 	return e.mock
 }
 
-// Forwards implements Calculator
+// Forwards implements pulse.Calculator
 func (mmForwards *CalculatorMock) Forwards(ctx context.Context, pn insolar.PulseNumber, steps int) (p1 insolar.Pulse, err error) {
 	mm_atomic.AddUint64(&mmForwards.beforeForwardsCounter, 1)
 	defer mm_atomic.AddUint64(&mmForwards.afterForwardsCounter, 1)

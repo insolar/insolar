@@ -12,7 +12,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 )
 
-// MemberAnnouncementSignatureMock implements MemberAnnouncementSignature
+// MemberAnnouncementSignatureMock implements proofs.MemberAnnouncementSignature
 type MemberAnnouncementSignatureMock struct {
 	t minimock.Tester
 
@@ -71,7 +71,7 @@ type MemberAnnouncementSignatureMock struct {
 	WriteToMock          mMemberAnnouncementSignatureMockWriteTo
 }
 
-// NewMemberAnnouncementSignatureMock returns a mock for MemberAnnouncementSignature
+// NewMemberAnnouncementSignatureMock returns a mock for proofs.MemberAnnouncementSignature
 func NewMemberAnnouncementSignatureMock(t minimock.Tester) *MemberAnnouncementSignatureMock {
 	m := &MemberAnnouncementSignatureMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -172,7 +172,7 @@ func (mmAsByteString *mMemberAnnouncementSignatureMockAsByteString) Set(f func()
 	return mmAsByteString.mock
 }
 
-// AsByteString implements MemberAnnouncementSignature
+// AsByteString implements proofs.MemberAnnouncementSignature
 func (mmAsByteString *MemberAnnouncementSignatureMock) AsByteString() (s1 string) {
 	mm_atomic.AddUint64(&mmAsByteString.beforeAsByteStringCounter, 1)
 	defer mm_atomic.AddUint64(&mmAsByteString.afterAsByteStringCounter, 1)
@@ -315,7 +315,7 @@ func (mmAsBytes *mMemberAnnouncementSignatureMockAsBytes) Set(f func() (ba1 []by
 	return mmAsBytes.mock
 }
 
-// AsBytes implements MemberAnnouncementSignature
+// AsBytes implements proofs.MemberAnnouncementSignature
 func (mmAsBytes *MemberAnnouncementSignatureMock) AsBytes() (ba1 []byte) {
 	mm_atomic.AddUint64(&mmAsBytes.beforeAsBytesCounter, 1)
 	defer mm_atomic.AddUint64(&mmAsBytes.afterAsBytesCounter, 1)
@@ -458,7 +458,7 @@ func (mmCopyOfSignature *mMemberAnnouncementSignatureMockCopyOfSignature) Set(f 
 	return mmCopyOfSignature.mock
 }
 
-// CopyOfSignature implements MemberAnnouncementSignature
+// CopyOfSignature implements proofs.MemberAnnouncementSignature
 func (mmCopyOfSignature *MemberAnnouncementSignatureMock) CopyOfSignature() (s1 cryptkit.Signature) {
 	mm_atomic.AddUint64(&mmCopyOfSignature.beforeCopyOfSignatureCounter, 1)
 	defer mm_atomic.AddUint64(&mmCopyOfSignature.afterCopyOfSignatureCounter, 1)
@@ -637,7 +637,7 @@ func (e *MemberAnnouncementSignatureMockEqualsExpectation) Then(b1 bool) *Member
 	return e.mock
 }
 
-// Equals implements MemberAnnouncementSignature
+// Equals implements proofs.MemberAnnouncementSignature
 func (mmEquals *MemberAnnouncementSignatureMock) Equals(other cryptkit.SignatureHolder) (b1 bool) {
 	mm_atomic.AddUint64(&mmEquals.beforeEqualsCounter, 1)
 	defer mm_atomic.AddUint64(&mmEquals.afterEqualsCounter, 1)
@@ -816,7 +816,7 @@ func (mmFixedByteSize *mMemberAnnouncementSignatureMockFixedByteSize) Set(f func
 	return mmFixedByteSize.mock
 }
 
-// FixedByteSize implements MemberAnnouncementSignature
+// FixedByteSize implements proofs.MemberAnnouncementSignature
 func (mmFixedByteSize *MemberAnnouncementSignatureMock) FixedByteSize() (i1 int) {
 	mm_atomic.AddUint64(&mmFixedByteSize.beforeFixedByteSizeCounter, 1)
 	defer mm_atomic.AddUint64(&mmFixedByteSize.afterFixedByteSizeCounter, 1)
@@ -959,7 +959,7 @@ func (mmFoldToUint64 *mMemberAnnouncementSignatureMockFoldToUint64) Set(f func()
 	return mmFoldToUint64.mock
 }
 
-// FoldToUint64 implements MemberAnnouncementSignature
+// FoldToUint64 implements proofs.MemberAnnouncementSignature
 func (mmFoldToUint64 *MemberAnnouncementSignatureMock) FoldToUint64() (u1 uint64) {
 	mm_atomic.AddUint64(&mmFoldToUint64.beforeFoldToUint64Counter, 1)
 	defer mm_atomic.AddUint64(&mmFoldToUint64.afterFoldToUint64Counter, 1)
@@ -1102,7 +1102,7 @@ func (mmGetSignatureMethod *mMemberAnnouncementSignatureMockGetSignatureMethod) 
 	return mmGetSignatureMethod.mock
 }
 
-// GetSignatureMethod implements MemberAnnouncementSignature
+// GetSignatureMethod implements proofs.MemberAnnouncementSignature
 func (mmGetSignatureMethod *MemberAnnouncementSignatureMock) GetSignatureMethod() (s1 cryptkit.SignatureMethod) {
 	mm_atomic.AddUint64(&mmGetSignatureMethod.beforeGetSignatureMethodCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetSignatureMethod.afterGetSignatureMethodCounter, 1)
@@ -1282,7 +1282,7 @@ func (e *MemberAnnouncementSignatureMockReadExpectation) Then(n int, err error) 
 	return e.mock
 }
 
-// Read implements MemberAnnouncementSignature
+// Read implements proofs.MemberAnnouncementSignature
 func (mmRead *MemberAnnouncementSignatureMock) Read(p []byte) (n int, err error) {
 	mm_atomic.AddUint64(&mmRead.beforeReadCounter, 1)
 	defer mm_atomic.AddUint64(&mmRead.afterReadCounter, 1)
@@ -1498,7 +1498,7 @@ func (e *MemberAnnouncementSignatureMockWriteToExpectation) Then(n int64, err er
 	return e.mock
 }
 
-// WriteTo implements MemberAnnouncementSignature
+// WriteTo implements proofs.MemberAnnouncementSignature
 func (mmWriteTo *MemberAnnouncementSignatureMock) WriteTo(w io.Writer) (n int64, err error) {
 	mm_atomic.AddUint64(&mmWriteTo.beforeWriteToCounter, 1)
 	defer mm_atomic.AddUint64(&mmWriteTo.afterWriteToCounter, 1)

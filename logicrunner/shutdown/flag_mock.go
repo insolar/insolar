@@ -11,7 +11,7 @@ import (
 	"github.com/gojuno/minimock"
 )
 
-// FlagMock implements Flag
+// FlagMock implements shutdown.Flag
 type FlagMock struct {
 	t minimock.Tester
 
@@ -34,7 +34,7 @@ type FlagMock struct {
 	StopMock          mFlagMockStop
 }
 
-// NewFlagMock returns a mock for Flag
+// NewFlagMock returns a mock for shutdown.Flag
 func NewFlagMock(t minimock.Tester) *FlagMock {
 	m := &FlagMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -133,7 +133,7 @@ func (mmDone *mFlagMockDone) Set(f func(ctx context.Context, isDone func() bool)
 	return mmDone.mock
 }
 
-// Done implements Flag
+// Done implements shutdown.Flag
 func (mmDone *FlagMock) Done(ctx context.Context, isDone func() bool) {
 	mm_atomic.AddUint64(&mmDone.beforeDoneCounter, 1)
 	defer mm_atomic.AddUint64(&mmDone.afterDoneCounter, 1)
@@ -310,7 +310,7 @@ func (mmIsStopped *mFlagMockIsStopped) Set(f func() (b1 bool)) *FlagMock {
 	return mmIsStopped.mock
 }
 
-// IsStopped implements Flag
+// IsStopped implements shutdown.Flag
 func (mmIsStopped *FlagMock) IsStopped() (b1 bool) {
 	mm_atomic.AddUint64(&mmIsStopped.beforeIsStoppedCounter, 1)
 	defer mm_atomic.AddUint64(&mmIsStopped.afterIsStoppedCounter, 1)
@@ -489,7 +489,7 @@ func (e *FlagMockStopExpectation) Then(f1 func()) *FlagMock {
 	return e.mock
 }
 
-// Stop implements Flag
+// Stop implements shutdown.Flag
 func (mmStop *FlagMock) Stop(ctx context.Context) (f1 func()) {
 	mm_atomic.AddUint64(&mmStop.beforeStopCounter, 1)
 	defer mm_atomic.AddUint64(&mmStop.afterStopCounter, 1)

@@ -10,20 +10,21 @@ import (
 
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/insolar"
+	mm_drop "github.com/insolar/insolar/ledger/drop"
 )
 
-// AccessorMock implements Accessor
+// AccessorMock implements drop.Accessor
 type AccessorMock struct {
 	t minimock.Tester
 
-	funcForPulse          func(ctx context.Context, jetID insolar.JetID, pulse insolar.PulseNumber) (d1 Drop, err error)
+	funcForPulse          func(ctx context.Context, jetID insolar.JetID, pulse insolar.PulseNumber) (d1 mm_drop.Drop, err error)
 	inspectFuncForPulse   func(ctx context.Context, jetID insolar.JetID, pulse insolar.PulseNumber)
 	afterForPulseCounter  uint64
 	beforeForPulseCounter uint64
 	ForPulseMock          mAccessorMockForPulse
 }
 
-// NewAccessorMock returns a mock for Accessor
+// NewAccessorMock returns a mock for drop.Accessor
 func NewAccessorMock(t minimock.Tester) *AccessorMock {
 	m := &AccessorMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -62,7 +63,7 @@ type AccessorMockForPulseParams struct {
 
 // AccessorMockForPulseResults contains results of the Accessor.ForPulse
 type AccessorMockForPulseResults struct {
-	d1  Drop
+	d1  mm_drop.Drop
 	err error
 }
 
@@ -98,7 +99,7 @@ func (mmForPulse *mAccessorMockForPulse) Inspect(f func(ctx context.Context, jet
 }
 
 // Return sets up results that will be returned by Accessor.ForPulse
-func (mmForPulse *mAccessorMockForPulse) Return(d1 Drop, err error) *AccessorMock {
+func (mmForPulse *mAccessorMockForPulse) Return(d1 mm_drop.Drop, err error) *AccessorMock {
 	if mmForPulse.mock.funcForPulse != nil {
 		mmForPulse.mock.t.Fatalf("AccessorMock.ForPulse mock is already set by Set")
 	}
@@ -111,7 +112,7 @@ func (mmForPulse *mAccessorMockForPulse) Return(d1 Drop, err error) *AccessorMoc
 }
 
 //Set uses given function f to mock the Accessor.ForPulse method
-func (mmForPulse *mAccessorMockForPulse) Set(f func(ctx context.Context, jetID insolar.JetID, pulse insolar.PulseNumber) (d1 Drop, err error)) *AccessorMock {
+func (mmForPulse *mAccessorMockForPulse) Set(f func(ctx context.Context, jetID insolar.JetID, pulse insolar.PulseNumber) (d1 mm_drop.Drop, err error)) *AccessorMock {
 	if mmForPulse.defaultExpectation != nil {
 		mmForPulse.mock.t.Fatalf("Default expectation is already set for the Accessor.ForPulse method")
 	}
@@ -140,13 +141,13 @@ func (mmForPulse *mAccessorMockForPulse) When(ctx context.Context, jetID insolar
 }
 
 // Then sets up Accessor.ForPulse return parameters for the expectation previously defined by the When method
-func (e *AccessorMockForPulseExpectation) Then(d1 Drop, err error) *AccessorMock {
+func (e *AccessorMockForPulseExpectation) Then(d1 mm_drop.Drop, err error) *AccessorMock {
 	e.results = &AccessorMockForPulseResults{d1, err}
 	return e.mock
 }
 
-// ForPulse implements Accessor
-func (mmForPulse *AccessorMock) ForPulse(ctx context.Context, jetID insolar.JetID, pulse insolar.PulseNumber) (d1 Drop, err error) {
+// ForPulse implements drop.Accessor
+func (mmForPulse *AccessorMock) ForPulse(ctx context.Context, jetID insolar.JetID, pulse insolar.PulseNumber) (d1 mm_drop.Drop, err error) {
 	mm_atomic.AddUint64(&mmForPulse.beforeForPulseCounter, 1)
 	defer mm_atomic.AddUint64(&mmForPulse.afterForPulseCounter, 1)
 

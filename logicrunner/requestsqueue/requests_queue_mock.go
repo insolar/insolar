@@ -10,14 +10,15 @@ import (
 
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/logicrunner/common"
+	mm_requestsqueue "github.com/insolar/insolar/logicrunner/requestsqueue"
 )
 
-// RequestsQueueMock implements RequestsQueue
+// RequestsQueueMock implements requestsqueue.RequestsQueue
 type RequestsQueueMock struct {
 	t minimock.Tester
 
-	funcAppend          func(ctx context.Context, from RequestSource, transcripts ...*common.Transcript)
-	inspectFuncAppend   func(ctx context.Context, from RequestSource, transcripts ...*common.Transcript)
+	funcAppend          func(ctx context.Context, from mm_requestsqueue.RequestSource, transcripts ...*common.Transcript)
+	inspectFuncAppend   func(ctx context.Context, from mm_requestsqueue.RequestSource, transcripts ...*common.Transcript)
 	afterAppendCounter  uint64
 	beforeAppendCounter uint64
 	AppendMock          mRequestsQueueMockAppend
@@ -34,8 +35,8 @@ type RequestsQueueMock struct {
 	beforeNumberOfOldCounter uint64
 	NumberOfOldMock          mRequestsQueueMockNumberOfOld
 
-	funcTakeAllOriginatedFrom          func(ctx context.Context, from RequestSource) (tpa1 []*common.Transcript)
-	inspectFuncTakeAllOriginatedFrom   func(ctx context.Context, from RequestSource)
+	funcTakeAllOriginatedFrom          func(ctx context.Context, from mm_requestsqueue.RequestSource) (tpa1 []*common.Transcript)
+	inspectFuncTakeAllOriginatedFrom   func(ctx context.Context, from mm_requestsqueue.RequestSource)
 	afterTakeAllOriginatedFromCounter  uint64
 	beforeTakeAllOriginatedFromCounter uint64
 	TakeAllOriginatedFromMock          mRequestsQueueMockTakeAllOriginatedFrom
@@ -47,7 +48,7 @@ type RequestsQueueMock struct {
 	TakeFirstMock          mRequestsQueueMockTakeFirst
 }
 
-// NewRequestsQueueMock returns a mock for RequestsQueue
+// NewRequestsQueueMock returns a mock for requestsqueue.RequestsQueue
 func NewRequestsQueueMock(t minimock.Tester) *RequestsQueueMock {
 	m := &RequestsQueueMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -92,12 +93,12 @@ type RequestsQueueMockAppendExpectation struct {
 // RequestsQueueMockAppendParams contains parameters of the RequestsQueue.Append
 type RequestsQueueMockAppendParams struct {
 	ctx         context.Context
-	from        RequestSource
+	from        mm_requestsqueue.RequestSource
 	transcripts []*common.Transcript
 }
 
 // Expect sets up expected params for RequestsQueue.Append
-func (mmAppend *mRequestsQueueMockAppend) Expect(ctx context.Context, from RequestSource, transcripts ...*common.Transcript) *mRequestsQueueMockAppend {
+func (mmAppend *mRequestsQueueMockAppend) Expect(ctx context.Context, from mm_requestsqueue.RequestSource, transcripts ...*common.Transcript) *mRequestsQueueMockAppend {
 	if mmAppend.mock.funcAppend != nil {
 		mmAppend.mock.t.Fatalf("RequestsQueueMock.Append mock is already set by Set")
 	}
@@ -117,7 +118,7 @@ func (mmAppend *mRequestsQueueMockAppend) Expect(ctx context.Context, from Reque
 }
 
 // Inspect accepts an inspector function that has same arguments as the RequestsQueue.Append
-func (mmAppend *mRequestsQueueMockAppend) Inspect(f func(ctx context.Context, from RequestSource, transcripts ...*common.Transcript)) *mRequestsQueueMockAppend {
+func (mmAppend *mRequestsQueueMockAppend) Inspect(f func(ctx context.Context, from mm_requestsqueue.RequestSource, transcripts ...*common.Transcript)) *mRequestsQueueMockAppend {
 	if mmAppend.mock.inspectFuncAppend != nil {
 		mmAppend.mock.t.Fatalf("Inspect function is already set for RequestsQueueMock.Append")
 	}
@@ -141,7 +142,7 @@ func (mmAppend *mRequestsQueueMockAppend) Return() *RequestsQueueMock {
 }
 
 //Set uses given function f to mock the RequestsQueue.Append method
-func (mmAppend *mRequestsQueueMockAppend) Set(f func(ctx context.Context, from RequestSource, transcripts ...*common.Transcript)) *RequestsQueueMock {
+func (mmAppend *mRequestsQueueMockAppend) Set(f func(ctx context.Context, from mm_requestsqueue.RequestSource, transcripts ...*common.Transcript)) *RequestsQueueMock {
 	if mmAppend.defaultExpectation != nil {
 		mmAppend.mock.t.Fatalf("Default expectation is already set for the RequestsQueue.Append method")
 	}
@@ -154,8 +155,8 @@ func (mmAppend *mRequestsQueueMockAppend) Set(f func(ctx context.Context, from R
 	return mmAppend.mock
 }
 
-// Append implements RequestsQueue
-func (mmAppend *RequestsQueueMock) Append(ctx context.Context, from RequestSource, transcripts ...*common.Transcript) {
+// Append implements requestsqueue.RequestsQueue
+func (mmAppend *RequestsQueueMock) Append(ctx context.Context, from mm_requestsqueue.RequestSource, transcripts ...*common.Transcript) {
 	mm_atomic.AddUint64(&mmAppend.beforeAppendCounter, 1)
 	defer mm_atomic.AddUint64(&mmAppend.afterAppendCounter, 1)
 
@@ -341,7 +342,7 @@ func (mmClean *mRequestsQueueMockClean) Set(f func(ctx context.Context)) *Reques
 	return mmClean.mock
 }
 
-// Clean implements RequestsQueue
+// Clean implements requestsqueue.RequestsQueue
 func (mmClean *RequestsQueueMock) Clean(ctx context.Context) {
 	mm_atomic.AddUint64(&mmClean.beforeCleanCounter, 1)
 	defer mm_atomic.AddUint64(&mmClean.afterCleanCounter, 1)
@@ -554,7 +555,7 @@ func (e *RequestsQueueMockNumberOfOldExpectation) Then(i1 int) *RequestsQueueMoc
 	return e.mock
 }
 
-// NumberOfOld implements RequestsQueue
+// NumberOfOld implements requestsqueue.RequestsQueue
 func (mmNumberOfOld *RequestsQueueMock) NumberOfOld(ctx context.Context) (i1 int) {
 	mm_atomic.AddUint64(&mmNumberOfOld.beforeNumberOfOldCounter, 1)
 	defer mm_atomic.AddUint64(&mmNumberOfOld.afterNumberOfOldCounter, 1)
@@ -683,7 +684,7 @@ type RequestsQueueMockTakeAllOriginatedFromExpectation struct {
 // RequestsQueueMockTakeAllOriginatedFromParams contains parameters of the RequestsQueue.TakeAllOriginatedFrom
 type RequestsQueueMockTakeAllOriginatedFromParams struct {
 	ctx  context.Context
-	from RequestSource
+	from mm_requestsqueue.RequestSource
 }
 
 // RequestsQueueMockTakeAllOriginatedFromResults contains results of the RequestsQueue.TakeAllOriginatedFrom
@@ -692,7 +693,7 @@ type RequestsQueueMockTakeAllOriginatedFromResults struct {
 }
 
 // Expect sets up expected params for RequestsQueue.TakeAllOriginatedFrom
-func (mmTakeAllOriginatedFrom *mRequestsQueueMockTakeAllOriginatedFrom) Expect(ctx context.Context, from RequestSource) *mRequestsQueueMockTakeAllOriginatedFrom {
+func (mmTakeAllOriginatedFrom *mRequestsQueueMockTakeAllOriginatedFrom) Expect(ctx context.Context, from mm_requestsqueue.RequestSource) *mRequestsQueueMockTakeAllOriginatedFrom {
 	if mmTakeAllOriginatedFrom.mock.funcTakeAllOriginatedFrom != nil {
 		mmTakeAllOriginatedFrom.mock.t.Fatalf("RequestsQueueMock.TakeAllOriginatedFrom mock is already set by Set")
 	}
@@ -712,7 +713,7 @@ func (mmTakeAllOriginatedFrom *mRequestsQueueMockTakeAllOriginatedFrom) Expect(c
 }
 
 // Inspect accepts an inspector function that has same arguments as the RequestsQueue.TakeAllOriginatedFrom
-func (mmTakeAllOriginatedFrom *mRequestsQueueMockTakeAllOriginatedFrom) Inspect(f func(ctx context.Context, from RequestSource)) *mRequestsQueueMockTakeAllOriginatedFrom {
+func (mmTakeAllOriginatedFrom *mRequestsQueueMockTakeAllOriginatedFrom) Inspect(f func(ctx context.Context, from mm_requestsqueue.RequestSource)) *mRequestsQueueMockTakeAllOriginatedFrom {
 	if mmTakeAllOriginatedFrom.mock.inspectFuncTakeAllOriginatedFrom != nil {
 		mmTakeAllOriginatedFrom.mock.t.Fatalf("Inspect function is already set for RequestsQueueMock.TakeAllOriginatedFrom")
 	}
@@ -736,7 +737,7 @@ func (mmTakeAllOriginatedFrom *mRequestsQueueMockTakeAllOriginatedFrom) Return(t
 }
 
 //Set uses given function f to mock the RequestsQueue.TakeAllOriginatedFrom method
-func (mmTakeAllOriginatedFrom *mRequestsQueueMockTakeAllOriginatedFrom) Set(f func(ctx context.Context, from RequestSource) (tpa1 []*common.Transcript)) *RequestsQueueMock {
+func (mmTakeAllOriginatedFrom *mRequestsQueueMockTakeAllOriginatedFrom) Set(f func(ctx context.Context, from mm_requestsqueue.RequestSource) (tpa1 []*common.Transcript)) *RequestsQueueMock {
 	if mmTakeAllOriginatedFrom.defaultExpectation != nil {
 		mmTakeAllOriginatedFrom.mock.t.Fatalf("Default expectation is already set for the RequestsQueue.TakeAllOriginatedFrom method")
 	}
@@ -751,7 +752,7 @@ func (mmTakeAllOriginatedFrom *mRequestsQueueMockTakeAllOriginatedFrom) Set(f fu
 
 // When sets expectation for the RequestsQueue.TakeAllOriginatedFrom which will trigger the result defined by the following
 // Then helper
-func (mmTakeAllOriginatedFrom *mRequestsQueueMockTakeAllOriginatedFrom) When(ctx context.Context, from RequestSource) *RequestsQueueMockTakeAllOriginatedFromExpectation {
+func (mmTakeAllOriginatedFrom *mRequestsQueueMockTakeAllOriginatedFrom) When(ctx context.Context, from mm_requestsqueue.RequestSource) *RequestsQueueMockTakeAllOriginatedFromExpectation {
 	if mmTakeAllOriginatedFrom.mock.funcTakeAllOriginatedFrom != nil {
 		mmTakeAllOriginatedFrom.mock.t.Fatalf("RequestsQueueMock.TakeAllOriginatedFrom mock is already set by Set")
 	}
@@ -770,8 +771,8 @@ func (e *RequestsQueueMockTakeAllOriginatedFromExpectation) Then(tpa1 []*common.
 	return e.mock
 }
 
-// TakeAllOriginatedFrom implements RequestsQueue
-func (mmTakeAllOriginatedFrom *RequestsQueueMock) TakeAllOriginatedFrom(ctx context.Context, from RequestSource) (tpa1 []*common.Transcript) {
+// TakeAllOriginatedFrom implements requestsqueue.RequestsQueue
+func (mmTakeAllOriginatedFrom *RequestsQueueMock) TakeAllOriginatedFrom(ctx context.Context, from mm_requestsqueue.RequestSource) (tpa1 []*common.Transcript) {
 	mm_atomic.AddUint64(&mmTakeAllOriginatedFrom.beforeTakeAllOriginatedFromCounter, 1)
 	defer mm_atomic.AddUint64(&mmTakeAllOriginatedFrom.afterTakeAllOriginatedFromCounter, 1)
 
@@ -985,7 +986,7 @@ func (e *RequestsQueueMockTakeFirstExpectation) Then(tp1 *common.Transcript) *Re
 	return e.mock
 }
 
-// TakeFirst implements RequestsQueue
+// TakeFirst implements requestsqueue.RequestsQueue
 func (mmTakeFirst *RequestsQueueMock) TakeFirst(ctx context.Context) (tp1 *common.Transcript) {
 	mm_atomic.AddUint64(&mmTakeFirst.beforeTakeFirstCounter, 1)
 	defer mm_atomic.AddUint64(&mmTakeFirst.afterTakeFirstCounter, 1)

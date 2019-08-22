@@ -13,7 +13,7 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 )
 
-// AtomicRecordStorageMock implements AtomicRecordStorage
+// AtomicRecordStorageMock implements object.AtomicRecordStorage
 type AtomicRecordStorageMock struct {
 	t minimock.Tester
 
@@ -30,7 +30,7 @@ type AtomicRecordStorageMock struct {
 	SetAtomicMock          mAtomicRecordStorageMockSetAtomic
 }
 
-// NewAtomicRecordStorageMock returns a mock for AtomicRecordStorage
+// NewAtomicRecordStorageMock returns a mock for object.AtomicRecordStorage
 func NewAtomicRecordStorageMock(t minimock.Tester) *AtomicRecordStorageMock {
 	m := &AtomicRecordStorageMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -154,7 +154,7 @@ func (e *AtomicRecordStorageMockForIDExpectation) Then(m1 record.Material, err e
 	return e.mock
 }
 
-// ForID implements AtomicRecordStorage
+// ForID implements object.AtomicRecordStorage
 func (mmForID *AtomicRecordStorageMock) ForID(ctx context.Context, id insolar.ID) (m1 record.Material, err error) {
 	mm_atomic.AddUint64(&mmForID.beforeForIDCounter, 1)
 	defer mm_atomic.AddUint64(&mmForID.afterForIDCounter, 1)
@@ -370,7 +370,7 @@ func (e *AtomicRecordStorageMockSetAtomicExpectation) Then(err error) *AtomicRec
 	return e.mock
 }
 
-// SetAtomic implements AtomicRecordStorage
+// SetAtomic implements object.AtomicRecordStorage
 func (mmSetAtomic *AtomicRecordStorageMock) SetAtomic(ctx context.Context, records ...record.Material) (err error) {
 	mm_atomic.AddUint64(&mmSetAtomic.beforeSetAtomicCounter, 1)
 	defer mm_atomic.AddUint64(&mmSetAtomic.afterSetAtomicCounter, 1)

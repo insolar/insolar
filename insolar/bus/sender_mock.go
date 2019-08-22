@@ -14,7 +14,7 @@ import (
 	"github.com/insolar/insolar/insolar/payload"
 )
 
-// SenderMock implements Sender
+// SenderMock implements bus.Sender
 type SenderMock struct {
 	t minimock.Tester
 
@@ -37,7 +37,7 @@ type SenderMock struct {
 	SendTargetMock          mSenderMockSendTarget
 }
 
-// NewSenderMock returns a mock for Sender
+// NewSenderMock returns a mock for bus.Sender
 func NewSenderMock(t minimock.Tester) *SenderMock {
 	m := &SenderMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -138,7 +138,7 @@ func (mmReply *mSenderMockReply) Set(f func(ctx context.Context, origin payload.
 	return mmReply.mock
 }
 
-// Reply implements Sender
+// Reply implements bus.Sender
 func (mmReply *SenderMock) Reply(ctx context.Context, origin payload.Meta, reply *message.Message) {
 	mm_atomic.AddUint64(&mmReply.beforeReplyCounter, 1)
 	defer mm_atomic.AddUint64(&mmReply.afterReplyCounter, 1)
@@ -355,7 +355,7 @@ func (e *SenderMockSendRoleExpectation) Then(ch1 <-chan *message.Message, f1 fun
 	return e.mock
 }
 
-// SendRole implements Sender
+// SendRole implements bus.Sender
 func (mmSendRole *SenderMock) SendRole(ctx context.Context, msg *message.Message, role insolar.DynamicRole, object insolar.Reference) (ch1 <-chan *message.Message, f1 func()) {
 	mm_atomic.AddUint64(&mmSendRole.beforeSendRoleCounter, 1)
 	defer mm_atomic.AddUint64(&mmSendRole.afterSendRoleCounter, 1)
@@ -573,7 +573,7 @@ func (e *SenderMockSendTargetExpectation) Then(ch1 <-chan *message.Message, f1 f
 	return e.mock
 }
 
-// SendTarget implements Sender
+// SendTarget implements bus.Sender
 func (mmSendTarget *SenderMock) SendTarget(ctx context.Context, msg *message.Message, target insolar.Reference) (ch1 <-chan *message.Message, f1 func()) {
 	mm_atomic.AddUint64(&mmSendTarget.beforeSendTargetCounter, 1)
 	defer mm_atomic.AddUint64(&mmSendTarget.afterSendTargetCounter, 1)

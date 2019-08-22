@@ -12,7 +12,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-// WriteControllerMock implements WriteController
+// WriteControllerMock implements writecontroller.WriteController
 type WriteControllerMock struct {
 	t minimock.Tester
 
@@ -41,7 +41,7 @@ type WriteControllerMock struct {
 	WaitOpenedMock          mWriteControllerMockWaitOpened
 }
 
-// NewWriteControllerMock returns a mock for WriteController
+// NewWriteControllerMock returns a mock for writecontroller.WriteController
 func NewWriteControllerMock(t minimock.Tester) *WriteControllerMock {
 	m := &WriteControllerMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -171,7 +171,7 @@ func (e *WriteControllerMockBeginExpectation) Then(f1 func(), err error) *WriteC
 	return e.mock
 }
 
-// Begin implements WriteController
+// Begin implements writecontroller.WriteController
 func (mmBegin *WriteControllerMock) Begin(ctx context.Context, pulse insolar.PulseNumber) (f1 func(), err error) {
 	mm_atomic.AddUint64(&mmBegin.beforeBeginCounter, 1)
 	defer mm_atomic.AddUint64(&mmBegin.afterBeginCounter, 1)
@@ -387,7 +387,7 @@ func (e *WriteControllerMockCloseAndWaitExpectation) Then(err error) *WriteContr
 	return e.mock
 }
 
-// CloseAndWait implements WriteController
+// CloseAndWait implements writecontroller.WriteController
 func (mmCloseAndWait *WriteControllerMock) CloseAndWait(ctx context.Context, pulse insolar.PulseNumber) (err error) {
 	mm_atomic.AddUint64(&mmCloseAndWait.beforeCloseAndWaitCounter, 1)
 	defer mm_atomic.AddUint64(&mmCloseAndWait.afterCloseAndWaitCounter, 1)
@@ -603,7 +603,7 @@ func (e *WriteControllerMockOpenExpectation) Then(err error) *WriteControllerMoc
 	return e.mock
 }
 
-// Open implements WriteController
+// Open implements writecontroller.WriteController
 func (mmOpen *WriteControllerMock) Open(ctx context.Context, pulse insolar.PulseNumber) (err error) {
 	mm_atomic.AddUint64(&mmOpen.beforeOpenCounter, 1)
 	defer mm_atomic.AddUint64(&mmOpen.afterOpenCounter, 1)
@@ -792,7 +792,7 @@ func (mmWaitOpened *mWriteControllerMockWaitOpened) Set(f func(ctx context.Conte
 	return mmWaitOpened.mock
 }
 
-// WaitOpened implements WriteController
+// WaitOpened implements writecontroller.WriteController
 func (mmWaitOpened *WriteControllerMock) WaitOpened(ctx context.Context) {
 	mm_atomic.AddUint64(&mmWaitOpened.beforeWaitOpenedCounter, 1)
 	defer mm_atomic.AddUint64(&mmWaitOpened.afterWaitOpenedCounter, 1)

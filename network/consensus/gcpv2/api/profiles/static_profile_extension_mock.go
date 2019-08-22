@@ -15,7 +15,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 )
 
-// StaticProfileExtensionMock implements StaticProfileExtension
+// StaticProfileExtensionMock implements profiles.StaticProfileExtension
 type StaticProfileExtensionMock struct {
 	t minimock.Tester
 
@@ -68,7 +68,7 @@ type StaticProfileExtensionMock struct {
 	GetReferenceMock          mStaticProfileExtensionMockGetReference
 }
 
-// NewStaticProfileExtensionMock returns a mock for StaticProfileExtension
+// NewStaticProfileExtensionMock returns a mock for profiles.StaticProfileExtension
 func NewStaticProfileExtensionMock(t minimock.Tester) *StaticProfileExtensionMock {
 	m := &StaticProfileExtensionMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -164,7 +164,7 @@ func (mmGetExtraEndpoints *mStaticProfileExtensionMockGetExtraEndpoints) Set(f f
 	return mmGetExtraEndpoints.mock
 }
 
-// GetExtraEndpoints implements StaticProfileExtension
+// GetExtraEndpoints implements profiles.StaticProfileExtension
 func (mmGetExtraEndpoints *StaticProfileExtensionMock) GetExtraEndpoints() (oa1 []endpoints.Outbound) {
 	mm_atomic.AddUint64(&mmGetExtraEndpoints.beforeGetExtraEndpointsCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetExtraEndpoints.afterGetExtraEndpointsCounter, 1)
@@ -307,7 +307,7 @@ func (mmGetIntroducedNodeID *mStaticProfileExtensionMockGetIntroducedNodeID) Set
 	return mmGetIntroducedNodeID.mock
 }
 
-// GetIntroducedNodeID implements StaticProfileExtension
+// GetIntroducedNodeID implements profiles.StaticProfileExtension
 func (mmGetIntroducedNodeID *StaticProfileExtensionMock) GetIntroducedNodeID() (s1 insolar.ShortNodeID) {
 	mm_atomic.AddUint64(&mmGetIntroducedNodeID.beforeGetIntroducedNodeIDCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetIntroducedNodeID.afterGetIntroducedNodeIDCounter, 1)
@@ -450,7 +450,7 @@ func (mmGetIssuedAtPulse *mStaticProfileExtensionMockGetIssuedAtPulse) Set(f fun
 	return mmGetIssuedAtPulse.mock
 }
 
-// GetIssuedAtPulse implements StaticProfileExtension
+// GetIssuedAtPulse implements profiles.StaticProfileExtension
 func (mmGetIssuedAtPulse *StaticProfileExtensionMock) GetIssuedAtPulse() (n1 pulse.Number) {
 	mm_atomic.AddUint64(&mmGetIssuedAtPulse.beforeGetIssuedAtPulseCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetIssuedAtPulse.afterGetIssuedAtPulseCounter, 1)
@@ -593,7 +593,7 @@ func (mmGetIssuedAtTime *mStaticProfileExtensionMockGetIssuedAtTime) Set(f func(
 	return mmGetIssuedAtTime.mock
 }
 
-// GetIssuedAtTime implements StaticProfileExtension
+// GetIssuedAtTime implements profiles.StaticProfileExtension
 func (mmGetIssuedAtTime *StaticProfileExtensionMock) GetIssuedAtTime() (t1 time.Time) {
 	mm_atomic.AddUint64(&mmGetIssuedAtTime.beforeGetIssuedAtTimeCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetIssuedAtTime.afterGetIssuedAtTimeCounter, 1)
@@ -736,7 +736,7 @@ func (mmGetIssuerID *mStaticProfileExtensionMockGetIssuerID) Set(f func() (s1 in
 	return mmGetIssuerID.mock
 }
 
-// GetIssuerID implements StaticProfileExtension
+// GetIssuerID implements profiles.StaticProfileExtension
 func (mmGetIssuerID *StaticProfileExtensionMock) GetIssuerID() (s1 insolar.ShortNodeID) {
 	mm_atomic.AddUint64(&mmGetIssuerID.beforeGetIssuerIDCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetIssuerID.afterGetIssuerIDCounter, 1)
@@ -879,7 +879,7 @@ func (mmGetIssuerSignature *mStaticProfileExtensionMockGetIssuerSignature) Set(f
 	return mmGetIssuerSignature.mock
 }
 
-// GetIssuerSignature implements StaticProfileExtension
+// GetIssuerSignature implements profiles.StaticProfileExtension
 func (mmGetIssuerSignature *StaticProfileExtensionMock) GetIssuerSignature() (s1 cryptkit.SignatureHolder) {
 	mm_atomic.AddUint64(&mmGetIssuerSignature.beforeGetIssuerSignatureCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetIssuerSignature.afterGetIssuerSignatureCounter, 1)
@@ -1022,7 +1022,7 @@ func (mmGetPowerLevels *mStaticProfileExtensionMockGetPowerLevels) Set(f func() 
 	return mmGetPowerLevels.mock
 }
 
-// GetPowerLevels implements StaticProfileExtension
+// GetPowerLevels implements profiles.StaticProfileExtension
 func (mmGetPowerLevels *StaticProfileExtensionMock) GetPowerLevels() (p1 member.PowerSet) {
 	mm_atomic.AddUint64(&mmGetPowerLevels.beforeGetPowerLevelsCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetPowerLevels.afterGetPowerLevelsCounter, 1)
@@ -1165,7 +1165,7 @@ func (mmGetReference *mStaticProfileExtensionMockGetReference) Set(f func() (r1 
 	return mmGetReference.mock
 }
 
-// GetReference implements StaticProfileExtension
+// GetReference implements profiles.StaticProfileExtension
 func (mmGetReference *StaticProfileExtensionMock) GetReference() (r1 insolar.Reference) {
 	mm_atomic.AddUint64(&mmGetReference.beforeGetReferenceCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetReference.afterGetReferenceCounter, 1)

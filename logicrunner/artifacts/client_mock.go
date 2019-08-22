@@ -12,9 +12,10 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
+	mm_artifacts "github.com/insolar/insolar/logicrunner/artifacts"
 )
 
-// ClientMock implements Client
+// ClientMock implements artifacts.Client
 type ClientMock struct {
 	t minimock.Tester
 
@@ -36,13 +37,13 @@ type ClientMock struct {
 	beforeGetAbandonedRequestCounter uint64
 	GetAbandonedRequestMock          mClientMockGetAbandonedRequest
 
-	funcGetCode          func(ctx context.Context, ref insolar.Reference) (c2 CodeDescriptor, err error)
+	funcGetCode          func(ctx context.Context, ref insolar.Reference) (c2 mm_artifacts.CodeDescriptor, err error)
 	inspectFuncGetCode   func(ctx context.Context, ref insolar.Reference)
 	afterGetCodeCounter  uint64
 	beforeGetCodeCounter uint64
 	GetCodeMock          mClientMockGetCode
 
-	funcGetObject          func(ctx context.Context, head insolar.Reference) (o1 ObjectDescriptor, err error)
+	funcGetObject          func(ctx context.Context, head insolar.Reference) (o1 mm_artifacts.ObjectDescriptor, err error)
 	inspectFuncGetObject   func(ctx context.Context, head insolar.Reference)
 	afterGetObjectCounter  uint64
 	beforeGetObjectCounter uint64
@@ -60,8 +61,8 @@ type ClientMock struct {
 	beforeHasPendingsCounter uint64
 	HasPendingsMock          mClientMockHasPendings
 
-	funcInjectCodeDescriptor          func(r1 insolar.Reference, c1 CodeDescriptor)
-	inspectFuncInjectCodeDescriptor   func(r1 insolar.Reference, c1 CodeDescriptor)
+	funcInjectCodeDescriptor          func(r1 insolar.Reference, c1 mm_artifacts.CodeDescriptor)
+	inspectFuncInjectCodeDescriptor   func(r1 insolar.Reference, c1 mm_artifacts.CodeDescriptor)
 	afterInjectCodeDescriptorCounter  uint64
 	beforeInjectCodeDescriptorCounter uint64
 	InjectCodeDescriptorMock          mClientMockInjectCodeDescriptor
@@ -72,8 +73,8 @@ type ClientMock struct {
 	beforeInjectFinishCounter uint64
 	InjectFinishMock          mClientMockInjectFinish
 
-	funcInjectObjectDescriptor          func(r1 insolar.Reference, o1 ObjectDescriptor)
-	inspectFuncInjectObjectDescriptor   func(r1 insolar.Reference, o1 ObjectDescriptor)
+	funcInjectObjectDescriptor          func(r1 insolar.Reference, o1 mm_artifacts.ObjectDescriptor)
+	inspectFuncInjectObjectDescriptor   func(r1 insolar.Reference, o1 mm_artifacts.ObjectDescriptor)
 	afterInjectObjectDescriptorCounter  uint64
 	beforeInjectObjectDescriptorCounter uint64
 	InjectObjectDescriptorMock          mClientMockInjectObjectDescriptor
@@ -90,8 +91,8 @@ type ClientMock struct {
 	beforeRegisterOutgoingRequestCounter uint64
 	RegisterOutgoingRequestMock          mClientMockRegisterOutgoingRequest
 
-	funcRegisterResult          func(ctx context.Context, request insolar.Reference, result RequestResult) (err error)
-	inspectFuncRegisterResult   func(ctx context.Context, request insolar.Reference, result RequestResult)
+	funcRegisterResult          func(ctx context.Context, request insolar.Reference, result mm_artifacts.RequestResult) (err error)
+	inspectFuncRegisterResult   func(ctx context.Context, request insolar.Reference, result mm_artifacts.RequestResult)
 	afterRegisterResultCounter  uint64
 	beforeRegisterResultCounter uint64
 	RegisterResultMock          mClientMockRegisterResult
@@ -103,7 +104,7 @@ type ClientMock struct {
 	StateMock          mClientMockState
 }
 
-// NewClientMock returns a mock for Client
+// NewClientMock returns a mock for artifacts.Client
 func NewClientMock(t minimock.Tester) *ClientMock {
 	m := &ClientMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -263,7 +264,7 @@ func (e *ClientMockActivatePrototypeExpectation) Then(err error) *ClientMock {
 	return e.mock
 }
 
-// ActivatePrototype implements Client
+// ActivatePrototype implements artifacts.Client
 func (mmActivatePrototype *ClientMock) ActivatePrototype(ctx context.Context, request insolar.Reference, parent insolar.Reference, code insolar.Reference, memory []byte) (err error) {
 	mm_atomic.AddUint64(&mmActivatePrototype.beforeActivatePrototypeCounter, 1)
 	defer mm_atomic.AddUint64(&mmActivatePrototype.afterActivatePrototypeCounter, 1)
@@ -483,7 +484,7 @@ func (e *ClientMockDeployCodeExpectation) Then(ip1 *insolar.ID, err error) *Clie
 	return e.mock
 }
 
-// DeployCode implements Client
+// DeployCode implements artifacts.Client
 func (mmDeployCode *ClientMock) DeployCode(ctx context.Context, domain insolar.Reference, request insolar.Reference, code []byte, machineType insolar.MachineType) (ip1 *insolar.ID, err error) {
 	mm_atomic.AddUint64(&mmDeployCode.beforeDeployCodeCounter, 1)
 	defer mm_atomic.AddUint64(&mmDeployCode.afterDeployCodeCounter, 1)
@@ -701,7 +702,7 @@ func (e *ClientMockGetAbandonedRequestExpectation) Then(r1 record.Request, err e
 	return e.mock
 }
 
-// GetAbandonedRequest implements Client
+// GetAbandonedRequest implements artifacts.Client
 func (mmGetAbandonedRequest *ClientMock) GetAbandonedRequest(ctx context.Context, objectRef insolar.Reference, reqRef insolar.Reference) (r1 record.Request, err error) {
 	mm_atomic.AddUint64(&mmGetAbandonedRequest.beforeGetAbandonedRequestCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetAbandonedRequest.afterGetAbandonedRequestCounter, 1)
@@ -835,7 +836,7 @@ type ClientMockGetCodeParams struct {
 
 // ClientMockGetCodeResults contains results of the Client.GetCode
 type ClientMockGetCodeResults struct {
-	c2  CodeDescriptor
+	c2  mm_artifacts.CodeDescriptor
 	err error
 }
 
@@ -871,7 +872,7 @@ func (mmGetCode *mClientMockGetCode) Inspect(f func(ctx context.Context, ref ins
 }
 
 // Return sets up results that will be returned by Client.GetCode
-func (mmGetCode *mClientMockGetCode) Return(c2 CodeDescriptor, err error) *ClientMock {
+func (mmGetCode *mClientMockGetCode) Return(c2 mm_artifacts.CodeDescriptor, err error) *ClientMock {
 	if mmGetCode.mock.funcGetCode != nil {
 		mmGetCode.mock.t.Fatalf("ClientMock.GetCode mock is already set by Set")
 	}
@@ -884,7 +885,7 @@ func (mmGetCode *mClientMockGetCode) Return(c2 CodeDescriptor, err error) *Clien
 }
 
 //Set uses given function f to mock the Client.GetCode method
-func (mmGetCode *mClientMockGetCode) Set(f func(ctx context.Context, ref insolar.Reference) (c2 CodeDescriptor, err error)) *ClientMock {
+func (mmGetCode *mClientMockGetCode) Set(f func(ctx context.Context, ref insolar.Reference) (c2 mm_artifacts.CodeDescriptor, err error)) *ClientMock {
 	if mmGetCode.defaultExpectation != nil {
 		mmGetCode.mock.t.Fatalf("Default expectation is already set for the Client.GetCode method")
 	}
@@ -913,13 +914,13 @@ func (mmGetCode *mClientMockGetCode) When(ctx context.Context, ref insolar.Refer
 }
 
 // Then sets up Client.GetCode return parameters for the expectation previously defined by the When method
-func (e *ClientMockGetCodeExpectation) Then(c2 CodeDescriptor, err error) *ClientMock {
+func (e *ClientMockGetCodeExpectation) Then(c2 mm_artifacts.CodeDescriptor, err error) *ClientMock {
 	e.results = &ClientMockGetCodeResults{c2, err}
 	return e.mock
 }
 
-// GetCode implements Client
-func (mmGetCode *ClientMock) GetCode(ctx context.Context, ref insolar.Reference) (c2 CodeDescriptor, err error) {
+// GetCode implements artifacts.Client
+func (mmGetCode *ClientMock) GetCode(ctx context.Context, ref insolar.Reference) (c2 mm_artifacts.CodeDescriptor, err error) {
 	mm_atomic.AddUint64(&mmGetCode.beforeGetCodeCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetCode.afterGetCodeCounter, 1)
 
@@ -1052,7 +1053,7 @@ type ClientMockGetObjectParams struct {
 
 // ClientMockGetObjectResults contains results of the Client.GetObject
 type ClientMockGetObjectResults struct {
-	o1  ObjectDescriptor
+	o1  mm_artifacts.ObjectDescriptor
 	err error
 }
 
@@ -1088,7 +1089,7 @@ func (mmGetObject *mClientMockGetObject) Inspect(f func(ctx context.Context, hea
 }
 
 // Return sets up results that will be returned by Client.GetObject
-func (mmGetObject *mClientMockGetObject) Return(o1 ObjectDescriptor, err error) *ClientMock {
+func (mmGetObject *mClientMockGetObject) Return(o1 mm_artifacts.ObjectDescriptor, err error) *ClientMock {
 	if mmGetObject.mock.funcGetObject != nil {
 		mmGetObject.mock.t.Fatalf("ClientMock.GetObject mock is already set by Set")
 	}
@@ -1101,7 +1102,7 @@ func (mmGetObject *mClientMockGetObject) Return(o1 ObjectDescriptor, err error) 
 }
 
 //Set uses given function f to mock the Client.GetObject method
-func (mmGetObject *mClientMockGetObject) Set(f func(ctx context.Context, head insolar.Reference) (o1 ObjectDescriptor, err error)) *ClientMock {
+func (mmGetObject *mClientMockGetObject) Set(f func(ctx context.Context, head insolar.Reference) (o1 mm_artifacts.ObjectDescriptor, err error)) *ClientMock {
 	if mmGetObject.defaultExpectation != nil {
 		mmGetObject.mock.t.Fatalf("Default expectation is already set for the Client.GetObject method")
 	}
@@ -1130,13 +1131,13 @@ func (mmGetObject *mClientMockGetObject) When(ctx context.Context, head insolar.
 }
 
 // Then sets up Client.GetObject return parameters for the expectation previously defined by the When method
-func (e *ClientMockGetObjectExpectation) Then(o1 ObjectDescriptor, err error) *ClientMock {
+func (e *ClientMockGetObjectExpectation) Then(o1 mm_artifacts.ObjectDescriptor, err error) *ClientMock {
 	e.results = &ClientMockGetObjectResults{o1, err}
 	return e.mock
 }
 
-// GetObject implements Client
-func (mmGetObject *ClientMock) GetObject(ctx context.Context, head insolar.Reference) (o1 ObjectDescriptor, err error) {
+// GetObject implements artifacts.Client
+func (mmGetObject *ClientMock) GetObject(ctx context.Context, head insolar.Reference) (o1 mm_artifacts.ObjectDescriptor, err error) {
 	mm_atomic.AddUint64(&mmGetObject.beforeGetObjectCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetObject.afterGetObjectCounter, 1)
 
@@ -1352,7 +1353,7 @@ func (e *ClientMockGetPendingsExpectation) Then(ra1 []insolar.Reference, err err
 	return e.mock
 }
 
-// GetPendings implements Client
+// GetPendings implements artifacts.Client
 func (mmGetPendings *ClientMock) GetPendings(ctx context.Context, objectRef insolar.Reference) (ra1 []insolar.Reference, err error) {
 	mm_atomic.AddUint64(&mmGetPendings.beforeGetPendingsCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetPendings.afterGetPendingsCounter, 1)
@@ -1569,7 +1570,7 @@ func (e *ClientMockHasPendingsExpectation) Then(b1 bool, err error) *ClientMock 
 	return e.mock
 }
 
-// HasPendings implements Client
+// HasPendings implements artifacts.Client
 func (mmHasPendings *ClientMock) HasPendings(ctx context.Context, object insolar.Reference) (b1 bool, err error) {
 	mm_atomic.AddUint64(&mmHasPendings.beforeHasPendingsCounter, 1)
 	defer mm_atomic.AddUint64(&mmHasPendings.afterHasPendingsCounter, 1)
@@ -1698,11 +1699,11 @@ type ClientMockInjectCodeDescriptorExpectation struct {
 // ClientMockInjectCodeDescriptorParams contains parameters of the Client.InjectCodeDescriptor
 type ClientMockInjectCodeDescriptorParams struct {
 	r1 insolar.Reference
-	c1 CodeDescriptor
+	c1 mm_artifacts.CodeDescriptor
 }
 
 // Expect sets up expected params for Client.InjectCodeDescriptor
-func (mmInjectCodeDescriptor *mClientMockInjectCodeDescriptor) Expect(r1 insolar.Reference, c1 CodeDescriptor) *mClientMockInjectCodeDescriptor {
+func (mmInjectCodeDescriptor *mClientMockInjectCodeDescriptor) Expect(r1 insolar.Reference, c1 mm_artifacts.CodeDescriptor) *mClientMockInjectCodeDescriptor {
 	if mmInjectCodeDescriptor.mock.funcInjectCodeDescriptor != nil {
 		mmInjectCodeDescriptor.mock.t.Fatalf("ClientMock.InjectCodeDescriptor mock is already set by Set")
 	}
@@ -1722,7 +1723,7 @@ func (mmInjectCodeDescriptor *mClientMockInjectCodeDescriptor) Expect(r1 insolar
 }
 
 // Inspect accepts an inspector function that has same arguments as the Client.InjectCodeDescriptor
-func (mmInjectCodeDescriptor *mClientMockInjectCodeDescriptor) Inspect(f func(r1 insolar.Reference, c1 CodeDescriptor)) *mClientMockInjectCodeDescriptor {
+func (mmInjectCodeDescriptor *mClientMockInjectCodeDescriptor) Inspect(f func(r1 insolar.Reference, c1 mm_artifacts.CodeDescriptor)) *mClientMockInjectCodeDescriptor {
 	if mmInjectCodeDescriptor.mock.inspectFuncInjectCodeDescriptor != nil {
 		mmInjectCodeDescriptor.mock.t.Fatalf("Inspect function is already set for ClientMock.InjectCodeDescriptor")
 	}
@@ -1746,7 +1747,7 @@ func (mmInjectCodeDescriptor *mClientMockInjectCodeDescriptor) Return() *ClientM
 }
 
 //Set uses given function f to mock the Client.InjectCodeDescriptor method
-func (mmInjectCodeDescriptor *mClientMockInjectCodeDescriptor) Set(f func(r1 insolar.Reference, c1 CodeDescriptor)) *ClientMock {
+func (mmInjectCodeDescriptor *mClientMockInjectCodeDescriptor) Set(f func(r1 insolar.Reference, c1 mm_artifacts.CodeDescriptor)) *ClientMock {
 	if mmInjectCodeDescriptor.defaultExpectation != nil {
 		mmInjectCodeDescriptor.mock.t.Fatalf("Default expectation is already set for the Client.InjectCodeDescriptor method")
 	}
@@ -1759,8 +1760,8 @@ func (mmInjectCodeDescriptor *mClientMockInjectCodeDescriptor) Set(f func(r1 ins
 	return mmInjectCodeDescriptor.mock
 }
 
-// InjectCodeDescriptor implements Client
-func (mmInjectCodeDescriptor *ClientMock) InjectCodeDescriptor(r1 insolar.Reference, c1 CodeDescriptor) {
+// InjectCodeDescriptor implements artifacts.Client
+func (mmInjectCodeDescriptor *ClientMock) InjectCodeDescriptor(r1 insolar.Reference, c1 mm_artifacts.CodeDescriptor) {
 	mm_atomic.AddUint64(&mmInjectCodeDescriptor.beforeInjectCodeDescriptorCounter, 1)
 	defer mm_atomic.AddUint64(&mmInjectCodeDescriptor.afterInjectCodeDescriptorCounter, 1)
 
@@ -1930,7 +1931,7 @@ func (mmInjectFinish *mClientMockInjectFinish) Set(f func()) *ClientMock {
 	return mmInjectFinish.mock
 }
 
-// InjectFinish implements Client
+// InjectFinish implements artifacts.Client
 func (mmInjectFinish *ClientMock) InjectFinish() {
 	mm_atomic.AddUint64(&mmInjectFinish.beforeInjectFinishCounter, 1)
 	defer mm_atomic.AddUint64(&mmInjectFinish.afterInjectFinishCounter, 1)
@@ -2021,11 +2022,11 @@ type ClientMockInjectObjectDescriptorExpectation struct {
 // ClientMockInjectObjectDescriptorParams contains parameters of the Client.InjectObjectDescriptor
 type ClientMockInjectObjectDescriptorParams struct {
 	r1 insolar.Reference
-	o1 ObjectDescriptor
+	o1 mm_artifacts.ObjectDescriptor
 }
 
 // Expect sets up expected params for Client.InjectObjectDescriptor
-func (mmInjectObjectDescriptor *mClientMockInjectObjectDescriptor) Expect(r1 insolar.Reference, o1 ObjectDescriptor) *mClientMockInjectObjectDescriptor {
+func (mmInjectObjectDescriptor *mClientMockInjectObjectDescriptor) Expect(r1 insolar.Reference, o1 mm_artifacts.ObjectDescriptor) *mClientMockInjectObjectDescriptor {
 	if mmInjectObjectDescriptor.mock.funcInjectObjectDescriptor != nil {
 		mmInjectObjectDescriptor.mock.t.Fatalf("ClientMock.InjectObjectDescriptor mock is already set by Set")
 	}
@@ -2045,7 +2046,7 @@ func (mmInjectObjectDescriptor *mClientMockInjectObjectDescriptor) Expect(r1 ins
 }
 
 // Inspect accepts an inspector function that has same arguments as the Client.InjectObjectDescriptor
-func (mmInjectObjectDescriptor *mClientMockInjectObjectDescriptor) Inspect(f func(r1 insolar.Reference, o1 ObjectDescriptor)) *mClientMockInjectObjectDescriptor {
+func (mmInjectObjectDescriptor *mClientMockInjectObjectDescriptor) Inspect(f func(r1 insolar.Reference, o1 mm_artifacts.ObjectDescriptor)) *mClientMockInjectObjectDescriptor {
 	if mmInjectObjectDescriptor.mock.inspectFuncInjectObjectDescriptor != nil {
 		mmInjectObjectDescriptor.mock.t.Fatalf("Inspect function is already set for ClientMock.InjectObjectDescriptor")
 	}
@@ -2069,7 +2070,7 @@ func (mmInjectObjectDescriptor *mClientMockInjectObjectDescriptor) Return() *Cli
 }
 
 //Set uses given function f to mock the Client.InjectObjectDescriptor method
-func (mmInjectObjectDescriptor *mClientMockInjectObjectDescriptor) Set(f func(r1 insolar.Reference, o1 ObjectDescriptor)) *ClientMock {
+func (mmInjectObjectDescriptor *mClientMockInjectObjectDescriptor) Set(f func(r1 insolar.Reference, o1 mm_artifacts.ObjectDescriptor)) *ClientMock {
 	if mmInjectObjectDescriptor.defaultExpectation != nil {
 		mmInjectObjectDescriptor.mock.t.Fatalf("Default expectation is already set for the Client.InjectObjectDescriptor method")
 	}
@@ -2082,8 +2083,8 @@ func (mmInjectObjectDescriptor *mClientMockInjectObjectDescriptor) Set(f func(r1
 	return mmInjectObjectDescriptor.mock
 }
 
-// InjectObjectDescriptor implements Client
-func (mmInjectObjectDescriptor *ClientMock) InjectObjectDescriptor(r1 insolar.Reference, o1 ObjectDescriptor) {
+// InjectObjectDescriptor implements artifacts.Client
+func (mmInjectObjectDescriptor *ClientMock) InjectObjectDescriptor(r1 insolar.Reference, o1 mm_artifacts.ObjectDescriptor) {
 	mm_atomic.AddUint64(&mmInjectObjectDescriptor.beforeInjectObjectDescriptorCounter, 1)
 	defer mm_atomic.AddUint64(&mmInjectObjectDescriptor.afterInjectObjectDescriptorCounter, 1)
 
@@ -2297,7 +2298,7 @@ func (e *ClientMockRegisterIncomingRequestExpectation) Then(rp1 *payload.Request
 	return e.mock
 }
 
-// RegisterIncomingRequest implements Client
+// RegisterIncomingRequest implements artifacts.Client
 func (mmRegisterIncomingRequest *ClientMock) RegisterIncomingRequest(ctx context.Context, request *record.IncomingRequest) (rp1 *payload.RequestInfo, err error) {
 	mm_atomic.AddUint64(&mmRegisterIncomingRequest.beforeRegisterIncomingRequestCounter, 1)
 	defer mm_atomic.AddUint64(&mmRegisterIncomingRequest.afterRegisterIncomingRequestCounter, 1)
@@ -2514,7 +2515,7 @@ func (e *ClientMockRegisterOutgoingRequestExpectation) Then(rp1 *payload.Request
 	return e.mock
 }
 
-// RegisterOutgoingRequest implements Client
+// RegisterOutgoingRequest implements artifacts.Client
 func (mmRegisterOutgoingRequest *ClientMock) RegisterOutgoingRequest(ctx context.Context, request *record.OutgoingRequest) (rp1 *payload.RequestInfo, err error) {
 	mm_atomic.AddUint64(&mmRegisterOutgoingRequest.beforeRegisterOutgoingRequestCounter, 1)
 	defer mm_atomic.AddUint64(&mmRegisterOutgoingRequest.afterRegisterOutgoingRequestCounter, 1)
@@ -2644,7 +2645,7 @@ type ClientMockRegisterResultExpectation struct {
 type ClientMockRegisterResultParams struct {
 	ctx     context.Context
 	request insolar.Reference
-	result  RequestResult
+	result  mm_artifacts.RequestResult
 }
 
 // ClientMockRegisterResultResults contains results of the Client.RegisterResult
@@ -2653,7 +2654,7 @@ type ClientMockRegisterResultResults struct {
 }
 
 // Expect sets up expected params for Client.RegisterResult
-func (mmRegisterResult *mClientMockRegisterResult) Expect(ctx context.Context, request insolar.Reference, result RequestResult) *mClientMockRegisterResult {
+func (mmRegisterResult *mClientMockRegisterResult) Expect(ctx context.Context, request insolar.Reference, result mm_artifacts.RequestResult) *mClientMockRegisterResult {
 	if mmRegisterResult.mock.funcRegisterResult != nil {
 		mmRegisterResult.mock.t.Fatalf("ClientMock.RegisterResult mock is already set by Set")
 	}
@@ -2673,7 +2674,7 @@ func (mmRegisterResult *mClientMockRegisterResult) Expect(ctx context.Context, r
 }
 
 // Inspect accepts an inspector function that has same arguments as the Client.RegisterResult
-func (mmRegisterResult *mClientMockRegisterResult) Inspect(f func(ctx context.Context, request insolar.Reference, result RequestResult)) *mClientMockRegisterResult {
+func (mmRegisterResult *mClientMockRegisterResult) Inspect(f func(ctx context.Context, request insolar.Reference, result mm_artifacts.RequestResult)) *mClientMockRegisterResult {
 	if mmRegisterResult.mock.inspectFuncRegisterResult != nil {
 		mmRegisterResult.mock.t.Fatalf("Inspect function is already set for ClientMock.RegisterResult")
 	}
@@ -2697,7 +2698,7 @@ func (mmRegisterResult *mClientMockRegisterResult) Return(err error) *ClientMock
 }
 
 //Set uses given function f to mock the Client.RegisterResult method
-func (mmRegisterResult *mClientMockRegisterResult) Set(f func(ctx context.Context, request insolar.Reference, result RequestResult) (err error)) *ClientMock {
+func (mmRegisterResult *mClientMockRegisterResult) Set(f func(ctx context.Context, request insolar.Reference, result mm_artifacts.RequestResult) (err error)) *ClientMock {
 	if mmRegisterResult.defaultExpectation != nil {
 		mmRegisterResult.mock.t.Fatalf("Default expectation is already set for the Client.RegisterResult method")
 	}
@@ -2712,7 +2713,7 @@ func (mmRegisterResult *mClientMockRegisterResult) Set(f func(ctx context.Contex
 
 // When sets expectation for the Client.RegisterResult which will trigger the result defined by the following
 // Then helper
-func (mmRegisterResult *mClientMockRegisterResult) When(ctx context.Context, request insolar.Reference, result RequestResult) *ClientMockRegisterResultExpectation {
+func (mmRegisterResult *mClientMockRegisterResult) When(ctx context.Context, request insolar.Reference, result mm_artifacts.RequestResult) *ClientMockRegisterResultExpectation {
 	if mmRegisterResult.mock.funcRegisterResult != nil {
 		mmRegisterResult.mock.t.Fatalf("ClientMock.RegisterResult mock is already set by Set")
 	}
@@ -2731,8 +2732,8 @@ func (e *ClientMockRegisterResultExpectation) Then(err error) *ClientMock {
 	return e.mock
 }
 
-// RegisterResult implements Client
-func (mmRegisterResult *ClientMock) RegisterResult(ctx context.Context, request insolar.Reference, result RequestResult) (err error) {
+// RegisterResult implements artifacts.Client
+func (mmRegisterResult *ClientMock) RegisterResult(ctx context.Context, request insolar.Reference, result mm_artifacts.RequestResult) (err error) {
 	mm_atomic.AddUint64(&mmRegisterResult.beforeRegisterResultCounter, 1)
 	defer mm_atomic.AddUint64(&mmRegisterResult.afterRegisterResultCounter, 1)
 
@@ -2910,7 +2911,7 @@ func (mmState *mClientMockState) Set(f func() (ba1 []byte)) *ClientMock {
 	return mmState.mock
 }
 
-// State implements Client
+// State implements artifacts.Client
 func (mmState *ClientMock) State() (ba1 []byte) {
 	mm_atomic.AddUint64(&mmState.beforeStateCounter, 1)
 	defer mm_atomic.AddUint64(&mmState.afterStateCounter, 1)

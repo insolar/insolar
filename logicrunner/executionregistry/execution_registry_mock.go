@@ -14,7 +14,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/common"
 )
 
-// ExecutionRegistryMock implements ExecutionRegistry
+// ExecutionRegistryMock implements executionregistry.ExecutionRegistry
 type ExecutionRegistryMock struct {
 	t minimock.Tester
 
@@ -61,7 +61,7 @@ type ExecutionRegistryMock struct {
 	RegisterMock          mExecutionRegistryMockRegister
 }
 
-// NewExecutionRegistryMock returns a mock for ExecutionRegistry
+// NewExecutionRegistryMock returns a mock for executionregistry.ExecutionRegistry
 func NewExecutionRegistryMock(t minimock.Tester) *ExecutionRegistryMock {
 	m := &ExecutionRegistryMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -196,7 +196,7 @@ func (e *ExecutionRegistryMockDoneExpectation) Then(b1 bool) *ExecutionRegistryM
 	return e.mock
 }
 
-// Done implements ExecutionRegistry
+// Done implements executionregistry.ExecutionRegistry
 func (mmDone *ExecutionRegistryMock) Done(transcript *common.Transcript) (b1 bool) {
 	mm_atomic.AddUint64(&mmDone.beforeDoneCounter, 1)
 	defer mm_atomic.AddUint64(&mmDone.afterDoneCounter, 1)
@@ -413,7 +413,7 @@ func (e *ExecutionRegistryMockFindRequestLoopExpectation) Then(b1 bool) *Executi
 	return e.mock
 }
 
-// FindRequestLoop implements ExecutionRegistry
+// FindRequestLoop implements executionregistry.ExecutionRegistry
 func (mmFindRequestLoop *ExecutionRegistryMock) FindRequestLoop(ctx context.Context, reqRef insolar.Reference, apiRequestID string) (b1 bool) {
 	mm_atomic.AddUint64(&mmFindRequestLoop.beforeFindRequestLoopCounter, 1)
 	defer mm_atomic.AddUint64(&mmFindRequestLoop.afterFindRequestLoopCounter, 1)
@@ -628,7 +628,7 @@ func (e *ExecutionRegistryMockGetActiveTranscriptExpectation) Then(tp1 *common.T
 	return e.mock
 }
 
-// GetActiveTranscript implements ExecutionRegistry
+// GetActiveTranscript implements executionregistry.ExecutionRegistry
 func (mmGetActiveTranscript *ExecutionRegistryMock) GetActiveTranscript(req insolar.Reference) (tp1 *common.Transcript) {
 	mm_atomic.AddUint64(&mmGetActiveTranscript.beforeGetActiveTranscriptCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetActiveTranscript.afterGetActiveTranscriptCounter, 1)
@@ -807,7 +807,7 @@ func (mmIsEmpty *mExecutionRegistryMockIsEmpty) Set(f func() (b1 bool)) *Executi
 	return mmIsEmpty.mock
 }
 
-// IsEmpty implements ExecutionRegistry
+// IsEmpty implements executionregistry.ExecutionRegistry
 func (mmIsEmpty *ExecutionRegistryMock) IsEmpty() (b1 bool) {
 	mm_atomic.AddUint64(&mmIsEmpty.beforeIsEmptyCounter, 1)
 	defer mm_atomic.AddUint64(&mmIsEmpty.afterIsEmptyCounter, 1)
@@ -950,7 +950,7 @@ func (mmLength *mExecutionRegistryMockLength) Set(f func() (i1 int)) *ExecutionR
 	return mmLength.mock
 }
 
-// Length implements ExecutionRegistry
+// Length implements executionregistry.ExecutionRegistry
 func (mmLength *ExecutionRegistryMock) Length() (i1 int) {
 	mm_atomic.AddUint64(&mmLength.beforeLengthCounter, 1)
 	defer mm_atomic.AddUint64(&mmLength.afterLengthCounter, 1)
@@ -1129,7 +1129,7 @@ func (e *ExecutionRegistryMockOnPulseExpectation) Then(pa1 []payload.Payload) *E
 	return e.mock
 }
 
-// OnPulse implements ExecutionRegistry
+// OnPulse implements executionregistry.ExecutionRegistry
 func (mmOnPulse *ExecutionRegistryMock) OnPulse(ctx context.Context) (pa1 []payload.Payload) {
 	mm_atomic.AddUint64(&mmOnPulse.beforeOnPulseCounter, 1)
 	defer mm_atomic.AddUint64(&mmOnPulse.afterOnPulseCounter, 1)
@@ -1319,7 +1319,7 @@ func (mmRegister *mExecutionRegistryMockRegister) Set(f func(ctx context.Context
 	return mmRegister.mock
 }
 
-// Register implements ExecutionRegistry
+// Register implements executionregistry.ExecutionRegistry
 func (mmRegister *ExecutionRegistryMock) Register(ctx context.Context, transcript *common.Transcript) {
 	mm_atomic.AddUint64(&mmRegister.beforeRegisterCounter, 1)
 	defer mm_atomic.AddUint64(&mmRegister.afterRegisterCounter, 1)

@@ -10,38 +10,39 @@ import (
 
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/insolar"
+	mm_artifacts "github.com/insolar/insolar/logicrunner/artifacts"
 )
 
-// DescriptorsCacheMock implements DescriptorsCache
+// DescriptorsCacheMock implements artifacts.DescriptorsCache
 type DescriptorsCacheMock struct {
 	t minimock.Tester
 
-	funcByObjectDescriptor          func(ctx context.Context, obj ObjectDescriptor) (o1 ObjectDescriptor, c2 CodeDescriptor, err error)
-	inspectFuncByObjectDescriptor   func(ctx context.Context, obj ObjectDescriptor)
+	funcByObjectDescriptor          func(ctx context.Context, obj mm_artifacts.ObjectDescriptor) (o1 mm_artifacts.ObjectDescriptor, c2 mm_artifacts.CodeDescriptor, err error)
+	inspectFuncByObjectDescriptor   func(ctx context.Context, obj mm_artifacts.ObjectDescriptor)
 	afterByObjectDescriptorCounter  uint64
 	beforeByObjectDescriptorCounter uint64
 	ByObjectDescriptorMock          mDescriptorsCacheMockByObjectDescriptor
 
-	funcByPrototypeRef          func(ctx context.Context, protoRef insolar.Reference) (o1 ObjectDescriptor, c2 CodeDescriptor, err error)
+	funcByPrototypeRef          func(ctx context.Context, protoRef insolar.Reference) (o1 mm_artifacts.ObjectDescriptor, c2 mm_artifacts.CodeDescriptor, err error)
 	inspectFuncByPrototypeRef   func(ctx context.Context, protoRef insolar.Reference)
 	afterByPrototypeRefCounter  uint64
 	beforeByPrototypeRefCounter uint64
 	ByPrototypeRefMock          mDescriptorsCacheMockByPrototypeRef
 
-	funcGetCode          func(ctx context.Context, ref insolar.Reference) (c2 CodeDescriptor, err error)
+	funcGetCode          func(ctx context.Context, ref insolar.Reference) (c2 mm_artifacts.CodeDescriptor, err error)
 	inspectFuncGetCode   func(ctx context.Context, ref insolar.Reference)
 	afterGetCodeCounter  uint64
 	beforeGetCodeCounter uint64
 	GetCodeMock          mDescriptorsCacheMockGetCode
 
-	funcGetPrototype          func(ctx context.Context, ref insolar.Reference) (o1 ObjectDescriptor, err error)
+	funcGetPrototype          func(ctx context.Context, ref insolar.Reference) (o1 mm_artifacts.ObjectDescriptor, err error)
 	inspectFuncGetPrototype   func(ctx context.Context, ref insolar.Reference)
 	afterGetPrototypeCounter  uint64
 	beforeGetPrototypeCounter uint64
 	GetPrototypeMock          mDescriptorsCacheMockGetPrototype
 }
 
-// NewDescriptorsCacheMock returns a mock for DescriptorsCache
+// NewDescriptorsCacheMock returns a mock for artifacts.DescriptorsCache
 func NewDescriptorsCacheMock(t minimock.Tester) *DescriptorsCacheMock {
 	m := &DescriptorsCacheMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -83,18 +84,18 @@ type DescriptorsCacheMockByObjectDescriptorExpectation struct {
 // DescriptorsCacheMockByObjectDescriptorParams contains parameters of the DescriptorsCache.ByObjectDescriptor
 type DescriptorsCacheMockByObjectDescriptorParams struct {
 	ctx context.Context
-	obj ObjectDescriptor
+	obj mm_artifacts.ObjectDescriptor
 }
 
 // DescriptorsCacheMockByObjectDescriptorResults contains results of the DescriptorsCache.ByObjectDescriptor
 type DescriptorsCacheMockByObjectDescriptorResults struct {
-	o1  ObjectDescriptor
-	c2  CodeDescriptor
+	o1  mm_artifacts.ObjectDescriptor
+	c2  mm_artifacts.CodeDescriptor
 	err error
 }
 
 // Expect sets up expected params for DescriptorsCache.ByObjectDescriptor
-func (mmByObjectDescriptor *mDescriptorsCacheMockByObjectDescriptor) Expect(ctx context.Context, obj ObjectDescriptor) *mDescriptorsCacheMockByObjectDescriptor {
+func (mmByObjectDescriptor *mDescriptorsCacheMockByObjectDescriptor) Expect(ctx context.Context, obj mm_artifacts.ObjectDescriptor) *mDescriptorsCacheMockByObjectDescriptor {
 	if mmByObjectDescriptor.mock.funcByObjectDescriptor != nil {
 		mmByObjectDescriptor.mock.t.Fatalf("DescriptorsCacheMock.ByObjectDescriptor mock is already set by Set")
 	}
@@ -114,7 +115,7 @@ func (mmByObjectDescriptor *mDescriptorsCacheMockByObjectDescriptor) Expect(ctx 
 }
 
 // Inspect accepts an inspector function that has same arguments as the DescriptorsCache.ByObjectDescriptor
-func (mmByObjectDescriptor *mDescriptorsCacheMockByObjectDescriptor) Inspect(f func(ctx context.Context, obj ObjectDescriptor)) *mDescriptorsCacheMockByObjectDescriptor {
+func (mmByObjectDescriptor *mDescriptorsCacheMockByObjectDescriptor) Inspect(f func(ctx context.Context, obj mm_artifacts.ObjectDescriptor)) *mDescriptorsCacheMockByObjectDescriptor {
 	if mmByObjectDescriptor.mock.inspectFuncByObjectDescriptor != nil {
 		mmByObjectDescriptor.mock.t.Fatalf("Inspect function is already set for DescriptorsCacheMock.ByObjectDescriptor")
 	}
@@ -125,7 +126,7 @@ func (mmByObjectDescriptor *mDescriptorsCacheMockByObjectDescriptor) Inspect(f f
 }
 
 // Return sets up results that will be returned by DescriptorsCache.ByObjectDescriptor
-func (mmByObjectDescriptor *mDescriptorsCacheMockByObjectDescriptor) Return(o1 ObjectDescriptor, c2 CodeDescriptor, err error) *DescriptorsCacheMock {
+func (mmByObjectDescriptor *mDescriptorsCacheMockByObjectDescriptor) Return(o1 mm_artifacts.ObjectDescriptor, c2 mm_artifacts.CodeDescriptor, err error) *DescriptorsCacheMock {
 	if mmByObjectDescriptor.mock.funcByObjectDescriptor != nil {
 		mmByObjectDescriptor.mock.t.Fatalf("DescriptorsCacheMock.ByObjectDescriptor mock is already set by Set")
 	}
@@ -138,7 +139,7 @@ func (mmByObjectDescriptor *mDescriptorsCacheMockByObjectDescriptor) Return(o1 O
 }
 
 //Set uses given function f to mock the DescriptorsCache.ByObjectDescriptor method
-func (mmByObjectDescriptor *mDescriptorsCacheMockByObjectDescriptor) Set(f func(ctx context.Context, obj ObjectDescriptor) (o1 ObjectDescriptor, c2 CodeDescriptor, err error)) *DescriptorsCacheMock {
+func (mmByObjectDescriptor *mDescriptorsCacheMockByObjectDescriptor) Set(f func(ctx context.Context, obj mm_artifacts.ObjectDescriptor) (o1 mm_artifacts.ObjectDescriptor, c2 mm_artifacts.CodeDescriptor, err error)) *DescriptorsCacheMock {
 	if mmByObjectDescriptor.defaultExpectation != nil {
 		mmByObjectDescriptor.mock.t.Fatalf("Default expectation is already set for the DescriptorsCache.ByObjectDescriptor method")
 	}
@@ -153,7 +154,7 @@ func (mmByObjectDescriptor *mDescriptorsCacheMockByObjectDescriptor) Set(f func(
 
 // When sets expectation for the DescriptorsCache.ByObjectDescriptor which will trigger the result defined by the following
 // Then helper
-func (mmByObjectDescriptor *mDescriptorsCacheMockByObjectDescriptor) When(ctx context.Context, obj ObjectDescriptor) *DescriptorsCacheMockByObjectDescriptorExpectation {
+func (mmByObjectDescriptor *mDescriptorsCacheMockByObjectDescriptor) When(ctx context.Context, obj mm_artifacts.ObjectDescriptor) *DescriptorsCacheMockByObjectDescriptorExpectation {
 	if mmByObjectDescriptor.mock.funcByObjectDescriptor != nil {
 		mmByObjectDescriptor.mock.t.Fatalf("DescriptorsCacheMock.ByObjectDescriptor mock is already set by Set")
 	}
@@ -167,13 +168,13 @@ func (mmByObjectDescriptor *mDescriptorsCacheMockByObjectDescriptor) When(ctx co
 }
 
 // Then sets up DescriptorsCache.ByObjectDescriptor return parameters for the expectation previously defined by the When method
-func (e *DescriptorsCacheMockByObjectDescriptorExpectation) Then(o1 ObjectDescriptor, c2 CodeDescriptor, err error) *DescriptorsCacheMock {
+func (e *DescriptorsCacheMockByObjectDescriptorExpectation) Then(o1 mm_artifacts.ObjectDescriptor, c2 mm_artifacts.CodeDescriptor, err error) *DescriptorsCacheMock {
 	e.results = &DescriptorsCacheMockByObjectDescriptorResults{o1, c2, err}
 	return e.mock
 }
 
-// ByObjectDescriptor implements DescriptorsCache
-func (mmByObjectDescriptor *DescriptorsCacheMock) ByObjectDescriptor(ctx context.Context, obj ObjectDescriptor) (o1 ObjectDescriptor, c2 CodeDescriptor, err error) {
+// ByObjectDescriptor implements artifacts.DescriptorsCache
+func (mmByObjectDescriptor *DescriptorsCacheMock) ByObjectDescriptor(ctx context.Context, obj mm_artifacts.ObjectDescriptor) (o1 mm_artifacts.ObjectDescriptor, c2 mm_artifacts.CodeDescriptor, err error) {
 	mm_atomic.AddUint64(&mmByObjectDescriptor.beforeByObjectDescriptorCounter, 1)
 	defer mm_atomic.AddUint64(&mmByObjectDescriptor.afterByObjectDescriptorCounter, 1)
 
@@ -306,8 +307,8 @@ type DescriptorsCacheMockByPrototypeRefParams struct {
 
 // DescriptorsCacheMockByPrototypeRefResults contains results of the DescriptorsCache.ByPrototypeRef
 type DescriptorsCacheMockByPrototypeRefResults struct {
-	o1  ObjectDescriptor
-	c2  CodeDescriptor
+	o1  mm_artifacts.ObjectDescriptor
+	c2  mm_artifacts.CodeDescriptor
 	err error
 }
 
@@ -343,7 +344,7 @@ func (mmByPrototypeRef *mDescriptorsCacheMockByPrototypeRef) Inspect(f func(ctx 
 }
 
 // Return sets up results that will be returned by DescriptorsCache.ByPrototypeRef
-func (mmByPrototypeRef *mDescriptorsCacheMockByPrototypeRef) Return(o1 ObjectDescriptor, c2 CodeDescriptor, err error) *DescriptorsCacheMock {
+func (mmByPrototypeRef *mDescriptorsCacheMockByPrototypeRef) Return(o1 mm_artifacts.ObjectDescriptor, c2 mm_artifacts.CodeDescriptor, err error) *DescriptorsCacheMock {
 	if mmByPrototypeRef.mock.funcByPrototypeRef != nil {
 		mmByPrototypeRef.mock.t.Fatalf("DescriptorsCacheMock.ByPrototypeRef mock is already set by Set")
 	}
@@ -356,7 +357,7 @@ func (mmByPrototypeRef *mDescriptorsCacheMockByPrototypeRef) Return(o1 ObjectDes
 }
 
 //Set uses given function f to mock the DescriptorsCache.ByPrototypeRef method
-func (mmByPrototypeRef *mDescriptorsCacheMockByPrototypeRef) Set(f func(ctx context.Context, protoRef insolar.Reference) (o1 ObjectDescriptor, c2 CodeDescriptor, err error)) *DescriptorsCacheMock {
+func (mmByPrototypeRef *mDescriptorsCacheMockByPrototypeRef) Set(f func(ctx context.Context, protoRef insolar.Reference) (o1 mm_artifacts.ObjectDescriptor, c2 mm_artifacts.CodeDescriptor, err error)) *DescriptorsCacheMock {
 	if mmByPrototypeRef.defaultExpectation != nil {
 		mmByPrototypeRef.mock.t.Fatalf("Default expectation is already set for the DescriptorsCache.ByPrototypeRef method")
 	}
@@ -385,13 +386,13 @@ func (mmByPrototypeRef *mDescriptorsCacheMockByPrototypeRef) When(ctx context.Co
 }
 
 // Then sets up DescriptorsCache.ByPrototypeRef return parameters for the expectation previously defined by the When method
-func (e *DescriptorsCacheMockByPrototypeRefExpectation) Then(o1 ObjectDescriptor, c2 CodeDescriptor, err error) *DescriptorsCacheMock {
+func (e *DescriptorsCacheMockByPrototypeRefExpectation) Then(o1 mm_artifacts.ObjectDescriptor, c2 mm_artifacts.CodeDescriptor, err error) *DescriptorsCacheMock {
 	e.results = &DescriptorsCacheMockByPrototypeRefResults{o1, c2, err}
 	return e.mock
 }
 
-// ByPrototypeRef implements DescriptorsCache
-func (mmByPrototypeRef *DescriptorsCacheMock) ByPrototypeRef(ctx context.Context, protoRef insolar.Reference) (o1 ObjectDescriptor, c2 CodeDescriptor, err error) {
+// ByPrototypeRef implements artifacts.DescriptorsCache
+func (mmByPrototypeRef *DescriptorsCacheMock) ByPrototypeRef(ctx context.Context, protoRef insolar.Reference) (o1 mm_artifacts.ObjectDescriptor, c2 mm_artifacts.CodeDescriptor, err error) {
 	mm_atomic.AddUint64(&mmByPrototypeRef.beforeByPrototypeRefCounter, 1)
 	defer mm_atomic.AddUint64(&mmByPrototypeRef.afterByPrototypeRefCounter, 1)
 
@@ -524,7 +525,7 @@ type DescriptorsCacheMockGetCodeParams struct {
 
 // DescriptorsCacheMockGetCodeResults contains results of the DescriptorsCache.GetCode
 type DescriptorsCacheMockGetCodeResults struct {
-	c2  CodeDescriptor
+	c2  mm_artifacts.CodeDescriptor
 	err error
 }
 
@@ -560,7 +561,7 @@ func (mmGetCode *mDescriptorsCacheMockGetCode) Inspect(f func(ctx context.Contex
 }
 
 // Return sets up results that will be returned by DescriptorsCache.GetCode
-func (mmGetCode *mDescriptorsCacheMockGetCode) Return(c2 CodeDescriptor, err error) *DescriptorsCacheMock {
+func (mmGetCode *mDescriptorsCacheMockGetCode) Return(c2 mm_artifacts.CodeDescriptor, err error) *DescriptorsCacheMock {
 	if mmGetCode.mock.funcGetCode != nil {
 		mmGetCode.mock.t.Fatalf("DescriptorsCacheMock.GetCode mock is already set by Set")
 	}
@@ -573,7 +574,7 @@ func (mmGetCode *mDescriptorsCacheMockGetCode) Return(c2 CodeDescriptor, err err
 }
 
 //Set uses given function f to mock the DescriptorsCache.GetCode method
-func (mmGetCode *mDescriptorsCacheMockGetCode) Set(f func(ctx context.Context, ref insolar.Reference) (c2 CodeDescriptor, err error)) *DescriptorsCacheMock {
+func (mmGetCode *mDescriptorsCacheMockGetCode) Set(f func(ctx context.Context, ref insolar.Reference) (c2 mm_artifacts.CodeDescriptor, err error)) *DescriptorsCacheMock {
 	if mmGetCode.defaultExpectation != nil {
 		mmGetCode.mock.t.Fatalf("Default expectation is already set for the DescriptorsCache.GetCode method")
 	}
@@ -602,13 +603,13 @@ func (mmGetCode *mDescriptorsCacheMockGetCode) When(ctx context.Context, ref ins
 }
 
 // Then sets up DescriptorsCache.GetCode return parameters for the expectation previously defined by the When method
-func (e *DescriptorsCacheMockGetCodeExpectation) Then(c2 CodeDescriptor, err error) *DescriptorsCacheMock {
+func (e *DescriptorsCacheMockGetCodeExpectation) Then(c2 mm_artifacts.CodeDescriptor, err error) *DescriptorsCacheMock {
 	e.results = &DescriptorsCacheMockGetCodeResults{c2, err}
 	return e.mock
 }
 
-// GetCode implements DescriptorsCache
-func (mmGetCode *DescriptorsCacheMock) GetCode(ctx context.Context, ref insolar.Reference) (c2 CodeDescriptor, err error) {
+// GetCode implements artifacts.DescriptorsCache
+func (mmGetCode *DescriptorsCacheMock) GetCode(ctx context.Context, ref insolar.Reference) (c2 mm_artifacts.CodeDescriptor, err error) {
 	mm_atomic.AddUint64(&mmGetCode.beforeGetCodeCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetCode.afterGetCodeCounter, 1)
 
@@ -741,7 +742,7 @@ type DescriptorsCacheMockGetPrototypeParams struct {
 
 // DescriptorsCacheMockGetPrototypeResults contains results of the DescriptorsCache.GetPrototype
 type DescriptorsCacheMockGetPrototypeResults struct {
-	o1  ObjectDescriptor
+	o1  mm_artifacts.ObjectDescriptor
 	err error
 }
 
@@ -777,7 +778,7 @@ func (mmGetPrototype *mDescriptorsCacheMockGetPrototype) Inspect(f func(ctx cont
 }
 
 // Return sets up results that will be returned by DescriptorsCache.GetPrototype
-func (mmGetPrototype *mDescriptorsCacheMockGetPrototype) Return(o1 ObjectDescriptor, err error) *DescriptorsCacheMock {
+func (mmGetPrototype *mDescriptorsCacheMockGetPrototype) Return(o1 mm_artifacts.ObjectDescriptor, err error) *DescriptorsCacheMock {
 	if mmGetPrototype.mock.funcGetPrototype != nil {
 		mmGetPrototype.mock.t.Fatalf("DescriptorsCacheMock.GetPrototype mock is already set by Set")
 	}
@@ -790,7 +791,7 @@ func (mmGetPrototype *mDescriptorsCacheMockGetPrototype) Return(o1 ObjectDescrip
 }
 
 //Set uses given function f to mock the DescriptorsCache.GetPrototype method
-func (mmGetPrototype *mDescriptorsCacheMockGetPrototype) Set(f func(ctx context.Context, ref insolar.Reference) (o1 ObjectDescriptor, err error)) *DescriptorsCacheMock {
+func (mmGetPrototype *mDescriptorsCacheMockGetPrototype) Set(f func(ctx context.Context, ref insolar.Reference) (o1 mm_artifacts.ObjectDescriptor, err error)) *DescriptorsCacheMock {
 	if mmGetPrototype.defaultExpectation != nil {
 		mmGetPrototype.mock.t.Fatalf("Default expectation is already set for the DescriptorsCache.GetPrototype method")
 	}
@@ -819,13 +820,13 @@ func (mmGetPrototype *mDescriptorsCacheMockGetPrototype) When(ctx context.Contex
 }
 
 // Then sets up DescriptorsCache.GetPrototype return parameters for the expectation previously defined by the When method
-func (e *DescriptorsCacheMockGetPrototypeExpectation) Then(o1 ObjectDescriptor, err error) *DescriptorsCacheMock {
+func (e *DescriptorsCacheMockGetPrototypeExpectation) Then(o1 mm_artifacts.ObjectDescriptor, err error) *DescriptorsCacheMock {
 	e.results = &DescriptorsCacheMockGetPrototypeResults{o1, err}
 	return e.mock
 }
 
-// GetPrototype implements DescriptorsCache
-func (mmGetPrototype *DescriptorsCacheMock) GetPrototype(ctx context.Context, ref insolar.Reference) (o1 ObjectDescriptor, err error) {
+// GetPrototype implements artifacts.DescriptorsCache
+func (mmGetPrototype *DescriptorsCacheMock) GetPrototype(ctx context.Context, ref insolar.Reference) (o1 mm_artifacts.ObjectDescriptor, err error) {
 	mm_atomic.AddUint64(&mmGetPrototype.beforeGetPrototypeCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetPrototype.afterGetPrototypeCounter, 1)
 

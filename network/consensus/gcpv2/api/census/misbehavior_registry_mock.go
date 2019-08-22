@@ -11,7 +11,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/misbehavior"
 )
 
-// MisbehaviorRegistryMock implements MisbehaviorRegistry
+// MisbehaviorRegistryMock implements census.MisbehaviorRegistry
 type MisbehaviorRegistryMock struct {
 	t minimock.Tester
 
@@ -22,7 +22,7 @@ type MisbehaviorRegistryMock struct {
 	AddReportMock          mMisbehaviorRegistryMockAddReport
 }
 
-// NewMisbehaviorRegistryMock returns a mock for MisbehaviorRegistry
+// NewMisbehaviorRegistryMock returns a mock for census.MisbehaviorRegistry
 func NewMisbehaviorRegistryMock(t minimock.Tester) *MisbehaviorRegistryMock {
 	m := &MisbehaviorRegistryMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -115,7 +115,7 @@ func (mmAddReport *mMisbehaviorRegistryMockAddReport) Set(f func(report misbehav
 	return mmAddReport.mock
 }
 
-// AddReport implements MisbehaviorRegistry
+// AddReport implements census.MisbehaviorRegistry
 func (mmAddReport *MisbehaviorRegistryMock) AddReport(report misbehavior.Report) {
 	mm_atomic.AddUint64(&mmAddReport.beforeAddReportCounter, 1)
 	defer mm_atomic.AddUint64(&mmAddReport.afterAddReportCounter, 1)

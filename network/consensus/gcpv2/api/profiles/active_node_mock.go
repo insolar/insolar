@@ -10,9 +10,10 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
+	mm_profiles "github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 )
 
-// ActiveNodeMock implements ActiveNode
+// ActiveNodeMock implements profiles.ActiveNode
 type ActiveNodeMock struct {
 	t minimock.Tester
 
@@ -52,7 +53,7 @@ type ActiveNodeMock struct {
 	beforeGetSignatureVerifierCounter uint64
 	GetSignatureVerifierMock          mActiveNodeMockGetSignatureVerifier
 
-	funcGetStatic          func() (s1 StaticProfile)
+	funcGetStatic          func() (s1 mm_profiles.StaticProfile)
 	inspectFuncGetStatic   func()
 	afterGetStaticCounter  uint64
 	beforeGetStaticCounter uint64
@@ -89,7 +90,7 @@ type ActiveNodeMock struct {
 	IsVoterMock          mActiveNodeMockIsVoter
 }
 
-// NewActiveNodeMock returns a mock for ActiveNode
+// NewActiveNodeMock returns a mock for profiles.ActiveNode
 func NewActiveNodeMock(t minimock.Tester) *ActiveNodeMock {
 	m := &ActiveNodeMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -193,7 +194,7 @@ func (mmCanIntroduceJoiner *mActiveNodeMockCanIntroduceJoiner) Set(f func() (b1 
 	return mmCanIntroduceJoiner.mock
 }
 
-// CanIntroduceJoiner implements ActiveNode
+// CanIntroduceJoiner implements profiles.ActiveNode
 func (mmCanIntroduceJoiner *ActiveNodeMock) CanIntroduceJoiner() (b1 bool) {
 	mm_atomic.AddUint64(&mmCanIntroduceJoiner.beforeCanIntroduceJoinerCounter, 1)
 	defer mm_atomic.AddUint64(&mmCanIntroduceJoiner.afterCanIntroduceJoinerCounter, 1)
@@ -336,7 +337,7 @@ func (mmGetDeclaredPower *mActiveNodeMockGetDeclaredPower) Set(f func() (p1 memb
 	return mmGetDeclaredPower.mock
 }
 
-// GetDeclaredPower implements ActiveNode
+// GetDeclaredPower implements profiles.ActiveNode
 func (mmGetDeclaredPower *ActiveNodeMock) GetDeclaredPower() (p1 member.Power) {
 	mm_atomic.AddUint64(&mmGetDeclaredPower.beforeGetDeclaredPowerCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetDeclaredPower.afterGetDeclaredPowerCounter, 1)
@@ -479,7 +480,7 @@ func (mmGetIndex *mActiveNodeMockGetIndex) Set(f func() (i1 member.Index)) *Acti
 	return mmGetIndex.mock
 }
 
-// GetIndex implements ActiveNode
+// GetIndex implements profiles.ActiveNode
 func (mmGetIndex *ActiveNodeMock) GetIndex() (i1 member.Index) {
 	mm_atomic.AddUint64(&mmGetIndex.beforeGetIndexCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetIndex.afterGetIndexCounter, 1)
@@ -622,7 +623,7 @@ func (mmGetNodeID *mActiveNodeMockGetNodeID) Set(f func() (s1 insolar.ShortNodeI
 	return mmGetNodeID.mock
 }
 
-// GetNodeID implements ActiveNode
+// GetNodeID implements profiles.ActiveNode
 func (mmGetNodeID *ActiveNodeMock) GetNodeID() (s1 insolar.ShortNodeID) {
 	mm_atomic.AddUint64(&mmGetNodeID.beforeGetNodeIDCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetNodeID.afterGetNodeIDCounter, 1)
@@ -765,7 +766,7 @@ func (mmGetOpMode *mActiveNodeMockGetOpMode) Set(f func() (o1 member.OpMode)) *A
 	return mmGetOpMode.mock
 }
 
-// GetOpMode implements ActiveNode
+// GetOpMode implements profiles.ActiveNode
 func (mmGetOpMode *ActiveNodeMock) GetOpMode() (o1 member.OpMode) {
 	mm_atomic.AddUint64(&mmGetOpMode.beforeGetOpModeCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetOpMode.afterGetOpModeCounter, 1)
@@ -908,7 +909,7 @@ func (mmGetSignatureVerifier *mActiveNodeMockGetSignatureVerifier) Set(f func() 
 	return mmGetSignatureVerifier.mock
 }
 
-// GetSignatureVerifier implements ActiveNode
+// GetSignatureVerifier implements profiles.ActiveNode
 func (mmGetSignatureVerifier *ActiveNodeMock) GetSignatureVerifier() (s1 cryptkit.SignatureVerifier) {
 	mm_atomic.AddUint64(&mmGetSignatureVerifier.beforeGetSignatureVerifierCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetSignatureVerifier.afterGetSignatureVerifierCounter, 1)
@@ -997,7 +998,7 @@ type ActiveNodeMockGetStaticExpectation struct {
 
 // ActiveNodeMockGetStaticResults contains results of the ActiveNode.GetStatic
 type ActiveNodeMockGetStaticResults struct {
-	s1 StaticProfile
+	s1 mm_profiles.StaticProfile
 }
 
 // Expect sets up expected params for ActiveNode.GetStatic
@@ -1025,7 +1026,7 @@ func (mmGetStatic *mActiveNodeMockGetStatic) Inspect(f func()) *mActiveNodeMockG
 }
 
 // Return sets up results that will be returned by ActiveNode.GetStatic
-func (mmGetStatic *mActiveNodeMockGetStatic) Return(s1 StaticProfile) *ActiveNodeMock {
+func (mmGetStatic *mActiveNodeMockGetStatic) Return(s1 mm_profiles.StaticProfile) *ActiveNodeMock {
 	if mmGetStatic.mock.funcGetStatic != nil {
 		mmGetStatic.mock.t.Fatalf("ActiveNodeMock.GetStatic mock is already set by Set")
 	}
@@ -1038,7 +1039,7 @@ func (mmGetStatic *mActiveNodeMockGetStatic) Return(s1 StaticProfile) *ActiveNod
 }
 
 //Set uses given function f to mock the ActiveNode.GetStatic method
-func (mmGetStatic *mActiveNodeMockGetStatic) Set(f func() (s1 StaticProfile)) *ActiveNodeMock {
+func (mmGetStatic *mActiveNodeMockGetStatic) Set(f func() (s1 mm_profiles.StaticProfile)) *ActiveNodeMock {
 	if mmGetStatic.defaultExpectation != nil {
 		mmGetStatic.mock.t.Fatalf("Default expectation is already set for the ActiveNode.GetStatic method")
 	}
@@ -1051,8 +1052,8 @@ func (mmGetStatic *mActiveNodeMockGetStatic) Set(f func() (s1 StaticProfile)) *A
 	return mmGetStatic.mock
 }
 
-// GetStatic implements ActiveNode
-func (mmGetStatic *ActiveNodeMock) GetStatic() (s1 StaticProfile) {
+// GetStatic implements profiles.ActiveNode
+func (mmGetStatic *ActiveNodeMock) GetStatic() (s1 mm_profiles.StaticProfile) {
 	mm_atomic.AddUint64(&mmGetStatic.beforeGetStaticCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetStatic.afterGetStaticCounter, 1)
 
@@ -1194,7 +1195,7 @@ func (mmHasFullProfile *mActiveNodeMockHasFullProfile) Set(f func() (b1 bool)) *
 	return mmHasFullProfile.mock
 }
 
-// HasFullProfile implements ActiveNode
+// HasFullProfile implements profiles.ActiveNode
 func (mmHasFullProfile *ActiveNodeMock) HasFullProfile() (b1 bool) {
 	mm_atomic.AddUint64(&mmHasFullProfile.beforeHasFullProfileCounter, 1)
 	defer mm_atomic.AddUint64(&mmHasFullProfile.afterHasFullProfileCounter, 1)
@@ -1337,7 +1338,7 @@ func (mmIsJoiner *mActiveNodeMockIsJoiner) Set(f func() (b1 bool)) *ActiveNodeMo
 	return mmIsJoiner.mock
 }
 
-// IsJoiner implements ActiveNode
+// IsJoiner implements profiles.ActiveNode
 func (mmIsJoiner *ActiveNodeMock) IsJoiner() (b1 bool) {
 	mm_atomic.AddUint64(&mmIsJoiner.beforeIsJoinerCounter, 1)
 	defer mm_atomic.AddUint64(&mmIsJoiner.afterIsJoinerCounter, 1)
@@ -1480,7 +1481,7 @@ func (mmIsPowered *mActiveNodeMockIsPowered) Set(f func() (b1 bool)) *ActiveNode
 	return mmIsPowered.mock
 }
 
-// IsPowered implements ActiveNode
+// IsPowered implements profiles.ActiveNode
 func (mmIsPowered *ActiveNodeMock) IsPowered() (b1 bool) {
 	mm_atomic.AddUint64(&mmIsPowered.beforeIsPoweredCounter, 1)
 	defer mm_atomic.AddUint64(&mmIsPowered.afterIsPoweredCounter, 1)
@@ -1623,7 +1624,7 @@ func (mmIsStateful *mActiveNodeMockIsStateful) Set(f func() (b1 bool)) *ActiveNo
 	return mmIsStateful.mock
 }
 
-// IsStateful implements ActiveNode
+// IsStateful implements profiles.ActiveNode
 func (mmIsStateful *ActiveNodeMock) IsStateful() (b1 bool) {
 	mm_atomic.AddUint64(&mmIsStateful.beforeIsStatefulCounter, 1)
 	defer mm_atomic.AddUint64(&mmIsStateful.afterIsStatefulCounter, 1)
@@ -1766,7 +1767,7 @@ func (mmIsVoter *mActiveNodeMockIsVoter) Set(f func() (b1 bool)) *ActiveNodeMock
 	return mmIsVoter.mock
 }
 
-// IsVoter implements ActiveNode
+// IsVoter implements profiles.ActiveNode
 func (mmIsVoter *ActiveNodeMock) IsVoter() (b1 bool) {
 	mm_atomic.AddUint64(&mmIsVoter.beforeIsVoterCounter, 1)
 	defer mm_atomic.AddUint64(&mmIsVoter.afterIsVoterCounter, 1)

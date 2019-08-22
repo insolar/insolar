@@ -10,9 +10,10 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
+	mm_profiles "github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 )
 
-// LocalNodeMock implements LocalNode
+// LocalNodeMock implements profiles.LocalNode
 type LocalNodeMock struct {
 	t minimock.Tester
 
@@ -52,7 +53,7 @@ type LocalNodeMock struct {
 	beforeGetSignatureVerifierCounter uint64
 	GetSignatureVerifierMock          mLocalNodeMockGetSignatureVerifier
 
-	funcGetStatic          func() (s1 StaticProfile)
+	funcGetStatic          func() (s1 mm_profiles.StaticProfile)
 	inspectFuncGetStatic   func()
 	afterGetStaticCounter  uint64
 	beforeGetStaticCounter uint64
@@ -95,7 +96,7 @@ type LocalNodeMock struct {
 	LocalNodeProfileMock          mLocalNodeMockLocalNodeProfile
 }
 
-// NewLocalNodeMock returns a mock for LocalNode
+// NewLocalNodeMock returns a mock for profiles.LocalNode
 func NewLocalNodeMock(t minimock.Tester) *LocalNodeMock {
 	m := &LocalNodeMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -201,7 +202,7 @@ func (mmCanIntroduceJoiner *mLocalNodeMockCanIntroduceJoiner) Set(f func() (b1 b
 	return mmCanIntroduceJoiner.mock
 }
 
-// CanIntroduceJoiner implements LocalNode
+// CanIntroduceJoiner implements profiles.LocalNode
 func (mmCanIntroduceJoiner *LocalNodeMock) CanIntroduceJoiner() (b1 bool) {
 	mm_atomic.AddUint64(&mmCanIntroduceJoiner.beforeCanIntroduceJoinerCounter, 1)
 	defer mm_atomic.AddUint64(&mmCanIntroduceJoiner.afterCanIntroduceJoinerCounter, 1)
@@ -344,7 +345,7 @@ func (mmGetDeclaredPower *mLocalNodeMockGetDeclaredPower) Set(f func() (p1 membe
 	return mmGetDeclaredPower.mock
 }
 
-// GetDeclaredPower implements LocalNode
+// GetDeclaredPower implements profiles.LocalNode
 func (mmGetDeclaredPower *LocalNodeMock) GetDeclaredPower() (p1 member.Power) {
 	mm_atomic.AddUint64(&mmGetDeclaredPower.beforeGetDeclaredPowerCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetDeclaredPower.afterGetDeclaredPowerCounter, 1)
@@ -487,7 +488,7 @@ func (mmGetIndex *mLocalNodeMockGetIndex) Set(f func() (i1 member.Index)) *Local
 	return mmGetIndex.mock
 }
 
-// GetIndex implements LocalNode
+// GetIndex implements profiles.LocalNode
 func (mmGetIndex *LocalNodeMock) GetIndex() (i1 member.Index) {
 	mm_atomic.AddUint64(&mmGetIndex.beforeGetIndexCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetIndex.afterGetIndexCounter, 1)
@@ -630,7 +631,7 @@ func (mmGetNodeID *mLocalNodeMockGetNodeID) Set(f func() (s1 insolar.ShortNodeID
 	return mmGetNodeID.mock
 }
 
-// GetNodeID implements LocalNode
+// GetNodeID implements profiles.LocalNode
 func (mmGetNodeID *LocalNodeMock) GetNodeID() (s1 insolar.ShortNodeID) {
 	mm_atomic.AddUint64(&mmGetNodeID.beforeGetNodeIDCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetNodeID.afterGetNodeIDCounter, 1)
@@ -773,7 +774,7 @@ func (mmGetOpMode *mLocalNodeMockGetOpMode) Set(f func() (o1 member.OpMode)) *Lo
 	return mmGetOpMode.mock
 }
 
-// GetOpMode implements LocalNode
+// GetOpMode implements profiles.LocalNode
 func (mmGetOpMode *LocalNodeMock) GetOpMode() (o1 member.OpMode) {
 	mm_atomic.AddUint64(&mmGetOpMode.beforeGetOpModeCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetOpMode.afterGetOpModeCounter, 1)
@@ -916,7 +917,7 @@ func (mmGetSignatureVerifier *mLocalNodeMockGetSignatureVerifier) Set(f func() (
 	return mmGetSignatureVerifier.mock
 }
 
-// GetSignatureVerifier implements LocalNode
+// GetSignatureVerifier implements profiles.LocalNode
 func (mmGetSignatureVerifier *LocalNodeMock) GetSignatureVerifier() (s1 cryptkit.SignatureVerifier) {
 	mm_atomic.AddUint64(&mmGetSignatureVerifier.beforeGetSignatureVerifierCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetSignatureVerifier.afterGetSignatureVerifierCounter, 1)
@@ -1005,7 +1006,7 @@ type LocalNodeMockGetStaticExpectation struct {
 
 // LocalNodeMockGetStaticResults contains results of the LocalNode.GetStatic
 type LocalNodeMockGetStaticResults struct {
-	s1 StaticProfile
+	s1 mm_profiles.StaticProfile
 }
 
 // Expect sets up expected params for LocalNode.GetStatic
@@ -1033,7 +1034,7 @@ func (mmGetStatic *mLocalNodeMockGetStatic) Inspect(f func()) *mLocalNodeMockGet
 }
 
 // Return sets up results that will be returned by LocalNode.GetStatic
-func (mmGetStatic *mLocalNodeMockGetStatic) Return(s1 StaticProfile) *LocalNodeMock {
+func (mmGetStatic *mLocalNodeMockGetStatic) Return(s1 mm_profiles.StaticProfile) *LocalNodeMock {
 	if mmGetStatic.mock.funcGetStatic != nil {
 		mmGetStatic.mock.t.Fatalf("LocalNodeMock.GetStatic mock is already set by Set")
 	}
@@ -1046,7 +1047,7 @@ func (mmGetStatic *mLocalNodeMockGetStatic) Return(s1 StaticProfile) *LocalNodeM
 }
 
 //Set uses given function f to mock the LocalNode.GetStatic method
-func (mmGetStatic *mLocalNodeMockGetStatic) Set(f func() (s1 StaticProfile)) *LocalNodeMock {
+func (mmGetStatic *mLocalNodeMockGetStatic) Set(f func() (s1 mm_profiles.StaticProfile)) *LocalNodeMock {
 	if mmGetStatic.defaultExpectation != nil {
 		mmGetStatic.mock.t.Fatalf("Default expectation is already set for the LocalNode.GetStatic method")
 	}
@@ -1059,8 +1060,8 @@ func (mmGetStatic *mLocalNodeMockGetStatic) Set(f func() (s1 StaticProfile)) *Lo
 	return mmGetStatic.mock
 }
 
-// GetStatic implements LocalNode
-func (mmGetStatic *LocalNodeMock) GetStatic() (s1 StaticProfile) {
+// GetStatic implements profiles.LocalNode
+func (mmGetStatic *LocalNodeMock) GetStatic() (s1 mm_profiles.StaticProfile) {
 	mm_atomic.AddUint64(&mmGetStatic.beforeGetStaticCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetStatic.afterGetStaticCounter, 1)
 
@@ -1202,7 +1203,7 @@ func (mmHasFullProfile *mLocalNodeMockHasFullProfile) Set(f func() (b1 bool)) *L
 	return mmHasFullProfile.mock
 }
 
-// HasFullProfile implements LocalNode
+// HasFullProfile implements profiles.LocalNode
 func (mmHasFullProfile *LocalNodeMock) HasFullProfile() (b1 bool) {
 	mm_atomic.AddUint64(&mmHasFullProfile.beforeHasFullProfileCounter, 1)
 	defer mm_atomic.AddUint64(&mmHasFullProfile.afterHasFullProfileCounter, 1)
@@ -1345,7 +1346,7 @@ func (mmIsJoiner *mLocalNodeMockIsJoiner) Set(f func() (b1 bool)) *LocalNodeMock
 	return mmIsJoiner.mock
 }
 
-// IsJoiner implements LocalNode
+// IsJoiner implements profiles.LocalNode
 func (mmIsJoiner *LocalNodeMock) IsJoiner() (b1 bool) {
 	mm_atomic.AddUint64(&mmIsJoiner.beforeIsJoinerCounter, 1)
 	defer mm_atomic.AddUint64(&mmIsJoiner.afterIsJoinerCounter, 1)
@@ -1488,7 +1489,7 @@ func (mmIsPowered *mLocalNodeMockIsPowered) Set(f func() (b1 bool)) *LocalNodeMo
 	return mmIsPowered.mock
 }
 
-// IsPowered implements LocalNode
+// IsPowered implements profiles.LocalNode
 func (mmIsPowered *LocalNodeMock) IsPowered() (b1 bool) {
 	mm_atomic.AddUint64(&mmIsPowered.beforeIsPoweredCounter, 1)
 	defer mm_atomic.AddUint64(&mmIsPowered.afterIsPoweredCounter, 1)
@@ -1631,7 +1632,7 @@ func (mmIsStateful *mLocalNodeMockIsStateful) Set(f func() (b1 bool)) *LocalNode
 	return mmIsStateful.mock
 }
 
-// IsStateful implements LocalNode
+// IsStateful implements profiles.LocalNode
 func (mmIsStateful *LocalNodeMock) IsStateful() (b1 bool) {
 	mm_atomic.AddUint64(&mmIsStateful.beforeIsStatefulCounter, 1)
 	defer mm_atomic.AddUint64(&mmIsStateful.afterIsStatefulCounter, 1)
@@ -1774,7 +1775,7 @@ func (mmIsVoter *mLocalNodeMockIsVoter) Set(f func() (b1 bool)) *LocalNodeMock {
 	return mmIsVoter.mock
 }
 
-// IsVoter implements LocalNode
+// IsVoter implements profiles.LocalNode
 func (mmIsVoter *LocalNodeMock) IsVoter() (b1 bool) {
 	mm_atomic.AddUint64(&mmIsVoter.beforeIsVoterCounter, 1)
 	defer mm_atomic.AddUint64(&mmIsVoter.afterIsVoterCounter, 1)
@@ -1911,7 +1912,7 @@ func (mmLocalNodeProfile *mLocalNodeMockLocalNodeProfile) Set(f func()) *LocalNo
 	return mmLocalNodeProfile.mock
 }
 
-// LocalNodeProfile implements LocalNode
+// LocalNodeProfile implements profiles.LocalNode
 func (mmLocalNodeProfile *LocalNodeMock) LocalNodeProfile() {
 	mm_atomic.AddUint64(&mmLocalNodeProfile.beforeLocalNodeProfileCounter, 1)
 	defer mm_atomic.AddUint64(&mmLocalNodeProfile.afterLocalNodeProfileCounter, 1)

@@ -12,7 +12,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-// StorageMock implements Storage
+// StorageMock implements jet.Storage
 type StorageMock struct {
 	t minimock.Tester
 
@@ -47,7 +47,7 @@ type StorageMock struct {
 	UpdateMock          mStorageMockUpdate
 }
 
-// NewStorageMock returns a mock for Storage
+// NewStorageMock returns a mock for jet.Storage
 func NewStorageMock(t minimock.Tester) *StorageMock {
 	m := &StorageMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -179,7 +179,7 @@ func (e *StorageMockAllExpectation) Then(ja1 []insolar.JetID) *StorageMock {
 	return e.mock
 }
 
-// All implements Storage
+// All implements jet.Storage
 func (mmAll *StorageMock) All(ctx context.Context, pulse insolar.PulseNumber) (ja1 []insolar.JetID) {
 	mm_atomic.AddUint64(&mmAll.beforeAllCounter, 1)
 	defer mm_atomic.AddUint64(&mmAll.afterAllCounter, 1)
@@ -397,7 +397,7 @@ func (e *StorageMockCloneExpectation) Then(err error) *StorageMock {
 	return e.mock
 }
 
-// Clone implements Storage
+// Clone implements jet.Storage
 func (mmClone *StorageMock) Clone(ctx context.Context, from insolar.PulseNumber, to insolar.PulseNumber, keepActual bool) (err error) {
 	mm_atomic.AddUint64(&mmClone.beforeCloneCounter, 1)
 	defer mm_atomic.AddUint64(&mmClone.afterCloneCounter, 1)
@@ -615,7 +615,7 @@ func (e *StorageMockForIDExpectation) Then(j1 insolar.JetID, b1 bool) *StorageMo
 	return e.mock
 }
 
-// ForID implements Storage
+// ForID implements jet.Storage
 func (mmForID *StorageMock) ForID(ctx context.Context, pulse insolar.PulseNumber, recordID insolar.ID) (j1 insolar.JetID, b1 bool) {
 	mm_atomic.AddUint64(&mmForID.beforeForIDCounter, 1)
 	defer mm_atomic.AddUint64(&mmForID.afterForIDCounter, 1)
@@ -834,7 +834,7 @@ func (e *StorageMockSplitExpectation) Then(j1 insolar.JetID, j2 insolar.JetID, e
 	return e.mock
 }
 
-// Split implements Storage
+// Split implements jet.Storage
 func (mmSplit *StorageMock) Split(ctx context.Context, pulse insolar.PulseNumber, id insolar.JetID) (j1 insolar.JetID, j2 insolar.JetID, err error) {
 	mm_atomic.AddUint64(&mmSplit.beforeSplitCounter, 1)
 	defer mm_atomic.AddUint64(&mmSplit.afterSplitCounter, 1)
@@ -1052,7 +1052,7 @@ func (e *StorageMockUpdateExpectation) Then(err error) *StorageMock {
 	return e.mock
 }
 
-// Update implements Storage
+// Update implements jet.Storage
 func (mmUpdate *StorageMock) Update(ctx context.Context, pulse insolar.PulseNumber, actual bool, ids ...insolar.JetID) (err error) {
 	mm_atomic.AddUint64(&mmUpdate.beforeUpdateCounter, 1)
 	defer mm_atomic.AddUint64(&mmUpdate.afterUpdateCounter, 1)

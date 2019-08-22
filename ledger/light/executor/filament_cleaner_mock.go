@@ -11,7 +11,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-// FilamentCleanerMock implements FilamentCleaner
+// FilamentCleanerMock implements executor.FilamentCleaner
 type FilamentCleanerMock struct {
 	t minimock.Tester
 
@@ -22,7 +22,7 @@ type FilamentCleanerMock struct {
 	ClearMock          mFilamentCleanerMockClear
 }
 
-// NewFilamentCleanerMock returns a mock for FilamentCleaner
+// NewFilamentCleanerMock returns a mock for executor.FilamentCleaner
 func NewFilamentCleanerMock(t minimock.Tester) *FilamentCleanerMock {
 	m := &FilamentCleanerMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -115,7 +115,7 @@ func (mmClear *mFilamentCleanerMockClear) Set(f func(objID insolar.ID)) *Filamen
 	return mmClear.mock
 }
 
-// Clear implements FilamentCleaner
+// Clear implements executor.FilamentCleaner
 func (mmClear *FilamentCleanerMock) Clear(objID insolar.ID) {
 	mm_atomic.AddUint64(&mmClear.beforeClearCounter, 1)
 	defer mm_atomic.AddUint64(&mmClear.afterClearCounter, 1)

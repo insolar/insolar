@@ -12,10 +12,10 @@ import (
 
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/insolar"
-	record "github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/insolar/record"
 )
 
-// MemoryIndexModifierMock implements MemoryIndexModifier
+// MemoryIndexModifierMock implements object.MemoryIndexModifier
 type MemoryIndexModifierMock struct {
 	t minimock.Tester
 
@@ -26,7 +26,7 @@ type MemoryIndexModifierMock struct {
 	SetMock          mMemoryIndexModifierMockSet
 }
 
-// NewMemoryIndexModifierMock returns a mock for MemoryIndexModifier
+// NewMemoryIndexModifierMock returns a mock for object.MemoryIndexModifier
 func NewMemoryIndexModifierMock(t minimock.Tester) *MemoryIndexModifierMock {
 	m := &MemoryIndexModifierMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -121,7 +121,7 @@ func (mmSet *mMemoryIndexModifierMockSet) Set(f func(ctx context.Context, pn ins
 	return mmSet.mock
 }
 
-// Set implements MemoryIndexModifier
+// Set implements object.MemoryIndexModifier
 func (mmSet *MemoryIndexModifierMock) Set(ctx context.Context, pn insolar.PulseNumber, index record.Index) {
 	mm_atomic.AddUint64(&mmSet.beforeSetCounter, 1)
 	defer mm_atomic.AddUint64(&mmSet.afterSetCounter, 1)

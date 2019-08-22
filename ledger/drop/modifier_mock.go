@@ -9,20 +9,21 @@ import (
 	mm_time "time"
 
 	"github.com/gojuno/minimock"
+	mm_drop "github.com/insolar/insolar/ledger/drop"
 )
 
-// ModifierMock implements Modifier
+// ModifierMock implements drop.Modifier
 type ModifierMock struct {
 	t minimock.Tester
 
-	funcSet          func(ctx context.Context, drop Drop) (err error)
-	inspectFuncSet   func(ctx context.Context, drop Drop)
+	funcSet          func(ctx context.Context, drop mm_drop.Drop) (err error)
+	inspectFuncSet   func(ctx context.Context, drop mm_drop.Drop)
 	afterSetCounter  uint64
 	beforeSetCounter uint64
 	SetMock          mModifierMockSet
 }
 
-// NewModifierMock returns a mock for Modifier
+// NewModifierMock returns a mock for drop.Modifier
 func NewModifierMock(t minimock.Tester) *ModifierMock {
 	m := &ModifierMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -55,7 +56,7 @@ type ModifierMockSetExpectation struct {
 // ModifierMockSetParams contains parameters of the Modifier.Set
 type ModifierMockSetParams struct {
 	ctx  context.Context
-	drop Drop
+	drop mm_drop.Drop
 }
 
 // ModifierMockSetResults contains results of the Modifier.Set
@@ -64,7 +65,7 @@ type ModifierMockSetResults struct {
 }
 
 // Expect sets up expected params for Modifier.Set
-func (mmSet *mModifierMockSet) Expect(ctx context.Context, drop Drop) *mModifierMockSet {
+func (mmSet *mModifierMockSet) Expect(ctx context.Context, drop mm_drop.Drop) *mModifierMockSet {
 	if mmSet.mock.funcSet != nil {
 		mmSet.mock.t.Fatalf("ModifierMock.Set mock is already set by Set")
 	}
@@ -84,7 +85,7 @@ func (mmSet *mModifierMockSet) Expect(ctx context.Context, drop Drop) *mModifier
 }
 
 // Inspect accepts an inspector function that has same arguments as the Modifier.Set
-func (mmSet *mModifierMockSet) Inspect(f func(ctx context.Context, drop Drop)) *mModifierMockSet {
+func (mmSet *mModifierMockSet) Inspect(f func(ctx context.Context, drop mm_drop.Drop)) *mModifierMockSet {
 	if mmSet.mock.inspectFuncSet != nil {
 		mmSet.mock.t.Fatalf("Inspect function is already set for ModifierMock.Set")
 	}
@@ -108,7 +109,7 @@ func (mmSet *mModifierMockSet) Return(err error) *ModifierMock {
 }
 
 //Set uses given function f to mock the Modifier.Set method
-func (mmSet *mModifierMockSet) Set(f func(ctx context.Context, drop Drop) (err error)) *ModifierMock {
+func (mmSet *mModifierMockSet) Set(f func(ctx context.Context, drop mm_drop.Drop) (err error)) *ModifierMock {
 	if mmSet.defaultExpectation != nil {
 		mmSet.mock.t.Fatalf("Default expectation is already set for the Modifier.Set method")
 	}
@@ -123,7 +124,7 @@ func (mmSet *mModifierMockSet) Set(f func(ctx context.Context, drop Drop) (err e
 
 // When sets expectation for the Modifier.Set which will trigger the result defined by the following
 // Then helper
-func (mmSet *mModifierMockSet) When(ctx context.Context, drop Drop) *ModifierMockSetExpectation {
+func (mmSet *mModifierMockSet) When(ctx context.Context, drop mm_drop.Drop) *ModifierMockSetExpectation {
 	if mmSet.mock.funcSet != nil {
 		mmSet.mock.t.Fatalf("ModifierMock.Set mock is already set by Set")
 	}
@@ -142,8 +143,8 @@ func (e *ModifierMockSetExpectation) Then(err error) *ModifierMock {
 	return e.mock
 }
 
-// Set implements Modifier
-func (mmSet *ModifierMock) Set(ctx context.Context, drop Drop) (err error) {
+// Set implements drop.Modifier
+func (mmSet *ModifierMock) Set(ctx context.Context, drop mm_drop.Drop) (err error) {
 	mm_atomic.AddUint64(&mmSet.beforeSetCounter, 1)
 	defer mm_atomic.AddUint64(&mmSet.afterSetCounter, 1)
 

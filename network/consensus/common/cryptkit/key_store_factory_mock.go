@@ -8,20 +8,21 @@ import (
 	mm_time "time"
 
 	"github.com/gojuno/minimock"
+	mm_cryptkit "github.com/insolar/insolar/network/consensus/common/cryptkit"
 )
 
-// KeyStoreFactoryMock implements KeyStoreFactory
+// KeyStoreFactoryMock implements cryptkit.KeyStoreFactory
 type KeyStoreFactoryMock struct {
 	t minimock.Tester
 
-	funcCreatePublicKeyStore          func(skh SignatureKeyHolder) (p1 PublicKeyStore)
-	inspectFuncCreatePublicKeyStore   func(skh SignatureKeyHolder)
+	funcCreatePublicKeyStore          func(skh mm_cryptkit.SignatureKeyHolder) (p1 mm_cryptkit.PublicKeyStore)
+	inspectFuncCreatePublicKeyStore   func(skh mm_cryptkit.SignatureKeyHolder)
 	afterCreatePublicKeyStoreCounter  uint64
 	beforeCreatePublicKeyStoreCounter uint64
 	CreatePublicKeyStoreMock          mKeyStoreFactoryMockCreatePublicKeyStore
 }
 
-// NewKeyStoreFactoryMock returns a mock for KeyStoreFactory
+// NewKeyStoreFactoryMock returns a mock for cryptkit.KeyStoreFactory
 func NewKeyStoreFactoryMock(t minimock.Tester) *KeyStoreFactoryMock {
 	m := &KeyStoreFactoryMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -53,16 +54,16 @@ type KeyStoreFactoryMockCreatePublicKeyStoreExpectation struct {
 
 // KeyStoreFactoryMockCreatePublicKeyStoreParams contains parameters of the KeyStoreFactory.CreatePublicKeyStore
 type KeyStoreFactoryMockCreatePublicKeyStoreParams struct {
-	skh SignatureKeyHolder
+	skh mm_cryptkit.SignatureKeyHolder
 }
 
 // KeyStoreFactoryMockCreatePublicKeyStoreResults contains results of the KeyStoreFactory.CreatePublicKeyStore
 type KeyStoreFactoryMockCreatePublicKeyStoreResults struct {
-	p1 PublicKeyStore
+	p1 mm_cryptkit.PublicKeyStore
 }
 
 // Expect sets up expected params for KeyStoreFactory.CreatePublicKeyStore
-func (mmCreatePublicKeyStore *mKeyStoreFactoryMockCreatePublicKeyStore) Expect(skh SignatureKeyHolder) *mKeyStoreFactoryMockCreatePublicKeyStore {
+func (mmCreatePublicKeyStore *mKeyStoreFactoryMockCreatePublicKeyStore) Expect(skh mm_cryptkit.SignatureKeyHolder) *mKeyStoreFactoryMockCreatePublicKeyStore {
 	if mmCreatePublicKeyStore.mock.funcCreatePublicKeyStore != nil {
 		mmCreatePublicKeyStore.mock.t.Fatalf("KeyStoreFactoryMock.CreatePublicKeyStore mock is already set by Set")
 	}
@@ -82,7 +83,7 @@ func (mmCreatePublicKeyStore *mKeyStoreFactoryMockCreatePublicKeyStore) Expect(s
 }
 
 // Inspect accepts an inspector function that has same arguments as the KeyStoreFactory.CreatePublicKeyStore
-func (mmCreatePublicKeyStore *mKeyStoreFactoryMockCreatePublicKeyStore) Inspect(f func(skh SignatureKeyHolder)) *mKeyStoreFactoryMockCreatePublicKeyStore {
+func (mmCreatePublicKeyStore *mKeyStoreFactoryMockCreatePublicKeyStore) Inspect(f func(skh mm_cryptkit.SignatureKeyHolder)) *mKeyStoreFactoryMockCreatePublicKeyStore {
 	if mmCreatePublicKeyStore.mock.inspectFuncCreatePublicKeyStore != nil {
 		mmCreatePublicKeyStore.mock.t.Fatalf("Inspect function is already set for KeyStoreFactoryMock.CreatePublicKeyStore")
 	}
@@ -93,7 +94,7 @@ func (mmCreatePublicKeyStore *mKeyStoreFactoryMockCreatePublicKeyStore) Inspect(
 }
 
 // Return sets up results that will be returned by KeyStoreFactory.CreatePublicKeyStore
-func (mmCreatePublicKeyStore *mKeyStoreFactoryMockCreatePublicKeyStore) Return(p1 PublicKeyStore) *KeyStoreFactoryMock {
+func (mmCreatePublicKeyStore *mKeyStoreFactoryMockCreatePublicKeyStore) Return(p1 mm_cryptkit.PublicKeyStore) *KeyStoreFactoryMock {
 	if mmCreatePublicKeyStore.mock.funcCreatePublicKeyStore != nil {
 		mmCreatePublicKeyStore.mock.t.Fatalf("KeyStoreFactoryMock.CreatePublicKeyStore mock is already set by Set")
 	}
@@ -106,7 +107,7 @@ func (mmCreatePublicKeyStore *mKeyStoreFactoryMockCreatePublicKeyStore) Return(p
 }
 
 //Set uses given function f to mock the KeyStoreFactory.CreatePublicKeyStore method
-func (mmCreatePublicKeyStore *mKeyStoreFactoryMockCreatePublicKeyStore) Set(f func(skh SignatureKeyHolder) (p1 PublicKeyStore)) *KeyStoreFactoryMock {
+func (mmCreatePublicKeyStore *mKeyStoreFactoryMockCreatePublicKeyStore) Set(f func(skh mm_cryptkit.SignatureKeyHolder) (p1 mm_cryptkit.PublicKeyStore)) *KeyStoreFactoryMock {
 	if mmCreatePublicKeyStore.defaultExpectation != nil {
 		mmCreatePublicKeyStore.mock.t.Fatalf("Default expectation is already set for the KeyStoreFactory.CreatePublicKeyStore method")
 	}
@@ -121,7 +122,7 @@ func (mmCreatePublicKeyStore *mKeyStoreFactoryMockCreatePublicKeyStore) Set(f fu
 
 // When sets expectation for the KeyStoreFactory.CreatePublicKeyStore which will trigger the result defined by the following
 // Then helper
-func (mmCreatePublicKeyStore *mKeyStoreFactoryMockCreatePublicKeyStore) When(skh SignatureKeyHolder) *KeyStoreFactoryMockCreatePublicKeyStoreExpectation {
+func (mmCreatePublicKeyStore *mKeyStoreFactoryMockCreatePublicKeyStore) When(skh mm_cryptkit.SignatureKeyHolder) *KeyStoreFactoryMockCreatePublicKeyStoreExpectation {
 	if mmCreatePublicKeyStore.mock.funcCreatePublicKeyStore != nil {
 		mmCreatePublicKeyStore.mock.t.Fatalf("KeyStoreFactoryMock.CreatePublicKeyStore mock is already set by Set")
 	}
@@ -135,13 +136,13 @@ func (mmCreatePublicKeyStore *mKeyStoreFactoryMockCreatePublicKeyStore) When(skh
 }
 
 // Then sets up KeyStoreFactory.CreatePublicKeyStore return parameters for the expectation previously defined by the When method
-func (e *KeyStoreFactoryMockCreatePublicKeyStoreExpectation) Then(p1 PublicKeyStore) *KeyStoreFactoryMock {
+func (e *KeyStoreFactoryMockCreatePublicKeyStoreExpectation) Then(p1 mm_cryptkit.PublicKeyStore) *KeyStoreFactoryMock {
 	e.results = &KeyStoreFactoryMockCreatePublicKeyStoreResults{p1}
 	return e.mock
 }
 
-// CreatePublicKeyStore implements KeyStoreFactory
-func (mmCreatePublicKeyStore *KeyStoreFactoryMock) CreatePublicKeyStore(skh SignatureKeyHolder) (p1 PublicKeyStore) {
+// CreatePublicKeyStore implements cryptkit.KeyStoreFactory
+func (mmCreatePublicKeyStore *KeyStoreFactoryMock) CreatePublicKeyStore(skh mm_cryptkit.SignatureKeyHolder) (p1 mm_cryptkit.PublicKeyStore) {
 	mm_atomic.AddUint64(&mmCreatePublicKeyStore.beforeCreatePublicKeyStoreCounter, 1)
 	defer mm_atomic.AddUint64(&mmCreatePublicKeyStore.afterCreatePublicKeyStoreCounter, 1)
 

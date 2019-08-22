@@ -8,38 +8,39 @@ import (
 	mm_time "time"
 
 	"github.com/gojuno/minimock"
+	mm_profiles "github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 )
 
-// FactoryMock implements Factory
+// FactoryMock implements profiles.Factory
 type FactoryMock struct {
 	t minimock.Tester
 
-	funcCreateBriefIntroProfile          func(candidate BriefCandidateProfile) (s1 StaticProfile)
-	inspectFuncCreateBriefIntroProfile   func(candidate BriefCandidateProfile)
+	funcCreateBriefIntroProfile          func(candidate mm_profiles.BriefCandidateProfile) (s1 mm_profiles.StaticProfile)
+	inspectFuncCreateBriefIntroProfile   func(candidate mm_profiles.BriefCandidateProfile)
 	afterCreateBriefIntroProfileCounter  uint64
 	beforeCreateBriefIntroProfileCounter uint64
 	CreateBriefIntroProfileMock          mFactoryMockCreateBriefIntroProfile
 
-	funcCreateFullIntroProfile          func(candidate CandidateProfile) (s1 StaticProfile)
-	inspectFuncCreateFullIntroProfile   func(candidate CandidateProfile)
+	funcCreateFullIntroProfile          func(candidate mm_profiles.CandidateProfile) (s1 mm_profiles.StaticProfile)
+	inspectFuncCreateFullIntroProfile   func(candidate mm_profiles.CandidateProfile)
 	afterCreateFullIntroProfileCounter  uint64
 	beforeCreateFullIntroProfileCounter uint64
 	CreateFullIntroProfileMock          mFactoryMockCreateFullIntroProfile
 
-	funcCreateUpgradableIntroProfile          func(candidate BriefCandidateProfile) (s1 StaticProfile)
-	inspectFuncCreateUpgradableIntroProfile   func(candidate BriefCandidateProfile)
+	funcCreateUpgradableIntroProfile          func(candidate mm_profiles.BriefCandidateProfile) (s1 mm_profiles.StaticProfile)
+	inspectFuncCreateUpgradableIntroProfile   func(candidate mm_profiles.BriefCandidateProfile)
 	afterCreateUpgradableIntroProfileCounter  uint64
 	beforeCreateUpgradableIntroProfileCounter uint64
 	CreateUpgradableIntroProfileMock          mFactoryMockCreateUpgradableIntroProfile
 
-	funcTryConvertUpgradableIntroProfile          func(profile StaticProfile) (s1 StaticProfile, b1 bool)
-	inspectFuncTryConvertUpgradableIntroProfile   func(profile StaticProfile)
+	funcTryConvertUpgradableIntroProfile          func(profile mm_profiles.StaticProfile) (s1 mm_profiles.StaticProfile, b1 bool)
+	inspectFuncTryConvertUpgradableIntroProfile   func(profile mm_profiles.StaticProfile)
 	afterTryConvertUpgradableIntroProfileCounter  uint64
 	beforeTryConvertUpgradableIntroProfileCounter uint64
 	TryConvertUpgradableIntroProfileMock          mFactoryMockTryConvertUpgradableIntroProfile
 }
 
-// NewFactoryMock returns a mock for Factory
+// NewFactoryMock returns a mock for profiles.Factory
 func NewFactoryMock(t minimock.Tester) *FactoryMock {
 	m := &FactoryMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -80,16 +81,16 @@ type FactoryMockCreateBriefIntroProfileExpectation struct {
 
 // FactoryMockCreateBriefIntroProfileParams contains parameters of the Factory.CreateBriefIntroProfile
 type FactoryMockCreateBriefIntroProfileParams struct {
-	candidate BriefCandidateProfile
+	candidate mm_profiles.BriefCandidateProfile
 }
 
 // FactoryMockCreateBriefIntroProfileResults contains results of the Factory.CreateBriefIntroProfile
 type FactoryMockCreateBriefIntroProfileResults struct {
-	s1 StaticProfile
+	s1 mm_profiles.StaticProfile
 }
 
 // Expect sets up expected params for Factory.CreateBriefIntroProfile
-func (mmCreateBriefIntroProfile *mFactoryMockCreateBriefIntroProfile) Expect(candidate BriefCandidateProfile) *mFactoryMockCreateBriefIntroProfile {
+func (mmCreateBriefIntroProfile *mFactoryMockCreateBriefIntroProfile) Expect(candidate mm_profiles.BriefCandidateProfile) *mFactoryMockCreateBriefIntroProfile {
 	if mmCreateBriefIntroProfile.mock.funcCreateBriefIntroProfile != nil {
 		mmCreateBriefIntroProfile.mock.t.Fatalf("FactoryMock.CreateBriefIntroProfile mock is already set by Set")
 	}
@@ -109,7 +110,7 @@ func (mmCreateBriefIntroProfile *mFactoryMockCreateBriefIntroProfile) Expect(can
 }
 
 // Inspect accepts an inspector function that has same arguments as the Factory.CreateBriefIntroProfile
-func (mmCreateBriefIntroProfile *mFactoryMockCreateBriefIntroProfile) Inspect(f func(candidate BriefCandidateProfile)) *mFactoryMockCreateBriefIntroProfile {
+func (mmCreateBriefIntroProfile *mFactoryMockCreateBriefIntroProfile) Inspect(f func(candidate mm_profiles.BriefCandidateProfile)) *mFactoryMockCreateBriefIntroProfile {
 	if mmCreateBriefIntroProfile.mock.inspectFuncCreateBriefIntroProfile != nil {
 		mmCreateBriefIntroProfile.mock.t.Fatalf("Inspect function is already set for FactoryMock.CreateBriefIntroProfile")
 	}
@@ -120,7 +121,7 @@ func (mmCreateBriefIntroProfile *mFactoryMockCreateBriefIntroProfile) Inspect(f 
 }
 
 // Return sets up results that will be returned by Factory.CreateBriefIntroProfile
-func (mmCreateBriefIntroProfile *mFactoryMockCreateBriefIntroProfile) Return(s1 StaticProfile) *FactoryMock {
+func (mmCreateBriefIntroProfile *mFactoryMockCreateBriefIntroProfile) Return(s1 mm_profiles.StaticProfile) *FactoryMock {
 	if mmCreateBriefIntroProfile.mock.funcCreateBriefIntroProfile != nil {
 		mmCreateBriefIntroProfile.mock.t.Fatalf("FactoryMock.CreateBriefIntroProfile mock is already set by Set")
 	}
@@ -133,7 +134,7 @@ func (mmCreateBriefIntroProfile *mFactoryMockCreateBriefIntroProfile) Return(s1 
 }
 
 //Set uses given function f to mock the Factory.CreateBriefIntroProfile method
-func (mmCreateBriefIntroProfile *mFactoryMockCreateBriefIntroProfile) Set(f func(candidate BriefCandidateProfile) (s1 StaticProfile)) *FactoryMock {
+func (mmCreateBriefIntroProfile *mFactoryMockCreateBriefIntroProfile) Set(f func(candidate mm_profiles.BriefCandidateProfile) (s1 mm_profiles.StaticProfile)) *FactoryMock {
 	if mmCreateBriefIntroProfile.defaultExpectation != nil {
 		mmCreateBriefIntroProfile.mock.t.Fatalf("Default expectation is already set for the Factory.CreateBriefIntroProfile method")
 	}
@@ -148,7 +149,7 @@ func (mmCreateBriefIntroProfile *mFactoryMockCreateBriefIntroProfile) Set(f func
 
 // When sets expectation for the Factory.CreateBriefIntroProfile which will trigger the result defined by the following
 // Then helper
-func (mmCreateBriefIntroProfile *mFactoryMockCreateBriefIntroProfile) When(candidate BriefCandidateProfile) *FactoryMockCreateBriefIntroProfileExpectation {
+func (mmCreateBriefIntroProfile *mFactoryMockCreateBriefIntroProfile) When(candidate mm_profiles.BriefCandidateProfile) *FactoryMockCreateBriefIntroProfileExpectation {
 	if mmCreateBriefIntroProfile.mock.funcCreateBriefIntroProfile != nil {
 		mmCreateBriefIntroProfile.mock.t.Fatalf("FactoryMock.CreateBriefIntroProfile mock is already set by Set")
 	}
@@ -162,13 +163,13 @@ func (mmCreateBriefIntroProfile *mFactoryMockCreateBriefIntroProfile) When(candi
 }
 
 // Then sets up Factory.CreateBriefIntroProfile return parameters for the expectation previously defined by the When method
-func (e *FactoryMockCreateBriefIntroProfileExpectation) Then(s1 StaticProfile) *FactoryMock {
+func (e *FactoryMockCreateBriefIntroProfileExpectation) Then(s1 mm_profiles.StaticProfile) *FactoryMock {
 	e.results = &FactoryMockCreateBriefIntroProfileResults{s1}
 	return e.mock
 }
 
-// CreateBriefIntroProfile implements Factory
-func (mmCreateBriefIntroProfile *FactoryMock) CreateBriefIntroProfile(candidate BriefCandidateProfile) (s1 StaticProfile) {
+// CreateBriefIntroProfile implements profiles.Factory
+func (mmCreateBriefIntroProfile *FactoryMock) CreateBriefIntroProfile(candidate mm_profiles.BriefCandidateProfile) (s1 mm_profiles.StaticProfile) {
 	mm_atomic.AddUint64(&mmCreateBriefIntroProfile.beforeCreateBriefIntroProfileCounter, 1)
 	defer mm_atomic.AddUint64(&mmCreateBriefIntroProfile.afterCreateBriefIntroProfileCounter, 1)
 
@@ -295,16 +296,16 @@ type FactoryMockCreateFullIntroProfileExpectation struct {
 
 // FactoryMockCreateFullIntroProfileParams contains parameters of the Factory.CreateFullIntroProfile
 type FactoryMockCreateFullIntroProfileParams struct {
-	candidate CandidateProfile
+	candidate mm_profiles.CandidateProfile
 }
 
 // FactoryMockCreateFullIntroProfileResults contains results of the Factory.CreateFullIntroProfile
 type FactoryMockCreateFullIntroProfileResults struct {
-	s1 StaticProfile
+	s1 mm_profiles.StaticProfile
 }
 
 // Expect sets up expected params for Factory.CreateFullIntroProfile
-func (mmCreateFullIntroProfile *mFactoryMockCreateFullIntroProfile) Expect(candidate CandidateProfile) *mFactoryMockCreateFullIntroProfile {
+func (mmCreateFullIntroProfile *mFactoryMockCreateFullIntroProfile) Expect(candidate mm_profiles.CandidateProfile) *mFactoryMockCreateFullIntroProfile {
 	if mmCreateFullIntroProfile.mock.funcCreateFullIntroProfile != nil {
 		mmCreateFullIntroProfile.mock.t.Fatalf("FactoryMock.CreateFullIntroProfile mock is already set by Set")
 	}
@@ -324,7 +325,7 @@ func (mmCreateFullIntroProfile *mFactoryMockCreateFullIntroProfile) Expect(candi
 }
 
 // Inspect accepts an inspector function that has same arguments as the Factory.CreateFullIntroProfile
-func (mmCreateFullIntroProfile *mFactoryMockCreateFullIntroProfile) Inspect(f func(candidate CandidateProfile)) *mFactoryMockCreateFullIntroProfile {
+func (mmCreateFullIntroProfile *mFactoryMockCreateFullIntroProfile) Inspect(f func(candidate mm_profiles.CandidateProfile)) *mFactoryMockCreateFullIntroProfile {
 	if mmCreateFullIntroProfile.mock.inspectFuncCreateFullIntroProfile != nil {
 		mmCreateFullIntroProfile.mock.t.Fatalf("Inspect function is already set for FactoryMock.CreateFullIntroProfile")
 	}
@@ -335,7 +336,7 @@ func (mmCreateFullIntroProfile *mFactoryMockCreateFullIntroProfile) Inspect(f fu
 }
 
 // Return sets up results that will be returned by Factory.CreateFullIntroProfile
-func (mmCreateFullIntroProfile *mFactoryMockCreateFullIntroProfile) Return(s1 StaticProfile) *FactoryMock {
+func (mmCreateFullIntroProfile *mFactoryMockCreateFullIntroProfile) Return(s1 mm_profiles.StaticProfile) *FactoryMock {
 	if mmCreateFullIntroProfile.mock.funcCreateFullIntroProfile != nil {
 		mmCreateFullIntroProfile.mock.t.Fatalf("FactoryMock.CreateFullIntroProfile mock is already set by Set")
 	}
@@ -348,7 +349,7 @@ func (mmCreateFullIntroProfile *mFactoryMockCreateFullIntroProfile) Return(s1 St
 }
 
 //Set uses given function f to mock the Factory.CreateFullIntroProfile method
-func (mmCreateFullIntroProfile *mFactoryMockCreateFullIntroProfile) Set(f func(candidate CandidateProfile) (s1 StaticProfile)) *FactoryMock {
+func (mmCreateFullIntroProfile *mFactoryMockCreateFullIntroProfile) Set(f func(candidate mm_profiles.CandidateProfile) (s1 mm_profiles.StaticProfile)) *FactoryMock {
 	if mmCreateFullIntroProfile.defaultExpectation != nil {
 		mmCreateFullIntroProfile.mock.t.Fatalf("Default expectation is already set for the Factory.CreateFullIntroProfile method")
 	}
@@ -363,7 +364,7 @@ func (mmCreateFullIntroProfile *mFactoryMockCreateFullIntroProfile) Set(f func(c
 
 // When sets expectation for the Factory.CreateFullIntroProfile which will trigger the result defined by the following
 // Then helper
-func (mmCreateFullIntroProfile *mFactoryMockCreateFullIntroProfile) When(candidate CandidateProfile) *FactoryMockCreateFullIntroProfileExpectation {
+func (mmCreateFullIntroProfile *mFactoryMockCreateFullIntroProfile) When(candidate mm_profiles.CandidateProfile) *FactoryMockCreateFullIntroProfileExpectation {
 	if mmCreateFullIntroProfile.mock.funcCreateFullIntroProfile != nil {
 		mmCreateFullIntroProfile.mock.t.Fatalf("FactoryMock.CreateFullIntroProfile mock is already set by Set")
 	}
@@ -377,13 +378,13 @@ func (mmCreateFullIntroProfile *mFactoryMockCreateFullIntroProfile) When(candida
 }
 
 // Then sets up Factory.CreateFullIntroProfile return parameters for the expectation previously defined by the When method
-func (e *FactoryMockCreateFullIntroProfileExpectation) Then(s1 StaticProfile) *FactoryMock {
+func (e *FactoryMockCreateFullIntroProfileExpectation) Then(s1 mm_profiles.StaticProfile) *FactoryMock {
 	e.results = &FactoryMockCreateFullIntroProfileResults{s1}
 	return e.mock
 }
 
-// CreateFullIntroProfile implements Factory
-func (mmCreateFullIntroProfile *FactoryMock) CreateFullIntroProfile(candidate CandidateProfile) (s1 StaticProfile) {
+// CreateFullIntroProfile implements profiles.Factory
+func (mmCreateFullIntroProfile *FactoryMock) CreateFullIntroProfile(candidate mm_profiles.CandidateProfile) (s1 mm_profiles.StaticProfile) {
 	mm_atomic.AddUint64(&mmCreateFullIntroProfile.beforeCreateFullIntroProfileCounter, 1)
 	defer mm_atomic.AddUint64(&mmCreateFullIntroProfile.afterCreateFullIntroProfileCounter, 1)
 
@@ -510,16 +511,16 @@ type FactoryMockCreateUpgradableIntroProfileExpectation struct {
 
 // FactoryMockCreateUpgradableIntroProfileParams contains parameters of the Factory.CreateUpgradableIntroProfile
 type FactoryMockCreateUpgradableIntroProfileParams struct {
-	candidate BriefCandidateProfile
+	candidate mm_profiles.BriefCandidateProfile
 }
 
 // FactoryMockCreateUpgradableIntroProfileResults contains results of the Factory.CreateUpgradableIntroProfile
 type FactoryMockCreateUpgradableIntroProfileResults struct {
-	s1 StaticProfile
+	s1 mm_profiles.StaticProfile
 }
 
 // Expect sets up expected params for Factory.CreateUpgradableIntroProfile
-func (mmCreateUpgradableIntroProfile *mFactoryMockCreateUpgradableIntroProfile) Expect(candidate BriefCandidateProfile) *mFactoryMockCreateUpgradableIntroProfile {
+func (mmCreateUpgradableIntroProfile *mFactoryMockCreateUpgradableIntroProfile) Expect(candidate mm_profiles.BriefCandidateProfile) *mFactoryMockCreateUpgradableIntroProfile {
 	if mmCreateUpgradableIntroProfile.mock.funcCreateUpgradableIntroProfile != nil {
 		mmCreateUpgradableIntroProfile.mock.t.Fatalf("FactoryMock.CreateUpgradableIntroProfile mock is already set by Set")
 	}
@@ -539,7 +540,7 @@ func (mmCreateUpgradableIntroProfile *mFactoryMockCreateUpgradableIntroProfile) 
 }
 
 // Inspect accepts an inspector function that has same arguments as the Factory.CreateUpgradableIntroProfile
-func (mmCreateUpgradableIntroProfile *mFactoryMockCreateUpgradableIntroProfile) Inspect(f func(candidate BriefCandidateProfile)) *mFactoryMockCreateUpgradableIntroProfile {
+func (mmCreateUpgradableIntroProfile *mFactoryMockCreateUpgradableIntroProfile) Inspect(f func(candidate mm_profiles.BriefCandidateProfile)) *mFactoryMockCreateUpgradableIntroProfile {
 	if mmCreateUpgradableIntroProfile.mock.inspectFuncCreateUpgradableIntroProfile != nil {
 		mmCreateUpgradableIntroProfile.mock.t.Fatalf("Inspect function is already set for FactoryMock.CreateUpgradableIntroProfile")
 	}
@@ -550,7 +551,7 @@ func (mmCreateUpgradableIntroProfile *mFactoryMockCreateUpgradableIntroProfile) 
 }
 
 // Return sets up results that will be returned by Factory.CreateUpgradableIntroProfile
-func (mmCreateUpgradableIntroProfile *mFactoryMockCreateUpgradableIntroProfile) Return(s1 StaticProfile) *FactoryMock {
+func (mmCreateUpgradableIntroProfile *mFactoryMockCreateUpgradableIntroProfile) Return(s1 mm_profiles.StaticProfile) *FactoryMock {
 	if mmCreateUpgradableIntroProfile.mock.funcCreateUpgradableIntroProfile != nil {
 		mmCreateUpgradableIntroProfile.mock.t.Fatalf("FactoryMock.CreateUpgradableIntroProfile mock is already set by Set")
 	}
@@ -563,7 +564,7 @@ func (mmCreateUpgradableIntroProfile *mFactoryMockCreateUpgradableIntroProfile) 
 }
 
 //Set uses given function f to mock the Factory.CreateUpgradableIntroProfile method
-func (mmCreateUpgradableIntroProfile *mFactoryMockCreateUpgradableIntroProfile) Set(f func(candidate BriefCandidateProfile) (s1 StaticProfile)) *FactoryMock {
+func (mmCreateUpgradableIntroProfile *mFactoryMockCreateUpgradableIntroProfile) Set(f func(candidate mm_profiles.BriefCandidateProfile) (s1 mm_profiles.StaticProfile)) *FactoryMock {
 	if mmCreateUpgradableIntroProfile.defaultExpectation != nil {
 		mmCreateUpgradableIntroProfile.mock.t.Fatalf("Default expectation is already set for the Factory.CreateUpgradableIntroProfile method")
 	}
@@ -578,7 +579,7 @@ func (mmCreateUpgradableIntroProfile *mFactoryMockCreateUpgradableIntroProfile) 
 
 // When sets expectation for the Factory.CreateUpgradableIntroProfile which will trigger the result defined by the following
 // Then helper
-func (mmCreateUpgradableIntroProfile *mFactoryMockCreateUpgradableIntroProfile) When(candidate BriefCandidateProfile) *FactoryMockCreateUpgradableIntroProfileExpectation {
+func (mmCreateUpgradableIntroProfile *mFactoryMockCreateUpgradableIntroProfile) When(candidate mm_profiles.BriefCandidateProfile) *FactoryMockCreateUpgradableIntroProfileExpectation {
 	if mmCreateUpgradableIntroProfile.mock.funcCreateUpgradableIntroProfile != nil {
 		mmCreateUpgradableIntroProfile.mock.t.Fatalf("FactoryMock.CreateUpgradableIntroProfile mock is already set by Set")
 	}
@@ -592,13 +593,13 @@ func (mmCreateUpgradableIntroProfile *mFactoryMockCreateUpgradableIntroProfile) 
 }
 
 // Then sets up Factory.CreateUpgradableIntroProfile return parameters for the expectation previously defined by the When method
-func (e *FactoryMockCreateUpgradableIntroProfileExpectation) Then(s1 StaticProfile) *FactoryMock {
+func (e *FactoryMockCreateUpgradableIntroProfileExpectation) Then(s1 mm_profiles.StaticProfile) *FactoryMock {
 	e.results = &FactoryMockCreateUpgradableIntroProfileResults{s1}
 	return e.mock
 }
 
-// CreateUpgradableIntroProfile implements Factory
-func (mmCreateUpgradableIntroProfile *FactoryMock) CreateUpgradableIntroProfile(candidate BriefCandidateProfile) (s1 StaticProfile) {
+// CreateUpgradableIntroProfile implements profiles.Factory
+func (mmCreateUpgradableIntroProfile *FactoryMock) CreateUpgradableIntroProfile(candidate mm_profiles.BriefCandidateProfile) (s1 mm_profiles.StaticProfile) {
 	mm_atomic.AddUint64(&mmCreateUpgradableIntroProfile.beforeCreateUpgradableIntroProfileCounter, 1)
 	defer mm_atomic.AddUint64(&mmCreateUpgradableIntroProfile.afterCreateUpgradableIntroProfileCounter, 1)
 
@@ -725,17 +726,17 @@ type FactoryMockTryConvertUpgradableIntroProfileExpectation struct {
 
 // FactoryMockTryConvertUpgradableIntroProfileParams contains parameters of the Factory.TryConvertUpgradableIntroProfile
 type FactoryMockTryConvertUpgradableIntroProfileParams struct {
-	profile StaticProfile
+	profile mm_profiles.StaticProfile
 }
 
 // FactoryMockTryConvertUpgradableIntroProfileResults contains results of the Factory.TryConvertUpgradableIntroProfile
 type FactoryMockTryConvertUpgradableIntroProfileResults struct {
-	s1 StaticProfile
+	s1 mm_profiles.StaticProfile
 	b1 bool
 }
 
 // Expect sets up expected params for Factory.TryConvertUpgradableIntroProfile
-func (mmTryConvertUpgradableIntroProfile *mFactoryMockTryConvertUpgradableIntroProfile) Expect(profile StaticProfile) *mFactoryMockTryConvertUpgradableIntroProfile {
+func (mmTryConvertUpgradableIntroProfile *mFactoryMockTryConvertUpgradableIntroProfile) Expect(profile mm_profiles.StaticProfile) *mFactoryMockTryConvertUpgradableIntroProfile {
 	if mmTryConvertUpgradableIntroProfile.mock.funcTryConvertUpgradableIntroProfile != nil {
 		mmTryConvertUpgradableIntroProfile.mock.t.Fatalf("FactoryMock.TryConvertUpgradableIntroProfile mock is already set by Set")
 	}
@@ -755,7 +756,7 @@ func (mmTryConvertUpgradableIntroProfile *mFactoryMockTryConvertUpgradableIntroP
 }
 
 // Inspect accepts an inspector function that has same arguments as the Factory.TryConvertUpgradableIntroProfile
-func (mmTryConvertUpgradableIntroProfile *mFactoryMockTryConvertUpgradableIntroProfile) Inspect(f func(profile StaticProfile)) *mFactoryMockTryConvertUpgradableIntroProfile {
+func (mmTryConvertUpgradableIntroProfile *mFactoryMockTryConvertUpgradableIntroProfile) Inspect(f func(profile mm_profiles.StaticProfile)) *mFactoryMockTryConvertUpgradableIntroProfile {
 	if mmTryConvertUpgradableIntroProfile.mock.inspectFuncTryConvertUpgradableIntroProfile != nil {
 		mmTryConvertUpgradableIntroProfile.mock.t.Fatalf("Inspect function is already set for FactoryMock.TryConvertUpgradableIntroProfile")
 	}
@@ -766,7 +767,7 @@ func (mmTryConvertUpgradableIntroProfile *mFactoryMockTryConvertUpgradableIntroP
 }
 
 // Return sets up results that will be returned by Factory.TryConvertUpgradableIntroProfile
-func (mmTryConvertUpgradableIntroProfile *mFactoryMockTryConvertUpgradableIntroProfile) Return(s1 StaticProfile, b1 bool) *FactoryMock {
+func (mmTryConvertUpgradableIntroProfile *mFactoryMockTryConvertUpgradableIntroProfile) Return(s1 mm_profiles.StaticProfile, b1 bool) *FactoryMock {
 	if mmTryConvertUpgradableIntroProfile.mock.funcTryConvertUpgradableIntroProfile != nil {
 		mmTryConvertUpgradableIntroProfile.mock.t.Fatalf("FactoryMock.TryConvertUpgradableIntroProfile mock is already set by Set")
 	}
@@ -779,7 +780,7 @@ func (mmTryConvertUpgradableIntroProfile *mFactoryMockTryConvertUpgradableIntroP
 }
 
 //Set uses given function f to mock the Factory.TryConvertUpgradableIntroProfile method
-func (mmTryConvertUpgradableIntroProfile *mFactoryMockTryConvertUpgradableIntroProfile) Set(f func(profile StaticProfile) (s1 StaticProfile, b1 bool)) *FactoryMock {
+func (mmTryConvertUpgradableIntroProfile *mFactoryMockTryConvertUpgradableIntroProfile) Set(f func(profile mm_profiles.StaticProfile) (s1 mm_profiles.StaticProfile, b1 bool)) *FactoryMock {
 	if mmTryConvertUpgradableIntroProfile.defaultExpectation != nil {
 		mmTryConvertUpgradableIntroProfile.mock.t.Fatalf("Default expectation is already set for the Factory.TryConvertUpgradableIntroProfile method")
 	}
@@ -794,7 +795,7 @@ func (mmTryConvertUpgradableIntroProfile *mFactoryMockTryConvertUpgradableIntroP
 
 // When sets expectation for the Factory.TryConvertUpgradableIntroProfile which will trigger the result defined by the following
 // Then helper
-func (mmTryConvertUpgradableIntroProfile *mFactoryMockTryConvertUpgradableIntroProfile) When(profile StaticProfile) *FactoryMockTryConvertUpgradableIntroProfileExpectation {
+func (mmTryConvertUpgradableIntroProfile *mFactoryMockTryConvertUpgradableIntroProfile) When(profile mm_profiles.StaticProfile) *FactoryMockTryConvertUpgradableIntroProfileExpectation {
 	if mmTryConvertUpgradableIntroProfile.mock.funcTryConvertUpgradableIntroProfile != nil {
 		mmTryConvertUpgradableIntroProfile.mock.t.Fatalf("FactoryMock.TryConvertUpgradableIntroProfile mock is already set by Set")
 	}
@@ -808,13 +809,13 @@ func (mmTryConvertUpgradableIntroProfile *mFactoryMockTryConvertUpgradableIntroP
 }
 
 // Then sets up Factory.TryConvertUpgradableIntroProfile return parameters for the expectation previously defined by the When method
-func (e *FactoryMockTryConvertUpgradableIntroProfileExpectation) Then(s1 StaticProfile, b1 bool) *FactoryMock {
+func (e *FactoryMockTryConvertUpgradableIntroProfileExpectation) Then(s1 mm_profiles.StaticProfile, b1 bool) *FactoryMock {
 	e.results = &FactoryMockTryConvertUpgradableIntroProfileResults{s1, b1}
 	return e.mock
 }
 
-// TryConvertUpgradableIntroProfile implements Factory
-func (mmTryConvertUpgradableIntroProfile *FactoryMock) TryConvertUpgradableIntroProfile(profile StaticProfile) (s1 StaticProfile, b1 bool) {
+// TryConvertUpgradableIntroProfile implements profiles.Factory
+func (mmTryConvertUpgradableIntroProfile *FactoryMock) TryConvertUpgradableIntroProfile(profile mm_profiles.StaticProfile) (s1 mm_profiles.StaticProfile, b1 bool) {
 	mm_atomic.AddUint64(&mmTryConvertUpgradableIntroProfile.beforeTryConvertUpgradableIntroProfileCounter, 1)
 	defer mm_atomic.AddUint64(&mmTryConvertUpgradableIntroProfile.afterTryConvertUpgradableIntroProfileCounter, 1)
 

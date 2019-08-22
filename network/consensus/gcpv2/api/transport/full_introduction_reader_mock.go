@@ -7,15 +7,15 @@ import (
 	"time"
 	mm_time "time"
 
+	"github.com/egorikas/insolar/network/consensus/common/endpoints"
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
-	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 )
 
-// FullIntroductionReaderMock implements FullIntroductionReader
+// FullIntroductionReaderMock implements transport.FullIntroductionReader
 type FullIntroductionReaderMock struct {
 	t minimock.Tester
 
@@ -104,7 +104,7 @@ type FullIntroductionReaderMock struct {
 	GetStaticNodeIDMock          mFullIntroductionReaderMockGetStaticNodeID
 }
 
-// NewFullIntroductionReaderMock returns a mock for FullIntroductionReader
+// NewFullIntroductionReaderMock returns a mock for transport.FullIntroductionReader
 func NewFullIntroductionReaderMock(t minimock.Tester) *FullIntroductionReaderMock {
 	m := &FullIntroductionReaderMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -212,7 +212,7 @@ func (mmGetBriefIntroSignedDigest *mFullIntroductionReaderMockGetBriefIntroSigne
 	return mmGetBriefIntroSignedDigest.mock
 }
 
-// GetBriefIntroSignedDigest implements FullIntroductionReader
+// GetBriefIntroSignedDigest implements transport.FullIntroductionReader
 func (mmGetBriefIntroSignedDigest *FullIntroductionReaderMock) GetBriefIntroSignedDigest() (s1 cryptkit.SignedDigestHolder) {
 	mm_atomic.AddUint64(&mmGetBriefIntroSignedDigest.beforeGetBriefIntroSignedDigestCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetBriefIntroSignedDigest.afterGetBriefIntroSignedDigestCounter, 1)
@@ -355,7 +355,7 @@ func (mmGetDefaultEndpoint *mFullIntroductionReaderMockGetDefaultEndpoint) Set(f
 	return mmGetDefaultEndpoint.mock
 }
 
-// GetDefaultEndpoint implements FullIntroductionReader
+// GetDefaultEndpoint implements transport.FullIntroductionReader
 func (mmGetDefaultEndpoint *FullIntroductionReaderMock) GetDefaultEndpoint() (o1 endpoints.Outbound) {
 	mm_atomic.AddUint64(&mmGetDefaultEndpoint.beforeGetDefaultEndpointCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetDefaultEndpoint.afterGetDefaultEndpointCounter, 1)
@@ -498,7 +498,7 @@ func (mmGetExtraEndpoints *mFullIntroductionReaderMockGetExtraEndpoints) Set(f f
 	return mmGetExtraEndpoints.mock
 }
 
-// GetExtraEndpoints implements FullIntroductionReader
+// GetExtraEndpoints implements transport.FullIntroductionReader
 func (mmGetExtraEndpoints *FullIntroductionReaderMock) GetExtraEndpoints() (oa1 []endpoints.Outbound) {
 	mm_atomic.AddUint64(&mmGetExtraEndpoints.beforeGetExtraEndpointsCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetExtraEndpoints.afterGetExtraEndpointsCounter, 1)
@@ -641,7 +641,7 @@ func (mmGetIssuedAtPulse *mFullIntroductionReaderMockGetIssuedAtPulse) Set(f fun
 	return mmGetIssuedAtPulse.mock
 }
 
-// GetIssuedAtPulse implements FullIntroductionReader
+// GetIssuedAtPulse implements transport.FullIntroductionReader
 func (mmGetIssuedAtPulse *FullIntroductionReaderMock) GetIssuedAtPulse() (n1 pulse.Number) {
 	mm_atomic.AddUint64(&mmGetIssuedAtPulse.beforeGetIssuedAtPulseCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetIssuedAtPulse.afterGetIssuedAtPulseCounter, 1)
@@ -784,7 +784,7 @@ func (mmGetIssuedAtTime *mFullIntroductionReaderMockGetIssuedAtTime) Set(f func(
 	return mmGetIssuedAtTime.mock
 }
 
-// GetIssuedAtTime implements FullIntroductionReader
+// GetIssuedAtTime implements transport.FullIntroductionReader
 func (mmGetIssuedAtTime *FullIntroductionReaderMock) GetIssuedAtTime() (t1 time.Time) {
 	mm_atomic.AddUint64(&mmGetIssuedAtTime.beforeGetIssuedAtTimeCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetIssuedAtTime.afterGetIssuedAtTimeCounter, 1)
@@ -927,7 +927,7 @@ func (mmGetIssuerID *mFullIntroductionReaderMockGetIssuerID) Set(f func() (s1 in
 	return mmGetIssuerID.mock
 }
 
-// GetIssuerID implements FullIntroductionReader
+// GetIssuerID implements transport.FullIntroductionReader
 func (mmGetIssuerID *FullIntroductionReaderMock) GetIssuerID() (s1 insolar.ShortNodeID) {
 	mm_atomic.AddUint64(&mmGetIssuerID.beforeGetIssuerIDCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetIssuerID.afterGetIssuerIDCounter, 1)
@@ -1070,7 +1070,7 @@ func (mmGetIssuerSignature *mFullIntroductionReaderMockGetIssuerSignature) Set(f
 	return mmGetIssuerSignature.mock
 }
 
-// GetIssuerSignature implements FullIntroductionReader
+// GetIssuerSignature implements transport.FullIntroductionReader
 func (mmGetIssuerSignature *FullIntroductionReaderMock) GetIssuerSignature() (s1 cryptkit.SignatureHolder) {
 	mm_atomic.AddUint64(&mmGetIssuerSignature.beforeGetIssuerSignatureCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetIssuerSignature.afterGetIssuerSignatureCounter, 1)
@@ -1213,7 +1213,7 @@ func (mmGetNodePublicKey *mFullIntroductionReaderMockGetNodePublicKey) Set(f fun
 	return mmGetNodePublicKey.mock
 }
 
-// GetNodePublicKey implements FullIntroductionReader
+// GetNodePublicKey implements transport.FullIntroductionReader
 func (mmGetNodePublicKey *FullIntroductionReaderMock) GetNodePublicKey() (s1 cryptkit.SignatureKeyHolder) {
 	mm_atomic.AddUint64(&mmGetNodePublicKey.beforeGetNodePublicKeyCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetNodePublicKey.afterGetNodePublicKeyCounter, 1)
@@ -1356,7 +1356,7 @@ func (mmGetPowerLevels *mFullIntroductionReaderMockGetPowerLevels) Set(f func() 
 	return mmGetPowerLevels.mock
 }
 
-// GetPowerLevels implements FullIntroductionReader
+// GetPowerLevels implements transport.FullIntroductionReader
 func (mmGetPowerLevels *FullIntroductionReaderMock) GetPowerLevels() (p1 member.PowerSet) {
 	mm_atomic.AddUint64(&mmGetPowerLevels.beforeGetPowerLevelsCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetPowerLevels.afterGetPowerLevelsCounter, 1)
@@ -1499,7 +1499,7 @@ func (mmGetPrimaryRole *mFullIntroductionReaderMockGetPrimaryRole) Set(f func() 
 	return mmGetPrimaryRole.mock
 }
 
-// GetPrimaryRole implements FullIntroductionReader
+// GetPrimaryRole implements transport.FullIntroductionReader
 func (mmGetPrimaryRole *FullIntroductionReaderMock) GetPrimaryRole() (p1 member.PrimaryRole) {
 	mm_atomic.AddUint64(&mmGetPrimaryRole.beforeGetPrimaryRoleCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetPrimaryRole.afterGetPrimaryRoleCounter, 1)
@@ -1642,7 +1642,7 @@ func (mmGetReference *mFullIntroductionReaderMockGetReference) Set(f func() (r1 
 	return mmGetReference.mock
 }
 
-// GetReference implements FullIntroductionReader
+// GetReference implements transport.FullIntroductionReader
 func (mmGetReference *FullIntroductionReaderMock) GetReference() (r1 insolar.Reference) {
 	mm_atomic.AddUint64(&mmGetReference.beforeGetReferenceCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetReference.afterGetReferenceCounter, 1)
@@ -1785,7 +1785,7 @@ func (mmGetSpecialRoles *mFullIntroductionReaderMockGetSpecialRoles) Set(f func(
 	return mmGetSpecialRoles.mock
 }
 
-// GetSpecialRoles implements FullIntroductionReader
+// GetSpecialRoles implements transport.FullIntroductionReader
 func (mmGetSpecialRoles *FullIntroductionReaderMock) GetSpecialRoles() (s1 member.SpecialRole) {
 	mm_atomic.AddUint64(&mmGetSpecialRoles.beforeGetSpecialRolesCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetSpecialRoles.afterGetSpecialRolesCounter, 1)
@@ -1928,7 +1928,7 @@ func (mmGetStartPower *mFullIntroductionReaderMockGetStartPower) Set(f func() (p
 	return mmGetStartPower.mock
 }
 
-// GetStartPower implements FullIntroductionReader
+// GetStartPower implements transport.FullIntroductionReader
 func (mmGetStartPower *FullIntroductionReaderMock) GetStartPower() (p1 member.Power) {
 	mm_atomic.AddUint64(&mmGetStartPower.beforeGetStartPowerCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetStartPower.afterGetStartPowerCounter, 1)
@@ -2071,7 +2071,7 @@ func (mmGetStaticNodeID *mFullIntroductionReaderMockGetStaticNodeID) Set(f func(
 	return mmGetStaticNodeID.mock
 }
 
-// GetStaticNodeID implements FullIntroductionReader
+// GetStaticNodeID implements transport.FullIntroductionReader
 func (mmGetStaticNodeID *FullIntroductionReaderMock) GetStaticNodeID() (s1 insolar.ShortNodeID) {
 	mm_atomic.AddUint64(&mmGetStaticNodeID.beforeGetStaticNodeIDCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetStaticNodeID.afterGetStaticNodeIDCounter, 1)

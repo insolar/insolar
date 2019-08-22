@@ -11,7 +11,7 @@ import (
 	"github.com/gojuno/minimock"
 )
 
-// RequestsFetcherMock implements RequestsFetcher
+// RequestsFetcherMock implements logicrunner.RequestsFetcher
 type RequestsFetcherMock struct {
 	t minimock.Tester
 
@@ -28,7 +28,7 @@ type RequestsFetcherMock struct {
 	FetchPendingsMock          mRequestsFetcherMockFetchPendings
 }
 
-// NewRequestsFetcherMock returns a mock for RequestsFetcher
+// NewRequestsFetcherMock returns a mock for logicrunner.RequestsFetcher
 func NewRequestsFetcherMock(t minimock.Tester) *RequestsFetcherMock {
 	m := &RequestsFetcherMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -124,7 +124,7 @@ func (mmAbort *mRequestsFetcherMockAbort) Set(f func(ctx context.Context)) *Requ
 	return mmAbort.mock
 }
 
-// Abort implements RequestsFetcher
+// Abort implements logicrunner.RequestsFetcher
 func (mmAbort *RequestsFetcherMock) Abort(ctx context.Context) {
 	mm_atomic.AddUint64(&mmAbort.beforeAbortCounter, 1)
 	defer mm_atomic.AddUint64(&mmAbort.afterAbortCounter, 1)
@@ -311,7 +311,7 @@ func (mmFetchPendings *mRequestsFetcherMockFetchPendings) Set(f func(ctx context
 	return mmFetchPendings.mock
 }
 
-// FetchPendings implements RequestsFetcher
+// FetchPendings implements logicrunner.RequestsFetcher
 func (mmFetchPendings *RequestsFetcherMock) FetchPendings(ctx context.Context) {
 	mm_atomic.AddUint64(&mmFetchPendings.beforeFetchPendingsCounter, 1)
 	defer mm_atomic.AddUint64(&mmFetchPendings.afterFetchPendingsCounter, 1)

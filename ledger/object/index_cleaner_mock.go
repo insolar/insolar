@@ -12,7 +12,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-// IndexCleanerMock implements IndexCleaner
+// IndexCleanerMock implements object.IndexCleaner
 type IndexCleanerMock struct {
 	t minimock.Tester
 
@@ -23,7 +23,7 @@ type IndexCleanerMock struct {
 	DeleteForPNMock          mIndexCleanerMockDeleteForPN
 }
 
-// NewIndexCleanerMock returns a mock for IndexCleaner
+// NewIndexCleanerMock returns a mock for object.IndexCleaner
 func NewIndexCleanerMock(t minimock.Tester) *IndexCleanerMock {
 	m := &IndexCleanerMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -117,7 +117,7 @@ func (mmDeleteForPN *mIndexCleanerMockDeleteForPN) Set(f func(ctx context.Contex
 	return mmDeleteForPN.mock
 }
 
-// DeleteForPN implements IndexCleaner
+// DeleteForPN implements object.IndexCleaner
 func (mmDeleteForPN *IndexCleanerMock) DeleteForPN(ctx context.Context, pn insolar.PulseNumber) {
 	mm_atomic.AddUint64(&mmDeleteForPN.beforeDeleteForPNCounter, 1)
 	defer mm_atomic.AddUint64(&mmDeleteForPN.afterDeleteForPNCounter, 1)

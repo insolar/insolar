@@ -9,10 +9,11 @@ import (
 
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/insolar"
+	mm_census "github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 )
 
-// EvictedPopulationMock implements EvictedPopulation
+// EvictedPopulationMock implements census.EvictedPopulation
 type EvictedPopulationMock struct {
 	t minimock.Tester
 
@@ -28,7 +29,7 @@ type EvictedPopulationMock struct {
 	beforeGetCountCounter uint64
 	GetCountMock          mEvictedPopulationMockGetCount
 
-	funcGetDetectedErrors          func() (r1 RecoverableErrorTypes)
+	funcGetDetectedErrors          func() (r1 mm_census.RecoverableErrorTypes)
 	inspectFuncGetDetectedErrors   func()
 	afterGetDetectedErrorsCounter  uint64
 	beforeGetDetectedErrorsCounter uint64
@@ -47,7 +48,7 @@ type EvictedPopulationMock struct {
 	IsValidMock          mEvictedPopulationMockIsValid
 }
 
-// NewEvictedPopulationMock returns a mock for EvictedPopulation
+// NewEvictedPopulationMock returns a mock for census.EvictedPopulation
 func NewEvictedPopulationMock(t minimock.Tester) *EvictedPopulationMock {
 	m := &EvictedPopulationMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -174,7 +175,7 @@ func (e *EvictedPopulationMockFindProfileExpectation) Then(e1 profiles.EvictedNo
 	return e.mock
 }
 
-// FindProfile implements EvictedPopulation
+// FindProfile implements census.EvictedPopulation
 func (mmFindProfile *EvictedPopulationMock) FindProfile(nodeID insolar.ShortNodeID) (e1 profiles.EvictedNode) {
 	mm_atomic.AddUint64(&mmFindProfile.beforeFindProfileCounter, 1)
 	defer mm_atomic.AddUint64(&mmFindProfile.afterFindProfileCounter, 1)
@@ -353,7 +354,7 @@ func (mmGetCount *mEvictedPopulationMockGetCount) Set(f func() (i1 int)) *Evicte
 	return mmGetCount.mock
 }
 
-// GetCount implements EvictedPopulation
+// GetCount implements census.EvictedPopulation
 func (mmGetCount *EvictedPopulationMock) GetCount() (i1 int) {
 	mm_atomic.AddUint64(&mmGetCount.beforeGetCountCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetCount.afterGetCountCounter, 1)
@@ -442,7 +443,7 @@ type EvictedPopulationMockGetDetectedErrorsExpectation struct {
 
 // EvictedPopulationMockGetDetectedErrorsResults contains results of the EvictedPopulation.GetDetectedErrors
 type EvictedPopulationMockGetDetectedErrorsResults struct {
-	r1 RecoverableErrorTypes
+	r1 mm_census.RecoverableErrorTypes
 }
 
 // Expect sets up expected params for EvictedPopulation.GetDetectedErrors
@@ -470,7 +471,7 @@ func (mmGetDetectedErrors *mEvictedPopulationMockGetDetectedErrors) Inspect(f fu
 }
 
 // Return sets up results that will be returned by EvictedPopulation.GetDetectedErrors
-func (mmGetDetectedErrors *mEvictedPopulationMockGetDetectedErrors) Return(r1 RecoverableErrorTypes) *EvictedPopulationMock {
+func (mmGetDetectedErrors *mEvictedPopulationMockGetDetectedErrors) Return(r1 mm_census.RecoverableErrorTypes) *EvictedPopulationMock {
 	if mmGetDetectedErrors.mock.funcGetDetectedErrors != nil {
 		mmGetDetectedErrors.mock.t.Fatalf("EvictedPopulationMock.GetDetectedErrors mock is already set by Set")
 	}
@@ -483,7 +484,7 @@ func (mmGetDetectedErrors *mEvictedPopulationMockGetDetectedErrors) Return(r1 Re
 }
 
 //Set uses given function f to mock the EvictedPopulation.GetDetectedErrors method
-func (mmGetDetectedErrors *mEvictedPopulationMockGetDetectedErrors) Set(f func() (r1 RecoverableErrorTypes)) *EvictedPopulationMock {
+func (mmGetDetectedErrors *mEvictedPopulationMockGetDetectedErrors) Set(f func() (r1 mm_census.RecoverableErrorTypes)) *EvictedPopulationMock {
 	if mmGetDetectedErrors.defaultExpectation != nil {
 		mmGetDetectedErrors.mock.t.Fatalf("Default expectation is already set for the EvictedPopulation.GetDetectedErrors method")
 	}
@@ -496,8 +497,8 @@ func (mmGetDetectedErrors *mEvictedPopulationMockGetDetectedErrors) Set(f func()
 	return mmGetDetectedErrors.mock
 }
 
-// GetDetectedErrors implements EvictedPopulation
-func (mmGetDetectedErrors *EvictedPopulationMock) GetDetectedErrors() (r1 RecoverableErrorTypes) {
+// GetDetectedErrors implements census.EvictedPopulation
+func (mmGetDetectedErrors *EvictedPopulationMock) GetDetectedErrors() (r1 mm_census.RecoverableErrorTypes) {
 	mm_atomic.AddUint64(&mmGetDetectedErrors.beforeGetDetectedErrorsCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetDetectedErrors.afterGetDetectedErrorsCounter, 1)
 
@@ -639,7 +640,7 @@ func (mmGetProfiles *mEvictedPopulationMockGetProfiles) Set(f func() (ea1 []prof
 	return mmGetProfiles.mock
 }
 
-// GetProfiles implements EvictedPopulation
+// GetProfiles implements census.EvictedPopulation
 func (mmGetProfiles *EvictedPopulationMock) GetProfiles() (ea1 []profiles.EvictedNode) {
 	mm_atomic.AddUint64(&mmGetProfiles.beforeGetProfilesCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetProfiles.afterGetProfilesCounter, 1)
@@ -782,7 +783,7 @@ func (mmIsValid *mEvictedPopulationMockIsValid) Set(f func() (b1 bool)) *Evicted
 	return mmIsValid.mock
 }
 
-// IsValid implements EvictedPopulation
+// IsValid implements census.EvictedPopulation
 func (mmIsValid *EvictedPopulationMock) IsValid() (b1 bool) {
 	mm_atomic.AddUint64(&mmIsValid.beforeIsValidCounter, 1)
 	defer mm_atomic.AddUint64(&mmIsValid.afterIsValidCounter, 1)

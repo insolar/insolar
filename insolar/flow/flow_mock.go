@@ -9,9 +9,10 @@ import (
 	mm_time "time"
 
 	"github.com/gojuno/minimock"
+	mm_flow "github.com/insolar/insolar/insolar/flow"
 )
 
-// FlowMock implements Flow
+// FlowMock implements flow.Flow
 type FlowMock struct {
 	t minimock.Tester
 
@@ -21,26 +22,26 @@ type FlowMock struct {
 	beforeContinueCounter uint64
 	ContinueMock          mFlowMockContinue
 
-	funcHandle          func(ctx context.Context, h1 Handle) (err error)
-	inspectFuncHandle   func(ctx context.Context, h1 Handle)
+	funcHandle          func(ctx context.Context, h1 mm_flow.Handle) (err error)
+	inspectFuncHandle   func(ctx context.Context, h1 mm_flow.Handle)
 	afterHandleCounter  uint64
 	beforeHandleCounter uint64
 	HandleMock          mFlowMockHandle
 
-	funcMigrate          func(ctx context.Context, h1 Handle) (err error)
-	inspectFuncMigrate   func(ctx context.Context, h1 Handle)
+	funcMigrate          func(ctx context.Context, h1 mm_flow.Handle) (err error)
+	inspectFuncMigrate   func(ctx context.Context, h1 mm_flow.Handle)
 	afterMigrateCounter  uint64
 	beforeMigrateCounter uint64
 	MigrateMock          mFlowMockMigrate
 
-	funcProcedure          func(ctx context.Context, proc Procedure, cancelable bool) (err error)
-	inspectFuncProcedure   func(ctx context.Context, proc Procedure, cancelable bool)
+	funcProcedure          func(ctx context.Context, proc mm_flow.Procedure, cancelable bool) (err error)
+	inspectFuncProcedure   func(ctx context.Context, proc mm_flow.Procedure, cancelable bool)
 	afterProcedureCounter  uint64
 	beforeProcedureCounter uint64
 	ProcedureMock          mFlowMockProcedure
 }
 
-// NewFlowMock returns a mock for Flow
+// NewFlowMock returns a mock for flow.Flow
 func NewFlowMock(t minimock.Tester) *FlowMock {
 	m := &FlowMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -142,7 +143,7 @@ func (mmContinue *mFlowMockContinue) Set(f func(ctx context.Context)) *FlowMock 
 	return mmContinue.mock
 }
 
-// Continue implements Flow
+// Continue implements flow.Flow
 func (mmContinue *FlowMock) Continue(ctx context.Context) {
 	mm_atomic.AddUint64(&mmContinue.beforeContinueCounter, 1)
 	defer mm_atomic.AddUint64(&mmContinue.afterContinueCounter, 1)
@@ -269,7 +270,7 @@ type FlowMockHandleExpectation struct {
 // FlowMockHandleParams contains parameters of the Flow.Handle
 type FlowMockHandleParams struct {
 	ctx context.Context
-	h1  Handle
+	h1  mm_flow.Handle
 }
 
 // FlowMockHandleResults contains results of the Flow.Handle
@@ -278,7 +279,7 @@ type FlowMockHandleResults struct {
 }
 
 // Expect sets up expected params for Flow.Handle
-func (mmHandle *mFlowMockHandle) Expect(ctx context.Context, h1 Handle) *mFlowMockHandle {
+func (mmHandle *mFlowMockHandle) Expect(ctx context.Context, h1 mm_flow.Handle) *mFlowMockHandle {
 	if mmHandle.mock.funcHandle != nil {
 		mmHandle.mock.t.Fatalf("FlowMock.Handle mock is already set by Set")
 	}
@@ -298,7 +299,7 @@ func (mmHandle *mFlowMockHandle) Expect(ctx context.Context, h1 Handle) *mFlowMo
 }
 
 // Inspect accepts an inspector function that has same arguments as the Flow.Handle
-func (mmHandle *mFlowMockHandle) Inspect(f func(ctx context.Context, h1 Handle)) *mFlowMockHandle {
+func (mmHandle *mFlowMockHandle) Inspect(f func(ctx context.Context, h1 mm_flow.Handle)) *mFlowMockHandle {
 	if mmHandle.mock.inspectFuncHandle != nil {
 		mmHandle.mock.t.Fatalf("Inspect function is already set for FlowMock.Handle")
 	}
@@ -322,7 +323,7 @@ func (mmHandle *mFlowMockHandle) Return(err error) *FlowMock {
 }
 
 //Set uses given function f to mock the Flow.Handle method
-func (mmHandle *mFlowMockHandle) Set(f func(ctx context.Context, h1 Handle) (err error)) *FlowMock {
+func (mmHandle *mFlowMockHandle) Set(f func(ctx context.Context, h1 mm_flow.Handle) (err error)) *FlowMock {
 	if mmHandle.defaultExpectation != nil {
 		mmHandle.mock.t.Fatalf("Default expectation is already set for the Flow.Handle method")
 	}
@@ -337,7 +338,7 @@ func (mmHandle *mFlowMockHandle) Set(f func(ctx context.Context, h1 Handle) (err
 
 // When sets expectation for the Flow.Handle which will trigger the result defined by the following
 // Then helper
-func (mmHandle *mFlowMockHandle) When(ctx context.Context, h1 Handle) *FlowMockHandleExpectation {
+func (mmHandle *mFlowMockHandle) When(ctx context.Context, h1 mm_flow.Handle) *FlowMockHandleExpectation {
 	if mmHandle.mock.funcHandle != nil {
 		mmHandle.mock.t.Fatalf("FlowMock.Handle mock is already set by Set")
 	}
@@ -356,8 +357,8 @@ func (e *FlowMockHandleExpectation) Then(err error) *FlowMock {
 	return e.mock
 }
 
-// Handle implements Flow
-func (mmHandle *FlowMock) Handle(ctx context.Context, h1 Handle) (err error) {
+// Handle implements flow.Flow
+func (mmHandle *FlowMock) Handle(ctx context.Context, h1 mm_flow.Handle) (err error) {
 	mm_atomic.AddUint64(&mmHandle.beforeHandleCounter, 1)
 	defer mm_atomic.AddUint64(&mmHandle.afterHandleCounter, 1)
 
@@ -485,7 +486,7 @@ type FlowMockMigrateExpectation struct {
 // FlowMockMigrateParams contains parameters of the Flow.Migrate
 type FlowMockMigrateParams struct {
 	ctx context.Context
-	h1  Handle
+	h1  mm_flow.Handle
 }
 
 // FlowMockMigrateResults contains results of the Flow.Migrate
@@ -494,7 +495,7 @@ type FlowMockMigrateResults struct {
 }
 
 // Expect sets up expected params for Flow.Migrate
-func (mmMigrate *mFlowMockMigrate) Expect(ctx context.Context, h1 Handle) *mFlowMockMigrate {
+func (mmMigrate *mFlowMockMigrate) Expect(ctx context.Context, h1 mm_flow.Handle) *mFlowMockMigrate {
 	if mmMigrate.mock.funcMigrate != nil {
 		mmMigrate.mock.t.Fatalf("FlowMock.Migrate mock is already set by Set")
 	}
@@ -514,7 +515,7 @@ func (mmMigrate *mFlowMockMigrate) Expect(ctx context.Context, h1 Handle) *mFlow
 }
 
 // Inspect accepts an inspector function that has same arguments as the Flow.Migrate
-func (mmMigrate *mFlowMockMigrate) Inspect(f func(ctx context.Context, h1 Handle)) *mFlowMockMigrate {
+func (mmMigrate *mFlowMockMigrate) Inspect(f func(ctx context.Context, h1 mm_flow.Handle)) *mFlowMockMigrate {
 	if mmMigrate.mock.inspectFuncMigrate != nil {
 		mmMigrate.mock.t.Fatalf("Inspect function is already set for FlowMock.Migrate")
 	}
@@ -538,7 +539,7 @@ func (mmMigrate *mFlowMockMigrate) Return(err error) *FlowMock {
 }
 
 //Set uses given function f to mock the Flow.Migrate method
-func (mmMigrate *mFlowMockMigrate) Set(f func(ctx context.Context, h1 Handle) (err error)) *FlowMock {
+func (mmMigrate *mFlowMockMigrate) Set(f func(ctx context.Context, h1 mm_flow.Handle) (err error)) *FlowMock {
 	if mmMigrate.defaultExpectation != nil {
 		mmMigrate.mock.t.Fatalf("Default expectation is already set for the Flow.Migrate method")
 	}
@@ -553,7 +554,7 @@ func (mmMigrate *mFlowMockMigrate) Set(f func(ctx context.Context, h1 Handle) (e
 
 // When sets expectation for the Flow.Migrate which will trigger the result defined by the following
 // Then helper
-func (mmMigrate *mFlowMockMigrate) When(ctx context.Context, h1 Handle) *FlowMockMigrateExpectation {
+func (mmMigrate *mFlowMockMigrate) When(ctx context.Context, h1 mm_flow.Handle) *FlowMockMigrateExpectation {
 	if mmMigrate.mock.funcMigrate != nil {
 		mmMigrate.mock.t.Fatalf("FlowMock.Migrate mock is already set by Set")
 	}
@@ -572,8 +573,8 @@ func (e *FlowMockMigrateExpectation) Then(err error) *FlowMock {
 	return e.mock
 }
 
-// Migrate implements Flow
-func (mmMigrate *FlowMock) Migrate(ctx context.Context, h1 Handle) (err error) {
+// Migrate implements flow.Flow
+func (mmMigrate *FlowMock) Migrate(ctx context.Context, h1 mm_flow.Handle) (err error) {
 	mm_atomic.AddUint64(&mmMigrate.beforeMigrateCounter, 1)
 	defer mm_atomic.AddUint64(&mmMigrate.afterMigrateCounter, 1)
 
@@ -701,7 +702,7 @@ type FlowMockProcedureExpectation struct {
 // FlowMockProcedureParams contains parameters of the Flow.Procedure
 type FlowMockProcedureParams struct {
 	ctx        context.Context
-	proc       Procedure
+	proc       mm_flow.Procedure
 	cancelable bool
 }
 
@@ -711,7 +712,7 @@ type FlowMockProcedureResults struct {
 }
 
 // Expect sets up expected params for Flow.Procedure
-func (mmProcedure *mFlowMockProcedure) Expect(ctx context.Context, proc Procedure, cancelable bool) *mFlowMockProcedure {
+func (mmProcedure *mFlowMockProcedure) Expect(ctx context.Context, proc mm_flow.Procedure, cancelable bool) *mFlowMockProcedure {
 	if mmProcedure.mock.funcProcedure != nil {
 		mmProcedure.mock.t.Fatalf("FlowMock.Procedure mock is already set by Set")
 	}
@@ -731,7 +732,7 @@ func (mmProcedure *mFlowMockProcedure) Expect(ctx context.Context, proc Procedur
 }
 
 // Inspect accepts an inspector function that has same arguments as the Flow.Procedure
-func (mmProcedure *mFlowMockProcedure) Inspect(f func(ctx context.Context, proc Procedure, cancelable bool)) *mFlowMockProcedure {
+func (mmProcedure *mFlowMockProcedure) Inspect(f func(ctx context.Context, proc mm_flow.Procedure, cancelable bool)) *mFlowMockProcedure {
 	if mmProcedure.mock.inspectFuncProcedure != nil {
 		mmProcedure.mock.t.Fatalf("Inspect function is already set for FlowMock.Procedure")
 	}
@@ -755,7 +756,7 @@ func (mmProcedure *mFlowMockProcedure) Return(err error) *FlowMock {
 }
 
 //Set uses given function f to mock the Flow.Procedure method
-func (mmProcedure *mFlowMockProcedure) Set(f func(ctx context.Context, proc Procedure, cancelable bool) (err error)) *FlowMock {
+func (mmProcedure *mFlowMockProcedure) Set(f func(ctx context.Context, proc mm_flow.Procedure, cancelable bool) (err error)) *FlowMock {
 	if mmProcedure.defaultExpectation != nil {
 		mmProcedure.mock.t.Fatalf("Default expectation is already set for the Flow.Procedure method")
 	}
@@ -770,7 +771,7 @@ func (mmProcedure *mFlowMockProcedure) Set(f func(ctx context.Context, proc Proc
 
 // When sets expectation for the Flow.Procedure which will trigger the result defined by the following
 // Then helper
-func (mmProcedure *mFlowMockProcedure) When(ctx context.Context, proc Procedure, cancelable bool) *FlowMockProcedureExpectation {
+func (mmProcedure *mFlowMockProcedure) When(ctx context.Context, proc mm_flow.Procedure, cancelable bool) *FlowMockProcedureExpectation {
 	if mmProcedure.mock.funcProcedure != nil {
 		mmProcedure.mock.t.Fatalf("FlowMock.Procedure mock is already set by Set")
 	}
@@ -789,8 +790,8 @@ func (e *FlowMockProcedureExpectation) Then(err error) *FlowMock {
 	return e.mock
 }
 
-// Procedure implements Flow
-func (mmProcedure *FlowMock) Procedure(ctx context.Context, proc Procedure, cancelable bool) (err error) {
+// Procedure implements flow.Flow
+func (mmProcedure *FlowMock) Procedure(ctx context.Context, proc mm_flow.Procedure, cancelable bool) (err error) {
 	mm_atomic.AddUint64(&mmProcedure.beforeProcedureCounter, 1)
 	defer mm_atomic.AddUint64(&mmProcedure.afterProcedureCounter, 1)
 

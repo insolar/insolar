@@ -12,7 +12,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-// JetFetcherMock implements JetFetcher
+// JetFetcherMock implements executor.JetFetcher
 type JetFetcherMock struct {
 	t minimock.Tester
 
@@ -29,7 +29,7 @@ type JetFetcherMock struct {
 	ReleaseMock          mJetFetcherMockRelease
 }
 
-// NewJetFetcherMock returns a mock for JetFetcher
+// NewJetFetcherMock returns a mock for executor.JetFetcher
 func NewJetFetcherMock(t minimock.Tester) *JetFetcherMock {
 	m := &JetFetcherMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -154,7 +154,7 @@ func (e *JetFetcherMockFetchExpectation) Then(ip1 *insolar.ID, err error) *JetFe
 	return e.mock
 }
 
-// Fetch implements JetFetcher
+// Fetch implements executor.JetFetcher
 func (mmFetch *JetFetcherMock) Fetch(ctx context.Context, target insolar.ID, pulse insolar.PulseNumber) (ip1 *insolar.ID, err error) {
 	mm_atomic.AddUint64(&mmFetch.beforeFetchCounter, 1)
 	defer mm_atomic.AddUint64(&mmFetch.afterFetchCounter, 1)
@@ -345,7 +345,7 @@ func (mmRelease *mJetFetcherMockRelease) Set(f func(ctx context.Context, jetID i
 	return mmRelease.mock
 }
 
-// Release implements JetFetcher
+// Release implements executor.JetFetcher
 func (mmRelease *JetFetcherMock) Release(ctx context.Context, jetID insolar.JetID, pulse insolar.PulseNumber) {
 	mm_atomic.AddUint64(&mmRelease.beforeReleaseCounter, 1)
 	defer mm_atomic.AddUint64(&mmRelease.afterReleaseCounter, 1)

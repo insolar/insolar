@@ -12,7 +12,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 )
 
-// OfflinePopulationMock implements OfflinePopulation
+// OfflinePopulationMock implements census.OfflinePopulation
 type OfflinePopulationMock struct {
 	t minimock.Tester
 
@@ -23,7 +23,7 @@ type OfflinePopulationMock struct {
 	FindRegisteredProfileMock          mOfflinePopulationMockFindRegisteredProfile
 }
 
-// NewOfflinePopulationMock returns a mock for OfflinePopulation
+// NewOfflinePopulationMock returns a mock for census.OfflinePopulation
 func NewOfflinePopulationMock(t minimock.Tester) *OfflinePopulationMock {
 	m := &OfflinePopulationMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -142,7 +142,7 @@ func (e *OfflinePopulationMockFindRegisteredProfileExpectation) Then(h1 profiles
 	return e.mock
 }
 
-// FindRegisteredProfile implements OfflinePopulation
+// FindRegisteredProfile implements census.OfflinePopulation
 func (mmFindRegisteredProfile *OfflinePopulationMock) FindRegisteredProfile(identity endpoints.Inbound) (h1 profiles.Host) {
 	mm_atomic.AddUint64(&mmFindRegisteredProfile.beforeFindRegisteredProfileCounter, 1)
 	defer mm_atomic.AddUint64(&mmFindRegisteredProfile.afterFindRegisteredProfileCounter, 1)

@@ -11,7 +11,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-// AccessorMock implements Accessor
+// AccessorMock implements node.Accessor
 type AccessorMock struct {
 	t minimock.Tester
 
@@ -28,7 +28,7 @@ type AccessorMock struct {
 	InRoleMock          mAccessorMockInRole
 }
 
-// NewAccessorMock returns a mock for Accessor
+// NewAccessorMock returns a mock for node.Accessor
 func NewAccessorMock(t minimock.Tester) *AccessorMock {
 	m := &AccessorMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -151,7 +151,7 @@ func (e *AccessorMockAllExpectation) Then(na1 []insolar.Node, err error) *Access
 	return e.mock
 }
 
-// All implements Accessor
+// All implements node.Accessor
 func (mmAll *AccessorMock) All(pulse insolar.PulseNumber) (na1 []insolar.Node, err error) {
 	mm_atomic.AddUint64(&mmAll.beforeAllCounter, 1)
 	defer mm_atomic.AddUint64(&mmAll.afterAllCounter, 1)
@@ -368,7 +368,7 @@ func (e *AccessorMockInRoleExpectation) Then(na1 []insolar.Node, err error) *Acc
 	return e.mock
 }
 
-// InRole implements Accessor
+// InRole implements node.Accessor
 func (mmInRole *AccessorMock) InRole(pulse insolar.PulseNumber, role insolar.StaticRole) (na1 []insolar.Node, err error) {
 	mm_atomic.AddUint64(&mmInRole.beforeInRoleCounter, 1)
 	defer mm_atomic.AddUint64(&mmInRole.afterInRoleCounter, 1)

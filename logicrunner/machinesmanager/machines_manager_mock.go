@@ -11,7 +11,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-// MachinesManagerMock implements MachinesManager
+// MachinesManagerMock implements machinesmanager.MachinesManager
 type MachinesManagerMock struct {
 	t minimock.Tester
 
@@ -28,7 +28,7 @@ type MachinesManagerMock struct {
 	RegisterExecutorMock          mMachinesManagerMockRegisterExecutor
 }
 
-// NewMachinesManagerMock returns a mock for MachinesManager
+// NewMachinesManagerMock returns a mock for machinesmanager.MachinesManager
 func NewMachinesManagerMock(t minimock.Tester) *MachinesManagerMock {
 	m := &MachinesManagerMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -151,7 +151,7 @@ func (e *MachinesManagerMockGetExecutorExpectation) Then(m1 insolar.MachineLogic
 	return e.mock
 }
 
-// GetExecutor implements MachinesManager
+// GetExecutor implements machinesmanager.MachinesManager
 func (mmGetExecutor *MachinesManagerMock) GetExecutor(t insolar.MachineType) (m1 insolar.MachineLogicExecutor, err error) {
 	mm_atomic.AddUint64(&mmGetExecutor.beforeGetExecutorCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetExecutor.afterGetExecutorCounter, 1)
@@ -367,7 +367,7 @@ func (e *MachinesManagerMockRegisterExecutorExpectation) Then(err error) *Machin
 	return e.mock
 }
 
-// RegisterExecutor implements MachinesManager
+// RegisterExecutor implements machinesmanager.MachinesManager
 func (mmRegisterExecutor *MachinesManagerMock) RegisterExecutor(t insolar.MachineType, e insolar.MachineLogicExecutor) (err error) {
 	mm_atomic.AddUint64(&mmRegisterExecutor.beforeRegisterExecutorCounter, 1)
 	defer mm_atomic.AddUint64(&mmRegisterExecutor.afterRegisterExecutorCounter, 1)

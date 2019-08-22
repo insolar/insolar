@@ -13,7 +13,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/common"
 )
 
-// LogicExecutorMock implements LogicExecutor
+// LogicExecutorMock implements logicexecutor.LogicExecutor
 type LogicExecutorMock struct {
 	t minimock.Tester
 
@@ -36,7 +36,7 @@ type LogicExecutorMock struct {
 	ExecuteMethodMock          mLogicExecutorMockExecuteMethod
 }
 
-// NewLogicExecutorMock returns a mock for LogicExecutor
+// NewLogicExecutorMock returns a mock for logicexecutor.LogicExecutor
 func NewLogicExecutorMock(t minimock.Tester) *LogicExecutorMock {
 	m := &LogicExecutorMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -163,7 +163,7 @@ func (e *LogicExecutorMockExecuteExpectation) Then(r1 artifacts.RequestResult, e
 	return e.mock
 }
 
-// Execute implements LogicExecutor
+// Execute implements logicexecutor.LogicExecutor
 func (mmExecute *LogicExecutorMock) Execute(ctx context.Context, transcript *common.Transcript) (r1 artifacts.RequestResult, err error) {
 	mm_atomic.AddUint64(&mmExecute.beforeExecuteCounter, 1)
 	defer mm_atomic.AddUint64(&mmExecute.afterExecuteCounter, 1)
@@ -380,7 +380,7 @@ func (e *LogicExecutorMockExecuteConstructorExpectation) Then(r1 artifacts.Reque
 	return e.mock
 }
 
-// ExecuteConstructor implements LogicExecutor
+// ExecuteConstructor implements logicexecutor.LogicExecutor
 func (mmExecuteConstructor *LogicExecutorMock) ExecuteConstructor(ctx context.Context, transcript *common.Transcript) (r1 artifacts.RequestResult, err error) {
 	mm_atomic.AddUint64(&mmExecuteConstructor.beforeExecuteConstructorCounter, 1)
 	defer mm_atomic.AddUint64(&mmExecuteConstructor.afterExecuteConstructorCounter, 1)
@@ -597,7 +597,7 @@ func (e *LogicExecutorMockExecuteMethodExpectation) Then(r1 artifacts.RequestRes
 	return e.mock
 }
 
-// ExecuteMethod implements LogicExecutor
+// ExecuteMethod implements logicexecutor.LogicExecutor
 func (mmExecuteMethod *LogicExecutorMock) ExecuteMethod(ctx context.Context, transcript *common.Transcript) (r1 artifacts.RequestResult, err error) {
 	mm_atomic.AddUint64(&mmExecuteMethod.beforeExecuteMethodCounter, 1)
 	defer mm_atomic.AddUint64(&mmExecuteMethod.afterExecuteMethodCounter, 1)

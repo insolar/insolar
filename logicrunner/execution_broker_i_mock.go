@@ -14,7 +14,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/common"
 )
 
-// ExecutionBrokerIMock implements ExecutionBrokerI
+// ExecutionBrokerIMock implements logicrunner.ExecutionBrokerI
 type ExecutionBrokerIMock struct {
 	t minimock.Tester
 
@@ -103,7 +103,7 @@ type ExecutionBrokerIMock struct {
 	SetNotPendingMock          mExecutionBrokerIMockSetNotPending
 }
 
-// NewExecutionBrokerIMock returns a mock for ExecutionBrokerI
+// NewExecutionBrokerIMock returns a mock for logicrunner.ExecutionBrokerI
 func NewExecutionBrokerIMock(t minimock.Tester) *ExecutionBrokerIMock {
 	m := &ExecutionBrokerIMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -234,7 +234,7 @@ func (mmAbandonedRequestsOnLedger *mExecutionBrokerIMockAbandonedRequestsOnLedge
 	return mmAbandonedRequestsOnLedger.mock
 }
 
-// AbandonedRequestsOnLedger implements ExecutionBrokerI
+// AbandonedRequestsOnLedger implements logicrunner.ExecutionBrokerI
 func (mmAbandonedRequestsOnLedger *ExecutionBrokerIMock) AbandonedRequestsOnLedger(ctx context.Context) {
 	mm_atomic.AddUint64(&mmAbandonedRequestsOnLedger.beforeAbandonedRequestsOnLedgerCounter, 1)
 	defer mm_atomic.AddUint64(&mmAbandonedRequestsOnLedger.afterAbandonedRequestsOnLedgerCounter, 1)
@@ -422,7 +422,7 @@ func (mmAddAdditionalRequestFromPrevExecutor *mExecutionBrokerIMockAddAdditional
 	return mmAddAdditionalRequestFromPrevExecutor.mock
 }
 
-// AddAdditionalRequestFromPrevExecutor implements ExecutionBrokerI
+// AddAdditionalRequestFromPrevExecutor implements logicrunner.ExecutionBrokerI
 func (mmAddAdditionalRequestFromPrevExecutor *ExecutionBrokerIMock) AddAdditionalRequestFromPrevExecutor(ctx context.Context, transcript *common.Transcript) {
 	mm_atomic.AddUint64(&mmAddAdditionalRequestFromPrevExecutor.beforeAddAdditionalRequestFromPrevExecutorCounter, 1)
 	defer mm_atomic.AddUint64(&mmAddAdditionalRequestFromPrevExecutor.afterAddAdditionalRequestFromPrevExecutorCounter, 1)
@@ -610,7 +610,7 @@ func (mmAddFreshRequest *mExecutionBrokerIMockAddFreshRequest) Set(f func(ctx co
 	return mmAddFreshRequest.mock
 }
 
-// AddFreshRequest implements ExecutionBrokerI
+// AddFreshRequest implements logicrunner.ExecutionBrokerI
 func (mmAddFreshRequest *ExecutionBrokerIMock) AddFreshRequest(ctx context.Context, transcript *common.Transcript) {
 	mm_atomic.AddUint64(&mmAddFreshRequest.beforeAddFreshRequestCounter, 1)
 	defer mm_atomic.AddUint64(&mmAddFreshRequest.afterAddFreshRequestCounter, 1)
@@ -798,7 +798,7 @@ func (mmAddRequestsFromLedger *mExecutionBrokerIMockAddRequestsFromLedger) Set(f
 	return mmAddRequestsFromLedger.mock
 }
 
-// AddRequestsFromLedger implements ExecutionBrokerI
+// AddRequestsFromLedger implements logicrunner.ExecutionBrokerI
 func (mmAddRequestsFromLedger *ExecutionBrokerIMock) AddRequestsFromLedger(ctx context.Context, transcripts ...*common.Transcript) {
 	mm_atomic.AddUint64(&mmAddRequestsFromLedger.beforeAddRequestsFromLedgerCounter, 1)
 	defer mm_atomic.AddUint64(&mmAddRequestsFromLedger.afterAddRequestsFromLedgerCounter, 1)
@@ -986,7 +986,7 @@ func (mmAddRequestsFromPrevExecutor *mExecutionBrokerIMockAddRequestsFromPrevExe
 	return mmAddRequestsFromPrevExecutor.mock
 }
 
-// AddRequestsFromPrevExecutor implements ExecutionBrokerI
+// AddRequestsFromPrevExecutor implements logicrunner.ExecutionBrokerI
 func (mmAddRequestsFromPrevExecutor *ExecutionBrokerIMock) AddRequestsFromPrevExecutor(ctx context.Context, transcripts ...*common.Transcript) {
 	mm_atomic.AddUint64(&mmAddRequestsFromPrevExecutor.beforeAddRequestsFromPrevExecutorCounter, 1)
 	defer mm_atomic.AddUint64(&mmAddRequestsFromPrevExecutor.afterAddRequestsFromPrevExecutorCounter, 1)
@@ -1200,7 +1200,7 @@ func (e *ExecutionBrokerIMockIsKnownRequestExpectation) Then(b1 bool) *Execution
 	return e.mock
 }
 
-// IsKnownRequest implements ExecutionBrokerI
+// IsKnownRequest implements logicrunner.ExecutionBrokerI
 func (mmIsKnownRequest *ExecutionBrokerIMock) IsKnownRequest(ctx context.Context, req insolar.Reference) (b1 bool) {
 	mm_atomic.AddUint64(&mmIsKnownRequest.beforeIsKnownRequestCounter, 1)
 	defer mm_atomic.AddUint64(&mmIsKnownRequest.afterIsKnownRequestCounter, 1)
@@ -1389,7 +1389,7 @@ func (mmMoreRequestsOnLedger *mExecutionBrokerIMockMoreRequestsOnLedger) Set(f f
 	return mmMoreRequestsOnLedger.mock
 }
 
-// MoreRequestsOnLedger implements ExecutionBrokerI
+// MoreRequestsOnLedger implements logicrunner.ExecutionBrokerI
 func (mmMoreRequestsOnLedger *ExecutionBrokerIMock) MoreRequestsOnLedger(ctx context.Context) {
 	mm_atomic.AddUint64(&mmMoreRequestsOnLedger.beforeMoreRequestsOnLedgerCounter, 1)
 	defer mm_atomic.AddUint64(&mmMoreRequestsOnLedger.afterMoreRequestsOnLedgerCounter, 1)
@@ -1576,7 +1576,7 @@ func (mmNoMoreRequestsOnLedger *mExecutionBrokerIMockNoMoreRequestsOnLedger) Set
 	return mmNoMoreRequestsOnLedger.mock
 }
 
-// NoMoreRequestsOnLedger implements ExecutionBrokerI
+// NoMoreRequestsOnLedger implements logicrunner.ExecutionBrokerI
 func (mmNoMoreRequestsOnLedger *ExecutionBrokerIMock) NoMoreRequestsOnLedger(ctx context.Context) {
 	mm_atomic.AddUint64(&mmNoMoreRequestsOnLedger.beforeNoMoreRequestsOnLedgerCounter, 1)
 	defer mm_atomic.AddUint64(&mmNoMoreRequestsOnLedger.afterNoMoreRequestsOnLedgerCounter, 1)
@@ -1789,7 +1789,7 @@ func (e *ExecutionBrokerIMockOnPulseExpectation) Then(pa1 []payload.Payload) *Ex
 	return e.mock
 }
 
-// OnPulse implements ExecutionBrokerI
+// OnPulse implements logicrunner.ExecutionBrokerI
 func (mmOnPulse *ExecutionBrokerIMock) OnPulse(ctx context.Context) (pa1 []payload.Payload) {
 	mm_atomic.AddUint64(&mmOnPulse.beforeOnPulseCounter, 1)
 	defer mm_atomic.AddUint64(&mmOnPulse.afterOnPulseCounter, 1)
@@ -1968,7 +1968,7 @@ func (mmPendingState *mExecutionBrokerIMockPendingState) Set(f func() (p1 insola
 	return mmPendingState.mock
 }
 
-// PendingState implements ExecutionBrokerI
+// PendingState implements logicrunner.ExecutionBrokerI
 func (mmPendingState *ExecutionBrokerIMock) PendingState() (p1 insolar.PendingState) {
 	mm_atomic.AddUint64(&mmPendingState.beforePendingStateCounter, 1)
 	defer mm_atomic.AddUint64(&mmPendingState.afterPendingStateCounter, 1)
@@ -2122,7 +2122,7 @@ func (mmPrevExecutorPendingResult *mExecutionBrokerIMockPrevExecutorPendingResul
 	return mmPrevExecutorPendingResult.mock
 }
 
-// PrevExecutorPendingResult implements ExecutionBrokerI
+// PrevExecutorPendingResult implements logicrunner.ExecutionBrokerI
 func (mmPrevExecutorPendingResult *ExecutionBrokerIMock) PrevExecutorPendingResult(ctx context.Context, prevExecState insolar.PendingState) {
 	mm_atomic.AddUint64(&mmPrevExecutorPendingResult.beforePrevExecutorPendingResultCounter, 1)
 	defer mm_atomic.AddUint64(&mmPrevExecutorPendingResult.afterPrevExecutorPendingResultCounter, 1)
@@ -2335,7 +2335,7 @@ func (e *ExecutionBrokerIMockPrevExecutorSentPendingFinishedExpectation) Then(er
 	return e.mock
 }
 
-// PrevExecutorSentPendingFinished implements ExecutionBrokerI
+// PrevExecutorSentPendingFinished implements logicrunner.ExecutionBrokerI
 func (mmPrevExecutorSentPendingFinished *ExecutionBrokerIMock) PrevExecutorSentPendingFinished(ctx context.Context) (err error) {
 	mm_atomic.AddUint64(&mmPrevExecutorSentPendingFinished.beforePrevExecutorSentPendingFinishedCounter, 1)
 	defer mm_atomic.AddUint64(&mmPrevExecutorSentPendingFinished.afterPrevExecutorSentPendingFinishedCounter, 1)
@@ -2524,7 +2524,7 @@ func (mmPrevExecutorStillExecuting *mExecutionBrokerIMockPrevExecutorStillExecut
 	return mmPrevExecutorStillExecuting.mock
 }
 
-// PrevExecutorStillExecuting implements ExecutionBrokerI
+// PrevExecutorStillExecuting implements logicrunner.ExecutionBrokerI
 func (mmPrevExecutorStillExecuting *ExecutionBrokerIMock) PrevExecutorStillExecuting(ctx context.Context) {
 	mm_atomic.AddUint64(&mmPrevExecutorStillExecuting.beforePrevExecutorStillExecutingCounter, 1)
 	defer mm_atomic.AddUint64(&mmPrevExecutorStillExecuting.afterPrevExecutorStillExecutingCounter, 1)
@@ -2711,7 +2711,7 @@ func (mmSetNotPending *mExecutionBrokerIMockSetNotPending) Set(f func(ctx contex
 	return mmSetNotPending.mock
 }
 
-// SetNotPending implements ExecutionBrokerI
+// SetNotPending implements logicrunner.ExecutionBrokerI
 func (mmSetNotPending *ExecutionBrokerIMock) SetNotPending(ctx context.Context) {
 	mm_atomic.AddUint64(&mmSetNotPending.beforeSetNotPendingCounter, 1)
 	defer mm_atomic.AddUint64(&mmSetNotPending.afterSetNotPendingCounter, 1)

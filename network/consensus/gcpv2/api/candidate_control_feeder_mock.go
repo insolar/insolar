@@ -13,7 +13,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 )
 
-// CandidateControlFeederMock implements CandidateControlFeeder
+// CandidateControlFeederMock implements api.CandidateControlFeeder
 type CandidateControlFeederMock struct {
 	t minimock.Tester
 
@@ -30,7 +30,7 @@ type CandidateControlFeederMock struct {
 	RemoveJoinCandidateMock          mCandidateControlFeederMockRemoveJoinCandidate
 }
 
-// NewCandidateControlFeederMock returns a mock for CandidateControlFeeder
+// NewCandidateControlFeederMock returns a mock for api.CandidateControlFeeder
 func NewCandidateControlFeederMock(t minimock.Tester) *CandidateControlFeederMock {
 	m := &CandidateControlFeederMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -116,7 +116,7 @@ func (mmPickNextJoinCandidate *mCandidateControlFeederMockPickNextJoinCandidate)
 	return mmPickNextJoinCandidate.mock
 }
 
-// PickNextJoinCandidate implements CandidateControlFeeder
+// PickNextJoinCandidate implements api.CandidateControlFeeder
 func (mmPickNextJoinCandidate *CandidateControlFeederMock) PickNextJoinCandidate() (c1 profiles.CandidateProfile, d1 cryptkit.DigestHolder) {
 	mm_atomic.AddUint64(&mmPickNextJoinCandidate.beforePickNextJoinCandidateCounter, 1)
 	defer mm_atomic.AddUint64(&mmPickNextJoinCandidate.afterPickNextJoinCandidateCounter, 1)
@@ -296,7 +296,7 @@ func (e *CandidateControlFeederMockRemoveJoinCandidateExpectation) Then(b1 bool)
 	return e.mock
 }
 
-// RemoveJoinCandidate implements CandidateControlFeeder
+// RemoveJoinCandidate implements api.CandidateControlFeeder
 func (mmRemoveJoinCandidate *CandidateControlFeederMock) RemoveJoinCandidate(candidateAdded bool, nodeID insolar.ShortNodeID) (b1 bool) {
 	mm_atomic.AddUint64(&mmRemoveJoinCandidate.beforeRemoveJoinCandidateCounter, 1)
 	defer mm_atomic.AddUint64(&mmRemoveJoinCandidate.afterRemoveJoinCandidateCounter, 1)

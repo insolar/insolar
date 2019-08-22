@@ -11,7 +11,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 )
 
-// NodeStateHashEvidenceMock implements NodeStateHashEvidence
+// NodeStateHashEvidenceMock implements proofs.NodeStateHashEvidence
 type NodeStateHashEvidenceMock struct {
 	t minimock.Tester
 
@@ -58,7 +58,7 @@ type NodeStateHashEvidenceMock struct {
 	VerifyWithMock          mNodeStateHashEvidenceMockVerifyWith
 }
 
-// NewNodeStateHashEvidenceMock returns a mock for NodeStateHashEvidence
+// NewNodeStateHashEvidenceMock returns a mock for proofs.NodeStateHashEvidence
 func NewNodeStateHashEvidenceMock(t minimock.Tester) *NodeStateHashEvidenceMock {
 	m := &NodeStateHashEvidenceMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -155,7 +155,7 @@ func (mmCopyOfSignedDigest *mNodeStateHashEvidenceMockCopyOfSignedDigest) Set(f 
 	return mmCopyOfSignedDigest.mock
 }
 
-// CopyOfSignedDigest implements NodeStateHashEvidence
+// CopyOfSignedDigest implements proofs.NodeStateHashEvidence
 func (mmCopyOfSignedDigest *NodeStateHashEvidenceMock) CopyOfSignedDigest() (s1 cryptkit.SignedDigest) {
 	mm_atomic.AddUint64(&mmCopyOfSignedDigest.beforeCopyOfSignedDigestCounter, 1)
 	defer mm_atomic.AddUint64(&mmCopyOfSignedDigest.afterCopyOfSignedDigestCounter, 1)
@@ -334,7 +334,7 @@ func (e *NodeStateHashEvidenceMockEqualsExpectation) Then(b1 bool) *NodeStateHas
 	return e.mock
 }
 
-// Equals implements NodeStateHashEvidence
+// Equals implements proofs.NodeStateHashEvidence
 func (mmEquals *NodeStateHashEvidenceMock) Equals(o cryptkit.SignedDigestHolder) (b1 bool) {
 	mm_atomic.AddUint64(&mmEquals.beforeEqualsCounter, 1)
 	defer mm_atomic.AddUint64(&mmEquals.afterEqualsCounter, 1)
@@ -513,7 +513,7 @@ func (mmGetDigestHolder *mNodeStateHashEvidenceMockGetDigestHolder) Set(f func()
 	return mmGetDigestHolder.mock
 }
 
-// GetDigestHolder implements NodeStateHashEvidence
+// GetDigestHolder implements proofs.NodeStateHashEvidence
 func (mmGetDigestHolder *NodeStateHashEvidenceMock) GetDigestHolder() (d1 cryptkit.DigestHolder) {
 	mm_atomic.AddUint64(&mmGetDigestHolder.beforeGetDigestHolderCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetDigestHolder.afterGetDigestHolderCounter, 1)
@@ -656,7 +656,7 @@ func (mmGetSignatureHolder *mNodeStateHashEvidenceMockGetSignatureHolder) Set(f 
 	return mmGetSignatureHolder.mock
 }
 
-// GetSignatureHolder implements NodeStateHashEvidence
+// GetSignatureHolder implements proofs.NodeStateHashEvidence
 func (mmGetSignatureHolder *NodeStateHashEvidenceMock) GetSignatureHolder() (s1 cryptkit.SignatureHolder) {
 	mm_atomic.AddUint64(&mmGetSignatureHolder.beforeGetSignatureHolderCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetSignatureHolder.afterGetSignatureHolderCounter, 1)
@@ -799,7 +799,7 @@ func (mmGetSignatureMethod *mNodeStateHashEvidenceMockGetSignatureMethod) Set(f 
 	return mmGetSignatureMethod.mock
 }
 
-// GetSignatureMethod implements NodeStateHashEvidence
+// GetSignatureMethod implements proofs.NodeStateHashEvidence
 func (mmGetSignatureMethod *NodeStateHashEvidenceMock) GetSignatureMethod() (s1 cryptkit.SignatureMethod) {
 	mm_atomic.AddUint64(&mmGetSignatureMethod.beforeGetSignatureMethodCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetSignatureMethod.afterGetSignatureMethodCounter, 1)
@@ -978,7 +978,7 @@ func (e *NodeStateHashEvidenceMockIsVerifiableByExpectation) Then(b1 bool) *Node
 	return e.mock
 }
 
-// IsVerifiableBy implements NodeStateHashEvidence
+// IsVerifiableBy implements proofs.NodeStateHashEvidence
 func (mmIsVerifiableBy *NodeStateHashEvidenceMock) IsVerifiableBy(v cryptkit.SignatureVerifier) (b1 bool) {
 	mm_atomic.AddUint64(&mmIsVerifiableBy.beforeIsVerifiableByCounter, 1)
 	defer mm_atomic.AddUint64(&mmIsVerifiableBy.afterIsVerifiableByCounter, 1)
@@ -1193,7 +1193,7 @@ func (e *NodeStateHashEvidenceMockVerifyWithExpectation) Then(b1 bool) *NodeStat
 	return e.mock
 }
 
-// VerifyWith implements NodeStateHashEvidence
+// VerifyWith implements proofs.NodeStateHashEvidence
 func (mmVerifyWith *NodeStateHashEvidenceMock) VerifyWith(v cryptkit.SignatureVerifier) (b1 bool) {
 	mm_atomic.AddUint64(&mmVerifyWith.beforeVerifyWithCounter, 1)
 	defer mm_atomic.AddUint64(&mmVerifyWith.afterVerifyWithCounter, 1)

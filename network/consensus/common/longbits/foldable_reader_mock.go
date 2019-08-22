@@ -11,7 +11,7 @@ import (
 	"github.com/gojuno/minimock"
 )
 
-// FoldableReaderMock implements FoldableReader
+// FoldableReaderMock implements longbits.FoldableReader
 type FoldableReaderMock struct {
 	t minimock.Tester
 
@@ -52,7 +52,7 @@ type FoldableReaderMock struct {
 	WriteToMock          mFoldableReaderMockWriteTo
 }
 
-// NewFoldableReaderMock returns a mock for FoldableReader
+// NewFoldableReaderMock returns a mock for longbits.FoldableReader
 func NewFoldableReaderMock(t minimock.Tester) *FoldableReaderMock {
 	m := &FoldableReaderMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -146,7 +146,7 @@ func (mmAsByteString *mFoldableReaderMockAsByteString) Set(f func() (s1 string))
 	return mmAsByteString.mock
 }
 
-// AsByteString implements FoldableReader
+// AsByteString implements longbits.FoldableReader
 func (mmAsByteString *FoldableReaderMock) AsByteString() (s1 string) {
 	mm_atomic.AddUint64(&mmAsByteString.beforeAsByteStringCounter, 1)
 	defer mm_atomic.AddUint64(&mmAsByteString.afterAsByteStringCounter, 1)
@@ -289,7 +289,7 @@ func (mmAsBytes *mFoldableReaderMockAsBytes) Set(f func() (ba1 []byte)) *Foldabl
 	return mmAsBytes.mock
 }
 
-// AsBytes implements FoldableReader
+// AsBytes implements longbits.FoldableReader
 func (mmAsBytes *FoldableReaderMock) AsBytes() (ba1 []byte) {
 	mm_atomic.AddUint64(&mmAsBytes.beforeAsBytesCounter, 1)
 	defer mm_atomic.AddUint64(&mmAsBytes.afterAsBytesCounter, 1)
@@ -432,7 +432,7 @@ func (mmFixedByteSize *mFoldableReaderMockFixedByteSize) Set(f func() (i1 int)) 
 	return mmFixedByteSize.mock
 }
 
-// FixedByteSize implements FoldableReader
+// FixedByteSize implements longbits.FoldableReader
 func (mmFixedByteSize *FoldableReaderMock) FixedByteSize() (i1 int) {
 	mm_atomic.AddUint64(&mmFixedByteSize.beforeFixedByteSizeCounter, 1)
 	defer mm_atomic.AddUint64(&mmFixedByteSize.afterFixedByteSizeCounter, 1)
@@ -575,7 +575,7 @@ func (mmFoldToUint64 *mFoldableReaderMockFoldToUint64) Set(f func() (u1 uint64))
 	return mmFoldToUint64.mock
 }
 
-// FoldToUint64 implements FoldableReader
+// FoldToUint64 implements longbits.FoldableReader
 func (mmFoldToUint64 *FoldableReaderMock) FoldToUint64() (u1 uint64) {
 	mm_atomic.AddUint64(&mmFoldToUint64.beforeFoldToUint64Counter, 1)
 	defer mm_atomic.AddUint64(&mmFoldToUint64.afterFoldToUint64Counter, 1)
@@ -755,7 +755,7 @@ func (e *FoldableReaderMockReadExpectation) Then(n int, err error) *FoldableRead
 	return e.mock
 }
 
-// Read implements FoldableReader
+// Read implements longbits.FoldableReader
 func (mmRead *FoldableReaderMock) Read(p []byte) (n int, err error) {
 	mm_atomic.AddUint64(&mmRead.beforeReadCounter, 1)
 	defer mm_atomic.AddUint64(&mmRead.afterReadCounter, 1)
@@ -971,7 +971,7 @@ func (e *FoldableReaderMockWriteToExpectation) Then(n int64, err error) *Foldabl
 	return e.mock
 }
 
-// WriteTo implements FoldableReader
+// WriteTo implements longbits.FoldableReader
 func (mmWriteTo *FoldableReaderMock) WriteTo(w io.Writer) (n int64, err error) {
 	mm_atomic.AddUint64(&mmWriteTo.beforeWriteToCounter, 1)
 	defer mm_atomic.AddUint64(&mmWriteTo.afterWriteToCounter, 1)

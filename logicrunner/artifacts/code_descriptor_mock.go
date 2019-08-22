@@ -10,7 +10,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-// CodeDescriptorMock implements CodeDescriptor
+// CodeDescriptorMock implements artifacts.CodeDescriptor
 type CodeDescriptorMock struct {
 	t minimock.Tester
 
@@ -33,7 +33,7 @@ type CodeDescriptorMock struct {
 	RefMock          mCodeDescriptorMockRef
 }
 
-// NewCodeDescriptorMock returns a mock for CodeDescriptor
+// NewCodeDescriptorMock returns a mock for artifacts.CodeDescriptor
 func NewCodeDescriptorMock(t minimock.Tester) *CodeDescriptorMock {
 	m := &CodeDescriptorMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -120,7 +120,7 @@ func (mmCode *mCodeDescriptorMockCode) Set(f func() (ba1 []byte, err error)) *Co
 	return mmCode.mock
 }
 
-// Code implements CodeDescriptor
+// Code implements artifacts.CodeDescriptor
 func (mmCode *CodeDescriptorMock) Code() (ba1 []byte, err error) {
 	mm_atomic.AddUint64(&mmCode.beforeCodeCounter, 1)
 	defer mm_atomic.AddUint64(&mmCode.afterCodeCounter, 1)
@@ -263,7 +263,7 @@ func (mmMachineType *mCodeDescriptorMockMachineType) Set(f func() (m1 insolar.Ma
 	return mmMachineType.mock
 }
 
-// MachineType implements CodeDescriptor
+// MachineType implements artifacts.CodeDescriptor
 func (mmMachineType *CodeDescriptorMock) MachineType() (m1 insolar.MachineType) {
 	mm_atomic.AddUint64(&mmMachineType.beforeMachineTypeCounter, 1)
 	defer mm_atomic.AddUint64(&mmMachineType.afterMachineTypeCounter, 1)
@@ -406,7 +406,7 @@ func (mmRef *mCodeDescriptorMockRef) Set(f func() (rp1 *insolar.Reference)) *Cod
 	return mmRef.mock
 }
 
-// Ref implements CodeDescriptor
+// Ref implements artifacts.CodeDescriptor
 func (mmRef *CodeDescriptorMock) Ref() (rp1 *insolar.Reference) {
 	mm_atomic.AddUint64(&mmRef.beforeRefCounter, 1)
 	defer mm_atomic.AddUint64(&mmRef.afterRefCounter, 1)

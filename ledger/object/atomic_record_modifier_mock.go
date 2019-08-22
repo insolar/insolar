@@ -14,7 +14,7 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 )
 
-// AtomicRecordModifierMock implements AtomicRecordModifier
+// AtomicRecordModifierMock implements object.AtomicRecordModifier
 type AtomicRecordModifierMock struct {
 	t minimock.Tester
 
@@ -25,7 +25,7 @@ type AtomicRecordModifierMock struct {
 	SetAtomicMock          mAtomicRecordModifierMockSetAtomic
 }
 
-// NewAtomicRecordModifierMock returns a mock for AtomicRecordModifier
+// NewAtomicRecordModifierMock returns a mock for object.AtomicRecordModifier
 func NewAtomicRecordModifierMock(t minimock.Tester) *AtomicRecordModifierMock {
 	m := &AtomicRecordModifierMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -145,7 +145,7 @@ func (e *AtomicRecordModifierMockSetAtomicExpectation) Then(err error) *AtomicRe
 	return e.mock
 }
 
-// SetAtomic implements AtomicRecordModifier
+// SetAtomic implements object.AtomicRecordModifier
 func (mmSetAtomic *AtomicRecordModifierMock) SetAtomic(ctx context.Context, records ...record.Material) (err error) {
 	mm_atomic.AddUint64(&mmSetAtomic.beforeSetAtomicCounter, 1)
 	defer mm_atomic.AddUint64(&mmSetAtomic.afterSetAtomicCounter, 1)

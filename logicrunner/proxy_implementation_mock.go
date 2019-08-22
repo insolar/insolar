@@ -13,7 +13,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 )
 
-// ProxyImplementationMock implements ProxyImplementation
+// ProxyImplementationMock implements logicrunner.ProxyImplementation
 type ProxyImplementationMock struct {
 	t minimock.Tester
 
@@ -42,7 +42,7 @@ type ProxyImplementationMock struct {
 	SaveAsChildMock          mProxyImplementationMockSaveAsChild
 }
 
-// NewProxyImplementationMock returns a mock for ProxyImplementation
+// NewProxyImplementationMock returns a mock for logicrunner.ProxyImplementation
 func NewProxyImplementationMock(t minimock.Tester) *ProxyImplementationMock {
 	m := &ProxyImplementationMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -173,7 +173,7 @@ func (e *ProxyImplementationMockDeactivateObjectExpectation) Then(err error) *Pr
 	return e.mock
 }
 
-// DeactivateObject implements ProxyImplementation
+// DeactivateObject implements logicrunner.ProxyImplementation
 func (mmDeactivateObject *ProxyImplementationMock) DeactivateObject(ctx context.Context, tp1 *common.Transcript, u1 rpctypes.UpDeactivateObjectReq, up1 *rpctypes.UpDeactivateObjectResp) (err error) {
 	mm_atomic.AddUint64(&mmDeactivateObject.beforeDeactivateObjectCounter, 1)
 	defer mm_atomic.AddUint64(&mmDeactivateObject.afterDeactivateObjectCounter, 1)
@@ -391,7 +391,7 @@ func (e *ProxyImplementationMockGetCodeExpectation) Then(err error) *ProxyImplem
 	return e.mock
 }
 
-// GetCode implements ProxyImplementation
+// GetCode implements logicrunner.ProxyImplementation
 func (mmGetCode *ProxyImplementationMock) GetCode(ctx context.Context, tp1 *common.Transcript, u1 rpctypes.UpGetCodeReq, up1 *rpctypes.UpGetCodeResp) (err error) {
 	mm_atomic.AddUint64(&mmGetCode.beforeGetCodeCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetCode.afterGetCodeCounter, 1)
@@ -609,7 +609,7 @@ func (e *ProxyImplementationMockRouteCallExpectation) Then(err error) *ProxyImpl
 	return e.mock
 }
 
-// RouteCall implements ProxyImplementation
+// RouteCall implements logicrunner.ProxyImplementation
 func (mmRouteCall *ProxyImplementationMock) RouteCall(ctx context.Context, tp1 *common.Transcript, u1 rpctypes.UpRouteReq, up1 *rpctypes.UpRouteResp) (err error) {
 	mm_atomic.AddUint64(&mmRouteCall.beforeRouteCallCounter, 1)
 	defer mm_atomic.AddUint64(&mmRouteCall.afterRouteCallCounter, 1)
@@ -827,7 +827,7 @@ func (e *ProxyImplementationMockSaveAsChildExpectation) Then(err error) *ProxyIm
 	return e.mock
 }
 
-// SaveAsChild implements ProxyImplementation
+// SaveAsChild implements logicrunner.ProxyImplementation
 func (mmSaveAsChild *ProxyImplementationMock) SaveAsChild(ctx context.Context, tp1 *common.Transcript, u1 rpctypes.UpSaveAsChildReq, up1 *rpctypes.UpSaveAsChildResp) (err error) {
 	mm_atomic.AddUint64(&mmSaveAsChild.beforeSaveAsChildCounter, 1)
 	defer mm_atomic.AddUint64(&mmSaveAsChild.afterSaveAsChildCounter, 1)

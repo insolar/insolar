@@ -11,7 +11,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-// ModifierMock implements Modifier
+// ModifierMock implements node.Modifier
 type ModifierMock struct {
 	t minimock.Tester
 
@@ -28,7 +28,7 @@ type ModifierMock struct {
 	SetMock          mModifierMockSet
 }
 
-// NewModifierMock returns a mock for Modifier
+// NewModifierMock returns a mock for node.Modifier
 func NewModifierMock(t minimock.Tester) *ModifierMock {
 	m := &ModifierMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -124,7 +124,7 @@ func (mmDeleteForPN *mModifierMockDeleteForPN) Set(f func(pulse insolar.PulseNum
 	return mmDeleteForPN.mock
 }
 
-// DeleteForPN implements Modifier
+// DeleteForPN implements node.Modifier
 func (mmDeleteForPN *ModifierMock) DeleteForPN(pulse insolar.PulseNumber) {
 	mm_atomic.AddUint64(&mmDeleteForPN.beforeDeleteForPNCounter, 1)
 	defer mm_atomic.AddUint64(&mmDeleteForPN.afterDeleteForPNCounter, 1)
@@ -338,7 +338,7 @@ func (e *ModifierMockSetExpectation) Then(err error) *ModifierMock {
 	return e.mock
 }
 
-// Set implements Modifier
+// Set implements node.Modifier
 func (mmSet *ModifierMock) Set(pulse insolar.PulseNumber, nodes []insolar.Node) (err error) {
 	mm_atomic.AddUint64(&mmSet.beforeSetCounter, 1)
 	defer mm_atomic.AddUint64(&mmSet.afterSetCounter, 1)

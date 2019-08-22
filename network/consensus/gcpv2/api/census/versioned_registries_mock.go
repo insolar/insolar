@@ -9,25 +9,26 @@ import (
 
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
+	mm_census "github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 )
 
-// VersionedRegistriesMock implements VersionedRegistries
+// VersionedRegistriesMock implements census.VersionedRegistries
 type VersionedRegistriesMock struct {
 	t minimock.Tester
 
-	funcCommitNextPulse          func(pd pulse.Data, population OnlinePopulation) (v1 VersionedRegistries)
-	inspectFuncCommitNextPulse   func(pd pulse.Data, population OnlinePopulation)
+	funcCommitNextPulse          func(pd pulse.Data, population mm_census.OnlinePopulation) (v1 mm_census.VersionedRegistries)
+	inspectFuncCommitNextPulse   func(pd pulse.Data, population mm_census.OnlinePopulation)
 	afterCommitNextPulseCounter  uint64
 	beforeCommitNextPulseCounter uint64
 	CommitNextPulseMock          mVersionedRegistriesMockCommitNextPulse
 
-	funcGetMandateRegistry          func() (m1 MandateRegistry)
+	funcGetMandateRegistry          func() (m1 mm_census.MandateRegistry)
 	inspectFuncGetMandateRegistry   func()
 	afterGetMandateRegistryCounter  uint64
 	beforeGetMandateRegistryCounter uint64
 	GetMandateRegistryMock          mVersionedRegistriesMockGetMandateRegistry
 
-	funcGetMisbehaviorRegistry          func() (m1 MisbehaviorRegistry)
+	funcGetMisbehaviorRegistry          func() (m1 mm_census.MisbehaviorRegistry)
 	inspectFuncGetMisbehaviorRegistry   func()
 	afterGetMisbehaviorRegistryCounter  uint64
 	beforeGetMisbehaviorRegistryCounter uint64
@@ -39,7 +40,7 @@ type VersionedRegistriesMock struct {
 	beforeGetNearestValidPulseDataCounter uint64
 	GetNearestValidPulseDataMock          mVersionedRegistriesMockGetNearestValidPulseData
 
-	funcGetOfflinePopulation          func() (o1 OfflinePopulation)
+	funcGetOfflinePopulation          func() (o1 mm_census.OfflinePopulation)
 	inspectFuncGetOfflinePopulation   func()
 	afterGetOfflinePopulationCounter  uint64
 	beforeGetOfflinePopulationCounter uint64
@@ -52,7 +53,7 @@ type VersionedRegistriesMock struct {
 	GetVersionPulseDataMock          mVersionedRegistriesMockGetVersionPulseData
 }
 
-// NewVersionedRegistriesMock returns a mock for VersionedRegistries
+// NewVersionedRegistriesMock returns a mock for census.VersionedRegistries
 func NewVersionedRegistriesMock(t minimock.Tester) *VersionedRegistriesMock {
 	m := &VersionedRegistriesMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -95,16 +96,16 @@ type VersionedRegistriesMockCommitNextPulseExpectation struct {
 // VersionedRegistriesMockCommitNextPulseParams contains parameters of the VersionedRegistries.CommitNextPulse
 type VersionedRegistriesMockCommitNextPulseParams struct {
 	pd         pulse.Data
-	population OnlinePopulation
+	population mm_census.OnlinePopulation
 }
 
 // VersionedRegistriesMockCommitNextPulseResults contains results of the VersionedRegistries.CommitNextPulse
 type VersionedRegistriesMockCommitNextPulseResults struct {
-	v1 VersionedRegistries
+	v1 mm_census.VersionedRegistries
 }
 
 // Expect sets up expected params for VersionedRegistries.CommitNextPulse
-func (mmCommitNextPulse *mVersionedRegistriesMockCommitNextPulse) Expect(pd pulse.Data, population OnlinePopulation) *mVersionedRegistriesMockCommitNextPulse {
+func (mmCommitNextPulse *mVersionedRegistriesMockCommitNextPulse) Expect(pd pulse.Data, population mm_census.OnlinePopulation) *mVersionedRegistriesMockCommitNextPulse {
 	if mmCommitNextPulse.mock.funcCommitNextPulse != nil {
 		mmCommitNextPulse.mock.t.Fatalf("VersionedRegistriesMock.CommitNextPulse mock is already set by Set")
 	}
@@ -124,7 +125,7 @@ func (mmCommitNextPulse *mVersionedRegistriesMockCommitNextPulse) Expect(pd puls
 }
 
 // Inspect accepts an inspector function that has same arguments as the VersionedRegistries.CommitNextPulse
-func (mmCommitNextPulse *mVersionedRegistriesMockCommitNextPulse) Inspect(f func(pd pulse.Data, population OnlinePopulation)) *mVersionedRegistriesMockCommitNextPulse {
+func (mmCommitNextPulse *mVersionedRegistriesMockCommitNextPulse) Inspect(f func(pd pulse.Data, population mm_census.OnlinePopulation)) *mVersionedRegistriesMockCommitNextPulse {
 	if mmCommitNextPulse.mock.inspectFuncCommitNextPulse != nil {
 		mmCommitNextPulse.mock.t.Fatalf("Inspect function is already set for VersionedRegistriesMock.CommitNextPulse")
 	}
@@ -135,7 +136,7 @@ func (mmCommitNextPulse *mVersionedRegistriesMockCommitNextPulse) Inspect(f func
 }
 
 // Return sets up results that will be returned by VersionedRegistries.CommitNextPulse
-func (mmCommitNextPulse *mVersionedRegistriesMockCommitNextPulse) Return(v1 VersionedRegistries) *VersionedRegistriesMock {
+func (mmCommitNextPulse *mVersionedRegistriesMockCommitNextPulse) Return(v1 mm_census.VersionedRegistries) *VersionedRegistriesMock {
 	if mmCommitNextPulse.mock.funcCommitNextPulse != nil {
 		mmCommitNextPulse.mock.t.Fatalf("VersionedRegistriesMock.CommitNextPulse mock is already set by Set")
 	}
@@ -148,7 +149,7 @@ func (mmCommitNextPulse *mVersionedRegistriesMockCommitNextPulse) Return(v1 Vers
 }
 
 //Set uses given function f to mock the VersionedRegistries.CommitNextPulse method
-func (mmCommitNextPulse *mVersionedRegistriesMockCommitNextPulse) Set(f func(pd pulse.Data, population OnlinePopulation) (v1 VersionedRegistries)) *VersionedRegistriesMock {
+func (mmCommitNextPulse *mVersionedRegistriesMockCommitNextPulse) Set(f func(pd pulse.Data, population mm_census.OnlinePopulation) (v1 mm_census.VersionedRegistries)) *VersionedRegistriesMock {
 	if mmCommitNextPulse.defaultExpectation != nil {
 		mmCommitNextPulse.mock.t.Fatalf("Default expectation is already set for the VersionedRegistries.CommitNextPulse method")
 	}
@@ -163,7 +164,7 @@ func (mmCommitNextPulse *mVersionedRegistriesMockCommitNextPulse) Set(f func(pd 
 
 // When sets expectation for the VersionedRegistries.CommitNextPulse which will trigger the result defined by the following
 // Then helper
-func (mmCommitNextPulse *mVersionedRegistriesMockCommitNextPulse) When(pd pulse.Data, population OnlinePopulation) *VersionedRegistriesMockCommitNextPulseExpectation {
+func (mmCommitNextPulse *mVersionedRegistriesMockCommitNextPulse) When(pd pulse.Data, population mm_census.OnlinePopulation) *VersionedRegistriesMockCommitNextPulseExpectation {
 	if mmCommitNextPulse.mock.funcCommitNextPulse != nil {
 		mmCommitNextPulse.mock.t.Fatalf("VersionedRegistriesMock.CommitNextPulse mock is already set by Set")
 	}
@@ -177,13 +178,13 @@ func (mmCommitNextPulse *mVersionedRegistriesMockCommitNextPulse) When(pd pulse.
 }
 
 // Then sets up VersionedRegistries.CommitNextPulse return parameters for the expectation previously defined by the When method
-func (e *VersionedRegistriesMockCommitNextPulseExpectation) Then(v1 VersionedRegistries) *VersionedRegistriesMock {
+func (e *VersionedRegistriesMockCommitNextPulseExpectation) Then(v1 mm_census.VersionedRegistries) *VersionedRegistriesMock {
 	e.results = &VersionedRegistriesMockCommitNextPulseResults{v1}
 	return e.mock
 }
 
-// CommitNextPulse implements VersionedRegistries
-func (mmCommitNextPulse *VersionedRegistriesMock) CommitNextPulse(pd pulse.Data, population OnlinePopulation) (v1 VersionedRegistries) {
+// CommitNextPulse implements census.VersionedRegistries
+func (mmCommitNextPulse *VersionedRegistriesMock) CommitNextPulse(pd pulse.Data, population mm_census.OnlinePopulation) (v1 mm_census.VersionedRegistries) {
 	mm_atomic.AddUint64(&mmCommitNextPulse.beforeCommitNextPulseCounter, 1)
 	defer mm_atomic.AddUint64(&mmCommitNextPulse.afterCommitNextPulseCounter, 1)
 
@@ -307,7 +308,7 @@ type VersionedRegistriesMockGetMandateRegistryExpectation struct {
 
 // VersionedRegistriesMockGetMandateRegistryResults contains results of the VersionedRegistries.GetMandateRegistry
 type VersionedRegistriesMockGetMandateRegistryResults struct {
-	m1 MandateRegistry
+	m1 mm_census.MandateRegistry
 }
 
 // Expect sets up expected params for VersionedRegistries.GetMandateRegistry
@@ -335,7 +336,7 @@ func (mmGetMandateRegistry *mVersionedRegistriesMockGetMandateRegistry) Inspect(
 }
 
 // Return sets up results that will be returned by VersionedRegistries.GetMandateRegistry
-func (mmGetMandateRegistry *mVersionedRegistriesMockGetMandateRegistry) Return(m1 MandateRegistry) *VersionedRegistriesMock {
+func (mmGetMandateRegistry *mVersionedRegistriesMockGetMandateRegistry) Return(m1 mm_census.MandateRegistry) *VersionedRegistriesMock {
 	if mmGetMandateRegistry.mock.funcGetMandateRegistry != nil {
 		mmGetMandateRegistry.mock.t.Fatalf("VersionedRegistriesMock.GetMandateRegistry mock is already set by Set")
 	}
@@ -348,7 +349,7 @@ func (mmGetMandateRegistry *mVersionedRegistriesMockGetMandateRegistry) Return(m
 }
 
 //Set uses given function f to mock the VersionedRegistries.GetMandateRegistry method
-func (mmGetMandateRegistry *mVersionedRegistriesMockGetMandateRegistry) Set(f func() (m1 MandateRegistry)) *VersionedRegistriesMock {
+func (mmGetMandateRegistry *mVersionedRegistriesMockGetMandateRegistry) Set(f func() (m1 mm_census.MandateRegistry)) *VersionedRegistriesMock {
 	if mmGetMandateRegistry.defaultExpectation != nil {
 		mmGetMandateRegistry.mock.t.Fatalf("Default expectation is already set for the VersionedRegistries.GetMandateRegistry method")
 	}
@@ -361,8 +362,8 @@ func (mmGetMandateRegistry *mVersionedRegistriesMockGetMandateRegistry) Set(f fu
 	return mmGetMandateRegistry.mock
 }
 
-// GetMandateRegistry implements VersionedRegistries
-func (mmGetMandateRegistry *VersionedRegistriesMock) GetMandateRegistry() (m1 MandateRegistry) {
+// GetMandateRegistry implements census.VersionedRegistries
+func (mmGetMandateRegistry *VersionedRegistriesMock) GetMandateRegistry() (m1 mm_census.MandateRegistry) {
 	mm_atomic.AddUint64(&mmGetMandateRegistry.beforeGetMandateRegistryCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetMandateRegistry.afterGetMandateRegistryCounter, 1)
 
@@ -450,7 +451,7 @@ type VersionedRegistriesMockGetMisbehaviorRegistryExpectation struct {
 
 // VersionedRegistriesMockGetMisbehaviorRegistryResults contains results of the VersionedRegistries.GetMisbehaviorRegistry
 type VersionedRegistriesMockGetMisbehaviorRegistryResults struct {
-	m1 MisbehaviorRegistry
+	m1 mm_census.MisbehaviorRegistry
 }
 
 // Expect sets up expected params for VersionedRegistries.GetMisbehaviorRegistry
@@ -478,7 +479,7 @@ func (mmGetMisbehaviorRegistry *mVersionedRegistriesMockGetMisbehaviorRegistry) 
 }
 
 // Return sets up results that will be returned by VersionedRegistries.GetMisbehaviorRegistry
-func (mmGetMisbehaviorRegistry *mVersionedRegistriesMockGetMisbehaviorRegistry) Return(m1 MisbehaviorRegistry) *VersionedRegistriesMock {
+func (mmGetMisbehaviorRegistry *mVersionedRegistriesMockGetMisbehaviorRegistry) Return(m1 mm_census.MisbehaviorRegistry) *VersionedRegistriesMock {
 	if mmGetMisbehaviorRegistry.mock.funcGetMisbehaviorRegistry != nil {
 		mmGetMisbehaviorRegistry.mock.t.Fatalf("VersionedRegistriesMock.GetMisbehaviorRegistry mock is already set by Set")
 	}
@@ -491,7 +492,7 @@ func (mmGetMisbehaviorRegistry *mVersionedRegistriesMockGetMisbehaviorRegistry) 
 }
 
 //Set uses given function f to mock the VersionedRegistries.GetMisbehaviorRegistry method
-func (mmGetMisbehaviorRegistry *mVersionedRegistriesMockGetMisbehaviorRegistry) Set(f func() (m1 MisbehaviorRegistry)) *VersionedRegistriesMock {
+func (mmGetMisbehaviorRegistry *mVersionedRegistriesMockGetMisbehaviorRegistry) Set(f func() (m1 mm_census.MisbehaviorRegistry)) *VersionedRegistriesMock {
 	if mmGetMisbehaviorRegistry.defaultExpectation != nil {
 		mmGetMisbehaviorRegistry.mock.t.Fatalf("Default expectation is already set for the VersionedRegistries.GetMisbehaviorRegistry method")
 	}
@@ -504,8 +505,8 @@ func (mmGetMisbehaviorRegistry *mVersionedRegistriesMockGetMisbehaviorRegistry) 
 	return mmGetMisbehaviorRegistry.mock
 }
 
-// GetMisbehaviorRegistry implements VersionedRegistries
-func (mmGetMisbehaviorRegistry *VersionedRegistriesMock) GetMisbehaviorRegistry() (m1 MisbehaviorRegistry) {
+// GetMisbehaviorRegistry implements census.VersionedRegistries
+func (mmGetMisbehaviorRegistry *VersionedRegistriesMock) GetMisbehaviorRegistry() (m1 mm_census.MisbehaviorRegistry) {
 	mm_atomic.AddUint64(&mmGetMisbehaviorRegistry.beforeGetMisbehaviorRegistryCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetMisbehaviorRegistry.afterGetMisbehaviorRegistryCounter, 1)
 
@@ -647,7 +648,7 @@ func (mmGetNearestValidPulseData *mVersionedRegistriesMockGetNearestValidPulseDa
 	return mmGetNearestValidPulseData.mock
 }
 
-// GetNearestValidPulseData implements VersionedRegistries
+// GetNearestValidPulseData implements census.VersionedRegistries
 func (mmGetNearestValidPulseData *VersionedRegistriesMock) GetNearestValidPulseData() (d1 pulse.Data) {
 	mm_atomic.AddUint64(&mmGetNearestValidPulseData.beforeGetNearestValidPulseDataCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetNearestValidPulseData.afterGetNearestValidPulseDataCounter, 1)
@@ -736,7 +737,7 @@ type VersionedRegistriesMockGetOfflinePopulationExpectation struct {
 
 // VersionedRegistriesMockGetOfflinePopulationResults contains results of the VersionedRegistries.GetOfflinePopulation
 type VersionedRegistriesMockGetOfflinePopulationResults struct {
-	o1 OfflinePopulation
+	o1 mm_census.OfflinePopulation
 }
 
 // Expect sets up expected params for VersionedRegistries.GetOfflinePopulation
@@ -764,7 +765,7 @@ func (mmGetOfflinePopulation *mVersionedRegistriesMockGetOfflinePopulation) Insp
 }
 
 // Return sets up results that will be returned by VersionedRegistries.GetOfflinePopulation
-func (mmGetOfflinePopulation *mVersionedRegistriesMockGetOfflinePopulation) Return(o1 OfflinePopulation) *VersionedRegistriesMock {
+func (mmGetOfflinePopulation *mVersionedRegistriesMockGetOfflinePopulation) Return(o1 mm_census.OfflinePopulation) *VersionedRegistriesMock {
 	if mmGetOfflinePopulation.mock.funcGetOfflinePopulation != nil {
 		mmGetOfflinePopulation.mock.t.Fatalf("VersionedRegistriesMock.GetOfflinePopulation mock is already set by Set")
 	}
@@ -777,7 +778,7 @@ func (mmGetOfflinePopulation *mVersionedRegistriesMockGetOfflinePopulation) Retu
 }
 
 //Set uses given function f to mock the VersionedRegistries.GetOfflinePopulation method
-func (mmGetOfflinePopulation *mVersionedRegistriesMockGetOfflinePopulation) Set(f func() (o1 OfflinePopulation)) *VersionedRegistriesMock {
+func (mmGetOfflinePopulation *mVersionedRegistriesMockGetOfflinePopulation) Set(f func() (o1 mm_census.OfflinePopulation)) *VersionedRegistriesMock {
 	if mmGetOfflinePopulation.defaultExpectation != nil {
 		mmGetOfflinePopulation.mock.t.Fatalf("Default expectation is already set for the VersionedRegistries.GetOfflinePopulation method")
 	}
@@ -790,8 +791,8 @@ func (mmGetOfflinePopulation *mVersionedRegistriesMockGetOfflinePopulation) Set(
 	return mmGetOfflinePopulation.mock
 }
 
-// GetOfflinePopulation implements VersionedRegistries
-func (mmGetOfflinePopulation *VersionedRegistriesMock) GetOfflinePopulation() (o1 OfflinePopulation) {
+// GetOfflinePopulation implements census.VersionedRegistries
+func (mmGetOfflinePopulation *VersionedRegistriesMock) GetOfflinePopulation() (o1 mm_census.OfflinePopulation) {
 	mm_atomic.AddUint64(&mmGetOfflinePopulation.beforeGetOfflinePopulationCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetOfflinePopulation.afterGetOfflinePopulationCounter, 1)
 
@@ -933,7 +934,7 @@ func (mmGetVersionPulseData *mVersionedRegistriesMockGetVersionPulseData) Set(f 
 	return mmGetVersionPulseData.mock
 }
 
-// GetVersionPulseData implements VersionedRegistries
+// GetVersionPulseData implements census.VersionedRegistries
 func (mmGetVersionPulseData *VersionedRegistriesMock) GetVersionPulseData() (d1 pulse.Data) {
 	mm_atomic.AddUint64(&mmGetVersionPulseData.beforeGetVersionPulseDataCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetVersionPulseData.afterGetVersionPulseDataCounter, 1)

@@ -14,7 +14,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/common"
 )
 
-// RequestsExecutorMock implements RequestsExecutor
+// RequestsExecutorMock implements logicrunner.RequestsExecutor
 type RequestsExecutorMock struct {
 	t minimock.Tester
 
@@ -43,7 +43,7 @@ type RequestsExecutorMock struct {
 	SendReplyMock          mRequestsExecutorMockSendReply
 }
 
-// NewRequestsExecutorMock returns a mock for RequestsExecutor
+// NewRequestsExecutorMock returns a mock for logicrunner.RequestsExecutor
 func NewRequestsExecutorMock(t minimock.Tester) *RequestsExecutorMock {
 	m := &RequestsExecutorMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -173,7 +173,7 @@ func (e *RequestsExecutorMockExecuteExpectation) Then(r1 artifacts.RequestResult
 	return e.mock
 }
 
-// Execute implements RequestsExecutor
+// Execute implements logicrunner.RequestsExecutor
 func (mmExecute *RequestsExecutorMock) Execute(ctx context.Context, current *common.Transcript) (r1 artifacts.RequestResult, err error) {
 	mm_atomic.AddUint64(&mmExecute.beforeExecuteCounter, 1)
 	defer mm_atomic.AddUint64(&mmExecute.afterExecuteCounter, 1)
@@ -390,7 +390,7 @@ func (e *RequestsExecutorMockExecuteAndSaveExpectation) Then(r1 insolar.Reply, e
 	return e.mock
 }
 
-// ExecuteAndSave implements RequestsExecutor
+// ExecuteAndSave implements logicrunner.RequestsExecutor
 func (mmExecuteAndSave *RequestsExecutorMock) ExecuteAndSave(ctx context.Context, current *common.Transcript) (r1 insolar.Reply, err error) {
 	mm_atomic.AddUint64(&mmExecuteAndSave.beforeExecuteAndSaveCounter, 1)
 	defer mm_atomic.AddUint64(&mmExecuteAndSave.afterExecuteAndSaveCounter, 1)
@@ -608,7 +608,7 @@ func (e *RequestsExecutorMockSaveExpectation) Then(r1 insolar.Reply, err error) 
 	return e.mock
 }
 
-// Save implements RequestsExecutor
+// Save implements logicrunner.RequestsExecutor
 func (mmSave *RequestsExecutorMock) Save(ctx context.Context, current *common.Transcript, res artifacts.RequestResult) (r1 insolar.Reply, err error) {
 	mm_atomic.AddUint64(&mmSave.beforeSaveCounter, 1)
 	defer mm_atomic.AddUint64(&mmSave.afterSaveCounter, 1)
@@ -800,7 +800,7 @@ func (mmSendReply *mRequestsExecutorMockSendReply) Set(f func(ctx context.Contex
 	return mmSendReply.mock
 }
 
-// SendReply implements RequestsExecutor
+// SendReply implements logicrunner.RequestsExecutor
 func (mmSendReply *RequestsExecutorMock) SendReply(ctx context.Context, current *common.Transcript, re insolar.Reply, err error) {
 	mm_atomic.AddUint64(&mmSendReply.beforeSendReplyCounter, 1)
 	defer mm_atomic.AddUint64(&mmSendReply.afterSendReplyCounter, 1)

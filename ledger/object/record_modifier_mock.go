@@ -12,7 +12,7 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 )
 
-// RecordModifierMock implements RecordModifier
+// RecordModifierMock implements object.RecordModifier
 type RecordModifierMock struct {
 	t minimock.Tester
 
@@ -29,7 +29,7 @@ type RecordModifierMock struct {
 	SetMock          mRecordModifierMockSet
 }
 
-// NewRecordModifierMock returns a mock for RecordModifier
+// NewRecordModifierMock returns a mock for object.RecordModifier
 func NewRecordModifierMock(t minimock.Tester) *RecordModifierMock {
 	m := &RecordModifierMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -152,7 +152,7 @@ func (e *RecordModifierMockBatchSetExpectation) Then(err error) *RecordModifierM
 	return e.mock
 }
 
-// BatchSet implements RecordModifier
+// BatchSet implements object.RecordModifier
 func (mmBatchSet *RecordModifierMock) BatchSet(ctx context.Context, recs []record.Material) (err error) {
 	mm_atomic.AddUint64(&mmBatchSet.beforeBatchSetCounter, 1)
 	defer mm_atomic.AddUint64(&mmBatchSet.afterBatchSetCounter, 1)
@@ -368,7 +368,7 @@ func (e *RecordModifierMockSetExpectation) Then(err error) *RecordModifierMock {
 	return e.mock
 }
 
-// Set implements RecordModifier
+// Set implements object.RecordModifier
 func (mmSet *RecordModifierMock) Set(ctx context.Context, rec record.Material) (err error) {
 	mm_atomic.AddUint64(&mmSet.beforeSetCounter, 1)
 	defer mm_atomic.AddUint64(&mmSet.afterSetCounter, 1)

@@ -12,7 +12,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 )
 
-// CloudStateHashMock implements CloudStateHash
+// CloudStateHashMock implements proofs.CloudStateHash
 type CloudStateHashMock struct {
 	t minimock.Tester
 
@@ -77,7 +77,7 @@ type CloudStateHashMock struct {
 	WriteToMock          mCloudStateHashMockWriteTo
 }
 
-// NewCloudStateHashMock returns a mock for CloudStateHash
+// NewCloudStateHashMock returns a mock for proofs.CloudStateHash
 func NewCloudStateHashMock(t minimock.Tester) *CloudStateHashMock {
 	m := &CloudStateHashMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -181,7 +181,7 @@ func (mmAsByteString *mCloudStateHashMockAsByteString) Set(f func() (s1 string))
 	return mmAsByteString.mock
 }
 
-// AsByteString implements CloudStateHash
+// AsByteString implements proofs.CloudStateHash
 func (mmAsByteString *CloudStateHashMock) AsByteString() (s1 string) {
 	mm_atomic.AddUint64(&mmAsByteString.beforeAsByteStringCounter, 1)
 	defer mm_atomic.AddUint64(&mmAsByteString.afterAsByteStringCounter, 1)
@@ -324,7 +324,7 @@ func (mmAsBytes *mCloudStateHashMockAsBytes) Set(f func() (ba1 []byte)) *CloudSt
 	return mmAsBytes.mock
 }
 
-// AsBytes implements CloudStateHash
+// AsBytes implements proofs.CloudStateHash
 func (mmAsBytes *CloudStateHashMock) AsBytes() (ba1 []byte) {
 	mm_atomic.AddUint64(&mmAsBytes.beforeAsBytesCounter, 1)
 	defer mm_atomic.AddUint64(&mmAsBytes.afterAsBytesCounter, 1)
@@ -467,7 +467,7 @@ func (mmCopyOfDigest *mCloudStateHashMockCopyOfDigest) Set(f func() (d1 cryptkit
 	return mmCopyOfDigest.mock
 }
 
-// CopyOfDigest implements CloudStateHash
+// CopyOfDigest implements proofs.CloudStateHash
 func (mmCopyOfDigest *CloudStateHashMock) CopyOfDigest() (d1 cryptkit.Digest) {
 	mm_atomic.AddUint64(&mmCopyOfDigest.beforeCopyOfDigestCounter, 1)
 	defer mm_atomic.AddUint64(&mmCopyOfDigest.afterCopyOfDigestCounter, 1)
@@ -646,7 +646,7 @@ func (e *CloudStateHashMockEqualsExpectation) Then(b1 bool) *CloudStateHashMock 
 	return e.mock
 }
 
-// Equals implements CloudStateHash
+// Equals implements proofs.CloudStateHash
 func (mmEquals *CloudStateHashMock) Equals(other cryptkit.DigestHolder) (b1 bool) {
 	mm_atomic.AddUint64(&mmEquals.beforeEqualsCounter, 1)
 	defer mm_atomic.AddUint64(&mmEquals.afterEqualsCounter, 1)
@@ -825,7 +825,7 @@ func (mmFixedByteSize *mCloudStateHashMockFixedByteSize) Set(f func() (i1 int)) 
 	return mmFixedByteSize.mock
 }
 
-// FixedByteSize implements CloudStateHash
+// FixedByteSize implements proofs.CloudStateHash
 func (mmFixedByteSize *CloudStateHashMock) FixedByteSize() (i1 int) {
 	mm_atomic.AddUint64(&mmFixedByteSize.beforeFixedByteSizeCounter, 1)
 	defer mm_atomic.AddUint64(&mmFixedByteSize.afterFixedByteSizeCounter, 1)
@@ -968,7 +968,7 @@ func (mmFoldToUint64 *mCloudStateHashMockFoldToUint64) Set(f func() (u1 uint64))
 	return mmFoldToUint64.mock
 }
 
-// FoldToUint64 implements CloudStateHash
+// FoldToUint64 implements proofs.CloudStateHash
 func (mmFoldToUint64 *CloudStateHashMock) FoldToUint64() (u1 uint64) {
 	mm_atomic.AddUint64(&mmFoldToUint64.beforeFoldToUint64Counter, 1)
 	defer mm_atomic.AddUint64(&mmFoldToUint64.afterFoldToUint64Counter, 1)
@@ -1111,7 +1111,7 @@ func (mmGetDigestMethod *mCloudStateHashMockGetDigestMethod) Set(f func() (d1 cr
 	return mmGetDigestMethod.mock
 }
 
-// GetDigestMethod implements CloudStateHash
+// GetDigestMethod implements proofs.CloudStateHash
 func (mmGetDigestMethod *CloudStateHashMock) GetDigestMethod() (d1 cryptkit.DigestMethod) {
 	mm_atomic.AddUint64(&mmGetDigestMethod.beforeGetDigestMethodCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetDigestMethod.afterGetDigestMethodCounter, 1)
@@ -1291,7 +1291,7 @@ func (e *CloudStateHashMockReadExpectation) Then(n int, err error) *CloudStateHa
 	return e.mock
 }
 
-// Read implements CloudStateHash
+// Read implements proofs.CloudStateHash
 func (mmRead *CloudStateHashMock) Read(p []byte) (n int, err error) {
 	mm_atomic.AddUint64(&mmRead.beforeReadCounter, 1)
 	defer mm_atomic.AddUint64(&mmRead.afterReadCounter, 1)
@@ -1506,7 +1506,7 @@ func (e *CloudStateHashMockSignWithExpectation) Then(s1 cryptkit.SignedDigestHol
 	return e.mock
 }
 
-// SignWith implements CloudStateHash
+// SignWith implements proofs.CloudStateHash
 func (mmSignWith *CloudStateHashMock) SignWith(signer cryptkit.DigestSigner) (s1 cryptkit.SignedDigestHolder) {
 	mm_atomic.AddUint64(&mmSignWith.beforeSignWithCounter, 1)
 	defer mm_atomic.AddUint64(&mmSignWith.afterSignWithCounter, 1)
@@ -1722,7 +1722,7 @@ func (e *CloudStateHashMockWriteToExpectation) Then(n int64, err error) *CloudSt
 	return e.mock
 }
 
-// WriteTo implements CloudStateHash
+// WriteTo implements proofs.CloudStateHash
 func (mmWriteTo *CloudStateHashMock) WriteTo(w io.Writer) (n int64, err error) {
 	mm_atomic.AddUint64(&mmWriteTo.beforeWriteToCounter, 1)
 	defer mm_atomic.AddUint64(&mmWriteTo.afterWriteToCounter, 1)

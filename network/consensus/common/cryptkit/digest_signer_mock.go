@@ -8,26 +8,27 @@ import (
 	mm_time "time"
 
 	"github.com/gojuno/minimock"
+	mm_cryptkit "github.com/insolar/insolar/network/consensus/common/cryptkit"
 )
 
-// DigestSignerMock implements DigestSigner
+// DigestSignerMock implements cryptkit.DigestSigner
 type DigestSignerMock struct {
 	t minimock.Tester
 
-	funcGetSignMethod          func() (s1 SignMethod)
+	funcGetSignMethod          func() (s1 mm_cryptkit.SignMethod)
 	inspectFuncGetSignMethod   func()
 	afterGetSignMethodCounter  uint64
 	beforeGetSignMethodCounter uint64
 	GetSignMethodMock          mDigestSignerMockGetSignMethod
 
-	funcSignDigest          func(digest Digest) (s1 Signature)
-	inspectFuncSignDigest   func(digest Digest)
+	funcSignDigest          func(digest mm_cryptkit.Digest) (s1 mm_cryptkit.Signature)
+	inspectFuncSignDigest   func(digest mm_cryptkit.Digest)
 	afterSignDigestCounter  uint64
 	beforeSignDigestCounter uint64
 	SignDigestMock          mDigestSignerMockSignDigest
 }
 
-// NewDigestSignerMock returns a mock for DigestSigner
+// NewDigestSignerMock returns a mock for cryptkit.DigestSigner
 func NewDigestSignerMock(t minimock.Tester) *DigestSignerMock {
 	m := &DigestSignerMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -58,7 +59,7 @@ type DigestSignerMockGetSignMethodExpectation struct {
 
 // DigestSignerMockGetSignMethodResults contains results of the DigestSigner.GetSignMethod
 type DigestSignerMockGetSignMethodResults struct {
-	s1 SignMethod
+	s1 mm_cryptkit.SignMethod
 }
 
 // Expect sets up expected params for DigestSigner.GetSignMethod
@@ -86,7 +87,7 @@ func (mmGetSignMethod *mDigestSignerMockGetSignMethod) Inspect(f func()) *mDiges
 }
 
 // Return sets up results that will be returned by DigestSigner.GetSignMethod
-func (mmGetSignMethod *mDigestSignerMockGetSignMethod) Return(s1 SignMethod) *DigestSignerMock {
+func (mmGetSignMethod *mDigestSignerMockGetSignMethod) Return(s1 mm_cryptkit.SignMethod) *DigestSignerMock {
 	if mmGetSignMethod.mock.funcGetSignMethod != nil {
 		mmGetSignMethod.mock.t.Fatalf("DigestSignerMock.GetSignMethod mock is already set by Set")
 	}
@@ -99,7 +100,7 @@ func (mmGetSignMethod *mDigestSignerMockGetSignMethod) Return(s1 SignMethod) *Di
 }
 
 //Set uses given function f to mock the DigestSigner.GetSignMethod method
-func (mmGetSignMethod *mDigestSignerMockGetSignMethod) Set(f func() (s1 SignMethod)) *DigestSignerMock {
+func (mmGetSignMethod *mDigestSignerMockGetSignMethod) Set(f func() (s1 mm_cryptkit.SignMethod)) *DigestSignerMock {
 	if mmGetSignMethod.defaultExpectation != nil {
 		mmGetSignMethod.mock.t.Fatalf("Default expectation is already set for the DigestSigner.GetSignMethod method")
 	}
@@ -112,8 +113,8 @@ func (mmGetSignMethod *mDigestSignerMockGetSignMethod) Set(f func() (s1 SignMeth
 	return mmGetSignMethod.mock
 }
 
-// GetSignMethod implements DigestSigner
-func (mmGetSignMethod *DigestSignerMock) GetSignMethod() (s1 SignMethod) {
+// GetSignMethod implements cryptkit.DigestSigner
+func (mmGetSignMethod *DigestSignerMock) GetSignMethod() (s1 mm_cryptkit.SignMethod) {
 	mm_atomic.AddUint64(&mmGetSignMethod.beforeGetSignMethodCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetSignMethod.afterGetSignMethodCounter, 1)
 
@@ -204,16 +205,16 @@ type DigestSignerMockSignDigestExpectation struct {
 
 // DigestSignerMockSignDigestParams contains parameters of the DigestSigner.SignDigest
 type DigestSignerMockSignDigestParams struct {
-	digest Digest
+	digest mm_cryptkit.Digest
 }
 
 // DigestSignerMockSignDigestResults contains results of the DigestSigner.SignDigest
 type DigestSignerMockSignDigestResults struct {
-	s1 Signature
+	s1 mm_cryptkit.Signature
 }
 
 // Expect sets up expected params for DigestSigner.SignDigest
-func (mmSignDigest *mDigestSignerMockSignDigest) Expect(digest Digest) *mDigestSignerMockSignDigest {
+func (mmSignDigest *mDigestSignerMockSignDigest) Expect(digest mm_cryptkit.Digest) *mDigestSignerMockSignDigest {
 	if mmSignDigest.mock.funcSignDigest != nil {
 		mmSignDigest.mock.t.Fatalf("DigestSignerMock.SignDigest mock is already set by Set")
 	}
@@ -233,7 +234,7 @@ func (mmSignDigest *mDigestSignerMockSignDigest) Expect(digest Digest) *mDigestS
 }
 
 // Inspect accepts an inspector function that has same arguments as the DigestSigner.SignDigest
-func (mmSignDigest *mDigestSignerMockSignDigest) Inspect(f func(digest Digest)) *mDigestSignerMockSignDigest {
+func (mmSignDigest *mDigestSignerMockSignDigest) Inspect(f func(digest mm_cryptkit.Digest)) *mDigestSignerMockSignDigest {
 	if mmSignDigest.mock.inspectFuncSignDigest != nil {
 		mmSignDigest.mock.t.Fatalf("Inspect function is already set for DigestSignerMock.SignDigest")
 	}
@@ -244,7 +245,7 @@ func (mmSignDigest *mDigestSignerMockSignDigest) Inspect(f func(digest Digest)) 
 }
 
 // Return sets up results that will be returned by DigestSigner.SignDigest
-func (mmSignDigest *mDigestSignerMockSignDigest) Return(s1 Signature) *DigestSignerMock {
+func (mmSignDigest *mDigestSignerMockSignDigest) Return(s1 mm_cryptkit.Signature) *DigestSignerMock {
 	if mmSignDigest.mock.funcSignDigest != nil {
 		mmSignDigest.mock.t.Fatalf("DigestSignerMock.SignDigest mock is already set by Set")
 	}
@@ -257,7 +258,7 @@ func (mmSignDigest *mDigestSignerMockSignDigest) Return(s1 Signature) *DigestSig
 }
 
 //Set uses given function f to mock the DigestSigner.SignDigest method
-func (mmSignDigest *mDigestSignerMockSignDigest) Set(f func(digest Digest) (s1 Signature)) *DigestSignerMock {
+func (mmSignDigest *mDigestSignerMockSignDigest) Set(f func(digest mm_cryptkit.Digest) (s1 mm_cryptkit.Signature)) *DigestSignerMock {
 	if mmSignDigest.defaultExpectation != nil {
 		mmSignDigest.mock.t.Fatalf("Default expectation is already set for the DigestSigner.SignDigest method")
 	}
@@ -272,7 +273,7 @@ func (mmSignDigest *mDigestSignerMockSignDigest) Set(f func(digest Digest) (s1 S
 
 // When sets expectation for the DigestSigner.SignDigest which will trigger the result defined by the following
 // Then helper
-func (mmSignDigest *mDigestSignerMockSignDigest) When(digest Digest) *DigestSignerMockSignDigestExpectation {
+func (mmSignDigest *mDigestSignerMockSignDigest) When(digest mm_cryptkit.Digest) *DigestSignerMockSignDigestExpectation {
 	if mmSignDigest.mock.funcSignDigest != nil {
 		mmSignDigest.mock.t.Fatalf("DigestSignerMock.SignDigest mock is already set by Set")
 	}
@@ -286,13 +287,13 @@ func (mmSignDigest *mDigestSignerMockSignDigest) When(digest Digest) *DigestSign
 }
 
 // Then sets up DigestSigner.SignDigest return parameters for the expectation previously defined by the When method
-func (e *DigestSignerMockSignDigestExpectation) Then(s1 Signature) *DigestSignerMock {
+func (e *DigestSignerMockSignDigestExpectation) Then(s1 mm_cryptkit.Signature) *DigestSignerMock {
 	e.results = &DigestSignerMockSignDigestResults{s1}
 	return e.mock
 }
 
-// SignDigest implements DigestSigner
-func (mmSignDigest *DigestSignerMock) SignDigest(digest Digest) (s1 Signature) {
+// SignDigest implements cryptkit.DigestSigner
+func (mmSignDigest *DigestSignerMock) SignDigest(digest mm_cryptkit.Digest) (s1 mm_cryptkit.Signature) {
 	mm_atomic.AddUint64(&mmSignDigest.beforeSignDigestCounter, 1)
 	defer mm_atomic.AddUint64(&mmSignDigest.afterSignDigestCounter, 1)
 

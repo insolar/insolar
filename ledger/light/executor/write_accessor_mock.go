@@ -12,7 +12,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-// WriteAccessorMock implements WriteAccessor
+// WriteAccessorMock implements executor.WriteAccessor
 type WriteAccessorMock struct {
 	t minimock.Tester
 
@@ -23,7 +23,7 @@ type WriteAccessorMock struct {
 	BeginMock          mWriteAccessorMockBegin
 }
 
-// NewWriteAccessorMock returns a mock for WriteAccessor
+// NewWriteAccessorMock returns a mock for executor.WriteAccessor
 func NewWriteAccessorMock(t minimock.Tester) *WriteAccessorMock {
 	m := &WriteAccessorMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -144,7 +144,7 @@ func (e *WriteAccessorMockBeginExpectation) Then(done func(), err error) *WriteA
 	return e.mock
 }
 
-// Begin implements WriteAccessor
+// Begin implements executor.WriteAccessor
 func (mmBegin *WriteAccessorMock) Begin(ctx context.Context, p1 insolar.PulseNumber) (done func(), err error) {
 	mm_atomic.AddUint64(&mmBegin.beforeBeginCounter, 1)
 	defer mm_atomic.AddUint64(&mmBegin.afterBeginCounter, 1)

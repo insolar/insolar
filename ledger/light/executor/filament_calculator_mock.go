@@ -13,7 +13,7 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 )
 
-// FilamentCalculatorMock implements FilamentCalculator
+// FilamentCalculatorMock implements executor.FilamentCalculator
 type FilamentCalculatorMock struct {
 	t minimock.Tester
 
@@ -48,7 +48,7 @@ type FilamentCalculatorMock struct {
 	ResultDuplicateMock          mFilamentCalculatorMockResultDuplicate
 }
 
-// NewFilamentCalculatorMock returns a mock for FilamentCalculator
+// NewFilamentCalculatorMock returns a mock for executor.FilamentCalculator
 func NewFilamentCalculatorMock(t minimock.Tester) *FilamentCalculatorMock {
 	m := &FilamentCalculatorMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -183,7 +183,7 @@ func (e *FilamentCalculatorMockOpenedRequestsExpectation) Then(ca1 []record.Comp
 	return e.mock
 }
 
-// OpenedRequests implements FilamentCalculator
+// OpenedRequests implements executor.FilamentCalculator
 func (mmOpenedRequests *FilamentCalculatorMock) OpenedRequests(ctx context.Context, pulse insolar.PulseNumber, objectID insolar.ID, pendingOnly bool) (ca1 []record.CompositeFilamentRecord, err error) {
 	mm_atomic.AddUint64(&mmOpenedRequests.beforeOpenedRequestsCounter, 1)
 	defer mm_atomic.AddUint64(&mmOpenedRequests.afterOpenedRequestsCounter, 1)
@@ -403,7 +403,7 @@ func (e *FilamentCalculatorMockRequestDuplicateExpectation) Then(foundRequest *r
 	return e.mock
 }
 
-// RequestDuplicate implements FilamentCalculator
+// RequestDuplicate implements executor.FilamentCalculator
 func (mmRequestDuplicate *FilamentCalculatorMock) RequestDuplicate(ctx context.Context, objectID insolar.ID, requestID insolar.ID, request record.Request) (foundRequest *record.CompositeFilamentRecord, foundResult *record.CompositeFilamentRecord, err error) {
 	mm_atomic.AddUint64(&mmRequestDuplicate.beforeRequestDuplicateCounter, 1)
 	defer mm_atomic.AddUint64(&mmRequestDuplicate.afterRequestDuplicateCounter, 1)
@@ -623,7 +623,7 @@ func (e *FilamentCalculatorMockRequestInfoExpectation) Then(foundRequest *record
 	return e.mock
 }
 
-// RequestInfo implements FilamentCalculator
+// RequestInfo implements executor.FilamentCalculator
 func (mmRequestInfo *FilamentCalculatorMock) RequestInfo(ctx context.Context, objectID insolar.ID, requestID insolar.ID, pulse insolar.PulseNumber) (foundRequest *record.CompositeFilamentRecord, foundResult *record.CompositeFilamentRecord, err error) {
 	mm_atomic.AddUint64(&mmRequestInfo.beforeRequestInfoCounter, 1)
 	defer mm_atomic.AddUint64(&mmRequestInfo.afterRequestInfoCounter, 1)
@@ -842,7 +842,7 @@ func (e *FilamentCalculatorMockRequestsExpectation) Then(ca1 []record.CompositeF
 	return e.mock
 }
 
-// Requests implements FilamentCalculator
+// Requests implements executor.FilamentCalculator
 func (mmRequests *FilamentCalculatorMock) Requests(ctx context.Context, objectID insolar.ID, from insolar.ID, readUntil insolar.PulseNumber) (ca1 []record.CompositeFilamentRecord, err error) {
 	mm_atomic.AddUint64(&mmRequests.beforeRequestsCounter, 1)
 	defer mm_atomic.AddUint64(&mmRequests.afterRequestsCounter, 1)
@@ -1061,7 +1061,7 @@ func (e *FilamentCalculatorMockResultDuplicateExpectation) Then(foundResult *rec
 	return e.mock
 }
 
-// ResultDuplicate implements FilamentCalculator
+// ResultDuplicate implements executor.FilamentCalculator
 func (mmResultDuplicate *FilamentCalculatorMock) ResultDuplicate(ctx context.Context, objectID insolar.ID, resultID insolar.ID, result record.Result) (foundResult *record.CompositeFilamentRecord, err error) {
 	mm_atomic.AddUint64(&mmResultDuplicate.beforeResultDuplicateCounter, 1)
 	defer mm_atomic.AddUint64(&mmResultDuplicate.afterResultDuplicateCounter, 1)

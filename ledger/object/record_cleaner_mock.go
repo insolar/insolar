@@ -12,7 +12,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-// RecordCleanerMock implements RecordCleaner
+// RecordCleanerMock implements object.RecordCleaner
 type RecordCleanerMock struct {
 	t minimock.Tester
 
@@ -23,7 +23,7 @@ type RecordCleanerMock struct {
 	DeleteForPNMock          mRecordCleanerMockDeleteForPN
 }
 
-// NewRecordCleanerMock returns a mock for RecordCleaner
+// NewRecordCleanerMock returns a mock for object.RecordCleaner
 func NewRecordCleanerMock(t minimock.Tester) *RecordCleanerMock {
 	m := &RecordCleanerMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -117,7 +117,7 @@ func (mmDeleteForPN *mRecordCleanerMockDeleteForPN) Set(f func(ctx context.Conte
 	return mmDeleteForPN.mock
 }
 
-// DeleteForPN implements RecordCleaner
+// DeleteForPN implements object.RecordCleaner
 func (mmDeleteForPN *RecordCleanerMock) DeleteForPN(ctx context.Context, pulse insolar.PulseNumber) {
 	mm_atomic.AddUint64(&mmDeleteForPN.beforeDeleteForPNCounter, 1)
 	defer mm_atomic.AddUint64(&mmDeleteForPN.afterDeleteForPNCounter, 1)

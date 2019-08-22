@@ -11,7 +11,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-// JetIndexAccessorMock implements JetIndexAccessor
+// JetIndexAccessorMock implements store.JetIndexAccessor
 type JetIndexAccessorMock struct {
 	t minimock.Tester
 
@@ -23,7 +23,7 @@ type JetIndexAccessorMock struct {
 	ForMock          mJetIndexAccessorMockFor
 }
 
-// NewJetIndexAccessorMock returns a mock for JetIndexAccessor
+// NewJetIndexAccessorMock returns a mock for store.JetIndexAccessor
 func NewJetIndexAccessorMock(t minimock.Tester) *JetIndexAccessorMock {
 	m := &JetIndexAccessorMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -146,7 +146,7 @@ func (e *JetIndexAccessorMockForExpectation) Then(m1 map[insolar.ID]struct {
 	return e.mock
 }
 
-// For implements JetIndexAccessor
+// For implements store.JetIndexAccessor
 func (mmFor *JetIndexAccessorMock) For(jetID insolar.JetID) (m1 map[insolar.ID]struct {
 }) {
 	mm_atomic.AddUint64(&mmFor.beforeForCounter, 1)

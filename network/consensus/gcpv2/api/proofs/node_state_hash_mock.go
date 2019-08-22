@@ -12,7 +12,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 )
 
-// NodeStateHashMock implements NodeStateHash
+// NodeStateHashMock implements proofs.NodeStateHash
 type NodeStateHashMock struct {
 	t minimock.Tester
 
@@ -77,7 +77,7 @@ type NodeStateHashMock struct {
 	WriteToMock          mNodeStateHashMockWriteTo
 }
 
-// NewNodeStateHashMock returns a mock for NodeStateHash
+// NewNodeStateHashMock returns a mock for proofs.NodeStateHash
 func NewNodeStateHashMock(t minimock.Tester) *NodeStateHashMock {
 	m := &NodeStateHashMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -181,7 +181,7 @@ func (mmAsByteString *mNodeStateHashMockAsByteString) Set(f func() (s1 string)) 
 	return mmAsByteString.mock
 }
 
-// AsByteString implements NodeStateHash
+// AsByteString implements proofs.NodeStateHash
 func (mmAsByteString *NodeStateHashMock) AsByteString() (s1 string) {
 	mm_atomic.AddUint64(&mmAsByteString.beforeAsByteStringCounter, 1)
 	defer mm_atomic.AddUint64(&mmAsByteString.afterAsByteStringCounter, 1)
@@ -324,7 +324,7 @@ func (mmAsBytes *mNodeStateHashMockAsBytes) Set(f func() (ba1 []byte)) *NodeStat
 	return mmAsBytes.mock
 }
 
-// AsBytes implements NodeStateHash
+// AsBytes implements proofs.NodeStateHash
 func (mmAsBytes *NodeStateHashMock) AsBytes() (ba1 []byte) {
 	mm_atomic.AddUint64(&mmAsBytes.beforeAsBytesCounter, 1)
 	defer mm_atomic.AddUint64(&mmAsBytes.afterAsBytesCounter, 1)
@@ -467,7 +467,7 @@ func (mmCopyOfDigest *mNodeStateHashMockCopyOfDigest) Set(f func() (d1 cryptkit.
 	return mmCopyOfDigest.mock
 }
 
-// CopyOfDigest implements NodeStateHash
+// CopyOfDigest implements proofs.NodeStateHash
 func (mmCopyOfDigest *NodeStateHashMock) CopyOfDigest() (d1 cryptkit.Digest) {
 	mm_atomic.AddUint64(&mmCopyOfDigest.beforeCopyOfDigestCounter, 1)
 	defer mm_atomic.AddUint64(&mmCopyOfDigest.afterCopyOfDigestCounter, 1)
@@ -646,7 +646,7 @@ func (e *NodeStateHashMockEqualsExpectation) Then(b1 bool) *NodeStateHashMock {
 	return e.mock
 }
 
-// Equals implements NodeStateHash
+// Equals implements proofs.NodeStateHash
 func (mmEquals *NodeStateHashMock) Equals(other cryptkit.DigestHolder) (b1 bool) {
 	mm_atomic.AddUint64(&mmEquals.beforeEqualsCounter, 1)
 	defer mm_atomic.AddUint64(&mmEquals.afterEqualsCounter, 1)
@@ -825,7 +825,7 @@ func (mmFixedByteSize *mNodeStateHashMockFixedByteSize) Set(f func() (i1 int)) *
 	return mmFixedByteSize.mock
 }
 
-// FixedByteSize implements NodeStateHash
+// FixedByteSize implements proofs.NodeStateHash
 func (mmFixedByteSize *NodeStateHashMock) FixedByteSize() (i1 int) {
 	mm_atomic.AddUint64(&mmFixedByteSize.beforeFixedByteSizeCounter, 1)
 	defer mm_atomic.AddUint64(&mmFixedByteSize.afterFixedByteSizeCounter, 1)
@@ -968,7 +968,7 @@ func (mmFoldToUint64 *mNodeStateHashMockFoldToUint64) Set(f func() (u1 uint64)) 
 	return mmFoldToUint64.mock
 }
 
-// FoldToUint64 implements NodeStateHash
+// FoldToUint64 implements proofs.NodeStateHash
 func (mmFoldToUint64 *NodeStateHashMock) FoldToUint64() (u1 uint64) {
 	mm_atomic.AddUint64(&mmFoldToUint64.beforeFoldToUint64Counter, 1)
 	defer mm_atomic.AddUint64(&mmFoldToUint64.afterFoldToUint64Counter, 1)
@@ -1111,7 +1111,7 @@ func (mmGetDigestMethod *mNodeStateHashMockGetDigestMethod) Set(f func() (d1 cry
 	return mmGetDigestMethod.mock
 }
 
-// GetDigestMethod implements NodeStateHash
+// GetDigestMethod implements proofs.NodeStateHash
 func (mmGetDigestMethod *NodeStateHashMock) GetDigestMethod() (d1 cryptkit.DigestMethod) {
 	mm_atomic.AddUint64(&mmGetDigestMethod.beforeGetDigestMethodCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetDigestMethod.afterGetDigestMethodCounter, 1)
@@ -1291,7 +1291,7 @@ func (e *NodeStateHashMockReadExpectation) Then(n int, err error) *NodeStateHash
 	return e.mock
 }
 
-// Read implements NodeStateHash
+// Read implements proofs.NodeStateHash
 func (mmRead *NodeStateHashMock) Read(p []byte) (n int, err error) {
 	mm_atomic.AddUint64(&mmRead.beforeReadCounter, 1)
 	defer mm_atomic.AddUint64(&mmRead.afterReadCounter, 1)
@@ -1506,7 +1506,7 @@ func (e *NodeStateHashMockSignWithExpectation) Then(s1 cryptkit.SignedDigestHold
 	return e.mock
 }
 
-// SignWith implements NodeStateHash
+// SignWith implements proofs.NodeStateHash
 func (mmSignWith *NodeStateHashMock) SignWith(signer cryptkit.DigestSigner) (s1 cryptkit.SignedDigestHolder) {
 	mm_atomic.AddUint64(&mmSignWith.beforeSignWithCounter, 1)
 	defer mm_atomic.AddUint64(&mmSignWith.afterSignWithCounter, 1)
@@ -1722,7 +1722,7 @@ func (e *NodeStateHashMockWriteToExpectation) Then(n int64, err error) *NodeStat
 	return e.mock
 }
 
-// WriteTo implements NodeStateHash
+// WriteTo implements proofs.NodeStateHash
 func (mmWriteTo *NodeStateHashMock) WriteTo(w io.Writer) (n int64, err error) {
 	mm_atomic.AddUint64(&mmWriteTo.beforeWriteToCounter, 1)
 	defer mm_atomic.AddUint64(&mmWriteTo.afterWriteToCounter, 1)

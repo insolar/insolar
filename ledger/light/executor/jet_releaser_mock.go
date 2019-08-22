@@ -12,7 +12,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-// JetReleaserMock implements JetReleaser
+// JetReleaserMock implements executor.JetReleaser
 type JetReleaserMock struct {
 	t minimock.Tester
 
@@ -29,7 +29,7 @@ type JetReleaserMock struct {
 	UnlockMock          mJetReleaserMockUnlock
 }
 
-// NewJetReleaserMock returns a mock for JetReleaser
+// NewJetReleaserMock returns a mock for executor.JetReleaser
 func NewJetReleaserMock(t minimock.Tester) *JetReleaserMock {
 	m := &JetReleaserMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -126,7 +126,7 @@ func (mmCloseAllUntil *mJetReleaserMockCloseAllUntil) Set(f func(ctx context.Con
 	return mmCloseAllUntil.mock
 }
 
-// CloseAllUntil implements JetReleaser
+// CloseAllUntil implements executor.JetReleaser
 func (mmCloseAllUntil *JetReleaserMock) CloseAllUntil(ctx context.Context, pulse insolar.PulseNumber) {
 	mm_atomic.AddUint64(&mmCloseAllUntil.beforeCloseAllUntilCounter, 1)
 	defer mm_atomic.AddUint64(&mmCloseAllUntil.afterCloseAllUntilCounter, 1)
@@ -341,7 +341,7 @@ func (e *JetReleaserMockUnlockExpectation) Then(err error) *JetReleaserMock {
 	return e.mock
 }
 
-// Unlock implements JetReleaser
+// Unlock implements executor.JetReleaser
 func (mmUnlock *JetReleaserMock) Unlock(ctx context.Context, pulse insolar.PulseNumber, jetID insolar.JetID) (err error) {
 	mm_atomic.AddUint64(&mmUnlock.beforeUnlockCounter, 1)
 	defer mm_atomic.AddUint64(&mmUnlock.afterUnlockCounter, 1)

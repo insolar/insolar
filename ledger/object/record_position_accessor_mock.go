@@ -13,7 +13,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-// RecordPositionAccessorMock implements RecordPositionAccessor
+// RecordPositionAccessorMock implements object.RecordPositionAccessor
 type RecordPositionAccessorMock struct {
 	t minimock.Tester
 
@@ -30,7 +30,7 @@ type RecordPositionAccessorMock struct {
 	LastKnownPositionMock          mRecordPositionAccessorMockLastKnownPosition
 }
 
-// NewRecordPositionAccessorMock returns a mock for RecordPositionAccessor
+// NewRecordPositionAccessorMock returns a mock for object.RecordPositionAccessor
 func NewRecordPositionAccessorMock(t minimock.Tester) *RecordPositionAccessorMock {
 	m := &RecordPositionAccessorMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -154,7 +154,7 @@ func (e *RecordPositionAccessorMockAtPositionExpectation) Then(i1 insolar.ID, er
 	return e.mock
 }
 
-// AtPosition implements RecordPositionAccessor
+// AtPosition implements object.RecordPositionAccessor
 func (mmAtPosition *RecordPositionAccessorMock) AtPosition(pn insolar.PulseNumber, position uint32) (i1 insolar.ID, err error) {
 	mm_atomic.AddUint64(&mmAtPosition.beforeAtPositionCounter, 1)
 	defer mm_atomic.AddUint64(&mmAtPosition.afterAtPositionCounter, 1)
@@ -370,7 +370,7 @@ func (e *RecordPositionAccessorMockLastKnownPositionExpectation) Then(u1 uint32,
 	return e.mock
 }
 
-// LastKnownPosition implements RecordPositionAccessor
+// LastKnownPosition implements object.RecordPositionAccessor
 func (mmLastKnownPosition *RecordPositionAccessorMock) LastKnownPosition(pn insolar.PulseNumber) (u1 uint32, err error) {
 	mm_atomic.AddUint64(&mmLastKnownPosition.beforeLastKnownPositionCounter, 1)
 	defer mm_atomic.AddUint64(&mmLastKnownPosition.afterLastKnownPositionCounter, 1)

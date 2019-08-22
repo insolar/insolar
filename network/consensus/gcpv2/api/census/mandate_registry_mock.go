@@ -10,11 +10,12 @@ import (
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
+	mm_census "github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 )
 
-// MandateRegistryMock implements MandateRegistry
+// MandateRegistryMock implements census.MandateRegistry
 type MandateRegistryMock struct {
 	t minimock.Tester
 
@@ -30,7 +31,7 @@ type MandateRegistryMock struct {
 	beforeGetCloudIdentityCounter uint64
 	GetCloudIdentityMock          mMandateRegistryMockGetCloudIdentity
 
-	funcGetConsensusConfiguration          func() (c1 ConsensusConfiguration)
+	funcGetConsensusConfiguration          func() (c1 mm_census.ConsensusConfiguration)
 	inspectFuncGetConsensusConfiguration   func()
 	afterGetConsensusConfigurationCounter  uint64
 	beforeGetConsensusConfigurationCounter uint64
@@ -43,7 +44,7 @@ type MandateRegistryMock struct {
 	GetPrimingCloudHashMock          mMandateRegistryMockGetPrimingCloudHash
 }
 
-// NewMandateRegistryMock returns a mock for MandateRegistry
+// NewMandateRegistryMock returns a mock for census.MandateRegistry
 func NewMandateRegistryMock(t minimock.Tester) *MandateRegistryMock {
 	m := &MandateRegistryMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -168,7 +169,7 @@ func (e *MandateRegistryMockFindRegisteredProfileExpectation) Then(h1 profiles.H
 	return e.mock
 }
 
-// FindRegisteredProfile implements MandateRegistry
+// FindRegisteredProfile implements census.MandateRegistry
 func (mmFindRegisteredProfile *MandateRegistryMock) FindRegisteredProfile(host endpoints.Inbound) (h1 profiles.Host) {
 	mm_atomic.AddUint64(&mmFindRegisteredProfile.beforeFindRegisteredProfileCounter, 1)
 	defer mm_atomic.AddUint64(&mmFindRegisteredProfile.afterFindRegisteredProfileCounter, 1)
@@ -347,7 +348,7 @@ func (mmGetCloudIdentity *mMandateRegistryMockGetCloudIdentity) Set(f func() (d1
 	return mmGetCloudIdentity.mock
 }
 
-// GetCloudIdentity implements MandateRegistry
+// GetCloudIdentity implements census.MandateRegistry
 func (mmGetCloudIdentity *MandateRegistryMock) GetCloudIdentity() (d1 cryptkit.DigestHolder) {
 	mm_atomic.AddUint64(&mmGetCloudIdentity.beforeGetCloudIdentityCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetCloudIdentity.afterGetCloudIdentityCounter, 1)
@@ -436,7 +437,7 @@ type MandateRegistryMockGetConsensusConfigurationExpectation struct {
 
 // MandateRegistryMockGetConsensusConfigurationResults contains results of the MandateRegistry.GetConsensusConfiguration
 type MandateRegistryMockGetConsensusConfigurationResults struct {
-	c1 ConsensusConfiguration
+	c1 mm_census.ConsensusConfiguration
 }
 
 // Expect sets up expected params for MandateRegistry.GetConsensusConfiguration
@@ -464,7 +465,7 @@ func (mmGetConsensusConfiguration *mMandateRegistryMockGetConsensusConfiguration
 }
 
 // Return sets up results that will be returned by MandateRegistry.GetConsensusConfiguration
-func (mmGetConsensusConfiguration *mMandateRegistryMockGetConsensusConfiguration) Return(c1 ConsensusConfiguration) *MandateRegistryMock {
+func (mmGetConsensusConfiguration *mMandateRegistryMockGetConsensusConfiguration) Return(c1 mm_census.ConsensusConfiguration) *MandateRegistryMock {
 	if mmGetConsensusConfiguration.mock.funcGetConsensusConfiguration != nil {
 		mmGetConsensusConfiguration.mock.t.Fatalf("MandateRegistryMock.GetConsensusConfiguration mock is already set by Set")
 	}
@@ -477,7 +478,7 @@ func (mmGetConsensusConfiguration *mMandateRegistryMockGetConsensusConfiguration
 }
 
 //Set uses given function f to mock the MandateRegistry.GetConsensusConfiguration method
-func (mmGetConsensusConfiguration *mMandateRegistryMockGetConsensusConfiguration) Set(f func() (c1 ConsensusConfiguration)) *MandateRegistryMock {
+func (mmGetConsensusConfiguration *mMandateRegistryMockGetConsensusConfiguration) Set(f func() (c1 mm_census.ConsensusConfiguration)) *MandateRegistryMock {
 	if mmGetConsensusConfiguration.defaultExpectation != nil {
 		mmGetConsensusConfiguration.mock.t.Fatalf("Default expectation is already set for the MandateRegistry.GetConsensusConfiguration method")
 	}
@@ -490,8 +491,8 @@ func (mmGetConsensusConfiguration *mMandateRegistryMockGetConsensusConfiguration
 	return mmGetConsensusConfiguration.mock
 }
 
-// GetConsensusConfiguration implements MandateRegistry
-func (mmGetConsensusConfiguration *MandateRegistryMock) GetConsensusConfiguration() (c1 ConsensusConfiguration) {
+// GetConsensusConfiguration implements census.MandateRegistry
+func (mmGetConsensusConfiguration *MandateRegistryMock) GetConsensusConfiguration() (c1 mm_census.ConsensusConfiguration) {
 	mm_atomic.AddUint64(&mmGetConsensusConfiguration.beforeGetConsensusConfigurationCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetConsensusConfiguration.afterGetConsensusConfigurationCounter, 1)
 
@@ -633,7 +634,7 @@ func (mmGetPrimingCloudHash *mMandateRegistryMockGetPrimingCloudHash) Set(f func
 	return mmGetPrimingCloudHash.mock
 }
 
-// GetPrimingCloudHash implements MandateRegistry
+// GetPrimingCloudHash implements census.MandateRegistry
 func (mmGetPrimingCloudHash *MandateRegistryMock) GetPrimingCloudHash() (c1 proofs.CloudStateHash) {
 	mm_atomic.AddUint64(&mmGetPrimingCloudHash.beforeGetPrimingCloudHashCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetPrimingCloudHash.afterGetPrimingCloudHashCounter, 1)

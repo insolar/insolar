@@ -12,7 +12,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-// BackupMakerMock implements BackupMaker
+// BackupMakerMock implements executor.BackupMaker
 type BackupMakerMock struct {
 	t minimock.Tester
 
@@ -23,7 +23,7 @@ type BackupMakerMock struct {
 	MakeBackupMock          mBackupMakerMockMakeBackup
 }
 
-// NewBackupMakerMock returns a mock for BackupMaker
+// NewBackupMakerMock returns a mock for executor.BackupMaker
 func NewBackupMakerMock(t minimock.Tester) *BackupMakerMock {
 	m := &BackupMakerMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -143,7 +143,7 @@ func (e *BackupMakerMockMakeBackupExpectation) Then(err error) *BackupMakerMock 
 	return e.mock
 }
 
-// MakeBackup implements BackupMaker
+// MakeBackup implements executor.BackupMaker
 func (mmMakeBackup *BackupMakerMock) MakeBackup(ctx context.Context, lastFinalizedPulse insolar.PulseNumber) (err error) {
 	mm_atomic.AddUint64(&mmMakeBackup.beforeMakeBackupCounter, 1)
 	defer mm_atomic.AddUint64(&mmMakeBackup.afterMakeBackupCounter, 1)

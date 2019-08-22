@@ -11,13 +11,14 @@ import (
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
+	mm_transport "github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 )
 
-// PacketParserMock implements PacketParser
+// PacketParserMock implements transport.PacketParser
 type PacketParserMock struct {
 	t minimock.Tester
 
-	funcGetMemberPacket          func() (m1 MemberPacketReader)
+	funcGetMemberPacket          func() (m1 mm_transport.MemberPacketReader)
 	inspectFuncGetMemberPacket   func()
 	afterGetMemberPacketCounter  uint64
 	beforeGetMemberPacketCounter uint64
@@ -41,7 +42,7 @@ type PacketParserMock struct {
 	beforeGetPulseNumberCounter uint64
 	GetPulseNumberMock          mPacketParserMockGetPulseNumber
 
-	funcGetPulsePacket          func() (p1 PulsePacketReader)
+	funcGetPulsePacket          func() (p1 mm_transport.PulsePacketReader)
 	inspectFuncGetPulsePacket   func()
 	afterGetPulsePacketCounter  uint64
 	beforeGetPulsePacketCounter uint64
@@ -71,14 +72,14 @@ type PacketParserMock struct {
 	beforeIsRelayForbiddenCounter uint64
 	IsRelayForbiddenMock          mPacketParserMockIsRelayForbidden
 
-	funcParsePacketBody          func() (p1 PacketParser, err error)
+	funcParsePacketBody          func() (p1 mm_transport.PacketParser, err error)
 	inspectFuncParsePacketBody   func()
 	afterParsePacketBodyCounter  uint64
 	beforeParsePacketBodyCounter uint64
 	ParsePacketBodyMock          mPacketParserMockParsePacketBody
 }
 
-// NewPacketParserMock returns a mock for PacketParser
+// NewPacketParserMock returns a mock for transport.PacketParser
 func NewPacketParserMock(t minimock.Tester) *PacketParserMock {
 	m := &PacketParserMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -124,7 +125,7 @@ type PacketParserMockGetMemberPacketExpectation struct {
 
 // PacketParserMockGetMemberPacketResults contains results of the PacketParser.GetMemberPacket
 type PacketParserMockGetMemberPacketResults struct {
-	m1 MemberPacketReader
+	m1 mm_transport.MemberPacketReader
 }
 
 // Expect sets up expected params for PacketParser.GetMemberPacket
@@ -152,7 +153,7 @@ func (mmGetMemberPacket *mPacketParserMockGetMemberPacket) Inspect(f func()) *mP
 }
 
 // Return sets up results that will be returned by PacketParser.GetMemberPacket
-func (mmGetMemberPacket *mPacketParserMockGetMemberPacket) Return(m1 MemberPacketReader) *PacketParserMock {
+func (mmGetMemberPacket *mPacketParserMockGetMemberPacket) Return(m1 mm_transport.MemberPacketReader) *PacketParserMock {
 	if mmGetMemberPacket.mock.funcGetMemberPacket != nil {
 		mmGetMemberPacket.mock.t.Fatalf("PacketParserMock.GetMemberPacket mock is already set by Set")
 	}
@@ -165,7 +166,7 @@ func (mmGetMemberPacket *mPacketParserMockGetMemberPacket) Return(m1 MemberPacke
 }
 
 //Set uses given function f to mock the PacketParser.GetMemberPacket method
-func (mmGetMemberPacket *mPacketParserMockGetMemberPacket) Set(f func() (m1 MemberPacketReader)) *PacketParserMock {
+func (mmGetMemberPacket *mPacketParserMockGetMemberPacket) Set(f func() (m1 mm_transport.MemberPacketReader)) *PacketParserMock {
 	if mmGetMemberPacket.defaultExpectation != nil {
 		mmGetMemberPacket.mock.t.Fatalf("Default expectation is already set for the PacketParser.GetMemberPacket method")
 	}
@@ -178,8 +179,8 @@ func (mmGetMemberPacket *mPacketParserMockGetMemberPacket) Set(f func() (m1 Memb
 	return mmGetMemberPacket.mock
 }
 
-// GetMemberPacket implements PacketParser
-func (mmGetMemberPacket *PacketParserMock) GetMemberPacket() (m1 MemberPacketReader) {
+// GetMemberPacket implements transport.PacketParser
+func (mmGetMemberPacket *PacketParserMock) GetMemberPacket() (m1 mm_transport.MemberPacketReader) {
 	mm_atomic.AddUint64(&mmGetMemberPacket.beforeGetMemberPacketCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetMemberPacket.afterGetMemberPacketCounter, 1)
 
@@ -321,7 +322,7 @@ func (mmGetPacketSignature *mPacketParserMockGetPacketSignature) Set(f func() (s
 	return mmGetPacketSignature.mock
 }
 
-// GetPacketSignature implements PacketParser
+// GetPacketSignature implements transport.PacketParser
 func (mmGetPacketSignature *PacketParserMock) GetPacketSignature() (s1 cryptkit.SignedDigest) {
 	mm_atomic.AddUint64(&mmGetPacketSignature.beforeGetPacketSignatureCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetPacketSignature.afterGetPacketSignatureCounter, 1)
@@ -464,7 +465,7 @@ func (mmGetPacketType *mPacketParserMockGetPacketType) Set(f func() (p1 phases.P
 	return mmGetPacketType.mock
 }
 
-// GetPacketType implements PacketParser
+// GetPacketType implements transport.PacketParser
 func (mmGetPacketType *PacketParserMock) GetPacketType() (p1 phases.PacketType) {
 	mm_atomic.AddUint64(&mmGetPacketType.beforeGetPacketTypeCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetPacketType.afterGetPacketTypeCounter, 1)
@@ -607,7 +608,7 @@ func (mmGetPulseNumber *mPacketParserMockGetPulseNumber) Set(f func() (n1 pulse.
 	return mmGetPulseNumber.mock
 }
 
-// GetPulseNumber implements PacketParser
+// GetPulseNumber implements transport.PacketParser
 func (mmGetPulseNumber *PacketParserMock) GetPulseNumber() (n1 pulse.Number) {
 	mm_atomic.AddUint64(&mmGetPulseNumber.beforeGetPulseNumberCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetPulseNumber.afterGetPulseNumberCounter, 1)
@@ -696,7 +697,7 @@ type PacketParserMockGetPulsePacketExpectation struct {
 
 // PacketParserMockGetPulsePacketResults contains results of the PacketParser.GetPulsePacket
 type PacketParserMockGetPulsePacketResults struct {
-	p1 PulsePacketReader
+	p1 mm_transport.PulsePacketReader
 }
 
 // Expect sets up expected params for PacketParser.GetPulsePacket
@@ -724,7 +725,7 @@ func (mmGetPulsePacket *mPacketParserMockGetPulsePacket) Inspect(f func()) *mPac
 }
 
 // Return sets up results that will be returned by PacketParser.GetPulsePacket
-func (mmGetPulsePacket *mPacketParserMockGetPulsePacket) Return(p1 PulsePacketReader) *PacketParserMock {
+func (mmGetPulsePacket *mPacketParserMockGetPulsePacket) Return(p1 mm_transport.PulsePacketReader) *PacketParserMock {
 	if mmGetPulsePacket.mock.funcGetPulsePacket != nil {
 		mmGetPulsePacket.mock.t.Fatalf("PacketParserMock.GetPulsePacket mock is already set by Set")
 	}
@@ -737,7 +738,7 @@ func (mmGetPulsePacket *mPacketParserMockGetPulsePacket) Return(p1 PulsePacketRe
 }
 
 //Set uses given function f to mock the PacketParser.GetPulsePacket method
-func (mmGetPulsePacket *mPacketParserMockGetPulsePacket) Set(f func() (p1 PulsePacketReader)) *PacketParserMock {
+func (mmGetPulsePacket *mPacketParserMockGetPulsePacket) Set(f func() (p1 mm_transport.PulsePacketReader)) *PacketParserMock {
 	if mmGetPulsePacket.defaultExpectation != nil {
 		mmGetPulsePacket.mock.t.Fatalf("Default expectation is already set for the PacketParser.GetPulsePacket method")
 	}
@@ -750,8 +751,8 @@ func (mmGetPulsePacket *mPacketParserMockGetPulsePacket) Set(f func() (p1 PulseP
 	return mmGetPulsePacket.mock
 }
 
-// GetPulsePacket implements PacketParser
-func (mmGetPulsePacket *PacketParserMock) GetPulsePacket() (p1 PulsePacketReader) {
+// GetPulsePacket implements transport.PacketParser
+func (mmGetPulsePacket *PacketParserMock) GetPulsePacket() (p1 mm_transport.PulsePacketReader) {
 	mm_atomic.AddUint64(&mmGetPulsePacket.beforeGetPulsePacketCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetPulsePacket.afterGetPulsePacketCounter, 1)
 
@@ -893,7 +894,7 @@ func (mmGetReceiverID *mPacketParserMockGetReceiverID) Set(f func() (s1 insolar.
 	return mmGetReceiverID.mock
 }
 
-// GetReceiverID implements PacketParser
+// GetReceiverID implements transport.PacketParser
 func (mmGetReceiverID *PacketParserMock) GetReceiverID() (s1 insolar.ShortNodeID) {
 	mm_atomic.AddUint64(&mmGetReceiverID.beforeGetReceiverIDCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetReceiverID.afterGetReceiverIDCounter, 1)
@@ -1036,7 +1037,7 @@ func (mmGetSourceID *mPacketParserMockGetSourceID) Set(f func() (s1 insolar.Shor
 	return mmGetSourceID.mock
 }
 
-// GetSourceID implements PacketParser
+// GetSourceID implements transport.PacketParser
 func (mmGetSourceID *PacketParserMock) GetSourceID() (s1 insolar.ShortNodeID) {
 	mm_atomic.AddUint64(&mmGetSourceID.beforeGetSourceIDCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetSourceID.afterGetSourceIDCounter, 1)
@@ -1179,7 +1180,7 @@ func (mmGetTargetID *mPacketParserMockGetTargetID) Set(f func() (s1 insolar.Shor
 	return mmGetTargetID.mock
 }
 
-// GetTargetID implements PacketParser
+// GetTargetID implements transport.PacketParser
 func (mmGetTargetID *PacketParserMock) GetTargetID() (s1 insolar.ShortNodeID) {
 	mm_atomic.AddUint64(&mmGetTargetID.beforeGetTargetIDCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetTargetID.afterGetTargetIDCounter, 1)
@@ -1322,7 +1323,7 @@ func (mmIsRelayForbidden *mPacketParserMockIsRelayForbidden) Set(f func() (b1 bo
 	return mmIsRelayForbidden.mock
 }
 
-// IsRelayForbidden implements PacketParser
+// IsRelayForbidden implements transport.PacketParser
 func (mmIsRelayForbidden *PacketParserMock) IsRelayForbidden() (b1 bool) {
 	mm_atomic.AddUint64(&mmIsRelayForbidden.beforeIsRelayForbiddenCounter, 1)
 	defer mm_atomic.AddUint64(&mmIsRelayForbidden.afterIsRelayForbiddenCounter, 1)
@@ -1411,7 +1412,7 @@ type PacketParserMockParsePacketBodyExpectation struct {
 
 // PacketParserMockParsePacketBodyResults contains results of the PacketParser.ParsePacketBody
 type PacketParserMockParsePacketBodyResults struct {
-	p1  PacketParser
+	p1  mm_transport.PacketParser
 	err error
 }
 
@@ -1440,7 +1441,7 @@ func (mmParsePacketBody *mPacketParserMockParsePacketBody) Inspect(f func()) *mP
 }
 
 // Return sets up results that will be returned by PacketParser.ParsePacketBody
-func (mmParsePacketBody *mPacketParserMockParsePacketBody) Return(p1 PacketParser, err error) *PacketParserMock {
+func (mmParsePacketBody *mPacketParserMockParsePacketBody) Return(p1 mm_transport.PacketParser, err error) *PacketParserMock {
 	if mmParsePacketBody.mock.funcParsePacketBody != nil {
 		mmParsePacketBody.mock.t.Fatalf("PacketParserMock.ParsePacketBody mock is already set by Set")
 	}
@@ -1453,7 +1454,7 @@ func (mmParsePacketBody *mPacketParserMockParsePacketBody) Return(p1 PacketParse
 }
 
 //Set uses given function f to mock the PacketParser.ParsePacketBody method
-func (mmParsePacketBody *mPacketParserMockParsePacketBody) Set(f func() (p1 PacketParser, err error)) *PacketParserMock {
+func (mmParsePacketBody *mPacketParserMockParsePacketBody) Set(f func() (p1 mm_transport.PacketParser, err error)) *PacketParserMock {
 	if mmParsePacketBody.defaultExpectation != nil {
 		mmParsePacketBody.mock.t.Fatalf("Default expectation is already set for the PacketParser.ParsePacketBody method")
 	}
@@ -1466,8 +1467,8 @@ func (mmParsePacketBody *mPacketParserMockParsePacketBody) Set(f func() (p1 Pack
 	return mmParsePacketBody.mock
 }
 
-// ParsePacketBody implements PacketParser
-func (mmParsePacketBody *PacketParserMock) ParsePacketBody() (p1 PacketParser, err error) {
+// ParsePacketBody implements transport.PacketParser
+func (mmParsePacketBody *PacketParserMock) ParsePacketBody() (p1 mm_transport.PacketParser, err error) {
 	mm_atomic.AddUint64(&mmParsePacketBody.beforeParsePacketBodyCounter, 1)
 	defer mm_atomic.AddUint64(&mmParsePacketBody.afterParsePacketBodyCounter, 1)
 

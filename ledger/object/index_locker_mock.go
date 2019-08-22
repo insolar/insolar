@@ -11,7 +11,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-// IndexLockerMock implements IndexLocker
+// IndexLockerMock implements object.IndexLocker
 type IndexLockerMock struct {
 	t minimock.Tester
 
@@ -28,7 +28,7 @@ type IndexLockerMock struct {
 	UnlockMock          mIndexLockerMockUnlock
 }
 
-// NewIndexLockerMock returns a mock for IndexLocker
+// NewIndexLockerMock returns a mock for object.IndexLocker
 func NewIndexLockerMock(t minimock.Tester) *IndexLockerMock {
 	m := &IndexLockerMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -124,7 +124,7 @@ func (mmLock *mIndexLockerMockLock) Set(f func(id insolar.ID)) *IndexLockerMock 
 	return mmLock.mock
 }
 
-// Lock implements IndexLocker
+// Lock implements object.IndexLocker
 func (mmLock *IndexLockerMock) Lock(id insolar.ID) {
 	mm_atomic.AddUint64(&mmLock.beforeLockCounter, 1)
 	defer mm_atomic.AddUint64(&mmLock.afterLockCounter, 1)
@@ -311,7 +311,7 @@ func (mmUnlock *mIndexLockerMockUnlock) Set(f func(id insolar.ID)) *IndexLockerM
 	return mmUnlock.mock
 }
 
-// Unlock implements IndexLocker
+// Unlock implements object.IndexLocker
 func (mmUnlock *IndexLockerMock) Unlock(id insolar.ID) {
 	mm_atomic.AddUint64(&mmUnlock.beforeUnlockCounter, 1)
 	defer mm_atomic.AddUint64(&mmUnlock.afterUnlockCounter, 1)

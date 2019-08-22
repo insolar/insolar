@@ -12,7 +12,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-// StateIniterMock implements StateIniter
+// StateIniterMock implements executor.StateIniter
 type StateIniterMock struct {
 	t minimock.Tester
 
@@ -23,7 +23,7 @@ type StateIniterMock struct {
 	PrepareStateMock          mStateIniterMockPrepareState
 }
 
-// NewStateIniterMock returns a mock for StateIniter
+// NewStateIniterMock returns a mock for executor.StateIniter
 func NewStateIniterMock(t minimock.Tester) *StateIniterMock {
 	m := &StateIniterMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -145,7 +145,7 @@ func (e *StateIniterMockPrepareStateExpectation) Then(justJoined bool, jets []in
 	return e.mock
 }
 
-// PrepareState implements StateIniter
+// PrepareState implements executor.StateIniter
 func (mmPrepareState *StateIniterMock) PrepareState(ctx context.Context, pulse insolar.PulseNumber) (justJoined bool, jets []insolar.JetID, err error) {
 	mm_atomic.AddUint64(&mmPrepareState.beforePrepareStateCounter, 1)
 	defer mm_atomic.AddUint64(&mmPrepareState.afterPrepareStateCounter, 1)

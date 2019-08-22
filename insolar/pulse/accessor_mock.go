@@ -12,7 +12,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-// AccessorMock implements Accessor
+// AccessorMock implements pulse.Accessor
 type AccessorMock struct {
 	t minimock.Tester
 
@@ -29,7 +29,7 @@ type AccessorMock struct {
 	LatestMock          mAccessorMockLatest
 }
 
-// NewAccessorMock returns a mock for Accessor
+// NewAccessorMock returns a mock for pulse.Accessor
 func NewAccessorMock(t minimock.Tester) *AccessorMock {
 	m := &AccessorMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -153,7 +153,7 @@ func (e *AccessorMockForPulseNumberExpectation) Then(p2 insolar.Pulse, err error
 	return e.mock
 }
 
-// ForPulseNumber implements Accessor
+// ForPulseNumber implements pulse.Accessor
 func (mmForPulseNumber *AccessorMock) ForPulseNumber(ctx context.Context, p1 insolar.PulseNumber) (p2 insolar.Pulse, err error) {
 	mm_atomic.AddUint64(&mmForPulseNumber.beforeForPulseNumberCounter, 1)
 	defer mm_atomic.AddUint64(&mmForPulseNumber.afterForPulseNumberCounter, 1)
@@ -369,7 +369,7 @@ func (e *AccessorMockLatestExpectation) Then(p1 insolar.Pulse, err error) *Acces
 	return e.mock
 }
 
-// Latest implements Accessor
+// Latest implements pulse.Accessor
 func (mmLatest *AccessorMock) Latest(ctx context.Context) (p1 insolar.Pulse, err error) {
 	mm_atomic.AddUint64(&mmLatest.beforeLatestCounter, 1)
 	defer mm_atomic.AddUint64(&mmLatest.afterLatestCounter, 1)

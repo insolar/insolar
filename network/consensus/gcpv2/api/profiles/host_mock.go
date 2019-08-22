@@ -12,7 +12,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 )
 
-// HostMock implements Host
+// HostMock implements profiles.Host
 type HostMock struct {
 	t minimock.Tester
 
@@ -35,7 +35,7 @@ type HostMock struct {
 	IsAcceptableHostMock          mHostMockIsAcceptableHost
 }
 
-// NewHostMock returns a mock for Host
+// NewHostMock returns a mock for profiles.Host
 func NewHostMock(t minimock.Tester) *HostMock {
 	m := &HostMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -122,7 +122,7 @@ func (mmGetDefaultEndpoint *mHostMockGetDefaultEndpoint) Set(f func() (o1 endpoi
 	return mmGetDefaultEndpoint.mock
 }
 
-// GetDefaultEndpoint implements Host
+// GetDefaultEndpoint implements profiles.Host
 func (mmGetDefaultEndpoint *HostMock) GetDefaultEndpoint() (o1 endpoints.Outbound) {
 	mm_atomic.AddUint64(&mmGetDefaultEndpoint.beforeGetDefaultEndpointCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetDefaultEndpoint.afterGetDefaultEndpointCounter, 1)
@@ -265,7 +265,7 @@ func (mmGetPublicKeyStore *mHostMockGetPublicKeyStore) Set(f func() (p1 cryptkit
 	return mmGetPublicKeyStore.mock
 }
 
-// GetPublicKeyStore implements Host
+// GetPublicKeyStore implements profiles.Host
 func (mmGetPublicKeyStore *HostMock) GetPublicKeyStore() (p1 cryptkit.PublicKeyStore) {
 	mm_atomic.AddUint64(&mmGetPublicKeyStore.beforeGetPublicKeyStoreCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetPublicKeyStore.afterGetPublicKeyStoreCounter, 1)
@@ -444,7 +444,7 @@ func (e *HostMockIsAcceptableHostExpectation) Then(b1 bool) *HostMock {
 	return e.mock
 }
 
-// IsAcceptableHost implements Host
+// IsAcceptableHost implements profiles.Host
 func (mmIsAcceptableHost *HostMock) IsAcceptableHost(from endpoints.Inbound) (b1 bool) {
 	mm_atomic.AddUint64(&mmIsAcceptableHost.beforeIsAcceptableHostCounter, 1)
 	defer mm_atomic.AddUint64(&mmIsAcceptableHost.afterIsAcceptableHostCounter, 1)

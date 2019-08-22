@@ -12,7 +12,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-// WriteManagerMock implements WriteManager
+// WriteManagerMock implements executor.WriteManager
 type WriteManagerMock struct {
 	t minimock.Tester
 
@@ -29,7 +29,7 @@ type WriteManagerMock struct {
 	OpenMock          mWriteManagerMockOpen
 }
 
-// NewWriteManagerMock returns a mock for WriteManager
+// NewWriteManagerMock returns a mock for executor.WriteManager
 func NewWriteManagerMock(t minimock.Tester) *WriteManagerMock {
 	m := &WriteManagerMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -152,7 +152,7 @@ func (e *WriteManagerMockCloseAndWaitExpectation) Then(err error) *WriteManagerM
 	return e.mock
 }
 
-// CloseAndWait implements WriteManager
+// CloseAndWait implements executor.WriteManager
 func (mmCloseAndWait *WriteManagerMock) CloseAndWait(ctx context.Context, p1 insolar.PulseNumber) (err error) {
 	mm_atomic.AddUint64(&mmCloseAndWait.beforeCloseAndWaitCounter, 1)
 	defer mm_atomic.AddUint64(&mmCloseAndWait.afterCloseAndWaitCounter, 1)
@@ -368,7 +368,7 @@ func (e *WriteManagerMockOpenExpectation) Then(err error) *WriteManagerMock {
 	return e.mock
 }
 
-// Open implements WriteManager
+// Open implements executor.WriteManager
 func (mmOpen *WriteManagerMock) Open(ctx context.Context, p1 insolar.PulseNumber) (err error) {
 	mm_atomic.AddUint64(&mmOpen.beforeOpenCounter, 1)
 	defer mm_atomic.AddUint64(&mmOpen.afterOpenCounter, 1)

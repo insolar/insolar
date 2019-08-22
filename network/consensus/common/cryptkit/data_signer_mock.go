@@ -9,50 +9,51 @@ import (
 	mm_time "time"
 
 	"github.com/gojuno/minimock"
+	mm_cryptkit "github.com/insolar/insolar/network/consensus/common/cryptkit"
 )
 
-// DataSignerMock implements DataSigner
+// DataSignerMock implements cryptkit.DataSigner
 type DataSignerMock struct {
 	t minimock.Tester
 
-	funcGetDigestMethod          func() (d1 DigestMethod)
+	funcGetDigestMethod          func() (d1 mm_cryptkit.DigestMethod)
 	inspectFuncGetDigestMethod   func()
 	afterGetDigestMethodCounter  uint64
 	beforeGetDigestMethodCounter uint64
 	GetDigestMethodMock          mDataSignerMockGetDigestMethod
 
-	funcGetDigestOf          func(reader io.Reader) (d1 Digest)
+	funcGetDigestOf          func(reader io.Reader) (d1 mm_cryptkit.Digest)
 	inspectFuncGetDigestOf   func(reader io.Reader)
 	afterGetDigestOfCounter  uint64
 	beforeGetDigestOfCounter uint64
 	GetDigestOfMock          mDataSignerMockGetDigestOf
 
-	funcGetSignMethod          func() (s1 SignMethod)
+	funcGetSignMethod          func() (s1 mm_cryptkit.SignMethod)
 	inspectFuncGetSignMethod   func()
 	afterGetSignMethodCounter  uint64
 	beforeGetSignMethodCounter uint64
 	GetSignMethodMock          mDataSignerMockGetSignMethod
 
-	funcGetSignatureMethod          func() (s1 SignatureMethod)
+	funcGetSignatureMethod          func() (s1 mm_cryptkit.SignatureMethod)
 	inspectFuncGetSignatureMethod   func()
 	afterGetSignatureMethodCounter  uint64
 	beforeGetSignatureMethodCounter uint64
 	GetSignatureMethodMock          mDataSignerMockGetSignatureMethod
 
-	funcSignData          func(reader io.Reader) (s1 SignedDigest)
+	funcSignData          func(reader io.Reader) (s1 mm_cryptkit.SignedDigest)
 	inspectFuncSignData   func(reader io.Reader)
 	afterSignDataCounter  uint64
 	beforeSignDataCounter uint64
 	SignDataMock          mDataSignerMockSignData
 
-	funcSignDigest          func(digest Digest) (s1 Signature)
-	inspectFuncSignDigest   func(digest Digest)
+	funcSignDigest          func(digest mm_cryptkit.Digest) (s1 mm_cryptkit.Signature)
+	inspectFuncSignDigest   func(digest mm_cryptkit.Digest)
 	afterSignDigestCounter  uint64
 	beforeSignDigestCounter uint64
 	SignDigestMock          mDataSignerMockSignDigest
 }
 
-// NewDataSignerMock returns a mock for DataSigner
+// NewDataSignerMock returns a mock for cryptkit.DataSigner
 func NewDataSignerMock(t minimock.Tester) *DataSignerMock {
 	m := &DataSignerMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -93,7 +94,7 @@ type DataSignerMockGetDigestMethodExpectation struct {
 
 // DataSignerMockGetDigestMethodResults contains results of the DataSigner.GetDigestMethod
 type DataSignerMockGetDigestMethodResults struct {
-	d1 DigestMethod
+	d1 mm_cryptkit.DigestMethod
 }
 
 // Expect sets up expected params for DataSigner.GetDigestMethod
@@ -121,7 +122,7 @@ func (mmGetDigestMethod *mDataSignerMockGetDigestMethod) Inspect(f func()) *mDat
 }
 
 // Return sets up results that will be returned by DataSigner.GetDigestMethod
-func (mmGetDigestMethod *mDataSignerMockGetDigestMethod) Return(d1 DigestMethod) *DataSignerMock {
+func (mmGetDigestMethod *mDataSignerMockGetDigestMethod) Return(d1 mm_cryptkit.DigestMethod) *DataSignerMock {
 	if mmGetDigestMethod.mock.funcGetDigestMethod != nil {
 		mmGetDigestMethod.mock.t.Fatalf("DataSignerMock.GetDigestMethod mock is already set by Set")
 	}
@@ -134,7 +135,7 @@ func (mmGetDigestMethod *mDataSignerMockGetDigestMethod) Return(d1 DigestMethod)
 }
 
 //Set uses given function f to mock the DataSigner.GetDigestMethod method
-func (mmGetDigestMethod *mDataSignerMockGetDigestMethod) Set(f func() (d1 DigestMethod)) *DataSignerMock {
+func (mmGetDigestMethod *mDataSignerMockGetDigestMethod) Set(f func() (d1 mm_cryptkit.DigestMethod)) *DataSignerMock {
 	if mmGetDigestMethod.defaultExpectation != nil {
 		mmGetDigestMethod.mock.t.Fatalf("Default expectation is already set for the DataSigner.GetDigestMethod method")
 	}
@@ -147,8 +148,8 @@ func (mmGetDigestMethod *mDataSignerMockGetDigestMethod) Set(f func() (d1 Digest
 	return mmGetDigestMethod.mock
 }
 
-// GetDigestMethod implements DataSigner
-func (mmGetDigestMethod *DataSignerMock) GetDigestMethod() (d1 DigestMethod) {
+// GetDigestMethod implements cryptkit.DataSigner
+func (mmGetDigestMethod *DataSignerMock) GetDigestMethod() (d1 mm_cryptkit.DigestMethod) {
 	mm_atomic.AddUint64(&mmGetDigestMethod.beforeGetDigestMethodCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetDigestMethod.afterGetDigestMethodCounter, 1)
 
@@ -244,7 +245,7 @@ type DataSignerMockGetDigestOfParams struct {
 
 // DataSignerMockGetDigestOfResults contains results of the DataSigner.GetDigestOf
 type DataSignerMockGetDigestOfResults struct {
-	d1 Digest
+	d1 mm_cryptkit.Digest
 }
 
 // Expect sets up expected params for DataSigner.GetDigestOf
@@ -279,7 +280,7 @@ func (mmGetDigestOf *mDataSignerMockGetDigestOf) Inspect(f func(reader io.Reader
 }
 
 // Return sets up results that will be returned by DataSigner.GetDigestOf
-func (mmGetDigestOf *mDataSignerMockGetDigestOf) Return(d1 Digest) *DataSignerMock {
+func (mmGetDigestOf *mDataSignerMockGetDigestOf) Return(d1 mm_cryptkit.Digest) *DataSignerMock {
 	if mmGetDigestOf.mock.funcGetDigestOf != nil {
 		mmGetDigestOf.mock.t.Fatalf("DataSignerMock.GetDigestOf mock is already set by Set")
 	}
@@ -292,7 +293,7 @@ func (mmGetDigestOf *mDataSignerMockGetDigestOf) Return(d1 Digest) *DataSignerMo
 }
 
 //Set uses given function f to mock the DataSigner.GetDigestOf method
-func (mmGetDigestOf *mDataSignerMockGetDigestOf) Set(f func(reader io.Reader) (d1 Digest)) *DataSignerMock {
+func (mmGetDigestOf *mDataSignerMockGetDigestOf) Set(f func(reader io.Reader) (d1 mm_cryptkit.Digest)) *DataSignerMock {
 	if mmGetDigestOf.defaultExpectation != nil {
 		mmGetDigestOf.mock.t.Fatalf("Default expectation is already set for the DataSigner.GetDigestOf method")
 	}
@@ -321,13 +322,13 @@ func (mmGetDigestOf *mDataSignerMockGetDigestOf) When(reader io.Reader) *DataSig
 }
 
 // Then sets up DataSigner.GetDigestOf return parameters for the expectation previously defined by the When method
-func (e *DataSignerMockGetDigestOfExpectation) Then(d1 Digest) *DataSignerMock {
+func (e *DataSignerMockGetDigestOfExpectation) Then(d1 mm_cryptkit.Digest) *DataSignerMock {
 	e.results = &DataSignerMockGetDigestOfResults{d1}
 	return e.mock
 }
 
-// GetDigestOf implements DataSigner
-func (mmGetDigestOf *DataSignerMock) GetDigestOf(reader io.Reader) (d1 Digest) {
+// GetDigestOf implements cryptkit.DataSigner
+func (mmGetDigestOf *DataSignerMock) GetDigestOf(reader io.Reader) (d1 mm_cryptkit.Digest) {
 	mm_atomic.AddUint64(&mmGetDigestOf.beforeGetDigestOfCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetDigestOf.afterGetDigestOfCounter, 1)
 
@@ -451,7 +452,7 @@ type DataSignerMockGetSignMethodExpectation struct {
 
 // DataSignerMockGetSignMethodResults contains results of the DataSigner.GetSignMethod
 type DataSignerMockGetSignMethodResults struct {
-	s1 SignMethod
+	s1 mm_cryptkit.SignMethod
 }
 
 // Expect sets up expected params for DataSigner.GetSignMethod
@@ -479,7 +480,7 @@ func (mmGetSignMethod *mDataSignerMockGetSignMethod) Inspect(f func()) *mDataSig
 }
 
 // Return sets up results that will be returned by DataSigner.GetSignMethod
-func (mmGetSignMethod *mDataSignerMockGetSignMethod) Return(s1 SignMethod) *DataSignerMock {
+func (mmGetSignMethod *mDataSignerMockGetSignMethod) Return(s1 mm_cryptkit.SignMethod) *DataSignerMock {
 	if mmGetSignMethod.mock.funcGetSignMethod != nil {
 		mmGetSignMethod.mock.t.Fatalf("DataSignerMock.GetSignMethod mock is already set by Set")
 	}
@@ -492,7 +493,7 @@ func (mmGetSignMethod *mDataSignerMockGetSignMethod) Return(s1 SignMethod) *Data
 }
 
 //Set uses given function f to mock the DataSigner.GetSignMethod method
-func (mmGetSignMethod *mDataSignerMockGetSignMethod) Set(f func() (s1 SignMethod)) *DataSignerMock {
+func (mmGetSignMethod *mDataSignerMockGetSignMethod) Set(f func() (s1 mm_cryptkit.SignMethod)) *DataSignerMock {
 	if mmGetSignMethod.defaultExpectation != nil {
 		mmGetSignMethod.mock.t.Fatalf("Default expectation is already set for the DataSigner.GetSignMethod method")
 	}
@@ -505,8 +506,8 @@ func (mmGetSignMethod *mDataSignerMockGetSignMethod) Set(f func() (s1 SignMethod
 	return mmGetSignMethod.mock
 }
 
-// GetSignMethod implements DataSigner
-func (mmGetSignMethod *DataSignerMock) GetSignMethod() (s1 SignMethod) {
+// GetSignMethod implements cryptkit.DataSigner
+func (mmGetSignMethod *DataSignerMock) GetSignMethod() (s1 mm_cryptkit.SignMethod) {
 	mm_atomic.AddUint64(&mmGetSignMethod.beforeGetSignMethodCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetSignMethod.afterGetSignMethodCounter, 1)
 
@@ -594,7 +595,7 @@ type DataSignerMockGetSignatureMethodExpectation struct {
 
 // DataSignerMockGetSignatureMethodResults contains results of the DataSigner.GetSignatureMethod
 type DataSignerMockGetSignatureMethodResults struct {
-	s1 SignatureMethod
+	s1 mm_cryptkit.SignatureMethod
 }
 
 // Expect sets up expected params for DataSigner.GetSignatureMethod
@@ -622,7 +623,7 @@ func (mmGetSignatureMethod *mDataSignerMockGetSignatureMethod) Inspect(f func())
 }
 
 // Return sets up results that will be returned by DataSigner.GetSignatureMethod
-func (mmGetSignatureMethod *mDataSignerMockGetSignatureMethod) Return(s1 SignatureMethod) *DataSignerMock {
+func (mmGetSignatureMethod *mDataSignerMockGetSignatureMethod) Return(s1 mm_cryptkit.SignatureMethod) *DataSignerMock {
 	if mmGetSignatureMethod.mock.funcGetSignatureMethod != nil {
 		mmGetSignatureMethod.mock.t.Fatalf("DataSignerMock.GetSignatureMethod mock is already set by Set")
 	}
@@ -635,7 +636,7 @@ func (mmGetSignatureMethod *mDataSignerMockGetSignatureMethod) Return(s1 Signatu
 }
 
 //Set uses given function f to mock the DataSigner.GetSignatureMethod method
-func (mmGetSignatureMethod *mDataSignerMockGetSignatureMethod) Set(f func() (s1 SignatureMethod)) *DataSignerMock {
+func (mmGetSignatureMethod *mDataSignerMockGetSignatureMethod) Set(f func() (s1 mm_cryptkit.SignatureMethod)) *DataSignerMock {
 	if mmGetSignatureMethod.defaultExpectation != nil {
 		mmGetSignatureMethod.mock.t.Fatalf("Default expectation is already set for the DataSigner.GetSignatureMethod method")
 	}
@@ -648,8 +649,8 @@ func (mmGetSignatureMethod *mDataSignerMockGetSignatureMethod) Set(f func() (s1 
 	return mmGetSignatureMethod.mock
 }
 
-// GetSignatureMethod implements DataSigner
-func (mmGetSignatureMethod *DataSignerMock) GetSignatureMethod() (s1 SignatureMethod) {
+// GetSignatureMethod implements cryptkit.DataSigner
+func (mmGetSignatureMethod *DataSignerMock) GetSignatureMethod() (s1 mm_cryptkit.SignatureMethod) {
 	mm_atomic.AddUint64(&mmGetSignatureMethod.beforeGetSignatureMethodCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetSignatureMethod.afterGetSignatureMethodCounter, 1)
 
@@ -745,7 +746,7 @@ type DataSignerMockSignDataParams struct {
 
 // DataSignerMockSignDataResults contains results of the DataSigner.SignData
 type DataSignerMockSignDataResults struct {
-	s1 SignedDigest
+	s1 mm_cryptkit.SignedDigest
 }
 
 // Expect sets up expected params for DataSigner.SignData
@@ -780,7 +781,7 @@ func (mmSignData *mDataSignerMockSignData) Inspect(f func(reader io.Reader)) *mD
 }
 
 // Return sets up results that will be returned by DataSigner.SignData
-func (mmSignData *mDataSignerMockSignData) Return(s1 SignedDigest) *DataSignerMock {
+func (mmSignData *mDataSignerMockSignData) Return(s1 mm_cryptkit.SignedDigest) *DataSignerMock {
 	if mmSignData.mock.funcSignData != nil {
 		mmSignData.mock.t.Fatalf("DataSignerMock.SignData mock is already set by Set")
 	}
@@ -793,7 +794,7 @@ func (mmSignData *mDataSignerMockSignData) Return(s1 SignedDigest) *DataSignerMo
 }
 
 //Set uses given function f to mock the DataSigner.SignData method
-func (mmSignData *mDataSignerMockSignData) Set(f func(reader io.Reader) (s1 SignedDigest)) *DataSignerMock {
+func (mmSignData *mDataSignerMockSignData) Set(f func(reader io.Reader) (s1 mm_cryptkit.SignedDigest)) *DataSignerMock {
 	if mmSignData.defaultExpectation != nil {
 		mmSignData.mock.t.Fatalf("Default expectation is already set for the DataSigner.SignData method")
 	}
@@ -822,13 +823,13 @@ func (mmSignData *mDataSignerMockSignData) When(reader io.Reader) *DataSignerMoc
 }
 
 // Then sets up DataSigner.SignData return parameters for the expectation previously defined by the When method
-func (e *DataSignerMockSignDataExpectation) Then(s1 SignedDigest) *DataSignerMock {
+func (e *DataSignerMockSignDataExpectation) Then(s1 mm_cryptkit.SignedDigest) *DataSignerMock {
 	e.results = &DataSignerMockSignDataResults{s1}
 	return e.mock
 }
 
-// SignData implements DataSigner
-func (mmSignData *DataSignerMock) SignData(reader io.Reader) (s1 SignedDigest) {
+// SignData implements cryptkit.DataSigner
+func (mmSignData *DataSignerMock) SignData(reader io.Reader) (s1 mm_cryptkit.SignedDigest) {
 	mm_atomic.AddUint64(&mmSignData.beforeSignDataCounter, 1)
 	defer mm_atomic.AddUint64(&mmSignData.afterSignDataCounter, 1)
 
@@ -955,16 +956,16 @@ type DataSignerMockSignDigestExpectation struct {
 
 // DataSignerMockSignDigestParams contains parameters of the DataSigner.SignDigest
 type DataSignerMockSignDigestParams struct {
-	digest Digest
+	digest mm_cryptkit.Digest
 }
 
 // DataSignerMockSignDigestResults contains results of the DataSigner.SignDigest
 type DataSignerMockSignDigestResults struct {
-	s1 Signature
+	s1 mm_cryptkit.Signature
 }
 
 // Expect sets up expected params for DataSigner.SignDigest
-func (mmSignDigest *mDataSignerMockSignDigest) Expect(digest Digest) *mDataSignerMockSignDigest {
+func (mmSignDigest *mDataSignerMockSignDigest) Expect(digest mm_cryptkit.Digest) *mDataSignerMockSignDigest {
 	if mmSignDigest.mock.funcSignDigest != nil {
 		mmSignDigest.mock.t.Fatalf("DataSignerMock.SignDigest mock is already set by Set")
 	}
@@ -984,7 +985,7 @@ func (mmSignDigest *mDataSignerMockSignDigest) Expect(digest Digest) *mDataSigne
 }
 
 // Inspect accepts an inspector function that has same arguments as the DataSigner.SignDigest
-func (mmSignDigest *mDataSignerMockSignDigest) Inspect(f func(digest Digest)) *mDataSignerMockSignDigest {
+func (mmSignDigest *mDataSignerMockSignDigest) Inspect(f func(digest mm_cryptkit.Digest)) *mDataSignerMockSignDigest {
 	if mmSignDigest.mock.inspectFuncSignDigest != nil {
 		mmSignDigest.mock.t.Fatalf("Inspect function is already set for DataSignerMock.SignDigest")
 	}
@@ -995,7 +996,7 @@ func (mmSignDigest *mDataSignerMockSignDigest) Inspect(f func(digest Digest)) *m
 }
 
 // Return sets up results that will be returned by DataSigner.SignDigest
-func (mmSignDigest *mDataSignerMockSignDigest) Return(s1 Signature) *DataSignerMock {
+func (mmSignDigest *mDataSignerMockSignDigest) Return(s1 mm_cryptkit.Signature) *DataSignerMock {
 	if mmSignDigest.mock.funcSignDigest != nil {
 		mmSignDigest.mock.t.Fatalf("DataSignerMock.SignDigest mock is already set by Set")
 	}
@@ -1008,7 +1009,7 @@ func (mmSignDigest *mDataSignerMockSignDigest) Return(s1 Signature) *DataSignerM
 }
 
 //Set uses given function f to mock the DataSigner.SignDigest method
-func (mmSignDigest *mDataSignerMockSignDigest) Set(f func(digest Digest) (s1 Signature)) *DataSignerMock {
+func (mmSignDigest *mDataSignerMockSignDigest) Set(f func(digest mm_cryptkit.Digest) (s1 mm_cryptkit.Signature)) *DataSignerMock {
 	if mmSignDigest.defaultExpectation != nil {
 		mmSignDigest.mock.t.Fatalf("Default expectation is already set for the DataSigner.SignDigest method")
 	}
@@ -1023,7 +1024,7 @@ func (mmSignDigest *mDataSignerMockSignDigest) Set(f func(digest Digest) (s1 Sig
 
 // When sets expectation for the DataSigner.SignDigest which will trigger the result defined by the following
 // Then helper
-func (mmSignDigest *mDataSignerMockSignDigest) When(digest Digest) *DataSignerMockSignDigestExpectation {
+func (mmSignDigest *mDataSignerMockSignDigest) When(digest mm_cryptkit.Digest) *DataSignerMockSignDigestExpectation {
 	if mmSignDigest.mock.funcSignDigest != nil {
 		mmSignDigest.mock.t.Fatalf("DataSignerMock.SignDigest mock is already set by Set")
 	}
@@ -1037,13 +1038,13 @@ func (mmSignDigest *mDataSignerMockSignDigest) When(digest Digest) *DataSignerMo
 }
 
 // Then sets up DataSigner.SignDigest return parameters for the expectation previously defined by the When method
-func (e *DataSignerMockSignDigestExpectation) Then(s1 Signature) *DataSignerMock {
+func (e *DataSignerMockSignDigestExpectation) Then(s1 mm_cryptkit.Signature) *DataSignerMock {
 	e.results = &DataSignerMockSignDigestResults{s1}
 	return e.mock
 }
 
-// SignDigest implements DataSigner
-func (mmSignDigest *DataSignerMock) SignDigest(digest Digest) (s1 Signature) {
+// SignDigest implements cryptkit.DataSigner
+func (mmSignDigest *DataSignerMock) SignDigest(digest mm_cryptkit.Digest) (s1 mm_cryptkit.Signature) {
 	mm_atomic.AddUint64(&mmSignDigest.beforeSignDigestCounter, 1)
 	defer mm_atomic.AddUint64(&mmSignDigest.afterSignDigestCounter, 1)
 

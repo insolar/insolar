@@ -9,9 +9,10 @@ import (
 	mm_time "time"
 
 	"github.com/gojuno/minimock"
+	mm_cryptkit "github.com/insolar/insolar/network/consensus/common/cryptkit"
 )
 
-// SignatureKeyHolderMock implements SignatureKeyHolder
+// SignatureKeyHolderMock implements cryptkit.SignatureKeyHolder
 type SignatureKeyHolderMock struct {
 	t minimock.Tester
 
@@ -27,8 +28,8 @@ type SignatureKeyHolderMock struct {
 	beforeAsBytesCounter uint64
 	AsBytesMock          mSignatureKeyHolderMockAsBytes
 
-	funcEquals          func(other SignatureKeyHolder) (b1 bool)
-	inspectFuncEquals   func(other SignatureKeyHolder)
+	funcEquals          func(other mm_cryptkit.SignatureKeyHolder) (b1 bool)
+	inspectFuncEquals   func(other mm_cryptkit.SignatureKeyHolder)
 	afterEqualsCounter  uint64
 	beforeEqualsCounter uint64
 	EqualsMock          mSignatureKeyHolderMockEquals
@@ -45,19 +46,19 @@ type SignatureKeyHolderMock struct {
 	beforeFoldToUint64Counter uint64
 	FoldToUint64Mock          mSignatureKeyHolderMockFoldToUint64
 
-	funcGetSignMethod          func() (s1 SignMethod)
+	funcGetSignMethod          func() (s1 mm_cryptkit.SignMethod)
 	inspectFuncGetSignMethod   func()
 	afterGetSignMethodCounter  uint64
 	beforeGetSignMethodCounter uint64
 	GetSignMethodMock          mSignatureKeyHolderMockGetSignMethod
 
-	funcGetSignatureKeyMethod          func() (s1 SignatureMethod)
+	funcGetSignatureKeyMethod          func() (s1 mm_cryptkit.SignatureMethod)
 	inspectFuncGetSignatureKeyMethod   func()
 	afterGetSignatureKeyMethodCounter  uint64
 	beforeGetSignatureKeyMethodCounter uint64
 	GetSignatureKeyMethodMock          mSignatureKeyHolderMockGetSignatureKeyMethod
 
-	funcGetSignatureKeyType          func() (s1 SignatureKeyType)
+	funcGetSignatureKeyType          func() (s1 mm_cryptkit.SignatureKeyType)
 	inspectFuncGetSignatureKeyType   func()
 	afterGetSignatureKeyTypeCounter  uint64
 	beforeGetSignatureKeyTypeCounter uint64
@@ -76,7 +77,7 @@ type SignatureKeyHolderMock struct {
 	WriteToMock          mSignatureKeyHolderMockWriteTo
 }
 
-// NewSignatureKeyHolderMock returns a mock for SignatureKeyHolder
+// NewSignatureKeyHolderMock returns a mock for cryptkit.SignatureKeyHolder
 func NewSignatureKeyHolderMock(t minimock.Tester) *SignatureKeyHolderMock {
 	m := &SignatureKeyHolderMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -179,7 +180,7 @@ func (mmAsByteString *mSignatureKeyHolderMockAsByteString) Set(f func() (s1 stri
 	return mmAsByteString.mock
 }
 
-// AsByteString implements SignatureKeyHolder
+// AsByteString implements cryptkit.SignatureKeyHolder
 func (mmAsByteString *SignatureKeyHolderMock) AsByteString() (s1 string) {
 	mm_atomic.AddUint64(&mmAsByteString.beforeAsByteStringCounter, 1)
 	defer mm_atomic.AddUint64(&mmAsByteString.afterAsByteStringCounter, 1)
@@ -322,7 +323,7 @@ func (mmAsBytes *mSignatureKeyHolderMockAsBytes) Set(f func() (ba1 []byte)) *Sig
 	return mmAsBytes.mock
 }
 
-// AsBytes implements SignatureKeyHolder
+// AsBytes implements cryptkit.SignatureKeyHolder
 func (mmAsBytes *SignatureKeyHolderMock) AsBytes() (ba1 []byte) {
 	mm_atomic.AddUint64(&mmAsBytes.beforeAsBytesCounter, 1)
 	defer mm_atomic.AddUint64(&mmAsBytes.afterAsBytesCounter, 1)
@@ -414,7 +415,7 @@ type SignatureKeyHolderMockEqualsExpectation struct {
 
 // SignatureKeyHolderMockEqualsParams contains parameters of the SignatureKeyHolder.Equals
 type SignatureKeyHolderMockEqualsParams struct {
-	other SignatureKeyHolder
+	other mm_cryptkit.SignatureKeyHolder
 }
 
 // SignatureKeyHolderMockEqualsResults contains results of the SignatureKeyHolder.Equals
@@ -423,7 +424,7 @@ type SignatureKeyHolderMockEqualsResults struct {
 }
 
 // Expect sets up expected params for SignatureKeyHolder.Equals
-func (mmEquals *mSignatureKeyHolderMockEquals) Expect(other SignatureKeyHolder) *mSignatureKeyHolderMockEquals {
+func (mmEquals *mSignatureKeyHolderMockEquals) Expect(other mm_cryptkit.SignatureKeyHolder) *mSignatureKeyHolderMockEquals {
 	if mmEquals.mock.funcEquals != nil {
 		mmEquals.mock.t.Fatalf("SignatureKeyHolderMock.Equals mock is already set by Set")
 	}
@@ -443,7 +444,7 @@ func (mmEquals *mSignatureKeyHolderMockEquals) Expect(other SignatureKeyHolder) 
 }
 
 // Inspect accepts an inspector function that has same arguments as the SignatureKeyHolder.Equals
-func (mmEquals *mSignatureKeyHolderMockEquals) Inspect(f func(other SignatureKeyHolder)) *mSignatureKeyHolderMockEquals {
+func (mmEquals *mSignatureKeyHolderMockEquals) Inspect(f func(other mm_cryptkit.SignatureKeyHolder)) *mSignatureKeyHolderMockEquals {
 	if mmEquals.mock.inspectFuncEquals != nil {
 		mmEquals.mock.t.Fatalf("Inspect function is already set for SignatureKeyHolderMock.Equals")
 	}
@@ -467,7 +468,7 @@ func (mmEquals *mSignatureKeyHolderMockEquals) Return(b1 bool) *SignatureKeyHold
 }
 
 //Set uses given function f to mock the SignatureKeyHolder.Equals method
-func (mmEquals *mSignatureKeyHolderMockEquals) Set(f func(other SignatureKeyHolder) (b1 bool)) *SignatureKeyHolderMock {
+func (mmEquals *mSignatureKeyHolderMockEquals) Set(f func(other mm_cryptkit.SignatureKeyHolder) (b1 bool)) *SignatureKeyHolderMock {
 	if mmEquals.defaultExpectation != nil {
 		mmEquals.mock.t.Fatalf("Default expectation is already set for the SignatureKeyHolder.Equals method")
 	}
@@ -482,7 +483,7 @@ func (mmEquals *mSignatureKeyHolderMockEquals) Set(f func(other SignatureKeyHold
 
 // When sets expectation for the SignatureKeyHolder.Equals which will trigger the result defined by the following
 // Then helper
-func (mmEquals *mSignatureKeyHolderMockEquals) When(other SignatureKeyHolder) *SignatureKeyHolderMockEqualsExpectation {
+func (mmEquals *mSignatureKeyHolderMockEquals) When(other mm_cryptkit.SignatureKeyHolder) *SignatureKeyHolderMockEqualsExpectation {
 	if mmEquals.mock.funcEquals != nil {
 		mmEquals.mock.t.Fatalf("SignatureKeyHolderMock.Equals mock is already set by Set")
 	}
@@ -501,8 +502,8 @@ func (e *SignatureKeyHolderMockEqualsExpectation) Then(b1 bool) *SignatureKeyHol
 	return e.mock
 }
 
-// Equals implements SignatureKeyHolder
-func (mmEquals *SignatureKeyHolderMock) Equals(other SignatureKeyHolder) (b1 bool) {
+// Equals implements cryptkit.SignatureKeyHolder
+func (mmEquals *SignatureKeyHolderMock) Equals(other mm_cryptkit.SignatureKeyHolder) (b1 bool) {
 	mm_atomic.AddUint64(&mmEquals.beforeEqualsCounter, 1)
 	defer mm_atomic.AddUint64(&mmEquals.afterEqualsCounter, 1)
 
@@ -680,7 +681,7 @@ func (mmFixedByteSize *mSignatureKeyHolderMockFixedByteSize) Set(f func() (i1 in
 	return mmFixedByteSize.mock
 }
 
-// FixedByteSize implements SignatureKeyHolder
+// FixedByteSize implements cryptkit.SignatureKeyHolder
 func (mmFixedByteSize *SignatureKeyHolderMock) FixedByteSize() (i1 int) {
 	mm_atomic.AddUint64(&mmFixedByteSize.beforeFixedByteSizeCounter, 1)
 	defer mm_atomic.AddUint64(&mmFixedByteSize.afterFixedByteSizeCounter, 1)
@@ -823,7 +824,7 @@ func (mmFoldToUint64 *mSignatureKeyHolderMockFoldToUint64) Set(f func() (u1 uint
 	return mmFoldToUint64.mock
 }
 
-// FoldToUint64 implements SignatureKeyHolder
+// FoldToUint64 implements cryptkit.SignatureKeyHolder
 func (mmFoldToUint64 *SignatureKeyHolderMock) FoldToUint64() (u1 uint64) {
 	mm_atomic.AddUint64(&mmFoldToUint64.beforeFoldToUint64Counter, 1)
 	defer mm_atomic.AddUint64(&mmFoldToUint64.afterFoldToUint64Counter, 1)
@@ -912,7 +913,7 @@ type SignatureKeyHolderMockGetSignMethodExpectation struct {
 
 // SignatureKeyHolderMockGetSignMethodResults contains results of the SignatureKeyHolder.GetSignMethod
 type SignatureKeyHolderMockGetSignMethodResults struct {
-	s1 SignMethod
+	s1 mm_cryptkit.SignMethod
 }
 
 // Expect sets up expected params for SignatureKeyHolder.GetSignMethod
@@ -940,7 +941,7 @@ func (mmGetSignMethod *mSignatureKeyHolderMockGetSignMethod) Inspect(f func()) *
 }
 
 // Return sets up results that will be returned by SignatureKeyHolder.GetSignMethod
-func (mmGetSignMethod *mSignatureKeyHolderMockGetSignMethod) Return(s1 SignMethod) *SignatureKeyHolderMock {
+func (mmGetSignMethod *mSignatureKeyHolderMockGetSignMethod) Return(s1 mm_cryptkit.SignMethod) *SignatureKeyHolderMock {
 	if mmGetSignMethod.mock.funcGetSignMethod != nil {
 		mmGetSignMethod.mock.t.Fatalf("SignatureKeyHolderMock.GetSignMethod mock is already set by Set")
 	}
@@ -953,7 +954,7 @@ func (mmGetSignMethod *mSignatureKeyHolderMockGetSignMethod) Return(s1 SignMetho
 }
 
 //Set uses given function f to mock the SignatureKeyHolder.GetSignMethod method
-func (mmGetSignMethod *mSignatureKeyHolderMockGetSignMethod) Set(f func() (s1 SignMethod)) *SignatureKeyHolderMock {
+func (mmGetSignMethod *mSignatureKeyHolderMockGetSignMethod) Set(f func() (s1 mm_cryptkit.SignMethod)) *SignatureKeyHolderMock {
 	if mmGetSignMethod.defaultExpectation != nil {
 		mmGetSignMethod.mock.t.Fatalf("Default expectation is already set for the SignatureKeyHolder.GetSignMethod method")
 	}
@@ -966,8 +967,8 @@ func (mmGetSignMethod *mSignatureKeyHolderMockGetSignMethod) Set(f func() (s1 Si
 	return mmGetSignMethod.mock
 }
 
-// GetSignMethod implements SignatureKeyHolder
-func (mmGetSignMethod *SignatureKeyHolderMock) GetSignMethod() (s1 SignMethod) {
+// GetSignMethod implements cryptkit.SignatureKeyHolder
+func (mmGetSignMethod *SignatureKeyHolderMock) GetSignMethod() (s1 mm_cryptkit.SignMethod) {
 	mm_atomic.AddUint64(&mmGetSignMethod.beforeGetSignMethodCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetSignMethod.afterGetSignMethodCounter, 1)
 
@@ -1055,7 +1056,7 @@ type SignatureKeyHolderMockGetSignatureKeyMethodExpectation struct {
 
 // SignatureKeyHolderMockGetSignatureKeyMethodResults contains results of the SignatureKeyHolder.GetSignatureKeyMethod
 type SignatureKeyHolderMockGetSignatureKeyMethodResults struct {
-	s1 SignatureMethod
+	s1 mm_cryptkit.SignatureMethod
 }
 
 // Expect sets up expected params for SignatureKeyHolder.GetSignatureKeyMethod
@@ -1083,7 +1084,7 @@ func (mmGetSignatureKeyMethod *mSignatureKeyHolderMockGetSignatureKeyMethod) Ins
 }
 
 // Return sets up results that will be returned by SignatureKeyHolder.GetSignatureKeyMethod
-func (mmGetSignatureKeyMethod *mSignatureKeyHolderMockGetSignatureKeyMethod) Return(s1 SignatureMethod) *SignatureKeyHolderMock {
+func (mmGetSignatureKeyMethod *mSignatureKeyHolderMockGetSignatureKeyMethod) Return(s1 mm_cryptkit.SignatureMethod) *SignatureKeyHolderMock {
 	if mmGetSignatureKeyMethod.mock.funcGetSignatureKeyMethod != nil {
 		mmGetSignatureKeyMethod.mock.t.Fatalf("SignatureKeyHolderMock.GetSignatureKeyMethod mock is already set by Set")
 	}
@@ -1096,7 +1097,7 @@ func (mmGetSignatureKeyMethod *mSignatureKeyHolderMockGetSignatureKeyMethod) Ret
 }
 
 //Set uses given function f to mock the SignatureKeyHolder.GetSignatureKeyMethod method
-func (mmGetSignatureKeyMethod *mSignatureKeyHolderMockGetSignatureKeyMethod) Set(f func() (s1 SignatureMethod)) *SignatureKeyHolderMock {
+func (mmGetSignatureKeyMethod *mSignatureKeyHolderMockGetSignatureKeyMethod) Set(f func() (s1 mm_cryptkit.SignatureMethod)) *SignatureKeyHolderMock {
 	if mmGetSignatureKeyMethod.defaultExpectation != nil {
 		mmGetSignatureKeyMethod.mock.t.Fatalf("Default expectation is already set for the SignatureKeyHolder.GetSignatureKeyMethod method")
 	}
@@ -1109,8 +1110,8 @@ func (mmGetSignatureKeyMethod *mSignatureKeyHolderMockGetSignatureKeyMethod) Set
 	return mmGetSignatureKeyMethod.mock
 }
 
-// GetSignatureKeyMethod implements SignatureKeyHolder
-func (mmGetSignatureKeyMethod *SignatureKeyHolderMock) GetSignatureKeyMethod() (s1 SignatureMethod) {
+// GetSignatureKeyMethod implements cryptkit.SignatureKeyHolder
+func (mmGetSignatureKeyMethod *SignatureKeyHolderMock) GetSignatureKeyMethod() (s1 mm_cryptkit.SignatureMethod) {
 	mm_atomic.AddUint64(&mmGetSignatureKeyMethod.beforeGetSignatureKeyMethodCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetSignatureKeyMethod.afterGetSignatureKeyMethodCounter, 1)
 
@@ -1198,7 +1199,7 @@ type SignatureKeyHolderMockGetSignatureKeyTypeExpectation struct {
 
 // SignatureKeyHolderMockGetSignatureKeyTypeResults contains results of the SignatureKeyHolder.GetSignatureKeyType
 type SignatureKeyHolderMockGetSignatureKeyTypeResults struct {
-	s1 SignatureKeyType
+	s1 mm_cryptkit.SignatureKeyType
 }
 
 // Expect sets up expected params for SignatureKeyHolder.GetSignatureKeyType
@@ -1226,7 +1227,7 @@ func (mmGetSignatureKeyType *mSignatureKeyHolderMockGetSignatureKeyType) Inspect
 }
 
 // Return sets up results that will be returned by SignatureKeyHolder.GetSignatureKeyType
-func (mmGetSignatureKeyType *mSignatureKeyHolderMockGetSignatureKeyType) Return(s1 SignatureKeyType) *SignatureKeyHolderMock {
+func (mmGetSignatureKeyType *mSignatureKeyHolderMockGetSignatureKeyType) Return(s1 mm_cryptkit.SignatureKeyType) *SignatureKeyHolderMock {
 	if mmGetSignatureKeyType.mock.funcGetSignatureKeyType != nil {
 		mmGetSignatureKeyType.mock.t.Fatalf("SignatureKeyHolderMock.GetSignatureKeyType mock is already set by Set")
 	}
@@ -1239,7 +1240,7 @@ func (mmGetSignatureKeyType *mSignatureKeyHolderMockGetSignatureKeyType) Return(
 }
 
 //Set uses given function f to mock the SignatureKeyHolder.GetSignatureKeyType method
-func (mmGetSignatureKeyType *mSignatureKeyHolderMockGetSignatureKeyType) Set(f func() (s1 SignatureKeyType)) *SignatureKeyHolderMock {
+func (mmGetSignatureKeyType *mSignatureKeyHolderMockGetSignatureKeyType) Set(f func() (s1 mm_cryptkit.SignatureKeyType)) *SignatureKeyHolderMock {
 	if mmGetSignatureKeyType.defaultExpectation != nil {
 		mmGetSignatureKeyType.mock.t.Fatalf("Default expectation is already set for the SignatureKeyHolder.GetSignatureKeyType method")
 	}
@@ -1252,8 +1253,8 @@ func (mmGetSignatureKeyType *mSignatureKeyHolderMockGetSignatureKeyType) Set(f f
 	return mmGetSignatureKeyType.mock
 }
 
-// GetSignatureKeyType implements SignatureKeyHolder
-func (mmGetSignatureKeyType *SignatureKeyHolderMock) GetSignatureKeyType() (s1 SignatureKeyType) {
+// GetSignatureKeyType implements cryptkit.SignatureKeyHolder
+func (mmGetSignatureKeyType *SignatureKeyHolderMock) GetSignatureKeyType() (s1 mm_cryptkit.SignatureKeyType) {
 	mm_atomic.AddUint64(&mmGetSignatureKeyType.beforeGetSignatureKeyTypeCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetSignatureKeyType.afterGetSignatureKeyTypeCounter, 1)
 
@@ -1432,7 +1433,7 @@ func (e *SignatureKeyHolderMockReadExpectation) Then(n int, err error) *Signatur
 	return e.mock
 }
 
-// Read implements SignatureKeyHolder
+// Read implements cryptkit.SignatureKeyHolder
 func (mmRead *SignatureKeyHolderMock) Read(p []byte) (n int, err error) {
 	mm_atomic.AddUint64(&mmRead.beforeReadCounter, 1)
 	defer mm_atomic.AddUint64(&mmRead.afterReadCounter, 1)
@@ -1648,7 +1649,7 @@ func (e *SignatureKeyHolderMockWriteToExpectation) Then(n int64, err error) *Sig
 	return e.mock
 }
 
-// WriteTo implements SignatureKeyHolder
+// WriteTo implements cryptkit.SignatureKeyHolder
 func (mmWriteTo *SignatureKeyHolderMock) WriteTo(w io.Writer) (n int64, err error) {
 	mm_atomic.AddUint64(&mmWriteTo.beforeWriteToCounter, 1)
 	defer mm_atomic.AddUint64(&mmWriteTo.afterWriteToCounter, 1)

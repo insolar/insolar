@@ -12,7 +12,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-// HeadTruncaterMock implements headTruncater
+// HeadTruncaterMock implements executor.headTruncater
 type HeadTruncaterMock struct {
 	t minimock.Tester
 
@@ -23,7 +23,7 @@ type HeadTruncaterMock struct {
 	TruncateHeadMock          mHeadTruncaterMockTruncateHead
 }
 
-// NewHeadTruncaterMock returns a mock for headTruncater
+// NewHeadTruncaterMock returns a mock for executor.headTruncater
 func NewHeadTruncaterMock(t minimock.Tester) *HeadTruncaterMock {
 	m := &HeadTruncaterMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -143,7 +143,7 @@ func (e *HeadTruncaterMockTruncateHeadExpectation) Then(err error) *HeadTruncate
 	return e.mock
 }
 
-// TruncateHead implements headTruncater
+// TruncateHead implements executor.headTruncater
 func (mmTruncateHead *HeadTruncaterMock) TruncateHead(ctx context.Context, from insolar.PulseNumber) (err error) {
 	mm_atomic.AddUint64(&mmTruncateHead.beforeTruncateHeadCounter, 1)
 	defer mm_atomic.AddUint64(&mmTruncateHead.afterTruncateHeadCounter, 1)

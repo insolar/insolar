@@ -8,10 +8,11 @@ import (
 
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
+	mm_misbehavior "github.com/insolar/insolar/network/consensus/gcpv2/api/misbehavior"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 )
 
-// ReportMock implements Report
+// ReportMock implements misbehavior.Report
 type ReportMock struct {
 	t minimock.Tester
 
@@ -27,7 +28,7 @@ type ReportMock struct {
 	beforeDetailsCounter uint64
 	DetailsMock          mReportMockDetails
 
-	funcMisbehaviorType          func() (t1 Type)
+	funcMisbehaviorType          func() (t1 mm_misbehavior.Type)
 	inspectFuncMisbehaviorType   func()
 	afterMisbehaviorTypeCounter  uint64
 	beforeMisbehaviorTypeCounter uint64
@@ -46,7 +47,7 @@ type ReportMock struct {
 	ViolatorNodeMock          mReportMockViolatorNode
 }
 
-// NewReportMock returns a mock for Report
+// NewReportMock returns a mock for misbehavior.Report
 func NewReportMock(t minimock.Tester) *ReportMock {
 	m := &ReportMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -136,7 +137,7 @@ func (mmCaptureMark *mReportMockCaptureMark) Set(f func() (p1 interface{})) *Rep
 	return mmCaptureMark.mock
 }
 
-// CaptureMark implements Report
+// CaptureMark implements misbehavior.Report
 func (mmCaptureMark *ReportMock) CaptureMark() (p1 interface{}) {
 	mm_atomic.AddUint64(&mmCaptureMark.beforeCaptureMarkCounter, 1)
 	defer mm_atomic.AddUint64(&mmCaptureMark.afterCaptureMarkCounter, 1)
@@ -279,7 +280,7 @@ func (mmDetails *mReportMockDetails) Set(f func() (pa1 []interface{})) *ReportMo
 	return mmDetails.mock
 }
 
-// Details implements Report
+// Details implements misbehavior.Report
 func (mmDetails *ReportMock) Details() (pa1 []interface{}) {
 	mm_atomic.AddUint64(&mmDetails.beforeDetailsCounter, 1)
 	defer mm_atomic.AddUint64(&mmDetails.afterDetailsCounter, 1)
@@ -368,7 +369,7 @@ type ReportMockMisbehaviorTypeExpectation struct {
 
 // ReportMockMisbehaviorTypeResults contains results of the Report.MisbehaviorType
 type ReportMockMisbehaviorTypeResults struct {
-	t1 Type
+	t1 mm_misbehavior.Type
 }
 
 // Expect sets up expected params for Report.MisbehaviorType
@@ -396,7 +397,7 @@ func (mmMisbehaviorType *mReportMockMisbehaviorType) Inspect(f func()) *mReportM
 }
 
 // Return sets up results that will be returned by Report.MisbehaviorType
-func (mmMisbehaviorType *mReportMockMisbehaviorType) Return(t1 Type) *ReportMock {
+func (mmMisbehaviorType *mReportMockMisbehaviorType) Return(t1 mm_misbehavior.Type) *ReportMock {
 	if mmMisbehaviorType.mock.funcMisbehaviorType != nil {
 		mmMisbehaviorType.mock.t.Fatalf("ReportMock.MisbehaviorType mock is already set by Set")
 	}
@@ -409,7 +410,7 @@ func (mmMisbehaviorType *mReportMockMisbehaviorType) Return(t1 Type) *ReportMock
 }
 
 //Set uses given function f to mock the Report.MisbehaviorType method
-func (mmMisbehaviorType *mReportMockMisbehaviorType) Set(f func() (t1 Type)) *ReportMock {
+func (mmMisbehaviorType *mReportMockMisbehaviorType) Set(f func() (t1 mm_misbehavior.Type)) *ReportMock {
 	if mmMisbehaviorType.defaultExpectation != nil {
 		mmMisbehaviorType.mock.t.Fatalf("Default expectation is already set for the Report.MisbehaviorType method")
 	}
@@ -422,8 +423,8 @@ func (mmMisbehaviorType *mReportMockMisbehaviorType) Set(f func() (t1 Type)) *Re
 	return mmMisbehaviorType.mock
 }
 
-// MisbehaviorType implements Report
-func (mmMisbehaviorType *ReportMock) MisbehaviorType() (t1 Type) {
+// MisbehaviorType implements misbehavior.Report
+func (mmMisbehaviorType *ReportMock) MisbehaviorType() (t1 mm_misbehavior.Type) {
 	mm_atomic.AddUint64(&mmMisbehaviorType.beforeMisbehaviorTypeCounter, 1)
 	defer mm_atomic.AddUint64(&mmMisbehaviorType.afterMisbehaviorTypeCounter, 1)
 
@@ -565,7 +566,7 @@ func (mmViolatorHost *mReportMockViolatorHost) Set(f func() (i1 endpoints.Inboun
 	return mmViolatorHost.mock
 }
 
-// ViolatorHost implements Report
+// ViolatorHost implements misbehavior.Report
 func (mmViolatorHost *ReportMock) ViolatorHost() (i1 endpoints.InboundConnection) {
 	mm_atomic.AddUint64(&mmViolatorHost.beforeViolatorHostCounter, 1)
 	defer mm_atomic.AddUint64(&mmViolatorHost.afterViolatorHostCounter, 1)
@@ -708,7 +709,7 @@ func (mmViolatorNode *mReportMockViolatorNode) Set(f func() (b1 profiles.BaseNod
 	return mmViolatorNode.mock
 }
 
-// ViolatorNode implements Report
+// ViolatorNode implements misbehavior.Report
 func (mmViolatorNode *ReportMock) ViolatorNode() (b1 profiles.BaseNode) {
 	mm_atomic.AddUint64(&mmViolatorNode.beforeViolatorNodeCounter, 1)
 	defer mm_atomic.AddUint64(&mmViolatorNode.afterViolatorNodeCounter, 1)

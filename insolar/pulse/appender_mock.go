@@ -12,7 +12,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-// AppenderMock implements Appender
+// AppenderMock implements pulse.Appender
 type AppenderMock struct {
 	t minimock.Tester
 
@@ -23,7 +23,7 @@ type AppenderMock struct {
 	AppendMock          mAppenderMockAppend
 }
 
-// NewAppenderMock returns a mock for Appender
+// NewAppenderMock returns a mock for pulse.Appender
 func NewAppenderMock(t minimock.Tester) *AppenderMock {
 	m := &AppenderMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -143,7 +143,7 @@ func (e *AppenderMockAppendExpectation) Then(err error) *AppenderMock {
 	return e.mock
 }
 
-// Append implements Appender
+// Append implements pulse.Appender
 func (mmAppend *AppenderMock) Append(ctx context.Context, pulse insolar.Pulse) (err error) {
 	mm_atomic.AddUint64(&mmAppend.beforeAppendCounter, 1)
 	defer mm_atomic.AddUint64(&mmAppend.afterAppendCounter, 1)

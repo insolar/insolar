@@ -12,7 +12,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-// AccessorMock implements Accessor
+// AccessorMock implements jet.Accessor
 type AccessorMock struct {
 	t minimock.Tester
 
@@ -29,7 +29,7 @@ type AccessorMock struct {
 	ForIDMock          mAccessorMockForID
 }
 
-// NewAccessorMock returns a mock for Accessor
+// NewAccessorMock returns a mock for jet.Accessor
 func NewAccessorMock(t minimock.Tester) *AccessorMock {
 	m := &AccessorMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -152,7 +152,7 @@ func (e *AccessorMockAllExpectation) Then(ja1 []insolar.JetID) *AccessorMock {
 	return e.mock
 }
 
-// All implements Accessor
+// All implements jet.Accessor
 func (mmAll *AccessorMock) All(ctx context.Context, pulse insolar.PulseNumber) (ja1 []insolar.JetID) {
 	mm_atomic.AddUint64(&mmAll.beforeAllCounter, 1)
 	defer mm_atomic.AddUint64(&mmAll.afterAllCounter, 1)
@@ -370,7 +370,7 @@ func (e *AccessorMockForIDExpectation) Then(j1 insolar.JetID, b1 bool) *Accessor
 	return e.mock
 }
 
-// ForID implements Accessor
+// ForID implements jet.Accessor
 func (mmForID *AccessorMock) ForID(ctx context.Context, pulse insolar.PulseNumber, recordID insolar.ID) (j1 insolar.JetID, b1 bool) {
 	mm_atomic.AddUint64(&mmForID.beforeForIDCounter, 1)
 	defer mm_atomic.AddUint64(&mmForID.afterForIDCounter, 1)

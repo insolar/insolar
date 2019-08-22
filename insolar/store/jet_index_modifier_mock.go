@@ -11,7 +11,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-// JetIndexModifierMock implements JetIndexModifier
+// JetIndexModifierMock implements store.JetIndexModifier
 type JetIndexModifierMock struct {
 	t minimock.Tester
 
@@ -28,7 +28,7 @@ type JetIndexModifierMock struct {
 	DeleteMock          mJetIndexModifierMockDelete
 }
 
-// NewJetIndexModifierMock returns a mock for JetIndexModifier
+// NewJetIndexModifierMock returns a mock for store.JetIndexModifier
 func NewJetIndexModifierMock(t minimock.Tester) *JetIndexModifierMock {
 	m := &JetIndexModifierMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -125,7 +125,7 @@ func (mmAdd *mJetIndexModifierMockAdd) Set(f func(id insolar.ID, jetID insolar.J
 	return mmAdd.mock
 }
 
-// Add implements JetIndexModifier
+// Add implements store.JetIndexModifier
 func (mmAdd *JetIndexModifierMock) Add(id insolar.ID, jetID insolar.JetID) {
 	mm_atomic.AddUint64(&mmAdd.beforeAddCounter, 1)
 	defer mm_atomic.AddUint64(&mmAdd.afterAddCounter, 1)
@@ -313,7 +313,7 @@ func (mmDelete *mJetIndexModifierMockDelete) Set(f func(id insolar.ID, jetID ins
 	return mmDelete.mock
 }
 
-// Delete implements JetIndexModifier
+// Delete implements store.JetIndexModifier
 func (mmDelete *JetIndexModifierMock) Delete(id insolar.ID, jetID insolar.JetID) {
 	mm_atomic.AddUint64(&mmDelete.beforeDeleteCounter, 1)
 	defer mm_atomic.AddUint64(&mmDelete.afterDeleteCounter, 1)

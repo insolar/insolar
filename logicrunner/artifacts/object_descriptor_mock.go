@@ -10,7 +10,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-// ObjectDescriptorMock implements ObjectDescriptor
+// ObjectDescriptorMock implements artifacts.ObjectDescriptor
 type ObjectDescriptorMock struct {
 	t minimock.Tester
 
@@ -63,7 +63,7 @@ type ObjectDescriptorMock struct {
 	StateIDMock          mObjectDescriptorMockStateID
 }
 
-// NewObjectDescriptorMock returns a mock for ObjectDescriptor
+// NewObjectDescriptorMock returns a mock for artifacts.ObjectDescriptor
 func NewObjectDescriptorMock(t minimock.Tester) *ObjectDescriptorMock {
 	m := &ObjectDescriptorMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -159,7 +159,7 @@ func (mmChildPointer *mObjectDescriptorMockChildPointer) Set(f func() (ip1 *inso
 	return mmChildPointer.mock
 }
 
-// ChildPointer implements ObjectDescriptor
+// ChildPointer implements artifacts.ObjectDescriptor
 func (mmChildPointer *ObjectDescriptorMock) ChildPointer() (ip1 *insolar.ID) {
 	mm_atomic.AddUint64(&mmChildPointer.beforeChildPointerCounter, 1)
 	defer mm_atomic.AddUint64(&mmChildPointer.afterChildPointerCounter, 1)
@@ -303,7 +303,7 @@ func (mmCode *mObjectDescriptorMockCode) Set(f func() (rp1 *insolar.Reference, e
 	return mmCode.mock
 }
 
-// Code implements ObjectDescriptor
+// Code implements artifacts.ObjectDescriptor
 func (mmCode *ObjectDescriptorMock) Code() (rp1 *insolar.Reference, err error) {
 	mm_atomic.AddUint64(&mmCode.beforeCodeCounter, 1)
 	defer mm_atomic.AddUint64(&mmCode.afterCodeCounter, 1)
@@ -446,7 +446,7 @@ func (mmHeadRef *mObjectDescriptorMockHeadRef) Set(f func() (rp1 *insolar.Refere
 	return mmHeadRef.mock
 }
 
-// HeadRef implements ObjectDescriptor
+// HeadRef implements artifacts.ObjectDescriptor
 func (mmHeadRef *ObjectDescriptorMock) HeadRef() (rp1 *insolar.Reference) {
 	mm_atomic.AddUint64(&mmHeadRef.beforeHeadRefCounter, 1)
 	defer mm_atomic.AddUint64(&mmHeadRef.afterHeadRefCounter, 1)
@@ -589,7 +589,7 @@ func (mmIsPrototype *mObjectDescriptorMockIsPrototype) Set(f func() (b1 bool)) *
 	return mmIsPrototype.mock
 }
 
-// IsPrototype implements ObjectDescriptor
+// IsPrototype implements artifacts.ObjectDescriptor
 func (mmIsPrototype *ObjectDescriptorMock) IsPrototype() (b1 bool) {
 	mm_atomic.AddUint64(&mmIsPrototype.beforeIsPrototypeCounter, 1)
 	defer mm_atomic.AddUint64(&mmIsPrototype.afterIsPrototypeCounter, 1)
@@ -732,7 +732,7 @@ func (mmMemory *mObjectDescriptorMockMemory) Set(f func() (ba1 []byte)) *ObjectD
 	return mmMemory.mock
 }
 
-// Memory implements ObjectDescriptor
+// Memory implements artifacts.ObjectDescriptor
 func (mmMemory *ObjectDescriptorMock) Memory() (ba1 []byte) {
 	mm_atomic.AddUint64(&mmMemory.beforeMemoryCounter, 1)
 	defer mm_atomic.AddUint64(&mmMemory.afterMemoryCounter, 1)
@@ -875,7 +875,7 @@ func (mmParent *mObjectDescriptorMockParent) Set(f func() (rp1 *insolar.Referenc
 	return mmParent.mock
 }
 
-// Parent implements ObjectDescriptor
+// Parent implements artifacts.ObjectDescriptor
 func (mmParent *ObjectDescriptorMock) Parent() (rp1 *insolar.Reference) {
 	mm_atomic.AddUint64(&mmParent.beforeParentCounter, 1)
 	defer mm_atomic.AddUint64(&mmParent.afterParentCounter, 1)
@@ -1019,7 +1019,7 @@ func (mmPrototype *mObjectDescriptorMockPrototype) Set(f func() (rp1 *insolar.Re
 	return mmPrototype.mock
 }
 
-// Prototype implements ObjectDescriptor
+// Prototype implements artifacts.ObjectDescriptor
 func (mmPrototype *ObjectDescriptorMock) Prototype() (rp1 *insolar.Reference, err error) {
 	mm_atomic.AddUint64(&mmPrototype.beforePrototypeCounter, 1)
 	defer mm_atomic.AddUint64(&mmPrototype.afterPrototypeCounter, 1)
@@ -1162,7 +1162,7 @@ func (mmStateID *mObjectDescriptorMockStateID) Set(f func() (ip1 *insolar.ID)) *
 	return mmStateID.mock
 }
 
-// StateID implements ObjectDescriptor
+// StateID implements artifacts.ObjectDescriptor
 func (mmStateID *ObjectDescriptorMock) StateID() (ip1 *insolar.ID) {
 	mm_atomic.AddUint64(&mmStateID.beforeStateIDCounter, 1)
 	defer mm_atomic.AddUint64(&mmStateID.afterStateIDCounter, 1)

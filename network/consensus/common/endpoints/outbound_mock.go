@@ -9,9 +9,10 @@ import (
 
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/insolar"
+	mm_endpoints "github.com/insolar/insolar/network/consensus/common/endpoints"
 )
 
-// OutboundMock implements Outbound
+// OutboundMock implements endpoints.Outbound
 type OutboundMock struct {
 	t minimock.Tester
 
@@ -21,25 +22,25 @@ type OutboundMock struct {
 	beforeAsByteStringCounter uint64
 	AsByteStringMock          mOutboundMockAsByteString
 
-	funcCanAccept          func(connection Inbound) (b1 bool)
-	inspectFuncCanAccept   func(connection Inbound)
+	funcCanAccept          func(connection mm_endpoints.Inbound) (b1 bool)
+	inspectFuncCanAccept   func(connection mm_endpoints.Inbound)
 	afterCanAcceptCounter  uint64
 	beforeCanAcceptCounter uint64
 	CanAcceptMock          mOutboundMockCanAccept
 
-	funcGetEndpointType          func() (n1 NodeEndpointType)
+	funcGetEndpointType          func() (n1 mm_endpoints.NodeEndpointType)
 	inspectFuncGetEndpointType   func()
 	afterGetEndpointTypeCounter  uint64
 	beforeGetEndpointTypeCounter uint64
 	GetEndpointTypeMock          mOutboundMockGetEndpointType
 
-	funcGetIPAddress          func() (i1 IPAddress)
+	funcGetIPAddress          func() (i1 mm_endpoints.IPAddress)
 	inspectFuncGetIPAddress   func()
 	afterGetIPAddressCounter  uint64
 	beforeGetIPAddressCounter uint64
 	GetIPAddressMock          mOutboundMockGetIPAddress
 
-	funcGetNameAddress          func() (n1 Name)
+	funcGetNameAddress          func() (n1 mm_endpoints.Name)
 	inspectFuncGetNameAddress   func()
 	afterGetNameAddressCounter  uint64
 	beforeGetNameAddressCounter uint64
@@ -52,7 +53,7 @@ type OutboundMock struct {
 	GetRelayIDMock          mOutboundMockGetRelayID
 }
 
-// NewOutboundMock returns a mock for Outbound
+// NewOutboundMock returns a mock for endpoints.Outbound
 func NewOutboundMock(t minimock.Tester) *OutboundMock {
 	m := &OutboundMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -145,7 +146,7 @@ func (mmAsByteString *mOutboundMockAsByteString) Set(f func() (s1 string)) *Outb
 	return mmAsByteString.mock
 }
 
-// AsByteString implements Outbound
+// AsByteString implements endpoints.Outbound
 func (mmAsByteString *OutboundMock) AsByteString() (s1 string) {
 	mm_atomic.AddUint64(&mmAsByteString.beforeAsByteStringCounter, 1)
 	defer mm_atomic.AddUint64(&mmAsByteString.afterAsByteStringCounter, 1)
@@ -237,7 +238,7 @@ type OutboundMockCanAcceptExpectation struct {
 
 // OutboundMockCanAcceptParams contains parameters of the Outbound.CanAccept
 type OutboundMockCanAcceptParams struct {
-	connection Inbound
+	connection mm_endpoints.Inbound
 }
 
 // OutboundMockCanAcceptResults contains results of the Outbound.CanAccept
@@ -246,7 +247,7 @@ type OutboundMockCanAcceptResults struct {
 }
 
 // Expect sets up expected params for Outbound.CanAccept
-func (mmCanAccept *mOutboundMockCanAccept) Expect(connection Inbound) *mOutboundMockCanAccept {
+func (mmCanAccept *mOutboundMockCanAccept) Expect(connection mm_endpoints.Inbound) *mOutboundMockCanAccept {
 	if mmCanAccept.mock.funcCanAccept != nil {
 		mmCanAccept.mock.t.Fatalf("OutboundMock.CanAccept mock is already set by Set")
 	}
@@ -266,7 +267,7 @@ func (mmCanAccept *mOutboundMockCanAccept) Expect(connection Inbound) *mOutbound
 }
 
 // Inspect accepts an inspector function that has same arguments as the Outbound.CanAccept
-func (mmCanAccept *mOutboundMockCanAccept) Inspect(f func(connection Inbound)) *mOutboundMockCanAccept {
+func (mmCanAccept *mOutboundMockCanAccept) Inspect(f func(connection mm_endpoints.Inbound)) *mOutboundMockCanAccept {
 	if mmCanAccept.mock.inspectFuncCanAccept != nil {
 		mmCanAccept.mock.t.Fatalf("Inspect function is already set for OutboundMock.CanAccept")
 	}
@@ -290,7 +291,7 @@ func (mmCanAccept *mOutboundMockCanAccept) Return(b1 bool) *OutboundMock {
 }
 
 //Set uses given function f to mock the Outbound.CanAccept method
-func (mmCanAccept *mOutboundMockCanAccept) Set(f func(connection Inbound) (b1 bool)) *OutboundMock {
+func (mmCanAccept *mOutboundMockCanAccept) Set(f func(connection mm_endpoints.Inbound) (b1 bool)) *OutboundMock {
 	if mmCanAccept.defaultExpectation != nil {
 		mmCanAccept.mock.t.Fatalf("Default expectation is already set for the Outbound.CanAccept method")
 	}
@@ -305,7 +306,7 @@ func (mmCanAccept *mOutboundMockCanAccept) Set(f func(connection Inbound) (b1 bo
 
 // When sets expectation for the Outbound.CanAccept which will trigger the result defined by the following
 // Then helper
-func (mmCanAccept *mOutboundMockCanAccept) When(connection Inbound) *OutboundMockCanAcceptExpectation {
+func (mmCanAccept *mOutboundMockCanAccept) When(connection mm_endpoints.Inbound) *OutboundMockCanAcceptExpectation {
 	if mmCanAccept.mock.funcCanAccept != nil {
 		mmCanAccept.mock.t.Fatalf("OutboundMock.CanAccept mock is already set by Set")
 	}
@@ -324,8 +325,8 @@ func (e *OutboundMockCanAcceptExpectation) Then(b1 bool) *OutboundMock {
 	return e.mock
 }
 
-// CanAccept implements Outbound
-func (mmCanAccept *OutboundMock) CanAccept(connection Inbound) (b1 bool) {
+// CanAccept implements endpoints.Outbound
+func (mmCanAccept *OutboundMock) CanAccept(connection mm_endpoints.Inbound) (b1 bool) {
 	mm_atomic.AddUint64(&mmCanAccept.beforeCanAcceptCounter, 1)
 	defer mm_atomic.AddUint64(&mmCanAccept.afterCanAcceptCounter, 1)
 
@@ -449,7 +450,7 @@ type OutboundMockGetEndpointTypeExpectation struct {
 
 // OutboundMockGetEndpointTypeResults contains results of the Outbound.GetEndpointType
 type OutboundMockGetEndpointTypeResults struct {
-	n1 NodeEndpointType
+	n1 mm_endpoints.NodeEndpointType
 }
 
 // Expect sets up expected params for Outbound.GetEndpointType
@@ -477,7 +478,7 @@ func (mmGetEndpointType *mOutboundMockGetEndpointType) Inspect(f func()) *mOutbo
 }
 
 // Return sets up results that will be returned by Outbound.GetEndpointType
-func (mmGetEndpointType *mOutboundMockGetEndpointType) Return(n1 NodeEndpointType) *OutboundMock {
+func (mmGetEndpointType *mOutboundMockGetEndpointType) Return(n1 mm_endpoints.NodeEndpointType) *OutboundMock {
 	if mmGetEndpointType.mock.funcGetEndpointType != nil {
 		mmGetEndpointType.mock.t.Fatalf("OutboundMock.GetEndpointType mock is already set by Set")
 	}
@@ -490,7 +491,7 @@ func (mmGetEndpointType *mOutboundMockGetEndpointType) Return(n1 NodeEndpointTyp
 }
 
 //Set uses given function f to mock the Outbound.GetEndpointType method
-func (mmGetEndpointType *mOutboundMockGetEndpointType) Set(f func() (n1 NodeEndpointType)) *OutboundMock {
+func (mmGetEndpointType *mOutboundMockGetEndpointType) Set(f func() (n1 mm_endpoints.NodeEndpointType)) *OutboundMock {
 	if mmGetEndpointType.defaultExpectation != nil {
 		mmGetEndpointType.mock.t.Fatalf("Default expectation is already set for the Outbound.GetEndpointType method")
 	}
@@ -503,8 +504,8 @@ func (mmGetEndpointType *mOutboundMockGetEndpointType) Set(f func() (n1 NodeEndp
 	return mmGetEndpointType.mock
 }
 
-// GetEndpointType implements Outbound
-func (mmGetEndpointType *OutboundMock) GetEndpointType() (n1 NodeEndpointType) {
+// GetEndpointType implements endpoints.Outbound
+func (mmGetEndpointType *OutboundMock) GetEndpointType() (n1 mm_endpoints.NodeEndpointType) {
 	mm_atomic.AddUint64(&mmGetEndpointType.beforeGetEndpointTypeCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetEndpointType.afterGetEndpointTypeCounter, 1)
 
@@ -592,7 +593,7 @@ type OutboundMockGetIPAddressExpectation struct {
 
 // OutboundMockGetIPAddressResults contains results of the Outbound.GetIPAddress
 type OutboundMockGetIPAddressResults struct {
-	i1 IPAddress
+	i1 mm_endpoints.IPAddress
 }
 
 // Expect sets up expected params for Outbound.GetIPAddress
@@ -620,7 +621,7 @@ func (mmGetIPAddress *mOutboundMockGetIPAddress) Inspect(f func()) *mOutboundMoc
 }
 
 // Return sets up results that will be returned by Outbound.GetIPAddress
-func (mmGetIPAddress *mOutboundMockGetIPAddress) Return(i1 IPAddress) *OutboundMock {
+func (mmGetIPAddress *mOutboundMockGetIPAddress) Return(i1 mm_endpoints.IPAddress) *OutboundMock {
 	if mmGetIPAddress.mock.funcGetIPAddress != nil {
 		mmGetIPAddress.mock.t.Fatalf("OutboundMock.GetIPAddress mock is already set by Set")
 	}
@@ -633,7 +634,7 @@ func (mmGetIPAddress *mOutboundMockGetIPAddress) Return(i1 IPAddress) *OutboundM
 }
 
 //Set uses given function f to mock the Outbound.GetIPAddress method
-func (mmGetIPAddress *mOutboundMockGetIPAddress) Set(f func() (i1 IPAddress)) *OutboundMock {
+func (mmGetIPAddress *mOutboundMockGetIPAddress) Set(f func() (i1 mm_endpoints.IPAddress)) *OutboundMock {
 	if mmGetIPAddress.defaultExpectation != nil {
 		mmGetIPAddress.mock.t.Fatalf("Default expectation is already set for the Outbound.GetIPAddress method")
 	}
@@ -646,8 +647,8 @@ func (mmGetIPAddress *mOutboundMockGetIPAddress) Set(f func() (i1 IPAddress)) *O
 	return mmGetIPAddress.mock
 }
 
-// GetIPAddress implements Outbound
-func (mmGetIPAddress *OutboundMock) GetIPAddress() (i1 IPAddress) {
+// GetIPAddress implements endpoints.Outbound
+func (mmGetIPAddress *OutboundMock) GetIPAddress() (i1 mm_endpoints.IPAddress) {
 	mm_atomic.AddUint64(&mmGetIPAddress.beforeGetIPAddressCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetIPAddress.afterGetIPAddressCounter, 1)
 
@@ -735,7 +736,7 @@ type OutboundMockGetNameAddressExpectation struct {
 
 // OutboundMockGetNameAddressResults contains results of the Outbound.GetNameAddress
 type OutboundMockGetNameAddressResults struct {
-	n1 Name
+	n1 mm_endpoints.Name
 }
 
 // Expect sets up expected params for Outbound.GetNameAddress
@@ -763,7 +764,7 @@ func (mmGetNameAddress *mOutboundMockGetNameAddress) Inspect(f func()) *mOutboun
 }
 
 // Return sets up results that will be returned by Outbound.GetNameAddress
-func (mmGetNameAddress *mOutboundMockGetNameAddress) Return(n1 Name) *OutboundMock {
+func (mmGetNameAddress *mOutboundMockGetNameAddress) Return(n1 mm_endpoints.Name) *OutboundMock {
 	if mmGetNameAddress.mock.funcGetNameAddress != nil {
 		mmGetNameAddress.mock.t.Fatalf("OutboundMock.GetNameAddress mock is already set by Set")
 	}
@@ -776,7 +777,7 @@ func (mmGetNameAddress *mOutboundMockGetNameAddress) Return(n1 Name) *OutboundMo
 }
 
 //Set uses given function f to mock the Outbound.GetNameAddress method
-func (mmGetNameAddress *mOutboundMockGetNameAddress) Set(f func() (n1 Name)) *OutboundMock {
+func (mmGetNameAddress *mOutboundMockGetNameAddress) Set(f func() (n1 mm_endpoints.Name)) *OutboundMock {
 	if mmGetNameAddress.defaultExpectation != nil {
 		mmGetNameAddress.mock.t.Fatalf("Default expectation is already set for the Outbound.GetNameAddress method")
 	}
@@ -789,8 +790,8 @@ func (mmGetNameAddress *mOutboundMockGetNameAddress) Set(f func() (n1 Name)) *Ou
 	return mmGetNameAddress.mock
 }
 
-// GetNameAddress implements Outbound
-func (mmGetNameAddress *OutboundMock) GetNameAddress() (n1 Name) {
+// GetNameAddress implements endpoints.Outbound
+func (mmGetNameAddress *OutboundMock) GetNameAddress() (n1 mm_endpoints.Name) {
 	mm_atomic.AddUint64(&mmGetNameAddress.beforeGetNameAddressCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetNameAddress.afterGetNameAddressCounter, 1)
 
@@ -932,7 +933,7 @@ func (mmGetRelayID *mOutboundMockGetRelayID) Set(f func() (s1 insolar.ShortNodeI
 	return mmGetRelayID.mock
 }
 
-// GetRelayID implements Outbound
+// GetRelayID implements endpoints.Outbound
 func (mmGetRelayID *OutboundMock) GetRelayID() (s1 insolar.ShortNodeID) {
 	mm_atomic.AddUint64(&mmGetRelayID.beforeGetRelayIDCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetRelayID.afterGetRelayIDCounter, 1)

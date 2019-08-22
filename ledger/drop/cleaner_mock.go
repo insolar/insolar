@@ -12,7 +12,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-// CleanerMock implements Cleaner
+// CleanerMock implements drop.Cleaner
 type CleanerMock struct {
 	t minimock.Tester
 
@@ -23,7 +23,7 @@ type CleanerMock struct {
 	DeleteForPNMock          mCleanerMockDeleteForPN
 }
 
-// NewCleanerMock returns a mock for Cleaner
+// NewCleanerMock returns a mock for drop.Cleaner
 func NewCleanerMock(t minimock.Tester) *CleanerMock {
 	m := &CleanerMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -117,7 +117,7 @@ func (mmDeleteForPN *mCleanerMockDeleteForPN) Set(f func(ctx context.Context, pu
 	return mmDeleteForPN.mock
 }
 
-// DeleteForPN implements Cleaner
+// DeleteForPN implements drop.Cleaner
 func (mmDeleteForPN *CleanerMock) DeleteForPN(ctx context.Context, pulse insolar.PulseNumber) {
 	mm_atomic.AddUint64(&mmDeleteForPN.beforeDeleteForPNCounter, 1)
 	defer mm_atomic.AddUint64(&mmDeleteForPN.afterDeleteForPNCounter, 1)

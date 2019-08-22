@@ -15,7 +15,7 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 )
 
-// RequesterMock implements Requester
+// RequesterMock implements bootstrap.Requester
 type RequesterMock struct {
 	t minimock.Tester
 
@@ -44,7 +44,7 @@ type RequesterMock struct {
 	UpdateScheduleMock          mRequesterMockUpdateSchedule
 }
 
-// NewRequesterMock returns a mock for Requester
+// NewRequesterMock returns a mock for bootstrap.Requester
 func NewRequesterMock(t minimock.Tester) *RequesterMock {
 	m := &RequesterMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -174,7 +174,7 @@ func (e *RequesterMockAuthorizeExpectation) Then(pp1 *packet.Permit, err error) 
 	return e.mock
 }
 
-// Authorize implements Requester
+// Authorize implements bootstrap.Requester
 func (mmAuthorize *RequesterMock) Authorize(ctx context.Context, c2 insolar.Certificate) (pp1 *packet.Permit, err error) {
 	mm_atomic.AddUint64(&mmAuthorize.beforeAuthorizeCounter, 1)
 	defer mm_atomic.AddUint64(&mmAuthorize.afterAuthorizeCounter, 1)
@@ -393,7 +393,7 @@ func (e *RequesterMockBootstrapExpectation) Then(bp1 *packet.BootstrapResponse, 
 	return e.mock
 }
 
-// Bootstrap implements Requester
+// Bootstrap implements bootstrap.Requester
 func (mmBootstrap *RequesterMock) Bootstrap(ctx context.Context, pp1 *packet.Permit, c2 adapters.Candidate, pp2 *insolar.Pulse) (bp1 *packet.BootstrapResponse, err error) {
 	mm_atomic.AddUint64(&mmBootstrap.beforeBootstrapCounter, 1)
 	defer mm_atomic.AddUint64(&mmBootstrap.afterBootstrapCounter, 1)
@@ -611,7 +611,7 @@ func (e *RequesterMockReconnectExpectation) Then(rp1 *packet.ReconnectResponse, 
 	return e.mock
 }
 
-// Reconnect implements Requester
+// Reconnect implements bootstrap.Requester
 func (mmReconnect *RequesterMock) Reconnect(ctx context.Context, hp1 *host.Host, pp1 *packet.Permit) (rp1 *packet.ReconnectResponse, err error) {
 	mm_atomic.AddUint64(&mmReconnect.beforeReconnectCounter, 1)
 	defer mm_atomic.AddUint64(&mmReconnect.afterReconnectCounter, 1)
@@ -829,7 +829,7 @@ func (e *RequesterMockUpdateScheduleExpectation) Then(up1 *packet.UpdateSchedule
 	return e.mock
 }
 
-// UpdateSchedule implements Requester
+// UpdateSchedule implements bootstrap.Requester
 func (mmUpdateSchedule *RequesterMock) UpdateSchedule(ctx context.Context, pp1 *packet.Permit, p1 insolar.PulseNumber) (up1 *packet.UpdateScheduleResponse, err error) {
 	mm_atomic.AddUint64(&mmUpdateSchedule.beforeUpdateScheduleCounter, 1)
 	defer mm_atomic.AddUint64(&mmUpdateSchedule.afterUpdateScheduleCounter, 1)

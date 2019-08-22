@@ -9,7 +9,7 @@ import (
 	"github.com/gojuno/minimock"
 )
 
-// IteratorMock implements Iterator
+// IteratorMock implements store.Iterator
 type IteratorMock struct {
 	t minimock.Tester
 
@@ -38,7 +38,7 @@ type IteratorMock struct {
 	ValueMock          mIteratorMockValue
 }
 
-// NewIteratorMock returns a mock for Iterator
+// NewIteratorMock returns a mock for store.Iterator
 func NewIteratorMock(t minimock.Tester) *IteratorMock {
 	m := &IteratorMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -120,7 +120,7 @@ func (mmClose *mIteratorMockClose) Set(f func()) *IteratorMock {
 	return mmClose.mock
 }
 
-// Close implements Iterator
+// Close implements store.Iterator
 func (mmClose *IteratorMock) Close() {
 	mm_atomic.AddUint64(&mmClose.beforeCloseCounter, 1)
 	defer mm_atomic.AddUint64(&mmClose.afterCloseCounter, 1)
@@ -261,7 +261,7 @@ func (mmKey *mIteratorMockKey) Set(f func() (ba1 []byte)) *IteratorMock {
 	return mmKey.mock
 }
 
-// Key implements Iterator
+// Key implements store.Iterator
 func (mmKey *IteratorMock) Key() (ba1 []byte) {
 	mm_atomic.AddUint64(&mmKey.beforeKeyCounter, 1)
 	defer mm_atomic.AddUint64(&mmKey.afterKeyCounter, 1)
@@ -404,7 +404,7 @@ func (mmNext *mIteratorMockNext) Set(f func() (b1 bool)) *IteratorMock {
 	return mmNext.mock
 }
 
-// Next implements Iterator
+// Next implements store.Iterator
 func (mmNext *IteratorMock) Next() (b1 bool) {
 	mm_atomic.AddUint64(&mmNext.beforeNextCounter, 1)
 	defer mm_atomic.AddUint64(&mmNext.afterNextCounter, 1)
@@ -548,7 +548,7 @@ func (mmValue *mIteratorMockValue) Set(f func() (ba1 []byte, err error)) *Iterat
 	return mmValue.mock
 }
 
-// Value implements Iterator
+// Value implements store.Iterator
 func (mmValue *IteratorMock) Value() (ba1 []byte, err error) {
 	mm_atomic.AddUint64(&mmValue.beforeValueCounter, 1)
 	defer mm_atomic.AddUint64(&mmValue.afterValueCounter, 1)

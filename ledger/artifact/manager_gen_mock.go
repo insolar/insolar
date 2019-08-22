@@ -11,9 +11,10 @@ import (
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/record"
+	mm_artifact "github.com/insolar/insolar/ledger/artifact"
 )
 
-// ManagerMock implements Manager
+// ManagerMock implements artifact.Manager
 type ManagerMock struct {
 	t minimock.Tester
 
@@ -29,7 +30,7 @@ type ManagerMock struct {
 	beforeDeployCodeCounter uint64
 	DeployCodeMock          mManagerMockDeployCode
 
-	funcGetObject          func(ctx context.Context, head insolar.Reference) (o1 ObjectDescriptor, err error)
+	funcGetObject          func(ctx context.Context, head insolar.Reference) (o1 mm_artifact.ObjectDescriptor, err error)
 	inspectFuncGetObject   func(ctx context.Context, head insolar.Reference)
 	afterGetObjectCounter  uint64
 	beforeGetObjectCounter uint64
@@ -47,14 +48,14 @@ type ManagerMock struct {
 	beforeRegisterResultCounter uint64
 	RegisterResultMock          mManagerMockRegisterResult
 
-	funcUpdateObject          func(ctx context.Context, domain insolar.Reference, request insolar.Reference, obj ObjectDescriptor, memory []byte) (err error)
-	inspectFuncUpdateObject   func(ctx context.Context, domain insolar.Reference, request insolar.Reference, obj ObjectDescriptor, memory []byte)
+	funcUpdateObject          func(ctx context.Context, domain insolar.Reference, request insolar.Reference, obj mm_artifact.ObjectDescriptor, memory []byte) (err error)
+	inspectFuncUpdateObject   func(ctx context.Context, domain insolar.Reference, request insolar.Reference, obj mm_artifact.ObjectDescriptor, memory []byte)
 	afterUpdateObjectCounter  uint64
 	beforeUpdateObjectCounter uint64
 	UpdateObjectMock          mManagerMockUpdateObject
 }
 
-// NewManagerMock returns a mock for Manager
+// NewManagerMock returns a mock for artifact.Manager
 func NewManagerMock(t minimock.Tester) *ManagerMock {
 	m := &ManagerMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -193,7 +194,7 @@ func (e *ManagerMockActivateObjectExpectation) Then(err error) *ManagerMock {
 	return e.mock
 }
 
-// ActivateObject implements Manager
+// ActivateObject implements artifact.Manager
 func (mmActivateObject *ManagerMock) ActivateObject(ctx context.Context, domain insolar.Reference, obj insolar.Reference, parent insolar.Reference, prototype insolar.Reference, memory []byte) (err error) {
 	mm_atomic.AddUint64(&mmActivateObject.beforeActivateObjectCounter, 1)
 	defer mm_atomic.AddUint64(&mmActivateObject.afterActivateObjectCounter, 1)
@@ -413,7 +414,7 @@ func (e *ManagerMockDeployCodeExpectation) Then(ip1 *insolar.ID, err error) *Man
 	return e.mock
 }
 
-// DeployCode implements Manager
+// DeployCode implements artifact.Manager
 func (mmDeployCode *ManagerMock) DeployCode(ctx context.Context, domain insolar.Reference, request insolar.Reference, code []byte, machineType insolar.MachineType) (ip1 *insolar.ID, err error) {
 	mm_atomic.AddUint64(&mmDeployCode.beforeDeployCodeCounter, 1)
 	defer mm_atomic.AddUint64(&mmDeployCode.afterDeployCodeCounter, 1)
@@ -547,7 +548,7 @@ type ManagerMockGetObjectParams struct {
 
 // ManagerMockGetObjectResults contains results of the Manager.GetObject
 type ManagerMockGetObjectResults struct {
-	o1  ObjectDescriptor
+	o1  mm_artifact.ObjectDescriptor
 	err error
 }
 
@@ -583,7 +584,7 @@ func (mmGetObject *mManagerMockGetObject) Inspect(f func(ctx context.Context, he
 }
 
 // Return sets up results that will be returned by Manager.GetObject
-func (mmGetObject *mManagerMockGetObject) Return(o1 ObjectDescriptor, err error) *ManagerMock {
+func (mmGetObject *mManagerMockGetObject) Return(o1 mm_artifact.ObjectDescriptor, err error) *ManagerMock {
 	if mmGetObject.mock.funcGetObject != nil {
 		mmGetObject.mock.t.Fatalf("ManagerMock.GetObject mock is already set by Set")
 	}
@@ -596,7 +597,7 @@ func (mmGetObject *mManagerMockGetObject) Return(o1 ObjectDescriptor, err error)
 }
 
 //Set uses given function f to mock the Manager.GetObject method
-func (mmGetObject *mManagerMockGetObject) Set(f func(ctx context.Context, head insolar.Reference) (o1 ObjectDescriptor, err error)) *ManagerMock {
+func (mmGetObject *mManagerMockGetObject) Set(f func(ctx context.Context, head insolar.Reference) (o1 mm_artifact.ObjectDescriptor, err error)) *ManagerMock {
 	if mmGetObject.defaultExpectation != nil {
 		mmGetObject.mock.t.Fatalf("Default expectation is already set for the Manager.GetObject method")
 	}
@@ -625,13 +626,13 @@ func (mmGetObject *mManagerMockGetObject) When(ctx context.Context, head insolar
 }
 
 // Then sets up Manager.GetObject return parameters for the expectation previously defined by the When method
-func (e *ManagerMockGetObjectExpectation) Then(o1 ObjectDescriptor, err error) *ManagerMock {
+func (e *ManagerMockGetObjectExpectation) Then(o1 mm_artifact.ObjectDescriptor, err error) *ManagerMock {
 	e.results = &ManagerMockGetObjectResults{o1, err}
 	return e.mock
 }
 
-// GetObject implements Manager
-func (mmGetObject *ManagerMock) GetObject(ctx context.Context, head insolar.Reference) (o1 ObjectDescriptor, err error) {
+// GetObject implements artifact.Manager
+func (mmGetObject *ManagerMock) GetObject(ctx context.Context, head insolar.Reference) (o1 mm_artifact.ObjectDescriptor, err error) {
 	mm_atomic.AddUint64(&mmGetObject.beforeGetObjectCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetObject.afterGetObjectCounter, 1)
 
@@ -847,7 +848,7 @@ func (e *ManagerMockRegisterRequestExpectation) Then(ip1 *insolar.ID, err error)
 	return e.mock
 }
 
-// RegisterRequest implements Manager
+// RegisterRequest implements artifact.Manager
 func (mmRegisterRequest *ManagerMock) RegisterRequest(ctx context.Context, req record.IncomingRequest) (ip1 *insolar.ID, err error) {
 	mm_atomic.AddUint64(&mmRegisterRequest.beforeRegisterRequestCounter, 1)
 	defer mm_atomic.AddUint64(&mmRegisterRequest.afterRegisterRequestCounter, 1)
@@ -1066,7 +1067,7 @@ func (e *ManagerMockRegisterResultExpectation) Then(ip1 *insolar.ID, err error) 
 	return e.mock
 }
 
-// RegisterResult implements Manager
+// RegisterResult implements artifact.Manager
 func (mmRegisterResult *ManagerMock) RegisterResult(ctx context.Context, obj insolar.Reference, request insolar.Reference, payload []byte) (ip1 *insolar.ID, err error) {
 	mm_atomic.AddUint64(&mmRegisterResult.beforeRegisterResultCounter, 1)
 	defer mm_atomic.AddUint64(&mmRegisterResult.afterRegisterResultCounter, 1)
@@ -1197,7 +1198,7 @@ type ManagerMockUpdateObjectParams struct {
 	ctx     context.Context
 	domain  insolar.Reference
 	request insolar.Reference
-	obj     ObjectDescriptor
+	obj     mm_artifact.ObjectDescriptor
 	memory  []byte
 }
 
@@ -1207,7 +1208,7 @@ type ManagerMockUpdateObjectResults struct {
 }
 
 // Expect sets up expected params for Manager.UpdateObject
-func (mmUpdateObject *mManagerMockUpdateObject) Expect(ctx context.Context, domain insolar.Reference, request insolar.Reference, obj ObjectDescriptor, memory []byte) *mManagerMockUpdateObject {
+func (mmUpdateObject *mManagerMockUpdateObject) Expect(ctx context.Context, domain insolar.Reference, request insolar.Reference, obj mm_artifact.ObjectDescriptor, memory []byte) *mManagerMockUpdateObject {
 	if mmUpdateObject.mock.funcUpdateObject != nil {
 		mmUpdateObject.mock.t.Fatalf("ManagerMock.UpdateObject mock is already set by Set")
 	}
@@ -1227,7 +1228,7 @@ func (mmUpdateObject *mManagerMockUpdateObject) Expect(ctx context.Context, doma
 }
 
 // Inspect accepts an inspector function that has same arguments as the Manager.UpdateObject
-func (mmUpdateObject *mManagerMockUpdateObject) Inspect(f func(ctx context.Context, domain insolar.Reference, request insolar.Reference, obj ObjectDescriptor, memory []byte)) *mManagerMockUpdateObject {
+func (mmUpdateObject *mManagerMockUpdateObject) Inspect(f func(ctx context.Context, domain insolar.Reference, request insolar.Reference, obj mm_artifact.ObjectDescriptor, memory []byte)) *mManagerMockUpdateObject {
 	if mmUpdateObject.mock.inspectFuncUpdateObject != nil {
 		mmUpdateObject.mock.t.Fatalf("Inspect function is already set for ManagerMock.UpdateObject")
 	}
@@ -1251,7 +1252,7 @@ func (mmUpdateObject *mManagerMockUpdateObject) Return(err error) *ManagerMock {
 }
 
 //Set uses given function f to mock the Manager.UpdateObject method
-func (mmUpdateObject *mManagerMockUpdateObject) Set(f func(ctx context.Context, domain insolar.Reference, request insolar.Reference, obj ObjectDescriptor, memory []byte) (err error)) *ManagerMock {
+func (mmUpdateObject *mManagerMockUpdateObject) Set(f func(ctx context.Context, domain insolar.Reference, request insolar.Reference, obj mm_artifact.ObjectDescriptor, memory []byte) (err error)) *ManagerMock {
 	if mmUpdateObject.defaultExpectation != nil {
 		mmUpdateObject.mock.t.Fatalf("Default expectation is already set for the Manager.UpdateObject method")
 	}
@@ -1266,7 +1267,7 @@ func (mmUpdateObject *mManagerMockUpdateObject) Set(f func(ctx context.Context, 
 
 // When sets expectation for the Manager.UpdateObject which will trigger the result defined by the following
 // Then helper
-func (mmUpdateObject *mManagerMockUpdateObject) When(ctx context.Context, domain insolar.Reference, request insolar.Reference, obj ObjectDescriptor, memory []byte) *ManagerMockUpdateObjectExpectation {
+func (mmUpdateObject *mManagerMockUpdateObject) When(ctx context.Context, domain insolar.Reference, request insolar.Reference, obj mm_artifact.ObjectDescriptor, memory []byte) *ManagerMockUpdateObjectExpectation {
 	if mmUpdateObject.mock.funcUpdateObject != nil {
 		mmUpdateObject.mock.t.Fatalf("ManagerMock.UpdateObject mock is already set by Set")
 	}
@@ -1285,8 +1286,8 @@ func (e *ManagerMockUpdateObjectExpectation) Then(err error) *ManagerMock {
 	return e.mock
 }
 
-// UpdateObject implements Manager
-func (mmUpdateObject *ManagerMock) UpdateObject(ctx context.Context, domain insolar.Reference, request insolar.Reference, obj ObjectDescriptor, memory []byte) (err error) {
+// UpdateObject implements artifact.Manager
+func (mmUpdateObject *ManagerMock) UpdateObject(ctx context.Context, domain insolar.Reference, request insolar.Reference, obj mm_artifact.ObjectDescriptor, memory []byte) (err error) {
 	mm_atomic.AddUint64(&mmUpdateObject.beforeUpdateObjectCounter, 1)
 	defer mm_atomic.AddUint64(&mmUpdateObject.afterUpdateObjectCounter, 1)
 

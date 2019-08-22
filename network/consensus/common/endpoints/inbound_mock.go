@@ -8,9 +8,10 @@ import (
 
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
+	mm_endpoints "github.com/insolar/insolar/network/consensus/common/endpoints"
 )
 
-// InboundMock implements Inbound
+// InboundMock implements endpoints.Inbound
 type InboundMock struct {
 	t minimock.Tester
 
@@ -20,7 +21,7 @@ type InboundMock struct {
 	beforeAsByteStringCounter uint64
 	AsByteStringMock          mInboundMockAsByteString
 
-	funcGetNameAddress          func() (n1 Name)
+	funcGetNameAddress          func() (n1 mm_endpoints.Name)
 	inspectFuncGetNameAddress   func()
 	afterGetNameAddressCounter  uint64
 	beforeGetNameAddressCounter uint64
@@ -39,7 +40,7 @@ type InboundMock struct {
 	GetTransportKeyMock          mInboundMockGetTransportKey
 }
 
-// NewInboundMock returns a mock for Inbound
+// NewInboundMock returns a mock for endpoints.Inbound
 func NewInboundMock(t minimock.Tester) *InboundMock {
 	m := &InboundMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -127,7 +128,7 @@ func (mmAsByteString *mInboundMockAsByteString) Set(f func() (s1 string)) *Inbou
 	return mmAsByteString.mock
 }
 
-// AsByteString implements Inbound
+// AsByteString implements endpoints.Inbound
 func (mmAsByteString *InboundMock) AsByteString() (s1 string) {
 	mm_atomic.AddUint64(&mmAsByteString.beforeAsByteStringCounter, 1)
 	defer mm_atomic.AddUint64(&mmAsByteString.afterAsByteStringCounter, 1)
@@ -216,7 +217,7 @@ type InboundMockGetNameAddressExpectation struct {
 
 // InboundMockGetNameAddressResults contains results of the Inbound.GetNameAddress
 type InboundMockGetNameAddressResults struct {
-	n1 Name
+	n1 mm_endpoints.Name
 }
 
 // Expect sets up expected params for Inbound.GetNameAddress
@@ -244,7 +245,7 @@ func (mmGetNameAddress *mInboundMockGetNameAddress) Inspect(f func()) *mInboundM
 }
 
 // Return sets up results that will be returned by Inbound.GetNameAddress
-func (mmGetNameAddress *mInboundMockGetNameAddress) Return(n1 Name) *InboundMock {
+func (mmGetNameAddress *mInboundMockGetNameAddress) Return(n1 mm_endpoints.Name) *InboundMock {
 	if mmGetNameAddress.mock.funcGetNameAddress != nil {
 		mmGetNameAddress.mock.t.Fatalf("InboundMock.GetNameAddress mock is already set by Set")
 	}
@@ -257,7 +258,7 @@ func (mmGetNameAddress *mInboundMockGetNameAddress) Return(n1 Name) *InboundMock
 }
 
 //Set uses given function f to mock the Inbound.GetNameAddress method
-func (mmGetNameAddress *mInboundMockGetNameAddress) Set(f func() (n1 Name)) *InboundMock {
+func (mmGetNameAddress *mInboundMockGetNameAddress) Set(f func() (n1 mm_endpoints.Name)) *InboundMock {
 	if mmGetNameAddress.defaultExpectation != nil {
 		mmGetNameAddress.mock.t.Fatalf("Default expectation is already set for the Inbound.GetNameAddress method")
 	}
@@ -270,8 +271,8 @@ func (mmGetNameAddress *mInboundMockGetNameAddress) Set(f func() (n1 Name)) *Inb
 	return mmGetNameAddress.mock
 }
 
-// GetNameAddress implements Inbound
-func (mmGetNameAddress *InboundMock) GetNameAddress() (n1 Name) {
+// GetNameAddress implements endpoints.Inbound
+func (mmGetNameAddress *InboundMock) GetNameAddress() (n1 mm_endpoints.Name) {
 	mm_atomic.AddUint64(&mmGetNameAddress.beforeGetNameAddressCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetNameAddress.afterGetNameAddressCounter, 1)
 
@@ -413,7 +414,7 @@ func (mmGetTransportCert *mInboundMockGetTransportCert) Set(f func() (c1 cryptki
 	return mmGetTransportCert.mock
 }
 
-// GetTransportCert implements Inbound
+// GetTransportCert implements endpoints.Inbound
 func (mmGetTransportCert *InboundMock) GetTransportCert() (c1 cryptkit.CertificateHolder) {
 	mm_atomic.AddUint64(&mmGetTransportCert.beforeGetTransportCertCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetTransportCert.afterGetTransportCertCounter, 1)
@@ -556,7 +557,7 @@ func (mmGetTransportKey *mInboundMockGetTransportKey) Set(f func() (s1 cryptkit.
 	return mmGetTransportKey.mock
 }
 
-// GetTransportKey implements Inbound
+// GetTransportKey implements endpoints.Inbound
 func (mmGetTransportKey *InboundMock) GetTransportKey() (s1 cryptkit.SignatureKeyHolder) {
 	mm_atomic.AddUint64(&mmGetTransportKey.beforeGetTransportKeyCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetTransportKey.afterGetTransportKeyCounter, 1)

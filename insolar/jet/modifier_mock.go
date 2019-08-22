@@ -12,7 +12,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-// ModifierMock implements Modifier
+// ModifierMock implements jet.Modifier
 type ModifierMock struct {
 	t minimock.Tester
 
@@ -35,7 +35,7 @@ type ModifierMock struct {
 	UpdateMock          mModifierMockUpdate
 }
 
-// NewModifierMock returns a mock for Modifier
+// NewModifierMock returns a mock for jet.Modifier
 func NewModifierMock(t minimock.Tester) *ModifierMock {
 	m := &ModifierMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -163,7 +163,7 @@ func (e *ModifierMockCloneExpectation) Then(err error) *ModifierMock {
 	return e.mock
 }
 
-// Clone implements Modifier
+// Clone implements jet.Modifier
 func (mmClone *ModifierMock) Clone(ctx context.Context, from insolar.PulseNumber, to insolar.PulseNumber, keepActual bool) (err error) {
 	mm_atomic.AddUint64(&mmClone.beforeCloneCounter, 1)
 	defer mm_atomic.AddUint64(&mmClone.afterCloneCounter, 1)
@@ -382,7 +382,7 @@ func (e *ModifierMockSplitExpectation) Then(j1 insolar.JetID, j2 insolar.JetID, 
 	return e.mock
 }
 
-// Split implements Modifier
+// Split implements jet.Modifier
 func (mmSplit *ModifierMock) Split(ctx context.Context, pulse insolar.PulseNumber, id insolar.JetID) (j1 insolar.JetID, j2 insolar.JetID, err error) {
 	mm_atomic.AddUint64(&mmSplit.beforeSplitCounter, 1)
 	defer mm_atomic.AddUint64(&mmSplit.afterSplitCounter, 1)
@@ -600,7 +600,7 @@ func (e *ModifierMockUpdateExpectation) Then(err error) *ModifierMock {
 	return e.mock
 }
 
-// Update implements Modifier
+// Update implements jet.Modifier
 func (mmUpdate *ModifierMock) Update(ctx context.Context, pulse insolar.PulseNumber, actual bool, ids ...insolar.JetID) (err error) {
 	mm_atomic.AddUint64(&mmUpdate.beforeUpdateCounter, 1)
 	defer mm_atomic.AddUint64(&mmUpdate.afterUpdateCounter, 1)

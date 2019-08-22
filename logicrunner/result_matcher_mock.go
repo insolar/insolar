@@ -13,7 +13,7 @@ import (
 	"github.com/insolar/insolar/insolar/payload"
 )
 
-// ResultMatcherMock implements ResultMatcher
+// ResultMatcherMock implements logicrunner.ResultMatcher
 type ResultMatcherMock struct {
 	t minimock.Tester
 
@@ -36,7 +36,7 @@ type ResultMatcherMock struct {
 	ClearMock          mResultMatcherMockClear
 }
 
-// NewResultMatcherMock returns a mock for ResultMatcher
+// NewResultMatcherMock returns a mock for logicrunner.ResultMatcher
 func NewResultMatcherMock(t minimock.Tester) *ResultMatcherMock {
 	m := &ResultMatcherMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -136,7 +136,7 @@ func (mmAddStillExecution *mResultMatcherMockAddStillExecution) Set(f func(ctx c
 	return mmAddStillExecution.mock
 }
 
-// AddStillExecution implements ResultMatcher
+// AddStillExecution implements logicrunner.ResultMatcher
 func (mmAddStillExecution *ResultMatcherMock) AddStillExecution(ctx context.Context, msg *payload.StillExecuting) {
 	mm_atomic.AddUint64(&mmAddStillExecution.beforeAddStillExecutionCounter, 1)
 	defer mm_atomic.AddUint64(&mmAddStillExecution.afterAddStillExecutionCounter, 1)
@@ -350,7 +350,7 @@ func (e *ResultMatcherMockAddUnwantedResponseExpectation) Then(err error) *Resul
 	return e.mock
 }
 
-// AddUnwantedResponse implements ResultMatcher
+// AddUnwantedResponse implements logicrunner.ResultMatcher
 func (mmAddUnwantedResponse *ResultMatcherMock) AddUnwantedResponse(ctx context.Context, msg *message.ReturnResults) (err error) {
 	mm_atomic.AddUint64(&mmAddUnwantedResponse.beforeAddUnwantedResponseCounter, 1)
 	defer mm_atomic.AddUint64(&mmAddUnwantedResponse.afterAddUnwantedResponseCounter, 1)
@@ -539,7 +539,7 @@ func (mmClear *mResultMatcherMockClear) Set(f func(ctx context.Context)) *Result
 	return mmClear.mock
 }
 
-// Clear implements ResultMatcher
+// Clear implements logicrunner.ResultMatcher
 func (mmClear *ResultMatcherMock) Clear(ctx context.Context) {
 	mm_atomic.AddUint64(&mmClear.beforeClearCounter, 1)
 	defer mm_atomic.AddUint64(&mmClear.afterClearCounter, 1)

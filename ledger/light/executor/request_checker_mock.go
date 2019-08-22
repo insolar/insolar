@@ -13,7 +13,7 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 )
 
-// RequestCheckerMock implements RequestChecker
+// RequestCheckerMock implements executor.RequestChecker
 type RequestCheckerMock struct {
 	t minimock.Tester
 
@@ -24,7 +24,7 @@ type RequestCheckerMock struct {
 	CheckRequestMock          mRequestCheckerMockCheckRequest
 }
 
-// NewRequestCheckerMock returns a mock for RequestChecker
+// NewRequestCheckerMock returns a mock for executor.RequestChecker
 func NewRequestCheckerMock(t minimock.Tester) *RequestCheckerMock {
 	m := &RequestCheckerMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -145,7 +145,7 @@ func (e *RequestCheckerMockCheckRequestExpectation) Then(err error) *RequestChec
 	return e.mock
 }
 
-// CheckRequest implements RequestChecker
+// CheckRequest implements executor.RequestChecker
 func (mmCheckRequest *RequestCheckerMock) CheckRequest(ctx context.Context, requestID insolar.ID, request record.Request) (err error) {
 	mm_atomic.AddUint64(&mmCheckRequest.beforeCheckRequestCounter, 1)
 	defer mm_atomic.AddUint64(&mmCheckRequest.afterCheckRequestCounter, 1)

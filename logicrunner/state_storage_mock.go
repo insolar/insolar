@@ -11,10 +11,11 @@ import (
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/payload"
+	mm_logicrunner "github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/logicrunner/executionregistry"
 )
 
-// StateStorageMock implements StateStorage
+// StateStorageMock implements logicrunner.StateStorage
 type StateStorageMock struct {
 	t minimock.Tester
 
@@ -24,7 +25,7 @@ type StateStorageMock struct {
 	beforeGetExecutionRegistryCounter uint64
 	GetExecutionRegistryMock          mStateStorageMockGetExecutionRegistry
 
-	funcGetExecutionState          func(ref insolar.Reference) (e1 ExecutionBrokerI)
+	funcGetExecutionState          func(ref insolar.Reference) (e1 mm_logicrunner.ExecutionBrokerI)
 	inspectFuncGetExecutionState   func(ref insolar.Reference)
 	afterGetExecutionStateCounter  uint64
 	beforeGetExecutionStateCounter uint64
@@ -42,14 +43,14 @@ type StateStorageMock struct {
 	beforeOnPulseCounter uint64
 	OnPulseMock          mStateStorageMockOnPulse
 
-	funcUpsertExecutionState          func(ref insolar.Reference) (e1 ExecutionBrokerI)
+	funcUpsertExecutionState          func(ref insolar.Reference) (e1 mm_logicrunner.ExecutionBrokerI)
 	inspectFuncUpsertExecutionState   func(ref insolar.Reference)
 	afterUpsertExecutionStateCounter  uint64
 	beforeUpsertExecutionStateCounter uint64
 	UpsertExecutionStateMock          mStateStorageMockUpsertExecutionState
 }
 
-// NewStateStorageMock returns a mock for StateStorage
+// NewStateStorageMock returns a mock for logicrunner.StateStorage
 func NewStateStorageMock(t minimock.Tester) *StateStorageMock {
 	m := &StateStorageMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -179,7 +180,7 @@ func (e *StateStorageMockGetExecutionRegistryExpectation) Then(e1 executionregis
 	return e.mock
 }
 
-// GetExecutionRegistry implements StateStorage
+// GetExecutionRegistry implements logicrunner.StateStorage
 func (mmGetExecutionRegistry *StateStorageMock) GetExecutionRegistry(ref insolar.Reference) (e1 executionregistry.ExecutionRegistry) {
 	mm_atomic.AddUint64(&mmGetExecutionRegistry.beforeGetExecutionRegistryCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetExecutionRegistry.afterGetExecutionRegistryCounter, 1)
@@ -312,7 +313,7 @@ type StateStorageMockGetExecutionStateParams struct {
 
 // StateStorageMockGetExecutionStateResults contains results of the StateStorage.GetExecutionState
 type StateStorageMockGetExecutionStateResults struct {
-	e1 ExecutionBrokerI
+	e1 mm_logicrunner.ExecutionBrokerI
 }
 
 // Expect sets up expected params for StateStorage.GetExecutionState
@@ -347,7 +348,7 @@ func (mmGetExecutionState *mStateStorageMockGetExecutionState) Inspect(f func(re
 }
 
 // Return sets up results that will be returned by StateStorage.GetExecutionState
-func (mmGetExecutionState *mStateStorageMockGetExecutionState) Return(e1 ExecutionBrokerI) *StateStorageMock {
+func (mmGetExecutionState *mStateStorageMockGetExecutionState) Return(e1 mm_logicrunner.ExecutionBrokerI) *StateStorageMock {
 	if mmGetExecutionState.mock.funcGetExecutionState != nil {
 		mmGetExecutionState.mock.t.Fatalf("StateStorageMock.GetExecutionState mock is already set by Set")
 	}
@@ -360,7 +361,7 @@ func (mmGetExecutionState *mStateStorageMockGetExecutionState) Return(e1 Executi
 }
 
 //Set uses given function f to mock the StateStorage.GetExecutionState method
-func (mmGetExecutionState *mStateStorageMockGetExecutionState) Set(f func(ref insolar.Reference) (e1 ExecutionBrokerI)) *StateStorageMock {
+func (mmGetExecutionState *mStateStorageMockGetExecutionState) Set(f func(ref insolar.Reference) (e1 mm_logicrunner.ExecutionBrokerI)) *StateStorageMock {
 	if mmGetExecutionState.defaultExpectation != nil {
 		mmGetExecutionState.mock.t.Fatalf("Default expectation is already set for the StateStorage.GetExecutionState method")
 	}
@@ -389,13 +390,13 @@ func (mmGetExecutionState *mStateStorageMockGetExecutionState) When(ref insolar.
 }
 
 // Then sets up StateStorage.GetExecutionState return parameters for the expectation previously defined by the When method
-func (e *StateStorageMockGetExecutionStateExpectation) Then(e1 ExecutionBrokerI) *StateStorageMock {
+func (e *StateStorageMockGetExecutionStateExpectation) Then(e1 mm_logicrunner.ExecutionBrokerI) *StateStorageMock {
 	e.results = &StateStorageMockGetExecutionStateResults{e1}
 	return e.mock
 }
 
-// GetExecutionState implements StateStorage
-func (mmGetExecutionState *StateStorageMock) GetExecutionState(ref insolar.Reference) (e1 ExecutionBrokerI) {
+// GetExecutionState implements logicrunner.StateStorage
+func (mmGetExecutionState *StateStorageMock) GetExecutionState(ref insolar.Reference) (e1 mm_logicrunner.ExecutionBrokerI) {
 	mm_atomic.AddUint64(&mmGetExecutionState.beforeGetExecutionStateCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetExecutionState.afterGetExecutionStateCounter, 1)
 
@@ -573,7 +574,7 @@ func (mmIsEmpty *mStateStorageMockIsEmpty) Set(f func() (b1 bool)) *StateStorage
 	return mmIsEmpty.mock
 }
 
-// IsEmpty implements StateStorage
+// IsEmpty implements logicrunner.StateStorage
 func (mmIsEmpty *StateStorageMock) IsEmpty() (b1 bool) {
 	mm_atomic.AddUint64(&mmIsEmpty.beforeIsEmptyCounter, 1)
 	defer mm_atomic.AddUint64(&mmIsEmpty.afterIsEmptyCounter, 1)
@@ -753,7 +754,7 @@ func (e *StateStorageMockOnPulseExpectation) Then(m1 map[insolar.Reference][]pay
 	return e.mock
 }
 
-// OnPulse implements StateStorage
+// OnPulse implements logicrunner.StateStorage
 func (mmOnPulse *StateStorageMock) OnPulse(ctx context.Context, pulse insolar.Pulse) (m1 map[insolar.Reference][]payload.Payload) {
 	mm_atomic.AddUint64(&mmOnPulse.beforeOnPulseCounter, 1)
 	defer mm_atomic.AddUint64(&mmOnPulse.afterOnPulseCounter, 1)
@@ -886,7 +887,7 @@ type StateStorageMockUpsertExecutionStateParams struct {
 
 // StateStorageMockUpsertExecutionStateResults contains results of the StateStorage.UpsertExecutionState
 type StateStorageMockUpsertExecutionStateResults struct {
-	e1 ExecutionBrokerI
+	e1 mm_logicrunner.ExecutionBrokerI
 }
 
 // Expect sets up expected params for StateStorage.UpsertExecutionState
@@ -921,7 +922,7 @@ func (mmUpsertExecutionState *mStateStorageMockUpsertExecutionState) Inspect(f f
 }
 
 // Return sets up results that will be returned by StateStorage.UpsertExecutionState
-func (mmUpsertExecutionState *mStateStorageMockUpsertExecutionState) Return(e1 ExecutionBrokerI) *StateStorageMock {
+func (mmUpsertExecutionState *mStateStorageMockUpsertExecutionState) Return(e1 mm_logicrunner.ExecutionBrokerI) *StateStorageMock {
 	if mmUpsertExecutionState.mock.funcUpsertExecutionState != nil {
 		mmUpsertExecutionState.mock.t.Fatalf("StateStorageMock.UpsertExecutionState mock is already set by Set")
 	}
@@ -934,7 +935,7 @@ func (mmUpsertExecutionState *mStateStorageMockUpsertExecutionState) Return(e1 E
 }
 
 //Set uses given function f to mock the StateStorage.UpsertExecutionState method
-func (mmUpsertExecutionState *mStateStorageMockUpsertExecutionState) Set(f func(ref insolar.Reference) (e1 ExecutionBrokerI)) *StateStorageMock {
+func (mmUpsertExecutionState *mStateStorageMockUpsertExecutionState) Set(f func(ref insolar.Reference) (e1 mm_logicrunner.ExecutionBrokerI)) *StateStorageMock {
 	if mmUpsertExecutionState.defaultExpectation != nil {
 		mmUpsertExecutionState.mock.t.Fatalf("Default expectation is already set for the StateStorage.UpsertExecutionState method")
 	}
@@ -963,13 +964,13 @@ func (mmUpsertExecutionState *mStateStorageMockUpsertExecutionState) When(ref in
 }
 
 // Then sets up StateStorage.UpsertExecutionState return parameters for the expectation previously defined by the When method
-func (e *StateStorageMockUpsertExecutionStateExpectation) Then(e1 ExecutionBrokerI) *StateStorageMock {
+func (e *StateStorageMockUpsertExecutionStateExpectation) Then(e1 mm_logicrunner.ExecutionBrokerI) *StateStorageMock {
 	e.results = &StateStorageMockUpsertExecutionStateResults{e1}
 	return e.mock
 }
 
-// UpsertExecutionState implements StateStorage
-func (mmUpsertExecutionState *StateStorageMock) UpsertExecutionState(ref insolar.Reference) (e1 ExecutionBrokerI) {
+// UpsertExecutionState implements logicrunner.StateStorage
+func (mmUpsertExecutionState *StateStorageMock) UpsertExecutionState(ref insolar.Reference) (e1 mm_logicrunner.ExecutionBrokerI) {
 	mm_atomic.AddUint64(&mmUpsertExecutionState.beforeUpsertExecutionStateCounter, 1)
 	defer mm_atomic.AddUint64(&mmUpsertExecutionState.afterUpsertExecutionStateCounter, 1)
 

@@ -12,7 +12,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-// ShifterMock implements Shifter
+// ShifterMock implements pulse.Shifter
 type ShifterMock struct {
 	t minimock.Tester
 
@@ -23,7 +23,7 @@ type ShifterMock struct {
 	ShiftMock          mShifterMockShift
 }
 
-// NewShifterMock returns a mock for Shifter
+// NewShifterMock returns a mock for pulse.Shifter
 func NewShifterMock(t minimock.Tester) *ShifterMock {
 	m := &ShifterMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -143,7 +143,7 @@ func (e *ShifterMockShiftExpectation) Then(err error) *ShifterMock {
 	return e.mock
 }
 
-// Shift implements Shifter
+// Shift implements pulse.Shifter
 func (mmShift *ShifterMock) Shift(ctx context.Context, pn insolar.PulseNumber) (err error) {
 	mm_atomic.AddUint64(&mmShift.beforeShiftCounter, 1)
 	defer mm_atomic.AddUint64(&mmShift.afterShiftCounter, 1)

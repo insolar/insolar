@@ -12,9 +12,10 @@ import (
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
+	mm_profiles "github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 )
 
-// StaticProfileMock implements StaticProfile
+// StaticProfileMock implements profiles.StaticProfile
 type StaticProfileMock struct {
 	t minimock.Tester
 
@@ -30,7 +31,7 @@ type StaticProfileMock struct {
 	beforeGetDefaultEndpointCounter uint64
 	GetDefaultEndpointMock          mStaticProfileMockGetDefaultEndpoint
 
-	funcGetExtension          func() (s1 StaticProfileExtension)
+	funcGetExtension          func() (s1 mm_profiles.StaticProfileExtension)
 	inspectFuncGetExtension   func()
 	afterGetExtensionCounter  uint64
 	beforeGetExtensionCounter uint64
@@ -79,7 +80,7 @@ type StaticProfileMock struct {
 	IsAcceptableHostMock          mStaticProfileMockIsAcceptableHost
 }
 
-// NewStaticProfileMock returns a mock for StaticProfile
+// NewStaticProfileMock returns a mock for profiles.StaticProfile
 func NewStaticProfileMock(t minimock.Tester) *StaticProfileMock {
 	m := &StaticProfileMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -180,7 +181,7 @@ func (mmGetBriefIntroSignedDigest *mStaticProfileMockGetBriefIntroSignedDigest) 
 	return mmGetBriefIntroSignedDigest.mock
 }
 
-// GetBriefIntroSignedDigest implements StaticProfile
+// GetBriefIntroSignedDigest implements profiles.StaticProfile
 func (mmGetBriefIntroSignedDigest *StaticProfileMock) GetBriefIntroSignedDigest() (s1 cryptkit.SignedDigestHolder) {
 	mm_atomic.AddUint64(&mmGetBriefIntroSignedDigest.beforeGetBriefIntroSignedDigestCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetBriefIntroSignedDigest.afterGetBriefIntroSignedDigestCounter, 1)
@@ -323,7 +324,7 @@ func (mmGetDefaultEndpoint *mStaticProfileMockGetDefaultEndpoint) Set(f func() (
 	return mmGetDefaultEndpoint.mock
 }
 
-// GetDefaultEndpoint implements StaticProfile
+// GetDefaultEndpoint implements profiles.StaticProfile
 func (mmGetDefaultEndpoint *StaticProfileMock) GetDefaultEndpoint() (o1 endpoints.Outbound) {
 	mm_atomic.AddUint64(&mmGetDefaultEndpoint.beforeGetDefaultEndpointCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetDefaultEndpoint.afterGetDefaultEndpointCounter, 1)
@@ -412,7 +413,7 @@ type StaticProfileMockGetExtensionExpectation struct {
 
 // StaticProfileMockGetExtensionResults contains results of the StaticProfile.GetExtension
 type StaticProfileMockGetExtensionResults struct {
-	s1 StaticProfileExtension
+	s1 mm_profiles.StaticProfileExtension
 }
 
 // Expect sets up expected params for StaticProfile.GetExtension
@@ -440,7 +441,7 @@ func (mmGetExtension *mStaticProfileMockGetExtension) Inspect(f func()) *mStatic
 }
 
 // Return sets up results that will be returned by StaticProfile.GetExtension
-func (mmGetExtension *mStaticProfileMockGetExtension) Return(s1 StaticProfileExtension) *StaticProfileMock {
+func (mmGetExtension *mStaticProfileMockGetExtension) Return(s1 mm_profiles.StaticProfileExtension) *StaticProfileMock {
 	if mmGetExtension.mock.funcGetExtension != nil {
 		mmGetExtension.mock.t.Fatalf("StaticProfileMock.GetExtension mock is already set by Set")
 	}
@@ -453,7 +454,7 @@ func (mmGetExtension *mStaticProfileMockGetExtension) Return(s1 StaticProfileExt
 }
 
 //Set uses given function f to mock the StaticProfile.GetExtension method
-func (mmGetExtension *mStaticProfileMockGetExtension) Set(f func() (s1 StaticProfileExtension)) *StaticProfileMock {
+func (mmGetExtension *mStaticProfileMockGetExtension) Set(f func() (s1 mm_profiles.StaticProfileExtension)) *StaticProfileMock {
 	if mmGetExtension.defaultExpectation != nil {
 		mmGetExtension.mock.t.Fatalf("Default expectation is already set for the StaticProfile.GetExtension method")
 	}
@@ -466,8 +467,8 @@ func (mmGetExtension *mStaticProfileMockGetExtension) Set(f func() (s1 StaticPro
 	return mmGetExtension.mock
 }
 
-// GetExtension implements StaticProfile
-func (mmGetExtension *StaticProfileMock) GetExtension() (s1 StaticProfileExtension) {
+// GetExtension implements profiles.StaticProfile
+func (mmGetExtension *StaticProfileMock) GetExtension() (s1 mm_profiles.StaticProfileExtension) {
 	mm_atomic.AddUint64(&mmGetExtension.beforeGetExtensionCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetExtension.afterGetExtensionCounter, 1)
 
@@ -609,7 +610,7 @@ func (mmGetNodePublicKey *mStaticProfileMockGetNodePublicKey) Set(f func() (s1 c
 	return mmGetNodePublicKey.mock
 }
 
-// GetNodePublicKey implements StaticProfile
+// GetNodePublicKey implements profiles.StaticProfile
 func (mmGetNodePublicKey *StaticProfileMock) GetNodePublicKey() (s1 cryptkit.SignatureKeyHolder) {
 	mm_atomic.AddUint64(&mmGetNodePublicKey.beforeGetNodePublicKeyCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetNodePublicKey.afterGetNodePublicKeyCounter, 1)
@@ -752,7 +753,7 @@ func (mmGetPrimaryRole *mStaticProfileMockGetPrimaryRole) Set(f func() (p1 membe
 	return mmGetPrimaryRole.mock
 }
 
-// GetPrimaryRole implements StaticProfile
+// GetPrimaryRole implements profiles.StaticProfile
 func (mmGetPrimaryRole *StaticProfileMock) GetPrimaryRole() (p1 member.PrimaryRole) {
 	mm_atomic.AddUint64(&mmGetPrimaryRole.beforeGetPrimaryRoleCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetPrimaryRole.afterGetPrimaryRoleCounter, 1)
@@ -895,7 +896,7 @@ func (mmGetPublicKeyStore *mStaticProfileMockGetPublicKeyStore) Set(f func() (p1
 	return mmGetPublicKeyStore.mock
 }
 
-// GetPublicKeyStore implements StaticProfile
+// GetPublicKeyStore implements profiles.StaticProfile
 func (mmGetPublicKeyStore *StaticProfileMock) GetPublicKeyStore() (p1 cryptkit.PublicKeyStore) {
 	mm_atomic.AddUint64(&mmGetPublicKeyStore.beforeGetPublicKeyStoreCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetPublicKeyStore.afterGetPublicKeyStoreCounter, 1)
@@ -1038,7 +1039,7 @@ func (mmGetSpecialRoles *mStaticProfileMockGetSpecialRoles) Set(f func() (s1 mem
 	return mmGetSpecialRoles.mock
 }
 
-// GetSpecialRoles implements StaticProfile
+// GetSpecialRoles implements profiles.StaticProfile
 func (mmGetSpecialRoles *StaticProfileMock) GetSpecialRoles() (s1 member.SpecialRole) {
 	mm_atomic.AddUint64(&mmGetSpecialRoles.beforeGetSpecialRolesCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetSpecialRoles.afterGetSpecialRolesCounter, 1)
@@ -1181,7 +1182,7 @@ func (mmGetStartPower *mStaticProfileMockGetStartPower) Set(f func() (p1 member.
 	return mmGetStartPower.mock
 }
 
-// GetStartPower implements StaticProfile
+// GetStartPower implements profiles.StaticProfile
 func (mmGetStartPower *StaticProfileMock) GetStartPower() (p1 member.Power) {
 	mm_atomic.AddUint64(&mmGetStartPower.beforeGetStartPowerCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetStartPower.afterGetStartPowerCounter, 1)
@@ -1324,7 +1325,7 @@ func (mmGetStaticNodeID *mStaticProfileMockGetStaticNodeID) Set(f func() (s1 ins
 	return mmGetStaticNodeID.mock
 }
 
-// GetStaticNodeID implements StaticProfile
+// GetStaticNodeID implements profiles.StaticProfile
 func (mmGetStaticNodeID *StaticProfileMock) GetStaticNodeID() (s1 insolar.ShortNodeID) {
 	mm_atomic.AddUint64(&mmGetStaticNodeID.beforeGetStaticNodeIDCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetStaticNodeID.afterGetStaticNodeIDCounter, 1)
@@ -1503,7 +1504,7 @@ func (e *StaticProfileMockIsAcceptableHostExpectation) Then(b1 bool) *StaticProf
 	return e.mock
 }
 
-// IsAcceptableHost implements StaticProfile
+// IsAcceptableHost implements profiles.StaticProfile
 func (mmIsAcceptableHost *StaticProfileMock) IsAcceptableHost(from endpoints.Inbound) (b1 bool) {
 	mm_atomic.AddUint64(&mmIsAcceptableHost.beforeIsAcceptableHostCounter, 1)
 	defer mm_atomic.AddUint64(&mmIsAcceptableHost.afterIsAcceptableHostCounter, 1)

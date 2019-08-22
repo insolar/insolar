@@ -13,7 +13,7 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 )
 
-// RecordCollectionAccessorMock implements RecordCollectionAccessor
+// RecordCollectionAccessorMock implements object.RecordCollectionAccessor
 type RecordCollectionAccessorMock struct {
 	t minimock.Tester
 
@@ -24,7 +24,7 @@ type RecordCollectionAccessorMock struct {
 	ForPulseMock          mRecordCollectionAccessorMockForPulse
 }
 
-// NewRecordCollectionAccessorMock returns a mock for RecordCollectionAccessor
+// NewRecordCollectionAccessorMock returns a mock for object.RecordCollectionAccessor
 func NewRecordCollectionAccessorMock(t minimock.Tester) *RecordCollectionAccessorMock {
 	m := &RecordCollectionAccessorMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -145,7 +145,7 @@ func (e *RecordCollectionAccessorMockForPulseExpectation) Then(ma1 []record.Mate
 	return e.mock
 }
 
-// ForPulse implements RecordCollectionAccessor
+// ForPulse implements object.RecordCollectionAccessor
 func (mmForPulse *RecordCollectionAccessorMock) ForPulse(ctx context.Context, jetID insolar.JetID, pn insolar.PulseNumber) (ma1 []record.Material) {
 	mm_atomic.AddUint64(&mmForPulse.beforeForPulseCounter, 1)
 	defer mm_atomic.AddUint64(&mmForPulse.afterForPulseCounter, 1)

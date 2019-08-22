@@ -10,10 +10,10 @@ import (
 
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/insolar"
-	record "github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/insolar/record"
 )
 
-// IndexModifierMock implements IndexModifier
+// IndexModifierMock implements object.IndexModifier
 type IndexModifierMock struct {
 	t minimock.Tester
 
@@ -30,7 +30,7 @@ type IndexModifierMock struct {
 	UpdateLastKnownPulseMock          mIndexModifierMockUpdateLastKnownPulse
 }
 
-// NewIndexModifierMock returns a mock for IndexModifier
+// NewIndexModifierMock returns a mock for object.IndexModifier
 func NewIndexModifierMock(t minimock.Tester) *IndexModifierMock {
 	m := &IndexModifierMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -154,7 +154,7 @@ func (e *IndexModifierMockSetIndexExpectation) Then(err error) *IndexModifierMoc
 	return e.mock
 }
 
-// SetIndex implements IndexModifier
+// SetIndex implements object.IndexModifier
 func (mmSetIndex *IndexModifierMock) SetIndex(ctx context.Context, pn insolar.PulseNumber, index record.Index) (err error) {
 	mm_atomic.AddUint64(&mmSetIndex.beforeSetIndexCounter, 1)
 	defer mm_atomic.AddUint64(&mmSetIndex.afterSetIndexCounter, 1)
@@ -370,7 +370,7 @@ func (e *IndexModifierMockUpdateLastKnownPulseExpectation) Then(err error) *Inde
 	return e.mock
 }
 
-// UpdateLastKnownPulse implements IndexModifier
+// UpdateLastKnownPulse implements object.IndexModifier
 func (mmUpdateLastKnownPulse *IndexModifierMock) UpdateLastKnownPulse(ctx context.Context, pn insolar.PulseNumber) (err error) {
 	mm_atomic.AddUint64(&mmUpdateLastKnownPulse.beforeUpdateLastKnownPulseCounter, 1)
 	defer mm_atomic.AddUint64(&mmUpdateLastKnownPulse.afterUpdateLastKnownPulseCounter, 1)
