@@ -20,11 +20,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/testutils"
-
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/testutils"
 )
 
 func TestFlag(t *testing.T) {

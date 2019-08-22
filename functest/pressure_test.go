@@ -22,9 +22,9 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/insolar/insolar/testutils"
-
 	"github.com/stretchr/testify/require"
+
+	"github.com/insolar/insolar/testutils"
 )
 
 func TestPressureOnSystem(t *testing.T) {
