@@ -16,17 +16,13 @@ jobs:
     - name: Check out code into the Go module directory
       uses: actions/checkout@v1
 
-    - name: Install tools
-      run: make install-deps
-
     - name: Get dependencies
-      run: make pre-build
+      run: |
+        go get -v -t -d ./...
+        if [ -f Gopkg.toml ]; then
+            curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+            dep ensure
+        fi
 
     - name: Build
-      run: make build
-
-    - name: Run units
-      run: make ci_test_unit
-
-    - name: Run funcs
-      run: make ci_test_func
+      run: go build -v .
