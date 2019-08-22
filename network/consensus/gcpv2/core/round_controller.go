@@ -392,20 +392,21 @@ func (r *PhasedRoundController) handlePulseChange(ctx context.Context, pn pulse.
 		epn = c.GetExpectedPulseNumber()
 	}
 
+	isFastForward := false
 	switch {
 	case pn == epn:
-		panic("illegal state")
+		break
 	case pn < epn:
 		r.roundWorker.onUnexpectedPulse(pn)
 		return api.KeepRound, origErr
+	default:
+		_, pd := c.GetNearestPulseData()
+		if !pulseControl.CanFastForwardPulse(epn, pn, pd) {
+			r.roundWorker.onUnexpectedPulse(pn)
+			return api.KeepRound, origErr
+		}
+		isFastForward = !epn.IsUnknown()
 	}
-
-	_, pd := c.GetNearestPulseData()
-	if !pulseControl.CanFastForwardPulse(epn, pn, pd) {
-		r.roundWorker.onUnexpectedPulse(pn)
-		return api.KeepRound, origErr
-	}
-	isFastForward := !epn.IsUnknown()
 
 	if r.roundWorker.IsRunning() {
 		endOfConsensus := r.realm.GetStartedAt().Add(r.realm.timings.EndOfConsensus)
@@ -414,7 +415,6 @@ func (r *PhasedRoundController) handlePulseChange(ctx context.Context, pn pulse.
 		}
 
 		inslogger.FromContext(ctx).Debug("stopping round by changed pulse")
-		r.StopConsensusRound()
 	} else if c.GetCensusState() != census.PrimingCensus {
 		// priming is provided externally, so don't check it
 		latest, _ := r.chronicle.GetLatestCensus()
