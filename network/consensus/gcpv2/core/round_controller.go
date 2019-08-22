@@ -290,8 +290,10 @@ func (r *PhasedRoundController) _startFullRealm(prepWasSuccessful bool) {
 		} else {
 			/* Auto-activation of the prepared lastCensus */
 			expCensus := chronicle.GetExpectedCensus()
+			if expCensus.GetPulseNumber() != pd.PulseNumber {
+				r.realm.unsafeRound = true
+			}
 			lastCensus = expCensus.MakeActive(pd)
-			r.realm.unsafeRound = chronicle.GetActiveCensus().GetExpectedPulseNumber() != pd.PulseNumber
 		}
 	}
 
@@ -311,14 +313,6 @@ func (r *PhasedRoundController) _startFullRealm(prepWasSuccessful bool) {
 
 	r.realm.start(active, active.GetOnlinePopulation(), r.bundle)
 	r.roundWorker.SetTimeout(endOf)
-}
-
-type briefTime struct {
-	time.Time
-}
-
-func (v briefTime) String() string {
-	return fmt.Sprintf("%02d:%02d:%02d.%09d", v.Time.Hour(), v.Time.Minute(), v.Time.Second(), v.Time.Nanosecond())
 }
 
 func (r *PhasedRoundController) ensureStarted() bool {
