@@ -97,7 +97,7 @@ func Run(cb func() int) int {
 var info *requester.InfoResponse
 var Root User
 var MigrationAdmin User
-var MigrationDaemons [insolar.GenesisAmountActiveMigrationDaemonMembers]User
+var MigrationDaemons [insolar.GenesisAmountActiveMigrationDaemonMembers]*User
 
 type User struct {
 	Ref     string
@@ -202,7 +202,7 @@ func loadAllMembersKeys() error {
 		if err != nil {
 			return err
 		}
-		MigrationDaemons[i] = md
+		MigrationDaemons[i] = &md
 	}
 
 	return nil
@@ -407,9 +407,6 @@ func setup() error {
 	fmt.Println("[ setup ] references successfully received")
 	Root.Ref = info.RootMember
 	MigrationAdmin.Ref = info.MigrationAdminMember
-	for i := range MigrationDaemons {
-		MigrationDaemons[i].Ref = info.MigrationDaemonMembers[i]
-	}
 
 	//Contracts = make(map[string]*contractInfo)
 

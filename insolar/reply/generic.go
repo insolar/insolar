@@ -60,8 +60,6 @@ func (e *Error) Error() error {
 		return insolar.ErrHotDataTimeout
 	case ErrNoPendingRequests:
 		return insolar.ErrNoPendingRequest
-	case ErrTooManyPendingRequests:
-		return insolar.ErrTooManyPendingRequests
 	case FlowCancelled:
 		return flow.ErrCancelled
 	}

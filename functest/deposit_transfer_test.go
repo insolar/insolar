@@ -80,7 +80,7 @@ func TestDepositTransferAnotherTx(t *testing.T) {
 	member := fullMigration(t, "Eth_TxHash_test")
 
 	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, member,
-		"deposit.transfer", map[string]interface{}{"amount": "100", "ethTxHash": "Eth_TxHash_foo"})
+		"deposit.transfer", map[string]interface{}{"amount": "100", "ethTxHash": "Eth_TxHash_testNovalid"})
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "can't find deposit")
 }
@@ -97,12 +97,12 @@ func TestDepositTransferWrongValueAmount(t *testing.T) {
 func TestDepositTransferNotEnoughConfirms(t *testing.T) {
 	migrationAddress := testutils.RandomString()
 	member := createMigrationMemberForMA(t, migrationAddress)
+	_ = migrate(t, member.Ref, "1000", "Eth_TxHash_test", migrationAddress, 2)
 
-	migrate(t, member.Ref, "1000", "Eth_TxHash_test", migrationAddress, 2)
-	migrate(t, member.Ref, "1000", "Eth_TxHash_test", migrationAddress, 0)
+	_ = migrate(t, member.Ref, "1000", "Eth_TxHash_test", migrationAddress, 0)
 
 	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, member,
 		"deposit.transfer", map[string]interface{}{"amount": "100", "ethTxHash": "Eth_TxHash_test"})
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "number of confirms is less then 3")
+	require.Contains(t, err.Error(), "not enough balance for transfer")
 }

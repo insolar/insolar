@@ -19,14 +19,20 @@
 package functest
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
 	"github.com/insolar/insolar/testutils/launchnet"
+	"github.com/pkg/errors"
 )
 
 func TestMain(m *testing.M) {
 	os.Exit(launchnet.Run(func() int {
+		err := setMigrationDaemonsRef()
+		if err != nil {
+			fmt.Println(errors.Wrap(err, "[ setup ] get reference daemons by public key failed ").Error())
+		}
 		return m.Run()
 	}))
 }

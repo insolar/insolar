@@ -95,7 +95,10 @@ func (p *HotObjects) Dep(
 }
 
 func (p *HotObjects) Proceed(ctx context.Context) error {
-	inslogger.FromContext(ctx).Debug("Get executor. pulse: ", p.drop.Pulse, " jet: ", p.drop.JetID.DebugString())
+	logger := inslogger.FromContext(ctx)
+	logger.Info("start hotObjects processing")
+
+	logger.Debug("get hots. pulse: ", p.drop.Pulse, " jet: ", p.drop.JetID.DebugString())
 
 	err := p.dep.drops.Set(ctx, p.drop)
 	if err == drop.ErrOverride {
@@ -111,10 +114,6 @@ func (p *HotObjects) Proceed(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to update jet tree")
 	}
-
-	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
-		"jet": p.jetID.DebugString(),
-	})
 
 	pendingNotifyPulse, err := p.dep.calculator.Backwards(ctx, flow.Pulse(ctx), pendingNotifyThreshold)
 	if err != nil {
@@ -148,17 +147,25 @@ func (p *HotObjects) Proceed(ctx context.Context) error {
 		go p.notifyPending(ctx, idx.ObjID, idx.Lifeline, pendingNotifyPulse.PulseNumber)
 	}
 
+	logger.Infof("before releasing jetFetcher for jet %s and pulse %s", p.jetID.DebugString(), p.pulse)
 	p.dep.jetFetcher.Release(ctx, p.jetID, p.pulse)
+
+	logger.Infof("before unlocking jetReleaser for jet %s and pulse %s", p.jetID.DebugString(), p.pulse)
 	err = p.dep.jetReleaser.Unlock(ctx, p.pulse, p.jetID)
 	if err != nil {
 		return errors.Wrap(err, "failed to release jets")
 	}
 
+	logger.Infof("jetFetcher and jetReleaser for jet %s and pulse %s are released", p.jetID.DebugString(), p.pulse)
+
 	p.sendConfirmationToHeavy(ctx, p.jetID, p.drop.Pulse, p.drop.Split)
+
+	logger.Infof("finish hotObjects processing")
 	return nil
 }
 
 func (p *HotObjects) sendConfirmationToHeavy(ctx context.Context, jetID insolar.JetID, pn insolar.PulseNumber, split bool) {
+	logger := inslogger.FromContext(ctx)
 	msg, err := payload.NewMessage(&payload.GotHotConfirmation{
 		JetID: jetID,
 		Pulse: pn,
@@ -166,11 +173,11 @@ func (p *HotObjects) sendConfirmationToHeavy(ctx context.Context, jetID insolar.
 	})
 
 	if err != nil {
-		inslogger.FromContext(ctx).Error("Can't create GotHotConfirmation message: ", err)
+		logger.Error("can't create GotHotConfirmation message: ", err)
 		return
 	}
 
-	inslogger.FromContext(ctx).Debug("Send hot confirmation to heavy. pulse: ", pn, " jet: ", p.drop.JetID.DebugString())
+	logger.Info("send hot confirmation to heavy. pulse: ", pn, " jet: ", p.drop.JetID.DebugString())
 
 	_, done := p.dep.sender.SendRole(ctx, msg, insolar.DynamicRoleHeavyExecutor, *insolar.NewReference(insolar.ID(jetID)))
 	done()

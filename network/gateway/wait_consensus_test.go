@@ -91,6 +91,7 @@ func TestWaitConsensus_ConsensusHappenedInETA(t *testing.T) {
 	})
 
 	waitConsensus := newWaitConsensus(&Base{})
+	assert.Equal(t, insolar.WaitConsensus, waitConsensus.GetState())
 	waitConsensus.Gatewayer = gatewayer
 	accessorMock := mock.NewPulseAccessorMock(mc)
 	accessorMock.GetPulseMock.Set(func(ctx context.Context, p1 insolar.PulseNumber) (p2 insolar.Pulse, err error) {
