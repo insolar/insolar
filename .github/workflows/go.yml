@@ -19,4 +19,4 @@ jobs:
     - name: goDEP
       run: make install-build-tools
     - name: ensure
-      run: dep ensure -v
+      run: /home/runner/go/bin/dep ensure -v
