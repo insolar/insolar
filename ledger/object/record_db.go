@@ -258,14 +258,15 @@ func setPosition(txn *badger.Txn, recID insolar.ID, position uint32) error {
 	return txn.Set(fullKey, recID.Bytes())
 }
 
-func (r *RecordDB) truncateRecordsHead(ctx context.Context, from printableKey, km keyMaker) error {
-	it := store.NewReadIterator(r.db.Backend(), from, false)
+func (r *RecordDB) truncateRecordsHead(ctx context.Context, from insolar.PulseNumber) error {
+	keyFrom := recordKey(*insolar.NewID(from, nil))
+	it := store.NewReadIterator(r.db.Backend(), keyFrom, false)
 	defer it.Close()
 
 	var hasKeys bool
 	for it.Next() {
 		hasKeys = true
-		key := km(it.Key())
+		key := newRecordKey(it.Key())
 
 		err := r.db.Delete(key)
 		if err != nil {
@@ -282,7 +283,7 @@ func (r *RecordDB) truncateRecordsHead(ctx context.Context, from printableKey, k
 	return nil
 }
 
-func (r *RecordDB) truncatePositionRecordHead(ctx context.Context, from printableKey, km keyMaker, prefix byte) error {
+func (r *RecordDB) truncatePositionRecordHead(ctx context.Context, from printableKey, prefix byte) error {
 	it := store.NewReadIterator(r.db.Backend(), from, false)
 	defer it.Close()
 
@@ -292,7 +293,7 @@ func (r *RecordDB) truncatePositionRecordHead(ctx context.Context, from printabl
 		if it.Key()[0] != prefix {
 			continue
 		}
-		key := km(it.Key())
+		key := makePositionKey(it.Key())
 
 		err := r.db.Delete(key)
 		if err != nil {
@@ -314,13 +315,7 @@ type printableKey interface {
 	String() string
 }
 
-type keyMaker func([]byte) printableKey
-
-func recordKeyMaker(raw []byte) printableKey {
-	return newRecordKey(raw)
-}
-
-func positionKeyMaker(raw []byte) printableKey {
+func makePositionKey(raw []byte) printableKey {
 	switch raw[0] {
 	case recordPositionKeyPrefix:
 		return newRecordPositionKeyFromBytes(raw)
@@ -334,15 +329,15 @@ func positionKeyMaker(raw []byte) printableKey {
 // TruncateHead remove all records after lastPulse
 func (r *RecordDB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
 
-	if err := r.truncateRecordsHead(ctx, recordKey(*insolar.NewID(from, nil)), recordKeyMaker); err != nil {
+	if err := r.truncateRecordsHead(ctx, from); err != nil {
 		return errors.Wrap(err, "failed to truncate records head")
 	}
 
-	if err := r.truncatePositionRecordHead(ctx, recordPositionKey{pn: from}, positionKeyMaker, recordPositionKeyPrefix); err != nil {
+	if err := r.truncatePositionRecordHead(ctx, recordPositionKey{pn: from}, recordPositionKeyPrefix); err != nil {
 		return errors.Wrap(err, "failed to truncate record positions head")
 	}
 
-	if err := r.truncatePositionRecordHead(ctx, lastKnownRecordPositionKey{pn: from}, positionKeyMaker, lastKnownRecordPositionKeyPrefix); err != nil {
+	if err := r.truncatePositionRecordHead(ctx, lastKnownRecordPositionKey{pn: from}, lastKnownRecordPositionKeyPrefix); err != nil {
 		return errors.Wrap(err, "failed to truncate last known record positions head")
 	}
 
