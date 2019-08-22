@@ -24,7 +24,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/insolar/insolar/insolar/utils"
+	"github.com/insolar/insolar/testutils"
 )
 
 func TestPressureOnSystem(t *testing.T) {
@@ -62,7 +62,7 @@ func (c *One) Dec() (int, error) {
 	protoRef := uploadContractOnce(t, "testPressure", contractCode)
 
 	t.Run("one object, sequential calls", func(t *testing.T) {
-		syncT := &utils.SyncT{T: t}
+		syncT := &testutils.SyncT{T: t}
 
 		objectRef := callConstructor(syncT, protoRef, "New")
 
@@ -75,7 +75,7 @@ func (c *One) Dec() (int, error) {
 	})
 
 	t.Run("one object, parallel calls", func(t *testing.T) {
-		syncT := &utils.SyncT{T: t}
+		syncT := &testutils.SyncT{T: t}
 
 		objectRef := callConstructor(syncT, protoRef, "New")
 
@@ -94,7 +94,7 @@ func (c *One) Dec() (int, error) {
 	})
 
 	t.Run("ten objects, sequential calls", func(t *testing.T) {
-		syncT := &utils.SyncT{T: t}
+		syncT := &testutils.SyncT{T: t}
 
 		wg := sync.WaitGroup{}
 		wg.Add(10)
@@ -114,7 +114,7 @@ func (c *One) Dec() (int, error) {
 	})
 
 	t.Run("ten objects, parallel calls", func(t *testing.T) {
-		syncT := &utils.SyncT{T: t}
+		syncT := &testutils.SyncT{T: t}
 
 		wg := sync.WaitGroup{}
 		wg.Add(100)

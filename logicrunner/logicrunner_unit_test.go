@@ -324,7 +324,7 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 
 	suite.jc.IsMeAuthorizedNowMock.Return(true, nil)
 
-	syncT := &utils.SyncT{T: suite.T()}
+	syncT := &testutils.SyncT{T: suite.T()}
 	meRef := gen.Reference()
 	nodeMock := network.NewNetworkNodeMock(syncT)
 	nodeMock.IDMock.Return(meRef)
