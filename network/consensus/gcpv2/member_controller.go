@@ -154,7 +154,7 @@ func (h *ConsensusMemberController) discardInternal(terminateMember bool, toBeDi
 		h.prevRound = nil
 		h.isTerminated = true
 	} else {
-		h.prevRound = round
+		h.prevRound = nil // round
 	}
 
 	go round.StopConsensusRound()

@@ -52,7 +52,9 @@ package core
 
 import (
 	"context"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/capacity"
+	"runtime/debug"
 	"sync/atomic"
 	"time"
 
@@ -194,7 +196,15 @@ func (p *RoundStateMachineWorker) preInit(ctx context.Context, upstream api.Upst
 
 	p.asyncCmd = make(chan func(), 10)
 	p.syncCmd = make(chan func())
-	p.ctx, p.cancelFn = context.WithCancel(ctx)
+	var cancelFn func()
+	p.ctx, cancelFn = context.WithCancel(ctx)
+	p.cancelFn = func() {
+		logger := inslogger.FromContext(p.ctx)
+		if logger.Is(insolar.DebugLevel) {
+			logger.Debugf("round cancelled: %v", string(debug.Stack()))
+		}
+		cancelFn()
+	}
 	return p.ctx
 }
 
