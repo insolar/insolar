@@ -40,7 +40,7 @@ func TestGetRequest(t *testing.T) {
 
 func TestWrongUrl(t *testing.T) {
 	jsonValue, _ := json.Marshal(postParams{})
-	testURL := launchnet.HOST + "/not_api"
+	testURL := launchnet.HOST + launchnet.AdminPort + "/not_api"
 	postResp, err := http.Post(testURL, "application/json", bytes.NewBuffer(jsonValue))
 	defer postResp.Body.Close()
 	require.NoError(t, err)
