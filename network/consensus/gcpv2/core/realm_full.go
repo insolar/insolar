@@ -596,6 +596,14 @@ func (r *FullRealm) finishRound(ctx context.Context, builder census.Builder, csh
 		expected = builder.BuildAsBroken(csh).MakeExpected()
 	}
 
+	if expected.GetOnlinePopulation().GetLocalProfile().IsJoiner() {
+		panic("DEBUG FAIL-FAST: local remains as joiner")
+	}
+
+	if expected.GetOnlinePopulation().GetLocalProfile().GetOpMode().IsMistrustful() {
+		panic("DEBUG FAIL-FAST: local was marked as fraud suspect")
+	}
+
 	isNextEphemeral := false
 	if r.ephemeralFeeder != nil {
 		if r.ephemeralFeeder.CanStopEphemeralByCensus(expected) {

@@ -107,6 +107,8 @@ func NewPhasedRoundController(strategy RoundStrategy, chronicle api.ConsensusChr
 	controlFeeder api.ConsensusControlFeeder, candidateFeeder api.CandidateControlFeeder, ephemeralFeeder api.EphemeralControlFeeder,
 	prevPulseRound api.RoundController) *PhasedRoundController {
 
+	prevPulseRound = nil // TODO fix
+
 	r := &PhasedRoundController{chronicle: chronicle, prevPulseRound: prevPulseRound, bundle: bundle}
 
 	latestCensus, _ := chronicle.GetLatestCensus()
@@ -182,7 +184,7 @@ func (r *PhasedRoundController) PrepareConsensusRound(upstream api.UpstreamContr
 	},
 		// both further handlers MUST not use round's lock inside
 		r.onConsensusStopper,
-		r.onConsensusFinished,
+		nil, // r.onConsensusFinished,
 	)
 
 	r.realm.coreRealm.pollingWorker.Start(r.realm.roundContext, 100*time.Millisecond)
@@ -190,42 +192,12 @@ func (r *PhasedRoundController) PrepareConsensusRound(upstream api.UpstreamContr
 }
 
 func (r *PhasedRoundController) onConsensusStopper() {
-	if !r.realm.census.IsActive() {
-		inslogger.FromContext(r.realm.roundContext).Warnf(
-			"Stopping previous consensus round: self={%v}, ephemeral=%v, bundle=%v, census=%+v", r.realm.GetLocalProfile(),
-			r.realm.ephemeralFeeder != nil, r.bundle, r.realm.census)
-		return
-	}
-
-	latest, _ := r.chronicle.GetLatestCensus()
 
 	inslogger.FromContext(r.realm.roundContext).Warnf(
-		"Stopping consensus round: self={%v}, ephemeral=%v, bundle=%v, roundCensus=%v, latestCensus=%+v", r.realm.GetLocalProfile(),
-		r.realm.ephemeralFeeder != nil, r.bundle, r.realm.census, latest)
-
-	if latest.GetOnlinePopulation().GetLocalProfile().IsJoiner() {
-		panic("DEBUG FAIL-FAST: local remains as joiner")
-	}
-
-	if r.chronicle.GetExpectedCensus() == nil {
-		panic("DEBUG FAIL-FAST: consensus didn't finish")
-	}
+		"Stopping consensus round: self={%v}, ephemeral=%v, bundle=%v, census=%+v", r.realm.GetLocalProfile(),
+		r.realm.ephemeralFeeder != nil, r.bundle, r.realm.census)
 
 	// TODO print purgatory
-}
-
-func (r *PhasedRoundController) onConsensusFinished() {
-	r.rw.Lock()
-	defer r.rw.Unlock()
-	r._onConsensusFinished()
-}
-
-func (r *PhasedRoundController) _onConsensusFinished() {
-	// prevents memory leak and disallows older controller to handle messages after a consensus is done
-	if r.prevPulseRound != nil {
-		r.prevPulseRound.StopConsensusRound()
-	}
-	r.prevPulseRound = nil
 }
 
 func (r *PhasedRoundController) _setStartedAt() {
@@ -235,12 +207,7 @@ func (r *PhasedRoundController) _setStartedAt() {
 }
 
 func (r *PhasedRoundController) StopConsensusRound() {
-	r.rw.Lock()
-	defer r.rw.Unlock()
 	r.roundWorker.Stop()
-	r._onConsensusFinished() // double-check, just to be on a safe side
-	// TODO should allow some time to handover a broken population?
-	// TODO build a one-node population for Suspected mode
 }
 
 func (r *PhasedRoundController) IsRunning() bool {
@@ -271,14 +238,23 @@ func (r *PhasedRoundController) _startFullRealm(prepWasSuccessful bool) {
 
 	r.roundWorker.OnFullRoundStarting()
 
+	//if latest.GetOnlinePopulation().GetLocalProfile().IsJoiner() {
+	//	panic("DEBUG FAIL-FAST: local remains as joiner")
+	//}
+	//
+	//if r.chronicle.GetExpectedCensus() == nil {
+	//	panic("DEBUG FAIL-FAST: consensus didn't finish")
+	//}
+
 	chronicle := r.chronicle
-	lastCensus, _ := chronicle.GetLatestCensus()
+	lastCensus, isLastExpected := chronicle.GetLatestCensus()
 	pd := r.realm.pulseData
 
+	var active census.Active
 	if lastCensus.GetCensusState() == census.PrimingCensus {
 		/* This is the priming census */
 		priming := lastCensus.GetMandateRegistry().GetPrimingCloudHash()
-		lastCensus.(census.Prime).BuildCopy(pd, priming, priming).MakeExpected().MakeActive(pd)
+		active = lastCensus.(census.Prime).BuildCopy(pd, priming, priming).MakeExpected().MakeActive(pd)
 	} else {
 		// TODO restore to exact equality for expected population!!!!!
 		if !lastCensus.GetPulseNumber().IsUnknownOrEqualTo(pd.PulseNumber) {
@@ -286,11 +262,16 @@ func (r *PhasedRoundController) _startFullRealm(prepWasSuccessful bool) {
 			panic(fmt.Sprintf("illegal state - pulse number of expected census (%v) and of the realm (%v) are mismatched for %v",
 				lastCensus.GetPulseNumber(), pd.PulseNumber, r.realm.GetSelfNodeID()))
 		}
-		if lastCensus.IsActive() {
-			r.realm.unsafeRound = true
+		if !isLastExpected {
+			if lastCensus.GetOnlinePopulation().GetLocalProfile().IsJoiner() {
+				panic("DEBUG FAIL-FAST: local remains as joiner")
+			}
+			panic("DEBUG FAIL-FAST: prev consensus didn't finish")
+			//r.realm.unsafeRound = true
+			//active = lastCensus.(census.Active)
 		} else {
 			/* Auto-activation of the prepared lastCensus */
-			expCensus := chronicle.GetExpectedCensus()
+			expCensus := lastCensus.(census.Expected)
 			if expCensus.GetPulseNumber() != pd.PulseNumber {
 				inslogger.FromContext(r.realm.roundContext).Debugf("Unsafe round: expected=%d, pn=%d", expCensus.GetPulseNumber(), pd.PulseNumber)
 				r.realm.unsafeRound = true
@@ -298,11 +279,10 @@ func (r *PhasedRoundController) _startFullRealm(prepWasSuccessful bool) {
 				inslogger.FromContext(r.realm.roundContext).Debugf("Unsafe round: prev.expected=%d, pn=%d", expCensus.GetPrevious().GetExpectedPulseNumber(), pd.PulseNumber)
 				r.realm.unsafeRound = true
 			}
-			lastCensus = expCensus.MakeActive(pd)
+			active = expCensus.MakeActive(pd)
 		}
 	}
 
-	active := chronicle.GetActiveCensus()
 	if r.realm.ephemeralFeeder != nil && !active.GetPulseData().IsFromEphemeral() {
 		r.realm.ephemeralFeeder.OnEphemeralCancelled()
 		r.realm.ephemeralFeeder = nil
