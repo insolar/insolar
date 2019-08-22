@@ -28,7 +28,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_IDLockTheSame(t *testing.T) {
+func TestIdLocker_Same(t *testing.T) {
 	tl := newtestlocker()
 	id := insolar.ID{0x0A}
 
@@ -61,7 +61,7 @@ func TestIdLocker_Lock_PulseDoesntMatter(t *testing.T) {
 	}()
 	select {
 	case <-end:
-	case <-time.After(5 * time.Second):
+	case <-time.After(5 * time.Minute):
 		// Different record.ID should not lock each other.
 		// 5s should be enough for any slow test environment.
 		t.Fatalf(
@@ -71,7 +71,7 @@ func TestIdLocker_Lock_PulseDoesntMatter(t *testing.T) {
 	}
 }
 
-func Test_IDLockDifferent(t *testing.T) {
+func TestIdLocker_Different(t *testing.T) {
 	tl := newtestlocker()
 	id1 := *insolar.NewID(0, []byte{0x0A})
 	id2 := *insolar.NewID(0, []byte{0x0B})
@@ -85,7 +85,7 @@ func Test_IDLockDifferent(t *testing.T) {
 	}()
 	select {
 	case <-end:
-	case <-time.After(5 * time.Second):
+	case <-time.After(5 * time.Minute):
 		// Different record.ID should not lock each other.
 		// 5s should be enough for any slow test environment.
 		t.Fatalf(

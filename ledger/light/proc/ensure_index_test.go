@@ -13,6 +13,7 @@ import (
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/stretchr/testify/assert"
@@ -24,16 +25,18 @@ func TestEnsureIndex_Proceed(t *testing.T) {
 	mc := minimock.NewController(t)
 
 	var (
-		locker  *object.IndexLockerMock
-		indexes *object.MemoryIndexStorageMock
-		cord    *jet.CoordinatorMock
-		sender  *bus.SenderMock
+		locker        *object.IndexLockerMock
+		indexes       *object.MemoryIndexStorageMock
+		cord          *jet.CoordinatorMock
+		sender        *bus.SenderMock
+		writeAccessor *executor.WriteAccessorMock
 	)
 	setup := func() {
 		locker = object.NewIndexLockerMock(mc)
 		indexes = object.NewMemoryIndexStorageMock(mc)
 		cord = jet.NewCoordinatorMock(mc)
 		sender = bus.NewSenderMock(mc)
+		writeAccessor = executor.NewWriteAccessorMock(mc)
 
 		locker.LockMock.Return()
 		locker.UnlockMock.Return()
@@ -54,7 +57,7 @@ func TestEnsureIndex_Proceed(t *testing.T) {
 		sender.SendTargetMock.Return(reps, func() {})
 
 		p := proc.NewEnsureIndex(gen.ID(), gen.JetID(), payload.Meta{}, insolar.FirstPulseNumber)
-		p.Dep(locker, indexes, cord, sender)
+		p.Dep(locker, indexes, cord, sender, writeAccessor)
 		err := p.Proceed(ctx)
 		assert.Error(t, err)
 		coded, ok := err.(*payload.CodedError)
@@ -83,7 +86,7 @@ func TestEnsureIndex_Proceed(t *testing.T) {
 		sender.SendTargetMock.Return(reps, func() {})
 
 		p := proc.NewEnsureIndex(objectID, gen.JetID(), payload.Meta{}, insolar.FirstPulseNumber)
-		p.Dep(locker, indexes, cord, sender)
+		p.Dep(locker, indexes, cord, sender, writeAccessor)
 		err := p.Proceed(ctx)
 		assert.Error(t, err)
 		coded, ok := err.(*payload.CodedError)

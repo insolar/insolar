@@ -110,7 +110,7 @@ type Params struct {
 	CallParams interface{} `json:"callParams,omitempty"`
 	Reference  string      `json:"reference"`
 	PublicKey  string      `json:"publicKey"`
-	LogLevel   string      `json:"logLevel,omitempty"`
+	LogLevel   interface{} `json:"logLevel,omitempty"`
 	Test       string      `json:"test,omitempty"`
 }
 

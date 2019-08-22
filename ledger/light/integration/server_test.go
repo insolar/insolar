@@ -242,7 +242,7 @@ func NewServer(
 			filamentCalculator,
 			Coordinator,
 			jetFetcher,
-			CryptoScheme.ReferenceHasher(),
+			CryptoScheme,
 			ServerBus,
 		)
 

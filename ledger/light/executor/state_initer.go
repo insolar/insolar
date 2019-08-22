@@ -146,7 +146,7 @@ func (s *StateIniterDefault) heavy(pn insolar.PulseNumber) (insolar.Reference, e
 		return *insolar.NewEmptyReference(), errors.Wrap(err, "failed to calculate heavy node for pulse")
 	}
 	if len(candidates) == 0 {
-		return *insolar.NewEmptyReference(), errors.Wrap(err, "failed to calculate heavy node for pulse")
+		return *insolar.NewEmptyReference(), errors.New("failed to calculate heavy node for pulse")
 	}
 	return candidates[0].ID, nil
 }
@@ -198,6 +198,10 @@ func (s *StateIniterDefault) loadStateRetry(
 		"prev_pulse":    prevPulse.PulseNumber,
 		"network_start": state.NetworkStart,
 	}).Debug("received initial state from heavy")
+
+	if len(state.JetIDs) < len(state.Drops) {
+		return nil, errors.New("Jets count must be greater or equal than drops count")
+	}
 
 	// If not network start, we should wait for other lights to give us data.
 	if !state.NetworkStart {

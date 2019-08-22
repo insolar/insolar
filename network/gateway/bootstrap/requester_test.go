@@ -77,12 +77,7 @@ import (
 
 func TestRequester_Authorize(t *testing.T) {
 	t.Skip("Until merge")
-
 	cert := GetTestCertificate()
-
-	d := cert.GetDiscoveryNodes()[0]
-	h, err := host.NewHostN(d.GetHost(), *d.GetNodeRef())
-	assert.NoError(t, err)
 
 	options := network.ConfigureOptions(configuration.NewConfiguration())
 
@@ -92,7 +87,7 @@ func TestRequester_Authorize(t *testing.T) {
 
 	r := NewRequester(options)
 	r.(*requester).CryptographyService = cs
-	resp, err := r.Authorize(context.Background(), h, cert)
+	resp, err := r.Authorize(context.Background(), cert)
 	assert.NoError(t, err)
 	assert.NotNil(t, resp)
 }
