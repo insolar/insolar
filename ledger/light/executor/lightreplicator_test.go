@@ -96,8 +96,8 @@ func Test_NotifyAboutPulse(t *testing.T) {
 	})
 
 	indexAccessor := object.NewIndexAccessorMock(mc)
-	indexAccessor.ForPulseMock.Set(func(_ context.Context, _ insolar.PulseNumber) []record.Index {
-		return expectIndexes
+	indexAccessor.ForPulseMock.Set(func(_ context.Context, _ insolar.PulseNumber) ([]record.Index, error) {
+		return expectIndexes, nil
 	})
 
 	jetAccessor := jet.NewAccessorMock(mc)

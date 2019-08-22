@@ -17,10 +17,12 @@
 package object
 
 import (
+	"bytes"
 	"context"
 	"io/ioutil"
 	"math/rand"
 	"os"
+	"sort"
 	"testing"
 	"time"
 
@@ -29,9 +31,12 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/store"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/testutils/testbadger"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+const indexCount = 5
 
 func TestIndexKey(t *testing.T) {
 	t.Parallel()
@@ -53,7 +58,9 @@ func TestIndexDB_DontLooseIndexAfterTruncate(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	assert.NoError(t, err)
 
-	dbMock, err := store.NewBadgerDB(tmpdir)
+	ops := testbadger.BadgerDefaultOptions(tmpdir)
+	dbMock, err := store.NewBadgerDB(ops)
+	require.NoError(t, err)
 	defer dbMock.Stop(ctx)
 	require.NoError(t, err)
 
@@ -99,13 +106,15 @@ func TestIndexDB_TruncateHead(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	assert.NoError(t, err)
 
-	dbMock, err := store.NewBadgerDB(tmpdir)
+	ops := testbadger.BadgerDefaultOptions(tmpdir)
+	dbMock, err := store.NewBadgerDB(ops)
+	require.NoError(t, err)
 	defer dbMock.Stop(ctx)
 	require.NoError(t, err)
 
 	indexStore := NewIndexDB(dbMock, NewRecordDB(dbMock))
 
-	numElements := 100
+	numElements := 10
 
 	// it's used for writing pulses in random order to db
 	indexes := make([]int, numElements)
@@ -124,16 +133,17 @@ func TestIndexDB_TruncateHead(t *testing.T) {
 		bucket := record.Index{}
 
 		bucket.ObjID = objects[idx]
-		indexStore.SetIndex(ctx, pulse, bucket)
+		err := indexStore.SetIndex(ctx, pulse, bucket)
+		require.NoError(t, err)
 
-		for i := 0; i < 5; i++ {
+		for i := 0; i < indexCount; i++ {
 			bucket := record.Index{}
 
 			bucket.ObjID = gen.ID()
-			indexStore.SetIndex(ctx, pulse, bucket)
+			err := indexStore.SetIndex(ctx, pulse, bucket)
+			require.NoError(t, err)
 		}
 
-		require.NoError(t, err)
 	}
 
 	for i := 0; i < numElements; i++ {
@@ -170,7 +180,7 @@ func TestDBIndexStorage_ForID(t *testing.T) {
 		defer os.RemoveAll(tmpdir)
 		require.NoError(t, err)
 
-		db, err := store.NewBadgerDB(tmpdir)
+		db, err := store.NewBadgerDB(testbadger.BadgerDefaultOptions(tmpdir))
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 		storage := NewIndexDB(db, NewRecordDB(db))
@@ -179,6 +189,72 @@ func TestDBIndexStorage_ForID(t *testing.T) {
 		_, err = storage.ForID(ctx, pn, id)
 
 		assert.Equal(t, ErrIndexNotFound, err)
+	})
+}
+
+func TestDBIndexStorage_ForPulse(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+	pn := gen.PulseNumber()
+
+	t.Run("empty index storage", func(t *testing.T) {
+		t.Parallel()
+
+		tmpdir, err := ioutil.TempDir("", "bdb-test-")
+		defer os.RemoveAll(tmpdir)
+		require.NoError(t, err)
+
+		db, err := store.NewBadgerDB(testbadger.BadgerDefaultOptions(tmpdir))
+		require.NoError(t, err)
+		defer db.Stop(context.Background())
+		storage := NewIndexDB(db, nil)
+
+		indexes, err := storage.ForPulse(ctx, pn)
+		require.Error(t, err)
+		require.Equal(t, err, ErrIndexNotFound)
+		require.Nil(t, indexes)
+	})
+
+	t.Run("index storage with couple values", func(t *testing.T) {
+		t.Parallel()
+
+		tmpdir, err := ioutil.TempDir("", "bdb-test-")
+		defer os.RemoveAll(tmpdir)
+		require.NoError(t, err)
+
+		db, err := store.NewBadgerDB(testbadger.BadgerDefaultOptions(tmpdir))
+		require.NoError(t, err)
+		defer db.Stop(context.Background())
+		storage := NewIndexDB(db, nil)
+
+		var indexes []record.Index
+		for i := 0; i < indexCount; i++ {
+			indexes = append(indexes, record.Index{ObjID: gen.ID()})
+			err = storage.SetIndex(ctx, pn, indexes[i])
+			require.NoError(t, err)
+		}
+
+		realIndexes, err := storage.ForPulse(ctx, pn)
+		require.NoError(t, err)
+		require.Equal(t, indexCount, len(indexes))
+
+		// Sort indexes for proper compare
+		// For now badger iterator already sorted by key but this behavior can change
+		sortIndexes := func(slice []record.Index) {
+			cmp := func(i, j int) bool {
+				cmp := bytes.Compare(slice[i].ObjID.Bytes(), slice[j].ObjID.Bytes())
+				return cmp < 0
+			}
+			sort.Slice(slice, cmp)
+		}
+
+		sortIndexes(realIndexes)
+		sortIndexes(indexes)
+
+		for i := 0; i < indexCount; i++ {
+			require.Equal(t, indexes[i], realIndexes[i])
+		}
 	})
 }
 
@@ -201,9 +277,11 @@ func TestDBIndex_SetBucket(t *testing.T) {
 		defer os.RemoveAll(tmpdir)
 		require.NoError(t, err)
 
-		db, err := store.NewBadgerDB(tmpdir)
+		ops := testbadger.BadgerDefaultOptions(tmpdir)
+		db, err := store.NewBadgerDB(ops)
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
+
 		index := NewIndexDB(db, NewRecordDB(db))
 
 		err = index.SetIndex(ctx, pn, buck)
@@ -224,7 +302,7 @@ func TestDBIndex_SetBucket(t *testing.T) {
 		defer os.RemoveAll(tmpdir)
 		require.NoError(t, err)
 
-		db, err := store.NewBadgerDB(tmpdir)
+		db, err := store.NewBadgerDB(testbadger.BadgerDefaultOptions(tmpdir))
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 		index := NewIndexDB(db, NewRecordDB(db))
@@ -259,7 +337,8 @@ func TestIndexDB_FetchFilament(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	db, err := store.NewBadgerDB(tmpdir)
+	ops := testbadger.BadgerDefaultOptions(tmpdir)
+	db, err := store.NewBadgerDB(ops)
 	require.NoError(t, err)
 	defer db.Stop(context.Background())
 	recordStorage := NewRecordDB(db)
@@ -313,7 +392,7 @@ func TestIndexDB_NextFilament(t *testing.T) {
 		defer os.RemoveAll(tmpdir)
 		require.NoError(t, err)
 
-		db, err := store.NewBadgerDB(tmpdir)
+		db, err := store.NewBadgerDB(testbadger.BadgerDefaultOptions(tmpdir))
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 		recordStorage := NewRecordDB(db)
@@ -343,7 +422,7 @@ func TestIndexDB_NextFilament(t *testing.T) {
 		defer os.RemoveAll(tmpdir)
 		require.NoError(t, err)
 
-		db, err := store.NewBadgerDB(tmpdir)
+		db, err := store.NewBadgerDB(testbadger.BadgerDefaultOptions(tmpdir))
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 		recordStorage := NewRecordDB(db)
@@ -369,7 +448,7 @@ func TestIndexDB_NextFilament(t *testing.T) {
 		defer os.RemoveAll(tmpdir)
 		require.NoError(t, err)
 
-		db, err := store.NewBadgerDB(tmpdir)
+		db, err := store.NewBadgerDB(testbadger.BadgerDefaultOptions(tmpdir))
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 		index := NewIndexDB(db, NewRecordDB(db))
@@ -393,7 +472,7 @@ func TestIndexDB_Records(t *testing.T) {
 		defer os.RemoveAll(tmpdir)
 		require.NoError(t, err)
 
-		db, err := store.NewBadgerDB(tmpdir)
+		db, err := store.NewBadgerDB(testbadger.BadgerDefaultOptions(tmpdir))
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 		index := NewIndexDB(db, NewRecordDB(db))
@@ -409,7 +488,7 @@ func TestIndexDB_Records(t *testing.T) {
 		defer os.RemoveAll(tmpdir)
 		require.NoError(t, err)
 
-		db, err := store.NewBadgerDB(tmpdir)
+		db, err := store.NewBadgerDB(testbadger.BadgerDefaultOptions(tmpdir))
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 		index := NewIndexDB(db, NewRecordDB(db))

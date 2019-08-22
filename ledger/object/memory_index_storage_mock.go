@@ -10,7 +10,7 @@ import (
 
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/insolar"
-	record "github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/insolar/record"
 )
 
 // MemoryIndexStorageMock implements MemoryIndexStorage
@@ -23,7 +23,7 @@ type MemoryIndexStorageMock struct {
 	beforeForIDCounter uint64
 	ForIDMock          mMemoryIndexStorageMockForID
 
-	funcForPulse          func(ctx context.Context, pn insolar.PulseNumber) (ia1 []record.Index)
+	funcForPulse          func(ctx context.Context, pn insolar.PulseNumber) (ia1 []record.Index, err error)
 	inspectFuncForPulse   func(ctx context.Context, pn insolar.PulseNumber)
 	afterForPulseCounter  uint64
 	beforeForPulseCounter uint64
@@ -299,6 +299,7 @@ type MemoryIndexStorageMockForPulseParams struct {
 // MemoryIndexStorageMockForPulseResults contains results of the MemoryIndexStorage.ForPulse
 type MemoryIndexStorageMockForPulseResults struct {
 	ia1 []record.Index
+	err error
 }
 
 // Expect sets up expected params for MemoryIndexStorage.ForPulse
@@ -333,7 +334,7 @@ func (mmForPulse *mMemoryIndexStorageMockForPulse) Inspect(f func(ctx context.Co
 }
 
 // Return sets up results that will be returned by MemoryIndexStorage.ForPulse
-func (mmForPulse *mMemoryIndexStorageMockForPulse) Return(ia1 []record.Index) *MemoryIndexStorageMock {
+func (mmForPulse *mMemoryIndexStorageMockForPulse) Return(ia1 []record.Index, err error) *MemoryIndexStorageMock {
 	if mmForPulse.mock.funcForPulse != nil {
 		mmForPulse.mock.t.Fatalf("MemoryIndexStorageMock.ForPulse mock is already set by Set")
 	}
@@ -341,12 +342,12 @@ func (mmForPulse *mMemoryIndexStorageMockForPulse) Return(ia1 []record.Index) *M
 	if mmForPulse.defaultExpectation == nil {
 		mmForPulse.defaultExpectation = &MemoryIndexStorageMockForPulseExpectation{mock: mmForPulse.mock}
 	}
-	mmForPulse.defaultExpectation.results = &MemoryIndexStorageMockForPulseResults{ia1}
+	mmForPulse.defaultExpectation.results = &MemoryIndexStorageMockForPulseResults{ia1, err}
 	return mmForPulse.mock
 }
 
 //Set uses given function f to mock the MemoryIndexStorage.ForPulse method
-func (mmForPulse *mMemoryIndexStorageMockForPulse) Set(f func(ctx context.Context, pn insolar.PulseNumber) (ia1 []record.Index)) *MemoryIndexStorageMock {
+func (mmForPulse *mMemoryIndexStorageMockForPulse) Set(f func(ctx context.Context, pn insolar.PulseNumber) (ia1 []record.Index, err error)) *MemoryIndexStorageMock {
 	if mmForPulse.defaultExpectation != nil {
 		mmForPulse.mock.t.Fatalf("Default expectation is already set for the MemoryIndexStorage.ForPulse method")
 	}
@@ -375,13 +376,13 @@ func (mmForPulse *mMemoryIndexStorageMockForPulse) When(ctx context.Context, pn 
 }
 
 // Then sets up MemoryIndexStorage.ForPulse return parameters for the expectation previously defined by the When method
-func (e *MemoryIndexStorageMockForPulseExpectation) Then(ia1 []record.Index) *MemoryIndexStorageMock {
-	e.results = &MemoryIndexStorageMockForPulseResults{ia1}
+func (e *MemoryIndexStorageMockForPulseExpectation) Then(ia1 []record.Index, err error) *MemoryIndexStorageMock {
+	e.results = &MemoryIndexStorageMockForPulseResults{ia1, err}
 	return e.mock
 }
 
 // ForPulse implements MemoryIndexStorage
-func (mmForPulse *MemoryIndexStorageMock) ForPulse(ctx context.Context, pn insolar.PulseNumber) (ia1 []record.Index) {
+func (mmForPulse *MemoryIndexStorageMock) ForPulse(ctx context.Context, pn insolar.PulseNumber) (ia1 []record.Index, err error) {
 	mm_atomic.AddUint64(&mmForPulse.beforeForPulseCounter, 1)
 	defer mm_atomic.AddUint64(&mmForPulse.afterForPulseCounter, 1)
 
@@ -399,7 +400,7 @@ func (mmForPulse *MemoryIndexStorageMock) ForPulse(ctx context.Context, pn insol
 	for _, e := range mmForPulse.ForPulseMock.expectations {
 		if minimock.Equal(e.params, params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
-			return e.results.ia1
+			return e.results.ia1, e.results.err
 		}
 	}
 
@@ -415,7 +416,7 @@ func (mmForPulse *MemoryIndexStorageMock) ForPulse(ctx context.Context, pn insol
 		if results == nil {
 			mmForPulse.t.Fatal("No results are set for the MemoryIndexStorageMock.ForPulse")
 		}
-		return (*results).ia1
+		return (*results).ia1, (*results).err
 	}
 	if mmForPulse.funcForPulse != nil {
 		return mmForPulse.funcForPulse(ctx, pn)

@@ -19,7 +19,6 @@ package store
 import (
 	"context"
 	"io"
-	"path/filepath"
 	"sync"
 	"time"
 
@@ -39,13 +38,7 @@ type BadgerDB struct {
 
 // NewBadgerDB creates new BadgerDB instance.
 // Creates new badger.DB instance with provided working dir and use it as backend for BadgerDB.
-func NewBadgerDB(dir string) (*BadgerDB, error) {
-	dir, err := filepath.Abs(dir)
-	if err != nil {
-		return nil, err
-	}
-
-	ops := badger.DefaultOptions(dir)
+func NewBadgerDB(ops badger.Options) (*BadgerDB, error) {
 	bdb, err := badger.Open(ops)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to open badger")

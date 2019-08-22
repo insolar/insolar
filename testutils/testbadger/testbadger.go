@@ -1,4 +1,4 @@
-//
+///
 // Copyright 2019 Insolar Technologies GmbH
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,27 +12,18 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
-// +build slowtest
+///
 
-package light
+package testbadger
 
 import (
-	"context"
-	"testing"
-
-	"github.com/insolar/insolar/configuration"
-	"github.com/stretchr/testify/require"
+	"github.com/dgraph-io/badger"
 )
 
-func TestComponents(t *testing.T) {
-	ctx := context.Background()
-	cfg := configuration.NewConfiguration()
-	cfg.KeysPath = "testdata/bootstrap_keys.json"
-	cfg.CertificatePath = "testdata/certificate.json"
-	cfg.Metrics.ListenAddress = "0.0.0.0:0"
-	cfg.APIRunner.Address = "0.0.0.0:0"
+func BadgerDefaultOptions(dir string) badger.Options {
+	ops := badger.DefaultOptions(dir)
+	ops.CompactL0OnClose = false
+	ops.SyncWrites = false
 
-	_, err := newComponents(ctx, cfg)
-	require.NoError(t, err)
+	return ops
 }

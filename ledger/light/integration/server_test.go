@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// +build slowtest
 
 package integration_test
 
@@ -242,7 +243,7 @@ func NewServer(
 			filamentCalculator,
 			Coordinator,
 			jetFetcher,
-			CryptoScheme.ReferenceHasher(),
+			CryptoScheme,
 			ServerBus,
 		)
 
