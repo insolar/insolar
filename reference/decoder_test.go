@@ -29,7 +29,7 @@ func TestDecoder_Decode_legacy(t *testing.T) {
 
 	legacyReference_ok := "1tJEBzbVurpgUrtyAM3hCsSAxKLJ5U8LTb1EaerkZs.11111111111111111111111111111111"
 	{ // good old reference, ok to parse
-		dec := NewDecoder(AllowLegacy)
+		dec := NewDefaultDecoder(AllowLegacy)
 		global, err := dec.Decode(legacyReference_ok)
 		if assert.NoError(t, err) {
 			assert.Equal(t, global.addressLocal, global.addressBase)
@@ -38,7 +38,7 @@ func TestDecoder_Decode_legacy(t *testing.T) {
 		}
 	}
 	{ // good old reference, disallow parsing
-		dec := NewDecoder(0)
+		dec := NewDefaultDecoder(0)
 		_, err := dec.Decode(legacyReference_ok)
 		if assert.Error(t, err) {
 			assert.Contains(t, err.Error(), "invalid reference, legacy domain name")
@@ -47,7 +47,7 @@ func TestDecoder_Decode_legacy(t *testing.T) {
 
 	legacyReference_bad := "1tJEBzbVurpgUrtyAM3hCsSAxKLJ5U8LTb1EaerkZs.1tJEBzbVurpgUrtyAM3hCsSAxKLJ5U8LTb1EaerkZs"
 	{ // bad legacy reference (domain isn't empty)
-		dec := NewDecoder(AllowLegacy)
+		dec := NewDefaultDecoder(AllowLegacy)
 		_, err := dec.Decode(legacyReference_bad)
 		if assert.Error(t, err) {
 			assert.Contains(t, err.Error(), "invalid reference, insufficient address length")
@@ -56,14 +56,14 @@ func TestDecoder_Decode_legacy(t *testing.T) {
 
 	legacyReference_empty := "11111111111111111111111111111111.11111111111111111111111111111111"
 	{ // empty legacy reference
-		dec := NewDecoder(AllowLegacy)
+		dec := NewDefaultDecoder(AllowLegacy)
 		_, err := dec.Decode(legacyReference_empty)
 		assert.NoError(t, err)
 	}
 
 	legacyReference_notFull := "115Ltamw9sE7JyRPGtz53j8FUbhdipmJ.11111111111111111111111111111111"
 	{
-		dec := NewDecoder(AllowLegacy)
+		dec := NewDefaultDecoder(AllowLegacy)
 		_, err := dec.Decode(legacyReference_notFull)
 		if assert.Error(t, err) {
 			assert.Contains(t, err.Error(), "insufficient length")
@@ -71,7 +71,7 @@ func TestDecoder_Decode_legacy(t *testing.T) {
 	}
 	legacyReference_badSymbols := "1tJEBzbVurpgUrtyoloyAM3hCsSAxKLJ5U8LTb1EaerkZs.11111111111111111111111111111111"
 	{ // good old reference, ok to parse
-		dec := NewDecoder(AllowLegacy)
+		dec := NewDefaultDecoder(AllowLegacy)
 		_, err := dec.Decode(legacyReference_badSymbols)
 		if assert.Error(t, err) {
 			assert.Contains(t, err.Error(), "input string contains bad charachters")
@@ -84,12 +84,12 @@ func TestDecoder_Decode_new(t *testing.T) {
 
 	newReference_fixed := "base58+insolarv1:11tJEBzbVurpgUrtyAM3hCsSAxKLJ5U8LTb1EaerkZs.record"
 	{ //
-		dec := NewDecoder(AllowRecords)
+		dec := NewDefaultDecoder(AllowRecords)
 		_, err := dec.Decode(newReference_fixed)
 		assert.NoError(t, err)
 	}
 	{ //
-		dec := NewDecoder(0)
+		dec := NewDefaultDecoder(0)
 		_, err := dec.Decode(newReference_fixed)
 		if assert.Error(t, err) {
 			assert.Contains(t, err.Error(), "invalid reference, record reference is not allowed")
@@ -99,7 +99,7 @@ func TestDecoder_Decode_new(t *testing.T) {
 	newReference_var_notReally := "base58+insolarv1:0114CxjQofp9Rrh2jwVAdqaqVPfZEsrP27WaP8dgnHY3.record"
 	newReference_var_really := "base58+insolarv1:0115Ltamw9sE7JyRPGtz53j8FUbhdipmJ.record"
 	{
-		dec := NewDecoder(AllowRecords)
+		dec := NewDefaultDecoder(AllowRecords)
 
 		g1, err1 := dec.Decode(newReference_var_notReally)
 		g2, err2 := dec.Decode(newReference_var_really)
@@ -113,14 +113,13 @@ func TestDecoder_Decode_new(t *testing.T) {
 			assert.Equal(t, g1.addressLocal.getScope(), g2.addressLocal.getScope())
 			assert.Equal(t, g1.addressLocal.GetHash(), g2.addressLocal.GetHash())
 		}
-
 	}
 
 	newReference_wo_part1 := "insolarv1:0114CxjQofp9Rrh2jwVAdqaqVPfZEsrP27WaP8dgnHY3.record"
 	newReference_wo_part2 := "base58:0114CxjQofp9Rrh2jwVAdqaqVPfZEsrP27WaP8dgnHY3.record"
 	{
 		var err error
-		dec := NewDecoder(AllowRecords)
+		dec := NewDefaultDecoder(AllowRecords)
 
 		_, err = dec.Decode(newReference_wo_part1)
 		assert.NoError(t, err)
@@ -132,7 +131,7 @@ func TestDecoder_Decode_new(t *testing.T) {
 	newReference_part_switched := "insolarv1+base58:0114CxjQofp9Rrh2jwVAdqaqVPfZEsrP27WaP8dgnHY3.record"
 	{
 		var err error
-		dec := NewDecoder(AllowRecords)
+		dec := NewDefaultDecoder(AllowRecords)
 
 		_, err = dec.Decode(newReference_part_switched)
 		assert.NoError(t, err)
@@ -143,7 +142,7 @@ func TestDecoder_Decode_new(t *testing.T) {
 	newReference_bad_parts3 := "insolarv1+base58+bad:0114CxjQofp9Rrh2jwVAdqaqVPfZEsrP27WaP8dgnHY3.record"
 	{
 		var err error
-		dec := NewDecoder(AllowRecords)
+		dec := NewDefaultDecoder(AllowRecords)
 
 		_, err = dec.Decode(newReference_bad_parts1)
 		if assert.Error(t, err) {
@@ -166,7 +165,7 @@ func TestDecoder_Decode_new(t *testing.T) {
 	newReference_with_bad_authority := "insolarv1://0114CxjQofp9Rrh2jwVAdqaqVPfZEsrP27WaP8dgnHY3.record"
 	{
 		var err error
-		dec := NewDecoder(AllowRecords)
+		dec := NewDefaultDecoder(AllowRecords)
 
 		_, err = dec.Decode(newReference_with_authority)
 		assert.NoError(t, err)
@@ -186,7 +185,7 @@ func TestDecoder_Decode_new(t *testing.T) {
 	newReference_legacy_domain := "insolarv1:0114CxjQofp9Rrh2jwVAdqaqVPfZEsrP27WaP8dgnHY3.11111111111111111111111111111111"
 	{
 		var err error
-		dec := NewDecoder(AllowRecords)
+		dec := NewDefaultDecoder(AllowRecords)
 
 		_, err = dec.Decode(newReference_empty_body)
 		if assert.Error(t, err) {
@@ -214,7 +213,7 @@ func TestDecoder_Decode_new(t *testing.T) {
 	newReference_badPrefix3 := "base58+insolarv1:a1tJEBzbVurpgUrtyAM3hCsSAxKLJ5U8LTb1EaerkZs.record"
 	{
 		var err error
-		dec := NewDecoder(AllowRecords)
+		dec := NewDefaultDecoder(AllowRecords)
 
 		_, err = dec.Decode(newReference_badPrefix1)
 		if assert.Error(t, err) {
@@ -236,7 +235,7 @@ func TestDecoder_Decode_new(t *testing.T) {
 	newReference_empty := "base58+insolarv1:0.0"
 	{
 		var err error
-		dec := NewDecoder(0)
+		dec := NewDefaultDecoder(0)
 
 		_, err = dec.Decode(newReference_full)
 		assert.NoError(t, err)
@@ -250,7 +249,7 @@ func TestDecoder_Decode_new(t *testing.T) {
 	newReference_brokenBody3 := "base58+insolarv1:01tJEBzbVurpgUrtyAM3hCsSAxKLJ5U8LTb1EaerkZs.01tJEBzbVurpgUrtyAM3hyoloCsSAxKLJ5U8LTb1EaerkZs"
 	{
 		var err error
-		dec := NewDecoder(IgnoreParity)
+		dec := NewDefaultDecoder(IgnoreParity)
 
 		_, err = dec.Decode(newReference_brokenBody1)
 		if assert.Error(t, err) {
@@ -272,12 +271,13 @@ func TestDecoder_Decode_new(t *testing.T) {
 func TestDecoder_Decode_parity(t *testing.T) {
 	t.Parallel()
 
-	newReference_with_parity := "base58+insolarv1:11tJEBzbVurpgUrtyAM3hCsSAxKLJ5U8LTb1EaerkZs.11tJEBzbVurpgUrtyAM3hCsSAxKLJ5U8LTb1EaerkZs/2FwFmj"
-	newReference_with_badParity := "base58+insolarv1:11tJEBzbVurpgUrtyAM3hCsSAxKLJ5U8LTb1EaerkZs.11tJEBzbVurpgUrtyAM3hCsSAxKLJ5U8LTb1EaerkZs/ololo"
+	newReference_with_parity := "base58+insolarv1:11tJEBzbVurpgUrtyAM3hCsSAxKLJ5U8LTb1EaerkZs.11tJEBzbVurpgUrtyAM3hCsSAxKLJ5U8LTb1EaerkZs/22FwFmj"
+	newReference_with_badParity := "base58+insolarv1:11tJEBzbVurpgUrtyAM3hCsSAxKLJ5U8LTb1EaerkZs.11tJEBzbVurpgUrtyAM3hCsSAxKLJ5U8LTb1EaerkZs/2ololo"
+	newReference_with_badParityPrefix := "base58+insolarv1:11tJEBzbVurpgUrtyAM3hCsSAxKLJ5U8LTb1EaerkZs.11tJEBzbVurpgUrtyAM3hCsSAxKLJ5U8LTb1EaerkZs/FwFmj"
 	newReference_with_emptyBodyAndParity := "base58+insolarv1:/ololo"
 	{
 		var err error
-		dec := NewDecoder(IgnoreParity)
+		dec := NewDefaultDecoder(IgnoreParity)
 
 		_, err = dec.Decode(newReference_with_parity)
 		assert.NoError(t, err)
@@ -285,6 +285,11 @@ func TestDecoder_Decode_parity(t *testing.T) {
 		_, err = dec.Decode(newReference_with_badParity)
 		if assert.Error(t, err) {
 			assert.Contains(t, err.Error(), "unable to decode parity")
+		}
+
+		_, err = dec.Decode(newReference_with_badParityPrefix)
+		if assert.Error(t, err) {
+			assert.Contains(t, err.Error(), "invalid parity prefix")
 		}
 
 		_, err = dec.Decode(newReference_with_emptyBodyAndParity)
@@ -301,7 +306,7 @@ func TestDecoder_Decode_aliases(t *testing.T) {
 	newReference_withRecordNameDecoder := "base58+insolarv1:help.11tJEBzbVurpgUrtyAM3hCsSAxKLJ5U8LTb1EaerkZs"
 	{
 		var err error
-		dec := NewDecoder(0)
+		dec := NewDefaultDecoder(0)
 
 		_, err = dec.Decode(newReference_withDomainNameDecoder)
 		if assert.Error(t, err) {

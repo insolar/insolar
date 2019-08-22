@@ -25,6 +25,7 @@ import (
 )
 
 type ByteDecodeFunc func(s string, target io.ByteWriter) (stringRead int, err error)
+
 type IdentityDecoder func(base *Global, name string) *Global
 
 type DecoderOptions uint8
@@ -48,15 +49,18 @@ type decoder struct {
 	options     DecoderOptions
 }
 
-func NewDecoder(options DecoderOptions) GlobalDecoder {
-	byteDecoderFactory := NewByteDecoderFactory()
+func NewDecoder(options DecoderOptions, factory ByteDecoderFactory) GlobalDecoder {
 	return &decoder{
-		byteDecoderFactory: byteDecoderFactory,
-		legacyDecoder:      byteDecoderFactory.LegacyDecoder(),
-		defaultDecoder:     byteDecoderFactory.DefaultDecoder(),
+		byteDecoderFactory: factory,
+		legacyDecoder:      factory.LegacyDecoder(),
+		defaultDecoder:     factory.DefaultDecoder(),
 
 		options: options,
 	}
+}
+
+func NewDefaultDecoder(options DecoderOptions) GlobalDecoder {
+	return NewDecoder(options, NewByteDecoderFactory())
 }
 
 func (v decoder) Decode(ref string) (Global, error) {
@@ -153,8 +157,12 @@ func (v decoder) parseReference(refFull string, byteDecoder ByteDecodeFunc) (Glo
 	case parityPos == 0:
 		return Global{}, fmt.Errorf("empty reference body: ref=%s", refFull)
 	case parityPos > 0:
+		encodedParity := ref[parityPos+1:]
+		if encodedParity[0] != '2' {
+			return Global{}, fmt.Errorf("invalid parity prefix: ref=%s, parity=%s", refFull, encodedParity)
+		}
 		buf := bytes.NewBuffer(make([]byte, 0, pulseAndScopeSize))
-		_, err := byteDecoder(ref[parityPos+1:], buf)
+		_, err := byteDecoder(encodedParity[1:], buf)
 		if err != nil {
 			return Global{}, fmt.Errorf("unable to decode parity: ref=%s, err=%v", refFull, err)
 		}
@@ -203,7 +211,7 @@ func (v decoder) parseAddress(ref string, byteDecoder ByteDecodeFunc, result *Gl
 			switch {
 			case err == nil:
 				if !resolveBase.tryConvertToSelf() {
-					return errors.New("invalid self reference")
+					return errors.New("invalid reference base")
 				}
 			case err == errAliasedReference:
 				if v.nameDecoder == nil {

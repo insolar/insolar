@@ -42,7 +42,7 @@ func (p BitBuilder) Len() int {
 
 const accInit = 0x80
 
-func (p BitBuilder) ensure() {
+func (p *BitBuilder) ensure() {
 	if p.accumulator == 0 {
 		if len(p.bytes) != 0 {
 			panic("illegal state")
@@ -67,6 +67,10 @@ func (p BitBuilder) Append(bit bool) BitBuilder {
 }
 
 func (p BitBuilder) AppendN(bitCount int, bit bool) BitBuilder {
+	if bitCount < 0 {
+		panic("invalid bitCount value")
+	}
+
 	p.ensure()
 
 	if bitCount == 0 {
