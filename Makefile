@@ -41,7 +41,7 @@ BININSGOCC=$(BIN_DIR)/$(INSGOCC)
 
 
 .PHONY: all
-all: clean install-deps pre-build build ## cleanup, install deps, (re)generate all code and build all binaries
+all: install-deps pre-build build ## cleanup, install deps, (re)generate all code and build all binaries
 
 .PHONY: lint
 lint: ci-lint ## alias for ci-lint
