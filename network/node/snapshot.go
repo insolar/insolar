@@ -147,7 +147,7 @@ func nodeStateToListType(node insolar.NetworkNode) ListType {
 			return ListWorking
 		}
 		return ListIdle
-	case insolar.NodePending:
+	case insolar.NodeJoining:
 		return ListJoiner
 	case insolar.NodeUndefined, insolar.NodeLeaving:
 		return ListLeaving
