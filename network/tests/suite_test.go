@@ -382,6 +382,16 @@ func (s *testSuite) StopNode(node *networkNode) {
 	}
 }
 
+func (s *testSuite) GracefulStop(node *networkNode) {
+	if node.componentManager != nil {
+		err := node.componentManager.GracefulStop(s.fixture().ctx)
+		require.NoError(s.t, err)
+
+		err = node.componentManager.Stop(s.fixture().ctx)
+		require.NoError(s.t, err)
+	}
+}
+
 type networkNode struct {
 	id                  insolar.Reference
 	role                insolar.StaticRole
