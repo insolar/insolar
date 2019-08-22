@@ -379,7 +379,7 @@ func (p *PrepRealm) _applyPulseData(_ context.Context, pdp proofs.OriginalPulsar
 		}
 	}
 
-	if p.pulseData == pd {
+	if p.originalPulse != nil || !p.pulseData.IsEmpty() {
 		return false, pd.PulseNumber
 	}
 
