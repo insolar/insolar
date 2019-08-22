@@ -64,12 +64,11 @@ type HandleAdditionalCallFromPreviousExecutor struct {
 // user will have to re-send it after some timeout.
 func (h *HandleAdditionalCallFromPreviousExecutor) Present(ctx context.Context, f flow.Flow) error {
 	ctx = loggerWithTargetID(ctx, h.Parcel)
-
-	logger := inslogger.FromContext(ctx).WithField("handler", "HandleAdditionalCallFromPreviousExecutor")
-	logger.Debug("Handler.Present starts")
-
 	msg := h.Parcel.Message().(*message.AdditionalCallFromPreviousExecutor)
 	ctx = contextWithServiceData(ctx, msg.ServiceData)
+
+	logger := inslogger.FromContext(ctx)
+	logger.Debug("additional call from previous executor")
 
 	ctx, span := instracer.StartSpan(ctx, "HandleAdditionalCallFromPreviousExecutor.Present")
 	span.AddAttributes(

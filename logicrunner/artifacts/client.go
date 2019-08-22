@@ -19,6 +19,7 @@ package artifacts
 import (
 	"context"
 	"fmt"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
@@ -140,7 +141,7 @@ func (m *client) registerRequest(
 		if p.Code == payload.CodeFlowCanceled {
 			err = flow.ErrCancelled
 		} else {
-			err = errors.New(p.Text)
+			err = &payload.CodedError{Code: p.Code, Text: p.Text}
 		}
 		return nil, err
 	default:

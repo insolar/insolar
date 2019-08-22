@@ -28,7 +28,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Beware, test results there depends on test file name (caller_test.go)!
+// IMPORTANT: Beware, test results there depends on test file name (caller_test.go)!
 
 type loggerField struct {
 	Caller string

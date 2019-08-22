@@ -21,6 +21,11 @@ import (
 	"sync"
 	"time"
 
+	base58 "github.com/jbenet/go-base58"
+	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
+	"go.opencensus.io/trace"
+
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/configuration"
@@ -30,10 +35,8 @@ import (
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/instrumentation/instracer"
-	base58 "github.com/jbenet/go-base58"
-	"github.com/pkg/errors"
-	"go.opencensus.io/trace"
 )
 
 const (
@@ -190,7 +193,10 @@ func (b *Bus) SendTarget(
 	if err == nil {
 		pn = latestPulse.PulseNumber
 	} else {
-		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to fetch pulse"))
+		// It's possible, that we try to fetch something in PM.Set()
+		// In those cases, when we in the start of the system, we don't have any pulses
+		// but this is not the error
+		inslogger.FromContext(ctx).Warn(errors.Wrap(err, "failed to fetch pulse"))
 	}
 	return b.sendTarget(ctx, msg, target, pn)
 }
@@ -198,6 +204,7 @@ func (b *Bus) SendTarget(
 func (b *Bus) sendTarget(
 	ctx context.Context, msg *message.Message, target insolar.Reference, pulse insolar.PulseNumber,
 ) (<-chan *message.Message, func()) {
+	start := time.Now()
 	ctx, span := instracer.StartSpan(ctx, "Bus.SendTarget")
 	span.AddAttributes(
 		trace.StringAttribute("type", "bus"),
@@ -211,16 +218,23 @@ func (b *Bus) sendTarget(
 		close(res)
 		return res, func() {}
 	}
-	ctx, _ = inslogger.WithField(ctx, "sending_type", msg.Metadata.Get(MetaType))
-	payloadType, err := payload.UnmarshalType(msg.Payload)
-	if err == nil {
-		ctx, _ = inslogger.WithField(ctx, "sending_type", payloadType.String())
-	}
+
+	msgType := messagePayloadTypeName(msg)
+
+	mctx := insmetrics.InsertTag(ctx, tagMessageType, msgType)
+	stats.Record(mctx, statSent.M(int64(len(msg.Payload))))
+	defer func() {
+		stats.Record(mctx, statSentTime.M(float64(time.Since(start).Nanoseconds())/1e6))
+	}()
+
+	// configure logger
+	ctx, _ = inslogger.WithField(ctx, "sending_type", msgType)
 	logger := inslogger.FromContext(ctx)
 	span.AddAttributes(
 		trace.StringAttribute("sending_type", msg.Metadata.Get(MetaType)),
 	)
 
+	// tracing setup
 	msg.Metadata.Set(MetaTraceID, inslogger.TraceID(ctx))
 
 	sp, err := instracer.Serialize(ctx)
@@ -231,6 +245,7 @@ func (b *Bus) sendTarget(
 		logger.Error(err)
 	}
 
+	// send message and start reply goroutine
 	msg.SetContext(ctx)
 	wrapped, msg, err := b.wrapMeta(ctx, msg, target, payload.MessageHash{}, pulse)
 	if err != nil {
@@ -266,11 +281,19 @@ func (b *Bus) sendTarget(
 	}
 
 	go func() {
+		replyStart := time.Now()
+		defer func() {
+			stats.Record(mctx,
+				statReplyTime.M(float64(time.Since(replyStart).Nanoseconds())/1e6),
+				statReply.M(1))
+		}()
+
 		logger.Debug("waiting for reply")
 		select {
 		case <-reply.done:
 			logger.Debugf("Done waiting replies for message with hash %s", msgHash.String())
 		case <-time.After(b.timeout):
+			stats.Record(mctx, statReplyTimeouts.M(1))
 			logger.Error(
 				errors.Errorf(
 					"can't return result for message with hash %s: timeout for reading (%s) was exceeded",
@@ -283,6 +306,17 @@ func (b *Bus) sendTarget(
 	}()
 
 	return reply.messages, done
+}
+
+// messagePayloadTypeName returns message type.
+// Parses type from payload if failed returns type from metadata field 'type'.
+func messagePayloadTypeName(msg *message.Message) string {
+	payloadType, err := payload.UnmarshalType(msg.Payload)
+	if err != nil {
+		// branch for legacy messages format: INS-2973
+		return msg.Metadata.Get(MetaType)
+	}
+	return payloadType.String()
 }
 
 // Reply sends message in response to another message.

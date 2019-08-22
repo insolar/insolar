@@ -89,6 +89,7 @@ func TestWaitMinroles_MinrolesNotHappenedInETA(t *testing.T) {
 		CertificateManager: certificate.NewCertificateManager(cert),
 		NodeKeeper:         nodeKeeper,
 	})
+	assert.Equal(t, insolar.WaitMinRoles, waitMinRoles.GetState())
 	waitMinRoles.Gatewayer = gatewayer
 	waitMinRoles.bootstrapETA = time.Millisecond
 	waitMinRoles.bootstrapTimer = time.NewTimer(waitMinRoles.bootstrapETA)

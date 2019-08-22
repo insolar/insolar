@@ -77,7 +77,7 @@ func Test_BasicOperations(t *testing.T) {
 		// Creating root reason request.
 		var reasonID insolar.ID
 		{
-			msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), true, true)
+			msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), insolar.ID{}, true, true)
 			rep := retryIfCancelled(func() payload.Payload {
 				return SendMessage(ctx, s, &msg)
 			})
@@ -104,7 +104,7 @@ func Test_BasicOperations(t *testing.T) {
 		var objectID insolar.ID
 		// Set, get request.
 		{
-			msg, virtual := MakeSetIncomingRequest(gen.ID(), reasonID, true, true)
+			msg, virtual := MakeSetIncomingRequest(gen.ID(), reasonID, insolar.ID{}, true, true)
 			p := retryIfCancelled(func() payload.Payload {
 				return SendMessage(ctx, s, &msg)
 			})
@@ -129,7 +129,7 @@ func Test_BasicOperations(t *testing.T) {
 		}
 		// Amend and check object.
 		{
-			msg, _ := MakeSetIncomingRequest(objectID, reasonID, false, true)
+			msg, _ := MakeSetIncomingRequest(objectID, reasonID, insolar.ID{}, false, true)
 			p := retryIfCancelled(func() payload.Payload {
 				return SendMessage(ctx, s, &msg)
 			})
@@ -148,7 +148,7 @@ func Test_BasicOperations(t *testing.T) {
 		}
 		// Deactivate and check object.
 		{
-			msg, _ := MakeSetIncomingRequest(objectID, reasonID, false, true)
+			msg, _ := MakeSetIncomingRequest(objectID, reasonID, insolar.ID{}, false, true)
 			p := retryIfCancelled(func() payload.Payload {
 				return SendMessage(ctx, s, &msg)
 			})
