@@ -193,8 +193,8 @@ func (r *PhasedRoundController) PrepareConsensusRound(upstream api.UpstreamContr
 func (r *PhasedRoundController) onConsensusStopper() {
 
 	inslogger.FromContext(r.realm.roundContext).Warnf(
-		"Stopping consensus round: self={%v}, ephemeral=%v, bundle=%v, census=%+v", r.realm.GetLocalProfile(),
-		r.realm.ephemeralFeeder != nil, r.bundle, r.realm.census)
+		"Stopping consensus round: self={%v}, ephemeral=%v, bundle=%v, census=%+v, expected=%+v", r.realm.GetLocalProfile(),
+		r.realm.ephemeralFeeder != nil, r.bundle, r.realm.census, r.chronicle.GetExpectedCensus())
 
 	// TODO print purgatory
 }
@@ -392,67 +392,61 @@ func (r *PhasedRoundController) handlePulseChange(ctx context.Context, pn pulse.
 		epn = c.GetExpectedPulseNumber()
 	}
 
-	isFastForward := false
+	expected := r.chronicle.GetExpectedCensus()
+	if expected != nil {
+		if expected.GetPrevious() != c {
+			inslogger.FromContext(ctx).Warnf("unable to switch a past round/population")
+			return api.KeepRound, origErr
+		}
+		epn = expected.GetPulseNumber()
+	}
+
 	switch {
-	case pn == epn:
+	case epn.IsUnknownOrEqualTo(epn):
 		break
+
 	case pn < epn:
 		r.roundWorker.onUnexpectedPulse(pn)
 		return api.KeepRound, origErr
+
+	case c.GetCensusState() == census.PrimingCensus:
+		panic(fmt.Sprintf("unable to fast-forward a priming census: %s", origErr.Error()))
+
 	default:
 		_, pd := c.GetNearestPulseData()
 		if !pulseControl.CanFastForwardPulse(epn, pn, pd) {
 			r.roundWorker.onUnexpectedPulse(pn)
 			return api.KeepRound, origErr
 		}
-		isFastForward = !epn.IsUnknown()
 	}
 
-	if r.roundWorker.IsRunning() {
+	switch {
+	case !r.roundWorker.IsRunning():
+		latest, _ := r.chronicle.GetLatestCensus()
+		if c == latest && !c.GetOnlinePopulation().IsValid() {
+			return api.NextRoundTerminate, fmt.Errorf("current population is invalid and an expected population is missing: %v", origErr.Error())
+		}
+		if expected == nil {
+			return api.KeepRound, origErr
+		}
+
+		inslogger.FromContext(ctx).Debug("switch to a next round by changed pulse: %s", origErr.Error())
+	default:
 		endOfConsensus := r.realm.GetStartedAt().Add(r.realm.timings.EndOfConsensus)
 		if time.Now().Before(endOfConsensus) && !pulseControl.CanStopOnHastyPulse(pn, endOfConsensus) {
 			return api.KeepRound, fmt.Errorf("too early: %v", origErr)
 		}
-
-		inslogger.FromContext(ctx).Debug("stopping round by changed pulse")
-	} else if c.GetCensusState() != census.PrimingCensus {
-		// priming is provided externally, so don't check it
-		latest, _ := r.chronicle.GetLatestCensus()
-		if c == latest && !c.GetOnlinePopulation().IsValid() {
-			return api.NextRoundTerminate, fmt.Errorf("current population is invalid and an expected population is missing: %v", origErr)
-		}
-	}
-
-	warnMsg := errors2.PulseRoundErrorMessageToWarn(origErr.Error())
-	inslogger.FromContext(ctx).Debug(warnMsg)
-
-	if isFastForward {
-		if !r.fastForwardCensus(ctx, pn) {
-			r.roundWorker.onUnexpectedPulse(pn)
+		if expected == nil {
 			return api.KeepRound, origErr
 		}
+
+		inslogger.FromContext(ctx).Debug("stopping round by changed pulse: %s", origErr.Error())
 	}
 
-	r.roundWorker.onNextPulse(pn)
-	return api.StartNextRound, nil
-}
-
-func (r *PhasedRoundController) fastForwardCensus(ctx context.Context, pn pulse.Number) bool {
-
-	// double check
-	if expected := r.chronicle.GetExpectedCensus(); expected != nil {
-		epn := expected.GetPulseNumber()
-		if epn.IsUnknownOrEqualTo(pn) {
-			return true
-		}
-		if epn > pn {
-			return false
-		}
-
+	if !expected.GetPulseNumber().IsUnknownOrEqualTo(pn) {
 		expected.Rebuild(pn).MakeExpected()
-		return true
 	}
+	r.roundWorker.onNextPulse(pn)
 
-	inslogger.FromContext(ctx).Warn("unable to fast-forward a priming/active census")
-	return false
+	return api.StartNextRound, nil
 }
