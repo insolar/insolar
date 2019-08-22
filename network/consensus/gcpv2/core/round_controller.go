@@ -192,9 +192,32 @@ func (r *PhasedRoundController) PrepareConsensusRound(upstream api.UpstreamContr
 
 func (r *PhasedRoundController) onConsensusStopper() {
 
+	latest, isExpected := r.chronicle.GetLatestCensus()
+	var expt interface{}
+	failed := false
+
+	switch {
+	case latest == r.realm.census:
+		expt = "<nil>"
+		failed = true
+	case !isExpected:
+		expt = "<unknown>"
+	default:
+		expected := latest.(census.Expected)
+		if expected.GetPrevious() == r.realm.census {
+			expt = expected
+		} else {
+			expt = "<unknown>"
+		}
+	}
+
 	inslogger.FromContext(r.realm.roundContext).Warnf(
 		"Stopping consensus round: self={%v}, ephemeral=%v, bundle=%v, census=%+v, expected=%+v", r.realm.GetLocalProfile(),
-		r.realm.ephemeralFeeder != nil, r.bundle, r.realm.census, r.chronicle.GetExpectedCensus())
+		r.realm.ephemeralFeeder != nil, r.bundle, r.realm.census, expt)
+
+	if failed {
+		panic("DEBUG FAIL-FAST: consensus didn't finish")
+	}
 
 	// TODO print purgatory
 }
@@ -236,14 +259,6 @@ func (r *PhasedRoundController) _startFullRealm(prepWasSuccessful bool) {
 
 	r.roundWorker.OnFullRoundStarting()
 
-	//if latest.GetOnlinePopulation().GetLocalProfile().IsJoiner() {
-	//	panic("DEBUG FAIL-FAST: local remains as joiner")
-	//}
-	//
-	//if r.chronicle.GetExpectedCensus() == nil {
-	//	panic("DEBUG FAIL-FAST: consensus didn't finish")
-	//}
-
 	chronicle := r.chronicle
 	lastCensus, isLastExpected := chronicle.GetLatestCensus()
 	pd := r.realm.pulseData
@@ -264,7 +279,7 @@ func (r *PhasedRoundController) _startFullRealm(prepWasSuccessful bool) {
 			if lastCensus.GetOnlinePopulation().GetLocalProfile().IsJoiner() {
 				panic("DEBUG FAIL-FAST: local remains as joiner")
 			}
-			panic("DEBUG FAIL-FAST: prev consensus didn't finish")
+			panic("DEBUG FAIL-FAST: previous consensus didn't finish")
 			//r.realm.unsafeRound = true
 			//active = lastCensus.(census.Active)
 		} else {
@@ -287,15 +302,16 @@ func (r *PhasedRoundController) _startFullRealm(prepWasSuccessful bool) {
 		r.realm.unsafeRound = true
 	}
 
+	r.realm.start(active, active.GetOnlinePopulation(), r.bundle)
+
 	endOf := r.realm.roundStartedAt.Add(r.realm.timings.EndOfConsensus)
+	r.roundWorker.SetTimeout(endOf)
+
 	inslogger.FromContext(r.realm.roundContext).Warnf(
 		"Starting consensus full realm: self={%v}, ephemeral=%v, unsafe=%v, startedAt=%v, endOf=%v, census=%+v", r.realm.GetLocalProfile(),
 		r.realm.ephemeralFeeder != nil, r.realm.unsafeRound,
 		args.LazyTimeFmt("15:04:05.000000", r.realm.GetStartedAt()),
 		args.LazyTimeFmt("15:04:05.000000", endOf), active)
-
-	r.realm.start(active, active.GetOnlinePopulation(), r.bundle)
-	r.roundWorker.SetTimeout(endOf)
 }
 
 func (r *PhasedRoundController) ensureStarted() bool {
@@ -430,7 +446,7 @@ func (r *PhasedRoundController) handlePulseChange(ctx context.Context, pn pulse.
 			return api.KeepRound, origErr
 		}
 
-		inslogger.FromContext(ctx).Debug("switch to a next round by changed pulse: %s", origErr.Error())
+		inslogger.FromContext(ctx).Debug("switch to a next round by changed pulse: ", origErr)
 	default:
 		endOfConsensus := r.realm.GetStartedAt().Add(r.realm.timings.EndOfConsensus)
 		if time.Now().Before(endOfConsensus) && !pulseControl.CanStopOnHastyPulse(pn, endOfConsensus) {
@@ -440,7 +456,7 @@ func (r *PhasedRoundController) handlePulseChange(ctx context.Context, pn pulse.
 			return api.KeepRound, origErr
 		}
 
-		inslogger.FromContext(ctx).Debug("stopping round by changed pulse: %s", origErr.Error())
+		inslogger.FromContext(ctx).Debug("stopping round by changed pulse: ", origErr)
 	}
 
 	if !expected.GetPulseNumber().IsUnknownOrEqualTo(pn) {
