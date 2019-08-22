@@ -19,7 +19,6 @@ package executor
 import (
 	"context"
 	"fmt"
-	"hash"
 
 	"github.com/pkg/errors"
 
@@ -41,7 +40,7 @@ type RequestCheckerDefault struct {
 	filaments   FilamentCalculator
 	coordinator jet.Coordinator
 	fetcher     JetFetcher
-	hasher      hash.Hash
+	scheme      insolar.PlatformCryptographyScheme
 	sender      bus.Sender
 }
 
@@ -49,14 +48,14 @@ func NewRequestChecker(
 	fc FilamentCalculator,
 	c jet.Coordinator,
 	jf JetFetcher,
-	hasher hash.Hash,
+	scheme insolar.PlatformCryptographyScheme,
 	sender bus.Sender,
 ) *RequestCheckerDefault {
 	return &RequestCheckerDefault{
 		filaments:   fc,
 		coordinator: c,
 		fetcher:     jf,
-		hasher:      hasher,
+		scheme:      scheme,
 		sender:      sender,
 	}
 }
@@ -149,12 +148,14 @@ func (c *RequestCheckerDefault) checkReasonForIncomingRequest(
 			return err
 		}
 
-		_, err = c.hasher.Write(buf)
+		hasher := c.scheme.ReferenceHasher()
+
+		_, err = hasher.Write(buf)
 		if err != nil {
 			return errors.Wrap(err, "failed to calculate id")
 		}
 
-		objectID = *insolar.NewID(requestID.Pulse(), c.hasher.Sum(nil))
+		objectID = *insolar.NewID(requestID.Pulse(), hasher.Sum(nil))
 	} else {
 		objectID = *incomingRequest.AffinityRef().Record()
 	}
