@@ -382,12 +382,14 @@ func (r *PhasedRoundController) handlePulseChange(ctx context.Context, pn pulse.
 	}
 
 	var epn pulse.Number
-	c := prep.initialCensus
+	var c census.Operational
+
 	if prep != nil {
+		c = prep.initialCensus
 		epn = c.GetPulseNumber()
 	} else {
 		c = r.realm.census
-		epn = r.realm.census.GetExpectedPulseNumber()
+		epn = c.GetExpectedPulseNumber()
 	}
 
 	switch {
