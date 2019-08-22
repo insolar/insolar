@@ -9,13 +9,14 @@ import (
 	mm_time "time"
 
 	"github.com/gojuno/minimock"
+	"github.com/insolar/insolar/longbits"
 )
 
 // SignatureKeyHolderMock implements SignatureKeyHolder
 type SignatureKeyHolderMock struct {
 	t minimock.Tester
 
-	funcAsByteString          func() (s1 string)
+	funcAsByteString          func() (b1 longbits.ByteString)
 	inspectFuncAsByteString   func()
 	afterAsByteStringCounter  uint64
 	beforeAsByteStringCounter uint64
@@ -125,7 +126,7 @@ type SignatureKeyHolderMockAsByteStringExpectation struct {
 
 // SignatureKeyHolderMockAsByteStringResults contains results of the SignatureKeyHolder.AsByteString
 type SignatureKeyHolderMockAsByteStringResults struct {
-	s1 string
+	b1 longbits.ByteString
 }
 
 // Expect sets up expected params for SignatureKeyHolder.AsByteString
@@ -153,7 +154,7 @@ func (mmAsByteString *mSignatureKeyHolderMockAsByteString) Inspect(f func()) *mS
 }
 
 // Return sets up results that will be returned by SignatureKeyHolder.AsByteString
-func (mmAsByteString *mSignatureKeyHolderMockAsByteString) Return(s1 string) *SignatureKeyHolderMock {
+func (mmAsByteString *mSignatureKeyHolderMockAsByteString) Return(b1 longbits.ByteString) *SignatureKeyHolderMock {
 	if mmAsByteString.mock.funcAsByteString != nil {
 		mmAsByteString.mock.t.Fatalf("SignatureKeyHolderMock.AsByteString mock is already set by Set")
 	}
@@ -161,12 +162,12 @@ func (mmAsByteString *mSignatureKeyHolderMockAsByteString) Return(s1 string) *Si
 	if mmAsByteString.defaultExpectation == nil {
 		mmAsByteString.defaultExpectation = &SignatureKeyHolderMockAsByteStringExpectation{mock: mmAsByteString.mock}
 	}
-	mmAsByteString.defaultExpectation.results = &SignatureKeyHolderMockAsByteStringResults{s1}
+	mmAsByteString.defaultExpectation.results = &SignatureKeyHolderMockAsByteStringResults{b1}
 	return mmAsByteString.mock
 }
 
 //Set uses given function f to mock the SignatureKeyHolder.AsByteString method
-func (mmAsByteString *mSignatureKeyHolderMockAsByteString) Set(f func() (s1 string)) *SignatureKeyHolderMock {
+func (mmAsByteString *mSignatureKeyHolderMockAsByteString) Set(f func() (b1 longbits.ByteString)) *SignatureKeyHolderMock {
 	if mmAsByteString.defaultExpectation != nil {
 		mmAsByteString.mock.t.Fatalf("Default expectation is already set for the SignatureKeyHolder.AsByteString method")
 	}
@@ -180,7 +181,7 @@ func (mmAsByteString *mSignatureKeyHolderMockAsByteString) Set(f func() (s1 stri
 }
 
 // AsByteString implements SignatureKeyHolder
-func (mmAsByteString *SignatureKeyHolderMock) AsByteString() (s1 string) {
+func (mmAsByteString *SignatureKeyHolderMock) AsByteString() (b1 longbits.ByteString) {
 	mm_atomic.AddUint64(&mmAsByteString.beforeAsByteStringCounter, 1)
 	defer mm_atomic.AddUint64(&mmAsByteString.afterAsByteStringCounter, 1)
 
@@ -195,7 +196,7 @@ func (mmAsByteString *SignatureKeyHolderMock) AsByteString() (s1 string) {
 		if results == nil {
 			mmAsByteString.t.Fatal("No results are set for the SignatureKeyHolderMock.AsByteString")
 		}
-		return (*results).s1
+		return (*results).b1
 	}
 	if mmAsByteString.funcAsByteString != nil {
 		return mmAsByteString.funcAsByteString()

@@ -56,21 +56,20 @@ import (
 	"sync"
 	"time"
 
-	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core/errors"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetdispatch"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core/population"
-
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
-	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/misbehavior"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/errors"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetdispatch"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/population"
+	"github.com/insolar/insolar/pulse"
 )
 
 // hides embedded pointer from external access

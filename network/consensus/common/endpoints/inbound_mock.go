@@ -7,6 +7,7 @@ import (
 	mm_time "time"
 
 	"github.com/gojuno/minimock"
+	"github.com/insolar/insolar/longbits"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 )
 
@@ -14,7 +15,7 @@ import (
 type InboundMock struct {
 	t minimock.Tester
 
-	funcAsByteString          func() (s1 string)
+	funcAsByteString          func() (b1 longbits.ByteString)
 	inspectFuncAsByteString   func()
 	afterAsByteStringCounter  uint64
 	beforeAsByteStringCounter uint64
@@ -73,7 +74,7 @@ type InboundMockAsByteStringExpectation struct {
 
 // InboundMockAsByteStringResults contains results of the Inbound.AsByteString
 type InboundMockAsByteStringResults struct {
-	s1 string
+	b1 longbits.ByteString
 }
 
 // Expect sets up expected params for Inbound.AsByteString
@@ -101,7 +102,7 @@ func (mmAsByteString *mInboundMockAsByteString) Inspect(f func()) *mInboundMockA
 }
 
 // Return sets up results that will be returned by Inbound.AsByteString
-func (mmAsByteString *mInboundMockAsByteString) Return(s1 string) *InboundMock {
+func (mmAsByteString *mInboundMockAsByteString) Return(b1 longbits.ByteString) *InboundMock {
 	if mmAsByteString.mock.funcAsByteString != nil {
 		mmAsByteString.mock.t.Fatalf("InboundMock.AsByteString mock is already set by Set")
 	}
@@ -109,12 +110,12 @@ func (mmAsByteString *mInboundMockAsByteString) Return(s1 string) *InboundMock {
 	if mmAsByteString.defaultExpectation == nil {
 		mmAsByteString.defaultExpectation = &InboundMockAsByteStringExpectation{mock: mmAsByteString.mock}
 	}
-	mmAsByteString.defaultExpectation.results = &InboundMockAsByteStringResults{s1}
+	mmAsByteString.defaultExpectation.results = &InboundMockAsByteStringResults{b1}
 	return mmAsByteString.mock
 }
 
 //Set uses given function f to mock the Inbound.AsByteString method
-func (mmAsByteString *mInboundMockAsByteString) Set(f func() (s1 string)) *InboundMock {
+func (mmAsByteString *mInboundMockAsByteString) Set(f func() (b1 longbits.ByteString)) *InboundMock {
 	if mmAsByteString.defaultExpectation != nil {
 		mmAsByteString.mock.t.Fatalf("Default expectation is already set for the Inbound.AsByteString method")
 	}
@@ -128,7 +129,7 @@ func (mmAsByteString *mInboundMockAsByteString) Set(f func() (s1 string)) *Inbou
 }
 
 // AsByteString implements Inbound
-func (mmAsByteString *InboundMock) AsByteString() (s1 string) {
+func (mmAsByteString *InboundMock) AsByteString() (b1 longbits.ByteString) {
 	mm_atomic.AddUint64(&mmAsByteString.beforeAsByteStringCounter, 1)
 	defer mm_atomic.AddUint64(&mmAsByteString.afterAsByteStringCounter, 1)
 
@@ -143,7 +144,7 @@ func (mmAsByteString *InboundMock) AsByteString() (s1 string) {
 		if results == nil {
 			mmAsByteString.t.Fatal("No results are set for the InboundMock.AsByteString")
 		}
-		return (*results).s1
+		return (*results).b1
 	}
 	if mmAsByteString.funcAsByteString != nil {
 		return mmAsByteString.funcAsByteString()

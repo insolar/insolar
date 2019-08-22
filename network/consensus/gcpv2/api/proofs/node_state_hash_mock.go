@@ -9,6 +9,7 @@ import (
 	mm_time "time"
 
 	"github.com/gojuno/minimock"
+	"github.com/insolar/insolar/longbits"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 )
 
@@ -16,7 +17,7 @@ import (
 type NodeStateHashMock struct {
 	t minimock.Tester
 
-	funcAsByteString          func() (s1 string)
+	funcAsByteString          func() (b1 longbits.ByteString)
 	inspectFuncAsByteString   func()
 	afterAsByteStringCounter  uint64
 	beforeAsByteStringCounter uint64
@@ -127,7 +128,7 @@ type NodeStateHashMockAsByteStringExpectation struct {
 
 // NodeStateHashMockAsByteStringResults contains results of the NodeStateHash.AsByteString
 type NodeStateHashMockAsByteStringResults struct {
-	s1 string
+	b1 longbits.ByteString
 }
 
 // Expect sets up expected params for NodeStateHash.AsByteString
@@ -155,7 +156,7 @@ func (mmAsByteString *mNodeStateHashMockAsByteString) Inspect(f func()) *mNodeSt
 }
 
 // Return sets up results that will be returned by NodeStateHash.AsByteString
-func (mmAsByteString *mNodeStateHashMockAsByteString) Return(s1 string) *NodeStateHashMock {
+func (mmAsByteString *mNodeStateHashMockAsByteString) Return(b1 longbits.ByteString) *NodeStateHashMock {
 	if mmAsByteString.mock.funcAsByteString != nil {
 		mmAsByteString.mock.t.Fatalf("NodeStateHashMock.AsByteString mock is already set by Set")
 	}
@@ -163,12 +164,12 @@ func (mmAsByteString *mNodeStateHashMockAsByteString) Return(s1 string) *NodeSta
 	if mmAsByteString.defaultExpectation == nil {
 		mmAsByteString.defaultExpectation = &NodeStateHashMockAsByteStringExpectation{mock: mmAsByteString.mock}
 	}
-	mmAsByteString.defaultExpectation.results = &NodeStateHashMockAsByteStringResults{s1}
+	mmAsByteString.defaultExpectation.results = &NodeStateHashMockAsByteStringResults{b1}
 	return mmAsByteString.mock
 }
 
 //Set uses given function f to mock the NodeStateHash.AsByteString method
-func (mmAsByteString *mNodeStateHashMockAsByteString) Set(f func() (s1 string)) *NodeStateHashMock {
+func (mmAsByteString *mNodeStateHashMockAsByteString) Set(f func() (b1 longbits.ByteString)) *NodeStateHashMock {
 	if mmAsByteString.defaultExpectation != nil {
 		mmAsByteString.mock.t.Fatalf("Default expectation is already set for the NodeStateHash.AsByteString method")
 	}
@@ -182,7 +183,7 @@ func (mmAsByteString *mNodeStateHashMockAsByteString) Set(f func() (s1 string)) 
 }
 
 // AsByteString implements NodeStateHash
-func (mmAsByteString *NodeStateHashMock) AsByteString() (s1 string) {
+func (mmAsByteString *NodeStateHashMock) AsByteString() (b1 longbits.ByteString) {
 	mm_atomic.AddUint64(&mmAsByteString.beforeAsByteStringCounter, 1)
 	defer mm_atomic.AddUint64(&mmAsByteString.afterAsByteStringCounter, 1)
 
@@ -197,7 +198,7 @@ func (mmAsByteString *NodeStateHashMock) AsByteString() (s1 string) {
 		if results == nil {
 			mmAsByteString.t.Fatal("No results are set for the NodeStateHashMock.AsByteString")
 		}
-		return (*results).s1
+		return (*results).b1
 	}
 	if mmAsByteString.funcAsByteString != nil {
 		return mmAsByteString.funcAsByteString()
