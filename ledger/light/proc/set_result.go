@@ -247,7 +247,7 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 	return nil
 }
 
-// EarliestPending checks if received result closes earliest request. If so, it should return new earliest request or
+// calcPending checks if received result closes earliest request. If so, it should return new earliest request or
 // nil if the last request was closed.
 func calcPending(opened []record.CompositeFilamentRecord, closedRequestID insolar.ID) (*insolar.PulseNumber, error) {
 	// If we don't have pending requests BEFORE we try to save result, something went wrong.
@@ -277,7 +277,7 @@ func calcPending(opened []record.CompositeFilamentRecord, closedRequestID insola
 	return &p, nil
 }
 
-// FindClosed looks for request that was closed by provided result. Returns error if not found.
+// findClosed looks for request that was closed by provided result. Returns error if not found.
 func findClosed(reqs []record.CompositeFilamentRecord, result record.Result) (record.CompositeFilamentRecord, error) {
 	for _, req := range reqs {
 		if req.RecordID == *result.Request.Record() {
@@ -296,7 +296,7 @@ func findClosed(reqs []record.CompositeFilamentRecord, result record.Result) (re
 		}
 }
 
-// NotifyDetached sends notifications about detached requests that are ready for execution.
+// notifyDetached sends notifications about detached requests that are ready for execution.
 func notifyDetached(
 	ctx context.Context,
 	sender bus.Sender,

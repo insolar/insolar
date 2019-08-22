@@ -56,20 +56,20 @@ func (i *IndexStorageMemory) ForID(ctx context.Context, pn insolar.PulseNumber, 
 }
 
 // ForPulse returns a collection of buckets for a provided pulse number.
-func (i *IndexStorageMemory) ForPulse(ctx context.Context, pn insolar.PulseNumber) []record.Index {
+func (i *IndexStorageMemory) ForPulse(ctx context.Context, pn insolar.PulseNumber) ([]record.Index, error) {
 	i.bucketsLock.RLock()
 	defer i.bucketsLock.RUnlock()
 
 	bucks, ok := i.buckets[pn]
 	if !ok {
-		return nil
+		return nil, ErrIndexNotFound
 	}
 
 	res := make([]record.Index, 0, len(bucks))
 	for _, b := range bucks {
 		res = append(res, clone(b))
 	}
-	return res
+	return res, nil
 }
 
 func (i *IndexStorageMemory) Set(ctx context.Context, pn insolar.PulseNumber, bucket record.Index) {

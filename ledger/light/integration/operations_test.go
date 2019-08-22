@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// +build slowtest
 
 package integration_test
 
@@ -74,11 +75,13 @@ func CallGetCode(ctx context.Context, s *Server, id insolar.ID) payload.Payload 
 	return nil
 }
 
-// func MakeSetIncomingRequestFromAPI(objectID, reasonID insolar.ID, isCreation bool) (payload.SetIncomingRequest, record.Virtual) {
-// 	return MakeSetIncomingRequest(objectID, reasonID, insolar.ID{}, isCreation, true)
-// }
-
-func MakeSetIncomingRequest(objectID, reasonID insolar.ID, reasonObjectID insolar.ID, isCreation, isAPI bool) (payload.SetIncomingRequest, record.Virtual) {
+func MakeSetIncomingRequest(
+	objectID insolar.ID,
+	reasonID insolar.ID,
+	reasonObjectID insolar.ID,
+	isCreation bool,
+	isAPI bool,
+) (payload.SetIncomingRequest, record.Virtual) {
 	args := make([]byte, 100)
 	_, err := rand.Read(args)
 	panicIfErr(err)
@@ -98,6 +101,30 @@ func MakeSetIncomingRequest(objectID, reasonID insolar.ID, reasonObjectID insola
 		req.APINode = gen.Reference()
 	} else {
 		req.Caller = *insolar.NewReference(reasonObjectID)
+	}
+
+	rec := record.Wrap(&req)
+	pl := payload.SetIncomingRequest{
+		Request: rec,
+	}
+	return pl, rec
+}
+
+func MakeSetIncomingRequestDetached(
+	objectID insolar.ID,
+	reasonID insolar.ID,
+	reasonObjectID insolar.ID,
+) (payload.SetIncomingRequest, record.Virtual) {
+	args := make([]byte, 100)
+	_, err := rand.Read(args)
+	panicIfErr(err)
+
+	req := record.IncomingRequest{
+		Arguments:  args,
+		Reason:     *insolar.NewReference(reasonID),
+		ReturnMode: record.ReturnNoWait,
+		Caller:     *insolar.NewReference(reasonObjectID),
+		Object:     insolar.NewReference(objectID),
 	}
 
 	rec := record.Wrap(&req)

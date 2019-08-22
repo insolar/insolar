@@ -30,6 +30,7 @@ import (
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/store"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/testutils/testbadger"
 )
 
 // helper for tests
@@ -67,13 +68,15 @@ func TestDBStore_TruncateHead(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	assert.NoError(t, err)
 
-	dbMock, err := store.NewBadgerDB(tmpdir)
+	ops := testbadger.BadgerDefaultOptions(tmpdir)
+	dbMock, err := store.NewBadgerDB(ops)
+
 	defer dbMock.Stop(ctx)
 	require.NoError(t, err)
 
 	dbStore := NewDBStore(dbMock)
 
-	numElements := 100
+	numElements := 10
 
 	// it's used for writing pulses in random order to db
 	indexes := make([]int, numElements)
@@ -122,7 +125,8 @@ func TestDBStorage_Empty(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	db, err := store.NewBadgerDB(tmpdir)
+	ops := testbadger.BadgerDefaultOptions(tmpdir)
+	db, err := store.NewBadgerDB(ops)
 	require.NoError(t, err)
 	defer db.Stop(ctx)
 	s := NewDBStore(db)
@@ -139,7 +143,8 @@ func TestDBStorage_UpdateJetTree(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	db, err := store.NewBadgerDB(tmpdir)
+	ops := testbadger.BadgerDefaultOptions(tmpdir)
+	db, err := store.NewBadgerDB(ops)
 	require.NoError(t, err)
 	defer db.Stop(ctx)
 	s := NewDBStore(db)
@@ -162,7 +167,8 @@ func TestDBStorage_SplitJetTree(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	db, err := store.NewBadgerDB(tmpdir)
+	ops := testbadger.BadgerDefaultOptions(tmpdir)
+	db, err := store.NewBadgerDB(ops)
 	require.NoError(t, err)
 	defer db.Stop(ctx)
 	s := NewDBStore(db)
@@ -195,7 +201,8 @@ func TestDBStorage_CloneJetTree(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	db, err := store.NewBadgerDB(tmpdir)
+	ops := testbadger.BadgerDefaultOptions(tmpdir)
+	db, err := store.NewBadgerDB(ops)
 	require.NoError(t, err)
 	defer db.Stop(ctx)
 	require.NoError(t, err)
@@ -240,7 +247,7 @@ func TestDBStorage_ForID_Basic(t *testing.T) {
 		defer os.RemoveAll(tmpdir)
 		require.NoError(t, err)
 
-		db, err := store.NewBadgerDB(tmpdir)
+		db, err := store.NewBadgerDB(testbadger.BadgerDefaultOptions(tmpdir))
 		require.NoError(t, err)
 		defer db.Stop(ctx)
 		s := NewDBStore(db)

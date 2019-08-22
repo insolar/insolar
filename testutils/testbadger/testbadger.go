@@ -1,4 +1,4 @@
-//
+///
 // Copyright 2019 Insolar Technologies GmbH
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,33 +12,18 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
+///
 
-package payload
+package testbadger
 
-const (
-	CodeUnknown = 0
-
-	CodeDeactivated  = 1001
-	CodeFlowCanceled = 1002
-	CodeNotFound     = 1003
-	CodeNoPendings   = 1004
-	CodeNoStartPulse = 1005
-
-	CodeRequestNotFound = 1006
-	CodeInvalidRequest  = 1007
-	CodeReasonNotFound  = 1008
-	CodeReasonIsWrong   = 1009
+import (
+	"github.com/dgraph-io/badger"
 )
 
-type CodedError struct {
-	Text string
-	Code uint32
-}
+func BadgerDefaultOptions(dir string) badger.Options {
+	ops := badger.DefaultOptions(dir)
+	ops.CompactL0OnClose = false
+	ops.SyncWrites = false
 
-func (e *CodedError) GetCode() uint32 {
-	return e.Code
-}
-func (e *CodedError) Error() string {
-	return e.Text
+	return ops
 }
