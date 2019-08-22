@@ -159,6 +159,7 @@ func (r *PhasedRoundController) PrepareConsensusRound(upstream api.UpstreamContr
 			}
 			defer r.prepR.stop() // initiates handover from PrepRealm
 			r.prepR = nil
+
 			r.roundWorker.Start() // ensures that worker was started
 			r._startFullRealm(successful)
 		})
@@ -283,21 +284,38 @@ func (r *PhasedRoundController) _startFullRealm(prepWasSuccessful bool) {
 			panic(fmt.Sprintf("illegal state - pulse number of expected census (%v) and of the realm (%v) are mismatched for %v",
 				lastCensus.GetPulseNumber(), pd.PulseNumber, r.realm.GetSelfNodeID()))
 		}
-		if !lastCensus.IsActive() {
+		if lastCensus.IsActive() {
+			r.realm.unsafeRound = true
+		} else {
 			/* Auto-activation of the prepared lastCensus */
 			expCensus := chronicle.GetExpectedCensus()
 			lastCensus = expCensus.MakeActive(pd)
+			r.realm.unsafeRound = chronicle.GetActiveCensus().GetExpectedPulseNumber() != pd.PulseNumber
 		}
 	}
 
 	active := chronicle.GetActiveCensus()
 	if r.realm.ephemeralFeeder != nil && !active.GetPulseData().IsFromEphemeral() {
-		r.realm.ephemeralFeeder.OnEphemeralCancelled() // can't be called inline due to lock
+		r.realm.ephemeralFeeder.OnEphemeralCancelled()
 		r.realm.ephemeralFeeder = nil
+		r.realm.unsafeRound = true
 	}
 
+	endOf := r.realm.roundStartedAt.Add(r.realm.timings.EndOfConsensus)
+	inslogger.FromContext(r.realm.roundContext).Warnf(
+		"Starting consensus full realm: self={%v}, ephemeral=%v, unsafe=%v, startedAt=%v, endOf=%v, census=%+v", r.realm.GetLocalProfile(),
+		r.realm.ephemeralFeeder != nil, r.realm.unsafeRound, briefTime{r.realm.GetStartedAt()}, briefTime{endOf}, active)
+
 	r.realm.start(active, active.GetOnlinePopulation(), r.bundle)
-	r.roundWorker.SetTimeout(r.realm.roundStartedAt.Add(r.realm.timings.EndOfConsensus))
+	r.roundWorker.SetTimeout(endOf)
+}
+
+type briefTime struct {
+	time.Time
+}
+
+func (v briefTime) String() string {
+	return fmt.Sprintf("%02d:%02d:%02d.%09d", v.Time.Hour(), v.Time.Minute(), v.Time.Second(), v.Time.Nanosecond())
 }
 
 func (r *PhasedRoundController) ensureStarted() bool {

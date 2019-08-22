@@ -533,7 +533,7 @@ func (r *FullRealm) buildLocalMemberAnnouncementDraft(mp profiles.MembershipProf
 	}
 
 	r.self.CanIntroduceJoiner()
-	if lp.CanIntroduceJoiner() {
+	if !r.unsafeRound && lp.CanIntroduceJoiner() {
 		jc, secret := r.registerNextJoinCandidate()
 		if jc != nil {
 			return profiles.NewMemberAnnouncementWithJoinerID(localID, mp, jc.GetNodeID(), secret, localID)
