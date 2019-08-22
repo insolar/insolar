@@ -235,31 +235,39 @@ type figment struct {
 func (p *figment) dispatchAnnouncement(ctx context.Context, phantom *NodePhantom, rank member.Rank, profile profiles.StaticProfile,
 	announcement profiles.MemberAnnouncement) error {
 
+	announcedBy := announcement.AnnouncedByID
+
+	profileCategory := "none"
+	if profile != nil {
+		if profile.GetExtension() != nil {
+			profileCategory = "full"
+		} else {
+			profileCategory = "brief"
+		}
+	}
+
 	flags := population.UpdateFlags(0)
 	hasUpdate := false
 	if p.phantom == nil {
 		p.phantom = phantom
 		p.rank = rank
-
-		prof := "none"
-		if profile != nil {
-			if profile.GetExtension() != nil {
-				prof = "full"
-			} else {
-				prof = "brief"
-			}
-		}
-		inslogger.FromContext(ctx).Debugf("Phantom node added: s=%d, t=%d, profile=%s",
-			p.phantom.purgatory.hook.GetLocalNodeID(), p.phantom.nodeID, prof)
+		inslogger.FromContext(ctx).Debugf("Phantom node added: s=%d, t=%d, announcedBy=%d, profile=%s, rank=%v",
+			p.phantom.purgatory.hook.GetLocalNodeID(), p.phantom.nodeID, announcedBy, profileCategory, rank)
 
 		flags |= population.FlagCreated
+	} else {
+		inslogger.FromContext(ctx).Debugf("Phantom node update attempt: s=%d, t=%d, announcedBy=%d, profile=%s, rank=%v, "+
+			"figmentRank=%v, figmentProfile=%+v, ann=%+v",
+			p.phantom.purgatory.hook.GetLocalNodeID(), p.phantom.nodeID, announcedBy, profileCategory, rank,
+			p.rank, p.profile, announcement,
+		)
 	}
+
 	ascentWithBrief := p.phantom.purgatory.IsBriefAscensionAllowed()
 
-	announcedBy := announcement.AnnouncedByID
 	hasProfileUpdate, hasMismatch := p.updateProfile(rank, profile)
 	if hasMismatch {
-		panic(fmt.Sprintf("inconsistent neighbour announcement: local=%d, phantom=%d, announcer=%d, rank=%v, profile=%+v, firmentRank=%v, figmentProfile=%+v, ann=%+v",
+		panic(fmt.Sprintf("inconsistent neighbour announcement: local=%d, phantom=%d, announcer=%d, rank=%v, profile=%+v, figmentRank=%v, figmentProfile=%+v, ann=%+v",
 			p.phantom.purgatory.hook.GetLocalNodeID(), p.phantom.nodeID, announcedBy, rank, profile, p.rank, p.profile, announcement))
 		// TODO return p.RegisterFraud(p.Frauds().NewInconsistentNeighbourAnnouncement(p.GetReportProfile()))
 	}
@@ -267,15 +275,22 @@ func (p *figment) dispatchAnnouncement(ctx context.Context, phantom *NodePhantom
 	if hasProfileUpdate {
 		flags |= population.FlagUpdatedProfile
 		hasUpdate = true
+
+		inslogger.FromContext(ctx).Debugf("Phantom profile updated: s=%d, t=%d, announcedBy=%d",
+			p.phantom.purgatory.hook.GetLocalNodeID(), p.phantom.nodeID, announcedBy)
 	}
 	if p.announcerID.IsAbsent() && !announcedBy.IsAbsent() && (announcedBy != phantom.nodeID || !p.rank.IsJoiner()) {
 		p.announcerID = announcedBy
 		hasUpdate = true
+
+		inslogger.FromContext(ctx).Debugf("Phantom announcer updated: s=%d, t=%d, announcedBy=%d",
+			p.phantom.purgatory.hook.GetLocalNodeID(), p.phantom.nodeID, announcedBy)
 	}
 
 	if flags != 0 {
 		p.phantom.purgatory.onNodeUpdated(p.phantom, flags)
 	}
+
 	if !hasUpdate || p.profile == nil {
 		return nil
 	}
@@ -283,6 +298,8 @@ func (p *figment) dispatchAnnouncement(ctx context.Context, phantom *NodePhantom
 	switch {
 	case p.rank.IsJoiner() && p.announcerID.IsAbsent():
 		/* self-ascension is not allowed for joiners */
+		inslogger.FromContext(ctx).Debugf("Phantom joiner ascension postponed: s=%d, t=%d, announcedBy=%d",
+			p.phantom.purgatory.hook.GetLocalNodeID(), p.phantom.nodeID, announcedBy)
 	case p.profile.GetExtension() != nil || ascentWithBrief:
 		inslogger.FromContext(ctx).Debugf("Phantom node ascension: s=%d, t=%d, full=%v",
 			p.phantom.purgatory.hook.GetLocalNodeID(), p.phantom.nodeID, p.profile.GetExtension() != nil)
