@@ -9,12 +9,12 @@ func _() {
 	// Re-run the stringer command to generate them again.
 	var x [1]struct{}
 	_ = x[NodeUndefined-0]
-	_ = x[NodePending-1]
+	_ = x[NodeJoining-1]
 	_ = x[NodeReady-2]
 	_ = x[NodeLeaving-3]
 }
 
-const _NodeState_name = "NodeUndefinedNodePendingNodeReadyNodeLeaving"
+const _NodeState_name = "NodeUndefinedNodeJoiningNodeReadyNodeLeaving"
 
 var _NodeState_index = [...]uint8{0, 13, 24, 33, 44}
 

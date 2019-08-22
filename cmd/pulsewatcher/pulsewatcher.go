@@ -78,11 +78,10 @@ func displayResultsTable(results []nodeStatus, ready bool, buffer *bytes.Buffer)
 		"ID",
 		"Network Pulse",
 		"Pulse",
-		"Active List",
-		"Working Count",
+		"Active",
+		"Working",
 		"Role",
 		"Timestamp",
-		"Restart Count",
 		"Uptime",
 		"Error",
 	})
@@ -102,7 +101,7 @@ func displayResultsTable(results []nodeStatus, ready bool, buffer *bytes.Buffer)
 	}
 
 	table.SetFooter([]string{
-		"", "", "", "", "",
+		"", "", "", "",
 		"Insolar State", stateString,
 		"Time", time.Now().Format(timeFormat),
 		"Insolar Uptime", time.Since(startTime).Round(time.Second).String(), "",
@@ -114,10 +113,9 @@ func displayResultsTable(results []nodeStatus, ready bool, buffer *bytes.Buffer)
 		tablewriter.Colors{},
 		tablewriter.Colors{},
 
-		tablewriter.Colors{},
 		tablewriter.Colors{color},
-
 		tablewriter.Colors{},
+
 		tablewriter.Colors{},
 		tablewriter.Colors{},
 		tablewriter.Colors{},
@@ -134,7 +132,6 @@ func displayResultsTable(results []nodeStatus, ready bool, buffer *bytes.Buffer)
 		tablewriter.Colors{},
 		tablewriter.Colors{},
 		tablewriter.Colors{},
-		tablewriter.Colors{tablewriter.FgHiRedColor},
 		tablewriter.Colors{},
 		tablewriter.Colors{tablewriter.FgHiRedColor},
 	)
@@ -186,7 +183,6 @@ func displayResultsTable(results []nodeStatus, ready bool, buffer *bytes.Buffer)
 			intToString(row.reply.WorkingListSize),
 			shortRole(row.reply.Origin.Role),
 			timestamp,
-			intToString(row.restartCount),
 			uptime,
 			row.errStr,
 		})
@@ -232,7 +228,7 @@ func displayResultsJSON(results []nodeStatus) {
 	fmt.Print("\n\n")
 }
 
-func collectNodesStatuses(conf *pulsewatcher.Config) ([]nodeStatus, bool) {
+func collectNodesStatuses(conf *pulsewatcher.Config, lastResults []nodeStatus) ([]nodeStatus, bool) {
 	state := true
 	errored := 0
 	results := make([]nodeStatus, len(conf.Nodes))
@@ -244,6 +240,9 @@ func collectNodesStatuses(conf *pulsewatcher.Config) ([]nodeStatus, bool) {
 		go func(url string, i int) {
 			res, err := client.Post("http://"+url+"/api/rpc", "application/json",
 				strings.NewReader(`{"jsonrpc": "2.0", "method": "node.getStatus", "id": 0}`))
+
+			url = strings.TrimPrefix(url, "127.0.0.1")
+
 			if err != nil {
 				errStr := err.Error()
 				if strings.Contains(errStr, "connection refused") ||
@@ -253,8 +252,17 @@ func collectNodesStatuses(conf *pulsewatcher.Config) ([]nodeStatus, bool) {
 					// This prevents table distortion on small screens.
 					errStr = "NODE IS DOWN"
 				}
+				if strings.Contains(errStr, "exceeded while awaiting headers") {
+					errStr = "TIMEOUT"
+				}
+
 				lock.Lock()
-				results[i] = nodeStatus{url, api.StatusReply{}, errStr, 0}
+				if len(lastResults) > i {
+					results[i] = lastResults[i]
+					results[i].errStr = errStr
+				} else {
+					results[i] = nodeStatus{url, api.StatusReply{}, errStr}
+				}
 				errored++
 				lock.Unlock()
 				wg.Done()
@@ -275,7 +283,7 @@ func collectNodesStatuses(conf *pulsewatcher.Config) ([]nodeStatus, bool) {
 			}
 			lock.Lock()
 
-			results[i] = nodeStatus{url, out.Result, "", 0}
+			results[i] = nodeStatus{url, out.Result, ""}
 			state = state && out.Result.NetworkState == insolar.CompleteNetworkState.String()
 			lock.Unlock()
 			wg.Done()
@@ -288,10 +296,9 @@ func collectNodesStatuses(conf *pulsewatcher.Config) ([]nodeStatus, bool) {
 }
 
 type nodeStatus struct {
-	url          string
-	reply        api.StatusReply
-	errStr       string
-	restartCount int
+	url    string
+	reply  api.StatusReply
+	errStr string
 }
 
 func main() {
@@ -327,7 +334,7 @@ func main() {
 	var ready bool
 	startTime = time.Now()
 	for {
-		results, ready = collectNodesStatuses(conf)
+		results, ready = collectNodesStatuses(conf, results)
 		if useJSONFormat {
 			displayResultsJSON(results)
 		} else {

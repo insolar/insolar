@@ -193,7 +193,10 @@ func (b *Bus) SendTarget(
 	if err == nil {
 		pn = latestPulse.PulseNumber
 	} else {
-		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to fetch pulse"))
+		// It's possible, that we try to fetch something in PM.Set()
+		// In those cases, when we in the start of the system, we don't have any pulses
+		// but this is not the error
+		inslogger.FromContext(ctx).Warn(errors.Wrap(err, "failed to fetch pulse"))
 	}
 	return b.sendTarget(ctx, msg, target, pn)
 }

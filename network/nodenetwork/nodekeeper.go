@@ -80,7 +80,7 @@ func NewNodeNetwork(configuration configuration.Transport, certificate insolar.C
 	}
 	nodeKeeper := NewNodeKeeper(origin)
 	if !network.OriginIsDiscovery(certificate) {
-		origin.(node.MutableNode).SetState(insolar.NodePending)
+		origin.(node.MutableNode).SetState(insolar.NodeJoining)
 	}
 	return nodeKeeper, nil
 }

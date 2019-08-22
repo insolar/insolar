@@ -71,7 +71,7 @@ func TestNode_GetState(t *testing.T) {
 	n.(MutableNode).SetState(insolar.NodeUndefined)
 	assert.Equal(t, insolar.NodeUndefined, n.GetState())
 	n.(MutableNode).ChangeState()
-	assert.Equal(t, insolar.NodePending, n.GetState())
+	assert.Equal(t, insolar.NodeJoining, n.GetState())
 	n.(MutableNode).ChangeState()
 	assert.Equal(t, insolar.NodeReady, n.GetState())
 	n.(MutableNode).ChangeState()
