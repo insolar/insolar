@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/pulsar"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
+	"github.com/insolar/insolar/testutils/testbadger"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -49,7 +50,8 @@ func TestDropStorageDB_TruncateHead_NoSuchPulse(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	assert.NoError(t, err)
 
-	dbMock, err := store.NewBadgerDB(tmpdir)
+	ops := testbadger.BadgerDefaultOptions(tmpdir)
+	dbMock, err := store.NewBadgerDB(ops)
 	defer dbMock.Stop(ctx)
 	require.NoError(t, err)
 
@@ -67,13 +69,14 @@ func TestDBStore_TruncateHead(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	assert.NoError(t, err)
 
-	dbMock, err := store.NewBadgerDB(tmpdir)
+	ops := testbadger.BadgerDefaultOptions(tmpdir)
+	dbMock, err := store.NewBadgerDB(ops)
 	defer dbMock.Stop(ctx)
 	require.NoError(t, err)
 
 	dbStore := NewDB(dbMock)
 
-	numElements := 100
+	numElements := 10
 
 	startPulseNumber := insolar.GenesisPulse.PulseNumber
 	for i := 0; i < numElements; i++ {
