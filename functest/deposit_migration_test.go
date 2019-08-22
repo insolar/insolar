@@ -128,7 +128,8 @@ func TestMigrationTokenNilValue(t *testing.T) {
 	migrationAddress := generateMigrationAddress()
 	_ = createMigrationMemberForMA(t, migrationAddress)
 
-	result, err := signedRequestWithEmptyRequestRef(t, &launchnet.MigrationDaemons[0], "deposit.migration", map[string]interface{}{"amount": "20", "ethTxHash": nil, "migrationAddress": migrationAddress})
+	result, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, launchnet.MigrationDaemons[0],
+		"deposit.migration", map[string]interface{}{"amount": "20", "ethTxHash": nil, "migrationAddress": migrationAddress})
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "failed to get 'ethTxHash' param")
 	require.Nil(t, result)
@@ -173,21 +174,20 @@ func TestMigrationAnotherAmountSameTx(t *testing.T) {
 	migrationAddress := generateMigrationAddress()
 	_ = createMigrationMemberForMA(t, migrationAddress)
 
-	resultMigr1, err := signedRequest(t,
+	_, err := signedRequest(t,
 		launchnet.TestRPCUrl,
 		launchnet.MigrationDaemons[0], "deposit.migration",
 		map[string]interface{}{"amount": "20", "ethTxHash": "ethTxHash", "migrationAddress": migrationAddress})
-	_, err := signedRequest(t,
-		launchnet.MigrationDaemons[0], "deposit.migration", map[string]interface{}{"amount": "20", "ethTxHash": "ethTxHash", "migrationAddress": migrationAddress})
-	require.NoError(t, err)
 
 	_, err = signedRequest(t,
+		launchnet.TestRPCUrl,
 		launchnet.MigrationDaemons[1],
 		"deposit.migration",
 		map[string]interface{}{"amount": "30", "ethTxHash": "ethTxHash", "migrationAddress": migrationAddress})
 	require.NoError(t, err)
 
 	_, _, err = makeSignedRequest(
+		launchnet.TestRPCUrl,
 		launchnet.MigrationDaemons[2],
 		"deposit.migration",
 		map[string]interface{}{"amount": "30", "ethTxHash": "ethTxHash", "migrationAddress": migrationAddress})
