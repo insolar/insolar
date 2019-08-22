@@ -25,7 +25,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dgraph-io/badger"
 	fuzz "github.com/google/gofuzz"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
@@ -230,9 +229,7 @@ func TestRecordStorage_DB_Set(t *testing.T) {
 		defer os.RemoveAll(tmpdir)
 		require.NoError(t, err)
 
-		ops := badger.DefaultOptions(tmpdir)
-		ops.CompactL0OnClose = false
-		db, err := store.NewBadgerDB(ops)
+		db, err := store.NewBadgerDB(testbadger.BadgerDefaultOptions(tmpdir))
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 
@@ -253,9 +250,7 @@ func TestRecordStorage_DB_Set(t *testing.T) {
 		defer os.RemoveAll(tmpdir)
 		require.NoError(t, err)
 
-		ops := badger.DefaultOptions(tmpdir)
-		ops.CompactL0OnClose = false
-		db, err := store.NewBadgerDB(ops)
+		db, err := store.NewBadgerDB(testbadger.BadgerDefaultOptions(tmpdir))
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 
@@ -285,9 +280,7 @@ func TestRecordStorage_DB_Set(t *testing.T) {
 		defer os.RemoveAll(tmpdir)
 		require.NoError(t, err)
 
-		ops := badger.DefaultOptions(tmpdir)
-		ops.CompactL0OnClose = false
-		db, err := store.NewBadgerDB(ops)
+		db, err := store.NewBadgerDB(testbadger.BadgerDefaultOptions(tmpdir))
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 
@@ -329,9 +322,7 @@ func TestRecordStorage_DB_Set(t *testing.T) {
 		defer os.RemoveAll(tmpdir)
 		require.NoError(t, err)
 
-		ops := badger.DefaultOptions(tmpdir)
-		ops.CompactL0OnClose = false
-		db, err := store.NewBadgerDB(ops)
+		db, err := store.NewBadgerDB(testbadger.BadgerDefaultOptions(tmpdir))
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 
@@ -356,9 +347,7 @@ func TestRecordStorage_DB_Set(t *testing.T) {
 		defer os.RemoveAll(tmpdir)
 		require.NoError(t, err)
 
-		ops := badger.DefaultOptions(tmpdir)
-		ops.CompactL0OnClose = false
-		db, err := store.NewBadgerDB(ops)
+		db, err := store.NewBadgerDB(testbadger.BadgerDefaultOptions(tmpdir))
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 
@@ -462,9 +451,7 @@ func TestRecordPositionDB(t *testing.T) {
 		defer os.RemoveAll(tmpdir)
 		require.NoError(t, err)
 
-		ops := badger.DefaultOptions(tmpdir)
-		ops.CompactL0OnClose = false
-		db, err := store.NewBadgerDB(ops)
+		db, err := store.NewBadgerDB(testbadger.BadgerDefaultOptions(tmpdir))
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 
@@ -483,9 +470,7 @@ func TestRecordPositionDB(t *testing.T) {
 		defer os.RemoveAll(tmpdir)
 		require.NoError(t, err)
 
-		ops := badger.DefaultOptions(tmpdir)
-		ops.CompactL0OnClose = false
-		db, err := store.NewBadgerDB(ops)
+		db, err := store.NewBadgerDB(testbadger.BadgerDefaultOptions(tmpdir))
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 
@@ -508,9 +493,7 @@ func TestRecordPositionDB(t *testing.T) {
 		defer os.RemoveAll(tmpdir)
 		require.NoError(t, err)
 
-		ops := badger.DefaultOptions(tmpdir)
-		ops.CompactL0OnClose = false
-		db, err := store.NewBadgerDB(ops)
+		db, err := store.NewBadgerDB(testbadger.BadgerDefaultOptions(tmpdir))
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 
@@ -539,9 +522,7 @@ func TestRecordPositionDB(t *testing.T) {
 		defer os.RemoveAll(tmpdir)
 		require.NoError(t, err)
 
-		ops := badger.DefaultOptions(tmpdir)
-		ops.CompactL0OnClose = false
-		db, err := store.NewBadgerDB(ops)
+		db, err := store.NewBadgerDB(testbadger.BadgerDefaultOptions(tmpdir))
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 
@@ -571,9 +552,7 @@ func TestRecordPositionDB(t *testing.T) {
 		defer os.RemoveAll(tmpdir)
 		require.NoError(t, err)
 
-		ops := badger.DefaultOptions(tmpdir)
-		ops.CompactL0OnClose = false
-		db, err := store.NewBadgerDB(ops)
+		db, err := store.NewBadgerDB(testbadger.BadgerDefaultOptions(tmpdir))
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 
@@ -608,9 +587,7 @@ func TestRecordPositionDB(t *testing.T) {
 		defer os.RemoveAll(tmpdir)
 		require.NoError(t, err)
 
-		ops := badger.DefaultOptions(tmpdir)
-		ops.CompactL0OnClose = false
-		db, err := store.NewBadgerDB(ops)
+		db, err := store.NewBadgerDB(testbadger.BadgerDefaultOptions(tmpdir))
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 
