@@ -51,8 +51,6 @@ func Test_BootstrapCalls(t *testing.T) {
 
 	// First pulse goes in storage then interrupts.
 	s.SetPulse(ctx)
-	// Second pulse goes in storage and starts processing, including pulse change in flow dispatcher.
-	s.SetPulse(ctx)
 
 	t.Run("messages after two pulses return result", func(t *testing.T) {
 		p, _ := CallSetCode(ctx, s)
@@ -70,8 +68,6 @@ func Test_BasicOperations(t *testing.T) {
 	defer s.Stop()
 
 	// First pulse goes in storage then interrupts.
-	s.SetPulse(ctx)
-	// Second pulse goes in storage and starts processing, including pulse change in flow dispatcher.
 	s.SetPulse(ctx)
 
 	runner := func(t *testing.T) {
