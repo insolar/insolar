@@ -87,6 +87,7 @@ func displayResultsTable(results []nodeStatus, ready bool, buffer *bytes.Buffer)
 		"Error",
 	})
 	table.SetBorder(false)
+
 	table.ClearRows()
 	table.ClearFooter()
 
