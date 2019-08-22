@@ -123,10 +123,6 @@ func (r *FullRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 		sourceNode = r.getMemberReceiver(sourceID)
 	}
 
-	if sourceNode != nil && !sourceNode.CanReceivePacket(pt) {
-		return fmt.Errorf("packet type (%v) limit exceeded: from=%v(%v)", pt, sourceNode.GetNodeID(), from)
-	}
-
 	pd := r.packetDispatchers[pt] // was checked above for != nil
 
 	var err error
@@ -143,6 +139,10 @@ func (r *FullRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 
 	if !canHandle || err != nil {
 		return err
+	}
+
+	if sourceNode != nil && !sourceNode.CanReceivePacket(pt) {
+		return fmt.Errorf("packet type (%v) limit exceeded: from=%v(%v)", pt, sourceNode.GetNodeID(), from)
 	}
 
 	// this enables lazy parsing - packet is fully parsed AFTER validation, hence makes it less prone to exploits for non-members
