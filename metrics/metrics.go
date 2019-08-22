@@ -87,8 +87,8 @@ func (m *Metrics) Start(ctx context.Context) error {
 	inslog := inslogger.FromContext(ctx)
 
 	_, err := insmetrics.RegisterPrometheus(
-		ctx, m.config.Namespace, m.registry, m.config.ReportingPeriod,
-		m.nodeRole,
+		m.config.Namespace, m.registry, m.config.ReportingPeriod,
+		inslog, m.nodeRole,
 	)
 	if err != nil {
 		inslog.Error(err.Error())

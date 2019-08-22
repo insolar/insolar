@@ -51,12 +51,13 @@ type Handler struct {
 	IndexAccessor object.IndexAccessor
 	IndexModifier object.IndexModifier
 
-	DropModifier  drop.Modifier
-	PulseAccessor pulse.Accessor
-	JetModifier   jet.Modifier
-	JetAccessor   jet.Accessor
-	JetKeeper     executor.JetKeeper
-	BackupMaker   executor.BackupMaker
+	DropModifier       drop.Modifier
+	PulseAccessor      pulse.Accessor
+	JetModifier        jet.Modifier
+	JetAccessor        jet.Accessor
+	JetKeeper          executor.JetKeeper
+	BackupMaker        executor.BackupMaker
+	InitialStateReader executor.InitialStateAccessor
 
 	Sender          bus.Sender
 	StartPulse      pulse.StartPulse
@@ -110,9 +111,7 @@ func New(cfg configuration.Ledger) *Handler {
 			p.Dep(
 				h.StartPulse,
 				h.JetKeeper,
-				h.JetTree,
-				h.JetCoordinator,
-				h.DropDB,
+				h.InitialStateReader,
 				h.PulseAccessor,
 				h.Sender,
 			)
