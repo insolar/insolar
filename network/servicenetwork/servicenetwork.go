@@ -320,7 +320,7 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse insolar.Pulse, o
 // ChangePulse process pulse from Consensus
 func (n *ServiceNetwork) ChangePulse(ctx context.Context, pulse insolar.Pulse) {
 	n.CurrentPulse = pulse
-	n.Gatewayer.Gateway().OnPulseFromConsensus(ctx, pulse)
+	n.BaseGateway.OnPulseFromConsensus(ctx, pulse)
 }
 
 func (n *ServiceNetwork) UpdateState(ctx context.Context, pulseNumber insolar.PulseNumber, nodes []insolar.NetworkNode, cloudStateHash []byte) {
