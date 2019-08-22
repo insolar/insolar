@@ -17,6 +17,6 @@ jobs:
       uses: actions/checkout@v1
 
     - name: goDEP
-      run: curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+      run: make install-build-tools
     - name: ensure
       run: dep ensure -v
