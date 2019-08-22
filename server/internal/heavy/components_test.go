@@ -29,7 +29,7 @@ import (
 )
 
 func TestComponents(t *testing.T) {
-	tmpdir, err := ioutil.TempDir("", "light-")
+	tmpdir, err := ioutil.TempDir("", "heavy-")
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
@@ -43,11 +43,5 @@ func TestComponents(t *testing.T) {
 	cfg.Exporter.Addr = ":0"
 
 	c, err := newComponents(ctx, cfg, insolar.GenesisHeavyConfig{Skip: true})
-	require.NoError(t, err)
-
-	err = c.Start(ctx)
-	require.NoError(t, err)
-
-	err = c.Stop(ctx)
 	require.NoError(t, err)
 }
