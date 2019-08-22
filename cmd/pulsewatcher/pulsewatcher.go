@@ -78,8 +78,8 @@ func displayResultsTable(results []nodeStatus, ready bool, buffer *bytes.Buffer)
 		"ID",
 		"Network Pulse",
 		"Pulse",
-		"Active List",
-		"Working Count",
+		"Active",
+		"Working",
 		"Role",
 		"Timestamp",
 		"Uptime",
@@ -113,8 +113,8 @@ func displayResultsTable(results []nodeStatus, ready bool, buffer *bytes.Buffer)
 		tablewriter.Colors{},
 		tablewriter.Colors{},
 
-		tablewriter.Colors{},
 		tablewriter.Colors{color},
+		tablewriter.Colors{},
 
 		tablewriter.Colors{},
 		tablewriter.Colors{},
@@ -240,6 +240,9 @@ func collectNodesStatuses(conf *pulsewatcher.Config, lastResults []nodeStatus) (
 		go func(url string, i int) {
 			res, err := client.Post("http://"+url+"/api/rpc", "application/json",
 				strings.NewReader(`{"jsonrpc": "2.0", "method": "node.getStatus", "id": 0}`))
+
+			url = strings.TrimPrefix(url, "127.0.0.1")
+
 			if err != nil {
 				errStr := err.Error()
 				if strings.Contains(errStr, "connection refused") ||
