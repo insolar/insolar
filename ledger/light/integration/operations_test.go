@@ -114,7 +114,6 @@ func MakeSetIncomingRequestDetached(
 	objectID insolar.ID,
 	reasonID insolar.ID,
 	reasonObjectID insolar.ID,
-	isCreation bool,
 ) (payload.SetIncomingRequest, record.Virtual) {
 	args := make([]byte, 100)
 	_, err := rand.Read(args)
@@ -125,12 +124,7 @@ func MakeSetIncomingRequestDetached(
 		Reason:     *insolar.NewReference(reasonID),
 		ReturnMode: record.ReturnNoWait,
 		Caller:     *insolar.NewReference(reasonObjectID),
-	}
-
-	if isCreation {
-		req.CallType = record.CTSaveAsChild
-	} else {
-		req.Object = insolar.NewReference(objectID)
+		Object:     insolar.NewReference(objectID),
 	}
 
 	rec := record.Wrap(&req)

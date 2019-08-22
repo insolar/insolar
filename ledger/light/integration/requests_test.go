@@ -539,7 +539,7 @@ func Test_IncomingRequest_ClosedReason_FromOtherObject(t *testing.T) {
 			// Creating request from another object with root object reason
 			// in detached mode when reason closed already.
 			{
-				msg, _ := MakeSetIncomingRequestDetached(anotherID, reasonID, objectID, false)
+				msg, _ := MakeSetIncomingRequestDetached(anotherID, reasonID, objectID)
 				rep := retryIfCancelled(func() payload.Payload {
 					return SendMessage(ctx, s, &msg)
 				})
