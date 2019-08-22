@@ -1,4 +1,4 @@
-///
+//
 // Copyright 2019 Insolar Technologies GmbH
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,7 +12,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-///
+//
 
 package logicexecutor
 
@@ -28,6 +28,7 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/artifacts"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/machinesmanager"
 	"github.com/insolar/insolar/logicrunner/requestresult"
@@ -214,7 +215,7 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 		{
 			name: "parent mismatch",
 			transcript: &common.Transcript{
-				ObjectDescriptor: artifacts.NewObjectDescriptorMock(mc),
+				ObjectDescriptor: artifacts.NewObjectDescriptorMock(mc).HeadRefMock.Return(&objRef),
 				Request: &record.IncomingRequest{
 					Prototype: insolar.NewEmptyReference(),
 				},
@@ -227,7 +228,18 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 					artifacts.NewCodeDescriptorMock(mc),
 					nil,
 				),
-			error: true,
+			error: false,
+			res: &requestresult.RequestResult{
+				RawResult: func() []byte {
+					err := errors.New("proxy call error: try to call method of prototype as method of another prototype")
+					errResBuf, err := foundation.MarshalMethodErrorResult(err)
+					if err != nil {
+						require.NoError(t, err)
+					}
+					return errResBuf
+				}(),
+				RawObjectReference: objRef,
+			},
 		},
 		{
 			name: "error, descriptors trouble",

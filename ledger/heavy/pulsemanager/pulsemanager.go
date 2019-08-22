@@ -48,8 +48,6 @@ type PulseManager struct {
 
 	// setLock locks Set method call.
 	setLock sync.RWMutex
-	// saves PM stopping mode
-	stopped bool
 }
 
 // NewPulseManager creates PulseManager instance.
@@ -71,11 +69,6 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 	defer m.setLock.Unlock()
 
 	logger.Debug("behind set lock")
-
-	if m.stopped {
-		logger.Error(errors.New("can't call Set method on PulseManager after stop"))
-		return errors.New("can't call Set method on PulseManager after stop")
-	}
 
 	ctx, span := instracer.StartSpan(
 		ctx, "PulseManager.Set", trace.WithSampler(trace.AlwaysSample()),
@@ -100,6 +93,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 		if err != nil {
 			panic(errors.Wrap(err, "call of SetActiveNodes failed"))
 		}
+
 	}
 
 	logger.Info("save pulse to storage")

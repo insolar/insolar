@@ -26,6 +26,8 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/diode"
+	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
@@ -147,7 +149,16 @@ func newZerologAdapter(cfg configuration.Log) (*zerologAdapter, error) {
 		return nil, err
 	}
 
+	if cfg.BufferSize > 0 {
+		output = diode.NewWriter(
+			output,
+			cfg.BufferSize, 0,
+			func(missed int) { panic(fmt.Errorf("logger dropped %d messages", missed)) },
+		)
+	}
+
 	logger := zerolog.New(output).Level(zerolog.InfoLevel).With().Timestamp().Logger()
+	logger = logger.Hook(&metricsHook{})
 	za := &zerologAdapter{
 		logger: logger,
 		level:  zerolog.InfoLevel,
@@ -181,61 +192,73 @@ func (z *zerologAdapter) WithField(key string, value interface{}) insolar.Logger
 
 // Debug logs a message at level Debug on the stdout.
 func (z *zerologAdapter) Debug(args ...interface{}) {
+	stats.Record(contextWithLogLevel(zerolog.DebugLevel), statLogCalls.M(1))
 	z.loggerWithHooks().Debug().Msg(fmt.Sprint(args...))
 }
 
 // Debugf formatted logs a message at level Debug on the stdout.
 func (z *zerologAdapter) Debugf(format string, args ...interface{}) {
+	stats.Record(contextWithLogLevel(zerolog.DebugLevel), statLogCalls.M(1))
 	z.loggerWithHooks().Debug().Msgf(format, args...)
 }
 
 // Info logs a message at level Info on the stdout.
 func (z *zerologAdapter) Info(args ...interface{}) {
+	stats.Record(contextWithLogLevel(zerolog.InfoLevel), statLogCalls.M(1))
 	z.loggerWithHooks().Info().Msg(fmt.Sprint(args...))
 }
 
 // Infof formatted logs a message at level Info on the stdout.
 func (z *zerologAdapter) Infof(format string, args ...interface{}) {
+	stats.Record(contextWithLogLevel(zerolog.InfoLevel), statLogCalls.M(1))
 	z.loggerWithHooks().Info().Msgf(format, args...)
 }
 
 // Warn logs a message at level Warn on the stdout.
 func (z *zerologAdapter) Warn(args ...interface{}) {
+	stats.Record(contextWithLogLevel(zerolog.WarnLevel), statLogCalls.M(1))
 	z.loggerWithHooks().Warn().Msg(fmt.Sprint(args...))
 }
 
 // Warnf formatted logs a message at level Warn on the stdout.
 func (z *zerologAdapter) Warnf(format string, args ...interface{}) {
+	stats.Record(contextWithLogLevel(zerolog.WarnLevel), statLogCalls.M(1))
 	z.loggerWithHooks().Warn().Msgf(format, args...)
 }
 
 // Error logs a message at level Error on the stdout.
 func (z *zerologAdapter) Error(args ...interface{}) {
+	stats.Record(contextWithLogLevel(zerolog.ErrorLevel), statLogCalls.M(1))
 	z.loggerWithHooks().Error().Msg(fmt.Sprint(args...))
 }
 
 // Errorf formatted logs a message at level Error on the stdout.
 func (z *zerologAdapter) Errorf(format string, args ...interface{}) {
+	stats.Record(contextWithLogLevel(zerolog.ErrorLevel), statLogCalls.M(1))
 	z.loggerWithHooks().Error().Msgf(format, args...)
 }
 
 // Fatal logs a message at level Fatal on the stdout.
 func (z *zerologAdapter) Fatal(args ...interface{}) {
+	stats.Record(contextWithLogLevel(zerolog.FatalLevel), statLogCalls.M(1))
 	z.loggerWithHooks().Fatal().Msg(fmt.Sprint(args...))
 }
 
 // Fatalf formatted logs a message at level Fatal on the stdout.
 func (z *zerologAdapter) Fatalf(format string, args ...interface{}) {
+	stats.Record(contextWithLogLevel(zerolog.FatalLevel), statLogCalls.M(1))
 	z.loggerWithHooks().Fatal().Msgf(format, args...)
 }
 
 // Panic logs a message at level Panic on the stdout.
 func (z *zerologAdapter) Panic(args ...interface{}) {
+	stats.Record(contextWithLogLevel(zerolog.PanicLevel), statLogCalls.M(1))
 	z.loggerWithHooks().Panic().Msg(fmt.Sprint(args...))
 }
 
 // Panicf formatted logs a message at level Panic on the stdout.
 func (z zerologAdapter) Panicf(format string, args ...interface{}) {
+	stats.Record(contextWithLogLevel(zerolog.PanicLevel), statLogCalls.M(1))
 	z.loggerWithHooks().Panic().Msgf(format, args...)
 }
 

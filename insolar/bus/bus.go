@@ -193,7 +193,10 @@ func (b *Bus) SendTarget(
 	if err == nil {
 		pn = latestPulse.PulseNumber
 	} else {
-		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to fetch pulse"))
+		// It's possible, that we try to fetch something in PM.Set()
+		// In those cases, when we in the start of the system, we don't have any pulses
+		// but this is not the error
+		inslogger.FromContext(ctx).Warn(errors.Wrap(err, "failed to fetch pulse"))
 	}
 	return b.sendTarget(ctx, msg, target, pn)
 }
@@ -216,7 +219,7 @@ func (b *Bus) sendTarget(
 		return res, func() {}
 	}
 
-	msgType := getMessageType(msg)
+	msgType := messagePayloadTypeName(msg)
 
 	mctx := insmetrics.InsertTag(ctx, tagMessageType, msgType)
 	stats.Record(mctx, statSent.M(int64(len(msg.Payload))))
@@ -305,7 +308,9 @@ func (b *Bus) sendTarget(
 	return reply.messages, done
 }
 
-func getMessageType(msg *message.Message) string {
+// messagePayloadTypeName returns message type.
+// Parses type from payload if failed returns type from metadata field 'type'.
+func messagePayloadTypeName(msg *message.Message) string {
 	payloadType, err := payload.UnmarshalType(msg.Payload)
 	if err != nil {
 		// branch for legacy messages format: INS-2973

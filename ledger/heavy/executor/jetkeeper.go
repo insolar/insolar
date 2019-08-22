@@ -163,8 +163,7 @@ func (jk *dbJetKeeper) AddHotConfirmation(ctx context.Context, pn insolar.PulseN
 		return errors.Wrapf(err, "failed to save updated jets")
 	}
 
-	err := jk.updateTopSyncPulse(ctx, pn)
-	return errors.Wrapf(err, "AddHotConfirmation. propagateConsistency returns error")
+	return nil
 }
 
 // AddDropConfirmation performs adding jet to storage and checks pulse completion.
@@ -178,9 +177,7 @@ func (jk *dbJetKeeper) AddDropConfirmation(ctx context.Context, pn insolar.Pulse
 		return errors.Wrapf(err, "AddDropConfirmation. failed to save updated jets")
 	}
 
-	err := jk.updateTopSyncPulse(ctx, pn)
-
-	return errors.Wrap(err, "updateTopSyncPulse returns error")
+	return nil
 }
 
 // AddBackupConfirmation performs adding backup confirmation to storage and checks pulse completion.
@@ -359,25 +356,26 @@ func (jk *dbJetKeeper) getTopSyncJets() ([]insolar.JetID, error) {
 
 }
 
-func compareJets(what []insolar.JetID, actualJetsSet map[insolar.JetID]struct{}) error {
+func compareJets(ctx context.Context, what []insolar.JetID, actualJetsSet map[insolar.JetID]struct{}) (bool, error) {
 	if len(actualJetsSet) != len(what) {
 		if len(actualJetsSet) > len(what) {
-			return errors.New("num actual jets is more then topSyncJets." +
+			return false, errors.New("num actual jets is more then topSyncJets." +
 				" TopSyncJets: " + insolar.JetIDCollection(what).DebugString() +
 				". Actual: " + insolar.JetIDCollection(infoToList(actualJetsSet)).DebugString())
 		}
-		return errors.New("lengths are different")
+		inslogger.FromContext(ctx).Debug("actual and top sync pule jets are still different")
+		return false, nil
 	}
 
 	for _, expID := range what {
 		if _, ok := actualJetsSet[expID]; !ok {
-			return errors.New("jet sets are different. it's too bad. " +
+			return false, errors.New("jet sets are different. it's too bad. " +
 				". TopSyncJets: " + insolar.JetIDCollection(what).DebugString() +
 				". Actual: " + insolar.JetIDCollection(infoToList(actualJetsSet)).DebugString())
 		}
 	}
 
-	return nil
+	return true, nil
 }
 
 func (jk *dbJetKeeper) checkPulseConsistency(ctx context.Context, pulse insolar.PulseNumber, checkBackup bool) bool {
@@ -414,16 +412,22 @@ func (jk *dbJetKeeper) checkPulseConsistency(ctx context.Context, pulse insolar.
 	logger.Debug("topSyncJets: ", insolar.JetIDCollection(topSyncJets).DebugString(), "  |  ",
 		"actualJets: ", insolar.JetIDCollection(infoToList(actualJetsSet)).DebugString())
 
-	err = compareJets(topSyncJets, actualJetsSet)
+	areEqual, err := compareJets(ctx, topSyncJets, actualJetsSet)
 	if err != nil {
 		logger.Error("top sync jets and actual jets are different. Pulse: ", pulse, ". Err: ", err)
 		return false
 	}
+	if !areEqual {
+		return false
+	}
 
 	currentJetTree := jk.jetTrees.All(ctx, pulse)
-	err = compareJets(currentJetTree, actualJetsSet)
+	areEqual, err = compareJets(ctx, currentJetTree, actualJetsSet)
 	if err != nil {
 		logger.Error("current jet tree and actual jets are different. Pulse: ", pulse, ". Err: ", err)
+		return false
+	}
+	if !areEqual {
 		return false
 	}
 
