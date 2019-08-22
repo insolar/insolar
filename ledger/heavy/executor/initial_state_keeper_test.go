@@ -17,6 +17,9 @@
 package executor_test
 
 import (
+	"bytes"
+	"sort"
+	"strings"
 	"testing"
 
 	"github.com/gojuno/minimock"
@@ -82,6 +85,30 @@ func dropsFixture() []drop.Drop {
 	}
 }
 
+func sortDrops(drops [][]byte) {
+	cmp := func(i, j int) bool {
+		cmp := bytes.Compare(drops[i], drops[j])
+		return cmp < 0
+	}
+	sort.Slice(drops, cmp)
+}
+
+func sortJets(jets []insolar.JetID) {
+	cmp := func(i, j int) bool {
+		cmp := strings.Compare(jets[i].DebugString(), jets[j].DebugString())
+		return cmp < 0
+	}
+	sort.Slice(jets, cmp)
+}
+
+func sortIndexes(indexes []record.Index) {
+	cmp := func(i, j int) bool {
+		cmp := bytes.Compare(indexes[i].ObjID.Bytes(), indexes[j].ObjID.Bytes())
+		return cmp < 0
+	}
+	sort.Slice(indexes, cmp)
+}
+
 func TestInitialStateKeeper_Get_AfterRestart(t *testing.T) {
 	mc := minimock.NewController(t)
 	defer mc.Finish()
@@ -127,19 +154,43 @@ func TestInitialStateKeeper_Get_AfterRestart(t *testing.T) {
 
 	// Get for currentLight
 	state := stateKeeper.Get(ctx, currentLight, current)
-	require.Equal(t, []record.Index{indexes[0], indexes[1]}, state.Indexes)
-	require.Equal(t, [][]byte{
+
+	expectedIndexes := []record.Index{indexes[0], indexes[1]}
+	sortIndexes(expectedIndexes)
+	sortIndexes(state.Indexes)
+	require.Equal(t, expectedIndexes, state.Indexes)
+
+	expectedDrops := [][]byte{
 		drop.MustEncode(&drops[0]),
 		drop.MustEncode(&drops[1]),
-	}, state.Drops)
-	require.Equal(t, []insolar.JetID{jetIDs[0], left}, state.JetIDs)
+	}
+	sortDrops(expectedDrops)
+	sortDrops(state.Drops)
+	require.Equal(t, expectedDrops, state.Drops)
+
+	expectedJets := []insolar.JetID{jetIDs[0], left}
+	sortJets(expectedJets)
+	sortJets(state.JetIDs)
+	require.Equal(t, expectedJets, state.JetIDs)
 
 	// Get for anotherLight
 	state = stateKeeper.Get(ctx, anotherLight, current)
+
+	expectedIndexes = []record.Index{indexes[2]}
+	sortIndexes(expectedIndexes)
+	sortIndexes(state.Indexes)
 	require.Equal(t, []record.Index{indexes[2]}, state.Indexes)
-	require.Equal(t, [][]byte{
+
+	expectedDrops = [][]byte{
 		drop.MustEncode(&drops[1]),
 		drop.MustEncode(&drops[2]),
-	}, state.Drops)
-	require.Equal(t, []insolar.JetID{right, jetIDs[2]}, state.JetIDs)
+	}
+	sortDrops(expectedDrops)
+	sortDrops(state.Drops)
+	require.Equal(t, expectedDrops, state.Drops)
+
+	expectedJets = []insolar.JetID{right, jetIDs[2]}
+	sortJets(expectedJets)
+	sortJets(state.JetIDs)
+	require.Equal(t, expectedJets, state.JetIDs)
 }
