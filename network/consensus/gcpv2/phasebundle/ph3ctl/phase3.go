@@ -57,8 +57,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/insolar/insolar/log"
-
 	"github.com/insolar/insolar/network/consensus/common/args"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/population"
 
@@ -137,7 +135,7 @@ func (*Phase3Controller) GetPacketType() []phases.PacketType {
 }
 
 func (c *Phase3PacketDispatcher) DispatchMemberPacket(ctx context.Context, reader transport.MemberPacketReader, n *population.NodeAppearance) error {
-
+	log := inslogger.FromContext(ctx)
 	log.Warn("Phase3 packet received")
 
 	p3 := reader.AsPhase3Packet()
@@ -410,15 +408,19 @@ func (c *Phase3Controller) workerSendPhase3(ctx context.Context, selfData statev
 	selfID := c.R.GetSelfNodeID()
 	nodes := c.R.GetPopulation().GetAnyNodes(true, true)
 
+	log := inslogger.FromContext(ctx)
 	// todo: hack send to all twice
-	for i := 0; i < 1; i++ {
+	for i := 0; i < 2; i++ {
 		p3.SendToMany(ctx, len(nodes), c.R.GetPacketSender(),
 			func(ctx context.Context, targetIdx int) (transport.TargetProfile, transport.PacketSendOptions) {
 				np := nodes[targetIdx]
-				if np.GetNodeID() == selfID /* || !np.SetPacketSent(phases.PacketPhase3)*/ { // TODO HACK
+				if np.GetNodeID() == selfID || i != 0 && !np.CanReceivePacket(phases.PacketPhase3) {
+					// CanReceivePacket checks if we've already got Ph3 from this node
 					return nil, 0
 				}
-				log.Warnf("Phase3 sent to %d", np.GetNodeID())
+				if i == 0 {
+					log.Warnf("Phase3 sent to %d", np.GetNodeID())
+				}
 
 				return np, sendOptions
 			})
@@ -427,16 +429,15 @@ func (c *Phase3Controller) workerSendPhase3(ctx context.Context, selfData statev
 		case <-ctx.Done():
 			return
 		case <-time.After(500 * time.Millisecond):
-
+			break
 		}
 	}
 }
 
 func (c *Phase3Controller) workerRecvPhase3(ctx context.Context, localInspector inspectors.VectorInspector) bool {
 
-	log.Warn("Phase3 start receive entry")
-
 	log := inslogger.FromContext(ctx)
+	log.Warn("Phase3 start receive entry")
 
 	var queueMissing chan inspectors.InspectedVector
 

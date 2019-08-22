@@ -205,7 +205,7 @@ func (p *NodePhantom) ascend(ctx context.Context, nsp profiles.StaticProfile, ra
 	}
 	p.hasAscent = true
 
-	p.purgatory.ascendFromPurgatory(ctx, p.nodeID, nsp, rank, sv)
+	p.purgatory.ascendFromPurgatory(ctx, p, nsp, rank, sv)
 	p.recorder.Playback(p.purgatory.postponedPacketFn)
 	return true
 }

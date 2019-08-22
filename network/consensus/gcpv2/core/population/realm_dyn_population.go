@@ -397,7 +397,8 @@ func (p *DynamicRealmPopulation) silentAddToDynamics(ctx context.Context, n *Nod
 	n.handlers = handlers
 	n.hook = &p.hook
 	n.neighbourWeight = p.baselineWeight
-	n.limiter = p.CreatePacketLimiter(n.IsJoiner())
+
+	n.limiter = p.CreatePacketLimiter(n.IsJoiner()).MergeSent(n.limiter)
 
 	if n.IsJoiner() {
 		p.joinerCount++

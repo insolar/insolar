@@ -243,7 +243,8 @@ func collectNodesStatuses(conf *pulsewatcher.Config, lastResults []nodeStatus) (
 			if err != nil {
 				errStr := err.Error()
 				if strings.Contains(errStr, "connection refused") ||
-					strings.Contains(errStr, "request canceled while waiting for connection") {
+					strings.Contains(errStr, "request canceled while waiting for connection") ||
+					strings.Contains(errStr, "no such host") {
 					// Print compact error string when node is down.
 					// This prevents table distortion on small screens.
 					errStr = "NODE IS DOWN"
