@@ -88,6 +88,7 @@ func TestWaitMajority_MajorityNotHappenedInETA(t *testing.T) {
 		CertificateManager: certificate.NewCertificateManager(cert),
 		NodeKeeper:         nodeKeeper,
 	})
+	assert.Equal(t, insolar.WaitMajority, waitMajority.GetState())
 	waitMajority.Gatewayer = gatewayer
 	waitMajority.bootstrapETA = time.Millisecond
 	waitMajority.bootstrapTimer = time.NewTimer(waitMajority.bootstrapETA)

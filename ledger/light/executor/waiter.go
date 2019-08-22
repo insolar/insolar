@@ -35,6 +35,7 @@ type HotDataStatusChecker interface {
 	IsReceived(ctx context.Context, jetID insolar.JetID, pulse insolar.PulseNumber) (bool, error)
 }
 
+//go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.JetReleaser -o ./ -s _mock.go -g
 // JetReleaser provides methods for releasing jet waiters.
 type JetReleaser interface {
 	Unlock(ctx context.Context, pulse insolar.PulseNumber, jetID insolar.JetID) error
