@@ -20,8 +20,6 @@ import (
 	"context"
 	"io"
 
-	"github.com/insolar/insolar/api/seedmanager"
-
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
@@ -149,15 +147,11 @@ func initComponents(
 	genesisDataProvider, err := genesisdataprovider.New()
 	checkError(ctx, err, "failed to start GenesisDataProvider")
 
-	seedManager := seedmanager.New()
-	publicAPI, err := api.NewRunner(&cfg.APIRunner)
+	apiRunner, err := api.NewRunner(&cfg.APIRunner)
 	checkError(ctx, err, "failed to start ApiRunner")
-	adminAPI, err := api.NewRunner(&cfg.AdminAPIRunner)
+
+	adminAPIRunner, err := api.NewRunner(&cfg.AdminAPIRunner)
 	checkError(ctx, err, "failed to start AdminAPIRunner")
-	publicAPI.SeedManager = seedManager
-	adminAPI.SeedManager = seedManager
-	API := publicAPI
-	AdminAPIRunner := adminAPI
 
 	metricsHandler, err := metrics.NewMetrics(ctx, cfg.Metrics, metrics.GetInsolarRegistry("virtual"), "virtual")
 	checkError(ctx, err, "failed to start Metrics")
@@ -188,8 +182,8 @@ func initComponents(
 		logicexecutor.NewLogicExecutor(),
 		logicrunner.NewRequestsExecutor(),
 		machinesmanager.NewMachinesManager(),
-		API,
-		AdminAPIRunner,
+		apiRunner,
+		adminAPIRunner,
 		nodeNetwork,
 		nw,
 		pm,
