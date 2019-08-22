@@ -291,6 +291,10 @@ func (r *PhasedRoundController) _startFullRealm(prepWasSuccessful bool) {
 			/* Auto-activation of the prepared lastCensus */
 			expCensus := chronicle.GetExpectedCensus()
 			if expCensus.GetPulseNumber() != pd.PulseNumber {
+				inslogger.FromContext(r.realm.roundContext).Debugf("Unsafe round: expected=%d, pn=%d", expCensus.GetPulseNumber(), pd.PulseNumber)
+				r.realm.unsafeRound = true
+			} else if !expCensus.GetPrevious().GetExpectedPulseNumber().IsUnknownOrEqualTo(pd.PulseNumber) {
+				inslogger.FromContext(r.realm.roundContext).Debugf("Unsafe round: prev.expected=%d, pn=%d", expCensus.GetPrevious().GetExpectedPulseNumber(), pd.PulseNumber)
 				r.realm.unsafeRound = true
 			}
 			lastCensus = expCensus.MakeActive(pd)
