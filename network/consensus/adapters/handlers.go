@@ -89,7 +89,7 @@ func (dh *DatagramHandler) SetPacketParserFactory(packetParserFactory PacketPars
 
 func (dh *DatagramHandler) HandleDatagram(ctx context.Context, address string, buf []byte) {
 	ctx, logger := inslogger.WithFields(ctx, map[string]interface{}{
-		"sender_address": address,
+		"sender_address": address, "component": "consensus",
 	})
 
 	if dh.packetProcessor == nil || dh.packetParserFactory == nil {
