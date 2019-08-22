@@ -75,12 +75,13 @@ import (
 )
 
 type components struct {
-	cmp       component.Manager
-	NodeRef   string
-	NodeRole  string
-	rollback  *executor.DBRollback
-	inRouter  *watermillMsg.Router
-	outRouter *watermillMsg.Router
+	cmp         component.Manager
+	NodeRef     string
+	NodeRole    string
+	rollback    *executor.DBRollback
+	stateKeeper *executor.InitialStateKeeper
+	inRouter    *watermillMsg.Router
+	outRouter   *watermillMsg.Router
 
 	replicator executor.HeavyReplicator
 }
@@ -265,7 +266,9 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		indexes := object.NewIndexDB(DB, Records)
 		drops := drop.NewDB(DB)
 		JetKeeper = executor.NewJetKeeper(Jets, DB, Pulses)
+
 		c.rollback = executor.NewDBRollback(JetKeeper, Pulses, drops, Records, indexes, Jets, Pulses, JetKeeper)
+		c.stateKeeper = executor.NewInitialStateKeeper(JetKeeper, Jets, Coordinator, indexes, drops)
 
 		sp := pulse.NewStartPulse()
 
@@ -304,6 +307,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		h.JetTree = Jets
 		h.DropDB = drops
 		h.JetKeeper = JetKeeper
+		h.InitialStateReader = c.stateKeeper
 		h.BackupMaker = backupMaker
 		h.Sender = WmBus
 		h.Replicator = replicator
@@ -404,7 +408,12 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 func (c *components) Start(ctx context.Context) error {
 	err := c.rollback.Start(ctx)
 	if err != nil {
-		return errors.Wrap(err, "rollback.Start return error: ")
+		return errors.Wrapf(err, "rollback.Start return error: %s", err.Error())
+	}
+
+	err = c.stateKeeper.Start(ctx)
+	if err != nil {
+		return errors.Wrapf(err, "stateKeeper.Start return error: %s", err.Error())
 	}
 	return c.cmp.Start(ctx)
 }
