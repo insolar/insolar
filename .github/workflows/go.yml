@@ -20,7 +20,10 @@ jobs:
       run: make install-deps
 
     - name: Get dependencies
-      run: make pre-build
+      run: |
+        curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+        dep ensure
+        make pre-build
 
     - name: Build
       run: make build
