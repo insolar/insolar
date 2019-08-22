@@ -51,8 +51,6 @@ import (
 	"github.com/insolar/insolar/network"
 )
 
-const maxQueueLength = 10
-
 // LogicRunner is a general interface of contract executor
 type LogicRunner struct {
 	MessageBus                 insolar.MessageBus                 `inject:""`

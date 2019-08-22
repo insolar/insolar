@@ -66,7 +66,7 @@ import (
 )
 
 const (
-	udpMaxPacketSize = 2000
+	udpMaxPacketSize = 1450
 )
 
 type udpTransport struct {

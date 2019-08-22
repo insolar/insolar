@@ -27,6 +27,7 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -34,13 +35,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/store"
 	"github.com/insolar/insolar/ledger/heavy/executor"
-	"github.com/insolar/insolar/network/storage"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 )
 
@@ -89,8 +87,8 @@ func TestBackuper(t *testing.T) {
 	defer clearData(t, cfg)
 
 	tmpdir, err := ioutil.TempDir("", "bdb-test-")
-	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
+	defer os.RemoveAll(tmpdir)
 
 	db, err := store.NewBadgerDB(tmpdir)
 	require.NoError(t, err)
@@ -117,14 +115,13 @@ func TestBackuper(t *testing.T) {
 			err := db.Set(key, value.Bytes())
 			require.NoError(t, err)
 			savedKeys[key] = value
-			require.NoError(t, err)
 			time.Sleep(time.Duration(rand.Int()%10) * time.Millisecond)
 		}
 		sgWriteStopped.Done()
 	}()
 
 	wgBackup := sync.WaitGroup{}
-	numIterations := 5
+	numIterations := 15
 
 	wgBackup.Add(numIterations)
 	// doing backups
@@ -164,6 +161,8 @@ func TestBackuper(t *testing.T) {
 	// wait for stopping
 	sgWriteStopped.Wait()
 
+	require.NotEqual(t, 0, len(savedKeys))
+
 	// final backup to collect all rest records
 	err = bm.MakeBackup(context.Background(), testPulse+insolar.PulseNumber(numIterations))
 	require.NoError(t, err)
@@ -174,11 +173,8 @@ func TestBackuper(t *testing.T) {
 	// load all backups and check all records
 	{
 		recovTmpDir, err := ioutil.TempDir("", "bdb-test-")
+		require.NoError(t, err)
 		defer os.RemoveAll(recovTmpDir)
-		require.NoError(t, err)
-		recoveredDB, err := makeRawBadger(recovTmpDir)
-		require.NoError(t, err)
-		defer recoveredDB.Close()
 
 		for i := 0; i < numIterations+1; i++ {
 			bkpFileName := filepath.Join(
@@ -186,59 +182,50 @@ func TestBackuper(t *testing.T) {
 				fmt.Sprintf(cfg.DirNameTemplate, testPulse+insolar.PulseNumber(i)),
 				cfg.BackupFile,
 			)
-			bkpFile, err := os.Open(bkpFileName)
-			require.NoError(t, err)
-			err = recoveredDB.Load(bkpFile, 2)
-			require.NoError(t, err)
+
+			loadIncrementalBackup(t, recovTmpDir, bkpFileName)
 		}
 
-		require.NotEqual(t, 0, len(savedKeys))
+		recoveredDB, err := store.NewBadgerDB(recovTmpDir)
+		require.NoError(t, err)
+		defer recoveredDB.Stop(context.Background())
 
 		for k, v := range savedKeys {
-			gotRawValue, err := getFromDB(recoveredDB, k)
+			gotRawValue, err := recoveredDB.Get(k)
 			require.NoError(t, err)
 			gotPulseNumber := insolar.NewPulseNumber(gotRawValue)
 			require.Equal(t, v, gotPulseNumber)
 		}
 	}
-
 }
 
-func makeRawBadger(dir string) (*badger.DB, error) {
-	dir, err := filepath.Abs(dir)
-	if err != nil {
-		return nil, err
-	}
+var binaryPath string
 
-	ops := badger.DefaultOptions(dir)
-	bdb, err := badger.Open(ops)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to open badger")
-	}
+func init() {
+	var ok bool
 
-	return bdb, nil
-}
+	binaryPath, ok = os.LookupEnv("BIN_DIR")
+	if !ok {
+		wd, err := os.Getwd()
+		binaryPath = filepath.Join(wd, "..", "..", "..", "..", "bin")
 
-func getFromDB(db *badger.DB, key store.Key) (value []byte, err error) {
-	fullKey := append(key.Scope().Bytes(), key.ID()...)
-
-	err = db.View(func(txn *badger.Txn) error {
-		item, err := txn.Get(fullKey)
 		if err != nil {
-			return err
+			panic(err.Error())
 		}
-		value, err = item.ValueCopy(nil)
-		return err
-	})
-
-	if err != nil {
-		if err == badger.ErrKeyNotFound {
-			return nil, storage.ErrNotFound
-		}
-		return nil, err
 	}
+}
 
-	return
+// loadIncrementalBackup uses backupmerger utility to roll backups
+func loadIncrementalBackup(t *testing.T, dbDir string, backupFile string) {
+	println("=====> Start loading backup")
+	cmd := exec.Command(binaryPath+"/backupmerger", "-t", dbDir, "-n", backupFile)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err := cmd.Start()
+	require.NoError(t, err)
+	err = cmd.Wait()
+	require.NoError(t, err)
+	println("<===== Finish loading backup")
 }
 
 func makeCurrentBkpDir(cfg configuration.Backup, pulse insolar.PulseNumber) string {
