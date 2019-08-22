@@ -31,7 +31,7 @@ func NewRecordRef(recID Local) Global {
 }
 
 func NewSelfRef(localID Local) Global {
-	if localID.getScope() != baseScopeReserved {
+	if localID.getScope() == baseScopeReserved {
 		panic("illegal value")
 	}
 	return Global{addressLocal: localID, addressBase: localID}

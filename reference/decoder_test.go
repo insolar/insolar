@@ -146,7 +146,7 @@ func TestDecoder_Decode_new(t *testing.T) {
 
 		_, err = dec.Decode(newReference_bad_parts1)
 		if assert.Error(t, err) {
-			assert.Contains(t, err.Error(), "unsupported scheme")
+			assert.Contains(t, err.Error(), "unsupported schema")
 		}
 
 		_, err = dec.Decode(newReference_bad_parts2)
@@ -156,7 +156,7 @@ func TestDecoder_Decode_new(t *testing.T) {
 
 		_, err = dec.Decode(newReference_bad_parts3)
 		if assert.Error(t, err) {
-			assert.Contains(t, err.Error(), "invalid scheme")
+			assert.Contains(t, err.Error(), "invalid schema")
 		}
 	}
 

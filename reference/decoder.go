@@ -105,8 +105,8 @@ func (v decoder) parseLegacyAddress(ref string, domainPos int) (Global, error) {
 	return result, fmt.Errorf("unable to parse legacy reference, %s: ref=%s", err.Error(), ref)
 }
 
-func (v decoder) parseSchema(scheme, refFull string) (ByteDecodeFunc, error) {
-	parts := strings.Split(scheme, "+")
+func (v decoder) parseSchema(schema, refFull string) (ByteDecodeFunc, error) {
+	parts := strings.Split(schema, "+")
 	switch len(parts) {
 	case 1:
 		if parts[0] == SchemaV1 {
@@ -119,14 +119,14 @@ func (v decoder) parseSchema(scheme, refFull string) (ByteDecodeFunc, error) {
 		case parts[1] == SchemaV1:
 			//
 		default:
-			return nil, fmt.Errorf("unsupported scheme: scheme=%s, ref=%s", scheme, refFull)
+			return nil, fmt.Errorf("unsupported schema: schema=%s, ref=%s", schema, refFull)
 		}
 	default:
-		return nil, fmt.Errorf("invalid scheme: scheme=%s", scheme)
+		return nil, fmt.Errorf("invalid schema: schema=%s", schema)
 	}
 	decoder := v.byteDecoderFactory.GetByteDecoder(parts[0])
 	if decoder == nil {
-		return nil, fmt.Errorf("unknown decoder: scheme=%s, decoder=%s, ref=%s", scheme, parts[0], refFull)
+		return nil, fmt.Errorf("unknown decoder: schema=%s, decoder=%s, ref=%s", schema, parts[0], refFull)
 	}
 	return decoder, nil
 }
