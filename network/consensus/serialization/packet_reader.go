@@ -59,7 +59,6 @@ import (
 	"github.com/insolar/insolar/network"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/adapters"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
@@ -86,10 +85,6 @@ type PacketParser struct {
 	keyProcessor insolar.KeyProcessor
 }
 
-func (p *PacketParser) ParsePacketBody() (transport.PacketParser, error) {
-	return nil, nil
-}
-
 func newPacketParser(
 	ctx context.Context,
 	reader io.Reader,
@@ -113,19 +108,17 @@ func newPacketParser(
 		return nil, err
 	}
 
-	_, logger := inslogger.WithFields(ctx, map[string]interface{}{
-		"sender_id":    parser.GetSourceID(),
-		"packet_type":  parser.GetPacketType().String(),
-		"packet_pulse": parser.GetPulseNumber(),
-	})
-
-	if logger.Is(insolar.DebugLevel) {
-		logger.Debugf("Received packet %s", parser.packet)
-	}
-
 	parser.data = capture.Captured()
 
 	return parser, nil
+}
+
+func (p PacketParser) String() string {
+	return p.packet.String()
+}
+
+func (p *PacketParser) ParsePacketBody() (transport.PacketParser, error) {
+	return nil, nil
 }
 
 type PacketParserFactory struct {

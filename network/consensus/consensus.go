@@ -55,8 +55,6 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/insolar/insolar/instrumentation/inslogger"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensus/adapters"
@@ -87,9 +85,7 @@ const (
 )
 
 func New(ctx context.Context, dep Dep) Installer {
-	ctx, _ = inslogger.WithFields(ctx, map[string]interface{}{
-		"component": "consensus",
-	})
+	ctx = adapters.ConsensusContext(ctx)
 	dep.verify()
 
 	constructor := newConstructor(ctx, &dep)
