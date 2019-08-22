@@ -205,8 +205,9 @@ func TestDBIndexStorage_ForPulse(t *testing.T) {
 		storage := NewIndexDB(db, nil)
 
 		indexes, err := storage.ForPulse(ctx, pn)
-		require.NoError(t, err)
-		require.Equal(t, []record.Index{}, indexes)
+		require.Error(t, err)
+		require.Equal(t, err, ErrIndexNotFound)
+		require.Nil(t, indexes)
 	})
 
 	t.Run("index storage with couple values", func(t *testing.T) {
