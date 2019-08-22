@@ -91,7 +91,7 @@ const (
 	// ScopeJetKeeper is the scope for a jet id storage.
 	ScopeJetKeeper Scope = 8
 	// ScopeJetKeeperSyncPulse is the scope for a top sync pulse storage.
-	ScopeJetKeeperSyncPulse Scope = 8
+	ScopeJetKeeperSyncPulse Scope = 9
 	// ScopeRecordPosition is the scope for records' positions.
 	ScopeRecordPosition Scope = 10
 )
