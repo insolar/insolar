@@ -150,13 +150,34 @@ func TestNodeLeave(t *testing.T) {
 
 	s.InitNode(testNode)
 	s.StartNode(testNode)
-	defer func(s *consensusSuite) {
-		s.StopNode(testNode)
-	}(s)
 
-	s.waitForConsensus(1)
+	s.waitForConsensus(2)
 
+	s.AssertActiveNodesCountDelta(1)
+	s.AssertWorkingNodesCountDelta(1)
+	require.Equal(s.t, insolar.CompleteNetworkState, testNode.serviceNetwork.Gatewayer.Gateway().GetState())
+
+	s.StopNode(testNode)
+
+	s.waitForConsensus(3)
+
+	s.AssertWorkingNodesCountDelta(0)
 	s.AssertActiveNodesCountDelta(0)
+}
+
+func TestNodeGracefulLeave(t *testing.T) {
+	defer leaktest.Check(t)()
+
+	s := serviceNetworkManyBootstraps(t)
+	defer s.TearDownTest()
+
+	s.CheckBootstrapCount()
+
+	testNode := s.newNetworkNode("testNode")
+	s.preInitNode(testNode)
+
+	s.InitNode(testNode)
+	s.StartNode(testNode)
 
 	s.waitForConsensus(2)
 
@@ -165,14 +186,10 @@ func TestNodeLeave(t *testing.T) {
 	require.Equal(s.t, insolar.CompleteNetworkState, testNode.serviceNetwork.Gatewayer.Gateway().GetState())
 
 	s.GracefulStop(testNode)
-	//testNode.serviceNetwork.Leave(context.Background(), 0)
 
 	s.waitForConsensus(3)
 
-	// one active node becomes "not working"
 	s.AssertWorkingNodesCountDelta(0)
-
-	// but all nodes are active
 	s.AssertActiveNodesCountDelta(0)
 }
 
