@@ -57,8 +57,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/insolar/insolar/log"
-
 	"github.com/insolar/insolar/network/consensus/common/args"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/population"
 
@@ -410,6 +408,7 @@ func (c *Phase3Controller) workerSendPhase3(ctx context.Context, selfData statev
 	selfID := c.R.GetSelfNodeID()
 	nodes := c.R.GetPopulation().GetAnyNodes(true, true)
 
+	log := inslogger.FromContext(ctx)
 	// todo: hack send to all twice
 	for i := 0; i < 2; i++ {
 		p3.SendToMany(ctx, len(nodes), c.R.GetPacketSender(),
@@ -437,9 +436,8 @@ func (c *Phase3Controller) workerSendPhase3(ctx context.Context, selfData statev
 
 func (c *Phase3Controller) workerRecvPhase3(ctx context.Context, localInspector inspectors.VectorInspector) bool {
 
-	log.Warn("Phase3 start receive entry")
-
 	log := inslogger.FromContext(ctx)
+	log.Warn("Phase3 start receive entry")
 
 	var queueMissing chan inspectors.InspectedVector
 
