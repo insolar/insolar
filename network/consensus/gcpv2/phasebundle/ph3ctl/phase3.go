@@ -137,7 +137,7 @@ func (*Phase3Controller) GetPacketType() []phases.PacketType {
 }
 
 func (c *Phase3PacketDispatcher) DispatchMemberPacket(ctx context.Context, reader transport.MemberPacketReader, n *population.NodeAppearance) error {
-
+	log := inslogger.FromContext(ctx)
 	log.Warn("Phase3 packet received")
 
 	p3 := reader.AsPhase3Packet()
