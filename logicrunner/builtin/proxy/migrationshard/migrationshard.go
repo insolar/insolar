@@ -77,8 +77,9 @@ func GetPrototype() insolar.Reference {
 }
 
 // New is constructor
-func New() *ContractConstructorHolder {
-	var args [0]interface{}
+func New(migrationAddresses []string) *ContractConstructorHolder {
+	var args [1]interface{}
+	args[0] = migrationAddresses
 
 	var argsSerialized []byte
 	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)

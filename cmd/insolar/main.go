@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/insolar"
@@ -89,6 +90,15 @@ func main() {
 		},
 	}
 	rootCmd.AddCommand(genKeysPairCmd)
+
+	var genMigrationAddressesCmd = &cobra.Command{
+		Use:   "gen-migration-addresses",
+		Short: "generates fake migration addresses",
+		Run: func(cmd *cobra.Command, args []string) {
+			generateMigrationAddresses()
+		},
+	}
+	rootCmd.AddCommand(genMigrationAddressesCmd)
 
 	var rootKeysFile string
 
@@ -223,6 +233,20 @@ func verboseInfo(msg string) {
 func mustWrite(out io.Writer, data string) {
 	_, err := out.Write([]byte(data))
 	check("Can't write data to output", err)
+}
+
+func generateMigrationAddresses() {
+	maLen := 20000
+	ma := make([]string, maLen)
+
+	for i := 0; i < maLen; i++ {
+		ma[i] = "fake_ma_" + strconv.Itoa(i)
+	}
+
+	result, err := json.MarshalIndent(ma, "", "    ")
+	check("Problems with marshaling migration addresses:", err)
+
+	mustWrite(os.Stdout, string(result))
 }
 
 func generateKeysPair() {

@@ -545,6 +545,9 @@ func waitForFunction(customFunction func() api.CallMethodReply, functionTimeout 
 
 	select {
 	case result := <-ch:
+		if result.Error != nil {
+			return nil, errors.New(result.Error.Error())
+		}
 		return &result, nil
 	case <-time.After(functionTimeout):
 		return nil, errors.New("timeout was exceeded")

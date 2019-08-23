@@ -27,8 +27,8 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
-	"github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
+	"github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/requestresult"
 )
 

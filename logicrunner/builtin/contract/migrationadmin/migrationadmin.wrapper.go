@@ -336,52 +336,53 @@ func INSMETHOD_GetActiveDaemons(object []byte, data []byte) ([]byte, []byte, err
 	return state, ret, err
 }
 
-func INSCONSTRUCTOR_New(data []byte) ([]byte, []byte, error) {
+func INSMETHOD_GetDepositParameters(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
-	args := make([]interface{}, 2)
-	var args0 [insolar.GenesisAmountMigrationDaemonMembers]insolar.Reference
-	args[0] = &args0
-	var args1 insolar.Reference
-	args[1] = &args1
+	self := new(MigrationAdmin)
 
-	err := ph.Deserialize(data, &args)
+	if len(object) == 0 {
+		return nil, nil, &foundation.Error{S: "[ FakeGetDepositParameters ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+	}
+
+	err := ph.Deserialize(object, self)
 	if err != nil {
-		e := &foundation.Error{S: "[ FakeNew ] ( INSCONSTRUCTOR_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		e := &foundation.Error{S: "[ FakeGetDepositParameters ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
 		return nil, nil, e
 	}
 
-	ret0, ret1 := New(args0, args1)
-	ret1 = ph.MakeErrorSerializable(ret1)
-	if ret0 == nil && ret1 == nil {
-		ret1 = &foundation.Error{S: "constructor returned nil"}
+	args := []interface{}{}
+
+	err = ph.Deserialize(data, &args)
+	if err != nil {
+		e := &foundation.Error{S: "[ FakeGetDepositParameters ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		return nil, nil, e
 	}
+
+	ret0, ret1, ret2 := self.GetDepositParameters()
 
 	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 
-	result := []byte{}
+	state := []byte{}
+	err = ph.Serialize(self, &state)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	ret2 = ph.MakeErrorSerializable(ret2)
+
+	ret := []byte{}
 	err = ph.Serialize(
-		foundation.Result{Returns: []interface{}{ret1}},
-		&result,
+		foundation.Result{Returns: []interface{}{ret0, ret1, ret2}},
+		&ret,
 	)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	if ret1 != nil {
-		// logical error, the result should be registered with type RequestSideEffectNone
-		return nil, result, nil
-	}
-
-	state := []byte{}
-	err = ph.Serialize(ret0, &state)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return state, result, nil
+	return state, ret, err
 }
 
 func Initialize() XXX_insolar.ContractWrapper {
@@ -394,9 +395,8 @@ func Initialize() XXX_insolar.ContractWrapper {
 			"DeactivateDaemon":      INSMETHOD_DeactivateDaemon,
 			"CheckActiveDaemon":     INSMETHOD_CheckActiveDaemon,
 			"GetActiveDaemons":      INSMETHOD_GetActiveDaemons,
+			"GetDepositParameters":  INSMETHOD_GetDepositParameters,
 		},
-		Constructors: XXX_insolar.ContractConstructors{
-			"New": INSCONSTRUCTOR_New,
-		},
+		Constructors: XXX_insolar.ContractConstructors{},
 	}
 }
