@@ -114,9 +114,10 @@ func (s *InfoService) GetInfo(r *http.Request, args *InfoArgs, requestBody *rpc.
 	for _, r := range migrationDaemonMembers {
 		if r.IsEmpty() {
 			msg := "[ INFO ] migration daemon members refs are nil"
+			inslog.Error(msg)
 			err := errors.New(msg)
 			instracer.AddError(span, err)
-			return errors.New(msg)
+			return err
 		}
 		migrationDaemonMembersStrs = append(migrationDaemonMembersStrs, r.String())
 	}

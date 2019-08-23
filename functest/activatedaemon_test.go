@@ -35,29 +35,57 @@ func TestActivateDaemonDoubleCall(t *testing.T) {
 }
 
 func TestActivateDeactivateDaemon(t *testing.T) {
-	for _, user := range launchnet.MigrationDaemons {
-		_, err := signedRequest(t, &launchnet.MigrationAdmin, "migration.checkDaemon", map[string]interface{}{"reference": user.Ref})
-		require.NoError(t, err)
-	}
+	activateDaemons(t)
 	for _, user := range launchnet.MigrationDaemons {
 		_, err := signedRequest(t, &launchnet.MigrationAdmin, "migration.deactivateDaemon", map[string]interface{}{"reference": user.Ref})
 		require.NoError(t, err)
 	}
+
 	for _, user := range launchnet.MigrationDaemons {
 		res, _, err := makeSignedRequest(&launchnet.MigrationAdmin, "migration.checkDaemon", map[string]interface{}{"reference": user.Ref})
 		require.NoError(t, err)
 		status := res.(map[string]interface{})["status"].(string)
 		require.Equal(t, status, "inactive")
 	}
-	activateDaemons(t)
 
+	for _, user := range launchnet.MigrationDaemons {
+		_, err := signedRequest(t, &launchnet.MigrationAdmin, "migration.activateDaemon", map[string]interface{}{"reference": user.Ref})
+		require.NoError(t, err)
+	}
+
+	for _, user := range launchnet.MigrationDaemons {
+		res, _, err := makeSignedRequest(&launchnet.MigrationAdmin, "migration.checkDaemon", map[string]interface{}{"reference": user.Ref})
+		require.NoError(t, err)
+		status := res.(map[string]interface{})["status"].(string)
+		require.Equal(t, status, "active")
+	}
 }
-
+func TestDeactivateDaemonDoubleCall(t *testing.T) {
+	activateDaemons(t)
+	for _, user := range launchnet.MigrationDaemons {
+		_, _, err := makeSignedRequest(&launchnet.MigrationAdmin, "migration.deactivateDaemon", map[string]interface{}{"reference": user.Ref})
+		require.NoError(t, err)
+	}
+	for _, user := range launchnet.MigrationDaemons {
+		_, _, err := makeSignedRequest(&launchnet.MigrationAdmin, "migration.deactivateDaemon", map[string]interface{}{"reference": user.Ref})
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "daemon member already deactivated")
+	}
+}
 func TestActivateAccess(t *testing.T) {
 
 	migrationAddress := testutils.RandomString()
 	member := createMigrationMemberForMA(t, migrationAddress)
 	_, _, err := makeSignedRequest(member, "migration.activateDaemon", map[string]interface{}{"reference": launchnet.MigrationDaemons[0].Ref})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "only migration admin can")
+}
+
+func TestDeactivateAccess(t *testing.T) {
+
+	migrationAddress := testutils.RandomString()
+	member := createMigrationMemberForMA(t, migrationAddress)
+	_, _, err := makeSignedRequest(member, "migration.deactivateDaemon", map[string]interface{}{"reference": launchnet.MigrationDaemons[0].Ref})
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "only migration admin can")
 }

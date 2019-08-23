@@ -116,12 +116,6 @@ func createMember(t *testing.T) *launchnet.User {
 	return member
 }
 
-func createMigrationMember(t *testing.T) *launchnet.User {
-	migrationAddress := testutils.RandomString()
-
-	return createMigrationMemberForMA(t, migrationAddress)
-}
-
 func createMigrationMemberForMA(t *testing.T, ma string) *launchnet.User {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
@@ -253,6 +247,7 @@ func getStatus(t testing.TB) statusResponse {
 }
 
 func activateDaemons(t *testing.T) {
+
 	if len(launchnet.MigrationDaemons[0].Ref) > 0 {
 		res, err := signedRequest(t, &launchnet.MigrationAdmin, "migration.checkDaemon", map[string]interface{}{"reference": launchnet.MigrationDaemons[0].Ref})
 		require.NoError(t, err)
