@@ -49,7 +49,7 @@ func New(migrationDaemons [insolar.GenesisAmountMigrationDaemonMembers]insolar.R
 func (mA *MigrationAdmin) MigrationAdminCall(params map[string]interface{}, nameMethod string, caller insolar.Reference) (interface{}, error) {
 
 	switch nameMethod {
-	case "addBurnAddresses":
+	case "addAddresses":
 		return mA.addMigrationAddressesCall(params, caller)
 
 	case "activateDaemon":
@@ -82,9 +82,9 @@ func (mA *MigrationAdmin) deactivateDaemonCall(params map[string]interface{}, me
 }
 
 func (mA *MigrationAdmin) addMigrationAddressesCall(params map[string]interface{}, memberRef insolar.Reference) (interface{}, error) {
-	migrationAddresses, ok := params["burnAddresses"].([]interface{})
+	migrationAddresses, ok := params["migrationAddresses"].([]interface{})
 	if !ok {
-		return nil, fmt.Errorf("incorect input: failed to get 'burnAddresses' param")
+		return nil, fmt.Errorf("incorect input: failed to get 'migrationAddresses' param")
 	}
 
 	rootDomain := rootdomain.GetObject(foundation.GetRootDomain())
@@ -98,7 +98,7 @@ func (mA *MigrationAdmin) addMigrationAddressesCall(params map[string]interface{
 	for i, ba := range migrationAddresses {
 		migrationAddress, ok := ba.(string)
 		if !ok {
-			return nil, fmt.Errorf("failed to 'burnAddresses' param")
+			return nil, fmt.Errorf("failed to 'migrationAddresses' param")
 		}
 		migrationAddressesStr[i] = migrationAddress
 	}
