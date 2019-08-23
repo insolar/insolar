@@ -18,9 +18,11 @@ package migrationadmin
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/rootdomain"
 )
 
 // MigrationAdmin manage and change status for  migration daemon.
