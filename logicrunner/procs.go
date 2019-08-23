@@ -109,8 +109,7 @@ type AddFreshRequest struct {
 }
 
 func (c *AddFreshRequest) Proceed(ctx context.Context) error {
-	requestCtx := freshContextFromContext(ctx)
-	tr := common.NewTranscript(requestCtx, c.requestRef, c.request)
+	tr := common.NewTranscriptCloneContext(ctx, c.requestRef, c.request)
 	c.broker.AddFreshRequest(ctx, tr)
 	return nil
 }

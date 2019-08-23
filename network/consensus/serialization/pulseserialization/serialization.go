@@ -54,7 +54,7 @@ import (
 	"bytes"
 	"encoding/binary"
 
-	"github.com/insolar/insolar/network/consensus/common/pulse"
+	"github.com/insolar/insolar/pulse"
 )
 
 func Serialize(p pulse.Data) ([]byte, error) {

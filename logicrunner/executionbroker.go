@@ -450,9 +450,6 @@ func (q *ExecutionBroker) PrevExecutorPendingResult(ctx context.Context, prevExe
 	case insolar.InPending:
 		if q.isActive() {
 			logger.Debug("execution returned to node that is still executing pending")
-
-			q.pending = insolar.NotPending
-			q.PendingConfirmed = false
 		} else if prevExecState == insolar.NotPending {
 			logger.Debug("executor we came to thinks that execution pending, but previous said to continue")
 

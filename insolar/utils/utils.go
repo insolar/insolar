@@ -21,7 +21,7 @@ import (
 	"encoding/binary"
 
 	"github.com/pkg/errors"
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 )
 
 type traceIDKey struct{}

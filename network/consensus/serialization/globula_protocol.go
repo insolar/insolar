@@ -54,13 +54,13 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensus/common/longbits"
+	"github.com/insolar/insolar/longbits"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
 	"github.com/insolar/insolar/network/consensus/serialization/pulseserialization"
-
-	"github.com/pkg/errors"
 )
 
 type GlobulaConsensusPacketBody struct {

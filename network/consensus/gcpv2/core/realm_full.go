@@ -58,7 +58,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
-	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
@@ -72,6 +71,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetdispatch"
 	pop "github.com/insolar/insolar/network/consensus/gcpv2/core/population"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/purgatory"
+	"github.com/insolar/insolar/pulse"
 )
 
 var _ pulse.DataHolder = &FullRealm{}

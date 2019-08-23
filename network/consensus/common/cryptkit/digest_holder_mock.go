@@ -9,13 +9,14 @@ import (
 	mm_time "time"
 
 	"github.com/gojuno/minimock"
+	"github.com/insolar/insolar/longbits"
 )
 
 // DigestHolderMock implements DigestHolder
 type DigestHolderMock struct {
 	t minimock.Tester
 
-	funcAsByteString          func() (s1 string)
+	funcAsByteString          func() (b1 longbits.ByteString)
 	inspectFuncAsByteString   func()
 	afterAsByteStringCounter  uint64
 	beforeAsByteStringCounter uint64
@@ -126,7 +127,7 @@ type DigestHolderMockAsByteStringExpectation struct {
 
 // DigestHolderMockAsByteStringResults contains results of the DigestHolder.AsByteString
 type DigestHolderMockAsByteStringResults struct {
-	s1 string
+	b1 longbits.ByteString
 }
 
 // Expect sets up expected params for DigestHolder.AsByteString
@@ -154,7 +155,7 @@ func (mmAsByteString *mDigestHolderMockAsByteString) Inspect(f func()) *mDigestH
 }
 
 // Return sets up results that will be returned by DigestHolder.AsByteString
-func (mmAsByteString *mDigestHolderMockAsByteString) Return(s1 string) *DigestHolderMock {
+func (mmAsByteString *mDigestHolderMockAsByteString) Return(b1 longbits.ByteString) *DigestHolderMock {
 	if mmAsByteString.mock.funcAsByteString != nil {
 		mmAsByteString.mock.t.Fatalf("DigestHolderMock.AsByteString mock is already set by Set")
 	}
@@ -162,12 +163,12 @@ func (mmAsByteString *mDigestHolderMockAsByteString) Return(s1 string) *DigestHo
 	if mmAsByteString.defaultExpectation == nil {
 		mmAsByteString.defaultExpectation = &DigestHolderMockAsByteStringExpectation{mock: mmAsByteString.mock}
 	}
-	mmAsByteString.defaultExpectation.results = &DigestHolderMockAsByteStringResults{s1}
+	mmAsByteString.defaultExpectation.results = &DigestHolderMockAsByteStringResults{b1}
 	return mmAsByteString.mock
 }
 
 //Set uses given function f to mock the DigestHolder.AsByteString method
-func (mmAsByteString *mDigestHolderMockAsByteString) Set(f func() (s1 string)) *DigestHolderMock {
+func (mmAsByteString *mDigestHolderMockAsByteString) Set(f func() (b1 longbits.ByteString)) *DigestHolderMock {
 	if mmAsByteString.defaultExpectation != nil {
 		mmAsByteString.mock.t.Fatalf("Default expectation is already set for the DigestHolder.AsByteString method")
 	}
@@ -181,7 +182,7 @@ func (mmAsByteString *mDigestHolderMockAsByteString) Set(f func() (s1 string)) *
 }
 
 // AsByteString implements DigestHolder
-func (mmAsByteString *DigestHolderMock) AsByteString() (s1 string) {
+func (mmAsByteString *DigestHolderMock) AsByteString() (b1 longbits.ByteString) {
 	mm_atomic.AddUint64(&mmAsByteString.beforeAsByteStringCounter, 1)
 	defer mm_atomic.AddUint64(&mmAsByteString.afterAsByteStringCounter, 1)
 
@@ -196,7 +197,7 @@ func (mmAsByteString *DigestHolderMock) AsByteString() (s1 string) {
 		if results == nil {
 			mmAsByteString.t.Fatal("No results are set for the DigestHolderMock.AsByteString")
 		}
-		return (*results).s1
+		return (*results).b1
 	}
 	if mmAsByteString.funcAsByteString != nil {
 		return mmAsByteString.funcAsByteString()
