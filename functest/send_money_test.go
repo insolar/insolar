@@ -50,7 +50,7 @@ func TestTransferMoney(t *testing.T) {
 
 	amountStr := "10"
 	amount, _ := new(big.Int).SetString(amountStr, 10)
-	fee := new(big.Int).SetInt64(4) // Fee for 10 coins transfer is 40%
+	fee, _ := new(big.Int).SetString("10000000", 10)
 	expectedFirstBalance := new(big.Int).Sub(oldFirstBalance, amount)
 	expectedFirstBalance.Sub(expectedFirstBalance, fee)
 	expectedSecondBalance := new(big.Int).Add(oldSecondBalance, amount)
