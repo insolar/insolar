@@ -43,7 +43,7 @@ func NewAdminContractService(runner *Runner) *AdminContractService {
 		"migration.deactivateDaemon": true,
 		"migration.activateDaemon":   true,
 		"migration.checkDaemon":      true,
-		"migration.addBurnAddresses": true,
+		"migration.addAddresses":     true,
 		"contract.registerNode":      true,
 		"deposit.migration":          true,
 		"member.create":              true,
