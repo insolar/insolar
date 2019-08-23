@@ -53,7 +53,6 @@ package core
 import (
 	"context"
 	"fmt"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
@@ -72,6 +71,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetdispatch"
 	pop "github.com/insolar/insolar/network/consensus/gcpv2/core/population"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/purgatory"
+	"runtime"
 )
 
 var _ pulse.DataHolder = &FullRealm{}
@@ -354,7 +354,7 @@ func (r *FullRealm) registerNextJoinCandidate() (*pop.NodeAppearance, cryptkit.D
 			nip := r.profileFactory.CreateFullIntroProfile(cp)
 			sv := r.GetSignatureVerifier(nip.GetPublicKeyStore())
 			np := censusimpl.NewJoinerProfile(nip, sv)
-			na := pop.NewEmptyNodeAppearance(&np)
+			na := pop.NewLocalJoinerNodeAppearance(&np, r.GetSelfNodeID(), secret)
 
 			nna, err := r.population.AddToDynamics(r.roundContext, &na)
 			if err != nil {
@@ -546,15 +546,16 @@ func (r *FullRealm) buildLocalMemberAnnouncementDraft(mp profiles.MembershipProf
 func (r *FullRealm) CreateAnnouncement(n *pop.NodeAppearance, isJoinerProfileRequired bool) *transport.NodeAnnouncementProfile {
 	ma := n.GetRequestedAnnouncement()
 	if ma.Membership.IsEmpty() {
+		runtime.Gosched() // TODO DEBUG
 		panic("illegal state")
 	}
 
 	var joiner *transport.JoinerAnnouncement
 	if !ma.JoinerID.IsAbsent() && isJoinerProfileRequired {
-		jp := r.GetPurgatory().FindJoinerProfile(ma.JoinerID, n.GetNodeID())
+		joiner = r.GetPurgatory().GetJoinerAnnouncement(ma.JoinerID, n.GetNodeID())
 		switch {
-		case jp != nil:
-			joiner = transport.NewAnyJoinerAnnouncement(jp, n.GetNodeID())
+		case joiner != nil:
+			break
 		case n == r.self:
 			panic(fmt.Sprintf("illegal state - local joiner is missing: %d", ma.JoinerID))
 		default:
@@ -562,7 +563,10 @@ func (r *FullRealm) CreateAnnouncement(n *pop.NodeAppearance, isJoinerProfileReq
 				r.self.GetNodeID(), n.GetNodeID(), ma.JoinerID))
 		}
 	} else if ma.Membership.IsJoiner() {
-		joiner = transport.NewAnyJoinerAnnouncement(n.GetStatic(), insolar.AbsentShortNodeID) // TODO provide an announcing node
+		joiner = n.GetAnnouncementAsJoiner()
+		if joiner == nil {
+			panic("illegal state")
+		}
 	}
 
 	return transport.NewNodeAnnouncement(n.GetProfile(), ma, r.GetNodeCount(), r.pulseData.PulseNumber, joiner)

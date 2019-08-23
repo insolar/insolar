@@ -155,6 +155,7 @@ func (p *populationEventHandler) OnTrustUpdated(populationVersion uint32, n *pop
 		return
 	default:
 		if trustBefore == member.UnknownTrust && trustAfter >= member.TrustBySelf {
+			n.UnsafeEnsureStateAvailable()
 			p.queueToPhase2(n)
 			p.queueToPhase3(ph2ctl.UpdateSignal{NewTrustLevel: member.TrustBySelf, UpdatedNode: n})
 		}

@@ -198,14 +198,14 @@ func (p *NodePhantom) DispatchAnnouncement(ctx context.Context, rank member.Rank
 	return p.figment.dispatchAnnouncement(ctx, p, rank, profile, announcement)
 }
 
-func (p *NodePhantom) ascend(ctx context.Context, nsp profiles.StaticProfile, rank member.Rank, sv cryptkit.SignatureVerifier) bool {
+func (p *NodePhantom) ascend(ctx context.Context, sv cryptkit.SignatureVerifier, figment *figment) bool {
 
 	if p.hasAscent {
 		return false
 	}
 	p.hasAscent = true
 
-	p.purgatory.ascendFromPurgatory(ctx, p, nsp, rank, sv)
+	p.purgatory.ascendFromPurgatory(ctx, p, figment.profile, figment.rank, sv, figment.announcerID, figment.joinerSecret)
 	p.recorder.Playback(p.purgatory.postponedPacketFn)
 	return true
 }
@@ -214,17 +214,17 @@ func (p *NodePhantom) IntroducedBy( /*id */ insolar.ShortNodeID) {
 
 }
 
-// func (p *NodePhantom) IntroducedBy( /* introducedBy */ insolar.ShortNodeID) {
-//
-//	// TODO do we need it?
-// }
+func (p *NodePhantom) GetAnnouncementAsJoiner() *transport.JoinerAnnouncement {
+	return p.figment.getAnnouncementAsJoiner()
+}
 
 type figment struct {
 	phantom     *NodePhantom
 	announcerID insolar.ShortNodeID
 	rank        member.Rank
 
-	profile profiles.StaticProfile
+	profile      profiles.StaticProfile
+	joinerSecret cryptkit.DigestHolder
 
 	// announceSignature proofs.MemberAnnouncementSignature // one-time set
 	// stateEvidence     proofs.NodeStateHashEvidence       // one-time set
@@ -267,8 +267,8 @@ func (p *figment) dispatchAnnouncement(ctx context.Context, phantom *NodePhantom
 
 	hasProfileUpdate, hasMismatch := p.updateProfile(rank, profile)
 	if hasMismatch {
-		panic(fmt.Sprintf("inconsistent neighbour announcement: local=%d, phantom=%d, announcer=%d, rank=%v, profile=%+v, figmentRank=%v, figmentProfile=%+v, ann=%+v",
-			p.phantom.purgatory.hook.GetLocalNodeID(), p.phantom.nodeID, announcedBy, rank, profile, p.rank, p.profile, announcement))
+		return fmt.Errorf("inconsistent neighbour announcement: local=%d, phantom=%d, announcer=%d, rank=%v, profile=%+v, figmentRank=%v, figmentProfile=%+v, ann=%+v",
+			p.phantom.purgatory.hook.GetLocalNodeID(), p.phantom.nodeID, announcedBy, rank, profile, p.rank, p.profile, announcement)
 		// TODO return p.RegisterFraud(p.Frauds().NewInconsistentNeighbourAnnouncement(p.GetReportProfile()))
 	}
 
@@ -291,6 +291,26 @@ func (p *figment) dispatchAnnouncement(ctx context.Context, phantom *NodePhantom
 		p.phantom.purgatory.onNodeUpdated(p.phantom, flags)
 	}
 
+	if p.rank.IsJoiner() {
+		if profile != nil && announcement.JoinerSecret == nil && p.phantom.purgatory.IsJoinerSecretRequired() {
+			return fmt.Errorf("joiner secret is missing: local=%d, phantom=%d, announcer=%d",
+				p.phantom.purgatory.hook.GetLocalNodeID(), p.phantom.nodeID, announcedBy)
+		}
+
+		if announcement.JoinerSecret != nil {
+			if p.joinerSecret == nil {
+				p.joinerSecret = announcement.JoinerSecret
+			} else if !p.joinerSecret.Equals(announcement.JoinerSecret) {
+				return fmt.Errorf("inconsistent joiner secret in announcements: local=%d, phantom=%d, announcer=%d",
+					p.phantom.purgatory.hook.GetLocalNodeID(), p.phantom.nodeID, announcedBy)
+				// TODO return p.RegisterFraud(p.Frauds().NewInconsistentNeighbourAnnouncement(p.GetReportProfile()))
+			}
+		}
+	} else if announcement.JoinerSecret != nil {
+		return fmt.Errorf("joiner secret is unexpected: local=%d, phantom=%d, announcer=%d",
+			p.phantom.purgatory.hook.GetLocalNodeID(), p.phantom.nodeID, announcedBy)
+	}
+
 	if !hasUpdate || p.profile == nil {
 		return nil
 	}
@@ -304,7 +324,7 @@ func (p *figment) dispatchAnnouncement(ctx context.Context, phantom *NodePhantom
 		inslogger.FromContext(ctx).Debugf("Phantom node ascension: s=%d, t=%d, full=%v",
 			p.phantom.purgatory.hook.GetLocalNodeID(), p.phantom.nodeID, p.profile.GetExtension() != nil)
 
-		p.phantom.ascend(ctx, p.profile, p.rank, nil)
+		p.phantom.ascend(ctx, nil, p)
 	}
 	return nil
 }
@@ -329,4 +349,20 @@ func (p *figment) updateProfile(rank member.Rank, profile profiles.StaticProfile
 	default:
 		return false, !profiles.EqualProfileExtensions(p.profile.GetExtension(), profile.GetExtension())
 	}
+}
+
+func (p *figment) getAnnouncementAsJoiner() *transport.JoinerAnnouncement {
+	if p.phantom == nil {
+		panic("illegal state")
+	}
+
+	if p.profile == nil || !p.rank.IsJoiner() {
+		panic("illegal state")
+	}
+
+	if p.announcerID.IsAbsent() {
+		panic("illegal state")
+	}
+
+	return transport.NewAnyJoinerAnnouncement(p.profile, p.announcerID, p.joinerSecret)
 }

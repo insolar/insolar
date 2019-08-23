@@ -53,6 +53,7 @@ package purgatory
 import (
 	"context"
 	"fmt"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 	"sync"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetdispatch"
@@ -216,7 +217,7 @@ func (p *RealmPurgatory) getMember(id insolar.ShortNodeID, introducedBy insolar.
 }
 
 func (p *RealmPurgatory) ascendFromPurgatory(ctx context.Context, phantom *NodePhantom, nsp profiles.StaticProfile,
-	rank member.Rank, sv cryptkit.SignatureVerifier) {
+	rank member.Rank, sv cryptkit.SignatureVerifier, announcerID insolar.ShortNodeID, joinerSecret cryptkit.DigestHolder) {
 
 	if sv == nil {
 		sv = p.svFactory.CreateSignatureVerifierWithPKS(nsp.GetPublicKeyStore())
@@ -229,7 +230,7 @@ func (p *RealmPurgatory) ascendFromPurgatory(ctx context.Context, phantom *NodeP
 		np = censusimpl.NewNodeProfileExt(rank.GetIndex(), nsp, sv, rank.GetPower(), rank.GetMode())
 	}
 
-	nav := population.NewNodeAppearance(&np, 0, phantom.limiter, nil, nil)
+	nav := population.NewAscendedNodeAppearance(&np, phantom.limiter, announcerID, joinerSecret)
 	na := &nav
 
 	p.rw.Lock()
@@ -258,20 +259,25 @@ func (p *RealmPurgatory) UnknownAsSelfFromMemberAnnouncement(ctx context.Context
 	return err == nil, err
 }
 
-func (p *RealmPurgatory) JoinerFromNeighbourhood(ctx context.Context, id insolar.ShortNodeID, profile profiles.StaticProfile,
-	introducedByID insolar.ShortNodeID) error {
-
-	ma := profiles.MemberAnnouncement{MemberID: id}
-	ma.Joiner.IntroducedByID = introducedByID
-	return p.getOrCreateMember(id).DispatchAnnouncement(ctx, member.JoinerRank, profile, ma)
-}
-
 func (p *RealmPurgatory) FindJoinerProfile(nodeID insolar.ShortNodeID, introducedBy insolar.ShortNodeID) profiles.StaticProfile {
 	am, _ := p.getMember(nodeID, introducedBy)
 	if am != nil && am.IsJoiner() {
 		return am.GetStatic()
 	}
 	return nil
+}
+
+func (p *RealmPurgatory) GetJoinerAnnouncement(nodeID insolar.ShortNodeID, introducedBy insolar.ShortNodeID) *transport.JoinerAnnouncement {
+	am, na := p.getMember(nodeID, introducedBy)
+	if am != nil && !am.IsJoiner() {
+		return nil
+	}
+
+	if na != nil {
+		return na.GetAnnouncementAsJoiner()
+	}
+
+	return am.(*NodePhantom).GetAnnouncementAsJoiner()
 }
 
 func (p *RealmPurgatory) onNodeUpdated(n *NodePhantom, flags population.UpdateFlags) {
@@ -321,4 +327,8 @@ func (p *RealmPurgatory) UnknownFromNeighbourhood(ctx context.Context, rank memb
 		return m.DispatchAnnouncement(ctx, rank, announcement.Joiner.JoinerProfile, announcement)
 	}
 	return m.DispatchAnnouncement(ctx, rank, nil, announcement)
+}
+
+func (p *RealmPurgatory) IsJoinerSecretRequired() bool {
+	return false
 }
