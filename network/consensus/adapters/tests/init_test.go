@@ -203,7 +203,7 @@ func initNodes(ctx context.Context, mode consensus.Mode, nodes GeneratedNodes, s
 			EphemeralController: &ephemeralController{
 				allowed: true,
 			},
-		}).ControllerFor(isDiscovery, mode, datagramHandler, pulseHandler)
+		}).ControllerFor(mode, datagramHandler, pulseHandler)
 
 		ns.controllers[i] = controller
 		ctx, _ = inslogger.WithFields(ctx, map[string]interface{}{
