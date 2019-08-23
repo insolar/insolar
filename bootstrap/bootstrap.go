@@ -60,25 +60,25 @@ func NewGeneratorWithConfig(config *Config, certificatesOutDir string) *Generato
 	}
 }
 
-func readMigrationAddresses(file string) (*[insolar.GenesisAmountMigrationAddressShards][]string, error) {
+func readMigrationAddresses(file string) ([insolar.GenesisAmountMigrationAddressShards][]string, error) {
+	var result [insolar.GenesisAmountMigrationAddressShards][]string
 	b, err := ioutil.ReadFile(file)
 	if err != nil {
-		return nil, errors.Wrapf(err, " couldn't read migration addresses file %v", file)
+		return result, errors.Wrapf(err, " couldn't read migration addresses file %v", file)
 	}
 
 	var ma []string
 	err = json.NewDecoder(bytes.NewReader(b)).Decode(&ma)
 	if err != nil {
-		return nil, errors.Wrapf(err, "fail unmarshal migration addresses data")
+		return result, errors.Wrapf(err, "fail unmarshal migration addresses data")
 	}
 
-	var result [insolar.GenesisAmountMigrationAddressShards][]string
 	for _, a := range ma {
 		i := foundation.GetShardIndex(a, insolar.GenesisAmountMigrationAddressShards)
 		result[i] = append(result[i])
 	}
 
-	return &result, nil
+	return result, nil
 }
 
 // Run generates bootstrap data.
@@ -141,7 +141,7 @@ func (g *Generator) Run(ctx context.Context) error {
 		RootPublicKey:             rootPublicKey,
 		MigrationAdminPublicKey:   migrationAdminPublicKey,
 		MigrationDaemonPublicKeys: migrationDaemonPublicKeys,
-		MigrationAddresses:        *migrationAddresses,
+		MigrationAddresses:        migrationAddresses,
 		VestingPeriodInPulses:     g.config.VestingPeriodInPulses,
 		LokupPeriodInPulses:       g.config.LokupPeriodInPulses,
 	}
