@@ -25,11 +25,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/testutils"
+
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 )
 
@@ -1783,7 +1784,7 @@ func (r *Two) NoWaitGet(OneRef insolar.Reference) (int, error) {
 	require.Equal(t, float64(n), firstResultAfterWait.ExtractedReply)
 
 	t.Run("one object, sequential calls", func(t *testing.T) {
-		syncT := &utils.SyncT{T: t}
+		syncT := &testutils.SyncT{T: t}
 		wg := sync.WaitGroup{}
 		wg.Add(10)
 

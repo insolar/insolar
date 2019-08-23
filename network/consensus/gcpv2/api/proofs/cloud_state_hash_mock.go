@@ -9,6 +9,7 @@ import (
 	mm_time "time"
 
 	"github.com/gojuno/minimock"
+	"github.com/insolar/insolar/longbits"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 )
 
@@ -16,7 +17,7 @@ import (
 type CloudStateHashMock struct {
 	t minimock.Tester
 
-	funcAsByteString          func() (s1 string)
+	funcAsByteString          func() (b1 longbits.ByteString)
 	inspectFuncAsByteString   func()
 	afterAsByteStringCounter  uint64
 	beforeAsByteStringCounter uint64
@@ -127,7 +128,7 @@ type CloudStateHashMockAsByteStringExpectation struct {
 
 // CloudStateHashMockAsByteStringResults contains results of the CloudStateHash.AsByteString
 type CloudStateHashMockAsByteStringResults struct {
-	s1 string
+	b1 longbits.ByteString
 }
 
 // Expect sets up expected params for CloudStateHash.AsByteString
@@ -155,7 +156,7 @@ func (mmAsByteString *mCloudStateHashMockAsByteString) Inspect(f func()) *mCloud
 }
 
 // Return sets up results that will be returned by CloudStateHash.AsByteString
-func (mmAsByteString *mCloudStateHashMockAsByteString) Return(s1 string) *CloudStateHashMock {
+func (mmAsByteString *mCloudStateHashMockAsByteString) Return(b1 longbits.ByteString) *CloudStateHashMock {
 	if mmAsByteString.mock.funcAsByteString != nil {
 		mmAsByteString.mock.t.Fatalf("CloudStateHashMock.AsByteString mock is already set by Set")
 	}
@@ -163,12 +164,12 @@ func (mmAsByteString *mCloudStateHashMockAsByteString) Return(s1 string) *CloudS
 	if mmAsByteString.defaultExpectation == nil {
 		mmAsByteString.defaultExpectation = &CloudStateHashMockAsByteStringExpectation{mock: mmAsByteString.mock}
 	}
-	mmAsByteString.defaultExpectation.results = &CloudStateHashMockAsByteStringResults{s1}
+	mmAsByteString.defaultExpectation.results = &CloudStateHashMockAsByteStringResults{b1}
 	return mmAsByteString.mock
 }
 
 //Set uses given function f to mock the CloudStateHash.AsByteString method
-func (mmAsByteString *mCloudStateHashMockAsByteString) Set(f func() (s1 string)) *CloudStateHashMock {
+func (mmAsByteString *mCloudStateHashMockAsByteString) Set(f func() (b1 longbits.ByteString)) *CloudStateHashMock {
 	if mmAsByteString.defaultExpectation != nil {
 		mmAsByteString.mock.t.Fatalf("Default expectation is already set for the CloudStateHash.AsByteString method")
 	}
@@ -182,7 +183,7 @@ func (mmAsByteString *mCloudStateHashMockAsByteString) Set(f func() (s1 string))
 }
 
 // AsByteString implements CloudStateHash
-func (mmAsByteString *CloudStateHashMock) AsByteString() (s1 string) {
+func (mmAsByteString *CloudStateHashMock) AsByteString() (b1 longbits.ByteString) {
 	mm_atomic.AddUint64(&mmAsByteString.beforeAsByteStringCounter, 1)
 	defer mm_atomic.AddUint64(&mmAsByteString.afterAsByteStringCounter, 1)
 
@@ -197,7 +198,7 @@ func (mmAsByteString *CloudStateHashMock) AsByteString() (s1 string) {
 		if results == nil {
 			mmAsByteString.t.Fatal("No results are set for the CloudStateHashMock.AsByteString")
 		}
-		return (*results).s1
+		return (*results).b1
 	}
 	if mmAsByteString.funcAsByteString != nil {
 		return mmAsByteString.funcAsByteString()

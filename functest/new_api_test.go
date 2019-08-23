@@ -27,6 +27,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/api/requester"
@@ -116,15 +117,77 @@ func TestIncorrectSign(t *testing.T) {
 				ID:      1,
 				Method:  "contract.call",
 			},
-			Params: requester.Params{Seed: seed, Reference: testMember.Ref, PublicKey: testMember.PubKey, CallSite: "wallet.getBalance", CallParams: map[string]interface{}{"reference": testMember.Ref}},
+			Params: requester.Params{Seed: seed, Reference: testMember.Ref, PublicKey: testMember.PubKey, CallSite: "member.getBalance", CallParams: map[string]interface{}{"reference": testMember.Ref}},
 		},
-		"MEQCIAvgBR42vSccBKynBIC7gb5GffqtW8q2XWRP+DlJ0IeUAiAeKCxZNSSRSsYcz2d49CT6KlSLpr5L7VlOokOiI9dsvQ==",
+		"invalidSignature",
 	)
 	require.NoError(t, err)
 	var res requester.ContractResponse
 	err = json.Unmarshal(body, &res)
 	require.NoError(t, err)
-	require.Contains(t, res.Error.Message, "invalid signature")
+	require.Contains(t, res.Error.Message, "error while verify signature")
+	require.Contains(t, res.Error.Message, "structure error")
+}
+
+func TestEmptySign(t *testing.T) {
+	testMember := createMember(t)
+	seed, err := requester.GetSeed(launchnet.TestAPIURL)
+	require.NoError(t, err)
+	body, err := requester.GetResponseBodyContract(
+		launchnet.TestRPCUrl,
+		requester.ContractRequest{
+			Request: requester.Request{
+				Version: "2.0",
+				ID:      1,
+				Method:  "contract.call",
+			},
+			Params: requester.Params{Seed: seed, Reference: testMember.Ref, PublicKey: testMember.PubKey, CallSite: "wallet.getBalance", CallParams: map[string]interface{}{"reference": testMember.Ref}},
+		},
+		"",
+	)
+	require.NoError(t, err)
+	var res requester.ContractResponse
+	err = json.Unmarshal(body, &res)
+	require.NoError(t, err)
+	require.Equal(t, res.Error.Message, "invalid signature")
+}
+
+func TestRequestWithSignFromOtherMember(t *testing.T) {
+	memberForParam := createMember(t)
+	seed, err := requester.GetSeed(launchnet.TestAPIURL)
+	require.NoError(t, err)
+
+	request := requester.ContractRequest{
+		Request: requester.Request{
+			Version: "2.0",
+			ID:      1,
+			Method:  "contract.call",
+		},
+		Params: requester.Params{Seed: seed, Reference: memberForParam.Ref, PublicKey: memberForParam.PubKey, CallSite: "wallet.getBalance", CallParams: map[string]interface{}{"reference": memberForParam.Ref}},
+	}
+
+	dataToSign, err := json.Marshal(request)
+	require.NoError(t, err)
+
+	memberForSign, err := newUserWithKeys()
+	require.NoError(t, err)
+
+	ks := platformpolicy.NewKeyProcessor()
+	privateKey, err := ks.ImportPrivateKeyPEM([]byte(memberForSign.PrivKey))
+	signature, err := requester.Sign(privateKey, dataToSign)
+	require.NoError(t, err)
+
+	body, err := requester.GetResponseBodyContract(
+		launchnet.TestRPCUrl,
+		request,
+		signature,
+	)
+	require.NoError(t, err)
+
+	var res requester.ContractResponse
+	err = json.Unmarshal(body, &res)
+	require.NoError(t, err)
+	require.Contains(t, res.Error.Message, "error while verify signature: invalid signature")
 }
 
 func TestIncorrectMethodName(t *testing.T) {

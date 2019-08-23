@@ -152,6 +152,7 @@ func (c *LightCleaner) clean(ctx context.Context) {
 
 func (c *LightCleaner) cleanPulse(ctx context.Context, pn insolar.PulseNumber) {
 	logger := inslogger.FromContext(ctx)
+
 	logger.Infof("start cleaning pn:%v", pn)
 
 	c.nodeModifier.DeleteForPN(pn)
@@ -160,16 +161,21 @@ func (c *LightCleaner) cleanPulse(ctx context.Context, pn insolar.PulseNumber) {
 
 	c.jetCleaner.DeleteForPN(ctx, pn)
 
-	idxs := c.indexAccessor.ForPulse(ctx, pn)
-	for _, idx := range idxs {
-		if idx.LifelineLastUsed < pn {
-			c.filamentCleaner.Clear(idx.ObjID)
+	idxs, err := c.indexAccessor.ForPulse(ctx, pn)
+	if err == nil {
+		for _, idx := range idxs {
+			if idx.LifelineLastUsed < pn {
+				c.filamentCleaner.Clear(idx.ObjID)
+			}
 		}
+
+	} else if err != object.ErrIndexNotFound {
+		logger.Errorf("Can't get indexes for pulse: %s", err)
 	}
 
 	c.indexCleaner.DeleteForPN(ctx, pn)
 
-	err := c.pulseShifter.Shift(ctx, pn)
+	err = c.pulseShifter.Shift(ctx, pn)
 	if err != nil {
 		logger.Errorf("can't clean pulse-tracker from pulse: %s", err)
 	}

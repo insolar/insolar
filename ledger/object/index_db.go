@@ -100,7 +100,10 @@ func (i *IndexDB) UpdateLastKnownPulse(ctx context.Context, topSyncPulse insolar
 	i.lock.Lock()
 	defer i.lock.Unlock()
 
-	indexes := i.ForPulse(ctx, topSyncPulse)
+	indexes, err := i.ForPulse(ctx, topSyncPulse)
+	if err != nil && err != ErrIndexNotFound {
+		return errors.Wrapf(err, "failed to get indexes for pulse: %d", topSyncPulse)
+	}
 
 	for idx := range indexes {
 		inslogger.FromContext(ctx).Debugf("UpdateLastKnownPulse. pulse: %d, object: %s", topSyncPulse, indexes[idx].ObjID.DebugString())
@@ -160,7 +163,7 @@ func (i *IndexDB) ForID(ctx context.Context, pn insolar.PulseNumber, objID insol
 	return *buck, nil
 }
 
-func (i *IndexDB) ForPulse(ctx context.Context, pn insolar.PulseNumber) []record.Index {
+func (i *IndexDB) ForPulse(ctx context.Context, pn insolar.PulseNumber) ([]record.Index, error) {
 	indexes := make([]record.Index, 0)
 
 	key := &indexKey{objID: insolar.ID{}, pn: pn}
@@ -168,18 +171,20 @@ func (i *IndexDB) ForPulse(ctx context.Context, pn insolar.PulseNumber) []record
 	defer it.Close()
 
 	for it.Next() {
-		bucket := record.Index{}
+		index := record.Index{}
 		rawIndex, err := it.Value()
+		err = index.Unmarshal(rawIndex)
 		if err != nil {
-			panic("can't get value: " + err.Error())
+			return nil, errors.Wrap(err, "Can't unmarshal index")
 		}
-		err = bucket.Unmarshal(rawIndex)
-		if err != nil {
-			panic("Can't unmarshal raw index: " + err.Error())
-		}
-		indexes = append(indexes, bucket)
+		indexes = append(indexes, index)
 	}
-	return indexes
+
+	if len(indexes) == 0 {
+		return nil, ErrIndexNotFound
+	}
+
+	return indexes, nil
 }
 
 func (i *IndexDB) setBucket(pn insolar.PulseNumber, objID insolar.ID, bucket *record.Index) error {

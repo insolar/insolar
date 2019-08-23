@@ -154,7 +154,7 @@ test_func: functest ## alias for functest
 
 .PHONY: test_slow
 test_slow: ## run tests with slowtest tag
-	CGO_ENABLED=1 go test $(TEST_ARGS) -tags slowtest ./logicrunner/... ./server/internal/...
+	CGO_ENABLED=1 go test $(TEST_ARGS) -tags slowtest ./logicrunner/... ./server/internal/... ./ledger/light/integration/...
 
 .PHONY: test
 test: test_unit ## alias for test_unit
@@ -187,7 +187,7 @@ ci_test_unit: ## run unit tests 10 times and -race flag, redirects json output t
 .PHONY: ci_test_slow
 ci_test_slow: ## run slow tests just once, redirects json output to file (CI)
 	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1 \
-		go test $(CI_TEST_ARGS) $(TEST_ARGS) -json -v -tags slowtest ./logicrunner/... ./server/internal/... -count 1 | tee -a ci_test_unit.json
+		go test $(CI_TEST_ARGS) $(TEST_ARGS) -json -v -tags slowtest ./logicrunner/... ./server/internal/... ./ledger/light/integration/... -count 1 | tee -a ci_test_unit.json
 
 .PHONY: ci_test_func
 ci_test_func: ## run functest 3 times, redirects json output to file (CI)

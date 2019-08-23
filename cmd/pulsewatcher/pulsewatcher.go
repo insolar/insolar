@@ -30,13 +30,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/insolar/insolar/api"
+	"github.com/insolar/insolar/api/requester"
 
-	pulsewatcher "github.com/insolar/insolar/cmd/pulsewatcher/config"
-	"github.com/insolar/insolar/insolar"
 	"github.com/olekukonko/tablewriter"
 	"github.com/pkg/errors"
 	"github.com/spf13/pflag"
+
+	pulsewatcher "github.com/insolar/insolar/cmd/pulsewatcher/config"
+	"github.com/insolar/insolar/insolar"
 )
 
 var client http.Client
@@ -261,7 +262,7 @@ func collectNodesStatuses(conf *pulsewatcher.Config, lastResults []nodeStatus) (
 					results[i] = lastResults[i]
 					results[i].errStr = errStr
 				} else {
-					results[i] = nodeStatus{url, api.StatusReply{}, errStr}
+					results[i] = nodeStatus{url, requester.StatusResponse{}, errStr}
 				}
 				errored++
 				lock.Unlock()
@@ -274,7 +275,7 @@ func collectNodesStatuses(conf *pulsewatcher.Config, lastResults []nodeStatus) (
 				log.Fatal(err)
 			}
 			var out struct {
-				Result api.StatusReply
+				Result requester.StatusResponse
 			}
 			err = json.Unmarshal(data, &out)
 			if err != nil {
@@ -297,7 +298,7 @@ func collectNodesStatuses(conf *pulsewatcher.Config, lastResults []nodeStatus) (
 
 type nodeStatus struct {
 	url    string
-	reply  api.StatusReply
+	reply  requester.StatusResponse
 	errStr string
 }
 

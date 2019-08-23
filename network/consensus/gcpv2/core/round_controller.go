@@ -53,21 +53,19 @@ package core
 import (
 	"context"
 	"fmt"
-	"github.com/insolar/insolar/network/consensus/common/args"
 	"sync"
 	"time"
 
-	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
-
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/network/consensus/common/args"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
-	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
-
-	errors2 "github.com/insolar/insolar/network/consensus/gcpv2/core/errors"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
+	gcpErrors "github.com/insolar/insolar/network/consensus/gcpv2/core/errors"
+	"github.com/insolar/insolar/pulse"
 )
 
 type RoundStrategyFactory interface {
@@ -348,7 +346,7 @@ func (r *PhasedRoundController) handlePacket(ctx context.Context, packet transpo
 		return api.KeepRound, err
 	}
 
-	isPulse, pn := errors2.IsMismatchPulseError(err)
+	isPulse, pn := gcpErrors.IsMismatchPulseError(err)
 	if !isPulse {
 		return api.KeepRound, err
 	}

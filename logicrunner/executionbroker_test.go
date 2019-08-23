@@ -18,6 +18,7 @@ package logicrunner
 
 import (
 	"context"
+	"errors"
 	"math"
 	"testing"
 	"time"
@@ -90,16 +91,16 @@ func TestExecutionBroker_AddFreshRequest(t *testing.T) {
 	transcript := common.NewTranscript(ctx, reqRef, record.IncomingRequest{})
 
 	table := []struct {
-		name   string
-		mocks  func(ctx context.Context, t minimock.Tester) *ExecutionBroker
+		name  string
+		mocks func(ctx context.Context, t minimock.Tester) *ExecutionBroker
 	}{
 		{
 			name: "happy path",
 			mocks: func(ctx context.Context, t minimock.Tester) *ExecutionBroker {
 				er := executionregistry.NewExecutionRegistryMock(t).
-					RegisterMock.Return().
+					RegisterMock.Return(nil).
 					DoneMock.Return(true).
-					GetActiveTranscriptMock.When(reqRef).Then(transcript)
+					GetActiveTranscriptMock.When(reqRef).Then(nil)
 				am := artifacts.NewClientMock(t).
 					HasPendingsMock.Return(false, nil)
 				re := NewRequestsExecutorMock(t).
@@ -130,23 +131,77 @@ func TestExecutionBroker_AddFreshRequest(t *testing.T) {
 }
 
 func TestExecutionBroker_Deduplication(t *testing.T) {
-	ctx := inslogger.TestContext(t)
-	mc := minimock.NewController(t)
-	defer mc.Finish()
-
 	objectRef := gen.Reference()
-	b := NewExecutionBroker(
-		objectRef, nil, nil, nil, nil, nil, nil, nil,
-	)
+	reqRef := gen.Reference()
 
-	queueMock := requestsqueue.NewRequestsQueueMock(mc).AppendMock.Return()
-	b.mutable = queueMock
+	tests := []struct {
+		name   string
+		mocks  func(ctx context.Context, t minimock.Tester) *ExecutionBroker
+		checks func(t *testing.T, b *ExecutionBroker)
+	}{
+		{
+			name: "request known to broker, gets deduplicated",
+			mocks: func(ctx context.Context, t minimock.Tester) *ExecutionBroker {
+				er := executionregistry.NewExecutionRegistryMock(t).
+					GetActiveTranscriptMock.Expect(reqRef).Return(nil)
 
-	reqRef1 := gen.Reference()
-	tr := common.NewTranscript(ctx, reqRef1, record.IncomingRequest{})
-	b.add(ctx, requestsqueue.FromLedger, tr)
-	b.add(ctx, requestsqueue.FromLedger, tr)
-	require.Equal(t, uint64(1), queueMock.AppendAfterCounter())
+				b := NewExecutionBroker(
+					objectRef, nil, nil, nil, nil, er, nil, nil,
+				)
+
+				queueMock := requestsqueue.NewRequestsQueueMock(t).AppendMock.Return()
+				b.mutable = queueMock
+
+				tr := common.NewTranscript(ctx, reqRef, record.IncomingRequest{})
+				b.add(ctx, requestsqueue.FromLedger, tr)
+
+				return b
+			},
+			checks: func(t *testing.T, b *ExecutionBroker) {
+				appended := b.mutable.(*requestsqueue.RequestsQueueMock).AppendAfterCounter()
+				require.Equal(t, 1, int(appended))
+			},
+		},
+		{
+			name: "request NOT known to broker, but registry, gets deduplicated",
+			mocks: func(ctx context.Context, t minimock.Tester) *ExecutionBroker {
+				tr := common.NewTranscript(ctx, reqRef, record.IncomingRequest{})
+				er := executionregistry.NewExecutionRegistryMock(t).
+					GetActiveTranscriptMock.Expect(reqRef).Return(tr)
+
+				b := NewExecutionBroker(
+					objectRef, nil, nil, nil, nil, er, nil, nil,
+				)
+
+				queueMock := requestsqueue.NewRequestsQueueMock(t)
+				b.mutable = queueMock
+
+				return b
+			},
+			checks: func(t *testing.T, b *ExecutionBroker) {
+				appended := b.mutable.(*requestsqueue.RequestsQueueMock).AppendAfterCounter()
+				require.Equal(t, 0, int(appended))
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctx := inslogger.TestContext(t)
+			mc := minimock.NewController(t)
+
+			broker := test.mocks(ctx, mc)
+
+			tr := common.NewTranscript(ctx, reqRef, record.IncomingRequest{})
+			broker.add(ctx, requestsqueue.FromLedger, tr)
+
+			mc.Wait(1 * time.Minute)
+			mc.Finish()
+
+			test.checks(t, broker)
+		})
+	}
+
 }
 
 func TestExecutionBroker_PendingFinishedIfNeed(t *testing.T) {
@@ -255,7 +310,7 @@ func TestExecutionBroker_ExecuteImmutable(t *testing.T) {
 	defer mc.Wait(1 * time.Minute)
 
 	er := executionregistry.NewExecutionRegistryMock(mc).
-		RegisterMock.Return().
+		RegisterMock.Return(nil).
 		DoneMock.Return(true)
 
 	// prepare default object and execution state
@@ -272,7 +327,8 @@ func TestExecutionBroker_ExecuteImmutable(t *testing.T) {
 		Immutable:    true,
 	}
 	immutableTranscript1 := common.NewTranscript(ctx, immutableRequestRef1, immutableRequest1)
-	er.GetActiveTranscriptMock.When(immutableRequestRef1).Then(immutableTranscript1)
+	er.GetActiveTranscriptMock.When(immutableRequestRef1).Then(nil).
+		DoneMock.Return(true)
 
 	re.ExecuteAndSaveMock.Return(&reply.CallMethod{Result: []byte{1, 2, 3}}, nil)
 	re.SendReplyMock.Return()
@@ -406,6 +462,7 @@ func TestExecutionBroker_AddFreshRequestWithOnPulse(t *testing.T) {
 				am := artifacts.NewClientMock(t)
 
 				er := executionregistry.NewExecutionRegistryMock(t).
+					GetActiveTranscriptMock.Return(nil).
 					IsEmptyMock.Return(true)
 				broker := NewExecutionBroker(objectRef, nil, nil, nil, am, er, nil, nil)
 
@@ -432,9 +489,9 @@ func TestExecutionBroker_AddFreshRequestWithOnPulse(t *testing.T) {
 				doneCalled := false
 				er := executionregistry.NewExecutionRegistryMock(t).
 					IsEmptyMock.Set(func() bool { return doneCalled }).
-					RegisterMock.Return().
+					RegisterMock.Return(nil).
 					DoneMock.Set(func(_ *common.Transcript) bool { doneCalled = true; return true }).
-					GetActiveTranscriptMock.When(reqRef).Then(transcript)
+					GetActiveTranscriptMock.When(reqRef).Then(nil)
 				am := artifacts.NewClientMock(t).
 					HasPendingsMock.Return(false, nil)
 				re := NewRequestsExecutorMock(t).
@@ -489,15 +546,17 @@ func TestExecutionBroker_IsKnownRequest(t *testing.T) {
 	mc := minimock.NewController(t)
 	defer mc.Finish()
 
+	reqRef1 := gen.Reference()
+	er := executionregistry.NewExecutionRegistryMock(mc).GetActiveTranscriptMock.Expect(reqRef1).Return(nil)
+
 	objectRef := gen.Reference()
 	b := NewExecutionBroker(
-		objectRef, nil, nil, nil, nil, nil, nil, nil,
+		objectRef, nil, nil, nil, nil, er, nil, nil,
 	)
 
 	queueMock := requestsqueue.NewRequestsQueueMock(mc).AppendMock.Return()
 	b.mutable = queueMock
 
-	reqRef1 := gen.Reference()
 	tr := common.NewTranscript(ctx, reqRef1, record.IncomingRequest{})
 	b.add(ctx, requestsqueue.FromLedger, tr)
 
@@ -602,6 +661,167 @@ func TestExecutionBroker_AbandonedRequestsOnLedger_Integration(t *testing.T) {
 
 			mc.Wait(1 * time.Minute)
 			mc.Finish()
+		})
+	}
+}
+
+func TestExecutionBroker_PrevExecutorPendingResult(t *testing.T) {
+	objectRef := gen.Reference()
+
+	tests := []struct {
+		name   string
+		state  insolar.PendingState
+		mocks  func(t minimock.Tester) *ExecutionBroker
+		checks func(t *testing.T, b *ExecutionBroker)
+	}{
+		{
+			name:  "local unknown, using remote",
+			state: insolar.NotPending,
+			mocks: func(t minimock.Tester) *ExecutionBroker {
+				b := NewExecutionBroker(
+					objectRef, nil, nil, nil, nil, nil, nil, nil,
+				)
+				return b
+			},
+			checks: func(t *testing.T, b *ExecutionBroker) {
+				require.Equal(t, insolar.NotPending, b.pending)
+			},
+		},
+		{
+			name:  "in pending, no executions, prev said continue",
+			state: insolar.NotPending,
+			mocks: func(t minimock.Tester) *ExecutionBroker {
+				er := executionregistry.NewExecutionRegistryMock(t).IsEmptyMock.Return(true)
+				b := NewExecutionBroker(
+					objectRef, nil, nil, nil, nil, er, nil, nil,
+				)
+				b.pending = insolar.InPending
+				return b
+			},
+			checks: func(t *testing.T, b *ExecutionBroker) {
+				require.Equal(t, insolar.NotPending, b.pending)
+				require.False(t, b.PendingConfirmed)
+			},
+		},
+		{
+			name:  "local execution, in pending, ignoring",
+			state: insolar.NotPending,
+			mocks: func(t minimock.Tester) *ExecutionBroker {
+				er := executionregistry.NewExecutionRegistryMock(t).IsEmptyMock.Return(false)
+				b := NewExecutionBroker(
+					objectRef, nil, nil, nil, nil, er, nil, nil,
+				)
+				b.pending = insolar.InPending
+				return b
+			},
+			checks: func(t *testing.T, b *ExecutionBroker) {
+				require.Equal(t, insolar.InPending, b.pending)
+				require.False(t, b.PendingConfirmed)
+			},
+		},
+		{
+			name:  "local not pending, ignoring remote",
+			state: insolar.InPending,
+			mocks: func(t minimock.Tester) *ExecutionBroker {
+				b := NewExecutionBroker(
+					objectRef, nil, nil, nil, nil, nil, nil, nil,
+				)
+				b.pending = insolar.NotPending
+				return b
+			},
+			checks: func(t *testing.T, b *ExecutionBroker) {
+				require.Equal(t, insolar.NotPending, b.pending)
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctx := inslogger.TestContext(t)
+			mc := minimock.NewController(t)
+
+			broker := test.mocks(mc)
+			broker.PrevExecutorPendingResult(ctx, test.state)
+
+			mc.Wait(1 * time.Minute)
+			mc.Finish()
+
+			test.checks(t, broker)
+		})
+	}
+}
+
+func TestExecutionBroker_getTask(t *testing.T) {
+	tests := []struct {
+		name    string
+		mocks   func(ctx context.Context, t minimock.Tester) *ExecutionBroker
+		hasTask bool
+	}{
+		{
+			name:    "happy path, got task",
+			hasTask: true,
+			mocks: func(ctx context.Context, t minimock.Tester) *ExecutionBroker {
+				er := executionregistry.NewExecutionRegistryMock(t).
+					GetActiveTranscriptMock.Return(nil).
+					RegisterMock.Return(nil)
+
+				objectRef := gen.Reference()
+				b := NewExecutionBroker(
+					objectRef, nil, nil, nil, nil, er, nil, nil,
+				)
+
+				reqRef := gen.Reference()
+				tr := common.NewTranscript(ctx, reqRef, record.IncomingRequest{})
+				b.add(ctx, requestsqueue.FromLedger, tr)
+
+				return b
+			},
+		},
+		{
+			name:    "no task, empty queue",
+			hasTask: false,
+			mocks: func(ctx context.Context, t minimock.Tester) *ExecutionBroker {
+				objectRef := gen.Reference()
+				b := NewExecutionBroker(
+					objectRef, nil, nil, nil, nil, nil, nil, nil,
+				)
+				return b
+			},
+		},
+		{
+			name:    "no task, already in the registry",
+			hasTask: false,
+			mocks: func(ctx context.Context, t minimock.Tester) *ExecutionBroker {
+				er := executionregistry.NewExecutionRegistryMock(t).
+					GetActiveTranscriptMock.Return(nil).
+					RegisterMock.Return(errors.New("some"))
+
+				objectRef := gen.Reference()
+				b := NewExecutionBroker(
+					objectRef, nil, nil, nil, nil, er, nil, nil,
+				)
+
+				reqRef := gen.Reference()
+				tr := common.NewTranscript(ctx, reqRef, record.IncomingRequest{})
+				b.add(ctx, requestsqueue.FromLedger, tr)
+
+				return b
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctx := inslogger.TestContext(t)
+			mc := minimock.NewController(t)
+
+			broker := test.mocks(ctx, mc)
+			task := broker.getTask(ctx, broker.mutable)
+
+			mc.Wait(1 * time.Minute)
+			mc.Finish()
+
+			require.Equal(t, test.hasTask, task != nil)
 		})
 	}
 }

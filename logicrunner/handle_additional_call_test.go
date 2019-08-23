@@ -49,7 +49,6 @@ func TestHandleAdditionalCallFromPreviousExecutor_Present(t *testing.T) {
 				reqRef := gen.Reference()
 
 				parcel := testutils.NewParcelMock(t).
-					DefaultTargetMock.Return(&obj).
 					MessageMock.Return(
 					&message.AdditionalCallFromPreviousExecutor{
 						ObjectReference: obj,

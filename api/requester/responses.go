@@ -16,6 +16,10 @@
 
 package requester
 
+import (
+	"time"
+)
+
 type Response struct {
 	JSONRPC string `json:"jsonrpc"`
 	ID      uint64 `json:"id"`
@@ -52,14 +56,37 @@ type rpcSeedResponse struct {
 	Result seedResponse `json:"result"`
 }
 
-// StatusResponse represents response from rpc on node.getStatus method
-type StatusResponse struct {
-	NetworkState string `json:"networkState"`
+// SeedReply is reply for Seed service requests.
+type SeedReply struct {
+	Seed    []byte `json:"seed"`
+	TraceID string `json:"traceID"`
 }
 
 type rpcStatusResponse struct {
 	Response
 	Result StatusResponse `json:"result"`
+}
+
+type Node struct {
+	Reference string `json:"reference"`
+	Role      string `json:"role"`
+	IsWorking bool   `json:"isWorking"`
+	ID        uint32 `json:"id"`
+}
+
+// StatusResponse represents response from rpc on node.getStatus method
+type StatusResponse struct {
+	NetworkState       string    `json:"networkState"`
+	Origin             Node      `json:"origin"`
+	ActiveListSize     int       `json:"activeListSize"`
+	WorkingListSize    int       `json:"workingListSize"`
+	Nodes              []Node    `json:"nodes"`
+	PulseNumber        uint32    `json:"pulseNumber"`
+	NetworkPulseNumber uint32    `json:"networkPulseNumber"`
+	Entropy            []byte    `json:"entropy"`
+	Version            string    `json:"version"`
+	Timestamp          time.Time `json:"timestamp"`
+	StartTime          time.Time `json:"startTime"`
 }
 
 // InfoResponse represents response from rpc on network.getInfo method

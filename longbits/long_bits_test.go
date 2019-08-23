@@ -1,51 +1,17 @@
 //
-// Modified BSD 3-Clause Clear License
+// Copyright 2019 Insolar Technologies GmbH
 //
-// Copyright (c) 2019 Insolar Technologies GmbH
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-// All rights reserved.
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted (subject to the limitations in the disclaimer below) provided that
-// the following conditions are met:
-//  * Redistributions of source code must retain the above copyright notice, this list
-//    of conditions and the following disclaimer.
-//  * Redistributions in binary form must reproduce the above copyright notice, this list
-//    of conditions and the following disclaimer in the documentation and/or other materials
-//    provided with the distribution.
-//  * Neither the name of Insolar Technologies GmbH nor the names of its contributors
-//    may be used to endorse or promote products derived from this software without
-//    specific prior written permission.
-//
-// NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED
-// BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS
-// AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
-// INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY
-// AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL
-// THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
-// INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
-// OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-//
-// Notwithstanding any other provisions of this license, it is prohibited to:
-//    (a) use this software,
-//
-//    (b) prepare modifications and derivative works of this software,
-//
-//    (c) distribute this software (including without limitation in source code, binary or
-//        object code form), and
-//
-//    (d) reproduce copies of this software
-//
-//    for any commercial purposes, and/or
-//
-//    for the purposes of making available this software to third parties as a service,
-//    including, without limitation, any software-as-a-service, platform-as-a-service,
-//    infrastructure-as-a-service or other similar online service, irrespective of
-//    whether it competes with the products or services of Insolar Technologies GmbH.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //
 
 package longbits
@@ -116,7 +82,7 @@ func TestBits64FixedByteSize(t *testing.T) {
 
 func TestBits64AsByteString(t *testing.T) {
 	bits := NewBits64(0x4142434445464748)
-	require.Equal(t, "HGFEDCBA", bits.AsByteString())
+	require.Equal(t, ByteString("HGFEDCBA"), bits.AsByteString())
 }
 
 func TestBits64String(t *testing.T) {
@@ -131,7 +97,7 @@ func TestBits64AsBytes(t *testing.T) {
 func TestFoldToBits64(t *testing.T) {
 	require.Equal(t, NewBits64(0x807060504030201), FoldToBits64([]byte{1, 2, 3, 4, 5, 6, 7, 8}))
 
-	require.Equal(t, NewBits64(0x1808080808080808), FoldToBits64([]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+	require.Equal(t, NewBits64(0x807060504030201), FoldToBits64([]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
 		11, 12, 13, 14, 15, 16}))
 
 	require.Panics(t, func() { FoldToBits64([]byte{1}) })
@@ -188,7 +154,7 @@ func TestBits128FoldToUint64(t *testing.T) {
 	l := uint64(0x807060504030201)
 	h := uint64(0x10F0E0D0C0B0A09)
 	bits := NewBits128(l, h)
-	require.Equal(t, uint64(0x908080808080808), bits.FoldToUint64())
+	require.Equal(t, uint64(0x807060504030201), bits.FoldToUint64())
 }
 
 func TestBits128FixedByteSize(t *testing.T) {
@@ -202,7 +168,7 @@ func TestBits128String(t *testing.T) {
 
 func TestBits128AsByteString(t *testing.T) {
 	bits := NewBits128(0x4142434445464748, 0x494A4B4C4D4E4F50)
-	require.Equal(t, "HGFEDCBAPONMLKJI", bits.AsByteString())
+	require.Equal(t, ByteString("HGFEDCBAPONMLKJI"), bits.AsByteString())
 }
 
 func TestBits128AsBytes(t *testing.T) {
@@ -215,7 +181,7 @@ func TestBits224WriteTo(t *testing.T) {
 	n, err := bits.WriteTo(&writerToComparer{other: &bits})
 	require.Equal(t, nil, err)
 
-	require.Equal(t, int64(24), n)
+	require.Equal(t, int64(28), n)
 
 	require.Equal(t, uint8(1), bits.AsBytes()[0])
 
@@ -232,11 +198,11 @@ func TestBits224Read(t *testing.T) {
 
 	require.Equal(t, uint8(1), dest[0])
 
-	dest = make([]byte, 25)
+	dest = make([]byte, 29)
 	n, err = bits.Read(dest)
 	require.Nil(t, err)
 
-	require.Equal(t, 24, n)
+	require.Equal(t, 28, n)
 
 	require.Equal(t, uint8(1), dest[0])
 
@@ -256,7 +222,7 @@ func TestBits224FoldToUint64(t *testing.T) {
 
 func TestBits224FixedByteSize(t *testing.T) {
 	bits := Bits224{}
-	require.Equal(t, 24, bits.FixedByteSize())
+	require.Equal(t, 28, bits.FixedByteSize())
 }
 
 func TestBits224String(t *testing.T) {
@@ -268,7 +234,8 @@ func TestBits224AsByteString(t *testing.T) {
 	binary.LittleEndian.PutUint64(bits[:8], uint64(0x4142434445464748))
 	binary.LittleEndian.PutUint64(bits[8:16], uint64(0x494A4B4C4D4E4F50))
 	binary.LittleEndian.PutUint64(bits[16:24], uint64(0x5152535455565758))
-	require.Equal(t, "HGFEDCBAPONMLKJIXWVUTSRQ", bits.AsByteString())
+	binary.LittleEndian.PutUint32(bits[24:28], uint32(0x41424344))
+	require.Equal(t, ByteString("HGFEDCBAPONMLKJIXWVUTSRQDCBA"), bits.AsByteString())
 }
 
 func TestBits224AsBytes(t *testing.T) {
@@ -276,8 +243,9 @@ func TestBits224AsBytes(t *testing.T) {
 	binary.LittleEndian.PutUint64(bits[:8], uint64(0x807060504030201))
 	binary.LittleEndian.PutUint64(bits[8:16], uint64(0x10F0E0D0C0B0A09))
 	binary.LittleEndian.PutUint64(bits[16:24], uint64(0x908070605040302))
+	binary.LittleEndian.PutUint32(bits[24:28], uint32(0x80706050))
 	require.Equal(t, []uint8{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
-		1, 2, 3, 4, 5, 6, 7, 8, 9}, bits.AsBytes())
+		1, 2, 3, 4, 5, 6, 7, 8, 9, 0x50, 0x60, 0x70, 0x80}, bits.AsBytes())
 }
 
 func TestBits256WriteTo(t *testing.T) {
@@ -322,7 +290,7 @@ func TestBits256FoldToUint64(t *testing.T) {
 	binary.LittleEndian.PutUint64(bits[8:16], uint64(0x10F0E0D0C0B0A09))
 	binary.LittleEndian.PutUint64(bits[16:24], uint64(0x0908070605040302))
 	binary.LittleEndian.PutUint64(bits[24:32], uint64(0x02010F0E0D0C0B0A))
-	require.Equal(t, uint64(0x201000000000000), bits.FoldToUint64())
+	require.Equal(t, uint64(0x807060504030201), bits.FoldToUint64())
 }
 
 func TestBits256FoldToBits128(t *testing.T) {
@@ -341,7 +309,7 @@ func TestBits256FoldToBits224(t *testing.T) {
 	binary.LittleEndian.PutUint64(bits[16:24], uint64(0x0908070605040302))
 	binary.LittleEndian.PutUint64(bits[24:32], uint64(0x02010F0E0D0C0B0A))
 	require.Equal(t, Bits224{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
-		1, 2, 3, 4, 5, 6, 7, 8, 9}, bits.FoldToBits224())
+		1, 2, 3, 4, 5, 6, 7, 8, 9, 0x0a, 0x0b, 0x0c, 0x0d}, bits.FoldToBits224())
 }
 
 func TestBits256FixedByteSize(t *testing.T) {
@@ -359,7 +327,7 @@ func TestBits256AsByteString(t *testing.T) {
 	binary.LittleEndian.PutUint64(bits[8:16], uint64(0x494A4B4C4D4E4F50))
 	binary.LittleEndian.PutUint64(bits[16:24], uint64(0x5152535455565758))
 	binary.LittleEndian.PutUint64(bits[24:32], uint64(0x595A5B5C5D5E5F60))
-	require.Equal(t, "HGFEDCBAPONMLKJIXWVUTSRQ`_^]\\[ZY", bits.AsByteString())
+	require.Equal(t, ByteString("HGFEDCBAPONMLKJIXWVUTSRQ`_^]\\[ZY"), bits.AsByteString())
 }
 
 func TestBits256AsBytes(t *testing.T) {
@@ -418,7 +386,7 @@ func TestBits512FoldToUint64(t *testing.T) {
 	binary.LittleEndian.PutUint64(bits[40:48], uint64(0x0302010F0E0D0C0B))
 	binary.LittleEndian.PutUint64(bits[48:56], uint64(0x0B0A090807060504))
 	binary.LittleEndian.PutUint64(bits[56:64], uint64(0x040302010F0E0D0C))
-	require.Equal(t, uint64(0x403020100000000), bits.FoldToUint64())
+	require.Equal(t, uint64(0x807060504030201), bits.FoldToUint64())
 }
 
 func TestBits512FoldToBits256(t *testing.T) {
@@ -446,7 +414,7 @@ func TestBits512FoldToBits224(t *testing.T) {
 	binary.LittleEndian.PutUint64(bits[48:56], uint64(0x0B0A090807060504))
 	binary.LittleEndian.PutUint64(bits[56:64], uint64(0x040302010F0E0D0C))
 	require.Equal(t, Bits224{2, 6, 6, 2, 2, 14, 14, 2, 2, 6, 6, 2, 2, 15, 13, 2, 6, 6, 2, 2, 14, 14,
-		2, 2}, bits.FoldToBits224())
+		2, 2, 6, 6, 2, 2}, bits.FoldToBits224())
 }
 
 func TestBits512FixedByteSize(t *testing.T) {
@@ -468,7 +436,7 @@ func TestBits512AsByteString(t *testing.T) {
 	binary.LittleEndian.PutUint64(bits[40:48], uint64(0x696A6B6C6D6E6F70))
 	binary.LittleEndian.PutUint64(bits[48:56], uint64(0x7172737475767778))
 	binary.LittleEndian.PutUint64(bits[56:64], uint64(0x797A7B7C7D7E7F80))
-	require.Equal(t, "HGFEDCBAPONMLKJIXWVUTSRQ`_^]\\[ZYhgfedcbaponmlkjixwvutsrq\x80\u007f~}|{zy",
+	require.Equal(t, ByteString("HGFEDCBAPONMLKJIXWVUTSRQ`_^]\\[ZYhgfedcbaponmlkjixwvutsrq\x80\u007f~}|{zy"),
 		bits.AsByteString())
 }
 
@@ -490,7 +458,7 @@ func TestBits512AsBytes(t *testing.T) {
 func TestFoldedFoldToUint64(t *testing.T) {
 	require.Equal(t, uint64(0x807060504030201), FoldToUint64([]byte{1, 2, 3, 4, 5, 6, 7, 8}))
 
-	require.Equal(t, uint64(0x1808080808080808), FoldToUint64([]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+	require.Equal(t, uint64(0x807060504030201), FoldToUint64([]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
 		11, 12, 13, 14, 15, 16}))
 
 	require.Panics(t, func() { FoldToUint64([]byte{1}) })
@@ -593,7 +561,7 @@ func TestNewBits128FromBytes(t *testing.T) {
 
 func TestNewBits224FromBytes(t *testing.T) {
 	var bytes []byte
-	for i := 0; i < 24; i++ {
+	for i := 0; i < 28; i++ {
 		bytes = append(bytes, byte(i%8))
 	}
 	bits := NewBits224FromBytes(bytes)

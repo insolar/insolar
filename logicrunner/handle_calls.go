@@ -169,9 +169,9 @@ func (h *HandleCall) handleActual(
 	ctx, logger := inslogger.WithFields(
 		ctx,
 		map[string]interface{}{
-			"object": objRef.String(),
+			"object":  objRef.String(),
 			"request": requestRef.String(),
-			"method": request.Method,
+			"method":  request.Method,
 		},
 	)
 	logger.Debug("registered request")

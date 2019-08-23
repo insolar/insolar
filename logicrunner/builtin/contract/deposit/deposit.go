@@ -35,13 +35,12 @@ type status string
 const (
 	// TODO: https://insolar.atlassian.net/browse/WLT-768
 	// day   = 24 * 60 * 60
-	day   = 10
-	month = 30 * day
+	day = 10
 
 	vestingPeriodInDays = 360
 
 	// TODO: https://insolar.atlassian.net/browse/WLT-768
-	// offsetDepositPulse insolar.PulseNumber = 6 * month
+	// offsetDepositPulse insolar.PulseNumber = 366 * day
 	offsetDepositPulse insolar.PulseNumber = 10
 
 	XNS = "XNS"
@@ -54,7 +53,6 @@ type Deposit struct {
 	PulseDepositUnHold      insolar.PulseNumber  `json:"holdReleaseDate"`
 	MigrationDaemonConfirms foundation.StableMap `json:"confirmerReferences"`
 	Amount                  string               `json:"amount"`
-	Bonus                   string               `json:"bonus"`
 	TxHash                  string               `json:"ethTxHash"`
 }
 

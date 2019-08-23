@@ -63,7 +63,7 @@ func TestCleaner_cleanPulse(t *testing.T) {
 	ia := object.NewIndexAccessorMock(ctrl)
 	ia.ForPulseMock.Expect(ctx, inputPulse.PulseNumber).Return([]record.Index{
 		{ObjID: objID, LifelineLastUsed: insolar.PulseNumber(110)},
-	})
+	}, nil)
 
 	fc := NewFilamentCleanerMock(ctrl)
 	fc.ClearMock.Expect(objID)
@@ -89,6 +89,7 @@ func TestCleaner_clean(t *testing.T) {
 	limit := 123
 
 	ctrl := minimock.NewController(t)
+	defer ctrl.Finish()
 
 	jm := jet.NewCleanerMock(ctrl)
 	jm.DeleteForPNFunc = DeleteForPNMock(t, calculatedPulse.PulseNumber)
@@ -120,12 +121,12 @@ func TestCleaner_clean(t *testing.T) {
 
 	objID := gen.ID()
 	ia := object.NewIndexAccessorMock(ctrl)
-	ia.ForPulseMock.Set(func(p context.Context, p1 insolar.PulseNumber) (r []record.Index) {
+	ia.ForPulseMock.Set(func(p context.Context, p1 insolar.PulseNumber) (r []record.Index, r1 error) {
 		require.Equal(t, calculatedPulse.PulseNumber, p1)
 
 		return []record.Index{
 			{ObjID: objID, LifelineLastUsed: insolar.PulseNumber(110)},
-		}
+		}, nil
 	})
 	fc := NewFilamentCleanerMock(ctrl)
 	fc.ClearMock.Expect(objID)
@@ -136,7 +137,7 @@ func TestCleaner_clean(t *testing.T) {
 	go cleaner.clean(ctx)
 	cleaner.pulseForClean <- inputPulse.PulseNumber
 
-	ctrl.Wait(time.Minute)
+	ctrl.Wait(time.Minute * 10)
 }
 
 func TestLightCleaner_NotifyAboutPulse(t *testing.T) {
@@ -178,12 +179,12 @@ func TestLightCleaner_NotifyAboutPulse(t *testing.T) {
 
 	objID := gen.ID()
 	ia := object.NewIndexAccessorMock(ctrl)
-	ia.ForPulseMock.Set(func(p context.Context, p1 insolar.PulseNumber) (r []record.Index) {
+	ia.ForPulseMock.Set(func(p context.Context, p1 insolar.PulseNumber) (r []record.Index, r1 error) {
 		require.Equal(t, calculatedPulse.PulseNumber, p1)
 
 		return []record.Index{
 			{ObjID: objID, LifelineLastUsed: insolar.PulseNumber(110)},
-		}
+		}, nil
 	})
 	fc := NewFilamentCleanerMock(ctrl)
 	fc.ClearMock.Expect(objID)
