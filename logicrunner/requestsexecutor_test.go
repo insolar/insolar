@@ -370,31 +370,6 @@ func TestRequestsExecutor_SendReply(t *testing.T) {
 					}
 				}),
 		},
-		{
-			name: "error",
-			transcript: &common.Transcript{
-				RequestRef: reqRef,
-				Request:    &record.IncomingRequest{},
-			},
-			reply: &reply.CallMethod{Object: &requestRef},
-			sender: bus.NewSenderMock(t).SendRoleMock.Set(
-				func(ctx context.Context, msg *message.Message, role insolar.DynamicRole, target insolar.Reference) (<-chan *message.Message, func()) {
-					res := make(chan *message.Message)
-					go func() {
-						replyMsg, err := payload.NewMessage(&payload.Error{Text: "test error", Code: payload.CodeUnknown})
-						require.NoError(t, err)
-						meta := payload.Meta{
-							Payload: msg.Payload,
-						}
-						buf, _ := meta.Marshal()
-						replyMsg.Payload = buf
-						res <- replyMsg
-					}()
-					return res, func() {
-						close(res)
-					}
-				}),
-		},
 	}
 
 	for _, test := range table {
