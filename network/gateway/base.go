@@ -281,7 +281,13 @@ func (g *Base) HandleNodeBootstrapRequest(ctx context.Context, request network.R
 	}
 
 	profile := adapters.Candidate(data.CandidateProfile).StaticProfile(g.KeyProcessor)
-	g.ConsensusController.AddJoinCandidate(candidate{profile, profile.GetExtension()})
+
+	err = g.ConsensusController.AddJoinCandidate(candidate{profile, profile.GetExtension()})
+	if err != nil {
+		inslogger.FromContext(ctx).Warnf("Rejected bootstrap request from node %s: %s", request.GetSender(), err.Error())
+		return g.HostNetwork.BuildResponse(ctx, request, &packet.BootstrapResponse{Code: packet.Reject}), nil
+	}
+
 	inslogger.FromContext(ctx).Infof("=== AddJoinCandidate id = %d, address = %s ", data.CandidateProfile.ShortID, data.CandidateProfile.Address)
 
 	return g.HostNetwork.BuildResponse(ctx, request,
