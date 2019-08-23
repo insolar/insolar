@@ -61,7 +61,6 @@ type Accessor struct {
 	refIndex  map[insolar.Reference]insolar.NetworkNode
 	sidIndex  map[insolar.ShortNodeID]insolar.NetworkNode
 	addrIndex map[string]insolar.NetworkNode
-	roleIndex map[insolar.StaticRole]*refSet
 	// should be removed in future
 	active []insolar.NetworkNode
 }
@@ -131,14 +130,6 @@ func (a *Accessor) addToIndex(node insolar.NetworkNode) {
 	if node.GetPower() == 0 {
 		return
 	}
-
-	list, ok := a.roleIndex[node.Role()]
-	if !ok {
-		list = newRefSet()
-	}
-
-	list.Add(node.ID())
-	a.roleIndex[node.Role()] = list
 }
 
 func NewAccessor(snapshot *Snapshot) *Accessor {
@@ -146,7 +137,6 @@ func NewAccessor(snapshot *Snapshot) *Accessor {
 		snapshot:  snapshot,
 		refIndex:  make(map[insolar.Reference]insolar.NetworkNode),
 		sidIndex:  make(map[insolar.ShortNodeID]insolar.NetworkNode),
-		roleIndex: make(map[insolar.StaticRole]*refSet),
 		addrIndex: make(map[string]insolar.NetworkNode),
 	}
 	result.active = GetSnapshotActiveNodes(snapshot)

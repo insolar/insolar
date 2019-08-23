@@ -65,7 +65,7 @@ func newPopulationEventHandler(nodeCount int) *populationEventHandler {
 	}
 
 	/* Ensure sufficient sizes of queues to avoid lockups */
-	nodeCount = 1 + nodeCount*3
+	nodeCount = 1 + nodeCount*10
 
 	return &populationEventHandler{
 		make(chan population.MemberPacketSender, nodeCount),
@@ -155,6 +155,7 @@ func (p *populationEventHandler) OnTrustUpdated(populationVersion uint32, n *pop
 		return
 	default:
 		if trustBefore == member.UnknownTrust && trustAfter >= member.TrustBySelf {
+			n.UnsafeEnsureStateAvailable()
 			p.queueToPhase2(n)
 			p.queueToPhase3(ph2ctl.UpdateSignal{NewTrustLevel: member.TrustBySelf, UpdatedNode: n})
 		}

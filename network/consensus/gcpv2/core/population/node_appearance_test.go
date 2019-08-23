@@ -52,6 +52,10 @@ package population
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/require"
+
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
 )
 
 // func TestNewNodeAppearanceAsSelf(t *testing.T) {
@@ -320,4 +324,20 @@ func TestCreateSignatureVerifier(t *testing.T) {
 	// sv := cryptkit.NewSignatureVerifierMock(t)
 	// svf.GetSignatureVerifierWithPKSMock.Set(func(cryptkit.PublicKeyStore) cryptkit.SignatureVerifier { return sv })
 	// require.Equal(t, sv, r.CreateSignatureVerifier(svf))
+}
+
+func TestSetPacketReceived(t *testing.T) {
+	pt := phases.PacketPhase3
+	hook := &Hook{}
+	na := NodeAppearance{limiter: phases.PacketLimiter{}, hook: hook}
+	require.True(t, na.SetPacketReceived(pt))
+
+	require.False(t, na.SetPacketReceived(pt))
+
+	require.False(t, na.SetPacketReceived(pt))
+
+	pt = phases.PacketPhase2
+	require.True(t, na.SetPacketReceived(pt))
+
+	require.False(t, na.SetPacketReceived(pt))
 }

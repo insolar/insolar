@@ -202,7 +202,7 @@ func (g *Complete) EphemeralMode(nodes []insolar.NetworkNode) bool {
 func (g *Complete) UpdateState(ctx context.Context, pulseNumber insolar.PulseNumber, nodes []insolar.NetworkNode, cloudStateHash []byte) {
 	logger := inslogger.FromContext(ctx)
 
-	workingNodes := node.SelectWorking(nodes)
+	workingNodes := node.Select(nodes, node.ListWorking)
 
 	if ok, _ := rules.CheckMajorityRule(g.CertificateManager.GetCertificate(), workingNodes); !ok {
 		logger.Fatal("MajorityRule failed")

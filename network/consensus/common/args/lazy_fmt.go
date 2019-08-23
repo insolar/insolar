@@ -1,4 +1,4 @@
-//
+///
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -46,93 +46,35 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-//
+///
 
-package censusimpl
+package args
 
 import (
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensus/common/cryptkit"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
+	"fmt"
+	"time"
 )
 
-func NewJoinerPopulation(localNode profiles.StaticProfile, vf cryptkit.SignatureVerifierFactory) OneJoinerPopulation {
-	localNode.GetStaticNodeID()
-
-	verifier := vf.CreateSignatureVerifierWithPKS(localNode.GetPublicKeyStore())
-	return OneJoinerPopulation{
-		localNode: updatableSlot{
-			NodeProfileSlot: NewJoinerProfile(localNode, verifier),
-		},
-	}
+func LazyStr(fn func() string) fmt.Stringer {
+	return &lazyStringer{fn}
 }
 
-var _ census.OnlinePopulation = &OneJoinerPopulation{}
-
-type OneJoinerPopulation struct {
-	localNode updatableSlot
+func LazyFmt(format string, a ...interface{}) fmt.Stringer {
+	return &lazyStringer{func() string {
+		return fmt.Sprintf(format, a...)
+	}}
 }
 
-func (c *OneJoinerPopulation) GetSuspendedCount() int {
-	return 0
+func LazyTimeFmt(format string, t time.Time) fmt.Stringer {
+	return &lazyStringer{func() string {
+		return t.Format(format)
+	}}
 }
 
-func (c *OneJoinerPopulation) GetMistrustedCount() int {
-	return 0
+type lazyStringer struct {
+	fn func() string
 }
 
-func (c *OneJoinerPopulation) GetIdleProfiles() []profiles.ActiveNode {
-	return nil
-}
-
-func (c *OneJoinerPopulation) GetIdleCount() int {
-	return 0
-}
-
-func (c *OneJoinerPopulation) GetIndexedCount() int {
-	return 0 // joiner is not counted
-}
-
-func (c *OneJoinerPopulation) GetIndexedCapacity() int {
-	return 0 // joiner is not counted
-}
-
-func (c *OneJoinerPopulation) IsValid() bool {
-	return true
-}
-
-func (c *OneJoinerPopulation) IsClean() bool {
-	return c.localNode.GetOpMode().IsClean()
-}
-
-func (c *OneJoinerPopulation) GetRolePopulation(role member.PrimaryRole) census.RolePopulation {
-	return nil
-}
-
-func (c *OneJoinerPopulation) GetWorkingRoles() []member.PrimaryRole {
-	return nil
-}
-
-func (c *OneJoinerPopulation) copyTo(p copyFromPopulation) {
-	v := []updatableSlot{c.localNode}
-	v[0].index = 0 // removes Joiner status
-
-	p.makeCopyOf(v, &v[0])
-}
-
-func (c *OneJoinerPopulation) FindProfile(nodeID insolar.ShortNodeID) profiles.ActiveNode {
-	if c.localNode.GetNodeID() != nodeID {
-		return nil
-	}
-	return &c.localNode
-}
-
-func (c *OneJoinerPopulation) GetProfiles() []profiles.ActiveNode {
-	return []profiles.ActiveNode{}
-}
-
-func (c *OneJoinerPopulation) GetLocalProfile() profiles.LocalNode {
-	return &c.localNode.NodeProfileSlot
+func (v *lazyStringer) String() string {
+	return v.fn()
 }

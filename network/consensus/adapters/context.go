@@ -1,4 +1,4 @@
-//
+///
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -48,91 +48,46 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package censusimpl
+package adapters
 
 import (
+	"context"
+
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensus/common/cryptkit"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 )
 
-func NewJoinerPopulation(localNode profiles.StaticProfile, vf cryptkit.SignatureVerifierFactory) OneJoinerPopulation {
-	localNode.GetStaticNodeID()
+func ConsensusContext(ctx context.Context) context.Context {
+	ctx, _ = inslogger.WithFields(ctx, map[string]interface{}{
+		"component": "consensus",
+	})
 
-	verifier := vf.CreateSignatureVerifierWithPKS(localNode.GetPublicKeyStore())
-	return OneJoinerPopulation{
-		localNode: updatableSlot{
-			NodeProfileSlot: NewJoinerProfile(localNode, verifier),
-		},
-	}
+	return ctx
 }
 
-var _ census.OnlinePopulation = &OneJoinerPopulation{}
+func PacketEarlyLogger(ctx context.Context, senderAddr string) (context.Context, insolar.Logger) {
+	ctx = ConsensusContext(ctx)
 
-type OneJoinerPopulation struct {
-	localNode updatableSlot
+	ctx, logger := inslogger.WithFields(ctx, map[string]interface{}{
+		"sender_address": senderAddr,
+	})
+
+	return ctx, logger
 }
 
-func (c *OneJoinerPopulation) GetSuspendedCount() int {
-	return 0
+func PacketLateLogger(ctx context.Context, parser transport.PacketParser) (context.Context, insolar.Logger) {
+	ctx, logger := inslogger.WithFields(ctx, map[string]interface{}{
+		"sender_id":    parser.GetSourceID(),
+		"packet_type":  parser.GetPacketType().String(),
+		"packet_pulse": parser.GetPulseNumber(),
+	})
+
+	return ctx, logger
 }
 
-func (c *OneJoinerPopulation) GetMistrustedCount() int {
-	return 0
-}
-
-func (c *OneJoinerPopulation) GetIdleProfiles() []profiles.ActiveNode {
-	return nil
-}
-
-func (c *OneJoinerPopulation) GetIdleCount() int {
-	return 0
-}
-
-func (c *OneJoinerPopulation) GetIndexedCount() int {
-	return 0 // joiner is not counted
-}
-
-func (c *OneJoinerPopulation) GetIndexedCapacity() int {
-	return 0 // joiner is not counted
-}
-
-func (c *OneJoinerPopulation) IsValid() bool {
-	return true
-}
-
-func (c *OneJoinerPopulation) IsClean() bool {
-	return c.localNode.GetOpMode().IsClean()
-}
-
-func (c *OneJoinerPopulation) GetRolePopulation(role member.PrimaryRole) census.RolePopulation {
-	return nil
-}
-
-func (c *OneJoinerPopulation) GetWorkingRoles() []member.PrimaryRole {
-	return nil
-}
-
-func (c *OneJoinerPopulation) copyTo(p copyFromPopulation) {
-	v := []updatableSlot{c.localNode}
-	v[0].index = 0 // removes Joiner status
-
-	p.makeCopyOf(v, &v[0])
-}
-
-func (c *OneJoinerPopulation) FindProfile(nodeID insolar.ShortNodeID) profiles.ActiveNode {
-	if c.localNode.GetNodeID() != nodeID {
-		return nil
-	}
-	return &c.localNode
-}
-
-func (c *OneJoinerPopulation) GetProfiles() []profiles.ActiveNode {
-	return []profiles.ActiveNode{}
-}
-
-func (c *OneJoinerPopulation) GetLocalProfile() profiles.LocalNode {
-	return &c.localNode.NodeProfileSlot
+func ReportContext(report api.UpstreamReport) context.Context {
+	return network.NewPulseContext(context.Background(), uint32(report.PulseNumber))
 }

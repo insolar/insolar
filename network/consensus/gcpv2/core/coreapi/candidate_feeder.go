@@ -51,6 +51,7 @@
 package coreapi
 
 import (
+	"errors"
 	"sync"
 
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
@@ -61,8 +62,13 @@ import (
 )
 
 type SequentialCandidateFeeder struct {
-	mx  sync.Mutex
-	buf []profiles.CandidateProfile
+	mx      sync.Mutex
+	bufSize int
+	buf     []profiles.CandidateProfile
+}
+
+func NewSequentialCandidateFeeder(candidateQueueSize int) *SequentialCandidateFeeder {
+	return &SequentialCandidateFeeder{bufSize: candidateQueueSize}
 }
 
 func (p *SequentialCandidateFeeder) PickNextJoinCandidate() (profiles.CandidateProfile, cryptkit.DigestHolder) {
@@ -91,12 +97,16 @@ func (p *SequentialCandidateFeeder) RemoveJoinCandidate(candidateAdded bool, nod
 	return true
 }
 
-func (p *SequentialCandidateFeeder) AddJoinCandidate(candidate transport.FullIntroductionReader) {
+func (p *SequentialCandidateFeeder) AddJoinCandidate(candidate transport.FullIntroductionReader) error {
 	if candidate == nil {
 		panic("illegal value")
 	}
 	p.mx.Lock()
 	defer p.mx.Unlock()
 
+	if p.bufSize > 0 && len(p.buf) >= p.bufSize {
+		return errors.New("JoinCandidate queue is full")
+	}
 	p.buf = append(p.buf, candidate)
+	return nil
 }
