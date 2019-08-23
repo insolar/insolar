@@ -169,6 +169,7 @@ func main() {
 		promVars.addTarget(node.Role, conf)
 
 		pwConfig.Nodes = append(pwConfig.Nodes, conf.AdminAPIRunner.Address)
+		pwConfig.Nodes = append(pwConfig.Nodes, conf.APIRunner.Address)
 	}
 
 	// process extra nodes
@@ -211,6 +212,7 @@ func main() {
 		promVars.addTarget(node.Role, conf)
 
 		pwConfig.Nodes = append(pwConfig.Nodes, conf.AdminAPIRunner.Address)
+		pwConfig.Nodes = append(pwConfig.Nodes, conf.APIRunner.Address)
 	}
 
 	writePromConfig(promVars)
