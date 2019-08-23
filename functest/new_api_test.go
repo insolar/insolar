@@ -131,7 +131,7 @@ func TestIncorrectSign(t *testing.T) {
 
 func TestEmptySign(t *testing.T) {
 	testMember := createMember(t)
-	seed, err := requester.GetSeed(launchnet.TestAPIURL)
+	seed, err := requester.GetSeed(launchnet.TestRPCUrl)
 	require.NoError(t, err)
 	body, err := requester.GetResponseBodyContract(
 		launchnet.TestRPCUrl,
@@ -154,7 +154,7 @@ func TestEmptySign(t *testing.T) {
 
 func TestRequestWithSignFromOtherMember(t *testing.T) {
 	memberForParam := createMember(t)
-	seed, err := requester.GetSeed(launchnet.TestAPIURL)
+	seed, err := requester.GetSeed(launchnet.TestRPCUrl)
 	require.NoError(t, err)
 
 	request := requester.ContractRequest{
