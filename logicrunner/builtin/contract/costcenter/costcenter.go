@@ -17,9 +17,6 @@
 package costcenter
 
 import (
-	"fmt"
-	"math/big"
-
 	"github.com/insolar/insolar/insolar"
 
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
@@ -43,51 +40,8 @@ func (cc CostCenter) GetFeeAccount() (insolar.Reference, error) {
 	return cc.FeeAccount, nil
 }
 
-func calcFeeRate(amountStr string) (string, error) {
-	amount, ok := new(big.Int).SetString(amountStr, 10)
-	if !ok {
-		return "", fmt.Errorf("can't parse amount")
-	}
-
-	if amount.Cmp(big.NewInt(1000*1000*1000)) >= 0 {
-		return "1000000000", nil // 1000 * 1000 * 1000 = 10%
-	}
-	if amount.Cmp(big.NewInt(1000*1000)) >= 0 {
-		return "2000000000", nil // 2 * 1000 * 1000 * 1000 = 20%
-	}
-	if amount.Cmp(big.NewInt(1000)) >= 0 {
-		return "3000000000", nil // 3 * 1000 * 1000 * 1000 = 30%
-	}
-	return "4000000000", nil // 4 * 1000 * 1000 * 1000 = 40%
-}
-
 // CalcFee calculates fee for amount. Returns fee.
 // ins:immutable
 func (cc CostCenter) CalcFee(amountStr string) (string, error) {
-	amount, ok := new(big.Int).SetString(amountStr, 10)
-	if !ok {
-		return "", fmt.Errorf("can't parse amount")
-	}
-
-	commissionRateStr, err := calcFeeRate(amountStr)
-	if err != nil {
-		return "", fmt.Errorf("failed to calc fee rate")
-	}
-
-	commissionRate, ok := new(big.Int).SetString(commissionRateStr, 10)
-	if !ok {
-		return "", fmt.Errorf("can't parse commission rate")
-	}
-
-	preResult := new(big.Int).Mul(amount, commissionRate)
-
-	capacity := big.NewInt(10 * 1000 * 1000 * 1000)
-	result := new(big.Int).Div(preResult, capacity)
-
-	mod := new(big.Int).Mod(preResult, capacity)
-	if mod.Cmp(big.NewInt(0)) == 1 {
-		result = new(big.Int).Add(result, big.NewInt(1))
-	}
-
-	return result.String(), nil
+	return "10000000", nil
 }
