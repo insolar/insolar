@@ -659,7 +659,7 @@ func (suite *LogicRunnerTestSuite) TestImmutableOrder() {
 
 	broker.add(suite.ctx, requestsqueue.FromLedger, mutableTranscript)
 	broker.add(suite.ctx, requestsqueue.FromLedger, immutableTranscript1, immutableTranscript2)
-	broker.StartProcessorsIfNeeded(suite.ctx)
+	broker.startProcessors(suite.ctx)
 
 	suite.True(wait(finishedCount, broker, 3))
 }
