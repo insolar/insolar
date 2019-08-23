@@ -202,10 +202,14 @@ func newInstaller(constructor *constructor, dep *Dep) Installer {
 	}
 }
 
-func (c Installer) ControllerFor(isDiscovery bool, mode Mode, setters ...packetProcessorSetter) Controller {
+func (c Installer) ControllerFor(mode Mode, setters ...packetProcessorSetter) Controller {
 	controlFeederInterceptor := adapters.InterceptConsensusControl(
 		adapters.NewConsensusControlFeeder(),
 	)
+
+	cert := c.dep.CertificateManager.GetCertificate()
+	isDiscovery := network.IsDiscovery(*cert.GetNodeRef(), cert)
+
 	var candidateQueueSize int
 	if isDiscovery {
 		candidateQueueSize = 1

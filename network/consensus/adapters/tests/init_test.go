@@ -184,9 +184,6 @@ func initNodes(ctx context.Context, mode consensus.Mode, nodes GeneratedNodes, s
 		delayTransport := strategy.GetLink(datagramTransport)
 		ns.transports[i] = delayTransport
 
-		cert := certificateManager.GetCertificate()
-		isDiscovery := network.IsDiscovery(*cert.GetNodeRef(), cert)
-
 		controller := consensus.New(ctx, consensus.Dep{
 			KeyProcessor:       keyProcessor,
 			Scheme:             scheme,
