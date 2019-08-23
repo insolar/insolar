@@ -37,7 +37,7 @@ import (
 // PulseManager implements insolar.PulseManager.
 type PulseManager struct {
 	LogicRunner    insolar.LogicRunner `inject:""`
-	NodeNet        network.NodeNetwork `inject:""`
+	NodeNet        network.NodeNetwork `inject:""` //nolint:staticcheck
 	NodeSetter     node.Modifier       `inject:""`
 	PulseAccessor  pulse.Accessor      `inject:""`
 	PulseAppender  pulse.Appender      `inject:""`

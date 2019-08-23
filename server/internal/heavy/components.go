@@ -23,6 +23,7 @@ import (
 	"path/filepath"
 
 	"github.com/dgraph-io/badger"
+
 	"github.com/insolar/insolar/network"
 
 	"google.golang.org/grpc"
@@ -56,7 +57,6 @@ import (
 	"github.com/insolar/insolar/insolar/delegationtoken"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/jetcoordinator"
-	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/node"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/store"
@@ -66,7 +66,6 @@ import (
 	"github.com/insolar/insolar/ledger/heavy/pulsemanager"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/logicrunner/artifacts"
-	"github.com/insolar/insolar/messagebus"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/servicenetwork"
@@ -204,13 +203,11 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 
 	// Communication.
 	var (
-		Tokens  insolar.DelegationTokenFactory
-		Parcels message.ParcelFactory
-		WmBus   *bus.Bus
+		Tokens insolar.DelegationTokenFactory
+		WmBus  *bus.Bus
 	)
 	{
 		Tokens = delegationtoken.NewDelegationTokenFactory()
-		Parcels = messagebus.NewParcelFactory()
 		WmBus = bus.NewBus(cfg.Bus, publisher, Pulses, Coordinator, CryptoScheme)
 	}
 
@@ -361,7 +358,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		metricsHandler,
 		Requester,
 		Tokens,
-		Parcels,
 		artifacts.NewClient(WmBus),
 		API,
 		KeyProcessor,

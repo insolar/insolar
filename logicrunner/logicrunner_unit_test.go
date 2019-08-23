@@ -17,7 +17,6 @@
 package logicrunner
 
 import (
-	"bytes"
 	"context"
 	"strconv"
 	"sync"
@@ -27,7 +26,6 @@ import (
 	"github.com/ThreeDotsLabs/watermill"
 	message2 "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/gojuno/minimock"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
@@ -67,7 +65,6 @@ type LogicRunnerCommonTestSuite struct {
 	ctx    context.Context
 	am     *artifacts.ClientMock
 	dc     *artifacts.DescriptorsCacheMock
-	mb     *testutils.MessageBusMock
 	jc     *jet.CoordinatorMock
 	mm     machinesmanager.MachinesManager
 	lr     *LogicRunner
@@ -90,7 +87,6 @@ func (suite *LogicRunnerCommonTestSuite) BeforeTest(suiteName, testName string) 
 	suite.dc = artifacts.NewDescriptorsCacheMock(suite.mc)
 	suite.mm = machinesmanager.NewMachinesManager()
 	suite.re = NewRequestsExecutorMock(suite.mc)
-	suite.mb = testutils.NewMessageBusMock(suite.mc)
 	suite.jc = jet.NewCoordinatorMock(suite.mc)
 	suite.ps = pulse.NewAccessorMock(suite.mc)
 	suite.nn = network.NewNodeNetworkMock(suite.mc)
@@ -144,31 +140,6 @@ func (suite *LogicRunnerTestSuite) SetupLogicRunner() {
 
 func (suite *LogicRunnerTestSuite) AfterTest(suiteName, testName string) {
 	suite.LogicRunnerCommonTestSuite.AfterTest(suiteName, testName)
-}
-
-func mockSender(suite *LogicRunnerTestSuite) chan *message2.Message {
-	replyChan := make(chan *message2.Message, 1)
-	suite.sender.ReplyMock.Set(func(p context.Context, p1 payload.Meta, p2 *message2.Message) {
-		replyChan <- p2
-	})
-	return replyChan
-}
-
-func getReply(suite *LogicRunnerTestSuite, replyChan chan *message2.Message) (insolar.Reply, error) {
-	res := <-replyChan
-	re, err := reply.Deserialize(bytes.NewBuffer(res.Payload))
-	if err != nil {
-		payloadType, err := payload.UnmarshalType(res.Payload)
-		suite.Require().NoError(err)
-		suite.Require().EqualValues(payload.TypeError, payloadType)
-
-		pl, err := payload.Unmarshal(res.Payload)
-		suite.Require().NoError(err)
-		p, ok := pl.(*payload.Error)
-		suite.Require().True(ok)
-		return nil, errors.New(p.Text)
-	}
-	return re, nil
 }
 
 func (suite *LogicRunnerTestSuite) TestSagaCallAcceptNotificationHandler() {

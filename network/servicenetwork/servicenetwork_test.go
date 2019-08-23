@@ -281,8 +281,8 @@ func TestServiceNetwork_StartStop(t *testing.T) {
 
 	cm.Inject(serviceNetwork, nk, certManager, testutils.NewCryptographyServiceMock(t), pulse.NewAccessorMock(t),
 		testutils.NewTerminationHandlerMock(t), testutils.NewPulseManagerMock(t), &PublisherMock{},
-		testutils.NewMessageBusMock(t), testutils.NewContractRequesterMock(t),
-		bus.NewSenderMock(t), &stater{}, testutils.NewPlatformCryptographyScheme(), testutils.NewKeyProcessorMock(t))
+		testutils.NewContractRequesterMock(t), bus.NewSenderMock(t), &stater{},
+		testutils.NewPlatformCryptographyScheme(), testutils.NewKeyProcessorMock(t))
 	err = serviceNetwork.Init(ctx)
 	require.NoError(t, err)
 	err = serviceNetwork.Start(ctx)
