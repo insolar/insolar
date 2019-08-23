@@ -22,13 +22,13 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/testutils"
 )
 
 func TestFlag(t *testing.T) {
 	ctx := inslogger.TestContext(t)
-	syncT := utils.SyncT{T: t}
+	syncT := testutils.SyncT{T: t}
 
 	flag := NewFlag()
 

@@ -10,7 +10,7 @@ import (
 
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/insolar"
-	record "github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/insolar/record"
 )
 
 // IndexAccessorMock implements IndexAccessor
@@ -23,7 +23,7 @@ type IndexAccessorMock struct {
 	beforeForIDCounter uint64
 	ForIDMock          mIndexAccessorMockForID
 
-	funcForPulse          func(ctx context.Context, pn insolar.PulseNumber) (ia1 []record.Index)
+	funcForPulse          func(ctx context.Context, pn insolar.PulseNumber) (ia1 []record.Index, err error)
 	inspectFuncForPulse   func(ctx context.Context, pn insolar.PulseNumber)
 	afterForPulseCounter  uint64
 	beforeForPulseCounter uint64
@@ -290,6 +290,7 @@ type IndexAccessorMockForPulseParams struct {
 // IndexAccessorMockForPulseResults contains results of the IndexAccessor.ForPulse
 type IndexAccessorMockForPulseResults struct {
 	ia1 []record.Index
+	err error
 }
 
 // Expect sets up expected params for IndexAccessor.ForPulse
@@ -324,7 +325,7 @@ func (mmForPulse *mIndexAccessorMockForPulse) Inspect(f func(ctx context.Context
 }
 
 // Return sets up results that will be returned by IndexAccessor.ForPulse
-func (mmForPulse *mIndexAccessorMockForPulse) Return(ia1 []record.Index) *IndexAccessorMock {
+func (mmForPulse *mIndexAccessorMockForPulse) Return(ia1 []record.Index, err error) *IndexAccessorMock {
 	if mmForPulse.mock.funcForPulse != nil {
 		mmForPulse.mock.t.Fatalf("IndexAccessorMock.ForPulse mock is already set by Set")
 	}
@@ -332,12 +333,12 @@ func (mmForPulse *mIndexAccessorMockForPulse) Return(ia1 []record.Index) *IndexA
 	if mmForPulse.defaultExpectation == nil {
 		mmForPulse.defaultExpectation = &IndexAccessorMockForPulseExpectation{mock: mmForPulse.mock}
 	}
-	mmForPulse.defaultExpectation.results = &IndexAccessorMockForPulseResults{ia1}
+	mmForPulse.defaultExpectation.results = &IndexAccessorMockForPulseResults{ia1, err}
 	return mmForPulse.mock
 }
 
 //Set uses given function f to mock the IndexAccessor.ForPulse method
-func (mmForPulse *mIndexAccessorMockForPulse) Set(f func(ctx context.Context, pn insolar.PulseNumber) (ia1 []record.Index)) *IndexAccessorMock {
+func (mmForPulse *mIndexAccessorMockForPulse) Set(f func(ctx context.Context, pn insolar.PulseNumber) (ia1 []record.Index, err error)) *IndexAccessorMock {
 	if mmForPulse.defaultExpectation != nil {
 		mmForPulse.mock.t.Fatalf("Default expectation is already set for the IndexAccessor.ForPulse method")
 	}
@@ -366,13 +367,13 @@ func (mmForPulse *mIndexAccessorMockForPulse) When(ctx context.Context, pn insol
 }
 
 // Then sets up IndexAccessor.ForPulse return parameters for the expectation previously defined by the When method
-func (e *IndexAccessorMockForPulseExpectation) Then(ia1 []record.Index) *IndexAccessorMock {
-	e.results = &IndexAccessorMockForPulseResults{ia1}
+func (e *IndexAccessorMockForPulseExpectation) Then(ia1 []record.Index, err error) *IndexAccessorMock {
+	e.results = &IndexAccessorMockForPulseResults{ia1, err}
 	return e.mock
 }
 
 // ForPulse implements IndexAccessor
-func (mmForPulse *IndexAccessorMock) ForPulse(ctx context.Context, pn insolar.PulseNumber) (ia1 []record.Index) {
+func (mmForPulse *IndexAccessorMock) ForPulse(ctx context.Context, pn insolar.PulseNumber) (ia1 []record.Index, err error) {
 	mm_atomic.AddUint64(&mmForPulse.beforeForPulseCounter, 1)
 	defer mm_atomic.AddUint64(&mmForPulse.afterForPulseCounter, 1)
 
@@ -390,7 +391,7 @@ func (mmForPulse *IndexAccessorMock) ForPulse(ctx context.Context, pn insolar.Pu
 	for _, e := range mmForPulse.ForPulseMock.expectations {
 		if minimock.Equal(e.params, params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
-			return e.results.ia1
+			return e.results.ia1, e.results.err
 		}
 	}
 
@@ -406,7 +407,7 @@ func (mmForPulse *IndexAccessorMock) ForPulse(ctx context.Context, pn insolar.Pu
 		if results == nil {
 			mmForPulse.t.Fatal("No results are set for the IndexAccessorMock.ForPulse")
 		}
-		return (*results).ia1
+		return (*results).ia1, (*results).err
 	}
 	if mmForPulse.funcForPulse != nil {
 		return mmForPulse.funcForPulse(ctx, pn)

@@ -9,13 +9,14 @@ import (
 
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/longbits"
 )
 
 // OutboundMock implements Outbound
 type OutboundMock struct {
 	t minimock.Tester
 
-	funcAsByteString          func() (s1 string)
+	funcAsByteString          func() (b1 longbits.ByteString)
 	inspectFuncAsByteString   func()
 	afterAsByteStringCounter  uint64
 	beforeAsByteStringCounter uint64
@@ -91,7 +92,7 @@ type OutboundMockAsByteStringExpectation struct {
 
 // OutboundMockAsByteStringResults contains results of the Outbound.AsByteString
 type OutboundMockAsByteStringResults struct {
-	s1 string
+	b1 longbits.ByteString
 }
 
 // Expect sets up expected params for Outbound.AsByteString
@@ -119,7 +120,7 @@ func (mmAsByteString *mOutboundMockAsByteString) Inspect(f func()) *mOutboundMoc
 }
 
 // Return sets up results that will be returned by Outbound.AsByteString
-func (mmAsByteString *mOutboundMockAsByteString) Return(s1 string) *OutboundMock {
+func (mmAsByteString *mOutboundMockAsByteString) Return(b1 longbits.ByteString) *OutboundMock {
 	if mmAsByteString.mock.funcAsByteString != nil {
 		mmAsByteString.mock.t.Fatalf("OutboundMock.AsByteString mock is already set by Set")
 	}
@@ -127,12 +128,12 @@ func (mmAsByteString *mOutboundMockAsByteString) Return(s1 string) *OutboundMock
 	if mmAsByteString.defaultExpectation == nil {
 		mmAsByteString.defaultExpectation = &OutboundMockAsByteStringExpectation{mock: mmAsByteString.mock}
 	}
-	mmAsByteString.defaultExpectation.results = &OutboundMockAsByteStringResults{s1}
+	mmAsByteString.defaultExpectation.results = &OutboundMockAsByteStringResults{b1}
 	return mmAsByteString.mock
 }
 
 //Set uses given function f to mock the Outbound.AsByteString method
-func (mmAsByteString *mOutboundMockAsByteString) Set(f func() (s1 string)) *OutboundMock {
+func (mmAsByteString *mOutboundMockAsByteString) Set(f func() (b1 longbits.ByteString)) *OutboundMock {
 	if mmAsByteString.defaultExpectation != nil {
 		mmAsByteString.mock.t.Fatalf("Default expectation is already set for the Outbound.AsByteString method")
 	}
@@ -146,7 +147,7 @@ func (mmAsByteString *mOutboundMockAsByteString) Set(f func() (s1 string)) *Outb
 }
 
 // AsByteString implements Outbound
-func (mmAsByteString *OutboundMock) AsByteString() (s1 string) {
+func (mmAsByteString *OutboundMock) AsByteString() (b1 longbits.ByteString) {
 	mm_atomic.AddUint64(&mmAsByteString.beforeAsByteStringCounter, 1)
 	defer mm_atomic.AddUint64(&mmAsByteString.afterAsByteStringCounter, 1)
 
@@ -161,7 +162,7 @@ func (mmAsByteString *OutboundMock) AsByteString() (s1 string) {
 		if results == nil {
 			mmAsByteString.t.Fatal("No results are set for the OutboundMock.AsByteString")
 		}
-		return (*results).s1
+		return (*results).b1
 	}
 	if mmAsByteString.funcAsByteString != nil {
 		return mmAsByteString.funcAsByteString()

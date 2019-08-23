@@ -55,6 +55,7 @@ package tests
 import (
 	"context"
 	"fmt"
+	"github.com/fortytw2/leaktest"
 	"testing"
 
 	"github.com/insolar/insolar/insolar"
@@ -71,7 +72,6 @@ var (
 )
 
 func serviceNetworkManyBootstraps(t *testing.T) *consensusSuite {
-	t.Skip("Skip until fix consensus bugs")
 	cs := newConsensusSuite(t, 5, 0)
 	cs.SetupTest()
 
@@ -81,6 +81,8 @@ func serviceNetworkManyBootstraps(t *testing.T) *consensusSuite {
 // Consensus suite tests
 
 func TestNetworkConsensusManyTimes(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	s := serviceNetworkManyBootstraps(t)
 	defer s.TearDownTest()
 
@@ -89,6 +91,8 @@ func TestNetworkConsensusManyTimes(t *testing.T) {
 }
 
 func TestJoinerNodeConnect(t *testing.T) {
+	defer leaktest.Check(t)()
+
 	s := serviceNetworkManyBootstraps(t)
 	defer s.TearDownTest()
 
@@ -108,6 +112,7 @@ func TestJoinerNodeConnect(t *testing.T) {
 	s.waitForConsensus(2)
 
 	s.AssertActiveNodesCountDelta(1)
+	require.Equal(s.t, insolar.CompleteNetworkState, testNode.serviceNetwork.Gatewayer.Gateway().GetState())
 }
 
 func TestNodeConnectInvalidVersion(t *testing.T) {
@@ -133,7 +138,8 @@ func TestNodeConnectInvalidVersion(t *testing.T) {
 }
 
 func TestNodeLeave(t *testing.T) {
-	t.Skip("FIXME")
+	defer leaktest.Check(t)()
+
 	s := serviceNetworkManyBootstraps(t)
 	defer s.TearDownTest()
 
@@ -144,27 +150,46 @@ func TestNodeLeave(t *testing.T) {
 
 	s.InitNode(testNode)
 	s.StartNode(testNode)
-	defer func(s *consensusSuite) {
-		s.StopNode(testNode)
-	}(s)
-
-	s.waitForConsensus(1)
-
-	s.AssertActiveNodesCountDelta(0)
 
 	s.waitForConsensus(2)
 
 	s.AssertActiveNodesCountDelta(1)
 	s.AssertWorkingNodesCountDelta(1)
+	require.Equal(s.t, insolar.CompleteNetworkState, testNode.serviceNetwork.Gatewayer.Gateway().GetState())
 
-	testNode.serviceNetwork.Leave(context.Background(), 0)
+	s.StopNode(testNode)
 
 	s.waitForConsensus(3)
 
-	// one active node becomes "not working"
 	s.AssertWorkingNodesCountDelta(0)
+	s.AssertActiveNodesCountDelta(0)
+}
 
-	// but all nodes are active
+func TestNodeGracefulLeave(t *testing.T) {
+	defer leaktest.Check(t)()
+
+	s := serviceNetworkManyBootstraps(t)
+	defer s.TearDownTest()
+
+	s.CheckBootstrapCount()
+
+	testNode := s.newNetworkNode("testNode")
+	s.preInitNode(testNode)
+
+	s.InitNode(testNode)
+	s.StartNode(testNode)
+
+	s.waitForConsensus(2)
+
+	s.AssertActiveNodesCountDelta(1)
+	s.AssertWorkingNodesCountDelta(1)
+	require.Equal(s.t, insolar.CompleteNetworkState, testNode.serviceNetwork.Gatewayer.Gateway().GetState())
+
+	s.GracefulStop(testNode)
+
+	s.waitForConsensus(3)
+
+	s.AssertWorkingNodesCountDelta(0)
 	s.AssertActiveNodesCountDelta(0)
 }
 

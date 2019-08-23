@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/ledger/heavy/executor"
+	"github.com/insolar/insolar/testutils/testbadger"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"
@@ -40,7 +41,8 @@ func initDB(t *testing.T, testPulse insolar.PulseNumber) (executor.JetKeeper, st
 
 	require.NoError(t, err)
 
-	db, err := store.NewBadgerDB(tmpdir)
+	ops := testbadger.BadgerDefaultOptions(tmpdir)
+	db, err := store.NewBadgerDB(ops)
 	require.NoError(t, err)
 
 	jets := jet.NewDBStore(db)
@@ -230,7 +232,8 @@ func TestNewJetKeeper(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	db, err := store.NewBadgerDB(tmpdir)
+	ops := testbadger.BadgerDefaultOptions(tmpdir)
+	db, err := store.NewBadgerDB(ops)
 	require.NoError(t, err)
 	defer db.Stop(context.Background())
 	jets := jet.NewDBStore(db)
@@ -259,7 +262,13 @@ func TestDbJetKeeper_DifferentActualAndExpectedJets(t *testing.T) {
 
 	err = jetKeeper.AddDropConfirmation(ctx, testPulse, testJet, false)
 	require.NoError(t, err)
+
+	require.False(t, jetKeeper.HasAllJetConfirms(ctx, testPulse))
+
+	err = jetKeeper.AddBackupConfirmation(ctx, testPulse)
+	require.NoError(t, err)
 	require.Equal(t, insolar.GenesisPulse.PulseNumber, jetKeeper.TopSyncPulse())
+	require.False(t, jetKeeper.HasAllJetConfirms(ctx, testPulse))
 }
 
 func TestDbJetKeeper_DifferentNumberOfActualAndExpectedJets(t *testing.T) {
@@ -277,14 +286,21 @@ func TestDbJetKeeper_DifferentNumberOfActualAndExpectedJets(t *testing.T) {
 	err := jets.Update(ctx, testPulse, true, testJet)
 	require.NoError(t, err)
 
-	err = jetKeeper.AddHotConfirmation(ctx, testPulse, left, true)
+	err = jetKeeper.AddHotConfirmation(ctx, testPulse, left, false)
 	require.NoError(t, err)
 
-	err = jetKeeper.AddHotConfirmation(ctx, testPulse, right, true)
+	err = jetKeeper.AddHotConfirmation(ctx, testPulse, right, false)
 	require.NoError(t, err)
 
-	err = jetKeeper.AddDropConfirmation(ctx, testPulse, testJet, true)
+	err = jetKeeper.AddDropConfirmation(ctx, testPulse, right, false)
 	require.NoError(t, err)
+
+	err = jetKeeper.AddDropConfirmation(ctx, testPulse, left, false)
+	require.NoError(t, err)
+
+	err = jetKeeper.AddBackupConfirmation(ctx, testPulse)
+	require.NoError(t, err)
+
 	require.Equal(t, insolar.GenesisPulse.PulseNumber, jetKeeper.TopSyncPulse())
 }
 
@@ -296,7 +312,8 @@ func TestDbJetKeeper_AddDropConfirmation(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	db, err := store.NewBadgerDB(tmpdir)
+	ops := testbadger.BadgerDefaultOptions(tmpdir)
+	db, err := store.NewBadgerDB(ops)
 	require.NoError(t, err)
 	defer db.Stop(context.Background())
 	jets := jet.NewDBStore(db)
@@ -347,7 +364,8 @@ func TestDbJetKeeper_TopSyncPulse(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	db, err := store.NewBadgerDB(tmpdir)
+	ops := testbadger.BadgerDefaultOptions(tmpdir)
+	db, err := store.NewBadgerDB(ops)
 	require.NoError(t, err)
 	defer db.Stop(context.Background())
 	jets := jet.NewDBStore(db)
@@ -415,7 +433,8 @@ func TestDbJetKeeper_LostDataOnNextPulseAfterSplit(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	db, err := store.NewBadgerDB(tmpdir)
+	ops := testbadger.BadgerDefaultOptions(tmpdir)
+	db, err := store.NewBadgerDB(ops)
 	require.NoError(t, err)
 	defer db.Stop(context.Background())
 	jets := jet.NewDBStore(db)

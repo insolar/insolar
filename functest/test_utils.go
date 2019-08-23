@@ -198,6 +198,8 @@ func generateMigrationAddress() string {
 const migrationAmount = "360000"
 
 func fullMigration(t *testing.T, txHash string) *launchnet.User {
+	activateDaemons(t)
+
 	migrationAddress := testutils.RandomString()
 	member := createMigrationMemberForMA(t, migrationAddress)
 
