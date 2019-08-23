@@ -566,7 +566,7 @@ func TestLogicRunner_OnPulse_Order(t *testing.T) {
 
 func (suite *LogicRunnerTestSuite) TestImmutableOrder() {
 	er := executionregistry.NewExecutionRegistryMock(suite.mc).
-		RegisterMock.Return().
+		RegisterMock.Return(nil).
 		DoneMock.Return(true)
 
 	// prepare default object and execution state

@@ -148,14 +148,19 @@ func (q *ExecutionBroker) getTask(ctx context.Context, queue requestsqueue.Reque
 	q.stateLock.Lock()
 	defer q.stateLock.Unlock()
 
-	transcript := queue.TakeFirst(ctx)
-	if transcript == nil {
-		return nil
+	for {
+		transcript := queue.TakeFirst(ctx)
+		if transcript == nil {
+			return nil
+		}
+
+		err := q.executionRegistry.Register(ctx, transcript)
+		if err != nil {
+			inslogger.FromContext(ctx).Error("couldn't register transcript, skipping: ", err.Error())
+			continue
+		}
+		return transcript
 	}
-
-	q.executionRegistry.Register(ctx, transcript)
-
-	return transcript
 }
 
 func (q *ExecutionBroker) finishTask(ctx context.Context, transcript *common.Transcript) {
