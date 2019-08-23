@@ -103,7 +103,7 @@ func (h *HandleExecutorResults) Present(ctx context.Context, f flow.Flow) error 
 
 	err = h.realHandleExecutorState(ctx, f, message)
 	if err != nil {
-		return sendErrorMessage(ctx, h.dep.Sender, h.Message, err)
+		return err
 	}
 	go h.dep.Sender.Reply(ctx, h.Message, bus.ReplyAsMessage(ctx, &reply.OK{}))
 	return nil

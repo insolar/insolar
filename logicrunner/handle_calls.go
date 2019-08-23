@@ -247,7 +247,7 @@ func (h *HandleCall) Present(ctx context.Context, f flow.Flow) error {
 	rep, err := h.handleActual(ctx, message, f)
 
 	if err != nil {
-		return sendErrorMessage(ctx, h.dep.Sender, h.Message, err)
+		return err
 	}
 
 	h.dep.Sender.Reply(ctx, h.Message, bus.ReplyAsMessage(ctx, rep))

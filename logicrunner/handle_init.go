@@ -60,14 +60,25 @@ func (s *Init) Future(ctx context.Context, f flow.Flow) error {
 	return f.Migrate(ctx, s.Present)
 }
 
-func sendErrorMessage(ctx context.Context, sender bus.Sender, meta payload.Meta, err error) error {
-	repMsg, err := payload.NewMessage(&payload.Error{Text: err.Error()})
-	if err != nil {
-		return err
+func (s *Init) replyError(ctx context.Context, meta payload.Meta, err error) {
+	errCode := uint32(payload.CodeUnknown)
+
+	// Throwing custom error code
+	cause := errors.Cause(err)
+	insError, ok := cause.(*payload.CodedError)
+	if ok {
+		errCode = insError.GetCode()
 	}
 
-	go sender.Reply(ctx, meta, repMsg)
-	return nil
+	// todo refactor this #INS-3191
+	if err == flow.ErrCancelled {
+		errCode = uint32(payload.CodeFlowCanceled)
+	}
+	errMsg, newErr := payload.NewMessage(&payload.Error{Text: err.Error(), Code: errCode})
+	if newErr != nil {
+		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to reply error"))
+	}
+	s.dep.Sender.Reply(ctx, meta, errMsg)
 }
 
 func (s *Init) Present(ctx context.Context, f flow.Flow) error {
@@ -78,14 +89,14 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 
 	var err error
 
-	meta := payload.Meta{}
-	err = meta.Unmarshal(s.Message.Payload)
+	originMeta := payload.Meta{}
+	err = originMeta.Unmarshal(s.Message.Payload)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal meta")
 	}
-	payloadType, err := payload.UnmarshalType(meta.Payload)
+	payloadType, err := payload.UnmarshalType(originMeta.Payload)
 	if err != nil {
-		inslogger.FromContext(ctx).WithField("metaPayload", meta.Payload).Info("payload")
+		inslogger.FromContext(ctx).WithField("metaPayload", originMeta.Payload).Info("payload")
 		return errors.Wrap(err, "failed to unmarshal payload type")
 	}
 
@@ -101,54 +112,58 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 	case payload.TypeSagaCallAcceptNotification:
 		h := &HandleSagaCallAcceptNotification{
 			dep:  s.dep,
-			meta: meta,
+			meta: originMeta,
 		}
-		return f.Handle(ctx, h.Present)
+		err = f.Handle(ctx, h.Present)
 	case payload.TypeAbandonedRequestsNotification:
 		h := &HandleAbandonedRequestsNotification{
 			dep:  s.dep,
-			meta: meta,
+			meta: originMeta,
 		}
-		return f.Handle(ctx, h.Present)
+		err = f.Handle(ctx, h.Present)
 	case payload.TypeUpdateJet:
 		h := &HandleUpdateJet{
 			dep:  s.dep,
-			meta: meta,
+			meta: originMeta,
 		}
-		return f.Handle(ctx, h.Present)
+		err = f.Handle(ctx, h.Present)
 	case payload.TypePendingFinished:
 		h := &HandlePendingFinished{
 			dep:     s.dep,
-			Message: meta,
+			Message: originMeta,
 		}
-		return f.Handle(ctx, h.Present)
+		err = f.Handle(ctx, h.Present)
 	case payload.TypeExecutorResults:
 		h := &HandleExecutorResults{
 			dep:     s.dep,
-			Message: meta,
+			Message: originMeta,
 		}
-		return f.Handle(ctx, h.Present)
+		err = f.Handle(ctx, h.Present)
 	case payload.TypeStillExecuting:
 		h := &HandleStillExecuting{
 			dep:     s.dep,
-			Message: meta,
+			Message: originMeta,
 		}
-		return f.Handle(ctx, h.Present)
+		err = f.Handle(ctx, h.Present)
 	case payload.TypeCallMethod:
 		h := &HandleCall{
 			dep:     s.dep,
-			Message: meta,
+			Message: originMeta,
 		}
-		return f.Handle(ctx, h.Present)
+		err = f.Handle(ctx, h.Present)
 	case payload.TypeAdditionalCallFromPreviousExecutor:
 		h := &HandleAdditionalCallFromPreviousExecutor{
 			dep:     s.dep,
-			Message: meta,
+			Message: originMeta,
 		}
-		return f.Handle(ctx, h.Present)
+		err = f.Handle(ctx, h.Present)
 	default:
-		return fmt.Errorf("[ Init.Present ] no handler for message type %s", msgType)
+		err = fmt.Errorf("[ Init.Present ] no handler for message type %s", msgType)
 	}
+	if err != nil {
+		s.replyError(ctx, originMeta, err)
+	}
+	return err
 }
 
 func (s *Init) Past(ctx context.Context, f flow.Flow) error {

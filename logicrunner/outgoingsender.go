@@ -170,7 +170,7 @@ func (a *outgoingSenderActorState) sendOutgoingRequest(ctx context.Context, outg
 	case *reply.RegisterRequest: // no-wait call
 		result = v.Request.Bytes()
 	default:
-		err = fmt.Errorf("sendOutgoingRequest: cr.Call returned unexpected type %T", v)
+		err = fmt.Errorf("sendOutgoingRequest: cr.Call returned unexpected type %T", res)
 		return nil, nil, nil, err
 	}
 
