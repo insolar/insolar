@@ -18,7 +18,6 @@ package executor
 
 import (
 	"context"
-	"encoding/binary"
 	"fmt"
 	"sync"
 
@@ -454,7 +453,7 @@ func (k JetKeeperKey) ID() []byte {
 }
 
 func NewJetKeeperKey(raw []byte) JetKeeperKey {
-	return JetKeeperKey(binary.BigEndian.Uint32(raw))
+	return JetKeeperKey(insolar.NewPulseNumber(raw))
 }
 
 type syncPulseKey struct{}
