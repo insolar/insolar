@@ -162,6 +162,7 @@ func initComponents(
 	contractRequester, err := contractrequester.New()
 	checkError(ctx, err, "failed to start ContractRequester")
 
+	// TODO: remove this hack in INS-3341
 	contractRequester.LR = logicRunner
 
 	pm := pulsemanager.NewPulseManager(logicRunner.ResultsMatcher)

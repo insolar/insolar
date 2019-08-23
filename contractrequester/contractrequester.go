@@ -50,6 +50,8 @@ type ContractRequester struct {
 	JetCoordinator             jet.Coordinator                    `inject:""`
 	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
 
+	// TODO: remove this hack in INS-3341
+	// we need ResultMatcher, not Logicrunner
 	LR insolar.LogicRunner
 
 	ResultMutex sync.Mutex
