@@ -161,7 +161,7 @@ func TestHandleCall_Present(t *testing.T) {
 
 		ctx := flow.TestContextWithPulse(inslogger.TestContext(t), gen.PulseNumber())
 		mc := minimock.NewController(t)
-		defer mc.Wait(time.Second)
+		defer mc.Wait(time.Minute)
 
 		objRef := gen.Reference()
 
@@ -280,7 +280,7 @@ func TestHandleCall_Present(t *testing.T) {
 
 		ctx := flow.TestContextWithPulse(inslogger.TestContext(t), gen.PulseNumber())
 		mc := minimock.NewController(t)
-		defer mc.Wait(time.Second)
+		defer mc.Wait(time.Minute)
 
 		fm := flow.NewFlowMock(mc)
 
@@ -333,7 +333,7 @@ func TestHandleCall_Present(t *testing.T) {
 
 		ctx := flow.TestContextWithPulse(inslogger.TestContext(t), gen.PulseNumber())
 		mc := minimock.NewController(t)
-		defer mc.Wait(time.Second)
+		defer mc.Wait(time.Minute)
 
 		fm := flow.NewFlowMock(mc)
 
@@ -437,7 +437,7 @@ func TestHandleCall_Present(t *testing.T) {
 
 		ctx := flow.TestContextWithPulse(inslogger.TestContext(t), gen.PulseNumber())
 		mc := minimock.NewController(t)
-		defer mc.Wait(time.Second)
+		defer mc.Wait(time.Minute)
 
 		objRef := gen.Reference()
 
@@ -607,7 +607,7 @@ func TestHandleCall_Present(t *testing.T) {
 
 		ctx := flow.TestContextWithPulse(inslogger.TestContext(t), gen.PulseNumber())
 		mc := minimock.NewController(t)
-		defer mc.Wait(time.Second)
+		defer mc.Wait(time.Minute)
 
 		objRef := gen.Reference()
 
