@@ -64,6 +64,7 @@ func TestMigrationToken(t *testing.T) {
 }
 
 func TestMigrationTokenOnDifferentDeposits(t *testing.T) {
+	activateDaemons(t)
 	migrationAddress := testutils.RandomString()
 	member := createMigrationMemberForMA(t, migrationAddress)
 
@@ -132,6 +133,7 @@ func TestMigrationTokenNilValue(t *testing.T) {
 }
 
 func TestMigrationTokenMaxAmount(t *testing.T) {
+	activateDaemons(t)
 	migrationAddress := generateMigrationAddress()
 	member := createMigrationMemberForMA(t, migrationAddress)
 
@@ -144,6 +146,7 @@ func TestMigrationTokenMaxAmount(t *testing.T) {
 }
 
 func TestMigrationDoubleMigrationFromSameDaemon(t *testing.T) {
+	activateDaemons(t)
 	migrationAddress := generateMigrationAddress()
 	member := createMigrationMemberForMA(t, migrationAddress)
 
@@ -161,6 +164,7 @@ func TestMigrationDoubleMigrationFromSameDaemon(t *testing.T) {
 }
 
 func TestMigrationAnotherAmountSameTx(t *testing.T) {
+	activateDaemons(t)
 
 	migrationAddress := generateMigrationAddress()
 	_ = createMigrationMemberForMA(t, migrationAddress)

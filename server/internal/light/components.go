@@ -243,7 +243,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			filamentCalculator,
 			Coordinator,
 			jetFetcher,
-			CryptoScheme.ReferenceHasher(),
+			CryptoScheme,
 			Sender,
 		)
 

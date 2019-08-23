@@ -10,7 +10,7 @@ import (
 
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/insolar"
-	record "github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/insolar/record"
 )
 
 // IndexStorageMock implements IndexStorage
@@ -23,7 +23,7 @@ type IndexStorageMock struct {
 	beforeForIDCounter uint64
 	ForIDMock          mIndexStorageMockForID
 
-	funcForPulse          func(ctx context.Context, pn insolar.PulseNumber) (ia1 []record.Index)
+	funcForPulse          func(ctx context.Context, pn insolar.PulseNumber) (ia1 []record.Index, err error)
 	inspectFuncForPulse   func(ctx context.Context, pn insolar.PulseNumber)
 	afterForPulseCounter  uint64
 	beforeForPulseCounter uint64
@@ -308,6 +308,7 @@ type IndexStorageMockForPulseParams struct {
 // IndexStorageMockForPulseResults contains results of the IndexStorage.ForPulse
 type IndexStorageMockForPulseResults struct {
 	ia1 []record.Index
+	err error
 }
 
 // Expect sets up expected params for IndexStorage.ForPulse
@@ -342,7 +343,7 @@ func (mmForPulse *mIndexStorageMockForPulse) Inspect(f func(ctx context.Context,
 }
 
 // Return sets up results that will be returned by IndexStorage.ForPulse
-func (mmForPulse *mIndexStorageMockForPulse) Return(ia1 []record.Index) *IndexStorageMock {
+func (mmForPulse *mIndexStorageMockForPulse) Return(ia1 []record.Index, err error) *IndexStorageMock {
 	if mmForPulse.mock.funcForPulse != nil {
 		mmForPulse.mock.t.Fatalf("IndexStorageMock.ForPulse mock is already set by Set")
 	}
@@ -350,12 +351,12 @@ func (mmForPulse *mIndexStorageMockForPulse) Return(ia1 []record.Index) *IndexSt
 	if mmForPulse.defaultExpectation == nil {
 		mmForPulse.defaultExpectation = &IndexStorageMockForPulseExpectation{mock: mmForPulse.mock}
 	}
-	mmForPulse.defaultExpectation.results = &IndexStorageMockForPulseResults{ia1}
+	mmForPulse.defaultExpectation.results = &IndexStorageMockForPulseResults{ia1, err}
 	return mmForPulse.mock
 }
 
 //Set uses given function f to mock the IndexStorage.ForPulse method
-func (mmForPulse *mIndexStorageMockForPulse) Set(f func(ctx context.Context, pn insolar.PulseNumber) (ia1 []record.Index)) *IndexStorageMock {
+func (mmForPulse *mIndexStorageMockForPulse) Set(f func(ctx context.Context, pn insolar.PulseNumber) (ia1 []record.Index, err error)) *IndexStorageMock {
 	if mmForPulse.defaultExpectation != nil {
 		mmForPulse.mock.t.Fatalf("Default expectation is already set for the IndexStorage.ForPulse method")
 	}
@@ -384,13 +385,13 @@ func (mmForPulse *mIndexStorageMockForPulse) When(ctx context.Context, pn insola
 }
 
 // Then sets up IndexStorage.ForPulse return parameters for the expectation previously defined by the When method
-func (e *IndexStorageMockForPulseExpectation) Then(ia1 []record.Index) *IndexStorageMock {
-	e.results = &IndexStorageMockForPulseResults{ia1}
+func (e *IndexStorageMockForPulseExpectation) Then(ia1 []record.Index, err error) *IndexStorageMock {
+	e.results = &IndexStorageMockForPulseResults{ia1, err}
 	return e.mock
 }
 
 // ForPulse implements IndexStorage
-func (mmForPulse *IndexStorageMock) ForPulse(ctx context.Context, pn insolar.PulseNumber) (ia1 []record.Index) {
+func (mmForPulse *IndexStorageMock) ForPulse(ctx context.Context, pn insolar.PulseNumber) (ia1 []record.Index, err error) {
 	mm_atomic.AddUint64(&mmForPulse.beforeForPulseCounter, 1)
 	defer mm_atomic.AddUint64(&mmForPulse.afterForPulseCounter, 1)
 
@@ -408,7 +409,7 @@ func (mmForPulse *IndexStorageMock) ForPulse(ctx context.Context, pn insolar.Pul
 	for _, e := range mmForPulse.ForPulseMock.expectations {
 		if minimock.Equal(e.params, params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
-			return e.results.ia1
+			return e.results.ia1, e.results.err
 		}
 	}
 
@@ -424,7 +425,7 @@ func (mmForPulse *IndexStorageMock) ForPulse(ctx context.Context, pn insolar.Pul
 		if results == nil {
 			mmForPulse.t.Fatal("No results are set for the IndexStorageMock.ForPulse")
 		}
-		return (*results).ia1
+		return (*results).ia1, (*results).err
 	}
 	if mmForPulse.funcForPulse != nil {
 		return mmForPulse.funcForPulse(ctx, pn)

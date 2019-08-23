@@ -17,12 +17,14 @@
 package payload
 
 const (
-	CodeUnknown         = 1000
-	CodeDeactivated     = 1001
-	CodeFlowCanceled    = 1002
-	CodeNotFound        = 1003
-	CodeNoPendings      = 1004
-	CodeNoStartPulse    = 1005
+	CodeUnknown = 0
+
+	CodeDeactivated  = 1001
+	CodeFlowCanceled = 1002
+	CodeNotFound     = 1003
+	CodeNoPendings   = 1004
+	CodeNoStartPulse = 1005
+
 	CodeRequestNotFound = 1006
 	CodeInvalidRequest  = 1007
 	CodeReasonNotFound  = 1008

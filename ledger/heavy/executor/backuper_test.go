@@ -132,7 +132,8 @@ func TestBackuper_BackupWaitPeriodExpired(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	db, err := store.NewBadgerDB(tmpdir)
+	ops := BadgerDefaultOptions(tmpdir)
+	db, err := store.NewBadgerDB(ops)
 	require.NoError(t, err)
 	bm, err := executor.NewBackupMaker(context.Background(), db, cfg, testPulse)
 	require.NoError(t, err)
@@ -151,7 +152,8 @@ func TestBackuper_CantMoveToTargetDir(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	db, err := store.NewBadgerDB(tmpdir)
+	ops := BadgerDefaultOptions(tmpdir)
+	db, err := store.NewBadgerDB(ops)
 	require.NoError(t, err)
 	bm, err := executor.NewBackupMaker(context.Background(), db, cfg, 0)
 	require.NoError(t, err)

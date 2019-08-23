@@ -65,15 +65,18 @@ func (s *ExecutionRegistrySuite) TestRegister() {
 	firstTranscript := s.genTranscriptForObject()
 
 	// successful archiving
-	registryI.Register(ctx, firstTranscript)
+	err := registryI.Register(ctx, firstTranscript)
+	s.NoError(err)
 	s.Len(registry.registry, 1)
 
 	// duplicate
-	registryI.Register(ctx, firstTranscript)
+	err = registryI.Register(ctx, firstTranscript)
+	s.Error(err)
 	s.Len(registry.registry, 1)
 
 	// successful archiving
-	registryI.Register(ctx, s.genTranscriptForObject())
+	err = registryI.Register(ctx, s.genTranscriptForObject())
+	s.NoError(err)
 	s.Len(registry.registry, 2)
 
 	mc.Finish()
@@ -90,8 +93,11 @@ func (s *ExecutionRegistrySuite) TestDone() {
 	registry := registryI.(*executionRegistry)
 	T1, T2, T3 := s.genTranscriptForObject(), s.genTranscriptForObject(), s.genTranscriptForObject()
 
-	registryI.Register(ctx, T1)
-	registryI.Register(ctx, T2)
+	err := registryI.Register(ctx, T1)
+	s.NoError(err)
+
+	err = registryI.Register(ctx, T2)
+	s.NoError(err)
 	s.Len(registry.registry, 2)
 
 	s.False(registryI.Done(T3))
@@ -116,7 +122,8 @@ func (s *ExecutionRegistrySuite) TestIsEmpty() {
 	s.True(registryI.IsEmpty())
 
 	T := s.genTranscriptForObject()
-	registryI.Register(ctx, T)
+	err := registryI.Register(ctx, T)
+	s.NoError(err)
 	s.Len(registry.registry, 1)
 	s.False(registryI.IsEmpty())
 
@@ -144,7 +151,8 @@ func (s *ExecutionRegistrySuite) TestOnPulse() {
 
 	T1 := s.genTranscriptForObject()
 	{
-		registryI.Register(ctx, T1)
+		err := registryI.Register(ctx, T1)
+		s.NoError(err)
 		msgs := registryI.OnPulse(ctx)
 		s.Len(msgs, 1)
 		msg, ok := msgs[0].(*payload.StillExecuting)
@@ -156,7 +164,8 @@ func (s *ExecutionRegistrySuite) TestOnPulse() {
 
 	T2 := s.genTranscriptForObject()
 	{
-		registryI.Register(ctx, T2)
+		err := registryI.Register(ctx, T2)
+		s.NoError(err)
 		msgs := registryI.OnPulse(ctx)
 		s.Len(msgs, 1)
 		msg, ok := msgs[0].(*payload.StillExecuting)
@@ -197,7 +206,8 @@ func (s *ExecutionRegistrySuite) TestFindRequestLoop() {
 
 	T := s.genTranscriptForObject()
 	{ // go request with current apirequestid (loop found)
-		registryI.Register(ctx, T)
+		err := registryI.Register(ctx, T)
+		s.NoError(err)
 
 		s.True(registryI.FindRequestLoop(ctx, reqRef, T.Request.APIRequestID))
 
@@ -209,7 +219,8 @@ func (s *ExecutionRegistrySuite) TestFindRequestLoop() {
 		id := s.genAPIRequestID()
 
 		T.Request.ReturnMode = record.ReturnNoWait
-		registryI.Register(ctx, T)
+		err := registryI.Register(ctx, T)
+		s.NoError(err)
 
 		s.False(registryI.FindRequestLoop(ctx, reqRef, id))
 
@@ -223,8 +234,11 @@ func (s *ExecutionRegistrySuite) TestFindRequestLoop() {
 	{ // combined test
 		id := s.genAPIRequestID()
 
-		registryI.Register(ctx, T1)
-		registryI.Register(ctx, T2)
+		err := registryI.Register(ctx, T1)
+		s.NoError(err)
+
+		err = registryI.Register(ctx, T2)
+		s.NoError(err)
 
 		s.False(registryI.FindRequestLoop(ctx, reqRef, T2.Request.APIRequestID))
 		s.True(registryI.FindRequestLoop(ctx, reqRef, T1.Request.APIRequestID))
@@ -246,7 +260,9 @@ func (s *ExecutionRegistrySuite) TestGetActiveTranscript() {
 
 	T := s.genTranscriptForObject()
 	registryI := New(objRef, jc)
-	registryI.Register(ctx, T)
+	err := registryI.Register(ctx, T)
+	s.NoError(err)
+
 	{ // have (put before)
 		s.NotNil(registryI.GetActiveTranscript(T.RequestRef))
 	}
