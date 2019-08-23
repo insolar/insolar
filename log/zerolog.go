@@ -242,11 +242,16 @@ func (z *zerologAdapter) Errorf(format string, args ...interface{}) {
 	z.loggerWithHooks().Error().Msgf(format, args...)
 }
 
-type FatalHook struct {
+// fatalDiodeHook is a hack for log.Fatal when diode is being used.
+// We need to save the buffer, before we call for os.Exit(1)
+// We call for diodeWriter.Close(), that save the buffer to output
+// and closes itself gracefully. After that we call for os.Exit(1)
+// When standart implementation is used, some logs can be lost
+type fatalDiodeHook struct {
 	diodeWriter *diode.Writer
 }
 
-func (h FatalHook) Run(e *zerolog.Event, level zerolog.Level, msg string) {
+func (h fatalDiodeHook) Run(e *zerolog.Event, level zerolog.Level, msg string) {
 	if level == zerolog.FatalLevel {
 		e.Str(zerolog.MessageFieldName, msg)
 		err := h.diodeWriter.Close()
@@ -262,7 +267,7 @@ func (z *zerologAdapter) Fatal(args ...interface{}) {
 	stats.Record(contextWithLogLevel(zerolog.FatalLevel), statLogCalls.M(1))
 
 	if z.diodeWriter != nil {
-		fHook := FatalHook{diodeWriter: z.diodeWriter}
+		fHook := fatalDiodeHook{diodeWriter: z.diodeWriter}
 		logger := *z.loggerWithHooks()
 		loggerFatal := logger.Hook(fHook)
 
@@ -277,7 +282,7 @@ func (z *zerologAdapter) Fatalf(format string, args ...interface{}) {
 	stats.Record(contextWithLogLevel(zerolog.FatalLevel), statLogCalls.M(1))
 
 	if z.diodeWriter != nil {
-		fHook := FatalHook{diodeWriter: z.diodeWriter}
+		fHook := fatalDiodeHook{diodeWriter: z.diodeWriter}
 		logger := *z.loggerWithHooks()
 		loggerFatal := logger.Hook(fHook)
 
