@@ -165,7 +165,7 @@ func initComponents(
 	// TODO: remove this hack in INS-3341
 	contractRequester.LR = logicRunner
 
-	pm := pulsemanager.NewPulseManager(logicRunner.ResultsMatcher)
+	pm := pulsemanager.NewPulseManager()
 
 	cm.Register(
 		terminationHandler,

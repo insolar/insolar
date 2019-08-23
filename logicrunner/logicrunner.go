@@ -247,6 +247,8 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, oldPulse insolar.Pulse, newP
 		return errors.Wrap(err, "failed to close pulse on write controller")
 	}
 
+	lr.ResultsMatcher.Clear(ctx)
+
 	messages := lr.StateStorage.OnPulse(ctx, newPulse)
 	err = lr.WriteController.Open(ctx, newPulse.PulseNumber)
 	if err != nil {
