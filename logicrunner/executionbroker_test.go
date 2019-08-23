@@ -124,7 +124,7 @@ func TestExecutionBroker_AddFreshRequest(t *testing.T) {
 			broker := test.mocks(ctx, mc)
 			broker.AddFreshRequest(ctx, transcript)
 
-			mc.Wait(1 * time.Second)
+			mc.Wait(1 * time.Minute)
 			mc.Finish()
 		})
 	}
