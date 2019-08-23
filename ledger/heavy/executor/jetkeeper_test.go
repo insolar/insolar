@@ -105,10 +105,22 @@ func Test_TruncateHead(t *testing.T) {
 	_, err = db.Get(executor.JetKeeperKey(testPulse))
 	require.NoError(t, err)
 
-	err = ji.(*executor.DBJetKeeper).TruncateHead(ctx, testPulse)
+	nextPulse := testPulse + 10
+
+	err = ji.AddDropConfirmation(ctx, nextPulse, gen.JetID(), false)
+	require.NoError(t, err)
+	err = ji.AddHotConfirmation(ctx, nextPulse, gen.JetID(), false)
+	require.NoError(t, err)
+
+	_, err = db.Get(executor.JetKeeperKey(nextPulse))
+	require.NoError(t, err)
+
+	err = ji.(*executor.DBJetKeeper).TruncateHead(ctx, nextPulse)
 	require.NoError(t, err)
 
 	_, err = db.Get(executor.JetKeeperKey(testPulse))
+	require.NoError(t, err)
+	_, err = db.Get(executor.JetKeeperKey(nextPulse))
 	require.EqualError(t, err, "value not found")
 }
 
