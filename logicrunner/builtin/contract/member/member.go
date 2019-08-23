@@ -168,7 +168,8 @@ func (m *Member) Call(signedRequest []byte) (interface{}, error) {
 
 	callSiteArgs := strings.Split(request.Params.CallSite, ".")
 	if len(callSiteArgs) == 2 && callSiteArgs[0] == "migration" {
-		return m.migrationAdminCall(params, callSiteArgs[1])
+		migrationAdminContract := migrationadmin.GetObject(foundation.GetMigrationAdmin())
+		return migrationAdminContract.MigrationAdminCall(params, callSiteArgs[1], m.GetReference())
 	}
 
 	switch request.Params.CallSite {
@@ -211,70 +212,6 @@ func (m *Member) registerNodeCall(params map[string]interface{}) (interface{}, e
 	}
 
 	return m.registerNode(publicKey, role)
-}
-
-func (m *Member) migrationAdminCall(params map[string]interface{}, nameMethod string) (interface{}, error) {
-
-	switch nameMethod {
-	case "addAddresses":
-		return m.addMigrationAddressesCall(params)
-
-	case "activateDaemon":
-		return m.activateDaemonCall(params)
-
-	case "deactivateDaemon":
-		return m.deactivateDaemonCall(params)
-	}
-	return nil, fmt.Errorf("unknown method: migration.'%s'", nameMethod)
-}
-
-func (m *Member) activateDaemonCall(params map[string]interface{}) (interface{}, error) {
-	migrationAdminContract := migrationadmin.GetObject(foundation.GetMigrationAdmin())
-	migrationDaemon, ok := params["reference"].(string)
-	if !ok && len(migrationDaemon) == 0 {
-		return nil, fmt.Errorf("incorect input: failed to get 'reference' param")
-	}
-	return migrationAdminContract.ActivateDaemon(strings.TrimSpace(migrationDaemon), m.GetReference()), nil
-}
-
-func (m *Member) deactivateDaemonCall(params map[string]interface{}) (interface{}, error) {
-	migrationAdminContract := migrationadmin.GetObject(foundation.GetMigrationAdmin())
-	migrationDaemon, ok := params["reference"].(string)
-
-	if !ok && len(migrationDaemon) == 0 {
-		return nil, fmt.Errorf("incorect input: failed to get 'reference' param")
-	}
-	return migrationAdminContract.DeactivateDaemon(strings.TrimSpace(migrationDaemon), m.GetReference()), nil
-}
-
-func (m *Member) addMigrationAddressesCall(params map[string]interface{}) (interface{}, error) {
-	migrationAddresses, ok := params["migrationAddresses"].([]interface{})
-	if !ok {
-		return nil, fmt.Errorf("incorect input: failed to get 'migrationAddresses' param")
-	}
-
-	rootDomain := rootdomain.GetObject(m.RootDomain)
-	migrationAdminRef := foundation.GetMigrationAdminMember()
-
-	if m.GetReference() != migrationAdminRef {
-		return nil, fmt.Errorf("only migration daemon admin can call this method")
-	}
-
-	migrationAddressesStr := make([]string, len(migrationAddresses))
-
-	for i, ba := range migrationAddresses {
-		migrationAddress, ok := ba.(string)
-		if !ok {
-			return nil, fmt.Errorf("failed to 'migrationAddresses' param")
-		}
-		migrationAddressesStr[i] = migrationAddress
-	}
-	err := rootDomain.AddMigrationAddresses(migrationAddressesStr)
-	if err != nil {
-		return nil, fmt.Errorf("failed to add migration address: %s", err.Error())
-	}
-
-	return nil, nil
 }
 
 type GetBalanceResponse struct {
@@ -523,8 +460,8 @@ func (m *Member) depositMigration(txHash string, migrationAddress string, amount
 	rd := rootdomain.GetObject(m.RootDomain)
 	migrationAdminContract := migrationadmin.GetObject(foundation.GetMigrationAdmin())
 
-	_, err := migrationAdminContract.CheckActiveDaemon(m.GetReference().String())
-	if err != nil {
+	result, err := migrationAdminContract.CheckDaemon(m.GetReference().String())
+	if err != nil || !result {
 		return nil, fmt.Errorf("this migration daemon is not in the list of active daemons: %s", err.Error())
 	}
 
@@ -544,8 +481,8 @@ func (m *Member) depositMigration(txHash string, migrationAddress string, amount
 	depositMigrationResult := &DepositMigrationResult{Reference: tokenHolderRef.String()}
 	// If deposit doesn't exist - create new deposit
 	if !found {
-
-		dHolder := deposit.New(m.GetReference(), txHash, amount.String())
+		lockup, vesting, _ := migrationAdminContract.GetDepositParameters()
+		dHolder := deposit.New(m.GetReference(), txHash, amount.String(), lockup, vesting)
 		txDeposit, err := dHolder.AsChild(*tokenHolderRef)
 		if err != nil {
 			return nil, fmt.Errorf("failed to save as child: %s", err.Error())

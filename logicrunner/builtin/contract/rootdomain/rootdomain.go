@@ -17,7 +17,6 @@
 package rootdomain
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -26,7 +25,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/helloworld"
-	"github.com/insolar/insolar/logicrunner/builtin/proxy/migrationadmin"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/migrationshard"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/pkshard"
 )
@@ -88,32 +86,6 @@ func (rd RootDomain) GetNodeDomainRef() (insolar.Reference, error) {
 }
 
 var INSATTR_Info_API = true
-
-// Info returns information about basic objects
-// ins:immutable
-func (rd RootDomain) Info() (interface{}, error) {
-	migrationAdminContract := migrationadmin.GetObject(foundation.GetMigrationAdmin())
-	migrationDaemonsMembers, err := migrationAdminContract.GetAllMigrationDaemon()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get active migration daemon from foundation: %s", err.Error())
-	}
-	migrationDaemonsMembersOut := []string{}
-	for ref := range migrationDaemonsMembers {
-		migrationDaemonsMembersOut = append(migrationDaemonsMembersOut, ref)
-	}
-	res := map[string]interface{}{
-		"rootDomain":             rd.GetReference().String(),
-		"rootMember":             foundation.GetRootMember().String(),
-		"migrationDaemonMembers": migrationDaemonsMembersOut,
-		"migrationAdminMember":   foundation.GetMigrationAdminMember().String(),
-		"nodeDomain":             rd.NodeDomain.String(),
-	}
-	resJSON, err := json.Marshal(res)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal result: %s", err.Error())
-	}
-	return resJSON, nil
-}
 
 // AddMigrationAddresses adds migration addresses to list.
 // ins:immutable

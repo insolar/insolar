@@ -220,7 +220,7 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 		contracts.GetAccountGenesisContractState(g.ContractsConfig.RootBalance, insolar.GenesisNameRootAccount, insolar.GenesisNameRootDomain),
 		contracts.GetAccountGenesisContractState(g.ContractsConfig.MDBalance, insolar.GenesisNameMigrationAdminAccount, insolar.GenesisNameRootDomain),
 		contracts.GetAccountGenesisContractState("0", insolar.GenesisNameFeeAccount, insolar.GenesisNameRootDomain),
-		contracts.GetMigrationAdminGenesisContractState(),
+		contracts.GetMigrationAdminGenesisContractState(g.ContractsConfig.LokupPeriodInPulses, g.ContractsConfig.VestingPeriodInPulses),
 		contracts.GetCostCenterGenesisContractState(),
 	}
 
@@ -249,8 +249,8 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 	for i, name := range insolar.GenesisNamePublicKeyShards {
 		states = append(states, contracts.GetPKShardGenesisContractState(name, MembersByPKShards[i]))
 	}
-	for _, name := range insolar.GenesisNameMigrationAddressShards {
-		states = append(states, contracts.GetMigrationShardGenesisContractState(name))
+	for i, name := range insolar.GenesisNameMigrationAddressShards {
+		states = append(states, contracts.GetMigrationShardGenesisContractState(name, g.ContractsConfig.MigrationAddresses[i]))
 	}
 	for _, conf := range states {
 		_, err := g.activateContract(ctx, conf)
