@@ -21,7 +21,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/fortytw2/leaktest"
 	"github.com/gojuno/minimock"
 	"github.com/insolar/go-actors/actor/system"
 	"github.com/pkg/errors"
@@ -312,7 +311,6 @@ func TestRouteCallRegistersOutgoingRequestWithValidReason(t *testing.T) {
 	t.Parallel()
 	mc := minimock.NewController(t)
 	defer mc.Finish()
-	defer leaktest.Check(t)()
 
 	am := artifacts.NewClientMock(mc)
 	dc := artifacts.NewDescriptorsCacheMock(mc)

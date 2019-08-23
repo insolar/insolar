@@ -220,6 +220,9 @@ func (lr *LogicRunner) Start(ctx context.Context) error {
 // Stop stops logic runner component and its executors
 func (lr *LogicRunner) Stop(ctx context.Context) error {
 	reterr := error(nil)
+	if lr.OutgoingSender != nil {
+		lr.OutgoingSender.Stop(ctx)
+	}
 	if err := lr.rpc.Stop(ctx); err != nil {
 		return err
 	}

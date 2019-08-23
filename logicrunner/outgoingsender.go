@@ -27,6 +27,7 @@ var OutgoingRequestSenderDefaultGoroutineLimit = int32(5000)
 type OutgoingRequestSender interface {
 	SendOutgoingRequest(ctx context.Context, reqRef insolar.Reference, req *record.OutgoingRequest) (*insolar.Reference, insolar.Arguments, *record.IncomingRequest, error)
 	SendAbandonedOutgoingRequest(ctx context.Context, reqRef insolar.Reference, req *record.OutgoingRequest)
+	Stop(ctx context.Context)
 }
 
 type outgoingRequestSender struct {
@@ -104,6 +105,10 @@ func (rs *outgoingRequestSender) SendAbandonedOutgoingRequest(ctx context.Contex
 		// in this case, LME will  re-send a corresponding notification anyway.
 		inslogger.FromContext(ctx).Errorf("SendAbandonedOutgoingRequest failed: %v", err)
 	}
+}
+
+func (rs *outgoingRequestSender) Stop(_ context.Context) {
+	rs.as.CloseAll()
 }
 
 func newOutgoingSenderActorState(cr insolar.ContractRequester, am artifacts.Client) actor.Actor {
