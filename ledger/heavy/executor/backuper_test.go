@@ -29,7 +29,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/store"
 	"github.com/insolar/insolar/ledger/heavy/executor"
-	"github.com/insolar/insolar/testutils/testbadger"
 	"github.com/stretchr/testify/require"
 )
 
@@ -133,7 +132,7 @@ func TestBackuper_BackupWaitPeriodExpired(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	ops := testbadger.BadgerDefaultOptions(tmpdir)
+	ops := BadgerDefaultOptions(tmpdir)
 	db, err := store.NewBadgerDB(ops)
 	require.NoError(t, err)
 	bm, err := executor.NewBackupMaker(context.Background(), db, cfg, testPulse)
@@ -153,7 +152,7 @@ func TestBackuper_CantMoveToTargetDir(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	ops := testbadger.BadgerDefaultOptions(tmpdir)
+	ops := BadgerDefaultOptions(tmpdir)
 	db, err := store.NewBadgerDB(ops)
 	require.NoError(t, err)
 	bm, err := executor.NewBackupMaker(context.Background(), db, cfg, 0)
