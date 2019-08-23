@@ -320,5 +320,32 @@ func (lr *LogicRunner) AddUnwantedResponse(ctx context.Context, msg insolar.Payl
 		return flow.ErrCancelled
 	}
 
+	// TODO: move towards flow.Dispatcher in INS-3341
+	err = lr.isStillExecutor(ctx, *m.Target.Record())
+	if err != nil {
+		return err
+	}
+
 	return lr.ResultsMatcher.AddUnwantedResponse(ctx, m)
+}
+
+func (lr *LogicRunner) isStillExecutor(ctx context.Context, object insolar.ID) error {
+	currentPulse, err := lr.PulseAccessor.Latest(ctx)
+	if err != nil {
+		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to get current pulse"))
+		return flow.ErrCancelled
+	}
+
+	node, err := lr.JetCoordinator.VirtualExecutorForObject(ctx, object, currentPulse.PulseNumber)
+	if err != nil {
+		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to calculate current executor"))
+		return flow.ErrCancelled
+	}
+
+	if *node != lr.JetCoordinator.Me() {
+		inslogger.FromContext(ctx).Debug("I'm not executor")
+		return flow.ErrCancelled
+	}
+
+	return nil
 }
