@@ -312,7 +312,6 @@ func (z *zerologAdapter) WithLevelNumber(level insolar.LogLevel) (insolar.Logger
 	zCopy := *z
 	zCopy.level = zerologLevel
 	zCopy.logger = z.logger.Level(zerologLevel)
-	zCopy.diodeWriter = z.diodeWriter
 	return &zCopy, nil
 }
 

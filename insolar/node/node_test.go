@@ -17,13 +17,11 @@
 package node
 
 import (
-	"context"
 	"testing"
 
 	fuzz "github.com/google/gofuzz"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -115,11 +113,6 @@ func TestNodeStorage_InRole(t *testing.T) {
 		assert.Equal(t, ErrNoNodes, err)
 		assert.Nil(t, result)
 	})
-}
-
-func TestLogger(t *testing.T) {
-	logger := inslogger.FromContext(context.TODO())
-	logger.Fatal("птыщь")
 }
 
 func TestStorage_Set(t *testing.T) {
