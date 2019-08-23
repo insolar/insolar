@@ -18,6 +18,7 @@ package executor
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
@@ -42,7 +43,7 @@ type InitialState struct {
 	// JetIds for passed executor (not all ids). If JetDrop for this jet has Split flag - both jets will be in slice
 	JetIDs []insolar.JetID
 	// Drops for JetIDs above
-	Drops [][]byte
+	Drops []drop.Drop
 	// Indexes only for Lifelines that has pending requests
 	Indexes []record.Index
 }
@@ -56,7 +57,7 @@ type InitialStateKeeper struct {
 
 	lock                  sync.RWMutex
 	syncPulse             insolar.PulseNumber
-	jetDrops              map[insolar.JetID][]byte
+	jetDrops              map[insolar.JetID]drop.Drop
 	abandonRequestIndexes map[insolar.JetID][]record.Index
 }
 
@@ -73,7 +74,7 @@ func NewInitialStateKeeper(
 		indexStorage:          indexStorage,
 		dropStorage:           dropStorage,
 		syncPulse:             jetKeeper.TopSyncPulse(),
-		jetDrops:              make(map[insolar.JetID][]byte),
+		jetDrops:              make(map[insolar.JetID]drop.Drop),
 		abandonRequestIndexes: make(map[insolar.JetID][]record.Index),
 	}
 }
@@ -95,21 +96,18 @@ func (isk *InitialStateKeeper) Start(ctx context.Context) error {
 }
 
 func (isk *InitialStateKeeper) prepareDrops(ctx context.Context) {
-	logger := inslogger.FromContext(ctx)
 	for _, jetID := range isk.jetAccessor.All(ctx, isk.syncPulse) {
 		dr, err := isk.dropStorage.ForPulse(ctx, jetID, isk.syncPulse)
 		if err != nil {
-			logger.Fatal("No drop found for pulse: ", isk.syncPulse.String())
+			panic(fmt.Sprintf("No drop found for pulse: ", isk.syncPulse.String()))
 		}
-
-		jetDrop := drop.MustEncode(&dr)
 
 		if dr.Split {
 			left, right := jet.Siblings(jetID)
-			isk.jetDrops[left] = jetDrop
-			isk.jetDrops[right] = jetDrop
+			isk.jetDrops[left] = dr
+			isk.jetDrops[right] = dr
 		} else {
-			isk.jetDrops[jetID] = jetDrop
+			isk.jetDrops[jetID] = dr
 		}
 	}
 }
@@ -157,14 +155,14 @@ func (isk *InitialStateKeeper) Get(ctx context.Context, lightExecutor insolar.Re
 	defer isk.lock.RUnlock()
 
 	var jetIDs []insolar.JetID
-	var drops [][]byte
+	var drops []drop.Drop
 	var indexes []record.Index
 
 	logger.Debugf("[ InitialStateKeeper ] Getting drops for: %s in pulse: %s", lightExecutor.String(), pulse.String())
 	for id, jetDrop := range isk.jetDrops {
 		light, err := isk.jetCoordinator.LightExecutorForJet(ctx, insolar.ID(id), pulse)
 		if err != nil {
-			logger.Fatal("No drop found for pulse ", isk.syncPulse.String())
+			panic(fmt.Sprintf("No drop found for pulse ", isk.syncPulse.String()))
 		}
 
 		if light.Equal(lightExecutor) {
