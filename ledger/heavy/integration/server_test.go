@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/testutils/testbadger"
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
@@ -159,7 +160,7 @@ func NewServer(
 	)
 	{
 		var err error
-		DB, err = store.NewBadgerDB(cfg.Ledger.Storage.DataDirectory)
+		DB, err = store.NewBadgerDB(testbadger.BadgerDefaultOptions(cfg.Ledger.Storage.DataDirectory))
 		if err != nil {
 			panic(errors.Wrap(err, "failed to initialize DB"))
 		}
