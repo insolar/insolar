@@ -44,7 +44,8 @@ const HOST = "http://localhost:"
 const AdminPort = "19002"
 const PublicPort = "19102"
 const HostDebug = "http://localhost:8001"
-const TestRPCUrl = HOST + AdminPort + "/admin-api/rpc"
+const TestAdminRPCUrl = "/admin-api/rpc"
+const TestRPCUrl = HOST + AdminPort + TestAdminRPCUrl
 const TestRPCUrlPublic = HOST + PublicPort + "/api/rpc"
 
 const insolarRootMemberKeys = "root_member_keys.json"
@@ -265,7 +266,7 @@ func waitForNet() error {
 	for i := 0; i < numAttempts; i++ {
 		currentOk = 0
 		for _, port := range ports {
-			resp, err := requester.Status(fmt.Sprintf("http://127.0.0.1:%s"+TestRPCUrl, port))
+			resp, err := requester.Status(fmt.Sprintf(HOST+"%s"+TestAdminRPCUrl, port))
 			if err != nil {
 				fmt.Println("[ waitForNet ] Problem with port " + port + ". Err: " + err.Error())
 				break
