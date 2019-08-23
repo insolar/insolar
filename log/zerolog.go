@@ -261,22 +261,30 @@ func (h FatalHook) Run(e *zerolog.Event, level zerolog.Level, msg string) {
 func (z *zerologAdapter) Fatal(args ...interface{}) {
 	stats.Record(contextWithLogLevel(zerolog.FatalLevel), statLogCalls.M(1))
 
-	fHook := FatalHook{diodeWriter: z.diodeWriter}
-	logger := *z.loggerWithHooks()
-	loggerFatal := logger.Hook(fHook)
+	if z.diodeWriter != nil {
+		fHook := FatalHook{diodeWriter: z.diodeWriter}
+		logger := *z.loggerWithHooks()
+		loggerFatal := logger.Hook(fHook)
 
-	loggerFatal.Fatal().Msg(fmt.Sprint(args...))
+		loggerFatal.Fatal().Msg(fmt.Sprint(args...))
+	}
+
+	z.loggerWithHooks().Fatal().Msg(fmt.Sprint(args...))
 }
 
 // Fatalf formatted logs a message at level Fatal on the stdout.
 func (z *zerologAdapter) Fatalf(format string, args ...interface{}) {
 	stats.Record(contextWithLogLevel(zerolog.FatalLevel), statLogCalls.M(1))
 
-	fHook := FatalHook{diodeWriter: z.diodeWriter}
-	logger := *z.loggerWithHooks()
-	loggerFatal := logger.Hook(fHook)
+	if z.diodeWriter != nil {
+		fHook := FatalHook{diodeWriter: z.diodeWriter}
+		logger := *z.loggerWithHooks()
+		loggerFatal := logger.Hook(fHook)
 
-	loggerFatal.Fatal().Msgf(format, args...)
+		loggerFatal.Fatal().Msgf(format, args...)
+	}
+
+	z.loggerWithHooks().Fatal().Msgf(format, args...)
 }
 
 // Panic logs a message at level Panic on the stdout.
