@@ -53,7 +53,6 @@ package gcpv2
 import (
 	"context"
 	"fmt"
-	"runtime/debug"
 	"sync"
 	"time"
 
@@ -144,7 +143,7 @@ func (h *ConsensusMemberController) discardInternal(terminateMember bool, toBeDi
 	defer h.mutex.Unlock()
 
 	logger := inslogger.FromContext(context.Background())
-	logger.Debugf("round discarded: %v", string(debug.Stack()))
+	logger.Debug("round discarded")
 
 	round := h.currentRound
 	if round == nil || toBeDiscarded != nil && toBeDiscarded != round {
