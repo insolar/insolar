@@ -80,7 +80,7 @@ import (
 
 func NewPhase3Controller(loopingMinimalDelay time.Duration, packetPrepareOptions transport.PacketPrepareOptions,
 	queueTrustUpdated <-chan ph2ctl.UpdateSignal, consensusStrategy consensus.SelectionStrategy,
-	inspectionFactory inspectors.VectorInspection, enabledFast, lockOSThread bool) *Phase3Controller {
+	inspectionFactory inspectors.VectorInspection, enabledFast, lockOSThread, retrySendPhase3 bool) *Phase3Controller {
 	return &Phase3Controller{
 		packetPrepareOptions: packetPrepareOptions,
 		queueTrustUpdated:    queueTrustUpdated,
@@ -89,6 +89,7 @@ func NewPhase3Controller(loopingMinimalDelay time.Duration, packetPrepareOptions
 		inspectionFactory:    inspectionFactory,
 		isFastPacketEnabled:  enabledFast,
 		lockOSThread:         lockOSThread,
+		retrySendPhase3:      retrySendPhase3,
 	}
 }
 
@@ -101,6 +102,7 @@ type Phase3Controller struct {
 	loopingMinimalDelay  time.Duration
 	isFastPacketEnabled  bool
 	lockOSThread         bool
+	retrySendPhase3      bool
 
 	inspectionFactory inspectors.VectorInspection
 	R                 *core.FullRealm
@@ -410,7 +412,11 @@ func (c *Phase3Controller) workerSendPhase3(ctx context.Context, selfData statev
 
 	logger := inslogger.FromContext(ctx)
 	// todo: hack send to all twice
-	for i := 0; i < 2; i++ {
+	sendCount := 1
+	if c.retrySendPhase3 {
+		sendCount = 2
+	}
+	for i := 0; i < sendCount; i++ {
 		p3.SendToMany(ctx, len(nodes), c.R.GetPacketSender(),
 			func(ctx context.Context, targetIdx int) (transport.TargetProfile, transport.PacketSendOptions) {
 				np := nodes[targetIdx]
