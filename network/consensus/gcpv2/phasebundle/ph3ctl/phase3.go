@@ -136,7 +136,7 @@ func (*Phase3Controller) GetPacketType() []phases.PacketType {
 
 func (c *Phase3PacketDispatcher) DispatchMemberPacket(ctx context.Context, reader transport.MemberPacketReader, n *population.NodeAppearance) error {
 	logger := inslogger.FromContext(ctx)
-	logger.Warn("Phase3 packet received")
+	logger.Debug("Phase3 packet received")
 
 	p3 := reader.AsPhase3Packet()
 
@@ -149,7 +149,7 @@ func (c *Phase3PacketDispatcher) DispatchMemberPacket(ctx context.Context, reade
 	if iv == nil || iv.HasSenderFault() {
 		return n.RegisterFraud(n.Frauds().NewMismatchedMembershipRank(n.GetProfile(), n.GetNodeMembershipProfileOrEmpty()))
 	}
-	logger.Warn("Phase3 packet to queue")
+	logger.Debug("Phase3 packet to queue")
 
 	select {
 	case c.ctl.queuePh3Recv <- iv:
@@ -273,10 +273,10 @@ outer:
 			logger.Debug(">>>>workerPrePhase3: chaseExpired")
 			break outer
 		case <-startOfPhase3:
-			logger.Warn(">>>>workerPrePhase3: startOfPhase3")
+			logger.Debug(">>>>workerPrePhase3: startOfPhase3")
 			break outer
 		case upd := <-c.queueTrustUpdated:
-			logger.Warn(">>>>workerPrePhase3: c.queueTrustUpdated")
+			logger.Debug(">>>>workerPrePhase3: c.queueTrustUpdated")
 			switch {
 			case upd.IsPingSignal(): // ping indicates arrival of Phase2 packet, to support chasing
 				// TODO chasing
@@ -361,7 +361,7 @@ outer:
 		case <-time.After(c.loopingMinimalDelay):
 		}
 	}
-	logger.Warn(">>>>workerPrePhase3: nsh available")
+	logger.Debug(">>>>workerPrePhase3: nsh available")
 
 	vectorHelper := c.R.GetPopulation().CreateVectorHelper()
 	localProjection := vectorHelper.CreateProjection()
@@ -411,15 +411,22 @@ func (c *Phase3Controller) workerSendPhase3(ctx context.Context, selfData statev
 	logger := inslogger.FromContext(ctx)
 	// todo: hack send to all twice
 	for i := 0; i < 2; i++ {
+
+		// capture range value
+		retry := i
+
 		p3.SendToMany(ctx, len(nodes), c.R.GetPacketSender(),
 			func(ctx context.Context, targetIdx int) (transport.TargetProfile, transport.PacketSendOptions) {
 				np := nodes[targetIdx]
-				if np.GetNodeID() == selfID || i != 0 && !np.CanReceivePacket(phases.PacketPhase3) {
+				if np.GetNodeID() == selfID || retry != 0 && !np.CanReceivePacket(phases.PacketPhase3) {
 					// CanReceivePacket checks if we've already got Ph3 from this node
 					return nil, 0
 				}
-				if i == 0 {
-					logger.Warnf("Phase3 sent to %d", np.GetNodeID())
+
+				if retry == 0 {
+					logger.Debugf("Phase3 sent to %d", np.GetNodeID())
+				} else {
+					logger.Warnf("Phase3 sent retry(%d) to %d", retry, np.GetNodeID())
 				}
 
 				return np, sendOptions
@@ -437,7 +444,7 @@ func (c *Phase3Controller) workerSendPhase3(ctx context.Context, selfData statev
 func (c *Phase3Controller) workerRecvPhase3(ctx context.Context, localInspector inspectors.VectorInspector) bool {
 
 	logger := inslogger.FromContext(ctx)
-	logger.Warn("Phase3 start receive entry")
+	logger.Debug("Phase3 start receive entry")
 
 	var queueMissing chan inspectors.InspectedVector
 
@@ -471,7 +478,7 @@ func (c *Phase3Controller) workerRecvPhase3(ctx context.Context, localInspector 
 	// alteredDoubtedGshCount := 0
 	var consensusSelection consensus.Selection
 
-	logger.Warn("Phase3 start receive loop")
+	logger.Debug("Phase3 start receive loop")
 
 outer:
 	for {
@@ -482,7 +489,7 @@ outer:
 			consensusSelection = c.consensusStrategy.SelectOnStopped(&verifiedStatTbl, false,
 				consensuskit.BftMajority(popCount))
 
-			logger.Warn("Phase3 done all")
+			logger.Debug("Phase3 done all")
 			break outer
 		}
 
@@ -500,7 +507,7 @@ outer:
 			consensusSelection = c.consensusStrategy.SelectOnStopped(&verifiedStatTbl, true, consensuskit.BftMajority(popCount))
 			break outer
 		case d := <-c.queuePh3Recv:
-			logger.Warnf("Phase3 queue receive from %d", d.GetNode().GetNodeID())
+			logger.Debugf("Phase3 queue receive from %d", d.GetNode().GetNodeID())
 			switch {
 			case d.HasMissingMembers():
 				if queueMissing == nil {
@@ -593,7 +600,7 @@ outer:
 					if nodeStats.HasAllValuesOf(nodeset.ConsensusStatTrusted, nodeset.ConsensusStatDoubted) {
 						processedNodesFlawlessly++
 					}
-					logger.Warnf("Phase3 processed %d", d.GetNode().GetNodeID())
+					logger.Debugf("Phase3 processed %d", d.GetNode().GetNodeID())
 
 				} else {
 					break
