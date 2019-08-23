@@ -20,20 +20,17 @@ package functest
 
 import (
 	"fmt"
-	"github.com/insolar/insolar/api"
-	"github.com/insolar/insolar/logicrunner/builtin/foundation"
-	"github.com/insolar/insolar/testutils"
-	"github.com/stretchr/testify/require"
 	"math/big"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/testutils/launchnet"
-
+	"github.com/insolar/insolar/api"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
+	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/require"
 
-	"github.com/insolar/insolar/testutils"
+	"github.com/insolar/insolar/testutils/launchnet"
 )
 
 // TODO: https://insolar.atlassian.net/browse/WLT-768
@@ -60,7 +57,7 @@ func TestDepositTransferToken(t *testing.T) {
 
 	anon = func() api.CallMethodReply {
 		_, _, err := makeSignedRequest(launchnet.TestRPCUrl, member,
-		"deposit.transfer", map[string]interface{}{"amount": "1000", "ethTxHash": "Eth_TxHash_test"})
+			"deposit.transfer", map[string]interface{}{"amount": "1000", "ethTxHash": "Eth_TxHash_test"})
 		if err == nil {
 			fmt.Println("Vesting STEP: === SUCCESS")
 			return api.CallMethodReply{}
