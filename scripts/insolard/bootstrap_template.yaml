@@ -7,8 +7,10 @@ heavy_genesis_plugins_dir: "{{ .BaseDir }}/plugins/"
 contracts:
   insgocc: "bin/insgocc"
   outdir: "{{ .BaseDir }}/plugins/"
-root_balance: "100000000000000000000"
-md_balance: "100000000000000000000"
+root_balance: "0"
+md_balance: "50000000000000000000"
+lokup_pulse_period: 10
+vesting_pulse_period: 10
 majority_rule: 5
 min_roles:
   heavy_material: 1

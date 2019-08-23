@@ -19,14 +19,15 @@
 package functest
 
 import (
+	"fmt"
+	"github.com/insolar/insolar/api"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
+	"github.com/insolar/insolar/testutils"
+	"github.com/stretchr/testify/require"
 	"math/big"
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/stretchr/testify/require"
-
-	"github.com/insolar/insolar/testutils"
 )
 
 // TODO: https://insolar.atlassian.net/browse/WLT-768
@@ -36,21 +37,33 @@ func TestDepositTransferToken(t *testing.T) {
 	firstBalance := getBalanceNoErr(t, member, member.Ref)
 	secondBalance := new(big.Int).Add(firstBalance, big.NewInt(1000))
 
-	var err error
-	for i := 0; i <= 11; i++ {
-		time.Sleep(time.Second)
-		_, _, err = makeSignedRequest(member, "deposit.transfer", map[string]interface{}{"amount": "1000", "ethTxHash": "Eth_TxHash_test"})
+	anon := func() api.CallMethodReply {
+		_, _, err := makeSignedRequest(member, "deposit.transfer", map[string]interface{}{"amount": "1000", "ethTxHash": "Eth_TxHash_test"})
 		require.Error(t, err)
+		fmt.Println("Lockup STEP: --- RETURNED   " + err.Error())
 		if !strings.Contains(err.Error(), "hold period didn't end") {
-			break
+			return api.CallMethodReply{}
+		}
+		return api.CallMethodReply{
+			Error: &foundation.Error{err.Error()},
 		}
 	}
-	require.Contains(t, err.Error(), "not enough unholded balance for transfer")
-
-	time.Sleep(11 * time.Second)
-	_, _, err = makeSignedRequest(member, "deposit.transfer", map[string]interface{}{"amount": "1000", "ethTxHash": "Eth_TxHash_test"})
+	_, err := waitUntilRequestProcessed(anon, time.Second*20, time.Second, 20)
 	require.NoError(t, err)
 
+	anon = func() api.CallMethodReply {
+		_, _, err := makeSignedRequest(member, "deposit.transfer", map[string]interface{}{"amount": "1000", "ethTxHash": "Eth_TxHash_test"})
+		if err == nil {
+			fmt.Println("Vesting STEP: === SUCCESS")
+			return api.CallMethodReply{}
+		}
+		fmt.Println("Vesting STEP: --- RETURNED   " + err.Error())
+		return api.CallMethodReply{
+			Error: &foundation.Error{err.Error()},
+		}
+	}
+	_, err = waitUntilRequestProcessed(anon, time.Second*20, time.Second, 20)
+	require.NoError(t, err)
 	checkBalanceFewTimes(t, member, member.Ref, secondBalance)
 }
 

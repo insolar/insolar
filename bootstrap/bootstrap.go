@@ -142,6 +142,8 @@ func (g *Generator) Run(ctx context.Context) error {
 		MigrationAdminPublicKey:   migrationAdminPublicKey,
 		MigrationDaemonPublicKeys: migrationDaemonPublicKeys,
 		MigrationAddresses:        *migrationAddresses,
+		VestingPeriodInPulses:     g.config.VestingPeriodInPulses,
+		LokupPeriodInPulses:       g.config.LokupPeriodInPulses,
 	}
 	err = g.makeHeavyGenesisConfig(discoveryNodes, contractsConfig)
 	if err != nil {

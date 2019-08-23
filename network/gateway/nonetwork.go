@@ -116,7 +116,6 @@ func (g *NoNetwork) Run(ctx context.Context, pulse insolar.Pulse) {
 	// Reset backoff if not insolar.JoinerBootstrap.
 	g.backoff = 0
 
-	g.bootstrapETA = g.Options.BootstrapTimeout
 	g.bootstrapTimer = time.NewTimer(g.bootstrapETA)
 	g.Gatewayer.SwitchState(ctx, insolar.WaitConsensus, pulse)
 }
