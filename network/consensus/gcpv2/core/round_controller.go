@@ -102,9 +102,7 @@ type PhasedRoundController struct {
 func NewPhasedRoundController(strategy RoundStrategy, chronicle api.ConsensusChronicles, bundle PhaseControllersBundle,
 	transport transport.Factory, config api.LocalNodeConfiguration,
 	controlFeeder api.ConsensusControlFeeder, candidateFeeder api.CandidateControlFeeder, ephemeralFeeder api.EphemeralControlFeeder,
-	prevPulseRound api.RoundController) *PhasedRoundController {
-
-	prevPulseRound = nil // TODO fix
+) *PhasedRoundController {
 
 	r := &PhasedRoundController{chronicle: chronicle, bundle: bundle}
 

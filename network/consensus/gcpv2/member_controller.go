@@ -130,7 +130,7 @@ func (h *ConsensusMemberController) getOrCreateInternal() (api.RoundController, 
 	ephemeralFeeder := h.ephemeralInterceptor.prepare(h)
 
 	h.prevRound, h.currentRound = nil, h.roundFactory.CreateConsensusRound(h.chronicle, h.controlFeeder,
-		h.candidateFeeder, ephemeralFeeder, h.prevRound)
+		h.candidateFeeder, ephemeralFeeder)
 
 	h.ephemeralInterceptor.attachTo(h.currentRound)
 
