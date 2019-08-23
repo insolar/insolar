@@ -17,20 +17,23 @@
 package bootstrap
 
 import (
+	"bytes"
 	"context"
 	"crypto"
 	"encoding/json"
 	"fmt"
-	"github.com/pkg/errors"
 	"io/ioutil"
 	"path"
 	"strconv"
+
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/genesisrefs"
 	"github.com/insolar/insolar/insolar/secrets"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 )
 
 // Generator is a component for generating bootstrap files required for discovery nodes bootstrap and heavy genesis.
@@ -55,6 +58,27 @@ func NewGeneratorWithConfig(config *Config, certificatesOutDir string) *Generato
 		config:             config,
 		certificatesOutDir: certificatesOutDir,
 	}
+}
+
+func readMigrationAddresses(file string) ([insolar.GenesisAmountMigrationAddressShards][]string, error) {
+	var result [insolar.GenesisAmountMigrationAddressShards][]string
+	b, err := ioutil.ReadFile(file)
+	if err != nil {
+		return result, errors.Wrapf(err, " couldn't read migration addresses file %v", file)
+	}
+
+	var ma []string
+	err = json.NewDecoder(bytes.NewReader(b)).Decode(&ma)
+	if err != nil {
+		return result, errors.Wrapf(err, "fail unmarshal migration addresses data")
+	}
+
+	for _, a := range ma {
+		i := foundation.GetShardIndex(a, insolar.GenesisAmountMigrationAddressShards)
+		result[i] = append(result[i])
+	}
+
+	return result, nil
 }
 
 // Run generates bootstrap data.
@@ -86,6 +110,12 @@ func (g *Generator) Run(ctx context.Context) error {
 		migrationDaemonPublicKeys = append(migrationDaemonPublicKeys, k)
 	}
 
+	inslog.Info("[ bootstrap ] read migration addresses ...")
+	migrationAddresses, err := readMigrationAddresses(g.config.MembersKeysDir + "migration_addresses.json")
+	if err != nil {
+		return errors.Wrap(err, "couldn't get migration addresses")
+	}
+
 	inslog.Info("[ bootstrap ] create keys ...")
 	discoveryNodes, err := createKeysInDir(
 		ctx,
@@ -111,6 +141,9 @@ func (g *Generator) Run(ctx context.Context) error {
 		RootPublicKey:             rootPublicKey,
 		MigrationAdminPublicKey:   migrationAdminPublicKey,
 		MigrationDaemonPublicKeys: migrationDaemonPublicKeys,
+		MigrationAddresses:        migrationAddresses,
+		VestingPeriodInPulses:     g.config.VestingPeriodInPulses,
+		LokupPeriodInPulses:       g.config.LokupPeriodInPulses,
 	}
 	err = g.makeHeavyGenesisConfig(discoveryNodes, contractsConfig)
 	if err != nil {

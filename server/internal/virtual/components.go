@@ -30,7 +30,6 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/contractrequester"
 	"github.com/insolar/insolar/cryptography"
-	"github.com/insolar/insolar/genesisdataprovider"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/delegationtoken"
@@ -144,9 +143,6 @@ func initComponents(
 	messageBus, err := messagebus.NewMessageBus(cfg)
 	checkError(ctx, err, "failed to start MessageBus")
 
-	genesisDataProvider, err := genesisdataprovider.New()
-	checkError(ctx, err, "failed to start GenesisDataProvider")
-
 	apiRunner, err := api.NewRunner(&cfg.APIRunner)
 	checkError(ctx, err, "failed to start ApiRunner")
 
@@ -200,7 +196,6 @@ func initComponents(
 		parcelFactory,
 	}
 	components = append(components, []interface{}{
-		genesisDataProvider,
 		metricsHandler,
 		cryptographyService,
 		keyProcessor,

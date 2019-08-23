@@ -55,7 +55,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/insolar/insolar/network/consensus/common/longbits"
+	"github.com/insolar/insolar/longbits"
 )
 
 type DigestMethod string

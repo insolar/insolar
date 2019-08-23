@@ -22,11 +22,11 @@ import (
 	"os"
 	"testing"
 
+	"github.com/dgraph-io/badger"
 	fuzz "github.com/google/gofuzz"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/ledger/heavy/executor"
-	"github.com/insolar/insolar/testutils/testbadger"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"
@@ -35,13 +35,21 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
+func BadgerDefaultOptions(dir string) badger.Options {
+	ops := badger.DefaultOptions(dir)
+	ops.CompactL0OnClose = false
+	ops.SyncWrites = false
+
+	return ops
+}
+
 func initDB(t *testing.T, testPulse insolar.PulseNumber) (executor.JetKeeper, string, *store.BadgerDB, *jet.DBStore, *pulse.DB) {
 	ctx := inslogger.TestContext(t)
 	tmpdir, err := ioutil.TempDir("", "bdb-test-")
 
 	require.NoError(t, err)
 
-	ops := testbadger.BadgerDefaultOptions(tmpdir)
+	ops := BadgerDefaultOptions(tmpdir)
 	db, err := store.NewBadgerDB(ops)
 	require.NoError(t, err)
 
@@ -232,7 +240,7 @@ func TestNewJetKeeper(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	ops := testbadger.BadgerDefaultOptions(tmpdir)
+	ops := BadgerDefaultOptions(tmpdir)
 	db, err := store.NewBadgerDB(ops)
 	require.NoError(t, err)
 	defer db.Stop(context.Background())
@@ -312,7 +320,7 @@ func TestDbJetKeeper_AddDropConfirmation(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	ops := testbadger.BadgerDefaultOptions(tmpdir)
+	ops := BadgerDefaultOptions(tmpdir)
 	db, err := store.NewBadgerDB(ops)
 	require.NoError(t, err)
 	defer db.Stop(context.Background())
@@ -364,7 +372,7 @@ func TestDbJetKeeper_TopSyncPulse(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	ops := testbadger.BadgerDefaultOptions(tmpdir)
+	ops := BadgerDefaultOptions(tmpdir)
 	db, err := store.NewBadgerDB(ops)
 	require.NoError(t, err)
 	defer db.Stop(context.Background())
@@ -433,7 +441,7 @@ func TestDbJetKeeper_LostDataOnNextPulseAfterSplit(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	ops := testbadger.BadgerDefaultOptions(tmpdir)
+	ops := BadgerDefaultOptions(tmpdir)
 	db, err := store.NewBadgerDB(ops)
 	require.NoError(t, err)
 	defer db.Stop(context.Background())

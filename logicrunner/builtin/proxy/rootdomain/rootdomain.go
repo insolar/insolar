@@ -241,7 +241,7 @@ func (r *RootDomain) GetMemberByPublicKey(publicKey string) (*insolar.Reference,
 }
 
 // GetMemberByMigrationAddress is proxy generated method
-func (r *RootDomain) GetMemberByMigrationAddress(migrationAddress string) (*insolar.Reference, error) {
+func (r *RootDomain) GetMemberByMigrationAddressAsMutable(migrationAddress string) (*insolar.Reference, error) {
 	var args [1]interface{}
 	args[0] = migrationAddress
 
@@ -301,7 +301,7 @@ func (r *RootDomain) GetMemberByMigrationAddressNoWait(migrationAddress string) 
 }
 
 // GetMemberByMigrationAddressAsImmutable is proxy generated method
-func (r *RootDomain) GetMemberByMigrationAddressAsImmutable(migrationAddress string) (*insolar.Reference, error) {
+func (r *RootDomain) GetMemberByMigrationAddress(migrationAddress string) (*insolar.Reference, error) {
 	var args [1]interface{}
 	args[0] = migrationAddress
 
@@ -437,105 +437,8 @@ func (r *RootDomain) GetNodeDomainRef() (insolar.Reference, error) {
 	return ret0, nil
 }
 
-// Info is proxy generated method
-func (r *RootDomain) InfoAsMutable() (interface{}, error) {
-	var args [0]interface{}
-
-	var argsSerialized []byte
-
-	ret := make([]interface{}, 2)
-	var ret0 interface{}
-	ret[0] = &ret0
-	var ret1 *foundation.Error
-	ret[1] = &ret1
-
-	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
-	if err != nil {
-		return ret0, err
-	}
-
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "Info", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return ret0, err
-	}
-
-	resultContainer := foundation.Result{
-		Returns: ret,
-	}
-	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
-	if err != nil {
-		return ret0, err
-	}
-	if resultContainer.Error != nil {
-		err = resultContainer.Error
-		return ret0, err
-	}
-	if ret1 != nil {
-		return ret0, ret1
-	}
-	return ret0, nil
-}
-
-// InfoNoWait is proxy generated method
-func (r *RootDomain) InfoNoWait() error {
-	var args [0]interface{}
-
-	var argsSerialized []byte
-
-	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
-	if err != nil {
-		return err
-	}
-
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "Info", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// InfoAsImmutable is proxy generated method
-func (r *RootDomain) Info() (interface{}, error) {
-	var args [0]interface{}
-
-	var argsSerialized []byte
-
-	ret := make([]interface{}, 2)
-	var ret0 interface{}
-	ret[0] = &ret0
-	var ret1 *foundation.Error
-	ret[1] = &ret1
-
-	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
-	if err != nil {
-		return ret0, err
-	}
-
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "Info", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return ret0, err
-	}
-
-	resultContainer := foundation.Result{
-		Returns: ret,
-	}
-	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
-	if err != nil {
-		return ret0, err
-	}
-	if resultContainer.Error != nil {
-		err = resultContainer.Error
-		return ret0, err
-	}
-	if ret1 != nil {
-		return ret0, ret1
-	}
-	return ret0, nil
-}
-
 // AddMigrationAddresses is proxy generated method
-func (r *RootDomain) AddMigrationAddresses(migrationAddresses []string) error {
+func (r *RootDomain) AddMigrationAddressesAsMutable(migrationAddresses []string) error {
 	var args [1]interface{}
 	args[0] = migrationAddresses
 
@@ -593,7 +496,7 @@ func (r *RootDomain) AddMigrationAddressesNoWait(migrationAddresses []string) er
 }
 
 // AddMigrationAddressesAsImmutable is proxy generated method
-func (r *RootDomain) AddMigrationAddressesAsImmutable(migrationAddresses []string) error {
+func (r *RootDomain) AddMigrationAddresses(migrationAddresses []string) error {
 	var args [1]interface{}
 	args[0] = migrationAddresses
 
@@ -631,7 +534,7 @@ func (r *RootDomain) AddMigrationAddressesAsImmutable(migrationAddresses []strin
 }
 
 // AddMigrationAddress is proxy generated method
-func (r *RootDomain) AddMigrationAddress(migrationAddress string) error {
+func (r *RootDomain) AddMigrationAddressAsMutable(migrationAddress string) error {
 	var args [1]interface{}
 	args[0] = migrationAddress
 
@@ -689,7 +592,7 @@ func (r *RootDomain) AddMigrationAddressNoWait(migrationAddress string) error {
 }
 
 // AddMigrationAddressAsImmutable is proxy generated method
-func (r *RootDomain) AddMigrationAddressAsImmutable(migrationAddress string) error {
+func (r *RootDomain) AddMigrationAddress(migrationAddress string) error {
 	var args [1]interface{}
 	args[0] = migrationAddress
 
@@ -727,7 +630,7 @@ func (r *RootDomain) AddMigrationAddressAsImmutable(migrationAddress string) err
 }
 
 // GetFreeMigrationAddress is proxy generated method
-func (r *RootDomain) GetFreeMigrationAddress(publicKey string) (string, error) {
+func (r *RootDomain) GetFreeMigrationAddressAsMutable(publicKey string) (string, error) {
 	var args [1]interface{}
 	args[0] = publicKey
 
@@ -787,7 +690,7 @@ func (r *RootDomain) GetFreeMigrationAddressNoWait(publicKey string) error {
 }
 
 // GetFreeMigrationAddressAsImmutable is proxy generated method
-func (r *RootDomain) GetFreeMigrationAddressAsImmutable(publicKey string) (string, error) {
+func (r *RootDomain) GetFreeMigrationAddress(publicKey string) (string, error) {
 	var args [1]interface{}
 	args[0] = publicKey
 
@@ -827,7 +730,7 @@ func (r *RootDomain) GetFreeMigrationAddressAsImmutable(publicKey string) (strin
 }
 
 // AddNewMemberToMaps is proxy generated method
-func (r *RootDomain) AddNewMemberToMaps(publicKey string, migrationAddress string, memberRef insolar.Reference) error {
+func (r *RootDomain) AddNewMemberToMapsAsMutable(publicKey string, migrationAddress string, memberRef insolar.Reference) error {
 	var args [3]interface{}
 	args[0] = publicKey
 	args[1] = migrationAddress
@@ -889,7 +792,7 @@ func (r *RootDomain) AddNewMemberToMapsNoWait(publicKey string, migrationAddress
 }
 
 // AddNewMemberToMapsAsImmutable is proxy generated method
-func (r *RootDomain) AddNewMemberToMapsAsImmutable(publicKey string, migrationAddress string, memberRef insolar.Reference) error {
+func (r *RootDomain) AddNewMemberToMaps(publicKey string, migrationAddress string, memberRef insolar.Reference) error {
 	var args [3]interface{}
 	args[0] = publicKey
 	args[1] = migrationAddress
@@ -929,7 +832,7 @@ func (r *RootDomain) AddNewMemberToMapsAsImmutable(publicKey string, migrationAd
 }
 
 // AddNewMemberToPublicKeyMap is proxy generated method
-func (r *RootDomain) AddNewMemberToPublicKeyMap(publicKey string, memberRef insolar.Reference) error {
+func (r *RootDomain) AddNewMemberToPublicKeyMapAsMutable(publicKey string, memberRef insolar.Reference) error {
 	var args [2]interface{}
 	args[0] = publicKey
 	args[1] = memberRef
@@ -989,7 +892,7 @@ func (r *RootDomain) AddNewMemberToPublicKeyMapNoWait(publicKey string, memberRe
 }
 
 // AddNewMemberToPublicKeyMapAsImmutable is proxy generated method
-func (r *RootDomain) AddNewMemberToPublicKeyMapAsImmutable(publicKey string, memberRef insolar.Reference) error {
+func (r *RootDomain) AddNewMemberToPublicKeyMap(publicKey string, memberRef insolar.Reference) error {
 	var args [2]interface{}
 	args[0] = publicKey
 	args[1] = memberRef

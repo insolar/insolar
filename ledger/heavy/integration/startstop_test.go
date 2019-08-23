@@ -13,16 +13,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// +build slowtest
 
-package insolar
+package integration_test
 
-import "context"
+import (
+	"context"
+	"os"
+	"testing"
 
-// GenesisDataProvider is the global genesis data provider handler. Other system parts communicate with genesis data provider through it.
-type GenesisDataProvider interface {
-	GetRootDomain(ctx context.Context) *Reference
-	GetNodeDomain(ctx context.Context) (*Reference, error)
-	GetRootMember(ctx context.Context) (*Reference, error)
-	GetMigrationDaemonMembers(ctx context.Context) ([]*Reference, error)
-	GetMigrationAdminMember(ctx context.Context) (*Reference, error)
+	"github.com/insolar/insolar/insolar"
+	"github.com/stretchr/testify/assert"
+)
+
+func TestStartStop(t *testing.T) {
+	cfg := DefaultHeavyConfig()
+	defer os.RemoveAll(cfg.Ledger.Storage.DataDirectory)
+
+	s, err := NewServer(context.Background(), cfg, insolar.GenesisHeavyConfig{}, nil)
+	assert.NoError(t, err)
+	s.Stop()
 }
