@@ -587,7 +587,8 @@ func (suite *LogicRunnerTestSuite) TestImmutableOrder() {
 		Immutable:    false,
 	}
 	mutableTranscript := common.NewTranscript(suite.ctx, mutableRequestRef, mutableRequest)
-	er.GetActiveTranscriptMock.When(mutableRequestRef).Then(mutableTranscript)
+	er.GetActiveTranscriptMock.When(mutableRequestRef).Then(nil).
+		DoneMock.When(mutableTranscript).Then(true)
 
 	immutableRequest1 := record.IncomingRequest{
 		ReturnMode:   record.ReturnResult,
@@ -596,7 +597,8 @@ func (suite *LogicRunnerTestSuite) TestImmutableOrder() {
 		Immutable:    true,
 	}
 	immutableTranscript1 := common.NewTranscript(suite.ctx, immutableRequestRef1, immutableRequest1)
-	er.GetActiveTranscriptMock.When(immutableRequestRef1).Then(immutableTranscript1)
+	er.GetActiveTranscriptMock.When(immutableRequestRef1).Then(nil).
+		DoneMock.When(immutableTranscript1).Then(true)
 
 	immutableRequest2 := record.IncomingRequest{
 		ReturnMode:   record.ReturnResult,
@@ -605,7 +607,8 @@ func (suite *LogicRunnerTestSuite) TestImmutableOrder() {
 		Immutable:    true,
 	}
 	immutableTranscript2 := common.NewTranscript(suite.ctx, immutableRequestRef2, immutableRequest2)
-	er.GetActiveTranscriptMock.When(immutableRequestRef2).Then(immutableTranscript2)
+	er.GetActiveTranscriptMock.When(immutableRequestRef2).Then(nil).
+		DoneMock.When(immutableTranscript2).Then(true)
 
 	// Set custom executor, that'll:
 	// 1) mutable will start execution and wait until something will ping it on channel 1

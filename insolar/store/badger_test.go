@@ -27,12 +27,19 @@ import (
 
 	"github.com/dgraph-io/badger"
 	fuzz "github.com/google/gofuzz"
-	"github.com/insolar/insolar/testutils/testbadger"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
+
+func BadgerDefaultOptions(dir string) badger.Options {
+	ops := badger.DefaultOptions(dir)
+	ops.CompactL0OnClose = false
+	ops.SyncWrites = false
+
+	return ops
+}
 
 type testBadgerKey struct {
 	id    []byte
@@ -56,7 +63,7 @@ func TestBadgerDB_Get(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	ops := testbadger.BadgerDefaultOptions(tmpdir)
+	ops := BadgerDefaultOptions(tmpdir)
 	db, err := NewBadgerDB(ops)
 	defer db.Stop(ctx)
 	require.NoError(t, err)
@@ -86,7 +93,7 @@ func TestBadgerDB_Set(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	ops := testbadger.BadgerDefaultOptions(tmpdir)
+	ops := BadgerDefaultOptions(tmpdir)
 	db, err := NewBadgerDB(ops)
 	defer db.Stop(ctx)
 	require.NoError(t, err)
@@ -122,7 +129,7 @@ func TestBadgerDB_Delete(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	assert.NoError(t, err)
 
-	ops := testbadger.BadgerDefaultOptions(tmpdir)
+	ops := BadgerDefaultOptions(tmpdir)
 	db, err := NewBadgerDB(ops)
 	defer db.Stop(ctx)
 	require.NoError(t, err)
@@ -174,7 +181,7 @@ func TestBadgerDB_NewIterator(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	ops := testbadger.BadgerDefaultOptions(tmpdir)
+	ops := BadgerDefaultOptions(tmpdir)
 	db, err := NewBadgerDB(ops)
 	defer db.Stop(ctx)
 	require.NoError(t, err)
@@ -275,7 +282,7 @@ func TestBadgerDB_NewReverseIterator(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	ops := testbadger.BadgerDefaultOptions(tmpdir)
+	ops := BadgerDefaultOptions(tmpdir)
 	db, err := NewBadgerDB(ops)
 	defer db.Stop(ctx)
 	require.NoError(t, err)
@@ -378,7 +385,7 @@ func TestBadgerDB_SimpleReverse(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	ops := testbadger.BadgerDefaultOptions(tmpdir)
+	ops := BadgerDefaultOptions(tmpdir)
 	db, err := NewBadgerDB(ops)
 	defer db.Stop(ctx)
 	require.NoError(t, err)

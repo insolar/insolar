@@ -22,6 +22,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/pulse"
@@ -31,11 +32,18 @@ import (
 	"github.com/insolar/insolar/ledger/heavy/executor"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/testutils/network"
-	"github.com/insolar/insolar/testutils/testbadger"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/metadata"
 )
+
+func BadgerDefaultOptions(dir string) badger.Options {
+	ops := badger.DefaultOptions(dir)
+	ops.CompactL0OnClose = false
+	ops.SyncWrites = false
+
+	return ops
+}
 
 func TestRecordIterator_HasNext(t *testing.T) {
 	t.Parallel()
@@ -350,7 +358,7 @@ func TestRecordServer_Export(t *testing.T) {
 		defer os.RemoveAll(tmpdir)
 		require.NoError(t, err)
 
-		db, err := store.NewBadgerDB(testbadger.BadgerDefaultOptions(tmpdir))
+		db, err := store.NewBadgerDB(BadgerDefaultOptions(tmpdir))
 		require.NoError(t, err)
 		defer db.Stop(context.Background())
 
@@ -433,7 +441,7 @@ func TestRecordServer_Export_Composite(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	ops := testbadger.BadgerDefaultOptions(tmpdir)
+	ops := BadgerDefaultOptions(tmpdir)
 	db, err := store.NewBadgerDB(ops)
 	require.NoError(t, err)
 	defer db.Stop(context.Background())
@@ -601,7 +609,7 @@ func TestRecordServer_Export_Composite_BatchVersion(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	ops := testbadger.BadgerDefaultOptions(tmpdir)
+	ops := BadgerDefaultOptions(tmpdir)
 	db, err := store.NewBadgerDB(ops)
 	require.NoError(t, err)
 	defer db.Stop(context.Background())
