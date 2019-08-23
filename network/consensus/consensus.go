@@ -202,12 +202,12 @@ func newInstaller(constructor *constructor, dep *Dep) Installer {
 	}
 }
 
-func (c Installer) ControllerFor(mode Mode, setters ...packetProcessorSetter) Controller {
+func (c Installer) ControllerFor(isDiscovery bool, mode Mode, setters ...packetProcessorSetter) Controller {
 	controlFeederInterceptor := adapters.InterceptConsensusControl(
 		adapters.NewConsensusControlFeeder(),
 	)
 	var candidateQueueSize int
-	if mode == ReadyNetwork {
+	if isDiscovery {
 		candidateQueueSize = 1
 	}
 	candidateFeeder := coreapi.NewSequentialCandidateFeeder(candidateQueueSize)

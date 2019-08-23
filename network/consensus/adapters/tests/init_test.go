@@ -184,6 +184,9 @@ func initNodes(ctx context.Context, mode consensus.Mode, nodes GeneratedNodes, s
 		delayTransport := strategy.GetLink(datagramTransport)
 		ns.transports[i] = delayTransport
 
+		cert := certificateManager.GetCertificate()
+		isDiscovery := network.IsDiscovery(*cert.GetNodeRef(), cert)
+
 		controller := consensus.New(ctx, consensus.Dep{
 			KeyProcessor:       keyProcessor,
 			Scheme:             scheme,
@@ -203,7 +206,7 @@ func initNodes(ctx context.Context, mode consensus.Mode, nodes GeneratedNodes, s
 			EphemeralController: &ephemeralController{
 				allowed: true,
 			},
-		}).ControllerFor(mode, datagramHandler, pulseHandler)
+		}).ControllerFor(isDiscovery, mode, datagramHandler, pulseHandler)
 
 		ns.controllers[i] = controller
 		ctx, _ = inslogger.WithFields(ctx, map[string]interface{}{

@@ -247,7 +247,9 @@ func (n *ServiceNetwork) initConsensus() {
 	}
 
 	pulseHandler := adapters.NewPulseHandler()
-	n.consensusController = n.consensusInstaller.ControllerFor(n.ConsensusMode, pulseHandler, n.datagramHandler)
+	cert := n.CertificateManager.GetCertificate()
+	isDiscovery := network.IsDiscovery(*cert.GetNodeRef(), cert)
+	n.consensusController = n.consensusInstaller.ControllerFor(isDiscovery, n.ConsensusMode, pulseHandler, n.datagramHandler)
 	n.consensusController.RegisterFinishedNotifier(func(ctx context.Context, report network.Report) {
 		n.Gatewayer.Gateway().OnConsensusFinished(ctx, report)
 	})
