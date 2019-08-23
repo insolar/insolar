@@ -481,8 +481,8 @@ func (m *Member) depositMigration(txHash string, migrationAddress string, amount
 	depositMigrationResult := &DepositMigrationResult{Reference: tokenHolderRef.String()}
 	// If deposit doesn't exist - create new deposit
 	if !found {
-
-		dHolder := deposit.New(m.GetReference(), txHash, amount.String())
+		lockup, vesting, _ := migrationAdminContract.GetDepositParameters()
+		dHolder := deposit.New(m.GetReference(), txHash, amount.String(), lockup, vesting)
 		txDeposit, err := dHolder.AsChild(*tokenHolderRef)
 		if err != nil {
 			return nil, fmt.Errorf("failed to save as child: %s", err.Error())

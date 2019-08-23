@@ -114,6 +114,8 @@ type GenesisContractsConfig struct {
 	RootPublicKey             string
 	MigrationAdminPublicKey   string
 	MigrationDaemonPublicKeys []string
+	VestingPeriodInPulses     int64
+	LokupPeriodInPulses       int64
 }
 
 // GenesisHeavyConfig carries data required for initial genesis on heavy node.

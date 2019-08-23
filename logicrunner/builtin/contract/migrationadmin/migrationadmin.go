@@ -18,11 +18,9 @@ package migrationadmin
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
-	"github.com/insolar/insolar/logicrunner/builtin/proxy/rootdomain"
 )
 
 // MigrationAdmin manage and change status for  migration daemon.
@@ -30,21 +28,14 @@ type MigrationAdmin struct {
 	foundation.BaseContract
 	MigrationDaemons     foundation.StableMap
 	MigrationAdminMember insolar.Reference
+	Lokup                int64
+	Vesting              int64
 }
 
 const (
 	StatusActive     = "active"
 	StatusInactivate = "inactive"
 )
-
-// Create new Migration admin in genesis.
-func New(migrationDaemons [insolar.GenesisAmountMigrationDaemonMembers]insolar.Reference, migrationAdminMember insolar.Reference) (*MigrationAdmin, error) {
-	daemonMigration := make(foundation.StableMap)
-	for i := 0; i < insolar.GenesisAmountMigrationDaemonMembers; i++ {
-		daemonMigration[migrationDaemons[i].String()] = StatusInactivate
-	}
-	return &MigrationAdmin{MigrationDaemons: daemonMigration, MigrationAdminMember: migrationAdminMember}, nil
-}
 
 func (mA *MigrationAdmin) MigrationAdminCall(params map[string]interface{}, nameMethod string, caller insolar.Reference) (interface{}, error) {
 
@@ -202,4 +193,8 @@ func (mA *MigrationAdmin) GetActiveDaemons() ([]string, error) {
 		}
 	}
 	return activeDaemons, nil
+}
+
+func (mA MigrationAdmin) GetDepositParameters() (int64, int64, error) {
+	return mA.Lokup, mA.Vesting, nil
 }

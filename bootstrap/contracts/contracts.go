@@ -144,18 +144,22 @@ func GetMigrationShardGenesisContractState(name string) insolar.GenesisContractS
 	}
 }
 
-func GetMigrationAdminGenesisContractState() insolar.GenesisContractState {
-	ma, err := migrationadmin.New(genesisrefs.ContractMigrationDaemonMembers, genesisrefs.ContractMigrationAdminMember)
-
-	if err != nil {
-		panic("failed to create migration admin contract instance")
+func GetMigrationAdminGenesisContractState(lokup int64, vesting int64) insolar.GenesisContractState {
+	migrationDaemons := make(foundation.StableMap)
+	for i := 0; i < insolar.GenesisAmountMigrationDaemonMembers; i++ {
+		migrationDaemons[genesisrefs.ContractMigrationDaemonMembers[i].String()] = migrationadmin.StatusInactivate
 	}
 
 	return insolar.GenesisContractState{
 		Name:       insolar.GenesisNameMigrationAdmin,
 		Prototype:  insolar.GenesisNameMigrationAdmin,
 		ParentName: insolar.GenesisNameRootDomain,
-		Memory:     mustGenMemory(ma),
+		Memory: mustGenMemory(&migrationadmin.MigrationAdmin{
+			MigrationDaemon:      migrationDaemons,
+			MigrationAdminMember: genesisrefs.ContractMigrationAdminMember,
+			Lokup:                lokup,
+			Vesting:              vesting,
+		}),
 	}
 }
 
