@@ -24,9 +24,10 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/insolar/insolar/insolar/utils"
-	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/pkg/errors"
+
+	"github.com/insolar/insolar/insolar/utils"
+	"github.com/insolar/insolar/pulse"
 )
 
 const (

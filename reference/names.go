@@ -1,4 +1,4 @@
-///
+//
 // Copyright 2019 Insolar Technologies GmbH
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,18 +12,28 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-///
+//
 
-package testbadger
+package reference
 
 import (
-	"github.com/dgraph-io/badger"
+	"regexp"
 )
 
-func BadgerDefaultOptions(dir string) badger.Options {
-	ops := badger.DefaultOptions(dir)
-	ops.CompactL0OnClose = false
-	ops.SyncWrites = false
+const LegacyDomainName = "11111111111111111111111111111111"
+const RecordDomainName = "record"
 
-	return ops
+var regexObjectName = regexp.MustCompile(`^[[:alpha:]][[:alnum:]]*$`)
+var regexDomainName = regexp.MustCompile(`^[[:alpha:]][[:alnum:]]*(\.[[:alpha:]][[:alnum:]]*)*$`)
+
+func IsReservedName(domainName string) bool {
+	return domainName == RecordDomainName || domainName == LegacyDomainName
+}
+
+func IsValidDomainName(domainName string) bool {
+	return regexDomainName.MatchString(domainName)
+}
+
+func IsValidObjectName(objectName string) bool {
+	return regexObjectName.MatchString(objectName)
 }

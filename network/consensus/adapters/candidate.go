@@ -54,9 +54,9 @@ import (
 	"crypto/ecdsa"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/longbits"
 	"github.com/insolar/insolar/network/consensus/adapters/candidate"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
-	"github.com/insolar/insolar/network/consensus/common/longbits"
 )
 
 type Candidate candidate.Profile

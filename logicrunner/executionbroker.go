@@ -166,10 +166,9 @@ func (q *ExecutionBroker) finishTask(ctx context.Context, transcript *common.Tra
 
 	q.finished = append(q.finished, transcript)
 
-	if q.executionRegistry.GetActiveTranscript(transcript.RequestRef) == nil {
-		logger.Error("[ ExecutionBroker.FinishTask ] task wasn't executed")
-	} else {
-		q.executionRegistry.Done(transcript)
+	done := q.executionRegistry.Done(transcript)
+	if !done {
+		logger.Error("task wasn't in the registry, very bad")
 	}
 }
 
@@ -217,6 +216,12 @@ func (q *ExecutionBroker) add(
 ) {
 	for _, transcript := range transcripts {
 		if q.storeWithoutDuplication(ctx, transcript) {
+			continue
+		}
+		if q.executionRegistry.GetActiveTranscript(transcript.RequestRef) != nil {
+			inslogger.FromContext(transcript.Context).Warn(
+				"this node already executing request, won't add to queue",
+			)
 			continue
 		}
 
@@ -450,9 +455,6 @@ func (q *ExecutionBroker) PrevExecutorPendingResult(ctx context.Context, prevExe
 	case insolar.InPending:
 		if q.isActive() {
 			logger.Debug("execution returned to node that is still executing pending")
-
-			q.pending = insolar.NotPending
-			q.PendingConfirmed = false
 		} else if prevExecState == insolar.NotPending {
 			logger.Debug("executor we came to thinks that execution pending, but previous said to continue")
 

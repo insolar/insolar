@@ -15,7 +15,7 @@ import (
 type FoldableReaderMock struct {
 	t minimock.Tester
 
-	funcAsByteString          func() (s1 string)
+	funcAsByteString          func() (b1 ByteString)
 	inspectFuncAsByteString   func()
 	afterAsByteStringCounter  uint64
 	beforeAsByteStringCounter uint64
@@ -92,7 +92,7 @@ type FoldableReaderMockAsByteStringExpectation struct {
 
 // FoldableReaderMockAsByteStringResults contains results of the FoldableReader.AsByteString
 type FoldableReaderMockAsByteStringResults struct {
-	s1 string
+	b1 ByteString
 }
 
 // Expect sets up expected params for FoldableReader.AsByteString
@@ -120,7 +120,7 @@ func (mmAsByteString *mFoldableReaderMockAsByteString) Inspect(f func()) *mFolda
 }
 
 // Return sets up results that will be returned by FoldableReader.AsByteString
-func (mmAsByteString *mFoldableReaderMockAsByteString) Return(s1 string) *FoldableReaderMock {
+func (mmAsByteString *mFoldableReaderMockAsByteString) Return(b1 ByteString) *FoldableReaderMock {
 	if mmAsByteString.mock.funcAsByteString != nil {
 		mmAsByteString.mock.t.Fatalf("FoldableReaderMock.AsByteString mock is already set by Set")
 	}
@@ -128,12 +128,12 @@ func (mmAsByteString *mFoldableReaderMockAsByteString) Return(s1 string) *Foldab
 	if mmAsByteString.defaultExpectation == nil {
 		mmAsByteString.defaultExpectation = &FoldableReaderMockAsByteStringExpectation{mock: mmAsByteString.mock}
 	}
-	mmAsByteString.defaultExpectation.results = &FoldableReaderMockAsByteStringResults{s1}
+	mmAsByteString.defaultExpectation.results = &FoldableReaderMockAsByteStringResults{b1}
 	return mmAsByteString.mock
 }
 
 //Set uses given function f to mock the FoldableReader.AsByteString method
-func (mmAsByteString *mFoldableReaderMockAsByteString) Set(f func() (s1 string)) *FoldableReaderMock {
+func (mmAsByteString *mFoldableReaderMockAsByteString) Set(f func() (b1 ByteString)) *FoldableReaderMock {
 	if mmAsByteString.defaultExpectation != nil {
 		mmAsByteString.mock.t.Fatalf("Default expectation is already set for the FoldableReader.AsByteString method")
 	}
@@ -147,7 +147,7 @@ func (mmAsByteString *mFoldableReaderMockAsByteString) Set(f func() (s1 string))
 }
 
 // AsByteString implements FoldableReader
-func (mmAsByteString *FoldableReaderMock) AsByteString() (s1 string) {
+func (mmAsByteString *FoldableReaderMock) AsByteString() (b1 ByteString) {
 	mm_atomic.AddUint64(&mmAsByteString.beforeAsByteStringCounter, 1)
 	defer mm_atomic.AddUint64(&mmAsByteString.afterAsByteStringCounter, 1)
 
@@ -162,7 +162,7 @@ func (mmAsByteString *FoldableReaderMock) AsByteString() (s1 string) {
 		if results == nil {
 			mmAsByteString.t.Fatal("No results are set for the FoldableReaderMock.AsByteString")
 		}
-		return (*results).s1
+		return (*results).b1
 	}
 	if mmAsByteString.funcAsByteString != nil {
 		return mmAsByteString.funcAsByteString()
