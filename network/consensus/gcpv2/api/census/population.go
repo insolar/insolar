@@ -70,6 +70,7 @@ type OnlinePopulation interface {
 	FindProfile(nodeID insolar.ShortNodeID) profiles.ActiveNode
 	/* indicates that this population was built without issues */
 	IsValid() bool
+	IsClean() bool
 
 	GetIndexedCount() int
 	/*

@@ -285,12 +285,19 @@ func (r *PhasedRoundController) _startFullRealm(prepWasSuccessful bool) {
 		} else {
 			/* Auto-activation of the prepared lastCensus */
 			expCensus := lastCensus.(census.Expected)
-			if expCensus.GetPulseNumber() != pd.PulseNumber {
-				inslogger.FromContext(r.realm.roundContext).Debugf("Unsafe round: expected=%d, pn=%d", expCensus.GetPulseNumber(), pd.PulseNumber)
-				r.realm.unsafeRound = true
-			} else if !expCensus.GetPrevious().GetExpectedPulseNumber().IsUnknownOrEqualTo(pd.PulseNumber) {
-				inslogger.FromContext(r.realm.roundContext).Debugf("Unsafe round: prev.expected=%d, pn=%d", expCensus.GetPrevious().GetExpectedPulseNumber(), pd.PulseNumber)
-				r.realm.unsafeRound = true
+			if !r.realm.unsafeRound {
+				unsafe := true
+				switch {
+				case expCensus.GetPulseNumber() != pd.PulseNumber:
+					inslogger.FromContext(r.realm.roundContext).Debugf("Unsafe round: expected=%d, pn=%d", expCensus.GetPulseNumber(), pd.PulseNumber)
+				case !expCensus.GetPrevious().GetExpectedPulseNumber().IsUnknownOrEqualTo(pd.PulseNumber):
+					inslogger.FromContext(r.realm.roundContext).Debugf("Unsafe round: prev.expected=%d, pn=%d", expCensus.GetPrevious().GetExpectedPulseNumber(), pd.PulseNumber)
+				case !expCensus.GetOnlinePopulation().IsClean():
+					inslogger.FromContext(r.realm.roundContext).Debugf("Unsafe round: population.clean=false, pn=%d", pd.PulseNumber)
+				default:
+					unsafe = false
+				}
+				r.realm.unsafeRound = unsafe
 			}
 			active = expCensus.MakeActive(pd)
 		}
