@@ -193,10 +193,14 @@ func (lr *LightReplicatorDefault) filterAndGroupIndexes(
 	ctx context.Context, pn insolar.PulseNumber,
 ) map[insolar.JetID][]record.Index {
 	byJet := map[insolar.JetID][]record.Index{}
-	indexes := lr.idxAccessor.ForPulse(ctx, pn)
-	for _, idx := range indexes {
-		jetID, _ := lr.jetAccessor.ForID(ctx, pn, idx.ObjID)
-		byJet[jetID] = append(byJet[jetID], idx)
+	indexes, err := lr.idxAccessor.ForPulse(ctx, pn)
+	if err == nil {
+		for _, idx := range indexes {
+			jetID, _ := lr.jetAccessor.ForID(ctx, pn, idx.ObjID)
+			byJet[jetID] = append(byJet[jetID], idx)
+		}
+	} else if err != object.ErrIndexNotFound {
+		inslogger.FromContext(ctx).Errorf("Can't get indexes: %s", err)
 	}
 	return byJet
 }

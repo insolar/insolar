@@ -57,7 +57,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
-	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
@@ -71,7 +70,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetdispatch"
 	pop "github.com/insolar/insolar/network/consensus/gcpv2/core/population"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/purgatory"
-	"runtime"
+	"github.com/insolar/insolar/pulse"
 )
 
 var _ pulse.DataHolder = &FullRealm{}
@@ -546,7 +545,6 @@ func (r *FullRealm) buildLocalMemberAnnouncementDraft(mp profiles.MembershipProf
 func (r *FullRealm) CreateAnnouncement(n *pop.NodeAppearance, isJoinerProfileRequired bool) *transport.NodeAnnouncementProfile {
 	ma := n.GetRequestedAnnouncement()
 	if ma.Membership.IsEmpty() {
-		runtime.Gosched() // TODO DEBUG
 		panic("illegal state")
 	}
 

@@ -22,11 +22,13 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
@@ -39,10 +41,11 @@ type EnsureIndex struct {
 	pulse   insolar.PulseNumber
 
 	dep struct {
-		indexLocker object.IndexLocker
-		indexes     object.MemoryIndexStorage
-		coordinator jet.Coordinator
-		sender      bus.Sender
+		indexLocker   object.IndexLocker
+		indexes       object.MemoryIndexStorage
+		coordinator   jet.Coordinator
+		sender        bus.Sender
+		writeAccessor executor.WriteAccessor
 	}
 }
 
@@ -60,11 +63,13 @@ func (p *EnsureIndex) Dep(
 	idxs object.MemoryIndexStorage,
 	c jet.Coordinator,
 	s bus.Sender,
+	wc executor.WriteAccessor,
 ) {
 	p.dep.indexLocker = il
 	p.dep.indexes = idxs
 	p.dep.coordinator = c
 	p.dep.sender = s
+	p.dep.writeAccessor = wc
 }
 
 func (p *EnsureIndex) Proceed(ctx context.Context) error {
@@ -122,6 +127,15 @@ func (p *EnsureIndex) Proceed(ctx context.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "EnsureIndex: failed to decode index")
 		}
+
+		done, err := p.dep.writeAccessor.Begin(ctx, p.pulse)
+		if err != nil {
+			if err == executor.ErrWriteClosed {
+				return flow.ErrCancelled
+			}
+			return errors.Wrap(err, "failed to write to db")
+		}
+		defer done()
 
 		p.dep.indexes.Set(ctx, p.pulse, record.Index{
 			LifelineLastUsed: p.pulse,

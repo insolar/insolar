@@ -20,6 +20,8 @@ import (
 	"context"
 	"sync"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
@@ -34,7 +36,7 @@ type Registry interface {
 
 //go:generate minimock -i github.com/insolar/insolar/logicrunner/executionregistry.ExecutionRegistry -o ./ -s _mock.go -g
 type ExecutionRegistry interface {
-	Register(ctx context.Context, transcript *common.Transcript)
+	Register(ctx context.Context, transcript *common.Transcript) error
 	Done(transcript *common.Transcript) bool
 
 	Length() int
@@ -79,17 +81,18 @@ func (r *executionRegistry) IsEmpty() bool {
 	return r.Length() == 0
 }
 
-func (r *executionRegistry) Register(ctx context.Context, transcript *common.Transcript) {
+func (r *executionRegistry) Register(ctx context.Context, transcript *common.Transcript) error {
 	requestRef := transcript.RequestRef
 
 	r.registryLock.Lock()
 	defer r.registryLock.Unlock()
 
-	if _, ok := r.registry[requestRef]; !ok {
-		r.registry[requestRef] = transcript
-	} else {
-		inslogger.FromContext(ctx).Error("Trying to register task that is already registered")
+	if _, ok := r.registry[requestRef]; ok {
+		return errors.New("trying to register task that is executing right now")
 	}
+
+	r.registry[requestRef] = transcript
+	return nil
 }
 
 func (r *executionRegistry) Done(transcript *common.Transcript) bool {
@@ -135,12 +138,14 @@ func (r *executionRegistry) FindRequestLoop(ctx context.Context, reqRef insolar.
 	if _, ok := r.registry[reqRef]; ok {
 		// we're executing this request right now
 		// de-duplication should deal with this case
+		inslogger.FromContext(ctx).Info("already executing exactly this request")
 		return false
 	}
 
 	for _, transcript := range r.registry {
 		req := transcript.Request
 		if req.APIRequestID == apiRequestID && req.ReturnMode != record.ReturnNoWait {
+			inslogger.FromContext(ctx).Error("execution loop detected with request ", transcript.RequestRef.String())
 			return true
 		}
 	}

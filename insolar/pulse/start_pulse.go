@@ -14,13 +14,13 @@
  *    limitations under the License.
  */
 
- package pulse
+package pulse
 
 import (
 	"context"
+	"errors"
 
 	"github.com/insolar/insolar/insolar"
-	"errors"
 )
 
 type StartPulse interface {

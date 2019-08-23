@@ -35,6 +35,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/store"
@@ -90,7 +91,7 @@ func TestBackuper(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
 
-	db, err := store.NewBadgerDB(tmpdir)
+	db, err := store.NewBadgerDB(badger.DefaultOptions(tmpdir))
 	require.NoError(t, err)
 	defer db.Stop(context.Background())
 
@@ -186,7 +187,7 @@ func TestBackuper(t *testing.T) {
 			loadIncrementalBackup(t, recovTmpDir, bkpFileName)
 		}
 
-		recoveredDB, err := store.NewBadgerDB(recovTmpDir)
+		recoveredDB, err := store.NewBadgerDB(badger.DefaultOptions(recovTmpDir))
 		require.NoError(t, err)
 		defer recoveredDB.Stop(context.Background())
 

@@ -55,15 +55,15 @@ import (
 	"io"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/longbits"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
-	"github.com/insolar/insolar/network/consensus/common/longbits"
-	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/statevector"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
+	"github.com/insolar/insolar/pulse"
 )
 
 type EmuPacketWrapper struct {
@@ -105,7 +105,7 @@ func (r *EmuPulsarNetPacket) IsRelayForbidden() bool {
 	return false
 }
 
-func (r *EmuPulsarNetPacket) AsByteString() string {
+func (r *EmuPulsarNetPacket) AsByteString() longbits.ByteString {
 	panic("implement me")
 }
 
