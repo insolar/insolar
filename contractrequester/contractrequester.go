@@ -219,7 +219,7 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Payload) (i
 			return nil, nil, errors.Errorf("not a reply in reply, message data is %T", data)
 		}
 
-		return nil, nil, errors.New(responseErr.Text)
+		return nil, nil, errors.Wrap(errors.New(responseErr.Text), "got reply with error")
 	}
 
 	replyData, err := reply.UnmarshalFromMeta(rawResponse.Payload)
@@ -227,32 +227,43 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Payload) (i
 		return nil, nil, errors.Wrap(err, "failed to unmarshal reply")
 	}
 
-	var (
-		res insolar.Reply
-		r   reply.RegisterRequest
-	)
-
-	switch res := replyData.(type) {
+	switch replyTyped := replyData.(type) {
 	// early result
 	case *reply.CallMethod:
-		logger.Debug("early result for request, not registered")
-		if !async {
-			cr.ResultMutex.Lock()
-			defer cr.ResultMutex.Unlock()
-
-			delete(cr.ResultMap, reqHash)
-			close(ch)
-		}
-
-		return res, nil, nil
+		return cr.handleCallMethod(ctx, replyTyped, reqHash, ch, async)
 	case *reply.RegisterRequest:
-		r = *res
+		ctx, _ = inslogger.WithFields(ctx,
+			map[string]interface{}{
+				"called_request": replyTyped.Request.String(),
+				"called_method":  msg.Request.Method,
+			},
+		)
+		return cr.handleRegisterResult(ctx, replyTyped, reqHash, ch, async)
 	default:
 		return nil, nil, errors.Errorf("Got not reply.RegisterRequest in reply for CallMethod %T", replyData)
 	}
+}
+
+func (cr *ContractRequester) handleCallMethod(ctx context.Context, r *reply.CallMethod,
+	reqHash [insolar.RecordHashSize]byte, ch chan *payload.ReturnResults, async bool) (insolar.Reply, *insolar.Reference, error) {
+	inslogger.FromContext(ctx).Debug("early result for request, not registered")
+	if !async {
+		cr.ResultMutex.Lock()
+		defer cr.ResultMutex.Unlock()
+
+		delete(cr.ResultMap, reqHash)
+		close(ch)
+	}
+
+	return r, nil, nil
+}
+
+func (cr *ContractRequester) handleRegisterResult(ctx context.Context, r *reply.RegisterRequest,
+	reqHash [insolar.RecordHashSize]byte, ch chan *payload.ReturnResults, async bool) (insolar.Reply, *insolar.Reference, error) {
+	logger := inslogger.FromContext(ctx)
 
 	if async {
-		return res, &r.Request, nil
+		return r, &r.Request, nil
 	}
 
 	if !bytes.Equal(r.Request.Record().Hash(), reqHash[:]) {
@@ -262,12 +273,6 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Payload) (i
 	ctx, cancel := context.WithTimeout(ctx, cr.callTimeout)
 	defer cancel()
 
-	logger = logger.WithFields(
-		map[string]interface{}{
-			"called_request": r.Request.String(),
-			"called_method":  msg.Request.Method,
-		},
-	)
 	logger.Debug("waiting results of request")
 
 	select {
@@ -354,14 +359,16 @@ func (cr *ContractRequester) ReceiveResult(msg *message.Message) error {
 	}
 
 	res := payload.ReturnResults{}
-	if err = res.Unmarshal(meta.Payload); err != nil {
+	err = res.Unmarshal(meta.Payload)
+	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal payload.ReturnResults")
 	}
 
 	ctx, span := instracer.StartSpan(ctx, "ContractRequester.ReceiveResult")
 	defer span.End()
 
-	if err = cr.result(ctx, &res); err != nil {
+	err = cr.result(ctx, &res)
+	if err != nil {
 		return errors.Wrap(err, "[ ReceiveResult ]")
 	}
 
