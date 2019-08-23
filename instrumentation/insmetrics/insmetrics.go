@@ -20,8 +20,8 @@ import (
 	"context"
 	"time"
 
+	"contrib.go.opencensus.io/exporter/prometheus"
 	prometheusclient "github.com/prometheus/client_golang/prometheus"
-	"go.opencensus.io/exporter/prometheus"
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
 

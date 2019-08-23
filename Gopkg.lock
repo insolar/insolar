@@ -2,13 +2,23 @@
 
 
 [[projects]]
-  branch = "master"
-  digest = "1:e95de5c830369d6592224de57a31cd87a2ba1cec2abaf050d06a63ee8f7babd8"
-  name = "git.apache.org/thrift.git"
-  packages = ["lib/go/thrift"]
+  digest = "1:8dd0db5b95368d375a994534f0ff7b1454cad3fc222c3f76a41dae43fa070d8b"
+  name = "contrib.go.opencensus.io/exporter/jaeger"
+  packages = [
+    ".",
+    "internal/gen-go/jaeger",
+  ]
   pruneopts = "UT"
-  revision = "7f0fa6c21ec225aebbbc563607646124279e557c"
-  source = "github.com/apache/thrift"
+  revision = "f3684086370a4b70671b0611a7d4ffd560eb3b54"
+  version = "v0.1.0"
+
+[[projects]]
+  digest = "1:a0f79124a2fba5112d3d1466b917daf508e548c6c2da106399df92a79e06628b"
+  name = "contrib.go.opencensus.io/exporter/prometheus"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "f4a2c1e53ec45636355d35fb9022b64e4bdd4a91"
+  version = "v0.1.0"
 
 [[projects]]
   branch = "master"
@@ -32,6 +42,14 @@
   pruneopts = "UT"
   revision = "577f2aca3bdaa3b2ba8a64ccaf39c67b82022400"
   version = "v1.0.0-rc.1"
+
+[[projects]]
+  digest = "1:b39cf81d5f440b9c0757a25058432d33af867e5201109bf53621356d9dab4b73"
+  name = "github.com/apache/thrift"
+  packages = ["lib/go/thrift"]
+  pruneopts = "UT"
+  revision = "384647d290e2e4a55a14b1b7ef1b7e66293a2c33"
+  version = "v0.12.0"
 
 [[projects]]
   branch = "master"
@@ -232,6 +250,14 @@
   pruneopts = "UT"
   revision = "886a7fbe3eb1c874d46f623bfa70af45f425b3d1"
   version = "v1.0.0"
+
+[[projects]]
+  digest = "1:7fae9ec96d10b2afce0da23c378c8b3389319b7f92fa092f2621bba3078cfb4b"
+  name = "github.com/hashicorp/golang-lru"
+  packages = ["simplelru"]
+  pruneopts = "UT"
+  revision = "7f827b33c0f158ec5dfbba01bb0b14a4541fd81d"
+  version = "v0.5.3"
 
 [[projects]]
   digest = "1:c0d19ab64b32ce9fe5cf4ddceba78d5bc9807f0016db6b1183599da3dcc24d10"
@@ -558,17 +584,17 @@
   revision = "772ced7fd4c2f6322c07537a9a93b68d74551fa6"
 
 [[projects]]
-  digest = "1:2b4f8766d46d868cb490fe7b8c36c28b1e93a4afe712d25f6d4c6f9d58ca2757"
+  digest = "1:b7c2ac33d95453f9285cb06d1dd07e666341f597e8090c0c925af4e9f8a3a150"
   name = "go.opencensus.io"
   packages = [
     ".",
-    "exemplar",
-    "exporter/jaeger",
-    "exporter/jaeger/internal/gen-go/jaeger",
-    "exporter/prometheus",
     "internal",
     "internal/tagencoding",
+    "metric/metricdata",
+    "metric/metricexport",
+    "metric/metricproducer",
     "plugin/ocgrpc",
+    "resource",
     "stats",
     "stats/internal",
     "stats/view",
@@ -581,8 +607,8 @@
     "zpages/internal",
   ]
   pruneopts = "UT"
-  revision = "2b5032d79456124f42db6b7eb19ac6c155449dc2"
-  version = "v0.19.0"
+  revision = "9c377598961b706d1542bd2d84d538b5094d596e"
+  version = "v0.22.0"
 
 [[projects]]
   branch = "master"
@@ -730,6 +756,8 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "contrib.go.opencensus.io/exporter/jaeger",
+    "contrib.go.opencensus.io/exporter/prometheus",
     "github.com/ThreeDotsLabs/watermill",
     "github.com/ThreeDotsLabs/watermill/message",
     "github.com/ThreeDotsLabs/watermill/message/router/middleware",
@@ -772,8 +800,6 @@
     "github.com/stretchr/testify/suite",
     "github.com/tylerb/gls",
     "github.com/ugorji/go/codec",
-    "go.opencensus.io/exporter/jaeger",
-    "go.opencensus.io/exporter/prometheus",
     "go.opencensus.io/stats",
     "go.opencensus.io/stats/view",
     "go.opencensus.io/tag",
