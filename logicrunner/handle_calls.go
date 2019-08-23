@@ -21,17 +21,15 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/platformpolicy"
 
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/common"
@@ -68,16 +66,20 @@ func (h *HandleCall) sendToNextExecutor(
 	logger := inslogger.FromContext(ctx)
 
 	logger.Debug("Sending additional request to next executor")
-	additionalCallMsg := message.AdditionalCallFromPreviousExecutor{
+	msg, err := payload.NewMessage(&payload.AdditionalCallFromPreviousExecutor{
 		ObjectReference: objectRef,
 		RequestRef:      requestRef,
-		Request:         request,
-		ServiceData:     oldServiceDataFromContext(ctx),
+		Request:         &request,
+		ServiceData:     common.ServiceDataFromContext(ctx),
+	})
+	if err != nil {
+		logger.Error("[ HandleCall.handleActual.sendToNextExecutor ] failed to serialize payload message", err)
 	}
 
-	_, err := h.dep.lr.MessageBus.Send(ctx, &additionalCallMsg, nil)
-	if err != nil {
-		logger.Error("[ HandleCall.handleActual.sendToNextExecutor ] mb.Send failed to send AdditionalCallFromPreviousExecutor, ", err)
+	resp, done := h.dep.Sender.SendRole(ctx, msg, insolar.DynamicRoleVirtualExecutor, objectRef)
+	done()
+	if _, ok := <-resp; !ok {
+		logger.Error("[ HandleCall.handleActual.sendToNextExecutor ] no reply")
 	}
 }
 
@@ -111,17 +113,20 @@ func (h *HandleCall) checkExecutionLoop(
 
 func (h *HandleCall) handleActual(
 	ctx context.Context,
-	msg *message.CallMethod,
+	msg payload.CallMethod,
 	f flow.Flow,
 ) (insolar.Reply, error) {
 
 	lr := h.dep.lr
 
+	var pcs = platformpolicy.NewPlatformCryptographyScheme() // TODO: create message factory
+	target := record.CalculateRequestAffinityRef(msg.Request, msg.PulseNumber, pcs)
+
 	procCheckRole := CheckOurRole{
-		msg:         msg,
-		role:        insolar.DynamicRoleVirtualExecutor,
-		lr:          lr,
-		pulseNumber: flow.Pulse(ctx),
+		target:         *target,
+		role:           insolar.DynamicRoleVirtualExecutor,
+		jetCoordinator: h.dep.lr.JetCoordinator,
+		pulseNumber:    flow.Pulse(ctx),
 	}
 
 	if err := f.Procedure(ctx, &procCheckRole, true); err != nil {
@@ -133,9 +138,9 @@ func (h *HandleCall) handleActual(
 		return nil, errors.Wrap(err, "[ HandleCall.handleActual ] can't play role")
 	}
 
-	request := msg.IncomingRequest
+	request := msg.Request
 
-	procRegisterRequest := NewRegisterIncomingRequest(request, h.dep)
+	procRegisterRequest := NewRegisterIncomingRequest(*request, h.dep)
 	err := f.Procedure(ctx, procRegisterRequest, true)
 	if err != nil {
 		if err == flow.ErrCancelled {
@@ -189,7 +194,7 @@ func (h *HandleCall) handleActual(
 	if len(reqInfo.Result) != 0 {
 		logger.Debug("request already has result on ledger, returning it")
 		go func() {
-			err := h.sendRequestResult(ctx, *objRef, *requestRef, request, *reqInfo)
+			err := h.sendRequestResult(ctx, *objRef, *requestRef, *request, *reqInfo)
 			if err != nil {
 				logger.Error("couldn't send request result: ", err.Error())
 			}
@@ -197,7 +202,7 @@ func (h *HandleCall) handleActual(
 		return registeredRequestReply, nil
 	}
 
-	if h.checkExecutionLoop(ctx, *requestRef, request) {
+	if h.checkExecutionLoop(ctx, *requestRef, *request) {
 		proc := &RecordErrorResult{
 			err:             errors.New("loop detected"),
 			requestRef:      *requestRef,
@@ -216,13 +221,13 @@ func (h *HandleCall) handleActual(
 	defer done()
 
 	if err != nil {
-		go h.sendToNextExecutor(ctx, *objRef, *requestRef, request)
+		go h.sendToNextExecutor(ctx, *objRef, *requestRef, *request)
 		return registeredRequestReply, nil
 	}
 
 	broker := h.dep.StateStorage.UpsertExecutionState(*objRef)
 
-	proc := AddFreshRequest{broker: broker, requestRef: *requestRef, request: request}
+	proc := AddFreshRequest{broker: broker, requestRef: *requestRef, request: *request}
 	if err := f.Procedure(ctx, &proc, true); err != nil {
 		return nil, errors.Wrap(err, "couldn't pass request to broker")
 	}
@@ -231,23 +236,18 @@ func (h *HandleCall) handleActual(
 }
 
 func (h *HandleCall) Present(ctx context.Context, f flow.Flow) error {
-	ctx = loggerWithTargetID(ctx, h.Parcel)
 	inslogger.FromContext(ctx).Debug("HandleCall.Present starts ...")
 
-	msg, ok := h.Parcel.Message().(*message.CallMethod)
-	if !ok {
-		return errors.New("is not CallMethod message")
+	message := payload.CallMethod{}
+	err := message.Unmarshal(h.Message.Payload)
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal message")
 	}
 
-	ctx, span := instracer.StartSpan(ctx, "HandleCall.Present")
-	span.AddAttributes(
-		trace.StringAttribute("msg.Type", msg.Type().String()),
-	)
-	defer span.End()
+	rep, err := h.handleActual(ctx, message, f)
 
-	rep, err := h.handleActual(ctx, msg, f)
 	if err != nil {
-		return sendErrorMessage(ctx, h.dep.Sender, h.Message, err)
+		return err
 	}
 
 	h.dep.Sender.Reply(ctx, h.Message, bus.ReplyAsMessage(ctx, rep))

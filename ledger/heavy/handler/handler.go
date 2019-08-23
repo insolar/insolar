@@ -21,8 +21,10 @@ import (
 	"fmt"
 
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
+
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/bus/meta"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
@@ -31,8 +33,9 @@ import (
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/heavy/executor"
 
-	"github.com/insolar/insolar/ledger/heavy/proc"
 	"github.com/pkg/errors"
+
+	"github.com/insolar/insolar/ledger/heavy/proc"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/ledger/object"
@@ -121,8 +124,8 @@ func New(cfg configuration.Ledger) *Handler {
 }
 
 func (h *Handler) Process(msg *watermillMsg.Message) error {
-	ctx := inslogger.ContextWithTrace(context.Background(), msg.Metadata.Get(bus.MetaTraceID))
-	parentSpan, err := instracer.Deserialize([]byte(msg.Metadata.Get(bus.MetaSpanData)))
+	ctx := inslogger.ContextWithTrace(context.Background(), msg.Metadata.Get(meta.TraceID))
+	parentSpan, err := instracer.Deserialize([]byte(msg.Metadata.Get(meta.SpanData)))
 	if err == nil {
 		ctx = instracer.WithParentSpan(ctx, parentSpan)
 	} else {
@@ -130,20 +133,21 @@ func (h *Handler) Process(msg *watermillMsg.Message) error {
 	}
 
 	for k, v := range msg.Metadata {
-		if k == bus.MetaSpanData || k == bus.MetaTraceID {
+		if k == meta.SpanData || k == meta.TraceID {
 			continue
 		}
 		ctx, _ = inslogger.WithField(ctx, k, v)
 	}
 	logger := inslogger.FromContext(ctx)
 
-	meta := payload.Meta{}
-	err = meta.Unmarshal(msg.Payload)
+	metaPayload := payload.Meta{}
+	err = metaPayload.Unmarshal(msg.Payload)
 	if err != nil {
-		logger.Error(err)
+		logger.Error(errors.Wrap(err, "failed to unmarshal payload"))
+		return nil
 	}
 
-	err = h.handle(ctx, msg)
+	err = h.handle(ctx, metaPayload)
 	if err != nil {
 		logger.Error(errors.Wrap(err, "handle error"))
 	}
@@ -151,16 +155,10 @@ func (h *Handler) Process(msg *watermillMsg.Message) error {
 	return nil
 }
 
-func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) error {
+func (h *Handler) handle(ctx context.Context, meta payload.Meta) error {
 	var err error
 	logger := inslogger.FromContext(ctx)
 
-	meta := payload.Meta{}
-	err = meta.Unmarshal(msg.Payload)
-	if err != nil {
-		logger.Error(err)
-		return errors.Wrap(err, "failed to unmarshal meta")
-	}
 	payloadType, err := payload.UnmarshalType(meta.Payload)
 	if err != nil {
 		logger.Error(err)

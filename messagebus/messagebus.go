@@ -25,27 +25,24 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/insolar/insolar/network"
-
 	"github.com/ThreeDotsLabs/watermill"
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
-
-	"github.com/insolar/insolar/insolar/bus"
-	"github.com/insolar/insolar/insolar/jet"
-	"github.com/insolar/insolar/insolar/payload"
-
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 
-	"github.com/insolar/insolar/insolar/pulse"
-
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/bus"
+	busMeta "github.com/insolar/insolar/insolar/bus/meta"
+	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/network"
 )
 
 const deliverRPCMethodName = "MessageBus.Deliver"
@@ -174,9 +171,9 @@ func (mb *MessageBus) createWatermillMessage(_ context.Context, parcel insolar.P
 	payload := message.ParcelToBytes(parcel)
 	wmMsg := watermillMsg.NewMessage(watermill.NewUUID(), payload)
 
-	wmMsg.Metadata.Set(bus.MetaPulse, fmt.Sprintf("%d", currentPulse.PulseNumber))
-	wmMsg.Metadata.Set(bus.MetaType, parcel.Message().Type().String())
-	wmMsg.Metadata.Set(bus.MetaSender, mb.OriginProvider.GetOrigin().ID().String())
+	wmMsg.Metadata.Set(busMeta.Pulse, fmt.Sprintf("%d", currentPulse.PulseNumber))
+	wmMsg.Metadata.Set(busMeta.Type, parcel.Message().Type().String())
+	wmMsg.Metadata.Set(busMeta.Sender, mb.OriginProvider.GetOrigin().ID().String())
 	return wmMsg
 }
 
@@ -247,7 +244,7 @@ func deserializePayload(msg *watermillMsg.Message) (insolar.Reply, error) {
 		return nil, errors.Wrap(err, "can't deserialize message payload")
 	}
 
-	if msg.Metadata.Get(bus.MetaType) == bus.TypeReply {
+	if msg.Metadata.Get(busMeta.Type) == busMeta.TypeReply {
 		rep, err := reply.Deserialize(bytes.NewBuffer(meta.Payload))
 		if err != nil {
 			return nil, errors.Wrap(err, "can't deserialize payload to reply")
@@ -401,14 +398,6 @@ func (mb *MessageBus) checkPulse(ctx context.Context, parcel insolar.Parcel, loc
 				"[ checkPulse ] Pulse is TOO OLD: (parcel: %d, current: %d) Parcel is: %#v",
 				ppn, pulse.PulseNumber, parcel.Message(),
 			)
-		}
-
-		// Parcel is from past. Return error for some messages, allow for others.
-		switch parcel.Message().(type) {
-		case
-			*message.CallMethod:
-			inslogger.FromContext(ctx).Errorf("[ checkPulse ] Incorrect message pulse (parcel: %d, current: %d) Msg: %s", ppn, pulse.PulseNumber, parcel.Message().Type().String())
-			return fmt.Errorf("[ checkPulse ] Incorrect message pulse (parcel: %d, current: %d)  Msg: %s", ppn, pulse.PulseNumber, parcel.Message().Type().String())
 		}
 	}
 

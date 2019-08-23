@@ -21,15 +21,16 @@ import (
 	"testing"
 	"time"
 
+	wmMessage "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/gojuno/minimock"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/gen"
-	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
@@ -38,7 +39,6 @@ import (
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/executionregistry"
 	"github.com/insolar/insolar/logicrunner/writecontroller"
-	"github.com/insolar/insolar/testutils"
 )
 
 func TestHandleCall_CheckExecutionLoop(t *testing.T) {
@@ -201,14 +201,14 @@ func TestHandleCall_Present(t *testing.T) {
 			Parcel:  nil,
 		}
 
-		msg := message.CallMethod{
-			IncomingRequest: record.IncomingRequest{
+		msg := payload.CallMethod{
+			Request: &record.IncomingRequest{
 				CallType: record.CTMethod,
 				Object:   &objRef,
 			},
 		}
 
-		reply, err := handler.handleActual(ctx, &msg, fm)
+		reply, err := handler.handleActual(ctx, msg, fm)
 		assert.NotNil(t, reply)
 		assert.NoError(t, err)
 	})
@@ -246,15 +246,16 @@ func TestHandleCall_Present(t *testing.T) {
 					executionregistry.NewExecutionRegistryMock(mc).FindRequestLoopMock.Return(false),
 				),
 				ResultsMatcher: nil,
+				Sender: bus.NewSenderMock(mc).SendRoleMock.Set(
+					func(ctx context.Context, msg *wmMessage.Message, role insolar.DynamicRole, obj insolar.Reference) (<-chan *wmMessage.Message, func()) {
+						payloadType, err := payload.UnmarshalType(msg.Payload)
+						require.NoError(t, err, "unmarshalType")
+						require.Equal(t, payload.TypeAdditionalCallFromPreviousExecutor, payloadType)
+						return nil, func() {}
+					}),
 				lr: &LogicRunner{
 					ArtifactManager: artifacts.NewClientMock(mc),
-					MessageBus: testutils.NewMessageBusMock(mc).SendMock.Set(
-						func(_ context.Context, m1 insolar.Message, _ *insolar.MessageSendOptions) (insolar.Reply, error) {
-							assert.IsType(t, &message.AdditionalCallFromPreviousExecutor{}, m1)
-							return nil, nil
-						}),
 				},
-				Sender:     nil,
 				JetStorage: nil,
 				WriteAccessor: writecontroller.NewAccessorMock(mc).
 					BeginMock.Return(func() {}, writecontroller.ErrWriteClosed),
@@ -263,14 +264,14 @@ func TestHandleCall_Present(t *testing.T) {
 			Parcel:  nil,
 		}
 
-		msg := message.CallMethod{
-			IncomingRequest: record.IncomingRequest{
+		msg := payload.CallMethod{
+			Request: &record.IncomingRequest{
 				CallType: record.CTMethod,
 				Object:   &objRef,
 			},
 		}
 
-		reply, err := handler.handleActual(ctx, &msg, fm)
+		reply, err := handler.handleActual(ctx, msg, fm)
 		assert.NotNil(t, reply)
 		assert.NoError(t, err)
 	})
@@ -306,7 +307,6 @@ func TestHandleCall_Present(t *testing.T) {
 				ResultsMatcher: nil,
 				lr: &LogicRunner{
 					ArtifactManager: artifacts.NewClientMock(mc),
-					MessageBus:      testutils.NewMessageBusMock(mc),
 				},
 				Sender:        nil,
 				JetStorage:    nil,
@@ -316,14 +316,14 @@ func TestHandleCall_Present(t *testing.T) {
 			Parcel:  nil,
 		}
 
-		msg := message.CallMethod{
-			IncomingRequest: record.IncomingRequest{
+		msg := payload.CallMethod{
+			Request: &record.IncomingRequest{
 				CallType: record.CTMethod,
 				Object:   &objRef,
 			},
 		}
 
-		reply, err := handler.handleActual(ctx, &msg, fm)
+		reply, err := handler.handleActual(ctx, msg, fm)
 		assert.Nil(t, reply)
 		assert.EqualError(t, err, flow.ErrCancelled.Error())
 	})
@@ -358,7 +358,6 @@ func TestHandleCall_Present(t *testing.T) {
 				ResultsMatcher: nil,
 				lr: &LogicRunner{
 					ArtifactManager: artifacts.NewClientMock(mc),
-					MessageBus:      testutils.NewMessageBusMock(mc),
 				},
 				Sender:        nil,
 				JetStorage:    nil,
@@ -368,14 +367,14 @@ func TestHandleCall_Present(t *testing.T) {
 			Parcel:  nil,
 		}
 
-		msg := message.CallMethod{
-			IncomingRequest: record.IncomingRequest{
+		msg := payload.CallMethod{
+			Request: &record.IncomingRequest{
 				CallType: record.CTMethod,
 				Object:   &objRef,
 			},
 		}
 
-		reply, err := handler.handleActual(ctx, &msg, fm)
+		reply, err := handler.handleActual(ctx, msg, fm)
 		assert.Nil(t, reply)
 		assert.EqualError(t, err, flow.ErrCancelled.Error())
 	})
@@ -410,7 +409,6 @@ func TestHandleCall_Present(t *testing.T) {
 				ResultsMatcher: nil,
 				lr: &LogicRunner{
 					ArtifactManager: artifacts.NewClientMock(mc),
-					MessageBus:      testutils.NewMessageBusMock(mc),
 				},
 				Sender:        nil,
 				JetStorage:    nil,
@@ -420,14 +418,14 @@ func TestHandleCall_Present(t *testing.T) {
 			Parcel:  nil,
 		}
 
-		msg := message.CallMethod{
-			IncomingRequest: record.IncomingRequest{
+		msg := payload.CallMethod{
+			Request: &record.IncomingRequest{
 				CallType: record.CTMethod,
 				Object:   nil,
 			},
 		}
 
-		reply, err := handler.handleActual(ctx, &msg, fm)
+		reply, err := handler.handleActual(ctx, msg, fm)
 		assert.Nil(t, reply)
 		assert.Error(t, err)
 	})
@@ -465,13 +463,14 @@ func TestHandleCall_Present(t *testing.T) {
 				ResultsMatcher: nil,
 				lr: &LogicRunner{
 					ArtifactManager: artifacts.NewClientMock(mc),
-					MessageBus: testutils.NewMessageBusMock(mc).SendMock.Set(
-						func(_ context.Context, m1 insolar.Message, _ *insolar.MessageSendOptions) (insolar.Reply, error) {
-							assert.IsType(t, &message.AdditionalCallFromPreviousExecutor{}, m1)
-							return nil, nil
-						}),
 				},
-				Sender:        nil,
+				Sender: bus.NewSenderMock(mc).SendRoleMock.Set(
+					func(ctx context.Context, msg *wmMessage.Message, role insolar.DynamicRole, obj insolar.Reference) (<-chan *wmMessage.Message, func()) {
+						payloadType, err := payload.UnmarshalType(msg.Payload)
+						require.NoError(t, err, "unmarshalType")
+						require.Equal(t, payload.TypeAdditionalCallFromPreviousExecutor, payloadType)
+						return nil, func() {}
+					}),
 				JetStorage:    nil,
 				WriteAccessor: writecontroller.NewAccessorMock(mc).BeginMock.Return(func() {}, writecontroller.ErrWriteClosed),
 			},
@@ -479,14 +478,14 @@ func TestHandleCall_Present(t *testing.T) {
 			Parcel:  nil,
 		}
 
-		msg := message.CallMethod{
-			IncomingRequest: record.IncomingRequest{
+		msg := payload.CallMethod{
+			Request: &record.IncomingRequest{
 				CallType: record.CTMethod,
 				Object:   &objRef,
 			},
 		}
 
-		reply, err := handler.handleActual(ctx, &msg, fm)
+		reply, err := handler.handleActual(ctx, msg, fm)
 		assert.NotNil(t, reply)
 		assert.NoError(t, err)
 	})
@@ -539,14 +538,14 @@ func TestHandleCall_Present(t *testing.T) {
 			Parcel:  nil,
 		}
 
-		msg := message.CallMethod{
-			IncomingRequest: record.IncomingRequest{
+		msg := payload.CallMethod{
+			Request: &record.IncomingRequest{
 				CallType: record.CTMethod,
 				Object:   &objRef,
 			},
 		}
 
-		gotReply, err := handler.handleActual(ctx, &msg, fm)
+		gotReply, err := handler.handleActual(ctx, msg, fm)
 		require.NoError(t, err)
 		require.Equal(t, &reply.RegisterRequest{Request: reqRef}, gotReply)
 	})
@@ -585,8 +584,8 @@ func TestHandleCall_Present(t *testing.T) {
 			Parcel:  nil,
 		}
 
-		msg := message.CallMethod{
-			IncomingRequest: record.IncomingRequest{
+		msg := payload.CallMethod{
+			Request: &record.IncomingRequest{
 				CallType: record.CTMethod,
 				Object:   &objRef,
 			},
@@ -596,7 +595,7 @@ func TestHandleCall_Present(t *testing.T) {
 		require.NoError(t, err)
 
 		expectedReply := &reply.CallMethod{Result: expectedResult}
-		gotReply, err := handler.handleActual(ctx, &msg, fm)
+		gotReply, err := handler.handleActual(ctx, msg, fm)
 		require.NoError(t, err)
 		require.Equal(t, expectedReply, gotReply)
 
@@ -644,15 +643,15 @@ func TestHandleCall_Present(t *testing.T) {
 			Parcel:  nil,
 		}
 
-		msg := message.CallMethod{
-			IncomingRequest: record.IncomingRequest{
+		msg := payload.CallMethod{
+			Request: &record.IncomingRequest{
 				CallType: record.CTMethod,
 				Object:   &objRef,
 			},
 		}
 
 		expectedReply := &reply.CallMethod{Object: &objRef, Result: []byte{3, 2, 1}}
-		gotReply, err := handler.handleActual(ctx, &msg, fm)
+		gotReply, err := handler.handleActual(ctx, msg, fm)
 		require.NoError(t, err)
 		require.Equal(t, expectedReply, gotReply)
 

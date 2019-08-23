@@ -34,12 +34,10 @@ import (
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/dispatcher"
 	"github.com/insolar/insolar/insolar/jet"
-	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/builtin"
 	lrCommon "github.com/insolar/insolar/logicrunner/common"
@@ -52,11 +50,9 @@ import (
 
 // LogicRunner is a general interface of contract executor
 type LogicRunner struct {
-	MessageBus                 insolar.MessageBus                 `inject:""`
 	ContractRequester          insolar.ContractRequester          `inject:""`
 	NodeNetwork                network.NodeNetwork                `inject:""`
 	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
-	ParcelFactory              message.ParcelFactory              `inject:""`
 	PulseAccessor              pulse.Accessor                     `inject:""`
 	ArtifactManager            artifacts.Client                   `inject:""`
 	DescriptorsCache           artifacts.DescriptorsCache         `inject:""`
@@ -182,7 +178,7 @@ func (lr *LogicRunner) initializeGoPlugin(ctx context.Context) error {
 		logger.Error("Starting goplugin VM with RPC turned off")
 	}
 
-	gp, err := goplugin.NewGoPlugin(lr.Cfg, lr.MessageBus, lr.ArtifactManager)
+	gp, err := goplugin.NewGoPlugin(lr.Cfg, lr.ArtifactManager)
 	if err != nil {
 		return err
 	}
@@ -281,7 +277,7 @@ func (lr *LogicRunner) sendOnPulseMessagesAsync(ctx context.Context, messages ma
 	for ref, msg := range messages {
 		sendWg.Add(len(msg))
 		for _, msg := range msg {
-			lr.sendOnPulseMessage(ctx, ref, msg, &sendWg)
+			go lr.sendOnPulseMessage(ctx, ref, msg, &sendWg)
 		}
 	}
 
@@ -304,30 +300,7 @@ func (lr *LogicRunner) sendOnPulseMessage(ctx context.Context, objectRef insolar
 	done()
 }
 
-func (lr *LogicRunner) AddUnwantedResponse(ctx context.Context, msg insolar.Message) error {
-	m := msg.(*message.ReturnResults)
-	return lr.ResultsMatcher.AddUnwantedResponse(ctx, m)
-}
-
-func convertQueueToMessageQueue(ctx context.Context, queue []*lrCommon.Transcript) []*payload.ExecutionQueueElement {
-	mq := make([]*payload.ExecutionQueueElement, 0)
-	var traces string
-	for _, elem := range queue {
-		mq = append(mq, &payload.ExecutionQueueElement{
-			RequestRef:  elem.RequestRef,
-			Incoming:    elem.Request,
-			ServiceData: serviceDataFromContext(elem.Context),
-		})
-
-		traces += inslogger.TraceID(elem.Context) + ", "
-	}
-
-	inslogger.FromContext(ctx).Debug("convertQueueToMessageQueue: ", traces)
-
-	return mq
-}
-
-func contextWithServiceData(ctx context.Context, data message.ServiceData) context.Context {
+func contextWithServiceData(ctx context.Context, data *payload.ServiceData) context.Context {
 	// ctx := inslogger.ContextWithTrace(context.Background(), data.LogTraceID)
 	ctx = inslogger.ContextWithTrace(ctx, data.LogTraceID)
 	ctx = inslogger.WithLoggerLevel(ctx, data.LogLevel)
@@ -338,26 +311,44 @@ func contextWithServiceData(ctx context.Context, data message.ServiceData) conte
 	return ctx
 }
 
-func serviceDataFromContext(ctx context.Context) *payload.ServiceData {
-	if ctx == nil {
-		log.Error("nil context, can't create correct ServiceData")
-		return &payload.ServiceData{}
+func (lr *LogicRunner) AddUnwantedResponse(ctx context.Context, msg insolar.Payload) error {
+	m := msg.(*payload.ReturnResults)
+	currentPulse, err := lr.PulseAccessor.Latest(ctx)
+	if err != nil {
+		return errors.Wrap(err, "failed to get current pulse")
 	}
-	return &payload.ServiceData{
-		LogTraceID:    inslogger.TraceID(ctx),
-		LogLevel:      inslogger.GetLoggerLevel(ctx),
-		TraceSpanData: instracer.MustSerialize(ctx),
+	done, err := lr.WriteController.Begin(ctx, currentPulse.PulseNumber)
+	defer done()
+	if err != nil {
+		return flow.ErrCancelled
 	}
+
+	// TODO: move towards flow.Dispatcher in INS-3341
+	err = lr.isStillExecutor(ctx, *m.Target.Record())
+	if err != nil {
+		return err
+	}
+
+	return lr.ResultsMatcher.AddUnwantedResponse(ctx, m)
 }
 
-func oldServiceDataFromContext(ctx context.Context) message.ServiceData {
-	if ctx == nil {
-		log.Error("nil context, can't create correct ServiceData")
-		return message.ServiceData{}
+func (lr *LogicRunner) isStillExecutor(ctx context.Context, object insolar.ID) error {
+	currentPulse, err := lr.PulseAccessor.Latest(ctx)
+	if err != nil {
+		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to get current pulse"))
+		return flow.ErrCancelled
 	}
-	return message.ServiceData{
-		LogTraceID:    inslogger.TraceID(ctx),
-		LogLevel:      inslogger.GetLoggerLevel(ctx),
-		TraceSpanData: instracer.MustSerialize(ctx),
+
+	node, err := lr.JetCoordinator.VirtualExecutorForObject(ctx, object, currentPulse.PulseNumber)
+	if err != nil {
+		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to calculate current executor"))
+		return flow.ErrCancelled
 	}
+
+	if *node != lr.JetCoordinator.Me() {
+		inslogger.FromContext(ctx).Debug("I'm not executor")
+		return flow.ErrCancelled
+	}
+
+	return nil
 }

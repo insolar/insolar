@@ -20,27 +20,23 @@ import (
 	"context"
 	"sync"
 
-	"github.com/pkg/errors"
-
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/messagebus"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/logicrunner.ResultMatcher -o ./ -s _mock.go -g
 
 type ResultMatcher interface {
 	AddStillExecution(ctx context.Context, msg *payload.StillExecuting)
-	AddUnwantedResponse(ctx context.Context, msg *message.ReturnResults) error
+	AddUnwantedResponse(ctx context.Context, msg *payload.ReturnResults) error
 	Clear(ctx context.Context)
 }
 
 type resultWithContext struct {
 	ctx    context.Context
-	result message.ReturnResults
+	result payload.ReturnResults
 }
 
 type resultsMatcher struct {
@@ -59,22 +55,20 @@ func newResultsMatcher(lr *LogicRunner) *resultsMatcher {
 	}
 }
 
-func (rm *resultsMatcher) send(ctx context.Context, msg *message.ReturnResults, receiver insolar.Reference) {
+func (rm *resultsMatcher) send(ctx context.Context, msg *payload.ReturnResults, receiver insolar.Reference) {
 	logger := inslogger.FromContext(ctx)
 
 	logger.Debug("resending result of request ", msg.RequestRef.String(), " to ", receiver.String())
 
-	sender := messagebus.BuildSender(
-		rm.lr.MessageBus.Send,
-		messagebus.RetryIncorrectPulse(rm.lr.PulseAccessor),
-		messagebus.RetryFlowCancelled(rm.lr.PulseAccessor),
-	)
-	_, err := sender(ctx, msg, &insolar.MessageSendOptions{
-		Receiver: &receiver,
-	})
+	sender := bus.NewWaitOKWithRetrySender(rm.lr.Sender, rm.lr.PulseAccessor, 1)
+
+	msgData, err := payload.NewResultMessage(msg)
 	if err != nil {
-		logger.Error(errors.Wrap(err, "couldn't resend response"))
+		inslogger.FromContext(ctx).Debug("failed to serialize message")
+		return
 	}
+
+	sender.SendTarget(ctx, msgData, receiver)
 }
 
 func (rm *resultsMatcher) AddStillExecution(ctx context.Context, msg *payload.StillExecuting) {
@@ -93,15 +87,9 @@ func (rm *resultsMatcher) AddStillExecution(ctx context.Context, msg *payload.St
 	}
 }
 
-func (rm *resultsMatcher) AddUnwantedResponse(ctx context.Context, msg *message.ReturnResults) error {
+func (rm *resultsMatcher) AddUnwantedResponse(ctx context.Context, msg *payload.ReturnResults) error {
 	rm.lock.Lock()
 	defer rm.lock.Unlock()
-
-	object := *msg.Target.Record()
-	err := rm.isStillExecutor(ctx, object)
-	if err != nil {
-		return err
-	}
 
 	inslogger.FromContext(ctx).Debug("got unwanted response to request ", msg.RequestRef.String())
 
@@ -114,22 +102,6 @@ func (rm *resultsMatcher) AddUnwantedResponse(ctx context.Context, msg *message.
 		result: *msg,
 	}
 
-	return rm.isStillExecutor(ctx, object)
-}
-
-// isStillExecutor is tmp solution. Needs to be moved on flow
-func (rm *resultsMatcher) isStillExecutor(ctx context.Context, object insolar.ID) error {
-	pulse, err := rm.lr.PulseAccessor.Latest(ctx)
-	if err != nil {
-		return flow.ErrCancelled
-	}
-	node, err := rm.lr.JetCoordinator.VirtualExecutorForObject(ctx, object, pulse.PulseNumber)
-	if err != nil {
-		return flow.ErrCancelled
-	}
-	if *node != rm.lr.JetCoordinator.Me() {
-		return flow.ErrCancelled
-	}
 	return nil
 }
 

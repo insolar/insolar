@@ -10,7 +10,7 @@ import (
 	"github.com/insolar/go-actors/actor"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -160,7 +160,7 @@ func (a *outgoingSenderActorState) sendOutgoingRequest(ctx context.Context, outg
 	incoming := buildIncomingRequestFromOutgoing(outgoing)
 
 	// Actually make a call.
-	callMsg := &message.CallMethod{IncomingRequest: *incoming}
+	callMsg := &payload.CallMethod{Request: incoming}
 	res, _, err := a.cr.Call(ctx, callMsg)
 	if err != nil {
 		return nil, nil, nil, err
@@ -175,7 +175,7 @@ func (a *outgoingSenderActorState) sendOutgoingRequest(ctx context.Context, outg
 	case *reply.RegisterRequest: // no-wait call
 		result = v.Request.Bytes()
 	default:
-		err = fmt.Errorf("sendOutgoingRequest: cr.Call returned unexpected type %T", v)
+		err = fmt.Errorf("sendOutgoingRequest: cr.Call returned unexpected type %T", res)
 		return nil, nil, nil, err
 	}
 

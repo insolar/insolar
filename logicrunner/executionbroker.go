@@ -186,14 +186,14 @@ func (q *ExecutionBroker) processTranscript(ctx context.Context, transcript *com
 
 	ctx, logger := inslogger.WithField(ctx, "request", transcript.RequestRef.String())
 
-	reply, err := q.requestsExecutor.ExecuteAndSave(ctx, transcript)
+	replyData, err := q.requestsExecutor.ExecuteAndSave(ctx, transcript)
 	if err != nil {
 		logger.Warn("contract execution error: ", err)
 	}
 
 	q.finishTask(ctx, transcript)
 
-	go q.requestsExecutor.SendReply(ctx, transcript, reply, err)
+	go q.requestsExecutor.SendReply(ctx, transcript, replyData, err)
 
 	// we're checking here that pulse was changed and we should send
 	// a message that we've finished processing tasks
@@ -408,7 +408,7 @@ func (q *ExecutionBroker) OnPulse(ctx context.Context) []payload.Payload {
 	if sendExecResults {
 		// TODO: we also should send when executed something for validation
 		// TODO: now validation is disabled
-		messagesQueue := convertQueueToMessageQueue(ctx, requests)
+		messagesQueue := common.ConvertQueueToMessageQueue(ctx, requests)
 		ledgerHasMoreRequests := q.ledgerHasMoreRequests || hasMore
 
 		messages = append(messages, &payload.ExecutorResults{

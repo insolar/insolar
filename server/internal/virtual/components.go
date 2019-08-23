@@ -159,8 +159,11 @@ func initComponents(
 	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner, publisher, b)
 	checkError(ctx, err, "failed to start LogicRunner")
 
-	contractRequester, err := contractrequester.New(logicRunner)
+	contractRequester, err := contractrequester.New()
 	checkError(ctx, err, "failed to start ContractRequester")
+
+	// TODO: remove this hack in INS-3341
+	contractRequester.LR = logicRunner
 
 	pm := pulsemanager.NewPulseManager(logicRunner.ResultsMatcher)
 
@@ -208,13 +211,12 @@ func initComponents(
 
 	pm.FlowDispatcher = logicRunner.FlowDispatcher
 
-	stopper := startWatermill(
+	return &cm, terminationHandler, startWatermill(
 		ctx, wmLogger, subscriber, b,
 		nw.SendMessageHandler,
 		logicRunner.FlowDispatcher.Process,
+		contractRequester.ReceiveResult,
 	)
-
-	return &cm, terminationHandler, stopper
 }
 
 func startWatermill(
@@ -222,7 +224,7 @@ func startWatermill(
 	logger watermill.LoggerAdapter,
 	sub message.Subscriber,
 	b *bus.Bus,
-	outHandler, inHandler message.NoPublishHandlerFunc,
+	outHandler, inHandler, resultsHandler message.NoPublishHandlerFunc,
 ) func() {
 	inRouter, err := message.NewRouter(message.RouterConfig{}, logger)
 	if err != nil {
@@ -232,6 +234,7 @@ func startWatermill(
 	if err != nil {
 		panic(err)
 	}
+
 	outRouter.AddNoPublisherHandler(
 		"OutgoingHandler",
 		bus.TopicOutgoing,
@@ -250,19 +253,16 @@ func startWatermill(
 		inHandler,
 	)
 
+	inRouter.AddNoPublisherHandler(
+		"IncomingRequestResultHandler",
+		bus.TopicIncomingRequestResults,
+		sub,
+		resultsHandler)
+
 	startRouter(ctx, inRouter)
 	startRouter(ctx, outRouter)
 
 	return stopWatermill(ctx, inRouter, outRouter)
-}
-
-func startRouter(ctx context.Context, router *message.Router) {
-	go func() {
-		if err := router.Run(ctx); err != nil {
-			inslogger.FromContext(ctx).Error("Error while running router", err)
-		}
-	}()
-	<-router.Running()
 }
 
 func stopWatermill(ctx context.Context, routers ...io.Closer) func() {
@@ -274,4 +274,13 @@ func stopWatermill(ctx context.Context, routers ...io.Closer) func() {
 			}
 		}
 	}
+}
+
+func startRouter(ctx context.Context, router *message.Router) {
+	go func() {
+		if err := router.Run(ctx); err != nil {
+			inslogger.FromContext(ctx).Error("Error while running router", err)
+		}
+	}()
+	<-router.Running()
 }

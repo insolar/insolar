@@ -19,7 +19,6 @@ package logicrunner
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"strconv"
 	"sync"
 	"testing"
@@ -35,9 +34,9 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/bus/meta"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/jet"
-	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
@@ -58,6 +57,8 @@ import (
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/network"
 )
+
+var _ insolar.LogicRunner = &LogicRunner{}
 
 type LogicRunnerCommonTestSuite struct {
 	suite.Suite
@@ -106,7 +107,6 @@ func (suite *LogicRunnerCommonTestSuite) SetupLogicRunner() {
 	suite.lr, _ = NewLogicRunner(&configuration.LogicRunner{}, suite.pub, suite.sender)
 	suite.lr.ArtifactManager = suite.am
 	suite.lr.DescriptorsCache = suite.dc
-	suite.lr.MessageBus = suite.mb
 	suite.lr.MachinesManager = suite.mm
 	suite.lr.JetCoordinator = suite.jc
 	suite.lr.PulseAccessor = suite.ps
@@ -195,10 +195,10 @@ func (suite *LogicRunnerTestSuite) TestSagaCallAcceptNotificationHandler() {
 
 	suite.ps.LatestMock.Return(*pulseNum, nil)
 
-	msg.Metadata.Set(bus.MetaPulse, pulseNum.PulseNumber.String())
+	msg.Metadata.Set(meta.Pulse, pulseNum.PulseNumber.String())
 	sp, err := instracer.Serialize(context.Background())
 	suite.Require().NoError(err)
-	msg.Metadata.Set(bus.MetaSpanData, string(sp))
+	msg.Metadata.Set(meta.SpanData, string(sp))
 
 	meta := payload.Meta{
 		Payload: msg.Payload,
@@ -212,12 +212,13 @@ func (suite *LogicRunnerTestSuite) TestSagaCallAcceptNotificationHandler() {
 	var usedReason insolar.Reference
 	var usedReturnMode record.ReturnMode
 
-	suite.cr.CallMock.Set(func(ctx context.Context, msg insolar.Message) (insolar.Reply, *insolar.Reference, error) {
-		suite.Require().Equal(insolar.TypeCallMethod, msg.Type())
-		cm := msg.(*message.CallMethod)
-		usedCaller = cm.Caller
-		usedReason = cm.Reason
-		usedReturnMode = cm.ReturnMode
+	suite.cr.CallMock.Set(func(ctx context.Context, msg insolar.Payload) (insolar.Reply, *insolar.Reference, error) {
+		_, ok := msg.(*payload.CallMethod)
+		suite.Require().True(ok, "message should be payload.CallMethod")
+		cm := msg.(*payload.CallMethod)
+		usedCaller = cm.Request.Caller
+		usedReason = cm.Request.Reason
+		usedReturnMode = cm.Request.ReturnMode
 
 		result := &reply.RegisterRequest{
 			Request: dummyRequestRef,
@@ -276,8 +277,6 @@ func (suite *LogicRunnerTestSuite) TestStartStop() {
 	}, suite.pub, suite.sender)
 	suite.Require().NoError(err)
 	suite.Require().NotNil(lr)
-
-	lr.MessageBus = suite.mb
 
 	lr.MachinesManager = suite.mm
 
@@ -366,36 +365,32 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 	})
 	for i := 0; i < num; i++ {
 		go func(i int) {
-			msg := &message.CallMethod{
-				IncomingRequest: record.IncomingRequest{
+			payloadData := &payload.CallMethod{
+				Request: &record.IncomingRequest{
 					Prototype:    &protoRef,
 					Object:       &objectRef,
 					Method:       "some",
 					APIRequestID: utils.RandTraceID(),
 				},
 			}
-
-			parcel := &message.Parcel{
-				Sender:      notMeRef,
-				Msg:         msg,
-				PulseNumber: pulseNum,
-			}
-
+			msg, err := payload.Marshal(payloadData)
+			require.NoError(syncT, err, "NewMessage")
 			wrapper := payload.Meta{
-				Payload: message.ParcelToBytes(parcel),
-				Sender:  notMeRef,
+				Payload: msg,
 				Pulse:   pulseNum,
+				Sender:  notMeRef,
 			}
 			buf, err := wrapper.Marshal()
 			require.NoError(syncT, err)
 
 			wmMsg := message2.NewMessage(watermill.NewUUID(), buf)
-			wmMsg.Metadata.Set(bus.MetaPulse, pulseNum.String())
+			require.NoError(syncT, err, "marshal")
+			wmMsg.Metadata.Set(meta.Pulse, pulseNum.String())
+			wmMsg.Metadata.Set(meta.Sender, notMeRef.String())
 			sp, err := instracer.Serialize(context.Background())
 			require.NoError(syncT, err)
-			wmMsg.Metadata.Set(bus.MetaSpanData, string(sp))
-			wmMsg.Metadata.Set(bus.MetaType, fmt.Sprintf("%s", msg.Type()))
-			wmMsg.Metadata.Set(bus.MetaTraceID, "req-"+strconv.Itoa(i))
+			wmMsg.Metadata.Set(meta.SpanData, string(sp))
+			wmMsg.Metadata.Set(meta.TraceID, "req-"+strconv.Itoa(i))
 
 			err = suite.lr.FlowDispatcher.Process(wmMsg)
 			require.NoError(syncT, err)

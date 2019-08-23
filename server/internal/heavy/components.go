@@ -25,8 +25,9 @@ import (
 	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/network"
 
-	"github.com/insolar/insolar/ledger/heavy/exporter"
 	"google.golang.org/grpc"
+
+	"github.com/insolar/insolar/ledger/heavy/exporter"
 
 	"github.com/ThreeDotsLabs/watermill"
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
@@ -168,24 +169,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 
 	}
 
-	// API.
-	var (
-		Requester insolar.ContractRequester
-		API       insolar.APIRunner
-	)
-	{
-		var err error
-		Requester, err = contractrequester.New(nil)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to start ContractRequester")
-		}
-
-		API, err = api.NewRunner(&cfg.APIRunner)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to start ApiRunner")
-		}
-	}
-
 	// Storage.
 	var (
 		Coordinator jet.Coordinator
@@ -223,18 +206,30 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 	var (
 		Tokens  insolar.DelegationTokenFactory
 		Parcels message.ParcelFactory
-		Bus     insolar.MessageBus
 		WmBus   *bus.Bus
 	)
 	{
-		var err error
 		Tokens = delegationtoken.NewDelegationTokenFactory()
 		Parcels = messagebus.NewParcelFactory()
-		Bus, err = messagebus.NewMessageBus(cfg)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to start MessageBus")
-		}
 		WmBus = bus.NewBus(cfg.Bus, publisher, Pulses, Coordinator, CryptoScheme)
+	}
+
+	// API.
+	var (
+		Requester *contractrequester.ContractRequester
+		API       insolar.APIRunner
+	)
+	{
+		var err error
+		Requester, err = contractrequester.New()
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to start ContractRequester")
+		}
+
+		API, err = api.NewRunner(&cfg.APIRunner)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to start ApiRunner")
+		}
 	}
 
 	metricsHandler, err := metrics.NewMetrics(
@@ -364,7 +359,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		Pulses,
 		Coordinator,
 		metricsHandler,
-		Bus,
 		Requester,
 		Tokens,
 		Parcels,
@@ -390,7 +384,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		}
 	}
 
-	c.startWatermill(ctx, wmLogger, subscriber, WmBus, NetworkService.SendMessageHandler, Handler.Process)
+	c.startWatermill(ctx, wmLogger, subscriber, WmBus, NetworkService.SendMessageHandler, Handler.Process, Requester.ReceiveResult)
 
 	return c, nil
 }
@@ -426,7 +420,7 @@ func (c *components) startWatermill(
 	logger watermill.LoggerAdapter,
 	sub watermillMsg.Subscriber,
 	b *bus.Bus,
-	outHandler, inHandler watermillMsg.NoPublishHandlerFunc,
+	outHandler, inHandler, resultsHandler watermillMsg.NoPublishHandlerFunc,
 ) {
 	inRouter, err := watermillMsg.NewRouter(watermillMsg.RouterConfig{}, logger)
 	if err != nil {
@@ -455,6 +449,12 @@ func (c *components) startWatermill(
 		sub,
 		inHandler,
 	)
+
+	inRouter.AddNoPublisherHandler(
+		"IncomingRequestResultHandler",
+		bus.TopicIncomingRequestResults,
+		sub,
+		resultsHandler)
 
 	startRouter(ctx, inRouter)
 	c.inRouter = inRouter
