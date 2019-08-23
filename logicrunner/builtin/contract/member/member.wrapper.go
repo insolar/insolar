@@ -483,18 +483,18 @@ func INSMETHOD_AddDeposit(object []byte, data []byte) ([]byte, []byte, error) {
 	return state, ret, err
 }
 
-func INSMETHOD_GetBurnAddress(object []byte, data []byte) ([]byte, []byte, error) {
+func INSMETHOD_GetMigrationAddress(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
 	self := new(Member)
 
 	if len(object) == 0 {
-		return nil, nil, &foundation.Error{S: "[ FakeGetBurnAddress ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+		return nil, nil, &foundation.Error{S: "[ FakeGetMigrationAddress ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
 	}
 
 	err := ph.Deserialize(object, self)
 	if err != nil {
-		e := &foundation.Error{S: "[ FakeGetBurnAddress ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		e := &foundation.Error{S: "[ FakeGetMigrationAddress ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
 		return nil, nil, e
 	}
 
@@ -502,11 +502,11 @@ func INSMETHOD_GetBurnAddress(object []byte, data []byte) ([]byte, []byte, error
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
-		e := &foundation.Error{S: "[ FakeGetBurnAddress ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		e := &foundation.Error{S: "[ FakeGetMigrationAddress ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
 		return nil, nil, e
 	}
 
-	ret0, ret1 := self.GetBurnAddress()
+	ret0, ret1 := self.GetMigrationAddress()
 
 	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()
@@ -591,15 +591,15 @@ func Initialize() XXX_insolar.ContractWrapper {
 		GetCode:      INSMETHOD_GetCode,
 		GetPrototype: INSMETHOD_GetPrototype,
 		Methods: XXX_insolar.ContractMethods{
-			"GetName":        INSMETHOD_GetName,
-			"GetWallet":      INSMETHOD_GetWallet,
-			"GetAccount":     INSMETHOD_GetAccount,
-			"GetPublicKey":   INSMETHOD_GetPublicKey,
-			"Call":           INSMETHOD_Call,
-			"GetDeposits":    INSMETHOD_GetDeposits,
-			"FindDeposit":    INSMETHOD_FindDeposit,
-			"AddDeposit":     INSMETHOD_AddDeposit,
-			"GetBurnAddress": INSMETHOD_GetBurnAddress,
+			"GetName":             INSMETHOD_GetName,
+			"GetWallet":           INSMETHOD_GetWallet,
+			"GetAccount":          INSMETHOD_GetAccount,
+			"GetPublicKey":        INSMETHOD_GetPublicKey,
+			"Call":                INSMETHOD_Call,
+			"GetDeposits":         INSMETHOD_GetDeposits,
+			"FindDeposit":         INSMETHOD_FindDeposit,
+			"AddDeposit":          INSMETHOD_AddDeposit,
+			"GetMigrationAddress": INSMETHOD_GetMigrationAddress,
 		},
 		Constructors: XXX_insolar.ContractConstructors{
 			"New": INSCONSTRUCTOR_New,

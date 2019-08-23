@@ -142,7 +142,7 @@ func (g *Base) Init(ctx context.Context) error {
 	})
 
 	g.createCandidateProfile()
-	g.bootstrapETA = 0
+	g.bootstrapETA = g.Options.BootstrapTimeout
 	return nil
 }
 

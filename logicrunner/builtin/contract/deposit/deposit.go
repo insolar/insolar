@@ -43,7 +43,6 @@ type Deposit struct {
 	PulseDepositUnHold      insolar.PulseNumber  `json:"holdReleaseDate"`
 	MigrationDaemonConfirms foundation.StableMap `json:"confirmerReferences"`
 	Amount                  string               `json:"amount"`
-	Bonus                   string               `json:"bonus"`
 	TxHash                  string               `json:"ethTxHash"`
 	LokupInPulses           int64                `json:"lokupInPulses"`
 	VestingInPulses         int64                `json:"vestingInPulses"`
