@@ -7,9 +7,9 @@ heavy_genesis_plugins_dir: "{{ .BaseDir }}/plugins/"
 contracts:
   insgocc: "bin/insgocc"
   outdir: "{{ .BaseDir }}/plugins/"
-root_balance: "100000000000000000000"
-md_balance: "100000000000000000000"
-majority_rule: 6
+root_balance: "0"
+md_balance: "50000000000000000000"
+majority_rule: 5
 min_roles:
   heavy_material: 1
   virtual:  2
@@ -38,30 +38,30 @@ discovery_nodes:
     host: "127.0.0.1:53835"
     role: "light_material"
     cert_name: "discovery_cert_5.json"
-  -
-    host: "127.0.0.1:53866"
-    role: "virtual"
-    cert_name: "discovery_cert_6.json"
-  -
-    host: "127.0.0.1:53877"
-    role: "light_material"
-    cert_name: "discovery_cert_7.json"
-  -
-    host: "127.0.0.1:53888"
-    role: "virtual"
-    cert_name: "discovery_cert_8.json"
-  -
-    host: "127.0.0.1:53899"
-    role: "light_material"
-    cert_name: "discovery_cert_9.json"
-  -
-    host: "127.0.0.1:53100"
-    role: "virtual"
-    cert_name: "discovery_cert_10.json"
-  -
-    host: "127.0.0.1:51101"
-    role: "light_material"
-    cert_name: "discovery_cert_11.json"
+#  -
+#    host: "127.0.0.1:53866"
+#    role: "virtual"
+#    cert_name: "discovery_cert_6.json"
+#  -
+#    host: "127.0.0.1:53877"
+#    role: "light_material"
+#    cert_name: "discovery_cert_7.json"
+#  -
+#    host: "127.0.0.1:53888"
+#    role: "virtual"
+#    cert_name: "discovery_cert_8.json"
+#  -
+#    host: "127.0.0.1:53899"
+#    role: "light_material"
+#    cert_name: "discovery_cert_9.json"
+#  -
+#    host: "127.0.0.1:53100"
+#    role: "virtual"
+#    cert_name: "discovery_cert_10.json"
+#  -
+#    host: "127.0.0.1:51101"
+#    role: "light_material"
+#    cert_name: "discovery_cert_11.json"
 #  -
 #    host: "127.0.0.1:53202"
 #    role: "virtual"

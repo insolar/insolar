@@ -21,6 +21,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/store"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -29,6 +30,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func BadgerDefaultOptions(dir string) badger.Options {
+	ops := badger.DefaultOptions(dir)
+	ops.CompactL0OnClose = false
+	ops.SyncWrites = false
+
+	return ops
+}
 
 func TestPulseKey(t *testing.T) {
 	t.Parallel()
@@ -49,7 +58,8 @@ func TestDropStorageDB_TruncateHead_NoSuchPulse(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	assert.NoError(t, err)
 
-	dbMock, err := store.NewBadgerDB(tmpdir)
+	ops := BadgerDefaultOptions(tmpdir)
+	dbMock, err := store.NewBadgerDB(ops)
 	defer dbMock.Stop(ctx)
 	require.NoError(t, err)
 
@@ -67,13 +77,14 @@ func TestDBStore_TruncateHead(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	assert.NoError(t, err)
 
-	dbMock, err := store.NewBadgerDB(tmpdir)
+	ops := BadgerDefaultOptions(tmpdir)
+	dbMock, err := store.NewBadgerDB(ops)
 	defer dbMock.Stop(ctx)
 	require.NoError(t, err)
 
 	dbStore := NewDB(dbMock)
 
-	numElements := 100
+	numElements := 10
 
 	startPulseNumber := insolar.GenesisPulse.PulseNumber
 	for i := 0; i < numElements; i++ {

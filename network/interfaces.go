@@ -144,6 +144,7 @@ type OriginProvider interface {
 
 //go:generate minimock -i github.com/insolar/insolar/network.NodeNetwork -o ../testutils/network -s _mock.go -g
 
+//Deprecated: todo: move GetWorkingNodes to ServiceNetwork facade
 type NodeNetwork interface {
 	OriginProvider
 

@@ -69,7 +69,6 @@ import (
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/controller/common"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
@@ -78,14 +77,9 @@ import (
 
 func TestRequester_Authorize(t *testing.T) {
 	t.Skip("Until merge")
-
 	cert := GetTestCertificate()
 
-	d := cert.GetDiscoveryNodes()[0]
-	h, err := host.NewHostN(d.GetHost(), *d.GetNodeRef())
-	assert.NoError(t, err)
-
-	options := common.ConfigureOptions(configuration.NewConfiguration())
+	options := network.ConfigureOptions(configuration.NewConfiguration())
 
 	cs := testutils.NewCryptographyServiceMock(t)
 	sig := insolar.SignatureFromBytes([]byte("lalal"))
@@ -93,13 +87,13 @@ func TestRequester_Authorize(t *testing.T) {
 
 	r := NewRequester(options)
 	r.(*requester).CryptographyService = cs
-	resp, err := r.Authorize(context.Background(), h, cert)
+	resp, err := r.Authorize(context.Background(), cert)
 	assert.NoError(t, err)
 	assert.NotNil(t, resp)
 }
 
 func TestRequester_Bootstrap(t *testing.T) {
-	options := common.ConfigureOptions(configuration.NewConfiguration())
+	options := network.ConfigureOptions(configuration.NewConfiguration())
 
 	hn := mock.NewHostNetworkMock(t)
 	hn.SendRequestToHostMock.Set(func(p context.Context, p1 types.PacketType, p2 interface{}, p3 *host.Host) (r network.Future, r1 error) {

@@ -53,6 +53,8 @@ package coreapi
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
@@ -96,11 +98,39 @@ func TestRemoveJoinCandidate(t *testing.T) {
 	require.True(t, len(s.buf) > 0 && s.buf[0] == c2)
 }
 
-func TestAddJoinCandidate(t *testing.T) {
-	require.Panics(t, func() { (&SequentialCandidateFeeder{}).AddJoinCandidate(nil) })
+func TestAddJoinCandidatePanicForNil(t *testing.T) {
+	s := NewSequentialCandidateFeeder(0)
+	require.NotNil(t, s)
+	require.Panics(t, func() { s.AddJoinCandidate(nil) })
+}
 
-	f := transport.NewFullIntroductionReaderMock(t)
-	s := &SequentialCandidateFeeder{}
-	s.AddJoinCandidate(f)
-	require.True(t, len(s.buf) == 1 && s.buf[0] == f)
+func TestAddJoinCandidate(t *testing.T) {
+	s := NewSequentialCandidateFeeder(0)
+
+	f1 := transport.NewFullIntroductionReaderMock(t)
+	f2 := transport.NewFullIntroductionReaderMock(t)
+
+	err := s.AddJoinCandidate(f1)
+	assert.NoError(t, err)
+	require.True(t, len(s.buf) == 1 && s.buf[0] == f1)
+
+	// add second
+	err = s.AddJoinCandidate(f2)
+	assert.NoError(t, err)
+	require.True(t, len(s.buf) == 2 && s.buf[1] == f2)
+}
+
+func TestAddJoinCandidateFullQueue(t *testing.T) {
+	s := NewSequentialCandidateFeeder(1)
+
+	f1 := transport.NewFullIntroductionReaderMock(t)
+	f2 := transport.NewFullIntroductionReaderMock(t)
+
+	err := s.AddJoinCandidate(f1)
+	assert.NoError(t, err)
+	require.True(t, len(s.buf) == 1 && s.buf[0] == f1)
+
+	// add second
+	err = s.AddJoinCandidate(f2)
+	assert.Error(t, err)
 }

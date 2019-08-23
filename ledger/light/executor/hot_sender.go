@@ -80,26 +80,33 @@ func (m *HotSenderDefault) filterAndGroupIndexes(
 		return nil, errors.Wrap(err, "failed to fetch starting pulse for getting filaments")
 	}
 
+	byJet := map[insolar.JetID][]record.Index{}
+
 	// filter out inactive indexes
-	indexes := m.indexAccessor.ForPulse(ctx, currentPulse)
-	// filtering in-place (optimization to avoid double allocation)
-	filtered := indexes[:0]
-	for _, idx := range indexes {
-		if idx.LifelineLastUsed < limitPN.PulseNumber && idx.Lifeline.EarliestOpenRequest == nil {
-			continue
+	indexes, err := m.indexAccessor.ForPulse(ctx, currentPulse)
+	if err == nil {
+
+		// filtering in-place (optimization to avoid double allocation)
+		filtered := indexes[:0]
+		for _, idx := range indexes {
+			if idx.LifelineLastUsed < limitPN.PulseNumber && idx.Lifeline.EarliestOpenRequest == nil {
+				continue
+			}
+			filtered = append(filtered, record.Index{
+				Lifeline:         idx.Lifeline,
+				ObjID:            idx.ObjID,
+				LifelineLastUsed: idx.LifelineLastUsed,
+			})
 		}
-		filtered = append(filtered, record.Index{
-			Lifeline:         idx.Lifeline,
-			ObjID:            idx.ObjID,
-			LifelineLastUsed: idx.LifelineLastUsed,
-		})
+
+		for _, idx := range filtered {
+			jetID, _ := m.jetAccessor.ForID(ctx, newPulse, idx.ObjID)
+			byJet[jetID] = append(byJet[jetID], idx)
+		}
+	} else if err != object.ErrIndexNotFound {
+		inslogger.FromContext(ctx).Errorf("Can't get indexes for pulse: %s", err)
 	}
 
-	byJet := map[insolar.JetID][]record.Index{}
-	for _, idx := range filtered {
-		jetID, _ := m.jetAccessor.ForID(ctx, newPulse, idx.ObjID)
-		byJet[jetID] = append(byJet[jetID], idx)
-	}
 	return byJet, nil
 }
 
@@ -120,7 +127,7 @@ func (m *HotSenderDefault) SendHot(
 
 	for _, id := range jets {
 		jetID := id
-		logger := logger.WithSkipFrameCount(1).WithField("jetID", jetID.DebugString())
+		logger := logger.WithField("jetID", jetID.DebugString())
 
 		block, err := m.findDrop(ctx, currentPulse, jetID)
 		if err != nil {

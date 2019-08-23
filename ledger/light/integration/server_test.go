@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// +build slowtest
 
 package integration_test
 
@@ -24,11 +25,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/insolar/insolar/network"
+	"github.com/pkg/errors"
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
+
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/cryptography"
@@ -50,9 +52,9 @@ import (
 	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/network"
 	networknode "github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/pkg/errors"
 )
 
 var (
@@ -99,21 +101,25 @@ func DefaultLightConfig() configuration.Configuration {
 	return cfg
 }
 
+func DefaultLightInitialState() *payload.LightInitialState {
+	return &payload.LightInitialState{
+		NetworkStart: true,
+		JetIDs:       []insolar.JetID{insolar.ZeroJetID},
+		Pulse: pulse.PulseProto{
+			PulseNumber: insolar.FirstPulseNumber,
+		},
+		Drops: [][]byte{
+			drop.MustEncode(&drop.Drop{JetID: insolar.ZeroJetID, Pulse: insolar.FirstPulseNumber}),
+		},
+	}
+}
+
 func DefaultHeavyResponse(pl payload.Payload) []payload.Payload {
 	switch pl.(type) {
 	case *payload.Replication, *payload.GotHotConfirmation:
 		return nil
 	case *payload.GetLightInitialState:
-		return []payload.Payload{&payload.LightInitialState{
-			NetworkStart: true,
-			JetIDs:       []insolar.JetID{insolar.ZeroJetID},
-			Pulse: pulse.PulseProto{
-				PulseNumber: insolar.FirstPulseNumber,
-			},
-			Drops: [][]byte{
-				drop.MustEncode(&drop.Drop{JetID: insolar.ZeroJetID, Pulse: insolar.FirstPulseNumber}),
-			},
-		}}
+		return []payload.Payload{DefaultLightInitialState()}
 	}
 
 	panic(fmt.Sprintf("unexpected message to heavy %T", pl))
@@ -233,7 +239,13 @@ func NewServer(
 			ServerBus,
 			Pulses,
 		)
-		requestChecker := executor.NewRequestChecker(filamentCalculator, Coordinator, jetFetcher, ServerBus)
+		requestChecker := executor.NewRequestChecker(
+			filamentCalculator,
+			Coordinator,
+			jetFetcher,
+			CryptoScheme,
+			ServerBus,
+		)
 
 		jetCalculator := executor.NewJetCalculator(Coordinator, Jets)
 		lightCleaner := executor.NewCleaner(
@@ -365,8 +377,6 @@ func NewServer(
 				}
 				return nil
 			}
-
-			// todo Add check that heavy is not available in test
 
 			clientHandler := func(msg *message.Message) (messages []*message.Message, e error) {
 				return nil, nil

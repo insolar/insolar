@@ -25,13 +25,14 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/testutils"
+	"github.com/insolar/insolar/testutils/launchnet"
 )
 
 func TestMemberMigrationCreate(t *testing.T) {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
 	ba := testutils.RandomString()
-	_, err = signedRequest(t, &migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{ba}})
+	_, err = signedRequest(t, &launchnet.MigrationAdmin, "migration.addAddresses", map[string]interface{}{"migrationAddresses": []string{ba}})
 	require.NoError(t, err)
 	result, err := signedRequest(t, member, "member.migrationCreate", nil)
 	require.NoError(t, err)
@@ -41,10 +42,10 @@ func TestMemberMigrationCreate(t *testing.T) {
 	require.Equal(t, ba, output["migrationAddress"])
 }
 
-func TestMemberMigrationCreateWhenNoBurnAddressesLeft(t *testing.T) {
+func TestMemberMigrationCreateWhenNomigrationAddressesLeft(t *testing.T) {
 	member1, err := newUserWithKeys()
 	require.NoError(t, err)
-	addBurnAddress(t)
+	addMigrationAddress(t)
 	_, err = signedRequest(t, member1, "member.migrationCreate", nil)
 	require.Nil(t, err)
 
@@ -59,22 +60,22 @@ func TestMemberMigrationCreateWhenNoBurnAddressesLeft(t *testing.T) {
 func TestMemberMigrationCreateWithBadKey(t *testing.T) {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
-	member.pubKey = "fake"
+	member.PubKey = "fake"
 	_, err = signedRequestWithEmptyRequestRef(t, member, "member.migrationCreate", nil)
 	require.Error(t, err)
-	require.Contains(t, err.Error(), fmt.Sprintf("problems with decoding. Key - %s", member.pubKey))
+	require.Contains(t, err.Error(), fmt.Sprintf("problems with decoding. Key - %s", member.PubKey))
 }
 
 func TestMemberMigrationCreateWithSamePublicKey(t *testing.T) {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
 
-	addBurnAddress(t)
+	addMigrationAddress(t)
 
 	_, err = signedRequest(t, member, "member.migrationCreate", nil)
 	require.NoError(t, err)
 
-	addBurnAddress(t)
+	addMigrationAddress(t)
 
 	_, err = signedRequestWithEmptyRequestRef(t, member, "member.migrationCreate", map[string]interface{}{})
 	require.Error(t, err)
@@ -86,12 +87,12 @@ func TestMemberMigrationCreateWithSamePublicKey(t *testing.T) {
 	_, err = signedRequestWithEmptyRequestRef(t, memberForBurn, "member.migrationCreate", nil)
 }
 
-func TestMemberMigrationCreateWithSameBurnAddress(t *testing.T) {
+func TestMemberMigrationCreateWithSameMigrationAddress(t *testing.T) {
 	member1, err := newUserWithKeys()
 	require.NoError(t, err)
 
 	ba := testutils.RandomString()
-	_, _ = signedRequest(t, &migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{ba, ba}})
+	_, _ = signedRequest(t, &launchnet.MigrationAdmin, "migration.addAddresses", map[string]interface{}{"migrationAddresses": []string{ba, ba}})
 
 	_, err = signedRequest(t, member1, "member.migrationCreate", nil)
 	require.NoError(t, err)

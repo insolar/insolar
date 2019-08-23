@@ -38,42 +38,13 @@ const (
 
 	// TypeGetCodeRedirect is a redirect reply for code-call
 	TypeGetCodeRedirect
-	// TypeGetObjectRedirect is a redirect reply for object-call
-	TypeGetObjectRedirect
 
 	// Logicrunner
 
 	// TypeCallMethod - two binary fields: data and results.
 	TypeCallMethod
-	// TypeCallConstructor - reference on created object
-	TypeCallConstructor
 	// TypeRegisterRequest - request for execution was registered
 	TypeRegisterRequest
-
-	// Ledger
-
-	// TypeCode is code from storage.
-	TypeCode
-	// TypeObject is object from storage.
-	TypeObject
-	// TypeID is common reply for methods returning id to lifeline states.
-	TypeID
-	// TypeChildren is a reply for fetching objects children in chunks.
-	TypeChildren
-	// TypeObjectIndex contains serialized object index. It can be stored in DB without processing.
-	TypeObjectIndex
-	// TypeJetMiss is returned for miscalculated jets due to incomplete jet tree.
-	TypeJetMiss
-	// TypePendingRequests contains unclosed requests for an object.
-	TypePendingRequests
-	// TypeJet contains jet.
-	TypeJet
-	// TypeOpenRequestsOnHeavy returns open requests from a heavy
-	TypeOpenRequestsOnHeavy
-	// TypeHeavyError carries heavy record sync
-	TypeHeavyError
-	// TypeIDs is common reply for methods returning list of IDs.
-	TypeIDs
 )
 
 // ErrType is used to determine and compare reply errors.
@@ -88,8 +59,7 @@ const (
 	ErrHotDataTimeout
 	// ErrNoPendingRequests is returned when there are no pending requests on current LME
 	ErrNoPendingRequests
-	// ErrTooManyPendingRequests is returned when a limit of pending requests has been reached
-	ErrTooManyPendingRequests
+	// FlowCancelled is returned when a new pulse happened in the process of message execution
 	FlowCancelled
 )
 
@@ -99,32 +69,12 @@ func getEmptyReply(t insolar.ReplyType) (insolar.Reply, error) {
 		return &CallMethod{}, nil
 	case TypeRegisterRequest:
 		return &RegisterRequest{}, nil
-	case TypeCode:
-		return &Code{}, nil
-	case TypeObject:
-		return &Object{}, nil
-	case TypeID:
-		return &ID{}, nil
-	case TypeIDs:
-		return &IDs{}, nil
-	case TypeChildren:
-		return &Children{}, nil
 	case TypeError:
 		return &Error{}, nil
-	case TypeHeavyError:
-		return &HeavyError{}, nil
 	case TypeOK:
 		return &OK{}, nil
-	case TypeObjectIndex:
-		return &ObjectIndex{}, nil
 	case TypeGetCodeRedirect:
 		return &GetCodeRedirectReply{}, nil
-	case TypeJetMiss:
-		return &JetMiss{}, nil
-	case TypePendingRequests:
-		return &HasPendingRequests{}, nil
-	case TypeJet:
-		return &Jet{}, nil
 
 	default:
 		return nil, errors.Errorf("unimplemented reply type: '%d'", t)
@@ -173,16 +123,7 @@ func ToBytes(rep insolar.Reply) []byte {
 func init() {
 	gob.Register(&CallMethod{})
 	gob.Register(&RegisterRequest{})
-	gob.Register(&Code{})
-	gob.Register(&Object{})
-	gob.Register(&ID{})
-	gob.Register(&IDs{})
-	gob.Register(&Children{})
 	gob.Register(&Error{})
 	gob.Register(&OK{})
-	gob.Register(&ObjectIndex{})
 	gob.Register(&GetCodeRedirectReply{})
-	gob.Register(&HeavyError{})
-	gob.Register(&JetMiss{})
-	gob.Register(&HasPendingRequests{})
 }

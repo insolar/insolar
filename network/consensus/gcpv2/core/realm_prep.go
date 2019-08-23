@@ -53,6 +53,7 @@ package core
 import (
 	"context"
 	"fmt"
+	"github.com/insolar/insolar/longbits"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/misbehavior"
 	"sync"
 	"time"
@@ -60,18 +61,19 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/common/watchdog"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core/population"
 
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core/errors"
-
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
-	"github.com/insolar/insolar/network/consensus/common/pulse"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
+
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/errors"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetdispatch"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/population"
+	"github.com/insolar/insolar/pulse"
 )
 
 /*
@@ -116,7 +118,7 @@ func (p *PrepRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 	pt := packet.GetPacketType()
 	selfID := p.prepSelf.GetNodeID()
 
-	var limiterKey string
+	var limiterKey longbits.ByteString
 	switch {
 	case pt.GetLimitPerSender() == 0:
 		return fmt.Errorf("packet type (%v) is unknown", pt)
@@ -142,9 +144,9 @@ func (p *PrepRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 		limiter = limiterI.(*phases.AtomicPacketLimiter)
 	}
 
-	if !limiter.GetPacketLimiter().CanReceivePacket(pt) {
-		return fmt.Errorf("packet type (%v) limit exceeded: from=%v", pt, from)
-	}
+	//if !limiter.GetPacketLimiter().CanReceivePacket(pt) {
+	//	return fmt.Errorf("packet type (%v) limit exceeded: from=%v", pt, from)
+	//}
 
 	var pd population.PacketDispatcher
 
@@ -351,7 +353,7 @@ func (p *PrepRealm) _applyPulseData(_ context.Context, pdp proofs.OriginalPulsar
 		if fromPulsar { // we cant receive pulsar packets directly from pulsars when ephemeral
 			panic("illegal state")
 		}
-		if !p.ephemeralFeeder.CanAcceptTimePulseToStopEphemeral(pd) {
+		if !p.ephemeralFeeder.CanStopEphemeralByPulse(pd, p.prepSelf.GetProfile()) {
 			return false, pulse.Unknown
 		}
 		p.disableEphemeral = true
@@ -367,6 +369,10 @@ func (p *PrepRealm) _applyPulseData(_ context.Context, pdp proofs.OriginalPulsar
 		if !epn.IsUnknownOrEqualTo(pd.PulseNumber) {
 			return false, epn
 		}
+	}
+
+	if p.originalPulse != nil || !p.pulseData.IsEmpty() {
+		return false, pd.PulseNumber
 	}
 
 	p.originalPulse = pdp

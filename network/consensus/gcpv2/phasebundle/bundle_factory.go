@@ -92,6 +92,8 @@ func CreateDefaultBundleConfig() BundleConfig {
 		false,
 		false,
 		true,
+		true,
+		true,
 	}
 }
 
@@ -106,6 +108,8 @@ type BundleConfig struct {
 	IgnoreVectorHashes              bool
 	DisableAggressivePhasing        bool
 	IgnoreHostVerificationForPulses bool
+	LockOSThreadForWorker           bool
+	RetrySendPhase3                 bool
 }
 
 type BundleFactories struct {

@@ -20,9 +20,11 @@ import (
 	"context"
 	"sync"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
-	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/common"
@@ -34,12 +36,12 @@ type Registry interface {
 
 //go:generate minimock -i github.com/insolar/insolar/logicrunner/executionregistry.ExecutionRegistry -o ./ -s _mock.go -g
 type ExecutionRegistry interface {
-	Register(ctx context.Context, transcript *common.Transcript)
+	Register(ctx context.Context, transcript *common.Transcript) error
 	Done(transcript *common.Transcript) bool
 
 	Length() int
 	IsEmpty() bool
-	OnPulse(ctx context.Context) []insolar.Message
+	OnPulse(ctx context.Context) []payload.Payload
 	FindRequestLoop(ctx context.Context, reqRef insolar.Reference, apiRequestID string) bool
 	GetActiveTranscript(req insolar.Reference) *common.Transcript
 }
@@ -79,17 +81,18 @@ func (r *executionRegistry) IsEmpty() bool {
 	return r.Length() == 0
 }
 
-func (r *executionRegistry) Register(ctx context.Context, transcript *common.Transcript) {
+func (r *executionRegistry) Register(ctx context.Context, transcript *common.Transcript) error {
 	requestRef := transcript.RequestRef
 
 	r.registryLock.Lock()
 	defer r.registryLock.Unlock()
 
-	if _, ok := r.registry[requestRef]; !ok {
-		r.registry[requestRef] = transcript
-	} else {
-		inslogger.FromContext(ctx).Error("Trying to register task that is already registered")
+	if _, ok := r.registry[requestRef]; ok {
+		return errors.New("trying to register task that is executing right now")
 	}
+
+	r.registry[requestRef] = transcript
+	return nil
 }
 
 func (r *executionRegistry) Done(transcript *common.Transcript) bool {
@@ -107,20 +110,20 @@ func (r *executionRegistry) Done(transcript *common.Transcript) bool {
 }
 
 // constructs all StillExecuting messages
-func (r *executionRegistry) OnPulse(_ context.Context) []insolar.Message {
+func (r *executionRegistry) OnPulse(_ context.Context) []payload.Payload {
 	r.registryLock.Lock()
 	defer r.registryLock.Unlock()
 
 	// TODO: this should return delegation token to continue execution of the pending
-	messages := make([]insolar.Message, 0)
+	messages := make([]payload.Payload, 0)
 	if len(r.registry) != 0 {
 		requestRefs := make([]insolar.Reference, 0, len(r.registry))
 		for requestRef := range r.registry {
 			requestRefs = append(requestRefs, requestRef)
 		}
 
-		messages = append(messages, &message.StillExecuting{
-			Reference:   r.objectRef,
+		messages = append(messages, &payload.StillExecuting{
+			ObjectRef:   r.objectRef,
 			Executor:    r.jetCoordinator.Me(),
 			RequestRefs: requestRefs,
 		})
@@ -135,12 +138,14 @@ func (r *executionRegistry) FindRequestLoop(ctx context.Context, reqRef insolar.
 	if _, ok := r.registry[reqRef]; ok {
 		// we're executing this request right now
 		// de-duplication should deal with this case
+		inslogger.FromContext(ctx).Info("already executing exactly this request")
 		return false
 	}
 
 	for _, transcript := range r.registry {
 		req := transcript.Request
 		if req.APIRequestID == apiRequestID && req.ReturnMode != record.ReturnNoWait {
+			inslogger.FromContext(ctx).Error("execution loop detected with request ", transcript.RequestRef.String())
 			return true
 		}
 	}

@@ -21,10 +21,11 @@ import (
 	"context"
 	"encoding/gob"
 	"fmt"
-	"github.com/insolar/insolar/network"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/insolar/insolar/network"
 
 	"github.com/ThreeDotsLabs/watermill"
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
@@ -63,6 +64,7 @@ type MessageBus struct {
 	Network                    insolar.Network                    `inject:""`
 	JetCoordinator             jet.Coordinator                    `inject:""`
 	NodeNetwork                network.NodeNetwork                `inject:""`
+	OriginProvider             network.OriginProvider             `inject:""`
 	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
 	CryptographyService        insolar.CryptographyService        `inject:""`
 	DelegationTokenFactory     insolar.DelegationTokenFactory     `inject:""`
@@ -174,7 +176,7 @@ func (mb *MessageBus) createWatermillMessage(_ context.Context, parcel insolar.P
 
 	wmMsg.Metadata.Set(bus.MetaPulse, fmt.Sprintf("%d", currentPulse.PulseNumber))
 	wmMsg.Metadata.Set(bus.MetaType, parcel.Message().Type().String())
-	wmMsg.Metadata.Set(bus.MetaSender, mb.NodeNetwork.GetOrigin().ID().String())
+	wmMsg.Metadata.Set(bus.MetaSender, mb.OriginProvider.GetOrigin().ID().String())
 	return wmMsg
 }
 
@@ -190,7 +192,7 @@ func (mb *MessageBus) getReceiverNodes(ctx context.Context, parcel insolar.Parce
 		target := parcel.DefaultTarget()
 		// FIXME: @andreyromancev. 21.12.18. Temp hack. All messages should have a default target.
 		if target == nil {
-			target = &insolar.Reference{}
+			target = insolar.NewEmptyReference()
 		}
 		nodes, err = mb.JetCoordinator.QueryRole(ctx, parcel.DefaultRole(), *target.Record(), currentPulse.PulseNumber)
 		if err != nil {
@@ -274,7 +276,7 @@ func deserializePayload(msg *watermillMsg.Message) (insolar.Reply, error) {
 
 // CreateParcel creates signed message from provided message.
 func (mb *MessageBus) CreateParcel(ctx context.Context, msg insolar.Message, token insolar.DelegationToken, currentPulse insolar.Pulse) (insolar.Parcel, error) {
-	return mb.ParcelFactory.Create(ctx, msg, mb.NodeNetwork.GetOrigin().ID(), token, currentPulse)
+	return mb.ParcelFactory.Create(ctx, msg, mb.OriginProvider.GetOrigin().ID(), token, currentPulse)
 }
 
 // SendParcel sends provided message via network.
@@ -316,7 +318,7 @@ func (mb *MessageBus) SendParcel(
 	}
 
 	// Short path when sending to self node. Skip serialization
-	origin := mb.NodeNetwork.GetOrigin()
+	origin := mb.OriginProvider.GetOrigin()
 	if nodes[0].Equal(origin.ID()) {
 		stats.Record(ctx, statLocallyDeliveredParcelsTotal.M(1))
 		return mb.doDeliver(parcel.Context(context.Background()), parcel)
@@ -505,12 +507,11 @@ func (mb *MessageBus) checkParcel(ctx context.Context, parcel insolar.Parcel) er
 	sender := parcel.GetSender()
 
 	if mb.signmessages {
-		p, err := mb.PulseAccessor.Latest(ctx)
-		if err != nil {
-			return errors.Wrap(err, "failed to get latest pulse")
+		n := mb.NodeNetwork.GetAccessor(parcel.Pulse()).GetWorkingNode(sender)
+		if n == nil {
+			return errors.New("failed to check a message sign: node not found in working list")
 		}
-
-		senderKey := mb.NodeNetwork.GetAccessor(p.PulseNumber).GetWorkingNode(sender).PublicKey()
+		senderKey := n.PublicKey()
 		if err := mb.ParcelFactory.Validate(senderKey, parcel); err != nil {
 			return errors.Wrap(err, "failed to check a message sign")
 		}

@@ -22,7 +22,6 @@ import (
 	"reflect"
 	"sync"
 
-	"github.com/insolar/insolar/insolar"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/log"
@@ -125,12 +124,12 @@ func (m *Manager) Start(ctx context.Context) error {
 		}
 		name := reflect.TypeOf(c).Elem().String()
 		if s, ok := c.(Starter); ok {
-			glog().Debug("ComponentManager: Start component: ", name)
+			log.Debug("ComponentManager: Start component: ", name)
 			err := s.Start(ctx)
 			if err != nil {
 				return errors.Wrap(err, "Failed to start components.")
 			}
-			glog().Debugf("ComponentManager: Component %s started ", name)
+			log.Debugf("ComponentManager: Component %s started ", name)
 		}
 	}
 
@@ -149,7 +148,7 @@ func (m *Manager) Init(ctx context.Context) error {
 		if !ok {
 			continue
 		}
-		glog().Debug("ComponentManager: Init component: ", name)
+		log.Debug("ComponentManager: Init component: ", name)
 		err := s.Init(ctx)
 		if err != nil {
 			return errors.Wrap(err, "Failed to init components.")
@@ -166,7 +165,7 @@ func (m *Manager) GracefulStop(ctx context.Context) error {
 		}
 		name := reflect.TypeOf(m.components[i]).Elem().String()
 		if s, ok := m.components[i].(GracefulStopper); ok {
-			glog().Debug("ComponentManager: GracefulStop component: ", name)
+			log.Debug("ComponentManager: GracefulStop component: ", name)
 
 			err := s.GracefulStop(ctx)
 			if err != nil {
@@ -183,7 +182,7 @@ func (m *Manager) Stop(ctx context.Context) error {
 	defer m.startStopLock.Unlock()
 
 	if !m.started {
-		glog().Debug("ComponentManager: components are not started. Skip stopping")
+		log.Debug("ComponentManager: components are not started. Skip stopping")
 		return nil
 	}
 
@@ -193,7 +192,7 @@ func (m *Manager) Stop(ctx context.Context) error {
 		}
 		name := reflect.TypeOf(m.components[i]).Elem().String()
 		if s, ok := m.components[i].(Stopper); ok {
-			glog().Debug("ComponentManager: Stop component: ", name)
+			log.Debug("ComponentManager: Stop component: ", name)
 
 			err := s.Stop(ctx)
 			if err != nil {
@@ -202,8 +201,4 @@ func (m *Manager) Stop(ctx context.Context) error {
 		}
 	}
 	return nil
-}
-
-func glog() insolar.Logger {
-	return log.GlobalLogger.WithSkipFrameCount(1)
 }

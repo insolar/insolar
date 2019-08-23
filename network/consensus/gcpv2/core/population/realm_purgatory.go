@@ -1,4 +1,4 @@
-///
+//
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -58,6 +58,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 	"github.com/insolar/insolar/network/consensus/gcpv2/censusimpl"
 )
 
@@ -189,8 +190,8 @@ func (p *RealmPurgatory) getOrCreateMember(id insolar.ShortNodeID) AnnouncingMem
 	return p.getOrCreatePhantom(id) // write lock
 }
 
-func (p *RealmPurgatory) ascendFromPurgatory(ctx context.Context, id insolar.ShortNodeID, nsp profiles.StaticProfile,
-	rank member.Rank, sv cryptkit.SignatureVerifier) {
+func (p *RealmPurgatory) ascendFromPurgatory(ctx context.Context, phantom *NodePhantom, nsp profiles.StaticProfile,
+	rank member.Rank, sv cryptkit.SignatureVerifier, announcerID insolar.ShortNodeID, joinerSecret cryptkit.DigestHolder) {
 
 	if sv == nil {
 		sv = p.svFactory.CreateSignatureVerifierWithPKS(nsp.GetPublicKeyStore())
@@ -203,7 +204,7 @@ func (p *RealmPurgatory) ascendFromPurgatory(ctx context.Context, id insolar.Sho
 		np = censusimpl.NewNodeProfileExt(rank.GetIndex(), nsp, sv, rank.GetPower(), rank.GetMode())
 	}
 
-	nav := NewEmptyNodeAppearance(&np)
+	nav := NewAscendedNodeAppearance(&np, phantom.limiter, announcerID, joinerSecret)
 	na, _ := p.population.AddToDynamics(ctx, &nav)
 
 	if na != &nav {
@@ -229,20 +230,25 @@ func (p *RealmPurgatory) UnknownAsSelfFromMemberAnnouncement(ctx context.Context
 	return err == nil, err
 }
 
-func (p *RealmPurgatory) JoinerFromNeighbourhood(ctx context.Context, id insolar.ShortNodeID, profile profiles.StaticProfile,
-	introducedByID insolar.ShortNodeID) error {
-
-	ma := profiles.MemberAnnouncement{MemberID: id}
-	ma.Joiner.IntroducedByID = introducedByID
-	return p.getOrCreateMember(id).DispatchAnnouncement(ctx, member.JoinerRank, profile, ma)
-}
-
 func (p *RealmPurgatory) FindJoinerProfile(nodeID insolar.ShortNodeID, introducedBy insolar.ShortNodeID) profiles.StaticProfile {
 	am, _ := p.getMember(nodeID, introducedBy)
 	if am != nil && am.IsJoiner() {
 		return am.GetStatic()
 	}
 	return nil
+}
+
+func (p *RealmPurgatory) GetJoinerAnnouncement(nodeID insolar.ShortNodeID, introducedBy insolar.ShortNodeID) *transport.JoinerAnnouncement {
+	am, na := p.getMember(nodeID, introducedBy)
+	if am != nil && !am.IsJoiner() {
+		return nil
+	}
+
+	if na != nil {
+		return na.GetAnnouncementAsJoiner()
+	}
+
+	return am.(*NodePhantom).GetAnnouncementAsJoiner()
 }
 
 func (p *RealmPurgatory) onNodeUpdated(n *NodePhantom, flags UpdateFlags) {
@@ -296,4 +302,8 @@ func (p *RealmPurgatory) UnknownFromNeighbourhood(ctx context.Context, rank memb
 
 func (p *RealmPurgatory) GetLocalNodeID() insolar.ShortNodeID {
 	return p.population.hook.GetLocalNodeID()
+}
+
+func (p *RealmPurgatory) IsJoinerSecretRequired() bool {
+	return false
 }

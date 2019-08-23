@@ -22,6 +22,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
 )
 
@@ -49,24 +50,30 @@ func NewDBRollback(jetKeeper JetKeeper, pulseCalculator pulse.Calculator, dbs ..
 
 func (d *DBRollback) Start(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
-	lastSincPulseNumber := d.jetKeeper.TopSyncPulse()
+	lastSyncPulseNumber := d.jetKeeper.TopSyncPulse()
 
-	logger.Debug("[ DBRollback.Start ] last finalized pulse number: ", lastSincPulseNumber)
-	if lastSincPulseNumber == insolar.GenesisPulse.PulseNumber {
+	logger.Debug("[ DBRollback.Start ] last finalized pulse number: ", lastSyncPulseNumber)
+	if lastSyncPulseNumber == insolar.GenesisPulse.PulseNumber {
 		logger.Debug("[ DBRollback.Start ] No finalized data. Nothing done")
 		return nil
 	}
 
-	pn, err := d.pulseCalculator.Forwards(ctx, lastSincPulseNumber, 1)
+	pn, err := d.pulseCalculator.Forwards(ctx, lastSyncPulseNumber, 1)
 	if err != nil {
 		if err == pulse.ErrNotFound {
-			inslogger.FromContext(ctx).Debug("No pulse after: ", lastSincPulseNumber, ". Nothing done.")
+			inslogger.FromContext(ctx).Debug("No pulse after: ", lastSyncPulseNumber, ". Nothing done.")
 			return nil
 		}
 		return errors.Wrap(err, "pulseCalculator.Forwards returns error")
 	}
 
 	for idx, db := range d.dbs {
+		if indexDB, ok := db.(object.IndexModifier); ok {
+			if err := indexDB.UpdateLastKnownPulse(ctx, lastSyncPulseNumber); err != nil {
+				return errors.Wrap(err, "can't update last sync pulse")
+			}
+		}
+
 		err := db.TruncateHead(ctx, pn.PulseNumber)
 		if err != nil {
 			return errors.Wrapf(err, "can't truncate %d db to pulse: %d", idx, pn.PulseNumber)

@@ -20,7 +20,9 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"path/filepath"
 
+	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/network"
 
 	"github.com/insolar/insolar/ledger/heavy/exporter"
@@ -73,12 +75,15 @@ import (
 )
 
 type components struct {
-	cmp       component.Manager
-	NodeRef   string
-	NodeRole  string
-	rollback  *executor.DBRollback
-	inRouter  *watermillMsg.Router
-	outRouter *watermillMsg.Router
+	cmp         component.Manager
+	NodeRef     string
+	NodeRole    string
+	rollback    *executor.DBRollback
+	stateKeeper *executor.InitialStateKeeper
+	inRouter    *watermillMsg.Router
+	outRouter   *watermillMsg.Router
+
+	replicator executor.HeavyReplicator
 }
 
 func newComponents(ctx context.Context, cfg configuration.Configuration, genesisCfg insolar.GenesisHeavyConfig) (*components, error) {
@@ -192,19 +197,23 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 	var (
 		Coordinator jet.Coordinator
 		Pulses      *pulse.DB
-		Jets        jet.Storage
 		Nodes       *node.Storage
 		DB          *store.BadgerDB
+		Jets        *jet.DBStore
 	)
 	{
 		var err error
-		DB, err = store.NewBadgerDB(cfg.Ledger.Storage.DataDirectory)
+		fullDataDirectoryPath, err := filepath.Abs(cfg.Ledger.Storage.DataDirectory)
+		if err != nil {
+			panic(errors.Wrap(err, "failed to get absolute path for DataDirectory"))
+		}
+		DB, err = store.NewBadgerDB(badger.DefaultOptions(fullDataDirectoryPath))
 		if err != nil {
 			panic(errors.Wrap(err, "failed to initialize DB"))
 		}
 		Nodes = node.NewStorage()
 		Pulses = pulse.NewDB(DB)
-		Jets = jet.NewStore()
+		Jets = jet.NewDBStore(DB)
 
 		c := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit)
 		c.PulseCalculator = Pulses
@@ -246,21 +255,19 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 	}
 
 	var (
-		PulseManager   insolar.PulseManager
-		Handler        *handler.Handler
-		Genesis        *genesis.Genesis
-		RecordPosition *object.RecordPositionDB
-		Records        *object.RecordDB
-		JetKeeper      executor.JetKeeper
+		PulseManager insolar.PulseManager
+		Handler      *handler.Handler
+		Genesis      *genesis.Genesis
+		Records      *object.RecordDB
+		JetKeeper    executor.JetKeeper
 	)
 	{
 		Records = object.NewRecordDB(DB)
-		RecordPosition = object.NewRecordPositionDB(DB)
-		indexes := object.NewIndexDB(DB)
+		indexes := object.NewIndexDB(DB, Records)
 		drops := drop.NewDB(DB)
-		jets := jet.NewDBStore(DB)
-		JetKeeper = executor.NewJetKeeper(jets, DB, Pulses)
-		c.rollback = executor.NewDBRollback(JetKeeper, Pulses, drops, Records, indexes, jets, Pulses)
+		JetKeeper = executor.NewJetKeeper(Jets, DB, Pulses)
+		c.rollback = executor.NewDBRollback(JetKeeper, Pulses, drops, Records, indexes, Jets, Pulses)
+		c.stateKeeper = executor.NewInitialStateKeeper(JetKeeper, Jets, Coordinator, indexes, drops)
 
 		sp := pulse.NewStartPulse()
 
@@ -270,36 +277,38 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		}
 
 		pm := pulsemanager.NewPulseManager()
-		pm.Bus = Bus
 		pm.NodeNet = NodeNetwork
 		pm.NodeSetter = Nodes
 		pm.Nodes = Nodes
 		pm.PulseAppender = Pulses
 		pm.PulseAccessor = Pulses
-		pm.JetModifier = jets
+		pm.JetModifier = Jets
 		pm.StartPulse = sp
 		pm.FinalizationKeeper = executor.NewFinalizationKeeperDefault(JetKeeper, Pulses, cfg.Ledger.LightChainLimit)
 
+		replicator := executor.NewHeavyReplicatorDefault(Records, indexes, CryptoScheme, Pulses, drops, JetKeeper, backupMaker, Jets)
+		c.replicator = replicator
+
 		h := handler.New(cfg.Ledger)
 		h.RecordAccessor = Records
-		h.RecordPositions = RecordPosition
 		h.RecordModifier = Records
 		h.JetCoordinator = Coordinator
 		h.IndexAccessor = indexes
 		h.IndexModifier = indexes
-		h.Bus = Bus
 		h.DropModifier = drops
 		h.PCS = CryptoScheme
 		h.PulseAccessor = Pulses
 		h.PulseCalculator = Pulses
 		h.StartPulse = sp
-		h.JetModifier = jets
-		h.JetAccessor = jets
-		h.JetTree = jets
+		h.JetModifier = Jets
+		h.JetAccessor = Jets
+		h.JetTree = Jets
 		h.DropDB = drops
 		h.JetKeeper = JetKeeper
+		h.InitialStateReader = c.stateKeeper
 		h.BackupMaker = backupMaker
 		h.Sender = WmBus
+		h.Replicator = replicator
 
 		PulseManager = pm
 		Handler = h
@@ -334,7 +343,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		pulseExporter  *exporter.PulseServer
 	)
 	{
-		recordExporter = exporter.NewRecordServer(Pulses, RecordPosition, Records, JetKeeper)
+		recordExporter = exporter.NewRecordServer(Pulses, Records, Records, JetKeeper)
 		pulseExporter = exporter.NewPulseServer(Pulses, JetKeeper)
 
 		grpcServer := grpc.NewServer()
@@ -397,7 +406,12 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 func (c *components) Start(ctx context.Context) error {
 	err := c.rollback.Start(ctx)
 	if err != nil {
-		return errors.Wrap(err, "rollback.Start return error: ")
+		return errors.Wrapf(err, "rollback.Start return error: %s", err.Error())
+	}
+
+	err = c.stateKeeper.Start(ctx)
+	if err != nil {
+		return errors.Wrapf(err, "stateKeeper.Start return error: %s", err.Error())
 	}
 	return c.cmp.Start(ctx)
 }
@@ -411,6 +425,7 @@ func (c *components) Stop(ctx context.Context) error {
 	if err != nil {
 		inslogger.FromContext(ctx).Error("Error while closing router", err)
 	}
+	c.replicator.Stop()
 	return c.cmp.Stop(ctx)
 }
 

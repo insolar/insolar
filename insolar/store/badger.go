@@ -19,7 +19,6 @@ package store
 import (
 	"context"
 	"io"
-	"path/filepath"
 	"sync"
 	"time"
 
@@ -39,13 +38,7 @@ type BadgerDB struct {
 
 // NewBadgerDB creates new BadgerDB instance.
 // Creates new badger.DB instance with provided working dir and use it as backend for BadgerDB.
-func NewBadgerDB(dir string) (*BadgerDB, error) {
-	dir, err := filepath.Abs(dir)
-	if err != nil {
-		return nil, err
-	}
-
-	ops := badger.DefaultOptions(dir)
+func NewBadgerDB(ops badger.Options) (*BadgerDB, error) {
 	bdb, err := badger.Open(ops)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to open badger")
@@ -54,6 +47,10 @@ func NewBadgerDB(dir string) (*BadgerDB, error) {
 	b := &BadgerDB{backend: bdb}
 	b.runGC(context.Background())
 	return b, nil
+}
+
+func (b *BadgerDB) Backend() *badger.DB {
+	return b.backend
 }
 
 type state struct {
@@ -200,6 +197,16 @@ func (b *BadgerDB) Delete(key Key) error {
 // Backup creates backup.
 func (b *BadgerDB) Backup(w io.Writer, since uint64) (uint64, error) {
 	return b.backend.Backup(w, since)
+}
+
+// NewReadIterator returns new Iterator over the store.
+func NewReadIterator(db *badger.DB, pivot Key, reverse bool) Iterator {
+	bi := badgerIterator{pivot: pivot, reverse: reverse}
+	bi.txn = db.NewTransaction(false)
+	opts := badger.DefaultIteratorOptions
+	opts.Reverse = reverse
+	bi.it = bi.txn.NewIterator(opts)
+	return &bi
 }
 
 // NewIterator returns new Iterator over the store.

@@ -59,6 +59,7 @@ import (
 
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/pulse"
 	network2 "github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/host"
@@ -182,9 +183,10 @@ func randomEntropy() [64]byte {
 }
 
 func newPulsePacket(t *testing.T) *packet.ReceivedPacket {
-	sender, err := host.NewHostN("127.0.0.1:3344", insolar.Reference{0})
+	refs := gen.UniqueReferences(2)
+	sender, err := host.NewHostN("127.0.0.1:3344", refs[0])
 	require.NoError(t, err)
-	receiver, err := host.NewHostN("127.0.0.1:3345", insolar.Reference{1})
+	receiver, err := host.NewHostN("127.0.0.1:3345", refs[1])
 	require.NoError(t, err)
 	return packet.NewReceivedPacket(packet.NewPacket(sender, receiver, types.Pulse, 1), nil, time.Now())
 }

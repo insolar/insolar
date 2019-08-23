@@ -8,6 +8,7 @@ TESTPULSARD = testpulsard
 INSGORUND = insgorund
 BENCHMARK = benchmark
 PULSEWATCHER = pulsewatcher
+BACKUPMERGER = backupmerger
 APIREQUESTER = apirequester
 HEALTHCHECK = healthcheck
 
@@ -60,20 +61,12 @@ clean: ## run all cleanup tasks
 	rm -rf $(BIN_DIR)
 	./scripts/insolard/launchnet.sh -l
 
-
-.PHONY: install-godep
-install-godep: ## install dep tool
-	./scripts/build/fetchdeps github.com/golang/dep/cmd/dep v0.5.3
-
 .PHONY: install-build-tools
 install-build-tools: ## install tools for codegen
-	go clean -modcache
-	./scripts/build/fetchdeps golang.org/x/tools/cmd/stringer 63e6ed9258fa6cbc90aab9b1eef3e0866e89b874
-	./scripts/build/fetchdeps github.com/gojuno/minimock/cmd/minimock v2.1.8
-	./scripts/build/fetchdeps github.com/gogo/protobuf/protoc-gen-gogoslick v1.2.1
+	./scripts/build/install_build_tools.sh
 
 .PHONY: install-deps
-install-deps: install-godep install-build-tools ## install dep and codegen tools
+install-deps: install-build-tools ## install dep and codegen tools
 
 .PHONY: pre-build
 pre-build: ensure generate regen-builtin ## install dependencies, (re)generates all code
@@ -91,7 +84,7 @@ ensure: ## install all dependencies
 	dep ensure
 
 .PHONY: build
-build: $(BIN_DIR) $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(TESTPULSARD) $(INSGORUND) $(HEALTHCHECK) $(BENCHMARK) $(APIREQUESTER) $(PULSEWATCHER) ## build all binaries
+build: $(BIN_DIR) $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(TESTPULSARD) $(INSGORUND) $(HEALTHCHECK) $(BENCHMARK) $(APIREQUESTER) $(PULSEWATCHER) $(BACKUPMERGER) ## build all binaries
 
 $(BIN_DIR):
 	mkdir -p $(BIN_DIR)
@@ -130,6 +123,10 @@ $(BENCHMARK):
 $(PULSEWATCHER):
 	$(GOBUILD) -o $(BIN_DIR)/$(PULSEWATCHER) -ldflags "${LDFLAGS}" cmd/pulsewatcher/*.go
 
+.PHONY: $(BACKUPMERGER)
+$(BACKUPMERGER):
+	$(GOBUILD) -o $(BIN_DIR)/$(BACKUPMERGER) -ldflags "${LDFLAGS}" cmd/backupmerger/*.go
+
 .PHONY: $(APIREQUESTER)
 $(APIREQUESTER):
 	$(GOBUILD) -o $(BIN_DIR)/$(APIREQUESTER) -ldflags "${LDFLAGS}" cmd/apirequester/*.go
@@ -157,7 +154,7 @@ test_func: functest ## alias for functest
 
 .PHONY: test_slow
 test_slow: ## run tests with slowtest tag
-	CGO_ENABLED=1 go test $(TEST_ARGS) -tags slowtest ./logicrunner/... ./server/internal/...
+	CGO_ENABLED=1 go test $(TEST_ARGS) -tags slowtest ./logicrunner/... ./server/internal/... ./ledger/light/integration/...
 
 .PHONY: test
 test: test_unit ## alias for test_unit
@@ -190,7 +187,7 @@ ci_test_unit: ## run unit tests 10 times and -race flag, redirects json output t
 .PHONY: ci_test_slow
 ci_test_slow: ## run slow tests just once, redirects json output to file (CI)
 	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1 \
-		go test $(CI_TEST_ARGS) $(TEST_ARGS) -json -v -tags slowtest ./logicrunner/... ./server/internal/... -count 1 | tee -a ci_test_unit.json
+		go test $(CI_TEST_ARGS) $(TEST_ARGS) -json -v -tags slowtest ./logicrunner/... ./server/internal/... ./ledger/light/integration/... -count 1 | tee -a ci_test_unit.json
 
 .PHONY: ci_test_func
 ci_test_func: ## run functest 3 times, redirects json output to file (CI)
@@ -224,6 +221,7 @@ docker: docker-insolard docker-insgorund ## build insolard and insgorund docker 
 generate-protobuf: ## generate protobuf structs
 	protoc -I./vendor -I./ --gogoslick_out=./ network/node/internal/node/node.proto
 	protoc -I./vendor -I./ --gogoslick_out=./ insolar/record/record.proto
+	protoc -I./vendor -I./ --gogoslick_out=./ insolar/jet/jet.proto
 	protoc -I./vendor -I./ --gogoslick_out=./ --proto_path=${GOPATH}/src insolar/payload/payload.proto
 	protoc -I./vendor -I./ --gogoslick_out=./ insolar/pulse/pulse.proto
 	protoc -I./vendor -I./ --gogoslick_out=./ --proto_path=${GOPATH}/src network/hostnetwork/packet/packet.proto

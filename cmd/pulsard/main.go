@@ -24,7 +24,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
 
@@ -42,6 +41,7 @@ import (
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
+	"github.com/insolar/insolar/pulse"
 	"github.com/insolar/insolar/version"
 )
 
@@ -80,8 +80,8 @@ func main() {
 	}
 
 	traceID := utils.RandTraceID()
-	ctx, inslog := initLogger(context.Background(), cfgHolder.Configuration.Log, traceID)
-	log.SetGlobalLogger(inslog)
+	ctx := context.Background()
+	ctx, inslog := inslogger.InitNodeLogger(ctx, cfgHolder.Configuration.Log, traceID, "", "pulsar")
 
 	jaegerflush := func() {}
 	if params.traceEnabled {
@@ -98,11 +98,10 @@ func main() {
 	defer jaegerflush()
 
 	cm, server := initPulsar(ctx, cfgHolder.Configuration)
-	pulseTicker, refreshTicker := runPulsar(ctx, server, cfgHolder.Configuration.Pulsar)
+	pulseTicker := runPulsar(ctx, server, cfgHolder.Configuration.Pulsar)
 
 	defer func() {
 		pulseTicker.Stop()
-		refreshTicker.Stop()
 		err = cm.Stop(ctx)
 		if err != nil {
 			inslog.Error(err)
@@ -157,7 +156,7 @@ func initPulsar(ctx context.Context, cfg configuration.Configuration) (*componen
 	return cm, server
 }
 
-func runPulsar(ctx context.Context, server *pulsar.Pulsar, cfg configuration.Pulsar) (pulseTicker *time.Ticker, refreshTicker *time.Ticker) {
+func runPulsar(ctx context.Context, server *pulsar.Pulsar, cfg configuration.Pulsar) *time.Ticker {
 	nextPulseNumber := insolar.PulseNumber(pulse.OfNow())
 	err := server.Send(ctx, nextPulseNumber)
 	if err != nil {
@@ -165,7 +164,7 @@ func runPulsar(ctx context.Context, server *pulsar.Pulsar, cfg configuration.Pul
 		panic(err)
 	}
 
-	pulseTicker = time.NewTicker(time.Duration(cfg.PulseTime) * time.Millisecond)
+	pulseTicker := time.NewTicker(time.Duration(cfg.PulseTime) * time.Millisecond)
 	go func() {
 		for range pulseTicker.C {
 			err := server.Send(ctx, server.LastPN()+insolar.PulseNumber(cfg.NumberDelta))
@@ -176,22 +175,5 @@ func runPulsar(ctx context.Context, server *pulsar.Pulsar, cfg configuration.Pul
 		}
 	}()
 
-	return
-}
-
-func initLogger(ctx context.Context, cfg configuration.Log, traceid string) (context.Context, insolar.Logger) {
-	inslog, err := log.NewLog(cfg)
-	if err != nil {
-		panic(err)
-	}
-
-	if newInslog, err := inslog.WithLevel(cfg.Level); err != nil {
-		inslog.Error(err.Error())
-	} else {
-		inslog = newInslog
-	}
-
-	ctx = inslogger.SetLogger(ctx, inslog)
-	ctx, inslog = inslogger.WithTraceField(ctx, traceid)
-	return ctx, inslog
+	return pulseTicker
 }

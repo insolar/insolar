@@ -56,18 +56,16 @@ import (
 	"io"
 	"time"
 
-	"github.com/insolar/insolar/network"
-
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensus/adapters"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
-	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
+	"github.com/insolar/insolar/pulse"
 )
 
 type packetData struct {
@@ -84,11 +82,6 @@ type PacketParser struct {
 	digester     cryptkit.DataDigester
 	signMethod   cryptkit.SignMethod
 	keyProcessor insolar.KeyProcessor
-	receivedAt   time.Time
-}
-
-func (p *PacketParser) ParsePacketBody() (transport.PacketParser, error) {
-	return nil, nil
 }
 
 func newPacketParser(
@@ -97,7 +90,6 @@ func newPacketParser(
 	digester cryptkit.DataDigester,
 	signMethod cryptkit.SignMethod,
 	keyProcessor insolar.KeyProcessor,
-	receivedAt time.Time,
 ) (*PacketParser, error) {
 
 	capture := network.NewCapturingReader(reader)
@@ -108,27 +100,24 @@ func newPacketParser(
 		digester:     digester,
 		signMethod:   signMethod,
 		keyProcessor: keyProcessor,
-		receivedAt:   receivedAt,
 	}
 
-	_, err := parser.packet.DeserializeFrom(ctx, capture, receivedAt)
+	_, err := parser.packet.DeserializeFrom(ctx, capture)
 	if err != nil {
 		return nil, err
-	}
-
-	_, logger := inslogger.WithFields(ctx, map[string]interface{}{
-		"sender_id":    parser.GetSourceID(),
-		"packet_type":  parser.GetPacketType().String(),
-		"packet_pulse": parser.GetPulseNumber(),
-	})
-
-	if logger.Is(insolar.DebugLevel) {
-		logger.Debugf("Received packet %s", parser.packet)
 	}
 
 	parser.data = capture.Captured()
 
 	return parser, nil
+}
+
+func (p PacketParser) String() string {
+	return p.packet.String()
+}
+
+func (p *PacketParser) ParsePacketBody() (transport.PacketParser, error) {
+	return nil, nil
 }
 
 type PacketParserFactory struct {
@@ -150,17 +139,13 @@ func NewPacketParserFactory(
 	}
 }
 
-func (f *PacketParserFactory) ParsePacket(ctx context.Context, reader io.Reader, receivedAt time.Time) (transport.PacketParser, error) {
-	return newPacketParser(ctx, reader, f.digester, f.signMethod, f.keyProcessor, receivedAt)
-}
-
-func (p *PacketParser) GetPacketReceivedAt() time.Time {
-	return p.receivedAt
+func (f *PacketParserFactory) ParsePacket(ctx context.Context, reader io.Reader) (transport.PacketParser, error) {
+	return newPacketParser(ctx, reader, f.digester, f.signMethod, f.keyProcessor)
 }
 
 func (p *PacketParser) GetPulsePacket() transport.PulsePacketReader {
 	pulsarBody := p.packet.EncryptableBody.(*PulsarPacketBody)
-	return adapters.NewPulsePacketParser(pulsarBody.getPulseData(), p.receivedAt, p.packetData.data)
+	return adapters.NewPulsePacketParser(pulsarBody.getPulseData())
 }
 
 func (p *PacketParser) GetMemberPacket() transport.MemberPacketReader {
@@ -194,7 +179,7 @@ func (p *PacketParser) GetPacketSignature() cryptkit.SignedDigest {
 	payloadReader := bytes.NewReader(p.data[:len(p.data)-signatureSize])
 
 	signature := cryptkit.NewSignature(&p.packet.PacketSignature, p.digester.GetDigestMethod().SignedBy(p.signMethod))
-	digest := p.digester.DigestData(payloadReader)
+	digest := p.digester.GetDigestOf(payloadReader)
 	return cryptkit.NewSignedDigest(digest, signature)
 }
 
@@ -250,8 +235,7 @@ func (r *EmbeddedPulseReader) GetEmbeddedPulsePacket() transport.PulsePacketRead
 		return nil
 	}
 
-	return adapters.NewPulsePacketParser(r.body.PulsarPacket.PulsarPacketBody.getPulseData(),
-		r.receivedAt, r.body.PulsarPacket.Data)
+	return adapters.NewPulsePacketParser(r.body.PulsarPacket.PulsarPacketBody.getPulseData())
 }
 
 type Phase0PacketReader struct {
@@ -452,7 +436,7 @@ type FullIntroductionReader struct {
 
 func (r *FullIntroductionReader) GetBriefIntroSignedDigest() cryptkit.SignedDigestHolder {
 	return cryptkit.NewSignedDigest(
-		r.digester.DigestData(bytes.NewReader(r.intro.JoinerData)),
+		r.digester.GetDigestOf(bytes.NewReader(r.intro.JoinerData)),
 		cryptkit.NewSignature(&r.intro.JoinerSignature, r.digester.GetDigestMethod().SignedBy(r.signMethod)),
 	).AsSignedDigestHolder()
 }
@@ -500,12 +484,10 @@ func (r *FullIntroductionReader) GetExtraEndpoints() []endpoints.Outbound {
 
 func (r *FullIntroductionReader) GetReference() insolar.Reference {
 	if r.body.FullSelfIntro.ProofLen > 0 {
-		ref := insolar.Reference{}
-		copy(ref[:], r.intro.NodeRefProof[0].AsBytes())
-		return ref
+		return *insolar.NewReferenceFromBytes(r.intro.NodeRefProof[0].AsBytes())
 	}
 
-	return insolar.Reference{}
+	return *insolar.NewEmptyReference()
 }
 
 func (r *FullIntroductionReader) GetIssuerID() insolar.ShortNodeID {

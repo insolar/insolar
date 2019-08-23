@@ -21,6 +21,7 @@ import (
 
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/pkg/errors"
@@ -39,6 +40,9 @@ func NewHotObjects(dep *proc.Dependencies, meta payload.Meta) *HotObjects {
 }
 
 func (s *HotObjects) Present(ctx context.Context, f flow.Flow) error {
+	logger := inslogger.FromContext(ctx)
+	logger.Info("start hotObjects msg processing")
+
 	msg, err := payload.Unmarshal(s.meta.Payload)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal message")
@@ -48,6 +52,10 @@ func (s *HotObjects) Present(ctx context.Context, f flow.Flow) error {
 	if !ok {
 		return errors.New("received wrong message")
 	}
+	logger = logger.WithFields(map[string]interface{}{
+		"pulse":  hots.Pulse,
+		"jet_id": hots.JetID.DebugString(),
+	})
 
 	d, err := drop.Decode(hots.Drop)
 	if err != nil {
@@ -59,5 +67,7 @@ func (s *HotObjects) Present(ctx context.Context, f flow.Flow) error {
 	if err := f.Procedure(ctx, hdProc, false); err != nil {
 		return err
 	}
+
+	logger.Info("finish hotObjects msg processing")
 	return nil
 }

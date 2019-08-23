@@ -10,6 +10,7 @@ import (
 
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/logicrunner/common"
 )
 
@@ -47,13 +48,13 @@ type ExecutionRegistryMock struct {
 	beforeLengthCounter uint64
 	LengthMock          mExecutionRegistryMockLength
 
-	funcOnPulse          func(ctx context.Context) (ma1 []insolar.Message)
+	funcOnPulse          func(ctx context.Context) (pa1 []payload.Payload)
 	inspectFuncOnPulse   func(ctx context.Context)
 	afterOnPulseCounter  uint64
 	beforeOnPulseCounter uint64
 	OnPulseMock          mExecutionRegistryMockOnPulse
 
-	funcRegister          func(ctx context.Context, transcript *common.Transcript)
+	funcRegister          func(ctx context.Context, transcript *common.Transcript) (err error)
 	inspectFuncRegister   func(ctx context.Context, transcript *common.Transcript)
 	afterRegisterCounter  uint64
 	beforeRegisterCounter uint64
@@ -1046,7 +1047,7 @@ type ExecutionRegistryMockOnPulseParams struct {
 
 // ExecutionRegistryMockOnPulseResults contains results of the ExecutionRegistry.OnPulse
 type ExecutionRegistryMockOnPulseResults struct {
-	ma1 []insolar.Message
+	pa1 []payload.Payload
 }
 
 // Expect sets up expected params for ExecutionRegistry.OnPulse
@@ -1081,7 +1082,7 @@ func (mmOnPulse *mExecutionRegistryMockOnPulse) Inspect(f func(ctx context.Conte
 }
 
 // Return sets up results that will be returned by ExecutionRegistry.OnPulse
-func (mmOnPulse *mExecutionRegistryMockOnPulse) Return(ma1 []insolar.Message) *ExecutionRegistryMock {
+func (mmOnPulse *mExecutionRegistryMockOnPulse) Return(pa1 []payload.Payload) *ExecutionRegistryMock {
 	if mmOnPulse.mock.funcOnPulse != nil {
 		mmOnPulse.mock.t.Fatalf("ExecutionRegistryMock.OnPulse mock is already set by Set")
 	}
@@ -1089,12 +1090,12 @@ func (mmOnPulse *mExecutionRegistryMockOnPulse) Return(ma1 []insolar.Message) *E
 	if mmOnPulse.defaultExpectation == nil {
 		mmOnPulse.defaultExpectation = &ExecutionRegistryMockOnPulseExpectation{mock: mmOnPulse.mock}
 	}
-	mmOnPulse.defaultExpectation.results = &ExecutionRegistryMockOnPulseResults{ma1}
+	mmOnPulse.defaultExpectation.results = &ExecutionRegistryMockOnPulseResults{pa1}
 	return mmOnPulse.mock
 }
 
 //Set uses given function f to mock the ExecutionRegistry.OnPulse method
-func (mmOnPulse *mExecutionRegistryMockOnPulse) Set(f func(ctx context.Context) (ma1 []insolar.Message)) *ExecutionRegistryMock {
+func (mmOnPulse *mExecutionRegistryMockOnPulse) Set(f func(ctx context.Context) (pa1 []payload.Payload)) *ExecutionRegistryMock {
 	if mmOnPulse.defaultExpectation != nil {
 		mmOnPulse.mock.t.Fatalf("Default expectation is already set for the ExecutionRegistry.OnPulse method")
 	}
@@ -1123,13 +1124,13 @@ func (mmOnPulse *mExecutionRegistryMockOnPulse) When(ctx context.Context) *Execu
 }
 
 // Then sets up ExecutionRegistry.OnPulse return parameters for the expectation previously defined by the When method
-func (e *ExecutionRegistryMockOnPulseExpectation) Then(ma1 []insolar.Message) *ExecutionRegistryMock {
-	e.results = &ExecutionRegistryMockOnPulseResults{ma1}
+func (e *ExecutionRegistryMockOnPulseExpectation) Then(pa1 []payload.Payload) *ExecutionRegistryMock {
+	e.results = &ExecutionRegistryMockOnPulseResults{pa1}
 	return e.mock
 }
 
 // OnPulse implements ExecutionRegistry
-func (mmOnPulse *ExecutionRegistryMock) OnPulse(ctx context.Context) (ma1 []insolar.Message) {
+func (mmOnPulse *ExecutionRegistryMock) OnPulse(ctx context.Context) (pa1 []payload.Payload) {
 	mm_atomic.AddUint64(&mmOnPulse.beforeOnPulseCounter, 1)
 	defer mm_atomic.AddUint64(&mmOnPulse.afterOnPulseCounter, 1)
 
@@ -1147,7 +1148,7 @@ func (mmOnPulse *ExecutionRegistryMock) OnPulse(ctx context.Context) (ma1 []inso
 	for _, e := range mmOnPulse.OnPulseMock.expectations {
 		if minimock.Equal(e.params, params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
-			return e.results.ma1
+			return e.results.pa1
 		}
 	}
 
@@ -1163,7 +1164,7 @@ func (mmOnPulse *ExecutionRegistryMock) OnPulse(ctx context.Context) (ma1 []inso
 		if results == nil {
 			mmOnPulse.t.Fatal("No results are set for the ExecutionRegistryMock.OnPulse")
 		}
-		return (*results).ma1
+		return (*results).pa1
 	}
 	if mmOnPulse.funcOnPulse != nil {
 		return mmOnPulse.funcOnPulse(ctx)
@@ -1248,9 +1249,9 @@ type mExecutionRegistryMockRegister struct {
 
 // ExecutionRegistryMockRegisterExpectation specifies expectation struct of the ExecutionRegistry.Register
 type ExecutionRegistryMockRegisterExpectation struct {
-	mock   *ExecutionRegistryMock
-	params *ExecutionRegistryMockRegisterParams
-
+	mock    *ExecutionRegistryMock
+	params  *ExecutionRegistryMockRegisterParams
+	results *ExecutionRegistryMockRegisterResults
 	Counter uint64
 }
 
@@ -1258,6 +1259,11 @@ type ExecutionRegistryMockRegisterExpectation struct {
 type ExecutionRegistryMockRegisterParams struct {
 	ctx        context.Context
 	transcript *common.Transcript
+}
+
+// ExecutionRegistryMockRegisterResults contains results of the ExecutionRegistry.Register
+type ExecutionRegistryMockRegisterResults struct {
+	err error
 }
 
 // Expect sets up expected params for ExecutionRegistry.Register
@@ -1292,7 +1298,7 @@ func (mmRegister *mExecutionRegistryMockRegister) Inspect(f func(ctx context.Con
 }
 
 // Return sets up results that will be returned by ExecutionRegistry.Register
-func (mmRegister *mExecutionRegistryMockRegister) Return() *ExecutionRegistryMock {
+func (mmRegister *mExecutionRegistryMockRegister) Return(err error) *ExecutionRegistryMock {
 	if mmRegister.mock.funcRegister != nil {
 		mmRegister.mock.t.Fatalf("ExecutionRegistryMock.Register mock is already set by Set")
 	}
@@ -1300,12 +1306,12 @@ func (mmRegister *mExecutionRegistryMockRegister) Return() *ExecutionRegistryMoc
 	if mmRegister.defaultExpectation == nil {
 		mmRegister.defaultExpectation = &ExecutionRegistryMockRegisterExpectation{mock: mmRegister.mock}
 	}
-
+	mmRegister.defaultExpectation.results = &ExecutionRegistryMockRegisterResults{err}
 	return mmRegister.mock
 }
 
 //Set uses given function f to mock the ExecutionRegistry.Register method
-func (mmRegister *mExecutionRegistryMockRegister) Set(f func(ctx context.Context, transcript *common.Transcript)) *ExecutionRegistryMock {
+func (mmRegister *mExecutionRegistryMockRegister) Set(f func(ctx context.Context, transcript *common.Transcript) (err error)) *ExecutionRegistryMock {
 	if mmRegister.defaultExpectation != nil {
 		mmRegister.mock.t.Fatalf("Default expectation is already set for the ExecutionRegistry.Register method")
 	}
@@ -1318,8 +1324,29 @@ func (mmRegister *mExecutionRegistryMockRegister) Set(f func(ctx context.Context
 	return mmRegister.mock
 }
 
+// When sets expectation for the ExecutionRegistry.Register which will trigger the result defined by the following
+// Then helper
+func (mmRegister *mExecutionRegistryMockRegister) When(ctx context.Context, transcript *common.Transcript) *ExecutionRegistryMockRegisterExpectation {
+	if mmRegister.mock.funcRegister != nil {
+		mmRegister.mock.t.Fatalf("ExecutionRegistryMock.Register mock is already set by Set")
+	}
+
+	expectation := &ExecutionRegistryMockRegisterExpectation{
+		mock:   mmRegister.mock,
+		params: &ExecutionRegistryMockRegisterParams{ctx, transcript},
+	}
+	mmRegister.expectations = append(mmRegister.expectations, expectation)
+	return expectation
+}
+
+// Then sets up ExecutionRegistry.Register return parameters for the expectation previously defined by the When method
+func (e *ExecutionRegistryMockRegisterExpectation) Then(err error) *ExecutionRegistryMock {
+	e.results = &ExecutionRegistryMockRegisterResults{err}
+	return e.mock
+}
+
 // Register implements ExecutionRegistry
-func (mmRegister *ExecutionRegistryMock) Register(ctx context.Context, transcript *common.Transcript) {
+func (mmRegister *ExecutionRegistryMock) Register(ctx context.Context, transcript *common.Transcript) (err error) {
 	mm_atomic.AddUint64(&mmRegister.beforeRegisterCounter, 1)
 	defer mm_atomic.AddUint64(&mmRegister.afterRegisterCounter, 1)
 
@@ -1337,7 +1364,7 @@ func (mmRegister *ExecutionRegistryMock) Register(ctx context.Context, transcrip
 	for _, e := range mmRegister.RegisterMock.expectations {
 		if minimock.Equal(e.params, params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
-			return
+			return e.results.err
 		}
 	}
 
@@ -1349,15 +1376,17 @@ func (mmRegister *ExecutionRegistryMock) Register(ctx context.Context, transcrip
 			mmRegister.t.Errorf("ExecutionRegistryMock.Register got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
 		}
 
-		return
-
+		results := mmRegister.RegisterMock.defaultExpectation.results
+		if results == nil {
+			mmRegister.t.Fatal("No results are set for the ExecutionRegistryMock.Register")
+		}
+		return (*results).err
 	}
 	if mmRegister.funcRegister != nil {
-		mmRegister.funcRegister(ctx, transcript)
-		return
+		return mmRegister.funcRegister(ctx, transcript)
 	}
 	mmRegister.t.Fatalf("Unexpected call to ExecutionRegistryMock.Register. %v %v", ctx, transcript)
-
+	return
 }
 
 // RegisterAfterCounter returns a count of finished ExecutionRegistryMock.Register invocations

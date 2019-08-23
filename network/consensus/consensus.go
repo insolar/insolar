@@ -56,10 +56,10 @@ import (
 	"reflect"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/longbits"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensus/adapters"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
-	"github.com/insolar/insolar/network/consensus/common/longbits"
 	"github.com/insolar/insolar/network/consensus/gcpv2"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
@@ -85,6 +85,7 @@ const (
 )
 
 func New(ctx context.Context, dep Dep) Installer {
+	ctx = adapters.ConsensusContext(ctx)
 	dep.verify()
 
 	constructor := newConstructor(ctx, &dep)
@@ -205,7 +206,11 @@ func (c Installer) ControllerFor(mode Mode, setters ...packetProcessorSetter) Co
 	controlFeederInterceptor := adapters.InterceptConsensusControl(
 		adapters.NewConsensusControlFeeder(),
 	)
-	candidateFeeder := &coreapi.SequentialCandidateFeeder{}
+	var candidateQueueSize int
+	if mode == ReadyNetwork {
+		candidateQueueSize = 1
+	}
+	candidateFeeder := coreapi.NewSequentialCandidateFeeder(candidateQueueSize)
 
 	var ephemeralFeeder api.EphemeralControlFeeder
 	if c.dep.EphemeralController.EphemeralMode(c.dep.NodeKeeper.GetAccessor(insolar.GenesisPulse.PulseNumber).GetActiveNodes()) {

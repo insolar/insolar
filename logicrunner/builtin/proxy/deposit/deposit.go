@@ -79,9 +79,9 @@ func GetPrototype() insolar.Reference {
 }
 
 // New is constructor
-func New(migrationDaemonConfirms [3]string, txHash string, amount string) *ContractConstructorHolder {
+func New(migrationDaemonRef insolar.Reference, txHash string, amount string) *ContractConstructorHolder {
 	var args [3]interface{}
-	args[0] = migrationDaemonConfirms
+	args[0] = migrationDaemonRef
 	args[1] = txHash
 	args[2] = amount
 
@@ -352,6 +352,103 @@ func (r *Deposit) GetAmount() (string, error) {
 	return ret0, nil
 }
 
+// GetPulseUnHold is proxy generated method
+func (r *Deposit) GetPulseUnHoldAsMutable() (insolar.PulseNumber, error) {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	ret := make([]interface{}, 2)
+	var ret0 insolar.PulseNumber
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetPulseUnHold", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return ret0, err
+	}
+
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
+	if err != nil {
+		return ret0, err
+	}
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return ret0, err
+	}
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
+}
+
+// GetPulseUnHoldNoWait is proxy generated method
+func (r *Deposit) GetPulseUnHoldNoWait() error {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "GetPulseUnHold", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// GetPulseUnHoldAsImmutable is proxy generated method
+func (r *Deposit) GetPulseUnHold() (insolar.PulseNumber, error) {
+	var args [0]interface{}
+
+	var argsSerialized []byte
+
+	ret := make([]interface{}, 2)
+	var ret0 insolar.PulseNumber
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "GetPulseUnHold", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return ret0, err
+	}
+
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
+	if err != nil {
+		return ret0, err
+	}
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return ret0, err
+	}
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
+}
+
 // Itself is proxy generated method
 func (r *Deposit) ItselfAsMutable() (interface{}, error) {
 	var args [0]interface{}
@@ -450,12 +547,11 @@ func (r *Deposit) Itself() (interface{}, error) {
 }
 
 // Confirm is proxy generated method
-func (r *Deposit) Confirm(migrationDaemonIndex int, migrationDaemonRef string, txHash string, amountStr string) error {
-	var args [4]interface{}
-	args[0] = migrationDaemonIndex
-	args[1] = migrationDaemonRef
-	args[2] = txHash
-	args[3] = amountStr
+func (r *Deposit) Confirm(migrationDaemonRef string, txHash string, amountStr string) error {
+	var args [3]interface{}
+	args[0] = migrationDaemonRef
+	args[1] = txHash
+	args[2] = amountStr
 
 	var argsSerialized []byte
 
@@ -491,12 +587,11 @@ func (r *Deposit) Confirm(migrationDaemonIndex int, migrationDaemonRef string, t
 }
 
 // ConfirmNoWait is proxy generated method
-func (r *Deposit) ConfirmNoWait(migrationDaemonIndex int, migrationDaemonRef string, txHash string, amountStr string) error {
-	var args [4]interface{}
-	args[0] = migrationDaemonIndex
-	args[1] = migrationDaemonRef
-	args[2] = txHash
-	args[3] = amountStr
+func (r *Deposit) ConfirmNoWait(migrationDaemonRef string, txHash string, amountStr string) error {
+	var args [3]interface{}
+	args[0] = migrationDaemonRef
+	args[1] = txHash
+	args[2] = amountStr
 
 	var argsSerialized []byte
 
@@ -514,12 +609,11 @@ func (r *Deposit) ConfirmNoWait(migrationDaemonIndex int, migrationDaemonRef str
 }
 
 // ConfirmAsImmutable is proxy generated method
-func (r *Deposit) ConfirmAsImmutable(migrationDaemonIndex int, migrationDaemonRef string, txHash string, amountStr string) error {
-	var args [4]interface{}
-	args[0] = migrationDaemonIndex
-	args[1] = migrationDaemonRef
-	args[2] = txHash
-	args[3] = amountStr
+func (r *Deposit) ConfirmAsImmutable(migrationDaemonRef string, txHash string, amountStr string) error {
+	var args [3]interface{}
+	args[0] = migrationDaemonRef
+	args[1] = txHash
+	args[2] = amountStr
 
 	var argsSerialized []byte
 

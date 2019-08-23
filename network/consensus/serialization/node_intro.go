@@ -53,15 +53,14 @@ package serialization
 import (
 	"io"
 
-	"github.com/insolar/insolar/network"
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/longbits"
+	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
-	"github.com/insolar/insolar/network/consensus/common/longbits"
-	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
-
-	"github.com/pkg/errors"
+	"github.com/insolar/insolar/pulse"
 )
 
 const (

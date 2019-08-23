@@ -57,8 +57,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/insolar/insolar/network/consensus/common/pulse"
-	"github.com/insolar/insolar/network/transport"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/component"
@@ -67,9 +65,11 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/pulsenetwork"
+	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
+	"github.com/insolar/insolar/pulse"
 )
 
 type TestPulsar interface {
@@ -105,11 +105,8 @@ type testPulsar struct {
 func (tp *testPulsar) Start(ctx context.Context, bootstrapHosts []string) error {
 
 	distributorCfg := configuration.PulseDistributor{
-		BootstrapHosts:            bootstrapHosts,
-		PingRequestTimeout:        tp.reqTimeoutMs,
-		RandomHostsRequestTimeout: tp.reqTimeoutMs,
-		PulseRequestTimeout:       tp.reqTimeoutMs,
-		RandomNodesCount:          1,
+		BootstrapHosts:      bootstrapHosts,
+		PulseRequestTimeout: tp.reqTimeoutMs,
 	}
 
 	var err error

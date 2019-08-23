@@ -185,7 +185,7 @@ func (hn *hostNetwork) handleRequest(ctx context.Context, p *packet.ReceivedPack
 	hn.muHandlers.RUnlock()
 
 	if !exist {
-		logger.Errorf("No handler set for packet type %s from node %s", p.GetType(), p.Sender.NodeID)
+		logger.Warnf("No handler set for packet type %s from node %s", p.GetType(), p.Sender.NodeID)
 		ep := hn.BuildResponse(ctx, p, &packet.ErrorResponse{Error: "UNKNOWN RPC ENDPOINT"}).(*packet.Packet)
 		ep.RequestID = p.RequestID
 		if err := SendPacket(ctx, hn.pool, ep); err != nil {
@@ -195,7 +195,7 @@ func (hn *hostNetwork) handleRequest(ctx context.Context, p *packet.ReceivedPack
 	}
 	response, err := handler(ctx, p)
 	if err != nil {
-		logger.Errorf("Error handling request %s from node %s: %s", p.GetType(), p.Sender.NodeID, err)
+		logger.Warnf("Error handling request %s from node %s: %s", p.GetType(), p.Sender.NodeID, err)
 		ep := hn.BuildResponse(ctx, p, &packet.ErrorResponse{Error: err.Error()}).(*packet.Packet)
 		ep.RequestID = p.RequestID
 		if err = SendPacket(ctx, hn.pool, ep); err != nil {
@@ -272,10 +272,7 @@ func (hn *hostNetwork) SendRequest(ctx context.Context, packetType types.PacketT
 
 // RegisterRequestHandler register a handler function to process incoming requests of a specific type.
 func (hn *hostNetwork) RegisterRequestHandler(t types.PacketType, handler network.RequestHandler) {
-	f := func(ctx context.Context, request network.ReceivedPacket) (network.Packet, error) {
-		return handler(ctx, request)
-	}
-	hn.RegisterPacketHandler(t, f)
+	hn.RegisterPacketHandler(t, handler)
 }
 
 func (hn *hostNetwork) getOrigin() *host.Host {

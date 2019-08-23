@@ -52,6 +52,7 @@ package adapters
 
 import (
 	"crypto/ecdsa"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
@@ -134,9 +135,9 @@ func NewRoundStrategyFactory() *RoundStrategyFactory {
 	}
 }
 
-func (rsf *RoundStrategyFactory) CreateRoundStrategy(chronicle api.ConsensusChronicles, config api.LocalNodeConfiguration) (core.RoundStrategy, core.PhaseControllersBundle) {
-	rs := NewRoundStrategy(chronicle, config)
-	pcb := rsf.bundleFactory.CreateControllersBundle(chronicle.GetLatestCensus().GetOnlinePopulation(), config)
+func (rsf *RoundStrategyFactory) CreateRoundStrategy(online census.OnlinePopulation, config api.LocalNodeConfiguration) (core.RoundStrategy, core.PhaseControllersBundle) {
+	rs := NewRoundStrategy(config)
+	pcb := rsf.bundleFactory.CreateControllersBundle(online, config)
 	return rs, pcb
 
 }

@@ -53,20 +53,21 @@ package node
 import (
 	"testing"
 
-	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestRecordRefSet_Collect(t *testing.T) {
+	refs := gen.UniqueReferences(3)
 	r := newRefSet()
 	assert.Equal(t, 0, len(r.Collect()))
-	r.Add(insolar.Reference{0})
-	r.Add(insolar.Reference{1})
-	assert.True(t, r.Contains(insolar.Reference{0}))
-	assert.False(t, r.Contains(insolar.Reference{2}))
+	r.Add(refs[0])
+	r.Add(refs[1])
+	assert.True(t, r.Contains(refs[0]))
+	assert.False(t, r.Contains(refs[2]))
 	assert.Equal(t, 2, len(r.Collect()))
-	r.Remove(insolar.Reference{0})
-	assert.False(t, r.Contains(insolar.Reference{0}))
-	assert.True(t, r.Contains(insolar.Reference{1}))
+	r.Remove(refs[0])
+	assert.False(t, r.Contains(refs[0]))
+	assert.True(t, r.Contains(refs[1]))
 	assert.Equal(t, 1, len(r.Collect()))
 }

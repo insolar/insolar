@@ -27,9 +27,11 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/api/requester"
+	"github.com/insolar/insolar/testutils/launchnet"
 )
 
 func contractError(body []byte) error {
@@ -48,34 +50,30 @@ func contractError(body []byte) error {
 
 func TestBadSeed(t *testing.T) {
 	ctx := context.TODO()
-	rootCfg, err := requester.CreateUserConfig(root.ref, root.privKey, root.pubKey)
+	rootCfg, err := requester.CreateUserConfig(launchnet.Root.Ref, launchnet.Root.PrivKey, launchnet.Root.PubKey)
 	require.NoError(t, err)
-	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
-		JSONRPC: "2.0",
-		ID:      1,
-		Method:  "api.call",
-		Params:  requester.Params{CallSite: "member.create", PublicKey: rootCfg.PublicKey},
-	}, "MTExMQ==")
+	res, err := requester.SendWithSeed(ctx, launchnet.TestRPCUrl, rootCfg, &requester.Params{
+		CallSite:  "member.create",
+		PublicKey: rootCfg.PublicKey},
+		"MTExMQ==")
 	require.NoError(t, err)
 	require.EqualError(t, contractError(res), "[ checkSeed ] Bad seed param")
 }
 
 func TestIncorrectSeed(t *testing.T) {
 	ctx := context.TODO()
-	rootCfg, err := requester.CreateUserConfig(root.ref, root.privKey, root.pubKey)
+	rootCfg, err := requester.CreateUserConfig(launchnet.Root.Ref, launchnet.Root.PrivKey, launchnet.Root.PubKey)
 	require.NoError(t, err)
-	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
-		JSONRPC: "2.0",
-		ID:      1,
-		Method:  "api.call",
-		Params:  requester.Params{CallSite: "member.create", PublicKey: rootCfg.PublicKey},
-	}, "z2vgMVDXx0s+g5mkagOLqCP0q/8YTfoQkII5pjNF1ag=")
+	res, err := requester.SendWithSeed(ctx, launchnet.TestRPCUrl, rootCfg, &requester.Params{
+		CallSite:  "member.create",
+		PublicKey: rootCfg.PublicKey},
+		"z2vgMVDXx0s+g5mkagOLqCP0q/8YTfoQkII5pjNF1ag=")
 	require.NoError(t, err)
 	require.EqualError(t, contractError(res), "[ checkSeed ] Incorrect seed")
 }
 
 func customSend(data string) (map[string]interface{}, error) {
-	req, err := http.NewRequest("POST", TestCallUrl, strings.NewReader(data))
+	req, err := http.NewRequest("POST", launchnet.TestRPCUrl, strings.NewReader(data))
 	if err != nil {
 		return nil, err
 	}
@@ -98,56 +96,120 @@ func customSend(data string) (map[string]interface{}, error) {
 func TestEmptyBody(t *testing.T) {
 	res, err := customSend("")
 	require.NoError(t, err)
-	require.Equal(t, "failed to unmarshal request: [ UnmarshalRequest ] Empty body", res["error"].(map[string]interface{})["message"].(string))
+	require.Equal(t, "unexpected end of JSON input", res["error"].(map[string]interface{})["message"].(string))
 }
 
 func TestCrazyJSON(t *testing.T) {
 	res, err := customSend("[dh")
 	require.NoError(t, err)
-	require.Contains(t, res["error"].(map[string]interface{})["message"].(string), "[ UnmarshalRequest ] Can't unmarshal input params: invalid")
+	require.Contains(t, res["error"].(map[string]interface{})["message"].(string), "looking for beginning of value")
 }
 
 func TestIncorrectSign(t *testing.T) {
 	testMember := createMember(t)
-	seed, err := requester.GetSeed(TestAPIURL)
+	seed, err := requester.GetSeed(launchnet.TestAPIURL)
 	require.NoError(t, err)
 	body, err := requester.GetResponseBodyContract(
-		TestCallUrl,
-		requester.Request{
-			JSONRPC: "2.0",
+		launchnet.TestRPCUrl,
+		requester.ContractRequest{
+			Request: requester.Request{
+				Version: "2.0",
+				ID:      1,
+				Method:  "contract.call",
+			},
+			Params: requester.Params{Seed: seed, Reference: testMember.Ref, PublicKey: testMember.PubKey, CallSite: "member.getBalance", CallParams: map[string]interface{}{"reference": testMember.Ref}},
+		},
+		"invalidSignature",
+	)
+	require.NoError(t, err)
+	var res requester.ContractResponse
+	err = json.Unmarshal(body, &res)
+	require.NoError(t, err)
+	require.Contains(t, res.Error.Message, "error while verify signature")
+	require.Contains(t, res.Error.Message, "structure error")
+}
+
+func TestEmptySign(t *testing.T) {
+	testMember := createMember(t)
+	seed, err := requester.GetSeed(launchnet.TestAPIURL)
+	require.NoError(t, err)
+	body, err := requester.GetResponseBodyContract(
+		launchnet.TestRPCUrl,
+		requester.ContractRequest{
+			Request: requester.Request{
+				Version: "2.0",
+				ID:      1,
+				Method:  "contract.call",
+			},
+			Params: requester.Params{Seed: seed, Reference: testMember.Ref, PublicKey: testMember.PubKey, CallSite: "wallet.getBalance", CallParams: map[string]interface{}{"reference": testMember.Ref}},
+		},
+		"",
+	)
+	require.NoError(t, err)
+	var res requester.ContractResponse
+	err = json.Unmarshal(body, &res)
+	require.NoError(t, err)
+	require.Equal(t, res.Error.Message, "invalid signature")
+}
+
+func TestRequestWithSignFromOtherMember(t *testing.T) {
+	memberForParam := createMember(t)
+	seed, err := requester.GetSeed(launchnet.TestAPIURL)
+	require.NoError(t, err)
+
+	request := requester.ContractRequest{
+		Request: requester.Request{
+			Version: "2.0",
 			ID:      1,
-			Method:  "api.call",
-			Params:  requester.Params{Seed: seed, Reference: testMember.ref, PublicKey: testMember.pubKey, CallSite: "wallet.getBalance", CallParams: map[string]interface{}{"reference": testMember.ref}},
+			Method:  "contract.call",
+		},
+		Params: requester.Params{Seed: seed, Reference: memberForParam.Ref, PublicKey: memberForParam.PubKey, CallSite: "wallet.getBalance", CallParams: map[string]interface{}{"reference": memberForParam.Ref}},
+	}
+
+	dataToSign, err := json.Marshal(request)
+	require.NoError(t, err)
+
+	memberForSign, err := newUserWithKeys()
+	require.NoError(t, err)
+
+	ks := platformpolicy.NewKeyProcessor()
+	privateKey, err := ks.ImportPrivateKeyPEM([]byte(memberForSign.PrivKey))
+	signature, err := requester.Sign(privateKey, dataToSign)
+	require.NoError(t, err)
+
+	body, err := requester.GetResponseBodyContract(
+		launchnet.TestRPCUrl,
+		request,
+		signature,
+	)
+	require.NoError(t, err)
+
+	var res requester.ContractResponse
+	err = json.Unmarshal(body, &res)
+	require.NoError(t, err)
+	require.Contains(t, res.Error.Message, "error while verify signature: invalid signature")
+}
+
+func TestIncorrectMethodName(t *testing.T) {
+	res, err := requester.GetResponseBodyContract(
+		launchnet.TestRPCUrl,
+		requester.ContractRequest{
+			Request: requester.Request{
+				Version: "2.0",
+				ID:      1,
+				Method:  "foo.bar",
+			},
 		},
 		"MEQCIAvgBR42vSccBKynBIC7gb5GffqtW8q2XWRP+DlJ0IeUAiAeKCxZNSSRSsYcz2d49CT6KlSLpr5L7VlOokOiI9dsvQ==",
 	)
 	require.NoError(t, err)
-	var res requester.ContractAnswer
-	err = json.Unmarshal(body, &res)
-	require.NoError(t, err)
-	require.Contains(t, res.Error.Message, "invalid signature")
-}
-
-func TestIncorrectMethodName(t *testing.T) {
-	ctx := context.TODO()
-	seed, err := requester.GetSeed(TestAPIURL)
-	require.NoError(t, err)
-	rootCfg, err := requester.CreateUserConfig(root.ref, root.privKey, root.pubKey)
-	require.NoError(t, err)
-	res, err := requester.SendWithSeed(ctx, TestCallUrl, rootCfg, &requester.Request{
-		JSONRPC: "2.0",
-		ID:      1,
-		Method:  "foo.bar",
-		Params:  requester.Params{CallSite: "member.create", PublicKey: rootCfg.PublicKey},
-	}, seed)
-	require.NoError(t, err)
-	require.EqualError(t, contractError(res), "rpc method does not exist")
+	require.EqualError(t, contractError(res), "rpc: can't find service \"foo.bar\"")
 }
 
 func TestIncorrectParams(t *testing.T) {
 	firstMember := createMember(t)
 
-	_, err := signedRequestWithEmptyRequestRef(t, firstMember, "member.transfer", firstMember.ref)
+	_, err := signedRequestWithEmptyRequestRef(t, firstMember, "member.transfer", firstMember.Ref)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "failed to cast call params: expected 'map[string]interface{}', got 'string'")
 }
@@ -165,7 +227,7 @@ func TestRequestReference(t *testing.T) {
 	secondMember := createMember(t)
 	amount := "10"
 
-	_, ref, err := makeSignedRequest(firstMember, "member.transfer", map[string]interface{}{"amount": amount, "toMemberReference": secondMember.ref})
+	_, ref, err := makeSignedRequest(firstMember, "member.transfer", map[string]interface{}{"amount": amount, "toMemberReference": secondMember.Ref})
 	require.NoError(t, err)
 	require.NotEqual(t, "", ref)
 	require.NotEqual(t, "11111111111111111111111111111111.11111111111111111111111111111111", ref)

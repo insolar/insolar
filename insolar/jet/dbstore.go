@@ -145,7 +145,7 @@ func (s *DBStore) get(pn insolar.PulseNumber) *Tree {
 	}
 
 	recovered := &Tree{}
-	err = insolar.Deserialize(serializedTree, recovered)
+	err = recovered.Unmarshal(serializedTree)
 	if err != nil {
 		return nil
 	}
@@ -155,7 +155,7 @@ func (s *DBStore) get(pn insolar.PulseNumber) *Tree {
 func (s *DBStore) set(pn insolar.PulseNumber, jt *Tree) error {
 	key := pulseKey(pn)
 
-	serialized, err := insolar.Serialize(jt)
+	serialized, err := jt.Marshal()
 	if err != nil {
 		return errors.Wrap(err, "failed to serialize jet.Tree")
 	}

@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// +build slowtest
 
 package integration_test
 
@@ -50,8 +51,6 @@ func Test_BootstrapCalls(t *testing.T) {
 
 	// First pulse goes in storage then interrupts.
 	s.SetPulse(ctx)
-	// Second pulse goes in storage and starts processing, including pulse change in flow dispatcher.
-	s.SetPulse(ctx)
 
 	t.Run("messages after two pulses return result", func(t *testing.T) {
 		p, _ := CallSetCode(ctx, s)
@@ -70,14 +69,12 @@ func Test_BasicOperations(t *testing.T) {
 
 	// First pulse goes in storage then interrupts.
 	s.SetPulse(ctx)
-	// Second pulse goes in storage and starts processing, including pulse change in flow dispatcher.
-	s.SetPulse(ctx)
 
 	runner := func(t *testing.T) {
 		// Creating root reason request.
 		var reasonID insolar.ID
 		{
-			msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), true, true)
+			msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), insolar.ID{}, true, true)
 			rep := retryIfCancelled(func() payload.Payload {
 				return SendMessage(ctx, s, &msg)
 			})
@@ -104,7 +101,7 @@ func Test_BasicOperations(t *testing.T) {
 		var objectID insolar.ID
 		// Set, get request.
 		{
-			msg, virtual := MakeSetIncomingRequest(gen.ID(), reasonID, true, true)
+			msg, virtual := MakeSetIncomingRequest(gen.ID(), reasonID, insolar.ID{}, true, true)
 			p := retryIfCancelled(func() payload.Payload {
 				return SendMessage(ctx, s, &msg)
 			})
@@ -129,7 +126,7 @@ func Test_BasicOperations(t *testing.T) {
 		}
 		// Amend and check object.
 		{
-			msg, _ := MakeSetIncomingRequest(objectID, reasonID, false, true)
+			msg, _ := MakeSetIncomingRequest(objectID, reasonID, insolar.ID{}, false, true)
 			p := retryIfCancelled(func() payload.Payload {
 				return SendMessage(ctx, s, &msg)
 			})
@@ -148,7 +145,7 @@ func Test_BasicOperations(t *testing.T) {
 		}
 		// Deactivate and check object.
 		{
-			msg, _ := MakeSetIncomingRequest(objectID, reasonID, false, true)
+			msg, _ := MakeSetIncomingRequest(objectID, reasonID, insolar.ID{}, false, true)
 			p := retryIfCancelled(func() payload.Payload {
 				return SendMessage(ctx, s, &msg)
 			})

@@ -45,7 +45,7 @@ func (p *AdditionalCallFromPreviousExecutor) Proceed(ctx context.Context) error 
 		broker.SetNotPending(ctx)
 	}
 
-	tr := common.NewTranscript(freshContextFromContext(ctx), p.message.RequestRef, p.message.Request)
+	tr := common.NewTranscriptCloneContext(ctx, p.message.RequestRef, p.message.Request)
 	broker.AddAdditionalRequestFromPrevExecutor(ctx, tr)
 	return nil
 }
@@ -63,13 +63,14 @@ type HandleAdditionalCallFromPreviousExecutor struct {
 // execution of this handle. In this scenario user is in a bad luck. The request will be lost and
 // user will have to re-send it after some timeout.
 func (h *HandleAdditionalCallFromPreviousExecutor) Present(ctx context.Context, f flow.Flow) error {
-	ctx = loggerWithTargetID(ctx, h.Parcel)
-
-	logger := inslogger.FromContext(ctx).WithField("handler", "HandleAdditionalCallFromPreviousExecutor")
-	logger.Debug("Handler.Present starts")
-
 	msg := h.Parcel.Message().(*message.AdditionalCallFromPreviousExecutor)
 	ctx = contextWithServiceData(ctx, msg.ServiceData)
+
+	ctx, logger := inslogger.WithFields(ctx, map[string]interface{}{
+		"object":  msg.ObjectReference.String(),
+		"request": msg.Request.String(),
+	})
+	logger.Debug("additional call from previous executor")
 
 	ctx, span := instracer.StartSpan(ctx, "HandleAdditionalCallFromPreviousExecutor.Present")
 	span.AddAttributes(

@@ -28,45 +28,37 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/api/requester"
+	"github.com/insolar/insolar/testutils/launchnet"
 )
+
+func TestGetRequest(t *testing.T) {
+	postResp, err := http.Get(launchnet.TestRPCUrl)
+	defer postResp.Body.Close()
+	require.NoError(t, err)
+	require.Equal(t, http.StatusMethodNotAllowed, postResp.StatusCode)
+}
 
 func TestWrongUrl(t *testing.T) {
 	jsonValue, _ := json.Marshal(postParams{})
-	testURL := HOST + "/not_api"
+	testURL := launchnet.HOST + "/not_api"
 	postResp, err := http.Post(testURL, "application/json", bytes.NewBuffer(jsonValue))
 	defer postResp.Body.Close()
 	require.NoError(t, err)
 	require.Equal(t, http.StatusNotFound, postResp.StatusCode)
 }
 
-func TestGetRequest(t *testing.T) {
-	postResp, err := http.Get(TestCallUrl)
-	defer postResp.Body.Close()
-	require.NoError(t, err)
-	require.Equal(t, http.StatusOK, postResp.StatusCode)
-	body, err := ioutil.ReadAll(postResp.Body)
-	require.NoError(t, err)
-
-	getResponse := &requester.ContractAnswer{}
-	unmarshalCallResponse(t, body, getResponse)
-	require.NotNil(t, getResponse.Error)
-
-	require.Equal(t, "failed to unmarshal request: [ UnmarshalRequest ] Empty body", getResponse.Error.Message)
-	require.Nil(t, getResponse.Result)
-}
-
 func TestWrongJson(t *testing.T) {
-	postResp, err := http.Post(TestCallUrl, "application/json", bytes.NewBuffer([]byte("some not json value")))
+	postResp, err := http.Post(launchnet.TestRPCUrl, "application/json", bytes.NewBuffer([]byte("some not json value")))
 	defer postResp.Body.Close()
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, postResp.StatusCode)
 	body, err := ioutil.ReadAll(postResp.Body)
 	require.NoError(t, err)
 
-	response := &requester.ContractAnswer{}
+	response := &requester.ContractResponse{}
 	unmarshalCallResponse(t, body, response)
 	require.NotNil(t, response.Error)
 
-	require.Equal(t, "failed to unmarshal request: [ UnmarshalRequest ] Can't unmarshal input params: invalid character 's' looking for beginning of value", response.Error.Message)
+	require.Equal(t, "invalid character 's' looking for beginning of value", response.Error.Message)
 	require.Nil(t, response.Result)
 }

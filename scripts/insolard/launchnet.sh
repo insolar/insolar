@@ -220,6 +220,7 @@ usage()
     echo -e "\t-b - do bootstrap only and exit, show bootstrap logs"
     echo -e "\t-l - clear all and exit"
     echo -e "\t-C - generate configs only"
+    echo -e "\t-w - start without pulse watcher"
 }
 
 process_input_params()

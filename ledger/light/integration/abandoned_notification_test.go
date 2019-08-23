@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// +build slowtest
 
 package integration_test
 
@@ -102,7 +103,7 @@ func Test_AbandonedNotification(t *testing.T) {
 
 	t.Run("abandoned notification", func(t *testing.T) {
 		// Set incoming request.
-		msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), true, true)
+		msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), insolar.ID{}, true, true)
 		rep := SendMessage(ctx, s, &msg)
 		RequireNotError(rep)
 		reqInfo := rep.(*payload.RequestInfo)

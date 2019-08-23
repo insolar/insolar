@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// +build slowtest
 
 package integration_test
 
@@ -80,7 +81,7 @@ func Test_LightReplication(t *testing.T) {
 
 		// Creating root reason request.
 		{
-			msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), true, true)
+			msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), insolar.ID{}, true, true)
 			rep := SendMessage(ctx, s, &msg)
 			RequireNotError(rep)
 			reasonID = rep.(*payload.RequestInfo).RequestID
@@ -109,7 +110,7 @@ func Test_LightReplication(t *testing.T) {
 
 		// Set, get request.
 		{
-			msg, _ := MakeSetIncomingRequest(gen.ID(), reasonID, true, true)
+			msg, _ := MakeSetIncomingRequest(gen.ID(), reasonID, insolar.ID{}, true, true)
 			rep := SendMessage(ctx, s, &msg)
 			RequireNotError(rep)
 			expectedObjectID = rep.(*payload.RequestInfo).RequestID
@@ -159,7 +160,7 @@ func Test_LightReplication(t *testing.T) {
 		}
 		// Amend and check object.
 		{
-			msg, _ := MakeSetIncomingRequest(expectedObjectID, reasonID, false, true)
+			msg, _ := MakeSetIncomingRequest(expectedObjectID, reasonID, insolar.ID{}, false, true)
 			rep := SendMessage(ctx, s, &msg)
 			RequireNotError(rep)
 

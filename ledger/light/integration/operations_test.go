@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// +build slowtest
 
 package integration_test
 
@@ -74,7 +75,13 @@ func CallGetCode(ctx context.Context, s *Server, id insolar.ID) payload.Payload 
 	return nil
 }
 
-func MakeSetIncomingRequest(objectID, reasonID insolar.ID, isCreation, isAPI bool) (payload.SetIncomingRequest, record.Virtual) {
+func MakeSetIncomingRequest(
+	objectID insolar.ID,
+	reasonID insolar.ID,
+	reasonObjectID insolar.ID,
+	isCreation bool,
+	isAPI bool,
+) (payload.SetIncomingRequest, record.Virtual) {
 	args := make([]byte, 100)
 	_, err := rand.Read(args)
 	panicIfErr(err)
@@ -83,16 +90,43 @@ func MakeSetIncomingRequest(objectID, reasonID insolar.ID, isCreation, isAPI boo
 		Arguments: args,
 		Reason:    *insolar.NewReference(reasonID),
 	}
+
 	if isCreation {
 		req.CallType = record.CTSaveAsChild
 	} else {
 		req.Object = insolar.NewReference(objectID)
 	}
+
 	if isAPI {
 		req.APINode = gen.Reference()
 	} else {
-		req.Caller = gen.Reference()
+		req.Caller = *insolar.NewReference(reasonObjectID)
 	}
+
+	rec := record.Wrap(&req)
+	pl := payload.SetIncomingRequest{
+		Request: rec,
+	}
+	return pl, rec
+}
+
+func MakeSetIncomingRequestDetached(
+	objectID insolar.ID,
+	reasonID insolar.ID,
+	reasonObjectID insolar.ID,
+) (payload.SetIncomingRequest, record.Virtual) {
+	args := make([]byte, 100)
+	_, err := rand.Read(args)
+	panicIfErr(err)
+
+	req := record.IncomingRequest{
+		Arguments:  args,
+		Reason:     *insolar.NewReference(reasonID),
+		ReturnMode: record.ReturnNoWait,
+		Caller:     *insolar.NewReference(reasonObjectID),
+		Object:     insolar.NewReference(objectID),
+	}
+
 	rec := record.Wrap(&req)
 	pl := payload.SetIncomingRequest{
 		Request: rec,
@@ -410,5 +444,13 @@ func RequireNotError(pl payload.Payload) {
 func RequireError(pl payload.Payload) {
 	if _, ok := pl.(*payload.Error); !ok {
 		panic("expected error")
+	}
+}
+
+func RequireErrorCode(pl payload.Payload, expectedCode uint32) {
+	RequireError(pl)
+	err := pl.(*payload.Error)
+	if err.Code != expectedCode {
+		panic(fmt.Sprintf("expected error code %d, got %d (%s)", expectedCode, err.Code, err.Text))
 	}
 }

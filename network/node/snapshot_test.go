@@ -113,13 +113,15 @@ func TestSnapshot_Decode(t *testing.T) {
 func TestSnapshot_Copy(t *testing.T) {
 	snapshot := NewSnapshot(insolar.FirstPulseNumber, nil)
 	mutator := NewMutator(snapshot)
-	node1 := newMutableNode(insolar.Reference{22}, insolar.StaticRoleVirtual, nil, insolar.NodeReady, "127.0.0.1:0", "")
+	ref1 := gen.Reference()
+	node1 := newMutableNode(ref1, insolar.StaticRoleVirtual, nil, insolar.NodeReady, "127.0.0.1:0", "")
 	mutator.AddWorkingNode(node1)
 
 	snapshot2 := snapshot.Copy()
 	accessor := NewAccessor(snapshot2)
 
-	node2 := newMutableNode(insolar.Reference{11}, insolar.StaticRoleLightMaterial, nil, insolar.NodeReady, "127.0.0.1:0", "")
+	ref2 := gen.Reference()
+	node2 := newMutableNode(ref2, insolar.StaticRoleLightMaterial, nil, insolar.NodeReady, "127.0.0.1:0", "")
 	mutator.AddWorkingNode(node2)
 
 	// mutator and accessor observe different copies of snapshot and don't affect each other
@@ -147,9 +149,10 @@ func TestSnapshot_Equal(t *testing.T) {
 			nil, insolar.NodeReady, "127.0.0.1:0", "")
 	}
 
-	node1 := genNodeCopy(insolar.Reference{11})
-	node2 := genNodeCopy(insolar.Reference{22})
-	node3 := genNodeCopy(insolar.Reference{22})
+	refs := gen.UniqueReferences(2)
+	node1 := genNodeCopy(refs[0])
+	node2 := genNodeCopy(refs[1])
+	node3 := genNodeCopy(refs[1])
 
 	mutator := NewMutator(snapshot)
 	mutator.AddWorkingNode(node1)

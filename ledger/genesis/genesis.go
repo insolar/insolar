@@ -190,6 +190,10 @@ func (g *Genesis) Start(ctx context.Context) error {
 		panic(fmt.Sprintf("[genesis] store discovery nodes failed: %v", err))
 	}
 
+	if err := g.BaseRecord.IndexModifier.UpdateLastKnownPulse(ctx, insolar.FirstPulseNumber); err != nil {
+		panic("can't update last known pulse on genesis")
+	}
+
 	inslog.Info("[genesis] finalize genesis record")
 	err = g.BaseRecord.Done(ctx)
 	if err != nil {
@@ -216,12 +220,12 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 		contracts.GetAccountGenesisContractState(g.ContractsConfig.RootBalance, insolar.GenesisNameRootAccount, insolar.GenesisNameRootDomain),
 		contracts.GetAccountGenesisContractState(g.ContractsConfig.MDBalance, insolar.GenesisNameMigrationAdminAccount, insolar.GenesisNameRootDomain),
 		contracts.GetAccountGenesisContractState("0", insolar.GenesisNameFeeAccount, insolar.GenesisNameRootDomain),
-
+		contracts.GetMigrationAdminGenesisContractState(),
 		contracts.GetCostCenterGenesisContractState(),
 	}
 
 	for i, key := range g.ContractsConfig.MigrationDaemonPublicKeys {
-		states = append(states, contracts.GetMemberGenesisContractState(key, insolar.GenesisNameMigrationDaemonMembers[i], insolar.GenesisNameRootDomain, insolar.NewEmptyReference()))
+		states = append(states, contracts.GetMemberGenesisContractState(key, insolar.GenesisNameMigrationDaemonMembers[i], insolar.GenesisNameRootDomain, *insolar.NewEmptyReference()))
 	}
 
 	// Split genesis members by PK shards
@@ -283,7 +287,7 @@ func (g *Genesis) activateContract(ctx context.Context, state insolar.GenesisCon
 
 	err = g.ArtifactManager.ActivateObject(
 		ctx,
-		insolar.Reference{},
+		*insolar.NewEmptyReference(),
 		objRef,
 		parentRef,
 		protoRef,

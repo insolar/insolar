@@ -19,6 +19,7 @@ package exporter
 import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/heavy/executor"
 	"github.com/pkg/errors"
 )
@@ -36,6 +37,9 @@ func NewPulseServer(pulses pulse.Calculator, jetKeeper executor.JetKeeper) *Puls
 }
 
 func (p *PulseServer) Export(getPulses *GetPulses, stream PulseExporter_ExportServer) error {
+	ctx := stream.Context()
+	logger := inslogger.FromContext(ctx)
+
 	if getPulses.Count == 0 {
 		return errors.New("count can't be 0")
 	}
@@ -49,6 +53,7 @@ func (p *PulseServer) Export(getPulses *GetPulses, stream PulseExporter_ExportSe
 			PulseTimestamp: insolar.GenesisPulse.PulseTimestamp,
 		})
 		if err != nil {
+			logger.Error(err)
 			return err
 		}
 		read++
@@ -60,8 +65,9 @@ func (p *PulseServer) Export(getPulses *GetPulses, stream PulseExporter_ExportSe
 			return nil
 		}
 
-		pulse, err := p.pulses.Forwards(stream.Context(), currentPN, 1)
+		pulse, err := p.pulses.Forwards(ctx, currentPN, 1)
 		if err != nil {
+			logger.Error(err)
 			return err
 		}
 		err = stream.Send(&Pulse{
@@ -70,6 +76,7 @@ func (p *PulseServer) Export(getPulses *GetPulses, stream PulseExporter_ExportSe
 			PulseTimestamp: pulse.PulseTimestamp,
 		})
 		if err != nil {
+			logger.Error(err)
 			return err
 		}
 

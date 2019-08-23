@@ -330,6 +330,10 @@ func VerifyNeighbourhood(ctx context.Context, neighbourhood []transport.Membersh
 				}
 				introducedBy = ja.GetJoinerIntroducedByID()
 				joinerProfile = pf.CreateUpgradableIntroProfile(ja.GetBriefIntroduction())
+
+				if introducedBy.IsAbsent() {
+					panic("illegal state")
+				}
 			}
 
 			neighbours[idx].Announcement = profiles.NewJoinerAnnouncement(joinerProfile, introducedBy)

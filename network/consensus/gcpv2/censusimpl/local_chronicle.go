@@ -55,11 +55,10 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
-
-	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
+	"github.com/insolar/insolar/pulse"
 )
 
 func NewLocalChronicles(profileFactory profiles.Factory) LocalConsensusChronicles {
@@ -87,14 +86,14 @@ type localChronicles struct {
 	profileFactory profiles.Factory
 }
 
-func (c *localChronicles) GetLatestCensus() census.Operational {
+func (c *localChronicles) GetLatestCensus() (census.Operational, bool) {
 	c.rw.RLock()
 	defer c.rw.RUnlock()
 
 	if c.expected != nil {
-		return c.expected
+		return c.expected, true
 	}
-	return c.active
+	return c.active, false
 }
 
 func (c *localChronicles) GetRecentCensus(pn pulse.Number) census.Operational {

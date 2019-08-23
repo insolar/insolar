@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/helloworld"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/migrationadmin"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/migrationshard"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/pkshard"
 )
@@ -33,16 +34,9 @@ import (
 // RootDomain is smart contract representing entrance point to system.
 type RootDomain struct {
 	foundation.BaseContract
-	MigrationDaemonMembers [insolar.GenesisAmountActiveMigrationDaemonMembers]insolar.Reference
 	MigrationAddressShards [insolar.GenesisAmountMigrationAddressShards]insolar.Reference
 	PublicKeyShards        [insolar.GenesisAmountPublicKeyShards]insolar.Reference
 	NodeDomain             insolar.Reference
-}
-
-// GetActiveMigrationDaemonMembers gets migration daemon members references.
-// ins:immutable
-func (rd RootDomain) GetActiveMigrationDaemonMembers() ([3]insolar.Reference, error) {
-	return rd.MigrationDaemonMembers, nil
 }
 
 // GetMemberByPublicKey gets member reference by public key.
@@ -67,6 +61,7 @@ func (rd RootDomain) GetMemberByPublicKey(publicKey string) (*insolar.Reference,
 }
 
 // GetMemberByMigrationAddress gets member reference by burn address.
+// ins:immutable
 func (rd RootDomain) GetMemberByMigrationAddress(migrationAddress string) (*insolar.Reference, error) {
 	trimmedMigrationAddress := foundation.TrimAddress(migrationAddress)
 	i := foundation.GetShardIndex(trimmedMigrationAddress, insolar.GenesisAmountMigrationAddressShards)
@@ -97,11 +92,15 @@ var INSATTR_Info_API = true
 // Info returns information about basic objects
 // ins:immutable
 func (rd RootDomain) Info() (interface{}, error) {
-	migrationDaemonsMembersOut := []string{}
-	for _, ref := range rd.MigrationDaemonMembers {
-		migrationDaemonsMembersOut = append(migrationDaemonsMembersOut, ref.String())
+	migrationAdminContract := migrationadmin.GetObject(foundation.GetMigrationAdmin())
+	migrationDaemonsMembers, err := migrationAdminContract.GetAllMigrationDaemon()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get active migration daemon from foundation: %s", err.Error())
 	}
-
+	migrationDaemonsMembersOut := []string{}
+	for ref := range migrationDaemonsMembers {
+		migrationDaemonsMembersOut = append(migrationDaemonsMembersOut, ref)
+	}
 	res := map[string]interface{}{
 		"rootDomain":             rd.GetReference().String(),
 		"rootMember":             foundation.GetRootMember().String(),
@@ -117,6 +116,7 @@ func (rd RootDomain) Info() (interface{}, error) {
 }
 
 // AddMigrationAddresses adds migration addresses to list.
+// ins:immutable
 func (rd *RootDomain) AddMigrationAddresses(migrationAddresses []string) error {
 	newMA := [insolar.GenesisAmountMigrationAddressShards][]string{}
 	for _, ma := range migrationAddresses {
@@ -143,6 +143,7 @@ func (rd *RootDomain) AddMigrationAddresses(migrationAddresses []string) error {
 }
 
 // AddMigrationAddress adds migration address to list.
+// ins:immutable
 func (rd *RootDomain) AddMigrationAddress(migrationAddress string) error {
 	trimmedMigrationAddress := foundation.TrimAddress(migrationAddress)
 	i := foundation.GetShardIndex(trimmedMigrationAddress, insolar.GenesisAmountMigrationAddressShards)
@@ -158,6 +159,7 @@ func (rd *RootDomain) AddMigrationAddress(migrationAddress string) error {
 	return nil
 }
 
+// ins:immutable
 func (rd *RootDomain) GetFreeMigrationAddress(publicKey string) (string, error) {
 	trimmedPublicKey := foundation.TrimPublicKey(publicKey)
 	shardIndex := foundation.GetShardIndex(trimmedPublicKey, insolar.GenesisAmountPublicKeyShards)
@@ -199,6 +201,7 @@ func (rd *RootDomain) GetFreeMigrationAddress(publicKey string) (string, error) 
 }
 
 // AddNewMemberToMaps adds new member to PublicKeyMap and MigrationAddressMap.
+// ins:immutable
 func (rd *RootDomain) AddNewMemberToMaps(publicKey string, migrationAddress string, memberRef insolar.Reference) error {
 	trimmedPublicKey := foundation.TrimPublicKey(publicKey)
 	shardIndex := foundation.GetShardIndex(trimmedPublicKey, insolar.GenesisAmountPublicKeyShards)
@@ -226,6 +229,7 @@ func (rd *RootDomain) AddNewMemberToMaps(publicKey string, migrationAddress stri
 }
 
 // AddNewMemberToPublicKeyMap adds new member to PublicKeyMap.
+// ins:immutable
 func (rd *RootDomain) AddNewMemberToPublicKeyMap(publicKey string, memberRef insolar.Reference) error {
 	trimmedPublicKey := foundation.TrimPublicKey(publicKey)
 	i := foundation.GetShardIndex(trimmedPublicKey, insolar.GenesisAmountPublicKeyShards)

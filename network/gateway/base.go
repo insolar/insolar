@@ -57,7 +57,6 @@ import (
 	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/consensus/adapters"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
-	"github.com/insolar/insolar/network/controller/common"
 	"github.com/insolar/insolar/network/rules"
 	"github.com/insolar/insolar/network/storage"
 
@@ -98,8 +97,8 @@ type Base struct {
 	ConsensusController   consensus.Controller
 	ConsensusPulseHandler network.PulseHandler
 
-	Options *common.Options
-
+	Options         *network.Options
+	bootstrapTimer  *time.Timer // nolint
 	bootstrapETA    time.Duration
 	originCandidate *adapters.Candidate
 
@@ -130,8 +129,12 @@ func (g *Base) NewGateway(ctx context.Context, state insolar.NetworkState) netwo
 }
 
 func (g *Base) Init(ctx context.Context) error {
-	g.HostNetwork.RegisterRequestHandler(types.Authorize, g.HandleNodeAuthorizeRequest) // validate cert
-	g.HostNetwork.RegisterRequestHandler(types.Bootstrap, g.HandleNodeBootstrapRequest) // provide joiner claim
+	g.HostNetwork.RegisterRequestHandler(
+		types.Authorize, g.discoveryMiddleware(g.announceMiddleware(g.HandleNodeAuthorizeRequest)), // validate cert
+	)
+	g.HostNetwork.RegisterRequestHandler(
+		types.Bootstrap, g.announceMiddleware(g.HandleNodeBootstrapRequest), // provide joiner claim
+	)
 	g.HostNetwork.RegisterRequestHandler(types.UpdateSchedule, g.HandleUpdateSchedule)
 	g.HostNetwork.RegisterRequestHandler(types.Reconnect, g.HandleReconnect)
 	g.HostNetwork.RegisterRequestHandler(types.Ping, func(ctx context.Context, req network.ReceivedPacket) (network.Packet, error) {
@@ -139,7 +142,7 @@ func (g *Base) Init(ctx context.Context) error {
 	})
 
 	g.createCandidateProfile()
-	g.bootstrapETA = 0
+	g.bootstrapETA = g.Options.BootstrapTimeout
 	return nil
 }
 
@@ -196,12 +199,64 @@ func (g *Base) ValidateCert(ctx context.Context, authCert insolar.AuthorizationC
 
 // ============= Bootstrap =======
 
-func (g *Base) HandleNodeBootstrapRequest(ctx context.Context, request network.ReceivedPacket) (network.Packet, error) {
+func (g *Base) checkCanAnnounceCandidate(ctx context.Context) error {
+	// 1. Current node is heavy:
+	// 		could announce candidate when network is initialized
+	// 		NB: announcing in WaitConsensus state is allowed
+	// 2. Otherwise:
+	// 		could announce candidate when heavy node found in *active* list and initial consensus passed
+	// 		NB: announcing in WaitConsensus state is *NOT* allowed
+
 	state := g.Gatewayer.Gateway().GetState()
-	if g.NodeKeeper.GetOrigin().Role() != insolar.StaticRoleHeavyMaterial && state <= insolar.WaitConsensus {
-		return nil, errors.Errorf("can't handle bootstrap in state: %s", state.String())
+	origin := g.NodeKeeper.GetOrigin()
+
+	if origin.Role() == insolar.StaticRoleHeavyMaterial && state >= insolar.WaitConsensus {
+		return nil
 	}
 
+	bootstrapPulse := GetBootstrapPulse(ctx, g.PulseAccessor)
+	nodes := g.NodeKeeper.GetAccessor(bootstrapPulse.PulseNumber).GetActiveNodes()
+
+	var hasHeavy bool
+	for _, n := range nodes {
+		if n.Role() == insolar.StaticRoleHeavyMaterial {
+			hasHeavy = true
+			break
+		}
+	}
+
+	if hasHeavy && state > insolar.WaitConsensus {
+		return nil
+	}
+
+	return errors.Errorf(
+		"can't announce candidate: role=%v pulse=%d hasHeavy=%t state=%s",
+		origin.Role(),
+		bootstrapPulse.PulseNumber,
+		hasHeavy,
+		state,
+	)
+}
+
+func (g *Base) announceMiddleware(handler network.RequestHandler) network.RequestHandler {
+	return func(ctx context.Context, request network.ReceivedPacket) (network.Packet, error) {
+		if err := g.checkCanAnnounceCandidate(ctx); err != nil {
+			return nil, err
+		}
+		return handler(ctx, request)
+	}
+}
+
+func (g *Base) discoveryMiddleware(handler network.RequestHandler) network.RequestHandler {
+	return func(ctx context.Context, request network.ReceivedPacket) (network.Packet, error) {
+		if !network.OriginIsDiscovery(g.CertificateManager.GetCertificate()) {
+			return nil, errors.New("only discovery nodes could authorize other nodes, this is not a discovery node")
+		}
+		return handler(ctx, request)
+	}
+}
+
+func (g *Base) HandleNodeBootstrapRequest(ctx context.Context, request network.ReceivedPacket) (network.Packet, error) {
 	if request.GetRequest() == nil || request.GetRequest().GetBootstrap() == nil {
 		return nil, errors.Errorf("process bootstrap: got invalid protobuf request message: %s", request)
 	}
@@ -226,14 +281,20 @@ func (g *Base) HandleNodeBootstrapRequest(ctx context.Context, request network.R
 	}
 
 	profile := adapters.Candidate(data.CandidateProfile).StaticProfile(g.KeyProcessor)
-	g.ConsensusController.AddJoinCandidate(candidate{profile, profile.GetExtension()})
+
+	err = g.ConsensusController.AddJoinCandidate(candidate{profile, profile.GetExtension()})
+	if err != nil {
+		inslogger.FromContext(ctx).Warnf("Rejected bootstrap request from node %s: %s", request.GetSender(), err.Error())
+		return g.HostNetwork.BuildResponse(ctx, request, &packet.BootstrapResponse{Code: packet.Reject}), nil
+	}
+
 	inslogger.FromContext(ctx).Infof("=== AddJoinCandidate id = %d, address = %s ", data.CandidateProfile.ShortID, data.CandidateProfile.Address)
 
 	return g.HostNetwork.BuildResponse(ctx, request,
 		&packet.BootstrapResponse{
 			Code:       packet.Accepted,
 			Pulse:      *pulse.ToProto(&bootstrapPulse),
-			ETASeconds: uint32(30), // TODO: move ETA to config
+			ETASeconds: uint32(g.bootstrapETA.Seconds()),
 		}), nil
 }
 
@@ -243,10 +304,6 @@ func validateTimestamp(timestamp int64, delta time.Duration) bool {
 }
 
 func (g *Base) HandleNodeAuthorizeRequest(ctx context.Context, request network.ReceivedPacket) (network.Packet, error) {
-	if !network.OriginIsDiscovery(g.CertificateManager.GetCertificate()) {
-		return nil, errors.New("only discovery nodes could authorize other nodes, this is not a discovery node")
-	}
-
 	if request.GetRequest() == nil || request.GetRequest().GetAuthorize() == nil {
 		return nil, errors.Errorf("process authorize: got invalid protobuf request message: %s", request)
 	}

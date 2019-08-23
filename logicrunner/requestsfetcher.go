@@ -126,8 +126,7 @@ func (rf *requestsFetcher) fetch(ctx context.Context) error {
 
 		switch v := request.(type) {
 		case *record.IncomingRequest:
-			requestCtx := freshContextFromContextAndRequest(ctx, *v)
-			tr := common.NewTranscript(requestCtx, reqRef, *v)
+			tr := common.NewTranscriptCloneContext(ctx, reqRef, *v)
 			rf.broker.AddRequestsFromLedger(ctx, tr)
 		case *record.OutgoingRequest:
 			rf.os.SendAbandonedOutgoingRequest(ctx, reqRef, v)
