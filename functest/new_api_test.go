@@ -117,7 +117,7 @@ func TestIncorrectSign(t *testing.T) {
 				ID:      1,
 				Method:  "contract.call",
 			},
-			Params: requester.Params{Seed: seed, Reference: testMember.Ref, PublicKey: testMember.PubKey, CallSite: "wallet.getBalance", CallParams: map[string]interface{}{"reference": testMember.Ref}},
+			Params: requester.Params{Seed: seed, Reference: testMember.Ref, PublicKey: testMember.PubKey, CallSite: "member.getBalance", CallParams: map[string]interface{}{"reference": testMember.Ref}},
 		},
 		"invalidSignature",
 	)

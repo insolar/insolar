@@ -27,9 +27,9 @@ type Log struct {
 // NewLog creates new default configuration for logging
 func NewLog() Log {
 	return Log{
-		Level: "Info",
-		Adapter: "zerolog",
-		Formatter: "json",
-		BufferSize: 10*1024*1024,
+		Level:      "Info",
+		Adapter:    "zerolog",
+		Formatter:  "json",
+		BufferSize: 10 * 1024 * 1024,
 	}
 }

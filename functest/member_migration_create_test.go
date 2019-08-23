@@ -33,7 +33,7 @@ func TestMemberMigrationCreate(t *testing.T) {
 	require.NoError(t, err)
 	ba := testutils.RandomString()
 	_, err = signedRequest(t, launchnet.TestRPCUrl, &launchnet.MigrationAdmin,
-		"migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{ba}})
+		"migration.addAddresses", map[string]interface{}{"migrationAddresses": []string{ba}})
 	require.NoError(t, err)
 	result, err := signedRequest(t, launchnet.TestRPCUrl, member, "member.migrationCreate", nil)
 	require.NoError(t, err)
@@ -43,10 +43,10 @@ func TestMemberMigrationCreate(t *testing.T) {
 	require.Equal(t, ba, output["migrationAddress"])
 }
 
-func TestMemberMigrationCreateWhenNoBurnAddressesLeft(t *testing.T) {
+func TestMemberMigrationCreateWhenNomigrationAddressesLeft(t *testing.T) {
 	member1, err := newUserWithKeys()
 	require.NoError(t, err)
-	addBurnAddress(t)
+	addMigrationAddress(t)
 	_, err = signedRequest(t, launchnet.TestRPCUrl, member1, "member.migrationCreate", nil)
 	require.Nil(t, err)
 
@@ -71,12 +71,12 @@ func TestMemberMigrationCreateWithSamePublicKey(t *testing.T) {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
 
-	addBurnAddress(t)
+	addMigrationAddress(t)
 
 	_, err = signedRequest(t, launchnet.TestRPCUrl, member, "member.migrationCreate", nil)
 	require.NoError(t, err)
 
-	addBurnAddress(t)
+	addMigrationAddress(t)
 
 	_, err = signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, member, "member.migrationCreate", map[string]interface{}{})
 	require.Error(t, err)
@@ -88,13 +88,13 @@ func TestMemberMigrationCreateWithSamePublicKey(t *testing.T) {
 	_, err = signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, memberForBurn, "member.migrationCreate", nil)
 }
 
-func TestMemberMigrationCreateWithSameBurnAddress(t *testing.T) {
+func TestMemberMigrationCreateWithSameMigrationAddress(t *testing.T) {
 	member1, err := newUserWithKeys()
 	require.NoError(t, err)
 
 	ba := testutils.RandomString()
-	_, _ = signedRequest(t, launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.addBurnAddresses",
-		map[string]interface{}{"burnAddresses": []string{ba, ba}})
+	_, _ = signedRequest(t, launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.addAddresses",
+		map[string]interface{}{"migrationAddresses": []string{ba, ba}})
 
 	_, err = signedRequest(t, launchnet.TestRPCUrl, member1, "member.migrationCreate", nil)
 	require.NoError(t, err)

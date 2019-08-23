@@ -33,8 +33,8 @@ type GetBalanceResponse struct {
 	Deposits map[string]interface{} `json:"deposits"`
 }
 type GetResponse struct {
-	Reference   string `json:"reference"`
-	BurnAddress string `json:"migrationAddress,omitempty"`
+	Reference        string `json:"reference"`
+	MigrationAddress string `json:"migrationAddress,omitempty"`
 }
 type MigrationCreateResponse struct {
 	Reference        string `json:"reference"`
@@ -114,12 +114,12 @@ func GetPrototype() insolar.Reference {
 }
 
 // New is constructor
-func New(rootDomain insolar.Reference, name string, key string, burnAddress string, walletRef insolar.Reference) *ContractConstructorHolder {
+func New(rootDomain insolar.Reference, name string, key string, migrationAddress string, walletRef insolar.Reference) *ContractConstructorHolder {
 	var args [5]interface{}
 	args[0] = rootDomain
 	args[1] = name
 	args[2] = key
-	args[3] = burnAddress
+	args[3] = migrationAddress
 	args[4] = walletRef
 
 	var argsSerialized []byte
@@ -587,7 +587,7 @@ func (r *Member) GetPublicKey() (string, error) {
 }
 
 // Call is proxy generated method
-func (r *Member) Call(signedRequest []byte) (interface{}, error) {
+func (r *Member) CallAsMutable(signedRequest []byte) (interface{}, error) {
 	var args [1]interface{}
 	args[0] = signedRequest
 
@@ -647,7 +647,7 @@ func (r *Member) CallNoWait(signedRequest []byte) error {
 }
 
 // CallAsImmutable is proxy generated method
-func (r *Member) CallAsImmutable(signedRequest []byte) (interface{}, error) {
+func (r *Member) Call(signedRequest []byte) (interface{}, error) {
 	var args [1]interface{}
 	args[0] = signedRequest
 
@@ -986,8 +986,8 @@ func (r *Member) AddDepositAsImmutable(txId string, deposit insolar.Reference) e
 	return nil
 }
 
-// GetBurnAddress is proxy generated method
-func (r *Member) GetBurnAddressAsMutable() (string, error) {
+// GetMigrationAddress is proxy generated method
+func (r *Member) GetMigrationAddressAsMutable() (string, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -1003,7 +1003,7 @@ func (r *Member) GetBurnAddressAsMutable() (string, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetBurnAddress", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetMigrationAddress", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -1025,8 +1025,8 @@ func (r *Member) GetBurnAddressAsMutable() (string, error) {
 	return ret0, nil
 }
 
-// GetBurnAddressNoWait is proxy generated method
-func (r *Member) GetBurnAddressNoWait() error {
+// GetMigrationAddressNoWait is proxy generated method
+func (r *Member) GetMigrationAddressNoWait() error {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -1036,7 +1036,7 @@ func (r *Member) GetBurnAddressNoWait() error {
 		return err
 	}
 
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "GetBurnAddress", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "GetMigrationAddress", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -1044,8 +1044,8 @@ func (r *Member) GetBurnAddressNoWait() error {
 	return nil
 }
 
-// GetBurnAddressAsImmutable is proxy generated method
-func (r *Member) GetBurnAddress() (string, error) {
+// GetMigrationAddressAsImmutable is proxy generated method
+func (r *Member) GetMigrationAddress() (string, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -1061,7 +1061,7 @@ func (r *Member) GetBurnAddress() (string, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "GetBurnAddress", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "GetMigrationAddress", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}

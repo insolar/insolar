@@ -42,7 +42,7 @@ func TestMigrationMemberGet(t *testing.T) {
 	member1, _ := newUserWithKeys()
 
 	ba := testutils.RandomString()
-	_, _ = signedRequest(t, launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{ba}})
+	_, _ = signedRequest(t, launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.addAddresses", map[string]interface{}{"migrationAddresses": []string{ba}})
 
 	res1, err := signedRequest(t, launchnet.TestRPCUrl, member1, "member.migrationCreate", nil)
 	require.Nil(t, err)

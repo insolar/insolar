@@ -75,13 +75,13 @@ func (m Member) GetPublicKey() (string, error) {
 }
 
 // New creates new member.
-func New(rootDomain insolar.Reference, name string, key string, burnAddress string, walletRef insolar.Reference) (*Member, error) {
+func New(rootDomain insolar.Reference, name string, key string, migrationAddress string, walletRef insolar.Reference) (*Member, error) {
 	return &Member{
 		RootDomain:       rootDomain,
 		Deposits:         make(map[string]insolar.Reference),
 		Name:             name,
 		PublicKey:        key,
-		MigrationAddress: burnAddress,
+		MigrationAddress: migrationAddress,
 		Wallet:           walletRef,
 	}, nil
 }
@@ -115,6 +115,7 @@ type Params struct {
 }
 
 // Call returns response on request. Method for authorized calls.
+// ins:immutable
 func (m *Member) Call(signedRequest []byte) (interface{}, error) {
 	var signature string
 	var pulseTimeStamp int64
@@ -175,7 +176,7 @@ func (m *Member) Call(signedRequest []byte) (interface{}, error) {
 		return m.registerNodeCall(params)
 	case "contract.getNodeRef":
 		return m.getNodeRefCall(params)
-	case "wallet.getBalance":
+	case "member.getBalance":
 		return m.getBalanceCall(params)
 	case "member.transfer":
 		return m.transferCall(params)
@@ -215,7 +216,7 @@ func (m *Member) registerNodeCall(params map[string]interface{}) (interface{}, e
 func (m *Member) migrationAdminCall(params map[string]interface{}, nameMethod string) (interface{}, error) {
 
 	switch nameMethod {
-	case "addBurnAddresses":
+	case "addAddresses":
 		return m.addMigrationAddressesCall(params)
 
 	case "activateDaemon":
@@ -247,9 +248,9 @@ func (m *Member) deactivateDaemonCall(params map[string]interface{}) (interface{
 }
 
 func (m *Member) addMigrationAddressesCall(params map[string]interface{}) (interface{}, error) {
-	migrationAddresses, ok := params["burnAddresses"].([]interface{})
+	migrationAddresses, ok := params["migrationAddresses"].([]interface{})
 	if !ok {
-		return nil, fmt.Errorf("incorrect input: failed to get 'burnAddresses' param")
+		return nil, fmt.Errorf("incorrect input: failed to get 'migrationAddresses' param")
 	}
 
 	rootDomain := rootdomain.GetObject(m.RootDomain)
@@ -264,7 +265,7 @@ func (m *Member) addMigrationAddressesCall(params map[string]interface{}) (inter
 	for i, ba := range migrationAddresses {
 		migrationAddress, ok := ba.(string)
 		if !ok {
-			return nil, fmt.Errorf("failed to 'burnAddresses' param")
+			return nil, fmt.Errorf("failed to 'migrationAddresses' param")
 		}
 		migrationAddressesStr[i] = migrationAddress
 	}
@@ -400,12 +401,12 @@ func (m *Member) depositMigrationCall(params map[string]interface{}) (*DepositMi
 		return nil, fmt.Errorf("incorrect input: failed to get 'ethTxHash' param")
 	}
 
-	burnAddress, ok := params["migrationAddress"].(string)
+	migrationAddress, ok := params["migrationAddress"].(string)
 	if !ok {
 		return nil, fmt.Errorf("incorrect input: failed to get 'migrationAddress' param")
 	}
 
-	return m.depositMigration(txId, burnAddress, amount)
+	return m.depositMigration(txId, migrationAddress, amount)
 }
 
 // Platform methods.
@@ -492,7 +493,7 @@ func (m *Member) createMember(name string, key string, migrationAddress string) 
 		return nil, fmt.Errorf("key is not valid")
 	}
 
-	aHolder := account.New("1000000000")
+	aHolder := account.New("10000000000")
 	accountRef, err := aHolder.AsChild(m.RootDomain)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create account for member: %s", err.Error())
@@ -611,13 +612,13 @@ func (m *Member) AddDeposit(txId string, deposit insolar.Reference) error {
 }
 
 // ins:immutable
-func (m Member) GetBurnAddress() (string, error) {
+func (m Member) GetMigrationAddress() (string, error) {
 	return m.MigrationAddress, nil
 }
 
 type GetResponse struct {
-	Reference   string `json:"reference"`
-	BurnAddress string `json:"migrationAddress,omitempty"`
+	Reference        string `json:"reference"`
+	MigrationAddress string `json:"migrationAddress,omitempty"`
 }
 
 func (m *Member) memberGet(publicKey string) (interface{}, error) {
@@ -628,15 +629,15 @@ func (m *Member) memberGet(publicKey string) (interface{}, error) {
 	}
 
 	if m.GetReference() == *ref {
-		return GetResponse{Reference: ref.String(), BurnAddress: m.MigrationAddress}, nil
+		return GetResponse{Reference: ref.String(), MigrationAddress: m.MigrationAddress}, nil
 	}
 
 	user := member.GetObject(*ref)
-	ba, err := user.GetBurnAddress()
+	ba, err := user.GetMigrationAddress()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get burn address: %s", err.Error())
 	}
 
-	return GetResponse{Reference: ref.String(), BurnAddress: ba}, nil
+	return GetResponse{Reference: ref.String(), MigrationAddress: ba}, nil
 
 }

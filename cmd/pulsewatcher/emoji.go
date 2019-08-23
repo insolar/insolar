@@ -17,7 +17,8 @@
 package main
 
 import (
-	"github.com/insolar/insolar/api"
+	"github.com/insolar/insolar/api/requester"
+
 	"sync"
 )
 
@@ -37,7 +38,7 @@ func NewEmoji() *Emoji {
 }
 
 //todo: one url has many shortISs if node restart
-func (e *Emoji) RegisterNode(_ string, n api.Node) {
+func (e *Emoji) RegisterNode(_ string, n requester.Node) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
@@ -59,7 +60,7 @@ func (e *Emoji) RegisterNode(_ string, n api.Node) {
 	}
 }
 
-func (e *Emoji) GetEmoji(n api.Node) string {
+func (e *Emoji) GetEmoji(n requester.Node) string {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
 

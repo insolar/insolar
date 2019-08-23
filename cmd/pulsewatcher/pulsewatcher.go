@@ -30,13 +30,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/insolar/insolar/api"
+	"github.com/insolar/insolar/api/requester"
 
-	pulsewatcher "github.com/insolar/insolar/cmd/pulsewatcher/config"
-	"github.com/insolar/insolar/insolar"
 	"github.com/olekukonko/tablewriter"
 	"github.com/pkg/errors"
 	"github.com/spf13/pflag"
+
+	pulsewatcher "github.com/insolar/insolar/cmd/pulsewatcher/config"
+	"github.com/insolar/insolar/insolar"
 )
 
 var client http.Client
@@ -253,7 +254,7 @@ func collectNodesStatuses(conf *pulsewatcher.Config) ([]nodeStatus, bool) {
 					errStr = "NODE IS DOWN"
 				}
 				lock.Lock()
-				results[i] = nodeStatus{url, api.StatusReply{}, errStr, 0}
+				results[i] = nodeStatus{url, requester.StatusResponse{}, errStr, 0}
 				errored++
 				lock.Unlock()
 				wg.Done()
@@ -265,7 +266,7 @@ func collectNodesStatuses(conf *pulsewatcher.Config) ([]nodeStatus, bool) {
 				log.Fatal(err)
 			}
 			var out struct {
-				Result api.StatusReply
+				Result requester.StatusResponse
 			}
 			err = json.Unmarshal(data, &out)
 			if err != nil {
@@ -288,7 +289,7 @@ func collectNodesStatuses(conf *pulsewatcher.Config) ([]nodeStatus, bool) {
 
 type nodeStatus struct {
 	url          string
-	reply        api.StatusReply
+	reply        requester.StatusResponse
 	errStr       string
 	restartCount int
 }
