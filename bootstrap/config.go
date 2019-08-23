@@ -60,7 +60,11 @@ type Config struct {
 	RootBalance string `mapstructure:"root_balance"`
 	// MDBalance is a start balance for the migration admin member's wallet.
 	MDBalance string `mapstructure:"md_balance"`
-	Contracts Contracts
+	// VestingPeriodInPulses - interval of count pulses for the full period of partial release.
+	VestingPeriodInPulses int64 `mapstructure:"vesting_pulse_period"`
+	// LokupPeriodInPulses - interval of count pulses for the full period of hold.
+	LokupPeriodInPulses int64 `mapstructure:"lokup_pulse_period"`
+	Contracts           Contracts
 
 	// Discovery settings.
 
