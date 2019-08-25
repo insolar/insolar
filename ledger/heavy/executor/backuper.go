@@ -24,6 +24,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sync"
 	"time"
@@ -104,6 +105,9 @@ func checkConfig(config configuration.Backup) error {
 	if len(config.BackupFile) == 0 {
 		return errors.New("BackupFile can't be empty")
 	}
+	if len(config.PostProcessBackupCmd) == 0 {
+		return errors.New("PostProcessBackupCmd can't be empty")
+	}
 
 	return nil
 }
@@ -172,6 +176,41 @@ func calculateFileHash(f *os.File) (string, error) {
 		return "", errors.Wrap(err, "io.Copy return error")
 	}
 	return fmt.Sprintf("%x", hasher.Sum(nil)), nil
+}
+
+type logWrapper struct {
+	logger insolar.Logger
+	isInfo bool
+}
+
+func (lw *logWrapper) Write(p []byte) (n int, err error) {
+	if lw.isInfo {
+		lw.logger.Info(string(p))
+	} else {
+		lw.logger.Error(string(p))
+	}
+	return len(p), nil
+}
+
+func invokeBackupPostProcessCommand(ctx context.Context, command []string, currentBkpDirPath string) error {
+	logger := inslogger.FromContext(ctx)
+	cmd := exec.Command(command[0], command[1:]...)
+	cmd.Env = os.Environ()
+	cmd.Env = append(cmd.Env, "INSOLAR_CURRENT_BACKUP_DIR="+currentBkpDirPath)
+	cmd.Stdout = &logWrapper{logger: logger, isInfo: true}
+	cmd.Stderr = &logWrapper{logger: logger, isInfo: false}
+
+	err := cmd.Start()
+	if err != nil {
+		return errors.Wrap(err, "failed to start post process command")
+	}
+
+	err = cmd.Wait()
+	if err != nil {
+		return errors.Wrap(err, "failed to wait for completion of post process command")
+	}
+
+	return nil
 }
 
 // prepareBackup make incremental backup and write auxiliary file with meta info
@@ -266,6 +305,11 @@ func (b *BackupMakerDefault) doBackup(ctx context.Context, lastFinalizedPulse in
 	err = move(ctx, dirHolder.tmpDir, currentBkpDirPath)
 	if err != nil {
 		return 0, errors.Wrap(err, "move returns error")
+	}
+
+	err = invokeBackupPostProcessCommand(ctx, b.config.PostProcessBackupCmd, currentBkpDirPath)
+	if err != nil {
+		return 0, errors.Wrapf(err, "failed to invoke PostProcessBackupCmd. pulse: %d", lastFinalizedPulse)
 	}
 
 	err = waitForFile(ctx, filepath.Join(currentBkpDirPath, b.config.ConfirmFile), b.config.BackupWaitPeriod)
