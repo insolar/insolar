@@ -82,8 +82,11 @@ func TestBackuper_BadConfig(t *testing.T) {
 
 	cfg.BackupFile = "Test"
 	_, err = executor.NewBackupMaker(context.Background(), nil, cfg, testPulse)
-	require.NoError(t, err)
+	require.Contains(t, err.Error(), "PostProcessBackupCmd can't be empty")
 
+	cfg.PostProcessBackupCmd = []string{"some command"}
+	_, err = executor.NewBackupMaker(context.Background(), nil, cfg, testPulse)
+	require.NoError(t, err)
 }
 
 func makeBackuperConfig(t *testing.T, prefix string) configuration.Backup {
