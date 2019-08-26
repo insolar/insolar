@@ -52,13 +52,14 @@ package gateway
 
 import (
 	"context"
+	"testing"
+	"time"
+
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network"
 	mock "github.com/insolar/insolar/testutils/network"
 	"github.com/stretchr/testify/assert"
-	"testing"
-	"time"
 )
 
 func TestNewGatewayer(t *testing.T) {
@@ -77,14 +78,13 @@ func TestNewGatewayer(t *testing.T) {
 		return gw
 	})
 
-	gw.NetworkOperableMock.Set(func() bool {
-		return false
+	gw.BeforeRunMock.Set(func(ctx context.Context, pulse insolar.Pulse) {
 	})
 
 	gw.RunMock.Set(func(ctx context.Context, pulse insolar.Pulse) {
 	})
 
-	gatewayer := NewGatewayer(gw, func(ctx context.Context, isNetworkOperable bool) {})
+	gatewayer := NewGatewayer(gw)
 	assert.Equal(t, gw, gatewayer.Gateway())
 	assert.Equal(t, insolar.NoNetworkState, gatewayer.Gateway().GetState())
 

@@ -213,9 +213,12 @@ type Gatewayer interface {
 
 // Gateway responds for whole network state
 type Gateway interface {
-	Run(ctx context.Context, pulse insolar.Pulse)
-	GetState() insolar.NetworkState
 	NewGateway(context.Context, insolar.NetworkState) Gateway
+
+	BeforeRun(ctx context.Context, pulse insolar.Pulse)
+	Run(ctx context.Context, pulse insolar.Pulse)
+
+	GetState() insolar.NetworkState
 
 	OnPulseFromPulsar(context.Context, insolar.Pulse, ReceivedPacket)
 	OnPulseFromConsensus(context.Context, insolar.Pulse)
@@ -226,7 +229,6 @@ type Gateway interface {
 	Auther() Auther
 	Bootstrapper() Bootstrapper
 
-	NetworkOperable() bool
 	EphemeralMode(nodes []insolar.NetworkNode) bool
 }
 

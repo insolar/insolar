@@ -59,19 +59,15 @@ import (
 	"github.com/insolar/insolar/network"
 )
 
-func NewGatewayer(g network.Gateway, f insolar.NetworkOperableCallback) network.Gatewayer {
+func NewGatewayer(g network.Gateway) network.Gatewayer {
 	return &gatewayer{
-		operableFunc: f,
-		gateway:      g,
-		isOperable:   true,
+		gateway: g,
 	}
 }
 
 type gatewayer struct {
-	operableFunc insolar.NetworkOperableCallback
-	gateway      network.Gateway
-	gatewayMu    sync.RWMutex
-	isOperable   bool
+	gatewayMu sync.RWMutex
+	gateway   network.Gateway
 }
 
 func (n *gatewayer) Gateway() network.Gateway {
@@ -92,20 +88,9 @@ func (n *gatewayer) SwitchState(ctx context.Context, state insolar.NetworkState,
 		return
 	}
 
-	n.gateway = n.gateway.NewGateway(ctx, state)
+	gateway := n.gateway.NewGateway(ctx, state)
+	gateway.BeforeRun(ctx, pulse)
 
-	operable := n.gateway.NetworkOperable()
-	operableChanged := false
-	if n.isOperable != operable {
-		n.isOperable = operable
-		operableChanged = true
-	}
-
-	go func() {
-		n.gateway.Run(ctx, pulse)
-
-		if operableChanged {
-			n.operableFunc(ctx, n.isOperable)
-		}
-	}()
+	n.gateway = gateway
+	go n.gateway.Run(ctx, pulse)
 }
