@@ -207,7 +207,7 @@ type Accessor interface {
 type Gatewayer interface {
 	Gateway() Gateway
 	SwitchState(ctx context.Context, state insolar.NetworkState, pulse insolar.Pulse)
-	Fail(ctx context.Context, reason string)
+	FailState(ctx context.Context, state insolar.NetworkState, reason string)
 }
 
 //go:generate minimock -i github.com/insolar/insolar/network.Gateway -o ../testutils/network -s _mock.go -g

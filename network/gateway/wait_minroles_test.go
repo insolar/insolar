@@ -72,8 +72,8 @@ func TestWaitMinroles_MinrolesNotHappenedInETA(t *testing.T) {
 	defer mc.Wait(time.Minute)
 
 	gatewayer := mock.NewGatewayerMock(mc)
-	gatewayer.FailMock.Set(func(ctx context.Context, reason string) {
-		require.Equal(t, "WaitMinRoles timeout exceeded", reason)
+	gatewayer.FailStateMock.Set(func(ctx context.Context, state insolar.NetworkState, reason string) {
+		require.Equal(t, "Bootstrap timeout exceeded", reason)
 	})
 
 	nodeKeeper := mock.NewNodeKeeperMock(mc)

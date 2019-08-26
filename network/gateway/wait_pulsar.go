@@ -71,7 +71,7 @@ func (g *WaitPulsar) Run(ctx context.Context, pulse insolar.Pulse) {
 
 	select {
 	case <-g.bootstrapTimer.C:
-		g.Gatewayer.Fail(ctx, "WaitPulsar timeout exceeded")
+		g.Gatewayer.FailState(ctx, g.GetState(), "Bootstrap timeout exceeded")
 	case newPulse := <-g.pulseArrived:
 		g.Gatewayer.SwitchState(ctx, insolar.CompleteNetworkState, newPulse)
 	}

@@ -70,7 +70,7 @@ type WaitConsensus struct {
 func (g *WaitConsensus) Run(ctx context.Context, pulse insolar.Pulse) {
 	select {
 	case <-g.bootstrapTimer.C:
-		g.Gatewayer.Fail(ctx, "WaitConsensus timeout exceeded")
+		g.Gatewayer.FailState(ctx, g.GetState(), "Bootstrap timeout exceeded")
 	case newPulse := <-g.consensusFinished:
 		g.Gatewayer.SwitchState(ctx, insolar.WaitMajority, newPulse)
 	}
