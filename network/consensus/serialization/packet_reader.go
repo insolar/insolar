@@ -71,6 +71,7 @@ import (
 type packetData struct {
 	data   []byte
 	packet *Packet
+	//	receivedAt time.Time
 }
 
 func (p *packetData) GetPulseNumber() pulse.Number {
@@ -82,6 +83,7 @@ type PacketParser struct {
 	digester     cryptkit.DataDigester
 	signMethod   cryptkit.SignMethod
 	keyProcessor insolar.KeyProcessor
+	receivedAt   time.Time
 }
 
 func newPacketParser(
@@ -90,6 +92,7 @@ func newPacketParser(
 	digester cryptkit.DataDigester,
 	signMethod cryptkit.SignMethod,
 	keyProcessor insolar.KeyProcessor,
+	receivedAt time.Time,
 ) (*PacketParser, error) {
 
 	capture := network.NewCapturingReader(reader)
@@ -100,6 +103,7 @@ func newPacketParser(
 		digester:     digester,
 		signMethod:   signMethod,
 		keyProcessor: keyProcessor,
+		receivedAt:   receivedAt,
 	}
 
 	_, err := parser.packet.DeserializeFrom(ctx, capture)
@@ -114,6 +118,10 @@ func newPacketParser(
 
 func (p PacketParser) String() string {
 	return p.packet.String()
+}
+
+func (p PacketParser) GetPacketReceivedAt() time.Time {
+	return p.receivedAt
 }
 
 func (p *PacketParser) ParsePacketBody() (transport.PacketParser, error) {
@@ -139,13 +147,13 @@ func NewPacketParserFactory(
 	}
 }
 
-func (f *PacketParserFactory) ParsePacket(ctx context.Context, reader io.Reader) (transport.PacketParser, error) {
-	return newPacketParser(ctx, reader, f.digester, f.signMethod, f.keyProcessor)
+func (f *PacketParserFactory) ParsePacket(ctx context.Context, reader io.Reader, receivedAt time.Time) (transport.PacketParser, error) {
+	return newPacketParser(ctx, reader, f.digester, f.signMethod, f.keyProcessor, receivedAt)
 }
 
 func (p *PacketParser) GetPulsePacket() transport.PulsePacketReader {
 	pulsarBody := p.packet.EncryptableBody.(*PulsarPacketBody)
-	return adapters.NewPulsePacketParser(pulsarBody.getPulseData())
+	return adapters.NewPulsePacketParser(pulsarBody.getPulseData(), p.receivedAt)
 }
 
 func (p *PacketParser) GetMemberPacket() transport.MemberPacketReader {
@@ -179,7 +187,7 @@ func (p *PacketParser) GetPacketSignature() cryptkit.SignedDigest {
 	payloadReader := bytes.NewReader(p.data[:len(p.data)-signatureSize])
 
 	signature := cryptkit.NewSignature(&p.packet.PacketSignature, p.digester.GetDigestMethod().SignedBy(p.signMethod))
-	digest := p.digester.GetDigestOf(payloadReader)
+	digest := p.digester.DigestData(payloadReader)
 	return cryptkit.NewSignedDigest(digest, signature)
 }
 
@@ -235,7 +243,7 @@ func (r *EmbeddedPulseReader) GetEmbeddedPulsePacket() transport.PulsePacketRead
 		return nil
 	}
 
-	return adapters.NewPulsePacketParser(r.body.PulsarPacket.PulsarPacketBody.getPulseData())
+	return adapters.NewPulsePacketParser(r.body.PulsarPacket.PulsarPacketBody.getPulseData(), r.receivedAt)
 }
 
 type Phase0PacketReader struct {
@@ -436,7 +444,7 @@ type FullIntroductionReader struct {
 
 func (r *FullIntroductionReader) GetBriefIntroSignedDigest() cryptkit.SignedDigestHolder {
 	return cryptkit.NewSignedDigest(
-		r.digester.GetDigestOf(bytes.NewReader(r.intro.JoinerData)),
+		r.digester.DigestData(bytes.NewReader(r.intro.JoinerData)),
 		cryptkit.NewSignature(&r.intro.JoinerSignature, r.digester.GetDigestMethod().SignedBy(r.signMethod)),
 	).AsSignedDigestHolder()
 }

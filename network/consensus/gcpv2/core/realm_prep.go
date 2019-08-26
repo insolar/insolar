@@ -301,6 +301,10 @@ func (p *PrepRealm) GetMandateRegistry() census.MandateRegistry {
 func (p *PrepRealm) ApplyPulseData(ctx context.Context, pp transport.PulsePacketReader, fromPulsar bool,
 	from endpoints.Inbound, receivedAt time.Time) error {
 
+	if receivedAt.IsZero() {
+		panic("illegal value")
+	}
+
 	pde := pp.GetPulseDataEvidence()
 	pd := pp.GetPulseData()
 	pn := pd.PulseNumber

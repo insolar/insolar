@@ -114,11 +114,16 @@ func NewPulseDigest(data pulse.Data) cryptkit.Digest {
 
 type PulsePacketParser struct {
 	longbits.FixedReader
-	digest cryptkit.DigestHolder
-	pulse  pulse.Data
+	digest     cryptkit.DigestHolder
+	pulse      pulse.Data
+	receivedAt time.Time
 }
 
-func NewPulsePacketParser(pulse pulse.Data) *PulsePacketParser {
+func (p PulsePacketParser) GetPacketReceivedAt() time.Time {
+	return p.receivedAt
+}
+
+func NewPulsePacketParser(pulse pulse.Data, receivedAt time.Time) *PulsePacketParser {
 	data, err := pulseserialization.Serialize(pulse)
 	if err != nil {
 		panic(err.Error())
@@ -128,6 +133,7 @@ func NewPulsePacketParser(pulse pulse.Data) *PulsePacketParser {
 		FixedReader: longbits.NewFixedReader(data),
 		digest:      NewPulseDigest(pulse).AsDigestHolder(),
 		pulse:       pulse,
+		receivedAt:  receivedAt,
 	}
 }
 

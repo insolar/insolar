@@ -52,7 +52,7 @@ package adapters
 
 import (
 	"context"
-	"math"
+	"github.com/insolar/insolar/network/consensus/common/timer"
 	"sync"
 	"time"
 
@@ -77,6 +77,13 @@ type EphemeralController interface {
 	EphemeralMode(nodes []insolar.NetworkNode) bool
 }
 
+func NewConsensusControlFeeder() *ConsensusControlFeeder {
+	return &ConsensusControlFeeder{
+		mu:            &sync.RWMutex{},
+		capacityLevel: capacity.LevelNormal,
+	}
+}
+
 var _ api.ConsensusControlFeeder = &ConsensusControlFeeder{}
 
 type ConsensusControlFeeder struct {
@@ -86,11 +93,25 @@ type ConsensusControlFeeder struct {
 	leaveReason   uint32
 }
 
-func NewConsensusControlFeeder() *ConsensusControlFeeder {
-	return &ConsensusControlFeeder{
-		mu:            &sync.RWMutex{},
-		capacityLevel: capacity.LevelNormal,
-	}
+func (cf *ConsensusControlFeeder) OnFailedPreparePulseChange() {
+}
+
+func (cf *ConsensusControlFeeder) OnFullRoundStarting() {
+}
+
+func (cf *ConsensusControlFeeder) OnPreparePulseChange(report api.UpstreamReport) {
+}
+
+func (cf *ConsensusControlFeeder) OnCommitPulseChange(report api.UpstreamReport, pulseData pulse.Data, activeCensus census.Operational) {
+}
+
+func (cf *ConsensusControlFeeder) OnCancelPulseChange() {
+}
+
+func (cf *ConsensusControlFeeder) OnConsensusFinished(report api.UpstreamReport, expectedCensus census.Operational) {
+}
+
+func (cf *ConsensusControlFeeder) OnConsensusAborted() {
 }
 
 func (cf *ConsensusControlFeeder) SetRequiredGracefulLeave(reason uint32) {
@@ -283,6 +304,30 @@ type EphemeralControlFeeder struct {
 	pulseDuration       time.Duration
 }
 
+func (f *EphemeralControlFeeder) OnFailedPreparePulseChange() {
+}
+
+func (f *EphemeralControlFeeder) OnPulseDetected() {
+}
+
+func (f *EphemeralControlFeeder) OnFullRoundStarting() {
+}
+
+func (f *EphemeralControlFeeder) OnPreparePulseChange(report api.UpstreamReport) {
+}
+
+func (f *EphemeralControlFeeder) OnCommitPulseChange(report api.UpstreamReport, pulseData pulse.Data, activeCensus census.Operational) {
+}
+
+func (f *EphemeralControlFeeder) OnCancelPulseChange() {
+}
+
+func (f *EphemeralControlFeeder) OnConsensusFinished(report api.UpstreamReport, expectedCensus census.Operational) {
+}
+
+func (f *EphemeralControlFeeder) OnConsensusAborted() {
+}
+
 func (f *EphemeralControlFeeder) CanFastForwardPulse(expected, received pulse.Number, lastPulseData pulse.Data) bool {
 	return true
 }
@@ -293,14 +338,6 @@ func (f *EphemeralControlFeeder) CanStopEphemeralByPulse(pd pulse.Data, localNod
 
 func (f *EphemeralControlFeeder) OnEphemeralCancelled() {
 	// TODO is called on cancellation by both Ph1 packets and TryConvertFromEphemeral
-}
-
-func (f *EphemeralControlFeeder) GetMinDuration() time.Duration {
-	return f.pulseDuration
-}
-
-func (f *EphemeralControlFeeder) GetMaxDuration() time.Duration {
-	return math.MaxInt64
 }
 
 func (f *EphemeralControlFeeder) OnNonEphemeralPacket(ctx context.Context, parser transport.PacketParser, inbound endpoints.Inbound) error {
@@ -326,7 +363,7 @@ func (f *EphemeralControlFeeder) CanStopEphemeralByCensus(expected census.Expect
 	return true
 }
 
-func (f *EphemeralControlFeeder) EphemeralConsensusFinished(isNextEphemeral bool, roundStartedAt time.Time, expected census.Operational) {
+func (f *EphemeralControlFeeder) EphemeralConsensusFinished(isNextEphemeral bool, roundStartedAt timer.Occasion, expected census.Operational) {
 }
 
 func (f *EphemeralControlFeeder) GetEphemeralTimings(config api.LocalNodeConfiguration) api.RoundTimings {
@@ -349,7 +386,7 @@ func (f *EphemeralControlFeeder) CreateEphemeralPulsePacket(census census.Operat
 	}
 	pd = pd.CreateNextEphemeralPulse()
 
-	return NewPulsePacketParser(pd)
+	return NewPulsePacketParser(pd, time.Now())
 }
 
 func (f *EphemeralControlFeeder) CanStopOnHastyPulse(pn pulse.Number, expectedEndOfConsensus time.Time) bool {

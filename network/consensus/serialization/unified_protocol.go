@@ -54,14 +54,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
-	"time"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/longbits"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
 	"github.com/insolar/insolar/pulse"
+	"io"
 )
 
 const (
@@ -271,7 +269,7 @@ type Packet struct {
 }
 
 func (p Packet) String() string {
-	packetCtx := newPacketContext(context.Background(), &p.Header, time.Time{})
+	packetCtx := newPacketContext(context.Background(), &p.Header)
 	return fmt.Sprintf(
 		"<s=%d t=%d pt=%s f=%s body=%s>",
 		p.Header.SourceID,
@@ -308,7 +306,7 @@ func (p *Packet) SerializeTo(ctx context.Context, writer io.Writer, digester cry
 	}
 
 	w := newTrackableWriter(writer)
-	packetCtx := newPacketContext(ctx, &p.Header, time.Time{} /* not relevant for serialization */)
+	packetCtx := newPacketContext(ctx, &p.Header)
 	serializeCtx := newSerializeContext(packetCtx, w, digester, signer, p)
 
 	if err := write(serializeCtx, &p.PulseNumber); err != nil {
@@ -322,14 +320,14 @@ func (p *Packet) SerializeTo(ctx context.Context, writer io.Writer, digester cry
 	return serializeCtx.Finalize()
 }
 
-func (p *Packet) DeserializeFrom(ctx context.Context, reader io.Reader, receivedAt time.Time) (int64, error) {
+func (p *Packet) DeserializeFrom(ctx context.Context, reader io.Reader) (int64, error) {
 	r := newTrackableReader(reader)
 
 	if err := p.Header.DeserializeFrom(nil, r); err != nil {
 		return r.totalRead, ErrMalformedHeader(err)
 	}
 
-	packetCtx := newPacketContext(ctx, &p.Header, receivedAt)
+	packetCtx := newPacketContext(ctx, &p.Header)
 	deserializeCtx := newDeserializeContext(packetCtx, r, &p.Header)
 
 	if err := read(deserializeCtx, &p.PulseNumber); err != nil {

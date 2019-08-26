@@ -105,7 +105,7 @@ type PacketContext interface {
 	SetNeighbourNodeID(nodeID insolar.ShortNodeID)
 	GetAnnouncedJoinerNodeID() insolar.ShortNodeID
 	SetAnnouncedJoinerNodeID(nodeID insolar.ShortNodeID)
-	GetReceivedAt() time.Time
+	//GetReceivedAt() time.Time
 }
 
 type SerializeContext interface {

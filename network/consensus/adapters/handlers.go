@@ -54,6 +54,7 @@ import (
 	"bytes"
 	"context"
 	"io"
+	"time"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network"
@@ -66,7 +67,7 @@ type PacketProcessor interface {
 }
 
 type PacketParserFactory interface {
-	ParsePacket(ctx context.Context, reader io.Reader) (transport.PacketParser, error)
+	ParsePacket(ctx context.Context, reader io.Reader, receivedAt time.Time) (transport.PacketParser, error)
 }
 
 type packetHandler struct {
@@ -111,7 +112,7 @@ func (dh *DatagramHandler) SetPacketParserFactory(packetParserFactory PacketPars
 	dh.packetParserFactory = packetParserFactory
 }
 
-func (dh *DatagramHandler) HandleDatagram(ctx context.Context, address string, buf []byte) {
+func (dh *DatagramHandler) HandleDatagram(ctx context.Context, address string, buf []byte, receivedAt time.Time) {
 	ctx, logger := PacketEarlyLogger(ctx, address)
 
 	if dh.packetHandler == nil {
@@ -124,7 +125,7 @@ func (dh *DatagramHandler) HandleDatagram(ctx context.Context, address string, b
 		return
 	}
 
-	packetParser, err := dh.packetParserFactory.ParsePacket(ctx, bytes.NewReader(buf))
+	packetParser, err := dh.packetParserFactory.ParsePacket(ctx, bytes.NewReader(buf), receivedAt)
 	if err != nil {
 		logger.Warnf("Failed to get PacketParser: ", err)
 		return
@@ -155,7 +156,7 @@ func (ph *PulseHandler) HandlePulse(ctx context.Context, pulse insolar.Pulse, pa
 		return
 	}
 
-	pulsePacketParser := NewPulsePacketParser(NewPulseData(pulse))
+	pulsePacketParser := NewPulsePacketParser(NewPulseData(pulse), packet.GetReceivedAt())
 
 	ph.packetHandler.handlePacket(ctx, pulsePacketParser, "pulsar")
 }
