@@ -261,7 +261,7 @@ func activateDaemons(t *testing.T) {
 		if status == "inactive" {
 			for _, user := range launchnet.MigrationDaemons {
 				_, err := signedRequest(t, launchnet.TestRPCUrl, &launchnet.MigrationAdmin,
-			"migration.activateDaemon", map[string]interface{}{"reference": user.Ref})
+					"migration.activateDaemon", map[string]interface{}{"reference": user.Ref})
 				require.NoError(t, err)
 			}
 		}
