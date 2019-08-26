@@ -50,7 +50,10 @@
 
 package smachine
 
-import "time"
+import (
+	"math"
+	"time"
+)
 
 type stateUpdateFn func(m *SlotMachine, slot *Slot, upd StateUpdate) bool
 
@@ -63,15 +66,28 @@ func slotMachineUpdate(marker *struct{}, upd stateUpdType, param interface{}, ap
 	}
 }
 
+func (u StateUpdate) getStateUpdateFn() stateUpdateFn {
+	return u.apply.(stateUpdateFn)
+}
+
 func stateUpdateNoChange(marker *struct{}) StateUpdate {
 	return slotMachineUpdate(marker, stateUpdNoChange, nil, nil)
 }
 
 func stateUpdateRepeat(marker *struct{}, limit int) StateUpdate {
-	if limit < 0 {
-		limit = 0
+	ulimit := uint32(0)
+
+	switch {
+	case limit > math.MaxUint32:
+		ulimit = math.MaxUint32
+	case limit > 0:
+		ulimit = uint32(limit)
 	}
-	return slotMachineUpdate(marker, stateUpdRepeat, uint32(limit), nil)
+	return slotMachineUpdate(marker, stateUpdRepeat, ulimit, nil)
+}
+
+func (u StateUpdate) getRepeatLimit() uint32 {
+	return u.param.(uint32)
 }
 
 func toUnixNano(t time.Time) int64 {
@@ -86,64 +102,81 @@ func toUnixNano(t time.Time) int64 {
 }
 
 func stateUpdateNextOnly(marker *struct{}, sf StateFunc, mf MigrateFunc) StateUpdate {
+	return _stateUpdateNext(marker, sf, mf, true, 0)
+}
+
+func stateUpdateActivate(marker *struct{}, sf StateFunc, mf MigrateFunc, flags stepFlags) StateUpdate {
+	return _stateUpdateNext(marker, sf, mf, false, flags)
+}
+
+func _stateUpdateNext(marker *struct{}, sf StateFunc, mf MigrateFunc, canRepeat bool, flags stepFlags) StateUpdate {
 	if sf == nil {
-		panic("illegal state")
+		panic("illegal value")
 	}
-	return slotMachineUpdate(marker, stateUpdNext, sf, func(m *SlotMachine, slot *Slot, upd StateUpdate) bool {
-		slot.nextState = SlotStep{transition: sf, migration: mf}
-		m.addSlotToQueue(slot, &m.activeSlots)
+
+	var param interface{}
+	slotStep := SlotStep{transition: sf, migration: mf, stepFlags: flags}
+	if canRepeat {
+		// enables a shortcut on executionContext
+		// NB! apply will NOT be called when a shortcut is possible
+		param = &slotStep
+	}
+	return slotMachineUpdate(marker, stateUpdNext, param, func(m *SlotMachine, slot *Slot, upd StateUpdate) bool {
+		slot.setNextStep(slotStep)
+		m.addSlotToActiveOrWorkingQueue(slot)
 		return true
 	})
 }
 
-func stateUpdateActivate(marker *struct{}, sf StateFunc, mf MigrateFunc, flags uint32) StateUpdate {
-	if sf == nil {
-		panic("illegal state")
+func (u StateUpdate) getShortLoopStep() *SlotStep {
+	if s, ok := u.param.(*SlotStep); ok {
+		return s
 	}
-	return slotMachineUpdate(marker, stateUpdNext, nil, func(m *SlotMachine, slot *Slot, upd StateUpdate) bool {
-		slot.nextState = SlotStep{transition: sf, migration: mf, stepFlags: flags}
-		m.addSlotToQueue(slot, &m.activeSlots)
-		return true
-	})
+	return nil
 }
 
 func stateUpdateDeactivate(marker *struct{}, slotStep SlotStep) StateUpdate {
-	if slotStep.transition == nil {
-		panic("illegal state")
+	if slotStep.IsEmpty() {
+		panic("illegal value")
 	}
 	return slotMachineUpdate(marker, stateUpdNext, nil, func(m *SlotMachine, slot *Slot, upd StateUpdate) bool {
-		slot.nextState = slotStep
-		m.addSlotToWaitingQueue(slot)
+		slot.setNextStep(slotStep)
+		m.timeReqSlots.AddLast(slot)
 		return true
 	})
 }
 
-func stateUpdateDeactivateOn(marker *struct{}, waitActivation SlotLink, slotStep SlotStep) StateUpdate {
-	if slotStep.transition == nil {
-		panic("illegal state")
+func stateUpdateWaitForSlot(marker *struct{}, waitOn SlotLink, slotStep SlotStep) StateUpdate {
+	if slotStep.IsEmpty() {
+		panic("illegal value")
 	}
+	if slotStep.HasTimeout() {
+		panic("illegal value - slot wait can't be combined with time wait")
+	}
+
 	return slotMachineUpdate(marker, stateUpdNext, nil, func(m *SlotMachine, slot *Slot, upd StateUpdate) bool {
-		slot.nextState = slotStep
-		if waitActivation.IsValid() {
-			switch waitActivation.s.QueueType() {
-			case ActiveSlots:
-				// don't add to the same queue, as it can be WorkingQueue, not ActiveQueue
-				break
-			case UnusedSlots:
-				// slotLink can't be valid then
-				panic("illegal state")
+		switch {
+		case waitOn.s == slot:
+			// don't wait
+		case !waitOn.IsValid():
+			// don't wait
+		default:
+			switch waitOn.s.QueueType() {
+			case ActiveSlots, WorkingSlots:
+				// don't wait
 			case NoQueue:
-				waitActivation.s.makeQueueHead()
+				waitOn.s.makeQueueHead()
 				fallthrough
-			//case AnotherSlotQueue:
-			//	fallthrough
-			default:
-				// join the same queue
-				waitActivation.s.queue.AddLast(slot)
+			case AnotherSlotQueue, PollingSlots:
+				slot.setNextStep(slotStep)
+				waitOn.s.queue.AddLast(slot)
 				return true
+			default:
+				panic("illegal state")
 			}
 		}
-		m.addSlotToQueue(slot, &m.activeSlots)
+		slot.setNextStep(slotStep)
+		m.addSlotToActiveOrWorkingQueue(slot)
 		return true
 	})
 }
@@ -168,8 +201,12 @@ func stateUpdateStop(marker *struct{}) StateUpdate {
 	})
 }
 
-func stateUpdateFailed(marker *struct{}, err error) StateUpdate {
-	return slotMachineUpdate(marker, stateUpdDispose, err, nil)
+func stateUpdateFailed(err error) StateUpdate {
+	return slotMachineUpdate(nil, stateUpdDispose, err, nil)
+}
+
+func stateUpdateExpired(info interface{}) StateUpdate {
+	return slotMachineUpdate(nil, stateUpdExpired, info, nil)
 }
 
 type stateUpdType uint32
@@ -180,6 +217,7 @@ const (
 	stateUpdRepeat // supports short-loop
 	stateUpdNext   // supports short-loop
 	stateUpdDispose
+	stateUpdExpired
 
 	//stateUpdFlagNoWakeup = 1 << 5
 	//stateUpdFlagHasAsync = 1 << 6

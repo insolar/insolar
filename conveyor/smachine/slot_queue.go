@@ -58,7 +58,10 @@ const (
 	AnotherSlotQueue
 
 	UnusedSlots
+
+	WorkingSlots
 	ActiveSlots
+
 	PollingSlots
 )
 
