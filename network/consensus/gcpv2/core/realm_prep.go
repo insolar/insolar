@@ -235,7 +235,13 @@ func (p *PrepRealm) prepareEphemeralPolling(ctxPrep context.Context) {
 	var startTimer *time.Timer
 	var startCh <-chan time.Time
 
-	if beforeNextRound < math.MaxInt64 {
+	pop := p.initialCensus.GetOnlinePopulation()
+	local := pop.GetLocalProfile()
+	if pop.GetIndexedCount() < 2 || local.IsJoiner() || !local.GetStatic().GetSpecialRoles().IsDiscovery() {
+		beforeNextRound = 0
+	}
+
+	if beforeNextRound > 0 && beforeNextRound < math.MaxInt64 {
 		if beforeNextRound < minDuration {
 			beforeNextRound = minDuration
 		}
