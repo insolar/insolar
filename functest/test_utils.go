@@ -194,7 +194,7 @@ func generateMigrationAddress() string {
 const migrationAmount = "360000"
 
 func fullMigration(t *testing.T, txHash string) *launchnet.User {
-	activateDaemons(t, countThreeActiveDaemon)
+	activateDaemons(t, launchnet.MigrationDaemons[0:3])
 
 	migrationAddress := testutils.RandomString()
 	member := createMigrationMemberForMA(t, migrationAddress)
@@ -254,17 +254,17 @@ func getStatus(t testing.TB) statusResponse {
 	return rpcStatusResponse.Result
 }
 
-func activateDaemons(t *testing.T, countDaemon int) {
-	for i := 0; i < countDaemon; i++ {
+func activateDaemons(t *testing.T, listDaemons []*launchnet.User) {
+	for _, daemons := range listDaemons {
 
-		if len(launchnet.MigrationDaemons[i].Ref) > 0 {
-			res, err := signedRequest(t, &launchnet.MigrationAdmin, "migration.checkDaemon", map[string]interface{}{"reference": launchnet.MigrationDaemons[i].Ref})
+		if len(daemons.Ref) > 0 {
+			res, err := signedRequest(t, &launchnet.MigrationAdmin, "migration.checkDaemon", map[string]interface{}{"reference": daemons.Ref})
 			require.NoError(t, err)
 
 			status := res.(map[string]interface{})["status"].(string)
 
 			if status == "inactive" {
-				_, err := signedRequest(t, &launchnet.MigrationAdmin, "migration.activateDaemon", map[string]interface{}{"reference": launchnet.MigrationDaemons[i].Ref})
+				_, err := signedRequest(t, &launchnet.MigrationAdmin, "migration.activateDaemon", map[string]interface{}{"reference": daemons.Ref})
 				require.NoError(t, err)
 			}
 		}

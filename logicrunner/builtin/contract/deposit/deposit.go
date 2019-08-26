@@ -139,7 +139,7 @@ func (d *Deposit) checkAmount(activeDaemons []string) error {
 				result = amount
 				continue
 			}
-			if result != d.MigrationDaemonConfirms[migrationRef] {
+			if result != amount {
 				return fmt.Errorf(" several migration daemons send different amount  ")
 			}
 		}

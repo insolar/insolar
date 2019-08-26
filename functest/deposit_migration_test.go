@@ -30,7 +30,7 @@ import (
 )
 
 func TestMigrationToken(t *testing.T) {
-	activateDaemons(t, countThreeActiveDaemon)
+	activateDaemons(t, launchnet.MigrationDaemons[0:3])
 	migrationAddress := testutils.RandomString()
 	member := createMigrationMemberForMA(t, migrationAddress)
 
@@ -64,20 +64,20 @@ func TestMigrationToken(t *testing.T) {
 }
 
 func TestMigrationTokenFourActiveDaemon(t *testing.T) {
-	activateDaemons(t, countFourActiveDaemon)
+	activateDaemons(t, launchnet.MigrationDaemons[0:4])
 	migrationAddress := testutils.RandomString()
 	member := createMigrationMemberForMA(t, migrationAddress)
 
-	_ = migrate(t, member.Ref, "1000", "Test_TxHash", migrationAddress, 0)
 	_ = migrate(t, member.Ref, "1000", "Test_TxHash", migrationAddress, 1)
-	deposit := migrate(t, member.Ref, "1000", "Test_TxHash", migrationAddress, 2)
+	_ = migrate(t, member.Ref, "1000", "Test_TxHash", migrationAddress, 2)
+	deposit := migrate(t, member.Ref, "1000", "Test_TxHash", migrationAddress, 3)
 
 	require.Equal(t, deposit["ethTxHash"], "Test_TxHash")
-	require.Equal(t, deposit["amount"], "1000")
+	require.Equal(t, deposit["amount"], "10000")
 }
 
 func TestMigrationTokenOnDifferentDeposits(t *testing.T) {
-	activateDaemons(t, countThreeActiveDaemon)
+	activateDaemons(t, launchnet.MigrationDaemons[0:3])
 	migrationAddress := testutils.RandomString()
 	member := createMigrationMemberForMA(t, migrationAddress)
 
@@ -146,7 +146,7 @@ func TestMigrationTokenNilValue(t *testing.T) {
 }
 
 func TestMigrationTokenMaxAmount(t *testing.T) {
-	activateDaemons(t, countThreeActiveDaemon)
+	activateDaemons(t, launchnet.MigrationDaemons[0:3])
 	migrationAddress := generateMigrationAddress()
 	member := createMigrationMemberForMA(t, migrationAddress)
 
@@ -159,7 +159,7 @@ func TestMigrationTokenMaxAmount(t *testing.T) {
 }
 
 func TestMigrationDoubleMigrationFromSameDaemon(t *testing.T) {
-	activateDaemons(t, countThreeActiveDaemon)
+	activateDaemons(t, launchnet.MigrationDaemons[0:3])
 	migrationAddress := generateMigrationAddress()
 	member := createMigrationMemberForMA(t, migrationAddress)
 
@@ -177,7 +177,7 @@ func TestMigrationDoubleMigrationFromSameDaemon(t *testing.T) {
 }
 
 func TestMigrationAnotherAmountSameTx(t *testing.T) {
-	activateDaemons(t, countThreeActiveDaemon)
+	activateDaemons(t, launchnet.MigrationDaemons[0:3])
 
 	migrationAddress := generateMigrationAddress()
 	_ = createMigrationMemberForMA(t, migrationAddress)

@@ -27,7 +27,7 @@ import (
 
 func TestActivateDaemonDoubleCall(t *testing.T) {
 	t.Skip("Test is constantly failing. Skipping until INS-3344 is fixed.")
-	activateDaemons(t, countThreeActiveDaemon)
+	activateDaemons(t, launchnet.MigrationDaemons[0:3])
 	for i := 0; i < countThreeActiveDaemon; i++ {
 		_, _, err := makeSignedRequest(&launchnet.MigrationAdmin, "migration.activateDaemon", map[string]interface{}{"reference": launchnet.MigrationDaemons[i].Ref})
 
@@ -37,7 +37,7 @@ func TestActivateDaemonDoubleCall(t *testing.T) {
 }
 
 func TestActivateDeactivateDaemon(t *testing.T) {
-	activateDaemons(t, countThreeActiveDaemon)
+	activateDaemons(t, launchnet.MigrationDaemons[0:3])
 	for i := 0; i < countThreeActiveDaemon; i++ {
 		_, err := signedRequest(t, &launchnet.MigrationAdmin, "migration.deactivateDaemon", map[string]interface{}{"reference": launchnet.MigrationDaemons[i].Ref})
 		require.NoError(t, err)
@@ -63,7 +63,7 @@ func TestActivateDeactivateDaemon(t *testing.T) {
 	}
 }
 func TestDeactivateDaemonDoubleCall(t *testing.T) {
-	activateDaemons(t, countThreeActiveDaemon)
+	activateDaemons(t, launchnet.MigrationDaemons[0:3])
 	for i := 0; i < countThreeActiveDaemon; i++ {
 		_, _, err := makeSignedRequest(&launchnet.MigrationAdmin, "migration.deactivateDaemon", map[string]interface{}{"reference": launchnet.MigrationDaemons[i].Ref})
 		require.NoError(t, err)

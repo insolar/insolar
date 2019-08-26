@@ -23,6 +23,7 @@ import (
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/testutils"
+	"github.com/insolar/insolar/testutils/launchnet"
 	"github.com/stretchr/testify/require"
 	"math/big"
 	"strings"
@@ -100,7 +101,7 @@ func TestDepositTransferWrongValueAmount(t *testing.T) {
 }
 
 func TestDepositTransferNotEnoughConfirms(t *testing.T) {
-	activateDaemons(t, countThreeActiveDaemon)
+	activateDaemons(t, launchnet.MigrationDaemons[0:3])
 	migrationAddress := testutils.RandomString()
 	member := createMigrationMemberForMA(t, migrationAddress)
 	_ = migrate(t, member.Ref, "1000", "Eth_TxHash_test", migrationAddress, 2)
