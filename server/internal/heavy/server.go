@@ -72,6 +72,7 @@ func (s *Server) Serve() {
 
 	cfg := &cfgHolder.Configuration
 
+	fmt.Println("Version: ", version.GetFullVersion())
 	fmt.Println("Starts with configuration:\n", configuration.ToString(cfgHolder.Configuration))
 
 	ctx := context.Background()
@@ -101,7 +102,6 @@ func (s *Server) Serve() {
 
 	err = cmp.Start(ctx)
 	fatal(ctx, err, "failed to start components")
-	fmt.Println("Version: ", version.GetFullVersion())
 	fmt.Println("All components were started")
 	<-waitChannel
 }

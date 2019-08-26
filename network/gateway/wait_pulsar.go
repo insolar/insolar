@@ -57,30 +57,37 @@ import (
 	"github.com/insolar/insolar/network"
 )
 
-func newWaitConsensus(b *Base) *WaitConsensus {
-	return &WaitConsensus{b, make(chan insolar.Pulse, 1)}
+func newWaitPulsar(b *Base) *WaitPulsar {
+	return &WaitPulsar{b, make(chan insolar.Pulse, 1)}
 }
 
-type WaitConsensus struct {
+type WaitPulsar struct {
 	*Base
-
-	consensusFinished chan insolar.Pulse
+	pulseArrived chan insolar.Pulse
 }
 
-func (g *WaitConsensus) Run(ctx context.Context, pulse insolar.Pulse) {
+func (g *WaitPulsar) Run(ctx context.Context, pulse insolar.Pulse) {
+	g.switchOnRealPulse(pulse)
+
 	select {
 	case <-g.bootstrapTimer.C:
 		g.Gatewayer.FailState(ctx, "Bootstrap timeout exceeded")
-	case newPulse := <-g.consensusFinished:
-		g.Gatewayer.SwitchState(ctx, insolar.WaitMajority, newPulse)
+	case newPulse := <-g.pulseArrived:
+		g.Gatewayer.SwitchState(ctx, insolar.CompleteNetworkState, newPulse)
 	}
 }
 
-func (g *WaitConsensus) GetState() insolar.NetworkState {
-	return insolar.WaitConsensus
+func (g *WaitPulsar) GetState() insolar.NetworkState {
+	return insolar.WaitPulsar
 }
 
-func (g *WaitConsensus) OnConsensusFinished(ctx context.Context, report network.Report) {
-	g.consensusFinished <- EnsureGetPulse(ctx, g.PulseAccessor, report.PulseNumber)
-	close(g.consensusFinished)
+func (g *WaitPulsar) OnConsensusFinished(ctx context.Context, report network.Report) {
+	g.switchOnRealPulse(EnsureGetPulse(ctx, g.PulseAccessor, report.PulseNumber))
+}
+
+func (g *WaitPulsar) switchOnRealPulse(pulse insolar.Pulse) {
+	if pulse.PulseNumber > insolar.FirstPulseNumber && pulse.EpochPulseNumber > insolar.EphemeralPulseEpoch {
+		g.pulseArrived <- pulse
+		close(g.pulseArrived)
+	}
 }

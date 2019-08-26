@@ -55,8 +55,9 @@ package tests
 import (
 	"context"
 	"fmt"
-	"github.com/fortytw2/leaktest"
 	"testing"
+
+	"github.com/fortytw2/leaktest"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
@@ -138,6 +139,7 @@ func TestNodeConnectInvalidVersion(t *testing.T) {
 }
 
 func TestNodeLeave(t *testing.T) {
+	t.Skip("FIXME")
 	defer leaktest.Check(t)()
 
 	s := serviceNetworkManyBootstraps(t)
@@ -166,6 +168,7 @@ func TestNodeLeave(t *testing.T) {
 }
 
 func TestNodeGracefulLeave(t *testing.T) {
+	t.Skip("FIXME")
 	defer leaktest.Check(t)()
 
 	s := serviceNetworkManyBootstraps(t)

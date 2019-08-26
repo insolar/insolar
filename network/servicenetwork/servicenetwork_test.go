@@ -275,9 +275,6 @@ func TestServiceNetwork_StartStop(t *testing.T) {
 	require.NoError(t, err)
 	ctx := context.Background()
 	defer serviceNetwork.Stop(ctx)
-	serviceNetwork.SetOperableFunc(func(ctx context.Context, operable bool) {
-
-	})
 
 	cm.Inject(serviceNetwork, nk, certManager, testutils.NewCryptographyServiceMock(t), pulse.NewAccessorMock(t),
 		testutils.NewTerminationHandlerMock(t), testutils.NewPulseManagerMock(t), &PublisherMock{},
@@ -313,42 +310,3 @@ func TestServiceNetwork_processIncoming(t *testing.T) {
 	_, err = serviceNetwork.processIncoming(ctx, data)
 	assert.Error(t, err)
 }
-
-// func TestServiceNetwork_SetGateway(t *testing.T) {
-// 	t.Skip("fix me")
-// 	sn, err := NewServiceNetwork(configuration.NewConfiguration(), &component.Manager{})
-// 	require.NoError(t, err)
-//
-// 	op := false
-// 	tick := 0
-// 	sn.SetOperableFunc(func(ctx context.Context, operable bool) {
-// 		op = operable
-// 		tick++
-// 	})
-//
-// 	hn := networkUtils.NewHostNetworkMock(t)
-// 	hn.RegisterRequestHandlerMock.Return()
-// 	sn.HostNetwork = hn
-//
-// 	// initial set
-// 	baseGateway := &gateway.Base{}
-// 	sn.SwitchState(insolar.NoNetworkState)
-// 	assert.Equal(t, 1, tick)
-// 	assert.False(t, op)
-//
-// 	type Test struct {
-// 		state insolar.NetworkState
-// 		lock  bool
-// 	}
-//
-// 	for i, T := range []Test{
-// 		{insolar.NoNetworkState, false},
-// 		{insolar.CompleteNetworkState, true},
-// 		{insolar.NoNetworkState, false},
-// 	} {
-// 		sn.SetGateway(sn.Gateway().NewGateway(T.state))
-// 		assert.Equal(t, i+1, tick)
-// 		assert.Equal(t, T.lock, op)
-//
-// 	}
-// }
