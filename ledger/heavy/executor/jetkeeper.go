@@ -452,7 +452,7 @@ func (k jetKeeperKey) ID() []byte {
 	return insolar.PulseNumber(k).Bytes()
 }
 
-func NewJetKeeperKey(raw []byte) jetKeeperKey {
+func newJetKeeperKey(raw []byte) jetKeeperKey {
 	return jetKeeperKey(insolar.NewPulseNumber(raw))
 }
 
@@ -513,7 +513,7 @@ func (jk *DBJetKeeper) TruncateHead(ctx context.Context, from insolar.PulseNumbe
 	var hasKeys bool
 	for it.Next() {
 		hasKeys = true
-		key := NewJetKeeperKey(it.Key())
+		key := newJetKeeperKey(it.Key())
 		err := jk.db.Delete(&key)
 		if err != nil {
 			return errors.Wrapf(err, "can't delete key: %+v", key)

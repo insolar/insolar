@@ -65,7 +65,7 @@ func initDB(t *testing.T, testPulse insolar.PulseNumber) (JetKeeper, string, *st
 func Test_JetKeeperKey(t *testing.T) {
 	k := jetKeeperKey(insolar.GenesisPulse.PulseNumber)
 	d := k.ID()
-	require.Equal(t, k, NewJetKeeperKey(d))
+	require.Equal(t, k, newJetKeeperKey(d))
 }
 
 func Test_TruncateHead(t *testing.T) {
