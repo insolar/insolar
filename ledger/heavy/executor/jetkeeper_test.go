@@ -43,12 +43,6 @@ func BadgerDefaultOptions(dir string) badger.Options {
 	return ops
 }
 
-func Test_JetKeeperKey(t *testing.T) {
-	k := executor.JetKeeperKey(insolar.GenesisPulse.PulseNumber)
-	d := k.ID()
-	require.Equal(t, k, executor.NewJetKeeperKey(d))
-}
-
 func initDB(t *testing.T, testPulse insolar.PulseNumber) (executor.JetKeeper, string, *store.BadgerDB, *jet.DBStore, *pulse.DB) {
 	ctx := inslogger.TestContext(t)
 	tmpdir, err := ioutil.TempDir("", "bdb-test-")
@@ -80,48 +74,6 @@ func Test_TruncateHead_TryToTruncateTopSync(t *testing.T) {
 	defer db.Stop(ctx)
 	err := ji.(*executor.DBJetKeeper).TruncateHead(ctx, 1)
 	require.EqualError(t, err, "try to truncate top sync pulse")
-}
-
-func Test_TruncateHead(t *testing.T) {
-	ctx := inslogger.TestContext(t)
-	testPulse := insolar.GenesisPulse.PulseNumber + 10
-	ji, tmpDir, db, jets, _ := initDB(t, testPulse)
-	defer os.RemoveAll(tmpDir)
-	defer db.Stop(ctx)
-
-	testJet := insolar.ZeroJetID
-
-	err := jets.Update(ctx, testPulse, true, testJet)
-	require.NoError(t, err)
-	err = ji.AddHotConfirmation(ctx, testPulse, testJet, false)
-	require.NoError(t, err)
-	err = ji.AddDropConfirmation(ctx, testPulse, testJet, false)
-	require.NoError(t, err)
-	err = ji.AddBackupConfirmation(ctx, testPulse)
-	require.NoError(t, err)
-
-	require.Equal(t, testPulse, ji.TopSyncPulse())
-
-	_, err = db.Get(executor.JetKeeperKey(testPulse))
-	require.NoError(t, err)
-
-	nextPulse := testPulse + 10
-
-	err = ji.AddDropConfirmation(ctx, nextPulse, gen.JetID(), false)
-	require.NoError(t, err)
-	err = ji.AddHotConfirmation(ctx, nextPulse, gen.JetID(), false)
-	require.NoError(t, err)
-
-	_, err = db.Get(executor.JetKeeperKey(nextPulse))
-	require.NoError(t, err)
-
-	err = ji.(*executor.DBJetKeeper).TruncateHead(ctx, nextPulse)
-	require.NoError(t, err)
-
-	_, err = db.Get(executor.JetKeeperKey(testPulse))
-	require.NoError(t, err)
-	_, err = db.Get(executor.JetKeeperKey(nextPulse))
-	require.EqualError(t, err, "value not found")
 }
 
 func TestJetInfoIsConfirmed_OneDropOneHot(t *testing.T) {
