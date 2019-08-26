@@ -235,7 +235,13 @@ func (p *PrepRealm) prepareEphemeralPolling(ctxPrep context.Context) {
 	var startTimer *time.Timer
 	var startCh <-chan time.Time
 
-	if beforeNextRound < math.MaxInt64 {
+	pop := p.initialCensus.GetOnlinePopulation()
+	local := pop.GetLocalProfile()
+	if pop.GetIndexedCount() < 2 || local.IsJoiner() || !local.GetStatic().GetSpecialRoles().IsDiscovery() {
+		beforeNextRound = 0
+	}
+
+	if beforeNextRound > 0 && beforeNextRound < math.MaxInt64 {
 		if beforeNextRound < minDuration {
 			beforeNextRound = minDuration
 		}
@@ -252,14 +258,17 @@ func (p *PrepRealm) prepareEphemeralPolling(ctxPrep context.Context) {
 		select {
 		case <-ctxOfPolling.Done():
 		case <-ctxPrep.Done():
-		case <-startCh:
-			go p.pushEphemeralPulse(ctxPrep)
 		default:
-			if !p.checkEphemeralStartByCandidate(ctxPrep) {
-				return true // stay in polling
+			select {
+			case <-startCh:
+				go p.pushEphemeralPulse(ctxPrep)
+			default:
+				if !p.checkEphemeralStartByCandidate(ctxPrep) {
+					return true // stay in polling
+				}
+				go p.pushEphemeralPulse(ctxPrep)
+				// stop polling anyway - repeating of unsuccessful is bad
 			}
-			go p.pushEphemeralPulse(ctxPrep)
-			// stop polling anyway - repeating of unsuccessful is bad
 		}
 		if startTimer != nil {
 			startTimer.Stop()

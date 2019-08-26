@@ -54,7 +54,6 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
 )
 
@@ -72,8 +71,7 @@ func (g *WaitPulsar) Run(ctx context.Context, pulse insolar.Pulse) {
 
 	select {
 	case <-g.bootstrapTimer.C:
-		inslogger.FromContext(ctx).Warn("WaitPulsar timeout, going to NoNetworkState")
-		g.Gatewayer.SwitchState(ctx, insolar.NoNetworkState, pulse)
+		g.Gatewayer.Fail(ctx, "WaitPulsar timeout exceeded")
 	case newPulse := <-g.pulseArrived:
 		g.Gatewayer.SwitchState(ctx, insolar.CompleteNetworkState, newPulse)
 	}

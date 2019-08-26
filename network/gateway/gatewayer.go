@@ -94,3 +94,7 @@ func (n *gatewayer) SwitchState(ctx context.Context, state insolar.NetworkState,
 	n.gateway = gateway
 	go n.gateway.Run(ctx, pulse)
 }
+
+func (n *gatewayer) Fail(ctx context.Context, reason string) {
+	inslogger.FromContext(ctx).Fatal(reason)
+}
