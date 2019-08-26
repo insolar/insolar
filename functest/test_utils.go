@@ -47,7 +47,7 @@ import (
 )
 
 const (
-	countTreeActiveDaemon = iota + 3
+	countThreeActiveDaemon = iota + 3
 	countFourActiveDaemon
 )
 
@@ -194,7 +194,7 @@ func generateMigrationAddress() string {
 const migrationAmount = "360000"
 
 func fullMigration(t *testing.T, txHash string) *launchnet.User {
-	activateDaemons(t, countTreeActiveDaemon)
+	activateDaemons(t, countThreeActiveDaemon)
 
 	migrationAddress := testutils.RandomString()
 	member := createMigrationMemberForMA(t, migrationAddress)

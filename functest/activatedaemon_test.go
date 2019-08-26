@@ -27,8 +27,8 @@ import (
 
 func TestActivateDaemonDoubleCall(t *testing.T) {
 	t.Skip("Test is constantly failing. Skipping until INS-3344 is fixed.")
-	activateDaemons(t, countTreeActiveDaemon)
-	for i := 0; i < countTreeActiveDaemon; i++ {
+	activateDaemons(t, countThreeActiveDaemon)
+	for i := 0; i < countThreeActiveDaemon; i++ {
 		_, _, err := makeSignedRequest(&launchnet.MigrationAdmin, "migration.activateDaemon", map[string]interface{}{"reference": launchnet.MigrationDaemons[i].Ref})
 
 		require.Error(t, err)
@@ -37,25 +37,25 @@ func TestActivateDaemonDoubleCall(t *testing.T) {
 }
 
 func TestActivateDeactivateDaemon(t *testing.T) {
-	activateDaemons(t, countTreeActiveDaemon)
-	for i := 0; i < countTreeActiveDaemon; i++ {
+	activateDaemons(t, countThreeActiveDaemon)
+	for i := 0; i < countThreeActiveDaemon; i++ {
 		_, err := signedRequest(t, &launchnet.MigrationAdmin, "migration.deactivateDaemon", map[string]interface{}{"reference": launchnet.MigrationDaemons[i].Ref})
 		require.NoError(t, err)
 	}
 
-	for i := 0; i < countTreeActiveDaemon; i++ {
+	for i := 0; i < countThreeActiveDaemon; i++ {
 		res, _, err := makeSignedRequest(&launchnet.MigrationAdmin, "migration.checkDaemon", map[string]interface{}{"reference": launchnet.MigrationDaemons[i].Ref})
 		require.NoError(t, err)
 		status := res.(map[string]interface{})["status"].(string)
 		require.Equal(t, status, "inactive")
 	}
 
-	for i := 0; i < countTreeActiveDaemon; i++ {
+	for i := 0; i < countThreeActiveDaemon; i++ {
 		_, err := signedRequest(t, &launchnet.MigrationAdmin, "migration.activateDaemon", map[string]interface{}{"reference": launchnet.MigrationDaemons[i].Ref})
 		require.NoError(t, err)
 	}
 
-	for i := 0; i < countTreeActiveDaemon; i++ {
+	for i := 0; i < countThreeActiveDaemon; i++ {
 		res, _, err := makeSignedRequest(&launchnet.MigrationAdmin, "migration.checkDaemon", map[string]interface{}{"reference": launchnet.MigrationDaemons[i].Ref})
 		require.NoError(t, err)
 		status := res.(map[string]interface{})["status"].(string)
@@ -63,12 +63,12 @@ func TestActivateDeactivateDaemon(t *testing.T) {
 	}
 }
 func TestDeactivateDaemonDoubleCall(t *testing.T) {
-	activateDaemons(t, countTreeActiveDaemon)
-	for i := 0; i < countTreeActiveDaemon; i++ {
+	activateDaemons(t, countThreeActiveDaemon)
+	for i := 0; i < countThreeActiveDaemon; i++ {
 		_, _, err := makeSignedRequest(&launchnet.MigrationAdmin, "migration.deactivateDaemon", map[string]interface{}{"reference": launchnet.MigrationDaemons[i].Ref})
 		require.NoError(t, err)
 	}
-	for i := 0; i < countTreeActiveDaemon; i++ {
+	for i := 0; i < countThreeActiveDaemon; i++ {
 		_, _, err := makeSignedRequest(&launchnet.MigrationAdmin, "migration.deactivateDaemon", map[string]interface{}{"reference": launchnet.MigrationDaemons[i].Ref})
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "daemon member already deactivated")
