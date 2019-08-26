@@ -319,16 +319,7 @@ func loadMembers(count int) ([]*sdk.Member, error) {
 }
 
 func calcFee(amount int64) int64 {
-	feePercentage := amount * transferFee
-
-	fee := feePercentage / 100
-	mod := feePercentage % 100
-
-	if mod > 0 {
-		return fee + 1
-	}
-
-	return fee
+	return transferFee
 }
 
 func main() {
