@@ -116,8 +116,8 @@ func main() {
 }
 
 func initPulsar(ctx context.Context, cfg configuration.Configuration) (*component.Manager, *pulsar.Pulsar) {
-	fmt.Println("Starts with configuration:\n", configuration.ToString(cfg))
 	fmt.Println("Version: ", version.GetFullVersion())
+	fmt.Println("Starts with configuration:\n", configuration.ToString(cfg))
 
 	keyStore, err := keystore.NewKeyStore(cfg.KeysPath)
 	if err != nil {
