@@ -93,7 +93,7 @@ func TestMemberMigrationCreateWithSameMigrationAddress(t *testing.T) {
 	require.NoError(t, err)
 
 	ba := testutils.RandomString()
-	_, _ = signedRequest(t, launchnet.TestRPCUrlPublic, &launchnet.MigrationAdmin, "migration.addAddresses",
+	_, _ = signedRequest(t, launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.addAddresses",
 		map[string]interface{}{"migrationAddresses": []string{ba, ba}})
 
 	_, err = signedRequest(t, launchnet.TestRPCUrlPublic, member1, "member.migrationCreate", nil)

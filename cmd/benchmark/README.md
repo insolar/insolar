@@ -33,8 +33,11 @@ or you can run benchmark with
         -k rootmemberkeys
                 Path to file with RootMember keys.
 
-        -u apiurl (may be specified multiple times for roundrobin requests)
-                API url for requests (default - http://localhost:19101/api).
+        -a admin apiurl (may be specified multiple times for roundrobin requests)
+                API url for requests (default - http://localhost:19001/admin-api/rpc).
+                
+        -p public apiurl (may be specified multiple times for roundrobin requests)
+                API url for requests (default - http://localhost:19101/api/rpc).
 
         -l loglevel
                 Log level (default - info).

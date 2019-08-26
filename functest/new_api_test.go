@@ -141,7 +141,8 @@ func TestEmptySign(t *testing.T) {
 				ID:      1,
 				Method:  "contract.call",
 			},
-			Params: requester.Params{Seed: seed, Reference: testMember.Ref, PublicKey: testMember.PubKey, CallSite: "wallet.getBalance", CallParams: map[string]interface{}{"reference": testMember.Ref}},
+			Params: requester.Params{Seed: seed, Reference: testMember.Ref, PublicKey: testMember.PubKey,
+				CallSite: "member.getBalance", CallParams: map[string]interface{}{"reference": testMember.Ref}},
 		},
 		"",
 	)
@@ -163,7 +164,7 @@ func TestRequestWithSignFromOtherMember(t *testing.T) {
 			ID:      1,
 			Method:  "contract.call",
 		},
-		Params: requester.Params{Seed: seed, Reference: memberForParam.Ref, PublicKey: memberForParam.PubKey, CallSite: "wallet.getBalance", CallParams: map[string]interface{}{"reference": memberForParam.Ref}},
+		Params: requester.Params{Seed: seed, Reference: memberForParam.Ref, PublicKey: memberForParam.PubKey, CallSite: "member.getBalance", CallParams: map[string]interface{}{"reference": memberForParam.Ref}},
 	}
 
 	dataToSign, err := json.Marshal(request)
