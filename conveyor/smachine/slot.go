@@ -52,6 +52,7 @@ package smachine
 
 import (
 	"sync/atomic"
+	"time"
 )
 
 type Slot struct {
@@ -60,13 +61,15 @@ type Slot struct {
 
 	machine StateMachineDeclaration
 
-	nextState   SlotStep
+	nextStep    SlotStep
 	migrateSlot MigrateFunc
 
-	lastActivation int64  // unix time
+	lastWorkAt   time.Duration // since start of the container
+	lastWorkScan uint8
+	workState    slotWorkFlags
+
 	asyncCallCount uint16 // pending calls
-	migrationCount uint16
-	workState      slotWorkState
+	migrationCount uint16 // can be wrapped by overflow
 
 	dependency SlotDependency
 
@@ -76,6 +79,42 @@ type Slot struct {
 	prevInQueue *Slot
 	nextInQueue *Slot
 	queue       *QueueHead
+}
+
+type stepFlags uint8
+
+const (
+	stepFlagAwakeDefault stepFlags = 0x00
+	stepFlagAwakeMask    stepFlags = 0x03
+)
+
+const (
+	stepFlagAwakeDisable stepFlags = 1 << iota
+	stepFlagAwakeAlways
+	stepFlagAllowPreempt
+)
+
+type SlotStep struct {
+	transition StateFunc
+	migration  MigrateFunc
+	wakeupTime int64 //unixNano
+	stepFlags  stepFlags
+}
+
+func (s *SlotStep) IsEmpty() bool {
+	return s.transition == nil
+}
+
+func (s *SlotStep) HasTimeout() bool {
+	return s.wakeupTime > 0
+}
+
+func (s *SlotStep) getAwakeMode() stepFlags {
+	return s.stepFlags & stepFlagAwakeMask
+}
+
+func (s *SlotStep) isPreemptive() bool {
+	return s.stepFlags&stepFlagAllowPreempt != 0
 }
 
 type SlotDependency interface {
@@ -89,11 +128,10 @@ type SlotDependency interface {
 	Remove()
 }
 
-type slotWorkState uint8
+type slotWorkFlags uint8
 
 const (
-	NotWorking slotWorkState = iota
-	Working
+	Working slotWorkFlags = 1 << iota
 )
 
 func (s *Slot) ensureNotInQueue() {
@@ -136,10 +174,10 @@ func (s *Slot) init(id SlotID, parent SlotLink, machine StateMachineDeclaration)
 	s.machine = machine
 }
 
-func (s *Slot) incStep(slotID SlotID) bool {
+func (s *Slot) incStep() bool {
 	for {
 		v := atomic.LoadUint64(&s.idAndStep)
-		if v == 0 || SlotID(v) != slotID {
+		if v == 0 {
 			return false
 		}
 		update := v + stepIncrement
@@ -179,16 +217,30 @@ func (s *Slot) isEmpty() bool {
 }
 
 func (s *Slot) isWorking() bool {
-	return s.workState == Working
+	return s.workState&Working != 0
 }
 
-func (s *Slot) setWorking() {
-	if s.workState != NotWorking {
+func (s *Slot) isLastScan(scanNo uint32) bool {
+	return s.lastWorkScan == uint8(scanNo)
+}
+
+func (s *Slot) startWorking(scanNo uint32, timeMark time.Duration) {
+	if s.workState&Working != 0 {
 		panic("illegal state")
 	}
-	s.workState = Working
+	s.lastWorkScan = uint8(scanNo)
+	s.lastWorkAt = timeMark
+	s.workState |= Working
 }
 
-func (s *Slot) setNotWorking() {
-	s.workState = NotWorking
+func (s *Slot) stopWorking(asyncCount uint16) {
+	if s.workState&Working == 0 {
+		panic("illegal state")
+	}
+	s.asyncCallCount += asyncCount
+	s.workState &^= Working
+}
+
+func (s *Slot) setNextStep(step SlotStep) {
+	s.nextStep = step
 }

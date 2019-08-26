@@ -106,12 +106,23 @@ type ExecutionContext interface {
 	Repeat(limit int) StateUpdate
 	Yield() StateUpdate
 
-	WaitAny() ConditionalUpdate
+	WaitAny() StateConditionalUpdate
+}
+
+type StateConditionalUpdate interface {
+	Poll() ConditionalUpdate
+	Active(slot SlotLink) ConditionalUpdate
+	Wakeup(enable bool) ConditionalUpdate
+	WakeupAlways() ConditionalUpdate
+
+	PreemptiveAsync(enable bool) ConditionalUpdate
 }
 
 type CallConditionalUpdate interface {
-	Deadline(d time.Time) ConditionalUpdate
+	Poll() ConditionalUpdate
 	Active(slot SlotLink) ConditionalUpdate
+	Wakeup(enable bool) ConditionalUpdate
+	WakeupAlways() ConditionalUpdate
 
 	ThenNext(StateFunc) StateUpdate
 	ThenNextWithMigrate(StateFunc, MigrateFunc) StateUpdate
@@ -120,6 +131,8 @@ type CallConditionalUpdate interface {
 
 type ConditionalUpdate interface {
 	Wakeup(enable bool) ConditionalUpdate
+	PreemptiveAsync(enable bool) ConditionalUpdate
+	WakeupAlways() ConditionalUpdate
 }
 
 type Syncronizer interface {
@@ -134,7 +147,9 @@ type Syncronizer interface {
 type AsyncResultContext interface {
 	BasicContext
 
+	// caller will execute its current step
 	WakeUp()
+	//WakeUpNext()
 }
 
 const UnknownSlotID SlotID = 0
@@ -143,13 +158,6 @@ type SlotID uint32
 
 func (id SlotID) IsUnknown() bool {
 	return id == UnknownSlotID
-}
-
-type SlotStep struct {
-	transition StateFunc
-	migration  MigrateFunc
-	wakeupTime int64 //unixNano
-	stepFlags  uint32
 }
 
 type StateUpdate struct {

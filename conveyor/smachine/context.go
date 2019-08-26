@@ -348,21 +348,27 @@ func (p *executionContext) executeNextStep() (stopNow bool, stateUpdate StateUpd
 			return true, stateUpdate, p.countAsyncCalls
 		}
 
-		current := p.s.nextState
+		current := p.s.nextStep
 		stateUpdate = current.transition(p)
 		stateUpdate.ensureContext(&p.marker)
 
-		switch stateUpdate.updType { // fast path(s)
+		if p.countAsyncCalls != 0 {
+			break
+		}
+		switch stateUpdType(stateUpdate.updType) { // fast path(s)
 		case stateUpdRepeat:
-			limit := stateUpdate.param.(uint32)
+			limit := stateUpdate.getRepeatLimit()
 			if loopCount < limit {
 				continue
 			}
-		case stateUpdNextOnly:
-			if p.countAsyncCalls == 0 && p.s.machine.IsConsecutive(current.transition, stateUpdate.step.transition) {
-				p.s.nextState = stateUpdate.step
-				continue
+		case stateUpdNext:
+			ns := stateUpdate.getShortLoopStep()
+			if ns == nil || !p.s.machine.IsConsecutive(current.transition, ns.transition) {
+				break
 			}
+			p.s.incStep()
+			p.s.setNextStep(*ns)
+			continue
 		}
 		break
 	}
@@ -403,13 +409,14 @@ func (p *asyncResultContext) executeBroadcast(payload interface{}, fn BroadcastR
 var _ ConditionalUpdate = &conditionalUpdate{}
 
 type conditionalUpdate struct {
-	template   StateUpdate
 	dependency SlotLink
+	poll       bool
+	flags      stepFlags
 }
 
-func (c *conditionalUpdate) Deadline(d time.Time) ConditionalUpdate {
+func (c *conditionalUpdate) Poll() ConditionalUpdate {
 	r := *c
-	r.template.step.wakeupTime = toUnixNano(d)
+	r.poll = true
 	return &r
 }
 
@@ -419,13 +426,29 @@ func (c *conditionalUpdate) Active(dependency SlotLink) ConditionalUpdate {
 	return &r
 }
 
+func (c *conditionalUpdate) PreemptiveAsync(enable bool) ConditionalUpdate {
+	r := *c
+	if enable {
+		r.flags |= stepFlagAllowPreempt
+	} else {
+		r.flags &^= stepFlagAllowPreempt
+	}
+	return &r
+}
+
 func (c *conditionalUpdate) Wakeup(enable bool) ConditionalUpdate {
 	r := *c
 	if enable {
-		r.template.flags &^= stateUpdateNoWakeup
+		r.flags = (r.flags &^ stepFlagAwakeMask) | stepFlagAwakeDefault
 	} else {
-		r.template.flags |= stateUpdateNoWakeup
+		r.flags = (r.flags &^ stepFlagAwakeMask) | stepFlagAwakeDisable
 	}
+	return &r
+}
+
+func (c *conditionalUpdate) WakeupAlways() ConditionalUpdate {
+	r := *c
+	r.flags = (r.flags &^ stepFlagAwakeMask) | stepFlagAwakeAlways
 	return &r
 }
 
