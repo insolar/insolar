@@ -255,7 +255,7 @@ func getStatus(t testing.TB) statusResponse {
 func activateDaemons(t *testing.T) {
 
 	if len(launchnet.MigrationDaemons[0].Ref) > 0 {
-		res, err := signedRequest(t, &launchnet.MigrationAdmin, "migration.checkDaemon", map[string]interface{}{"reference": launchnet.MigrationDaemons[0].Ref})
+		res, err := signedRequest(t, launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.checkDaemon", map[string]interface{}{"reference": launchnet.MigrationDaemons[0].Ref})
 		require.NoError(t, err)
 		status := res.(map[string]interface{})["status"].(string)
 		if status == "inactive" {
