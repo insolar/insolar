@@ -31,7 +31,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	insolarApi "github.com/insolar/insolar/insolar/api"
 	"github.com/insolar/insolar/insolar/gen"
-	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/insolar/utils"
@@ -130,8 +130,8 @@ func (s *FuncTestContractService) CallConstructor(r *http.Request, args *CallCon
 	}
 
 	base := insolar.GenesisRecord.Ref()
-	msg := &message.CallMethod{
-		IncomingRequest: record.IncomingRequest{
+	msg := &payload.CallMethod{
+		Request: &record.IncomingRequest{
 			Method:          args.Method,
 			Arguments:       args.MethodArgs,
 			Base:            &base,
@@ -190,8 +190,8 @@ func (s *FuncTestContractService) CallMethod(r *http.Request, args *CallMethodAr
 		return errors.Wrap(err, "can't get current pulse")
 	}
 
-	msg := &message.CallMethod{
-		IncomingRequest: record.IncomingRequest{
+	msg := &payload.CallMethod{
+		Request: &record.IncomingRequest{
 			Object:       objectRef,
 			Method:       args.Method,
 			Arguments:    args.MethodArgs,
@@ -210,7 +210,7 @@ func (s *FuncTestContractService) CallMethod(r *http.Request, args *CallMethodAr
 }
 
 // CallConstructor make an object from its prototype
-func (s *FuncTestContractService) call(ctx context.Context, msg insolar.Message, re *CallMethodReply) error {
+func (s *FuncTestContractService) call(ctx context.Context, msg insolar.Payload, re *CallMethodReply) error {
 	inslog := inslogger.FromContext(ctx)
 
 	callReply, _, err := s.runner.ContractRequester.Call(ctx, msg)

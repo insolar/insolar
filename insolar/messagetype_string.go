@@ -8,19 +8,13 @@ func _() {
 	// An "invalid array index" compiler error signifies that the constant values have changed.
 	// Re-run the stringer command to generate them again.
 	var x [1]struct{}
-	_ = x[TypeCallMethod-0]
-	_ = x[TypeReturnResults-1]
-	_ = x[TypeExecutorResults-2]
-	_ = x[TypeValidationResults-3]
-	_ = x[TypePendingFinished-4]
-	_ = x[TypeAdditionalCallFromPreviousExecutor-5]
-	_ = x[TypeStillExecuting-6]
-	_ = x[TypeGenesisRequest-7]
+	_ = x[TypeValidationResults-0]
+	_ = x[TypeGenesisRequest-1]
 }
 
-const _MessageType_name = "TypeCallMethodTypeReturnResultsTypeExecutorResultsTypeValidationResultsTypePendingFinishedTypeAdditionalCallFromPreviousExecutorTypeStillExecutingTypeGenesisRequest"
+const _MessageType_name = "TypeValidationResultsTypeGenesisRequest"
 
-var _MessageType_index = [...]uint8{0, 14, 31, 50, 71, 90, 128, 146, 164}
+var _MessageType_index = [...]uint8{0, 21, 39}
 
 func (i MessageType) String() string {
 	if i >= MessageType(len(_MessageType_index)-1) {

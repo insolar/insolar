@@ -116,12 +116,6 @@ func createMember(t *testing.T) *launchnet.User {
 	return member
 }
 
-func createMigrationMember(t *testing.T) *launchnet.User {
-	migrationAddress := testutils.RandomString()
-
-	return createMigrationMemberForMA(t, migrationAddress)
-}
-
 func createMigrationMemberForMA(t *testing.T, ma string) *launchnet.User {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
@@ -186,7 +180,7 @@ func migrate(t *testing.T, memberRef string, amount string, tx string, ma string
 	require.NoError(t, err)
 	err = sm.UnmarshalBinary(decoded)
 	require.True(t, ok)
-	require.Equal(t, sm[launchnet.MigrationDaemons[mdNum].Ref], amount)
+	require.Equal(t, amount, sm[launchnet.MigrationDaemons[mdNum].Ref])
 
 	return deposit
 }
@@ -258,15 +252,21 @@ func getStatus(t testing.TB) statusResponse {
 	return rpcStatusResponse.Result
 }
 
-func activateDaemons(t *testing.T) error {
-	for _, user := range launchnet.MigrationDaemons {
-		_, err := signedRequest(t, launchnet.TestRPCUrl, &launchnet.MigrationAdmin,
+func activateDaemons(t *testing.T) {
+
+	if len(launchnet.MigrationDaemons[0].Ref) > 0 {
+		res, err := signedRequest(t, &launchnet.MigrationAdmin, "migration.checkDaemon", map[string]interface{}{"reference": launchnet.MigrationDaemons[0].Ref})
+		require.NoError(t, err)
+		status := res.(map[string]interface{})["status"].(string)
+		if status == "inactive" {
+			for _, user := range launchnet.MigrationDaemons {
+				_, err := signedRequest(t, launchnet.TestRPCUrl, &launchnet.MigrationAdmin,
 			"migration.activateDaemon", map[string]interface{}{"reference": user.Ref})
-		if err != nil {
-			return errors.Wrapf(err, "failed activate migration daemon %s", user.Ref)
+				require.NoError(t, err)
+			}
 		}
 	}
-	return nil
+
 }
 
 func unmarshalRPCResponse(t testing.TB, body []byte, response RPCResponseInterface) {

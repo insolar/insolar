@@ -85,6 +85,7 @@ const (
 )
 
 func New(ctx context.Context, dep Dep) Installer {
+	ctx = adapters.ConsensusContext(ctx)
 	dep.verify()
 
 	constructor := newConstructor(ctx, &dep)
@@ -205,7 +206,15 @@ func (c Installer) ControllerFor(mode Mode, setters ...packetProcessorSetter) Co
 	controlFeederInterceptor := adapters.InterceptConsensusControl(
 		adapters.NewConsensusControlFeeder(),
 	)
-	candidateFeeder := &coreapi.SequentialCandidateFeeder{}
+
+	cert := c.dep.CertificateManager.GetCertificate()
+	isDiscovery := network.IsDiscovery(*cert.GetNodeRef(), cert)
+
+	var candidateQueueSize int
+	if isDiscovery {
+		candidateQueueSize = 1
+	}
+	candidateFeeder := coreapi.NewSequentialCandidateFeeder(candidateQueueSize)
 
 	var ephemeralFeeder api.EphemeralControlFeeder
 	if c.dep.EphemeralController.EphemeralMode(c.dep.NodeKeeper.GetAccessor(insolar.GenesisPulse.PulseNumber).GetActiveNodes()) {

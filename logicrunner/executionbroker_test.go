@@ -124,7 +124,7 @@ func TestExecutionBroker_AddFreshRequest(t *testing.T) {
 			broker := test.mocks(ctx, mc)
 			broker.AddFreshRequest(ctx, transcript)
 
-			mc.Wait(1 * time.Second)
+			mc.Wait(1 * time.Minute)
 			mc.Finish()
 		})
 	}
@@ -150,7 +150,7 @@ func TestExecutionBroker_Deduplication(t *testing.T) {
 				)
 
 				queueMock := requestsqueue.NewRequestsQueueMock(t).AppendMock.Return()
-				b.mutable = queueMock
+				b.mutable.queue = queueMock
 
 				tr := common.NewTranscript(ctx, reqRef, record.IncomingRequest{})
 				b.add(ctx, requestsqueue.FromLedger, tr)
@@ -158,7 +158,7 @@ func TestExecutionBroker_Deduplication(t *testing.T) {
 				return b
 			},
 			checks: func(t *testing.T, b *ExecutionBroker) {
-				appended := b.mutable.(*requestsqueue.RequestsQueueMock).AppendAfterCounter()
+				appended := b.mutable.queue.(*requestsqueue.RequestsQueueMock).AppendAfterCounter()
 				require.Equal(t, 1, int(appended))
 			},
 		},
@@ -174,12 +174,12 @@ func TestExecutionBroker_Deduplication(t *testing.T) {
 				)
 
 				queueMock := requestsqueue.NewRequestsQueueMock(t)
-				b.mutable = queueMock
+				b.mutable.queue = queueMock
 
 				return b
 			},
 			checks: func(t *testing.T, b *ExecutionBroker) {
-				appended := b.mutable.(*requestsqueue.RequestsQueueMock).AppendAfterCounter()
+				appended := b.mutable.queue.(*requestsqueue.RequestsQueueMock).AppendAfterCounter()
 				require.Equal(t, 0, int(appended))
 			},
 		},
@@ -361,7 +361,7 @@ func TestExecutionBroker_OnPulse(t *testing.T) {
 				broker := NewExecutionBroker(objectRef, nil, nil, nil, nil, er, nil, nil)
 				// fetcher is stopped
 				broker.requestsFetcher = NewRequestsFetcherMock(t).AbortMock.Return()
-				broker.mutable.Append(ctx, requestsqueue.FromLedger, randTranscript(ctx), randTranscript(ctx))
+				broker.mutable.queue.Append(ctx, requestsqueue.FromLedger, randTranscript(ctx), randTranscript(ctx))
 				return broker
 			},
 			numberOfMessages: 1,
@@ -404,7 +404,7 @@ func TestExecutionBroker_OnPulse(t *testing.T) {
 				er := executionregistry.NewExecutionRegistryMock(t).
 					IsEmptyMock.Return(true)
 				broker := NewExecutionBroker(objectRef, nil, nil, nil, nil, er, nil, nil)
-				broker.mutable.Append(ctx, requestsqueue.FromLedger, randTranscript(ctx), randTranscript(ctx))
+				broker.mutable.queue.Append(ctx, requestsqueue.FromLedger, randTranscript(ctx), randTranscript(ctx))
 				return broker
 			},
 			numberOfMessages: 1,
@@ -555,7 +555,7 @@ func TestExecutionBroker_IsKnownRequest(t *testing.T) {
 	)
 
 	queueMock := requestsqueue.NewRequestsQueueMock(mc).AppendMock.Return()
-	b.mutable = queueMock
+	b.mutable.queue = queueMock
 
 	tr := common.NewTranscript(ctx, reqRef1, record.IncomingRequest{})
 	b.add(ctx, requestsqueue.FromLedger, tr)
@@ -816,7 +816,7 @@ func TestExecutionBroker_getTask(t *testing.T) {
 			mc := minimock.NewController(t)
 
 			broker := test.mocks(ctx, mc)
-			task := broker.getTask(ctx, broker.mutable)
+			task := broker.getTask(ctx, broker.mutable.queue)
 
 			mc.Wait(1 * time.Minute)
 			mc.Finish()

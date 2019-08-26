@@ -54,14 +54,15 @@ import (
 	"bytes"
 	"context"
 
-	"github.com/insolar/insolar/instrumentation/instracer"
-
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/bus/meta"
+	busMeta "github.com/insolar/insolar/insolar/bus/meta"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 )
 
 const deliverWatermillMsg = "ServiceNetwork.processIncoming"
@@ -70,8 +71,8 @@ var ack = []byte{1}
 
 // SendMessageHandler async sends message with confirmation of delivery.
 func (n *ServiceNetwork) SendMessageHandler(msg *message.Message) error {
-	ctx := inslogger.ContextWithTrace(context.Background(), msg.Metadata.Get(bus.MetaTraceID))
-	parentSpan, err := instracer.Deserialize([]byte(msg.Metadata.Get(bus.MetaSpanData)))
+	ctx := inslogger.ContextWithTrace(context.Background(), msg.Metadata.Get(meta.TraceID))
+	parentSpan, err := instracer.Deserialize([]byte(msg.Metadata.Get(meta.SpanData)))
 	if err == nil {
 		ctx = instracer.WithParentSpan(ctx, parentSpan)
 	} else {
@@ -101,7 +102,7 @@ func (n *ServiceNetwork) sendMessage(ctx context.Context, msg *message.Message) 
 	// Short path when sending to self node. Skip serialization
 	origin := n.NodeKeeper.GetOrigin()
 	if node.Equal(origin.ID()) {
-		err := n.Pub.Publish(bus.TopicIncoming, msg)
+		err := n.Pub.Publish(getIncomingTopic(msg), msg)
 		if err != nil {
 			return errors.Wrap(err, "error while publish msg to TopicIncoming")
 		}
@@ -130,12 +131,12 @@ func (n *ServiceNetwork) processIncoming(ctx context.Context, args []byte) ([]by
 		return nil, err
 	}
 	logger = inslogger.FromContext(ctx)
-	if inslogger.TraceID(ctx) != msg.Metadata.Get(bus.MetaTraceID) {
-		logger.Errorf("traceID from context (%s) is different from traceID from message Metadata (%s)", inslogger.TraceID(ctx), msg.Metadata.Get(bus.MetaTraceID))
+	if inslogger.TraceID(ctx) != msg.Metadata.Get(busMeta.TraceID) {
+		logger.Errorf("traceID from context (%s) is different from traceID from message Metadata (%s)", inslogger.TraceID(ctx), msg.Metadata.Get(meta.TraceID))
 	}
 	// TODO: check pulse here
 
-	err = n.Pub.Publish(bus.TopicIncoming, msg)
+	err = n.Pub.Publish(getIncomingTopic(msg), msg)
 	if err != nil {
 		err = errors.Wrap(err, "error while publish msg to TopicIncoming")
 		logger.Error(err)
@@ -143,4 +144,12 @@ func (n *ServiceNetwork) processIncoming(ctx context.Context, args []byte) ([]by
 	}
 
 	return ack, nil
+}
+
+func getIncomingTopic(msg *message.Message) string {
+	topic := bus.TopicIncoming
+	if msg.Metadata.Get(busMeta.Type) == busMeta.TypeReturnResults {
+		topic = bus.TopicIncomingRequestResults
+	}
+	return topic
 }

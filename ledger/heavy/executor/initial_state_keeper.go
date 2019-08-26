@@ -123,10 +123,11 @@ func (isk *InitialStateKeeper) prepareAbandonRequests(ctx context.Context) {
 
 	indexes, err := isk.indexStorage.ForPulse(ctx, isk.syncPulse)
 	if err != nil {
+		if err == object.ErrIndexNotFound {
+			logger.Warnf("[ InitialStateKeeper ] No object indexes found in lastSyncPulseNumber: %s", isk.syncPulse.String())
+			return
+		}
 		logger.Fatal("Cant receive initial state indexes: ", err.Error())
-	}
-	if len(indexes) == 0 {
-		logger.Warnf("[ InitialStateKeeper ] No object indexes found in lastSyncPulseNumber: %s", isk.syncPulse.String())
 	}
 
 	// Fill the map of indexes with abandon requests
@@ -156,9 +157,9 @@ func (isk *InitialStateKeeper) Get(ctx context.Context, lightExecutor insolar.Re
 	isk.lock.RLock()
 	defer isk.lock.RUnlock()
 
-	var jetIDs []insolar.JetID
-	var drops [][]byte
-	var indexes []record.Index
+	jetIDs := make([]insolar.JetID, 0)
+	drops := make([][]byte, 0)
+	indexes := make([]record.Index, 0)
 
 	logger.Debugf("[ InitialStateKeeper ] Getting drops for: %s in pulse: %s", lightExecutor.String(), pulse.String())
 	for id, jetDrop := range isk.jetDrops {

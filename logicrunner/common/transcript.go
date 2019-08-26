@@ -57,7 +57,7 @@ func NewTranscriptCloneContext(
 	switch sourceTyped := ctxSource.(type) {
 	case context.Context:
 		ctx = freshContextFromContext(sourceTyped, request.APIRequestID)
-	case payload.ServiceData:
+	case *payload.ServiceData:
 		ctx = contextFromServiceData(sourceTyped)
 	default:
 		panic(fmt.Errorf("unexpected type of context source: %T", ctxSource))
@@ -102,7 +102,7 @@ func (t *Transcript) HasOutgoingRequest(
 	return nil
 }
 
-func contextFromServiceData(data payload.ServiceData) context.Context {
+func contextFromServiceData(data *payload.ServiceData) context.Context {
 	ctx := inslogger.ContextWithTrace(context.Background(), data.LogTraceID)
 	ctx = inslogger.WithLoggerLevel(ctx, data.LogLevel)
 	if data.TraceSpanData != nil {

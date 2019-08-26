@@ -17,9 +17,7 @@
 package logicrunner
 
 import (
-	"bytes"
 	"context"
-	"fmt"
 	"strconv"
 	"sync"
 	"testing"
@@ -28,16 +26,15 @@ import (
 	"github.com/ThreeDotsLabs/watermill"
 	message2 "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/gojuno/minimock"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/bus/meta"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/jet"
-	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
@@ -59,6 +56,8 @@ import (
 	"github.com/insolar/insolar/testutils/network"
 )
 
+var _ insolar.LogicRunner = &LogicRunner{}
+
 type LogicRunnerCommonTestSuite struct {
 	suite.Suite
 
@@ -66,7 +65,6 @@ type LogicRunnerCommonTestSuite struct {
 	ctx    context.Context
 	am     *artifacts.ClientMock
 	dc     *artifacts.DescriptorsCacheMock
-	mb     *testutils.MessageBusMock
 	jc     *jet.CoordinatorMock
 	mm     machinesmanager.MachinesManager
 	lr     *LogicRunner
@@ -89,7 +87,6 @@ func (suite *LogicRunnerCommonTestSuite) BeforeTest(suiteName, testName string) 
 	suite.dc = artifacts.NewDescriptorsCacheMock(suite.mc)
 	suite.mm = machinesmanager.NewMachinesManager()
 	suite.re = NewRequestsExecutorMock(suite.mc)
-	suite.mb = testutils.NewMessageBusMock(suite.mc)
 	suite.jc = jet.NewCoordinatorMock(suite.mc)
 	suite.ps = pulse.NewAccessorMock(suite.mc)
 	suite.nn = network.NewNodeNetworkMock(suite.mc)
@@ -106,7 +103,6 @@ func (suite *LogicRunnerCommonTestSuite) SetupLogicRunner() {
 	suite.lr, _ = NewLogicRunner(&configuration.LogicRunner{}, suite.pub, suite.sender)
 	suite.lr.ArtifactManager = suite.am
 	suite.lr.DescriptorsCache = suite.dc
-	suite.lr.MessageBus = suite.mb
 	suite.lr.MachinesManager = suite.mm
 	suite.lr.JetCoordinator = suite.jc
 	suite.lr.PulseAccessor = suite.ps
@@ -146,31 +142,6 @@ func (suite *LogicRunnerTestSuite) AfterTest(suiteName, testName string) {
 	suite.LogicRunnerCommonTestSuite.AfterTest(suiteName, testName)
 }
 
-func mockSender(suite *LogicRunnerTestSuite) chan *message2.Message {
-	replyChan := make(chan *message2.Message, 1)
-	suite.sender.ReplyMock.Set(func(p context.Context, p1 payload.Meta, p2 *message2.Message) {
-		replyChan <- p2
-	})
-	return replyChan
-}
-
-func getReply(suite *LogicRunnerTestSuite, replyChan chan *message2.Message) (insolar.Reply, error) {
-	res := <-replyChan
-	re, err := reply.Deserialize(bytes.NewBuffer(res.Payload))
-	if err != nil {
-		payloadType, err := payload.UnmarshalType(res.Payload)
-		suite.Require().NoError(err)
-		suite.Require().EqualValues(payload.TypeError, payloadType)
-
-		pl, err := payload.Unmarshal(res.Payload)
-		suite.Require().NoError(err)
-		p, ok := pl.(*payload.Error)
-		suite.Require().True(ok)
-		return nil, errors.New(p.Text)
-	}
-	return re, nil
-}
-
 func (suite *LogicRunnerTestSuite) TestSagaCallAcceptNotificationHandler() {
 	outgoing := record.OutgoingRequest{
 		Caller:     gen.Reference(),
@@ -195,10 +166,10 @@ func (suite *LogicRunnerTestSuite) TestSagaCallAcceptNotificationHandler() {
 
 	suite.ps.LatestMock.Return(*pulseNum, nil)
 
-	msg.Metadata.Set(bus.MetaPulse, pulseNum.PulseNumber.String())
+	msg.Metadata.Set(meta.Pulse, pulseNum.PulseNumber.String())
 	sp, err := instracer.Serialize(context.Background())
 	suite.Require().NoError(err)
-	msg.Metadata.Set(bus.MetaSpanData, string(sp))
+	msg.Metadata.Set(meta.SpanData, string(sp))
 
 	meta := payload.Meta{
 		Payload: msg.Payload,
@@ -212,12 +183,13 @@ func (suite *LogicRunnerTestSuite) TestSagaCallAcceptNotificationHandler() {
 	var usedReason insolar.Reference
 	var usedReturnMode record.ReturnMode
 
-	suite.cr.CallMock.Set(func(ctx context.Context, msg insolar.Message) (insolar.Reply, *insolar.Reference, error) {
-		suite.Require().Equal(insolar.TypeCallMethod, msg.Type())
-		cm := msg.(*message.CallMethod)
-		usedCaller = cm.Caller
-		usedReason = cm.Reason
-		usedReturnMode = cm.ReturnMode
+	suite.cr.CallMock.Set(func(ctx context.Context, msg insolar.Payload) (insolar.Reply, *insolar.Reference, error) {
+		_, ok := msg.(*payload.CallMethod)
+		suite.Require().True(ok, "message should be payload.CallMethod")
+		cm := msg.(*payload.CallMethod)
+		usedCaller = cm.Request.Caller
+		usedReason = cm.Request.Reason
+		usedReturnMode = cm.Request.ReturnMode
 
 		result := &reply.RegisterRequest{
 			Request: dummyRequestRef,
@@ -276,8 +248,6 @@ func (suite *LogicRunnerTestSuite) TestStartStop() {
 	}, suite.pub, suite.sender)
 	suite.Require().NoError(err)
 	suite.Require().NotNil(lr)
-
-	lr.MessageBus = suite.mb
 
 	lr.MachinesManager = suite.mm
 
@@ -366,36 +336,32 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 	})
 	for i := 0; i < num; i++ {
 		go func(i int) {
-			msg := &message.CallMethod{
-				IncomingRequest: record.IncomingRequest{
+			payloadData := &payload.CallMethod{
+				Request: &record.IncomingRequest{
 					Prototype:    &protoRef,
 					Object:       &objectRef,
 					Method:       "some",
 					APIRequestID: utils.RandTraceID(),
 				},
 			}
-
-			parcel := &message.Parcel{
-				Sender:      notMeRef,
-				Msg:         msg,
-				PulseNumber: pulseNum,
-			}
-
+			msg, err := payload.Marshal(payloadData)
+			require.NoError(syncT, err, "NewMessage")
 			wrapper := payload.Meta{
-				Payload: message.ParcelToBytes(parcel),
-				Sender:  notMeRef,
+				Payload: msg,
 				Pulse:   pulseNum,
+				Sender:  notMeRef,
 			}
 			buf, err := wrapper.Marshal()
 			require.NoError(syncT, err)
 
 			wmMsg := message2.NewMessage(watermill.NewUUID(), buf)
-			wmMsg.Metadata.Set(bus.MetaPulse, pulseNum.String())
+			require.NoError(syncT, err, "marshal")
+			wmMsg.Metadata.Set(meta.Pulse, pulseNum.String())
+			wmMsg.Metadata.Set(meta.Sender, notMeRef.String())
 			sp, err := instracer.Serialize(context.Background())
 			require.NoError(syncT, err)
-			wmMsg.Metadata.Set(bus.MetaSpanData, string(sp))
-			wmMsg.Metadata.Set(bus.MetaType, fmt.Sprintf("%s", msg.Type()))
-			wmMsg.Metadata.Set(bus.MetaTraceID, "req-"+strconv.Itoa(i))
+			wmMsg.Metadata.Set(meta.SpanData, string(sp))
+			wmMsg.Metadata.Set(meta.TraceID, "req-"+strconv.Itoa(i))
 
 			err = suite.lr.FlowDispatcher.Process(wmMsg)
 			require.NoError(syncT, err)
@@ -664,7 +630,7 @@ func (suite *LogicRunnerTestSuite) TestImmutableOrder() {
 
 	broker.add(suite.ctx, requestsqueue.FromLedger, mutableTranscript)
 	broker.add(suite.ctx, requestsqueue.FromLedger, immutableTranscript1, immutableTranscript2)
-	broker.StartProcessorsIfNeeded(suite.ctx)
+	broker.startProcessors(suite.ctx)
 
 	suite.True(wait(finishedCount, broker, 3))
 }

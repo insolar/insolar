@@ -16,8 +16,8 @@ import (
 type LogicRunnerMock struct {
 	t minimock.Tester
 
-	funcAddUnwantedResponse          func(ctx context.Context, msg mm_insolar.Message) (err error)
-	inspectFuncAddUnwantedResponse   func(ctx context.Context, msg mm_insolar.Message)
+	funcAddUnwantedResponse          func(ctx context.Context, msg mm_insolar.Payload) (err error)
+	inspectFuncAddUnwantedResponse   func(ctx context.Context, msg mm_insolar.Payload)
 	afterAddUnwantedResponseCounter  uint64
 	beforeAddUnwantedResponseCounter uint64
 	AddUnwantedResponseMock          mLogicRunnerMockAddUnwantedResponse
@@ -73,7 +73,7 @@ type LogicRunnerMockAddUnwantedResponseExpectation struct {
 // LogicRunnerMockAddUnwantedResponseParams contains parameters of the LogicRunner.AddUnwantedResponse
 type LogicRunnerMockAddUnwantedResponseParams struct {
 	ctx context.Context
-	msg mm_insolar.Message
+	msg mm_insolar.Payload
 }
 
 // LogicRunnerMockAddUnwantedResponseResults contains results of the LogicRunner.AddUnwantedResponse
@@ -82,7 +82,7 @@ type LogicRunnerMockAddUnwantedResponseResults struct {
 }
 
 // Expect sets up expected params for LogicRunner.AddUnwantedResponse
-func (mmAddUnwantedResponse *mLogicRunnerMockAddUnwantedResponse) Expect(ctx context.Context, msg mm_insolar.Message) *mLogicRunnerMockAddUnwantedResponse {
+func (mmAddUnwantedResponse *mLogicRunnerMockAddUnwantedResponse) Expect(ctx context.Context, msg mm_insolar.Payload) *mLogicRunnerMockAddUnwantedResponse {
 	if mmAddUnwantedResponse.mock.funcAddUnwantedResponse != nil {
 		mmAddUnwantedResponse.mock.t.Fatalf("LogicRunnerMock.AddUnwantedResponse mock is already set by Set")
 	}
@@ -102,7 +102,7 @@ func (mmAddUnwantedResponse *mLogicRunnerMockAddUnwantedResponse) Expect(ctx con
 }
 
 // Inspect accepts an inspector function that has same arguments as the LogicRunner.AddUnwantedResponse
-func (mmAddUnwantedResponse *mLogicRunnerMockAddUnwantedResponse) Inspect(f func(ctx context.Context, msg mm_insolar.Message)) *mLogicRunnerMockAddUnwantedResponse {
+func (mmAddUnwantedResponse *mLogicRunnerMockAddUnwantedResponse) Inspect(f func(ctx context.Context, msg mm_insolar.Payload)) *mLogicRunnerMockAddUnwantedResponse {
 	if mmAddUnwantedResponse.mock.inspectFuncAddUnwantedResponse != nil {
 		mmAddUnwantedResponse.mock.t.Fatalf("Inspect function is already set for LogicRunnerMock.AddUnwantedResponse")
 	}
@@ -126,7 +126,7 @@ func (mmAddUnwantedResponse *mLogicRunnerMockAddUnwantedResponse) Return(err err
 }
 
 //Set uses given function f to mock the LogicRunner.AddUnwantedResponse method
-func (mmAddUnwantedResponse *mLogicRunnerMockAddUnwantedResponse) Set(f func(ctx context.Context, msg mm_insolar.Message) (err error)) *LogicRunnerMock {
+func (mmAddUnwantedResponse *mLogicRunnerMockAddUnwantedResponse) Set(f func(ctx context.Context, msg mm_insolar.Payload) (err error)) *LogicRunnerMock {
 	if mmAddUnwantedResponse.defaultExpectation != nil {
 		mmAddUnwantedResponse.mock.t.Fatalf("Default expectation is already set for the LogicRunner.AddUnwantedResponse method")
 	}
@@ -141,7 +141,7 @@ func (mmAddUnwantedResponse *mLogicRunnerMockAddUnwantedResponse) Set(f func(ctx
 
 // When sets expectation for the LogicRunner.AddUnwantedResponse which will trigger the result defined by the following
 // Then helper
-func (mmAddUnwantedResponse *mLogicRunnerMockAddUnwantedResponse) When(ctx context.Context, msg mm_insolar.Message) *LogicRunnerMockAddUnwantedResponseExpectation {
+func (mmAddUnwantedResponse *mLogicRunnerMockAddUnwantedResponse) When(ctx context.Context, msg mm_insolar.Payload) *LogicRunnerMockAddUnwantedResponseExpectation {
 	if mmAddUnwantedResponse.mock.funcAddUnwantedResponse != nil {
 		mmAddUnwantedResponse.mock.t.Fatalf("LogicRunnerMock.AddUnwantedResponse mock is already set by Set")
 	}
@@ -161,7 +161,7 @@ func (e *LogicRunnerMockAddUnwantedResponseExpectation) Then(err error) *LogicRu
 }
 
 // AddUnwantedResponse implements insolar.LogicRunner
-func (mmAddUnwantedResponse *LogicRunnerMock) AddUnwantedResponse(ctx context.Context, msg mm_insolar.Message) (err error) {
+func (mmAddUnwantedResponse *LogicRunnerMock) AddUnwantedResponse(ctx context.Context, msg mm_insolar.Payload) (err error) {
 	mm_atomic.AddUint64(&mmAddUnwantedResponse.beforeAddUnwantedResponseCounter, 1)
 	defer mm_atomic.AddUint64(&mmAddUnwantedResponse.afterAddUnwantedResponseCounter, 1)
 

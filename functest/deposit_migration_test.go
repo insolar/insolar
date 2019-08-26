@@ -30,8 +30,7 @@ import (
 )
 
 func TestMigrationToken(t *testing.T) {
-	err := activateDaemons(t)
-	require.NoError(t, err)
+	activateDaemons(t)
 	migrationAddress := testutils.RandomString()
 	member := createMigrationMemberForMA(t, migrationAddress)
 

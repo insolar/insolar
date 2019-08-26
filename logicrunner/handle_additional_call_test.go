@@ -27,11 +27,10 @@ import (
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/gen"
-	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/writecontroller"
-	"github.com/insolar/insolar/testutils"
 )
 
 func TestHandleAdditionalCallFromPreviousExecutor_Present(t *testing.T) {
@@ -48,15 +47,16 @@ func TestHandleAdditionalCallFromPreviousExecutor_Present(t *testing.T) {
 				obj := gen.Reference()
 				reqRef := gen.Reference()
 
-				parcel := testutils.NewParcelMock(t).
-					MessageMock.Return(
-					&message.AdditionalCallFromPreviousExecutor{
-						ObjectReference: obj,
-						RequestRef:      reqRef,
-						Request:         record.IncomingRequest{},
-						Pending:         insolar.NotPending,
-					},
-				)
+				receivedPayload := &payload.AdditionalCallFromPreviousExecutor{
+					RequestRef:      reqRef,
+					Pending:         insolar.NotPending,
+					ObjectReference: obj,
+					Request:         &record.IncomingRequest{},
+					ServiceData:     &payload.ServiceData{},
+				}
+
+				buf, err := payload.Marshal(receivedPayload)
+				require.NoError(t, err, "marshal")
 
 				h := &HandleAdditionalCallFromPreviousExecutor{
 					dep: &Dependencies{
@@ -64,7 +64,7 @@ func TestHandleAdditionalCallFromPreviousExecutor_Present(t *testing.T) {
 						WriteAccessor: writecontroller.NewAccessorMock(t).
 							BeginMock.Return(func() {}, nil),
 					},
-					Parcel: parcel,
+					Message: payload.Meta{Payload: buf},
 				}
 				f := flow.NewFlowMock(t).ProcedureMock.Return(nil)
 				return h, f
@@ -103,10 +103,10 @@ func TestAdditionalCallFromPreviousExecutor_Proceed(t *testing.T) {
 		obj := gen.Reference()
 		reqRef := gen.Reference()
 
-		msg := &message.AdditionalCallFromPreviousExecutor{
+		msg := &payload.AdditionalCallFromPreviousExecutor{
 			ObjectReference: obj,
 			RequestRef:      reqRef,
-			Request:         record.IncomingRequest{},
+			Request:         &record.IncomingRequest{},
 			Pending:         insolar.NotPending,
 		}
 
@@ -135,10 +135,10 @@ func TestAdditionalCallFromPreviousExecutor_Proceed(t *testing.T) {
 		obj := gen.Reference()
 		reqRef := gen.Reference()
 
-		msg := &message.AdditionalCallFromPreviousExecutor{
+		msg := &payload.AdditionalCallFromPreviousExecutor{
 			ObjectReference: obj,
 			RequestRef:      reqRef,
-			Request:         record.IncomingRequest{},
+			Request:         &record.IncomingRequest{},
 			Pending:         insolar.InPending,
 		}
 

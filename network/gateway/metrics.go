@@ -67,6 +67,11 @@ var (
 		"number of bootstrap requests that are required to be retried",
 		stats.UnitDimensionless,
 	)
+	statPulse = stats.Int64(
+		"current_pulse",
+		"current node pulse",
+		stats.UnitDimensionless,
+	)
 )
 
 func init() {
@@ -78,6 +83,12 @@ func init() {
 			Measure:     statBootstrapReconnectRequired,
 			Aggregation: view.Count(),
 			TagKeys:     tags,
+		},
+		&view.View{
+			Name:        statPulse.Name(),
+			Description: statPulse.Description(),
+			Measure:     statPulse,
+			Aggregation: view.LastValue(),
 		},
 	)
 	if err != nil {

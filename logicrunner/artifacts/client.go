@@ -29,7 +29,6 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/insolar/insolar/messagebus"
 
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
@@ -85,13 +84,11 @@ func newLocalStorage() *localStorage {
 // Client provides concrete API to storage for processing module.
 type client struct {
 	JetStorage     jet.Storage                        `inject:""`
-	DefaultBus     insolar.MessageBus                 `inject:""`
 	PCS            insolar.PlatformCryptographyScheme `inject:""`
 	PulseAccessor  pulse.Accessor                     `inject:""`
 	JetCoordinator jet.Coordinator                    `inject:""`
 
 	sender       bus.Sender
-	senders      *messagebus.Senders
 	localStorage *localStorage
 }
 
@@ -104,7 +101,6 @@ func (m *client) State() []byte {
 // NewClient creates new client instance.
 func NewClient(sender bus.Sender) *client { // nolint
 	return &client{
-		senders:      messagebus.NewSenders(),
 		sender:       sender,
 		localStorage: newLocalStorage(),
 	}

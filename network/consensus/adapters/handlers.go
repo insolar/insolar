@@ -56,7 +56,6 @@ import (
 	"io"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
@@ -70,8 +69,33 @@ type PacketParserFactory interface {
 	ParsePacket(ctx context.Context, reader io.Reader) (transport.PacketParser, error)
 }
 
+type packetHandler struct {
+	packetProcessor PacketProcessor
+}
+
+func newPacketHandler(packetProcessor PacketProcessor) *packetHandler {
+	return &packetHandler{
+		packetProcessor: packetProcessor,
+	}
+}
+
+func (ph *packetHandler) handlePacket(ctx context.Context, packetParser transport.PacketParser, sender string) {
+	ctx, logger := PacketLateLogger(ctx, packetParser)
+
+	if logger.Is(insolar.DebugLevel) {
+		logger.Debugf("Received packet %v", packetParser)
+	}
+
+	err := ph.packetProcessor.ProcessPacket(ctx, packetParser, &endpoints.InboundConnection{
+		Addr: endpoints.Name(sender),
+	})
+	if err != nil {
+		logger.Error("Failed to process packet: ", err)
+	}
+}
+
 type DatagramHandler struct {
-	packetProcessor     PacketProcessor
+	packetHandler       *packetHandler
 	packetParserFactory PacketParserFactory
 }
 
@@ -80,7 +104,7 @@ func NewDatagramHandler() *DatagramHandler {
 }
 
 func (dh *DatagramHandler) SetPacketProcessor(packetProcessor PacketProcessor) {
-	dh.packetProcessor = packetProcessor
+	dh.packetHandler = newPacketHandler(packetProcessor)
 }
 
 func (dh *DatagramHandler) SetPacketParserFactory(packetParserFactory PacketParserFactory) {
@@ -88,12 +112,15 @@ func (dh *DatagramHandler) SetPacketParserFactory(packetParserFactory PacketPars
 }
 
 func (dh *DatagramHandler) HandleDatagram(ctx context.Context, address string, buf []byte) {
-	ctx, logger := inslogger.WithFields(ctx, map[string]interface{}{
-		"sender_address": address,
-	})
+	ctx, logger := PacketEarlyLogger(ctx, address)
 
-	if dh.packetProcessor == nil || dh.packetParserFactory == nil {
-		logger.Error("Datagram handler not initialized")
+	if dh.packetHandler == nil {
+		logger.Error("Packet handler is not initialized")
+		return
+	}
+
+	if dh.packetParserFactory == nil {
+		logger.Error("Packet parser factory is not initialized")
 		return
 	}
 
@@ -103,24 +130,11 @@ func (dh *DatagramHandler) HandleDatagram(ctx context.Context, address string, b
 		return
 	}
 
-	ctx, logger = inslogger.WithFields(ctx, map[string]interface{}{
-		"sender_id":    packetParser.GetSourceID(),
-		"packet_type":  packetParser.GetPacketType().String(),
-		"packet_pulse": packetParser.GetPulseNumber(),
-	})
-
-	hostIdentity := endpoints.InboundConnection{
-		Addr: endpoints.Name(address),
-	}
-	err = dh.packetProcessor.ProcessPacket(ctx, packetParser, &hostIdentity)
-	if err != nil {
-		logger.Error("Failed to process packet: ", err)
-		return
-	}
+	dh.packetHandler.handlePacket(ctx, packetParser, address)
 }
 
 type PulseHandler struct {
-	packetProcessor PacketProcessor
+	packetHandler *packetHandler
 }
 
 func NewPulseHandler() *PulseHandler {
@@ -128,26 +142,20 @@ func NewPulseHandler() *PulseHandler {
 }
 
 func (ph *PulseHandler) SetPacketProcessor(packetProcessor PacketProcessor) {
-	ph.packetProcessor = packetProcessor
+	ph.packetHandler = newPacketHandler(packetProcessor)
 }
 
 func (ph *PulseHandler) SetPacketParserFactory(PacketParserFactory) {}
 
 func (ph *PulseHandler) HandlePulse(ctx context.Context, pulse insolar.Pulse, packet network.ReceivedPacket) {
-	logger := inslogger.FromContext(ctx)
+	ctx, logger := PacketEarlyLogger(ctx, "pulsar")
 
-	if ph.packetProcessor == nil {
-		logger.Error("Pulse handler not initialized")
+	if ph.packetHandler == nil {
+		logger.Error("Packet handler is not initialized")
 		return
 	}
 
-	pulseData := NewPulseData(pulse)
-	pulsePayload := NewPulsePacketParser(pulseData)
+	pulsePacketParser := NewPulsePacketParser(NewPulseData(pulse))
 
-	err := ph.packetProcessor.ProcessPacket(ctx, pulsePayload, &endpoints.InboundConnection{
-		Addr: "pulsar",
-	})
-	if err != nil {
-		logger.Warn(err)
-	}
+	ph.packetHandler.handlePacket(ctx, pulsePacketParser, "pulsar")
 }

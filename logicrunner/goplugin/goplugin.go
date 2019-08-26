@@ -52,7 +52,6 @@ type RunnerOptions struct {
 // GoPlugin is a logic runner of code written in golang and compiled as go plugins
 type GoPlugin struct {
 	Cfg             *configuration.LogicRunner
-	MessageBus      insolar.MessageBus
 	ArtifactManager artifacts.Client
 
 	clientMutex sync.Mutex
@@ -60,10 +59,9 @@ type GoPlugin struct {
 }
 
 // NewGoPlugin returns a new started GoPlugin
-func NewGoPlugin(conf *configuration.LogicRunner, eb insolar.MessageBus, am artifacts.Client) (*GoPlugin, error) {
+func NewGoPlugin(conf *configuration.LogicRunner, am artifacts.Client) (*GoPlugin, error) {
 	gp := GoPlugin{
 		Cfg:             conf,
-		MessageBus:      eb,
 		ArtifactManager: am,
 	}
 

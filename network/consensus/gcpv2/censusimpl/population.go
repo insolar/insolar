@@ -180,6 +180,10 @@ func (c *ManyNodePopulation) IsValid() bool {
 	return !c.isInvalid
 }
 
+func (c *ManyNodePopulation) IsClean() bool {
+	return !c.isInvalid && c.suspendedCount == 0 && c.mistrustedCount == 0 && c.local.GetOpMode().IsClean()
+}
+
 func (c *ManyNodePopulation) GetRolePopulation(role member.PrimaryRole) census.RolePopulation {
 	if role == member.PrimaryRoleInactive || int(role) >= len(c.workingRoles) {
 		return nil

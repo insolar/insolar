@@ -27,6 +27,7 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
@@ -211,4 +212,5 @@ func (p *HotObjects) notifyPending(
 	// Notification should be send to virtual for this object.
 	_, done := p.dep.sender.SendRole(ctx, msg, insolar.DynamicRoleVirtualExecutor, *insolar.NewReference(objectID))
 	done()
+	stats.Record(ctx, statHotsAbandoned.M(1))
 }
