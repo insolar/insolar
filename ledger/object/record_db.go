@@ -44,7 +44,7 @@ func (k recordKey) Scope() store.Scope {
 	return store.ScopeRecord
 }
 
-func (k recordKey) String() string {
+func (k recordKey) DebugString() string {
 	id := insolar.ID(k)
 	return "recordKey. " + id.DebugString()
 }
@@ -270,10 +270,10 @@ func (r *RecordDB) truncateRecordsHead(ctx context.Context, from insolar.PulseNu
 
 		err := r.db.Delete(key)
 		if err != nil {
-			return errors.Wrapf(err, "can't delete key: %s", key.String())
+			return errors.Wrapf(err, "can't delete key: %s", key.DebugString())
 		}
 
-		inslogger.FromContext(ctx).Debugf("Erased key: %s", key.String())
+		inslogger.FromContext(ctx).Debugf("Erased key: %s", key.DebugString())
 	}
 
 	if !hasKeys {
