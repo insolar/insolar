@@ -29,7 +29,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -59,18 +58,24 @@ func (t *testKey) Scope() store.Scope {
 
 func makeBackuperConfig(t *testing.T, prefix string) configuration.Backup {
 
-	cfg := configuration.Backup{
-		ConfirmFile:      "BACKUPED",
-		MetaInfoFile:     "META.json",
-		TargetDirectory:  "/tmp/BKP/TARGET/" + prefix,
-		TmpDirectory:     "/tmp/BKP/TMP",
-		DirNameTemplate:  "pulse-%d",
-		BackupWaitPeriod: 60,
-		BackupFile:       "incr.bkp",
-		Enabled:          true,
+	cwd, err := os.Getwd()
+	if err != nil {
+		require.NoError(t, err)
 	}
 
-	err := os.MkdirAll(cfg.TargetDirectory, 0777)
+	cfg := configuration.Backup{
+		ConfirmFile:          "BACKUPED",
+		MetaInfoFile:         "META.json",
+		TargetDirectory:      "/tmp/BKP/TARGET/" + prefix,
+		TmpDirectory:         "/tmp/BKP/TMP",
+		DirNameTemplate:      "pulse-%d",
+		BackupWaitPeriod:     10,
+		BackupFile:           "incr.bkp",
+		Enabled:              true,
+		PostProcessBackupCmd: []string{"bash", "-c", cwd + "/post_process_backup.sh"},
+	}
+
+	err = os.MkdirAll(cfg.TargetDirectory, 0777)
 	require.NoError(t, err)
 	err = os.MkdirAll(cfg.TmpDirectory, 0777)
 	require.NoError(t, err)
@@ -132,26 +137,6 @@ func TestBackuper(t *testing.T) {
 			require.NoError(t, err)
 			wgBackup.Done()
 			time.Sleep(time.Duration(rand.Int()%1000) * time.Millisecond)
-		}
-	}()
-
-	// creating backup confirmation files
-	go func() {
-		for i := 0; i < numIterations+1; i++ {
-			time.Sleep(2 * time.Second)
-
-			backupConfirmFile := filepath.Join(makeCurrentBkpDir(cfg, testPulse+insolar.PulseNumber(i)), cfg.ConfirmFile)
-			for true {
-				fff, err := os.Create(backupConfirmFile)
-				if err != nil && strings.Contains(err.Error(), "no such file or directory") {
-					time.Sleep(time.Millisecond * 200)
-					fmt.Printf("%s not created yet\n", backupConfirmFile)
-					continue
-				}
-				require.NoError(t, err)
-				require.NoError(t, fff.Close())
-				break
-			}
 		}
 	}()
 
