@@ -46,6 +46,11 @@ import (
 	"github.com/pkg/errors"
 )
 
+const (
+	countTreeActiveDaemon = iota + 3
+	countFourActiveDaemon
+)
+
 type contractInfo struct {
 	reference *insolar.Reference
 	testName  string
@@ -189,7 +194,7 @@ func generateMigrationAddress() string {
 const migrationAmount = "360000"
 
 func fullMigration(t *testing.T, txHash string) *launchnet.User {
-	activateDaemons(t)
+	activateDaemons(t, countTreeActiveDaemon)
 
 	migrationAddress := testutils.RandomString()
 	member := createMigrationMemberForMA(t, migrationAddress)
@@ -249,15 +254,17 @@ func getStatus(t testing.TB) statusResponse {
 	return rpcStatusResponse.Result
 }
 
-func activateDaemons(t *testing.T) {
+func activateDaemons(t *testing.T, countDaemon int) {
+	for i := 0; i < countDaemon; i++ {
 
-	if len(launchnet.MigrationDaemons[0].Ref) > 0 {
-		res, err := signedRequest(t, &launchnet.MigrationAdmin, "migration.checkDaemon", map[string]interface{}{"reference": launchnet.MigrationDaemons[0].Ref})
-		require.NoError(t, err)
-		status := res.(map[string]interface{})["status"].(string)
-		if status == "inactive" {
-			for _, user := range launchnet.MigrationDaemons {
-				_, err := signedRequest(t, &launchnet.MigrationAdmin, "migration.activateDaemon", map[string]interface{}{"reference": user.Ref})
+		if len(launchnet.MigrationDaemons[i].Ref) > 0 {
+			res, err := signedRequest(t, &launchnet.MigrationAdmin, "migration.checkDaemon", map[string]interface{}{"reference": launchnet.MigrationDaemons[i].Ref})
+			require.NoError(t, err)
+
+			status := res.(map[string]interface{})["status"].(string)
+
+			if status == "inactive" {
+				_, err := signedRequest(t, &launchnet.MigrationAdmin, "migration.activateDaemon", map[string]interface{}{"reference": launchnet.MigrationDaemons[i].Ref})
 				require.NoError(t, err)
 			}
 		}
