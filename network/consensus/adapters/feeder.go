@@ -52,7 +52,6 @@ package adapters
 
 import (
 	"context"
-	"math"
 	"sync"
 	"time"
 
@@ -71,7 +70,10 @@ import (
 	"github.com/insolar/insolar/pulse"
 )
 
-const defaultEphemeralPulseDuration = 2 * time.Second
+const (
+	defaultEphemeralPulseDuration = 2 * time.Second
+	defaultEphemeralHeartbeat     = 10 * time.Second
+)
 
 type EphemeralController interface {
 	EphemeralMode(nodes []insolar.NetworkNode) bool
@@ -273,14 +275,18 @@ func (cf *InternalControlFeederAdapter) setHasLeft() {
 func NewEphemeralControlFeeder(ephemeralController EphemeralController) *EphemeralControlFeeder {
 	return &EphemeralControlFeeder{
 		ephemeralController: ephemeralController,
-		pulseDuration:       defaultEphemeralPulseDuration,
+
+		pulseDuration: defaultEphemeralPulseDuration,
+		heartbeat:     defaultEphemeralHeartbeat,
 	}
 }
 
 type EphemeralControlFeeder struct {
 	pulseChanger        PulseChanger
 	ephemeralController EphemeralController
-	pulseDuration       time.Duration
+
+	pulseDuration time.Duration
+	heartbeat     time.Duration
 }
 
 func (f *EphemeralControlFeeder) CanFastForwardPulse(expected, received pulse.Number, lastPulseData pulse.Data) bool {
@@ -300,7 +306,7 @@ func (f *EphemeralControlFeeder) GetMinDuration() time.Duration {
 }
 
 func (f *EphemeralControlFeeder) GetMaxDuration() time.Duration {
-	return math.MaxInt64
+	return f.heartbeat
 }
 
 func (f *EphemeralControlFeeder) OnNonEphemeralPacket(ctx context.Context, parser transport.PacketParser, inbound endpoints.Inbound) error {
