@@ -181,8 +181,9 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 
 	// API.
 	var (
-		Requester *contractrequester.ContractRequester
-		API       insolar.APIRunner
+		Requester      *contractrequester.ContractRequester
+		API            insolar.APIRunner
+		AdminAPIRunner insolar.APIRunner
 	)
 	{
 		var err error
@@ -194,6 +195,10 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		API, err = api.NewRunner(&cfg.APIRunner)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start ApiRunner")
+		}
+		AdminAPIRunner, err = api.NewRunner(&cfg.AdminAPIRunner)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to start AdminAPIRunner")
 		}
 	}
 
