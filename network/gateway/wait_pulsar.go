@@ -56,46 +56,40 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/rules"
 )
 
-func newWaitMajority(b *Base) *WaitMajority {
-	return &WaitMajority{b, make(chan insolar.Pulse, 1)}
+func newWaitPulsar(b *Base) *WaitPulsar {
+	return &WaitPulsar{b, make(chan insolar.Pulse, 1)}
 }
 
-type WaitMajority struct {
+type WaitPulsar struct {
 	*Base
-	majorityComplete chan insolar.Pulse
+	pulseArrived chan insolar.Pulse
 }
 
-func (g *WaitMajority) Run(ctx context.Context, pulse insolar.Pulse) {
-	g.switchOnMajorityRule(ctx, pulse)
+func (g *WaitPulsar) Run(ctx context.Context, pulse insolar.Pulse) {
+	g.switchOnRealPulse(pulse)
 
 	select {
 	case <-g.bootstrapTimer.C:
-		inslogger.FromContext(ctx).Warn("WaitMajority timeout, going to NoNetworkState")
+		inslogger.FromContext(ctx).Warn("WaitPulsar timeout, going to NoNetworkState")
 		g.Gatewayer.SwitchState(ctx, insolar.NoNetworkState, pulse)
-	case newPulse := <-g.majorityComplete:
-		g.Gatewayer.SwitchState(ctx, insolar.WaitMinRoles, newPulse)
+	case newPulse := <-g.pulseArrived:
+		g.Gatewayer.SwitchState(ctx, insolar.CompleteNetworkState, newPulse)
 	}
 }
 
-func (g *WaitMajority) GetState() insolar.NetworkState {
-	return insolar.WaitMajority
+func (g *WaitPulsar) GetState() insolar.NetworkState {
+	return insolar.WaitPulsar
 }
 
-func (g *WaitMajority) OnConsensusFinished(ctx context.Context, report network.Report) {
-	g.switchOnMajorityRule(ctx, EnsureGetPulse(ctx, g.PulseAccessor, report.PulseNumber))
+func (g *WaitPulsar) OnConsensusFinished(ctx context.Context, report network.Report) {
+	g.switchOnRealPulse(EnsureGetPulse(ctx, g.PulseAccessor, report.PulseNumber))
 }
 
-func (g *WaitMajority) switchOnMajorityRule(ctx context.Context, pulse insolar.Pulse) {
-	majorityRule, _ := rules.CheckMajorityRule(
-		g.CertificateManager.GetCertificate(),
-		g.NodeKeeper.GetAccessor(pulse.PulseNumber).GetWorkingNodes(),
-	)
-
-	if majorityRule {
-		g.majorityComplete <- pulse
-		close(g.majorityComplete)
+func (g *WaitPulsar) switchOnRealPulse(pulse insolar.Pulse) {
+	if pulse.PulseNumber > insolar.FirstPulseNumber && pulse.EpochPulseNumber > insolar.EphemeralPulseEpoch {
+		g.pulseArrived <- pulse
+		close(g.pulseArrived)
 	}
 }

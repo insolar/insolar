@@ -91,13 +91,6 @@ func (g *Complete) Run(ctx context.Context, pulse insolar.Pulse) {
 		g.bootstrapTimer.Stop()
 	}
 
-	if pulse.EpochPulseNumber > insolar.EphemeralPulseEpoch {
-		err := g.PulseManager.Set(ctx, pulse)
-		if err != nil {
-			inslogger.FromContext(ctx).Panicf("failed to set start pulse: %d, %s", pulse.PulseNumber, err.Error())
-		}
-	}
-
 	g.HostNetwork.RegisterRequestHandler(types.SignCert, g.signCertHandler)
 	metrics.NetworkComplete.Set(float64(time.Now().Unix()))
 }
@@ -106,8 +99,13 @@ func (g *Complete) GetState() insolar.NetworkState {
 	return insolar.CompleteNetworkState
 }
 
-func (g *Complete) NetworkOperable() bool {
-	return true
+func (g *Complete) BeforeRun(ctx context.Context, pulse insolar.Pulse) {
+	if pulse.EpochPulseNumber > insolar.EphemeralPulseEpoch {
+		err := g.PulseManager.Set(ctx, pulse)
+		if err != nil {
+			inslogger.FromContext(ctx).Panicf("failed to set start pulse: %d, %s", pulse.PulseNumber, err.Error())
+		}
+	}
 }
 
 // GetCert method generates cert by requesting signs from discovery nodes

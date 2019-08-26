@@ -52,6 +52,7 @@ package gateway
 
 import (
 	"context"
+
 	"github.com/insolar/insolar/instrumentation/inslogger"
 
 	"github.com/insolar/insolar/insolar"
@@ -76,7 +77,7 @@ func (g *WaitMinRoles) Run(ctx context.Context, pulse insolar.Pulse) {
 		inslogger.FromContext(ctx).Warn("WaitMinRoles timeout, going to NoNetworkState")
 		g.Gatewayer.SwitchState(ctx, insolar.NoNetworkState, pulse)
 	case newPulse := <-g.minrolesComplete:
-		g.Gatewayer.SwitchState(ctx, insolar.CompleteNetworkState, newPulse)
+		g.Gatewayer.SwitchState(ctx, insolar.WaitPulsar, newPulse)
 	}
 }
 

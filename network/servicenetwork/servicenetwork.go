@@ -116,7 +116,6 @@ type ServiceNetwork struct {
 	CurrentPulse insolar.Pulse
 	Gatewayer    network.Gatewayer
 	BaseGateway  *gateway.Base
-	operableFunc insolar.NetworkOperableCallback
 
 	datagramHandler   *adapters.DatagramHandler
 	datagramTransport transport.DatagramTransport
@@ -161,11 +160,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	cert := n.CertificateManager.GetCertificate()
 
 	n.BaseGateway = &gateway.Base{Options: options}
-	n.Gatewayer = gateway.NewGatewayer(n.BaseGateway.NewGateway(ctx, insolar.NoNetworkState), func(ctx context.Context, isNetworkOperable bool) {
-		if n.operableFunc != nil {
-			n.operableFunc(ctx, isNetworkOperable)
-		}
-	})
+	n.Gatewayer = gateway.NewGatewayer(n.BaseGateway.NewGateway(ctx, insolar.NoNetworkState))
 
 	pulseStorage := storage.NewMemoryPulseStorage()
 	table := &routing.Table{}
@@ -304,10 +299,6 @@ func (n *ServiceNetwork) Stop(ctx context.Context) error {
 
 func (n *ServiceNetwork) GetState() insolar.NetworkState {
 	return n.Gatewayer.Gateway().GetState()
-}
-
-func (n *ServiceNetwork) SetOperableFunc(f insolar.NetworkOperableCallback) {
-	n.operableFunc = f
 }
 
 // HandlePulse process pulse from PulseController
