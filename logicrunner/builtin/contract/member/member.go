@@ -45,7 +45,10 @@ type Member struct {
 	Wallet           insolar.Reference
 }
 
-const XNS = "XNS"
+const (
+	XNS        = "XNS"
+	CONVERSION = "10"
+)
 
 // GetName gets name.
 // ins:immutable
@@ -342,8 +345,10 @@ func (m *Member) depositMigrationCall(params map[string]interface{}) (*DepositMi
 	if !ok {
 		return nil, fmt.Errorf("incorect input: failed to get 'migrationAddress' param")
 	}
+	base, _ := new(big.Int).SetString(CONVERSION, 10)
+	amountXns := new(big.Int).Mul(amount, base)
 
-	return m.depositMigration(txId, migrationAddress, amount)
+	return m.depositMigration(txId, migrationAddress, amountXns)
 }
 
 // Platform methods.
