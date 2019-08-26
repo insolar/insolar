@@ -338,7 +338,9 @@ func INSMETHOD_SetRef(object []byte, data []byte) ([]byte, []byte, error) {
 func INSCONSTRUCTOR_New(data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
-	args := []interface{}{}
+	args := make([]interface{}, 1)
+	var args0 []string
+	args[0] = &args0
 
 	err := ph.Deserialize(data, &args)
 	if err != nil {
@@ -346,7 +348,7 @@ func INSCONSTRUCTOR_New(data []byte) ([]byte, []byte, error) {
 		return nil, nil, e
 	}
 
-	ret0, ret1 := New()
+	ret0, ret1 := New(args0)
 	ret1 = ph.MakeErrorSerializable(ret1)
 	if ret0 == nil && ret1 == nil {
 		ret1 = &foundation.Error{S: "constructor returned nil"}

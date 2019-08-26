@@ -52,7 +52,9 @@ func NewRetrySender(sender Sender, pulseAccessor pulse.Accessor, retries uint, r
 }
 
 func (r *RetrySender) SendTarget(ctx context.Context, msg *message.Message, target insolar.Reference) (<-chan *message.Message, func()) {
-	panic("not implemented")
+	return r.retryWrapper(ctx, msg, func(ctx context.Context, msg *message.Message) (<-chan *message.Message, func()) {
+		return r.sender.SendTarget(ctx, msg, target)
+	})
 }
 
 func (r *RetrySender) Reply(ctx context.Context, origin payload.Meta, reply *message.Message) {
@@ -66,6 +68,12 @@ func (r *RetrySender) Reply(ctx context.Context, origin payload.Meta, reply *mes
 func (r *RetrySender) SendRole(
 	ctx context.Context, msg *message.Message, role insolar.DynamicRole, ref insolar.Reference,
 ) (<-chan *message.Message, func()) {
+	return r.retryWrapper(ctx, msg, func(ctx context.Context, msg *message.Message) (<-chan *message.Message, func()) {
+		return r.sender.SendRole(ctx, msg, role, ref)
+	})
+}
+
+func (r *RetrySender) retryWrapper(ctx context.Context, msg *message.Message, caller func(context.Context, *message.Message) (<-chan *message.Message, func())) (<-chan *message.Message, func()) {
 	tries := r.retries + 1
 	once := sync.Once{}
 	done := make(chan struct{})
@@ -89,7 +97,7 @@ func (r *RetrySender) SendRole(
 			if updateUUID {
 				msg.UUID = watermill.NewUUID()
 			}
-			reps, d := r.sender.SendRole(ctx, msg, role, ref)
+			reps, d := caller(ctx, msg)
 			received = tryReceive(ctx, reps, done, replyChan, r.responseCount)
 			tries--
 			updateUUID = true

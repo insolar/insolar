@@ -23,23 +23,24 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/pkg/errors"
+	"github.com/stretchr/testify/require"
+
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/bus/meta"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/internal/thread"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/pkg/errors"
-	"github.com/stretchr/testify/require"
 )
 
 func makeMessage(t *testing.T, ctx context.Context, pn insolar.PulseNumber) *message.Message {
 	payload := []byte{1, 2, 3, 4, 5}
 	msg := message.NewMessage(watermill.NewUUID(), payload)
-	msg.Metadata.Set(bus.MetaPulse, pn.String())
+	msg.Metadata.Set(meta.Pulse, pn.String())
 	sp, err := instracer.Serialize(ctx)
 	require.NoError(t, err)
-	msg.Metadata.Set(bus.MetaSpanData, string(sp))
+	msg.Metadata.Set(meta.SpanData, string(sp))
 
 	return msg
 }

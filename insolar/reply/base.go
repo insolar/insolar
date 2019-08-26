@@ -23,6 +23,7 @@ import (
 	"io"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/pkg/errors"
 )
 
@@ -126,4 +127,21 @@ func init() {
 	gob.Register(&Error{})
 	gob.Register(&OK{})
 	gob.Register(&GetCodeRedirectReply{})
+}
+
+// UnmarshalFromMeta reads only payload skipping meta decoding. Use this instead of regular Unmarshal if you don't need
+// Meta data.
+func UnmarshalFromMeta(meta []byte) (insolar.Reply, error) {
+	m := payload.Meta{}
+	// Can be optimized by using proto.NewBuffer.
+	err := m.Unmarshal(meta)
+	if err != nil {
+		return nil, err
+	}
+
+	rep, err := Deserialize(bytes.NewBuffer(m.Payload))
+	if err != nil {
+		return nil, errors.Wrap(err, "can't deserialize payload to reply")
+	}
+	return rep, nil
 }

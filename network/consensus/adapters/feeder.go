@@ -56,10 +56,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/common/capacity"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
@@ -304,14 +304,7 @@ func (f *EphemeralControlFeeder) GetMaxDuration() time.Duration {
 }
 
 func (f *EphemeralControlFeeder) OnNonEphemeralPacket(ctx context.Context, parser transport.PacketParser, inbound endpoints.Inbound) error {
-	_, logger := inslogger.WithFields(ctx, map[string]interface{}{
-		"sender_address": inbound.GetNameAddress().String(),
-		"sender_id":      parser.GetSourceID(),
-		"packet_type":    parser.GetPacketType().String(),
-		"packet_pulse":   parser.GetPulseNumber(),
-	})
-
-	logger.Info("non-ephemeral packet")
+	inslogger.FromContext(ctx).Info("non-ephemeral packet")
 	return nil
 }
 

@@ -13,14 +13,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// +build slowtest
 
-package messagebus
+package integration_test
 
 import (
-	"github.com/pkg/errors"
+	"context"
+	"os"
+	"testing"
+
+	"github.com/insolar/insolar/insolar"
+	"github.com/stretchr/testify/assert"
 )
 
-var (
-	// ErrNoReply is returned from player when there is no stored reply for provided message.
-	ErrNoReply = errors.New("no such reply")
-)
+func TestStartStop(t *testing.T) {
+	cfg := DefaultHeavyConfig()
+	defer os.RemoveAll(cfg.Ledger.Storage.DataDirectory)
+
+	s, err := NewServer(context.Background(), cfg, insolar.GenesisHeavyConfig{}, nil)
+	assert.NoError(t, err)
+	s.Stop()
+}

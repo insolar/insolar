@@ -81,6 +81,61 @@ func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) 
 	return state, ret, err
 }
 
+func INSMETHOD_MigrationAdminCall(object []byte, data []byte) ([]byte, []byte, error) {
+	ph := common.CurrentProxyCtx
+	ph.SetSystemError(nil)
+	self := new(MigrationAdmin)
+
+	if len(object) == 0 {
+		return nil, nil, &foundation.Error{S: "[ FakeMigrationAdminCall ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+	}
+
+	err := ph.Deserialize(object, self)
+	if err != nil {
+		e := &foundation.Error{S: "[ FakeMigrationAdminCall ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		return nil, nil, e
+	}
+
+	args := make([]interface{}, 3)
+	var args0 map[string]interface{}
+	args[0] = &args0
+	var args1 string
+	args[1] = &args1
+	var args2 insolar.Reference
+	args[2] = &args2
+
+	err = ph.Deserialize(data, &args)
+	if err != nil {
+		e := &foundation.Error{S: "[ FakeMigrationAdminCall ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		return nil, nil, e
+	}
+
+	ret0, ret1 := self.MigrationAdminCall(args0, args1, args2)
+
+	if ph.GetSystemError() != nil {
+		return nil, nil, ph.GetSystemError()
+	}
+
+	state := []byte{}
+	err = ph.Serialize(self, &state)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	ret1 = ph.MakeErrorSerializable(ret1)
+
+	ret := []byte{}
+	err = ph.Serialize(
+		foundation.Result{Returns: []interface{}{ret0, ret1}},
+		&ret,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return state, ret, err
+}
+
 func INSMETHOD_GetAllMigrationDaemon(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
@@ -236,18 +291,18 @@ func INSMETHOD_DeactivateDaemon(object []byte, data []byte) ([]byte, []byte, err
 	return state, ret, err
 }
 
-func INSMETHOD_CheckActiveDaemon(object []byte, data []byte) ([]byte, []byte, error) {
+func INSMETHOD_CheckDaemon(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
 	self := new(MigrationAdmin)
 
 	if len(object) == 0 {
-		return nil, nil, &foundation.Error{S: "[ FakeCheckActiveDaemon ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+		return nil, nil, &foundation.Error{S: "[ FakeCheckDaemon ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
 	}
 
 	err := ph.Deserialize(object, self)
 	if err != nil {
-		e := &foundation.Error{S: "[ FakeCheckActiveDaemon ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		e := &foundation.Error{S: "[ FakeCheckDaemon ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
 		return nil, nil, e
 	}
 
@@ -257,11 +312,11 @@ func INSMETHOD_CheckActiveDaemon(object []byte, data []byte) ([]byte, []byte, er
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
-		e := &foundation.Error{S: "[ FakeCheckActiveDaemon ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		e := &foundation.Error{S: "[ FakeCheckDaemon ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
 		return nil, nil, e
 	}
 
-	ret0, ret1 := self.CheckActiveDaemon(args0)
+	ret0, ret1 := self.CheckDaemon(args0)
 
 	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()
@@ -336,52 +391,53 @@ func INSMETHOD_GetActiveDaemons(object []byte, data []byte) ([]byte, []byte, err
 	return state, ret, err
 }
 
-func INSCONSTRUCTOR_New(data []byte) ([]byte, []byte, error) {
+func INSMETHOD_GetDepositParameters(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
-	args := make([]interface{}, 2)
-	var args0 [insolar.GenesisAmountMigrationDaemonMembers]insolar.Reference
-	args[0] = &args0
-	var args1 insolar.Reference
-	args[1] = &args1
+	self := new(MigrationAdmin)
 
-	err := ph.Deserialize(data, &args)
+	if len(object) == 0 {
+		return nil, nil, &foundation.Error{S: "[ FakeGetDepositParameters ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+	}
+
+	err := ph.Deserialize(object, self)
 	if err != nil {
-		e := &foundation.Error{S: "[ FakeNew ] ( INSCONSTRUCTOR_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		e := &foundation.Error{S: "[ FakeGetDepositParameters ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
 		return nil, nil, e
 	}
 
-	ret0, ret1 := New(args0, args1)
-	ret1 = ph.MakeErrorSerializable(ret1)
-	if ret0 == nil && ret1 == nil {
-		ret1 = &foundation.Error{S: "constructor returned nil"}
+	args := []interface{}{}
+
+	err = ph.Deserialize(data, &args)
+	if err != nil {
+		e := &foundation.Error{S: "[ FakeGetDepositParameters ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		return nil, nil, e
 	}
+
+	ret0, ret1, ret2 := self.GetDepositParameters()
 
 	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()
 	}
 
-	result := []byte{}
+	state := []byte{}
+	err = ph.Serialize(self, &state)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	ret2 = ph.MakeErrorSerializable(ret2)
+
+	ret := []byte{}
 	err = ph.Serialize(
-		foundation.Result{Returns: []interface{}{ret1}},
-		&result,
+		foundation.Result{Returns: []interface{}{ret0, ret1, ret2}},
+		&ret,
 	)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	if ret1 != nil {
-		// logical error, the result should be registered with type RequestSideEffectNone
-		return nil, result, nil
-	}
-
-	state := []byte{}
-	err = ph.Serialize(ret0, &state)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return state, result, nil
+	return state, ret, err
 }
 
 func Initialize() XXX_insolar.ContractWrapper {
@@ -389,14 +445,14 @@ func Initialize() XXX_insolar.ContractWrapper {
 		GetCode:      INSMETHOD_GetCode,
 		GetPrototype: INSMETHOD_GetPrototype,
 		Methods: XXX_insolar.ContractMethods{
+			"MigrationAdminCall":    INSMETHOD_MigrationAdminCall,
 			"GetAllMigrationDaemon": INSMETHOD_GetAllMigrationDaemon,
 			"ActivateDaemon":        INSMETHOD_ActivateDaemon,
 			"DeactivateDaemon":      INSMETHOD_DeactivateDaemon,
-			"CheckActiveDaemon":     INSMETHOD_CheckActiveDaemon,
+			"CheckDaemon":           INSMETHOD_CheckDaemon,
 			"GetActiveDaemons":      INSMETHOD_GetActiveDaemons,
+			"GetDepositParameters":  INSMETHOD_GetDepositParameters,
 		},
-		Constructors: XXX_insolar.ContractConstructors{
-			"New": INSCONSTRUCTOR_New,
-		},
+		Constructors: XXX_insolar.ContractConstructors{},
 	}
 }

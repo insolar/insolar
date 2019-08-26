@@ -114,6 +114,7 @@ type coreRealm struct {
 	*/
 	pulseData     pulse.Data
 	originalPulse proofs.OriginalPulsarPacket
+	unsafeRound   bool // nolint: structcheck
 }
 
 func (r *coreRealm) initBefore(hLocker hLocker, strategy RoundStrategy, transport transport.Factory,

@@ -239,8 +239,9 @@ message ReturnResults {
 
     bytes Target = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
     bytes RequestRef = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
-    bytes Reply = 22;
-    string Error = 23;
+    bytes Reason = 22 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
+    bytes Reply = 23;
+    string Error = 24;
 }
 
 message CallMethod {

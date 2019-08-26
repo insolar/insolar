@@ -97,7 +97,7 @@ func NewUpstreamPulseController(stateGetter StateGetter, pulseChanger PulseChang
 }
 
 func (u *UpstreamController) ConsensusFinished(report api.UpstreamReport, expectedCensus census.Operational) {
-	ctx := contextFromReport(report)
+	ctx := ReportContext(report)
 	logger := inslogger.FromContext(ctx)
 	population := expectedCensus.GetOnlinePopulation()
 
@@ -145,7 +145,7 @@ func (u *UpstreamController) PreparePulseChange(report api.UpstreamReport, ch ch
 }
 
 func (u *UpstreamController) CommitPulseChange(report api.UpstreamReport, pulseData pulse.Data, activeCensus census.Operational) {
-	ctx := contextFromReport(report)
+	ctx := ReportContext(report)
 	p := NewPulse(pulseData)
 
 	go u.pulseChanger.ChangePulse(ctx, p)
@@ -166,8 +166,4 @@ func awaitState(c chan<- api.UpstreamState, stater StateGetter) {
 	c <- api.UpstreamState{
 		NodeState: cryptkit.NewDigest(longbits.NewBits512FromBytes(stater.State()), SHA3512Digest).AsDigestHolder(),
 	}
-}
-
-func contextFromReport(report api.UpstreamReport) context.Context {
-	return network.NewPulseContext(context.Background(), uint32(report.PulseNumber))
 }

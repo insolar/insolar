@@ -288,29 +288,31 @@ func (c *Phase01Controller) workerSendPhase1ToFixed(ctx context.Context, startIn
 
 	sendOptions := c.packetPrepareOptions.AsSendOptions()
 
+	from := c.R.GetSelfNodeID()
+
 	// first, send to nodes not covered by Phase 0
 	p1.SendToMany(ctx, len(otherNodes)-startIndex, c.R.GetPacketSender(),
 		func(ctx context.Context, targetIdx int) (transport.TargetProfile, transport.PacketSendOptions) {
-			return prepareTarget(otherNodes[targetIdx+startIndex], sendOptions)
+			return prepareTarget(ctx, otherNodes[targetIdx+startIndex], from, sendOptions)
 		})
 
 	// then to the rest
 	p1.SendToMany(ctx, startIndex, c.R.GetPacketSender(),
 		func(ctx context.Context, targetIdx int) (transport.TargetProfile, transport.PacketSendOptions) {
-			return prepareTarget(otherNodes[targetIdx], sendOptions)
+			return prepareTarget(ctx, otherNodes[targetIdx], from, sendOptions)
 		})
 }
 
-func prepareTarget(target *population.NodeAppearance,
+func prepareTarget(ctx context.Context, target *population.NodeAppearance, from insolar.ShortNodeID,
 	sendOptions transport.PacketSendOptions) (transport.TargetProfile, transport.PacketSendOptions) {
 
-	target.SetPacketSent(phases.PacketPhase1)
 	if !target.SetPacketSent(phases.PacketPhase1) {
 		return nil, 0
 	}
 	if target.HasAnyPacketReceived() {
 		sendOptions |= transport.SendWithoutPulseData
 	}
+	inslogger.FromContext(ctx).Debugf("sent ph1: from=%d to=%d mode=fix", from, target.GetNodeID())
 	return target, sendOptions
 }
 
@@ -330,10 +332,18 @@ func (c *Phase01Controller) workerSendPhase1ToDynamics(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case introTo := <-c.qIntro:
-			if selfID == introTo.GetNodeID() {
+			nodeID := introTo.GetNodeID()
+			if nodeID == selfID {
 				continue
 			}
-			// || !introTo.SetPacketSent(phases.PacketPhase1)
+			na := c.R.GetPopulation().GetNodeAppearance(nodeID)
+			if na != nil {
+				introTo = na
+			}
+			if !introTo.SetPacketSent(phases.PacketPhase1) {
+				continue
+			}
+			inslogger.FromContext(ctx).Debugf("sent ph1: from=%d to=%d mode=dyn", c.R.GetSelfNodeID(), introTo.GetNodeID())
 			p1.SendTo(ctx, introTo, sendOptions, c.R.GetPacketSender())
 		}
 	}

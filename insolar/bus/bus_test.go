@@ -58,8 +58,8 @@ func TestMessageBus_SendTarget(t *testing.T) {
 	externalMsgCh, err := pubsub.Subscribe(ctx, TopicOutgoing)
 	require.NoError(t, err)
 
-	p := []byte{1, 2, 3, 4, 5}
-	msg := message.NewMessage(watermill.NewUUID(), p)
+	msg, err := payload.NewMessage(&payload.CallMethod{})
+	require.NoError(t, err)
 
 	mapSizeBefore := len(b.replies)
 	results, done := b.SendTarget(ctx, msg, gen.Reference())
@@ -69,7 +69,6 @@ func TestMessageBus_SendTarget(t *testing.T) {
 	require.Equal(t, mapSizeBefore+1, len(b.replies))
 	externalMsg := <-externalMsgCh
 	require.Equal(t, msg.Metadata, externalMsg.Metadata)
-	require.Equal(t, p, []byte(msg.Payload))
 	require.Equal(t, msg.UUID, externalMsg.UUID)
 }
 

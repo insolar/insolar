@@ -14,12 +14,31 @@
 // limitations under the License.
 //
 
-/*
-Package messagebus routes messages (contract calls & responses) and delivers'em to relevant modules.
+package executor
 
-Usage:
+import (
+	"go.opencensus.io/stats"
+	"go.opencensus.io/stats/view"
+)
 
-	TODO:
+var (
+	statFinalizedPulse = stats.Int64(
+		"heavy_finalized_pulse",
+		"last pulse with fully finalized data",
+		stats.UnitDimensionless,
+	)
+)
 
-*/
-package messagebus
+func init() {
+	err := view.Register(
+		&view.View{
+			Name:        statFinalizedPulse.Name(),
+			Description: statFinalizedPulse.Description(),
+			Measure:     statFinalizedPulse,
+			Aggregation: view.LastValue(),
+		},
+	)
+	if err != nil {
+		panic(err)
+	}
+}

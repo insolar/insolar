@@ -33,17 +33,6 @@ import (
 type status string
 
 const (
-	// TODO: https://insolar.atlassian.net/browse/WLT-768
-	// day   = 24 * 60 * 60
-	day   = 10
-	month = 30 * day
-
-	vestingPeriodInDays = 360
-
-	// TODO: https://insolar.atlassian.net/browse/WLT-768
-	// offsetDepositPulse insolar.PulseNumber = 6 * month
-	offsetDepositPulse insolar.PulseNumber = 10
-
 	XNS = "XNS"
 )
 
@@ -54,8 +43,9 @@ type Deposit struct {
 	PulseDepositUnHold      insolar.PulseNumber  `json:"holdReleaseDate"`
 	MigrationDaemonConfirms foundation.StableMap `json:"confirmerReferences"`
 	Amount                  string               `json:"amount"`
-	Bonus                   string               `json:"bonus"`
 	TxHash                  string               `json:"ethTxHash"`
+	LokupInPulses           int64                `json:"lokupInPulses"`
+	VestingInPulses         int64                `json:"vestingInPulses"`
 }
 
 // GetTxHash gets transaction hash.
@@ -77,7 +67,7 @@ func (d *Deposit) GetPulseUnHold() (insolar.PulseNumber, error) {
 }
 
 // New creates new deposit.
-func New(migrationDaemonRef insolar.Reference, txHash string, amount string) (*Deposit, error) {
+func New(migrationDaemonRef insolar.Reference, txHash string, amount string, lokup int64, vesting int64) (*Deposit, error) {
 
 	migrationDaemonConfirms := make(foundation.StableMap)
 	migrationDaemonConfirms[migrationDaemonRef.String()] = amount
@@ -87,11 +77,9 @@ func New(migrationDaemonRef insolar.Reference, txHash string, amount string) (*D
 		MigrationDaemonConfirms: migrationDaemonConfirms,
 		Amount:                  "0",
 		TxHash:                  txHash,
+		VestingInPulses:         vesting,
+		LokupInPulses:           lokup,
 	}, nil
-}
-
-func calculateUnHoldPulse(currentPulse insolar.PulseNumber) insolar.PulseNumber {
-	return currentPulse + offsetDepositPulse
 }
 
 // Itself gets deposit information.
@@ -125,7 +113,7 @@ func (d *Deposit) Confirm(migrationDaemonRef string, txHash string, amountStr st
 			return fmt.Errorf("failed to get current pulse: %s", err.Error())
 		}
 		d.Amount = amountStr
-		d.PulseDepositUnHold = calculateUnHoldPulse(currentPulse)
+		d.PulseDepositUnHold = currentPulse + insolar.PulseNumber(d.LokupInPulses)
 
 		ma := member.GetObject(foundation.GetMigrationAdminMember())
 		accountRef, err := ma.GetAccount(XNS)
@@ -173,7 +161,7 @@ func (d *Deposit) canTransfer(transferAmount *big.Int) error {
 		return fmt.Errorf("hold period didn't end")
 	}
 
-	spentPeriodInDays := big.NewInt(int64((currentPulse - d.PulseDepositUnHold) / day))
+	spentPeriodInPulses := big.NewInt(int64(currentPulse - d.PulseDepositUnHold))
 	amount, ok := new(big.Int).SetString(d.Amount, 10)
 	if !ok {
 		return fmt.Errorf("can't parse derposit amount")
@@ -185,8 +173,8 @@ func (d *Deposit) canTransfer(transferAmount *big.Int) error {
 
 	// How much can we transfer for this time
 	availableForNow := new(big.Int).Div(
-		new(big.Int).Mul(amount, spentPeriodInDays),
-		big.NewInt(vestingPeriodInDays),
+		new(big.Int).Mul(amount, spentPeriodInPulses),
+		big.NewInt(d.VestingInPulses),
 	)
 
 	if new(big.Int).Sub(amount, availableForNow).Cmp(

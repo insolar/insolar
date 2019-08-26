@@ -9,7 +9,6 @@ import (
 	mm_time "time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/payload"
 )
 
@@ -23,8 +22,8 @@ type ResultMatcherMock struct {
 	beforeAddStillExecutionCounter uint64
 	AddStillExecutionMock          mResultMatcherMockAddStillExecution
 
-	funcAddUnwantedResponse          func(ctx context.Context, msg *message.ReturnResults) (err error)
-	inspectFuncAddUnwantedResponse   func(ctx context.Context, msg *message.ReturnResults)
+	funcAddUnwantedResponse          func(ctx context.Context, msg *payload.ReturnResults) (err error)
+	inspectFuncAddUnwantedResponse   func(ctx context.Context, msg *payload.ReturnResults)
 	afterAddUnwantedResponseCounter  uint64
 	beforeAddUnwantedResponseCounter uint64
 	AddUnwantedResponseMock          mResultMatcherMockAddUnwantedResponse
@@ -263,7 +262,7 @@ type ResultMatcherMockAddUnwantedResponseExpectation struct {
 // ResultMatcherMockAddUnwantedResponseParams contains parameters of the ResultMatcher.AddUnwantedResponse
 type ResultMatcherMockAddUnwantedResponseParams struct {
 	ctx context.Context
-	msg *message.ReturnResults
+	msg *payload.ReturnResults
 }
 
 // ResultMatcherMockAddUnwantedResponseResults contains results of the ResultMatcher.AddUnwantedResponse
@@ -272,7 +271,7 @@ type ResultMatcherMockAddUnwantedResponseResults struct {
 }
 
 // Expect sets up expected params for ResultMatcher.AddUnwantedResponse
-func (mmAddUnwantedResponse *mResultMatcherMockAddUnwantedResponse) Expect(ctx context.Context, msg *message.ReturnResults) *mResultMatcherMockAddUnwantedResponse {
+func (mmAddUnwantedResponse *mResultMatcherMockAddUnwantedResponse) Expect(ctx context.Context, msg *payload.ReturnResults) *mResultMatcherMockAddUnwantedResponse {
 	if mmAddUnwantedResponse.mock.funcAddUnwantedResponse != nil {
 		mmAddUnwantedResponse.mock.t.Fatalf("ResultMatcherMock.AddUnwantedResponse mock is already set by Set")
 	}
@@ -292,7 +291,7 @@ func (mmAddUnwantedResponse *mResultMatcherMockAddUnwantedResponse) Expect(ctx c
 }
 
 // Inspect accepts an inspector function that has same arguments as the ResultMatcher.AddUnwantedResponse
-func (mmAddUnwantedResponse *mResultMatcherMockAddUnwantedResponse) Inspect(f func(ctx context.Context, msg *message.ReturnResults)) *mResultMatcherMockAddUnwantedResponse {
+func (mmAddUnwantedResponse *mResultMatcherMockAddUnwantedResponse) Inspect(f func(ctx context.Context, msg *payload.ReturnResults)) *mResultMatcherMockAddUnwantedResponse {
 	if mmAddUnwantedResponse.mock.inspectFuncAddUnwantedResponse != nil {
 		mmAddUnwantedResponse.mock.t.Fatalf("Inspect function is already set for ResultMatcherMock.AddUnwantedResponse")
 	}
@@ -316,7 +315,7 @@ func (mmAddUnwantedResponse *mResultMatcherMockAddUnwantedResponse) Return(err e
 }
 
 //Set uses given function f to mock the ResultMatcher.AddUnwantedResponse method
-func (mmAddUnwantedResponse *mResultMatcherMockAddUnwantedResponse) Set(f func(ctx context.Context, msg *message.ReturnResults) (err error)) *ResultMatcherMock {
+func (mmAddUnwantedResponse *mResultMatcherMockAddUnwantedResponse) Set(f func(ctx context.Context, msg *payload.ReturnResults) (err error)) *ResultMatcherMock {
 	if mmAddUnwantedResponse.defaultExpectation != nil {
 		mmAddUnwantedResponse.mock.t.Fatalf("Default expectation is already set for the ResultMatcher.AddUnwantedResponse method")
 	}
@@ -331,7 +330,7 @@ func (mmAddUnwantedResponse *mResultMatcherMockAddUnwantedResponse) Set(f func(c
 
 // When sets expectation for the ResultMatcher.AddUnwantedResponse which will trigger the result defined by the following
 // Then helper
-func (mmAddUnwantedResponse *mResultMatcherMockAddUnwantedResponse) When(ctx context.Context, msg *message.ReturnResults) *ResultMatcherMockAddUnwantedResponseExpectation {
+func (mmAddUnwantedResponse *mResultMatcherMockAddUnwantedResponse) When(ctx context.Context, msg *payload.ReturnResults) *ResultMatcherMockAddUnwantedResponseExpectation {
 	if mmAddUnwantedResponse.mock.funcAddUnwantedResponse != nil {
 		mmAddUnwantedResponse.mock.t.Fatalf("ResultMatcherMock.AddUnwantedResponse mock is already set by Set")
 	}
@@ -351,7 +350,7 @@ func (e *ResultMatcherMockAddUnwantedResponseExpectation) Then(err error) *Resul
 }
 
 // AddUnwantedResponse implements ResultMatcher
-func (mmAddUnwantedResponse *ResultMatcherMock) AddUnwantedResponse(ctx context.Context, msg *message.ReturnResults) (err error) {
+func (mmAddUnwantedResponse *ResultMatcherMock) AddUnwantedResponse(ctx context.Context, msg *payload.ReturnResults) (err error) {
 	mm_atomic.AddUint64(&mmAddUnwantedResponse.beforeAddUnwantedResponseCounter, 1)
 	defer mm_atomic.AddUint64(&mmAddUnwantedResponse.afterAddUnwantedResponseCounter, 1)
 

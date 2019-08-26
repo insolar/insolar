@@ -61,6 +61,7 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 	"github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/network/rules"
+	"go.opencensus.io/stats"
 	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/certificate"
@@ -202,7 +203,7 @@ func (g *Complete) EphemeralMode(nodes []insolar.NetworkNode) bool {
 func (g *Complete) UpdateState(ctx context.Context, pulseNumber insolar.PulseNumber, nodes []insolar.NetworkNode, cloudStateHash []byte) {
 	logger := inslogger.FromContext(ctx)
 
-	workingNodes := node.SelectWorking(nodes)
+	workingNodes := node.Select(nodes, node.ListWorking)
 
 	if ok, _ := rules.CheckMajorityRule(g.CertificateManager.GetCertificate(), workingNodes); !ok {
 		logger.Fatal("MajorityRule failed")
@@ -236,6 +237,7 @@ func (g *Complete) OnPulseFromConsensus(ctx context.Context, pulse insolar.Pulse
 		logger.Fatalf("Failed to set new pulse: %s", err.Error())
 	}
 	logger.Infof("Set new current pulse number: %d", pulse.PulseNumber)
+	stats.Record(ctx, statPulse.M(int64(pulse.PulseNumber)))
 }
 
 func pulseProcessingWatchdog(ctx context.Context, pulse insolar.Pulse, done chan struct{}) {

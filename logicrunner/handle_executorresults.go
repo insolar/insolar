@@ -49,7 +49,7 @@ func (p *initializeExecutionState) Proceed(ctx context.Context) error {
 	if len(p.msg.Queue) > 0 {
 		transcripts := make([]*common.Transcript, len(p.msg.Queue))
 		for i, qe := range p.msg.Queue {
-			transcripts[i] = common.NewTranscriptCloneContext(*qe.ServiceData, qe.RequestRef, *qe.Incoming)
+			transcripts[i] = common.NewTranscriptCloneContext(qe.ServiceData, qe.RequestRef, *qe.Incoming)
 		}
 		broker.AddRequestsFromPrevExecutor(ctx, transcripts...)
 	}
@@ -103,7 +103,7 @@ func (h *HandleExecutorResults) Present(ctx context.Context, f flow.Flow) error 
 
 	err = h.realHandleExecutorState(ctx, f, message)
 	if err != nil {
-		return sendErrorMessage(ctx, h.dep.Sender, h.Message, err)
+		return err
 	}
 	go h.dep.Sender.Reply(ctx, h.Message, bus.ReplyAsMessage(ctx, &reply.OK{}))
 	return nil

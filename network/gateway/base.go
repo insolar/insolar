@@ -199,7 +199,7 @@ func (g *Base) ValidateCert(ctx context.Context, authCert insolar.AuthorizationC
 
 // ============= Bootstrap =======
 
-func (g *Base) canAnnounceCandidate(ctx context.Context) bool {
+func (g *Base) checkCanAnnounceCandidate(ctx context.Context) error {
 	// 1. Current node is heavy:
 	// 		could announce candidate when network is initialized
 	// 		NB: announcing in WaitConsensus state is allowed
@@ -208,16 +208,16 @@ func (g *Base) canAnnounceCandidate(ctx context.Context) bool {
 	// 		NB: announcing in WaitConsensus state is *NOT* allowed
 
 	state := g.Gatewayer.Gateway().GetState()
+	origin := g.NodeKeeper.GetOrigin()
 
-	if g.NodeKeeper.GetOrigin().Role() == insolar.StaticRoleHeavyMaterial {
-		return state >= insolar.WaitConsensus
+	if origin.Role() == insolar.StaticRoleHeavyMaterial && state >= insolar.WaitConsensus {
+		return nil
 	}
 
 	bootstrapPulse := GetBootstrapPulse(ctx, g.PulseAccessor)
 	nodes := g.NodeKeeper.GetAccessor(bootstrapPulse.PulseNumber).GetActiveNodes()
 
 	var hasHeavy bool
-
 	for _, n := range nodes {
 		if n.Role() == insolar.StaticRoleHeavyMaterial {
 			hasHeavy = true
@@ -225,13 +225,23 @@ func (g *Base) canAnnounceCandidate(ctx context.Context) bool {
 		}
 	}
 
-	return hasHeavy && state > insolar.WaitConsensus
+	if hasHeavy && state > insolar.WaitConsensus {
+		return nil
+	}
+
+	return errors.Errorf(
+		"can't announce candidate: role=%v pulse=%d hasHeavy=%t state=%s",
+		origin.Role(),
+		bootstrapPulse.PulseNumber,
+		hasHeavy,
+		state,
+	)
 }
 
 func (g *Base) announceMiddleware(handler network.RequestHandler) network.RequestHandler {
 	return func(ctx context.Context, request network.ReceivedPacket) (network.Packet, error) {
-		if !g.canAnnounceCandidate(ctx) {
-			return nil, errors.New("can't announce candidate")
+		if err := g.checkCanAnnounceCandidate(ctx); err != nil {
+			return nil, err
 		}
 		return handler(ctx, request)
 	}
@@ -271,7 +281,13 @@ func (g *Base) HandleNodeBootstrapRequest(ctx context.Context, request network.R
 	}
 
 	profile := adapters.Candidate(data.CandidateProfile).StaticProfile(g.KeyProcessor)
-	g.ConsensusController.AddJoinCandidate(candidate{profile, profile.GetExtension()})
+
+	err = g.ConsensusController.AddJoinCandidate(candidate{profile, profile.GetExtension()})
+	if err != nil {
+		inslogger.FromContext(ctx).Warnf("Rejected bootstrap request from node %s: %s", request.GetSender(), err.Error())
+		return g.HostNetwork.BuildResponse(ctx, request, &packet.BootstrapResponse{Code: packet.Reject}), nil
+	}
+
 	inslogger.FromContext(ctx).Infof("=== AddJoinCandidate id = %d, address = %s ", data.CandidateProfile.ShortID, data.CandidateProfile.Address)
 
 	return g.HostNetwork.BuildResponse(ctx, request,

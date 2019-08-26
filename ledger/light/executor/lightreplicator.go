@@ -33,6 +33,7 @@ import (
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
 	"go.opencensus.io/trace"
 )
 
@@ -127,6 +128,7 @@ func (lr *LightReplicatorDefault) sync(ctx context.Context) {
 		span.AddAttributes(
 			trace.Int64Attribute("pulse", int64(pn)),
 		)
+		defer span.End()
 
 		allIndexes := lr.filterAndGroupIndexes(ctx, pn)
 		jets, err := lr.jetCalculator.MineForPulse(ctx, pn)
@@ -156,9 +158,9 @@ func (lr *LightReplicatorDefault) sync(ctx context.Context) {
 				logger.Debugf("[Replicator][sync] Data has been sent to a heavy. pn - %v, jetID - %v", msg.Pulse, msg.JetID.DebugString())
 			}
 		}
-
 		lr.cleaner.NotifyAboutPulse(ctx, pn)
-		span.End()
+
+		stats.Record(ctx, statLastReplicatedPulse.M(int64(pn)))
 	}
 
 	for {

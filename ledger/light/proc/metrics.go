@@ -14,54 +14,50 @@
 // limitations under the License.
 //
 
-package messagebus
+package proc
 
 import (
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
-	"go.opencensus.io/tag"
-
-	"github.com/insolar/insolar/instrumentation/insmetrics"
 )
 
 var (
-	tagMessageType = insmetrics.MustTagKey("messageType")
-)
-
-var (
-	statParcelsSentTotal = stats.Int64(
-		"messagebus/parcels/sent/count",
-		"number of parcels sent",
+	statHotsAbandoned = stats.Int64(
+		"hots_abandoned",
+		"How many abandoned requests in hot data",
 		stats.UnitDimensionless,
 	)
-	statLocallyDeliveredParcelsTotal = stats.Int64(
-		"messagebus/parcels/locally/delivered/count",
-		"total number of parcels delivered to the same machine",
+	statRequestsOpened = stats.Int64(
+		"requests_opened",
+		"How many requests in hot data",
 		stats.UnitDimensionless,
 	)
-	statParcelsTime = stats.Float64(
-		"messagebus/parcels/time",
-		"time spent on sending parcels",
-		stats.UnitMilliseconds,
+	statRequestsClosed = stats.Int64(
+		"requests_closed",
+		"How many requests are closed",
+		stats.UnitDimensionless,
 	)
 )
 
 func init() {
 	err := view.Register(
 		&view.View{
-			Measure:     statParcelsSentTotal,
+			Name:        statHotsAbandoned.Name(),
+			Description: statHotsAbandoned.Description(),
+			Measure:     statHotsAbandoned,
 			Aggregation: view.Count(),
-			TagKeys:     []tag.Key{tagMessageType},
 		},
 		&view.View{
-			Measure:     statLocallyDeliveredParcelsTotal,
+			Name:        statRequestsOpened.Name(),
+			Description: statRequestsOpened.Description(),
+			Measure:     statRequestsOpened,
 			Aggregation: view.Count(),
-			TagKeys:     []tag.Key{tagMessageType},
 		},
 		&view.View{
-			Measure:     statParcelsTime,
-			Aggregation: view.Distribution(1, 10, 100, 1000, 5000, 10000, 20000),
-			TagKeys:     []tag.Key{tagMessageType},
+			Name:        statRequestsClosed.Name(),
+			Description: statRequestsClosed.Description(),
+			Measure:     statRequestsClosed,
+			Aggregation: view.Count(),
 		},
 	)
 	if err != nil {

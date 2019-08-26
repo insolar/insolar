@@ -33,14 +33,8 @@ func getEmptyMessage(mt insolar.MessageType) (insolar.Message, error) {
 	switch mt {
 
 	// Logicrunner
-	case insolar.TypeCallMethod:
-		return &CallMethod{}, nil
-	case insolar.TypeReturnResults:
-		return &ReturnResults{}, nil
 	case insolar.TypeValidationResults:
 		return &ValidationResults{}, nil
-	case insolar.TypeAdditionalCallFromPreviousExecutor:
-		return &AdditionalCallFromPreviousExecutor{}, nil
 
 	// Genesis
 	case insolar.TypeGenesisRequest:
@@ -104,9 +98,6 @@ func ParcelMessageHash(pcs insolar.PlatformCryptographyScheme, parcel insolar.Pa
 
 func init() {
 	// Logicrunner
-	gob.Register(&CallMethod{})
-	gob.Register(&ReturnResults{})
-	gob.Register(&AdditionalCallFromPreviousExecutor{})
 	gob.Register(&ValidationResults{})
 
 	// Bootstrap

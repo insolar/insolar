@@ -101,6 +101,6 @@ func (r *RegularPhaseBundle) CreateFullPhaseControllers(nodeCount int) ([]core.P
 		ph2ctl.NewPhase2Controller(r.LoopingMinimalDelay, packetPrepareOptions, rcb.qForPhase2,
 			r.LockOSThreadForWorker),
 		ph3ctl.NewPhase3Controller(r.LoopingMinimalDelay, packetPrepareOptions, rcb.qForPhase3,
-			r.ConsensusStrategy, r.VectorInspection, r.EnableFastPhase3, r.LockOSThreadForWorker),
+			r.ConsensusStrategy, r.VectorInspection, r.EnableFastPhase3, r.LockOSThreadForWorker, r.RetrySendPhase3),
 	}, rcb
 }
