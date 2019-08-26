@@ -70,7 +70,7 @@ func TestWaitConsensus_ConsensusNotHappenedInETA(t *testing.T) {
 	defer mc.Wait(time.Minute)
 
 	gatewayer := mock.NewGatewayerMock(mc)
-	gatewayer.FailStateMock.Set(func(ctx context.Context, state insolar.NetworkState, reason string) {
+	gatewayer.FailStateMock.Set(func(ctx context.Context, reason string) {
 		require.Equal(t, "Bootstrap timeout exceeded", reason)
 	})
 

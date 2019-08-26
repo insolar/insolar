@@ -17,8 +17,8 @@ import (
 type GatewayerMock struct {
 	t minimock.Tester
 
-	funcFailState          func(ctx context.Context, state insolar.NetworkState, reason string)
-	inspectFuncFailState   func(ctx context.Context, state insolar.NetworkState, reason string)
+	funcFailState          func(ctx context.Context, reason string)
+	inspectFuncFailState   func(ctx context.Context, reason string)
 	afterFailStateCounter  uint64
 	beforeFailStateCounter uint64
 	FailStateMock          mGatewayerMockFailState
@@ -74,12 +74,11 @@ type GatewayerMockFailStateExpectation struct {
 // GatewayerMockFailStateParams contains parameters of the Gatewayer.FailState
 type GatewayerMockFailStateParams struct {
 	ctx    context.Context
-	state  insolar.NetworkState
 	reason string
 }
 
 // Expect sets up expected params for Gatewayer.FailState
-func (mmFailState *mGatewayerMockFailState) Expect(ctx context.Context, state insolar.NetworkState, reason string) *mGatewayerMockFailState {
+func (mmFailState *mGatewayerMockFailState) Expect(ctx context.Context, reason string) *mGatewayerMockFailState {
 	if mmFailState.mock.funcFailState != nil {
 		mmFailState.mock.t.Fatalf("GatewayerMock.FailState mock is already set by Set")
 	}
@@ -88,7 +87,7 @@ func (mmFailState *mGatewayerMockFailState) Expect(ctx context.Context, state in
 		mmFailState.defaultExpectation = &GatewayerMockFailStateExpectation{}
 	}
 
-	mmFailState.defaultExpectation.params = &GatewayerMockFailStateParams{ctx, state, reason}
+	mmFailState.defaultExpectation.params = &GatewayerMockFailStateParams{ctx, reason}
 	for _, e := range mmFailState.expectations {
 		if minimock.Equal(e.params, mmFailState.defaultExpectation.params) {
 			mmFailState.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmFailState.defaultExpectation.params)
@@ -99,7 +98,7 @@ func (mmFailState *mGatewayerMockFailState) Expect(ctx context.Context, state in
 }
 
 // Inspect accepts an inspector function that has same arguments as the Gatewayer.FailState
-func (mmFailState *mGatewayerMockFailState) Inspect(f func(ctx context.Context, state insolar.NetworkState, reason string)) *mGatewayerMockFailState {
+func (mmFailState *mGatewayerMockFailState) Inspect(f func(ctx context.Context, reason string)) *mGatewayerMockFailState {
 	if mmFailState.mock.inspectFuncFailState != nil {
 		mmFailState.mock.t.Fatalf("Inspect function is already set for GatewayerMock.FailState")
 	}
@@ -123,7 +122,7 @@ func (mmFailState *mGatewayerMockFailState) Return() *GatewayerMock {
 }
 
 //Set uses given function f to mock the Gatewayer.FailState method
-func (mmFailState *mGatewayerMockFailState) Set(f func(ctx context.Context, state insolar.NetworkState, reason string)) *GatewayerMock {
+func (mmFailState *mGatewayerMockFailState) Set(f func(ctx context.Context, reason string)) *GatewayerMock {
 	if mmFailState.defaultExpectation != nil {
 		mmFailState.mock.t.Fatalf("Default expectation is already set for the Gatewayer.FailState method")
 	}
@@ -137,15 +136,15 @@ func (mmFailState *mGatewayerMockFailState) Set(f func(ctx context.Context, stat
 }
 
 // FailState implements network.Gatewayer
-func (mmFailState *GatewayerMock) FailState(ctx context.Context, state insolar.NetworkState, reason string) {
+func (mmFailState *GatewayerMock) FailState(ctx context.Context, reason string) {
 	mm_atomic.AddUint64(&mmFailState.beforeFailStateCounter, 1)
 	defer mm_atomic.AddUint64(&mmFailState.afterFailStateCounter, 1)
 
 	if mmFailState.inspectFuncFailState != nil {
-		mmFailState.inspectFuncFailState(ctx, state, reason)
+		mmFailState.inspectFuncFailState(ctx, reason)
 	}
 
-	params := &GatewayerMockFailStateParams{ctx, state, reason}
+	params := &GatewayerMockFailStateParams{ctx, reason}
 
 	// Record call args
 	mmFailState.FailStateMock.mutex.Lock()
@@ -162,7 +161,7 @@ func (mmFailState *GatewayerMock) FailState(ctx context.Context, state insolar.N
 	if mmFailState.FailStateMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmFailState.FailStateMock.defaultExpectation.Counter, 1)
 		want := mmFailState.FailStateMock.defaultExpectation.params
-		got := GatewayerMockFailStateParams{ctx, state, reason}
+		got := GatewayerMockFailStateParams{ctx, reason}
 		if want != nil && !minimock.Equal(*want, got) {
 			mmFailState.t.Errorf("GatewayerMock.FailState got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
 		}
@@ -171,10 +170,10 @@ func (mmFailState *GatewayerMock) FailState(ctx context.Context, state insolar.N
 
 	}
 	if mmFailState.funcFailState != nil {
-		mmFailState.funcFailState(ctx, state, reason)
+		mmFailState.funcFailState(ctx, reason)
 		return
 	}
-	mmFailState.t.Fatalf("Unexpected call to GatewayerMock.FailState. %v %v %v", ctx, state, reason)
+	mmFailState.t.Fatalf("Unexpected call to GatewayerMock.FailState. %v %v", ctx, reason)
 
 }
 
