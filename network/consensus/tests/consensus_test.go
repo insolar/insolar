@@ -53,6 +53,7 @@ package tests
 import (
 	"context"
 	"errors"
+	"github.com/insolar/insolar/network/consensus/common/timer"
 	"math/rand"
 	"time"
 
@@ -287,34 +288,50 @@ var _ api.EphemeralControlFeeder = &EmuEphemeralFeeder{}
 
 type EmuEphemeralFeeder struct{}
 
+func (e EmuEphemeralFeeder) OnFailedPreparePulseChange() {
+}
+
+func (e EmuEphemeralFeeder) OnPulseDetected() {
+}
+
+func (e EmuEphemeralFeeder) OnFullRoundStarting() {
+}
+
+func (e EmuEphemeralFeeder) OnPreparePulseChange(report api.UpstreamReport) {
+}
+
+func (e EmuEphemeralFeeder) OnCommitPulseChange(report api.UpstreamReport, pulseData pulse.Data, activeCensus census.Operational) {
+}
+
+func (e EmuEphemeralFeeder) OnCancelPulseChange() {
+}
+
+func (e EmuEphemeralFeeder) OnConsensusFinished(report api.UpstreamReport, expectedCensus census.Operational) {
+}
+
+func (e EmuEphemeralFeeder) OnConsensusAborted() {
+}
+
 func (e EmuEphemeralFeeder) CanFastForwardPulse(expected, received pulse.Number, lastPulseData pulse.Data) bool {
-	panic("implement me")
+	return false
 }
 
 func (e EmuEphemeralFeeder) CanStopEphemeralByPulse(pd pulse.Data, localNode profiles.ActiveNode) bool {
-	panic("implement me")
+	return false
 }
 
 func (e EmuEphemeralFeeder) CanStopEphemeralByCensus(expected census.Expected) bool {
-	panic("implement me")
-}
-
-func (e EmuEphemeralFeeder) GetMaxDuration() time.Duration {
-	panic("implement me")
+	return false
 }
 
 func (e EmuEphemeralFeeder) OnEphemeralCancelled() {
-}
-
-func (e EmuEphemeralFeeder) GetMinDuration() time.Duration {
-	return 2 * time.Second
 }
 
 func (e EmuEphemeralFeeder) OnNonEphemeralPacket(ctx context.Context, parser transport.PacketParser, inbound endpoints.Inbound) error {
 	return nil
 }
 
-func (e EmuEphemeralFeeder) EphemeralConsensusFinished(isNextEphemeral bool, roundStartedAt time.Time, expected census.Operational) {
+func (e EmuEphemeralFeeder) EphemeralConsensusFinished(isNextEphemeral bool, roundStartedAt timer.Occasion, expected census.Operational) {
 }
 
 func (e EmuEphemeralFeeder) GetEphemeralTimings(c api.LocalNodeConfiguration) api.RoundTimings {

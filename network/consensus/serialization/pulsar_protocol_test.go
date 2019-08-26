@@ -53,10 +53,8 @@ package serialization
 import (
 	"bytes"
 	"context"
-	"testing"
-	"time"
-
 	"github.com/stretchr/testify/require"
+	"testing"
 )
 
 func TestPulsarPacketBody_SerializeTo(t *testing.T) {
@@ -120,7 +118,7 @@ func TestPulsarPacket_DeserializeFrom(t *testing.T) {
 
 	p2 := Packet{}
 
-	_, err = p2.DeserializeFrom(context.Background(), buf, time.Now())
+	_, err = p2.DeserializeFrom(context.Background(), buf)
 	require.NoError(t, err)
 
 	require.Equal(t, p1, p2)

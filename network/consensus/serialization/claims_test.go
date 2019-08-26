@@ -53,10 +53,8 @@ package serialization
 import (
 	"bytes"
 	"context"
-	"testing"
-	"time"
-
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 func TestNewClaimList(t *testing.T) {
@@ -83,7 +81,7 @@ func TestClaimList_SerializeDeserialize(t *testing.T) {
 	buf := make([]byte, 0)
 	rw := bytes.NewBuffer(buf)
 	w := newTrackableWriter(rw)
-	packetCtx := newPacketContext(context.Background(), &Header{}, time.Now())
+	packetCtx := newPacketContext(context.Background(), &Header{})
 	serializeCtx := newSerializeContext(packetCtx, w, digester, signer, nil)
 
 	err := list.SerializeTo(serializeCtx, rw)
