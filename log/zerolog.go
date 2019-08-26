@@ -19,7 +19,6 @@ package log
 import (
 	"fmt"
 	"io"
-	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -59,41 +58,6 @@ type zerologAdapter struct {
 	diodeWriter  *diode.Writer
 	level        zerolog.Level
 	callerConfig callerHookConfig
-}
-
-type loglevelChangeHandler struct {
-}
-
-func NewLoglevelChangeHandler() http.Handler {
-	handler := &loglevelChangeHandler{}
-	return handler
-}
-
-// ServeHTTP is an HTTP handler that changes the global minimum log level
-func (h *loglevelChangeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	values := r.URL.Query()
-	levelStr := "(nil)"
-	if values["level"] != nil {
-		levelStr = values["level"][0]
-	}
-	level, err := insolar.ParseLevel(levelStr)
-	if err != nil {
-		w.WriteHeader(500)
-		_, _ = fmt.Fprintf(w, "Invalid level '%v': %v\n", levelStr, err)
-		return
-	}
-
-	zlevel, err := InternalLevelToZerologLevel(level)
-	if err != nil {
-		w.WriteHeader(500)
-		_, _ = fmt.Fprintf(w, "Invalid level '%v': %v\n", levelStr, err)
-		return
-	}
-
-	zerolog.SetGlobalLevel(zlevel)
-
-	w.WriteHeader(200)
-	_, _ = fmt.Fprintf(w, "New log level: '%v'\n", levelStr)
 }
 
 func InternalLevelToZerologLevel(level insolar.LogLevel) (zerolog.Level, error) {
