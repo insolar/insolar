@@ -258,14 +258,17 @@ func (p *PrepRealm) prepareEphemeralPolling(ctxPrep context.Context) {
 		select {
 		case <-ctxOfPolling.Done():
 		case <-ctxPrep.Done():
-		case <-startCh:
-			go p.pushEphemeralPulse(ctxPrep)
 		default:
-			if !p.checkEphemeralStartByCandidate(ctxPrep) {
-				return true // stay in polling
+			select {
+			case <-startCh:
+				go p.pushEphemeralPulse(ctxPrep)
+			default:
+				if !p.checkEphemeralStartByCandidate(ctxPrep) {
+					return true // stay in polling
+				}
+				go p.pushEphemeralPulse(ctxPrep)
+				// stop polling anyway - repeating of unsuccessful is bad
 			}
-			go p.pushEphemeralPulse(ctxPrep)
-			// stop polling anyway - repeating of unsuccessful is bad
 		}
 		if startTimer != nil {
 			startTimer.Stop()
