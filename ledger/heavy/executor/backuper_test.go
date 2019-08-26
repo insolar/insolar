@@ -92,14 +92,15 @@ func TestBackuper_BadConfig(t *testing.T) {
 func makeBackuperConfig(t *testing.T, prefix string) configuration.Backup {
 
 	cfg := configuration.Backup{
-		ConfirmFile:      "BACKUPED",
-		MetaInfoFile:     "META.json",
-		TargetDirectory:  "/tmp/BKP/TARGET/" + prefix,
-		TmpDirectory:     "/tmp/BKP/TMP",
-		DirNameTemplate:  "pulse-%d",
-		BackupWaitPeriod: 60,
-		BackupFile:       "incr.bkp",
-		Enabled:          true,
+		ConfirmFile:          "BACKUPED",
+		MetaInfoFile:         "META.json",
+		TargetDirectory:      "/tmp/BKP/TARGET/" + prefix,
+		TmpDirectory:         "/tmp/BKP/TMP",
+		DirNameTemplate:      "pulse-%d",
+		BackupWaitPeriod:     60,
+		BackupFile:           "incr.bkp",
+		Enabled:              true,
+		PostProcessBackupCmd: []string{"ls"},
 	}
 
 	err := os.MkdirAll(cfg.TargetDirectory, 0777)
