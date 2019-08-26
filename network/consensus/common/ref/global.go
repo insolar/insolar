@@ -51,7 +51,7 @@
 package ref
 
 import (
-	"github.com/insolar/insolar/network/consensus/common/longbits"
+	"github.com/insolar/insolar/longbits"
 	"io"
 )
 

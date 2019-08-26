@@ -156,9 +156,9 @@ type InboundConnection struct {
 	Cert cryptkit.CertificateHolder
 }
 
-func ShortNodeIDAsByteString(nodeID insolar.ShortNodeID) string {
-	return fmt.Sprintf("node:%s",
-		string([]byte{byte(nodeID), byte(nodeID >> 8), byte(nodeID >> 16), byte(nodeID >> 24)}))
+func ShortNodeIDAsByteString(nodeID insolar.ShortNodeID) longbits.ByteString {
+	return longbits.ByteString(fmt.Sprintf("node:%s",
+		string([]byte{byte(nodeID), byte(nodeID >> 8), byte(nodeID >> 16), byte(nodeID >> 24)})))
 }
 
 func (v InboundConnection) String() string {

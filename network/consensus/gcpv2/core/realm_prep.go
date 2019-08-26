@@ -71,7 +71,6 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/errors"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetdispatch"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/population"
 	"github.com/insolar/insolar/pulse"
 )

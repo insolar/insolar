@@ -51,9 +51,9 @@
 package merkler
 
 import (
+	"github.com/insolar/insolar/longbits"
 	"github.com/insolar/insolar/network/consensus/common/args"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
-	"github.com/insolar/insolar/network/consensus/common/longbits"
 )
 
 var _ cryptkit.SequenceDigester = &StackedCalculator{}

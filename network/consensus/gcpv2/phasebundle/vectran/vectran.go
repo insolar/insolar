@@ -51,7 +51,7 @@
 package vectran
 
 import (
-	"github.com/insolar/insolar/network/consensus/common/longbits"
+	"github.com/insolar/insolar/longbits"
 	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/nodeset"
 )
 
