@@ -100,11 +100,9 @@ func (g *Complete) GetState() insolar.NetworkState {
 }
 
 func (g *Complete) BeforeRun(ctx context.Context, pulse insolar.Pulse) {
-	if pulse.EpochPulseNumber > insolar.EphemeralPulseEpoch {
-		err := g.PulseManager.Set(ctx, pulse)
-		if err != nil {
-			inslogger.FromContext(ctx).Panicf("failed to set start pulse: %d, %s", pulse.PulseNumber, err.Error())
-		}
+	err := g.PulseManager.Set(ctx, pulse)
+	if err != nil {
+		inslogger.FromContext(ctx).Panicf("failed to set start pulse: %d, %s", pulse.PulseNumber, err.Error())
 	}
 }
 
@@ -202,11 +200,11 @@ func (g *Complete) UpdateState(ctx context.Context, pulseNumber insolar.PulseNum
 	workingNodes := node.Select(nodes, node.ListWorking)
 
 	if ok, _ := rules.CheckMajorityRule(g.CertificateManager.GetCertificate(), workingNodes); !ok {
-		g.Gatewayer.Fail(ctx, "MajorityRule failed")
+		g.Gatewayer.FailState(ctx, "MajorityRule failed")
 	}
 
 	if !rules.CheckMinRole(g.CertificateManager.GetCertificate(), workingNodes) {
-		g.Gatewayer.Fail(ctx, "MinRole failed")
+		g.Gatewayer.FailState(ctx, "MinRoles failed")
 	}
 
 	g.Base.UpdateState(ctx, pulseNumber, nodes, cloudStateHash)

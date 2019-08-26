@@ -154,7 +154,7 @@ func (g *Base) OnPulseFromPulsar(ctx context.Context, pu insolar.Pulse, original
 
 func (g *Base) OnPulseFromConsensus(ctx context.Context, pu insolar.Pulse) {
 	g.NodeKeeper.MoveSyncToActive(ctx, pu.PulseNumber)
-	err := g.PulseAppender.(*storage.MemoryPulseStorage).AppendPulse(ctx, pu)
+	err := g.PulseAppender.AppendPulse(ctx, pu)
 	if err != nil {
 		panic("failed to append pulse:" + err.Error())
 	}

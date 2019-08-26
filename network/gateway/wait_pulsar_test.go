@@ -69,8 +69,8 @@ func TestWaitPulsar_PulseNotArrivedInETA(t *testing.T) {
 	defer mc.Wait(time.Minute)
 
 	gatewayer := mock.NewGatewayerMock(mc)
-	gatewayer.FailMock.Set(func(ctx context.Context, reason string) {
-		require.Equal(t, "WaitPulsar timeout exceeded", reason)
+	gatewayer.FailStateMock.Set(func(ctx context.Context, reason string) {
+		require.Equal(t, "Bootstrap timeout exceeded", reason)
 	})
 
 	waitPulsar := newWaitPulsar(&Base{})
