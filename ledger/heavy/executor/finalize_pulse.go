@@ -19,6 +19,8 @@ package executor
 import (
 	"context"
 
+	"go.opencensus.io/stats"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -71,16 +73,18 @@ func FinalizePulse(ctx context.Context, pulses pulse.Calculator, backuper Backup
 		}
 
 		inslogger.FromContext(ctx).Infof("Pulse %d completely finalized ( drops + hots + backup )", newPulse)
+		stats.Record(ctx, statFinalizedPulse.M(int64(newPulse)))
 
 		nextTop, err := pulses.Forwards(ctx, newTopSyncPulse, 1)
 		if err != nil && err != pulse.ErrNotFound {
-			panic("pulses.Forwards topSynk: " + newTopSyncPulse.String())
+			panic("pulses.Forwards topSynс: " + newTopSyncPulse.String())
 		}
 		if err == pulse.ErrNotFound {
 			logger.Info("Stop propagating of backups")
 			return
 		}
 		logger.Info("Propagating finalization to next pulse: ", nextTop.PulseNumber)
+
 		go FinalizePulse(ctx, pulses, backuper, jetKeeper, indexes, nextTop.PulseNumber)
 	}()
 }

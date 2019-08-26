@@ -17,6 +17,12 @@ import (
 type GatewayerMock struct {
 	t minimock.Tester
 
+	funcFail          func(ctx context.Context, reason string)
+	inspectFuncFail   func(ctx context.Context, reason string)
+	afterFailCounter  uint64
+	beforeFailCounter uint64
+	FailMock          mGatewayerMockFail
+
 	funcGateway          func() (g1 mm_network.Gateway)
 	inspectFuncGateway   func()
 	afterGatewayCounter  uint64
@@ -37,12 +43,203 @@ func NewGatewayerMock(t minimock.Tester) *GatewayerMock {
 		controller.RegisterMocker(m)
 	}
 
+	m.FailMock = mGatewayerMockFail{mock: m}
+	m.FailMock.callArgs = []*GatewayerMockFailParams{}
+
 	m.GatewayMock = mGatewayerMockGateway{mock: m}
 
 	m.SwitchStateMock = mGatewayerMockSwitchState{mock: m}
 	m.SwitchStateMock.callArgs = []*GatewayerMockSwitchStateParams{}
 
 	return m
+}
+
+type mGatewayerMockFail struct {
+	mock               *GatewayerMock
+	defaultExpectation *GatewayerMockFailExpectation
+	expectations       []*GatewayerMockFailExpectation
+
+	callArgs []*GatewayerMockFailParams
+	mutex    sync.RWMutex
+}
+
+// GatewayerMockFailExpectation specifies expectation struct of the Gatewayer.Fail
+type GatewayerMockFailExpectation struct {
+	mock   *GatewayerMock
+	params *GatewayerMockFailParams
+
+	Counter uint64
+}
+
+// GatewayerMockFailParams contains parameters of the Gatewayer.Fail
+type GatewayerMockFailParams struct {
+	ctx    context.Context
+	reason string
+}
+
+// Expect sets up expected params for Gatewayer.Fail
+func (mmFail *mGatewayerMockFail) Expect(ctx context.Context, reason string) *mGatewayerMockFail {
+	if mmFail.mock.funcFail != nil {
+		mmFail.mock.t.Fatalf("GatewayerMock.Fail mock is already set by Set")
+	}
+
+	if mmFail.defaultExpectation == nil {
+		mmFail.defaultExpectation = &GatewayerMockFailExpectation{}
+	}
+
+	mmFail.defaultExpectation.params = &GatewayerMockFailParams{ctx, reason}
+	for _, e := range mmFail.expectations {
+		if minimock.Equal(e.params, mmFail.defaultExpectation.params) {
+			mmFail.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmFail.defaultExpectation.params)
+		}
+	}
+
+	return mmFail
+}
+
+// Inspect accepts an inspector function that has same arguments as the Gatewayer.Fail
+func (mmFail *mGatewayerMockFail) Inspect(f func(ctx context.Context, reason string)) *mGatewayerMockFail {
+	if mmFail.mock.inspectFuncFail != nil {
+		mmFail.mock.t.Fatalf("Inspect function is already set for GatewayerMock.Fail")
+	}
+
+	mmFail.mock.inspectFuncFail = f
+
+	return mmFail
+}
+
+// Return sets up results that will be returned by Gatewayer.Fail
+func (mmFail *mGatewayerMockFail) Return() *GatewayerMock {
+	if mmFail.mock.funcFail != nil {
+		mmFail.mock.t.Fatalf("GatewayerMock.Fail mock is already set by Set")
+	}
+
+	if mmFail.defaultExpectation == nil {
+		mmFail.defaultExpectation = &GatewayerMockFailExpectation{mock: mmFail.mock}
+	}
+
+	return mmFail.mock
+}
+
+//Set uses given function f to mock the Gatewayer.Fail method
+func (mmFail *mGatewayerMockFail) Set(f func(ctx context.Context, reason string)) *GatewayerMock {
+	if mmFail.defaultExpectation != nil {
+		mmFail.mock.t.Fatalf("Default expectation is already set for the Gatewayer.Fail method")
+	}
+
+	if len(mmFail.expectations) > 0 {
+		mmFail.mock.t.Fatalf("Some expectations are already set for the Gatewayer.Fail method")
+	}
+
+	mmFail.mock.funcFail = f
+	return mmFail.mock
+}
+
+// Fail implements network.Gatewayer
+func (mmFail *GatewayerMock) Fail(ctx context.Context, reason string) {
+	mm_atomic.AddUint64(&mmFail.beforeFailCounter, 1)
+	defer mm_atomic.AddUint64(&mmFail.afterFailCounter, 1)
+
+	if mmFail.inspectFuncFail != nil {
+		mmFail.inspectFuncFail(ctx, reason)
+	}
+
+	params := &GatewayerMockFailParams{ctx, reason}
+
+	// Record call args
+	mmFail.FailMock.mutex.Lock()
+	mmFail.FailMock.callArgs = append(mmFail.FailMock.callArgs, params)
+	mmFail.FailMock.mutex.Unlock()
+
+	for _, e := range mmFail.FailMock.expectations {
+		if minimock.Equal(e.params, params) {
+			mm_atomic.AddUint64(&e.Counter, 1)
+			return
+		}
+	}
+
+	if mmFail.FailMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmFail.FailMock.defaultExpectation.Counter, 1)
+		want := mmFail.FailMock.defaultExpectation.params
+		got := GatewayerMockFailParams{ctx, reason}
+		if want != nil && !minimock.Equal(*want, got) {
+			mmFail.t.Errorf("GatewayerMock.Fail got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		}
+
+		return
+
+	}
+	if mmFail.funcFail != nil {
+		mmFail.funcFail(ctx, reason)
+		return
+	}
+	mmFail.t.Fatalf("Unexpected call to GatewayerMock.Fail. %v %v", ctx, reason)
+
+}
+
+// FailAfterCounter returns a count of finished GatewayerMock.Fail invocations
+func (mmFail *GatewayerMock) FailAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmFail.afterFailCounter)
+}
+
+// FailBeforeCounter returns a count of GatewayerMock.Fail invocations
+func (mmFail *GatewayerMock) FailBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmFail.beforeFailCounter)
+}
+
+// Calls returns a list of arguments used in each call to GatewayerMock.Fail.
+// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
+func (mmFail *mGatewayerMockFail) Calls() []*GatewayerMockFailParams {
+	mmFail.mutex.RLock()
+
+	argCopy := make([]*GatewayerMockFailParams, len(mmFail.callArgs))
+	copy(argCopy, mmFail.callArgs)
+
+	mmFail.mutex.RUnlock()
+
+	return argCopy
+}
+
+// MinimockFailDone returns true if the count of the Fail invocations corresponds
+// the number of defined expectations
+func (m *GatewayerMock) MinimockFailDone() bool {
+	for _, e := range m.FailMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			return false
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.FailMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterFailCounter) < 1 {
+		return false
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcFail != nil && mm_atomic.LoadUint64(&m.afterFailCounter) < 1 {
+		return false
+	}
+	return true
+}
+
+// MinimockFailInspect logs each unmet expectation
+func (m *GatewayerMock) MinimockFailInspect() {
+	for _, e := range m.FailMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			m.t.Errorf("Expected call to GatewayerMock.Fail with params: %#v", *e.params)
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.FailMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterFailCounter) < 1 {
+		if m.FailMock.defaultExpectation.params == nil {
+			m.t.Error("Expected call to GatewayerMock.Fail")
+		} else {
+			m.t.Errorf("Expected call to GatewayerMock.Fail with params: %#v", *m.FailMock.defaultExpectation.params)
+		}
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcFail != nil && mm_atomic.LoadUint64(&m.afterFailCounter) < 1 {
+		m.t.Error("Expected call to GatewayerMock.Fail")
+	}
 }
 
 type mGatewayerMockGateway struct {
@@ -380,6 +577,8 @@ func (m *GatewayerMock) MinimockSwitchStateInspect() {
 // MinimockFinish checks that all mocked methods have been called the expected number of times
 func (m *GatewayerMock) MinimockFinish() {
 	if !m.minimockDone() {
+		m.MinimockFailInspect()
+
 		m.MinimockGatewayInspect()
 
 		m.MinimockSwitchStateInspect()
@@ -406,6 +605,7 @@ func (m *GatewayerMock) MinimockWait(timeout mm_time.Duration) {
 func (m *GatewayerMock) minimockDone() bool {
 	done := true
 	return done &&
+		m.MinimockFailDone() &&
 		m.MinimockGatewayDone() &&
 		m.MinimockSwitchStateDone()
 }

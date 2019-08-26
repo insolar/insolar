@@ -45,7 +45,6 @@ import (
 	"github.com/insolar/insolar/logicrunner/logicexecutor"
 	"github.com/insolar/insolar/logicrunner/machinesmanager"
 	"github.com/insolar/insolar/logicrunner/pulsemanager"
-	"github.com/insolar/insolar/messagebus"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/servicenetwork"
@@ -138,10 +137,6 @@ func initComponents(
 	terminationHandler := termination.NewHandler(nw)
 
 	delegationTokenFactory := delegationtoken.NewDelegationTokenFactory()
-	parcelFactory := messagebus.NewParcelFactory()
-
-	messageBus, err := messagebus.NewMessageBus(cfg)
-	checkError(ctx, err, "failed to start MessageBus")
 
 	apiRunner, err := api.NewRunner(&cfg.APIRunner)
 	checkError(ctx, err, "failed to start ApiRunner")
@@ -165,7 +160,7 @@ func initComponents(
 	// TODO: remove this hack in INS-3341
 	contractRequester.LR = logicRunner
 
-	pm := pulsemanager.NewPulseManager(logicRunner.ResultsMatcher)
+	pm := pulsemanager.NewPulseManager()
 
 	cm.Register(
 		terminationHandler,
@@ -187,7 +182,6 @@ func initComponents(
 	components := []interface{}{
 		b,
 		publisher,
-		messageBus,
 		contractRequester,
 		artifacts.NewClient(b),
 		artifacts.NewDescriptorsCache(),
@@ -196,7 +190,6 @@ func initComponents(
 		jet.NewStore(),
 		node.NewStorage(),
 		delegationTokenFactory,
-		parcelFactory,
 	}
 	components = append(components, []interface{}{
 		metricsHandler,

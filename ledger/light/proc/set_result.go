@@ -29,6 +29,7 @@ import (
 	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
 )
 
 type SetResult struct {
@@ -229,6 +230,8 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+
+	stats.Record(ctx, statRequestsClosed.M(1))
 
 	// Only incoming request cannot be a reason. We are only interested in potential reason requests.
 	if _, ok := record.Unwrap(&closedRequest.Record.Virtual).(*record.IncomingRequest); ok {

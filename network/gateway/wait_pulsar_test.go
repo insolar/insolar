@@ -56,53 +56,59 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/stretchr/testify/require"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network"
 	mock "github.com/insolar/insolar/testutils/network"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestWaitConsensus_ConsensusNotHappenedInETA(t *testing.T) {
+func TestWaitPulsar_PulseNotArrivedInETA(t *testing.T) {
 	mc := minimock.NewController(t)
 	defer mc.Finish()
 	defer mc.Wait(time.Minute)
 
 	gatewayer := mock.NewGatewayerMock(mc)
 	gatewayer.FailMock.Set(func(ctx context.Context, reason string) {
-		require.Equal(t, "WaitConsensus timeout exceeded", reason)
+		require.Equal(t, "WaitPulsar timeout exceeded", reason)
 	})
 
-	waitConsensus := newWaitConsensus(&Base{})
-	waitConsensus.Gatewayer = gatewayer
-	waitConsensus.bootstrapETA = time.Millisecond
-	waitConsensus.bootstrapTimer = time.NewTimer(waitConsensus.bootstrapETA)
+	waitPulsar := newWaitPulsar(&Base{})
+	assert.Equal(t, insolar.WaitPulsar, waitPulsar.GetState())
 
-	waitConsensus.Run(context.Background(), *insolar.EphemeralPulse)
+	waitPulsar.Gatewayer = gatewayer
+	waitPulsar.bootstrapETA = time.Millisecond
+	waitPulsar.bootstrapTimer = time.NewTimer(waitPulsar.bootstrapETA)
+
+	waitPulsar.Run(context.Background(), *insolar.EphemeralPulse)
 }
 
-func TestWaitConsensus_ConsensusHappenedInETA(t *testing.T) {
+func TestWaitPulsar_PulseArrivedInETA(t *testing.T) {
 	mc := minimock.NewController(t)
 	defer mc.Finish()
 	defer mc.Wait(time.Minute)
 
 	gatewayer := mock.NewGatewayerMock(mc)
 	gatewayer.SwitchStateMock.Set(func(ctx context.Context, state insolar.NetworkState, pulse insolar.Pulse) {
-		assert.Equal(t, insolar.WaitMajority, state)
+		assert.Equal(t, insolar.CompleteNetworkState, state)
 	})
 
-	waitConsensus := newWaitConsensus(&Base{})
-	assert.Equal(t, insolar.WaitConsensus, waitConsensus.GetState())
-	waitConsensus.Gatewayer = gatewayer
-	accessorMock := mock.NewPulseAccessorMock(mc)
-	accessorMock.GetPulseMock.Set(func(ctx context.Context, p1 insolar.PulseNumber) (p2 insolar.Pulse, err error) {
-		return *insolar.EphemeralPulse, nil
+	pulseAccessor := mock.NewPulseAccessorMock(mc)
+	pulseAccessor.GetPulseMock.Set(func(ctx context.Context, p1 insolar.PulseNumber) (p2 insolar.Pulse, err error) {
+		p := *insolar.GenesisPulse
+		p.PulseNumber += 10
+		return p, nil
 	})
-	waitConsensus.PulseAccessor = accessorMock
-	waitConsensus.bootstrapETA = time.Second
-	waitConsensus.bootstrapTimer = time.NewTimer(waitConsensus.bootstrapETA)
-	waitConsensus.OnConsensusFinished(context.Background(), network.Report{})
 
-	waitConsensus.Run(context.Background(), *insolar.EphemeralPulse)
+	waitPulsar := newWaitPulsar(&Base{
+		PulseAccessor: pulseAccessor,
+	})
+	waitPulsar.Gatewayer = gatewayer
+	waitPulsar.bootstrapETA = time.Second * 2
+	waitPulsar.bootstrapTimer = time.NewTimer(waitPulsar.bootstrapETA)
+
+	go waitPulsar.Run(context.Background(), *insolar.GenesisPulse)
+	time.Sleep(100 * time.Millisecond)
+
+	waitPulsar.OnConsensusFinished(context.Background(), network.Report{PulseNumber: insolar.FirstPulseNumber + 10})
 }

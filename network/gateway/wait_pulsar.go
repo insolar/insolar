@@ -52,57 +52,42 @@ package gateway
 
 import (
 	"context"
-	"testing"
-	"time"
-
-	"github.com/gojuno/minimock"
-	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network"
-	mock "github.com/insolar/insolar/testutils/network"
-	"github.com/stretchr/testify/assert"
 )
 
-func TestWaitConsensus_ConsensusNotHappenedInETA(t *testing.T) {
-	mc := minimock.NewController(t)
-	defer mc.Finish()
-	defer mc.Wait(time.Minute)
-
-	gatewayer := mock.NewGatewayerMock(mc)
-	gatewayer.FailMock.Set(func(ctx context.Context, reason string) {
-		require.Equal(t, "WaitConsensus timeout exceeded", reason)
-	})
-
-	waitConsensus := newWaitConsensus(&Base{})
-	waitConsensus.Gatewayer = gatewayer
-	waitConsensus.bootstrapETA = time.Millisecond
-	waitConsensus.bootstrapTimer = time.NewTimer(waitConsensus.bootstrapETA)
-
-	waitConsensus.Run(context.Background(), *insolar.EphemeralPulse)
+func newWaitPulsar(b *Base) *WaitPulsar {
+	return &WaitPulsar{b, make(chan insolar.Pulse, 1)}
 }
 
-func TestWaitConsensus_ConsensusHappenedInETA(t *testing.T) {
-	mc := minimock.NewController(t)
-	defer mc.Finish()
-	defer mc.Wait(time.Minute)
+type WaitPulsar struct {
+	*Base
+	pulseArrived chan insolar.Pulse
+}
 
-	gatewayer := mock.NewGatewayerMock(mc)
-	gatewayer.SwitchStateMock.Set(func(ctx context.Context, state insolar.NetworkState, pulse insolar.Pulse) {
-		assert.Equal(t, insolar.WaitMajority, state)
-	})
+func (g *WaitPulsar) Run(ctx context.Context, pulse insolar.Pulse) {
+	g.switchOnRealPulse(pulse)
 
-	waitConsensus := newWaitConsensus(&Base{})
-	assert.Equal(t, insolar.WaitConsensus, waitConsensus.GetState())
-	waitConsensus.Gatewayer = gatewayer
-	accessorMock := mock.NewPulseAccessorMock(mc)
-	accessorMock.GetPulseMock.Set(func(ctx context.Context, p1 insolar.PulseNumber) (p2 insolar.Pulse, err error) {
-		return *insolar.EphemeralPulse, nil
-	})
-	waitConsensus.PulseAccessor = accessorMock
-	waitConsensus.bootstrapETA = time.Second
-	waitConsensus.bootstrapTimer = time.NewTimer(waitConsensus.bootstrapETA)
-	waitConsensus.OnConsensusFinished(context.Background(), network.Report{})
+	select {
+	case <-g.bootstrapTimer.C:
+		g.Gatewayer.Fail(ctx, "WaitPulsar timeout exceeded")
+	case newPulse := <-g.pulseArrived:
+		g.Gatewayer.SwitchState(ctx, insolar.CompleteNetworkState, newPulse)
+	}
+}
 
-	waitConsensus.Run(context.Background(), *insolar.EphemeralPulse)
+func (g *WaitPulsar) GetState() insolar.NetworkState {
+	return insolar.WaitPulsar
+}
+
+func (g *WaitPulsar) OnConsensusFinished(ctx context.Context, report network.Report) {
+	g.switchOnRealPulse(EnsureGetPulse(ctx, g.PulseAccessor, report.PulseNumber))
+}
+
+func (g *WaitPulsar) switchOnRealPulse(pulse insolar.Pulse) {
+	if pulse.PulseNumber > insolar.FirstPulseNumber && pulse.EpochPulseNumber > insolar.EphemeralPulseEpoch {
+		g.pulseArrived <- pulse
+		close(g.pulseArrived)
+	}
 }
