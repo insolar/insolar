@@ -23,10 +23,12 @@ import (
 	"path/filepath"
 
 	"github.com/dgraph-io/badger"
+
 	"github.com/insolar/insolar/network"
 
-	"github.com/insolar/insolar/ledger/heavy/exporter"
 	"google.golang.org/grpc"
+
+	"github.com/insolar/insolar/ledger/heavy/exporter"
 
 	"github.com/ThreeDotsLabs/watermill"
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
@@ -55,7 +57,6 @@ import (
 	"github.com/insolar/insolar/insolar/delegationtoken"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/jetcoordinator"
-	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/node"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/store"
@@ -65,7 +66,6 @@ import (
 	"github.com/insolar/insolar/ledger/heavy/pulsemanager"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/logicrunner/artifacts"
-	"github.com/insolar/insolar/messagebus"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/servicenetwork"
@@ -168,24 +168,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 
 	}
 
-	// API.
-	var (
-		Requester insolar.ContractRequester
-		API       insolar.APIRunner
-	)
-	{
-		var err error
-		Requester, err = contractrequester.New(nil)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to start ContractRequester")
-		}
-
-		API, err = api.NewRunner(&cfg.APIRunner)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to start ApiRunner")
-		}
-	}
-
 	// Storage.
 	var (
 		Coordinator jet.Coordinator
@@ -221,20 +203,30 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 
 	// Communication.
 	var (
-		Tokens  insolar.DelegationTokenFactory
-		Parcels message.ParcelFactory
-		Bus     insolar.MessageBus
-		WmBus   *bus.Bus
+		Tokens insolar.DelegationTokenFactory
+		WmBus  *bus.Bus
+	)
+	{
+		Tokens = delegationtoken.NewDelegationTokenFactory()
+		WmBus = bus.NewBus(cfg.Bus, publisher, Pulses, Coordinator, CryptoScheme)
+	}
+
+	// API.
+	var (
+		Requester *contractrequester.ContractRequester
+		API       insolar.APIRunner
 	)
 	{
 		var err error
-		Tokens = delegationtoken.NewDelegationTokenFactory()
-		Parcels = messagebus.NewParcelFactory()
-		Bus, err = messagebus.NewMessageBus(cfg)
+		Requester, err = contractrequester.New()
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to start MessageBus")
+			return nil, errors.Wrap(err, "failed to start ContractRequester")
 		}
-		WmBus = bus.NewBus(cfg.Bus, publisher, Pulses, Coordinator, CryptoScheme)
+
+		API, err = api.NewRunner(&cfg.APIRunner)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to start ApiRunner")
+		}
 	}
 
 	metricsHandler, err := metrics.NewMetrics(
@@ -364,10 +356,8 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		Pulses,
 		Coordinator,
 		metricsHandler,
-		Bus,
 		Requester,
 		Tokens,
-		Parcels,
 		artifacts.NewClient(WmBus),
 		API,
 		KeyProcessor,
@@ -390,7 +380,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		}
 	}
 
-	c.startWatermill(ctx, wmLogger, subscriber, WmBus, NetworkService.SendMessageHandler, Handler.Process)
+	c.startWatermill(ctx, wmLogger, subscriber, WmBus, NetworkService.SendMessageHandler, Handler.Process, Requester.ReceiveResult)
 
 	return c, nil
 }
@@ -426,7 +416,7 @@ func (c *components) startWatermill(
 	logger watermill.LoggerAdapter,
 	sub watermillMsg.Subscriber,
 	b *bus.Bus,
-	outHandler, inHandler watermillMsg.NoPublishHandlerFunc,
+	outHandler, inHandler, resultsHandler watermillMsg.NoPublishHandlerFunc,
 ) {
 	inRouter, err := watermillMsg.NewRouter(watermillMsg.RouterConfig{}, logger)
 	if err != nil {
@@ -455,6 +445,12 @@ func (c *components) startWatermill(
 		sub,
 		inHandler,
 	)
+
+	inRouter.AddNoPublisherHandler(
+		"IncomingRequestResultHandler",
+		bus.TopicIncomingRequestResults,
+		sub,
+		resultsHandler)
 
 	startRouter(ctx, inRouter)
 	c.inRouter = inRouter

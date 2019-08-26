@@ -79,9 +79,9 @@ func indexesFixture() []record.Index {
 func dropsFixture() []drop.Drop {
 	ids := gen.UniqueIDs(3)
 	return []drop.Drop{
-		{Split: false, Hash: ids[0].Hash()},
-		{Split: true, Hash: ids[1].Hash()},
-		{Split: false, Hash: ids[2].Hash()},
+		{Split: false, Hash: ids[0].Bytes()},
+		{Split: true, Hash: ids[1].Bytes()},
+		{Split: false, Hash: ids[2].Bytes()},
 	}
 }
 
@@ -193,4 +193,50 @@ func TestInitialStateKeeper_Get_AfterRestart(t *testing.T) {
 	sortJets(expectedJets)
 	sortJets(state.JetIDs)
 	require.Equal(t, expectedJets, state.JetIDs)
+}
+
+func TestInitialStateKeeper_Get_EmptyAfterRestart(t *testing.T) {
+	mc := minimock.NewController(t)
+	defer mc.Finish()
+	ctx := inslogger.TestContext(t)
+
+	jetKeeper := executor.NewJetKeeperMock(mc)
+	jetKeeper.TopSyncPulseMock.Return(topSync)
+
+	jetIDs := gen.UniqueJetIDs(1)
+	jetAccessor := jet.NewAccessorMock(mc)
+	jetAccessor.AllMock.Expect(ctx, topSync).Return(jetIDs)
+
+	jetDrop := drop.Drop{Split: false, Hash: gen.ID().Bytes()}
+	dropAccessor := drop.NewAccessorMock(mc)
+	dropAccessor.ForPulseMock.When(ctx, jetIDs[0], topSync).Then(jetDrop, nil)
+
+	indexAccessor := object.NewIndexAccessorMock(mc)
+	indexAccessor.ForPulseMock.Expect(ctx, topSync).Return(nil, object.ErrIndexNotFound)
+
+	jetCoordinator := jet.NewCoordinatorMock(mc)
+
+	stateKeeper := executor.NewInitialStateKeeper(jetKeeper, jetAccessor, jetCoordinator, indexAccessor, dropAccessor)
+	err := stateKeeper.Start(ctx)
+	require.NoError(t, err)
+
+	currentLight := gen.Reference()
+	anotherLight := gen.Reference()
+
+	jetCoordinator.LightExecutorForJetMock.When(ctx, insolar.ID(jetIDs[0]), current).Then(&currentLight, nil)
+
+	// Get for currentLight
+	state := stateKeeper.Get(ctx, currentLight, current)
+
+	require.Equal(t, []record.Index{}, state.Indexes)
+	require.Equal(t, [][]byte{drop.MustEncode(&jetDrop)}, state.Drops)
+	require.Equal(t, []insolar.JetID{jetIDs[0]}, state.JetIDs)
+
+	// Get for anotherLight
+	state = stateKeeper.Get(ctx, anotherLight, current)
+
+	require.Equal(t, []record.Index{}, state.Indexes)
+	require.Equal(t, [][]byte{}, state.Drops)
+	require.Equal(t, []insolar.JetID{}, state.JetIDs)
+
 }

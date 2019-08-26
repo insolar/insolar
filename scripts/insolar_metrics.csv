@@ -1,0 +1,34 @@
+name, type, description
+insolar_bus_reply_milliseconds,histogram,reply messages latency
+insolar_bus_reply_total,counter,reply messages total count
+insolar_bus_sent_bytes,histogram,sent messages payload size
+insolar_bus_sent_milliseconds,histogram,sent messages latency
+insolar_bus_sent_total,counter,sent messages total count
+insolar_consensus_activenodes_count,gauge,Active nodes count after consensus
+insolar_consensus_packets_recv_bytes,counter,Consensus received packets size
+insolar_consensus_packets_sent_bytes,counter,Consensus sent packets size
+insolar_current_pulse,gauge,current node pulse
+insolar_drop_records_total,counter,Amount of records in drop
+insolar_drops_total,counter,How many drop records have created
+insolar_dropstorage_added_count,counter,How many drop-records have been saved in a drop storage
+insolar_dropstorage_removed_count,counter,How many drop-records have been removed from a drop storage
+insolar_flow_dispatcher_handler_latency,histogram,handlers latency
+insolar_flow_dispatcher_process_latency,histogram,process handlers call latency (handlers latency+overhead)
+insolar_flow_procedure_latency,histogram,time spent on procedure run
+insolar_heavy_finalized_pulse,gauge,last pulse with fully finalized data
+insolar_heavysyncer_heavypayload_count,counter,How many heavy-payload messages were received from a light-node
+insolar_hotdata_objects_send,counter,Amount of hot records actually sent to next executors
+insolar_hotdata_objects_total,counter,Amount of hot records for next executors
+insolar_jets_counter,gauge,how many jets on start of pulse
+insolar_light_last_sent_pulse,gauge,last pulse sent to heavy
+insolar_log_calls,counter,number of log calls
+insolar_log_written,counter,number of log actually written
+insolar_network_complete_network_state,gauge,Timestamp when the node reaches complete network state
+insolar_network_connections,gauge,Current network transport connections count
+insolar_network_futures,gauge,Current network transport futures count
+insolar_network_packet_received_total,counter,Total number of received packets
+insolar_network_packets_received,counter,number of received packets
+insolar_network_parcels_reply_size,histogram,size of replies to parcels
+insolar_network_recv_bytes,counter,Recieved by transport
+insolar_network_sent_bytes,counter,Sent by transport
+insolar_object_bucket_added_count,counter,How many bucket have been created on a node

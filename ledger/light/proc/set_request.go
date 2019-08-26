@@ -20,6 +20,7 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
@@ -249,6 +250,8 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to save records")
 	}
+
+	stats.Record(ctx, statRequestsOpened.M(1))
 
 	// Save updated index.
 	index.LifelineLastUsed = p.requestID.Pulse()

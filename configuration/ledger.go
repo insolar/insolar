@@ -84,6 +84,12 @@ type Backup struct {
 	// BackupWaitPeriod - how much time we will wait for appearing of file ConfirmFile
 	BackupWaitPeriod uint
 
+	// PostProcessBackupCmd - command which will be invoked after creating backup. It might be used to
+	// send backup to remote node and do some external checks. If everything is ok, this command must create ConfirmFile
+	// It will be invoked with environment variable 'INSOLAR_CURRENT_BACKUP_DIR'
+	// PostProcessBackupCmd[0] is interpreted as command, and PostProcessBackupCmd[1:] as arguments
+	PostProcessBackupCmd []string
+
 	// Paths:
 	// Every incremental backup live in  TargetDirectory/"DirNameTemplate"%<pulse_number>
 	// and it contains:

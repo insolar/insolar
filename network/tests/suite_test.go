@@ -596,7 +596,6 @@ func (s *testSuite) preInitNode(node *networkNode) {
 		testutils.NewContractRequesterMock(s.t),
 		// pulse.NewStorageMem(),
 	)
-	// serviceNetwork.SetOperableFunc(func(ctx context.Context, operable bool) {})
 	node.serviceNetwork = serviceNetwork
 	node.terminationHandler = terminationHandler
 

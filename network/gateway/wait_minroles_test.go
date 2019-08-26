@@ -52,6 +52,9 @@ package gateway
 
 import (
 	"context"
+	"testing"
+	"time"
+
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/insolar"
@@ -60,8 +63,7 @@ import (
 	"github.com/insolar/insolar/network/node"
 	mock "github.com/insolar/insolar/testutils/network"
 	"github.com/stretchr/testify/assert"
-	"testing"
-	"time"
+	"github.com/stretchr/testify/require"
 )
 
 func TestWaitMinroles_MinrolesNotHappenedInETA(t *testing.T) {
@@ -70,8 +72,8 @@ func TestWaitMinroles_MinrolesNotHappenedInETA(t *testing.T) {
 	defer mc.Wait(time.Minute)
 
 	gatewayer := mock.NewGatewayerMock(mc)
-	gatewayer.SwitchStateMock.Set(func(ctx context.Context, state insolar.NetworkState, pulse insolar.Pulse) {
-		assert.Equal(t, insolar.NoNetworkState, state)
+	gatewayer.FailStateMock.Set(func(ctx context.Context, reason string) {
+		require.Equal(t, "Bootstrap timeout exceeded", reason)
 	})
 
 	nodeKeeper := mock.NewNodeKeeperMock(mc)
@@ -104,7 +106,7 @@ func TestWaitMinroles_MinrolesHappenedInETA(t *testing.T) {
 
 	gatewayer := mock.NewGatewayerMock(mc)
 	gatewayer.SwitchStateMock.Set(func(ctx context.Context, state insolar.NetworkState, pulse insolar.Pulse) {
-		assert.Equal(t, insolar.CompleteNetworkState, state)
+		assert.Equal(t, insolar.WaitPulsar, state)
 	})
 
 	ref := gen.Reference()

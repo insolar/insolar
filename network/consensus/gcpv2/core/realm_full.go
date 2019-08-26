@@ -53,7 +53,6 @@ package core
 import (
 	"context"
 	"fmt"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
@@ -123,10 +122,6 @@ func (r *FullRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 		sourceNode = r.getMemberReceiver(sourceID)
 	}
 
-	if sourceNode != nil && !sourceNode.CanReceivePacket(pt) {
-		return fmt.Errorf("packet type (%v) limit exceeded: from=%v(%v)", pt, sourceNode.GetNodeID(), from)
-	}
-
 	pd := r.packetDispatchers[pt] // was checked above for != nil
 
 	var err error
@@ -143,6 +138,10 @@ func (r *FullRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 
 	if !canHandle || err != nil {
 		return err
+	}
+
+	if sourceNode != nil && !sourceNode.CanReceivePacket(pt) {
+		return fmt.Errorf("packet type (%v) limit exceeded: from=%v(%v)", pt, sourceNode.GetNodeID(), from)
 	}
 
 	// this enables lazy parsing - packet is fully parsed AFTER validation, hence makes it less prone to exploits for non-members
@@ -178,7 +177,8 @@ func (r *FullRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 	}
 
 	if !sourceNode.SetPacketReceived(pt) {
-		return fmt.Errorf("packet type (%v) limit exceeded: from=%v(%v)", pt, sourceNode.GetNodeID(), from)
+		inslogger.FromContext(ctx).Infof("packet type (%v) limit exceeded: from=%v(%v)", pt, sourceNode.GetNodeID(), from)
+		return nil
 	}
 
 	return sourceNode.DispatchMemberPacket(ctx, packet, from, verifyFlags, pd)
@@ -353,7 +353,7 @@ func (r *FullRealm) registerNextJoinCandidate() (*pop.NodeAppearance, cryptkit.D
 			nip := r.profileFactory.CreateFullIntroProfile(cp)
 			sv := r.GetSignatureVerifier(nip.GetPublicKeyStore())
 			np := censusimpl.NewJoinerProfile(nip, sv)
-			na := pop.NewEmptyNodeAppearance(&np)
+			na := pop.NewLocalJoinerNodeAppearance(&np, r.GetSelfNodeID(), secret)
 
 			nna, err := r.population.AddToDynamics(r.roundContext, &na)
 			if err != nil {
@@ -532,7 +532,7 @@ func (r *FullRealm) buildLocalMemberAnnouncementDraft(mp profiles.MembershipProf
 	}
 
 	r.self.CanIntroduceJoiner()
-	if lp.CanIntroduceJoiner() {
+	if !r.unsafeRound && lp.CanIntroduceJoiner() {
 		jc, secret := r.registerNextJoinCandidate()
 		if jc != nil {
 			return profiles.NewMemberAnnouncementWithJoinerID(localID, mp, jc.GetNodeID(), secret, localID)
@@ -550,10 +550,10 @@ func (r *FullRealm) CreateAnnouncement(n *pop.NodeAppearance, isJoinerProfileReq
 
 	var joiner *transport.JoinerAnnouncement
 	if !ma.JoinerID.IsAbsent() && isJoinerProfileRequired {
-		jp := r.GetPurgatory().FindJoinerProfile(ma.JoinerID, n.GetNodeID())
+		joiner = r.GetPurgatory().GetJoinerAnnouncement(ma.JoinerID, n.GetNodeID())
 		switch {
-		case jp != nil:
-			joiner = transport.NewAnyJoinerAnnouncement(jp, n.GetNodeID())
+		case joiner != nil:
+			break
 		case n == r.self:
 			panic(fmt.Sprintf("illegal state - local joiner is missing: %d", ma.JoinerID))
 		default:
@@ -561,7 +561,10 @@ func (r *FullRealm) CreateAnnouncement(n *pop.NodeAppearance, isJoinerProfileReq
 				r.self.GetNodeID(), n.GetNodeID(), ma.JoinerID))
 		}
 	} else if ma.Membership.IsJoiner() {
-		joiner = transport.NewAnyJoinerAnnouncement(n.GetStatic(), insolar.AbsentShortNodeID) // TODO provide an announcing node
+		joiner = n.GetAnnouncementAsJoiner()
+		if joiner == nil {
+			panic("illegal state")
+		}
 	}
 
 	return transport.NewNodeAnnouncement(n.GetProfile(), ma, r.GetNodeCount(), r.pulseData.PulseNumber, joiner)
@@ -593,6 +596,14 @@ func (r *FullRealm) finishRound(ctx context.Context, builder census.Builder, csh
 		expected = builder.Build(csh).MakeExpected()
 	} else {
 		expected = builder.BuildAsBroken(csh).MakeExpected()
+	}
+
+	if expected.GetOnlinePopulation().GetLocalProfile().IsJoiner() {
+		panic("DEBUG FAIL-FAST: local remains as joiner")
+	}
+
+	if expected.GetOnlinePopulation().GetLocalProfile().GetOpMode().IsMistrustful() {
+		panic("DEBUG FAIL-FAST: local was marked as fraud suspect")
 	}
 
 	isNextEphemeral := false

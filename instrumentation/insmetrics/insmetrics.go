@@ -20,12 +20,10 @@ import (
 	"context"
 	"time"
 
+	"contrib.go.opencensus.io/exporter/prometheus"
 	prometheusclient "github.com/prometheus/client_golang/prometheus"
-	"go.opencensus.io/exporter/prometheus"
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
-
-	"github.com/insolar/insolar/insolar"
 )
 
 // MustTagKey creates new tag.Key, panics on error
@@ -55,19 +53,23 @@ func ChangeTags(ctx context.Context, mutator ...tag.Mutator) context.Context {
 	return ctx
 }
 
+type errorer interface {
+	Error(...interface{})
+}
+
 // RegisterPrometheus creates prometheus exporter and registers it in opencensus view lib.
 func RegisterPrometheus(
 	namespace string,
 	registry *prometheusclient.Registry,
 	reportperiod time.Duration,
-	inslog insolar.Logger,
+	logger errorer,
 	nodeRole string,
 ) (*prometheus.Exporter, error) {
 	exporter, err := prometheus.NewExporter(prometheus.Options{
 		Namespace: namespace,
 		Registry:  registry,
 		OnError: func(err error) {
-			inslog.Error("Failed to export to Prometheus: ", err)
+			logger.Error("Failed to export to Prometheus: ", err)
 		},
 		ConstLabels: prometheusclient.Labels{"role": nodeRole},
 	})
@@ -75,7 +77,6 @@ func RegisterPrometheus(
 		return nil, err
 	}
 	view.RegisterExporter(exporter)
-	// TODO: make reporting period configurable
 	if reportperiod == 0 {
 		reportperiod = time.Second
 	}

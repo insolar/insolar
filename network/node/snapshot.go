@@ -147,7 +147,7 @@ func nodeStateToListType(node insolar.NetworkNode) ListType {
 			return ListWorking
 		}
 		return ListIdle
-	case insolar.NodePending:
+	case insolar.NodeJoining:
 		return ListJoiner
 	case insolar.NodeUndefined, insolar.NodeLeaving:
 		return ListLeaving
@@ -223,7 +223,7 @@ func (s *Snapshot) Decode(buff []byte) error {
 	return nil
 }
 
-func SelectWorking(nodes []insolar.NetworkNode) []insolar.NetworkNode {
+func Select(nodes []insolar.NetworkNode, typ ListType) []insolar.NetworkNode {
 	lists := splitNodes(nodes)
-	return lists[ListWorking]
+	return lists[typ]
 }

@@ -182,7 +182,7 @@ type RoundController interface {
 
 type RoundControllerFactory interface {
 	CreateConsensusRound(chronicle ConsensusChronicles, controlFeeder ConsensusControlFeeder, candidateFeeder CandidateControlFeeder,
-		ephemeralFeeder EphemeralControlFeeder, prevPulseRound RoundController) RoundController
+		ephemeralFeeder EphemeralControlFeeder) RoundController
 	GetLocalConfiguration() LocalNodeConfiguration
 }
 

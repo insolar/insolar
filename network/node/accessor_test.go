@@ -63,7 +63,7 @@ func TestAccessor(t *testing.T) {
 
 	node := newMutableNode(gen.Reference(), insolar.StaticRoleVirtual, nil, insolar.NodeReady, "127.0.0.1:0", "")
 
-	node2 := newMutableNode(gen.Reference(), insolar.StaticRoleVirtual, nil, insolar.NodePending, "127.0.0.1:0", "")
+	node2 := newMutableNode(gen.Reference(), insolar.StaticRoleVirtual, nil, insolar.NodeJoining, "127.0.0.1:0", "")
 	node2.SetShortID(11)
 
 	node3 := newMutableNode(gen.Reference(), insolar.StaticRoleVirtual, nil, insolar.NodeLeaving, "127.0.0.1:0", "")
