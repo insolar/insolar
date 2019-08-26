@@ -68,7 +68,7 @@ type WaitPulsar struct {
 }
 
 func (g *WaitPulsar) Run(ctx context.Context, pulse insolar.Pulse) {
-	g.switchOnRealPulse(ctx, pulse)
+	g.switchOnRealPulse(pulse)
 
 	select {
 	case <-g.bootstrapTimer.C:
@@ -84,10 +84,10 @@ func (g *WaitPulsar) GetState() insolar.NetworkState {
 }
 
 func (g *WaitPulsar) OnConsensusFinished(ctx context.Context, report network.Report) {
-	g.switchOnRealPulse(ctx, EnsureGetPulse(ctx, g.PulseAccessor, report.PulseNumber))
+	g.switchOnRealPulse(EnsureGetPulse(ctx, g.PulseAccessor, report.PulseNumber))
 }
 
-func (g *WaitPulsar) switchOnRealPulse(ctx context.Context, pulse insolar.Pulse) {
+func (g *WaitPulsar) switchOnRealPulse(pulse insolar.Pulse) {
 	if pulse.PulseNumber > insolar.FirstPulseNumber && pulse.EpochPulseNumber > insolar.EphemeralPulseEpoch {
 		g.pulseArrived <- pulse
 		close(g.pulseArrived)
