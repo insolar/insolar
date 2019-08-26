@@ -41,7 +41,7 @@ func TestDepositTransferToken(t *testing.T) {
 	secondBalance := new(big.Int).Add(firstBalance, big.NewInt(1000))
 
 	anon := func() api.CallMethodReply {
-		_, _, err := makeSignedRequest(launchnet.TestRPCUrl, member,
+		_, _, err := makeSignedRequest(launchnet.TestRPCUrlPublic, member,
 			"deposit.transfer", map[string]interface{}{"amount": "1000", "ethTxHash": "Eth_TxHash_test"})
 		require.Error(t, err)
 		fmt.Println("Lockup STEP: --- RETURNED   " + err.Error())
@@ -56,7 +56,7 @@ func TestDepositTransferToken(t *testing.T) {
 	require.NoError(t, err)
 
 	anon = func() api.CallMethodReply {
-		_, _, err := makeSignedRequest(launchnet.TestRPCUrl, member,
+		_, _, err := makeSignedRequest(launchnet.TestRPCUrlPublic, member,
 			"deposit.transfer", map[string]interface{}{"amount": "1000", "ethTxHash": "Eth_TxHash_test"})
 		if err == nil {
 			fmt.Println("Vesting STEP: === SUCCESS")
@@ -75,7 +75,7 @@ func TestDepositTransferToken(t *testing.T) {
 func TestDepositTransferBeforeUnhold(t *testing.T) {
 	member := fullMigration(t, "Eth_TxHash_test")
 
-	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, member,
+	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, member,
 		"deposit.transfer", map[string]interface{}{"amount": "100", "ethTxHash": "Eth_TxHash_test"})
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "hold period didn't end")
@@ -84,7 +84,7 @@ func TestDepositTransferBeforeUnhold(t *testing.T) {
 func TestDepositTransferBiggerAmount(t *testing.T) {
 	member := fullMigration(t, "Eth_TxHash_test")
 
-	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, member,
+	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, member,
 		"deposit.transfer", map[string]interface{}{"amount": "10000000000000", "ethTxHash": "Eth_TxHash_test"})
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "not enough balance for transfer")
@@ -93,7 +93,7 @@ func TestDepositTransferBiggerAmount(t *testing.T) {
 func TestDepositTransferAnotherTx(t *testing.T) {
 	member := fullMigration(t, "Eth_TxHash_test")
 
-	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, member,
+	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, member,
 		"deposit.transfer", map[string]interface{}{"amount": "100", "ethTxHash": "Eth_TxHash_testNovalid"})
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "can't find deposit")
@@ -102,7 +102,7 @@ func TestDepositTransferAnotherTx(t *testing.T) {
 func TestDepositTransferWrongValueAmount(t *testing.T) {
 	member := fullMigration(t, "Eth_TxHash_test")
 
-	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, member,
+	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, member,
 		"deposit.transfer", map[string]interface{}{"amount": "foo", "ethTxHash": "Eth_TxHash_test"})
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "can't parse input amount")
@@ -116,7 +116,7 @@ func TestDepositTransferNotEnoughConfirms(t *testing.T) {
 
 	_ = migrate(t, member.Ref, "1000", "Eth_TxHash_test", migrationAddress, 0)
 
-	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, member,
+	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, member,
 		"deposit.transfer", map[string]interface{}{"amount": "100", "ethTxHash": "Eth_TxHash_test"})
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "not enough balance for transfer")

@@ -35,7 +35,7 @@ func TestMemberMigrationCreate(t *testing.T) {
 	_, err = signedRequest(t, launchnet.TestRPCUrl, &launchnet.MigrationAdmin,
 		"migration.addAddresses", map[string]interface{}{"migrationAddresses": []string{ba}})
 	require.NoError(t, err)
-	result, err := signedRequest(t, launchnet.TestRPCUrl, member, "member.migrationCreate", nil)
+	result, err := signedRequest(t, launchnet.TestRPCUrlPublic, member, "member.migrationCreate", nil)
 	require.NoError(t, err)
 	output, ok := result.(map[string]interface{})
 	require.True(t, ok)
@@ -47,13 +47,13 @@ func TestMemberMigrationCreateWhenNomigrationAddressesLeft(t *testing.T) {
 	member1, err := newUserWithKeys()
 	require.NoError(t, err)
 	addMigrationAddress(t)
-	_, err = signedRequest(t, launchnet.TestRPCUrl, member1, "member.migrationCreate", nil)
+	_, err = signedRequest(t, launchnet.TestRPCUrlPublic, member1, "member.migrationCreate", nil)
 	require.Nil(t, err)
 
 	member2, err := newUserWithKeys()
 	require.NoError(t, err)
 
-	_, err = signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, member2, "member.migrationCreate", nil)
+	_, err = signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, member2, "member.migrationCreate", nil)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "no more migration addresses left in any shard")
 }
@@ -62,7 +62,7 @@ func TestMemberMigrationCreateWithBadKey(t *testing.T) {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
 	member.PubKey = "fake"
-	_, err = signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, member, "member.migrationCreate", nil)
+	_, err = signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, member, "member.migrationCreate", nil)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), fmt.Sprintf("problems with decoding. Key - %s", member.PubKey))
 }
@@ -73,19 +73,19 @@ func TestMemberMigrationCreateWithSamePublicKey(t *testing.T) {
 
 	addMigrationAddress(t)
 
-	_, err = signedRequest(t, launchnet.TestRPCUrl, member, "member.migrationCreate", nil)
+	_, err = signedRequest(t, launchnet.TestRPCUrlPublic, member, "member.migrationCreate", nil)
 	require.NoError(t, err)
 
 	addMigrationAddress(t)
 
-	_, err = signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, member, "member.migrationCreate", map[string]interface{}{})
+	_, err = signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, member, "member.migrationCreate", map[string]interface{}{})
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "failed to set reference in public key shard: can't set reference because this key already exists")
 
 	memberForBurn, err := newUserWithKeys()
 	require.NoError(t, err)
 
-	_, err = signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, memberForBurn, "member.migrationCreate", nil)
+	_, err = signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, memberForBurn, "member.migrationCreate", nil)
 }
 
 func TestMemberMigrationCreateWithSameMigrationAddress(t *testing.T) {
@@ -93,16 +93,16 @@ func TestMemberMigrationCreateWithSameMigrationAddress(t *testing.T) {
 	require.NoError(t, err)
 
 	ba := testutils.RandomString()
-	_, _ = signedRequest(t, launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.addAddresses",
+	_, _ = signedRequest(t, launchnet.TestRPCUrlPublic, &launchnet.MigrationAdmin, "migration.addAddresses",
 		map[string]interface{}{"migrationAddresses": []string{ba, ba}})
 
-	_, err = signedRequest(t, launchnet.TestRPCUrl, member1, "member.migrationCreate", nil)
+	_, err = signedRequest(t, launchnet.TestRPCUrlPublic, member1, "member.migrationCreate", nil)
 	require.NoError(t, err)
 
 	member2, err := newUserWithKeys()
 	require.NoError(t, err)
 
-	_, err = signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, member2, "member.migrationCreate", nil)
+	_, err = signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, member2, "member.migrationCreate", nil)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "failed to set reference in migration address shard: can't set reference because this key already exists")
 }

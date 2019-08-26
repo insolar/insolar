@@ -37,20 +37,14 @@ type AdminContractService struct {
 // NewAdminContractService creates new AdminContract service instance.
 func NewAdminContractService(runner *Runner) *AdminContractService {
 	methods := map[string]bool{
-		"member.getBalance":          true,
-		"wallet.getBalance":          true,
 		"migration.getInfo":          true,
 		"migration.deactivateDaemon": true,
 		"migration.activateDaemon":   true,
 		"migration.checkDaemon":      true,
 		"migration.addAddresses":     true,
-		"contract.registerNode":      true,
 		"deposit.migration":          true,
-		"member.create":              true,
-		"member.get":                 true,
-		"member.transfer":            true,
-		"member.migrationCreate":     true,
-		"deposit.transfer":           true,
+		"member.getBalance":          true,
+		"contract.registerNode":      true,
 		"contract.getNodeRef":        true,
 		"CreateHelloWorld":           true,
 		"Greet":                      true,

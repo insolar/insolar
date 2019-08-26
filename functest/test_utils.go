@@ -108,7 +108,7 @@ func createMember(t *testing.T) *launchnet.User {
 	require.NoError(t, err)
 	member.Ref = launchnet.Root.Ref
 
-	result, err := signedRequest(t, launchnet.TestRPCUrl, member, "member.create", nil)
+	result, err := signedRequest(t, launchnet.TestRPCUrlPublic, member, "member.create", nil)
 	require.NoError(t, err)
 	ref, ok := result.(map[string]interface{})["reference"].(string)
 	require.True(t, ok)
@@ -125,7 +125,7 @@ func createMigrationMemberForMA(t *testing.T, ma string) *launchnet.User {
 		map[string]interface{}{"migrationAddresses": []string{ma}})
 	require.NoError(t, err)
 
-	result, err := signedRequest(t, launchnet.TestRPCUrl, member, "member.migrationCreate", nil)
+	result, err := signedRequest(t, launchnet.TestRPCUrlPublic, member, "member.migrationCreate", nil)
 	require.NoError(t, err)
 	ref, ok := result.(map[string]interface{})["reference"].(string)
 	require.True(t, ok)
@@ -255,7 +255,8 @@ func getStatus(t testing.TB) statusResponse {
 func activateDaemons(t *testing.T) {
 
 	if len(launchnet.MigrationDaemons[0].Ref) > 0 {
-		res, err := signedRequest(t, launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.checkDaemon", map[string]interface{}{"reference": launchnet.MigrationDaemons[0].Ref})
+		res, err := signedRequest(t, launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.checkDaemon",
+			map[string]interface{}{"reference": launchnet.MigrationDaemons[0].Ref})
 		require.NoError(t, err)
 		status := res.(map[string]interface{})["status"].(string)
 		if status == "inactive" {
@@ -327,7 +328,7 @@ func makeSignedRequest(URL string, user *launchnet.User, method string, params i
 		caller = ""
 	}
 
-	seed, err := requester.GetSeed(launchnet.TestRPCUrl)
+	seed, err := requester.GetSeed(URL)
 	if err != nil {
 		return nil, "", err
 	}
@@ -558,7 +559,7 @@ func setMigrationDaemonsRef() error {
 	for i, mDaemon := range launchnet.MigrationDaemons {
 		daemon := mDaemon
 		daemon.Ref = launchnet.Root.Ref
-		res, _, err := makeSignedRequest(launchnet.TestRPCUrl, daemon, "member.get", nil)
+		res, _, err := makeSignedRequest(launchnet.TestRPCUrlPublic, daemon, "member.get", nil)
 		if err != nil {
 			return errors.Wrap(err, "[ setup ] get member by public key failed ,key ")
 		}
