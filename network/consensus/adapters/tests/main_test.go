@@ -95,11 +95,13 @@ func TestConsensusJoin(t *testing.T) {
 	initPulsar(ctx, defaultPulseDelta, *ns)
 
 	testCase(defaultTestDuration, defaultStartCaseAfter, func() {
-		for _, joiner := range js.staticProfiles {
-			ns.controllers[0].AddJoinCandidate(candidate{
+		for i, joiner := range js.staticProfiles {
+			err := ns.controllers[i].AddJoinCandidate(candidate{
 				joiner,
 				joiner.GetExtension(),
 			})
+
+			require.NoError(t, err)
 		}
 	})
 
@@ -180,10 +182,12 @@ func TestConsensusJoinLeave(t *testing.T) {
 
 		go func() {
 			for i, joiner := range js.staticProfiles {
-				ns.controllers[i].AddJoinCandidate(candidate{
+				err := ns.controllers[i].AddJoinCandidate(candidate{
 					joiner,
 					joiner.GetExtension(),
 				})
+
+				require.NoError(t, err)
 			}
 
 			wg.Done()
@@ -227,10 +231,12 @@ func TestConsensusJoinDrop(t *testing.T) {
 
 		go func() {
 			for i, joiner := range js.staticProfiles {
-				ns.controllers[i].AddJoinCandidate(candidate{
+				err := ns.controllers[i].AddJoinCandidate(candidate{
 					joiner,
 					joiner.GetExtension(),
 				})
+
+				require.NoError(t, err)
 			}
 
 			wg.Done()
@@ -324,10 +330,12 @@ func TestConsensusAll(t *testing.T) {
 
 		go func() {
 			for i, joiner := range js.staticProfiles {
-				ns.controllers[i].AddJoinCandidate(candidate{
+				err := ns.controllers[i].AddJoinCandidate(candidate{
 					joiner,
 					joiner.GetExtension(),
 				})
+
+				require.NoError(t, err)
 			}
 
 			wg.Done()
