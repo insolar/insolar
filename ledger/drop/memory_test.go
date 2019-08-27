@@ -95,9 +95,9 @@ func TestDropStorageMemory_DoubleSet(t *testing.T) {
 	fSize := rand.Uint64()
 	sSize := rand.Uint64()
 
-	err := ms.Set(ctx, Drop{JetID: fJet, Pulse: fPn, Size: fSize})
+	err := ms.Set(ctx, Drop{JetID: fJet, Pulse: fPn, DropSize: fSize})
 	require.NoError(t, err)
-	err = ms.Set(ctx, Drop{JetID: fJet, Pulse: fPn, Size: sSize})
+	err = ms.Set(ctx, Drop{JetID: fJet, Pulse: fPn, DropSize: sSize})
 	require.Error(t, err, ErrOverride)
 }
 
@@ -115,7 +115,7 @@ func TestDropStorageMemory_Set_Concurrent(t *testing.T) {
 		go func() {
 			<-startChannel
 
-			err := ms.Set(ctx, Drop{JetID: gen.JetID(), Pulse: gen.PulseNumber(), Size: rand.Uint64()})
+			err := ms.Set(ctx, Drop{JetID: gen.JetID(), Pulse: gen.PulseNumber(), DropSize: rand.Uint64()})
 			if err != nil {
 				require.Error(t, err, ErrOverride)
 			}
@@ -140,16 +140,16 @@ func TestDropStorageMemory_Delete(t *testing.T) {
 	sSize := rand.Uint64()
 	tSize := rand.Uint64()
 
-	_ = ms.Set(ctx, Drop{JetID: jets[0], Pulse: fPn, Size: fSize})
-	_ = ms.Set(ctx, Drop{JetID: jets[0], Pulse: sPn, Size: sSize})
-	_ = ms.Set(ctx, Drop{JetID: jets[1], Pulse: fPn, Size: tSize})
+	_ = ms.Set(ctx, Drop{JetID: jets[0], Pulse: fPn, DropSize: fSize})
+	_ = ms.Set(ctx, Drop{JetID: jets[0], Pulse: sPn, DropSize: sSize})
+	_ = ms.Set(ctx, Drop{JetID: jets[1], Pulse: fPn, DropSize: tSize})
 
 	ms.DeleteForPN(ctx, fPn)
 
 	drop, err := ms.ForPulse(ctx, jets[0], sPn)
 	require.NoError(t, err)
 	require.Equal(t, drop.Pulse, sPn)
-	require.Equal(t, drop.Size, sSize)
+	require.Equal(t, drop.DropSize, sSize)
 
 	drop, err = ms.ForPulse(ctx, jets[0], fPn)
 	require.Error(t, err, ErrNotFound)

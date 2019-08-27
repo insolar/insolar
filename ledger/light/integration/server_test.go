@@ -108,8 +108,8 @@ func DefaultLightInitialState() *payload.LightInitialState {
 		Pulse: pulse.PulseProto{
 			PulseNumber: insolar.FirstPulseNumber,
 		},
-		Drops: [][]byte{
-			drop.MustEncode(&drop.Drop{JetID: insolar.ZeroJetID, Pulse: insolar.FirstPulseNumber}),
+		Drops: []drop.Drop{
+			{JetID: insolar.ZeroJetID, Pulse: insolar.FirstPulseNumber},
 		},
 	}
 }

@@ -306,10 +306,10 @@ func Test_LightStartsFromInitialState(t *testing.T) {
 		return jetTree.LeafIDs()
 	}
 
-	createDrops := func(jets []insolar.JetID) [][]byte {
-		var drops [][]byte
+	createDrops := func(jets []insolar.JetID) []drop.Drop {
+		var drops []drop.Drop
 		for _, jetID := range jets {
-			drops = append(drops, drop.MustEncode(&drop.Drop{JetID: jetID, Pulse: insolar.FirstPulseNumber}))
+			drops = append(drops, drop.Drop{JetID: jetID, Pulse: insolar.FirstPulseNumber})
 		}
 		return drops
 	}

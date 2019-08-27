@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package executor;
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+option (gogoproto.goproto_getters_all) = false;
+
+
+message JetInfo {
+    int32 polymorph = 16;
+    bytes JetID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.JetID", (gogoproto.nullable) = false];
+    repeated bytes HotConfirmed = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.JetID", (gogoproto.nullable) = false];
+    bool DropConfirmed = 22;
+    bool BackupConfirmed = 23;
+    bool Split = 24;
+    bool IsSplitSet = 25;
+}
+
+
+message JetsInfo {
+    int32 polymorph = 16;
+
+    repeated JetInfo Jets = 20 [(gogoproto.nullable) = false];
+}
