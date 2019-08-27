@@ -133,7 +133,7 @@ func (j *JetInfo) isConfirmed(checkBackup bool) bool {
 	}
 
 	if !j.IsSplitSet {
-		panic("unexpected situation")
+		panic("IsSplitJet must be set before calling for isConfirmed")
 	}
 
 	if !j.Split {
@@ -342,7 +342,7 @@ func (jk *DBJetKeeper) getTopSyncJets() ([]insolar.JetID, error) {
 
 	for _, ji := range jets {
 		if !ji.IsSplitSet {
-			panic("unexpected situation")
+			panic("IsSplitSet must be set before calling for getTopSyncJets")
 		}
 		if ji.Split {
 			left, right := jet.Siblings(ji.JetID)
