@@ -40,10 +40,11 @@ type storedSeed struct {
 // SeedManager manages working with seed pool
 // It's thread safe
 type SeedManager struct {
-	mutex    sync.RWMutex
-	seedPool map[Seed]storedSeed
-	ttl      time.Duration
-	stopped  bool
+	mutex        sync.RWMutex
+	seedPool     map[Seed]storedSeed
+	ttl          time.Duration
+	stopDeleting bool
+	stopped      chan struct{}
 }
 
 // New creates new seed manager with default params
@@ -53,25 +54,32 @@ func New() *SeedManager {
 
 // NewSpecified creates new seed manager with custom params
 func NewSpecified(ttl time.Duration, cleanPeriod time.Duration) *SeedManager {
-	sm := SeedManager{seedPool: make(map[Seed]storedSeed), ttl: ttl, stopped: false}
+	sm := SeedManager{
+		seedPool:     make(map[Seed]storedSeed),
+		ttl:          ttl,
+		stopDeleting: false,
+		stopped:      make(chan struct{}),
+	}
+
 	go func() {
-		for range time.Tick(cleanPeriod) {
-			sm.deleteExpired()
-			sm.mutex.RLock()
-			if sm.stopped {
-				break
+		var stop = false
+		for !stop {
+			select {
+			case <-time.Tick(cleanPeriod):
+				sm.deleteExpired()
+			case <-sm.stopped:
+				stop = true
 			}
-			sm.mutex.RUnlock()
 		}
+		sm.stopped <- struct{}{}
 	}()
 
 	return &sm
 }
 
 func (sm *SeedManager) Stop() {
-	sm.mutex.Lock()
-	defer sm.mutex.Unlock()
-	sm.stopped = true
+	sm.stopped <- struct{}{}
+	<-sm.stopped
 }
 
 // Add adds seed to pool
