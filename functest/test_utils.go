@@ -260,7 +260,7 @@ func activateDaemons(t *testing.T, countDaemon int) []*launchnet.User {
 	for i := 0; i < countDaemon; i++ {
 		if len(launchnet.MigrationDaemons[i].Ref) > 0 {
 			res, err := signedRequest(t, launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.checkDaemon",
-			map[string]interface{}{"reference": launchnet.MigrationDaemons[i].Ref})
+				map[string]interface{}{"reference": launchnet.MigrationDaemons[i].Ref})
 			require.NoError(t, err)
 
 			status := res.(map[string]interface{})["status"].(string)

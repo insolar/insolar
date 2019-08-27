@@ -30,11 +30,6 @@ import (
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/require"
 
-	"github.com/insolar/insolar/api"
-	"github.com/insolar/insolar/logicrunner/builtin/foundation"
-	"github.com/insolar/insolar/testutils"
-	"github.com/stretchr/testify/require"
-
 	"github.com/insolar/insolar/testutils/launchnet"
 )
 
