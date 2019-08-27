@@ -99,7 +99,7 @@ func (isk *InitialStateKeeper) prepareDrops(ctx context.Context) {
 	for _, jetID := range isk.jetAccessor.All(ctx, isk.syncPulse) {
 		dr, err := isk.dropStorage.ForPulse(ctx, jetID, isk.syncPulse)
 		if err != nil {
-			panic(fmt.Sprint("No drop found for pulse: ", isk.syncPulse.String()))
+			inslogger.FromContext(ctx).Fatal(fmt.Sprint("No drop found for pulse: ", isk.syncPulse.String()))
 		}
 
 		if dr.Split {
@@ -163,7 +163,7 @@ func (isk *InitialStateKeeper) Get(ctx context.Context, lightExecutor insolar.Re
 	for id, jetDrop := range isk.jetDrops {
 		light, err := isk.jetCoordinator.LightExecutorForJet(ctx, insolar.ID(id), pulse)
 		if err != nil {
-			panic(fmt.Sprint("No drop found for pulse ", isk.syncPulse.String()))
+			logger.Fatal(fmt.Sprint("No drop found for pulse ", isk.syncPulse.String()))
 		}
 
 		if light.Equal(lightExecutor) {
