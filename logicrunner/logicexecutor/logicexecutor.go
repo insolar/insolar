@@ -102,8 +102,11 @@ func (le *logicExecutor) ExecuteMethod(ctx context.Context, transcript *common.T
 	if err != nil {
 		return nil, errors.Wrap(err, "executor error")
 	}
-	if result == nil {
-		return nil, errors.New("result is NIL")
+	if len(result) == 0 {
+		return nil, errors.New("return of method is empty")
+	}
+	if len(newData) == 0 {
+		return nil, errors.New("object state is empty")
 	}
 
 	res := requestresult.New(result, *objDesc.HeadRef())
@@ -154,8 +157,8 @@ func (le *logicExecutor) ExecuteConstructor(
 	if err != nil {
 		return nil, errors.Wrap(err, "executor error")
 	}
-	if result == nil {
-		return nil, errors.New("result is NIL")
+	if len(result) == 0 {
+		return nil, errors.New("return of constructor is empty")
 	}
 
 	res := requestresult.New(result, transcript.RequestRef)
