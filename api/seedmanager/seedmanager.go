@@ -59,11 +59,13 @@ func NewSpecified(ttl time.Duration, cleanPeriod time.Duration) *SeedManager {
 		stopped:  make(chan struct{}),
 	}
 
+	ticker := time.NewTicker(cleanPeriod)
+
 	go func() {
 		var stop = false
 		for !stop {
 			select {
-			case <-time.Tick(cleanPeriod):
+			case <-ticker.C:
 				sm.deleteExpired()
 			case <-sm.stopped:
 				stop = true
