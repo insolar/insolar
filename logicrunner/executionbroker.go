@@ -191,7 +191,9 @@ func (q *ExecutionBroker) processTranscript(ctx context.Context, transcript *com
 
 	q.finishTask(ctx, transcript)
 
-	go q.requestsExecutor.SendReply(ctx, transcript, replyData, err)
+	go q.requestsExecutor.SendReply(
+		ctx, transcript.RequestRef, *transcript.Request, replyData, err,
+	)
 
 	// we're checking here that pulse was changed and we should send
 	// a message that we've finished processing tasks
