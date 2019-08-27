@@ -141,7 +141,8 @@ func (s *suiteTest) TestStreamTransport() {
 	n1Port, _ := strconv.Atoi(strings.Split(n1.tcp.Address(), ":")[1])
 	n2Port, _ := strconv.Atoi(strings.Split(n2.tcp.Address(), ":")[1])
 	port := 5555
-	for ; port == n1Port || port == n2Port; port++ {
+	for port == n1Port || port == n2Port {
+		port++
 	}
 
 	_, err := n2.tcp.Dial(ctx, "127.0.0.1:"+strconv.Itoa(port))
