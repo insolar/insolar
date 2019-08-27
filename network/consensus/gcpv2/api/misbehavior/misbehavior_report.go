@@ -98,5 +98,5 @@ func (c Type) Type() int {
 }
 
 func (c Category) Of(misbehavior int) Type {
-	return Type(c<<32) | Type(misbehavior&(1<<32-1))
+	return Type(c<<32) | Type(misbehavior)&(1<<32-1)
 }
