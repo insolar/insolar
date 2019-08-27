@@ -17,6 +17,7 @@
 package contractrequester
 
 import (
+	"bytes"
 	"context"
 	"testing"
 	"time"
@@ -29,6 +30,8 @@ import (
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/bus/meta"
+	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
@@ -36,6 +39,7 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 )
@@ -241,8 +245,6 @@ func TestReceiveResult(t *testing.T) {
 	cReq, err := New()
 	require.NoError(t, err)
 
-	cReq.Sender = bus.NewSenderMock(t)
-
 	mc := minimock.NewController(t)
 	defer mc.Finish()
 
@@ -250,32 +252,84 @@ func TestReceiveResult(t *testing.T) {
 	var reqHash [insolar.RecordHashSize]byte
 	copy(reqHash[:], reqRef.Record().Hash())
 
-	msg := &payload.ReturnResults{
+	msgPayload := &payload.ReturnResults{
 		RequestRef: reqRef,
 	}
 
-	// unexpected result
-	res, err := serializeReply(payload.MustNewMessage(msg))
-	require.NoError(t, err)
-	err = cReq.ReceiveResult(res)
-	require.NoError(t, err)
+	msg := payload.MustNewMessage(msgPayload)
 
-	// expected result
-	resChan := make(chan *payload.ReturnResults)
-	chanResult := make(chan *payload.ReturnResults)
-	cReq.ResultMap[reqHash] = resChan
-
-	go func() {
-		chanResult <- <-cReq.ResultMap[reqHash]
-	}()
-
-	res, err = serializeReply(payload.MustNewMessage(msg))
+	sp, err := instracer.Serialize(ctx)
 	require.NoError(t, err)
-	err = cReq.ReceiveResult(res)
+	msg.Metadata.Set(meta.SpanData, string(sp))
 
-	require.NoError(t, err)
-	require.Equal(t, 0, len(cReq.ResultMap))
-	require.Equal(t, msg, <-chanResult)
+	{
+
+		msg.Metadata.Set(meta.TraceID, "OK_unwanted_test")
+		cReq.Sender = bus.NewSenderMock(t).ReplyMock.Set(
+			func(_ context.Context, origin payload.Meta, replyMsg *message.Message) {
+				replyData, err := reply.Deserialize(bytes.NewBuffer(replyMsg.Payload))
+				require.NoError(t, err)
+				require.Equal(t, &reply.OK{}, replyData)
+			})
+
+		// unexpected result
+		res, err := serializeReply(msg)
+		require.NoError(t, err)
+		err = cReq.ReceiveResult(res)
+		require.NoError(t, err)
+	}
+
+	{
+		msg.Metadata.Set(meta.TraceID, "OK_wanted_test")
+		cReq.Sender = bus.NewSenderMock(t).ReplyMock.Set(
+			func(_ context.Context, origin payload.Meta, replyMsg *message.Message) {
+				replyData, err := reply.Deserialize(bytes.NewBuffer(replyMsg.Payload))
+				require.NoError(t, err)
+				require.Equal(t, &reply.OK{}, replyData)
+			})
+
+		// expected result
+		resChan := make(chan *payload.ReturnResults)
+		chanResult := make(chan *payload.ReturnResults)
+		cReq.ResultMap[reqHash] = resChan
+
+		go func() {
+			chanResult <- <-cReq.ResultMap[reqHash]
+		}()
+
+		res, err := serializeReply(msg)
+		require.NoError(t, err)
+		err = cReq.ReceiveResult(res)
+
+		require.NoError(t, err)
+		require.Equal(t, 0, len(cReq.ResultMap))
+		require.Equal(t, msgPayload, <-chanResult)
+	}
+
+	// error during result
+	{
+		msg.Metadata.Set(meta.TraceID, "handle_flow_cancelled")
+		cReq.LR = testutils.NewLogicRunnerMock(t).AddUnwantedResponseMock.Set(
+			func(ctx context.Context, msg insolar.Payload) error {
+				return flow.ErrCancelled
+			})
+		cReq.Sender = bus.NewSenderMock(t).ReplyMock.Set(
+			func(_ context.Context, origin payload.Meta, replyMsg *message.Message) {
+				payloadError := &payload.Error{}
+				err := payloadError.Unmarshal(replyMsg.Payload)
+				require.NoError(t, err)
+				require.Equal(t, &payload.Error{
+					Polymorph: uint32(payload.TypeError),
+					Code:      uint32(payload.CodeFlowCanceled),
+					Text:      errors.Wrap(flow.ErrCancelled, "[ ReceiveResult ]").Error(),
+				}, payloadError)
+			})
+
+		res, err := serializeReply(msg)
+		require.NoError(t, err)
+		err = cReq.ReceiveResult(res)
+		require.NoError(t, err)
+	}
 }
 
 func serializeReply(msg *message.Message) (*message.Message, error) {

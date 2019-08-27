@@ -32,6 +32,7 @@ import (
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/bus/meta"
 	busMeta "github.com/insolar/insolar/insolar/bus/meta"
+	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
@@ -341,13 +342,23 @@ func (cr *ContractRequester) ReceiveResult(msg *message.Message) error {
 		ctx, _ = inslogger.WithField(ctx, k, v)
 	}
 
-	meta := payload.Meta{}
-	err = meta.Unmarshal(msg.Payload)
+	payloadMeta := &payload.Meta{}
+	err = payloadMeta.Unmarshal(msg.Payload)
 	if err != nil {
 		return err
 	}
 
-	payloadType, err := payload.UnmarshalType(meta.Payload)
+	err = cr.handleMessage(ctx, payloadMeta)
+	if err != nil {
+		cr.replyError(ctx, payloadMeta, err)
+		return nil
+	}
+	cr.Sender.Reply(ctx, *payloadMeta, bus.ReplyAsMessage(ctx, &reply.OK{}))
+	return nil
+}
+
+func (cr *ContractRequester) handleMessage(ctx context.Context, payloadMeta *payload.Meta) error {
+	payloadType, err := payload.UnmarshalType(payloadMeta.Payload)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal payload type")
 	}
@@ -361,7 +372,7 @@ func (cr *ContractRequester) ReceiveResult(msg *message.Message) error {
 	}
 
 	res := payload.ReturnResults{}
-	err = res.Unmarshal(meta.Payload)
+	err = res.Unmarshal(payloadMeta.Payload)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal payload.ReturnResults")
 	}
@@ -375,4 +386,25 @@ func (cr *ContractRequester) ReceiveResult(msg *message.Message) error {
 	}
 
 	return nil
+}
+
+func (cr *ContractRequester) replyError(ctx context.Context, meta *payload.Meta, err error) {
+	errCode := uint32(payload.CodeUnknown)
+
+	// Throwing custom error code
+	cause := errors.Cause(err)
+	insError, ok := cause.(*payload.CodedError)
+	if ok {
+		errCode = insError.GetCode()
+	}
+
+	// todo refactor this #INS-3191
+	if cause == flow.ErrCancelled {
+		errCode = uint32(payload.CodeFlowCanceled)
+	}
+	errMsg, newErr := payload.NewMessage(&payload.Error{Text: err.Error(), Code: errCode})
+	if newErr != nil {
+		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to reply error"))
+	}
+	cr.Sender.Reply(ctx, *meta, errMsg)
 }

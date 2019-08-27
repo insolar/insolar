@@ -71,7 +71,7 @@ func (s *Init) replyError(ctx context.Context, meta payload.Meta, err error) {
 	}
 
 	// todo refactor this #INS-3191
-	if err == flow.ErrCancelled {
+	if cause == flow.ErrCancelled {
 		errCode = uint32(payload.CodeFlowCanceled)
 	}
 	errMsg, newErr := payload.NewMessage(&payload.Error{Text: err.Error(), Code: errCode})
