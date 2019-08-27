@@ -42,7 +42,7 @@ type JetKeeper interface {
 	AddBackupConfirmation(ctx context.Context, pn insolar.PulseNumber) error
 	// TopSyncPulse provides access to highest synced (replicated) pulse.
 	TopSyncPulse() insolar.PulseNumber
-	// HasJetConfirms says if given pulse has drop and hot confirms. Ignore backups
+	// HasAllJetConfirms says if given pulse has drop and hot confirms. Ignore backups
 	HasAllJetConfirms(ctx context.Context, pn insolar.PulseNumber) bool
 }
 
