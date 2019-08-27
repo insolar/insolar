@@ -99,14 +99,6 @@ func (j *Jet) ExtractLeafIDs(ids *[]insolar.JetID, path []byte, depth uint8) {
 	}
 }
 
-//go:generate minimock -i github.com/insolar/insolar/insolar/jet.TreeManager -o ./ -s _mock.go -g
-
-// TreeManager interface for operations with JetTree
-type TreeManager interface {
-	Find(insolar.ID) (insolar.JetID, bool)
-	Update(insolar.JetID, bool)
-}
-
 // NewTree creates new tree.
 func NewTree(isActual bool) *Tree {
 	return &Tree{

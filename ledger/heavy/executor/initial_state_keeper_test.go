@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
-package executor
+package executor_test
 
 import (
 	"bytes"
+	"fmt"
 	"sort"
 	"strings"
 	"testing"
@@ -29,6 +30,7 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/drop"
+	"github.com/insolar/insolar/ledger/heavy/executor"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/stretchr/testify/require"
 )
@@ -47,39 +49,40 @@ func singleJetFixture() []insolar.JetID {
 func jetsFixture() []insolar.JetID {
 	tree := jet.NewTree(true)
 	left, _, _ := tree.Split(tree.LeafIDs()[0])
+	fmt.Println(tree.LeafIDs()[0].DebugString())
+	fmt.Println(left.DebugString())
 	_, _, _ = tree.Split(left)
 	return tree.LeafIDs()
 }
 
 func indexesFixture() []record.Index {
-	objIDs := gen.UniqueIDs(5)
 	return []record.Index{
 		{
-			ObjID: objIDs[0],
+			ObjID: *insolar.NewID(pending, []byte{0x01}), // JetIDs[0]
 			Lifeline: record.Lifeline{
 				EarliestOpenRequest: &pending,
 			},
 		},
 		{
-			ObjID: objIDs[1],
+			ObjID: *insolar.NewID(pending, []byte{0x02}), // JetIDs[0]
 			Lifeline: record.Lifeline{
 				EarliestOpenRequest: &pending,
 			},
 		},
 		{
-			ObjID: objIDs[2],
+			ObjID: *insolar.NewID(pending, []byte{0xD5}), // 11010101 -> JetIDs[2]
 			Lifeline: record.Lifeline{
 				EarliestOpenRequest: &pending,
 			},
 		},
 		{
-			ObjID: objIDs[3],
+			ObjID: *insolar.NewID(pending, []byte{0xD6}), // 11010110 -> JetIDs[2]
 			Lifeline: record.Lifeline{
 				EarliestOpenRequest: nil,
 			},
 		},
 		{
-			ObjID: objIDs[4],
+			ObjID: *insolar.NewID(pending, []byte{0xAC}), // 10101100 -> JetIDs[1]
 			Lifeline: record.Lifeline{
 				EarliestOpenRequest: nil,
 			},
@@ -125,9 +128,8 @@ func TestInitialStateKeeper_Get_AfterRestart(t *testing.T) {
 	defer mc.Finish()
 	ctx := inslogger.TestContext(t)
 
-	jetKeeper := NewJetKeeperMock(mc)
+	jetKeeper := executor.NewJetKeeperMock(mc)
 	jetKeeper.TopSyncPulseMock.Return(topSync)
-
 	jetIDs := jetsFixture()
 	// split jet depends on fixture data
 	left, right := jet.Siblings(jetIDs[1])
@@ -141,35 +143,15 @@ func TestInitialStateKeeper_Get_AfterRestart(t *testing.T) {
 	dropAccessor.ForPulseMock.When(ctx, jetIDs[1], topSync).Then(drops[1], nil)
 	dropAccessor.ForPulseMock.When(ctx, jetIDs[2], topSync).Then(drops[2], nil)
 
-	jetTree := jet.NewTreeManagerMock(mc)
-
-	treeUpdateCalls := make(map[insolar.JetID]bool)
-	jetTree.UpdateMock.Set(func(jetID insolar.JetID, upd bool) {
-		treeUpdateCalls[jetID] = upd
-	})
-	expectedTreeUpdateCalls := map[insolar.JetID]bool{
-		jetIDs[0]: true,
-		left:      true,
-		right:     true,
-		jetIDs[2]: true,
-	}
-
 	indexes := indexesFixture()
 	indexAccessor := object.NewIndexAccessorMock(mc)
 	indexAccessor.ForPulseMock.Expect(ctx, topSync).Return(indexes, nil)
 
-	jetTree.FindMock.When(indexes[0].ObjID).Then(jetIDs[0], true)
-	jetTree.FindMock.When(indexes[1].ObjID).Then(jetIDs[0], true)
-	jetTree.FindMock.When(indexes[2].ObjID).Then(jetIDs[2], true)
-
 	jetCoordinator := jet.NewCoordinatorMock(mc)
 
-	stateKeeper := NewInitialStateKeeper(jetKeeper, jetAccessor, jetCoordinator, indexAccessor, dropAccessor)
-	stateKeeper.jetTree = jetTree
-
+	stateKeeper := executor.NewInitialStateKeeper(jetKeeper, jetAccessor, jetCoordinator, indexAccessor, dropAccessor)
 	err := stateKeeper.Start(ctx)
 	require.NoError(t, err)
-	require.Equal(t, expectedTreeUpdateCalls, treeUpdateCalls)
 
 	currentLight := gen.Reference()
 	anotherLight := gen.Reference()
@@ -227,7 +209,7 @@ func TestInitialStateKeeper_Get_EmptyAfterRestart(t *testing.T) {
 	defer mc.Finish()
 	ctx := inslogger.TestContext(t)
 
-	jetKeeper := NewJetKeeperMock(mc)
+	jetKeeper := executor.NewJetKeeperMock(mc)
 	jetKeeper.TopSyncPulseMock.Return(topSync)
 
 	jetIDs := singleJetFixture()
@@ -243,7 +225,7 @@ func TestInitialStateKeeper_Get_EmptyAfterRestart(t *testing.T) {
 
 	jetCoordinator := jet.NewCoordinatorMock(mc)
 
-	stateKeeper := NewInitialStateKeeper(jetKeeper, jetAccessor, jetCoordinator, indexAccessor, dropAccessor)
+	stateKeeper := executor.NewInitialStateKeeper(jetKeeper, jetAccessor, jetCoordinator, indexAccessor, dropAccessor)
 	err := stateKeeper.Start(ctx)
 	require.NoError(t, err)
 
@@ -273,7 +255,7 @@ func TestInitialStateKeeper_Get_WithDuplicatedDrops(t *testing.T) {
 	defer mc.Finish()
 	ctx := inslogger.TestContext(t)
 
-	jetKeeper := NewJetKeeperMock(mc)
+	jetKeeper := executor.NewJetKeeperMock(mc)
 	jetKeeper.TopSyncPulseMock.Return(topSync)
 
 	jetIDs := jetsFixture()
@@ -289,35 +271,16 @@ func TestInitialStateKeeper_Get_WithDuplicatedDrops(t *testing.T) {
 	dropAccessor.ForPulseMock.When(ctx, jetIDs[1], topSync).Then(drops[1], nil)
 	dropAccessor.ForPulseMock.When(ctx, jetIDs[2], topSync).Then(drops[2], nil)
 
-	jetTree := jet.NewTreeManagerMock(mc)
-
-	treeUpdateCalls := make(map[insolar.JetID]bool)
-	jetTree.UpdateMock.Set(func(jetID insolar.JetID, upd bool) {
-		treeUpdateCalls[jetID] = upd
-	})
-	expectedTreeUpdateCalls := map[insolar.JetID]bool{
-		jetIDs[0]: true,
-		left:      true,
-		right:     true,
-		jetIDs[2]: true,
-	}
-
 	indexes := indexesFixture()
 	indexAccessor := object.NewIndexAccessorMock(mc)
 	indexAccessor.ForPulseMock.Expect(ctx, topSync).Return(indexes, nil)
 
-	jetTree.FindMock.When(indexes[0].ObjID).Then(jetIDs[0], true)
-	jetTree.FindMock.When(indexes[1].ObjID).Then(jetIDs[0], true)
-	jetTree.FindMock.When(indexes[2].ObjID).Then(jetIDs[2], true)
-
 	jetCoordinator := jet.NewCoordinatorMock(mc)
 
-	stateKeeper := NewInitialStateKeeper(jetKeeper, jetAccessor, jetCoordinator, indexAccessor, dropAccessor)
-	stateKeeper.jetTree = jetTree
+	stateKeeper := executor.NewInitialStateKeeper(jetKeeper, jetAccessor, jetCoordinator, indexAccessor, dropAccessor)
 
 	err := stateKeeper.Start(ctx)
 	require.NoError(t, err)
-	require.Equal(t, expectedTreeUpdateCalls, treeUpdateCalls)
 
 	currentLight := gen.Reference()
 	anotherLight := gen.Reference()

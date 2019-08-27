@@ -55,7 +55,6 @@ type InitialStateKeeper struct {
 	dropStorage    drop.Accessor
 
 	syncPulse insolar.PulseNumber
-	jetTree   jet.TreeManager
 
 	lock                  sync.RWMutex
 	jetDrops              map[insolar.JetID][]byte
@@ -76,7 +75,6 @@ func NewInitialStateKeeper(
 		indexStorage:          indexStorage,
 		dropStorage:           dropStorage,
 		syncPulse:             jetKeeper.TopSyncPulse(),
-		jetTree:               jet.NewTree(true),
 		jetDrops:              make(map[insolar.JetID][]byte),
 		jetSiblings:           make(map[insolar.JetID]insolar.JetID),
 		abandonRequestIndexes: make(map[insolar.JetID][]record.Index),
@@ -125,8 +123,9 @@ func (isk *InitialStateKeeper) prepareDrops(ctx context.Context) {
 func (isk *InitialStateKeeper) prepareAbandonRequests(ctx context.Context) {
 	logger := inslogger.FromContext(ctx)
 
+	tree := jet.NewTree(true)
 	for jetID := range isk.jetDrops {
-		isk.jetTree.Update(jetID, true)
+		tree.Update(jetID, true)
 		isk.abandonRequestIndexes[jetID] = []record.Index{}
 	}
 
@@ -143,14 +142,14 @@ func (isk *InitialStateKeeper) prepareAbandonRequests(ctx context.Context) {
 	for _, index := range indexes {
 
 		if index.Lifeline.EarliestOpenRequest != nil {
-			isk.addIndexToState(ctx, index)
+			isk.addIndexToState(ctx, index, tree)
 		}
 	}
 }
 
-func (isk *InitialStateKeeper) addIndexToState(ctx context.Context, index record.Index) {
+func (isk *InitialStateKeeper) addIndexToState(ctx context.Context, index record.Index, tree *jet.Tree) {
 	logger := inslogger.FromContext(ctx)
-	indexJet, _ := isk.jetTree.Find(index.ObjID)
+	indexJet, _ := tree.Find(index.ObjID)
 	indexes, ok := isk.abandonRequestIndexes[indexJet]
 	if !ok {
 		// Someone changed jetTree in sync pulse while starting heavy material node
@@ -173,8 +172,8 @@ func (isk *InitialStateKeeper) Get(ctx context.Context, lightExecutor insolar.Re
 
 	logger.Debugf("[ InitialStateKeeper ] Getting drops for: %s in pulse: %s", lightExecutor.String(), pulse.String())
 
-	// Exclude sending two equal drops to single LME after split
-	excludeDrops := make(map[insolar.JetID]bool)
+	// Must not send two equal drops to single LME after split
+	existingDrops := make(map[insolar.JetID]bool)
 
 	for id, jetDrop := range isk.jetDrops {
 		light, err := isk.jetCoordinator.LightExecutorForJet(ctx, insolar.ID(id), pulse)
@@ -185,13 +184,13 @@ func (isk *InitialStateKeeper) Get(ctx context.Context, lightExecutor insolar.Re
 		if light.Equal(lightExecutor) {
 			jetIDs = append(jetIDs, id)
 
-			if _, ok := excludeDrops[id]; ok {
+			if _, ok := existingDrops[id]; ok {
 				continue
 			}
 
 			drops = append(drops, jetDrop)
 			if siblingID, ok := isk.jetSiblings[id]; ok {
-				excludeDrops[siblingID] = true
+				existingDrops[siblingID] = true
 			}
 		}
 	}
