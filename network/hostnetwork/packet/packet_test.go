@@ -220,8 +220,8 @@ func TestPacket_GetRequest_GetAuthorize(t *testing.T) {
 }
 
 func TestPacket_GetResponse(t *testing.T) {
-	cascade := BasicResponse{}
-	_, p2 := marshalUnmarshalPacketResponse(t, &cascade)
+	response := BasicResponse{}
+	_, p2 := marshalUnmarshalPacketResponse(t, &response)
 	assert.NotNil(t, p2.GetResponse().GetBasic())
 }
 

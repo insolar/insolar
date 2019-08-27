@@ -59,8 +59,6 @@ const (
 	Ping
 	// RPC is packet type to execute RPC on a remote node.
 	RPC
-	// Cascade is packet type to send cascade message and execute RPC on each node of the cascade.
-	Cascade
 	// Pulse is packet type to receive Pulse from pulsard and resend it on remote nodes.
 	Pulse
 	// Bootstrap is packet type for the node bootstrap process.

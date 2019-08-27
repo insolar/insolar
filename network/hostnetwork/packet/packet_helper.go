@@ -69,8 +69,6 @@ func (p *Packet) SetRequest(request interface{}) {
 		r = &Request_Ping{t}
 	case *RPCRequest:
 		r = &Request_RPC{t}
-	case *CascadeRequest:
-		r = &Request_Cascade{t}
 	case *PulseRequest:
 		r = &Request_Pulse{t}
 	case *BootstrapRequest:

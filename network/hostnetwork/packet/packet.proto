@@ -31,13 +31,12 @@ message Request {
     oneof Request {
         Ping Ping = 1;
         RPCRequest RPC = 2;
-        CascadeRequest Cascade = 3;
-        PulseRequest Pulse = 4;
-        BootstrapRequest Bootstrap = 5;
-        AuthorizeRequest Authorize = 6;
-        SignCertRequest SignCert = 7;
-        UpdateScheduleRequest UpdateSchedule = 8;
-        ReconnectRequest Reconnect = 9;
+        PulseRequest Pulse = 3;
+        BootstrapRequest Bootstrap = 4;
+        AuthorizeRequest Authorize = 5;
+        SignCertRequest SignCert = 6;
+        UpdateScheduleRequest UpdateSchedule = 7;
+        ReconnectRequest Reconnect = 8;
     }
 }
 
@@ -62,18 +61,6 @@ message Ping {
 message RPCRequest {
     string Method = 1;
     bytes Data = 2;
-}
-
-message Cascade {
-    repeated bytes NodeIds = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference"];
-    bytes Entropy = 2 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Entropy", (gogoproto.nullable) = false];
-    uint32 ReplicationFactor = 3;
-}
-
-message CascadeRequest {
-    string TraceID = 1;
-    RPCRequest RPC = 2;
-    Cascade Cascade = 3;
 }
 
 message PulseRequest {
