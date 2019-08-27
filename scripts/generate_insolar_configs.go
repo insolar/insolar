@@ -149,6 +149,20 @@ func main() {
 			conf.Ledger.JetSplit.ThresholdOverflowCount = 0
 			conf.Ledger.JetSplit.DepthLimit = 4
 		}
+		if node.Role == "heavy_material" {
+			conf.Ledger.Backup =
+				configuration.Backup{
+					ConfirmFile:          "BACKUPED",
+					MetaInfoFile:         "META.json",
+					TargetDirectory:      "/tmp/BKP/TARGET/PREVED/",
+					TmpDirectory:         "/tmp/BKP/TMP",
+					DirNameTemplate:      "pulse-%d",
+					BackupWaitPeriod:     10,
+					BackupFile:           "incr.bkp",
+					Enabled:              true,
+					PostProcessBackupCmd: []string{"ls"},
+				}
+		}
 
 		conf.APIRunner.Address = fmt.Sprintf(defaultHost+":191%02d", nodeIndex)
 		conf.Metrics.ListenAddress = fmt.Sprintf(defaultHost+":80%02d", nodeIndex)

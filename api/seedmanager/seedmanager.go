@@ -40,11 +40,10 @@ type storedSeed struct {
 // SeedManager manages working with seed pool
 // It's thread safe
 type SeedManager struct {
-	mutex        sync.RWMutex
-	seedPool     map[Seed]storedSeed
-	ttl          time.Duration
-	stopDeleting bool
-	stopped      chan struct{}
+	mutex    sync.RWMutex
+	seedPool map[Seed]storedSeed
+	ttl      time.Duration
+	stopped  chan struct{}
 }
 
 // New creates new seed manager with default params
@@ -55,10 +54,9 @@ func New() *SeedManager {
 // NewSpecified creates new seed manager with custom params
 func NewSpecified(ttl time.Duration, cleanPeriod time.Duration) *SeedManager {
 	sm := SeedManager{
-		seedPool:     make(map[Seed]storedSeed),
-		ttl:          ttl,
-		stopDeleting: false,
-		stopped:      make(chan struct{}),
+		seedPool: make(map[Seed]storedSeed),
+		ttl:      ttl,
+		stopped:  make(chan struct{}),
 	}
 
 	go func() {
