@@ -17,15 +17,10 @@
 package api
 
 import (
-	"context"
 	"net/http"
 
 	"github.com/insolar/insolar/api/requester"
-	"github.com/insolar/insolar/insolar/utils"
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/rpc/v2"
-	"github.com/pkg/errors"
 )
 
 // AdminContractService is a service that provides API for working with smart contracts.
@@ -58,47 +53,4 @@ func NewAdminContractService(runner *Runner) *AdminContractService {
 
 func (cs *AdminContractService) Call(req *http.Request, args *requester.Params, requestBody *rpc.RequestBody, result *requester.ContractResult) error {
 	return wrapCall(cs.runner, cs.allowedMethods, req, args, requestBody, result)
-}
-
-func wrapCall(runner *Runner, allowedMethods map[string]bool, req *http.Request, args *requester.Params, requestBody *rpc.RequestBody, result *requester.ContractResult) error {
-	traceID := utils.RandTraceID()
-	ctx, logger := inslogger.WithTraceField(context.Background(), traceID)
-
-	ctx, span := instracer.StartSpan(ctx, "Call")
-	defer span.End()
-
-	logger.Infof("[ ContractService.Call ] Incoming request: %s", req.RequestURI)
-
-	_, ok := allowedMethods[args.CallSite]
-	if !ok {
-		return errors.New("method not allowed")
-	}
-
-	if args.Test != "" {
-		logger.Infof("ContractRequest related to %s", args.Test)
-	}
-
-	signature, err := validateRequestHeaders(req.Header.Get(requester.Digest), req.Header.Get(requester.Signature), requestBody.Raw)
-	if err != nil {
-		return err
-	}
-
-	seedPulse, err := runner.checkSeed(args.Seed)
-	if err != nil {
-		return err
-	}
-
-	setRootReferenceIfNeeded(args)
-
-	callResult, requestRef, err := runner.makeCall(ctx, "contract.call", *args, requestBody.Raw, signature, 0, seedPulse)
-	if err != nil {
-		return err
-	}
-
-	if requestRef != nil {
-		result.RequestReference = requestRef.String()
-	}
-	result.CallResult = callResult
-	result.TraceID = traceID
-	return nil
 }
