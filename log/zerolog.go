@@ -253,7 +253,6 @@ type fatalDiodeHook struct {
 
 func (h fatalDiodeHook) Run(e *zerolog.Event, level zerolog.Level, msg string) {
 	if level == zerolog.FatalLevel {
-		e.Str(zerolog.MessageFieldName, msg)
 		err := h.diodeWriter.Close()
 		if err != nil {
 			e.Err(err)
@@ -271,6 +270,7 @@ func (z *zerologAdapter) Fatal(args ...interface{}) {
 		logger := *z.loggerWithHooks()
 		loggerFatal := logger.Hook(fHook)
 
+		loggerFatal.Error().Msg(fmt.Sprintf("FATAL: %v", fmt.Sprint(args...)))
 		loggerFatal.Fatal().Msg(fmt.Sprint(args...))
 	}
 
@@ -286,6 +286,7 @@ func (z *zerologAdapter) Fatalf(format string, args ...interface{}) {
 		logger := *z.loggerWithHooks()
 		loggerFatal := logger.Hook(fHook)
 
+		loggerFatal.Error().Msg(fmt.Sprintf("FATAL: %v", fmt.Sprint(args...)))
 		loggerFatal.Fatal().Msgf(format, args...)
 	}
 
@@ -302,8 +303,7 @@ type panicDiodeHook struct {
 }
 
 func (h panicDiodeHook) Run(e *zerolog.Event, level zerolog.Level, msg string) {
-	if level == zerolog.FatalLevel {
-		e.Str(zerolog.MessageFieldName, msg)
+	if level == zerolog.PanicLevel {
 		err := h.diodeWriter.Close()
 		if err != nil {
 			e.Err(err)
@@ -321,6 +321,7 @@ func (z *zerologAdapter) Panic(args ...interface{}) {
 		logger := *z.loggerWithHooks()
 		loggerFatal := logger.Hook(fHook)
 
+		loggerFatal.Error().Msg(fmt.Sprintf("PANIC: %v", fmt.Sprint(args...)))
 		loggerFatal.Panic().Msg(fmt.Sprint(args...))
 	}
 
@@ -328,7 +329,7 @@ func (z *zerologAdapter) Panic(args ...interface{}) {
 }
 
 // Panicf formatted logs a message at level Panic on the stdout.
-func (z zerologAdapter) Panicf(format string, args ...interface{}) {
+func (z *zerologAdapter) Panicf(format string, args ...interface{}) {
 	stats.Record(contextWithLogLevel(zerolog.PanicLevel), statLogCalls.M(1))
 
 	if z.diodeWriter != nil {
@@ -336,6 +337,7 @@ func (z zerologAdapter) Panicf(format string, args ...interface{}) {
 		logger := *z.loggerWithHooks()
 		loggerFatal := logger.Hook(fHook)
 
+		loggerFatal.Error().Msg(fmt.Sprintf("PANIC: %v", fmt.Sprint(args...)))
 		loggerFatal.Panic().Msgf(format, args...)
 	}
 
