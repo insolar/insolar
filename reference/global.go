@@ -201,6 +201,10 @@ func (v Global) Marshal() ([]byte, error) {
 	return v.AsBytes(), nil
 }
 
+func (v Global) MarshalBinary() ([]byte, error) {
+	return v.Marshal()
+}
+
 func (v Global) MarshalTo(data []byte) (int, error) {
 	if len(data) < GlobalBinarySize {
 		return 0, errors.New("not enough bytes to marshal reference.Global")
@@ -250,6 +254,10 @@ func (v *Global) Unmarshal(data []byte) error {
 	}
 
 	return nil
+}
+
+func (v *Global) UnmarshalBinary(data []byte) error {
+	return v.Unmarshal(data)
 }
 
 func (v Global) Size() int {

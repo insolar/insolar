@@ -17,8 +17,6 @@
 package gen
 
 import (
-	"fmt"
-
 	fuzz "github.com/google/gofuzz"
 
 	"github.com/insolar/insolar/insolar"
@@ -38,10 +36,7 @@ func ID() insolar.ID {
 
 		*id = *insolar.NewID(pn, hash)
 	})
-
-	fmt.Println("Old ID Value is", id)
 	f.Fuzz(&id)
-	fmt.Println("New ID Value is", id)
 
 	return id
 }
