@@ -49,10 +49,9 @@ func TestGen_IDWithPulse(t *testing.T) {
 
 		idWithPulse := gen.IDWithPulse(pulse)
 
-		pulseFromIDBuf := idWithPulse[:insolar.PulseNumberSize]
 		require.Equal(t,
-			pulse.Bytes(), pulseFromIDBuf,
-			"pulse bytes should be equal pulse bytes from generated ID")
+			idWithPulse.Pulse().Bytes(),
+			pulse.Bytes(), "pulse bytes should be equal pulse bytes from generated ID")
 
 		pulseFromID := idWithPulse.Pulse()
 		require.Equal(t,

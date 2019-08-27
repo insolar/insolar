@@ -220,12 +220,9 @@ func (v encoder) EncodeRecord(rec *Local) (string, error) {
 	if rec == nil {
 		return NilRef, nil
 	}
+
 	b := strings.Builder{}
 	v.appendPrefix(&b)
 	err := v.encodeRecord(rec, &b)
 	return b.String(), err
-}
-
-func init() {
-
 }

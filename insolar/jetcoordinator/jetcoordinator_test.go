@@ -106,7 +106,7 @@ func (s *jetCoordinatorSuite) TestJetCoordinator_QueryRole() {
 	var nds []insolar.Node
 	var nodeRefs []insolar.Reference
 	for i := 0; i < 100; i++ {
-		ref := *insolar.NewReference(*insolar.NewID(0, []byte{byte(i)}))
+		ref := *insolar.NewReference(*insolar.NewID(100, []byte{byte(i)}))
 		nds = append(nds, insolar.Node{ID: ref, Role: insolar.StaticRoleLightMaterial})
 		nodeRefs = append(nodeRefs, ref)
 	}
@@ -114,7 +114,7 @@ func (s *jetCoordinatorSuite) TestJetCoordinator_QueryRole() {
 
 	s.nodeStorage.InRoleMock.Return(nds, nil)
 
-	objID := insolar.NewID(0, []byte{1, 42, 123})
+	objID := insolar.NewID(100, []byte{1, 42, 123})
 	err = s.jetStorage.Update(s.ctx, 0, true, *insolar.NewJetID(50, []byte{1, 42, 123}))
 	require.NoError(s.T(), err)
 

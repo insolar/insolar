@@ -49,6 +49,11 @@ func NewReference(id ID) *Reference {
 	return &global
 }
 
+func NewGlobalReference(local ID, base ID) *Reference {
+	global := reference.NewGlobal(base, local)
+	return &global
+}
+
 // NewReferenceFromBase58 deserializes reference from base58 encoded string
 func NewReferenceFromBase58(input string) (*Reference, error) {
 	global, err := reference.DefaultDecoder().Decode(input)
@@ -92,6 +97,13 @@ func NewIDFromBase58(input string) (*ID, error) {
 
 // NewIDFromBytes converts byte slice to ID
 func NewIDFromBytes(hash []byte) *ID {
+	if hash == nil {
+		return NewEmptyID()
+	}
 	pn := PulseNumber(binary.BigEndian.Uint32(hash[:reference.LocalBinaryPulseAndScopeSize]))
 	return NewID(pn, hash[reference.LocalBinaryPulseAndScopeSize:])
+}
+
+func NewEmptyID() *ID {
+	return &ID{}
 }

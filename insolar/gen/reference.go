@@ -17,15 +17,32 @@
 package gen
 
 import (
+	"fmt"
+
 	fuzz "github.com/google/gofuzz"
+
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/pulse"
 	"github.com/insolar/insolar/reference"
 )
 
 // ID generates random id.
 func ID() insolar.ID {
 	var id insolar.ID
-	fuzz.New().NilChance(0).Fuzz(&id)
+
+	f := fuzz.New().NilChance(0).Funcs(func(id *insolar.ID, c fuzz.Continue) {
+		hash := make([]byte, reference.LocalBinaryHashSize)
+		c.Fuzz(&hash)
+
+		pn := insolar.PulseNumber(c.Int31n(pulse.MaxTimePulse-pulse.LocalRelative) + pulse.LocalRelative)
+
+		*id = *insolar.NewID(pn, hash)
+	})
+
+	fmt.Println("Old ID Value is", id)
+	f.Fuzz(&id)
+	fmt.Println("New ID Value is", id)
+
 	return id
 }
 
@@ -62,7 +79,7 @@ func JetID() insolar.JetID {
 	var jetID insolar.JetID
 	f := fuzz.New().Funcs(func(jet *insolar.JetID, c fuzz.Continue) {
 		prefix := make([]byte, insolar.JetPrefixSize)
-		c.Fuzz(prefix)
+		c.Fuzz(&prefix)
 		depth := c.Intn(insolar.JetMaximumDepth + 1)
 
 		*jet = *insolar.NewJetID(uint8(depth), prefix)
