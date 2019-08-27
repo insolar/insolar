@@ -28,13 +28,14 @@ import (
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/contractrequester"
 	"github.com/insolar/insolar/cryptography"
-	"github.com/insolar/insolar/genesisdataprovider"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/delegationtoken"
@@ -49,14 +50,12 @@ import (
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/artifacts"
-	"github.com/insolar/insolar/messagebus"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/insolar/insolar/network/termination"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/server/internal"
-	"github.com/pkg/errors"
 )
 
 type components struct {
@@ -147,30 +146,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 
 	}
 
-	// API.
-	var (
-		Requester insolar.ContractRequester
-		Genesis   insolar.GenesisDataProvider
-		API       insolar.APIRunner
-	)
-	{
-		var err error
-		Requester, err = contractrequester.New(nil)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to start ContractRequester")
-		}
-
-		Genesis, err = genesisdataprovider.New()
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to start GenesisDataProvider")
-		}
-
-		API, err = api.NewRunner(&cfg.APIRunner)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to start ApiRunner")
-		}
-	}
-
 	// Role calculations.
 	var (
 		Coordinator jet.Coordinator
@@ -197,17 +172,29 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 	// Communication.
 	var (
 		Tokens insolar.DelegationTokenFactory
-		Bus    insolar.MessageBus
 		Sender *bus.Bus
 	)
 	{
-		var err error
 		Tokens = delegationtoken.NewDelegationTokenFactory()
-		Bus, err = messagebus.NewMessageBus(cfg)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to start MessageBus")
-		}
 		Sender = bus.NewBus(cfg.Bus, publisher, Pulses, Coordinator, CryptoScheme)
+	}
+
+	// API.
+	var (
+		Requester *contractrequester.ContractRequester
+		API       insolar.APIRunner
+	)
+	{
+		var err error
+		Requester, err = contractrequester.New()
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to start ContractRequester")
+		}
+
+		API, err = api.NewRunner(&cfg.APIRunner)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to start ApiRunner")
+		}
 	}
 
 	metricsHandler, err := metrics.NewMetrics(
@@ -355,11 +342,9 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		Coordinator,
 		PulseManager,
 		metricsHandler,
-		Bus,
 		Requester,
 		Tokens,
 		artifacts.NewClient(Sender),
-		Genesis,
 		API,
 		KeyProcessor,
 		Termination,
@@ -369,7 +354,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		NodeNetwork,
 		NetworkService,
 		publisher,
-		messagebus.NewParcelFactory(),
 	)
 
 	err = comps.cmp.Init(ctx)
@@ -377,7 +361,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		return nil, errors.Wrap(err, "failed to init components")
 	}
 
-	comps.startWatermill(ctx, wmLogger, subscriber, Sender, NetworkService.SendMessageHandler, FlowDispatcher.Process)
+	comps.startWatermill(ctx, wmLogger, subscriber, Sender, NetworkService.SendMessageHandler, FlowDispatcher.Process, Requester.ReceiveResult)
 
 	return comps, nil
 }
@@ -397,7 +381,7 @@ func (c *components) startWatermill(
 	logger watermill.LoggerAdapter,
 	sub message.Subscriber,
 	b *bus.Bus,
-	outHandler, inHandler message.NoPublishHandlerFunc,
+	outHandler, inHandler, resultsHandler message.NoPublishHandlerFunc,
 ) {
 	inRouter, err := message.NewRouter(message.RouterConfig{}, logger)
 	if err != nil {
@@ -425,6 +409,12 @@ func (c *components) startWatermill(
 		sub,
 		inHandler,
 	)
+
+	inRouter.AddNoPublisherHandler(
+		"IncomingRequestResultHandler",
+		bus.TopicIncomingRequestResults,
+		sub,
+		resultsHandler)
 
 	startRouter(ctx, inRouter)
 	startRouter(ctx, outRouter)

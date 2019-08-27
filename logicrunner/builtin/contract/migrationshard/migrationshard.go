@@ -30,10 +30,10 @@ type MigrationShard struct {
 }
 
 // New creates new member.
-func New() (*MigrationShard, error) {
+func New(migrationAddresses []string) (*MigrationShard, error) {
 	return &MigrationShard{
 		Map:                    make(foundation.StableMap),
-		FreeMigrationAddresses: []string{},
+		FreeMigrationAddresses: migrationAddresses,
 	}, nil
 }
 

@@ -18,7 +18,6 @@ package executor
 
 import (
 	"context"
-	"errors"
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
@@ -32,7 +31,7 @@ type JetWaiter interface {
 
 // HotDataStatusChecker provides methods for checking receiving status of hot data.
 type HotDataStatusChecker interface {
-	IsReceived(ctx context.Context, jetID insolar.JetID, pulse insolar.PulseNumber) (bool, error)
+	IsReceived(ctx context.Context, jetID insolar.JetID, pulse insolar.PulseNumber) bool
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.JetReleaser -o ./ -s _mock.go -g
@@ -109,19 +108,19 @@ func (w *ChannelWaiter) Wait(ctx context.Context, jetID insolar.JetID, pulse ins
 	}
 }
 
-func (w *ChannelWaiter) IsReceived(ctx context.Context, jetID insolar.JetID, pn insolar.PulseNumber) (bool, error) {
+func (w *ChannelWaiter) IsReceived(ctx context.Context, jetID insolar.JetID, pn insolar.PulseNumber) bool {
 	w.lock.Lock()
 	defer w.lock.Unlock()
 
 	pWaiter, ok := w.waiters[pn]
 	if !ok {
-		return false, errors.New("waiters for pulse not found")
+		return false
 	}
 	jWaiter, ok := pWaiter.waiters[jetID]
 	if !ok {
-		return false, errors.New("waiter for jet not found")
+		return false
 	}
-	return jWaiter.isClosed(), nil
+	return jWaiter.isClosed()
 }
 
 // Unlock raises hotDataChannel

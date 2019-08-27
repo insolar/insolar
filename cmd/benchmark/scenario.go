@@ -34,7 +34,7 @@ import (
 )
 
 const transferAmount = 101
-const transferFee = 40 // 40%
+const transferFee = 10000000
 
 type scenario interface {
 	canBeStarted() error

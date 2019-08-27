@@ -145,3 +145,7 @@ func (v OpMode) String() string {
 		return fmt.Sprintf("?%d?", v)
 	}
 }
+
+func (v OpMode) IsClean() bool {
+	return v == ModeNormal || v.IsJustJoined()
+}

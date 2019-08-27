@@ -28,6 +28,12 @@ type OutgoingRequestSenderMock struct {
 	afterSendOutgoingRequestCounter  uint64
 	beforeSendOutgoingRequestCounter uint64
 	SendOutgoingRequestMock          mOutgoingRequestSenderMockSendOutgoingRequest
+
+	funcStop          func(ctx context.Context)
+	inspectFuncStop   func(ctx context.Context)
+	afterStopCounter  uint64
+	beforeStopCounter uint64
+	StopMock          mOutgoingRequestSenderMockStop
 }
 
 // NewOutgoingRequestSenderMock returns a mock for OutgoingRequestSender
@@ -42,6 +48,9 @@ func NewOutgoingRequestSenderMock(t minimock.Tester) *OutgoingRequestSenderMock 
 
 	m.SendOutgoingRequestMock = mOutgoingRequestSenderMockSendOutgoingRequest{mock: m}
 	m.SendOutgoingRequestMock.callArgs = []*OutgoingRequestSenderMockSendOutgoingRequestParams{}
+
+	m.StopMock = mOutgoingRequestSenderMockStop{mock: m}
+	m.StopMock.callArgs = []*OutgoingRequestSenderMockStopParams{}
 
 	return m
 }
@@ -455,12 +464,201 @@ func (m *OutgoingRequestSenderMock) MinimockSendOutgoingRequestInspect() {
 	}
 }
 
+type mOutgoingRequestSenderMockStop struct {
+	mock               *OutgoingRequestSenderMock
+	defaultExpectation *OutgoingRequestSenderMockStopExpectation
+	expectations       []*OutgoingRequestSenderMockStopExpectation
+
+	callArgs []*OutgoingRequestSenderMockStopParams
+	mutex    sync.RWMutex
+}
+
+// OutgoingRequestSenderMockStopExpectation specifies expectation struct of the OutgoingRequestSender.Stop
+type OutgoingRequestSenderMockStopExpectation struct {
+	mock   *OutgoingRequestSenderMock
+	params *OutgoingRequestSenderMockStopParams
+
+	Counter uint64
+}
+
+// OutgoingRequestSenderMockStopParams contains parameters of the OutgoingRequestSender.Stop
+type OutgoingRequestSenderMockStopParams struct {
+	ctx context.Context
+}
+
+// Expect sets up expected params for OutgoingRequestSender.Stop
+func (mmStop *mOutgoingRequestSenderMockStop) Expect(ctx context.Context) *mOutgoingRequestSenderMockStop {
+	if mmStop.mock.funcStop != nil {
+		mmStop.mock.t.Fatalf("OutgoingRequestSenderMock.Stop mock is already set by Set")
+	}
+
+	if mmStop.defaultExpectation == nil {
+		mmStop.defaultExpectation = &OutgoingRequestSenderMockStopExpectation{}
+	}
+
+	mmStop.defaultExpectation.params = &OutgoingRequestSenderMockStopParams{ctx}
+	for _, e := range mmStop.expectations {
+		if minimock.Equal(e.params, mmStop.defaultExpectation.params) {
+			mmStop.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmStop.defaultExpectation.params)
+		}
+	}
+
+	return mmStop
+}
+
+// Inspect accepts an inspector function that has same arguments as the OutgoingRequestSender.Stop
+func (mmStop *mOutgoingRequestSenderMockStop) Inspect(f func(ctx context.Context)) *mOutgoingRequestSenderMockStop {
+	if mmStop.mock.inspectFuncStop != nil {
+		mmStop.mock.t.Fatalf("Inspect function is already set for OutgoingRequestSenderMock.Stop")
+	}
+
+	mmStop.mock.inspectFuncStop = f
+
+	return mmStop
+}
+
+// Return sets up results that will be returned by OutgoingRequestSender.Stop
+func (mmStop *mOutgoingRequestSenderMockStop) Return() *OutgoingRequestSenderMock {
+	if mmStop.mock.funcStop != nil {
+		mmStop.mock.t.Fatalf("OutgoingRequestSenderMock.Stop mock is already set by Set")
+	}
+
+	if mmStop.defaultExpectation == nil {
+		mmStop.defaultExpectation = &OutgoingRequestSenderMockStopExpectation{mock: mmStop.mock}
+	}
+
+	return mmStop.mock
+}
+
+//Set uses given function f to mock the OutgoingRequestSender.Stop method
+func (mmStop *mOutgoingRequestSenderMockStop) Set(f func(ctx context.Context)) *OutgoingRequestSenderMock {
+	if mmStop.defaultExpectation != nil {
+		mmStop.mock.t.Fatalf("Default expectation is already set for the OutgoingRequestSender.Stop method")
+	}
+
+	if len(mmStop.expectations) > 0 {
+		mmStop.mock.t.Fatalf("Some expectations are already set for the OutgoingRequestSender.Stop method")
+	}
+
+	mmStop.mock.funcStop = f
+	return mmStop.mock
+}
+
+// Stop implements OutgoingRequestSender
+func (mmStop *OutgoingRequestSenderMock) Stop(ctx context.Context) {
+	mm_atomic.AddUint64(&mmStop.beforeStopCounter, 1)
+	defer mm_atomic.AddUint64(&mmStop.afterStopCounter, 1)
+
+	if mmStop.inspectFuncStop != nil {
+		mmStop.inspectFuncStop(ctx)
+	}
+
+	params := &OutgoingRequestSenderMockStopParams{ctx}
+
+	// Record call args
+	mmStop.StopMock.mutex.Lock()
+	mmStop.StopMock.callArgs = append(mmStop.StopMock.callArgs, params)
+	mmStop.StopMock.mutex.Unlock()
+
+	for _, e := range mmStop.StopMock.expectations {
+		if minimock.Equal(e.params, params) {
+			mm_atomic.AddUint64(&e.Counter, 1)
+			return
+		}
+	}
+
+	if mmStop.StopMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmStop.StopMock.defaultExpectation.Counter, 1)
+		want := mmStop.StopMock.defaultExpectation.params
+		got := OutgoingRequestSenderMockStopParams{ctx}
+		if want != nil && !minimock.Equal(*want, got) {
+			mmStop.t.Errorf("OutgoingRequestSenderMock.Stop got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		}
+
+		return
+
+	}
+	if mmStop.funcStop != nil {
+		mmStop.funcStop(ctx)
+		return
+	}
+	mmStop.t.Fatalf("Unexpected call to OutgoingRequestSenderMock.Stop. %v", ctx)
+
+}
+
+// StopAfterCounter returns a count of finished OutgoingRequestSenderMock.Stop invocations
+func (mmStop *OutgoingRequestSenderMock) StopAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmStop.afterStopCounter)
+}
+
+// StopBeforeCounter returns a count of OutgoingRequestSenderMock.Stop invocations
+func (mmStop *OutgoingRequestSenderMock) StopBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmStop.beforeStopCounter)
+}
+
+// Calls returns a list of arguments used in each call to OutgoingRequestSenderMock.Stop.
+// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
+func (mmStop *mOutgoingRequestSenderMockStop) Calls() []*OutgoingRequestSenderMockStopParams {
+	mmStop.mutex.RLock()
+
+	argCopy := make([]*OutgoingRequestSenderMockStopParams, len(mmStop.callArgs))
+	copy(argCopy, mmStop.callArgs)
+
+	mmStop.mutex.RUnlock()
+
+	return argCopy
+}
+
+// MinimockStopDone returns true if the count of the Stop invocations corresponds
+// the number of defined expectations
+func (m *OutgoingRequestSenderMock) MinimockStopDone() bool {
+	for _, e := range m.StopMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			return false
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.StopMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterStopCounter) < 1 {
+		return false
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcStop != nil && mm_atomic.LoadUint64(&m.afterStopCounter) < 1 {
+		return false
+	}
+	return true
+}
+
+// MinimockStopInspect logs each unmet expectation
+func (m *OutgoingRequestSenderMock) MinimockStopInspect() {
+	for _, e := range m.StopMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			m.t.Errorf("Expected call to OutgoingRequestSenderMock.Stop with params: %#v", *e.params)
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.StopMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterStopCounter) < 1 {
+		if m.StopMock.defaultExpectation.params == nil {
+			m.t.Error("Expected call to OutgoingRequestSenderMock.Stop")
+		} else {
+			m.t.Errorf("Expected call to OutgoingRequestSenderMock.Stop with params: %#v", *m.StopMock.defaultExpectation.params)
+		}
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcStop != nil && mm_atomic.LoadUint64(&m.afterStopCounter) < 1 {
+		m.t.Error("Expected call to OutgoingRequestSenderMock.Stop")
+	}
+}
+
 // MinimockFinish checks that all mocked methods have been called the expected number of times
 func (m *OutgoingRequestSenderMock) MinimockFinish() {
 	if !m.minimockDone() {
 		m.MinimockSendAbandonedOutgoingRequestInspect()
 
 		m.MinimockSendOutgoingRequestInspect()
+
+		m.MinimockStopInspect()
 		m.t.FailNow()
 	}
 }
@@ -485,5 +683,6 @@ func (m *OutgoingRequestSenderMock) minimockDone() bool {
 	done := true
 	return done &&
 		m.MinimockSendAbandonedOutgoingRequestDone() &&
-		m.MinimockSendOutgoingRequestDone()
+		m.MinimockSendOutgoingRequestDone() &&
+		m.MinimockStopDone()
 }

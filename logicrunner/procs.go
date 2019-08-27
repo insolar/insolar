@@ -22,24 +22,25 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
-	"github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
+	"github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/requestresult"
 )
 
 // ------------- CheckOurRole
 
 type CheckOurRole struct {
-	msg         insolar.Message
+	target      insolar.Reference
 	role        insolar.DynamicRole
 	pulseNumber insolar.PulseNumber
 
-	lr *LogicRunner
+	jetCoordinator jet.Coordinator
 }
 
 var ErrCantExecute = errors.New("can't executeAndReply this object")
@@ -49,8 +50,7 @@ func (ch *CheckOurRole) Proceed(ctx context.Context) error {
 	defer span.End()
 
 	// TODO do map of supported objects for pulse, go to jetCoordinator only if map is empty for ref
-	target := ch.msg.DefaultTarget()
-	isAuthorized, err := ch.lr.JetCoordinator.IsMeAuthorizedNow(ctx, ch.role, *target.Record())
+	isAuthorized, err := ch.jetCoordinator.IsMeAuthorizedNow(ctx, ch.role, *ch.target.Record())
 	if err != nil {
 		return errors.Wrap(err, "authorization failed with error")
 	}

@@ -199,8 +199,8 @@ func (sdk *SDK) CreateMember() (*Member, string, error) {
 	return NewMember(memberRef, privateKeyStr, publicKeyStr), response.TraceID, nil
 }
 
-// AddBurnAddresses method add burn addresses
-func (sdk *SDK) AddBurnAddresses(burnAddresses []string) (string, error) {
+// addMigrationAddresses method add burn addresses
+func (sdk *SDK) AddMigrationAddresses(migrationAddresses []string) (string, error) {
 	userConfig, err := requester.CreateUserConfig(sdk.migrationAdminMember.Caller, sdk.migrationAdminMember.PrivateKey, sdk.migrationAdminMember.PublicKey)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to create user config for request")
@@ -208,8 +208,8 @@ func (sdk *SDK) AddBurnAddresses(burnAddresses []string) (string, error) {
 
 	response, err := sdk.DoRequest(
 		userConfig,
-		"migration.addBurnAddresses",
-		map[string]interface{}{"burnAddresses": burnAddresses},
+		"migration.addAddresses",
+		map[string]interface{}{"migrationAddresses": migrationAddresses},
 	)
 	if err != nil {
 		return "", errors.Wrap(err, "request was failed ")
@@ -244,7 +244,7 @@ func (sdk *SDK) GetBalance(m *Member) (*big.Int, error) {
 	}
 	response, err := sdk.DoRequest(
 		userConfig,
-		"wallet.getBalance",
+		"member.getBalance",
 		map[string]interface{}{"reference": m.Reference},
 	)
 	if err != nil {

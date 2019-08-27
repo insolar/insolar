@@ -51,6 +51,7 @@
 package adapters
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/insolar/insolar/insolar"
@@ -128,6 +129,10 @@ func NewPulsePacketParser(pulse pulse.Data) *PulsePacketParser {
 		digest:      NewPulseDigest(pulse).AsDigestHolder(),
 		pulse:       pulse,
 	}
+}
+
+func (p PulsePacketParser) String() string {
+	return fmt.Sprintf("<pt=pulse body=<%s>>", p.pulse.String())
 }
 
 func (p *PulsePacketParser) ParsePacketBody() (transport.PacketParser, error) {

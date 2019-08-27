@@ -103,6 +103,10 @@ func (c *OneJoinerPopulation) IsValid() bool {
 	return true
 }
 
+func (c *OneJoinerPopulation) IsClean() bool {
+	return c.localNode.GetOpMode().IsClean()
+}
+
 func (c *OneJoinerPopulation) GetRolePopulation(role member.PrimaryRole) census.RolePopulation {
 	return nil
 }

@@ -1,4 +1,4 @@
-///
+//
 // Copyright 2019 Insolar Technologies GmbH
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,18 +12,25 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-///
+//
+// +build slowtest
 
-package testbadger
+package integration_test
 
 import (
-	"github.com/dgraph-io/badger"
+	"context"
+	"os"
+	"testing"
+
+	"github.com/insolar/insolar/insolar"
+	"github.com/stretchr/testify/assert"
 )
 
-func BadgerDefaultOptions(dir string) badger.Options {
-	ops := badger.DefaultOptions(dir)
-	ops.CompactL0OnClose = false
-	ops.SyncWrites = false
+func TestStartStop(t *testing.T) {
+	cfg := DefaultHeavyConfig()
+	defer os.RemoveAll(cfg.Ledger.Storage.DataDirectory)
 
-	return ops
+	s, err := NewServer(context.Background(), cfg, insolar.GenesisHeavyConfig{}, nil)
+	assert.NoError(t, err)
+	s.Stop()
 }

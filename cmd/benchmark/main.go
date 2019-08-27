@@ -143,17 +143,17 @@ func printResults(s scenario) {
 	s.printResult()
 }
 
-func addBurnAddresses(insSDK *sdk.SDK) int32 {
+func addMigrationAddresses(insSDK *sdk.SDK) int32 {
 	var err error
 	var retriesCount int32
 
 	bof := backoff.Backoff{Min: 1 * time.Second, Max: 10 * time.Second}
 	for bof.Attempt() < backoffAttemptsCount {
-		burnAddresses := []string{}
+		migrationAddresses := []string{}
 		for j := 0; j < concurrent*2; j++ {
-			burnAddresses = append(burnAddresses, "fake_burn_address_"+strconv.Itoa(j))
+			migrationAddresses = append(migrationAddresses, "fake_burn_address_"+strconv.Itoa(j))
 		}
-		traceID, err := insSDK.AddBurnAddresses(burnAddresses)
+		traceID, err := insSDK.AddMigrationAddresses(migrationAddresses)
 		if err == nil {
 			break
 		}
@@ -319,16 +319,7 @@ func loadMembers(count int) ([]*sdk.Member, error) {
 }
 
 func calcFee(amount int64) int64 {
-	feePercentage := amount * transferFee
-
-	fee := feePercentage / 100
-	mod := feePercentage % 100
-
-	if mod > 0 {
-		return fee + 1
-	}
-
-	return fee
+	return transferFee
 }
 
 func main() {
@@ -350,7 +341,7 @@ func main() {
 	err = insSDK.SetLogLevel(logLevelServer)
 	check("Failed to parse log level: ", err)
 
-	crBaPenBefore := addBurnAddresses(insSDK)
+	crBaPenBefore := addMigrationAddresses(insSDK)
 	check("Error while adding burn addresses: ", err)
 
 	members, crMemPenBefore, err := getMembers(insSDK)
