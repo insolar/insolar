@@ -181,7 +181,7 @@ func (isk *InitialStateKeeper) Get(ctx context.Context, lightExecutor insolar.Re
 			jetIDs = append(jetIDs, id)
 
 			parentID := jet.Parent(id)
-			if _, ok := excludeDrops[parentID]; !ok {
+			if _, appended := excludeDrops[parentID]; !appended {
 				drops = append(drops, jetDrop)
 				excludeDrops[parentID] = true
 			}
