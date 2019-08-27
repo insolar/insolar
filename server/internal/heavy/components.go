@@ -244,14 +244,15 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		Handler      *handler.Handler
 		Genesis      *genesis.Genesis
 		Records      *object.RecordDB
-		JetKeeper    executor.JetKeeper
+		JetKeeper    *executor.DBJetKeeper
 	)
 	{
 		Records = object.NewRecordDB(DB)
 		indexes := object.NewIndexDB(DB, Records)
 		drops := drop.NewDB(DB)
 		JetKeeper = executor.NewJetKeeper(Jets, DB, Pulses)
-		c.rollback = executor.NewDBRollback(JetKeeper, Pulses, drops, Records, indexes, Jets, Pulses)
+
+		c.rollback = executor.NewDBRollback(JetKeeper, drops, Records, indexes, Jets, Pulses, JetKeeper)
 		c.stateKeeper = executor.NewInitialStateKeeper(JetKeeper, Jets, Coordinator, indexes, drops)
 
 		sp := pulse.NewStartPulse()

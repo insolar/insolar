@@ -65,12 +65,8 @@ func (gp *GetPendings) Proceed(ctx context.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to create reply")
 		}
-		go gp.dep.sender.Reply(ctx, gp.message, msg)
+		gp.dep.sender.Reply(ctx, gp.message, msg)
 		return nil
-	}
-
-	if len(pendings) > 100 {
-		pendings = pendings[:100]
 	}
 
 	ids := make([]insolar.ID, len(pendings))
@@ -85,6 +81,6 @@ func (gp *GetPendings) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "failed to create reply")
 	}
 
-	go gp.dep.sender.Reply(ctx, gp.message, msg)
+	gp.dep.sender.Reply(ctx, gp.message, msg)
 	return nil
 }

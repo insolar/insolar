@@ -27,6 +27,7 @@ import (
 	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -199,4 +200,25 @@ func getErrorType(ctx context.Context, rep *message.Message) messageType {
 		return messageTypeErrorNonRetryable
 	}
 	return messageTypeNotError
+}
+
+func ReplyError(ctx context.Context, sender Sender, meta payload.Meta, err error) {
+	errCode := uint32(payload.CodeUnknown)
+
+	// Throwing custom error code
+	cause := errors.Cause(err)
+	insError, ok := cause.(*payload.CodedError)
+	if ok {
+		errCode = insError.GetCode()
+	}
+
+	// todo refactor this #INS-3191
+	if cause == flow.ErrCancelled {
+		errCode = uint32(payload.CodeFlowCanceled)
+	}
+	errMsg, newErr := payload.NewMessage(&payload.Error{Text: err.Error(), Code: errCode})
+	if newErr != nil {
+		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to reply error"))
+	}
+	sender.Reply(ctx, meta, errMsg)
 }

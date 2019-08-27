@@ -38,7 +38,6 @@ import (
 type Member struct {
 	foundation.BaseContract
 	RootDomain       insolar.Reference
-	Deposits         map[string]insolar.Reference
 	Name             string
 	PublicKey        string
 	MigrationAddress string
@@ -82,7 +81,6 @@ func (m Member) GetPublicKey() (string, error) {
 func New(rootDomain insolar.Reference, name string, key string, migrationAddress string, walletRef insolar.Reference) (*Member, error) {
 	return &Member{
 		RootDomain:       rootDomain,
-		Deposits:         make(map[string]insolar.Reference),
 		Name:             name,
 		PublicKey:        key,
 		MigrationAddress: migrationAddress,
@@ -246,22 +244,15 @@ func (m *Member) getBalanceCall(params map[string]interface{}) (interface{}, err
 		}
 	}
 
-	b, err := wallet.GetObject(*walletRef).GetBalance(XNS)
+	depWallet := wallet.GetObject(*walletRef)
+	b, err := depWallet.GetBalance(XNS)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get balance: %s", err.Error())
 	}
 
-	var d map[string]interface{}
-	if referenceStr == m.GetReference().String() {
-		d, err = m.getDeposits()
-		if err != nil {
-			return nil, fmt.Errorf("failed to get deposits: %s", err.Error())
-		}
-	} else {
-		d, err = member.GetObject(*reference).GetDeposits()
-		if err != nil {
-			return nil, fmt.Errorf("failed to get deposits for user: %s", err.Error())
-		}
+	d, err := depWallet.GetDeposits()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get deposits: %s", err.Error())
 	}
 
 	return GetBalanceResponse{Balance: b, Deposits: d}, nil
@@ -309,15 +300,15 @@ func (m *Member) depositTransferCall(params map[string]interface{}) (interface{}
 	if !ok {
 		return nil, fmt.Errorf("incorect input: failed to get 'amount' param")
 	}
-
-	find, dRef, err := m.FindDeposit(ethTxHash)
+	w := wallet.GetObject(m.Wallet)
+	find, dRef, err := w.FindDeposit(ethTxHash)
 	if err != nil {
 		return nil, fmt.Errorf("failed to find deposit: %s", err.Error())
 	}
 	if !find {
 		return nil, fmt.Errorf("can't find deposit")
 	}
-	d := deposit.GetObject(dRef)
+	d := deposit.GetObject(*dRef)
 
 	return d.Transfer(amount, m.Wallet)
 }
@@ -482,9 +473,14 @@ func (m *Member) depositMigration(txHash string, migrationAddress string, amount
 		return nil, fmt.Errorf("failed to get member by migration address")
 	}
 	tokenHolder := member.GetObject(*tokenHolderRef)
+	tokenHolderWallet, err := tokenHolder.GetWallet()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get wallet: %s", err.Error())
+	}
 
 	// Find deposit for txHash
-	found, txDepositRef, err := tokenHolder.FindDeposit(txHash)
+	w := wallet.GetObject(*tokenHolderWallet)
+	found, txDepositRef, err := w.FindDeposit(txHash)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get deposit: %s", err.Error())
 	}
@@ -498,14 +494,13 @@ func (m *Member) depositMigration(txHash string, migrationAddress string, amount
 		if err != nil {
 			return nil, fmt.Errorf("failed to save as child: %s", err.Error())
 		}
-
-		err = tokenHolder.AddDeposit(txHash, txDeposit.GetReference())
+		err = w.AddDeposit(txHash, txDeposit.GetReference())
 		if err != nil {
 			return nil, fmt.Errorf("failed to set deposit: %s", err.Error())
 		}
 		return depositMigrationResult, nil
 	}
-	txDeposit := deposit.GetObject(txDepositRef)
+	txDeposit := deposit.GetObject(*txDepositRef)
 	unHoldPulse, err := txDeposit.GetPulseUnHold()
 	if unHoldPulse != 0 {
 		return nil, fmt.Errorf(" Migration is done for this deposit: %s", txHash)
@@ -516,47 +511,6 @@ func (m *Member) depositMigration(txHash string, migrationAddress string, amount
 		return nil, fmt.Errorf("confirmed failed: %s", err.Error())
 	}
 	return depositMigrationResult, nil
-}
-
-// GetDeposits get all deposits for this member
-// ins:immutable
-func (m *Member) GetDeposits() (map[string]interface{}, error) {
-	return m.getDeposits()
-}
-func (m *Member) getDeposits() (map[string]interface{}, error) {
-	result := map[string]interface{}{}
-	for tx, dRef := range m.Deposits {
-
-		d := deposit.GetObject(dRef)
-
-		depositInfo, err := d.Itself()
-		if err != nil {
-			return nil, fmt.Errorf("failed to get deposit itself: %s", err.Error())
-		}
-
-		result[tx] = depositInfo
-	}
-	return result, nil
-}
-
-// FindDeposit finds deposit for this member with this transaction hash.
-// ins:immutable
-func (m *Member) FindDeposit(transactionsHash string) (bool, insolar.Reference, error) {
-
-	if dRef, ok := m.Deposits[transactionsHash]; ok {
-		return true, dRef, nil
-	}
-
-	return false, *insolar.NewEmptyReference(), nil
-}
-
-// SetDeposit method stores deposit reference in member it belongs to
-func (m *Member) AddDeposit(txId string, deposit insolar.Reference) error {
-	if _, ok := m.Deposits[txId]; ok {
-		return fmt.Errorf("deposit for this transaction already exist")
-	}
-	m.Deposits[txId] = deposit
-	return nil
 }
 
 // ins:immutable
