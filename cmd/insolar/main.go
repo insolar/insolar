@@ -165,7 +165,7 @@ func defaultURL() string {
 	if u := os.Getenv("INSOLAR_API_URL"); u != "" {
 		return u
 	}
-	return "http://localhost:19101/api"
+	return "http://localhost:19001/admin-api/rpc"
 }
 
 type mixedConfig struct {

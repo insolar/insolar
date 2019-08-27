@@ -138,9 +138,6 @@ func initComponents(
 
 	delegationTokenFactory := delegationtoken.NewDelegationTokenFactory()
 
-	apiRunner, err := api.NewRunner(&cfg.APIRunner)
-	checkError(ctx, err, "failed to start ApiRunner")
-
 	metricsHandler, err := metrics.NewMetrics(ctx, cfg.Metrics, metrics.GetInsolarRegistry("virtual"), "virtual")
 	checkError(ctx, err, "failed to start Metrics")
 
@@ -156,6 +153,36 @@ func initComponents(
 
 	contractRequester, err := contractrequester.New()
 	checkError(ctx, err, "failed to start ContractRequester")
+
+	artifactsClient := artifacts.NewClient(b)
+
+	API, err := api.NewRunner(
+		&cfg.APIRunner,
+		certManager,
+		contractRequester,
+		nodeNetwork,
+		nw,
+		pulses,
+		artifactsClient,
+		jc,
+		nw,
+	)
+	checkError(ctx, err, "failed to start ApiRunner")
+
+	AdminAPIRunner, err := api.NewRunner(
+		&cfg.AdminAPIRunner,
+		certManager,
+		contractRequester,
+		nodeNetwork,
+		nw,
+		pulses,
+		artifactsClient,
+		jc,
+		nw,
+	)
+	checkError(ctx, err, "failed to start AdminAPIRunner")
+
+	APIWrapper := api.NewWrapper(API, AdminAPIRunner)
 
 	// TODO: remove this hack in INS-3341
 	contractRequester.LR = logicRunner
@@ -173,7 +200,7 @@ func initComponents(
 		logicexecutor.NewLogicExecutor(),
 		logicrunner.NewRequestsExecutor(),
 		machinesmanager.NewMachinesManager(),
-		apiRunner,
+		APIWrapper,
 		nodeNetwork,
 		nw,
 		pm,
@@ -183,7 +210,7 @@ func initComponents(
 		b,
 		publisher,
 		contractRequester,
-		artifacts.NewClient(b),
+		artifactsClient,
 		artifacts.NewDescriptorsCache(),
 		jc,
 		pulses,
