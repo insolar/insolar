@@ -54,8 +54,8 @@ import (
 	"context"
 	"io"
 	"log"
+	"net"
 	"strconv"
-	"strings"
 	"testing"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -138,8 +138,10 @@ func (s *suiteTest) TestStreamTransport() {
 	s.NoError(n1.Start(ctx))
 	s.NoError(n2.Start(ctx))
 
-	n1Port, _ := strconv.Atoi(strings.Split(n1.tcp.Address(), ":")[1])
-	n2Port, _ := strconv.Atoi(strings.Split(n2.tcp.Address(), ":")[1])
+	_, port1, _ := net.SplitHostPort(n1.tcp.Address())
+	_, port2, _ := net.SplitHostPort(n2.tcp.Address())
+	n1Port, _ := strconv.Atoi(port1)
+	n2Port, _ := strconv.Atoi(port2)
 	port := 5555
 	for port == n1Port || port == n2Port {
 		port++
