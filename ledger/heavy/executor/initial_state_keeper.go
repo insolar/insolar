@@ -168,7 +168,8 @@ func (isk *InitialStateKeeper) Get(ctx context.Context, lightExecutor insolar.Re
 
 	logger.Debugf("[ InitialStateKeeper ] Getting drops for: %s in pulse: %s", lightExecutor.String(), pulse.String())
 
-	// Exclude sending two equal drops to single LME by jet parent id
+	// Exclude sending two equal drops to single LME after split
+	// Find out which is duplicated by jetID of parent
 	excludeDrops := make(map[insolar.JetID]bool)
 
 	for id, jetDrop := range isk.jetDrops {
