@@ -149,7 +149,7 @@ func (w *Wallet) Accept(amountStr string, assetName string) error {
 	return acc.Accept(amountStr)
 }
 
-// SetDeposit method stores deposit reference in member it belongs to
+// AddDeposit method stores deposit reference in member it belongs to
 func (w *Wallet) AddDeposit(txId string, deposit insolar.Reference) error {
 	if _, ok := w.Deposits[txId]; ok {
 		return fmt.Errorf("deposit for this transaction already exist")
@@ -188,5 +188,5 @@ func (w *Wallet) FindDeposit(transactionHash string) (bool, *insolar.Reference, 
 		return true, depositReference, nil
 	}
 
-	return false, insolar.NewEmptyReference(), nil
+	return false, nil, nil
 }
