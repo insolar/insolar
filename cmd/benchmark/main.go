@@ -161,45 +161,8 @@ func nodesErrorLogReader(s scenario) chan struct{} {
 
 	wg.Add(len(logs))
 	for _, fileName := range logs {
-		fName := fileName
-		go func(fName string) {
-			defer wg.Done()
-
-			file, err := os.Open(fName)
-			if err != nil {
-				writeToOutput(s.getOut(), fmt.Sprintln("Can't open log file ", fName, ", error : ", err))
-			}
-			_, err = file.Seek(-1, io.SeekEnd)
-			if err != nil {
-				writeToOutput(s.getOut(), fmt.Sprintln("Can't seek through log file ", fName, ", error : ", err))
-			}
-
-			reader := bufio.NewReader(file)
-
-			// for making wg.Done()
-			go func() {
-				defer file.Close()
-				ok := true
-				for ok {
-					select {
-					case <-time.After(time.Millisecond):
-						line, err := reader.ReadString('\n')
-						if err != nil && err != io.EOF {
-							writeToOutput(s.getOut(), fmt.Sprintln("Can't read string from ", fName, ", error: ", err))
-							ok = false
-						}
-
-						if strings.Contains(line, " ERR ") {
-							writeToOutput(s.getOut(), fmt.Sprintln("!!! THERE ARE ERRORS IN ERROR LOG !!! ", fName))
-							ok = false
-						}
-					case <-closeChan:
-						writeToOutput(s.getOut(), fmt.Sprintln("Stop reading ", fName))
-						ok = false
-					}
-				}
-			}()
-		}(fName)
+		fName := fileName // be careful using loops and values in parallel code
+		go readLogs(s, &wg, fName, closeChan)
 	}
 
 	wg.Wait()
@@ -219,6 +182,48 @@ func getLogs(root string) ([]string, error) {
 		return nil
 	})
 	return files, err
+}
+
+func readLogs(s scenario, wg *sync.WaitGroup, fileName string, closeChan chan struct{}) {
+	defer wg.Done()
+
+	file, err := os.Open(fileName)
+	if err != nil {
+		writeToOutput(s.getOut(), fmt.Sprintln("Can't open log file ", fileName, ", error : ", err))
+	}
+	_, err = file.Seek(-1, io.SeekEnd)
+	if err != nil {
+		writeToOutput(s.getOut(), fmt.Sprintln("Can't seek through log file ", fileName, ", error : ", err))
+	}
+
+	// for making wg.Done()
+	go findErrorsInLog(s, fileName, file, closeChan)
+}
+
+func findErrorsInLog(s scenario, fName string, file *os.File, closeChan chan struct{}) {
+	defer file.Close()
+	reader := bufio.NewReader(file)
+
+	ok := true
+	for ok {
+		select {
+		case <-time.After(time.Millisecond):
+			line, err := reader.ReadString('\n')
+			if err != nil && err != io.EOF {
+				writeToOutput(s.getOut(), fmt.Sprintln("Can't read string from ", fName, ", error: ", err))
+				ok = false
+			}
+
+			if strings.Contains(line, " ERR ") {
+				writeToOutput(s.getOut(), fmt.Sprintln("!!! THERE ARE ERRORS IN ERROR LOG !!! ", fName))
+				ok = false
+			}
+		case <-closeChan:
+			writeToOutput(s.getOut(), fmt.Sprintln("Stop reading ", fName))
+			ok = false
+		}
+
+	}
 }
 
 func addMigrationAddresses(insSDK *sdk.SDK) int32 {
