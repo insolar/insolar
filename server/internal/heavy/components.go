@@ -213,8 +213,9 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 
 	// API.
 	var (
-		Requester *contractrequester.ContractRequester
-		API       insolar.APIRunner
+		Requester       *contractrequester.ContractRequester
+		ArtifactsClient = artifacts.NewClient(WmBus)
+		APIWrapper      *api.RunnerWrapper
 	)
 	{
 		var err error
@@ -223,10 +224,37 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 			return nil, errors.Wrap(err, "failed to start ContractRequester")
 		}
 
-		API, err = api.NewRunner(&cfg.APIRunner)
+		API, err := api.NewRunner(
+			&cfg.APIRunner,
+			CertManager,
+			Requester,
+			NodeNetwork,
+			NetworkService,
+			Pulses,
+			ArtifactsClient,
+			Coordinator,
+			NetworkService,
+		)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start ApiRunner")
 		}
+
+		AdminAPIRunner, err := api.NewRunner(
+			&cfg.AdminAPIRunner,
+			CertManager,
+			Requester,
+			NodeNetwork,
+			NetworkService,
+			Pulses,
+			ArtifactsClient,
+			Coordinator,
+			NetworkService,
+		)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to start AdminAPIRunner")
+		}
+
+		APIWrapper = api.NewWrapper(API, AdminAPIRunner)
 	}
 
 	metricsHandler, err := metrics.NewMetrics(
@@ -244,14 +272,15 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		Handler      *handler.Handler
 		Genesis      *genesis.Genesis
 		Records      *object.RecordDB
-		JetKeeper    executor.JetKeeper
+		JetKeeper    *executor.DBJetKeeper
 	)
 	{
 		Records = object.NewRecordDB(DB)
 		indexes := object.NewIndexDB(DB, Records)
 		drops := drop.NewDB(DB)
 		JetKeeper = executor.NewJetKeeper(Jets, DB, Pulses)
-		c.rollback = executor.NewDBRollback(JetKeeper, Pulses, drops, Records, indexes, Jets, Pulses)
+
+		c.rollback = executor.NewDBRollback(JetKeeper, drops, Records, indexes, Jets, Pulses, JetKeeper)
 		c.stateKeeper = executor.NewInitialStateKeeper(JetKeeper, Jets, Coordinator, indexes, drops)
 
 		sp := pulse.NewStartPulse()
@@ -358,8 +387,8 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		metricsHandler,
 		Requester,
 		Tokens,
-		artifacts.NewClient(WmBus),
-		API,
+		ArtifactsClient,
+		APIWrapper,
 		KeyProcessor,
 		Termination,
 		CryptoScheme,

@@ -216,7 +216,7 @@ func NewServer(
 		indexes := object.NewIndexDB(DB, Records)
 		drops := drop.NewDB(DB)
 		JetKeeper = executor.NewJetKeeper(Jets, DB, Pulses)
-		DBRollback = executor.NewDBRollback(JetKeeper, Pulses, drops, Records, indexes, Jets, Pulses)
+		DBRollback = executor.NewDBRollback(JetKeeper, drops, Records, indexes, Jets, Pulses, JetKeeper)
 
 		sp := pulse.NewStartPulse()
 

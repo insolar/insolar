@@ -66,6 +66,16 @@ func initDB(t *testing.T, testPulse insolar.PulseNumber) (executor.JetKeeper, st
 	return jetKeeper, tmpdir, db, jets, pulses
 }
 
+func Test_TruncateHead_TryToTruncateTopSync(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+	testPulse := insolar.GenesisPulse.PulseNumber + 10
+	ji, tmpDir, db, _, _ := initDB(t, testPulse)
+	defer os.RemoveAll(tmpDir)
+	defer db.Stop(ctx)
+	err := ji.(*executor.DBJetKeeper).TruncateHead(ctx, 1)
+	require.EqualError(t, err, "try to truncate top sync pulse")
+}
+
 func TestJetInfoIsConfirmed_OneDropOneHot(t *testing.T) {
 	t.Parallel()
 	ctx := inslogger.TestContext(t)

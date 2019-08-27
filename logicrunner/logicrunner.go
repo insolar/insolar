@@ -45,13 +45,11 @@ import (
 	"github.com/insolar/insolar/logicrunner/machinesmanager"
 	"github.com/insolar/insolar/logicrunner/shutdown"
 	"github.com/insolar/insolar/logicrunner/writecontroller"
-	"github.com/insolar/insolar/network"
 )
 
 // LogicRunner is a general interface of contract executor
 type LogicRunner struct {
 	ContractRequester          insolar.ContractRequester          `inject:""`
-	NodeNetwork                network.NodeNetwork                `inject:""`
 	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
 	PulseAccessor              pulse.Accessor                     `inject:""`
 	ArtifactManager            artifacts.Client                   `inject:""`
@@ -231,11 +229,6 @@ func (lr *LogicRunner) GracefulStop(ctx context.Context) error {
 	waitFunction()
 
 	return nil
-}
-
-func loggerWithTargetID(ctx context.Context, msg insolar.Parcel) context.Context {
-	ctx, _ = inslogger.WithField(ctx, "targetid", msg.DefaultTarget().String())
-	return ctx
 }
 
 func (lr *LogicRunner) OnPulse(ctx context.Context, oldPulse insolar.Pulse, newPulse insolar.Pulse) error {

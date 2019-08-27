@@ -60,6 +60,7 @@ import (
 	"github.com/insolar/insolar/network"
 	mock "github.com/insolar/insolar/testutils/network"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestWaitPulsar_PulseNotArrivedInETA(t *testing.T) {
@@ -68,8 +69,8 @@ func TestWaitPulsar_PulseNotArrivedInETA(t *testing.T) {
 	defer mc.Wait(time.Minute)
 
 	gatewayer := mock.NewGatewayerMock(mc)
-	gatewayer.SwitchStateMock.Set(func(ctx context.Context, state insolar.NetworkState, pulse insolar.Pulse) {
-		assert.Equal(t, insolar.NoNetworkState, state)
+	gatewayer.FailStateMock.Set(func(ctx context.Context, reason string) {
+		require.Equal(t, "Bootstrap timeout exceeded", reason)
 	})
 
 	waitPulsar := newWaitPulsar(&Base{})

@@ -40,10 +40,13 @@ import (
 	"github.com/pkg/errors"
 )
 
-const HOST = "http://localhost:19102"
-const HOST_DEBUG = "http://localhost:8001"
-const TestAPIURL = HOST + "/api"
-const TestRPCUrl = TestAPIURL + "/rpc"
+const HOST = "http://localhost:"
+const AdminPort = "19002"
+const PublicPort = "19102"
+const HostDebug = "http://localhost:8001"
+const TestAdminRPCUrl = "/admin-api/rpc"
+const TestRPCUrl = HOST + AdminPort + TestAdminRPCUrl
+const TestRPCUrlPublic = HOST + PublicPort + "/api/rpc"
 
 const insolarRootMemberKeys = "root_member_keys.json"
 const insolarMigrationAdminMemberKeys = "migration_admin_member_keys.json"
@@ -95,7 +98,7 @@ func Run(cb func() int) int {
 var info *requester.InfoResponse
 var Root User
 var MigrationAdmin User
-var MigrationDaemons [insolar.GenesisAmountActiveMigrationDaemonMembers]*User
+var MigrationDaemons [insolar.GenesisAmountMigrationDaemonMembers]*User
 
 type User struct {
 	Ref     string
@@ -208,7 +211,7 @@ func loadAllMembersKeys() error {
 
 func setInfo() error {
 	var err error
-	info, err = requester.Info(TestAPIURL)
+	info, err = requester.Info(TestRPCUrl)
 	if err != nil {
 		return errors.Wrap(err, "[ setInfo ] error sending request")
 	}
@@ -246,11 +249,11 @@ func waitForNet() error {
 	numAttempts := 90
 	// TODO: read ports from bootstrap config
 	ports := []string{
-		"19101",
-		"19102",
-		"19103",
-		"19104",
-		"19105",
+		"19001",
+		"19002",
+		"19003",
+		"19004",
+		"19005",
 		// "19106",
 		// "19107",
 		// "19108",
@@ -263,7 +266,7 @@ func waitForNet() error {
 	for i := 0; i < numAttempts; i++ {
 		currentOk = 0
 		for _, port := range ports {
-			resp, err := requester.Status(fmt.Sprintf("http://127.0.0.1:%s/api", port))
+			resp, err := requester.Status(fmt.Sprintf("%s%s%s", HOST, port, TestAdminRPCUrl))
 			if err != nil {
 				fmt.Println("[ waitForNet ] Problem with port " + port + ". Err: " + err.Error())
 				break

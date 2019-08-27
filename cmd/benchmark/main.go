@@ -57,7 +57,8 @@ var (
 	concurrent         int
 	repetitions        int
 	memberKeys         string
-	apiURLs            []string
+	adminAPIURLs       []string
+	publicAPIURLs      []string
 	logLevel           string
 	logLevelServer     string
 	saveMembersToFile  bool
@@ -71,7 +72,8 @@ func parseInputParams() {
 	pflag.IntVarP(&concurrent, "concurrent", "c", 1, "concurrent users")
 	pflag.IntVarP(&repetitions, "repetitions", "r", 1, "repetitions for one user")
 	pflag.StringVarP(&memberKeys, "memberkeys", "k", "", "path to dir with members keys")
-	pflag.StringArrayVarP(&apiURLs, "apiurl", "u", []string{"http://localhost:19101/api"}, "url to api")
+	pflag.StringArrayVarP(&adminAPIURLs, "adminurls", "a", []string{"http://localhost:19001/admin-api/rpc"}, "url to admin api")
+	pflag.StringArrayVarP(&publicAPIURLs, "publicurls", "p", []string{"http://localhost:19101/api/rpc"}, "url to public api")
 	pflag.StringVarP(&logLevel, "loglevel", "l", "info", "log level for benchmark")
 	pflag.StringVarP(&logLevelServer, "loglevelserver", "L", "", "server log level")
 	pflag.BoolVarP(&saveMembersToFile, "savemembers", "s", false, "save members to file")
@@ -417,7 +419,7 @@ func main() {
 	out, err := chooseOutput(output)
 	check("Problems with output file:", err)
 
-	insSDK, err := sdk.NewSDK(apiURLs, memberKeys)
+	insSDK, err := sdk.NewSDK(adminAPIURLs, publicAPIURLs, memberKeys)
 	check("SDK is not initialized: ", err)
 
 	err = insSDK.SetLogLevel(logLevelServer)

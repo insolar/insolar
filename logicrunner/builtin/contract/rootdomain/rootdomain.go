@@ -43,7 +43,7 @@ func (rd RootDomain) GetMemberByPublicKey(publicKey string) (*insolar.Reference,
 	trimmedPublicKey := foundation.TrimPublicKey(publicKey)
 	i := foundation.GetShardIndex(trimmedPublicKey, insolar.GenesisAmountPublicKeyShards)
 	if i >= len(rd.PublicKeyShards) {
-		return nil, fmt.Errorf("incorect shard index")
+		return nil, fmt.Errorf("incorrect shard index")
 	}
 	s := pkshard.GetObject(rd.PublicKeyShards[i])
 	refStr, err := s.GetRef(trimmedPublicKey)
@@ -64,7 +64,7 @@ func (rd RootDomain) GetMemberByMigrationAddress(migrationAddress string) (*inso
 	trimmedMigrationAddress := foundation.TrimAddress(migrationAddress)
 	i := foundation.GetShardIndex(trimmedMigrationAddress, insolar.GenesisAmountMigrationAddressShards)
 	if i >= len(rd.MigrationAddressShards) {
-		return nil, fmt.Errorf("incorect shard index")
+		return nil, fmt.Errorf("incorrect shard index")
 	}
 	s := migrationshard.GetObject(rd.MigrationAddressShards[i])
 	refStr, err := s.GetRef(trimmedMigrationAddress)
@@ -95,7 +95,7 @@ func (rd *RootDomain) AddMigrationAddresses(migrationAddresses []string) error {
 		trimmedMigrationAddress := foundation.TrimAddress(ma)
 		i := foundation.GetShardIndex(trimmedMigrationAddress, insolar.GenesisAmountMigrationAddressShards)
 		if i >= len(newMA) {
-			return fmt.Errorf("incorect migration shard index")
+			return fmt.Errorf("incorrect migration shard index")
 		}
 		newMA[i] = append(newMA[i], trimmedMigrationAddress)
 	}
@@ -120,7 +120,7 @@ func (rd *RootDomain) AddMigrationAddress(migrationAddress string) error {
 	trimmedMigrationAddress := foundation.TrimAddress(migrationAddress)
 	i := foundation.GetShardIndex(trimmedMigrationAddress, insolar.GenesisAmountMigrationAddressShards)
 	if i >= len(rd.MigrationAddressShards) {
-		return fmt.Errorf("incorect migration shard index")
+		return fmt.Errorf("incorrect migration shard index")
 	}
 	s := migrationshard.GetObject(rd.MigrationAddressShards[i])
 	err := s.AddFreeMigrationAddresses([]string{trimmedMigrationAddress})
@@ -136,7 +136,7 @@ func (rd *RootDomain) GetFreeMigrationAddress(publicKey string) (string, error) 
 	trimmedPublicKey := foundation.TrimPublicKey(publicKey)
 	shardIndex := foundation.GetShardIndex(trimmedPublicKey, insolar.GenesisAmountPublicKeyShards)
 	if shardIndex >= len(rd.MigrationAddressShards) {
-		return "", fmt.Errorf("incorect migration address shard index")
+		return "", fmt.Errorf("incorrect migration address shard index")
 	}
 
 	for i := shardIndex; i < len(rd.MigrationAddressShards); i++ {
@@ -178,7 +178,7 @@ func (rd *RootDomain) AddNewMemberToMaps(publicKey string, migrationAddress stri
 	trimmedPublicKey := foundation.TrimPublicKey(publicKey)
 	shardIndex := foundation.GetShardIndex(trimmedPublicKey, insolar.GenesisAmountPublicKeyShards)
 	if shardIndex >= len(rd.PublicKeyShards) {
-		return fmt.Errorf("incorect public key shard index")
+		return fmt.Errorf("incorrect public key shard index")
 	}
 	pks := pkshard.GetObject(rd.PublicKeyShards[shardIndex])
 	err := pks.SetRef(trimmedPublicKey, memberRef.String())
@@ -189,7 +189,7 @@ func (rd *RootDomain) AddNewMemberToMaps(publicKey string, migrationAddress stri
 	trimmedMigrationAddress := foundation.TrimAddress(migrationAddress)
 	shardIndex = foundation.GetShardIndex(trimmedMigrationAddress, insolar.GenesisAmountPublicKeyShards)
 	if shardIndex >= len(rd.MigrationAddressShards) {
-		return fmt.Errorf("incorect migration address shard index")
+		return fmt.Errorf("incorrect migration address shard index")
 	}
 	mas := migrationshard.GetObject(rd.MigrationAddressShards[shardIndex])
 	err = mas.SetRef(migrationAddress, memberRef.String())
@@ -206,7 +206,7 @@ func (rd *RootDomain) AddNewMemberToPublicKeyMap(publicKey string, memberRef ins
 	trimmedPublicKey := foundation.TrimPublicKey(publicKey)
 	i := foundation.GetShardIndex(trimmedPublicKey, insolar.GenesisAmountPublicKeyShards)
 	if i >= len(rd.PublicKeyShards) {
-		return fmt.Errorf("incorect public key shard index")
+		return fmt.Errorf("incorrect public key shard index")
 	}
 	s := pkshard.GetObject(rd.PublicKeyShards[i])
 	err := s.SetRef(trimmedPublicKey, memberRef.String())

@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
+	"fmt"
 	"sync"
 
 	"github.com/dgraph-io/badger"
@@ -41,6 +42,11 @@ type recordKey insolar.ID
 
 func (k recordKey) Scope() store.Scope {
 	return store.ScopeRecord
+}
+
+func (k recordKey) DebugString() string {
+	id := insolar.ID(k)
+	return "recordKey. " + id.DebugString()
 }
 
 func (k recordKey) ID() []byte {
@@ -79,8 +85,31 @@ func (k recordPositionKey) ID() []byte {
 	return bytes.Join([][]byte{{recordPositionKeyPrefix}, k.pn.Bytes(), parsedNum}, nil)
 }
 
+func newRecordPositionKeyFromBytes(raw []byte) recordPositionKey {
+	k := recordPositionKey{}
+
+	k.pn = insolar.NewPulseNumber(raw[1:])
+	k.number = binary.BigEndian.Uint32(raw[(k.pn.Size() + 1):])
+
+	return k
+}
+
+func (k recordPositionKey) String() string {
+	return fmt.Sprintf("recordPositionKey. pulse: %d, number: %d", k.pn, k.number)
+}
+
 type lastKnownRecordPositionKey struct {
 	pn insolar.PulseNumber
+}
+
+func newLastKnownRecordPositionKey(raw []byte) lastKnownRecordPositionKey {
+	k := lastKnownRecordPositionKey{}
+	k.pn = insolar.NewPulseNumber(raw[1:])
+	return k
+}
+
+func (k lastKnownRecordPositionKey) String() string {
+	return fmt.Sprintf("lastKnownRecordPositionKey. pulse: %d", k.pn)
 }
 
 func (k lastKnownRecordPositionKey) Scope() store.Scope {
@@ -229,29 +258,82 @@ func setPosition(txn *badger.Txn, recID insolar.ID, position uint32) error {
 	return txn.Set(fullKey, recID.Bytes())
 }
 
-// TruncateHead remove all records after lastPulse
-func (r *RecordDB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
-	it := store.NewReadIterator(r.db.Backend(), recordKey(*insolar.NewID(from, nil)), false)
+func (r *RecordDB) truncateRecordsHead(ctx context.Context, from insolar.PulseNumber) error {
+	keyFrom := recordKey(*insolar.NewID(from, nil))
+	it := store.NewReadIterator(r.db.Backend(), keyFrom, false)
 	defer it.Close()
 
 	var hasKeys bool
 	for it.Next() {
 		hasKeys = true
 		key := newRecordKey(it.Key())
-		keyID := insolar.ID(key)
 
-		err := r.db.Backend().Update(func(txn *badger.Txn) error {
-			fullKey := append(key.Scope().Bytes(), key.ID()...)
-			return txn.Delete(fullKey)
-		})
+		err := r.db.Delete(key)
 		if err != nil {
-			return errors.Wrapf(err, "can't delete key: %+v", key)
+			return errors.Wrapf(err, "can't delete key: %s", key.DebugString())
 		}
-		inslogger.FromContext(ctx).Debugf("Erased key with pulse number: %s. ID: %s", keyID.Pulse().String(), keyID.String())
+
+		inslogger.FromContext(ctx).Debugf("Erased key: %s", key.DebugString())
 	}
 
 	if !hasKeys {
-		inslogger.FromContext(ctx).Infof("No records. Nothing done. Pulse number: %s", from.String())
+		inslogger.FromContext(ctx).Infof("No records. Nothing done. Start key: %s", from.String())
+	}
+
+	return nil
+}
+
+func (r *RecordDB) truncatePositionRecordHead(ctx context.Context, from store.Key, prefix byte) error {
+	it := store.NewReadIterator(r.db.Backend(), from, false)
+	defer it.Close()
+
+	var hasKeys bool
+	for it.Next() {
+		hasKeys = true
+		if it.Key()[0] != prefix {
+			continue
+		}
+		key := makePositionKey(it.Key())
+
+		err := r.db.Delete(key)
+		if err != nil {
+			return errors.Wrapf(err, "can't delete key: %s", key)
+		}
+
+		inslogger.FromContext(ctx).Debugf("Erased key: %s", key)
+	}
+
+	if !hasKeys {
+		inslogger.FromContext(ctx).Infof("No records. Nothing done. Start key: %s", from)
+	}
+
+	return nil
+}
+
+func makePositionKey(raw []byte) store.Key {
+	switch raw[0] {
+	case recordPositionKeyPrefix:
+		return newRecordPositionKeyFromBytes(raw)
+	case lastKnownRecordPositionKeyPrefix:
+		return newLastKnownRecordPositionKey(raw)
+	default:
+		panic("unknown prefix: " + string(raw[0]))
+	}
+}
+
+// TruncateHead remove all records after lastPulse
+func (r *RecordDB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
+
+	if err := r.truncateRecordsHead(ctx, from); err != nil {
+		return errors.Wrap(err, "failed to truncate records head")
+	}
+
+	if err := r.truncatePositionRecordHead(ctx, recordPositionKey{pn: from}, recordPositionKeyPrefix); err != nil {
+		return errors.Wrap(err, "failed to truncate record positions head")
+	}
+
+	if err := r.truncatePositionRecordHead(ctx, lastKnownRecordPositionKey{pn: from}, lastKnownRecordPositionKeyPrefix); err != nil {
+		return errors.Wrap(err, "failed to truncate last known record positions head")
 	}
 
 	return nil
