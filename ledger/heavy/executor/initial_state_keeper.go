@@ -59,6 +59,7 @@ type InitialStateKeeper struct {
 
 	lock                  sync.RWMutex
 	jetDrops              map[insolar.JetID][]byte
+	jetSiblings           map[insolar.JetID]insolar.JetID
 	abandonRequestIndexes map[insolar.JetID][]record.Index
 }
 
@@ -77,6 +78,7 @@ func NewInitialStateKeeper(
 		syncPulse:             jetKeeper.TopSyncPulse(),
 		jetTree:               jet.NewTree(true),
 		jetDrops:              make(map[insolar.JetID][]byte),
+		jetSiblings:           make(map[insolar.JetID]insolar.JetID),
 		abandonRequestIndexes: make(map[insolar.JetID][]record.Index),
 	}
 }
@@ -109,6 +111,9 @@ func (isk *InitialStateKeeper) prepareDrops(ctx context.Context) {
 
 		if dr.Split {
 			left, right := jet.Siblings(jetID)
+			isk.jetSiblings[left] = right
+			isk.jetSiblings[right] = left
+
 			isk.jetDrops[left] = jetDrop
 			isk.jetDrops[right] = jetDrop
 		} else {
@@ -169,7 +174,6 @@ func (isk *InitialStateKeeper) Get(ctx context.Context, lightExecutor insolar.Re
 	logger.Debugf("[ InitialStateKeeper ] Getting drops for: %s in pulse: %s", lightExecutor.String(), pulse.String())
 
 	// Exclude sending two equal drops to single LME after split
-	// Find out which is duplicated by jetID of parent
 	excludeDrops := make(map[insolar.JetID]bool)
 
 	for id, jetDrop := range isk.jetDrops {
@@ -181,10 +185,13 @@ func (isk *InitialStateKeeper) Get(ctx context.Context, lightExecutor insolar.Re
 		if light.Equal(lightExecutor) {
 			jetIDs = append(jetIDs, id)
 
-			parentID := jet.Parent(id)
-			if _, appended := excludeDrops[parentID]; !appended {
-				drops = append(drops, jetDrop)
-				excludeDrops[parentID] = true
+			if _, ok := excludeDrops[id]; ok {
+				continue
+			}
+
+			drops = append(drops, jetDrop)
+			if siblingID, ok := isk.jetSiblings[id]; ok {
+				excludeDrops[siblingID] = true
 			}
 		}
 	}
