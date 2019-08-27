@@ -33,8 +33,11 @@ or you can run benchmark with
         -k rootmemberkeys
                 Path to file with RootMember keys.
 
-        -u apiurl (may be specified multiple times for roundrobin requests)
-                API url for requests (default - http://localhost:19101/api).
+        -a adminapiurl (may be specified multiple times for roundrobin requests)
+                API url for requests (default - http://localhost:19001/admin-api/rpc).
+                
+        -p publicapiurl (may be specified multiple times for roundrobin requests)
+                API url for requests (default - http://localhost:19101/api/rpc).
 
         -l loglevel
                 Log level (default - info).
@@ -46,6 +49,9 @@ or you can run benchmark with
         -m usemembers
                 Use members from file .artifacts/bench-members/members.txt.
                 If false, wright info about created members in this file. Default is false. 
-
+        -members-dir
+                Dir for saving memebers data
         -b nocheckbalance
                 If true, don't check balance at the start/end of transfers. Default is false. 
+        -discovery-nodes-logs-dir
+                Launchnet logs dir for checking errors

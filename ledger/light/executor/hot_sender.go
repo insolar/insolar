@@ -155,17 +155,16 @@ func (m *HotSenderDefault) sendForJet(
 	jetID insolar.JetID,
 	pn insolar.PulseNumber,
 	indexes []record.Index,
-	block drop.Drop,
+	drop drop.Drop,
 ) error {
 	ctx, span := instracer.StartSpan(ctx, "hot_sender.send_hot")
 	defer span.End()
 
 	stats.Record(ctx, statHotObjectsTotal.M(int64(len(indexes))))
 
-	buf := drop.MustEncode(&block)
 	msg, err := payload.NewMessage(&payload.HotObjects{
 		JetID:   jetID,
-		Drop:    buf,
+		Drop:    drop,
 		Pulse:   pn,
 		Indexes: indexes,
 	})

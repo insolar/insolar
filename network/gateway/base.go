@@ -125,7 +125,7 @@ func (g *Base) NewGateway(ctx context.Context, state insolar.NetworkState) netwo
 	case insolar.WaitPulsar:
 		g.Self = newWaitPulsar(g)
 	default:
-		panic("Try to switch network to unknown state. Memory of process is inconsistent.")
+		inslogger.FromContext(ctx).Panic("Try to switch network to unknown state. Memory of process is inconsistent.")
 	}
 	return g.Self
 }
@@ -139,9 +139,6 @@ func (g *Base) Init(ctx context.Context) error {
 	)
 	g.HostNetwork.RegisterRequestHandler(types.UpdateSchedule, g.HandleUpdateSchedule)
 	g.HostNetwork.RegisterRequestHandler(types.Reconnect, g.HandleReconnect)
-	g.HostNetwork.RegisterRequestHandler(types.Ping, func(ctx context.Context, req network.ReceivedPacket) (network.Packet, error) {
-		return g.HostNetwork.BuildResponse(ctx, req, &packet.Ping{}), nil
-	})
 
 	g.createCandidateProfile()
 	g.bootstrapETA = g.Options.BootstrapTimeout
@@ -156,7 +153,7 @@ func (g *Base) OnPulseFromConsensus(ctx context.Context, pu insolar.Pulse) {
 	g.NodeKeeper.MoveSyncToActive(ctx, pu.PulseNumber)
 	err := g.PulseAppender.AppendPulse(ctx, pu)
 	if err != nil {
-		panic("failed to append pulse:" + err.Error())
+		inslogger.FromContext(ctx).Panic("failed to append pulse: ", err.Error())
 	}
 
 	nodes := g.NodeKeeper.GetAccessor(pu.PulseNumber).GetActiveNodes()

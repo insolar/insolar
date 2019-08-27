@@ -18,11 +18,14 @@ package rootdomain
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/helloworld"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/migrationshard"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/pkshard"
 )
 
@@ -39,7 +42,7 @@ func (rd *RootDomain) GetMemberByPublicKey(publicKey string) (*insolar.Reference
 	trimmedPublicKey := foundation.TrimPublicKey(publicKey)
 	i := foundation.GetShardIndex(trimmedPublicKey, insolar.GenesisAmountPublicKeyShards)
 	if i >= len(rd.PublicKeyShards) {
-		return nil, fmt.Errorf("incorect shard index")
+		return nil, fmt.Errorf("incorrect shard index")
 	}
 	s := pkshard.GetObject(rd.PublicKeyShards[i])
 	refStr, err := s.GetRef(trimmedPublicKey)
@@ -68,7 +71,7 @@ func (rd *RootDomain) AddNewMemberToMap(publicKey string, memberRef insolar.Refe
 	trimmedPublicKey := foundation.TrimPublicKey(publicKey)
 	shardIndex := foundation.GetShardIndex(trimmedPublicKey, insolar.GenesisAmountPublicKeyShards)
 	if shardIndex >= len(rd.PublicKeyShards) {
-		return fmt.Errorf("incorect public key shard index")
+		return fmt.Errorf("incorrect public key shard index")
 	}
 	pks := pkshard.GetObject(rd.PublicKeyShards[shardIndex])
 	err := pks.SetRef(trimmedPublicKey, memberRef.String())
@@ -84,7 +87,7 @@ func (rd *RootDomain) AddNewMemberToPublicKeyMap(publicKey string, memberRef ins
 	trimmedPublicKey := foundation.TrimPublicKey(publicKey)
 	i := foundation.GetShardIndex(trimmedPublicKey, insolar.GenesisAmountPublicKeyShards)
 	if i >= len(rd.PublicKeyShards) {
-		return fmt.Errorf("incorect public key shard index")
+		return fmt.Errorf("incorrect public key shard index")
 	}
 	s := pkshard.GetObject(rd.PublicKeyShards[i])
 	err := s.SetRef(trimmedPublicKey, memberRef.String())
