@@ -194,15 +194,13 @@ func generateMigrationAddress() string {
 const migrationAmount = "360000"
 
 func fullMigration(t *testing.T, txHash string) *launchnet.User {
-	activateDaemons(t, launchnet.MigrationDaemons[0:3])
+	activeDaemons := activateDaemons(t, countThreeActiveDaemon)
 
 	migrationAddress := testutils.RandomString()
 	member := createMigrationMemberForMA(t, migrationAddress)
-
-	migrate(t, member.Ref, migrationAmount, txHash, migrationAddress, 0)
-	migrate(t, member.Ref, migrationAmount, txHash, migrationAddress, 2)
-	migrate(t, member.Ref, migrationAmount, txHash, migrationAddress, 1)
-
+	for i := range activeDaemons {
+		migrate(t, member.Ref, migrationAmount, txHash, migrationAddress, i)
+	}
 	return member
 }
 
@@ -254,22 +252,23 @@ func getStatus(t testing.TB) statusResponse {
 	return rpcStatusResponse.Result
 }
 
-func activateDaemons(t *testing.T, listDaemons []*launchnet.User) {
-	for _, daemons := range listDaemons {
-
-		if len(daemons.Ref) > 0 {
-			res, err := signedRequest(t, &launchnet.MigrationAdmin, "migration.checkDaemon", map[string]interface{}{"reference": daemons.Ref})
+func activateDaemons(t *testing.T, countDaemon int) []*launchnet.User {
+	var activeDaemons []*launchnet.User
+	for i := 0; i < countDaemon; i++ {
+		if len(launchnet.MigrationDaemons[i].Ref) > 0 {
+			res, err := signedRequest(t, &launchnet.MigrationAdmin, "migration.checkDaemon", map[string]interface{}{"reference": launchnet.MigrationDaemons[i].Ref})
 			require.NoError(t, err)
 
 			status := res.(map[string]interface{})["status"].(string)
 
 			if status == "inactive" {
-				_, err := signedRequest(t, &launchnet.MigrationAdmin, "migration.activateDaemon", map[string]interface{}{"reference": daemons.Ref})
+				_, err := signedRequest(t, &launchnet.MigrationAdmin, "migration.activateDaemon", map[string]interface{}{"reference": launchnet.MigrationDaemons[i].Ref})
 				require.NoError(t, err)
 			}
+			activeDaemons = append(activeDaemons, launchnet.MigrationDaemons[i])
 		}
 	}
-
+	return activeDaemons
 }
 
 func unmarshalRPCResponse(t testing.TB, body []byte, response RPCResponseInterface) {

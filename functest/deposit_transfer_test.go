@@ -20,15 +20,15 @@ package functest
 
 import (
 	"fmt"
-	"github.com/insolar/insolar/api"
-	"github.com/insolar/insolar/logicrunner/builtin/foundation"
-	"github.com/insolar/insolar/testutils"
-	"github.com/insolar/insolar/testutils/launchnet"
-	"github.com/stretchr/testify/require"
 	"math/big"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/insolar/insolar/api"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
+	"github.com/insolar/insolar/testutils"
+	"github.com/stretchr/testify/require"
 )
 
 // TODO: https://insolar.atlassian.net/browse/WLT-768
@@ -101,7 +101,7 @@ func TestDepositTransferWrongValueAmount(t *testing.T) {
 }
 
 func TestDepositTransferNotEnoughConfirms(t *testing.T) {
-	activateDaemons(t, launchnet.MigrationDaemons[0:3])
+	activateDaemons(t, countThreeActiveDaemon)
 	migrationAddress := testutils.RandomString()
 	member := createMigrationMemberForMA(t, migrationAddress)
 	_ = migrate(t, member.Ref, "1000", "Eth_TxHash_test", migrationAddress, 2)
