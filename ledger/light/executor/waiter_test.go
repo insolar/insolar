@@ -110,7 +110,7 @@ func Test_HotDataWaiterConcrete_WaitClose_MultipleMembers(t *testing.T) {
 	t.Parallel()
 	// Arrange
 	waitingStarted := make(chan struct{}, 2)
-	waitingFinished := make(chan struct{})
+	waitingRes := make(chan error, 2)
 
 	hdw := executor.NewChannelWaiter()
 	hdwLock := sync.Mutex{}
@@ -128,17 +128,11 @@ func Test_HotDataWaiterConcrete_WaitClose_MultipleMembers(t *testing.T) {
 	// Act
 	go func() {
 		waitingStarted <- struct{}{}
-		err := hdwGetter().Wait(inslogger.TestContext(t), jetID, pulse)
-		require.NotNil(t, err)
-		require.Equal(t, insolar.ErrHotDataTimeout, err)
-		waitingFinished <- struct{}{}
+		waitingRes <- hdwGetter().Wait(inslogger.TestContext(t), jetID, pulse)
 	}()
 	go func() {
 		waitingStarted <- struct{}{}
-		err := hdwGetter().Wait(inslogger.TestContext(t), secondJetID, pulse)
-		require.NotNil(t, err)
-		require.Equal(t, insolar.ErrHotDataTimeout, err)
-		waitingFinished <- struct{}{}
+		waitingRes <- hdwGetter().Wait(inslogger.TestContext(t), secondJetID, pulse)
 	}()
 
 	<-waitingStarted
@@ -147,6 +141,8 @@ func Test_HotDataWaiterConcrete_WaitClose_MultipleMembers(t *testing.T) {
 
 	hdwGetter().CloseAllUntil(inslogger.TestContext(t), pulse)
 
-	<-waitingFinished
-	<-waitingFinished
+	err := <-waitingRes
+	require.Equal(t, err, insolar.ErrHotDataTimeout)
+	err = <-waitingRes
+	require.Equal(t, err, insolar.ErrHotDataTimeout)
 }

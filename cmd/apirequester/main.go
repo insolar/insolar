@@ -25,16 +25,19 @@ import (
 	"github.com/spf13/pflag"
 )
 
-const defaultURL = "http://localhost:19101/api"
+const defaultAdminURL = "http://localhost:19001/admin-api/rpc"
+const defaultPublicURL = "http://localhost:19101/api/rpc"
 
 var (
-	memberKeys string
-	apiURL     string
+	memberKeys   string
+	apiAdminURL  string
+	apiPublicURL string
 )
 
 func parseInputParams() {
 	pflag.StringVarP(&memberKeys, "memberkeys", "k", "", "path to dir with members keys")
-	pflag.StringVarP(&apiURL, "url", "u", defaultURL, "api url")
+	pflag.StringVarP(&apiAdminURL, "adminurls", "a", defaultAdminURL, "admin api url")
+	pflag.StringVarP(&apiPublicURL, "publicurls", "p", defaultPublicURL, "public api url")
 	pflag.Parse()
 }
 
@@ -51,7 +54,7 @@ func main() {
 	err := log.SetLevel("error")
 	check("can't set 'error' level on logger: ", err)
 
-	insSDK, err := sdk.NewSDK([]string{apiURL}, memberKeys)
+	insSDK, err := sdk.NewSDK([]string{apiAdminURL}, []string{apiPublicURL}, memberKeys)
 	check("can't create SDK: ", err)
 
 	// you can modify this manual tests by commenting any of this functions or/and add some new functions if necessary

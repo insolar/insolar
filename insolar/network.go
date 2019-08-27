@@ -34,9 +34,6 @@ type Cascade struct {
 // RemoteProcedure is remote procedure call function.
 type RemoteProcedure func(ctx context.Context, args []byte) ([]byte, error)
 
-// NetworkOperableCallback is callback for notifying is network is operable or not
-type NetworkOperableCallback func(ctx context.Context, isNetworkOperable bool)
-
 // HealthChecker interface provides method to check network health
 type HealthChecker interface {
 	// IsAlive returns true if todo: fix requirements
@@ -76,8 +73,6 @@ type Network interface {
 	Leave(ctx context.Context, ETA PulseNumber)
 	// GetState returns our current thoughs about whole network
 	GetState() NetworkState
-	// SetOperableFunc registers callback for notifying of network state
-	SetOperableFunc(NetworkOperableCallback)
 	GetCert(context.Context, *Reference) (Certificate, error)
 }
 
@@ -100,5 +95,6 @@ const (
 	WaitConsensus
 	WaitMajority
 	WaitMinRoles
+	WaitPulsar
 	CompleteNetworkState
 )

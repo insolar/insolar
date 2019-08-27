@@ -22,8 +22,6 @@ import (
 	"github.com/insolar/insolar/logicrunner/common"
 )
 
-type status string
-
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
 var PrototypeReference, _ = insolar.NewReferenceFromBase58("111A7ctasuNUug8BoK4VJNuAFJ73rnH8bH5zqd5HrDj.11111111111111111111111111111111")

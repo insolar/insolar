@@ -61,7 +61,7 @@ func Test_NotifyAboutPulse(t *testing.T) {
 		JetID:     jetID,
 		Pulse:     expectPN,
 		Indexes:   expectIndexes,
-		Drop:      drop.MustEncode(&expectDrop),
+		Drop:      expectDrop,
 		Records:   expectRecords,
 	}
 

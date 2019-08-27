@@ -90,16 +90,15 @@ func indexesFixture() []record.Index {
 func dropsFixture() []drop.Drop {
 	ids := gen.UniqueIDs(3)
 	return []drop.Drop{
-		{Split: false, Hash: ids[0].Bytes()},
-		{Split: true, Hash: ids[1].Bytes()},
-		{Split: false, Hash: ids[2].Bytes()},
+		{Split: false, Pulse: ids[0].Pulse(), Hash: ids[0].Bytes()},
+		{Split: true, Pulse: ids[1].Pulse(), Hash: ids[1].Bytes()},
+		{Split: false, Pulse: ids[2].Pulse(), Hash: ids[2].Bytes()},
 	}
 }
 
-func sortDrops(drops [][]byte) {
+func sortDrops(drops []drop.Drop) {
 	cmp := func(i, j int) bool {
-		cmp := bytes.Compare(drops[i], drops[j])
-		return cmp < 0
+		return drops[i].Pulse < drops[j].Pulse
 	}
 	sort.Slice(drops, cmp)
 }
@@ -166,9 +165,9 @@ func TestInitialStateKeeper_Get_AfterRestart(t *testing.T) {
 	sortIndexes(state.Indexes)
 	require.Equal(t, expectedIndexes, state.Indexes)
 
-	expectedDrops := [][]byte{
-		drop.MustEncode(&drops[0]),
-		drop.MustEncode(&drops[1]),
+	expectedDrops := []drop.Drop{
+		drops[0],
+		drops[1],
 	}
 	sortDrops(expectedDrops)
 	sortDrops(state.Drops)
@@ -187,9 +186,9 @@ func TestInitialStateKeeper_Get_AfterRestart(t *testing.T) {
 	sortIndexes(state.Indexes)
 	require.Equal(t, []record.Index{indexes[2]}, state.Indexes)
 
-	expectedDrops = [][]byte{
-		drop.MustEncode(&drops[1]),
-		drop.MustEncode(&drops[2]),
+	expectedDrops = []drop.Drop{
+		drops[1],
+		drops[2],
 	}
 	sortDrops(expectedDrops)
 	sortDrops(state.Drops)
@@ -235,14 +234,14 @@ func TestInitialStateKeeper_Get_EmptyAfterRestart(t *testing.T) {
 	state := stateKeeper.Get(ctx, currentLight, current)
 
 	require.Equal(t, []record.Index{}, state.Indexes)
-	require.Equal(t, [][]byte{drop.MustEncode(&jetDrop)}, state.Drops)
+	require.Equal(t, []drop.Drop{jetDrop}, state.Drops)
 	require.Equal(t, []insolar.JetID{jetIDs[0]}, state.JetIDs)
 
 	// Get for anotherLight
 	state = stateKeeper.Get(ctx, anotherLight, current)
 
 	require.Equal(t, []record.Index{}, state.Indexes)
-	require.Equal(t, [][]byte{}, state.Drops)
+	require.Equal(t, []drop.Drop{}, state.Drops)
 	require.Equal(t, []insolar.JetID{}, state.JetIDs)
 
 }
@@ -296,9 +295,9 @@ func TestInitialStateKeeper_Get_WithDuplicatedDrops(t *testing.T) {
 	sortIndexes(state.Indexes)
 	require.Equal(t, expectedIndexes, state.Indexes)
 
-	expectedDrops := [][]byte{
-		drop.MustEncode(&drops[0]),
-		drop.MustEncode(&drops[1]),
+	expectedDrops := []drop.Drop{
+		drops[0],
+		drops[1],
 	}
 	sortDrops(expectedDrops)
 	sortDrops(state.Drops)
@@ -317,8 +316,8 @@ func TestInitialStateKeeper_Get_WithDuplicatedDrops(t *testing.T) {
 	sortIndexes(state.Indexes)
 	require.Equal(t, []record.Index{indexes[2]}, state.Indexes)
 
-	expectedDrops = [][]byte{
-		drop.MustEncode(&drops[2]),
+	expectedDrops = []drop.Drop{
+		drops[2],
 	}
 	sortDrops(expectedDrops)
 	sortDrops(state.Drops)

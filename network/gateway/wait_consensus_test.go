@@ -52,9 +52,11 @@ package gateway
 
 import (
 	"context"
-	"github.com/gojuno/minimock"
 	"testing"
 	"time"
+
+	"github.com/gojuno/minimock"
+	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network"
@@ -68,8 +70,8 @@ func TestWaitConsensus_ConsensusNotHappenedInETA(t *testing.T) {
 	defer mc.Wait(time.Minute)
 
 	gatewayer := mock.NewGatewayerMock(mc)
-	gatewayer.SwitchStateMock.Set(func(ctx context.Context, state insolar.NetworkState, pulse insolar.Pulse) {
-		assert.Equal(t, insolar.NoNetworkState, state)
+	gatewayer.FailStateMock.Set(func(ctx context.Context, reason string) {
+		require.Equal(t, "Bootstrap timeout exceeded", reason)
 	})
 
 	waitConsensus := newWaitConsensus(&Base{})

@@ -5,6 +5,7 @@ package payload;
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 import "github.com/insolar/insolar/insolar/record/record.proto";
 import "github.com/insolar/insolar/insolar/pulse/pulse.proto";
+import "github.com/insolar/insolar/ledger/drop/drop.proto";
 
 
 message Meta {
@@ -166,7 +167,7 @@ message FilamentSegment {
 message GetRequestInfo {
     uint32 Polymorph = 16;
 
-    bytes ObjectID  = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+    bytes ObjectID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
     bytes RequestID = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
     bytes Pulse = 22 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
 }
@@ -200,7 +201,7 @@ message HotObjects {
 
     bytes JetID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.JetID", (gogoproto.nullable) = false];
     bytes Pulse = 22 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
-    bytes Drop = 21;
+    drop.Drop Drop = 21 [(gogoproto.nullable) = false];
     repeated record.Index Indexes = 23 [(gogoproto.nullable) = false];
 }
 
@@ -310,7 +311,7 @@ message Replication {
     bytes Pulse = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
     repeated record.Index Indexes = 22 [(gogoproto.nullable) = false];
     repeated record.Material Records = 23 [(gogoproto.nullable) = false];
-    bytes Drop = 24;
+    drop.Drop Drop = 24 [(gogoproto.nullable) = false];
 }
 
 message GetJet {
@@ -337,9 +338,9 @@ message LightInitialState {
 
     bool NetworkStart = 20;
     repeated bytes JetIDs = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.JetID", (gogoproto.nullable) = false];
-    repeated bytes Drops = 22;
+    repeated drop.Drop Drops = 22 [(gogoproto.nullable) = false];
     repeated record.Index Indexes = 23 [(gogoproto.nullable) = false];
-    pulse.PulseProto Pulse = 24 [ (gogoproto.nullable) = false];
+    pulse.PulseProto Pulse = 24 [(gogoproto.nullable) = false];
 }
 
 message GetIndex {

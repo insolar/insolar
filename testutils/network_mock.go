@@ -51,12 +51,6 @@ type NetworkMock struct {
 	afterSendMessageCounter  uint64
 	beforeSendMessageCounter uint64
 	SendMessageMock          mNetworkMockSendMessage
-
-	funcSetOperableFunc          func(n1 mm_insolar.NetworkOperableCallback)
-	inspectFuncSetOperableFunc   func(n1 mm_insolar.NetworkOperableCallback)
-	afterSetOperableFuncCounter  uint64
-	beforeSetOperableFuncCounter uint64
-	SetOperableFuncMock          mNetworkMockSetOperableFunc
 }
 
 // NewNetworkMock returns a mock for insolar.Network
@@ -82,9 +76,6 @@ func NewNetworkMock(t minimock.Tester) *NetworkMock {
 
 	m.SendMessageMock = mNetworkMockSendMessage{mock: m}
 	m.SendMessageMock.callArgs = []*NetworkMockSendMessageParams{}
-
-	m.SetOperableFuncMock = mNetworkMockSetOperableFunc{mock: m}
-	m.SetOperableFuncMock.callArgs = []*NetworkMockSetOperableFuncParams{}
 
 	return m
 }
@@ -1260,193 +1251,6 @@ func (m *NetworkMock) MinimockSendMessageInspect() {
 	}
 }
 
-type mNetworkMockSetOperableFunc struct {
-	mock               *NetworkMock
-	defaultExpectation *NetworkMockSetOperableFuncExpectation
-	expectations       []*NetworkMockSetOperableFuncExpectation
-
-	callArgs []*NetworkMockSetOperableFuncParams
-	mutex    sync.RWMutex
-}
-
-// NetworkMockSetOperableFuncExpectation specifies expectation struct of the Network.SetOperableFunc
-type NetworkMockSetOperableFuncExpectation struct {
-	mock   *NetworkMock
-	params *NetworkMockSetOperableFuncParams
-
-	Counter uint64
-}
-
-// NetworkMockSetOperableFuncParams contains parameters of the Network.SetOperableFunc
-type NetworkMockSetOperableFuncParams struct {
-	n1 mm_insolar.NetworkOperableCallback
-}
-
-// Expect sets up expected params for Network.SetOperableFunc
-func (mmSetOperableFunc *mNetworkMockSetOperableFunc) Expect(n1 mm_insolar.NetworkOperableCallback) *mNetworkMockSetOperableFunc {
-	if mmSetOperableFunc.mock.funcSetOperableFunc != nil {
-		mmSetOperableFunc.mock.t.Fatalf("NetworkMock.SetOperableFunc mock is already set by Set")
-	}
-
-	if mmSetOperableFunc.defaultExpectation == nil {
-		mmSetOperableFunc.defaultExpectation = &NetworkMockSetOperableFuncExpectation{}
-	}
-
-	mmSetOperableFunc.defaultExpectation.params = &NetworkMockSetOperableFuncParams{n1}
-	for _, e := range mmSetOperableFunc.expectations {
-		if minimock.Equal(e.params, mmSetOperableFunc.defaultExpectation.params) {
-			mmSetOperableFunc.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmSetOperableFunc.defaultExpectation.params)
-		}
-	}
-
-	return mmSetOperableFunc
-}
-
-// Inspect accepts an inspector function that has same arguments as the Network.SetOperableFunc
-func (mmSetOperableFunc *mNetworkMockSetOperableFunc) Inspect(f func(n1 mm_insolar.NetworkOperableCallback)) *mNetworkMockSetOperableFunc {
-	if mmSetOperableFunc.mock.inspectFuncSetOperableFunc != nil {
-		mmSetOperableFunc.mock.t.Fatalf("Inspect function is already set for NetworkMock.SetOperableFunc")
-	}
-
-	mmSetOperableFunc.mock.inspectFuncSetOperableFunc = f
-
-	return mmSetOperableFunc
-}
-
-// Return sets up results that will be returned by Network.SetOperableFunc
-func (mmSetOperableFunc *mNetworkMockSetOperableFunc) Return() *NetworkMock {
-	if mmSetOperableFunc.mock.funcSetOperableFunc != nil {
-		mmSetOperableFunc.mock.t.Fatalf("NetworkMock.SetOperableFunc mock is already set by Set")
-	}
-
-	if mmSetOperableFunc.defaultExpectation == nil {
-		mmSetOperableFunc.defaultExpectation = &NetworkMockSetOperableFuncExpectation{mock: mmSetOperableFunc.mock}
-	}
-
-	return mmSetOperableFunc.mock
-}
-
-//Set uses given function f to mock the Network.SetOperableFunc method
-func (mmSetOperableFunc *mNetworkMockSetOperableFunc) Set(f func(n1 mm_insolar.NetworkOperableCallback)) *NetworkMock {
-	if mmSetOperableFunc.defaultExpectation != nil {
-		mmSetOperableFunc.mock.t.Fatalf("Default expectation is already set for the Network.SetOperableFunc method")
-	}
-
-	if len(mmSetOperableFunc.expectations) > 0 {
-		mmSetOperableFunc.mock.t.Fatalf("Some expectations are already set for the Network.SetOperableFunc method")
-	}
-
-	mmSetOperableFunc.mock.funcSetOperableFunc = f
-	return mmSetOperableFunc.mock
-}
-
-// SetOperableFunc implements insolar.Network
-func (mmSetOperableFunc *NetworkMock) SetOperableFunc(n1 mm_insolar.NetworkOperableCallback) {
-	mm_atomic.AddUint64(&mmSetOperableFunc.beforeSetOperableFuncCounter, 1)
-	defer mm_atomic.AddUint64(&mmSetOperableFunc.afterSetOperableFuncCounter, 1)
-
-	if mmSetOperableFunc.inspectFuncSetOperableFunc != nil {
-		mmSetOperableFunc.inspectFuncSetOperableFunc(n1)
-	}
-
-	params := &NetworkMockSetOperableFuncParams{n1}
-
-	// Record call args
-	mmSetOperableFunc.SetOperableFuncMock.mutex.Lock()
-	mmSetOperableFunc.SetOperableFuncMock.callArgs = append(mmSetOperableFunc.SetOperableFuncMock.callArgs, params)
-	mmSetOperableFunc.SetOperableFuncMock.mutex.Unlock()
-
-	for _, e := range mmSetOperableFunc.SetOperableFuncMock.expectations {
-		if minimock.Equal(e.params, params) {
-			mm_atomic.AddUint64(&e.Counter, 1)
-			return
-		}
-	}
-
-	if mmSetOperableFunc.SetOperableFuncMock.defaultExpectation != nil {
-		mm_atomic.AddUint64(&mmSetOperableFunc.SetOperableFuncMock.defaultExpectation.Counter, 1)
-		want := mmSetOperableFunc.SetOperableFuncMock.defaultExpectation.params
-		got := NetworkMockSetOperableFuncParams{n1}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmSetOperableFunc.t.Errorf("NetworkMock.SetOperableFunc got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
-		}
-
-		return
-
-	}
-	if mmSetOperableFunc.funcSetOperableFunc != nil {
-		mmSetOperableFunc.funcSetOperableFunc(n1)
-		return
-	}
-	mmSetOperableFunc.t.Fatalf("Unexpected call to NetworkMock.SetOperableFunc. %v", n1)
-
-}
-
-// SetOperableFuncAfterCounter returns a count of finished NetworkMock.SetOperableFunc invocations
-func (mmSetOperableFunc *NetworkMock) SetOperableFuncAfterCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmSetOperableFunc.afterSetOperableFuncCounter)
-}
-
-// SetOperableFuncBeforeCounter returns a count of NetworkMock.SetOperableFunc invocations
-func (mmSetOperableFunc *NetworkMock) SetOperableFuncBeforeCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmSetOperableFunc.beforeSetOperableFuncCounter)
-}
-
-// Calls returns a list of arguments used in each call to NetworkMock.SetOperableFunc.
-// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
-func (mmSetOperableFunc *mNetworkMockSetOperableFunc) Calls() []*NetworkMockSetOperableFuncParams {
-	mmSetOperableFunc.mutex.RLock()
-
-	argCopy := make([]*NetworkMockSetOperableFuncParams, len(mmSetOperableFunc.callArgs))
-	copy(argCopy, mmSetOperableFunc.callArgs)
-
-	mmSetOperableFunc.mutex.RUnlock()
-
-	return argCopy
-}
-
-// MinimockSetOperableFuncDone returns true if the count of the SetOperableFunc invocations corresponds
-// the number of defined expectations
-func (m *NetworkMock) MinimockSetOperableFuncDone() bool {
-	for _, e := range m.SetOperableFuncMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			return false
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.SetOperableFuncMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterSetOperableFuncCounter) < 1 {
-		return false
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcSetOperableFunc != nil && mm_atomic.LoadUint64(&m.afterSetOperableFuncCounter) < 1 {
-		return false
-	}
-	return true
-}
-
-// MinimockSetOperableFuncInspect logs each unmet expectation
-func (m *NetworkMock) MinimockSetOperableFuncInspect() {
-	for _, e := range m.SetOperableFuncMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			m.t.Errorf("Expected call to NetworkMock.SetOperableFunc with params: %#v", *e.params)
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.SetOperableFuncMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterSetOperableFuncCounter) < 1 {
-		if m.SetOperableFuncMock.defaultExpectation.params == nil {
-			m.t.Error("Expected call to NetworkMock.SetOperableFunc")
-		} else {
-			m.t.Errorf("Expected call to NetworkMock.SetOperableFunc with params: %#v", *m.SetOperableFuncMock.defaultExpectation.params)
-		}
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcSetOperableFunc != nil && mm_atomic.LoadUint64(&m.afterSetOperableFuncCounter) < 1 {
-		m.t.Error("Expected call to NetworkMock.SetOperableFunc")
-	}
-}
-
 // MinimockFinish checks that all mocked methods have been called the expected number of times
 func (m *NetworkMock) MinimockFinish() {
 	if !m.minimockDone() {
@@ -1461,8 +1265,6 @@ func (m *NetworkMock) MinimockFinish() {
 		m.MinimockSendCascadeMessageInspect()
 
 		m.MinimockSendMessageInspect()
-
-		m.MinimockSetOperableFuncInspect()
 		m.t.FailNow()
 	}
 }
@@ -1491,6 +1293,5 @@ func (m *NetworkMock) minimockDone() bool {
 		m.MinimockLeaveDone() &&
 		m.MinimockRemoteProcedureRegisterDone() &&
 		m.MinimockSendCascadeMessageDone() &&
-		m.MinimockSendMessageDone() &&
-		m.MinimockSetOperableFuncDone()
+		m.MinimockSendMessageDone()
 }
