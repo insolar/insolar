@@ -17,9 +17,15 @@
 package reference
 
 import (
+	"bytes"
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"io"
+	"strconv"
+	"strings"
+
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/longbits"
 	"github.com/insolar/insolar/pulse"
@@ -45,8 +51,14 @@ type Local struct {
 	hash          longbits.Bits224
 }
 
+// IsEmpty - check for void
 func (v Local) IsEmpty() bool {
 	return v.pulseAndScope == 0
+}
+
+// NotEmpty - check for non void
+func (v Local) NotEmpty() bool {
+	return !v.IsEmpty()
 }
 
 func (v Local) GetPulseNumber() pulse.Number {
@@ -85,13 +97,14 @@ func (v Local) len() int {
 	return pulseAndScopeSize + len(v.hash)
 }
 
-func (v Local) String() string {
-	sc := v.getScope()
-	if sc != 0 {
-		return fmt.Sprintf("%d(%d)_0x%08x", v.GetPulseNumber(), sc, v.hash.FoldToUint64())
-	}
-	return fmt.Sprintf("%d_0x%08x", v.GetPulseNumber(), v.hash.FoldToUint64())
-}
+// TODO[bigbes]: change semantics of String method
+// func (v Local) String() string {
+// 	sc := v.getScope()
+// 	if sc != 0 {
+// 		return fmt.Sprintf("%d(%d)_0x%08x", v.GetPulseNumber(), sc, v.hash.FoldToUint64())
+// 	}
+// 	return fmt.Sprintf("%d_0x%08x", v.GetPulseNumber(), v.hash.FoldToUint64())
+// }
 
 func (v *Local) AsByteString() longbits.ByteString {
 	return longbits.NewByteString(v.AsBytes())
@@ -167,4 +180,145 @@ func (p *byteWriter) WriteByte(c byte) error {
 
 func (p *byteWriter) isFull() bool {
 	return int(p.o) >= p.v.len()
+}
+
+// String implements stringer on ID and returns base58 encoded value
+func (v Local) String() string {
+	repr, err := defaultEncoder.EncodeRecord(&v)
+	if err != nil {
+		return ""
+	}
+	return repr
+}
+
+// Bytes returns byte slice of ID.
+func (v Local) Bytes() []byte {
+	return v.AsBytes()
+}
+
+// Equal checks if reference points to the same record
+func (v *Local) Equal(other Local) bool {
+	if v == nil {
+		return false
+	}
+	return v.pulseAndScope == other.pulseAndScope && v.hash == other.hash
+}
+
+func (v Local) Compare(other Local) int {
+	if v.pulseAndScope < other.pulseAndScope {
+		return -1
+	} else if v.pulseAndScope > other.pulseAndScope {
+		return 1
+	}
+
+	// TODO[bigbes]: probably better to move this metod to Bits224 (Compare)
+	return bytes.Compare(v.hash[:], other.hash[:])
+}
+
+// Pulse returns a copy of Pulse part of ID.
+func (v Local) Pulse() pulse.Number {
+	return v.GetPulseNumber()
+}
+
+// Hash returns a copy of Hash part of ID
+func (v Local) Hash() []byte {
+	rv := make([]byte, len(v.hash))
+	copy(rv, v.hash[:])
+	return rv
+}
+
+// MarshalJSON serializes ID into JSONFormat
+func (v *Local) MarshalJSON() ([]byte, error) {
+	if v == nil {
+		return json.Marshal(nil)
+	}
+	return json.Marshal(v.String())
+}
+
+func (v Local) Marshal() ([]byte, error) {
+	return v.AsBytes(), nil
+}
+
+func (v Local) MarshalTo(data []byte) (int, error) {
+	if len(data) < LocalBinarySize {
+		return 0, errors.New("not enough bytes to marshal reference.Local")
+	}
+	return copy(data, v.AsBytes()), nil
+}
+
+func (v *Local) UnmarshalJSON(data []byte) error {
+	var repr interface{}
+
+	err := json.Unmarshal(data, &repr)
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal reference.Local")
+	}
+
+	switch realRepr := repr.(type) {
+	case string:
+		intermidiate, err := DefaultDecoder().Decode(realRepr)
+		if err != nil {
+			return errors.Wrap(err, "failed to unmarshal reference.Local")
+		}
+		*v = intermidiate.addressLocal
+	case nil:
+	default:
+		return errors.Wrapf(err, "unexpected type %T when unmarshal reference.Local", repr)
+	}
+
+	return nil
+}
+
+func (v *Local) Unmarshal(data []byte) error {
+	if len(data) < LocalBinarySize {
+		return errors.New("not enough bytes to unmarshal reference.Global")
+	}
+
+	writer := v.asWriter()
+	for i := 0; i < LocalBinarySize; i++ {
+		_ = writer.WriteByte(data[i])
+	}
+
+	return nil
+}
+
+func (v Local) Size() int {
+	return LocalBinarySize
+}
+
+func (v Local) debugStringJet() string {
+	depth, prefix := int(v.hash[0]), v.hash[1:]
+
+	if depth == 0 {
+		return "[JET 0 -]"
+	} else if depth > 8*(len(v.hash)-1) {
+		return fmt.Sprintf(fmt.Sprintf("[JET: <wrong format> %d %b]", depth, prefix))
+	}
+
+	res := strings.Builder{}
+	res.WriteString(fmt.Sprintf("[JET %d ", depth))
+
+	for i := 0; i < depth; i++ {
+		bytePos, bitPos := i/8, 7-i%8
+
+		byteValue := prefix[bytePos]
+		bitValue := byteValue >> uint(bitPos) & 0x01
+		bitString := strconv.Itoa(int(bitValue))
+		res.WriteString(bitString)
+	}
+
+	res.WriteString("]")
+	return res.String()
+}
+
+// DebugString prints ID in human readable form.
+func (v *Local) DebugString() string {
+	if v == nil {
+		return NilRef
+	} else if v.Pulse().IsJet() {
+		// TODO: remove this branch after finish transition to JetID
+		return v.debugStringJet()
+	}
+
+	return fmt.Sprintf("[%d | %s]", v.Pulse(), v.String())
 }

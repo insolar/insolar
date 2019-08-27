@@ -17,7 +17,6 @@
 package jetcoordinator
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"sort"
@@ -396,9 +395,7 @@ func getRefs(
 	count int,
 ) ([]insolar.Reference, error) {
 	sort.SliceStable(values, func(i, j int) bool {
-		v1 := values[i].ID
-		v2 := values[j].ID
-		return bytes.Compare(v1[:], v2[:]) < 0
+		return values[i].ID.Compare(values[j].ID) < 0
 	})
 	in := make([]interface{}, 0, len(values))
 	for _, value := range values {

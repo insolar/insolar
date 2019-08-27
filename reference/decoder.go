@@ -36,6 +36,15 @@ const (
 	IgnoreParity
 )
 
+var defaultDecoder GlobalDecoder
+
+func DefaultDecoder() GlobalDecoder {
+	if defaultDecoder == nil {
+		defaultDecoder = NewDefaultDecoder(AllowLegacy & AllowRecords)
+	}
+	return defaultDecoder
+}
+
 type GlobalDecoder interface {
 	Decode(ref string) (Global, error)
 }

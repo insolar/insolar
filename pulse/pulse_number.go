@@ -30,6 +30,7 @@ const (
 	LocalRelative        = 65536
 	MinTimePulse         = LocalRelative + 1
 	MaxTimePulse         = 1<<30 - 1
+	Jet           Number = 1
 	// PulseNumberSize declares the number of bytes in the pulse number
 	NumberSize int = 4
 )
@@ -154,6 +155,10 @@ func (n Number) Equal(other Number) bool {
 
 func (n Number) Size() int {
 	return NumberSize
+}
+
+func (n Number) IsJet() bool {
+	return n == Jet
 }
 
 func IsValidAsPulseNumber(n int) bool {
