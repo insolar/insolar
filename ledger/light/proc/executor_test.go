@@ -114,12 +114,7 @@ func TestFetchJet_Proceed(t *testing.T) {
 		reps := make(chan *message.Message, 1)
 
 		sender.SendTargetMock.Inspect(func(ctx context.Context, msg *message.Message, target insolar.Reference) {
-			res := false
-			if target == *notMe || target == *msgSender {
-				res = true
-			}
-			assert.True(t, res, "expected messages to msgSender and to right executor")
-
+			assert.True(t, target == *notMe || target == *msgSender, "expected messages to msgSender and to right executor")
 		}).Return(reps, func() {})
 
 		p := proc.NewFetchJet(gen.ID(), insolar.FirstPulseNumber, payload.Meta{Sender: *msgSender}, true)
