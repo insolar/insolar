@@ -46,6 +46,11 @@ import (
 	"github.com/pkg/errors"
 )
 
+const (
+	countThreeActiveDaemon = iota + 3
+	countFourActiveDaemon
+)
+
 type contractInfo struct {
 	reference *insolar.Reference
 	testName  string
@@ -189,15 +194,13 @@ func generateMigrationAddress() string {
 const migrationAmount = "360000"
 
 func fullMigration(t *testing.T, txHash string) *launchnet.User {
-	activateDaemons(t)
+	activeDaemons := activateDaemons(t, countThreeActiveDaemon)
 
 	migrationAddress := testutils.RandomString()
 	member := createMigrationMemberForMA(t, migrationAddress)
-
-	migrate(t, member.Ref, migrationAmount, txHash, migrationAddress, 0)
-	migrate(t, member.Ref, migrationAmount, txHash, migrationAddress, 2)
-	migrate(t, member.Ref, migrationAmount, txHash, migrationAddress, 1)
-
+	for i := range activeDaemons {
+		migrate(t, member.Ref, migrationAmount, txHash, migrationAddress, i)
+	}
 	return member
 }
 
@@ -249,20 +252,23 @@ func getStatus(t testing.TB) statusResponse {
 	return rpcStatusResponse.Result
 }
 
-func activateDaemons(t *testing.T) {
+func activateDaemons(t *testing.T, countDaemon int) []*launchnet.User {
+	var activeDaemons []*launchnet.User
+	for i := 0; i < countDaemon; i++ {
+		if len(launchnet.MigrationDaemons[i].Ref) > 0 {
+			res, err := signedRequest(t, &launchnet.MigrationAdmin, "migration.checkDaemon", map[string]interface{}{"reference": launchnet.MigrationDaemons[i].Ref})
+			require.NoError(t, err)
 
-	if len(launchnet.MigrationDaemons[0].Ref) > 0 {
-		res, err := signedRequest(t, &launchnet.MigrationAdmin, "migration.checkDaemon", map[string]interface{}{"reference": launchnet.MigrationDaemons[0].Ref})
-		require.NoError(t, err)
-		status := res.(map[string]interface{})["status"].(string)
-		if status == "inactive" {
-			for _, user := range launchnet.MigrationDaemons {
-				_, err := signedRequest(t, &launchnet.MigrationAdmin, "migration.activateDaemon", map[string]interface{}{"reference": user.Ref})
+			status := res.(map[string]interface{})["status"].(string)
+
+			if status == "inactive" {
+				_, err := signedRequest(t, &launchnet.MigrationAdmin, "migration.activateDaemon", map[string]interface{}{"reference": launchnet.MigrationDaemons[i].Ref})
 				require.NoError(t, err)
 			}
+			activeDaemons = append(activeDaemons, launchnet.MigrationDaemons[i])
 		}
 	}
-
+	return activeDaemons
 }
 
 func unmarshalRPCResponse(t testing.TB, body []byte, response RPCResponseInterface) {

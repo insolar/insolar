@@ -30,8 +30,6 @@ import (
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 )
 
-type status string
-
 const (
 	XNS = "XNS"
 )
@@ -131,17 +129,24 @@ func (d *Deposit) Confirm(migrationDaemonRef string, txHash string, amountStr st
 
 // Check amount field in confirmation from migration daemons.
 func (d *Deposit) checkAmount(activeDaemons []string) error {
-	if len(activeDaemons) > 0 {
-		amount := d.MigrationDaemonConfirms[activeDaemons[0]]
-		for i := 0; i < insolar.GenesisAmountActiveMigrationDaemonMembers; i++ {
-			if amount != d.MigrationDaemonConfirms[activeDaemons[i]] {
+	if activeDaemons == nil || len(activeDaemons) == 0 {
+		return fmt.Errorf(" list with migration daemons member is empty ")
+	}
+	result := ""
+	for _, migrationRef := range activeDaemons {
+		if amount, ok := d.MigrationDaemonConfirms[migrationRef]; ok {
+			if result == "" {
+				result = amount
+				continue
+			}
+			if result != amount {
 				return fmt.Errorf(" several migration daemons send different amount  ")
 			}
 		}
-		return nil
 	}
-	return fmt.Errorf(" list with migration daemons member is empty ")
+	return nil
 }
+
 func (d *Deposit) canTransfer(transferAmount *big.Int) error {
 	c := 0
 	for _, r := range d.MigrationDaemonConfirms {
