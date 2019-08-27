@@ -29,6 +29,7 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/logicrunner/writecontroller"
 	"github.com/insolar/insolar/platformpolicy"
 
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
@@ -76,11 +77,8 @@ func (h *HandleCall) sendToNextExecutor(
 		logger.Error("[ HandleCall.handleActual.sendToNextExecutor ] failed to serialize payload message", err)
 	}
 
-	resp, done := h.dep.Sender.SendRole(ctx, msg, insolar.DynamicRoleVirtualExecutor, objectRef)
-	done()
-	if _, ok := <-resp; !ok {
-		logger.Error("[ HandleCall.handleActual.sendToNextExecutor ] no reply")
-	}
+	sender := bus.NewWaitOKWithRetrySender(h.dep.Sender, h.dep.PulseAccessor, 1)
+	sender.SendRole(ctx, msg, insolar.DynamicRoleVirtualExecutor, objectRef)
 }
 
 func (h *HandleCall) checkExecutionLoop(
@@ -219,8 +217,11 @@ func (h *HandleCall) handleActual(
 
 	done, err := h.dep.WriteAccessor.Begin(ctx, flow.Pulse(ctx))
 	if err != nil {
-		go h.sendToNextExecutor(ctx, *objRef, *requestRef, *request)
-		return registeredRequestReply, nil
+		if err == writecontroller.ErrWriteClosed {
+			go h.sendToNextExecutor(ctx, *objRef, *requestRef, *request)
+			return registeredRequestReply, nil
+		}
+		return nil, errors.Wrap(err, "failed to acquire write access")
 	}
 	defer done()
 
@@ -244,7 +245,6 @@ func (h *HandleCall) Present(ctx context.Context, f flow.Flow) error {
 	}
 
 	rep, err := h.handleActual(ctx, message, f)
-
 	if err != nil {
 		return err
 	}
