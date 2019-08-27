@@ -17,6 +17,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -49,6 +50,7 @@ const backoffAttemptsCount = 20
 
 var (
 	defaultMemberFileDir = filepath.Join(defaults.ArtifactsDir(), "bench-members")
+	defaultDiscoveryNodesLogs = filepath.Join(defaults.LaunchnetDir(), "logs", "discoverynodes")
 
 	memberFilesDir     string
 	output             string
@@ -61,6 +63,7 @@ var (
 	saveMembersToFile  bool
 	useMembersFromFile bool
 	noCheckBalance     bool
+	discoveryNodesLogs string
 )
 
 func parseInputParams() {
@@ -75,6 +78,7 @@ func parseInputParams() {
 	pflag.BoolVarP(&useMembersFromFile, "usemembers", "m", false, "use members from file")
 	pflag.StringVarP(&memberFilesDir, "members-dir", "", defaultMemberFileDir, "dir for saving memebers data")
 	pflag.BoolVarP(&noCheckBalance, "nocheckbalance", "b", false, "don't check balance at the end")
+	pflag.StringVarP(&discoveryNodesLogs, "discovery-nodes-logs-dir", "", defaultDiscoveryNodesLogs, "launchnet logs dir for checking errors")
 	pflag.Parse()
 }
 
@@ -123,10 +127,13 @@ func startScenario(ctx context.Context, s scenario) {
 	writeToOutput(s.getOut(), fmt.Sprintf("Scenario %s: Start to transfer\n", s.getName()))
 
 	start := time.Now()
+	logReaderCloseChan := nodesErrorLogReader(s)
+
 	s.start(ctx)
 	elapsed := time.Since(start)
 	writeToOutput(s.getOut(), fmt.Sprintf("Scenario %s: Transferring took %s \n", s.getName(), elapsed))
 
+	close(logReaderCloseChan)
 	printResults(s)
 }
 
@@ -142,6 +149,84 @@ func printResults(s scenario) {
 	)
 	s.printResult()
 }
+
+func nodesErrorLogReader(s scenario) chan struct{} {
+	closeChan := make(chan struct{})
+	wg := sync.WaitGroup{}
+
+	logs, err := getLogs(discoveryNodesLogs)
+	if err != nil {
+		writeToOutput(s.getOut(), fmt.Sprintf("Can't find node logs: %s", err))
+	}
+
+	wg.Add(len(logs))
+	for _, fileName := range logs {
+		fName := fileName
+		go func(fName string) {
+			file, err := os.Open(fName)
+			if err != nil {
+				writeToOutput(s.getOut(), fmt.Sprintln("Can't open log file: ", err))
+				wg.Done()
+			}
+			defer file.Close()
+
+			reader := bufio.NewReader(file)
+			// skip to the end of file
+			for {
+				_, err := reader.ReadString('\n')
+				if err != nil && err != io.EOF {
+					writeToOutput(s.getOut(), fmt.Sprintln("Can't read string from ", fName, "while skipping"))
+					wg.Done()
+					break
+				}
+
+				if err == io.EOF {
+					break
+				}
+			}
+
+			wg.Done()
+			ok := true
+			for ok {
+				select {
+				case <-time.After(time.Millisecond):
+					line, err := reader.ReadString('\n')
+					if err != nil && err != io.EOF {
+						writeToOutput(s.getOut(), fmt.Sprintln("Can't read string from ", fName))
+						ok = false
+					}
+
+					if strings.Contains(string(line), " ERR ") {
+						writeToOutput(s.getOut(), fmt.Sprintln("!!! THERE ARE ERRORS IN ERROR LOG !!! ", fName))
+						ok = false
+					}
+				case <-closeChan:
+					writeToOutput(s.getOut(), fmt.Sprintln("Stop reading ", fName))
+					ok = false
+				}
+			}
+		}(fName)
+	}
+
+	wg.Wait()
+	return closeChan
+}
+
+func getLogs(root string) ([]string, error) {
+	var files []string
+	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if !info.IsDir() && info.Name() == "output.log" {
+			files = append(files, path)
+		}
+		return nil
+	})
+	return files, err
+}
+
 
 func addMigrationAddresses(insSDK *sdk.SDK) int32 {
 	var err error
