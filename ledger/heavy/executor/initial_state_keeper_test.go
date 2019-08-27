@@ -255,3 +255,105 @@ func TestInitialStateKeeper_Get_EmptyAfterRestart(t *testing.T) {
 	require.Equal(t, []insolar.JetID{}, state.JetIDs)
 
 }
+
+func TestInitialStateKeeper_Get_WithDuplicatedDrops(t *testing.T) {
+	mc := minimock.NewController(t)
+	defer mc.Finish()
+	ctx := inslogger.TestContext(t)
+
+	jetKeeper := NewJetKeeperMock(mc)
+	jetKeeper.TopSyncPulseMock.Return(topSync)
+
+	jetIDs := gen.UniqueJetIDs(3)
+	// split jet depends on fixture data
+	left, right := jet.Siblings(jetIDs[1])
+
+	jetAccessor := jet.NewAccessorMock(mc)
+	jetAccessor.AllMock.Expect(ctx, topSync).Return(jetIDs)
+
+	drops := dropsFixture()
+	dropAccessor := drop.NewAccessorMock(mc)
+	dropAccessor.ForPulseMock.When(ctx, jetIDs[0], topSync).Then(drops[0], nil)
+	dropAccessor.ForPulseMock.When(ctx, jetIDs[1], topSync).Then(drops[1], nil)
+	dropAccessor.ForPulseMock.When(ctx, jetIDs[2], topSync).Then(drops[2], nil)
+
+	jetTree := jet.NewTreeManagerMock(mc)
+
+	treeUpdateCalls := make(map[insolar.JetID]bool)
+	jetTree.UpdateMock.Set(func(jetID insolar.JetID, upd bool) {
+		treeUpdateCalls[jetID] = upd
+	})
+	expectedTreeUpdateCalls := map[insolar.JetID]bool{
+		jetIDs[0]: true,
+		left:      true,
+		right:     true,
+		jetIDs[2]: true,
+	}
+
+	indexes := indexesFixture()
+	indexAccessor := object.NewIndexAccessorMock(mc)
+	indexAccessor.ForPulseMock.Expect(ctx, topSync).Return(indexes, nil)
+
+	jetTree.FindMock.When(indexes[0].ObjID).Then(jetIDs[0], true)
+	jetTree.FindMock.When(indexes[1].ObjID).Then(jetIDs[0], true)
+	jetTree.FindMock.When(indexes[2].ObjID).Then(jetIDs[2], true)
+
+	jetCoordinator := jet.NewCoordinatorMock(mc)
+
+	stateKeeper := NewInitialStateKeeper(jetKeeper, jetAccessor, jetCoordinator, indexAccessor, dropAccessor)
+	stateKeeper.jetTree = jetTree
+
+	err := stateKeeper.Start(ctx)
+	require.NoError(t, err)
+	require.Equal(t, expectedTreeUpdateCalls, treeUpdateCalls)
+
+	currentLight := gen.Reference()
+	anotherLight := gen.Reference()
+
+	// Both jets after split executed by currentLight
+	jetCoordinator.LightExecutorForJetMock.When(ctx, insolar.ID(jetIDs[0]), current).Then(&currentLight, nil)
+	jetCoordinator.LightExecutorForJetMock.When(ctx, insolar.ID(left), current).Then(&currentLight, nil)
+	jetCoordinator.LightExecutorForJetMock.When(ctx, insolar.ID(right), current).Then(&currentLight, nil)
+	jetCoordinator.LightExecutorForJetMock.When(ctx, insolar.ID(jetIDs[2]), current).Then(&anotherLight, nil)
+
+	// Get for currentLight
+	state := stateKeeper.Get(ctx, currentLight, current)
+
+	expectedIndexes := []record.Index{indexes[0], indexes[1]}
+	sortIndexes(expectedIndexes)
+	sortIndexes(state.Indexes)
+	require.Equal(t, expectedIndexes, state.Indexes)
+
+	expectedDrops := [][]byte{
+		drop.MustEncode(&drops[0]),
+		drop.MustEncode(&drops[1]),
+	}
+	sortDrops(expectedDrops)
+	sortDrops(state.Drops)
+	require.Equal(t, expectedDrops, state.Drops)
+
+	expectedJets := []insolar.JetID{jetIDs[0], left, right}
+	sortJets(expectedJets)
+	sortJets(state.JetIDs)
+	require.Equal(t, expectedJets, state.JetIDs)
+
+	// Get for anotherLight
+	state = stateKeeper.Get(ctx, anotherLight, current)
+
+	expectedIndexes = []record.Index{indexes[2]}
+	sortIndexes(expectedIndexes)
+	sortIndexes(state.Indexes)
+	require.Equal(t, []record.Index{indexes[2]}, state.Indexes)
+
+	expectedDrops = [][]byte{
+		drop.MustEncode(&drops[2]),
+	}
+	sortDrops(expectedDrops)
+	sortDrops(state.Drops)
+	require.Equal(t, expectedDrops, state.Drops)
+
+	expectedJets = []insolar.JetID{jetIDs[2]}
+	sortJets(expectedJets)
+	sortJets(state.JetIDs)
+	require.Equal(t, expectedJets, state.JetIDs)
+}
