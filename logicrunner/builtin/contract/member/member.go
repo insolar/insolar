@@ -46,8 +46,9 @@ type Member struct {
 }
 
 const (
-	XNS        = "XNS"
-	CONVERSION = "10"
+	XNS                 = "XNS"
+	CONVERSION          = "10"
+	ACCOUNT_START_VALUE = "10000000000"
 )
 
 // GetName gets name.
@@ -396,7 +397,8 @@ type MigrationCreateResponse struct {
 func (m *Member) memberMigrationCreate(key string) (*MigrationCreateResponse, error) {
 
 	rootDomain := rootdomain.GetObject(m.RootDomain)
-	migrationAddress, err := rootDomain.GetFreeMigrationAddress(key)
+	migrationAdminContract := migrationadmin.GetObject(foundation.GetMigrationAdmin())
+	migrationAddress, err := migrationAdminContract.GetFreeMigrationAddress(key)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get migration address: %s", err.Error())
 	}
@@ -406,9 +408,14 @@ func (m *Member) memberMigrationCreate(key string) (*MigrationCreateResponse, er
 		return nil, fmt.Errorf("failed to create member: %s", err.Error())
 	}
 
-	err = rootDomain.AddNewMemberToMaps(key, migrationAddress, created.Reference)
+	err = rootDomain.AddNewMemberToMap(key, created.Reference)
 	if err != nil {
-		return nil, fmt.Errorf("failed to add new member to maps: %s", err.Error())
+		return nil, fmt.Errorf("failed to add new member to mapPK: %s", err.Error())
+	}
+
+	err = migrationAdminContract.AddNewMigrationAddressToMaps(migrationAddress, created.Reference)
+	if err != nil {
+		return nil, fmt.Errorf("failed to add new member to mapMA: %s", err.Error())
 	}
 
 	return &MigrationCreateResponse{Reference: created.Reference.String(), MigrationAddress: migrationAddress}, nil
@@ -435,7 +442,7 @@ func (m *Member) createMember(name string, key string, migrationAddress string) 
 		return nil, fmt.Errorf("key is not valid")
 	}
 
-	aHolder := account.New("10000000000")
+	aHolder := account.New(ACCOUNT_START_VALUE)
 	accountRef, err := aHolder.AsChild(m.RootDomain)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create account for member: %s", err.Error())
@@ -462,7 +469,6 @@ type DepositMigrationResult struct {
 }
 
 func (m *Member) depositMigration(txHash string, migrationAddress string, amount *big.Int) (*DepositMigrationResult, error) {
-	rd := rootdomain.GetObject(m.RootDomain)
 	migrationAdminContract := migrationadmin.GetObject(foundation.GetMigrationAdmin())
 
 	result, err := migrationAdminContract.CheckDaemon(m.GetReference().String())
@@ -471,7 +477,7 @@ func (m *Member) depositMigration(txHash string, migrationAddress string, amount
 	}
 
 	// Get member by migration address
-	tokenHolderRef, err := rd.GetMemberByMigrationAddress(migrationAddress)
+	tokenHolderRef, err := migrationAdminContract.GetMemberByMigrationAddress(migrationAddress)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get member by migration address")
 	}
@@ -514,10 +520,10 @@ func (m *Member) depositMigration(txHash string, migrationAddress string, amount
 
 // GetDeposits get all deposits for this member
 // ins:immutable
-func (m Member) GetDeposits() (map[string]interface{}, error) {
+func (m *Member) GetDeposits() (map[string]interface{}, error) {
 	return m.getDeposits()
 }
-func (m Member) getDeposits() (map[string]interface{}, error) {
+func (m *Member) getDeposits() (map[string]interface{}, error) {
 	result := map[string]interface{}{}
 	for tx, dRef := range m.Deposits {
 
@@ -554,7 +560,7 @@ func (m *Member) AddDeposit(txId string, deposit insolar.Reference) error {
 }
 
 // ins:immutable
-func (m Member) GetMigrationAddress() (string, error) {
+func (m *Member) GetMigrationAddress() (string, error) {
 	return m.MigrationAddress, nil
 }
 
@@ -575,11 +581,11 @@ func (m *Member) memberGet(publicKey string) (interface{}, error) {
 	}
 
 	user := member.GetObject(*ref)
-	ba, err := user.GetMigrationAddress()
+	ma, err := user.GetMigrationAddress()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get burn address: %s", err.Error())
 	}
 
-	return GetResponse{Reference: ref.String(), MigrationAddress: ba}, nil
+	return GetResponse{Reference: ref.String(), MigrationAddress: ma}, nil
 
 }
