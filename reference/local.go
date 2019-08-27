@@ -39,7 +39,7 @@ func NewRecordID(pn pulse.Number, hash longbits.Bits224) Local {
 
 func NewLocal(pn pulse.Number, scope uint8, hash longbits.Bits224) Local {
 	if !pn.IsSpecialOrTimePulse() {
-		panic("illegal value")
+		panic(fmt.Sprintf("illegal value: %d", pn))
 	}
 	return Local{pulseAndScope: pn.WithFlags(scope), hash: hash}
 }

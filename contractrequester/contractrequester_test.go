@@ -132,7 +132,7 @@ func TestContractRequester_SendRequest(t *testing.T) {
 
 					hash, err := cReq.calcRequestHash(*request)
 					require.NoError(t, err)
-					requestRef := insolar.NewReference(*insolar.NewID(insolar.FirstPulseNumber, hash[:]))
+					requestRef := insolar.NewReference(*insolar.NewID(gen.PulseNumber(), hash[:]))
 
 					resultSender := func() {
 						res := test.resultMessage

@@ -20,7 +20,6 @@ import (
 	fuzz "github.com/google/gofuzz"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/pulse"
 	"github.com/insolar/insolar/reference"
 )
 
@@ -32,7 +31,7 @@ func ID() insolar.ID {
 		hash := make([]byte, reference.LocalBinaryHashSize)
 		c.Fuzz(&hash)
 
-		pn := insolar.PulseNumber(c.Int31n(pulse.MaxTimePulse-pulse.LocalRelative) + pulse.LocalRelative)
+		pn := PulseNumber()
 
 		*id = *insolar.NewID(pn, hash)
 	})

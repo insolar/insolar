@@ -471,7 +471,7 @@ func TestJetTreeUpdater_Concurrency(t *testing.T) {
 
 		for _, b := range []byte{0, 128, 192} {
 			go func(b byte) {
-				target := insolar.NewID(0, []byte{b})
+				target := insolar.NewID(insolar.FirstPulseNumber+50, []byte{b})
 
 				jetID, err := jtu.Fetch(ctx, *target, insolar.FirstPulseNumber+insolar.PulseNumber(100))
 				require.NoError(t, err)

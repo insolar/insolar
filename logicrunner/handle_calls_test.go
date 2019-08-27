@@ -421,7 +421,7 @@ func TestHandleCall_Present(t *testing.T) {
 				CallType: record.CTMethod,
 				Object:   nil,
 			},
-			PulseNumber: gen.CorrectPulseNumber(),
+			PulseNumber: gen.PulseNumber(),
 		}
 
 		reply, err := handler.handleActual(ctx, msg, fm)
@@ -484,7 +484,7 @@ func TestHandleCall_Present(t *testing.T) {
 				CallType: record.CTMethod,
 				Object:   &objRef,
 			},
-			PulseNumber: gen.CorrectPulseNumber(),
+			PulseNumber: gen.PulseNumber(),
 		}
 
 		reply, err := handler.handleActual(ctx, msg, fm)
