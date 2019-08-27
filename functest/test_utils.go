@@ -113,7 +113,7 @@ func createMember(t *testing.T) *launchnet.User {
 	require.NoError(t, err)
 	member.Ref = launchnet.Root.Ref
 
-	result, err := signedRequest(t, member, "member.create", nil)
+	result, err := signedRequest(t, launchnet.TestRPCUrlPublic, member, "member.create", nil)
 	require.NoError(t, err)
 	ref, ok := result.(map[string]interface{})["reference"].(string)
 	require.True(t, ok)
@@ -126,10 +126,11 @@ func createMigrationMemberForMA(t *testing.T, ma string) *launchnet.User {
 	require.NoError(t, err)
 	member.Ref = launchnet.Root.Ref
 
-	_, err = signedRequest(t, &launchnet.MigrationAdmin, "migration.addAddresses", map[string]interface{}{"migrationAddresses": []string{ma}})
+	_, err = signedRequest(t, launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.addAddresses",
+		map[string]interface{}{"migrationAddresses": []string{ma}})
 	require.NoError(t, err)
 
-	result, err := signedRequest(t, member, "member.migrationCreate", nil)
+	result, err := signedRequest(t, launchnet.TestRPCUrlPublic, member, "member.migrationCreate", nil)
 	require.NoError(t, err)
 	ref, ok := result.(map[string]interface{})["reference"].(string)
 	require.True(t, ok)
@@ -140,7 +141,8 @@ func createMigrationMemberForMA(t *testing.T, ma string) *launchnet.User {
 
 func addMigrationAddress(t *testing.T) {
 	ba := testutils.RandomString()
-	_, err := signedRequest(t, &launchnet.MigrationAdmin, "migration.addAddresses", map[string]interface{}{"migrationAddresses": []string{ba}})
+	_, err := signedRequest(t, launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.addAddresses",
+		map[string]interface{}{"migrationAddresses": []string{ba}})
 	require.NoError(t, err)
 }
 
@@ -151,7 +153,7 @@ func getBalanceNoErr(t *testing.T, caller *launchnet.User, reference string) *bi
 }
 
 func getBalance(t *testing.T, caller *launchnet.User, reference string) (*big.Int, error) {
-	res, err := signedRequest(t, caller, "member.getBalance", map[string]interface{}{"reference": reference})
+	res, err := signedRequest(t, launchnet.TestRPCUrl, caller, "member.getBalance", map[string]interface{}{"reference": reference})
 	if err != nil {
 		return nil, err
 	}
@@ -166,11 +168,12 @@ func migrate(t *testing.T, memberRef string, amount string, tx string, ma string
 	anotherMember := createMember(t)
 
 	_, err := signedRequest(t,
+		launchnet.TestRPCUrl,
 		launchnet.MigrationDaemons[mdNum],
 		"deposit.migration",
 		map[string]interface{}{"amount": amount, "ethTxHash": tx, "migrationAddress": ma})
 	require.NoError(t, err)
-	res, err := signedRequest(t, anotherMember, "member.getBalance", map[string]interface{}{"reference": memberRef})
+	res, err := signedRequest(t, launchnet.TestRPCUrl, anotherMember, "member.getBalance", map[string]interface{}{"reference": memberRef})
 	require.NoError(t, err)
 	deposits, ok := res.(map[string]interface{})["deposits"].(map[string]interface{})
 	require.True(t, ok)
@@ -204,10 +207,10 @@ func fullMigration(t *testing.T, txHash string) *launchnet.User {
 	return member
 }
 
-func getRPSResponseBody(t testing.TB, postParams map[string]interface{}) []byte {
+func getRPSResponseBody(t testing.TB, URL string, postParams map[string]interface{}) []byte {
 	jsonValue, _ := json.Marshal(postParams)
 
-	postResp, err := http.Post(launchnet.TestRPCUrl, "application/json", bytes.NewBuffer(jsonValue))
+	postResp, err := http.Post(URL, "application/json", bytes.NewBuffer(jsonValue))
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, postResp.StatusCode)
 	body, err := ioutil.ReadAll(postResp.Body)
@@ -216,7 +219,7 @@ func getRPSResponseBody(t testing.TB, postParams map[string]interface{}) []byte 
 }
 
 func getSeed(t testing.TB) string {
-	body := getRPSResponseBody(t, postParams{
+	body := getRPSResponseBody(t, launchnet.TestRPCUrl, postParams{
 		"jsonrpc": "2.0",
 		"method":  "node.getSeed",
 		"id":      "",
@@ -233,7 +236,7 @@ func getInfo(t testing.TB) infoResponse {
 		"method":  "network.getInfo",
 		"id":      "",
 	}
-	body := getRPSResponseBody(t, pp)
+	body := getRPSResponseBody(t, launchnet.TestRPCUrl, pp)
 	rpcInfoResponse := &rpcInfoResponse{}
 	unmarshalRPCResponse(t, body, rpcInfoResponse)
 	require.NotNil(t, rpcInfoResponse.Result)
@@ -241,7 +244,7 @@ func getInfo(t testing.TB) infoResponse {
 }
 
 func getStatus(t testing.TB) statusResponse {
-	body := getRPSResponseBody(t, postParams{
+	body := getRPSResponseBody(t, launchnet.TestRPCUrl, postParams{
 		"jsonrpc": "2.0",
 		"method":  "node.getStatus",
 		"id":      "",
@@ -256,13 +259,15 @@ func activateDaemons(t *testing.T, countDaemon int) []*launchnet.User {
 	var activeDaemons []*launchnet.User
 	for i := 0; i < countDaemon; i++ {
 		if len(launchnet.MigrationDaemons[i].Ref) > 0 {
-			res, err := signedRequest(t, &launchnet.MigrationAdmin, "migration.checkDaemon", map[string]interface{}{"reference": launchnet.MigrationDaemons[i].Ref})
+			res, err := signedRequest(t, launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.checkDaemon",
+				map[string]interface{}{"reference": launchnet.MigrationDaemons[i].Ref})
 			require.NoError(t, err)
 
 			status := res.(map[string]interface{})["status"].(string)
 
 			if status == "inactive" {
-				_, err := signedRequest(t, &launchnet.MigrationAdmin, "migration.activateDaemon", map[string]interface{}{"reference": launchnet.MigrationDaemons[i].Ref})
+				_, err := signedRequest(t, launchnet.TestRPCUrl, &launchnet.MigrationAdmin,
+					"migration.activateDaemon", map[string]interface{}{"reference": launchnet.MigrationDaemons[i].Ref})
 				require.NoError(t, err)
 			}
 			activeDaemons = append(activeDaemons, launchnet.MigrationDaemons[i])
@@ -283,8 +288,8 @@ func unmarshalCallResponse(t testing.TB, body []byte, response *requester.Contra
 	require.NoError(t, err)
 }
 
-func signedRequest(t *testing.T, user *launchnet.User, method string, params interface{}) (interface{}, error) {
-	res, refStr, err := makeSignedRequest(user, method, params)
+func signedRequest(t *testing.T, URL string, user *launchnet.User, method string, params interface{}) (interface{}, error) {
+	res, refStr, err := makeSignedRequest(URL, user, method, params)
 
 	var errMsg string
 	if err != nil {
@@ -301,15 +306,15 @@ func signedRequest(t *testing.T, user *launchnet.User, method string, params int
 	return res, err
 }
 
-func signedRequestWithEmptyRequestRef(t *testing.T, user *launchnet.User, method string, params interface{}) (interface{}, error) {
-	res, refStr, err := makeSignedRequest(user, method, params)
+func signedRequestWithEmptyRequestRef(t *testing.T, URL string, user *launchnet.User, method string, params interface{}) (interface{}, error) {
+	res, refStr, err := makeSignedRequest(URL, user, method, params)
 
 	require.Equal(t, "", refStr)
 
 	return res, err
 }
 
-func makeSignedRequest(user *launchnet.User, method string, params interface{}) (interface{}, string, error) {
+func makeSignedRequest(URL string, user *launchnet.User, method string, params interface{}) (interface{}, string, error) {
 	ctx := context.TODO()
 	rootCfg, err := requester.CreateUserConfig(user.Ref, user.PrivKey, user.PubKey)
 	if err != nil {
@@ -329,11 +334,16 @@ func makeSignedRequest(user *launchnet.User, method string, params interface{}) 
 		caller = ""
 	}
 
-	res, err := requester.Send(ctx, launchnet.TestAPIURL, rootCfg, &requester.Params{
+	seed, err := requester.GetSeed(URL)
+	if err != nil {
+		return nil, "", err
+	}
+
+	res, err := requester.SendWithSeed(ctx, URL, rootCfg, &requester.Params{
 		CallSite:   method,
 		CallParams: params,
 		PublicKey:  user.PubKey,
-		Test:       caller})
+		Test:       caller}, seed)
 
 	if err != nil {
 		return nil, "", err
@@ -398,7 +408,7 @@ func uploadContractOnce(t testing.TB, name string, code string) *insolar.Referen
 }
 
 func uploadContract(t testing.TB, contractName string, contractCode string) *insolar.Reference {
-	uploadBody := getRPSResponseBody(t, postParams{
+	uploadBody := getRPSResponseBody(t, launchnet.TestRPCUrl, postParams{
 		"jsonrpc": "2.0",
 		"method":  "funcTestContract.upload",
 		"id":      "",
@@ -433,7 +443,7 @@ func callConstructor(t testing.TB, prototypeRef *insolar.Reference, method strin
 	argsSerialized, err := insolar.Serialize(args)
 	require.NoError(t, err)
 
-	objectBody := getRPSResponseBody(t, postParams{
+	objectBody := getRPSResponseBody(t, launchnet.TestRPCUrl, postParams{
 		"jsonrpc": "2.0",
 		"method":  "funcTestContract.callConstructor",
 		"id":      "",
@@ -491,7 +501,7 @@ func callMethodNoChecks(t testing.TB, objectRef *insolar.Reference, method strin
 	argsSerialized, err := insolar.Serialize(args)
 	require.NoError(t, err)
 
-	respBody := getRPSResponseBody(t, postParams{
+	respBody := getRPSResponseBody(t, launchnet.TestRPCUrl, postParams{
 		"jsonrpc": "2.0",
 		"method":  "funcTestContract.callMethod",
 		"id":      "",
@@ -555,7 +565,7 @@ func setMigrationDaemonsRef() error {
 	for i, mDaemon := range launchnet.MigrationDaemons {
 		daemon := mDaemon
 		daemon.Ref = launchnet.Root.Ref
-		res, _, err := makeSignedRequest(daemon, "member.get", nil)
+		res, _, err := makeSignedRequest(launchnet.TestRPCUrlPublic, daemon, "member.get", nil)
 		if err != nil {
 			return errors.Wrap(err, "[ setup ] get member by public key failed ,key ")
 		}

@@ -32,29 +32,29 @@ type MainAPISuite struct {
 }
 
 func (suite *MainAPISuite) TestNewApiRunnerNilConfig() {
-	_, err := NewRunner(nil)
+	_, err := NewRunner(nil, nil, nil, nil, nil, nil, nil, nil, nil)
 	suite.Contains(err.Error(), "config is nil")
 }
 
 func (suite *MainAPISuite) TestNewApiRunnerNoRequiredParams() {
 	cfg := configuration.APIRunner{}
-	_, err := NewRunner(&cfg)
+	_, err := NewRunner(&cfg, nil, nil, nil, nil, nil, nil, nil, nil)
 	suite.Contains(err.Error(), "Address must not be empty")
 
 	cfg.Address = "address:100"
-	_, err = NewRunner(&cfg)
+	_, err = NewRunner(&cfg, nil, nil, nil, nil, nil, nil, nil, nil)
 	suite.Contains(err.Error(), "RPC must exist")
 
 	cfg.RPC = "test"
-	_, err = NewRunner(&cfg)
+	_, err = NewRunner(&cfg, nil, nil, nil, nil, nil, nil, nil, nil)
 	suite.NoError(err)
 }
 
 func TestMainTestSuite(t *testing.T) {
 	ctx, _ := inslogger.WithTraceField(context.Background(), "APItests")
 	http.DefaultServeMux = new(http.ServeMux)
-	cfg := configuration.NewAPIRunner()
-	api, _ := NewRunner(&cfg)
+	cfg := configuration.NewAPIRunner(false)
+	api, _ := NewRunner(&cfg, nil, nil, nil, nil, nil, nil, nil, nil)
 
 	cm := certificate.NewCertificateManager(&certificate.Certificate{})
 	api.CertificateManager = cm
