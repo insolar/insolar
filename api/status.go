@@ -36,11 +36,10 @@ func (s *NodeService) GetStatus(r *http.Request, args *interface{}, requestBody 
 	ctx, inslog := inslogger.WithTraceField(context.Background(), traceID)
 
 	inslog.Infof("[ NodeService.GetStatus ] Incoming request: %s", r.RequestURI)
-	statusReply := s.runner.NetworkStatus.GetNetworkStatus()
-
 	if !s.runner.cfg.IsAdmin {
 		return errors.New("method not allowed")
 	}
+	statusReply := s.runner.NetworkStatus.GetNetworkStatus()
 
 	reply.NetworkState = statusReply.NetworkState.String()
 	reply.ActiveListSize = statusReply.ActiveListSize

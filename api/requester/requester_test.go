@@ -93,7 +93,7 @@ func FakeRPCHandler(response http.ResponseWriter, req *http.Request) {
 const rpcLOCATION = "/admin-api/rpc"
 const PORT = "12221"
 const HOST = "127.0.0.1"
-const URL = "http://" + HOST + ":" + PORT + "/admin-api/rpc"
+const URL = "http://" + HOST + ":" + PORT + rpcLOCATION
 
 var server = &http.Server{Addr: ":" + PORT}
 

@@ -28,7 +28,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-// ContractService is a service that provides API for working with smart contracts.
+// AdminContractService is a service that provides API for working with smart contracts.
 type AdminContractService struct {
 	runner         *Runner
 	allowedMethods map[string]bool
@@ -57,6 +57,10 @@ func NewAdminContractService(runner *Runner) *AdminContractService {
 }
 
 func (cs *AdminContractService) Call(req *http.Request, args *requester.Params, requestBody *rpc.RequestBody, result *requester.ContractResult) error {
+	return wrapCall(cs.runner, cs.allowedMethods, req, args, requestBody, result)
+}
+
+func wrapCall(runner *Runner, allowedMethods map[string]bool, req *http.Request, args *requester.Params, requestBody *rpc.RequestBody, result *requester.ContractResult) error {
 	traceID := utils.RandTraceID()
 	ctx, logger := inslogger.WithTraceField(context.Background(), traceID)
 
@@ -65,7 +69,7 @@ func (cs *AdminContractService) Call(req *http.Request, args *requester.Params, 
 
 	logger.Infof("[ ContractService.Call ] Incoming request: %s", req.RequestURI)
 
-	_, ok := cs.allowedMethods[args.CallSite]
+	_, ok := allowedMethods[args.CallSite]
 	if !ok {
 		return errors.New("method not allowed")
 	}
@@ -79,14 +83,14 @@ func (cs *AdminContractService) Call(req *http.Request, args *requester.Params, 
 		return err
 	}
 
-	seedPulse, err := cs.runner.checkSeed(args.Seed)
+	seedPulse, err := runner.checkSeed(args.Seed)
 	if err != nil {
 		return err
 	}
 
 	setRootReferenceIfNeeded(args)
 
-	callResult, requestRef, err := cs.runner.makeCall(ctx, "contract.call", *args, requestBody.Raw, signature, 0, seedPulse)
+	callResult, requestRef, err := runner.makeCall(ctx, "contract.call", *args, requestBody.Raw, signature, 0, seedPulse)
 	if err != nil {
 		return err
 	}
@@ -96,6 +100,5 @@ func (cs *AdminContractService) Call(req *http.Request, args *requester.Params, 
 	}
 	result.CallResult = callResult
 	result.TraceID = traceID
-
 	return nil
 }

@@ -213,9 +213,9 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 
 	// API.
 	var (
-		Requester      *contractrequester.ContractRequester
-		API            insolar.APIRunner
-		AdminAPIRunner insolar.APIRunner
+		Requester       *contractrequester.ContractRequester
+		ArtifactsClient = artifacts.NewClient(WmBus)
+		APIWrapper      *api.RunnerWrapper
 	)
 	{
 		var err error
@@ -224,15 +224,37 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 			return nil, errors.Wrap(err, "failed to start ContractRequester")
 		}
 
-		API, err = api.NewRunner(&cfg.APIRunner)
+		API, err := api.NewRunner(
+			&cfg.APIRunner,
+			CertManager,
+			Requester,
+			NodeNetwork,
+			NetworkService,
+			Pulses,
+			ArtifactsClient,
+			Coordinator,
+			NetworkService,
+		)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start ApiRunner")
 		}
 
-		AdminAPIRunner, err = api.NewRunner(&cfg.AdminAPIRunner)
+		AdminAPIRunner, err := api.NewRunner(
+			&cfg.AdminAPIRunner,
+			CertManager,
+			Requester,
+			NodeNetwork,
+			NetworkService,
+			Pulses,
+			ArtifactsClient,
+			Coordinator,
+			NetworkService,
+		)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start AdminAPIRunner")
 		}
+
+		APIWrapper = api.NewWrapper(API, AdminAPIRunner)
 	}
 
 	metricsHandler, err := metrics.NewMetrics(
@@ -364,9 +386,8 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		metricsHandler,
 		Requester,
 		Tokens,
-		artifacts.NewClient(WmBus),
-		API,
-		AdminAPIRunner,
+		ArtifactsClient,
+		APIWrapper,
 		KeyProcessor,
 		Termination,
 		CryptoScheme,

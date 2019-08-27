@@ -266,7 +266,7 @@ func waitForNet() error {
 	for i := 0; i < numAttempts; i++ {
 		currentOk = 0
 		for _, port := range ports {
-			resp, err := requester.Status(fmt.Sprintf(HOST+"%s"+TestAdminRPCUrl, port))
+			resp, err := requester.Status(fmt.Sprintf("%s%s%s", HOST, port, TestAdminRPCUrl))
 			if err != nil {
 				fmt.Println("[ waitForNet ] Problem with port " + port + ". Err: " + err.Error())
 				break

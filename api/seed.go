@@ -33,7 +33,7 @@ import (
 // SeedArgs is arguments that Seed service accepts.
 type SeedArgs struct{}
 
-// NodeService is a service that provides API for getting new seed.
+// NodeService is a service that provides API for getting new seed and status.
 type NodeService struct {
 	runner *Runner
 }

@@ -20,6 +20,7 @@ Usage
 
         -k path to members keys
                 Path to dir with members keys.
-
-        -p url
+        -a admin url
+                API url for requests (default - http://localhost:19001/admin-api/rpc).
+        -p public url
                 API url for requests (default - http://localhost:19101/api/rpc).
