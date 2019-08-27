@@ -414,7 +414,7 @@ func INSMETHOD_GetDepositParameters(object []byte, data []byte) ([]byte, []byte,
 		return nil, nil, e
 	}
 
-	ret0, ret1, ret2 := self.GetDepositParameters()
+	ret0, ret1 := self.GetDepositParameters()
 
 	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()
@@ -426,11 +426,11 @@ func INSMETHOD_GetDepositParameters(object []byte, data []byte) ([]byte, []byte,
 		return nil, nil, err
 	}
 
-	ret2 = ph.MakeErrorSerializable(ret2)
+	ret1 = ph.MakeErrorSerializable(ret1)
 
 	ret := []byte{}
 	err = ph.Serialize(
-		foundation.Result{Returns: []interface{}{ret0, ret1, ret2}},
+		foundation.Result{Returns: []interface{}{ret0, ret1}},
 		&ret,
 	)
 	if err != nil {
