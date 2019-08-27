@@ -161,7 +161,7 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 		err = fmt.Errorf("[ Init.Present ] no handler for message type %s", msgType)
 	}
 	if err != nil {
-		s.replyError(ctx, originMeta, err)
+		bus.ReplyError(ctx, s.dep.Sender, originMeta, err)
 	}
 	return err
 }
