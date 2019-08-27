@@ -54,8 +54,10 @@ type InitialStateKeeper struct {
 	indexStorage   object.IndexAccessor
 	dropStorage    drop.Accessor
 
+	syncPulse insolar.PulseNumber
+	jetTree   jet.TreeManager
+
 	lock                  sync.RWMutex
-	syncPulse             insolar.PulseNumber
 	jetDrops              map[insolar.JetID][]byte
 	abandonRequestIndexes map[insolar.JetID][]record.Index
 }
@@ -73,6 +75,7 @@ func NewInitialStateKeeper(
 		indexStorage:          indexStorage,
 		dropStorage:           dropStorage,
 		syncPulse:             jetKeeper.TopSyncPulse(),
+		jetTree:               jet.NewTree(true),
 		jetDrops:              make(map[insolar.JetID][]byte),
 		abandonRequestIndexes: make(map[insolar.JetID][]record.Index),
 	}
@@ -118,6 +121,7 @@ func (isk *InitialStateKeeper) prepareAbandonRequests(ctx context.Context) {
 	logger := inslogger.FromContext(ctx)
 
 	for jetID := range isk.jetDrops {
+		isk.jetTree.Update(jetID, true)
 		isk.abandonRequestIndexes[jetID] = []record.Index{}
 	}
 
@@ -141,13 +145,14 @@ func (isk *InitialStateKeeper) prepareAbandonRequests(ctx context.Context) {
 
 func (isk *InitialStateKeeper) addIndexToState(ctx context.Context, index record.Index) {
 	logger := inslogger.FromContext(ctx)
-	indexJet, _ := isk.jetAccessor.ForID(ctx, isk.syncPulse, index.ObjID)
+	indexJet, _ := isk.jetTree.Find(index.ObjID)
 	indexes, ok := isk.abandonRequestIndexes[indexJet]
 	if !ok {
 		// Someone changed jetTree in sync pulse while starting heavy material node
 		// If this ever happens - we need to stop network
 		logger.Fatal("Jet tree changed on preparing state. New jet: ", indexJet)
 	}
+	logger.Debugf("Prepare index with abandon request: %s in jet %s", index.ObjID.String(), indexJet.DebugString())
 	isk.abandonRequestIndexes[indexJet] = append(indexes, index)
 }
 
