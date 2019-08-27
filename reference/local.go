@@ -235,6 +235,10 @@ func (v *Local) MarshalJSON() ([]byte, error) {
 	return json.Marshal(v.String())
 }
 
+func (v Local) MarshalBinary() ([]byte, error) {
+	return v.Marshal()
+}
+
 func (v Local) Marshal() ([]byte, error) {
 	return v.AsBytes(), nil
 }
@@ -267,6 +271,10 @@ func (v *Local) UnmarshalJSON(data []byte) error {
 	}
 
 	return nil
+}
+
+func (v *Local) UnmarshalBinary(data []byte) error {
+	return v.Unmarshal(data)
 }
 
 func (v *Local) Unmarshal(data []byte) error {
