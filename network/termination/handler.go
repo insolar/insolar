@@ -66,12 +66,12 @@ type terminationHandler struct {
 	done        chan insolar.LeaveApproved
 	terminating bool
 
-	Network       insolar.Network `inject:""`
-	PulseAccessor pulse.Accessor  `inject:""`
+	Leaver        insolar.Leaver `inject:""`
+	PulseAccessor pulse.Accessor `inject:""`
 }
 
-func NewHandler(nw insolar.Network) insolar.TerminationHandler {
-	return &terminationHandler{Network: nw}
+func NewHandler(l insolar.Leaver) insolar.TerminationHandler {
+	return &terminationHandler{Leaver: l}
 }
 
 // TODO take ETA by role of node
@@ -90,7 +90,7 @@ func (t *terminationHandler) leave(ctx context.Context, leaveAfterPulses insolar
 
 		if leaveAfterPulses == 0 {
 			inslogger.FromContext(ctx).Debug("terminationHandler.Leave() with 0")
-			t.Network.Leave(ctx, 0)
+			t.Leaver.Leave(ctx, 0)
 		} else {
 			pulse, err := t.PulseAccessor.Latest(ctx)
 			if err != nil {
@@ -99,7 +99,7 @@ func (t *terminationHandler) leave(ctx context.Context, leaveAfterPulses insolar
 			pulseDelta := pulse.NextPulseNumber - pulse.PulseNumber
 
 			inslogger.FromContext(ctx).Debugf("terminationHandler.Leave() with leaveAfterPulses: %+v, in pulse %+v", leaveAfterPulses, pulse.PulseNumber+leaveAfterPulses*pulseDelta)
-			t.Network.Leave(ctx, pulse.PulseNumber+leaveAfterPulses*pulseDelta)
+			t.Leaver.Leave(ctx, pulse.PulseNumber+leaveAfterPulses*pulseDelta)
 		}
 	}
 

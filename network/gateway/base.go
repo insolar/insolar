@@ -139,9 +139,6 @@ func (g *Base) Init(ctx context.Context) error {
 	)
 	g.HostNetwork.RegisterRequestHandler(types.UpdateSchedule, g.HandleUpdateSchedule)
 	g.HostNetwork.RegisterRequestHandler(types.Reconnect, g.HandleReconnect)
-	g.HostNetwork.RegisterRequestHandler(types.Ping, func(ctx context.Context, req network.ReceivedPacket) (network.Packet, error) {
-		return g.HostNetwork.BuildResponse(ctx, req, &packet.Ping{}), nil
-	})
 
 	g.createCandidateProfile()
 	g.bootstrapETA = g.Options.BootstrapTimeout

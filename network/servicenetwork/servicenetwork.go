@@ -132,21 +132,6 @@ func NewServiceNetwork(conf configuration.Configuration, rootCm *component.Manag
 	return serviceNetwork, nil
 }
 
-// SendMessage sends a message from MessageBus.
-func (n *ServiceNetwork) SendMessage(nodeID insolar.Reference, method string, msg insolar.Parcel) ([]byte, error) {
-	return n.RPC.SendMessage(nodeID, method, msg)
-}
-
-// SendCascadeMessage sends a message from MessageBus to a cascade of nodes
-func (n *ServiceNetwork) SendCascadeMessage(data insolar.Cascade, method string, msg insolar.Parcel) error {
-	return n.RPC.SendCascadeMessage(data, method, msg)
-}
-
-// RemoteProcedureRegister registers procedure for remote call on this host.
-func (n *ServiceNetwork) RemoteProcedureRegister(name string, method insolar.RemoteProcedure) {
-	n.RPC.RemoteProcedureRegister(name, method)
-}
-
 // Init implements component.Initer
 func (n *ServiceNetwork) Init(ctx context.Context) error {
 	hostNetwork, err := hostnetwork.NewHostNetwork(n.CertificateManager.GetCertificate().GetNodeRef().String())
@@ -262,7 +247,7 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 	n.initConsensus()
 	n.Gatewayer.Gateway().Run(ctx, bootstrapPulse)
 
-	n.RemoteProcedureRegister(deliverWatermillMsg, n.processIncoming)
+	n.RPC.RemoteProcedureRegister(deliverWatermillMsg, n.processIncoming)
 
 	return nil
 }
@@ -295,10 +280,6 @@ func (n *ServiceNetwork) Stop(ctx context.Context) error {
 	}
 
 	return n.cm.Stop(ctx)
-}
-
-func (n *ServiceNetwork) GetState() insolar.NetworkState {
-	return n.Gatewayer.Gateway().GetState()
 }
 
 // HandlePulse process pulse from PulseController
