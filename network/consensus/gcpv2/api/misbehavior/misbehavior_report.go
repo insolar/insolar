@@ -89,14 +89,14 @@ const (
 	Fraud
 )
 
-func (c Type) Category() Category {
-	return Category(c >> 32)
+func (t Type) Category() Category {
+	return Category(t >> 32)
 }
 
-func (c Type) Type() int {
-	return int(c & (1<<32 - 1))
+func (t Type) Type() int {
+	return int(t & (1<<32 - 1))
 }
 
 func (c Category) Of(misbehavior int) Type {
-	return Type(c<<32) | Type(misbehavior)&(1<<32-1)
+	return Type(c)<<32 | Type(misbehavior)&(1<<32-1)
 }
