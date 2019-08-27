@@ -210,8 +210,7 @@ func (b *Bus) sendTarget(
 
 	// configure logger
 	ctx, _ = inslogger.WithField(ctx, "sending_type", msgType)
-	ctx, _ = inslogger.WithField(ctx, "sending_uuid", msg.UUID)
-	logger := inslogger.FromContext(ctx)
+	ctx, logger := inslogger.WithField(ctx, "sending_uuid", msg.UUID)
 	span.AddAttributes(
 		trace.StringAttribute("sending_type", msg.Metadata.Get(meta.Type)),
 	)
