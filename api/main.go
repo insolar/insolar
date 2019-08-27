@@ -179,6 +179,8 @@ func (ar *Runner) Stop(ctx context.Context) error {
 		return errors.Wrap(err, "Can't gracefully stop API server")
 	}
 
+	ar.SeedManager.Stop()
+
 	return nil
 }
 
