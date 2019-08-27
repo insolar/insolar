@@ -21,9 +21,6 @@ import (
 	"time"
 )
 
-// RemoteProcedure is remote procedure call function.
-type RemoteProcedure func(ctx context.Context, args []byte) ([]byte, error)
-
 // HealthChecker interface provides method to check network health
 type HealthChecker interface {
 	// IsAlive returns true if todo: fix requirements
@@ -49,14 +46,16 @@ type NetworkStatus interface {
 	GetNetworkStatus() StatusReply
 }
 
-//go:generate minimock -i github.com/insolar/insolar/insolar.Network -o ../testutils -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/insolar.Leaver -o ../testutils -s _mock.go -g
 
-// Network is interface for network modules facade.
-type Network interface {
-	// RemoteProcedureRegister is remote procedure register func.
-	RemoteProcedureRegister(name string, method RemoteProcedure)
+type Leaver interface {
 	// Leave notify other nodes that this node want to leave and doesn't want to receive new tasks
 	Leave(ctx context.Context, ETA PulseNumber)
+}
+
+//go:generate minimock -i github.com/insolar/insolar/insolar.CertificateGetter -o ../testutils -s _mock.go -g
+
+type CertificateGetter interface {
 	// GetState returns our current thoughs about whole network
 	GetCert(context.Context, *Reference) (Certificate, error)
 }

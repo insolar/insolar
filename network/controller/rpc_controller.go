@@ -65,21 +65,24 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/network/controller.RPCController -o ../../testutils/network -s _mock.go -g
+// RemoteProcedure is remote procedure call function.
+type RemoteProcedure func(ctx context.Context, args []byte) ([]byte, error)
+
+//go:generate minimock -i github.com/insolar/insolar/network/controller.RPCController -o . -s _mock.go -g
 
 type RPCController interface {
 	SendBytes(ctx context.Context, nodeID insolar.Reference, name string, msgBytes []byte) ([]byte, error)
-	RemoteProcedureRegister(name string, method insolar.RemoteProcedure)
+	RemoteProcedureRegister(name string, method RemoteProcedure)
 }
 
 type rpcController struct {
 	Network network.HostNetwork `inject:""`
 
 	options     *network.Options
-	methodTable map[string]insolar.RemoteProcedure
+	methodTable map[string]RemoteProcedure
 }
 
-func (rpc *rpcController) RemoteProcedureRegister(name string, method insolar.RemoteProcedure) {
+func (rpc *rpcController) RemoteProcedureRegister(name string, method RemoteProcedure) {
 	rpc.methodTable[name] = method
 }
 
@@ -139,5 +142,5 @@ func (rpc *rpcController) Init(ctx context.Context) error {
 }
 
 func NewRPCController(options *network.Options) RPCController {
-	return &rpcController{options: options, methodTable: make(map[string]insolar.RemoteProcedure)}
+	return &rpcController{options: options, methodTable: make(map[string]RemoteProcedure)}
 }

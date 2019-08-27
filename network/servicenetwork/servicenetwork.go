@@ -132,11 +132,6 @@ func NewServiceNetwork(conf configuration.Configuration, rootCm *component.Manag
 	return serviceNetwork, nil
 }
 
-// RemoteProcedureRegister registers procedure for remote call on this host.
-func (n *ServiceNetwork) RemoteProcedureRegister(name string, method insolar.RemoteProcedure) {
-	n.RPC.RemoteProcedureRegister(name, method)
-}
-
 // Init implements component.Initer
 func (n *ServiceNetwork) Init(ctx context.Context) error {
 	hostNetwork, err := hostnetwork.NewHostNetwork(n.CertificateManager.GetCertificate().GetNodeRef().String())
@@ -252,7 +247,7 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 	n.initConsensus()
 	n.Gatewayer.Gateway().Run(ctx, bootstrapPulse)
 
-	n.RemoteProcedureRegister(deliverWatermillMsg, n.processIncoming)
+	n.RPC.RemoteProcedureRegister(deliverWatermillMsg, n.processIncoming)
 
 	return nil
 }
