@@ -193,7 +193,7 @@ func newPulsePacket(t *testing.T) *packet.ReceivedPacket {
 func TestProcessIncorrectPacket(t *testing.T) {
 	controller := &pulseController{}
 	request := newPulsePacket(t)
-	request.SetRequest(&packet.Ping{})
+	request.SetRequest(&packet.RPCRequest{})
 	_, err := controller.processPulse(context.Background(), request)
 	assert.Error(t, err)
 	request.SetResponse(&packet.BasicResponse{Success: true})

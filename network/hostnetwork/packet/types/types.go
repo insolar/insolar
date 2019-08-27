@@ -55,8 +55,6 @@ type PacketType int
 
 const (
 	Unknown PacketType = iota
-	// Ping is packet type to ping remote node.
-	Ping
 	// RPC is packet type to execute RPC on a remote node.
 	RPC
 	// Pulse is packet type to receive Pulse from pulsard and resend it on remote nodes.
