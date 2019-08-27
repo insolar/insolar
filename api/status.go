@@ -18,6 +18,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"net/http"
 
 	"github.com/insolar/rpc/v2"
@@ -35,7 +36,9 @@ func (s *NodeService) GetStatus(r *http.Request, args *interface{}, requestBody 
 	ctx, inslog := inslogger.WithTraceField(context.Background(), traceID)
 
 	inslog.Infof("[ NodeService.GetStatus ] Incoming request: %s", r.RequestURI)
-
+	if !s.runner.cfg.IsAdmin {
+		return errors.New("method not allowed")
+	}
 	statusReply := s.runner.NetworkStatus.GetNetworkStatus()
 
 	reply.NetworkState = statusReply.NetworkState.String()

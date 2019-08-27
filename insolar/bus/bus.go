@@ -23,7 +23,6 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/trace"
@@ -211,7 +210,7 @@ func (b *Bus) sendTarget(
 
 	// configure logger
 	ctx, _ = inslogger.WithField(ctx, "sending_type", msgType)
-	logger := inslogger.FromContext(ctx)
+	ctx, logger := inslogger.WithField(ctx, "sending_uuid", msg.UUID)
 	span.AddAttributes(
 		trace.StringAttribute("sending_type", msg.Metadata.Get(meta.Type)),
 	)
@@ -241,6 +240,8 @@ func (b *Bus) sendTarget(
 		return handleError(errors.Wrap(err, "failed to unmarshal hash"))
 	}
 
+	ctx, logger = inslogger.WithField(ctx, "sending_msg_hash", msgHash.String())
+
 	reply := &lockedReply{
 		messages: make(chan *message.Message),
 		done:     make(chan struct{}),
@@ -254,7 +255,7 @@ func (b *Bus) sendTarget(
 	b.replies[msgHash] = reply
 	b.repliesMutex.Unlock()
 
-	logger.Debugf("sending message %s. uuid = %s", msgHash.String(), msg.UUID)
+	logger.Debugf("sending message")
 	err = b.pub.Publish(TopicOutgoing, msg)
 	if err != nil {
 		done()
@@ -317,6 +318,8 @@ func (b *Bus) Reply(ctx context.Context, origin payload.Meta, reply *message.Mes
 		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to fetch pulse"))
 	}
 
+	ctx, logger = inslogger.WithField(ctx, "replying_type", messagePayloadTypeName(reply))
+
 	wrapped, reply, err := b.wrapMeta(ctx, reply, origin.Sender, originHash, pn)
 	if err != nil {
 		instracer.AddError(span, err)
@@ -324,7 +327,16 @@ func (b *Bus) Reply(ctx context.Context, origin payload.Meta, reply *message.Mes
 		return
 	}
 
-	replyHash := wrapped.ID
+	replyHash := payload.MessageHash{}
+	err = replyHash.Unmarshal(wrapped.ID)
+	if err != nil {
+		instracer.AddError(span, err)
+		logger.Error(errors.Wrap(err, "failed to unmarshal hash"))
+		return
+	}
+
+	ctx, _ = inslogger.WithField(ctx, "origin_hash", originHash.String())
+	ctx, logger = inslogger.WithField(ctx, "sending_reply_hash", replyHash.String())
 
 	reply.Metadata.Set(meta.TraceID, inslogger.TraceID(ctx))
 
@@ -338,7 +350,7 @@ func (b *Bus) Reply(ctx context.Context, origin payload.Meta, reply *message.Mes
 
 	reply.SetContext(ctx)
 
-	logger.Debugf("sending reply %s", base58.Encode(replyHash))
+	logger.Debugf("sending reply")
 	err = b.pub.Publish(TopicOutgoing, reply)
 	if err != nil {
 		instracer.AddError(span, err)

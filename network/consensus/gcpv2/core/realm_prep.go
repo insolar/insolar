@@ -282,7 +282,7 @@ func (p *PrepRealm) pushEphemeralPulse(ctx context.Context) {
 	p.Lock()
 	defer p.Unlock()
 
-	if p.disableEphemeral {
+	if p.disableEphemeral || p.ephemeralFeeder == nil {
 		return // ephemeral mode was deactivated
 	}
 
