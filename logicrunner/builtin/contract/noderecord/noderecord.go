@@ -58,6 +58,7 @@ func NewNodeRecord(publicKey string, roleStr string) (*NodeRecord, error) {
 	}, nil
 }
 
+// is needed for proxy
 var INSATTR_GetNodeInfo_API = true
 
 // GetNodeInfo returns RecordInfo.
@@ -66,6 +67,7 @@ func (nr NodeRecord) GetNodeInfo() (RecordInfo, error) {
 	return nr.Record, nil
 }
 
+// is needed for proxy
 var INSATTR_GetPublicKey_API = true
 
 // GetPublicKey returns public key.

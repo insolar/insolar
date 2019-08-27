@@ -187,7 +187,7 @@ func (nk *nodekeeper) MoveSyncToActive(ctx context.Context, number insolar.Pulse
 	snapshot := node.NewSnapshot(number, nk.syncNodes)
 	err := nk.SnapshotStorage.Append(number, snapshot)
 	if err != nil {
-		panic("MoveSyncToActive(): " + err.Error())
+		inslogger.FromContext(ctx).Panic("MoveSyncToActive(): ", err.Error())
 	}
 
 	accessor := node.NewAccessor(snapshot)

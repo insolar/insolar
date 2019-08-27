@@ -239,7 +239,7 @@ func collectNodesStatuses(conf *pulsewatcher.Config, lastResults []nodeStatus) (
 	wg.Add(len(conf.Nodes))
 	for i, url := range conf.Nodes {
 		go func(url string, i int) {
-			res, err := client.Post("http://"+url+"/api/rpc", "application/json",
+			res, err := client.Post("http://"+url+"/admin-api/rpc", "application/json",
 				strings.NewReader(`{"jsonrpc": "2.0", "method": "node.getStatus", "id": 0}`))
 
 			url = strings.TrimPrefix(url, "127.0.0.1")

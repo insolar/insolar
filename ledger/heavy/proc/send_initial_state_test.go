@@ -29,6 +29,7 @@ import (
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/heavy/executor"
 	"github.com/stretchr/testify/require"
 )
@@ -109,7 +110,7 @@ func TestSendInitialState_ProceedForNetworkStart(t *testing.T) {
 	light := gen.Reference()
 
 	JetIDs := make([]insolar.JetID, 0)
-	Drops := make([][]byte, 0)
+	Drops := make([]drop.Drop, 0)
 	Indexes := make([]record.Index, 0)
 	initialStateAccessor := executor.NewInitialStateAccessorMock(mc)
 	initialStateAccessor.GetMock.Expect(ctx, light, sp.PulseNumber).Return(&executor.InitialState{

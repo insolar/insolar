@@ -24,17 +24,26 @@ import (
 type APIRunner struct {
 	Address string
 	RPC     string
+	IsAdmin bool
 }
 
 // NewAPIRunner creates new api config
-func NewAPIRunner() APIRunner {
+func NewAPIRunner(admin bool) APIRunner {
+	if admin {
+		return APIRunner{
+			Address: "localhost:19001",
+			RPC:     "/admin-api/rpc",
+			IsAdmin: true,
+		}
+	}
 	return APIRunner{
 		Address: "localhost:19101",
 		RPC:     "/api/rpc",
+		IsAdmin: false,
 	}
 }
 
 func (ar *APIRunner) String() string {
-	res := fmt.Sprintln("Addr ->", ar.Address, ", RPC ->", ar.RPC)
+	res := fmt.Sprintln("Addr ->", ar.Address, ", RPC ->", ar.RPC, ", IsAdmin ->", ar.IsAdmin)
 	return res
 }

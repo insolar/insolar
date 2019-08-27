@@ -49,6 +49,7 @@ const (
 	defaultRPCListenPort         = 18182
 	defaultInsgorundListenPort   = 18181
 	defaultAPIListenPort         = 19191
+	defaultAdminAPIListenPort    = 19091
 	defaultJaegerEndpointPort    = 6831
 	defaultKeysPath              = "/etc/insolar/keys.json"
 	defaultCertPath              = "/etc/insolar/cert.json"
@@ -71,6 +72,7 @@ func main() {
 	insolardMetricsListen := getURI(defaultMetricsListenPort)
 	insolardRPCListen := getURI(defaultRPCListenPort)
 	insolardAPIListen := getURI(defaultAPIListenPort)
+	insolardAdminAPIListen := getURI(defaultAdminAPIListenPort)
 
 	insolardTransportListen := GetEnvDefault("INSOLARD_TRANSPORT_LISTEN", getURI(defaultTranportListenPort))
 	insolardLogLevel := GetEnvDefault("INSOLARD_LOG_LEVEL", defaultLogLevel)
@@ -84,6 +86,7 @@ func main() {
 	fmt.Println("[debug] cfg->logicrunner->rpclisten ==", insolardRPCListen)
 	fmt.Println("[debug] cfg->logicrunner->goplugin->runnerlisten ==", insgorundListen)
 	fmt.Println("[debug] cfg->apirunner->address ==", insolardAPIListen)
+	fmt.Println("[debug] cfg->adminapirunner->address ==", insolardAdminAPIListen)
 	fmt.Println("[debug] cfg->tracer->jaeger->agentendpoint ==", insolardTracerEndpoint)
 
 	// transport related
@@ -99,6 +102,7 @@ func main() {
 	cfg.LogicRunner.GoPlugin.RunnerListen = insgorundListen
 	// api runner related
 	cfg.APIRunner.Address = insolardAPIListen
+	cfg.AdminAPIRunner.Address = insolardAdminAPIListen
 	// with tracer
 	cfg.Tracer.Jaeger.AgentEndpoint = insolardTracerEndpoint
 	// unstructured

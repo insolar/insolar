@@ -42,7 +42,7 @@ type JetKeeper interface {
 	AddBackupConfirmation(ctx context.Context, pn insolar.PulseNumber) error
 	// TopSyncPulse provides access to highest synced (replicated) pulse.
 	TopSyncPulse() insolar.PulseNumber
-	// HasJetConfirms says if given pulse has drop and hot confirms. Ignore backups
+	// HasAllJetConfirms says if given pulse has drop and hot confirms. Ignore backups
 	HasAllJetConfirms(ctx context.Context, pn insolar.PulseNumber) bool
 }
 
@@ -61,24 +61,17 @@ type DBJetKeeper struct {
 	db       store.DB
 }
 
-type jetInfo struct {
-	JetID           insolar.JetID
-	HotConfirmed    []insolar.JetID
-	DropConfirmed   bool
-	BackupConfirmed bool
-	Split           *bool
-}
-
-func (j *jetInfo) updateSplit(split bool) error {
-	if j.Split == nil {
-		j.Split = &split
-	} else if *j.Split != split {
-		return errors.New(fmt.Sprintf("try to change split from %t to %t ", *j.Split, split))
+func (j *JetInfo) updateSplit(split bool) error {
+	if !j.IsSplitSet {
+		j.Split = split
+		j.IsSplitSet = true
+	} else if j.Split != split {
+		return errors.New(fmt.Sprintf("try to change split from %t to %t ", j.Split, split))
 	}
 	return nil
 }
 
-func (j *jetInfo) addDrop(newJetID insolar.JetID, split bool) error {
+func (j *JetInfo) addDrop(newJetID insolar.JetID, split bool) error {
 	if j.DropConfirmed {
 		return errors.New("addDrop. try to rewrite drop confirmation. existing: " + j.JetID.DebugString() +
 			", new: " + newJetID.DebugString())
@@ -94,7 +87,7 @@ func (j *jetInfo) addDrop(newJetID insolar.JetID, split bool) error {
 	return nil
 }
 
-func (j *jetInfo) checkIncomingHot(incomingJetID insolar.JetID) error {
+func (j *JetInfo) checkIncomingHot(incomingJetID insolar.JetID) error {
 	if len(j.HotConfirmed) >= 2 {
 		return errors.New("num hot confirmations exceeds 2. existing: " + insolar.JetIDCollection(j.HotConfirmed).DebugString() +
 			", new: " + incomingJetID.DebugString())
@@ -107,11 +100,11 @@ func (j *jetInfo) checkIncomingHot(incomingJetID insolar.JetID) error {
 	return nil
 }
 
-func (j *jetInfo) addBackup() {
+func (j *JetInfo) addBackup() {
 	j.BackupConfirmed = true
 }
 
-func (j *jetInfo) addHot(newJetID insolar.JetID, parentID insolar.JetID, split bool) error {
+func (j *JetInfo) addHot(newJetID insolar.JetID, parentID insolar.JetID, split bool) error {
 	err := j.checkIncomingHot(newJetID)
 	if err != nil {
 		return errors.Wrap(err, "incorrect incoming jet")
@@ -126,7 +119,7 @@ func (j *jetInfo) addHot(newJetID insolar.JetID, parentID insolar.JetID, split b
 	return nil
 }
 
-func (j *jetInfo) isConfirmed(checkBackup bool) bool {
+func (j *JetInfo) isConfirmed(ctx context.Context, checkBackup bool) bool {
 	if checkBackup && !j.BackupConfirmed {
 		return false
 	}
@@ -139,7 +132,12 @@ func (j *jetInfo) isConfirmed(checkBackup bool) bool {
 		return false
 	}
 
-	if !*j.Split {
+	if !j.IsSplitSet {
+		inslogger.FromContext(ctx).Error("IsSplitJet must be set before calling for isConfirmed")
+		return false
+	}
+
+	if !j.Split {
 		return j.HotConfirmed[0].Equal(j.JetID)
 	}
 
@@ -255,7 +253,7 @@ func (jk *DBJetKeeper) topSyncPulse() insolar.PulseNumber {
 	return insolar.NewPulseNumber(val)
 }
 
-func (jk *DBJetKeeper) getForJet(ctx context.Context, pulse insolar.PulseNumber, jet insolar.JetID) (int, []jetInfo, error) {
+func (jk *DBJetKeeper) getForJet(ctx context.Context, pulse insolar.PulseNumber, jet insolar.JetID) (int, []JetInfo, error) {
 	logger := inslogger.FromContext(ctx)
 	jets, err := jk.get(pulse)
 	if err != nil && err != store.ErrNotFound {
@@ -269,7 +267,7 @@ func (jk *DBJetKeeper) getForJet(ctx context.Context, pulse insolar.PulseNumber,
 		}
 	}
 
-	newInfo := jetInfo{}
+	newInfo := JetInfo{}
 	jets = append(jets, newInfo)
 	logger.Debug("getForJet. create new. jet: ", jet.DebugString(), ", pulse: ", pulse)
 	return len(jets) - 1, jets, nil
@@ -311,10 +309,10 @@ func (jk *DBJetKeeper) updateDrop(ctx context.Context, pulse insolar.PulseNumber
 // infoToSet converts given jetInfo slice to set and checks confirmations
 // if at least one jetInfo is not confirmed it returns false
 // checkBackup is used to skip checking of backup confirmation
-func infoToSet(s []jetInfo, checkBackup bool) (map[insolar.JetID]struct{}, bool) {
+func infoToSet(ctx context.Context, s []JetInfo, checkBackup bool) (map[insolar.JetID]struct{}, bool) {
 	r := make(map[insolar.JetID]struct{}, len(s))
 	for _, el := range s {
-		if !el.isConfirmed(checkBackup) {
+		if !el.isConfirmed(ctx, checkBackup) {
 			return nil, false
 		}
 		r[el.JetID] = struct{}{}
@@ -332,7 +330,7 @@ func infoToList(s map[insolar.JetID]struct{}) []insolar.JetID {
 	return r
 }
 
-func (jk *DBJetKeeper) getTopSyncJets() ([]insolar.JetID, error) {
+func (jk *DBJetKeeper) getTopSyncJets(ctx context.Context) ([]insolar.JetID, error) {
 	var result []insolar.JetID
 	top := jk.topSyncPulse()
 	if top == insolar.FirstPulseNumber {
@@ -344,7 +342,11 @@ func (jk *DBJetKeeper) getTopSyncJets() ([]insolar.JetID, error) {
 	}
 
 	for _, ji := range jets {
-		if *ji.Split {
+		if !ji.IsSplitSet {
+			inslogger.FromContext(ctx).Error("IsSplitJet must be set before calling for isConfirmed")
+			return nil, fmt.Errorf("IsSplitJet must be set before calling for isConfirmed. JetID:%v", ji.JetID.DebugString())
+		}
+		if ji.Split {
 			left, right := jet.Siblings(ji.JetID)
 			result = append(result, left, right)
 		} else {
@@ -397,14 +399,14 @@ func (jk *DBJetKeeper) checkPulseConsistency(ctx context.Context, pulse insolar.
 		return false
 	}
 
-	topSyncJets, err := jk.getTopSyncJets()
+	topSyncJets, err := jk.getTopSyncJets(ctx)
 	if err != nil {
 		logger.Fatal("can't get jets for top sync pulse: ", err)
 		return false
 	}
 	actualJets := jk.all(pulse)
 
-	actualJetsSet, allConfirmed := infoToSet(actualJets, checkBackup)
+	actualJetsSet, allConfirmed := infoToSet(ctx, actualJets, checkBackup)
 	if !allConfirmed {
 		return false
 	}
@@ -434,10 +436,10 @@ func (jk *DBJetKeeper) checkPulseConsistency(ctx context.Context, pulse insolar.
 	return true
 }
 
-func (jk *DBJetKeeper) all(pulse insolar.PulseNumber) []jetInfo {
+func (jk *DBJetKeeper) all(pulse insolar.PulseNumber) []JetInfo {
 	jets, err := jk.get(pulse)
 	if err != nil {
-		jets = []jetInfo{}
+		jets = []JetInfo{}
 	}
 	return jets
 }
@@ -466,7 +468,7 @@ func (k syncPulseKey) ID() []byte {
 	return []byte{}
 }
 
-func (jk *DBJetKeeper) get(pn insolar.PulseNumber) ([]jetInfo, error) {
+func (jk *DBJetKeeper) get(pn insolar.PulseNumber) ([]JetInfo, error) {
 	serializedJets, err := jk.db.Get(jetKeeperKey(pn))
 	if err != nil {
 		if err == store.ErrNotFound {
@@ -475,18 +477,19 @@ func (jk *DBJetKeeper) get(pn insolar.PulseNumber) ([]jetInfo, error) {
 		return nil, errors.Wrapf(err, "failed to get jets by pulse=%v", pn)
 	}
 
-	var jets []jetInfo
-	err = insolar.Deserialize(serializedJets, &jets)
+	var jets JetsInfo
+	err = jets.Unmarshal(serializedJets)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to deserialize jets")
 	}
-	return jets, nil
+	return jets.Jets, nil
 }
 
-func (jk *DBJetKeeper) set(pn insolar.PulseNumber, jets []jetInfo) error {
+func (jk *DBJetKeeper) set(pn insolar.PulseNumber, jets []JetInfo) error {
 	key := jetKeeperKey(pn)
 
-	serialized, err := insolar.Serialize(jets)
+	jetsInfo := JetsInfo{Jets: jets}
+	serialized, err := jetsInfo.Marshal()
 	if err != nil {
 		return errors.Wrap(err, "failed to serialize jets")
 	}

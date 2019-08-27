@@ -72,8 +72,8 @@ func Test_AbandonedNotification(t *testing.T) {
 				Pulse: pulse.PulseProto{
 					PulseNumber: insolar.FirstPulseNumber,
 				},
-				Drops: [][]byte{
-					drop.MustEncode(&drop.Drop{JetID: insolar.ZeroJetID, Pulse: insolar.FirstPulseNumber}),
+				Drops: []drop.Drop{
+					{JetID: insolar.ZeroJetID, Pulse: insolar.FirstPulseNumber},
 				},
 			}}
 		}
@@ -175,8 +175,8 @@ func Test_AbandonedNotification_WhenLightInit(t *testing.T) {
 				Pulse: pulse.PulseProto{
 					PulseNumber: insolar.FirstPulseNumber,
 				},
-				Drops: [][]byte{
-					drop.MustEncode(&drop.Drop{JetID: insolar.ZeroJetID, Pulse: insolar.FirstPulseNumber}),
+				Drops: []drop.Drop{
+					{JetID: insolar.ZeroJetID, Pulse: insolar.FirstPulseNumber},
 				},
 				Indexes: []record.Index{
 					{Lifeline: record.Lifeline{EarliestOpenRequest: &pn}, ObjID: objectID},

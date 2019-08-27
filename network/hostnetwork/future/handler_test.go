@@ -169,15 +169,3 @@ func TestShouldProcessPacket_WrongSender(t *testing.T) {
 
 	require.False(t, shouldProcessPacket(future, packet.NewReceivedPacket(req, nil)))
 }
-
-func TestShouldProcessPacket_WrongSenderPing(t *testing.T) {
-	m := NewManager()
-
-	req := newPacket()
-	future := m.Create(req)
-
-	resp := newPacket()
-	resp.SetResponse(&packet.Ping{})
-
-	require.False(t, shouldProcessPacket(future, packet.NewReceivedPacket(resp, nil)))
-}

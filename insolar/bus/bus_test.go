@@ -45,6 +45,7 @@ func TestMessageBus_SendTarget(t *testing.T) {
 	ctx := context.Background()
 	logger := log.NewWatermillLogAdapter(inslogger.FromContext(ctx))
 	pubsub := gochannel.NewGoChannel(gochannel.Config{}, logger)
+	defer pubsub.Close()
 
 	pulseMock := pulse.NewAccessorMock(t)
 	pulseMock.LatestMock.Return(*insolar.GenesisPulse, nil)
@@ -63,6 +64,7 @@ func TestMessageBus_SendTarget(t *testing.T) {
 
 	mapSizeBefore := len(b.replies)
 	results, done := b.SendTarget(ctx, msg, gen.Reference())
+	defer done()
 
 	require.NotNil(t, results)
 	require.NotNil(t, done)
@@ -153,6 +155,7 @@ func TestMessageBus_Send_Timeout(t *testing.T) {
 	ctx := context.Background()
 	logger := log.NewWatermillLogAdapter(inslogger.FromContext(ctx))
 	pubsub := gochannel.NewGoChannel(gochannel.Config{}, logger)
+	defer pubsub.Close()
 
 	pulseMock := pulse.NewAccessorMock(t)
 	pulseMock.LatestMock.Return(*insolar.GenesisPulse, nil)
@@ -173,7 +176,8 @@ func TestMessageBus_Send_Timeout(t *testing.T) {
 	err = msgHash.Unmarshal(h.Sum(nil))
 	require.NoError(t, err)
 
-	results, _ := b.SendTarget(ctx, msg, gen.Reference())
+	results, done := b.SendTarget(ctx, msg, gen.Reference())
+	defer done()
 
 	res, ok := <-results
 
@@ -188,6 +192,7 @@ func TestMessageBus_Send_Timeout_Close_Race(t *testing.T) {
 	ctx := context.Background()
 	logger := log.NewWatermillLogAdapter(inslogger.FromContext(ctx))
 	pubsub := gochannel.NewGoChannel(gochannel.Config{}, logger)
+	defer pubsub.Close()
 
 	pulseMock := pulse.NewAccessorMock(t)
 	pulseMock.LatestMock.Return(*insolar.GenesisPulse, nil)
@@ -212,6 +217,7 @@ func TestMessageBus_IncomingMessageRouter_Request(t *testing.T) {
 	incomingHandlerCalls := 0
 	logger := log.NewWatermillLogAdapter(inslogger.FromContext(context.Background()))
 	pubsub := gochannel.NewGoChannel(gochannel.Config{}, logger)
+	defer pubsub.Close()
 
 	pulseMock := pulse.NewAccessorMock(t)
 	pulseMock.LatestMock.Return(*insolar.GenesisPulse, nil)
@@ -243,6 +249,7 @@ func TestMessageBus_IncomingMessageRouter_Reply(t *testing.T) {
 	incomingHandlerCalls := 0
 	logger := log.NewWatermillLogAdapter(inslogger.FromContext(context.Background()))
 	pubsub := gochannel.NewGoChannel(gochannel.Config{}, logger)
+	defer pubsub.Close()
 
 	pulseMock := pulse.NewAccessorMock(t)
 	pulseMock.LatestMock.Return(*insolar.GenesisPulse, nil)
@@ -295,12 +302,14 @@ func TestMessageBus_IncomingMessageRouter_Reply(t *testing.T) {
 	require.Equal(t, 0, incomingHandlerCalls)
 	<-done
 	require.Equal(t, reply, receivedMsg)
+
 }
 
 func TestMessageBus_IncomingMessageRouter_ReplyTimeout(t *testing.T) {
 	incomingHandlerCalls := 0
 	logger := log.NewWatermillLogAdapter(inslogger.FromContext(context.Background()))
 	pubsub := gochannel.NewGoChannel(gochannel.Config{}, logger)
+	defer pubsub.Close()
 
 	pulseMock := pulse.NewAccessorMock(t)
 	pulseMock.LatestMock.Return(*insolar.GenesisPulse, nil)
@@ -344,7 +353,8 @@ func TestMessageBus_Send_IncomingMessageRouter(t *testing.T) {
 	id := watermill.NewUUID()
 	msg := message.NewMessage(id, slice())
 
-	results, _ := b.SendTarget(ctx, msg, gen.Reference())
+	results, done := b.SendTarget(ctx, msg, gen.Reference())
+	defer done()
 
 	hash := payload.MessageHash{}
 	err := hash.Unmarshal([]byte(id))
@@ -398,7 +408,8 @@ func TestMessageBus_Send_IncomingMessageRouter_ReadAfterTimeout(t *testing.T) {
 	p := []byte{1, 2, 3, 4, 5}
 	msg := message.NewMessage(watermill.NewUUID(), p)
 
-	results, _ := b.SendTarget(ctx, msg, gen.Reference())
+	results, done := b.SendTarget(ctx, msg, gen.Reference())
+	defer done()
 
 	incomingHandler := func(msg *message.Message) ([]*message.Message, error) {
 		return nil, nil
@@ -432,7 +443,8 @@ func TestMessageBus_Send_IncomingMessageRouter_WriteAfterTimeout(t *testing.T) {
 	msgPayload := []byte{1, 2, 3, 4, 5}
 	msg := message.NewMessage(watermill.NewUUID(), msgPayload)
 
-	results, _ := b.SendTarget(ctx, msg, gen.Reference())
+	results, done := b.SendTarget(ctx, msg, gen.Reference())
+	defer done()
 
 	resSend, ok := <-results
 	require.False(t, ok)
@@ -541,7 +553,8 @@ func TestMessageBus_Send_IncomingMessageRouter_SeveralMsg(t *testing.T) {
 	}
 
 	// try to send again
-	b.SendTarget(ctx, message.NewMessage(watermill.NewUUID(), nil), gen.Reference())
+	_, doneSend := b.SendTarget(ctx, message.NewMessage(watermill.NewUUID(), nil), gen.Reference())
+	doneSend()
 }
 
 func TestMessageBus_Send_IncomingMessageRouter_SeveralMsgForOneSend(t *testing.T) {
@@ -560,7 +573,8 @@ func TestMessageBus_Send_IncomingMessageRouter_SeveralMsgForOneSend(t *testing.T
 	b.timeout = time.Millisecond * time.Duration(rand.Intn(10))
 
 	// send message
-	results, _ := b.SendTarget(ctx, message.NewMessage(watermill.NewUUID(), nil), gen.Reference())
+	results, done := b.SendTarget(ctx, message.NewMessage(watermill.NewUUID(), nil), gen.Reference())
+	defer done()
 
 	incomingHandler := func(msg *message.Message) ([]*message.Message, error) {
 		return nil, nil

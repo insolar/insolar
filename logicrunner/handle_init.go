@@ -71,7 +71,7 @@ func (s *Init) replyError(ctx context.Context, meta payload.Meta, err error) {
 	}
 
 	// todo refactor this #INS-3191
-	if err == flow.ErrCancelled {
+	if cause == flow.ErrCancelled {
 		errCode = uint32(payload.CodeFlowCanceled)
 	}
 	errMsg, newErr := payload.NewMessage(&payload.Error{Text: err.Error(), Code: errCode})
@@ -161,7 +161,7 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 		err = fmt.Errorf("[ Init.Present ] no handler for message type %s", msgType)
 	}
 	if err != nil {
-		s.replyError(ctx, originMeta, err)
+		bus.ReplyError(ctx, s.dep.Sender, originMeta, err)
 	}
 	return err
 }

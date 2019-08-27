@@ -9,21 +9,19 @@ func _() {
 	// Re-run the stringer command to generate them again.
 	var x [1]struct{}
 	_ = x[Unknown-0]
-	_ = x[Ping-1]
-	_ = x[RPC-2]
-	_ = x[Cascade-3]
-	_ = x[Pulse-4]
-	_ = x[Bootstrap-5]
-	_ = x[Authorize-6]
-	_ = x[Disconnect-7]
-	_ = x[SignCert-8]
-	_ = x[UpdateSchedule-9]
-	_ = x[Reconnect-10]
+	_ = x[RPC-1]
+	_ = x[Pulse-2]
+	_ = x[Bootstrap-3]
+	_ = x[Authorize-4]
+	_ = x[Disconnect-5]
+	_ = x[SignCert-6]
+	_ = x[UpdateSchedule-7]
+	_ = x[Reconnect-8]
 }
 
-const _PacketType_name = "UnknownPingRPCCascadePulseBootstrapAuthorizeDisconnectSignCertUpdateScheduleReconnect"
+const _PacketType_name = "UnknownRPCPulseBootstrapAuthorizeDisconnectSignCertUpdateScheduleReconnect"
 
-var _PacketType_index = [...]uint8{0, 7, 11, 14, 21, 26, 35, 44, 54, 62, 76, 85}
+var _PacketType_index = [...]uint8{0, 7, 10, 15, 24, 33, 43, 51, 65, 74}
 
 func (i PacketType) String() string {
 	if i < 0 || i >= PacketType(len(_PacketType_index)-1) {
