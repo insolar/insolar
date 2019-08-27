@@ -45,7 +45,7 @@ func TestGen_IDWithPulse(t *testing.T) {
 	emptySlice := make([]byte, insolar.RecordHashSize)
 
 	for i := 0; i < 100; i++ {
-		pulse := gen.PulseNumber()
+		pulse := gen.CorrectPulseNumber()
 
 		idWithPulse := gen.IDWithPulse(pulse)
 
