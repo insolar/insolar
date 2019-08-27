@@ -221,15 +221,11 @@ func (s *StateIniterDefault) loadStateRetry(
 		}
 	}
 
-	for _, buf := range state.Drops {
-		d, err := drop.Decode(buf)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to decode drop")
-		}
+	for _, d := range state.Drops {
 		if d.Pulse != prevPulse.PulseNumber {
 			return nil, errors.New("received drop with wrong pulse")
 		}
-		err = s.drops.Set(ctx, *d)
+		err = s.drops.Set(ctx, d)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to set drop")
 		}

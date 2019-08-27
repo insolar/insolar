@@ -223,7 +223,7 @@ func (lr *LightReplicatorDefault) heavyPayload(
 		JetID:   jetID,
 		Pulse:   pn,
 		Indexes: indexes,
-		Drop:    drop.MustEncode(&dr),
+		Drop:    dr,
 		Records: records,
 	}, nil
 }

@@ -201,7 +201,7 @@ message HotObjects {
 
     bytes JetID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.JetID", (gogoproto.nullable) = false];
     bytes Pulse = 22 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
-    bytes Drop = 21;
+    drop.Drop Drop = 21 [(gogoproto.nullable) = false];
     repeated record.Index Indexes = 23 [(gogoproto.nullable) = false];
 }
 
@@ -337,7 +337,7 @@ message LightInitialState {
 
     bool NetworkStart = 20;
     repeated bytes JetIDs = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.JetID", (gogoproto.nullable) = false];
-    repeated bytes Drops = 22;
+    repeated drop.Drop Drops = 22 [(gogoproto.nullable) = false];
     repeated record.Index Indexes = 23 [(gogoproto.nullable) = false];
     pulse.PulseProto Pulse = 24 [(gogoproto.nullable) = false];
 }
