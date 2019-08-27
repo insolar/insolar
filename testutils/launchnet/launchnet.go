@@ -98,7 +98,7 @@ func Run(cb func() int) int {
 var info *requester.InfoResponse
 var Root User
 var MigrationAdmin User
-var MigrationDaemons [insolar.GenesisAmountActiveMigrationDaemonMembers]*User
+var MigrationDaemons [insolar.GenesisAmountMigrationDaemonMembers]*User
 
 type User struct {
 	Ref     string

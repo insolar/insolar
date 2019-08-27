@@ -27,55 +27,55 @@ import (
 
 func TestActivateDaemonDoubleCall(t *testing.T) {
 	t.Skip("Test is constantly failing. Skipping until INS-3344 is fixed.")
-	activateDaemons(t)
-	for _, user := range launchnet.MigrationDaemons {
+	activeDaemons := activateDaemons(t, countThreeActiveDaemon)
+	for _, daemon := range activeDaemons {
 		_, _, err := makeSignedRequest(launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.activateDaemon",
-			map[string]interface{}{"reference": user.Ref})
+			map[string]interface{}{"reference": daemon.Ref})
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "daemon member already activated")
 	}
 }
 
 func TestActivateDeactivateDaemon(t *testing.T) {
-	activateDaemons(t)
-	for _, user := range launchnet.MigrationDaemons {
+	activeDaemons := activateDaemons(t, countThreeActiveDaemon)
+	for _, daemon := range activeDaemons {
 		_, err := signedRequest(t, launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.deactivateDaemon",
-			map[string]interface{}{"reference": user.Ref})
+			map[string]interface{}{"reference": daemon.Ref})
 		require.NoError(t, err)
 	}
 
-	for _, user := range launchnet.MigrationDaemons {
+	for _, daemon := range activeDaemons {
 		res, _, err := makeSignedRequest(launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.checkDaemon",
-			map[string]interface{}{"reference": user.Ref})
+			map[string]interface{}{"reference": daemon.Ref})
 		require.NoError(t, err)
 		status := res.(map[string]interface{})["status"].(string)
 		require.Equal(t, status, "inactive")
 	}
 
-	for _, user := range launchnet.MigrationDaemons {
+	for _, daemon := range activeDaemons {
 		_, err := signedRequest(t, launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.activateDaemon",
-			map[string]interface{}{"reference": user.Ref})
+			map[string]interface{}{"reference": daemon.Ref})
 		require.NoError(t, err)
 	}
 
-	for _, user := range launchnet.MigrationDaemons {
+	for _, daemon := range activeDaemons {
 		res, _, err := makeSignedRequest(launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.checkDaemon",
-			map[string]interface{}{"reference": user.Ref})
+			map[string]interface{}{"reference": daemon.Ref})
 		require.NoError(t, err)
 		status := res.(map[string]interface{})["status"].(string)
 		require.Equal(t, status, "active")
 	}
 }
 func TestDeactivateDaemonDoubleCall(t *testing.T) {
-	activateDaemons(t)
-	for _, user := range launchnet.MigrationDaemons {
+	activeDaemons := activateDaemons(t, countThreeActiveDaemon)
+	for _, daemon := range activeDaemons {
 		_, _, err := makeSignedRequest(launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.deactivateDaemon",
-			map[string]interface{}{"reference": user.Ref})
+			map[string]interface{}{"reference": daemon.Ref})
 		require.NoError(t, err)
 	}
-	for _, user := range launchnet.MigrationDaemons {
+	for _, daemon := range activeDaemons {
 		_, _, err := makeSignedRequest(launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.deactivateDaemon",
-			map[string]interface{}{"reference": user.Ref})
+			map[string]interface{}{"reference": daemon.Ref})
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "daemon member already deactivated")
 	}
