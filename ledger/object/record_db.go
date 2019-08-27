@@ -283,7 +283,7 @@ func (r *RecordDB) truncateRecordsHead(ctx context.Context, from insolar.PulseNu
 	return nil
 }
 
-func (r *RecordDB) truncatePositionRecordHead(ctx context.Context, from printableKey, prefix byte) error {
+func (r *RecordDB) truncatePositionRecordHead(ctx context.Context, from store.Key, prefix byte) error {
 	it := store.NewReadIterator(r.db.Backend(), from, false)
 	defer it.Close()
 
@@ -297,25 +297,20 @@ func (r *RecordDB) truncatePositionRecordHead(ctx context.Context, from printabl
 
 		err := r.db.Delete(key)
 		if err != nil {
-			return errors.Wrapf(err, "can't delete key: %s", key.String())
+			return errors.Wrapf(err, "can't delete key: %s", key)
 		}
 
-		inslogger.FromContext(ctx).Debugf("Erased key: %s", key.String())
+		inslogger.FromContext(ctx).Debugf("Erased key: %s", key)
 	}
 
 	if !hasKeys {
-		inslogger.FromContext(ctx).Infof("No records. Nothing done. Start key: %s", from.String())
+		inslogger.FromContext(ctx).Infof("No records. Nothing done. Start key: %s", from)
 	}
 
 	return nil
 }
 
-type printableKey interface {
-	store.Key
-	String() string
-}
-
-func makePositionKey(raw []byte) printableKey {
+func makePositionKey(raw []byte) store.Key {
 	switch raw[0] {
 	case recordPositionKeyPrefix:
 		return newRecordPositionKeyFromBytes(raw)
