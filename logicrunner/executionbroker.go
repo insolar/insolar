@@ -67,14 +67,22 @@ type ExecutionBrokerI interface {
 	OnPulse(ctx context.Context) []payload.Payload
 }
 
+type processorState struct {
+	name     string
+	active   uint32
+	parallel bool
+	queue    requestsqueue.RequestsQueue
+}
+
 type ExecutionBroker struct {
 	Ref insolar.Reference
 
 	stateLock sync.Mutex
 
-	mutable   requestsqueue.RequestsQueue
-	immutable requestsqueue.RequestsQueue
-	finished  []*common.Transcript
+	mutable   processorState
+	immutable processorState
+
+	finished []*common.Transcript
 
 	outgoingSender OutgoingRequestSender
 
@@ -94,8 +102,6 @@ type ExecutionBroker struct {
 
 	ledgerHasMoreRequests bool
 
-	processorActive uint32
-
 	deduplicationTable map[insolar.Reference]bool
 }
 
@@ -112,8 +118,16 @@ func NewExecutionBroker(
 	return &ExecutionBroker{
 		Ref: ref,
 
-		mutable:   requestsqueue.New(),
-		immutable: requestsqueue.New(),
+		mutable: processorState{
+			name:     "mutable",
+			parallel: false,
+			queue:    requestsqueue.New(),
+		},
+		immutable: processorState{
+			name:     "immutable",
+			parallel: true,
+			queue:    requestsqueue.New(),
+		},
 
 		outgoingSender: outgoingSender,
 		pulseAccessor:  pulseAccessor,
@@ -124,24 +138,8 @@ func NewExecutionBroker(
 		artifactsManager:  artifactsManager,
 		executionRegistry: executionRegistry,
 
-		processorActive: 0,
-
 		deduplicationTable: make(map[insolar.Reference]bool),
 	}
-}
-
-func (q *ExecutionBroker) tryTakeProcessor(_ context.Context, immutable bool) bool {
-	if immutable {
-		return true
-	}
-	return atomic.CompareAndSwapUint32(&q.processorActive, 0, 1)
-}
-
-func (q *ExecutionBroker) releaseProcessor(_ context.Context, immutable bool) {
-	if immutable {
-		return
-	}
-	atomic.SwapUint32(&q.processorActive, 0)
 }
 
 func (q *ExecutionBroker) getTask(ctx context.Context, queue requestsqueue.RequestsQueue) *common.Transcript {
@@ -186,14 +184,14 @@ func (q *ExecutionBroker) processTranscript(ctx context.Context, transcript *com
 
 	ctx, logger := inslogger.WithField(ctx, "request", transcript.RequestRef.String())
 
-	reply, err := q.requestsExecutor.ExecuteAndSave(ctx, transcript)
+	replyData, err := q.requestsExecutor.ExecuteAndSave(ctx, transcript)
 	if err != nil {
 		logger.Warn("contract execution error: ", err)
 	}
 
 	q.finishTask(ctx, transcript)
 
-	go q.requestsExecutor.SendReply(ctx, transcript, reply, err)
+	go q.requestsExecutor.SendReply(ctx, transcript, replyData, err)
 
 	// we're checking here that pulse was changed and we should send
 	// a message that we've finished processing tasks
@@ -234,9 +232,9 @@ func (q *ExecutionBroker) add(
 
 		var list requestsqueue.RequestsQueue
 		if transcript.Request.Immutable {
-			list = q.immutable
+			list = q.immutable.queue
 		} else {
-			list = q.mutable
+			list = q.mutable.queue
 		}
 		list.Append(ctx, source, transcript)
 	}
@@ -252,51 +250,62 @@ func (q *ExecutionBroker) IsKnownRequest(ctx context.Context, req insolar.Refere
 	return false
 }
 
-func (q *ExecutionBroker) commonStartProcessor(ctx context.Context, immutable bool) {
-	defer q.releaseProcessor(ctx, immutable)
+// startProcessors starts independent processing of mutable and immutable queues
+func (q *ExecutionBroker) startProcessors(ctx context.Context) {
+	q.startProcessor(ctx, &q.immutable)
+	q.startProcessor(ctx, &q.mutable)
+}
 
-	q.clarifyPendingStateFromLedger(ctx)
+// startProcessor starts processing of queue ensuring that only one processor is active
+// at the moment.
+func (q *ExecutionBroker) startProcessor(ctx context.Context, state *processorState) {
+	logger := inslogger.FromContext(ctx)
 
-	// сhecking we're eligible to execute contracts
-	if readyToExecute := q.Check(ctx); !readyToExecute {
+	if !q.tryTakeProcessor(ctx, state) {
 		return
 	}
 
-	q.fetchMoreFromLedgerIfNeeded(ctx)
+	go func() {
+		defer q.releaseProcessor(ctx, state)
+		logger.Info("started a new ", state.name, " queue processor")
 
-	if immutable {
-		for elem := q.getTask(ctx, q.immutable); elem != nil; elem = q.getTask(ctx, q.immutable) {
+		q.processQueue(ctx, state)
+
+	}()
+}
+
+func (q *ExecutionBroker) processQueue(ctx context.Context, state *processorState) {
+	q.clarifyPendingStateFromLedger(ctx)
+
+	ps := q.PendingState()
+	if ps != insolar.NotPending {
+		inslogger.FromContext(ctx).Debug(
+			"wont process ", state.name, " queue, pending state is ", ps,
+		)
+		return
+	}
+
+	if state.parallel {
+		for elem := q.getTask(ctx, state.queue); elem != nil; elem = q.getTask(ctx, state.queue) {
 			go q.processTranscript(ctx, elem)
 		}
+		q.fetchMoreFromLedgerIfNeeded(ctx)
 	} else {
-		for elem := q.getTask(ctx, q.mutable); elem != nil; elem = q.getTask(ctx, q.mutable) {
+		for elem := q.getTask(ctx, state.queue); elem != nil; elem = q.getTask(ctx, state.queue) {
 			q.processTranscript(ctx, elem)
+			q.fetchMoreFromLedgerIfNeeded(ctx)
 		}
 	}
 }
 
-func getQueueName(immutable bool) string {
-	if immutable {
-		return "immutable"
-	}
-	return "mutable"
+// tryTakeProcessor tries to get right to execute queue processor, returns true if you won.
+func (q *ExecutionBroker) tryTakeProcessor(_ context.Context, state *processorState) bool {
+	return atomic.CompareAndSwapUint32(&state.active, 0, 1)
 }
 
-// StartProcessorIfNeeded processes queue messages in strict order (flag determines which
-// one, mutable or immutable)
-// We need to start manually execution broker only if we were in pending and now we're not.
-func (q *ExecutionBroker) StartProcessorIfNeeded(ctx context.Context, immutable bool) {
-	logger := inslogger.FromContext(ctx)
-
-	if q.tryTakeProcessor(ctx, immutable) {
-		logger.Info("[ StartProcessorIfNeeded ] Starting a new ", getQueueName(immutable), " queue processor")
-		go q.commonStartProcessor(ctx, immutable)
-	}
-}
-
-func (q *ExecutionBroker) StartProcessorsIfNeeded(ctx context.Context) {
-	q.StartProcessorIfNeeded(ctx, false)
-	q.StartProcessorIfNeeded(ctx, true)
+// releaseProcessor marks processor as inactive
+func (q *ExecutionBroker) releaseProcessor(_ context.Context, state *processorState) {
+	atomic.SwapUint32(&state.active, 0)
 }
 
 func (q *ExecutionBroker) fetchMoreFromLedgerIfNeeded(ctx context.Context) {
@@ -307,29 +316,11 @@ func (q *ExecutionBroker) fetchMoreFromLedgerIfNeeded(ctx context.Context) {
 		return
 	}
 
-	if q.mutable.NumberOfOld(ctx)+q.immutable.NumberOfOld(ctx) > prefetchLimit {
+	if q.mutable.queue.NumberOfOld(ctx)+q.immutable.queue.NumberOfOld(ctx) > prefetchLimit {
 		return
 	}
 
 	q.startRequestsFetcher(ctx)
-}
-
-func (q *ExecutionBroker) Check(ctx context.Context) bool {
-	q.stateLock.Lock()
-	defer q.stateLock.Unlock()
-
-	logger := inslogger.FromContext(ctx)
-
-	// check pending state of execution (whether we can process task or not)
-	if q.pending == insolar.PendingUnknown {
-		logger.Debug("One shouldn't call ExecuteTranscript in case when pending state is unknown")
-		return false
-	} else if q.pending == insolar.InPending {
-		logger.Debug("Object in pending, wont start queue processor")
-		return false
-	}
-
-	return true
 }
 
 // finishPendingIfNeeded checks whether last execution was a pending one.
@@ -378,8 +369,8 @@ func (q *ExecutionBroker) OnPulse(ctx context.Context) []payload.Payload {
 
 	defer func() {
 		// clean everything, just in case
-		q.mutable.Clean(ctx)
-		q.immutable.Clean(ctx)
+		q.mutable.queue.Clean(ctx)
+		q.immutable.queue.Clean(ctx)
 		q.finished = nil
 		q.deduplicationTable = make(map[insolar.Reference]bool)
 	}()
@@ -388,7 +379,7 @@ func (q *ExecutionBroker) OnPulse(ctx context.Context) []payload.Payload {
 
 	sendExecResults := false
 
-	requests, hasMore := requestsqueue.FirstNFromMany(ctx, passToNextLimit, q.mutable, q.immutable)
+	requests, hasMore := requestsqueue.FirstNFromMany(ctx, passToNextLimit, q.mutable.queue, q.immutable.queue)
 
 	switch {
 	case q.isActive():
@@ -408,7 +399,7 @@ func (q *ExecutionBroker) OnPulse(ctx context.Context) []payload.Payload {
 	if sendExecResults {
 		// TODO: we also should send when executed something for validation
 		// TODO: now validation is disabled
-		messagesQueue := convertQueueToMessageQueue(ctx, requests)
+		messagesQueue := common.ConvertQueueToMessageQueue(ctx, requests)
 		ledgerHasMoreRequests := q.ledgerHasMoreRequests || hasMore
 
 		messages = append(messages, &payload.ExecutorResults{
@@ -502,7 +493,7 @@ func (q *ExecutionBroker) PrevExecutorSentPendingFinished(ctx context.Context) e
 	}
 
 	q.pending = insolar.NotPending
-	q.StartProcessorsIfNeeded(ctx)
+	q.startProcessors(ctx)
 
 	return nil
 }
@@ -560,7 +551,7 @@ func (q *ExecutionBroker) AddFreshRequest(
 	}
 
 	q.add(ctx, requestsqueue.FromThisPulse, tr)
-	q.StartProcessorsIfNeeded(ctx)
+	q.startProcessors(ctx)
 }
 
 func (q *ExecutionBroker) AddRequestsFromPrevExecutor(ctx context.Context, transcripts ...*common.Transcript) {
@@ -568,7 +559,7 @@ func (q *ExecutionBroker) AddRequestsFromPrevExecutor(ctx context.Context, trans
 	defer q.stateLock.Unlock()
 
 	q.add(ctx, requestsqueue.FromPreviousExecutor, transcripts...)
-	q.StartProcessorsIfNeeded(ctx)
+	q.startProcessors(ctx)
 }
 
 func (q *ExecutionBroker) AddRequestsFromLedger(ctx context.Context, transcripts ...*common.Transcript) {
@@ -576,7 +567,7 @@ func (q *ExecutionBroker) AddRequestsFromLedger(ctx context.Context, transcripts
 	defer q.stateLock.Unlock()
 
 	q.add(ctx, requestsqueue.FromLedger, transcripts...)
-	q.StartProcessorsIfNeeded(ctx)
+	q.startProcessors(ctx)
 }
 
 func (q *ExecutionBroker) AddAdditionalRequestFromPrevExecutor(
@@ -586,7 +577,7 @@ func (q *ExecutionBroker) AddAdditionalRequestFromPrevExecutor(
 	defer q.stateLock.Unlock()
 
 	q.add(ctx, requestsqueue.FromPreviousExecutor, tr)
-	q.StartProcessorsIfNeeded(ctx)
+	q.startProcessors(ctx)
 }
 
 func (q *ExecutionBroker) isActive() bool {

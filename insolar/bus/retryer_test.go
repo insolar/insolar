@@ -23,15 +23,13 @@ import (
 	"time"
 
 	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/insolar/insolar/insolar/gen"
-	"github.com/insolar/insolar/insolar/payload"
-	"github.com/insolar/insolar/log"
-
 	"github.com/stretchr/testify/require"
 
-	"github.com/insolar/insolar/insolar/pulse"
-
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/gen"
+	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/log"
 )
 
 func accessorMock(t *testing.T) pulse.Accessor {

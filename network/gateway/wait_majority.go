@@ -52,8 +52,8 @@ package gateway
 
 import (
 	"context"
+
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/rules"
 )
@@ -72,8 +72,7 @@ func (g *WaitMajority) Run(ctx context.Context, pulse insolar.Pulse) {
 
 	select {
 	case <-g.bootstrapTimer.C:
-		inslogger.FromContext(ctx).Warn("WaitMajority timeout, going to NoNetworkState")
-		g.Gatewayer.SwitchState(ctx, insolar.NoNetworkState, pulse)
+		g.Gatewayer.FailState(ctx, "Bootstrap timeout exceeded")
 	case newPulse := <-g.majorityComplete:
 		g.Gatewayer.SwitchState(ctx, insolar.WaitMinRoles, newPulse)
 	}

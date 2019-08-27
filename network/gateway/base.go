@@ -122,6 +122,8 @@ func (g *Base) NewGateway(ctx context.Context, state insolar.NetworkState) netwo
 		g.Self = newWaitMajority(g)
 	case insolar.WaitMinRoles:
 		g.Self = newWaitMinRoles(g)
+	case insolar.WaitPulsar:
+		g.Self = newWaitPulsar(g)
 	default:
 		panic("Try to switch network to unknown state. Memory of process is inconsistent.")
 	}
@@ -152,7 +154,7 @@ func (g *Base) OnPulseFromPulsar(ctx context.Context, pu insolar.Pulse, original
 
 func (g *Base) OnPulseFromConsensus(ctx context.Context, pu insolar.Pulse) {
 	g.NodeKeeper.MoveSyncToActive(ctx, pu.PulseNumber)
-	err := g.PulseAppender.(*storage.MemoryPulseStorage).AppendPulse(ctx, pu)
+	err := g.PulseAppender.AppendPulse(ctx, pu)
 	if err != nil {
 		panic("failed to append pulse:" + err.Error())
 	}
@@ -167,9 +169,7 @@ func (g *Base) UpdateState(ctx context.Context, pulseNumber insolar.PulseNumber,
 	g.NodeKeeper.SetCloudHash(pulseNumber, cloudStateHash)
 }
 
-func (g *Base) NetworkOperable() bool {
-	return false
-}
+func (g *Base) BeforeRun(ctx context.Context, pulse insolar.Pulse) {}
 
 // Auther casts us to Auther or obtain it in another way
 func (g *Base) Auther() network.Auther {

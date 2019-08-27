@@ -19,6 +19,8 @@ package payload
 import (
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
+
+	"github.com/insolar/insolar/insolar/bus/meta"
 )
 
 func NewMessage(pl Payload) (*message.Message, error) {
@@ -35,4 +37,13 @@ func MustNewMessage(p Payload) *message.Message {
 		panic(err)
 	}
 	return msg
+}
+
+func NewResultMessage(payload Payload) (*message.Message, error) {
+	msg, err := NewMessage(payload)
+	if err != nil {
+		return nil, err
+	}
+	msg.Metadata.Set(meta.Type, meta.TypeReturnResults)
+	return msg, nil
 }

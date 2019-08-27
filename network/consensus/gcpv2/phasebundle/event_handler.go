@@ -65,7 +65,7 @@ func newPopulationEventHandler(nodeCount int) *populationEventHandler {
 	}
 
 	/* Ensure sufficient sizes of queues to avoid lockups */
-	nodeCount = 1 + nodeCount*3
+	nodeCount = 1 + nodeCount*10
 
 	return &populationEventHandler{
 		make(chan population.MemberPacketSender, nodeCount),

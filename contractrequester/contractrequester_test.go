@@ -21,14 +21,17 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/gojuno/minimock"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/jet"
-	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
@@ -37,25 +40,22 @@ import (
 	"github.com/insolar/insolar/testutils"
 )
 
-func mockMessageBus(t minimock.Tester, result insolar.Reply) *testutils.MessageBusMock {
-	mbMock := testutils.NewMessageBusMock(t)
-	mbMock.SendMock.Return(result, nil)
-	return mbMock
-}
+// ensure that ContractRequester implements insolar.ContractRequester
+var _ insolar.ContractRequester = &ContractRequester{}
 
 func TestNew(t *testing.T) {
-	messageBus := mockMessageBus(t, nil)
+	sender := bus.NewSenderMock(t)
 	pulseAccessor := pulse.NewAccessorMock(t)
 	jetCoordinator := jet.NewCoordinatorMock(t)
 	pcs := platformpolicy.NewPlatformCryptographyScheme()
 
-	contractRequester, err := New(nil)
+	contractRequester, err := New()
+	require.NoError(t, err)
 
 	cm := &component.Manager{}
-	cm.Inject(messageBus, contractRequester, pulseAccessor, jetCoordinator, pcs)
+	cm.Inject(sender, contractRequester, pulseAccessor, jetCoordinator, pcs)
 
 	require.NoError(t, err)
-	require.Equal(t, messageBus, contractRequester.MessageBus)
 }
 
 func mockPulseAccessor(t minimock.Tester) pulse.Accessor {
@@ -79,21 +79,6 @@ func mockJetCoordinator(t minimock.Tester) jet.Coordinator {
 	return coordinator
 }
 
-func TestContractRequester_Start(t *testing.T) {
-	ctx := inslogger.TestContext(t)
-	mc := minimock.NewController(t)
-	defer mc.Finish()
-
-	cReq, err := New(nil)
-	require.NoError(t, err)
-
-	cReq.MessageBus = testutils.NewMessageBusMock(mc).
-		MustRegisterMock.Return()
-
-	err = cReq.Start(ctx)
-	require.NoError(t, err)
-}
-
 func TestContractRequester_SendRequest(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	mc := minimock.NewController(t)
@@ -101,7 +86,7 @@ func TestContractRequester_SendRequest(t *testing.T) {
 
 	ref := gen.Reference()
 
-	cReq, err := New(nil)
+	cReq, err := New()
 	require.NoError(t, err)
 
 	cReq.PulseAccessor = mockPulseAccessor(mc)
@@ -110,19 +95,26 @@ func TestContractRequester_SendRequest(t *testing.T) {
 
 	table := []struct {
 		name          string
-		resultMessage message.ReturnResults
+		resultMessage payload.ReturnResults
 		earlyResult   bool
 	}{
 		{
 			name: "success",
-			resultMessage: message.ReturnResults{
-				Reply: &reply.CallMethod{},
+			resultMessage: payload.ReturnResults{
+				Reply: reply.ToBytes(&reply.CallMethod{}),
 			},
 		},
 		{
+			name: "earlyResult",
+			resultMessage: payload.ReturnResults{
+				Reply: reply.ToBytes(&reply.CallMethod{}),
+			},
+			earlyResult: true,
+		},
+		{
 			name: "early result, before registration",
-			resultMessage: message.ReturnResults{
-				Reply: &reply.CallMethod{},
+			resultMessage: payload.ReturnResults{
+				Reply: reply.ToBytes(&reply.CallMethod{}),
 			},
 		},
 	}
@@ -131,11 +123,14 @@ func TestContractRequester_SendRequest(t *testing.T) {
 		test := test
 		t.Run(test.name, func(t *testing.T) {
 
-			cReq.MessageBus = testutils.NewMessageBusMock(mc).SendMock.
-				Set(func(ctx context.Context, m insolar.Message, opt *insolar.MessageSendOptions) (insolar.Reply, error) {
-					request := m.(*message.CallMethod).IncomingRequest
+			cReq.Sender = bus.NewSenderMock(t).SendRoleMock.
+				Set(func(ctx context.Context, msg *message.Message, role insolar.DynamicRole, obj insolar.Reference) (<-chan *message.Message, func()) {
+					data, err := payload.Unmarshal(msg.Payload)
+					require.NoError(t, err)
 
-					hash, err := cReq.calcRequestHash(request)
+					request := data.(*payload.CallMethod).Request
+
+					hash, err := cReq.calcRequestHash(*request)
 					require.NoError(t, err)
 					requestRef := insolar.NewReference(*insolar.NewID(insolar.FirstPulseNumber, hash[:]))
 
@@ -144,6 +139,16 @@ func TestContractRequester_SendRequest(t *testing.T) {
 						res.RequestRef = *requestRef
 						cReq.result(ctx, &res)
 					}
+
+					resChan := make(chan *message.Message)
+
+					res, err := serializeReply(bus.ReplyAsMessage(ctx, &reply.RegisterRequest{Request: *requestRef}))
+					require.NoError(t, err)
+
+					go func() {
+						resChan <- res
+					}()
+
 					if test.earlyResult {
 						resultSender()
 					} else {
@@ -153,7 +158,9 @@ func TestContractRequester_SendRequest(t *testing.T) {
 						}()
 					}
 
-					return &reply.RegisterRequest{Request: *requestRef}, nil
+					return resChan, func() {
+						close(resChan)
+					}
 				})
 
 			result, err := cReq.SendRequest(ctx, &ref, "TestMethod", []interface{}{})
@@ -168,43 +175,59 @@ func TestContractRequester_Call_Timeout(t *testing.T) {
 	mc := minimock.NewController(t)
 	defer mc.Finish()
 
-	cr, err := New(nil)
+	cReq, err := New()
 	require.NoError(t, err)
 
-	cr.callTimeout = 1 * time.Nanosecond
+	cReq.callTimeout = 1 * time.Nanosecond
 
-	cr.PlatformCryptographyScheme = testutils.NewPlatformCryptographyScheme()
+	cReq.PlatformCryptographyScheme = testutils.NewPlatformCryptographyScheme()
 
-	cr.PulseAccessor = mockPulseAccessor(mc)
-	cr.JetCoordinator = jet.NewCoordinatorMock(t)
+	cReq.PulseAccessor = mockPulseAccessor(mc)
+	cReq.JetCoordinator = jet.NewCoordinatorMock(t)
 
 	ref := gen.Reference()
 	prototypeRef := gen.Reference()
 	method := testutils.RandomString()
 
-	mb := testutils.NewMessageBusMock(mc)
-	mb.SendMock.Set(func(ctx context.Context, m insolar.Message, opt *insolar.MessageSendOptions) (insolar.Reply, error) {
-		request := m.(*message.CallMethod).IncomingRequest
-
-		hash, err := cr.calcRequestHash(request)
-		require.NoError(t, err)
-		requestRef := insolar.NewReference(*insolar.NewID(insolar.FirstPulseNumber, hash[:]))
-
-		return &reply.RegisterRequest{Request: *requestRef}, nil
-	})
-	cr.MessageBus = mb
-
-	msg := &message.CallMethod{
-		IncomingRequest: record.IncomingRequest{
-			Caller:    gen.Reference(),
-			Object:    &ref,
-			Prototype: &prototypeRef,
-			Method:    method,
-			Arguments: insolar.Arguments{},
-		},
+	request := &record.IncomingRequest{
+		Caller:    gen.Reference(),
+		Object:    &ref,
+		Prototype: &prototypeRef,
+		Method:    method,
+		Arguments: insolar.Arguments{},
 	}
 
-	_, _, err = cr.Call(ctx, msg)
+	cReq.Sender = bus.NewSenderMock(t).SendRoleMock.Set(
+		func(ctx context.Context, msg *message.Message, role insolar.DynamicRole, obj insolar.Reference) (<-chan *message.Message, func()) {
+			resChan := make(chan *message.Message)
+
+			data, err := payload.Unmarshal(msg.Payload)
+			require.NoError(t, err)
+
+			request := data.(*payload.CallMethod).Request
+
+			hash, err := cReq.calcRequestHash(*request)
+			require.NoError(t, err)
+			requestRef := insolar.NewReference(*insolar.NewID(insolar.FirstPulseNumber, hash[:]))
+
+			res, err := serializeReply(bus.ReplyAsMessage(ctx, &reply.RegisterRequest{
+				Request: *requestRef,
+			}))
+			require.NoError(t, err)
+
+			go func() {
+				resChan <- res
+			}()
+			return resChan, func() {
+				close(resChan)
+			}
+		})
+
+	msg := &payload.CallMethod{
+		Request: request,
+	}
+
+	_, _, err = cReq.Call(ctx, msg)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "canceled")
 	require.Contains(t, err.Error(), "timeout")
@@ -215,8 +238,10 @@ func TestReceiveResult(t *testing.T) {
 	ctx, cancelFunc := context.WithTimeout(ctx, time.Second*10)
 	defer cancelFunc()
 
-	cr, err := New(nil)
+	cReq, err := New()
 	require.NoError(t, err)
+
+	cReq.Sender = bus.NewSenderMock(t)
 
 	mc := minimock.NewController(t)
 	defer mc.Finish()
@@ -225,29 +250,47 @@ func TestReceiveResult(t *testing.T) {
 	var reqHash [insolar.RecordHashSize]byte
 	copy(reqHash[:], reqRef.Record().Hash())
 
-	msg := &message.ReturnResults{RequestRef: reqRef}
-	parcel := testutils.NewParcelMock(mc).MessageMock.Return(
-		msg,
-	)
+	msg := &payload.ReturnResults{
+		RequestRef: reqRef,
+	}
 
 	// unexpected result
-	rep, err := cr.ReceiveResult(ctx, parcel)
+	res, err := serializeReply(payload.MustNewMessage(msg))
 	require.NoError(t, err)
-	require.Equal(t, &reply.OK{}, rep)
+	err = cReq.ReceiveResult(res)
+	require.NoError(t, err)
 
 	// expected result
-	resChan := make(chan *message.ReturnResults)
-	chanResult := make(chan *message.ReturnResults)
-	cr.ResultMap[reqHash] = resChan
+	resChan := make(chan *payload.ReturnResults)
+	chanResult := make(chan *payload.ReturnResults)
+	cReq.ResultMap[reqHash] = resChan
 
 	go func() {
-		chanResult <- <-cr.ResultMap[reqHash]
+		chanResult <- <-cReq.ResultMap[reqHash]
 	}()
 
-	rep, err = cr.ReceiveResult(ctx, parcel)
+	res, err = serializeReply(payload.MustNewMessage(msg))
+	require.NoError(t, err)
+	err = cReq.ReceiveResult(res)
 
 	require.NoError(t, err)
-	require.Equal(t, &reply.OK{}, rep)
-	require.Equal(t, 0, len(cr.ResultMap))
+	require.Equal(t, 0, len(cReq.ResultMap))
 	require.Equal(t, msg, <-chanResult)
+}
+
+func serializeReply(msg *message.Message) (*message.Message, error) {
+	msg = msg.Copy()
+
+	meta := payload.Meta{
+		Payload: msg.Payload,
+		ID:      []byte(msg.UUID),
+	}
+
+	buf, err := meta.Marshal()
+	if err != nil {
+		return nil, errors.Wrap(err, "serializePayload. failed to wrap message")
+	}
+	msg.Payload = buf
+
+	return msg, nil
 }

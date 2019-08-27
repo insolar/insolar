@@ -14,13 +14,31 @@
 // limitations under the License.
 //
 
-package messagebus
+package executor
 
 import (
-	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
+	"go.opencensus.io/stats/view"
 )
 
 var (
-	// ErrNoReply is returned from player when there is no stored reply for provided message.
-	ErrNoReply = errors.New("no such reply")
+	statFinalizedPulse = stats.Int64(
+		"heavy_finalized_pulse",
+		"last pulse with fully finalized data",
+		stats.UnitDimensionless,
+	)
 )
+
+func init() {
+	err := view.Register(
+		&view.View{
+			Name:        statFinalizedPulse.Name(),
+			Description: statFinalizedPulse.Description(),
+			Measure:     statFinalizedPulse,
+			Aggregation: view.LastValue(),
+		},
+	)
+	if err != nil {
+		panic(err)
+	}
+}

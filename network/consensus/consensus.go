@@ -206,8 +206,12 @@ func (c Installer) ControllerFor(mode Mode, setters ...packetProcessorSetter) Co
 	controlFeederInterceptor := adapters.InterceptConsensusControl(
 		adapters.NewConsensusControlFeeder(),
 	)
+
+	cert := c.dep.CertificateManager.GetCertificate()
+	isDiscovery := network.IsDiscovery(*cert.GetNodeRef(), cert)
+
 	var candidateQueueSize int
-	if mode == ReadyNetwork {
+	if isDiscovery {
 		candidateQueueSize = 1
 	}
 	candidateFeeder := coreapi.NewSequentialCandidateFeeder(candidateQueueSize)

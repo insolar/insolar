@@ -61,6 +61,7 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 	"github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/network/rules"
+	"go.opencensus.io/stats"
 	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/certificate"
@@ -90,13 +91,6 @@ func (g *Complete) Run(ctx context.Context, pulse insolar.Pulse) {
 		g.bootstrapTimer.Stop()
 	}
 
-	if pulse.EpochPulseNumber > insolar.EphemeralPulseEpoch {
-		err := g.PulseManager.Set(ctx, pulse)
-		if err != nil {
-			inslogger.FromContext(ctx).Panicf("failed to set start pulse: %d, %s", pulse.PulseNumber, err.Error())
-		}
-	}
-
 	g.HostNetwork.RegisterRequestHandler(types.SignCert, g.signCertHandler)
 	metrics.NetworkComplete.Set(float64(time.Now().Unix()))
 }
@@ -105,8 +99,11 @@ func (g *Complete) GetState() insolar.NetworkState {
 	return insolar.CompleteNetworkState
 }
 
-func (g *Complete) NetworkOperable() bool {
-	return true
+func (g *Complete) BeforeRun(ctx context.Context, pulse insolar.Pulse) {
+	err := g.PulseManager.Set(ctx, pulse)
+	if err != nil {
+		inslogger.FromContext(ctx).Panicf("failed to set start pulse: %d, %s", pulse.PulseNumber, err.Error())
+	}
 }
 
 // GetCert method generates cert by requesting signs from discovery nodes
@@ -200,16 +197,14 @@ func (g *Complete) EphemeralMode(nodes []insolar.NetworkNode) bool {
 }
 
 func (g *Complete) UpdateState(ctx context.Context, pulseNumber insolar.PulseNumber, nodes []insolar.NetworkNode, cloudStateHash []byte) {
-	logger := inslogger.FromContext(ctx)
-
 	workingNodes := node.Select(nodes, node.ListWorking)
 
 	if ok, _ := rules.CheckMajorityRule(g.CertificateManager.GetCertificate(), workingNodes); !ok {
-		logger.Fatal("MajorityRule failed")
+		g.Gatewayer.FailState(ctx, "MajorityRule failed")
 	}
 
 	if !rules.CheckMinRole(g.CertificateManager.GetCertificate(), workingNodes) {
-		logger.Fatal("MinRole failed")
+		g.Gatewayer.FailState(ctx, "MinRoles failed")
 	}
 
 	g.Base.UpdateState(ctx, pulseNumber, nodes, cloudStateHash)
@@ -236,6 +231,7 @@ func (g *Complete) OnPulseFromConsensus(ctx context.Context, pulse insolar.Pulse
 		logger.Fatalf("Failed to set new pulse: %s", err.Error())
 	}
 	logger.Infof("Set new current pulse number: %d", pulse.PulseNumber)
+	stats.Record(ctx, statPulse.M(int64(pulse.PulseNumber)))
 }
 
 func pulseProcessingWatchdog(ctx context.Context, pulse insolar.Pulse, done chan struct{}) {

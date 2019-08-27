@@ -71,7 +71,9 @@ import (
 	"github.com/insolar/insolar/pulse"
 )
 
-const defaultEphemeralPulseDuration = 2 * time.Second
+const (
+	defaultEphemeralPulseDuration = 2 * time.Second
+)
 
 type EphemeralController interface {
 	EphemeralMode(nodes []insolar.NetworkNode) bool
@@ -294,14 +296,16 @@ func (cf *InternalControlFeederAdapter) setHasLeft() {
 func NewEphemeralControlFeeder(ephemeralController EphemeralController) *EphemeralControlFeeder {
 	return &EphemeralControlFeeder{
 		ephemeralController: ephemeralController,
-		pulseDuration:       defaultEphemeralPulseDuration,
+
+		pulseDuration: defaultEphemeralPulseDuration,
 	}
 }
 
 type EphemeralControlFeeder struct {
 	pulseChanger        PulseChanger
 	ephemeralController EphemeralController
-	pulseDuration       time.Duration
+
+	pulseDuration time.Duration
 }
 
 func (f *EphemeralControlFeeder) OnFailedPreparePulseChange() {

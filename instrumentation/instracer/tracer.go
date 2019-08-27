@@ -20,7 +20,7 @@ import (
 	"context"
 	"errors"
 
-	"go.opencensus.io/exporter/jaeger"
+	"contrib.go.opencensus.io/exporter/jaeger"
 	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"

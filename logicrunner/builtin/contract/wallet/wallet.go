@@ -18,6 +18,7 @@ package wallet
 
 import (
 	"fmt"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/deposit"
 	"math/big"
 
 	"github.com/insolar/insolar/insolar"
@@ -32,6 +33,7 @@ import (
 type Wallet struct {
 	foundation.BaseContract
 	Accounts foundation.StableMap
+	Deposits foundation.StableMap
 }
 
 const XNS = "XNS"
@@ -47,6 +49,7 @@ func New(accountReference insolar.Reference) (*Wallet, error) {
 
 	return &Wallet{
 		Accounts: accounts,
+		Deposits: make(foundation.StableMap),
 	}, nil
 }
 
@@ -144,4 +147,46 @@ func (w *Wallet) Accept(amountStr string, assetName string) error {
 	}
 	acc := account.GetObject(*accRef)
 	return acc.Accept(amountStr)
+}
+
+// AddDeposit method stores deposit reference in member it belongs to
+func (w *Wallet) AddDeposit(txId string, deposit insolar.Reference) error {
+	if _, ok := w.Deposits[txId]; ok {
+		return fmt.Errorf("deposit for this transaction already exist")
+	}
+	w.Deposits[txId] = deposit.String()
+	return nil
+}
+
+// GetDeposits get all deposits for this wallet
+// ins:immutable
+func (w *Wallet) GetDeposits() (map[string]interface{}, error) {
+	result := map[string]interface{}{}
+	for tx, dRef := range w.Deposits {
+
+		reference, err := insolar.NewReferenceFromBase58(dRef)
+		if err != nil {
+			return nil, err
+		}
+		d := deposit.GetObject(*reference)
+
+		depositInfo, err := d.Itself()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get deposit itself: %s", err.Error())
+		}
+
+		result[tx] = depositInfo
+	}
+	return result, nil
+}
+
+// FindDeposit finds deposit for this wallet with this transaction hash.
+// ins:immutable
+func (w *Wallet) FindDeposit(transactionHash string) (bool, *insolar.Reference, error) {
+	if depositReferenceStr, ok := w.Deposits[transactionHash]; ok {
+		depositReference, _ := insolar.NewReferenceFromBase58(depositReferenceStr)
+		return true, depositReference, nil
+	}
+
+	return false, nil, nil
 }

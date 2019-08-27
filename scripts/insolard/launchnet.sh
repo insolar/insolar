@@ -199,6 +199,12 @@ generate_root_member_keys()
     done
 }
 
+generate_migration_addresses()
+{
+    echo "generate migration addresses: ${CONFIGS_DIR}migration_addresses.json"
+    bin/insolar gen-migration-addresses > ${CONFIGS_DIR}migration_addresses.json
+}
+
 check_working_dir()
 {
     echo "check_working_dir() starts ..."
@@ -322,6 +328,7 @@ bootstrap()
     generate_pulsar_keys
     generate_root_member_keys
     generate_insolard_configs
+    generate_migration_addresses
 
     echo "start bootstrap ..."
     CMD="${INSOLAR_CLI} bootstrap --config=${BOOTSTRAP_CONFIG} --certificates-out-dir=${DISCOVERY_NODES_DATA}certs"
