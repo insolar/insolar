@@ -49,7 +49,7 @@ const defaultMemberFileName = "members.txt"
 const backoffAttemptsCount = 20
 
 var (
-	defaultMemberFileDir = filepath.Join(defaults.ArtifactsDir(), "bench-members")
+	defaultMemberFileDir      = filepath.Join(defaults.ArtifactsDir(), "bench-members")
 	defaultDiscoveryNodesLogs = filepath.Join(defaults.LaunchnetDir(), "logs", "discoverynodes")
 
 	memberFilesDir     string
@@ -163,48 +163,42 @@ func nodesErrorLogReader(s scenario) chan struct{} {
 	for _, fileName := range logs {
 		fName := fileName
 		go func(fName string) {
+			defer wg.Done()
+
 			file, err := os.Open(fName)
 			if err != nil {
-				writeToOutput(s.getOut(), fmt.Sprintln("Can't open log file: ", err))
-				wg.Done()
+				writeToOutput(s.getOut(), fmt.Sprintln("Can't open log file ", fName, ", error : ", err))
 			}
-			defer file.Close()
+			_, err = file.Seek(-1, io.SeekEnd)
+			if err != nil {
+				writeToOutput(s.getOut(), fmt.Sprintln("Can't seek through log file ", fName, ", error : ", err))
+			}
 
 			reader := bufio.NewReader(file)
-			// skip to the end of file
-			for {
-				_, err := reader.ReadString('\n')
-				if err != nil && err != io.EOF {
-					writeToOutput(s.getOut(), fmt.Sprintln("Can't read string from ", fName, "while skipping"))
-					wg.Done()
-					break
-				}
 
-				if err == io.EOF {
-					break
-				}
-			}
+			// for making wg.Done()
+			go func() {
+				defer file.Close()
+				ok := true
+				for ok {
+					select {
+					case <-time.After(time.Millisecond):
+						line, err := reader.ReadString('\n')
+						if err != nil && err != io.EOF {
+							writeToOutput(s.getOut(), fmt.Sprintln("Can't read string from ", fName, ", error: ", err))
+							ok = false
+						}
 
-			wg.Done()
-			ok := true
-			for ok {
-				select {
-				case <-time.After(time.Millisecond):
-					line, err := reader.ReadString('\n')
-					if err != nil && err != io.EOF {
-						writeToOutput(s.getOut(), fmt.Sprintln("Can't read string from ", fName))
+						if strings.Contains(line, " ERR ") {
+							writeToOutput(s.getOut(), fmt.Sprintln("!!! THERE ARE ERRORS IN ERROR LOG !!! ", fName))
+							ok = false
+						}
+					case <-closeChan:
+						writeToOutput(s.getOut(), fmt.Sprintln("Stop reading ", fName))
 						ok = false
 					}
-
-					if strings.Contains(line, " ERR ") {
-						writeToOutput(s.getOut(), fmt.Sprintln("!!! THERE ARE ERRORS IN ERROR LOG !!! ", fName))
-						ok = false
-					}
-				case <-closeChan:
-					writeToOutput(s.getOut(), fmt.Sprintln("Stop reading ", fName))
-					ok = false
 				}
-			}
+			}()
 		}(fName)
 	}
 
@@ -226,7 +220,6 @@ func getLogs(root string) ([]string, error) {
 	})
 	return files, err
 }
-
 
 func addMigrationAddresses(insSDK *sdk.SDK) int32 {
 	var err error
