@@ -336,7 +336,7 @@ func (b *Bus) Reply(ctx context.Context, origin payload.Meta, reply *message.Mes
 		return
 	}
 
-	ctx, logger = inslogger.WithField(ctx, "origin_hash", originHash.String())
+	ctx, _ = inslogger.WithField(ctx, "origin_hash", originHash.String())
 	ctx, logger = inslogger.WithField(ctx, "sending_reply_hash", replyHash.String())
 
 	reply.Metadata.Set(meta.TraceID, inslogger.TraceID(ctx))
