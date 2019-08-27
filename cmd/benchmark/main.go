@@ -200,7 +200,7 @@ func readLogs(s scenario, wg *sync.WaitGroup, fileName string, closeChan chan st
 	go findErrorsInLog(s, fileName, file, closeChan)
 }
 
-func findErrorsInLog(s scenario, fName string, file *os.File, closeChan chan struct{}) {
+func findErrorsInLog(s scenario, fName string, file io.ReadCloser, closeChan chan struct{}) {
 	defer file.Close()
 	reader := bufio.NewReader(file)
 
