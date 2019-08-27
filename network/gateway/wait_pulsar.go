@@ -55,6 +55,8 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/node"
+	"github.com/insolar/insolar/network/rules"
 )
 
 func newWaitPulsar(b *Base) *WaitPulsar {
@@ -75,6 +77,20 @@ func (g *WaitPulsar) Run(ctx context.Context, pulse insolar.Pulse) {
 	case newPulse := <-g.pulseArrived:
 		g.Gatewayer.SwitchState(ctx, insolar.CompleteNetworkState, newPulse)
 	}
+}
+
+func (g *WaitPulsar) UpdateState(ctx context.Context, pulseNumber insolar.PulseNumber, nodes []insolar.NetworkNode, cloudStateHash []byte) {
+	workingNodes := node.Select(nodes, node.ListWorking)
+
+	if ok, _ := rules.CheckMajorityRule(g.CertificateManager.GetCertificate(), workingNodes); !ok {
+		g.Gatewayer.FailState(ctx, "MajorityRule failed")
+	}
+
+	if !rules.CheckMinRole(g.CertificateManager.GetCertificate(), workingNodes) {
+		g.Gatewayer.FailState(ctx, "MinRoles failed")
+	}
+
+	g.Base.UpdateState(ctx, pulseNumber, nodes, cloudStateHash)
 }
 
 func (g *WaitPulsar) GetState() insolar.NetworkState {
