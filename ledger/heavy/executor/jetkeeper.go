@@ -119,7 +119,7 @@ func (j *JetInfo) addHot(newJetID insolar.JetID, parentID insolar.JetID, split b
 	return nil
 }
 
-func (j *JetInfo) isConfirmed(checkBackup bool) bool {
+func (j *JetInfo) isConfirmed(ctx context.Context, checkBackup bool) bool {
 	if checkBackup && !j.BackupConfirmed {
 		return false
 	}
@@ -133,7 +133,8 @@ func (j *JetInfo) isConfirmed(checkBackup bool) bool {
 	}
 
 	if !j.IsSplitSet {
-		panic("IsSplitJet must be set before calling for isConfirmed")
+		inslogger.FromContext(ctx).Error("IsSplitJet must be set before calling for isConfirmed")
+		return false
 	}
 
 	if !j.Split {
@@ -308,10 +309,10 @@ func (jk *DBJetKeeper) updateDrop(ctx context.Context, pulse insolar.PulseNumber
 // infoToSet converts given jetInfo slice to set and checks confirmations
 // if at least one jetInfo is not confirmed it returns false
 // checkBackup is used to skip checking of backup confirmation
-func infoToSet(s []JetInfo, checkBackup bool) (map[insolar.JetID]struct{}, bool) {
+func infoToSet(ctx context.Context, s []JetInfo, checkBackup bool) (map[insolar.JetID]struct{}, bool) {
 	r := make(map[insolar.JetID]struct{}, len(s))
 	for _, el := range s {
-		if !el.isConfirmed(checkBackup) {
+		if !el.isConfirmed(ctx, checkBackup) {
 			return nil, false
 		}
 		r[el.JetID] = struct{}{}
@@ -329,7 +330,7 @@ func infoToList(s map[insolar.JetID]struct{}) []insolar.JetID {
 	return r
 }
 
-func (jk *DBJetKeeper) getTopSyncJets() ([]insolar.JetID, error) {
+func (jk *DBJetKeeper) getTopSyncJets(ctx context.Context) ([]insolar.JetID, error) {
 	var result []insolar.JetID
 	top := jk.topSyncPulse()
 	if top == insolar.FirstPulseNumber {
@@ -342,7 +343,8 @@ func (jk *DBJetKeeper) getTopSyncJets() ([]insolar.JetID, error) {
 
 	for _, ji := range jets {
 		if !ji.IsSplitSet {
-			panic("IsSplitSet must be set before calling for getTopSyncJets")
+			inslogger.FromContext(ctx).Error("IsSplitJet must be set before calling for isConfirmed")
+			return nil, fmt.Errorf("IsSplitJet must be set before calling for isConfirmed. JetID:%v", ji.JetID.DebugString())
 		}
 		if ji.Split {
 			left, right := jet.Siblings(ji.JetID)
@@ -397,14 +399,14 @@ func (jk *DBJetKeeper) checkPulseConsistency(ctx context.Context, pulse insolar.
 		return false
 	}
 
-	topSyncJets, err := jk.getTopSyncJets()
+	topSyncJets, err := jk.getTopSyncJets(ctx)
 	if err != nil {
 		logger.Fatal("can't get jets for top sync pulse: ", err)
 		return false
 	}
 	actualJets := jk.all(pulse)
 
-	actualJetsSet, allConfirmed := infoToSet(actualJets, checkBackup)
+	actualJetsSet, allConfirmed := infoToSet(ctx, actualJets, checkBackup)
 	if !allConfirmed {
 		return false
 	}
