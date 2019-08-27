@@ -18,7 +18,6 @@ package executor_test
 
 import (
 	"bytes"
-	"fmt"
 	"sort"
 	"strings"
 	"testing"
@@ -49,8 +48,6 @@ func singleJetFixture() []insolar.JetID {
 func jetsFixture() []insolar.JetID {
 	tree := jet.NewTree(true)
 	left, _, _ := tree.Split(tree.LeafIDs()[0])
-	fmt.Println(tree.LeafIDs()[0].DebugString())
-	fmt.Println(left.DebugString())
 	_, _, _ = tree.Split(left)
 	return tree.LeafIDs()
 }
