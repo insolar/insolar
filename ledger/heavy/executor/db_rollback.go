@@ -20,7 +20,6 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
@@ -34,17 +33,15 @@ type headTruncater interface {
 // DBRollback is used for rollback all data which is not finalized
 // It removes all data which was added after pulse which we consider as finalized
 type DBRollback struct {
-	dbs             []headTruncater
-	jetKeeper       JetKeeper
-	pulseCalculator pulse.Calculator
+	dbs       []headTruncater
+	jetKeeper JetKeeper
 }
 
-func NewDBRollback(jetKeeper JetKeeper, pulseCalculator pulse.Calculator, dbs ...headTruncater) *DBRollback {
+func NewDBRollback(jetKeeper JetKeeper, dbs ...headTruncater) *DBRollback {
 
 	return &DBRollback{
-		jetKeeper:       jetKeeper,
-		dbs:             dbs,
-		pulseCalculator: pulseCalculator,
+		jetKeeper: jetKeeper,
+		dbs:       dbs,
 	}
 }
 
@@ -58,14 +55,7 @@ func (d *DBRollback) Start(ctx context.Context) error {
 		return nil
 	}
 
-	pn, err := d.pulseCalculator.Forwards(ctx, lastSyncPulseNumber, 1)
-	if err != nil {
-		if err == pulse.ErrNotFound {
-			inslogger.FromContext(ctx).Debug("No pulse after: ", lastSyncPulseNumber, ". Nothing done.")
-			return nil
-		}
-		return errors.Wrap(err, "pulseCalculator.Forwards returns error")
-	}
+	nextPulse := lastSyncPulseNumber + 1
 
 	for idx, db := range d.dbs {
 		if indexDB, ok := db.(object.IndexModifier); ok {
@@ -74,9 +64,9 @@ func (d *DBRollback) Start(ctx context.Context) error {
 			}
 		}
 
-		err := db.TruncateHead(ctx, pn.PulseNumber)
+		err := db.TruncateHead(ctx, nextPulse)
 		if err != nil {
-			return errors.Wrapf(err, "can't truncate %d db to pulse: %d", idx, pn.PulseNumber)
+			return errors.Wrapf(err, "can't truncate %d db since pulse: %d", idx, nextPulse)
 		}
 	}
 

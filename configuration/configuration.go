@@ -35,6 +35,7 @@ type Configuration struct {
 	Metrics         Metrics
 	LogicRunner     LogicRunner
 	APIRunner       APIRunner
+	AdminAPIRunner  APIRunner
 	Pulsar          Pulsar
 	VersionManager  VersionManager
 	KeysPath        string
@@ -60,7 +61,8 @@ func NewConfiguration() Configuration {
 		Log:             NewLog(),
 		Metrics:         NewMetrics(),
 		LogicRunner:     NewLogicRunner(),
-		APIRunner:       NewAPIRunner(),
+		APIRunner:       NewAPIRunner(false),
+		AdminAPIRunner:  NewAPIRunner(true),
 		Pulsar:          NewPulsar(),
 		VersionManager:  NewVersionManager(),
 		KeysPath:        "./",

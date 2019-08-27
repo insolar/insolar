@@ -36,7 +36,8 @@ func TestGetBalance(t *testing.T) {
 }
 
 func TestGetBalanceWrongRef(t *testing.T) {
-	_, err := signedRequestWithEmptyRequestRef(t, &launchnet.Root, "member.getBalance", map[string]interface{}{"reference": gen.Reference().String()})
+	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, &launchnet.Root, "member.getBalance",
+		map[string]interface{}{"reference": gen.Reference().String()})
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "index not found")
 }

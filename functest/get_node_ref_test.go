@@ -29,7 +29,7 @@ import (
 const NOTEXISTINGPUBLICKEY = "not_existing_public_key"
 
 func getNodeRefSignedCall(t *testing.T, params map[string]interface{}) (string, error) {
-	res, err := signedRequest(t, &launchnet.Root, "contract.getNodeRef", params)
+	res, err := signedRequest(t, launchnet.TestRPCUrl, &launchnet.Root, "contract.getNodeRef", params)
 	if err != nil {
 		return "", err
 	}
@@ -53,7 +53,8 @@ func TestGetNodeRefByNotExistsPK(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, ref)
 
-	_, err = signedRequestWithEmptyRequestRef(t, &launchnet.Root, "contract.getNodeRef", map[string]interface{}{"publicKey": NOTEXISTINGPUBLICKEY})
+	_, err = signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, &launchnet.Root,
+		"contract.getNodeRef", map[string]interface{}{"publicKey": NOTEXISTINGPUBLICKEY})
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "network node was not found by public key:")
 }
@@ -64,7 +65,8 @@ func TestGetNodeRefInvalidParams(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, ref)
 
-	_, err = signedRequestWithEmptyRequestRef(t, &launchnet.Root, "contract.getNodeRef", map[string]interface{}{"publicKey": 123})
+	_, err = signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, &launchnet.Root,
+		"contract.getNodeRef", map[string]interface{}{"publicKey": 123})
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "incorect input: failed to get 'publicKey' param")
+	require.Contains(t, err.Error(), "incorrect input: failed to get 'publicKey' param")
 }

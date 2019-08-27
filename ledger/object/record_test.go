@@ -47,6 +47,31 @@ func TestRecordKey(t *testing.T) {
 	require.Equal(t, expectedKey, actualKey)
 }
 
+func TestRecordPositionKey(t *testing.T) {
+	t.Parallel()
+
+	expectedKey := recordPositionKey{pn: insolar.GenesisPulse.PulseNumber, number: 42}
+
+	rawID := expectedKey.ID()
+
+	actualKey := newRecordPositionKey(insolar.GenesisPulse.PulseNumber, 42)
+
+	actualKeyFromBytes := newRecordPositionKeyFromBytes(rawID)
+	require.Equal(t, expectedKey, actualKeyFromBytes)
+	require.Equal(t, expectedKey, actualKey)
+}
+
+func TestLastKnownRecordPositionKey(t *testing.T) {
+	t.Parallel()
+
+	expectedKey := lastKnownRecordPositionKey{pn: insolar.GenesisPulse.PulseNumber}
+
+	rawID := expectedKey.ID()
+
+	actualKey := newLastKnownRecordPositionKey(rawID)
+	require.Equal(t, expectedKey, actualKey)
+}
+
 func TestRecordStorage_TruncateHead(t *testing.T) {
 	t.Parallel()
 
@@ -78,7 +103,7 @@ func TestRecordStorage_TruncateHead(t *testing.T) {
 		pulse := startPulseNumber + insolar.PulseNumber(idx)
 		ids[idx] = *insolar.NewID(pulse, []byte(testutils.RandomString()))
 
-		err := recordStore.Set(ctx, record.Material{JetID: *insolar.NewJetID(uint8(idx), nil), ID: ids[idx]})
+		err := recordStore.Set(ctx, record.Material{JetID: *insolar.NewJetID(uint8(idx), ids[idx].Bytes()), ID: ids[idx]})
 		require.NoError(t, err)
 	}
 
@@ -94,10 +119,22 @@ func TestRecordStorage_TruncateHead(t *testing.T) {
 	for i := 0; i < numLeftElements; i++ {
 		_, err := recordStore.ForID(ctx, ids[i])
 		require.NoError(t, err)
+
+		_, err = recordStore.AtPosition(ids[i].Pulse(), 1)
+		require.NoError(t, err)
+
+		_, err = recordStore.LastKnownPosition(ids[i].Pulse())
+		require.NoError(t, err)
 	}
 
 	for i := numElements - 1; i >= numLeftElements; i-- {
 		_, err := recordStore.ForID(ctx, ids[i])
+		require.EqualError(t, err, ErrNotFound.Error())
+
+		_, err = recordStore.AtPosition(ids[i].Pulse(), 1)
+		require.EqualError(t, err, ErrNotFound.Error())
+
+		_, err = recordStore.LastKnownPosition(ids[i].Pulse())
 		require.EqualError(t, err, ErrNotFound.Error())
 	}
 }
