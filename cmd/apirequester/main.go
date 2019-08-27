@@ -36,8 +36,8 @@ var (
 
 func parseInputParams() {
 	pflag.StringVarP(&memberKeys, "memberkeys", "k", "", "path to dir with members keys")
-	pflag.StringVarP(&apiAdminURL, "admin urls", "a", defaultAdminURL, "admin api url")
-	pflag.StringVarP(&apiPublicURL, "public urls", "p", defaultPublicURL, "public api url")
+	pflag.StringVarP(&apiAdminURL, "adminurls", "a", defaultAdminURL, "admin api url")
+	pflag.StringVarP(&apiPublicURL, "publicurls", "p", defaultPublicURL, "public api url")
 	pflag.Parse()
 }
 

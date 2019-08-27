@@ -118,7 +118,6 @@ func initComponents(
 		wmLogger   *log.WatermillLogAdapter
 		publisher  message.Publisher
 		subscriber message.Subscriber
-		APIWrapper *api.RunnerWrapper
 	)
 	{
 		wmLogger = log.NewWatermillLogAdapter(inslogger.FromContext(ctx))
@@ -183,7 +182,7 @@ func initComponents(
 	)
 	checkError(ctx, err, "failed to start AdminAPIRunner")
 
-	APIWrapper = api.NewWrapper(API, AdminAPIRunner)
+	APIWrapper := api.NewWrapper(API, AdminAPIRunner)
 
 	// TODO: remove this hack in INS-3341
 	contractRequester.LR = logicRunner
