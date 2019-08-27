@@ -1,6 +1,6 @@
 {
   "public_key": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEl3SUfUaw1UvYEszK5QoSN7UrJ1aO\nb0WoUEcRgwElT/Tbh0CPYZA+deaF1KO+6cGAxvTBJZpEedkLUgcM8S56Qg==\n-----END PUBLIC KEY-----\n",
-  "reference": "1474sCnj1DggSggkNZLry55pcbjWhSss1WSXj6W9XwhT.1tJEEuxPAn8JgS3dxxxYnLASSHEeb54DpwiGntisn6",
+  "reference": "11474sCnj1DggSggkNZLry55pcbjWhSss1WSXj6W9XwhT.11tJEEuxPAn8JgS3dxxxYnLASSHEeb54DpwiGntisn6",
   "role": "virtual",
   "majority_rule": 7,
   "min_roles": {
@@ -9,22 +9,22 @@
     "light_material": 1
   },
   "pulsar_public_keys": null,
-  "root_domain_ref": "1tJEEuxPAn8JgS3dxxxYnLASSHEeb54DpwiGntisn6.1tJEEuxPAn8JgS3dxxxYnLASSHEeb54DpwiGntisn6",
+  "root_domain_ref": "11tJEEuxPAn8JgS3dxxxYnLASSHEeb54DpwiGntisn6.11tJEEuxPAn8JgS3dxxxYnLASSHEeb54DpwiGntisn6",
   "bootstrap_nodes": [
     {
       "public_key": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEFhw9v2vl9OkMedBoKz8GTndZyx5S\n/KHFc3OKOoEhUPZwuNo1q3bXTaeJ1WBcs4MjGBBGuC5w1i3WcNfJHzyyLw==\n-----END PUBLIC KEY-----\n",
       "host": "localhost:22001",
-      "node_ref": "1tJDXVqB8L4AwVGdQKoECgM2TJeMZV2otQuw5X4Uta.1tJEEuxPAn8JgS3dxxxYnLASSHEeb54DpwiGntisn6"
+      "node_ref": "11tJDXVqB8L4AwVGdQKoECgM2TJeMZV2otQuw5X4Uta.11tJEEuxPAn8JgS3dxxxYnLASSHEeb54DpwiGntisn6"
     },
     {
       "public_key": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEtlCnGJbptDc+c/pr9nAJE3SlWSCP\n3SIQ9Q9iOFKzZFf71c6fCrLyquAl+lCD/S3ch1v/y42d1peGAWiYujmOuw==\n-----END PUBLIC KEY-----\n",
       "host": "127.0.0.1:23832",
-      "node_ref": "1tJC6sijvFtBJvFBSfyaksfMy7XqmDsnjt5RkZLa9u.1tJEEuxPAn8JgS3dxxxYnLASSHEeb54DpwiGntisn6"
+      "node_ref": "11tJC6sijvFtBJvFBSfyaksfMy7XqmDsnjt5RkZLa9u.11tJEEuxPAn8JgS3dxxxYnLASSHEeb54DpwiGntisn6"
     },
     {
       "public_key": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEMs0nrI/to+AfRs+AuXr+ri/fHNrQ\nY6A83jNYlQfIUHRFxmv9Oowi6aDGkmsSzRDGVKrqabjgBuVYYTznqm/s9g==\n-----END PUBLIC KEY-----\n",
       "host": "127.0.0.1:33833",
-      "node_ref": "1tJDPHz1yWzKi4PoKybBDjLJmFeqH67qyKmwGECeMy.1tJEEuxPAn8JgS3dxxxYnLASSHEeb54DpwiGntisn6"
+      "node_ref": "11tJDPHz1yWzKi4PoKybBDjLJmFeqH67qyKmwGECeMy.11tJEEuxPAn8JgS3dxxxYnLASSHEeb54DpwiGntisn6"
     }
   ]
 }
