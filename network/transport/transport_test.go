@@ -54,6 +54,8 @@ import (
 	"context"
 	"io"
 	"log"
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -136,7 +138,19 @@ func (s *suiteTest) TestStreamTransport() {
 	s.NoError(n1.Start(ctx))
 	s.NoError(n2.Start(ctx))
 
-	_, err := n2.tcp.Dial(ctx, "127.0.0.1:555555")
+	n1Port, _ := strconv.Atoi(strings.Split(n1.tcp.Address(), ":")[1])
+	n2Port, _ := strconv.Atoi(strings.Split(n2.tcp.Address(), ":")[1])
+	port := 5555
+	if port == n1Port || port == n2Port {
+		port++
+		if port == n1Port || port == n2Port {
+			port++
+		}
+	}
+	_, err := n2.tcp.Dial(ctx, "127.0.0.1:"+strconv.Itoa(port))
+	s.Error(err)
+
+	_, err = n2.tcp.Dial(ctx, "127.0.0.1:555555")
 	s.Error(err)
 
 	_, err = n2.tcp.Dial(ctx, "invalid address")
