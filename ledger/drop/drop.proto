@@ -14,7 +14,7 @@ message Drop {
     bytes Pulse = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
     bytes PrevHash = 21;
     bytes Hash = 22;
-    uint64 Size = 23;
+    uint64 DropSize = 23;
     bytes JetID = 24 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.JetID", (gogoproto.nullable) = false];
     int64 SplitThresholdExceeded = 25;
     bool Split = 26;

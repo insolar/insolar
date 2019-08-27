@@ -85,10 +85,9 @@ func dropsFixture() []drop.Drop {
 	}
 }
 
-func sortDrops(drops [][]byte) {
+func sortDrops(drops []drop.Drop) {
 	cmp := func(i, j int) bool {
-		cmp := bytes.Compare(drops[i], drops[j])
-		return cmp < 0
+		return drops[i].Pulse < drops[j].Pulse
 	}
 	sort.Slice(drops, cmp)
 }
@@ -160,9 +159,9 @@ func TestInitialStateKeeper_Get_AfterRestart(t *testing.T) {
 	sortIndexes(state.Indexes)
 	require.Equal(t, expectedIndexes, state.Indexes)
 
-	expectedDrops := [][]byte{
-		drop.MustEncode(&drops[0]),
-		drop.MustEncode(&drops[1]),
+	expectedDrops := []drop.Drop{
+		drops[0],
+		drops[1],
 	}
 	sortDrops(expectedDrops)
 	sortDrops(state.Drops)
@@ -181,9 +180,9 @@ func TestInitialStateKeeper_Get_AfterRestart(t *testing.T) {
 	sortIndexes(state.Indexes)
 	require.Equal(t, []record.Index{indexes[2]}, state.Indexes)
 
-	expectedDrops = [][]byte{
-		drop.MustEncode(&drops[1]),
-		drop.MustEncode(&drops[2]),
+	expectedDrops = []drop.Drop{
+		drops[1],
+		drops[2],
 	}
 	sortDrops(expectedDrops)
 	sortDrops(state.Drops)
