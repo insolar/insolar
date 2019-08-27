@@ -39,6 +39,18 @@ var (
 	current insolar.PulseNumber = 850
 )
 
+func singleJetFixture() []insolar.JetID {
+	tree := jet.NewTree(true)
+	return tree.LeafIDs()
+}
+
+func jetsFixture() []insolar.JetID {
+	tree := jet.NewTree(true)
+	left, _, _ := tree.Split(tree.LeafIDs()[0])
+	_, _, _ = tree.Split(left)
+	return tree.LeafIDs()
+}
+
 func indexesFixture() []record.Index {
 	objIDs := gen.UniqueIDs(5)
 	return []record.Index{
@@ -116,7 +128,7 @@ func TestInitialStateKeeper_Get_AfterRestart(t *testing.T) {
 	jetKeeper := NewJetKeeperMock(mc)
 	jetKeeper.TopSyncPulseMock.Return(topSync)
 
-	jetIDs := gen.UniqueJetIDs(3)
+	jetIDs := jetsFixture()
 	// split jet depends on fixture data
 	left, right := jet.Siblings(jetIDs[1])
 
@@ -218,7 +230,7 @@ func TestInitialStateKeeper_Get_EmptyAfterRestart(t *testing.T) {
 	jetKeeper := NewJetKeeperMock(mc)
 	jetKeeper.TopSyncPulseMock.Return(topSync)
 
-	jetIDs := gen.UniqueJetIDs(1)
+	jetIDs := singleJetFixture()
 	jetAccessor := jet.NewAccessorMock(mc)
 	jetAccessor.AllMock.Expect(ctx, topSync).Return(jetIDs)
 
@@ -264,7 +276,7 @@ func TestInitialStateKeeper_Get_WithDuplicatedDrops(t *testing.T) {
 	jetKeeper := NewJetKeeperMock(mc)
 	jetKeeper.TopSyncPulseMock.Return(topSync)
 
-	jetIDs := gen.UniqueJetIDs(3)
+	jetIDs := jetsFixture()
 	// split jet depends on fixture data
 	left, right := jet.Siblings(jetIDs[1])
 
