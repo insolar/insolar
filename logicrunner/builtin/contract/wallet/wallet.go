@@ -80,10 +80,6 @@ func (w *Wallet) Transfer(rootDomainRef insolar.Reference, assetName string, amo
 		return nil, fmt.Errorf("failed to calculate fee for amount: %s", err.Error())
 	}
 
-	amount, ok = new(big.Int).SetString(amountStr, 10)
-	if !ok {
-		return nil, fmt.Errorf("can't parse input amountStr")
-	}
 	fee, ok := new(big.Int).SetString(feeStr, 10)
 	if !ok {
 		return nil, fmt.Errorf("can't parse input feeStr")
@@ -111,6 +107,9 @@ func (w *Wallet) Transfer(rootDomainRef insolar.Reference, assetName string, amo
 		return nil, fmt.Errorf("failed to get account by asset name: %s", err.Error())
 	}
 	acc := account.GetObject(*accRef)
+
+	// todo decriment acc
+
 	err = acc.TransferToAccount(amountStr, *toAccount)
 	if err != nil {
 		return nil, fmt.Errorf("failed to transfer: %s", err.Error())
