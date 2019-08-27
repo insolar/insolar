@@ -153,7 +153,7 @@ func (m *Member) Call(signedRequest []byte) (interface{}, error) {
 	case "CreateHelloWorld":
 		return rootdomain.GetObject(m.RootDomain).CreateHelloWorld()
 	case "member.create":
-		return m.contractCreateMember(request.Params.PublicKey)
+		return m.contractCreateMemberCall(request.Params.PublicKey)
 	case "member.migrationCreate":
 		return m.memberMigrationCreate(request.Params.PublicKey)
 	case "member.get":
@@ -387,21 +387,14 @@ type MigrationCreateResponse struct {
 
 func (m *Member) memberMigrationCreate(key string) (*MigrationCreateResponse, error) {
 
-	rootDomain := rootdomain.GetObject(m.RootDomain)
 	migrationAdminContract := migrationadmin.GetObject(foundation.GetMigrationAdmin())
 	migrationAddress, err := migrationAdminContract.GetFreeMigrationAddress(key)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get migration address: %s", err.Error())
 	}
-
-	created, err := m.createMember("", key, migrationAddress)
+	created, err := m.contractCreateMember(key)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create member: %s", err.Error())
-	}
-
-	err = rootDomain.AddNewMemberToMap(key, created.Reference)
-	if err != nil {
-		return nil, fmt.Errorf("failed to add new member to mapPK: %s", err.Error())
+		return nil, err
 	}
 
 	err = migrationAdminContract.AddNewMigrationAddressToMaps(migrationAddress, created.Reference)
@@ -412,7 +405,15 @@ func (m *Member) memberMigrationCreate(key string) (*MigrationCreateResponse, er
 	return &MigrationCreateResponse{Reference: created.Reference.String(), MigrationAddress: migrationAddress}, nil
 }
 
-func (m *Member) contractCreateMember(key string) (*CreateResponse, error) {
+func (m *Member) contractCreateMemberCall(key string) (*CreateResponse, error) {
+	created, err := m.contractCreateMember(key)
+	if err != nil {
+		return nil, err
+	}
+	return &CreateResponse{Reference: created.Reference.String()}, nil
+}
+
+func (m *Member) contractCreateMember(key string) (*member.Member, error) {
 
 	rootDomain := rootdomain.GetObject(m.RootDomain)
 
@@ -425,7 +426,7 @@ func (m *Member) contractCreateMember(key string) (*CreateResponse, error) {
 		return nil, fmt.Errorf("failed to add new member to public key map: %s", err.Error())
 	}
 
-	return &CreateResponse{Reference: created.Reference.String()}, nil
+	return created, nil
 }
 
 func (m *Member) createMember(name string, key string, migrationAddress string) (*member.Member, error) {

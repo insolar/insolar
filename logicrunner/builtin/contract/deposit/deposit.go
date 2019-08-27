@@ -83,7 +83,7 @@ func New(migrationDaemonRef insolar.Reference, txHash string, amount string, lok
 // Itself gets deposit information.
 // ins:immutable
 func (d *Deposit) Itself() (interface{}, error) {
-	return d, nil
+	return &d, nil
 }
 
 // Confirm adds confirm for deposit by migration daemon.

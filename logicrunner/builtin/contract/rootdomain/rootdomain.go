@@ -18,14 +18,12 @@ package rootdomain
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/helloworld"
-	"github.com/insolar/insolar/logicrunner/builtin/proxy/migrationshard"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/pkshard"
 )
 
@@ -65,9 +63,9 @@ func (rd *RootDomain) GetNodeDomainRef() (insolar.Reference, error) {
 
 var INSATTR_Info_API = true
 
-// AddNewMemberToMaps adds new member to PublicKeyMap.
+// AddNewMemberToPublicKeyMap adds new member to PublicKeyMap.
 // ins:immutable
-func (rd *RootDomain) AddNewMemberToMap(publicKey string, memberRef insolar.Reference) error {
+func (rd *RootDomain) AddNewMemberToPublicKeyMap(publicKey string, memberRef insolar.Reference) error {
 	trimmedPublicKey := foundation.TrimPublicKey(publicKey)
 	shardIndex := foundation.GetShardIndex(trimmedPublicKey, insolar.GenesisAmountPublicKeyShards)
 	if shardIndex >= len(rd.PublicKeyShards) {
@@ -78,23 +76,6 @@ func (rd *RootDomain) AddNewMemberToMap(publicKey string, memberRef insolar.Refe
 	if err != nil {
 		return errors.Wrap(err, "failed to set reference in public key shard")
 	}
-	return nil
-}
-
-// AddNewMemberToPublicKeyMap adds new member to PublicKeyMap.
-// ins:immutable
-func (rd *RootDomain) AddNewMemberToPublicKeyMap(publicKey string, memberRef insolar.Reference) error {
-	trimmedPublicKey := foundation.TrimPublicKey(publicKey)
-	i := foundation.GetShardIndex(trimmedPublicKey, insolar.GenesisAmountPublicKeyShards)
-	if i >= len(rd.PublicKeyShards) {
-		return fmt.Errorf("incorrect public key shard index")
-	}
-	s := pkshard.GetObject(rd.PublicKeyShards[i])
-	err := s.SetRef(trimmedPublicKey, memberRef.String())
-	if err != nil {
-		return errors.Wrap(err, "failed to set reference in public key shard")
-	}
-
 	return nil
 }
 

@@ -181,59 +181,6 @@ func INSMETHOD_GetNodeDomainRef(object []byte, data []byte) ([]byte, []byte, err
 	return state, ret, err
 }
 
-func INSMETHOD_AddNewMemberToMap(object []byte, data []byte) ([]byte, []byte, error) {
-	ph := common.CurrentProxyCtx
-	ph.SetSystemError(nil)
-	self := new(RootDomain)
-
-	if len(object) == 0 {
-		return nil, nil, &foundation.Error{S: "[ FakeAddNewMemberToMap ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
-	}
-
-	err := ph.Deserialize(object, self)
-	if err != nil {
-		e := &foundation.Error{S: "[ FakeAddNewMemberToMap ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
-		return nil, nil, e
-	}
-
-	args := make([]interface{}, 2)
-	var args0 string
-	args[0] = &args0
-	var args1 insolar.Reference
-	args[1] = &args1
-
-	err = ph.Deserialize(data, &args)
-	if err != nil {
-		e := &foundation.Error{S: "[ FakeAddNewMemberToMap ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
-		return nil, nil, e
-	}
-
-	ret0 := self.AddNewMemberToMap(args0, args1)
-
-	if ph.GetSystemError() != nil {
-		return nil, nil, ph.GetSystemError()
-	}
-
-	state := []byte{}
-	err = ph.Serialize(self, &state)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	ret0 = ph.MakeErrorSerializable(ret0)
-
-	ret := []byte{}
-	err = ph.Serialize(
-		foundation.Result{Returns: []interface{}{ret0}},
-		&ret,
-	)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return state, ret, err
-}
-
 func INSMETHOD_AddNewMemberToPublicKeyMap(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
@@ -343,7 +290,6 @@ func Initialize() XXX_insolar.ContractWrapper {
 		Methods: XXX_insolar.ContractMethods{
 			"GetMemberByPublicKey":       INSMETHOD_GetMemberByPublicKey,
 			"GetNodeDomainRef":           INSMETHOD_GetNodeDomainRef,
-			"AddNewMemberToMap":          INSMETHOD_AddNewMemberToMap,
 			"AddNewMemberToPublicKeyMap": INSMETHOD_AddNewMemberToPublicKeyMap,
 			"CreateHelloWorld":           INSMETHOD_CreateHelloWorld,
 		},
