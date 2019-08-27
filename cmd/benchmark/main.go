@@ -219,7 +219,6 @@ func findErrorsInLog(s scenario, fName string, file *os.File, closeChan chan str
 				ok = false
 			}
 		case <-closeChan:
-			writeToOutput(s.getOut(), fmt.Sprintln("Stop reading ", fName))
 			ok = false
 		}
 
