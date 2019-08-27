@@ -136,7 +136,7 @@ func (s *suiteTest) TestStreamTransport() {
 	s.NoError(n1.Start(ctx))
 	s.NoError(n2.Start(ctx))
 
-	_, err := n2.tcp.Dial(ctx, "127.0.0.1:5555")
+	_, err := n2.tcp.Dial(ctx, "127.0.0.1:555555")
 	s.Error(err)
 
 	_, err = n2.tcp.Dial(ctx, "invalid address")
