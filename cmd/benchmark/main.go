@@ -196,7 +196,7 @@ func nodesErrorLogReader(s scenario) chan struct{} {
 						ok = false
 					}
 
-					if strings.Contains(string(line), " ERR ") {
+					if strings.Contains(line, " ERR ") {
 						writeToOutput(s.getOut(), fmt.Sprintln("!!! THERE ARE ERRORS IN ERROR LOG !!! ", fName))
 						ok = false
 					}
