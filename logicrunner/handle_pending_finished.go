@@ -46,11 +46,11 @@ func (h *HandlePendingFinished) Present(ctx context.Context, _ flow.Flow) error 
 	}
 
 	done, err := h.dep.WriteAccessor.Begin(ctx, flow.Pulse(ctx))
-	defer done()
-
 	if err != nil {
 		return nil
 	}
+	defer done()
+
 
 	broker := h.dep.StateStorage.UpsertExecutionState(message.ObjectRef)
 

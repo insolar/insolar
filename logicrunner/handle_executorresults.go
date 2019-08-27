@@ -65,11 +65,11 @@ type HandleExecutorResults struct {
 
 func (h *HandleExecutorResults) realHandleExecutorState(ctx context.Context, f flow.Flow, msg payload.ExecutorResults) error {
 	done, err := h.dep.WriteAccessor.Begin(ctx, flow.Pulse(ctx))
-	defer done()
-
 	if err != nil {
 		return nil
 	}
+	defer done()
+
 
 	procInitializeExecutionState := initializeExecutionState{
 		dep: h.dep,

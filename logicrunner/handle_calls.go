@@ -218,12 +218,11 @@ func (h *HandleCall) handleActual(
 	}
 
 	done, err := h.dep.WriteAccessor.Begin(ctx, flow.Pulse(ctx))
-	defer done()
-
 	if err != nil {
 		go h.sendToNextExecutor(ctx, *objRef, *requestRef, *request)
 		return registeredRequestReply, nil
 	}
+	defer done()
 
 	broker := h.dep.StateStorage.UpsertExecutionState(*objRef)
 

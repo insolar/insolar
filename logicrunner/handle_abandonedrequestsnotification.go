@@ -68,11 +68,10 @@ func (h *HandleAbandonedRequestsNotification) Present(ctx context.Context, f flo
 	defer span.End()
 
 	done, err := h.dep.WriteAccessor.Begin(ctx, flow.Pulse(ctx))
-	defer done()
-
 	if err != nil {
 		return nil
 	}
+	defer done()
 
 	procInitializeExecutionState := initializeAbandonedRequestsNotificationExecutionState{
 		dep: h.dep,

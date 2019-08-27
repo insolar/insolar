@@ -48,11 +48,10 @@ func (h *HandleStillExecuting) Present(ctx context.Context, f flow.Flow) error {
 	}
 
 	done, err := h.dep.WriteAccessor.Begin(ctx, flow.Pulse(ctx))
-	defer done()
-
 	if err != nil {
 		return nil
 	}
+	defer done()
 
 	h.dep.ResultsMatcher.AddStillExecution(ctx, &message)
 
