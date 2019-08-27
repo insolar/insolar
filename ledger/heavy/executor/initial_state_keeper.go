@@ -171,7 +171,7 @@ func (isk *InitialStateKeeper) Get(ctx context.Context, lightExecutor insolar.Re
 	logger.Debugf("[ InitialStateKeeper ] Getting drops for: %s in pulse: %s", lightExecutor.String(), pulse.String())
 
 	// Must not send two equal drops to single LME after split
-	existingDrops := make(map[insolar.JetID]bool)
+	existingDrops := make(map[insolar.JetID]struct{})
 
 	for id, jetDrop := range isk.jetDrops {
 		light, err := isk.jetCoordinator.LightExecutorForJet(ctx, insolar.ID(id), pulse)
@@ -188,7 +188,7 @@ func (isk *InitialStateKeeper) Get(ctx context.Context, lightExecutor insolar.Re
 
 			drops = append(drops, jetDrop)
 			if siblingID, ok := isk.jetSiblings[id]; ok {
-				existingDrops[siblingID] = true
+				existingDrops[siblingID] = struct{}{}
 			}
 		}
 	}
