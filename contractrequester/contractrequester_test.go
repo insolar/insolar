@@ -237,7 +237,7 @@ func TestContractRequester_Call_Timeout(t *testing.T) {
 	require.Contains(t, err.Error(), "timeout")
 }
 
-func TestReceiveResult(t *testing.T) {
+func TestReceiveResult_UnwantedResult(t *testing.T) {
 	ctx := context.Background()
 	ctx, cancelFunc := context.WithTimeout(ctx, time.Second*10)
 	defer cancelFunc()
@@ -262,74 +262,118 @@ func TestReceiveResult(t *testing.T) {
 	require.NoError(t, err)
 	msg.Metadata.Set(meta.SpanData, string(sp))
 
-	{
+	msg.Metadata.Set(meta.TraceID, "OK_unwanted_test")
+	cReq.Sender = bus.NewSenderMock(t).ReplyMock.Set(
+		func(_ context.Context, origin payload.Meta, replyMsg *message.Message) {
+			replyData, err := reply.Deserialize(bytes.NewBuffer(replyMsg.Payload))
+			require.NoError(t, err)
+			require.Equal(t, &reply.OK{}, replyData)
+		})
 
-		msg.Metadata.Set(meta.TraceID, "OK_unwanted_test")
-		cReq.Sender = bus.NewSenderMock(t).ReplyMock.Set(
-			func(_ context.Context, origin payload.Meta, replyMsg *message.Message) {
-				replyData, err := reply.Deserialize(bytes.NewBuffer(replyMsg.Payload))
-				require.NoError(t, err)
-				require.Equal(t, &reply.OK{}, replyData)
-			})
+	// unexpected result
+	res, err := serializeReply(msg)
+	require.NoError(t, err)
+	err = cReq.ReceiveResult(res)
+	require.NoError(t, err)
+}
 
-		// unexpected result
-		res, err := serializeReply(msg)
-		require.NoError(t, err)
-		err = cReq.ReceiveResult(res)
-		require.NoError(t, err)
+func TestReceiveResult_WantedResult(t *testing.T) {
+	ctx := context.Background()
+	ctx, cancelFunc := context.WithTimeout(ctx, time.Second*10)
+	defer cancelFunc()
+
+	cReq, err := New()
+	require.NoError(t, err)
+
+	mc := minimock.NewController(t)
+	defer mc.Finish()
+
+	reqRef := gen.Reference()
+	var reqHash [insolar.RecordHashSize]byte
+	copy(reqHash[:], reqRef.Record().Hash())
+
+	msgPayload := &payload.ReturnResults{
+		RequestRef: reqRef,
 	}
 
-	{
-		msg.Metadata.Set(meta.TraceID, "OK_wanted_test")
-		cReq.Sender = bus.NewSenderMock(t).ReplyMock.Set(
-			func(_ context.Context, origin payload.Meta, replyMsg *message.Message) {
-				replyData, err := reply.Deserialize(bytes.NewBuffer(replyMsg.Payload))
-				require.NoError(t, err)
-				require.Equal(t, &reply.OK{}, replyData)
-			})
+	msg := payload.MustNewMessage(msgPayload)
 
-		// expected result
-		resChan := make(chan *payload.ReturnResults)
-		chanResult := make(chan *payload.ReturnResults)
-		cReq.ResultMap[reqHash] = resChan
+	sp, err := instracer.Serialize(ctx)
+	require.NoError(t, err)
+	msg.Metadata.Set(meta.SpanData, string(sp))
 
-		go func() {
-			chanResult <- <-cReq.ResultMap[reqHash]
-		}()
+	msg.Metadata.Set(meta.TraceID, "OK_wanted_test")
+	cReq.Sender = bus.NewSenderMock(t).ReplyMock.Set(
+		func(_ context.Context, origin payload.Meta, replyMsg *message.Message) {
+			replyData, err := reply.Deserialize(bytes.NewBuffer(replyMsg.Payload))
+			require.NoError(t, err)
+			require.Equal(t, &reply.OK{}, replyData)
+		})
 
-		res, err := serializeReply(msg)
-		require.NoError(t, err)
-		err = cReq.ReceiveResult(res)
+	// expected result
+	resChan := make(chan *payload.ReturnResults)
+	chanResult := make(chan *payload.ReturnResults)
+	cReq.ResultMap[reqHash] = resChan
 
-		require.NoError(t, err)
-		require.Equal(t, 0, len(cReq.ResultMap))
-		require.Equal(t, msgPayload, <-chanResult)
+	go func() {
+		chanResult <- <-cReq.ResultMap[reqHash]
+	}()
+
+	res, err := serializeReply(msg)
+	require.NoError(t, err)
+	err = cReq.ReceiveResult(res)
+
+	require.NoError(t, err)
+	require.Equal(t, 0, len(cReq.ResultMap))
+	require.Equal(t, msgPayload, <-chanResult)
+}
+
+func TestReceiveResult_UnwantedResultWithError(t *testing.T) {
+	ctx := context.Background()
+	ctx, cancelFunc := context.WithTimeout(ctx, time.Second*10)
+	defer cancelFunc()
+
+	cReq, err := New()
+	require.NoError(t, err)
+
+	mc := minimock.NewController(t)
+	defer mc.Finish()
+
+	reqRef := gen.Reference()
+	var reqHash [insolar.RecordHashSize]byte
+	copy(reqHash[:], reqRef.Record().Hash())
+
+	msgPayload := &payload.ReturnResults{
+		RequestRef: reqRef,
 	}
 
-	// error during result
-	{
-		msg.Metadata.Set(meta.TraceID, "handle_flow_cancelled")
-		cReq.LR = testutils.NewLogicRunnerMock(t).AddUnwantedResponseMock.Set(
-			func(ctx context.Context, msg insolar.Payload) error {
-				return flow.ErrCancelled
-			})
-		cReq.Sender = bus.NewSenderMock(t).ReplyMock.Set(
-			func(_ context.Context, origin payload.Meta, replyMsg *message.Message) {
-				payloadError := &payload.Error{}
-				err := payloadError.Unmarshal(replyMsg.Payload)
-				require.NoError(t, err)
-				require.Equal(t, &payload.Error{
-					Polymorph: uint32(payload.TypeError),
-					Code:      uint32(payload.CodeFlowCanceled),
-					Text:      errors.Wrap(flow.ErrCancelled, "[ ReceiveResult ]").Error(),
-				}, payloadError)
-			})
+	msg := payload.MustNewMessage(msgPayload)
 
-		res, err := serializeReply(msg)
-		require.NoError(t, err)
-		err = cReq.ReceiveResult(res)
-		require.NoError(t, err)
-	}
+	sp, err := instracer.Serialize(ctx)
+	require.NoError(t, err)
+	msg.Metadata.Set(meta.SpanData, string(sp))
+
+	msg.Metadata.Set(meta.TraceID, "handle_flow_cancelled")
+	cReq.LR = testutils.NewLogicRunnerMock(t).AddUnwantedResponseMock.Set(
+		func(ctx context.Context, msg insolar.Payload) error {
+			return flow.ErrCancelled
+		})
+	cReq.Sender = bus.NewSenderMock(t).ReplyMock.Set(
+		func(_ context.Context, origin payload.Meta, replyMsg *message.Message) {
+			payloadError := &payload.Error{}
+			err := payloadError.Unmarshal(replyMsg.Payload)
+			require.NoError(t, err)
+			require.Equal(t, &payload.Error{
+				Polymorph: uint32(payload.TypeError),
+				Code:      uint32(payload.CodeFlowCanceled),
+				Text:      errors.Wrap(flow.ErrCancelled, "[ ReceiveResult ]").Error(),
+			}, payloadError)
+		})
+
+	res, err := serializeReply(msg)
+	require.NoError(t, err)
+	err = cReq.ReceiveResult(res)
+	require.NoError(t, err)
 }
 
 func serializeReply(msg *message.Message) (*message.Message, error) {
