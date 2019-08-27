@@ -277,8 +277,7 @@ func (h *HandleCall) sendRequestResult(
 	}
 
 	repl := &reply.CallMethod{Result: resultRecord.Payload, Object: &objRef}
-	tr := common.NewTranscript(ctx, reqRef, request)
-	h.dep.RequestsExecutor.SendReply(ctx, tr, repl, nil)
+	h.dep.RequestsExecutor.SendReply(ctx, reqRef, request, repl, nil)
 
 	return nil
 }

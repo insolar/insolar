@@ -52,7 +52,7 @@ func TestBadSeed(t *testing.T) {
 	ctx := context.TODO()
 	rootCfg, err := requester.CreateUserConfig(launchnet.Root.Ref, launchnet.Root.PrivKey, launchnet.Root.PubKey)
 	require.NoError(t, err)
-	res, err := requester.SendWithSeed(ctx, launchnet.TestRPCUrl, rootCfg, &requester.Params{
+	res, err := requester.SendWithSeed(ctx, launchnet.TestRPCUrlPublic, rootCfg, &requester.Params{
 		CallSite:  "member.create",
 		PublicKey: rootCfg.PublicKey},
 		"MTExMQ==")
@@ -64,7 +64,7 @@ func TestIncorrectSeed(t *testing.T) {
 	ctx := context.TODO()
 	rootCfg, err := requester.CreateUserConfig(launchnet.Root.Ref, launchnet.Root.PrivKey, launchnet.Root.PubKey)
 	require.NoError(t, err)
-	res, err := requester.SendWithSeed(ctx, launchnet.TestRPCUrl, rootCfg, &requester.Params{
+	res, err := requester.SendWithSeed(ctx, launchnet.TestRPCUrlPublic, rootCfg, &requester.Params{
 		CallSite:  "member.create",
 		PublicKey: rootCfg.PublicKey},
 		"z2vgMVDXx0s+g5mkagOLqCP0q/8YTfoQkII5pjNF1ag=")
@@ -107,7 +107,7 @@ func TestCrazyJSON(t *testing.T) {
 
 func TestIncorrectSign(t *testing.T) {
 	testMember := createMember(t)
-	seed, err := requester.GetSeed(launchnet.TestAPIURL)
+	seed, err := requester.GetSeed(launchnet.TestRPCUrl)
 	require.NoError(t, err)
 	body, err := requester.GetResponseBodyContract(
 		launchnet.TestRPCUrl,
@@ -131,7 +131,7 @@ func TestIncorrectSign(t *testing.T) {
 
 func TestEmptySign(t *testing.T) {
 	testMember := createMember(t)
-	seed, err := requester.GetSeed(launchnet.TestAPIURL)
+	seed, err := requester.GetSeed(launchnet.TestRPCUrl)
 	require.NoError(t, err)
 	body, err := requester.GetResponseBodyContract(
 		launchnet.TestRPCUrl,
@@ -141,7 +141,8 @@ func TestEmptySign(t *testing.T) {
 				ID:      1,
 				Method:  "contract.call",
 			},
-			Params: requester.Params{Seed: seed, Reference: testMember.Ref, PublicKey: testMember.PubKey, CallSite: "wallet.getBalance", CallParams: map[string]interface{}{"reference": testMember.Ref}},
+			Params: requester.Params{Seed: seed, Reference: testMember.Ref, PublicKey: testMember.PubKey,
+				CallSite: "member.getBalance", CallParams: map[string]interface{}{"reference": testMember.Ref}},
 		},
 		"",
 	)
@@ -154,7 +155,7 @@ func TestEmptySign(t *testing.T) {
 
 func TestRequestWithSignFromOtherMember(t *testing.T) {
 	memberForParam := createMember(t)
-	seed, err := requester.GetSeed(launchnet.TestAPIURL)
+	seed, err := requester.GetSeed(launchnet.TestRPCUrl)
 	require.NoError(t, err)
 
 	request := requester.ContractRequest{
@@ -163,7 +164,7 @@ func TestRequestWithSignFromOtherMember(t *testing.T) {
 			ID:      1,
 			Method:  "contract.call",
 		},
-		Params: requester.Params{Seed: seed, Reference: memberForParam.Ref, PublicKey: memberForParam.PubKey, CallSite: "wallet.getBalance", CallParams: map[string]interface{}{"reference": memberForParam.Ref}},
+		Params: requester.Params{Seed: seed, Reference: memberForParam.Ref, PublicKey: memberForParam.PubKey, CallSite: "member.getBalance", CallParams: map[string]interface{}{"reference": memberForParam.Ref}},
 	}
 
 	dataToSign, err := json.Marshal(request)
@@ -209,7 +210,7 @@ func TestIncorrectMethodName(t *testing.T) {
 func TestIncorrectParams(t *testing.T) {
 	firstMember := createMember(t)
 
-	_, err := signedRequestWithEmptyRequestRef(t, firstMember, "member.transfer", firstMember.Ref)
+	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, firstMember, "member.transfer", firstMember.Ref)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "failed to cast call params: expected 'map[string]interface{}', got 'string'")
 }
@@ -217,7 +218,7 @@ func TestIncorrectParams(t *testing.T) {
 func TestNilParams(t *testing.T) {
 	firstMember := createMember(t)
 
-	_, err := signedRequestWithEmptyRequestRef(t, firstMember, "member.transfer", nil)
+	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, firstMember, "member.transfer", nil)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "call params are nil")
 }
@@ -227,8 +228,18 @@ func TestRequestReference(t *testing.T) {
 	secondMember := createMember(t)
 	amount := "10"
 
-	_, ref, err := makeSignedRequest(firstMember, "member.transfer", map[string]interface{}{"amount": amount, "toMemberReference": secondMember.Ref})
+	_, ref, err := makeSignedRequest(launchnet.TestRPCUrlPublic, firstMember, "member.transfer",
+		map[string]interface{}{"amount": amount, "toMemberReference": secondMember.Ref})
 	require.NoError(t, err)
 	require.NotEqual(t, "", ref)
 	require.NotEqual(t, "11111111111111111111111111111111.11111111111111111111111111111111", ref)
+}
+
+func TestNotAllowedMethod(t *testing.T) {
+	member := createMember(t)
+
+	_, _, err := makeSignedRequest(launchnet.TestRPCUrlPublic, member, "member.getBalance",
+		map[string]interface{}{"reference": member.Ref})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "method not allowed")
 }

@@ -17,6 +17,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -48,19 +49,22 @@ const defaultMemberFileName = "members.txt"
 const backoffAttemptsCount = 20
 
 var (
-	defaultMemberFileDir = filepath.Join(defaults.ArtifactsDir(), "bench-members")
+	defaultMemberFileDir      = filepath.Join(defaults.ArtifactsDir(), "bench-members")
+	defaultDiscoveryNodesLogs = filepath.Join(defaults.LaunchnetDir(), "logs", "discoverynodes")
 
 	memberFilesDir     string
 	output             string
 	concurrent         int
 	repetitions        int
 	memberKeys         string
-	apiURLs            []string
+	adminAPIURLs       []string
+	publicAPIURLs      []string
 	logLevel           string
 	logLevelServer     string
 	saveMembersToFile  bool
 	useMembersFromFile bool
 	noCheckBalance     bool
+	discoveryNodesLogs string
 )
 
 func parseInputParams() {
@@ -68,13 +72,15 @@ func parseInputParams() {
 	pflag.IntVarP(&concurrent, "concurrent", "c", 1, "concurrent users")
 	pflag.IntVarP(&repetitions, "repetitions", "r", 1, "repetitions for one user")
 	pflag.StringVarP(&memberKeys, "memberkeys", "k", "", "path to dir with members keys")
-	pflag.StringArrayVarP(&apiURLs, "apiurl", "u", []string{"http://localhost:19101/api"}, "url to api")
+	pflag.StringArrayVarP(&adminAPIURLs, "adminurls", "a", []string{"http://localhost:19001/admin-api/rpc"}, "url to admin api")
+	pflag.StringArrayVarP(&publicAPIURLs, "publicurls", "p", []string{"http://localhost:19101/api/rpc"}, "url to public api")
 	pflag.StringVarP(&logLevel, "loglevel", "l", "info", "log level for benchmark")
 	pflag.StringVarP(&logLevelServer, "loglevelserver", "L", "", "server log level")
 	pflag.BoolVarP(&saveMembersToFile, "savemembers", "s", false, "save members to file")
 	pflag.BoolVarP(&useMembersFromFile, "usemembers", "m", false, "use members from file")
 	pflag.StringVarP(&memberFilesDir, "members-dir", "", defaultMemberFileDir, "dir for saving memebers data")
 	pflag.BoolVarP(&noCheckBalance, "nocheckbalance", "b", false, "don't check balance at the end")
+	pflag.StringVarP(&discoveryNodesLogs, "discovery-nodes-logs-dir", "", defaultDiscoveryNodesLogs, "launchnet logs dir for checking errors")
 	pflag.Parse()
 }
 
@@ -123,10 +129,13 @@ func startScenario(ctx context.Context, s scenario) {
 	writeToOutput(s.getOut(), fmt.Sprintf("Scenario %s: Start to transfer\n", s.getName()))
 
 	start := time.Now()
+	logReaderCloseChan := nodesErrorLogReader(s)
+
 	s.start(ctx)
 	elapsed := time.Since(start)
 	writeToOutput(s.getOut(), fmt.Sprintf("Scenario %s: Transferring took %s \n", s.getName(), elapsed))
 
+	close(logReaderCloseChan)
 	printResults(s)
 }
 
@@ -141,6 +150,81 @@ func printResults(s scenario) {
 		),
 	)
 	s.printResult()
+}
+
+func nodesErrorLogReader(s scenario) chan struct{} {
+	closeChan := make(chan struct{})
+	wg := sync.WaitGroup{}
+
+	logs, err := getLogs(discoveryNodesLogs)
+	if err != nil {
+		writeToOutput(s.getOut(), fmt.Sprintf("Can't find node logs: %s", err))
+	}
+
+	wg.Add(len(logs))
+	for _, fileName := range logs {
+		fName := fileName // be careful using loops and values in parallel code
+		go readLogs(s, &wg, fName, closeChan)
+	}
+
+	wg.Wait()
+	return closeChan
+}
+
+func getLogs(root string) ([]string, error) {
+	var files []string
+	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if !info.IsDir() && info.Name() == "output.log" {
+			files = append(files, path)
+		}
+		return nil
+	})
+	return files, err
+}
+
+func readLogs(s scenario, wg *sync.WaitGroup, fileName string, closeChan chan struct{}) {
+	defer wg.Done()
+
+	file, err := os.Open(fileName)
+	if err != nil {
+		writeToOutput(s.getOut(), fmt.Sprintln("Can't open log file ", fileName, ", error : ", err))
+	}
+	_, err = file.Seek(-1, io.SeekEnd)
+	if err != nil {
+		writeToOutput(s.getOut(), fmt.Sprintln("Can't seek through log file ", fileName, ", error : ", err))
+	}
+
+	// for making wg.Done()
+	go findErrorsInLog(s, fileName, file, closeChan)
+}
+
+func findErrorsInLog(s scenario, fName string, file io.ReadCloser, closeChan chan struct{}) {
+	defer file.Close()
+	reader := bufio.NewReader(file)
+
+	ok := true
+	for ok {
+		select {
+		case <-time.After(time.Millisecond):
+			line, err := reader.ReadString('\n')
+			if err != nil && err != io.EOF {
+				writeToOutput(s.getOut(), fmt.Sprintln("Can't read string from ", fName, ", error: ", err))
+				ok = false
+			}
+
+			if strings.Contains(line, " ERR ") {
+				writeToOutput(s.getOut(), fmt.Sprintln("!!! THERE ARE ERRORS IN ERROR LOG !!! ", fName))
+				ok = false
+			}
+		case <-closeChan:
+			ok = false
+		}
+
+	}
 }
 
 func addMigrationAddresses(insSDK *sdk.SDK) int32 {
@@ -335,7 +419,7 @@ func main() {
 	out, err := chooseOutput(output)
 	check("Problems with output file:", err)
 
-	insSDK, err := sdk.NewSDK(apiURLs, memberKeys)
+	insSDK, err := sdk.NewSDK(adminAPIURLs, publicAPIURLs, memberKeys)
 	check("SDK is not initialized: ", err)
 
 	err = insSDK.SetLogLevel(logLevelServer)
