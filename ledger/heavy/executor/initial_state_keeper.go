@@ -167,6 +167,10 @@ func (isk *InitialStateKeeper) Get(ctx context.Context, lightExecutor insolar.Re
 	indexes := make([]record.Index, 0)
 
 	logger.Debugf("[ InitialStateKeeper ] Getting drops for: %s in pulse: %s", lightExecutor.String(), pulse.String())
+
+	// Exclude sending two equal drops to single LME by jet parent id
+	excludeDrops := make(map[insolar.JetID]bool)
+
 	for id, jetDrop := range isk.jetDrops {
 		light, err := isk.jetCoordinator.LightExecutorForJet(ctx, insolar.ID(id), pulse)
 		if err != nil {
@@ -175,7 +179,12 @@ func (isk *InitialStateKeeper) Get(ctx context.Context, lightExecutor insolar.Re
 
 		if light.Equal(lightExecutor) {
 			jetIDs = append(jetIDs, id)
-			drops = append(drops, jetDrop)
+
+			parentID := jet.Parent(id)
+			if _, ok := excludeDrops[parentID]; !ok {
+				drops = append(drops, jetDrop)
+				excludeDrops[parentID] = true
+			}
 		}
 	}
 
