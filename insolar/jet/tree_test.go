@@ -34,7 +34,7 @@ func TestTree_Update(t *testing.T) {
 		prefix []byte
 	)
 
-	lookup := insolar.NewID(gen.CorrectPulseNumber(), []byte{0xD5}) // 11010101
+	lookup := insolar.NewID(gen.PulseNumber(), []byte{0xD5}) // 11010101
 
 	id, actual := tree.Find(*lookup)
 	depth, prefix = id.Depth(), id.Prefix()
@@ -81,7 +81,7 @@ func TestTree_Find(t *testing.T) {
 			},
 		},
 	}
-	lookup := insolar.NewID(gen.CorrectPulseNumber(), []byte{0xD5}) // 11010101
+	lookup := insolar.NewID(gen.PulseNumber(), []byte{0xD5}) // 11010101
 	jetLookup := insolar.NewJetID(15, []byte{1, 2, 3})
 	expectedPrefix := make([]byte, insolar.RecordIDSize-insolar.PulseNumberSize-1)
 	expectedPrefix[0] = 0xD0 // 11010000

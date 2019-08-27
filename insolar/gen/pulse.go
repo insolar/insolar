@@ -23,12 +23,7 @@ import (
 )
 
 // PulseNumber generates random pulse number (excluding special cases).
-func PulseNumber() (pn insolar.PulseNumber) {
-	fuzz.New().NilChance(0).Fuzz(&pn)
-	return
-}
-
-func CorrectPulseNumber() insolar.PulseNumber {
+func PulseNumber() insolar.PulseNumber {
 	f := fuzz.New().NilChance(0).Funcs(func(pn *insolar.PulseNumber, c fuzz.Continue) {
 		*pn = insolar.PulseNumber(c.Int31n(pulse.MaxTimePulse-pulse.MinTimePulse) + pulse.MinTimePulse)
 	})
