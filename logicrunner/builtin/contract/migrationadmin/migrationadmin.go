@@ -30,7 +30,7 @@ type MigrationAdmin struct {
 	foundation.BaseContract
 	MigrationDaemons     foundation.StableMap
 	MigrationAdminMember insolar.Reference
-	VestingParams        VestingParams
+	VestingParams        *VestingParams
 }
 
 type VestingParams struct {
@@ -203,5 +203,5 @@ func (mA *MigrationAdmin) GetActiveDaemons() ([]string, error) {
 }
 
 func (mA MigrationAdmin) GetDepositParameters() (*VestingParams, error) {
-	return &mA.VestingParams, nil
+	return mA.VestingParams, nil
 }

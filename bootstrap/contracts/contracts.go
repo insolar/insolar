@@ -157,7 +157,7 @@ func GetMigrationAdminGenesisContractState(lokup int64, vesting int64, vestingSt
 		Memory: mustGenMemory(&migrationadmin.MigrationAdmin{
 			MigrationDaemons:     migrationDaemons,
 			MigrationAdminMember: genesisrefs.ContractMigrationAdminMember,
-			VestingParams: migrationadmin.VestingParams{
+			VestingParams: &migrationadmin.VestingParams{
 				Lokup:       lokup,
 				Vesting:     vesting,
 				VestingStep: vestingStep,
