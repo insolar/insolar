@@ -33,6 +33,21 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestSetOutgoingRequest_NilMsgPayload(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+	msg := payload.Meta{
+		Polymorph: uint32(payload.TypeMeta),
+		Payload:   nil,
+	}
+
+	handler := handle.NewSetOutgoingRequest(nil, msg, false)
+
+	err := handler.Present(ctx, flow.NewFlowMock(t))
+	require.Error(t, err)
+}
+
 func TestSetOutgoingRequest_BadMsgPayload(t *testing.T) {
 	t.Parallel()
 
@@ -47,6 +62,34 @@ func TestSetOutgoingRequest_BadMsgPayload(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestSetOutgoingRequest_IncorrectTypeMsgPayload(t *testing.T) {
+	t.Parallel()
+
+	ctx := flow.TestContextWithPulse(
+		inslogger.TestContext(t),
+		insolar.GenesisPulse.PulseNumber+10,
+	)
+	f := flow.NewFlowMock(t)
+
+	// Incorrect type.
+	result := payload.SetIncomingRequest{
+		Polymorph: uint32(payload.TypeSetIncomingRequest),
+		Request:   record.Virtual{},
+	}
+	buf, err := result.Marshal()
+	require.NoError(t, err)
+
+	msg := payload.Meta{
+		Polymorph: uint32(payload.TypeMeta),
+		Payload:   buf,
+	}
+
+	handler := handle.NewSetOutgoingRequest(proc.NewDependenciesMock(), msg, false)
+
+	err = handler.Present(ctx, f)
+	require.Error(t, err)
+}
+
 func TestSetOutgoingRequest_IncorrectRecordInVirtual(t *testing.T) {
 	t.Parallel()
 
@@ -55,16 +98,8 @@ func TestSetOutgoingRequest_IncorrectRecordInVirtual(t *testing.T) {
 		insolar.GenesisPulse.PulseNumber+10,
 	)
 	f := flow.NewFlowMock(t)
-	f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
-		switch p.(type) {
-		case *proc.CalculateID:
-			return nil
-		default:
-			panic("unknown procedure")
-		}
-	})
 
-	// Incorrect record in virtual.
+	// Incorrect record type in virtual.
 	virtual := record.Virtual{
 		Union: &record.Virtual_Genesis{
 			Genesis: &record.Genesis{
@@ -74,19 +109,110 @@ func TestSetOutgoingRequest_IncorrectRecordInVirtual(t *testing.T) {
 	}
 
 	request := payload.SetOutgoingRequest{
-		Request: virtual,
+		Polymorph: uint32(payload.TypeSetOutgoingRequest),
+		Request:   virtual,
 	}
 	requestBuf, err := request.Marshal()
 	require.NoError(t, err)
 
 	msg := payload.Meta{
-		Payload: requestBuf,
+		Polymorph: uint32(payload.TypeMeta),
+		Payload:   requestBuf,
 	}
 
 	handler := handle.NewSetOutgoingRequest(proc.NewDependenciesMock(), msg, false)
 
 	err = handler.Present(ctx, f)
 	require.Error(t, err)
+}
+
+func TestSetOutgoingRequest_EmptyRequestAffinityRef(t *testing.T) {
+	t.Parallel()
+
+	ctx := flow.TestContextWithPulse(
+		inslogger.TestContext(t),
+		insolar.GenesisPulse.PulseNumber+10,
+	)
+	f := flow.NewFlowMock(t)
+
+	// AffinityRef object (request.Caller) is empty.
+	virtual := record.Virtual{
+		Union: &record.Virtual_OutgoingRequest{
+			OutgoingRequest: &record.OutgoingRequest{
+				Caller: insolar.Reference{},
+			},
+		},
+	}
+
+	request := payload.SetOutgoingRequest{
+		Polymorph: uint32(payload.TypeSetOutgoingRequest),
+		Request:   virtual,
+	}
+	requestBuf, err := request.Marshal()
+	require.NoError(t, err)
+
+	msg := payload.Meta{
+		Polymorph: uint32(payload.TypeMeta),
+		Payload:   requestBuf,
+	}
+
+	handler := handle.NewSetOutgoingRequest(proc.NewDependenciesMock(), msg, false)
+
+	err = handler.Present(ctx, f)
+	assert.EqualError(t, err, "object is nil")
+}
+
+func TestSetOutgoingRequest_ErrorCalculateID(t *testing.T) {
+	t.Parallel()
+	ctx := flow.TestContextWithPulse(
+		inslogger.TestContext(t),
+		insolar.GenesisPulse.PulseNumber+10,
+	)
+
+	msg := metaOutgoingRequestMsg(t)
+
+	t.Run("calculateID procedure returns err", func(t *testing.T) {
+		t.Parallel()
+		f := flow.NewFlowMock(t)
+		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
+			switch p.(type) {
+			case *proc.CalculateID:
+				return errors.New("something strange from calculateID")
+			default:
+				panic("unknown procedure")
+			}
+		})
+
+		handler := handle.NewSetOutgoingRequest(proc.NewDependenciesMock(), msg, false)
+		err := handler.Present(ctx, f)
+		assert.EqualError(t, err, "something strange from calculateID")
+	})
+
+	// Happy path, everything is fine.
+	t.Run("calculateID procedure returns nil err", func(t *testing.T) {
+		t.Parallel()
+		f := flow.NewFlowMock(t)
+		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
+			switch p.(type) {
+			case *proc.CalculateID:
+				return nil
+			case *proc.FetchJet:
+				return nil
+			case *proc.WaitHot:
+				return nil
+			case *proc.EnsureIndex:
+				return nil
+			case *proc.SetRequest:
+				return nil
+			default:
+				panic("unknown procedure")
+			}
+		})
+
+		handler := handle.NewSetOutgoingRequest(proc.NewDependenciesMock(), msg, false)
+		err := handler.Present(ctx, f)
+		require.NoError(t, err)
+	})
 }
 
 func TestSetOutgoingRequest_FlowWithPassedFlag(t *testing.T) {
@@ -145,8 +271,6 @@ func TestSetOutgoingRequest_FlowWithPassedFlag(t *testing.T) {
 				return nil
 			case *proc.FetchJet:
 				return proc.ErrNotExecutor
-			case *proc.EnsureIndex:
-				return nil
 			default:
 				panic("unknown procedure")
 			}
@@ -189,6 +313,7 @@ func TestSetOutgoingRequest_ErrorFromWaitHot(t *testing.T) {
 		assert.EqualError(t, err, "error from waithot")
 	})
 
+	// Happy path, everything is fine.
 	t.Run("waithot procedure returns nil err", func(t *testing.T) {
 		t.Parallel()
 		f := flow.NewFlowMock(t)
@@ -215,7 +340,7 @@ func TestSetOutgoingRequest_ErrorFromWaitHot(t *testing.T) {
 	})
 }
 
-func TestSetOutgoingRequest_ErrorFromGetIndex(t *testing.T) {
+func TestSetOutgoingRequest_ErrorFromEnsureIndex(t *testing.T) {
 	t.Parallel()
 	ctx := flow.TestContextWithPulse(
 		inslogger.TestContext(t),
@@ -224,7 +349,7 @@ func TestSetOutgoingRequest_ErrorFromGetIndex(t *testing.T) {
 
 	msg := metaOutgoingRequestMsg(t)
 
-	t.Run("getindex procedure returns err", func(t *testing.T) {
+	t.Run("ensureindex procedure returns err", func(t *testing.T) {
 		t.Parallel()
 		f := flow.NewFlowMock(t)
 		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
@@ -236,7 +361,7 @@ func TestSetOutgoingRequest_ErrorFromGetIndex(t *testing.T) {
 			case *proc.WaitHot:
 				return nil
 			case *proc.EnsureIndex:
-				return errors.New("can't get index: error from getindex")
+				return errors.New("can't get index: error from ensureindex")
 			default:
 				panic("unknown procedure")
 			}
@@ -244,10 +369,11 @@ func TestSetOutgoingRequest_ErrorFromGetIndex(t *testing.T) {
 
 		handler := handle.NewSetOutgoingRequest(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
-		assert.EqualError(t, err, "can't get index: error from getindex")
+		assert.EqualError(t, err, "can't get index: error from ensureindex")
 	})
 
-	t.Run("getindex procedure returns nil err", func(t *testing.T) {
+	// Happy path, everything is fine.
+	t.Run("ensureindex procedure returns nil err", func(t *testing.T) {
 		t.Parallel()
 		f := flow.NewFlowMock(t)
 		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
@@ -293,10 +419,10 @@ func TestSetOutgoingRequest_ErrorFromSetRequest(t *testing.T) {
 				return nil
 			case *proc.WaitHot:
 				return nil
-			case *proc.SetRequest:
-				return errors.New("error from setrequest")
 			case *proc.EnsureIndex:
 				return nil
+			case *proc.SetRequest:
+				return errors.New("error from setrequest")
 			default:
 				panic("unknown procedure")
 			}
@@ -307,6 +433,7 @@ func TestSetOutgoingRequest_ErrorFromSetRequest(t *testing.T) {
 		assert.EqualError(t, err, "error from setrequest")
 	})
 
+	// Happy path, everything is fine.
 	t.Run("setrequest procedure returns nil err", func(t *testing.T) {
 		t.Parallel()
 		f := flow.NewFlowMock(t)
@@ -339,19 +466,21 @@ func metaOutgoingRequestMsg(t *testing.T) payload.Meta {
 	virtual := record.Virtual{
 		Union: &record.Virtual_OutgoingRequest{
 			OutgoingRequest: &record.OutgoingRequest{
-				Object: &ref,
+				Caller: ref,
 			},
 		},
 	}
 
 	request := payload.SetOutgoingRequest{
-		Request: virtual,
+		Polymorph: uint32(payload.TypeSetOutgoingRequest),
+		Request:   virtual,
 	}
 	requestBuf, err := request.Marshal()
 	require.NoError(t, err)
 
 	msg := payload.Meta{
-		Payload: requestBuf,
+		Polymorph: uint32(payload.TypeMeta),
+		Payload:   requestBuf,
 	}
 
 	return msg
