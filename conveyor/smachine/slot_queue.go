@@ -50,6 +50,8 @@
 
 package smachine
 
+import "time"
+
 type QueueType int8
 
 const (
@@ -83,6 +85,11 @@ type SlotQueue struct {
 
 func (p *SlotQueue) AppendAll(anotherQueue *SlotQueue) {
 	p.QueueHead.AppendAll(&anotherQueue.QueueHead)
+}
+
+type PollingSlotQueue struct {
+	SlotQueue
+	pollingTime time.Time
 }
 
 type QueueHead struct {

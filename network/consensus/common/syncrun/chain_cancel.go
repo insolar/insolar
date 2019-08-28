@@ -55,6 +55,10 @@ import (
 	"sync/atomic"
 )
 
+func NewChainedCancel() *ChainedCancel {
+	return &ChainedCancel{}
+}
+
 type ChainedCancel struct {
 	state uint32 // atomic
 	chain atomic.Value

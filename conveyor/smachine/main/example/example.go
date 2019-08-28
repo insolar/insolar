@@ -49,13 +49,14 @@ func (s *StateMachine1) Init(ctx smachine.InitializationContext) smachine.StateU
 }
 
 func (s *StateMachine1) State1(ctx smachine.ExecutionContext) smachine.StateUpdate {
-	mutex := ctx.SyncOneStep("test", 0, nil)
 
-	if !mutex.IsFirst() {
-		return mutex.Wait()
-	}
+	//mutex := ctx.SyncOneStep("test", 0, nil)
 
-	ctx.WaitAny().WakeUp().Deadline().Active().ThenRepeat()
+	//if !mutex.IsFirst() {
+	//	return mutex.Wait()
+	//}
+
+	//ctx.WaitAny().WakeUp().Deadline().Active().ThenRepeat()
 
 	return ctx.Jump(s.State3)
 }
@@ -65,7 +66,8 @@ func (s *StateMachine1) State3(ctx smachine.ExecutionContext) smachine.StateUpda
 	s.result = fmt.Sprint(s.count)
 	if s.count < 5 {
 		//return ctx.Yield()
-		return ctx.Repeat(0)
+		//return ctx.Repeat(0)
+		return ctx.WaitAny().Poll().ThenJump(s.State3)
 	}
 	ctx.NewChild(func(ctx smachine.ConstructionContext) smachine.StateMachine {
 		return &StateMachine1{}
@@ -75,9 +77,9 @@ func (s *StateMachine1) State3(ctx smachine.ExecutionContext) smachine.StateUpda
 }
 
 func (s *StateMachine1) State4(ctx smachine.ExecutionContext) smachine.StateUpdate {
-	ctx.NewChild(func(ctx smachine.ConstructionContext) smachine.StateMachine {
-		return &StateMachine1{}
-	})
+	//ctx.NewChild(func(ctx smachine.ConstructionContext) smachine.StateMachine {
+	//	return &StateMachine1{}
+	//})
 
 	fmt.Println(s.result)
 	return ctx.Stop()
@@ -102,7 +104,7 @@ func (s *StateMachine1) State50(ctx smachine.ExecutionContext) smachine.StateUpd
 			s.result = asyncResult
 			ctx.WakeUp()
 		}
-	}).Wait().WakeUp().ThenJump(s.State5)
+	}).Wait().WakeUp(true).ThenJump(s.State5)
 }
 
 func (s *StateMachine1) State60(ctx smachine.ExecutionContext) smachine.StateUpdate {

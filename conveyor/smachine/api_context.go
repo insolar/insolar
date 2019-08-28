@@ -147,7 +147,7 @@ type AsyncResultContext interface {
 
 	// caller will execute its current step
 	WakeUp()
-	WakeUpAndJump()
+	//WakeUpAndJump()
 }
 
 const UnknownSlotID SlotID = 0
@@ -161,6 +161,7 @@ func (id SlotID) IsUnknown() bool {
 type StateUpdate struct {
 	marker *struct{}
 	step   SlotStep
+	link   SlotLink
 	param  interface{}
 }
 
@@ -177,10 +178,21 @@ func NewStateUpdate(marker *struct{}, updType uint16, slotStep SlotStep, param i
 	}
 }
 
-func EnsureUpdateContext(p *struct{}, u StateUpdate) {
+func NewStateUpdateLink(marker *struct{}, updType uint16, link SlotLink, slotStep SlotStep, param interface{}) StateUpdate {
+	slotStep.paramTmp = updType
+	return StateUpdate{
+		marker: marker,
+		param:  param,
+		link:   link,
+		step:   slotStep,
+	}
+}
+
+func EnsureUpdateContext(p *struct{}, u StateUpdate) StateUpdate {
 	if u.marker != p {
 		panic("illegal value")
 	}
+	return u
 }
 
 func ExtractStateUpdate(u StateUpdate) (updType uint16, slotStep SlotStep, param interface{}) {
@@ -196,7 +208,6 @@ func ExtractStateUpdateParam(u StateUpdate) (updType uint16, param interface{}) 
 type SlotStep struct {
 	Transition StateFunc
 	Migration  MigrateFunc
-	WakeupTime int64 //unixNano
 	StepFlags  uint16
 	paramTmp   uint16
 }
@@ -205,10 +216,6 @@ func (s *SlotStep) IsZero() bool {
 	return s.Transition == nil && s.StepFlags == 0 && s.paramTmp == 0
 }
 
-func (s *SlotStep) HasTimeout() bool {
-	return s.WakeupTime > 0
-}
-
 func (s *SlotStep) HasTransition() bool {
-
+	return s.Transition != nil
 }

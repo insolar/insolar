@@ -92,7 +92,7 @@ type SlotMachine struct {
 	activeSlots  SlotQueue //they are are moved to workingSlots on every Scan
 	pollingSlots *SlotQueue
 
-	pollingSeq     []SlotQueue
+	pollingSeq     []PollingSlotQueue
 	pollingSeqHead uint16
 	pollingSeqTail uint16
 
@@ -248,6 +248,7 @@ func (m *SlotMachine) prepareSlot(slot *Slot, slotID SlotID, parent SlotLink, sm
 
 	slot.init(slotID, parent, smd)
 	slot.migrationCount = m.migrationCount
+	slot.lastWorkScan = uint8(m.scanCount)
 }
 
 func (m *SlotMachine) startSlot(slot *Slot, sm StateMachine) bool {
@@ -329,7 +330,7 @@ func (m *SlotMachine) safeWrapAndHandleError(slotLink SlotLink, fn func(*Slot)) 
 	if !slotLink.IsValid() {
 		m.getDetachQueue(slotLink.SlotID()) // cleanup
 
-		stateUpdate := stateUpdateExpired(fn)
+		stateUpdate := stateUpdateExpired(SlotStep{}, fn)
 		m.slotAccessError("slot has expired on adapter callback", slotLink, stateUpdate)
 		return
 	}
@@ -439,28 +440,72 @@ func (m *SlotMachine) applyStateUpdate(slot *Slot, stateUpdate StateUpdate) bool
 	}
 	slot.incStep()
 
-	switch stateUpdType(stateUpdate.updType) {
+	updType, slotStep, param := ExtractStateUpdate(stateUpdate)
+
+	switch stateUpdType(updType) {
 	case stateUpdNoChange, stateUpdExpired:
 		// can't be here
 		panic("illegal value")
 
-	case stateUpdNext:
-		fn := stateUpdate.getStateUpdateFn()
-		if fn == nil {
-			break
-		}
-		result := fn(m, slot, stateUpdate)
-		if !result {
-			return false
-		}
+	case stateUpdNext, stateUpdNextLoop:
+		slot.setNextStep(slotStep)
 		fallthrough
-
 	case stateUpdRepeat:
 		if slot.nextStep.Transition == nil {
 			break
 		}
 		m.addSlotToActiveOrWorkingQueue(slot)
 		return true
+
+	case stateUpdReplace:
+		parent := slot.parent
+		m.disposeSlot(slot)
+		ok, _ := m.applySlotCreate(slot, parent, param.(CreateFunc)) // recursive call inside
+		return ok
+
+	case stateUpdPoll:
+		slot.setNextStep(slotStep)
+		if slot.nextStep.Transition == nil {
+			break
+		}
+		m.pollingSlots.AddLast(slot)
+		return true
+
+	case stateUpdWait:
+		slot.setNextStep(slotStep)
+		if slot.nextStep.Transition == nil {
+			break
+		}
+		return true
+
+	//	switch {
+	//	case waitOn.s == slot:
+	//		// don't wait
+	//	case !waitOn.IsValid():
+	//		// don't wait
+	//	default:
+	//		switch waitOn.s.QueueType() {
+	//		case ActiveSlots, WorkingSlots:
+	//			// don't wait
+	//		case NoQueue:
+	//			waitOn.s.makeQueueHead()
+	//			fallthrough
+	//		case AnotherSlotQueue, PollingSlots:
+	//			slot.setNextStep(slotStep)
+	//			waitOn.s.queue.AddLast(slot)
+	//			return true
+	//		default:
+	//			panic("illegal state")
+	//		}
+	//	}
+	//	slot.setNextStep(slotStep)
+	//	m.addSlotToActiveOrWorkingQueue(slot)
+	//	return true
+
+	case stateUpdStop:
+		m.disposeSlot(slot)
+		m.unusedSlots.AddLast(slot)
+		return false
 
 	case stateUpdDispose:
 		break
@@ -525,12 +570,10 @@ func (m *SlotMachine) disposeSlot(slot *Slot) {
 
 func (m *SlotMachine) preparePollingSlots(scanTime time.Time) {
 
-	scanTimeUnix := scanTime.UnixNano()
-
 	for m.pollingSeqHead != m.pollingSeqTail {
 		ps := &m.pollingSeq[m.pollingSeqTail]
 
-		if !ps.IsEmpty() && ps.slot.nextStep.WakeupTime > scanTimeUnix {
+		if !ps.IsEmpty() && ps.pollingTime.After(scanTime) {
 			break
 		}
 
@@ -539,11 +582,12 @@ func (m *SlotMachine) preparePollingSlots(scanTime time.Time) {
 			m.pollingSeqTail = 0
 		}
 
-		m.workingSlots.AppendAll(ps)
+		m.workingSlots.AppendAll(&ps.SlotQueue)
 	}
 }
 
 func (m *SlotMachine) allocatePollingSlots(scanTime time.Time) {
+	var pollingQueue *PollingSlotQueue
 	switch {
 	case m.pollingSlots == nil:
 		if m.pollingSeqHead != 0 {
@@ -552,18 +596,18 @@ func (m *SlotMachine) allocatePollingSlots(scanTime time.Time) {
 		if len(m.pollingSeq) == 0 {
 			m.growPollingSlots()
 		}
-		m.pollingSlots = &m.pollingSeq[m.pollingSeqHead]
 	case !m.pollingSlots.IsEmpty():
 		m.growPollingSlots()
 		m.pollingSeqHead++
-		m.pollingSlots = &m.pollingSeq[m.pollingSeqHead]
 	}
+	pollingQueue = &m.pollingSeq[m.pollingSeqHead]
 
-	if !m.pollingSlots.IsEmpty() {
+	if !pollingQueue.SlotQueue.IsEmpty() {
 		panic("illegal state")
 	}
 
-	m.pollingSlots.slot.nextStep.WakeupTime = scanTime.Add(m.config.PollingPeriod).UnixNano()
+	m.pollingSlots = &pollingQueue.SlotQueue
+	pollingQueue.pollingTime = scanTime.Add(m.config.PollingPeriod)
 }
 
 func (m *SlotMachine) growPollingSlots() {
@@ -572,7 +616,7 @@ func (m *SlotMachine) growPollingSlots() {
 		// full
 		sLen := len(m.pollingSeq)
 
-		cp := make([]SlotQueue, sLen, 1+(sLen<<2)/3)
+		cp := make([]PollingSlotQueue, sLen, 1+(sLen<<2)/3)
 		copy(cp, m.pollingSeq[m.pollingSeqTail:])
 		copy(cp[m.pollingSeqTail:], m.pollingSeq[:m.pollingSeqTail])
 		m.pollingSeq = cp
@@ -583,7 +627,7 @@ func (m *SlotMachine) growPollingSlots() {
 	case m.pollingSeqTail == 0 && int(m.pollingSeqHead)+1 >= len(m.pollingSeq):
 		// full
 		for {
-			m.pollingSeq = append(m.pollingSeq, NewSlotQueue(PollingSlots))
+			m.pollingSeq = append(m.pollingSeq, PollingSlotQueue{SlotQueue: NewSlotQueue(PollingSlots)})
 			if len(m.pollingSeq) == cap(m.pollingSeq) {
 				break
 			}

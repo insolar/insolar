@@ -51,7 +51,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/insolar/insolar/conveyor/smachine"
 	"github.com/insolar/insolar/conveyor/smachine/main/example"
 	"time"
@@ -59,16 +58,15 @@ import (
 
 func main() {
 	sm := smachine.NewSlotMachine(smachine.SlotMachineConfig{
-		SlotPageSize: 10,
+		SlotPageSize:  10,
+		PollingPeriod: 100 * time.Millisecond,
 	})
 
 	sm.AddNew(smachine.NoLink(), &example.StateMachine1{})
 
 	for i := 0; ; i++ {
-		if !sm.ScanOnce(nil) {
-			break
-		}
-		fmt.Printf("%03d %v: slots=%v\n", i, time.Now(), sm.OccupiedSlotCount())
-		time.Sleep(100 * time.Millisecond)
+		sm.ScanOnce(nil)
+		//fmt.Printf("%03d %v: slots=%v\n", i, time.Now(), sm.OccupiedSlotCount())
+		time.Sleep(10 * time.Millisecond)
 	}
 }

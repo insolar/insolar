@@ -52,6 +52,7 @@ package smachine
 
 import (
 	"context"
+	"github.com/insolar/insolar/network/consensus/common/syncrun"
 	"sync"
 )
 
@@ -87,7 +88,7 @@ func (c *ChannelAdapter) Close() {
 }
 
 func (c *ChannelAdapter) CallAsync(stepLink StepLink, fn AdapterCallFunc, callback AdapterCallbackFunc) {
-	r := ChannelRecord{stepLink, fn, callback}
+	r := ChannelRecord{stepLink, fn, callback, nil}
 
 	if !c.append(r, false) || !c.send(r) {
 		c.append(r, true)
@@ -95,12 +96,13 @@ func (c *ChannelAdapter) CallAsync(stepLink StepLink, fn AdapterCallFunc, callba
 }
 
 func (c *ChannelAdapter) CallAsyncWithCancel(stepLink StepLink, fn AdapterCallFunc, callback AdapterCallbackFunc) (cancelFn context.CancelFunc) {
-	r := ChannelRecord{stepLink, fn, callback}
+	cancel := syncrun.NewChainedCancel()
+	r := ChannelRecord{stepLink, fn, callback, cancel}
 
 	if !c.append(r, false) || !c.send(r) {
 		c.append(r, true)
 	}
-	return nil // TODO
+	return cancel.Cancel
 }
 
 func (c *ChannelAdapter) append(r ChannelRecord, force bool) bool {
@@ -165,10 +167,11 @@ type ChannelRecord struct {
 	stepLink StepLink
 	callFunc AdapterCallFunc
 	callback AdapterCallbackFunc
+	cancel   *syncrun.ChainedCancel
 }
 
 func (c ChannelRecord) IsCancelled() bool {
-	return c.stepLink.IsCancelled()
+	return !c.stepLink.IsAtStep() || c.cancel != nil && c.cancel.IsCancelled()
 }
 
 func (c ChannelRecord) RunCall() AsyncResultFunc {
@@ -189,24 +192,43 @@ func (c ChannelRecord) SendCancel() {
 }
 
 func (c ChannelRecord) RunAndSendResult() bool {
-	if c.stepLink.IsCancelled() {
+	if c.IsCancelled() {
 		c.callback(nil)
 		return false
 	}
 
-	result := c.callFunc()
+	result, recovered := c.safeCall()
 
-	if c.stepLink.IsCancelled() {
+	if c.IsCancelled() && recovered == nil {
 		c.callback(nil)
 		return false
 	}
 
-	stepLink := c.stepLink
-	c.callback(func(ctx AsyncResultContext) {
-		if result == nil || stepLink.IsCancelled() {
+	wrapCallback(result, recovered, c.stepLink, c.cancel, c.callback)
+	return true
+}
+
+// just to make sure that ChannelRecord doesn't leak into a closure
+func wrapCallback(result AsyncResultFunc, recovered interface{}, stepLink StepLink, cancel *syncrun.ChainedCancel, callback AdapterCallbackFunc) {
+
+	if recovered != nil {
+		result = nil
+	}
+
+	callback(func(ctx AsyncResultContext) {
+		if recovered != nil {
+			panic(recovered)
+		}
+		if result == nil || !stepLink.IsAtStep() {
 			return
 		}
 		result(ctx)
 	})
-	return true
+}
+
+func (c ChannelRecord) safeCall() (result AsyncResultFunc, recovered interface{}) {
+	defer func() {
+		recovered = recover()
+	}()
+	return c.callFunc(), nil
 }

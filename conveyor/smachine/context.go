@@ -50,10 +50,6 @@
 
 package smachine
 
-import (
-	"time"
-)
-
 type slotContextMode uint8
 
 const (
@@ -183,7 +179,7 @@ func (p *migrationContext) executeMigrate(fn MigrateFunc) StateUpdate {
 	p.setState(inactiveContext, migrateContext)
 	defer p.setState(migrateContext, discardedContext)
 
-	return fn(p).ensureContext(&p.marker)
+	return EnsureUpdateContext(&p.marker, fn(p))
 }
 
 var _ InitializationContext = &initializationContext{}
@@ -196,7 +192,7 @@ func (p *initializationContext) executeInitialization(fn InitFunc) StateUpdate {
 	p.setState(inactiveContext, initContext)
 	defer p.setState(initContext, discardedContext)
 
-	return fn(p).ensureContext(&p.marker)
+	return EnsureUpdateContext(&p.marker, fn(p))
 }
 
 var _ ExecutionContext = &executionContext{}
@@ -209,7 +205,7 @@ type executionContext struct {
 
 func (p *executionContext) WaitAny() StateConditionalUpdate {
 	p.ensureExactState(execContext)
-	return &conditionalUpdate{template: stateUpdateDeactivateTemplate(&p.marker)}
+	return &conditionalUpdate{marker: &p.marker}
 }
 
 func (p *executionContext) SyncOneStep(key string, weight int32, broadcastFn BroadcastReceiveFunc) Syncronizer {
@@ -319,25 +315,27 @@ func (p *executionContext) executeNextStep() (stopNow bool, stateUpdate StateUpd
 		}
 
 		current := p.s.nextStep
-		stateUpdate = current.Transition(p)
-		stateUpdate.ensureContext(&p.marker)
+		stateUpdate = EnsureUpdateContext(&p.marker, current.Transition(p))
 
 		if p.countAsyncCalls != 0 {
 			break
 		}
-		switch stateUpdType(stateUpdate.updType) { // fast path(s)
+		updType, updParam := ExtractStateUpdateParam(stateUpdate)
+
+		switch stateUpdType(updType) { // fast path(s)
 		case stateUpdRepeat:
-			limit := stateUpdate.getRepeatLimit()
+			limit := getRepeatLimit(updParam)
 			if loopCount < limit {
 				continue
 			}
-		case stateUpdNext:
-			ns := stateUpdate.getShortLoopStep()
-			if ns == nil || !p.s.machine.IsConsecutive(current.Transition, ns.Transition) {
+		case stateUpdNextLoop:
+			ns := getShortLoopStep(updParam)
+			if ns == nil || !p.s.machine.IsConsecutive(current.Transition, ns) {
 				break
 			}
 			p.s.incStep()
-			p.s.setNextStep(*ns)
+			_, ss, _ := ExtractStateUpdate(stateUpdate)
+			p.s.setNextStep(ss)
 			continue
 		}
 		break
@@ -402,7 +400,7 @@ func (c *conditionalUpdate) Active(dependency SlotLink) ConditionalUpdate {
 	return &r
 }
 
-func (c *conditionalUpdate) AsyncJump(enable bool) ConditionalUpdate {
+func (c *conditionalUpdate) AsyncJump(enable bool) CallConditionalUpdate {
 	r := *c
 	if enable {
 		r.flags |= stepFlagAllowPreempt
@@ -448,14 +446,23 @@ func (c *conditionalUpdate) ThenRepeat() StateUpdate {
 
 func (c *conditionalUpdate) then(fn StateFunc, mf MigrateFunc) StateUpdate {
 
-	apply kickOff
+	// TODO apply kickOff
+	if c.kickOff != nil {
+		panic("not implemented")
+	}
 
-	if c.dependency.IsEmpty() {
+	slotStep := SlotStep{Transition: fn, Migration: mf}
+	switch {
+	case fn == nil: // repeat
+		panic("not implemented") // TODO repeat
+	case c.dependency.IsEmpty():
 		if c.poll {
-			panic("illegal state")
+			return stateUpdatePoll(c.marker, slotStep)
 		}
+		return stateUpdateWait(c.marker, slotStep)
+	case c.poll:
+		panic("not supported")
+	default:
 		return stateUpdateWaitForSlot(c.marker, c.dependency, slotStep)
-	} else {
-		return stateUpdateWait(c.marker, c.poll, slotStep)
 	}
 }

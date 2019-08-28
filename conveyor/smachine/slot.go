@@ -194,7 +194,11 @@ func (s *Slot) NewLink() SlotLink {
 }
 
 func (s *Slot) NewStepLink() StepLink {
-	return StepLink{s.NewLink(), s.GetStep(), nil}
+	return StepLink{s.NewLink(), s.GetStep()}
+}
+
+func (s *Slot) NewAnyStepLink() StepLink {
+	return StepLink{s.NewLink(), 0}
 }
 
 func (s *Slot) isEmpty() bool {

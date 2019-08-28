@@ -52,7 +52,6 @@ package smachine
 
 import (
 	"math"
-	"time"
 )
 
 type stateUpdateFn func(m *SlotMachine, slot *Slot, upd StateUpdate) bool
@@ -77,19 +76,8 @@ func stateUpdateRepeat(marker *struct{}, limit int) StateUpdate {
 	return slotMachineUpdate(marker, stateUpdRepeat, SlotStep{}, ulimit)
 }
 
-func getRepeatLimit(u StateUpdate) uint32 {
-	return u.param.(uint32)
-}
-
-func toUnixNano(t time.Time) int64 {
-	if t.IsZero() {
-		return 0
-	}
-	r := t.UnixNano()
-	if r <= 0 {
-		return 1
-	}
-	return r
+func getRepeatLimit(p interface{}) uint32 {
+	return p.(uint32)
 }
 
 func stateUpdateNext(marker *struct{}, sf StateFunc, mf MigrateFunc, canLoop bool, flags stepFlags) StateUpdate {
@@ -102,19 +90,10 @@ func stateUpdateNext(marker *struct{}, sf StateFunc, mf MigrateFunc, canLoop boo
 		return slotMachineUpdate(marker, stateUpdNextLoop, slotStep, sf)
 	}
 	return slotMachineUpdate(marker, stateUpdNext, slotStep, nil)
-
-	//return slotMachineUpdate(marker, stateUpdNext, param, func(m *SlotMachine, slot *Slot, upd StateUpdate) bool {
-	//	slot.setNextStep(slotStep)
-	//	m.addSlotToActiveOrWorkingQueue(slot)
-	//	return true
-	//})
 }
 
-func (u StateUpdate) getShortLoopStep() StateFunc {
-	if s, ok := u.param.(StateFunc); ok {
-		return s
-	}
-	return nil
+func getShortLoopStep(p interface{}) StateFunc {
+	return p.(StateFunc)
 }
 
 func stateUpdatePoll(marker *struct{}, slotStep SlotStep) StateUpdate {
@@ -135,35 +114,8 @@ func stateUpdateWaitForSlot(marker *struct{}, waitOn SlotLink, slotStep SlotStep
 	if !slotStep.HasTransition() {
 		panic("illegal value")
 	}
-	if slotStep.HasTimeout() {
-		panic("illegal value - slot wait can't be combined with time wait")
-	}
 
-	return slotMachineUpdate(marker, stateUpdNext, nil, func(m *SlotMachine, slot *Slot, upd StateUpdate) bool {
-		switch {
-		case waitOn.s == slot:
-			// don't wait
-		case !waitOn.IsValid():
-			// don't wait
-		default:
-			switch waitOn.s.QueueType() {
-			case ActiveSlots, WorkingSlots:
-				// don't wait
-			case NoQueue:
-				waitOn.s.makeQueueHead()
-				fallthrough
-			case AnotherSlotQueue, PollingSlots:
-				slot.setNextStep(slotStep)
-				waitOn.s.queue.AddLast(slot)
-				return true
-			default:
-				panic("illegal state")
-			}
-		}
-		slot.setNextStep(slotStep)
-		m.addSlotToActiveOrWorkingQueue(slot)
-		return true
-	})
+	panic("not implemented") // TODO not implemented
 }
 
 func stateUpdateReplace(marker *struct{}, cf CreateFunc) StateUpdate {
@@ -171,19 +123,10 @@ func stateUpdateReplace(marker *struct{}, cf CreateFunc) StateUpdate {
 		panic("illegal state")
 	}
 	return slotMachineUpdate(marker, stateUpdReplace, SlotStep{}, cf)
-	//	parent := slot.parent
-	//	m.disposeSlot(slot)
-	//	ok, _ := m.applySlotCreate(slot, parent, cf) // recursive call inside
-	//	return ok
-	//})
 }
 
 func stateUpdateStop(marker *struct{}) StateUpdate {
 	return slotMachineUpdate(marker, stateUpdStop, SlotStep{}, nil)
-	//	m.disposeSlot(slot)
-	//	m.unusedSlots.AddLast(slot)
-	//	return false
-	//})
 }
 
 func stateUpdateFailed(err error) StateUpdate {
