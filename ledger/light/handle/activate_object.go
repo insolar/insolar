@@ -42,10 +42,13 @@ func NewActivateObject(dep *proc.Dependencies, msg payload.Meta, passed bool) *A
 }
 
 func (s *ActivateObject) Present(ctx context.Context, f flow.Flow) error {
-	msg := payload.Activate{}
-	err := msg.Unmarshal(s.message.Payload)
+	pl, err := payload.Unmarshal(s.message.Payload)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal Activate message")
+	}
+	msg, ok := pl.(*payload.Activate)
+	if !ok {
+		return fmt.Errorf("wrong request type: %T", pl)
 	}
 
 	activateVirt := record.Virtual{}
