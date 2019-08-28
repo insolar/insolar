@@ -41,9 +41,8 @@ func RootDomain() insolar.GenesisContractState {
 		ParentName: "",
 
 		Memory: mustGenMemory(&rootdomain.RootDomain{
-			MigrationAddressShards: genesisrefs.ContractMigrationAddressShards,
-			PublicKeyShards:        genesisrefs.ContractPublicKeyShards,
-			NodeDomain:             genesisrefs.ContractNodeDomain,
+			PublicKeyShards: genesisrefs.ContractPublicKeyShards,
+			NodeDomain:      genesisrefs.ContractNodeDomain,
 		}),
 	}
 }
@@ -156,6 +155,7 @@ func GetMigrationAdminGenesisContractState(lokup int64, vesting int64, vestingSt
 		ParentName: insolar.GenesisNameRootDomain,
 		Memory: mustGenMemory(&migrationadmin.MigrationAdmin{
 			MigrationDaemons:     migrationDaemons,
+			MigrationAddressShards: genesisrefs.ContractMigrationAddressShards,
 			MigrationAdminMember: genesisrefs.ContractMigrationAdminMember,
 			VestingParams: &migrationadmin.VestingParams{
 				Lokup:       lokup,

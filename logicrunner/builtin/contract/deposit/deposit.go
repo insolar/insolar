@@ -47,13 +47,13 @@ type Deposit struct {
 
 // GetTxHash gets transaction hash.
 // ins:immutable
-func (d Deposit) GetTxHash() (string, error) {
+func (d *Deposit) GetTxHash() (string, error) {
 	return d.TxHash, nil
 }
 
 // GetAmount gets amount.
 // ins:immutable
-func (d Deposit) GetAmount() (string, error) {
+func (d *Deposit) GetAmount() (string, error) {
 	return d.Amount, nil
 }
 
@@ -80,8 +80,8 @@ func New(migrationDaemonRef insolar.Reference, txHash string, amount string, ves
 
 // Itself gets deposit information.
 // ins:immutable
-func (d Deposit) Itself() (interface{}, error) {
-	return d, nil
+func (d *Deposit) Itself() (interface{}, error) {
+	return &d, nil
 }
 
 // Confirm adds confirm for deposit by migration daemon.

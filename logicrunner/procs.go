@@ -73,7 +73,7 @@ type RegisterIncomingRequest struct {
 func NewRegisterIncomingRequest(request record.IncomingRequest, dep *Dependencies) *RegisterIncomingRequest {
 	return &RegisterIncomingRequest{
 		request:         request,
-		ArtifactManager: dep.lr.ArtifactManager,
+		ArtifactManager: dep.ArtifactManager,
 		result:          make(chan *payload.RequestInfo, 1),
 	}
 }
