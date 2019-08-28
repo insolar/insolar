@@ -268,7 +268,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 	}
 
 	var (
-		PulseManager insolar.PulseManager
+		PulseManager *pulsemanager.PulseManager
 		Handler      *handler.Handler
 		Genesis      *genesis.Genesis
 		Records      *object.RecordDB
@@ -290,15 +290,15 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 			return nil, errors.Wrap(err, "failed create backuper")
 		}
 
-		pm := pulsemanager.NewPulseManager(Requester.FlowDispatcher)
-		pm.NodeNet = NodeNetwork
-		pm.NodeSetter = Nodes
-		pm.Nodes = Nodes
-		pm.PulseAppender = Pulses
-		pm.PulseAccessor = Pulses
-		pm.JetModifier = Jets
-		pm.StartPulse = sp
-		pm.FinalizationKeeper = executor.NewFinalizationKeeperDefault(JetKeeper, Pulses, cfg.Ledger.LightChainLimit)
+		PulseManager = pulsemanager.NewPulseManager()
+		PulseManager.NodeNet = NodeNetwork
+		PulseManager.NodeSetter = Nodes
+		PulseManager.Nodes = Nodes
+		PulseManager.PulseAppender = Pulses
+		PulseManager.PulseAccessor = Pulses
+		PulseManager.JetModifier = Jets
+		PulseManager.StartPulse = sp
+		PulseManager.FinalizationKeeper = executor.NewFinalizationKeeperDefault(JetKeeper, Pulses, cfg.Ledger.LightChainLimit)
 
 		replicator := executor.NewHeavyReplicatorDefault(Records, indexes, CryptoScheme, Pulses, drops, JetKeeper, backupMaker, Jets)
 		c.replicator = replicator
@@ -324,7 +324,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		h.Sender = WmBus
 		h.Replicator = replicator
 
-		PulseManager = pm
 		Handler = h
 
 		artifactManager := &artifact.Scope{
@@ -402,6 +401,9 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to init components")
 	}
+
+	// this should be done after Init due to inject
+	PulseManager.AddDispatcher(Requester.FlowDispatcher)
 
 	if !genesisCfg.Skip {
 		if err := Genesis.Start(ctx); err != nil {

@@ -72,7 +72,10 @@ func New() (*ContractRequester, error) {
 		ResultMap:   make(map[[insolar.RecordHashSize]byte]chan *payload.ReturnResults),
 		callTimeout: 25 * time.Second,
 	}
+	return cr, nil
+}
 
+func (cr *ContractRequester) Init(ctx context.Context) error {
 	handle := func(msg *message.Message) *handleResults {
 		return &handleResults{
 			cr:      cr,
@@ -89,7 +92,7 @@ func New() (*ContractRequester, error) {
 			return handle(msg).Past
 		})
 
-	return cr, nil
+	return nil
 }
 
 func randomUint64() uint64 {

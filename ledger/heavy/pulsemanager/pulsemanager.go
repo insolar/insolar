@@ -44,7 +44,7 @@ type PulseManager struct {
 	FinalizationKeeper executor.FinalizationKeeper `inject:""`
 	JetModifier        jet.Modifier                `inject:""`
 
-	dispatchers []dispatcher.Dispatcher
+	dispatcher dispatcher.Dispatcher
 
 	currentPulse insolar.Pulse
 	StartPulse   pulse.StartPulse
@@ -54,12 +54,20 @@ type PulseManager struct {
 }
 
 // NewPulseManager creates PulseManager instance.
-func NewPulseManager(dispatchers ...dispatcher.Dispatcher) *PulseManager {
+func NewPulseManager() *PulseManager {
 	pm := &PulseManager{
 		currentPulse: *insolar.GenesisPulse,
-		dispatchers:  dispatchers,
 	}
 	return pm
+}
+
+// AddDispatcher adds dispatchers to handling
+// that could be done only when Set is not happening
+func (m *PulseManager) AddDispatcher(d dispatcher.Dispatcher) {
+	m.setLock.Lock()
+	defer m.setLock.Unlock()
+
+	m.dispatcher = d
 }
 
 // Set set's new pulse.
@@ -82,8 +90,8 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 	)
 	defer span.End()
 
-	for _, d := range m.dispatchers {
-		d.ClosePulse(ctx, newPulse)
+	if m.dispatcher != nil {
+		m.dispatcher.ClosePulse(ctx, newPulse)
 	}
 
 	// Dealing with node lists.
@@ -123,8 +131,8 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 	logger.Debug("before calling to StartPulse.SetStartPulse")
 	m.StartPulse.SetStartPulse(ctx, newPulse)
 
-	for _, d := range m.dispatchers {
-		d.BeginPulse(ctx, newPulse)
+	if m.dispatcher != nil {
+		m.dispatcher.BeginPulse(ctx, newPulse)
 	}
 
 	logger.Info("new pulse is set")

@@ -229,6 +229,7 @@ func initComponents(
 	err = cm.Init(ctx)
 	checkError(ctx, err, "failed to init components")
 
+	// this should be done after Init due to inject
 	pm.AddDispatcher(logicRunner.FlowDispatcher, contractRequester.FlowDispatcher)
 
 	return &cm, terminationHandler, startWatermill(

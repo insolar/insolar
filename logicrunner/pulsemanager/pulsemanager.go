@@ -55,6 +55,8 @@ func NewPulseManager() *PulseManager {
 	return &PulseManager{}
 }
 
+// AddDispatcher adds dispatchers to handling
+// that could be done only when Set is not happening
 func (m *PulseManager) AddDispatcher(d ...dispatcher.Dispatcher) {
 	m.setLock.Lock()
 	defer m.setLock.Unlock()
