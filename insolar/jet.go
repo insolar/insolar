@@ -71,11 +71,10 @@ var ZeroJetID = *NewJetID(0, nil)
 
 // NewJetID creates a new jet with provided ID and index
 func NewJetID(depth uint8, prefix []byte) *JetID {
-	hash := make([]byte, reference.LocalBinaryHashSize)
-	hash[0] = depth
+	hash := [reference.LocalBinaryHashSize]byte{depth}
 	copy(hash[1:], bits.ResetBits(prefix, depth))
 
-	return (*JetID)(NewID(PulseNumberJet, hash))
+	return (*JetID)(NewID(PulseNumberJet, hash[:]))
 }
 
 // Depth extracts depth from a jet id.

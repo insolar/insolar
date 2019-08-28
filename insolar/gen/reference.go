@@ -28,12 +28,12 @@ func ID() insolar.ID {
 	var id insolar.ID
 
 	f := fuzz.New().NilChance(0).Funcs(func(id *insolar.ID, c fuzz.Continue) {
-		hash := make([]byte, reference.LocalBinaryHashSize)
+		var hash [reference.LocalBinaryHashSize]byte
 		c.Fuzz(&hash)
 
 		pn := PulseNumber()
 
-		*id = *insolar.NewID(pn, hash)
+		*id = *insolar.NewID(pn, hash[:])
 	})
 	f.Fuzz(&id)
 

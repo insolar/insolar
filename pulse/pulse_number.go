@@ -124,9 +124,9 @@ func (n Number) WithFlags(flags uint8) uint32 {
 
 // Bytes serializes pulse number.
 func (n Number) Bytes() []byte {
-	buf := make([]byte, NumberSize)
-	binary.BigEndian.PutUint32(buf, uint32(n))
-	return buf
+	var buf [NumberSize]byte
+	binary.BigEndian.PutUint32(buf[:], uint32(n))
+	return buf[:]
 }
 
 func (n Number) String() string {
