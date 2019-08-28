@@ -71,8 +71,8 @@ func (s *Server) Serve() {
 	nodeRef := certManager.GetCertificate().GetNodeRef().String()
 
 	traceID := "main_" + utils.RandTraceID()
-	ctx, inslog := inslogger.InitNodeLogger(ctx, cfg.Log, traceID, nodeRef, nodeRole)
-	log.InitTicker(inslog)
+	ctx, logger := inslogger.InitNodeLogger(ctx, cfg.Log, traceID, nodeRef, nodeRole)
+	log.InitTicker(logger)
 
 	if cfg.Tracer.Jaeger.AgentEndpoint != "" {
 		var jaegerFlush func()
@@ -98,11 +98,12 @@ func (s *Server) Serve() {
 
 	go func() {
 		sig := <-gracefulStop
-		inslog.Debug("caught sig: ", sig)
+		logger.Debug("caught sig: ", sig)
 
-		inslog.Warn("GRACEFUL STOP APP")
+		logger.Warn("GRACEFUL STOP APP")
 		// th.Leave(ctx, 10) TODO: is actual ??
-		inslog.Info("main leave ends ")
+		logger.Info("main leave ends ")
+
 		err = cm.GracefulStop(ctx)
 		checkError(ctx, err, "failed to graceful stop components")
 

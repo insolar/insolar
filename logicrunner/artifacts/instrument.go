@@ -18,8 +18,9 @@ package artifacts
 
 import (
 	"context"
-	"github.com/insolar/insolar/insolar/flow"
 	"time"
+
+	"github.com/insolar/insolar/insolar/flow"
 
 	"go.opencensus.io/stats"
 	"go.opencensus.io/tag"
@@ -55,7 +56,7 @@ func (mi *methodInstrumenter) end() {
 	code := "2xx"
 	if mi.errlink != nil && *mi.errlink != nil && *mi.errlink != flow.ErrCancelled {
 		code = "5xx"
-		inslog.Error(*mi.errlink)
+		inslog.WithField("instrument-name", mi.name).Error(*mi.errlink)
 	}
 
 	ctx := insmetrics.InsertTag(mi.ctx, tagMethod, mi.name)
