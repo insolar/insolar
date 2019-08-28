@@ -300,7 +300,7 @@ func (v Local) debugStringJet() string {
 	if depth == 0 {
 		return "[JET 0 -]"
 	} else if depth > 8*(len(v.hash)-1) {
-		return fmt.Sprintf(fmt.Sprintf("[JET: <wrong format> %d %b]", depth, prefix))
+		return fmt.Sprintf("[JET: <wrong format> %d %b]", depth, prefix)
 	}
 
 	res := strings.Builder{}

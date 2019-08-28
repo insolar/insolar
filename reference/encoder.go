@@ -59,7 +59,7 @@ type encoder struct {
 	options         EncoderOptions
 }
 
-func NewBase58Encoder(opts EncoderOptions) *encoder {
+func NewBase58Encoder(opts EncoderOptions) Encoder {
 	return &encoder{
 		nameEncoder:     nil,
 		byteEncoder:     byteEncodeBase58,
@@ -69,7 +69,7 @@ func NewBase58Encoder(opts EncoderOptions) *encoder {
 	}
 }
 
-func NewBase64Encoder(opts EncoderOptions) *encoder {
+func NewBase64Encoder(opts EncoderOptions) Encoder {
 	return &encoder{
 		nameEncoder:     nil,
 		byteEncoder:     byteEncodeBase64,
