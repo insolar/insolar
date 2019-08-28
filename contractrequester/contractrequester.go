@@ -47,10 +47,10 @@ import (
 
 // ContractRequester helps to call contracts
 type ContractRequester struct {
-	Sender                     bus.Sender                         `inject:""`
-	PulseAccessor              pulse.Accessor                     `inject:""`
-	JetCoordinator             jet.Coordinator                    `inject:""`
-	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
+	Sender                     bus.Sender
+	PulseAccessor              pulse.Accessor
+	JetCoordinator             jet.Coordinator
+	PlatformCryptographyScheme insolar.PlatformCryptographyScheme
 
 	// TODO: remove this hack in INS-3341
 	// we need ResultMatcher, not Logicrunner
@@ -67,15 +67,22 @@ type ContractRequester struct {
 }
 
 // New creates new ContractRequester
-func New() (*ContractRequester, error) {
+func New(
+	sender bus.Sender,
+	pulses pulse.Accessor,
+	jetCoordinator jet.Coordinator,
+	pcs insolar.PlatformCryptographyScheme,
+) (*ContractRequester, error) {
 	cr := &ContractRequester{
 		ResultMap:   make(map[[insolar.RecordHashSize]byte]chan *payload.ReturnResults),
 		callTimeout: 25 * time.Second,
-	}
-	return cr, nil
-}
 
-func (cr *ContractRequester) Init(ctx context.Context) error {
+		Sender:                     sender,
+		PulseAccessor:              pulses,
+		JetCoordinator:             jetCoordinator,
+		PlatformCryptographyScheme: pcs,
+	}
+
 	handle := func(msg *message.Message) *handleResults {
 		return &handleResults{
 			cr:      cr,
@@ -91,8 +98,7 @@ func (cr *ContractRequester) Init(ctx context.Context) error {
 		}, func(msg *message.Message) flow.Handle {
 			return handle(msg).Past
 		})
-
-	return nil
+	return cr, nil
 }
 
 func randomUint64() uint64 {

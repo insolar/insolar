@@ -187,7 +187,12 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 	)
 	{
 		var err error
-		Requester, err = contractrequester.New()
+		Requester, err = contractrequester.New(
+			Sender,
+			Pulses,
+			Coordinator,
+			CryptoScheme,
+		)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start ContractRequester")
 		}
@@ -349,7 +354,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 
 		PulseManager = executor.NewPulseManager(
 			NodeNetwork,
-			[]dispatcher.Dispatcher{FlowDispatcher},
+			[]dispatcher.Dispatcher{FlowDispatcher, Requester.FlowDispatcher},
 			Nodes,
 			Pulses,
 			Pulses,
@@ -388,9 +393,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to init components")
 	}
-
-	// this should be done after Init due to inject
-	PulseManager.AddDispatcher(Requester.FlowDispatcher)
 
 	comps.startWatermill(ctx, wmLogger, subscriber, Sender, NetworkService.SendMessageHandler, FlowDispatcher.Process, Requester.FlowDispatcher.Process)
 

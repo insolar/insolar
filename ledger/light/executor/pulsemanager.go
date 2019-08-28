@@ -84,15 +84,6 @@ func NewPulseManager(
 	return pm
 }
 
-// AddDispatcher adds dispatchers to handling
-// that could be done only when Set is not happening
-func (m *PulseManager) AddDispatcher(d ...dispatcher.Dispatcher) {
-	m.setLock.Lock()
-	defer m.setLock.Unlock()
-
-	m.dispatchers = append(m.dispatchers, d...)
-}
-
 // Set set's new pulse and closes current jet drop.
 func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 	logger := inslogger.FromContext(ctx)

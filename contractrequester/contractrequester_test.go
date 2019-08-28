@@ -27,7 +27,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 
-	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/bus/meta"
@@ -53,12 +52,10 @@ func TestNew(t *testing.T) {
 	jetCoordinator := jet.NewCoordinatorMock(t)
 	pcs := platformpolicy.NewPlatformCryptographyScheme()
 
-	contractRequester, err := New()
-	require.NoError(t, err)
-
-	cm := &component.Manager{}
-	cm.Inject(sender, contractRequester, pulseAccessor, jetCoordinator, pcs)
-
+	_, err := New(sender,
+		pulseAccessor,
+		jetCoordinator,
+		pcs)
 	require.NoError(t, err)
 }
 
@@ -90,12 +87,11 @@ func TestContractRequester_SendRequest(t *testing.T) {
 
 	ref := gen.Reference()
 
-	cReq, err := New()
+	cReq, err := New(bus.NewSenderMock(t),
+		mockPulseAccessor(mc),
+		mockJetCoordinator(mc),
+		testutils.NewPlatformCryptographyScheme())
 	require.NoError(t, err)
-
-	cReq.PulseAccessor = mockPulseAccessor(mc)
-	cReq.JetCoordinator = mockJetCoordinator(mc)
-	cReq.PlatformCryptographyScheme = testutils.NewPlatformCryptographyScheme()
 
 	table := []struct {
 		name          string
@@ -179,15 +175,15 @@ func TestContractRequester_Call_Timeout(t *testing.T) {
 	mc := minimock.NewController(t)
 	defer mc.Finish()
 
-	cReq, err := New()
+	cReq, err := New(
+		bus.NewSenderMock(t),
+		mockPulseAccessor(mc),
+		jet.NewCoordinatorMock(t),
+		testutils.NewPlatformCryptographyScheme(),
+	)
 	require.NoError(t, err)
 
 	cReq.callTimeout = 1 * time.Nanosecond
-
-	cReq.PlatformCryptographyScheme = testutils.NewPlatformCryptographyScheme()
-
-	cReq.PulseAccessor = mockPulseAccessor(mc)
-	cReq.JetCoordinator = jet.NewCoordinatorMock(t)
 
 	ref := gen.Reference()
 	prototypeRef := gen.Reference()
@@ -242,7 +238,12 @@ func TestReceiveResult_UnwantedResult(t *testing.T) {
 	ctx, cancelFunc := context.WithTimeout(ctx, time.Second*10)
 	defer cancelFunc()
 
-	cReq, err := New()
+	cReq, err := New(
+		bus.NewSenderMock(t),
+		pulse.NewAccessorMock(t),
+		jet.NewCoordinatorMock(t),
+		testutils.NewPlatformCryptographyScheme(),
+	)
 	require.NoError(t, err)
 
 	mc := minimock.NewController(t)
@@ -282,7 +283,11 @@ func TestReceiveResult_WantedResult(t *testing.T) {
 	ctx, cancelFunc := context.WithTimeout(ctx, time.Second*10)
 	defer cancelFunc()
 
-	cReq, err := New()
+	cReq, err := New(
+		bus.NewSenderMock(t),
+		pulse.NewAccessorMock(t),
+		jet.NewCoordinatorMock(t),
+		testutils.NewPlatformCryptographyScheme())
 	require.NoError(t, err)
 
 	mc := minimock.NewController(t)
@@ -333,7 +338,10 @@ func TestReceiveResult_UnwantedResultWithError(t *testing.T) {
 	ctx, cancelFunc := context.WithTimeout(ctx, time.Second*10)
 	defer cancelFunc()
 
-	cReq, err := New()
+	cReq, err := New(bus.NewSenderMock(t),
+		pulse.NewAccessorMock(t),
+		jet.NewCoordinatorMock(t),
+		testutils.NewPlatformCryptographyScheme())
 	require.NoError(t, err)
 
 	mc := minimock.NewController(t)

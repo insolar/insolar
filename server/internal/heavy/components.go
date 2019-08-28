@@ -219,7 +219,12 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 	)
 	{
 		var err error
-		Requester, err = contractrequester.New()
+		Requester, err = contractrequester.New(
+			WmBus,
+			Pulses,
+			Coordinator,
+			CryptoScheme,
+		)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start ContractRequester")
 		}
@@ -290,7 +295,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 			return nil, errors.Wrap(err, "failed create backuper")
 		}
 
-		PulseManager = pulsemanager.NewPulseManager()
+		PulseManager = pulsemanager.NewPulseManager(Requester.FlowDispatcher)
 		PulseManager.NodeNet = NodeNetwork
 		PulseManager.NodeSetter = Nodes
 		PulseManager.Nodes = Nodes
@@ -401,9 +406,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to init components")
 	}
-
-	// this should be done after Init due to inject
-	PulseManager.AddDispatcher(Requester.FlowDispatcher)
 
 	if !genesisCfg.Skip {
 		if err := Genesis.Start(ctx); err != nil {

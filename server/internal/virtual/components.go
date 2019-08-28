@@ -151,7 +151,12 @@ func initComponents(
 	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner, publisher, b)
 	checkError(ctx, err, "failed to start LogicRunner")
 
-	contractRequester, err := contractrequester.New()
+	contractRequester, err := contractrequester.New(
+		b,
+		pulses,
+		jc,
+		pcs,
+	)
 	checkError(ctx, err, "failed to start ContractRequester")
 
 	artifactsClient := artifacts.NewClient(b)

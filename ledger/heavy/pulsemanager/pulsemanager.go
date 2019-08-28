@@ -54,20 +54,12 @@ type PulseManager struct {
 }
 
 // NewPulseManager creates PulseManager instance.
-func NewPulseManager() *PulseManager {
+func NewPulseManager(disp dispatcher.Dispatcher) *PulseManager {
 	pm := &PulseManager{
 		currentPulse: *insolar.GenesisPulse,
+		dispatcher:   disp,
 	}
 	return pm
-}
-
-// AddDispatcher adds dispatchers to handling
-// that could be done only when Set is not happening
-func (m *PulseManager) AddDispatcher(d dispatcher.Dispatcher) {
-	m.setLock.Lock()
-	defer m.setLock.Unlock()
-
-	m.dispatcher = d
 }
 
 // Set set's new pulse.
