@@ -25,6 +25,7 @@ import (
 
 	"github.com/insolar/insolar/insolar/bus/meta"
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/writecontroller"
 
 	"github.com/pkg/errors"
@@ -39,12 +40,13 @@ import (
 const InnerMsgTopic = "InnerMsg"
 
 type Dependencies struct {
+	ArtifactManager  artifacts.Client
 	Publisher        message.Publisher
 	StateStorage     StateStorage
 	ResultsMatcher   ResultMatcher
-	lr               *LogicRunner
 	Sender           bus.Sender
 	JetStorage       jet.Storage
+	JetCoordinator   jet.Coordinator
 	WriteAccessor    writecontroller.Accessor
 	OutgoingSender   OutgoingRequestSender
 	RequestsExecutor RequestsExecutor

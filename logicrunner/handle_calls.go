@@ -116,16 +116,13 @@ func (h *HandleCall) handleActual(
 	msg payload.CallMethod,
 	f flow.Flow,
 ) (insolar.Reply, error) {
-
-	lr := h.dep.lr
-
 	var pcs = platformpolicy.NewPlatformCryptographyScheme() // TODO: create message factory
 	target := record.CalculateRequestAffinityRef(msg.Request, msg.PulseNumber, pcs)
 
 	procCheckRole := CheckOurRole{
 		target:         *target,
 		role:           insolar.DynamicRoleVirtualExecutor,
-		jetCoordinator: h.dep.lr.JetCoordinator,
+		jetCoordinator: h.dep.JetCoordinator,
 		pulseNumber:    flow.Pulse(ctx),
 	}
 
@@ -207,7 +204,7 @@ func (h *HandleCall) handleActual(
 			err:             errors.New("loop detected"),
 			requestRef:      *requestRef,
 			objectRef:       *objRef,
-			artifactManager: lr.ArtifactManager,
+			artifactManager: h.dep.ArtifactManager,
 		}
 		err := f.Procedure(ctx, proc, false)
 		if err != nil {
