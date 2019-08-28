@@ -21,15 +21,16 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/insolar/insolar/insolar/bus"
-	"github.com/insolar/insolar/insolar/jet"
-	"github.com/insolar/insolar/insolar/payload"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/node"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/pulse"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.JetFetcher -o ./ -s _mock.go -g
@@ -96,25 +97,25 @@ func NewFetcher(
 // 4. Update local tree.
 // 5. Exit the queue.
 func (tu *fetcher) Fetch(
-	ctx context.Context, target insolar.ID, pulse insolar.PulseNumber,
+	ctx context.Context, target insolar.ID, pulseNumber insolar.PulseNumber,
 ) (*insolar.ID, error) {
 	ctx, span := instracer.StartSpan(ctx, "jet_fetcher.Fetch")
 	defer span.End()
 
 	// Special case for genesis pulse. No one was executor at that time, so anyone can fetch data from it.
-	if pulse <= insolar.FirstPulseNumber {
+	if pulseNumber <= pulse.MinTimePulse {
 		return (*insolar.ID)(insolar.NewJetID(0, nil)), nil
 	}
 
 	// Look in the local tree. Return if the actual jet found.
-	jetID, actual := tu.JetStorage.ForID(ctx, pulse, target)
+	jetID, actual := tu.JetStorage.ForID(ctx, pulseNumber, target)
 	if actual {
 		return (*insolar.ID)(&jetID), nil
 	}
 
 	// Not actual in our tree, asking neighbors for jet.
 	span.Annotate(nil, "tree in DB is not actual")
-	key := seqKey{pulse, jetID}
+	key := seqKey{pulseNumber, jetID}
 
 	// Indicates that this routine is the first in the queue and should do the fetching.
 	// Other routines wait in the queue.
@@ -137,7 +138,7 @@ func (tu *fetcher) Fetch(
 
 		// Tree was updated in another thread, rechecking.
 		span.Annotate(nil, "somebody else updated actuality")
-		return tu.Fetch(ctx, target, pulse)
+		return tu.Fetch(ctx, target, pulseNumber)
 	}
 
 	defer func() {
@@ -153,13 +154,13 @@ func (tu *fetcher) Fetch(
 	}()
 
 	// Fetching jet via network.
-	resJet, err := tu.fetch(ctx, target, pulse)
+	resJet, err := tu.fetch(ctx, target, pulseNumber)
 	if err != nil {
 		return nil, err
 	}
 
 	// Updating local tree.
-	err = tu.JetStorage.Update(ctx, pulse, true, insolar.JetID(*resJet))
+	err = tu.JetStorage.Update(ctx, pulseNumber, true, insolar.JetID(*resJet))
 	if err != nil {
 		return nil, err
 	}

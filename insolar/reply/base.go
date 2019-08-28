@@ -111,7 +111,7 @@ func Deserialize(buff io.Reader) (insolar.Reply, error) {
 func ToBytes(rep insolar.Reply) []byte {
 	repBuff, err := Serialize(rep)
 	if err != nil {
-		panic("failed to serialize reply")
+		panic("failed to serialize reply: " + err.Error())
 	}
 	return repBuff.(*bytes.Buffer).Bytes()
 }

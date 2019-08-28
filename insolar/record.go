@@ -17,15 +17,10 @@
 package insolar
 
 import (
-	"bytes"
 	"encoding/binary"
-	"encoding/json"
-	"fmt"
-	"strconv"
-	"strings"
 
-	base58 "github.com/jbenet/go-base58"
-	"github.com/pkg/errors"
+	"github.com/insolar/insolar/longbits"
+	"github.com/insolar/insolar/reference"
 )
 
 const (
@@ -41,94 +36,40 @@ const (
 	RecordRefIDSeparator = "."
 )
 
-// ID is a unified record ID.
-type ID [RecordIDSize]byte
-
-// NewID generates ID byte representation.
-func NewID(pulse PulseNumber, hash []byte) *ID {
-	var id ID
-	copy(id[:PulseNumberSize], pulse.Bytes())
-	copy(id[RecordHashOffset:], hash)
-	return &id
-}
-
-// NewIDFromBytes converts byte slice to ID.
-func NewIDFromBytes(raw []byte) *ID {
-	id := ID{}
-	copy(id[:], raw)
-
-	return &id
-}
-
-// NewIDFromBase58 deserializes ID from base58 encoded string.
-func NewIDFromBase58(str string) (*ID, error) {
-	decoded := base58.Decode(str)
-	if len(decoded) != RecordIDSize {
-		return nil, errors.New("bad ID size")
-	}
-	var id ID
-	copy(id[:], decoded)
-	return &id, nil
-}
-
-// String implements stringer on ID and returns base58 encoded value
-func (id ID) String() string {
-	return base58.Encode(id[:])
-}
-
-// Bytes returns byte slice of ID.
-func (id ID) Bytes() []byte {
-	return id[:]
-}
-
-// Pulse returns a copy of Pulse part of ID.
-func (id *ID) Pulse() PulseNumber {
-	pulse := binary.BigEndian.Uint32(id[:PulseNumberSize])
-	return PulseNumber(pulse)
-}
-
-// Hash returns a copy of Hash part of ID.
-func (id *ID) Hash() []byte {
-	recHash := make([]byte, RecordHashSize)
-	copy(recHash, id[RecordHashOffset:])
-	return recHash
-}
-
-// Equal checks if reference points to the same record.
-func (id *ID) Equal(other ID) bool {
-	if id == nil {
-		return false
-	}
-	return *id == other
-}
-
-// IsEmpty - check for void
-func (id ID) IsEmpty() bool {
-	return id.Equal(ID{})
-}
-
-// NotEmpty - check for void
-func (id ID) NotEmpty() bool {
-	return !id.IsEmpty()
-}
-
-// MarshalJSON serializes ID into JSONFormat.
-func (id *ID) MarshalJSON() ([]byte, error) {
-	if id == nil {
-		return json.Marshal(nil)
-	}
-	return json.Marshal(id.String())
-}
-
-// Reference is a unified record reference.
-type Reference [RecordRefSize]byte
+type (
+	// ID is a unified record ID
+	ID = reference.Local
+	// Reference is a unified record reference
+	Reference = reference.Global
+)
 
 // NewReference returns Reference composed from domain and record.
 func NewReference(id ID) *Reference {
-	var ref Reference
-	copy(ref[:RecordIDSize], id[:])
-	// ref.setDomain(id)
-	return &ref
+	global := reference.NewSelfRef(id)
+	return &global
+}
+
+func NewGlobalReference(local ID, base ID) *Reference {
+	global := reference.NewGlobal(base, local)
+	return &global
+}
+
+// NewReferenceFromBase58 deserializes reference from base58 encoded string
+func NewReferenceFromBase58(input string) (*Reference, error) {
+	global, err := reference.DefaultDecoder().Decode(input)
+	if err != nil {
+		return nil, err
+	}
+	return &global, nil
+}
+
+// NewReferenceFromBytes : After CBOR Marshal/Unmarshal Ref can be converted to byte slice, this converts it back
+func NewReferenceFromBytes(byteReference []byte) *Reference {
+	g := reference.Global{}
+	if err := g.Unmarshal(byteReference); err != nil {
+		return nil
+	}
+	return &g
 }
 
 // NewEmptyReference returns empty Reference.
@@ -136,166 +77,33 @@ func NewEmptyReference() *Reference {
 	return &Reference{}
 }
 
-// NewReferenceFromBytes : After CBOR Marshal/Unmarshal Ref can be converted to byte slice, this converts it back
-func NewReferenceFromBytes(from []byte) *Reference {
-	var ref Reference
-	copy(ref[:], from)
-	return &ref
+// NewID generates ID byte representation
+func NewID(p PulseNumber, hash []byte) *ID {
+	hashB := longbits.Bits224{}
+	copy(hashB[:], hash)
+
+	local := reference.NewLocal(p, 0, hashB)
+	return &local
 }
 
-// NewReferenceFromBase58 deserializes reference from base58 encoded string.
-func NewReferenceFromBase58(str string) (*Reference, error) {
-	parts := strings.SplitN(str, RecordRefIDSeparator, 2)
-	if len(parts) < 2 {
-		return nil, errors.New("bad reference format")
-	}
-	recordID, err := NewIDFromBase58(parts[0])
+// NewIDFromBase58 deserializes ID from base58 encoded string
+func NewIDFromBase58(input string) (*ID, error) {
+	global, err := reference.DefaultDecoder().Decode(input)
 	if err != nil {
-		return nil, errors.Wrap(err, "bad record part")
+		return nil, err
 	}
-	_, err = NewIDFromBase58(parts[1])
-	if err != nil {
-		return nil, errors.Wrap(err, "bad domain part")
+	return global.GetLocal(), nil
+}
+
+// NewIDFromBytes converts byte slice to ID
+func NewIDFromBytes(hash []byte) *ID {
+	if hash == nil {
+		return NewEmptyID()
 	}
-	return NewReference(*recordID), nil
+	pn := PulseNumber(binary.BigEndian.Uint32(hash[:reference.LocalBinaryPulseAndScopeSize]))
+	return NewID(pn, hash[reference.LocalBinaryPulseAndScopeSize:])
 }
 
-// Domain returns domain ID part of reference.
-func (ref Reference) Domain() *ID {
-	var id ID
-	copy(id[:], ref[RecordIDSize:])
-	return &id
-}
-
-// Record returns record's ID.
-func (ref *Reference) Record() *ID {
-	if ref == nil {
-		return nil
-	}
-	var id ID
-	copy(id[:], ref[:RecordIDSize])
-	return &id
-}
-
-// String outputs base58 Reference representation.
-func (ref Reference) String() string {
-	return ref.Record().String() + RecordRefIDSeparator + ref.Domain().String()
-}
-
-// Bytes returns byte slice of Reference.
-func (ref Reference) Bytes() []byte {
-	return ref[:]
-}
-
-// Equal checks if reference points to the same record.
-func (ref Reference) Equal(other Reference) bool {
-	return ref == other
-}
-
-// IsEmpty - check for void
-func (ref Reference) IsEmpty() bool {
-	return ref.Equal(*NewEmptyReference())
-}
-
-// Compare compares two record references
-func (ref Reference) Compare(other Reference) int {
-	return bytes.Compare(ref.Bytes(), other.Bytes())
-}
-
-// MarshalJSON serializes reference into JSONFormat.
-func (ref *Reference) MarshalJSON() ([]byte, error) {
-	if ref == nil {
-		return json.Marshal(nil)
-	}
-	return json.Marshal(ref.String())
-}
-
-func (ref Reference) Marshal() ([]byte, error) {
-	return ref[:], nil
-}
-
-func (ref *Reference) MarshalTo(data []byte) (int, error) {
-	copy(data, ref[:])
-	return RecordRefSize, nil
-}
-
-func (ref *Reference) Unmarshal(data []byte) error {
-	if len(data) != RecordRefSize {
-		return errors.New("Not enough bytes to unpack Reference")
-	}
-	copy(ref[:], data)
-	return nil
-}
-
-func (ref *Reference) UnmarshalJSON(data []byte) error {
-	return json.Unmarshal(data, ref)
-}
-
-func (ref *Reference) Size() int { return RecordRefSize }
-
-func (id ID) Marshal() ([]byte, error) { return id[:], nil }
-
-func (id *ID) MarshalTo(data []byte) (int, error) {
-	copy(data, id[:])
-	return RecordIDSize, nil
-}
-
-func (id *ID) Unmarshal(data []byte) error {
-	if len(data) != RecordIDSize {
-		return errors.New("Not enough bytes to unpack ID")
-	}
-	copy(id[:], data)
-	return nil
-}
-
-func (id *ID) UnmarshalJSON(data []byte) error {
-	return json.Unmarshal(data, id)
-}
-
-func (id *ID) Size() int { return RecordIDSize }
-
-func (id ID) Compare(other ID) int {
-	return bytes.Compare(id.Bytes(), other.Bytes())
-}
-
-// DebugString prints ID in human readable form.
-func (id *ID) DebugString() string {
-	if id == nil {
-		return "<nil>"
-	}
-
-	// TODO: remove this branch after finish transition to JetID
-	pulse := NewPulseNumber(id[:PulseNumberSize])
-	if pulse == PulseNumberJet {
-		depth := int(id[PulseNumberSize])
-		if depth == 0 {
-			return "[JET 0 -]"
-		}
-
-		prefix := id[PulseNumberSize+1:]
-		var res strings.Builder
-		res.WriteString("[JET ")
-		res.WriteString(strconv.Itoa(depth))
-		res.WriteString(" ")
-
-		for _, b := range prefix {
-			for j := 7; j >= 0; j-- {
-				if 0 == (b >> uint(j) & 0x01) {
-					res.WriteString("0")
-				} else {
-					res.WriteString("1")
-				}
-
-				depth--
-				if depth == 0 {
-					res.WriteString("]")
-					return res.String()
-				}
-			}
-		}
-
-		return fmt.Sprintf("[JET: <wrong format> %d %b]", depth, prefix)
-	}
-
-	return fmt.Sprintf("[%d | %s]", id.Pulse(), id.String())
+func NewEmptyID() *ID {
+	return &ID{}
 }

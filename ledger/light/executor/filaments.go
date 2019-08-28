@@ -211,13 +211,13 @@ func (c *FilamentCalculatorDefault) OpenedRequests(ctx context.Context, pulse in
 		switch r := virtual.(type) {
 		// result should always go first, before initial request
 		case *record.Result:
-			hasResult[*r.Request.Record()] = struct{}{}
+			hasResult[*r.Request.GetLocal()] = struct{}{}
 
 		case *record.IncomingRequest:
 			opened = append(opened, rec)
 
 		case *record.OutgoingRequest:
-			_, reasonClosed := hasResult[*r.Reason.Record()]
+			_, reasonClosed := hasResult[*r.Reason.GetLocal()]
 			isReadyDetached := r.IsDetached() && reasonClosed
 			if pendingOnly && !isReadyDetached {
 				break
@@ -243,7 +243,7 @@ func (c *FilamentCalculatorDefault) ResultDuplicate(
 	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
 		"object_id":  objectID.DebugString(),
 		"result_id":  resultID.DebugString(),
-		"request_id": result.Request.Record().DebugString(),
+		"request_id": result.Request.GetLocal().DebugString(),
 	})
 
 	logger.Debug("started to search for duplicated results")
@@ -269,7 +269,7 @@ func (c *FilamentCalculatorDefault) ResultDuplicate(
 		cache,
 		objectID,
 		*idx.Lifeline.LatestRequest,
-		result.Request.Record().Pulse(),
+		result.Request.GetLocal().Pulse(),
 		c.jetFetcher,
 		c.coordinator,
 		c.sender,
@@ -289,14 +289,14 @@ func (c *FilamentCalculatorDefault) ResultDuplicate(
 
 		// Request found, return nil. It means we didn't find the result since result goes before request on
 		// iteration.
-		if bytes.Equal(rec.RecordID.Hash(), result.Request.Record().Hash()) {
+		if bytes.Equal(rec.RecordID.Hash(), result.Request.GetLocal().Hash()) {
 			return nil, nil
 		}
 	}
 
 	return nil, fmt.Errorf(
 		"request %s for result %s is not found",
-		result.Request.Record().DebugString(),
+		result.Request.GetLocal().DebugString(),
 		resultID.DebugString(),
 	)
 }
@@ -313,7 +313,7 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 	defer logger.Debug("finished searching for duplicated requests")
 
 	reasonRef := request.ReasonRef()
-	reasonID := *reasonRef.Record()
+	reasonID := *reasonRef.GetLocal()
 	var lifeline record.Lifeline
 	if request.IsCreationRequest() {
 		l, err := c.findLifeline(ctx, reasonID.Pulse(), requestID)
@@ -367,7 +367,7 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 
 		virtual := record.Unwrap(&rec.Record.Virtual)
 		if r, ok := virtual.(*record.Result); ok {
-			if bytes.Equal(r.Request.Record().Hash(), requestID.Hash()) {
+			if bytes.Equal(r.Request.GetLocal().Hash(), requestID.Hash()) {
 				foundResult = &rec
 				logger.Debugf("found result %s", rec.RecordID.DebugString())
 			}
@@ -438,7 +438,7 @@ func (c *FilamentCalculatorDefault) RequestInfo(
 		virtual := record.Unwrap(&rec.Record.Virtual)
 		if r, ok := virtual.(*record.Result); ok {
 
-			if *r.Request.Record() == requestID {
+			if *r.Request.GetLocal() == requestID {
 				foundResult = &rec
 				logger.Debugf("found result %s", rec.RecordID.DebugString())
 			}

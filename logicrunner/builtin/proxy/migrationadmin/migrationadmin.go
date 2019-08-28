@@ -33,7 +33,7 @@ type VestingParams struct {
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = insolar.NewReferenceFromBase58("111A8DhUhw5pzyvzVg1qXomNEHXs7kDtJRQGSD1PUpc.11111111111111111111111111111111")
+var PrototypeReference, _ = insolar.NewReferenceFromBase58("0111A8DhUhw5pzyvzVg1qXomNEHXs7kDtJRQGSD1PUpc")
 
 // MigrationAdmin holds proxy type
 type MigrationAdmin struct {

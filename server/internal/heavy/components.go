@@ -22,29 +22,13 @@ import (
 	"net"
 	"path/filepath"
 
-	"github.com/dgraph-io/badger"
-
-	"github.com/insolar/insolar/network"
-
-	"google.golang.org/grpc"
-
-	"github.com/insolar/insolar/ledger/heavy/exporter"
-
 	"github.com/ThreeDotsLabs/watermill"
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
-	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
-
-	"github.com/insolar/insolar/ledger/heavy/executor"
-	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/server/internal"
-
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
-
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/artifact"
-	"github.com/insolar/insolar/ledger/genesis"
-
+	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
+	"github.com/dgraph-io/badger"
 	"github.com/pkg/errors"
+	"google.golang.org/grpc"
 
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/certificate"
@@ -57,19 +41,28 @@ import (
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/jetcoordinator"
 	"github.com/insolar/insolar/insolar/node"
-	"github.com/insolar/insolar/insolar/pulse"
+	insolarPulse "github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/store"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/keystore"
+	"github.com/insolar/insolar/ledger/artifact"
 	"github.com/insolar/insolar/ledger/drop"
+	"github.com/insolar/insolar/ledger/genesis"
+	"github.com/insolar/insolar/ledger/heavy/executor"
+	"github.com/insolar/insolar/ledger/heavy/exporter"
 	"github.com/insolar/insolar/ledger/heavy/handler"
 	"github.com/insolar/insolar/ledger/heavy/pulsemanager"
 	"github.com/insolar/insolar/ledger/object"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/metrics"
+	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/insolar/insolar/network/termination"
 	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/pulse"
+	"github.com/insolar/insolar/server/internal"
 )
 
 type components struct {
@@ -170,7 +163,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 	// Storage.
 	var (
 		Coordinator jet.Coordinator
-		Pulses      *pulse.DB
+		Pulses      *insolarPulse.DB
 		Nodes       *node.Storage
 		DB          *store.BadgerDB
 		Jets        *jet.DBStore
@@ -186,7 +179,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 			panic(errors.Wrap(err, "failed to initialize DB"))
 		}
 		Nodes = node.NewStorage()
-		Pulses = pulse.NewDB(DB)
+		Pulses = insolarPulse.NewDB(DB)
 		Jets = jet.NewDBStore(DB)
 
 		c := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit)
@@ -285,7 +278,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		c.rollback = executor.NewDBRollback(JetKeeper, drops, Records, indexes, Jets, Pulses, JetKeeper)
 		c.stateKeeper = executor.NewInitialStateKeeper(JetKeeper, Jets, Coordinator, indexes, drops)
 
-		sp := pulse.NewStartPulse()
+		sp := insolarPulse.NewStartPulse()
 
 		backupMaker, err := executor.NewBackupMaker(ctx, DB, cfg.Ledger.Backup, JetKeeper.TopSyncPulse())
 		if err != nil {
@@ -329,7 +322,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		Handler = h
 
 		artifactManager := &artifact.Scope{
-			PulseNumber:    insolar.FirstPulseNumber,
+			PulseNumber:    pulse.MinTimePulse,
 			PCS:            CryptoScheme,
 			RecordAccessor: Records,
 			RecordModifier: Records,

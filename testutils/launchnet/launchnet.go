@@ -74,6 +74,8 @@ func Run(cb func() int) int {
 		sig := <-c
 		fmt.Printf("Got %s signal. Aborting...\n", sig)
 		teardown()
+
+		os.Exit(2)
 	}()
 
 	pulseWatcher, config, err := pulseWatcherPath()

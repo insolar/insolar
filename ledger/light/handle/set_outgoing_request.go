@@ -58,7 +58,7 @@ func (s *SetOutgoingRequest) Present(ctx context.Context, f flow.Flow) error {
 		return fmt.Errorf("wrong request type: %T", rec)
 	}
 
-	objectID := *request.AffinityRef().Record()
+	objectID := *request.AffinityRef().GetLocal()
 	if objectID.IsEmpty() {
 		return errors.New("object is nil")
 	}

@@ -21,6 +21,7 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/pulse"
 )
 
 type mucount struct {
@@ -53,7 +54,7 @@ func NewIndexLocker() IndexLocker {
 // If mutex does not exist, it will be created in concurrent safe fashion.
 func (l *idLocker) Lock(id insolar.ID) {
 	// Reset pulse. It should not be considered when locking.
-	normalizedID := *insolar.NewID(0, id.Hash())
+	normalizedID := *insolar.NewID(pulse.LocalRelative, id.Hash())
 
 	l.mu.Lock()
 	mc, ok := l.muxs[normalizedID]
@@ -70,7 +71,7 @@ func (l *idLocker) Lock(id insolar.ID) {
 // Unlock unlocks mutex belonged to record ID.
 func (l *idLocker) Unlock(id insolar.ID) {
 	// Reset pulse. It should not be considered when locking.
-	zeroID := *insolar.NewID(0, id.Hash())
+	zeroID := *insolar.NewID(pulse.LocalRelative, id.Hash())
 
 	l.mu.Lock()
 	defer l.mu.Unlock()
