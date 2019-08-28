@@ -392,7 +392,7 @@ func (m *Member) memberMigrationCreate(key string) (*MigrationCreateResponse, er
 	if err != nil {
 		return nil, fmt.Errorf("failed to get migration address: %s", err.Error())
 	}
-	created, err := m.contractCreateMember(key)
+	created, err := m.contractCreateMember(key, migrationAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -406,18 +406,18 @@ func (m *Member) memberMigrationCreate(key string) (*MigrationCreateResponse, er
 }
 
 func (m *Member) contractCreateMemberCall(key string) (*CreateResponse, error) {
-	created, err := m.contractCreateMember(key)
+	created, err := m.contractCreateMember(key, "")
 	if err != nil {
 		return nil, err
 	}
 	return &CreateResponse{Reference: created.Reference.String()}, nil
 }
 
-func (m *Member) contractCreateMember(key string) (*member.Member, error) {
+func (m *Member) contractCreateMember(key string, migrationnAddress string) (*member.Member, error) {
 
 	rootDomain := rootdomain.GetObject(m.RootDomain)
 
-	created, err := m.createMember("", key, "")
+	created, err := m.createMember("", key, migrationnAddress)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create member: %s", err.Error())
 	}
