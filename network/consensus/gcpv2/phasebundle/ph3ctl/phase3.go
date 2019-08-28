@@ -53,7 +53,6 @@ package ph3ctl
 import (
 	"context"
 	"fmt"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"runtime"
 	"sync"
 	"time"
