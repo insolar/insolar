@@ -18,10 +18,13 @@ package thread
 
 import (
 	"context"
+	"io"
 	"testing"
 	"time"
 
 	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -57,12 +60,113 @@ func TestThread_Procedure_CancelledBefore(t *testing.T) {
 	require.Equal(t, err, flow.ErrCancelled)
 }
 
-func TestThread_Procedure_NilProcedureError(t *testing.T) {
+type loggerMock struct {
+	fatalChecker func()
+}
+
+func (l *loggerMock) WithLevel(string) (insolar.Logger, error) {
+	panic("implement me")
+}
+
+func (l *loggerMock) WithLevelNumber(level insolar.LogLevel) (insolar.Logger, error) {
+	panic("implement me")
+}
+
+func (l *loggerMock) WithFormat(format insolar.LogFormat) (insolar.Logger, error) {
+	panic("implement me")
+}
+
+func (l *loggerMock) WithCaller(flag bool) insolar.Logger {
+	panic("implement me")
+}
+
+func (l *loggerMock) WithSkipFrameCount(delta int) insolar.Logger {
+	panic("implement me")
+}
+
+func (l *loggerMock) WithFuncName(flag bool) insolar.Logger {
+	panic("implement me")
+}
+
+func (l *loggerMock) Debug(...interface{}) {
+	panic("implement me")
+}
+
+func (l *loggerMock) Debugf(string, ...interface{}) {
+	panic("implement me")
+}
+
+func (l *loggerMock) Info(...interface{}) {
+	panic("implement me")
+}
+
+func (l *loggerMock) Infof(string, ...interface{}) {
+	panic("implement me")
+}
+
+func (l *loggerMock) Warn(...interface{}) {
+	panic("implement me")
+}
+
+func (l *loggerMock) Warnf(string, ...interface{}) {
+	panic("implement me")
+}
+
+func (l *loggerMock) Error(...interface{}) {
+	panic("implement me")
+}
+
+func (l *loggerMock) Errorf(string, ...interface{}) {
+	panic("implement me")
+}
+
+func (l *loggerMock) Fatal(...interface{}) {
+	l.fatalChecker()
+}
+
+func (l *loggerMock) Fatalf(string, ...interface{}) {
+	panic("implement me")
+}
+
+func (l *loggerMock) Panic(...interface{}) {
+	panic("implement me")
+}
+
+func (l *loggerMock) Panicf(string, ...interface{}) {
+	panic("implement me")
+}
+
+func (l *loggerMock) WithOutput(w io.Writer) insolar.Logger {
+	panic("implement me")
+}
+
+func (l *loggerMock) WithFields(map[string]interface{}) insolar.Logger {
+	panic("implement me")
+}
+
+func (l *loggerMock) WithField(string, interface{}) insolar.Logger {
+	panic("implement me")
+}
+
+func (l *loggerMock) Is(level insolar.LogLevel) bool {
+	panic("implement me")
+}
+
+func TestThread_Procedure_LoggerFailProcedureError(t *testing.T) {
 	t.Parallel()
 	thread := Thread{}
-	require.Panics(t, func() {
-		_ = thread.Procedure(context.Background(), nil, true)
-	})
+	isCalled := false
+
+	logger := &loggerMock{
+		fatalChecker: func() {
+			isCalled = true
+		},
+	}
+	ctx := context.TODO()
+	ctx = inslogger.SetLogger(ctx, logger)
+	_ = thread.Procedure(ctx, nil, true)
+
+	require.True(t, isCalled)
 }
 
 func TestThread_Procedure_CancelledWhenProcedureWorks(t *testing.T) {

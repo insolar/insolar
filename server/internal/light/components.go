@@ -38,7 +38,6 @@ import (
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
-	"github.com/insolar/insolar/insolar/delegationtoken"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/jetcoordinator"
 	"github.com/insolar/insolar/insolar/node"
@@ -171,11 +170,9 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 
 	// Communication.
 	var (
-		Tokens insolar.DelegationTokenFactory
 		Sender *bus.Bus
 	)
 	{
-		Tokens = delegationtoken.NewDelegationTokenFactory()
 		Sender = bus.NewBus(cfg.Bus, publisher, Pulses, Coordinator, CryptoScheme)
 	}
 
@@ -371,7 +368,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		PulseManager,
 		metricsHandler,
 		Requester,
-		Tokens,
 		ArtifactsClient,
 		APIWrapper,
 		KeyProcessor,

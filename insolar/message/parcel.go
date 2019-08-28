@@ -27,7 +27,7 @@ import (
 
 // ParcelFactory is used for creating parcels
 type ParcelFactory interface {
-	Create(context.Context, insolar.Message, insolar.Reference, insolar.DelegationToken, insolar.Pulse) (insolar.Parcel, error)
+	Create(context.Context, insolar.Message, insolar.Reference, insolar.Pulse) (insolar.Parcel, error)
 	Validate(crypto.PublicKey, insolar.Parcel) error
 }
 
@@ -43,7 +43,6 @@ type Parcel struct {
 	Sender      insolar.Reference
 	Msg         insolar.Message
 	Signature   []byte
-	Token       insolar.DelegationToken
 	PulseNumber insolar.PulseNumber
 	ServiceData ServiceData
 }
@@ -84,10 +83,6 @@ func (p *Parcel) Context(ctx context.Context) context.Context {
 	return instracer.WithParentSpan(ctx, parentSpan)
 }
 
-func (p *Parcel) DelegationToken() insolar.DelegationToken {
-	return p.Token
-}
-
 // Type returns message type.
 func (p *Parcel) Type() insolar.MessageType {
 	return p.Msg.Type()
@@ -108,8 +103,4 @@ func (p *Parcel) GetSender() insolar.Reference {
 
 func (p *Parcel) SetSender(sender insolar.Reference) {
 	p.Sender = sender
-}
-
-func (p *Parcel) AddDelegationToken(token insolar.DelegationToken) {
-	p.Token = token
 }

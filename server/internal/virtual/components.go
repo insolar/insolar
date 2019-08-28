@@ -32,7 +32,6 @@ import (
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
-	"github.com/insolar/insolar/insolar/delegationtoken"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/jetcoordinator"
 	"github.com/insolar/insolar/insolar/node"
@@ -136,8 +135,6 @@ func initComponents(
 
 	terminationHandler := termination.NewHandler(nw)
 
-	delegationTokenFactory := delegationtoken.NewDelegationTokenFactory()
-
 	metricsHandler, err := metrics.NewMetrics(ctx, cfg.Metrics, metrics.GetInsolarRegistry("virtual"), "virtual")
 	checkError(ctx, err, "failed to start Metrics")
 
@@ -216,7 +213,6 @@ func initComponents(
 		pulses,
 		jet.NewStore(),
 		node.NewStorage(),
-		delegationTokenFactory,
 	}
 	components = append(components, []interface{}{
 		metricsHandler,

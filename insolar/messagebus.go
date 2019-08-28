@@ -114,8 +114,6 @@ type Parcel interface {
 	Context(context.Context) context.Context
 
 	Pulse() PulseNumber
-
-	DelegationToken() DelegationToken
 }
 
 // Reply for an `Message`
@@ -130,14 +128,11 @@ type RedirectReply interface {
 	Redirected(genericMsg Message) Message
 	// GetReceiver returns node reference to send message to.
 	GetReceiver() *Reference
-	// GetToken returns delegation token.
-	GetToken() DelegationToken
 }
 
 // MessageSendOptions represents options for message sending.
 type MessageSendOptions struct {
 	Receiver *Reference
-	Token    DelegationToken
 }
 
 // Safe returns original options, falling back on defaults if nil.
@@ -160,15 +155,4 @@ const (
 
 	// TypeGenesisRequest used for bootstrap object generation.
 	TypeGenesisRequest
-)
-
-// DelegationTokenType is an enum type of delegation token
-type DelegationTokenType byte
-
-//go:generate stringer -type=DelegationTokenType
-const (
-	// DTTypePendingExecution allows to continue method calls
-	DTTypePendingExecution DelegationTokenType = iota + 1
-	DTTypeGetObjectRedirect
-	DTTypeGetCodeRedirect
 )

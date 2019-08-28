@@ -40,12 +40,6 @@ type ParcelMock struct {
 	beforeDefaultTargetCounter uint64
 	DefaultTargetMock          mParcelMockDefaultTarget
 
-	funcDelegationToken          func() (d1 mm_insolar.DelegationToken)
-	inspectFuncDelegationToken   func()
-	afterDelegationTokenCounter  uint64
-	beforeDelegationTokenCounter uint64
-	DelegationTokenMock          mParcelMockDelegationToken
-
 	funcGetCaller          func() (rp1 *mm_insolar.Reference)
 	inspectFuncGetCaller   func()
 	afterGetCallerCounter  uint64
@@ -104,8 +98,6 @@ func NewParcelMock(t minimock.Tester) *ParcelMock {
 	m.DefaultRoleMock = mParcelMockDefaultRole{mock: m}
 
 	m.DefaultTargetMock = mParcelMockDefaultTarget{mock: m}
-
-	m.DelegationTokenMock = mParcelMockDelegationToken{mock: m}
 
 	m.GetCallerMock = mParcelMockGetCaller{mock: m}
 
@@ -767,149 +759,6 @@ func (m *ParcelMock) MinimockDefaultTargetInspect() {
 	// if func was set then invocations count should be greater than zero
 	if m.funcDefaultTarget != nil && mm_atomic.LoadUint64(&m.afterDefaultTargetCounter) < 1 {
 		m.t.Error("Expected call to ParcelMock.DefaultTarget")
-	}
-}
-
-type mParcelMockDelegationToken struct {
-	mock               *ParcelMock
-	defaultExpectation *ParcelMockDelegationTokenExpectation
-	expectations       []*ParcelMockDelegationTokenExpectation
-}
-
-// ParcelMockDelegationTokenExpectation specifies expectation struct of the Parcel.DelegationToken
-type ParcelMockDelegationTokenExpectation struct {
-	mock *ParcelMock
-
-	results *ParcelMockDelegationTokenResults
-	Counter uint64
-}
-
-// ParcelMockDelegationTokenResults contains results of the Parcel.DelegationToken
-type ParcelMockDelegationTokenResults struct {
-	d1 mm_insolar.DelegationToken
-}
-
-// Expect sets up expected params for Parcel.DelegationToken
-func (mmDelegationToken *mParcelMockDelegationToken) Expect() *mParcelMockDelegationToken {
-	if mmDelegationToken.mock.funcDelegationToken != nil {
-		mmDelegationToken.mock.t.Fatalf("ParcelMock.DelegationToken mock is already set by Set")
-	}
-
-	if mmDelegationToken.defaultExpectation == nil {
-		mmDelegationToken.defaultExpectation = &ParcelMockDelegationTokenExpectation{}
-	}
-
-	return mmDelegationToken
-}
-
-// Inspect accepts an inspector function that has same arguments as the Parcel.DelegationToken
-func (mmDelegationToken *mParcelMockDelegationToken) Inspect(f func()) *mParcelMockDelegationToken {
-	if mmDelegationToken.mock.inspectFuncDelegationToken != nil {
-		mmDelegationToken.mock.t.Fatalf("Inspect function is already set for ParcelMock.DelegationToken")
-	}
-
-	mmDelegationToken.mock.inspectFuncDelegationToken = f
-
-	return mmDelegationToken
-}
-
-// Return sets up results that will be returned by Parcel.DelegationToken
-func (mmDelegationToken *mParcelMockDelegationToken) Return(d1 mm_insolar.DelegationToken) *ParcelMock {
-	if mmDelegationToken.mock.funcDelegationToken != nil {
-		mmDelegationToken.mock.t.Fatalf("ParcelMock.DelegationToken mock is already set by Set")
-	}
-
-	if mmDelegationToken.defaultExpectation == nil {
-		mmDelegationToken.defaultExpectation = &ParcelMockDelegationTokenExpectation{mock: mmDelegationToken.mock}
-	}
-	mmDelegationToken.defaultExpectation.results = &ParcelMockDelegationTokenResults{d1}
-	return mmDelegationToken.mock
-}
-
-//Set uses given function f to mock the Parcel.DelegationToken method
-func (mmDelegationToken *mParcelMockDelegationToken) Set(f func() (d1 mm_insolar.DelegationToken)) *ParcelMock {
-	if mmDelegationToken.defaultExpectation != nil {
-		mmDelegationToken.mock.t.Fatalf("Default expectation is already set for the Parcel.DelegationToken method")
-	}
-
-	if len(mmDelegationToken.expectations) > 0 {
-		mmDelegationToken.mock.t.Fatalf("Some expectations are already set for the Parcel.DelegationToken method")
-	}
-
-	mmDelegationToken.mock.funcDelegationToken = f
-	return mmDelegationToken.mock
-}
-
-// DelegationToken implements insolar.Parcel
-func (mmDelegationToken *ParcelMock) DelegationToken() (d1 mm_insolar.DelegationToken) {
-	mm_atomic.AddUint64(&mmDelegationToken.beforeDelegationTokenCounter, 1)
-	defer mm_atomic.AddUint64(&mmDelegationToken.afterDelegationTokenCounter, 1)
-
-	if mmDelegationToken.inspectFuncDelegationToken != nil {
-		mmDelegationToken.inspectFuncDelegationToken()
-	}
-
-	if mmDelegationToken.DelegationTokenMock.defaultExpectation != nil {
-		mm_atomic.AddUint64(&mmDelegationToken.DelegationTokenMock.defaultExpectation.Counter, 1)
-
-		results := mmDelegationToken.DelegationTokenMock.defaultExpectation.results
-		if results == nil {
-			mmDelegationToken.t.Fatal("No results are set for the ParcelMock.DelegationToken")
-		}
-		return (*results).d1
-	}
-	if mmDelegationToken.funcDelegationToken != nil {
-		return mmDelegationToken.funcDelegationToken()
-	}
-	mmDelegationToken.t.Fatalf("Unexpected call to ParcelMock.DelegationToken.")
-	return
-}
-
-// DelegationTokenAfterCounter returns a count of finished ParcelMock.DelegationToken invocations
-func (mmDelegationToken *ParcelMock) DelegationTokenAfterCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmDelegationToken.afterDelegationTokenCounter)
-}
-
-// DelegationTokenBeforeCounter returns a count of ParcelMock.DelegationToken invocations
-func (mmDelegationToken *ParcelMock) DelegationTokenBeforeCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmDelegationToken.beforeDelegationTokenCounter)
-}
-
-// MinimockDelegationTokenDone returns true if the count of the DelegationToken invocations corresponds
-// the number of defined expectations
-func (m *ParcelMock) MinimockDelegationTokenDone() bool {
-	for _, e := range m.DelegationTokenMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			return false
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.DelegationTokenMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterDelegationTokenCounter) < 1 {
-		return false
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcDelegationToken != nil && mm_atomic.LoadUint64(&m.afterDelegationTokenCounter) < 1 {
-		return false
-	}
-	return true
-}
-
-// MinimockDelegationTokenInspect logs each unmet expectation
-func (m *ParcelMock) MinimockDelegationTokenInspect() {
-	for _, e := range m.DelegationTokenMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			m.t.Error("Expected call to ParcelMock.DelegationToken")
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.DelegationTokenMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterDelegationTokenCounter) < 1 {
-		m.t.Error("Expected call to ParcelMock.DelegationToken")
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcDelegationToken != nil && mm_atomic.LoadUint64(&m.afterDelegationTokenCounter) < 1 {
-		m.t.Error("Expected call to ParcelMock.DelegationToken")
 	}
 }
 
@@ -1969,8 +1818,6 @@ func (m *ParcelMock) MinimockFinish() {
 
 		m.MinimockDefaultTargetInspect()
 
-		m.MinimockDelegationTokenInspect()
-
 		m.MinimockGetCallerInspect()
 
 		m.MinimockGetSenderInspect()
@@ -2011,7 +1858,6 @@ func (m *ParcelMock) minimockDone() bool {
 		m.MinimockContextDone() &&
 		m.MinimockDefaultRoleDone() &&
 		m.MinimockDefaultTargetDone() &&
-		m.MinimockDelegationTokenDone() &&
 		m.MinimockGetCallerDone() &&
 		m.MinimockGetSenderDone() &&
 		m.MinimockGetSignDone() &&
