@@ -25,11 +25,6 @@ import (
 type CheckDaemonResponse struct {
 	Status string `json:"status"`
 }
-type VestingParams struct {
-	Lokup       int64 `json:"lokupInPulses"`
-	Vesting     int64 `json:"vestingInPulses"`
-	VestingStep int64 `json:"vestingStepInPulses"`
-}
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator

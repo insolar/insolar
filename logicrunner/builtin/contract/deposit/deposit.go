@@ -37,12 +37,14 @@ const (
 // Deposit is like wallet. It holds migrated money.
 type Deposit struct {
 	foundation.BaseContract
-	Balance                 string                       `json:"balance"`
-	PulseDepositUnHold      insolar.PulseNumber          `json:"holdReleaseDate"`
-	MigrationDaemonConfirms foundation.StableMap         `json:"confirmerReferences"`
-	Amount                  string                       `json:"amount"`
-	TxHash                  string                       `json:"ethTxHash"`
-	VestingParams           migrationadmin.VestingParams `json:"vestingParams"`
+	Balance                 string                   `json:"balance"`
+	PulseDepositUnHold      insolar.PulseNumber      `json:"holdReleaseDate"`
+	MigrationDaemonConfirms foundation.StableMap     `json:"confirmerReferences"`
+	Amount                  string                   `json:"amount"`
+	TxHash                  string                   `json:"ethTxHash"`
+	VestingParams           foundation.VestingParams `json:"vestingParams"`
+	VestingType             foundation.VestingType   `json:"vestingType"`
+	MatureDate              insolar.PulseNumber      `json:"matureDate"`
 }
 
 // GetTxHash gets transaction hash.
@@ -64,7 +66,7 @@ func (d *Deposit) GetPulseUnHold() (insolar.PulseNumber, error) {
 }
 
 // New creates new deposit.
-func New(migrationDaemonRef insolar.Reference, txHash string, amount string, vestingParams *migrationadmin.VestingParams) (*Deposit, error) {
+func New(migrationDaemonRef insolar.Reference, txHash string, amount string, vestingParams foundation.VestingParams) (*Deposit, error) {
 
 	migrationDaemonConfirms := make(foundation.StableMap)
 	migrationDaemonConfirms[migrationDaemonRef.String()] = amount
@@ -74,7 +76,8 @@ func New(migrationDaemonRef insolar.Reference, txHash string, amount string, ves
 		MigrationDaemonConfirms: migrationDaemonConfirms,
 		Amount:                  "0",
 		TxHash:                  txHash,
-		VestingParams:           *vestingParams,
+		VestingParams:           vestingParams,
+		VestingType:             foundation.DefaultVesting,
 	}, nil
 }
 
@@ -109,7 +112,7 @@ func (d *Deposit) Confirm(migrationDaemonRef string, txHash string, amountStr st
 			return fmt.Errorf("failed to get current pulse: %s", err.Error())
 		}
 		d.Amount = amountStr
-		d.PulseDepositUnHold = currentPulse + insolar.PulseNumber(d.VestingParams.Lokup)
+		d.PulseDepositUnHold = currentPulse + insolar.PulseNumber(d.VestingParams.Lockup)
 
 		ma := member.GetObject(foundation.GetMigrationAdminMember())
 		accountRef, err := ma.GetAccount(XNS)

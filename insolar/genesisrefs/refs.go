@@ -86,6 +86,30 @@ var (
 		return
 	}()
 
+	// ContractNetworkIncentivesMembers is the network incentives members contracts references.
+	ContractNetworkIncentivesMembers = func() (result [insolar.GenesisAmountNetworkIncentivesMembers]insolar.Reference) {
+		for i, name := range insolar.GenesisNameNetworkIncentivesMembers {
+			result[i] = GenesisRef(name)
+		}
+		return
+	}()
+
+	// ContractApplicationIncentivesMembers is the application incentives members contracts references.
+	ContractApplicationIncentivesMembers = func() (result [insolar.GenesisAmountApplicationIncentivesMembers]insolar.Reference) {
+		for i, name := range insolar.GenesisNameApplicationIncentivesMembers {
+			result[i] = GenesisRef(name)
+		}
+		return
+	}()
+
+	// ContractFoundationMembers is the foundation members contracts references.
+	ContractFoundationMembers = func() (result [insolar.GenesisAmountFoundationMembers]insolar.Reference) {
+		for i, name := range insolar.GenesisNameFoundationMembers {
+			result[i] = GenesisRef(name)
+		}
+		return
+	}()
+
 	// ContractPublicKeyShards is the public key shards contracts references.
 	ContractPublicKeyShards = func() (result [insolar.GenesisAmountPublicKeyShards]insolar.Reference) {
 		for i, name := range insolar.GenesisNamePublicKeyShards {
@@ -93,6 +117,7 @@ var (
 		}
 		return
 	}()
+
 	// ContractMigrationAddressShards is the migration address shards contracts references.
 	ContractMigrationAddressShards = func() (result [insolar.GenesisAmountMigrationAddressShards]insolar.Reference) {
 		for i, name := range insolar.GenesisNameMigrationAddressShards {

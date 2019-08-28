@@ -51,6 +51,10 @@ const (
 	GenesisNameFeeWallet             = "fee" + GenesisNameWallet
 	GenesisNameFeeAccount            = "fee" + GenesisNameAccount
 
+	GenesisAmountNetworkIncentivesMembers     = 10
+	GenesisAmountApplicationIncentivesMembers = 10
+	GenesisAmountFoundationMembers            = 10
+
 	GenesisAmountMigrationDaemonMembers       = 10
 	GenesisAmountActiveMigrationDaemonMembers = 3
 
@@ -65,12 +69,34 @@ var GenesisNameMigrationDaemonMembers = func() (result [GenesisAmountMigrationDa
 	return
 }()
 
+var GenesisNameNetworkIncentivesMembers = func() (result [GenesisAmountNetworkIncentivesMembers]string) {
+	for i := 0; i < GenesisAmountNetworkIncentivesMembers; i++ {
+		result[i] = "network_incentives_" + strconv.Itoa(i) + "_" + GenesisNameMember
+	}
+	return
+}()
+
+var GenesisNameApplicationIncentivesMembers = func() (result [GenesisAmountApplicationIncentivesMembers]string) {
+	for i := 0; i < GenesisAmountApplicationIncentivesMembers; i++ {
+		result[i] = "application_incentives_" + strconv.Itoa(i) + "_" + GenesisNameMember
+	}
+	return
+}()
+
+var GenesisNameFoundationMembers = func() (result [GenesisAmountFoundationMembers]string) {
+	for i := 0; i < GenesisAmountFoundationMembers; i++ {
+		result[i] = "foundation_" + strconv.Itoa(i) + "_" + GenesisNameMember
+	}
+	return
+}()
+
 var GenesisNameMigrationAddressShards = func() (result [GenesisAmountMigrationAddressShards]string) {
 	for i := 0; i < GenesisAmountMigrationAddressShards; i++ {
 		result[i] = GenesisNameMigrationShard + "_" + strconv.Itoa(i)
 	}
 	return
 }()
+
 var GenesisNamePublicKeyShards = func() (result [GenesisAmountPublicKeyShards]string) {
 	for i := 0; i < GenesisAmountPublicKeyShards; i++ {
 		result[i] = GenesisNamePKShard + "_" + strconv.Itoa(i)

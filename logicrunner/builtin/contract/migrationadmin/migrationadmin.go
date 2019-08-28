@@ -29,16 +29,10 @@ import (
 // MigrationAdmin manage and change status for  migration daemon.
 type MigrationAdmin struct {
 	foundation.BaseContract
-	MigrationDaemons     foundation.StableMap
-	MigrationAdminMember insolar.Reference
+	MigrationDaemons       foundation.StableMap
+	MigrationAdminMember   insolar.Reference
 	MigrationAddressShards [insolar.GenesisAmountMigrationAddressShards]insolar.Reference
-	VestingParams        *VestingParams
-}
-
-type VestingParams struct {
-	Lokup       int64 `json:"lokupInPulses"`
-	Vesting     int64 `json:"vestingInPulses"`
-	VestingStep int64 `json:"vestingStepInPulses"`
+	VestingParams          foundation.VestingParams
 }
 
 const (
@@ -202,7 +196,7 @@ func (mA *MigrationAdmin) GetActiveDaemons() ([]string, error) {
 	return activeDaemons, nil
 }
 
-func (mA *MigrationAdmin) GetDepositParameters() (*VestingParams, error) {
+func (mA *MigrationAdmin) GetDepositParameters() (foundation.VestingParams, error) {
 	return mA.VestingParams, nil
 }
 
