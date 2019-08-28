@@ -21,6 +21,7 @@ import (
 
 	"github.com/gojuno/minimock"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
@@ -51,7 +52,7 @@ func TestGetJet_Present(t *testing.T) {
 		meta = payload.Meta{
 			Polymorph: uint32(payload.TypeMeta),
 			Payload: payload.MustMarshal(&payload.GetJet{
-				Polymorph: 0,
+				Polymorph: uint32(payload.TypeGetJet),
 				ObjectID:  insolar.ID{},
 			}),
 		}
@@ -61,23 +62,56 @@ func TestGetJet_Present(t *testing.T) {
 		err := handler.Present(ctx, flowMock)
 		assert.NoError(t, err)
 	})
+}
 
-	t.Run("error wrong payload", func(t *testing.T) {
-		setup()
-		defer mc.Finish()
+func TestGetJet_NilMsgPayload(t *testing.T) {
+	t.Parallel()
 
-		meta = payload.Meta{
-			Polymorph: uint32(payload.TypeMeta),
-			Payload: payload.MustMarshal(&payload.SetIncomingRequest{
-				Polymorph: 0,
-				Request:   record.Virtual{},
-			}),
-			ID: []byte{1, 1, 1},
-		}
+	ctx := inslogger.TestContext(t)
+	meta := payload.Meta{
+		Polymorph: uint32(payload.TypeMeta),
+		Payload:   nil,
+	}
 
-		handler := handle.NewGetJet(dep, meta, false)
-		flowMock := flow.NewFlowMock(mc)
-		err := handler.Present(ctx, flowMock)
-		assert.Error(t, err, "expected error 'unexpected payload type'")
-	})
+	handler := handle.NewGetJet(nil, meta, false)
+
+	err := handler.Present(ctx, flow.NewFlowMock(t))
+	require.Error(t, err)
+}
+
+func TestGetJet_BadMsgPayload(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+	meta := payload.Meta{
+		Polymorph: uint32(payload.TypeMeta),
+		Payload:   []byte{1, 2, 3, 4, 5},
+	}
+
+	handler := handle.NewGetJet(nil, meta, false)
+
+	err := handler.Present(ctx, flow.NewFlowMock(t))
+	require.Error(t, err)
+}
+
+func TestGetJet_IncorrectTypeMsgPayload(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+	f := flow.NewFlowMock(t)
+
+	meta := payload.Meta{
+		Polymorph: uint32(payload.TypeMeta),
+		// Incorrect type (SetIncomingRequest instead of GetJet).
+		Payload: payload.MustMarshal(&payload.SetIncomingRequest{
+			Polymorph: uint32(payload.TypeSetIncomingRequest),
+			Request:   record.Virtual{},
+		}),
+		ID: []byte{1, 1, 1},
+	}
+
+	handler := handle.NewGetJet(proc.NewDependenciesMock(), meta, false)
+
+	err := handler.Present(ctx, f)
+	require.Error(t, err)
 }
