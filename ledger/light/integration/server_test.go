@@ -43,7 +43,7 @@ import (
 	"github.com/insolar/insolar/insolar/jetcoordinator"
 	"github.com/insolar/insolar/insolar/node"
 	"github.com/insolar/insolar/insolar/payload"
-	"github.com/insolar/insolar/insolar/pulse"
+	insolarPulse "github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/keystore"
 	"github.com/insolar/insolar/ledger/drop"
@@ -55,7 +55,7 @@ import (
 	"github.com/insolar/insolar/network"
 	networknode "github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/platformpolicy"
-	pulse2 "github.com/insolar/insolar/pulse"
+	"github.com/insolar/insolar/pulse"
 )
 
 var (
@@ -106,11 +106,11 @@ func DefaultLightInitialState() *payload.LightInitialState {
 	return &payload.LightInitialState{
 		NetworkStart: true,
 		JetIDs:       []insolar.JetID{insolar.ZeroJetID},
-		Pulse: pulse.PulseProto{
-			PulseNumber: pulse2.MinTimePulse,
+		Pulse: insolarPulse.PulseProto{
+			PulseNumber: pulse.MinTimePulse,
 		},
 		Drops: []drop.Drop{
-			{JetID: insolar.ZeroJetID, Pulse: pulse2.MinTimePulse},
+			{JetID: insolar.ZeroJetID, Pulse: pulse.MinTimePulse},
 		},
 	}
 }
@@ -173,13 +173,13 @@ func NewServer(
 	// Role calculations.
 	var (
 		Coordinator jet.Coordinator
-		Pulses      *pulse.StorageMem
+		Pulses      *insolarPulse.StorageMem
 		Jets        jet.Storage
 		Nodes       *node.Storage
 	)
 	{
 		Nodes = node.NewStorage()
-		Pulses = pulse.NewStorageMem()
+		Pulses = insolarPulse.NewStorageMem()
 		Jets = jet.NewStore()
 
 		c := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit)

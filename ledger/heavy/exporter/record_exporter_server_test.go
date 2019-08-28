@@ -29,13 +29,13 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
-	"github.com/insolar/insolar/insolar/pulse"
+	insolarPulse "github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/store"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/heavy/executor"
 	"github.com/insolar/insolar/ledger/object"
-	pulse2 "github.com/insolar/insolar/pulse"
+	"github.com/insolar/insolar/pulse"
 	"github.com/insolar/insolar/testutils/network"
 )
 
@@ -347,14 +347,14 @@ func TestRecordServer_Export(t *testing.T) {
 			jetKeeper: jetKeeper,
 		}
 
-		err := server.Export(&GetRecords{Count: 1, PulseNumber: pulse2.MinTimePulse}, &streamMock{})
+		err := server.Export(&GetRecords{Count: 1, PulseNumber: pulse.MinTimePulse}, &streamMock{})
 
 		require.Error(t, err)
 	})
 
 	t.Run("returns empty slice of records, if no records", func(t *testing.T) {
 		jetKeeper := executor.NewJetKeeperMock(t)
-		jetKeeper.TopSyncPulseMock.Return(pulse2.MinTimePulse)
+		jetKeeper.TopSyncPulseMock.Return(pulse.MinTimePulse)
 
 		tmpdir, err := ioutil.TempDir("", "bdb-test-")
 		defer os.RemoveAll(tmpdir)
@@ -365,7 +365,7 @@ func TestRecordServer_Export(t *testing.T) {
 		defer db.Stop(context.Background())
 
 		recordPosition := object.NewRecordDB(db)
-		pulses := pulse.NewDB(db)
+		pulses := insolarPulse.NewDB(db)
 
 		recordServer := NewRecordServer(pulses, recordPosition, nil, jetKeeper)
 
@@ -375,7 +375,7 @@ func TestRecordServer_Export(t *testing.T) {
 		}}
 
 		err = recordServer.Export(&GetRecords{
-			PulseNumber:  pulse2.MinTimePulse,
+			PulseNumber:  pulse.MinTimePulse,
 			RecordNumber: 0,
 			Count:        10,
 		}, streamMock)
@@ -418,7 +418,7 @@ func TestRecordServer_Export_Composite(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
 	// Pulses
-	firstPN := insolar.PulseNumber(pulse2.MinTimePulse + 100)
+	firstPN := insolar.PulseNumber(pulse.MinTimePulse + 100)
 	secondPN := insolar.PulseNumber(firstPN + 10)
 
 	// JetKeeper
@@ -448,7 +448,7 @@ func TestRecordServer_Export_Composite(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Stop(context.Background())
 
-	pulseStorage := pulse.NewDB(db)
+	pulseStorage := insolarPulse.NewDB(db)
 	recordStorage := object.NewRecordDB(db)
 	recordPosition := object.NewRecordDB(db)
 
@@ -465,11 +465,11 @@ func TestRecordServer_Export_Composite(t *testing.T) {
 	// Pulses
 
 	// Trash pulses without data
-	err = pulseStorage.Append(ctx, insolar.Pulse{PulseNumber: pulse2.MinTimePulse})
+	err = pulseStorage.Append(ctx, insolar.Pulse{PulseNumber: pulse.MinTimePulse})
 	require.NoError(t, err)
-	err = pulseStorage.Append(ctx, insolar.Pulse{PulseNumber: pulse2.MinTimePulse + 10})
+	err = pulseStorage.Append(ctx, insolar.Pulse{PulseNumber: pulse.MinTimePulse + 10})
 	require.NoError(t, err)
-	err = pulseStorage.Append(ctx, insolar.Pulse{PulseNumber: pulse2.MinTimePulse + 20})
+	err = pulseStorage.Append(ctx, insolar.Pulse{PulseNumber: pulse.MinTimePulse + 20})
 	require.NoError(t, err)
 
 	// LegalInfo
@@ -586,7 +586,7 @@ func TestRecordServer_Export_Composite_BatchVersion(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
 	// Pulses
-	firstPN := insolar.PulseNumber(pulse2.MinTimePulse + 100)
+	firstPN := insolar.PulseNumber(pulse.MinTimePulse + 100)
 	secondPN := insolar.PulseNumber(firstPN + 10)
 
 	// JetKeeper
@@ -616,7 +616,7 @@ func TestRecordServer_Export_Composite_BatchVersion(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Stop(context.Background())
 
-	pulseStorage := pulse.NewDB(db)
+	pulseStorage := insolarPulse.NewDB(db)
 	recordStorage := object.NewRecordDB(db)
 	recordPosition := object.NewRecordDB(db)
 
@@ -627,11 +627,11 @@ func TestRecordServer_Export_Composite_BatchVersion(t *testing.T) {
 	// Pulses
 
 	// Trash pulses without data
-	err = pulseStorage.Append(ctx, insolar.Pulse{PulseNumber: pulse2.MinTimePulse})
+	err = pulseStorage.Append(ctx, insolar.Pulse{PulseNumber: pulse.MinTimePulse})
 	require.NoError(t, err)
-	err = pulseStorage.Append(ctx, insolar.Pulse{PulseNumber: pulse2.MinTimePulse + 10})
+	err = pulseStorage.Append(ctx, insolar.Pulse{PulseNumber: pulse.MinTimePulse + 10})
 	require.NoError(t, err)
-	err = pulseStorage.Append(ctx, insolar.Pulse{PulseNumber: pulse2.MinTimePulse + 20})
+	err = pulseStorage.Append(ctx, insolar.Pulse{PulseNumber: pulse.MinTimePulse + 20})
 	require.NoError(t, err)
 
 	// LegalInfo

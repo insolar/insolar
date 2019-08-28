@@ -30,18 +30,18 @@ import (
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
-	"github.com/insolar/insolar/insolar/pulse"
+	insolarPulse "github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/insolar/insolar/ledger/object"
-	pulse2 "github.com/insolar/insolar/pulse"
+	"github.com/insolar/insolar/pulse"
 )
 
 func TestHotObjects_Proceed(t *testing.T) {
-	ctx := flow.TestContextWithPulse(inslogger.TestContext(t), pulse2.MinTimePulse+10)
+	ctx := flow.TestContextWithPulse(inslogger.TestContext(t), pulse.MinTimePulse+10)
 	mc := minimock.NewController(t)
 
 	var (
@@ -51,7 +51,7 @@ func TestHotObjects_Proceed(t *testing.T) {
 		jetFetcher  *executor.JetFetcherMock
 		jetReleaser *executor.JetReleaserMock
 		coordinator *jet.CoordinatorMock
-		calculator  *pulse.CalculatorMock
+		calculator  *insolarPulse.CalculatorMock
 		sender      *bus.SenderMock
 	)
 
@@ -62,7 +62,7 @@ func TestHotObjects_Proceed(t *testing.T) {
 		jetFetcher = executor.NewJetFetcherMock(mc)
 		jetReleaser = executor.NewJetReleaserMock(mc)
 		coordinator = jet.NewCoordinatorMock(mc)
-		calculator = pulse.NewCalculatorMock(mc)
+		calculator = insolarPulse.NewCalculatorMock(mc)
 		sender = bus.NewSenderMock(mc)
 	}
 
@@ -71,7 +71,7 @@ func TestHotObjects_Proceed(t *testing.T) {
 		defer mc.Finish()
 
 		expectedPulse := insolar.Pulse{
-			PulseNumber: pulse2.MinTimePulse + 10,
+			PulseNumber: pulse.MinTimePulse + 10,
 		}
 		expectedJetID := gen.JetID()
 		expectedObjJetID := expectedJetID
@@ -99,7 +99,7 @@ func TestHotObjects_Proceed(t *testing.T) {
 			assert.Equal(t, expectedJetID, ids[0], "wrong jetID received")
 		}).Return(nil)
 
-		calculator.BackwardsMock.Return(insolar.Pulse{}, pulse.ErrNotFound)
+		calculator.BackwardsMock.Return(insolar.Pulse{}, insolarPulse.ErrNotFound)
 
 		jetStorage.ForIDMock.Return(expectedObjJetID, false)
 
@@ -137,13 +137,13 @@ func TestHotObjects_Proceed(t *testing.T) {
 		defer mc.Finish()
 
 		currentPulse := insolar.Pulse{
-			PulseNumber: pulse2.MinTimePulse + 100,
+			PulseNumber: pulse.MinTimePulse + 100,
 		}
 		abandonedRequestPulse := insolar.Pulse{
-			PulseNumber: pulse2.MinTimePulse,
+			PulseNumber: pulse.MinTimePulse,
 		}
 		thresholdAbandonedRequestPulse := insolar.Pulse{
-			PulseNumber: pulse2.MinTimePulse + 80,
+			PulseNumber: pulse.MinTimePulse + 80,
 		}
 
 		expectedJetID := gen.JetID()

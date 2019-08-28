@@ -35,7 +35,7 @@ import (
 	"github.com/insolar/insolar/insolar/flow/dispatcher"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
-	"github.com/insolar/insolar/insolar/pulse"
+	insolarPulse "github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
@@ -45,14 +45,14 @@ import (
 	"github.com/insolar/insolar/logicrunner/machinesmanager"
 	"github.com/insolar/insolar/logicrunner/shutdown"
 	"github.com/insolar/insolar/logicrunner/writecontroller"
-	pulse2 "github.com/insolar/insolar/pulse"
+	"github.com/insolar/insolar/pulse"
 )
 
 // LogicRunner is a general interface of contract executor
 type LogicRunner struct {
 	ContractRequester          insolar.ContractRequester          `inject:""`
 	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
-	PulseAccessor              pulse.Accessor                     `inject:""`
+	PulseAccessor              insolarPulse.Accessor              `inject:""`
 	ArtifactManager            artifacts.Client                   `inject:""`
 	DescriptorsCache           artifacts.DescriptorsCache         `inject:""`
 	JetCoordinator             jet.Coordinator                    `inject:""`
@@ -120,7 +120,7 @@ func (lr *LogicRunner) Init(ctx context.Context) error {
 	)
 
 	lr.WriteController = writecontroller.NewWriteController()
-	err := lr.WriteController.Open(ctx, pulse2.MinTimePulse)
+	err := lr.WriteController.Open(ctx, pulse.MinTimePulse)
 	if err != nil {
 		return errors.Wrap(err, "failed to initialize write controller")
 	}

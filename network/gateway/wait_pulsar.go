@@ -57,7 +57,7 @@ import (
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/network/rules"
-	pulse2 "github.com/insolar/insolar/pulse"
+	"github.com/insolar/insolar/pulse"
 )
 
 func newWaitPulsar(b *Base) *WaitPulsar {
@@ -102,9 +102,9 @@ func (g *WaitPulsar) OnConsensusFinished(ctx context.Context, report network.Rep
 	g.switchOnRealPulse(EnsureGetPulse(ctx, g.PulseAccessor, report.PulseNumber))
 }
 
-func (g *WaitPulsar) switchOnRealPulse(pulse insolar.Pulse) {
-	if pulse.PulseNumber > pulse2.MinTimePulse && pulse.EpochPulseNumber > insolar.EphemeralPulseEpoch {
-		g.pulseArrived <- pulse
+func (g *WaitPulsar) switchOnRealPulse(pulseObject insolar.Pulse) {
+	if pulseObject.PulseNumber > pulse.MinTimePulse && pulseObject.EpochPulseNumber > insolar.EphemeralPulseEpoch {
+		g.pulseArrived <- pulseObject
 		close(g.pulseArrived)
 	}
 }

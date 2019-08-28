@@ -24,11 +24,11 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/payload"
-	"github.com/insolar/insolar/insolar/pulse"
+	insolarPulse "github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/drop"
-	pulse2 "github.com/insolar/insolar/pulse"
+	"github.com/insolar/insolar/pulse"
 
 	"github.com/stretchr/testify/require"
 )
@@ -71,11 +71,11 @@ func Test_AbandonedNotification(t *testing.T) {
 			return []payload.Payload{&payload.LightInitialState{
 				NetworkStart: true,
 				JetIDs:       []insolar.JetID{insolar.ZeroJetID},
-				Pulse: pulse.PulseProto{
-					PulseNumber: pulse2.MinTimePulse,
+				Pulse: insolarPulse.PulseProto{
+					PulseNumber: pulse.MinTimePulse,
 				},
 				Drops: []drop.Drop{
-					{JetID: insolar.ZeroJetID, Pulse: pulse2.MinTimePulse},
+					{JetID: insolar.ZeroJetID, Pulse: pulse.MinTimePulse},
 				},
 			}}
 		}
@@ -162,7 +162,7 @@ func Test_AbandonedNotification_WhenLightInit(t *testing.T) {
 	receivedConfirmations := make(chan payload.GotHotConfirmation)
 
 	// PulseNumber and ObjectID for mock heavy response
-	pn := insolar.PulseNumber(pulse2.MinTimePulse)
+	pn := insolar.PulseNumber(pulse.MinTimePulse)
 	objectID := gen.IDWithPulse(pn)
 
 	// Response from heavy.
@@ -174,11 +174,11 @@ func Test_AbandonedNotification_WhenLightInit(t *testing.T) {
 			return []payload.Payload{&payload.LightInitialState{
 				NetworkStart: true,
 				JetIDs:       []insolar.JetID{insolar.ZeroJetID},
-				Pulse: pulse.PulseProto{
-					PulseNumber: pulse2.MinTimePulse,
+				Pulse: insolarPulse.PulseProto{
+					PulseNumber: pulse.MinTimePulse,
 				},
 				Drops: []drop.Drop{
-					{JetID: insolar.ZeroJetID, Pulse: pulse2.MinTimePulse},
+					{JetID: insolar.ZeroJetID, Pulse: pulse.MinTimePulse},
 				},
 				Indexes: []record.Index{
 					{Lifeline: record.Lifeline{EarliestOpenRequest: &pn}, ObjID: objectID},

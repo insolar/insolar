@@ -34,13 +34,13 @@ import (
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
-	"github.com/insolar/insolar/insolar/pulse"
+	insolarPulse "github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/platformpolicy"
-	pulse2 "github.com/insolar/insolar/pulse"
+	"github.com/insolar/insolar/pulse"
 	"github.com/insolar/insolar/testutils"
 )
 
@@ -49,7 +49,7 @@ var _ insolar.ContractRequester = &ContractRequester{}
 
 func TestNew(t *testing.T) {
 	sender := bus.NewSenderMock(t)
-	pulseAccessor := pulse.NewAccessorMock(t)
+	pulseAccessor := insolarPulse.NewAccessorMock(t)
 	jetCoordinator := jet.NewCoordinatorMock(t)
 	pcs := platformpolicy.NewPlatformCryptographyScheme()
 
@@ -60,9 +60,9 @@ func TestNew(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func mockPulseAccessor(t minimock.Tester) pulse.Accessor {
-	pulseAccessor := pulse.NewAccessorMock(t)
-	currentPulse := pulse2.MinTimePulse
+func mockPulseAccessor(t minimock.Tester) insolarPulse.Accessor {
+	pulseAccessor := insolarPulse.NewAccessorMock(t)
+	currentPulse := pulse.MinTimePulse
 	pulseAccessor.LatestMock.Set(func(p context.Context) (r insolar.Pulse, r1 error) {
 		return insolar.Pulse{
 			PulseNumber:     insolar.PulseNumber(currentPulse),
@@ -209,7 +209,7 @@ func TestContractRequester_Call_Timeout(t *testing.T) {
 
 			hash, err := cReq.calcRequestHash(*request)
 			require.NoError(t, err)
-			requestRef := insolar.NewReference(*insolar.NewID(pulse2.MinTimePulse, hash[:]))
+			requestRef := insolar.NewReference(*insolar.NewID(pulse.MinTimePulse, hash[:]))
 
 			res, err := serializeReply(bus.ReplyAsMessage(ctx, &reply.RegisterRequest{
 				Request: *requestRef,
@@ -241,7 +241,7 @@ func TestReceiveResult_UnwantedResult(t *testing.T) {
 
 	cReq, err := New(
 		bus.NewSenderMock(t),
-		pulse.NewAccessorMock(t),
+		insolarPulse.NewAccessorMock(t),
 		jet.NewCoordinatorMock(t),
 		testutils.NewPlatformCryptographyScheme(),
 	)
@@ -286,7 +286,7 @@ func TestReceiveResult_WantedResult(t *testing.T) {
 
 	cReq, err := New(
 		bus.NewSenderMock(t),
-		pulse.NewAccessorMock(t),
+		insolarPulse.NewAccessorMock(t),
 		jet.NewCoordinatorMock(t),
 		testutils.NewPlatformCryptographyScheme())
 	require.NoError(t, err)
@@ -340,7 +340,7 @@ func TestReceiveResult_UnwantedResultWithError(t *testing.T) {
 	defer cancelFunc()
 
 	cReq, err := New(bus.NewSenderMock(t),
-		pulse.NewAccessorMock(t),
+		insolarPulse.NewAccessorMock(t),
 		jet.NewCoordinatorMock(t),
 		testutils.NewPlatformCryptographyScheme())
 	require.NoError(t, err)

@@ -41,7 +41,7 @@ import (
 	"github.com/insolar/insolar/insolar/jetcoordinator"
 	"github.com/insolar/insolar/insolar/node"
 	"github.com/insolar/insolar/insolar/payload"
-	"github.com/insolar/insolar/insolar/pulse"
+	insolarPulse "github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/store"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/keystore"
@@ -56,7 +56,7 @@ import (
 	"github.com/insolar/insolar/network"
 	networknode "github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/platformpolicy"
-	pulse2 "github.com/insolar/insolar/pulse"
+	"github.com/insolar/insolar/pulse"
 )
 
 var (
@@ -154,7 +154,7 @@ func NewServer(
 	// Role calculations.
 	var (
 		Coordinator jet.Coordinator
-		Pulses      *pulse.DB
+		Pulses      *insolarPulse.DB
 		Jets        *jet.DBStore
 		Nodes       *node.Storage
 		DB          *store.BadgerDB
@@ -167,7 +167,7 @@ func NewServer(
 			panic(errors.Wrap(err, "failed to initialize DB"))
 		}
 		Nodes = node.NewStorage()
-		Pulses = pulse.NewDB(DB)
+		Pulses = insolarPulse.NewDB(DB)
 		Jets = jet.NewDBStore(DB)
 
 		c := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit)
@@ -219,7 +219,7 @@ func NewServer(
 		JetKeeper = executor.NewJetKeeper(Jets, DB, Pulses)
 		DBRollback = executor.NewDBRollback(JetKeeper, drops, Records, indexes, Jets, Pulses, JetKeeper)
 
-		sp := pulse.NewStartPulse()
+		sp := insolarPulse.NewStartPulse()
 
 		backupMaker, err := executor.NewBackupMaker(ctx, DB, cfg.Ledger.Backup, JetKeeper.TopSyncPulse())
 		if err != nil {
@@ -262,7 +262,7 @@ func NewServer(
 		Handler = h
 
 		artifactManager := &artifact.Scope{
-			PulseNumber:    pulse2.MinTimePulse,
+			PulseNumber:    pulse.MinTimePulse,
 			PCS:            CryptoScheme,
 			RecordAccessor: Records,
 			RecordModifier: Records,

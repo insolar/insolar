@@ -25,7 +25,7 @@ import (
 	"github.com/insolar/insolar/bootstrap/contracts"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/genesisrefs"
-	"github.com/insolar/insolar/insolar/pulse"
+	insolarPulse "github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/store"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -33,15 +33,15 @@ import (
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
-	pulse2 "github.com/insolar/insolar/pulse"
+	"github.com/insolar/insolar/pulse"
 )
 
 // BaseRecord provides methods for genesis base record manipulation.
 type BaseRecord struct {
 	DB             store.DB
 	DropModifier   drop.Modifier
-	PulseAppender  pulse.Appender
-	PulseAccessor  pulse.Accessor
+	PulseAppender  insolarPulse.Appender
+	PulseAccessor  insolarPulse.Accessor
 	RecordModifier object.RecordModifier
 	IndexModifier  object.IndexModifier
 }
@@ -124,7 +124,7 @@ func (br *BaseRecord) Create(ctx context.Context) error {
 
 	err = br.IndexModifier.SetIndex(
 		ctx,
-		pulse2.MinTimePulse,
+		pulse.MinTimePulse,
 		record.Index{
 			ObjID: genesisID,
 			Lifeline: record.Lifeline{
@@ -191,7 +191,7 @@ func (g *Genesis) Start(ctx context.Context) error {
 		panic(fmt.Sprintf("[genesis] store discovery nodes failed: %v", err))
 	}
 
-	if err := g.BaseRecord.IndexModifier.UpdateLastKnownPulse(ctx, pulse2.MinTimePulse); err != nil {
+	if err := g.BaseRecord.IndexModifier.UpdateLastKnownPulse(ctx, pulse.MinTimePulse); err != nil {
 		panic("can't update last known pulse on genesis")
 	}
 

@@ -29,11 +29,11 @@ import (
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/node"
 	"github.com/insolar/insolar/insolar/payload"
-	"github.com/insolar/insolar/insolar/pulse"
+	insolarPulse "github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/object"
-	pulse2 "github.com/insolar/insolar/pulse"
+	"github.com/insolar/insolar/pulse"
 
 	"github.com/pkg/errors"
 )
@@ -55,8 +55,8 @@ func NewStateIniter(
 	drops drop.Modifier,
 	nodes node.Accessor,
 	sender bus.Sender,
-	pulseAppender pulse.Appender,
-	pulseAccessor pulse.Accessor,
+	pulseAppender insolarPulse.Appender,
+	pulseAccessor insolarPulse.Accessor,
 	calc JetCalculator,
 	indexes object.MemoryIndexModifier,
 ) *StateIniterDefault {
@@ -86,8 +86,8 @@ type StateIniterDefault struct {
 	drops         drop.Modifier
 	nodes         node.Accessor
 	sender        bus.Sender
-	pulseAppender pulse.Appender
-	pulseAccessor pulse.Accessor
+	pulseAppender insolarPulse.Appender
+	pulseAccessor insolarPulse.Accessor
 	jetCalculator JetCalculator
 	backoff       backoff.Backoff
 	indexes       object.MemoryIndexModifier
@@ -97,7 +97,7 @@ func (s *StateIniterDefault) PrepareState(
 	ctx context.Context,
 	forPulse insolar.PulseNumber,
 ) (bool, []insolar.JetID, error) {
-	if forPulse < pulse2.MinTimePulse {
+	if forPulse < pulse.MinTimePulse {
 		return false, nil, errors.Errorf("invalid pulse %s for light state initialization ", forPulse)
 	}
 
@@ -110,7 +110,7 @@ func (s *StateIniterDefault) PrepareState(
 		}
 		return false, myJets, nil
 	}
-	if err != pulse.ErrNotFound {
+	if err != insolarPulse.ErrNotFound {
 		return false, nil, errors.Wrap(err, "failed to fetch latest pulse")
 	}
 
@@ -190,7 +190,7 @@ func (s *StateIniterDefault) loadStateRetry(
 		return nil, fmt.Errorf("unexpected reply %T", pl)
 	}
 
-	prevPulse := pulse.FromProto(&state.Pulse)
+	prevPulse := insolarPulse.FromProto(&state.Pulse)
 	err = s.pulseAppender.Append(ctx, *prevPulse)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to append pulse")
