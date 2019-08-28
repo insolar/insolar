@@ -19,12 +19,12 @@ var (
 	memberKeysPath string
 )
 
-const defaultURL = "http://localhost:19101/api"
+const defaultURL = "http://localhost:19001/admin-api"
 
 func parseInputParams() {
 	pflag.StringVarP(&memberKeysPath, "memberkeys", "k", "../.artifacts/launchnet/configs/", "path to files with migration Member keys")
 	pflag.StringVarP(&indexStr, "index", "i", "", "index of migration deamon")
-	pflag.StringVarP(&apiURL, "url", "u", defaultURL, "api url")
+	pflag.StringVarP(&apiURL, "adminurl", "u", defaultURL, "admin api url")
 	pflag.StringVarP(&paramsFile, "paramsFile", "f", "migration.json", "json file params")
 	pflag.Parse()
 }
