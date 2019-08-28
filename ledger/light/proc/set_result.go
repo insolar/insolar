@@ -20,6 +20,9 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
@@ -28,8 +31,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/object"
-	"github.com/pkg/errors"
-	"go.opencensus.io/stats"
 )
 
 type SetResult struct {

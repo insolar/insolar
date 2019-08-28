@@ -24,7 +24,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/payload"
@@ -61,7 +60,6 @@ func TestHandleExecutorResults_Present(t *testing.T) {
 
 				h := &HandleExecutorResults{
 					dep: &Dependencies{
-						Sender:        bus.NewSenderMock(t).ReplyMock.Return(),
 						WriteAccessor: writecontroller.NewWriteControllerMock(t).BeginMock.Return(func() {}, nil),
 					},
 					Message: payload.Meta{Payload: buf},

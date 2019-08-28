@@ -58,9 +58,6 @@ import (
 
 // Options contains configuration options for the local host.
 type Options struct {
-	// The maximum time to wait for a response to ping request.
-	PingTimeout time.Duration
-
 	// The maximum time to wait for a response to any packet.
 	PacketTimeout time.Duration
 
@@ -78,22 +75,17 @@ type Options struct {
 
 	// Multiplier for boostrap retry time
 	TimeoutMult time.Duration
-
-	// HandshakeSession TTL
-	HandshakeSessionTTL time.Duration
 }
 
 // ConfigureOptions convert daemon configuration to controller options
 func ConfigureOptions(conf configuration.Configuration) *Options {
 	config := conf.Host
 	return &Options{
-		TimeoutMult:         time.Duration(config.TimeoutMult) * time.Millisecond,
-		MinTimeout:          time.Duration(config.MinTimeout) * time.Millisecond,
-		MaxTimeout:          time.Duration(config.MaxTimeout) * time.Millisecond,
-		PingTimeout:         1 * time.Second,
-		PacketTimeout:       15 * time.Second,
-		AckPacketTimeout:    5 * time.Second,
-		BootstrapTimeout:    90 * time.Second,
-		HandshakeSessionTTL: time.Duration(config.HandshakeSessionTTL) * time.Millisecond,
+		TimeoutMult:      time.Duration(config.TimeoutMult) * time.Millisecond,
+		MinTimeout:       time.Duration(config.MinTimeout) * time.Millisecond,
+		MaxTimeout:       time.Duration(config.MaxTimeout) * time.Millisecond,
+		PacketTimeout:    15 * time.Second,
+		AckPacketTimeout: 5 * time.Second,
+		BootstrapTimeout: 90 * time.Second,
 	}
 }

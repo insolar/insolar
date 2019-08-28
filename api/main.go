@@ -50,12 +50,12 @@ type Runner struct {
 	CertificateManager insolar.CertificateManager
 	ContractRequester  insolar.ContractRequester
 	// nolint
-	NodeNetwork     network.NodeNetwork
-	ServiceNetwork  insolar.Network
-	PulseAccessor   pulse.Accessor
-	ArtifactManager artifacts.Client
-	JetCoordinator  jet.Coordinator
-	NetworkStatus   insolar.NetworkStatus
+	NodeNetwork       network.NodeNetwork
+	CertificateGetter insolar.CertificateGetter
+	PulseAccessor     pulse.Accessor
+	ArtifactManager   artifacts.Client
+	JetCoordinator    jet.Coordinator
+	NetworkStatus     insolar.NetworkStatus
 
 	server        *http.Server
 	rpcServer     *rpc.Server
@@ -129,7 +129,7 @@ func NewRunner(cfg *configuration.APIRunner,
 	contractRequester insolar.ContractRequester,
 	// nolint
 	nodeNetwork network.NodeNetwork,
-	serviceNetwork insolar.Network,
+	certificateGetter insolar.CertificateGetter,
 	pulseAccessor pulse.Accessor,
 	artifactManager artifacts.Client,
 	jetCoordinator jet.Coordinator,
@@ -146,7 +146,7 @@ func NewRunner(cfg *configuration.APIRunner,
 		CertificateManager: certificateManager,
 		ContractRequester:  contractRequester,
 		NodeNetwork:        nodeNetwork,
-		ServiceNetwork:     serviceNetwork,
+		CertificateGetter:  certificateGetter,
 		PulseAccessor:      pulseAccessor,
 		ArtifactManager:    artifactManager,
 		JetCoordinator:     jetCoordinator,
