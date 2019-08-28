@@ -53,6 +53,7 @@ package ph3ctl
 import (
 	"context"
 	"fmt"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"runtime"
 	"sync"
 	"time"
@@ -65,7 +66,6 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/phasebundle/inspectors"
 
 	"github.com/insolar/insolar/network/consensus/common/chaser"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/statevector"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
@@ -247,20 +247,6 @@ func (c *Phase3Controller) workerPrePhase3(ctx context.Context) inspectors.Vecto
 	startOfPhase3 := time.After(c.R.AdjustedAfter(timings.EndOfPhase2))
 	chasingDelayTimer := chaser.NewChasingTimer(timings.BeforeInPhase2ChasingDelay)
 
-	var countAnnouncedJoiners = 0
-	var countPurgatory = 0
-	var countFullJoiners = 0
-	var countFraud = 0
-	var countHasNsh = 0
-	var countTrustBySome = 0
-	var countTrustByNeighbors = 0
-
-	if c.R.IsJoiner() {
-		// creation of a self when it is joiner doesnt trigger purgatory, so counters will be in disbalance
-		// TODO should notification be suppressed otherwise?
-		countFullJoiners--
-	}
-
 	pop := c.R.GetPopulation()
 	didFastPhase3 := false
 
@@ -279,49 +265,31 @@ outer:
 			break outer
 		case upd := <-c.queueTrustUpdated:
 			logger.Debug(">>>>workerPrePhase3: c.queueTrustUpdated")
-			switch {
-			case upd.IsPingSignal(): // ping indicates arrival of Phase2 packet, to support chasing
-				// TODO chasing
-			case upd.DynNode:
-				switch {
-				case upd.UpdatedNode == nil: // joiner notification
-					countPurgatory++
-				case upd.NewTrustLevel == member.TrustBySome: // full profile joiner
-					countFullJoiners++
-				}
-			case upd.UpdatedNode.IsJoiner():
-				continue // ignore
-			case upd.NewTrustLevel == member.UnknownTrust:
-				if !upd.UpdatedNode.GetRequestedState().JoinerID.IsAbsent() {
-					countAnnouncedJoiners++
-				}
-				countHasNsh++
-			case upd.NewTrustLevel < 0:
-				countFraud++
-				continue // no chasing delay on fraud
-			case upd.NewTrustLevel >= member.TrustByNeighbors:
-				countTrustByNeighbors++
-			default:
-				countTrustBySome++
-			}
 			indexedCount, isComplete := pop.GetCountAndCompleteness(false)
 			bftMajority := consensuskit.BftMajority(indexedCount)
+
+			/* Order of getting counts is VITAL */
+			fraudCount, bySelfCount, bySomeCount, byNeighborsCount := pop.GetTrustCounts()
+			briefCount, fullCount := pop.GetDynamicCounts()
+			addedCount, ascentCount := pop.GetPurgatoryCounts()
 
 			updID := insolar.AbsentShortNodeID
 			if upd.UpdatedNode != nil {
 				updID = upd.UpdatedNode.GetNodeID()
 			}
 
-			logger.Debug(fmt.Sprintf("workerPrePhase3: \nid=%d upd=%d count=%d hasNsh=%d trustBySome=%d trustByNbh=%d purg=%d ann=%d full=%d fraud=%d"+
-				"\nid=%[1]d upd=%[2]d dyns=%[11]v purg=%v trust=%v",
+			logger.Debug(fmt.Sprintf("workerPrePhase3: id=%d upd=%d count=%d dyns=%v purg=%v trust=%v",
 				c.R.GetSelfNodeID(), updID,
-				indexedCount, countHasNsh, countTrustBySome, countTrustByNeighbors, countPurgatory, countAnnouncedJoiners, countFullJoiners, countFraud,
-				args.AsUint16Slice(pop.GetDynamicCounts()), args.AsUint16Slice(pop.GetPurgatoryCounts()), args.AsUint16Slice(pop.GetTrustCounts())))
+				indexedCount,
+				args.AsUint16Slice(briefCount, fullCount), args.AsUint16Slice(addedCount, ascentCount),
+				args.AsUint16Slice(fraudCount, bySelfCount, bySomeCount, byNeighborsCount)))
+
+			allCount := indexedCount + int(addedCount) - int(ascentCount) + int(briefCount)
 
 			// We have some-trusted from all nodes, and the majority of them are well-trusted
-			if isComplete && countFraud == 0 && countHasNsh >= indexedCount &&
-				countFullJoiners >= countAnnouncedJoiners && countFullJoiners >= countPurgatory &&
-				c.consensusStrategy.CanStartVectorsEarly(indexedCount, countFraud, countTrustBySome, countTrustByNeighbors) {
+			if isComplete && fraudCount == 0 && int(bySelfCount) >= allCount &&
+				fullCount >= briefCount && ascentCount >= addedCount &&
+				c.consensusStrategy.CanStartVectorsEarly(indexedCount, int(fraudCount), int(bySomeCount), int(byNeighborsCount)) {
 				// (countTrustBySome >= bftMajority || countTrustByNeighbors >= 1+indexedCount>>1) {
 
 				logger.Debugf(">>>>workerPrePhase3: all and complete: %d", c.R.GetSelfNodeID())
@@ -329,8 +297,8 @@ outer:
 			}
 
 			// if we didn't went for a full phase3 sending, but we have all nodes, then should try a shortcut
-			if c.isFastPacketEnabled && isComplete && countHasNsh >= indexedCount &&
-				countPurgatory == 0 && countAnnouncedJoiners == 0 &&
+			if c.isFastPacketEnabled && isComplete && int(bySelfCount) >= allCount &&
+				addedCount == 0 && briefCount == 0 && fullCount == 0 &&
 				!didFastPhase3 {
 
 				didFastPhase3 = true
@@ -340,10 +308,10 @@ outer:
 
 			if chasingDelayTimer.IsEnabled() {
 				// We have answers from all nodes, and the majority of them are well-trusted
-				if countHasNsh >= indexedCount && countTrustByNeighbors >= bftMajority {
+				if int(bySelfCount) >= indexedCount && int(byNeighborsCount) >= bftMajority {
 					chasingDelayTimer.RestartChase()
 					logger.Debugf(">>>>workerPrePhase3: chaseStartedAll: %d", c.R.GetSelfNodeID())
-				} else if countTrustBySome-countFraud >= bftMajority {
+				} else if int(bySomeCount)-int(fraudCount) >= bftMajority {
 					// We can start chasing-timeout after getting answers from majority of some-trusted nodes
 					chasingDelayTimer.RestartChase()
 					logger.Debugf(">>>>workerPrePhase3: chaseStartedSome: %d", c.R.GetSelfNodeID())
@@ -426,7 +394,7 @@ func (c *Phase3Controller) workerSendPhase3(ctx context.Context, selfData statev
 				break
 			}
 		}
-			
+
 		// capture range value
 		sendNo := i
 		p3.SendToMany(ctx, len(nodes), c.R.GetPacketSender(),
