@@ -19,6 +19,7 @@ package reference
 import (
 	"bytes"
 	"strings"
+	"sync"
 
 	"github.com/pkg/errors"
 )
@@ -42,12 +43,13 @@ type Encoder interface {
 	EncodeRecord(rec *Local) (string, error)
 }
 
+var defaultEncoderOnce sync.Once
 var defaultEncoder Encoder
 
 func DefaultEncoder() Encoder {
-	if defaultEncoder == nil {
+	defaultEncoderOnce.Do(func() {
 		defaultEncoder = NewBase58Encoder(0)
-	}
+	})
 	return defaultEncoder
 }
 
