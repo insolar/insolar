@@ -77,7 +77,7 @@ func execute(url string, keys memberKeys, request requester.ContractRequest) (st
 
 	fmt.Println("Request: " + string(dataToSign))
 
-	body, err := requester.GetResponseBodyContract(url+"/call", request, signature)
+	body, err := requester.GetResponseBodyContract(url+"/rpc", request, signature)
 	check("[Execute]", err)
 	return string(body), nil
 }
