@@ -105,15 +105,6 @@ const (
 	maxPulsesForJoin       = 3
 )
 
-type fixture struct {
-	ctx            context.Context
-	bootstrapNodes []*networkNode
-	networkNodes   []*networkNode
-	pulsar         TestPulsar
-
-	discoveriesAreBootstrapped uint32
-}
-
 const cacheDir = "network_cache/"
 
 func initLogger(ctx context.Context, level insolar.LogLevel) context.Context {
@@ -124,20 +115,17 @@ func initLogger(ctx context.Context, level insolar.LogLevel) context.Context {
 	return ctx
 }
 
-func newFixture(t *testing.T) *fixture {
-	return &fixture{
-		ctx:            initLogger(inslogger.TestContext(t), insolar.DebugLevel),
-		bootstrapNodes: make([]*networkNode, 0),
-		networkNodes:   make([]*networkNode, 0),
-	}
-}
-
 // testSuite is base test suite
 type testSuite struct {
-	fixtureMap     map[string]*fixture
 	bootstrapCount int
 	nodesCount     int
+	ctx            context.Context
+	bootstrapNodes []*networkNode
+	networkNodes   []*networkNode
+	pulsar         TestPulsar
 	t              *testing.T
+
+	discoveriesAreBootstrapped uint32
 }
 
 type consensusSuite struct {
@@ -146,10 +134,12 @@ type consensusSuite struct {
 
 func newTestSuite(t *testing.T, bootstrapCount, nodesCount int) testSuite {
 	return testSuite{
-		fixtureMap:     make(map[string]*fixture, 0),
 		bootstrapCount: bootstrapCount,
 		nodesCount:     nodesCount,
 		t:              t,
+		ctx:            initLogger(inslogger.TestContext(t), insolar.DebugLevel),
+		bootstrapNodes: make([]*networkNode, 0),
+		networkNodes:   make([]*networkNode, 0),
 	}
 }
 
@@ -163,15 +153,10 @@ func newConsensusSuite(t *testing.T, bootstrapCount, nodesCount int) *consensusS
 	}
 }
 
-func (s *testSuite) fixture() *fixture {
-	return s.fixtureMap[s.t.Name()]
-}
-
 // SetupSuite creates and run network with bootstrap and common nodes once before run all tests in the suite
 func (s *consensusSuite) SetupTest() {
-	s.fixtureMap[s.t.Name()] = newFixture(s.t)
 	var err error
-	s.fixture().pulsar, err = NewTestPulsar(reqTimeoutMs, pulseDelta)
+	s.pulsar, err = NewTestPulsar(reqTimeoutMs, pulseDelta)
 	require.NoError(s.t, err)
 
 	suiteLogger.Info("SetupTest")
@@ -181,23 +166,23 @@ func (s *consensusSuite) SetupTest() {
 		if i == 0 {
 			role = insolar.StaticRoleHeavyMaterial
 		}
-		s.fixture().bootstrapNodes = append(s.fixture().bootstrapNodes, s.newNetworkNodeWithRole(fmt.Sprintf("bootstrap_%d", i), role))
+		s.bootstrapNodes = append(s.bootstrapNodes, s.newNetworkNodeWithRole(fmt.Sprintf("bootstrap_%d", i), role))
 	}
 
 	for i := 0; i < s.nodesCount; i++ {
-		s.fixture().networkNodes = append(s.fixture().networkNodes, s.newNetworkNode(fmt.Sprintf("node_%d", i)))
+		s.networkNodes = append(s.networkNodes, s.newNetworkNode(fmt.Sprintf("node_%d", i)))
 	}
 
 	pulseReceivers := make([]string, 0)
-	for _, n := range s.fixture().bootstrapNodes {
+	for _, n := range s.bootstrapNodes {
 		pulseReceivers = append(pulseReceivers, n.host)
 	}
 
 	suiteLogger.Info("Setup bootstrap nodes")
-	s.SetupNodesNetwork(s.fixture().bootstrapNodes)
+	s.SetupNodesNetwork(s.bootstrapNodes)
 	if UseFakeBootstrap {
 		bnodes := make([]insolar.NetworkNode, 0)
-		for _, n := range s.fixture().bootstrapNodes {
+		for _, n := range s.bootstrapNodes {
 			o := n.serviceNetwork.NodeKeeper.GetOrigin()
 			dig, sig := o.(node.MutableNode).GetSignature()
 			require.NotNil(s.t, dig)
@@ -205,22 +190,22 @@ func (s *consensusSuite) SetupTest() {
 
 			bnodes = append(bnodes, o)
 		}
-		for _, n := range s.fixture().bootstrapNodes {
+		for _, n := range s.bootstrapNodes {
 			n.serviceNetwork.ConsensusMode = consensus.ReadyNetwork
 			n.serviceNetwork.NodeKeeper.SetInitialSnapshot(bnodes)
-			err := n.serviceNetwork.PulseAppender.AppendPulse(s.fixture().ctx, *insolar.GenesisPulse)
+			err := n.serviceNetwork.PulseAppender.AppendPulse(s.ctx, *insolar.GenesisPulse)
 			require.NoError(s.t, err)
-			n.serviceNetwork.Gatewayer.SwitchState(s.fixture().ctx, insolar.CompleteNetworkState, *insolar.GenesisPulse)
+			n.serviceNetwork.Gatewayer.SwitchState(s.ctx, insolar.CompleteNetworkState, *insolar.GenesisPulse)
 			pulseReceivers = append(pulseReceivers, n.host)
 		}
 	}
 
-	s.StartNodesNetwork(s.fixture().bootstrapNodes)
+	s.StartNodesNetwork(s.bootstrapNodes)
 
-	expectedBootstrapsCount := len(s.fixture().bootstrapNodes)
+	expectedBootstrapsCount := len(s.bootstrapNodes)
 	retries := 10
 	for {
-		activeNodes := s.fixture().bootstrapNodes[0].GetActiveNodes()
+		activeNodes := s.bootstrapNodes[0].GetActiveNodes()
 		if expectedBootstrapsCount == len(activeNodes) {
 			break
 		}
@@ -233,25 +218,25 @@ func (s *consensusSuite) SetupTest() {
 		time.Sleep(2 * time.Second)
 	}
 
-	activeNodes := s.fixture().bootstrapNodes[0].GetActiveNodes()
-	require.Equal(s.t, len(s.fixture().bootstrapNodes), len(activeNodes))
+	activeNodes := s.bootstrapNodes[0].GetActiveNodes()
+	require.Equal(s.t, len(s.bootstrapNodes), len(activeNodes))
 
-	if len(s.fixture().networkNodes) > 0 {
+	if len(s.networkNodes) > 0 {
 		suiteLogger.Info("Setup network nodes")
-		s.SetupNodesNetwork(s.fixture().networkNodes)
-		s.StartNodesNetwork(s.fixture().networkNodes)
+		s.SetupNodesNetwork(s.networkNodes)
+		s.StartNodesNetwork(s.networkNodes)
 
 		s.waitForConsensus(2)
 
 		// active nodes count verification
-		activeNodes1 := s.fixture().networkNodes[0].GetActiveNodes()
-		activeNodes2 := s.fixture().networkNodes[0].GetActiveNodes()
+		activeNodes1 := s.networkNodes[0].GetActiveNodes()
+		activeNodes2 := s.networkNodes[0].GetActiveNodes()
 
 		require.Equal(s.t, s.getNodesCount(), len(activeNodes1))
 		require.Equal(s.t, s.getNodesCount(), len(activeNodes2))
 	}
 	suiteLogger.Info("Start test pulsar")
-	err = s.fixture().pulsar.Start(initLogger(s.fixture().ctx, insolar.ErrorLevel), pulseReceivers)
+	err = s.pulsar.Start(initLogger(s.ctx, insolar.ErrorLevel), pulseReceivers)
 	require.NoError(s.t, err)
 }
 
@@ -298,24 +283,24 @@ func (s *testSuite) StartNodesNetwork(nodes []*networkNode) {
 		go startNode(n)
 	}
 	s.waitResults(results, len(nodes))
-	atomic.StoreUint32(&s.fixture().discoveriesAreBootstrapped, 1)
+	atomic.StoreUint32(&s.discoveriesAreBootstrapped, 1)
 }
 
 // stopNetwork shutdowns all nodes in network
 func (s *consensusSuite) stopNetwork() {
 	suiteLogger.Info("=================== stopNetwork()")
 	suiteLogger.Info("Stop network nodes")
-	for _, n := range s.fixture().networkNodes {
+	for _, n := range s.networkNodes {
 		err := n.componentManager.Stop(n.ctx)
 		require.NoError(s.t, err)
 	}
 	suiteLogger.Info("Stop bootstrap nodes")
-	for _, n := range s.fixture().bootstrapNodes {
+	for _, n := range s.bootstrapNodes {
 		err := n.componentManager.Stop(n.ctx)
 		require.NoError(s.t, err)
 	}
 	suiteLogger.Info("Stop test pulsar")
-	err := s.fixture().pulsar.Stop(s.fixture().ctx)
+	err := s.pulsar.Stop(s.ctx)
 	require.NoError(s.t, err)
 }
 func (s *consensusSuite) waitForNodeJoin(ref insolar.Reference, pulsesCount int) bool {
@@ -331,7 +316,7 @@ func (s *consensusSuite) waitForNodeJoin(ref insolar.Reference, pulsesCount int)
 func (s *consensusSuite) waitForConsensus(consensusCount int) insolar.PulseNumber {
 	var pn insolar.PulseNumber
 	for i := 0; i < consensusCount; i++ {
-		for _, n := range s.fixture().bootstrapNodes {
+		for _, n := range s.bootstrapNodes {
 			select {
 			case pn = <-n.consensusResult:
 				continue
@@ -340,7 +325,7 @@ func (s *consensusSuite) waitForConsensus(consensusCount int) insolar.PulseNumbe
 			}
 		}
 
-		for _, n := range s.fixture().networkNodes {
+		for _, n := range s.networkNodes {
 			<-n.consensusResult
 		}
 	}
@@ -349,14 +334,14 @@ func (s *consensusSuite) waitForConsensus(consensusCount int) insolar.PulseNumbe
 
 func (s *consensusSuite) waitForConsensusExcept(consensusCount int, exception insolar.Reference) {
 	for i := 0; i < consensusCount; i++ {
-		for _, n := range s.fixture().bootstrapNodes {
+		for _, n := range s.bootstrapNodes {
 			if n.id.Equal(exception) {
 				continue
 			}
 			<-n.consensusResult
 		}
 
-		for _, n := range s.fixture().networkNodes {
+		for _, n := range s.networkNodes {
 			if n.id.Equal(exception) {
 				continue
 			}
@@ -367,11 +352,11 @@ func (s *consensusSuite) waitForConsensusExcept(consensusCount int, exception in
 
 // nodesCount returns count of nodes in network without testNode
 func (s *testSuite) getNodesCount() int {
-	return len(s.fixture().bootstrapNodes) + len(s.fixture().networkNodes)
+	return len(s.bootstrapNodes) + len(s.networkNodes)
 }
 
 func (s *testSuite) isNodeInActiveLists(ref insolar.Reference, p insolar.PulseNumber) bool {
-	for _, n := range s.fixture().bootstrapNodes {
+	for _, n := range s.bootstrapNodes {
 		a := n.serviceNetwork.NodeKeeper.GetAccessor(p)
 		if a.GetActiveNode(ref) == nil {
 			return false
@@ -396,17 +381,17 @@ func (s *testSuite) StartNode(node *networkNode) {
 
 func (s *testSuite) StopNode(node *networkNode) {
 	if node.componentManager != nil {
-		err := node.componentManager.Stop(s.fixture().ctx)
+		err := node.componentManager.Stop(s.ctx)
 		require.NoError(s.t, err)
 	}
 }
 
 func (s *testSuite) GracefulStop(node *networkNode) {
 	if node.componentManager != nil {
-		err := node.componentManager.GracefulStop(s.fixture().ctx)
+		err := node.componentManager.GracefulStop(s.ctx)
 		require.NoError(s.t, err)
 
-		err = node.componentManager.Stop(s.fixture().ctx)
+		err = node.componentManager.Stop(s.ctx)
 		require.NoError(s.t, err)
 	}
 }
@@ -451,7 +436,7 @@ func (s *testSuite) newNetworkNodeWithRole(name string, role insolar.StaticRole)
 		consensusResult:     make(chan insolar.PulseNumber, 1),
 	}
 
-	nodeContext, _ := inslogger.WithFields(s.fixture().ctx, map[string]interface{}{
+	nodeContext, _ := inslogger.WithFields(s.ctx, map[string]interface{}{
 		"node_name": name,
 	})
 
@@ -505,7 +490,7 @@ func (s *testSuite) initCrypto(node *networkNode) (*certificate.CertificateManag
 	cert.MinRoles.HeavyMaterial = 1
 	cert.MinRoles.Virtual = 4
 
-	for _, b := range s.fixture().bootstrapNodes {
+	for _, b := range s.bootstrapNodes {
 		pubKey, _ := b.cryptographyService.GetPublicKey()
 		pubKeyBuf, err := proc.ExportPublicKeyPEM(pubKey)
 		require.NoError(s.t, err)
@@ -595,7 +580,7 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	node.serviceNetwork = serviceNetwork
 	node.terminationHandler = terminationHandler
 
-	nodeContext, _ := inslogger.WithFields(s.fixture().ctx, map[string]interface{}{
+	nodeContext, _ := inslogger.WithFields(s.ctx, map[string]interface{}{
 		"node_id":      realKeeper.GetOrigin().ShortID(),
 		"node_address": realKeeper.GetOrigin().Address(),
 		"node_role":    realKeeper.GetOrigin().Role().String(),
@@ -605,11 +590,11 @@ func (s *testSuite) preInitNode(node *networkNode) {
 }
 
 func (s *testSuite) AssertActiveNodesCountDelta(delta int) {
-	activeNodes := s.fixture().bootstrapNodes[1].GetActiveNodes()
+	activeNodes := s.bootstrapNodes[1].GetActiveNodes()
 	require.Equal(s.t, s.getNodesCount()+delta, len(activeNodes))
 }
 
 func (s *testSuite) AssertWorkingNodesCountDelta(delta int) {
-	workingNodes := s.fixture().bootstrapNodes[0].GetWorkingNodes()
+	workingNodes := s.bootstrapNodes[0].GetWorkingNodes()
 	require.Equal(s.t, s.getNodesCount()+delta, len(workingNodes))
 }
