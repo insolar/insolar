@@ -96,3 +96,7 @@ required = [
 [[constraint]]
   name = "github.com/gojuno/minimock"
   version="2.1.8"
+
+[[constraint]]
+  branch = "v1"
+  name = "github.com/insolar/rpc"

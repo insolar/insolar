@@ -131,15 +131,17 @@ func (lr *LogicRunner) Init(ctx context.Context) error {
 
 func (lr *LogicRunner) initHandlers() {
 	dep := &Dependencies{
+		ArtifactManager:  lr.ArtifactManager,
 		Publisher:        lr.Publisher,
 		StateStorage:     lr.StateStorage,
 		ResultsMatcher:   lr.ResultsMatcher,
-		lr:               lr,
 		Sender:           lr.Sender,
 		JetStorage:       lr.JetStorage,
+		JetCoordinator:   lr.JetCoordinator,
 		WriteAccessor:    lr.WriteController,
 		OutgoingSender:   lr.OutgoingSender,
 		RequestsExecutor: lr.RequestsExecutor,
+		PulseAccessor:    lr.PulseAccessor,
 	}
 
 	initHandle := func(msg *watermillMsg.Message) *Init {

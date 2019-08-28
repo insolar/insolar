@@ -23,7 +23,6 @@ import (
 	"github.com/gojuno/minimock"
 	"github.com/stretchr/testify/require"
 
-	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/payload"
@@ -49,7 +48,6 @@ func TestHandleStillExecuting_Present(t *testing.T) {
 
 				h := &HandleStillExecuting{
 					dep: &Dependencies{
-						Sender: bus.NewSenderMock(t).ReplyMock.Return(),
 						StateStorage: NewStateStorageMock(t).
 							UpsertExecutionStateMock.Expect(obj).
 							Return(

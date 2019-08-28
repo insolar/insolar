@@ -25,6 +25,11 @@ import (
 type CheckDaemonResponse struct {
 	Status string `json:"status"`
 }
+type VestingParams struct {
+	Lokup       int64 `json:"lokupInPulses"`
+	Vesting     int64 `json:"vestingInPulses"`
+	VestingStep int64 `json:"vestingStepInPulses"`
+}
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
@@ -743,27 +748,25 @@ func (r *MigrationAdmin) GetActiveDaemons() ([]string, error) {
 }
 
 // GetDepositParameters is proxy generated method
-func (r *MigrationAdmin) GetDepositParameters() (int64, int64, error) {
+func (r *MigrationAdmin) GetDepositParameters() (*VestingParams, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
-	ret := make([]interface{}, 3)
-	var ret0 int64
+	ret := make([]interface{}, 2)
+	var ret0 *VestingParams
 	ret[0] = &ret0
-	var ret1 int64
+	var ret1 *foundation.Error
 	ret[1] = &ret1
-	var ret2 *foundation.Error
-	ret[2] = &ret2
 
 	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
 	if err != nil {
-		return ret0, ret1, err
+		return ret0, err
 	}
 
 	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetDepositParameters", argsSerialized, *PrototypeReference)
 	if err != nil {
-		return ret0, ret1, err
+		return ret0, err
 	}
 
 	resultContainer := foundation.Result{
@@ -771,16 +774,16 @@ func (r *MigrationAdmin) GetDepositParameters() (int64, int64, error) {
 	}
 	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
 	if err != nil {
-		return ret0, ret1, err
+		return ret0, err
 	}
 	if resultContainer.Error != nil {
 		err = resultContainer.Error
-		return ret0, ret1, err
+		return ret0, err
 	}
-	if ret2 != nil {
-		return ret0, ret1, ret2
+	if ret1 != nil {
+		return ret0, ret1
 	}
-	return ret0, ret1, nil
+	return ret0, nil
 }
 
 // GetDepositParametersNoWait is proxy generated method
@@ -803,27 +806,25 @@ func (r *MigrationAdmin) GetDepositParametersNoWait() error {
 }
 
 // GetDepositParametersAsImmutable is proxy generated method
-func (r *MigrationAdmin) GetDepositParametersAsImmutable() (int64, int64, error) {
+func (r *MigrationAdmin) GetDepositParametersAsImmutable() (*VestingParams, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
-	ret := make([]interface{}, 3)
-	var ret0 int64
+	ret := make([]interface{}, 2)
+	var ret0 *VestingParams
 	ret[0] = &ret0
-	var ret1 int64
+	var ret1 *foundation.Error
 	ret[1] = &ret1
-	var ret2 *foundation.Error
-	ret[2] = &ret2
 
 	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
 	if err != nil {
-		return ret0, ret1, err
+		return ret0, err
 	}
 
 	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "GetDepositParameters", argsSerialized, *PrototypeReference)
 	if err != nil {
-		return ret0, ret1, err
+		return ret0, err
 	}
 
 	resultContainer := foundation.Result{
@@ -831,14 +832,313 @@ func (r *MigrationAdmin) GetDepositParametersAsImmutable() (int64, int64, error)
 	}
 	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
 	if err != nil {
-		return ret0, ret1, err
+		return ret0, err
 	}
 	if resultContainer.Error != nil {
 		err = resultContainer.Error
-		return ret0, ret1, err
+		return ret0, err
 	}
-	if ret2 != nil {
-		return ret0, ret1, ret2
+	if ret1 != nil {
+		return ret0, ret1
 	}
-	return ret0, ret1, nil
+	return ret0, nil
+}
+
+// GetMemberByMigrationAddress is proxy generated method
+func (r *MigrationAdmin) GetMemberByMigrationAddressAsMutable(migrationAddress string) (*insolar.Reference, error) {
+	var args [1]interface{}
+	args[0] = migrationAddress
+
+	var argsSerialized []byte
+
+	ret := make([]interface{}, 2)
+	var ret0 *insolar.Reference
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetMemberByMigrationAddress", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return ret0, err
+	}
+
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
+	if err != nil {
+		return ret0, err
+	}
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return ret0, err
+	}
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
+}
+
+// GetMemberByMigrationAddressNoWait is proxy generated method
+func (r *MigrationAdmin) GetMemberByMigrationAddressNoWait(migrationAddress string) error {
+	var args [1]interface{}
+	args[0] = migrationAddress
+
+	var argsSerialized []byte
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "GetMemberByMigrationAddress", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// GetMemberByMigrationAddressAsImmutable is proxy generated method
+func (r *MigrationAdmin) GetMemberByMigrationAddress(migrationAddress string) (*insolar.Reference, error) {
+	var args [1]interface{}
+	args[0] = migrationAddress
+
+	var argsSerialized []byte
+
+	ret := make([]interface{}, 2)
+	var ret0 *insolar.Reference
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "GetMemberByMigrationAddress", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return ret0, err
+	}
+
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
+	if err != nil {
+		return ret0, err
+	}
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return ret0, err
+	}
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
+}
+
+// GetFreeMigrationAddress is proxy generated method
+func (r *MigrationAdmin) GetFreeMigrationAddressAsMutable(publicKey string) (string, error) {
+	var args [1]interface{}
+	args[0] = publicKey
+
+	var argsSerialized []byte
+
+	ret := make([]interface{}, 2)
+	var ret0 string
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetFreeMigrationAddress", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return ret0, err
+	}
+
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
+	if err != nil {
+		return ret0, err
+	}
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return ret0, err
+	}
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
+}
+
+// GetFreeMigrationAddressNoWait is proxy generated method
+func (r *MigrationAdmin) GetFreeMigrationAddressNoWait(publicKey string) error {
+	var args [1]interface{}
+	args[0] = publicKey
+
+	var argsSerialized []byte
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "GetFreeMigrationAddress", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// GetFreeMigrationAddressAsImmutable is proxy generated method
+func (r *MigrationAdmin) GetFreeMigrationAddress(publicKey string) (string, error) {
+	var args [1]interface{}
+	args[0] = publicKey
+
+	var argsSerialized []byte
+
+	ret := make([]interface{}, 2)
+	var ret0 string
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "GetFreeMigrationAddress", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return ret0, err
+	}
+
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
+	if err != nil {
+		return ret0, err
+	}
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return ret0, err
+	}
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
+}
+
+// AddNewMigrationAddressToMaps is proxy generated method
+func (r *MigrationAdmin) AddNewMigrationAddressToMapsAsMutable(migrationAddress string, memberRef insolar.Reference) error {
+	var args [2]interface{}
+	args[0] = migrationAddress
+	args[1] = memberRef
+
+	var argsSerialized []byte
+
+	ret := make([]interface{}, 1)
+	var ret0 *foundation.Error
+	ret[0] = &ret0
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "AddNewMigrationAddressToMaps", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
+	if err != nil {
+		return err
+	}
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return err
+	}
+	if ret0 != nil {
+		return ret0
+	}
+	return nil
+}
+
+// AddNewMigrationAddressToMapsNoWait is proxy generated method
+func (r *MigrationAdmin) AddNewMigrationAddressToMapsNoWait(migrationAddress string, memberRef insolar.Reference) error {
+	var args [2]interface{}
+	args[0] = migrationAddress
+	args[1] = memberRef
+
+	var argsSerialized []byte
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "AddNewMigrationAddressToMaps", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// AddNewMigrationAddressToMapsAsImmutable is proxy generated method
+func (r *MigrationAdmin) AddNewMigrationAddressToMaps(migrationAddress string, memberRef insolar.Reference) error {
+	var args [2]interface{}
+	args[0] = migrationAddress
+	args[1] = memberRef
+
+	var argsSerialized []byte
+
+	ret := make([]interface{}, 1)
+	var ret0 *foundation.Error
+	ret[0] = &ret0
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "AddNewMigrationAddressToMaps", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
+	if err != nil {
+		return err
+	}
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return err
+	}
+	if ret0 != nil {
+		return ret0
+	}
+	return nil
 }

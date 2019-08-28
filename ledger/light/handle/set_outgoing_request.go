@@ -42,20 +42,25 @@ func NewSetOutgoingRequest(dep *proc.Dependencies, msg payload.Meta, passed bool
 }
 
 func (s *SetOutgoingRequest) Present(ctx context.Context, f flow.Flow) error {
-	msg := payload.SetOutgoingRequest{}
-	err := msg.Unmarshal(s.message.Payload)
+	pl, err := payload.Unmarshal(s.message.Payload)
 	if err != nil {
-		return errors.Wrap(err, "SetOutgoingRequest.Present: failed to unmarshal SetIncomingRequest message")
+		return errors.Wrap(err, "failed to unmarshal SetOutgoingRequest message")
+	}
+	msg, ok := pl.(*payload.SetOutgoingRequest)
+	if !ok {
+		return fmt.Errorf("wrong request type: %T", pl)
 	}
 
-	rec := record.Unwrap(&msg.Request)
+	virtual := msg.Request
+	rec := record.Unwrap(&virtual)
 	request, ok := rec.(*record.OutgoingRequest)
 	if !ok {
-		return fmt.Errorf("SetOutgoingRequest.Present: wrong request type: %T", rec)
+		return fmt.Errorf("wrong request type: %T", rec)
 	}
 
-	if request.AffinityRef() == nil {
-		return errors.New("SetOutgoingRequest.Present: object is nil")
+	objectID := *request.AffinityRef().Record()
+	if objectID.IsEmpty() {
+		return errors.New("object is nil")
 	}
 
 	buf, err := msg.Request.Marshal()
@@ -71,7 +76,7 @@ func (s *SetOutgoingRequest) Present(ctx context.Context, f flow.Flow) error {
 	reqID := calc.Result.ID
 
 	passIfNotExecutor := !s.passed
-	jet := proc.NewFetchJet(*request.AffinityRef().Record(), flow.Pulse(ctx), s.message, passIfNotExecutor)
+	jet := proc.NewFetchJet(objectID, flow.Pulse(ctx), s.message, passIfNotExecutor)
 	s.dep.FetchJet(jet)
 	if err := f.Procedure(ctx, jet, true); err != nil {
 		if err == proc.ErrNotExecutor && passIfNotExecutor {
@@ -88,8 +93,8 @@ func (s *SetOutgoingRequest) Present(ctx context.Context, f flow.Flow) error {
 	}
 
 	// To ensure, that we have the index. Because index can be on a heavy node.
-	// If we don't have it and heavy does, SetResult fails because it should update light's index state
-	getIndex := proc.NewEnsureIndex(*request.AffinityRef().Record(), objJetID, s.message, flow.Pulse(ctx))
+	// If we don't have it and heavy does, SetOutgoingRequest fails because it should update light's index state.
+	getIndex := proc.NewEnsureIndex(objectID, objJetID, s.message, flow.Pulse(ctx))
 	s.dep.EnsureIndex(getIndex)
 	if err := f.Procedure(ctx, getIndex, false); err != nil {
 		return err
