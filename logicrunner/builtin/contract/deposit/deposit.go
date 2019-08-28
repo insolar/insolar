@@ -31,36 +31,29 @@ import (
 )
 
 const (
-	XNS                = "XNS"
-	DefaultVestingType = 1    // daily release
-	VestingType1       = 1001 // available from beginning
-	VestingType2       = 1002 // undefined
-	VestingType3       = 1003 // undefined
-	VestingType4       = 1004 // monthly release
+	XNS = "XNS"
 )
 
 // Deposit is like wallet. It holds migrated money.
 type Deposit struct {
 	foundation.BaseContract
-	Balance                 string                 `json:"balance"`
-	PulseDepositUnHold      insolar.PulseNumber    `json:"holdReleaseDate"` // lockupdate
-	MigrationDaemonConfirms foundation.StableMap   `json:"confirmerReferences"`
-	Amount                  string                 `json:"amount"`
-	TxHash                  string                 `json:"ethTxHash"`
-	LockupInPulses          int64                  `json:"lockupInPulses"`  //
-	VestingInPulses         int64                  `json:"vestingInPulses"` // interval
-	VestingType             foundation.VestingType `json:"vestingType"`
+	Balance                 string                       `json:"balance"`
+	PulseDepositUnHold      insolar.PulseNumber          `json:"holdReleaseDate"`
+	MigrationDaemonConfirms foundation.StableMap         `json:"confirmerReferences"`
+	Amount                  string                       `json:"amount"`
+	TxHash                  string                       `json:"ethTxHash"`
+	VestingParams           migrationadmin.VestingParams `json:"vestingParams"`
 }
 
 // GetTxHash gets transaction hash.
 // ins:immutable
-func (d Deposit) GetTxHash() (string, error) {
+func (d *Deposit) GetTxHash() (string, error) {
 	return d.TxHash, nil
 }
 
 // GetAmount gets amount.
 // ins:immutable
-func (d Deposit) GetAmount() (string, error) {
+func (d *Deposit) GetAmount() (string, error) {
 	return d.Amount, nil
 }
 
@@ -71,7 +64,7 @@ func (d *Deposit) GetPulseUnHold() (insolar.PulseNumber, error) {
 }
 
 // New creates new deposit.
-func New(migrationDaemonRef insolar.Reference, txHash string, amount string, lockup int64, vesting int64, vestingType foundation.VestingType) (*Deposit, error) {
+func New(migrationDaemonRef insolar.Reference, txHash string, amount string, vestingParams *migrationadmin.VestingParams) (*Deposit, error) {
 
 	migrationDaemonConfirms := make(foundation.StableMap)
 	migrationDaemonConfirms[migrationDaemonRef.String()] = amount
@@ -81,16 +74,14 @@ func New(migrationDaemonRef insolar.Reference, txHash string, amount string, loc
 		MigrationDaemonConfirms: migrationDaemonConfirms,
 		Amount:                  "0",
 		TxHash:                  txHash,
-		VestingInPulses:         vesting,
-		LockupInPulses:          lockup,
-		VestingType:             vestingType,
+		VestingParams:           *vestingParams,
 	}, nil
 }
 
 // Itself gets deposit information.
 // ins:immutable
-func (d Deposit) Itself() (interface{}, error) {
-	return d, nil
+func (d *Deposit) Itself() (interface{}, error) {
+	return &d, nil
 }
 
 // Confirm adds confirm for deposit by migration daemon.
@@ -118,7 +109,7 @@ func (d *Deposit) Confirm(migrationDaemonRef string, txHash string, amountStr st
 			return fmt.Errorf("failed to get current pulse: %s", err.Error())
 		}
 		d.Amount = amountStr
-		d.PulseDepositUnHold = currentPulse + insolar.PulseNumber(d.LockupInPulses)
+		d.PulseDepositUnHold = currentPulse + insolar.PulseNumber(d.VestingParams.Lokup)
 
 		ma := member.GetObject(foundation.GetMigrationAdminMember())
 		accountRef, err := ma.GetAccount(XNS)
@@ -173,7 +164,7 @@ func (d *Deposit) canTransfer(transferAmount *big.Int) error {
 		return fmt.Errorf("hold period didn't end")
 	}
 
-	spentPeriodInPulses := big.NewInt(int64(currentPulse - d.PulseDepositUnHold))
+	spentPeriodInPulses := big.NewInt(int64(currentPulse-d.PulseDepositUnHold) / d.VestingParams.VestingStep)
 	amount, ok := new(big.Int).SetString(d.Amount, 10)
 	if !ok {
 		return fmt.Errorf("can't parse derposit amount")
@@ -186,7 +177,7 @@ func (d *Deposit) canTransfer(transferAmount *big.Int) error {
 	// How much can we transfer for this time
 	availableForNow := new(big.Int).Div(
 		new(big.Int).Mul(amount, spentPeriodInPulses),
-		big.NewInt(d.VestingInPulses),
+		big.NewInt(int64(d.VestingParams.Vesting/d.VestingParams.VestingStep)),
 	)
 
 	if new(big.Int).Sub(amount, availableForNow).Cmp(

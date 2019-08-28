@@ -33,17 +33,61 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestSetResult_BadMsgPayload(t *testing.T) {
+func TestSetResult_NilMsgPayload(t *testing.T) {
 	t.Parallel()
 
 	ctx := inslogger.TestContext(t)
 	msg := payload.Meta{
-		Payload: []byte{1, 2, 3, 4, 5},
+		Polymorph: uint32(payload.TypeMeta),
+		Payload:   nil,
 	}
 
 	handler := handle.NewSetResult(nil, msg, false)
 
 	err := handler.Present(ctx, flow.NewFlowMock(t))
+	require.Error(t, err)
+}
+
+func TestSetResult_BadMsgPayload(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+	msg := payload.Meta{
+		Polymorph: uint32(payload.TypeMeta),
+		Payload:   []byte{1, 2, 3, 4, 5},
+	}
+
+	handler := handle.NewSetResult(nil, msg, false)
+
+	err := handler.Present(ctx, flow.NewFlowMock(t))
+	require.Error(t, err)
+}
+
+func TestSetResult_IncorrectTypeMsgPayload(t *testing.T) {
+	t.Parallel()
+
+	ctx := flow.TestContextWithPulse(
+		inslogger.TestContext(t),
+		insolar.GenesisPulse.PulseNumber+10,
+	)
+	f := flow.NewFlowMock(t)
+
+	// Incorrect type.
+	result := payload.SetIncomingRequest{
+		Polymorph: uint32(payload.TypeSetIncomingRequest),
+		Request:   record.Virtual{},
+	}
+	buf, err := result.Marshal()
+	require.NoError(t, err)
+
+	msg := payload.Meta{
+		Polymorph: uint32(payload.TypeMeta),
+		Payload:   buf,
+	}
+
+	handler := handle.NewSetResult(proc.NewDependenciesMock(), msg, false)
+
+	err = handler.Present(ctx, f)
 	require.Error(t, err)
 }
 
@@ -55,22 +99,17 @@ func TestSetResult_BadWrappedVirtualRecord(t *testing.T) {
 		insolar.GenesisPulse.PulseNumber+10,
 	)
 	f := flow.NewFlowMock(t)
-	f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
-		switch p.(type) {
-		case *proc.CalculateID:
-			return nil
-		default:
-			panic("unknown procedure")
-		}
-	})
 
 	result := payload.SetResult{
+		Polymorph: uint32(payload.TypeSetResult),
+		// Just a byte slice, not a correct virtual record.
 		Result: []byte{1, 2, 3, 4, 5},
 	}
 	buf, err := result.Marshal()
 	require.NoError(t, err)
 
 	msg := payload.Meta{
+		Polymorph: uint32(payload.TypeMeta),
 		// This buf is not wrapped as virtual record.
 		Payload: buf,
 	}
@@ -89,16 +128,8 @@ func TestSetResult_IncorrectRecordInVirtual(t *testing.T) {
 		insolar.GenesisPulse.PulseNumber+10,
 	)
 	f := flow.NewFlowMock(t)
-	f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
-		switch p.(type) {
-		case *proc.CalculateID:
-			return nil
-		default:
-			panic("unknown procedure")
-		}
-	})
 
-	// Incorrect record in virtual.
+	// Incorrect record type in virtual.
 	virtual := record.Virtual{
 		Union: &record.Virtual_Genesis{
 			Genesis: &record.Genesis{
@@ -110,13 +141,15 @@ func TestSetResult_IncorrectRecordInVirtual(t *testing.T) {
 	require.NoError(t, err)
 
 	result := payload.SetResult{
-		Result: virtualBuf,
+		Polymorph: uint32(payload.TypeSetResult),
+		Result:    virtualBuf,
 	}
 	resultBuf, err := result.Marshal()
 	require.NoError(t, err)
 
 	msg := payload.Meta{
-		Payload: resultBuf,
+		Polymorph: uint32(payload.TypeMeta),
+		Payload:   resultBuf,
 	}
 
 	handler := handle.NewSetResult(proc.NewDependenciesMock(), msg, false)
@@ -133,14 +166,6 @@ func TestSetResult_EmptyResultObject(t *testing.T) {
 		insolar.GenesisPulse.PulseNumber+10,
 	)
 	f := flow.NewFlowMock(t)
-	f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
-		switch p.(type) {
-		case *proc.CalculateID:
-			return nil
-		default:
-			panic("unknown procedure")
-		}
-	})
 
 	// Result object is empty
 	virtual := record.Virtual{
@@ -154,13 +179,15 @@ func TestSetResult_EmptyResultObject(t *testing.T) {
 	require.NoError(t, err)
 
 	result := payload.SetResult{
-		Result: virtualBuf,
+		Polymorph: uint32(payload.TypeSetResult),
+		Result:    virtualBuf,
 	}
 	resultBuf, err := result.Marshal()
 	require.NoError(t, err)
 
 	msg := payload.Meta{
-		Payload: resultBuf,
+		Polymorph: uint32(payload.TypeMeta),
+		Payload:   resultBuf,
 	}
 
 	handler := handle.NewSetResult(proc.NewDependenciesMock(), msg, false)
@@ -183,8 +210,6 @@ func TestSetResult_FlowWithPassedFlag(t *testing.T) {
 		f := flow.NewFlowMock(t)
 		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
 			switch p.(type) {
-			case *proc.CalculateID:
-				return nil
 			case *proc.FetchJet:
 				return errors.New("something strange from checkjet")
 			default:
@@ -202,8 +227,6 @@ func TestSetResult_FlowWithPassedFlag(t *testing.T) {
 		f := flow.NewFlowMock(t)
 		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
 			switch p.(type) {
-			case *proc.CalculateID:
-				return nil
 			case *proc.FetchJet:
 				return proc.ErrNotExecutor
 			default:
@@ -221,8 +244,6 @@ func TestSetResult_FlowWithPassedFlag(t *testing.T) {
 		f := flow.NewFlowMock(t)
 		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
 			switch p.(type) {
-			case *proc.CalculateID:
-				return nil
 			case *proc.FetchJet:
 				return proc.ErrNotExecutor
 			default:
@@ -251,8 +272,6 @@ func TestSetResult_ErrorFromWaitHot(t *testing.T) {
 		f := flow.NewFlowMock(t)
 		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
 			switch p.(type) {
-			case *proc.CalculateID:
-				return nil
 			case *proc.FetchJet:
 				return nil
 			case *proc.WaitHot:
@@ -267,13 +286,12 @@ func TestSetResult_ErrorFromWaitHot(t *testing.T) {
 		assert.EqualError(t, err, "error from waithot")
 	})
 
+	// Happy path, everything is fine.
 	t.Run("waithot procedure returns nil err", func(t *testing.T) {
 		t.Parallel()
 		f := flow.NewFlowMock(t)
 		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
 			switch p.(type) {
-			case *proc.CalculateID:
-				return nil
 			case *proc.FetchJet:
 				return nil
 			case *proc.WaitHot:
@@ -307,8 +325,6 @@ func TestSetResult_ErrorFromGetIndex(t *testing.T) {
 		f := flow.NewFlowMock(t)
 		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
 			switch p.(type) {
-			case *proc.CalculateID:
-				return nil
 			case *proc.FetchJet:
 				return nil
 			case *proc.WaitHot:
@@ -325,13 +341,12 @@ func TestSetResult_ErrorFromGetIndex(t *testing.T) {
 		assert.EqualError(t, err, "can't get index: error from getindex")
 	})
 
+	// Happy path, everything is fine.
 	t.Run("getindex procedure returns nil err", func(t *testing.T) {
 		t.Parallel()
 		f := flow.NewFlowMock(t)
 		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
 			switch p.(type) {
-			case *proc.CalculateID:
-				return nil
 			case *proc.FetchJet:
 				return nil
 			case *proc.WaitHot:
@@ -365,8 +380,6 @@ func TestSetResult_ErrorFromSetResult(t *testing.T) {
 		f := flow.NewFlowMock(t)
 		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
 			switch p.(type) {
-			case *proc.CalculateID:
-				return nil
 			case *proc.FetchJet:
 				return nil
 			case *proc.WaitHot:
@@ -385,13 +398,12 @@ func TestSetResult_ErrorFromSetResult(t *testing.T) {
 		assert.EqualError(t, err, "error from setresult")
 	})
 
+	// Happy path, everything is fine.
 	t.Run("setresult procedure returns nil err", func(t *testing.T) {
 		t.Parallel()
 		f := flow.NewFlowMock(t)
 		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
 			switch p.(type) {
-			case *proc.CalculateID:
-				return nil
 			case *proc.FetchJet:
 				return nil
 			case *proc.WaitHot:
@@ -425,13 +437,15 @@ func metaResultMsg(t *testing.T) payload.Meta {
 	require.NoError(t, err)
 
 	result := payload.SetResult{
-		Result: virtualBuf,
+		Polymorph: uint32(payload.TypeSetResult),
+		Result:    virtualBuf,
 	}
 	resultBuf, err := result.Marshal()
 	require.NoError(t, err)
 
 	msg := payload.Meta{
-		Payload: resultBuf,
+		Polymorph: uint32(payload.TypeMeta),
+		Payload:   resultBuf,
 	}
 
 	return msg

@@ -116,6 +116,7 @@ type GenesisContractsConfig struct {
 	MigrationDaemonPublicKeys []string
 	VestingPeriodInPulses     int64
 	LokupPeriodInPulses       int64
+	VestingStepInPulses       int64
 	MigrationAddresses        [GenesisAmountMigrationAddressShards][]string
 }
 

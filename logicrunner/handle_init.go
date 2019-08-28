@@ -23,11 +23,13 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message"
 	"go.opencensus.io/trace"
 
-	"github.com/insolar/insolar/insolar/bus/meta"
-	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/insolar/insolar/logicrunner/writecontroller"
-
 	"github.com/pkg/errors"
+
+	"github.com/insolar/insolar/insolar/bus/meta"
+	"github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/logicrunner/artifacts"
+	"github.com/insolar/insolar/logicrunner/writecontroller"
 
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
@@ -39,15 +41,17 @@ import (
 const InnerMsgTopic = "InnerMsg"
 
 type Dependencies struct {
+	ArtifactManager  artifacts.Client
 	Publisher        message.Publisher
 	StateStorage     StateStorage
 	ResultsMatcher   ResultMatcher
-	lr               *LogicRunner
 	Sender           bus.Sender
 	JetStorage       jet.Storage
+	JetCoordinator   jet.Coordinator
 	WriteAccessor    writecontroller.Accessor
 	OutgoingSender   OutgoingRequestSender
 	RequestsExecutor RequestsExecutor
+	PulseAccessor    pulse.Accessor
 }
 
 type Init struct {

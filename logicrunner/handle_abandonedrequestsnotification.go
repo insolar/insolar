@@ -23,10 +23,8 @@ import (
 	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
-	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 )
@@ -68,21 +66,20 @@ func (h *HandleAbandonedRequestsNotification) Present(ctx context.Context, f flo
 	defer span.End()
 
 	done, err := h.dep.WriteAccessor.Begin(ctx, flow.Pulse(ctx))
-	defer done()
-
 	if err != nil {
+		logger.Warn("late notification about abandoned: ", err.Error())
 		return nil
 	}
+	defer done()
 
 	procInitializeExecutionState := initializeAbandonedRequestsNotificationExecutionState{
 		dep: h.dep,
 		msg: abandoned,
 	}
 	err = f.Procedure(ctx, &procInitializeExecutionState, false)
-
 	if err != nil {
 		return err
 	}
-	go h.dep.Sender.Reply(ctx, h.meta, bus.ReplyAsMessage(ctx, &reply.OK{}))
+
 	return nil
 }

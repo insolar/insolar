@@ -414,7 +414,7 @@ func INSMETHOD_GetDepositParameters(object []byte, data []byte) ([]byte, []byte,
 		return nil, nil, e
 	}
 
-	ret0, ret1, ret2 := self.GetDepositParameters()
+	ret0, ret1 := self.GetDepositParameters()
 
 	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()
@@ -426,11 +426,166 @@ func INSMETHOD_GetDepositParameters(object []byte, data []byte) ([]byte, []byte,
 		return nil, nil, err
 	}
 
-	ret2 = ph.MakeErrorSerializable(ret2)
+	ret1 = ph.MakeErrorSerializable(ret1)
 
 	ret := []byte{}
 	err = ph.Serialize(
-		foundation.Result{Returns: []interface{}{ret0, ret1, ret2}},
+		foundation.Result{Returns: []interface{}{ret0, ret1}},
+		&ret,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return state, ret, err
+}
+
+func INSMETHOD_GetMemberByMigrationAddress(object []byte, data []byte) ([]byte, []byte, error) {
+	ph := common.CurrentProxyCtx
+	ph.SetSystemError(nil)
+	self := new(MigrationAdmin)
+
+	if len(object) == 0 {
+		return nil, nil, &foundation.Error{S: "[ FakeGetMemberByMigrationAddress ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+	}
+
+	err := ph.Deserialize(object, self)
+	if err != nil {
+		e := &foundation.Error{S: "[ FakeGetMemberByMigrationAddress ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		return nil, nil, e
+	}
+
+	args := make([]interface{}, 1)
+	var args0 string
+	args[0] = &args0
+
+	err = ph.Deserialize(data, &args)
+	if err != nil {
+		e := &foundation.Error{S: "[ FakeGetMemberByMigrationAddress ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		return nil, nil, e
+	}
+
+	ret0, ret1 := self.GetMemberByMigrationAddress(args0)
+
+	if ph.GetSystemError() != nil {
+		return nil, nil, ph.GetSystemError()
+	}
+
+	state := []byte{}
+	err = ph.Serialize(self, &state)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	ret1 = ph.MakeErrorSerializable(ret1)
+
+	ret := []byte{}
+	err = ph.Serialize(
+		foundation.Result{Returns: []interface{}{ret0, ret1}},
+		&ret,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return state, ret, err
+}
+
+func INSMETHOD_GetFreeMigrationAddress(object []byte, data []byte) ([]byte, []byte, error) {
+	ph := common.CurrentProxyCtx
+	ph.SetSystemError(nil)
+	self := new(MigrationAdmin)
+
+	if len(object) == 0 {
+		return nil, nil, &foundation.Error{S: "[ FakeGetFreeMigrationAddress ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+	}
+
+	err := ph.Deserialize(object, self)
+	if err != nil {
+		e := &foundation.Error{S: "[ FakeGetFreeMigrationAddress ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		return nil, nil, e
+	}
+
+	args := make([]interface{}, 1)
+	var args0 string
+	args[0] = &args0
+
+	err = ph.Deserialize(data, &args)
+	if err != nil {
+		e := &foundation.Error{S: "[ FakeGetFreeMigrationAddress ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		return nil, nil, e
+	}
+
+	ret0, ret1 := self.GetFreeMigrationAddress(args0)
+
+	if ph.GetSystemError() != nil {
+		return nil, nil, ph.GetSystemError()
+	}
+
+	state := []byte{}
+	err = ph.Serialize(self, &state)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	ret1 = ph.MakeErrorSerializable(ret1)
+
+	ret := []byte{}
+	err = ph.Serialize(
+		foundation.Result{Returns: []interface{}{ret0, ret1}},
+		&ret,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return state, ret, err
+}
+
+func INSMETHOD_AddNewMigrationAddressToMaps(object []byte, data []byte) ([]byte, []byte, error) {
+	ph := common.CurrentProxyCtx
+	ph.SetSystemError(nil)
+	self := new(MigrationAdmin)
+
+	if len(object) == 0 {
+		return nil, nil, &foundation.Error{S: "[ FakeAddNewMigrationAddressToMaps ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+	}
+
+	err := ph.Deserialize(object, self)
+	if err != nil {
+		e := &foundation.Error{S: "[ FakeAddNewMigrationAddressToMaps ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		return nil, nil, e
+	}
+
+	args := make([]interface{}, 2)
+	var args0 string
+	args[0] = &args0
+	var args1 insolar.Reference
+	args[1] = &args1
+
+	err = ph.Deserialize(data, &args)
+	if err != nil {
+		e := &foundation.Error{S: "[ FakeAddNewMigrationAddressToMaps ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		return nil, nil, e
+	}
+
+	ret0 := self.AddNewMigrationAddressToMaps(args0, args1)
+
+	if ph.GetSystemError() != nil {
+		return nil, nil, ph.GetSystemError()
+	}
+
+	state := []byte{}
+	err = ph.Serialize(self, &state)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	ret0 = ph.MakeErrorSerializable(ret0)
+
+	ret := []byte{}
+	err = ph.Serialize(
+		foundation.Result{Returns: []interface{}{ret0}},
 		&ret,
 	)
 	if err != nil {
@@ -445,13 +600,16 @@ func Initialize() XXX_insolar.ContractWrapper {
 		GetCode:      INSMETHOD_GetCode,
 		GetPrototype: INSMETHOD_GetPrototype,
 		Methods: XXX_insolar.ContractMethods{
-			"MigrationAdminCall":    INSMETHOD_MigrationAdminCall,
-			"GetAllMigrationDaemon": INSMETHOD_GetAllMigrationDaemon,
-			"ActivateDaemon":        INSMETHOD_ActivateDaemon,
-			"DeactivateDaemon":      INSMETHOD_DeactivateDaemon,
-			"CheckDaemon":           INSMETHOD_CheckDaemon,
-			"GetActiveDaemons":      INSMETHOD_GetActiveDaemons,
-			"GetDepositParameters":  INSMETHOD_GetDepositParameters,
+			"MigrationAdminCall":           INSMETHOD_MigrationAdminCall,
+			"GetAllMigrationDaemon":        INSMETHOD_GetAllMigrationDaemon,
+			"ActivateDaemon":               INSMETHOD_ActivateDaemon,
+			"DeactivateDaemon":             INSMETHOD_DeactivateDaemon,
+			"CheckDaemon":                  INSMETHOD_CheckDaemon,
+			"GetActiveDaemons":             INSMETHOD_GetActiveDaemons,
+			"GetDepositParameters":         INSMETHOD_GetDepositParameters,
+			"GetMemberByMigrationAddress":  INSMETHOD_GetMemberByMigrationAddress,
+			"GetFreeMigrationAddress":      INSMETHOD_GetFreeMigrationAddress,
+			"AddNewMigrationAddressToMaps": INSMETHOD_AddNewMigrationAddressToMaps,
 		},
 		Constructors: XXX_insolar.ContractConstructors{},
 	}
