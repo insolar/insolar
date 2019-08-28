@@ -43,7 +43,7 @@ func NewLocal(pn pulse.Number, scope uint8, hash longbits.Bits224) Local {
 	return Local{pulseAndScope: pn.WithFlags(scope), hash: hash}
 }
 
-const pulseAndScopeSize = 4
+const JetDepthPosition = 0
 
 type Local struct {
 	pulseAndScope uint32 // pulse + scope
@@ -84,16 +84,16 @@ func (v *Local) WriteTo(w io.Writer) (int64, error) {
 }
 
 func (v *Local) Read(p []byte) (n int, err error) {
-	if len(p) < pulseAndScopeSize {
+	if len(p) < LocalBinaryPulseAndScopeSize {
 		return copy(p, v.pulseAndScopeAsBytes()), nil
 	}
 
 	byteOrder.PutUint32(p, v.pulseAndScope)
-	return pulseAndScopeSize + copy(p[pulseAndScopeSize:], v.hash.AsBytes()), nil
+	return LocalBinaryPulseAndScopeSize + copy(p[LocalBinaryPulseAndScopeSize:], v.hash.AsBytes()), nil
 }
 
 func (v Local) len() int {
-	return pulseAndScopeSize + len(v.hash)
+	return LocalBinaryPulseAndScopeSize + len(v.hash)
 }
 
 func (v *Local) AsByteString() longbits.ByteString {
@@ -103,12 +103,12 @@ func (v *Local) AsByteString() longbits.ByteString {
 func (v *Local) AsBytes() []byte {
 	val := make([]byte, v.len())
 	byteOrder.PutUint32(val, v.pulseAndScope)
-	_, _ = v.hash.Read(val[pulseAndScopeSize:])
+	_, _ = v.hash.Read(val[LocalBinaryPulseAndScopeSize:])
 	return val
 }
 
 func (v *Local) pulseAndScopeAsBytes() []byte {
-	val := make([]byte, pulseAndScopeSize)
+	val := make([]byte, LocalBinaryPulseAndScopeSize)
 	byteOrder.PutUint32(val, v.pulseAndScope)
 	return val
 }
@@ -142,7 +142,7 @@ func (p *byteReader) ReadByte() (byte, error) {
 			return 0, io.EOF
 		}
 		p.o++
-		return p.v.hash[p.o-1-pulseAndScopeSize], nil
+		return p.v.hash[p.o-1-LocalBinaryPulseAndScopeSize], nil
 	}
 }
 
@@ -162,7 +162,7 @@ func (p *byteWriter) WriteByte(c byte) error {
 		if p.isFull() {
 			return io.ErrUnexpectedEOF
 		}
-		p.v.hash[p.o-pulseAndScopeSize] = c
+		p.v.hash[p.o-LocalBinaryPulseAndScopeSize] = c
 	}
 	p.o++
 	return nil
@@ -284,7 +284,7 @@ func (v Local) Size() int {
 }
 
 func (v Local) debugStringJet() string {
-	depth, prefix := int(v.hash[0]), v.hash[1:]
+	depth, prefix := int(v.hash[JetDepthPosition]), v.hash[1:]
 
 	if depth == 0 {
 		return "[JET 0 -]"

@@ -187,7 +187,7 @@ func (v encoder) encodeBinary(rec *Local, b *strings.Builder) error {
 		limit := len(rec.hash) - 1
 		for ; limit >= 0 && rec.hash[limit] == 0; limit-- {
 		}
-		limit += 1 + pulseAndScopeSize
+		limit += 1 + LocalBinaryPulseAndScopeSize
 
 		err := v.byteEncoder(rec.asReader(uint8(limit)), b)
 		if err != nil {

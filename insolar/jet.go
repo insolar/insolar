@@ -33,8 +33,10 @@ const (
 	JetPrefixSize = JetSize - 1
 	// JetMaximumDepth is a Jet's maximum depth (maximum offset in bits).
 	JetMaximumDepth = JetPrefixSize*8 - 1
+	// JetDepthPosition is an position where depth of jet id is located
+	JetDepthPosition = 0
 	// JetPrefixOffset is an offset where prefix starts in jet id.
-	JetPrefixOffset = PulseNumberSize + 1
+	JetPrefixOffset = JetDepthPosition + 1
 )
 
 // JetID should be used, when id is a jetID
@@ -72,7 +74,7 @@ var ZeroJetID = *NewJetID(0, nil)
 // NewJetID creates a new jet with provided ID and index
 func NewJetID(depth uint8, prefix []byte) *JetID {
 	hash := [reference.LocalBinaryHashSize]byte{depth}
-	copy(hash[1:], bits.ResetBits(prefix, depth))
+	copy(hash[JetPrefixOffset:], bits.ResetBits(prefix, depth))
 
 	return (*JetID)(NewID(PulseNumberJet, hash[:]))
 }
@@ -82,7 +84,7 @@ func (id JetID) Depth() uint8 {
 	if !id.IsValid() {
 		panic(fmt.Sprintf("provided id %b is not a jet id", id))
 	}
-	return ID(id).GetHash()[0]
+	return ID(id).GetHash()[JetDepthPosition]
 }
 
 // Prefix extracts prefix from a jet id.
@@ -90,7 +92,7 @@ func (id JetID) Prefix() []byte {
 	if !id.IsValid() {
 		panic(fmt.Sprintf("provided id %b is not a jet id", id))
 	}
-	return ID(id).Hash()[1:]
+	return ID(id).Hash()[JetPrefixOffset:]
 }
 
 // DebugString prints JetID in human readable form.

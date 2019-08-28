@@ -170,7 +170,7 @@ func (v decoder) parseReference(refFull string, byteDecoder ByteDecodeFunc) (Glo
 		if encodedParity[0] != '2' {
 			return Global{}, fmt.Errorf("invalid parity prefix: ref=%s, parity=%s", refFull, encodedParity)
 		}
-		buf := bytes.NewBuffer(make([]byte, 0, pulseAndScopeSize))
+		buf := bytes.NewBuffer(make([]byte, 0, LocalBinaryPulseAndScopeSize))
 		_, err := byteDecoder(encodedParity[1:], buf)
 		if err != nil {
 			return Global{}, fmt.Errorf("unable to decode parity: ref=%s, err=%v", refFull, err)
