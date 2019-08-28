@@ -52,7 +52,7 @@ func TestGetCode_Present(t *testing.T) {
 		meta = payload.Meta{
 			Polymorph: uint32(payload.TypeMeta),
 			Payload: payload.MustMarshal(&payload.GetCode{
-				Polymorph: 0,
+				Polymorph: uint32(payload.TypeGetCode),
 				CodeID:    insolar.ID{},
 			}),
 			ID: []byte{1, 1, 1},
