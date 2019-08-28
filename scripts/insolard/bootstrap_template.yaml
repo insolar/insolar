@@ -9,7 +9,7 @@ contracts:
   outdir: "{{ .BaseDir }}/plugins/"
 root_balance: "0"
 md_balance: "50000000000000000000"
-lokup_pulse_period: 10
+lokup_pulse_period: 20
 vesting_pulse_period: 10
 vesting_pulse_step: 10
 majority_rule: 5
