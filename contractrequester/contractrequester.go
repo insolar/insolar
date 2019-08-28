@@ -205,6 +205,13 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Payload) (i
 	if msg.Request.Nonce == 0 {
 		msg.Request.Nonce = randomUint64()
 	}
+	if msg.PulseNumber == 0 {
+		pulseObject, err := cr.PulseAccessor.Latest(ctx)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "failed to get latest pulse")
+		}
+		msg.PulseNumber = pulseObject.PulseNumber
+	}
 
 	logger := inslogger.FromContext(ctx)
 	logger.Debug("about to send call to method ", msg.Request.Method)
