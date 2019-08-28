@@ -24,11 +24,12 @@ import (
 	"sync"
 
 	"github.com/dgraph-io/badger"
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/store"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/pkg/errors"
 )
 
 // RecordDB is a DB storage implementation. It saves records to disk and does not allow removal.
@@ -51,7 +52,7 @@ func (k recordKey) DebugString() string {
 
 func (k recordKey) ID() []byte {
 	id := insolar.ID(k)
-	return bytes.Join([][]byte{id.Pulse().Bytes(), id.Hash()}, nil)
+	return id.AsBytes()
 }
 
 func newRecordKey(raw []byte) recordKey {
