@@ -42,10 +42,13 @@ func NewSetResult(dep *proc.Dependencies, msg payload.Meta, passed bool) *SetRes
 }
 
 func (s *SetResult) Present(ctx context.Context, f flow.Flow) error {
-	msg := payload.SetResult{}
-	err := msg.Unmarshal(s.message.Payload)
+	pl, err := payload.Unmarshal(s.message.Payload)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal SetResult message")
+	}
+	msg, ok := pl.(*payload.SetResult)
+	if !ok {
+		return fmt.Errorf("wrong request type: %T", pl)
 	}
 
 	virtual := record.Virtual{}
@@ -82,7 +85,7 @@ func (s *SetResult) Present(ctx context.Context, f flow.Flow) error {
 	}
 
 	// To ensure, that we have the index. Because index can be on a heavy node.
-	// If we don't have it and heavy does, SetResult fails because it should update light's index state
+	// If we don't have it and heavy does, SetResult fails because it should update light's index state.
 	idx := proc.NewEnsureIndex(result.Object, jetID, s.message, flow.Pulse(ctx))
 	s.dep.EnsureIndex(idx)
 	if err := f.Procedure(ctx, idx, false); err != nil {

@@ -140,6 +140,7 @@ func (lr *LogicRunner) initHandlers() {
 		WriteAccessor:    lr.WriteController,
 		OutgoingSender:   lr.OutgoingSender,
 		RequestsExecutor: lr.RequestsExecutor,
+		PulseAccessor:    lr.PulseAccessor,
 	}
 
 	initHandle := func(msg *watermillMsg.Message) *Init {
