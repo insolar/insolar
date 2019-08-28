@@ -20,6 +20,7 @@ import (
 )
 
 var (
+	adminAPIURL    string
 	apiURL         string
 	method         string
 	params         string
@@ -29,12 +30,14 @@ var (
 	privateKeyHex  string
 )
 
-const defaultURL = "http://localhost:19101/api"
+const defaultAdminURL = "http://localhost:19001/admin-api/rpc"
+const defaultPublicURL = "http://localhost:19101/api/rpc"
 
 func parseInputParams() {
 	pflag.StringVarP(&memberKeysPath, "memberkeys", "k", "", "path to file with Member keys")
 	pflag.StringVarP(&privateKeyHex, "privateKeyHex", "h", "", "private key in hex format")
-	pflag.StringVarP(&apiURL, "url", "u", defaultURL, "api url")
+	pflag.StringVarP(&adminAPIURL, "adminurl", "a", defaultAdminURL, "admin api url")
+	pflag.StringVarP(&apiURL, "url", "u", defaultPublicURL, "api url")
 	pflag.StringVarP(&paramsFile, "paramsFile", "f", "", "json file params")
 
 	pflag.StringVarP(&method, "method", "m", "", "Insolar method name")
@@ -68,7 +71,7 @@ func main() {
 	}
 
 	if params.Reference == "" {
-		response, err := requester.Info(apiURL)
+		response, err := requester.Info(adminAPIURL)
 		check("[ simpleRequester ]", err)
 		params.Reference = response.RootMember
 	}

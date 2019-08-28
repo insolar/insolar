@@ -23,8 +23,11 @@ Usage
         -k memberkeys
                 Path to file with Member keys.
 
+        -a adminurl
+                admin API url for requests (default - http://localhost:19001/admin-api/rpc).
+
         -u url
-                API url for requests (default - http://localhost:19101/api).
+                public or admin API url for requests (default - http://localhost:19101/api/rpc).
 
         -f paramsFile
                 JSON request parameters file
