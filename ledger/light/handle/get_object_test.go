@@ -274,7 +274,7 @@ func TestGetObject_ErrorFromEnsureIndex(t *testing.T) {
 	})
 }
 
-func TestGetObject_ErrorFromGetObject(t *testing.T) {
+func TestGetObject_ErrorFromSendObject(t *testing.T) {
 	t.Parallel()
 	ctx := flow.TestContextWithPulse(
 		inslogger.TestContext(t),
