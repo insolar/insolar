@@ -56,21 +56,20 @@ import (
 	"math"
 	"sync"
 
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/power"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/longbits"
 	"github.com/insolar/insolar/network/consensus/common/args"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
-	"github.com/insolar/insolar/network/consensus/common/longbits"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/misbehavior"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/power"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
 )
 
 func NewNodeAppearanceAsSelf(np profiles.LocalNode, powerRequest power.Request, hook *Hook) NodeAppearance {
@@ -122,12 +121,44 @@ func (c *NodeAppearance) CopySelfTo(target *NodeAppearance) {
 }
 
 func NewEmptyNodeAppearance(np profiles.ActiveNode) NodeAppearance {
-
 	if np == nil {
 		panic("illegal value")
 	}
 	return NodeAppearance{
 		profile: np,
+	}
+}
+
+func NewLocalJoinerNodeAppearance(np profiles.ActiveNode,
+	announcerID insolar.ShortNodeID, joinerSecret cryptkit.DigestHolder) NodeAppearance {
+
+	if np == nil {
+		panic("illegal value")
+	}
+	if !np.IsJoiner() || announcerID.IsAbsent() {
+		panic("illegal value")
+	}
+	return NodeAppearance{
+		profile:            np,
+		joinerIntroducedBy: announcerID,
+		joinerSecret:       joinerSecret,
+	}
+}
+
+func NewAscendedNodeAppearance(np profiles.ActiveNode, limiter phases.PacketLimiter,
+	announcerID insolar.ShortNodeID, joinerSecret cryptkit.DigestHolder) NodeAppearance {
+
+	if np == nil {
+		panic("illegal value")
+	}
+	if np.IsJoiner() && announcerID.IsAbsent() {
+		panic("illegal value")
+	}
+	return NodeAppearance{
+		profile:            np,
+		limiter:            limiter,
+		joinerIntroducedBy: announcerID,
+		joinerSecret:       joinerSecret,
 	}
 }
 
@@ -165,7 +196,9 @@ type NodeAppearance struct {
 
 	// statelessDigest cryptkit.DigestHolder
 
-	// joinerSecret         cryptkit.Digest     // TODO implement
+	joinerIntroducedBy insolar.ShortNodeID
+	joinerSecret       cryptkit.DigestHolder
+
 	requestedJoinerID    insolar.ShortNodeID // one-time set
 	requestedLeave       bool                // one-time set
 	requestedLeaveReason uint32              // one-time set
@@ -177,11 +210,6 @@ type NodeAppearance struct {
 	limiter         phases.PacketLimiter
 	trust           member.TrustLevel
 	neighborReports uint8
-}
-
-func (c *NodeAppearance) EncryptJoinerSecret(joinerSecret cryptkit.DigestHolder) cryptkit.DigestHolder {
-	// TODO encryption of joinerSecret
-	return joinerSecret
 }
 
 func (c *NodeAppearance) GetStatic() profiles.StaticProfile {
@@ -293,7 +321,9 @@ func (c *NodeAppearance) ApplyNodeMembership(mp profiles.MemberAnnouncement, app
 	defer c.mutex.Unlock()
 
 	modified, err := c._applyState(mp, applyAfterChecks)
-	c.updateNodeTrustLevel(c.trust, member.TrustBySelf)
+	if modified && err == nil {
+		c.updateNodeTrustLevel(c.trust, member.TrustBySelf)
+	}
 	return modified, err
 }
 
@@ -749,4 +779,26 @@ func (c *NodeAppearance) GetRequestedLeave() (bool, uint32) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	return c.requestedLeave, c.requestedLeaveReason
+}
+
+func (c *NodeAppearance) GetAnnouncementAsJoiner() *transport.JoinerAnnouncement {
+	if !c.profile.IsJoiner() {
+		panic("illegal state")
+	}
+	if c.joinerIntroducedBy.IsAbsent() && !c.IsLocal() {
+		panic("illegal state")
+	}
+	return transport.NewAnyJoinerAnnouncement(c.profile.GetStatic(), c.joinerIntroducedBy, c.joinerSecret)
+}
+
+func (c *NodeAppearance) EncryptJoinerSecret(joinerSecret cryptkit.DigestHolder) cryptkit.DigestHolder {
+	// TODO encryption of joinerSecret
+	return joinerSecret
+}
+
+/* MUST be used under lock, used for fast-fail detection in event handler */
+func (c *NodeAppearance) UnsafeEnsureStateAvailable() {
+	if !c.isStateAvailable() {
+		panic("illegal state")
+	}
 }

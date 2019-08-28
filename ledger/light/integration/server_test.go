@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// +build slowtest
 
 package integration_test
 
@@ -107,8 +108,8 @@ func DefaultLightInitialState() *payload.LightInitialState {
 		Pulse: pulse.PulseProto{
 			PulseNumber: insolar.FirstPulseNumber,
 		},
-		Drops: [][]byte{
-			drop.MustEncode(&drop.Drop{JetID: insolar.ZeroJetID, Pulse: insolar.FirstPulseNumber}),
+		Drops: []drop.Drop{
+			{JetID: insolar.ZeroJetID, Pulse: insolar.FirstPulseNumber},
 		},
 	}
 }
@@ -242,7 +243,7 @@ func NewServer(
 			filamentCalculator,
 			Coordinator,
 			jetFetcher,
-			CryptoScheme.ReferenceHasher(),
+			CryptoScheme,
 			ServerBus,
 		)
 

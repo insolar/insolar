@@ -21,9 +21,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/insolar/go-actors/actor/system"
-
 	"github.com/gojuno/minimock"
+	"github.com/insolar/go-actors/actor/system"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 
@@ -310,10 +309,12 @@ func TestValidationProxyImplementation_RouteCall(t *testing.T) {
 }
 func TestRouteCallRegistersOutgoingRequestWithValidReason(t *testing.T) {
 	t.Parallel()
+	mc := minimock.NewController(t)
+	defer mc.Finish()
 
-	am := artifacts.NewClientMock(t)
-	dc := artifacts.NewDescriptorsCacheMock(t)
-	cr := testutils.NewContractRequesterMock(t)
+	am := artifacts.NewClientMock(mc)
+	dc := artifacts.NewDescriptorsCacheMock(mc)
+	cr := testutils.NewContractRequesterMock(mc)
 	as := system.New()
 	os := NewOutgoingRequestSender(as, cr, am)
 
@@ -349,6 +350,7 @@ func TestRouteCallRegistersOutgoingRequestWithValidReason(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, outreq)
 	require.Equal(t, requestRef, outreq.Reason)
+	as.CloseAll()
 }
 
 func TestRouteCallRegistersSaga(t *testing.T) {

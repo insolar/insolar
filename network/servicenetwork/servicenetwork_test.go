@@ -56,6 +56,7 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/insolar/insolar/network/controller"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -161,7 +162,7 @@ func TestSendMessageHandler_SendError(t *testing.T) {
 		})
 		return n
 	})
-	rpc := networkUtils.NewRPCControllerMock(t)
+	rpc := controller.NewRPCControllerMock(t)
 	rpc.SendBytesMock.Set(func(p context.Context, p1 insolar.Reference, p2 string, p3 []byte) (r []byte, r1 error) {
 		return nil, errors.New("test error")
 	})
@@ -198,7 +199,7 @@ func TestSendMessageHandler_WrongReply(t *testing.T) {
 		})
 		return n
 	})
-	rpc := networkUtils.NewRPCControllerMock(t)
+	rpc := controller.NewRPCControllerMock(t)
 	rpc.SendBytesMock.Set(func(p context.Context, p1 insolar.Reference, p2 string, p3 []byte) (r []byte, r1 error) {
 		return nil, nil
 	})
@@ -233,7 +234,7 @@ func TestSendMessageHandler(t *testing.T) {
 		})
 		return n
 	})
-	rpc := networkUtils.NewRPCControllerMock(t)
+	rpc := controller.NewRPCControllerMock(t)
 	rpc.SendBytesMock.Set(func(p context.Context, p1 insolar.Reference, p2 string, p3 []byte) (r []byte, r1 error) {
 		return ack, nil
 	})
@@ -275,14 +276,11 @@ func TestServiceNetwork_StartStop(t *testing.T) {
 	require.NoError(t, err)
 	ctx := context.Background()
 	defer serviceNetwork.Stop(ctx)
-	serviceNetwork.SetOperableFunc(func(ctx context.Context, operable bool) {
-
-	})
 
 	cm.Inject(serviceNetwork, nk, certManager, testutils.NewCryptographyServiceMock(t), pulse.NewAccessorMock(t),
 		testutils.NewTerminationHandlerMock(t), testutils.NewPulseManagerMock(t), &PublisherMock{},
-		testutils.NewMessageBusMock(t), testutils.NewContractRequesterMock(t),
-		bus.NewSenderMock(t), &stater{}, testutils.NewPlatformCryptographyScheme(), testutils.NewKeyProcessorMock(t))
+		testutils.NewContractRequesterMock(t), bus.NewSenderMock(t), &stater{},
+		testutils.NewPlatformCryptographyScheme(), testutils.NewKeyProcessorMock(t))
 	err = serviceNetwork.Init(ctx)
 	require.NoError(t, err)
 	err = serviceNetwork.Start(ctx)
@@ -313,42 +311,3 @@ func TestServiceNetwork_processIncoming(t *testing.T) {
 	_, err = serviceNetwork.processIncoming(ctx, data)
 	assert.Error(t, err)
 }
-
-// func TestServiceNetwork_SetGateway(t *testing.T) {
-// 	t.Skip("fix me")
-// 	sn, err := NewServiceNetwork(configuration.NewConfiguration(), &component.Manager{})
-// 	require.NoError(t, err)
-//
-// 	op := false
-// 	tick := 0
-// 	sn.SetOperableFunc(func(ctx context.Context, operable bool) {
-// 		op = operable
-// 		tick++
-// 	})
-//
-// 	hn := networkUtils.NewHostNetworkMock(t)
-// 	hn.RegisterRequestHandlerMock.Return()
-// 	sn.HostNetwork = hn
-//
-// 	// initial set
-// 	baseGateway := &gateway.Base{}
-// 	sn.SwitchState(insolar.NoNetworkState)
-// 	assert.Equal(t, 1, tick)
-// 	assert.False(t, op)
-//
-// 	type Test struct {
-// 		state insolar.NetworkState
-// 		lock  bool
-// 	}
-//
-// 	for i, T := range []Test{
-// 		{insolar.NoNetworkState, false},
-// 		{insolar.CompleteNetworkState, true},
-// 		{insolar.NoNetworkState, false},
-// 	} {
-// 		sn.SetGateway(sn.Gateway().NewGateway(T.state))
-// 		assert.Equal(t, i+1, tick)
-// 		assert.Equal(t, T.lock, op)
-//
-// 	}
-// }

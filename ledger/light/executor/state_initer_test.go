@@ -179,9 +179,9 @@ func TestStateIniterDefault_PrepareState(t *testing.T) {
 				Pulse: pulse.PulseProto{
 					PulseNumber: insolar.FirstPulseNumber,
 				},
-				Drops: [][]byte{
-					drop.MustEncode(&drop.Drop{JetID: j1, Pulse: insolar.FirstPulseNumber}),
-					drop.MustEncode(&drop.Drop{JetID: j2, Pulse: insolar.FirstPulseNumber}),
+				Drops: []drop.Drop{
+					{JetID: j1, Pulse: insolar.FirstPulseNumber},
+					{JetID: j2, Pulse: insolar.FirstPulseNumber},
 				},
 			}),
 		})

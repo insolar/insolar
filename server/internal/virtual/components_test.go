@@ -54,10 +54,4 @@ func TestComponents(t *testing.T) {
 
 	err := cm.Init(ctx)
 	require.NoError(t, err)
-
-	err = cm.Start(ctx)
-	require.NoError(t, err)
-
-	err = cm.Stop(ctx)
-	require.NoError(t, err)
 }

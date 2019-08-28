@@ -52,14 +52,14 @@ package core
 
 import (
 	"context"
-	"github.com/insolar/insolar/network/consensus/common/capacity"
 	"sync/atomic"
 	"time"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/network/consensus/common/pulse"
+	"github.com/insolar/insolar/network/consensus/common/capacity"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
+	"github.com/insolar/insolar/pulse"
 )
 
 const (
@@ -259,10 +259,10 @@ func (p *RoundStateMachineWorker) runToLastState() (exitState RoundState) {
 			exitState = RoundAborted
 			// TODO log
 		}
+		p.trafficControl.ResumeTraffic()
 		if p.stopperFn != nil {
 			p.stopperFn()
 		}
-		p.trafficControl.ResumeTraffic()
 	}()
 
 	exitState = RoundAborted

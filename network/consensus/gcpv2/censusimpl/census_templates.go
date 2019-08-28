@@ -55,10 +55,10 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
-	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
+	"github.com/insolar/insolar/pulse"
 )
 
 var _ localActiveCensus = &PrimingCensusTemplate{}
@@ -310,13 +310,13 @@ type ExpectedCensusTemplate struct {
 
 func (c *ExpectedCensusTemplate) Rebuild(pn pulse.Number) census.Built {
 
-	if !pn.IsUnknown() && (!pn.IsTimePulse() || !c.GetExpectedPulseNumber().IsUnknownOrEqualTo(pn)) {
-		panic("illegal value")
+	if pn.IsUnknown() || pn.IsTimePulse() && pn >= c.GetExpectedPulseNumber() {
+		cp := BuiltCensusTemplate{*c}
+		cp.expected.pn = pn
+		return &cp
 	}
 
-	cp := BuiltCensusTemplate{*c}
-	cp.expected.pn = pn
-	return &cp
+	panic(fmt.Sprintf("illegal value: %v, %v", c.GetExpectedPulseNumber(), pn))
 }
 
 func (c *ExpectedCensusTemplate) GetNearestPulseData() (bool, pulse.Data) {

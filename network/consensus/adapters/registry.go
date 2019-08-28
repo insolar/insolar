@@ -51,16 +51,15 @@
 package adapters
 
 import (
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
-	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/misbehavior"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
-
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/pulse"
 )
 
 type MisbehaviorRegistry struct{}

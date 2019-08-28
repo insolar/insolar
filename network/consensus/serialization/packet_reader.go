@@ -56,18 +56,16 @@ import (
 	"io"
 	"time"
 
-	"github.com/insolar/insolar/network"
-
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensus/adapters"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
-	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
+	"github.com/insolar/insolar/pulse"
 )
 
 type packetData struct {
@@ -84,10 +82,6 @@ type PacketParser struct {
 	digester     cryptkit.DataDigester
 	signMethod   cryptkit.SignMethod
 	keyProcessor insolar.KeyProcessor
-}
-
-func (p *PacketParser) ParsePacketBody() (transport.PacketParser, error) {
-	return nil, nil
 }
 
 func newPacketParser(
@@ -113,19 +107,17 @@ func newPacketParser(
 		return nil, err
 	}
 
-	_, logger := inslogger.WithFields(ctx, map[string]interface{}{
-		"sender_id":    parser.GetSourceID(),
-		"packet_type":  parser.GetPacketType().String(),
-		"packet_pulse": parser.GetPulseNumber(),
-	})
-
-	if logger.Is(insolar.DebugLevel) {
-		logger.Debugf("Received packet %s", parser.packet)
-	}
-
 	parser.data = capture.Captured()
 
 	return parser, nil
+}
+
+func (p PacketParser) String() string {
+	return p.packet.String()
+}
+
+func (p *PacketParser) ParsePacketBody() (transport.PacketParser, error) {
+	return nil, nil
 }
 
 type PacketParserFactory struct {

@@ -81,7 +81,7 @@ func (h *HandleAbandonedRequestsNotification) Present(ctx context.Context, f flo
 	err = f.Procedure(ctx, &procInitializeExecutionState, false)
 
 	if err != nil {
-		return sendErrorMessage(ctx, h.dep.Sender, h.meta, err)
+		return err
 	}
 	go h.dep.Sender.Reply(ctx, h.meta, bus.ReplyAsMessage(ctx, &reply.OK{}))
 	return nil

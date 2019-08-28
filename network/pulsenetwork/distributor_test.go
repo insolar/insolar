@@ -102,17 +102,11 @@ func TestDistributor_Distribute(t *testing.T) {
 	ctx := context.Background()
 
 	handler := func(ctx context.Context, r network.ReceivedPacket) (network.Packet, error) {
-		if r.GetType() == types.Ping {
-			log.Info("handle Ping")
-			return n1.BuildResponse(ctx, r, &packet.Ping{}), nil
-		}
-
 		log.Info("handle Pulse")
 		pulse := r.GetRequest().GetPulse()
 		assert.EqualValues(t, PULSENUMBER, pulse.Pulse.PulseNumber)
 		return n1.BuildResponse(ctx, r, &packet.BasicResponse{Success: true}), nil
 	}
-	n1.RegisterRequestHandler(types.Ping, handler)
 	n1.RegisterRequestHandler(types.Pulse, handler)
 
 	err = n1.Start(ctx)

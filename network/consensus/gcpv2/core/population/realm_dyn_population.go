@@ -156,11 +156,11 @@ func (p *DynamicRealmPopulation) initPopulation(population census.OnlinePopulati
 
 	selfNode := NewNodeAppearanceAsSelf(local, power.EmptyRequest, nil)
 	p.self = &selfNode
-	_, p.self = p.silentAddToDynamics(ctx, p.self)
+	_, p.self = p.silentAddToDynamics(ctx, p.self, true)
 
 	for _, np := range population.GetProfiles() {
 		node := NewEmptyNodeAppearance(np)
-		_, _ = p.silentAddToDynamics(ctx, &node) // repeated addition will leave the initial node
+		_, _ = p.silentAddToDynamics(ctx, &node, false) // repeated addition will leave the initial node
 	}
 
 	self := p.dynamicNodes[local.GetNodeID()]
@@ -342,7 +342,7 @@ func (p *DynamicRealmPopulation) CreatePacketLimiter(isJoiner bool) phases.Packe
 
 func (p *DynamicRealmPopulation) AddToDynamics(ctx context.Context, na *NodeAppearance) (*NodeAppearance, error) {
 
-	added, nna := p.silentAddToDynamics(ctx, na)
+	added, nna := p.silentAddToDynamics(ctx, na, false)
 
 	if added {
 		nna.onAddedToPopulation(false)
@@ -377,7 +377,11 @@ func (p *DynamicRealmPopulation) FindReservation(id insolar.ShortNodeID) (bool, 
 	return ok && na == nil, na
 }
 
-func (p *DynamicRealmPopulation) silentAddToDynamics(ctx context.Context, n *NodeAppearance) (bool, *NodeAppearance) {
+func (p *DynamicRealmPopulation) silentAddToDynamics(ctx context.Context, n *NodeAppearance, isLocal bool) (bool, *NodeAppearance) {
+
+	if !isLocal && n.IsJoiner() && n.GetAnnouncementAsJoiner() == nil {
+		panic("illegal state")
+	}
 
 	nip := n.GetStatic()
 	handlers := p.dispatchFactory(ctx, n)
@@ -397,7 +401,8 @@ func (p *DynamicRealmPopulation) silentAddToDynamics(ctx context.Context, n *Nod
 	n.handlers = handlers
 	n.hook = &p.hook
 	n.neighbourWeight = p.baselineWeight
-	n.limiter = p.CreatePacketLimiter(n.IsJoiner())
+
+	n.limiter = p.CreatePacketLimiter(n.IsJoiner()).MergeSent(n.limiter)
 
 	if n.IsJoiner() {
 		p.joinerCount++

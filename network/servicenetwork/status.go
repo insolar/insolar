@@ -62,7 +62,7 @@ var startTime time.Time
 
 func (n *ServiceNetwork) GetNetworkStatus() insolar.StatusReply {
 	var reply insolar.StatusReply
-	reply.NetworkState = n.GetState()
+	reply.NetworkState = n.Gatewayer.Gateway().GetState()
 
 	np, err := n.PulseAccessor.GetLatestPulse(context.Background())
 	if err != nil {

@@ -22,8 +22,6 @@ import (
 	"github.com/insolar/insolar/logicrunner/common"
 )
 
-type status string
-
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
 var PrototypeReference, _ = insolar.NewReferenceFromBase58("111A7ctasuNUug8BoK4VJNuAFJ73rnH8bH5zqd5HrDj.11111111111111111111111111111111")
@@ -79,11 +77,13 @@ func GetPrototype() insolar.Reference {
 }
 
 // New is constructor
-func New(migrationDaemonRef insolar.Reference, txHash string, amount string) *ContractConstructorHolder {
-	var args [3]interface{}
+func New(migrationDaemonRef insolar.Reference, txHash string, amount string, lokup int64, vesting int64) *ContractConstructorHolder {
+	var args [5]interface{}
 	args[0] = migrationDaemonRef
 	args[1] = txHash
 	args[2] = amount
+	args[3] = lokup
+	args[4] = vesting
 
 	var argsSerialized []byte
 	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)

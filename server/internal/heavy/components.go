@@ -20,11 +20,15 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"path/filepath"
+
+	"github.com/dgraph-io/badger"
 
 	"github.com/insolar/insolar/network"
 
-	"github.com/insolar/insolar/ledger/heavy/exporter"
 	"google.golang.org/grpc"
+
+	"github.com/insolar/insolar/ledger/heavy/exporter"
 
 	"github.com/ThreeDotsLabs/watermill"
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
@@ -48,13 +52,11 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/contractrequester"
 	"github.com/insolar/insolar/cryptography"
-	"github.com/insolar/insolar/genesisdataprovider"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/delegationtoken"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/jetcoordinator"
-	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/node"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/store"
@@ -64,7 +66,6 @@ import (
 	"github.com/insolar/insolar/ledger/heavy/pulsemanager"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/logicrunner/artifacts"
-	"github.com/insolar/insolar/messagebus"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/servicenetwork"
@@ -73,12 +74,13 @@ import (
 )
 
 type components struct {
-	cmp       component.Manager
-	NodeRef   string
-	NodeRole  string
-	rollback  *executor.DBRollback
-	inRouter  *watermillMsg.Router
-	outRouter *watermillMsg.Router
+	cmp         component.Manager
+	NodeRef     string
+	NodeRole    string
+	rollback    *executor.DBRollback
+	stateKeeper *executor.InitialStateKeeper
+	inRouter    *watermillMsg.Router
+	outRouter   *watermillMsg.Router
 
 	replicator executor.HeavyReplicator
 }
@@ -166,30 +168,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 
 	}
 
-	// API.
-	var (
-		Requester       insolar.ContractRequester
-		GenesisProvider insolar.GenesisDataProvider
-		API             insolar.APIRunner
-	)
-	{
-		var err error
-		Requester, err = contractrequester.New(nil)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to start ContractRequester")
-		}
-
-		GenesisProvider, err = genesisdataprovider.New()
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to start GenesisDataProvider")
-		}
-
-		API, err = api.NewRunner(&cfg.APIRunner)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to start ApiRunner")
-		}
-	}
-
 	// Storage.
 	var (
 		Coordinator jet.Coordinator
@@ -200,7 +178,11 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 	)
 	{
 		var err error
-		DB, err = store.NewBadgerDB(cfg.Ledger.Storage.DataDirectory)
+		fullDataDirectoryPath, err := filepath.Abs(cfg.Ledger.Storage.DataDirectory)
+		if err != nil {
+			panic(errors.Wrap(err, "failed to get absolute path for DataDirectory"))
+		}
+		DB, err = store.NewBadgerDB(badger.DefaultOptions(fullDataDirectoryPath))
 		if err != nil {
 			panic(errors.Wrap(err, "failed to initialize DB"))
 		}
@@ -221,20 +203,58 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 
 	// Communication.
 	var (
-		Tokens  insolar.DelegationTokenFactory
-		Parcels message.ParcelFactory
-		Bus     insolar.MessageBus
-		WmBus   *bus.Bus
+		Tokens insolar.DelegationTokenFactory
+		WmBus  *bus.Bus
+	)
+	{
+		Tokens = delegationtoken.NewDelegationTokenFactory()
+		WmBus = bus.NewBus(cfg.Bus, publisher, Pulses, Coordinator, CryptoScheme)
+	}
+
+	// API.
+	var (
+		Requester       *contractrequester.ContractRequester
+		ArtifactsClient = artifacts.NewClient(WmBus)
+		APIWrapper      *api.RunnerWrapper
 	)
 	{
 		var err error
-		Tokens = delegationtoken.NewDelegationTokenFactory()
-		Parcels = messagebus.NewParcelFactory()
-		Bus, err = messagebus.NewMessageBus(cfg)
+		Requester, err = contractrequester.New()
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to start MessageBus")
+			return nil, errors.Wrap(err, "failed to start ContractRequester")
 		}
-		WmBus = bus.NewBus(cfg.Bus, publisher, Pulses, Coordinator, CryptoScheme)
+
+		API, err := api.NewRunner(
+			&cfg.APIRunner,
+			CertManager,
+			Requester,
+			NodeNetwork,
+			NetworkService,
+			Pulses,
+			ArtifactsClient,
+			Coordinator,
+			NetworkService,
+		)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to start ApiRunner")
+		}
+
+		AdminAPIRunner, err := api.NewRunner(
+			&cfg.AdminAPIRunner,
+			CertManager,
+			Requester,
+			NodeNetwork,
+			NetworkService,
+			Pulses,
+			ArtifactsClient,
+			Coordinator,
+			NetworkService,
+		)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to start AdminAPIRunner")
+		}
+
+		APIWrapper = api.NewWrapper(API, AdminAPIRunner)
 	}
 
 	metricsHandler, err := metrics.NewMetrics(
@@ -252,14 +272,16 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		Handler      *handler.Handler
 		Genesis      *genesis.Genesis
 		Records      *object.RecordDB
-		JetKeeper    executor.JetKeeper
+		JetKeeper    *executor.DBJetKeeper
 	)
 	{
 		Records = object.NewRecordDB(DB)
 		indexes := object.NewIndexDB(DB, Records)
 		drops := drop.NewDB(DB)
 		JetKeeper = executor.NewJetKeeper(Jets, DB, Pulses)
-		c.rollback = executor.NewDBRollback(JetKeeper, Pulses, drops, Records, indexes, Jets, Pulses)
+
+		c.rollback = executor.NewDBRollback(JetKeeper, drops, Records, indexes, Jets, Pulses, JetKeeper)
+		c.stateKeeper = executor.NewInitialStateKeeper(JetKeeper, Jets, Coordinator, indexes, drops)
 
 		sp := pulse.NewStartPulse()
 
@@ -287,7 +309,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		h.JetCoordinator = Coordinator
 		h.IndexAccessor = indexes
 		h.IndexModifier = indexes
-		h.Bus = Bus
 		h.DropModifier = drops
 		h.PCS = CryptoScheme
 		h.PulseAccessor = Pulses
@@ -298,6 +319,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		h.JetTree = Jets
 		h.DropDB = drops
 		h.JetKeeper = JetKeeper
+		h.InitialStateReader = c.stateKeeper
 		h.BackupMaker = backupMaker
 		h.Sender = WmBus
 		h.Replicator = replicator
@@ -363,13 +385,10 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		Pulses,
 		Coordinator,
 		metricsHandler,
-		Bus,
 		Requester,
 		Tokens,
-		Parcels,
-		artifacts.NewClient(WmBus),
-		GenesisProvider,
-		API,
+		ArtifactsClient,
+		APIWrapper,
 		KeyProcessor,
 		Termination,
 		CryptoScheme,
@@ -390,7 +409,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		}
 	}
 
-	c.startWatermill(ctx, wmLogger, subscriber, WmBus, NetworkService.SendMessageHandler, Handler.Process)
+	c.startWatermill(ctx, wmLogger, subscriber, WmBus, NetworkService.SendMessageHandler, Handler.Process, Requester.ReceiveResult)
 
 	return c, nil
 }
@@ -398,7 +417,12 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 func (c *components) Start(ctx context.Context) error {
 	err := c.rollback.Start(ctx)
 	if err != nil {
-		return errors.Wrap(err, "rollback.Start return error: ")
+		return errors.Wrapf(err, "rollback.Start return error: %s", err.Error())
+	}
+
+	err = c.stateKeeper.Start(ctx)
+	if err != nil {
+		return errors.Wrapf(err, "stateKeeper.Start return error: %s", err.Error())
 	}
 	return c.cmp.Start(ctx)
 }
@@ -421,7 +445,7 @@ func (c *components) startWatermill(
 	logger watermill.LoggerAdapter,
 	sub watermillMsg.Subscriber,
 	b *bus.Bus,
-	outHandler, inHandler watermillMsg.NoPublishHandlerFunc,
+	outHandler, inHandler, resultsHandler watermillMsg.NoPublishHandlerFunc,
 ) {
 	inRouter, err := watermillMsg.NewRouter(watermillMsg.RouterConfig{}, logger)
 	if err != nil {
@@ -450,6 +474,12 @@ func (c *components) startWatermill(
 		sub,
 		inHandler,
 	)
+
+	inRouter.AddNoPublisherHandler(
+		"IncomingRequestResultHandler",
+		bus.TopicIncomingRequestResults,
+		sub,
+		resultsHandler)
 
 	startRouter(ctx, inRouter)
 	c.inRouter = inRouter

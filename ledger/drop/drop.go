@@ -42,39 +42,3 @@ type Accessor interface {
 type Cleaner interface {
 	DeleteForPN(ctx context.Context, pulse insolar.PulseNumber)
 }
-
-// Drop is a blockchain block.
-// It contains hashes of the current block and the previous one.
-type Drop struct {
-	// Pulse number (probably we should save it too).
-	Pulse insolar.PulseNumber
-
-	// PrevHash is a hash of all record hashes belongs to previous pulse.
-	PrevHash []byte
-
-	// Hash is a hash of all record hashes belongs to one pulse and previous drop hash.
-	Hash []byte
-
-	// Size represents data about physical size of the current jet.Drop.
-	Size uint64
-
-	// JetID represents data about JetID of the current jet.Drop.
-	JetID insolar.JetID
-
-	// SplitThresholdExceeded is a counter, which stores how many times in the row jet records count exceeds `ThresholdRecordsCount`.
-	SplitThresholdExceeded int
-	// Split indicates to heavy, what split for this jet happened on light.
-	Split bool
-}
-
-// MustEncode serializes jet drop.
-func MustEncode(drop *Drop) []byte {
-	return insolar.MustSerialize(drop)
-}
-
-// Decode deserializes jet drop.
-func Decode(buf []byte) (*Drop, error) {
-	var drop Drop
-	err := insolar.Deserialize(buf, &drop)
-	return &drop, err
-}

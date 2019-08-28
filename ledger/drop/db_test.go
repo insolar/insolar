@@ -51,7 +51,8 @@ func TestNewStorageDB(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	db, err := store.NewBadgerDB(tmpdir)
+	ops := BadgerDefaultOptions(tmpdir)
+	db, err := store.NewBadgerDB(ops)
 	require.NoError(t, err)
 	defer db.Stop(context.Background())
 	dbStore := NewDB(db)
@@ -71,7 +72,8 @@ func TestDropStorageDB_TruncateHead_NoSuchPulse(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	assert.NoError(t, err)
 
-	dbMock, err := store.NewBadgerDB(tmpdir)
+	ops := BadgerDefaultOptions(tmpdir)
+	dbMock, err := store.NewBadgerDB(ops)
 	defer dbMock.Stop(ctx)
 	require.NoError(t, err)
 
@@ -89,13 +91,14 @@ func TestDropStorageDB_TruncateHead(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	assert.NoError(t, err)
 
-	dbMock, err := store.NewBadgerDB(tmpdir)
+	ops := BadgerDefaultOptions(tmpdir)
+	dbMock, err := store.NewBadgerDB(ops)
 	defer dbMock.Stop(ctx)
 	require.NoError(t, err)
 
 	dropStore := NewDB(dbMock)
 
-	numElements := 100
+	numElements := 10
 
 	// it's used for writing pulses in random order to db
 	indexes := make([]int, numElements)
@@ -152,12 +155,13 @@ func TestDropStorageDB_Set(t *testing.T) {
 	encodedDrops := map[string]struct{}{}
 	f := fuzz.New().Funcs(func(inp *setInput, c fuzz.Continue) {
 		inp.dr = Drop{
-			Size:  rand.Uint64(),
-			Pulse: gen.PulseNumber(),
-			JetID: gen.JetID(),
+			DropSize: rand.Uint64(),
+			Pulse:    gen.PulseNumber(),
+			JetID:    gen.JetID(),
 		}
 
-		encoded := MustEncode(&inp.dr)
+		encoded, err := inp.dr.Marshal()
+		require.NoError(t, err)
 		encodedDrops[string(encoded)] = struct{}{}
 	}).NumElements(5, 5000).NilChance(0)
 	f.Fuzz(&inputs)
@@ -181,9 +185,9 @@ func TestDropStorageDB_Set(t *testing.T) {
 func TestDropStorageDB_Set_ErrOverride(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	dr := Drop{
-		Size:  rand.Uint64(),
-		Pulse: gen.PulseNumber(),
-		JetID: gen.JetID(),
+		DropSize: rand.Uint64(),
+		Pulse:    gen.PulseNumber(),
+		JetID:    gen.JetID(),
 	}
 
 	dbMock := store.NewDBMock(t)
@@ -201,10 +205,11 @@ func TestDropStorageDB_ForPulse(t *testing.T) {
 	jetID := gen.JetID()
 	pn := gen.PulseNumber()
 	dr := Drop{
-		Size:  rand.Uint64(),
-		Pulse: gen.PulseNumber(),
+		DropSize: rand.Uint64(),
+		Pulse:    gen.PulseNumber(),
 	}
-	buf := MustEncode(&dr)
+	buf, err := dr.Marshal()
+	require.NoError(t, err)
 
 	dbMock := store.NewDBMock(t)
 	dbMock.GetMock.Return(buf, nil)

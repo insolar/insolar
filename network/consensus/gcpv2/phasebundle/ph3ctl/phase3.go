@@ -80,7 +80,7 @@ import (
 
 func NewPhase3Controller(loopingMinimalDelay time.Duration, packetPrepareOptions transport.PacketPrepareOptions,
 	queueTrustUpdated <-chan ph2ctl.UpdateSignal, consensusStrategy consensus.SelectionStrategy,
-	inspectionFactory inspectors.VectorInspection, enabledFast, lockOSThread bool) *Phase3Controller {
+	inspectionFactory inspectors.VectorInspection, enabledFast, lockOSThread, retrySendPhase3 bool) *Phase3Controller {
 	return &Phase3Controller{
 		packetPrepareOptions: packetPrepareOptions,
 		queueTrustUpdated:    queueTrustUpdated,
@@ -89,6 +89,7 @@ func NewPhase3Controller(loopingMinimalDelay time.Duration, packetPrepareOptions
 		inspectionFactory:    inspectionFactory,
 		isFastPacketEnabled:  enabledFast,
 		lockOSThread:         lockOSThread,
+		retrySendPhase3:      retrySendPhase3,
 	}
 }
 
@@ -101,6 +102,7 @@ type Phase3Controller struct {
 	loopingMinimalDelay  time.Duration
 	isFastPacketEnabled  bool
 	lockOSThread         bool
+	retrySendPhase3      bool
 
 	inspectionFactory inspectors.VectorInspection
 	R                 *core.FullRealm
@@ -135,6 +137,8 @@ func (*Phase3Controller) GetPacketType() []phases.PacketType {
 }
 
 func (c *Phase3PacketDispatcher) DispatchMemberPacket(ctx context.Context, reader transport.MemberPacketReader, n *population.NodeAppearance) error {
+	logger := inslogger.FromContext(ctx)
+	logger.Debug("Phase3 packet received")
 
 	p3 := reader.AsPhase3Packet()
 
@@ -147,8 +151,13 @@ func (c *Phase3PacketDispatcher) DispatchMemberPacket(ctx context.Context, reade
 	if iv == nil || iv.HasSenderFault() {
 		return n.RegisterFraud(n.Frauds().NewMismatchedMembershipRank(n.GetProfile(), n.GetNodeMembershipProfileOrEmpty()))
 	}
-	c.ctl.queuePh3Recv <- iv
+	logger.Debug("Phase3 packet to queue")
 
+	select {
+	case c.ctl.queuePh3Recv <- iv:
+	default:
+		panic("overflow")
+	}
 	return nil
 }
 
@@ -230,9 +239,9 @@ func workerQueueFlusher(realm *core.FullRealm, q0 chan inspectors.InspectedVecto
 }
 
 func (c *Phase3Controller) workerPrePhase3(ctx context.Context) inspectors.VectorInspector {
-	log := inslogger.FromContext(ctx)
+	logger := inslogger.FromContext(ctx)
 
-	log.Debug(">>>>workerPrePhase3: begin")
+	logger.Debug(">>>>workerPrePhase3: begin")
 
 	timings := c.R.GetTimings()
 	startOfPhase3 := time.After(c.R.AdjustedAfter(timings.EndOfPhase2))
@@ -259,16 +268,17 @@ outer:
 	for {
 		select {
 		case <-ctx.Done():
-			log.Debug(">>>>workerPrePhase3: ctx.Done")
+			logger.Warn(">>>>workerPrePhase3: ctx.Done")
 			return nil // ctx.Err() ?
 		case <-chasingDelayTimer.Channel():
 			chasingDelayTimer.ClearExpired()
-			log.Debug(">>>>workerPrePhase3: chaseExpired")
+			logger.Debug(">>>>workerPrePhase3: chaseExpired")
 			break outer
 		case <-startOfPhase3:
-			log.Debug(">>>>workerPrePhase3: startOfPhase3")
+			logger.Debug(">>>>workerPrePhase3: startOfPhase3")
 			break outer
 		case upd := <-c.queueTrustUpdated:
+			logger.Debug(">>>>workerPrePhase3: c.queueTrustUpdated")
 			switch {
 			case upd.IsPingSignal(): // ping indicates arrival of Phase2 packet, to support chasing
 				// TODO chasing
@@ -302,7 +312,7 @@ outer:
 				updID = upd.UpdatedNode.GetNodeID()
 			}
 
-			log.Debug(fmt.Sprintf("workerPrePhase3: \nid=%d upd=%d count=%d hasNsh=%d trustBySome=%d trustByNbh=%d purg=%d ann=%d full=%d fraud=%d"+
+			logger.Debug(fmt.Sprintf("workerPrePhase3: \nid=%d upd=%d count=%d hasNsh=%d trustBySome=%d trustByNbh=%d purg=%d ann=%d full=%d fraud=%d"+
 				"\nid=%[1]d upd=%[2]d dyns=%[11]v purg=%v trust=%v",
 				c.R.GetSelfNodeID(), updID,
 				indexedCount, countHasNsh, countTrustBySome, countTrustByNeighbors, countPurgatory, countAnnouncedJoiners, countFullJoiners, countFraud,
@@ -314,7 +324,7 @@ outer:
 				c.consensusStrategy.CanStartVectorsEarly(indexedCount, countFraud, countTrustBySome, countTrustByNeighbors) {
 				// (countTrustBySome >= bftMajority || countTrustByNeighbors >= 1+indexedCount>>1) {
 
-				log.Debugf(">>>>workerPrePhase3: all and complete: %d", c.R.GetSelfNodeID())
+				logger.Debugf(">>>>workerPrePhase3: all and complete: %d", c.R.GetSelfNodeID())
 				break outer
 			}
 
@@ -324,7 +334,7 @@ outer:
 				!didFastPhase3 {
 
 				didFastPhase3 = true
-				log.Debugf(">>>>workerPrePhase3: try FastPhase3: %d", c.R.GetSelfNodeID())
+				logger.Debugf(">>>>workerPrePhase3: try FastPhase3: %d", c.R.GetSelfNodeID())
 				go c.workerSendFastPhase3(ctx)
 			}
 
@@ -332,11 +342,11 @@ outer:
 				// We have answers from all nodes, and the majority of them are well-trusted
 				if countHasNsh >= indexedCount && countTrustByNeighbors >= bftMajority {
 					chasingDelayTimer.RestartChase()
-					log.Debugf(">>>>workerPrePhase3: chaseStartedAll: %d", c.R.GetSelfNodeID())
+					logger.Debugf(">>>>workerPrePhase3: chaseStartedAll: %d", c.R.GetSelfNodeID())
 				} else if countTrustBySome-countFraud >= bftMajority {
 					// We can start chasing-timeout after getting answers from majority of some-trusted nodes
 					chasingDelayTimer.RestartChase()
-					log.Debugf(">>>>workerPrePhase3: chaseStartedSome: %d", c.R.GetSelfNodeID())
+					logger.Debugf(">>>>workerPrePhase3: chaseStartedSome: %d", c.R.GetSelfNodeID())
 				}
 			}
 		}
@@ -344,15 +354,16 @@ outer:
 
 	/* Ensure that NSH is available, otherwise we can't normally build packets */
 	for c.R.GetSelf().IsNSHRequired() {
-		log.Debug(">>>>workerPrePhase3: nsh is required")
+		logger.Debug(">>>>workerPrePhase3: nsh is required")
 		select {
 		case <-ctx.Done():
-			log.Debug(">>>>workerPrePhase3: ctx.Done")
+			logger.Debug(">>>>workerPrePhase3: ctx.Done")
 			return nil // ctx.Err() ?
 		case <-c.queueTrustUpdated:
 		case <-time.After(c.loopingMinimalDelay):
 		}
 	}
+	logger.Debug(">>>>workerPrePhase3: nsh available")
 
 	vectorHelper := c.R.GetPopulation().CreateVectorHelper()
 	localProjection := vectorHelper.CreateProjection()
@@ -360,7 +371,7 @@ outer:
 
 	// enables parallel use
 	if !localInspector.PrepareForInspection(ctx) {
-		log.Errorf("consensus terminated abnormally - unable to build a minimal vector: %d", c.R.GetSelfNodeID())
+		logger.Errorf("consensus terminated abnormally - unable to build a minimal vector: %d", c.R.GetSelfNodeID())
 		return nil
 	}
 	return localInspector
@@ -399,20 +410,48 @@ func (c *Phase3Controller) workerSendPhase3(ctx context.Context, selfData statev
 	selfID := c.R.GetSelfNodeID()
 	nodes := c.R.GetPopulation().GetAnyNodes(true, true)
 
-	p3.SendToMany(ctx, len(nodes), c.R.GetPacketSender(),
-		func(ctx context.Context, targetIdx int) (transport.TargetProfile, transport.PacketSendOptions) {
-			np := nodes[targetIdx]
-			if np.GetNodeID() == selfID || !np.SetPacketSent(phases.PacketPhase3) {
-				return nil, 0
-			}
+	logger := inslogger.FromContext(ctx)
 
-			return np, sendOptions
-		})
+	sendCount := 1
+	if c.retrySendPhase3 {
+		// TODO HACK sending twice while there is no Phase 4
+		sendCount = 2
+	}
+	for i := 0; i < sendCount; i++ {
+		if i > 0 {
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(500 * time.Millisecond):
+				break
+			}
+		}
+			
+		// capture range value
+		sendNo := i
+		p3.SendToMany(ctx, len(nodes), c.R.GetPacketSender(),
+			func(ctx context.Context, targetIdx int) (transport.TargetProfile, transport.PacketSendOptions) {
+				np := nodes[targetIdx]
+				if np.GetNodeID() == selfID || sendNo != 0 && !np.CanReceivePacket(phases.PacketPhase3) {
+					// CanReceivePacket checks if we've already got Ph3 from this node
+					return nil, 0
+				}
+
+				if sendNo == 0 {
+					logger.Debugf("Phase3 sent to %d", np.GetNodeID())
+				} else {
+					logger.Warnf("Phase3 sent retry(%d) to %d", sendNo, np.GetNodeID())
+				}
+
+				return np, sendOptions
+			})
+	}
 }
 
 func (c *Phase3Controller) workerRecvPhase3(ctx context.Context, localInspector inspectors.VectorInspector) bool {
 
-	log := inslogger.FromContext(ctx)
+	logger := inslogger.FromContext(ctx)
+	logger.Debug("Phase3 start receive entry")
 
 	var queueMissing chan inspectors.InspectedVector
 
@@ -446,6 +485,8 @@ func (c *Phase3Controller) workerRecvPhase3(ctx context.Context, localInspector 
 	// alteredDoubtedGshCount := 0
 	var consensusSelection consensus.Selection
 
+	logger.Debug("Phase3 start receive loop")
+
 outer:
 	for {
 		popCount, popCompleteness := pop.GetCountAndCompleteness(false)
@@ -455,24 +496,25 @@ outer:
 			consensusSelection = c.consensusStrategy.SelectOnStopped(&verifiedStatTbl, false,
 				consensuskit.BftMajority(popCount))
 
-			log.Debug("Phase3 done all")
+			logger.Debug("Phase3 done all")
 			break outer
 		}
 
 		select {
 		case <-ctx.Done():
-			log.Debug("Phase3 cancelled")
+			logger.Warn("Phase3 cancelled")
 			return false
 		case <-softDeadline:
-			log.Debug("Phase3 deadline")
+			logger.Warn("Phase3 deadline")
 			consensusSelection = c.consensusStrategy.SelectOnStopped(&verifiedStatTbl, true, consensuskit.BftMajority(popCount))
 			break outer
 		case <-chasingDelayTimer.Channel():
 			chasingDelayTimer.ClearExpired()
-			log.Debug("Phase3 chasing expired")
+			logger.Debug("Phase3 chasing expired")
 			consensusSelection = c.consensusStrategy.SelectOnStopped(&verifiedStatTbl, true, consensuskit.BftMajority(popCount))
 			break outer
 		case d := <-c.queuePh3Recv:
+			logger.Debugf("Phase3 queue receive from %d", d.GetNode().GetNodeID())
 			switch {
 			case d.HasMissingMembers():
 				if queueMissing == nil {
@@ -512,7 +554,7 @@ outer:
 				}
 
 				nodeStats, vr := d.GetInspectionResults()
-				if log.Is(insolar.DebugLevel) {
+				if logger.Is(insolar.DebugLevel) {
 					popLimit, popSealed := pop.GetSealedCapacity()
 					remains := popLimit - originalStatTbl.RowCount() - 1
 
@@ -538,7 +580,7 @@ outer:
 					}
 
 					na := d.GetNode()
-					log.Debugf(
+					logger.Debugf(
 						"%s: idx:%d remains:%d%c\n Here(%04d):%v\nThere(%04d):%v\n     Result:%v\n Comparison:%v\n",
 						//													    Compared
 						logMsg, na.GetIndex(), remains, completenessMark, c.R.GetSelf().GetNodeID(), localInspector.GetBitset(),
@@ -565,6 +607,8 @@ outer:
 					if nodeStats.HasAllValuesOf(nodeset.ConsensusStatTrusted, nodeset.ConsensusStatDoubted) {
 						processedNodesFlawlessly++
 					}
+					logger.Debugf("Phase3 processed %d", d.GetNode().GetNodeID())
+
 				} else {
 					break
 				}
@@ -581,17 +625,17 @@ outer:
 
 			if consensusSelection != nil {
 				if !consensusSelection.CanBeImproved() || !chasingDelayTimer.IsEnabled() {
-					log.Debug("Phase3 done earlier by strategy")
+					logger.Debug("Phase3 done earlier by strategy")
 					break outer
 				}
 
-				log.Debug("Phase3 (re)start chasing")
+				logger.Debug("Phase3 (re)start chasing")
 				chasingDelayTimer.RestartChase()
 			}
 		}
 	}
 
-	if log.Is(insolar.DebugLevel) {
+	if logger.Is(insolar.DebugLevel) {
 
 		limit, sealed := pop.GetSealedCapacity()
 		limitStr := ""
@@ -608,7 +652,7 @@ outer:
 			prev = originalStatTbl.TableFmt(fmt.Sprintf(tblHeader, prev, "Original"), nodeset.FmtConsensusStat)
 			typeHeader = "Verified"
 		}
-		log.Debug(verifiedStatTbl.TableFmt(fmt.Sprintf(tblHeader, prev, typeHeader), nodeset.FmtConsensusStat))
+		logger.Debug(verifiedStatTbl.TableFmt(fmt.Sprintf(tblHeader, prev, typeHeader), nodeset.FmtConsensusStat))
 	}
 
 	if consensusSelection == nil {
@@ -622,10 +666,10 @@ outer:
 		finishType = "different"
 		// TODO update population and/or start Phase 4
 	}
-	if log.Is(insolar.DebugLevel) {
-		log.Debugf("Consensus is finished as %s: %v", finishType, selectionSet)
+	if logger.Is(insolar.DebugLevel) {
+		logger.Debugf("Consensus is finished as %s: %v", finishType, selectionSet)
 	} else {
-		log.Infof("Consensus is finished as %s", finishType)
+		logger.Infof("Consensus is finished as %s", finishType)
 	}
 
 	popRanks, csh, gsh := localInspector.CreateNextPopulation(selectionSet)

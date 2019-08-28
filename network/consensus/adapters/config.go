@@ -63,10 +63,10 @@ import (
 var defaultRoundTimings = api.RoundTimings{
 	StartPhase0At: 100 * time.Millisecond, // Not scaled
 
-	StartPhase1RetryAt: 200 * time.Millisecond, // 0 for no retries
-	EndOfPhase1:        250 * time.Millisecond,
-	EndOfPhase2:        400 * time.Millisecond,
-	EndOfPhase3:        500 * time.Millisecond,
+	StartPhase1RetryAt: 0 * time.Millisecond, // 0 for no retries
+	EndOfPhase1:        180 * time.Millisecond,
+	EndOfPhase2:        250 * time.Millisecond,
+	EndOfPhase3:        400 * time.Millisecond,
 	EndOfConsensus:     600 * time.Millisecond,
 
 	BeforeInPhase2ChasingDelay: 0 * time.Millisecond,

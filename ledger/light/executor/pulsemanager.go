@@ -95,7 +95,6 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 	defer m.setLock.Unlock()
 
 	logger.Debug("behind set lock")
-
 	ctx, span := instracer.StartSpan(
 		ctx, "PulseManager.Set", trace.WithSampler(trace.AlwaysSample()),
 	)
@@ -149,12 +148,8 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 					"endedPulse": endedPulse.PulseNumber,
 				}).Debug("before hotStatusChecker.IsReceived")
 
-				received, err := m.hotStatusChecker.IsReceived(ctx, jet, endedPulse.PulseNumber)
-				if err != nil {
-					panic(errors.Wrap(err, "can't find waiter for pn/jet"))
-				}
-				if !received {
-					log.Fatal("hot data for jet:%v and pulse:%v wasn't received", jet.DebugString(), endedPulse.PulseNumber)
+				if !m.hotStatusChecker.IsReceived(ctx, jet, endedPulse.PulseNumber) {
+					log.Fatal("hot data for jet: %s and pulse: %d wasn't received", jet.DebugString(), endedPulse.PulseNumber)
 				}
 			}
 

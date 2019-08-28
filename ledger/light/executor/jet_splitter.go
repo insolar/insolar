@@ -182,11 +182,11 @@ func (js *JetSplitterDefault) createDrop(
 	}
 	// if records count reached threshold increase counter (instead it reset)
 	if recordsCount >= js.cfg.ThresholdRecordsCount {
-		block.SplitThresholdExceeded = threshold + 1
+		block.SplitThresholdExceeded = int64(threshold + 1)
 	}
 
 	// first return value is split needed
-	if block.SplitThresholdExceeded > js.cfg.ThresholdOverflowCount {
+	if block.SplitThresholdExceeded > int64(js.cfg.ThresholdOverflowCount) {
 		block.Split = true
 	}
 	return block
@@ -223,5 +223,5 @@ func (js *JetSplitterDefault) getDropThreshold(
 		}
 		panic(errors.Wrapf(err, "failed to get drop for pulse=%v and jetID=%v", pn, jetID.DebugString()))
 	}
-	return block.SplitThresholdExceeded
+	return int(block.SplitThresholdExceeded)
 }

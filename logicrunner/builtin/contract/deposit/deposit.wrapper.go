@@ -447,13 +447,17 @@ func INSMETHOD_Accept(object []byte, data []byte) ([]byte, []byte, error) {
 func INSCONSTRUCTOR_New(data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
-	args := make([]interface{}, 3)
+	args := make([]interface{}, 5)
 	var args0 insolar.Reference
 	args[0] = &args0
 	var args1 string
 	args[1] = &args1
 	var args2 string
 	args[2] = &args2
+	var args3 int64
+	args[3] = &args3
+	var args4 int64
+	args[4] = &args4
 
 	err := ph.Deserialize(data, &args)
 	if err != nil {
@@ -461,7 +465,7 @@ func INSCONSTRUCTOR_New(data []byte) ([]byte, []byte, error) {
 		return nil, nil, e
 	}
 
-	ret0, ret1 := New(args0, args1, args2)
+	ret0, ret1 := New(args0, args1, args2, args3, args4)
 	ret1 = ph.MakeErrorSerializable(ret1)
 	if ret0 == nil && ret1 == nil {
 		ret1 = &foundation.Error{S: "constructor returned nil"}

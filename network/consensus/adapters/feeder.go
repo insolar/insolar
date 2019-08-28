@@ -52,26 +52,28 @@ package adapters
 
 import (
 	"context"
-	"math"
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/common/capacity"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
-	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/power"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
+	"github.com/insolar/insolar/pulse"
 )
 
-const defaultEphemeralPulseDuration = 2 * time.Second
+const (
+	defaultEphemeralPulseDuration = 2 * time.Second
+	defaultEphemeralHeartbeat     = 10 * time.Second
+)
 
 type EphemeralController interface {
 	EphemeralMode(nodes []insolar.NetworkNode) bool
@@ -273,14 +275,18 @@ func (cf *InternalControlFeederAdapter) setHasLeft() {
 func NewEphemeralControlFeeder(ephemeralController EphemeralController) *EphemeralControlFeeder {
 	return &EphemeralControlFeeder{
 		ephemeralController: ephemeralController,
-		pulseDuration:       defaultEphemeralPulseDuration,
+
+		pulseDuration: defaultEphemeralPulseDuration,
+		heartbeat:     defaultEphemeralHeartbeat,
 	}
 }
 
 type EphemeralControlFeeder struct {
 	pulseChanger        PulseChanger
 	ephemeralController EphemeralController
-	pulseDuration       time.Duration
+
+	pulseDuration time.Duration
+	heartbeat     time.Duration
 }
 
 func (f *EphemeralControlFeeder) CanFastForwardPulse(expected, received pulse.Number, lastPulseData pulse.Data) bool {
@@ -300,18 +306,11 @@ func (f *EphemeralControlFeeder) GetMinDuration() time.Duration {
 }
 
 func (f *EphemeralControlFeeder) GetMaxDuration() time.Duration {
-	return math.MaxInt64
+	return f.heartbeat
 }
 
 func (f *EphemeralControlFeeder) OnNonEphemeralPacket(ctx context.Context, parser transport.PacketParser, inbound endpoints.Inbound) error {
-	_, logger := inslogger.WithFields(ctx, map[string]interface{}{
-		"sender_address": inbound.GetNameAddress().String(),
-		"sender_id":      parser.GetSourceID(),
-		"packet_type":    parser.GetPacketType().String(),
-		"packet_pulse":   parser.GetPulseNumber(),
-	})
-
-	logger.Info("non-ephemeral packet")
+	inslogger.FromContext(ctx).Info("non-ephemeral packet")
 	return nil
 }
 

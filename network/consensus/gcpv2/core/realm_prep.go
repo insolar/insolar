@@ -58,20 +58,18 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetdispatch"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core/population"
-
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
-	"github.com/insolar/insolar/network/consensus/gcpv2/core/errors"
-
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
-	"github.com/insolar/insolar/network/consensus/common/pulse"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/errors"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetdispatch"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/population"
+	"github.com/insolar/insolar/pulse"
 )
 
 /*
@@ -128,7 +126,7 @@ func (p *PrepRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 		}
 		limiterKey = endpoints.ShortNodeIDAsByteString(packet.GetSourceID())
 	default:
-		limiterKey = from.AsByteString()
+		limiterKey = string(from.AsByteString())
 	}
 
 	/*
@@ -140,9 +138,9 @@ func (p *PrepRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 		limiter = limiterI.(*phases.AtomicPacketLimiter)
 	}
 
-	if !limiter.GetPacketLimiter().CanReceivePacket(pt) {
-		return fmt.Errorf("packet type (%v) limit exceeded: from=%v", pt, from)
-	}
+	//if !limiter.GetPacketLimiter().CanReceivePacket(pt) {
+	//	return fmt.Errorf("packet type (%v) limit exceeded: from=%v", pt, from)
+	//}
 
 	var pd population.PacketDispatcher
 
@@ -237,7 +235,13 @@ func (p *PrepRealm) prepareEphemeralPolling(ctxPrep context.Context) {
 	var startTimer *time.Timer
 	var startCh <-chan time.Time
 
-	if beforeNextRound < math.MaxInt64 {
+	pop := p.initialCensus.GetOnlinePopulation()
+	local := pop.GetLocalProfile()
+	if pop.GetIndexedCount() < 2 || local.IsJoiner() || !local.GetStatic().GetSpecialRoles().IsDiscovery() {
+		beforeNextRound = 0
+	}
+
+	if beforeNextRound > 0 && beforeNextRound < math.MaxInt64 {
 		if beforeNextRound < minDuration {
 			beforeNextRound = minDuration
 		}
@@ -254,14 +258,17 @@ func (p *PrepRealm) prepareEphemeralPolling(ctxPrep context.Context) {
 		select {
 		case <-ctxOfPolling.Done():
 		case <-ctxPrep.Done():
-		case <-startCh:
-			go p.pushEphemeralPulse(ctxPrep)
 		default:
-			if !p.checkEphemeralStartByCandidate(ctxPrep) {
-				return true // stay in polling
+			select {
+			case <-startCh:
+				go p.pushEphemeralPulse(ctxPrep)
+			default:
+				if !p.checkEphemeralStartByCandidate(ctxPrep) {
+					return true // stay in polling
+				}
+				go p.pushEphemeralPulse(ctxPrep)
+				// stop polling anyway - repeating of unsuccessful is bad
 			}
-			go p.pushEphemeralPulse(ctxPrep)
-			// stop polling anyway - repeating of unsuccessful is bad
 		}
 		if startTimer != nil {
 			startTimer.Stop()
@@ -275,7 +282,7 @@ func (p *PrepRealm) pushEphemeralPulse(ctx context.Context) {
 	p.Lock()
 	defer p.Unlock()
 
-	if p.disableEphemeral {
+	if p.disableEphemeral || p.ephemeralFeeder == nil {
 		return // ephemeral mode was deactivated
 	}
 
@@ -377,6 +384,10 @@ func (p *PrepRealm) _applyPulseData(_ context.Context, pdp proofs.OriginalPulsar
 		if !epn.IsUnknownOrEqualTo(pd.PulseNumber) {
 			return false, epn
 		}
+	}
+
+	if p.originalPulse != nil || !p.pulseData.IsEmpty() {
+		return false, pd.PulseNumber
 	}
 
 	p.originalPulse = pdp

@@ -148,53 +148,15 @@ func (o *MessageSendOptions) Safe() *MessageSendOptions {
 	return o
 }
 
-//go:generate minimock -i github.com/insolar/insolar/insolar.MessageBus -o ../testutils -s _mock.go -g
-
-// MessageBus interface
-type MessageBus interface {
-	// Send an `Message` and get a `Reply` or error from remote host.
-	Send(context.Context, Message, *MessageSendOptions) (Reply, error)
-	// Register saves message handler in the registry. Only one handler can be registered for a message type.
-	Register(p MessageType, handler MessageHandler) error
-	// MustRegister is a Register wrapper that panics if an error was returned.
-	MustRegister(p MessageType, handler MessageHandler)
-
-	// Called each new pulse, cleans next pulse messages buffer
-	OnPulse(context.Context, Pulse) error
-}
-
-//go:generate minimock -i github.com/insolar/insolar/insolar.GlobalInsolarLock -o ../testutils -s _mock.go -g
-
-// GlobalInsolarLock is lock of all incoming and outcoming network calls.
-// It's not intended to be used in multiple threads. And main use of it is `Set` method of `PulseManager`.
-type GlobalInsolarLock interface {
-	Acquire(ctx context.Context)
-	Release(ctx context.Context)
-}
-
 // MessageHandler is a function for message handling. It should be registered via Register method.
 type MessageHandler func(context.Context, Parcel) (Reply, error)
 
 //go:generate stringer -type=MessageType
 const (
-	// Logicrunner
-
-	// TypeCallMethod calls method and returns request
-	TypeCallMethod MessageType = iota
-	// TypePutResults when execution finishes, tell results to requester
-	TypeReturnResults
-	// TypeExecutorResults message that goes to new Executor to validate previous Executor actions through CaseBind
-	TypeExecutorResults
 	// TypeValidationResults sends from Validator to new Executor with results of validation actions of previous Executor
-	TypeValidationResults
-	// TypePendingFinished is sent by the old executor to the current executor when pending execution finishes
-	TypePendingFinished
+	TypeValidationResults MessageType = iota
 	// TypeAdditionalCallFromPreviousExecutor is sent by the old executor to the current executor when Flow
 	// cancels after registering the request but before adding the request to the execution queue.
-	TypeAdditionalCallFromPreviousExecutor
-	// TypeStillExecuting is sent by an old executor on pulse switch if it wants to continue executing
-	// to the current executor
-	TypeStillExecuting
 
 	// TypeGenesisRequest used for bootstrap object generation.
 	TypeGenesisRequest

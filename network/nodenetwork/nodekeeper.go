@@ -80,7 +80,7 @@ func NewNodeNetwork(configuration configuration.Transport, certificate insolar.C
 	}
 	nodeKeeper := NewNodeKeeper(origin)
 	if !network.OriginIsDiscovery(certificate) {
-		origin.(node.MutableNode).SetState(insolar.NodePending)
+		origin.(node.MutableNode).SetState(insolar.NodeJoining)
 	}
 	return nodeKeeper, nil
 }
@@ -187,7 +187,7 @@ func (nk *nodekeeper) MoveSyncToActive(ctx context.Context, number insolar.Pulse
 	snapshot := node.NewSnapshot(number, nk.syncNodes)
 	err := nk.SnapshotStorage.Append(number, snapshot)
 	if err != nil {
-		panic("MoveSyncToActive(): " + err.Error())
+		inslogger.FromContext(ctx).Panic("MoveSyncToActive(): ", err.Error())
 	}
 
 	accessor := node.NewAccessor(snapshot)

@@ -29,12 +29,12 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/store"
@@ -58,18 +58,24 @@ func (t *testKey) Scope() store.Scope {
 
 func makeBackuperConfig(t *testing.T, prefix string) configuration.Backup {
 
-	cfg := configuration.Backup{
-		ConfirmFile:      "BACKUPED",
-		MetaInfoFile:     "META.json",
-		TargetDirectory:  "/tmp/BKP/TARGET/" + prefix,
-		TmpDirectory:     "/tmp/BKP/TMP",
-		DirNameTemplate:  "pulse-%d",
-		BackupWaitPeriod: 60,
-		BackupFile:       "incr.bkp",
-		Enabled:          true,
+	cwd, err := os.Getwd()
+	if err != nil {
+		require.NoError(t, err)
 	}
 
-	err := os.MkdirAll(cfg.TargetDirectory, 0777)
+	cfg := configuration.Backup{
+		ConfirmFile:          "BACKUPED",
+		MetaInfoFile:         "META.json",
+		TargetDirectory:      "/tmp/BKP/TARGET/" + prefix,
+		TmpDirectory:         "/tmp/BKP/TMP",
+		DirNameTemplate:      "pulse-%d",
+		BackupWaitPeriod:     10,
+		BackupFile:           "incr.bkp",
+		Enabled:              true,
+		PostProcessBackupCmd: []string{"bash", "-c", cwd + "/post_process_backup.sh"},
+	}
+
+	err = os.MkdirAll(cfg.TargetDirectory, 0777)
 	require.NoError(t, err)
 	err = os.MkdirAll(cfg.TmpDirectory, 0777)
 	require.NoError(t, err)
@@ -90,7 +96,7 @@ func TestBackuper(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
 
-	db, err := store.NewBadgerDB(tmpdir)
+	db, err := store.NewBadgerDB(badger.DefaultOptions(tmpdir))
 	require.NoError(t, err)
 	defer db.Stop(context.Background())
 
@@ -134,26 +140,6 @@ func TestBackuper(t *testing.T) {
 		}
 	}()
 
-	// creating backup confirmation files
-	go func() {
-		for i := 0; i < numIterations+1; i++ {
-			time.Sleep(2 * time.Second)
-
-			backupConfirmFile := filepath.Join(makeCurrentBkpDir(cfg, testPulse+insolar.PulseNumber(i)), cfg.ConfirmFile)
-			for true {
-				fff, err := os.Create(backupConfirmFile)
-				if err != nil && strings.Contains(err.Error(), "no such file or directory") {
-					time.Sleep(time.Millisecond * 200)
-					fmt.Printf("%s not created yet\n", backupConfirmFile)
-					continue
-				}
-				require.NoError(t, err)
-				require.NoError(t, fff.Close())
-				break
-			}
-		}
-	}()
-
 	// wait for all backups done
 	wgBackup.Wait()
 	// stop writing to db
@@ -186,7 +172,7 @@ func TestBackuper(t *testing.T) {
 			loadIncrementalBackup(t, recovTmpDir, bkpFileName)
 		}
 
-		recoveredDB, err := store.NewBadgerDB(recovTmpDir)
+		recoveredDB, err := store.NewBadgerDB(badger.DefaultOptions(recovTmpDir))
 		require.NoError(t, err)
 		defer recoveredDB.Stop(context.Background())
 

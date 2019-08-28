@@ -51,10 +51,8 @@
 package bootstrap
 
 import (
-	"bytes"
 	"context"
-	"crypto/rand"
-	"sort"
+	"math/rand"
 	"time"
 
 	"github.com/pkg/errors"
@@ -99,16 +97,12 @@ func (ac *requester) Authorize(ctx context.Context, cert insolar.Certificate) (*
 
 	discoveryNodes := network.ExcludeOrigin(cert.GetDiscoveryNodes(), *cert.GetNodeRef())
 
-	entropy := make([]byte, insolar.RecordRefSize)
-	if _, err := rand.Read(entropy); err != nil {
-		panic("Failed to get bootstrap entropy")
-	}
-
-	sort.Slice(discoveryNodes, func(i, j int) bool {
-		return bytes.Compare(
-			xor(*discoveryNodes[i].GetNodeRef(), entropy),
-			xor(*discoveryNodes[j].GetNodeRef(), entropy)) < 0
-	})
+	rand.Shuffle(
+		len(discoveryNodes),
+		func(i, j int) {
+			discoveryNodes[i], discoveryNodes[j] = discoveryNodes[j], discoveryNodes[i]
+		},
+	)
 
 	bestResult := &packet.AuthorizeResponse{}
 
@@ -149,13 +143,6 @@ func (ac *requester) Authorize(ctx context.Context, cert insolar.Certificate) (*
 	}
 
 	return nil, errors.New("failed to authorize to any discovery node")
-}
-
-func xor(ref insolar.Reference, entropy []byte) []byte {
-	for i, d := range ref {
-		ref[i] = entropy[i] ^ d
-	}
-	return ref[:]
 }
 
 func (ac *requester) authorize(ctx context.Context, host *host.Host, cert insolar.AuthorizationCertificate) (*packet.AuthorizeResponse, error) {
