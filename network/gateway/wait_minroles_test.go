@@ -56,14 +56,16 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/node"
+	"github.com/insolar/insolar/pulse"
 	mock "github.com/insolar/insolar/testutils/network"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestWaitMinroles_MinrolesNotHappenedInETA(t *testing.T) {
@@ -113,7 +115,7 @@ func TestWaitMinroles_MinrolesHappenedInETA(t *testing.T) {
 	nodeKeeper := mock.NewNodeKeeperMock(mc)
 	nodeKeeper.GetAccessorMock.Set(func(p insolar.PulseNumber) (a1 network.Accessor) {
 		accessor := mock.NewAccessorMock(mc)
-		if p == insolar.FirstPulseNumber {
+		if p == pulse.MinTimePulse {
 			accessor.GetWorkingNodesMock.Set(func() (na1 []insolar.NetworkNode) {
 				return []insolar.NetworkNode{}
 			})
@@ -148,5 +150,5 @@ func TestWaitMinroles_MinrolesHappenedInETA(t *testing.T) {
 	go waitMinRoles.Run(context.Background(), *insolar.EphemeralPulse)
 	time.Sleep(100 * time.Millisecond)
 
-	waitMinRoles.OnConsensusFinished(context.Background(), network.Report{PulseNumber: insolar.FirstPulseNumber + 10})
+	waitMinRoles.OnConsensusFinished(context.Background(), network.Report{PulseNumber: pulse.MinTimePulse + 10})
 }

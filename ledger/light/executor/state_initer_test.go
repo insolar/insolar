@@ -34,6 +34,7 @@ import (
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/object"
+	pulse2 "github.com/insolar/insolar/pulse"
 )
 
 func TestStateIniterDefault_PrepareState(t *testing.T) {
@@ -80,7 +81,7 @@ func TestStateIniterDefault_PrepareState(t *testing.T) {
 			indexes,
 		)
 
-		_, _, err := s.PrepareState(ctx, insolar.FirstPulseNumber/2)
+		_, _, err := s.PrepareState(ctx, pulse2.MinTimePulse/2)
 		assert.Error(t, err, "must return error 'invalid pulse'")
 	})
 
@@ -101,7 +102,7 @@ func TestStateIniterDefault_PrepareState(t *testing.T) {
 			indexes,
 		)
 
-		justAdded, jetsReturned, err := s.PrepareState(ctx, insolar.FirstPulseNumber)
+		justAdded, jetsReturned, err := s.PrepareState(ctx, pulse2.MinTimePulse)
 		assert.Error(t, err, "must return error 'failed to calculate heavy node for pulse'")
 		assert.Nil(t, jetsReturned)
 		assert.False(t, justAdded)
@@ -119,12 +120,12 @@ func TestStateIniterDefault_PrepareState(t *testing.T) {
 			nodes,
 			sender,
 			pulseAppender,
-			pulseAccessor.LatestMock.Return(insolar.Pulse{PulseNumber: insolar.FirstPulseNumber + 10}, nil),
+			pulseAccessor.LatestMock.Return(insolar.Pulse{PulseNumber: pulse2.MinTimePulse + 10}, nil),
 			jetCalculator.MineForPulseMock.Return(jets, nil),
 			indexes,
 		)
 
-		justAdded, jetsReturned, err := s.PrepareState(ctx, insolar.FirstPulseNumber)
+		justAdded, jetsReturned, err := s.PrepareState(ctx, pulse2.MinTimePulse)
 		assert.NoError(t, err, "must be nil")
 		assert.Equal(t, jets, jetsReturned)
 		assert.False(t, justAdded)
@@ -155,7 +156,7 @@ func TestStateIniterDefault_PrepareState(t *testing.T) {
 			indexes,
 		)
 
-		justAdded, jetsReturned, err := s.PrepareState(ctx, insolar.FirstPulseNumber)
+		justAdded, jetsReturned, err := s.PrepareState(ctx, pulse2.MinTimePulse)
 		assert.Error(t, err, "must be error 'failed to fetch state from heavy'")
 		assert.Nil(t, jetsReturned)
 		assert.False(t, justAdded)
@@ -177,11 +178,11 @@ func TestStateIniterDefault_PrepareState(t *testing.T) {
 				NetworkStart: true,
 				JetIDs:       jets,
 				Pulse: pulse.PulseProto{
-					PulseNumber: insolar.FirstPulseNumber,
+					PulseNumber: pulse2.MinTimePulse,
 				},
 				Drops: []drop.Drop{
-					{JetID: j1, Pulse: insolar.FirstPulseNumber},
-					{JetID: j2, Pulse: insolar.FirstPulseNumber},
+					{JetID: j1, Pulse: pulse2.MinTimePulse},
+					{JetID: j2, Pulse: pulse2.MinTimePulse},
 				},
 			}),
 		})
@@ -198,7 +199,7 @@ func TestStateIniterDefault_PrepareState(t *testing.T) {
 			indexes,
 		)
 
-		justAdded, jetsReturned, err := s.PrepareState(ctx, insolar.FirstPulseNumber+10)
+		justAdded, jetsReturned, err := s.PrepareState(ctx, pulse2.MinTimePulse+10)
 		assert.NoError(t, err, "must be nil")
 		assert.Equal(t, jets, jetsReturned)
 		assert.True(t, justAdded)

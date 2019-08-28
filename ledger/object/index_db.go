@@ -221,7 +221,7 @@ func (i *IndexDB) setLastKnownPN(pn insolar.PulseNumber, objID insolar.ID) error
 func (i *IndexDB) getLastKnownPN(objID insolar.ID) (insolar.PulseNumber, error) {
 	buff, err := i.db.Get(lastKnownIndexPNKey{objID: objID})
 	if err != nil {
-		return insolar.FirstPulseNumber, err
+		return pulse.MinTimePulse, err
 	}
 	return insolar.NewPulseNumber(buff), err
 }

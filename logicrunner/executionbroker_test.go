@@ -41,6 +41,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/executionregistry"
 	"github.com/insolar/insolar/logicrunner/requestsqueue"
+	pulse2 "github.com/insolar/insolar/pulse"
 )
 
 type publisherMock struct{}
@@ -228,8 +229,8 @@ func TestExecutionBroker_PendingFinishedIfNeed(t *testing.T) {
 
 					pulseAccessor: pulse.NewAccessorMock(t).LatestMock.Set(func(p context.Context) (r insolar.Pulse, r1 error) {
 						return insolar.Pulse{
-							PulseNumber:     insolar.PulseNumber(insolar.FirstPulseNumber),
-							NextPulseNumber: insolar.PulseNumber(insolar.FirstPulseNumber + 1),
+							PulseNumber:     insolar.PulseNumber(pulse2.MinTimePulse),
+							NextPulseNumber: insolar.PulseNumber(pulse2.MinTimePulse + 1),
 						}, nil
 					}),
 
@@ -499,8 +500,8 @@ func TestExecutionBroker_AddFreshRequestWithOnPulse(t *testing.T) {
 				sender := bus.NewSenderMock(t).SendRoleMock.Return(nil, func() { return })
 				pulseMock := pulse.NewAccessorMock(t).LatestMock.Set(func(p context.Context) (r insolar.Pulse, r1 error) {
 					return insolar.Pulse{
-						PulseNumber:     insolar.PulseNumber(insolar.FirstPulseNumber),
-						NextPulseNumber: insolar.PulseNumber(insolar.FirstPulseNumber + 1),
+						PulseNumber:     insolar.PulseNumber(pulse2.MinTimePulse),
+						NextPulseNumber: insolar.PulseNumber(pulse2.MinTimePulse + 1),
 					}, nil
 				})
 				broker := NewExecutionBroker(objectRef, nil, re, sender, am, er, nil, pulseMock)

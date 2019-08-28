@@ -33,6 +33,7 @@ import (
 	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/insolar/insolar/ledger/object"
+	"github.com/insolar/insolar/pulse"
 )
 
 func TestSendRequestInfo_Proceed(t *testing.T) {
@@ -55,17 +56,17 @@ func TestSendRequestInfo_Proceed(t *testing.T) {
 		setup()
 		defer mc.Finish()
 
-		p := proc.NewSendRequestInfo(payload.Meta{}, gen.ID(), insolar.ID{}, insolar.FirstPulseNumber)
+		p := proc.NewSendRequestInfo(payload.Meta{}, gen.ID(), insolar.ID{}, pulse.MinTimePulse)
 		p.Dep(filament, sender, locker)
 		err := p.Proceed(ctx)
 		assert.Error(t, err, "expected error 'requestID is empty'")
 
-		p = proc.NewSendRequestInfo(payload.Meta{}, insolar.ID{}, gen.ID(), insolar.FirstPulseNumber)
+		p = proc.NewSendRequestInfo(payload.Meta{}, insolar.ID{}, gen.ID(), pulse.MinTimePulse)
 		p.Dep(filament, sender, locker)
 		err = p.Proceed(ctx)
 		assert.Error(t, err, "expected error 'objectID is empty'")
 
-		p = proc.NewSendRequestInfo(payload.Meta{}, gen.ID(), gen.ID(), insolar.FirstPulseNumber-10)
+		p = proc.NewSendRequestInfo(payload.Meta{}, gen.ID(), gen.ID(), pulse.MinTimePulse-10)
 		p.Dep(filament, sender, locker)
 		err = p.Proceed(ctx)
 		assert.Error(t, err, "expected error 'pulse is wrong'")
@@ -109,7 +110,7 @@ func TestSendRequestInfo_Proceed(t *testing.T) {
 		locker.UnlockMock.Return()
 		locker.LockMock.Return()
 
-		p := proc.NewSendRequestInfo(msg, objID, reqID, insolar.FirstPulseNumber)
+		p := proc.NewSendRequestInfo(msg, objID, reqID, pulse.MinTimePulse)
 		p.Dep(filament, sender, locker)
 		err = p.Proceed(ctx)
 

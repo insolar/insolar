@@ -33,10 +33,11 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/insolar/insolar/ledger/object"
+	pulse2 "github.com/insolar/insolar/pulse"
 )
 
 func TestHasPendings_Proceed(t *testing.T) {
-	ctx := flow.TestContextWithPulse(inslogger.TestContext(t), insolar.FirstPulseNumber+10)
+	ctx := flow.TestContextWithPulse(inslogger.TestContext(t), pulse2.MinTimePulse+10)
 	mc := minimock.NewController(t)
 
 	var (
@@ -53,7 +54,7 @@ func TestHasPendings_Proceed(t *testing.T) {
 		setup()
 		defer mc.Finish()
 
-		pulse := insolar.NewID(insolar.FirstPulseNumber, []byte{1}).Pulse()
+		pulse := insolar.NewID(pulse2.MinTimePulse, []byte{1}).Pulse()
 
 		index.ForIDMock.Return(
 			record.Index{
@@ -83,7 +84,7 @@ func TestHasPendings_Proceed(t *testing.T) {
 		setup()
 		defer mc.Finish()
 
-		pulse := insolar.NewID(insolar.FirstPulseNumber+100, []byte{1}).Pulse()
+		pulse := insolar.NewID(pulse2.MinTimePulse+100, []byte{1}).Pulse()
 
 		index.ForIDMock.Return(
 			record.Index{

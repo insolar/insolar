@@ -33,6 +33,7 @@ import (
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
+	pulse2 "github.com/insolar/insolar/pulse"
 )
 
 // BaseRecord provides methods for genesis base record manipulation.
@@ -123,7 +124,7 @@ func (br *BaseRecord) Create(ctx context.Context) error {
 
 	err = br.IndexModifier.SetIndex(
 		ctx,
-		insolar.FirstPulseNumber,
+		pulse2.MinTimePulse,
 		record.Index{
 			ObjID: genesisID,
 			Lifeline: record.Lifeline{
@@ -190,7 +191,7 @@ func (g *Genesis) Start(ctx context.Context) error {
 		panic(fmt.Sprintf("[genesis] store discovery nodes failed: %v", err))
 	}
 
-	if err := g.BaseRecord.IndexModifier.UpdateLastKnownPulse(ctx, insolar.FirstPulseNumber); err != nil {
+	if err := g.BaseRecord.IndexModifier.UpdateLastKnownPulse(ctx, pulse2.MinTimePulse); err != nil {
 		panic("can't update last known pulse on genesis")
 	}
 

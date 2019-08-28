@@ -40,6 +40,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/platformpolicy"
+	pulse2 "github.com/insolar/insolar/pulse"
 	"github.com/insolar/insolar/testutils"
 )
 
@@ -61,7 +62,7 @@ func TestNew(t *testing.T) {
 
 func mockPulseAccessor(t minimock.Tester) pulse.Accessor {
 	pulseAccessor := pulse.NewAccessorMock(t)
-	currentPulse := insolar.FirstPulseNumber
+	currentPulse := pulse2.MinTimePulse
 	pulseAccessor.LatestMock.Set(func(p context.Context) (r insolar.Pulse, r1 error) {
 		return insolar.Pulse{
 			PulseNumber:     insolar.PulseNumber(currentPulse),
@@ -208,7 +209,7 @@ func TestContractRequester_Call_Timeout(t *testing.T) {
 
 			hash, err := cReq.calcRequestHash(*request)
 			require.NoError(t, err)
-			requestRef := insolar.NewReference(*insolar.NewID(insolar.FirstPulseNumber, hash[:]))
+			requestRef := insolar.NewReference(*insolar.NewID(pulse2.MinTimePulse, hash[:]))
 
 			res, err := serializeReply(bus.ReplyAsMessage(ctx, &reply.RegisterRequest{
 				Request: *requestRef,

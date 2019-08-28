@@ -55,6 +55,7 @@ import (
 	"github.com/insolar/insolar/network"
 	networknode "github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/platformpolicy"
+	pulse2 "github.com/insolar/insolar/pulse"
 )
 
 var (
@@ -106,10 +107,10 @@ func DefaultLightInitialState() *payload.LightInitialState {
 		NetworkStart: true,
 		JetIDs:       []insolar.JetID{insolar.ZeroJetID},
 		Pulse: pulse.PulseProto{
-			PulseNumber: insolar.FirstPulseNumber,
+			PulseNumber: pulse2.MinTimePulse,
 		},
 		Drops: []drop.Drop{
-			{JetID: insolar.ZeroJetID, Pulse: insolar.FirstPulseNumber},
+			{JetID: insolar.ZeroJetID, Pulse: pulse2.MinTimePulse},
 		},
 	}
 }

@@ -24,6 +24,8 @@ import (
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
+	pulse2 "github.com/insolar/insolar/pulse"
+
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -102,7 +104,7 @@ func (tu *fetcher) Fetch(
 	defer span.End()
 
 	// Special case for genesis pulse. No one was executor at that time, so anyone can fetch data from it.
-	if pulse <= insolar.FirstPulseNumber {
+	if pulse <= pulse2.MinTimePulse {
 		return (*insolar.ID)(insolar.NewJetID(0, nil)), nil
 	}
 

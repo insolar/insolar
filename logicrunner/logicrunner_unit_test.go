@@ -52,6 +52,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/writecontroller"
 	"github.com/insolar/insolar/pulsar"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
+	pulse2 "github.com/insolar/insolar/pulse"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/network"
 )
@@ -161,7 +162,7 @@ func (suite *LogicRunnerTestSuite) TestSagaCallAcceptNotificationHandler() {
 	msg, err := payload.NewMessage(pl)
 	suite.Require().NoError(err)
 
-	pulseNum := pulsar.NewPulse(0, insolar.FirstPulseNumber, &entropygenerator.StandardEntropyGenerator{})
+	pulseNum := pulsar.NewPulse(0, pulse2.MinTimePulse, &entropygenerator.StandardEntropyGenerator{})
 
 	suite.ps.LatestMock.Return(*pulseNum, nil)
 
@@ -289,7 +290,7 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 
 	notMeRef := gen.Reference()
 
-	pulseNum := insolar.PulseNumber(insolar.FirstPulseNumber)
+	pulseNum := insolar.PulseNumber(pulse2.MinTimePulse)
 
 	suite.jc.IsMeAuthorizedNowMock.Return(true, nil)
 
@@ -408,7 +409,7 @@ func TestLogicRunner_OnPulse(t *testing.T) {
 					OnPulseMock.Return(map[insolar.Reference][]payload.Payload{gen.Reference(): {&payload.ExecutorResults{}}})
 
 				lr.WriteController = writecontroller.NewWriteController()
-				_ = lr.WriteController.Open(ctx, insolar.FirstPulseNumber)
+				_ = lr.WriteController.Open(ctx, pulse2.MinTimePulse)
 				lr.ShutdownFlag = shutdown.NewFlagMock(mc).
 					DoneMock.Set(
 					func(ctx context.Context, isDone func() bool) {
@@ -431,7 +432,7 @@ func TestLogicRunner_OnPulse(t *testing.T) {
 					OnPulseMock.Return(map[insolar.Reference][]payload.Payload{})
 
 				lr.WriteController = writecontroller.NewWriteController()
-				_ = lr.WriteController.Open(ctx, insolar.FirstPulseNumber)
+				_ = lr.WriteController.Open(ctx, pulse2.MinTimePulse)
 				lr.ShutdownFlag = shutdown.NewFlagMock(mc).
 					DoneMock.Set(
 					func(ctx context.Context, isDone func() bool) {
@@ -449,7 +450,7 @@ func TestLogicRunner_OnPulse(t *testing.T) {
 			mc := minimock.NewController(t)
 
 			lr := test.mocks(ctx, mc)
-			err := lr.OnPulse(ctx, insolar.Pulse{PulseNumber: insolar.FirstPulseNumber}, insolar.Pulse{PulseNumber: insolar.FirstPulseNumber + 1})
+			err := lr.OnPulse(ctx, insolar.Pulse{PulseNumber: pulse2.MinTimePulse}, insolar.Pulse{PulseNumber: pulse2.MinTimePulse + 1})
 			require.NoError(t, err)
 
 			mc.Wait(3 * time.Minute)
@@ -509,8 +510,8 @@ func TestLogicRunner_OnPulse_Order(t *testing.T) {
 			isDone()
 		})
 
-	oldPulse := insolar.Pulse{PulseNumber: insolar.FirstPulseNumber}
-	newPulse := insolar.Pulse{PulseNumber: insolar.FirstPulseNumber + 1}
+	oldPulse := insolar.Pulse{PulseNumber: pulse2.MinTimePulse}
+	newPulse := insolar.Pulse{PulseNumber: pulse2.MinTimePulse + 1}
 	require.NoError(t, lr.OnPulse(ctx, oldPulse, newPulse))
 	require.Len(t, orderChan, int(OrderMAX-1))
 

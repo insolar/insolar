@@ -24,6 +24,8 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/heavy/executor"
 	"github.com/insolar/insolar/ledger/object"
+	pulse2 "github.com/insolar/insolar/pulse"
+
 	"github.com/pkg/errors"
 )
 
@@ -62,7 +64,7 @@ func (r *RecordServer) Export(getRecords *GetRecords, stream RecordExporter_Expo
 			return errors.New("trying to get a non-finalized pulse data")
 		}
 	} else {
-		getRecords.PulseNumber = insolar.FirstPulseNumber
+		getRecords.PulseNumber = pulse2.MinTimePulse
 	}
 
 	iter := newRecordIterator(

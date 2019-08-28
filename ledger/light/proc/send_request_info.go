@@ -27,6 +27,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/object"
+	"github.com/insolar/insolar/pulse"
 )
 
 type SendRequestInfo struct {
@@ -73,7 +74,7 @@ func (p *SendRequestInfo) Proceed(ctx context.Context) error {
 	if p.objectID.IsEmpty() {
 		return errors.New("objectID is empty")
 	}
-	if p.pulse < insolar.FirstPulseNumber {
+	if p.pulse < pulse.MinTimePulse {
 		return errors.New("pulse is wrong")
 	}
 

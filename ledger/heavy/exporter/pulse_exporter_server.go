@@ -21,6 +21,8 @@ import (
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/heavy/executor"
+	pulse2 "github.com/insolar/insolar/pulse"
+
 	"github.com/pkg/errors"
 )
 
@@ -46,9 +48,9 @@ func (p *PulseServer) Export(getPulses *GetPulses, stream PulseExporter_ExportSe
 
 	read := uint32(0)
 	if getPulses.PulseNumber == 0 {
-		getPulses.PulseNumber = insolar.FirstPulseNumber
+		getPulses.PulseNumber = pulse2.MinTimePulse
 		err := stream.Send(&Pulse{
-			PulseNumber:    insolar.FirstPulseNumber,
+			PulseNumber:    pulse2.MinTimePulse,
 			Entropy:        insolar.GenesisPulse.Entropy,
 			PulseTimestamp: insolar.GenesisPulse.PulseTimestamp,
 		})

@@ -38,6 +38,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/instrumentation/instracer"
+	pulse2 "github.com/insolar/insolar/pulse"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/insolar/flow/dispatcher.Dispatcher -o ./ -s _mock.go -g
@@ -83,7 +84,7 @@ func (d *dispatcher) ClosePulse(ctx context.Context, pulse insolar.Pulse) {
 }
 
 func (d *dispatcher) getHandleByPulse(ctx context.Context, msgPulseNumber insolar.PulseNumber) flow.MakeHandle {
-	currentPulseNumber := insolar.PulseNumber(insolar.FirstPulseNumber)
+	currentPulseNumber := insolar.PulseNumber(pulse2.MinTimePulse)
 	p, err := d.pulses.Latest(ctx)
 	if err == nil {
 		currentPulseNumber = p.PulseNumber

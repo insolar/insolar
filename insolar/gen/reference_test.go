@@ -20,6 +20,8 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/insolar/gen"
+	"github.com/insolar/insolar/pulse"
+
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"
@@ -30,7 +32,7 @@ func TestGen_JetID(t *testing.T) {
 		jetID := gen.JetID()
 		recID := (*insolar.ID)(&jetID)
 		require.Equalf(t,
-			insolar.PulseNumberJet, recID.Pulse(),
+			pulse.Jet, recID.Pulse(),
 			"pulse number should be insolar.PulseNumberJet. jet: %v", recID.DebugString())
 		require.GreaterOrEqualf(t,
 			uint8(insolar.JetMaximumDepth), jetID.Depth(),

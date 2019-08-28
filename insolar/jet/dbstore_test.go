@@ -31,6 +31,7 @@ import (
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/store"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/pulse"
 )
 
 func BadgerDefaultOptions(dir string) badger.Options {
@@ -139,7 +140,7 @@ func TestDBStorage_Empty(t *testing.T) {
 	defer db.Stop(ctx)
 	s := NewDBStore(db)
 
-	all := s.All(ctx, insolar.FirstPulseNumber)
+	all := s.All(ctx, pulse.MinTimePulse)
 	require.Equal(t, 1, len(all), "should be just one jet ID")
 	require.Equal(t, insolar.ZeroJetID, all[0], "JetID should be a zero on empty storage")
 }

@@ -25,6 +25,7 @@ import (
 	"github.com/dgraph-io/badger"
 
 	"github.com/insolar/insolar/network"
+	pulse2 "github.com/insolar/insolar/pulse"
 
 	"google.golang.org/grpc"
 
@@ -329,7 +330,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		Handler = h
 
 		artifactManager := &artifact.Scope{
-			PulseNumber:    insolar.FirstPulseNumber,
+			PulseNumber:    pulse2.MinTimePulse,
 			PCS:            CryptoScheme,
 			RecordAccessor: Records,
 			RecordModifier: Records,

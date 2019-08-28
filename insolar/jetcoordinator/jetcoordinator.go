@@ -21,16 +21,17 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/network"
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/node"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/utils"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/network"
+	pulse2 "github.com/insolar/insolar/pulse"
 	"github.com/insolar/insolar/utils/entropy"
-	"github.com/pkg/errors"
 )
 
 // Coordinator is responsible for all jet interactions
@@ -105,35 +106,35 @@ func (jc *Coordinator) QueryRole(
 	ctx context.Context,
 	role insolar.DynamicRole,
 	objID insolar.ID,
-	pulse insolar.PulseNumber,
+	pulseNumber insolar.PulseNumber,
 ) ([]insolar.Reference, error) {
 	switch role {
 	case insolar.DynamicRoleVirtualExecutor:
-		n, err := jc.VirtualExecutorForObject(ctx, objID, pulse)
+		n, err := jc.VirtualExecutorForObject(ctx, objID, pulseNumber)
 		if err != nil {
 			return nil, errors.Wrapf(err, "calc DynamicRoleVirtualExecutor for object %v failed", objID.String())
 		}
 		return []insolar.Reference{*n}, nil
 
 	case insolar.DynamicRoleVirtualValidator:
-		return jc.VirtualValidatorsForObject(ctx, objID, pulse)
+		return jc.VirtualValidatorsForObject(ctx, objID, pulseNumber)
 
 	case insolar.DynamicRoleLightExecutor:
-		if objID.Pulse() == insolar.PulseNumberJet {
-			n, err := jc.LightExecutorForJet(ctx, objID, pulse)
+		if objID.Pulse() == pulse2.Jet {
+			n, err := jc.LightExecutorForJet(ctx, objID, pulseNumber)
 			if err != nil {
 				return nil, errors.Wrapf(err, "calc DynamicRoleLightExecutor for object %v failed", objID.String())
 			}
 			return []insolar.Reference{*n}, nil
 		}
-		n, err := jc.LightExecutorForObject(ctx, objID, pulse)
+		n, err := jc.LightExecutorForObject(ctx, objID, pulseNumber)
 		if err != nil {
 			return nil, errors.Wrapf(err, "calc LightExecutorForObject for object %v failed", objID.String())
 		}
 		return []insolar.Reference{*n}, nil
 
 	case insolar.DynamicRoleLightValidator:
-		ref, err := jc.LightValidatorsForObject(ctx, objID, pulse)
+		ref, err := jc.LightValidatorsForObject(ctx, objID, pulseNumber)
 		if err != nil {
 			return nil, errors.Wrapf(err, "calc DynamicRoleLightValidator for object %v failed", objID.String())
 		}
@@ -142,7 +143,7 @@ func (jc *Coordinator) QueryRole(
 	case insolar.DynamicRoleHeavyExecutor:
 		n, err := jc.Heavy(ctx)
 		if err != nil {
-			return nil, errors.Wrapf(err, "calc DynamicRoleHeavyExecutor for pulse %v failed", pulse.String())
+			return nil, errors.Wrapf(err, "calc DynamicRoleHeavyExecutor for pulse %v failed", pulseNumber.String())
 		}
 		return []insolar.Reference{*n}, nil
 	}

@@ -45,6 +45,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/machinesmanager"
 	"github.com/insolar/insolar/logicrunner/shutdown"
 	"github.com/insolar/insolar/logicrunner/writecontroller"
+	pulse2 "github.com/insolar/insolar/pulse"
 )
 
 // LogicRunner is a general interface of contract executor
@@ -119,7 +120,7 @@ func (lr *LogicRunner) Init(ctx context.Context) error {
 	)
 
 	lr.WriteController = writecontroller.NewWriteController()
-	err := lr.WriteController.Open(ctx, insolar.FirstPulseNumber)
+	err := lr.WriteController.Open(ctx, pulse2.MinTimePulse)
 	if err != nil {
 		return errors.Wrap(err, "failed to initialize write controller")
 	}

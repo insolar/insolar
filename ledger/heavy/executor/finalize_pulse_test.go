@@ -20,18 +20,20 @@ import (
 	"context"
 	"testing"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/heavy/executor"
 	"github.com/insolar/insolar/ledger/object"
+	"github.com/insolar/insolar/pulse"
 	"github.com/insolar/insolar/testutils/network"
-	"github.com/pkg/errors"
 )
 
 func TestFinalizePulse_HappyPath(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
-	testPulse := insolar.PulseNumber(insolar.FirstPulseNumber)
+	testPulse := insolar.PulseNumber(pulse.MinTimePulse)
 	targetPulse := testPulse + 1
 
 	pc := network.NewPulseCalculatorMock(t)
@@ -81,7 +83,7 @@ func TestFinalizePulse_HappyPath(t *testing.T) {
 func TestFinalizePulse_JetIsNotConfirmed(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
-	testPulse := insolar.PulseNumber(insolar.FirstPulseNumber)
+	testPulse := insolar.PulseNumber(pulse.MinTimePulse)
 
 	jk := executor.NewJetKeeperMock(t)
 	jk.HasAllJetConfirmsMock.Return(false)
@@ -92,7 +94,7 @@ func TestFinalizePulse_JetIsNotConfirmed(t *testing.T) {
 func TestFinalizePulse_CantGteNextPulse(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
-	testPulse := insolar.PulseNumber(insolar.FirstPulseNumber)
+	testPulse := insolar.PulseNumber(pulse.MinTimePulse)
 
 	jk := executor.NewJetKeeperMock(t)
 	jk.HasAllJetConfirmsMock.Return(true)
@@ -107,7 +109,7 @@ func TestFinalizePulse_CantGteNextPulse(t *testing.T) {
 func TestFinalizePulse_BackupError(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
-	testPulse := insolar.PulseNumber(insolar.FirstPulseNumber)
+	testPulse := insolar.PulseNumber(pulse.MinTimePulse)
 	targetPulse := testPulse + 1
 
 	jk := executor.NewJetKeeperMock(t)
@@ -126,7 +128,7 @@ func TestFinalizePulse_BackupError(t *testing.T) {
 func TestFinalizePulse_NotNextPulse(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
-	testPulse := insolar.PulseNumber(insolar.FirstPulseNumber)
+	testPulse := insolar.PulseNumber(pulse.MinTimePulse)
 
 	jk := executor.NewJetKeeperMock(t)
 	jk.HasAllJetConfirmsMock.Return(true)

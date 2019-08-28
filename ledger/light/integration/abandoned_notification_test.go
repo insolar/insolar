@@ -28,6 +28,8 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/drop"
+	pulse2 "github.com/insolar/insolar/pulse"
+
 	"github.com/stretchr/testify/require"
 )
 
@@ -70,10 +72,10 @@ func Test_AbandonedNotification(t *testing.T) {
 				NetworkStart: true,
 				JetIDs:       []insolar.JetID{insolar.ZeroJetID},
 				Pulse: pulse.PulseProto{
-					PulseNumber: insolar.FirstPulseNumber,
+					PulseNumber: pulse2.MinTimePulse,
 				},
 				Drops: []drop.Drop{
-					{JetID: insolar.ZeroJetID, Pulse: insolar.FirstPulseNumber},
+					{JetID: insolar.ZeroJetID, Pulse: pulse2.MinTimePulse},
 				},
 			}}
 		}
@@ -160,7 +162,7 @@ func Test_AbandonedNotification_WhenLightInit(t *testing.T) {
 	receivedConfirmations := make(chan payload.GotHotConfirmation)
 
 	// PulseNumber and ObjectID for mock heavy response
-	pn := insolar.PulseNumber(insolar.FirstPulseNumber)
+	pn := insolar.PulseNumber(pulse2.MinTimePulse)
 	objectID := gen.IDWithPulse(pn)
 
 	// Response from heavy.
@@ -173,10 +175,10 @@ func Test_AbandonedNotification_WhenLightInit(t *testing.T) {
 				NetworkStart: true,
 				JetIDs:       []insolar.JetID{insolar.ZeroJetID},
 				Pulse: pulse.PulseProto{
-					PulseNumber: insolar.FirstPulseNumber,
+					PulseNumber: pulse2.MinTimePulse,
 				},
 				Drops: []drop.Drop{
-					{JetID: insolar.ZeroJetID, Pulse: insolar.FirstPulseNumber},
+					{JetID: insolar.ZeroJetID, Pulse: pulse2.MinTimePulse},
 				},
 				Indexes: []record.Index{
 					{Lifeline: record.Lifeline{EarliestOpenRequest: &pn}, ObjID: objectID},

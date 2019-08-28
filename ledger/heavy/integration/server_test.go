@@ -25,12 +25,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
-	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
 	"github.com/dgraph-io/badger"
 	"github.com/pkg/errors"
 
+	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
+	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/cryptography"
@@ -56,6 +56,7 @@ import (
 	"github.com/insolar/insolar/network"
 	networknode "github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/platformpolicy"
+	pulse2 "github.com/insolar/insolar/pulse"
 )
 
 var (
@@ -261,7 +262,7 @@ func NewServer(
 		Handler = h
 
 		artifactManager := &artifact.Scope{
-			PulseNumber:    insolar.FirstPulseNumber,
+			PulseNumber:    pulse2.MinTimePulse,
 			PCS:            CryptoScheme,
 			RecordAccessor: Records,
 			RecordModifier: Records,

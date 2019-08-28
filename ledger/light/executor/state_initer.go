@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/ThreeDotsLabs/watermill/message"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/backoff"
 	"github.com/insolar/insolar/insolar/bus"
@@ -32,6 +33,8 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/object"
+	pulse2 "github.com/insolar/insolar/pulse"
+
 	"github.com/pkg/errors"
 )
 
@@ -94,7 +97,7 @@ func (s *StateIniterDefault) PrepareState(
 	ctx context.Context,
 	forPulse insolar.PulseNumber,
 ) (bool, []insolar.JetID, error) {
-	if forPulse < insolar.FirstPulseNumber {
+	if forPulse < pulse2.MinTimePulse {
 		return false, nil, errors.Errorf("invalid pulse %s for light state initialization ", forPulse)
 	}
 

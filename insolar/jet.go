@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/insolar/insolar/insolar/bits"
+	"github.com/insolar/insolar/pulse"
 	"github.com/insolar/insolar/reference"
 
 	"github.com/pkg/errors"
@@ -76,7 +77,7 @@ func NewJetID(depth uint8, prefix []byte) *JetID {
 	hash := [reference.LocalBinaryHashSize]byte{depth}
 	copy(hash[JetPrefixOffset:], bits.ResetBits(prefix, depth))
 
-	return (*JetID)(NewID(PulseNumberJet, hash[:]))
+	return (*JetID)(NewID(pulse.Jet, hash[:]))
 }
 
 // Depth extracts depth from a jet id.

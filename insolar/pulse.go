@@ -127,13 +127,6 @@ type PulseSenderConfirmation struct {
 }
 
 const (
-	// FirstPulseNumber is the hardcoded first pulse number. Because first 65536 numbers are saved for the system's needs
-	FirstPulseNumber = pulse.MinTimePulse
-	// PulseNumberJet is a special pulse number value that signifies jet ID.
-	PulseNumberJet = PulseNumber(1)
-	// BuiltinContractPulseNumber declares special pulse number that creates namespace for builtin contracts
-	BuiltinContractPulseNumber = PulseNumber(200)
-
 	InvalidPulseEpoch   int = 0
 	EphemeralPulseEpoch     = InvalidPulseEpoch + 1
 )
@@ -142,15 +135,15 @@ const (
 // because first 2 bits of pulse number and first 65536 pulses a are used by system needs and pulse numbers are related to the seconds of Unix time
 // for calculation pulse numbers we use the formula = unix.Now() - firstPulseDate + 65536
 var GenesisPulse = &Pulse{
-	PulseNumber:      FirstPulseNumber,
+	PulseNumber:      pulse.MinTimePulse,
 	Entropy:          [EntropySize]byte{},
-	EpochPulseNumber: FirstPulseNumber,
+	EpochPulseNumber: pulse.MinTimePulse,
 	PulseTimestamp:   pulse.UnixTimeOfMinTimePulse,
 }
 
 // EphemeralPulse is used for discovery network bootstrap
 var EphemeralPulse = &Pulse{
-	PulseNumber:      FirstPulseNumber,
+	PulseNumber:      pulse.MinTimePulse,
 	Entropy:          [EntropySize]byte{},
 	EpochPulseNumber: EphemeralPulseEpoch,
 	PulseTimestamp:   pulse.UnixTimeOfMinTimePulse,

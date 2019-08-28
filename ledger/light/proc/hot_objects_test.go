@@ -37,10 +37,11 @@ import (
 	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/insolar/insolar/ledger/object"
+	pulse2 "github.com/insolar/insolar/pulse"
 )
 
 func TestHotObjects_Proceed(t *testing.T) {
-	ctx := flow.TestContextWithPulse(inslogger.TestContext(t), insolar.FirstPulseNumber+10)
+	ctx := flow.TestContextWithPulse(inslogger.TestContext(t), pulse2.MinTimePulse+10)
 	mc := minimock.NewController(t)
 
 	var (
@@ -70,7 +71,7 @@ func TestHotObjects_Proceed(t *testing.T) {
 		defer mc.Finish()
 
 		expectedPulse := insolar.Pulse{
-			PulseNumber: insolar.FirstPulseNumber + 10,
+			PulseNumber: pulse2.MinTimePulse + 10,
 		}
 		expectedJetID := gen.JetID()
 		expectedObjJetID := expectedJetID
@@ -136,13 +137,13 @@ func TestHotObjects_Proceed(t *testing.T) {
 		defer mc.Finish()
 
 		currentPulse := insolar.Pulse{
-			PulseNumber: insolar.FirstPulseNumber + 100,
+			PulseNumber: pulse2.MinTimePulse + 100,
 		}
 		abandonedRequestPulse := insolar.Pulse{
-			PulseNumber: insolar.FirstPulseNumber,
+			PulseNumber: pulse2.MinTimePulse,
 		}
 		thresholdAbandonedRequestPulse := insolar.Pulse{
-			PulseNumber: insolar.FirstPulseNumber + 80,
+			PulseNumber: pulse2.MinTimePulse + 80,
 		}
 
 		expectedJetID := gen.JetID()

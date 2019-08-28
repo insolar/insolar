@@ -23,6 +23,8 @@ import (
 
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	pulse2 "github.com/insolar/insolar/pulse"
+
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -333,7 +335,7 @@ func infoToList(s map[insolar.JetID]struct{}) []insolar.JetID {
 func (jk *DBJetKeeper) getTopSyncJets(ctx context.Context) ([]insolar.JetID, error) {
 	var result []insolar.JetID
 	top := jk.topSyncPulse()
-	if top == insolar.FirstPulseNumber {
+	if top == pulse2.MinTimePulse {
 		return []insolar.JetID{insolar.ZeroJetID}, nil
 	}
 	jets, err := jk.get(top)
