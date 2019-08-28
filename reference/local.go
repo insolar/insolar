@@ -17,7 +17,6 @@
 package reference
 
 import (
-	"bytes"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
@@ -96,15 +95,6 @@ func (v *Local) Read(p []byte) (n int, err error) {
 func (v Local) len() int {
 	return pulseAndScopeSize + len(v.hash)
 }
-
-// TODO[bigbes]: change semantics of String method
-// func (v Local) String() string {
-// 	sc := v.getScope()
-// 	if sc != 0 {
-// 		return fmt.Sprintf("%d(%d)_0x%08x", v.GetPulseNumber(), sc, v.hash.FoldToUint64())
-// 	}
-// 	return fmt.Sprintf("%d_0x%08x", v.GetPulseNumber(), v.hash.FoldToUint64())
-// }
 
 func (v *Local) AsByteString() longbits.ByteString {
 	return longbits.NewByteString(v.AsBytes())
@@ -211,8 +201,7 @@ func (v Local) Compare(other Local) int {
 		return 1
 	}
 
-	// TODO[bigbes]: probably better to move this metod to Bits224 (Compare)
-	return bytes.Compare(v.hash[:], other.hash[:])
+	return v.hash.Compare(other.hash)
 }
 
 // Pulse returns a copy of Pulse part of ID.
@@ -328,5 +317,5 @@ func (v *Local) DebugString() string {
 		return v.debugStringJet()
 	}
 
-	return fmt.Sprintf("[%d | %s]", v.Pulse(), v.String())
+	return fmt.Sprintf("[%d | %d | %s]", v.Pulse(), v.getScope(), v.String())
 }

@@ -240,8 +240,6 @@ func TestDBStorage_CloneJetTree(t *testing.T) {
 }
 
 func TestDBStorage_ForID_Basic(t *testing.T) {
-	t.Skip("IDK")
-
 	ctx := inslogger.TestContext(t)
 
 	pn := gen.PulseNumber()
@@ -252,7 +250,7 @@ func TestDBStorage_ForID_Basic(t *testing.T) {
 	searchID := gen.ID()
 	hash := searchID.Hash()
 	hash = setBitsPrefix(hash, bits, len(meaningfulBits))
-	// copy(searchID[insolar.RecordHashOffset:], hash)
+	searchID = *insolar.NewID(searchID.Pulse(), hash)
 
 	for _, actuality := range []bool{true, false} {
 		tmpdir, err := ioutil.TempDir("", "bdb-test-")

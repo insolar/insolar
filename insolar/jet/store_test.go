@@ -22,6 +22,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
@@ -103,26 +104,23 @@ func TestJetStorage_DeleteJetTree(t *testing.T) {
 }
 
 func TestJetStorage_ForID_Basic(t *testing.T) {
-	t.Skip("IDK")
+	ctx := inslogger.TestContext(t)
 
-	// ctx := inslogger.TestContext(t)
-	//
-	// pn := gen.PulseNumber()
-	// meaningfulBits := "01000011" + "11000011" + "010010"
-	//
-	// bits := parsePrefix(meaningfulBits)
-	// expectJetID := NewIDFromString(meaningfulBits)
-	// // fmt.Printf("expectJetID:        %08b\n", expectJetID[:])
-	// searchID := gen.ID()
-	// hash := searchID[insolar.RecordHashOffset:]
-	// hash = setBitsPrefix(hash, bits, len(meaningfulBits))
-	// copy(searchID[insolar.RecordHashOffset:], hash)
-	//
-	// for _, actuality := range []bool{true, false} {
-	// 	s := NewStore()
-	// 	s.Update(ctx, pn, actuality, expectJetID)
-	// 	found, ok := s.ForID(ctx, pn, searchID)
-	// 	require.Equal(t, expectJetID, found, "got jet with exactly same prefix")
-	// 	require.Equal(t, actuality, ok, "jet should be in actuality state we defined in Update")
-	// }
+	pn := gen.PulseNumber()
+	meaningfulBits := "01000011" + "11000011" + "010010"
+
+	bits := parsePrefix(meaningfulBits)
+	expectJetID := NewIDFromString(meaningfulBits)
+	searchID := gen.ID()
+	hash := searchID.Hash()
+	hash = setBitsPrefix(hash, bits, len(meaningfulBits))
+	searchID = *insolar.NewID(searchID.Pulse(), hash)
+
+	for _, actuality := range []bool{true, false} {
+		s := NewStore()
+		s.Update(ctx, pn, actuality, expectJetID)
+		found, ok := s.ForID(ctx, pn, searchID)
+		require.Equal(t, expectJetID, found, "got jet with exactly same prefix")
+		require.Equal(t, actuality, ok, "jet should be in actuality state we defined in Update")
+	}
 }

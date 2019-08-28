@@ -180,13 +180,12 @@ func (v Global) Equal(other Global) bool {
 	return v.addressLocal.Equal(other.addressLocal) && v.addressBase.Equal(other.addressBase)
 }
 
-// TODO[bigbes]: what is comparing order? local->base or base->local?
 // Compare compares two record references
 func (v Global) Compare(other Global) int {
-	if cmp := v.addressLocal.Compare(other.addressLocal); cmp != 0 {
+	if cmp := v.addressBase.Compare(other.addressBase); cmp != 0 {
 		return cmp
 	}
-	return v.addressBase.Compare(other.addressBase)
+	return v.addressLocal.Compare(other.addressLocal)
 }
 
 // MarshalJSON serializes reference into JSONFormat.

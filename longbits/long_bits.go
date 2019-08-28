@@ -17,6 +17,7 @@
 package longbits
 
 import (
+	"bytes"
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
@@ -158,6 +159,10 @@ func (v *Bits224) AsBytes() []byte {
 
 func (v *Bits224) AsByteString() ByteString {
 	return ByteString(v[:])
+}
+
+func (v Bits224) Compare(other Bits224) int {
+	return bytes.Compare(v[:], other[:])
 }
 
 type Bits256 [32]byte
