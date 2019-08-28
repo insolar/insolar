@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
 
 	"github.com/insolar/insolar/insolar"
@@ -147,7 +148,8 @@ func (jc *Coordinator) QueryRole(
 		return []insolar.Reference{*n}, nil
 	}
 
-	panic("unexpected role")
+	inslogger.FromContext(ctx).Panicf("unexpected role %v", role.String())
+	return nil, nil
 }
 
 // VirtualExecutorForObject returns list of VEs for a provided pulse and objID

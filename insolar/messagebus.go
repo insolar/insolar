@@ -114,8 +114,6 @@ type Parcel interface {
 	Context(context.Context) context.Context
 
 	Pulse() PulseNumber
-
-	DelegationToken() DelegationToken
 }
 
 // Reply for an `Message`
@@ -123,52 +121,3 @@ type Reply interface {
 	// Type returns message type.
 	Type() ReplyType
 }
-
-// RedirectReply is used to create redirected messages.
-type RedirectReply interface {
-	// Redirected creates redirected message from redirect data.
-	Redirected(genericMsg Message) Message
-	// GetReceiver returns node reference to send message to.
-	GetReceiver() *Reference
-	// GetToken returns delegation token.
-	GetToken() DelegationToken
-}
-
-// MessageSendOptions represents options for message sending.
-type MessageSendOptions struct {
-	Receiver *Reference
-	Token    DelegationToken
-}
-
-// Safe returns original options, falling back on defaults if nil.
-func (o *MessageSendOptions) Safe() *MessageSendOptions {
-	if o == nil {
-		return &MessageSendOptions{}
-	}
-	return o
-}
-
-// MessageHandler is a function for message handling. It should be registered via Register method.
-type MessageHandler func(context.Context, Parcel) (Reply, error)
-
-//go:generate stringer -type=MessageType
-const (
-	// TypeValidationResults sends from Validator to new Executor with results of validation actions of previous Executor
-	TypeValidationResults MessageType = iota
-	// TypeAdditionalCallFromPreviousExecutor is sent by the old executor to the current executor when Flow
-	// cancels after registering the request but before adding the request to the execution queue.
-
-	// TypeGenesisRequest used for bootstrap object generation.
-	TypeGenesisRequest
-)
-
-// DelegationTokenType is an enum type of delegation token
-type DelegationTokenType byte
-
-//go:generate stringer -type=DelegationTokenType
-const (
-	// DTTypePendingExecution allows to continue method calls
-	DTTypePendingExecution DelegationTokenType = iota + 1
-	DTTypeGetObjectRedirect
-	DTTypeGetCodeRedirect
-)

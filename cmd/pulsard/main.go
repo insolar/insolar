@@ -121,7 +121,7 @@ func initPulsar(ctx context.Context, cfg configuration.Configuration) (*componen
 
 	keyStore, err := keystore.NewKeyStore(cfg.KeysPath)
 	if err != nil {
-		inslogger.FromContext(ctx).Fatal(err)
+		panic(err)
 	}
 	cryptographyScheme := platformpolicy.NewPlatformCryptographyScheme()
 	cryptographyService := cryptography.NewCryptographyService()
@@ -129,7 +129,7 @@ func initPulsar(ctx context.Context, cfg configuration.Configuration) (*componen
 
 	pulseDistributor, err := pulsenetwork.NewDistributor(cfg.Pulsar.PulseDistributor)
 	if err != nil {
-		inslogger.FromContext(ctx).Fatal(err)
+		panic(err)
 	}
 
 	cm := &component.Manager{}
@@ -137,11 +137,11 @@ func initPulsar(ctx context.Context, cfg configuration.Configuration) (*componen
 	cm.Inject(cryptographyService, pulseDistributor)
 
 	if err = cm.Init(ctx); err != nil {
-		inslogger.FromContext(ctx).Fatal(err)
+		panic(err)
 	}
 
 	if err = cm.Start(ctx); err != nil {
-		inslogger.FromContext(ctx).Fatal(err)
+		panic(err)
 	}
 
 	server := pulsar.NewPulsar(
@@ -160,7 +160,6 @@ func runPulsar(ctx context.Context, server *pulsar.Pulsar, cfg configuration.Pul
 	nextPulseNumber := insolar.PulseNumber(pulse.OfNow())
 	err := server.Send(ctx, nextPulseNumber)
 	if err != nil {
-		inslogger.FromContext(ctx).Fatal(err)
 		panic(err)
 	}
 
@@ -169,7 +168,6 @@ func runPulsar(ctx context.Context, server *pulsar.Pulsar, cfg configuration.Pul
 		for range pulseTicker.C {
 			err := server.Send(ctx, server.LastPN()+insolar.PulseNumber(cfg.NumberDelta))
 			if err != nil {
-				inslogger.FromContext(ctx).Fatal(err)
 				panic(err)
 			}
 		}

@@ -92,7 +92,7 @@ func main() {
 
 	fmt.Printf("Starting server for testing HTTP POST...\n")
 	if err := http.ListenAndServe(cfgHolder.Configuration.Pulsar.MainListenerAddress, nil); err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 }
 
@@ -102,7 +102,7 @@ func initPulsar(ctx context.Context, cfg configuration.Configuration) *pulsar.Te
 
 	keyStore, err := keystore.NewKeyStore(cfg.KeysPath)
 	if err != nil {
-		inslogger.FromContext(ctx).Fatal(err)
+		panic(err)
 	}
 	cryptographyScheme := platformpolicy.NewPlatformCryptographyScheme()
 	cryptographyService := cryptography.NewCryptographyService()
@@ -110,7 +110,7 @@ func initPulsar(ctx context.Context, cfg configuration.Configuration) *pulsar.Te
 
 	pulseDistributor, err := pulsenetwork.NewDistributor(cfg.Pulsar.PulseDistributor)
 	if err != nil {
-		inslogger.FromContext(ctx).Fatal(err)
+		panic(err)
 	}
 
 	cm := &component.Manager{}
@@ -118,11 +118,11 @@ func initPulsar(ctx context.Context, cfg configuration.Configuration) *pulsar.Te
 	cm.Inject(cryptographyService, pulseDistributor)
 
 	if err = cm.Init(ctx); err != nil {
-		inslogger.FromContext(ctx).Fatal(err)
+		panic(err)
 	}
 
 	if err = cm.Start(ctx); err != nil {
-		inslogger.FromContext(ctx).Fatal(err)
+		panic(err)
 	}
 
 	return pulsar.NewTestPulsar(cfg.Pulsar, pulseDistributor, &entropygenerator.StandardEntropyGenerator{})
