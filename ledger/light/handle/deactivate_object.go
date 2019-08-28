@@ -99,10 +99,10 @@ func (s *DeactivateObject) Present(ctx context.Context, f flow.Flow) error {
 	}
 
 	// To ensure, that we have the index. Because index can be on a heavy node.
-	// If we don't have it and heavy does, DeactivateObject fails because it should update light's index state
-	getIndex := proc.NewEnsureIndex(obj, objJetID, s.message, flow.Pulse(ctx))
-	s.dep.EnsureIndex(getIndex)
-	if err := f.Procedure(ctx, getIndex, false); err != nil {
+	// If we don't have it and heavy does, DeactivateObject fails because it should update light's index state.
+	ensureIdx := proc.NewEnsureIndex(obj, objJetID, s.message, flow.Pulse(ctx))
+	s.dep.EnsureIndex(ensureIdx)
+	if err := f.Procedure(ctx, ensureIdx, false); err != nil {
 		return err
 	}
 
