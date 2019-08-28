@@ -30,6 +30,12 @@ var (
 
 	statDrop        = stats.Int64("drops", "How many drop records have created", stats.UnitDimensionless)
 	statDropRecords = stats.Int64("drop/records", "Amount of records in drop", stats.UnitDimensionless)
+
+	statLastReplicatedPulse = stats.Int64(
+		"light_last_sent_pulse",
+		"last pulse sent to heavy",
+		stats.UnitDimensionless,
+	)
 )
 
 func init() {
@@ -72,6 +78,13 @@ func init() {
 			Description: statDropRecords.Description(),
 			Measure:     statDropRecords,
 			Aggregation: view.Sum(),
+		},
+
+		&view.View{
+			Name:        statLastReplicatedPulse.Name(),
+			Description: statLastReplicatedPulse.Description(),
+			Measure:     statLastReplicatedPulse,
+			Aggregation: view.LastValue(),
 		},
 	)
 	if err != nil {

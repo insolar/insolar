@@ -71,7 +71,7 @@ type CommonTestSuite struct {
 	mc            *minimock.Controller
 	ctx           context.Context
 	handler       *terminationHandler
-	network       *testutils.NetworkMock
+	leaver        *testutils.LeaverMock
 	pulseAccessor *pulse.AccessorMock
 }
 
@@ -82,9 +82,9 @@ func TestBasics(t *testing.T) {
 func (s *CommonTestSuite) BeforeTest(suiteName, testName string) {
 	s.mc = minimock.NewController(s.T())
 	s.ctx = inslogger.TestContext(s.T())
-	s.network = testutils.NewNetworkMock(s.T())
+	s.leaver = testutils.NewLeaverMock(s.T())
 	s.pulseAccessor = pulse.NewAccessorMock(s.T())
-	s.handler = &terminationHandler{Network: s.network, PulseAccessor: s.pulseAccessor}
+	s.handler = &terminationHandler{Leaver: s.leaver, PulseAccessor: s.pulseAccessor}
 
 }
 
@@ -112,7 +112,7 @@ type LeaveTestSuite struct {
 }
 
 func (s *LeaveTestSuite) TestLeaveNow() {
-	s.network.LeaveMock.Expect(s.ctx, 0)
+	s.leaver.LeaveMock.Expect(s.ctx, 0)
 	s.handler.leave(s.ctx, 0)
 
 	s.HandlerIsTerminating()
@@ -125,7 +125,7 @@ func (s *LeaveTestSuite) TestLeaveEta() {
 	leaveAfter := insolar.PulseNumber(5)
 
 	s.pulseAccessor.LatestMock.Return(*testPulse, nil)
-	s.network.LeaveMock.Expect(s.ctx, mockPulseNumber+leaveAfter*pulseDelta)
+	s.leaver.LeaveMock.Expect(s.ctx, mockPulseNumber+leaveAfter*pulseDelta)
 	s.handler.leave(s.ctx, leaveAfter)
 
 	s.HandlerIsTerminating()

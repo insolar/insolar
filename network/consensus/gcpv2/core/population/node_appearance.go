@@ -121,12 +121,44 @@ func (c *NodeAppearance) CopySelfTo(target *NodeAppearance) {
 }
 
 func NewEmptyNodeAppearance(np profiles.ActiveNode) NodeAppearance {
-
 	if np == nil {
 		panic("illegal value")
 	}
 	return NodeAppearance{
 		profile: np,
+	}
+}
+
+func NewLocalJoinerNodeAppearance(np profiles.ActiveNode,
+	announcerID insolar.ShortNodeID, joinerSecret cryptkit.DigestHolder) NodeAppearance {
+
+	if np == nil {
+		panic("illegal value")
+	}
+	if !np.IsJoiner() || announcerID.IsAbsent() {
+		panic("illegal value")
+	}
+	return NodeAppearance{
+		profile:            np,
+		joinerIntroducedBy: announcerID,
+		joinerSecret:       joinerSecret,
+	}
+}
+
+func NewAscendedNodeAppearance(np profiles.ActiveNode, limiter phases.PacketLimiter,
+	announcerID insolar.ShortNodeID, joinerSecret cryptkit.DigestHolder) NodeAppearance {
+
+	if np == nil {
+		panic("illegal value")
+	}
+	if np.IsJoiner() && announcerID.IsAbsent() {
+		panic("illegal value")
+	}
+	return NodeAppearance{
+		profile:            np,
+		limiter:            limiter,
+		joinerIntroducedBy: announcerID,
+		joinerSecret:       joinerSecret,
 	}
 }
 
@@ -164,7 +196,9 @@ type NodeAppearance struct {
 
 	// statelessDigest cryptkit.DigestHolder
 
-	// joinerSecret         cryptkit.Digest     // TODO implement
+	joinerIntroducedBy insolar.ShortNodeID
+	joinerSecret       cryptkit.DigestHolder
+
 	requestedJoinerID    insolar.ShortNodeID // one-time set
 	requestedLeave       bool                // one-time set
 	requestedLeaveReason uint32              // one-time set
@@ -176,11 +210,6 @@ type NodeAppearance struct {
 	limiter         phases.PacketLimiter
 	trust           member.TrustLevel
 	neighborReports uint8
-}
-
-func (c *NodeAppearance) EncryptJoinerSecret(joinerSecret cryptkit.DigestHolder) cryptkit.DigestHolder {
-	// TODO encryption of joinerSecret
-	return joinerSecret
 }
 
 func (c *NodeAppearance) GetStatic() profiles.StaticProfile {
@@ -292,7 +321,9 @@ func (c *NodeAppearance) ApplyNodeMembership(mp profiles.MemberAnnouncement, app
 	defer c.mutex.Unlock()
 
 	modified, err := c._applyState(mp, applyAfterChecks)
-	c.updateNodeTrustLevel(c.trust, member.TrustBySelf)
+	if modified && err == nil {
+		c.updateNodeTrustLevel(c.trust, member.TrustBySelf)
+	}
 	return modified, err
 }
 
@@ -748,4 +779,26 @@ func (c *NodeAppearance) GetRequestedLeave() (bool, uint32) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	return c.requestedLeave, c.requestedLeaveReason
+}
+
+func (c *NodeAppearance) GetAnnouncementAsJoiner() *transport.JoinerAnnouncement {
+	if !c.profile.IsJoiner() {
+		panic("illegal state")
+	}
+	if c.joinerIntroducedBy.IsAbsent() && !c.IsLocal() {
+		panic("illegal state")
+	}
+	return transport.NewAnyJoinerAnnouncement(c.profile.GetStatic(), c.joinerIntroducedBy, c.joinerSecret)
+}
+
+func (c *NodeAppearance) EncryptJoinerSecret(joinerSecret cryptkit.DigestHolder) cryptkit.DigestHolder {
+	// TODO encryption of joinerSecret
+	return joinerSecret
+}
+
+/* MUST be used under lock, used for fast-fail detection in event handler */
+func (c *NodeAppearance) UnsafeEnsureStateAvailable() {
+	if !c.isStateAvailable() {
+		panic("illegal state")
+	}
 }

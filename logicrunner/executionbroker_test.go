@@ -18,6 +18,7 @@ package logicrunner
 
 import (
 	"context"
+	"errors"
 	"math"
 	"testing"
 	"time"
@@ -97,7 +98,7 @@ func TestExecutionBroker_AddFreshRequest(t *testing.T) {
 			name: "happy path",
 			mocks: func(ctx context.Context, t minimock.Tester) *ExecutionBroker {
 				er := executionregistry.NewExecutionRegistryMock(t).
-					RegisterMock.Return().
+					RegisterMock.Return(nil).
 					DoneMock.Return(true).
 					GetActiveTranscriptMock.When(reqRef).Then(nil)
 				am := artifacts.NewClientMock(t).
@@ -123,7 +124,7 @@ func TestExecutionBroker_AddFreshRequest(t *testing.T) {
 			broker := test.mocks(ctx, mc)
 			broker.AddFreshRequest(ctx, transcript)
 
-			mc.Wait(1 * time.Second)
+			mc.Wait(1 * time.Minute)
 			mc.Finish()
 		})
 	}
@@ -149,7 +150,7 @@ func TestExecutionBroker_Deduplication(t *testing.T) {
 				)
 
 				queueMock := requestsqueue.NewRequestsQueueMock(t).AppendMock.Return()
-				b.mutable = queueMock
+				b.mutable.queue = queueMock
 
 				tr := common.NewTranscript(ctx, reqRef, record.IncomingRequest{})
 				b.add(ctx, requestsqueue.FromLedger, tr)
@@ -157,7 +158,7 @@ func TestExecutionBroker_Deduplication(t *testing.T) {
 				return b
 			},
 			checks: func(t *testing.T, b *ExecutionBroker) {
-				appended := b.mutable.(*requestsqueue.RequestsQueueMock).AppendAfterCounter()
+				appended := b.mutable.queue.(*requestsqueue.RequestsQueueMock).AppendAfterCounter()
 				require.Equal(t, 1, int(appended))
 			},
 		},
@@ -173,12 +174,12 @@ func TestExecutionBroker_Deduplication(t *testing.T) {
 				)
 
 				queueMock := requestsqueue.NewRequestsQueueMock(t)
-				b.mutable = queueMock
+				b.mutable.queue = queueMock
 
 				return b
 			},
 			checks: func(t *testing.T, b *ExecutionBroker) {
-				appended := b.mutable.(*requestsqueue.RequestsQueueMock).AppendAfterCounter()
+				appended := b.mutable.queue.(*requestsqueue.RequestsQueueMock).AppendAfterCounter()
 				require.Equal(t, 0, int(appended))
 			},
 		},
@@ -309,7 +310,7 @@ func TestExecutionBroker_ExecuteImmutable(t *testing.T) {
 	defer mc.Wait(1 * time.Minute)
 
 	er := executionregistry.NewExecutionRegistryMock(mc).
-		RegisterMock.Return().
+		RegisterMock.Return(nil).
 		DoneMock.Return(true)
 
 	// prepare default object and execution state
@@ -360,7 +361,7 @@ func TestExecutionBroker_OnPulse(t *testing.T) {
 				broker := NewExecutionBroker(objectRef, nil, nil, nil, nil, er, nil, nil)
 				// fetcher is stopped
 				broker.requestsFetcher = NewRequestsFetcherMock(t).AbortMock.Return()
-				broker.mutable.Append(ctx, requestsqueue.FromLedger, randTranscript(ctx), randTranscript(ctx))
+				broker.mutable.queue.Append(ctx, requestsqueue.FromLedger, randTranscript(ctx), randTranscript(ctx))
 				return broker
 			},
 			numberOfMessages: 1,
@@ -403,7 +404,7 @@ func TestExecutionBroker_OnPulse(t *testing.T) {
 				er := executionregistry.NewExecutionRegistryMock(t).
 					IsEmptyMock.Return(true)
 				broker := NewExecutionBroker(objectRef, nil, nil, nil, nil, er, nil, nil)
-				broker.mutable.Append(ctx, requestsqueue.FromLedger, randTranscript(ctx), randTranscript(ctx))
+				broker.mutable.queue.Append(ctx, requestsqueue.FromLedger, randTranscript(ctx), randTranscript(ctx))
 				return broker
 			},
 			numberOfMessages: 1,
@@ -488,7 +489,7 @@ func TestExecutionBroker_AddFreshRequestWithOnPulse(t *testing.T) {
 				doneCalled := false
 				er := executionregistry.NewExecutionRegistryMock(t).
 					IsEmptyMock.Set(func() bool { return doneCalled }).
-					RegisterMock.Return().
+					RegisterMock.Return(nil).
 					DoneMock.Set(func(_ *common.Transcript) bool { doneCalled = true; return true }).
 					GetActiveTranscriptMock.When(reqRef).Then(nil)
 				am := artifacts.NewClientMock(t).
@@ -554,7 +555,7 @@ func TestExecutionBroker_IsKnownRequest(t *testing.T) {
 	)
 
 	queueMock := requestsqueue.NewRequestsQueueMock(mc).AppendMock.Return()
-	b.mutable = queueMock
+	b.mutable.queue = queueMock
 
 	tr := common.NewTranscript(ctx, reqRef1, record.IncomingRequest{})
 	b.add(ctx, requestsqueue.FromLedger, tr)
@@ -746,6 +747,81 @@ func TestExecutionBroker_PrevExecutorPendingResult(t *testing.T) {
 			mc.Finish()
 
 			test.checks(t, broker)
+		})
+	}
+}
+
+func TestExecutionBroker_getTask(t *testing.T) {
+	tests := []struct {
+		name    string
+		mocks   func(ctx context.Context, t minimock.Tester) *ExecutionBroker
+		hasTask bool
+	}{
+		{
+			name:    "happy path, got task",
+			hasTask: true,
+			mocks: func(ctx context.Context, t minimock.Tester) *ExecutionBroker {
+				er := executionregistry.NewExecutionRegistryMock(t).
+					GetActiveTranscriptMock.Return(nil).
+					RegisterMock.Return(nil)
+
+				objectRef := gen.Reference()
+				b := NewExecutionBroker(
+					objectRef, nil, nil, nil, nil, er, nil, nil,
+				)
+
+				reqRef := gen.Reference()
+				tr := common.NewTranscript(ctx, reqRef, record.IncomingRequest{})
+				b.add(ctx, requestsqueue.FromLedger, tr)
+
+				return b
+			},
+		},
+		{
+			name:    "no task, empty queue",
+			hasTask: false,
+			mocks: func(ctx context.Context, t minimock.Tester) *ExecutionBroker {
+				objectRef := gen.Reference()
+				b := NewExecutionBroker(
+					objectRef, nil, nil, nil, nil, nil, nil, nil,
+				)
+				return b
+			},
+		},
+		{
+			name:    "no task, already in the registry",
+			hasTask: false,
+			mocks: func(ctx context.Context, t minimock.Tester) *ExecutionBroker {
+				er := executionregistry.NewExecutionRegistryMock(t).
+					GetActiveTranscriptMock.Return(nil).
+					RegisterMock.Return(errors.New("some"))
+
+				objectRef := gen.Reference()
+				b := NewExecutionBroker(
+					objectRef, nil, nil, nil, nil, er, nil, nil,
+				)
+
+				reqRef := gen.Reference()
+				tr := common.NewTranscript(ctx, reqRef, record.IncomingRequest{})
+				b.add(ctx, requestsqueue.FromLedger, tr)
+
+				return b
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctx := inslogger.TestContext(t)
+			mc := minimock.NewController(t)
+
+			broker := test.mocks(ctx, mc)
+			task := broker.getTask(ctx, broker.mutable.queue)
+
+			mc.Wait(1 * time.Minute)
+			mc.Finish()
+
+			require.Equal(t, test.hasTask, task != nil)
 		})
 	}
 }

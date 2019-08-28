@@ -19,23 +19,21 @@ package logicrunner
 import (
 	"context"
 
-	"go.opencensus.io/trace"
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/common"
 )
 
 type AdditionalCallFromPreviousExecutor struct {
 	stateStorage StateStorage
 
-	message *message.AdditionalCallFromPreviousExecutor
+	message *payload.AdditionalCallFromPreviousExecutor
 }
 
 func (p *AdditionalCallFromPreviousExecutor) Proceed(ctx context.Context) error {
@@ -45,7 +43,7 @@ func (p *AdditionalCallFromPreviousExecutor) Proceed(ctx context.Context) error 
 		broker.SetNotPending(ctx)
 	}
 
-	tr := common.NewTranscriptCloneContext(ctx, p.message.RequestRef, p.message.Request)
+	tr := common.NewTranscriptCloneContext(ctx, p.message.RequestRef, *p.message.Request)
 	broker.AddAdditionalRequestFromPrevExecutor(ctx, tr)
 	return nil
 }
@@ -63,34 +61,43 @@ type HandleAdditionalCallFromPreviousExecutor struct {
 // execution of this handle. In this scenario user is in a bad luck. The request will be lost and
 // user will have to re-send it after some timeout.
 func (h *HandleAdditionalCallFromPreviousExecutor) Present(ctx context.Context, f flow.Flow) error {
-	msg := h.Parcel.Message().(*message.AdditionalCallFromPreviousExecutor)
-	ctx = contextWithServiceData(ctx, msg.ServiceData)
-
 	ctx, logger := inslogger.WithFields(ctx, map[string]interface{}{
-		"object":  msg.ObjectReference.String(),
-		"request": msg.Request.String(),
+		"handler": "HandleAdditionalCallFromPreviousExecutor",
 	})
-	logger.Debug("additional call from previous executor")
 
-	ctx, span := instracer.StartSpan(ctx, "HandleAdditionalCallFromPreviousExecutor.Present")
-	span.AddAttributes(
-		trace.StringAttribute("msg.Type", msg.Type().String()),
-	)
-	defer span.End()
+	logger.Debug("Handler.Present starts")
+
+	message := payload.AdditionalCallFromPreviousExecutor{}
+	err := message.Unmarshal(h.Message.Payload)
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal message")
+	}
+
+	ctx = contextWithServiceData(ctx, message.ServiceData)
+
+	ctx, _ = inslogger.WithFields(ctx, map[string]interface{}{
+		"object":  message.ObjectReference.String(),
+		"request": message.Request.String(),
+	})
+
+	ctx = contextWithServiceData(ctx, message.ServiceData)
 
 	done, err := h.dep.WriteAccessor.Begin(ctx, flow.Pulse(ctx))
 	if err != nil { // pulse changed, send that message to next executor
-		_, err := h.dep.lr.MessageBus.Send(ctx, msg, nil)
+		// ensure OK response because we might catch flow cancelled
+		msg, err := payload.NewMessage(&message)
 		if err != nil {
-			logger.Error("MessageBus.Send failed: ", err)
+			return errors.Wrap(err, "failed to serialize message")
 		}
+		_, done := h.dep.Sender.SendRole(ctx, msg, insolar.DynamicRoleVirtualExecutor, message.RequestRef)
+		done()
 		return nil
 	}
 	defer done()
 
 	proc := &AdditionalCallFromPreviousExecutor{
 		stateStorage: h.dep.StateStorage,
-		message:      msg,
+		message:      &message,
 	}
 	if err := f.Procedure(ctx, proc, false); err != nil {
 		return err

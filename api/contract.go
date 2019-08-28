@@ -30,8 +30,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/genesisrefs"
 	"github.com/insolar/insolar/insolar/reply"
-	"github.com/insolar/insolar/insolar/utils"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/rpc/v2"
 	"github.com/pkg/errors"
@@ -39,51 +37,24 @@ import (
 
 // ContractService is a service that provides API for working with smart contracts.
 type ContractService struct {
-	runner *Runner
+	runner         *Runner
+	allowedMethods map[string]bool
 }
 
 // NewContractService creates new Contract service instance.
 func NewContractService(runner *Runner) *ContractService {
-	return &ContractService{runner: runner}
+	methods := map[string]bool{
+		"member.create":          true,
+		"member.get":             true,
+		"member.transfer":        true,
+		"member.migrationCreate": true,
+		"deposit.transfer":       true,
+	}
+	return &ContractService{runner: runner, allowedMethods: methods}
 }
 
 func (cs *ContractService) Call(req *http.Request, args *requester.Params, requestBody *rpc.RequestBody, result *requester.ContractResult) error {
-	traceID := utils.RandTraceID()
-	ctx, logger := inslogger.WithTraceField(context.Background(), traceID)
-
-	ctx, span := instracer.StartSpan(ctx, "Call")
-	defer span.End()
-
-	logger.Infof("[ ContractService.Call ] Incoming request: %s", req.RequestURI)
-
-	if args.Test != "" {
-		logger.Infof("ContractRequest related to %s", args.Test)
-	}
-
-	signature, err := validateRequestHeaders(req.Header.Get(requester.Digest), req.Header.Get(requester.Signature), requestBody.Raw)
-	if err != nil {
-		return err
-	}
-
-	seedPulse, err := cs.runner.checkSeed(args.Seed)
-	if err != nil {
-		return err
-	}
-
-	setRootReferenceIfNeeded(args)
-
-	callResult, requestRef, err := cs.runner.makeCall(ctx, "contract.call", *args, requestBody.Raw, signature, 0, seedPulse)
-	if err != nil {
-		return err
-	}
-
-	if requestRef != nil {
-		result.RequestReference = requestRef.String()
-	}
-	result.CallResult = callResult
-	result.TraceID = traceID
-
-	return nil
+	return wrapCall(cs.runner, cs.allowedMethods, req, args, requestBody, result)
 }
 
 func (ar *Runner) checkSeed(paramsSeed string) (insolar.PulseNumber, error) {

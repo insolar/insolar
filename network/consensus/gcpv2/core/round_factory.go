@@ -72,10 +72,9 @@ func (c *PhasedRoundControllerFactory) GetLocalConfiguration() api.LocalNodeConf
 }
 
 func (c *PhasedRoundControllerFactory) CreateConsensusRound(chronicle api.ConsensusChronicles, controlFeeder api.ConsensusControlFeeder,
-	candidateFeeder api.CandidateControlFeeder, ephemeralFeeder api.EphemeralControlFeeder, prevPulseRound api.RoundController) api.RoundController {
+	candidateFeeder api.CandidateControlFeeder, ephemeralFeeder api.EphemeralControlFeeder) api.RoundController {
 
 	latest, _ := chronicle.GetLatestCensus()
 	strategy, bundle := c.strategyFactory.CreateRoundStrategy(latest.GetOnlinePopulation(), c.config)
-	return NewPhasedRoundController(strategy, chronicle, bundle, c.transport, c.config, controlFeeder, candidateFeeder,
-		ephemeralFeeder, prevPulseRound)
+	return NewPhasedRoundController(strategy, chronicle, bundle, c.transport, c.config, controlFeeder, candidateFeeder, ephemeralFeeder)
 }

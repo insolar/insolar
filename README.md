@@ -84,7 +84,8 @@ This tool runs a scenario: creates a number of users with wallets and transfers 
 
 Options:
 * `-k`: Path to root user keypair. All requests to create a new user must be signed by the root user.
-* `-u`: Node API URL. By default, the first node listens on the `127.0.0.1:19101` port. It can be changed in configuration.
+* `-a`: Node Admin API URL. By default, the first node listens on the `127.0.0.1:19001` port. It can be changed in configuration.
+* `-p`: Node Public API URL. By default, the first node listens on the `127.0.0.1:19101` port. It can be changed in configuration.
 
 Run benchmark:
 

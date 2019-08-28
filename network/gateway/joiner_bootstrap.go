@@ -85,6 +85,8 @@ func (g *JoinerBootstrap) Run(ctx context.Context, p insolar.Pulse) {
 		return
 	}
 
+	logger.Infof("Bootstrapping to node %s", permit.Payload.ReconnectTo)
+
 	// Reset backoff if not insolar.NoNetworkState.
 	g.backoff = 0
 

@@ -52,7 +52,6 @@ package gcpv2
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -131,7 +130,7 @@ func (h *ConsensusMemberController) getOrCreateInternal() (api.RoundController, 
 	ephemeralFeeder := h.ephemeralInterceptor.prepare(h)
 
 	h.prevRound, h.currentRound = nil, h.roundFactory.CreateConsensusRound(h.chronicle, h.controlFeeder,
-		h.candidateFeeder, ephemeralFeeder, h.prevRound)
+		h.candidateFeeder, ephemeralFeeder)
 
 	h.ephemeralInterceptor.attachTo(h.currentRound)
 
@@ -142,6 +141,9 @@ func (h *ConsensusMemberController) getOrCreateInternal() (api.RoundController, 
 func (h *ConsensusMemberController) discardInternal(terminateMember bool, toBeDiscarded api.RoundController) bool {
 	h.mutex.Lock()
 	defer h.mutex.Unlock()
+
+	logger := inslogger.FromContext(context.Background())
+	logger.Debug("round discarded")
 
 	round := h.currentRound
 	if round == nil || toBeDiscarded != nil && toBeDiscarded != round {
@@ -154,7 +156,7 @@ func (h *ConsensusMemberController) discardInternal(terminateMember bool, toBeDi
 		h.prevRound = nil
 		h.isTerminated = true
 	} else {
-		h.prevRound = round
+		h.prevRound = nil // round
 	}
 
 	go round.StopConsensusRound()
@@ -175,46 +177,31 @@ func (h *ConsensusMemberController) terminate(toBeDiscarded api.RoundController)
 	return h.discardInternal(true, toBeDiscarded)
 }
 
-func (h *ConsensusMemberController) processPacket(ctx context.Context, round api.RoundController,
-	payload transport.PacketParser, from endpoints.Inbound) (api.RoundControlCode, error) {
-
-	code, err := round.HandlePacket(ctx, payload, from)
-
-	switch code {
-	case api.KeepRound:
-		return code, err
-	case api.StartNextRound:
-		// return true, err
-	case api.NextRoundTerminate:
-		// h.terminate(round)
-	default:
-		panic("unexpected")
-	}
-	if err != nil {
-		inslogger.FromContext(ctx).Error(err)
-	}
-	return code, nil
-}
-
 func (h *ConsensusMemberController) ProcessPacket(ctx context.Context, payload transport.PacketParser, from endpoints.Inbound) error {
 
 	round, isCreated := h.getOrCreate()
 
 	if round != nil {
-		code, err := h.processPacket(ctx, round, payload, from)
+		code, err := round.HandlePacket(ctx, payload, from)
 		if code == api.KeepRound {
 			return err
 		}
+		errStr := "<none>"
+		if err != nil {
+			errStr = err.Error()
+		}
 		if isCreated {
-			return fmt.Errorf("packet can not be re-processed for a just created round")
+			return fmt.Errorf("packet can not be re-processed for a just created round: %s", errStr)
 		}
 		switch code {
 		case api.StartNextRound:
-			inslogger.FromContext(ctx).Debugf("discarding round")
+			inslogger.FromContext(ctx).Debugf("discarding round: %s", errStr)
 			h.discard(round)
 		case api.NextRoundTerminate:
-			inslogger.FromContext(ctx).Debugf("terminating round")
+			inslogger.FromContext(ctx).Debugf("terminating round: %s", errStr)
 			h.terminate(round)
+		default:
+			panic("illegal state")
 		}
 	}
 
@@ -223,15 +210,23 @@ func (h *ConsensusMemberController) ProcessPacket(ctx context.Context, payload t
 		return fmt.Errorf("packet cant be processed - controller was terminated")
 	}
 
-	code, err := h.processPacket(ctx, round, payload, from)
+	code, err := round.HandlePacket(ctx, payload, from)
+
+	errStr := "<none>"
+	if err != nil {
+		errStr = err.Error()
+	}
+
 	switch code {
 	case api.StartNextRound:
-		return errors.New("packet can not be re-processed twice")
+		return fmt.Errorf("packet can not be re-processed twice: %s", errStr)
 	case api.NextRoundTerminate:
-		inslogger.FromContext(ctx).Debugf("terminating round")
+		inslogger.FromContext(ctx).Debugf("terminating round: %s", errStr)
 		h.terminate(round)
+		return nil
+	default:
+		return err
 	}
-	return err
 }
 
 type ephemeralInterceptor struct {

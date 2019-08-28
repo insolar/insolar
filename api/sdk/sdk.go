@@ -56,7 +56,8 @@ type memberKeys struct {
 
 // SDK is used to send messages to API
 type SDK struct {
-	apiURLs                *ringBuffer
+	adminAPIURLs           *ringBuffer
+	publicAPIURLs          *ringBuffer
 	rootMember             *requester.UserConfigJSON
 	migrationAdminMember   *requester.UserConfigJSON
 	migrationDaemonMembers []*requester.UserConfigJSON
@@ -64,8 +65,9 @@ type SDK struct {
 }
 
 // NewSDK creates insSDK object
-func NewSDK(urls []string, memberKeysDirPath string) (*SDK, error) {
-	buffer := &ringBuffer{urls: urls}
+func NewSDK(adminUrls []string, publicUrls []string, memberKeysDirPath string) (*SDK, error) {
+	adminBuffer := &ringBuffer{urls: adminUrls}
+	publicBuffer := &ringBuffer{urls: publicUrls}
 
 	getMember := func(keyPath string, ref string) (*requester.UserConfigJSON, error) {
 
@@ -83,7 +85,7 @@ func NewSDK(urls []string, memberKeysDirPath string) (*SDK, error) {
 		return requester.CreateUserConfig(ref, keys.Private, keys.Public)
 	}
 
-	response, err := requester.Info(buffer.next())
+	response, err := requester.Info(adminBuffer.next())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get info")
 	}
@@ -99,7 +101,8 @@ func NewSDK(urls []string, memberKeysDirPath string) (*SDK, error) {
 	}
 
 	result := &SDK{
-		apiURLs:                buffer,
+		adminAPIURLs:           adminBuffer,
+		publicAPIURLs:          publicBuffer,
 		rootMember:             rootMember,
 		migrationAdminMember:   migrationAdminMember,
 		migrationDaemonMembers: []*requester.UserConfigJSON{},
@@ -130,10 +133,10 @@ func (sdk *SDK) SetLogLevel(logLevel string) error {
 	return nil
 }
 
-func (sdk *SDK) sendRequest(ctx context.Context, method string, params map[string]interface{}, userCfg *requester.UserConfigJSON) ([]byte, error) {
+func (sdk *SDK) sendRequest(ctx context.Context, urls *ringBuffer, method string, params map[string]interface{}, userCfg *requester.UserConfigJSON) ([]byte, error) {
 	reqParams := requester.Params{CallParams: params, CallSite: method, PublicKey: userCfg.PublicKey, LogLevel: sdk.logLevel}
 
-	body, err := requester.Send(ctx, sdk.apiURLs.next(), userCfg, &reqParams)
+	body, err := requester.Send(ctx, urls.next(), userCfg, &reqParams)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to send request")
 	}
@@ -178,6 +181,7 @@ func (sdk *SDK) CreateMember() (*Member, string, error) {
 	}
 
 	response, err := sdk.DoRequest(
+		sdk.publicAPIURLs,
 		userConfig,
 		"member.create",
 		map[string]interface{}{},
@@ -199,17 +203,18 @@ func (sdk *SDK) CreateMember() (*Member, string, error) {
 	return NewMember(memberRef, privateKeyStr, publicKeyStr), response.TraceID, nil
 }
 
-// AddBurnAddresses method add burn addresses
-func (sdk *SDK) AddBurnAddresses(burnAddresses []string) (string, error) {
+// addMigrationAddresses method add burn addresses
+func (sdk *SDK) AddMigrationAddresses(migrationAddresses []string) (string, error) {
 	userConfig, err := requester.CreateUserConfig(sdk.migrationAdminMember.Caller, sdk.migrationAdminMember.PrivateKey, sdk.migrationAdminMember.PublicKey)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to create user config for request")
 	}
 
 	response, err := sdk.DoRequest(
+		sdk.adminAPIURLs,
 		userConfig,
-		"migration.addBurnAddresses",
-		map[string]interface{}{"burnAddresses": burnAddresses},
+		"migration.addAddresses",
+		map[string]interface{}{"migrationAddresses": migrationAddresses},
 	)
 	if err != nil {
 		return "", errors.Wrap(err, "request was failed ")
@@ -225,6 +230,7 @@ func (sdk *SDK) Transfer(amount string, from *Member, to *Member) (string, error
 		return "", errors.Wrap(err, "failed to create user config for request")
 	}
 	response, err := sdk.DoRequest(
+		sdk.publicAPIURLs,
 		userConfig,
 		"member.transfer",
 		map[string]interface{}{"amount": amount, "toMemberReference": to.Reference},
@@ -243,8 +249,9 @@ func (sdk *SDK) GetBalance(m *Member) (*big.Int, error) {
 		return nil, errors.Wrap(err, "failed to create user config for request")
 	}
 	response, err := sdk.DoRequest(
+		sdk.adminAPIURLs,
 		userConfig,
-		"wallet.getBalance",
+		"member.getBalance",
 		map[string]interface{}{"reference": m.Reference},
 	)
 	if err != nil {
@@ -259,10 +266,10 @@ func (sdk *SDK) GetBalance(m *Member) (*big.Int, error) {
 	return result, nil
 }
 
-func (sdk *SDK) DoRequest(user *requester.UserConfigJSON, method string, params map[string]interface{}) (*requester.ContractResult, error) {
+func (sdk *SDK) DoRequest(urls *ringBuffer, user *requester.UserConfigJSON, method string, params map[string]interface{}) (*requester.ContractResult, error) {
 	ctx := inslogger.ContextWithTrace(context.Background(), method)
 
-	body, err := sdk.sendRequest(ctx, method, params, user)
+	body, err := sdk.sendRequest(ctx, urls, method, params, user)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to send request")
 	}

@@ -18,7 +18,6 @@ package executor_test
 
 import (
 	"context"
-	"encoding/binary"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -29,23 +28,8 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/store"
 	"github.com/insolar/insolar/ledger/heavy/executor"
-	"github.com/insolar/insolar/testutils/testbadger"
 	"github.com/stretchr/testify/require"
 )
-
-type testKey struct {
-	id uint64
-}
-
-func (t *testKey) ID() []byte {
-	bs := make([]byte, 8)
-	binary.PutUvarint(bs, t.id)
-	return bs
-}
-
-func (t *testKey) Scope() store.Scope {
-	return store.ScopeJetDrop
-}
 
 func TestBackuper_BadConfig(t *testing.T) {
 	existingDir, err := os.Getwd()
@@ -83,21 +67,25 @@ func TestBackuper_BadConfig(t *testing.T) {
 
 	cfg.BackupFile = "Test"
 	_, err = executor.NewBackupMaker(context.Background(), nil, cfg, testPulse)
-	require.NoError(t, err)
+	require.Contains(t, err.Error(), "PostProcessBackupCmd can't be empty")
 
+	cfg.PostProcessBackupCmd = []string{"some command"}
+	_, err = executor.NewBackupMaker(context.Background(), nil, cfg, testPulse)
+	require.NoError(t, err)
 }
 
 func makeBackuperConfig(t *testing.T, prefix string) configuration.Backup {
 
 	cfg := configuration.Backup{
-		ConfirmFile:      "BACKUPED",
-		MetaInfoFile:     "META.json",
-		TargetDirectory:  "/tmp/BKP/TARGET/" + prefix,
-		TmpDirectory:     "/tmp/BKP/TMP",
-		DirNameTemplate:  "pulse-%d",
-		BackupWaitPeriod: 60,
-		BackupFile:       "incr.bkp",
-		Enabled:          true,
+		ConfirmFile:          "BACKUPED",
+		MetaInfoFile:         "META.json",
+		TargetDirectory:      "/tmp/BKP/TARGET/" + prefix,
+		TmpDirectory:         "/tmp/BKP/TMP",
+		DirNameTemplate:      "pulse-%d",
+		BackupWaitPeriod:     60,
+		BackupFile:           "incr.bkp",
+		Enabled:              true,
+		PostProcessBackupCmd: []string{"ls"},
 	}
 
 	err := os.MkdirAll(cfg.TargetDirectory, 0777)
@@ -122,6 +110,54 @@ func TestBackuper_Disabled(t *testing.T) {
 	require.Equal(t, err, executor.ErrBackupDisabled)
 }
 
+func TestBackuper_PostProcessCmdReturnError(t *testing.T) {
+	cfg := makeBackuperConfig(t, t.Name())
+	defer clearData(t, cfg)
+
+	cfg.BackupWaitPeriod = 1
+	testPulse := insolar.GenesisPulse.PulseNumber + 1
+
+	tmpdir, err := ioutil.TempDir("", "bdb-test-")
+	defer os.RemoveAll(tmpdir)
+	require.NoError(t, err)
+
+	ops := BadgerDefaultOptions(tmpdir)
+	db, err := store.NewBadgerDB(ops)
+	require.NoError(t, err)
+	defer db.Stop(context.Background())
+
+	cfg.PostProcessBackupCmd = []string{""}
+	bm, err := executor.NewBackupMaker(context.Background(), db, cfg, testPulse)
+	require.NoError(t, err)
+
+	err = bm.MakeBackup(context.Background(), testPulse+1)
+	require.Contains(t, err.Error(), "failed to start post process command")
+}
+
+func TestBackuper_HappyPath(t *testing.T) {
+	cfg := makeBackuperConfig(t, t.Name())
+	defer clearData(t, cfg)
+
+	cfg.BackupWaitPeriod = 1
+	testPulse := insolar.GenesisPulse.PulseNumber + 1
+
+	tmpdir, err := ioutil.TempDir("", "bdb-test-")
+	defer os.RemoveAll(tmpdir)
+	require.NoError(t, err)
+
+	ops := BadgerDefaultOptions(tmpdir)
+	db, err := store.NewBadgerDB(ops)
+	require.NoError(t, err)
+	defer db.Stop(context.Background())
+	confirmFile := filepath.Join(cfg.TargetDirectory, fmt.Sprintf(cfg.DirNameTemplate, testPulse+1), cfg.ConfirmFile)
+	cfg.PostProcessBackupCmd = []string{"touch", confirmFile}
+	bm, err := executor.NewBackupMaker(context.Background(), db, cfg, testPulse)
+	require.NoError(t, err)
+
+	err = bm.MakeBackup(context.Background(), testPulse+1)
+	require.NoError(t, err)
+}
+
 func TestBackuper_BackupWaitPeriodExpired(t *testing.T) {
 	cfg := makeBackuperConfig(t, t.Name())
 	defer clearData(t, cfg)
@@ -133,9 +169,10 @@ func TestBackuper_BackupWaitPeriodExpired(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	ops := testbadger.BadgerDefaultOptions(tmpdir)
+	ops := BadgerDefaultOptions(tmpdir)
 	db, err := store.NewBadgerDB(ops)
 	require.NoError(t, err)
+	defer db.Stop(context.Background())
 	bm, err := executor.NewBackupMaker(context.Background(), db, cfg, testPulse)
 	require.NoError(t, err)
 
@@ -153,9 +190,10 @@ func TestBackuper_CantMoveToTargetDir(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	ops := testbadger.BadgerDefaultOptions(tmpdir)
+	ops := BadgerDefaultOptions(tmpdir)
 	db, err := store.NewBadgerDB(ops)
 	require.NoError(t, err)
+	defer db.Stop(context.Background())
 	bm, err := executor.NewBackupMaker(context.Background(), db, cfg, 0)
 	require.NoError(t, err)
 	// Create dir to fail move operation
