@@ -64,8 +64,7 @@ func (f *Thread) Handle(ctx context.Context, handle flow.Handle) error {
 
 func (f *Thread) Procedure(ctx context.Context, proc flow.Procedure, cancel bool) error {
 	if proc == nil {
-		inslogger.FromContext(ctx).Fatal("procedure called with nil procedure")
-		return nil
+		inslogger.FromContext(ctx).Panic("procedure called with nil procedure")
 	}
 
 	var procName string
