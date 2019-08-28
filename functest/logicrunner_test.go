@@ -450,7 +450,7 @@ func (w *TestSagaCallFromAcceptMethodContract) RollbackStepTwo(amount int) error
 
 		bal1 := callMethod(t, firstWalletRef, "GetBalance")
 		require.Empty(t, bal1.Error)
-		if bal1.ExtractedReply.(float64) != balance-amount { // true
+		if bal1.ExtractedReply.(float64) != balance-amount {
 			//money are not transferred yet
 			time.Sleep(1 * time.Second)
 			continue
