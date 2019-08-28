@@ -151,13 +151,13 @@ func (v *Global) tryApplyBase(base *Global) bool {
 	return true
 }
 
-// Domain returns domain ID part of reference.
-func (v Global) Domain() *Local {
+// GetBase returns base address from Global.
+func (v Global) GetBase() *Local {
 	return &v.addressBase
 }
 
-// Record returns record's ID.
-func (v Global) Record() *Local {
+// GetLocal returns local address from Global.
+func (v Global) GetLocal() *Local {
 	return &v.addressLocal
 }
 

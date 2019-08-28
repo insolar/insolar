@@ -92,7 +92,7 @@ func NewIDFromBase58(input string) (*ID, error) {
 	if err != nil {
 		return nil, err
 	}
-	return global.Record(), nil
+	return global.GetLocal(), nil
 }
 
 // NewIDFromBytes converts byte slice to ID

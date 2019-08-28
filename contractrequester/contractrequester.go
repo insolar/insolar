@@ -306,7 +306,7 @@ func (cr *ContractRequester) handleRegisterResult(ctx context.Context, r *reply.
 		return r, &r.Request, nil
 	}
 
-	if !bytes.Equal(r.Request.Record().Hash(), reqHash[:]) {
+	if !bytes.Equal(r.Request.GetLocal().Hash(), reqHash[:]) {
 		return nil, &r.Request, errors.New("Registered request has different hash")
 	}
 
@@ -341,7 +341,7 @@ func (cr *ContractRequester) result(ctx context.Context, msg *payload.ReturnResu
 	defer cr.ResultMutex.Unlock()
 
 	var reqHash [insolar.RecordHashSize]byte
-	copy(reqHash[:], msg.RequestRef.Record().Hash())
+	copy(reqHash[:], msg.RequestRef.GetLocal().Hash())
 	c, ok := cr.ResultMap[reqHash]
 	if !ok {
 		inslogger.FromContext(ctx).Info("unwanted results of request ", msg.RequestRef.String())

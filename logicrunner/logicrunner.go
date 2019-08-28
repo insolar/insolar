@@ -321,7 +321,7 @@ func (lr *LogicRunner) AddUnwantedResponse(ctx context.Context, msg insolar.Payl
 	}
 
 	// TODO: move towards flow.Dispatcher in INS-3341
-	err = lr.isStillExecutor(ctx, *m.Target.Record())
+	err = lr.isStillExecutor(ctx, *m.Target.GetLocal())
 	if err != nil {
 		return err
 	}

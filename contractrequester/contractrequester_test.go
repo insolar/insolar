@@ -251,7 +251,7 @@ func TestReceiveResult_UnwantedResult(t *testing.T) {
 
 	reqRef := gen.Reference()
 	var reqHash [insolar.RecordHashSize]byte
-	copy(reqHash[:], reqRef.Record().Hash())
+	copy(reqHash[:], reqRef.GetLocal().Hash())
 
 	msgPayload := &payload.ReturnResults{
 		RequestRef: reqRef,
@@ -295,7 +295,7 @@ func TestReceiveResult_WantedResult(t *testing.T) {
 
 	reqRef := gen.Reference()
 	var reqHash [insolar.RecordHashSize]byte
-	copy(reqHash[:], reqRef.Record().Hash())
+	copy(reqHash[:], reqRef.GetLocal().Hash())
 
 	msgPayload := &payload.ReturnResults{
 		RequestRef: reqRef,
@@ -349,7 +349,7 @@ func TestReceiveResult_UnwantedResultWithError(t *testing.T) {
 
 	reqRef := gen.Reference()
 	var reqHash [insolar.RecordHashSize]byte
-	copy(reqHash[:], reqRef.Record().Hash())
+	copy(reqHash[:], reqRef.GetLocal().Hash())
 
 	msgPayload := &payload.ReturnResults{
 		RequestRef: reqRef,

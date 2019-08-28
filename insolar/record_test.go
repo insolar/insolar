@@ -66,7 +66,7 @@ func TestNewRefFromBase58(t *testing.T) {
 
 func TestRecordRef_String(t *testing.T) {
 	ref := gen.Reference()
-	expectedRefStr := "1" + base58.Encode(ref.Record().Bytes())
+	expectedRefStr := "1" + base58.Encode(ref.GetLocal().Bytes())
 
 	assert.Equal(t, expectedRefStr, ref.String())
 }

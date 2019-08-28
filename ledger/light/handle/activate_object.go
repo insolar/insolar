@@ -81,7 +81,7 @@ func (s *ActivateObject) Present(ctx context.Context, f flow.Flow) error {
 	}
 
 	passIfNotExecutor := !s.passed
-	jet := proc.NewFetchJet(*activate.Request.Record(), flow.Pulse(ctx), s.message, passIfNotExecutor)
+	jet := proc.NewFetchJet(*activate.Request.GetLocal(), flow.Pulse(ctx), s.message, passIfNotExecutor)
 	s.dep.FetchJet(jet)
 	if err := f.Procedure(ctx, jet, true); err != nil {
 		if err == proc.ErrNotExecutor && passIfNotExecutor {

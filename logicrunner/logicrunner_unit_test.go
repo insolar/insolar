@@ -316,7 +316,7 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 
 	suite.am.RegisterIncomingRequestMock.Set(func(ctx context.Context, r *record.IncomingRequest) (*payload.RequestInfo, error) {
 		reqId := gen.ID()
-		return &payload.RequestInfo{RequestID: reqId, ObjectID: *objectRef.Record()}, nil
+		return &payload.RequestInfo{RequestID: reqId, ObjectID: *objectRef.GetLocal()}, nil
 	})
 
 	suite.re.ExecuteAndSaveMock.Return(nil, nil)

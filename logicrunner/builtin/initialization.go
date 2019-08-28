@@ -170,7 +170,7 @@ func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
 		cRef := shouldLoadRef("0111A7rimrANEAnwBT1kvAhHeHp9NPTFJMLKVng8GLH5")
 		rv = append(rv, XXX_artifacts.NewObjectDescriptor(
 			/* head:         */ pRef,
-			/* state:        */ *pRef.Record(),
+			/* state:        */ *pRef.GetLocal(),
 			/* prototype:    */ &cRef,
 			/* isPrototype:  */ true,
 			/* childPointer: */ nil,
@@ -184,7 +184,7 @@ func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
 		cRef := shouldLoadRef("0111A7tUo1FeZ5DSoroiinMCKwzLacaYBAAcwAaNj6bc")
 		rv = append(rv, XXX_artifacts.NewObjectDescriptor(
 			/* head:         */ pRef,
-			/* state:        */ *pRef.Record(),
+			/* state:        */ *pRef.GetLocal(),
 			/* prototype:    */ &cRef,
 			/* isPrototype:  */ true,
 			/* childPointer: */ nil,
@@ -198,7 +198,7 @@ func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
 		cRef := shouldLoadRef("0111A79KGpeDUjYhRJP1n1AwYgwU9KEWmc2TNNc3KQjV")
 		rv = append(rv, XXX_artifacts.NewObjectDescriptor(
 			/* head:         */ pRef,
-			/* state:        */ *pRef.Record(),
+			/* state:        */ *pRef.GetLocal(),
 			/* prototype:    */ &cRef,
 			/* isPrototype:  */ true,
 			/* childPointer: */ nil,
@@ -212,7 +212,7 @@ func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
 		cRef := shouldLoadRef("0111A5w1GcnTsht82duVrnWdVHVNyrxCUVcSPLtgQCPR")
 		rv = append(rv, XXX_artifacts.NewObjectDescriptor(
 			/* head:         */ pRef,
-			/* state:        */ *pRef.Record(),
+			/* state:        */ *pRef.GetLocal(),
 			/* prototype:    */ &cRef,
 			/* isPrototype:  */ true,
 			/* childPointer: */ nil,
@@ -226,7 +226,7 @@ func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
 		cRef := shouldLoadRef("0111A72gPKWyrF9c7yzDoccRoPQ62g1uQQDBecWJwAYr")
 		rv = append(rv, XXX_artifacts.NewObjectDescriptor(
 			/* head:         */ pRef,
-			/* state:        */ *pRef.Record(),
+			/* state:        */ *pRef.GetLocal(),
 			/* prototype:    */ &cRef,
 			/* isPrototype:  */ true,
 			/* childPointer: */ nil,
@@ -240,7 +240,7 @@ func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
 		cRef := shouldLoadRef("0111A6516TVnMLh8DAzTWbtEJrgZkESeCpdn2viV6D61")
 		rv = append(rv, XXX_artifacts.NewObjectDescriptor(
 			/* head:         */ pRef,
-			/* state:        */ *pRef.Record(),
+			/* state:        */ *pRef.GetLocal(),
 			/* prototype:    */ &cRef,
 			/* isPrototype:  */ true,
 			/* childPointer: */ nil,
@@ -254,7 +254,7 @@ func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
 		cRef := shouldLoadRef("0111A66L3aoDPf2wedyRo2gyns8ghV9vdeJdJntVaGEf")
 		rv = append(rv, XXX_artifacts.NewObjectDescriptor(
 			/* head:         */ pRef,
-			/* state:        */ *pRef.Record(),
+			/* state:        */ *pRef.GetLocal(),
 			/* prototype:    */ &cRef,
 			/* isPrototype:  */ true,
 			/* childPointer: */ nil,
@@ -268,7 +268,7 @@ func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
 		cRef := shouldLoadRef("0111A7Q5FK2ebPG9WnSiUc4iqF45w9oYkJkRjEtBohGe")
 		rv = append(rv, XXX_artifacts.NewObjectDescriptor(
 			/* head:         */ pRef,
-			/* state:        */ *pRef.Record(),
+			/* state:        */ *pRef.GetLocal(),
 			/* prototype:    */ &cRef,
 			/* isPrototype:  */ true,
 			/* childPointer: */ nil,
@@ -282,7 +282,7 @@ func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
 		cRef := shouldLoadRef("0111A86xPKUQ1ZxSscgv5brbw93LkwiVhUWgGrYYsMar")
 		rv = append(rv, XXX_artifacts.NewObjectDescriptor(
 			/* head:         */ pRef,
-			/* state:        */ *pRef.Record(),
+			/* state:        */ *pRef.GetLocal(),
 			/* prototype:    */ &cRef,
 			/* isPrototype:  */ true,
 			/* childPointer: */ nil,
@@ -296,7 +296,7 @@ func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
 		cRef := shouldLoadRef("0111A5tzn16hnKGCZCyYA8Dv9FALvPYYQu4VA41SVx6s")
 		rv = append(rv, XXX_artifacts.NewObjectDescriptor(
 			/* head:         */ pRef,
-			/* state:        */ *pRef.Record(),
+			/* state:        */ *pRef.GetLocal(),
 			/* prototype:    */ &cRef,
 			/* isPrototype:  */ true,
 			/* childPointer: */ nil,
@@ -310,7 +310,7 @@ func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
 		cRef := shouldLoadRef("0111A63R5cAgGHC5DJffqF16vUkCuSVj3GExbMLy56cS")
 		rv = append(rv, XXX_artifacts.NewObjectDescriptor(
 			/* head:         */ pRef,
-			/* state:        */ *pRef.Record(),
+			/* state:        */ *pRef.GetLocal(),
 			/* prototype:    */ &cRef,
 			/* isPrototype:  */ true,
 			/* childPointer: */ nil,
@@ -324,7 +324,7 @@ func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
 		cRef := shouldLoadRef("0111A5e49cJW6GKGegWBhtgrJs7nFh1kSWhBtT2VgK4t")
 		rv = append(rv, XXX_artifacts.NewObjectDescriptor(
 			/* head:         */ pRef,
-			/* state:        */ *pRef.Record(),
+			/* state:        */ *pRef.GetLocal(),
 			/* prototype:    */ &cRef,
 			/* isPrototype:  */ true,
 			/* childPointer: */ nil,
