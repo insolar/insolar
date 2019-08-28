@@ -59,7 +59,7 @@ func FinalizePulse(ctx context.Context, pulses pulse.Calculator, backuper Backup
 	logger.Debug("FinalizePulse starts")
 	bkpError := backuper.MakeBackup(ctx, newPulse)
 	if bkpError != nil && bkpError != ErrAlreadyDone && bkpError != ErrBackupDisabled {
-		panic("Can't do backup: " + bkpError.Error())
+		logger.Fatal("Can't do backup: " + bkpError.Error())
 	}
 
 	if bkpError == ErrAlreadyDone {
@@ -69,7 +69,7 @@ func FinalizePulse(ctx context.Context, pulses pulse.Calculator, backuper Backup
 
 	err := jetKeeper.AddBackupConfirmation(ctx, newPulse)
 	if err != nil {
-		panic("Can't add backup confirmation: " + err.Error())
+		logger.Fatal("Can't add backup confirmation: " + err.Error())
 	}
 
 	newTopSyncPulse := jetKeeper.TopSyncPulse()
@@ -86,7 +86,7 @@ func FinalizePulse(ctx context.Context, pulses pulse.Calculator, backuper Backup
 
 	nextTop, err := pulses.Forwards(ctx, newTopSyncPulse, 1)
 	if err != nil && err != pulse.ErrNotFound {
-		panic("pulses.Forwards topSynс: " + newTopSyncPulse.String())
+		logger.Fatal("pulses.Forwards topSynс: " + newTopSyncPulse.String())
 	}
 	if err == pulse.ErrNotFound {
 		logger.Info("Stop propagating of backups")
@@ -95,5 +95,4 @@ func FinalizePulse(ctx context.Context, pulses pulse.Calculator, backuper Backup
 	logger.Info("Propagating finalization to next pulse: ", nextTop.PulseNumber)
 
 	FinalizePulse(ctx, pulses, backuper, jetKeeper, indexes, nextTop.PulseNumber)
-
 }
