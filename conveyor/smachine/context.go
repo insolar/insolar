@@ -110,20 +110,14 @@ func (p *slotContext) SetDefaultMigration(fn MigrateFunc) {
 	p.s.migrateSlot = fn
 }
 
-func (p *slotContext) NextWithMigrate(fn StateFunc, mf MigrateFunc) StateUpdate {
+func (p *slotContext) JumpWithMigrate(fn StateFunc, mf MigrateFunc) StateUpdate {
 	p.ensureAtLeastState(initContext)
-	if fn == nil {
-		panic("illegal value")
-	}
-	return stateUpdateNextOnly(&p.marker, fn, mf)
+	return stateUpdateNext(&p.marker, fn, mf, true, 0)
 }
 
-func (p *slotContext) Next(fn StateFunc) StateUpdate {
+func (p *slotContext) Jump(fn StateFunc) StateUpdate {
 	p.ensureAtLeastState(initContext)
-	if fn == nil {
-		panic("illegal value")
-	}
-	return stateUpdateNextOnly(&p.marker, fn, nil)
+	return stateUpdateNext(&p.marker, fn, nil, true, 0)
 }
 
 func (p *slotContext) Stop() StateUpdate {
@@ -213,7 +207,7 @@ type executionContext struct {
 	countAsyncCalls uint16
 }
 
-func (p *executionContext) WaitAny() ConditionalUpdate {
+func (p *executionContext) WaitAny() StateConditionalUpdate {
 	p.ensureExactState(execContext)
 	return &conditionalUpdate{template: stateUpdateDeactivateTemplate(&p.marker)}
 }
@@ -250,30 +244,6 @@ func (p *executionContext) NewChild(fn CreateFunc) SlotLink {
 //				p.worker.machine.applyAsyncStateUpdate(stepLink, fn)
 //			}))
 //		}}, cf.cancel
-//}
-//
-//type indirectCancel struct {
-//	cancelled bool
-//	cancelFn  context.CancelFunc
-//}
-//
-//func (p *indirectCancel) cancel() {
-//	p.cancelled = true
-//	if p.cancelFn != nil {
-//		p.cancelFn()
-//	}
-//}
-//
-//func (p *indirectCancel) set(cancel context.CancelFunc) {
-//	if p.cancelFn != nil {
-//		panic("illegal state")
-//	}
-//	if cancel == nil {
-//		return
-//	}
-//	if p.cancelled {
-//		p.cancel()
-//	}
 //}
 //
 //func (p *executionContext) AdapterSyncCall(a ExecutionAdapter, fn AdapterCallFunc) bool {
@@ -349,7 +319,7 @@ func (p *executionContext) executeNextStep() (stopNow bool, stateUpdate StateUpd
 		}
 
 		current := p.s.nextStep
-		stateUpdate = current.transition(p)
+		stateUpdate = current.Transition(p)
 		stateUpdate.ensureContext(&p.marker)
 
 		if p.countAsyncCalls != 0 {
@@ -363,7 +333,7 @@ func (p *executionContext) executeNextStep() (stopNow bool, stateUpdate StateUpd
 			}
 		case stateUpdNext:
 			ns := stateUpdate.getShortLoopStep()
-			if ns == nil || !p.s.machine.IsConsecutive(current.transition, ns.transition) {
+			if ns == nil || !p.s.machine.IsConsecutive(current.Transition, ns.Transition) {
 				break
 			}
 			p.s.incStep()
@@ -395,6 +365,10 @@ func (p *asyncResultContext) WakeUp() {
 	p.wakeup = true
 }
 
+func (p *asyncResultContext) WakeUpAndJump() {
+	panic("implement me")
+}
+
 func (p *asyncResultContext) executeResult(fn AsyncResultFunc) bool {
 	fn(p)
 	return p.wakeup
@@ -409,6 +383,8 @@ func (p *asyncResultContext) executeBroadcast(payload interface{}, fn BroadcastR
 var _ ConditionalUpdate = &conditionalUpdate{}
 
 type conditionalUpdate struct {
+	marker     *struct{}
+	kickOff    func()
 	dependency SlotLink
 	poll       bool
 	flags      stepFlags
@@ -426,7 +402,7 @@ func (c *conditionalUpdate) Active(dependency SlotLink) ConditionalUpdate {
 	return &r
 }
 
-func (c *conditionalUpdate) PreemptiveAsync(enable bool) ConditionalUpdate {
+func (c *conditionalUpdate) AsyncJump(enable bool) ConditionalUpdate {
 	r := *c
 	if enable {
 		r.flags |= stepFlagAllowPreempt
@@ -436,7 +412,7 @@ func (c *conditionalUpdate) PreemptiveAsync(enable bool) ConditionalUpdate {
 	return &r
 }
 
-func (c *conditionalUpdate) Wakeup(enable bool) ConditionalUpdate {
+func (c *conditionalUpdate) WakeUp(enable bool) ConditionalUpdate {
 	r := *c
 	if enable {
 		r.flags = (r.flags &^ stepFlagAwakeMask) | stepFlagAwakeDefault
@@ -446,20 +422,20 @@ func (c *conditionalUpdate) Wakeup(enable bool) ConditionalUpdate {
 	return &r
 }
 
-func (c *conditionalUpdate) WakeupAlways() ConditionalUpdate {
+func (c *conditionalUpdate) WakeUpAlways() ConditionalUpdate {
 	r := *c
 	r.flags = (r.flags &^ stepFlagAwakeMask) | stepFlagAwakeAlways
 	return &r
 }
 
-func (c *conditionalUpdate) ThenNext(fn StateFunc) StateUpdate {
+func (c *conditionalUpdate) ThenJump(fn StateFunc) StateUpdate {
 	if fn == nil {
 		panic("illegal value")
 	}
 	return c.then(fn, nil)
 }
 
-func (c *conditionalUpdate) ThenNextWithMigrate(fn StateFunc, mf MigrateFunc) StateUpdate {
+func (c *conditionalUpdate) ThenJumpWithMigrate(fn StateFunc, mf MigrateFunc) StateUpdate {
 	if fn == nil {
 		panic("illegal value")
 	}
@@ -471,18 +447,15 @@ func (c *conditionalUpdate) ThenRepeat() StateUpdate {
 }
 
 func (c *conditionalUpdate) then(fn StateFunc, mf MigrateFunc) StateUpdate {
-	if fn == nil {
-		panic("illegal value")
-	}
 
-	r := c.template
+	apply kickOff
+
 	if c.dependency.IsEmpty() {
-		r.param = nil
+		if c.poll {
+			panic("illegal state")
+		}
+		return stateUpdateWaitForSlot(c.marker, c.dependency, slotStep)
 	} else {
-		r.param = c.dependency
+		return stateUpdateWait(c.marker, c.poll, slotStep)
 	}
-
-	r.step.transition = fn
-	r.step.migration = mf
-	return r
 }

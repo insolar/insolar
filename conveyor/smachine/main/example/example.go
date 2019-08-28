@@ -45,7 +45,7 @@ func (s *StateMachine1) GetInitStateFor(m smachine.StateMachine) smachine.InitFu
 }
 
 func (s *StateMachine1) Init(ctx smachine.InitializationContext) smachine.StateUpdate {
-	return ctx.Next(s.State1)
+	return ctx.Jump(s.State1)
 }
 
 func (s *StateMachine1) State1(ctx smachine.ExecutionContext) smachine.StateUpdate {
@@ -55,9 +55,9 @@ func (s *StateMachine1) State1(ctx smachine.ExecutionContext) smachine.StateUpda
 		return mutex.Wait()
 	}
 
-	ctx.WaitAny().Wakeup().Deadline().Active().ThenRepeat()
+	ctx.WaitAny().WakeUp().Deadline().Active().ThenRepeat()
 
-	return ctx.Next(s.State3)
+	return ctx.Jump(s.State3)
 }
 
 func (s *StateMachine1) State3(ctx smachine.ExecutionContext) smachine.StateUpdate {
@@ -71,7 +71,7 @@ func (s *StateMachine1) State3(ctx smachine.ExecutionContext) smachine.StateUpda
 		return &StateMachine1{}
 	})
 
-	return ctx.Next(s.State4)
+	return ctx.Jump(s.State4)
 }
 
 func (s *StateMachine1) State4(ctx smachine.ExecutionContext) smachine.StateUpdate {
@@ -102,7 +102,7 @@ func (s *StateMachine1) State50(ctx smachine.ExecutionContext) smachine.StateUpd
 			s.result = asyncResult
 			ctx.WakeUp()
 		}
-	}).Wait().Wakeup().ThenNext(s.State5)
+	}).Wait().WakeUp().ThenJump(s.State5)
 }
 
 func (s *StateMachine1) State60(ctx smachine.ExecutionContext) smachine.StateUpdate {
@@ -115,7 +115,7 @@ func (s *StateMachine1) State60(ctx smachine.ExecutionContext) smachine.StateUpd
 	//mb.Broadcast(info)
 	//// do something
 
-	return ctx.Next(nil)
+	return ctx.Jump(nil)
 }
 
 // ------------------------------------------

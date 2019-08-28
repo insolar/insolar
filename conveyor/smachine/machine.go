@@ -272,9 +272,9 @@ func (m *SlotMachine) migrate(slot *Slot) bool {
 	}
 
 	for m.migrationCount != slot.migrationCount {
-		migrateFn := slot.nextStep.migration
+		migrateFn := slot.nextStep.Migration
 		if migrateFn == nil {
-			migrateFn = slot.machine.GetMigrateFn(slot.nextStep.transition)
+			migrateFn = slot.machine.GetMigrateFn(slot.nextStep.Transition)
 			if migrateFn == nil {
 				migrateFn = slot.migrateSlot
 			}
@@ -456,7 +456,7 @@ func (m *SlotMachine) applyStateUpdate(slot *Slot, stateUpdate StateUpdate) bool
 		fallthrough
 
 	case stateUpdRepeat:
-		if slot.nextStep.transition == nil {
+		if slot.nextStep.Transition == nil {
 			break
 		}
 		m.addSlotToActiveOrWorkingQueue(slot)
@@ -530,7 +530,7 @@ func (m *SlotMachine) preparePollingSlots(scanTime time.Time) {
 	for m.pollingSeqHead != m.pollingSeqTail {
 		ps := &m.pollingSeq[m.pollingSeqTail]
 
-		if !ps.IsEmpty() && ps.slot.nextStep.wakeupTime > scanTimeUnix {
+		if !ps.IsEmpty() && ps.slot.nextStep.WakeupTime > scanTimeUnix {
 			break
 		}
 
@@ -563,7 +563,7 @@ func (m *SlotMachine) allocatePollingSlots(scanTime time.Time) {
 		panic("illegal state")
 	}
 
-	m.pollingSlots.slot.nextStep.wakeupTime = scanTime.Add(m.config.PollingPeriod).UnixNano()
+	m.pollingSlots.slot.nextStep.WakeupTime = scanTime.Add(m.config.PollingPeriod).UnixNano()
 }
 
 func (m *SlotMachine) growPollingSlots() {

@@ -94,28 +94,13 @@ const (
 	stepFlagAllowPreempt
 )
 
-type SlotStep struct {
-	transition StateFunc
-	migration  MigrateFunc
-	wakeupTime int64 //unixNano
-	stepFlags  stepFlags
-}
-
-func (s *SlotStep) IsEmpty() bool {
-	return s.transition == nil
-}
-
-func (s *SlotStep) HasTimeout() bool {
-	return s.wakeupTime > 0
-}
-
-func (s *SlotStep) getAwakeMode() stepFlags {
-	return s.stepFlags & stepFlagAwakeMask
-}
-
-func (s *SlotStep) isPreemptive() bool {
-	return s.stepFlags&stepFlagAllowPreempt != 0
-}
+//func (s *SlotStep) getAwakeMode() stepFlags {
+//	return s.stepFlags & stepFlagAwakeMask
+//}
+//
+//func (s *SlotStep) isPreemptive() bool {
+//	return s.stepFlags&stepFlagAllowPreempt != 0
+//}
 
 type SlotDependency interface {
 	GetKey() string

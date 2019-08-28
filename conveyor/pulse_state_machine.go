@@ -75,7 +75,7 @@ func (sm *FuturePulseSM) GetInitStateFor(machine smachine.StateMachine) smachine
 
 func (sm *FuturePulseSM) Init(ctx smachine.InitializationContext) smachine.StateUpdate {
 	ctx.SetDefaultMigration(sm.PulseCommitted)
-	return ctx.Next(sm.StateWorking)
+	return ctx.Jump(sm.StateWorking)
 }
 
 func (sm *FuturePulseSM) PulseCommitted(ctx smachine.MigrationContext) smachine.StateUpdate {
@@ -110,11 +110,11 @@ func (sm *PresentPulseSM) GetInitStateFor(machine smachine.StateMachine) smachin
 func (sm *PresentPulseSM) Init(ctx smachine.InitializationContext) smachine.StateUpdate {
 	ctx.SetDefaultMigration(sm.PulseCommitted)
 	sm.psa.svc.subscribe(ctx, sm.PulsePrepare, sm.PulseCancel)
-	return ctx.Next(sm.StateWorking)
+	return ctx.Jump(sm.StateWorking)
 }
 
 func (sm *PresentPulseSM) PulsePrepare(ctx smachine.ExecutionContext) smachine.StateUpdate {
-	return ctx.Next(sm.StateSuspending)
+	return ctx.Jump(sm.StateSuspending)
 }
 
 func (sm *PresentPulseSM) PulseCommitted(ctx smachine.MigrationContext) smachine.StateUpdate {
@@ -128,7 +128,7 @@ func (sm *PresentPulseSM) PulseCommitted(ctx smachine.MigrationContext) smachine
 }
 
 func (sm *PresentPulseSM) PulseCancel(ctx smachine.ExecutionContext) smachine.StateUpdate {
-	return ctx.Next(sm.StateWorking)
+	return ctx.Jump(sm.StateWorking)
 }
 
 func (sm *PresentPulseSM) StateWorking(ctx smachine.ExecutionContext) smachine.StateUpdate {
@@ -156,7 +156,7 @@ func (sm *PastPulseSM) GetInitStateFor(machine smachine.StateMachine) smachine.I
 
 func (sm *PastPulseSM) Init(ctx smachine.InitializationContext) smachine.StateUpdate {
 	ctx.SetDefaultMigration(sm.PulseCommitted)
-	return ctx.Next(sm.StateWorking)
+	return ctx.Jump(sm.StateWorking)
 }
 
 func (sm *PastPulseSM) PulseCommitted(ctx smachine.MigrationContext) smachine.StateUpdate {

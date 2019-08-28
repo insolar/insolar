@@ -77,8 +77,8 @@ type stepContext interface {
 
 	SetDefaultMigration(fn MigrateFunc)
 
-	NextWithMigrate(StateFunc, MigrateFunc) StateUpdate
-	Next(StateFunc) StateUpdate
+	JumpWithMigrate(StateFunc, MigrateFunc) StateUpdate
+	Jump(StateFunc) StateUpdate
 	Stop() StateUpdate
 }
 
@@ -109,30 +109,28 @@ type ExecutionContext interface {
 	WaitAny() StateConditionalUpdate
 }
 
-type StateConditionalUpdate interface {
-	Poll() ConditionalUpdate
-	Active(slot SlotLink) ConditionalUpdate
-	Wakeup(enable bool) ConditionalUpdate
-	WakeupAlways() ConditionalUpdate
+type conditionalUpdateAction interface {
+	WakeUp(enable bool) ConditionalUpdate
+	WakeUpAlways() ConditionalUpdate
+}
 
-	PreemptiveAsync(enable bool) ConditionalUpdate
+type StateConditionalUpdate interface {
+	CallConditionalUpdate
+	AsyncJump(enable bool) CallConditionalUpdate
 }
 
 type CallConditionalUpdate interface {
+	conditionalUpdateAction
 	Poll() ConditionalUpdate
 	Active(slot SlotLink) ConditionalUpdate
-	Wakeup(enable bool) ConditionalUpdate
-	WakeupAlways() ConditionalUpdate
-
-	ThenNext(StateFunc) StateUpdate
-	ThenNextWithMigrate(StateFunc, MigrateFunc) StateUpdate
-	ThenRepeat() StateUpdate
 }
 
 type ConditionalUpdate interface {
-	Wakeup(enable bool) ConditionalUpdate
-	PreemptiveAsync(enable bool) ConditionalUpdate
-	WakeupAlways() ConditionalUpdate
+	conditionalUpdateAction
+
+	ThenJump(StateFunc) StateUpdate
+	ThenJumpWithMigrate(StateFunc, MigrateFunc) StateUpdate
+	ThenRepeat() StateUpdate
 }
 
 type Syncronizer interface {
@@ -149,7 +147,7 @@ type AsyncResultContext interface {
 
 	// caller will execute its current step
 	WakeUp()
-	//WakeUpNext()
+	WakeUpAndJump()
 }
 
 const UnknownSlotID SlotID = 0
@@ -161,20 +159,56 @@ func (id SlotID) IsUnknown() bool {
 }
 
 type StateUpdate struct {
-	marker  *struct{}
-	updType uint32
-	apply   interface{}
-	//step       SlotStep
-	param interface{}
+	marker *struct{}
+	step   SlotStep
+	param  interface{}
 }
 
 func (u StateUpdate) IsZero() bool {
-	return u.marker == nil && u.updType == 0
+	return u.marker == nil && u.step.paramTmp == 0
 }
 
-func (u StateUpdate) ensureContext(p *struct{}) StateUpdate {
+func NewStateUpdate(marker *struct{}, updType uint16, slotStep SlotStep, param interface{}) StateUpdate {
+	slotStep.paramTmp = updType
+	return StateUpdate{
+		marker: marker,
+		param:  param,
+		step:   slotStep,
+	}
+}
+
+func EnsureUpdateContext(p *struct{}, u StateUpdate) {
 	if u.marker != p {
 		panic("illegal value")
 	}
-	return u
+}
+
+func ExtractStateUpdate(u StateUpdate) (updType uint16, slotStep SlotStep, param interface{}) {
+	t := u.step.paramTmp
+	u.step.paramTmp = 0
+	return t, u.step, u.param
+}
+
+func ExtractStateUpdateParam(u StateUpdate) (updType uint16, param interface{}) {
+	return u.step.paramTmp, u.param
+}
+
+type SlotStep struct {
+	Transition StateFunc
+	Migration  MigrateFunc
+	WakeupTime int64 //unixNano
+	StepFlags  uint16
+	paramTmp   uint16
+}
+
+func (s *SlotStep) IsZero() bool {
+	return s.Transition == nil && s.StepFlags == 0 && s.paramTmp == 0
+}
+
+func (s *SlotStep) HasTimeout() bool {
+	return s.WakeupTime > 0
+}
+
+func (s *SlotStep) HasTransition() bool {
+
 }

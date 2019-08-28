@@ -66,11 +66,21 @@ type SyncCallContext interface {
 }
 
 type CallContext interface {
-	Call()
-	CallWithCancel() context.CancelFunc
+	/* Allocates and provides cancellation function. Repeated calls return the same. */
+	GetCancel(*context.CancelFunc) CallContext
 
+	/* Will automatically cancel this call when step is changed */
+	CancelOnStep(attach bool) CallContext
+
+	/* Starts async call  */
+	Start()
+
+	/* Start async call that will try to do Jump after the result is returned and applied */
+	Callback(fn StateFunc)
+	CallbackWithMigrate(fn StateFunc, mf MigrateFunc)
+
+	/* Creates an update that can be returned as a new state and will ONLY be executed if returned as a new state */
 	Wait() CallConditionalUpdate
-	WaitWithCancel(*context.CancelFunc) CallConditionalUpdate
 }
 
 type AdapterCallbackFunc func(AsyncResultFunc)
