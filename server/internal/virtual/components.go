@@ -148,7 +148,12 @@ func initComponents(
 	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner, publisher, b)
 	checkError(ctx, err, "failed to start LogicRunner")
 
-	contractRequester, err := contractrequester.New()
+	contractRequester, err := contractrequester.New(
+		b,
+		pulses,
+		jc,
+		pcs,
+	)
 	checkError(ctx, err, "failed to start ContractRequester")
 
 	artifactsClient := artifacts.NewClient(b)
@@ -225,13 +230,14 @@ func initComponents(
 	err = cm.Init(ctx)
 	checkError(ctx, err, "failed to init components")
 
-	pm.FlowDispatcher = logicRunner.FlowDispatcher
+	// this should be done after Init due to inject
+	pm.AddDispatcher(logicRunner.FlowDispatcher, contractRequester.FlowDispatcher)
 
 	return &cm, terminationHandler, startWatermill(
 		ctx, wmLogger, subscriber, b,
 		nw.SendMessageHandler,
 		logicRunner.FlowDispatcher.Process,
-		contractRequester.ReceiveResult,
+		contractRequester.FlowDispatcher.Process,
 	)
 }
 

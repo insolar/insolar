@@ -32,6 +32,8 @@ import (
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/bus/meta"
 	busMeta "github.com/insolar/insolar/insolar/bus/meta"
+	"github.com/insolar/insolar/insolar/flow"
+	"github.com/insolar/insolar/insolar/flow/dispatcher"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
@@ -45,14 +47,16 @@ import (
 
 // ContractRequester helps to call contracts
 type ContractRequester struct {
-	Sender                     bus.Sender                         `inject:""`
-	PulseAccessor              pulse.Accessor                     `inject:""`
-	JetCoordinator             jet.Coordinator                    `inject:""`
-	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
+	Sender                     bus.Sender
+	PulseAccessor              pulse.Accessor
+	JetCoordinator             jet.Coordinator
+	PlatformCryptographyScheme insolar.PlatformCryptographyScheme
 
 	// TODO: remove this hack in INS-3341
 	// we need ResultMatcher, not Logicrunner
 	LR insolar.LogicRunner
+
+	FlowDispatcher dispatcher.Dispatcher
 
 	ResultMutex sync.Mutex
 	ResultMap   map[[insolar.RecordHashSize]byte]chan *payload.ReturnResults
@@ -63,11 +67,38 @@ type ContractRequester struct {
 }
 
 // New creates new ContractRequester
-func New() (*ContractRequester, error) {
-	return &ContractRequester{
+func New(
+	sender bus.Sender,
+	pulses pulse.Accessor,
+	jetCoordinator jet.Coordinator,
+	pcs insolar.PlatformCryptographyScheme,
+) (*ContractRequester, error) {
+	cr := &ContractRequester{
 		ResultMap:   make(map[[insolar.RecordHashSize]byte]chan *payload.ReturnResults),
 		callTimeout: 25 * time.Second,
-	}, nil
+
+		Sender:                     sender,
+		PulseAccessor:              pulses,
+		JetCoordinator:             jetCoordinator,
+		PlatformCryptographyScheme: pcs,
+	}
+
+	handle := func(msg *message.Message) *handleResults {
+		return &handleResults{
+			cr:      cr,
+			Message: msg,
+		}
+	}
+
+	cr.FlowDispatcher = dispatcher.NewDispatcher(cr.PulseAccessor,
+		func(msg *message.Message) flow.Handle {
+			return handle(msg).Present
+		}, func(msg *message.Message) flow.Handle {
+			return handle(msg).Future
+		}, func(msg *message.Message) flow.Handle {
+			return handle(msg).Past
+		})
+	return cr, nil
 }
 
 func randomUint64() uint64 {

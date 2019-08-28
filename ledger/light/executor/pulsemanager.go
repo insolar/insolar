@@ -39,7 +39,7 @@ type PulseManager struct {
 	setLock sync.RWMutex
 
 	nodeNet          network.NodeNetwork
-	dispatcher       dispatcher.Dispatcher
+	dispatchers      []dispatcher.Dispatcher
 	nodeSetter       node.Modifier
 	pulseAccessor    pulse.Accessor
 	pulseAppender    pulse.Appender
@@ -55,7 +55,7 @@ type PulseManager struct {
 // NewPulseManager creates PulseManager instance.
 func NewPulseManager(
 	nodeNet network.NodeNetwork,
-	disp dispatcher.Dispatcher,
+	dispatchers []dispatcher.Dispatcher,
 	nodeSetter node.Modifier,
 	pulseAccessor pulse.Accessor,
 	pulseAppender pulse.Appender,
@@ -69,7 +69,7 @@ func NewPulseManager(
 ) *PulseManager {
 	pm := &PulseManager{
 		nodeNet:          nodeNet,
-		dispatcher:       disp,
+		dispatchers:      dispatchers,
 		jetSplitter:      jetSplitter,
 		nodeSetter:       nodeSetter,
 		pulseAccessor:    pulseAccessor,
@@ -137,7 +137,9 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 	logger.Debug("before changing pulse")
 	{
 		logger.Debug("before dispatcher closePulse")
-		m.dispatcher.ClosePulse(ctx, newPulse)
+		for _, d := range m.dispatchers {
+			d.ClosePulse(ctx, newPulse)
+		}
 
 		if !justJoined {
 			logger.Debug("before parsing jets")
@@ -188,7 +190,9 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 		}
 
 		logger.WithField("newPulse", newPulse.PulseNumber).Debugf("before dispatcher.BeginPulse", newPulse)
-		m.dispatcher.BeginPulse(ctx, newPulse)
+		for _, d := range m.dispatchers {
+			d.BeginPulse(ctx, newPulse)
+		}
 	}
 
 	if !justJoined {
