@@ -235,7 +235,7 @@ func initComponents(
 		ctx, wmLogger, subscriber, b,
 		nw.SendMessageHandler,
 		logicRunner.FlowDispatcher.Process,
-		contractRequester.ReceiveResult,
+		contractRequester.FlowDispatcher.Process,
 	)
 }
 

@@ -389,7 +389,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		return nil, errors.Wrap(err, "failed to init components")
 	}
 
-	comps.startWatermill(ctx, wmLogger, subscriber, Sender, NetworkService.SendMessageHandler, FlowDispatcher.Process, Requester.ReceiveResult)
+	comps.startWatermill(ctx, wmLogger, subscriber, Sender, NetworkService.SendMessageHandler, FlowDispatcher.Process, Requester.FlowDispatcher.Process)
 
 	return comps, nil
 }
