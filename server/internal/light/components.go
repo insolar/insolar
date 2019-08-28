@@ -349,7 +349,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 
 		PulseManager = executor.NewPulseManager(
 			NodeNetwork,
-			FlowDispatcher,
+			[]dispatcher.Dispatcher{FlowDispatcher},
 			Nodes,
 			Pulses,
 			Pulses,

@@ -229,7 +229,7 @@ func initComponents(
 	err = cm.Init(ctx)
 	checkError(ctx, err, "failed to init components")
 
-	pm.FlowDispatcher = logicRunner.FlowDispatcher
+	pm.AddDispatcher(logicRunner.FlowDispatcher, contractRequester.FlowDispatcher)
 
 	return &cm, terminationHandler, startWatermill(
 		ctx, wmLogger, subscriber, b,

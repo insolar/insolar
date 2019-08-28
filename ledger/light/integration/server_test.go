@@ -325,7 +325,7 @@ func NewServer(
 
 		PulseManager = executor.NewPulseManager(
 			NodeNetwork,
-			FlowDispatcher,
+			[]dispatcher.Dispatcher{FlowDispatcher},
 			Nodes,
 			Pulses,
 			Pulses,

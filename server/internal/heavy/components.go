@@ -290,7 +290,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 			return nil, errors.Wrap(err, "failed create backuper")
 		}
 
-		pm := pulsemanager.NewPulseManager()
+		pm := pulsemanager.NewPulseManager(Requester.FlowDispatcher)
 		pm.NodeNet = NodeNetwork
 		pm.NodeSetter = Nodes
 		pm.Nodes = Nodes

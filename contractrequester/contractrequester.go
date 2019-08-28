@@ -32,6 +32,8 @@ import (
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/bus/meta"
 	busMeta "github.com/insolar/insolar/insolar/bus/meta"
+	"github.com/insolar/insolar/insolar/flow"
+	"github.com/insolar/insolar/insolar/flow/dispatcher"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
@@ -54,6 +56,8 @@ type ContractRequester struct {
 	// we need ResultMatcher, not Logicrunner
 	LR insolar.LogicRunner
 
+	FlowDispatcher dispatcher.Dispatcher
+
 	ResultMutex sync.Mutex
 	ResultMap   map[[insolar.RecordHashSize]byte]chan *payload.ReturnResults
 
@@ -64,10 +68,28 @@ type ContractRequester struct {
 
 // New creates new ContractRequester
 func New() (*ContractRequester, error) {
-	return &ContractRequester{
+	cr := &ContractRequester{
 		ResultMap:   make(map[[insolar.RecordHashSize]byte]chan *payload.ReturnResults),
 		callTimeout: 25 * time.Second,
-	}, nil
+	}
+
+	handle := func(msg *message.Message) *handleResults {
+		return &handleResults{
+			cr:      cr,
+			Message: msg,
+		}
+	}
+
+	cr.FlowDispatcher = dispatcher.NewDispatcher(cr.PulseAccessor,
+		func(msg *message.Message) flow.Handle {
+			return handle(msg).Present
+		}, func(msg *message.Message) flow.Handle {
+			return handle(msg).Future
+		}, func(msg *message.Message) flow.Handle {
+			return handle(msg).Past
+		})
+
+	return cr, nil
 }
 
 func randomUint64() uint64 {

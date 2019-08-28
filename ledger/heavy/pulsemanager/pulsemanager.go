@@ -21,6 +21,7 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/flow/dispatcher"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/node"
 	"github.com/insolar/insolar/insolar/pulse"
@@ -43,6 +44,8 @@ type PulseManager struct {
 	FinalizationKeeper executor.FinalizationKeeper `inject:""`
 	JetModifier        jet.Modifier                `inject:""`
 
+	dispatchers []dispatcher.Dispatcher
+
 	currentPulse insolar.Pulse
 	StartPulse   pulse.StartPulse
 
@@ -51,9 +54,10 @@ type PulseManager struct {
 }
 
 // NewPulseManager creates PulseManager instance.
-func NewPulseManager() *PulseManager {
+func NewPulseManager(dispatchers ...dispatcher.Dispatcher) *PulseManager {
 	pm := &PulseManager{
 		currentPulse: *insolar.GenesisPulse,
+		dispatchers:  dispatchers,
 	}
 	return pm
 }
@@ -77,6 +81,10 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 		trace.Int64Attribute("pulse.PulseNumber", int64(newPulse.PulseNumber)),
 	)
 	defer span.End()
+
+	for _, d := range m.dispatchers {
+		d.ClosePulse(ctx, newPulse)
+	}
 
 	// Dealing with node lists.
 	{
@@ -114,6 +122,10 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 
 	logger.Debug("before calling to StartPulse.SetStartPulse")
 	m.StartPulse.SetStartPulse(ctx, newPulse)
+
+	for _, d := range m.dispatchers {
+		d.BeginPulse(ctx, newPulse)
+	}
 
 	logger.Info("new pulse is set")
 	return nil
