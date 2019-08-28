@@ -54,7 +54,6 @@ package tests
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/fortytw2/leaktest"
@@ -67,13 +66,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var (
-	consensusMin    = 5 // minimum count of participants that can survive when one node leaves
-	consensusMinMsg = fmt.Sprintf("skip test for bootstrap nodes < %d", consensusMin)
-)
-
-func serviceNetworkManyBootstraps(t *testing.T) *consensusSuite {
-	cs := newConsensusSuite(t, 5, 0)
+func startNetwork(t *testing.T) *consensusSuite {
+	cs := newConsensusSuite(t, consensusMin, 0)
 	cs.SetupTest()
 
 	return cs
@@ -84,8 +78,8 @@ func serviceNetworkManyBootstraps(t *testing.T) *consensusSuite {
 func TestNetworkConsensusManyTimes(t *testing.T) {
 	defer leaktest.Check(t)()
 
-	s := serviceNetworkManyBootstraps(t)
-	defer s.TearDownTest()
+	s := startNetwork(t)
+	defer s.stopNetwork()
 
 	s.waitForConsensus(9)
 	s.AssertActiveNodesCountDelta(0)
@@ -94,32 +88,21 @@ func TestNetworkConsensusManyTimes(t *testing.T) {
 func TestJoinerNodeConnect(t *testing.T) {
 	defer leaktest.Check(t)()
 
-	s := serviceNetworkManyBootstraps(t)
-	defer s.TearDownTest()
+	s := startNetwork(t)
+	defer s.stopNetwork()
 
-	testNode := s.newNetworkNode("JoinerNode")
-	s.preInitNode(testNode)
+	joinerNode := s.startNewNetworkNode("JoinerNode")
+	defer s.StopNode(joinerNode)
 
-	s.InitNode(testNode)
-	s.StartNode(testNode)
-	defer func(s *consensusSuite) {
-		s.StopNode(testNode)
-	}(s)
-
-	s.waitForConsensus(1)
-
-	s.AssertActiveNodesCountDelta(0)
-
-	s.waitForConsensus(2)
+	assert.True(t, s.waitForNodeJoin(joinerNode.id, maxPulsesForJoin), "JoinerNode not found in active list after 3 pulses")
 
 	s.AssertActiveNodesCountDelta(1)
-	require.Equal(s.t, insolar.CompleteNetworkState, testNode.serviceNetwork.Gatewayer.Gateway().GetState())
+	require.Equal(s.t, insolar.CompleteNetworkState, joinerNode.serviceNetwork.Gatewayer.Gateway().GetState())
 }
 
 func TestNodeConnectInvalidVersion(t *testing.T) {
-	t.Skip("Behavior changed, fix assertion in test needed")
-	s := serviceNetworkManyBootstraps(t)
-	defer s.TearDownTest()
+	s := startNetwork(t)
+	defer s.stopNetwork()
 
 	testNode := s.newNetworkNode("testNode")
 	s.preInitNode(testNode)
@@ -128,32 +111,21 @@ func TestNodeConnectInvalidVersion(t *testing.T) {
 
 	s.InitNode(testNode)
 	err := testNode.componentManager.Start(s.fixture().ctx)
-	defer func(s *consensusSuite) {
-		s.StopNode(testNode)
-	}(s)
 	assert.NoError(t, err)
 
-	s.waitForConsensus(2)
-	s.AssertActiveNodesCountDelta(0)
+	defer s.StopNode(testNode)
 
+	assert.False(t, s.waitForNodeJoin(testNode.id, maxPulsesForJoin), "testNode joined with incorrect version")
 }
 
 func TestNodeLeave(t *testing.T) {
-	t.Skip("FIXME")
 	defer leaktest.Check(t)()
 
-	s := serviceNetworkManyBootstraps(t)
-	defer s.TearDownTest()
+	s := startNetwork(t)
+	defer s.stopNetwork()
 
-	s.CheckBootstrapCount()
-
-	testNode := s.newNetworkNode("testNode")
-	s.preInitNode(testNode)
-
-	s.InitNode(testNode)
-	s.StartNode(testNode)
-
-	s.waitForConsensus(2)
+	testNode := s.startNewNetworkNode("testNode")
+	assert.True(t, s.waitForNodeJoin(testNode.id, 3), "testNode not found in active list after 3 pulses")
 
 	s.AssertActiveNodesCountDelta(1)
 	s.AssertWorkingNodesCountDelta(1)
@@ -168,24 +140,14 @@ func TestNodeLeave(t *testing.T) {
 }
 
 func TestNodeGracefulLeave(t *testing.T) {
-	t.Skip("FIXME")
 	defer leaktest.Check(t)()
 
-	s := serviceNetworkManyBootstraps(t)
-	defer s.TearDownTest()
+	s := startNetwork(t)
+	defer s.stopNetwork()
 
-	s.CheckBootstrapCount()
+	testNode := s.startNewNetworkNode("testNode")
+	assert.True(t, s.waitForNodeJoin(testNode.id, 3), "testNode not found in active list after 3 pulses")
 
-	testNode := s.newNetworkNode("testNode")
-	s.preInitNode(testNode)
-
-	s.InitNode(testNode)
-	s.StartNode(testNode)
-
-	s.waitForConsensus(2)
-
-	s.AssertActiveNodesCountDelta(1)
-	s.AssertWorkingNodesCountDelta(1)
 	require.Equal(s.t, insolar.CompleteNetworkState, testNode.serviceNetwork.Gatewayer.Gateway().GetState())
 
 	s.GracefulStop(testNode)
@@ -198,10 +160,8 @@ func TestNodeGracefulLeave(t *testing.T) {
 
 func TestNodeLeaveAtETA(t *testing.T) {
 	t.Skip("FIXME")
-	s := serviceNetworkManyBootstraps(t)
-	defer s.TearDownTest()
-
-	s.CheckBootstrapCount()
+	s := startNetwork(t)
+	defer s.stopNetwork()
 
 	testNode := s.newNetworkNode("testNode")
 	s.preInitNode(testNode)
@@ -248,13 +208,10 @@ func TestNodeLeaveAtETA(t *testing.T) {
 
 func TestNodeComeAfterAnotherNodeSendLeaveETA(t *testing.T) {
 	t.Skip("FIXME")
-	s := serviceNetworkManyBootstraps(t)
-	defer s.TearDownTest()
+	s := startNetwork(t)
+	defer s.stopNetwork()
 
 	t.Skip("fix testcase in TESTNET 2.0")
-	if len(s.fixture().bootstrapNodes) < consensusMin {
-		t.Skip(consensusMinMsg)
-	}
 
 	leavingNode := s.newNetworkNode("leavingNode")
 	s.preInitNode(leavingNode)
@@ -325,10 +282,9 @@ func TestNodeComeAfterAnotherNodeSendLeaveETA(t *testing.T) {
 
 func TestDiscoveryDown(t *testing.T) {
 	t.Skip("FIXME")
-	s := serviceNetworkManyBootstraps(t)
-	defer s.TearDownTest()
+	s := startNetwork(t)
+	defer s.stopNetwork()
 
-	s.CheckBootstrapCount()
 	s.StopNode(s.fixture().bootstrapNodes[0])
 	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
 	for i := 1; i < s.getNodesCount(); i++ {
@@ -346,10 +302,8 @@ func flushNodeKeeper(keeper network.NodeKeeper) {
 
 func TestDiscoveryRestart(t *testing.T) {
 	t.Skip("FIXME")
-	s := serviceNetworkManyBootstraps(t)
-	defer s.TearDownTest()
-
-	s.CheckBootstrapCount()
+	s := startNetwork(t)
+	defer s.stopNetwork()
 
 	s.waitForConsensus(2)
 
@@ -377,10 +331,8 @@ func TestDiscoveryRestart(t *testing.T) {
 
 func TestDiscoveryRestartNoWait(t *testing.T) {
 	t.Skip("FIXME")
-	s := serviceNetworkManyBootstraps(t)
-	defer s.TearDownTest()
-
-	s.CheckBootstrapCount()
+	s := startNetwork(t)
+	defer s.stopNetwork()
 
 	s.waitForConsensus(2)
 

@@ -97,7 +97,7 @@ func (s *bootstrapSuite) SetupTest() {
 }
 
 func (s *bootstrapSuite) TearDownTest() {
-	inslogger.FromContext(s.fixture().ctx).Info("TearDownTest")
+	inslogger.FromContext(s.fixture().ctx).Info("stopNetwork")
 
 	suiteLogger.Info("Stop bootstrap nodes")
 	for _, n := range s.fixture().bootstrapNodes {
