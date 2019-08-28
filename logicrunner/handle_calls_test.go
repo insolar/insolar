@@ -32,6 +32,7 @@ import (
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -161,7 +162,6 @@ func TestHandleCall_Present(t *testing.T) {
 
 		ctx := flow.TestContextWithPulse(inslogger.TestContext(t), gen.PulseNumber())
 		mc := minimock.NewController(t)
-		defer mc.Wait(time.Minute)
 
 		objRef := gen.Reference()
 
@@ -211,6 +211,9 @@ func TestHandleCall_Present(t *testing.T) {
 		reply, err := handler.handleActual(ctx, msg, fm)
 		assert.NotNil(t, reply)
 		assert.NoError(t, err)
+
+		mc.Wait(time.Minute)
+		mc.Finish()
 	})
 
 	t.Run("write accessor failed to fetch lock", func(t *testing.T) {
@@ -218,7 +221,7 @@ func TestHandleCall_Present(t *testing.T) {
 
 		ctx := flow.TestContextWithPulse(inslogger.TestContext(t), gen.PulseNumber())
 		mc := minimock.NewController(t)
-		defer mc.Wait(time.Second)
+		defer mc.Wait(time.Minute)
 
 		objRef := gen.Reference()
 
@@ -259,6 +262,8 @@ func TestHandleCall_Present(t *testing.T) {
 				JetStorage: nil,
 				WriteAccessor: writecontroller.NewAccessorMock(mc).
 					BeginMock.Return(func() {}, writecontroller.ErrWriteClosed),
+				PulseAccessor: pulse.NewAccessorMock(mc).
+					LatestMock.Return(insolar.Pulse{PulseNumber: 100}, nil),
 			},
 			Message: payload.Meta{},
 			Parcel:  nil,
@@ -274,6 +279,9 @@ func TestHandleCall_Present(t *testing.T) {
 		reply, err := handler.handleActual(ctx, msg, fm)
 		assert.NotNil(t, reply)
 		assert.NoError(t, err)
+
+		mc.Wait(time.Minute)
+		mc.Finish()
 	})
 
 	t.Run("failed to authorize", func(t *testing.T) {
@@ -281,10 +289,8 @@ func TestHandleCall_Present(t *testing.T) {
 
 		ctx := flow.TestContextWithPulse(inslogger.TestContext(t), gen.PulseNumber())
 		mc := minimock.NewController(t)
-		defer mc.Wait(time.Minute)
 
 		fm := flow.NewFlowMock(mc)
-
 		fm.ProcedureMock.Set(func(ctx context.Context, proc flow.Procedure, cancelable bool) (err error) {
 			switch proc.(type) {
 			case *CheckOurRole:
@@ -326,6 +332,9 @@ func TestHandleCall_Present(t *testing.T) {
 		reply, err := handler.handleActual(ctx, msg, fm)
 		assert.Nil(t, reply)
 		assert.EqualError(t, err, flow.ErrCancelled.Error())
+
+		mc.Wait(time.Minute)
+		mc.Finish()
 	})
 
 	t.Run("failed to register incoming request", func(t *testing.T) {
@@ -333,10 +342,8 @@ func TestHandleCall_Present(t *testing.T) {
 
 		ctx := flow.TestContextWithPulse(inslogger.TestContext(t), gen.PulseNumber())
 		mc := minimock.NewController(t)
-		defer mc.Wait(time.Minute)
 
 		fm := flow.NewFlowMock(mc)
-
 		fm.ProcedureMock.Set(func(ctx context.Context, proc flow.Procedure, cancelable bool) (err error) {
 			switch proc.(type) {
 			case *CheckOurRole:
@@ -377,6 +384,9 @@ func TestHandleCall_Present(t *testing.T) {
 		reply, err := handler.handleActual(ctx, msg, fm)
 		assert.Nil(t, reply)
 		assert.EqualError(t, err, flow.ErrCancelled.Error())
+
+		mc.Wait(time.Minute)
+		mc.Finish()
 	})
 
 	t.Run("objectRef for CTMethod is empty", func(t *testing.T) {
@@ -384,10 +394,8 @@ func TestHandleCall_Present(t *testing.T) {
 
 		ctx := flow.TestContextWithPulse(inslogger.TestContext(t), gen.PulseNumber())
 		mc := minimock.NewController(t)
-		defer mc.Wait(time.Second)
 
 		fm := flow.NewFlowMock(mc)
-
 		fm.ProcedureMock.Set(func(ctx context.Context, proc flow.Procedure, cancelable bool) (err error) {
 			switch proc.(type) {
 			case *CheckOurRole:
@@ -428,6 +436,9 @@ func TestHandleCall_Present(t *testing.T) {
 		reply, err := handler.handleActual(ctx, msg, fm)
 		assert.Nil(t, reply)
 		assert.Error(t, err)
+
+		mc.Wait(time.Minute)
+		mc.Finish()
 	})
 
 	t.Run("write accessor failed to fetch lock AND registry is empty after on pulse", func(t *testing.T) {
@@ -435,7 +446,6 @@ func TestHandleCall_Present(t *testing.T) {
 
 		ctx := flow.TestContextWithPulse(inslogger.TestContext(t), gen.PulseNumber())
 		mc := minimock.NewController(t)
-		defer mc.Wait(time.Minute)
 
 		objRef := gen.Reference()
 
@@ -473,6 +483,8 @@ func TestHandleCall_Present(t *testing.T) {
 					}),
 				JetStorage:    nil,
 				WriteAccessor: writecontroller.NewAccessorMock(mc).BeginMock.Return(func() {}, writecontroller.ErrWriteClosed),
+				PulseAccessor: pulse.NewAccessorMock(mc).
+					LatestMock.Return(insolar.Pulse{PulseNumber: 100}, nil),
 			},
 			Message: payload.Meta{},
 			Parcel:  nil,
@@ -488,6 +500,9 @@ func TestHandleCall_Present(t *testing.T) {
 		reply, err := handler.handleActual(ctx, msg, fm)
 		assert.NotNil(t, reply)
 		assert.NoError(t, err)
+
+		mc.Wait(time.Minute)
+		mc.Finish()
 	})
 
 	t.Run("already completed request", func(t *testing.T) {
@@ -495,7 +510,6 @@ func TestHandleCall_Present(t *testing.T) {
 
 		ctx := flow.TestContextWithPulse(inslogger.TestContext(t), gen.PulseNumber())
 		mc := minimock.NewController(t)
-		defer mc.Wait(time.Minute)
 
 		objRef := gen.Reference()
 		reqRef := gen.Reference()
@@ -548,6 +562,9 @@ func TestHandleCall_Present(t *testing.T) {
 		gotReply, err := handler.handleActual(ctx, msg, fm)
 		require.NoError(t, err)
 		require.Equal(t, &reply.RegisterRequest{Request: reqRef}, gotReply)
+
+		mc.Wait(time.Minute)
+		mc.Finish()
 	})
 
 	t.Run("object not found during request registration", func(t *testing.T) {
@@ -555,7 +572,6 @@ func TestHandleCall_Present(t *testing.T) {
 
 		ctx := flow.TestContextWithPulse(inslogger.TestContext(t), gen.PulseNumber())
 		mc := minimock.NewController(t)
-		defer mc.Wait(time.Minute)
 
 		objRef := gen.Reference()
 
@@ -599,6 +615,8 @@ func TestHandleCall_Present(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, expectedReply, gotReply)
 
+		mc.Wait(time.Minute)
+		mc.Finish()
 	})
 
 	t.Run("loop detected", func(t *testing.T) {
@@ -606,7 +624,6 @@ func TestHandleCall_Present(t *testing.T) {
 
 		ctx := flow.TestContextWithPulse(inslogger.TestContext(t), gen.PulseNumber())
 		mc := minimock.NewController(t)
-		defer mc.Wait(time.Minute)
 
 		objRef := gen.Reference()
 
@@ -655,5 +672,7 @@ func TestHandleCall_Present(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, expectedReply, gotReply)
 
+		mc.Wait(time.Minute)
+		mc.Finish()
 	})
 }
