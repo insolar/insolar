@@ -124,8 +124,6 @@ type testSuite struct {
 	networkNodes   []*networkNode
 	pulsar         TestPulsar
 	t              *testing.T
-
-	discoveriesAreBootstrapped uint32
 }
 
 type consensusSuite struct {
@@ -153,8 +151,8 @@ func newConsensusSuite(t *testing.T, bootstrapCount, nodesCount int) *consensusS
 	}
 }
 
-// SetupSuite creates and run network with bootstrap and common nodes once before run all tests in the suite
-func (s *consensusSuite) SetupTest() {
+// Setup creates and run network with bootstrap and common nodes once before run all tests in the suite
+func (s *consensusSuite) Setup() {
 	var err error
 	s.pulsar, err = NewTestPulsar(reqTimeoutMs, pulseDelta)
 	require.NoError(s.t, err)
@@ -256,7 +254,7 @@ func (s *testSuite) SetupNodesNetwork(nodes []*networkNode) {
 
 	results := make(chan error, len(nodes))
 	initNode := func(node *networkNode) {
-		err := node.init()
+		err := node.componentManager.Init(s.ctx)
 		results <- err
 	}
 
@@ -283,12 +281,18 @@ func (s *testSuite) StartNodesNetwork(nodes []*networkNode) {
 		go startNode(n)
 	}
 	s.waitResults(results, len(nodes))
-	atomic.StoreUint32(&s.discoveriesAreBootstrapped, 1)
 }
 
-// stopNetwork shutdowns all nodes in network
-func (s *consensusSuite) stopNetwork() {
-	suiteLogger.Info("=================== stopNetwork()")
+func startNetworkSuite(t *testing.T) *consensusSuite {
+	cs := newConsensusSuite(t, consensusMin, 0)
+	cs.Setup()
+
+	return cs
+}
+
+// stopNetworkSuite shutdowns all nodes in network
+func (s *consensusSuite) stopNetworkSuite() {
+	suiteLogger.Info("=================== stopNetworkSuite()")
 	suiteLogger.Info("Stop network nodes")
 	for _, n := range s.networkNodes {
 		err := n.componentManager.Stop(n.ctx)
@@ -367,7 +371,7 @@ func (s *testSuite) isNodeInActiveLists(ref insolar.Reference, p insolar.PulseNu
 
 func (s *testSuite) InitNode(node *networkNode) {
 	if node.componentManager != nil {
-		err := node.init()
+		err := node.componentManager.Init(s.ctx)
 		require.NoError(s.t, err)
 	}
 }
@@ -447,13 +451,6 @@ func (s *testSuite) newNetworkNodeWithRole(name string, role insolar.StaticRole)
 func incrementTestPort() int {
 	result := atomic.AddUint32(&testNetworkPort, 1)
 	return int(result)
-}
-
-// init calls Init for node component manager and wraps PhaseManager
-func (n *networkNode) init() error {
-	err := n.componentManager.Init(n.ctx)
-	// n.serviceNetwork.PhaseManager = &phaseManagerWrapper{original: n.serviceNetwork.PhaseManager, result: n.consensusResult}
-	return err
 }
 
 func (n *networkNode) GetActiveNodes() []insolar.NetworkNode {

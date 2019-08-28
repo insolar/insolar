@@ -66,20 +66,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func startNetwork(t *testing.T) *consensusSuite {
-	cs := newConsensusSuite(t, consensusMin, 0)
-	cs.SetupTest()
-
-	return cs
-}
-
-// Consensus suite tests
-
 func TestNetworkConsensusManyTimes(t *testing.T) {
 	defer leaktest.Check(t)()
 
-	s := startNetwork(t)
-	defer s.stopNetwork()
+	s := startNetworkSuite(t)
+	defer s.stopNetworkSuite()
 
 	s.waitForConsensus(9)
 	s.AssertActiveNodesCountDelta(0)
@@ -88,8 +79,8 @@ func TestNetworkConsensusManyTimes(t *testing.T) {
 func TestJoinerNodeConnect(t *testing.T) {
 	defer leaktest.Check(t)()
 
-	s := startNetwork(t)
-	defer s.stopNetwork()
+	s := startNetworkSuite(t)
+	defer s.stopNetworkSuite()
 
 	joinerNode := s.startNewNetworkNode("JoinerNode")
 	defer s.StopNode(joinerNode)
@@ -101,8 +92,8 @@ func TestJoinerNodeConnect(t *testing.T) {
 }
 
 func TestNodeConnectInvalidVersion(t *testing.T) {
-	s := startNetwork(t)
-	defer s.stopNetwork()
+	s := startNetworkSuite(t)
+	defer s.stopNetworkSuite()
 
 	testNode := s.newNetworkNode("testNode")
 	s.preInitNode(testNode)
@@ -121,8 +112,8 @@ func TestNodeConnectInvalidVersion(t *testing.T) {
 func TestNodeLeave(t *testing.T) {
 	defer leaktest.Check(t)()
 
-	s := startNetwork(t)
-	defer s.stopNetwork()
+	s := startNetworkSuite(t)
+	defer s.stopNetworkSuite()
 
 	testNode := s.startNewNetworkNode("testNode")
 	assert.True(t, s.waitForNodeJoin(testNode.id, 3), "testNode not found in active list after 3 pulses")
@@ -142,8 +133,8 @@ func TestNodeLeave(t *testing.T) {
 func TestNodeGracefulLeave(t *testing.T) {
 	defer leaktest.Check(t)()
 
-	s := startNetwork(t)
-	defer s.stopNetwork()
+	s := startNetworkSuite(t)
+	defer s.stopNetworkSuite()
 
 	testNode := s.startNewNetworkNode("testNode")
 	assert.True(t, s.waitForNodeJoin(testNode.id, 3), "testNode not found in active list after 3 pulses")
@@ -160,8 +151,8 @@ func TestNodeGracefulLeave(t *testing.T) {
 
 func TestNodeLeaveAtETA(t *testing.T) {
 	t.Skip("FIXME")
-	s := startNetwork(t)
-	defer s.stopNetwork()
+	s := startNetworkSuite(t)
+	defer s.stopNetworkSuite()
 
 	testNode := s.newNetworkNode("testNode")
 	s.preInitNode(testNode)
@@ -208,8 +199,8 @@ func TestNodeLeaveAtETA(t *testing.T) {
 
 func TestNodeComeAfterAnotherNodeSendLeaveETA(t *testing.T) {
 	t.Skip("FIXME")
-	s := startNetwork(t)
-	defer s.stopNetwork()
+	s := startNetworkSuite(t)
+	defer s.stopNetworkSuite()
 
 	t.Skip("fix testcase in TESTNET 2.0")
 
@@ -282,8 +273,8 @@ func TestNodeComeAfterAnotherNodeSendLeaveETA(t *testing.T) {
 
 func TestDiscoveryDown(t *testing.T) {
 	t.Skip("FIXME")
-	s := startNetwork(t)
-	defer s.stopNetwork()
+	s := startNetworkSuite(t)
+	defer s.stopNetworkSuite()
 
 	s.StopNode(s.bootstrapNodes[0])
 	s.waitForConsensusExcept(2, s.bootstrapNodes[0].id)
@@ -302,8 +293,8 @@ func flushNodeKeeper(keeper network.NodeKeeper) {
 
 func TestDiscoveryRestart(t *testing.T) {
 	t.Skip("FIXME")
-	s := startNetwork(t)
-	defer s.stopNetwork()
+	s := startNetworkSuite(t)
+	defer s.stopNetworkSuite()
 
 	s.waitForConsensus(2)
 
@@ -331,8 +322,8 @@ func TestDiscoveryRestart(t *testing.T) {
 
 func TestDiscoveryRestartNoWait(t *testing.T) {
 	t.Skip("FIXME")
-	s := startNetwork(t)
-	defer s.stopNetwork()
+	s := startNetworkSuite(t)
+	defer s.stopNetworkSuite()
 
 	s.waitForConsensus(2)
 

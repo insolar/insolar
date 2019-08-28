@@ -67,7 +67,7 @@ type bootstrapSuite struct {
 	testSuite
 }
 
-func (s *bootstrapSuite) SetupTest() {
+func (s *bootstrapSuite) Setup() {
 	var err error
 	s.pulsar, err = NewTestPulsar(reqTimeoutMs*10, pulseDelta*10)
 	require.NoError(s.t, err)
@@ -95,8 +95,8 @@ func (s *bootstrapSuite) SetupTest() {
 	require.NoError(s.t, err)
 }
 
-func (s *bootstrapSuite) TearDownTest() {
-	inslogger.FromContext(s.ctx).Info("stopNetwork")
+func (s *bootstrapSuite) stopBootstrapSuite() {
+	inslogger.FromContext(s.ctx).Info("stopNetworkSuite")
 
 	suiteLogger.Info("Stop bootstrap nodes")
 	for _, n := range s.bootstrapNodes {
@@ -119,17 +119,17 @@ func newBootstraptSuite(t *testing.T, bootstrapCount int) *bootstrapSuite {
 	}
 }
 
-func testBootstrap(t *testing.T) *bootstrapSuite {
+func startBootstrapSuite(t *testing.T) *bootstrapSuite {
 	t.Skip("Skip until fix consensus bugs")
 
 	s := newBootstraptSuite(t, 11)
-	s.SetupTest()
+	s.Setup()
 	return s
 }
 
 func TestBootstrap(t *testing.T) {
-	s := testBootstrap(t)
-	defer s.TearDownTest()
+	s := startBootstrapSuite(t)
+	defer s.stopBootstrapSuite()
 
 	s.StartNodesNetwork(s.bootstrapNodes)
 
