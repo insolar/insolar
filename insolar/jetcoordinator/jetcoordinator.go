@@ -148,7 +148,7 @@ func (jc *Coordinator) QueryRole(
 		return []insolar.Reference{*n}, nil
 	}
 
-	inslogger.FromContext(ctx).Fatal("unexpected role")
+	inslogger.FromContext(ctx).Panicf("unexpected role %v", role.String())
 	return nil, nil
 }
 

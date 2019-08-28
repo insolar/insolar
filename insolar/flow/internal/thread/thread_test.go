@@ -57,7 +57,7 @@ func TestThread_Procedure_CancelledBefore(t *testing.T) {
 	require.Equal(t, err, flow.ErrCancelled)
 }
 
-func TestThread_Procedure_LoggerFailProcedureError(t *testing.T) {
+func TestThread_Procedure_NilProcedureError(t *testing.T) {
 	t.Parallel()
 	thread := Thread{}
 	require.Panics(t, func() {
