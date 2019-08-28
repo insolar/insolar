@@ -182,7 +182,7 @@ func randomEntropy() [64]byte {
 }
 
 func newPulsePacket(t *testing.T) *packet.ReceivedPacket {
-	refs := gen.References(2)
+	refs := gen.UniqueReferences(2)
 	sender, err := host.NewHostN("127.0.0.1:3344", refs[0])
 	require.NoError(t, err)
 	receiver, err := host.NewHostN("127.0.0.1:3345", refs[1])
@@ -193,7 +193,7 @@ func newPulsePacket(t *testing.T) *packet.ReceivedPacket {
 func TestProcessIncorrectPacket(t *testing.T) {
 	controller := &pulseController{}
 	request := newPulsePacket(t)
-	request.SetRequest(&packet.Ping{})
+	request.SetRequest(&packet.RPCRequest{})
 	_, err := controller.processPulse(context.Background(), request)
 	assert.Error(t, err)
 	request.SetResponse(&packet.BasicResponse{Success: true})

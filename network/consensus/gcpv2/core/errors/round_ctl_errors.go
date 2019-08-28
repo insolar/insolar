@@ -55,7 +55,7 @@ import (
 	"strings"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensus/common/pulse"
+	"github.com/insolar/insolar/pulse"
 )
 
 func NewPulseRoundMismatchError(pn pulse.Number, msg string) error {

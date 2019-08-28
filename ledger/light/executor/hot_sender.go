@@ -80,26 +80,33 @@ func (m *HotSenderDefault) filterAndGroupIndexes(
 		return nil, errors.Wrap(err, "failed to fetch starting pulse for getting filaments")
 	}
 
+	byJet := map[insolar.JetID][]record.Index{}
+
 	// filter out inactive indexes
-	indexes := m.indexAccessor.ForPulse(ctx, currentPulse)
-	// filtering in-place (optimization to avoid double allocation)
-	filtered := indexes[:0]
-	for _, idx := range indexes {
-		if idx.LifelineLastUsed < limitPN.PulseNumber && idx.Lifeline.EarliestOpenRequest == nil {
-			continue
+	indexes, err := m.indexAccessor.ForPulse(ctx, currentPulse)
+	if err == nil {
+
+		// filtering in-place (optimization to avoid double allocation)
+		filtered := indexes[:0]
+		for _, idx := range indexes {
+			if idx.LifelineLastUsed < limitPN.PulseNumber && idx.Lifeline.EarliestOpenRequest == nil {
+				continue
+			}
+			filtered = append(filtered, record.Index{
+				Lifeline:         idx.Lifeline,
+				ObjID:            idx.ObjID,
+				LifelineLastUsed: idx.LifelineLastUsed,
+			})
 		}
-		filtered = append(filtered, record.Index{
-			Lifeline:         idx.Lifeline,
-			ObjID:            idx.ObjID,
-			LifelineLastUsed: idx.LifelineLastUsed,
-		})
+
+		for _, idx := range filtered {
+			jetID, _ := m.jetAccessor.ForID(ctx, newPulse, idx.ObjID)
+			byJet[jetID] = append(byJet[jetID], idx)
+		}
+	} else if err != object.ErrIndexNotFound {
+		inslogger.FromContext(ctx).Errorf("Can't get indexes for pulse: %s", err)
 	}
 
-	byJet := map[insolar.JetID][]record.Index{}
-	for _, idx := range filtered {
-		jetID, _ := m.jetAccessor.ForID(ctx, newPulse, idx.ObjID)
-		byJet[jetID] = append(byJet[jetID], idx)
-	}
 	return byJet, nil
 }
 
@@ -148,17 +155,16 @@ func (m *HotSenderDefault) sendForJet(
 	jetID insolar.JetID,
 	pn insolar.PulseNumber,
 	indexes []record.Index,
-	block drop.Drop,
+	drop drop.Drop,
 ) error {
 	ctx, span := instracer.StartSpan(ctx, "hot_sender.send_hot")
 	defer span.End()
 
 	stats.Record(ctx, statHotObjectsTotal.M(int64(len(indexes))))
 
-	buf := drop.MustEncode(&block)
 	msg, err := payload.NewMessage(&payload.HotObjects{
 		JetID:   jetID,
-		Drop:    buf,
+		Drop:    drop,
 		Pulse:   pn,
 		Indexes: indexes,
 	})

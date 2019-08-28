@@ -56,7 +56,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/insolar/insolar/network/consensus/common/longbits"
+	"github.com/insolar/insolar/longbits"
 	"github.com/stretchr/testify/require"
 )
 

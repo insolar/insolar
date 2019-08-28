@@ -123,25 +123,25 @@ func (h *HeavyReplicatorDefault) sync(ctx context.Context) {
 		}
 
 		logger.Debug("heavy replicator storing drop")
-		dr, err := storeDrop(ctx, h.drops, msg.Drop)
+		err := storeDrop(ctx, h.drops, msg.Drop)
 		if err != nil {
 			panic(errors.Wrap(err, "heavy replicator failed to store drop"))
 		}
-		logger = logger.WithField("drop_pulse", dr.Pulse)
+		logger = logger.WithField("drop_pulse", msg.Drop.Pulse)
 
 		logger.Debug("heavy replicator storing drop confirmation")
-		if err := h.keeper.AddDropConfirmation(ctx, dr.Pulse, dr.JetID, dr.Split); err != nil {
-			panic(errors.Wrapf(err, "heavy replicator failed to add drop confirmation jet=%v", dr.JetID.DebugString()))
+		if err := h.keeper.AddDropConfirmation(ctx, msg.Drop.Pulse, msg.Drop.JetID, msg.Drop.Split); err != nil {
+			panic(errors.Wrapf(err, "heavy replicator failed to add drop confirmation jet=%v", msg.Drop.JetID.DebugString()))
 		}
 
 		logger.Debug("heavy replicator update jets")
-		err = h.jets.Update(ctx, dr.Pulse, true, dr.JetID)
+		err = h.jets.Update(ctx, msg.Drop.Pulse, true, msg.Drop.JetID)
 		if err != nil {
-			panic(errors.Wrapf(err, "heavy replicator failed to update jet %s", dr.JetID.DebugString()))
+			panic(errors.Wrapf(err, "heavy replicator failed to update jet %s", msg.Drop.JetID.DebugString()))
 		}
 
 		logger.Debug("heavy replicator finalize pulse")
-		FinalizePulse(ctx, h.pulseCalculator, h.backuper, h.keeper, h.indexes, dr.Pulse)
+		FinalizePulse(ctx, h.pulseCalculator, h.backuper, h.keeper, h.indexes, msg.Drop.Pulse)
 
 		logger.Info("heavy replicator stops replication")
 	}
@@ -178,19 +178,14 @@ func storeIndexes(
 func storeDrop(
 	ctx context.Context,
 	drops drop.Modifier,
-	rawDrop []byte,
-) (*drop.Drop, error) {
-	d, err := drop.Decode(rawDrop)
+	drop drop.Drop,
+) error {
+	err := drops.Set(ctx, drop)
 	if err != nil {
-		inslogger.FromContext(ctx).Error(err)
-		return nil, err
-	}
-	err = drops.Set(ctx, *d)
-	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return d, nil
+	return nil
 }
 
 func storeRecords(

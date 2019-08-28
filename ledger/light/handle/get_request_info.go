@@ -24,7 +24,6 @@ import (
 
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/light/proc"
 )
 
@@ -50,29 +49,26 @@ func (s *GetRequestInfo) Present(ctx context.Context, f flow.Flow) error {
 		return fmt.Errorf("unexpected payload type %T", pl)
 	}
 
-	pulse := msg.Pulse
-	ctx, _ = inslogger.WithField(ctx, "object", msg.ObjectID.DebugString())
-
-	jet := proc.NewFetchJet(msg.ObjectID, pulse, s.meta, false)
+	jet := proc.NewFetchJet(msg.ObjectID, msg.Pulse, s.meta, false)
 	s.dep.FetchJet(jet)
 	if err := f.Procedure(ctx, jet, false); err != nil {
 		return err
 	}
 	objJetID := jet.Result.Jet
 
-	hot := proc.NewWaitHot(objJetID, pulse, s.meta)
+	hot := proc.NewWaitHot(objJetID, msg.Pulse, s.meta)
 	s.dep.WaitHot(hot)
 	if err := f.Procedure(ctx, hot, false); err != nil {
 		return err
 	}
 
-	ensureIdx := proc.NewEnsureIndex(msg.ObjectID, objJetID, s.meta)
+	ensureIdx := proc.NewEnsureIndex(msg.ObjectID, objJetID, s.meta, msg.Pulse)
 	s.dep.EnsureIndex(ensureIdx)
 	if err := f.Procedure(ctx, ensureIdx, false); err != nil {
 		return err
 	}
 
-	request := proc.NewSendRequestInfo(s.meta, msg.ObjectID, msg.RequestID, pulse)
+	request := proc.NewSendRequestInfo(s.meta, msg.ObjectID, msg.RequestID, msg.Pulse)
 	s.dep.GetRequestInfo(request)
 	return f.Procedure(ctx, request, false)
 }

@@ -20,7 +20,6 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
@@ -34,49 +33,40 @@ type headTruncater interface {
 // DBRollback is used for rollback all data which is not finalized
 // It removes all data which was added after pulse which we consider as finalized
 type DBRollback struct {
-	dbs             []headTruncater
-	jetKeeper       JetKeeper
-	pulseCalculator pulse.Calculator
+	dbs       []headTruncater
+	jetKeeper JetKeeper
 }
 
-func NewDBRollback(jetKeeper JetKeeper, pulseCalculator pulse.Calculator, dbs ...headTruncater) *DBRollback {
+func NewDBRollback(jetKeeper JetKeeper, dbs ...headTruncater) *DBRollback {
 
 	return &DBRollback{
-		jetKeeper:       jetKeeper,
-		dbs:             dbs,
-		pulseCalculator: pulseCalculator,
+		jetKeeper: jetKeeper,
+		dbs:       dbs,
 	}
 }
 
 func (d *DBRollback) Start(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
-	lastSincPulseNumber := d.jetKeeper.TopSyncPulse()
+	lastSyncPulseNumber := d.jetKeeper.TopSyncPulse()
 
-	logger.Debug("[ DBRollback.Start ] last finalized pulse number: ", lastSincPulseNumber)
-	if lastSincPulseNumber == insolar.GenesisPulse.PulseNumber {
+	logger.Debug("[ DBRollback.Start ] last finalized pulse number: ", lastSyncPulseNumber)
+	if lastSyncPulseNumber == insolar.GenesisPulse.PulseNumber {
 		logger.Debug("[ DBRollback.Start ] No finalized data. Nothing done")
 		return nil
 	}
 
-	pn, err := d.pulseCalculator.Forwards(ctx, lastSincPulseNumber, 1)
-	if err != nil {
-		if err == pulse.ErrNotFound {
-			inslogger.FromContext(ctx).Debug("No pulse after: ", lastSincPulseNumber, ". Nothing done.")
-			return nil
-		}
-		return errors.Wrap(err, "pulseCalculator.Forwards returns error")
-	}
+	nextPulse := lastSyncPulseNumber + 1
 
 	for idx, db := range d.dbs {
 		if indexDB, ok := db.(object.IndexModifier); ok {
-			if err := indexDB.UpdateLastKnownPulse(ctx, lastSincPulseNumber); err != nil {
+			if err := indexDB.UpdateLastKnownPulse(ctx, lastSyncPulseNumber); err != nil {
 				return errors.Wrap(err, "can't update last sync pulse")
 			}
 		}
 
-		err := db.TruncateHead(ctx, pn.PulseNumber)
+		err := db.TruncateHead(ctx, nextPulse)
 		if err != nil {
-			return errors.Wrapf(err, "can't truncate %d db to pulse: %d", idx, pn.PulseNumber)
+			return errors.Wrapf(err, "can't truncate %d db since pulse: %d", idx, nextPulse)
 		}
 	}
 

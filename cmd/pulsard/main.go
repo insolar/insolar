@@ -24,7 +24,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/insolar/insolar/network/consensus/common/pulse"
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
 
@@ -42,6 +41,7 @@ import (
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
+	"github.com/insolar/insolar/pulse"
 	"github.com/insolar/insolar/version"
 )
 
@@ -116,8 +116,8 @@ func main() {
 }
 
 func initPulsar(ctx context.Context, cfg configuration.Configuration) (*component.Manager, *pulsar.Pulsar) {
-	fmt.Println("Starts with configuration:\n", configuration.ToString(cfg))
 	fmt.Println("Version: ", version.GetFullVersion())
+	fmt.Println("Starts with configuration:\n", configuration.ToString(cfg))
 
 	keyStore, err := keystore.NewKeyStore(cfg.KeysPath)
 	if err != nil {

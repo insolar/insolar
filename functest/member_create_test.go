@@ -22,13 +22,15 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/insolar/insolar/testutils/launchnet"
+
 	"github.com/stretchr/testify/require"
 )
 
 func TestMemberCreate(t *testing.T) {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
-	result, err := signedRequest(t, member, "member.create", nil)
+	result, err := signedRequest(t, launchnet.TestRPCUrlPublic, member, "member.create", nil)
 	require.NoError(t, err)
 	output, ok := result.(map[string]interface{})
 	require.True(t, ok)
@@ -38,20 +40,20 @@ func TestMemberCreate(t *testing.T) {
 func TestMemberCreateWithBadKey(t *testing.T) {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
-	member.pubKey = "fake"
-	_, err = signedRequestWithEmptyRequestRef(t, member, "member.create", nil)
+	member.PubKey = "fake"
+	_, err = signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, member, "member.create", nil)
 	require.Error(t, err)
-	require.Contains(t, err.Error(), fmt.Sprintf("problems with decoding. Key - %s", member.pubKey))
+	require.Contains(t, err.Error(), fmt.Sprintf("problems with decoding. Key - %s", member.PubKey))
 }
 
 func TestMemberCreateWithSamePublicKey(t *testing.T) {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
 
-	_, err = signedRequest(t, member, "member.create", nil)
+	_, err = signedRequest(t, launchnet.TestRPCUrlPublic, member, "member.create", nil)
 	require.NoError(t, err)
 
-	_, err = signedRequestWithEmptyRequestRef(t, member, "member.create", nil)
+	_, err = signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, member, "member.create", nil)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "failed to set reference in public key shard: can't set reference because this key already exists")
 }

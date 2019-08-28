@@ -122,23 +122,26 @@ func (g *Base) NewGateway(ctx context.Context, state insolar.NetworkState) netwo
 		g.Self = newWaitMajority(g)
 	case insolar.WaitMinRoles:
 		g.Self = newWaitMinRoles(g)
+	case insolar.WaitPulsar:
+		g.Self = newWaitPulsar(g)
 	default:
-		panic("Try to switch network to unknown state. Memory of process is inconsistent.")
+		inslogger.FromContext(ctx).Panic("Try to switch network to unknown state. Memory of process is inconsistent.")
 	}
 	return g.Self
 }
 
 func (g *Base) Init(ctx context.Context) error {
-	g.HostNetwork.RegisterRequestHandler(types.Authorize, g.HandleNodeAuthorizeRequest) // validate cert
-	g.HostNetwork.RegisterRequestHandler(types.Bootstrap, g.HandleNodeBootstrapRequest) // provide joiner claim
+	g.HostNetwork.RegisterRequestHandler(
+		types.Authorize, g.discoveryMiddleware(g.announceMiddleware(g.HandleNodeAuthorizeRequest)), // validate cert
+	)
+	g.HostNetwork.RegisterRequestHandler(
+		types.Bootstrap, g.announceMiddleware(g.HandleNodeBootstrapRequest), // provide joiner claim
+	)
 	g.HostNetwork.RegisterRequestHandler(types.UpdateSchedule, g.HandleUpdateSchedule)
 	g.HostNetwork.RegisterRequestHandler(types.Reconnect, g.HandleReconnect)
-	g.HostNetwork.RegisterRequestHandler(types.Ping, func(ctx context.Context, req network.ReceivedPacket) (network.Packet, error) {
-		return g.HostNetwork.BuildResponse(ctx, req, &packet.Ping{}), nil
-	})
 
 	g.createCandidateProfile()
-	g.bootstrapETA = 0
+	g.bootstrapETA = g.Options.BootstrapTimeout
 	return nil
 }
 
@@ -148,9 +151,9 @@ func (g *Base) OnPulseFromPulsar(ctx context.Context, pu insolar.Pulse, original
 
 func (g *Base) OnPulseFromConsensus(ctx context.Context, pu insolar.Pulse) {
 	g.NodeKeeper.MoveSyncToActive(ctx, pu.PulseNumber)
-	err := g.PulseAppender.(*storage.MemoryPulseStorage).AppendPulse(ctx, pu)
+	err := g.PulseAppender.AppendPulse(ctx, pu)
 	if err != nil {
-		panic("failed to append pulse:" + err.Error())
+		inslogger.FromContext(ctx).Panic("failed to append pulse: ", err.Error())
 	}
 
 	nodes := g.NodeKeeper.GetAccessor(pu.PulseNumber).GetActiveNodes()
@@ -163,9 +166,7 @@ func (g *Base) UpdateState(ctx context.Context, pulseNumber insolar.PulseNumber,
 	g.NodeKeeper.SetCloudHash(pulseNumber, cloudStateHash)
 }
 
-func (g *Base) NetworkOperable() bool {
-	return false
-}
+func (g *Base) BeforeRun(ctx context.Context, pulse insolar.Pulse) {}
 
 // Auther casts us to Auther or obtain it in another way
 func (g *Base) Auther() network.Auther {
@@ -195,12 +196,64 @@ func (g *Base) ValidateCert(ctx context.Context, authCert insolar.AuthorizationC
 
 // ============= Bootstrap =======
 
-func (g *Base) HandleNodeBootstrapRequest(ctx context.Context, request network.ReceivedPacket) (network.Packet, error) {
+func (g *Base) checkCanAnnounceCandidate(ctx context.Context) error {
+	// 1. Current node is heavy:
+	// 		could announce candidate when network is initialized
+	// 		NB: announcing in WaitConsensus state is allowed
+	// 2. Otherwise:
+	// 		could announce candidate when heavy node found in *active* list and initial consensus passed
+	// 		NB: announcing in WaitConsensus state is *NOT* allowed
+
 	state := g.Gatewayer.Gateway().GetState()
-	if g.NodeKeeper.GetOrigin().Role() != insolar.StaticRoleHeavyMaterial && state <= insolar.WaitConsensus {
-		return nil, errors.Errorf("can't handle bootstrap in state: %s", state.String())
+	origin := g.NodeKeeper.GetOrigin()
+
+	if origin.Role() == insolar.StaticRoleHeavyMaterial && state >= insolar.WaitConsensus {
+		return nil
 	}
 
+	bootstrapPulse := GetBootstrapPulse(ctx, g.PulseAccessor)
+	nodes := g.NodeKeeper.GetAccessor(bootstrapPulse.PulseNumber).GetActiveNodes()
+
+	var hasHeavy bool
+	for _, n := range nodes {
+		if n.Role() == insolar.StaticRoleHeavyMaterial {
+			hasHeavy = true
+			break
+		}
+	}
+
+	if hasHeavy && state > insolar.WaitConsensus {
+		return nil
+	}
+
+	return errors.Errorf(
+		"can't announce candidate: role=%v pulse=%d hasHeavy=%t state=%s",
+		origin.Role(),
+		bootstrapPulse.PulseNumber,
+		hasHeavy,
+		state,
+	)
+}
+
+func (g *Base) announceMiddleware(handler network.RequestHandler) network.RequestHandler {
+	return func(ctx context.Context, request network.ReceivedPacket) (network.Packet, error) {
+		if err := g.checkCanAnnounceCandidate(ctx); err != nil {
+			return nil, err
+		}
+		return handler(ctx, request)
+	}
+}
+
+func (g *Base) discoveryMiddleware(handler network.RequestHandler) network.RequestHandler {
+	return func(ctx context.Context, request network.ReceivedPacket) (network.Packet, error) {
+		if !network.OriginIsDiscovery(g.CertificateManager.GetCertificate()) {
+			return nil, errors.New("only discovery nodes could authorize other nodes, this is not a discovery node")
+		}
+		return handler(ctx, request)
+	}
+}
+
+func (g *Base) HandleNodeBootstrapRequest(ctx context.Context, request network.ReceivedPacket) (network.Packet, error) {
 	if request.GetRequest() == nil || request.GetRequest().GetBootstrap() == nil {
 		return nil, errors.Errorf("process bootstrap: got invalid protobuf request message: %s", request)
 	}
@@ -225,7 +278,13 @@ func (g *Base) HandleNodeBootstrapRequest(ctx context.Context, request network.R
 	}
 
 	profile := adapters.Candidate(data.CandidateProfile).StaticProfile(g.KeyProcessor)
-	g.ConsensusController.AddJoinCandidate(candidate{profile, profile.GetExtension()})
+
+	err = g.ConsensusController.AddJoinCandidate(candidate{profile, profile.GetExtension()})
+	if err != nil {
+		inslogger.FromContext(ctx).Warnf("Rejected bootstrap request from node %s: %s", request.GetSender(), err.Error())
+		return g.HostNetwork.BuildResponse(ctx, request, &packet.BootstrapResponse{Code: packet.Reject}), nil
+	}
+
 	inslogger.FromContext(ctx).Infof("=== AddJoinCandidate id = %d, address = %s ", data.CandidateProfile.ShortID, data.CandidateProfile.Address)
 
 	return g.HostNetwork.BuildResponse(ctx, request,
@@ -242,10 +301,6 @@ func validateTimestamp(timestamp int64, delta time.Duration) bool {
 }
 
 func (g *Base) HandleNodeAuthorizeRequest(ctx context.Context, request network.ReceivedPacket) (network.Packet, error) {
-	if !network.OriginIsDiscovery(g.CertificateManager.GetCertificate()) {
-		return nil, errors.New("only discovery nodes could authorize other nodes, this is not a discovery node")
-	}
-
 	if request.GetRequest() == nil || request.GetRequest().GetAuthorize() == nil {
 		return nil, errors.Errorf("process authorize: got invalid protobuf request message: %s", request)
 	}

@@ -56,32 +56,38 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 )
 
-func NewBriefJoinerAnnouncement(np profiles.StaticProfile, announcerID insolar.ShortNodeID) *JoinerAnnouncement {
+func NewBriefJoinerAnnouncement(np profiles.StaticProfile, announcerID insolar.ShortNodeID, joinerSecret cryptkit.DigestHolder) *JoinerAnnouncement {
 
 	return &JoinerAnnouncement{
 		privStaticProfile: np,
 		announcerID:       announcerID,
+		joinerSecret:      joinerSecret,
 		joinerSignature:   np.GetBriefIntroSignedDigest().GetSignatureHolder(),
 		disableFull:       true,
 	}
 }
 
 func NewBriefJoinerAnnouncementByFull(fp JoinerAnnouncementReader) JoinerAnnouncementReader {
-	return &fullIntroduction{fp.GetBriefIntroduction(), nil}
+	return &fullIntroduction{
+		fp.GetBriefIntroduction(),
+		nil,
+		fp.GetJoinerIntroducedByID(),
+	}
 }
 
-func NewFullJoinerAnnouncement(np profiles.StaticProfile, announcerID insolar.ShortNodeID) *JoinerAnnouncement {
+func NewFullJoinerAnnouncement(np profiles.StaticProfile, announcerID insolar.ShortNodeID, joinerSecret cryptkit.DigestHolder) *JoinerAnnouncement {
 
 	if np.GetExtension() == nil {
 		panic("illegal value")
 	}
-	return NewAnyJoinerAnnouncement(np, announcerID)
+	return NewAnyJoinerAnnouncement(np, announcerID, joinerSecret)
 }
 
-func NewAnyJoinerAnnouncement(np profiles.StaticProfile, announcerID insolar.ShortNodeID) *JoinerAnnouncement {
+func NewAnyJoinerAnnouncement(np profiles.StaticProfile, announcerID insolar.ShortNodeID, joinerSecret cryptkit.DigestHolder) *JoinerAnnouncement {
 	return &JoinerAnnouncement{
 		privStaticProfile: np,
 		announcerID:       announcerID,
+		joinerSecret:      joinerSecret,
 		joinerSignature:   np.GetBriefIntroSignedDigest().GetSignatureHolder(),
 	}
 }
@@ -94,11 +100,12 @@ type JoinerAnnouncement struct {
 	privStaticProfile
 	disableFull     bool
 	announcerID     insolar.ShortNodeID
+	joinerSecret    cryptkit.DigestHolder
 	joinerSignature cryptkit.SignatureHolder
 }
 
 func (p *JoinerAnnouncement) GetJoinerIntroducedByID() insolar.ShortNodeID {
-	return insolar.AbsentShortNodeID
+	return p.announcerID
 }
 
 func (p *JoinerAnnouncement) HasFullIntro() bool {
@@ -109,24 +116,29 @@ func (p *JoinerAnnouncement) GetFullIntroduction() FullIntroductionReader {
 	if !p.HasFullIntro() {
 		return nil
 	}
-	return &fullIntroduction{p.privStaticProfile, p.privStaticProfile.GetExtension()}
+	return &fullIntroduction{
+		p.privStaticProfile,
+		p.privStaticProfile.GetExtension(),
+		p.announcerID,
+	}
 }
 
 func (p *JoinerAnnouncement) GetBriefIntroduction() BriefIntroductionReader {
 	return p
 }
 
-func (p *JoinerAnnouncement) GetAnnouncerID() insolar.ShortNodeID {
-	return p.announcerID
+func (p *JoinerAnnouncement) GetDecryptedSecret() cryptkit.DigestHolder {
+	return p.joinerSecret
 }
 
 type fullIntroduction struct {
 	profiles.BriefCandidateProfile
 	profiles.StaticProfileExtension
+	announcerID insolar.ShortNodeID
 }
 
 func (p *fullIntroduction) GetJoinerIntroducedByID() insolar.ShortNodeID {
-	return insolar.AbsentShortNodeID
+	return p.announcerID
 }
 
 func (p *fullIntroduction) GetBriefIntroduction() BriefIntroductionReader {

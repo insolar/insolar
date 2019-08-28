@@ -24,44 +24,26 @@ import (
 	"github.com/insolar/insolar/logicrunner/builtin/foundation/safemath"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/account"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/member"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/migrationadmin"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/wallet"
 
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 )
 
-type status string
-
 const (
-	// TODO: https://insolar.atlassian.net/browse/WLT-768
-	// day   = 24 * 60 * 60
-	day   = 10
-	month = 30 * day
-
-	vestingPeriodInDays = 360
-
-	confirms uint = 3
-	// TODO: https://insolar.atlassian.net/browse/WLT-768
-	// offsetDepositPulse insolar.PulseNumber = 6 * month
-	offsetDepositPulse insolar.PulseNumber = 10
-
-	statusOpen    status = "Open"
-	statusHolding status = "Holding"
-	statusClose   status = "Close"
-
 	XNS = "XNS"
 )
 
 // Deposit is like wallet. It holds migrated money.
 type Deposit struct {
 	foundation.BaseContract
-	Balance                 string              `json:"balance"`
-	PulseDepositCreate      insolar.PulseNumber `json:"timestamp"`
-	PulseDepositHold        insolar.PulseNumber `json:"holdStartDate"`
-	PulseDepositUnHold      insolar.PulseNumber `json:"holdReleaseDate"`
-	MigrationDaemonConfirms [3]string           `json:"confirmerReferences"`
-	Amount                  string              `json:"amount"`
-	Bonus                   string              `json:"bonus"`
-	TxHash                  string              `json:"ethTxHash"`
+	Balance                 string               `json:"balance"`
+	PulseDepositUnHold      insolar.PulseNumber  `json:"holdReleaseDate"`
+	MigrationDaemonConfirms foundation.StableMap `json:"confirmerReferences"`
+	Amount                  string               `json:"amount"`
+	TxHash                  string               `json:"ethTxHash"`
+	LokupInPulses           int64                `json:"lokupInPulses"`
+	VestingInPulses         int64                `json:"vestingInPulses"`
 }
 
 // GetTxHash gets transaction hash.
@@ -76,23 +58,26 @@ func (d Deposit) GetAmount() (string, error) {
 	return d.Amount, nil
 }
 
-// New creates new deposit.
-func New(migrationDaemonConfirms [3]string, txHash string, amount string) (*Deposit, error) {
-	currentPulse, err := foundation.GetPulseNumber()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get current pulse: %s", err.Error())
-	}
-	return &Deposit{
-		Balance:                 "0",
-		PulseDepositCreate:      currentPulse,
-		MigrationDaemonConfirms: migrationDaemonConfirms,
-		Amount:                  amount,
-		TxHash:                  txHash,
-	}, nil
+// Return pulse of unhold deposit.
+// ins:immutable
+func (d *Deposit) GetPulseUnHold() (insolar.PulseNumber, error) {
+	return d.PulseDepositUnHold, nil
 }
 
-func calculateUnHoldPulse(currentPulse insolar.PulseNumber) insolar.PulseNumber {
-	return currentPulse + offsetDepositPulse
+// New creates new deposit.
+func New(migrationDaemonRef insolar.Reference, txHash string, amount string, lokup int64, vesting int64) (*Deposit, error) {
+
+	migrationDaemonConfirms := make(foundation.StableMap)
+	migrationDaemonConfirms[migrationDaemonRef.String()] = amount
+
+	return &Deposit{
+		Balance:                 "0",
+		MigrationDaemonConfirms: migrationDaemonConfirms,
+		Amount:                  "0",
+		TxHash:                  txHash,
+		VestingInPulses:         vesting,
+		LokupInPulses:           lokup,
+	}, nil
 }
 
 // Itself gets deposit information.
@@ -102,55 +87,64 @@ func (d Deposit) Itself() (interface{}, error) {
 }
 
 // Confirm adds confirm for deposit by migration daemon.
-func (d *Deposit) Confirm(migrationDaemonIndex int, migrationDaemonRef string, txHash string, amountStr string) error {
+func (d *Deposit) Confirm(migrationDaemonRef string, txHash string, amountStr string) error {
 	if txHash != d.TxHash {
 		return fmt.Errorf("transaction hash is incorrect")
 	}
-
-	inputAmount := new(big.Int)
-	inputAmount, ok := inputAmount.SetString(amountStr, 10)
-	if !ok {
-		return fmt.Errorf("failed to parse input amount")
+	if _, ok := d.MigrationDaemonConfirms[migrationDaemonRef]; ok {
+		return fmt.Errorf("confirm from this migration daemon already exists: '%s' ", migrationDaemonRef)
 	}
-	depositAmount := new(big.Int)
-	depositAmount, ok = depositAmount.SetString(d.Amount, 10)
-	if !ok {
-		return fmt.Errorf("failed to parse deposit amount")
+	d.MigrationDaemonConfirms[migrationDaemonRef] = amountStr
+
+	if len(d.MigrationDaemonConfirms) > 2 {
+		migrationAdminContract := migrationadmin.GetObject(foundation.GetMigrationAdmin())
+		activeDaemons, err := migrationAdminContract.GetActiveDaemons()
+		if err != nil {
+			return fmt.Errorf("failed to get list active daemons: %s", err.Error())
+		}
+		err = d.checkAmount(activeDaemons)
+		if err != nil {
+			return fmt.Errorf("failed to check amount in confirmation from migration daemon: '%s'", err.Error())
+		}
+		currentPulse, err := foundation.GetPulseNumber()
+		if err != nil {
+			return fmt.Errorf("failed to get current pulse: %s", err.Error())
+		}
+		d.Amount = amountStr
+		d.PulseDepositUnHold = currentPulse + insolar.PulseNumber(d.LokupInPulses)
+
+		ma := member.GetObject(foundation.GetMigrationAdminMember())
+		accountRef, err := ma.GetAccount(XNS)
+		if err != nil {
+			return fmt.Errorf("get account ref failed: %s", err.Error())
+		}
+		a := account.GetObject(*accountRef)
+		err = a.TransferToDeposit(amountStr, d.GetReference())
+		if err != nil {
+			return fmt.Errorf("failed to transfer from migration wallet to deposit: %s", err.Error())
+		}
 	}
+	return nil
+}
 
-	if (inputAmount).Cmp(depositAmount) != 0 {
-		return fmt.Errorf("deposit with this transaction hash has different amount")
+// Check amount field in confirmation from migration daemons.
+func (d *Deposit) checkAmount(activeDaemons []string) error {
+	if activeDaemons == nil || len(activeDaemons) == 0 {
+		return fmt.Errorf(" list with migration daemons member is empty ")
 	}
-
-	if d.MigrationDaemonConfirms[migrationDaemonIndex] != "" {
-		return fmt.Errorf("confirm from the '%v' migration daemon already exists; member '%s' already confirmed it", migrationDaemonIndex, migrationDaemonRef)
-	} else {
-		d.MigrationDaemonConfirms[migrationDaemonIndex] = migrationDaemonRef
-
-		n := 0
-		for _, c := range d.MigrationDaemonConfirms {
-			if c != "" {
-				n++
+	result := ""
+	for _, migrationRef := range activeDaemons {
+		if amount, ok := d.MigrationDaemonConfirms[migrationRef]; ok {
+			if result == "" {
+				result = amount
+				continue
+			}
+			if result != amount {
+				return fmt.Errorf(" several migration daemons send different amount  ")
 			}
 		}
-		if uint(n) >= confirms {
-			currentPulse, err := foundation.GetPulseNumber()
-			if err != nil {
-				return fmt.Errorf("failed to get current pulse: %s", err.Error())
-			}
-			d.PulseDepositHold = currentPulse
-			d.PulseDepositUnHold = calculateUnHoldPulse(currentPulse)
-
-			ma := member.GetObject(foundation.GetMigrationAdminMember())
-			accountRef, err := ma.GetAccount(XNS)
-			a := account.GetObject(*accountRef)
-			err = a.TransferToDeposit(amountStr, d.GetReference())
-			if err != nil {
-				return fmt.Errorf("failed to transfer from migration wallet to deposit: %s", err.Error())
-			}
-		}
-		return nil
 	}
+	return nil
 }
 
 func (d *Deposit) canTransfer(transferAmount *big.Int) error {
@@ -172,7 +166,7 @@ func (d *Deposit) canTransfer(transferAmount *big.Int) error {
 		return fmt.Errorf("hold period didn't end")
 	}
 
-	spentPeriodInDays := big.NewInt(int64((currentPulse - d.PulseDepositUnHold) / day))
+	spentPeriodInPulses := big.NewInt(int64(currentPulse - d.PulseDepositUnHold))
 	amount, ok := new(big.Int).SetString(d.Amount, 10)
 	if !ok {
 		return fmt.Errorf("can't parse derposit amount")
@@ -184,8 +178,8 @@ func (d *Deposit) canTransfer(transferAmount *big.Int) error {
 
 	// How much can we transfer for this time
 	availableForNow := new(big.Int).Div(
-		new(big.Int).Mul(amount, spentPeriodInDays),
-		big.NewInt(vestingPeriodInDays),
+		new(big.Int).Mul(amount, spentPeriodInPulses),
+		big.NewInt(d.VestingInPulses),
 	)
 
 	if new(big.Int).Sub(amount, availableForNow).Cmp(

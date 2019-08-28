@@ -35,10 +35,6 @@ func (t *PendingExecutionToken) Type() insolar.DelegationTokenType {
 
 func (t *PendingExecutionToken) Verify(parcel insolar.Parcel) (bool, error) {
 	switch mt := parcel.Message().Type(); mt {
-
-	//TODO: stab should start verification
-	case insolar.TypeCallMethod:
-		return false, nil
 	default:
 		return false, errors.Errorf("Message of type %s can't be delegated with %s token", t.Type(), mt)
 	}

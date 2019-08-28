@@ -30,7 +30,6 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/contractrequester"
 	"github.com/insolar/insolar/cryptography"
-	"github.com/insolar/insolar/genesisdataprovider"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/delegationtoken"
@@ -46,7 +45,6 @@ import (
 	"github.com/insolar/insolar/logicrunner/logicexecutor"
 	"github.com/insolar/insolar/logicrunner/machinesmanager"
 	"github.com/insolar/insolar/logicrunner/pulsemanager"
-	"github.com/insolar/insolar/messagebus"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/servicenetwork"
@@ -139,16 +137,6 @@ func initComponents(
 	terminationHandler := termination.NewHandler(nw)
 
 	delegationTokenFactory := delegationtoken.NewDelegationTokenFactory()
-	parcelFactory := messagebus.NewParcelFactory()
-
-	messageBus, err := messagebus.NewMessageBus(cfg)
-	checkError(ctx, err, "failed to start MessageBus")
-
-	genesisDataProvider, err := genesisdataprovider.New()
-	checkError(ctx, err, "failed to start GenesisDataProvider")
-
-	apiRunner, err := api.NewRunner(&cfg.APIRunner)
-	checkError(ctx, err, "failed to start ApiRunner")
 
 	metricsHandler, err := metrics.NewMetrics(ctx, cfg.Metrics, metrics.GetInsolarRegistry("virtual"), "virtual")
 	checkError(ctx, err, "failed to start Metrics")
@@ -163,10 +151,43 @@ func initComponents(
 	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner, publisher, b)
 	checkError(ctx, err, "failed to start LogicRunner")
 
-	contractRequester, err := contractrequester.New(logicRunner)
+	contractRequester, err := contractrequester.New()
 	checkError(ctx, err, "failed to start ContractRequester")
 
-	pm := pulsemanager.NewPulseManager(logicRunner.ResultsMatcher)
+	artifactsClient := artifacts.NewClient(b)
+
+	API, err := api.NewRunner(
+		&cfg.APIRunner,
+		certManager,
+		contractRequester,
+		nodeNetwork,
+		nw,
+		pulses,
+		artifactsClient,
+		jc,
+		nw,
+	)
+	checkError(ctx, err, "failed to start ApiRunner")
+
+	AdminAPIRunner, err := api.NewRunner(
+		&cfg.AdminAPIRunner,
+		certManager,
+		contractRequester,
+		nodeNetwork,
+		nw,
+		pulses,
+		artifactsClient,
+		jc,
+		nw,
+	)
+	checkError(ctx, err, "failed to start AdminAPIRunner")
+
+	APIWrapper := api.NewWrapper(API, AdminAPIRunner)
+
+	// TODO: remove this hack in INS-3341
+	contractRequester.LR = logicRunner
+
+	pm := pulsemanager.NewPulseManager()
 
 	cm.Register(
 		terminationHandler,
@@ -179,7 +200,7 @@ func initComponents(
 		logicexecutor.NewLogicExecutor(),
 		logicrunner.NewRequestsExecutor(),
 		machinesmanager.NewMachinesManager(),
-		apiRunner,
+		APIWrapper,
 		nodeNetwork,
 		nw,
 		pm,
@@ -188,19 +209,16 @@ func initComponents(
 	components := []interface{}{
 		b,
 		publisher,
-		messageBus,
 		contractRequester,
-		artifacts.NewClient(b),
+		artifactsClient,
 		artifacts.NewDescriptorsCache(),
 		jc,
 		pulses,
 		jet.NewStore(),
 		node.NewStorage(),
 		delegationTokenFactory,
-		parcelFactory,
 	}
 	components = append(components, []interface{}{
-		genesisDataProvider,
 		metricsHandler,
 		cryptographyService,
 		keyProcessor,
@@ -213,13 +231,12 @@ func initComponents(
 
 	pm.FlowDispatcher = logicRunner.FlowDispatcher
 
-	stopper := startWatermill(
+	return &cm, terminationHandler, startWatermill(
 		ctx, wmLogger, subscriber, b,
 		nw.SendMessageHandler,
 		logicRunner.FlowDispatcher.Process,
+		contractRequester.ReceiveResult,
 	)
-
-	return &cm, terminationHandler, stopper
 }
 
 func startWatermill(
@@ -227,7 +244,7 @@ func startWatermill(
 	logger watermill.LoggerAdapter,
 	sub message.Subscriber,
 	b *bus.Bus,
-	outHandler, inHandler message.NoPublishHandlerFunc,
+	outHandler, inHandler, resultsHandler message.NoPublishHandlerFunc,
 ) func() {
 	inRouter, err := message.NewRouter(message.RouterConfig{}, logger)
 	if err != nil {
@@ -237,6 +254,7 @@ func startWatermill(
 	if err != nil {
 		panic(err)
 	}
+
 	outRouter.AddNoPublisherHandler(
 		"OutgoingHandler",
 		bus.TopicOutgoing,
@@ -255,19 +273,16 @@ func startWatermill(
 		inHandler,
 	)
 
+	inRouter.AddNoPublisherHandler(
+		"IncomingRequestResultHandler",
+		bus.TopicIncomingRequestResults,
+		sub,
+		resultsHandler)
+
 	startRouter(ctx, inRouter)
 	startRouter(ctx, outRouter)
 
 	return stopWatermill(ctx, inRouter, outRouter)
-}
-
-func startRouter(ctx context.Context, router *message.Router) {
-	go func() {
-		if err := router.Run(ctx); err != nil {
-			inslogger.FromContext(ctx).Error("Error while running router", err)
-		}
-	}()
-	<-router.Running()
 }
 
 func stopWatermill(ctx context.Context, routers ...io.Closer) func() {
@@ -279,4 +294,13 @@ func stopWatermill(ctx context.Context, routers ...io.Closer) func() {
 			}
 		}
 	}
+}
+
+func startRouter(ctx context.Context, router *message.Router) {
+	go func() {
+		if err := router.Run(ctx); err != nil {
+			inslogger.FromContext(ctx).Error("Error while running router", err)
+		}
+	}()
+	<-router.Running()
 }

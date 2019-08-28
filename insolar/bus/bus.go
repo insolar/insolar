@@ -21,15 +21,15 @@ import (
 	"sync"
 	"time"
 
-	base58 "github.com/jbenet/go-base58"
+	"github.com/ThreeDotsLabs/watermill"
+	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/trace"
 
-	"github.com/ThreeDotsLabs/watermill"
-	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/bus/meta"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
@@ -45,28 +45,9 @@ const (
 
 	// TopicIncoming is topic for incoming calls
 	TopicIncoming = "TopicIncoming"
-)
 
-const (
-	// MetaPulse is key for Pulse
-	MetaPulse = "pulse"
-
-	// MetaType is key for Type
-	MetaType = "type"
-
-	// MetaSender is key for Sender
-	MetaSender = "sender"
-
-	// MetaTraceID is key for traceID
-	MetaTraceID = "TraceID"
-
-	// MetaSpanData is key for a span data
-	MetaSpanData = "SpanData"
-)
-
-const (
-	// TypeReply is Type for messages with insolar.Reply in Payload
-	TypeReply = "reply"
+	// TopicIncomingRequestResponse is topic for handling incoming RequestResponse messages
+	TopicIncomingRequestResults = "TopicIncomingRequestResults"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/insolar/bus.Sender -o ./ -s _mock.go -g
@@ -143,7 +124,7 @@ func (b *Bus) removeReplyChannel(ctx context.Context, h payload.MessageHash, rep
 func ReplyAsMessage(ctx context.Context, rep insolar.Reply) *message.Message {
 	resInBytes := reply.ToBytes(rep)
 	resAsMsg := message.NewMessage(watermill.NewUUID(), resInBytes)
-	resAsMsg.Metadata.Set(MetaType, TypeReply)
+	resAsMsg.Metadata.Set(meta.Type, meta.TypeReply)
 	return resAsMsg
 }
 
@@ -193,7 +174,10 @@ func (b *Bus) SendTarget(
 	if err == nil {
 		pn = latestPulse.PulseNumber
 	} else {
-		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to fetch pulse"))
+		// It's possible, that we try to fetch something in PM.Set()
+		// In those cases, when we in the start of the system, we don't have any pulses
+		// but this is not the error
+		inslogger.FromContext(ctx).Warn(errors.Wrap(err, "failed to fetch pulse"))
 	}
 	return b.sendTarget(ctx, msg, target, pn)
 }
@@ -216,7 +200,7 @@ func (b *Bus) sendTarget(
 		return res, func() {}
 	}
 
-	msgType := getMessageType(msg)
+	msgType := messagePayloadTypeName(msg)
 
 	mctx := insmetrics.InsertTag(ctx, tagMessageType, msgType)
 	stats.Record(mctx, statSent.M(int64(len(msg.Payload))))
@@ -226,17 +210,17 @@ func (b *Bus) sendTarget(
 
 	// configure logger
 	ctx, _ = inslogger.WithField(ctx, "sending_type", msgType)
-	logger := inslogger.FromContext(ctx)
+	ctx, logger := inslogger.WithField(ctx, "sending_uuid", msg.UUID)
 	span.AddAttributes(
-		trace.StringAttribute("sending_type", msg.Metadata.Get(MetaType)),
+		trace.StringAttribute("sending_type", msg.Metadata.Get(meta.Type)),
 	)
 
 	// tracing setup
-	msg.Metadata.Set(MetaTraceID, inslogger.TraceID(ctx))
+	msg.Metadata.Set(meta.TraceID, inslogger.TraceID(ctx))
 
 	sp, err := instracer.Serialize(ctx)
 	if err == nil {
-		msg.Metadata.Set(MetaSpanData, string(sp))
+		msg.Metadata.Set(meta.SpanData, string(sp))
 	} else {
 		instracer.AddError(span, err)
 		logger.Error(err)
@@ -256,6 +240,8 @@ func (b *Bus) sendTarget(
 		return handleError(errors.Wrap(err, "failed to unmarshal hash"))
 	}
 
+	ctx, logger = inslogger.WithField(ctx, "sending_msg_hash", msgHash.String())
+
 	reply := &lockedReply{
 		messages: make(chan *message.Message),
 		done:     make(chan struct{}),
@@ -269,7 +255,7 @@ func (b *Bus) sendTarget(
 	b.replies[msgHash] = reply
 	b.repliesMutex.Unlock()
 
-	logger.Debugf("sending message %s. uuid = ", msgHash.String(), msg.UUID)
+	logger.Debugf("sending message")
 	err = b.pub.Publish(TopicOutgoing, msg)
 	if err != nil {
 		done()
@@ -305,15 +291,6 @@ func (b *Bus) sendTarget(
 	return reply.messages, done
 }
 
-func getMessageType(msg *message.Message) string {
-	payloadType, err := payload.UnmarshalType(msg.Payload)
-	if err != nil {
-		// branch for legacy messages format: INS-2973
-		return msg.Metadata.Get(MetaType)
-	}
-	return payloadType.String()
-}
-
 // Reply sends message in response to another message.
 func (b *Bus) Reply(ctx context.Context, origin payload.Meta, reply *message.Message) {
 	logger := inslogger.FromContext(ctx)
@@ -341,6 +318,8 @@ func (b *Bus) Reply(ctx context.Context, origin payload.Meta, reply *message.Mes
 		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to fetch pulse"))
 	}
 
+	ctx, logger = inslogger.WithField(ctx, "replying_type", messagePayloadTypeName(reply))
+
 	wrapped, reply, err := b.wrapMeta(ctx, reply, origin.Sender, originHash, pn)
 	if err != nil {
 		instracer.AddError(span, err)
@@ -348,13 +327,22 @@ func (b *Bus) Reply(ctx context.Context, origin payload.Meta, reply *message.Mes
 		return
 	}
 
-	replyHash := wrapped.ID
+	replyHash := payload.MessageHash{}
+	err = replyHash.Unmarshal(wrapped.ID)
+	if err != nil {
+		instracer.AddError(span, err)
+		logger.Error(errors.Wrap(err, "failed to unmarshal hash"))
+		return
+	}
 
-	reply.Metadata.Set(MetaTraceID, inslogger.TraceID(ctx))
+	ctx, _ = inslogger.WithField(ctx, "origin_hash", originHash.String())
+	ctx, logger = inslogger.WithField(ctx, "sending_reply_hash", replyHash.String())
+
+	reply.Metadata.Set(meta.TraceID, inslogger.TraceID(ctx))
 
 	sp, err := instracer.Serialize(ctx)
 	if err == nil {
-		reply.Metadata.Set(MetaSpanData, string(sp))
+		reply.Metadata.Set(meta.SpanData, string(sp))
 	} else {
 		instracer.AddError(span, err)
 		logger.Error(err)
@@ -362,7 +350,7 @@ func (b *Bus) Reply(ctx context.Context, origin payload.Meta, reply *message.Mes
 
 	reply.SetContext(ctx)
 
-	logger.Debugf("sending reply %s", base58.Encode(replyHash))
+	logger.Debugf("sending reply")
 	err = b.pub.Publish(TopicOutgoing, reply)
 	if err != nil {
 		instracer.AddError(span, err)
@@ -373,9 +361,9 @@ func (b *Bus) Reply(ctx context.Context, origin payload.Meta, reply *message.Mes
 // IncomingMessageRouter is watermill middleware for incoming messages - it decides, how to handle it: as request or as reply.
 func (b *Bus) IncomingMessageRouter(handle message.HandlerFunc) message.HandlerFunc {
 	return func(msg *message.Message) ([]*message.Message, error) {
-		ctx, logger := inslogger.WithTraceField(context.Background(), msg.Metadata.Get(MetaTraceID))
+		ctx, logger := inslogger.WithTraceField(context.Background(), msg.Metadata.Get(meta.TraceID))
 
-		parentSpan, err := instracer.Deserialize([]byte(msg.Metadata.Get(MetaSpanData)))
+		parentSpan, err := instracer.Deserialize([]byte(msg.Metadata.Get(meta.SpanData)))
 		if err == nil {
 			ctx = instracer.WithParentSpan(ctx, parentSpan)
 		} else {
@@ -478,4 +466,15 @@ func (b *Bus) wrapMeta(
 	msg.Payload = buf
 
 	return meta, msg, nil
+}
+
+// messagePayloadTypeName returns message type.
+// Parses type from payload if failed returns type from metadata field 'type'.
+func messagePayloadTypeName(msg *message.Message) string {
+	payloadType, err := payload.UnmarshalType(msg.Payload)
+	if err != nil {
+		// branch for legacy messages format: INS-2973
+		return msg.Metadata.Get(meta.Type)
+	}
+	return payloadType.String()
 }

@@ -52,6 +52,7 @@ package bootstrap
 
 import (
 	"context"
+	"math/rand"
 	"time"
 
 	"github.com/pkg/errors"
@@ -70,8 +71,10 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 )
 
+//go:generate minimock -i github.com/insolar/insolar/network/gateway/bootstrap.Requester -o ./ -s _mock.go -g
+
 type Requester interface {
-	Authorize(context.Context, *host.Host, insolar.AuthorizationCertificate) (*packet.AuthorizeResponse, error)
+	Authorize(context.Context, insolar.Certificate) (*packet.Permit, error)
 	Bootstrap(context.Context, *packet.Permit, adapters.Candidate, *insolar.Pulse) (*packet.BootstrapResponse, error)
 	UpdateSchedule(context.Context, *packet.Permit, insolar.PulseNumber) (*packet.UpdateScheduleResponse, error)
 	Reconnect(context.Context, *host.Host, *packet.Permit) (*packet.ReconnectResponse, error)
@@ -89,7 +92,60 @@ type requester struct {
 	options *network.Options
 }
 
-func (ac *requester) Authorize(ctx context.Context, host *host.Host, cert insolar.AuthorizationCertificate) (*packet.AuthorizeResponse, error) {
+func (ac *requester) Authorize(ctx context.Context, cert insolar.Certificate) (*packet.Permit, error) {
+	logger := inslogger.FromContext(ctx)
+
+	discoveryNodes := network.ExcludeOrigin(cert.GetDiscoveryNodes(), *cert.GetNodeRef())
+
+	rand.Shuffle(
+		len(discoveryNodes),
+		func(i, j int) {
+			discoveryNodes[i], discoveryNodes[j] = discoveryNodes[j], discoveryNodes[i]
+		},
+	)
+
+	bestResult := &packet.AuthorizeResponse{}
+
+	for _, n := range discoveryNodes {
+		h, err := host.NewHostN(n.GetHost(), *n.GetNodeRef())
+		if err != nil {
+			logger.Warnf("Error authorizing to mallformed host %s[%s]: %s",
+				n.GetHost(), *n.GetNodeRef(), err.Error())
+			continue
+		}
+
+		logger.Infof("Trying to authorize to node: %s", h.String())
+		res, err := ac.authorize(ctx, h, cert)
+		if err != nil {
+			logger.Warnf("Error authorizing to host %s: %s", h.String(), err.Error())
+			continue
+		}
+
+		if int(res.DiscoveryCount) < cert.GetMajorityRule() {
+			logger.Infof(
+				"Check MajorityRule failed on authorize, expect %d, got %d",
+				cert.GetMajorityRule(),
+				res.DiscoveryCount,
+			)
+
+			if res.DiscoveryCount > bestResult.DiscoveryCount {
+				bestResult = res
+			}
+
+			continue
+		}
+
+		return res.Permit, nil
+	}
+
+	if network.OriginIsDiscovery(cert) && bestResult.Permit != nil {
+		return bestResult.Permit, nil
+	}
+
+	return nil, errors.New("failed to authorize to any discovery node")
+}
+
+func (ac *requester) authorize(ctx context.Context, host *host.Host, cert insolar.AuthorizationCertificate) (*packet.AuthorizeResponse, error) {
 	inslogger.FromContext(ctx).Infof("Authorizing on host: %s", host.String())
 
 	ctx, span := instracer.StartSpan(ctx, "AuthorizationController.Authorize")

@@ -404,6 +404,8 @@ func (c *FilamentCalculatorDefault) RequestInfo(
 		return nil, nil, errors.Wrap(err, "latest request in lifeline is empty")
 	}
 
+	logger.Debugf("latest request from index %s", idx.Lifeline.LatestRequest.DebugString())
+
 	cache := c.cache.Get(objectID)
 	cache.Lock()
 	defer cache.Unlock()
@@ -455,7 +457,9 @@ func (c *FilamentCalculatorDefault) findLifeline(
 ) (record.Lifeline, error) {
 	iter := requestID.Pulse()
 	for {
-		idx, err := c.indexes.ForID(ctx, iter, requestID)
+		// We should find lifeline for `iter` pulse,
+		// because requestID.Pulse() may be different.
+		idx, err := c.indexes.ForID(ctx, iter, *insolar.NewID(iter, requestID.Hash()))
 		if err != nil && err != object.ErrIndexNotFound {
 			return record.Lifeline{}, errors.Wrap(err, "failed to fetch index")
 		}

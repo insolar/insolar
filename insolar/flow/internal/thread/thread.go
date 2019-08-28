@@ -19,13 +19,17 @@ package thread
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
+	"go.opencensus.io/tag"
 	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/insolar/flow"
+	"github.com/insolar/insolar/instrumentation/insmetrics"
+	"github.com/insolar/insolar/instrumentation/instracer"
 )
 
 type Thread struct {
@@ -62,51 +66,61 @@ func (f *Thread) Procedure(ctx context.Context, proc flow.Procedure, cancel bool
 		panic("procedure called with nil procedure")
 	}
 
-	var spanName string
+	var procName string
 	procStringer, ok := proc.(fmt.Stringer)
 	if ok {
-		spanName = procStringer.String()
+		procName = procStringer.String()
 	} else {
-		spanName = fmt.Sprintf("%T", proc)
+		procName = fmt.Sprintf("%T", proc)
 	}
 
-	ctx, span := instracer.StartSpan(ctx, spanName)
+	ctx, span := instracer.StartSpan(ctx, procName)
 	span.AddAttributes(
 		trace.StringAttribute("type", "flow_proc"),
 	)
 	defer span.End()
 
-	if !cancel {
+	start := time.Now()
+	err := func() error {
+		if !cancel {
+			res := f.procedure(ctx, proc)
+			<-res.done
+			return res.err
+		}
+
+		if f.cancelled() {
+			return flow.ErrCancelled
+		}
+
+		ctx, cl := context.WithCancel(ctx)
 		res := f.procedure(ctx, proc)
-		<-res.done
-
-		if res.err != nil {
-			instracer.AddError(span, res.err)
+		select {
+		case <-f.cancel:
+			cl()
+			return flow.ErrCancelled
+		case <-res.done:
+			cl()
+			return res.err
 		}
+	}()
+	duration := time.Since(start)
 
-		return res.err
-	}
-
-	if f.cancelled() {
-		return flow.ErrCancelled
-	}
-
-	ctx, cl := context.WithCancel(ctx)
-	res := f.procedure(ctx, proc)
-	select {
-	case <-f.cancel:
-		cl()
-		instracer.AddError(span, flow.ErrCancelled)
-		return flow.ErrCancelled
-	case <-res.done:
-		cl()
-
-		if res.err != nil {
-			instracer.AddError(span, res.err)
+	result := "ok"
+	if err != nil {
+		if err == flow.ErrCancelled {
+			result = "cancelled"
+		} else {
+			result = "error"
 		}
-
-		return res.err
+		instracer.AddError(span, err)
 	}
+	mctx := insmetrics.ChangeTags(ctx,
+		tag.Insert(tagProcedureName, procName),
+		tag.Insert(tagResult, result),
+	)
+	stats.Record(mctx, procCallTime.M(float64(duration.Nanoseconds())/1e6))
+
+	return err
 }
 
 func (f *Thread) Migrate(ctx context.Context, to flow.Handle) error {

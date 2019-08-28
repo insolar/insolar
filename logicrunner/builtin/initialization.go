@@ -26,6 +26,7 @@ import (
 	deposit "github.com/insolar/insolar/logicrunner/builtin/contract/deposit"
 	helloworld "github.com/insolar/insolar/logicrunner/builtin/contract/helloworld"
 	member "github.com/insolar/insolar/logicrunner/builtin/contract/member"
+	migrationadmin "github.com/insolar/insolar/logicrunner/builtin/contract/migrationadmin"
 	migrationshard "github.com/insolar/insolar/logicrunner/builtin/contract/migrationshard"
 	nodedomain "github.com/insolar/insolar/logicrunner/builtin/contract/nodedomain"
 	noderecord "github.com/insolar/insolar/logicrunner/builtin/contract/noderecord"
@@ -45,6 +46,7 @@ func InitializeContractMethods() map[string]XXX_insolar.ContractWrapper {
 		"deposit":        deposit.Initialize(),
 		"helloworld":     helloworld.Initialize(),
 		"member":         member.Initialize(),
+		"migrationadmin": migrationadmin.Initialize(),
 		"migrationshard": migrationshard.Initialize(),
 		"nodedomain":     nodedomain.Initialize(),
 		"noderecord":     noderecord.Initialize(),
@@ -70,6 +72,7 @@ func InitializeCodeRefs() map[XXX_insolar.Reference]string {
 	rv[shouldLoadRef("111A79KGpeDUjYhRJP1n1AwYgwU9KEWmc2TNNc3KQjV.11111111111111111111111111111111")] = "deposit"
 	rv[shouldLoadRef("111A5w1GcnTsht82duVrnWdVHVNyrxCUVcSPLtgQCPR.11111111111111111111111111111111")] = "helloworld"
 	rv[shouldLoadRef("111A72gPKWyrF9c7yzDoccRoPQ62g1uQQDBecWJwAYr.11111111111111111111111111111111")] = "member"
+	rv[shouldLoadRef("111A6516TVnMLh8DAzTWbtEJrgZkESeCpdn2viV6D61.11111111111111111111111111111111")] = "migrationadmin"
 	rv[shouldLoadRef("111A66L3aoDPf2wedyRo2gyns8ghV9vdeJdJntVaGEf.11111111111111111111111111111111")] = "migrationshard"
 	rv[shouldLoadRef("111A7Q5FK2ebPG9WnSiUc4iqF45w9oYkJkRjEtBohGe.11111111111111111111111111111111")] = "nodedomain"
 	rv[shouldLoadRef("111A86xPKUQ1ZxSscgv5brbw93LkwiVhUWgGrYYsMar.11111111111111111111111111111111")] = "noderecord"
@@ -112,6 +115,12 @@ func InitializeCodeDescriptors() []XXX_artifacts.CodeDescriptor {
 		/* code:        */ nil,
 		/* machineType: */ XXX_insolar.MachineTypeBuiltin,
 		/* ref:         */ shouldLoadRef("111A72gPKWyrF9c7yzDoccRoPQ62g1uQQDBecWJwAYr.11111111111111111111111111111111"),
+	))
+	// migrationadmin
+	rv = append(rv, XXX_artifacts.NewCodeDescriptor(
+		/* code:        */ nil,
+		/* machineType: */ XXX_insolar.MachineTypeBuiltin,
+		/* ref:         */ shouldLoadRef("111A6516TVnMLh8DAzTWbtEJrgZkESeCpdn2viV6D61.11111111111111111111111111111111"),
 	))
 	// migrationshard
 	rv = append(rv, XXX_artifacts.NewCodeDescriptor(
@@ -215,6 +224,20 @@ func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
 	{ // member
 		pRef := shouldLoadRef("111A7UqbgvFXj9vkCAaNYSAkWLapu62eU5AUSv3y4JY.11111111111111111111111111111111")
 		cRef := shouldLoadRef("111A72gPKWyrF9c7yzDoccRoPQ62g1uQQDBecWJwAYr.11111111111111111111111111111111")
+		rv = append(rv, XXX_artifacts.NewObjectDescriptor(
+			/* head:         */ pRef,
+			/* state:        */ *pRef.Record(),
+			/* prototype:    */ &cRef,
+			/* isPrototype:  */ true,
+			/* childPointer: */ nil,
+			/* memory:       */ nil,
+			/* parent:       */ XXX_rootdomain.RootDomain.Ref(),
+		))
+	}
+
+	{ // migrationadmin
+		pRef := shouldLoadRef("111A8DhUhw5pzyvzVg1qXomNEHXs7kDtJRQGSD1PUpc.11111111111111111111111111111111")
+		cRef := shouldLoadRef("111A6516TVnMLh8DAzTWbtEJrgZkESeCpdn2viV6D61.11111111111111111111111111111111")
 		rv = append(rv, XXX_artifacts.NewObjectDescriptor(
 			/* head:         */ pRef,
 			/* state:        */ *pRef.Record(),

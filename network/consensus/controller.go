@@ -63,11 +63,11 @@ import (
 )
 
 type candidateController interface {
-	AddJoinCandidate(candidate transport.FullIntroductionReader)
+	AddJoinCandidate(candidate transport.FullIntroductionReader) error
 }
 
 type Controller interface {
-	AddJoinCandidate(candidate profiles.CandidateProfile)
+	AddJoinCandidate(candidate profiles.CandidateProfile) error
 
 	Abort()
 
@@ -106,8 +106,8 @@ func newController(
 	return controller
 }
 
-func (c *controller) AddJoinCandidate(candidate profiles.CandidateProfile) {
-	c.candidateController.AddJoinCandidate(candidate)
+func (c *controller) AddJoinCandidate(candidate profiles.CandidateProfile) error {
+	return c.candidateController.AddJoinCandidate(candidate)
 }
 
 func (c *controller) Abort() {

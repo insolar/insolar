@@ -22,6 +22,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/dgraph-io/badger"
 	fuzz "github.com/google/gofuzz"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/pulse"
@@ -34,13 +35,22 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
+func BadgerDefaultOptions(dir string) badger.Options {
+	ops := badger.DefaultOptions(dir)
+	ops.CompactL0OnClose = false
+	ops.SyncWrites = false
+
+	return ops
+}
+
 func initDB(t *testing.T, testPulse insolar.PulseNumber) (executor.JetKeeper, string, *store.BadgerDB, *jet.DBStore, *pulse.DB) {
 	ctx := inslogger.TestContext(t)
 	tmpdir, err := ioutil.TempDir("", "bdb-test-")
 
 	require.NoError(t, err)
 
-	db, err := store.NewBadgerDB(tmpdir)
+	ops := BadgerDefaultOptions(tmpdir)
+	db, err := store.NewBadgerDB(ops)
 	require.NoError(t, err)
 
 	jets := jet.NewDBStore(db)
@@ -54,6 +64,16 @@ func initDB(t *testing.T, testPulse insolar.PulseNumber) (executor.JetKeeper, st
 	jetKeeper := executor.NewJetKeeper(jets, db, pulses)
 
 	return jetKeeper, tmpdir, db, jets, pulses
+}
+
+func Test_TruncateHead_TryToTruncateTopSync(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+	testPulse := insolar.GenesisPulse.PulseNumber + 10
+	ji, tmpDir, db, _, _ := initDB(t, testPulse)
+	defer os.RemoveAll(tmpDir)
+	defer db.Stop(ctx)
+	err := ji.(*executor.DBJetKeeper).TruncateHead(ctx, 1)
+	require.EqualError(t, err, "try to truncate top sync pulse")
 }
 
 func TestJetInfoIsConfirmed_OneDropOneHot(t *testing.T) {
@@ -230,7 +250,8 @@ func TestNewJetKeeper(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	db, err := store.NewBadgerDB(tmpdir)
+	ops := BadgerDefaultOptions(tmpdir)
+	db, err := store.NewBadgerDB(ops)
 	require.NoError(t, err)
 	defer db.Stop(context.Background())
 	jets := jet.NewDBStore(db)
@@ -259,7 +280,13 @@ func TestDbJetKeeper_DifferentActualAndExpectedJets(t *testing.T) {
 
 	err = jetKeeper.AddDropConfirmation(ctx, testPulse, testJet, false)
 	require.NoError(t, err)
+
+	require.False(t, jetKeeper.HasAllJetConfirms(ctx, testPulse))
+
+	err = jetKeeper.AddBackupConfirmation(ctx, testPulse)
+	require.NoError(t, err)
 	require.Equal(t, insolar.GenesisPulse.PulseNumber, jetKeeper.TopSyncPulse())
+	require.False(t, jetKeeper.HasAllJetConfirms(ctx, testPulse))
 }
 
 func TestDbJetKeeper_DifferentNumberOfActualAndExpectedJets(t *testing.T) {
@@ -277,14 +304,21 @@ func TestDbJetKeeper_DifferentNumberOfActualAndExpectedJets(t *testing.T) {
 	err := jets.Update(ctx, testPulse, true, testJet)
 	require.NoError(t, err)
 
-	err = jetKeeper.AddHotConfirmation(ctx, testPulse, left, true)
+	err = jetKeeper.AddHotConfirmation(ctx, testPulse, left, false)
 	require.NoError(t, err)
 
-	err = jetKeeper.AddHotConfirmation(ctx, testPulse, right, true)
+	err = jetKeeper.AddHotConfirmation(ctx, testPulse, right, false)
 	require.NoError(t, err)
 
-	err = jetKeeper.AddDropConfirmation(ctx, testPulse, testJet, true)
+	err = jetKeeper.AddDropConfirmation(ctx, testPulse, right, false)
 	require.NoError(t, err)
+
+	err = jetKeeper.AddDropConfirmation(ctx, testPulse, left, false)
+	require.NoError(t, err)
+
+	err = jetKeeper.AddBackupConfirmation(ctx, testPulse)
+	require.NoError(t, err)
+
 	require.Equal(t, insolar.GenesisPulse.PulseNumber, jetKeeper.TopSyncPulse())
 }
 
@@ -296,7 +330,8 @@ func TestDbJetKeeper_AddDropConfirmation(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	db, err := store.NewBadgerDB(tmpdir)
+	ops := BadgerDefaultOptions(tmpdir)
+	db, err := store.NewBadgerDB(ops)
 	require.NoError(t, err)
 	defer db.Stop(context.Background())
 	jets := jet.NewDBStore(db)
@@ -347,7 +382,8 @@ func TestDbJetKeeper_TopSyncPulse(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	db, err := store.NewBadgerDB(tmpdir)
+	ops := BadgerDefaultOptions(tmpdir)
+	db, err := store.NewBadgerDB(ops)
 	require.NoError(t, err)
 	defer db.Stop(context.Background())
 	jets := jet.NewDBStore(db)
@@ -415,7 +451,8 @@ func TestDbJetKeeper_LostDataOnNextPulseAfterSplit(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	db, err := store.NewBadgerDB(tmpdir)
+	ops := BadgerDefaultOptions(tmpdir)
+	db, err := store.NewBadgerDB(ops)
 	require.NoError(t, err)
 	defer db.Stop(context.Background())
 	jets := jet.NewDBStore(db)

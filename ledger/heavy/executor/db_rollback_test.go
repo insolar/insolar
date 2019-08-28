@@ -41,39 +41,6 @@ func TestDBRollback_HasOnlyGenesisPulse(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestDBRollback_CalculatorReturnError(t *testing.T) {
-	jetKeeper := NewJetKeeperMock(t)
-	testPulse := insolar.GenesisPulse.PulseNumber + 1
-	jetKeeper.TopSyncPulseMock.Set(func() (r insolar.PulseNumber) {
-		return testPulse
-	})
-	calculator := pulse.NewCalculatorMock(t)
-	testError := errors.New("Hello")
-	calculator.ForwardsMock.Set(func(p context.Context, p1 insolar.PulseNumber, p2 int) (r insolar.Pulse, r1 error) {
-		return *insolar.GenesisPulse, testError
-	})
-
-	rollback := NewDBRollback(jetKeeper, calculator, nil)
-	err := rollback.Start(context.Background())
-	require.Contains(t, err.Error(), testError.Error(), err)
-}
-
-func TestDBRollback_NoNextPulse(t *testing.T) {
-	jetKeeper := NewJetKeeperMock(t)
-	testPulse := insolar.GenesisPulse.PulseNumber + 1
-	jetKeeper.TopSyncPulseMock.Set(func() (r insolar.PulseNumber) {
-		return testPulse
-	})
-	calculator := pulse.NewCalculatorMock(t)
-	calculator.ForwardsMock.Set(func(p context.Context, p1 insolar.PulseNumber, p2 int) (r insolar.Pulse, r1 error) {
-		return *insolar.GenesisPulse, pulse.ErrNotFound
-	})
-
-	rollback := NewDBRollback(jetKeeper, calculator, nil)
-	err := rollback.Start(context.Background())
-	require.NoError(t, err)
-}
-
 func TestDBRollback_TruncateReturnError(t *testing.T) {
 	jetKeeper := NewJetKeeperMock(t)
 	testPulse := insolar.GenesisPulse.PulseNumber + 1
@@ -89,7 +56,7 @@ func TestDBRollback_TruncateReturnError(t *testing.T) {
 	testError := errors.New("Hello")
 	drops := NewdropTruncaterMock(t)
 	drops.TruncateHeadMock.Return(testError)
-	rollback := NewDBRollback(jetKeeper, calculator, drops)
+	rollback := NewDBRollback(jetKeeper, drops)
 	err := rollback.Start(context.Background())
 	require.Contains(t, err.Error(), testError.Error(), err)
 }
@@ -142,7 +109,7 @@ func TestDBRollback_HappyPath(t *testing.T) {
 		return insolar.Pulse{PulseNumber: p1 + 1}, nil
 	})
 
-	rollback := NewDBRollback(jetKeeper, calculator, drops, records, indexes, jets, pulses)
+	rollback := NewDBRollback(jetKeeper, drops, records, indexes, jets, pulses)
 	err := rollback.Start(context.Background())
 	require.Len(t, hits, 5) // drops, record, jets, indexes, pulses
 	expectedScopes := []struct {

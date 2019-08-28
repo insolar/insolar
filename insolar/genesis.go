@@ -35,6 +35,8 @@ const (
 	GenesisNameDeposit = "deposit"
 	// GenesisNameCostCenter is the name of cost center contract for genesis record.
 	GenesisNameCostCenter = "costcenter"
+	// GenesisNameMigrationAdmin is the name of migration admin contract for genesis record.
+	GenesisNameMigrationAdmin = "migrationadmin"
 	// GenesisNamePKShard is the name of public key shard contract for genesis record.
 	GenesisNamePKShard = "pkshard"
 	// GenesisNameMigrationShard is the name of migration address shard contract for genesis record.
@@ -112,6 +114,9 @@ type GenesisContractsConfig struct {
 	RootPublicKey             string
 	MigrationAdminPublicKey   string
 	MigrationDaemonPublicKeys []string
+	VestingPeriodInPulses     int64
+	LokupPeriodInPulses       int64
+	MigrationAddresses        [GenesisAmountMigrationAddressShards][]string
 }
 
 // GenesisHeavyConfig carries data required for initial genesis on heavy node.

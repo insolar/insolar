@@ -27,8 +27,8 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"os"
+	"os/exec"
 	"path/filepath"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -39,8 +39,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/store"
 	"github.com/insolar/insolar/ledger/heavy/executor"
-	"github.com/insolar/insolar/network/storage"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 )
 
@@ -60,18 +58,24 @@ func (t *testKey) Scope() store.Scope {
 
 func makeBackuperConfig(t *testing.T, prefix string) configuration.Backup {
 
-	cfg := configuration.Backup{
-		ConfirmFile:      "BACKUPED",
-		MetaInfoFile:     "META.json",
-		TargetDirectory:  "/tmp/BKP/TARGET/" + prefix,
-		TmpDirectory:     "/tmp/BKP/TMP",
-		DirNameTemplate:  "pulse-%d",
-		BackupWaitPeriod: 60,
-		BackupFile:       "incr.bkp",
-		Enabled:          true,
+	cwd, err := os.Getwd()
+	if err != nil {
+		require.NoError(t, err)
 	}
 
-	err := os.MkdirAll(cfg.TargetDirectory, 0777)
+	cfg := configuration.Backup{
+		ConfirmFile:          "BACKUPED",
+		MetaInfoFile:         "META.json",
+		TargetDirectory:      "/tmp/BKP/TARGET/" + prefix,
+		TmpDirectory:         "/tmp/BKP/TMP",
+		DirNameTemplate:      "pulse-%d",
+		BackupWaitPeriod:     10,
+		BackupFile:           "incr.bkp",
+		Enabled:              true,
+		PostProcessBackupCmd: []string{"bash", "-c", cwd + "/post_process_backup.sh"},
+	}
+
+	err = os.MkdirAll(cfg.TargetDirectory, 0777)
 	require.NoError(t, err)
 	err = os.MkdirAll(cfg.TmpDirectory, 0777)
 	require.NoError(t, err)
@@ -89,10 +93,10 @@ func TestBackuper(t *testing.T) {
 	defer clearData(t, cfg)
 
 	tmpdir, err := ioutil.TempDir("", "bdb-test-")
-	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
+	defer os.RemoveAll(tmpdir)
 
-	db, err := store.NewBadgerDB(tmpdir)
+	db, err := store.NewBadgerDB(badger.DefaultOptions(tmpdir))
 	require.NoError(t, err)
 	defer db.Stop(context.Background())
 
@@ -117,14 +121,13 @@ func TestBackuper(t *testing.T) {
 			err := db.Set(key, value.Bytes())
 			require.NoError(t, err)
 			savedKeys[key] = value
-			require.NoError(t, err)
 			time.Sleep(time.Duration(rand.Int()%10) * time.Millisecond)
 		}
 		sgWriteStopped.Done()
 	}()
 
 	wgBackup := sync.WaitGroup{}
-	numIterations := 5
+	numIterations := 15
 
 	wgBackup.Add(numIterations)
 	// doing backups
@@ -137,32 +140,14 @@ func TestBackuper(t *testing.T) {
 		}
 	}()
 
-	// creating backup confirmation files
-	go func() {
-		for i := 0; i < numIterations+1; i++ {
-			time.Sleep(2 * time.Second)
-
-			backupConfirmFile := filepath.Join(makeCurrentBkpDir(cfg, testPulse+insolar.PulseNumber(i)), cfg.ConfirmFile)
-			for true {
-				fff, err := os.Create(backupConfirmFile)
-				if err != nil && strings.Contains(err.Error(), "no such file or directory") {
-					time.Sleep(time.Millisecond * 200)
-					fmt.Printf("%s not created yet\n", backupConfirmFile)
-					continue
-				}
-				require.NoError(t, err)
-				require.NoError(t, fff.Close())
-				break
-			}
-		}
-	}()
-
 	// wait for all backups done
 	wgBackup.Wait()
 	// stop writing to db
 	atomic.StoreUint32(&stopWriting, 1)
 	// wait for stopping
 	sgWriteStopped.Wait()
+
+	require.NotEqual(t, 0, len(savedKeys))
 
 	// final backup to collect all rest records
 	err = bm.MakeBackup(context.Background(), testPulse+insolar.PulseNumber(numIterations))
@@ -174,11 +159,8 @@ func TestBackuper(t *testing.T) {
 	// load all backups and check all records
 	{
 		recovTmpDir, err := ioutil.TempDir("", "bdb-test-")
+		require.NoError(t, err)
 		defer os.RemoveAll(recovTmpDir)
-		require.NoError(t, err)
-		recoveredDB, err := makeRawBadger(recovTmpDir)
-		require.NoError(t, err)
-		defer recoveredDB.Close()
 
 		for i := 0; i < numIterations+1; i++ {
 			bkpFileName := filepath.Join(
@@ -186,59 +168,50 @@ func TestBackuper(t *testing.T) {
 				fmt.Sprintf(cfg.DirNameTemplate, testPulse+insolar.PulseNumber(i)),
 				cfg.BackupFile,
 			)
-			bkpFile, err := os.Open(bkpFileName)
-			require.NoError(t, err)
-			err = recoveredDB.Load(bkpFile, 2)
-			require.NoError(t, err)
+
+			loadIncrementalBackup(t, recovTmpDir, bkpFileName)
 		}
 
-		require.NotEqual(t, 0, len(savedKeys))
+		recoveredDB, err := store.NewBadgerDB(badger.DefaultOptions(recovTmpDir))
+		require.NoError(t, err)
+		defer recoveredDB.Stop(context.Background())
 
 		for k, v := range savedKeys {
-			gotRawValue, err := getFromDB(recoveredDB, k)
+			gotRawValue, err := recoveredDB.Get(k)
 			require.NoError(t, err)
 			gotPulseNumber := insolar.NewPulseNumber(gotRawValue)
 			require.Equal(t, v, gotPulseNumber)
 		}
 	}
-
 }
 
-func makeRawBadger(dir string) (*badger.DB, error) {
-	dir, err := filepath.Abs(dir)
-	if err != nil {
-		return nil, err
-	}
+var binaryPath string
 
-	ops := badger.DefaultOptions(dir)
-	bdb, err := badger.Open(ops)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to open badger")
-	}
+func init() {
+	var ok bool
 
-	return bdb, nil
-}
+	binaryPath, ok = os.LookupEnv("BIN_DIR")
+	if !ok {
+		wd, err := os.Getwd()
+		binaryPath = filepath.Join(wd, "..", "..", "..", "..", "bin")
 
-func getFromDB(db *badger.DB, key store.Key) (value []byte, err error) {
-	fullKey := append(key.Scope().Bytes(), key.ID()...)
-
-	err = db.View(func(txn *badger.Txn) error {
-		item, err := txn.Get(fullKey)
 		if err != nil {
-			return err
+			panic(err.Error())
 		}
-		value, err = item.ValueCopy(nil)
-		return err
-	})
-
-	if err != nil {
-		if err == badger.ErrKeyNotFound {
-			return nil, storage.ErrNotFound
-		}
-		return nil, err
 	}
+}
 
-	return
+// loadIncrementalBackup uses backupmerger utility to roll backups
+func loadIncrementalBackup(t *testing.T, dbDir string, backupFile string) {
+	println("=====> Start loading backup")
+	cmd := exec.Command(binaryPath+"/backupmerger", "-t", dbDir, "-n", backupFile)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err := cmd.Start()
+	require.NoError(t, err)
+	err = cmd.Wait()
+	require.NoError(t, err)
+	println("<===== Finish loading backup")
 }
 
 func makeCurrentBkpDir(cfg configuration.Backup, pulse insolar.PulseNumber) string {

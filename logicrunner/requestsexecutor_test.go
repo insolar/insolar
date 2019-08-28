@@ -21,12 +21,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/gojuno/minimock"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/gen"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
@@ -35,7 +38,6 @@ import (
 	"github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/logicexecutor"
 	"github.com/insolar/insolar/logicrunner/requestresult"
-	"github.com/insolar/insolar/testutils"
 )
 
 func TestRequestsExecutor_ExecuteAndSave(t *testing.T) {
@@ -323,65 +325,121 @@ func TestRequestsExecutor_Save(t *testing.T) {
 }
 
 func TestRequestsExecutor_SendReply(t *testing.T) {
-	ctx := inslogger.TestContext(t)
-	mc := minimock.NewController(t)
-	defer mc.Finish()
-	defer mc.Wait(time.Minute)
-
-	requestRef := gen.Reference()
 
 	reqRef := gen.Reference()
 
+	replyMessage := func(msg *message.Message) *message.Message {
+		replyMsg := payload.MustNewMessage(&payload.Error{Text: "test error", Code: payload.CodeUnknown})
+		meta := payload.Meta{
+			Payload: msg.Payload,
+		}
+		buf, _ := meta.Marshal()
+		replyMsg.Payload = buf
+		return replyMsg
+	}
+
+	sendRoleHelper := func(ctx context.Context, msg *message.Message, role insolar.DynamicRole, target insolar.Reference) (<-chan *message.Message, func()) {
+		res := make(chan *message.Message)
+		go func() { res <- replyMessage(msg) }()
+		return res, func() { close(res) }
+	}
+	sendTargetHelper :=	func(ctx context.Context, msg *message.Message, target insolar.Reference) (<-chan *message.Message, func()) {
+		res := make(chan *message.Message)
+		go func() { res <- replyMessage(msg) }()
+		return res, func() { close(res) }
+	}
+
 	table := []struct {
-		name       string
-		reply      insolar.Reply
-		err        error
-		transcript *common.Transcript
-		mb         insolar.MessageBus
+		name    string
+		mocks   func(ctx context.Context, mc minimock.Tester) RequestsExecutor
+		reply   insolar.Reply
+		request record.IncomingRequest
+		err     error
 	}{
 		{
-			name: "success",
-			transcript: &common.Transcript{
-				RequestRef: reqRef,
-				Request:    &record.IncomingRequest{},
+			name: "success, reply to caller",
+			mocks: func(ctx context.Context, mc minimock.Tester) RequestsExecutor {
+				pa := pulse.NewAccessorMock(t)
+				pa.LatestMock.Set(func(p context.Context) (insolar.Pulse, error) {
+					return insolar.Pulse{
+						PulseNumber: 1000,
+					}, nil
+				})
+				sender := bus.NewSenderMock(t).SendRoleMock.Set(sendRoleHelper)
+
+				return &requestsExecutor{Sender: sender, PulseAccessor: pa}
 			},
-			reply: &reply.CallMethod{Object: &requestRef},
-			mb: testutils.NewMessageBusMock(mc).SendMock.Set(
-				func(
-					ctx context.Context, msg insolar.Message, opt *insolar.MessageSendOptions,
-				) (insolar.Reply, error) {
-					return nil, nil
-				},
-			),
+			request: record.IncomingRequest{
+				Caller: gen.Reference(),
+			},
+			reply: &reply.CallMethod{Object: &reqRef},
 		},
 		{
-			name: "error",
-			transcript: &common.Transcript{
-				RequestRef: reqRef,
-				Request:    &record.IncomingRequest{},
+			name: "success, reply to API",
+			mocks: func(ctx context.Context, mc minimock.Tester) RequestsExecutor {
+				pa := pulse.NewAccessorMock(t)
+				pa.LatestMock.Set(func(p context.Context) (insolar.Pulse, error) {
+					return insolar.Pulse{
+						PulseNumber: 1000,
+					}, nil
+				})
+				sender := bus.NewSenderMock(t).SendTargetMock.Set(sendTargetHelper)
+
+				return &requestsExecutor{Sender: sender, PulseAccessor: pa}
 			},
-			reply: &reply.CallMethod{Object: &requestRef},
-			mb: testutils.NewMessageBusMock(mc).SendMock.Set(
-				func(
-					ctx context.Context, msg insolar.Message, opt *insolar.MessageSendOptions,
-				) (insolar.Reply, error) {
-					return nil, errors.New("some error")
-				},
-			),
+			request: record.IncomingRequest{
+				APINode: gen.Reference(),
+			},
+			reply: &reply.CallMethod{Object: &reqRef},
+		},
+		{
+			name: "success, reply with error",
+			mocks: func(ctx context.Context, mc minimock.Tester) RequestsExecutor {
+				pa := pulse.NewAccessorMock(t)
+				pa.LatestMock.Set(func(p context.Context) (insolar.Pulse, error) {
+					return insolar.Pulse{
+						PulseNumber: 1000,
+					}, nil
+				})
+				sender := bus.NewSenderMock(t).SendRoleMock.Set(sendRoleHelper)
+
+				return &requestsExecutor{Sender: sender, PulseAccessor: pa}
+			},
+			request: record.IncomingRequest{
+				Caller: gen.Reference(),
+			},
+			err:   errors.New("some"),
+		},
+		{
+			name: "return mode NoWait, no reply required",
+			mocks: func(ctx context.Context, mc minimock.Tester) RequestsExecutor {
+				return &requestsExecutor{}
+			},
+			request: record.IncomingRequest{
+				ReturnMode: record.ReturnNoWait,
+			},
+		},
+		{
+			name: "empty reply and no error",
+			mocks: func(ctx context.Context, mc minimock.Tester) RequestsExecutor {
+				return &requestsExecutor{}
+			},
+			request: record.IncomingRequest{
+			},
 		},
 	}
 
 	for _, test := range table {
 		test := test
 		t.Run(test.name, func(t *testing.T) {
-			pa := pulse.NewAccessorMock(t)
-			pa.LatestMock.Set(func(p context.Context) (insolar.Pulse, error) {
-				return insolar.Pulse{
-					PulseNumber: 1000,
-				}, nil
-			})
-			re := &requestsExecutor{MessageBus: test.mb, PulseAccessor: pa}
-			re.SendReply(ctx, test.transcript, test.reply, test.err)
+			ctx := inslogger.TestContext(t)
+			mc := minimock.NewController(t)
+
+			re := test.mocks(ctx, mc)
+			re.SendReply(ctx, reqRef, test.request, test.reply, test.err)
+
+			mc.Wait(time.Minute)
+			mc.Finish()
 		})
 	}
 }

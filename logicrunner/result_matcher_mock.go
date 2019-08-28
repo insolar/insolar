@@ -9,7 +9,6 @@ import (
 	mm_time "time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/payload"
 )
 
@@ -23,14 +22,14 @@ type ResultMatcherMock struct {
 	beforeAddStillExecutionCounter uint64
 	AddStillExecutionMock          mResultMatcherMockAddStillExecution
 
-	funcAddUnwantedResponse          func(ctx context.Context, msg *message.ReturnResults) (err error)
-	inspectFuncAddUnwantedResponse   func(ctx context.Context, msg *message.ReturnResults)
+	funcAddUnwantedResponse          func(ctx context.Context, msg *payload.ReturnResults) (err error)
+	inspectFuncAddUnwantedResponse   func(ctx context.Context, msg *payload.ReturnResults)
 	afterAddUnwantedResponseCounter  uint64
 	beforeAddUnwantedResponseCounter uint64
 	AddUnwantedResponseMock          mResultMatcherMockAddUnwantedResponse
 
-	funcClear          func()
-	inspectFuncClear   func()
+	funcClear          func(ctx context.Context)
+	inspectFuncClear   func(ctx context.Context)
 	afterClearCounter  uint64
 	beforeClearCounter uint64
 	ClearMock          mResultMatcherMockClear
@@ -50,6 +49,7 @@ func NewResultMatcherMock(t minimock.Tester) *ResultMatcherMock {
 	m.AddUnwantedResponseMock.callArgs = []*ResultMatcherMockAddUnwantedResponseParams{}
 
 	m.ClearMock = mResultMatcherMockClear{mock: m}
+	m.ClearMock.callArgs = []*ResultMatcherMockClearParams{}
 
 	return m
 }
@@ -262,7 +262,7 @@ type ResultMatcherMockAddUnwantedResponseExpectation struct {
 // ResultMatcherMockAddUnwantedResponseParams contains parameters of the ResultMatcher.AddUnwantedResponse
 type ResultMatcherMockAddUnwantedResponseParams struct {
 	ctx context.Context
-	msg *message.ReturnResults
+	msg *payload.ReturnResults
 }
 
 // ResultMatcherMockAddUnwantedResponseResults contains results of the ResultMatcher.AddUnwantedResponse
@@ -271,7 +271,7 @@ type ResultMatcherMockAddUnwantedResponseResults struct {
 }
 
 // Expect sets up expected params for ResultMatcher.AddUnwantedResponse
-func (mmAddUnwantedResponse *mResultMatcherMockAddUnwantedResponse) Expect(ctx context.Context, msg *message.ReturnResults) *mResultMatcherMockAddUnwantedResponse {
+func (mmAddUnwantedResponse *mResultMatcherMockAddUnwantedResponse) Expect(ctx context.Context, msg *payload.ReturnResults) *mResultMatcherMockAddUnwantedResponse {
 	if mmAddUnwantedResponse.mock.funcAddUnwantedResponse != nil {
 		mmAddUnwantedResponse.mock.t.Fatalf("ResultMatcherMock.AddUnwantedResponse mock is already set by Set")
 	}
@@ -291,7 +291,7 @@ func (mmAddUnwantedResponse *mResultMatcherMockAddUnwantedResponse) Expect(ctx c
 }
 
 // Inspect accepts an inspector function that has same arguments as the ResultMatcher.AddUnwantedResponse
-func (mmAddUnwantedResponse *mResultMatcherMockAddUnwantedResponse) Inspect(f func(ctx context.Context, msg *message.ReturnResults)) *mResultMatcherMockAddUnwantedResponse {
+func (mmAddUnwantedResponse *mResultMatcherMockAddUnwantedResponse) Inspect(f func(ctx context.Context, msg *payload.ReturnResults)) *mResultMatcherMockAddUnwantedResponse {
 	if mmAddUnwantedResponse.mock.inspectFuncAddUnwantedResponse != nil {
 		mmAddUnwantedResponse.mock.t.Fatalf("Inspect function is already set for ResultMatcherMock.AddUnwantedResponse")
 	}
@@ -315,7 +315,7 @@ func (mmAddUnwantedResponse *mResultMatcherMockAddUnwantedResponse) Return(err e
 }
 
 //Set uses given function f to mock the ResultMatcher.AddUnwantedResponse method
-func (mmAddUnwantedResponse *mResultMatcherMockAddUnwantedResponse) Set(f func(ctx context.Context, msg *message.ReturnResults) (err error)) *ResultMatcherMock {
+func (mmAddUnwantedResponse *mResultMatcherMockAddUnwantedResponse) Set(f func(ctx context.Context, msg *payload.ReturnResults) (err error)) *ResultMatcherMock {
 	if mmAddUnwantedResponse.defaultExpectation != nil {
 		mmAddUnwantedResponse.mock.t.Fatalf("Default expectation is already set for the ResultMatcher.AddUnwantedResponse method")
 	}
@@ -330,7 +330,7 @@ func (mmAddUnwantedResponse *mResultMatcherMockAddUnwantedResponse) Set(f func(c
 
 // When sets expectation for the ResultMatcher.AddUnwantedResponse which will trigger the result defined by the following
 // Then helper
-func (mmAddUnwantedResponse *mResultMatcherMockAddUnwantedResponse) When(ctx context.Context, msg *message.ReturnResults) *ResultMatcherMockAddUnwantedResponseExpectation {
+func (mmAddUnwantedResponse *mResultMatcherMockAddUnwantedResponse) When(ctx context.Context, msg *payload.ReturnResults) *ResultMatcherMockAddUnwantedResponseExpectation {
 	if mmAddUnwantedResponse.mock.funcAddUnwantedResponse != nil {
 		mmAddUnwantedResponse.mock.t.Fatalf("ResultMatcherMock.AddUnwantedResponse mock is already set by Set")
 	}
@@ -350,7 +350,7 @@ func (e *ResultMatcherMockAddUnwantedResponseExpectation) Then(err error) *Resul
 }
 
 // AddUnwantedResponse implements ResultMatcher
-func (mmAddUnwantedResponse *ResultMatcherMock) AddUnwantedResponse(ctx context.Context, msg *message.ReturnResults) (err error) {
+func (mmAddUnwantedResponse *ResultMatcherMock) AddUnwantedResponse(ctx context.Context, msg *payload.ReturnResults) (err error) {
 	mm_atomic.AddUint64(&mmAddUnwantedResponse.beforeAddUnwantedResponseCounter, 1)
 	defer mm_atomic.AddUint64(&mmAddUnwantedResponse.afterAddUnwantedResponseCounter, 1)
 
@@ -462,17 +462,26 @@ type mResultMatcherMockClear struct {
 	mock               *ResultMatcherMock
 	defaultExpectation *ResultMatcherMockClearExpectation
 	expectations       []*ResultMatcherMockClearExpectation
+
+	callArgs []*ResultMatcherMockClearParams
+	mutex    sync.RWMutex
 }
 
 // ResultMatcherMockClearExpectation specifies expectation struct of the ResultMatcher.Clear
 type ResultMatcherMockClearExpectation struct {
-	mock *ResultMatcherMock
+	mock   *ResultMatcherMock
+	params *ResultMatcherMockClearParams
 
 	Counter uint64
 }
 
+// ResultMatcherMockClearParams contains parameters of the ResultMatcher.Clear
+type ResultMatcherMockClearParams struct {
+	ctx context.Context
+}
+
 // Expect sets up expected params for ResultMatcher.Clear
-func (mmClear *mResultMatcherMockClear) Expect() *mResultMatcherMockClear {
+func (mmClear *mResultMatcherMockClear) Expect(ctx context.Context) *mResultMatcherMockClear {
 	if mmClear.mock.funcClear != nil {
 		mmClear.mock.t.Fatalf("ResultMatcherMock.Clear mock is already set by Set")
 	}
@@ -481,11 +490,18 @@ func (mmClear *mResultMatcherMockClear) Expect() *mResultMatcherMockClear {
 		mmClear.defaultExpectation = &ResultMatcherMockClearExpectation{}
 	}
 
+	mmClear.defaultExpectation.params = &ResultMatcherMockClearParams{ctx}
+	for _, e := range mmClear.expectations {
+		if minimock.Equal(e.params, mmClear.defaultExpectation.params) {
+			mmClear.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmClear.defaultExpectation.params)
+		}
+	}
+
 	return mmClear
 }
 
 // Inspect accepts an inspector function that has same arguments as the ResultMatcher.Clear
-func (mmClear *mResultMatcherMockClear) Inspect(f func()) *mResultMatcherMockClear {
+func (mmClear *mResultMatcherMockClear) Inspect(f func(ctx context.Context)) *mResultMatcherMockClear {
 	if mmClear.mock.inspectFuncClear != nil {
 		mmClear.mock.t.Fatalf("Inspect function is already set for ResultMatcherMock.Clear")
 	}
@@ -509,7 +525,7 @@ func (mmClear *mResultMatcherMockClear) Return() *ResultMatcherMock {
 }
 
 //Set uses given function f to mock the ResultMatcher.Clear method
-func (mmClear *mResultMatcherMockClear) Set(f func()) *ResultMatcherMock {
+func (mmClear *mResultMatcherMockClear) Set(f func(ctx context.Context)) *ResultMatcherMock {
 	if mmClear.defaultExpectation != nil {
 		mmClear.mock.t.Fatalf("Default expectation is already set for the ResultMatcher.Clear method")
 	}
@@ -523,25 +539,44 @@ func (mmClear *mResultMatcherMockClear) Set(f func()) *ResultMatcherMock {
 }
 
 // Clear implements ResultMatcher
-func (mmClear *ResultMatcherMock) Clear() {
+func (mmClear *ResultMatcherMock) Clear(ctx context.Context) {
 	mm_atomic.AddUint64(&mmClear.beforeClearCounter, 1)
 	defer mm_atomic.AddUint64(&mmClear.afterClearCounter, 1)
 
 	if mmClear.inspectFuncClear != nil {
-		mmClear.inspectFuncClear()
+		mmClear.inspectFuncClear(ctx)
+	}
+
+	params := &ResultMatcherMockClearParams{ctx}
+
+	// Record call args
+	mmClear.ClearMock.mutex.Lock()
+	mmClear.ClearMock.callArgs = append(mmClear.ClearMock.callArgs, params)
+	mmClear.ClearMock.mutex.Unlock()
+
+	for _, e := range mmClear.ClearMock.expectations {
+		if minimock.Equal(e.params, params) {
+			mm_atomic.AddUint64(&e.Counter, 1)
+			return
+		}
 	}
 
 	if mmClear.ClearMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmClear.ClearMock.defaultExpectation.Counter, 1)
+		want := mmClear.ClearMock.defaultExpectation.params
+		got := ResultMatcherMockClearParams{ctx}
+		if want != nil && !minimock.Equal(*want, got) {
+			mmClear.t.Errorf("ResultMatcherMock.Clear got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		}
 
 		return
 
 	}
 	if mmClear.funcClear != nil {
-		mmClear.funcClear()
+		mmClear.funcClear(ctx)
 		return
 	}
-	mmClear.t.Fatalf("Unexpected call to ResultMatcherMock.Clear.")
+	mmClear.t.Fatalf("Unexpected call to ResultMatcherMock.Clear. %v", ctx)
 
 }
 
@@ -553,6 +588,19 @@ func (mmClear *ResultMatcherMock) ClearAfterCounter() uint64 {
 // ClearBeforeCounter returns a count of ResultMatcherMock.Clear invocations
 func (mmClear *ResultMatcherMock) ClearBeforeCounter() uint64 {
 	return mm_atomic.LoadUint64(&mmClear.beforeClearCounter)
+}
+
+// Calls returns a list of arguments used in each call to ResultMatcherMock.Clear.
+// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
+func (mmClear *mResultMatcherMockClear) Calls() []*ResultMatcherMockClearParams {
+	mmClear.mutex.RLock()
+
+	argCopy := make([]*ResultMatcherMockClearParams, len(mmClear.callArgs))
+	copy(argCopy, mmClear.callArgs)
+
+	mmClear.mutex.RUnlock()
+
+	return argCopy
 }
 
 // MinimockClearDone returns true if the count of the Clear invocations corresponds
@@ -579,13 +627,17 @@ func (m *ResultMatcherMock) MinimockClearDone() bool {
 func (m *ResultMatcherMock) MinimockClearInspect() {
 	for _, e := range m.ClearMock.expectations {
 		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			m.t.Error("Expected call to ResultMatcherMock.Clear")
+			m.t.Errorf("Expected call to ResultMatcherMock.Clear with params: %#v", *e.params)
 		}
 	}
 
 	// if default expectation was set then invocations count should be greater than zero
 	if m.ClearMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterClearCounter) < 1 {
-		m.t.Error("Expected call to ResultMatcherMock.Clear")
+		if m.ClearMock.defaultExpectation.params == nil {
+			m.t.Error("Expected call to ResultMatcherMock.Clear")
+		} else {
+			m.t.Errorf("Expected call to ResultMatcherMock.Clear with params: %#v", *m.ClearMock.defaultExpectation.params)
+		}
 	}
 	// if func was set then invocations count should be greater than zero
 	if m.funcClear != nil && mm_atomic.LoadUint64(&m.afterClearCounter) < 1 {

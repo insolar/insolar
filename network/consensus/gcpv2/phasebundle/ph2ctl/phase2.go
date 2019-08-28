@@ -53,6 +53,7 @@ package ph2ctl
 import (
 	"context"
 	"math"
+	"runtime"
 	"time"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/population"
@@ -74,12 +75,13 @@ import (
 )
 
 func NewPhase2Controller(loopingMinimalDelay time.Duration, packetPrepareOptions transport.PacketPrepareOptions,
-	queueNshReady <-chan *population.NodeAppearance) *Phase2Controller {
+	queueNshReady <-chan *population.NodeAppearance, lockOSThread bool) *Phase2Controller {
 
 	return &Phase2Controller{
 		packetPrepareOptions: packetPrepareOptions,
 		queueNshReady:        queueNshReady,
 		loopingMinimalDelay:  loopingMinimalDelay,
+		lockOSThread:         lockOSThread,
 	}
 }
 
@@ -91,6 +93,7 @@ type Phase2Controller struct {
 	packetPrepareOptions transport.PacketPrepareOptions
 	queueNshReady        <-chan *population.NodeAppearance
 	loopingMinimalDelay  time.Duration
+	lockOSThread         bool
 }
 
 type Phase2PacketDispatcher struct {
@@ -157,7 +160,7 @@ func (c *Phase2PacketDispatcher) DispatchMemberPacket(ctx context.Context, reade
 	}
 
 	purgatory := realm.GetPurgatory()
-	// senderID := sender.GetNodeID()
+	//senderID := sender.GetNodeID()
 
 	for i, nb := range neighbours {
 		modified := false
@@ -167,6 +170,7 @@ func (c *Phase2PacketDispatcher) DispatchMemberPacket(ctx context.Context, reade
 				if announcedJoiner == nil || announcedJoiner.GetStaticNodeID() != nb.Announcement.MemberID {
 					panic("unexpected")
 				}
+				// skip joiner that was introduced by the sender
 				continue
 			}
 			err = purgatory.UnknownFromNeighbourhood(ctx, rank, nb.Announcement, c.isCapped)
@@ -202,6 +206,11 @@ func (c *Phase2Controller) StartWorker(ctx context.Context, realm *core.FullReal
 }
 
 func (c *Phase2Controller) workerPhase2(ctx context.Context) {
+
+	if c.lockOSThread {
+		runtime.LockOSThread()
+		defer runtime.UnlockOSThread()
+	}
 
 	log := inslogger.FromContext(ctx)
 
@@ -269,8 +278,10 @@ func (c *Phase2Controller) workerPhase2(ctx context.Context) {
 			case np.GetNodeID() == c.R.GetSelfNodeID():
 				continue
 			case np.IsJoiner():
+				//c.R.CreateAnnouncement(np, false) // sanity check
 				joinQueue.Add(np)
 			default:
+				//c.R.CreateAnnouncement(np, false) // sanity check
 				nodeQueue.Add(np)
 			}
 		}

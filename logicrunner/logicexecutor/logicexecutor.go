@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -78,7 +79,13 @@ func (le *logicExecutor) ExecuteMethod(ctx context.Context, transcript *common.T
 
 	// it's needed to assure that we call method on ref, that has same prototype as proxy, that we import in contract code
 	if request.Prototype != nil && !request.Prototype.Equal(*protoDesc.HeadRef()) {
-		return nil, errors.New("proxy call error: try to call method of prototype as method of another prototype")
+		err := errors.New("proxy call error: try to call method of prototype as method of another prototype")
+		errResBuf, err := foundation.MarshalMethodErrorResult(err)
+		if err != nil {
+			return nil, errors.Wrap(err, "couldn't marshal result")
+		}
+
+		return requestresult.New(errResBuf, *objDesc.HeadRef()), nil
 	}
 
 	executor, err := le.MachinesManager.GetExecutor(codeDesc.MachineType())
@@ -95,8 +102,11 @@ func (le *logicExecutor) ExecuteMethod(ctx context.Context, transcript *common.T
 	if err != nil {
 		return nil, errors.Wrap(err, "executor error")
 	}
-	if result == nil {
-		return nil, errors.New("result is NIL")
+	if len(result) == 0 {
+		return nil, errors.New("return of method is empty")
+	}
+	if len(newData) == 0 {
+		return nil, errors.New("object state is empty")
 	}
 
 	res := requestresult.New(result, *objDesc.HeadRef())
@@ -147,8 +157,8 @@ func (le *logicExecutor) ExecuteConstructor(
 	if err != nil {
 		return nil, errors.Wrap(err, "executor error")
 	}
-	if result == nil {
-		return nil, errors.New("result is NIL")
+	if len(result) == 0 {
+		return nil, errors.New("return of constructor is empty")
 	}
 
 	res := requestresult.New(result, transcript.RequestRef)

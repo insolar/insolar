@@ -54,19 +54,17 @@ import (
 	"context"
 	"time"
 
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/power"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
-
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/capacity"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
-	"github.com/insolar/insolar/network/consensus/common/pulse"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/power"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/proofs"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
+	"github.com/insolar/insolar/pulse"
 )
 
 type ConsensusController interface {
@@ -106,23 +104,27 @@ func (mode EphemeralMode) IsEnabled() bool {
 
 type PulseControlFeeder interface {
 	CanStopOnHastyPulse(pn pulse.Number, expectedEndOfConsensus time.Time) bool
+	CanFastForwardPulse(expected, received pulse.Number, lastPulseData pulse.Data) bool
 }
 
 type EphemeralControlFeeder interface {
+	PulseControlFeeder
 	GetEphemeralTimings(LocalNodeConfiguration) RoundTimings
+	/* Minimum time after the last ephemeral round before checking for another candidate */
 	GetMinDuration() time.Duration
+	/* Maximum time to wait for a candidate before starting a next ephemeral round */
+	GetMaxDuration() time.Duration
 
 	/* if true, then a new round can be triggered by a joiner candidate */
 	IsActive() bool
 	CreateEphemeralPulsePacket(census census.Operational) proofs.OriginalPulsarPacket
 
 	OnNonEphemeralPacket(ctx context.Context, parser transport.PacketParser, inbound endpoints.Inbound) error
-	CanStopOnHastyPulse(pn pulse.Number, expectedEndOfConsensus time.Time) bool
 
-	/* When a joiner gets a non-ephemeral pulse data from a member */
-	CanAcceptTimePulseToStopEphemeral(pd pulse.Data /*, sourceNode profiles.ActiveNode*/) bool
-
-	TryConvertFromEphemeral(ctx context.Context, expected census.Expected) (wasConverted bool, converted census.Expected)
+	/* Applied when an ephemeral node gets a non-ephemeral pulse data from another member */
+	CanStopEphemeralByPulse(pd pulse.Data, localNode profiles.ActiveNode) bool
+	/* Applied when an ephemeral node finishes consensus */
+	CanStopEphemeralByCensus(expected census.Expected) bool
 
 	EphemeralConsensusFinished(isNextEphemeral bool, roundStartedAt time.Time, expected census.Operational)
 	/* is called:
@@ -141,6 +143,8 @@ type ConsensusControlFeeder interface {
 
 	GetRequiredGracefulLeave() (bool, uint32)
 	OnAppliedGracefulLeave(exitCode uint32, effectiveSince pulse.Number)
+
+	OnPulseDetected() // this method is not currently invoked
 }
 
 type MaintenancePollFunc func(ctx context.Context) bool
@@ -178,7 +182,7 @@ type RoundController interface {
 
 type RoundControllerFactory interface {
 	CreateConsensusRound(chronicle ConsensusChronicles, controlFeeder ConsensusControlFeeder, candidateFeeder CandidateControlFeeder,
-		ephemeralFeeder EphemeralControlFeeder, prevPulseRound RoundController) RoundController
+		ephemeralFeeder EphemeralControlFeeder) RoundController
 	GetLocalConfiguration() LocalNodeConfiguration
 }
 

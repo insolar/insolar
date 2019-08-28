@@ -23,11 +23,13 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/insolar/insolar/testutils/launchnet"
+
 	"github.com/stretchr/testify/require"
 )
 
 func TestChangeLogLevelOk(t *testing.T) {
-	url := HOST_DEBUG + "/debug/loglevel?level=debug"
+	url := launchnet.HostDebug + "/debug/loglevel?level=debug"
 	resp, err := http.Get(url)
 	defer resp.Body.Close()
 	require.NoError(t, err)
@@ -38,7 +40,7 @@ func TestChangeLogLevelOk(t *testing.T) {
 }
 
 func TestChangeLogLevelFail(t *testing.T) {
-	url := HOST_DEBUG + "/debug/loglevel?level=ololo"
+	url := launchnet.HostDebug + "/debug/loglevel?level=ololo"
 	resp, err := http.Get(url)
 	defer resp.Body.Close()
 	require.NoError(t, err)

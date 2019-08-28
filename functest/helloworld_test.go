@@ -23,13 +23,14 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
+	"github.com/insolar/insolar/testutils/launchnet"
 )
 
 type HelloWorldInstance struct {
@@ -37,13 +38,13 @@ type HelloWorldInstance struct {
 }
 
 func NewHelloWorld(ctx context.Context) (*HelloWorldInstance, error) {
-	seed, err := requester.GetSeed(TestAPIURL)
+	seed, err := requester.GetSeed(launchnet.TestRPCUrl)
 	if err != nil {
 		return nil, err
 	}
 
-	rootCfg, err := requester.CreateUserConfig(root.ref, root.privKey, root.pubKey)
-	res, err := requester.SendWithSeed(ctx, TestRPCUrl, rootCfg, &requester.Params{
+	rootCfg, err := requester.CreateUserConfig(launchnet.Root.Ref, launchnet.Root.PrivKey, launchnet.Root.PubKey)
+	res, err := requester.SendWithSeed(ctx, launchnet.TestRPCUrl, rootCfg, &requester.Params{
 		CallSite:   "CreateHelloWorld",
 		CallParams: make(foundation.StableMap),
 		PublicKey:  rootCfg.PublicKey},
@@ -75,15 +76,15 @@ func NewHelloWorld(ctx context.Context) (*HelloWorldInstance, error) {
 }
 
 func (i *HelloWorldInstance) Greet(ctx context.Context, name string) (string, error) {
-	seed, err := requester.GetSeed(TestAPIURL)
+	seed, err := requester.GetSeed(launchnet.TestRPCUrl)
 	if err != nil {
 		return "", err
 	}
 
-	rootCfg, err := requester.CreateUserConfig(i.Ref.String(), root.privKey, root.pubKey)
+	rootCfg, err := requester.CreateUserConfig(i.Ref.String(), launchnet.Root.PrivKey, launchnet.Root.PubKey)
 	callParams := make(foundation.StableMap)
 	callParams["name"] = name
-	res, err := requester.SendWithSeed(ctx, TestRPCUrl, rootCfg, &requester.Params{
+	res, err := requester.SendWithSeed(ctx, launchnet.TestRPCUrl, rootCfg, &requester.Params{
 		CallSite:   "Greet",
 		CallParams: callParams,
 		PublicKey:  rootCfg.PublicKey},
@@ -108,13 +109,13 @@ func (i *HelloWorldInstance) Greet(ctx context.Context, name string) (string, er
 }
 
 func (i *HelloWorldInstance) Count(ctx context.Context) (int, error) {
-	seed, err := requester.GetSeed(TestAPIURL)
+	seed, err := requester.GetSeed(launchnet.TestRPCUrl)
 	if err != nil {
 		return 0, err
 	}
 
-	rootCfg, err := requester.CreateUserConfig(i.Ref.String(), root.privKey, root.pubKey)
-	res, err := requester.SendWithSeed(ctx, TestRPCUrl, rootCfg, &requester.Params{
+	rootCfg, err := requester.CreateUserConfig(i.Ref.String(), launchnet.Root.PrivKey, launchnet.Root.PubKey)
+	res, err := requester.SendWithSeed(ctx, launchnet.TestRPCUrl, rootCfg, &requester.Params{
 		CallSite:   "Count",
 		CallParams: make(foundation.StableMap),
 		PublicKey:  rootCfg.PublicKey},
@@ -139,8 +140,8 @@ func (i *HelloWorldInstance) Count(ctx context.Context) (int, error) {
 }
 
 func (i *HelloWorldInstance) PulseNumber(t *testing.T, ctx context.Context) (int, error) {
-	member := &user{i.Ref.String(), root.privKey, root.pubKey}
-	result, err := signedRequest(t, member, "PulseNumber", nil)
+	member := &launchnet.User{i.Ref.String(), launchnet.Root.PrivKey, launchnet.Root.PubKey}
+	result, err := signedRequest(t, launchnet.TestRPCUrl, member, "PulseNumber", nil)
 	if err != nil {
 		return 0, err
 	}
@@ -152,13 +153,13 @@ func (i *HelloWorldInstance) PulseNumber(t *testing.T, ctx context.Context) (int
 }
 
 func (i *HelloWorldInstance) CreateChild(ctx context.Context) (*HelloWorldInstance, error) {
-	seed, err := requester.GetSeed(TestAPIURL)
+	seed, err := requester.GetSeed(launchnet.TestRPCUrl)
 	if err != nil {
 		return nil, err
 	}
 
-	rootCfg, err := requester.CreateUserConfig(i.Ref.String(), root.privKey, root.pubKey)
-	res, err := requester.SendWithSeed(ctx, TestRPCUrl, rootCfg, &requester.Params{
+	rootCfg, err := requester.CreateUserConfig(i.Ref.String(), launchnet.Root.PrivKey, launchnet.Root.PubKey)
+	res, err := requester.SendWithSeed(ctx, launchnet.TestRPCUrl, rootCfg, &requester.Params{
 		CallSite:   "CreateChild",
 		CallParams: make(foundation.StableMap),
 		PublicKey:  rootCfg.PublicKey},
@@ -190,13 +191,13 @@ func (i *HelloWorldInstance) CreateChild(ctx context.Context) (*HelloWorldInstan
 }
 
 func (i *HelloWorldInstance) ReturnObj(ctx context.Context) (map[string]interface{}, error) {
-	seed, err := requester.GetSeed(TestAPIURL)
+	seed, err := requester.GetSeed(launchnet.TestRPCUrl)
 	if err != nil {
 		return nil, err
 	}
 
-	rootCfg, err := requester.CreateUserConfig(i.Ref.String(), root.privKey, root.pubKey)
-	res, err := requester.SendWithSeed(ctx, TestRPCUrl, rootCfg, &requester.Params{
+	rootCfg, err := requester.CreateUserConfig(i.Ref.String(), launchnet.Root.PrivKey, launchnet.Root.PubKey)
+	res, err := requester.SendWithSeed(ctx, launchnet.TestRPCUrl, rootCfg, &requester.Params{
 		CallSite:   "ReturnObj",
 		CallParams: make(foundation.StableMap),
 		PublicKey:  rootCfg.PublicKey},

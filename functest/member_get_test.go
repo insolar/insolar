@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/testutils"
+	"github.com/insolar/insolar/testutils/launchnet"
 
 	"github.com/stretchr/testify/require"
 )
@@ -30,26 +31,26 @@ import (
 func TestMemberGet(t *testing.T) {
 	member1 := *createMember(t)
 	member2, _ := newUserWithKeys()
-	member2.pubKey = member1.pubKey
-	member2.privKey = member1.privKey
-	res, err := signedRequest(t, member2, "member.get", nil)
+	member2.PubKey = member1.PubKey
+	member2.PrivKey = member1.PrivKey
+	res, err := signedRequest(t, launchnet.TestRPCUrlPublic, member2, "member.get", nil)
 	require.Nil(t, err)
-	require.Equal(t, member1.ref, res.(map[string]interface{})["reference"].(string))
+	require.Equal(t, member1.Ref, res.(map[string]interface{})["reference"].(string))
 }
 
 func TestMigrationMemberGet(t *testing.T) {
 	member1, _ := newUserWithKeys()
 
 	ba := testutils.RandomString()
-	_, _ = signedRequest(t, &migrationAdmin, "migration.addBurnAddresses", map[string]interface{}{"burnAddresses": []string{ba}})
+	_, _ = signedRequest(t, launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.addAddresses", map[string]interface{}{"migrationAddresses": []string{ba}})
 
-	res1, err := signedRequest(t, member1, "member.migrationCreate", nil)
+	res1, err := signedRequest(t, launchnet.TestRPCUrlPublic, member1, "member.migrationCreate", nil)
 	require.Nil(t, err)
 
 	decodedRes1, ok := res1.(map[string]interface{})
 	require.True(t, ok, fmt.Sprintf("failed to decode: expected map[string]interface{}, got %T", res1))
 
-	res2, err := signedRequest(t, member1, "member.get", nil)
+	res2, err := signedRequest(t, launchnet.TestRPCUrlPublic, member1, "member.get", nil)
 	require.Nil(t, err)
 
 	decodedRes2, ok := res2.(map[string]interface{})
@@ -61,13 +62,13 @@ func TestMigrationMemberGet(t *testing.T) {
 
 func TestMemberGetWrongPublicKey(t *testing.T) {
 	member1, _ := newUserWithKeys()
-	_, err := signedRequestWithEmptyRequestRef(t, member1, "member.get", nil)
+	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, member1, "member.get", nil)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "failed to get reference by public key: failed to get reference in shard: failed to find reference by key")
 }
 
 func TestMemberGetGenesisMember(t *testing.T) {
-	res, err := signedRequest(t, &migrationAdmin, "member.get", nil)
+	res, err := signedRequest(t, launchnet.TestRPCUrlPublic, &launchnet.MigrationAdmin, "member.get", nil)
 	require.Nil(t, err)
-	require.Equal(t, migrationAdmin.ref, res.(map[string]interface{})["reference"].(string))
+	require.Equal(t, launchnet.MigrationAdmin.Ref, res.(map[string]interface{})["reference"].(string))
 }

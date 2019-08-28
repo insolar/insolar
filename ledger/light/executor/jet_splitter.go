@@ -20,6 +20,7 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
@@ -147,6 +148,7 @@ func (js *JetSplitterDefault) Do(
 		inslog.WithFields(map[string]interface{}{
 			"jet_left": leftJetID.DebugString(), "jet_right": rightJetID.DebugString(),
 		}).Info("jet split performed")
+		stats.Record(ctx, statJetSplits.M(1))
 	}
 
 	return result, nil
@@ -162,6 +164,12 @@ func (js *JetSplitterDefault) createDrop(
 		JetID: jetID,
 	}
 
+	recordsCount := len(js.recordsAccessor.ForPulse(ctx, jetID, pn))
+	stats.Record(ctx,
+		statDrop.M(1),
+		statDropRecords.M(int64(recordsCount)),
+	)
+
 	// skip any thresholds calculation for split if jet depth for jetID reached limit.
 	if jetID.Depth() >= js.cfg.DepthLimit {
 		return block
@@ -173,13 +181,12 @@ func (js *JetSplitterDefault) createDrop(
 		threshold = 0
 	}
 	// if records count reached threshold increase counter (instead it reset)
-	recordsCount := len(js.recordsAccessor.ForPulse(ctx, jetID, pn))
 	if recordsCount >= js.cfg.ThresholdRecordsCount {
-		block.SplitThresholdExceeded = threshold + 1
+		block.SplitThresholdExceeded = int64(threshold + 1)
 	}
 
 	// first return value is split needed
-	if block.SplitThresholdExceeded > js.cfg.ThresholdOverflowCount {
+	if block.SplitThresholdExceeded > int64(js.cfg.ThresholdOverflowCount) {
 		block.Split = true
 	}
 	return block
@@ -216,5 +223,5 @@ func (js *JetSplitterDefault) getDropThreshold(
 		}
 		panic(errors.Wrapf(err, "failed to get drop for pulse=%v and jetID=%v", pn, jetID.DebugString()))
 	}
-	return block.SplitThresholdExceeded
+	return int(block.SplitThresholdExceeded)
 }

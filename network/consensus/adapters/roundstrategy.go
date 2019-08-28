@@ -54,24 +54,20 @@ import (
 	"context"
 	"math/rand"
 
-	"github.com/insolar/insolar/network/consensus/common/pulse"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
-
-	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/pulse"
 )
 
 type RoundStrategy struct {
-	chronicle   api.ConsensusChronicles
 	localConfig api.LocalNodeConfiguration
 }
 
 func NewRoundStrategy(
-	chronicle api.ConsensusChronicles,
 	localConfig api.LocalNodeConfiguration,
 ) *RoundStrategy {
 	return &RoundStrategy{
-		chronicle:   chronicle,
 		localConfig: localConfig,
 	}
 }

@@ -27,6 +27,7 @@ import (
 	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -52,7 +53,9 @@ func NewRetrySender(sender Sender, pulseAccessor pulse.Accessor, retries uint, r
 }
 
 func (r *RetrySender) SendTarget(ctx context.Context, msg *message.Message, target insolar.Reference) (<-chan *message.Message, func()) {
-	panic("not implemented")
+	return r.retryWrapper(ctx, msg, func(ctx context.Context, msg *message.Message) (<-chan *message.Message, func()) {
+		return r.sender.SendTarget(ctx, msg, target)
+	})
 }
 
 func (r *RetrySender) Reply(ctx context.Context, origin payload.Meta, reply *message.Message) {
@@ -66,6 +69,12 @@ func (r *RetrySender) Reply(ctx context.Context, origin payload.Meta, reply *mes
 func (r *RetrySender) SendRole(
 	ctx context.Context, msg *message.Message, role insolar.DynamicRole, ref insolar.Reference,
 ) (<-chan *message.Message, func()) {
+	return r.retryWrapper(ctx, msg, func(ctx context.Context, msg *message.Message) (<-chan *message.Message, func()) {
+		return r.sender.SendRole(ctx, msg, role, ref)
+	})
+}
+
+func (r *RetrySender) retryWrapper(ctx context.Context, msg *message.Message, caller func(context.Context, *message.Message) (<-chan *message.Message, func())) (<-chan *message.Message, func()) {
 	tries := r.retries + 1
 	once := sync.Once{}
 	done := make(chan struct{})
@@ -89,7 +98,7 @@ func (r *RetrySender) SendRole(
 			if updateUUID {
 				msg.UUID = watermill.NewUUID()
 			}
-			reps, d := r.sender.SendRole(ctx, msg, role, ref)
+			reps, d := caller(ctx, msg)
 			received = tryReceive(ctx, reps, done, replyChan, r.responseCount)
 			tries--
 			updateUUID = true
@@ -97,7 +106,7 @@ func (r *RetrySender) SendRole(
 		}
 
 		if tries < r.retries {
-			mctx := insmetrics.InsertTag(ctx, tagMessageType, getMessageType(msg))
+			mctx := insmetrics.InsertTag(ctx, tagMessageType, messagePayloadTypeName(msg))
 			stats.Record(mctx, statRetries.M(int64(r.retries-tries)))
 		}
 
@@ -191,4 +200,25 @@ func getErrorType(ctx context.Context, rep *message.Message) messageType {
 		return messageTypeErrorNonRetryable
 	}
 	return messageTypeNotError
+}
+
+func ReplyError(ctx context.Context, sender Sender, meta payload.Meta, err error) {
+	errCode := uint32(payload.CodeUnknown)
+
+	// Throwing custom error code
+	cause := errors.Cause(err)
+	insError, ok := cause.(*payload.CodedError)
+	if ok {
+		errCode = insError.GetCode()
+	}
+
+	// todo refactor this #INS-3191
+	if cause == flow.ErrCancelled {
+		errCode = uint32(payload.CodeFlowCanceled)
+	}
+	errMsg, newErr := payload.NewMessage(&payload.Error{Text: err.Error(), Code: errCode})
+	if newErr != nil {
+		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to reply error"))
+	}
+	sender.Reply(ctx, meta, errMsg)
 }

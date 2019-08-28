@@ -23,6 +23,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/insolar/insolar/insolar/genesisrefs"
 	"github.com/insolar/insolar/instrumentation/instracer"
 
 	"github.com/insolar/insolar/insolar/utils"
@@ -91,68 +92,45 @@ func (s *InfoService) GetInfo(r *http.Request, args *InfoArgs, requestBody *rpc.
 
 	span.Annotate(nil, fmt.Sprintf("Incoming request: %s", r.RequestURI))
 
-	rootDomain := s.runner.GenesisDataProvider.GetRootDomain(ctx)
-	if rootDomain == nil {
+	rootDomain := genesisrefs.ContractRootDomain
+	if rootDomain.IsEmpty() {
 		msg := "[ INFO ] rootDomain ref is nil"
 		inslog.Error(msg)
 		err := errors.New(msg)
 		instracer.AddError(span, err)
 		return err
 	}
-	rootMember, err := s.runner.GenesisDataProvider.GetRootMember(ctx)
-	if err != nil {
-		msg := "[ INFO ] Can't get rootMember ref"
-		inslog.Error(errors.Wrap(err, msg))
-		err := errors.Wrap(err, msg)
-		instracer.AddError(span, err)
-		return err
-	}
-	if rootMember == nil {
+
+	rootMember := genesisrefs.ContractRootMember
+	if rootMember.IsEmpty() {
 		msg := "[ INFO ] rootMember ref is nil"
 		inslog.Error(msg)
 		err := errors.New(msg)
 		instracer.AddError(span, err)
 		return err
 	}
-	migrationDaemonMembers, err := s.runner.GenesisDataProvider.GetMigrationDaemonMembers(ctx)
-	if err != nil {
-		msg := "[ INFO ] Can't get migration daemon members refs"
-		inslog.Error(errors.Wrap(err, msg))
-		instracer.AddError(span, err)
-		return errors.Wrap(err, msg)
-	}
+	migrationDaemonMembers := genesisrefs.ContractMigrationDaemonMembers
 	migrationDaemonMembersStrs := []string{}
 	for _, r := range migrationDaemonMembers {
-		if r == nil {
+		if r.IsEmpty() {
 			msg := "[ INFO ] migration daemon members refs are nil"
 			inslog.Error(msg)
+			err := errors.New(msg)
 			instracer.AddError(span, err)
-			return errors.New(msg)
+			return err
 		}
 		migrationDaemonMembersStrs = append(migrationDaemonMembersStrs, r.String())
 	}
-	migrationAdminMember, err := s.runner.GenesisDataProvider.GetMigrationAdminMember(ctx)
-	if err != nil {
-		msg := "[ INFO ] Can't get migration admin member ref"
-		inslog.Error(errors.Wrap(err, msg))
-		instracer.AddError(span, err)
-		return errors.Wrap(err, msg)
-	}
-	if migrationAdminMember == nil {
+	migrationAdminMember := genesisrefs.ContractMigrationAdminMember
+	if migrationAdminMember.IsEmpty() {
 		msg := "[ INFO ] migration admin member ref is nil"
 		inslog.Error(msg)
 		err := errors.New(msg)
 		instracer.AddError(span, err)
 		return err
 	}
-	nodeDomain, err := s.runner.GenesisDataProvider.GetNodeDomain(ctx)
-	if err != nil {
-		msg := "[ INFO ] Can't get nodeDomain ref"
-		inslog.Error(errors.Wrap(err, msg))
-		instracer.AddError(span, err)
-		return errors.Wrap(err, msg)
-	}
-	if nodeDomain == nil {
+	nodeDomain := genesisrefs.ContractNodeDomain
+	if nodeDomain.IsEmpty() {
 		msg := "[ INFO ] nodeDomain ref is nil"
 		inslog.Error(msg)
 		err := errors.New(msg)

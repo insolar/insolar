@@ -146,7 +146,7 @@ func (s *StateIniterDefault) heavy(pn insolar.PulseNumber) (insolar.Reference, e
 		return *insolar.NewEmptyReference(), errors.Wrap(err, "failed to calculate heavy node for pulse")
 	}
 	if len(candidates) == 0 {
-		return *insolar.NewEmptyReference(), errors.Wrap(err, "failed to calculate heavy node for pulse")
+		return *insolar.NewEmptyReference(), errors.New("failed to calculate heavy node for pulse")
 	}
 	return candidates[0].ID, nil
 }
@@ -199,6 +199,10 @@ func (s *StateIniterDefault) loadStateRetry(
 		"network_start": state.NetworkStart,
 	}).Debug("received initial state from heavy")
 
+	if len(state.JetIDs) < len(state.Drops) {
+		return nil, errors.New("Jets count must be greater or equal than drops count")
+	}
+
 	// If not network start, we should wait for other lights to give us data.
 	if !state.NetworkStart {
 		inslogger.FromContext(ctx).Info("Not network start. Wait for other light")
@@ -217,15 +221,11 @@ func (s *StateIniterDefault) loadStateRetry(
 		}
 	}
 
-	for _, buf := range state.Drops {
-		d, err := drop.Decode(buf)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to decode drop")
-		}
+	for _, d := range state.Drops {
 		if d.Pulse != prevPulse.PulseNumber {
 			return nil, errors.New("received drop with wrong pulse")
 		}
-		err = s.drops.Set(ctx, *d)
+		err = s.drops.Set(ctx, d)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to set drop")
 		}
