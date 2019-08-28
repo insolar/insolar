@@ -288,7 +288,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:b1c847919d78cde89a933f6da7927647b61d38b9fcfa302fbe67975d5cef73e5"
+  digest = "1:3c6ef72ecdb2ead95ff8b26a5d7ba93b70ee903eb12cf2d585cf168238cf9a2b"
   name = "github.com/insolar/go-actors"
   packages = [
     "actor",
@@ -297,7 +297,7 @@
     "actor/system",
   ]
   pruneopts = "UT"
-  revision = "edeb5572d29cc6159f4c51e64339d2a901cd88b0"
+  revision = "36f9cd2e9cfb77718cc165dae5a1ddee09dc05ab"
 
 [[projects]]
   branch = "v1"
