@@ -94,7 +94,7 @@ func (lr *LogicRunner) Init(ctx context.Context) error {
 	lr.ShutdownFlag = shutdown.NewFlag()
 
 	as := system.New()
-	lr.OutgoingSender = NewOutgoingRequestSender(as, lr.ContractRequester, lr.ArtifactManager)
+	lr.OutgoingSender = NewOutgoingRequestSender(as, lr.ContractRequester, lr.ArtifactManager, lr.PulseAccessor)
 
 	lr.StateStorage = NewStateStorage(
 		lr.Publisher,
