@@ -134,6 +134,11 @@ func (g *Generator) Run(ctx context.Context) error {
 		return errors.Wrap(err, "generate discovery certificates failed")
 	}
 
+	vestingStep := g.config.VestingStepInPulses
+	if vestingStep == 0 {
+		vestingStep = 60 * 60 * 24
+	}
+
 	inslog.Info("[ bootstrap ] create heavy genesis config ...")
 	contractsConfig := insolar.GenesisContractsConfig{
 		RootBalance:               g.config.RootBalance,
@@ -144,6 +149,7 @@ func (g *Generator) Run(ctx context.Context) error {
 		MigrationAddresses:        migrationAddresses,
 		VestingPeriodInPulses:     g.config.VestingPeriodInPulses,
 		LokupPeriodInPulses:       g.config.LokupPeriodInPulses,
+		VestingStepInPulses:       vestingStep,
 	}
 	err = g.makeHeavyGenesisConfig(discoveryNodes, contractsConfig)
 	if err != nil {
