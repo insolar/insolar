@@ -67,6 +67,10 @@ func (v *Bits64) AsBytes() []byte {
 	return v[:]
 }
 
+func (v Bits64) Compare(other Bits64) int {
+	return bytes.Compare(v[:], other[:])
+}
+
 /* Array size doesnt need to be aligned */
 func FoldToBits64(v []byte) Bits64 {
 	var folded Bits64
@@ -126,6 +130,10 @@ func (v *Bits128) AsByteString() ByteString {
 
 func (v *Bits128) AsBytes() []byte {
 	return v[:]
+}
+
+func (v Bits128) Compare(other Bits128) int {
+	return bytes.Compare(v[:], other[:])
 }
 
 type Bits224 [28]byte
@@ -212,6 +220,10 @@ func (v *Bits256) AsByteString() ByteString {
 	return ByteString(v[:])
 }
 
+func (v Bits256) Compare(other Bits256) int {
+	return bytes.Compare(v[:], other[:])
+}
+
 type Bits512 [64]byte
 
 func (v *Bits512) WriteTo(w io.Writer) (int64, error) {
@@ -257,6 +269,10 @@ func (v *Bits512) AsBytes() []byte {
 
 func (v *Bits512) AsByteString() ByteString {
 	return ByteString(v[:])
+}
+
+func (v Bits512) Compare(other Bits512) int {
+	return bytes.Compare(v[:], other[:])
 }
 
 /* Array size must be aligned to 8 bytes */
