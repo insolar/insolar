@@ -20,11 +20,12 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/ledger/light/proc"
-	"github.com/pkg/errors"
 )
 
 type ActivateObject struct {

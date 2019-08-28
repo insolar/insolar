@@ -20,11 +20,12 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/ledger/light/proc"
-	"github.com/pkg/errors"
 )
 
 type DeactivateObject struct {
@@ -42,10 +43,13 @@ func NewDeactivateObject(dep *proc.Dependencies, msg payload.Meta, passed bool) 
 }
 
 func (s *DeactivateObject) Present(ctx context.Context, f flow.Flow) error {
-	msg := payload.Deactivate{}
-	err := msg.Unmarshal(s.message.Payload)
+	pl, err := payload.Unmarshal(s.message.Payload)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal Deactivate message")
+	}
+	msg, ok := pl.(*payload.Deactivate)
+	if !ok {
+		return fmt.Errorf("wrong request type: %T", pl)
 	}
 
 	deactivateVirt := record.Virtual{}
