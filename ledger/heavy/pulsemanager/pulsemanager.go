@@ -91,7 +91,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 		}
 		err := m.NodeSetter.Set(newPulse.PulseNumber, toSet)
 		if err != nil {
-			panic(errors.Wrap(err, "call of SetActiveNodes failed"))
+			logger.Panic(errors.Wrap(err, "call of SetActiveNodes failed"))
 		}
 
 	}
