@@ -23,37 +23,8 @@ import (
 	"io"
 	"io/ioutil"
 
-	"github.com/pkg/errors"
-
 	"github.com/insolar/insolar/insolar"
 )
-
-// GetEmptyMessage constructs specified message
-func getEmptyMessage(mt insolar.MessageType) (insolar.Message, error) {
-	switch mt {
-
-	// Logicrunner
-	case insolar.TypeValidationResults:
-		return &ValidationResults{}, nil
-
-	// Genesis
-	case insolar.TypeGenesisRequest:
-		return &GenesisRequest{}, nil
-	default:
-		return nil, errors.Errorf("unimplemented message type %d", mt)
-	}
-}
-
-// Deserialize returns decoded message.
-func Deserialize(buf []byte) (insolar.Message, error) {
-	msg, err := getEmptyMessage(insolar.MessageType(buf[0]))
-	if err != nil {
-		return nil, err
-	}
-	buf = buf[1:]
-	err = insolar.Deserialize(buf, &msg)
-	return msg, err
-}
 
 // MustSerialize serialize a insolar.Message to bytes.
 func MustSerialize(msg insolar.Message) []byte {
@@ -70,14 +41,6 @@ func SerializeParcel(parcel insolar.Parcel) (io.Reader, error) {
 	return buff, err
 }
 
-// DeserializeParcel returns decoded signed message.
-func DeserializeParcel(buff io.Reader) (insolar.Parcel, error) {
-	var signed Parcel
-	enc := gob.NewDecoder(buff)
-	err := enc.Decode(&signed)
-	return &signed, err
-}
-
 // ParcelToBytes deserialize a insolar.Parcel to bytes.
 func ParcelToBytes(msg insolar.Parcel) []byte {
 	reqBuff, err := SerializeParcel(msg)
@@ -91,17 +54,7 @@ func ParcelToBytes(msg insolar.Parcel) []byte {
 	return buf
 }
 
-// ParcelMessageHash returns hash of parcel's message calculated with provided cryptography scheme.
-func ParcelMessageHash(pcs insolar.PlatformCryptographyScheme, parcel insolar.Parcel) []byte {
-	return pcs.IntegrityHasher().Hash(MustSerialize(parcel.Message()))
-}
-
 func init() {
-	// Logicrunner
-	gob.Register(&ValidationResults{})
-
-	// Bootstrap
-	gob.Register(&GenesisRequest{})
 	gob.Register(&Parcel{})
 	gob.Register(insolar.Reference{})
 }
