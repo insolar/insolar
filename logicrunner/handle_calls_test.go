@@ -189,13 +189,11 @@ func TestHandleCall_Present(t *testing.T) {
 					executionregistry.NewExecutionRegistryMock(mc).FindRequestLoopMock.Return(false),
 				).
 					UpsertExecutionStateMock.Expect(objRef).Return(nil),
-				ResultsMatcher: nil,
-				lr: &LogicRunner{
-					ArtifactManager: artifacts.NewClientMock(mc),
-				},
-				Sender:        nil,
-				JetStorage:    nil,
-				WriteAccessor: writecontroller.NewAccessorMock(mc).BeginMock.Return(func() {}, nil),
+				ResultsMatcher:  nil,
+				ArtifactManager: artifacts.NewClientMock(mc),
+				Sender:          nil,
+				JetStorage:      nil,
+				WriteAccessor:   writecontroller.NewAccessorMock(mc).BeginMock.Return(func() {}, nil),
 			},
 			Message: payload.Meta{},
 			Parcel:  nil,
@@ -256,10 +254,8 @@ func TestHandleCall_Present(t *testing.T) {
 						require.Equal(t, payload.TypeAdditionalCallFromPreviousExecutor, payloadType)
 						return nil, func() {}
 					}),
-				lr: &LogicRunner{
-					ArtifactManager: artifacts.NewClientMock(mc),
-				},
-				JetStorage: nil,
+				ArtifactManager: artifacts.NewClientMock(mc),
+				JetStorage:      nil,
 				WriteAccessor: writecontroller.NewAccessorMock(mc).
 					BeginMock.Return(func() {}, writecontroller.ErrWriteClosed),
 				PulseAccessor: pulse.NewAccessorMock(mc).
@@ -308,15 +304,13 @@ func TestHandleCall_Present(t *testing.T) {
 		objRef := gen.Reference()
 		handler := HandleCall{
 			dep: &Dependencies{
-				Publisher:      nil,
-				StateStorage:   NewStateStorageMock(mc),
-				ResultsMatcher: nil,
-				lr: &LogicRunner{
-					ArtifactManager: artifacts.NewClientMock(mc),
-				},
-				Sender:        nil,
-				JetStorage:    nil,
-				WriteAccessor: writecontroller.NewAccessorMock(mc),
+				Publisher:       nil,
+				StateStorage:    NewStateStorageMock(mc),
+				ResultsMatcher:  nil,
+				ArtifactManager: artifacts.NewClientMock(mc),
+				Sender:          nil,
+				JetStorage:      nil,
+				WriteAccessor:   writecontroller.NewAccessorMock(mc),
 			},
 			Message: payload.Meta{},
 			Parcel:  nil,
@@ -361,14 +355,12 @@ func TestHandleCall_Present(t *testing.T) {
 		objRef := gen.Reference()
 		handler := HandleCall{
 			dep: &Dependencies{
-				Publisher:      nil,
-				ResultsMatcher: nil,
-				lr: &LogicRunner{
-					ArtifactManager: artifacts.NewClientMock(mc),
-				},
-				Sender:        nil,
-				JetStorage:    nil,
-				WriteAccessor: writecontroller.NewAccessorMock(mc),
+				Publisher:       nil,
+				ResultsMatcher:  nil,
+				ArtifactManager: artifacts.NewClientMock(mc),
+				Sender:          nil,
+				JetStorage:      nil,
+				WriteAccessor:   writecontroller.NewAccessorMock(mc),
 			},
 			Message: payload.Meta{},
 			Parcel:  nil,
@@ -412,15 +404,13 @@ func TestHandleCall_Present(t *testing.T) {
 
 		handler := HandleCall{
 			dep: &Dependencies{
-				Publisher:      nil,
-				StateStorage:   NewStateStorageMock(mc),
-				ResultsMatcher: nil,
-				lr: &LogicRunner{
-					ArtifactManager: artifacts.NewClientMock(mc),
-				},
-				Sender:        nil,
-				JetStorage:    nil,
-				WriteAccessor: writecontroller.NewAccessorMock(mc),
+				Publisher:       nil,
+				StateStorage:    NewStateStorageMock(mc),
+				ResultsMatcher:  nil,
+				ArtifactManager: artifacts.NewClientMock(mc),
+				Sender:          nil,
+				JetStorage:      nil,
+				WriteAccessor:   writecontroller.NewAccessorMock(mc),
 			},
 			Message: payload.Meta{},
 			Parcel:  nil,
@@ -470,10 +460,8 @@ func TestHandleCall_Present(t *testing.T) {
 				Publisher: nil,
 				StateStorage: NewStateStorageMock(mc).
 					GetExecutionRegistryMock.Expect(objRef).Return(nil),
-				ResultsMatcher: nil,
-				lr: &LogicRunner{
-					ArtifactManager: artifacts.NewClientMock(mc),
-				},
+				ResultsMatcher:  nil,
+				ArtifactManager: artifacts.NewClientMock(mc),
 				Sender: bus.NewSenderMock(mc).SendRoleMock.Set(
 					func(ctx context.Context, msg *wmMessage.Message, role insolar.DynamicRole, obj insolar.Reference) (<-chan *wmMessage.Message, func()) {
 						payloadType, err := payload.UnmarshalType(msg.Payload)
@@ -543,9 +531,7 @@ func TestHandleCall_Present(t *testing.T) {
 
 		handler := HandleCall{
 			dep: &Dependencies{
-				lr: &LogicRunner{
-					ArtifactManager: artifacts.NewClientMock(mc),
-				},
+				ArtifactManager:  artifacts.NewClientMock(mc),
 				RequestsExecutor: NewRequestsExecutorMock(mc).SendReplyMock.Return(),
 			},
 			Message: payload.Meta{},
@@ -592,9 +578,7 @@ func TestHandleCall_Present(t *testing.T) {
 
 		handler := HandleCall{
 			dep: &Dependencies{
-				lr: &LogicRunner{
-					ArtifactManager: artifacts.NewClientMock(mc),
-				},
+				ArtifactManager: artifacts.NewClientMock(mc),
 			},
 			Message: payload.Meta{},
 			Parcel:  nil,
@@ -651,10 +635,8 @@ func TestHandleCall_Present(t *testing.T) {
 					GetExecutionRegistryMock.Expect(objRef).Return(
 					executionregistry.NewExecutionRegistryMock(mc).FindRequestLoopMock.Return(true),
 				),
-				ResultsMatcher: nil,
-				lr: &LogicRunner{
-					ArtifactManager: artifacts.NewClientMock(mc),
-				},
+				ResultsMatcher:  nil,
+				ArtifactManager: artifacts.NewClientMock(mc),
 			},
 			Message: payload.Meta{},
 			Parcel:  nil,
