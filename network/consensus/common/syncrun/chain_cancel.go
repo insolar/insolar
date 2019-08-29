@@ -97,7 +97,10 @@ func (p *ChainedCancel) IsCancelled() bool {
 
 func (p *ChainedCancel) SetChain(chain context.CancelFunc) {
 	if chain == nil {
-		panic("illegal value")
+		if p.chain.Load() == nil {
+			return
+		}
+		panic("illegal state")
 	}
 	for {
 		lastState := atomic.LoadUint32(&p.state)

@@ -18,8 +18,13 @@ package smachine
 
 import "context"
 
-type AdapterID uint32
+type AdapterID string
 
+func (v AdapterID) IsEmpty() bool {
+	return len(v) == 0
+}
+
+/* This is a helper interface to facilitate implementation of service adapters */
 type ExecutionAdapter interface {
 	GetAdapterID() AdapterID
 	PrepareSync(ctx ExecutionContext, fn AdapterCallFunc) SyncCallContext
@@ -41,18 +46,22 @@ type CallContext interface {
 	/* Starts async call  */
 	Start()
 
-	/* Start async call that will try to do Jump after the result is returned and applied */
-	Callback(fn StateFunc)
-	CallbackWithMigrate(fn StateFunc, mf MigrateFunc)
+	///* Start async call that will try to do Jump after the result is returned and applied */
+	//Callback(fn StateFunc)
+	//CallbackWithMigrate(fn StateFunc, mf MigrateFunc)
 
 	/* Creates an update that can be returned as a new state and will ONLY be executed if returned as a new state */
 	Wait() CallConditionalUpdate
 }
 
-type AdapterCallbackFunc func(AsyncResultFunc)
+type AdapterCallbackFunc func(fn AsyncResultFunc, recovered interface{})
 type AdapterCallFunc func() AsyncResultFunc
 
-type ExecutionAdapterSink interface {
-	CallAsync(stepLink StepLink, fn AdapterCallFunc, callback AdapterCallbackFunc)
-	CallAsyncWithCancel(stepLink StepLink, fn AdapterCallFunc, callback AdapterCallbackFunc) context.CancelFunc
+/* Provided by internal adapter */
+type AdapterExecutor interface {
+	/* Schedules asynchronous execution, MAY return native cancellation function if supported.
+	When callback == nil then fn() must return nil as well.
+	Panics are handled by caller.
+	*/
+	StartCall(stepLink StepLink, fn AdapterCallFunc, callback AdapterCallbackFunc, requireCancel bool) context.CancelFunc
 }

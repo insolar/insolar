@@ -31,13 +31,8 @@ type PulseServiceAdapter struct {
 }
 
 func (a *PulseServiceAdapter) Call(ctx smachine.ExecutionContext, fn func(svc *PulseService)) {
-	ctx.AdapterSyncCall(a.exec, func() {
+	a.exec.PrepareSync(ctx, func() smachine.AsyncResultFunc {
 		fn(&a.svc)
+		return nil
 	})
-}
-
-func (a *PulseServiceAdapter) AsyncCall(ctx smachine.ExecutionContext, fn func(svc *PulseService), nextState smachine.StateFunc) {
-	ctx.AdapterAsyncCall(a.exec, func() {
-		fn(&a.svc)
-	}, nextState)
 }

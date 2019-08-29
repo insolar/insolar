@@ -25,7 +25,7 @@ import (
 func main() {
 	sm := smachine.NewSlotMachine(smachine.SlotMachineConfig{
 		SlotPageSize:  10,
-		PollingPeriod: 100 * time.Millisecond,
+		PollingPeriod: 10 * time.Millisecond,
 	})
 
 	sm.AddNew(smachine.NoLink(), &example.StateMachine1{})
@@ -33,6 +33,6 @@ func main() {
 	for i := 0; ; i++ {
 		sm.ScanOnce(nil)
 		//fmt.Printf("%03d %v: slots=%v\n", i, time.Now(), sm.OccupiedSlotCount())
-		time.Sleep(10 * time.Millisecond)
+		time.Sleep(1 * time.Millisecond)
 	}
 }

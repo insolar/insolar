@@ -18,6 +18,7 @@ package smachine
 
 import (
 	"fmt"
+	"github.com/insolar/insolar/network/consensus/common/syncrun"
 	"sync"
 	"time"
 )
@@ -41,7 +42,7 @@ func NewSlotMachine(config SlotMachineConfig) SlotMachine {
 type SlotMachine struct {
 	config SlotMachineConfig
 
-	adapters map[AdapterID]ExecutionAdapterSink
+	adapters map[AdapterID]AdapterExecutor
 
 	slotCount SlotID
 	slots     [][]Slot
@@ -80,13 +81,32 @@ func (m *SlotMachine) IsEmpty() bool {
 	return m.syncQueue.IsZero()
 }
 
-func (m *SlotMachine) GetAdapterQueue(adapter ExecutionAdapter) ExecutionAdapterSink {
+func (m *SlotMachine) GetAdapterQueue(adapter ExecutionAdapter) AdapterExecutor {
 	return m.adapters[adapter.GetAdapterID()]
 }
 
 func (m *SlotMachine) ScanOnceAsNested(context ExecutionContext) bool {
 	workCtl := context.(*executionContext).worker.workCtl
 	return m.ScanOnce(workCtl)
+}
+
+func (m *SlotMachine) RegisterAdapter(adapterID AdapterID, adapterExecutor AdapterExecutor) ExecutionAdapter {
+	if adapterID.IsEmpty() {
+		panic("illegal value")
+	}
+	if adapterExecutor == nil {
+		panic("illegal value")
+	}
+
+	if m.adapters == nil {
+		m.adapters = make(map[AdapterID]AdapterExecutor)
+	}
+	if m.adapters[adapterID] != nil {
+		panic("duplicate adapter id: " + adapterID)
+	}
+	m.adapters[adapterID] = adapterExecutor
+
+	return &adapterExecHelper{adapterID, adapterExecutor}
 }
 
 func (m *SlotMachine) ScanOnce(workCtl WorkerController) (hasUpdates bool) {
@@ -239,11 +259,11 @@ func (m *SlotMachine) migrate(slot *Slot) bool {
 	}
 
 	for m.migrationCount != slot.migrationCount {
-		migrateFn := slot.nextStep.Migration
+		migrateFn := slot.step.Migration
 		if migrateFn == nil {
-			migrateFn = slot.machine.GetMigrateFn(slot.nextStep.Transition)
+			migrateFn = slot.machine.GetMigrateFn(slot.step.Transition)
 			if migrateFn == nil {
-				migrateFn = slot.migrateSlot
+				migrateFn = slot.defMigrate
 			}
 		}
 		if migrateFn == nil {
@@ -326,7 +346,7 @@ func safeSlotCall(slot *Slot, fn func(*Slot)) (err error) {
 	return nil
 }
 
-func (m *SlotMachine) applyAsyncStateUpdate(stepLink StepLink, resultFn AsyncResultFunc) {
+func (m *SlotMachine) applyAsyncStateUpdate(stepLink StepLink, resultFn AsyncResultFunc, recovered interface{}) {
 
 	m.syncSafe(stepLink.SlotLink, func(slot *Slot) {
 		if !slot.isWorking() {
@@ -407,20 +427,74 @@ func (m *SlotMachine) applyStateUpdate(slot *Slot, stateUpdate StateUpdate) bool
 	slot.incStep()
 
 	updType, slotStep, param := ExtractStateUpdate(stateUpdate)
+	su := stateUpdType(updType)
 
-	switch stateUpdType(updType) {
+	if su.HasStep() {
+		switch {
+		case su.HasPrepare():
+			recovered := runStepPrepareFn(param, slot)
+			if recovered != nil {
+				su = stateUpdDispose
+				// TODO report recovered error
+				break
+			}
+			fallthrough
+		default:
+			if slotStep.Transition != nil {
+				slot.setNextStep(slotStep)
+			}
+		}
+	}
+
+	switch su {
 	case stateUpdNoChange, stateUpdExpired:
 		// can't be here
 		panic("illegal value")
 
-	case stateUpdNext, stateUpdNextLoop:
-		slot.setNextStep(slotStep)
-		fallthrough
-	case stateUpdRepeat:
-		if slot.nextStep.Transition == nil {
+	case stateUpdNext, stateUpdNextLoop, stateUpdRepeat:
+		if slot.step.Transition == nil {
 			break
 		}
 		m.addSlotToActiveOrWorkingQueue(slot)
+		return true
+
+	case stateUpdPoll:
+		if slot.step.Transition == nil {
+			break
+		}
+		m.pollingSlots.AddLast(slot)
+		return true
+
+	case stateUpdWait:
+		if slot.step.Transition == nil {
+			break
+		}
+
+		waitOn := stateUpdate.link.s
+		switch {
+		case waitOn == slot:
+			// don't wait for self
+			fallthrough
+		case !stateUpdate.link.IsValid():
+			// don't wait for an expired slot
+			m.addSlotToActiveOrWorkingQueue(slot)
+			return true
+		default:
+			switch waitOn.QueueType() {
+			case ActiveSlots, WorkingSlots:
+				// don't wait
+				m.addSlotToActiveOrWorkingQueue(slot)
+				return true
+			case NoQueue:
+				waitOn.makeQueueHead()
+				fallthrough
+			case AnotherSlotQueue, PollingSlots:
+				waitOn.queue.AddLast(slot)
+				return true
+			default:
+				panic("illegal state")
+			}
+		}
 		return true
 
 	case stateUpdReplace:
@@ -428,45 +502,6 @@ func (m *SlotMachine) applyStateUpdate(slot *Slot, stateUpdate StateUpdate) bool
 		m.disposeSlot(slot)
 		ok, _ := m.applySlotCreate(slot, parent, param.(CreateFunc)) // recursive call inside
 		return ok
-
-	case stateUpdPoll:
-		slot.setNextStep(slotStep)
-		if slot.nextStep.Transition == nil {
-			break
-		}
-		m.pollingSlots.AddLast(slot)
-		return true
-
-	case stateUpdWait:
-		slot.setNextStep(slotStep)
-		if slot.nextStep.Transition == nil {
-			break
-		}
-		return true
-
-	//	switch {
-	//	case waitOn.s == slot:
-	//		// don't wait
-	//	case !waitOn.IsValid():
-	//		// don't wait
-	//	default:
-	//		switch waitOn.s.QueueType() {
-	//		case ActiveSlots, WorkingSlots:
-	//			// don't wait
-	//		case NoQueue:
-	//			waitOn.s.makeQueueHead()
-	//			fallthrough
-	//		case AnotherSlotQueue, PollingSlots:
-	//			slot.setNextStep(slotStep)
-	//			waitOn.s.queue.AddLast(slot)
-	//			return true
-	//		default:
-	//			panic("illegal state")
-	//		}
-	//	}
-	//	slot.setNextStep(slotStep)
-	//	m.addSlotToActiveOrWorkingQueue(slot)
-	//	return true
 
 	case stateUpdStop:
 		m.disposeSlot(slot)
@@ -480,7 +515,7 @@ func (m *SlotMachine) applyStateUpdate(slot *Slot, stateUpdate StateUpdate) bool
 		panic("illegal state")
 	}
 
-	fmt.Printf("slot fail: %v %+v", slot.GetID(), stateUpdate)
+	fmt.Printf("slot fail: %v %+v %+v", slot.GetID(), stateUpdate, stateUpdate.param)
 	m.disposeSlot(slot)
 	m.unusedSlots.AddLast(slot)
 	return false
@@ -536,7 +571,7 @@ func (m *SlotMachine) disposeSlot(slot *Slot) {
 
 func (m *SlotMachine) preparePollingSlots(scanTime time.Time) {
 
-	for m.pollingSeqHead != m.pollingSeqTail {
+	for m.pollingSeqHead != m.pollingSeqTail { // FIXME it won't pick the only non-empty polling slot queue
 		ps := &m.pollingSeq[m.pollingSeqTail]
 
 		if !ps.IsEmpty() && ps.pollingTime.After(scanTime) {
@@ -565,6 +600,9 @@ func (m *SlotMachine) allocatePollingSlots(scanTime time.Time) {
 	case !m.pollingSlots.IsEmpty():
 		m.growPollingSlots()
 		m.pollingSeqHead++
+		if int(m.pollingSeqHead) >= len(m.pollingSeq) {
+			m.pollingSeqHead = 0
+		}
 	}
 	pollingQueue = &m.pollingSeq[m.pollingSeqHead]
 
@@ -599,4 +637,51 @@ func (m *SlotMachine) growPollingSlots() {
 			}
 		}
 	}
+}
+
+type AdapterCallback struct {
+	stepLink StepLink
+	callback AdapterCallbackFunc
+	cancel   *syncrun.ChainedCancel
+}
+
+func (c AdapterCallback) IsZero() bool {
+	return c.stepLink.IsEmpty() || c.callback == nil
+}
+
+func (c AdapterCallback) IsCancelled() bool {
+	return !c.stepLink.IsAtStep() || c.cancel != nil && c.cancel.IsCancelled()
+}
+
+func (c AdapterCallback) SendResult(result AsyncResultFunc) {
+	if c.IsZero() {
+		panic("illegal state")
+	}
+	_sendResult(c.stepLink, result, c.callback, c.cancel)
+}
+
+// just to make sure that outer struct doesn't leak into a closure
+func _sendResult(stepLink StepLink, result AsyncResultFunc, callback AdapterCallbackFunc, cancel *syncrun.ChainedCancel) {
+
+	// NB! Do NOT ignore "result = nil" - it MUST decrement async call count
+	callback(func(ctx AsyncResultContext) {
+		if result == nil || !stepLink.IsAtStep() || cancel != nil && cancel.IsCancelled() {
+			return
+		}
+		result(ctx)
+	}, nil)
+}
+
+func (c AdapterCallback) SendPanic(recovered interface{}) {
+	if c.IsZero() {
+		panic("illegal state")
+	}
+	c.callback(nil, recovered)
+}
+
+func (c AdapterCallback) SendCancel() {
+	if c.IsZero() {
+		panic("illegal state")
+	}
+	c.callback(nil, nil)
 }

@@ -19,7 +19,7 @@ package conveyor
 import (
 	"fmt"
 	"github.com/insolar/insolar/conveyor/smachine"
-	"github.com/insolar/insolar/network/consensus/common/pulse"
+	"github.com/insolar/insolar/pulse"
 	"sync"
 )
 
@@ -163,18 +163,19 @@ func (p *PulseSlot) processEvents(ctx smachine.ExecutionContext, suspending bool
 	events, _ := p.inputQueue.Flush()
 	//if len(events) == 0 {
 	//	// pass a signal to the state machine
-	//	return ctx.WaitAny()
+	//	return ctx.Idle()
 	//}
 
 	for _, ev := range events {
 		ev()
 	}
 
-	return ctx.Yield()
+	return ctx.Yield().ThenRepeat()
 }
 
 func (p *PulseSlot) processEventsAndOperations(ctx smachine.ExecutionContext) smachine.StateUpdate {
 	p.processEvents(ctx, false)
 	p.slotMachine.ScanOnceAsNested(ctx)
-	return ctx.Yield()
+
+	return ctx.Yield().ThenRepeat()
 }

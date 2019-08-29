@@ -127,7 +127,7 @@ func (sm *PastPulseSM) Init(ctx smachine.InitializationContext) smachine.StateUp
 
 func (sm *PastPulseSM) PulseCommitted(ctx smachine.MigrationContext) smachine.StateUpdate {
 	// trigger some events?
-	return ctx.Same()
+	return ctx.Stay()
 }
 
 func (sm *PastPulseSM) StateWorking(ctx smachine.ExecutionContext) smachine.StateUpdate {

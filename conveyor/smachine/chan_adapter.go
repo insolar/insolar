@@ -22,7 +22,7 @@ import (
 	"sync"
 )
 
-var _ ExecutionAdapterSink = &ChannelAdapter{}
+var _ AdapterExecutor = &ChannelAdapter{}
 
 func NewChannelAdapter(ctx context.Context, chanLen int) ChannelAdapter {
 	return ChannelAdapter{
@@ -38,6 +38,21 @@ type ChannelAdapter struct {
 	q   []ChannelRecord
 }
 
+func (c *ChannelAdapter) StartCall(stepLink StepLink, fn AdapterCallFunc, callback AdapterCallbackFunc, requireCancel bool) context.CancelFunc {
+
+	var cancel *syncrun.ChainedCancel
+	if requireCancel {
+		cancel = syncrun.NewChainedCancel()
+	}
+
+	r := ChannelRecord{fn, AdapterCallback{stepLink, callback, cancel}}
+	if !c.append(r, false) || !c.send(r) {
+		c.append(r, true)
+	}
+
+	return cancel.Cancel
+}
+
 func (c *ChannelAdapter) Channel() <-chan ChannelRecord {
 	return c.c
 }
@@ -51,24 +66,6 @@ func (c *ChannelAdapter) Close() {
 	defer c.m.Unlock()
 	c.q = nil
 	close(c.c)
-}
-
-func (c *ChannelAdapter) CallAsync(stepLink StepLink, fn AdapterCallFunc, callback AdapterCallbackFunc) {
-	r := ChannelRecord{stepLink, fn, callback, nil}
-
-	if !c.append(r, false) || !c.send(r) {
-		c.append(r, true)
-	}
-}
-
-func (c *ChannelAdapter) CallAsyncWithCancel(stepLink StepLink, fn AdapterCallFunc, callback AdapterCallbackFunc) (cancelFn context.CancelFunc) {
-	cancel := syncrun.NewChainedCancel()
-	r := ChannelRecord{stepLink, fn, callback, cancel}
-
-	if !c.append(r, false) || !c.send(r) {
-		c.append(r, true)
-	}
-	return cancel.Cancel
 }
 
 func (c *ChannelAdapter) append(r ChannelRecord, force bool) bool {
@@ -130,66 +127,24 @@ func (c *ChannelAdapter) sendWorker() {
 }
 
 type ChannelRecord struct {
-	stepLink StepLink
 	callFunc AdapterCallFunc
-	callback AdapterCallbackFunc
-	cancel   *syncrun.ChainedCancel
-}
-
-func (c ChannelRecord) IsCancelled() bool {
-	return !c.stepLink.IsAtStep() || c.cancel != nil && c.cancel.IsCancelled()
-}
-
-func (c ChannelRecord) RunCall() AsyncResultFunc {
-	return c.callFunc()
-}
-
-func (c ChannelRecord) SendResult(result AsyncResultFunc) {
-	if result == nil {
-		c.callback(func(ctx AsyncResultContext) {
-		})
-	} else {
-		c.callback(result)
-	}
-}
-
-func (c ChannelRecord) SendCancel() {
-	c.callback(nil)
+	callback AdapterCallback
 }
 
 func (c ChannelRecord) RunAndSendResult() bool {
-	if c.IsCancelled() {
-		c.callback(nil)
+	if c.callback.IsCancelled() {
+		c.callback.SendCancel()
 		return false
 	}
 
 	result, recovered := c.safeCall()
-
-	if c.IsCancelled() && recovered == nil {
-		c.callback(nil)
+	if recovered != nil {
+		c.callback.SendPanic(recovered)
 		return false
 	}
 
-	wrapCallback(result, recovered, c.stepLink, c.cancel, c.callback)
+	c.callback.SendResult(result)
 	return true
-}
-
-// just to make sure that ChannelRecord doesn't leak into a closure
-func wrapCallback(result AsyncResultFunc, recovered interface{}, stepLink StepLink, cancel *syncrun.ChainedCancel, callback AdapterCallbackFunc) {
-
-	if recovered != nil {
-		result = nil
-	}
-
-	callback(func(ctx AsyncResultContext) {
-		if recovered != nil {
-			panic(recovered)
-		}
-		if result == nil || !stepLink.IsAtStep() {
-			return
-		}
-		result(ctx)
-	})
 }
 
 func (c ChannelRecord) safeCall() (result AsyncResultFunc, recovered interface{}) {

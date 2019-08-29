@@ -20,8 +20,6 @@ import (
 	"math"
 )
 
-type stateUpdateFn func(m *SlotMachine, slot *Slot, upd StateUpdate) bool
-
 func slotMachineUpdate(marker *struct{}, upd stateUpdType, step SlotStep, param interface{}) StateUpdate {
 	return NewStateUpdate(marker, uint16(upd), step, param)
 }
@@ -46,42 +44,73 @@ func getRepeatLimit(p interface{}) uint32 {
 	return p.(uint32)
 }
 
-func stateUpdateNext(marker *struct{}, sf StateFunc, mf MigrateFunc, canLoop bool, flags stepFlags) StateUpdate {
+func stateUpdateNext(marker *struct{}, sf StateFunc, mf MigrateFunc, canLoop bool, flags StepFlags) StateUpdate {
 	if sf == nil {
 		panic("illegal value")
 	}
 
-	slotStep := SlotStep{Transition: sf, Migration: mf, StepFlags: uint16(flags)}
+	slotStep := SlotStep{Transition: sf, Migration: mf, StepFlags: flags}
 	if canLoop {
 		return slotMachineUpdate(marker, stateUpdNextLoop, slotStep, sf)
 	}
+
 	return slotMachineUpdate(marker, stateUpdNext, slotStep, nil)
 }
 
-func getShortLoopStep(p interface{}) StateFunc {
+func getShortLoopTransition(p interface{}) StateFunc {
 	return p.(StateFunc)
 }
 
-func stateUpdatePoll(marker *struct{}, slotStep SlotStep) StateUpdate {
-	if !slotStep.HasTransition() {
-		panic("illegal value")
+type StepPrepareFunc func(slot *Slot)
+
+func runStepPrepareFn(p interface{}, slot *Slot) (recovered interface{}) {
+	if p == nil {
+		return nil
 	}
-	return slotMachineUpdate(marker, stateUpdPoll, slotStep, nil)
+
+	defer func() {
+		recovered = recover()
+	}()
+
+	fn := p.(StepPrepareFunc)
+	fn(slot)
+	return nil
 }
 
-func stateUpdateWait(marker *struct{}, slotStep SlotStep) StateUpdate {
-	if !slotStep.HasTransition() {
-		panic("illegal value")
+func prepareToParam(prepare StepPrepareFunc) interface{} {
+	if prepare == nil {
+		return nil
 	}
-	return slotMachineUpdate(marker, stateUpdWait, slotStep, nil)
+	return prepare
 }
 
-func stateUpdateWaitForSlot(marker *struct{}, waitOn SlotLink, slotStep SlotStep) StateUpdate {
+func stateUpdateYield(marker *struct{}, slotStep SlotStep, prepare StepPrepareFunc) StateUpdate {
+	//if !slotStep.HasTransition() {
+	//	panic("illegal value")
+	//}
+	return slotMachineUpdate(marker, stateUpdNext, slotStep, prepareToParam(prepare))
+}
+
+func stateUpdatePoll(marker *struct{}, slotStep SlotStep, prepare StepPrepareFunc) StateUpdate {
+	if !slotStep.HasTransition() {
+		panic("illegal value")
+	}
+	return slotMachineUpdate(marker, stateUpdPoll, slotStep, prepareToParam(prepare))
+}
+
+func stateUpdateWait(marker *struct{}, slotStep SlotStep, prepare StepPrepareFunc) StateUpdate {
+	if !slotStep.HasTransition() {
+		panic("illegal value")
+	}
+	return slotMachineUpdate(marker, stateUpdWait, slotStep, prepareToParam(prepare))
+}
+
+func stateUpdateWaitForSlot(marker *struct{}, waitOn SlotLink, slotStep SlotStep, prepare StepPrepareFunc) StateUpdate {
 	if !slotStep.HasTransition() {
 		panic("illegal value")
 	}
 
-	panic("not implemented") // TODO not implemented
+	return NewStateUpdateLink(marker, uint16(stateUpdWait), waitOn, slotStep, prepareToParam(prepare))
 }
 
 func stateUpdateReplace(marker *struct{}, cf CreateFunc) StateUpdate {
@@ -105,18 +134,27 @@ func stateUpdateExpired(slotStep SlotStep, info interface{}) StateUpdate {
 
 type stateUpdType uint32
 
+func (u stateUpdType) HasStep() bool {
+	return u >= stateUpdRepeat
+}
+
+func (u stateUpdType) HasPrepare() bool {
+	return u > stateUpdNextLoop
+}
+
 const (
 	_ stateUpdType = iota
 	stateUpdNoChange
-	stateUpdRepeat   // supports short-loop
-	stateUpdNextLoop // supports short-loop
-	stateUpdNext
-	stateUpdReplace
-	stateUpdPoll
-	stateUpdWait
 	stateUpdStop
 	stateUpdDispose
 	stateUpdExpired
+	stateUpdReplace
+
+	stateUpdRepeat   // supports short-loop, no prepare
+	stateUpdNextLoop // supports short-loop, no prepare
+	stateUpdNext
+	stateUpdPoll
+	stateUpdWait
 
 	//stateUpdFlagNoWakeup = 1 << 5
 	//stateUpdFlagHasAsync = 1 << 6

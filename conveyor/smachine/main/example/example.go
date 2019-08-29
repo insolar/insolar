@@ -19,6 +19,7 @@ package example
 import (
 	"fmt"
 	"github.com/insolar/insolar/conveyor/smachine"
+	"time"
 )
 
 var _ smachine.StateMachine = &StateMachine1{}
@@ -45,6 +46,7 @@ func (s *StateMachine1) GetInitStateFor(m smachine.StateMachine) smachine.InitFu
 }
 
 func (s *StateMachine1) Init(ctx smachine.InitializationContext) smachine.StateUpdate {
+	fmt.Printf("init: %d %v\n", ctx.GetSlotID(), time.Now())
 	return ctx.Jump(s.State1)
 }
 
@@ -56,7 +58,7 @@ func (s *StateMachine1) State1(ctx smachine.ExecutionContext) smachine.StateUpda
 	//	return mutex.Wait()
 	//}
 
-	//ctx.WaitAny().WakeUp().Deadline().Active().ThenRepeat()
+	//ctx.Idle().SetWakeUp().Deadline().Active().ThenRepeat()
 
 	return ctx.Jump(s.State3)
 }
@@ -67,7 +69,7 @@ func (s *StateMachine1) State3(ctx smachine.ExecutionContext) smachine.StateUpda
 	if s.count < 5 {
 		//return ctx.Yield()
 		//return ctx.Repeat(0)
-		return ctx.WaitAny().Poll().ThenJump(s.State3)
+		return ctx.Poll().ThenJump(s.State3)
 	}
 	ctx.NewChild(func(ctx smachine.ConstructionContext) smachine.StateMachine {
 		return &StateMachine1{}
@@ -81,11 +83,12 @@ func (s *StateMachine1) State4(ctx smachine.ExecutionContext) smachine.StateUpda
 	//	return &StateMachine1{}
 	//})
 
-	fmt.Println(s.result)
+	fmt.Printf("stop: %d %v %v\n", ctx.GetSlotID(), time.Now(), s.result)
 	return ctx.Stop()
 }
 
 func (s *StateMachine1) State5(ctx smachine.ExecutionContext) smachine.StateUpdate {
+	fmt.Printf("stop: %d %v\n", ctx.GetSlotID(), time.Now())
 	return ctx.Stop()
 }
 
@@ -104,14 +107,14 @@ func (s *StateMachine1) State50(ctx smachine.ExecutionContext) smachine.StateUpd
 			s.result = asyncResult
 			ctx.WakeUp()
 		}
-	}).Wait().WakeUp(true).ThenJump(s.State5)
+	}).Wait().ThenJump(s.State5)
 }
 
 func (s *StateMachine1) State60(ctx smachine.ExecutionContext) smachine.StateUpdate {
 
 	//mx := s.mutexB.JoinMutex(ctx, "mutex Key", mutexCallback)
 	//if !mx.IsHolder() {
-	//	return ctx.WaitAny()
+	//	return ctx.Idle()
 	//}
 	//
 	//mb.Broadcast(info)

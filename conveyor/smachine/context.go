@@ -69,12 +69,21 @@ func (p *slotContext) GetParent() SlotLink {
 
 func (p *slotContext) SetDefaultMigration(fn MigrateFunc) {
 	p.ensureAtLeastState(initContext)
-	p.s.migrateSlot = fn
+	p.s.defMigrate = fn
 }
 
-func (p *slotContext) JumpWithMigrate(fn StateFunc, mf MigrateFunc) StateUpdate {
+func (p *slotContext) SetDefaultFlags(flags StepFlags) {
 	p.ensureAtLeastState(initContext)
-	return stateUpdateNext(&p.marker, fn, mf, true, 0)
+	if flags&StepResetAllFlags != 0 {
+		p.s.defFlags = flags &^ StepResetAllFlags
+	} else {
+		p.s.defFlags |= flags
+	}
+}
+
+func (p *slotContext) JumpOverride(fn StateFunc, mf MigrateFunc, flags StepFlags) StateUpdate {
+	p.ensureAtLeastState(initContext)
+	return stateUpdateNext(&p.marker, fn, mf, true, flags)
 }
 
 func (p *slotContext) Jump(fn StateFunc) StateUpdate {
@@ -98,11 +107,6 @@ func (p *slotContext) Replace(fn CreateFunc) StateUpdate {
 func (p *slotContext) Repeat(limit int) StateUpdate {
 	p.ensureExactState(execContext)
 	return stateUpdateRepeat(&p.marker, limit)
-}
-
-func (p *slotContext) Yield() StateUpdate {
-	p.ensureExactState(execContext)
-	return stateUpdateRepeat(&p.marker, 0)
 }
 
 var _ ConstructionContext = &constructionContext{}
@@ -137,7 +141,7 @@ type migrationContext struct {
 	slotContext
 }
 
-func (p *migrationContext) Same() StateUpdate {
+func (p *migrationContext) Stay() StateUpdate {
 	return stateUpdateNoChange(&p.marker)
 }
 
@@ -169,12 +173,31 @@ type executionContext struct {
 	countAsyncCalls uint16
 }
 
-func (p *executionContext) WaitAny() StateConditionalUpdate {
+func (p *executionContext) Yield() StateConditionalUpdate {
+	p.ensureExactState(execContext)
+	return &conditionalUpdate{marker: &p.marker, updMode: stateUpdNext}
+}
+
+func (p *executionContext) Poll() StateConditionalUpdate {
+	p.ensureExactState(execContext)
+	return &conditionalUpdate{marker: &p.marker, updMode: stateUpdPoll}
+}
+
+func (p *executionContext) WaitForActive(link SlotLink) StateConditionalUpdate {
+	p.ensureExactState(execContext)
+	if link.IsEmpty() {
+		panic("illegal value")
+	}
+	return &conditionalUpdate{marker: &p.marker, dependency: link}
+}
+
+func (p *executionContext) Wait() StateConditionalUpdate {
 	p.ensureExactState(execContext)
 	return &conditionalUpdate{marker: &p.marker}
 }
 
 func (p *executionContext) SyncOneStep(key string, weight int32, broadcastFn BroadcastReceiveFunc) Syncronizer {
+	p.ensureExactState(execContext)
 	return p.worker.machine.stepSync.Join(p.s, key, weight, broadcastFn)
 }
 
@@ -187,88 +210,6 @@ func (p *executionContext) NewChild(fn CreateFunc) SlotLink {
 	return link
 }
 
-//func (p *executionContext) NextAdapterCall(a ExecutionAdapter, fn AdapterCallFunc, resultState StateFunc) (StateUpdate, context.CancelFunc) {
-//	p.ensureExactState(execContext)
-//	if resultState == nil {
-//		panic("illegal value")
-//	}
-//	aq := p.worker.machine.GetAdapterQueue(a)
-//
-//	cf := &indirectCancel{}
-//
-//	stepLink := p.s.NewStepLink()
-//	return StateUpdate{marker: &p.marker,
-//		flags:    stateUpdateColdWait | stateUpdateHasAsync,
-//		nextStep: SlotStep{transition: resultState},
-//
-//		param: func() {
-//			cf.set(aq.CallAsyncWithCancel(stepLink, fn, func(fn AsyncResultFunc) {
-//				p.worker.machine.applyAsyncStateUpdate(stepLink, fn)
-//			}))
-//		}}, cf.cancel
-//}
-//
-//func (p *executionContext) AdapterSyncCall(a ExecutionAdapter, fn AdapterCallFunc) bool {
-//	p.ensureExactState(execContext)
-//	aq := p.worker.machine.GetAdapterQueue(a)
-//
-//	wc := p.worker.getCond()
-//
-//	var resultFn AsyncResultFunc
-//	var stateFlag uint32
-//
-//	stepLink := p.s.NewStepLink()
-//	aq.CallAsync(stepLink, fn, func(fn AsyncResultFunc) {
-//		resultFn = fn
-//		if !atomic.CompareAndSwapUint32(&stateFlag, 0, 1) {
-//			return
-//		}
-//		wc.L.Lock()
-//		wc.Broadcast()
-//		wc.L.Unlock()
-//	})
-//
-//	wc.L.Lock()
-//	wc.Wait()
-//	wc.L.Unlock()
-//
-//	if atomic.CompareAndSwapUint32(&stateFlag, 0, 2) {
-//		stepLink.setCancelled()
-//		return false
-//	}
-//	if resultFn == nil {
-//		return false
-//	}
-//
-//	rc := asyncResultContext{slot: p.s}
-//	rc.executeResult(resultFn)
-//	return true
-//}
-//
-//func (p *executionContext) AdapterAsyncCall(a ExecutionAdapter, fn AdapterCallFunc) {
-//	p.ensureExactState(execContext)
-//	aq := p.worker.machine.GetAdapterQueue(a)
-//
-//	stepLink := p.s.NewStepLink()
-//	p.countAsyncCalls++
-//
-//	aq.CallAsync(stepLink, fn, func(fn AsyncResultFunc) {
-//		p.worker.machine.applyAsyncStateUpdate(stepLink, fn)
-//	})
-//}
-//
-//func (p *executionContext) AdapterAsyncCallWithCancel(a ExecutionAdapter, fn AdapterCallFunc) context.CancelFunc {
-//	p.ensureExactState(execContext)
-//	aq := p.worker.machine.GetAdapterQueue(a)
-//
-//	stepLink := p.s.NewStepLink()
-//	p.countAsyncCalls++
-//
-//	return aq.CallAsyncWithCancel(stepLink, fn, func(fn AsyncResultFunc) {
-//		p.worker.machine.applyAsyncStateUpdate(stepLink, fn)
-//	})
-//}
-
 func (p *executionContext) executeNextStep() (stopNow bool, stateUpdate StateUpdate, asyncCount uint16) {
 	p.setState(inactiveContext, execContext)
 	defer p.setState(execContext, discardedContext)
@@ -280,7 +221,7 @@ func (p *executionContext) executeNextStep() (stopNow bool, stateUpdate StateUpd
 			return true, stateUpdate, p.countAsyncCalls
 		}
 
-		current := p.s.nextStep
+		current := p.s.step
 		stateUpdate = EnsureUpdateContext(&p.marker, current.Transition(p))
 
 		if p.countAsyncCalls != 0 {
@@ -295,7 +236,7 @@ func (p *executionContext) executeNextStep() (stopNow bool, stateUpdate StateUpd
 				continue
 			}
 		case stateUpdNextLoop:
-			ns := getShortLoopStep(updParam)
+			ns := getShortLoopTransition(updParam)
 			if ns == nil || !p.s.machine.IsConsecutive(current.Transition, ns) {
 				break
 			}
@@ -317,20 +258,16 @@ type asyncResultContext struct {
 	wakeup bool
 }
 
+func (p *asyncResultContext) WakeUp() {
+	p.wakeup = true
+}
+
 func (p *asyncResultContext) GetSlotID() SlotID {
 	return p.slot.GetID()
 }
 
 func (p *asyncResultContext) GetParent() SlotLink {
 	return p.slot.parent
-}
-
-func (p *asyncResultContext) WakeUp() {
-	p.wakeup = true
-}
-
-func (p *asyncResultContext) WakeUpAndJump() {
-	panic("implement me")
 }
 
 func (p *asyncResultContext) executeResult(fn AsyncResultFunc) bool {
@@ -348,87 +285,48 @@ var _ ConditionalUpdate = &conditionalUpdate{}
 
 type conditionalUpdate struct {
 	marker     *struct{}
-	kickOff    func()
+	kickOff    StepPrepareFunc
 	dependency SlotLink
-	poll       bool
-	flags      stepFlags
-}
-
-func (c *conditionalUpdate) Poll() ConditionalUpdate {
-	r := *c
-	r.poll = true
-	return &r
-}
-
-func (c *conditionalUpdate) Active(dependency SlotLink) ConditionalUpdate {
-	r := *c
-	r.dependency = dependency
-	return &r
-}
-
-func (c *conditionalUpdate) AsyncJump(enable bool) CallConditionalUpdate {
-	r := *c
-	if enable {
-		r.flags |= stepFlagAllowPreempt
-	} else {
-		r.flags &^= stepFlagAllowPreempt
-	}
-	return &r
-}
-
-func (c *conditionalUpdate) WakeUp(enable bool) ConditionalUpdate {
-	r := *c
-	if enable {
-		r.flags = (r.flags &^ stepFlagAwakeMask) | stepFlagAwakeDefault
-	} else {
-		r.flags = (r.flags &^ stepFlagAwakeMask) | stepFlagAwakeDisable
-	}
-	return &r
-}
-
-func (c *conditionalUpdate) WakeUpAlways() ConditionalUpdate {
-	r := *c
-	r.flags = (r.flags &^ stepFlagAwakeMask) | stepFlagAwakeAlways
-	return &r
+	updMode    stateUpdType
+	//flags      stepFlags
 }
 
 func (c *conditionalUpdate) ThenJump(fn StateFunc) StateUpdate {
 	if fn == nil {
 		panic("illegal value")
 	}
-	return c.then(fn, nil)
+	return c.then(fn, nil, 0)
 }
 
-func (c *conditionalUpdate) ThenJumpWithMigrate(fn StateFunc, mf MigrateFunc) StateUpdate {
+func (c *conditionalUpdate) ThenJumpOverride(fn StateFunc, mf MigrateFunc, flags StepFlags) StateUpdate {
 	if fn == nil {
 		panic("illegal value")
 	}
-	return c.then(fn, mf)
+	return c.then(fn, mf, 0)
 }
 
 func (c *conditionalUpdate) ThenRepeat() StateUpdate {
-	return c.then(nil, nil)
+	return c.then(nil, nil, 0)
 }
 
-func (c *conditionalUpdate) then(fn StateFunc, mf MigrateFunc) StateUpdate {
-
-	// TODO apply kickOff
-	if c.kickOff != nil {
-		panic("not implemented")
-	}
-
-	slotStep := SlotStep{Transition: fn, Migration: mf}
-	switch {
-	case fn == nil: // repeat
-		panic("not implemented") // TODO repeat
-	case c.dependency.IsEmpty():
-		if c.poll {
-			return stateUpdatePoll(c.marker, slotStep)
+func (c *conditionalUpdate) then(fn StateFunc, mf MigrateFunc, flags StepFlags) StateUpdate {
+	slotStep := SlotStep{Transition: fn, Migration: mf, StepFlags: flags}
+	switch c.updMode {
+	case stateUpdNext: // yield
+		if !c.dependency.IsEmpty() {
+			break
 		}
-		return stateUpdateWait(c.marker, slotStep)
-	case c.poll:
-		panic("not supported")
-	default:
-		return stateUpdateWaitForSlot(c.marker, c.dependency, slotStep)
+		return stateUpdateYield(c.marker, slotStep, c.kickOff)
+	case stateUpdPoll: // poll
+		if !c.dependency.IsEmpty() {
+			break
+		}
+		return stateUpdatePoll(c.marker, slotStep, c.kickOff)
+	default: // wait
+		if c.dependency.IsEmpty() {
+			return stateUpdateWait(c.marker, slotStep, c.kickOff)
+		}
+		return stateUpdateWaitForSlot(c.marker, c.dependency, slotStep, c.kickOff)
 	}
+	panic("illegal state")
 }

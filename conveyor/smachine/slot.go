@@ -27,12 +27,13 @@ type Slot struct {
 
 	machine StateMachineDeclaration
 
-	nextStep    SlotStep
-	migrateSlot MigrateFunc
+	step       SlotStep
+	defMigrate MigrateFunc
+	defFlags   StepFlags
 
-	lastWorkAt   time.Duration // since start of the container
-	lastWorkScan uint8
 	workState    slotWorkFlags
+	lastWorkScan uint8
+	lastWorkAt   time.Duration // since start of the container
 
 	asyncCallCount uint16 // pending calls
 	migrationCount uint16 // can be wrapped by overflow
@@ -46,27 +47,6 @@ type Slot struct {
 	nextInQueue *Slot
 	queue       *QueueHead
 }
-
-type stepFlags uint8
-
-const (
-	stepFlagAwakeDefault stepFlags = 0x00
-	stepFlagAwakeMask    stepFlags = 0x03
-)
-
-const (
-	stepFlagAwakeDisable stepFlags = 1 << iota
-	stepFlagAwakeAlways
-	stepFlagAllowPreempt
-)
-
-//func (s *SlotStep) getAwakeMode() stepFlags {
-//	return s.stepFlags & stepFlagAwakeMask
-//}
-//
-//func (s *SlotStep) isPreemptive() bool {
-//	return s.stepFlags&stepFlagAllowPreempt != 0
-//}
 
 type SlotDependency interface {
 	GetKey() string
@@ -159,7 +139,7 @@ func (s *Slot) NewLink() SlotLink {
 	return SlotLink{s.GetID(), s}
 }
 
-func (s *Slot) NewStepLink() StepLink {
+func (s *Slot) NewExactStepLink() StepLink {
 	return StepLink{s.NewLink(), s.GetStep()}
 }
 
@@ -197,5 +177,11 @@ func (s *Slot) stopWorking(asyncCount uint16) {
 }
 
 func (s *Slot) setNextStep(step SlotStep) {
-	s.nextStep = step
+	if step.Transition == nil {
+		panic("illegal value")
+	}
+	if step.StepFlags&StepResetAllFlags == 0 {
+		step.StepFlags |= s.defFlags
+	}
+	s.step = step
 }
