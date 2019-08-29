@@ -14,19 +14,30 @@
 // limitations under the License.
 //
 
-package insolar
+package contractrequester
 
-//go:generate minimock -i github.com/insolar/insolar/insolar.DelegationTokenFactory -o ../testutils -s _mock.go -g
-type DelegationTokenFactory interface {
-	IssuePendingExecution(msg Message, pulse PulseNumber) (DelegationToken, error)
-	Verify(parcel Parcel) (bool, error)
+import (
+	"context"
+
+	"github.com/ThreeDotsLabs/watermill/message"
+
+	"github.com/insolar/insolar/insolar/flow"
+)
+
+type handleResults struct {
+	cr *ContractRequester
+
+	Message *message.Message
 }
 
-// DelegationToken is the base interface for delegation tokens
-type DelegationToken interface {
-	// Type returns token type.
-	Type() DelegationTokenType
+func (s *handleResults) Future(ctx context.Context, f flow.Flow) error {
+	return f.Migrate(ctx, s.Present)
+}
 
-	// Verify checks against the token. See also delegationtoken.Verify(...)
-	Verify(parcel Parcel) (bool, error)
+func (s *handleResults) Present(ctx context.Context, f flow.Flow) error {
+	return s.cr.ReceiveResult(s.Message)
+}
+
+func (s *handleResults) Past(ctx context.Context, f flow.Flow) error {
+	return s.Present(ctx, f)
 }

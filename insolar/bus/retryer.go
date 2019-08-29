@@ -59,7 +59,7 @@ func (r *RetrySender) SendTarget(ctx context.Context, msg *message.Message, targ
 }
 
 func (r *RetrySender) Reply(ctx context.Context, origin payload.Meta, reply *message.Message) {
-	panic("not implemented")
+	inslogger.FromContext(ctx).Panic("not implemented")
 }
 
 // SendRole sends message to specified role, using provided Sender.SendRole. If error with CodeFlowCanceled
@@ -89,6 +89,7 @@ func (r *RetrySender) retryWrapper(ctx context.Context, msg *message.Message, ca
 		updateUUID := false
 		for tries > 0 && !received {
 			var err error
+			// this doesn't wait on first iteration due to lastPulse being zero
 			lastPulse, err = r.waitForPulseChange(ctx, lastPulse)
 			if err != nil {
 				logger.Error(errors.Wrap(err, "can't wait for pulse change"))

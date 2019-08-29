@@ -19,13 +19,12 @@ package reference
 import (
 	"bytes"
 	"strings"
+	"sync"
 
 	"github.com/pkg/errors"
 )
 
 type IdentityEncoder func(ref *Global) (domain, object string)
-
-const NilRef = "<nil>" // non-parsable
 
 type EncoderOptions uint8
 
@@ -33,11 +32,28 @@ const (
 	Parity EncoderOptions = 1 << iota
 	EncodingSchema
 	FormatSchema
+
+	NilRef   = "<nil>" // non-parsable
+	SchemaV1 = "insolarv1"
 )
 
-const SchemaV1 = "insolarv1"
+type Encoder interface {
+	Encode(ref *Global) (string, error)
+	EncodeToBuilder(ref *Global, b *strings.Builder) error
+	EncodeRecord(rec *Local) (string, error)
+}
 
-type Encoder struct {
+var defaultEncoderOnce sync.Once
+var defaultEncoder Encoder
+
+func DefaultEncoder() Encoder {
+	defaultEncoderOnce.Do(func() {
+		defaultEncoder = NewBase58Encoder(0)
+	})
+	return defaultEncoder
+}
+
+type encoder struct {
 	nameEncoder     IdentityEncoder
 	byteEncoder     ByteEncodeFunc
 	byteEncoderName string
@@ -45,8 +61,8 @@ type Encoder struct {
 	options         EncoderOptions
 }
 
-func NewBase58Encoder(opts EncoderOptions) *Encoder {
-	return &Encoder{
+func NewBase58Encoder(opts EncoderOptions) Encoder {
+	return &encoder{
 		nameEncoder:     nil,
 		byteEncoder:     byteEncodeBase58,
 		byteEncoderName: "base58",
@@ -55,8 +71,8 @@ func NewBase58Encoder(opts EncoderOptions) *Encoder {
 	}
 }
 
-func NewBase64Encoder(opts EncoderOptions) *Encoder {
-	return &Encoder{
+func NewBase64Encoder(opts EncoderOptions) Encoder {
+	return &encoder{
 		nameEncoder:     nil,
 		byteEncoder:     byteEncodeBase64,
 		byteEncoderName: "base64",
@@ -65,13 +81,13 @@ func NewBase64Encoder(opts EncoderOptions) *Encoder {
 	}
 }
 
-func (v Encoder) Encode(ref *Global) (string, error) {
+func (v encoder) Encode(ref *Global) (string, error) {
 	b := strings.Builder{}
 	err := v.EncodeToBuilder(ref, &b)
 	return b.String(), err
 }
 
-func (v Encoder) EncodeToBuilder(ref *Global, b *strings.Builder) error {
+func (v encoder) EncodeToBuilder(ref *Global, b *strings.Builder) error {
 	if ref == nil {
 		b.WriteString(NilRef)
 		return nil
@@ -135,7 +151,7 @@ func (v Encoder) EncodeToBuilder(ref *Global, b *strings.Builder) error {
 	return nil
 }
 
-func (v Encoder) appendPrefix(b *strings.Builder) {
+func (v encoder) appendPrefix(b *strings.Builder) {
 
 	if v.options&(EncodingSchema|FormatSchema) != 0 {
 		b.WriteString(v.byteEncoderName)
@@ -152,7 +168,7 @@ func (v Encoder) appendPrefix(b *strings.Builder) {
 	}
 }
 
-func (v Encoder) encodeBinary(rec *Local, b *strings.Builder) error {
+func (v encoder) encodeBinary(rec *Local, b *strings.Builder) error {
 	if rec.IsEmpty() {
 		b.WriteByte('0')
 		return nil
@@ -173,7 +189,7 @@ func (v Encoder) encodeBinary(rec *Local, b *strings.Builder) error {
 		limit := len(rec.hash) - 1
 		for ; limit >= 0 && rec.hash[limit] == 0; limit-- {
 		}
-		limit += 1 + pulseAndScopeSize
+		limit += 1 + LocalBinaryPulseAndScopeSize
 
 		err := v.byteEncoder(rec.asReader(uint8(limit)), b)
 		if err != nil {
@@ -185,7 +201,7 @@ func (v Encoder) encodeBinary(rec *Local, b *strings.Builder) error {
 	return nil
 }
 
-func (v Encoder) encodeRecord(rec *Local, b *strings.Builder) error {
+func (v encoder) encodeRecord(rec *Local, b *strings.Builder) error {
 	if rec.IsEmpty() {
 		b.WriteString("0." + RecordDomainName)
 		return nil
@@ -202,10 +218,11 @@ func (v Encoder) encodeRecord(rec *Local, b *strings.Builder) error {
 	return nil
 }
 
-func (v Encoder) EncodeRecord(rec *Local) (string, error) {
+func (v encoder) EncodeRecord(rec *Local) (string, error) {
 	if rec == nil {
 		return NilRef, nil
 	}
+
 	b := strings.Builder{}
 	v.appendPrefix(&b)
 	err := v.encodeRecord(rec, &b)

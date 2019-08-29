@@ -64,9 +64,7 @@ func (f *FinalizationKeeperDefault) OnPulse(ctx context.Context, current insolar
 	}
 
 	if lastConfirmedPulse <= bottomLevel.PulseNumber {
-		// f.networkStopper.Leave(ctx, 0)
-		panic(fmt.Sprintf("it shouldn't be called. lastConfirmedPulse:%v, bottomLevel.PulseNumber:%v", lastConfirmedPulse, bottomLevel.PulseNumber))
-		return errors.New(fmt.Sprintf("last finalized pulse falls behind too much. Stop node. bottomLevel.PulseNumber: %d, last confirmed: %d", bottomLevel.PulseNumber, lastConfirmedPulse))
+		inslogger.FromContext(ctx).Panicf("last finalized pulse falls behind too much. Stop node. bottomLevel.PulseNumber: %d, last confirmed: %d", bottomLevel.PulseNumber, lastConfirmedPulse)
 	}
 
 	logger.Debugf("FinalizationKeeper: everything is ok. Current pulse: %d, last confirmed: %d, limit: %d", current, lastConfirmedPulse, f.limit)

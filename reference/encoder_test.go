@@ -200,7 +200,7 @@ func TestEncoder_Encode(t *testing.T) {
 	{
 		g := createRandomSelfReference()
 		enc := NewBase58Encoder(0)
-		enc.authorityName = "someAuthority"
+		enc.(*encoder).authorityName = "someAuthority"
 		result, _ := enc.Encode(g)
 		assert.NotContains(t, result, '.')
 		assert.Contains(t, result, "//someAuthority/")
@@ -267,7 +267,7 @@ func TestEncoder_EncodeRecord(t *testing.T) {
 	{
 		g := createRandomSelfReference()
 		enc := NewBase58Encoder(0)
-		enc.authorityName = "someAuthority"
+		enc.(*encoder).authorityName = "someAuthority"
 		result, _ := enc.EncodeRecord(&g.addressLocal)
 		assert.NotContains(t, result, '.')
 		assert.Contains(t, result, "//someAuthority/")

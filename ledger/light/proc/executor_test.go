@@ -33,6 +33,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/light/proc"
+	"github.com/insolar/insolar/pulse"
 )
 
 func TestFetchJet_Proceed(t *testing.T) {
@@ -59,7 +60,7 @@ func TestFetchJet_Proceed(t *testing.T) {
 
 		jetFetcher.FetchMock.Return(&insolar.ID{}, errors.New("test"))
 
-		p := proc.NewFetchJet(gen.ID(), insolar.FirstPulseNumber, payload.Meta{}, false)
+		p := proc.NewFetchJet(gen.ID(), pulse.MinTimePulse, payload.Meta{}, false)
 		p.Dep(jetAccessor, jetFetcher, coordinator, sender)
 		err := p.Proceed(ctx)
 		assert.Error(t, err, "expected error 'failed to fetch jet'")
@@ -75,7 +76,7 @@ func TestFetchJet_Proceed(t *testing.T) {
 		coordinator.LightExecutorForJetMock.Return(me, nil)
 		coordinator.MeMock.Return(*me)
 
-		p := proc.NewFetchJet(gen.ID(), insolar.FirstPulseNumber, payload.Meta{}, false)
+		p := proc.NewFetchJet(gen.ID(), pulse.MinTimePulse, payload.Meta{}, false)
 		p.Dep(jetAccessor, jetFetcher, coordinator, sender)
 		err := p.Proceed(ctx)
 		assert.NoError(t, err)
@@ -93,7 +94,7 @@ func TestFetchJet_Proceed(t *testing.T) {
 		coordinator.LightExecutorForJetMock.Return(me, nil)
 		coordinator.MeMock.Return(*notMe)
 
-		p := proc.NewFetchJet(gen.ID(), insolar.FirstPulseNumber, payload.Meta{}, false)
+		p := proc.NewFetchJet(gen.ID(), pulse.MinTimePulse, payload.Meta{}, false)
 		p.Dep(jetAccessor, jetFetcher, coordinator, sender)
 		err := p.Proceed(ctx)
 		assert.Error(t, err)
@@ -117,7 +118,7 @@ func TestFetchJet_Proceed(t *testing.T) {
 			assert.True(t, target == *notMe || target == *msgSender, "expected messages to msgSender and to right executor")
 		}).Return(reps, func() {})
 
-		p := proc.NewFetchJet(gen.ID(), insolar.FirstPulseNumber, payload.Meta{Sender: *msgSender}, true)
+		p := proc.NewFetchJet(gen.ID(), pulse.MinTimePulse, payload.Meta{Sender: *msgSender}, true)
 		p.Dep(jetAccessor, jetFetcher, coordinator, sender)
 		err := p.Proceed(ctx)
 		assert.Error(t, err)

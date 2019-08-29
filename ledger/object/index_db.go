@@ -25,6 +25,8 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/store"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/pulse"
+
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 )
@@ -120,7 +122,7 @@ func (i *IndexDB) TruncateHead(ctx context.Context, from insolar.PulseNumber) er
 	i.lock.Lock()
 	defer i.lock.Unlock()
 
-	it := i.db.NewIterator(&indexKey{objID: insolar.ID{}, pn: from}, false)
+	it := i.db.NewIterator(&indexKey{objID: *insolar.NewID(pulse.MinTimePulse, nil), pn: from}, false)
 	defer it.Close()
 
 	var hasKeys bool
@@ -219,7 +221,7 @@ func (i *IndexDB) setLastKnownPN(pn insolar.PulseNumber, objID insolar.ID) error
 func (i *IndexDB) getLastKnownPN(objID insolar.ID) (insolar.PulseNumber, error) {
 	buff, err := i.db.Get(lastKnownIndexPNKey{objID: objID})
 	if err != nil {
-		return insolar.FirstPulseNumber, err
+		return pulse.MinTimePulse, err
 	}
 	return insolar.NewPulseNumber(buff), err
 }

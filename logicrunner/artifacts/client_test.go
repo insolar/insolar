@@ -119,7 +119,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetIncomingRequest_Success() {
 	}
 
 	finalResponse := &payload.Request{
-		RequestID: *requestRef.Record(),
+		RequestID: *requestRef.GetLocal(),
 		Request:   record.Wrap(&req),
 	}
 	reqMsg, err := payload.NewMessage(finalResponse)
@@ -133,7 +133,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetIncomingRequest_Success() {
 		err := getReq.Unmarshal(msg.Payload)
 		require.NoError(s.T(), err)
 
-		require.Equal(s.T(), *requestRef.Record(), getReq.RequestID)
+		require.Equal(s.T(), *requestRef.GetLocal(), getReq.RequestID)
 		require.Equal(s.T(), objectRef, n)
 
 		meta := payload.Meta{Payload: reqMsg.Payload}
@@ -171,7 +171,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetPendings_Success() {
 	pulseAccessor.LatestMock.Return(*insolar.GenesisPulse, nil)
 
 	resultIDs := &payload.IDs{
-		IDs: []insolar.ID{*requestRef.Record()},
+		IDs: []insolar.ID{*requestRef.GetLocal()},
 	}
 	resMsg, err := payload.NewMessage(resultIDs)
 	require.NoError(s.T(), err)
@@ -182,7 +182,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetPendings_Success() {
 		err := getPendings.Unmarshal(msg.Payload)
 		require.NoError(s.T(), err)
 
-		require.Equal(s.T(), *objectRef.Record(), getPendings.ObjectID)
+		require.Equal(s.T(), *objectRef.GetLocal(), getPendings.ObjectID)
 
 		meta := payload.Meta{Payload: resMsg.Payload}
 		buf, err := meta.Marshal()
@@ -224,7 +224,7 @@ func (s *amSuite) TestLedgerArtifactManager_HasPendings_Success() {
 		err := hasPendings.Unmarshal(msg.Payload)
 		require.NoError(s.T(), err)
 
-		require.Equal(s.T(), *objectRef.Record(), hasPendings.ObjectID)
+		require.Equal(s.T(), *objectRef.GetLocal(), hasPendings.ObjectID)
 
 		meta := payload.Meta{Payload: resMsg.Payload}
 		buf, err := meta.Marshal()

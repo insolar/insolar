@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/migrationshard"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/pkshard"
 	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/pulse"
 )
 
 const (
@@ -83,6 +84,6 @@ func GenesisRef(name string) insolar.Reference {
 	}
 	virtRec := record.Wrap(&req)
 	hash := record.HashVirtual(pcs.ReferenceHasher(), virtRec)
-	id := insolar.NewID(insolar.FirstPulseNumber, hash)
+	id := insolar.NewID(pulse.MinTimePulse, hash)
 	return *insolar.NewReference(*id)
 }

@@ -32,7 +32,7 @@ import (
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/payload"
-	"github.com/insolar/insolar/insolar/pulse"
+	insolarPulse "github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/insolar/utils"
@@ -41,6 +41,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/executionregistry"
 	"github.com/insolar/insolar/logicrunner/requestsqueue"
+	"github.com/insolar/insolar/pulse"
 )
 
 type publisherMock struct{}
@@ -226,10 +227,10 @@ func TestExecutionBroker_PendingFinishedIfNeed(t *testing.T) {
 					Ref:     objRef,
 					pending: insolar.InPending,
 
-					pulseAccessor: pulse.NewAccessorMock(t).LatestMock.Set(func(p context.Context) (r insolar.Pulse, r1 error) {
+					pulseAccessor: insolarPulse.NewAccessorMock(t).LatestMock.Set(func(p context.Context) (r insolar.Pulse, r1 error) {
 						return insolar.Pulse{
-							PulseNumber:     insolar.PulseNumber(insolar.FirstPulseNumber),
-							NextPulseNumber: insolar.PulseNumber(insolar.FirstPulseNumber + 1),
+							PulseNumber:     insolar.PulseNumber(pulse.MinTimePulse),
+							NextPulseNumber: insolar.PulseNumber(pulse.MinTimePulse + 1),
 						}, nil
 					}),
 
@@ -497,10 +498,10 @@ func TestExecutionBroker_AddFreshRequestWithOnPulse(t *testing.T) {
 				re := NewRequestsExecutorMock(t).
 					SendReplyMock.Return()
 				sender := bus.NewSenderMock(t).SendRoleMock.Return(nil, func() { return })
-				pulseMock := pulse.NewAccessorMock(t).LatestMock.Set(func(p context.Context) (r insolar.Pulse, r1 error) {
+				pulseMock := insolarPulse.NewAccessorMock(t).LatestMock.Set(func(p context.Context) (r insolar.Pulse, r1 error) {
 					return insolar.Pulse{
-						PulseNumber:     insolar.PulseNumber(insolar.FirstPulseNumber),
-						NextPulseNumber: insolar.PulseNumber(insolar.FirstPulseNumber + 1),
+						PulseNumber:     insolar.PulseNumber(pulse.MinTimePulse),
+						NextPulseNumber: insolar.PulseNumber(pulse.MinTimePulse + 1),
 					}, nil
 				})
 				broker := NewExecutionBroker(objectRef, nil, re, sender, am, er, nil, pulseMock)

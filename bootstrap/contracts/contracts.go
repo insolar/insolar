@@ -41,9 +41,8 @@ func RootDomain() insolar.GenesisContractState {
 		ParentName: "",
 
 		Memory: mustGenMemory(&rootdomain.RootDomain{
-			MigrationAddressShards: genesisrefs.ContractMigrationAddressShards,
-			PublicKeyShards:        genesisrefs.ContractPublicKeyShards,
-			NodeDomain:             genesisrefs.ContractNodeDomain,
+			PublicKeyShards: genesisrefs.ContractPublicKeyShards,
+			NodeDomain:      genesisrefs.ContractNodeDomain,
 		}),
 	}
 }
@@ -144,7 +143,7 @@ func GetMigrationShardGenesisContractState(name string, migrationAddresses []str
 	}
 }
 
-func GetMigrationAdminGenesisContractState(lokup int64, vesting int64) insolar.GenesisContractState {
+func GetMigrationAdminGenesisContractState(lokup int64, vesting int64, vestingStep int64) insolar.GenesisContractState {
 	migrationDaemons := make(foundation.StableMap)
 	for i := 0; i < insolar.GenesisAmountMigrationDaemonMembers; i++ {
 		migrationDaemons[genesisrefs.ContractMigrationDaemonMembers[i].String()] = migrationadmin.StatusInactivate
@@ -156,9 +155,13 @@ func GetMigrationAdminGenesisContractState(lokup int64, vesting int64) insolar.G
 		ParentName: insolar.GenesisNameRootDomain,
 		Memory: mustGenMemory(&migrationadmin.MigrationAdmin{
 			MigrationDaemons:     migrationDaemons,
+			MigrationAddressShards: genesisrefs.ContractMigrationAddressShards,
 			MigrationAdminMember: genesisrefs.ContractMigrationAdminMember,
-			Lokup:                lokup,
-			Vesting:              vesting,
+			VestingParams: &migrationadmin.VestingParams{
+				Lokup:       lokup,
+				Vesting:     vesting,
+				VestingStep: vestingStep,
+			},
 		}),
 	}
 }

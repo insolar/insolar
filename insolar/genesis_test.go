@@ -25,7 +25,7 @@ import (
 
 var (
 	genesisIDHex  = "00010001ac000000000000000000000000000000000000000000000000000000"
-	genesisRefHex = genesisIDHex + "0000000000000000000000000000000000000000000000000000000000000000"
+	genesisRefHex = genesisIDHex + genesisIDHex
 )
 
 func TestGenesisRecordID(t *testing.T) {

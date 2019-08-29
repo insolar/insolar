@@ -23,10 +23,9 @@ import (
 
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/logicrunner/common"
+	"github.com/insolar/insolar/logicrunner/writecontroller"
 
-	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 )
@@ -65,23 +64,21 @@ type HandleExecutorResults struct {
 
 func (h *HandleExecutorResults) realHandleExecutorState(ctx context.Context, f flow.Flow, msg payload.ExecutorResults) error {
 	done, err := h.dep.WriteAccessor.Begin(ctx, flow.Pulse(ctx))
-	defer done()
-
 	if err != nil {
-		return nil
+		if err == writecontroller.ErrWriteClosed {
+			return flow.ErrCancelled
+		}
+		return errors.Wrap(err, "failed to acquire write access")
 	}
+	defer done()
 
 	procInitializeExecutionState := initializeExecutionState{
 		dep: h.dep,
 		msg: &msg,
 	}
-	err = f.Procedure(ctx, &procInitializeExecutionState, true)
+	err = f.Procedure(ctx, &procInitializeExecutionState, false)
 	if err != nil {
-		if err == flow.ErrCancelled {
-			return nil
-		}
-		err := errors.Wrap(err, "[ HandleExecutorResults ] Failed to initialize execution state")
-		return err
+		return errors.Wrap(err, "[ HandleExecutorResults ] Failed to initialize execution state")
 	}
 
 	return nil
@@ -105,6 +102,5 @@ func (h *HandleExecutorResults) Present(ctx context.Context, f flow.Flow) error 
 	if err != nil {
 		return err
 	}
-	go h.dep.Sender.Reply(ctx, h.Message, bus.ReplyAsMessage(ctx, &reply.OK{}))
 	return nil
 }

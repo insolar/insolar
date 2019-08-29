@@ -30,51 +30,51 @@ func TestReferences(t *testing.T) {
 	}{
 		insolar.GenesisNameRootDomain: {
 			got:    ContractRootDomain,
-			expect: "1tJD1hMFxYYt9rHcYuvCMLdCn4AZdPfy4HPaavNWn8.11111111111111111111111111111111",
+			expect: "11tJD1hMFxYYt9rHcYuvCMLdCn4AZdPfy4HPaavNWn8",
 		},
 		insolar.GenesisNameNodeDomain: {
 			got:    ContractNodeDomain,
-			expect: "1tJDPJd6QDhsKhhgc5bCCJuDEZyrPpe2EkSCVgMoeQ.11111111111111111111111111111111",
+			expect: "11tJDPJd6QDhsKhhgc5bCCJuDEZyrPpe2EkSCVgMoeQ",
 		},
 		insolar.GenesisNameNodeRecord: {
 			got:    ContractNodeRecord,
-			expect: "1tJCCeN3WNGKi6w3YqxHPV7tjxLxsCcookXTe9i6uD.11111111111111111111111111111111",
+			expect: "11tJCCeN3WNGKi6w3YqxHPV7tjxLxsCcookXTe9i6uD",
 		},
 		insolar.GenesisNameRootMember: {
 			got:    ContractRootMember,
-			expect: "1tJDb3zZnEns6R4ChKhE4RFhzbUVxvxUdj58YF22yP.11111111111111111111111111111111",
+			expect: "11tJDb3zZnEns6R4ChKhE4RFhzbUVxvxUdj58YF22yP",
 		},
 		insolar.GenesisNameRootWallet: {
 			got:    ContractRootWallet,
-			expect: "1tJCLgYKxM4TABHW8tY3DBxeBZZixWua6iwReJAL4g.11111111111111111111111111111111",
+			expect: "11tJCLgYKxM4TABHW8tY3DBxeBZZixWua6iwReJAL4g",
 		},
 		insolar.GenesisNameRootAccount: {
 			got:    ContractRootAccount,
-			expect: "1tJC166eWveiffkDiF3zyqc3zhHyqULzkNUMn1VmSc.11111111111111111111111111111111",
+			expect: "11tJC166eWveiffkDiF3zyqc3zhHyqULzkNUMn1VmSc",
 		},
 		insolar.GenesisNameDeposit: {
 			got:    ContractDeposit,
-			expect: "1tJCUhUMyeumaDA9wPksSjugbQ5uFJ5iYfpsX9yZ7j.11111111111111111111111111111111",
+			expect: "11tJCUhUMyeumaDA9wPksSjugbQ5uFJ5iYfpsX9yZ7j",
 		},
 		insolar.GenesisNameCostCenter: {
 			got:    ContractCostCenter,
-			expect: "1tJDyWCLK4y4JLw7dsCaD9KzEqYTgyGXN5Zp4HuteA.11111111111111111111111111111111",
+			expect: "11tJDyWCLK4y4JLw7dsCaD9KzEqYTgyGXN5Zp4HuteA",
 		},
 		insolar.GenesisNameFeeAccount: {
 			got:    ContractFeeAccount,
-			expect: "1tJEHA5P78QZLoboHnrVKNAxGys78xmBGVXDVca2HE.11111111111111111111111111111111",
+			expect: "11tJEHA5P78QZLoboHnrVKNAxGys78xmBGVXDVca2HE",
 		},
 		insolar.GenesisNamePKShard: {
 			got:    ContractPublicKeyShards[0],
-			expect: "1tJCPZRjHWbFXQT5xNMzhm33ZWMQMSw2f5s39hYkNM.11111111111111111111111111111111",
+			expect: "11tJCPZRjHWbFXQT5xNMzhm33ZWMQMSw2f5s39hYkNM",
 		},
 		insolar.GenesisNameMigrationShard: {
 			got:    ContractMigrationAddressShards[0],
-			expect: "1tJDMfQ7GmZ2AU4efkVyPYjQ9ExkpN9uMqpqBieYwA.11111111111111111111111111111111",
+			expect: "11tJDMfQ7GmZ2AU4efkVyPYjQ9ExkpN9uMqpqBieYwA",
 		},
 		insolar.GenesisNameMigrationAdminAccount: {
 			got:    ContractMigrationAccount,
-			expect: "1tJEFK9k1NtRjxCVbTAshtt8CDuZjV6W8m6f6RYXxD.11111111111111111111111111111111",
+			expect: "11tJEFK9k1NtRjxCVbTAshtt8CDuZjV6W8m6f6RYXxD",
 		},
 	}
 
