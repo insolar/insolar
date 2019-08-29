@@ -121,20 +121,20 @@ func createMember(t *testing.T) *launchnet.User {
 	return member
 }
 
-func createMigrationMemberForMA(t *testing.T, ma string) *launchnet.User {
+func createMigrationMemberForMA(t *testing.T) *launchnet.User {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
 	member.Ref = launchnet.Root.Ref
-
-	_, err = signedRequest(t, launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.addAddresses",
-		map[string]interface{}{"migrationAddresses": []string{ma}})
-	require.NoError(t, err)
 
 	result, err := signedRequest(t, launchnet.TestRPCUrlPublic, member, "member.migrationCreate", nil)
 	require.NoError(t, err)
 	ref, ok := result.(map[string]interface{})["reference"].(string)
 	require.True(t, ok)
 	member.Ref = ref
+
+	ma, ok := result.(map[string]interface{})["migrationAddress"].(string)
+	require.True(t, ok)
+	member.MigrationAddress = ma
 	return member
 
 }
@@ -199,10 +199,9 @@ const migrationAmount = "360000"
 func fullMigration(t *testing.T, txHash string) *launchnet.User {
 	activeDaemons := activateDaemons(t, countThreeActiveDaemon)
 
-	migrationAddress := testutils.RandomString()
-	member := createMigrationMemberForMA(t, migrationAddress)
+	member := createMigrationMemberForMA(t)
 	for i := range activeDaemons {
-		migrate(t, member.Ref, migrationAmount, txHash, migrationAddress, i)
+		migrate(t, member.Ref, migrationAmount, txHash, member.MigrationAddress, i)
 	}
 	return member
 }

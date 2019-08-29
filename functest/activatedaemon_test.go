@@ -20,7 +20,6 @@ package functest
 import (
 	"testing"
 
-	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/launchnet"
 	"github.com/stretchr/testify/require"
 )
@@ -82,8 +81,7 @@ func TestDeactivateDaemonDoubleCall(t *testing.T) {
 }
 func TestActivateAccess(t *testing.T) {
 
-	migrationAddress := testutils.RandomString()
-	member := createMigrationMemberForMA(t, migrationAddress)
+	member := createMigrationMemberForMA(t)
 	_, _, err := makeSignedRequest(launchnet.TestRPCUrl, member, "migration.activateDaemon",
 		map[string]interface{}{"reference": launchnet.MigrationDaemons[0].Ref})
 	require.Error(t, err)
@@ -92,8 +90,7 @@ func TestActivateAccess(t *testing.T) {
 
 func TestDeactivateAccess(t *testing.T) {
 
-	migrationAddress := testutils.RandomString()
-	member := createMigrationMemberForMA(t, migrationAddress)
+	member := createMigrationMemberForMA(t)
 	_, _, err := makeSignedRequest(launchnet.TestRPCUrl, member, "migration.deactivateDaemon",
 		map[string]interface{}{"reference": launchnet.MigrationDaemons[0].Ref})
 	require.Error(t, err)
@@ -102,8 +99,7 @@ func TestDeactivateAccess(t *testing.T) {
 
 func TestCheckDaemonAccess(t *testing.T) {
 
-	migrationAddress := testutils.RandomString()
-	member := createMigrationMemberForMA(t, migrationAddress)
+	member := createMigrationMemberForMA(t)
 	_, _, err := makeSignedRequest(launchnet.TestRPCUrl, member, "migration.checkDaemon",
 		map[string]interface{}{"reference": launchnet.MigrationDaemons[0].Ref})
 	require.Error(t, err)

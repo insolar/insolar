@@ -31,31 +31,12 @@ import (
 func TestMemberMigrationCreate(t *testing.T) {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
-	ba := testutils.RandomString()
-	_, err = signedRequest(t, launchnet.TestRPCUrl, &launchnet.MigrationAdmin,
-		"migration.addAddresses", map[string]interface{}{"migrationAddresses": []string{ba}})
-	require.NoError(t, err)
 	result, err := signedRequest(t, launchnet.TestRPCUrlPublic, member, "member.migrationCreate", nil)
 	require.NoError(t, err)
 	output, ok := result.(map[string]interface{})
 	require.True(t, ok)
 	require.NotEqual(t, "", output["reference"])
-	require.Equal(t, ba, output["migrationAddress"])
-}
-
-func TestMemberMigrationCreateWhenNomigrationAddressesLeft(t *testing.T) {
-	member1, err := newUserWithKeys()
-	require.NoError(t, err)
-	addMigrationAddress(t)
-	_, err = signedRequest(t, launchnet.TestRPCUrlPublic, member1, "member.migrationCreate", nil)
-	require.Nil(t, err)
-
-	member2, err := newUserWithKeys()
-	require.NoError(t, err)
-
-	_, err = signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, member2, "member.migrationCreate", nil)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "no more migration addresses left in any shard")
+	require.NotEqual(t, "", output["migrationAddress"])
 }
 
 func TestMemberMigrationCreateWithBadKey(t *testing.T) {

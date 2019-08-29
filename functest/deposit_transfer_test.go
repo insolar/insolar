@@ -27,7 +27,6 @@ import (
 
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
-	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/testutils/launchnet"
@@ -39,12 +38,13 @@ func TestDepositTransferToken(t *testing.T) {
 
 	firstBalance := getBalanceNoErr(t, member, member.Ref)
 	secondBalance := new(big.Int).Add(firstBalance, big.NewInt(1000))
+	fmt.Print("Lockup STEP")
 
 	anon := func() api.CallMethodReply {
 		_, _, err := makeSignedRequest(launchnet.TestRPCUrlPublic, member,
 			"deposit.transfer", map[string]interface{}{"amount": "1000", "ethTxHash": "Eth_TxHash_test"})
 		require.Error(t, err)
-		fmt.Println("Lockup STEP: --- RETURNED   " + err.Error())
+		fmt.Print(".")
 		if !strings.Contains(err.Error(), "hold period didn't end") {
 			return api.CallMethodReply{}
 		}
@@ -54,21 +54,27 @@ func TestDepositTransferToken(t *testing.T) {
 	}
 	_, err := waitUntilRequestProcessed(anon, time.Second*20, time.Second, 20)
 	require.NoError(t, err)
+	if err == nil {
+		fmt.Print("SUCCESS\n")
+	}
+	fmt.Print("Vesting STEP")
 
 	anon = func() api.CallMethodReply {
 		_, _, err := makeSignedRequest(launchnet.TestRPCUrlPublic, member,
 			"deposit.transfer", map[string]interface{}{"amount": "1000", "ethTxHash": "Eth_TxHash_test"})
 		if err == nil {
-			fmt.Println("Vesting STEP: === SUCCESS")
 			return api.CallMethodReply{}
 		}
-		fmt.Println("Vesting STEP: --- RETURNED   " + err.Error())
+		fmt.Print(".")
 		return api.CallMethodReply{
 			Error: &foundation.Error{err.Error()},
 		}
 	}
 	_, err = waitUntilRequestProcessed(anon, time.Second*20, time.Second, 20)
 	require.NoError(t, err)
+	if err == nil {
+		fmt.Print("SUCCESS")
+	}
 	checkBalanceFewTimes(t, member, member.Ref, secondBalance)
 }
 
@@ -110,11 +116,10 @@ func TestDepositTransferWrongValueAmount(t *testing.T) {
 
 func TestDepositTransferNotEnoughConfirms(t *testing.T) {
 	activateDaemons(t, countThreeActiveDaemon)
-	migrationAddress := testutils.RandomString()
-	member := createMigrationMemberForMA(t, migrationAddress)
-	_ = migrate(t, member.Ref, "1000", "Eth_TxHash_test", migrationAddress, 2)
+	member := createMigrationMemberForMA(t)
+	_ = migrate(t, member.Ref, "1000", "Eth_TxHash_test", member.MigrationAddress, 2)
 
-	_ = migrate(t, member.Ref, "1000", "Eth_TxHash_test", migrationAddress, 0)
+	_ = migrate(t, member.Ref, "1000", "Eth_TxHash_test", member.MigrationAddress, 0)
 
 	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, member,
 		"deposit.transfer", map[string]interface{}{"amount": "100", "ethTxHash": "Eth_TxHash_test"})
