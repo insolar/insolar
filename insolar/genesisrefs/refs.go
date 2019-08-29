@@ -85,7 +85,7 @@ var (
 		return
 	}()
 
-	// ContractMigrationDaemon is the migration daemon contracts references,which is associated with MigrationDaemonMember.
+	// ContractMigrationDaemons is the migration daemon contracts references,which is associated with MigrationDaemonMember.
 	ContractMigrationDaemons = func() (result [insolar.GenesisAmountMigrationDaemonContract]insolar.Reference) {
 		for i, name := range insolar.GenesisNameMigrationDaemons {
 			result[i] = GenesisRef(name)
