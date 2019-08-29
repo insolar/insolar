@@ -167,6 +167,7 @@ func GetMigrationAdminGenesisContractState(lockup int64, vesting int64, vestingS
 	}
 }
 
+// TODO refactor
 func GetDepositGenesisContractState(
 	amount string,
 	lockup int64,
@@ -175,11 +176,12 @@ func GetDepositGenesisContractState(
 	vestingType foundation.VestingType,
 	matureDate insolar.PulseNumber,
 	pulseDepositUnHold insolar.PulseNumber,
+	name string, parent string,
 ) insolar.GenesisContractState {
 	return insolar.GenesisContractState{
-		Name:       insolar.GenesisNameDeposit,
+		Name:       name,
 		Prototype:  insolar.GenesisNameDeposit,
-		ParentName: insolar.GenesisNameRootDomain,
+		ParentName: parent,
 		Memory: mustGenMemory(&deposit.Deposit{
 			Balance:            amount,
 			Amount:             amount,

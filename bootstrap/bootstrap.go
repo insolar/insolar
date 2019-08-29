@@ -97,6 +97,12 @@ func (g *Generator) Run(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "couldn't get root keys")
 	}
+
+	feePublicKey, err := secrets.GetPublicKeyFromFile(g.config.MembersKeysDir + "fee_member_keys.json")
+	if err != nil {
+		return errors.Wrap(err, "couldn't get fees keys")
+	}
+
 	migrationAdminPublicKey, err := secrets.GetPublicKeyFromFile(g.config.MembersKeysDir + "migration_admin_member_keys.json")
 	if err != nil {
 		return errors.Wrap(err, "couldn't get migration admin keys")
@@ -106,6 +112,40 @@ func (g *Generator) Run(ctx context.Context) error {
 		k, err := secrets.GetPublicKeyFromFile(g.config.MembersKeysDir + GetMigrationDaemonPath(i))
 		if err != nil {
 			return errors.Wrap(err, "couldn't get migration daemon keys")
+		}
+		migrationDaemonPublicKeys = append(migrationDaemonPublicKeys, k)
+	}
+
+	// load keys for funds
+
+	fundsAndEnterprisePublicKey, err := secrets.GetPublicKeyFromFile(g.config.MembersKeysDir + "funds_and_enterprise_member_keys.json")
+	if err != nil {
+		return errors.Wrap(err, "couldn't get enterprise keys")
+	}
+
+	networkIncentivesPublicKeys := []string{}
+	for i := 0; i < insolar.GenesisAmountNetworkIncentivesMembers; i++ {
+		k, err := secrets.GetPublicKeyFromFile(g.config.MembersKeysDir + GetFundPath(i, "network_incentives_"))
+		if err != nil {
+			return errors.Wrap(err, "couldn't get network incentives keys")
+		}
+		migrationDaemonPublicKeys = append(migrationDaemonPublicKeys, k)
+	}
+
+	applicationIncentivesPublicKeys := []string{}
+	for i := 0; i < insolar.GenesisAmountApplicationIncentivesMembers; i++ {
+		k, err := secrets.GetPublicKeyFromFile(g.config.MembersKeysDir + GetFundPath(i, "application_incentives_"))
+		if err != nil {
+			return errors.Wrap(err, "couldn't get application incentives keys")
+		}
+		migrationDaemonPublicKeys = append(migrationDaemonPublicKeys, k)
+	}
+
+	foundationPublicKeys := []string{}
+	for i := 0; i < insolar.GenesisAmountFoundationMembers; i++ {
+		k, err := secrets.GetPublicKeyFromFile(g.config.MembersKeysDir + GetFundPath(i, "foundation_"))
+		if err != nil {
+			return errors.Wrap(err, "couldn't get foundation keys")
 		}
 		migrationDaemonPublicKeys = append(migrationDaemonPublicKeys, k)
 	}
@@ -141,15 +181,20 @@ func (g *Generator) Run(ctx context.Context) error {
 
 	inslog.Info("[ bootstrap ] create heavy genesis config ...")
 	contractsConfig := insolar.GenesisContractsConfig{
-		RootBalance:               g.config.RootBalance,
-		MDBalance:                 g.config.MDBalance,
-		RootPublicKey:             rootPublicKey,
-		MigrationAdminPublicKey:   migrationAdminPublicKey,
-		MigrationDaemonPublicKeys: migrationDaemonPublicKeys,
-		MigrationAddresses:        migrationAddresses,
-		VestingPeriodInPulses:     g.config.VestingPeriodInPulses,
-		LokupPeriodInPulses:       g.config.LokupPeriodInPulses,
-		VestingStepInPulses:       vestingStep,
+		RootBalance:                     g.config.RootBalance,
+		MDBalance:                       g.config.MDBalance,
+		RootPublicKey:                   rootPublicKey,
+		FeePublicKey:                    feePublicKey,
+		FundsAndEnterprisePublicKey:     fundsAndEnterprisePublicKey,
+		MigrationAdminPublicKey:         migrationAdminPublicKey,
+		MigrationDaemonPublicKeys:       migrationDaemonPublicKeys,
+		NetworkIncentivesPublicKeys:     networkIncentivesPublicKeys,
+		ApplicationIncentivesPublicKeys: applicationIncentivesPublicKeys,
+		FoundationPublicKeys:            foundationPublicKeys,
+		MigrationAddresses:              migrationAddresses,
+		VestingPeriodInPulses:           g.config.VestingPeriodInPulses,
+		LokupPeriodInPulses:             g.config.LokupPeriodInPulses,
+		VestingStepInPulses:             vestingStep,
 	}
 	err = g.makeHeavyGenesisConfig(discoveryNodes, contractsConfig)
 	if err != nil {
@@ -275,4 +320,9 @@ func dumpAsJSON(data interface{}) string {
 // GetMigrationDaemonPath generate key file name for migration daemon
 func GetMigrationDaemonPath(i int) string {
 	return "migration_daemon_" + strconv.Itoa(i) + "_member_keys.json"
+}
+
+// GetFundPath generate key file name for migration daemon
+func GetFundPath(i int, prefix string) string {
+	return prefix + strconv.Itoa(i) + "_member_keys.json"
 }

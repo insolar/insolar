@@ -42,24 +42,46 @@ const (
 	// GenesisNameMigrationShard is the name of migration address shard contract for genesis record.
 	GenesisNameMigrationShard = "migrationshard"
 
-	GenesisNameRootMember            = "root" + GenesisNameMember
-	GenesisNameRootWallet            = "root" + GenesisNameWallet
-	GenesisNameRootAccount           = "root" + GenesisNameAccount
+	// Root entity
+	GenesisNameRootMember  = "root" + GenesisNameMember
+	GenesisNameRootWallet  = "root" + GenesisNameWallet
+	GenesisNameRootAccount = "root" + GenesisNameAccount
+	// Migration entity
 	GenesisNameMigrationAdminMember  = "migration" + GenesisNameMember
 	GenesisNameMigrationAdminWallet  = "migration" + GenesisNameWallet
 	GenesisNameMigrationAdminAccount = "migration" + GenesisNameAccount
-	GenesisNameFeeWallet             = "fee" + GenesisNameWallet
-	GenesisNameFeeAccount            = "fee" + GenesisNameAccount
-
-	GenesisAmountNetworkIncentivesMembers     = 10
-	GenesisAmountApplicationIncentivesMembers = 10
-	GenesisAmountFoundationMembers            = 10
+	// Fee entity
+	GenesisNameFeeMember  = "fee" + GenesisNameMember
+	GenesisNameFeeWallet  = "fee" + GenesisNameWallet
+	GenesisNameFeeAccount = "fee" + GenesisNameAccount
+	// Fund entity
+	GenesisNameEnterpriseMember  = "enterprise" + GenesisNameMember
+	GenesisNameEnterpriseWallet  = "enterprise" + GenesisNameWallet
+	GenesisNameEnterpriseAccount = "enterprise" + GenesisNameAccount
 
 	GenesisAmountMigrationDaemonMembers       = 10
 	GenesisAmountActiveMigrationDaemonMembers = 3
 
 	GenesisAmountPublicKeyShards        = 10
 	GenesisAmountMigrationAddressShards = 10
+
+	// на один акк уходит 100кк токенов
+
+	GenesisAmountNetworkIncentivesMembers     = 40
+	GenesisAmountApplicationIncentivesMembers = 40
+	GenesisAmountFoundationMembers            = 14
+
+	// distribution
+	DefaultDistributionAmount = "10000000000000000000"
+
+	// funds
+	FutureNetworkIncentivesAmount     = 4000000000 * (10 * 10)
+	FutureApplicationIncentivesAmount = 4000000000 * (10 * 10)
+	FoundationAmount                  = 1400000000 * (10 * 10)
+
+	// lockups
+
+	// mature date
 )
 
 var GenesisNameMigrationDaemonMembers = func() (result [GenesisAmountMigrationDaemonMembers]string) {
@@ -69,6 +91,7 @@ var GenesisNameMigrationDaemonMembers = func() (result [GenesisAmountMigrationDa
 	return
 }()
 
+// funds members
 var GenesisNameNetworkIncentivesMembers = func() (result [GenesisAmountNetworkIncentivesMembers]string) {
 	for i := 0; i < GenesisAmountNetworkIncentivesMembers; i++ {
 		result[i] = "network_incentives_" + strconv.Itoa(i) + "_" + GenesisNameMember
@@ -86,6 +109,72 @@ var GenesisNameApplicationIncentivesMembers = func() (result [GenesisAmountAppli
 var GenesisNameFoundationMembers = func() (result [GenesisAmountFoundationMembers]string) {
 	for i := 0; i < GenesisAmountFoundationMembers; i++ {
 		result[i] = "foundation_" + strconv.Itoa(i) + "_" + GenesisNameMember
+	}
+	return
+}()
+
+// funds deposits
+var GenesisNameNetworkIncentivesDeposits = func() (result [GenesisAmountNetworkIncentivesMembers]string) {
+	for i := 0; i < GenesisAmountNetworkIncentivesMembers; i++ {
+		result[i] = "network_incentives_" + strconv.Itoa(i) + "_" + GenesisNameDeposit
+	}
+	return
+}()
+
+var GenesisNameApplicationIncentivesDeposits = func() (result [GenesisAmountApplicationIncentivesMembers]string) {
+	for i := 0; i < GenesisAmountApplicationIncentivesMembers; i++ {
+		result[i] = "application_incentives_" + strconv.Itoa(i) + "_" + GenesisNameDeposit
+	}
+	return
+}()
+
+var GenesisNameFoundationDeposits = func() (result [GenesisAmountFoundationMembers]string) {
+	for i := 0; i < GenesisAmountFoundationMembers; i++ {
+		result[i] = "foundation_" + strconv.Itoa(i) + "_" + GenesisNameDeposit
+	}
+	return
+}()
+
+// funds wallets
+var GenesisNameNetworkIncentivesWallets = func() (result [GenesisAmountNetworkIncentivesMembers]string) {
+	for i := 0; i < GenesisAmountNetworkIncentivesMembers; i++ {
+		result[i] = "network_incentives_" + strconv.Itoa(i) + "_" + GenesisNameWallet
+	}
+	return
+}()
+
+var GenesisNameApplicationIncentivesWallets = func() (result [GenesisAmountApplicationIncentivesMembers]string) {
+	for i := 0; i < GenesisAmountApplicationIncentivesMembers; i++ {
+		result[i] = "application_incentives_" + strconv.Itoa(i) + "_" + GenesisNameWallet
+	}
+	return
+}()
+
+var GenesisNameFoundationWallets = func() (result [GenesisAmountFoundationMembers]string) {
+	for i := 0; i < GenesisAmountFoundationMembers; i++ {
+		result[i] = "foundation_" + strconv.Itoa(i) + "_" + GenesisNameWallet
+	}
+	return
+}()
+
+// funds accounts
+var GenesisNameNetworkIncentivesAccounts = func() (result [GenesisAmountNetworkIncentivesMembers]string) {
+	for i := 0; i < GenesisAmountNetworkIncentivesMembers; i++ {
+		result[i] = "network_incentives_" + strconv.Itoa(i) + "_" + GenesisNameAccount
+	}
+	return
+}()
+
+var GenesisNameApplicationIncentivesAccounts = func() (result [GenesisAmountApplicationIncentivesMembers]string) {
+	for i := 0; i < GenesisAmountApplicationIncentivesMembers; i++ {
+		result[i] = "application_incentives_" + strconv.Itoa(i) + "_" + GenesisNameAccount
+	}
+	return
+}()
+
+var GenesisNameFoundationAccounts = func() (result [GenesisAmountFoundationMembers]string) {
+	for i := 0; i < GenesisAmountFoundationMembers; i++ {
+		result[i] = "foundation_" + strconv.Itoa(i) + "_" + GenesisNameAccount
 	}
 	return
 }()
@@ -135,15 +224,20 @@ type GenesisContractState struct {
 
 // GenesisContractsConfig carries data required for contract object initialization via genesis.
 type GenesisContractsConfig struct {
-	RootBalance               string
-	MDBalance                 string
-	RootPublicKey             string
-	MigrationAdminPublicKey   string
-	MigrationDaemonPublicKeys []string
-	VestingPeriodInPulses     int64
-	LokupPeriodInPulses       int64
-	VestingStepInPulses       int64
-	MigrationAddresses        [GenesisAmountMigrationAddressShards][]string
+	RootBalance                     string
+	MDBalance                       string
+	RootPublicKey                   string
+	FeePublicKey                    string
+	FundsAndEnterprisePublicKey     string
+	MigrationAdminPublicKey         string
+	MigrationDaemonPublicKeys       []string
+	VestingPeriodInPulses           int64
+	LokupPeriodInPulses             int64
+	VestingStepInPulses             int64
+	MigrationAddresses              [GenesisAmountMigrationAddressShards][]string
+	NetworkIncentivesPublicKeys     []string
+	ApplicationIncentivesPublicKeys []string
+	FoundationPublicKeys            []string
 }
 
 // GenesisHeavyConfig carries data required for initial genesis on heavy node.
