@@ -139,8 +139,8 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 		err = f.Handle(ctx, h.Present)
 	case payload.TypeExecutorResults:
 		h := &HandleExecutorResults{
-			dep:     s.dep,
-			Message: originMeta,
+			dep:  s.dep,
+			meta: originMeta,
 		}
 		err = f.Handle(ctx, h.Present)
 	case payload.TypeStillExecuting:
