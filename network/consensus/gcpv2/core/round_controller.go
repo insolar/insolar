@@ -232,14 +232,17 @@ func (r *PhasedRoundController) IsRunning() bool {
 	return r.roundWorker.IsRunning()
 }
 
-func (r *PhasedRoundController) beforeHandlePacket() (prep *PrepRealm, current pulse.Number, possibleNext pulse.Number) {
+func (r *PhasedRoundController) beforeHandlePacket() (prep *PrepRealm, current pulse.Number, possibleNext pulse.Number, ephemeralFeeder api.EphemeralControlFeeder) {
 
 	r.rw.RLock()
 	defer r.rw.RUnlock()
 	if r.prepR != nil {
-		return r.prepR, r.realm.coreRealm.initialCensus.GetExpectedPulseNumber(), 0
+		if !r.prepR.disableEphemeral {
+			ephemeralFeeder = r.realm.ephemeralFeeder
+		}
+		return r.prepR, r.realm.coreRealm.initialCensus.GetExpectedPulseNumber(), 0, ephemeralFeeder
 	}
-	return nil, r.realm.GetPulseNumber(), r.realm.GetNextPulseNumber()
+	return nil, r.realm.GetPulseNumber(), r.realm.GetNextPulseNumber(), nil
 }
 
 /*
@@ -357,7 +360,7 @@ func (r *PhasedRoundController) _handlePacket(ctx context.Context, packet transp
 
 	pn := packet.GetPulseNumber()
 	/* a separate method with lock is to ensure that further packet processing is not connected to a lock */
-	prep, filterPN, _ := r.beforeHandlePacket()
+	prep, filterPN, _, ephemeralFeeder := r.beforeHandlePacket()
 
 	// TODO HACK - network doesnt have information about pulsars to validate packets, hackIgnoreVerification must be removed when fixed
 	const defaultOptions = coreapi.SkipVerify // coreapi.DefaultVerify
@@ -369,7 +372,7 @@ func (r *PhasedRoundController) _handlePacket(ctx context.Context, packet transp
 	//	// defaultOptions = coreapi.SkipVerify // validation was done by the prev controller
 	//}
 
-	if r.realm.ephemeralFeeder != nil && (prep == nil || !prep.disableEphemeral) && !packet.GetPacketType().IsEphemeralPacket() { // TODO need fix, too ugly
+	if ephemeralFeeder != nil && !packet.GetPacketType().IsEphemeralPacket() { // TODO need fix, too ugly
 		_, err := r.realm.VerifyPacketAuthenticity(ctx, packet, from, nil, coreapi.DefaultVerify, nil, defaultOptions)
 		if err == nil {
 			err = r.realm.ephemeralFeeder.OnNonEphemeralPacket(ctx, packet, from)
