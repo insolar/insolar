@@ -105,7 +105,7 @@ type Base struct {
 	// Next request backoff.
 	backoff time.Duration // nolint
 
-	newPulseCh chan insolar.Pulse
+	newPulseCh chan *struct{}
 }
 
 // NewGateway creates new gateway on top of existing
@@ -147,15 +147,24 @@ func (g *Base) Init(ctx context.Context) error {
 	return nil
 }
 
+func (g *Base) Stop(ctx context.Context) error {
+	if g.newPulseCh != nil {
+		close(g.newPulseCh)
+	}
+
+	return nil
+}
+
 func (g *Base) OnPulseFromPulsar(ctx context.Context, pu insolar.Pulse, originalPacket network.ReceivedPacket) {
 	g.ConsensusPulseHandler.HandlePulse(ctx, pu, originalPacket)
 }
 
 func (g *Base) OnPulseFromConsensus(ctx context.Context, pu insolar.Pulse) {
 	if g.newPulseCh != nil {
-		g.newPulseCh <- pu
+		g.newPulseCh <- &struct{}{}
 	} else {
-		g.newPulseCh = newPulseWatchdog(ctx, g.Gatewayer, g.Options.PulseWatchdogTimeout)
+		g.newPulseCh = make(chan *struct{})
+		newPulseWatchdog(ctx, g.Gatewayer, g.Options.PulseWatchdogTimeout, g.newPulseCh)
 	}
 
 	g.NodeKeeper.MoveSyncToActive(ctx, pu.PulseNumber)

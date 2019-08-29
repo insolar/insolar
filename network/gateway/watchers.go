@@ -72,8 +72,7 @@ func pulseProcessingWatchdog(ctx context.Context, pulse insolar.Pulse, done chan
 	}()
 }
 
-func newPulseWatchdog(ctx context.Context, gatewayer network.Gatewayer, timeout time.Duration) chan insolar.Pulse {
-	ch := make(chan insolar.Pulse)
+func newPulseWatchdog(ctx context.Context, gatewayer network.Gatewayer, timeout time.Duration, done chan *struct{}) {
 	logger := inslogger.FromContext(ctx)
 
 	go func() {
@@ -81,11 +80,13 @@ func newPulseWatchdog(ctx context.Context, gatewayer network.Gatewayer, timeout 
 			select {
 			case <-time.After(timeout):
 				gatewayer.FailState(ctx, "New valid pulse timeout exceeded")
-			case <-ch:
+			case v := <-done:
+				if v == nil {
+					return
+				}
+
 				logger.Debug("Resetting new pulse watchdog")
 			}
 		}
 	}()
-
-	return ch
 }
