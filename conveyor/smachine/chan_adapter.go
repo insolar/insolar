@@ -119,6 +119,7 @@ func (c *ChannelAdapter) sendWorker() {
 		c.m.Lock()
 		switch len(c.q) {
 		case 0:
+			c.m.Unlock()
 			return
 		case 1:
 			r = c.q[0]

@@ -64,6 +64,8 @@ type MigrationContext interface {
 type ExecutionContext interface {
 	stepContext
 
+	GetPendingCallCount() int
+
 	//ListenBroadcast(key string, broadcastFn BroadcastReceiveFunc)
 	SyncOneStep(key string, weight int32, broadcastFn BroadcastReceiveFunc) Syncronizer
 	//SyncManySteps(key string)

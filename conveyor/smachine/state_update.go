@@ -85,31 +85,18 @@ func prepareToParam(prepare StepPrepareFunc) interface{} {
 }
 
 func stateUpdateYield(marker *struct{}, slotStep SlotStep, prepare StepPrepareFunc) StateUpdate {
-	//if !slotStep.HasTransition() {
-	//	panic("illegal value")
-	//}
 	return slotMachineUpdate(marker, stateUpdNext, slotStep, prepareToParam(prepare))
 }
 
 func stateUpdatePoll(marker *struct{}, slotStep SlotStep, prepare StepPrepareFunc) StateUpdate {
-	if !slotStep.HasTransition() {
-		panic("illegal value")
-	}
 	return slotMachineUpdate(marker, stateUpdPoll, slotStep, prepareToParam(prepare))
 }
 
 func stateUpdateWait(marker *struct{}, slotStep SlotStep, prepare StepPrepareFunc) StateUpdate {
-	if !slotStep.HasTransition() {
-		panic("illegal value")
-	}
 	return slotMachineUpdate(marker, stateUpdWait, slotStep, prepareToParam(prepare))
 }
 
 func stateUpdateWaitForSlot(marker *struct{}, waitOn SlotLink, slotStep SlotStep, prepare StepPrepareFunc) StateUpdate {
-	if !slotStep.HasTransition() {
-		panic("illegal value")
-	}
-
 	return NewStateUpdateLink(marker, uint16(stateUpdWait), waitOn, slotStep, prepareToParam(prepare))
 }
 

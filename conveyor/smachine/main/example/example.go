@@ -56,12 +56,19 @@ func (s *StateMachine1) Init(ctx smachine.InitializationContext) smachine.StateU
 
 func (s *StateMachine1) State1(ctx smachine.ExecutionContext) smachine.StateUpdate {
 
-	result := ""
+	s.serviceA.PrepareAsync(ctx, func(svc ServiceA) smachine.AsyncResultFunc {
+		result := svc.DoSomething("y")
+		return func(ctx smachine.AsyncResultContext) {
+			fmt.Printf("state1 async: %d %v\n", ctx.GetSlotID(), result)
+			s.result = result
+		}
+	}).Start() // result of async can only be applied _after_ leaving this state
+
 	s.serviceA.PrepareSync(ctx, func(svc ServiceA) {
-		result = svc.DoSomething("x")
+		s.result = svc.DoSomething("x")
 	}).Call()
 
-	fmt.Printf("state1: %d %v\n", ctx.GetSlotID(), result)
+	fmt.Printf("state1: %d %v\n", ctx.GetSlotID(), s.result)
 
 	//mutex := ctx.SyncOneStep("test", 0, nil)
 
@@ -69,18 +76,29 @@ func (s *StateMachine1) State1(ctx smachine.ExecutionContext) smachine.StateUpda
 	//	return mutex.Wait()
 	//}
 
-	//ctx.Idle().SetWakeUp().Deadline().Active().ThenRepeat()
+	return ctx.Jump(s.State3)
+}
+
+func (s *StateMachine1) State2(ctx smachine.ExecutionContext) smachine.StateUpdate {
+
+	// TODO not yet ready
+
+	mutex := ctx.SyncOneStep("test", 0, nil)
+
+	if !mutex.IsFirst() {
+		return mutex.Wait()
+	}
 
 	return ctx.Jump(s.State3)
 }
 
 func (s *StateMachine1) State3(ctx smachine.ExecutionContext) smachine.StateUpdate {
 	s.count++
-	s.result = fmt.Sprint(s.count)
+	//s.result = fmt.Sprint(s.count)
 	if s.count < 5 {
 		//return ctx.Yield()
 		//return ctx.Repeat(0)
-		return ctx.Poll().ThenJump(s.State3)
+		return ctx.Poll().ThenRepeat()
 	}
 	ctx.NewChild(func(ctx smachine.ConstructionContext) smachine.StateMachine {
 		return &StateMachine1{}
@@ -93,8 +111,11 @@ func (s *StateMachine1) State4(ctx smachine.ExecutionContext) smachine.StateUpda
 	//ctx.NewChild(func(ctx smachine.ConstructionContext) smachine.StateMachine {
 	//	return &StateMachine1{}
 	//})
+	if ctx.GetPendingCallCount() > 0 {
+		return ctx.Poll().ThenRepeat()
+	}
 
-	fmt.Printf("stop: %d %v %v\n", ctx.GetSlotID(), time.Now(), s.result)
+	fmt.Printf("stop: %d %v result:%v\n", ctx.GetSlotID(), time.Now(), s.result)
 	return ctx.Stop()
 }
 
@@ -175,7 +196,6 @@ func SetInjectServiceAdapterA(svc ServiceA, machine *smachine.SlotMachine) {
 			case <-ach.Context().Done():
 				return
 			case t := <-ach.Channel():
-				//fmt.Printf("%+v\n", t)
 				t.RunAndSendResult()
 			}
 		}

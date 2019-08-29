@@ -173,6 +173,10 @@ type executionContext struct {
 	countAsyncCalls uint16
 }
 
+func (p *executionContext) GetPendingCallCount() int {
+	return int(p.s.asyncCallCount) + int(p.countAsyncCalls)
+}
+
 func (p *executionContext) Yield() StateConditionalUpdate {
 	p.ensureExactState(execContext)
 	return &conditionalUpdate{marker: &p.marker, updMode: stateUpdNext}
@@ -313,14 +317,8 @@ func (c *conditionalUpdate) then(fn StateFunc, mf MigrateFunc, flags StepFlags) 
 	slotStep := SlotStep{Transition: fn, Migration: mf, StepFlags: flags}
 	switch c.updMode {
 	case stateUpdNext: // yield
-		if !c.dependency.IsEmpty() {
-			break
-		}
 		return stateUpdateYield(c.marker, slotStep, c.kickOff)
 	case stateUpdPoll: // poll
-		if !c.dependency.IsEmpty() {
-			break
-		}
 		return stateUpdatePoll(c.marker, slotStep, c.kickOff)
 	default: // wait
 		if c.dependency.IsEmpty() {
@@ -328,5 +326,4 @@ func (c *conditionalUpdate) then(fn StateFunc, mf MigrateFunc, flags StepFlags) 
 		}
 		return stateUpdateWaitForSlot(c.marker, c.dependency, slotStep, c.kickOff)
 	}
-	panic("illegal state")
 }
