@@ -673,7 +673,12 @@ func (c AdapterCallback) SendResult(result AsyncResultFunc) {
 // just to make sure that outer struct doesn't leak into a closure
 func _sendResult(stepLink StepLink, result AsyncResultFunc, callback AdapterCallbackFunc, cancel *syncrun.ChainedCancel) {
 
-	// NB! Do NOT ignore "result = nil" - it MUST decrement async call count
+	if result == nil {
+		// NB! Do NOT ignore "result = nil" - it MUST decrement async call count
+		callback(func(ctx AsyncResultContext) {}, nil)
+		return
+	}
+
 	callback(func(ctx AsyncResultContext) {
 		if result == nil || !stepLink.IsAtStep() || cancel != nil && cancel.IsCancelled() {
 			return

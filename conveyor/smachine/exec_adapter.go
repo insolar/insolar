@@ -168,7 +168,10 @@ func (c *adapterCallContext) _startSync() bool {
 	}, false)
 
 	wc.L.Lock()
-	wc.Wait()
+	// make sure that it hasn't been fired yet
+	if !atomic.CompareAndSwapUint32(&stateHolder.flags, 1, 2) {
+		wc.Wait()
+	}
 	wc.L.Unlock()
 
 	/* Condition can be triggered by Worker for emergent stop */

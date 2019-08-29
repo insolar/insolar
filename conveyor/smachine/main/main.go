@@ -28,6 +28,8 @@ func main() {
 		PollingPeriod: 10 * time.Millisecond,
 	}, nil)
 
+	example.SetInjectServiceAdapterA(&implA{}, &sm)
+
 	sm.AddNew(smachine.NoLink(), &example.StateMachine1{})
 
 	for i := 0; ; i++ {
@@ -35,4 +37,15 @@ func main() {
 		//fmt.Printf("%03d %v: slots=%v\n", i, time.Now(), sm.OccupiedSlotCount())
 		time.Sleep(1 * time.Millisecond)
 	}
+}
+
+type implA struct {
+}
+
+func (*implA) DoSomething(param string) string {
+	return param
+}
+
+func (*implA) DoSomethingElse(param0 string, param1 int) (bool, string) {
+	return param1 != 0, param0
 }

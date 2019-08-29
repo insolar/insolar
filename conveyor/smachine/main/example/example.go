@@ -17,6 +17,7 @@
 package example
 
 import (
+	"context"
 	"fmt"
 	"github.com/insolar/insolar/conveyor/smachine"
 	"time"
@@ -45,12 +46,22 @@ func (s *StateMachine1) GetInitStateFor(m smachine.StateMachine) smachine.InitFu
 	return s.Init
 }
 
+var injectServiceAdapterA *ServiceAdapterA
+
 func (s *StateMachine1) Init(ctx smachine.InitializationContext) smachine.StateUpdate {
+	s.serviceA = injectServiceAdapterA
 	fmt.Printf("init: %d %v\n", ctx.GetSlotID(), time.Now())
 	return ctx.Jump(s.State1)
 }
 
 func (s *StateMachine1) State1(ctx smachine.ExecutionContext) smachine.StateUpdate {
+
+	result := ""
+	s.serviceA.PrepareSync(ctx, func(svc ServiceA) {
+		result = svc.DoSomething("x")
+	}).Call()
+
+	fmt.Printf("state1: %d %v\n", ctx.GetSlotID(), result)
 
 	//mutex := ctx.SyncOneStep("test", 0, nil)
 
@@ -96,7 +107,7 @@ func (s *StateMachine1) State50(ctx smachine.ExecutionContext) smachine.StateUpd
 
 	////s.serviceA.
 	result := ""
-	s.serviceA.Prepare(ctx, func(svc ServiceA) {
+	s.serviceA.PrepareSync(ctx, func(svc ServiceA) {
 		result = svc.DoSomething("x")
 	}).Call()
 
@@ -137,7 +148,7 @@ type ServiceAdapterA struct {
 	exec smachine.ExecutionAdapter
 }
 
-func (a *ServiceAdapterA) Prepare(ctx smachine.ExecutionContext, fn func(svc ServiceA)) smachine.SyncCallContext {
+func (a *ServiceAdapterA) PrepareSync(ctx smachine.ExecutionContext, fn func(svc ServiceA)) smachine.SyncCallContext {
 	return a.exec.PrepareSync(ctx, func() smachine.AsyncResultFunc {
 		fn(a.svc)
 		return nil
@@ -148,4 +159,25 @@ func (a *ServiceAdapterA) PrepareAsync(ctx smachine.ExecutionContext, fn func(sv
 	return a.exec.PrepareAsync(ctx, func() smachine.AsyncResultFunc {
 		return fn(a.svc)
 	})
+}
+
+func SetInjectServiceAdapterA(svc ServiceA, machine *smachine.SlotMachine) {
+	if injectServiceAdapterA != nil {
+		panic("illegal state")
+	}
+	ach := smachine.NewChannelAdapter(context.Background(), 0, -1)
+	adapterExec := machine.RegisterAdapter("ServiceA", &ach)
+	injectServiceAdapterA = &ServiceAdapterA{svc, adapterExec}
+
+	go func() {
+		for {
+			select {
+			case <-ach.Context().Done():
+				return
+			case t := <-ach.Channel():
+				//fmt.Printf("%+v\n", t)
+				t.RunAndSendResult()
+			}
+		}
+	}()
 }

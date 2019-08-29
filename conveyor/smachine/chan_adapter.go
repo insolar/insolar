@@ -24,10 +24,11 @@ import (
 
 var _ AdapterExecutor = &ChannelAdapter{}
 
-func NewChannelAdapter(ctx context.Context, chanLen int) ChannelAdapter {
+func NewChannelAdapter(ctx context.Context, chanLen int, overflowLimit int) ChannelAdapter {
 	return ChannelAdapter{
 		ctx: ctx,
 		c:   make(chan ChannelRecord, chanLen),
+		o:   overflowLimit,
 	}
 }
 
@@ -36,6 +37,7 @@ type ChannelAdapter struct {
 	c   chan ChannelRecord
 	m   sync.Mutex
 	q   []ChannelRecord
+	o   int
 }
 
 func (c *ChannelAdapter) StartCall(stepLink StepLink, fn AdapterCallFunc, callback AdapterCallbackFunc, requireCancel bool) context.CancelFunc {
@@ -46,7 +48,7 @@ func (c *ChannelAdapter) StartCall(stepLink StepLink, fn AdapterCallFunc, callba
 	}
 
 	r := ChannelRecord{fn, AdapterCallback{stepLink, callback, cancel}}
-	if !c.append(r, false) || !c.send(r) {
+	if !c.append(r, false) && !c.send(r) {
 		c.append(r, true)
 	}
 
@@ -55,6 +57,10 @@ func (c *ChannelAdapter) StartCall(stepLink StepLink, fn AdapterCallFunc, callba
 
 func (c *ChannelAdapter) Channel() <-chan ChannelRecord {
 	return c.c
+}
+
+func (c *ChannelAdapter) Context() context.Context {
+	return c.ctx
 }
 
 func (c *ChannelAdapter) Close() {
@@ -80,6 +86,11 @@ func (c *ChannelAdapter) append(r ChannelRecord, force bool) bool {
 	default:
 		go c.sendWorker() // wont start because of lock
 	}
+
+	if c.o >= 0 && len(c.q) > c.o {
+		panic("overflow")
+	}
+
 	c.q = append(c.q, r)
 	return true
 }
