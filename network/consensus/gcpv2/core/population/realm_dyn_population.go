@@ -156,11 +156,11 @@ func (p *DynamicRealmPopulation) initPopulation(population census.OnlinePopulati
 
 	selfNode := NewNodeAppearanceAsSelf(local, power.EmptyRequest, nil)
 	p.self = &selfNode
-	_, p.self = p.silentAddToDynamics(ctx, p.self, true)
+	_, p.self = p._addToDynamics(ctx, p.self, true, false)
 
 	for _, np := range population.GetProfiles() {
 		node := NewEmptyNodeAppearance(np)
-		_, _ = p.silentAddToDynamics(ctx, &node, false) // repeated addition will leave the initial node
+		_, _ = p._addToDynamics(ctx, &node, false, false) // repeated addition will leave the initial node
 	}
 
 	self := p.dynamicNodes[local.GetNodeID()]
@@ -342,11 +342,9 @@ func (p *DynamicRealmPopulation) CreatePacketLimiter(isJoiner bool) phases.Packe
 
 func (p *DynamicRealmPopulation) AddToDynamics(ctx context.Context, na *NodeAppearance) (*NodeAppearance, error) {
 
-	added, nna := p.silentAddToDynamics(ctx, na, false)
+	added, nna := p._addToDynamics(ctx, na, false, true)
 
-	if added {
-		nna.onAddedToPopulation(false)
-	} else if !profiles.EqualBriefProfiles(nna.GetStatic(), na.GetStatic()) {
+	if !added && !profiles.EqualBriefProfiles(nna.GetStatic(), na.GetStatic()) {
 		return nil, fmt.Errorf("multiple joiners on same id(%v): %v", na.GetNodeID(), []*NodeAppearance{na, nna})
 	}
 
@@ -377,7 +375,7 @@ func (p *DynamicRealmPopulation) FindReservation(id insolar.ShortNodeID) (bool, 
 	return ok && na == nil, na
 }
 
-func (p *DynamicRealmPopulation) silentAddToDynamics(ctx context.Context, n *NodeAppearance, isLocal bool) (bool, *NodeAppearance) {
+func (p *DynamicRealmPopulation) _addToDynamics(ctx context.Context, n *NodeAppearance, isLocal, callOnAdded bool) (bool, *NodeAppearance) {
 
 	if !isLocal && n.IsJoiner() && n.GetAnnouncementAsJoiner() == nil {
 		panic("illegal state")
@@ -423,13 +421,25 @@ func (p *DynamicRealmPopulation) silentAddToDynamics(ctx context.Context, n *Nod
 		p.indexedCount++
 		p.nodeShuffle = append(p.nodeShuffle, n)
 	}
-	p.dynamicNodes[id] = n
+
+	if callOnAdded {
+		p._addNodeToMap(id, n)
+	} else {
+		p.dynamicNodes[id] = n
+	}
 
 	// if r.indexedLenSet && r.indexedCount == len(r.nodeIndex) {
 	//	r.onDynamicPopulationCompleted()
 	// }
 
 	return true, n
+}
+
+func (p *DynamicRealmPopulation) _addNodeToMap(id insolar.ShortNodeID, n *NodeAppearance) {
+	n.mutex.Lock()
+	defer n.mutex.Unlock()
+	p.dynamicNodes[id] = n
+	n.onAddedToPopulation(false)
 }
 
 func (p *DynamicRealmPopulation) appendAnyNodes(includeIndexed bool, nodes []*NodeAppearance) []*NodeAppearance {
