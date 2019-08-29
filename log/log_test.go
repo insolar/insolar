@@ -32,8 +32,8 @@ import (
 func capture(f func()) string {
 	var buf bytes.Buffer
 
-	orig := GlobalLogger
-	GlobalLogger = GlobalLogger.WithOutput(&buf)
+	orig := globalLogger
+	globalLogger = globalLogger.WithOutput(&buf)
 	defer func() { GlobalLogger = orig }()
 
 	f()

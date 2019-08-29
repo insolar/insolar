@@ -91,9 +91,8 @@ func NewLog(cfg configuration.Log) (insolar.Logger, error) {
 	return logger, nil
 }
 
-// GlobalLogger creates global logger with correct skipCallNumber
-// TODO: make it private again
-var GlobalLogger = func() insolar.Logger {
+// globalLogger is a global logger with correct skipCallNumber
+var globalLogger = func() insolar.Logger {
 	holder := configuration.NewHolder().MustInit(false)
 
 	logger, err := NewLog(holder.Configuration.Log)
@@ -107,76 +106,82 @@ var GlobalLogger = func() insolar.Logger {
 	return logger.WithCaller(true).WithSkipFrameCount(1).WithField("loginstance", "global_default")
 }()
 
-func SetGlobalLogger(logger insolar.Logger) {
-	GlobalLogger = logger.WithSkipFrameCount(1).WithField("loginstance", "global")
+// GlobalLogger returns global logger instance.
+func GlobalLogger() insolar.Logger {
+	return globalLogger
 }
 
-// SetLevel lets log level for global logger
+// SetGlobalLogger sets global logger, it's thread unsafe, so never use it in code which could run concurrently.
+func SetGlobalLogger(logger insolar.Logger) {
+	globalLogger = logger.WithSkipFrameCount(1).WithField("loginstance", "global")
+}
+
+// SetLevel sets log level for global logger, it's thread unsafe, so never use it in code which could run concurrently.
 func SetLevel(level string) error {
-	newGlobalLogger, err := GlobalLogger.WithLevel(level)
+	newGlobalLogger, err := globalLogger.WithLevel(level)
 	if err != nil {
 		return err
 	}
-	GlobalLogger = newGlobalLogger
+	globalLogger = newGlobalLogger
 	return nil
 }
 
 // Debug logs a message at level Debug to the global logger.
 func Debug(args ...interface{}) {
-	GlobalLogger.Debug(args...)
+	globalLogger.Debug(args...)
 }
 
 // Debugf logs a message at level Debug to the global logger.
 func Debugf(format string, args ...interface{}) {
-	GlobalLogger.Debugf(format, args...)
+	globalLogger.Debugf(format, args...)
 }
 
 // Info logs a message at level Info to the global logger.
 func Info(args ...interface{}) {
-	GlobalLogger.Info(args...)
+	globalLogger.Info(args...)
 }
 
 // Infof logs a message at level Info to the global logger.
 func Infof(format string, args ...interface{}) {
-	GlobalLogger.Infof(format, args...)
+	globalLogger.Infof(format, args...)
 }
 
 // Warn logs a message at level Warn to the global logger.
 func Warn(args ...interface{}) {
-	GlobalLogger.Warn(args...)
+	globalLogger.Warn(args...)
 }
 
 // Warnf logs a message at level Warn to the global logger.
 func Warnf(format string, args ...interface{}) {
-	GlobalLogger.Warnf(format, args...)
+	globalLogger.Warnf(format, args...)
 }
 
 // Error logs a message at level Error to the global logger.
 func Error(args ...interface{}) {
-	GlobalLogger.Error(args...)
+	globalLogger.Error(args...)
 }
 
 // Errorf logs a message at level Error to the global logger.
 func Errorf(format string, args ...interface{}) {
-	GlobalLogger.Errorf(format, args...)
+	globalLogger.Errorf(format, args...)
 }
 
 // Fatal logs a message at level Fatal to the global logger.
 func Fatal(args ...interface{}) {
-	GlobalLogger.Fatal(args...)
+	globalLogger.Fatal(args...)
 }
 
 // Fatalf logs a message at level Fatal to the global logger.
 func Fatalf(format string, args ...interface{}) {
-	GlobalLogger.Fatalf(format, args...)
+	globalLogger.Fatalf(format, args...)
 }
 
 // Panic logs a message at level Panic to the global logger.
 func Panic(args ...interface{}) {
-	GlobalLogger.Panic(args...)
+	globalLogger.Panic(args...)
 }
 
 // Panicf logs a message at level Panic to the global logger.
 func Panicf(format string, args ...interface{}) {
-	GlobalLogger.Panicf(format, args...)
+	globalLogger.Panicf(format, args...)
 }
