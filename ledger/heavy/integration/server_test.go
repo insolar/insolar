@@ -26,7 +26,6 @@ import (
 	"time"
 
 	"github.com/dgraph-io/badger"
-	"github.com/insolar/insolar/contractrequester"
 	"github.com/pkg/errors"
 
 	"github.com/ThreeDotsLabs/watermill/message"
@@ -203,23 +202,6 @@ func NewServer(
 		ClientBus = bus.NewBus(cfg.Bus, ClientPubSub, Pulses, c, CryptoScheme)
 	}
 
-	// API.
-	var (
-		Requester *contractrequester.ContractRequester
-	)
-	{
-		var err error
-		Requester, err = contractrequester.New(
-			ServerBus,
-			Pulses,
-			Coordinator,
-			CryptoScheme,
-		)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to start ContractRequester")
-		}
-	}
-
 	var replicator executor.HeavyReplicator
 
 	// Heavy components.
@@ -246,7 +228,7 @@ func NewServer(
 
 		replicator = executor.NewHeavyReplicatorDefault(Records, indexes, CryptoScheme, Pulses, drops, JetKeeper, backupMaker, Jets)
 
-		pm := pulsemanager.NewPulseManager(Requester.FlowDispatcher)
+		pm := pulsemanager.NewPulseManager(nil)
 		pm.NodeNet = NodeNetwork
 		pm.NodeSetter = Nodes
 		pm.Nodes = Nodes
