@@ -30,12 +30,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func panicIfErr(err error) {
-	if err != nil {
-		panic(err)
-	}
-}
-
 func Test_FinalizePulse(t *testing.T) {
 	t.Parallel()
 
@@ -70,7 +64,7 @@ func Test_FinalizePulse(t *testing.T) {
 	_, done = s.Send(ctx, &payload.Replication{
 		JetID: insolar.ZeroJetID,
 		Pulse: targetPulse,
-		Drop:  drop.MustEncode(&d),
+		Drop:  d,
 	})
 	done()
 
