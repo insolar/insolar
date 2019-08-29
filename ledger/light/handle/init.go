@@ -20,12 +20,10 @@ import (
 	"context"
 	"fmt"
 
-	wmessage "github.com/ThreeDotsLabs/watermill/message"
-
+	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar/bus"
-	wbus "github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/bus/meta"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
@@ -35,11 +33,11 @@ import (
 
 type Init struct {
 	dep     *proc.Dependencies
-	message *wmessage.Message
-	sender  wbus.Sender
+	message *message.Message
+	sender  bus.Sender
 }
 
-func NewInit(dep *proc.Dependencies, sender wbus.Sender, msg *wmessage.Message) *Init {
+func NewInit(dep *proc.Dependencies, sender bus.Sender, msg *message.Message) *Init {
 	return &Init{
 		dep:     dep,
 		sender:  sender,
