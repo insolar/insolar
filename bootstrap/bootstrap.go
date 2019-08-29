@@ -74,10 +74,10 @@ func readMigrationAddresses(file string) ([insolar.GenesisAmountMigrationAddress
 	}
 
 	for _, a := range ma {
-		i := foundation.GetShardIndex(a, insolar.GenesisAmountMigrationAddressShards)
-		result[i] = append(result[i])
+		address := foundation.TrimAddress(a)
+		i := foundation.GetShardIndex(address, insolar.GenesisAmountMigrationAddressShards)
+		result[i] = append(result[i], address)
 	}
-
 	return result, nil
 }
 
