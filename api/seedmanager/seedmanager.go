@@ -87,7 +87,7 @@ func (sm *SeedManager) Stop() {
 func (sm *SeedManager) Add(seed Seed, pulse insolar.PulseNumber) {
 	expTime := time.Now().Add(sm.ttl).UnixNano()
 
-	log.Info("SeedManager.Add. Now: ", time.Now(), " ttl: ", sm.ttl.String())
+	log.Info("SeedManager.Add. Now: ", time.Now(), " ttl: ", sm.ttl.String(), ". seed: ", seed)
 
 	sm.mutex.Lock()
 	defer sm.mutex.Unlock()
@@ -100,11 +100,13 @@ func (sm *SeedManager) Add(seed Seed, pulse insolar.PulseNumber) {
 }
 
 func (sm *SeedManager) isExpired(expTime Expiration) bool {
+	log.Info("isExpired. expTime: ", expTime, " , now: ", time.Now().UnixNano())
 	return expTime < time.Now().UnixNano()
 }
 
 // Exists checks whether seed in the pool
 func (sm *SeedManager) Pop(seed Seed) (insolar.PulseNumber, bool) {
+	log.Info("Pop seed: ", seed)
 	sm.mutex.RLock()
 	stored, ok := sm.seedPool[seed]
 	sm.mutex.RUnlock()
@@ -113,9 +115,12 @@ func (sm *SeedManager) Pop(seed Seed) (insolar.PulseNumber, bool) {
 		sm.mutex.Lock()
 		defer sm.mutex.Unlock()
 
+		log.Info("Pop seed: delete: ", seed)
 		delete(sm.seedPool, seed)
 		return stored.pulse, true
 	}
+
+	log.Info("Pop seed: NO: ", seed)
 
 	return 0, false
 }

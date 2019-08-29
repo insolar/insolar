@@ -57,7 +57,8 @@ type TimeoutSuite struct {
 func (suite *TimeoutSuite) TestRunner_callHandler() {
 	seed, err := suite.api.SeedGenerator.Next()
 	suite.NoError(err)
-	inslogger.FromContext(suite.ctx).Info("Before SeedManager.Add")
+
+	inslogger.FromContext(suite.ctx).Info("Before SeedManager.Add: ", *seed)
 	suite.api.SeedManager.Add(*seed, 0)
 
 	inslogger.FromContext(suite.ctx).Info("AFTER SeedManager.Add")
