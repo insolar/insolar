@@ -217,6 +217,7 @@ func NewDependenciesMock() *Dependencies {
 		SendObject:     func(*SendObject) {},
 		GetCode:        func(*GetCode) {},
 		SetRequest:     func(*SetRequest) {},
+		GetRequest:     func(*GetRequest) {},
 		SetResult:      func(*SetResult) {},
 		GetPendings:    func(*GetPendings) {},
 		GetJet:         func(*GetJet) {},
