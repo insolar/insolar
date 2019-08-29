@@ -1,4 +1,4 @@
-//
+///
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -48,48 +48,44 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package network
+package gateway
 
 import (
+	"context"
 	"time"
 
-	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/network"
 )
 
-// Options contains configuration options for the local host.
-type Options struct {
-	// The maximum time to wait for a response to any packet.
-	PacketTimeout time.Duration
+func pulseProcessingWatchdog(ctx context.Context, pulse insolar.Pulse, done chan struct{}) {
+	logger := inslogger.FromContext(ctx)
 
-	// The maximum time to wait for a response to ack packet.
-	AckPacketTimeout time.Duration
-
-	// Bootstrap ETA for join the Insolar network
-	BootstrapTimeout time.Duration
-
-	// Min bootstrap retry timeout
-	MinTimeout time.Duration
-
-	// Max bootstrap retry timeout
-	MaxTimeout time.Duration
-
-	// Multiplier for boostrap retry time
-	TimeoutMult time.Duration
-
-	// The maximum time to wait for a new pulse
-	PulseWatchdogTimeout time.Duration
+	go func() {
+		select {
+		case <-time.After(time.Second * time.Duration(pulse.NextPulseNumber-pulse.PulseNumber)):
+			logger.Errorf("Node stopped due to long pulse processing, pulse:%v", pulse.PulseNumber)
+		case <-done:
+			logger.Debug("Resetting pulse processing watchdog")
+		}
+	}()
 }
 
-// ConfigureOptions convert daemon configuration to controller options
-func ConfigureOptions(conf configuration.Configuration) *Options {
-	config := conf.Host
-	return &Options{
-		TimeoutMult:          time.Duration(config.TimeoutMult) * time.Millisecond,
-		MinTimeout:           time.Duration(config.MinTimeout) * time.Millisecond,
-		MaxTimeout:           time.Duration(config.MaxTimeout) * time.Millisecond,
-		PacketTimeout:        15 * time.Second,
-		AckPacketTimeout:     5 * time.Second,
-		BootstrapTimeout:     90 * time.Second,
-		PulseWatchdogTimeout: 30 * time.Second,
-	}
+func newPulseWatchdog(ctx context.Context, gatewayer network.Gatewayer, timeout time.Duration) chan insolar.Pulse {
+	ch := make(chan insolar.Pulse)
+	logger := inslogger.FromContext(ctx)
+
+	go func() {
+		for {
+			select {
+			case <-time.After(timeout):
+				gatewayer.FailState(ctx, "New valid pulse timeout exceeded")
+			case <-ch:
+				logger.Debug("Resetting new pulse watchdog")
+			}
+		}
+	}()
+
+	return ch
 }
