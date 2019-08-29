@@ -29,6 +29,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -312,11 +313,14 @@ func TestRouteCallRegistersOutgoingRequestWithValidReason(t *testing.T) {
 	mc := minimock.NewController(t)
 	defer mc.Finish()
 
+	pulseObject := insolar.Pulse{PulseNumber: gen.PulseNumber()}
+	pa := pulse.NewAccessorMock(mc).LatestMock.Return(pulseObject, nil)
+
 	am := artifacts.NewClientMock(mc)
 	dc := artifacts.NewDescriptorsCacheMock(mc)
 	cr := testutils.NewContractRequesterMock(mc)
 	as := system.New()
-	os := NewOutgoingRequestSender(as, cr, am)
+	os := NewOutgoingRequestSender(as, cr, am, pa)
 
 	requestRef := gen.Reference()
 

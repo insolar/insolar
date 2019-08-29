@@ -56,11 +56,13 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network"
-	mock "github.com/insolar/insolar/testutils/network"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/pulse"
+	mock "github.com/insolar/insolar/testutils/network"
 )
 
 func TestWaitPulsar_PulseNotArrivedInETA(t *testing.T) {
@@ -110,5 +112,5 @@ func TestWaitPulsar_PulseArrivedInETA(t *testing.T) {
 	go waitPulsar.Run(context.Background(), *insolar.GenesisPulse)
 	time.Sleep(100 * time.Millisecond)
 
-	waitPulsar.OnConsensusFinished(context.Background(), network.Report{PulseNumber: insolar.FirstPulseNumber + 10})
+	waitPulsar.OnConsensusFinished(context.Background(), network.Report{PulseNumber: pulse.MinTimePulse + 10})
 }

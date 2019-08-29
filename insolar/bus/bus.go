@@ -154,7 +154,7 @@ func (b *Bus) SendRole(
 		instracer.AddError(span, err)
 		return handleError(errors.Wrap(err, "failed to fetch pulse"))
 	}
-	nodes, err := b.coordinator.QueryRole(ctx, role, *object.Record(), latestPulse.PulseNumber)
+	nodes, err := b.coordinator.QueryRole(ctx, role, *object.GetLocal(), latestPulse.PulseNumber)
 	if err != nil {
 		instracer.AddError(span, err)
 		return handleError(errors.Wrap(err, "failed to calculate role"))

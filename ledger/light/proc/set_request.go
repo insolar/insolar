@@ -101,7 +101,7 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 	if p.request.IsCreationRequest() {
 		objectID = p.requestID
 	} else {
-		objectID = *p.request.AffinityRef().Record()
+		objectID = *p.request.AffinityRef().GetLocal()
 	}
 
 	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{

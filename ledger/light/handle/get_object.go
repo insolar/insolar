@@ -18,6 +18,7 @@ package handle
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/pkg/errors"
@@ -43,10 +44,13 @@ func NewGetObject(dep *proc.Dependencies, meta payload.Meta, passed bool) *GetOb
 }
 
 func (s *GetObject) Present(ctx context.Context, f flow.Flow) error {
-	msg := payload.GetObject{}
-	err := msg.Unmarshal(s.meta.Payload)
+	pl, err := payload.Unmarshal(s.meta.Payload)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal GetObject message")
+	}
+	msg, ok := pl.(*payload.GetObject)
+	if !ok {
+		return fmt.Errorf("wrong request type: %T", pl)
 	}
 
 	ctx, _ = inslogger.WithField(ctx, "object", msg.ObjectID.DebugString())
@@ -68,6 +72,8 @@ func (s *GetObject) Present(ctx context.Context, f flow.Flow) error {
 		return err
 	}
 
+	// To ensure, that we have the index. Because index can be on a heavy node.
+	// If we don't have it and heavy does, GetObject fails because it should update light's index state.
 	ensureIdx := proc.NewEnsureIndex(msg.ObjectID, objJetID, s.meta, flow.Pulse(ctx))
 	s.dep.EnsureIndex(ensureIdx)
 	if err := f.Procedure(ctx, ensureIdx, false); err != nil {

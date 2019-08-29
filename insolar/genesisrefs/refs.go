@@ -22,6 +22,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/pulse"
 )
 
 const (
@@ -112,7 +113,7 @@ func GenerateFromCode(pulse insolar.PulseNumber, code []byte) *insolar.Reference
 // Generate reference from contract id.
 func GenerateFromContractID(typeContractID string, name string, version int) *insolar.Reference {
 	contractID := fmt.Sprintf("%s::%s::v%02d", typeContractID, name, version)
-	return GenerateFromCode(insolar.BuiltinContractPulseNumber, []byte(contractID))
+	return GenerateFromCode(pulse.BuiltinContract, []byte(contractID))
 }
 
 // GenesisRef returns reference to any genesis records.
@@ -127,6 +128,6 @@ func GenesisRef(name string) insolar.Reference {
 	}
 	virtRec := record.Wrap(&req)
 	hash := record.HashVirtual(pcs.ReferenceHasher(), virtRec)
-	id := insolar.NewID(insolar.FirstPulseNumber, hash)
+	id := insolar.NewID(pulse.MinTimePulse, hash)
 	return *insolar.NewReference(*id)
 }

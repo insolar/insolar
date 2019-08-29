@@ -37,9 +37,6 @@ const (
 	// TypeNotOK is a generic reply for signaling a negative result.
 	TypeNotOK
 
-	// TypeGetCodeRedirect is a redirect reply for code-call
-	TypeGetCodeRedirect
-
 	// Logicrunner
 
 	// TypeCallMethod - two binary fields: data and results.
@@ -74,8 +71,6 @@ func getEmptyReply(t insolar.ReplyType) (insolar.Reply, error) {
 		return &Error{}, nil
 	case TypeOK:
 		return &OK{}, nil
-	case TypeGetCodeRedirect:
-		return &GetCodeRedirectReply{}, nil
 
 	default:
 		return nil, errors.Errorf("unimplemented reply type: '%d'", t)
@@ -116,7 +111,7 @@ func Deserialize(buff io.Reader) (insolar.Reply, error) {
 func ToBytes(rep insolar.Reply) []byte {
 	repBuff, err := Serialize(rep)
 	if err != nil {
-		panic("failed to serialize reply")
+		panic("failed to serialize reply: " + err.Error())
 	}
 	return repBuff.(*bytes.Buffer).Bytes()
 }
@@ -126,7 +121,6 @@ func init() {
 	gob.Register(&RegisterRequest{})
 	gob.Register(&Error{})
 	gob.Register(&OK{})
-	gob.Register(&GetCodeRedirectReply{})
 }
 
 // UnmarshalFromMeta reads only payload skipping meta decoding. Use this instead of regular Unmarshal if you don't need

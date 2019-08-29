@@ -114,30 +114,30 @@ func (h *HeavyReplicatorDefault) sync(ctx context.Context) {
 
 		logger.Debug("heavy replicator storing records")
 		if err := storeRecords(ctx, h.records, h.pcs, msg.Pulse, msg.Records); err != nil {
-			panic(errors.Wrap(err, "heavy replicator failed to store records"))
+			logger.Panic(errors.Wrap(err, "heavy replicator failed to store records"))
 		}
 
 		logger.Debug("heavy replicator storing indexes")
 		if err := storeIndexes(ctx, h.indexes, msg.Indexes, msg.Pulse); err != nil {
-			panic(errors.Wrap(err, "heavy replicator failed to store indexes"))
+			logger.Panic(errors.Wrap(err, "heavy replicator failed to store indexes"))
 		}
 
 		logger.Debug("heavy replicator storing drop")
 		err := storeDrop(ctx, h.drops, msg.Drop)
 		if err != nil {
-			panic(errors.Wrap(err, "heavy replicator failed to store drop"))
+			logger.Panic(errors.Wrap(err, "heavy replicator failed to store drop"))
 		}
 		logger = logger.WithField("drop_pulse", msg.Drop.Pulse)
 
 		logger.Debug("heavy replicator storing drop confirmation")
 		if err := h.keeper.AddDropConfirmation(ctx, msg.Drop.Pulse, msg.Drop.JetID, msg.Drop.Split); err != nil {
-			panic(errors.Wrapf(err, "heavy replicator failed to add drop confirmation jet=%v", msg.Drop.JetID.DebugString()))
+			logger.Panic(errors.Wrapf(err, "heavy replicator failed to add drop confirmation jet=%v", msg.Drop.JetID.DebugString()))
 		}
 
 		logger.Debug("heavy replicator update jets")
 		err = h.jets.Update(ctx, msg.Drop.Pulse, true, msg.Drop.JetID)
 		if err != nil {
-			panic(errors.Wrapf(err, "heavy replicator failed to update jet %s", msg.Drop.JetID.DebugString()))
+			logger.Panic(errors.Wrapf(err, "heavy replicator failed to update jet %s", msg.Drop.JetID.DebugString()))
 		}
 
 		logger.Debug("heavy replicator finalize pulse")

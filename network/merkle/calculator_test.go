@@ -71,7 +71,7 @@ import (
 )
 
 func createOrigin() insolar.NetworkNode {
-	ref, _ := insolar.NewReferenceFromBase58("4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa")
+	ref, _ := insolar.NewReferenceFromBase58("14K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.17ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa")
 	return node.NewNode(*ref, insolar.StaticRoleVirtual, nil, "127.0.0.1:5432", "")
 }
 

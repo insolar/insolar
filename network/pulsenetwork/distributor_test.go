@@ -71,8 +71,8 @@ import (
 
 const (
 	PULSENUMBER = 155
-	ID1         = "4K2V1kpVycZ6qSFsNdz2FtpNxnJs17eBNzf9rdCMcKoe"
-	DOMAIN      = ".4F7BsTMVPKFshM1MwLf6y23cid6fL3xMpazVoF9krzUw"
+	ID1         = "14K2V1kpVycZ6qSFsNdz2FtpNxnJs17eBNzf9rdCMcKoe"
+	DOMAIN      = ".14F7BsTMVPKFshM1MwLf6y23cid6fL3xMpazVoF9krzUw"
 )
 
 func createHostNetwork(t *testing.T) (network.HostNetwork, error) {

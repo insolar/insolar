@@ -127,7 +127,7 @@ func TestSetRequest_Proceed(t *testing.T) {
 		sender.ReplyMock.Return()
 		coordinator.VirtualExecutorForObjectMock.Set(func(_ context.Context, objID insolar.ID, pn insolar.PulseNumber) (r *insolar.Reference, r1 error) {
 			require.Equal(t, flowPN, pn)
-			require.Equal(t, *ref.Record(), objID)
+			require.Equal(t, *ref.GetLocal(), objID)
 
 			return &virtualRef, nil
 		})
@@ -182,7 +182,7 @@ func TestSetRequest_Proceed(t *testing.T) {
 		})
 		coordinator.VirtualExecutorForObjectMock.Set(func(_ context.Context, objID insolar.ID, pn insolar.PulseNumber) (r *insolar.Reference, r1 error) {
 			require.Equal(t, flowPN, pn)
-			require.Equal(t, *ref.Record(), objID)
+			require.Equal(t, *ref.GetLocal(), objID)
 
 			return &virtualRef, nil
 		})
@@ -201,7 +201,7 @@ func TestSetRequest_Proceed(t *testing.T) {
 		t.Skip("virtual doesn't pass this check")
 		coordinator.VirtualExecutorForObjectMock.Set(func(_ context.Context, objID insolar.ID, pn insolar.PulseNumber) (r *insolar.Reference, r1 error) {
 			require.Equal(t, flowPN, pn)
-			require.Equal(t, *ref.Record(), objID)
+			require.Equal(t, *ref.GetLocal(), objID)
 
 			virtualRef := gen.Reference()
 			return &virtualRef, nil

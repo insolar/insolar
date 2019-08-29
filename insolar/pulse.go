@@ -26,13 +26,12 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/pulse"
 )
 
 const (
-	// PulseNumberSize declares the number of bytes in the pulse number
-	PulseNumberSize = 4
+	// PulseNumberSize is alias that was left for compatibility
+	PulseNumberSize = pulse.NumberSize
 	// EntropySize declares the number of bytes in the pulse entropy
 	EntropySize = 64
 	// OriginIDSize declares the number of bytes in the origin id
@@ -69,7 +68,7 @@ func (entropy Entropy) Equal(other Entropy) bool {
 // Upper 2 bits are reserved for use in references (scope), must be zero otherwise.
 // Valid Absolute PulseNumber must be >65536.
 // If PulseNumber <65536 it is a relative PulseNumber
-type PulseNumber pulse.Number
+type PulseNumber = pulse.Number
 
 // NewPulseNumber creates pulse number from bytes.
 func NewPulseNumber(buf []byte) PulseNumber {
@@ -82,37 +81,6 @@ func NewPulseNumberFromStr(pn string) (PulseNumber, error) {
 		return 0, errors.Wrap(err, "failed to parse pulse number")
 	}
 	return PulseNumber(i), nil
-}
-
-// Bytes serializes pulse number.
-func (pn PulseNumber) Bytes() []byte {
-	return utils.UInt32ToBytes(uint32(pn))
-}
-
-func (pn PulseNumber) String() string {
-	return fmt.Sprintf("%d", pn)
-}
-
-func (pn *PulseNumber) MarshalTo(data []byte) (int, error) {
-	buf := pn.Bytes()
-	if len(data) < len(buf) {
-		return 0, errors.New("Not enough bytes to marshal PulseNumber")
-	}
-	copy(data, buf)
-	return len(buf), nil
-}
-
-func (pn *PulseNumber) Unmarshal(data []byte) error {
-	*pn = PulseNumber(binary.BigEndian.Uint32(data))
-	return nil
-}
-
-func (pn PulseNumber) Equal(other PulseNumber) bool {
-	return pn == other
-}
-
-func (pn PulseNumber) Size() int {
-	return len(pn.Bytes())
 }
 
 //go:generate minimock -i github.com/insolar/insolar/insolar.PulseManager -o ../testutils -s _mock.go -g
@@ -159,13 +127,6 @@ type PulseSenderConfirmation struct {
 }
 
 const (
-	// FirstPulseNumber is the hardcoded first pulse number. Because first 65536 numbers are saved for the system's needs
-	FirstPulseNumber = pulse.MinTimePulse
-	// PulseNumberJet is a special pulse number value that signifies jet ID.
-	PulseNumberJet = PulseNumber(1)
-	// BuiltinContractPulseNumber declares special pulse number that creates namespace for builtin contracts
-	BuiltinContractPulseNumber = PulseNumber(200)
-
 	InvalidPulseEpoch   int = 0
 	EphemeralPulseEpoch     = InvalidPulseEpoch + 1
 )
@@ -174,15 +135,15 @@ const (
 // because first 2 bits of pulse number and first 65536 pulses a are used by system needs and pulse numbers are related to the seconds of Unix time
 // for calculation pulse numbers we use the formula = unix.Now() - firstPulseDate + 65536
 var GenesisPulse = &Pulse{
-	PulseNumber:      FirstPulseNumber,
+	PulseNumber:      pulse.MinTimePulse,
 	Entropy:          [EntropySize]byte{},
-	EpochPulseNumber: FirstPulseNumber,
+	EpochPulseNumber: pulse.MinTimePulse,
 	PulseTimestamp:   pulse.UnixTimeOfMinTimePulse,
 }
 
 // EphemeralPulse is used for discovery network bootstrap
 var EphemeralPulse = &Pulse{
-	PulseNumber:      FirstPulseNumber,
+	PulseNumber:      pulse.MinTimePulse,
 	Entropy:          [EntropySize]byte{},
 	EpochPulseNumber: EphemeralPulseEpoch,
 	PulseTimestamp:   pulse.UnixTimeOfMinTimePulse,

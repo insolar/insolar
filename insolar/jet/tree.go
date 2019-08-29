@@ -23,6 +23,7 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bits"
+	"github.com/insolar/insolar/pulse"
 )
 
 // Find returns jet for provided reference.
@@ -118,7 +119,7 @@ func (t *Tree) Clone(keep bool) *Tree {
 func (t *Tree) Find(recordID insolar.ID) (insolar.JetID, bool) {
 	// if provided record ID is JetID, returns it as actual jet. (kind of hack)
 	// TODO: we should remove this and check tests
-	if recordID.Pulse() == insolar.PulseNumberJet {
+	if recordID.Pulse() == pulse.Jet {
 		return insolar.JetID(recordID), true
 	}
 

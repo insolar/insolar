@@ -4,8 +4,12 @@ import (
 	"context"
 	"math/rand"
 	"testing"
+	"time"
+
+	"github.com/gojuno/minimock"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/reply"
 
 	"github.com/stretchr/testify/require"
@@ -56,10 +60,16 @@ func checkIncomingAndOutgoingMatch(t *testing.T, incoming *record.IncomingReques
 func TestOutgoingSenderSendRegularOutgoing(t *testing.T) {
 	t.Parallel()
 
-	cr := testutils.NewContractRequesterMock(t)
-	am := artifacts.NewClientMock(t)
+	mc := minimock.NewController(t)
+	defer mc.Wait(2 * time.Minute)
 
-	sender := newOutgoingSenderActorState(cr, am)
+	cr := testutils.NewContractRequesterMock(mc)
+	am := artifacts.NewClientMock(mc)
+
+	pulseObject := insolar.Pulse{PulseNumber: gen.PulseNumber()}
+	pa := pulse.NewAccessorMock(mc).LatestMock.Return(pulseObject, nil)
+
+	sender := newOutgoingSenderActorState(cr, am, pa)
 	resultChan := make(chan sendOutgoingResult, 1)
 	outgoing := randomOutgoingRequest()
 	msg := sendOutgoingRequestMessage{
@@ -87,10 +97,16 @@ func TestOutgoingSenderSendRegularOutgoing(t *testing.T) {
 func TestOutgoingSenderSendSagaOutgoing(t *testing.T) {
 	t.Parallel()
 
-	cr := testutils.NewContractRequesterMock(t)
-	am := artifacts.NewClientMock(t)
+	mc := minimock.NewController(t)
+	defer mc.Wait(2 * time.Minute)
 
-	sender := newOutgoingSenderActorState(cr, am)
+	cr := testutils.NewContractRequesterMock(mc)
+	am := artifacts.NewClientMock(mc)
+
+	pulseObject := insolar.Pulse{PulseNumber: gen.PulseNumber()}
+	pa := pulse.NewAccessorMock(mc).LatestMock.Return(pulseObject, nil)
+
+	sender := newOutgoingSenderActorState(cr, am, pa)
 	resultChan := make(chan sendOutgoingResult, 1)
 	outgoing := randomOutgoingRequest()
 	outgoing.ReturnMode = record.ReturnSaga
@@ -117,10 +133,16 @@ func TestOutgoingSenderSendSagaOutgoing(t *testing.T) {
 func TestOutgoingSenderSendAbandonedOutgoing(t *testing.T) {
 	t.Parallel()
 
-	cr := testutils.NewContractRequesterMock(t)
-	am := artifacts.NewClientMock(t)
+	mc := minimock.NewController(t)
+	defer mc.Wait(2 * time.Minute)
 
-	sender := newOutgoingSenderActorState(cr, am)
+	cr := testutils.NewContractRequesterMock(mc)
+	am := artifacts.NewClientMock(mc)
+
+	pulseObject := insolar.Pulse{PulseNumber: gen.PulseNumber()}
+	pa := pulse.NewAccessorMock(mc).LatestMock.Return(pulseObject, nil)
+
+	sender := newOutgoingSenderActorState(cr, am, pa)
 	outgoing := randomOutgoingRequest()
 	msg := sendAbandonedOutgoingRequestMessage{
 		ctx:              context.Background(),

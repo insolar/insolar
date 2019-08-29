@@ -6,6 +6,7 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/gojuno/minimock"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/gen"
@@ -16,6 +17,8 @@ import (
 	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/insolar/insolar/ledger/object"
+	"github.com/insolar/insolar/pulse"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -56,7 +59,7 @@ func TestEnsureIndex_Proceed(t *testing.T) {
 		})
 		sender.SendTargetMock.Return(reps, func() {})
 
-		p := proc.NewEnsureIndex(gen.ID(), gen.JetID(), payload.Meta{}, insolar.FirstPulseNumber)
+		p := proc.NewEnsureIndex(gen.ID(), gen.JetID(), payload.Meta{}, pulse.MinTimePulse)
 		p.Dep(locker, indexes, cord, sender, writeAccessor)
 		err := p.Proceed(ctx)
 		assert.Error(t, err)
@@ -85,7 +88,7 @@ func TestEnsureIndex_Proceed(t *testing.T) {
 		})
 		sender.SendTargetMock.Return(reps, func() {})
 
-		p := proc.NewEnsureIndex(objectID, gen.JetID(), payload.Meta{}, insolar.FirstPulseNumber)
+		p := proc.NewEnsureIndex(objectID, gen.JetID(), payload.Meta{}, pulse.MinTimePulse)
 		p.Dep(locker, indexes, cord, sender, writeAccessor)
 		err := p.Proceed(ctx)
 		assert.Error(t, err)

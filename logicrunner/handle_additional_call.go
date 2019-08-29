@@ -28,6 +28,7 @@ import (
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/common"
+	"github.com/insolar/insolar/logicrunner/writecontroller"
 )
 
 type AdditionalCallFromPreviousExecutor struct {
@@ -83,15 +84,11 @@ func (h *HandleAdditionalCallFromPreviousExecutor) Present(ctx context.Context, 
 	ctx = contextWithServiceData(ctx, message.ServiceData)
 
 	done, err := h.dep.WriteAccessor.Begin(ctx, flow.Pulse(ctx))
-	if err != nil { // pulse changed, send that message to next executor
-		// ensure OK response because we might catch flow cancelled
-		msg, err := payload.NewMessage(&message)
-		if err != nil {
-			return errors.Wrap(err, "failed to serialize message")
+	if err != nil {
+		if err == writecontroller.ErrWriteClosed {
+			return flow.ErrCancelled
 		}
-		_, done := h.dep.Sender.SendRole(ctx, msg, insolar.DynamicRoleVirtualExecutor, message.RequestRef)
-		done()
-		return nil
+		return errors.Wrap(err, "failed to acquire write access")
 	}
 	defer done()
 

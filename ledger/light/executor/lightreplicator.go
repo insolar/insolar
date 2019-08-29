@@ -18,7 +18,6 @@ package executor
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
@@ -133,7 +132,7 @@ func (lr *LightReplicatorDefault) sync(ctx context.Context) {
 		allIndexes := lr.filterAndGroupIndexes(ctx, pn)
 		jets, err := lr.jetCalculator.MineForPulse(ctx, pn)
 		if err != nil {
-			panic(errors.Wrap(err, "failed to calculate jets to sync"))
+			logger.Panic(errors.Wrap(err, "failed to calculate jets to sync"))
 		}
 		logger.Debugf("[Replicator][sync] founds %d jets", len(jets), ". Jets: ", insolar.JetIDCollection(jets).DebugString())
 
@@ -141,13 +140,11 @@ func (lr *LightReplicatorDefault) sync(ctx context.Context) {
 			msg, err := lr.heavyPayload(ctx, pn, jetID, allIndexes[jetID])
 			if err != nil {
 				instracer.AddError(span, err)
-				panic(
-					fmt.Sprintf(
-						"[Replicator][sync] Problems with gather data for a pulse - %v and jet - %v. err - %v",
-						pn,
-						jetID.DebugString(),
-						err,
-					),
+				logger.Panicf(
+					"[Replicator][sync] Problems with gather data for a pulse - %v and jet - %v. err - %v",
+					pn,
+					jetID.DebugString(),
+					err,
 				)
 			}
 			err = lr.sendToHeavy(ctx, msg)

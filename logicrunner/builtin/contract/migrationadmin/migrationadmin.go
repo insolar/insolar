@@ -18,11 +18,12 @@ package migrationadmin
 
 import (
 	"fmt"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/migrationshard"
+	"github.com/pkg/errors"
 	"strings"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
-	"github.com/insolar/insolar/logicrunner/builtin/proxy/rootdomain"
 )
 
 // MigrationAdmin manage and change status for  migration daemon.
@@ -30,8 +31,14 @@ type MigrationAdmin struct {
 	foundation.BaseContract
 	MigrationDaemons     foundation.StableMap
 	MigrationAdminMember insolar.Reference
-	Lokup                int64
-	Vesting              int64
+	MigrationAddressShards [insolar.GenesisAmountMigrationAddressShards]insolar.Reference
+	VestingParams        *VestingParams
+}
+
+type VestingParams struct {
+	Lokup       int64 `json:"lokupInPulses"`
+	Vesting     int64 `json:"vestingInPulses"`
+	VestingStep int64 `json:"vestingStepInPulses"`
 }
 
 const (
@@ -80,8 +87,6 @@ func (mA *MigrationAdmin) addMigrationAddressesCall(params map[string]interface{
 		return nil, fmt.Errorf("incorect input: failed to get 'migrationAddresses' param")
 	}
 
-	rootDomain := rootdomain.GetObject(foundation.GetRootDomain())
-
 	if memberRef != mA.MigrationAdminMember {
 		return nil, fmt.Errorf("only migration daemon admin can call this method")
 	}
@@ -95,7 +100,7 @@ func (mA *MigrationAdmin) addMigrationAddressesCall(params map[string]interface{
 		}
 		migrationAddressesStr[i] = migrationAddress
 	}
-	err := rootDomain.AddMigrationAddresses(migrationAddressesStr)
+	err := mA.addMigrationAddresses(migrationAddressesStr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to add migration address: %s", err.Error())
 	}
@@ -197,6 +202,129 @@ func (mA *MigrationAdmin) GetActiveDaemons() ([]string, error) {
 	return activeDaemons, nil
 }
 
-func (mA MigrationAdmin) GetDepositParameters() (int64, int64, error) {
-	return mA.Lokup, mA.Vesting, nil
+func (mA *MigrationAdmin) GetDepositParameters() (*VestingParams, error) {
+	return mA.VestingParams, nil
+}
+
+// GetMemberByMigrationAddress gets member reference by burn address.
+// ins:immutable
+func (mA *MigrationAdmin) GetMemberByMigrationAddress(migrationAddress string) (*insolar.Reference, error) {
+	trimmedMigrationAddress := foundation.TrimAddress(migrationAddress)
+	i := foundation.GetShardIndex(trimmedMigrationAddress, insolar.GenesisAmountMigrationAddressShards)
+	if i >= len(mA.MigrationAddressShards) {
+		return nil, fmt.Errorf("incorect shard index")
+	}
+	s := migrationshard.GetObject(mA.MigrationAddressShards[i])
+	refStr, err := s.GetRef(trimmedMigrationAddress)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get reference in shard")
+	}
+	ref, err := insolar.NewReferenceFromBase58(refStr)
+	if err != nil {
+		return nil, errors.Wrap(err, "bad member reference for this migration address")
+	}
+
+	return ref, nil
+}
+
+// AddMigrationAddresses adds migration addresses to list.
+// ins:immutable
+func (mA *MigrationAdmin) addMigrationAddresses(migrationAddresses []string) error {
+	newMA := [insolar.GenesisAmountMigrationAddressShards][]string{}
+	for _, ma := range migrationAddresses {
+		trimmedMigrationAddress := foundation.TrimAddress(ma)
+		i := foundation.GetShardIndex(trimmedMigrationAddress, insolar.GenesisAmountMigrationAddressShards)
+		if i >= len(newMA) {
+			return fmt.Errorf("incorect migration shard index")
+		}
+		newMA[i] = append(newMA[i], trimmedMigrationAddress)
+	}
+
+	for i, ma := range newMA {
+		if len(ma) == 0 {
+			continue
+		}
+		s := migrationshard.GetObject(mA.MigrationAddressShards[i])
+		err := s.AddFreeMigrationAddresses(ma)
+		if err != nil {
+			return errors.New("failed to add migration addresses to shard")
+		}
+	}
+
+	return nil
+}
+
+// AddMigrationAddress adds migration address to list.
+// ins:immutable
+func (mA *MigrationAdmin) addMigrationAddress(migrationAddress string) error {
+	trimmedMigrationAddress := foundation.TrimAddress(migrationAddress)
+	i := foundation.GetShardIndex(trimmedMigrationAddress, insolar.GenesisAmountMigrationAddressShards)
+	if i >= len(mA.MigrationAddressShards) {
+		return fmt.Errorf("incorect migration shard index")
+	}
+	s := migrationshard.GetObject(mA.MigrationAddressShards[i])
+	err := s.AddFreeMigrationAddresses([]string{trimmedMigrationAddress})
+	if err != nil {
+		return errors.New("failed to add migration address to shard")
+	}
+
+	return nil
+}
+
+// ins:immutable
+func (mA *MigrationAdmin) GetFreeMigrationAddress(publicKey string) (string, error) {
+	trimmedPublicKey := foundation.TrimPublicKey(publicKey)
+	shardIndex := foundation.GetShardIndex(trimmedPublicKey, insolar.GenesisAmountPublicKeyShards)
+	if shardIndex >= len(mA.MigrationAddressShards) {
+		return "", fmt.Errorf("incorect migration address shard index")
+	}
+
+	for i := shardIndex; i < len(mA.MigrationAddressShards); i++ {
+		mas := migrationshard.GetObject(mA.MigrationAddressShards[i])
+		ma, err := mas.GetFreeMigrationAddress()
+
+		if err == nil {
+			return ma, nil
+		}
+
+		if err != nil {
+			if !strings.Contains(err.Error(), "no more migration address left") {
+				return "", errors.Wrap(err, "failed to set reference in migration address shard")
+			}
+		}
+	}
+
+	for i := 0; i < shardIndex; i++ {
+		mas := migrationshard.GetObject(mA.MigrationAddressShards[i])
+		ma, err := mas.GetFreeMigrationAddress()
+
+		if err == nil {
+			return ma, nil
+		}
+
+		if err != nil {
+			if !strings.Contains(err.Error(), "no more migration address left") {
+				return "", errors.Wrap(err, "failed to set reference in migration address shard")
+			}
+		}
+	}
+
+	return "", errors.New("no more migration addresses left in any shard")
+}
+
+// AddNewMemberToMaps adds new member to MigrationAddressMap.
+// ins:immutable
+func (mA *MigrationAdmin) AddNewMigrationAddressToMaps(migrationAddress string, memberRef insolar.Reference) error {
+	trimmedMigrationAddress := foundation.TrimAddress(migrationAddress)
+	shardIndex := foundation.GetShardIndex(trimmedMigrationAddress, insolar.GenesisAmountPublicKeyShards)
+	if shardIndex >= len(mA.MigrationAddressShards) {
+		return fmt.Errorf("incorect migration address shard index")
+	}
+	mas := migrationshard.GetObject(mA.MigrationAddressShards[shardIndex])
+	err := mas.SetRef(migrationAddress, memberRef.String())
+	if err != nil {
+		return errors.Wrap(err, "failed to set reference in migration address shard")
+	}
+
+	return nil
 }

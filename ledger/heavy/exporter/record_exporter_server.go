@@ -20,22 +20,24 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/pulse"
+	insolarPulse "github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/heavy/executor"
 	"github.com/insolar/insolar/ledger/object"
+	"github.com/insolar/insolar/pulse"
+
 	"github.com/pkg/errors"
 )
 
 type RecordServer struct {
-	pulseCalculator pulse.Calculator
+	pulseCalculator insolarPulse.Calculator
 	recordIndex     object.RecordPositionAccessor
 	recordAccessor  object.RecordAccessor
 	jetKeeper       executor.JetKeeper
 }
 
 func NewRecordServer(
-	pulseCalculator pulse.Calculator,
+	pulseCalculator insolarPulse.Calculator,
 	recordIndex object.RecordPositionAccessor,
 	recordAccessor object.RecordAccessor,
 	jetKeeper executor.JetKeeper,
@@ -62,7 +64,7 @@ func (r *RecordServer) Export(getRecords *GetRecords, stream RecordExporter_Expo
 			return errors.New("trying to get a non-finalized pulse data")
 		}
 	} else {
-		getRecords.PulseNumber = insolar.FirstPulseNumber
+		getRecords.PulseNumber = pulse.MinTimePulse
 	}
 
 	iter := newRecordIterator(
@@ -102,7 +104,7 @@ type recordIterator struct {
 	recordIndex     object.RecordPositionAccessor
 	recordAccessor  object.RecordAccessor
 	jetKeeper       executor.JetKeeper
-	pulseCalculator pulse.Calculator
+	pulseCalculator insolarPulse.Calculator
 }
 
 func newRecordIterator(
@@ -112,7 +114,7 @@ func newRecordIterator(
 	recordIndex object.RecordPositionAccessor,
 	recordAccessor object.RecordAccessor,
 	jetKeeper executor.JetKeeper,
-	pulseCalculator pulse.Calculator,
+	pulseCalculator insolarPulse.Calculator,
 ) *recordIterator {
 	return &recordIterator{
 		needToRead:      takeCount,

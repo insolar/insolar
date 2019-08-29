@@ -18,6 +18,7 @@ package handle
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
 
@@ -41,10 +42,13 @@ func NewGetCode(dep *proc.Dependencies, meta payload.Meta, passed bool) *GetCode
 }
 
 func (s *GetCode) Present(ctx context.Context, f flow.Flow) error {
-	msg := payload.GetCode{}
-	err := msg.Unmarshal(s.meta.Payload)
+	pl, err := payload.Unmarshal(s.meta.Payload)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal GetCode message")
+	}
+	msg, ok := pl.(*payload.GetCode)
+	if !ok {
+		return fmt.Errorf("wrong request type: %T", pl)
 	}
 
 	passIfNotFound := !s.passed

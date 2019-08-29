@@ -26,9 +26,10 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
-	"github.com/insolar/insolar/insolar/pulse"
+	insolarPulse "github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/drop"
+	"github.com/insolar/insolar/pulse"
 )
 
 func Test_JetSplitEveryPulse(t *testing.T) {
@@ -309,7 +310,7 @@ func Test_LightStartsFromInitialState(t *testing.T) {
 	createDrops := func(jets []insolar.JetID) []drop.Drop {
 		var drops []drop.Drop
 		for _, jetID := range jets {
-			drops = append(drops, drop.Drop{JetID: jetID, Pulse: insolar.FirstPulseNumber})
+			drops = append(drops, drop.Drop{JetID: jetID, Pulse: pulse.MinTimePulse})
 		}
 		return drops
 	}
@@ -343,8 +344,8 @@ func Test_LightStartsFromInitialState(t *testing.T) {
 					&payload.LightInitialState{
 						NetworkStart: true,
 						JetIDs:       initialJets,
-						Pulse: pulse.PulseProto{
-							PulseNumber: insolar.FirstPulseNumber,
+						Pulse: insolarPulse.PulseProto{
+							PulseNumber: pulse.MinTimePulse,
 						},
 						Drops: createDrops(initialJets),
 					},

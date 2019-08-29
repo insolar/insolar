@@ -26,7 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-//ID and Reference serialization tests
+// ID and Reference serialization tests
 
 func TestNewIDFromBytes(t *testing.T) {
 	id := gen.ID()
@@ -38,7 +38,7 @@ func TestNewIDFromBytes(t *testing.T) {
 
 func TestNewIDFromBase58(t *testing.T) {
 	id := gen.ID()
-	idStr := base58.Encode(id[:])
+	idStr := "1" + base58.Encode(id.Bytes())
 	id2, err := insolar.NewIDFromBase58(idStr)
 	require.NoError(t, err)
 
@@ -47,7 +47,7 @@ func TestNewIDFromBase58(t *testing.T) {
 
 func TestRecordID_String(t *testing.T) {
 	id := gen.ID()
-	idStr := base58.Encode(id[:])
+	idStr := "1" + base58.Encode(id.Bytes()) + ".record"
 
 	assert.Equal(t, idStr, id.String())
 }
@@ -55,9 +55,9 @@ func TestRecordID_String(t *testing.T) {
 func TestNewRefFromBase58(t *testing.T) {
 	recordID := gen.ID()
 	domainID := gen.ID()
-	refStr := recordID.String() + insolar.RecordRefIDSeparator + domainID.String()
+	refStr := "1" + base58.Encode(recordID.Bytes()) + insolar.RecordRefIDSeparator + "1" + base58.Encode(domainID.Bytes())
 
-	expectedRef := insolar.NewReference(recordID)
+	expectedRef := insolar.NewGlobalReference(recordID, domainID)
 	actualRef, err := insolar.NewReferenceFromBase58(refStr)
 	require.NoError(t, err)
 
@@ -66,7 +66,7 @@ func TestNewRefFromBase58(t *testing.T) {
 
 func TestRecordRef_String(t *testing.T) {
 	ref := gen.Reference()
-	expectedRefStr := ref.Record().String() + insolar.RecordRefIDSeparator + "11111111111111111111111111111111"
+	expectedRefStr := "1" + base58.Encode(ref.GetLocal().Bytes())
 
 	assert.Equal(t, expectedRefStr, ref.String())
 }

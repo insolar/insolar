@@ -74,11 +74,11 @@ import (
 )
 
 const (
-	ID1       = "4K2V1kpVycZ6qSFsNdz2FtpNxnJs17eBNzf9rdCMcKoe"
-	ID2       = "4NwnA4HWZurKyXWNowJwYmb9CwX4gBKzwQKov1ExMf8M"
-	ID3       = "4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4"
-	IDUNKNOWN = "4K3Mi2hyZ6QKgynGv33sR5n3zWmSzdo8zv5Em7X26r1w"
-	DOMAIN    = ".4F7BsTMVPKFshM1MwLf6y23cid6fL3xMpazVoF9krzUw"
+	ID1       = "14K2V1kpVycZ6qSFsNdz2FtpNxnJs17eBNzf9rdCMcKoe"
+	ID2       = "14NwnA4HWZurKyXWNowJwYmb9CwX4gBKzwQKov1ExMf8M"
+	ID3       = "14Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4"
+	IDUNKNOWN = "14K3Mi2hyZ6QKgynGv33sR5n3zWmSzdo8zv5Em7X26r1w"
+	DOMAIN    = ".14F7BsTMVPKFshM1MwLf6y23cid6fL3xMpazVoF9krzUw"
 )
 
 type MockResolver struct {

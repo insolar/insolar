@@ -56,6 +56,8 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/pulse"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -111,7 +113,7 @@ func TestSnapshot_Decode(t *testing.T) {
 }
 
 func TestSnapshot_Copy(t *testing.T) {
-	snapshot := NewSnapshot(insolar.FirstPulseNumber, nil)
+	snapshot := NewSnapshot(pulse.MinTimePulse, nil)
 	mutator := NewMutator(snapshot)
 	ref1 := gen.Reference()
 	node1 := newMutableNode(ref1, insolar.StaticRoleVirtual, nil, insolar.NodeReady, "127.0.0.1:0", "")
