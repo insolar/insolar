@@ -50,8 +50,17 @@ type stepContext interface {
 	Stop() StateUpdate
 }
 
+type BargeInPermit interface {
+	IsValid() bool
+	BargeIn()
+	Cancel()
+}
+
 type InitializationContext interface {
 	stepContext
+
+	//BargeIn(StateFunc) BargeInPermit
+	//BargeInWithOverride(StateFunc, MigrateFunc, StepFlags) BargeInPermit
 }
 
 type MigrationContext interface {
@@ -71,6 +80,9 @@ type ExecutionContext interface {
 	//SyncManySteps(key string)
 
 	NewChild(CreateFunc) SlotLink
+
+	//StepBargeIn(StateFunc) BargeInPermit
+	//StepBargeInWithOverride(StateFunc, MigrateFunc, StepFlags) BargeInPermit
 
 	Replace(CreateFunc) StateUpdate
 	Repeat(limit int) StateUpdate
