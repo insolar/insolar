@@ -237,12 +237,12 @@ func (r *PhasedRoundController) beforeHandlePacket() (prep *PrepRealm, current p
 	r.rw.RLock()
 	defer r.rw.RUnlock()
 	if r.prepR != nil {
-		if !r.prepR.disableEphemeral {
-			ephemeralFeeder = r.realm.ephemeralFeeder
+		if r.prepR.disableEphemeral {
+			return r.prepR, r.realm.coreRealm.initialCensus.GetExpectedPulseNumber(), 0, nil
 		}
-		return r.prepR, r.realm.coreRealm.initialCensus.GetExpectedPulseNumber(), 0, ephemeralFeeder
+		return r.prepR, r.realm.coreRealm.initialCensus.GetExpectedPulseNumber(), 0, r.realm.ephemeralFeeder
 	}
-	return nil, r.realm.GetPulseNumber(), r.realm.GetNextPulseNumber(), nil
+	return nil, r.realm.GetPulseNumber(), r.realm.GetNextPulseNumber(), r.realm.ephemeralFeeder
 }
 
 /*
@@ -364,13 +364,6 @@ func (r *PhasedRoundController) _handlePacket(ctx context.Context, packet transp
 
 	// TODO HACK - network doesnt have information about pulsars to validate packets, hackIgnoreVerification must be removed when fixed
 	const defaultOptions = coreapi.SkipVerify // coreapi.DefaultVerify
-
-	//if prev != nil && filterPN > pn { // TODO fix as filterPN can be zero during ephemeral transition
-	//	// something from a previous round?
-	//	_, err := prev.HandlePacket(ctx, packet, from)
-	//	return false, fmt.Errorf("on prev round: %v", err)
-	//	// defaultOptions = coreapi.SkipVerify // validation was done by the prev controller
-	//}
 
 	if ephemeralFeeder != nil && !packet.GetPacketType().IsEphemeralPacket() { // TODO need fix, too ugly
 		_, err := r.realm.VerifyPacketAuthenticity(ctx, packet, from, nil, coreapi.DefaultVerify, nil, defaultOptions)
