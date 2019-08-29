@@ -18,6 +18,7 @@ package handle
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
 
@@ -40,10 +41,13 @@ func NewGetFilament(dep *proc.Dependencies, meta payload.Meta) *GetFilament {
 }
 
 func (s *GetFilament) Present(ctx context.Context, f flow.Flow) error {
-	msg := payload.GetFilament{}
-	err := msg.Unmarshal(s.meta.Payload)
+	pl, err := payload.Unmarshal(s.meta.Payload)
 	if err != nil {
-		return errors.Wrap(err, "failed to unmarshal payload")
+		return errors.Wrap(err, "failed to unmarshal GetFilament message")
+	}
+	msg, ok := pl.(*payload.GetFilament)
+	if !ok {
+		return fmt.Errorf("wrong request type: %T", pl)
 	}
 
 	getFilament := proc.NewSendFilament(s.meta, msg.ObjectID, msg.StartFrom, msg.ReadUntil)
