@@ -50,7 +50,7 @@ func (ch *CheckOurRole) Proceed(ctx context.Context) error {
 	defer span.End()
 
 	// TODO do map of supported objects for pulse, go to jetCoordinator only if map is empty for ref
-	isAuthorized, err := ch.jetCoordinator.IsMeAuthorizedNow(ctx, ch.role, *ch.target.Record())
+	isAuthorized, err := ch.jetCoordinator.IsMeAuthorizedNow(ctx, ch.role, *ch.target.GetLocal())
 	if err != nil {
 		return errors.Wrap(err, "authorization failed with error")
 	}

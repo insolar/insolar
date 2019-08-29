@@ -35,7 +35,7 @@ import (
 	"github.com/insolar/insolar/insolar/flow/dispatcher"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
-	"github.com/insolar/insolar/insolar/pulse"
+	insolarPulse "github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
@@ -45,13 +45,14 @@ import (
 	"github.com/insolar/insolar/logicrunner/machinesmanager"
 	"github.com/insolar/insolar/logicrunner/shutdown"
 	"github.com/insolar/insolar/logicrunner/writecontroller"
+	"github.com/insolar/insolar/pulse"
 )
 
 // LogicRunner is a general interface of contract executor
 type LogicRunner struct {
 	ContractRequester          insolar.ContractRequester          `inject:""`
 	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
-	PulseAccessor              pulse.Accessor                     `inject:""`
+	PulseAccessor              insolarPulse.Accessor              `inject:""`
 	ArtifactManager            artifacts.Client                   `inject:""`
 	DescriptorsCache           artifacts.DescriptorsCache         `inject:""`
 	JetCoordinator             jet.Coordinator                    `inject:""`
@@ -94,7 +95,7 @@ func (lr *LogicRunner) Init(ctx context.Context) error {
 	lr.ShutdownFlag = shutdown.NewFlag()
 
 	as := system.New()
-	lr.OutgoingSender = NewOutgoingRequestSender(as, lr.ContractRequester, lr.ArtifactManager)
+	lr.OutgoingSender = NewOutgoingRequestSender(as, lr.ContractRequester, lr.ArtifactManager, lr.PulseAccessor)
 
 	lr.StateStorage = NewStateStorage(
 		lr.Publisher,
@@ -119,7 +120,7 @@ func (lr *LogicRunner) Init(ctx context.Context) error {
 	)
 
 	lr.WriteController = writecontroller.NewWriteController()
-	err := lr.WriteController.Open(ctx, insolar.FirstPulseNumber)
+	err := lr.WriteController.Open(ctx, pulse.MinTimePulse)
 	if err != nil {
 		return errors.Wrap(err, "failed to initialize write controller")
 	}
@@ -321,7 +322,7 @@ func (lr *LogicRunner) AddUnwantedResponse(ctx context.Context, msg insolar.Payl
 	}
 
 	// TODO: move towards flow.Dispatcher in INS-3341
-	err = lr.isStillExecutor(ctx, *m.Target.Record())
+	err = lr.isStillExecutor(ctx, *m.Target.GetLocal())
 	if err != nil {
 		return err
 	}

@@ -18,11 +18,11 @@ package logicrunner
 
 import (
 	"context"
-	"fmt"
+
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
-	"github.com/pkg/errors"
 )
 
 type HandleUpdateJet struct {
@@ -32,17 +32,16 @@ type HandleUpdateJet struct {
 }
 
 func (h *HandleUpdateJet) Present(ctx context.Context, _ flow.Flow) error {
-	pl, err := payload.Unmarshal(h.meta.Payload)
+	pl := payload.UpdateJet{}
+	err := pl.Unmarshal(h.meta.Payload)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal payload")
 	}
-	jet, ok := pl.(*payload.UpdateJet)
-	if !ok {
-		return fmt.Errorf("unexpected payload type %T", pl)
-	}
-	err = h.dep.JetStorage.Update(ctx, jet.Pulse, true, jet.JetID)
+
+	err = h.dep.JetStorage.Update(ctx, pl.Pulse, true, pl.JetID)
 	if err != nil {
 		return errors.Wrap(err, "failed to update jets")
 	}
+
 	return nil
 }

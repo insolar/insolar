@@ -55,6 +55,8 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
+	"github.com/insolar/insolar/pulse"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -71,7 +73,7 @@ func TestAccessor(t *testing.T) {
 
 	node4 := newMutableNode(gen.Reference(), insolar.StaticRoleVirtual, nil, insolar.NodeUndefined, "127.0.0.1:0", "")
 
-	snapshot := NewSnapshot(insolar.FirstPulseNumber, []insolar.NetworkNode{node, node2, node3, node4})
+	snapshot := NewSnapshot(pulse.MinTimePulse, []insolar.NetworkNode{node, node2, node3, node4})
 	accessor := NewAccessor(snapshot)
 	assert.Equal(t, 4, len(accessor.GetActiveNodes()))
 	assert.Equal(t, 1, len(accessor.GetWorkingNodes()))

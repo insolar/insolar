@@ -59,7 +59,7 @@ func (r *RetrySender) SendTarget(ctx context.Context, msg *message.Message, targ
 }
 
 func (r *RetrySender) Reply(ctx context.Context, origin payload.Meta, reply *message.Message) {
-	panic("not implemented")
+	inslogger.FromContext(ctx).Panic("not implemented")
 }
 
 // SendRole sends message to specified role, using provided Sender.SendRole. If error with CodeFlowCanceled

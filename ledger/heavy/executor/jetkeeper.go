@@ -21,13 +21,14 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/insolar/insolar/insolar/pulse"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
+	insolarPulse "github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/store"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/pulse"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/heavy/executor.JetKeeper -o ./ -s _gen_mock.go -g
@@ -46,7 +47,7 @@ type JetKeeper interface {
 	HasAllJetConfirms(ctx context.Context, pn insolar.PulseNumber) bool
 }
 
-func NewJetKeeper(jets jet.Storage, db store.DB, pulses pulse.Calculator) *DBJetKeeper {
+func NewJetKeeper(jets jet.Storage, db store.DB, pulses insolarPulse.Calculator) *DBJetKeeper {
 	return &DBJetKeeper{
 		jetTrees: jets,
 		db:       db,
@@ -57,7 +58,7 @@ func NewJetKeeper(jets jet.Storage, db store.DB, pulses pulse.Calculator) *DBJet
 type DBJetKeeper struct {
 	lock     sync.RWMutex
 	jetTrees jet.Storage
-	pulses   pulse.Calculator
+	pulses   insolarPulse.Calculator
 	db       store.DB
 }
 
@@ -333,7 +334,7 @@ func infoToList(s map[insolar.JetID]struct{}) []insolar.JetID {
 func (jk *DBJetKeeper) getTopSyncJets(ctx context.Context) ([]insolar.JetID, error) {
 	var result []insolar.JetID
 	top := jk.topSyncPulse()
-	if top == insolar.FirstPulseNumber {
+	if top == pulse.MinTimePulse {
 		return []insolar.JetID{insolar.ZeroJetID}, nil
 	}
 	jets, err := jk.get(top)

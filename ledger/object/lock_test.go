@@ -24,13 +24,15 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/pulse"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestIdLocker_Same(t *testing.T) {
 	tl := newtestlocker()
-	id := insolar.ID{0x0A}
+	id := insolar.NewID(pulse.MinTimePulse, []byte{0x0A})
 
 	counter := 0
 	numParallelAccessors := 800
@@ -38,9 +40,9 @@ func TestIdLocker_Same(t *testing.T) {
 	wg.Add(numParallelAccessors)
 	for i := 0; i < numParallelAccessors; i++ {
 		go func() {
-			tl.Lock("", id)
+			tl.Lock("", *id)
 			counter++
-			tl.Unlock("", id)
+			tl.Unlock("", *id)
 			wg.Done()
 		}()
 	}
@@ -51,8 +53,8 @@ func TestIdLocker_Same(t *testing.T) {
 
 func TestIdLocker_Lock_PulseDoesntMatter(t *testing.T) {
 	tl := newtestlocker()
-	id1 := *insolar.NewID(0, []byte{0x0A})
-	id2 := *insolar.NewID(1, []byte{0x0A})
+	id1 := *insolar.NewID(pulse.MinTimePulse, []byte{0x0A})
+	id2 := *insolar.NewID(pulse.MinTimePulse+1, []byte{0x0A})
 	end := make(chan bool)
 	go func() {
 		tl.Lock("lock1", id1)
@@ -73,8 +75,8 @@ func TestIdLocker_Lock_PulseDoesntMatter(t *testing.T) {
 
 func TestIdLocker_Different(t *testing.T) {
 	tl := newtestlocker()
-	id1 := *insolar.NewID(0, []byte{0x0A})
-	id2 := *insolar.NewID(0, []byte{0x0B})
+	id1 := *insolar.NewID(pulse.MinTimePulse, []byte{0x0A})
+	id2 := *insolar.NewID(pulse.MinTimePulse+1, []byte{0x0B})
 	end := make(chan bool)
 	go func() {
 		tl.Lock("lock1", id1)

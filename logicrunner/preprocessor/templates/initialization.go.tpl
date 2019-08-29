@@ -78,7 +78,7 @@ func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
         cRef := shouldLoadRef("{{ $contract.CodeReference }}")
         rv = append(rv, XXX_artifacts.NewObjectDescriptor(
             /* head:         */ pRef,
-            /* state:        */ *pRef.Record(),
+            /* state:        */ *pRef.GetLocal(),
             /* prototype:    */ &cRef,
             /* isPrototype:  */ true,
             /* childPointer: */ nil,

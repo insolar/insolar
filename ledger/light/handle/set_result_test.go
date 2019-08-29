@@ -66,10 +66,7 @@ func TestSetResult_BadMsgPayload(t *testing.T) {
 func TestSetResult_IncorrectTypeMsgPayload(t *testing.T) {
 	t.Parallel()
 
-	ctx := flow.TestContextWithPulse(
-		inslogger.TestContext(t),
-		insolar.GenesisPulse.PulseNumber+10,
-	)
+	ctx := inslogger.TestContext(t)
 	f := flow.NewFlowMock(t)
 
 	// Incorrect type.
@@ -94,10 +91,7 @@ func TestSetResult_IncorrectTypeMsgPayload(t *testing.T) {
 func TestSetResult_BadWrappedVirtualRecord(t *testing.T) {
 	t.Parallel()
 
-	ctx := flow.TestContextWithPulse(
-		inslogger.TestContext(t),
-		insolar.GenesisPulse.PulseNumber+10,
-	)
+	ctx := inslogger.TestContext(t)
 	f := flow.NewFlowMock(t)
 
 	result := payload.SetResult{
@@ -123,10 +117,7 @@ func TestSetResult_BadWrappedVirtualRecord(t *testing.T) {
 func TestSetResult_IncorrectRecordInVirtual(t *testing.T) {
 	t.Parallel()
 
-	ctx := flow.TestContextWithPulse(
-		inslogger.TestContext(t),
-		insolar.GenesisPulse.PulseNumber+10,
-	)
+	ctx := inslogger.TestContext(t)
 	f := flow.NewFlowMock(t)
 
 	// Incorrect record type in virtual.
@@ -161,10 +152,7 @@ func TestSetResult_IncorrectRecordInVirtual(t *testing.T) {
 func TestSetResult_EmptyResultObject(t *testing.T) {
 	t.Parallel()
 
-	ctx := flow.TestContextWithPulse(
-		inslogger.TestContext(t),
-		insolar.GenesisPulse.PulseNumber+10,
-	)
+	ctx := inslogger.TestContext(t)
 	f := flow.NewFlowMock(t)
 
 	// Result object is empty

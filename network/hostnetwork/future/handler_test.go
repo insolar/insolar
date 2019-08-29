@@ -109,7 +109,7 @@ func TestPacketHandler_Handle_NotResponse(t *testing.T) {
 
 	ph.Handle(context.Background(), packet.NewReceivedPacket(resp, nil))
 
-	_, err := future.WaitResponse(time.Second)
+	_, err := future.WaitResponse(time.Millisecond)
 
 	require.Error(t, err)
 	require.Equal(t, err, ErrTimeout)

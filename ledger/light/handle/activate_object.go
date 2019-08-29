@@ -20,11 +20,12 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/ledger/light/proc"
-	"github.com/pkg/errors"
 )
 
 type ActivateObject struct {
@@ -42,10 +43,13 @@ func NewActivateObject(dep *proc.Dependencies, msg payload.Meta, passed bool) *A
 }
 
 func (s *ActivateObject) Present(ctx context.Context, f flow.Flow) error {
-	msg := payload.Activate{}
-	err := msg.Unmarshal(s.message.Payload)
+	pl, err := payload.Unmarshal(s.message.Payload)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal Activate message")
+	}
+	msg, ok := pl.(*payload.Activate)
+	if !ok {
+		return fmt.Errorf("wrong request type: %T", pl)
 	}
 
 	activateVirt := record.Virtual{}
@@ -77,7 +81,7 @@ func (s *ActivateObject) Present(ctx context.Context, f flow.Flow) error {
 	}
 
 	passIfNotExecutor := !s.passed
-	jet := proc.NewFetchJet(*activate.Request.Record(), flow.Pulse(ctx), s.message, passIfNotExecutor)
+	jet := proc.NewFetchJet(*activate.Request.GetLocal(), flow.Pulse(ctx), s.message, passIfNotExecutor)
 	s.dep.FetchJet(jet)
 	if err := f.Procedure(ctx, jet, true); err != nil {
 		if err == proc.ErrNotExecutor && passIfNotExecutor {

@@ -60,6 +60,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/reference"
 )
 
 // Host is the over-the-wire representation of a host.
@@ -163,9 +164,13 @@ func (host *Host) MarshalTo(data []byte) (int, error) {
 
 func (host *Host) Unmarshal(data []byte) error {
 	reader := bytes.NewReader(data)
-	if err := binary.Read(reader, binary.BigEndian, &host.NodeID); err != nil {
+
+	var nodeIDBinary [reference.GlobalBinarySize]byte
+	if err := binary.Read(reader, binary.BigEndian, &nodeIDBinary); err != nil {
 		return errors.Wrap(err, "failed to unmarshal protobuf host NodeID")
 	}
+	host.NodeID = *insolar.NewReferenceFromBytes(nodeIDBinary[:])
+
 	if err := binary.Read(reader, binary.BigEndian, &host.ShortID); err != nil {
 		return errors.Wrap(err, "failed to unmarshal protobuf host ShortID")
 	}

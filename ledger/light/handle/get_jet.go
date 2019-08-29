@@ -18,11 +18,13 @@ package handle
 
 import (
 	"context"
+	"fmt"
+
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/ledger/light/proc"
-	"github.com/pkg/errors"
 )
 
 type GetJet struct {
@@ -40,10 +42,13 @@ func NewGetJet(dep *proc.Dependencies, meta payload.Meta, passed bool) *GetJet {
 }
 
 func (h *GetJet) Present(ctx context.Context, f flow.Flow) error {
-	msg := payload.GetJet{}
-	err := msg.Unmarshal(h.meta.Payload)
+	pl, err := payload.Unmarshal(h.meta.Payload)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal GetJet message")
+	}
+	msg, ok := pl.(*payload.GetJet)
+	if !ok {
+		return fmt.Errorf("wrong request type: %T", pl)
 	}
 
 	getJet := proc.NewGetJet(h.meta, msg.ObjectID, msg.PulseNumber)

@@ -29,11 +29,12 @@ import (
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/node"
 	"github.com/insolar/insolar/insolar/payload"
-	"github.com/insolar/insolar/insolar/pulse"
+	insolarPulse "github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/object"
+	"github.com/insolar/insolar/pulse"
 )
 
 func TestStateIniterDefault_PrepareState(t *testing.T) {
@@ -46,8 +47,8 @@ func TestStateIniterDefault_PrepareState(t *testing.T) {
 		drops         *drop.ModifierMock
 		nodes         *node.AccessorMock
 		sender        *bus.SenderMock
-		pulseAppender *pulse.AppenderMock
-		pulseAccessor *pulse.AccessorMock
+		pulseAppender *insolarPulse.AppenderMock
+		pulseAccessor *insolarPulse.AccessorMock
 		jetCalculator *executor.JetCalculatorMock
 		indexes       *object.MemoryIndexModifierMock
 	)
@@ -58,8 +59,8 @@ func TestStateIniterDefault_PrepareState(t *testing.T) {
 		drops = drop.NewModifierMock(mc)
 		nodes = node.NewAccessorMock(mc)
 		sender = bus.NewSenderMock(mc)
-		pulseAppender = pulse.NewAppenderMock(mc)
-		pulseAccessor = pulse.NewAccessorMock(mc)
+		pulseAppender = insolarPulse.NewAppenderMock(mc)
+		pulseAccessor = insolarPulse.NewAccessorMock(mc)
 		jetCalculator = executor.NewJetCalculatorMock(mc)
 		indexes = object.NewMemoryIndexModifierMock(mc)
 	}
@@ -80,7 +81,7 @@ func TestStateIniterDefault_PrepareState(t *testing.T) {
 			indexes,
 		)
 
-		_, _, err := s.PrepareState(ctx, insolar.FirstPulseNumber/2)
+		_, _, err := s.PrepareState(ctx, pulse.MinTimePulse/2)
 		assert.Error(t, err, "must return error 'invalid pulse'")
 	})
 
@@ -96,12 +97,12 @@ func TestStateIniterDefault_PrepareState(t *testing.T) {
 			nodes.InRoleMock.Return(heavy, nil),
 			sender,
 			pulseAppender,
-			pulseAccessor.LatestMock.Return(insolar.Pulse{}, pulse.ErrNotFound),
+			pulseAccessor.LatestMock.Return(insolar.Pulse{}, insolarPulse.ErrNotFound),
 			jetCalculator,
 			indexes,
 		)
 
-		justAdded, jetsReturned, err := s.PrepareState(ctx, insolar.FirstPulseNumber)
+		justAdded, jetsReturned, err := s.PrepareState(ctx, pulse.MinTimePulse)
 		assert.Error(t, err, "must return error 'failed to calculate heavy node for pulse'")
 		assert.Nil(t, jetsReturned)
 		assert.False(t, justAdded)
@@ -119,12 +120,12 @@ func TestStateIniterDefault_PrepareState(t *testing.T) {
 			nodes,
 			sender,
 			pulseAppender,
-			pulseAccessor.LatestMock.Return(insolar.Pulse{PulseNumber: insolar.FirstPulseNumber + 10}, nil),
+			pulseAccessor.LatestMock.Return(insolar.Pulse{PulseNumber: pulse.MinTimePulse + 10}, nil),
 			jetCalculator.MineForPulseMock.Return(jets, nil),
 			indexes,
 		)
 
-		justAdded, jetsReturned, err := s.PrepareState(ctx, insolar.FirstPulseNumber)
+		justAdded, jetsReturned, err := s.PrepareState(ctx, pulse.MinTimePulse)
 		assert.NoError(t, err, "must be nil")
 		assert.Equal(t, jets, jetsReturned)
 		assert.False(t, justAdded)
@@ -150,12 +151,12 @@ func TestStateIniterDefault_PrepareState(t *testing.T) {
 			nodes.InRoleMock.Return(heavy, nil),
 			sender,
 			pulseAppender,
-			pulseAccessor.LatestMock.Return(insolar.Pulse{}, pulse.ErrNotFound),
+			pulseAccessor.LatestMock.Return(insolar.Pulse{}, insolarPulse.ErrNotFound),
 			jetCalculator,
 			indexes,
 		)
 
-		justAdded, jetsReturned, err := s.PrepareState(ctx, insolar.FirstPulseNumber)
+		justAdded, jetsReturned, err := s.PrepareState(ctx, pulse.MinTimePulse)
 		assert.Error(t, err, "must be error 'failed to fetch state from heavy'")
 		assert.Nil(t, jetsReturned)
 		assert.False(t, justAdded)
@@ -176,12 +177,12 @@ func TestStateIniterDefault_PrepareState(t *testing.T) {
 			Payload: payload.MustMarshal(&payload.LightInitialState{
 				NetworkStart: true,
 				JetIDs:       jets,
-				Pulse: pulse.PulseProto{
-					PulseNumber: insolar.FirstPulseNumber,
+				Pulse: insolarPulse.PulseProto{
+					PulseNumber: pulse.MinTimePulse,
 				},
 				Drops: []drop.Drop{
-					{JetID: j1, Pulse: insolar.FirstPulseNumber},
-					{JetID: j2, Pulse: insolar.FirstPulseNumber},
+					{JetID: j1, Pulse: pulse.MinTimePulse},
+					{JetID: j2, Pulse: pulse.MinTimePulse},
 				},
 			}),
 		})
@@ -193,12 +194,12 @@ func TestStateIniterDefault_PrepareState(t *testing.T) {
 			nodes.InRoleMock.Return(heavy, nil),
 			sender.SendTargetMock.Return(reps, func() {}),
 			pulseAppender.AppendMock.Return(nil),
-			pulseAccessor.LatestMock.Return(insolar.Pulse{}, pulse.ErrNotFound),
+			pulseAccessor.LatestMock.Return(insolar.Pulse{}, insolarPulse.ErrNotFound),
 			jetCalculator,
 			indexes,
 		)
 
-		justAdded, jetsReturned, err := s.PrepareState(ctx, insolar.FirstPulseNumber+10)
+		justAdded, jetsReturned, err := s.PrepareState(ctx, pulse.MinTimePulse+10)
 		assert.NoError(t, err, "must be nil")
 		assert.Equal(t, jets, jetsReturned)
 		assert.True(t, justAdded)

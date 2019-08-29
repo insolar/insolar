@@ -157,7 +157,7 @@ func (s *suiteTest) TestStreamTransport() {
 	s.Error(err)
 
 	conn, err := n1.tcp.Dial(ctx, n2.tcp.Address())
-	s.NoError(err)
+	s.Require().NoError(err)
 
 	count, err := conn.Write([]byte{1, 2, 3})
 	s.Equal(3, count)

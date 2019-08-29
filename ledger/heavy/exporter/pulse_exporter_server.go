@@ -18,18 +18,20 @@ package exporter
 
 import (
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/pulse"
+	insolarPulse "github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/heavy/executor"
+	"github.com/insolar/insolar/pulse"
+
 	"github.com/pkg/errors"
 )
 
 type PulseServer struct {
-	pulses    pulse.Calculator
+	pulses    insolarPulse.Calculator
 	jetKeeper executor.JetKeeper
 }
 
-func NewPulseServer(pulses pulse.Calculator, jetKeeper executor.JetKeeper) *PulseServer {
+func NewPulseServer(pulses insolarPulse.Calculator, jetKeeper executor.JetKeeper) *PulseServer {
 	return &PulseServer{
 		pulses:    pulses,
 		jetKeeper: jetKeeper,
@@ -46,9 +48,9 @@ func (p *PulseServer) Export(getPulses *GetPulses, stream PulseExporter_ExportSe
 
 	read := uint32(0)
 	if getPulses.PulseNumber == 0 {
-		getPulses.PulseNumber = insolar.FirstPulseNumber
+		getPulses.PulseNumber = pulse.MinTimePulse
 		err := stream.Send(&Pulse{
-			PulseNumber:    insolar.FirstPulseNumber,
+			PulseNumber:    pulse.MinTimePulse,
 			Entropy:        insolar.GenesisPulse.Entropy,
 			PulseTimestamp: insolar.GenesisPulse.PulseTimestamp,
 		})

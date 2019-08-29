@@ -29,6 +29,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/light/handle"
 	"github.com/insolar/insolar/ledger/light/proc"
+	"github.com/insolar/insolar/pulse"
 )
 
 func TestGetRequestInfo_Present(t *testing.T) {
@@ -54,7 +55,7 @@ func TestGetRequestInfo_Present(t *testing.T) {
 				Polymorph: 0,
 				ObjectID:  insolar.ID{},
 				RequestID: insolar.ID{},
-				Pulse:     insolar.FirstPulseNumber,
+				Pulse:     pulse.MinTimePulse,
 			}),
 			ID: []byte{1, 1, 1},
 		}

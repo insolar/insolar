@@ -171,7 +171,7 @@ func TestHandleCall_Present(t *testing.T) {
 			case *CheckOurRole:
 				return nil
 			case *RegisterIncomingRequest:
-				p.result <- &payload.RequestInfo{RequestID: gen.ID(), ObjectID: *objRef.Record()}
+				p.result <- &payload.RequestInfo{RequestID: gen.ID(), ObjectID: *objRef.GetLocal()}
 				return nil
 			case *AddFreshRequest:
 				return nil
@@ -229,7 +229,7 @@ func TestHandleCall_Present(t *testing.T) {
 			case *CheckOurRole:
 				return nil
 			case *RegisterIncomingRequest:
-				p.result <- &payload.RequestInfo{RequestID: gen.ID(), ObjectID: *objRef.Record()}
+				p.result <- &payload.RequestInfo{RequestID: gen.ID(), ObjectID: *objRef.GetLocal()}
 				return nil
 			case *AddFreshRequest:
 				return nil
@@ -421,6 +421,7 @@ func TestHandleCall_Present(t *testing.T) {
 				CallType: record.CTMethod,
 				Object:   nil,
 			},
+			PulseNumber: gen.PulseNumber(),
 		}
 
 		reply, err := handler.handleActual(ctx, msg, fm)
@@ -445,7 +446,7 @@ func TestHandleCall_Present(t *testing.T) {
 			case *CheckOurRole:
 				return nil
 			case *RegisterIncomingRequest:
-				p.result <- &payload.RequestInfo{RequestID: gen.ID(), ObjectID: *objRef.Record()}
+				p.result <- &payload.RequestInfo{RequestID: gen.ID(), ObjectID: *objRef.GetLocal()}
 				return nil
 			case *AddFreshRequest:
 				return nil
@@ -483,6 +484,7 @@ func TestHandleCall_Present(t *testing.T) {
 				CallType: record.CTMethod,
 				Object:   &objRef,
 			},
+			PulseNumber: gen.PulseNumber(),
 		}
 
 		reply, err := handler.handleActual(ctx, msg, fm)
@@ -515,8 +517,8 @@ func TestHandleCall_Present(t *testing.T) {
 				return nil
 			case *RegisterIncomingRequest:
 				p.result <- &payload.RequestInfo{
-					RequestID: *reqRef.Record(),
-					ObjectID:  *objRef.Record(),
+					RequestID: *reqRef.GetLocal(),
+					ObjectID:  *objRef.GetLocal(),
 					Request:   []byte{1, 2, 3},
 					Result:    matRecordSerialized,
 				}
@@ -617,7 +619,7 @@ func TestHandleCall_Present(t *testing.T) {
 			case *CheckOurRole:
 				return nil
 			case *RegisterIncomingRequest:
-				p.result <- &payload.RequestInfo{RequestID: gen.ID(), ObjectID: *objRef.Record()}
+				p.result <- &payload.RequestInfo{RequestID: gen.ID(), ObjectID: *objRef.GetLocal()}
 				return nil
 			case *RecordErrorResult:
 				p.result = []byte{3, 2, 1}

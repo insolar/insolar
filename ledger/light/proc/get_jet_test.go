@@ -24,13 +24,13 @@ import (
 	"github.com/gojuno/minimock"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/light/proc"
+	"github.com/insolar/insolar/pulse"
 )
 
 func TestGetJet_Proceed(t *testing.T) {
@@ -63,7 +63,7 @@ func TestGetJet_Proceed(t *testing.T) {
 			assert.Equal(t, expectedMsg.Payload, reply.Payload)
 		}).Return()
 
-		p := proc.NewGetJet(payload.Meta{}, gen.ID(), insolar.FirstPulseNumber)
+		p := proc.NewGetJet(payload.Meta{}, gen.ID(), pulse.MinTimePulse)
 		p.Dep(jetAccessor, sender)
 		err := p.Proceed(ctx)
 		assert.NoError(t, err)

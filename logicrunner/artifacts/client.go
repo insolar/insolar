@@ -209,7 +209,7 @@ func (m *client) GetCode(
 		instrumenter.end()
 	}()
 
-	getCodePl := &payload.GetCode{CodeID: *code.Record()}
+	getCodePl := &payload.GetCode{CodeID: *code.GetLocal()}
 
 	pl, err := m.sendToLight(
 		ctx, bus.NewRetrySender(m.sender, m.PulseAccessor, 1, 1), getCodePl, code,
@@ -274,10 +274,10 @@ func (m *client) GetObject(
 		instrumenter.end()
 	}()
 
-	logger := inslogger.FromContext(ctx).WithField("object", head.Record().DebugString())
+	logger := inslogger.FromContext(ctx).WithField("object", head.GetLocal().DebugString())
 
 	msg, err := payload.NewMessage(&payload.GetObject{
-		ObjectID: *head.Record(),
+		ObjectID: *head.GetLocal(),
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to marshal message")
@@ -319,7 +319,7 @@ func (m *client) GetObject(
 				err = insolar.ErrDeactivated
 				return nil, err
 			default:
-				logger.Errorf("reply error: %v, objectID: %v", p.Text, head.Record().DebugString())
+				logger.Errorf("reply error: %v, objectID: %v", p.Text, head.GetLocal().DebugString())
 				err = errors.New(p.Text)
 				return nil, err
 			}
@@ -377,8 +377,8 @@ func (m *client) GetAbandonedRequest(
 	}()
 
 	getRequestPl := &payload.GetRequest{
-		ObjectID:  *object.Record(),
-		RequestID: *reqRef.Record(),
+		ObjectID:  *object.GetLocal(),
+		RequestID: *reqRef.GetLocal(),
 	}
 
 	pl, err := m.sendToLight(ctx, m.sender, getRequestPl, object)
@@ -421,7 +421,7 @@ func (m *client) GetPendings(ctx context.Context, object insolar.Reference) ([]i
 	}()
 
 	getPendingsPl := &payload.GetPendings{
-		ObjectID: *object.Record(),
+		ObjectID: *object.GetLocal(),
 	}
 
 	pl, err := m.sendToLight(ctx, m.sender, getPendingsPl, object)
@@ -465,7 +465,7 @@ func (m *client) HasPendings(
 	}()
 
 	hasPendingsPl := &payload.HasPendings{
-		ObjectID: *object.Record(),
+		ObjectID: *object.GetLocal(),
 	}
 
 	pl, err := m.sendToLight(ctx, m.sender, hasPendingsPl, object)
@@ -610,7 +610,7 @@ func (m *client) activateObject(
 	}
 
 	result := record.Result{
-		Object:  *obj.Record(),
+		Object:  *obj.GetLocal(),
 		Request: obj,
 	}
 
@@ -705,7 +705,7 @@ func (m *client) RegisterResult(
 
 	objReference := result.ObjectReference()
 	resultRecord := record.Result{
-		Object:  *objReference.Record(),
+		Object:  *objReference.GetLocal(),
 		Request: request,
 		Payload: result.Result(),
 	}

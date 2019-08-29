@@ -11,6 +11,7 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -39,6 +40,7 @@ type outgoingRequestSender struct {
 type outgoingSenderActorState struct {
 	cr                            insolar.ContractRequester
 	am                            artifacts.Client
+	pa                            pulse.Accessor
 	atomicRunningGoroutineCounter int32
 }
 
@@ -62,9 +64,9 @@ type sendAbandonedOutgoingRequestMessage struct {
 	outgoingRequest  *record.OutgoingRequest // outgoing request body
 }
 
-func NewOutgoingRequestSender(as actor.System, cr insolar.ContractRequester, am artifacts.Client) OutgoingRequestSender {
+func NewOutgoingRequestSender(as actor.System, cr insolar.ContractRequester, am artifacts.Client, pa pulse.Accessor) OutgoingRequestSender {
 	pid := as.Spawn(func(system actor.System, pid actor.Pid) (actor.Actor, int) {
-		state := newOutgoingSenderActorState(cr, am)
+		state := newOutgoingSenderActorState(cr, am, pa)
 		queueLimit := OutgoingRequestSenderDefaultQueueLimit
 		return state, queueLimit
 	})
@@ -111,8 +113,8 @@ func (rs *outgoingRequestSender) Stop(_ context.Context) {
 	rs.as.CloseAll()
 }
 
-func newOutgoingSenderActorState(cr insolar.ContractRequester, am artifacts.Client) actor.Actor {
-	return &outgoingSenderActorState{cr: cr, am: am}
+func newOutgoingSenderActorState(cr insolar.ContractRequester, am artifacts.Client, pa pulse.Accessor) actor.Actor {
+	return &outgoingSenderActorState{cr: cr, am: am, pa: pa}
 }
 
 func (a *outgoingSenderActorState) Receive(message actor.Message) (actor.Actor, error) {
@@ -159,8 +161,13 @@ func (a *outgoingSenderActorState) sendOutgoingRequest(ctx context.Context, outg
 
 	incoming := buildIncomingRequestFromOutgoing(outgoing)
 
+	latestPulse, err := a.pa.Latest(ctx)
+	if err != nil {
+		err = errors.Wrapf(err, "sendOutgoingRequest: failed to get current pulse")
+		return nil, nil, nil, err
+	}
 	// Actually make a call.
-	callMsg := &payload.CallMethod{Request: incoming}
+	callMsg := &payload.CallMethod{Request: incoming, PulseNumber: latestPulse.PulseNumber}
 	res, _, err := a.cr.Call(ctx, callMsg)
 	if err != nil {
 		return nil, nil, nil, err

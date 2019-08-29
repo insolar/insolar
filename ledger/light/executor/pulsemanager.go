@@ -39,7 +39,7 @@ type PulseManager struct {
 	setLock sync.RWMutex
 
 	nodeNet          network.NodeNetwork
-	dispatcher       dispatcher.Dispatcher
+	dispatchers      []dispatcher.Dispatcher
 	nodeSetter       node.Modifier
 	pulseAccessor    pulse.Accessor
 	pulseAppender    pulse.Appender
@@ -55,7 +55,7 @@ type PulseManager struct {
 // NewPulseManager creates PulseManager instance.
 func NewPulseManager(
 	nodeNet network.NodeNetwork,
-	disp dispatcher.Dispatcher,
+	dispatchers []dispatcher.Dispatcher,
 	nodeSetter node.Modifier,
 	pulseAccessor pulse.Accessor,
 	pulseAppender pulse.Appender,
@@ -69,7 +69,7 @@ func NewPulseManager(
 ) *PulseManager {
 	pm := &PulseManager{
 		nodeNet:          nodeNet,
-		dispatcher:       disp,
+		dispatchers:      dispatchers,
 		jetSplitter:      jetSplitter,
 		nodeSetter:       nodeSetter,
 		pulseAccessor:    pulseAccessor,
@@ -117,27 +117,29 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 		}
 		err := m.nodeSetter.Set(newPulse.PulseNumber, toSet)
 		if err != nil {
-			panic(errors.Wrap(err, "call of SetActiveNodes failed"))
+			logger.Panic(errors.Wrap(err, "call of SetActiveNodes failed"))
 		}
 	}
 
 	logger.Debug("before preparing state")
 	justJoined, jets, err := m.stateIniter.PrepareState(ctx, newPulse.PulseNumber)
 	if err != nil {
-		panic(errors.Wrap(err, "failed to prepare light for start"))
+		logger.Panic(errors.Wrap(err, "failed to prepare light for start"))
 	}
 	stats.Record(ctx, statJets.M(int64(len(jets))))
 
 	endedPulse, err := m.pulseAccessor.Latest(ctx)
 	if err != nil {
-		panic(errors.Wrap(err, "failed to fetch ended pulse"))
+		logger.Panic(errors.Wrap(err, "failed to fetch ended pulse"))
 	}
 
 	// Changing pulse.
 	logger.Debug("before changing pulse")
 	{
 		logger.Debug("before dispatcher closePulse")
-		m.dispatcher.ClosePulse(ctx, newPulse)
+		for _, d := range m.dispatchers {
+			d.ClosePulse(ctx, newPulse)
+		}
 
 		if !justJoined {
 			logger.Debug("before parsing jets")
@@ -159,7 +161,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 			}).Debug("before jetSplitter.Do")
 			jets, err = m.jetSplitter.Do(ctx, endedPulse.PulseNumber, newPulse.PulseNumber, jets, true)
 			if err != nil {
-				panic(errors.Wrap(err, "failed to split jets"))
+				logger.Panic(errors.Wrap(err, "failed to split jets"))
 			}
 		}
 
@@ -173,22 +175,24 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 		}).Debugf("before writeManager.CloseAndWait")
 		err = m.writeManager.CloseAndWait(ctx, endedPulse.PulseNumber)
 		if err != nil {
-			panic(errors.Wrap(err, "can't close pulse for writing"))
+			logger.Panic(errors.Wrap(err, "can't close pulse for writing"))
 		}
 
 		logger.WithField("newPulse.PulseNumber", newPulse.PulseNumber).Debug("before writeManager.Open")
 		err = m.writeManager.Open(ctx, newPulse.PulseNumber)
 		if err != nil {
-			panic(errors.Wrap(err, "failed to open pulse for writing"))
+			logger.Panic(errors.Wrap(err, "failed to open pulse for writing"))
 		}
 
 		logger.WithField("newPulse.PulseNumber", newPulse.PulseNumber).Debug("before pulseAppender.Append")
 		if err := m.pulseAppender.Append(ctx, newPulse); err != nil {
-			panic(errors.Wrap(err, "failed to add pulse"))
+			logger.Panic(errors.Wrap(err, "failed to add pulse"))
 		}
 
 		logger.WithField("newPulse", newPulse.PulseNumber).Debugf("before dispatcher.BeginPulse", newPulse)
-		m.dispatcher.BeginPulse(ctx, newPulse)
+		for _, d := range m.dispatchers {
+			d.BeginPulse(ctx, newPulse)
+		}
 	}
 
 	if !justJoined {

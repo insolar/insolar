@@ -65,10 +65,7 @@ func TestSetOutgoingRequest_BadMsgPayload(t *testing.T) {
 func TestSetOutgoingRequest_IncorrectTypeMsgPayload(t *testing.T) {
 	t.Parallel()
 
-	ctx := flow.TestContextWithPulse(
-		inslogger.TestContext(t),
-		insolar.GenesisPulse.PulseNumber+10,
-	)
+	ctx := inslogger.TestContext(t)
 	f := flow.NewFlowMock(t)
 
 	// Incorrect type.
@@ -93,10 +90,7 @@ func TestSetOutgoingRequest_IncorrectTypeMsgPayload(t *testing.T) {
 func TestSetOutgoingRequest_IncorrectRecordInVirtual(t *testing.T) {
 	t.Parallel()
 
-	ctx := flow.TestContextWithPulse(
-		inslogger.TestContext(t),
-		insolar.GenesisPulse.PulseNumber+10,
-	)
+	ctx := inslogger.TestContext(t)
 	f := flow.NewFlowMock(t)
 
 	// Incorrect record type in virtual.
@@ -129,10 +123,7 @@ func TestSetOutgoingRequest_IncorrectRecordInVirtual(t *testing.T) {
 func TestSetOutgoingRequest_EmptyRequestAffinityRef(t *testing.T) {
 	t.Parallel()
 
-	ctx := flow.TestContextWithPulse(
-		inslogger.TestContext(t),
-		insolar.GenesisPulse.PulseNumber+10,
-	)
+	ctx := inslogger.TestContext(t)
 	f := flow.NewFlowMock(t)
 
 	// AffinityRef object (request.Caller) is empty.
