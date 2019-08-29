@@ -80,7 +80,6 @@ func TestHotObjects_Proceed(t *testing.T) {
 			Pulse: expectedPulse.PulseNumber,
 			JetID: expectedJetID,
 			Split: false,
-			Hash:  []byte{1, 2, 3},
 		}
 		idxs := []record.Index{
 			{
@@ -154,7 +153,6 @@ func TestHotObjects_Proceed(t *testing.T) {
 			Pulse: currentPulse.PulseNumber,
 			JetID: expectedJetID,
 			Split: false,
-			Hash:  []byte{1, 2, 3},
 		}
 		idxs := []record.Index{
 			{
