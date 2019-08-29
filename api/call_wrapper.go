@@ -18,13 +18,14 @@ package api
 
 import (
 	"context"
+	"net/http"
+
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/rpc/v2"
 	"github.com/pkg/errors"
-	"net/http"
 )
 
 func wrapCall(runner *Runner, allowedMethods map[string]bool, req *http.Request, args *requester.Params, requestBody *rpc.RequestBody, result *requester.ContractResult) error {
@@ -50,7 +51,8 @@ func wrapCall(runner *Runner, allowedMethods map[string]bool, req *http.Request,
 		return err
 	}
 
-	seedPulse, err := runner.checkSeed(args.Seed)
+	logger.Infof("[ ContractService.Call ] After validate headers: %s", req.RequestURI)
+	seedPulse, err := runner.checkSeed(ctx, args.Seed)
 	if err != nil {
 		return err
 	}

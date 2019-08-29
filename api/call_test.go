@@ -26,17 +26,18 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
+	"github.com/insolar/insolar/insolar/reply"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/api/seedmanager"
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 )
@@ -53,15 +54,18 @@ type TimeoutSuite struct {
 	delay chan struct{}
 }
 
-func (suite *TimeoutSuite) TestRunner_callHandler_NoTimeout() {
+func (suite *TimeoutSuite) TestRunner_callHandler() {
 	seed, err := suite.api.SeedGenerator.Next()
 	suite.NoError(err)
 	suite.api.SeedManager.Add(*seed, 0)
 
 	close(suite.delay)
-	suite.api.timeout = 60 * time.Second
 	seedString := base64.StdEncoding.EncodeToString(seed[:])
 
+	requester.SetVerbose(true)
+
+	inslogger.FromContext(suite.ctx).Info("Before SendWithSeed")
+	requester.SetVerbose(true)
 	resp, err := requester.SendWithSeed(
 		suite.ctx,
 		CallUrl,
@@ -76,25 +80,6 @@ func (suite *TimeoutSuite) TestRunner_callHandler_NoTimeout() {
 	suite.NoError(err)
 	suite.Nil(result.Error)
 	suite.Equal("OK", result.Result.CallResult)
-}
-
-func (suite *TimeoutSuite) TestRunner_callHandler_Timeout() {
-	seed, err := suite.api.SeedGenerator.Next()
-	suite.NoError(err)
-	suite.api.SeedManager.Add(*seed, 0)
-
-	suite.api.timeout = 1 * time.Millisecond
-
-	seedString := base64.StdEncoding.EncodeToString(seed[:])
-
-	_, err = requester.SendWithSeed(
-		suite.ctx,
-		CallUrl,
-		suite.user,
-		nil,
-		seedString,
-	)
-	suite.Error(err, "Client.Timeout exceeded while awaiting headers")
 }
 
 func TestTimeoutSuite(t *testing.T) {
@@ -119,31 +104,26 @@ func TestTimeoutSuite(t *testing.T) {
 	cfg.Address = "localhost:19192"
 	timeoutSuite.api, err = NewRunner(&cfg, nil, nil, nil, nil, nil, nil, nil, nil)
 	require.NoError(t, err)
-	timeoutSuite.api.timeout = 1 * time.Second
 
 	cr := testutils.NewContractRequesterMock(timeoutSuite.mc)
 	cr.SendRequestWithPulseMock.Set(func(p context.Context, p1 *insolar.Reference, method string, p3 []interface{}, p4 insolar.PulseNumber) (insolar.Reply, *insolar.Reference, error) {
 		requestReference, _ := insolar.NewReferenceFromBase58("4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.4FFB8zfQoGznSmzDxwv4njX1aR9ioL8GHSH17QXH2AFa")
 		switch method {
-		case "GetPublicKey":
-			var result = string(pKeyString)
-			data, _ := foundation.MarshalMethodResult(result, nil)
-			return &reply.CallMethod{
-				Result: data,
-			}, requestReference, nil
-		default:
+		case "Call":
 			<-timeoutSuite.delay
 			var result = "OK"
 			data, _ := foundation.MarshalMethodResult(result, nil)
 			return &reply.CallMethod{
 				Result: data,
 			}, requestReference, nil
+		default:
+			return nil, nil, errors.New("Unknown method: " + method)
 		}
 	})
 
 	timeoutSuite.api.ContractRequester = cr
 	timeoutSuite.api.Start(timeoutSuite.ctx)
-	timeoutSuite.api.SeedManager = seedmanager.NewSpecified(time.Minute, time.Minute)
+	timeoutSuite.api.SeedManager = seedmanager.NewSpecified(17*time.Second, 35*time.Second)
 
 	requester.SetTimeout(25)
 	suite.Run(t, timeoutSuite)
@@ -189,6 +169,6 @@ func (suite *TimeoutSuite) BeforeTest(suiteName, testName string) {
 }
 
 func (suite *TimeoutSuite) AfterTest(suiteName, testName string) {
-	suite.mc.Wait(1 * time.Minute)
+	suite.mc.Wait(64 * time.Second)
 	suite.mc.Finish()
 }
