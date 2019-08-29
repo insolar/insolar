@@ -48,6 +48,7 @@ const (
 	GenesisNameMigrationAdminMember  = "migration" + GenesisNameMember
 	GenesisNameMigrationAdminWallet  = "migration" + GenesisNameWallet
 	GenesisNameMigrationAdminAccount = "migration" + GenesisNameAccount
+	GenesisNameFeeMember             = "fee" + GenesisNameMember
 	GenesisNameFeeWallet             = "fee" + GenesisNameWallet
 	GenesisNameFeeAccount            = "fee" + GenesisNameAccount
 
@@ -113,6 +114,7 @@ type GenesisContractsConfig struct {
 	MDBalance                 string
 	RootPublicKey             string
 	MigrationAdminPublicKey   string
+	FeeMemberPublicKey        string
 	MigrationDaemonPublicKeys []string
 	VestingPeriodInPulses     int64
 	LokupPeriodInPulses       int64

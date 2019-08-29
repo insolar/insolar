@@ -192,6 +192,7 @@ generate_root_member_keys()
 {
     echo "generate members keys in dir: $CONFIGS_DIR"
     bin/insolar gen-key-pair > ${CONFIGS_DIR}root_member_keys.json
+    bin/insolar gen-key-pair > ${CONFIGS_DIR}fee_member_keys.json
     bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_admin_member_keys.json
     for (( b = 0; b < 10; b++ ))
     do

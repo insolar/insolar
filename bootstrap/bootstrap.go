@@ -101,6 +101,10 @@ func (g *Generator) Run(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "couldn't get migration admin keys")
 	}
+	feeMemberPublicKey, err := secrets.GetPublicKeyFromFile(g.config.MembersKeysDir + "fee_member_keys.json")
+	if err != nil {
+		return errors.Wrap(err, "couldn't get fee member keys")
+	}
 	migrationDaemonPublicKeys := []string{}
 	for i := 0; i < insolar.GenesisAmountMigrationDaemonMembers; i++ {
 		k, err := secrets.GetPublicKeyFromFile(g.config.MembersKeysDir + GetMigrationDaemonPath(i))
@@ -145,6 +149,7 @@ func (g *Generator) Run(ctx context.Context) error {
 		MDBalance:                 g.config.MDBalance,
 		RootPublicKey:             rootPublicKey,
 		MigrationAdminPublicKey:   migrationAdminPublicKey,
+		FeeMemberPublicKey:        feeMemberPublicKey,
 		MigrationDaemonPublicKeys: migrationDaemonPublicKeys,
 		MigrationAddresses:        migrationAddresses,
 		VestingPeriodInPulses:     g.config.VestingPeriodInPulses,
