@@ -64,7 +64,6 @@ func (rd *RootDomain) GetNodeDomainRef() (insolar.Reference, error) {
 var INSATTR_Info_API = true
 
 // AddNewMemberToPublicKeyMap adds new member to PublicKeyMap.
-// ins:immutable
 func (rd *RootDomain) AddNewMemberToPublicKeyMap(publicKey string, memberRef insolar.Reference) error {
 	trimmedPublicKey := foundation.TrimPublicKey(publicKey)
 	shardIndex := foundation.GetShardIndex(trimmedPublicKey, insolar.GenesisAmountPublicKeyShards)

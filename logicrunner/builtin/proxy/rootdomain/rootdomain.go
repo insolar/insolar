@@ -338,7 +338,7 @@ func (r *RootDomain) GetNodeDomainRef() (insolar.Reference, error) {
 }
 
 // AddNewMemberToPublicKeyMap is proxy generated method
-func (r *RootDomain) AddNewMemberToPublicKeyMapAsMutable(publicKey string, memberRef insolar.Reference) error {
+func (r *RootDomain) AddNewMemberToPublicKeyMap(publicKey string, memberRef insolar.Reference) error {
 	var args [2]interface{}
 	args[0] = publicKey
 	args[1] = memberRef
@@ -398,7 +398,7 @@ func (r *RootDomain) AddNewMemberToPublicKeyMapNoWait(publicKey string, memberRe
 }
 
 // AddNewMemberToPublicKeyMapAsImmutable is proxy generated method
-func (r *RootDomain) AddNewMemberToPublicKeyMap(publicKey string, memberRef insolar.Reference) error {
+func (r *RootDomain) AddNewMemberToPublicKeyMapAsImmutable(publicKey string, memberRef insolar.Reference) error {
 	var args [2]interface{}
 	args[0] = publicKey
 	args[1] = memberRef

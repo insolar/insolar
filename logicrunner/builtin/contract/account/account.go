@@ -60,6 +60,31 @@ func (a *Account) transfer(amountStr string, destinationObject destination) erro
 	return destinationObject.Accept(amountStr)
 }
 
+// Accept accepts transfer to balance.
+//ins:saga(INS_FLAG_NO_ROLLBACK_METHOD)
+func (a *Account) Accept(amountStr string) error {
+
+	amount := new(big.Int)
+	amount, ok := amount.SetString(amountStr, 10)
+	if !ok {
+		return fmt.Errorf("can't parse input amount")
+	}
+
+	balance := new(big.Int)
+	balance, ok = balance.SetString(a.Balance, 10)
+	if !ok {
+		return fmt.Errorf("can't parse account balance")
+	}
+
+	b, err := safemath.Add(balance, amount)
+	if err != nil {
+		return fmt.Errorf("failed to add amount to balance: %s", err.Error())
+	}
+	a.Balance = b.String()
+
+	return nil
+}
+
 // RollBack rolls back transfer to balance.
 func (a *Account) RollBack(amountStr string) error {
 
