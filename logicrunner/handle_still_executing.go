@@ -51,7 +51,7 @@ func (h *HandleStillExecuting) Present(ctx context.Context, f flow.Flow) error {
 	}
 	defer done()
 
-	h.dep.ResultsMatcher.AddStillExecution(ctx, &message)
+	h.dep.ResultsMatcher.AddStillExecution(ctx, message)
 
 	broker := h.dep.StateStorage.UpsertExecutionState(message.ObjectRef)
 	broker.PrevExecutorStillExecuting(ctx)

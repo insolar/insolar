@@ -16,14 +16,14 @@ import (
 type ResultMatcherMock struct {
 	t minimock.Tester
 
-	funcAddStillExecution          func(ctx context.Context, msg *payload.StillExecuting)
-	inspectFuncAddStillExecution   func(ctx context.Context, msg *payload.StillExecuting)
+	funcAddStillExecution          func(ctx context.Context, msg payload.StillExecuting)
+	inspectFuncAddStillExecution   func(ctx context.Context, msg payload.StillExecuting)
 	afterAddStillExecutionCounter  uint64
 	beforeAddStillExecutionCounter uint64
 	AddStillExecutionMock          mResultMatcherMockAddStillExecution
 
-	funcAddUnwantedResponse          func(ctx context.Context, msg *payload.ReturnResults) (err error)
-	inspectFuncAddUnwantedResponse   func(ctx context.Context, msg *payload.ReturnResults)
+	funcAddUnwantedResponse          func(ctx context.Context, msg payload.ReturnResults)
+	inspectFuncAddUnwantedResponse   func(ctx context.Context, msg payload.ReturnResults)
 	afterAddUnwantedResponseCounter  uint64
 	beforeAddUnwantedResponseCounter uint64
 	AddUnwantedResponseMock          mResultMatcherMockAddUnwantedResponse
@@ -74,11 +74,11 @@ type ResultMatcherMockAddStillExecutionExpectation struct {
 // ResultMatcherMockAddStillExecutionParams contains parameters of the ResultMatcher.AddStillExecution
 type ResultMatcherMockAddStillExecutionParams struct {
 	ctx context.Context
-	msg *payload.StillExecuting
+	msg payload.StillExecuting
 }
 
 // Expect sets up expected params for ResultMatcher.AddStillExecution
-func (mmAddStillExecution *mResultMatcherMockAddStillExecution) Expect(ctx context.Context, msg *payload.StillExecuting) *mResultMatcherMockAddStillExecution {
+func (mmAddStillExecution *mResultMatcherMockAddStillExecution) Expect(ctx context.Context, msg payload.StillExecuting) *mResultMatcherMockAddStillExecution {
 	if mmAddStillExecution.mock.funcAddStillExecution != nil {
 		mmAddStillExecution.mock.t.Fatalf("ResultMatcherMock.AddStillExecution mock is already set by Set")
 	}
@@ -98,7 +98,7 @@ func (mmAddStillExecution *mResultMatcherMockAddStillExecution) Expect(ctx conte
 }
 
 // Inspect accepts an inspector function that has same arguments as the ResultMatcher.AddStillExecution
-func (mmAddStillExecution *mResultMatcherMockAddStillExecution) Inspect(f func(ctx context.Context, msg *payload.StillExecuting)) *mResultMatcherMockAddStillExecution {
+func (mmAddStillExecution *mResultMatcherMockAddStillExecution) Inspect(f func(ctx context.Context, msg payload.StillExecuting)) *mResultMatcherMockAddStillExecution {
 	if mmAddStillExecution.mock.inspectFuncAddStillExecution != nil {
 		mmAddStillExecution.mock.t.Fatalf("Inspect function is already set for ResultMatcherMock.AddStillExecution")
 	}
@@ -122,7 +122,7 @@ func (mmAddStillExecution *mResultMatcherMockAddStillExecution) Return() *Result
 }
 
 //Set uses given function f to mock the ResultMatcher.AddStillExecution method
-func (mmAddStillExecution *mResultMatcherMockAddStillExecution) Set(f func(ctx context.Context, msg *payload.StillExecuting)) *ResultMatcherMock {
+func (mmAddStillExecution *mResultMatcherMockAddStillExecution) Set(f func(ctx context.Context, msg payload.StillExecuting)) *ResultMatcherMock {
 	if mmAddStillExecution.defaultExpectation != nil {
 		mmAddStillExecution.mock.t.Fatalf("Default expectation is already set for the ResultMatcher.AddStillExecution method")
 	}
@@ -136,7 +136,7 @@ func (mmAddStillExecution *mResultMatcherMockAddStillExecution) Set(f func(ctx c
 }
 
 // AddStillExecution implements ResultMatcher
-func (mmAddStillExecution *ResultMatcherMock) AddStillExecution(ctx context.Context, msg *payload.StillExecuting) {
+func (mmAddStillExecution *ResultMatcherMock) AddStillExecution(ctx context.Context, msg payload.StillExecuting) {
 	mm_atomic.AddUint64(&mmAddStillExecution.beforeAddStillExecutionCounter, 1)
 	defer mm_atomic.AddUint64(&mmAddStillExecution.afterAddStillExecutionCounter, 1)
 
@@ -253,25 +253,20 @@ type mResultMatcherMockAddUnwantedResponse struct {
 
 // ResultMatcherMockAddUnwantedResponseExpectation specifies expectation struct of the ResultMatcher.AddUnwantedResponse
 type ResultMatcherMockAddUnwantedResponseExpectation struct {
-	mock    *ResultMatcherMock
-	params  *ResultMatcherMockAddUnwantedResponseParams
-	results *ResultMatcherMockAddUnwantedResponseResults
+	mock   *ResultMatcherMock
+	params *ResultMatcherMockAddUnwantedResponseParams
+
 	Counter uint64
 }
 
 // ResultMatcherMockAddUnwantedResponseParams contains parameters of the ResultMatcher.AddUnwantedResponse
 type ResultMatcherMockAddUnwantedResponseParams struct {
 	ctx context.Context
-	msg *payload.ReturnResults
-}
-
-// ResultMatcherMockAddUnwantedResponseResults contains results of the ResultMatcher.AddUnwantedResponse
-type ResultMatcherMockAddUnwantedResponseResults struct {
-	err error
+	msg payload.ReturnResults
 }
 
 // Expect sets up expected params for ResultMatcher.AddUnwantedResponse
-func (mmAddUnwantedResponse *mResultMatcherMockAddUnwantedResponse) Expect(ctx context.Context, msg *payload.ReturnResults) *mResultMatcherMockAddUnwantedResponse {
+func (mmAddUnwantedResponse *mResultMatcherMockAddUnwantedResponse) Expect(ctx context.Context, msg payload.ReturnResults) *mResultMatcherMockAddUnwantedResponse {
 	if mmAddUnwantedResponse.mock.funcAddUnwantedResponse != nil {
 		mmAddUnwantedResponse.mock.t.Fatalf("ResultMatcherMock.AddUnwantedResponse mock is already set by Set")
 	}
@@ -291,7 +286,7 @@ func (mmAddUnwantedResponse *mResultMatcherMockAddUnwantedResponse) Expect(ctx c
 }
 
 // Inspect accepts an inspector function that has same arguments as the ResultMatcher.AddUnwantedResponse
-func (mmAddUnwantedResponse *mResultMatcherMockAddUnwantedResponse) Inspect(f func(ctx context.Context, msg *payload.ReturnResults)) *mResultMatcherMockAddUnwantedResponse {
+func (mmAddUnwantedResponse *mResultMatcherMockAddUnwantedResponse) Inspect(f func(ctx context.Context, msg payload.ReturnResults)) *mResultMatcherMockAddUnwantedResponse {
 	if mmAddUnwantedResponse.mock.inspectFuncAddUnwantedResponse != nil {
 		mmAddUnwantedResponse.mock.t.Fatalf("Inspect function is already set for ResultMatcherMock.AddUnwantedResponse")
 	}
@@ -302,7 +297,7 @@ func (mmAddUnwantedResponse *mResultMatcherMockAddUnwantedResponse) Inspect(f fu
 }
 
 // Return sets up results that will be returned by ResultMatcher.AddUnwantedResponse
-func (mmAddUnwantedResponse *mResultMatcherMockAddUnwantedResponse) Return(err error) *ResultMatcherMock {
+func (mmAddUnwantedResponse *mResultMatcherMockAddUnwantedResponse) Return() *ResultMatcherMock {
 	if mmAddUnwantedResponse.mock.funcAddUnwantedResponse != nil {
 		mmAddUnwantedResponse.mock.t.Fatalf("ResultMatcherMock.AddUnwantedResponse mock is already set by Set")
 	}
@@ -310,12 +305,12 @@ func (mmAddUnwantedResponse *mResultMatcherMockAddUnwantedResponse) Return(err e
 	if mmAddUnwantedResponse.defaultExpectation == nil {
 		mmAddUnwantedResponse.defaultExpectation = &ResultMatcherMockAddUnwantedResponseExpectation{mock: mmAddUnwantedResponse.mock}
 	}
-	mmAddUnwantedResponse.defaultExpectation.results = &ResultMatcherMockAddUnwantedResponseResults{err}
+
 	return mmAddUnwantedResponse.mock
 }
 
 //Set uses given function f to mock the ResultMatcher.AddUnwantedResponse method
-func (mmAddUnwantedResponse *mResultMatcherMockAddUnwantedResponse) Set(f func(ctx context.Context, msg *payload.ReturnResults) (err error)) *ResultMatcherMock {
+func (mmAddUnwantedResponse *mResultMatcherMockAddUnwantedResponse) Set(f func(ctx context.Context, msg payload.ReturnResults)) *ResultMatcherMock {
 	if mmAddUnwantedResponse.defaultExpectation != nil {
 		mmAddUnwantedResponse.mock.t.Fatalf("Default expectation is already set for the ResultMatcher.AddUnwantedResponse method")
 	}
@@ -328,29 +323,8 @@ func (mmAddUnwantedResponse *mResultMatcherMockAddUnwantedResponse) Set(f func(c
 	return mmAddUnwantedResponse.mock
 }
 
-// When sets expectation for the ResultMatcher.AddUnwantedResponse which will trigger the result defined by the following
-// Then helper
-func (mmAddUnwantedResponse *mResultMatcherMockAddUnwantedResponse) When(ctx context.Context, msg *payload.ReturnResults) *ResultMatcherMockAddUnwantedResponseExpectation {
-	if mmAddUnwantedResponse.mock.funcAddUnwantedResponse != nil {
-		mmAddUnwantedResponse.mock.t.Fatalf("ResultMatcherMock.AddUnwantedResponse mock is already set by Set")
-	}
-
-	expectation := &ResultMatcherMockAddUnwantedResponseExpectation{
-		mock:   mmAddUnwantedResponse.mock,
-		params: &ResultMatcherMockAddUnwantedResponseParams{ctx, msg},
-	}
-	mmAddUnwantedResponse.expectations = append(mmAddUnwantedResponse.expectations, expectation)
-	return expectation
-}
-
-// Then sets up ResultMatcher.AddUnwantedResponse return parameters for the expectation previously defined by the When method
-func (e *ResultMatcherMockAddUnwantedResponseExpectation) Then(err error) *ResultMatcherMock {
-	e.results = &ResultMatcherMockAddUnwantedResponseResults{err}
-	return e.mock
-}
-
 // AddUnwantedResponse implements ResultMatcher
-func (mmAddUnwantedResponse *ResultMatcherMock) AddUnwantedResponse(ctx context.Context, msg *payload.ReturnResults) (err error) {
+func (mmAddUnwantedResponse *ResultMatcherMock) AddUnwantedResponse(ctx context.Context, msg payload.ReturnResults) {
 	mm_atomic.AddUint64(&mmAddUnwantedResponse.beforeAddUnwantedResponseCounter, 1)
 	defer mm_atomic.AddUint64(&mmAddUnwantedResponse.afterAddUnwantedResponseCounter, 1)
 
@@ -368,7 +342,7 @@ func (mmAddUnwantedResponse *ResultMatcherMock) AddUnwantedResponse(ctx context.
 	for _, e := range mmAddUnwantedResponse.AddUnwantedResponseMock.expectations {
 		if minimock.Equal(e.params, params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
-			return e.results.err
+			return
 		}
 	}
 
@@ -380,17 +354,15 @@ func (mmAddUnwantedResponse *ResultMatcherMock) AddUnwantedResponse(ctx context.
 			mmAddUnwantedResponse.t.Errorf("ResultMatcherMock.AddUnwantedResponse got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
 		}
 
-		results := mmAddUnwantedResponse.AddUnwantedResponseMock.defaultExpectation.results
-		if results == nil {
-			mmAddUnwantedResponse.t.Fatal("No results are set for the ResultMatcherMock.AddUnwantedResponse")
-		}
-		return (*results).err
+		return
+
 	}
 	if mmAddUnwantedResponse.funcAddUnwantedResponse != nil {
-		return mmAddUnwantedResponse.funcAddUnwantedResponse(ctx, msg)
+		mmAddUnwantedResponse.funcAddUnwantedResponse(ctx, msg)
+		return
 	}
 	mmAddUnwantedResponse.t.Fatalf("Unexpected call to ResultMatcherMock.AddUnwantedResponse. %v %v", ctx, msg)
-	return
+
 }
 
 // AddUnwantedResponseAfterCounter returns a count of finished ResultMatcherMock.AddUnwantedResponse invocations
