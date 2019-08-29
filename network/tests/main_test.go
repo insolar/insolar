@@ -103,7 +103,6 @@ func TestNodeConnectInvalidVersion(t *testing.T) {
 	s.InitNode(testNode)
 	err := testNode.componentManager.Start(s.ctx)
 	assert.NoError(t, err)
-
 	defer s.StopNode(testNode)
 
 	assert.False(t, s.waitForNodeJoin(testNode.id, maxPulsesForJoin), "testNode joined with incorrect version")
@@ -124,7 +123,7 @@ func TestNodeLeave(t *testing.T) {
 
 	s.StopNode(testNode)
 
-	s.waitForConsensus(3)
+	assert.True(t, s.waitForNodeLeave(testNode.id, 3), "testNode found in active list after 3 pulses")
 
 	s.AssertWorkingNodesCountDelta(0)
 	s.AssertActiveNodesCountDelta(0)
@@ -143,7 +142,7 @@ func TestNodeGracefulLeave(t *testing.T) {
 
 	s.GracefulStop(testNode)
 
-	s.waitForConsensus(3)
+	assert.True(t, s.waitForNodeLeave(testNode.id, 3), "testNode found in active list after 3 pulses")
 
 	s.AssertWorkingNodesCountDelta(0)
 	s.AssertActiveNodesCountDelta(0)

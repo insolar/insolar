@@ -56,6 +56,8 @@ import (
 	"context"
 	"crypto"
 	"fmt"
+	"github.com/stretchr/testify/assert"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -121,9 +123,9 @@ type testSuite struct {
 	nodesCount     int
 	ctx            context.Context
 	bootstrapNodes []*networkNode
-	networkNodes   []*networkNode
-	pulsar         TestPulsar
-	t              *testing.T
+	//networkNodes   []*networkNode
+	pulsar TestPulsar
+	t      *testing.T
 }
 
 type consensusSuite struct {
@@ -137,7 +139,7 @@ func newTestSuite(t *testing.T, bootstrapCount, nodesCount int) testSuite {
 		t:              t,
 		ctx:            initLogger(inslogger.TestContext(t), insolar.DebugLevel),
 		bootstrapNodes: make([]*networkNode, 0),
-		networkNodes:   make([]*networkNode, 0),
+		//networkNodes:   make([]*networkNode, 0),
 	}
 }
 
@@ -167,9 +169,9 @@ func (s *consensusSuite) Setup() {
 		s.bootstrapNodes = append(s.bootstrapNodes, s.newNetworkNodeWithRole(fmt.Sprintf("bootstrap_%d", i), role))
 	}
 
-	for i := 0; i < s.nodesCount; i++ {
-		s.networkNodes = append(s.networkNodes, s.newNetworkNode(fmt.Sprintf("node_%d", i)))
-	}
+	//for i := 0; i < s.nodesCount; i++ {
+	//	s.networkNodes = append(s.networkNodes, s.newNetworkNode(fmt.Sprintf("node_%d", i)))
+	//}
 
 	pulseReceivers := make([]string, 0)
 	for _, n := range s.bootstrapNodes {
@@ -219,20 +221,20 @@ func (s *consensusSuite) Setup() {
 	activeNodes := s.bootstrapNodes[0].GetActiveNodes()
 	require.Equal(s.t, len(s.bootstrapNodes), len(activeNodes))
 
-	if len(s.networkNodes) > 0 {
-		suiteLogger.Info("Setup network nodes")
-		s.SetupNodesNetwork(s.networkNodes)
-		s.StartNodesNetwork(s.networkNodes)
-
-		s.waitForConsensus(2)
-
-		// active nodes count verification
-		activeNodes1 := s.networkNodes[0].GetActiveNodes()
-		activeNodes2 := s.networkNodes[0].GetActiveNodes()
-
-		require.Equal(s.t, s.getNodesCount(), len(activeNodes1))
-		require.Equal(s.t, s.getNodesCount(), len(activeNodes2))
-	}
+	//if len(s.networkNodes) > 0 {
+	//	suiteLogger.Info("Setup network nodes")
+	//	s.SetupNodesNetwork(s.networkNodes)
+	//	s.StartNodesNetwork(s.networkNodes)
+	//
+	//	s.waitForConsensus(2)
+	//
+	//	// active nodes count verification
+	//	activeNodes1 := s.networkNodes[0].GetActiveNodes()
+	//	activeNodes2 := s.networkNodes[0].GetActiveNodes()
+	//
+	//	require.Equal(s.t, s.getNodesCount(), len(activeNodes1))
+	//	require.Equal(s.t, s.getNodesCount(), len(activeNodes2))
+	//}
 	suiteLogger.Info("Start test pulsar")
 	err = s.pulsar.Start(initLogger(s.ctx, insolar.ErrorLevel), pulseReceivers)
 	require.NoError(s.t, err)
@@ -294,10 +296,10 @@ func startNetworkSuite(t *testing.T) *consensusSuite {
 func (s *consensusSuite) stopNetworkSuite() {
 	suiteLogger.Info("=================== stopNetworkSuite()")
 	suiteLogger.Info("Stop network nodes")
-	for _, n := range s.networkNodes {
-		err := n.componentManager.Stop(n.ctx)
-		require.NoError(s.t, err)
-	}
+	//for _, n := range s.networkNodes {
+	//	err := n.componentManager.Stop(n.ctx)
+	//	require.NoError(s.t, err)
+	//}
 	suiteLogger.Info("Stop bootstrap nodes")
 	for _, n := range s.bootstrapNodes {
 		err := n.componentManager.Stop(n.ctx)
@@ -307,6 +309,8 @@ func (s *consensusSuite) stopNetworkSuite() {
 	err := s.pulsar.Stop(s.ctx)
 	require.NoError(s.t, err)
 }
+
+// waitForNodeJoin returns true if node joined in pulsesCount
 func (s *consensusSuite) waitForNodeJoin(ref insolar.Reference, pulsesCount int) bool {
 	for i := 0; i < pulsesCount; i++ {
 		pn := s.waitForConsensus(1)
@@ -317,23 +321,54 @@ func (s *consensusSuite) waitForNodeJoin(ref insolar.Reference, pulsesCount int)
 	return false
 }
 
+// waitForNodeLeave returns true if node leaved in pulsesCount
+func (s *consensusSuite) waitForNodeLeave(ref insolar.Reference, pulsesCount int) bool {
+	for i := 0; i < pulsesCount; i++ {
+		pn := s.waitForConsensus(1)
+		if !s.isNodeInActiveLists(ref, pn) {
+			return true
+		}
+	}
+	return false
+}
+
 func (s *consensusSuite) waitForConsensus(consensusCount int) insolar.PulseNumber {
-	var pn insolar.PulseNumber
+	var p insolar.PulseNumber
 	for i := 0; i < consensusCount; i++ {
 		for _, n := range s.bootstrapNodes {
 			select {
-			case pn = <-n.consensusResult:
+			case p = <-n.consensusResult:
 				continue
 			case <-time.After(time.Second * 12):
 				panic("waitForConsensus timeout")
 			}
 		}
 
-		for _, n := range s.networkNodes {
-			<-n.consensusResult
+		//for _, n := range s.networkNodes {
+		//	<-n.consensusResult
+		//}
+	}
+	s.assertNetworkInConsistentState(p)
+	return p
+}
+
+func (s *consensusSuite) assertNetworkInConsistentState(p insolar.PulseNumber) {
+	var nodes []insolar.NetworkNode
+
+	for _, n := range s.bootstrapNodes {
+		require.Equal(s.t, insolar.CompleteNetworkState.String(),
+			n.serviceNetwork.Gatewayer.Gateway().GetState().String(),
+			"Node not in CompleteNetworkState",
+		)
+
+		a := n.serviceNetwork.NodeKeeper.GetAccessor(p)
+		activeNodes := a.GetActiveNodes()
+		if nodes == nil {
+			nodes = activeNodes
+		} else {
+			assert.True(s.t, reflect.DeepEqual(nodes, activeNodes), "lists is not equals")
 		}
 	}
-	return pn
 }
 
 func (s *consensusSuite) waitForConsensusExcept(consensusCount int, exception insolar.Reference) {
@@ -345,18 +380,18 @@ func (s *consensusSuite) waitForConsensusExcept(consensusCount int, exception in
 			<-n.consensusResult
 		}
 
-		for _, n := range s.networkNodes {
-			if n.id.Equal(exception) {
-				continue
-			}
-			<-n.consensusResult
-		}
+		//for _, n := range s.networkNodes {
+		//	if n.id.Equal(exception) {
+		//		continue
+		//	}
+		//	<-n.consensusResult
+		//}
 	}
 }
 
 // nodesCount returns count of nodes in network without testNode
 func (s *testSuite) getNodesCount() int {
-	return len(s.bootstrapNodes) + len(s.networkNodes)
+	return len(s.bootstrapNodes) // + len(s.networkNodes)
 }
 
 func (s *testSuite) isNodeInActiveLists(ref insolar.Reference, p insolar.PulseNumber) bool {
