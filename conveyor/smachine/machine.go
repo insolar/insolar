@@ -29,9 +29,14 @@ type SlotMachineConfig struct {
 	SlotPageSize  uint16
 }
 
-func NewSlotMachine(config SlotMachineConfig) SlotMachine {
+type DependencyInjector interface {
+	InjectDependencies(sm StateMachine, slotID SlotID, container *SlotMachine)
+}
+
+func NewSlotMachine(config SlotMachineConfig, injector DependencyInjector) SlotMachine {
 	return SlotMachine{
 		config:       config,
+		injector:     injector,
 		unusedSlots:  NewSlotQueue(UnusedSlots),
 		activeSlots:  NewSlotQueue(ActiveSlots),
 		workingSlots: NewSlotQueue(WorkingSlots),
@@ -40,9 +45,10 @@ func NewSlotMachine(config SlotMachineConfig) SlotMachine {
 }
 
 type SlotMachine struct {
-	config SlotMachineConfig
+	config   SlotMachineConfig
+	injector DependencyInjector
 
-	adapters map[AdapterID]AdapterExecutor
+	adapters map[AdapterID]*adapterExecHelper
 
 	slotCount SlotID
 	slots     [][]Slot
@@ -81,10 +87,6 @@ func (m *SlotMachine) IsEmpty() bool {
 	return m.syncQueue.IsZero()
 }
 
-func (m *SlotMachine) GetAdapterQueue(adapter ExecutionAdapter) AdapterExecutor {
-	return m.adapters[adapter.GetAdapterID()]
-}
-
 func (m *SlotMachine) ScanOnceAsNested(context ExecutionContext) bool {
 	workCtl := context.(*executionContext).worker.workCtl
 	return m.ScanOnce(workCtl)
@@ -99,14 +101,19 @@ func (m *SlotMachine) RegisterAdapter(adapterID AdapterID, adapterExecutor Adapt
 	}
 
 	if m.adapters == nil {
-		m.adapters = make(map[AdapterID]AdapterExecutor)
+		m.adapters = make(map[AdapterID]*adapterExecHelper)
 	}
 	if m.adapters[adapterID] != nil {
 		panic("duplicate adapter id: " + adapterID)
 	}
-	m.adapters[adapterID] = adapterExecutor
+	r := &adapterExecHelper{adapterID, adapterExecutor}
+	m.adapters[adapterID] = r
 
-	return &adapterExecHelper{adapterID, adapterExecutor}
+	return r
+}
+
+func (m *SlotMachine) GetAdapter(adapterID AdapterID) ExecutionAdapter {
+	return m.adapters[adapterID]
 }
 
 func (m *SlotMachine) ScanOnce(workCtl WorkerController) (hasUpdates bool) {
@@ -223,6 +230,9 @@ func (m *SlotMachine) addStateMachine(slot *Slot, newSlotID SlotID, parent SlotL
 	}
 	m.prepareSlot(slot, newSlotID, parent, smd)
 	link := slot.NewLink() // should happen BEFORE start as slot can die immediately
+	if m.injector != nil {
+		m.injector.InjectDependencies(sm, link.id, m)
+	}
 
 	return m.startSlot(slot, sm), link
 }

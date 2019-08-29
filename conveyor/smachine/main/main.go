@@ -26,7 +26,7 @@ func main() {
 	sm := smachine.NewSlotMachine(smachine.SlotMachineConfig{
 		SlotPageSize:  10,
 		PollingPeriod: 10 * time.Millisecond,
-	})
+	}, nil)
 
 	sm.AddNew(smachine.NoLink(), &example.StateMachine1{})
 
