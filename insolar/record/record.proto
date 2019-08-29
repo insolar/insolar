@@ -14,22 +14,6 @@ message Genesis {
     bytes Hash = 20;
 }
 
-message Child {
-    option (gogoproto.face) = true;
-
-    int32 polymorph = 16;
-
-    bytes PrevChild = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
-    bytes Ref = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
-}
-
-message Jet {
-    option (gogoproto.face) = true;
-
-    int32 polymorph = 16;
-    // TODO
-}
-
 enum CallType {
     CTMethod = 0;
     CTSaveAsChild = 1;
@@ -107,55 +91,41 @@ message Result {
     bytes Payload = 22;
 }
 
-message Type {
-    option (gogoproto.face) = true;
-
-    int32 polymorph = 16;
-
-    bytes Domain = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
-    bytes Request = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
-    bytes TypeDeclaration = 22;
-}
-
 message Code {
     option (gogoproto.face) = true;
 
     int32 polymorph = 16;
 
-    bytes Domain = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
-    bytes Request = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
-    bytes Code = 22;
-    uint32 MachineType = 23 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.MachineType", (gogoproto.nullable) = false];
+    bytes Request = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
+    bytes Code = 21;
+    uint32 MachineType = 22 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.MachineType", (gogoproto.nullable) = false];
 }
 
 message Activate {
     int32 polymorph = 16;
 
-    bytes Domain = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
-    bytes Request = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
-    bytes Memory = 22;
-    bytes Image = 23 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
-    bool IsPrototype = 24;
-    bytes Parent = 25 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
+    bytes Request = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
+    bytes Memory = 21;
+    bytes Image = 22 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
+    bool IsPrototype = 23;
+    bytes Parent = 24 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
 }
 
 message Amend {
     int32 polymorph = 16;
 
-    bytes Domain = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
-    bytes Request = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
-    bytes Memory = 22;
-    bytes Image = 23 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
-    bool IsPrototype = 24;
-    bytes PrevState = 25 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+    bytes Request = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
+    bytes Memory = 21;
+    bytes Image = 22 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
+    bool IsPrototype = 23;
+    bytes PrevState = 24 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
 }
 
 message Deactivate {
     int32 polymorph = 16;
 
-    bytes Domain = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
-    bytes Request = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
-    bytes PrevState = 22 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+    bytes Request = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
+    bytes PrevState = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
 }
 
 message PendingFilament {
@@ -191,17 +161,14 @@ message Virtual {
 
     oneof union {
         Genesis Genesis = 101;
-        Child Child = 102;
-        Jet Jet = 103;
-        IncomingRequest IncomingRequest = 104;
-        OutgoingRequest OutgoingRequest = 105;
-        Result Result = 106;
-        Type Type = 107;
-        Code Code = 108;
-        Activate Activate = 109;
-        Amend Amend = 110;
-        Deactivate Deactivate = 111;
-        PendingFilament PendingFilament = 112;
+        IncomingRequest IncomingRequest = 102;
+        OutgoingRequest OutgoingRequest = 103;
+        Result Result = 104;
+        Code Code = 105;
+        Activate Activate = 106;
+        Amend Amend = 107;
+        Deactivate Deactivate = 108;
+        PendingFilament PendingFilament = 109;
     }
 
     bytes Signature = 200;
