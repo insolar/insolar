@@ -18,34 +18,39 @@ package handle
 
 import (
 	"context"
+	"fmt"
+
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/ledger/light/proc"
-	"github.com/pkg/errors"
 )
 
-type GetRequests struct {
+type GetFilament struct {
 	dep *proc.Dependencies
 
 	meta payload.Meta
 }
 
-func NewGetRequests(dep *proc.Dependencies, meta payload.Meta) *GetRequests {
-	return &GetRequests{
+func NewGetFilament(dep *proc.Dependencies, meta payload.Meta) *GetFilament {
+	return &GetFilament{
 		dep:  dep,
 		meta: meta,
 	}
 }
 
-func (s *GetRequests) Present(ctx context.Context, f flow.Flow) error {
-	msg := payload.GetFilament{}
-	err := msg.Unmarshal(s.meta.Payload)
+func (s *GetFilament) Present(ctx context.Context, f flow.Flow) error {
+	pl, err := payload.Unmarshal(s.meta.Payload)
 	if err != nil {
-		return errors.Wrap(err, "failed to unmarshal payload")
+		return errors.Wrap(err, "failed to unmarshal GetFilament message")
+	}
+	msg, ok := pl.(*payload.GetFilament)
+	if !ok {
+		return fmt.Errorf("wrong request type: %T", pl)
 	}
 
-	getFilament := proc.NewSendRequests(s.meta, msg.ObjectID, msg.StartFrom, msg.ReadUntil)
-	s.dep.SendRequests(getFilament)
+	getFilament := proc.NewSendFilament(s.meta, msg.ObjectID, msg.StartFrom, msg.ReadUntil)
+	s.dep.SendFilament(getFilament)
 	return f.Procedure(ctx, getFilament, false)
 }
