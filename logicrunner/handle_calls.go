@@ -176,7 +176,7 @@ func (h *HandleCall) handleActual(
 	)
 	logger.Debug("registered request")
 
-	if !objRef.Record().Equal(reqInfo.ObjectID) {
+	if !objRef.GetLocal().Equal(reqInfo.ObjectID) {
 		return nil, errors.New("object id we calculated doesn't match ledger")
 	}
 

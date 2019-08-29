@@ -17,20 +17,21 @@
 package jetcoordinator
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"sort"
 
-	"github.com/insolar/insolar/network"
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/node"
-	"github.com/insolar/insolar/insolar/pulse"
+	insolarPulse "github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/utils"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/pulse"
 	"github.com/insolar/insolar/utils/entropy"
-	"github.com/pkg/errors"
 )
 
 // Coordinator is responsible for all jet interactions
@@ -38,8 +39,8 @@ type Coordinator struct {
 	OriginProvider             network.OriginProvider             `inject:""`
 	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
 
-	PulseAccessor   pulse.Accessor   `inject:""`
-	PulseCalculator pulse.Calculator `inject:""`
+	PulseAccessor   insolarPulse.Accessor   `inject:""`
+	PulseCalculator insolarPulse.Calculator `inject:""`
 
 	JetAccessor jet.Accessor  `inject:""`
 	Nodes       node.Accessor `inject:""`
@@ -105,35 +106,35 @@ func (jc *Coordinator) QueryRole(
 	ctx context.Context,
 	role insolar.DynamicRole,
 	objID insolar.ID,
-	pulse insolar.PulseNumber,
+	pulseNumber insolar.PulseNumber,
 ) ([]insolar.Reference, error) {
 	switch role {
 	case insolar.DynamicRoleVirtualExecutor:
-		n, err := jc.VirtualExecutorForObject(ctx, objID, pulse)
+		n, err := jc.VirtualExecutorForObject(ctx, objID, pulseNumber)
 		if err != nil {
 			return nil, errors.Wrapf(err, "calc DynamicRoleVirtualExecutor for object %v failed", objID.String())
 		}
 		return []insolar.Reference{*n}, nil
 
 	case insolar.DynamicRoleVirtualValidator:
-		return jc.VirtualValidatorsForObject(ctx, objID, pulse)
+		return jc.VirtualValidatorsForObject(ctx, objID, pulseNumber)
 
 	case insolar.DynamicRoleLightExecutor:
-		if objID.Pulse() == insolar.PulseNumberJet {
-			n, err := jc.LightExecutorForJet(ctx, objID, pulse)
+		if objID.Pulse() == pulse.Jet {
+			n, err := jc.LightExecutorForJet(ctx, objID, pulseNumber)
 			if err != nil {
 				return nil, errors.Wrapf(err, "calc DynamicRoleLightExecutor for object %v failed", objID.String())
 			}
 			return []insolar.Reference{*n}, nil
 		}
-		n, err := jc.LightExecutorForObject(ctx, objID, pulse)
+		n, err := jc.LightExecutorForObject(ctx, objID, pulseNumber)
 		if err != nil {
 			return nil, errors.Wrapf(err, "calc LightExecutorForObject for object %v failed", objID.String())
 		}
 		return []insolar.Reference{*n}, nil
 
 	case insolar.DynamicRoleLightValidator:
-		ref, err := jc.LightValidatorsForObject(ctx, objID, pulse)
+		ref, err := jc.LightValidatorsForObject(ctx, objID, pulseNumber)
 		if err != nil {
 			return nil, errors.Wrapf(err, "calc DynamicRoleLightValidator for object %v failed", objID.String())
 		}
@@ -142,12 +143,13 @@ func (jc *Coordinator) QueryRole(
 	case insolar.DynamicRoleHeavyExecutor:
 		n, err := jc.Heavy(ctx)
 		if err != nil {
-			return nil, errors.Wrapf(err, "calc DynamicRoleHeavyExecutor for pulse %v failed", pulse.String())
+			return nil, errors.Wrapf(err, "calc DynamicRoleHeavyExecutor for pulse %v failed", pulseNumber.String())
 		}
 		return []insolar.Reference{*n}, nil
 	}
 
-	panic("unexpected role")
+	inslogger.FromContext(ctx).Panicf("unexpected role %v", role.String())
+	return nil, nil
 }
 
 // VirtualExecutorForObject returns list of VEs for a provided pulse and objID
@@ -270,7 +272,7 @@ func (jc *Coordinator) IsBeyondLimit(ctx context.Context, targetPN insolar.Pulse
 	for i := 1; i <= jc.lightChainLimit; i++ {
 		stepBack, err := jc.PulseCalculator.Backwards(ctx, latest.PulseNumber, i)
 		// We could not reach our target and ran out of known pulses. It means it's beyond limit.
-		if err == pulse.ErrNotFound {
+		if err == insolarPulse.ErrNotFound {
 			return true, nil
 		}
 		if err != nil {
@@ -394,9 +396,7 @@ func getRefs(
 	count int,
 ) ([]insolar.Reference, error) {
 	sort.SliceStable(values, func(i, j int) bool {
-		v1 := values[i].ID
-		v2 := values[j].ID
-		return bytes.Compare(v1[:], v2[:]) < 0
+		return values[i].ID.Compare(values[j].ID) < 0
 	})
 	in := make([]interface{}, 0, len(values))
 	for _, value := range values {

@@ -414,16 +414,14 @@ func TestRecordStorage_Delete(t *testing.T) {
 		countSecondPulse := rand.Int31n(256)
 
 		for i := int32(0); i < countFirstPulse; i++ {
-			randID := gen.ID()
-			id := insolar.NewID(firstPulse, randID.Hash())
-			err := recordStorage.SetAtomic(ctx, record.Material{ID: *id})
+			id := gen.IDWithPulse(firstPulse)
+			err := recordStorage.SetAtomic(ctx, record.Material{ID: id})
 			require.NoError(t, err)
 		}
 
 		for i := int32(0); i < countSecondPulse; i++ {
-			randID := gen.ID()
-			id := insolar.NewID(secondPulse, randID.Hash())
-			err := recordStorage.SetAtomic(ctx, record.Material{ID: *id})
+			id := gen.IDWithPulse(secondPulse)
+			err := recordStorage.SetAtomic(ctx, record.Material{ID: id})
 			require.NoError(t, err)
 		}
 		require.Equal(t, countFirstPulse+countSecondPulse, int32(len(recordStorage.recsStor)))

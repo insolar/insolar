@@ -131,7 +131,7 @@ func (c *LightCleaner) clean(ctx context.Context) {
 			return
 		}
 		if err != nil {
-			panic(err)
+			logger.Panic(err)
 		}
 		c.cleanPulse(ctx, expiredPn.PulseNumber)
 	}

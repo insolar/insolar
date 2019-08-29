@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/pulse"
 )
 
 // helper for tests
@@ -39,7 +40,7 @@ func TestJetStorage_Empty(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	s := NewStore()
 
-	all := s.All(ctx, insolar.FirstPulseNumber)
+	all := s.All(ctx, pulse.MinTimePulse)
 	require.Equal(t, 1, len(all), "should be just one jet ID")
 	require.Equal(t, insolar.ZeroJetID, all[0], "JetID should be a zero on empty storage")
 }
@@ -111,11 +112,10 @@ func TestJetStorage_ForID_Basic(t *testing.T) {
 
 	bits := parsePrefix(meaningfulBits)
 	expectJetID := NewIDFromString(meaningfulBits)
-	// fmt.Printf("expectJetID:        %08b\n", expectJetID[:])
 	searchID := gen.ID()
-	hash := searchID[insolar.RecordHashOffset:]
+	hash := searchID.Hash()
 	hash = setBitsPrefix(hash, bits, len(meaningfulBits))
-	copy(searchID[insolar.RecordHashOffset:], hash)
+	searchID = *insolar.NewID(searchID.Pulse(), hash)
 
 	for _, actuality := range []bool{true, false} {
 		s := NewStore()

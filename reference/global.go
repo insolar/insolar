@@ -17,9 +17,19 @@
 package reference
 
 import (
+	"encoding/json"
 	"io"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/longbits"
+)
+
+const (
+	LocalBinaryHashSize          = 28
+	LocalBinaryPulseAndScopeSize = 4
+	LocalBinarySize              = LocalBinaryPulseAndScopeSize + LocalBinaryHashSize
+	GlobalBinarySize             = 2 * LocalBinarySize
 )
 
 /* For LIMITED USE ONLY - can only be used by observer/analytical code */
@@ -78,9 +88,11 @@ func (v *Global) AsBytes() []byte {
 	_, _ = v.addressLocal.Read(val)
 	_, _ = v.addressBase.Read(val[prefix:])
 	return val
+
 }
 
-func (v *Global) IsEmpty() bool {
+// IsEmpty - check for void
+func (v Global) IsEmpty() bool {
 	return v.addressLocal.IsEmpty() && v.addressBase.IsEmpty()
 }
 
@@ -137,4 +149,116 @@ func (v *Global) tryApplyBase(base *Global) bool {
 	}
 	v.addressBase = base.addressLocal
 	return true
+}
+
+// GetBase returns base address from Global.
+func (v Global) GetBase() *Local {
+	return &v.addressBase
+}
+
+// GetLocal returns local address from Global.
+func (v Global) GetLocal() *Local {
+	return &v.addressLocal
+}
+
+// String outputs base58 Reference representation.
+func (v Global) String() string {
+	repr, err := DefaultEncoder().Encode(&v)
+	if err != nil {
+		return NilRef
+	}
+	return repr
+}
+
+// Bytes returns byte slice of Reference
+func (v Global) Bytes() []byte {
+	return v.AsBytes()
+}
+
+// Equal checks if reference points to the same record.
+func (v Global) Equal(other Global) bool {
+	return v.addressLocal.Equal(other.addressLocal) && v.addressBase.Equal(other.addressBase)
+}
+
+// Compare compares two record references
+func (v Global) Compare(other Global) int {
+	if cmp := v.addressBase.Compare(other.addressBase); cmp != 0 {
+		return cmp
+	}
+	return v.addressLocal.Compare(other.addressLocal)
+}
+
+// MarshalJSON serializes reference into JSONFormat.
+func (v *Global) MarshalJSON() ([]byte, error) {
+	if v == nil {
+		return json.Marshal(nil)
+	}
+	return json.Marshal(v.String())
+}
+
+func (v Global) Marshal() ([]byte, error) {
+	return v.AsBytes(), nil
+}
+
+func (v Global) MarshalBinary() ([]byte, error) {
+	return v.Marshal()
+}
+
+func (v Global) MarshalTo(data []byte) (int, error) {
+	if len(data) < GlobalBinarySize {
+		return 0, errors.New("not enough bytes to marshal reference.Global")
+	}
+	return copy(data, v.AsBytes()), nil
+}
+
+func (v *Global) UnmarshalJSON(data []byte) error {
+	var repr interface{}
+
+	err := json.Unmarshal(data, &repr)
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal reference.Global")
+	}
+
+	switch realRepr := repr.(type) {
+	case string:
+		*v, err = DefaultDecoder().Decode(realRepr)
+		if err != nil {
+			return errors.Wrap(err, "failed to unmarshal reference.Global")
+		}
+	case nil:
+	default:
+		return errors.Wrapf(err, "unexpected type %T when unmarshal reference.Global", repr)
+	}
+
+	return nil
+}
+
+func (v *Global) Unmarshal(data []byte) error {
+	if len(data) < GlobalBinarySize {
+		return errors.New("not enough bytes to unmarshal reference.Global")
+	}
+
+	{
+		localWriter := v.addressLocal.asWriter()
+		for i := 0; i < LocalBinarySize; i++ {
+			_ = localWriter.WriteByte(data[i])
+		}
+	}
+
+	{
+		baseWriter := v.addressBase.asWriter()
+		for i := 0; i < LocalBinarySize; i++ {
+			_ = baseWriter.WriteByte(data[LocalBinarySize+i])
+		}
+	}
+
+	return nil
+}
+
+func (v *Global) UnmarshalBinary(data []byte) error {
+	return v.Unmarshal(data)
+}
+
+func (v Global) Size() int {
+	return GlobalBinarySize
 }

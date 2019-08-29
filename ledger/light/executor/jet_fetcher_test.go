@@ -23,11 +23,14 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/gojuno/minimock"
+
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/node"
 	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/pulse"
+
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 
@@ -322,7 +325,7 @@ func TestJetTreeUpdater_fetchJet(t *testing.T) {
 	t.Run("quick reply, data is up to date", func(t *testing.T) {
 		fjmr := *insolar.NewJetID(0, nil)
 		js.ForIDMock.Return(fjmr, true)
-		jetID, err := jtu.Fetch(ctx, target, insolar.FirstPulseNumber+insolar.PulseNumber(100))
+		jetID, err := jtu.Fetch(ctx, target, pulse.MinTimePulse+insolar.PulseNumber(100))
 		require.NoError(t, err)
 		require.Equal(t, fjmr, insolar.JetID(*jetID))
 	})
@@ -336,7 +339,7 @@ func TestJetTreeUpdater_fetchJet(t *testing.T) {
 		}
 
 		ans.InRoleMock.Expect(
-			insolar.FirstPulseNumber+100, insolar.StaticRoleLightMaterial,
+			pulse.MinTimePulse+100, insolar.StaticRoleLightMaterial,
 		).Return(
 			getNodes(), nil,
 		)
@@ -366,13 +369,13 @@ func TestJetTreeUpdater_fetchJet(t *testing.T) {
 		fjm := *insolar.NewJetID(0, nil)
 		js.ForIDMock.Return(fjm, false)
 		js.UpdateMock.Set(func(ctx context.Context, pn insolar.PulseNumber, actual bool, jets ...insolar.JetID) error {
-			require.Equal(t, insolar.FirstPulseNumber+insolar.PulseNumber(100), pn)
+			require.Equal(t, pulse.MinTimePulse+insolar.PulseNumber(100), pn)
 			require.True(t, actual)
 			require.Equal(t, []insolar.JetID{*insolar.NewJetID(0, nil)}, jets)
 			return nil
 		})
 
-		jetID, err := jtu.Fetch(ctx, target, insolar.FirstPulseNumber+insolar.PulseNumber(100))
+		jetID, err := jtu.Fetch(ctx, target, pulse.MinTimePulse+insolar.PulseNumber(100))
 		require.NoError(t, err)
 		require.Equal(t, insolar.ID(*insolar.NewJetID(0, nil)), *jetID)
 	})
@@ -471,9 +474,9 @@ func TestJetTreeUpdater_Concurrency(t *testing.T) {
 
 		for _, b := range []byte{0, 128, 192} {
 			go func(b byte) {
-				target := insolar.NewID(0, []byte{b})
+				target := insolar.NewID(pulse.MinTimePulse+50, []byte{b})
 
-				jetID, err := jtu.Fetch(ctx, *target, insolar.FirstPulseNumber+insolar.PulseNumber(100))
+				jetID, err := jtu.Fetch(ctx, *target, pulse.MinTimePulse+insolar.PulseNumber(100))
 				require.NoError(t, err)
 
 				dataMu.Lock()
@@ -485,7 +488,7 @@ func TestJetTreeUpdater_Concurrency(t *testing.T) {
 		}
 		go func() {
 			dataMu.Lock()
-			jtu.Fetch(ctx, *data[128], insolar.FirstPulseNumber+insolar.PulseNumber(100))
+			jtu.Fetch(ctx, *data[128], pulse.MinTimePulse+insolar.PulseNumber(100))
 			dataMu.Unlock()
 
 			wg.Done()

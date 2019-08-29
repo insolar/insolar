@@ -55,11 +55,12 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
 type testNode struct {
@@ -139,5 +140,8 @@ func TestUdpTransport_SendDatagram_Error(t *testing.T) {
 	require.NoError(t, err)
 
 	err = udp.SendDatagram(ctx, udp.Address(), []byte{1, 2, 3})
+	require.NoError(t, err)
+
+	err = udp.Stop(ctx)
 	require.NoError(t, err)
 }

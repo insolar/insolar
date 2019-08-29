@@ -131,7 +131,7 @@ func (js *JetSplitterDefault) Do(
 		if !endedDrop.Split {
 			// no split, just mark jet as actual for new pulse
 			if err := js.jetModifier.Update(ctx, newPulse, true, jetID); err != nil {
-				panic("failed to update jets on LM-node: " + err.Error())
+				inslog.Panic("failed to update jets on LM-node: " + err.Error())
 			}
 			result = append(result, jetID)
 
@@ -202,7 +202,7 @@ func (js *JetSplitterDefault) getPreviousDropThreshold(
 		if err == pulse.ErrNotFound {
 			return 0
 		}
-		panic("failed to fetch previous pulse")
+		inslogger.FromContext(ctx).Panic("failed to fetch previous pulse")
 	}
 	return js.getDropThreshold(ctx, jetID, prevPulse.PulseNumber)
 }
@@ -221,7 +221,7 @@ func (js *JetSplitterDefault) getDropThreshold(
 			//    Returning 0 because we starting from 0 after split.
 			return 0
 		}
-		panic(errors.Wrapf(err, "failed to get drop for pulse=%v and jetID=%v", pn, jetID.DebugString()))
+		inslogger.FromContext(ctx).Panic(errors.Wrapf(err, "failed to get drop for pulse=%v and jetID=%v", pn, jetID.DebugString()))
 	}
 	return int(block.SplitThresholdExceeded)
 }

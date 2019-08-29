@@ -67,18 +67,18 @@ func shouldLoadRef(strRef string) XXX_insolar.Reference {
 func InitializeCodeRefs() map[XXX_insolar.Reference]string {
 	rv := make(map[XXX_insolar.Reference]string, 0)
 
-	rv[shouldLoadRef("111A7rimrANEAnwBT1kvAhHeHp9NPTFJMLKVng8GLH5.11111111111111111111111111111111")] = "account"
-	rv[shouldLoadRef("111A7tUo1FeZ5DSoroiinMCKwzLacaYBAAcwAaNj6bc.11111111111111111111111111111111")] = "costcenter"
-	rv[shouldLoadRef("111A79KGpeDUjYhRJP1n1AwYgwU9KEWmc2TNNc3KQjV.11111111111111111111111111111111")] = "deposit"
-	rv[shouldLoadRef("111A5w1GcnTsht82duVrnWdVHVNyrxCUVcSPLtgQCPR.11111111111111111111111111111111")] = "helloworld"
-	rv[shouldLoadRef("111A72gPKWyrF9c7yzDoccRoPQ62g1uQQDBecWJwAYr.11111111111111111111111111111111")] = "member"
-	rv[shouldLoadRef("111A6516TVnMLh8DAzTWbtEJrgZkESeCpdn2viV6D61.11111111111111111111111111111111")] = "migrationadmin"
-	rv[shouldLoadRef("111A66L3aoDPf2wedyRo2gyns8ghV9vdeJdJntVaGEf.11111111111111111111111111111111")] = "migrationshard"
-	rv[shouldLoadRef("111A7Q5FK2ebPG9WnSiUc4iqF45w9oYkJkRjEtBohGe.11111111111111111111111111111111")] = "nodedomain"
-	rv[shouldLoadRef("111A86xPKUQ1ZxSscgv5brbw93LkwiVhUWgGrYYsMar.11111111111111111111111111111111")] = "noderecord"
-	rv[shouldLoadRef("111A5tzn16hnKGCZCyYA8Dv9FALvPYYQu4VA41SVx6s.11111111111111111111111111111111")] = "pkshard"
-	rv[shouldLoadRef("111A63R5cAgGHC5DJffqF16vUkCuSVj3GExbMLy56cS.11111111111111111111111111111111")] = "rootdomain"
-	rv[shouldLoadRef("111A5e49cJW6GKGegWBhtgrJs7nFh1kSWhBtT2VgK4t.11111111111111111111111111111111")] = "wallet"
+	rv[shouldLoadRef("0111A7rimrANEAnwBT1kvAhHeHp9NPTFJMLKVng8GLH5")] = "account"
+	rv[shouldLoadRef("0111A7tUo1FeZ5DSoroiinMCKwzLacaYBAAcwAaNj6bc")] = "costcenter"
+	rv[shouldLoadRef("0111A79KGpeDUjYhRJP1n1AwYgwU9KEWmc2TNNc3KQjV")] = "deposit"
+	rv[shouldLoadRef("0111A5w1GcnTsht82duVrnWdVHVNyrxCUVcSPLtgQCPR")] = "helloworld"
+	rv[shouldLoadRef("0111A72gPKWyrF9c7yzDoccRoPQ62g1uQQDBecWJwAYr")] = "member"
+	rv[shouldLoadRef("0111A6516TVnMLh8DAzTWbtEJrgZkESeCpdn2viV6D61")] = "migrationadmin"
+	rv[shouldLoadRef("0111A66L3aoDPf2wedyRo2gyns8ghV9vdeJdJntVaGEf")] = "migrationshard"
+	rv[shouldLoadRef("0111A7Q5FK2ebPG9WnSiUc4iqF45w9oYkJkRjEtBohGe")] = "nodedomain"
+	rv[shouldLoadRef("0111A86xPKUQ1ZxSscgv5brbw93LkwiVhUWgGrYYsMar")] = "noderecord"
+	rv[shouldLoadRef("0111A5tzn16hnKGCZCyYA8Dv9FALvPYYQu4VA41SVx6s")] = "pkshard"
+	rv[shouldLoadRef("0111A63R5cAgGHC5DJffqF16vUkCuSVj3GExbMLy56cS")] = "rootdomain"
+	rv[shouldLoadRef("0111A5e49cJW6GKGegWBhtgrJs7nFh1kSWhBtT2VgK4t")] = "wallet"
 
 	return rv
 }
@@ -90,73 +90,73 @@ func InitializeCodeDescriptors() []XXX_artifacts.CodeDescriptor {
 	rv = append(rv, XXX_artifacts.NewCodeDescriptor(
 		/* code:        */ nil,
 		/* machineType: */ XXX_insolar.MachineTypeBuiltin,
-		/* ref:         */ shouldLoadRef("111A7rimrANEAnwBT1kvAhHeHp9NPTFJMLKVng8GLH5.11111111111111111111111111111111"),
+		/* ref:         */ shouldLoadRef("0111A7rimrANEAnwBT1kvAhHeHp9NPTFJMLKVng8GLH5"),
 	))
 	// costcenter
 	rv = append(rv, XXX_artifacts.NewCodeDescriptor(
 		/* code:        */ nil,
 		/* machineType: */ XXX_insolar.MachineTypeBuiltin,
-		/* ref:         */ shouldLoadRef("111A7tUo1FeZ5DSoroiinMCKwzLacaYBAAcwAaNj6bc.11111111111111111111111111111111"),
+		/* ref:         */ shouldLoadRef("0111A7tUo1FeZ5DSoroiinMCKwzLacaYBAAcwAaNj6bc"),
 	))
 	// deposit
 	rv = append(rv, XXX_artifacts.NewCodeDescriptor(
 		/* code:        */ nil,
 		/* machineType: */ XXX_insolar.MachineTypeBuiltin,
-		/* ref:         */ shouldLoadRef("111A79KGpeDUjYhRJP1n1AwYgwU9KEWmc2TNNc3KQjV.11111111111111111111111111111111"),
+		/* ref:         */ shouldLoadRef("0111A79KGpeDUjYhRJP1n1AwYgwU9KEWmc2TNNc3KQjV"),
 	))
 	// helloworld
 	rv = append(rv, XXX_artifacts.NewCodeDescriptor(
 		/* code:        */ nil,
 		/* machineType: */ XXX_insolar.MachineTypeBuiltin,
-		/* ref:         */ shouldLoadRef("111A5w1GcnTsht82duVrnWdVHVNyrxCUVcSPLtgQCPR.11111111111111111111111111111111"),
+		/* ref:         */ shouldLoadRef("0111A5w1GcnTsht82duVrnWdVHVNyrxCUVcSPLtgQCPR"),
 	))
 	// member
 	rv = append(rv, XXX_artifacts.NewCodeDescriptor(
 		/* code:        */ nil,
 		/* machineType: */ XXX_insolar.MachineTypeBuiltin,
-		/* ref:         */ shouldLoadRef("111A72gPKWyrF9c7yzDoccRoPQ62g1uQQDBecWJwAYr.11111111111111111111111111111111"),
+		/* ref:         */ shouldLoadRef("0111A72gPKWyrF9c7yzDoccRoPQ62g1uQQDBecWJwAYr"),
 	))
 	// migrationadmin
 	rv = append(rv, XXX_artifacts.NewCodeDescriptor(
 		/* code:        */ nil,
 		/* machineType: */ XXX_insolar.MachineTypeBuiltin,
-		/* ref:         */ shouldLoadRef("111A6516TVnMLh8DAzTWbtEJrgZkESeCpdn2viV6D61.11111111111111111111111111111111"),
+		/* ref:         */ shouldLoadRef("0111A6516TVnMLh8DAzTWbtEJrgZkESeCpdn2viV6D61"),
 	))
 	// migrationshard
 	rv = append(rv, XXX_artifacts.NewCodeDescriptor(
 		/* code:        */ nil,
 		/* machineType: */ XXX_insolar.MachineTypeBuiltin,
-		/* ref:         */ shouldLoadRef("111A66L3aoDPf2wedyRo2gyns8ghV9vdeJdJntVaGEf.11111111111111111111111111111111"),
+		/* ref:         */ shouldLoadRef("0111A66L3aoDPf2wedyRo2gyns8ghV9vdeJdJntVaGEf"),
 	))
 	// nodedomain
 	rv = append(rv, XXX_artifacts.NewCodeDescriptor(
 		/* code:        */ nil,
 		/* machineType: */ XXX_insolar.MachineTypeBuiltin,
-		/* ref:         */ shouldLoadRef("111A7Q5FK2ebPG9WnSiUc4iqF45w9oYkJkRjEtBohGe.11111111111111111111111111111111"),
+		/* ref:         */ shouldLoadRef("0111A7Q5FK2ebPG9WnSiUc4iqF45w9oYkJkRjEtBohGe"),
 	))
 	// noderecord
 	rv = append(rv, XXX_artifacts.NewCodeDescriptor(
 		/* code:        */ nil,
 		/* machineType: */ XXX_insolar.MachineTypeBuiltin,
-		/* ref:         */ shouldLoadRef("111A86xPKUQ1ZxSscgv5brbw93LkwiVhUWgGrYYsMar.11111111111111111111111111111111"),
+		/* ref:         */ shouldLoadRef("0111A86xPKUQ1ZxSscgv5brbw93LkwiVhUWgGrYYsMar"),
 	))
 	// pkshard
 	rv = append(rv, XXX_artifacts.NewCodeDescriptor(
 		/* code:        */ nil,
 		/* machineType: */ XXX_insolar.MachineTypeBuiltin,
-		/* ref:         */ shouldLoadRef("111A5tzn16hnKGCZCyYA8Dv9FALvPYYQu4VA41SVx6s.11111111111111111111111111111111"),
+		/* ref:         */ shouldLoadRef("0111A5tzn16hnKGCZCyYA8Dv9FALvPYYQu4VA41SVx6s"),
 	))
 	// rootdomain
 	rv = append(rv, XXX_artifacts.NewCodeDescriptor(
 		/* code:        */ nil,
 		/* machineType: */ XXX_insolar.MachineTypeBuiltin,
-		/* ref:         */ shouldLoadRef("111A63R5cAgGHC5DJffqF16vUkCuSVj3GExbMLy56cS.11111111111111111111111111111111"),
+		/* ref:         */ shouldLoadRef("0111A63R5cAgGHC5DJffqF16vUkCuSVj3GExbMLy56cS"),
 	))
 	// wallet
 	rv = append(rv, XXX_artifacts.NewCodeDescriptor(
 		/* code:        */ nil,
 		/* machineType: */ XXX_insolar.MachineTypeBuiltin,
-		/* ref:         */ shouldLoadRef("111A5e49cJW6GKGegWBhtgrJs7nFh1kSWhBtT2VgK4t.11111111111111111111111111111111"),
+		/* ref:         */ shouldLoadRef("0111A5e49cJW6GKGegWBhtgrJs7nFh1kSWhBtT2VgK4t"),
 	))
 
 	return rv
@@ -166,11 +166,11 @@ func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
 	rv := make([]XXX_artifacts.ObjectDescriptor, 0)
 
 	{ // account
-		pRef := shouldLoadRef("111A62X73fkPeY5vK6NjcXgmL9d37DgRRNtHNLGaEse.11111111111111111111111111111111")
-		cRef := shouldLoadRef("111A7rimrANEAnwBT1kvAhHeHp9NPTFJMLKVng8GLH5.11111111111111111111111111111111")
+		pRef := shouldLoadRef("0111A62X73fkPeY5vK6NjcXgmL9d37DgRRNtHNLGaEse")
+		cRef := shouldLoadRef("0111A7rimrANEAnwBT1kvAhHeHp9NPTFJMLKVng8GLH5")
 		rv = append(rv, XXX_artifacts.NewObjectDescriptor(
 			/* head:         */ pRef,
-			/* state:        */ *pRef.Record(),
+			/* state:        */ *pRef.GetLocal(),
 			/* prototype:    */ &cRef,
 			/* isPrototype:  */ true,
 			/* childPointer: */ nil,
@@ -180,11 +180,11 @@ func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
 	}
 
 	{ // costcenter
-		pRef := shouldLoadRef("111A62HrJvAimG7M1r8XdeBVMw4X6ge8hGzVStfnn4e.11111111111111111111111111111111")
-		cRef := shouldLoadRef("111A7tUo1FeZ5DSoroiinMCKwzLacaYBAAcwAaNj6bc.11111111111111111111111111111111")
+		pRef := shouldLoadRef("0111A62HrJvAimG7M1r8XdeBVMw4X6ge8hGzVStfnn4e")
+		cRef := shouldLoadRef("0111A7tUo1FeZ5DSoroiinMCKwzLacaYBAAcwAaNj6bc")
 		rv = append(rv, XXX_artifacts.NewObjectDescriptor(
 			/* head:         */ pRef,
-			/* state:        */ *pRef.Record(),
+			/* state:        */ *pRef.GetLocal(),
 			/* prototype:    */ &cRef,
 			/* isPrototype:  */ true,
 			/* childPointer: */ nil,
@@ -194,11 +194,11 @@ func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
 	}
 
 	{ // deposit
-		pRef := shouldLoadRef("111A7ctasuNUug8BoK4VJNuAFJ73rnH8bH5zqd5HrDj.11111111111111111111111111111111")
-		cRef := shouldLoadRef("111A79KGpeDUjYhRJP1n1AwYgwU9KEWmc2TNNc3KQjV.11111111111111111111111111111111")
+		pRef := shouldLoadRef("0111A7ctasuNUug8BoK4VJNuAFJ73rnH8bH5zqd5HrDj")
+		cRef := shouldLoadRef("0111A79KGpeDUjYhRJP1n1AwYgwU9KEWmc2TNNc3KQjV")
 		rv = append(rv, XXX_artifacts.NewObjectDescriptor(
 			/* head:         */ pRef,
-			/* state:        */ *pRef.Record(),
+			/* state:        */ *pRef.GetLocal(),
 			/* prototype:    */ &cRef,
 			/* isPrototype:  */ true,
 			/* childPointer: */ nil,
@@ -208,11 +208,11 @@ func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
 	}
 
 	{ // helloworld
-		pRef := shouldLoadRef("111A85JAZugtAkQErbDe3eAaTw56DPLku8QGymJUCt2.11111111111111111111111111111111")
-		cRef := shouldLoadRef("111A5w1GcnTsht82duVrnWdVHVNyrxCUVcSPLtgQCPR.11111111111111111111111111111111")
+		pRef := shouldLoadRef("0111A85JAZugtAkQErbDe3eAaTw56DPLku8QGymJUCt2")
+		cRef := shouldLoadRef("0111A5w1GcnTsht82duVrnWdVHVNyrxCUVcSPLtgQCPR")
 		rv = append(rv, XXX_artifacts.NewObjectDescriptor(
 			/* head:         */ pRef,
-			/* state:        */ *pRef.Record(),
+			/* state:        */ *pRef.GetLocal(),
 			/* prototype:    */ &cRef,
 			/* isPrototype:  */ true,
 			/* childPointer: */ nil,
@@ -222,11 +222,11 @@ func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
 	}
 
 	{ // member
-		pRef := shouldLoadRef("111A7UqbgvFXj9vkCAaNYSAkWLapu62eU5AUSv3y4JY.11111111111111111111111111111111")
-		cRef := shouldLoadRef("111A72gPKWyrF9c7yzDoccRoPQ62g1uQQDBecWJwAYr.11111111111111111111111111111111")
+		pRef := shouldLoadRef("0111A7UqbgvFXj9vkCAaNYSAkWLapu62eU5AUSv3y4JY")
+		cRef := shouldLoadRef("0111A72gPKWyrF9c7yzDoccRoPQ62g1uQQDBecWJwAYr")
 		rv = append(rv, XXX_artifacts.NewObjectDescriptor(
 			/* head:         */ pRef,
-			/* state:        */ *pRef.Record(),
+			/* state:        */ *pRef.GetLocal(),
 			/* prototype:    */ &cRef,
 			/* isPrototype:  */ true,
 			/* childPointer: */ nil,
@@ -236,11 +236,11 @@ func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
 	}
 
 	{ // migrationadmin
-		pRef := shouldLoadRef("111A8DhUhw5pzyvzVg1qXomNEHXs7kDtJRQGSD1PUpc.11111111111111111111111111111111")
-		cRef := shouldLoadRef("111A6516TVnMLh8DAzTWbtEJrgZkESeCpdn2viV6D61.11111111111111111111111111111111")
+		pRef := shouldLoadRef("0111A8DhUhw5pzyvzVg1qXomNEHXs7kDtJRQGSD1PUpc")
+		cRef := shouldLoadRef("0111A6516TVnMLh8DAzTWbtEJrgZkESeCpdn2viV6D61")
 		rv = append(rv, XXX_artifacts.NewObjectDescriptor(
 			/* head:         */ pRef,
-			/* state:        */ *pRef.Record(),
+			/* state:        */ *pRef.GetLocal(),
 			/* prototype:    */ &cRef,
 			/* isPrototype:  */ true,
 			/* childPointer: */ nil,
@@ -250,11 +250,11 @@ func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
 	}
 
 	{ // migrationshard
-		pRef := shouldLoadRef("111A7FNYLZLYXYWZPbkMhCAPwV9nYrWWE7L57CtdJCj.11111111111111111111111111111111")
-		cRef := shouldLoadRef("111A66L3aoDPf2wedyRo2gyns8ghV9vdeJdJntVaGEf.11111111111111111111111111111111")
+		pRef := shouldLoadRef("0111A7FNYLZLYXYWZPbkMhCAPwV9nYrWWE7L57CtdJCj")
+		cRef := shouldLoadRef("0111A66L3aoDPf2wedyRo2gyns8ghV9vdeJdJntVaGEf")
 		rv = append(rv, XXX_artifacts.NewObjectDescriptor(
 			/* head:         */ pRef,
-			/* state:        */ *pRef.Record(),
+			/* state:        */ *pRef.GetLocal(),
 			/* prototype:    */ &cRef,
 			/* isPrototype:  */ true,
 			/* childPointer: */ nil,
@@ -264,11 +264,11 @@ func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
 	}
 
 	{ // nodedomain
-		pRef := shouldLoadRef("111A6NKbCjpzFr9MttfcWV8vX8eFjiyGPPfSH1AMtwN.11111111111111111111111111111111")
-		cRef := shouldLoadRef("111A7Q5FK2ebPG9WnSiUc4iqF45w9oYkJkRjEtBohGe.11111111111111111111111111111111")
+		pRef := shouldLoadRef("0111A6NKbCjpzFr9MttfcWV8vX8eFjiyGPPfSH1AMtwN")
+		cRef := shouldLoadRef("0111A7Q5FK2ebPG9WnSiUc4iqF45w9oYkJkRjEtBohGe")
 		rv = append(rv, XXX_artifacts.NewObjectDescriptor(
 			/* head:         */ pRef,
-			/* state:        */ *pRef.Record(),
+			/* state:        */ *pRef.GetLocal(),
 			/* prototype:    */ &cRef,
 			/* isPrototype:  */ true,
 			/* childPointer: */ nil,
@@ -278,11 +278,11 @@ func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
 	}
 
 	{ // noderecord
-		pRef := shouldLoadRef("111A5fZeApbGhcsLrbfGy82kKLgapF93GhNPMLSYaPY.11111111111111111111111111111111")
-		cRef := shouldLoadRef("111A86xPKUQ1ZxSscgv5brbw93LkwiVhUWgGrYYsMar.11111111111111111111111111111111")
+		pRef := shouldLoadRef("0111A5fZeApbGhcsLrbfGy82kKLgapF93GhNPMLSYaPY")
+		cRef := shouldLoadRef("0111A86xPKUQ1ZxSscgv5brbw93LkwiVhUWgGrYYsMar")
 		rv = append(rv, XXX_artifacts.NewObjectDescriptor(
 			/* head:         */ pRef,
-			/* state:        */ *pRef.Record(),
+			/* state:        */ *pRef.GetLocal(),
 			/* prototype:    */ &cRef,
 			/* isPrototype:  */ true,
 			/* childPointer: */ nil,
@@ -292,11 +292,11 @@ func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
 	}
 
 	{ // pkshard
-		pRef := shouldLoadRef("111A5x8N1VJTm7BKYgzSe6TWHcFi98QZgw3AnkYiKML.11111111111111111111111111111111")
-		cRef := shouldLoadRef("111A5tzn16hnKGCZCyYA8Dv9FALvPYYQu4VA41SVx6s.11111111111111111111111111111111")
+		pRef := shouldLoadRef("0111A5x8N1VJTm7BKYgzSe6TWHcFi98QZgw3AnkYiKML")
+		cRef := shouldLoadRef("0111A5tzn16hnKGCZCyYA8Dv9FALvPYYQu4VA41SVx6s")
 		rv = append(rv, XXX_artifacts.NewObjectDescriptor(
 			/* head:         */ pRef,
-			/* state:        */ *pRef.Record(),
+			/* state:        */ *pRef.GetLocal(),
 			/* prototype:    */ &cRef,
 			/* isPrototype:  */ true,
 			/* childPointer: */ nil,
@@ -306,11 +306,11 @@ func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
 	}
 
 	{ // rootdomain
-		pRef := shouldLoadRef("111A84uiiTD1LXAHNP4GMA6YJFjbnCdkRia2pCqwBV5.11111111111111111111111111111111")
-		cRef := shouldLoadRef("111A63R5cAgGHC5DJffqF16vUkCuSVj3GExbMLy56cS.11111111111111111111111111111111")
+		pRef := shouldLoadRef("0111A84uiiTD1LXAHNP4GMA6YJFjbnCdkRia2pCqwBV5")
+		cRef := shouldLoadRef("0111A63R5cAgGHC5DJffqF16vUkCuSVj3GExbMLy56cS")
 		rv = append(rv, XXX_artifacts.NewObjectDescriptor(
 			/* head:         */ pRef,
-			/* state:        */ *pRef.Record(),
+			/* state:        */ *pRef.GetLocal(),
 			/* prototype:    */ &cRef,
 			/* isPrototype:  */ true,
 			/* childPointer: */ nil,
@@ -320,11 +320,11 @@ func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
 	}
 
 	{ // wallet
-		pRef := shouldLoadRef("111A5gmRD1ZbHjQh7DgH9SrCK4a1qfwEUP5xAir6i8L.11111111111111111111111111111111")
-		cRef := shouldLoadRef("111A5e49cJW6GKGegWBhtgrJs7nFh1kSWhBtT2VgK4t.11111111111111111111111111111111")
+		pRef := shouldLoadRef("0111A5gmRD1ZbHjQh7DgH9SrCK4a1qfwEUP5xAir6i8L")
+		cRef := shouldLoadRef("0111A5e49cJW6GKGegWBhtgrJs7nFh1kSWhBtT2VgK4t")
 		rv = append(rv, XXX_artifacts.NewObjectDescriptor(
 			/* head:         */ pRef,
-			/* state:        */ *pRef.Record(),
+			/* state:        */ *pRef.GetLocal(),
 			/* prototype:    */ &cRef,
 			/* isPrototype:  */ true,
 			/* childPointer: */ nil,

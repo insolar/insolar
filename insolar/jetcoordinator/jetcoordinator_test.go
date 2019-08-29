@@ -21,21 +21,23 @@ import (
 	"testing"
 
 	"github.com/gojuno/minimock"
+	"github.com/pkg/errors"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
+
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/node"
-	"github.com/insolar/insolar/insolar/pulse"
+	insolarPulse "github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
+	"github.com/insolar/insolar/pulse"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/network"
-	"github.com/pkg/errors"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"github.com/stretchr/testify/suite"
 )
 
 type jetCoordinatorSuite struct {
@@ -44,8 +46,8 @@ type jetCoordinatorSuite struct {
 	cm  *component.Manager
 	ctx context.Context
 
-	pulseAccessor pulse.Accessor
-	pulseAppender pulse.Appender
+	pulseAccessor insolarPulse.Accessor
+	pulseAppender insolarPulse.Appender
 
 	jetStorage  jet.Storage
 	nodeStorage *node.AccessorMock
@@ -66,7 +68,7 @@ func (s *jetCoordinatorSuite) BeforeTest(suiteName, testName string) {
 	s.cm = &component.Manager{}
 	s.ctx = inslogger.TestContext(s.T())
 
-	ps := pulse.NewStorageMem()
+	ps := insolarPulse.NewStorageMem()
 	s.pulseAppender = ps
 	s.pulseAccessor = ps
 	storage := jet.NewStore()
@@ -106,7 +108,7 @@ func (s *jetCoordinatorSuite) TestJetCoordinator_QueryRole() {
 	var nds []insolar.Node
 	var nodeRefs []insolar.Reference
 	for i := 0; i < 100; i++ {
-		ref := *insolar.NewReference(*insolar.NewID(0, []byte{byte(i)}))
+		ref := *insolar.NewReference(*insolar.NewID(100, []byte{byte(i)}))
 		nds = append(nds, insolar.Node{ID: ref, Role: insolar.StaticRoleLightMaterial})
 		nodeRefs = append(nodeRefs, ref)
 	}
@@ -114,7 +116,7 @@ func (s *jetCoordinatorSuite) TestJetCoordinator_QueryRole() {
 
 	s.nodeStorage.InRoleMock.Return(nds, nil)
 
-	objID := insolar.NewID(0, []byte{1, 42, 123})
+	objID := insolar.NewID(100, []byte{1, 42, 123})
 	err = s.jetStorage.Update(s.ctx, 0, true, *insolar.NewJetID(50, []byte{1, 42, 123}))
 	require.NoError(s.T(), err)
 
@@ -158,16 +160,16 @@ func TestJetCoordinator_IsBeyondLimit_ProblemsWithTracker(t *testing.T) {
 	t.Parallel()
 	// Arrange
 	ctx := inslogger.TestContext(t)
-	pulseCalculator := pulse.NewCalculatorMock(t)
+	pulseCalculator := insolarPulse.NewCalculatorMock(t)
 	pulseCalculator.BackwardsMock.Return(insolar.Pulse{}, errors.New("it's expected"))
-	pulseAccessor := pulse.NewAccessorMock(t)
-	pulseAccessor.LatestMock.Return(insolar.Pulse{PulseNumber: insolar.FirstPulseNumber + 2}, nil)
+	pulseAccessor := insolarPulse.NewAccessorMock(t)
+	pulseAccessor.LatestMock.Return(insolar.Pulse{PulseNumber: pulse.MinTimePulse + 2}, nil)
 	calc := NewJetCoordinator(12)
 	calc.PulseCalculator = pulseCalculator
 	calc.PulseAccessor = pulseAccessor
 
 	// Act
-	res, err := calc.IsBeyondLimit(ctx, insolar.FirstPulseNumber+1)
+	res, err := calc.IsBeyondLimit(ctx, pulse.MinTimePulse+1)
 
 	// Assert
 	require.NotNil(t, err)
@@ -180,10 +182,10 @@ func TestJetCoordinator_IsBeyondLimit_OutsideOfLightChainLimit(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
 	coord := NewJetCoordinator(25)
-	pulseCalculator := pulse.NewCalculatorMock(t)
-	pulseCalculator.BackwardsMock.Expect(ctx, insolar.FirstPulseNumber, 25).Return(insolar.Pulse{PulseNumber: 34}, nil)
-	pulseAccessor := pulse.NewAccessorMock(t)
-	pulseAccessor.LatestMock.Return(insolar.Pulse{PulseNumber: insolar.FirstPulseNumber}, nil)
+	pulseCalculator := insolarPulse.NewCalculatorMock(t)
+	pulseCalculator.BackwardsMock.Expect(ctx, pulse.MinTimePulse, 25).Return(insolar.Pulse{PulseNumber: 34}, nil)
+	pulseAccessor := insolarPulse.NewAccessorMock(t)
+	pulseAccessor.LatestMock.Return(insolar.Pulse{PulseNumber: pulse.MinTimePulse}, nil)
 	coord.PulseCalculator = pulseCalculator
 	coord.PulseAccessor = pulseAccessor
 
@@ -203,15 +205,15 @@ func TestJetCoordinator_IsBeyondLimit_PulseNotFoundIsNotBeyondLimit(t *testing.T
 	defer mc.Finish()
 
 	coord := NewJetCoordinator(25)
-	pulseCalculator := pulse.NewCalculatorMock(mc)
-	pulseCalculator.BackwardsMock.Expect(ctx, insolar.FirstPulseNumber+2, 1).Return(insolar.Pulse{}, pulse.ErrNotFound)
-	pulseAccessor := pulse.NewAccessorMock(mc)
-	pulseAccessor.LatestMock.Return(insolar.Pulse{PulseNumber: insolar.FirstPulseNumber + 2}, nil)
+	pulseCalculator := insolarPulse.NewCalculatorMock(mc)
+	pulseCalculator.BackwardsMock.Expect(ctx, pulse.MinTimePulse+2, 1).Return(insolar.Pulse{}, insolarPulse.ErrNotFound)
+	pulseAccessor := insolarPulse.NewAccessorMock(mc)
+	pulseAccessor.LatestMock.Return(insolar.Pulse{PulseNumber: pulse.MinTimePulse + 2}, nil)
 	coord.PulseCalculator = pulseCalculator
 	coord.PulseAccessor = pulseAccessor
 
 	// Act
-	res, err := coord.IsBeyondLimit(ctx, insolar.FirstPulseNumber+1)
+	res, err := coord.IsBeyondLimit(ctx, pulse.MinTimePulse+1)
 
 	// Assert
 	require.Nil(t, err)
@@ -223,15 +225,15 @@ func TestJetCoordinator_IsBeyondLimit_InsideOfLightChainLimit(t *testing.T) {
 	// Arrange
 	ctx := inslogger.TestContext(t)
 	coord := NewJetCoordinator(25)
-	pulseCalculator := pulse.NewCalculatorMock(t)
-	pulseCalculator.BackwardsMock.Expect(ctx, insolar.FirstPulseNumber+1, 25).Return(insolar.Pulse{PulseNumber: 15}, nil)
-	pulseAccessor := pulse.NewAccessorMock(t)
-	pulseAccessor.LatestMock.Return(insolar.Pulse{PulseNumber: insolar.FirstPulseNumber + 1}, nil)
+	pulseCalculator := insolarPulse.NewCalculatorMock(t)
+	pulseCalculator.BackwardsMock.Expect(ctx, pulse.MinTimePulse+1, 25).Return(insolar.Pulse{PulseNumber: 15}, nil)
+	pulseAccessor := insolarPulse.NewAccessorMock(t)
+	pulseAccessor.LatestMock.Return(insolar.Pulse{PulseNumber: pulse.MinTimePulse + 1}, nil)
 	coord.PulseCalculator = pulseCalculator
 	coord.PulseAccessor = pulseAccessor
 
 	// Act
-	res, err := coord.IsBeyondLimit(ctx, insolar.FirstPulseNumber+2)
+	res, err := coord.IsBeyondLimit(ctx, pulse.MinTimePulse+2)
 
 	// Assert
 	require.Nil(t, err)
@@ -242,16 +244,16 @@ func TestJetCoordinator_NodeForJet_CheckLimitFailed(t *testing.T) {
 	t.Parallel()
 	// Arrange
 	ctx := inslogger.TestContext(t)
-	pulseCalculator := pulse.NewCalculatorMock(t)
+	pulseCalculator := insolarPulse.NewCalculatorMock(t)
 	pulseCalculator.BackwardsMock.Return(insolar.Pulse{}, errors.New("it's expected"))
-	pulseAccessor := pulse.NewAccessorMock(t)
-	pulseAccessor.LatestMock.Return(insolar.Pulse{PulseNumber: insolar.FirstPulseNumber + 2}, nil)
+	pulseAccessor := insolarPulse.NewAccessorMock(t)
+	pulseAccessor.LatestMock.Return(insolar.Pulse{PulseNumber: pulse.MinTimePulse + 2}, nil)
 	calc := NewJetCoordinator(12)
 	calc.PulseCalculator = pulseCalculator
 	calc.PulseAccessor = pulseAccessor
 
 	// Act
-	res, err := calc.NodeForJet(ctx, insolar.ID(gen.JetID()), insolar.FirstPulseNumber+1)
+	res, err := calc.NodeForJet(ctx, insolar.ID(gen.JetID()), pulse.MinTimePulse+1)
 
 	// Assert
 	require.NotNil(t, err)
@@ -262,16 +264,16 @@ func TestJetCoordinator_NodeForJet_GoToHeavy(t *testing.T) {
 	t.Parallel()
 	// Arrange
 	ctx := inslogger.TestContext(t)
-	pulseCalculator := pulse.NewCalculatorMock(t)
+	pulseCalculator := insolarPulse.NewCalculatorMock(t)
 	pulseCalculator.BackwardsMock.Return(insolar.Pulse{PulseNumber: 11}, nil)
-	pulseAccessor := pulse.NewAccessorMock(t)
+	pulseAccessor := insolarPulse.NewAccessorMock(t)
 	generator := entropygenerator.StandardEntropyGenerator{}
-	pulseAccessor.LatestMock.Return(insolar.Pulse{PulseNumber: insolar.FirstPulseNumber, Entropy: generator.GenerateEntropy()}, nil)
+	pulseAccessor.LatestMock.Return(insolar.Pulse{PulseNumber: pulse.MinTimePulse, Entropy: generator.GenerateEntropy()}, nil)
 
 	expectedID := insolar.NewReference(gen.ID())
 	activeNodesStorageMock := node.NewAccessorMock(t)
 	activeNodesStorageMock.InRoleMock.Set(func(p insolar.PulseNumber, p1 insolar.StaticRole) (r []insolar.Node, r1 error) {
-		require.Equal(t, insolar.FirstPulseNumber, int(p))
+		require.Equal(t, pulse.MinTimePulse, int(p))
 		require.Equal(t, insolar.StaticRoleHeavyMaterial, p1)
 
 		return []insolar.Node{{ID: *expectedID}}, nil
@@ -296,16 +298,16 @@ func TestJetCoordinator_NodeForJet_GoToLight(t *testing.T) {
 	// Arrange
 	ctx := inslogger.TestContext(t)
 
-	pulseCalculator := pulse.NewCalculatorMock(t)
-	pulseCalculator.BackwardsMock.Return(insolar.Pulse{PulseNumber: insolar.FirstPulseNumber - 100}, nil)
-	pulseAccessor := pulse.NewAccessorMock(t)
+	pulseCalculator := insolarPulse.NewCalculatorMock(t)
+	pulseCalculator.BackwardsMock.Return(insolar.Pulse{PulseNumber: pulse.MinTimePulse - 100}, nil)
+	pulseAccessor := insolarPulse.NewAccessorMock(t)
 	generator := entropygenerator.StandardEntropyGenerator{}
-	pulseAccessor.LatestMock.Return(insolar.Pulse{PulseNumber: insolar.PulseNumber(insolar.FirstPulseNumber + 1), Entropy: generator.GenerateEntropy()}, nil)
+	pulseAccessor.LatestMock.Return(insolar.Pulse{PulseNumber: insolar.PulseNumber(pulse.MinTimePulse + 1), Entropy: generator.GenerateEntropy()}, nil)
 
 	expectedID := insolar.NewReference(gen.ID())
 	activeNodesStorageMock := node.NewAccessorMock(t)
 	activeNodesStorageMock.InRoleMock.Set(func(p insolar.PulseNumber, p1 insolar.StaticRole) (r []insolar.Node, r1 error) {
-		require.Equal(t, insolar.FirstPulseNumber+1, int(p))
+		require.Equal(t, pulse.MinTimePulse+1, int(p))
 		require.Equal(t, insolar.StaticRoleLightMaterial, p1)
 
 		return []insolar.Node{{ID: *expectedID}}, nil
@@ -318,7 +320,7 @@ func TestJetCoordinator_NodeForJet_GoToLight(t *testing.T) {
 	coord.PlatformCryptographyScheme = platformpolicy.NewPlatformCryptographyScheme()
 
 	// Act
-	resNode, err := coord.NodeForJet(ctx, insolar.ID(gen.JetID()), insolar.FirstPulseNumber+1)
+	resNode, err := coord.NodeForJet(ctx, insolar.ID(gen.JetID()), pulse.MinTimePulse+1)
 
 	// Assert
 	require.Nil(t, err)

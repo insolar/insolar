@@ -21,6 +21,7 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/flow/dispatcher"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/node"
 	"github.com/insolar/insolar/insolar/pulse"
@@ -43,6 +44,8 @@ type PulseManager struct {
 	FinalizationKeeper executor.FinalizationKeeper `inject:""`
 	JetModifier        jet.Modifier                `inject:""`
 
+	dispatcher dispatcher.Dispatcher
+
 	currentPulse insolar.Pulse
 	StartPulse   pulse.StartPulse
 
@@ -51,9 +54,10 @@ type PulseManager struct {
 }
 
 // NewPulseManager creates PulseManager instance.
-func NewPulseManager() *PulseManager {
+func NewPulseManager(disp dispatcher.Dispatcher) *PulseManager {
 	pm := &PulseManager{
 		currentPulse: *insolar.GenesisPulse,
+		dispatcher:   disp,
 	}
 	return pm
 }
@@ -78,6 +82,10 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 	)
 	defer span.End()
 
+	if m.dispatcher != nil {
+		m.dispatcher.ClosePulse(ctx, newPulse)
+	}
+
 	// Dealing with node lists.
 	{
 		fromNetwork := m.NodeNet.GetAccessor(newPulse.PulseNumber).GetWorkingNodes()
@@ -91,7 +99,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 		}
 		err := m.NodeSetter.Set(newPulse.PulseNumber, toSet)
 		if err != nil {
-			panic(errors.Wrap(err, "call of SetActiveNodes failed"))
+			logger.Panic(errors.Wrap(err, "call of SetActiveNodes failed"))
 		}
 
 	}
@@ -114,6 +122,10 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 
 	logger.Debug("before calling to StartPulse.SetStartPulse")
 	m.StartPulse.SetStartPulse(ctx, newPulse)
+
+	if m.dispatcher != nil {
+		m.dispatcher.BeginPulse(ctx, newPulse)
+	}
 
 	logger.Info("new pulse is set")
 	return nil

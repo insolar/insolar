@@ -38,7 +38,6 @@ import (
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
-	"github.com/insolar/insolar/insolar/delegationtoken"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/jetcoordinator"
 	"github.com/insolar/insolar/insolar/node"
@@ -171,11 +170,9 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 
 	// Communication.
 	var (
-		Tokens insolar.DelegationTokenFactory
 		Sender *bus.Bus
 	)
 	{
-		Tokens = delegationtoken.NewDelegationTokenFactory()
 		Sender = bus.NewBus(cfg.Bus, publisher, Pulses, Coordinator, CryptoScheme)
 	}
 
@@ -187,7 +184,12 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 	)
 	{
 		var err error
-		Requester, err = contractrequester.New()
+		Requester, err = contractrequester.New(
+			Sender,
+			Pulses,
+			Coordinator,
+			CryptoScheme,
+		)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start ContractRequester")
 		}
@@ -237,7 +239,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 
 	// Light components.
 	var (
-		PulseManager   insolar.PulseManager
+		PulseManager   *executor.PulseManager
 		FlowDispatcher dispatcher.Dispatcher
 	)
 	{
@@ -349,7 +351,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 
 		PulseManager = executor.NewPulseManager(
 			NodeNetwork,
-			FlowDispatcher,
+			[]dispatcher.Dispatcher{FlowDispatcher, Requester.FlowDispatcher},
 			Nodes,
 			Pulses,
 			Pulses,
@@ -371,7 +373,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		PulseManager,
 		metricsHandler,
 		Requester,
-		Tokens,
 		ArtifactsClient,
 		APIWrapper,
 		KeyProcessor,
@@ -389,7 +390,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		return nil, errors.Wrap(err, "failed to init components")
 	}
 
-	comps.startWatermill(ctx, wmLogger, subscriber, Sender, NetworkService.SendMessageHandler, FlowDispatcher.Process, Requester.ReceiveResult)
+	comps.startWatermill(ctx, wmLogger, subscriber, Sender, NetworkService.SendMessageHandler, FlowDispatcher.Process, Requester.FlowDispatcher.Process)
 
 	return comps, nil
 }

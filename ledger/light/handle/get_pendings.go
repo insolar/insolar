@@ -18,6 +18,7 @@ package handle
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
@@ -40,10 +41,13 @@ func NewGetPendings(dep *proc.Dependencies, meta payload.Meta, passed bool) *Get
 }
 
 func (s *GetPendings) Present(ctx context.Context, f flow.Flow) error {
-	msg := payload.GetPendings{}
-	err := msg.Unmarshal(s.meta.Payload)
+	pl, err := payload.Unmarshal(s.meta.Payload)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal GetPendings message")
+	}
+	msg, ok := pl.(*payload.GetPendings)
+	if !ok {
+		return fmt.Errorf("wrong request type: %T", pl)
 	}
 
 	passIfNotExecutor := !s.passed

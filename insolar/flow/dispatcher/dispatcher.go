@@ -31,13 +31,14 @@ import (
 	"github.com/insolar/insolar/insolar/bus/meta"
 	busMeta "github.com/insolar/insolar/insolar/bus/meta"
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/flow/internal/pulse"
+	flowPulse "github.com/insolar/insolar/insolar/flow/internal/pulse"
 	"github.com/insolar/insolar/insolar/flow/internal/thread"
 	"github.com/insolar/insolar/insolar/payload"
 	insPulse "github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/pulse"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/insolar/flow/dispatcher.Dispatcher -o ./ -s _mock.go -g
@@ -71,19 +72,19 @@ func NewDispatcher(pulseAccessor insPulse.Accessor, present flow.MakeHandle, fut
 }
 
 // BeginPulse is a handle for pulse begin event.
-func (d *dispatcher) BeginPulse(ctx context.Context, pulse insolar.Pulse) {
+func (d *dispatcher) BeginPulse(ctx context.Context, pulseObject insolar.Pulse) {
 	d.controller.BeginPulse()
-	inslogger.FromContext(ctx).Debugf("Pulse was changed to %s in dispatcher", pulse.PulseNumber)
+	inslogger.FromContext(ctx).Debugf("Pulse was changed to %s in dispatcher", pulseObject.PulseNumber)
 }
 
 // ClosePulse is a handle for pulse close event.
-func (d *dispatcher) ClosePulse(ctx context.Context, pulse insolar.Pulse) {
+func (d *dispatcher) ClosePulse(ctx context.Context, pulseObject insolar.Pulse) {
 	d.controller.ClosePulse()
-	inslogger.FromContext(ctx).Debugf("Pulse %s was closed in dispatcher", pulse.PulseNumber)
+	inslogger.FromContext(ctx).Debugf("Pulse %s was closed in dispatcher", pulseObject.PulseNumber)
 }
 
 func (d *dispatcher) getHandleByPulse(ctx context.Context, msgPulseNumber insolar.PulseNumber) flow.MakeHandle {
-	currentPulseNumber := insolar.PulseNumber(insolar.FirstPulseNumber)
+	currentPulseNumber := insolar.PulseNumber(pulse.MinTimePulse)
 	p, err := d.pulses.Latest(ctx)
 	if err == nil {
 		currentPulseNumber = p.PulseNumber
@@ -120,7 +121,7 @@ func (d *dispatcher) Process(msg *message.Message) error {
 		logger.Error("failed to handle message: ", err)
 		return nil
 	}
-	ctx = pulse.ContextWith(ctx, pn)
+	ctx = flowPulse.ContextWith(ctx, pn)
 	parentSpan := instracer.MustDeserialize([]byte(msg.Metadata.Get(meta.SpanData)))
 	ctx = instracer.WithParentSpan(ctx, parentSpan)
 

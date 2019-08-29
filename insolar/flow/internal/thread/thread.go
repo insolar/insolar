@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/tag"
@@ -63,7 +64,7 @@ func (f *Thread) Handle(ctx context.Context, handle flow.Handle) error {
 
 func (f *Thread) Procedure(ctx context.Context, proc flow.Procedure, cancel bool) error {
 	if proc == nil {
-		panic("procedure called with nil procedure")
+		inslogger.FromContext(ctx).Panic("procedure called with nil procedure")
 	}
 
 	var procName string

@@ -20,6 +20,10 @@ import (
 	"context"
 	"testing"
 
+	"github.com/pkg/errors"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/gen"
@@ -28,22 +32,60 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/light/handle"
 	"github.com/insolar/insolar/ledger/light/proc"
-	"github.com/pkg/errors"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
+
+func TestActivateObject_NilMsgPayload(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+	msg := payload.Meta{
+		Polymorph: uint32(payload.TypeMeta),
+		Payload:   nil,
+	}
+
+	handler := handle.NewActivateObject(nil, msg, false)
+
+	err := handler.Present(ctx, flow.NewFlowMock(t))
+	require.Error(t, err)
+}
 
 func TestActivateObject_BadMsgPayload(t *testing.T) {
 	t.Parallel()
 
 	ctx := inslogger.TestContext(t)
 	msg := payload.Meta{
-		Payload: []byte{1, 2, 3, 4, 5},
+		Polymorph: uint32(payload.TypeMeta),
+		Payload:   []byte{1, 2, 3, 4, 5},
 	}
 
 	handler := handle.NewActivateObject(nil, msg, false)
 
 	err := handler.Present(ctx, flow.NewFlowMock(t))
+	require.Error(t, err)
+}
+
+func TestActivateObject_IncorrectTypeMsgPayload(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+	f := flow.NewFlowMock(t)
+
+	// Incorrect type (SetIncomingRequest instead of Activate).
+	result := payload.SetIncomingRequest{
+		Polymorph: uint32(payload.TypeSetIncomingRequest),
+		Request:   record.Virtual{},
+	}
+	buf, err := result.Marshal()
+	require.NoError(t, err)
+
+	msg := payload.Meta{
+		Polymorph: uint32(payload.TypeMeta),
+		Payload:   buf,
+	}
+
+	handler := handle.NewActivateObject(proc.NewDependenciesMock(), msg, false)
+
+	err = handler.Present(ctx, f)
 	require.Error(t, err)
 }
 
@@ -54,12 +96,15 @@ func TestActivateObject_BadWrappedVirtualRecord(t *testing.T) {
 	f := flow.NewFlowMock(t)
 
 	activate := payload.Activate{
+		Polymorph: uint32(payload.TypeActivate),
+		// Just a byte slice, not a correct virtual record.
 		Record: []byte{1, 2, 3, 4, 5},
 	}
 	buf, err := activate.Marshal()
 	require.NoError(t, err)
 
 	msg := payload.Meta{
+		Polymorph: uint32(payload.TypeMeta),
 		// This buf is not wrapped as virtual record.
 		Payload: buf,
 	}
@@ -76,7 +121,7 @@ func TestActivateObject_IncorrectActivateRecordInVirtual(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	f := flow.NewFlowMock(t)
 
-	// Incorrect record in virtual.
+	// Incorrect record type in virtual.
 	virtual := record.Virtual{
 		Union: &record.Virtual_Genesis{
 			Genesis: &record.Genesis{
@@ -88,13 +133,15 @@ func TestActivateObject_IncorrectActivateRecordInVirtual(t *testing.T) {
 	require.NoError(t, err)
 
 	activate := payload.Activate{
-		Record: virtualBuf,
+		Polymorph: uint32(payload.TypeActivate),
+		Record:    virtualBuf,
 	}
 	activateBuf, err := activate.Marshal()
 	require.NoError(t, err)
 
 	msg := payload.Meta{
-		Payload: activateBuf,
+		Polymorph: uint32(payload.TypeMeta),
+		Payload:   activateBuf,
 	}
 
 	handler := handle.NewActivateObject(proc.NewDependenciesMock(), msg, false)
@@ -106,19 +153,8 @@ func TestActivateObject_IncorrectActivateRecordInVirtual(t *testing.T) {
 func TestActivateObject_EmptyActivateRequestField(t *testing.T) {
 	t.Parallel()
 
-	ctx := flow.TestContextWithPulse(
-		inslogger.TestContext(t),
-		insolar.GenesisPulse.PulseNumber+10,
-	)
+	ctx := inslogger.TestContext(t)
 	f := flow.NewFlowMock(t)
-	f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
-		switch p.(type) {
-		case *proc.CalculateID:
-			return nil
-		default:
-			panic("unknown procedure")
-		}
-	})
 
 	// Activate.Request object is nil.
 	virtual := record.Virtual{
@@ -132,13 +168,15 @@ func TestActivateObject_EmptyActivateRequestField(t *testing.T) {
 	require.NoError(t, err)
 
 	activate := payload.Activate{
-		Record: virtualBuf,
+		Polymorph: uint32(payload.TypeActivate),
+		Record:    virtualBuf,
 	}
 	activateBuf, err := activate.Marshal()
 	require.NoError(t, err)
 
 	msg := payload.Meta{
-		Payload: activateBuf,
+		Polymorph: uint32(payload.TypeMeta),
+		Payload:   activateBuf,
 	}
 
 	handler := handle.NewActivateObject(proc.NewDependenciesMock(), msg, false)
@@ -150,19 +188,8 @@ func TestActivateObject_EmptyActivateRequestField(t *testing.T) {
 func TestActivateObject_IncorrectActivateResultPayload(t *testing.T) {
 	t.Parallel()
 
-	ctx := flow.TestContextWithPulse(
-		inslogger.TestContext(t),
-		insolar.GenesisPulse.PulseNumber+10,
-	)
+	ctx := inslogger.TestContext(t)
 	f := flow.NewFlowMock(t)
-	f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
-		switch p.(type) {
-		case *proc.CalculateID:
-			return nil
-		default:
-			panic("unknown procedure")
-		}
-	})
 
 	// Activate.Request is ok.
 	virtualActivate := record.Virtual{
@@ -176,14 +203,17 @@ func TestActivateObject_IncorrectActivateResultPayload(t *testing.T) {
 	require.NoError(t, err)
 
 	activate := payload.Activate{
-		Record: virtualActivateBuf,
+		Polymorph: uint32(payload.TypeActivate),
+		Record:    virtualActivateBuf,
+		// Just a byte slice, not a correct virtual record.
 		Result: []byte{1, 2, 3, 4, 5},
 	}
 	activateBuf, err := activate.Marshal()
 	require.NoError(t, err)
 
 	msg := payload.Meta{
-		Payload: activateBuf,
+		Polymorph: uint32(payload.TypeMeta),
+		Payload:   activateBuf,
 	}
 
 	handler := handle.NewActivateObject(proc.NewDependenciesMock(), msg, false)
@@ -195,19 +225,8 @@ func TestActivateObject_IncorrectActivateResultPayload(t *testing.T) {
 func TestActivateObject_WrongTypeActivateResultInVirtual(t *testing.T) {
 	t.Parallel()
 
-	ctx := flow.TestContextWithPulse(
-		inslogger.TestContext(t),
-		insolar.GenesisPulse.PulseNumber+10,
-	)
+	ctx := inslogger.TestContext(t)
 	f := flow.NewFlowMock(t)
-	f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
-		switch p.(type) {
-		case *proc.CalculateID:
-			return nil
-		default:
-			panic("unknown procedure")
-		}
-	})
 
 	// Activate.Request is ok.
 	virtualActivate := record.Virtual{
@@ -232,14 +251,17 @@ func TestActivateObject_WrongTypeActivateResultInVirtual(t *testing.T) {
 	require.NoError(t, err)
 
 	activate := payload.Activate{
-		Record: virtualActivateBuf,
+		Polymorph: uint32(payload.TypeActivate),
+		Record:    virtualActivateBuf,
+		// Incorrect value.
 		Result: virtualResultBuf,
 	}
 	activateBuf, err := activate.Marshal()
 	require.NoError(t, err)
 
 	msg := payload.Meta{
-		Payload: activateBuf,
+		Polymorph: uint32(payload.TypeMeta),
+		Payload:   activateBuf,
 	}
 
 	handler := handle.NewActivateObject(proc.NewDependenciesMock(), msg, false)
@@ -262,8 +284,6 @@ func TestActivateObject_FlowWithPassedFlag(t *testing.T) {
 		f := flow.NewFlowMock(t)
 		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
 			switch p.(type) {
-			case *proc.CalculateID:
-				return nil
 			case *proc.FetchJet:
 				return errors.New("something strange from checkjet")
 			default:
@@ -281,8 +301,6 @@ func TestActivateObject_FlowWithPassedFlag(t *testing.T) {
 		f := flow.NewFlowMock(t)
 		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
 			switch p.(type) {
-			case *proc.CalculateID:
-				return nil
 			case *proc.FetchJet:
 				return proc.ErrNotExecutor
 			default:
@@ -300,12 +318,8 @@ func TestActivateObject_FlowWithPassedFlag(t *testing.T) {
 		f := flow.NewFlowMock(t)
 		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
 			switch p.(type) {
-			case *proc.CalculateID:
-				return nil
 			case *proc.FetchJet:
 				return proc.ErrNotExecutor
-			case *proc.EnsureIndex:
-				return nil
 			default:
 				panic("unknown procedure")
 			}
@@ -332,8 +346,6 @@ func TestActivateObject_ErrorFromWaitHot(t *testing.T) {
 		f := flow.NewFlowMock(t)
 		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
 			switch p.(type) {
-			case *proc.CalculateID:
-				return nil
 			case *proc.FetchJet:
 				return nil
 			case *proc.WaitHot:
@@ -348,13 +360,12 @@ func TestActivateObject_ErrorFromWaitHot(t *testing.T) {
 		assert.EqualError(t, err, "error from waithot")
 	})
 
+	// Happy path, everything is fine.
 	t.Run("waithot procedure returns nil err", func(t *testing.T) {
 		t.Parallel()
 		f := flow.NewFlowMock(t)
 		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
 			switch p.(type) {
-			case *proc.CalculateID:
-				return nil
 			case *proc.FetchJet:
 				return nil
 			case *proc.WaitHot:
@@ -386,8 +397,6 @@ func TestActivateObject_ErrorFromActivateObject(t *testing.T) {
 		f := flow.NewFlowMock(t)
 		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
 			switch p.(type) {
-			case *proc.CalculateID:
-				return nil
 			case *proc.FetchJet:
 				return nil
 			case *proc.WaitHot:
@@ -404,13 +413,12 @@ func TestActivateObject_ErrorFromActivateObject(t *testing.T) {
 		assert.EqualError(t, err, "error from SetResult")
 	})
 
+	// Happy path, everything is fine.
 	t.Run("SetResult procedure returns nil err", func(t *testing.T) {
 		t.Parallel()
 		f := flow.NewFlowMock(t)
 		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
 			switch p.(type) {
-			case *proc.CalculateID:
-				return nil
 			case *proc.FetchJet:
 				return nil
 			case *proc.WaitHot:
@@ -452,14 +460,16 @@ func metaActivateMsg(t *testing.T) payload.Meta {
 	require.NoError(t, err)
 
 	activate := payload.Activate{
-		Record: virtualActivateBuf,
-		Result: virtualResultBuf,
+		Polymorph: uint32(payload.TypeActivate),
+		Record:    virtualActivateBuf,
+		Result:    virtualResultBuf,
 	}
 	activateBuf, err := activate.Marshal()
 	require.NoError(t, err)
 
 	msg := payload.Meta{
-		Payload: activateBuf,
+		Polymorph: uint32(payload.TypeMeta),
+		Payload:   activateBuf,
 	}
 	return msg
 }

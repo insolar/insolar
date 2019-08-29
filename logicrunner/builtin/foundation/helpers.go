@@ -30,7 +30,7 @@ func GetPulseNumber() (insolar.PulseNumber, error) {
 	if req == nil {
 		return insolar.PulseNumber(0), errors.New("request from LogicCallContext is nil, get pulse is failed")
 	}
-	return req.Record().Pulse(), nil
+	return req.GetLocal().Pulse(), nil
 }
 
 // GetRequestReference - Returns request reference from context.

@@ -93,7 +93,7 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
 		"object_id":  objectID.DebugString(),
 		"result_id":  resultID.DebugString(),
-		"request_id": p.result.Request.Record().DebugString(),
+		"request_id": p.result.Request.GetLocal().DebugString(),
 	})
 	logger.Debug("trying to save result")
 
@@ -284,7 +284,7 @@ func calcPending(opened []record.CompositeFilamentRecord, closedRequestID insola
 // findClosed looks for request that was closed by provided result. Returns error if not found.
 func findClosed(reqs []record.CompositeFilamentRecord, result record.Result) (record.CompositeFilamentRecord, error) {
 	for _, req := range reqs {
-		if req.RecordID == *result.Request.Record() {
+		if req.RecordID == *result.Request.GetLocal() {
 			found := record.Unwrap(&req.Record.Virtual)
 			if _, ok := found.(record.Request); ok {
 				return req, nil
@@ -295,7 +295,7 @@ func findClosed(reqs []record.CompositeFilamentRecord, result record.Result) (re
 
 	return record.CompositeFilamentRecord{},
 		&payload.CodedError{
-			Text: fmt.Sprintf("request %s not found", result.Request.Record().DebugString()),
+			Text: fmt.Sprintf("request %s not found", result.Request.GetLocal().DebugString()),
 			Code: payload.CodeRequestNotFound,
 		}
 }
@@ -315,7 +315,7 @@ func notifyDetached(
 		if !outgoing.IsDetached() {
 			continue
 		}
-		if reasonRef := outgoing.ReasonRef(); *reasonRef.Record() != closedRequestID {
+		if reasonRef := outgoing.ReasonRef(); *reasonRef.GetLocal() != closedRequestID {
 			continue
 		}
 
