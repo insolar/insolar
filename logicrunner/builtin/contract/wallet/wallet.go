@@ -18,15 +18,10 @@ package wallet
 
 import (
 	"fmt"
-	"github.com/insolar/insolar/logicrunner/builtin/proxy/deposit"
-	"math/big"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
-	"github.com/insolar/insolar/logicrunner/builtin/foundation/safemath"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/account"
-	"github.com/insolar/insolar/logicrunner/builtin/proxy/costcenter"
-	"github.com/insolar/insolar/logicrunner/builtin/proxy/member"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/deposit"
 )
 
 // Wallet - basic wallet contract.
@@ -63,69 +58,12 @@ func (w *Wallet) GetAccount(assetName string) (*insolar.Reference, error) {
 
 // Transfer transfers money to given wallet.
 func (w *Wallet) Transfer(rootDomainRef insolar.Reference, assetName string, amountStr string, toMember *insolar.Reference) (interface{}, error) {
-	amount, ok := new(big.Int).SetString(amountStr, 10)
-	if !ok {
-		return nil, fmt.Errorf("can't parse input amount")
-	}
-	zero, _ := new(big.Int).SetString("0", 10)
-	if amount.Cmp(zero) < 1 {
-		return nil, fmt.Errorf("amount must be larger then zero")
-	}
-
-	ccRef := foundation.GetCostCenter()
-
-	cc := costcenter.GetObject(ccRef)
-	feeStr, err := cc.CalcFee(amountStr)
-	if err != nil {
-		return nil, fmt.Errorf("failed to calculate fee for amount: %s", err.Error())
-	}
-
-	fee, ok := new(big.Int).SetString(feeStr, 10)
-	if !ok {
-		return nil, fmt.Errorf("can't parse input feeStr")
-	}
-	totalSum, err := safemath.Add(fee, amount)
-	if err != nil {
-		return nil, fmt.Errorf("failed to calculate totalSum for amount: %s", err.Error())
-	}
-	currentBalanceStr, err := w.GetBalance(assetName)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get balance for asset: %s", err.Error())
-	}
-	currentBalance, _ := new(big.Int).SetString(currentBalanceStr, 10)
-	if totalSum.Cmp(currentBalance) > 0 {
-		return nil, fmt.Errorf("balance is too low: %s", currentBalanceStr)
-	}
-
-	toAccount, err := member.GetObject(*toMember).GetAccount(assetName)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get account by asset name: %s", err.Error())
-	}
-
 	accRef, err := w.GetAccount(assetName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get account by asset name: %s", err.Error())
 	}
 	acc := account.GetObject(*accRef)
-
-	// todo decriment acc
-
-	err = acc.TransferToAccount(amountStr, *toAccount)
-	if err != nil {
-		return nil, fmt.Errorf("failed to transfer: %s", err.Error())
-	}
-
-	toFeeAccount, err := cc.GetFeeAccount()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get fee account: %s", err.Error())
-	}
-
-	err = acc.TransferToAccount(feeStr, toFeeAccount)
-	if err != nil {
-		return nil, fmt.Errorf("failed to transfer: %s", err.Error())
-	}
-
-	return member.TransferResponse{Fee: feeStr}, nil
+	return acc.Transfer(rootDomainRef, amountStr, toMember)
 }
 
 // GetBalance gets balance by asset name.

@@ -542,5 +542,20 @@ func (m *Member) memberGet(publicKey string) (interface{}, error) {
 	}
 
 	return GetResponse{Reference: ref.String(), MigrationAddress: ma}, nil
+}
 
+// Accept accepts transfer to balance.
+//ins:saga(INS_FLAG_NO_ROLLBACK_METHOD)
+func (m *Member) Accept(amountStr string) error {
+
+	accountRef, err := m.GetAccount(XNS)
+	if err != nil {
+		return fmt.Errorf("failed to get account reference: %s", err.Error())
+	}
+	acc := account.GetObject(*accountRef)
+	err = acc.IncreaseBalance(amountStr)
+	if err != nil {
+		return fmt.Errorf("failed to increase balance: %s", err.Error())
+	}
+	return nil
 }

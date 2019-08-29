@@ -154,8 +154,8 @@ func (r *CostCenter) GetCode() (insolar.Reference, error) {
 	return r.Code, nil
 }
 
-// GetFeeAccount is proxy generated method
-func (r *CostCenter) GetFeeAccountAsMutable() (insolar.Reference, error) {
+// GetFeeMember is proxy generated method
+func (r *CostCenter) GetFeeMemberAsMutable() (insolar.Reference, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -171,7 +171,7 @@ func (r *CostCenter) GetFeeAccountAsMutable() (insolar.Reference, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetFeeAccount", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetFeeMember", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -193,8 +193,8 @@ func (r *CostCenter) GetFeeAccountAsMutable() (insolar.Reference, error) {
 	return ret0, nil
 }
 
-// GetFeeAccountNoWait is proxy generated method
-func (r *CostCenter) GetFeeAccountNoWait() error {
+// GetFeeMemberNoWait is proxy generated method
+func (r *CostCenter) GetFeeMemberNoWait() error {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -204,7 +204,7 @@ func (r *CostCenter) GetFeeAccountNoWait() error {
 		return err
 	}
 
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "GetFeeAccount", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "GetFeeMember", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -212,8 +212,8 @@ func (r *CostCenter) GetFeeAccountNoWait() error {
 	return nil
 }
 
-// GetFeeAccountAsImmutable is proxy generated method
-func (r *CostCenter) GetFeeAccount() (insolar.Reference, error) {
+// GetFeeMemberAsImmutable is proxy generated method
+func (r *CostCenter) GetFeeMember() (insolar.Reference, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -229,7 +229,7 @@ func (r *CostCenter) GetFeeAccount() (insolar.Reference, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "GetFeeAccount", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "GetFeeMember", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
