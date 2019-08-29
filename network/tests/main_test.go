@@ -56,8 +56,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/fortytw2/leaktest"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
@@ -67,18 +65,14 @@ import (
 )
 
 func TestNetworkConsensusManyTimes(t *testing.T) {
-	defer leaktest.Check(t)()
-
 	s := startNetworkSuite(t)
 	defer s.stopNetworkSuite()
 
-	s.waitForConsensus(9)
+	s.waitForConsensus(5)
 	s.AssertActiveNodesCountDelta(0)
 }
 
 func TestJoinerNodeConnect(t *testing.T) {
-	defer leaktest.Check(t)()
-
 	s := startNetworkSuite(t)
 	defer s.stopNetworkSuite()
 
@@ -88,7 +82,6 @@ func TestJoinerNodeConnect(t *testing.T) {
 	assert.True(t, s.waitForNodeJoin(joinerNode.id, maxPulsesForJoin), "JoinerNode not found in active list after 3 pulses")
 
 	s.AssertActiveNodesCountDelta(1)
-	require.Equal(s.t, insolar.CompleteNetworkState, joinerNode.serviceNetwork.Gatewayer.Gateway().GetState())
 }
 
 func TestNodeConnectInvalidVersion(t *testing.T) {
@@ -109,8 +102,6 @@ func TestNodeConnectInvalidVersion(t *testing.T) {
 }
 
 func TestNodeLeave(t *testing.T) {
-	defer leaktest.Check(t)()
-
 	s := startNetworkSuite(t)
 	defer s.stopNetworkSuite()
 
@@ -119,7 +110,6 @@ func TestNodeLeave(t *testing.T) {
 
 	s.AssertActiveNodesCountDelta(1)
 	s.AssertWorkingNodesCountDelta(1)
-	require.Equal(s.t, insolar.CompleteNetworkState, testNode.serviceNetwork.Gatewayer.Gateway().GetState())
 
 	s.StopNode(testNode)
 
@@ -130,15 +120,11 @@ func TestNodeLeave(t *testing.T) {
 }
 
 func TestNodeGracefulLeave(t *testing.T) {
-	defer leaktest.Check(t)()
-
 	s := startNetworkSuite(t)
 	defer s.stopNetworkSuite()
 
 	testNode := s.startNewNetworkNode("testNode")
 	assert.True(t, s.waitForNodeJoin(testNode.id, 3), "testNode not found in active list after 3 pulses")
-
-	require.Equal(s.t, insolar.CompleteNetworkState, testNode.serviceNetwork.Gatewayer.Gateway().GetState())
 
 	s.GracefulStop(testNode)
 

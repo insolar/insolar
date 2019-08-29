@@ -102,7 +102,7 @@ const (
 	UseFakeBootstrap = true
 
 	reqTimeoutMs     int32 = 2000
-	pulseDelta       int32 = 1
+	pulseDelta       int32 = 4
 	consensusMin           = 5 // minimum count of participants that can survive when one node leaves
 	maxPulsesForJoin       = 3
 )
@@ -144,9 +144,9 @@ func newTestSuite(t *testing.T, bootstrapCount, nodesCount int) testSuite {
 }
 
 func newConsensusSuite(t *testing.T, bootstrapCount, nodesCount int) *consensusSuite {
-	if bootstrapCount < consensusMin {
-		panic("incorrect bootstrapCount, it should 5 or more")
-	}
+	//if bootstrapCount < consensusMin {
+	//	panic("incorrect bootstrapCount, it should 5 or more")
+	//}
 
 	return &consensusSuite{
 		testSuite: newTestSuite(t, bootstrapCount, nodesCount),
@@ -286,7 +286,7 @@ func (s *testSuite) StartNodesNetwork(nodes []*networkNode) {
 }
 
 func startNetworkSuite(t *testing.T) *consensusSuite {
-	cs := newConsensusSuite(t, consensusMin, 0)
+	cs := newConsensusSuite(t, 5, 0)
 	cs.Setup()
 
 	return cs
@@ -371,22 +371,25 @@ func (s *consensusSuite) assertNetworkInConsistentState(p insolar.PulseNumber) {
 	}
 }
 
-func (s *consensusSuite) waitForConsensusExcept(consensusCount int, exception insolar.Reference) {
+func (s *consensusSuite) waitForConsensusExcept(consensusCount int, exception insolar.Reference) insolar.PulseNumber {
+	var p insolar.PulseNumber
 	for i := 0; i < consensusCount; i++ {
 		for _, n := range s.bootstrapNodes {
 			if n.id.Equal(exception) {
 				continue
 			}
-			<-n.consensusResult
+			select {
+			case p = <-n.consensusResult:
+				continue
+			case <-time.After(time.Second * 12):
+				panic("waitForConsensus timeout")
+			}
 		}
 
-		//for _, n := range s.networkNodes {
-		//	if n.id.Equal(exception) {
-		//		continue
-		//	}
-		//	<-n.consensusResult
-		//}
 	}
+
+	s.assertNetworkInConsistentState(p)
+	return p
 }
 
 // nodesCount returns count of nodes in network without testNode
@@ -520,7 +523,7 @@ func (s *testSuite) initCrypto(node *networkNode) (*certificate.CertificateManag
 	cert.Role = node.role.String()
 	cert.BootstrapNodes = make([]certificate.BootstrapNode, 0)
 	cert.MinRoles.HeavyMaterial = 1
-	cert.MinRoles.Virtual = 4
+	cert.MinRoles.Virtual = 1
 
 	for _, b := range s.bootstrapNodes {
 		pubKey, _ := b.cryptographyService.GetPublicKey()
