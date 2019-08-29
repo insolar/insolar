@@ -226,7 +226,6 @@ func (m *Scope) DeployCode(
 	machineType insolar.MachineType,
 ) (*insolar.ID, error) {
 	codeRec := record.Code{
-		Domain:      domain,
 		Request:     request,
 		Code:        code,
 		MachineType: machineType,
