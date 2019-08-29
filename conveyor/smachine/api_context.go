@@ -59,8 +59,14 @@ type BargeInPermit interface {
 type InitializationContext interface {
 	stepContext
 
-	//BargeIn(StateFunc) BargeInPermit
-	//BargeInWithOverride(StateFunc, MigrateFunc, StepFlags) BargeInPermit
+	//BargeIn(BargeInValidator) BargeInContext
+}
+
+type BargeInValidator func(sameStep bool) bool
+
+type BargeInContext interface {
+	WithJumpOverride(StateFunc, MigrateFunc, StepFlags) BargeInPermit
+	WithJump(StateFunc) BargeInPermit
 }
 
 type MigrationContext interface {
@@ -81,8 +87,7 @@ type ExecutionContext interface {
 
 	NewChild(CreateFunc) SlotLink
 
-	//StepBargeIn(StateFunc) BargeInPermit
-	//StepBargeInWithOverride(StateFunc, MigrateFunc, StepFlags) BargeInPermit
+	//BargeIn(BargeInValidator) BargeInContext
 
 	Replace(CreateFunc) StateUpdate
 	Repeat(limit int) StateUpdate
