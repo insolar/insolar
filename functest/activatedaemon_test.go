@@ -26,7 +26,6 @@ import (
 )
 
 func TestActivateDaemonDoubleCall(t *testing.T) {
-	t.Skip("Test is constantly failing. Skipping until INS-3344 is fixed.")
 	activeDaemons := activateDaemons(t, countThreeActiveDaemon)
 	for _, daemon := range activeDaemons {
 		_, _, err := makeSignedRequest(launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.activateDaemon",
