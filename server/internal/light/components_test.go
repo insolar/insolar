@@ -33,6 +33,7 @@ func TestComponents(t *testing.T) {
 	cfg.Metrics.ListenAddress = "0.0.0.0:0"
 	cfg.APIRunner.Address = "0.0.0.0:0"
 
-	_, err := newComponents(ctx, cfg)
+	earlyComponents, err := initEarlyComponents(ctx, cfg)
+	_, err = newComponents(ctx, cfg, earlyComponents)
 	require.NoError(t, err)
 }

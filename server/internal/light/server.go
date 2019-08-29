@@ -60,13 +60,19 @@ func (s *Server) Serve() {
 	fmt.Println("Starts with configuration:\n", configuration.ToString(cfgHolder.Configuration))
 
 	ctx := context.Background()
-	cmp, err := newComponents(ctx, *cfg)
-	fatal(ctx, err, "failed to create components")
+	earlyComponents, err := initEarlyComponents(ctx, *cfg)
+	fatal(ctx, err, "failed bootstrapping components")
+
+	nodeRef := earlyComponents.CertManager.GetCertificate().GetNodeRef().String()
+	nodeRole := earlyComponents.CertManager.GetCertificate().GetRole().String()
 
 	traceID := "main_" + utils.RandTraceID()
-	ctx, inslog := inslogger.InitNodeLogger(ctx, cfg.Log, traceID, cmp.NodeRef, cmp.NodeRole)
-	ctx, jaegerFlush := internal.Jaeger(ctx, cfg.Tracer.Jaeger, traceID, cmp.NodeRef, cmp.NodeRole)
+	ctx, inslog := inslogger.InitNodeLogger(ctx, cfg.Log, traceID, nodeRef, nodeRole)
+	ctx, jaegerFlush := internal.Jaeger(ctx, cfg.Tracer.Jaeger, traceID, nodeRef, nodeRole)
 	defer jaegerFlush()
+
+	cmp, err := newComponents(ctx, *cfg, earlyComponents)
+	fatal(ctx, err, "failed to create components")
 
 	var gracefulStop = make(chan os.Signal, 1)
 	signal.Notify(gracefulStop, syscall.SIGTERM)

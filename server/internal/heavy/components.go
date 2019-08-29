@@ -65,6 +65,49 @@ import (
 	"github.com/insolar/insolar/server/internal"
 )
 
+type earlyComponents struct {
+	CryptographyService        insolar.CryptographyService
+	PlatformCryptographyScheme insolar.PlatformCryptographyScheme
+	KeyStore                   insolar.KeyStore
+	KeyProcessor               insolar.KeyProcessor
+	CertManager                *certificate.CertificateManager
+}
+
+func initEarlyComponents(ctx context.Context, cfg configuration.Configuration) (earlyComponents, error) {
+	components := component.Manager{}
+
+	keyStore, err := keystore.NewKeyStore(cfg.KeysPath)
+	if err != nil {
+		return earlyComponents{}, errors.Wrap(err, "failed to load KeyStore")
+	}
+
+	platformCryptographyScheme := platformpolicy.NewPlatformCryptographyScheme()
+	keyProcessor := platformpolicy.NewKeyProcessor()
+
+	cryptographyService := cryptography.NewCryptographyService()
+	// ??
+	components.Register(platformCryptographyScheme, keyStore)
+	components.Inject(cryptographyService, keyProcessor)
+
+	// certificate manager
+	publicKey, err := cryptographyService.GetPublicKey()
+	if err != nil {
+		return earlyComponents{}, errors.Wrap(err, "failed to retrieve node public key")
+	}
+	certManager, err := certificate.NewManagerReadCertificate(publicKey, keyProcessor, cfg.CertificatePath)
+	if err != nil {
+		return earlyComponents{}, errors.Wrap(err, "failed to start Certificate")
+	}
+
+	return earlyComponents{
+		CryptographyService:        cryptographyService,
+		PlatformCryptographyScheme: platformCryptographyScheme,
+		KeyStore:                   keyStore,
+		KeyProcessor:               keyProcessor,
+		CertManager:                certManager,
+	}, nil
+}
+
 type components struct {
 	cmp         component.Manager
 	NodeRef     string
@@ -77,42 +120,18 @@ type components struct {
 	replicator executor.HeavyReplicator
 }
 
-func newComponents(ctx context.Context, cfg configuration.Configuration, genesisCfg insolar.GenesisHeavyConfig) (*components, error) {
+func newComponents(ctx context.Context, cfg configuration.Configuration, genesisCfg insolar.GenesisHeavyConfig, earlyComponents earlyComponents) (*components, error) {
 	// Cryptography.
-	var (
-		KeyProcessor  insolar.KeyProcessor
-		CryptoScheme  insolar.PlatformCryptographyScheme
-		CryptoService insolar.CryptographyService
-		CertManager   insolar.CertificateManager
-	)
-	{
-		var err error
-		// Private key storage.
-		ks, err := keystore.NewKeyStore(cfg.KeysPath)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to load KeyStore")
-		}
-		// Public key manipulations.
-		KeyProcessor = platformpolicy.NewKeyProcessor()
-		// Platform cryptography.
-		CryptoScheme = platformpolicy.NewPlatformCryptographyScheme()
-		// Sign, verify, etc.
-		CryptoService = cryptography.NewCryptographyService()
+	// Public key manipulations.
+	KeyProcessor := earlyComponents.KeyProcessor
+	// Platform cryptography.
+	CryptoScheme := earlyComponents.PlatformCryptographyScheme
+	// Sign, verify, etc.
+	CryptoService := earlyComponents.CryptographyService
 
-		c := component.Manager{}
-		c.Inject(CryptoService, CryptoScheme, KeyProcessor, ks)
-
-		publicKey, err := CryptoService.GetPublicKey()
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to retrieve node public key")
-		}
-
-		// Node certificate.
-		CertManager, err = certificate.NewManagerReadCertificate(publicKey, KeyProcessor, cfg.CertificatePath)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to start Certificate")
-		}
-	}
+	// Node certificate.
+	var CertManager insolar.CertificateManager
+	CertManager = earlyComponents.CertManager
 
 	c := &components{}
 	c.cmp = component.Manager{}

@@ -42,6 +42,7 @@ func TestComponents(t *testing.T) {
 	cfg.Ledger.Storage.DataDirectory = tmpdir
 	cfg.Exporter.Addr = ":0"
 
-	_, err = newComponents(ctx, cfg, insolar.GenesisHeavyConfig{Skip: true})
+	earlyComponents, err := initEarlyComponents(ctx, cfg)
+	_, err = newComponents(ctx, cfg, insolar.GenesisHeavyConfig{Skip: true}, earlyComponents)
 	require.NoError(t, err)
 }
