@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/log"
 )
 
 // Expiration represents time of expiration
@@ -86,6 +87,8 @@ func (sm *SeedManager) Stop() {
 func (sm *SeedManager) Add(seed Seed, pulse insolar.PulseNumber) {
 	expTime := time.Now().Add(sm.ttl).UnixNano()
 
+	log.Info("SeedManager.Add. Now: ", time.Now(), " ttl: ", sm.ttl.String())
+
 	sm.mutex.Lock()
 	defer sm.mutex.Unlock()
 
@@ -123,6 +126,7 @@ func (sm *SeedManager) deleteExpired() {
 
 	for seed, stored := range sm.seedPool {
 		if sm.isExpired(stored.expiration) {
+			log.Info("deleteExpired: ", seed)
 			delete(sm.seedPool, seed)
 		}
 	}
