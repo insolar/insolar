@@ -73,7 +73,7 @@ func TestDepositTransferToken(t *testing.T) {
 	_, err = waitUntilRequestProcessed(anon, time.Second*20, time.Second, 20)
 	require.NoError(t, err)
 	if err == nil {
-		fmt.Print("SUCCESS")
+		fmt.Print("SUCCESS\n")
 	}
 	checkBalanceFewTimes(t, member, member.Ref, secondBalance)
 }
