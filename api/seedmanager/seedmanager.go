@@ -87,8 +87,6 @@ func (sm *SeedManager) Stop() {
 func (sm *SeedManager) Add(seed Seed, pulse insolar.PulseNumber) {
 	expTime := time.Now().Add(sm.ttl).UnixNano()
 
-	log.Info("SeedManager.Add. Now: ", time.Now(), " ttl: ", sm.ttl.String(), ". seed: ", seed)
-
 	sm.mutex.Lock()
 	defer sm.mutex.Unlock()
 
@@ -96,6 +94,12 @@ func (sm *SeedManager) Add(seed Seed, pulse insolar.PulseNumber) {
 		expiration: expTime,
 		pulse:      pulse,
 	}
+
+	log.Info("SeedManager.Add. Now: ", time.Now(),
+		", ttl: ", sm.ttl.String(),
+		", expTime:", expTime,
+		"content: ", sm.seedPool,
+		", seed: ", seed)
 
 }
 
@@ -109,6 +113,7 @@ func (sm *SeedManager) Pop(seed Seed) (insolar.PulseNumber, bool) {
 	log.Info("Pop seed: ", seed)
 	sm.mutex.RLock()
 	stored, ok := sm.seedPool[seed]
+	log.Info("Pop: ok: ", ok, ". content: ", sm.seedPool, ", seed: ", seed)
 	sm.mutex.RUnlock()
 
 	if ok && !sm.isExpired(stored.expiration) {
