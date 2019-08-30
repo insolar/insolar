@@ -74,7 +74,7 @@ import (
 Does Phase0/Phase1/Phase1Rq processing
 */
 func NewPhase01Controller(packetPrepareOptions transport.PacketPrepareOptions, qIntro <-chan population.MemberPacketSender) *Phase01Controller {
-	return &Phase01Controller{packetPrepareOptions: packetPrepareOptions, qIntro: qIntro}
+	return &Phase01Controller{packetPrepareOptions: packetPrepareOptions, qIntro: qIntro, seeeeeen: make(map[insolar.ShortNodeID]struct{})}
 }
 
 func (p *packetPhase0Dispatcher) DispatchMemberPacket(ctx context.Context, packet transport.MemberPacketReader, n *population.NodeAppearance) error {
@@ -166,6 +166,7 @@ type Phase01Controller struct {
 	packetPrepareOptions transport.PacketPrepareOptions
 	qIntro               <-chan population.MemberPacketSender
 	R                    *core.FullRealm
+	seeeeeen             map[insolar.ShortNodeID]struct{}
 }
 
 func (c *Phase01Controller) CreatePacketDispatcher(pt phases.PacketType, ctlIndex int, realm *core.FullRealm) (population.PacketDispatcher, core.PerNodePacketDispatcherFactory) {
@@ -343,6 +344,12 @@ func (c *Phase01Controller) workerSendPhase1ToDynamics(ctx context.Context) {
 			if !introTo.SetPacketSent(phases.PacketPhase1) {
 				continue
 			}
+
+			if _, ok := c.seeeeeen[introTo.GetNodeID()]; ok {
+				panic("WTF")
+			}
+			c.seeeeeen[introTo.GetNodeID()] = struct{}{}
+
 			inslogger.FromContext(ctx).Debugf("sent ph1: from=%d to=%d mode=dyn", c.R.GetSelfNodeID(), introTo.GetNodeID())
 			p1.SendTo(ctx, introTo, sendOptions, c.R.GetPacketSender())
 		}
