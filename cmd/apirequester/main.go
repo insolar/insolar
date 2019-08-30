@@ -62,15 +62,15 @@ func main() {
 	// make one request to create new member
 	oneSimpleRequest(insSDK)
 
-	// // make several (10) requests to create new member (every request make call to RootMember instance)
-	// severalSimpleRequestToRootMember(insSDK)
-	//
-	// // make several (10) requests to transfer money (every request make call to different members instances)
-	// severalSimpleRequestToDifferentMembers(insSDK)
-	//
-	// // make several (10) requests in parallel to create new member (every request make call to RootMember instance)
-	// severalParallelRequestToRootMember(insSDK)
-	//
-	// // make several (10) requests in parallel to transfer money (every request make call to different members instances)
-	// severalParallelRequestToDifferentMembers(insSDK)
+	// make several (10) requests to create new member (every request make call to RootMember instance)
+	severalSimpleRequestToRootMember(insSDK)
+
+	// make several (10) requests to transfer money (every request make call to different members instances)
+	severalSimpleRequestToDifferentMembers(insSDK)
+
+	// make several (10) requests in parallel to create new member (every request make call to RootMember instance)
+	severalParallelRequestToRootMember(insSDK)
+
+	// make several (10) requests in parallel to transfer money (every request make call to different members instances)
+	severalParallelRequestToDifferentMembers(insSDK)
 }
