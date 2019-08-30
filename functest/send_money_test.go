@@ -52,6 +52,7 @@ func TestTransferMoney(t *testing.T) {
 	require.Nil(t, err)
 	feeMemberRef, ok := feeRes.(map[string]interface{})["reference"].(string)
 	require.True(t, ok)
+	launchnet.FeeMember.Ref = feeMemberRef
 	feeBalance := getBalanceNoErr(t, &launchnet.FeeMember, feeMemberRef)
 
 	amountStr := "10"
