@@ -129,7 +129,7 @@ func (g *Generator) Run(ctx context.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "couldn't get network incentives keys")
 		}
-		migrationDaemonPublicKeys = append(migrationDaemonPublicKeys, k)
+		networkIncentivesPublicKeys = append(networkIncentivesPublicKeys, k)
 	}
 
 	applicationIncentivesPublicKeys := []string{}
@@ -138,7 +138,7 @@ func (g *Generator) Run(ctx context.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "couldn't get application incentives keys")
 		}
-		migrationDaemonPublicKeys = append(migrationDaemonPublicKeys, k)
+		applicationIncentivesPublicKeys = append(applicationIncentivesPublicKeys, k)
 	}
 
 	foundationPublicKeys := []string{}
@@ -147,7 +147,7 @@ func (g *Generator) Run(ctx context.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "couldn't get foundation keys")
 		}
-		migrationDaemonPublicKeys = append(migrationDaemonPublicKeys, k)
+		foundationPublicKeys = append(foundationPublicKeys, k)
 	}
 
 	inslog.Info("[ bootstrap ] read migration addresses ...")

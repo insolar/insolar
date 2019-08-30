@@ -170,7 +170,7 @@ func GetMigrationAdminGenesisContractState(lockup int64, vesting int64, vestingS
 			MigrationDaemons:       migrationDaemons,
 			MigrationAddressShards: genesisrefs.ContractMigrationAddressShards,
 			MigrationAdminMember:   genesisrefs.ContractMigrationAdminMember,
-			VestingParams: foundation.VestingParams{
+			VestingParams: &migrationadmin.VestingParams{
 				Lockup:      lockup,
 				Vesting:     vesting,
 				VestingStep: vestingStep,
@@ -186,7 +186,7 @@ func GetDepositGenesisContractState(
 	vesting int64,
 	vestingStep int64,
 	vestingType foundation.VestingType,
-	matureDate insolar.PulseNumber,
+	maturePulse insolar.PulseNumber,
 	pulseDepositUnHold insolar.PulseNumber,
 	name string, parent string,
 ) insolar.GenesisContractState {
@@ -199,12 +199,10 @@ func GetDepositGenesisContractState(
 			Amount:             amount,
 			PulseDepositUnHold: pulseDepositUnHold,
 			VestingType:        vestingType,
-			MatureDate:         matureDate,
-			VestingParams: foundation.VestingParams{
-				Lockup:      lockup,
-				Vesting:     vesting,
-				VestingStep: vestingStep,
-			},
+			MaturePulse:        maturePulse,
+			Lockup:             lockup,
+			Vesting:            vesting,
+			VestingStep:        vestingStep,
 		}),
 	}
 }

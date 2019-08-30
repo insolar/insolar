@@ -21,8 +21,6 @@ then
     insolar gen-key-pair > ${CONFIG_DIR}/migration_daemon_${b}_member_keys.json
     done
 
-    # TODO: generate keys for funds
-
     for (( b = 0; b < 40; b++ ))
     do
     insolar gen-key-pair > ${CONFIG_DIR}/network_incentives_${b}_member_keys.json

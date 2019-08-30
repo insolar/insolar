@@ -32,7 +32,13 @@ type MigrationAdmin struct {
 	MigrationDaemons       foundation.StableMap
 	MigrationAdminMember   insolar.Reference
 	MigrationAddressShards [insolar.GenesisAmountMigrationAddressShards]insolar.Reference
-	VestingParams          foundation.VestingParams
+	VestingParams          *VestingParams
+}
+
+type VestingParams struct {
+	Lockup      int64 `json:"lockupInPulses"`
+	Vesting     int64 `json:"vestingInPulses"`
+	VestingStep int64 `json:"vestingStepInPulses"`
 }
 
 const (
@@ -196,7 +202,7 @@ func (mA *MigrationAdmin) GetActiveDaemons() ([]string, error) {
 	return activeDaemons, nil
 }
 
-func (mA *MigrationAdmin) GetDepositParameters() (foundation.VestingParams, error) {
+func (mA *MigrationAdmin) GetDepositParameters() (*VestingParams, error) {
 	return mA.VestingParams, nil
 }
 

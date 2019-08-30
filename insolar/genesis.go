@@ -50,6 +50,7 @@ const (
 	GenesisNameMigrationAdminMember  = "migration" + GenesisNameMember
 	GenesisNameMigrationAdminWallet  = "migration" + GenesisNameWallet
 	GenesisNameMigrationAdminAccount = "migration" + GenesisNameAccount
+	GenesisNameMigrationAdminDeposit = "migration" + GenesisNameDeposit
 	// Fee entity
 	GenesisNameFeeMember  = "fee" + GenesisNameMember
 	GenesisNameFeeWallet  = "fee" + GenesisNameWallet
@@ -58,6 +59,7 @@ const (
 	GenesisNameEnterpriseMember  = "enterprise" + GenesisNameMember
 	GenesisNameEnterpriseWallet  = "enterprise" + GenesisNameWallet
 	GenesisNameEnterpriseAccount = "enterprise" + GenesisNameAccount
+	GenesisNameEnterpriseDeposit = "enterprise" + GenesisNameDeposit
 
 	GenesisAmountMigrationDaemonMembers       = 10
 	GenesisAmountActiveMigrationDaemonMembers = 3
