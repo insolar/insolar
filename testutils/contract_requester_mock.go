@@ -500,7 +500,7 @@ type mContractRequesterMockSendRequestWithPulse struct {
 	mutex    sync.RWMutex
 }
 
-// ContractRequesterMockSendRequestWithPulseExpectation specifies expectation struct of the ContractRequester.SendRequestWithPulse
+// ContractRequesterMockSendRequestWithPulseExpectation specifies expectation struct of the ContractRequester.SendRequest
 type ContractRequesterMockSendRequestWithPulseExpectation struct {
 	mock    *ContractRequesterMock
 	params  *ContractRequesterMockSendRequestWithPulseParams
@@ -508,7 +508,7 @@ type ContractRequesterMockSendRequestWithPulseExpectation struct {
 	Counter uint64
 }
 
-// ContractRequesterMockSendRequestWithPulseParams contains parameters of the ContractRequester.SendRequestWithPulse
+// ContractRequesterMockSendRequestWithPulseParams contains parameters of the ContractRequester.SendRequest
 type ContractRequesterMockSendRequestWithPulseParams struct {
 	ctx    context.Context
 	ref    *mm_insolar.Reference
@@ -517,17 +517,17 @@ type ContractRequesterMockSendRequestWithPulseParams struct {
 	pulse  mm_insolar.PulseNumber
 }
 
-// ContractRequesterMockSendRequestWithPulseResults contains results of the ContractRequester.SendRequestWithPulse
+// ContractRequesterMockSendRequestWithPulseResults contains results of the ContractRequester.SendRequest
 type ContractRequesterMockSendRequestWithPulseResults struct {
 	r1  mm_insolar.Reply
 	rp1 *mm_insolar.Reference
 	err error
 }
 
-// Expect sets up expected params for ContractRequester.SendRequestWithPulse
+// Expect sets up expected params for ContractRequester.SendRequest
 func (mmSendRequestWithPulse *mContractRequesterMockSendRequestWithPulse) Expect(ctx context.Context, ref *mm_insolar.Reference, method string, argsIn []interface{}, pulse mm_insolar.PulseNumber) *mContractRequesterMockSendRequestWithPulse {
 	if mmSendRequestWithPulse.mock.funcSendRequestWithPulse != nil {
-		mmSendRequestWithPulse.mock.t.Fatalf("ContractRequesterMock.SendRequestWithPulse mock is already set by Set")
+		mmSendRequestWithPulse.mock.t.Fatalf("ContractRequesterMock.SendRequest mock is already set by Set")
 	}
 
 	if mmSendRequestWithPulse.defaultExpectation == nil {
@@ -544,10 +544,10 @@ func (mmSendRequestWithPulse *mContractRequesterMockSendRequestWithPulse) Expect
 	return mmSendRequestWithPulse
 }
 
-// Inspect accepts an inspector function that has same arguments as the ContractRequester.SendRequestWithPulse
+// Inspect accepts an inspector function that has same arguments as the ContractRequester.SendRequest
 func (mmSendRequestWithPulse *mContractRequesterMockSendRequestWithPulse) Inspect(f func(ctx context.Context, ref *mm_insolar.Reference, method string, argsIn []interface{}, pulse mm_insolar.PulseNumber)) *mContractRequesterMockSendRequestWithPulse {
 	if mmSendRequestWithPulse.mock.inspectFuncSendRequestWithPulse != nil {
-		mmSendRequestWithPulse.mock.t.Fatalf("Inspect function is already set for ContractRequesterMock.SendRequestWithPulse")
+		mmSendRequestWithPulse.mock.t.Fatalf("Inspect function is already set for ContractRequesterMock.SendRequest")
 	}
 
 	mmSendRequestWithPulse.mock.inspectFuncSendRequestWithPulse = f
@@ -555,10 +555,10 @@ func (mmSendRequestWithPulse *mContractRequesterMockSendRequestWithPulse) Inspec
 	return mmSendRequestWithPulse
 }
 
-// Return sets up results that will be returned by ContractRequester.SendRequestWithPulse
+// Return sets up results that will be returned by ContractRequester.SendRequest
 func (mmSendRequestWithPulse *mContractRequesterMockSendRequestWithPulse) Return(r1 mm_insolar.Reply, rp1 *mm_insolar.Reference, err error) *ContractRequesterMock {
 	if mmSendRequestWithPulse.mock.funcSendRequestWithPulse != nil {
-		mmSendRequestWithPulse.mock.t.Fatalf("ContractRequesterMock.SendRequestWithPulse mock is already set by Set")
+		mmSendRequestWithPulse.mock.t.Fatalf("ContractRequesterMock.SendRequest mock is already set by Set")
 	}
 
 	if mmSendRequestWithPulse.defaultExpectation == nil {
@@ -568,25 +568,25 @@ func (mmSendRequestWithPulse *mContractRequesterMockSendRequestWithPulse) Return
 	return mmSendRequestWithPulse.mock
 }
 
-//Set uses given function f to mock the ContractRequester.SendRequestWithPulse method
+//Set uses given function f to mock the ContractRequester.SendRequest method
 func (mmSendRequestWithPulse *mContractRequesterMockSendRequestWithPulse) Set(f func(ctx context.Context, ref *mm_insolar.Reference, method string, argsIn []interface{}, pulse mm_insolar.PulseNumber) (r1 mm_insolar.Reply, rp1 *mm_insolar.Reference, err error)) *ContractRequesterMock {
 	if mmSendRequestWithPulse.defaultExpectation != nil {
-		mmSendRequestWithPulse.mock.t.Fatalf("Default expectation is already set for the ContractRequester.SendRequestWithPulse method")
+		mmSendRequestWithPulse.mock.t.Fatalf("Default expectation is already set for the ContractRequester.SendRequest method")
 	}
 
 	if len(mmSendRequestWithPulse.expectations) > 0 {
-		mmSendRequestWithPulse.mock.t.Fatalf("Some expectations are already set for the ContractRequester.SendRequestWithPulse method")
+		mmSendRequestWithPulse.mock.t.Fatalf("Some expectations are already set for the ContractRequester.SendRequest method")
 	}
 
 	mmSendRequestWithPulse.mock.funcSendRequestWithPulse = f
 	return mmSendRequestWithPulse.mock
 }
 
-// When sets expectation for the ContractRequester.SendRequestWithPulse which will trigger the result defined by the following
+// When sets expectation for the ContractRequester.SendRequest which will trigger the result defined by the following
 // Then helper
 func (mmSendRequestWithPulse *mContractRequesterMockSendRequestWithPulse) When(ctx context.Context, ref *mm_insolar.Reference, method string, argsIn []interface{}, pulse mm_insolar.PulseNumber) *ContractRequesterMockSendRequestWithPulseExpectation {
 	if mmSendRequestWithPulse.mock.funcSendRequestWithPulse != nil {
-		mmSendRequestWithPulse.mock.t.Fatalf("ContractRequesterMock.SendRequestWithPulse mock is already set by Set")
+		mmSendRequestWithPulse.mock.t.Fatalf("ContractRequesterMock.SendRequest mock is already set by Set")
 	}
 
 	expectation := &ContractRequesterMockSendRequestWithPulseExpectation{
@@ -597,13 +597,13 @@ func (mmSendRequestWithPulse *mContractRequesterMockSendRequestWithPulse) When(c
 	return expectation
 }
 
-// Then sets up ContractRequester.SendRequestWithPulse return parameters for the expectation previously defined by the When method
+// Then sets up ContractRequester.SendRequest return parameters for the expectation previously defined by the When method
 func (e *ContractRequesterMockSendRequestWithPulseExpectation) Then(r1 mm_insolar.Reply, rp1 *mm_insolar.Reference, err error) *ContractRequesterMock {
 	e.results = &ContractRequesterMockSendRequestWithPulseResults{r1, rp1, err}
 	return e.mock
 }
 
-// SendRequestWithPulse implements insolar.ContractRequester
+// SendRequest implements insolar.ContractRequester
 func (mmSendRequestWithPulse *ContractRequesterMock) SendRequestWithPulse(ctx context.Context, ref *mm_insolar.Reference, method string, argsIn []interface{}, pulse mm_insolar.PulseNumber) (r1 mm_insolar.Reply, rp1 *mm_insolar.Reference, err error) {
 	mm_atomic.AddUint64(&mmSendRequestWithPulse.beforeSendRequestWithPulseCounter, 1)
 	defer mm_atomic.AddUint64(&mmSendRequestWithPulse.afterSendRequestWithPulseCounter, 1)
@@ -631,33 +631,33 @@ func (mmSendRequestWithPulse *ContractRequesterMock) SendRequestWithPulse(ctx co
 		want := mmSendRequestWithPulse.SendRequestWithPulseMock.defaultExpectation.params
 		got := ContractRequesterMockSendRequestWithPulseParams{ctx, ref, method, argsIn, pulse}
 		if want != nil && !minimock.Equal(*want, got) {
-			mmSendRequestWithPulse.t.Errorf("ContractRequesterMock.SendRequestWithPulse got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+			mmSendRequestWithPulse.t.Errorf("ContractRequesterMock.SendRequest got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
 		}
 
 		results := mmSendRequestWithPulse.SendRequestWithPulseMock.defaultExpectation.results
 		if results == nil {
-			mmSendRequestWithPulse.t.Fatal("No results are set for the ContractRequesterMock.SendRequestWithPulse")
+			mmSendRequestWithPulse.t.Fatal("No results are set for the ContractRequesterMock.SendRequest")
 		}
 		return (*results).r1, (*results).rp1, (*results).err
 	}
 	if mmSendRequestWithPulse.funcSendRequestWithPulse != nil {
 		return mmSendRequestWithPulse.funcSendRequestWithPulse(ctx, ref, method, argsIn, pulse)
 	}
-	mmSendRequestWithPulse.t.Fatalf("Unexpected call to ContractRequesterMock.SendRequestWithPulse. %v %v %v %v %v", ctx, ref, method, argsIn, pulse)
+	mmSendRequestWithPulse.t.Fatalf("Unexpected call to ContractRequesterMock.SendRequest. %v %v %v %v %v", ctx, ref, method, argsIn, pulse)
 	return
 }
 
-// SendRequestWithPulseAfterCounter returns a count of finished ContractRequesterMock.SendRequestWithPulse invocations
+// SendRequestWithPulseAfterCounter returns a count of finished ContractRequesterMock.SendRequest invocations
 func (mmSendRequestWithPulse *ContractRequesterMock) SendRequestWithPulseAfterCounter() uint64 {
 	return mm_atomic.LoadUint64(&mmSendRequestWithPulse.afterSendRequestWithPulseCounter)
 }
 
-// SendRequestWithPulseBeforeCounter returns a count of ContractRequesterMock.SendRequestWithPulse invocations
+// SendRequestWithPulseBeforeCounter returns a count of ContractRequesterMock.SendRequest invocations
 func (mmSendRequestWithPulse *ContractRequesterMock) SendRequestWithPulseBeforeCounter() uint64 {
 	return mm_atomic.LoadUint64(&mmSendRequestWithPulse.beforeSendRequestWithPulseCounter)
 }
 
-// Calls returns a list of arguments used in each call to ContractRequesterMock.SendRequestWithPulse.
+// Calls returns a list of arguments used in each call to ContractRequesterMock.SendRequest.
 // The list is in the same order as the calls were made (i.e. recent calls have a higher index)
 func (mmSendRequestWithPulse *mContractRequesterMockSendRequestWithPulse) Calls() []*ContractRequesterMockSendRequestWithPulseParams {
 	mmSendRequestWithPulse.mutex.RLock()
@@ -670,7 +670,7 @@ func (mmSendRequestWithPulse *mContractRequesterMockSendRequestWithPulse) Calls(
 	return argCopy
 }
 
-// MinimockSendRequestWithPulseDone returns true if the count of the SendRequestWithPulse invocations corresponds
+// MinimockSendRequestWithPulseDone returns true if the count of the SendRequest invocations corresponds
 // the number of defined expectations
 func (m *ContractRequesterMock) MinimockSendRequestWithPulseDone() bool {
 	for _, e := range m.SendRequestWithPulseMock.expectations {
@@ -694,21 +694,21 @@ func (m *ContractRequesterMock) MinimockSendRequestWithPulseDone() bool {
 func (m *ContractRequesterMock) MinimockSendRequestWithPulseInspect() {
 	for _, e := range m.SendRequestWithPulseMock.expectations {
 		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			m.t.Errorf("Expected call to ContractRequesterMock.SendRequestWithPulse with params: %#v", *e.params)
+			m.t.Errorf("Expected call to ContractRequesterMock.SendRequest with params: %#v", *e.params)
 		}
 	}
 
 	// if default expectation was set then invocations count should be greater than zero
 	if m.SendRequestWithPulseMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterSendRequestWithPulseCounter) < 1 {
 		if m.SendRequestWithPulseMock.defaultExpectation.params == nil {
-			m.t.Error("Expected call to ContractRequesterMock.SendRequestWithPulse")
+			m.t.Error("Expected call to ContractRequesterMock.SendRequest")
 		} else {
-			m.t.Errorf("Expected call to ContractRequesterMock.SendRequestWithPulse with params: %#v", *m.SendRequestWithPulseMock.defaultExpectation.params)
+			m.t.Errorf("Expected call to ContractRequesterMock.SendRequest with params: %#v", *m.SendRequestWithPulseMock.defaultExpectation.params)
 		}
 	}
 	// if func was set then invocations count should be greater than zero
 	if m.funcSendRequestWithPulse != nil && mm_atomic.LoadUint64(&m.afterSendRequestWithPulseCounter) < 1 {
-		m.t.Error("Expected call to ContractRequesterMock.SendRequestWithPulse")
+		m.t.Error("Expected call to ContractRequesterMock.SendRequest")
 	}
 }
 

@@ -18,13 +18,16 @@ package api
 
 import (
 	"context"
+	"fmt"
+	"net/http"
+
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/rpc/v2"
+	"github.com/insolar/rpc/v2/json2"
 	"github.com/pkg/errors"
-	"net/http"
 )
 
 func wrapCall(runner *Runner, allowedMethods map[string]bool, req *http.Request, args *requester.Params, requestBody *rpc.RequestBody, result *requester.ContractResult) error {
@@ -57,9 +60,19 @@ func wrapCall(runner *Runner, allowedMethods map[string]bool, req *http.Request,
 
 	setRootReferenceIfNeeded(args)
 
+	fmt.Println("AAAAA")
 	callResult, requestRef, err := runner.makeCall(ctx, "contract.call", *args, requestBody.Raw, signature, 0, seedPulse)
+
+	fmt.Println("BBBBB", requestRef)
 	if err != nil {
-		return err
+		return &json2.Error{
+			Code:    -320000,
+			Message: err.Error(),
+			Data: requester.Data{
+				TraceID:          traceID,
+				RequestReference: requestRef.String(),
+			},
+		}
 	}
 
 	if requestRef != nil {
