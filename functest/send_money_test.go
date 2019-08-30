@@ -48,20 +48,31 @@ func TestTransferMoney(t *testing.T) {
 	oldFirstBalance := getBalanceNoErr(t, firstMember, firstMember.Ref)
 	oldSecondBalance := getBalanceNoErr(t, secondMember, secondMember.Ref)
 
+	feeRes, err := signedRequest(t, launchnet.TestRPCUrlPublic, &launchnet.FeeMember, "member.get", nil)
+	require.Nil(t, err)
+	feeMemberRef, ok := feeRes.(map[string]interface{})["reference"].(string)
+	require.True(t, ok)
+	feeBalance := getBalanceNoErr(t, &launchnet.FeeMember, feeMemberRef)
+
 	amountStr := "10"
 	amount, _ := new(big.Int).SetString(amountStr, 10)
 	fee, _ := new(big.Int).SetString("10000000", 10)
 	expectedFirstBalance := new(big.Int).Sub(oldFirstBalance, amount)
 	expectedFirstBalance.Sub(expectedFirstBalance, fee)
 	expectedSecondBalance := new(big.Int).Add(oldSecondBalance, amount)
+	expectedFeeBalance := new(big.Int).Add(feeBalance, fee)
 
-	_, err := signedRequest(t, launchnet.TestRPCUrlPublic, firstMember, "member.transfer",
+	_, err = signedRequest(t, launchnet.TestRPCUrlPublic, firstMember, "member.transfer",
 		map[string]interface{}{"amount": amountStr, "toMemberReference": secondMember.Ref})
 	require.NoError(t, err)
 
 	checkBalanceFewTimes(t, secondMember, secondMember.Ref, expectedSecondBalance)
 	newFirstBalance := getBalanceNoErr(t, firstMember, firstMember.Ref)
 	require.Equal(t, expectedFirstBalance, newFirstBalance)
+
+	checkBalanceFewTimes(t, &launchnet.FeeMember, feeMemberRef, expectedFeeBalance)
+	newFeeBalance := getBalanceNoErr(t, &launchnet.FeeMember, feeMemberRef)
+	require.Equal(t, newFeeBalance, expectedFeeBalance)
 }
 
 func TestTransferMoneyFromNotExist(t *testing.T) {

@@ -28,9 +28,9 @@ type CostCenter struct {
 }
 
 // New creates new CostCenter.
-func New(feeAccount insolar.Reference) (*CostCenter, error) {
+func New(feeMember insolar.Reference) (*CostCenter, error) {
 	return &CostCenter{
-		FeeMember: feeAccount,
+		FeeMember: feeMember,
 	}, nil
 }
 

@@ -102,7 +102,7 @@ func GetAccountGenesisContractState(balance string, name string, parent string) 
 }
 
 func GetCostCenterGenesisContractState() insolar.GenesisContractState {
-	cc, err := costcenter.New(genesisrefs.ContractFeeAccount)
+	cc, err := costcenter.New(genesisrefs.ContractFeeMember)
 	if err != nil {
 		panic("failed to create cost center instance")
 	}
@@ -154,9 +154,9 @@ func GetMigrationAdminGenesisContractState(lokup int64, vesting int64, vestingSt
 		Prototype:  insolar.GenesisNameMigrationAdmin,
 		ParentName: insolar.GenesisNameRootDomain,
 		Memory: mustGenMemory(&migrationadmin.MigrationAdmin{
-			MigrationDaemons:     migrationDaemons,
+			MigrationDaemons:       migrationDaemons,
 			MigrationAddressShards: genesisrefs.ContractMigrationAddressShards,
-			MigrationAdminMember: genesisrefs.ContractMigrationAdminMember,
+			MigrationAdminMember:   genesisrefs.ContractMigrationAdminMember,
 			VestingParams: &migrationadmin.VestingParams{
 				Lokup:       lokup,
 				Vesting:     vesting,

@@ -241,6 +241,10 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 	trimmedMigrationAdminPublicKey := foundation.TrimPublicKey(g.ContractsConfig.MigrationAdminPublicKey)
 	index = foundation.GetShardIndex(trimmedMigrationAdminPublicKey, insolar.GenesisAmountPublicKeyShards)
 	MembersByPKShards[index][trimmedMigrationAdminPublicKey] = genesisrefs.ContractMigrationAdminMember.String()
+	trimmedFeeMemberPublicKey := foundation.TrimPublicKey(g.ContractsConfig.FeeMemberPublicKey)
+	index = foundation.GetShardIndex(trimmedFeeMemberPublicKey, insolar.GenesisAmountPublicKeyShards)
+	MembersByPKShards[index][trimmedFeeMemberPublicKey] = genesisrefs.ContractFeeMember.String()
+
 	for i, key := range g.ContractsConfig.MigrationDaemonPublicKeys {
 		trimmedMigrationDaemonPublicKey := foundation.TrimPublicKey(key)
 		index := foundation.GetShardIndex(trimmedMigrationDaemonPublicKey, insolar.GenesisAmountPublicKeyShards)

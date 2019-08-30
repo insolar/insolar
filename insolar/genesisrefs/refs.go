@@ -43,6 +43,7 @@ var PredefinedPrototypes = map[string]insolar.Reference{
 	insolar.GenesisNameDeposit + PrototypeSuffix:               *GenerateFromContractID(PrototypeType, insolar.GenesisNameDeposit, 0),
 	insolar.GenesisNameMember + PrototypeSuffix:                *GenerateFromContractID(PrototypeType, insolar.GenesisNameMember, 0),
 	insolar.GenesisNameMigrationAdminMember + PrototypeSuffix:  *GenerateFromContractID(PrototypeType, insolar.GenesisNameMember, 0),
+	insolar.GenesisNameFeeMember + PrototypeSuffix:             *GenerateFromContractID(PrototypeType, insolar.GenesisNameMember, 0),
 	insolar.GenesisNameMigrationAdmin + PrototypeSuffix:        *GenerateFromContractID(PrototypeType, insolar.GenesisNameMigrationAdmin, 0),
 	insolar.GenesisNameMigrationAdminWallet + PrototypeSuffix:  *GenerateFromContractID(PrototypeType, insolar.GenesisNameWallet, 0),
 	insolar.GenesisNameMigrationAdminAccount + PrototypeSuffix: *GenerateFromContractID(PrototypeType, insolar.GenesisNameAccount, 0),
@@ -74,6 +75,8 @@ var (
 	ContractDeposit = GenesisRef(insolar.GenesisNameDeposit)
 	// ContractCostCenter is the cost center contract reference.
 	ContractCostCenter = GenesisRef(insolar.GenesisNameCostCenter)
+	// ContractFeeMember is the commission member contract reference.
+	ContractFeeMember = GenesisRef(insolar.GenesisNameFeeMember)
 	// ContractFeeWallet is the commission wallet contract reference.
 	ContractFeeWallet = GenesisRef(insolar.GenesisNameFeeWallet)
 	// ContractFeeAccount is the commission account contract reference.
