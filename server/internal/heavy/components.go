@@ -280,7 +280,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 
 		sp := insolarPulse.NewStartPulse()
 
-		backupMaker, err := executor.NewBackupMaker(ctx, DB, cfg.Ledger.Backup, JetKeeper.TopSyncPulse())
+		backupMaker, err := executor.NewBackupMaker(ctx, DB, cfg.Ledger.Backup, JetKeeper.TopSyncPulse(), DB)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed create backuper")
 		}

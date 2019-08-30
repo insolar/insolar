@@ -263,7 +263,7 @@ func TestBackupSendDeleteRecords(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Stop(context.Background())
 
-	bm, err := executor.NewBackupMaker(context.Background(), db, cfg, insolar.GenesisPulse.PulseNumber)
+	bm, err := executor.NewBackupMaker(context.Background(), db, cfg, insolar.GenesisPulse.PulseNumber, db)
 	require.NoError(t, err)
 
 	key := &testKey{id: uint64(3)}
