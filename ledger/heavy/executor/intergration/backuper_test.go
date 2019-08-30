@@ -100,7 +100,7 @@ func TestBackuper(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Stop(context.Background())
 
-	bm, err := executor.NewBackupMaker(context.Background(), db, cfg, insolar.GenesisPulse.PulseNumber)
+	bm, err := executor.NewBackupMaker(context.Background(), db, cfg, insolar.GenesisPulse.PulseNumber, db)
 	require.NoError(t, err)
 
 	savedKeys := make(map[store.Key]insolar.PulseNumber, 0)
@@ -162,6 +162,8 @@ func TestBackuper(t *testing.T) {
 		require.NoError(t, err)
 		defer os.RemoveAll(recovTmpDir)
 
+		prepareDirForBackup(t, recovTmpDir)
+
 		for i := 0; i < numIterations+1; i++ {
 			bkpFileName := filepath.Join(
 				cfg.TargetDirectory,
@@ -201,10 +203,23 @@ func init() {
 	}
 }
 
+// prepareDirForBackup uses backupmerger utility to create empty badger
+func prepareDirForBackup(t *testing.T, dbDir string) {
+	println("=====> Start creating db for backup")
+	cmd := exec.Command(binaryPath+"/backupmerger", "create", "-d", dbDir)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err := cmd.Start()
+	require.NoError(t, err)
+	err = cmd.Wait()
+	require.NoError(t, err)
+	println("<===== Finish creating db for backup")
+}
+
 // loadIncrementalBackup uses backupmerger utility to roll backups
 func loadIncrementalBackup(t *testing.T, dbDir string, backupFile string) {
 	println("=====> Start loading backup")
-	cmd := exec.Command(binaryPath+"/backupmerger", "-t", dbDir, "-n", backupFile)
+	cmd := exec.Command(binaryPath+"/backupmerger", "merge", "-t", dbDir, "-n", backupFile)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	err := cmd.Start()
@@ -286,6 +301,7 @@ func TestBackupSendDeleteRecords(t *testing.T) {
 		cfg.BackupFile,
 	)
 
+	prepareDirForBackup(t, recovTmpDir)
 	loadIncrementalBackup(t, recovTmpDir, bkpFileName)
 	recoveredDB, err := store.NewBadgerDB(badger.DefaultOptions(recovTmpDir))
 	require.NoError(t, err)
