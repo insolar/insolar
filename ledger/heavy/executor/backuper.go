@@ -70,6 +70,7 @@ type BackupMakerDefault struct {
 	lastBackupedPulse   insolar.PulseNumber
 	backuper            store.Backuper
 	config              configuration.Backup
+	db                  store.DB
 }
 
 func isPathExists(dirName string) error {
@@ -112,7 +113,12 @@ func checkConfig(config configuration.Backup) error {
 	return nil
 }
 
-func NewBackupMaker(ctx context.Context, backuper store.Backuper, config configuration.Backup, lastBackupedPulse insolar.PulseNumber) (*BackupMakerDefault, error) {
+func NewBackupMaker(ctx context.Context,
+	backuper store.Backuper,
+	config configuration.Backup,
+	lastBackupedPulse insolar.PulseNumber,
+	db store.DB,
+) (*BackupMakerDefault, error) {
 	if config.Enabled {
 		if err := checkConfig(config); err != nil {
 			return nil, errors.Wrap(err, "bad config")
@@ -125,6 +131,7 @@ func NewBackupMaker(ctx context.Context, backuper store.Backuper, config configu
 		backuper:          backuper,
 		config:            config,
 		lastBackupedPulse: lastBackupedPulse,
+		db:                db,
 	}, nil
 }
 
@@ -213,8 +220,22 @@ func invokeBackupPostProcessCommand(ctx context.Context, command []string, curre
 	return nil
 }
 
+type BackupStartKey insolar.PulseNumber
+
+func (k BackupStartKey) Scope() store.Scope {
+	return store.ScopeBackupStart
+}
+
+func (k BackupStartKey) ID() []byte {
+	return insolar.PulseNumber(k).Bytes()
+}
+
 // prepareBackup make incremental backup and write auxiliary file with meta info
-func (b *BackupMakerDefault) prepareBackup(dirHolder *tmpDirHolder, pulse insolar.PulseNumber) (currentBackupedVersion uint64, err error) {
+func (b *BackupMakerDefault) prepareBackup(dirHolder *tmpDirHolder, pulse insolar.PulseNumber) (uint64, error) {
+	err := b.db.Set(BackupStartKey(pulse), []byte{})
+	if err != nil {
+		return 0, errors.Wrap(err, "Failed to set start backup key")
+	}
 	currentBT, err := b.backuper.Backup(dirHolder.tmpFile, b.lastBackupedVersion)
 	if err != nil {
 		return 0, errors.Wrap(err, "Backup return error")
