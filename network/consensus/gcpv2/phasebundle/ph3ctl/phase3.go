@@ -485,7 +485,7 @@ outer:
 			switch {
 			case d.HasMissingMembers():
 				if queueMissing == nil {
-					queueMissing = make(chan inspectors.InspectedVector, len(c.queuePh3Recv))
+					queueMissing = make(chan inspectors.InspectedVector, cap(c.queuePh3Recv))
 					go c.workerRescanForMissing(ctx, queueMissing)
 				}
 				queueMissing <- d
