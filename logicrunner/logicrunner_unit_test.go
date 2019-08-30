@@ -416,6 +416,8 @@ func TestLogicRunner_OnPulse(t *testing.T) {
 						isDone()
 					})
 
+				lr.ResultsMatcher = newResultsMatcher(lr.Sender, lr.PulseAccessor)
+
 				return lr
 			},
 		},
@@ -438,6 +440,8 @@ func TestLogicRunner_OnPulse(t *testing.T) {
 					func(ctx context.Context, isDone func() bool) {
 						isDone()
 					})
+
+				lr.ResultsMatcher = newResultsMatcher(lr.Sender, lr.PulseAccessor)
 
 				return lr
 			},
@@ -509,6 +513,8 @@ func TestLogicRunner_OnPulse_Order(t *testing.T) {
 			orderChan <- OrderFlagDone
 			isDone()
 		})
+
+	lr.ResultsMatcher = newResultsMatcher(lr.Sender, lr.PulseAccessor)
 
 	oldPulse := insolar.Pulse{PulseNumber: pulse.MinTimePulse}
 	newPulse := insolar.Pulse{PulseNumber: pulse.MinTimePulse + 1}
