@@ -33,7 +33,7 @@ func (h *HandleSagaCallAcceptNotification) Present(ctx context.Context, f flow.F
 		return fmt.Errorf("unexpected request received %T", rec)
 	}
 
-	outgoingReqRef := insolar.NewReference(msg.DetachedRequestID)
+	outgoingReqRef := insolar.NewRecordReference(msg.DetachedRequestID)
 	_, _, _, err = h.dep.OutgoingSender.SendOutgoingRequest(ctx, *outgoingReqRef, outgoing)
 	return err
 }

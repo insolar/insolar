@@ -189,10 +189,10 @@ func (m *executionProxyImplementation) RouteCall(
 
 	// Step 2. Send the request and register the result (both is done by outgoingSender)
 
-	outgoingReqRef := insolar.NewReference(outReqInfo.RequestID)
+	outgoingReqRef := *outReqInfo.RequestReference()
 
 	var incoming *record.IncomingRequest
-	_, rep.Result, incoming, err = m.outgoingSender.SendOutgoingRequest(ctx, *outgoingReqRef, outgoing)
+	_, rep.Result, incoming, err = m.outgoingSender.SendOutgoingRequest(ctx, outgoingReqRef, outgoing)
 	if incoming != nil {
 		current.AddOutgoingRequest(ctx, *incoming, rep.Result, nil, err)
 	}
@@ -219,9 +219,10 @@ func (m *executionProxyImplementation) SaveAsChild(
 	}
 
 	// Register result of the outgoing method
-	outgoingReqRef := insolar.NewReference(outReqInfo.RequestID)
+	outgoingReqRef := *outReqInfo.RequestReference()
+
 	var incoming *record.IncomingRequest
-	rep.Reference, rep.Result, incoming, err = m.outgoingSender.SendOutgoingRequest(ctx, *outgoingReqRef, outgoing)
+	rep.Reference, rep.Result, incoming, err = m.outgoingSender.SendOutgoingRequest(ctx, outgoingReqRef, outgoing)
 	if incoming != nil {
 		current.AddOutgoingRequest(ctx, *incoming, rep.Result, nil, err)
 	}

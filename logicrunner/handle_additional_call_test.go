@@ -106,8 +106,10 @@ func TestAdditionalCallFromPreviousExecutor_Proceed(t *testing.T) {
 		msg := &payload.AdditionalCallFromPreviousExecutor{
 			ObjectReference: obj,
 			RequestRef:      reqRef,
-			Request:         &record.IncomingRequest{},
-			Pending:         insolar.NotPending,
+			Request: &record.IncomingRequest{
+				Object: &obj,
+			},
+			Pending: insolar.NotPending,
 		}
 
 		stateStorage := NewStateStorageMock(t).
@@ -138,8 +140,10 @@ func TestAdditionalCallFromPreviousExecutor_Proceed(t *testing.T) {
 		msg := &payload.AdditionalCallFromPreviousExecutor{
 			ObjectReference: obj,
 			RequestRef:      reqRef,
-			Request:         &record.IncomingRequest{},
-			Pending:         insolar.InPending,
+			Request: &record.IncomingRequest{
+				Object: &obj,
+			},
+			Pending: insolar.InPending,
 		}
 
 		stateStorage := NewStateStorageMock(t).

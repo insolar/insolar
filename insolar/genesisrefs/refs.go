@@ -31,22 +31,22 @@ const (
 )
 
 var PredefinedPrototypes = map[string]insolar.Reference{
-	insolar.GenesisNameRootDomain + PrototypeSuffix:            *GenerateFromContractID(PrototypeType, insolar.GenesisNameRootDomain, 0),
-	insolar.GenesisNameNodeDomain + PrototypeSuffix:            *GenerateFromContractID(PrototypeType, insolar.GenesisNameNodeDomain, 0),
-	insolar.GenesisNameNodeRecord + PrototypeSuffix:            *GenerateFromContractID(PrototypeType, insolar.GenesisNameNodeRecord, 0),
-	insolar.GenesisNameRootMember + PrototypeSuffix:            *GenerateFromContractID(PrototypeType, insolar.GenesisNameMember, 0),
-	insolar.GenesisNameRootWallet + PrototypeSuffix:            *GenerateFromContractID(PrototypeType, insolar.GenesisNameWallet, 0),
-	insolar.GenesisNameRootAccount + PrototypeSuffix:           *GenerateFromContractID(PrototypeType, insolar.GenesisNameAccount, 0),
-	insolar.GenesisNameCostCenter + PrototypeSuffix:            *GenerateFromContractID(PrototypeType, insolar.GenesisNameCostCenter, 0),
-	insolar.GenesisNameFeeWallet + PrototypeSuffix:             *GenerateFromContractID(PrototypeType, insolar.GenesisNameWallet, 0),
-	insolar.GenesisNameFeeAccount + PrototypeSuffix:            *GenerateFromContractID(PrototypeType, insolar.GenesisNameAccount, 0),
-	insolar.GenesisNameDeposit + PrototypeSuffix:               *GenerateFromContractID(PrototypeType, insolar.GenesisNameDeposit, 0),
-	insolar.GenesisNameMember + PrototypeSuffix:                *GenerateFromContractID(PrototypeType, insolar.GenesisNameMember, 0),
-	insolar.GenesisNameMigrationAdminMember + PrototypeSuffix:  *GenerateFromContractID(PrototypeType, insolar.GenesisNameMember, 0),
-	insolar.GenesisNameMigrationAdmin + PrototypeSuffix:        *GenerateFromContractID(PrototypeType, insolar.GenesisNameMigrationAdmin, 0),
-	insolar.GenesisNameMigrationAdminWallet + PrototypeSuffix:  *GenerateFromContractID(PrototypeType, insolar.GenesisNameWallet, 0),
-	insolar.GenesisNameMigrationAdminAccount + PrototypeSuffix: *GenerateFromContractID(PrototypeType, insolar.GenesisNameAccount, 0),
-	insolar.GenesisNameWallet + PrototypeSuffix:                *GenerateFromContractID(PrototypeType, insolar.GenesisNameWallet, 0),
+	insolar.GenesisNameRootDomain + PrototypeSuffix:            *GenerateProtoReferenceFromContractID(PrototypeType, insolar.GenesisNameRootDomain, 0),
+	insolar.GenesisNameNodeDomain + PrototypeSuffix:            *GenerateProtoReferenceFromContractID(PrototypeType, insolar.GenesisNameNodeDomain, 0),
+	insolar.GenesisNameNodeRecord + PrototypeSuffix:            *GenerateProtoReferenceFromContractID(PrototypeType, insolar.GenesisNameNodeRecord, 0),
+	insolar.GenesisNameRootMember + PrototypeSuffix:            *GenerateProtoReferenceFromContractID(PrototypeType, insolar.GenesisNameMember, 0),
+	insolar.GenesisNameRootWallet + PrototypeSuffix:            *GenerateProtoReferenceFromContractID(PrototypeType, insolar.GenesisNameWallet, 0),
+	insolar.GenesisNameRootAccount + PrototypeSuffix:           *GenerateProtoReferenceFromContractID(PrototypeType, insolar.GenesisNameAccount, 0),
+	insolar.GenesisNameCostCenter + PrototypeSuffix:            *GenerateProtoReferenceFromContractID(PrototypeType, insolar.GenesisNameCostCenter, 0),
+	insolar.GenesisNameFeeWallet + PrototypeSuffix:             *GenerateProtoReferenceFromContractID(PrototypeType, insolar.GenesisNameWallet, 0),
+	insolar.GenesisNameFeeAccount + PrototypeSuffix:            *GenerateProtoReferenceFromContractID(PrototypeType, insolar.GenesisNameAccount, 0),
+	insolar.GenesisNameDeposit + PrototypeSuffix:               *GenerateProtoReferenceFromContractID(PrototypeType, insolar.GenesisNameDeposit, 0),
+	insolar.GenesisNameMember + PrototypeSuffix:                *GenerateProtoReferenceFromContractID(PrototypeType, insolar.GenesisNameMember, 0),
+	insolar.GenesisNameMigrationAdminMember + PrototypeSuffix:  *GenerateProtoReferenceFromContractID(PrototypeType, insolar.GenesisNameMember, 0),
+	insolar.GenesisNameMigrationAdmin + PrototypeSuffix:        *GenerateProtoReferenceFromContractID(PrototypeType, insolar.GenesisNameMigrationAdmin, 0),
+	insolar.GenesisNameMigrationAdminWallet + PrototypeSuffix:  *GenerateProtoReferenceFromContractID(PrototypeType, insolar.GenesisNameWallet, 0),
+	insolar.GenesisNameMigrationAdminAccount + PrototypeSuffix: *GenerateProtoReferenceFromContractID(PrototypeType, insolar.GenesisNameAccount, 0),
+	insolar.GenesisNameWallet + PrototypeSuffix:                *GenerateProtoReferenceFromContractID(PrototypeType, insolar.GenesisNameWallet, 0),
 }
 
 var (
@@ -110,16 +110,26 @@ var (
 )
 
 // Generate reference from hash code.
-func GenerateFromCode(pulse insolar.PulseNumber, code []byte) *insolar.Reference {
+func GenerateProtoReferenceFromCode(pulse insolar.PulseNumber, code []byte) *insolar.Reference {
 	hasher := platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher()
 	codeHash := hasher.Hash(code)
-	return insolar.NewReference(*insolar.NewID(pulse, codeHash))
+	id := insolar.NewID(pulse, codeHash)
+	return insolar.NewReference(*id)
 }
 
-// Generate reference from contract id.
-func GenerateFromContractID(typeContractID string, name string, version int) *insolar.Reference {
+// Generate prototype reference from contract id.
+func GenerateProtoReferenceFromContractID(typeContractID string, name string, version int) *insolar.Reference {
 	contractID := fmt.Sprintf("%s::%s::v%02d", typeContractID, name, version)
-	return GenerateFromCode(pulse.BuiltinContract, []byte(contractID))
+	return GenerateProtoReferenceFromCode(pulse.BuiltinContract, []byte(contractID))
+}
+
+// Generate contract reference from contract id.
+func GenerateCodeReferenceFromContractID(typeContractID string, name string, version int) *insolar.Reference {
+	contractID := fmt.Sprintf("%s::%s::v%02d", typeContractID, name, version)
+	hasher := platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher()
+	codeHash := hasher.Hash([]byte(contractID))
+	id := insolar.NewID(pulse.BuiltinContract, codeHash)
+	return insolar.NewRecordReference(*id)
 }
 
 // GenesisRef returns reference to any genesis records.

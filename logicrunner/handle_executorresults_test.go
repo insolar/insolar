@@ -34,6 +34,8 @@ import (
 )
 
 func TestHandleExecutorResults_Present(t *testing.T) {
+	objectRef1, objectRef2 := gen.Reference(), gen.Reference()
+
 	tests := []struct {
 		name  string
 		mocks func(t minimock.Tester) (*HandleExecutorResults, flow.Flow)
@@ -49,13 +51,13 @@ func TestHandleExecutorResults_Present(t *testing.T) {
 					LedgerHasMoreRequests: true,
 					Queue: []*payload.ExecutionQueueElement{
 						{
-							RequestRef: gen.Reference(),
-							Incoming: &record.IncomingRequest{},
+							RequestRef:  gen.Reference(),
+							Incoming:    &record.IncomingRequest{Object: &objectRef1},
 							ServiceData: &payload.ServiceData{},
 						},
 						{
-							RequestRef: gen.Reference(),
-							Incoming: &record.IncomingRequest{},
+							RequestRef:  gen.Reference(),
+							Incoming:    &record.IncomingRequest{Object: &objectRef2},
 							ServiceData: &payload.ServiceData{},
 						},
 					},
@@ -87,8 +89,8 @@ func TestHandleExecutorResults_Present(t *testing.T) {
 			mocks: func(t minimock.Tester) (*HandleExecutorResults, flow.Flow) {
 				obj := gen.Reference()
 				receivedPayload := &payload.ExecutorResults{
-					RecordRef:             obj,
-					Pending:               insolar.NotPending,
+					RecordRef: obj,
+					Pending:   insolar.NotPending,
 				}
 
 				buf, err := payload.Marshal(receivedPayload)
@@ -115,8 +117,8 @@ func TestHandleExecutorResults_Present(t *testing.T) {
 			mocks: func(t minimock.Tester) (*HandleExecutorResults, flow.Flow) {
 				obj := gen.Reference()
 				receivedPayload := &payload.ExecutorResults{
-					RecordRef:             obj,
-					Pending:               insolar.NotPending,
+					RecordRef: obj,
+					Pending:   insolar.NotPending,
 				}
 
 				buf, err := payload.Marshal(receivedPayload)
@@ -139,8 +141,8 @@ func TestHandleExecutorResults_Present(t *testing.T) {
 			mocks: func(t minimock.Tester) (*HandleExecutorResults, flow.Flow) {
 				obj := gen.Reference()
 				receivedPayload := &payload.ExecutorResults{
-					RecordRef:             obj,
-					Pending:               insolar.NotPending,
+					RecordRef: obj,
+					Pending:   insolar.NotPending,
 				}
 
 				buf, err := payload.Marshal(receivedPayload)
@@ -162,8 +164,8 @@ func TestHandleExecutorResults_Present(t *testing.T) {
 			name: "error, bad data",
 			mocks: func(t minimock.Tester) (*HandleExecutorResults, flow.Flow) {
 				h := &HandleExecutorResults{
-					dep: &Dependencies{},
-					meta: payload.Meta{Payload: []byte{3,2,1}},
+					dep:  &Dependencies{},
+					meta: payload.Meta{Payload: []byte{3, 2, 1}},
 				}
 				f := flow.NewFlowMock(t)
 				return h, f

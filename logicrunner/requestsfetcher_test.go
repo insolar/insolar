@@ -36,6 +36,8 @@ func TestRequestsFetcher_New(t *testing.T) {
 }
 
 func TestRequestsFetcher_FetchPendings(t *testing.T) {
+	objectRef := gen.Reference()
+
 	tests := []struct {
 		name  string
 		mocks func(t minimock.Tester) (insolar.Reference, artifacts.Client, ExecutionBrokerI)
@@ -47,7 +49,7 @@ func TestRequestsFetcher_FetchPendings(t *testing.T) {
 				reqRef := gen.Reference()
 				am := artifacts.NewClientMock(t).
 					GetPendingsMock.Return([]insolar.Reference{reqRef}, nil).
-					GetAbandonedRequestMock.Return(&record.IncomingRequest{}, nil)
+					GetAbandonedRequestMock.Return(&record.IncomingRequest{Object: &objectRef}, nil)
 				broker := NewExecutionBrokerIMock(t).
 					IsKnownRequestMock.Return(false).
 					AddRequestsFromLedgerMock.Return()

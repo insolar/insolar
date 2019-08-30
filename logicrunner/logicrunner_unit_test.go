@@ -143,9 +143,11 @@ func (suite *LogicRunnerTestSuite) AfterTest(suiteName, testName string) {
 }
 
 func (suite *LogicRunnerTestSuite) TestSagaCallAcceptNotificationHandler() {
+	objectRef := gen.Reference()
 	outgoing := record.OutgoingRequest{
 		Caller:     gen.Reference(),
-		Reason:     gen.Reference(),
+		Reason:     gen.RecordReference(),
+		Object:     &objectRef,
 		ReturnMode: record.ReturnSaga,
 	}
 	virtual := record.Wrap(&outgoing)
