@@ -356,7 +356,7 @@ func (m *client) GetObject(
 		state:       *index.LatestState,
 		prototype:   state.GetImage(),
 		isPrototype: state.GetIsPrototype(),
-		memory:      statePayload.Memory,
+		memory:      s.GetMemory(),
 		parent:      index.Parent,
 	}
 	return desc, nil
@@ -513,7 +513,6 @@ func (m *client) DeployCode(
 	}
 
 	codeRec := record.Code{
-		Domain:      domain,
 		Code:        code,
 		MachineType: machineType,
 	}
