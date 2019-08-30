@@ -45,6 +45,7 @@ type Metrics struct {
 	registry *prometheus.Registry
 
 	server   *http.Server
+	mux      *http.ServeMux
 	listener net.Listener
 
 	nodeRole string
@@ -58,7 +59,7 @@ func NewMetrics(ctx context.Context, cfg configuration.Metrics, registry *promet
 	mux := http.NewServeMux()
 	mux.Handle("/metrics", promhandler)
 	mux.Handle("/_status", newProcStatus())
-	mux.Handle("/debug/loglevel", log.NewLoglevelChangeHandler())
+
 	pprof.Handle(mux)
 	if cfg.ZpagesEnabled {
 		// https://opencensus.io/zpages/
@@ -72,6 +73,7 @@ func NewMetrics(ctx context.Context, cfg configuration.Metrics, registry *promet
 			Addr:    cfg.ListenAddress,
 			Handler: mux,
 		},
+		mux:      mux,
 		nodeRole: nodeRole,
 	}
 
@@ -85,6 +87,7 @@ var ErrBind = errors.New("Failed to bind")
 // Start is implementation of insolar.Component interface.
 func (m *Metrics) Start(ctx context.Context) error {
 	inslog := inslogger.FromContext(ctx)
+	m.mux.Handle("/debug/logs/", log.NewLogHandler("/debug/logs/", inslog.Controller()))
 
 	_, err := insmetrics.RegisterPrometheus(
 		m.config.Namespace, m.registry, m.config.ReportingPeriod,

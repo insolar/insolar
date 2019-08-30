@@ -32,7 +32,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-var insolarPrefix = "github.com/insolar/insolar/"
+var insolarPrefix = insolar.RootModule + "/"
 
 func trimInsolarPrefix(file string, line int) string {
 	var skip = 0
@@ -40,6 +40,16 @@ func trimInsolarPrefix(file string, line int) string {
 		skip = idx + len(insolarPrefix)
 	}
 	return file[skip:] + ":" + strconv.Itoa(line)
+}
+
+// fast level 'map' when we are sure a insolar log level has proper value.
+var insLevelToZerologLevel = []zerolog.Level{
+	insolar.DebugLevel: zerolog.DebugLevel,
+	insolar.InfoLevel:  zerolog.InfoLevel,
+	insolar.WarnLevel:  zerolog.WarnLevel,
+	insolar.ErrorLevel: zerolog.ErrorLevel,
+	insolar.FatalLevel: zerolog.FatalLevel,
+	insolar.PanicLevel: zerolog.PanicLevel,
 }
 
 func init() {
@@ -54,10 +64,13 @@ type callerHookConfig struct {
 }
 
 type zerologAdapter struct {
-	logger       zerolog.Logger
-	diodeWriter  *diode.Writer
-	level        zerolog.Level
+	logger      zerolog.Logger
+	diodeWriter *diode.Writer
+	level       zerolog.Level
+
 	callerConfig callerHookConfig
+
+	controller insolar.LogController
 }
 
 func InternalLevelToZerologLevel(level insolar.LogLevel) (zerolog.Level, error) {
@@ -161,49 +174,59 @@ func (z *zerologAdapter) WithField(key string, value interface{}) insolar.Logger
 // Debug logs a message at level Debug on the stdout.
 func (z *zerologAdapter) Debug(args ...interface{}) {
 	stats.Record(contextWithLogLevel(zerolog.DebugLevel), statLogCalls.M(1))
-	z.loggerWithHooks().Debug().Msg(fmt.Sprint(args...))
+	l := z.loggerPrepare(insolar.DebugLevel)
+	l.Debug().Msg(fmt.Sprint(args...))
 }
 
 // Debugf formatted logs a message at level Debug on the stdout.
 func (z *zerologAdapter) Debugf(format string, args ...interface{}) {
 	stats.Record(contextWithLogLevel(zerolog.DebugLevel), statLogCalls.M(1))
-	z.loggerWithHooks().Debug().Msgf(format, args...)
+
+	l := z.loggerPrepare(insolar.DebugLevel)
+	l.Debug().Msgf(format, args...)
 }
 
 // Info logs a message at level Info on the stdout.
 func (z *zerologAdapter) Info(args ...interface{}) {
 	stats.Record(contextWithLogLevel(zerolog.InfoLevel), statLogCalls.M(1))
-	z.loggerWithHooks().Info().Msg(fmt.Sprint(args...))
+	l := z.loggerPrepare(insolar.InfoLevel)
+	l.Info().Msg(fmt.Sprint(args...))
 }
 
 // Infof formatted logs a message at level Info on the stdout.
 func (z *zerologAdapter) Infof(format string, args ...interface{}) {
 	stats.Record(contextWithLogLevel(zerolog.InfoLevel), statLogCalls.M(1))
-	z.loggerWithHooks().Info().Msgf(format, args...)
+	l := z.loggerPrepare(insolar.InfoLevel)
+	l.Info().Msgf(format, args...)
 }
 
 // Warn logs a message at level Warn on the stdout.
 func (z *zerologAdapter) Warn(args ...interface{}) {
 	stats.Record(contextWithLogLevel(zerolog.WarnLevel), statLogCalls.M(1))
-	z.loggerWithHooks().Warn().Msg(fmt.Sprint(args...))
+	l := z.loggerPrepare(insolar.WarnLevel)
+	l.Warn().Msg(fmt.Sprint(args...))
 }
 
 // Warnf formatted logs a message at level Warn on the stdout.
 func (z *zerologAdapter) Warnf(format string, args ...interface{}) {
 	stats.Record(contextWithLogLevel(zerolog.WarnLevel), statLogCalls.M(1))
-	z.loggerWithHooks().Warn().Msgf(format, args...)
+	l := z.loggerPrepare(insolar.WarnLevel)
+	l.Warn().Msgf(format, args...)
 }
 
 // Error logs a message at level Error on the stdout.
 func (z *zerologAdapter) Error(args ...interface{}) {
 	stats.Record(contextWithLogLevel(zerolog.ErrorLevel), statLogCalls.M(1))
-	z.loggerWithHooks().Error().Msg(fmt.Sprint(args...))
+	l := z.loggerPrepare(insolar.ErrorLevel)
+	l.Error().Msg(fmt.Sprint(args...))
+	// z.loggerWithHooks().Error().Msg(fmt.Sprint(args...))
 }
 
 // Errorf formatted logs a message at level Error on the stdout.
 func (z *zerologAdapter) Errorf(format string, args ...interface{}) {
 	stats.Record(contextWithLogLevel(zerolog.ErrorLevel), statLogCalls.M(1))
-	z.loggerWithHooks().Error().Msgf(format, args...)
+	l := z.loggerPrepare(insolar.ErrorLevel)
+	l.Error().Msgf(format, args...)
 }
 
 // fatalDiodeHook is a hack for log.Fatal when diode is being used.
@@ -372,6 +395,16 @@ func (z *zerologAdapter) WithFormat(format insolar.LogFormat) (insolar.Logger, e
 	return z.WithOutput(output), nil
 }
 
+func (z *zerologAdapter) WithController(lc insolar.LogController) insolar.Logger {
+	zCopy := *z
+	zCopy.controller = lc
+	return &zCopy
+}
+
+func (z *zerologAdapter) Controller() insolar.LogController {
+	return z.controller
+}
+
 func (z *zerologAdapter) loggerWithHooks() *zerolog.Logger {
 	l := z.logger
 	if z.callerConfig.funcname {
@@ -379,9 +412,27 @@ func (z *zerologAdapter) loggerWithHooks() *zerolog.Logger {
 	} else if z.callerConfig.enabled {
 		l = l.With().CallerWithSkipFrameCount(z.callerConfig.skipFrameCount).Logger()
 	}
+
 	return &l
 }
 
+func (z *zerologAdapter) loggerPrepare(level insolar.LogLevel) *zerolog.Logger {
+	zCopy := *z
+	l := zCopy.logger
+	if z.controller != nil {
+		info := getCallInfo(z.callerConfig.skipFrameCount)
+
+		newLevel := z.controller.Check(info.fileName, level)
+		if level != newLevel {
+			l = l.With().Logger().Level(insLevelToZerologLevel[newLevel])
+		}
+	}
+
+	// TODO: if filter enabled we can use info data in caller hook
+	return zCopy.loggerWithHooks()
+}
+
+// Is returns if passed log level equal current log level.
 func (z *zerologAdapter) Is(level insolar.LogLevel) bool {
 	zerologLevel, err := InternalLevelToZerologLevel(level)
 	if err != nil {

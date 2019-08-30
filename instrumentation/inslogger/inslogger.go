@@ -40,6 +40,8 @@ func InitNodeLogger(
 	if err != nil {
 		panic(err)
 	}
+	lc := logger.NewController()
+	inslog = inslog.WithController(lc)
 
 	ctx = SetLogger(ctx, inslog)
 	ctx, _ = WithTraceField(ctx, traceID)

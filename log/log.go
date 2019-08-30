@@ -112,6 +112,7 @@ func GlobalLogger() insolar.Logger {
 }
 
 // SetGlobalLogger sets global logger, it's thread unsafe, so never use it in code which could run concurrently.
+// Increases skip frame count by one, so if you are saving changed global logger, don't forget to decrease it by one.
 func SetGlobalLogger(logger insolar.Logger) {
 	globalLogger = logger.WithSkipFrameCount(1).WithField("loginstance", "global")
 }

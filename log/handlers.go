@@ -19,42 +19,132 @@ package log
 import (
 	"fmt"
 	"net/http"
+	"os"
+	"runtime/debug"
+
+	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/middleware"
+	"github.com/go-chi/render"
+	"github.com/rs/zerolog"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/rs/zerolog"
 )
 
-type loglevelChangeHandler struct {
+// LogHandler is an HTTP handler that changes the log level.
+type LogHandler struct {
+	mux           *chi.Mux
+	logController insolar.LogController
 }
 
-func NewLoglevelChangeHandler() http.Handler {
-	handler := &loglevelChangeHandler{}
-	return handler
-}
-
-// ServeHTTP is an HTTP handler that changes the global minimum log level
-func (h *loglevelChangeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	values := r.URL.Query()
-	levelStr := "(nil)"
-	if values["level"] != nil {
-		levelStr = values["level"][0]
+func NewLogHandler(base string, logController insolar.LogController) *LogHandler {
+	r := chi.NewRouter()
+	lh := &LogHandler{
+		mux:           r,
+		logController: logController,
 	}
+	r.Use(recoverer)
+	r.Use(middleware.Throttle(1))
+	r.Use(render.SetContentType(render.ContentTypeJSON))
+
+	r.Route(base, func(r chi.Router) {
+		r.Get("/", lh.getRules)
+		r.Post("/", lh.setRule)
+		r.Delete("/", lh.deleteRule)
+	})
+
+	return lh
+}
+
+type jsonErr struct {
+	Error string
+}
+
+type RuleItem struct {
+	Level  string `json:"level"`
+	Prefix string `json:"prefix"`
+}
+
+func (lh *LogHandler) deleteRule(w http.ResponseWriter, r *http.Request) {
+	prefixStr := r.URL.Query().Get("prefix")
+	ok := lh.logController.Del(prefixStr)
+	if !ok {
+		render.Status(r, http.StatusNoContent)
+		return
+	}
+
+	render.JSON(w, r, struct {
+		Prefix string `json:"prefix"`
+	}{Prefix: prefixStr})
+}
+
+func (lh *LogHandler) setRule(w http.ResponseWriter, r *http.Request) {
+	levelStr := r.URL.Query().Get("level")
 	level, err := insolar.ParseLevel(levelStr)
 	if err != nil {
-		w.WriteHeader(500)
-		_, _ = fmt.Fprintf(w, "Invalid level '%v': %v\n", levelStr, err)
+		render.Status(r, http.StatusBadRequest)
+		render.JSON(w, r,
+			jsonErr{fmt.Sprintf("Invalid level '%v': %v\n", levelStr, err)})
 		return
 	}
 
-	zlevel, err := InternalLevelToZerologLevel(level)
-	if err != nil {
-		w.WriteHeader(500)
-		_, _ = fmt.Fprintf(w, "Invalid level '%v': %v\n", levelStr, err)
+	if level == insolar.NoLevel {
+		render.Status(r, http.StatusBadRequest)
+		render.JSON(w, r,
+			jsonErr{"level value should not be empty"})
 		return
 	}
 
-	zerolog.SetGlobalLevel(zlevel)
+	prefixStr := r.URL.Query().Get("prefix")
+	lh.logController.Set(prefixStr, level)
+	render.JSON(w, r, struct {
+		Level  string `json:"level"`
+		Prefix string `json:"prefix"`
+	}{
+		Level:  level.String(),
+		Prefix: prefixStr,
+	})
+}
 
-	w.WriteHeader(200)
-	_, _ = fmt.Fprintf(w, "New log level: '%v'\n", levelStr)
+func (lh *LogHandler) getRules(w http.ResponseWriter, r *http.Request) {
+	render.JSON(w, r, struct {
+		GlobalLevel string     `json:"global_level"`
+		Items       []RuleItem `json:"items"`
+	}{
+		GlobalLevel: zerolog.GlobalLevel().String(),
+		Items: func() (items []RuleItem) {
+			for _, item := range lh.logController.List() {
+				items = append(items, RuleItem{
+					Level:  item.Level.String(),
+					Prefix: item.Prefix,
+				})
+			}
+			return
+		}(),
+	})
+}
+
+// ServeHTTP implements http.Handler.
+func (lh *LogHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if lh.logController == nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = w.Write([]byte("log controller not initialized"))
+		return
+	}
+	lh.mux.ServeHTTP(w, r)
+}
+
+// recoverer is a chi middleware. handles panics in handlers.
+func recoverer(next http.Handler) http.Handler {
+	fn := func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if rvr := recover(); rvr != nil {
+				_, _ = fmt.Fprintf(os.Stderr, "Log Controller API Panic: %+v\n", rvr)
+				debug.PrintStack()
+				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			}
+		}()
+
+		next.ServeHTTP(w, r)
+	}
+	return http.HandlerFunc(fn)
 }

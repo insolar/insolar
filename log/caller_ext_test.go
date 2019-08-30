@@ -19,14 +19,16 @@ package log_test
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"runtime"
 	"strconv"
 	"testing"
 
-	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/log"
 )
 
 // Beware, test results there depends on test file name (caller_test.go)!
@@ -85,36 +87,53 @@ func TestExtLog_ZerologCallerWithFunc(t *testing.T) {
 	assert.Equal(t, "TestExtLog_ZerologCallerWithFunc", lf.Func, "log contains func name")
 }
 
-func TestExtLog_GlobalCaller(t *testing.T) {
-	gl := log.GlobalLogger
-	defer func() { log.GlobalLogger = gl }()
+func TestExtLog_GlobalCallerNoFunc(t *testing.T) {
+	gl := log.GlobalLogger().WithSkipFrameCount(-1)
+	defer log.SetGlobalLogger(gl)
 
-	var b bytes.Buffer
-	log.GlobalLogger = log.GlobalLogger.WithOutput(&b)
-	log.SetLevel("info")
+	r, w := io.Pipe()
+	log.SetGlobalLogger(gl.WithOutput(w).WithFuncName(false))
 
+	// print log and capture output
+	ready := make(chan struct{})
+	var buf bytes.Buffer
+	go func() {
+		io.Copy(&buf, r)
+		close(ready)
+	}()
+	// this two lines should be tied together
 	_, _, line, _ := runtime.Caller(0)
-	log.Info("test")
+	log.Error("test")
+	w.Close()
+	<-ready
 
-	lf := logFields(t, b.Bytes())
+	lf := logFields(t, buf.Bytes())
 	assert.Regexp(t, "^log/caller_ext_test.go:"+strconv.Itoa(line+1), lf.Caller, "log contains proper call place")
-	assert.Equal(t, "", lf.Func, "log not contains func name")
+	assert.Equal(t, "", lf.Func, "log doesn't contain func name")
 }
 
 // this test result depends on test name!
 func TestExtLog_GlobalCallerWithFunc(t *testing.T) {
-	gl := log.GlobalLogger
-	defer func() { log.GlobalLogger = gl }()
+	gl := log.GlobalLogger().WithSkipFrameCount(-1)
+	defer log.SetGlobalLogger(gl)
 
-	var b bytes.Buffer
-	log.GlobalLogger = log.GlobalLogger.WithOutput(&b)
-	log.GlobalLogger = log.GlobalLogger.WithFuncName(true)
-	log.SetLevel("info")
+	r, w := io.Pipe()
+	log.SetGlobalLogger(gl.WithOutput(w).WithFuncName(true))
 
+	// print log and capture output
+	ready := make(chan struct{})
+	var buf bytes.Buffer
+	go func() {
+		io.Copy(&buf, r)
+		close(ready)
+	}()
+	// this two lines should be tied together
 	_, _, line, _ := runtime.Caller(0)
-	log.Info("test")
+	log.Error("test")
+	w.Close()
+	<-ready
 
-	lf := logFields(t, b.Bytes())
-	assert.Regexp(t, "^log/caller_ext_test.go:"+strconv.Itoa(line+1), lf.Caller, "log contains call place")
-	assert.Equal(t, "TestExtLog_GlobalCallerWithFunc", lf.Func, "log contains call place")
+	lf := logFields(t, buf.Bytes())
+	assert.Regexp(t, "^log/caller_ext_test.go:"+strconv.Itoa(line+1), lf.Caller, "proper caller path")
+	assert.Equal(t, t.Name(), lf.Func, "proper caller function")
 }

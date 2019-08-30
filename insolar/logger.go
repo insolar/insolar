@@ -108,6 +108,24 @@ func (l LogFormat) String() string {
 	return string(l)
 }
 
+type LogControllerItem struct {
+	Level  LogLevel
+	Prefix string
+}
+
+// LogController allows control logger behaviour.
+// (in concurrency safe fashion)
+type LogController interface {
+	// Set sets log level for prefix.
+	Set(prefix string, level LogLevel)
+	// Del deletes prefix. Returns false if prefix not found.
+	Del(prefix string) bool
+	// Check path for predefined prefixes set
+	Check(path string, level LogLevel) LogLevel
+	// List
+	List() []LogControllerItem
+}
+
 // Logger is the interface for loggers used in the Insolar components.
 type Logger interface {
 	// WithLevel sets log level.
@@ -116,6 +134,11 @@ type Logger interface {
 	WithLevelNumber(level LogLevel) (Logger, error)
 	// WithFormat sets logger output format
 	WithFormat(format LogFormat) (Logger, error)
+
+	// WithController sets logger controller
+	WithController(lc LogController) Logger
+	// Controller returns logger controller
+	Controller() LogController
 
 	// WithCaller switch on/off 'caller' field computation.
 	WithCaller(flag bool) Logger
@@ -163,4 +186,15 @@ type Logger interface {
 
 	// Is returns if passed log level equal current log level
 	Is(level LogLevel) bool
+}
+
+type LogFilter struct {
+	Filter string
+	Level  LogLevel
+}
+
+type LoggerController interface {
+	SetLevelFilter(s string, level LogLevel)
+	DelLevelFilter(s string)
+	AllFilters() []LogFilter
 }

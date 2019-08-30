@@ -34,7 +34,7 @@ func capture(f func()) string {
 
 	orig := globalLogger
 	globalLogger = globalLogger.WithOutput(&buf)
-	defer func() { GlobalLogger = orig }()
+	defer func() { globalLogger = orig }()
 
 	f()
 
@@ -71,13 +71,13 @@ func TestLog_GlobalLogger(t *testing.T) {
 }
 
 func TestLog_NewLog_Config(t *testing.T) {
-	invalidtests := map[string]configuration.Log{
+	invalidTests := map[string]configuration.Log{
 		"InvalidAdapter":   configuration.Log{Level: "Debug", Adapter: "invalid", Formatter: "text"},
 		"InvalidLevel":     configuration.Log{Level: "Invalid", Adapter: "zerolog", Formatter: "text"},
 		"InvalidFormatter": configuration.Log{Level: "Debug", Adapter: "zerolog", Formatter: "invalid"},
 	}
 
-	for name, test := range invalidtests {
+	for name, test := range invalidTests {
 		t.Run(name, func(t *testing.T) {
 			logger, err := NewLog(test)
 			assert.Nil(t, logger)

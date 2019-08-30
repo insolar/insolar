@@ -85,11 +85,11 @@ func TestLog_ZerologCallerWithFunc(t *testing.T) {
 }
 
 func TestLog_GlobalCaller(t *testing.T) {
-	gl := GlobalLogger
-	defer func() { GlobalLogger = gl }()
+	gl := globalLogger
+	defer func() { globalLogger = gl }()
 
 	var b bytes.Buffer
-	GlobalLogger = GlobalLogger.WithOutput(&b)
+	globalLogger = globalLogger.WithOutput(&b)
 	SetLevel("info")
 
 	_, _, line, _ := runtime.Caller(0)
@@ -102,12 +102,12 @@ func TestLog_GlobalCaller(t *testing.T) {
 
 // this test result depends on test name!
 func TestLog_GlobalCallerWithFunc(t *testing.T) {
-	gl := GlobalLogger
-	defer func() { GlobalLogger = gl }()
+	gl := globalLogger
+	defer func() { globalLogger = gl }()
 
 	var b bytes.Buffer
-	GlobalLogger = GlobalLogger.WithOutput(&b)
-	GlobalLogger = GlobalLogger.WithFuncName(true)
+	globalLogger = globalLogger.WithOutput(&b)
+	globalLogger = globalLogger.WithFuncName(true)
 	SetLevel("info")
 
 	_, _, line, _ := runtime.Caller(0)
