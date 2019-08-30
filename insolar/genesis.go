@@ -65,23 +65,12 @@ const (
 	GenesisAmountPublicKeyShards        = 10
 	GenesisAmountMigrationAddressShards = 10
 
-	// на один акк уходит 100кк токенов
-
 	GenesisAmountNetworkIncentivesMembers     = 40
 	GenesisAmountApplicationIncentivesMembers = 40
 	GenesisAmountFoundationMembers            = 14
 
 	// distribution
 	DefaultDistributionAmount = "10000000000000000000"
-
-	// funds
-	FutureNetworkIncentivesAmount     = 4000000000 * (10 * 10)
-	FutureApplicationIncentivesAmount = 4000000000 * (10 * 10)
-	FoundationAmount                  = 1400000000 * (10 * 10)
-
-	// lockups
-
-	// mature date
 )
 
 var GenesisNameMigrationDaemonMembers = func() (result [GenesisAmountMigrationDaemonMembers]string) {

@@ -147,6 +147,54 @@ var (
 		return
 	}()
 
+	// ContractNetworkIncentivesDeposits is the network incentives deposits contracts references.
+	ContractNetworkIncentivesDeposits = func() (result [insolar.GenesisAmountNetworkIncentivesMembers]insolar.Reference) {
+		for i, name := range insolar.GenesisNameNetworkIncentivesAccounts {
+			result[i] = GenesisRef(name)
+		}
+		return
+	}()
+
+	// ContractApplicationIncentivesDeposits is the application incentives deposits contracts references.
+	ContractApplicationIncentivesDeposits = func() (result [insolar.GenesisAmountApplicationIncentivesMembers]insolar.Reference) {
+		for i, name := range insolar.GenesisNameApplicationIncentivesAccounts {
+			result[i] = GenesisRef(name)
+		}
+		return
+	}()
+
+	// ContractFoundationDeposits is the foundation deposits contracts references.
+	ContractFoundationDeposits = func() (result [insolar.GenesisAmountFoundationMembers]insolar.Reference) {
+		for i, name := range insolar.GenesisNameFoundationAccounts {
+			result[i] = GenesisRef(name)
+		}
+		return
+	}()
+
+	// ContractNetworkIncentivesAccounts is the network incentives accounts contracts references.
+	ContractNetworkIncentivesAccounts = func() (result [insolar.GenesisAmountNetworkIncentivesMembers]insolar.Reference) {
+		for i, name := range insolar.GenesisNameNetworkIncentivesAccounts {
+			result[i] = GenesisRef(name)
+		}
+		return
+	}()
+
+	// ContractApplicationIncentivesAccounts is the application incentives accounts contracts references.
+	ContractApplicationIncentivesAccounts = func() (result [insolar.GenesisAmountApplicationIncentivesMembers]insolar.Reference) {
+		for i, name := range insolar.GenesisNameApplicationIncentivesAccounts {
+			result[i] = GenesisRef(name)
+		}
+		return
+	}()
+
+	// ContractFoundationAccounts is the foundation accounts contracts references.
+	ContractFoundationAccounts = func() (result [insolar.GenesisAmountFoundationMembers]insolar.Reference) {
+		for i, name := range insolar.GenesisNameFoundationAccounts {
+			result[i] = GenesisRef(name)
+		}
+		return
+	}()
+
 	// ContractPublicKeyShards is the public key shards contracts references.
 	ContractPublicKeyShards = func() (result [insolar.GenesisAmountPublicKeyShards]insolar.Reference) {
 		for i, name := range insolar.GenesisNamePublicKeyShards {

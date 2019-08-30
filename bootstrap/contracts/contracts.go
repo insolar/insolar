@@ -88,6 +88,18 @@ func GetWalletGenesisContractState(name string, parent string, accountRef insola
 	}
 }
 
+func GetPreWalletGenesisContractState(name string, parent string, accountRef insolar.Reference, accounts foundation.StableMap, deposits foundation.StableMap) insolar.GenesisContractState {
+	return insolar.GenesisContractState{
+		Name:       name,
+		Prototype:  insolar.GenesisNameWallet,
+		ParentName: parent,
+		Memory: mustGenMemory(&wallet.Wallet{
+			Accounts: accounts,
+			Deposits: deposits,
+		}),
+	}
+}
+
 func GetAccountGenesisContractState(balance string, name string, parent string) insolar.GenesisContractState {
 	w, err := account.New(balance)
 	if err != nil {

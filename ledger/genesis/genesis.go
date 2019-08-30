@@ -57,6 +57,9 @@ func (Key) Scope() store.Scope {
 	return store.ScopeGenesis
 }
 
+const XNS = "XNS"
+const FundsDepositName = "genesis_deposit"
+
 // IsGenesisRequired checks if genesis record already exists.
 func (br *BaseRecord) IsGenesisRequired(ctx context.Context) (bool, error) {
 	b, err := br.DB.Get(Key{})
@@ -251,19 +254,6 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 		states = append(states, contracts.GetMemberGenesisContractState(key, insolar.GenesisNameFoundationMembers[i], insolar.GenesisNameRootDomain, genesisrefs.ContractFoundationMembers[i]))
 	}
 
-	// wallets
-	for i, _ := range g.ContractsConfig.ApplicationIncentivesPublicKeys {
-		states = append(states, contracts.GetWalletGenesisContractState(insolar.GenesisNameApplicationIncentivesWallets[i], insolar.GenesisNameRootDomain, genesisrefs.ContractApplicationIncentivesWallets[i]))
-	}
-
-	for i, _ := range g.ContractsConfig.NetworkIncentivesPublicKeys {
-		states = append(states, contracts.GetWalletGenesisContractState(insolar.GenesisNameNetworkIncentivesMembers[i], insolar.GenesisNameRootDomain, genesisrefs.ContractNetworkIncentivesWallets[i]))
-	}
-
-	for i, _ := range g.ContractsConfig.FoundationPublicKeys {
-		states = append(states, contracts.GetWalletGenesisContractState(insolar.GenesisNameFoundationMembers[i], insolar.GenesisNameRootDomain, genesisrefs.ContractFoundationWallets[i]))
-	}
-
 	// accounts
 	for i, _ := range g.ContractsConfig.ApplicationIncentivesPublicKeys {
 		states = append(states, contracts.GetAccountGenesisContractState("0", insolar.GenesisNameApplicationIncentivesAccounts[i], insolar.GenesisNameRootDomain))
@@ -289,6 +279,55 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 
 	for i, _ := range g.ContractsConfig.FoundationPublicKeys {
 		states = append(states, contracts.GetDepositGenesisContractState(insolar.DefaultDistributionAmount, insolar.GenesisNameFoundationAccounts[i], insolar.GenesisNameRootDomain))
+	}
+
+	// wallets
+	for i, _ := range g.ContractsConfig.ApplicationIncentivesPublicKeys {
+		membersAccounts := make(foundation.StableMap)
+		membersAccounts[XNS] = genesisrefs.ContractApplicationIncentivesAccounts[i].String()
+
+		membersDeposits := make(foundation.StableMap)
+		membersDeposits[FundsDepositName] = genesisrefs.ContractApplicationIncentivesDeposits[i].String()
+
+		states = append(states, contracts.GetPreWalletGenesisContractState(
+			insolar.GenesisNameApplicationIncentivesWallets[i],
+			insolar.GenesisNameRootDomain,
+			genesisrefs.ContractApplicationIncentivesWallets[i],
+			membersAccounts,
+			membersDeposits,
+		))
+	}
+
+	for i, _ := range g.ContractsConfig.NetworkIncentivesPublicKeys {
+		membersAccounts := make(foundation.StableMap)
+		membersAccounts[XNS] = genesisrefs.ContractNetworkIncentivesAccounts[i].String()
+
+		membersDeposits := make(foundation.StableMap)
+		membersDeposits[FundsDepositName] = genesisrefs.ContractNetworkIncentivesDeposits[i].String()
+
+		states = append(states, contracts.GetPreWalletGenesisContractState(
+			insolar.GenesisNameNetworkIncentivesMembers[i],
+			insolar.GenesisNameRootDomain,
+			genesisrefs.ContractNetworkIncentivesWallets[i],
+			membersAccounts,
+			membersDeposits,
+		))
+	}
+
+	for i, _ := range g.ContractsConfig.FoundationPublicKeys {
+		membersAccounts := make(foundation.StableMap)
+		membersAccounts[XNS] = genesisrefs.ContractFoundationAccounts[i].String()
+
+		membersDeposits := make(foundation.StableMap)
+		membersDeposits[FundsDepositName] = genesisrefs.ContractFoundationDeposits[i].String()
+
+		states = append(states, contracts.GetPreWalletGenesisContractState(
+			insolar.GenesisNameFoundationMembers[i],
+			insolar.GenesisNameRootDomain,
+			genesisrefs.ContractFoundationWallets[i],
+			membersAccounts,
+			membersDeposits,
+		))
 	}
 
 	// Split genesis members by PK shards
