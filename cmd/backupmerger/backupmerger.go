@@ -17,13 +17,20 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"math"
 	"os"
 	"time"
 
 	"github.com/dgraph-io/badger"
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/store"
+	"github.com/insolar/insolar/ledger/heavy/executor"
+	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -55,6 +62,7 @@ func merge(targetDBPath string, backupFileName string, numberOfWorkers int) {
 		closeOnError(bdb, errors.New("db must not be empty"))
 		return
 	}
+	log.Info("DB is not empty")
 
 	bkpFile, err := os.Open(backupFileName)
 	if err != nil {
@@ -67,6 +75,7 @@ func merge(targetDBPath string, backupFileName string, numberOfWorkers int) {
 		closeOnError(bdb, err)
 		return
 	}
+	log.Info("Successfully merged")
 }
 
 func parseMergeParams() *cobra.Command {
@@ -142,6 +151,7 @@ func createEmptyBadger(dbDir string) {
 		closeOnError(bdb, err)
 		return
 	}
+	log.Info("DB is empty")
 
 	var key dbInitializedKey
 	fullKey := append(key.Scope().Bytes(), key.ID()...)
@@ -149,6 +159,10 @@ func createEmptyBadger(dbDir string) {
 	err = bdb.Update(func(txn *badger.Txn) error {
 		return txn.Set(fullKey, []byte{})
 	})
+
+	t := time.Time{}
+	t.UnmarshalBinary(key.ID())
+	log.Info("Set db initialized key: ", t.String())
 
 	if err != nil {
 		closeOnError(bdb, err)
@@ -175,6 +189,77 @@ func parseCreateParams() *cobra.Command {
 	return createCmd
 }
 
+func prepareBackup(dbDir string) {
+	// finalizing of data
+	ops := badger.DefaultOptions(dbDir)
+	bdb, err := store.NewBadgerDB(ops)
+	if err != nil {
+		printError("failed to open badger", err)
+		os.Exit(1)
+	}
+
+	ctx := context.Background()
+
+	pulsesDB := pulse.NewDB(bdb)
+
+	jetKeeper := executor.NewJetKeeper(jet.NewDBStore(bdb), bdb, pulsesDB)
+	log.Info("Current top sync pulse: ", jetKeeper.TopSyncPulse().String())
+
+	closeDBIfError := func(err error) {
+		errStop := bdb.Stop(ctx)
+		printError("", err)
+		printError("failed to close db", errStop)
+		os.Exit(1)
+	}
+
+	it := bdb.NewIterator(executor.BackupStartKey(math.MaxUint32), true)
+	if it.Next() {
+		pulseNumber := insolar.NewPulseNumber(it.Key())
+		log.Info("Found backup start key: ", pulseNumber.String())
+
+		if !jetKeeper.HasAllJetConfirms(ctx, pulseNumber) {
+			closeDBIfError(errors.New("data is inconsistent. pulse " + pulseNumber.String() + " must has all confirms"))
+			return
+		}
+
+		log.Info("All jet confirmed for pulse: ", pulseNumber.String())
+		err = jetKeeper.AddBackupConfirmation(ctx, pulseNumber)
+		if err != nil {
+			closeDBIfError(errors.New("failed to add backup confirmation for pulse" + pulseNumber.String()))
+			return
+		}
+
+		if jetKeeper.TopSyncPulse() != pulseNumber {
+			closeDBIfError(errors.New("new top sync pulse must be equal to last backuped"))
+			return
+		}
+
+		log.Info("New top sync pulse: ", jetKeeper.TopSyncPulse().String())
+	} else {
+		closeDBIfError(errors.New("no backup start keys"))
+		return
+	}
+}
+
+func parsePrepareBackupParams() *cobra.Command {
+	var dbDir string
+	var prepareBackupCmd = &cobra.Command{
+		Use:   "prepare_backup",
+		Short: "prepare backup for usage",
+		Run: func(cmd *cobra.Command, args []string) {
+			prepareBackup(dbDir)
+		},
+	}
+
+	dbDirFlagName := "db-dir"
+	prepareBackupCmd.Flags().StringVarP(
+		&dbDir, dbDirFlagName, "d", "", "directory where new badger will be created (required)")
+
+	cobra.MarkFlagRequired(prepareBackupCmd.Flags(), dbDirFlagName)
+
+	return prepareBackupCmd
+}
+
 func parseInputParams() {
 
 	var rootCmd = &cobra.Command{
@@ -184,6 +269,7 @@ func parseInputParams() {
 
 	rootCmd.AddCommand(parseMergeParams())
 	rootCmd.AddCommand(parseCreateParams())
+	rootCmd.AddCommand(parsePrepareBackupParams())
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
@@ -199,5 +285,13 @@ func printError(message string, err error) {
 }
 
 func main() {
+	log.SetLevel("Debug")
+
+	cfg := configuration.NewLog()
+	cfg.Level = "Debug"
+	cfg.Formatter = "text"
+	l, _ := log.NewLog(cfg)
+
+	log.SetGlobalLogger(l)
 	parseInputParams()
 }
