@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/launchnet"
 
 	"github.com/stretchr/testify/require"
@@ -41,9 +40,6 @@ func TestMemberGet(t *testing.T) {
 func TestMigrationMemberGet(t *testing.T) {
 	member1, _ := newUserWithKeys()
 
-	ba := testutils.RandomString()
-	_, _ = signedRequest(t, launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.addAddresses", map[string]interface{}{"migrationAddresses": []string{ba}})
-
 	res1, err := signedRequest(t, launchnet.TestRPCUrlPublic, member1, "member.migrationCreate", nil)
 	require.Nil(t, err)
 
@@ -57,7 +53,7 @@ func TestMigrationMemberGet(t *testing.T) {
 	require.True(t, ok, fmt.Sprintf("failed to decode: expected map[string]interface{}, got %T", res2))
 
 	require.Equal(t, decodedRes1["reference"].(string), decodedRes2["reference"].(string))
-	require.Equal(t, ba, res2.(map[string]interface{})["migrationAddress"].(string))
+	require.Equal(t, decodedRes1["migrationAddress"], res2.(map[string]interface{})["migrationAddress"].(string))
 }
 
 func TestMemberGetWrongPublicKey(t *testing.T) {

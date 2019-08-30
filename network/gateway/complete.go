@@ -233,15 +233,3 @@ func (g *Complete) OnPulseFromConsensus(ctx context.Context, pulse insolar.Pulse
 	logger.Infof("Set new current pulse number: %d", pulse.PulseNumber)
 	stats.Record(ctx, statPulse.M(int64(pulse.PulseNumber)))
 }
-
-func pulseProcessingWatchdog(ctx context.Context, pulse insolar.Pulse, done chan struct{}) {
-	logger := inslogger.FromContext(ctx)
-
-	go func() {
-		select {
-		case <-time.After(time.Second * time.Duration(pulse.NextPulseNumber-pulse.PulseNumber)):
-			logger.Errorf("Node stopped due to long pulse processing, pulse:%v", pulse.PulseNumber)
-		case <-done:
-		}
-	}()
-}

@@ -35,7 +35,7 @@ func (s *handleResults) Future(ctx context.Context, f flow.Flow) error {
 }
 
 func (s *handleResults) Present(ctx context.Context, f flow.Flow) error {
-	return s.cr.ReceiveResult(s.Message)
+	return s.cr.ReceiveResult(ctx, s.Message)
 }
 
 func (s *handleResults) Past(ctx context.Context, f flow.Flow) error {
