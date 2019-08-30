@@ -40,26 +40,21 @@ const (
 	// GenesisNamePKShard is the name of public key shard contract for genesis record.
 	GenesisNamePKShard = "pkshard"
 	// GenesisNameMigrationShard is the name of migration address shard contract for genesis record.
-	GenesisNameMigrationShard = "migrationshard"
-
-	// Root entity
-	GenesisNameRootMember  = "root" + GenesisNameMember
-	GenesisNameRootWallet  = "root" + GenesisNameWallet
-	GenesisNameRootAccount = "root" + GenesisNameAccount
-	// Migration entity
+	GenesisNameMigrationShard        = "migrationshard"
+	GenesisNameRootMember            = "root" + GenesisNameMember
+	GenesisNameRootWallet            = "root" + GenesisNameWallet
+	GenesisNameRootAccount           = "root" + GenesisNameAccount
 	GenesisNameMigrationAdminMember  = "migration" + GenesisNameMember
 	GenesisNameMigrationAdminWallet  = "migration" + GenesisNameWallet
 	GenesisNameMigrationAdminAccount = "migration" + GenesisNameAccount
 	GenesisNameMigrationAdminDeposit = "migration" + GenesisNameDeposit
-	// Fee entity
-	GenesisNameFeeMember  = "fee" + GenesisNameMember
-	GenesisNameFeeWallet  = "fee" + GenesisNameWallet
-	GenesisNameFeeAccount = "fee" + GenesisNameAccount
-	// Fund entity
-	GenesisNameEnterpriseMember  = "enterprise" + GenesisNameMember
-	GenesisNameEnterpriseWallet  = "enterprise" + GenesisNameWallet
-	GenesisNameEnterpriseAccount = "enterprise" + GenesisNameAccount
-	GenesisNameEnterpriseDeposit = "enterprise" + GenesisNameDeposit
+	GenesisNameFeeMember             = "fee" + GenesisNameMember
+	GenesisNameFeeWallet             = "fee" + GenesisNameWallet
+	GenesisNameFeeAccount            = "fee" + GenesisNameAccount
+	GenesisNameEnterpriseMember      = "enterprise" + GenesisNameMember
+	GenesisNameEnterpriseWallet      = "enterprise" + GenesisNameWallet
+	GenesisNameEnterpriseAccount     = "enterprise" + GenesisNameAccount
+	GenesisNameEnterpriseDeposit     = "enterprise" + GenesisNameDeposit
 
 	GenesisAmountMigrationDaemonMembers       = 10
 	GenesisAmountActiveMigrationDaemonMembers = 3
@@ -71,7 +66,6 @@ const (
 	GenesisAmountApplicationIncentivesMembers = 40
 	GenesisAmountFoundationMembers            = 14
 
-	// distribution
 	DefaultDistributionAmount = "10000000000000000000"
 )
 
@@ -82,7 +76,6 @@ var GenesisNameMigrationDaemonMembers = func() (result [GenesisAmountMigrationDa
 	return
 }()
 
-// funds members
 var GenesisNameNetworkIncentivesMembers = func() (result [GenesisAmountNetworkIncentivesMembers]string) {
 	for i := 0; i < GenesisAmountNetworkIncentivesMembers; i++ {
 		result[i] = "network_incentives_" + strconv.Itoa(i) + "_" + GenesisNameMember
@@ -104,7 +97,6 @@ var GenesisNameFoundationMembers = func() (result [GenesisAmountFoundationMember
 	return
 }()
 
-// funds deposits
 var GenesisNameNetworkIncentivesDeposits = func() (result [GenesisAmountNetworkIncentivesMembers]string) {
 	for i := 0; i < GenesisAmountNetworkIncentivesMembers; i++ {
 		result[i] = "network_incentives_" + strconv.Itoa(i) + "_" + GenesisNameDeposit
@@ -126,7 +118,6 @@ var GenesisNameFoundationDeposits = func() (result [GenesisAmountFoundationMembe
 	return
 }()
 
-// funds wallets
 var GenesisNameNetworkIncentivesWallets = func() (result [GenesisAmountNetworkIncentivesMembers]string) {
 	for i := 0; i < GenesisAmountNetworkIncentivesMembers; i++ {
 		result[i] = "network_incentives_" + strconv.Itoa(i) + "_" + GenesisNameWallet
@@ -148,7 +139,6 @@ var GenesisNameFoundationWallets = func() (result [GenesisAmountFoundationMember
 	return
 }()
 
-// funds accounts
 var GenesisNameNetworkIncentivesAccounts = func() (result [GenesisAmountNetworkIncentivesMembers]string) {
 	for i := 0; i < GenesisAmountNetworkIncentivesMembers; i++ {
 		result[i] = "network_incentives_" + strconv.Itoa(i) + "_" + GenesisNameAccount
