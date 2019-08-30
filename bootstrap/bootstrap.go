@@ -173,7 +173,6 @@ func (g *Generator) Run(ctx context.Context) error {
 	}
 	err = g.makeHeavyGenesisConfig(discoveryNodes, contractsConfig)
 	if err != nil {
-		inslog.Info("[ bootstrap ] error love")
 		return errors.Wrap(err, "generate heavy genesis config failed")
 	}
 
