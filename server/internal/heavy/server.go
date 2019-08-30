@@ -78,11 +78,12 @@ func (s *Server) Serve() {
 	ctx := context.Background()
 	traceID := "main_" + utils.RandTraceID()
 	ctx, inslog := inslogger.InitNodeLogger(ctx, cfg.Log, traceID, "", "")
-	ctx, jaegerFlush := internal.Jaeger(ctx, cfg.Tracer.Jaeger, traceID, "", "")
-	defer jaegerFlush()
 
 	cmp, err := newComponents(ctx, *cfg, genesisCfg)
 	fatal(ctx, err, "failed to create components")
+
+	ctx, jaegerFlush := internal.Jaeger(ctx, cfg.Tracer.Jaeger, traceID, cmp.NodeRef, cmp.NodeRole)
+	defer jaegerFlush()
 
 	var gracefulStop = make(chan os.Signal, 1)
 	signal.Notify(gracefulStop, syscall.SIGTERM)
