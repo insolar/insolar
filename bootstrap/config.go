@@ -101,6 +101,10 @@ func hasMinimumRolesSet(conf *Config) error {
 		delete(minRequiredRolesSet, discNode.Role)
 	}
 
+	for _, node := range conf.Nodes {
+		delete(minRequiredRolesSet, node.Role)
+	}
+
 	if len(minRequiredRolesSet) != 0 {
 		var missingRoles string
 		for role := range minRequiredRolesSet {
