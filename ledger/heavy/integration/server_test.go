@@ -210,7 +210,7 @@ func NewServer(
 		Handler      *handler.Handler
 		Genesis      *genesis.Genesis
 		Records      *object.RecordDB
-		JetKeeper    executor.JetKeeper
+		JetKeeper    *executor.DBJetKeeper
 	)
 	{
 		Records = object.NewRecordDB(DB)
@@ -228,7 +228,7 @@ func NewServer(
 
 		replicator = executor.NewHeavyReplicatorDefault(Records, indexes, CryptoScheme, Pulses, drops, JetKeeper, backupMaker, Jets)
 
-		pm := pulsemanager.NewPulseManager()
+		pm := pulsemanager.NewPulseManager(nil)
 		pm.NodeNet = NodeNetwork
 		pm.NodeSetter = Nodes
 		pm.Nodes = Nodes

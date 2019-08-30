@@ -103,9 +103,10 @@ var MigrationAdmin User
 var MigrationDaemons [insolar.GenesisAmountMigrationDaemonMembers]*User
 
 type User struct {
-	Ref     string
-	PrivKey string
-	PubKey  string
+	Ref              string
+	PrivKey          string
+	PubKey           string
+	MigrationAddress string
 }
 
 func launchnetPath(a ...string) (string, error) {
