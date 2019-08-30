@@ -29,6 +29,8 @@ import (
 	"github.com/pkg/errors"
 )
 
+const defaultError = -32000
+
 func wrapCall(runner *Runner, allowedMethods map[string]bool, req *http.Request, args *requester.Params, requestBody *rpc.RequestBody, result *requester.ContractResult) error {
 	traceID := utils.RandTraceID()
 	ctx, logger := inslogger.WithTraceField(context.Background(), traceID)
@@ -65,7 +67,7 @@ func wrapCall(runner *Runner, allowedMethods map[string]bool, req *http.Request,
 		logger.Error(err.Error())
 		return &json2.Error{
 			// TODO: correct error codes
-			Code:    -320000,
+			Code:    defaultError,
 			Message: err.Error(),
 			Data: requester.Data{
 				TraceID:          traceID,
