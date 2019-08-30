@@ -17,18 +17,16 @@
 package main
 
 import (
+	"fmt"
 	"os"
+	"time"
 
 	"github.com/dgraph-io/badger"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/store"
 	"github.com/pkg/errors"
+	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-)
-
-var (
-	targetDBPath    string
-	backupFileName  string
-	numberOfWorkers int
-	help            bool
 )
 
 func usage() {
@@ -36,65 +34,170 @@ func usage() {
 	os.Exit(0)
 }
 
-func parseInputParams() {
-
-	pflag.StringVarP(
-		&targetDBPath, "target-db", "t", "", "directory where backup will be roll to (required)")
-	pflag.StringVarP(
-		&backupFileName, "bkp-name", "n", "", "file name if incremental backup (required)")
-	pflag.IntVarP(
-		&numberOfWorkers, "workers-num", "w", 1, "number of workers to read backup file")
-	pflag.BoolVarP(
-		&help, "help", "h", false, "show this help")
-
-	pflag.Parse()
-
-	if help {
-		usage()
-	}
-
-	if len(targetDBPath) == 0 || len(backupFileName) == 0 {
-		println("bkp-name and target-db are required\n")
-		usage()
+func closeOnError(bdb *badger.DB, err error) {
+	closeError := bdb.Close()
+	if closeOnError != nil || err != nil {
+		printError("failed to close db", closeError)
+		printError("", err)
+		os.Exit(1)
 	}
 }
 
-func printError(err error, message string) {
-	println(errors.Wrap(err, "ERROR "+message).Error())
-}
-
-func main() {
-	parseInputParams()
-
-	var merged bool
+func merge(targetDBPath string, backupFileName string, numberOfWorkers int) {
 	ops := badger.DefaultOptions(targetDBPath)
 	bdb, err := badger.Open(ops)
 	if err != nil {
-		printError(err, "failed to open badger")
+		printError("failed to open badger", err)
+		os.Exit(1)
+	}
+
+	if err := isDBEmpty(bdb); err == nil {
+		closeOnError(bdb, errors.New("db must not be empty"))
 		return
 	}
-	defer func() {
-		err = bdb.Close()
-		if err != nil {
-			printError(err, "failed to close db")
-			return
-		}
-		if merged {
-			println()
-			println("successfully merged " + backupFileName + " to " + targetDBPath)
-		}
-	}()
 
 	bkpFile, err := os.Open(backupFileName)
 	if err != nil {
-		printError(err, "failed to open backup file")
+		closeOnError(bdb, err)
 		return
 	}
 
 	err = bdb.Load(bkpFile, numberOfWorkers)
 	if err != nil {
-		printError(err, "failed to load backup")
+		closeOnError(bdb, err)
 		return
 	}
-	merged = true
+}
+
+func parseMergeParams() *cobra.Command {
+	var (
+		targetDBPath    string
+		backupFileName  string
+		numberOfWorkers int
+	)
+
+	var mergeCmd = &cobra.Command{
+		Use:   "merge",
+		Short: "merge incremental backup to existing db",
+		Run: func(cmd *cobra.Command, args []string) {
+			merge(targetDBPath, backupFileName, numberOfWorkers)
+		},
+	}
+	mergeFlags := mergeCmd.Flags()
+	targetDBFlagName := "target-db"
+	bkpFileName := "bkp-name"
+	mergeFlags.StringVarP(
+		&targetDBPath, targetDBFlagName, "t", "", "directory where backup will be roll to (required)")
+	mergeFlags.StringVarP(
+		&backupFileName, bkpFileName, "n", "", "file name if incremental backup (required)")
+	mergeFlags.IntVarP(
+		&numberOfWorkers, "workers-num", "w", 1, "number of workers to read backup file")
+
+	cobra.MarkFlagRequired(mergeFlags, targetDBFlagName)
+	cobra.MarkFlagRequired(mergeFlags, bkpFileName)
+
+	return mergeCmd
+}
+
+type dbInitializedKey insolar.PulseNumber
+
+func (k dbInitializedKey) Scope() store.Scope {
+	return store.ScopeDBInit
+}
+
+func (k dbInitializedKey) ID() []byte {
+	bytes, err := time.Now().MarshalBinary()
+	if err != nil {
+		panic("failed to marshal time: " + err.Error())
+	}
+	return bytes
+}
+
+func isDBEmpty(bdb *badger.DB) error {
+	tableInfo := bdb.Tables(true)
+	if len(tableInfo) != 0 {
+		return errors.New("tableInfo is not empty")
+	}
+
+	lsm, vlog := bdb.Size()
+	if lsm != 0 || vlog != 0 {
+		println("lsm: ", lsm, ", vlog: ", vlog)
+		return errors.New("lsm ot vlog are not empty")
+	}
+
+	return nil
+}
+
+func createEmptyBadger(dbDir string) {
+	ops := badger.DefaultOptions(dbDir)
+	var err error
+	bdb, err := badger.Open(ops)
+	if err != nil {
+		printError("failed to open badger", err)
+		os.Exit(1)
+	}
+
+	err = isDBEmpty(bdb)
+	if err != nil {
+		closeOnError(bdb, err)
+		return
+	}
+
+	var key dbInitializedKey
+	fullKey := append(key.Scope().Bytes(), key.ID()...)
+
+	err = bdb.Update(func(txn *badger.Txn) error {
+		return txn.Set(fullKey, []byte{})
+	})
+
+	if err != nil {
+		closeOnError(bdb, err)
+		return
+	}
+}
+
+func parseCreateParams() *cobra.Command {
+	var dbDir string
+	var createCmd = &cobra.Command{
+		Use:   "create",
+		Short: "create new empty badger",
+		Run: func(cmd *cobra.Command, args []string) {
+			createEmptyBadger(dbDir)
+		},
+	}
+
+	dbDirFlagName := "db-dir"
+	createCmd.Flags().StringVarP(
+		&dbDir, dbDirFlagName, "d", "", "directory where new badger will be created (required)")
+
+	cobra.MarkFlagRequired(createCmd.Flags(), dbDirFlagName)
+
+	return createCmd
+}
+
+func parseInputParams() {
+
+	var rootCmd = &cobra.Command{
+		Use:   "backupmanager",
+		Short: "backupmanager is the command line client for managing backups",
+	}
+
+	rootCmd.AddCommand(parseMergeParams())
+	rootCmd.AddCommand(parseCreateParams())
+
+	if err := rootCmd.Execute(); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+}
+
+func printError(message string, err error) {
+	if err == nil {
+		return
+	}
+	println(errors.Wrap(err, "ERROR "+message).Error())
+}
+
+func main() {
+	parseInputParams()
 }
