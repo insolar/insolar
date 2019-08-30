@@ -23,7 +23,7 @@ import (
 	"testing"
 
 	"github.com/dgraph-io/badger"
-	"github.com/google/gofuzz"
+	fuzz "github.com/google/gofuzz"
 	"github.com/insolar/insolar/insolar/store"
 	"github.com/stretchr/testify/require"
 
@@ -139,9 +139,15 @@ func TestDropStorageCompare(t *testing.T) {
 	ms := NewStorageMemory()
 
 	var drops []Drop
+	pulses := map[insolar.PulseNumber]struct{}{}
 	genInputs := map[jetPulse]struct{}{}
 	f := fuzz.New().Funcs(func(jd *Drop, c fuzz.Continue) {
 		pn := gen.PulseNumber()
+		for _, ok := pulses[pn]; ok; {
+			pn = gen.PulseNumber()
+		}
+		pulses[pn] = struct{}{}
+
 		jd.Pulse = pn
 
 		jetID := gen.JetID()
