@@ -250,3 +250,65 @@ func checkBackupMetaInfo(t *testing.T, cfg configuration.Backup, numIterations i
 		require.Equal(t, currentPulse, bi.Pulse)
 	}
 }
+
+func TestBackupSendDeleteRecords(t *testing.T) {
+	cfg := makeBackuperConfig(t, t.Name())
+	defer clearData(t, cfg)
+
+	tmpdir, err := ioutil.TempDir("", "bdb-test-")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpdir)
+
+	db, err := store.NewBadgerDB(badger.DefaultOptions(tmpdir))
+	require.NoError(t, err)
+	defer db.Stop(context.Background())
+
+	bm, err := executor.NewBackupMaker(context.Background(), db, cfg, insolar.GenesisPulse.PulseNumber)
+	require.NoError(t, err)
+
+	key := &testKey{id: uint64(3)}
+
+	err = db.Set(key, []byte{})
+	require.NoError(t, err)
+
+	err = bm.MakeBackup(context.Background(), 100000)
+	require.NoError(t, err)
+	err = bm.MakeBackup(context.Background(), 100001)
+	require.NoError(t, err)
+
+	recovTmpDir, err := ioutil.TempDir("", "bdb-test-")
+	require.NoError(t, err)
+	defer os.RemoveAll(recovTmpDir)
+
+	bkpFileName := filepath.Join(
+		cfg.TargetDirectory,
+		fmt.Sprintf(cfg.DirNameTemplate, 100001),
+		cfg.BackupFile,
+	)
+
+	loadIncrementalBackup(t, recovTmpDir, bkpFileName)
+	recoveredDB, err := store.NewBadgerDB(badger.DefaultOptions(recovTmpDir))
+	require.NoError(t, err)
+	_, err = recoveredDB.Get(key)
+	require.NoError(t, err)
+	recoveredDB.Stop(context.Background())
+
+	err = db.Delete(key)
+	require.NoError(t, err)
+
+	err = bm.MakeBackup(context.Background(), 100002)
+	require.NoError(t, err)
+
+	bkpFileName = filepath.Join(
+		cfg.TargetDirectory,
+		fmt.Sprintf(cfg.DirNameTemplate, 100002),
+		cfg.BackupFile,
+	)
+	loadIncrementalBackup(t, recovTmpDir, bkpFileName)
+	recoveredDB, err = store.NewBadgerDB(badger.DefaultOptions(recovTmpDir))
+	require.NoError(t, err)
+	defer recoveredDB.Stop(context.Background())
+
+	_, err = recoveredDB.Get(key)
+	require.EqualError(t, err, store.ErrNotFound.Error())
+}
