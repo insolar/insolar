@@ -128,18 +128,6 @@ func (g *Generator) Run(ctx context.Context) error {
 		return errors.Wrapf(err, "create keys step failed")
 	}
 
-	inslog.Info("[ bootstrap ] create not discovery keys ...")
-	nodes, err := createKeysInDir(
-		ctx,
-		g.config.NotDiscoveryKeysDir,
-		g.config.KeysNameFormat,
-		g.config.Nodes,
-		g.config.ReuseKeys,
-	)
-	if err != nil {
-		return errors.Wrapf(err, "create keys step failed")
-	}
-
 	inslog.Info("[ bootstrap ] create discovery certificates ...")
 	err = g.makeCertificates(ctx, discoveryNodes, discoveryNodes)
 	if err != nil {
@@ -150,10 +138,25 @@ func (g *Generator) Run(ctx context.Context) error {
 	if vestingStep == 0 {
 		vestingStep = 60 * 60 * 24
 	}
-	inslog.Info("[ bootstrap ] create not discovery certificates ...", nodes)
-	err = g.makeCertificates(ctx, nodes, discoveryNodes)
-	if err != nil {
-		return errors.Wrap(err, "generate not discovery certificates failed")
+
+	if g.config.NotDiscoveryKeysDir != "" {
+		inslog.Info("[ bootstrap ] create not discovery keys ...")
+		nodes, err := createKeysInDir(
+			ctx,
+			g.config.NotDiscoveryKeysDir,
+			g.config.KeysNameFormat,
+			g.config.Nodes,
+			g.config.ReuseKeys,
+		)
+		if err != nil {
+			return errors.Wrapf(err, "create keys step failed")
+		}
+
+		inslog.Info("[ bootstrap ] create not discovery certificates ...", nodes)
+		err = g.makeCertificates(ctx, nodes, discoveryNodes)
+		if err != nil {
+			return errors.Wrap(err, "generate not discovery certificates failed")
+		}
 	}
 
 	inslog.Info("[ bootstrap ] create heavy genesis config ...")
