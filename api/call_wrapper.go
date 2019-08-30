@@ -18,7 +18,6 @@ package api
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 
 	"github.com/insolar/insolar/api/requester"
@@ -60,12 +59,12 @@ func wrapCall(runner *Runner, allowedMethods map[string]bool, req *http.Request,
 
 	setRootReferenceIfNeeded(args)
 
-	fmt.Println("AAAAA")
 	callResult, requestRef, err := runner.makeCall(ctx, "contract.call", *args, requestBody.Raw, signature, 0, seedPulse)
-
-	fmt.Println("BBBBB", requestRef)
 	if err != nil {
+		// TODO: white list of errors
+		logger.Error(err.Error())
 		return &json2.Error{
+			// TODO: correct error codes
 			Code:    -320000,
 			Message: err.Error(),
 			Data: requester.Data{
