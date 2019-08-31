@@ -231,26 +231,29 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 
 		contracts.GetDepositGenesisContractState(
 			insolar.DefaultDistributionAmount,
-			1,
-			1,
+			0,
+			0,
 			1,
 			foundation.Vesting1,
-			1,
-			1,
+			0,
+			0,
 			insolar.GenesisNameEnterpriseDeposit,
 			insolar.GenesisNameRootDomain,
 		),
 		contracts.GetDepositGenesisContractState(
 			"0",
-			1,
-			1,
-			1,
-			foundation.DefaultVesting,
-			1,
-			1,
+			int64(pulse.OfUnixTime(1604188800)),
+			int64(pulse.OfUnixTime(1735689600)),
+			2629746, // 1 month
+			foundation.Vesting2,
+			pulse.OfUnixTime(1735689600),
+			0,
 			insolar.GenesisNameMigrationAdminDeposit,
 			insolar.GenesisNameRootDomain,
 		),
+
+		// на три года заблокировать для нетворк и аппликейшен
+		//
 
 		contracts.GetMigrationAdminGenesisContractState(g.ContractsConfig.LokupPeriodInPulses, g.ContractsConfig.VestingPeriodInPulses, g.ContractsConfig.VestingStepInPulses),
 		contracts.GetCostCenterGenesisContractState(),
@@ -287,11 +290,11 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 	for i := range g.ContractsConfig.NetworkIncentivesPublicKeys {
 		states = append(states, contracts.GetDepositGenesisContractState(
 			insolar.DefaultDistributionAmount,
-			int64(pulse.OfUnixTime(1672531200)), // смещение текущего пульса до даты разблокировки
-			int64(pulse.OfUnixTime(1735689600)),
-			2629746, // 1 month
+			int64(pulse.OfUnixTime(1672531200)),
+			int64(pulse.OfUnixTime(1635724800)),
+			1,
 			foundation.Vesting2,
-			pulse.OfUnixTime(1735689600), // смещение текущего пульса до даты оканчания
+			pulse.OfUnixTime(1735689600),
 			0,
 			insolar.GenesisNameNetworkIncentivesDeposits[i],
 			insolar.GenesisNameRootDomain,
@@ -301,11 +304,11 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 	for i := range g.ContractsConfig.ApplicationIncentivesPublicKeys {
 		states = append(states, contracts.GetDepositGenesisContractState(
 			insolar.DefaultDistributionAmount,
-			int64(pulse.OfUnixTime(1672531200)), // смещение текущего пульса до даты разблокировки
+			int64(pulse.OfUnixTime(1672531200)),
 			int64(pulse.OfUnixTime(1735689600)),
-			2629746, // 1 month
+			2629746,
 			foundation.Vesting2,
-			pulse.OfUnixTime(1735689600), // смещение текущего пульса до даты оканчания
+			pulse.OfUnixTime(1735689600),
 			0,
 			insolar.GenesisNameApplicationIncentivesDeposits[i],
 			insolar.GenesisNameRootDomain,
@@ -315,11 +318,11 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 	for i := range g.ContractsConfig.FoundationPublicKeys {
 		states = append(states, contracts.GetDepositGenesisContractState(
 			insolar.DefaultDistributionAmount,
-			int64(pulse.OfUnixTime(1672531200)), // смещение текущего пульса до даты разблокировки
+			int64(pulse.OfUnixTime(1672531200)),
 			int64(pulse.OfUnixTime(1735689600)),
-			2629746, // 1 month
+			2629746,
 			foundation.Vesting2,
-			pulse.OfUnixTime(1735689600), // смещение текущего пульса до даты оканчания
+			pulse.OfUnixTime(1735689600),
 			0,
 			insolar.GenesisNameFoundationDeposits[i],
 			insolar.GenesisNameRootDomain,
