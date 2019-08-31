@@ -18,21 +18,21 @@ package migrationadmin
 
 import (
 	"fmt"
-	"github.com/insolar/insolar/logicrunner/builtin/proxy/migrationshard"
-	"github.com/pkg/errors"
 	"strings"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/migrationshard"
+	"github.com/pkg/errors"
 )
 
 // MigrationAdmin manage and change status for  migration daemon.
 type MigrationAdmin struct {
 	foundation.BaseContract
-	MigrationDaemons     foundation.StableMap
-	MigrationAdminMember insolar.Reference
+	MigrationDaemons       foundation.StableMap
+	MigrationAdminMember   insolar.Reference
 	MigrationAddressShards [insolar.GenesisAmountMigrationAddressShards]insolar.Reference
-	VestingParams        *VestingParams
+	VestingParams          *VestingParams
 }
 
 type VestingParams struct {

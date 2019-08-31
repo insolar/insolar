@@ -223,7 +223,7 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 		contracts.GetAccountGenesisContractState(g.ContractsConfig.MDBalance, insolar.GenesisNameMigrationAdminAccount, insolar.GenesisNameRootDomain),
 		contracts.GetAccountGenesisContractState("0", insolar.GenesisNameFeeAccount, insolar.GenesisNameRootDomain),
 		contracts.GetMigrationAdminGenesisContractState(g.ContractsConfig.LokupPeriodInPulses, g.ContractsConfig.VestingPeriodInPulses, g.ContractsConfig.VestingStepInPulses),
-		contracts.GetCostCenterGenesisContractState(),
+		contracts.GetCostCenterGenesisContractState(genesisrefs.ContractFeeMember),
 	}
 
 	for i, key := range g.ContractsConfig.MigrationDaemonPublicKeys {

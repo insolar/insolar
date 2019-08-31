@@ -68,11 +68,6 @@ func GetMigrationAdmin() insolar.Reference {
 	return genesisrefs.ContractMigrationAdmin
 }
 
-// Get reference on  FeeMember contract.
-func GetFeeMember() insolar.Reference {
-	return genesisrefs.ContractFeeMember
-}
-
 // Get reference on  RootDomain contract.
 func GetRootDomain() insolar.Reference {
 	return genesisrefs.ContractRootDomain

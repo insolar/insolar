@@ -127,7 +127,7 @@ func (a *Account) GetBalance() (string, error) {
 	return a.Balance, nil
 }
 
-// Transfer transfers money to given wallet.
+// Transfer transfers money to given member.
 func (a *Account) Transfer(rootDomainRef insolar.Reference, amountStr string, toMember *insolar.Reference) (interface{}, error) {
 
 	amount, ok := new(big.Int).SetString(amountStr, 10)
@@ -151,6 +151,12 @@ func (a *Account) Transfer(rootDomainRef insolar.Reference, amountStr string, to
 	if !ok {
 		return nil, fmt.Errorf("can't parse input feeStr")
 	}
+
+	toFeeMember, err := cc.GetFeeMember()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get fee member: %s", err.Error())
+	}
+
 	totalSum, err := safemath.Add(fee, amount)
 	if err != nil {
 		return nil, fmt.Errorf("failed to calculate totalSum for amount: %s", err.Error())
@@ -176,12 +182,7 @@ func (a *Account) Transfer(rootDomainRef insolar.Reference, amountStr string, to
 		return nil, fmt.Errorf("failed to transfer amount: %s", err.Error())
 	}
 
-	toFeeMember, err := cc.GetFeeMember()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get fee member: %s", err.Error())
-	}
-
-	err = a.TransferToMember(feeStr, toFeeMember)
+	err = a.TransferToMember(feeStr, *toFeeMember)
 	if err != nil {
 		return nil, fmt.Errorf("failed to transfer fee: %s", err.Error())
 	}
@@ -191,10 +192,11 @@ func (a *Account) Transfer(rootDomainRef insolar.Reference, amountStr string, to
 
 // IncreaseBalance increases the current balance by the amount.
 func (a *Account) IncreaseBalance(amountStr string) error {
-	callerPrototype := *a.GetContext().CallerPrototype
-	if member.GetPrototype() != callerPrototype {
-		return fmt.Errorf("only member can IncreaseBalance")
-	}
+	// ToDo: Only member can execute this method
+	// callerPrototype := *a.GetContext().CallerPrototype
+	// if member.GetPrototype() != callerPrototype {
+	// 	return fmt.Errorf("only member can IncreaseBalance %s, %s", callerPrototype, member.GetPrototype())
+	// }
 
 	amount, ok := new(big.Int).SetString(amountStr, 10)
 	if !ok {

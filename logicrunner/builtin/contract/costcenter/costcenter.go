@@ -24,11 +24,11 @@ import (
 
 type CostCenter struct {
 	foundation.BaseContract
-	FeeMember insolar.Reference
+	FeeMember *insolar.Reference
 }
 
 // New creates new CostCenter.
-func New(feeMember insolar.Reference) (*CostCenter, error) {
+func New(feeMember *insolar.Reference) (*CostCenter, error) {
 	return &CostCenter{
 		FeeMember: feeMember,
 	}, nil
@@ -36,7 +36,7 @@ func New(feeMember insolar.Reference) (*CostCenter, error) {
 
 // GetFeeMember gets fee member reference.
 // ins:immutable
-func (cc CostCenter) GetFeeMember() (insolar.Reference, error) {
+func (cc CostCenter) GetFeeMember() (*insolar.Reference, error) {
 	return cc.FeeMember, nil
 }
 

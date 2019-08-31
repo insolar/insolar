@@ -18,7 +18,6 @@ package contracts
 
 import (
 	"fmt"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/genesisrefs"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/account"
@@ -101,8 +100,8 @@ func GetAccountGenesisContractState(balance string, name string, parent string) 
 	}
 }
 
-func GetCostCenterGenesisContractState() insolar.GenesisContractState {
-	cc, err := costcenter.New(genesisrefs.ContractFeeMember)
+func GetCostCenterGenesisContractState(feeMember insolar.Reference) insolar.GenesisContractState {
+	cc, err := costcenter.New(&feeMember)
 	if err != nil {
 		panic("failed to create cost center instance")
 	}

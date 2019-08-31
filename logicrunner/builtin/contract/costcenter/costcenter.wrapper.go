@@ -185,7 +185,7 @@ func INSCONSTRUCTOR_New(data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
 	args := make([]interface{}, 1)
-	var args0 insolar.Reference
+	var args0 *insolar.Reference
 	args[0] = &args0
 
 	err := ph.Deserialize(data, &args)

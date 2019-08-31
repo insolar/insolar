@@ -73,7 +73,7 @@ func TestTransferMoney(t *testing.T) {
 
 	checkBalanceFewTimes(t, &launchnet.FeeMember, feeMemberRef, expectedFeeBalance)
 	newFeeBalance := getBalanceNoErr(t, &launchnet.FeeMember, feeMemberRef)
-	require.Equal(t, newFeeBalance, expectedFeeBalance)
+	require.Equal(t, expectedFeeBalance, newFeeBalance)
 }
 
 func TestTransferMoneyFromNotExist(t *testing.T) {
