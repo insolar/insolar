@@ -57,8 +57,34 @@ func (Key) Scope() store.Scope {
 	return store.ScopeGenesis
 }
 
-const XNS = "XNS"
-const FundsDepositName = "genesis_deposit"
+const (
+	XNS                        = "XNS"
+	FundsDepositName           = "genesis_deposit"
+	MigrationDaemonLockup      = 1604188800
+	MigrationDaemonVesting     = 1735689600
+	MigrationDaemonVestingStep = 2629746
+	MigrationDaemonMaturePulse = 1735689600
+
+	FundsAndEnterpriseLockup      = 0
+	FundsAndEnterpriseVesting     = 0
+	FundsAndEnterpriseVestingStep = 1
+	FundsAndEnterpriseMaturePulse = 0
+
+	NetworkIncentivesLockup      = 1672531200
+	NetworkIncentivesVesting     = 1635724800
+	NetworkIncentivesVestingStep = 1
+	NetworkIncentivesMaturePulse = 1735689600
+
+	ApplicationIncentivesLockup      = 1672531200
+	ApplicationIncentivesVesting     = 1735689600
+	ApplicationIncentivesVestingStep = 2629746
+	ApplicationIncentivesMaturePulse = 1735689600
+
+	FoundationLockup      = 1672531200
+	FoundationVesting     = 1735689600
+	FoundationVestingStep = 2629746
+	FoundationMaturePulse = 1735689600
+)
 
 // IsGenesisRequired checks if genesis record already exists.
 func (br *BaseRecord) IsGenesisRequired(ctx context.Context) (bool, error) {
@@ -231,22 +257,22 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 
 		contracts.GetDepositGenesisContractState(
 			insolar.DefaultDistributionAmount,
-			0,
-			0,
-			1,
+			int64(pulse.OfUnixTime(FundsAndEnterpriseLockup)),
+			int64(pulse.OfUnixTime(FundsAndEnterpriseVesting)),
+			FundsAndEnterpriseVestingStep,
 			foundation.Vesting1,
-			0,
+			FundsAndEnterpriseMaturePulse,
 			0,
 			insolar.GenesisNameEnterpriseDeposit,
 			insolar.GenesisNameRootDomain,
 		),
 		contracts.GetDepositGenesisContractState(
 			"0",
-			int64(pulse.OfUnixTime(1604188800)),
-			int64(pulse.OfUnixTime(1735689600)),
-			2629746,
+			int64(pulse.OfUnixTime(MigrationDaemonLockup)),
+			int64(pulse.OfUnixTime(MigrationDaemonVesting)),
+			MigrationDaemonVestingStep,
 			foundation.Vesting2,
-			pulse.OfUnixTime(1735689600),
+			pulse.OfUnixTime(MigrationDaemonMaturePulse),
 			0,
 			insolar.GenesisNameMigrationAdminDeposit,
 			insolar.GenesisNameRootDomain,
@@ -286,11 +312,11 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 	for i := range g.ContractsConfig.NetworkIncentivesPublicKeys {
 		states = append(states, contracts.GetDepositGenesisContractState(
 			insolar.DefaultDistributionAmount,
-			int64(pulse.OfUnixTime(1672531200)),
-			int64(pulse.OfUnixTime(1635724800)),
-			1,
+			int64(pulse.OfUnixTime(NetworkIncentivesLockup)),
+			int64(pulse.OfUnixTime(NetworkIncentivesVesting)),
+			NetworkIncentivesVestingStep,
 			foundation.Vesting2,
-			pulse.OfUnixTime(1735689600),
+			pulse.OfUnixTime(NetworkIncentivesMaturePulse),
 			0,
 			insolar.GenesisNameNetworkIncentivesDeposits[i],
 			insolar.GenesisNameRootDomain,
@@ -300,11 +326,11 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 	for i := range g.ContractsConfig.ApplicationIncentivesPublicKeys {
 		states = append(states, contracts.GetDepositGenesisContractState(
 			insolar.DefaultDistributionAmount,
-			int64(pulse.OfUnixTime(1672531200)),
-			int64(pulse.OfUnixTime(1735689600)),
-			2629746,
+			int64(pulse.OfUnixTime(ApplicationIncentivesLockup)),
+			int64(pulse.OfUnixTime(ApplicationIncentivesVesting)),
+			ApplicationIncentivesVestingStep,
 			foundation.Vesting2,
-			pulse.OfUnixTime(1735689600),
+			pulse.OfUnixTime(ApplicationIncentivesMaturePulse),
 			0,
 			insolar.GenesisNameApplicationIncentivesDeposits[i],
 			insolar.GenesisNameRootDomain,
@@ -314,11 +340,11 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 	for i := range g.ContractsConfig.FoundationPublicKeys {
 		states = append(states, contracts.GetDepositGenesisContractState(
 			insolar.DefaultDistributionAmount,
-			int64(pulse.OfUnixTime(1672531200)),
-			int64(pulse.OfUnixTime(1735689600)),
-			2629746,
+			int64(pulse.OfUnixTime(FoundationLockup)),
+			int64(pulse.OfUnixTime(FoundationVesting)),
+			FoundationVestingStep,
 			foundation.Vesting2,
-			pulse.OfUnixTime(1735689600),
+			pulse.OfUnixTime(FoundationMaturePulse),
 			0,
 			insolar.GenesisNameFoundationDeposits[i],
 			insolar.GenesisNameRootDomain,
