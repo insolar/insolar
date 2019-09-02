@@ -24,7 +24,6 @@ import (
 	"github.com/insolar/insolar/logicrunner/builtin/foundation/safemath"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/account"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/member"
-	"github.com/insolar/insolar/logicrunner/builtin/proxy/migrationadmin"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/migrationdaemon"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/wallet"
 
