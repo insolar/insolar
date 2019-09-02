@@ -67,6 +67,7 @@ type BargeInValidator func(sameStep bool) bool
 type BargeInContext interface {
 	WithJumpOverride(StateFunc, MigrateFunc, StepFlags) BargeInPermit
 	WithJump(StateFunc) BargeInPermit
+	//WithStop() BargeInPermit
 }
 
 type MigrationContext interface {

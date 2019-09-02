@@ -75,6 +75,8 @@ func (sm *PresentPulseSM) GetInitStateFor(machine smachine.StateMachine) smachin
 
 func (sm *PresentPulseSM) Init(ctx smachine.InitializationContext) smachine.StateUpdate {
 	ctx.SetDefaultMigration(sm.PulseCommitted)
+	//ctx.BargeIn(sm.PulsePrepare)
+	//ctx.BargeIn(sm.PulseCancel)
 	sm.psa.svc.subscribe(ctx, sm.PulsePrepare, sm.PulseCancel)
 	return ctx.Jump(sm.StateWorking)
 }
