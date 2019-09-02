@@ -122,10 +122,9 @@ func resolveAddress(configuration configuration.Transport) (string, error) {
 // NewNodeKeeper create new NodeKeeper
 func NewNodeKeeper(origin insolar.NetworkNode) network.NodeKeeper {
 	nk := &nodekeeper{
-		origin:    origin,
-		syncNodes: make([]insolar.NetworkNode, 0),
-		//SnapshotStorage:  storage.NewMemoryStorage(),
-		//CloudHashStorage: storage.NewMemoryCloudHashStorage(),
+		origin:          origin,
+		syncNodes:       make([]insolar.NetworkNode, 0),
+		SnapshotStorage: storage.NewMemoryStorage(),
 	}
 	return nk
 }
@@ -136,7 +135,7 @@ type nodekeeper struct {
 	syncLock  sync.Mutex
 	syncNodes []insolar.NetworkNode
 
-	SnapshotStorage storage.SnapshotStorage `inject:""`
+	SnapshotStorage storage.SnapshotStorage
 }
 
 func (nk *nodekeeper) SetInitialSnapshot(nodes []insolar.NetworkNode) {

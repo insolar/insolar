@@ -56,8 +56,6 @@ import (
 	"crypto"
 	"crypto/ecdsa"
 	"fmt"
-	"github.com/insolar/insolar/component"
-	"github.com/insolar/insolar/network/storage"
 	"math/rand"
 	"strings"
 	"time"
@@ -165,9 +163,6 @@ func initNodes(ctx context.Context, mode consensus.Mode, nodes GeneratedNodes, s
 
 	for i, n := range nodes.nodes {
 		nodeKeeper := nodenetwork.NewNodeKeeper(n)
-		cm := component.NewManager(nil)
-		cm.Inject(nodeKeeper, storage.NewMemoryStorage())
-
 		nodeKeeper.SetInitialSnapshot(nodes.nodes)
 		ns.nodeKeepers[i] = nodeKeeper
 
