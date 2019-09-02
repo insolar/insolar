@@ -285,7 +285,10 @@ func (m *Member) transferCall(params map[string]interface{}) (interface{}, error
 	if m.GetReference() == *recipientReference {
 		return nil, fmt.Errorf("recipient must be different from the sender")
 	}
-
+	_, err = member.GetObject(*recipientReference).GetPrototype()
+	if err != nil {
+		return nil, fmt.Errorf("member does not exists")
+	}
 	return wallet.GetObject(m.Wallet).Transfer(m.RootDomain, asset, amount, recipientReference)
 }
 
