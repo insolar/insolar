@@ -201,13 +201,13 @@ func ApplyMemberAnnouncement(ctx context.Context, reader transport.AnnouncementP
 		addJoiner = nil
 	}
 
-	inslogger.FromContext(ctx).Debugf("Before ApplyNodeMembership: id=%d %v %+v %+v",
-		n.GetNodeID(), addJoiner, ma, profile)
+	inslogger.FromContext(ctx).Debugf("Before ApplyNodeMembership: s=%d t=%d %v %+v %+v",
+		realm.GetSelfNodeID(), n.GetNodeID(), addJoiner, ma, profile)
 
 	modified, err := n.ApplyNodeMembership(ma, addJoiner)
 
-	inslogger.FromContext(ctx).Debugf("After ApplyNodeMembership: id=%d %v %+v",
-		n.GetNodeID(), modified, err)
+	inslogger.FromContext(ctx).Debugf("After ApplyNodeMembership: s=%d t=%d %v %+v",
+		realm.GetSelfNodeID(), n.GetNodeID(), modified, err)
 
 	return modified, ma.Joiner.JoinerProfile, err
 }

@@ -192,8 +192,8 @@ func (p *NodePhantom) postponePacket(ctx context.Context, packet transport.Packe
 func (p *NodePhantom) DispatchAnnouncement(ctx context.Context, rank member.Rank, profile profiles.StaticProfile,
 	announcement profiles.MemberAnnouncement) error {
 
-	inslogger.FromContext(ctx).Debugf("DispatchAnnouncement to NodePhantom: id=%d %v %+v %+v",
-		p.GetNodeID(), rank, profile, announcement)
+	inslogger.FromContext(ctx).Debugf("DispatchAnnouncement to NodePhantom: s=%d, t=%d %v %+v %+v",
+		p.purgatory.hook.GetLocalNodeID(), p.GetNodeID(), rank, profile, announcement)
 
 	p.mutex.Lock()
 	defer p.mutex.Unlock()

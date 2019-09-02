@@ -765,8 +765,8 @@ func (c *NodeAppearance) DispatchAnnouncement(ctx context.Context, rank member.R
 
 	// TODO additional checks
 
-	inslogger.FromContext(ctx).Debugf("DispatchAnnouncement to NodeAppearance: id=%d %v %+v %+v",
-		c.GetNodeID(), rank, profile, announcement)
+	inslogger.FromContext(ctx).Debugf("DispatchAnnouncement to NodeAppearance: s=%d t=%d %v %+v %+v",
+		c.hook.GetLocalNodeID(), c.GetNodeID(), rank, profile, announcement)
 
 	if args.IsNil(profile) {
 		return nil
