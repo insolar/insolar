@@ -45,7 +45,6 @@ func Test_NotifyAboutPulse(t *testing.T) {
 	expectDrop := drop.Drop{
 		JetID: jetID,
 		Pulse: expectPN,
-		Hash:  []byte{4, 2, 3},
 	}
 	expectIndexes := []record.Index{
 		{ObjID: gen.ID()},

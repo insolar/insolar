@@ -155,9 +155,8 @@ func TestDropStorageDB_Set(t *testing.T) {
 	encodedDrops := map[string]struct{}{}
 	f := fuzz.New().Funcs(func(inp *setInput, c fuzz.Continue) {
 		inp.dr = Drop{
-			DropSize: rand.Uint64(),
-			Pulse:    gen.PulseNumber(),
-			JetID:    gen.JetID(),
+			Pulse: gen.PulseNumber(),
+			JetID: gen.JetID(),
 		}
 
 		encoded, err := inp.dr.Marshal()
@@ -185,9 +184,8 @@ func TestDropStorageDB_Set(t *testing.T) {
 func TestDropStorageDB_Set_ErrOverride(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	dr := Drop{
-		DropSize: rand.Uint64(),
-		Pulse:    gen.PulseNumber(),
-		JetID:    gen.JetID(),
+		Pulse: gen.PulseNumber(),
+		JetID: gen.JetID(),
 	}
 
 	dbMock := store.NewDBMock(t)
@@ -205,8 +203,7 @@ func TestDropStorageDB_ForPulse(t *testing.T) {
 	jetID := gen.JetID()
 	pn := gen.PulseNumber()
 	dr := Drop{
-		DropSize: rand.Uint64(),
-		Pulse:    gen.PulseNumber(),
+		Pulse: gen.PulseNumber(),
 	}
 	buf, err := dr.Marshal()
 	require.NoError(t, err)

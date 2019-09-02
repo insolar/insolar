@@ -33,7 +33,7 @@ import (
 	"github.com/insolar/insolar/ledger/light/proc"
 )
 
-func TestGetRequestInfo_NilMsgPayload(t *testing.T) {
+func TestHasPendings_NilMsgPayload(t *testing.T) {
 	t.Parallel()
 
 	ctx := inslogger.TestContext(t)
@@ -42,13 +42,13 @@ func TestGetRequestInfo_NilMsgPayload(t *testing.T) {
 		Payload:   nil,
 	}
 
-	handler := handle.NewGetRequestInfo(nil, meta)
+	handler := handle.NewHasPendings(nil, meta, false)
 
 	err := handler.Present(ctx, flow.NewFlowMock(t))
 	require.Error(t, err)
 }
 
-func TestGetRequestInfo_BadMsgPayload(t *testing.T) {
+func TestHasPendings_BadMsgPayload(t *testing.T) {
 	t.Parallel()
 
 	ctx := inslogger.TestContext(t)
@@ -57,13 +57,13 @@ func TestGetRequestInfo_BadMsgPayload(t *testing.T) {
 		Payload:   []byte{1, 2, 3, 4, 5},
 	}
 
-	handler := handle.NewGetRequestInfo(nil, meta)
+	handler := handle.NewHasPendings(nil, meta, false)
 
 	err := handler.Present(ctx, flow.NewFlowMock(t))
 	require.Error(t, err)
 }
 
-func TestGetRequestInfo_IncorrectTypeMsgPayload(t *testing.T) {
+func TestHasPendings_IncorrectTypeMsgPayload(t *testing.T) {
 	t.Parallel()
 
 	ctx := inslogger.TestContext(t)
@@ -71,7 +71,7 @@ func TestGetRequestInfo_IncorrectTypeMsgPayload(t *testing.T) {
 
 	meta := payload.Meta{
 		Polymorph: uint32(payload.TypeMeta),
-		// Incorrect type (SetIncomingRequest instead of GetRequestInfo).
+		// Incorrect type (SetIncomingRequest instead of HasPendings).
 		Payload: payload.MustMarshal(&payload.SetIncomingRequest{
 			Polymorph: uint32(payload.TypeSetIncomingRequest),
 			Request:   record.Virtual{},
@@ -79,13 +79,13 @@ func TestGetRequestInfo_IncorrectTypeMsgPayload(t *testing.T) {
 		ID: []byte{1, 1, 1},
 	}
 
-	handler := handle.NewGetRequestInfo(proc.NewDependenciesMock(), meta)
+	handler := handle.NewHasPendings(proc.NewDependenciesMock(), meta, false)
 
 	err := handler.Present(ctx, f)
 	require.Error(t, err)
 }
 
-func TestGetRequestInfo_ErrorFromFetchJet(t *testing.T) {
+func TestHasPendings_FlowWithPassedFlag(t *testing.T) {
 	t.Parallel()
 	ctx := flow.TestContextWithPulse(
 		inslogger.TestContext(t),
@@ -94,10 +94,9 @@ func TestGetRequestInfo_ErrorFromFetchJet(t *testing.T) {
 
 	msg := payload.Meta{
 		Polymorph: uint32(payload.TypeMeta),
-		Payload: payload.MustMarshal(&payload.GetRequestInfo{
-			Polymorph: uint32(payload.TypeGetRequestInfo),
+		Payload: payload.MustMarshal(&payload.HasPendings{
+			Polymorph: uint32(payload.TypeHasPendings),
 			ObjectID:  insolar.ID{},
-			RequestID: insolar.ID{},
 		}),
 	}
 
@@ -113,12 +112,12 @@ func TestGetRequestInfo_ErrorFromFetchJet(t *testing.T) {
 			}
 		})
 
-		handler := handle.NewGetRequestInfo(proc.NewDependenciesMock(), msg)
+		handler := handle.NewHasPendings(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
 		assert.EqualError(t, err, "something strange from FetchJet")
 	})
 
-	t.Run("FetchJet returns ErrNotExecutor", func(t *testing.T) {
+	t.Run("passed flag is false and FetchJet returns ErrNotExecutor", func(t *testing.T) {
 		t.Parallel()
 		f := flow.NewFlowMock(t)
 		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
@@ -130,38 +129,31 @@ func TestGetRequestInfo_ErrorFromFetchJet(t *testing.T) {
 			}
 		})
 
-		handler := handle.NewGetRequestInfo(proc.NewDependenciesMock(), msg)
+		handler := handle.NewHasPendings(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
-		require.Error(t, err)
-		assert.Equal(t, proc.ErrNotExecutor, err)
+		require.NoError(t, err)
 	})
 
-	// Happy path, everything is fine.
-	t.Run("FetchJet procedure returns nil err", func(t *testing.T) {
+	t.Run("passed flag is true and FetchJet returns ErrNotExecutor", func(t *testing.T) {
 		t.Parallel()
 		f := flow.NewFlowMock(t)
 		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
 			switch p.(type) {
 			case *proc.FetchJet:
-				return nil
-			case *proc.WaitHot:
-				return nil
-			case *proc.EnsureIndex:
-				return nil
-			case *proc.SendRequestInfo:
-				return nil
+				return proc.ErrNotExecutor
 			default:
 				panic("unknown procedure")
 			}
 		})
 
-		handler := handle.NewGetRequestInfo(proc.NewDependenciesMock(), msg)
+		handler := handle.NewHasPendings(proc.NewDependenciesMock(), msg, true)
 		err := handler.Present(ctx, f)
-		require.NoError(t, err)
+		require.Error(t, err)
+		assert.Equal(t, proc.ErrNotExecutor, err)
 	})
 }
 
-func TestGetRequestInfo_ErrorFromWaitHot(t *testing.T) {
+func TestHasPendings_ErrorFromWaitHot(t *testing.T) {
 	t.Parallel()
 	ctx := flow.TestContextWithPulse(
 		inslogger.TestContext(t),
@@ -170,10 +162,9 @@ func TestGetRequestInfo_ErrorFromWaitHot(t *testing.T) {
 
 	msg := payload.Meta{
 		Polymorph: uint32(payload.TypeMeta),
-		Payload: payload.MustMarshal(&payload.GetRequestInfo{
-			Polymorph: uint32(payload.TypeGetRequestInfo),
+		Payload: payload.MustMarshal(&payload.HasPendings{
+			Polymorph: uint32(payload.TypeHasPendings),
 			ObjectID:  insolar.ID{},
-			RequestID: insolar.ID{},
 		}),
 	}
 
@@ -191,7 +182,7 @@ func TestGetRequestInfo_ErrorFromWaitHot(t *testing.T) {
 			}
 		})
 
-		handler := handle.NewGetRequestInfo(proc.NewDependenciesMock(), msg)
+		handler := handle.NewHasPendings(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
 		assert.EqualError(t, err, "error from WaitHot")
 	})
@@ -208,20 +199,20 @@ func TestGetRequestInfo_ErrorFromWaitHot(t *testing.T) {
 				return nil
 			case *proc.EnsureIndex:
 				return nil
-			case *proc.SendRequestInfo:
+			case *proc.HasPendings:
 				return nil
 			default:
 				panic("unknown procedure")
 			}
 		})
 
-		handler := handle.NewGetRequestInfo(proc.NewDependenciesMock(), msg)
+		handler := handle.NewHasPendings(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
 		require.NoError(t, err)
 	})
 }
 
-func TestGetRequestInfo_ErrorFromEnsureIndex(t *testing.T) {
+func TestHasPendings_ErrorFromEnsureIndex(t *testing.T) {
 	t.Parallel()
 	ctx := flow.TestContextWithPulse(
 		inslogger.TestContext(t),
@@ -230,10 +221,9 @@ func TestGetRequestInfo_ErrorFromEnsureIndex(t *testing.T) {
 
 	msg := payload.Meta{
 		Polymorph: uint32(payload.TypeMeta),
-		Payload: payload.MustMarshal(&payload.GetRequestInfo{
-			Polymorph: uint32(payload.TypeGetRequestInfo),
+		Payload: payload.MustMarshal(&payload.HasPendings{
+			Polymorph: uint32(payload.TypeHasPendings),
 			ObjectID:  insolar.ID{},
-			RequestID: insolar.ID{},
 		}),
 	}
 
@@ -254,7 +244,7 @@ func TestGetRequestInfo_ErrorFromEnsureIndex(t *testing.T) {
 			}
 		})
 
-		handler := handle.NewGetRequestInfo(proc.NewDependenciesMock(), msg)
+		handler := handle.NewHasPendings(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
 		assert.EqualError(t, err, "error from EnsureIndex")
 	})
@@ -271,20 +261,20 @@ func TestGetRequestInfo_ErrorFromEnsureIndex(t *testing.T) {
 				return nil
 			case *proc.EnsureIndex:
 				return nil
-			case *proc.SendRequestInfo:
+			case *proc.HasPendings:
 				return nil
 			default:
 				panic("unknown procedure")
 			}
 		})
 
-		handler := handle.NewGetRequestInfo(proc.NewDependenciesMock(), msg)
+		handler := handle.NewHasPendings(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
 		require.NoError(t, err)
 	})
 }
 
-func TestGetRequestInfo_ErrorFromSendRequestInfo(t *testing.T) {
+func TestHasPendings_ErrorFromSendObject(t *testing.T) {
 	t.Parallel()
 	ctx := flow.TestContextWithPulse(
 		inslogger.TestContext(t),
@@ -293,14 +283,13 @@ func TestGetRequestInfo_ErrorFromSendRequestInfo(t *testing.T) {
 
 	msg := payload.Meta{
 		Polymorph: uint32(payload.TypeMeta),
-		Payload: payload.MustMarshal(&payload.GetRequestInfo{
-			Polymorph: uint32(payload.TypeGetRequestInfo),
+		Payload: payload.MustMarshal(&payload.HasPendings{
+			Polymorph: uint32(payload.TypeHasPendings),
 			ObjectID:  insolar.ID{},
-			RequestID: insolar.ID{},
 		}),
 	}
 
-	t.Run("SendRequestInfo procedure returns err", func(t *testing.T) {
+	t.Run("HasPendings procedure returns err", func(t *testing.T) {
 		t.Parallel()
 		f := flow.NewFlowMock(t)
 		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
@@ -311,20 +300,20 @@ func TestGetRequestInfo_ErrorFromSendRequestInfo(t *testing.T) {
 				return nil
 			case *proc.EnsureIndex:
 				return nil
-			case *proc.SendRequestInfo:
-				return errors.New("error from SendRequestInfo")
+			case *proc.HasPendings:
+				return errors.New("error from HasPendings")
 			default:
 				panic("unknown procedure")
 			}
 		})
 
-		handler := handle.NewGetRequestInfo(proc.NewDependenciesMock(), msg)
+		handler := handle.NewHasPendings(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
-		assert.EqualError(t, err, "error from SendRequestInfo")
+		assert.EqualError(t, err, "error from HasPendings")
 	})
 
 	// Happy path, everything is fine.
-	t.Run("SendRequestInfo procedure returns nil err", func(t *testing.T) {
+	t.Run("HasPendings procedure returns nil err", func(t *testing.T) {
 		t.Parallel()
 		f := flow.NewFlowMock(t)
 		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
@@ -335,14 +324,14 @@ func TestGetRequestInfo_ErrorFromSendRequestInfo(t *testing.T) {
 				return nil
 			case *proc.EnsureIndex:
 				return nil
-			case *proc.SendRequestInfo:
+			case *proc.HasPendings:
 				return nil
 			default:
 				panic("unknown procedure")
 			}
 		})
 
-		handler := handle.NewGetRequestInfo(proc.NewDependenciesMock(), msg)
+		handler := handle.NewHasPendings(proc.NewDependenciesMock(), msg, false)
 		err := handler.Present(ctx, f)
 		require.NoError(t, err)
 	})

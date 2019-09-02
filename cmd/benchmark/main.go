@@ -158,7 +158,7 @@ func nodesErrorLogReader(s scenario) chan struct{} {
 
 	logs, err := getLogs(discoveryNodesLogs)
 	if err != nil {
-		writeToOutput(s.getOut(), fmt.Sprintf("Can't find node logs: %s", err))
+		writeToOutput(s.getOut(), fmt.Sprintf("Can't find node logs: %s \n", err))
 	}
 
 	wg.Add(len(logs))
