@@ -33,13 +33,7 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 )
-
-func usage() {
-	pflag.Usage()
-	os.Exit(0)
-}
 
 func closeRawDB(bdb *badger.DB, err error) {
 	closeError := bdb.Close()
@@ -103,8 +97,16 @@ func parseMergeParams() *cobra.Command {
 	mergeFlags.IntVarP(
 		&numberOfWorkers, "workers-num", "w", 1, "number of workers to read backup file")
 
-	cobra.MarkFlagRequired(mergeFlags, targetDBFlagName)
-	cobra.MarkFlagRequired(mergeFlags, bkpFileName)
+	err := cobra.MarkFlagRequired(mergeFlags, targetDBFlagName)
+	if err != nil {
+		printError("failed to set required param: "+targetDBFlagName, err)
+		os.Exit(1)
+	}
+	err = cobra.MarkFlagRequired(mergeFlags, bkpFileName)
+	if err != nil {
+		printError("failed to set required param: "+bkpFileName, err)
+		os.Exit(1)
+	}
 
 	return mergeCmd
 }
@@ -162,7 +164,11 @@ func createEmptyBadger(dbDir string) {
 	})
 
 	t := time.Time{}
-	t.UnmarshalBinary(key.ID())
+	err = t.UnmarshalBinary(key.ID())
+	if err != nil {
+		closeRawDB(bdb, err)
+		return
+	}
 	log.Info("Set db initialized key: ", t.String())
 
 	if err != nil {
@@ -187,7 +193,11 @@ func parseCreateParams() *cobra.Command {
 	createCmd.Flags().StringVarP(
 		&dbDir, dbDirFlagName, "d", "", "directory where new badger will be created (required)")
 
-	cobra.MarkFlagRequired(createCmd.Flags(), dbDirFlagName)
+	err := cobra.MarkFlagRequired(createCmd.Flags(), dbDirFlagName)
+	if err != nil {
+		printError("failed to set required param: "+dbDirFlagName, err)
+		os.Exit(1)
+	}
 
 	return createCmd
 }
@@ -259,7 +269,11 @@ func parsePrepareBackupParams() *cobra.Command {
 	prepareBackupCmd.Flags().StringVarP(
 		&dbDir, dbDirFlagName, "d", "", "directory where new badger will be created (required)")
 
-	cobra.MarkFlagRequired(prepareBackupCmd.Flags(), dbDirFlagName)
+	err := cobra.MarkFlagRequired(prepareBackupCmd.Flags(), dbDirFlagName)
+	if err != nil {
+		printError("failed to set required param: "+dbDirFlagName, err)
+		os.Exit(1)
+	}
 
 	return prepareBackupCmd
 }
@@ -289,7 +303,11 @@ func printError(message string, err error) {
 }
 
 func main() {
-	log.SetLevel("Debug")
+	err := log.SetLevel("Debug")
+	if err != nil {
+		printError("failed to set log level", err)
+		os.Exit(1)
+	}
 
 	cfg := configuration.NewLog()
 	cfg.Level = "Debug"
