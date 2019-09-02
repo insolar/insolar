@@ -18,18 +18,20 @@ package migrationadmin
 
 import (
 	"fmt"
-	"github.com/insolar/insolar/logicrunner/builtin/proxy/migrationshard"
-	"github.com/pkg/errors"
 	"strings"
+
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/migrationdaemon"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/migrationshard"
 )
 
 // MigrationAdmin manage and change status for  migration daemon.
 type MigrationAdmin struct {
 	foundation.BaseContract
-	MigrationDaemons       foundation.StableMap
+
 	MigrationAdminMember   insolar.Reference
 	MigrationAddressShards [insolar.GenesisAmountMigrationAddressShards]insolar.Reference
 	VestingParams          *VestingParams
@@ -41,11 +43,16 @@ type VestingParams struct {
 	VestingStep int64 `json:"vestingStepInPulses"`
 }
 
+type CheckDaemonResponse struct {
+	Status string `json:"status"`
+}
+
 const (
 	StatusActive     = "active"
 	StatusInactivate = "inactive"
 )
 
+//Call internal function migration admin from api.
 func (mA *MigrationAdmin) MigrationAdminCall(params map[string]interface{}, nameMethod string, caller insolar.Reference) (interface{}, error) {
 
 	switch nameMethod {
@@ -64,21 +71,66 @@ func (mA *MigrationAdmin) MigrationAdminCall(params map[string]interface{}, name
 	return nil, fmt.Errorf("unknown method: migration.'%s'", nameMethod)
 }
 
-func (mA *MigrationAdmin) activateDaemonCall(params map[string]interface{}, memberRef insolar.Reference) (interface{}, error) {
-	migrationDaemon, ok := params["reference"].(string)
-	if !ok && len(migrationDaemon) == 0 {
+func (mA *MigrationAdmin) getMigrationDamon(params map[string]interface{}, caller insolar.Reference) (*migrationdaemon.MigrationDaemon, error) {
+
+	migrationDaemonMember, ok := params["reference"].(string)
+	if !ok && len(migrationDaemonMember) == 0 {
 		return nil, fmt.Errorf("incorect input: failed to get 'reference' param")
 	}
-	return nil, mA.ActivateDaemon(strings.TrimSpace(migrationDaemon), memberRef)
+
+	migrationDaemonMemberRef, err := insolar.NewReferenceFromBase58(migrationDaemonMember)
+	if err != nil {
+		return nil, fmt.Errorf(" failed to parse params.Reference")
+	}
+
+	migrationDaemonContractRef, err := foundation.GetMigrationDaemon(*migrationDaemonMemberRef)
+	if err != nil {
+		return nil, fmt.Errorf(" get migration daemon contract from foundation failed, %s ", err.Error())
+	}
+	if migrationDaemonContractRef.IsEmpty() {
+		return nil, fmt.Errorf(" the member is not migration daemon, %s ", migrationDaemonMemberRef)
+	}
+	migrationDaemonContract := migrationdaemon.GetObject(migrationDaemonContractRef)
+
+	return migrationDaemonContract, nil
+}
+
+func (mA *MigrationAdmin) activateDaemonCall(params map[string]interface{}, caller insolar.Reference) (interface{}, error) {
+	if caller != mA.MigrationAdminMember {
+		return nil, fmt.Errorf(" only migration admin can activate migration demons ")
+	}
+	migrationDaemonContract, err := mA.getMigrationDamon(params, caller)
+	if err != nil {
+		return nil, err
+	}
+	status, err := migrationDaemonContract.GetActivationStatus()
+	if err != nil {
+		return nil, err
+	}
+	if status {
+		return nil, fmt.Errorf("daemon member already activated")
+	}
+	err = migrationDaemonContract.SetActivationStatus(true)
+	return nil, err
 }
 
 func (mA *MigrationAdmin) deactivateDaemonCall(params map[string]interface{}, memberRef insolar.Reference) (interface{}, error) {
-	migrationDaemon, ok := params["reference"].(string)
-
-	if !ok && len(migrationDaemon) == 0 {
-		return nil, fmt.Errorf("incorect input: failed to get 'reference' param")
+	if memberRef != mA.MigrationAdminMember {
+		return nil, fmt.Errorf(" only migration admin can deactivate migration demons ")
 	}
-	return nil, mA.DeactivateDaemon(strings.TrimSpace(migrationDaemon), memberRef)
+	migrationDaemonContract, err := mA.getMigrationDamon(params, memberRef)
+	if err != nil {
+		return nil, err
+	}
+	status, err := migrationDaemonContract.GetActivationStatus()
+	if err != nil {
+		return nil, err
+	}
+	if !status {
+		return nil, fmt.Errorf("daemon member already deactivated")
+	}
+	err = migrationDaemonContract.SetActivationStatus(false)
+	return nil, err
 }
 
 func (mA *MigrationAdmin) addMigrationAddressesCall(params map[string]interface{}, memberRef insolar.Reference) (interface{}, error) {
@@ -108,98 +160,23 @@ func (mA *MigrationAdmin) addMigrationAddressesCall(params map[string]interface{
 	return nil, nil
 }
 
-type CheckDaemonResponse struct {
-	Status string `json:"status"`
-}
-
 func (mA *MigrationAdmin) checkDaemonCall(params map[string]interface{}, caller insolar.Reference) (interface{}, error) {
-	migrationDaemon, ok := params["reference"].(string)
 
-	_, err := mA.CheckDaemon(strings.TrimSpace(caller.String()))
-	if caller != mA.MigrationAdminMember && err != nil {
-		return nil, fmt.Errorf(" permission denied to information about migration daemons: %s", err.Error())
+	if caller != mA.MigrationAdminMember && !foundation.IsMigrationDaemonMember(caller) {
+		return nil, fmt.Errorf(" permission denied to information about migration daemons")
 	}
-
-	if !ok && len(migrationDaemon) == 0 {
-		return nil, fmt.Errorf("incorect input: failed to get 'reference' param")
-	}
-
-	result, err := mA.CheckDaemon(strings.TrimSpace(migrationDaemon))
+	migrationDaemonContract, err := mA.getMigrationDamon(params, caller)
 	if err != nil {
-		return nil, fmt.Errorf(" check status migration daemon failed: %s", err.Error())
+		return nil, err
 	}
-	if result {
+	status, err := migrationDaemonContract.GetActivationStatus()
+	if err != nil {
+		return nil, err
+	}
+	if status {
 		return CheckDaemonResponse{Status: StatusActive}, nil
 	}
 	return CheckDaemonResponse{Status: StatusInactivate}, nil
-}
-
-// Return stable map migration daemon.
-// ins:immutable
-func (mA *MigrationAdmin) GetAllMigrationDaemon() (foundation.StableMap, error) {
-	sizeMap := len(mA.MigrationDaemons)
-	if sizeMap != insolar.GenesisAmountMigrationDaemonMembers {
-		return foundation.StableMap{}, fmt.Errorf(" MigrationAdmin contains the wrong amount migration daemon %d", sizeMap)
-	}
-	return mA.MigrationDaemons, nil
-}
-
-// Activate migration daemon.
-func (mA *MigrationAdmin) ActivateDaemon(daemonMember string, caller insolar.Reference) error {
-	if caller != mA.MigrationAdminMember {
-		return fmt.Errorf(" only migration admin can activate migration demons ")
-	}
-	switch mA.MigrationDaemons[daemonMember] {
-	case StatusActive:
-		return fmt.Errorf(" daemon member already activated - %s", daemonMember)
-	case StatusInactivate:
-		mA.MigrationDaemons[daemonMember] = StatusActive
-		return nil
-	default:
-		return fmt.Errorf(" this referense is not daemon member ")
-	}
-}
-
-// Deactivate migration daemon.
-func (mA *MigrationAdmin) DeactivateDaemon(daemonMember string, caller insolar.Reference) error {
-	if caller != mA.MigrationAdminMember {
-		return fmt.Errorf(" only migration admin can deactivate migration demons ")
-	}
-
-	switch mA.MigrationDaemons[daemonMember] {
-	case StatusActive:
-		mA.MigrationDaemons[daemonMember] = StatusInactivate
-		return nil
-	case StatusInactivate:
-		return fmt.Errorf(" daemon member already deactivated - %s", daemonMember)
-	default:
-		return fmt.Errorf(" this referense is not daemon member ")
-	}
-}
-
-// Check this member is migration daemon or mot.
-// ins:immutable
-func (mA *MigrationAdmin) CheckDaemon(daemonMember string) (bool, error) {
-	switch mA.MigrationDaemons[daemonMember] {
-	case StatusActive:
-		return true, nil
-	case StatusInactivate:
-		return false, nil
-	default:
-		return false, fmt.Errorf(" this reference is not daemon member %s", daemonMember)
-	}
-}
-
-// Return only active daemons.
-// ins:immutable
-func (mA *MigrationAdmin) GetActiveDaemons() ([]string, error) {
-	var activeDaemons []string
-	for daemonsRef, status := range mA.MigrationDaemons {
-		if status == StatusActive {
-			activeDaemons = append(activeDaemons, daemonsRef)
-		}
-	}
-	return activeDaemons, nil
 }
 
 func (mA *MigrationAdmin) GetDepositParameters() (*VestingParams, error) {

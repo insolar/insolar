@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/account"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/member"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/migrationadmin"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/migrationdaemon"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/wallet"
 
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
@@ -103,10 +104,9 @@ func (d *Deposit) Confirm(migrationDaemonRef string, txHash string, amountStr st
 	d.MigrationDaemonConfirms[migrationDaemonRef] = amountStr
 
 	if len(d.MigrationDaemonConfirms) > 2 {
-		migrationAdminContract := migrationadmin.GetObject(foundation.GetMigrationAdmin())
-		activeDaemons, err := migrationAdminContract.GetActiveDaemons()
+		activeDaemons, err := d.checkStatusConfirm()
 		if err != nil {
-			return fmt.Errorf("failed to get list active daemons: %s", err.Error())
+			return err
 		}
 		err = d.checkAmount(activeDaemons)
 		if err != nil {
@@ -151,6 +151,36 @@ func (d *Deposit) checkAmount(activeDaemons []string) error {
 		}
 	}
 	return nil
+}
+
+func (d *Deposit) checkStatusConfirm() ([]string, error) {
+	var activateDaemon = []string{}
+
+	for ref := range d.MigrationDaemonConfirms {
+		migrationDaemonMemberRef, err := insolar.NewReferenceFromBase58(ref)
+		if err != nil {
+			return nil, fmt.Errorf(" failed to parse params.Reference")
+		}
+
+		migrationDaemonContractRef, err := foundation.GetMigrationDaemon(*migrationDaemonMemberRef)
+		if err != nil || migrationDaemonContractRef.IsEmpty() {
+			return nil, fmt.Errorf(" get migration daemon contract from foundation failed, %s ", err)
+		}
+
+		migrationDaemonContract := migrationdaemon.GetObject(migrationDaemonContractRef)
+		result, err := migrationDaemonContract.GetActivationStatus()
+
+		if err != nil {
+			return nil, err
+		}
+		if result {
+			activateDaemon = append(activateDaemon, ref)
+		}
+	}
+	if len(activateDaemon) >= 3 {
+		return activateDaemon, nil
+	}
+	return nil, fmt.Errorf("failed to check amount in confirmation from migration daemon")
 }
 
 func (d *Deposit) canTransfer(transferAmount *big.Int) error {
