@@ -162,6 +162,10 @@ func createEmptyBadger(dbDir string) {
 	err = bdb.Update(func(txn *badger.Txn) error {
 		return txn.Set(fullKey, []byte{})
 	})
+	if err != nil {
+		closeRawDB(bdb, err)
+		return
+	}
 
 	t := time.Time{}
 	err = t.UnmarshalBinary(key.ID())
@@ -170,11 +174,6 @@ func createEmptyBadger(dbDir string) {
 		return
 	}
 	log.Info("Set db initialized key: ", t.String())
-
-	if err != nil {
-		closeRawDB(bdb, err)
-		return
-	}
 
 	closeRawDB(bdb, nil)
 }
