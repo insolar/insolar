@@ -69,7 +69,7 @@ type Backup struct {
 	// TargetDirectory is directory where backups will be moved to
 	TargetDirectory string
 
-	// MetaInfoFile contains meta info about backup. It will be in json format
+	// MetaInfoFile contains meta info about current incremental backup. It will be in json format
 	MetaInfoFile string
 
 	// ConfirmFile: we wait this file being created when backup was saved on remote host
@@ -83,6 +83,10 @@ type Backup struct {
 
 	// BackupWaitPeriod - how much time we will wait for appearing of file ConfirmFile
 	BackupWaitPeriod uint
+
+	// LastBackupInfoFile contains info about last backup. Must lies inside Storage.DataDirectory
+	// Is's are full path
+	LastBackupInfoFile string
 
 	// PostProcessBackupCmd - command which will be invoked after creating backup. It might be used to
 	// send backup to remote node and do some external checks. If everything is ok, this command must create ConfirmFile
