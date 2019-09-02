@@ -110,7 +110,8 @@ func (rs *outgoingRequestSender) SendAbandonedOutgoingRequest(ctx context.Contex
 }
 
 func (rs *outgoingRequestSender) Stop(_ context.Context) {
-	rs.as.CloseAll()
+	// not implemented yet, see INS-3293, INS-3371
+	// rs.as.CloseAll()
 }
 
 func newOutgoingSenderActorState(cr insolar.ContractRequester, am artifacts.Client, pa pulse.Accessor) actor.Actor {
