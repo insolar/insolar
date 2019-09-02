@@ -42,6 +42,6 @@ func (md *MigrationDaemon) GetActivationStatus() (bool, error) {
 
 // Return reference on migration daemon.
 // ins:immutable
-func (md *MigrationDaemon) GetMigrationDaemonMember(status bool) (insolar.Reference, error) {
+func (md *MigrationDaemon) GetMigrationDaemonMember() (insolar.Reference, error) {
 	return md.MigrationDaemonMember, nil
 }

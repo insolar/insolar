@@ -55,11 +55,8 @@ const (
 
 	GenesisAmountMigrationDaemonMembers       = 10
 	GenesisAmountActiveMigrationDaemonMembers = 3
-
-	GenesisAmountMigrationDaemonContract = 10
-
-	GenesisAmountPublicKeyShards        = 10
-	GenesisAmountMigrationAddressShards = 10
+	GenesisAmountPublicKeyShards              = 10
+	GenesisAmountMigrationAddressShards       = 10
 )
 
 var GenesisNameMigrationDaemonMembers = func() (result [GenesisAmountMigrationDaemonMembers]string) {
@@ -69,8 +66,8 @@ var GenesisNameMigrationDaemonMembers = func() (result [GenesisAmountMigrationDa
 	return
 }()
 
-var GenesisNameMigrationDaemons = func() (result [GenesisAmountMigrationDaemonContract]string) {
-	for i := 0; i < GenesisAmountMigrationDaemonContract; i++ {
+var GenesisNameMigrationDaemons = func() (result [GenesisAmountMigrationDaemonMembers]string) {
+	for i := 0; i < GenesisAmountMigrationDaemonMembers; i++ {
 		result[i] = GenesisNameMigrationDaemon + "_" + strconv.Itoa(i)
 	}
 	return

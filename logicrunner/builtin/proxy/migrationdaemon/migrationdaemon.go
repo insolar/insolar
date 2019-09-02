@@ -334,9 +334,8 @@ func (r *MigrationDaemon) GetActivationStatus() (bool, error) {
 }
 
 // GetMigrationDaemonMember is proxy generated method
-func (r *MigrationDaemon) GetMigrationDaemonMemberAsMutable(status bool) (insolar.Reference, error) {
-	var args [1]interface{}
-	args[0] = status
+func (r *MigrationDaemon) GetMigrationDaemonMemberAsMutable() (insolar.Reference, error) {
+	var args [0]interface{}
 
 	var argsSerialized []byte
 
@@ -374,9 +373,8 @@ func (r *MigrationDaemon) GetMigrationDaemonMemberAsMutable(status bool) (insola
 }
 
 // GetMigrationDaemonMemberNoWait is proxy generated method
-func (r *MigrationDaemon) GetMigrationDaemonMemberNoWait(status bool) error {
-	var args [1]interface{}
-	args[0] = status
+func (r *MigrationDaemon) GetMigrationDaemonMemberNoWait() error {
+	var args [0]interface{}
 
 	var argsSerialized []byte
 
@@ -394,9 +392,8 @@ func (r *MigrationDaemon) GetMigrationDaemonMemberNoWait(status bool) error {
 }
 
 // GetMigrationDaemonMemberAsImmutable is proxy generated method
-func (r *MigrationDaemon) GetMigrationDaemonMember(status bool) (insolar.Reference, error) {
-	var args [1]interface{}
-	args[0] = status
+func (r *MigrationDaemon) GetMigrationDaemonMember() (insolar.Reference, error) {
+	var args [0]interface{}
 
 	var argsSerialized []byte
 

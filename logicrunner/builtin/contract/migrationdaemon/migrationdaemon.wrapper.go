@@ -195,9 +195,7 @@ func INSMETHOD_GetMigrationDaemonMember(object []byte, data []byte) ([]byte, []b
 		return nil, nil, e
 	}
 
-	args := make([]interface{}, 1)
-	var args0 bool
-	args[0] = &args0
+	args := []interface{}{}
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
@@ -205,7 +203,7 @@ func INSMETHOD_GetMigrationDaemonMember(object []byte, data []byte) ([]byte, []b
 		return nil, nil, e
 	}
 
-	ret0, ret1 := self.GetMigrationDaemonMember(args0)
+	ret0, ret1 := self.GetMigrationDaemonMember()
 
 	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()
