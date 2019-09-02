@@ -344,23 +344,6 @@ outer:
 	return localInspector
 }
 
-func (c *Phase3Controller) workerRescanForMissing(ctx context.Context, missing chan inspectors.InspectedVector) {
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case sig := <-c.queueTrustUpdated:
-			if sig.IsPingSignal() {
-				continue
-			}
-			// TODO
-		case <-missing:
-			// TODO - rescan vector and send results
-			// c.queuePh3Recv <- d
-		}
-	}
-}
-
 func (c *Phase3Controller) workerSendFastPhase3(ctx context.Context) {
 
 	// TODO vector calculation for fast options
@@ -419,8 +402,6 @@ func (c *Phase3Controller) workerRecvPhase3(ctx context.Context, localInspector 
 
 	logger := inslogger.FromContext(ctx)
 	logger.Debug("Phase3 start receive entry")
-
-	var queueMissing chan inspectors.InspectedVector
 
 	timings := c.R.GetTimings()
 	softDeadline := time.After(c.R.AdjustedAfter(timings.EndOfPhase3))
@@ -483,31 +464,14 @@ outer:
 		case d := <-c.queuePh3Recv:
 			logger.Debugf("Phase3 queue receive from %d", d.GetNode().GetNodeID())
 			switch {
-			case d.HasMissingMembers():
-				if queueMissing == nil {
-					queueMissing = make(chan inspectors.InspectedVector, cap(c.queuePh3Recv))
-					go c.workerRescanForMissing(ctx, queueMissing)
-				}
-				queueMissing <- d
-				// do chasing
 			case !d.IsInspected():
 				d = d.Reinspect(ctx, localInspector)
 				if !d.IsInspected() {
-					if d.HasMissingMembers() {
-						// loop it back to be picked by "case d.HasMissingMembers()"
-						c.queuePh3Recv <- d
-					}
-					// TODO heavy inspection with hash recalculations should be running on a limited pool
-					// go func() {
 					d.Inspect(ctx)
 					if !d.IsInspected() {
 						inslogger.FromContext(ctx).Errorf("unable to inspect vector: %v", d)
 						break
-						// } else {
-						//	c.queuePh3Recv <- d
 					}
-					// }()
-					// break // do chasing
 				}
 				fallthrough
 			default:
