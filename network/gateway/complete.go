@@ -160,7 +160,14 @@ func (g *Complete) requestCertSign(ctx context.Context, discoveryNode insolar.Di
 }
 
 func (g *Complete) getNodeInfo(ctx context.Context, nodeRef *insolar.Reference) (string, string, error) {
-	res, err := g.ContractRequester.SendRequest(ctx, nodeRef, "GetNodeInfo", []interface{}{})
+	latest, err := g.PulseAccessor.GetLatestPulse(ctx)
+	if err != nil {
+		return "", "", errors.Wrap(err, "[ GetCert ] Can't get latest pulse")
+	}
+
+	res, _, err := g.ContractRequester.SendRequest(
+		ctx, nodeRef, "GetNodeInfo", []interface{}{}, latest.PulseNumber,
+	)
 	if err != nil {
 		return "", "", errors.Wrap(err, "[ GetCert ] Couldn't call GetNodeInfo")
 	}
