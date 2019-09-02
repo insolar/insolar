@@ -23,8 +23,27 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/rpc/v2"
-	"github.com/pkg/errors"
+	"github.com/insolar/rpc/v2/json2"
 	"net/http"
+)
+
+const (
+	ParseError                 = -31700
+	ParseErrorMessage          = "Parsing error on the server side: received an invalid JSON."
+	InvalidRequestError        = -31600
+	InvalidRequestErrorMessage = "The JSON received is not a valid request payload."
+	MethodNotFoundError        = -31601
+	MethodNotFoundErrorMessage = "Method does not exist / is not available."
+	InvalidParamsError         = -31602
+	InvalidParamsErrorMessage  = "Invalid method parameter(s)."
+	InternalError              = -31603
+	InternalErrorMessage       = "Internal JSON RPC error."
+	TimeoutError               = -31106
+	TimeoutErrorMessage        = "Request's timeout has expired."
+	UnauthorizedError          = -31401
+	UnauthorizedErrorMessage   = "Action is not authorized."
+	ExecutionError             = -31103
+	ExecutionErrorMessage      = "Execution error."
 )
 
 func wrapCall(runner *Runner, allowedMethods map[string]bool, req *http.Request, args *requester.Params, requestBody *rpc.RequestBody, result *requester.ContractResult) error {
@@ -38,7 +57,11 @@ func wrapCall(runner *Runner, allowedMethods map[string]bool, req *http.Request,
 
 	_, ok := allowedMethods[args.CallSite]
 	if !ok {
-		return errors.New("method not allowed")
+		return &json2.Error{
+			Code:    MethodNotFoundError,
+			Message: MethodNotFoundErrorMessage,
+			Data:    nil,
+		}
 	}
 
 	if args.Test != "" {
@@ -57,9 +80,13 @@ func wrapCall(runner *Runner, allowedMethods map[string]bool, req *http.Request,
 
 	setRootReferenceIfNeeded(args)
 
-	callResult, requestRef, err := runner.makeCall(ctx, "contract.call", *args, requestBody.Raw, signature, 0, seedPulse)
+	callResult, requestRef, err := runner.makeCall(ctx, "contract.call", *args, requestBody.Raw, signature, seedPulse)
 	if err != nil {
-		return err
+		return &json2.Error{
+			Code:    ExecutionError,
+			Message: ExecutionErrorMessage,
+			Data:    nil,
+		}
 	}
 
 	if requestRef != nil {
