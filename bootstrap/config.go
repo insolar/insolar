@@ -64,8 +64,8 @@ type Config struct {
 	VestingPeriodInPulses int64 `mapstructure:"vesting_pulse_period"`
 	// VestingPeriodInPulses - interval of count pulses for one step of partial release.
 	VestingStepInPulses int64 `mapstructure:"vesting_pulse_step"`
-	// LoсkupPeriodInPulses - interval of count pulses for the full period of hold.
-	LoсkupPeriodInPulses int64 `mapstructure:"loсkup_pulse_period"`
+	// LockupPeriodInPulses - interval of count pulses for the full period of hold.
+	LockupPeriodInPulses int64 `mapstructure:"lockup_pulse_period"`
 	Contracts            Contracts
 
 	// Discovery settings.
