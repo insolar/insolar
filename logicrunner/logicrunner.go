@@ -85,7 +85,6 @@ func NewLogicRunner(cfg *configuration.LogicRunner, publisher watermillMsg.Publi
 		Sender:    sender,
 	}
 
-	res.ResultsMatcher = newResultsMatcher(&res)
 	return &res, nil
 }
 
@@ -107,6 +106,7 @@ func (lr *LogicRunner) Init(ctx context.Context) error {
 		lr.OutgoingSender,
 		lr.ShutdownFlag,
 	)
+	lr.ResultsMatcher = newResultsMatcher(lr.Sender, lr.PulseAccessor)
 
 	lr.rpc = lrCommon.NewRPC(
 		NewRPCMethods(
@@ -311,42 +311,15 @@ func contextWithServiceData(ctx context.Context, data *payload.ServiceData) cont
 
 func (lr *LogicRunner) AddUnwantedResponse(ctx context.Context, msg insolar.Payload) error {
 	m := msg.(*payload.ReturnResults)
-	currentPulse, err := lr.PulseAccessor.Latest(ctx)
+	done, err := lr.WriteController.Begin(ctx, flow.Pulse(ctx))
 	if err != nil {
-		return errors.Wrap(err, "failed to get current pulse")
+		if err == writecontroller.ErrWriteClosed {
+			return flow.ErrCancelled
+		}
+		return errors.Wrap(err, "couldn't obtain writecontroller lock")
 	}
-	done, err := lr.WriteController.Begin(ctx, currentPulse.PulseNumber)
 	defer done()
-	if err != nil {
-		return flow.ErrCancelled
-	}
 
-	// TODO: move towards flow.Dispatcher in INS-3341
-	err = lr.isStillExecutor(ctx, *m.Target.GetLocal())
-	if err != nil {
-		return err
-	}
-
-	return lr.ResultsMatcher.AddUnwantedResponse(ctx, m)
-}
-
-func (lr *LogicRunner) isStillExecutor(ctx context.Context, object insolar.ID) error {
-	currentPulse, err := lr.PulseAccessor.Latest(ctx)
-	if err != nil {
-		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to get current pulse"))
-		return flow.ErrCancelled
-	}
-
-	node, err := lr.JetCoordinator.VirtualExecutorForObject(ctx, object, currentPulse.PulseNumber)
-	if err != nil {
-		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to calculate current executor"))
-		return flow.ErrCancelled
-	}
-
-	if *node != lr.JetCoordinator.Me() {
-		inslogger.FromContext(ctx).Debug("I'm not executor")
-		return flow.ErrCancelled
-	}
-
+	lr.ResultsMatcher.AddUnwantedResponse(ctx, *m)
 	return nil
 }

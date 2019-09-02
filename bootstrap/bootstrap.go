@@ -74,10 +74,10 @@ func readMigrationAddresses(file string) ([insolar.GenesisAmountMigrationAddress
 	}
 
 	for _, a := range ma {
-		i := foundation.GetShardIndex(a, insolar.GenesisAmountMigrationAddressShards)
-		result[i] = append(result[i])
+		address := foundation.TrimAddress(a)
+		i := foundation.GetShardIndex(address, insolar.GenesisAmountMigrationAddressShards)
+		result[i] = append(result[i], address)
 	}
-
 	return result, nil
 }
 
@@ -116,7 +116,7 @@ func (g *Generator) Run(ctx context.Context) error {
 		return errors.Wrap(err, "couldn't get migration addresses")
 	}
 
-	inslog.Info("[ bootstrap ] create keys ...")
+	inslog.Info("[ bootstrap ] create discovery keys ...")
 	discoveryNodes, err := createKeysInDir(
 		ctx,
 		g.config.DiscoveryKeysDir,
@@ -128,8 +128,8 @@ func (g *Generator) Run(ctx context.Context) error {
 		return errors.Wrapf(err, "create keys step failed")
 	}
 
-	inslog.Info("[ bootstrap ] create certificates ...")
-	err = g.makeCertificates(ctx, discoveryNodes)
+	inslog.Info("[ bootstrap ] create discovery certificates ...")
+	err = g.makeCertificates(ctx, discoveryNodes, discoveryNodes)
 	if err != nil {
 		return errors.Wrap(err, "generate discovery certificates failed")
 	}
@@ -137,6 +137,26 @@ func (g *Generator) Run(ctx context.Context) error {
 	vestingStep := g.config.VestingStepInPulses
 	if vestingStep == 0 {
 		vestingStep = 60 * 60 * 24
+	}
+
+	if g.config.NotDiscoveryKeysDir != "" {
+		inslog.Info("[ bootstrap ] create not discovery keys ...")
+		nodes, err := createKeysInDir(
+			ctx,
+			g.config.NotDiscoveryKeysDir,
+			g.config.KeysNameFormat,
+			g.config.Nodes,
+			g.config.ReuseKeys,
+		)
+		if err != nil {
+			return errors.Wrapf(err, "create keys step failed")
+		}
+
+		inslog.Info("[ bootstrap ] create not discovery certificates ...", nodes)
+		err = g.makeCertificates(ctx, nodes, discoveryNodes)
+		if err != nil {
+			return errors.Wrap(err, "generate not discovery certificates failed")
+		}
 	}
 
 	inslog.Info("[ bootstrap ] create heavy genesis config ...")
@@ -163,15 +183,16 @@ type nodeInfo struct {
 	privateKey crypto.PrivateKey
 	publicKey  string
 	role       string
+	certName   string
 }
 
 func (ni nodeInfo) reference() insolar.Reference {
 	return genesisrefs.GenesisRef(ni.publicKey)
 }
 
-func (g *Generator) makeCertificates(ctx context.Context, discoveryNodes []nodeInfo) error {
+func (g *Generator) makeCertificates(ctx context.Context, nodesInfo []nodeInfo, discoveryNodes []nodeInfo) error {
 	certs := make([]certificate.Certificate, 0, len(g.config.DiscoveryNodes))
-	for _, node := range discoveryNodes {
+	for _, node := range nodesInfo {
 		c := certificate.Certificate{
 			AuthorizationCertificate: certificate.AuthorizationCertificate{
 				PublicKey: node.publicKey,
@@ -201,7 +222,7 @@ func (g *Generator) makeCertificates(ctx context.Context, discoveryNodes []nodeI
 	}
 
 	var err error
-	for i, node := range g.config.DiscoveryNodes {
+	for i, node := range nodesInfo {
 		for j := range g.config.DiscoveryNodes {
 			dn := discoveryNodes[j]
 
@@ -224,11 +245,11 @@ func (g *Generator) makeCertificates(ctx context.Context, discoveryNodes []nodeI
 			return errors.Wrapf(err, "can't MarshalIndent")
 		}
 
-		if len(node.CertName) == 0 {
+		if len(node.certName) == 0 {
 			return errors.New("cert_name must not be empty for node number " + strconv.Itoa(i+1))
 		}
 
-		certFile := path.Join(g.certificatesOutDir, node.CertName)
+		certFile := path.Join(g.certificatesOutDir, node.certName)
 		err = ioutil.WriteFile(certFile, cert, 0600)
 		if err != nil {
 			return errors.Wrapf(err, "failed to create certificate: %v", certFile)

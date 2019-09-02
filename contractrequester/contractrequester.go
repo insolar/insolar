@@ -357,13 +357,11 @@ func (cr *ContractRequester) result(ctx context.Context, msg *payload.ReturnResu
 	return nil
 }
 
-func (cr *ContractRequester) ReceiveResult(msg *message.Message) error {
+func (cr *ContractRequester) ReceiveResult(ctx context.Context, msg *message.Message) error {
 	if msg == nil {
 		log.Error("can't deserialize payload of nil message")
 		return nil
 	}
-
-	ctx := inslogger.ContextWithTrace(context.Background(), msg.Metadata.Get(busMeta.TraceID))
 
 	parentSpan, err := instracer.Deserialize([]byte(msg.Metadata.Get(busMeta.SpanData)))
 	if err == nil {

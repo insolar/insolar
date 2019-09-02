@@ -601,7 +601,7 @@ func (c *NodeAppearance) onAddedToPopulation(fixedInit bool) {
 	pv := c.hook.GetPopulationVersion()
 	c.hook.OnDynamicNodeUpdate(pv, c, flags)
 
-	trust := c.trust // this is safe as this method is called before any concurrent access
+	trust := c.trust // this is safe as this method is called either before any concurrent access or under lock
 	if trust != member.UnknownTrust {
 		c.hook.OnTrustUpdated(pv, c, member.UnknownTrust, trust, full)
 	}

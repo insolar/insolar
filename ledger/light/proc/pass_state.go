@@ -100,7 +100,6 @@ func (p *PassState) Proceed(ctx context.Context) error {
 	}
 	msg, err := payload.NewMessage(&payload.State{
 		Record: buf,
-		Memory: state.GetMemory(),
 	})
 	if err != nil {
 		return errors.Wrap(err, "failed to create message")
