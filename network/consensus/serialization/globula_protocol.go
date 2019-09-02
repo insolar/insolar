@@ -107,18 +107,22 @@ func (b *GlobulaConsensusPacketBody) String(ctx PacketContext) string {
 	hasBrief := flags == 1
 	hasFull := flags == 2 || flags == 3
 	intro := "no"
+	joinerExt := "no"
 	if hasBrief {
 		intro = "brief"
 	}
 	if hasFull {
 		intro = "full"
 	}
+	if ctx.HasFlag(FlagHasJoinerExt) {
+		joinerExt = "yes"
+	}
 
 	switch ctx.GetPacketType().GetPayloadEquivalent() {
 	case phases.PacketPhase0:
 		return fmt.Sprintf("<current_rank=%s>", b.CurrentRank)
 	case phases.PacketPhase1:
-		return fmt.Sprintf("<membership=%s intro=%s>", b.Announcement, intro)
+		return fmt.Sprintf("<membership=%s intro=%s joinerExt=%s>", b.Announcement, intro, joinerExt)
 	case phases.PacketPhase2:
 		return fmt.Sprintf("<membership=%s intro=%s neighbourhood=%s>", b.Announcement, intro, b.Neighbourhood)
 	case phases.PacketPhase3:
