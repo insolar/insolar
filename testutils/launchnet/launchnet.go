@@ -103,9 +103,10 @@ var MigrationAdmin User
 var MigrationDaemons [insolar.GenesisAmountMigrationDaemonMembers]*User
 
 type User struct {
-	Ref     string
-	PrivKey string
-	PubKey  string
+	Ref              string
+	PrivKey          string
+	PubKey           string
+	MigrationAddress string
 }
 
 func launchnetPath(a ...string) (string, error) {
@@ -138,6 +139,7 @@ func launchnetPath(a ...string) (string, error) {
 func GetNodesCount() (int, error) {
 	type nodesConf struct {
 		DiscoverNodes []interface{} `yaml:"discovery_nodes"`
+		Nodes         []interface{} `yaml:"nodes"`
 	}
 
 	var conf nodesConf
@@ -156,7 +158,7 @@ func GetNodesCount() (int, error) {
 		return 0, errors.Wrap(err, "[ getNumberNodes ] Can't parse bootstrap config")
 	}
 
-	return len(conf.DiscoverNodes), nil
+	return len(conf.DiscoverNodes) + len(conf.Nodes), nil
 }
 
 func loadMemberKeys(keysPath string, member *User) error {

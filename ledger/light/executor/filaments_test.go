@@ -527,7 +527,7 @@ func TestFilamentCalculatorDefault_ResultDuplicate(t *testing.T) {
 			},
 		})
 
-		_, err := calculator.ResultDuplicate(ctx, objectID, req.RecordID, record.Result{Request: gen.Reference()})
+		_, err := calculator.ResultDuplicate(ctx, objectID, req.RecordID, record.Result{Request: insolar.Reference{}})
 		require.Error(t, err)
 
 		mc.Finish()

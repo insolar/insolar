@@ -18,6 +18,7 @@ package handle
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
 
@@ -42,14 +43,23 @@ func NewSetCode(dep *proc.Dependencies, msg payload.Meta, passed bool) *SetCode 
 }
 
 func (s *SetCode) Present(ctx context.Context, f flow.Flow) error {
-	msg := payload.SetCode{}
-	err := msg.Unmarshal(s.message.Payload)
+	pl, err := payload.Unmarshal(s.message.Payload)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal SetCode message")
+	}
+	msg, ok := pl.(*payload.SetCode)
+	if !ok {
+		return fmt.Errorf("wrong request type: %T", pl)
 	}
 
 	if len(msg.Record) == 0 {
 		return errors.New("empty record")
+	}
+
+	rec := record.Virtual{}
+	err = rec.Unmarshal(msg.Record)
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal record")
 	}
 
 	calc := proc.NewCalculateID(msg.Record, flow.Pulse(ctx))
@@ -67,12 +77,6 @@ func (s *SetCode) Present(ctx context.Context, f flow.Flow) error {
 			return nil
 		}
 		return err
-	}
-
-	rec := record.Virtual{}
-	err = rec.Unmarshal(msg.Record)
-	if err != nil {
-		return errors.Wrap(err, "failed to unmarshal record")
 	}
 
 	setCode := proc.NewSetCode(s.message, rec, recID, jet.Result.Jet)

@@ -49,10 +49,10 @@ func createKeysInDir(
 	ctx context.Context,
 	dir string,
 	keyFilenameFormat string,
-	discoveryNodes []Node,
+	nodes []Node,
 	reuse bool,
 ) ([]nodeInfo, error) {
-	amount := len(discoveryNodes)
+	amount := len(nodes)
 
 	// XXX: Hack: works only for generated files with keyFilenameFormat
 	// TODO: reconsider this option implementation - (INS-2473) - @nordicdyno 16.May.2019
@@ -62,17 +62,16 @@ func createKeysInDir(
 			return nil, err
 		}
 		if len(pairs) != amount {
-			return nil, errors.New(fmt.Sprintf("[ uploadKeys ] amount of nodes != amount of files in directory: %d != %d", len(pairs), amount))
+			return nil, errors.New(fmt.Sprintf("[ uploadKeys ] amount of discoveryNodes != amount of files in directory: %d != %d", len(pairs), amount))
 		}
 		return keyPairsToNodeInfo(pairs...), nil
 	}
 
-	nodes := make([]nodeInfo, 0, amount)
-	for i := 0; i < amount; i++ {
-		dn := discoveryNodes[i]
+	nodeInfos := make([]nodeInfo, 0, amount)
+	for i, n := range nodes {
 		keyname := fmt.Sprintf(keyFilenameFormat, i+1)
-		if len(dn.KeyName) > 0 {
-			keyname = dn.KeyName
+		if len(n.KeyName) > 0 {
+			keyname = n.KeyName
 		}
 
 		pair, err := secrets.GenerateKeyPair()
@@ -107,11 +106,12 @@ func createKeysInDir(
 		}
 
 		p := keysToNodeInfo(pair)
-		p.role = dn.Role
-		nodes = append(nodes, p)
+		p.role = n.Role
+		p.certName = n.CertName
+		nodeInfos = append(nodeInfos, p)
 	}
 
-	return nodes, nil
+	return nodeInfos, nil
 }
 
 // makeFileWithDir saves content into file with `name` in directory `dir`.

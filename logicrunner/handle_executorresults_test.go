@@ -17,6 +17,7 @@
 package logicrunner
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -27,6 +28,7 @@ import (
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/writecontroller"
 )
@@ -38,7 +40,7 @@ func TestHandleExecutorResults_Present(t *testing.T) {
 		error bool
 	}{
 		{
-			name: "success",
+			name: "success, every call to broker",
 			mocks: func(t minimock.Tester) (*HandleExecutorResults, flow.Flow) {
 				obj := gen.Reference()
 				receivedPayload := &payload.ExecutorResults{
@@ -48,9 +50,13 @@ func TestHandleExecutorResults_Present(t *testing.T) {
 					Queue: []*payload.ExecutionQueueElement{
 						{
 							RequestRef: gen.Reference(),
+							Incoming: &record.IncomingRequest{},
+							ServiceData: &payload.ServiceData{},
 						},
 						{
 							RequestRef: gen.Reference(),
+							Incoming: &record.IncomingRequest{},
+							ServiceData: &payload.ServiceData{},
 						},
 					},
 				}
@@ -61,12 +67,108 @@ func TestHandleExecutorResults_Present(t *testing.T) {
 				h := &HandleExecutorResults{
 					dep: &Dependencies{
 						WriteAccessor: writecontroller.NewWriteControllerMock(t).BeginMock.Return(func() {}, nil),
+						StateStorage: NewStateStorageMock(t).
+							UpsertExecutionStateMock.Expect(obj).
+							Return(
+								NewExecutionBrokerIMock(t).
+									PrevExecutorPendingResultMock.Return().
+									MoreRequestsOnLedgerMock.Return().
+									AddRequestsFromPrevExecutorMock.Return(),
+							),
 					},
-					Message: payload.Meta{Payload: buf},
+					meta: payload.Meta{Payload: buf},
 				}
-				f := flow.NewFlowMock(t).ProcedureMock.Return(nil)
+				f := flow.NewFlowMock(t)
 				return h, f
 			},
+		},
+		{
+			name: "success, minimum calls to broker",
+			mocks: func(t minimock.Tester) (*HandleExecutorResults, flow.Flow) {
+				obj := gen.Reference()
+				receivedPayload := &payload.ExecutorResults{
+					RecordRef:             obj,
+					Pending:               insolar.NotPending,
+				}
+
+				buf, err := payload.Marshal(receivedPayload)
+				require.NoError(t, err, "marshal")
+
+				h := &HandleExecutorResults{
+					dep: &Dependencies{
+						WriteAccessor: writecontroller.NewWriteControllerMock(t).BeginMock.Return(func() {}, nil),
+						StateStorage: NewStateStorageMock(t).
+							UpsertExecutionStateMock.Expect(obj).
+							Return(
+								NewExecutionBrokerIMock(t).
+									PrevExecutorPendingResultMock.Return(),
+							),
+					},
+					meta: payload.Meta{Payload: buf},
+				}
+				f := flow.NewFlowMock(t)
+				return h, f
+			},
+		},
+		{
+			name: "write controller is closed",
+			mocks: func(t minimock.Tester) (*HandleExecutorResults, flow.Flow) {
+				obj := gen.Reference()
+				receivedPayload := &payload.ExecutorResults{
+					RecordRef:             obj,
+					Pending:               insolar.NotPending,
+				}
+
+				buf, err := payload.Marshal(receivedPayload)
+				require.NoError(t, err, "marshal")
+
+				h := &HandleExecutorResults{
+					dep: &Dependencies{
+						WriteAccessor: writecontroller.NewWriteControllerMock(t).
+							BeginMock.Return(nil, writecontroller.ErrWriteClosed),
+					},
+					meta: payload.Meta{Payload: buf},
+				}
+				f := flow.NewFlowMock(t)
+				return h, f
+			},
+			error: true,
+		},
+		{
+			name: "write controller error",
+			mocks: func(t minimock.Tester) (*HandleExecutorResults, flow.Flow) {
+				obj := gen.Reference()
+				receivedPayload := &payload.ExecutorResults{
+					RecordRef:             obj,
+					Pending:               insolar.NotPending,
+				}
+
+				buf, err := payload.Marshal(receivedPayload)
+				require.NoError(t, err, "marshal")
+
+				h := &HandleExecutorResults{
+					dep: &Dependencies{
+						WriteAccessor: writecontroller.NewWriteControllerMock(t).
+							BeginMock.Return(nil, errors.New("some")),
+					},
+					meta: payload.Meta{Payload: buf},
+				}
+				f := flow.NewFlowMock(t)
+				return h, f
+			},
+			error: true,
+		},
+		{
+			name: "error, bad data",
+			mocks: func(t minimock.Tester) (*HandleExecutorResults, flow.Flow) {
+				h := &HandleExecutorResults{
+					dep: &Dependencies{},
+					meta: payload.Meta{Payload: []byte{3,2,1}},
+				}
+				f := flow.NewFlowMock(t)
+				return h, f
+			},
+			error: true,
 		},
 	}
 	for _, test := range tests {
