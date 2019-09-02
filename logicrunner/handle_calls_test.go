@@ -569,7 +569,9 @@ func TestHandleCall_Present(t *testing.T) {
 			case *CheckOurRole:
 				return nil
 			case *RegisterIncomingRequest:
-				return &payload.CodedError{Code: payload.CodeNotFound, Text: "index not found"}
+				return errors.Wrap(
+					&payload.CodedError{Code: payload.CodeNotFound, Text: "index not found"},
+					"RegisterIncomingRequest")
 			case *AddFreshRequest:
 				return nil
 			default:
@@ -583,7 +585,6 @@ func TestHandleCall_Present(t *testing.T) {
 				ArtifactManager: artifacts.NewClientMock(mc),
 			},
 			Message: payload.Meta{},
-			Parcel:  nil,
 		}
 
 		msg := payload.CallMethod{
@@ -593,7 +594,7 @@ func TestHandleCall_Present(t *testing.T) {
 			},
 		}
 
-		expectedResult, err := foundation.MarshalMethodErrorResult(errors.New("index not found"))
+		expectedResult, err := foundation.MarshalMethodErrorResult(errors.New("not found"))
 		require.NoError(t, err)
 
 		expectedReply := &reply.CallMethod{Result: expectedResult}

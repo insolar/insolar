@@ -143,10 +143,10 @@ func (h *HandleCall) handleActual(
 			// Requests need to be deduplicated. For now in case of ErrCancelled we may have 2 registered requests
 			return nil, err // message bus will retry on the calling side in ContractRequester
 		}
-		if e, ok := errors.Cause(err).(*payload.CodedError); ok && e.Code == payload.CodeNotFound {
+		if logicalError, isLogicalError := ProcessLogicalError(err); isLogicalError {
 			inslogger.FromContext(ctx).Warn("request to not existing object")
 
-			resultWithErr, err := foundation.MarshalMethodErrorResult(err)
+			resultWithErr, err := foundation.MarshalMethodErrorResult(logicalError)
 			if err != nil {
 				return nil, errors.Wrap(err, "can't create error result")
 			}
