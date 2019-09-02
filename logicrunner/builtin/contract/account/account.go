@@ -192,12 +192,6 @@ func (a *Account) Transfer(rootDomainRef insolar.Reference, amountStr string, to
 
 // IncreaseBalance increases the current balance by the amount.
 func (a *Account) IncreaseBalance(amountStr string) error {
-	// ToDo: Only member can execute this method
-	// callerPrototype := *a.GetContext().CallerPrototype
-	// if member.GetPrototype() != callerPrototype {
-	// 	return fmt.Errorf("only member can IncreaseBalance %s, %s", callerPrototype, member.GetPrototype())
-	// }
-
 	amount, ok := new(big.Int).SetString(amountStr, 10)
 	if !ok {
 		return fmt.Errorf("can't parse input amount")
