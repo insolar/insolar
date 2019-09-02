@@ -295,14 +295,16 @@ func TestBackupSendDeleteRecords(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(recovTmpDir)
 
-	bkpFileName := filepath.Join(
-		cfg.TargetDirectory,
-		fmt.Sprintf(cfg.DirNameTemplate, 100001),
-		cfg.BackupFile,
-	)
-
 	prepareDirForBackup(t, recovTmpDir)
-	loadIncrementalBackup(t, recovTmpDir, bkpFileName)
+	for i := 0; i < 2; i++ {
+		bkpFileName := filepath.Join(
+			cfg.TargetDirectory,
+			fmt.Sprintf(cfg.DirNameTemplate, 100000),
+			cfg.BackupFile,
+		)
+
+		loadIncrementalBackup(t, recovTmpDir, bkpFileName)
+	}
 	recoveredDB, err := store.NewBadgerDB(badger.DefaultOptions(recovTmpDir))
 	require.NoError(t, err)
 	_, err = recoveredDB.Get(key)
@@ -315,7 +317,7 @@ func TestBackupSendDeleteRecords(t *testing.T) {
 	err = bm.MakeBackup(context.Background(), 100002)
 	require.NoError(t, err)
 
-	bkpFileName = filepath.Join(
+	bkpFileName := filepath.Join(
 		cfg.TargetDirectory,
 		fmt.Sprintf(cfg.DirNameTemplate, 100002),
 		cfg.BackupFile,
