@@ -116,8 +116,6 @@ func (g *Generator) Run(ctx context.Context) error {
 		migrationDaemonPublicKeys = append(migrationDaemonPublicKeys, k)
 	}
 
-	// load keys for funds
-
 	fundsAndEnterprisePublicKey, err := secrets.GetPublicKeyFromFile(g.config.MembersKeysDir + "funds_and_enterprise_member_keys.json")
 	if err != nil {
 		return errors.Wrap(err, "couldn't get enterprise keys")
@@ -322,7 +320,7 @@ func GetMigrationDaemonPath(i int) string {
 	return "migration_daemon_" + strconv.Itoa(i) + "_member_keys.json"
 }
 
-// GetFundPath generate key file name for migration daemon
+// GetFundPath generate key file name for composite name
 func GetFundPath(i int, prefix string) string {
 	return prefix + strconv.Itoa(i) + "_member_keys.json"
 }
