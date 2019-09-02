@@ -160,7 +160,7 @@ func (c *Phase2PacketDispatcher) DispatchMemberPacket(ctx context.Context, reade
 	}
 
 	purgatory := realm.GetPurgatory()
-	//senderID := sender.GetNodeID()
+	// senderID := sender.GetNodeID()
 
 	for i, nb := range neighbours {
 		modified := false
@@ -278,10 +278,10 @@ func (c *Phase2Controller) workerPhase2(ctx context.Context) {
 			case np.GetNodeID() == c.R.GetSelfNodeID():
 				continue
 			case np.IsJoiner():
-				//c.R.CreateAnnouncement(np, false) // sanity check
+				// c.R.CreateAnnouncement(np, false) // sanity check
 				joinQueue.Add(np)
 			default:
-				//c.R.CreateAnnouncement(np, false) // sanity check
+				// c.R.CreateAnnouncement(np, false) // sanity check
 				nodeQueue.Add(np)
 			}
 		}
