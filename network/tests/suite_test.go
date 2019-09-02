@@ -56,13 +56,14 @@ import (
 	"context"
 	"crypto"
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"reflect"
 	"strconv"
 	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/log"

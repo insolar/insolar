@@ -183,10 +183,6 @@ func (pb *PacketBuilder) PreparePhase2Packet(
 		packet.Header.setPacketType(phases.PacketExtPhase2)
 	}
 
-	if !options.HasAny(transport.OnlyBriefIntroAboutJoiner) {
-		packet.Header.SetFlag(FlagHasJoinerExt)
-	}
-
 	packet.Header.SetFlag(FlagSelfIntro1)
 	if welcome != nil {
 		packet.Header.ClearFlag(FlagSelfIntro1)
@@ -271,12 +267,6 @@ func (p *PreparedPacketSender) SendToMany(
 ) {
 
 	for i := 0; i < targetCount; i++ {
-		select {
-		case <-ctx.Done():
-			return
-		default:
-		}
-
 		if np, options := filter(ctx, i); np != nil {
 			p.Copy().SendTo(ctx, np, options, sender)
 		}

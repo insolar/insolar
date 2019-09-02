@@ -335,7 +335,7 @@ func (r *PhasedRoundController) ensureStarted() bool {
 func (r *PhasedRoundController) HandlePacket(ctx context.Context, packet transport.PacketParser,
 	from endpoints.Inbound) (api.RoundControlCode, error) {
 
-	inslogger.FromContext(ctx).Warnf("processPacket %v", packet)
+	inslogger.FromContext(ctx).Debugf("processPacket %v", packet)
 	return r.handlePacket(ctx, packet, from, coreapi.DefaultVerify)
 }
 

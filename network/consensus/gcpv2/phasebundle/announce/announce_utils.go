@@ -193,7 +193,7 @@ func ApplyMemberAnnouncement(ctx context.Context, reader transport.AnnouncementP
 	}
 
 	addJoiner := func(ma profiles.MemberAnnouncement) error {
-		return realm.GetPurgatory().AddJoinerAndEnsureAscendancy(ma.Joiner, ma.AnnouncedByID)
+		return realm.GetPurgatory().AddJoinerAndEnsureAscendancy(ctx, ma.Joiner, ma.AnnouncedByID)
 	}
 
 	if ma.Joiner.IsEmpty() || // it can be EMPTY when !ma.JoinerID.IsAbsent() - it is normal

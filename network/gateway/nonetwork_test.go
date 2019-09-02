@@ -51,9 +51,10 @@
 package gateway
 
 import (
-	"github.com/insolar/insolar/network"
 	"testing"
 	"time"
+
+	"github.com/insolar/insolar/network"
 
 	"github.com/stretchr/testify/require"
 )
