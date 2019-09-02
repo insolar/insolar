@@ -100,6 +100,10 @@ func (v *Global) IsRecordScope() bool {
 	return v.addressBase.IsEmpty() && !v.addressLocal.IsEmpty() && v.addressLocal.getScope() == baseScopeLifeline
 }
 
+func (v *Global) IsObjectReference() bool {
+	return !v.addressBase.IsEmpty() && !v.addressLocal.IsEmpty() && v.addressLocal.getScope() == baseScopeLifeline
+}
+
 func (v *Global) IsSelfScope() bool {
 	return v.addressBase == v.addressLocal
 }

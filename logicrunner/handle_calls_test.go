@@ -502,7 +502,7 @@ func TestHandleCall_Present(t *testing.T) {
 		mc := minimock.NewController(t)
 
 		objRef := gen.Reference()
-		reqRef := gen.Reference()
+		reqRef := gen.RecordReference()
 
 		resRecord := &record.Result{Payload: []byte{3, 2, 1}}
 		virtResRecord := record.Wrap(resRecord)

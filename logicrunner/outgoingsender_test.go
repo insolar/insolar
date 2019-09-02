@@ -41,7 +41,7 @@ func randomOutgoingRequest() *record.OutgoingRequest {
 		Method:          "RandomMethodName",
 		Arguments:       arguments,
 		APIRequestID:    "dummy-api-request-id",
-		Reason:          gen.Reference(),
+		Reason:          gen.RecordReference(),
 	}
 	return outgoing
 }
@@ -148,7 +148,7 @@ func TestOutgoingSenderSendAbandonedOutgoing(t *testing.T) {
 	outgoing := randomOutgoingRequest()
 	msg := sendAbandonedOutgoingRequestMessage{
 		ctx:              context.Background(),
-		requestReference: gen.Reference(),
+		requestReference: gen.RecordReference(),
 		outgoingRequest:  outgoing,
 	}
 

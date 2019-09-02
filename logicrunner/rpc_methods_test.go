@@ -313,6 +313,8 @@ func TestRouteCallRegistersOutgoingRequestWithValidReason(t *testing.T) {
 	mc := minimock.NewController(t)
 	defer mc.Finish()
 
+	ctx := inslogger.TestContext(t)
+
 	pulseObject := insolar.Pulse{PulseNumber: gen.PulseNumber()}
 	pa := pulse.NewAccessorMock(mc).LatestMock.Return(pulseObject, nil)
 
@@ -322,23 +324,24 @@ func TestRouteCallRegistersOutgoingRequestWithValidReason(t *testing.T) {
 	as := system.New()
 	os := NewOutgoingRequestSender(as, cr, am, pa)
 
-	requestRef := gen.Reference()
+	objectRef := gen.Reference()
+	requestRef := gen.RecordReference()
 
 	rpcm := NewExecutionProxyImplementation(dc, cr, am, os)
-	ctx := context.Background()
-	transcript := common.NewTranscript(ctx, requestRef, record.IncomingRequest{})
+	transcript := common.NewTranscript(ctx, requestRef, record.IncomingRequest{
+		Object: &objectRef,
+	})
 	req := rpctypes.UpRouteReq{Wait: true}
 	resp := &rpctypes.UpRouteResp{}
 
 	var outreq *record.OutgoingRequest
-	outgoingReqID := gen.ID()
-	outgoingReqRef := insolar.NewReference(outgoingReqID)
+	outgoingReqRef := gen.RecordReference()
 	// Make sure an outgoing request is registered
 	am.RegisterOutgoingRequestMock.Set(func(ctx context.Context, r *record.OutgoingRequest) (*payload.RequestInfo, error) {
 		require.Nil(t, outreq)
 		require.Equal(t, record.ReturnResult, r.ReturnMode)
 		outreq = r
-		id := outgoingReqID
+		id := *outgoingReqRef.GetLocal()
 		return &payload.RequestInfo{RequestID: id}, nil
 	})
 
@@ -346,7 +349,9 @@ func TestRouteCallRegistersOutgoingRequestWithValidReason(t *testing.T) {
 	cr.CallMock.Return(&reply.CallMethod{}, &ref, nil)
 	// Make sure the result of the outgoing request is registered as well
 	am.RegisterResultMock.Set(func(ctx context.Context, reqref insolar.Reference, result artifacts.RequestResult) (r error) {
-		require.Equal(t, outgoingReqRef, &reqref)
+		if outgoingReqRef != reqref {
+			return errors.Errorf("outgoingReqRef != reqref, ref1=%s, ref2=%s", outgoingReqRef.String(), reqref.String())
+		}
 		return nil
 	})
 

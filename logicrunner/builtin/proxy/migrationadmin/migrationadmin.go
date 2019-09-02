@@ -76,7 +76,10 @@ func (r *ContractConstructorHolder) AsChild(objRef insolar.Reference) (*Migratio
 }
 
 // GetObject returns proxy object
-func GetObject(ref insolar.Reference) (r *MigrationAdmin) {
+func GetObject(ref insolar.Reference) *MigrationAdmin {
+	if !ref.IsObjectReference() {
+		return nil
+	}
 	return &MigrationAdmin{Reference: ref}
 }
 
