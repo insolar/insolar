@@ -50,7 +50,6 @@ import (
 	"github.com/insolar/insolar/network/termination"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/server/internal"
-	"github.com/insolar/insolar/version/manager"
 )
 
 type bootstrapComponents struct {
