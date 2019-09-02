@@ -52,6 +52,7 @@ package adapters
 
 import (
 	"crypto/ecdsa"
+
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 
 	"github.com/insolar/insolar/insolar"
