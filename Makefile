@@ -8,7 +8,7 @@ TESTPULSARD = testpulsard
 INSGORUND = insgorund
 BENCHMARK = benchmark
 PULSEWATCHER = pulsewatcher
-BACKUPMERGER = backupmerger
+BACKUPMANAGER = backupmanager
 APIREQUESTER = apirequester
 HEALTHCHECK = healthcheck
 
@@ -84,7 +84,7 @@ ensure: ## install all dependencies
 	dep ensure
 
 .PHONY: build
-build: $(BIN_DIR) $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(TESTPULSARD) $(INSGORUND) $(HEALTHCHECK) $(BENCHMARK) $(APIREQUESTER) $(PULSEWATCHER) $(BACKUPMERGER) ## build all binaries
+build: $(BIN_DIR) $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(TESTPULSARD) $(INSGORUND) $(HEALTHCHECK) $(BENCHMARK) $(APIREQUESTER) $(PULSEWATCHER) $(BACKUPMANAGER) ## build all binaries
 
 $(BIN_DIR):
 	mkdir -p $(BIN_DIR)
@@ -123,9 +123,9 @@ $(BENCHMARK):
 $(PULSEWATCHER):
 	$(GOBUILD) -o $(BIN_DIR)/$(PULSEWATCHER) -ldflags "${LDFLAGS}" cmd/pulsewatcher/*.go
 
-.PHONY: $(BACKUPMERGER)
-$(BACKUPMERGER):
-	$(GOBUILD) -o $(BIN_DIR)/$(BACKUPMERGER) -ldflags "${LDFLAGS}" cmd/backupmerger/*.go
+.PHONY: $(BACKUPMANAGER)
+$(BACKUPMANAGER):
+	$(GOBUILD) -o $(BIN_DIR)/$(BACKUPMANAGER) -ldflags "${LDFLAGS}" cmd/backupmanager/*.go
 
 .PHONY: $(APIREQUESTER)
 $(APIREQUESTER):

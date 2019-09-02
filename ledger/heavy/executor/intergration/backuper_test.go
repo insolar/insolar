@@ -243,10 +243,10 @@ func init() {
 	}
 }
 
-// prepareDirForBackup uses backupmerger utility to create empty badger
+// prepareDirForBackup uses backupmanager utility to create empty badger
 func prepareDirForBackup(t *testing.T, dbDir string) {
 	println("=====> Start creating db for backup")
-	cmd := exec.Command(binaryPath+"/backupmerger", "create", "-d", dbDir)
+	cmd := exec.Command(binaryPath+"/backupmanager", "create", "-d", dbDir)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	err := cmd.Start()
@@ -256,10 +256,10 @@ func prepareDirForBackup(t *testing.T, dbDir string) {
 	println("<===== Finish creating db for backup")
 }
 
-// loadIncrementalBackup uses backupmerger utility to roll backups
+// loadIncrementalBackup uses backupmanager utility to roll backups
 func loadIncrementalBackup(t *testing.T, dbDir string, backupFile string) {
 	println("=====> Start loading backup")
-	cmd := exec.Command(binaryPath+"/backupmerger", "merge", "-t", dbDir, "-n", backupFile)
+	cmd := exec.Command(binaryPath+"/backupmanager", "merge", "-t", dbDir, "-n", backupFile)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	err := cmd.Start()
