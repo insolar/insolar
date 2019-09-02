@@ -321,10 +321,10 @@ func (p *figment) dispatchAnnouncement(ctx context.Context, phantom *NodePhantom
 	switch {
 	case p.rank.IsJoiner() && p.announcerID.IsAbsent():
 		/* self-ascension is not allowed for joiners */
-		inslogger.FromContext(ctx).Debugf("Phantom joiner ascension postponed: s=%d, t=%d, announcedBy=%d",
+		inslogger.FromContext(ctx).Debugf("Phantom joiner ascension postponed: s=%d t=%d announcedBy=%d",
 			p.phantom.purgatory.hook.GetLocalNodeID(), p.phantom.nodeID, announcedBy)
 	case p.profile.GetExtension() != nil || ascentWithBrief:
-		inslogger.FromContext(ctx).Debugf("Phantom node ascension: s=%d, t=%d, full=%v",
+		inslogger.FromContext(ctx).Debugf("Phantom node ascension: s=%d t=%d full=%v",
 			p.phantom.purgatory.hook.GetLocalNodeID(), p.phantom.nodeID, p.profile.GetExtension() != nil)
 
 		p.phantom.ascend(ctx, nil, p)
