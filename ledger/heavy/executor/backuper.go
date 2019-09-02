@@ -109,8 +109,55 @@ func checkConfig(config configuration.Backup) error {
 	if len(config.PostProcessBackupCmd) == 0 {
 		return errors.New("PostProcessBackupCmd can't be empty")
 	}
+	if len(config.LastBackupInfoFile) == 0 {
+		return errors.New("LastBackupInfoFile can't be empty")
+	}
+	if err := isPathExists(config.LastBackupInfoFile); err != nil {
+		return errors.Wrap(err, "check LastBackupInfoFile returns error")
+	}
 
 	return nil
+}
+
+// LastBackupInfo contains info about last successful backup
+type LastBackupInfo struct {
+	LastBackupedVersion uint64
+}
+
+func loadLastBackupedVersion(fileName string) (uint64, error) {
+	raw, err := ioutil.ReadFile(fileName)
+	if err != nil {
+		return 0, errors.Wrap(err, "failed to read "+fileName)
+	}
+	var backupInfo LastBackupInfo
+	err = json.Unmarshal(raw, &backupInfo)
+	if err != nil {
+		return 0, errors.Wrap(err, "failed to unmarshal "+fileName)
+	}
+
+	return backupInfo.LastBackupedVersion, nil
+}
+
+const lastBackupedVersionTmpFile = "last_backuped_version.json"
+
+func saveLastBackupedVersion(ctx context.Context, to string, tmpDir string, lastBackupedVersion uint64) error {
+	backupInfo := LastBackupInfo{
+		LastBackupedVersion: lastBackupedVersion,
+	}
+	rawInfo, err := json.MarshalIndent(backupInfo, "", "    ")
+	if err != nil {
+		return errors.Wrap(err, "can't marshal last backup info")
+	}
+
+	tmpFile := tmpDir + "/" + lastBackupedVersionTmpFile
+
+	err = ioutil.WriteFile(tmpFile, rawInfo, 0600)
+	if err != nil {
+		return errors.Wrapf(err, "can't write file %s", to)
+	}
+
+	err = move(ctx, tmpFile, to)
+	return errors.Wrapf(err, "can't move file %s", to)
 }
 
 func NewBackupMaker(ctx context.Context,
@@ -119,19 +166,28 @@ func NewBackupMaker(ctx context.Context,
 	lastBackupedPulse insolar.PulseNumber,
 	db store.DB,
 ) (*BackupMakerDefault, error) {
+	var (
+		lastBackupedVersion uint64
+		err                 error
+	)
 	if config.Enabled {
 		if err := checkConfig(config); err != nil {
 			return nil, errors.Wrap(err, "bad config")
+		}
+		lastBackupedVersion, err = loadLastBackupedVersion(config.LastBackupInfoFile)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to loadLastBackupedVersion")
 		}
 	} else {
 		inslogger.FromContext(ctx).Info("Backup is disabled")
 	}
 
 	return &BackupMakerDefault{
-		backuper:          backuper,
-		config:            config,
-		lastBackupedPulse: lastBackupedPulse,
-		db:                db,
+		backuper:            backuper,
+		config:              config,
+		lastBackupedPulse:   lastBackupedPulse,
+		db:                  db,
+		lastBackupedVersion: lastBackupedVersion,
 	}, nil
 }
 
@@ -362,11 +418,16 @@ func (b *BackupMakerDefault) MakeBackup(ctx context.Context, lastFinalizedPulse 
 
 	currentBkpVersion, err := b.doBackup(ctx, lastFinalizedPulse)
 	if err != nil {
-		return errors.Wrap(err, "doBackup return error")
+		return errors.Wrap(err, "failed to doBackup")
 	}
 
 	b.lastBackupedPulse = lastFinalizedPulse
 	b.lastBackupedVersion = currentBkpVersion
+	err = saveLastBackupedVersion(ctx, b.config.LastBackupInfoFile, b.config.TmpDirectory, currentBkpVersion)
+	if err != nil {
+		return errors.Wrap(err, "failed to saveLastBackupedVersion")
+	}
+
 	inslogger.FromContext(ctx).Infof("Pulse %d successfully backuped", lastFinalizedPulse)
 	return nil
 }
