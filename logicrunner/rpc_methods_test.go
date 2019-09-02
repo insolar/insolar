@@ -354,7 +354,7 @@ func TestRouteCallRegistersOutgoingRequestWithValidReason(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, outreq)
 	require.Equal(t, requestRef, outreq.Reason)
-	// not implemented yet, see INS-3293 / INS-3371
+	// not implemented yet, see INS-3293 / INS-3371 AALEKSEEV
 	// as.CloseAll()
 }
 

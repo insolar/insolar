@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/go-actors/actor/errors"
+
 	"github.com/gojuno/minimock"
 
 	"github.com/insolar/insolar/insolar"
@@ -155,4 +157,24 @@ func TestOutgoingSenderSendAbandonedOutgoing(t *testing.T) {
 
 	_, err := sender.Receive(msg)
 	require.NoError(t, err)
+}
+
+func TestOutgoingSenderStop(t *testing.T) {
+	t.Parallel()
+
+	mc := minimock.NewController(t)
+	defer mc.Wait(2 * time.Minute)
+
+	cr := testutils.NewContractRequesterMock(mc)
+	am := artifacts.NewClientMock(mc)
+	pa := pulse.NewAccessorMock(mc)
+
+	sender := newOutgoingSenderActorState(cr, am, pa)
+	resultChan := make(chan struct{}, 1)
+	msg := stopOutgoingRequestSenderMessage{
+		resultChan: resultChan,
+	}
+	_, err := sender.Receive(msg)
+	<-resultChan
+	require.Equal(t, errors.Terminate, err)
 }
