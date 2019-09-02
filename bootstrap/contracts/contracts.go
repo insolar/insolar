@@ -179,7 +179,6 @@ func GetMigrationAdminGenesisContractState(lockup int64, vesting int64, vestingS
 	}
 }
 
-// TODO refactor
 func GetDepositGenesisContractState(
 	amount string,
 	lockup int64,
