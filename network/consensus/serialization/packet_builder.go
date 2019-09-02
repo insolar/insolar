@@ -271,12 +271,6 @@ func (p *PreparedPacketSender) SendToMany(
 ) {
 
 	for i := 0; i < targetCount; i++ {
-		select {
-		case <-ctx.Done():
-			return
-		default:
-		}
-
 		if np, options := filter(ctx, i); np != nil {
 			p.Copy().SendTo(ctx, np, options, sender)
 		}
