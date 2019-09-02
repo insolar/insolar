@@ -17,6 +17,7 @@
 package migrationdaemon
 
 import (
+	"github.com/insolar/insolar/insolar"
 	XXX_insolar "github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/common"
@@ -76,6 +77,59 @@ func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) 
 
 	ret := []byte{}
 	err = ph.Serialize([]interface{}{self.GetPrototype().Bytes()}, &ret)
+
+	return state, ret, err
+}
+
+func INSMETHOD_DepositMigrationCall(object []byte, data []byte) ([]byte, []byte, error) {
+	ph := common.CurrentProxyCtx
+	ph.SetSystemError(nil)
+	self := new(MigrationDaemon)
+
+	if len(object) == 0 {
+		return nil, nil, &foundation.Error{S: "[ FakeDepositMigrationCall ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+	}
+
+	err := ph.Deserialize(object, self)
+	if err != nil {
+		e := &foundation.Error{S: "[ FakeDepositMigrationCall ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		return nil, nil, e
+	}
+
+	args := make([]interface{}, 2)
+	var args0 map[string]interface{}
+	args[0] = &args0
+	var args1 insolar.Reference
+	args[1] = &args1
+
+	err = ph.Deserialize(data, &args)
+	if err != nil {
+		e := &foundation.Error{S: "[ FakeDepositMigrationCall ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		return nil, nil, e
+	}
+
+	ret0, ret1 := self.DepositMigrationCall(args0, args1)
+
+	if ph.GetSystemError() != nil {
+		return nil, nil, ph.GetSystemError()
+	}
+
+	state := []byte{}
+	err = ph.Serialize(self, &state)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	ret1 = ph.MakeErrorSerializable(ret1)
+
+	ret := []byte{}
+	err = ph.Serialize(
+		foundation.Result{Returns: []interface{}{ret0, ret1}},
+		&ret,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	return state, ret, err
 }
@@ -195,9 +249,7 @@ func INSMETHOD_GetMigrationDaemonMember(object []byte, data []byte) ([]byte, []b
 		return nil, nil, e
 	}
 
-	args := make([]interface{}, 1)
-	var args0 bool
-	args[0] = &args0
+	args := []interface{}{}
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
@@ -205,7 +257,7 @@ func INSMETHOD_GetMigrationDaemonMember(object []byte, data []byte) ([]byte, []b
 		return nil, nil, e
 	}
 
-	ret0, ret1 := self.GetMigrationDaemonMember(args0)
+	ret0, ret1 := self.GetMigrationDaemonMember()
 
 	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()
@@ -236,6 +288,7 @@ func Initialize() XXX_insolar.ContractWrapper {
 		GetCode:      INSMETHOD_GetCode,
 		GetPrototype: INSMETHOD_GetPrototype,
 		Methods: XXX_insolar.ContractMethods{
+			"DepositMigrationCall":     INSMETHOD_DepositMigrationCall,
 			"SetActivationStatus":      INSMETHOD_SetActivationStatus,
 			"GetActivationStatus":      INSMETHOD_GetActivationStatus,
 			"GetMigrationDaemonMember": INSMETHOD_GetMigrationDaemonMember,

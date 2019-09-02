@@ -76,18 +76,9 @@ func (mA *MigrationAdmin) changeStatusCall(params map[string]interface{}, caller
 	if !ok && len(migrationDaemonMember) == 0 {
 		return nil, fmt.Errorf("incorect input: failed to get 'reference' param")
 	}
-
-	migrationDaemonMemberRef, err := insolar.NewReferenceFromBase58(migrationDaemonMember)
+	migrationDaemonContractRef, err := foundation.GetMigrationDaemonByMemberRef(migrationDaemonMember)
 	if err != nil {
-		return nil, fmt.Errorf(" failed to parse params.Reference")
-	}
-
-	migrationDaemonContractRef, err := foundation.GetMigrationDaemon(*migrationDaemonMemberRef)
-	if err != nil {
-		return nil, fmt.Errorf(" get migration daemon contract from foundation failed, %s ", err.Error())
-	}
-	if migrationDaemonContractRef.IsEmpty() {
-		return nil, fmt.Errorf(" the member is not migration daemon, %s ", migrationDaemonMemberRef)
+		return nil, err
 	}
 	migrationDaemonContract := migrationdaemon.GetObject(migrationDaemonContractRef)
 

@@ -18,6 +18,7 @@ package foundation
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/insolar/insolar/insolar"
@@ -75,12 +76,7 @@ func GetRootDomain() insolar.Reference {
 
 // Get reference on  migrationdaemon contract by  migration member.
 func GetMigrationDaemon(migrationMember insolar.Reference) (insolar.Reference, error) {
-	for i := range genesisrefs.ContractMigrationDaemonMembers {
-		if migrationMember.Equal(genesisrefs.ContractMigrationDaemonMembers[i]) {
-			return genesisrefs.ContractMigrationDaemons[i], nil
-		}
-	}
-	return insolar.Reference{}, nil
+	return genesisrefs.ContractMigrationMap[migrationMember], nil
 }
 
 // Check member is migration daemon member or not
@@ -91,6 +87,23 @@ func IsMigrationDaemonMember(member insolar.Reference) bool {
 		}
 	}
 	return false
+}
+
+func GetMigrationDaemonByMemberRef(memberRef string) (insolar.Reference, error) {
+
+	migrationDaemonMemberRef, err := insolar.NewReferenceFromBase58(memberRef)
+	if err != nil {
+		return insolar.Reference{}, fmt.Errorf(" failed to parse params.Reference")
+	}
+
+	migrationDaemonContractRef, err := GetMigrationDaemon(*migrationDaemonMemberRef)
+	if err != nil {
+		return insolar.Reference{}, fmt.Errorf(" get migration daemon contract from foundation failed, %s ", err.Error())
+	}
+	if migrationDaemonContractRef.IsEmpty() {
+		return insolar.Reference{}, fmt.Errorf(" the member is not migration daemon, %s ", migrationDaemonMemberRef)
+	}
+	return migrationDaemonContractRef, nil
 }
 
 // TrimPublicKey trim public key
