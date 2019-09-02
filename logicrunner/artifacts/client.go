@@ -92,11 +92,7 @@ type client struct {
 	localStorage *localStorage
 }
 
-// State returns hash state for artifact manager.
-func (m *client) State() []byte {
-	// This is a temporary stab to simulate real hash.
-	return m.PCS.IntegrityHasher().Hash([]byte{1, 2, 3})
-}
+var _ Client = (*client)(nil)
 
 // NewClient creates new client instance.
 func NewClient(sender bus.Sender) *client { // nolint
@@ -383,26 +379,31 @@ func (m *client) GetAbandonedRequest(
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to send GetRequest")
 	}
-	req, ok := pl.(*payload.Request)
-	if !ok {
-		err = fmt.Errorf("unexpected reply %T", pl)
-		return nil, err
+
+	if req, ok := pl.(*payload.Request); ok {
+		concrete := record.Unwrap(&req.Request)
+		var result record.Request
+
+		switch v := concrete.(type) {
+		case *record.IncomingRequest:
+			result = v
+		case *record.OutgoingRequest:
+			result = v
+		default:
+			err = fmt.Errorf("GetAbandonedRequest: unexpected message: %#v", concrete)
+			return nil, err
+		}
+
+		return result, nil
+	} else if err, ok := pl.(*payload.Error); ok {
+		if err.Code == payload.CodeNotFound {
+			return nil, insolar.ErrNotFound
+		}
+		return nil, errors.New(err.Text)
 	}
 
-	concrete := record.Unwrap(&req.Request)
-	var result record.Request
-
-	switch v := concrete.(type) {
-	case *record.IncomingRequest:
-		result = v
-	case *record.OutgoingRequest:
-		result = v
-	default:
-		err = fmt.Errorf("GetAbandonedRequest: unexpected message: %#v", concrete)
-		return nil, err
-	}
-
-	return result, nil
+	err = errors.Errorf("unexpected reply %T", pl)
+	return nil, err
 }
 
 // GetPendings returns a list of pending requests
@@ -436,7 +437,6 @@ func (m *client) GetPendings(ctx context.Context, object insolar.Reference) ([]i
 		return res, nil
 	case *payload.Error:
 		if concrete.Code == payload.CodeNoPendings {
-			err = insolar.ErrNoPendingRequest
 			return []insolar.Reference{}, insolar.ErrNoPendingRequest
 		}
 		err = errors.New(concrete.Text)

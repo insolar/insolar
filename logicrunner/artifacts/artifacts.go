@@ -71,9 +71,6 @@ type Client interface {
 		memory []byte,
 	) error
 
-	// State returns hash state for artifact manager.
-	State() []byte
-
 	// InjectCodeDescriptor injects code descriptor needed by builtin contracts
 	InjectCodeDescriptor(insolar.Reference, CodeDescriptor)
 	// InjectObjectDescriptor injects object descriptor needed by builtin contracts (to store prototypes)
