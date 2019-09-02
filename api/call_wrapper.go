@@ -62,14 +62,15 @@ func wrapCall(runner *Runner, allowedMethods map[string]bool, req *http.Request,
 	setRootReferenceIfNeeded(args)
 
 	callResult, requestRef, err := runner.makeCall(ctx, "contract.call", *args, requestBody.Raw, signature, 0, seedPulse)
-	if err != nil {
-		// TODO: white list of errors
-		logger.Error(err.Error())
 
-		var ref string
-		if requestRef != nil {
-			ref = requestRef.String()
-		}
+	var ref string
+	if requestRef != nil {
+		ref = requestRef.String()
+	}
+
+	if err != nil {
+		// TODO: white list of errors that doesnt require log
+		logger.Error(err.Error())
 
 		return &json2.Error{
 			// TODO: correct error codes
@@ -82,9 +83,7 @@ func wrapCall(runner *Runner, allowedMethods map[string]bool, req *http.Request,
 		}
 	}
 
-	if requestRef != nil {
-		result.RequestReference = requestRef.String()
-	}
+	result.RequestReference = ref
 	result.CallResult = callResult
 	result.TraceID = traceID
 	return nil
