@@ -201,7 +201,7 @@ func (d *Deposit) Transfer(amountStr string, wallerRef insolar.Reference) (inter
 		return nil, fmt.Errorf("amount must be larger then zero")
 	}
 
-	balance, ok := new(big.Int).SetString(d.Amount, 10)
+	balance, ok := new(big.Int).SetString(d.Balance, 10)
 	if !ok {
 		return nil, fmt.Errorf("can't parse deposit balance")
 	}
@@ -214,9 +214,7 @@ func (d *Deposit) Transfer(amountStr string, wallerRef insolar.Reference) (inter
 	if err != nil {
 		return nil, fmt.Errorf("can't start transfer: %s", err.Error())
 	}
-
-	d.Amount = newBalance.String()
-
+	d.Balance = newBalance.String()
 	w := wallet.GetObject(wallerRef)
 
 	acceptWalletErr := w.Accept(amountStr, XNS)
@@ -228,7 +226,7 @@ func (d *Deposit) Transfer(amountStr string, wallerRef insolar.Reference) (inter
 	if err != nil {
 		return nil, fmt.Errorf("failed to add amount back to balance: %s", err.Error())
 	}
-	d.Amount = newBalance.String()
+	d.Balance = newBalance.String()
 	return nil, fmt.Errorf("failed to transfer amount: %s", acceptWalletErr.Error())
 }
 
