@@ -14,7 +14,7 @@ Usage
    
 #### Start apirequester
 
-    ./bin/apirequester -k=scripts/insolard/configs/
+    ./bin/apirequester -k=.artifacts/launchnet/configs/
 
 ### Options
 

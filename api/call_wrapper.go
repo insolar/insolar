@@ -18,14 +18,18 @@ package api
 
 import (
 	"context"
+	"net/http"
+
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/rpc/v2"
 	"github.com/insolar/rpc/v2/json2"
-	"net/http"
+	"github.com/insolar/rpc/v2/json2"
 )
+
+const defaultError = -32000
 
 const (
 	ParseError                 = -31700
@@ -80,18 +84,29 @@ func wrapCall(runner *Runner, allowedMethods map[string]bool, req *http.Request,
 
 	setRootReferenceIfNeeded(args)
 
-	callResult, requestRef, err := runner.makeCall(ctx, "contract.call", *args, requestBody.Raw, signature, seedPulse)
+	callResult, requestRef, err := runner.makeCall(ctx, "contract.call", *args, requestBody.Raw, signature, 0, seedPulse)
+
+	var ref string
+	if requestRef != nil {
+		ref = requestRef.String()
+	}
+
 	if err != nil {
+		// TODO: white list of errors that doesnt require log
+		logger.Error(err.Error())
+
 		return &json2.Error{
-			Code:    ExecutionError,
-			Message: ExecutionErrorMessage,
-			Data:    nil,
+			// TODO: correct error codes
+			Code:    defaultError,
+			Message: err.Error(),
+			Data: requester.Data{
+				TraceID:          traceID,
+				RequestReference: ref,
+			},
 		}
 	}
 
-	if requestRef != nil {
-		result.RequestReference = requestRef.String()
-	}
+	result.RequestReference = ref
 	result.CallResult = callResult
 	result.TraceID = traceID
 	return nil
