@@ -51,6 +51,35 @@ func (p *PassState) Dep(
 }
 
 func (p *PassState) Proceed(ctx context.Context) error {
+
+	sendObject := func(rec record.Material, origin payload.Meta) error {
+		virtual := rec.Virtual
+		concrete := record.Unwrap(&virtual)
+		state, ok := concrete.(record.State)
+		if !ok {
+			return p.replyError(ctx, fmt.Sprintf("invalid object record %#v", virtual), payload.CodeInvalidRequest)
+		}
+
+		if state.ID() == record.StateDeactivation {
+			return p.replyError(ctx, "object is deactivated", payload.CodeDeactivated)
+		}
+
+		buf, err := rec.Marshal()
+		if err != nil {
+			return errors.Wrap(err, "failed to marshal state record")
+		}
+		msg, err := payload.NewMessage(&payload.State{
+			Record: buf,
+		})
+		if err != nil {
+			return errors.Wrap(err, "failed to create message")
+		}
+
+		p.dep.sender.Reply(ctx, origin, msg)
+
+		return nil
+	}
+
 	pass := payload.PassState{}
 	err := pass.Unmarshal(p.message.Payload)
 	if err != nil {
@@ -64,48 +93,29 @@ func (p *PassState) Proceed(ctx context.Context) error {
 	}
 
 	rec, err := p.dep.records.ForID(ctx, pass.StateID)
-	if err == object.ErrNotFound {
-		msg, err := payload.NewMessage(&payload.Error{Text: "no such state"})
-		if err != nil {
-			return errors.Wrap(err, "failed to create reply")
-		}
-
-		p.dep.sender.Reply(ctx, origin, msg)
-		return nil
+	switch err {
+	case nil:
+		return sendObject(rec, origin)
+	case object.ErrNotFound:
+		return p.replyError(ctx, "state not found", payload.CodeNotFound)
+	default:
+		return errors.Wrap(err, "failed to fetch object state")
 	}
-	if err != nil {
-		return err
-	}
+}
 
-	virtual := rec.Virtual
-	concrete := record.Unwrap(&virtual)
-	state, ok := concrete.(record.State)
-	if !ok {
-		return fmt.Errorf("invalid object record %#v", virtual)
-	}
-
-	if state.ID() == record.StateDeactivation {
-		msg, err := payload.NewMessage(&payload.Error{Text: "object is deactivated", Code: payload.CodeDeactivated})
-		if err != nil {
-			return errors.Wrap(err, "failed to create reply")
-		}
-
-		p.dep.sender.Reply(ctx, origin, msg)
-		return nil
-	}
-
-	buf, err := rec.Marshal()
-	if err != nil {
-		return errors.Wrap(err, "failed to marshal state record")
-	}
-	msg, err := payload.NewMessage(&payload.State{
-		Record: buf,
+func (p *PassState) replyError(
+	ctx context.Context,
+	text string,
+	code uint32,
+) error {
+	msg, err := payload.NewMessage(&payload.Error{
+		Text: text,
+		Code: code,
 	})
 	if err != nil {
-		return errors.Wrap(err, "failed to create message")
+		return errors.Wrap(err, "failed to create reply")
 	}
 
-	p.dep.sender.Reply(ctx, origin, msg)
-
+	p.dep.sender.Reply(ctx, p.message, msg)
 	return nil
 }

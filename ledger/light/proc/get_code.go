@@ -119,11 +119,9 @@ func (p *GetCode) Proceed(ctx context.Context) error {
 			node = *l
 		}
 
-		go func() {
-			_, done := p.dep.sender.SendTarget(ctx, msg, node)
-			done()
-			logger.Debug("passed GetCode")
-		}()
+		_, done := p.dep.sender.SendTarget(ctx, msg, node)
+		done()
+		logger.Debug("passed GetCode")
 		return nil
 	}
 
@@ -137,7 +135,17 @@ func (p *GetCode) Proceed(ctx context.Context) error {
 			logger.Info("code not found (sending pass)")
 			return sendPassCode()
 		}
-		return errors.Wrap(err, "failed to fetch record")
+		msg, err := payload.NewMessage(&payload.Error{
+			Text: "code not found",
+			Code: payload.CodeNotFound,
+		})
+		if err != nil {
+			return errors.Wrap(err, "failed to create reply")
+		}
+
+		p.dep.sender.Reply(ctx, p.message, msg)
+		return nil
+
 	default:
 		return errors.Wrap(err, "failed to fetch record")
 	}

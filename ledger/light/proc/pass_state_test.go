@@ -24,111 +24,129 @@ import (
 	"github.com/gojuno/minimock"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/gen"
-	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/insolar/insolar/ledger/object"
 )
 
-func TestGetRequest_Proceed(t *testing.T) {
+func TestPassState_Proceed(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	mc := minimock.NewController(t)
 
 	var (
-		records     *object.RecordAccessorMock
-		sender      *bus.SenderMock
-		coordinator *jet.CoordinatorMock
-		fetcher     *executor.JetFetcherMock
+		records *object.RecordAccessorMock
+		sender  *bus.SenderMock
 	)
 
 	setup := func() {
 		records = object.NewRecordAccessorMock(mc)
 		sender = bus.NewSenderMock(mc)
-		coordinator = jet.NewCoordinatorMock(mc)
-		fetcher = executor.NewJetFetcherMock(mc)
 	}
-
-	t.Run("Passing request on heavy", func(t *testing.T) {
-		setup()
-		defer mc.Finish()
-
-		records.ForIDMock.Return(record.Material{}, object.ErrNotFound)
-
-		expectedTarget := insolar.NewReference(gen.ID())
-
-		coordinator.IsBeyondLimitMock.Return(true, nil)
-		coordinator.HeavyMock.Return(expectedTarget, nil)
-
-		meta := payload.Meta{}
-		buf, _ := meta.Marshal()
-		expectedPass, _ := payload.NewMessage(&payload.Pass{
-			Origin: buf,
-		})
-
-		sender.SendTargetMock.Inspect(func(ctx context.Context, msg *message.Message, target insolar.Reference) {
-			assert.Equal(t, expectedPass.Payload, msg.Payload)
-			assert.Equal(t, expectedTarget, &target)
-		}).Return(make(chan *message.Message), func() {})
-
-		p := proc.NewGetRequest(meta, gen.ID(), gen.ID(), true)
-		p.Dep(records, sender, coordinator, fetcher)
-
-		err := p.Proceed(ctx)
-		assert.NoError(t, err)
-	})
-
-	t.Run("Not passing, returns error", func(t *testing.T) {
-		setup()
-		defer mc.Finish()
-
-		records.ForIDMock.Return(record.Material{}, object.ErrNotFound)
-
-		expectedError, _ := payload.NewMessage(&payload.Error{
-			Text: "request not found",
-			Code: payload.CodeNotFound,
-		})
-		sender.ReplyMock.Inspect(func(ctx context.Context, origin payload.Meta, reply *message.Message) {
-			assert.Equal(t, expectedError.Payload, reply.Payload)
-		}).Return()
-
-		meta := payload.Meta{}
-
-		p := proc.NewGetRequest(meta, gen.ID(), gen.ID(), false)
-		p.Dep(records, sender, coordinator, fetcher)
-
-		err := p.Proceed(ctx)
-		assert.NoError(t, err)
-	})
 
 	t.Run("Simple success", func(t *testing.T) {
 		setup()
 		defer mc.Finish()
 
+		origMsg, _ := (&payload.Meta{}).Marshal()
+		passed, _ := (&payload.PassState{
+			Origin:  origMsg,
+			StateID: gen.ID(),
+		}).Marshal()
+
+		msg := payload.Meta{
+			Payload: passed,
+		}
+
 		rec := record.Material{
-			Virtual:  record.Wrap(&record.IncomingRequest{}),
+			Virtual:  record.Wrap(&record.Activate{}),
 			ID:       gen.ID(),
 			ObjectID: gen.ID(),
 		}
 		records.ForIDMock.Return(rec, nil)
 
-		reqID := gen.ID()
-		expectedMsg, _ := payload.NewMessage(&payload.Request{
-			RequestID: reqID,
-			Request:   rec.Virtual,
+		buf, err := rec.Marshal()
+		expectedMsg, _ := payload.NewMessage(&payload.State{
+			Record: buf,
 		})
 
 		sender.ReplyMock.Inspect(func(ctx context.Context, origin payload.Meta, reply *message.Message) {
 			assert.Equal(t, expectedMsg.Payload, reply.Payload)
 		}).Return()
 
-		p := proc.NewGetRequest(payload.Meta{}, gen.ID(), reqID, true)
-		p.Dep(records, sender, coordinator, fetcher)
+		p := proc.NewPassState(msg)
+		p.Dep(records, sender)
+
+		err = p.Proceed(ctx)
+		assert.NoError(t, err)
+	})
+
+	t.Run("Object not found sends error", func(t *testing.T) {
+		setup()
+		defer mc.Finish()
+
+		origMsg, _ := (&payload.Meta{}).Marshal()
+		passed, _ := (&payload.PassState{
+			Origin:  origMsg,
+			StateID: gen.ID(),
+		}).Marshal()
+
+		msg := payload.Meta{
+			Payload: passed,
+		}
+
+		records.ForIDMock.Return(record.Material{}, object.ErrNotFound)
+
+		expectedError, _ := payload.NewMessage(&payload.Error{
+			Text: "state not found",
+			Code: payload.CodeNotFound,
+		})
+		sender.ReplyMock.Inspect(func(ctx context.Context, origin payload.Meta, reply *message.Message) {
+			assert.Equal(t, expectedError.Payload, reply.Payload)
+		}).Return()
+
+		p := proc.NewPassState(msg)
+		p.Dep(records, sender)
+
+		err := p.Proceed(ctx)
+		assert.NoError(t, err)
+	})
+
+	t.Run("Deactivated object sends error", func(t *testing.T) {
+		setup()
+		defer mc.Finish()
+
+		origMsg, _ := (&payload.Meta{}).Marshal()
+		passed, _ := (&payload.PassState{
+			Origin:  origMsg,
+			StateID: gen.ID(),
+		}).Marshal()
+
+		msg := payload.Meta{
+			Payload: passed,
+		}
+
+		rec := record.Material{
+			Virtual:  record.Wrap(&record.Deactivate{}),
+			ID:       gen.ID(),
+			ObjectID: gen.ID(),
+		}
+
+		records.ForIDMock.Return(rec, nil)
+
+		expectedError, _ := payload.NewMessage(&payload.Error{
+			Text: "object is deactivated",
+			Code: payload.CodeDeactivated,
+		})
+		sender.ReplyMock.Inspect(func(ctx context.Context, origin payload.Meta, reply *message.Message) {
+			assert.Equal(t, expectedError.Payload, reply.Payload)
+		}).Return()
+
+		p := proc.NewPassState(msg)
+		p.Dep(records, sender)
 
 		err := p.Proceed(ctx)
 		assert.NoError(t, err)

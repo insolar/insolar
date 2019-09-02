@@ -33,7 +33,7 @@ import (
 type GetRequest struct {
 	message             payload.Meta
 	objectID, requestID insolar.ID
-	passed              bool
+	pass                bool
 
 	dep struct {
 		records     object.RecordAccessor
@@ -43,12 +43,12 @@ type GetRequest struct {
 	}
 }
 
-func NewGetRequest(msg payload.Meta, objectID, requestID insolar.ID, passed bool) *GetRequest {
+func NewGetRequest(msg payload.Meta, objectID, requestID insolar.ID, pass bool) *GetRequest {
 	return &GetRequest{
 		requestID: requestID,
 		objectID:  objectID,
 		message:   msg,
-		passed:    passed,
+		pass:      pass,
 	}
 }
 
@@ -131,7 +131,7 @@ func (p *GetRequest) Proceed(ctx context.Context) error {
 		return sendRequest(rec)
 
 	case object.ErrNotFound:
-		if !p.passed {
+		if p.pass {
 			return sendPassRequest()
 		}
 

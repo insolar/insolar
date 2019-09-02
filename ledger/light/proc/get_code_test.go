@@ -36,7 +36,7 @@ import (
 	"github.com/insolar/insolar/ledger/object"
 )
 
-func TestGetRequest_Proceed(t *testing.T) {
+func TestGetCode_Proceed(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	mc := minimock.NewController(t)
 
@@ -53,6 +53,33 @@ func TestGetRequest_Proceed(t *testing.T) {
 		coordinator = jet.NewCoordinatorMock(mc)
 		fetcher = executor.NewJetFetcherMock(mc)
 	}
+
+	t.Run("Simple success", func(t *testing.T) {
+		setup()
+		defer mc.Finish()
+
+		rec := record.Material{
+			Virtual:  record.Wrap(&record.Code{}),
+			ID:       gen.ID(),
+			ObjectID: gen.ID(),
+		}
+		records.ForIDMock.Return(rec, nil)
+
+		buf, err := rec.Marshal()
+		expectedMsg, _ := payload.NewMessage(&payload.Code{
+			Record: buf,
+		})
+
+		sender.ReplyMock.Inspect(func(ctx context.Context, origin payload.Meta, reply *message.Message) {
+			assert.Equal(t, expectedMsg.Payload, reply.Payload)
+		}).Return()
+
+		p := proc.NewGetCode(payload.Meta{}, gen.ID(), true)
+		p.Dep(records, coordinator, fetcher, sender)
+
+		err = p.Proceed(ctx)
+		assert.NoError(t, err)
+	})
 
 	t.Run("Passing request on heavy", func(t *testing.T) {
 		setup()
@@ -74,10 +101,11 @@ func TestGetRequest_Proceed(t *testing.T) {
 		sender.SendTargetMock.Inspect(func(ctx context.Context, msg *message.Message, target insolar.Reference) {
 			assert.Equal(t, expectedPass.Payload, msg.Payload)
 			assert.Equal(t, expectedTarget, &target)
-		}).Return(make(chan *message.Message), func() {})
+		}).Return(
+			make(chan *message.Message), func() {})
 
-		p := proc.NewGetRequest(meta, gen.ID(), gen.ID(), true)
-		p.Dep(records, sender, coordinator, fetcher)
+		p := proc.NewGetCode(meta, gen.ID(), true)
+		p.Dep(records, coordinator, fetcher, sender)
 
 		err := p.Proceed(ctx)
 		assert.NoError(t, err)
@@ -90,45 +118,15 @@ func TestGetRequest_Proceed(t *testing.T) {
 		records.ForIDMock.Return(record.Material{}, object.ErrNotFound)
 
 		expectedError, _ := payload.NewMessage(&payload.Error{
-			Text: "request not found",
+			Text: "code not found",
 			Code: payload.CodeNotFound,
 		})
 		sender.ReplyMock.Inspect(func(ctx context.Context, origin payload.Meta, reply *message.Message) {
 			assert.Equal(t, expectedError.Payload, reply.Payload)
 		}).Return()
 
-		meta := payload.Meta{}
-
-		p := proc.NewGetRequest(meta, gen.ID(), gen.ID(), false)
-		p.Dep(records, sender, coordinator, fetcher)
-
-		err := p.Proceed(ctx)
-		assert.NoError(t, err)
-	})
-
-	t.Run("Simple success", func(t *testing.T) {
-		setup()
-		defer mc.Finish()
-
-		rec := record.Material{
-			Virtual:  record.Wrap(&record.IncomingRequest{}),
-			ID:       gen.ID(),
-			ObjectID: gen.ID(),
-		}
-		records.ForIDMock.Return(rec, nil)
-
-		reqID := gen.ID()
-		expectedMsg, _ := payload.NewMessage(&payload.Request{
-			RequestID: reqID,
-			Request:   rec.Virtual,
-		})
-
-		sender.ReplyMock.Inspect(func(ctx context.Context, origin payload.Meta, reply *message.Message) {
-			assert.Equal(t, expectedMsg.Payload, reply.Payload)
-		}).Return()
-
-		p := proc.NewGetRequest(payload.Meta{}, gen.ID(), reqID, true)
-		p.Dep(records, sender, coordinator, fetcher)
+		p := proc.NewGetCode(payload.Meta{}, gen.ID(), false)
+		p.Dep(records, coordinator, fetcher, sender)
 
 		err := p.Proceed(ctx)
 		assert.NoError(t, err)
