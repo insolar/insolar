@@ -201,7 +201,13 @@ func ApplyMemberAnnouncement(ctx context.Context, reader transport.AnnouncementP
 		addJoiner = nil
 	}
 
+	inslogger.FromContext(ctx).Debugf("Before ApplyNodeMembership: id=%d %v %+v %+v",
+		n.GetNodeID(), addJoiner, ma, profile)
+
 	modified, err := n.ApplyNodeMembership(ma, addJoiner)
+
+	inslogger.FromContext(ctx).Debugf("After ApplyNodeMembership: id=%d %v %+v",
+		n.GetNodeID(), modified, err)
 
 	return modified, ma.Joiner.JoinerProfile, err
 }
@@ -237,6 +243,10 @@ func AnnouncementFromReaderNotForJoiner(senderID insolar.ShortNodeID, ma transpo
 		ja.JoinerProfile = pf.CreateFullIntroProfile(jar.GetFullIntroduction())
 	} else {
 		ja.JoinerProfile = pf.CreateUpgradableIntroProfile(jar.GetBriefIntroduction())
+	}
+
+	if ja.JoinerProfile == nil || ma.GetJoinerID() != ja.JoinerProfile.GetStaticNodeID() {
+		panic("illegal state")
 	}
 
 	return profiles.NewMemberAnnouncementWithJoiner(senderID, mp, ja, announcerID), ma.GetJoinerID()
