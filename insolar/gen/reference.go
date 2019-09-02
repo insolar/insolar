@@ -105,6 +105,11 @@ func Reference() insolar.Reference {
 	return *insolar.NewReference(ID())
 }
 
+// Reference generates random reference.
+func RecordReference() insolar.Reference {
+	return *insolar.NewRecordReference(ID())
+}
+
 // UniqueReferences generates multiple random unique References.
 func UniqueReferences(a int) []insolar.Reference {
 	refs := make([]insolar.Reference, a)

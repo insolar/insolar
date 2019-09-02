@@ -27,6 +27,7 @@ import (
 
 	"github.com/insolar/insolar/insolar/bus/meta"
 	"github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/writecontroller"
@@ -208,4 +209,55 @@ func (s *Init) Past(ctx context.Context, f flow.Flow) error {
 	}
 
 	return s.Present(ctx, f)
+}
+
+func checkOutgoingRequest(ctx context.Context, request *record.OutgoingRequest) error {
+	return checkIncomingRequest(ctx, (*record.IncomingRequest)(request))
+}
+
+func checkIncomingRequest(ctx context.Context, request *record.IncomingRequest) error {
+	logger := inslogger.FromContext(ctx)
+
+	if !request.Caller.IsEmpty() && !request.Caller.IsObjectReference() {
+		return errors.Errorf("request.Caller should be ObjectReference; ref=%s", request.Caller.String())
+	}
+	if !request.CallerPrototype.IsEmpty() && !request.CallerPrototype.IsObjectReference() {
+		return errors.Errorf("request.CallerPrototype should be ObjectReference; ref=%s", request.CallerPrototype.String())
+	}
+	if request.Base != nil && !request.Base.IsObjectReference() {
+		return errors.Errorf("request.Base should be ObjectReference; ref=%s", request.Base.String())
+	}
+	if request.Object != nil && !request.Object.IsObjectReference() {
+		return errors.Errorf("request.Object should be ObjectReference; ref=%s", request.Object.String())
+	}
+	if request.Prototype != nil && !request.Prototype.IsObjectReference() {
+		return errors.Errorf("request.Prototype should be ObjectReference; ref=%s", request.Prototype.String())
+	}
+
+	if rEmpty, aEmpty := request.Reason.IsEmpty(), request.APINode.IsEmpty(); rEmpty == aEmpty {
+		rStr := "Reason is empty"
+		if !rEmpty {
+			rStr = "Reason is not empty"
+		}
+		aStr := "APINode is empty"
+		if !aEmpty {
+			aStr = "APINode is not empty"
+		}
+
+		msg := fmt.Sprintf("failed to check request reason: one should be set, but %s and %s", rStr, aStr)
+		if !rEmpty && !aEmpty {
+			logger.Warn(msg)
+		} else {
+			return errors.Errorf(msg)
+		}
+	}
+
+	if !request.Reason.IsEmpty() && !request.Reason.IsRecordScope() {
+		return errors.Errorf("request.Reason should be RecordReference; ref=%s", request.Reason.String())
+	}
+	if !request.APINode.IsEmpty() && !request.APINode.IsObjectReference() {
+		return errors.Errorf("request.APINode should be ObjectReference; ref=%s", request.Reason.String())
+	}
+
+	return nil
 }

@@ -7,5 +7,6 @@ import (
 
 func MakeReason(pulse insolar.PulseNumber, data []byte) insolar.Reference {
 	hasher := platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher()
-	return *insolar.NewReference(*insolar.NewID(pulse, hasher.Hash(data)))
+	reasonID := *insolar.NewID(pulse, hasher.Hash(data))
+	return *insolar.NewRecordReference(reasonID)
 }
