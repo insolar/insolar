@@ -253,11 +253,8 @@ func (p *RealmPurgatory) IsBriefAscensionAllowed() bool {
 	return false
 }
 
-func (p *RealmPurgatory) UnknownAsSelfFromMemberAnnouncement(ctx context.Context, id insolar.ShortNodeID,
-	profile profiles.StaticProfile, rank member.Rank, announcement profiles.MemberAnnouncement) (bool, error) {
-
-	err := p.getOrCreateMember(id).DispatchAnnouncement(ctx, rank, profile, announcement)
-	return err == nil, err
+func (p *RealmPurgatory) IsJoinerSecretRequired() bool {
+	return false
 }
 
 func (p *RealmPurgatory) FindJoinerProfile(nodeID insolar.ShortNodeID, introducedBy insolar.ShortNodeID) profiles.StaticProfile {
@@ -332,6 +329,15 @@ func (p *RealmPurgatory) UnknownFromNeighbourhood(ctx context.Context, rank memb
 	return m.DispatchAnnouncement(ctx, rank, nil, announcement)
 }
 
-func (p *RealmPurgatory) IsJoinerSecretRequired() bool {
-	return false
+func (p *RealmPurgatory) UnknownJoinerFromNeighbourhood(ctx context.Context, joinerID, announcedByID insolar.ShortNodeID) error {
+
+	m := p.getOrCreateMember(joinerID)
+	return m.DispatchAnnouncement(ctx, member.JoinerRank, nil, profiles.NewJoinerIDAnnouncement(joinerID, announcedByID))
+}
+
+func (p *RealmPurgatory) UnknownAsSelfFromMemberAnnouncement(ctx context.Context, id insolar.ShortNodeID,
+	profile profiles.StaticProfile, rank member.Rank, announcement profiles.MemberAnnouncement) (bool, error) {
+
+	err := p.getOrCreateMember(id).DispatchAnnouncement(ctx, rank, profile, announcement)
+	return err == nil, err
 }

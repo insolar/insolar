@@ -254,13 +254,13 @@ func (p *figment) dispatchAnnouncement(ctx context.Context, phantom *NodePhantom
 	if p.phantom == nil {
 		p.phantom = phantom
 		p.rank = rank
-		inslogger.FromContext(ctx).Debugf("Phantom node added: s=%d, t=%d, announcedBy=%d, profile=%s, rank=%v",
+		inslogger.FromContext(ctx).Debugf("Phantom node added: s=%d t=%d announcedBy=%d profile=%s rank=%v",
 			p.phantom.purgatory.hook.GetLocalNodeID(), p.phantom.nodeID, announcedBy, profileCategory, rank)
 
 		flags |= population.FlagCreated
 	} else {
-		inslogger.FromContext(ctx).Debugf("Phantom node update attempt: s=%d, t=%d, announcedBy=%d, profile=%s, rank=%v, "+
-			"figmentRank=%v, figmentProfile=%+v, ann=%+v",
+		inslogger.FromContext(ctx).Debugf("Phantom node update attempt: s=%d t=%d announcedBy=%d profile=%s rank=%v "+
+			"figmentRank=%v figmentProfile=%+v ann=%+v",
 			p.phantom.purgatory.hook.GetLocalNodeID(), p.phantom.nodeID, announcedBy, profileCategory, rank,
 			p.rank, p.profile, announcement,
 		)

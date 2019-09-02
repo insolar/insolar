@@ -52,6 +52,7 @@ package ph2ctl
 
 import (
 	"context"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
 	"math"
 	"runtime"
 	"time"
@@ -175,7 +176,15 @@ func (c *Phase2PacketDispatcher) DispatchMemberPacket(ctx context.Context, reade
 			}
 			err = purgatory.UnknownFromNeighbourhood(ctx, rank, nb.Announcement, c.isCapped)
 		} else {
-			modified, err = nb.Neighbour.ApplyNeighbourEvidence(sender, nb.Announcement, c.isCapped, nil)
+			addJoiner := func(ma profiles.MemberAnnouncement) error {
+				return realm.GetPurgatory().UnknownJoinerFromNeighbourhood(ctx, ma.JoinerID, ma.MemberID)
+			}
+
+			if nb.Announcement.JoinerID.IsAbsent() {
+				addJoiner = nil
+			}
+
+			modified, err = nb.Neighbour.ApplyNeighbourEvidence(sender, nb.Announcement, c.isCapped, addJoiner)
 		}
 		if err != nil {
 			inslogger.FromContext(ctx).Error(err)

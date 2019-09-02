@@ -320,7 +320,7 @@ func (c *NodeAppearance) ApplyNodeMembership(mp profiles.MemberAnnouncement, app
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
-	modified, err := c._applyState(mp, applyAfterChecks)
+	modified, err := c.applyState(mp, applyAfterChecks)
 	if modified && err == nil {
 		c.updateNodeTrustLevel(c.trust, member.TrustBySelf)
 	}
@@ -336,7 +336,7 @@ func (c *NodeAppearance) ApplyNeighbourEvidence(witness *NodeAppearance, mp prof
 
 	var updVersion uint32
 	trustBefore := c.trust
-	modified, err := c._applyState(mp, applyAfterChecks)
+	modified, err := c.applyState(mp, applyAfterChecks)
 
 	if err == nil {
 		switch {
@@ -416,9 +416,24 @@ func (c *NodeAppearance) IsStateful() bool {
 
 type MembershipApplyFunc func(ma profiles.MemberAnnouncement) error
 
-/* Evidence MUST be verified before this call */
-func (c *NodeAppearance) _applyState(ma profiles.MemberAnnouncement,
+func (c *NodeAppearance) applyState(ma profiles.MemberAnnouncement,
 	applyAfterChecks MembershipApplyFunc) (bool, error) {
+
+	updated, updVersion, err := c._applyState(ma)
+
+	if err == nil && applyAfterChecks != nil {
+		err = applyAfterChecks(ma)
+	}
+
+	if updated {
+		c.hook.OnNodeStateAssigned(updVersion, c)
+	}
+
+	return updated, err
+}
+
+/* Evidence MUST be verified before this call */
+func (c *NodeAppearance) _applyState(ma profiles.MemberAnnouncement) (bool, uint32, error) {
 
 	if ma.Membership.IsEmpty() {
 		panic(fmt.Sprintf("membership evidence is nil: %v", c.GetNodeID()))
@@ -435,19 +450,17 @@ func (c *NodeAppearance) _applyState(ma profiles.MemberAnnouncement,
 			switch {
 			case c.requestedLeave:
 				if ma.LeaveReason == c.requestedLeaveReason {
-					return false, nil
+					return false, 0, nil
 				}
 			default:
 				if c.requestedJoinerID == ma.JoinerID {
-					return false, nil
+					return false, 0, nil
 				}
 			}
 		}
 		lma := c.getMembershipAnnouncement()
 		return c.registerFraud(c.Frauds().NewInconsistentMembershipAnnouncement(c.GetProfile(), lma, ma.MembershipAnnouncement))
 	}
-
-	updVersion := c.hook.UpdatePopulationVersion()
 
 	switch {
 	case ma.IsLeaving:
@@ -490,15 +503,10 @@ func (c *NodeAppearance) _applyState(ma profiles.MemberAnnouncement,
 			// return false, nil // let the node to be "unset" // TODO handle properly
 		}
 	case !c.profile.GetStatic().GetExtension().GetPowerLevels().IsAllowed(ma.Membership.RequestedPower):
-		return false, c.RegisterFraud(c.Frauds().NewInvalidPowerLevel(c.profile))
+		return false, 0, c.RegisterFraud(c.Frauds().NewInvalidPowerLevel(c.profile))
 	}
 
-	if applyAfterChecks != nil {
-		err := applyAfterChecks(ma)
-		if err != nil {
-			return false, err
-		}
-	}
+	updVersion := c.hook.UpdatePopulationVersion()
 
 	c.stateEvidence = ma.Membership.StateEvidence
 	c.announceSignature = ma.Membership.AnnounceSignature
@@ -507,9 +515,7 @@ func (c *NodeAppearance) _applyState(ma profiles.MemberAnnouncement,
 	c.requestedPower = ma.Membership.RequestedPower
 	c.requestedJoinerID = ma.JoinerID
 
-	c.hook.OnNodeStateAssigned(updVersion, c)
-
-	return true, nil
+	return true, updVersion, nil
 }
 
 func (c *NodeAppearance) SetLocalNodeState(ma profiles.MemberAnnouncement) bool {
@@ -527,7 +533,7 @@ func (c *NodeAppearance) SetLocalNodeState(ma profiles.MemberAnnouncement) bool 
 
 	trustBefore := c.trust
 
-	updated, err := c._applyState(ma, nil)
+	updated, err := c.applyState(ma, nil)
 	if err != nil {
 		panic(err)
 	}
@@ -628,7 +634,7 @@ func (c *NodeAppearance) GetNeighbourWeight() uint32 {
 	return c.neighbourWeight
 }
 
-func (c *NodeAppearance) registerFraud(fraud misbehavior.FraudError) (bool, error) {
+func (c *NodeAppearance) registerFraud(fraud misbehavior.FraudError) (bool, uint32, error) {
 	if fraud.IsUnknown() {
 		panic("empty fraud")
 	}
@@ -638,9 +644,9 @@ func (c *NodeAppearance) registerFraud(fraud misbehavior.FraudError) (bool, erro
 		updVersion := c.hook.UpdatePopulationVersion()
 		c.firstFraudDetails = &fraud
 		c.hook.OnTrustUpdated(updVersion, c, prevTrust, c.trust, c.profile.HasFullProfile())
-		return true, fraud
+		return true, updVersion, fraud
 	}
-	return false, fraud
+	return false, 0, fraud
 }
 
 func (c *NodeAppearance) RegisterFraud(fraud misbehavior.FraudError) error {
@@ -652,7 +658,7 @@ func (c *NodeAppearance) RegisterFraud(fraud misbehavior.FraudError) error {
 		panic("misplaced fraud")
 	}
 
-	_, err := c.registerFraud(fraud)
+	_, _, err := c.registerFraud(fraud)
 	return err
 }
 
