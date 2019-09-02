@@ -26,7 +26,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/rpc/v2"
 	"github.com/insolar/rpc/v2/json2"
-	"github.com/insolar/rpc/v2/json2"
 )
 
 const defaultError = -32000
@@ -84,7 +83,7 @@ func wrapCall(runner *Runner, allowedMethods map[string]bool, req *http.Request,
 
 	setRootReferenceIfNeeded(args)
 
-	callResult, requestRef, err := runner.makeCall(ctx, "contract.call", *args, requestBody.Raw, signature, 0, seedPulse)
+	callResult, requestRef, err := runner.makeCall(ctx, "contract.call", *args, requestBody.Raw, signature, seedPulse)
 
 	var ref string
 	if requestRef != nil {
@@ -97,7 +96,7 @@ func wrapCall(runner *Runner, allowedMethods map[string]bool, req *http.Request,
 
 		return &json2.Error{
 			// TODO: correct error codes
-			Code:    defaultError,
+			Code:    ExecutionError,
 			Message: err.Error(),
 			Data: requester.Data{
 				TraceID:          traceID,
