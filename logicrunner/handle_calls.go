@@ -164,19 +164,16 @@ func (h *HandleCall) handleActual(
 	}
 
 	reqInfo := procRegisterRequest.getResult()
-	requestRef := *reqInfo.RequestReference()
+	requestRef := *getRequestReference(reqInfo)
 
 	if request.CallType != record.CTMethod {
-		request.Object = reqInfo.RequestAsObjectReference()
+		request.Object = insolar.NewReference(reqInfo.RequestID)
 	}
 
 	objectRef := request.Object
 
-	if objectRef == nil {
+	if objectRef == nil || !objectRef.IsSelfScope() {
 		return nil, errors.New("can't get object reference")
-	} else if !objectRef.IsSelfScope() {
-		// TODO[bigbes]: temporary check, remove later
-		panic("objectRef is not in recordScope")
 	}
 
 	ctx, logger := inslogger.WithFields(

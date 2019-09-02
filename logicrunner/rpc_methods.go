@@ -22,6 +22,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
@@ -43,6 +44,10 @@ type RPCMethods struct {
 	ss         StateStorage
 	execution  ProxyImplementation
 	validation ProxyImplementation
+}
+
+func getRequestReference(info *payload.RequestInfo) *insolar.Reference {
+	return insolar.NewRecordReference(info.RequestID)
 }
 
 func NewRPCMethods(
@@ -189,7 +194,7 @@ func (m *executionProxyImplementation) RouteCall(
 
 	// Step 2. Send the request and register the result (both is done by outgoingSender)
 
-	outgoingReqRef := *outReqInfo.RequestReference()
+	outgoingReqRef := *getRequestReference(outReqInfo)
 
 	var incoming *record.IncomingRequest
 	_, rep.Result, incoming, err = m.outgoingSender.SendOutgoingRequest(ctx, outgoingReqRef, outgoing)
@@ -219,7 +224,7 @@ func (m *executionProxyImplementation) SaveAsChild(
 	}
 
 	// Register result of the outgoing method
-	outgoingReqRef := *outReqInfo.RequestReference()
+	outgoingReqRef := *getRequestReference(outReqInfo)
 
 	var incoming *record.IncomingRequest
 	rep.Reference, rep.Result, incoming, err = m.outgoingSender.SendOutgoingRequest(ctx, outgoingReqRef, outgoing)

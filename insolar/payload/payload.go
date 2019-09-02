@@ -20,8 +20,6 @@ import (
 	"github.com/gogo/protobuf/proto"
 	base58 "github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
-
-	"github.com/insolar/insolar/insolar"
 )
 
 type Type uint32
@@ -139,14 +137,6 @@ func (h *MessageHash) IsZero() bool {
 		}
 	}
 	return true
-}
-
-func (m RequestInfo) RequestAsObjectReference() *insolar.Reference {
-	return insolar.NewReference(m.RequestID)
-}
-
-func (m RequestInfo) RequestReference() *insolar.Reference {
-	return insolar.NewRecordReference(m.RequestID)
 }
 
 // UnmarshalType decodes payload type from given binary.
