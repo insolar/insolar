@@ -65,12 +65,8 @@ import (
 func (p *Packet) SetRequest(request interface{}) {
 	var r isRequest_Request
 	switch t := request.(type) {
-	case *Ping:
-		r = &Request_Ping{t}
 	case *RPCRequest:
 		r = &Request_RPC{t}
-	case *CascadeRequest:
-		r = &Request_Cascade{t}
 	case *PulseRequest:
 		r = &Request_Pulse{t}
 	case *BootstrapRequest:
@@ -92,8 +88,6 @@ func (p *Packet) SetRequest(request interface{}) {
 func (p *Packet) SetResponse(response interface{}) {
 	var r isResponse_Response
 	switch t := response.(type) {
-	case *Ping:
-		r = &Response_Ping{t}
 	case *RPCResponse:
 		r = &Response_RPC{t}
 	case *BasicResponse:

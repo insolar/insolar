@@ -56,6 +56,7 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/network/storage"
+	"github.com/insolar/insolar/pulse"
 
 	"github.com/insolar/insolar/network/hostnetwork/resolver"
 	"github.com/insolar/insolar/network/node"
@@ -141,8 +142,8 @@ type nodekeeper struct {
 
 func (nk *nodekeeper) SetInitialSnapshot(nodes []insolar.NetworkNode) {
 	ctx := context.TODO()
-	nk.Sync(ctx, insolar.FirstPulseNumber, nodes)
-	nk.MoveSyncToActive(ctx, insolar.FirstPulseNumber)
+	nk.Sync(ctx, pulse.MinTimePulse, nodes)
+	nk.MoveSyncToActive(ctx, pulse.MinTimePulse)
 }
 
 func (nk *nodekeeper) GetAccessor(pn insolar.PulseNumber) network.Accessor {
@@ -187,7 +188,7 @@ func (nk *nodekeeper) MoveSyncToActive(ctx context.Context, number insolar.Pulse
 	snapshot := node.NewSnapshot(number, nk.syncNodes)
 	err := nk.SnapshotStorage.Append(number, snapshot)
 	if err != nil {
-		panic("MoveSyncToActive(): " + err.Error())
+		inslogger.FromContext(ctx).Panic("MoveSyncToActive(): ", err.Error())
 	}
 
 	accessor := node.NewAccessor(snapshot)

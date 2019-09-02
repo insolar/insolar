@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/logicrunner/writecontroller"
 )
 
 type HandlePendingFinished struct {
@@ -46,11 +47,13 @@ func (h *HandlePendingFinished) Present(ctx context.Context, _ flow.Flow) error 
 	}
 
 	done, err := h.dep.WriteAccessor.Begin(ctx, flow.Pulse(ctx))
-	defer done()
-
 	if err != nil {
-		return nil
+		if err == writecontroller.ErrWriteClosed {
+			return flow.ErrCancelled
+		}
+		return errors.Wrap(err, "failed to acquire write access")
 	}
+	defer done()
 
 	broker := h.dep.StateStorage.UpsertExecutionState(message.ObjectRef)
 

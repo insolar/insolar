@@ -32,7 +32,6 @@ import (
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
-	"github.com/insolar/insolar/insolar/delegationtoken"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/jetcoordinator"
 	"github.com/insolar/insolar/insolar/node"
@@ -136,11 +135,6 @@ func initComponents(
 
 	terminationHandler := termination.NewHandler(nw)
 
-	delegationTokenFactory := delegationtoken.NewDelegationTokenFactory()
-
-	apiRunner, err := api.NewRunner(&cfg.APIRunner)
-	checkError(ctx, err, "failed to start ApiRunner")
-
 	metricsHandler, err := metrics.NewMetrics(ctx, cfg.Metrics, metrics.GetInsolarRegistry("virtual"), "virtual")
 	checkError(ctx, err, "failed to start Metrics")
 
@@ -154,8 +148,43 @@ func initComponents(
 	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner, publisher, b)
 	checkError(ctx, err, "failed to start LogicRunner")
 
-	contractRequester, err := contractrequester.New()
+	contractRequester, err := contractrequester.New(
+		b,
+		pulses,
+		jc,
+		pcs,
+	)
 	checkError(ctx, err, "failed to start ContractRequester")
+
+	artifactsClient := artifacts.NewClient(b)
+
+	API, err := api.NewRunner(
+		&cfg.APIRunner,
+		certManager,
+		contractRequester,
+		nodeNetwork,
+		nw,
+		pulses,
+		artifactsClient,
+		jc,
+		nw,
+	)
+	checkError(ctx, err, "failed to start ApiRunner")
+
+	AdminAPIRunner, err := api.NewRunner(
+		&cfg.AdminAPIRunner,
+		certManager,
+		contractRequester,
+		nodeNetwork,
+		nw,
+		pulses,
+		artifactsClient,
+		jc,
+		nw,
+	)
+	checkError(ctx, err, "failed to start AdminAPIRunner")
+
+	APIWrapper := api.NewWrapper(API, AdminAPIRunner)
 
 	// TODO: remove this hack in INS-3341
 	contractRequester.LR = logicRunner
@@ -173,7 +202,7 @@ func initComponents(
 		logicexecutor.NewLogicExecutor(),
 		logicrunner.NewRequestsExecutor(),
 		machinesmanager.NewMachinesManager(),
-		apiRunner,
+		APIWrapper,
 		nodeNetwork,
 		nw,
 		pm,
@@ -183,13 +212,12 @@ func initComponents(
 		b,
 		publisher,
 		contractRequester,
-		artifacts.NewClient(b),
+		artifactsClient,
 		artifacts.NewDescriptorsCache(),
 		jc,
 		pulses,
 		jet.NewStore(),
 		node.NewStorage(),
-		delegationTokenFactory,
 	}
 	components = append(components, []interface{}{
 		metricsHandler,
@@ -202,13 +230,14 @@ func initComponents(
 	err = cm.Init(ctx)
 	checkError(ctx, err, "failed to init components")
 
-	pm.FlowDispatcher = logicRunner.FlowDispatcher
+	// this should be done after Init due to inject
+	pm.AddDispatcher(logicRunner.FlowDispatcher, contractRequester.FlowDispatcher)
 
 	return &cm, terminationHandler, startWatermill(
 		ctx, wmLogger, subscriber, b,
 		nw.SendMessageHandler,
 		logicRunner.FlowDispatcher.Process,
-		contractRequester.ReceiveResult,
+		contractRequester.FlowDispatcher.Process,
 	)
 }
 

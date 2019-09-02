@@ -27,7 +27,6 @@ import (
 )
 
 func TestEcdsaMarshalUnmarshal(t *testing.T) {
-	count := 10000
 	data := gen.Reference()
 
 	kp := platformpolicy.NewKeyProcessor()
@@ -35,16 +34,14 @@ func TestEcdsaMarshalUnmarshal(t *testing.T) {
 
 	hasher := hash.NewSHA3Provider().Hash512bits()
 
-	for i := 0; i < count; i++ {
-		privateKey, err := kp.GeneratePrivateKey()
-		assert.NoError(t, err)
+	privateKey, err := kp.GeneratePrivateKey()
+	assert.NoError(t, err)
 
-		signer := provider.DataSigner(privateKey, hasher)
-		verifier := provider.DataVerifier(kp.ExtractPublicKey(privateKey), hasher)
+	signer := provider.DataSigner(privateKey, hasher)
+	verifier := provider.DataVerifier(kp.ExtractPublicKey(privateKey), hasher)
 
-		signature, err := signer.Sign(data.Bytes())
-		assert.NoError(t, err)
+	signature, err := signer.Sign(data.Bytes())
+	assert.NoError(t, err)
 
-		assert.True(t, verifier.Verify(*signature, data.Bytes()))
-	}
+	assert.True(t, verifier.Verify(*signature, data.Bytes()))
 }

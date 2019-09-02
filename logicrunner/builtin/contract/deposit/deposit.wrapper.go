@@ -20,6 +20,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	XXX_insolar "github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/migrationadmin"
 	"github.com/insolar/insolar/logicrunner/common"
 )
 
@@ -447,17 +448,15 @@ func INSMETHOD_Accept(object []byte, data []byte) ([]byte, []byte, error) {
 func INSCONSTRUCTOR_New(data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
-	args := make([]interface{}, 5)
+	args := make([]interface{}, 4)
 	var args0 insolar.Reference
 	args[0] = &args0
 	var args1 string
 	args[1] = &args1
 	var args2 string
 	args[2] = &args2
-	var args3 int64
+	var args3 *migrationadmin.VestingParams
 	args[3] = &args3
-	var args4 int64
-	args[4] = &args4
 
 	err := ph.Deserialize(data, &args)
 	if err != nil {
@@ -465,7 +464,7 @@ func INSCONSTRUCTOR_New(data []byte) ([]byte, []byte, error) {
 		return nil, nil, e
 	}
 
-	ret0, ret1 := New(args0, args1, args2, args3, args4)
+	ret0, ret1 := New(args0, args1, args2, args3)
 	ret1 = ph.MakeErrorSerializable(ret1)
 	if ret0 == nil && ret1 == nil {
 		ret1 = &foundation.Error{S: "constructor returned nil"}

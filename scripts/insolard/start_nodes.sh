@@ -70,7 +70,7 @@ generate_nodes_certs()
         set -x
         ${INSOLAR_CMD} certgen \
             --root-keys ${ROOT_MEMBER_KEYS_FILE} \
-            --url "http://127.0.0.1:19101/api" \
+            --url "http://127.0.0.1:19001/admin-api/rpc" \
             --node-cert ${NODES_DATA}${i}/cert.json \
             --node-keys ${NODES_DATA}${i}/keys.json \
             --role ${role}

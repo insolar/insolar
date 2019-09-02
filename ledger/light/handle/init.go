@@ -20,11 +20,10 @@ import (
 	"context"
 	"fmt"
 
-	wmessage "github.com/ThreeDotsLabs/watermill/message"
-
+	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/pkg/errors"
 
-	wbus "github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/bus/meta"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
@@ -34,11 +33,11 @@ import (
 
 type Init struct {
 	dep     *proc.Dependencies
-	message *wmessage.Message
-	sender  wbus.Sender
+	message *message.Message
+	sender  bus.Sender
 }
 
-func NewInit(dep *proc.Dependencies, sender wbus.Sender, msg *wmessage.Message) *Init {
+func NewInit(dep *proc.Dependencies, sender bus.Sender, msg *message.Message) *Init {
 	return &Init{
 		dep:     dep,
 		sender:  sender,
@@ -91,7 +90,7 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 		h := NewGetRequestInfo(s.dep, meta)
 		err = f.Handle(ctx, h.Present)
 	case payload.TypeGetFilament:
-		h := NewGetRequests(s.dep, meta)
+		h := NewGetFilament(s.dep, meta)
 		return f.Handle(ctx, h.Present)
 	case payload.TypePassState:
 		h := NewPassState(s.dep, meta)
@@ -139,7 +138,7 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 		err = fmt.Errorf("no handler for message type %s", payloadType.String())
 	}
 	if err != nil {
-		s.replyError(ctx, meta, err)
+		bus.ReplyError(ctx, s.sender, meta, err)
 	}
 	return err
 }
@@ -169,7 +168,7 @@ func (s *Init) handlePass(ctx context.Context, f flow.Flow, meta payload.Meta) e
 	ctx, _ = inslogger.WithField(ctx, "msg_type_original", payloadType.String())
 
 	if originMeta.Pulse != meta.Pulse {
-		s.replyError(ctx, originMeta, flow.ErrCancelled)
+		bus.ReplyError(ctx, s.sender, originMeta, flow.ErrCancelled)
 		return flow.ErrCancelled
 	}
 
@@ -217,7 +216,7 @@ func (s *Init) handlePass(ctx context.Context, f flow.Flow, meta payload.Meta) e
 		err = fmt.Errorf("no handler for message type %s", payloadType.String())
 	}
 	if err != nil {
-		s.replyError(ctx, originMeta, err)
+		bus.ReplyError(ctx, s.sender, originMeta, err)
 	}
 
 	return err
@@ -278,27 +277,6 @@ func (s *Init) Past(ctx context.Context, f flow.Flow) error {
 		return s.Present(ctx, f)
 	}
 
-	s.replyError(ctx, meta, flow.ErrCancelled)
+	bus.ReplyError(ctx, s.sender, meta, flow.ErrCancelled)
 	return nil
-}
-
-func (s *Init) replyError(ctx context.Context, replyTo payload.Meta, err error) {
-	errCode := uint32(payload.CodeUnknown)
-
-	// Throwing custom error code
-	cause := errors.Cause(err)
-	insError, ok := cause.(*payload.CodedError)
-	if ok {
-		errCode = insError.GetCode()
-	}
-
-	// todo refactor this #INS-3191
-	if err == flow.ErrCancelled {
-		errCode = uint32(payload.CodeFlowCanceled)
-	}
-	errMsg, newErr := payload.NewMessage(&payload.Error{Text: err.Error(), Code: errCode})
-	if newErr != nil {
-		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to reply error"))
-	}
-	s.sender.Reply(ctx, replyTo, errMsg)
 }

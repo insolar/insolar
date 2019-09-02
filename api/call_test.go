@@ -115,15 +115,15 @@ func TestTimeoutSuite(t *testing.T) {
 	timeoutSuite.user, err = requester.CreateUserConfig(userRef, string(sKeyString), string(pKeyString))
 
 	http.DefaultServeMux = new(http.ServeMux)
-	cfg := configuration.NewAPIRunner()
+	cfg := configuration.NewAPIRunner(false)
 	cfg.Address = "localhost:19192"
-	timeoutSuite.api, err = NewRunner(&cfg)
+	timeoutSuite.api, err = NewRunner(&cfg, nil, nil, nil, nil, nil, nil, nil, nil)
 	require.NoError(t, err)
 	timeoutSuite.api.timeout = 1 * time.Second
 
 	cr := testutils.NewContractRequesterMock(timeoutSuite.mc)
 	cr.SendRequestWithPulseMock.Set(func(p context.Context, p1 *insolar.Reference, method string, p3 []interface{}, p4 insolar.PulseNumber) (insolar.Reply, *insolar.Reference, error) {
-		requestReference, _ := insolar.NewReferenceFromBase58("4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.4FFB8zfQoGznSmzDxwv4njX1aR9ioL8GHSH17QXH2AFa")
+		requestReference, _ := insolar.NewReferenceFromBase58("14K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.14FFB8zfQoGznSmzDxwv4njX1aR9ioL8GHSH17QXH2AFa")
 		switch method {
 		case "GetPublicKey":
 			var result = string(pKeyString)

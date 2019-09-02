@@ -17,12 +17,13 @@
 package insolar
 
 import (
-	"bytes"
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/insolar/insolar/insolar/bits"
+	"github.com/insolar/insolar/pulse"
+	"github.com/insolar/insolar/reference"
+
 	"github.com/pkg/errors"
 )
 
@@ -33,34 +34,34 @@ const (
 	JetPrefixSize = JetSize - 1
 	// JetMaximumDepth is a Jet's maximum depth (maximum offset in bits).
 	JetMaximumDepth = JetPrefixSize*8 - 1
+	// JetDepthPosition is an position where depth of jet id is located
+	JetDepthPosition = 0
 	// JetPrefixOffset is an offset where prefix starts in jet id.
-	JetPrefixOffset = PulseNumberSize + 1
+	JetPrefixOffset = JetDepthPosition + 1
 )
 
 // JetID should be used, when id is a jetID
 type JetID ID
 
 // Size is a protobuf required method. It returns size of JetID
-func (id *JetID) Size() int { return RecordIDSize }
+func (id *JetID) Size() int { return reference.LocalBinarySize }
 
 // MarshalTo is a protobuf required method. It marshals data
 func (id *JetID) MarshalTo(data []byte) (n int, err error) {
-	copy(data, id[:])
-	return RecordIDSize, nil
+	return (*ID)(id).MarshalTo(data)
 }
 
 // Unmarshal is a protobuf required method. It unmarshals data
 func (id *JetID) Unmarshal(data []byte) error {
-	if len(data) != RecordIDSize {
+	if err := (*ID)(id).Unmarshal(data); err != nil {
 		return errors.New("Not enough bytes to unpack JetID")
 	}
-	copy(id[:], data)
 	return nil
 }
 
 // IsValid returns true is JetID has a predefined reserved pulse number.
 func (id *JetID) IsValid() bool {
-	return bytes.Equal(id[:PulseNumberSize], PulseNumberJet.Bytes())
+	return (*ID)(id).Pulse().IsJet()
 }
 
 // IsEmpty - check for void
@@ -73,66 +74,31 @@ var ZeroJetID = *NewJetID(0, nil)
 
 // NewJetID creates a new jet with provided ID and index
 func NewJetID(depth uint8, prefix []byte) *JetID {
-	var id JetID
-	copy(id[:PulseNumberSize], PulseNumberJet.Bytes())
-	id[PulseNumberSize] = depth
-	prefix = bits.ResetBits(prefix, depth)
-	copy(id[JetPrefixOffset:], prefix)
-	return &id
+	hash := [reference.LocalBinaryHashSize]byte{depth}
+	copy(hash[JetPrefixOffset:], bits.ResetBits(prefix, depth))
+
+	return (*JetID)(NewID(pulse.Jet, hash[:]))
 }
 
 // Depth extracts depth from a jet id.
 func (id JetID) Depth() uint8 {
-	recordID := ID(id)
-	if recordID.Pulse() != PulseNumberJet {
+	if !id.IsValid() {
 		panic(fmt.Sprintf("provided id %b is not a jet id", id))
 	}
-	return id[PulseNumberSize]
+	return ID(id).GetHash()[JetDepthPosition]
 }
 
 // Prefix extracts prefix from a jet id.
 func (id JetID) Prefix() []byte {
-	recordID := ID(id)
-	if recordID.Pulse() != PulseNumberJet {
+	if !id.IsValid() {
 		panic(fmt.Sprintf("provided id %b is not a jet id", id))
 	}
-	return id[JetPrefixOffset:]
+	return ID(id).Hash()[JetPrefixOffset:]
 }
 
 // DebugString prints JetID in human readable form.
-func (id JetID) DebugString() string {
-	depth := int(id[PulseNumberSize])
-	if depth == 0 {
-		return "[JET 0 -]"
-	}
-
-	prefix := id[PulseNumberSize+1:]
-	var res strings.Builder
-	res.WriteString("[JET ")
-	res.WriteString(strconv.Itoa(depth))
-	res.WriteString(" ")
-	if len(prefix)*8 < depth {
-		return fmt.Sprintf("[JET: <wrong format> %d %b]", depth, prefix)
-	}
-
-ScanPrefix:
-	for _, b := range prefix {
-		for j := 7; j >= 0; j-- {
-			if 0 == (b >> uint(j) & 0x01) {
-				res.WriteString("0")
-			} else {
-				res.WriteString("1")
-			}
-
-			depth--
-			if depth == 0 {
-				res.WriteString("]")
-				break ScanPrefix
-			}
-		}
-	}
-
-	return res.String()
+func (id *JetID) DebugString() string {
+	return (*ID)(id).DebugString()
 }
 
 type JetIDCollection []JetID
@@ -151,9 +117,9 @@ func (ids JetIDCollection) DebugString() string {
 }
 
 func (id JetID) Marshal() ([]byte, error) {
-	return id[:], nil
+	return ID(id).Marshal()
 }
 
-func (id JetID) Equal(other JetID) bool {
-	return id == other
+func (id *JetID) Equal(other JetID) bool {
+	return (*ID)(id).Equal(ID(other))
 }

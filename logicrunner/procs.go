@@ -50,7 +50,7 @@ func (ch *CheckOurRole) Proceed(ctx context.Context) error {
 	defer span.End()
 
 	// TODO do map of supported objects for pulse, go to jetCoordinator only if map is empty for ref
-	isAuthorized, err := ch.jetCoordinator.IsMeAuthorizedNow(ctx, ch.role, *ch.target.Record())
+	isAuthorized, err := ch.jetCoordinator.IsMeAuthorizedNow(ctx, ch.role, *ch.target.GetLocal())
 	if err != nil {
 		return errors.Wrap(err, "authorization failed with error")
 	}
@@ -73,7 +73,7 @@ type RegisterIncomingRequest struct {
 func NewRegisterIncomingRequest(request record.IncomingRequest, dep *Dependencies) *RegisterIncomingRequest {
 	return &RegisterIncomingRequest{
 		request:         request,
-		ArtifactManager: dep.lr.ArtifactManager,
+		ArtifactManager: dep.ArtifactManager,
 		result:          make(chan *payload.RequestInfo, 1),
 	}
 }

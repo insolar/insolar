@@ -29,7 +29,7 @@ import (
 	"github.com/insolar/insolar/ledger/light/executor"
 )
 
-type SendRequests struct {
+type SendFilament struct {
 	message          payload.Meta
 	objID, startFrom insolar.ID
 	readUntil        insolar.PulseNumber
@@ -40,8 +40,8 @@ type SendRequests struct {
 	}
 }
 
-func NewSendRequests(msg payload.Meta, objID insolar.ID, startFrom insolar.ID, readUntil insolar.PulseNumber) *SendRequests {
-	return &SendRequests{
+func NewSendFilament(msg payload.Meta, objID insolar.ID, startFrom insolar.ID, readUntil insolar.PulseNumber) *SendFilament {
+	return &SendFilament{
 		message:   msg,
 		objID:     objID,
 		startFrom: startFrom,
@@ -49,13 +49,13 @@ func NewSendRequests(msg payload.Meta, objID insolar.ID, startFrom insolar.ID, r
 	}
 }
 
-func (p *SendRequests) Dep(sender bus.Sender, filaments executor.FilamentCalculator) {
+func (p *SendFilament) Dep(sender bus.Sender, filaments executor.FilamentCalculator) {
 	p.dep.sender = sender
 	p.dep.filaments = filaments
 }
 
-func (p *SendRequests) Proceed(ctx context.Context) error {
-	ctx, span := instracer.StartSpan(ctx, "SendRequests")
+func (p *SendFilament) Proceed(ctx context.Context) error {
+	ctx, span := instracer.StartSpan(ctx, "SendFilament")
 	defer span.End()
 
 	span.AddAttributes(

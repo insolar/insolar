@@ -34,6 +34,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/builtin/contract/noderecord"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/pulse"
 
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -125,7 +126,7 @@ func initArtifactManager(t *testing.T) artifact.Manager {
 	) (*insolar.ID, error) {
 		virtRec := record.Wrap(&req)
 		hash := record.HashVirtual(pcs.ReferenceHasher(), virtRec)
-		return insolar.NewID(insolar.FirstPulseNumber, hash), nil
+		return insolar.NewID(pulse.MinTimePulse, hash), nil
 	})
 
 	amMock.UpdateObjectMock.Set(func(

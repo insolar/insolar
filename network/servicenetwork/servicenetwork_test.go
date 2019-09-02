@@ -56,6 +56,7 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/insolar/insolar/network/controller"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -161,7 +162,7 @@ func TestSendMessageHandler_SendError(t *testing.T) {
 		})
 		return n
 	})
-	rpc := networkUtils.NewRPCControllerMock(t)
+	rpc := controller.NewRPCControllerMock(t)
 	rpc.SendBytesMock.Set(func(p context.Context, p1 insolar.Reference, p2 string, p3 []byte) (r []byte, r1 error) {
 		return nil, errors.New("test error")
 	})
@@ -198,7 +199,7 @@ func TestSendMessageHandler_WrongReply(t *testing.T) {
 		})
 		return n
 	})
-	rpc := networkUtils.NewRPCControllerMock(t)
+	rpc := controller.NewRPCControllerMock(t)
 	rpc.SendBytesMock.Set(func(p context.Context, p1 insolar.Reference, p2 string, p3 []byte) (r []byte, r1 error) {
 		return nil, nil
 	})
@@ -233,7 +234,7 @@ func TestSendMessageHandler(t *testing.T) {
 		})
 		return n
 	})
-	rpc := networkUtils.NewRPCControllerMock(t)
+	rpc := controller.NewRPCControllerMock(t)
 	rpc.SendBytesMock.Set(func(p context.Context, p1 insolar.Reference, p2 string, p3 []byte) (r []byte, r1 error) {
 		return ack, nil
 	})

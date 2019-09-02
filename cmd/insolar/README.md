@@ -15,19 +15,20 @@
 You should have ```params.json``` with something like this:
 
     {
-      "params": [
+      "callParams": [
        "<public_key from node config>",
         <numberOfBootstrapNodes>,
         <majorityRule>,
         [<roles>],
         "<ip>"
       ],
-      "method": "RegisterNode"
+      "callSite": "RegisterNode"
     }
 
 Than use send_request command with this file:
 
     ./bin/insolar send_request --root-keys=./scripts/insolard/configs/root_member_keys.json --root-caller --params=params.json
+    ./bin/insolar send_request --root-keys=./scripts/insolard/configs/root_member_keys.json --migration-admin-caller --params=params.json
 
 Check available commands: `./bin/insolar -h`
 

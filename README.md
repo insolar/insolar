@@ -1,108 +1,114 @@
-# Insolar
+[<img src="https://insolar.io/st/github-readme-banner.png">](http://insolar.io/?utm_source=Github)
 
-Enterprise-ready blockchain platform.
+Insolar platform is the most secure, scalable, and comprehensive business-ready blockchain toolkit in the world. Insolar’s goal is to give businesses access to features and services that enable them to launch new decentralized applications quickly and easily. Whether a minimum viable product or full-scale production software, Insolar builds and integrates applications for your enterprise's existing systems.
 
 [![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/2150/badge)](https://bestpractices.coreinfrastructure.org/projects/2150)
-
 [![GolangCI](https://golangci.com/badges/github.com/insolar/insolar.svg)](https://golangci.com/r/github.com/insolar/insolar/)
 [![Go Report Card](https://goreportcard.com/badge/github.com/insolar/insolar)](https://goreportcard.com/report/github.com/insolar/insolar)
 [![GoDoc](https://godoc.org/github.com/insolar/insolar?status.svg)](https://godoc.org/github.com/insolar/insolar)
 [![codecov](https://codecov.io/gh/insolar/insolar/branch/master/graph/badge.svg)](https://codecov.io/gh/insolar/insolar)
 
-## Overview
+# Quick start
 
-**Insolar** is building a 4th generation blockchain platform for business aimed to enable seamless interactions between companies and unlock new growth opportunities. In addition to the blockchain platform, Insolar will provide blockchain services and ecosystem support for companies that are looking to develop and deploy blockchain solutions. Insolar will feature most complete and secure set of production-ready business blockchain tools and services to quickly build or launch blockchain enterprise applications, accelerating the progression path from initial proof-of-concept to full-scale production.
+To learn what distinguishes Insolar from other blockchain projects, go through the [list of our features](https://insolar.io/platform?utm_source=Github). 
 
-The world’s most innovative companies in finance, logistics, consumer goods, energy, healthcare, transportation, manufacturing and others will be turning to Insolar to create applications and networks that deliver tangible business success. They recognise that even in today’s digital economy, vast amounts of value continue to be trapped inside processes and organisations that don’t connect. Insolar is their remedy, helping them discover and design business value in blockchain networks — starting, accelerating and innovating strategies that replace longstanding business friction with trust and transparency. Delegating trust to a blockchain means that businesses can pursue broader networks, onboard new partners, and enter new ecosystems with ease. Blockchain-based networks that support multiparty collaboration around shared, trusted data and process automation across organisational boundaries bring benefits at many levels, starting with efficiency gains and culminating in reinventing how entire industry ecosystems operate.
+To get a grip on how Insolar works, take a look at its [architecture overview](https://docs.insolar.io/en/latest/architecture.html#architecture).
 
-Insolar is a global team of 60+ people in North America and Europe, including a 35-strong engineering team with practical blockchain engineering know-how, and 10 leading blockchain academics from major institutions (York University, ETH Zurich, Princeton).
+To join the Insolar network, download the [latest release](https://github.com/insolar/insolar/releases) and follow the [integration instructions](https://docs.insolar.io/en/latest/integration.html).
 
-## Components
+To test Insolar locally, install it and deploy as described below.
 
-### [Network](network)
+## Install
 
-Blockchain network layer.
+1. Install the Golang [programming tools](https://golang.org/doc/install#install). Make sure the `$GOPATH` environment variable is set.
 
-* Support of heterogeneous network topology.
-* Network routing with a host or host group becoming relays for others hosts.
-* Ability to limit number of gateways to corporate host group via relays to keep the host group secure.
+2. Download the Insolar package:
 
-### [Ledger](ledger)
+   ```
+   go get github.com/insolar/insolar
+   ```
 
-Record storage engine backed by [BadgerDB](https://github.com/dgraph-io/badger).
+3. Go to the package directory:
 
-### [Virtual machines](vm)
+   ```
+   cd $GOPATH/src/github.com/insolar/insolar
+   ```
 
-Various engines for smart contract execution:
+4. Install dependencies and build binaries:
 
-* [wasm](vm/wasm) - WebAssembly implementation of smart contracts.
-
-### [Application layer](application)
-
-Application module describes interaction of system components with each other.
-Every component of the system is a `SmartContract`. Members of the system are given the opportunity to build their own dApps by publishing smart contracts in `Domain` instances.
-Domains define the visibility scope for the child contracts and their interaction policies. Actually, `Domain` is subclass of `SmartContract`.
-
-See [package readme](application) for more details.
-
-### [Configuration](configuration)
-
-Provides configuration parameters for all Insolar components and a helper for configuration resources management.
-
-### [Metrics](metrics)
-
-Using Prometheus monitoring system and time series database for collecting and store metrics.
-
-## Installation
-
-Download the Insolar package:
-
-    go get github.com/insolar/insolar
-
-Go to the package directory:
-
-    cd $GOPATH/src/github.com/insolar/insolar
-
-Install dependencies and build binaries:
-
+    ```
     make
+    ```
 
-### Example
+## Deploy locally
 
-Run launcher:
+1. Run the launcher:
 
-    scripts/insolard/launchnet.sh -g
+   ```
+   scripts/insolard/launchnet.sh -g
+   ```
 
-It will generate bootstrap data and launch a number of nodes. Default number is 5, you can uncomment more nodes in `scripts/insolard/bootstrap_template.yaml`.
+   It generates bootstrap data, starts a pulse watcher, and launches a number of nodes. In local setup, the "nodes" are simply services listening on different ports.
+   The default number of nodes is 5, you can uncomment more in `scripts/insolard/bootstrap_template.yaml`.
 
-After node processes are started you will see messages like “NODE 3 STARTED in background” in log and a PulseWatcher will be started.
-When you see `Ready` in Insolar State you can run test scripts and benchmarks:
+2. When the pulse watcher says `INSOLAR STATE: READY`, you can run the following:
 
-    bin/apirequester -k=.artifacts/launchnet/configs/ -u=http://127.0.0.1:19101/api
+   * Requester:
 
-This tool runs a scenario: creates a number of users with wallets and transfers some money between them. For the first time, the script does it sequentially, upon subsequent runs — concurrently.
+     ```
+     bin/apirequester -k=.artifacts/launchnet/configs/ -u=http://127.0.0.1:19101/api
+     ```
 
-Options:
-* `-k`: Path to root user keypair. All requests to create a new user must be signed by the root user.
-* `-u`: Node API URL. By default, the first node listens on the `127.0.0.1:19101` port. It can be changed in configuration.
+     The requester runs a scenario: creates a number of users with wallets and transfers some money between them. For the first time, the script does it sequentially, upon subsequent runs — concurrently.
 
-Run benchmark:
+     Options:
+     * `-k`: Path to the root user's key pair. All requests for a new user creation must be signed by the root one.
+     * `-u`: Node's API URL. By default, the first node listens on the `127.0.0.1:19101` port. It can be changed in configuration.
 
-    bin/benchmark -c=4 -r=25 -k=.artifacts/launchnet/configs/
+   * Benchmark:
 
-Options:
-* `-k`: Same as above, path to root user keypair.
-* `-c`: Number of concurrent threads in which requests will be sent.
-* `-r`: Number of transfer requests that will be sent in each thread.
+     ```
+     bin/benchmark -c=4 -r=25 -k=.artifacts/launchnet/configs/
+     ```
 
-After testing, you can stop all nodes by pressing Ctrl+C.
+     Options:
+     * `-k`: Path to the root user's key pair.
+     * `-c`: Number of concurrent threads in which requests are sent.
+     * `-r`: Number of transfer requests to be sent in each thread.
 
-#### See [apirequester](cmd/apirequester) and [benchmark](cmd/benchmark) readmes for more details.
+# Contribute!
 
-## Contributing
+Feel free to submit issues, fork the repository and send pull requests! 
 
-See [Contributing Guidelines](.github/CONTRIBUTING.md).
+To make the process smooth for both reviewers and contributors, familiarize yourself with the list of guidelines:
 
-## License
+1. [Open source contributor guide](https://github.com/freeCodeCamp/how-to-contribute-to-open-source).
+2. [Style guide: Effective Go](https://golang.org/doc/effective_go.html).
+3. [List of shorthands for Go code review comments](https://github.com/golang/go/wiki/CodeReviewComments).
+
+When submitting an issue, **include a complete test function** that demonstrates it.
+
+Thank you for your intention to contribute to the Insolar project. As a company developing open-source code, we highly appreciate external contributions to our project.
+
+# FAQ
+
+For more information, check out our [FAQ](https://github.com/insolar/insolar/wiki/FAQ).
+
+# Contacts
+
+If you have any additional questions, join our [developers chat](https://t.me/InsolarTech).
+
+Our social media:
+
+[<img src="https://insolar.io/st/ico-social-facebook.png" width="36" height="36">](https://facebook.com/insolario)
+[<img src="https://insolar.io/st/ico-social-twitter.png" width="36" height="36">](https://twitter.com/insolario)
+[<img src="https://insolar.io/st/ico-social-medium.png" width="36" height="36">](https://medium.com/insolar)
+[<img src="https://insolar.io/st/ico-social-youtube.png" width="36" height="36">](https://youtube.com/insolar)
+[<img src="https://insolar.io/st/ico-social-reddit.png" width="36" height="36">](https://www.reddit.com/r/insolar/)
+[<img src="https://insolar.io/st/ico-social-linkedin.png" width="36" height="36">](https://www.linkedin.com/company/insolario/)
+[<img src="https://insolar.io/st/ico-social-instagram.png" width="36" height="36">](https://instagram.com/insolario)
+[<img src="https://insolar.io/st/ico-social-telegram.png" width="36" height="36">](https://t.me/InsolarAnnouncements)
+
+# License
 
 This project is licensed under the terms of the [Apache license 2.0](LICENSE), except for the [Network](network) subdirectory, which is licensed under the terms of the [Modified BSD 3-Clause Clear License](network/LICENSE.md).

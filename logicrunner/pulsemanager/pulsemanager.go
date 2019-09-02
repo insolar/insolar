@@ -36,13 +36,13 @@ import (
 
 // PulseManager implements insolar.PulseManager.
 type PulseManager struct {
-	LogicRunner    insolar.LogicRunner `inject:""`
-	NodeNet        network.NodeNetwork `inject:""` //nolint:staticcheck
-	NodeSetter     node.Modifier       `inject:""`
-	PulseAccessor  pulse.Accessor      `inject:""`
-	PulseAppender  pulse.Appender      `inject:""`
-	JetModifier    jet.Modifier        `inject:""`
-	FlowDispatcher dispatcher.Dispatcher
+	LogicRunner   insolar.LogicRunner `inject:""`
+	NodeNet       network.NodeNetwork `inject:""` //nolint:staticcheck
+	NodeSetter    node.Modifier       `inject:""`
+	PulseAccessor pulse.Accessor      `inject:""`
+	PulseAppender pulse.Appender      `inject:""`
+	JetModifier   jet.Modifier        `inject:""`
+	dispatchers   []dispatcher.Dispatcher
 
 	// setLock locks Set method call.
 	setLock sync.RWMutex
@@ -53,6 +53,15 @@ type PulseManager struct {
 // NewPulseManager creates PulseManager instance.
 func NewPulseManager() *PulseManager {
 	return &PulseManager{}
+}
+
+// AddDispatcher adds dispatchers to handling
+// that could be done only when Set is not happening
+func (m *PulseManager) AddDispatcher(d ...dispatcher.Dispatcher) {
+	m.setLock.Lock()
+	defer m.setLock.Unlock()
+
+	m.dispatchers = append(m.dispatchers, d...)
 }
 
 // Set set's new pulse.
@@ -99,7 +108,9 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 		return errors.Wrap(err, "call of GetLatestPulseNumber failed")
 	}
 
-	m.FlowDispatcher.ClosePulse(ctx, storagePulse)
+	for _, d := range m.dispatchers {
+		d.ClosePulse(ctx, storagePulse)
+	}
 
 	err = m.JetModifier.Clone(ctx, storagePulse.PulseNumber, newPulse.PulseNumber, false)
 	if err != nil {
@@ -115,7 +126,9 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 		return err
 	}
 
-	m.FlowDispatcher.BeginPulse(ctx, newPulse)
+	for _, d := range m.dispatchers {
+		d.BeginPulse(ctx, newPulse)
+	}
 
 	return nil
 }

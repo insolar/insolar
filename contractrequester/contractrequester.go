@@ -32,6 +32,8 @@ import (
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/bus/meta"
 	busMeta "github.com/insolar/insolar/insolar/bus/meta"
+	"github.com/insolar/insolar/insolar/flow"
+	"github.com/insolar/insolar/insolar/flow/dispatcher"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
@@ -45,14 +47,16 @@ import (
 
 // ContractRequester helps to call contracts
 type ContractRequester struct {
-	Sender                     bus.Sender                         `inject:""`
-	PulseAccessor              pulse.Accessor                     `inject:""`
-	JetCoordinator             jet.Coordinator                    `inject:""`
-	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
+	Sender                     bus.Sender
+	PulseAccessor              pulse.Accessor
+	JetCoordinator             jet.Coordinator
+	PlatformCryptographyScheme insolar.PlatformCryptographyScheme
 
 	// TODO: remove this hack in INS-3341
 	// we need ResultMatcher, not Logicrunner
 	LR insolar.LogicRunner
+
+	FlowDispatcher dispatcher.Dispatcher
 
 	ResultMutex sync.Mutex
 	ResultMap   map[[insolar.RecordHashSize]byte]chan *payload.ReturnResults
@@ -63,11 +67,38 @@ type ContractRequester struct {
 }
 
 // New creates new ContractRequester
-func New() (*ContractRequester, error) {
-	return &ContractRequester{
+func New(
+	sender bus.Sender,
+	pulses pulse.Accessor,
+	jetCoordinator jet.Coordinator,
+	pcs insolar.PlatformCryptographyScheme,
+) (*ContractRequester, error) {
+	cr := &ContractRequester{
 		ResultMap:   make(map[[insolar.RecordHashSize]byte]chan *payload.ReturnResults),
 		callTimeout: 25 * time.Second,
-	}, nil
+
+		Sender:                     sender,
+		PulseAccessor:              pulses,
+		JetCoordinator:             jetCoordinator,
+		PlatformCryptographyScheme: pcs,
+	}
+
+	handle := func(msg *message.Message) *handleResults {
+		return &handleResults{
+			cr:      cr,
+			Message: msg,
+		}
+	}
+
+	cr.FlowDispatcher = dispatcher.NewDispatcher(cr.PulseAccessor,
+		func(msg *message.Message) flow.Handle {
+			return handle(msg).Present
+		}, func(msg *message.Message) flow.Handle {
+			return handle(msg).Future
+		}, func(msg *message.Message) flow.Handle {
+			return handle(msg).Past
+		})
+	return cr, nil
 }
 
 func randomUint64() uint64 {
@@ -174,6 +205,13 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Payload) (i
 	if msg.Request.Nonce == 0 {
 		msg.Request.Nonce = randomUint64()
 	}
+	if msg.PulseNumber == 0 {
+		pulseObject, err := cr.PulseAccessor.Latest(ctx)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "failed to get latest pulse")
+		}
+		msg.PulseNumber = pulseObject.PulseNumber
+	}
 
 	logger := inslogger.FromContext(ctx)
 	logger.Debug("about to send call to method ", msg.Request.Method)
@@ -268,7 +306,7 @@ func (cr *ContractRequester) handleRegisterResult(ctx context.Context, r *reply.
 		return r, &r.Request, nil
 	}
 
-	if !bytes.Equal(r.Request.Record().Hash(), reqHash[:]) {
+	if !bytes.Equal(r.Request.GetLocal().Hash(), reqHash[:]) {
 		return nil, &r.Request, errors.New("Registered request has different hash")
 	}
 
@@ -303,7 +341,7 @@ func (cr *ContractRequester) result(ctx context.Context, msg *payload.ReturnResu
 	defer cr.ResultMutex.Unlock()
 
 	var reqHash [insolar.RecordHashSize]byte
-	copy(reqHash[:], msg.RequestRef.Record().Hash())
+	copy(reqHash[:], msg.RequestRef.GetLocal().Hash())
 	c, ok := cr.ResultMap[reqHash]
 	if !ok {
 		inslogger.FromContext(ctx).Info("unwanted results of request ", msg.RequestRef.String())
@@ -319,13 +357,11 @@ func (cr *ContractRequester) result(ctx context.Context, msg *payload.ReturnResu
 	return nil
 }
 
-func (cr *ContractRequester) ReceiveResult(msg *message.Message) error {
+func (cr *ContractRequester) ReceiveResult(ctx context.Context, msg *message.Message) error {
 	if msg == nil {
 		log.Error("can't deserialize payload of nil message")
 		return nil
 	}
-
-	ctx := inslogger.ContextWithTrace(context.Background(), msg.Metadata.Get(busMeta.TraceID))
 
 	parentSpan, err := instracer.Deserialize([]byte(msg.Metadata.Get(busMeta.SpanData)))
 	if err == nil {
@@ -341,13 +377,23 @@ func (cr *ContractRequester) ReceiveResult(msg *message.Message) error {
 		ctx, _ = inslogger.WithField(ctx, k, v)
 	}
 
-	meta := payload.Meta{}
-	err = meta.Unmarshal(msg.Payload)
+	payloadMeta := &payload.Meta{}
+	err = payloadMeta.Unmarshal(msg.Payload)
 	if err != nil {
 		return err
 	}
 
-	payloadType, err := payload.UnmarshalType(meta.Payload)
+	err = cr.handleMessage(ctx, payloadMeta)
+	if err != nil {
+		bus.ReplyError(ctx, cr.Sender, *payloadMeta, err)
+		return nil
+	}
+	cr.Sender.Reply(ctx, *payloadMeta, bus.ReplyAsMessage(ctx, &reply.OK{}))
+	return nil
+}
+
+func (cr *ContractRequester) handleMessage(ctx context.Context, payloadMeta *payload.Meta) error {
+	payloadType, err := payload.UnmarshalType(payloadMeta.Payload)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal payload type")
 	}
@@ -361,7 +407,7 @@ func (cr *ContractRequester) ReceiveResult(msg *message.Message) error {
 	}
 
 	res := payload.ReturnResults{}
-	err = res.Unmarshal(meta.Payload)
+	err = res.Unmarshal(payloadMeta.Payload)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal payload.ReturnResults")
 	}

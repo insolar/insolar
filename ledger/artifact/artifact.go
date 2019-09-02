@@ -89,7 +89,7 @@ func (m *Scope) GetObject(
 	head insolar.Reference,
 ) (ObjectDescriptor, error) {
 
-	idx, err := m.IndexAccessor.ForID(ctx, m.PulseNumber, *head.Record())
+	idx, err := m.IndexAccessor.ForID(ctx, m.PulseNumber, *head.GetLocal())
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +129,7 @@ func (m *Scope) RegisterResult(
 	ctx context.Context, obj, request insolar.Reference, payload []byte,
 ) (*insolar.ID, error) {
 	res := record.Result{
-		Object:  *obj.Record(),
+		Object:  *obj.GetLocal(),
 		Request: request,
 		Payload: payload,
 	}
@@ -159,13 +159,12 @@ func (m *Scope) activateObject(
 	parent insolar.Reference,
 	memory []byte,
 ) error {
-	_, err := m.IndexAccessor.ForID(ctx, m.PulseNumber, *parent.Record())
+	_, err := m.IndexAccessor.ForID(ctx, m.PulseNumber, *parent.GetLocal())
 	if err != nil {
 		return errors.Wrapf(err, "not found parent index for activated object: %v", parent.String())
 	}
 
 	stateRecord := record.Activate{
-		Domain:      domain,
 		Request:     obj,
 		Image:       prototype,
 		IsPrototype: isPrototype,
@@ -207,7 +206,6 @@ func (m *Scope) UpdateObject(
 	}
 
 	amendRecord := record.Amend{
-		Domain:      domain,
 		Request:     request,
 		Image:       *image,
 		IsPrototype: objDesc.IsPrototype(),
@@ -226,7 +224,6 @@ func (m *Scope) DeployCode(
 	machineType insolar.MachineType,
 ) (*insolar.ID, error) {
 	codeRec := record.Code{
-		Domain:      domain,
 		Request:     request,
 		Code:        code,
 		MachineType: machineType,
@@ -269,7 +266,7 @@ func (m *Scope) updateStateObject(
 		panic("unknown state object type")
 	}
 
-	idx, err := m.IndexAccessor.ForID(ctx, m.PulseNumber, *objRef.Record())
+	idx, err := m.IndexAccessor.ForID(ctx, m.PulseNumber, *objRef.GetLocal())
 	// No index on our node.
 	if err != nil {
 		if err != object.ErrIndexNotFound {
@@ -282,7 +279,7 @@ func (m *Scope) updateStateObject(
 		idx = record.Index{
 			Lifeline:       record.Lifeline{StateID: record.StateUndefined},
 			PendingRecords: []insolar.ID{},
-			ObjID:          *objRef.Record(),
+			ObjID:          *objRef.GetLocal(),
 		}
 	}
 

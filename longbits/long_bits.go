@@ -17,6 +17,7 @@
 package longbits
 
 import (
+	"bytes"
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
@@ -64,6 +65,10 @@ func (v Bits64) String() string {
 
 func (v *Bits64) AsBytes() []byte {
 	return v[:]
+}
+
+func (v Bits64) Compare(other Bits64) int {
+	return bytes.Compare(v[:], other[:])
 }
 
 /* Array size doesnt need to be aligned */
@@ -127,6 +132,10 @@ func (v *Bits128) AsBytes() []byte {
 	return v[:]
 }
 
+func (v Bits128) Compare(other Bits128) int {
+	return bytes.Compare(v[:], other[:])
+}
+
 type Bits224 [28]byte
 
 func (v *Bits224) WriteTo(w io.Writer) (int64, error) {
@@ -158,6 +167,10 @@ func (v *Bits224) AsBytes() []byte {
 
 func (v *Bits224) AsByteString() ByteString {
 	return ByteString(v[:])
+}
+
+func (v Bits224) Compare(other Bits224) int {
+	return bytes.Compare(v[:], other[:])
 }
 
 type Bits256 [32]byte
@@ -207,6 +220,10 @@ func (v *Bits256) AsByteString() ByteString {
 	return ByteString(v[:])
 }
 
+func (v Bits256) Compare(other Bits256) int {
+	return bytes.Compare(v[:], other[:])
+}
+
 type Bits512 [64]byte
 
 func (v *Bits512) WriteTo(w io.Writer) (int64, error) {
@@ -252,6 +269,10 @@ func (v *Bits512) AsBytes() []byte {
 
 func (v *Bits512) AsByteString() ByteString {
 	return ByteString(v[:])
+}
+
+func (v Bits512) Compare(other Bits512) int {
+	return bytes.Compare(v[:], other[:])
 }
 
 /* Array size must be aligned to 8 bytes */

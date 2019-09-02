@@ -56,7 +56,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
-	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 )
 
 type packetHandler struct {
@@ -98,5 +97,5 @@ func shouldProcessPacket(future Future, p *packet.ReceivedPacket) bool {
 	typesShouldBeEqual := p.GetType() == future.Request().GetType()
 	responseIsForRightSender := future.Receiver().Equal(*p.Sender)
 
-	return typesShouldBeEqual && (responseIsForRightSender || p.GetType() == types.Ping)
+	return typesShouldBeEqual && responseIsForRightSender
 }

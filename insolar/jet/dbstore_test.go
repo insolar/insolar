@@ -31,6 +31,7 @@ import (
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/store"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/pulse"
 )
 
 func BadgerDefaultOptions(dir string) badger.Options {
@@ -139,7 +140,7 @@ func TestDBStorage_Empty(t *testing.T) {
 	defer db.Stop(ctx)
 	s := NewDBStore(db)
 
-	all := s.All(ctx, insolar.FirstPulseNumber)
+	all := s.All(ctx, pulse.MinTimePulse)
 	require.Equal(t, 1, len(all), "should be just one jet ID")
 	require.Equal(t, insolar.ZeroJetID, all[0], "JetID should be a zero on empty storage")
 }
@@ -181,9 +182,11 @@ func TestDBStorage_SplitJetTree(t *testing.T) {
 	defer db.Stop(ctx)
 	s := NewDBStore(db)
 
+	lArray := []byte{0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+	rArray := []byte{0, 0, 0, 1, 1, 128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 	var (
-		expectedLeft  = insolar.JetID{0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
-		expectedRight = insolar.JetID{0, 0, 0, 1, 1, 128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+		expectedLeft  = insolar.JetID(*insolar.NewIDFromBytes(lArray))
+		expectedRight = insolar.JetID(*insolar.NewIDFromBytes(rArray))
 		expectedLeafs = Tree{Head: &Jet{
 			Actual: false,
 			Left:   &Jet{Actual: true},
@@ -246,9 +249,9 @@ func TestDBStorage_ForID_Basic(t *testing.T) {
 	bits := parsePrefix(meaningfulBits)
 	expectJetID := NewIDFromString(meaningfulBits)
 	searchID := gen.ID()
-	hash := searchID[insolar.RecordHashOffset:]
+	hash := searchID.Hash()
 	hash = setBitsPrefix(hash, bits, len(meaningfulBits))
-	copy(searchID[insolar.RecordHashOffset:], hash)
+	searchID = *insolar.NewID(searchID.Pulse(), hash)
 
 	for _, actuality := range []bool{true, false} {
 		tmpdir, err := ioutil.TempDir("", "bdb-test-")

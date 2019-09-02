@@ -105,12 +105,13 @@ func main() {
 	var (
 		paramsPath   string
 		rootAsCaller bool
+		maAsCaller   bool
 	)
 	var sendRequestCmd = &cobra.Command{
 		Use:   "send-request",
 		Short: "sends request",
 		Run: func(cmd *cobra.Command, args []string) {
-			sendRequest(sendURL, rootKeysFile, paramsPath, rootAsCaller)
+			sendRequest(sendURL, rootKeysFile, paramsPath, rootAsCaller, maAsCaller)
 		},
 	}
 	addURLFlag(sendRequestCmd.Flags())
@@ -120,6 +121,9 @@ func main() {
 		&paramsPath, "params", "p", "", "path to params file (default params.json)")
 	sendRequestCmd.Flags().BoolVarP(
 		&rootAsCaller, "root-caller", "r", false, "use root member as caller")
+	rootCmd.AddCommand(sendRequestCmd)
+	sendRequestCmd.Flags().BoolVarP(
+		&maAsCaller, "migration-admin-caller", "m", false, "use migration admin member as caller")
 	rootCmd.AddCommand(sendRequestCmd)
 
 	var (
@@ -165,7 +169,7 @@ func defaultURL() string {
 	if u := os.Getenv("INSOLAR_API_URL"); u != "" {
 		return u
 	}
-	return "http://localhost:19101/api"
+	return "http://localhost:19001/admin-api/rpc"
 }
 
 type mixedConfig struct {
@@ -270,16 +274,21 @@ func generateKeysPair() {
 	mustWrite(os.Stdout, string(result))
 }
 
-func sendRequest(sendURL string, rootKeysFile string, paramsPath string, rootAsCaller bool) {
+func sendRequest(sendURL string, rootKeysFile string, paramsPath string, rootAsCaller bool, maAsCaller bool) {
 	requester.SetVerbose(verbose)
 
 	userCfg, err := requester.ReadUserConfigFromFile(rootKeysFile)
 	check("[ sendRequest ]", err)
 
-	if rootAsCaller || userCfg.Caller == "" {
+	if userCfg.Caller == "" {
 		info, err := requester.Info(sendURL)
 		check("[ sendRequest ]", err)
-		userCfg.Caller = info.RootMember
+		if rootAsCaller {
+			userCfg.Caller = info.RootMember
+		}
+		if maAsCaller {
+			userCfg.Caller = info.MigrationAdminMember
+		}
 	}
 
 	pPath := paramsPath

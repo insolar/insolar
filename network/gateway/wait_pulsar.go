@@ -55,6 +55,9 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/node"
+	"github.com/insolar/insolar/network/rules"
+	"github.com/insolar/insolar/pulse"
 )
 
 func newWaitPulsar(b *Base) *WaitPulsar {
@@ -77,6 +80,20 @@ func (g *WaitPulsar) Run(ctx context.Context, pulse insolar.Pulse) {
 	}
 }
 
+func (g *WaitPulsar) UpdateState(ctx context.Context, pulseNumber insolar.PulseNumber, nodes []insolar.NetworkNode, cloudStateHash []byte) {
+	workingNodes := node.Select(nodes, node.ListWorking)
+
+	if ok, _ := rules.CheckMajorityRule(g.CertificateManager.GetCertificate(), workingNodes); !ok {
+		g.Gatewayer.FailState(ctx, "MajorityRule failed")
+	}
+
+	if !rules.CheckMinRole(g.CertificateManager.GetCertificate(), workingNodes) {
+		g.Gatewayer.FailState(ctx, "MinRoles failed")
+	}
+
+	g.Base.UpdateState(ctx, pulseNumber, nodes, cloudStateHash)
+}
+
 func (g *WaitPulsar) GetState() insolar.NetworkState {
 	return insolar.WaitPulsar
 }
@@ -85,9 +102,9 @@ func (g *WaitPulsar) OnConsensusFinished(ctx context.Context, report network.Rep
 	g.switchOnRealPulse(EnsureGetPulse(ctx, g.PulseAccessor, report.PulseNumber))
 }
 
-func (g *WaitPulsar) switchOnRealPulse(pulse insolar.Pulse) {
-	if pulse.PulseNumber > insolar.FirstPulseNumber && pulse.EpochPulseNumber > insolar.EphemeralPulseEpoch {
-		g.pulseArrived <- pulse
+func (g *WaitPulsar) switchOnRealPulse(pulseObject insolar.Pulse) {
+	if pulseObject.PulseNumber > pulse.MinTimePulse && pulseObject.EpochPulseNumber > insolar.EphemeralPulseEpoch {
+		g.pulseArrived <- pulseObject
 		close(g.pulseArrived)
 	}
 }

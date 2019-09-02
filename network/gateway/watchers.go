@@ -1,4 +1,4 @@
-//
+///
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -48,45 +48,45 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package pinger
+package gateway
 
 import (
 	"context"
 	"time"
 
-	"github.com/insolar/insolar/network/hostnetwork/packet"
-	"github.com/pkg/errors"
-
-	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/hostnetwork/host"
-	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 )
 
-// Pinger is a light and stateless component that can ping remote host to receive its NodeID
-type Pinger struct {
-	transport network.HostNetwork
+func pulseProcessingWatchdog(ctx context.Context, pulse insolar.Pulse, done chan struct{}) {
+	logger := inslogger.FromContext(ctx)
+
+	go func() {
+		select {
+		case <-time.After(time.Second * time.Duration(pulse.NextPulseNumber-pulse.PulseNumber)):
+			logger.Errorf("Node stopped due to long pulse processing, pulse:%v", pulse.PulseNumber)
+		case <-done:
+			logger.Debug("Resetting pulse processing watchdog")
+		}
+	}()
 }
 
-// Ping ping remote host with timeout
-func (p *Pinger) Ping(ctx context.Context, address string, timeout time.Duration) (*host.Host, error) {
-	ctx, span := instracer.StartSpan(ctx, "Pinger.Ping")
-	defer span.End()
-	h, err := host.NewHost(address)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to resolve address %s", address)
-	}
-	future, err := p.transport.SendRequestToHost(ctx, types.Ping, &packet.Ping{}, h)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to ping address %s", address)
-	}
-	result, err := future.WaitResponse(timeout)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to receive ping response from address %s", address)
-	}
-	return result.GetSenderHost(), nil
-}
+func newPulseWatchdog(ctx context.Context, gatewayer network.Gatewayer, timeout time.Duration, done chan *struct{}) {
+	logger := inslogger.FromContext(ctx)
 
-func NewPinger(transport network.HostNetwork) *Pinger {
-	return &Pinger{transport: transport}
+	go func() {
+		for {
+			select {
+			case <-time.After(timeout):
+				gatewayer.FailState(ctx, "New valid pulse timeout exceeded")
+			case v := <-done:
+				if v == nil {
+					return
+				}
+
+				logger.Debug("Resetting new pulse watchdog")
+			}
+		}
+	}()
 }

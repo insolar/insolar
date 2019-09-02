@@ -67,56 +67,6 @@ func TestMarshalUnmarshalRecord(t *testing.T) {
 		}
 	})
 
-	t.Run("ChildRecordTest", func(t *testing.T) {
-		f := fuzzer()
-		a := assert.New(t)
-		t.Parallel()
-		var record Child
-
-		for i := 0; i < 10; i++ {
-			f.Fuzz(&record)
-
-			bin, err := record.Marshal()
-			a.NoError(err)
-			for i := 0; i < 2; i++ {
-				binNew, err := record.Marshal()
-				a.NoError(err)
-				a.Equal(bin, binNew)
-
-				var recordNew Child
-				err = recordNew.Unmarshal(binNew)
-				require.NoError(t, err)
-
-				a.Equal(&record, &recordNew)
-			}
-		}
-	})
-
-	t.Run("JetRecordTest", func(t *testing.T) {
-		f := fuzzer()
-		a := assert.New(t)
-		t.Parallel()
-		var record Jet
-
-		for i := 0; i < 10; i++ {
-			f.Fuzz(&record)
-
-			bin, err := record.Marshal()
-			a.NoError(err)
-			for i := 0; i < 2; i++ {
-				binNew, err := record.Marshal()
-				a.NoError(err)
-				a.Equal(bin, binNew)
-
-				var recordNew Jet
-				err = recordNew.Unmarshal(binNew)
-				require.NoError(t, err)
-
-				a.Equal(&record, &recordNew)
-			}
-		}
-	})
-
 	t.Run("RequestRecordTest", func(t *testing.T) {
 		f := fuzzer()
 		a := assert.New(t)
@@ -159,31 +109,6 @@ func TestMarshalUnmarshalRecord(t *testing.T) {
 				a.Equal(bin, binNew)
 
 				var recordNew Result
-				err = recordNew.Unmarshal(binNew)
-				require.NoError(t, err)
-
-				a.Equal(&record, &recordNew)
-			}
-		}
-	})
-
-	t.Run("TypeRecordTest", func(t *testing.T) {
-		f := fuzzer()
-		a := assert.New(t)
-		t.Parallel()
-		var record Type
-
-		for i := 0; i < 10; i++ {
-			f.Fuzz(&record)
-
-			bin, err := record.Marshal()
-			a.NoError(err)
-			for i := 0; i < 2; i++ {
-				binNew, err := record.Marshal()
-				a.NoError(err)
-				a.Equal(bin, binNew)
-
-				var recordNew Type
 				err = recordNew.Unmarshal(binNew)
 				require.NoError(t, err)
 

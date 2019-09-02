@@ -33,10 +33,11 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/light/proc"
+	"github.com/insolar/insolar/pulse"
 )
 
 func TestGetPendings_Proceed(t *testing.T) {
-	ctx := flow.TestContextWithPulse(inslogger.TestContext(t), insolar.FirstPulseNumber+10)
+	ctx := flow.TestContextWithPulse(inslogger.TestContext(t), pulse.MinTimePulse+10)
 	mc := minimock.NewController(t)
 
 	var (
