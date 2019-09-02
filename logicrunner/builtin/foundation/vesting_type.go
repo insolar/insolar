@@ -1,7 +1,7 @@
 package foundation
 
 // VestingType type of vesting process
-type VestingType = int
+type VestingType int
 
 //go:generate stringer -type=VestingType
 const (
