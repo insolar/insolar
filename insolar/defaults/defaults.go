@@ -29,6 +29,10 @@ func LaunchnetDir() string {
 	return envVarWithDefault("LAUNCHNET_BASE_DIR", filepath.Join(ArtifactsDir(), "launchnet"))
 }
 
+func LaunchnetDiscoveryNodesLogsDir() string {
+	return  filepath.Join(LaunchnetDir(), "logs", "discoverynodes")
+}
+
 func envVarWithDefault(name string, defaultValue string) string {
 	value := os.Getenv(name)
 	if value != "" {
