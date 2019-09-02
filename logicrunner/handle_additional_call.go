@@ -49,6 +49,19 @@ func (p *AdditionalCallFromPreviousExecutor) Proceed(ctx context.Context) error 
 	return nil
 }
 
+func checkPayloadAdditionalCallFromPreviousExecutor(ctx context.Context, msg payload.AdditionalCallFromPreviousExecutor) error {
+	if !msg.ObjectReference.IsObjectReference() {
+		return errors.Errorf("StillExecuting.ObjectReference should be ObjectReference; ref=%s", msg.ObjectReference.String())
+	}
+	if !msg.RequestRef.IsRecordScope() {
+		return errors.Errorf("StillExecuting.RequestRef should be RecordReference; ref=%s", msg.RequestRef.String())
+	}
+	if err := checkIncomingRequest(ctx, msg.Request); err != nil {
+		return errors.Wrap(err, "failed to check IncomingRequest of AdditionalCallFromPreviousExecutor")
+	}
+	return nil
+}
+
 type HandleAdditionalCallFromPreviousExecutor struct {
 	dep *Dependencies
 
@@ -82,6 +95,10 @@ func (h *HandleAdditionalCallFromPreviousExecutor) Present(ctx context.Context, 
 	})
 
 	ctx = contextWithServiceData(ctx, message.ServiceData)
+
+	if err := checkPayloadAdditionalCallFromPreviousExecutor(ctx, message); err != nil {
+		return err
+	}
 
 	done, err := h.dep.WriteAccessor.Begin(ctx, flow.Pulse(ctx))
 	if err != nil {

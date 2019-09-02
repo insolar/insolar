@@ -25,7 +25,6 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
-	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 )
@@ -36,8 +35,6 @@ func TestRequestsFetcher_New(t *testing.T) {
 }
 
 func TestRequestsFetcher_FetchPendings(t *testing.T) {
-	objectRef := gen.Reference()
-
 	tests := []struct {
 		name  string
 		mocks func(t minimock.Tester) (insolar.Reference, artifacts.Client, ExecutionBrokerI)
@@ -45,16 +42,19 @@ func TestRequestsFetcher_FetchPendings(t *testing.T) {
 		{
 			name: "success",
 			mocks: func(t minimock.Tester) (insolar.Reference, artifacts.Client, ExecutionBrokerI) {
-				obj := gen.Reference()
-				reqRef := gen.Reference()
+
+				requestRef := gen.RecordReference()
+				incoming := genIncomingRequest()
+
 				am := artifacts.NewClientMock(t).
-					GetPendingsMock.Return([]insolar.Reference{reqRef}, nil).
-					GetAbandonedRequestMock.Return(&record.IncomingRequest{Object: &objectRef}, nil)
+					GetPendingsMock.Return([]insolar.Reference{requestRef}, nil).
+					GetAbandonedRequestMock.Return(incoming, nil)
+
 				broker := NewExecutionBrokerIMock(t).
 					IsKnownRequestMock.Return(false).
 					AddRequestsFromLedgerMock.Return()
 
-				return obj, am, broker
+				return *incoming.Object, am, broker
 			},
 		},
 	}

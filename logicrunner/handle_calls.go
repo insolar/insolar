@@ -36,6 +36,14 @@ import (
 	"github.com/insolar/insolar/logicrunner/common"
 )
 
+func checkPayloadCallMethod(ctx context.Context, callMethod payload.CallMethod) error {
+	if err := checkIncomingRequest(ctx, callMethod.Request); err != nil {
+		return errors.Wrap(err, "failed to verify callMethod.Request")
+	}
+
+	return nil
+}
+
 type HandleCall struct {
 	dep *Dependencies
 
@@ -244,6 +252,10 @@ func (h *HandleCall) Present(ctx context.Context, f flow.Flow) error {
 	err := message.Unmarshal(h.Message.Payload)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal message")
+	}
+
+	if err := checkPayloadCallMethod(ctx, message); err != nil {
+		return err
 	}
 
 	rep, err := h.handleActual(ctx, message, f)
