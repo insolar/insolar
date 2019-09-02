@@ -162,8 +162,8 @@ func TestDumbComplete_GetCert(t *testing.T) {
 
 	cref := gen.Reference()
 
-	CR.SendRequestMock.Set(func(ctx context.Context, ref *insolar.Reference, method string, argsIn []interface{},
-	) (r insolar.Reply, r1 error) {
+	CR.SendRequestMock.Set(func(ctx context.Context, ref *insolar.Reference, method string, argsIn []interface{}, p insolar.PulseNumber,
+	) (r insolar.Reply, r2 *insolar.Reference, r1 error) {
 		require.Equal(t, &cref, ref)
 		require.Equal(t, "GetNodeInfo", method)
 		repl, _ := insolar.Serialize(struct {
@@ -172,7 +172,7 @@ func TestDumbComplete_GetCert(t *testing.T) {
 		}{"LALALA", insolar.StaticRoleVirtual})
 		return &reply.CallMethod{
 			Result: repl,
-		}, nil
+		}, nil, nil
 	})
 
 	CM.GetCertificateMock.Set(func() (r insolar.Certificate) { return &certificate.Certificate{} })
