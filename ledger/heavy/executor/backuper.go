@@ -230,6 +230,11 @@ func (k BackupStartKey) ID() []byte {
 	return insolar.PulseNumber(k).Bytes()
 }
 
+func NewBackupStartKey(raw []byte) BackupStartKey {
+	key := BackupStartKey(insolar.NewPulseNumber(raw))
+	return key
+}
+
 // prepareBackup make incremental backup and write auxiliary file with meta info
 func (b *BackupMakerDefault) prepareBackup(dirHolder *tmpDirHolder, pulse insolar.PulseNumber) (uint64, error) {
 	err := b.db.Set(BackupStartKey(pulse), []byte{})
@@ -363,5 +368,31 @@ func (b *BackupMakerDefault) MakeBackup(ctx context.Context, lastFinalizedPulse 
 	b.lastBackupedPulse = lastFinalizedPulse
 	b.lastBackupedVersion = currentBkpVersion
 	inslogger.FromContext(ctx).Infof("Pulse %d successfully backuped", lastFinalizedPulse)
+	return nil
+}
+
+func (b *BackupMakerDefault) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	it := b.db.NewIterator(BackupStartKey(from), false)
+	defer it.Close()
+
+	var hasKeys bool
+	for it.Next() {
+		hasKeys = true
+		key := NewBackupStartKey(it.Key())
+		err := b.db.Delete(&key)
+		if err != nil {
+			return errors.Wrapf(err, "can't delete key: %+v", key)
+		}
+
+		inslogger.FromContext(ctx).Debugf("Erased key. Pulse number: %s", key)
+	}
+
+	if !hasKeys {
+		inslogger.FromContext(ctx).Infof("No records. Nothing done. Pulse number: %s", from.String())
+	}
+
 	return nil
 }

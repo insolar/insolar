@@ -275,15 +275,15 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		drops := drop.NewDB(DB)
 		JetKeeper = executor.NewJetKeeper(Jets, DB, Pulses)
 
-		c.rollback = executor.NewDBRollback(JetKeeper, drops, Records, indexes, Jets, Pulses, JetKeeper)
-		c.stateKeeper = executor.NewInitialStateKeeper(JetKeeper, Jets, Coordinator, indexes, drops)
-
-		sp := insolarPulse.NewStartPulse()
-
 		backupMaker, err := executor.NewBackupMaker(ctx, DB, cfg.Ledger.Backup, JetKeeper.TopSyncPulse(), DB)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed create backuper")
 		}
+
+		c.rollback = executor.NewDBRollback(JetKeeper, drops, Records, indexes, Jets, Pulses, JetKeeper, backupMaker)
+		c.stateKeeper = executor.NewInitialStateKeeper(JetKeeper, Jets, Coordinator, indexes, drops)
+
+		sp := insolarPulse.NewStartPulse()
 
 		PulseManager = pulsemanager.NewPulseManager(Requester.FlowDispatcher)
 		PulseManager.NodeNet = NodeNetwork
