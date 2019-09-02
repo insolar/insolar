@@ -279,8 +279,8 @@ func (r *PhasedRoundController) _startFullRealm(prepWasSuccessful bool) {
 				panic("DEBUG FAIL-FAST: local remains as joiner")
 			}
 			panic("DEBUG FAIL-FAST: previous consensus didn't finish")
-			//r.realm.unsafeRound = true
-			//active = lastCensus.(census.Active)
+			// r.realm.unsafeRound = true
+			// active = lastCensus.(census.Active)
 		} else {
 			/* Auto-activation of the prepared lastCensus */
 			expCensus := lastCensus.(census.Expected)

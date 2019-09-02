@@ -69,9 +69,9 @@ const nanosecondsInSecond = int64(time.Second / time.Nanosecond)
 func NewPulse(pulseData pulse.Data) insolar.Pulse {
 	var prev insolar.PulseNumber
 	if !pulseData.IsFirstPulse() {
-		prev = insolar.PulseNumber(pulseData.GetPrevPulseNumber())
+		prev = pulseData.GetPrevPulseNumber()
 	} else {
-		prev = insolar.PulseNumber(pulseData.PulseNumber)
+		prev = pulseData.PulseNumber
 	}
 
 	entropy := insolar.Entropy{}
@@ -80,8 +80,8 @@ func NewPulse(pulseData pulse.Data) insolar.Pulse {
 	copy(entropy[pulseData.PulseEntropy.FixedByteSize():], bs)
 
 	return insolar.Pulse{
-		PulseNumber:      insolar.PulseNumber(pulseData.PulseNumber),
-		NextPulseNumber:  insolar.PulseNumber(pulseData.GetNextPulseNumber()),
+		PulseNumber:      pulseData.PulseNumber,
+		NextPulseNumber:  pulseData.GetNextPulseNumber(),
 		PrevPulseNumber:  prev,
 		PulseTimestamp:   int64(pulseData.Timestamp) * nanosecondsInSecond,
 		EpochPulseNumber: int(pulseData.PulseEpoch),
@@ -91,7 +91,7 @@ func NewPulse(pulseData pulse.Data) insolar.Pulse {
 
 func NewPulseData(p insolar.Pulse) pulse.Data {
 	data := pulse.NewPulsarData(
-		pulse.Number(p.PulseNumber),
+		p.PulseNumber,
 		uint16(p.NextPulseNumber-p.PulseNumber),
 		uint16(p.PulseNumber-p.PrevPulseNumber),
 		longbits.NewBits512FromBytes(p.Entropy[:]).FoldToBits256(),
