@@ -594,7 +594,7 @@ func TestHandleCall_Present(t *testing.T) {
 			},
 		}
 
-		expectedResult, err := foundation.MarshalMethodErrorResult(errors.New("not found"))
+		expectedResult, err := foundation.MarshalMethodErrorResult(errors.New("RegisterIncomingRequest: index not found"))
 		require.NoError(t, err)
 
 		expectedReply := &reply.CallMethod{Result: expectedResult}
