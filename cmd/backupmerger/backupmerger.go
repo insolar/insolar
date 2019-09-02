@@ -41,9 +41,9 @@ func usage() {
 	os.Exit(0)
 }
 
-func closeOnError(bdb *badger.DB, err error) {
+func closeRawDB(bdb *badger.DB, err error) {
 	closeError := bdb.Close()
-	if closeOnError != nil || err != nil {
+	if closeError != nil || err != nil {
 		printError("failed to close db", closeError)
 		printError("", err)
 		os.Exit(1)
@@ -59,23 +59,24 @@ func merge(targetDBPath string, backupFileName string, numberOfWorkers int) {
 	}
 
 	if err := isDBEmpty(bdb); err == nil {
-		closeOnError(bdb, errors.New("db must not be empty"))
+		closeRawDB(bdb, errors.New("db must not be empty"))
 		return
 	}
 	log.Info("DB is not empty")
 
 	bkpFile, err := os.Open(backupFileName)
 	if err != nil {
-		closeOnError(bdb, err)
+		closeRawDB(bdb, err)
 		return
 	}
 
 	err = bdb.Load(bkpFile, numberOfWorkers)
 	if err != nil {
-		closeOnError(bdb, err)
+		closeRawDB(bdb, err)
 		return
 	}
 	log.Info("Successfully merged")
+	closeRawDB(bdb, nil)
 }
 
 func parseMergeParams() *cobra.Command {
@@ -148,7 +149,7 @@ func createEmptyBadger(dbDir string) {
 
 	err = isDBEmpty(bdb)
 	if err != nil {
-		closeOnError(bdb, err)
+		closeRawDB(bdb, err)
 		return
 	}
 	log.Info("DB is empty")
@@ -165,9 +166,11 @@ func createEmptyBadger(dbDir string) {
 	log.Info("Set db initialized key: ", t.String())
 
 	if err != nil {
-		closeOnError(bdb, err)
+		closeRawDB(bdb, err)
 		return
 	}
+
+	closeRawDB(bdb, nil)
 }
 
 func parseCreateParams() *cobra.Command {
@@ -197,48 +200,49 @@ func prepareBackup(dbDir string) {
 		printError("failed to open badger", err)
 		os.Exit(1)
 	}
-
 	ctx := context.Background()
+	closeDB := func(err error) {
+		errStop := bdb.Stop(ctx)
+		if err != nil || errStop != nil {
+			printError("", err)
+			printError("failed to close db", errStop)
+			os.Exit(1)
+		}
+	}
 
 	pulsesDB := pulse.NewDB(bdb)
 
 	jetKeeper := executor.NewJetKeeper(jet.NewDBStore(bdb), bdb, pulsesDB)
 	log.Info("Current top sync pulse: ", jetKeeper.TopSyncPulse().String())
 
-	closeDBIfError := func(err error) {
-		errStop := bdb.Stop(ctx)
-		printError("", err)
-		printError("failed to close db", errStop)
-		os.Exit(1)
-	}
-
 	it := bdb.NewIterator(executor.BackupStartKey(math.MaxUint32), true)
-	if it.Next() {
-		pulseNumber := insolar.NewPulseNumber(it.Key())
-		log.Info("Found backup start key: ", pulseNumber.String())
-
-		if !jetKeeper.HasAllJetConfirms(ctx, pulseNumber) {
-			closeDBIfError(errors.New("data is inconsistent. pulse " + pulseNumber.String() + " must has all confirms"))
-			return
-		}
-
-		log.Info("All jet confirmed for pulse: ", pulseNumber.String())
-		err = jetKeeper.AddBackupConfirmation(ctx, pulseNumber)
-		if err != nil {
-			closeDBIfError(errors.New("failed to add backup confirmation for pulse" + pulseNumber.String()))
-			return
-		}
-
-		if jetKeeper.TopSyncPulse() != pulseNumber {
-			closeDBIfError(errors.New("new top sync pulse must be equal to last backuped"))
-			return
-		}
-
-		log.Info("New top sync pulse: ", jetKeeper.TopSyncPulse().String())
-	} else {
-		closeDBIfError(errors.New("no backup start keys"))
+	if !it.Next() {
+		closeDB(errors.New("no backup start keys"))
 		return
 	}
+
+	pulseNumber := insolar.NewPulseNumber(it.Key())
+	log.Info("Found backup start key: ", pulseNumber.String())
+
+	if !jetKeeper.HasAllJetConfirms(ctx, pulseNumber) {
+		closeDB(errors.New("data is inconsistent. pulse " + pulseNumber.String() + " must has all confirms"))
+		return
+	}
+
+	log.Info("All jet confirmed for pulse: ", pulseNumber.String())
+	err = jetKeeper.AddBackupConfirmation(ctx, pulseNumber)
+	if err != nil {
+		closeDB(errors.New("failed to add backup confirmation for pulse" + pulseNumber.String()))
+		return
+	}
+
+	if jetKeeper.TopSyncPulse() != pulseNumber {
+		closeDB(errors.New("new top sync pulse must be equal to last backuped"))
+		return
+	}
+
+	log.Info("New top sync pulse: ", jetKeeper.TopSyncPulse().String())
+	closeDB(nil)
 }
 
 func parsePrepareBackupParams() *cobra.Command {
