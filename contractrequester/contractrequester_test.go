@@ -164,7 +164,7 @@ func TestContractRequester_SendRequest(t *testing.T) {
 					}
 				})
 
-			result, err := cReq.SendRequest(ctx, &ref, "TestMethod", []interface{}{})
+			result, _, err := cReq.SendRequest(ctx, &ref, "TestMethod", []interface{}{}, insolar.GenesisPulse.PulseNumber)
 			require.NoError(t, err)
 			require.Equal(t, &reply.CallMethod{}, result)
 		})
