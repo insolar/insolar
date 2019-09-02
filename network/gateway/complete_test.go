@@ -204,6 +204,7 @@ func TestComplete_handler(t *testing.T) {
 	cm := mockCertificateManager(t, &certNodeRef, &certNodeRef, true)
 	cs := mockCryptographyService(t, true)
 	pm := mockPulseManager(t)
+	pa := mock.NewPulseAccessorMock(t)
 
 	hn := mock.NewHostNetworkMock(t)
 
@@ -216,9 +217,12 @@ func TestComplete_handler(t *testing.T) {
 		CertificateManager:  cm,
 		CryptographyService: cs,
 		PulseManager:        pm,
+		PulseAccessor:       pa,
 	})
+
 	ge = ge.NewGateway(context.Background(), insolar.CompleteNetworkState)
 	ctx := context.Background()
+	pa.GetLatestPulseMock.Expect(ctx).Return(*insolar.GenesisPulse, nil)
 
 	p := packet.NewReceivedPacket(packet.NewPacket(nil, nil, types.SignCert, 1), nil)
 	p.SetRequest(&packet.SignCertRequest{NodeRef: nodeRef})

@@ -65,13 +65,19 @@ func wrapCall(runner *Runner, allowedMethods map[string]bool, req *http.Request,
 	if err != nil {
 		// TODO: white list of errors
 		logger.Error(err.Error())
+
+		var ref string
+		if requestRef != nil {
+			ref = requestRef.String()
+		}
+
 		return &json2.Error{
 			// TODO: correct error codes
 			Code:    defaultError,
 			Message: err.Error(),
 			Data: requester.Data{
 				TraceID:          traceID,
-				RequestReference: requestRef.String(),
+				RequestReference: ref,
 			},
 		}
 	}
