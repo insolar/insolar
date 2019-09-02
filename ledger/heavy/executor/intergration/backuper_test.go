@@ -13,7 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// +build slowtest
 
 package intergration
 
@@ -56,6 +55,17 @@ func (t *testKey) Scope() store.Scope {
 	return store.ScopeJetDrop
 }
 
+func addLastBackupFile(t *testing.T, to string, lastBackupedVersion uint64) {
+	backupInfo := executor.LastBackupInfo{
+		LastBackupedVersion: lastBackupedVersion,
+	}
+	rawInfo, err := json.MarshalIndent(backupInfo, "", "    ")
+	require.NoError(t, err)
+
+	err = ioutil.WriteFile(to, rawInfo, 0600)
+	require.NoError(t, err)
+}
+
 func makeBackuperConfig(t *testing.T, prefix string) configuration.Backup {
 
 	cwd, err := os.Getwd()
@@ -63,16 +73,22 @@ func makeBackuperConfig(t *testing.T, prefix string) configuration.Backup {
 		require.NoError(t, err)
 	}
 
+	tmpDir := "/tmp/BKP/"
+
+	lastBackupedVersionFile := tmpDir + "last_version.json"
+	addLastBackupFile(t, lastBackupedVersionFile, 0)
+
 	cfg := configuration.Backup{
 		ConfirmFile:          "BACKUPED",
 		MetaInfoFile:         "META.json",
-		TargetDirectory:      "/tmp/BKP/TARGET/" + prefix,
-		TmpDirectory:         "/tmp/BKP/TMP",
+		TargetDirectory:      tmpDir + "/TARGET/" + prefix,
+		TmpDirectory:         tmpDir + "/TMP",
 		DirNameTemplate:      "pulse-%d",
 		BackupWaitPeriod:     10,
 		BackupFile:           "incr.bkp",
 		Enabled:              true,
 		PostProcessBackupCmd: []string{"bash", "-c", cwd + "/post_process_backup.sh"},
+		LastBackupInfoFile:   lastBackupedVersionFile,
 	}
 
 	err = os.MkdirAll(cfg.TargetDirectory, 0777)
@@ -85,6 +101,8 @@ func makeBackuperConfig(t *testing.T, prefix string) configuration.Backup {
 
 func clearData(t *testing.T, cfg configuration.Backup) {
 	err := os.RemoveAll(cfg.TargetDirectory)
+	require.NoError(t, err)
+	err = os.RemoveAll(cfg.TmpDirectory)
 	require.NoError(t, err)
 }
 
@@ -185,6 +203,21 @@ func TestBackuper(t *testing.T) {
 			require.Equal(t, v, gotPulseNumber)
 		}
 	}
+
+	// check last backuped version file
+	{
+		require.NotEqual(t, 0, loadLastBackupedVersion(t, cfg.LastBackupInfoFile))
+	}
+}
+
+func loadLastBackupedVersion(t *testing.T, fileName string) uint64 {
+	raw, err := ioutil.ReadFile(fileName)
+	require.NoError(t, err)
+	var backupInfo executor.LastBackupInfo
+	err = json.Unmarshal(raw, &backupInfo)
+	require.NoError(t, err)
+
+	return backupInfo.LastBackupedVersion
 }
 
 var binaryPath string
@@ -264,6 +297,53 @@ func checkBackupMetaInfo(t *testing.T, cfg configuration.Backup, numIterations i
 		// check pulse
 		require.Equal(t, currentPulse, bi.Pulse)
 	}
+}
+
+func TestBackup_UsageOfLastBackupedVersion(t *testing.T) {
+	cfg := makeBackuperConfig(t, t.Name())
+	defer clearData(t, cfg)
+	addLastBackupFile(t, cfg.LastBackupInfoFile, 40000)
+
+	tmpdir, err := ioutil.TempDir("", "bdb-test-")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpdir)
+
+	db, err := store.NewBadgerDB(badger.DefaultOptions(tmpdir))
+	require.NoError(t, err)
+	defer db.Stop(context.Background())
+
+	bm, err := executor.NewBackupMaker(context.Background(), db, cfg, insolar.GenesisPulse.PulseNumber, db)
+	require.NoError(t, err)
+
+	key := &testKey{id: uint64(3)}
+
+	err = db.Set(key, []byte{})
+	require.NoError(t, err)
+
+	_, err = db.Get(key)
+	require.NoError(t, err)
+
+	err = bm.MakeBackup(context.Background(), 100000)
+	require.NoError(t, err)
+
+	recovTmpDir, err := ioutil.TempDir("", "bdb-test-")
+	require.NoError(t, err)
+	defer os.RemoveAll(recovTmpDir)
+	prepareDirForBackup(t, recovTmpDir)
+
+	bkpFileName := filepath.Join(
+		cfg.TargetDirectory,
+		fmt.Sprintf(cfg.DirNameTemplate, 100000),
+		cfg.BackupFile,
+	)
+	loadIncrementalBackup(t, recovTmpDir, bkpFileName)
+	recoveredDB, err := store.NewBadgerDB(badger.DefaultOptions(recovTmpDir))
+	require.NoError(t, err)
+	defer recoveredDB.Stop(context.Background())
+
+	// we should not find 'key', since tried to backup from non existing high version
+	_, err = recoveredDB.Get(key)
+	require.EqualError(t, err, store.ErrNotFound.Error())
 }
 
 func TestBackupSendDeleteRecords(t *testing.T) {
