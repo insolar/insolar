@@ -542,5 +542,16 @@ func (m *Member) memberGet(publicKey string) (interface{}, error) {
 	}
 
 	return GetResponse{Reference: ref.String(), MigrationAddress: ma}, nil
+}
 
+// Todo: Remove this when WLT-903 merged to master
+// Accept accepts transfer.
+// ins:saga(INS_FLAG_NO_ROLLBACK_METHOD)
+func (m *Member) Accept(amountStr string) error {
+	accRef, err := m.GetAccount(XNS)
+	if err != nil {
+		return fmt.Errorf("failed to get account by asset: %s", err.Error())
+	}
+	acc := account.GetObject(*accRef)
+	return acc.Accept(amountStr)
 }

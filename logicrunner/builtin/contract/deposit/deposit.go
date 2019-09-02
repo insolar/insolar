@@ -21,13 +21,11 @@ import (
 	"math/big"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation/safemath"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/account"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/member"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/migrationadmin"
-	"github.com/insolar/insolar/logicrunner/builtin/proxy/wallet"
-
-	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 )
 
 const (
@@ -190,7 +188,7 @@ func (d *Deposit) canTransfer(transferAmount *big.Int) error {
 }
 
 // Transfer transfers money from deposit to wallet. It can be called only after deposit hold period.
-func (d *Deposit) Transfer(amountStr string, wallerRef insolar.Reference) (interface{}, error) {
+func (d *Deposit) Transfer(amountStr string, memberRef insolar.Reference) (interface{}, error) {
 
 	amount, ok := new(big.Int).SetString(amountStr, 10)
 	if !ok {
@@ -215,10 +213,10 @@ func (d *Deposit) Transfer(amountStr string, wallerRef insolar.Reference) (inter
 		return nil, fmt.Errorf("can't start transfer: %s", err.Error())
 	}
 	d.Balance = newBalance.String()
-	w := wallet.GetObject(wallerRef)
+	m := member.GetObject(memberRef)
 
-	acceptWalletErr := w.Accept(amountStr, XNS)
-	if acceptWalletErr == nil {
+	acceptMemberErr := m.Accept(amountStr)
+	if acceptMemberErr == nil {
 		return nil, nil
 	}
 
@@ -227,7 +225,7 @@ func (d *Deposit) Transfer(amountStr string, wallerRef insolar.Reference) (inter
 		return nil, fmt.Errorf("failed to add amount back to balance: %s", err.Error())
 	}
 	d.Balance = newBalance.String()
-	return nil, fmt.Errorf("failed to transfer amount: %s", acceptWalletErr.Error())
+	return nil, fmt.Errorf("failed to transfer amount: %s", acceptMemberErr.Error())
 }
 
 // Accept accepts transfer to balance.
