@@ -56,6 +56,7 @@ import (
 	"context"
 	"crypto"
 	"fmt"
+	"github.com/insolar/insolar/network/storage"
 	"github.com/stretchr/testify/assert"
 	"reflect"
 	"strconv"
@@ -610,7 +611,7 @@ func (s *testSuite) preInitNode(node *networkNode) {
 		keyProc,
 		terminationHandler,
 		testutils.NewContractRequesterMock(s.t),
-		// pulse.NewStorageMem(),
+		storage.NewMemoryStorage(),
 	)
 	node.serviceNetwork = serviceNetwork
 	node.terminationHandler = terminationHandler

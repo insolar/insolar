@@ -51,68 +51,87 @@
 package storage
 
 import (
-	"io/ioutil"
-	"os"
-	"testing"
-
-	"github.com/insolar/insolar/component"
-	"github.com/insolar/insolar/configuration"
+	"context"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/gen"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/node"
-	"github.com/insolar/insolar/platformpolicy"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"sync"
 )
 
-func TestNewSnapshotStorage(t *testing.T) {
-	tmpdir, err := ioutil.TempDir("", "bdb-test-")
-	defer os.RemoveAll(tmpdir)
-	require.NoError(t, err)
+const entriesCount = 10
 
-	ctx := inslogger.TestContext(t)
-	cm := component.NewManager(nil)
-	badgerDB, err := NewBadgerDB(configuration.ServiceNetwork{CacheDirectory: tmpdir})
-	defer badgerDB.Stop(ctx)
-	ss := newSnapshotStorage()
-
-	cm.Register(badgerDB, ss)
-	cm.Inject()
-
-	ks := platformpolicy.NewKeyProcessor()
-	p1, err := ks.GeneratePrivateKey()
-	n := node.NewNode(gen.Reference(), insolar.StaticRoleVirtual, ks.ExtractPublicKey(p1), "127.0.0.1:22", "ver2")
-
-	pulse := insolar.Pulse{PulseNumber: 15}
-	snap := node.NewSnapshot(pulse.PulseNumber, []insolar.NetworkNode{n})
-
-	err = ss.Append(pulse.PulseNumber, snap)
-	assert.NoError(t, err)
-
-	snapshot2, err := ss.ForPulseNumber(pulse.PulseNumber)
-	assert.NoError(t, err)
-
-	assert.True(t, snap.Equal(snapshot2))
-
-	err = cm.Stop(ctx)
+// NewMemoryStorage constructor creates MemoryStorage
+func NewMemoryStorage() *MemoryStorage {
+	return &MemoryStorage{
+		entries:         make([]insolar.Pulse, 0),
+		snapshotEntries: make(map[insolar.PulseNumber]*node.Snapshot),
+	}
 }
 
-func TestNewMemorySnapshotStorage(t *testing.T) {
-	ss := NewMemoryStorage()
+type MemoryStorage struct {
+	lock            sync.RWMutex
+	entries         []insolar.Pulse
+	snapshotEntries map[insolar.PulseNumber]*node.Snapshot
+}
 
-	ks := platformpolicy.NewKeyProcessor()
-	p1, err := ks.GeneratePrivateKey()
-	n := node.NewNode(gen.Reference(), insolar.StaticRoleVirtual, ks.ExtractPublicKey(p1), "127.0.0.1:22", "ver2")
+// truncate deletes all entries except Count
+func (m *MemoryStorage) truncate(count int) {
+	if len(m.entries) <= count {
+		return
+	}
 
-	pulse := insolar.Pulse{PulseNumber: 15}
-	snap := node.NewSnapshot(pulse.PulseNumber, []insolar.NetworkNode{n})
+	truncatePulses := m.entries[:len(m.entries)-count]
+	m.entries = m.entries[len(truncatePulses):]
+	for _, p := range truncatePulses {
+		delete(m.snapshotEntries, p.PulseNumber)
+	}
+}
 
-	err = ss.Append(pulse.PulseNumber, snap)
-	assert.NoError(t, err)
+func (m *MemoryStorage) AppendPulse(ctx context.Context, pulse insolar.Pulse) error {
+	m.lock.Lock()
+	defer m.lock.Unlock()
 
-	snapshot2, err := ss.ForPulseNumber(pulse.PulseNumber)
-	assert.NoError(t, err)
+	m.entries = append(m.entries, pulse)
+	m.truncate(entriesCount)
+	return nil
+}
 
-	assert.True(t, snap.Equal(snapshot2))
+func (m *MemoryStorage) GetPulse(ctx context.Context, number insolar.PulseNumber) (insolar.Pulse, error) {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+
+	for _, p := range m.entries {
+		if p.PulseNumber == number {
+			return p, nil
+		}
+	}
+
+	return *insolar.GenesisPulse, ErrNotFound
+}
+
+func (m *MemoryStorage) GetLatestPulse(ctx context.Context) (insolar.Pulse, error) {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+
+	if len(m.entries) == 0 {
+		return *insolar.GenesisPulse, ErrNotFound
+	}
+	return m.entries[len(m.entries)-1], nil
+}
+
+func (m *MemoryStorage) Append(pulse insolar.PulseNumber, snapshot *node.Snapshot) error {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	m.snapshotEntries[pulse] = snapshot
+	return nil
+}
+
+func (m *MemoryStorage) ForPulseNumber(pulse insolar.PulseNumber) (*node.Snapshot, error) {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+
+	if s, ok := m.snapshotEntries[pulse]; ok {
+		return s, nil
+	}
+	return nil, ErrNotFound
 }

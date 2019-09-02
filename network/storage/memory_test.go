@@ -51,68 +51,56 @@
 package storage
 
 import (
-	"io/ioutil"
-	"os"
-	"testing"
-
-	"github.com/insolar/insolar/component"
-	"github.com/insolar/insolar/configuration"
+	"context"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"testing"
 )
 
-func TestNewSnapshotStorage(t *testing.T) {
-	tmpdir, err := ioutil.TempDir("", "bdb-test-")
-	defer os.RemoveAll(tmpdir)
-	require.NoError(t, err)
-
-	ctx := inslogger.TestContext(t)
-	cm := component.NewManager(nil)
-	badgerDB, err := NewBadgerDB(configuration.ServiceNetwork{CacheDirectory: tmpdir})
-	defer badgerDB.Stop(ctx)
-	ss := newSnapshotStorage()
-
-	cm.Register(badgerDB, ss)
-	cm.Inject()
+func TestMemoryStorage(t *testing.T) {
+	ctx := context.Background()
+	s := NewMemoryStorage()
+	startPulse := *insolar.GenesisPulse
 
 	ks := platformpolicy.NewKeyProcessor()
 	p1, err := ks.GeneratePrivateKey()
+	assert.NoError(t, err)
 	n := node.NewNode(gen.Reference(), insolar.StaticRoleVirtual, ks.ExtractPublicKey(p1), "127.0.0.1:22", "ver2")
+	nodes := []insolar.NetworkNode{n}
 
-	pulse := insolar.Pulse{PulseNumber: 15}
-	snap := node.NewSnapshot(pulse.PulseNumber, []insolar.NetworkNode{n})
+	for i := 0; i < entriesCount+2; i++ {
+		p := startPulse
+		p.PulseNumber += insolar.PulseNumber(i)
 
-	err = ss.Append(pulse.PulseNumber, snap)
-	assert.NoError(t, err)
+		snap := node.NewSnapshot(p.PulseNumber, nodes)
+		err = s.Append(p.PulseNumber, snap)
+		assert.NoError(t, err)
 
-	snapshot2, err := ss.ForPulseNumber(pulse.PulseNumber)
-	assert.NoError(t, err)
+		err = s.AppendPulse(ctx, p)
+		assert.NoError(t, err)
 
-	assert.True(t, snap.Equal(snapshot2))
+		p1, err := s.GetLatestPulse(ctx)
+		assert.NoError(t, err)
+		assert.Equal(t, p, p1)
 
-	err = cm.Stop(ctx)
-}
+		snap1, err := s.ForPulseNumber(p1.PulseNumber)
+		assert.NoError(t, err)
+		assert.True(t, snap1.Equal(snap), "snapshots should be equal")
+	}
 
-func TestNewMemorySnapshotStorage(t *testing.T) {
-	ss := NewMemoryStorage()
+	// first pulse and snapshot should be truncated
+	assert.Len(t, s.entries, entriesCount)
+	assert.Len(t, s.snapshotEntries, entriesCount)
 
-	ks := platformpolicy.NewKeyProcessor()
-	p1, err := ks.GeneratePrivateKey()
-	n := node.NewNode(gen.Reference(), insolar.StaticRoleVirtual, ks.ExtractPublicKey(p1), "127.0.0.1:22", "ver2")
+	p2, err := s.GetPulse(ctx, startPulse.PulseNumber)
+	assert.EqualError(t, err, ErrNotFound.Error())
+	assert.Equal(t, p2, *insolar.GenesisPulse)
 
-	pulse := insolar.Pulse{PulseNumber: 15}
-	snap := node.NewSnapshot(pulse.PulseNumber, []insolar.NetworkNode{n})
+	snap2, err := s.ForPulseNumber(startPulse.PulseNumber)
+	assert.EqualError(t, err, ErrNotFound.Error())
+	assert.Nil(t, snap2)
 
-	err = ss.Append(pulse.PulseNumber, snap)
-	assert.NoError(t, err)
-
-	snapshot2, err := ss.ForPulseNumber(pulse.PulseNumber)
-	assert.NoError(t, err)
-
-	assert.True(t, snap.Equal(snapshot2))
 }

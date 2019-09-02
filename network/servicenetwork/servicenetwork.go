@@ -147,7 +147,6 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	n.BaseGateway = &gateway.Base{Options: options}
 	n.Gatewayer = gateway.NewGatewayer(n.BaseGateway.NewGateway(ctx, insolar.NoNetworkState))
 
-	pulseStorage := storage.NewMemoryPulseStorage()
 	table := &routing.Table{}
 
 	n.cm.Inject(n,
@@ -158,10 +157,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		controller.NewRPCController(options),
 		controller.NewPulseController(),
 		bootstrap.NewRequester(options),
-		// db,
-		pulseStorage,
-		storage.NewMemoryCloudHashStorage(),
-		storage.NewMemorySnapshotStorage(),
+		storage.NewMemoryStorage(),
 		n.BaseGateway,
 		n.Gatewayer,
 	)
