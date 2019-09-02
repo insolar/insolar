@@ -67,17 +67,17 @@ func addLastBackupFile(t *testing.T, to string, lastBackupedVersion uint64) {
 	require.NoError(t, err)
 }
 
-func makeBackuperConfig(t *testing.T, prefix string) configuration.Backup {
+func makeBackuperConfig(t *testing.T, prefix string, badgerDir string) configuration.Ledger {
 
 	cwd, err := os.Getwd()
 	if err != nil {
 		require.NoError(t, err)
 	}
 
-	tmpDir := "/tmp/BKP/"
-
-	lastBackupedVersionFile := tmpDir + "last_version.json"
+	lastBackupedVersionFile := badgerDir + "/last_version.json"
 	addLastBackupFile(t, lastBackupedVersionFile, 0)
+
+	tmpDir := "/tmp/BKP/"
 
 	cfg := configuration.Backup{
 		ConfirmFile:          "BACKUPED",
@@ -97,23 +97,29 @@ func makeBackuperConfig(t *testing.T, prefix string) configuration.Backup {
 	err = os.MkdirAll(cfg.TmpDirectory, 0777)
 	require.NoError(t, err)
 
-	return cfg
+	return configuration.Ledger{
+		Backup: cfg,
+		Storage: configuration.Storage{
+			DataDirectory: badgerDir,
+		},
+	}
 }
 
-func clearData(t *testing.T, cfg configuration.Backup) {
-	err := os.RemoveAll(cfg.TargetDirectory)
+func clearData(t *testing.T, cfg configuration.Ledger) {
+	err := os.RemoveAll(cfg.Backup.TargetDirectory)
 	require.NoError(t, err)
-	err = os.RemoveAll(cfg.TmpDirectory)
+	err = os.RemoveAll(cfg.Backup.TmpDirectory)
 	require.NoError(t, err)
 }
 
 func TestBackuper(t *testing.T) {
-	cfg := makeBackuperConfig(t, t.Name())
-	defer clearData(t, cfg)
 
 	tmpdir, err := ioutil.TempDir("", "bdb-test-")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
+
+	cfg := makeBackuperConfig(t, t.Name(), tmpdir)
+	defer clearData(t, cfg)
 
 	db, err := store.NewBadgerDB(badger.DefaultOptions(tmpdir))
 	require.NoError(t, err)
@@ -173,7 +179,7 @@ func TestBackuper(t *testing.T) {
 	require.NoError(t, err)
 
 	// check backup hashes
-	checkBackupMetaInfo(t, cfg, numIterations, testPulse)
+	checkBackupMetaInfo(t, cfg.Backup, numIterations, testPulse)
 
 	// load all backups and check all records
 	{
@@ -185,9 +191,9 @@ func TestBackuper(t *testing.T) {
 
 		for i := 0; i < numIterations+1; i++ {
 			bkpFileName := filepath.Join(
-				cfg.TargetDirectory,
-				fmt.Sprintf(cfg.DirNameTemplate, testPulse+insolar.PulseNumber(i)),
-				cfg.BackupFile,
+				cfg.Backup.TargetDirectory,
+				fmt.Sprintf(cfg.Backup.DirNameTemplate, testPulse+insolar.PulseNumber(i)),
+				cfg.Backup.BackupFile,
 			)
 
 			loadIncrementalBackup(t, recovTmpDir, bkpFileName)
@@ -207,7 +213,7 @@ func TestBackuper(t *testing.T) {
 
 	// check last backuped version file
 	{
-		require.NotEqual(t, 0, loadLastBackupedVersion(t, cfg.LastBackupInfoFile))
+		require.NotEqual(t, 0, loadLastBackupedVersion(t, cfg.Backup.LastBackupInfoFile))
 	}
 }
 
@@ -301,13 +307,14 @@ func checkBackupMetaInfo(t *testing.T, cfg configuration.Backup, numIterations i
 }
 
 func TestBackup_UsageOfLastBackupedVersion(t *testing.T) {
-	cfg := makeBackuperConfig(t, t.Name())
-	defer clearData(t, cfg)
-	addLastBackupFile(t, cfg.LastBackupInfoFile, 40000)
 
 	tmpdir, err := ioutil.TempDir("", "bdb-test-")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
+
+	cfg := makeBackuperConfig(t, t.Name(), tmpdir)
+	defer clearData(t, cfg)
+	addLastBackupFile(t, cfg.Backup.LastBackupInfoFile, 40000)
 
 	db, err := store.NewBadgerDB(badger.DefaultOptions(tmpdir))
 	require.NoError(t, err)
@@ -333,9 +340,9 @@ func TestBackup_UsageOfLastBackupedVersion(t *testing.T) {
 	prepareDirForBackup(t, recovTmpDir)
 
 	bkpFileName := filepath.Join(
-		cfg.TargetDirectory,
-		fmt.Sprintf(cfg.DirNameTemplate, 100000),
-		cfg.BackupFile,
+		cfg.Backup.TargetDirectory,
+		fmt.Sprintf(cfg.Backup.DirNameTemplate, 100000),
+		cfg.Backup.BackupFile,
 	)
 	loadIncrementalBackup(t, recovTmpDir, bkpFileName)
 	recoveredDB, err := store.NewBadgerDB(badger.DefaultOptions(recovTmpDir))
@@ -348,12 +355,13 @@ func TestBackup_UsageOfLastBackupedVersion(t *testing.T) {
 }
 
 func TestBackupSendDeleteRecords(t *testing.T) {
-	cfg := makeBackuperConfig(t, t.Name())
-	defer clearData(t, cfg)
 
 	tmpdir, err := ioutil.TempDir("", "bdb-test-")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
+
+	cfg := makeBackuperConfig(t, t.Name(), tmpdir)
+	defer clearData(t, cfg)
 
 	db, err := store.NewBadgerDB(badger.DefaultOptions(tmpdir))
 	require.NoError(t, err)
@@ -379,9 +387,9 @@ func TestBackupSendDeleteRecords(t *testing.T) {
 	prepareDirForBackup(t, recovTmpDir)
 	for i := 0; i < 2; i++ {
 		bkpFileName := filepath.Join(
-			cfg.TargetDirectory,
-			fmt.Sprintf(cfg.DirNameTemplate, 100000),
-			cfg.BackupFile,
+			cfg.Backup.TargetDirectory,
+			fmt.Sprintf(cfg.Backup.DirNameTemplate, 100000),
+			cfg.Backup.BackupFile,
 		)
 
 		loadIncrementalBackup(t, recovTmpDir, bkpFileName)
@@ -399,9 +407,9 @@ func TestBackupSendDeleteRecords(t *testing.T) {
 	require.NoError(t, err)
 
 	bkpFileName := filepath.Join(
-		cfg.TargetDirectory,
-		fmt.Sprintf(cfg.DirNameTemplate, 100002),
-		cfg.BackupFile,
+		cfg.Backup.TargetDirectory,
+		fmt.Sprintf(cfg.Backup.DirNameTemplate, 100002),
+		cfg.Backup.BackupFile,
 	)
 	loadIncrementalBackup(t, recovTmpDir, bkpFileName)
 	recoveredDB, err = store.NewBadgerDB(badger.DefaultOptions(recovTmpDir))
