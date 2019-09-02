@@ -111,18 +111,10 @@ func randomUint64() uint64 {
 	return binary.LittleEndian.Uint64(buf)
 }
 
-// SendRequest makes synchronously call to method of contract by its ref without additional information
-func (cr *ContractRequester) SendRequest(ctx context.Context, ref *insolar.Reference, method string, argsIn []interface{}) (insolar.Reply, error) {
-	pulse, err := cr.PulseAccessor.Latest(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ ContractRequester::SendRequest ] Couldn't fetch current pulse")
-	}
+func (cr *ContractRequester) SendRequest(
+	ctx context.Context, ref *insolar.Reference, method string, argsIn []interface{}, pulse insolar.PulseNumber,
+) (insolar.Reply, *insolar.Reference, error) {
 
-	r, _, err := cr.SendRequestWithPulse(ctx, ref, method, argsIn, pulse.PulseNumber)
-	return r, err
-}
-
-func (cr *ContractRequester) SendRequestWithPulse(ctx context.Context, ref *insolar.Reference, method string, argsIn []interface{}, pulse insolar.PulseNumber) (insolar.Reply, *insolar.Reference, error) {
 	ctx, span := instracer.StartSpan(ctx, "SendRequest "+method)
 	defer span.End()
 
@@ -144,7 +136,7 @@ func (cr *ContractRequester) SendRequestWithPulse(ctx context.Context, ref *inso
 
 	routResult, ref, err := cr.Call(ctx, msg)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "[ ContractRequester::SendRequest ] Can't route call")
+		return nil, ref, errors.Wrap(err, "[ ContractRequester::SendRequest ] Can't route call")
 	}
 
 	return routResult, ref, nil
