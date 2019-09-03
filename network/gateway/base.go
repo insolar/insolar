@@ -180,7 +180,6 @@ func (g *Base) OnPulseFromConsensus(ctx context.Context, pu insolar.Pulse) {
 // UpdateState called then Consensus done
 func (g *Base) UpdateState(ctx context.Context, pulseNumber insolar.PulseNumber, nodes []insolar.NetworkNode, cloudStateHash []byte) {
 	g.NodeKeeper.Sync(ctx, pulseNumber, nodes)
-	g.NodeKeeper.SetCloudHash(pulseNumber, cloudStateHash)
 }
 
 func (g *Base) BeforeRun(ctx context.Context, pulse insolar.Pulse) {}

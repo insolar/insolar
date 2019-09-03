@@ -90,10 +90,9 @@ func TestNodeConnectInvalidVersion(t *testing.T) {
 
 	testNode := s.newNetworkNode("testNode")
 	s.preInitNode(testNode)
+	s.InitNode(testNode)
 	testNode.serviceNetwork.NodeKeeper.GetOrigin().(node.MutableNode).SetVersion("ololo")
 	require.Equal(t, "ololo", testNode.serviceNetwork.NodeKeeper.GetOrigin().Version())
-
-	s.InitNode(testNode)
 	err := testNode.componentManager.Start(s.ctx)
 	assert.NoError(t, err)
 	defer s.StopNode(testNode)

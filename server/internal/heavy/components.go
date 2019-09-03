@@ -56,8 +56,6 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/metrics"
-	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/insolar/insolar/network/termination"
 	"github.com/insolar/insolar/platformpolicy"
@@ -139,7 +137,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 	// Network.
 	var (
 		NetworkService *servicenetwork.ServiceNetwork
-		NodeNetwork    network.NodeNetwork
 		Termination    insolar.TerminationHandler
 	)
 	{
@@ -151,13 +148,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		}
 
 		Termination = termination.NewHandler(NetworkService)
-
-		// Node info.
-		NodeNetwork, err = nodenetwork.NewNodeNetwork(cfg.Host.Transport, CertManager.GetCertificate())
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to start NodeNetwork")
-		}
-
 	}
 
 	// Storage.
@@ -186,7 +176,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		c.PulseCalculator = Pulses
 		c.PulseAccessor = Pulses
 		c.JetAccessor = Jets
-		c.OriginProvider = NodeNetwork
+		c.OriginProvider = NetworkService
 		c.PlatformCryptographyScheme = CryptoScheme
 		c.Nodes = Nodes
 
@@ -223,7 +213,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 			&cfg.APIRunner,
 			CertManager,
 			Requester,
-			NodeNetwork,
+			NetworkService,
 			NetworkService,
 			Pulses,
 			ArtifactsClient,
@@ -238,7 +228,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 			&cfg.AdminAPIRunner,
 			CertManager,
 			Requester,
-			NodeNetwork,
+			NetworkService,
 			NetworkService,
 			Pulses,
 			ArtifactsClient,
@@ -286,7 +276,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		}
 
 		PulseManager = pulsemanager.NewPulseManager(Requester.FlowDispatcher)
-		PulseManager.NodeNet = NodeNetwork
+		PulseManager.NodeNet = NetworkService
 		PulseManager.NodeSetter = Nodes
 		PulseManager.Nodes = Nodes
 		PulseManager.PulseAppender = Pulses
@@ -387,7 +377,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		CryptoScheme,
 		CryptoService,
 		CertManager,
-		NodeNetwork,
 		NetworkService,
 		publisher,
 	)

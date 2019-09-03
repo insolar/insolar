@@ -611,7 +611,6 @@ func (s *testSuite) preInitNode(node *networkNode) {
 		keyProc,
 		terminationHandler,
 		testutils.NewContractRequesterMock(s.t),
-		// pulse.NewStorageMem(),
 	)
 	node.serviceNetwork = serviceNetwork
 	node.terminationHandler = terminationHandler
