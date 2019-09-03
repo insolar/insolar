@@ -8,7 +8,7 @@ PROM_SERVER=${PROM_SERVER:-"http://localhost:9090"}
 FETCH_CSV='.artifacts/fetch_series.csv'
 CLEANED_CSV='scripts/insolar_metrics.csv'
 
-echo "name, type, description" > ${FETCH_CSV}
+echo "name,type,description" > ${FETCH_CSV}
 curl -G -sS -g "$PROM_SERVER/api/v1/targets/metadata" \
     --data-urlencode 'match_target={job=~"light_material|heavy_material|virtual"}' \
     |  jq -r '.data[] | "\(.metric),\(.type),\(.help)"' \

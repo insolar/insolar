@@ -45,12 +45,10 @@ import (
 	"github.com/insolar/insolar/logicrunner/machinesmanager"
 	"github.com/insolar/insolar/logicrunner/pulsemanager"
 	"github.com/insolar/insolar/metrics"
-	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/insolar/insolar/network/termination"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/server/internal"
-	"github.com/insolar/insolar/version/manager"
 )
 
 type bootstrapComponents struct {
@@ -127,9 +125,6 @@ func initComponents(
 		publisher = internal.PublisherWrapper(ctx, &cm, cfg.Introspection, publisher)
 	}
 
-	nodeNetwork, err := nodenetwork.NewNodeNetwork(cfg.Host.Transport, certManager.GetCertificate())
-	checkError(ctx, err, "failed to start NodeNetwork")
-
 	nw, err := servicenetwork.NewServiceNetwork(cfg, &cm)
 	checkError(ctx, err, "failed to start Network")
 
@@ -138,7 +133,6 @@ func initComponents(
 	metricsHandler, err := metrics.NewMetrics(ctx, cfg.Metrics, metrics.GetInsolarRegistry("virtual"), "virtual")
 	checkError(ctx, err, "failed to start Metrics")
 
-	_, err = manager.NewVersionManager(cfg.VersionManager)
 	checkError(ctx, err, "failed to load VersionManager: ")
 
 	jc := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit)
@@ -162,7 +156,7 @@ func initComponents(
 		&cfg.APIRunner,
 		certManager,
 		contractRequester,
-		nodeNetwork,
+		nw,
 		nw,
 		pulses,
 		artifactsClient,
@@ -175,7 +169,7 @@ func initComponents(
 		&cfg.AdminAPIRunner,
 		certManager,
 		contractRequester,
-		nodeNetwork,
+		nw,
 		nw,
 		pulses,
 		artifactsClient,
@@ -203,7 +197,6 @@ func initComponents(
 		logicrunner.NewRequestsExecutor(),
 		machinesmanager.NewMachinesManager(),
 		APIWrapper,
-		nodeNetwork,
 		nw,
 		pm,
 	)

@@ -24,6 +24,7 @@ import (
 type APIRunner struct {
 	Address string
 	RPC     string
+	// IsAdmin indicates status of api (internal or external)
 	IsAdmin bool
 }
 

@@ -88,9 +88,7 @@ func (i *IndexDB) SetIndex(ctx context.Context, pn insolar.PulseNumber, bucket r
 		return err
 	}
 
-	stats.Record(ctx,
-		statBucketAddedCount.M(1),
-	)
+	stats.Record(ctx, statIndexesAddedCount.M(1))
 
 	inslogger.FromContext(ctx).Debugf("[SetIndex] bucket for obj - %v was set successfully. Pulse: %d", bucket.ObjID.DebugString(), pn)
 

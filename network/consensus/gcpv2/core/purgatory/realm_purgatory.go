@@ -53,8 +53,9 @@ package purgatory
 import (
 	"context"
 	"fmt"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 	"sync"
+
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetdispatch"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/population"
@@ -252,11 +253,8 @@ func (p *RealmPurgatory) IsBriefAscensionAllowed() bool {
 	return false
 }
 
-func (p *RealmPurgatory) UnknownAsSelfFromMemberAnnouncement(ctx context.Context, id insolar.ShortNodeID,
-	profile profiles.StaticProfile, rank member.Rank, announcement profiles.MemberAnnouncement) (bool, error) {
-
-	err := p.getOrCreateMember(id).DispatchAnnouncement(ctx, rank, profile, announcement)
-	return err == nil, err
+func (p *RealmPurgatory) IsJoinerSecretRequired() bool {
+	return false
 }
 
 func (p *RealmPurgatory) FindJoinerProfile(nodeID insolar.ShortNodeID, introducedBy insolar.ShortNodeID) profiles.StaticProfile {
@@ -286,7 +284,7 @@ func (p *RealmPurgatory) onNodeUpdated(n *NodePhantom, flags population.UpdateFl
 
 // WARNING! Is called under NodeAppearance lock
 func (p *RealmPurgatory) AddJoinerAndEnsureAscendancy(
-	announcement profiles.JoinerAnnouncement, announcedByID insolar.ShortNodeID) error {
+	ctx context.Context, announcement profiles.JoinerAnnouncement, announcedByID insolar.ShortNodeID) error {
 
 	jp := announcement.JoinerProfile
 	joinerID := jp.GetStaticNodeID()
@@ -295,9 +293,11 @@ func (p *RealmPurgatory) AddJoinerAndEnsureAscendancy(
 		panic("illegal value - cant add itself")
 	}
 
-	err := p.getOrCreateMember(joinerID).DispatchAnnouncement(context.TODO(), // TODO context
+	err := p.getOrCreateMember(joinerID).DispatchAnnouncement(
+		ctx,
 		member.JoinerRank, jp,
-		profiles.NewJoinerAnnouncement(jp, announcedByID))
+		profiles.NewJoinerAnnouncement(jp, announcedByID),
+	)
 
 	sp := p.FindJoinerProfile(joinerID, announcedByID)
 	if sp == nil {
@@ -329,6 +329,15 @@ func (p *RealmPurgatory) UnknownFromNeighbourhood(ctx context.Context, rank memb
 	return m.DispatchAnnouncement(ctx, rank, nil, announcement)
 }
 
-func (p *RealmPurgatory) IsJoinerSecretRequired() bool {
-	return false
+func (p *RealmPurgatory) UnknownJoinerFromNeighbourhood(ctx context.Context, joinerID, announcedByID insolar.ShortNodeID) error {
+
+	m := p.getOrCreateMember(joinerID)
+	return m.DispatchAnnouncement(ctx, member.JoinerRank, nil, profiles.NewJoinerIDAnnouncement(joinerID, announcedByID))
+}
+
+func (p *RealmPurgatory) UnknownAsSelfFromMemberAnnouncement(ctx context.Context, id insolar.ShortNodeID,
+	profile profiles.StaticProfile, rank member.Rank, announcement profiles.MemberAnnouncement) (bool, error) {
+
+	err := p.getOrCreateMember(id).DispatchAnnouncement(ctx, rank, profile, announcement)
+	return err == nil, err
 }

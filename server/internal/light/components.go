@@ -19,15 +19,13 @@ package light
 import (
 	"context"
 
+	"github.com/ThreeDotsLabs/watermill"
+	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/dispatcher"
 	"github.com/insolar/insolar/ledger/light/handle"
 	"github.com/insolar/insolar/ledger/light/proc"
-	"github.com/insolar/insolar/network"
-
-	"github.com/ThreeDotsLabs/watermill"
-	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/api"
@@ -50,7 +48,6 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/metrics"
-	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/insolar/insolar/network/termination"
 	"github.com/insolar/insolar/platformpolicy"
@@ -124,7 +121,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 	// Network.
 	var (
 		NetworkService *servicenetwork.ServiceNetwork
-		NodeNetwork    network.NodeNetwork
 		Termination    insolar.TerminationHandler
 	)
 	{
@@ -136,13 +132,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		}
 
 		Termination = termination.NewHandler(NetworkService)
-
-		// Node info.
-		NodeNetwork, err = nodenetwork.NewNodeNetwork(cfg.Host.Transport, CertManager.GetCertificate())
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to start NodeNetwork")
-		}
-
 	}
 
 	// Role calculations.
@@ -161,7 +150,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		c.PulseCalculator = Pulses
 		c.PulseAccessor = Pulses
 		c.JetAccessor = Jets
-		c.OriginProvider = NodeNetwork
+		c.OriginProvider = NetworkService
 		c.PlatformCryptographyScheme = CryptoScheme
 		c.Nodes = Nodes
 
@@ -198,7 +187,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			&cfg.APIRunner,
 			CertManager,
 			Requester,
-			NodeNetwork,
+			NetworkService,
 			NetworkService,
 			Pulses,
 			ArtifactsClient,
@@ -213,7 +202,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			&cfg.AdminAPIRunner,
 			CertManager,
 			Requester,
-			NodeNetwork,
+			NetworkService,
 			NetworkService,
 			Pulses,
 			ArtifactsClient,
@@ -350,7 +339,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		)
 
 		PulseManager = executor.NewPulseManager(
-			NodeNetwork,
+			NetworkService,
 			[]dispatcher.Dispatcher{FlowDispatcher, Requester.FlowDispatcher},
 			Nodes,
 			Pulses,
@@ -380,7 +369,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		CryptoScheme,
 		CryptoService,
 		CertManager,
-		NodeNetwork,
 		NetworkService,
 		publisher,
 	)

@@ -48,46 +48,59 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package adapters
+package storage
 
 import (
 	"context"
-
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
+	"github.com/insolar/insolar/insolar/gen"
+	"github.com/insolar/insolar/network/node"
+	"github.com/insolar/insolar/platformpolicy"
+	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
-func ConsensusContext(ctx context.Context) context.Context {
-	ctx, _ = inslogger.WithFields(ctx, map[string]interface{}{
-		"component": "consensus",
-	})
+func TestMemoryStorage(t *testing.T) {
+	ctx := context.Background()
+	s := NewMemoryStorage()
+	startPulse := *insolar.GenesisPulse
 
-	return ctx
-}
+	ks := platformpolicy.NewKeyProcessor()
+	p1, err := ks.GeneratePrivateKey()
+	assert.NoError(t, err)
+	n := node.NewNode(gen.Reference(), insolar.StaticRoleVirtual, ks.ExtractPublicKey(p1), "127.0.0.1:22", "ver2")
+	nodes := []insolar.NetworkNode{n}
 
-func PacketEarlyLogger(ctx context.Context, senderAddr string) (context.Context, insolar.Logger) {
-	ctx = ConsensusContext(ctx)
+	for i := 0; i < entriesCount+2; i++ {
+		p := startPulse
+		p.PulseNumber += insolar.PulseNumber(i)
 
-	ctx, logger := inslogger.WithFields(ctx, map[string]interface{}{
-		"sender_address": senderAddr,
-	})
+		snap := node.NewSnapshot(p.PulseNumber, nodes)
+		err = s.Append(p.PulseNumber, snap)
+		assert.NoError(t, err)
 
-	return ctx, logger
-}
+		err = s.AppendPulse(ctx, p)
+		assert.NoError(t, err)
 
-func PacketLateLogger(ctx context.Context, parser transport.PacketParser) (context.Context, insolar.Logger) {
-	ctx, logger := inslogger.WithFields(ctx, map[string]interface{}{
-		"sender_id":    parser.GetSourceID(),
-		"packet_type":  parser.GetPacketType().String(),
-		"packet_pulse": parser.GetPulseNumber(),
-	})
+		p1, err := s.GetLatestPulse(ctx)
+		assert.NoError(t, err)
+		assert.Equal(t, p, p1)
 
-	return ctx, logger
-}
+		snap1, err := s.ForPulseNumber(p1.PulseNumber)
+		assert.NoError(t, err)
+		assert.True(t, snap1.Equal(snap), "snapshots should be equal")
+	}
 
-func ReportContext(report api.UpstreamReport) context.Context {
-	return network.NewPulseContext(context.Background(), uint32(report.PulseNumber))
+	// first pulse and snapshot should be truncated
+	assert.Len(t, s.entries, entriesCount)
+	assert.Len(t, s.snapshotEntries, entriesCount)
+
+	p2, err := s.GetPulse(ctx, startPulse.PulseNumber)
+	assert.EqualError(t, err, ErrNotFound.Error())
+	assert.Equal(t, p2, *insolar.GenesisPulse)
+
+	snap2, err := s.ForPulseNumber(startPulse.PulseNumber)
+	assert.EqualError(t, err, ErrNotFound.Error())
+	assert.Nil(t, snap2)
+
 }
