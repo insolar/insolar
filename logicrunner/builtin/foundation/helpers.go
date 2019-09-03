@@ -106,7 +106,7 @@ func GetMigrationDaemonByMemberRef(memberRef string) (insolar.Reference, error) 
 		return insolar.Reference{}, fmt.Errorf(" get migration daemon contract from foundation failed, %s ", err.Error())
 	}
 	if migrationDaemonContractRef.IsEmpty() {
-		return insolar.Reference{}, fmt.Errorf(" the member is not migration daemon, %s ", migrationDaemonMemberRef)
+		return insolar.Reference{}, fmt.Errorf("the member is not migration daemon")
 	}
 	return migrationDaemonContractRef, nil
 }
