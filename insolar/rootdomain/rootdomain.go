@@ -41,14 +41,6 @@ func init() {
 	for _, el := range insolar.GenesisNameMigrationDaemons {
 		genesisrefs.PredefinedPrototypes[el+GenesisPrototypeSuffix] = *migrationdaemon.PrototypeReference
 	}
-
-	for _, el := range insolar.GenesisNamePublicKeyShards {
-		genesisrefs.PredefinedPrototypes[el+GenesisPrototypeSuffix] = *pkshard.PrototypeReference
-	}
-
-	for _, el := range insolar.GenesisNameMigrationAddressShards {
-		genesisrefs.PredefinedPrototypes[el+GenesisPrototypeSuffix] = *migrationshard.PrototypeReference
-	}
 }
 
 var genesisPulse = insolar.GenesisPulse.PulseNumber

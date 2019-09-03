@@ -67,6 +67,8 @@ func writeBootstrapConfig(outputDir string) {
 		VestingPeriodInPulses:  10,
 		VestingStepInPulses:    10,
 		LockupPeriodInPulses:   20,
+		MAShardCount:           10,
+		PKShardCount:           10,
 		Contracts: bootstrap.Contracts{
 			Insgocc: path.Join("bin", "insgocc"),
 			OutDir:  path.Join(baseDir(), "plugins"),

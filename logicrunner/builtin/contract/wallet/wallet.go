@@ -116,7 +116,7 @@ func (w *Wallet) Transfer(rootDomainRef insolar.Reference, assetName string, amo
 		return nil, fmt.Errorf("failed to transfer: %s", err.Error())
 	}
 
-	toFeeAccount, err := cc.GetFeeAccount()
+	toFeeAccount, err := cc.GetFeeMember()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get fee account: %s", err.Error())
 	}

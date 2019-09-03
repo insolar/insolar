@@ -196,6 +196,8 @@ func (g *Generator) Run(ctx context.Context) error {
 			return errors.Wrap(err, "generate not discovery certificates failed")
 		}
 	}
+	maShardCount := g.config.MAShardCount
+	pkShardCount := g.config.PKShardCount
 
 	inslog.Info("[ bootstrap ] create heavy genesis config ...")
 	contractsConfig := insolar.GenesisContractsConfig{
