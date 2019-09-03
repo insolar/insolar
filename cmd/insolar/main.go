@@ -25,6 +25,7 @@ import (
 	"strconv"
 
 	"github.com/insolar/insolar/api/requester"
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/platformpolicy"
@@ -105,12 +106,13 @@ func main() {
 	var (
 		paramsPath   string
 		rootAsCaller bool
+		maAsCaller   bool
 	)
 	var sendRequestCmd = &cobra.Command{
 		Use:   "send-request",
 		Short: "sends request",
 		Run: func(cmd *cobra.Command, args []string) {
-			sendRequest(sendURL, rootKeysFile, paramsPath, rootAsCaller)
+			sendRequest(sendURL, rootKeysFile, paramsPath, rootAsCaller, maAsCaller)
 		},
 	}
 	addURLFlag(sendRequestCmd.Flags())
@@ -120,6 +122,9 @@ func main() {
 		&paramsPath, "params", "p", "", "path to params file (default params.json)")
 	sendRequestCmd.Flags().BoolVarP(
 		&rootAsCaller, "root-caller", "r", false, "use root member as caller")
+	rootCmd.AddCommand(sendRequestCmd)
+	sendRequestCmd.Flags().BoolVarP(
+		&maAsCaller, "migration-admin-caller", "m", false, "use migration admin member as caller")
 	rootCmd.AddCommand(sendRequestCmd)
 
 	var (
@@ -154,6 +159,22 @@ func main() {
 	rootCmd.AddCommand(certgenCmd)
 
 	rootCmd.AddCommand(bootstrapCommand())
+
+	var (
+		configsOutputDir string
+	)
+	var generateDefaultConfigs = &cobra.Command{
+		Use:   "generate-config",
+		Short: "generate default configs for bootstrap, node and pulsar",
+		Run: func(cmd *cobra.Command, args []string) {
+			cfg := configuration.NewConfiguration()
+			writePulsarConfgi(cfg, configsOutputDir)
+			writeBootstrapConfig(configsOutputDir)
+			writeNodeConfgi(cfg, configsOutputDir)
+		},
+	}
+	generateDefaultConfigs.Flags().StringVarP(&configsOutputDir, "output_dir", "o", "", "path to output directory")
+	rootCmd.AddCommand(generateDefaultConfigs)
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
@@ -270,16 +291,21 @@ func generateKeysPair() {
 	mustWrite(os.Stdout, string(result))
 }
 
-func sendRequest(sendURL string, rootKeysFile string, paramsPath string, rootAsCaller bool) {
+func sendRequest(sendURL string, rootKeysFile string, paramsPath string, rootAsCaller bool, maAsCaller bool) {
 	requester.SetVerbose(verbose)
 
 	userCfg, err := requester.ReadUserConfigFromFile(rootKeysFile)
 	check("[ sendRequest ]", err)
 
-	if rootAsCaller || userCfg.Caller == "" {
+	if userCfg.Caller == "" {
 		info, err := requester.Info(sendURL)
 		check("[ sendRequest ]", err)
-		userCfg.Caller = info.RootMember
+		if rootAsCaller {
+			userCfg.Caller = info.RootMember
+		}
+		if maAsCaller {
+			userCfg.Caller = info.MigrationAdminMember
+		}
 	}
 
 	pPath := paramsPath

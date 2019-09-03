@@ -160,7 +160,14 @@ func (g *Complete) requestCertSign(ctx context.Context, discoveryNode insolar.Di
 }
 
 func (g *Complete) getNodeInfo(ctx context.Context, nodeRef *insolar.Reference) (string, string, error) {
-	res, err := g.ContractRequester.SendRequest(ctx, nodeRef, "GetNodeInfo", []interface{}{})
+	latest, err := g.PulseAccessor.GetLatestPulse(ctx)
+	if err != nil {
+		return "", "", errors.Wrap(err, "[ GetCert ] Can't get latest pulse")
+	}
+
+	res, _, err := g.ContractRequester.SendRequest(
+		ctx, nodeRef, "GetNodeInfo", []interface{}{}, latest.PulseNumber,
+	)
 	if err != nil {
 		return "", "", errors.Wrap(err, "[ GetCert ] Couldn't call GetNodeInfo")
 	}
@@ -232,16 +239,4 @@ func (g *Complete) OnPulseFromConsensus(ctx context.Context, pulse insolar.Pulse
 	}
 	logger.Infof("Set new current pulse number: %d", pulse.PulseNumber)
 	stats.Record(ctx, statPulse.M(int64(pulse.PulseNumber)))
-}
-
-func pulseProcessingWatchdog(ctx context.Context, pulse insolar.Pulse, done chan struct{}) {
-	logger := inslogger.FromContext(ctx)
-
-	go func() {
-		select {
-		case <-time.After(time.Second * time.Duration(pulse.NextPulseNumber-pulse.PulseNumber)):
-			logger.Errorf("Node stopped due to long pulse processing, pulse:%v", pulse.PulseNumber)
-		case <-done:
-		}
-	}()
 }

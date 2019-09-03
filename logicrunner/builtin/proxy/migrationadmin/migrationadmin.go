@@ -26,7 +26,7 @@ type CheckDaemonResponse struct {
 	Status string `json:"status"`
 }
 type VestingParams struct {
-	Lokup       int64 `json:"lokupInPulses"`
+	Lockup      int64 `json:"lockupInPulses"`
 	Vesting     int64 `json:"vestingInPulses"`
 	VestingStep int64 `json:"vestingStepInPulses"`
 }
@@ -76,7 +76,10 @@ func (r *ContractConstructorHolder) AsChild(objRef insolar.Reference) (*Migratio
 }
 
 // GetObject returns proxy object
-func GetObject(ref insolar.Reference) (r *MigrationAdmin) {
+func GetObject(ref insolar.Reference) *MigrationAdmin {
+	if !ref.IsObjectReference() {
+		return nil
+	}
 	return &MigrationAdmin{Reference: ref}
 }
 

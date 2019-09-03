@@ -75,17 +75,21 @@ type Options struct {
 
 	// Multiplier for boostrap retry time
 	TimeoutMult time.Duration
+
+	// The maximum time to wait for a new pulse
+	PulseWatchdogTimeout time.Duration
 }
 
 // ConfigureOptions convert daemon configuration to controller options
 func ConfigureOptions(conf configuration.Configuration) *Options {
 	config := conf.Host
 	return &Options{
-		TimeoutMult:      time.Duration(config.TimeoutMult) * time.Millisecond,
-		MinTimeout:       time.Duration(config.MinTimeout) * time.Millisecond,
-		MaxTimeout:       time.Duration(config.MaxTimeout) * time.Millisecond,
-		PacketTimeout:    15 * time.Second,
-		AckPacketTimeout: 5 * time.Second,
-		BootstrapTimeout: 90 * time.Second,
+		TimeoutMult:          time.Duration(config.TimeoutMult) * time.Millisecond,
+		MinTimeout:           time.Duration(config.MinTimeout) * time.Millisecond,
+		MaxTimeout:           time.Duration(config.MaxTimeout) * time.Millisecond,
+		PacketTimeout:        15 * time.Second,
+		AckPacketTimeout:     5 * time.Second,
+		BootstrapTimeout:     90 * time.Second,
+		PulseWatchdogTimeout: 30 * time.Second,
 	}
 }

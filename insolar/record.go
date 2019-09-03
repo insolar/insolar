@@ -49,6 +49,11 @@ func NewReference(id ID) *Reference {
 	return &global
 }
 
+func NewRecordReference(local ID) *Reference {
+	global := reference.NewRecordRef(local)
+	return &global
+}
+
 func NewGlobalReference(local ID, base ID) *Reference {
 	global := reference.NewGlobal(base, local)
 	return &global

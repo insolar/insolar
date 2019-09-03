@@ -164,7 +164,7 @@ func TestContractRequester_SendRequest(t *testing.T) {
 					}
 				})
 
-			result, err := cReq.SendRequest(ctx, &ref, "TestMethod", []interface{}{})
+			result, _, err := cReq.SendRequest(ctx, &ref, "TestMethod", []interface{}{}, insolar.GenesisPulse.PulseNumber)
 			require.NoError(t, err)
 			require.Equal(t, &reply.CallMethod{}, result)
 		})
@@ -275,7 +275,7 @@ func TestReceiveResult_UnwantedResult(t *testing.T) {
 	// unexpected result
 	res, err := serializeReply(msg)
 	require.NoError(t, err)
-	err = cReq.ReceiveResult(res)
+	err = cReq.ReceiveResult(ctx, res)
 	require.NoError(t, err)
 }
 
@@ -327,7 +327,7 @@ func TestReceiveResult_WantedResult(t *testing.T) {
 
 	res, err := serializeReply(msg)
 	require.NoError(t, err)
-	err = cReq.ReceiveResult(res)
+	err = cReq.ReceiveResult(ctx, res)
 
 	require.NoError(t, err)
 	require.Equal(t, 0, len(cReq.ResultMap))
@@ -381,7 +381,7 @@ func TestReceiveResult_UnwantedResultWithError(t *testing.T) {
 
 	res, err := serializeReply(msg)
 	require.NoError(t, err)
-	err = cReq.ReceiveResult(res)
+	err = cReq.ReceiveResult(ctx, res)
 	require.NoError(t, err)
 }
 

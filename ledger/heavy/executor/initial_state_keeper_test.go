@@ -90,9 +90,9 @@ func indexesFixture() []record.Index {
 func dropsFixture() []drop.Drop {
 	ids := gen.UniqueIDs(3)
 	return []drop.Drop{
-		{Split: false, Pulse: ids[0].Pulse(), Hash: ids[0].Bytes()},
-		{Split: true, Pulse: ids[1].Pulse(), Hash: ids[1].Bytes()},
-		{Split: false, Pulse: ids[2].Pulse(), Hash: ids[2].Bytes()},
+		{Split: false, Pulse: ids[0].Pulse()},
+		{Split: true, Pulse: ids[1].Pulse()},
+		{Split: false, Pulse: ids[2].Pulse()},
 	}
 }
 
@@ -212,7 +212,7 @@ func TestInitialStateKeeper_Get_EmptyAfterRestart(t *testing.T) {
 	jetAccessor := jet.NewAccessorMock(mc)
 	jetAccessor.AllMock.Expect(ctx, topSync).Return(jetIDs)
 
-	jetDrop := drop.Drop{Split: false, Hash: gen.ID().Bytes()}
+	jetDrop := drop.Drop{Split: false}
 	dropAccessor := drop.NewAccessorMock(mc)
 	dropAccessor.ForPulseMock.When(ctx, jetIDs[0], topSync).Then(jetDrop, nil)
 

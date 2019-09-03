@@ -165,7 +165,6 @@ func (m *Scope) activateObject(
 	}
 
 	stateRecord := record.Activate{
-		Domain:      domain,
 		Request:     obj,
 		Image:       prototype,
 		IsPrototype: isPrototype,
@@ -207,7 +206,6 @@ func (m *Scope) UpdateObject(
 	}
 
 	amendRecord := record.Amend{
-		Domain:      domain,
 		Request:     request,
 		Image:       *image,
 		IsPrototype: objDesc.IsPrototype(),
@@ -226,7 +224,6 @@ func (m *Scope) DeployCode(
 	machineType insolar.MachineType,
 ) (*insolar.ID, error) {
 	codeRec := record.Code{
-		Domain:      domain,
 		Request:     request,
 		Code:        code,
 		MachineType: machineType,

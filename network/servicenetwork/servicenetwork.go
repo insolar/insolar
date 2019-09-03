@@ -54,7 +54,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
-
+	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/storage"
 
 	"github.com/insolar/insolar/cryptography"
@@ -97,7 +97,6 @@ type ServiceNetwork struct {
 	CryptographyService insolar.CryptographyService        `inject:""`
 	CryptographyScheme  insolar.PlatformCryptographyScheme `inject:""`
 	KeyProcessor        insolar.KeyProcessor               `inject:""`
-	NodeKeeper          network.NodeKeeper                 `inject:""`
 	TerminationHandler  insolar.TerminationHandler         `inject:""`
 	ContractRequester   insolar.ContractRequester          `inject:""`
 
@@ -109,6 +108,7 @@ type ServiceNetwork struct {
 	TransportFactory transport.Factory        `inject:"subcomponent"`
 	PulseAccessor    storage.PulseAccessor    `inject:"subcomponent"`
 	PulseAppender    storage.PulseAppender    `inject:"subcomponent"`
+	NodeKeeper       network.NodeKeeper       `inject:"subcomponent"`
 	// DB               storage.DB               `inject:"subcomponent"`
 
 	HostNetwork network.HostNetwork
@@ -144,10 +144,14 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 
 	cert := n.CertificateManager.GetCertificate()
 
+	nodeNetwork, err := nodenetwork.NewNodeNetwork(n.cfg.Host.Transport, cert)
+	if err != nil {
+		return errors.Wrap(err, "failed to create NodeNetwork")
+	}
+
 	n.BaseGateway = &gateway.Base{Options: options}
 	n.Gatewayer = gateway.NewGatewayer(n.BaseGateway.NewGateway(ctx, insolar.NoNetworkState))
 
-	pulseStorage := storage.NewMemoryPulseStorage()
 	table := &routing.Table{}
 
 	n.cm.Inject(n,
@@ -155,15 +159,14 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		cert,
 		transport.NewFactory(n.cfg.Host.Transport),
 		hostNetwork,
+		nodeNetwork,
 		controller.NewRPCController(options),
 		controller.NewPulseController(),
 		bootstrap.NewRequester(options),
-		// db,
-		pulseStorage,
-		storage.NewMemoryCloudHashStorage(),
-		storage.NewMemorySnapshotStorage(),
+		storage.NewMemoryStorage(),
 		n.BaseGateway,
 		n.Gatewayer,
+		storage.NewMemoryStorage(),
 	)
 
 	n.datagramHandler = adapters.NewDatagramHandler()
@@ -285,6 +288,14 @@ func (n *ServiceNetwork) Stop(ctx context.Context) error {
 // HandlePulse process pulse from PulseController
 func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse insolar.Pulse, originalPacket network.ReceivedPacket) {
 	n.Gatewayer.Gateway().OnPulseFromPulsar(ctx, pulse, originalPacket)
+}
+
+func (n *ServiceNetwork) GetOrigin() insolar.NetworkNode {
+	return n.NodeKeeper.GetOrigin()
+}
+
+func (n *ServiceNetwork) GetAccessor(p insolar.PulseNumber) network.Accessor {
+	return n.NodeKeeper.GetAccessor(p)
 }
 
 // consensus handlers here

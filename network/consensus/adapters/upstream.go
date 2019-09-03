@@ -114,7 +114,7 @@ func (u *UpstreamController) ConsensusFinished(report api.UpstreamReport, expect
 
 	u.stateUpdater.UpdateState(
 		ctx,
-		insolar.PulseNumber(report.PulseNumber),
+		report.PulseNumber,
 		networkNodes,
 		expectedCensus.GetCloudStateHash().AsBytes(),
 	)
@@ -128,7 +128,7 @@ func (u *UpstreamController) ConsensusFinished(report api.UpstreamReport, expect
 	defer u.mu.RUnlock()
 
 	u.onFinished(ctx, network.Report{
-		PulseNumber:     insolar.PulseNumber(report.PulseNumber),
+		PulseNumber:     report.PulseNumber,
 		MemberPower:     report.MemberPower,
 		MemberMode:      report.MemberMode,
 		IsJoiner:        report.IsJoiner,

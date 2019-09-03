@@ -19,7 +19,6 @@ package deposit
 import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
-	"github.com/insolar/insolar/logicrunner/builtin/proxy/migrationadmin"
 	"github.com/insolar/insolar/logicrunner/common"
 )
 
@@ -68,7 +67,10 @@ func (r *ContractConstructorHolder) AsChild(objRef insolar.Reference) (*Deposit,
 }
 
 // GetObject returns proxy object
-func GetObject(ref insolar.Reference) (r *Deposit) {
+func GetObject(ref insolar.Reference) *Deposit {
+	if !ref.IsObjectReference() {
+		return nil
+	}
 	return &Deposit{Reference: ref}
 }
 
@@ -78,12 +80,14 @@ func GetPrototype() insolar.Reference {
 }
 
 // New is constructor
-func New(migrationDaemonRef insolar.Reference, txHash string, amount string, vestingParams *migrationadmin.VestingParams) *ContractConstructorHolder {
-	var args [4]interface{}
+func New(migrationDaemonRef insolar.Reference, txHash string, amount string, lockup int64, vesting int64, vestingStep int64) *ContractConstructorHolder {
+	var args [6]interface{}
 	args[0] = migrationDaemonRef
 	args[1] = txHash
 	args[2] = amount
-	args[3] = vestingParams
+	args[3] = lockup
+	args[4] = vesting
+	args[5] = vestingStep
 
 	var argsSerialized []byte
 	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)

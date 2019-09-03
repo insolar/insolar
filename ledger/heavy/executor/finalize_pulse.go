@@ -56,6 +56,9 @@ func FinalizePulse(ctx context.Context, pulses pulse.Calculator, backuper Backup
 		return
 	}
 
+	// record all jets count
+	stats.Record(ctx, statJets.M(int64(len(jetKeeper.Storage().All(ctx, newPulse)))))
+
 	logger.Debug("FinalizePulse starts")
 	bkpError := backuper.MakeBackup(ctx, newPulse)
 	if bkpError != nil && bkpError != ErrAlreadyDone && bkpError != ErrBackupDisabled {

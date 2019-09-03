@@ -71,13 +71,6 @@ func newSnapshotStorage() *snapshotStorage { // nolint
 	return &snapshotStorage{}
 }
 
-// NewMemorySnapshotStorage constructor creates PulseStorage
-func NewMemorySnapshotStorage() *MemorySnapshotStorage {
-	return &MemorySnapshotStorage{
-		entries: make(map[insolar.PulseNumber]*node.Snapshot),
-	}
-}
-
 type snapshotStorage struct { // nolint
 	DB   DB `inject:""`
 	lock sync.RWMutex
@@ -108,27 +101,4 @@ func (s *snapshotStorage) ForPulseNumber(pulse insolar.PulseNumber) (*node.Snaps
 		return nil, errors.Wrap(err, "[snapshotStorage] Failed to decode snapshot")
 	}
 	return result, nil
-}
-
-type MemorySnapshotStorage struct {
-	lock    sync.RWMutex
-	entries map[insolar.PulseNumber]*node.Snapshot
-}
-
-func (m *MemorySnapshotStorage) Append(pulse insolar.PulseNumber, snapshot *node.Snapshot) error {
-	m.lock.Lock()
-	defer m.lock.Unlock()
-
-	m.entries[pulse] = snapshot
-	return nil
-}
-
-func (m *MemorySnapshotStorage) ForPulseNumber(pulse insolar.PulseNumber) (*node.Snapshot, error) {
-	m.lock.RLock()
-	defer m.lock.RUnlock()
-
-	if s, ok := m.entries[pulse]; ok {
-		return s, nil
-	}
-	return nil, ErrNotFound
 }

@@ -29,12 +29,12 @@ var (
 
 var (
 	statDropInMemoryAddedCount = stats.Int64(
-		"dropstorage/added/count",
+		"dropstorage_added_count",
 		"How many drop-records have been saved in a drop storage",
 		stats.UnitDimensionless,
 	)
 	statDropInMemoryRemovedCount = stats.Int64(
-		"dropstorage/removed/count",
+		"dropstorage_removed_count",
 		"How many drop-records have been removed from a drop storage",
 		stats.UnitDimensionless,
 	)

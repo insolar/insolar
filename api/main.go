@@ -32,17 +32,14 @@ import (
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/network"
 
-	"github.com/insolar/insolar/application/extractor"
 	"github.com/insolar/insolar/insolar/jet"
 
 	"github.com/insolar/insolar/api/seedmanager"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/artifacts"
-	"github.com/insolar/insolar/platformpolicy"
 )
 
 // Runner implements Component for API
@@ -181,6 +178,7 @@ func (ar *Runner) IsAPIRunner() bool {
 
 // Start runs api server
 func (ar *Runner) Start(ctx context.Context) error {
+	logger := inslogger.FromContext(ctx)
 	hc := NewHealthChecker(ar.CertificateManager, ar.NodeNetwork, ar.PulseAccessor)
 
 	router := http.NewServeMux()
@@ -190,16 +188,15 @@ func (ar *Runner) Start(ctx context.Context) error {
 	router.HandleFunc("/healthcheck", hc.CheckHandler)
 	router.Handle(ar.cfg.RPC, ar.rpcServer)
 
-	inslog := inslogger.FromContext(ctx)
-	inslog.Info("Starting ApiRunner ...")
-	inslog.Info("Config: ", ar.cfg)
+	logger.Info("Starting ApiRunner ...")
+	logger.Info("Config: ", ar.cfg)
 	listener, err := net.Listen("tcp", ar.server.Addr)
 	if err != nil {
 		return errors.Wrap(err, "Can't start listening")
 	}
 	go func() {
 		if err := ar.server.Serve(listener); err != http.ErrServerClosed {
-			inslog.Error("Http server: ListenAndServe() error: ", err)
+			logger.Error("Http server: ListenAndServe() error: ", err)
 		}
 	}()
 	return nil
@@ -220,39 +217,4 @@ func (ar *Runner) Stop(ctx context.Context) error {
 	ar.SeedManager.Stop()
 
 	return nil
-}
-
-func (ar *Runner) getMemberPubKey(ctx context.Context, ref string) (crypto.PublicKey, error) { //nolint
-	ar.cacheLock.RLock()
-	publicKey, ok := ar.keyCache[ref]
-	ar.cacheLock.RUnlock()
-	if ok {
-		return publicKey, nil
-	}
-
-	reference, err := insolar.NewReferenceFromBase58(ref)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ getMemberPubKey ] Can't parse ref")
-	}
-	res, err := ar.ContractRequester.SendRequest(ctx, reference, "GetPublicKey", []interface{}{})
-	if err != nil {
-		return nil, errors.Wrap(err, "[ getMemberPubKey ] Can't get public key")
-	}
-
-	publicKeyString, err := extractor.PublicKeyResponse(res.(*reply.CallMethod).Result)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ getMemberPubKey ] Can't extract response")
-	}
-
-	kp := platformpolicy.NewKeyProcessor()
-	publicKey, err = kp.ImportPublicKeyPEM([]byte(publicKeyString))
-	if err != nil {
-		return nil, errors.Wrap(err, "Failed to convert public key")
-	}
-
-	ar.cacheLock.Lock()
-	defer ar.cacheLock.Unlock()
-
-	ar.keyCache[ref] = publicKey
-	return publicKey, nil
 }

@@ -54,10 +54,7 @@ package tests
 
 import (
 	"context"
-	"fmt"
 	"testing"
-
-	"github.com/fortytw2/leaktest"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
@@ -67,130 +64,70 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var (
-	consensusMin    = 5 // minimum count of participants that can survive when one node leaves
-	consensusMinMsg = fmt.Sprintf("skip test for bootstrap nodes < %d", consensusMin)
-)
-
-func serviceNetworkManyBootstraps(t *testing.T) *consensusSuite {
-	cs := newConsensusSuite(t, 5, 0)
-	cs.SetupTest()
-
-	return cs
-}
-
-// Consensus suite tests
-
 func TestNetworkConsensusManyTimes(t *testing.T) {
-	defer leaktest.Check(t)()
+	s := startNetworkSuite(t)
+	defer s.stopNetworkSuite()
 
-	s := serviceNetworkManyBootstraps(t)
-	defer s.TearDownTest()
-
-	s.waitForConsensus(9)
+	s.waitForConsensus(5)
 	s.AssertActiveNodesCountDelta(0)
 }
 
 func TestJoinerNodeConnect(t *testing.T) {
-	defer leaktest.Check(t)()
+	s := startNetworkSuite(t)
+	defer s.stopNetworkSuite()
 
-	s := serviceNetworkManyBootstraps(t)
-	defer s.TearDownTest()
+	joinerNode := s.startNewNetworkNode("JoinerNode")
+	defer s.StopNode(joinerNode)
 
-	testNode := s.newNetworkNode("JoinerNode")
-	s.preInitNode(testNode)
-
-	s.InitNode(testNode)
-	s.StartNode(testNode)
-	defer func(s *consensusSuite) {
-		s.StopNode(testNode)
-	}(s)
-
-	s.waitForConsensus(1)
-
-	s.AssertActiveNodesCountDelta(0)
-
-	s.waitForConsensus(2)
+	assert.True(t, s.waitForNodeJoin(joinerNode.id, maxPulsesForJoin), "JoinerNode not found in active list after 3 pulses")
 
 	s.AssertActiveNodesCountDelta(1)
-	require.Equal(s.t, insolar.CompleteNetworkState, testNode.serviceNetwork.Gatewayer.Gateway().GetState())
 }
 
 func TestNodeConnectInvalidVersion(t *testing.T) {
-	t.Skip("Behavior changed, fix assertion in test needed")
-	s := serviceNetworkManyBootstraps(t)
-	defer s.TearDownTest()
+	s := startNetworkSuite(t)
+	defer s.stopNetworkSuite()
 
 	testNode := s.newNetworkNode("testNode")
 	s.preInitNode(testNode)
+	s.InitNode(testNode)
 	testNode.serviceNetwork.NodeKeeper.GetOrigin().(node.MutableNode).SetVersion("ololo")
 	require.Equal(t, "ololo", testNode.serviceNetwork.NodeKeeper.GetOrigin().Version())
-
-	s.InitNode(testNode)
-	err := testNode.componentManager.Start(s.fixture().ctx)
-	defer func(s *consensusSuite) {
-		s.StopNode(testNode)
-	}(s)
+	err := testNode.componentManager.Start(s.ctx)
 	assert.NoError(t, err)
+	defer s.StopNode(testNode)
 
-	s.waitForConsensus(2)
-	s.AssertActiveNodesCountDelta(0)
-
+	assert.False(t, s.waitForNodeJoin(testNode.id, maxPulsesForJoin), "testNode joined with incorrect version")
 }
 
 func TestNodeLeave(t *testing.T) {
-	t.Skip("FIXME")
-	defer leaktest.Check(t)()
+	s := startNetworkSuite(t)
+	defer s.stopNetworkSuite()
 
-	s := serviceNetworkManyBootstraps(t)
-	defer s.TearDownTest()
-
-	s.CheckBootstrapCount()
-
-	testNode := s.newNetworkNode("testNode")
-	s.preInitNode(testNode)
-
-	s.InitNode(testNode)
-	s.StartNode(testNode)
-
-	s.waitForConsensus(2)
+	testNode := s.startNewNetworkNode("testNode")
+	assert.True(t, s.waitForNodeJoin(testNode.id, 3), "testNode not found in active list after 3 pulses")
 
 	s.AssertActiveNodesCountDelta(1)
 	s.AssertWorkingNodesCountDelta(1)
-	require.Equal(s.t, insolar.CompleteNetworkState, testNode.serviceNetwork.Gatewayer.Gateway().GetState())
 
 	s.StopNode(testNode)
 
-	s.waitForConsensus(3)
+	assert.True(t, s.waitForNodeLeave(testNode.id, 3), "testNode found in active list after 3 pulses")
 
 	s.AssertWorkingNodesCountDelta(0)
 	s.AssertActiveNodesCountDelta(0)
 }
 
 func TestNodeGracefulLeave(t *testing.T) {
-	t.Skip("FIXME")
-	defer leaktest.Check(t)()
+	s := startNetworkSuite(t)
+	defer s.stopNetworkSuite()
 
-	s := serviceNetworkManyBootstraps(t)
-	defer s.TearDownTest()
-
-	s.CheckBootstrapCount()
-
-	testNode := s.newNetworkNode("testNode")
-	s.preInitNode(testNode)
-
-	s.InitNode(testNode)
-	s.StartNode(testNode)
-
-	s.waitForConsensus(2)
-
-	s.AssertActiveNodesCountDelta(1)
-	s.AssertWorkingNodesCountDelta(1)
-	require.Equal(s.t, insolar.CompleteNetworkState, testNode.serviceNetwork.Gatewayer.Gateway().GetState())
+	testNode := s.startNewNetworkNode("testNode")
+	assert.True(t, s.waitForNodeJoin(testNode.id, 3), "testNode not found in active list after 3 pulses")
 
 	s.GracefulStop(testNode)
 
-	s.waitForConsensus(3)
+	assert.True(t, s.waitForNodeLeave(testNode.id, 3), "testNode found in active list after 3 pulses")
 
 	s.AssertWorkingNodesCountDelta(0)
 	s.AssertActiveNodesCountDelta(0)
@@ -198,10 +135,8 @@ func TestNodeGracefulLeave(t *testing.T) {
 
 func TestNodeLeaveAtETA(t *testing.T) {
 	t.Skip("FIXME")
-	s := serviceNetworkManyBootstraps(t)
-	defer s.TearDownTest()
-
-	s.CheckBootstrapCount()
+	s := startNetworkSuite(t)
+	defer s.stopNetworkSuite()
 
 	testNode := s.newNetworkNode("testNode")
 	s.preInitNode(testNode)
@@ -222,13 +157,13 @@ func TestNodeLeaveAtETA(t *testing.T) {
 	s.AssertActiveNodesCountDelta(1)
 	s.AssertWorkingNodesCountDelta(1)
 
-	pulse, err := s.fixture().bootstrapNodes[0].serviceNetwork.PulseAccessor.GetLatestPulse(s.fixture().ctx)
+	pulse, err := s.bootstrapNodes[0].serviceNetwork.PulseAccessor.GetLatestPulse(s.ctx)
 	require.NoError(t, err)
 
 	// next pulse will be last for this node
 	// leaving in 3 pulses
 	pulseDelta := pulse.NextPulseNumber - pulse.PulseNumber
-	testNode.serviceNetwork.Leave(s.fixture().ctx, pulse.PulseNumber+3*pulseDelta)
+	testNode.serviceNetwork.Leave(s.ctx, pulse.PulseNumber+3*pulseDelta)
 
 	// node still active and working
 	s.waitForConsensus(1)
@@ -248,13 +183,10 @@ func TestNodeLeaveAtETA(t *testing.T) {
 
 func TestNodeComeAfterAnotherNodeSendLeaveETA(t *testing.T) {
 	t.Skip("FIXME")
-	s := serviceNetworkManyBootstraps(t)
-	defer s.TearDownTest()
+	s := startNetworkSuite(t)
+	defer s.stopNetworkSuite()
 
 	t.Skip("fix testcase in TESTNET 2.0")
-	if len(s.fixture().bootstrapNodes) < consensusMin {
-		t.Skip(consensusMinMsg)
-	}
 
 	leavingNode := s.newNetworkNode("leavingNode")
 	s.preInitNode(leavingNode)
@@ -267,15 +199,15 @@ func TestNodeComeAfterAnotherNodeSendLeaveETA(t *testing.T) {
 
 	// wait for node will be added at active list
 	s.waitForConsensus(2)
-	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor(0).GetActiveNodes()
+	activeNodes := s.bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor(0).GetActiveNodes()
 	require.Equal(t, s.getNodesCount()+1, len(activeNodes))
 
-	pulse, err := s.fixture().bootstrapNodes[0].serviceNetwork.PulseAccessor.GetLatestPulse(s.fixture().ctx)
+	pulse, err := s.bootstrapNodes[0].serviceNetwork.PulseAccessor.GetLatestPulse(s.ctx)
 	require.NoError(t, err)
 
 	// leaving in 3 pulses
 	pulseDelta := pulse.NextPulseNumber - pulse.PulseNumber
-	leavingNode.serviceNetwork.Leave(s.fixture().ctx, pulse.PulseNumber+3*pulseDelta)
+	leavingNode.serviceNetwork.Leave(s.ctx, pulse.PulseNumber+3*pulseDelta)
 
 	// wait for leavingNode will be marked as leaving
 	s.waitForConsensus(1)
@@ -293,8 +225,8 @@ func TestNodeComeAfterAnotherNodeSendLeaveETA(t *testing.T) {
 	s.waitForConsensus(2)
 
 	// newNode doesn't have workingNodes
-	activeNodes = s.fixture().bootstrapNodes[0].GetActiveNodes()
-	workingNodes := s.fixture().bootstrapNodes[0].GetWorkingNodes()
+	activeNodes = s.bootstrapNodes[0].GetActiveNodes()
+	workingNodes := s.bootstrapNodes[0].GetWorkingNodes()
 	newNodeWorkingNodes := newNode.GetWorkingNodes()
 
 	require.Equal(t, s.getNodesCount()+2, len(activeNodes))
@@ -303,8 +235,8 @@ func TestNodeComeAfterAnotherNodeSendLeaveETA(t *testing.T) {
 
 	// newNode have to have same working node list as other nodes, but it doesn't because it miss leaving claim
 	s.waitForConsensus(1)
-	activeNodes = s.fixture().bootstrapNodes[0].GetActiveNodes()
-	workingNodes = s.fixture().bootstrapNodes[0].GetWorkingNodes()
+	activeNodes = s.bootstrapNodes[0].GetActiveNodes()
+	workingNodes = s.bootstrapNodes[0].GetWorkingNodes()
 	newNodeWorkingNodes = newNode.GetWorkingNodes()
 
 	require.Equal(t, s.getNodesCount()+2, len(activeNodes))
@@ -314,7 +246,7 @@ func TestNodeComeAfterAnotherNodeSendLeaveETA(t *testing.T) {
 
 	// leaveNode leaving, newNode still ok
 	s.waitForConsensus(1)
-	activeNodes = s.fixture().bootstrapNodes[0].GetActiveNodes()
+	activeNodes = s.bootstrapNodes[0].GetActiveNodes()
 	workingNodes = newNode.GetWorkingNodes()
 	newNodeWorkingNodes = newNode.GetWorkingNodes()
 
@@ -325,14 +257,13 @@ func TestNodeComeAfterAnotherNodeSendLeaveETA(t *testing.T) {
 
 func TestDiscoveryDown(t *testing.T) {
 	t.Skip("FIXME")
-	s := serviceNetworkManyBootstraps(t)
-	defer s.TearDownTest()
+	s := startNetworkSuite(t)
+	defer s.stopNetworkSuite()
 
-	s.CheckBootstrapCount()
-	s.StopNode(s.fixture().bootstrapNodes[0])
-	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
+	s.StopNode(s.bootstrapNodes[0])
+	s.waitForConsensusExcept(2, s.bootstrapNodes[0].id)
 	for i := 1; i < s.getNodesCount(); i++ {
-		activeNodes := s.fixture().bootstrapNodes[i].GetWorkingNodes()
+		activeNodes := s.bootstrapNodes[i].GetWorkingNodes()
 		require.Equal(t, s.getNodesCount()-1, len(activeNodes))
 	}
 }
@@ -346,64 +277,60 @@ func flushNodeKeeper(keeper network.NodeKeeper) {
 
 func TestDiscoveryRestart(t *testing.T) {
 	t.Skip("FIXME")
-	s := serviceNetworkManyBootstraps(t)
-	defer s.TearDownTest()
-
-	s.CheckBootstrapCount()
+	s := startNetworkSuite(t)
+	defer s.stopNetworkSuite()
 
 	s.waitForConsensus(2)
 
 	log.Info("Discovery node stopping...")
-	err := s.fixture().bootstrapNodes[0].serviceNetwork.Stop(context.Background())
-	flushNodeKeeper(s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper)
+	err := s.bootstrapNodes[0].serviceNetwork.Stop(context.Background())
+	flushNodeKeeper(s.bootstrapNodes[0].serviceNetwork.NodeKeeper)
 	log.Info("Discovery node stopped...")
 	require.NoError(t, err)
 
-	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
-	activeNodes := s.fixture().bootstrapNodes[1].GetWorkingNodes()
+	s.waitForConsensusExcept(2, s.bootstrapNodes[0].id)
+	activeNodes := s.bootstrapNodes[1].GetWorkingNodes()
 	require.Equal(t, s.getNodesCount()-1, len(activeNodes))
 
 	log.Info("Discovery node starting...")
-	err = s.fixture().bootstrapNodes[0].serviceNetwork.Start(context.Background())
+	err = s.bootstrapNodes[0].serviceNetwork.Start(context.Background())
 	log.Info("Discovery node started")
 	require.NoError(t, err)
 
-	s.waitForConsensusExcept(3, s.fixture().bootstrapNodes[0].id)
-	activeNodes = s.fixture().bootstrapNodes[1].GetWorkingNodes()
+	s.waitForConsensusExcept(3, s.bootstrapNodes[0].id)
+	activeNodes = s.bootstrapNodes[1].GetWorkingNodes()
 	require.Equal(t, s.getNodesCount(), len(activeNodes))
-	activeNodes = s.fixture().bootstrapNodes[0].GetWorkingNodes()
+	activeNodes = s.bootstrapNodes[0].GetWorkingNodes()
 	require.Equal(t, s.getNodesCount(), len(activeNodes))
 }
 
 func TestDiscoveryRestartNoWait(t *testing.T) {
 	t.Skip("FIXME")
-	s := serviceNetworkManyBootstraps(t)
-	defer s.TearDownTest()
-
-	s.CheckBootstrapCount()
+	s := startNetworkSuite(t)
+	defer s.stopNetworkSuite()
 
 	s.waitForConsensus(2)
 
 	log.Info("Discovery node stopping...")
-	err := s.fixture().bootstrapNodes[0].serviceNetwork.Stop(context.Background())
-	flushNodeKeeper(s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper)
+	err := s.bootstrapNodes[0].serviceNetwork.Stop(context.Background())
+	flushNodeKeeper(s.bootstrapNodes[0].serviceNetwork.NodeKeeper)
 	log.Info("Discovery node stopped...")
 	require.NoError(t, err)
 
 	go func(s *consensusSuite) {
 		log.Info("Discovery node starting...")
-		err = s.fixture().bootstrapNodes[0].serviceNetwork.Start(context.Background())
+		err = s.bootstrapNodes[0].serviceNetwork.Start(context.Background())
 		log.Info("Discovery node started")
 		require.NoError(t, err)
 	}(s)
 
-	s.waitForConsensusExcept(4, s.fixture().bootstrapNodes[0].id)
-	activeNodes := s.fixture().bootstrapNodes[1].GetActiveNodes()
+	s.waitForConsensusExcept(4, s.bootstrapNodes[0].id)
+	activeNodes := s.bootstrapNodes[1].GetActiveNodes()
 	require.Equal(t, s.getNodesCount(), len(activeNodes))
-	s.waitForConsensusExcept(1, s.fixture().bootstrapNodes[0].id)
-	activeNodes = s.fixture().bootstrapNodes[0].GetWorkingNodes()
+	s.waitForConsensusExcept(1, s.bootstrapNodes[0].id)
+	activeNodes = s.bootstrapNodes[0].GetWorkingNodes()
 	require.Equal(t, s.getNodesCount(), len(activeNodes))
-	activeNodes = s.fixture().bootstrapNodes[1].GetWorkingNodes()
+	activeNodes = s.bootstrapNodes[1].GetWorkingNodes()
 	require.Equal(t, s.getNodesCount(), len(activeNodes))
 }
 

@@ -48,6 +48,8 @@ type Config struct {
 	MembersKeysDir string `mapstructure:"members_keys_dir"`
 	// DiscoveryKeysDir is a default directory where save keys for discovery nodes.
 	DiscoveryKeysDir string `mapstructure:"discovery_keys_dir"`
+	// NotDiscoveryKeysDir is a default directory where save keys for discovery nodes.
+	NotDiscoveryKeysDir string `mapstructure:"not_discovery_keys_dir"`
 	// KeysNameFormat is the default key file name format for discovery nodes.
 	KeysNameFormat string `mapstructure:"keys_name_format"`
 	// ReuseKeys is a flag to reuse discovery nodes keys (don't use if your not understand how it works)
@@ -64,9 +66,9 @@ type Config struct {
 	VestingPeriodInPulses int64 `mapstructure:"vesting_pulse_period"`
 	// VestingPeriodInPulses - interval of count pulses for one step of partial release.
 	VestingStepInPulses int64 `mapstructure:"vesting_pulse_step"`
-	// LokupPeriodInPulses - interval of count pulses for the full period of hold.
-	LokupPeriodInPulses int64 `mapstructure:"lokup_pulse_period"`
-	Contracts           Contracts
+	// LockupPeriodInPulses - interval of count pulses for the full period of hold.
+	LockupPeriodInPulses int64 `mapstructure:"lockup_pulse_period"`
+	Contracts            Contracts
 
 	// Discovery settings.
 
@@ -97,6 +99,10 @@ func hasMinimumRolesSet(conf *Config) error {
 
 	for _, discNode := range conf.DiscoveryNodes {
 		delete(minRequiredRolesSet, discNode.Role)
+	}
+
+	for _, node := range conf.Nodes {
+		delete(minRequiredRolesSet, node.Role)
 	}
 
 	if len(minRequiredRolesSet) != 0 {

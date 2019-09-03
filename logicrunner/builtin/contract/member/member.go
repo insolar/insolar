@@ -46,6 +46,7 @@ type Member struct {
 
 const (
 	XNS                 = "XNS"
+	CONVERSION          = "10"
 	ACCOUNT_START_VALUE = "10000000000"
 )
 

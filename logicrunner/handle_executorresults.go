@@ -30,39 +30,53 @@ import (
 	"github.com/insolar/insolar/instrumentation/instracer"
 )
 
-type initializeExecutionState struct {
+type HandleExecutorResults struct {
 	dep *Dependencies
-	msg *payload.ExecutorResults
+
+	meta payload.Meta
 }
 
-func (p *initializeExecutionState) Proceed(ctx context.Context) error {
-	ref := p.msg.RecordRef
-
-	broker := p.dep.StateStorage.UpsertExecutionState(ref)
-	broker.PrevExecutorPendingResult(ctx, p.msg.Pending)
-
-	if p.msg.LedgerHasMoreRequests {
-		broker.MoreRequestsOnLedger(ctx)
+func checkPayloadExecutorResults(ctx context.Context, results payload.ExecutorResults) error {
+	if !results.Caller.IsEmpty() && !results.Caller.IsObjectReference() {
+		return errors.Errorf("results.Caller should be ObjectReference; ref=%s", results.Caller.String())
+	}
+	if !results.RecordRef.IsObjectReference() {
+		return errors.Errorf("results.RecordRef should be ObjectReference; ref=%s", results.RecordRef.String())
 	}
 
-	if len(p.msg.Queue) > 0 {
-		transcripts := make([]*common.Transcript, len(p.msg.Queue))
-		for i, qe := range p.msg.Queue {
-			transcripts[i] = common.NewTranscriptCloneContext(qe.ServiceData, qe.RequestRef, *qe.Incoming)
+	for _, elem := range results.Queue {
+		if !elem.RequestRef.IsRecordScope() {
+			return errors.Errorf("results.RecordRef should be RecordReference; ref=%s", results.RecordRef.String())
 		}
-		broker.AddRequestsFromPrevExecutor(ctx, transcripts...)
+		if err := checkIncomingRequest(ctx, elem.Incoming); err != nil {
+			return errors.Wrap(err, "failed to check ExecutionQueue of ExecutorResults")
+		}
 	}
 
 	return nil
 }
 
-type HandleExecutorResults struct {
-	dep *Dependencies
+func (h *HandleExecutorResults) Present(ctx context.Context, f flow.Flow) error {
+	message := payload.ExecutorResults{}
+	err := message.Unmarshal(h.meta.Payload)
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal message")
+	}
 
-	Message payload.Meta
+	ctx, logger := inslogger.WithField(ctx, "object", message.RecordRef.String())
+	logger.Debug("handling ExecutorResults")
+
+	ctx, span := instracer.StartSpan(ctx, "HandleExecutorResults.Present")
+	defer span.End()
+
+	if err := checkPayloadExecutorResults(ctx, message); err != nil {
+		return err
+	}
+
+	return h.handleMessage(ctx, message)
 }
 
-func (h *HandleExecutorResults) realHandleExecutorState(ctx context.Context, f flow.Flow, msg payload.ExecutorResults) error {
+func (h *HandleExecutorResults) handleMessage(ctx context.Context, msg payload.ExecutorResults) error {
 	done, err := h.dep.WriteAccessor.Begin(ctx, flow.Pulse(ctx))
 	if err != nil {
 		if err == writecontroller.ErrWriteClosed {
@@ -72,35 +86,20 @@ func (h *HandleExecutorResults) realHandleExecutorState(ctx context.Context, f f
 	}
 	defer done()
 
-	procInitializeExecutionState := initializeExecutionState{
-		dep: h.dep,
-		msg: &msg,
-	}
-	err = f.Procedure(ctx, &procInitializeExecutionState, false)
-	if err != nil {
-		return errors.Wrap(err, "[ HandleExecutorResults ] Failed to initialize execution state")
+	broker := h.dep.StateStorage.UpsertExecutionState(msg.RecordRef)
+	broker.PrevExecutorPendingResult(ctx, msg.Pending)
+
+	if msg.LedgerHasMoreRequests {
+		broker.MoreRequestsOnLedger(ctx)
 	}
 
-	return nil
-}
-
-func (h *HandleExecutorResults) Present(ctx context.Context, f flow.Flow) error {
-	logger := inslogger.FromContext(ctx)
-
-	logger.Debug("HandleExecutorResults.Present starts ...")
-
-	message := payload.ExecutorResults{}
-	err := message.Unmarshal(h.Message.Payload)
-	if err != nil {
-		return errors.Wrap(err, "failed to unmarshal message")
+	if len(msg.Queue) > 0 {
+		transcripts := make([]*common.Transcript, len(msg.Queue))
+		for i, qe := range msg.Queue {
+			transcripts[i] = common.NewTranscriptCloneContext(qe.ServiceData, qe.RequestRef, *qe.Incoming)
+		}
+		broker.AddRequestsFromPrevExecutor(ctx, transcripts...)
 	}
 
-	ctx, span := instracer.StartSpan(ctx, "HandleExecutorResults.Present")
-	defer span.End()
-
-	err = h.realHandleExecutorState(ctx, f, message)
-	if err != nil {
-		return err
-	}
 	return nil
 }

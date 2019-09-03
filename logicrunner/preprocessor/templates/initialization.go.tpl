@@ -83,7 +83,7 @@ func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
             /* isPrototype:  */ true,
             /* childPointer: */ nil,
             /* memory:       */ nil,
-            /* parent:       */ XXX_rootdomain.RootDomain.Ref(),
+            /* parent:       */ XXX_rootdomain.RootDomain.Reference(),
         ))
     }
     {{ end }}
