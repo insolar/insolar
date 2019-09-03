@@ -29,8 +29,6 @@ import (
 	"github.com/insolar/rpc/v2/json2"
 )
 
-const defaultError = -32000
-
 const (
 	ParseError                 = -31700
 	ParseErrorMessage          = "Parsing error on the server side: received an invalid JSON."
