@@ -119,11 +119,13 @@ func NewLedger() Ledger {
 		LightChainLimit: 5, // 5 pulses
 
 		Backup: Backup{
-			Enabled:          false,
-			DirNameTemplate:  "pulse-%d",
-			BackupWaitPeriod: 60,
-			MetaInfoFile:     "meta.json",
-			BackupFile:       "incr.bkp",
+			Enabled:            false,
+			DirNameTemplate:    "pulse-%d",
+			BackupWaitPeriod:   60,
+			MetaInfoFile:       "meta.json",
+			BackupFile:         "incr.bkp",
+			ConfirmFile:        "BACKUPED",
+			LastBackupInfoFile: "last_backup_info.json",
 		},
 
 		CleanerDelay: 3, // 3 pulses
