@@ -213,7 +213,7 @@ func writeLastBackupFile(to string, lastBackupedVersion uint64) error {
 	}
 
 	err = ioutil.WriteFile(to, rawInfo, 0600)
-	return errors.Wrap(err, "failed to MarshalIndent")
+	return errors.Wrap(err, "failed to write to file")
 }
 
 func finalizeLastPulse(ctx context.Context, bdb store.DB) (insolar.PulseNumber, error) {

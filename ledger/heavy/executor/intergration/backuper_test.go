@@ -37,7 +37,10 @@ import (
 	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/store"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/heavy/executor"
 	"github.com/stretchr/testify/require"
 )
@@ -64,6 +67,7 @@ func addLastBackupFile(t *testing.T, to string, lastBackupedVersion uint64) {
 	require.NoError(t, err)
 
 	err = ioutil.WriteFile(to, rawInfo, 0600)
+	println("============ addLastBackupFile: ", to)
 	require.NoError(t, err)
 }
 
@@ -187,7 +191,7 @@ func TestBackuper(t *testing.T) {
 		require.NoError(t, err)
 		defer os.RemoveAll(recovTmpDir)
 
-		prepareDirForBackup(t, recovTmpDir)
+		createDirForBackup(t, recovTmpDir)
 
 		for i := 0; i < numIterations+1; i++ {
 			bkpFileName := filepath.Join(
@@ -243,8 +247,21 @@ func init() {
 	}
 }
 
-// prepareDirForBackup uses backupmanager utility to create empty badger
-func prepareDirForBackup(t *testing.T, dbDir string) {
+// prepareBackup uses backupmanager utility to prepare backup for usage
+func prepareBackup(t *testing.T, dbDir string, lastBackupInfoFile string) {
+	println("=====> Start preparing backup")
+	cmd := exec.Command(binaryPath+"/backupmanager", "prepare_backup", "-d", dbDir, "-l", lastBackupInfoFile)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err := cmd.Start()
+	require.NoError(t, err)
+	err = cmd.Wait()
+	require.NoError(t, err)
+	println("<===== Finish preparing backup")
+}
+
+// createDirForBackup uses backupmanager utility to create empty badger
+func createDirForBackup(t *testing.T, dbDir string) {
 	println("=====> Start creating db for backup")
 	cmd := exec.Command(binaryPath+"/backupmanager", "create", "-d", dbDir)
 	cmd.Stdout = os.Stdout
@@ -337,7 +354,7 @@ func TestBackup_UsageOfLastBackupedVersion(t *testing.T) {
 	recovTmpDir, err := ioutil.TempDir("", "bdb-test-")
 	require.NoError(t, err)
 	defer os.RemoveAll(recovTmpDir)
-	prepareDirForBackup(t, recovTmpDir)
+	createDirForBackup(t, recovTmpDir)
 
 	bkpFileName := filepath.Join(
 		cfg.Backup.TargetDirectory,
@@ -384,7 +401,7 @@ func TestBackupSendDeleteRecords(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(recovTmpDir)
 
-	prepareDirForBackup(t, recovTmpDir)
+	createDirForBackup(t, recovTmpDir)
 	for i := 0; i < 2; i++ {
 		bkpFileName := filepath.Join(
 			cfg.Backup.TargetDirectory,
@@ -418,4 +435,66 @@ func TestBackupSendDeleteRecords(t *testing.T) {
 
 	_, err = recoveredDB.Get(key)
 	require.EqualError(t, err, store.ErrNotFound.Error())
+}
+
+func TestBackup_FullCycle(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+	tmpdir, err := ioutil.TempDir("", "bdb-test-")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpdir)
+
+	cfg := makeBackuperConfig(t, t.Name(), tmpdir)
+	defer clearData(t, cfg)
+
+	db, err := store.NewBadgerDB(badger.DefaultOptions(tmpdir))
+	require.NoError(t, err)
+	defer db.Stop(context.Background())
+
+	bm, err := executor.NewBackupMaker(context.Background(), db, cfg, insolar.GenesisPulse.PulseNumber, db)
+	require.NoError(t, err)
+
+	testPulse := insolar.GenesisPulse.PulseNumber + 10
+	testJet := insolar.ZeroJetID
+
+	pulsesDB := pulse.NewDB(db)
+	err = pulsesDB.Append(ctx, insolar.Pulse{PulseNumber: insolar.GenesisPulse.PulseNumber})
+	require.NoError(t, err)
+	err = pulsesDB.Append(ctx, insolar.Pulse{PulseNumber: testPulse})
+	require.NoError(t, err)
+
+	jetsDB := jet.NewDBStore(db)
+	err = jetsDB.Update(ctx, testPulse, true, testJet)
+	require.NoError(t, err)
+
+	jetKeeper := executor.NewJetKeeper(jetsDB, db, pulsesDB)
+
+	err = jetKeeper.AddHotConfirmation(ctx, testPulse, testJet, false)
+	require.NoError(t, err)
+	err = jetKeeper.AddDropConfirmation(ctx, testPulse, testJet, false)
+	require.NoError(t, err)
+
+	require.Equal(t, insolar.GenesisPulse.PulseNumber, jetKeeper.TopSyncPulse())
+
+	err = bm.MakeBackup(ctx, testPulse)
+	require.NoError(t, err)
+
+	recovTmpDir, err := ioutil.TempDir("", "bdb-test-")
+	require.NoError(t, err)
+	defer os.RemoveAll(recovTmpDir)
+	createDirForBackup(t, recovTmpDir)
+	bkpFileName := filepath.Join(
+		cfg.Backup.TargetDirectory,
+		fmt.Sprintf(cfg.Backup.DirNameTemplate, testPulse),
+		cfg.Backup.BackupFile,
+	)
+	loadIncrementalBackup(t, recovTmpDir, bkpFileName)
+	prepareBackup(t, recovTmpDir, filepath.Base(cfg.Backup.LastBackupInfoFile))
+	recoveredDB, err := store.NewBadgerDB(badger.DefaultOptions(recovTmpDir))
+	require.NoError(t, err)
+	defer recoveredDB.Stop(context.Background())
+
+	recoveredJetKeeper := executor.NewJetKeeper(jet.NewDBStore(recoveredDB), recoveredDB, pulse.NewDB(recoveredDB))
+
+	// pulse must be finalized when prepare_backup complete without error
+	require.Equal(t, testPulse, recoveredJetKeeper.TopSyncPulse())
 }
