@@ -31,13 +31,14 @@ import (
 // MigrationAdmin manage and change status for  migration daemon.
 type MigrationAdmin struct {
 	foundation.BaseContract
+
 	MigrationAdminMember   insolar.Reference
 	MigrationAddressShards [insolar.GenesisAmountMigrationAddressShards]insolar.Reference
 	VestingParams          *VestingParams
 }
 
 type VestingParams struct {
-	Lokup       int64 `json:"lokupInPulses"`
+	Lockup      int64 `json:"lockupInPulses"`
 	Vesting     int64 `json:"vestingInPulses"`
 	VestingStep int64 `json:"vestingStepInPulses"`
 }
