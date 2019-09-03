@@ -128,5 +128,5 @@ func UniqueReferences(a int) []insolar.Reference {
 }
 
 func ReferenceWithPulse(pn insolar.PulseNumber) insolar.Reference {
-	return *insolar.NewRecordReference(IDWithPulse(pn))
+	return *insolar.NewReference(IDWithPulse(pn))
 }
