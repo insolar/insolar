@@ -165,7 +165,7 @@ func main() {
 	)
 	var generateDefaultConfigs = &cobra.Command{
 		Use:   "generate-config",
-		Short: "sends request",
+		Short: "generate default configs for bootstrap, node and pulsar",
 		Run: func(cmd *cobra.Command, args []string) {
 			cfg := configuration.NewConfiguration()
 			writePulsarConfgi(cfg, configsOutputDir)
@@ -173,7 +173,7 @@ func main() {
 			writeNodeConfgi(cfg, configsOutputDir)
 		},
 	}
-	sendRequestCmd.Flags().StringVarP(&configsOutputDir, "output_dir", "o", "", "path to output directory")
+	generateDefaultConfigs.Flags().StringVarP(&configsOutputDir, "output_dir", "o", "", "path to output directory")
 	rootCmd.AddCommand(generateDefaultConfigs)
 
 	if err := rootCmd.Execute(); err != nil {
