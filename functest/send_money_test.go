@@ -105,7 +105,6 @@ func TestTransferMoneyToNotExist(t *testing.T) {
 	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, firstMember, "member.transfer",
 		map[string]interface{}{"amount": amount, "toMemberReference": gen.Reference().String()})
 	require.Error(t, err)
-	fmt.Println(err)
 	require.IsType(t, &requester.Error{}, err)
 	data := err.(*requester.Error).Data
 	require.Contains(t, data.Trace, "index not found")
