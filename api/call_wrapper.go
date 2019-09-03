@@ -19,6 +19,7 @@ package api
 import (
 	"context"
 	"net/http"
+	"strings"
 
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/insolar/utils"
@@ -63,7 +64,9 @@ func wrapCall(runner *Runner, allowedMethods map[string]bool, req *http.Request,
 		return &json2.Error{
 			Code:    MethodNotFoundError,
 			Message: MethodNotFoundErrorMessage,
-			Data:    nil,
+			Data: requester.Data{
+				TraceID: traceID,
+			},
 		}
 	}
 
@@ -73,12 +76,26 @@ func wrapCall(runner *Runner, allowedMethods map[string]bool, req *http.Request,
 
 	signature, err := validateRequestHeaders(req.Header.Get(requester.Digest), req.Header.Get(requester.Signature), requestBody.Raw)
 	if err != nil {
-		return err
+		return &json2.Error{
+			Code:    InvalidParamsError,
+			Message: InvalidParamsErrorMessage,
+			Data: requester.Data{
+				Trace:   strings.Split(err.Error(), ": "),
+				TraceID: traceID,
+			},
+		}
 	}
 
 	seedPulse, err := runner.checkSeed(args.Seed)
 	if err != nil {
-		return err
+		return &json2.Error{
+			Code:    InvalidRequestError,
+			Message: InvalidRequestErrorMessage,
+			Data: requester.Data{
+				Trace:   strings.Split(err.Error(), ": "),
+				TraceID: traceID,
+			},
+		}
 	}
 
 	setRootReferenceIfNeeded(args)
@@ -95,10 +112,10 @@ func wrapCall(runner *Runner, allowedMethods map[string]bool, req *http.Request,
 		logger.Error(err.Error())
 
 		return &json2.Error{
-			// TODO: correct error codes
 			Code:    ExecutionError,
-			Message: err.Error(),
+			Message: ExecutionErrorMessage,
 			Data: requester.Data{
+				Trace:            strings.Split(err.Error(), ": "),
 				TraceID:          traceID,
 				RequestReference: ref,
 			},
