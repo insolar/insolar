@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -e
+set -em
 # requires: lsof, awk, sed, grep, pgrep
 
 # Changeable environment variables (parameters)
@@ -382,6 +382,14 @@ then
 else
     echo "insgorund launch skip"
 fi
+
+handle_sigchld()
+{
+  jobs -pn
+  echo "someone left the network"
+}
+
+trap 'handle_sigchld' SIGCHLD
 
 echo "start heavy node"
 set -x
