@@ -19,7 +19,6 @@
 package functest
 
 import (
-	"fmt"
 	"github.com/insolar/insolar/api/requester"
 	"math/big"
 	"testing"
@@ -80,9 +79,6 @@ func TestTransferMoneyFromNotExist(t *testing.T) {
 	require.Error(t, err)
 	require.IsType(t, &requester.Error{}, err)
 	data := err.(*requester.Error).Data
-	for i, v := range data.Trace {
-		fmt.Println(i, v)
-	}
 	require.Contains(t, data.Trace, "failed to fetch index from heavy")
 	newSecondBalance := getBalanceNoErr(t, secondMember, secondMember.Ref)
 	require.Equal(t, oldSecondBalance, newSecondBalance)

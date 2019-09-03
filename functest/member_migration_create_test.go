@@ -61,8 +61,5 @@ func TestMemberMigrationCreateWithSamePublicKey(t *testing.T) {
 	require.Error(t, err)
 	require.IsType(t, &requester.Error{}, err)
 	data := err.(*requester.Error).Data
-	for i, v := range data.Trace {
-		fmt.Println(i, v)
-	}
 	require.Contains(t, data.Trace, "can't set reference because this key already exists")
 }
