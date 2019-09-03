@@ -22,13 +22,13 @@ import (
 )
 
 var (
-	statBucketAddedCount = stats.Int64(
-		"object_bucket_added_count",
+	statIndexesAddedCount = stats.Int64(
+		"object_indexes_added_count",
 		"How many bucket have been created on a node",
 		stats.UnitDimensionless,
 	)
-	statBucketRemovedCount = stats.Int64(
-		"object_bucket_removed_count",
+	statIndexesRemovedCount = stats.Int64(
+		"object_indexes_removed_count",
 		"How many bucket have been removed from a node",
 		stats.UnitDimensionless,
 	)
@@ -57,15 +57,15 @@ var (
 func init() {
 	err := view.Register(
 		&view.View{
-			Name:        statBucketRemovedCount.Name(),
-			Description: statBucketRemovedCount.Description(),
-			Measure:     statBucketRemovedCount,
+			Name:        statIndexesAddedCount.Name(),
+			Description: statIndexesAddedCount.Description(),
+			Measure:     statIndexesAddedCount,
 			Aggregation: view.Sum(),
 		},
 		&view.View{
-			Name:        statBucketAddedCount.Name(),
-			Description: statBucketAddedCount.Description(),
-			Measure:     statBucketAddedCount,
+			Name:        statIndexesRemovedCount.Name(),
+			Description: statIndexesRemovedCount.Description(),
+			Measure:     statIndexesRemovedCount,
 			Aggregation: view.Sum(),
 		},
 		&view.View{

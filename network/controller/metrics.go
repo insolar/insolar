@@ -84,6 +84,11 @@ var (
 func init() {
 	err := view.Register(
 		&view.View{
+			Measure:     statParcelsSentSizeBytes,
+			Aggregation: view.Distribution(16, 32, 64, 128, 256, 512, 1024, 16*1<<10, 512*1<<10, 1<<20),
+			TagKeys:     []tag.Key{tagMessageType},
+		},
+		&view.View{
 			Measure:     statParcelsReplySizeBytes,
 			Aggregation: view.Distribution(16, 32, 64, 128, 256, 512, 1024, 16*1<<10, 512*1<<10, 1<<20),
 			TagKeys:     []tag.Key{tagMessageType},
