@@ -15,7 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1567416372376,
+  "iteration": 1567508856323,
   "links": [],
   "panels": [
     {
@@ -178,7 +178,7 @@
       ],
       "repeat": null,
       "repeatDirection": "h",
-      "repeatIteration": 1567416372376,
+      "repeatIteration": 1567508856323,
       "repeatPanelId": 28,
       "scopedVars": {
         "instance": {
@@ -382,7 +382,7 @@
       ],
       "repeat": null,
       "repeatDirection": "h",
-      "repeatIteration": 1567416372376,
+      "repeatIteration": 1567508856323,
       "repeatPanelId": 22,
       "scopedVars": {
         "instance": {
@@ -856,7 +856,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Buckets",
+      "title": "Indexes rate",
       "tooltip": {
         "shared": true,
         "sort": 0,

@@ -60,14 +60,6 @@
   version = "v1.0.1"
 
 [[projects]]
-  digest = "1:b6d886569181ec96ca83d529f4d6ba0cbf92ace7bb6f633f90c5f34d9bba7aab"
-  name = "github.com/blang/semver"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "ba2c2ddd89069b46a7011d4106f6868f17ee1705"
-  version = "v3.6.1"
-
-[[projects]]
   digest = "1:c1100fc71e23b6a32b2c68a5202a848fd13811d5a10b12edb8019c3667d1cd9a"
   name = "github.com/cenkalti/backoff"
   packages = ["."]
@@ -803,7 +795,6 @@
     "github.com/ThreeDotsLabs/watermill/message",
     "github.com/ThreeDotsLabs/watermill/message/router/middleware",
     "github.com/ThreeDotsLabs/watermill/pubsub/gochannel",
-    "github.com/blang/semver",
     "github.com/dgraph-io/badger",
     "github.com/fortytw2/leaktest",
     "github.com/gogo/protobuf/gogoproto",
@@ -817,6 +808,7 @@
     "github.com/grpc-ecosystem/grpc-gateway/runtime",
     "github.com/grpc-ecosystem/grpc-gateway/utilities",
     "github.com/insolar/go-actors/actor",
+    "github.com/insolar/go-actors/actor/errors",
     "github.com/insolar/go-actors/actor/system",
     "github.com/insolar/rpc/v2",
     "github.com/insolar/rpc/v2/json2",

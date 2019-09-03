@@ -122,9 +122,12 @@ func (i *IndexStorageMemory) Set(ctx context.Context, pn insolar.PulseNumber, bu
 
 	}
 
+	if _, ok := i.buckets[pn][bucket.ObjID]; !ok {
+		stats.Record(ctx, statIndexesAddedCount.M(1))
+	}
+
 	i.buckets[pn][bucket.ObjID] = &bucket
 
-	stats.Record(ctx, statIndexesAddedCount.M(1))
 }
 
 // DeleteForPN deletes all buckets for a provided pulse number
