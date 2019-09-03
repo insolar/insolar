@@ -19,16 +19,10 @@
 package functest
 
 import (
-	"bufio"
-	"bytes"
 	"fmt"
 	"os"
-	"path/filepath"
 	"testing"
-	"time"
 
-	"github.com/insolar/insolar/insolar/defaults"
-	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/launchnet"
 	"github.com/pkg/errors"
 )
@@ -40,40 +34,6 @@ func TestMain(m *testing.M) {
 			fmt.Println(errors.Wrap(err, "[ setup ] get reference daemons by public key failed ").Error())
 		}
 
-		var b bytes.Buffer
-		buffer := bufio.NewWriter(&b)
-
-		closeLogReader := testutils.NodesErrorLogReader(filepath.Join("..", defaults.LaunchnetDiscoveryNodesLogsDir()), buffer)
-		defer close(closeLogReader)
-
-		runResult := m.Run()
-		if runResult > 0 {
-			return runResult
-		}
-
-		// waiting few pulses for possible errors
-		time.Sleep(30 * time.Second)
-
-		// check logs for errors
-		err = buffer.Flush()
-		if err != nil {
-			fmt.Println(errors.Wrap(
-				err,
-				"Can't flush buffer").Error())
-		}
-
-		// change Require.Error - make wrapper with save errors
-
-		if b.Len() > 0 {
-			_, err = b.WriteTo(os.Stdout)
-			if err != nil {
-				fmt.Println(errors.Wrap(
-					err,
-					"Discovery nodes contains errors, but there was an error while writing it to output ").Error())
-			}
-
-			return 1
-		}
-		return 0
+		return m.Run()
 	}))
 }
