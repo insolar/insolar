@@ -105,7 +105,7 @@ func Reference() insolar.Reference {
 	return *insolar.NewReference(ID())
 }
 
-// Reference generates random reference.
+// RecordReference generates random record reference.
 func RecordReference() insolar.Reference {
 	return *insolar.NewRecordReference(ID())
 }
@@ -125,4 +125,8 @@ func UniqueReferences(a int) []insolar.Reference {
 		seen[refs[i]] = struct{}{}
 	}
 	return refs
+}
+
+func ReferenceWithPulse(pn insolar.PulseNumber) insolar.Reference {
+	return *insolar.NewRecordReference(IDWithPulse(pn))
 }
