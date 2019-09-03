@@ -67,7 +67,10 @@ func (r *ContractConstructorHolder) AsChild(objRef insolar.Reference) (*CostCent
 }
 
 // GetObject returns proxy object
-func GetObject(ref insolar.Reference) (r *CostCenter) {
+func GetObject(ref insolar.Reference) *CostCenter {
+	if !ref.IsObjectReference() {
+		return nil
+	}
 	return &CostCenter{Reference: ref}
 }
 

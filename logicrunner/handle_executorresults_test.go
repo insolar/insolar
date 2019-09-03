@@ -28,7 +28,6 @@ import (
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/payload"
-	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/writecontroller"
 )
@@ -42,20 +41,23 @@ func TestHandleExecutorResults_Present(t *testing.T) {
 		{
 			name: "success, every call to broker",
 			mocks: func(t minimock.Tester) (*HandleExecutorResults, flow.Flow) {
-				obj := gen.Reference()
+				incoming1 := genIncomingRequest()
+				incoming2 := genIncomingRequest()
+				incoming2.Object = incoming1.Object
+
 				receivedPayload := &payload.ExecutorResults{
-					RecordRef:             obj,
+					RecordRef:             *incoming1.Object,
 					Pending:               insolar.NotPending,
 					LedgerHasMoreRequests: true,
 					Queue: []*payload.ExecutionQueueElement{
 						{
-							RequestRef: gen.Reference(),
-							Incoming: &record.IncomingRequest{},
+							RequestRef:  gen.RecordReference(),
+							Incoming:    incoming1,
 							ServiceData: &payload.ServiceData{},
 						},
 						{
-							RequestRef: gen.Reference(),
-							Incoming: &record.IncomingRequest{},
+							RequestRef:  gen.RecordReference(),
+							Incoming:    incoming2,
 							ServiceData: &payload.ServiceData{},
 						},
 					},
@@ -68,7 +70,7 @@ func TestHandleExecutorResults_Present(t *testing.T) {
 					dep: &Dependencies{
 						WriteAccessor: writecontroller.NewWriteControllerMock(t).BeginMock.Return(func() {}, nil),
 						StateStorage: NewStateStorageMock(t).
-							UpsertExecutionStateMock.Expect(obj).
+							UpsertExecutionStateMock.Expect(*incoming1.Object).
 							Return(
 								NewExecutionBrokerIMock(t).
 									PrevExecutorPendingResultMock.Return().
@@ -86,9 +88,10 @@ func TestHandleExecutorResults_Present(t *testing.T) {
 			name: "success, minimum calls to broker",
 			mocks: func(t minimock.Tester) (*HandleExecutorResults, flow.Flow) {
 				obj := gen.Reference()
+
 				receivedPayload := &payload.ExecutorResults{
-					RecordRef:             obj,
-					Pending:               insolar.NotPending,
+					RecordRef: obj,
+					Pending:   insolar.NotPending,
 				}
 
 				buf, err := payload.Marshal(receivedPayload)
@@ -115,8 +118,8 @@ func TestHandleExecutorResults_Present(t *testing.T) {
 			mocks: func(t minimock.Tester) (*HandleExecutorResults, flow.Flow) {
 				obj := gen.Reference()
 				receivedPayload := &payload.ExecutorResults{
-					RecordRef:             obj,
-					Pending:               insolar.NotPending,
+					RecordRef: obj,
+					Pending:   insolar.NotPending,
 				}
 
 				buf, err := payload.Marshal(receivedPayload)
@@ -139,8 +142,8 @@ func TestHandleExecutorResults_Present(t *testing.T) {
 			mocks: func(t minimock.Tester) (*HandleExecutorResults, flow.Flow) {
 				obj := gen.Reference()
 				receivedPayload := &payload.ExecutorResults{
-					RecordRef:             obj,
-					Pending:               insolar.NotPending,
+					RecordRef: obj,
+					Pending:   insolar.NotPending,
 				}
 
 				buf, err := payload.Marshal(receivedPayload)
@@ -162,8 +165,8 @@ func TestHandleExecutorResults_Present(t *testing.T) {
 			name: "error, bad data",
 			mocks: func(t minimock.Tester) (*HandleExecutorResults, flow.Flow) {
 				h := &HandleExecutorResults{
-					dep: &Dependencies{},
-					meta: payload.Meta{Payload: []byte{3,2,1}},
+					dep:  &Dependencies{},
+					meta: payload.Meta{Payload: []byte{3, 2, 1}},
 				}
 				f := flow.NewFlowMock(t)
 				return h, f

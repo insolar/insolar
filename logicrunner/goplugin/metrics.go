@@ -30,7 +30,7 @@ var (
 
 var (
 	statGopluginContractMethodTime = stats.Float64(
-		"goplugin/contract/method/time",
+		"goplugin_contract_method_time",
 		"time spent on execution contract, measured in goplugin",
 		stats.UnitMilliseconds,
 	)

@@ -67,7 +67,10 @@ func (r *ContractConstructorHolder) AsChild(objRef insolar.Reference) (*NodeDoma
 }
 
 // GetObject returns proxy object
-func GetObject(ref insolar.Reference) (r *NodeDomain) {
+func GetObject(ref insolar.Reference) *NodeDomain {
+	if !ref.IsObjectReference() {
+		return nil
+	}
 	return &NodeDomain{Reference: ref}
 }
 

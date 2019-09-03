@@ -18,12 +18,14 @@ package contracts
 
 import (
 	"fmt"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/genesisrefs"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/account"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/costcenter"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/member"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/migrationadmin"
+	"github.com/insolar/insolar/logicrunner/builtin/contract/migrationdaemon"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/migrationshard"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/nodedomain"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/pkshard"
@@ -143,10 +145,6 @@ func GetMigrationShardGenesisContractState(name string, migrationAddresses []str
 }
 
 func GetMigrationAdminGenesisContractState(lokup int64, vesting int64, vestingStep int64) insolar.GenesisContractState {
-	migrationDaemons := make(foundation.StableMap)
-	for i := 0; i < insolar.GenesisAmountMigrationDaemonMembers; i++ {
-		migrationDaemons[genesisrefs.ContractMigrationDaemonMembers[i].String()] = migrationadmin.StatusInactivate
-	}
 
 	return insolar.GenesisContractState{
 		Name:       insolar.GenesisNameMigrationAdmin,
@@ -161,6 +159,19 @@ func GetMigrationAdminGenesisContractState(lokup int64, vesting int64, vestingSt
 				Vesting:     vesting,
 				VestingStep: vestingStep,
 			},
+		}),
+	}
+}
+
+func GetMigrationDaemonGenesisContractState(numberMigrationDaemon int) insolar.GenesisContractState {
+
+	return insolar.GenesisContractState{
+		Name:       insolar.GenesisNameMigrationDaemons[numberMigrationDaemon],
+		Prototype:  insolar.GenesisNameMigrationDaemon,
+		ParentName: insolar.GenesisNameRootDomain,
+		Memory: mustGenMemory(&migrationdaemon.MigrationDaemon{
+			IsActive:              false,
+			MigrationDaemonMember: genesisrefs.ContractMigrationDaemonMembers[numberMigrationDaemon],
 		}),
 	}
 }

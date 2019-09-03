@@ -23,6 +23,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/heavy/executor"
 	"github.com/insolar/insolar/ledger/object"
@@ -57,6 +58,10 @@ func TestFinalizePulse_HappyPath(t *testing.T) {
 	}
 
 	jk.HasAllJetConfirmsMock.Set(hasConfirm)
+
+	js := jet.NewStorageMock(t)
+	js.AllMock.Return(nil)
+	jk.StorageMock.Return(js)
 
 	var topSyncCount uint32
 	topSync := func() insolar.PulseNumber {
@@ -115,6 +120,10 @@ func TestFinalizePulse_BackupError(t *testing.T) {
 	jk := executor.NewJetKeeperMock(t)
 	jk.HasAllJetConfirmsMock.Return(true)
 	jk.TopSyncPulseMock.Return(targetPulse)
+
+	js := jet.NewStorageMock(t)
+	js.AllMock.Return(nil)
+	jk.StorageMock.Return(js)
 
 	pc := network.NewPulseCalculatorMock(t)
 	pc.ForwardsMock.Return(insolar.Pulse{PulseNumber: targetPulse}, nil)

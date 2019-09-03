@@ -36,6 +36,26 @@ type HandleExecutorResults struct {
 	meta payload.Meta
 }
 
+func checkPayloadExecutorResults(ctx context.Context, results payload.ExecutorResults) error {
+	if !results.Caller.IsEmpty() && !results.Caller.IsObjectReference() {
+		return errors.Errorf("results.Caller should be ObjectReference; ref=%s", results.Caller.String())
+	}
+	if !results.RecordRef.IsObjectReference() {
+		return errors.Errorf("results.RecordRef should be ObjectReference; ref=%s", results.RecordRef.String())
+	}
+
+	for _, elem := range results.Queue {
+		if !elem.RequestRef.IsRecordScope() {
+			return errors.Errorf("results.RecordRef should be RecordReference; ref=%s", results.RecordRef.String())
+		}
+		if err := checkIncomingRequest(ctx, elem.Incoming); err != nil {
+			return errors.Wrap(err, "failed to check ExecutionQueue of ExecutorResults")
+		}
+	}
+
+	return nil
+}
+
 func (h *HandleExecutorResults) Present(ctx context.Context, f flow.Flow) error {
 	message := payload.ExecutorResults{}
 	err := message.Unmarshal(h.meta.Payload)
@@ -48,6 +68,10 @@ func (h *HandleExecutorResults) Present(ctx context.Context, f flow.Flow) error 
 
 	ctx, span := instracer.StartSpan(ctx, "HandleExecutorResults.Present")
 	defer span.End()
+
+	if err := checkPayloadExecutorResults(ctx, message); err != nil {
+		return err
+	}
 
 	return h.handleMessage(ctx, message)
 }
