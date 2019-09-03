@@ -17,44 +17,17 @@
 package main
 
 import (
-	"fmt"
 	"io/ioutil"
 	"path"
 
 	"github.com/insolar/insolar/bootstrap"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar/defaults"
-	"github.com/spf13/cobra"
 	yaml "gopkg.in/yaml.v2"
 )
 
 func baseDir() string {
 	return defaults.LaunchnetDir()
-}
-
-type inputParams struct {
-	outputDir string
-}
-
-func parseInputParams() inputParams {
-	var rootCmd = &cobra.Command{}
-	var result inputParams
-	rootCmd.Flags().StringVarP(&result.outputDir, "output_dir", "o", "", "path to output directory")
-	err := rootCmd.Execute()
-	if err != nil {
-		fmt.Println("Wrong input params:", err.Error())
-	}
-
-	return result
-}
-
-func main() {
-	params := parseInputParams()
-
-	cfg := configuration.NewConfiguration()
-	writePulsarConfgi(cfg, params)
-	writeBootstrapConfig(params)
-	writeNodeConfgi(cfg, params)
 }
 
 type PulsarConfig struct {
@@ -63,7 +36,7 @@ type PulsarConfig struct {
 	Log    configuration.Log
 }
 
-func writePulsarConfgi(cfg configuration.Configuration, params inputParams) {
+func writePulsarConfgi(cfg configuration.Configuration, outputDir string) {
 	pcfg := PulsarConfig{
 		Pulsar: cfg.Pulsar,
 		Tracer: cfg.Tracer,
@@ -74,13 +47,13 @@ func writePulsarConfgi(cfg configuration.Configuration, params inputParams) {
 		panic(err)
 	}
 
-	err = ioutil.WriteFile(path.Join(params.outputDir, "pulsar_default.yaml"), raw, 0644)
+	err = ioutil.WriteFile(path.Join(outputDir, "pulsar_default.yaml"), raw, 0644)
 	if err != nil {
 		panic(err)
 	}
 }
 
-func writeBootstrapConfig(params inputParams) {
+func writeBootstrapConfig(outputDir string) {
 	cfg := bootstrap.Config{
 		MembersKeysDir:         path.Join(baseDir(), "configs"),
 		DiscoveryKeysDir:       path.Join(baseDir(), "reusekeys", "discovery"),
@@ -144,7 +117,7 @@ func writeBootstrapConfig(params inputParams) {
 		panic(err)
 	}
 
-	err = ioutil.WriteFile(path.Join(params.outputDir, "bootstrap_default.yaml"), raw, 0644)
+	err = ioutil.WriteFile(path.Join(outputDir, "bootstrap_default.yaml"), raw, 0644)
 	if err != nil {
 		panic(err)
 	}
@@ -167,7 +140,7 @@ type NodeConfiguration struct {
 	Bus             configuration.Bus
 }
 
-func writeNodeConfgi(cfg configuration.Configuration, params inputParams) {
+func writeNodeConfgi(cfg configuration.Configuration, outputDir string) {
 	pcfg := NodeConfiguration{
 		Host:            cfg.Host,
 		Service:         cfg.Service,
@@ -189,7 +162,7 @@ func writeNodeConfgi(cfg configuration.Configuration, params inputParams) {
 		panic(err)
 	}
 
-	err = ioutil.WriteFile(path.Join(params.outputDir, "node_default.yaml"), raw, 0644)
+	err = ioutil.WriteFile(path.Join(outputDir, "node_default.yaml"), raw, 0644)
 	if err != nil {
 		panic(err)
 	}
