@@ -82,7 +82,7 @@ type Backup struct {
 	BackupWaitPeriod uint
 
 	// LastBackupInfoFile contains info about last backup. Must exist and lie inside Storage.DataDirectory
-	// Is's are full path.
+	// Is's a full path.
 	LastBackupInfoFile string
 
 	// PostProcessBackupCmd - command which will be invoked after creating backup. It might be used to
