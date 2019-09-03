@@ -17,6 +17,7 @@
 package genesisrefs
 
 import (
+	"github.com/insolar/insolar/bootstrap/contracts"
 	"testing"
 
 	"github.com/insolar/insolar/insolar"
@@ -81,11 +82,11 @@ func TestReferences(t *testing.T) {
 			expect: "11tJE7umKrS3RJZSfRLTUtP2hiWwXefgCzVyCWMT3Q3",
 		},
 		insolar.GenesisNamePKShard: {
-			got:    ContractPublicKeyShards[0],
+			got:    contracts.ContractPublicKeyShards(10)[0],
 			expect: "11tJCPZRjHWbFXQT5xNMzhm33ZWMQMSw2f5s39hYkNM",
 		},
 		insolar.GenesisNameMigrationShard: {
-			got:    ContractMigrationAddressShards[0],
+			got:    contracts.ContractMigrationAddressShards(10)[0],
 			expect: "11tJDMfQ7GmZ2AU4efkVyPYjQ9ExkpN9uMqpqBieYwA",
 		},
 		insolar.GenesisNameMigrationAdminAccount: {

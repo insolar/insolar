@@ -24,8 +24,6 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/member"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/migrationdaemon"
-	"github.com/insolar/insolar/logicrunner/builtin/proxy/migrationshard"
-	"github.com/insolar/insolar/logicrunner/builtin/proxy/pkshard"
 	"github.com/insolar/insolar/platformpolicy"
 )
 

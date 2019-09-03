@@ -60,8 +60,6 @@ const (
 
 	GenesisAmountMigrationDaemonMembers       = 10
 	GenesisAmountActiveMigrationDaemonMembers = 3
-	GenesisAmountPublicKeyShards              = 10
-	GenesisAmountMigrationAddressShards       = 10
 
 	GenesisAmountNetworkIncentivesMembers     = 40
 	GenesisAmountApplicationIncentivesMembers = 40

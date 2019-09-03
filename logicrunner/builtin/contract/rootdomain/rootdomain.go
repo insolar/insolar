@@ -30,15 +30,16 @@ import (
 // RootDomain is smart contract representing entrance point to system.
 type RootDomain struct {
 	foundation.BaseContract
-	PublicKeyShards [insolar.GenesisAmountPublicKeyShards]insolar.Reference
+	PublicKeyShards []insolar.Reference
 	NodeDomain      insolar.Reference
+	PKShardCount    int
 }
 
 // GetMemberByPublicKey gets member reference by public key.
 // ins:immutable
 func (rd *RootDomain) GetMemberByPublicKey(publicKey string) (*insolar.Reference, error) {
 	trimmedPublicKey := foundation.TrimPublicKey(publicKey)
-	i := foundation.GetShardIndex(trimmedPublicKey, insolar.GenesisAmountPublicKeyShards)
+	i := foundation.GetShardIndex(trimmedPublicKey, rd.PKShardCount)
 	if i >= len(rd.PublicKeyShards) {
 		return nil, fmt.Errorf("incorrect shard index")
 	}
@@ -67,7 +68,7 @@ var INSATTR_Info_API = true
 // ins:immutable
 func (rd *RootDomain) AddNewMemberToPublicKeyMap(publicKey string, memberRef insolar.Reference) error {
 	trimmedPublicKey := foundation.TrimPublicKey(publicKey)
-	shardIndex := foundation.GetShardIndex(trimmedPublicKey, insolar.GenesisAmountPublicKeyShards)
+	shardIndex := foundation.GetShardIndex(trimmedPublicKey, rd.PKShardCount)
 	if shardIndex >= len(rd.PublicKeyShards) {
 		return fmt.Errorf("incorrect public key shard index")
 	}

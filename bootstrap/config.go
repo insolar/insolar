@@ -68,6 +68,8 @@ type Config struct {
 	VestingStepInPulses int64 `mapstructure:"vesting_pulse_step"`
 	// LockupPeriodInPulses - interval of count pulses for the full period of hold.
 	LockupPeriodInPulses int64 `mapstructure:"lockup_pulse_period"`
+	PKShardCount         int   `mapstructure:"pk_shard_count"`
+	MAShardCount         int   `mapstructure:"ma_shard_count"`
 	Contracts            Contracts
 
 	// Discovery settings.

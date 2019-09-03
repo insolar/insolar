@@ -18,6 +18,8 @@ package contracts
 
 import (
 	"fmt"
+	"github.com/insolar/insolar/logicrunner/builtin/contract/migrationdaemon"
+	"strconv"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/genesisrefs"
@@ -26,16 +28,17 @@ import (
 	"github.com/insolar/insolar/logicrunner/builtin/contract/deposit"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/member"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/migrationadmin"
-	"github.com/insolar/insolar/logicrunner/builtin/contract/migrationdaemon"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/migrationshard"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/nodedomain"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/pkshard"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/rootdomain"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/wallet"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
+	maProxy "github.com/insolar/insolar/logicrunner/builtin/proxy/migrationshard"
+	pkProxy "github.com/insolar/insolar/logicrunner/builtin/proxy/pkshard"
 )
 
-func RootDomain() insolar.GenesisContractState {
+func RootDomain(pkShardCount int) insolar.GenesisContractState {
 
 	return insolar.GenesisContractState{
 		Name:       insolar.GenesisNameRootDomain,
@@ -43,8 +46,9 @@ func RootDomain() insolar.GenesisContractState {
 		ParentName: "",
 
 		Memory: mustGenMemory(&rootdomain.RootDomain{
-			PublicKeyShards: genesisrefs.ContractPublicKeyShards,
+			PublicKeyShards: ContractPublicKeyShards(pkShardCount),
 			NodeDomain:      genesisrefs.ContractNodeDomain,
+			PKShardCount:    pkShardCount,
 		}),
 	}
 }
@@ -115,8 +119,8 @@ func GetAccountGenesisContractState(balance string, name string, parent string) 
 	}
 }
 
-func GetCostCenterGenesisContractState() insolar.GenesisContractState {
-	cc, err := costcenter.New(genesisrefs.ContractFeeAccount)
+func GetCostCenterGenesisContractState(feeMember insolar.Reference) insolar.GenesisContractState {
+	cc, err := costcenter.New(feeMember)
 	if err != nil {
 		panic("failed to create cost center instance")
 	}
@@ -157,20 +161,25 @@ func GetMigrationShardGenesisContractState(name string, migrationAddresses []str
 	}
 }
 
-func GetMigrationAdminGenesisContractState(lockup int64, vesting int64, vestingStep int64) insolar.GenesisContractState {
+func GetMigrationAdminGenesisContractState(lockup int64, vesting int64, vestingStep int64, maShardCount int) insolar.GenesisContractState {
+	migrationDaemons := make(foundation.StableMap)
+	for i := 0; i < insolar.GenesisAmountMigrationDaemonMembers; i++ {
+		migrationDaemons[genesisrefs.ContractMigrationDaemonMembers[i].String()] = migrationadmin.StatusInactivate
+	}
 
 	return insolar.GenesisContractState{
 		Name:       insolar.GenesisNameMigrationAdmin,
 		Prototype:  insolar.GenesisNameMigrationAdmin,
 		ParentName: insolar.GenesisNameRootDomain,
 		Memory: mustGenMemory(&migrationadmin.MigrationAdmin{
-			MigrationAddressShards: genesisrefs.ContractMigrationAddressShards,
+			MigrationAddressShards: ContractMigrationAddressShards(maShardCount),
 			MigrationAdminMember:   genesisrefs.ContractMigrationAdminMember,
 			VestingParams: &migrationadmin.VestingParams{
 				Lockup:      lockup,
 				Vesting:     vesting,
 				VestingStep: vestingStep,
 			},
+			MAShardCount: maShardCount,
 		}),
 	}
 }
@@ -221,4 +230,44 @@ func mustGenMemory(data interface{}) []byte {
 		panic("failed to serialize contract data")
 	}
 	return b
+}
+
+// ContractPublicKeyNameShards is the public key shards contracts names.
+func ContractPublicKeyNameShards(pkShardCount int) []string {
+	result := make([]string, pkShardCount)
+	for i := 0; i < pkShardCount; i++ {
+		name := insolar.GenesisNamePKShard + strconv.Itoa(i)
+		result[i] = name
+	}
+	return result
+}
+
+// ContractPublicKeyShards is the public key shards contracts references.
+func ContractPublicKeyShards(pkShardCount int) []insolar.Reference {
+	result := make([]insolar.Reference, pkShardCount)
+	for i, name := range ContractPublicKeyNameShards(pkShardCount) {
+		result[i] = genesisrefs.GenesisRef(name)
+		genesisrefs.PredefinedPrototypes[name+genesisrefs.PrototypeSuffix] = *pkProxy.PrototypeReference
+	}
+	return result
+}
+
+// ContractMigrationAddressNameShards is the migration address shards contracts names.
+func ContractMigrationAddressNameShards(maShardCount int) []string {
+	result := make([]string, maShardCount)
+	for i := 0; i < maShardCount; i++ {
+		name := insolar.GenesisNameMigrationShard + strconv.Itoa(i)
+		result[i] = name
+	}
+	return result
+}
+
+// ContractMigrationAddressShards is the migration address shards contracts references.
+func ContractMigrationAddressShards(maShardCount int) []insolar.Reference {
+	result := make([]insolar.Reference, maShardCount)
+	for i, name := range ContractMigrationAddressNameShards(maShardCount) {
+		result[i] = genesisrefs.GenesisRef(name)
+		genesisrefs.PredefinedPrototypes[name+genesisrefs.PrototypeSuffix] = *maProxy.PrototypeReference
+	}
+	return result
 }
