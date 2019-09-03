@@ -426,6 +426,7 @@ func TestLogicExecutor_ExecuteConstructor(t *testing.T) {
 	callerRef := gen.Reference()
 	codeRef := gen.Reference()
 	baseRef := gen.Reference()
+	objectRef := gen.Reference()
 
 	tests := []struct {
 		name  string
@@ -438,6 +439,7 @@ func TestLogicExecutor_ExecuteConstructor(t *testing.T) {
 			mocks: func(ctx context.Context, mc minimock.Tester) (LogicExecutor, *common.Transcript) {
 				tr := &common.Transcript{
 					Request: &record.IncomingRequest{
+						Object:    &objectRef,
 						Base:      &baseRef,
 						CallType:  record.CTSaveAsChild,
 						Caller:    callerRef,
@@ -464,11 +466,12 @@ func TestLogicExecutor_ExecuteConstructor(t *testing.T) {
 				return &logicExecutor{MachinesManager: mm, DescriptorsCache: dc}, tr
 			},
 			res: &requestresult.RequestResult{
-				SideEffectType:  artifacts.RequestSideEffectActivate,
-				RawResult:       []byte{3, 2, 1},
-				Memory:          []byte{1, 2, 3},
-				ParentReference: baseRef,
-				ObjectImage:     protoRef,
+				SideEffectType:     artifacts.RequestSideEffectActivate,
+				RawResult:          []byte{3, 2, 1},
+				Memory:             []byte{1, 2, 3},
+				ParentReference:    baseRef,
+				ObjectImage:        protoRef,
+				RawObjectReference: objectRef,
 			},
 		},
 		{
@@ -476,6 +479,7 @@ func TestLogicExecutor_ExecuteConstructor(t *testing.T) {
 			mocks: func(ctx context.Context, mc minimock.Tester) (LogicExecutor, *common.Transcript) {
 				tr := &common.Transcript{
 					Request: &record.IncomingRequest{
+						Object:    &objectRef,
 						Base:      &baseRef,
 						CallType:  record.CTSaveAsChild,
 						Caller:    callerRef,
@@ -502,7 +506,8 @@ func TestLogicExecutor_ExecuteConstructor(t *testing.T) {
 				return &logicExecutor{MachinesManager: mm, DescriptorsCache: dc}, tr
 			},
 			res: &requestresult.RequestResult{
-				RawResult:       []byte{3, 2, 1},
+				RawResult:          []byte{3, 2, 1},
+				RawObjectReference: objectRef,
 			},
 		},
 		{
@@ -510,6 +515,7 @@ func TestLogicExecutor_ExecuteConstructor(t *testing.T) {
 			mocks: func(ctx context.Context, mc minimock.Tester) (LogicExecutor, *common.Transcript) {
 				tr := &common.Transcript{
 					Request: &record.IncomingRequest{
+						Object:    &objectRef,
 						Base:      &baseRef,
 						CallType:  record.CTSaveAsChild,
 						Caller:    callerRef,
@@ -544,6 +550,7 @@ func TestLogicExecutor_ExecuteConstructor(t *testing.T) {
 			mocks: func(ctx context.Context, mc minimock.Tester) (LogicExecutor, *common.Transcript) {
 				tr := &common.Transcript{
 					Request: &record.IncomingRequest{
+						Object:    &objectRef,
 						Base:      &baseRef,
 						CallType:  record.CTSaveAsChild,
 						Caller:    callerRef,
@@ -578,6 +585,7 @@ func TestLogicExecutor_ExecuteConstructor(t *testing.T) {
 			mocks: func(ctx context.Context, mc minimock.Tester) (LogicExecutor, *common.Transcript) {
 				tr := &common.Transcript{
 					Request: &record.IncomingRequest{
+						Object:    &objectRef,
 						Base:      &baseRef,
 						CallType:  record.CTSaveAsChild,
 						Caller:    gen.Reference(),
@@ -604,6 +612,7 @@ func TestLogicExecutor_ExecuteConstructor(t *testing.T) {
 			mocks: func(ctx context.Context, mc minimock.Tester) (LogicExecutor, *common.Transcript) {
 				tr := &common.Transcript{
 					Request: &record.IncomingRequest{
+						Object:    &objectRef,
 						CallType:  record.CTSaveAsChild,
 						Caller:    gen.Reference(),
 						Prototype: &protoRef,
@@ -624,6 +633,7 @@ func TestLogicExecutor_ExecuteConstructor(t *testing.T) {
 			mocks: func(ctx context.Context, mc minimock.Tester) (LogicExecutor, *common.Transcript) {
 				tr := &common.Transcript{
 					Request: &record.IncomingRequest{
+						Object:    &objectRef,
 						CallType:  record.CTSaveAsChild,
 						Caller:    gen.Reference(),
 						Prototype: nil,

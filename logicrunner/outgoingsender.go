@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/go-actors/actor"
+	aerr "github.com/insolar/go-actors/actor/errors"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/payload"
@@ -64,6 +65,10 @@ type sendAbandonedOutgoingRequestMessage struct {
 	outgoingRequest  *record.OutgoingRequest // outgoing request body
 }
 
+type stopOutgoingRequestSenderMessage struct {
+	resultChan chan struct{}
+}
+
 func NewOutgoingRequestSender(as actor.System, cr insolar.ContractRequester, am artifacts.Client, pa pulse.Accessor) OutgoingRequestSender {
 	pid := as.Spawn(func(system actor.System, pid actor.Pid) (actor.Actor, int) {
 		state := newOutgoingSenderActorState(cr, am, pa)
@@ -109,8 +114,19 @@ func (rs *outgoingRequestSender) SendAbandonedOutgoingRequest(ctx context.Contex
 	}
 }
 
-func (rs *outgoingRequestSender) Stop(_ context.Context) {
-	rs.as.CloseAll()
+func (rs *outgoingRequestSender) Stop(ctx context.Context) {
+	resultChan := make(chan struct{}, 1)
+	msg := stopOutgoingRequestSenderMessage{
+		resultChan: resultChan,
+	}
+	err := rs.as.SendPriority(rs.senderPid, msg)
+	if err != nil { // this is unlikely to happen
+		inslogger.FromContext(ctx).Errorf("OutgoingRequestSender.Stop failed: %v", err)
+		return
+	}
+
+	// wait for a termination
+	<-resultChan
 }
 
 func newOutgoingSenderActorState(cr insolar.ContractRequester, am artifacts.Client, pa pulse.Accessor) actor.Actor {
@@ -150,6 +166,9 @@ func (a *outgoingSenderActorState) Receive(message actor.Message) (actor.Actor, 
 			inslogger.FromContext(context.Background()).Errorf("OutgoingRequestActor: sendOutgoingRequest failed %v", err)
 		}
 		return a, nil
+	case stopOutgoingRequestSenderMessage:
+		v.resultChan <- struct{}{}
+		return a, aerr.Terminate
 	default:
 		inslogger.FromContext(context.Background()).Errorf("OutgoingRequestActor: unexpected message %v", v)
 		return a, nil

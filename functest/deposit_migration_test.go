@@ -101,7 +101,7 @@ func TestMigrationTokenNotInTheList(t *testing.T) {
 		"deposit.migration",
 		map[string]interface{}{"amount": "1000", "ethTxHash": "TxHash", "migrationAddress": migrationAddress})
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "this migration daemon is not in the list")
+	require.Contains(t, err.Error(), "the member is not migration daemon,")
 }
 
 func TestMigrationTokenZeroAmount(t *testing.T) {

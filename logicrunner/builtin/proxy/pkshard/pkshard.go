@@ -67,7 +67,10 @@ func (r *ContractConstructorHolder) AsChild(objRef insolar.Reference) (*PKShard,
 }
 
 // GetObject returns proxy object
-func GetObject(ref insolar.Reference) (r *PKShard) {
+func GetObject(ref insolar.Reference) *PKShard {
+	if !ref.IsObjectReference() {
+		return nil
+	}
 	return &PKShard{Reference: ref}
 }
 

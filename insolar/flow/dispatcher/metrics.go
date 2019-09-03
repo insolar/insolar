@@ -30,12 +30,12 @@ var (
 
 var (
 	statProcessTime = stats.Float64(
-		"flow/dispatcher/process/latency",
+		"flow_dispatcher_process_latency",
 		"process handlers call latency (handlers latency+overhead)",
 		stats.UnitMilliseconds,
 	)
 	statHandlerTime = stats.Float64(
-		"flow/dispatcher/handler/latency",
+		"flow_dispatcher_handler_latency",
 		"handlers latency",
 		stats.UnitMilliseconds,
 	)

@@ -122,10 +122,9 @@ func resolveAddress(configuration configuration.Transport) (string, error) {
 // NewNodeKeeper create new NodeKeeper
 func NewNodeKeeper(origin insolar.NetworkNode) network.NodeKeeper {
 	nk := &nodekeeper{
-		origin:           origin,
-		syncNodes:        make([]insolar.NetworkNode, 0),
-		SnapshotStorage:  storage.NewMemorySnapshotStorage(),
-		CloudHashStorage: storage.NewMemoryCloudHashStorage(),
+		origin:          origin,
+		syncNodes:       make([]insolar.NetworkNode, 0),
+		SnapshotStorage: storage.NewMemoryStorage(),
 	}
 	return nk
 }
@@ -136,8 +135,7 @@ type nodekeeper struct {
 	syncLock  sync.Mutex
 	syncNodes []insolar.NetworkNode
 
-	SnapshotStorage  storage.SnapshotStorage  // `inject:""`
-	CloudHashStorage storage.CloudHashStorage // `inject:""`
+	SnapshotStorage storage.SnapshotStorage
 }
 
 func (nk *nodekeeper) SetInitialSnapshot(nodes []insolar.NetworkNode) {
@@ -156,21 +154,6 @@ func (nk *nodekeeper) GetAccessor(pn insolar.PulseNumber) network.Accessor {
 
 func (nk *nodekeeper) GetOrigin() insolar.NetworkNode {
 	return nk.origin
-}
-
-func (nk *nodekeeper) GetCloudHash(pn insolar.PulseNumber) []byte {
-	ch, err := nk.CloudHashStorage.ForPulseNumber(pn)
-	if err != nil {
-		panic("GetCloudHash(): " + err.Error())
-	}
-	return ch
-}
-
-func (nk *nodekeeper) SetCloudHash(pn insolar.PulseNumber, cloudHash []byte) {
-	err := nk.CloudHashStorage.Append(pn, cloudHash)
-	if err != nil {
-		panic("SetCloudHash(): " + err.Error())
-	}
 }
 
 func (nk *nodekeeper) Sync(ctx context.Context, number insolar.PulseNumber, nodes []insolar.NetworkNode) {

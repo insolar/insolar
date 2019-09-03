@@ -23,8 +23,10 @@ import (
 	"github.com/insolar/insolar/insolar/genesisrefs"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/account"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/costcenter"
+	"github.com/insolar/insolar/logicrunner/builtin/contract/deposit"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/member"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/migrationadmin"
+	"github.com/insolar/insolar/logicrunner/builtin/contract/migrationdaemon"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/migrationshard"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/nodedomain"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/pkshard"
@@ -87,6 +89,18 @@ func GetWalletGenesisContractState(name string, parent string, accountRef insola
 	}
 }
 
+func GetPreWalletGenesisContractState(name string, parent string, accountRef insolar.Reference, accounts foundation.StableMap, deposits foundation.StableMap) insolar.GenesisContractState {
+	return insolar.GenesisContractState{
+		Name:       name,
+		Prototype:  insolar.GenesisNameWallet,
+		ParentName: parent,
+		Memory: mustGenMemory(&wallet.Wallet{
+			Accounts: accounts,
+			Deposits: deposits,
+		}),
+	}
+}
+
 func GetAccountGenesisContractState(balance string, name string, parent string) insolar.GenesisContractState {
 	w, err := account.New(balance)
 	if err != nil {
@@ -143,25 +157,60 @@ func GetMigrationShardGenesisContractState(name string, migrationAddresses []str
 	}
 }
 
-func GetMigrationAdminGenesisContractState(lokup int64, vesting int64, vestingStep int64) insolar.GenesisContractState {
-	migrationDaemons := make(foundation.StableMap)
-	for i := 0; i < insolar.GenesisAmountMigrationDaemonMembers; i++ {
-		migrationDaemons[genesisrefs.ContractMigrationDaemonMembers[i].String()] = migrationadmin.StatusInactivate
-	}
+func GetMigrationAdminGenesisContractState(lockup int64, vesting int64, vestingStep int64) insolar.GenesisContractState {
 
 	return insolar.GenesisContractState{
 		Name:       insolar.GenesisNameMigrationAdmin,
 		Prototype:  insolar.GenesisNameMigrationAdmin,
 		ParentName: insolar.GenesisNameRootDomain,
 		Memory: mustGenMemory(&migrationadmin.MigrationAdmin{
-			MigrationDaemons:     migrationDaemons,
 			MigrationAddressShards: genesisrefs.ContractMigrationAddressShards,
-			MigrationAdminMember: genesisrefs.ContractMigrationAdminMember,
+			MigrationAdminMember:   genesisrefs.ContractMigrationAdminMember,
 			VestingParams: &migrationadmin.VestingParams{
-				Lokup:       lokup,
+				Lockup:      lockup,
 				Vesting:     vesting,
 				VestingStep: vestingStep,
 			},
+		}),
+	}
+}
+
+func GetDepositGenesisContractState(
+	amount string,
+	lockup int64,
+	vesting int64,
+	vestingStep int64,
+	vestingType foundation.VestingType,
+	maturePulse insolar.PulseNumber,
+	pulseDepositUnHold insolar.PulseNumber,
+	name string, parent string,
+) insolar.GenesisContractState {
+	return insolar.GenesisContractState{
+		Name:       name,
+		Prototype:  insolar.GenesisNameDeposit,
+		ParentName: parent,
+		Memory: mustGenMemory(&deposit.Deposit{
+			Balance:            amount,
+			Amount:             amount,
+			PulseDepositUnHold: pulseDepositUnHold,
+			VestingType:        vestingType,
+			MaturePulse:        maturePulse,
+			Lockup:             lockup,
+			Vesting:            vesting,
+			VestingStep:        vestingStep,
+		}),
+	}
+}
+
+func GetMigrationDaemonGenesisContractState(numberMigrationDaemon int) insolar.GenesisContractState {
+
+	return insolar.GenesisContractState{
+		Name:       insolar.GenesisNameMigrationDaemons[numberMigrationDaemon],
+		Prototype:  insolar.GenesisNameMigrationDaemon,
+		ParentName: insolar.GenesisNameRootDomain,
+		Memory: mustGenMemory(&migrationdaemon.MigrationDaemon{
+			IsActive:              false,
+			MigrationDaemonMember: genesisrefs.ContractMigrationDaemonMembers[numberMigrationDaemon],
 		}),
 	}
 }

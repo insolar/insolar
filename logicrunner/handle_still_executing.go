@@ -21,17 +21,40 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
+func checkPayloadStillExecuting(msg payload.StillExecuting) error {
+	if msg.ObjectRef.IsEmpty() {
+		return errors.New("Got StillExecuting message, but field ObjectRef is empty")
+	}
+	if !msg.ObjectRef.IsObjectReference() {
+		return errors.Errorf("StillExecuting.ObjectRef should be ObjectReference; ref=%s", msg.ObjectRef.String())
+	}
+
+	if !msg.Executor.IsObjectReference() {
+		return errors.Errorf("StillExecuting.Executor should be ObjectReference; ref=%s", msg.Executor.String())
+	}
+
+	if len(msg.RequestRefs) == 0 {
+		return errors.New("StillExecuting.RequestRefs should have list of elements, got empty list")
+	}
+
+	for _, requestRef := range msg.RequestRefs {
+		if !requestRef.IsRecordScope() {
+			return errors.Errorf("StillExecuting.RequestRefs should have only RecordReferences; ref=%s", requestRef.String())
+		}
+	}
+
+	return nil
+}
+
 type HandleStillExecuting struct {
 	dep *Dependencies
 
 	Message payload.Meta
-	Parcel  insolar.Parcel
 }
 
 func (h *HandleStillExecuting) Present(ctx context.Context, f flow.Flow) error {
@@ -43,6 +66,10 @@ func (h *HandleStillExecuting) Present(ctx context.Context, f flow.Flow) error {
 
 	ctx, logger := inslogger.WithField(ctx, "object", message.ObjectRef.String())
 	logger.Debug("handling still executing message")
+
+	if err := checkPayloadStillExecuting(message); err != nil {
+		return nil
+	}
 
 	done, err := h.dep.WriteAccessor.Begin(ctx, flow.Pulse(ctx))
 	if err != nil {

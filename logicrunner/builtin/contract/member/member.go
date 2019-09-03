@@ -29,6 +29,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/deposit"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/member"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/migrationadmin"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/migrationdaemon"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/nodedomain"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/rootdomain"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/wallet"
@@ -462,10 +463,21 @@ type DepositMigrationResult struct {
 
 func (m *Member) depositMigration(txHash string, migrationAddress string, amount *big.Int) (*DepositMigrationResult, error) {
 	migrationAdminContract := migrationadmin.GetObject(foundation.GetMigrationAdmin())
+	migrationDaemonContractRef, err := foundation.GetMigrationDaemon(m.GetReference())
+	if err != nil {
+		return nil, fmt.Errorf(" get migration daemon contract from foundation failed, %s ", err.Error())
+	}
+	if migrationDaemonContractRef.IsEmpty() {
+		return nil, fmt.Errorf(" the member is not migration daemon, %s ", m.GetReference())
+	}
 
-	result, err := migrationAdminContract.CheckDaemon(m.GetReference().String())
-	if err != nil || !result {
-		return nil, fmt.Errorf("this migration daemon is not in the list of active daemons: %s", err.Error())
+	migrationDaemonContract := migrationdaemon.GetObject(migrationDaemonContractRef)
+	result, err := migrationDaemonContract.GetActivationStatus()
+	if err != nil {
+		return nil, err
+	}
+	if !result {
+		return nil, fmt.Errorf("this migration daemon is not active daemons: %s", m.GetReference())
 	}
 
 	// Get member by migration address
@@ -490,7 +502,7 @@ func (m *Member) depositMigration(txHash string, migrationAddress string, amount
 	// If deposit doesn't exist - create new deposit
 	if !found {
 		vestingParams, _ := migrationAdminContract.GetDepositParameters()
-		dHolder := deposit.New(m.GetReference(), txHash, amount.String(), vestingParams)
+		dHolder := deposit.New(m.GetReference(), txHash, amount.String(), vestingParams.Lockup, vestingParams.Vesting, vestingParams.VestingStep)
 		txDeposit, err := dHolder.AsChild(*tokenHolderRef)
 		if err != nil {
 			return nil, fmt.Errorf("failed to save as child: %s", err.Error())
