@@ -221,7 +221,7 @@ func NewServer(
 
 		sp := insolarPulse.NewStartPulse()
 
-		backupMaker, err := executor.NewBackupMaker(ctx, DB, cfg.Ledger.Backup, JetKeeper.TopSyncPulse())
+		backupMaker, err := executor.NewBackupMaker(ctx, DB, cfg.Ledger, JetKeeper.TopSyncPulse(), DB)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed create backuper")
 		}
