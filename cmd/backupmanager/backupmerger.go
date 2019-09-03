@@ -18,7 +18,9 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"math"
 	"os"
 	"time"
@@ -151,7 +153,7 @@ func createEmptyBadger(dbDir string) {
 
 	err = isDBEmpty(bdb)
 	if err != nil {
-		closeRawDB(bdb, err)
+		closeRawDB(bdb, errors.Wrap(err, "DB must be empty"))
 		return
 	}
 	log.Info("DB is empty")
@@ -201,8 +203,66 @@ func parseCreateParams() *cobra.Command {
 	return createCmd
 }
 
-func prepareBackup(dbDir string) {
-	// finalizing of data
+func writeLastBackupFile(to string, lastBackupedVersion uint64) error {
+	backupInfo := executor.LastBackupInfo{
+		LastBackupedVersion: lastBackupedVersion,
+	}
+	rawInfo, err := json.MarshalIndent(backupInfo, "", "    ")
+	if err != nil {
+		return errors.Wrap(err, "failed to MarshalIndent")
+	}
+
+	err = ioutil.WriteFile(to, rawInfo, 0600)
+	return errors.Wrap(err, "failed to MarshalIndent")
+}
+
+func finalizeLastPulse(ctx context.Context, bdb *store.BadgerDB) (insolar.PulseNumber, error) {
+	pulsesDB := pulse.NewDB(bdb)
+
+	jetKeeper := executor.NewJetKeeper(jet.NewDBStore(bdb), bdb, pulsesDB)
+	log.Info("Current top sync pulse: ", jetKeeper.TopSyncPulse().String())
+
+	it := bdb.NewIterator(executor.BackupStartKey(math.MaxUint32), true)
+	if !it.Next() {
+		return 0, errors.New("no backup start keys")
+	}
+
+	pulseNumber := insolar.NewPulseNumber(it.Key())
+	log.Info("Found last backup start key: ", pulseNumber.String())
+
+	if pulseNumber < jetKeeper.TopSyncPulse() {
+		return 0, errors.New("Found last backup start key must be grater or equal to top sync pulse")
+	}
+
+	if !jetKeeper.HasAllJetConfirms(ctx, pulseNumber) {
+		return 0, errors.New("data is inconsistent. pulse " + pulseNumber.String() + " must has all confirms")
+	}
+
+	log.Info("All jet confirmed for pulse: ", pulseNumber.String())
+	err := jetKeeper.AddBackupConfirmation(ctx, pulseNumber)
+	if err != nil {
+		return 0, errors.New("failed to add backup confirmation for pulse" + pulseNumber.String())
+	}
+
+	if jetKeeper.TopSyncPulse() != pulseNumber {
+		return 0, errors.New("new top sync pulse must be equal to last backuped")
+
+	}
+
+	return jetKeeper.TopSyncPulse(), nil
+}
+
+type nopWriter struct{}
+
+func (nopWriter) Write(p []byte) (n int, err error) {
+	return len(p), nil
+}
+
+// prepareBackup does:
+// 1. finalize last pulse, since it comes not finalized ( since we set finalization after success of backup )
+// 2. gets last backuped version
+// 3. write 2. to file
+func prepareBackup(dbDir string, lastBackupedVersionFile string) {
 	ops := badger.DefaultOptions(dbDir)
 	bdb, err := store.NewBadgerDB(ops)
 	if err != nil {
@@ -219,58 +279,58 @@ func prepareBackup(dbDir string) {
 		}
 	}
 
-	pulsesDB := pulse.NewDB(bdb)
-
-	jetKeeper := executor.NewJetKeeper(jet.NewDBStore(bdb), bdb, pulsesDB)
-	log.Info("Current top sync pulse: ", jetKeeper.TopSyncPulse().String())
-
-	it := bdb.NewIterator(executor.BackupStartKey(math.MaxUint32), true)
-	if !it.Next() {
-		closeDB(errors.New("no backup start keys"))
-		return
-	}
-
-	pulseNumber := insolar.NewPulseNumber(it.Key())
-	log.Info("Found backup start key: ", pulseNumber.String())
-
-	if !jetKeeper.HasAllJetConfirms(ctx, pulseNumber) {
-		closeDB(errors.New("data is inconsistent. pulse " + pulseNumber.String() + " must has all confirms"))
-		return
-	}
-
-	log.Info("All jet confirmed for pulse: ", pulseNumber.String())
-	err = jetKeeper.AddBackupConfirmation(ctx, pulseNumber)
+	topSyncPulse, err := finalizeLastPulse(ctx, bdb)
 	if err != nil {
-		closeDB(errors.New("failed to add backup confirmation for pulse" + pulseNumber.String()))
+		closeDB(errors.Wrap(err, "failed to finalizeLastPulse"))
 		return
 	}
 
-	if jetKeeper.TopSyncPulse() != pulseNumber {
-		closeDB(errors.New("new top sync pulse must be equal to last backuped"))
+	lastVersion, err := bdb.Backup(nopWriter{}, 0)
+	if err != nil {
+		closeDB(errors.Wrap(err, "failed to calculate last backuped version"))
 		return
 	}
+	log.Info("Get last backup version: ", lastVersion)
 
-	log.Info("New top sync pulse: ", jetKeeper.TopSyncPulse().String())
+	if err := writeLastBackupFile(lastBackupedVersionFile, lastVersion); err != nil {
+		closeDB(errors.Wrap(err, "failed to writeLastBackupFile"))
+		return
+	}
+	log.Info("Write last backup version file: ", lastBackupedVersionFile)
+
 	closeDB(nil)
+	log.Info("New top sync pulse: ", topSyncPulse.String())
 }
 
 func parsePrepareBackupParams() *cobra.Command {
-	var dbDir string
+	var (
+		dbDir                   string
+		lastBackupedVersionFile string
+	)
 	var prepareBackupCmd = &cobra.Command{
 		Use:   "prepare_backup",
 		Short: "prepare backup for usage",
 		Run: func(cmd *cobra.Command, args []string) {
-			prepareBackup(dbDir)
+			prepareBackup(dbDir, dbDir+"/"+lastBackupedVersionFile)
 		},
 	}
 
 	dbDirFlagName := "db-dir"
 	prepareBackupCmd.Flags().StringVarP(
 		&dbDir, dbDirFlagName, "d", "", "directory where new badger will be created (required)")
+	lastBackupFileFlagName := "last-backup-info"
+	prepareBackupCmd.Flags().StringVarP(
+		&lastBackupedVersionFile, lastBackupFileFlagName, "l", "", "file where last backup info will be stored (required)")
 
 	err := cobra.MarkFlagRequired(prepareBackupCmd.Flags(), dbDirFlagName)
 	if err != nil {
 		printError("failed to set required param: "+dbDirFlagName, err)
+		os.Exit(1)
+	}
+
+	err = cobra.MarkFlagRequired(prepareBackupCmd.Flags(), lastBackupFileFlagName)
+	if err != nil {
+		printError("failed to set required param: "+lastBackupFileFlagName, err)
 		os.Exit(1)
 	}
 
