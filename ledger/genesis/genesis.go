@@ -278,7 +278,7 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 			insolar.GenesisNameRootDomain,
 		),
 		contracts.GetMigrationAdminGenesisContractState(g.ContractsConfig.LoсkupPeriodInPulses, g.ContractsConfig.VestingPeriodInPulses, g.ContractsConfig.VestingStepInPulses),
-		contracts.GetCostCenterGenesisContractState(),
+		contracts.GetCostCenterGenesisContractState(genesisrefs.ContractFeeMember),
 	}
 
 	for i, key := range g.ContractsConfig.MigrationDaemonPublicKeys {

@@ -19,6 +19,7 @@
 package functest
 
 import (
+	"fmt"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/testutils/launchnet"
 	"github.com/stretchr/testify/require"
@@ -102,6 +103,7 @@ func TestTransferMoneyToNotExist(t *testing.T) {
 	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, firstMember, "member.transfer",
 		map[string]interface{}{"amount": amount, "toMemberReference": gen.Reference().String()})
 	require.Error(t, err)
+	fmt.Println(err)
 	require.Contains(t, err.Error(), "index not found")
 
 	newFirstBalance := getBalanceNoErr(t, firstMember, firstMember.Ref)
