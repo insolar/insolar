@@ -24,19 +24,19 @@ import (
 
 	wmMessage "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/gojuno/minimock"
-	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/gen"
-	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/testutils"
 )
 
 func genAPIRequestID() string {
@@ -77,10 +77,8 @@ type ArtifactsMangerClientSuite struct {
 	mc  *minimock.Controller
 	ctx context.Context
 
-	busSender      *bus.SenderMock
-	jetStorage     *jet.StorageMock
-	pulseAccessor  *pulse.AccessorMock
-	jetCoordinator *jet.CoordinatorMock
+	busSender     *bus.SenderMock
+	pulseAccessor *pulse.AccessorMock
 
 	amClientOriginal *client
 	amClient         Client
@@ -91,31 +89,30 @@ func TestArtifactManager(t *testing.T) {
 	suite.Run(t, &ArtifactsMangerClientSuite{Suite: suite.Suite{}})
 }
 
-func (s *ArtifactsMangerClientSuite) createAMClient() *client {
+func (s *ArtifactsMangerClientSuite) prepareAMClient() {
 	s.mc = minimock.NewController(s.T())
 
-	s.jetStorage = jet.NewStorageMock(s.mc)
 	s.pulseAccessor = pulse.NewAccessorMock(s.mc)
-	s.jetCoordinator = jet.NewCoordinatorMock(s.mc)
-
 	s.busSender = bus.NewSenderMock(s.mc)
 
-	return &client{
-		JetStorage:     s.jetStorage,
-		PCS:            platformpolicy.NewPlatformCryptographyScheme(),
-		PulseAccessor:  s.pulseAccessor,
-		JetCoordinator: s.jetCoordinator,
+	s.amClientOriginal = &client{
+		PCS:           platformpolicy.NewPlatformCryptographyScheme(),
+		PulseAccessor: s.pulseAccessor,
 
 		sender:       s.busSender,
 		localStorage: newLocalStorage(),
 	}
+
+	s.amClient = s.amClientOriginal
+}
+
+func (s *ArtifactsMangerClientSuite) prepareContext() {
+	s.ctx = inslogger.TestContext(s.T())
 }
 
 func (s *ArtifactsMangerClientSuite) BeforeTest(suiteName, testName string) {
-	s.ctx = inslogger.TestContext(s.T())
-
-	s.amClientOriginal = s.createAMClient()
-	s.amClient = s.amClientOriginal
+	s.prepareContext()
+	s.prepareAMClient()
 }
 
 func (s *ArtifactsMangerClientSuite) AfterTest(suiteName, testName string) {
@@ -139,7 +136,7 @@ func (s *ArtifactsMangerClientSuite) TestGetAbandonedRequest() {
 				Request:   record.Wrap(iRequest),
 			},
 			check: func(gotRequest record.Request, err error) {
-				s.Assert().NoError(err)
+				s.NoError(err)
 				s.Equal(*iRequest, *gotRequest.(*record.IncomingRequest))
 			},
 		},
@@ -149,7 +146,7 @@ func (s *ArtifactsMangerClientSuite) TestGetAbandonedRequest() {
 				Request:   record.Wrap(oRequest),
 			},
 			check: func(gotRequest record.Request, err error) {
-				s.Assert().NoError(err)
+				s.NoError(err)
 				s.Equal(*oRequest, *gotRequest.(*record.OutgoingRequest))
 			},
 		},
@@ -158,7 +155,7 @@ func (s *ArtifactsMangerClientSuite) TestGetAbandonedRequest() {
 				Text: "request not found",
 				Code: payload.CodeNotFound,
 			},
-			check: func(gotRequest record.Request, err error) {
+			check: func(_ record.Request, err error) {
 				s.Equal(insolar.ErrNotFound, err)
 			},
 		},
@@ -167,15 +164,15 @@ func (s *ArtifactsMangerClientSuite) TestGetAbandonedRequest() {
 				Text: "some error",
 				Code: payload.CodeUnknown,
 			},
-			check: func(gotRequest record.Request, err error) {
+			check: func(_ record.Request, err error) {
 				s.Error(err)
 				s.Contains(err.Error(), "some error")
 			},
 		},
 		"unknown payload": {
 			response: &payload.PendingFinished{},
-			check: func(gotRequest record.Request, err error) {
-				s.Assert().Contains(err.Error(), "unexpected reply")
+			check: func(_ record.Request, err error) {
+				s.Contains(err.Error(), "unexpected reply")
 			},
 		},
 		"unexpected message": {
@@ -183,12 +180,14 @@ func (s *ArtifactsMangerClientSuite) TestGetAbandonedRequest() {
 				RequestID: *requestRef.GetLocal(),
 				Request:   record.Wrap(&record.Activate{}),
 			},
-			check: func(gotRequest record.Request, err error) {
-				s.Assert().Contains(err.Error(), "unexpected message")
+			check: func(_ record.Request, err error) {
+				s.Contains(err.Error(), "unexpected message")
 			},
 		},
 	} {
 		s.Run(name, func() {
+			s.prepareContext()
+
 			reqMsg, err := payload.NewMessage(test.response)
 			s.Require().NoError(err)
 
@@ -249,52 +248,116 @@ func (s *ArtifactsMangerClientSuite) TestGetAbandonedRequest_FailedToSend() {
 	s.Contains(err.Error(), "failed to send GetRequest")
 }
 
-func (s *ArtifactsMangerClientSuite) TestGetPendings_Success() {
+func (s *ArtifactsMangerClientSuite) TestGetPendings() {
 	// Arrange
-	request, requestRef := genIncomingRequest()
+	objectRef := gen.Reference()
+	requestRef1 := gen.RecordReference()
+	requestRef2 := gen.RecordReference()
+	requestRef3 := gen.RecordReference()
 
-	resultIDs := &payload.IDs{
-		IDs: []insolar.ID{*requestRef.GetLocal()},
-	}
-	resMsg, err := payload.NewMessage(resultIDs)
-	require.NoError(s.T(), err)
-
-	s.busSender.SendRoleMock.Set(
-		func(
-			p context.Context,
-			msg *wmMessage.Message,
-			role insolar.DynamicRole,
-			ref insolar.Reference,
-		) (
-			<-chan *wmMessage.Message,
-			func(),
-		) {
-			getPendings := payload.GetPendings{}
-			err := getPendings.Unmarshal(msg.Payload)
-			s.Require().NoError(err)
-
-			s.Equal(*request.Object.GetLocal(), getPendings.ObjectID)
-
-			meta := payload.Meta{
-				Payload: resMsg.Payload,
-			}
-			buf, err := meta.Marshal()
-			s.Require().NoError(err)
-
-			resMsg.Payload = buf
-
-			ch := make(chan *wmMessage.Message, 1)
-			ch <- resMsg
-			return ch, func() {}
+	for name, test := range map[string]struct {
+		response payload.Payload
+		check    func([]insolar.Reference, error)
+	}{
+		"success": {
+			response: &payload.IDs{
+				IDs: []insolar.ID{*requestRef1.GetLocal()},
+			},
+			check: func(requests []insolar.Reference, err error) {
+				s.NoError(err)
+				s.Equal([]insolar.Reference{requestRef1}, requests)
+			},
 		},
-	)
+		"success_multiple": {
+			response: &payload.IDs{
+				IDs: []insolar.ID{
+					*requestRef1.GetLocal(),
+					*requestRef2.GetLocal(),
+					*requestRef3.GetLocal(),
+				},
+			},
+			check: func(requests []insolar.Reference, err error) {
+				s.NoError(err)
+				s.Len(requests, 3)
+				s.Contains(requests, requestRef1)
+				s.Contains(requests, requestRef2)
+				s.Contains(requests, requestRef3)
+			},
+		},
+		"no pendings": {
+			response: &payload.Error{
+				Text: insolar.ErrNoPendingRequest.Error(),
+				Code: payload.CodeNoPendings,
+			},
+			check: func(requests []insolar.Reference, err error) {
+				s.Len(requests, 0)
+				s.Error(err)
+				s.Equal(err, insolar.ErrNoPendingRequest)
+			},
+		},
+		"other error": {
+			response: &payload.Error{
+				Text: "some error",
+				Code: payload.CodeUnknown,
+			},
+			check: func(requests []insolar.Reference, err error) {
+				s.Len(requests, 0)
+				s.Error(err)
+				s.Contains(err.Error(), "some error")
+			},
+		},
+		"unknown payload": {
+			response: &payload.PendingFinished{},
+			check: func(requests []insolar.Reference, err error) {
+				s.Len(requests, 0)
+				s.Contains(err.Error(), "unexpected reply")
+			},
+		},
+	} {
+		s.Run(name, func() {
+			s.prepareContext()
 
-	// Act
-	res, err := s.amClient.GetPendings(s.ctx, *request.Object)
+			resMsg, err := payload.NewMessage(test.response)
+			s.Require().NoError(err)
 
-	// Assert
-	s.NoError(err)
-	s.Equal([]insolar.Reference{requestRef}, res)
+			s.busSender.SendRoleMock.Set(
+				func(
+					p context.Context,
+					msg *wmMessage.Message,
+					role insolar.DynamicRole,
+					ref insolar.Reference,
+				) (
+					<-chan *wmMessage.Message,
+					func(),
+				) {
+					getPendings := payload.GetPendings{}
+					err := getPendings.Unmarshal(msg.Payload)
+					s.Require().NoError(err)
+
+					s.Equal(objectRef.GetLocal(), &getPendings.ObjectID)
+
+					meta := payload.Meta{
+						Payload: resMsg.Payload,
+					}
+					buf, err := meta.Marshal()
+					s.Require().NoError(err)
+
+					resMsg.Payload = buf
+
+					ch := make(chan *wmMessage.Message, 1)
+					ch <- resMsg
+					return ch, func() {}
+				},
+			)
+
+			// Act
+			references, err := s.amClient.GetPendings(s.ctx, objectRef)
+
+			// Assert
+			test.check(references, err)
+		})
+
+	}
 }
 
 func (s *ArtifactsMangerClientSuite) TestGetPendings_FailedToSend() {
@@ -309,53 +372,480 @@ func (s *ArtifactsMangerClientSuite) TestGetPendings_FailedToSend() {
 	_, err := s.amClient.GetPendings(s.ctx, *request.Object)
 
 	// Assert
+	s.Error(err)
 	s.Contains(err.Error(), "failed to send GetPendings")
 }
 
-func (s *ArtifactsMangerClientSuite) TestHasPendings_Success() {
+func (s *ArtifactsMangerClientSuite) TestHasPendings() {
 	// Arrange
 	objectRef := gen.Reference()
 
-	resultHas := &payload.PendingsInfo{
-		HasPendings: true,
-	}
-	resMsg, err := payload.NewMessage(resultHas)
-	s.Require().NoError(err)
-
-	s.busSender.SendRoleMock.Set(
-		func(
-			p context.Context,
-			msg *wmMessage.Message,
-			role insolar.DynamicRole,
-			ref insolar.Reference,
-		) (
-			<-chan *wmMessage.Message,
-			func(),
-		) {
-			hasPendings := payload.HasPendings{}
-			err := hasPendings.Unmarshal(msg.Payload)
-			s.Require().NoError(err)
-
-			s.Equal(*objectRef.GetLocal(), hasPendings.ObjectID)
-
-			meta := payload.Meta{
-				Payload: resMsg.Payload,
-			}
-			buf, err := meta.Marshal()
-			s.Require().NoError(err)
-
-			resMsg.Payload = buf
-
-			ch := make(chan *wmMessage.Message, 1)
-			ch <- resMsg
-			return ch, func() {}
+	for name, test := range map[string]struct {
+		response payload.Payload
+		check    func(bool, error)
+	}{
+		"success ok": {
+			response: &payload.PendingsInfo{
+				HasPendings: true,
+			},
+			check: func(hasPendings bool, err error) {
+				s.NoError(err)
+				s.Equal(true, hasPendings)
+			},
 		},
-	)
+		"success not ok": {
+			response: &payload.PendingsInfo{
+				HasPendings: false,
+			},
+			check: func(hasPendings bool, err error) {
+				s.NoError(err)
+				s.Equal(false, hasPendings)
+			},
+		},
+		"other error": {
+			response: &payload.Error{
+				Text: "some error",
+				Code: payload.CodeUnknown,
+			},
+			check: func(_ bool, err error) {
+				s.Error(err)
+				s.Contains(err.Error(), "some error")
+			},
+		},
+		"unknown payload": {
+			response: &payload.PendingFinished{},
+			check: func(_ bool, err error) {
+				s.Contains(err.Error(), "unexpected reply")
+			},
+		},
+	} {
+		s.Run(name, func() {
+			s.prepareContext()
+
+			resMsg, err := payload.NewMessage(test.response)
+			s.Require().NoError(err)
+
+			s.busSender.SendRoleMock.Set(
+				func(
+					p context.Context,
+					msg *wmMessage.Message,
+					role insolar.DynamicRole,
+					ref insolar.Reference,
+				) (
+					<-chan *wmMessage.Message,
+					func(),
+				) {
+					hasPendings := payload.HasPendings{}
+					err := hasPendings.Unmarshal(msg.Payload)
+					s.Require().NoError(err)
+
+					s.Equal(*objectRef.GetLocal(), hasPendings.ObjectID)
+
+					meta := payload.Meta{
+						Payload: resMsg.Payload,
+					}
+					buf, err := meta.Marshal()
+					s.Require().NoError(err)
+
+					resMsg.Payload = buf
+
+					ch := make(chan *wmMessage.Message, 1)
+					ch <- resMsg
+					return ch, func() {}
+				},
+			)
+
+			// Act
+			hasPendings, err := s.amClient.HasPendings(s.ctx, objectRef)
+
+			// Assert
+			test.check(hasPendings, err)
+		})
+	}
+}
+
+func (s *ArtifactsMangerClientSuite) TestHasPendings_FailedToSend() {
+	// Arrange
+	request, _ := genIncomingRequest()
+
+	ch := make(chan *wmMessage.Message)
+	close(ch)
+	s.busSender.SendRoleMock.Return(ch, func() {})
 
 	// Act
-	res, err := s.amClient.HasPendings(s.ctx, objectRef)
+	_, err := s.amClient.HasPendings(s.ctx, *request.Object)
 
 	// Assert
-	s.NoError(err)
-	s.Equal(true, res)
+	s.Error(err)
+	s.Contains(err.Error(), "failed to send HasPendings")
+}
+
+func (s *ArtifactsMangerClientSuite) TestDeployCode() {
+	// Arrange
+	codeID := gen.ID()
+	code := []byte(testutils.RandomString())
+	machineType := insolar.MachineTypeGoPlugin
+	pulseObject := insolar.Pulse{PulseNumber: gen.PulseNumber()}
+
+	for name, test := range map[string]struct {
+		response payload.Payload
+		check    func(*insolar.ID, error)
+	}{
+		"success": {
+			response: &payload.ID{
+				ID: codeID,
+			},
+			check: func(id *insolar.ID, err error) {
+				s.NoError(err)
+				s.Equal(codeID, *id)
+			},
+		},
+		"error": {
+			response: &payload.Error{
+				Text: "some error",
+				Code: payload.CodeUnknown,
+			},
+			check: func(id *insolar.ID, err error) {
+				s.Error(err)
+				s.Contains(err.Error(), "some error")
+				s.Nil(id)
+			},
+		},
+		"unknown payload": {
+			response: &payload.PendingFinished{},
+			check: func(id *insolar.ID, err error) {
+				s.Error(err)
+				s.Contains(err.Error(), "unexpected reply")
+				s.Nil(id)
+			},
+		},
+	} {
+		s.Run(name, func() {
+			s.prepareContext()
+			s.prepareAMClient()
+
+			resMsg, err := payload.NewMessage(test.response)
+			s.Require().NoError(err)
+
+			s.pulseAccessor.LatestMock.Return(pulseObject, nil)
+
+			s.busSender.SendRoleMock.Set(
+				func(
+					p context.Context,
+					msg *wmMessage.Message,
+					role insolar.DynamicRole,
+					ref insolar.Reference,
+				) (
+					<-chan *wmMessage.Message,
+					func(),
+				) {
+					payloadSetCode := payload.SetCode{}
+					err := payloadSetCode.Unmarshal(msg.Payload)
+					s.Require().NoError(err)
+
+					virtualRec := &record.Virtual{}
+					err = virtualRec.Unmarshal(payloadSetCode.Record)
+					s.Require().NoError(err)
+
+					rec := record.Unwrap(virtualRec)
+					s.Require().IsType((*record.Code)(nil), rec)
+
+					s.Equal(code, rec.(*record.Code).Code)
+					s.Equal(machineType, rec.(*record.Code).MachineType)
+
+					meta := payload.Meta{
+						Payload: resMsg.Payload,
+					}
+					buf, err := meta.Marshal()
+					s.Require().NoError(err)
+
+					resMsg.Payload = buf
+
+					ch := make(chan *wmMessage.Message, 1)
+					ch <- resMsg
+					return ch, func() {}
+				},
+			)
+
+			emptyRef := *insolar.NewEmptyReference()
+
+			// Act
+			deployCodeID, err := s.amClient.DeployCode(s.ctx, emptyRef, emptyRef, code, machineType)
+
+			// Assert
+			test.check(deployCodeID, err)
+
+			s.mc.Finish()
+		})
+	}
+}
+
+func (s *ArtifactsMangerClientSuite) TestDeployCode_FailedToSend() {
+	// Arrange
+	emptyRef := *insolar.NewEmptyReference()
+	code := []byte(testutils.RandomString())
+	machineType := insolar.MachineTypeGoPlugin
+
+	pulseObject := insolar.Pulse{PulseNumber: gen.PulseNumber()}
+	s.pulseAccessor.LatestMock.Return(pulseObject, nil)
+
+	ch := make(chan *wmMessage.Message)
+	close(ch)
+	s.busSender.SendRoleMock.Return(ch, func() {})
+
+	// Act
+	_, err := s.amClient.DeployCode(s.ctx, emptyRef, emptyRef, code, machineType)
+
+	// Assert
+	s.Error(err)
+	s.Contains(err.Error(), "failed to send SetCode")
+}
+
+func (s *ArtifactsMangerClientSuite) TestRegisterIncomingRequest() {
+	// Arrange
+	incoming, requestRef := genIncomingRequest()
+	objectRef := *incoming.Object
+
+	pulseObject := insolar.Pulse{PulseNumber: gen.PulseNumber()}
+
+	for name, test := range map[string]struct {
+		response payload.Payload
+		check    func(*payload.RequestInfo, error)
+	}{
+		"success": {
+			response: &payload.RequestInfo{
+				ObjectID:  *objectRef.GetLocal(),
+				RequestID: *requestRef.GetLocal(),
+				Request:   nil,
+				Result:    nil,
+			},
+			check: func(requestInfo *payload.RequestInfo, err error) {
+				s.Equal(*objectRef.GetLocal(), requestInfo.ObjectID)
+				s.Equal(*requestRef.GetLocal(), requestInfo.RequestID)
+				s.Nil(requestInfo.Request)
+				s.Nil(requestInfo.Result)
+			},
+		},
+		"flow cancelled": {
+			response: &payload.Error{
+				Code: payload.CodeFlowCanceled,
+				Text: "flow cancelled",
+			},
+			check: func(requestInfo *payload.RequestInfo, err error) {
+				s.Nil(requestInfo)
+				s.Error(err)
+				s.Contains(err.Error(), flow.ErrCancelled.Error())
+			},
+		},
+		"other error": {
+			response: &payload.Error{
+				Text: "some error",
+				Code: payload.CodeUnknown,
+			},
+			check: func(requestInfo *payload.RequestInfo, err error) {
+				s.Error(err)
+				s.Contains(err.Error(), "some error")
+				s.Nil(requestInfo)
+			},
+		},
+		"unknown payload": {
+			response: &payload.PendingFinished{},
+			check: func(requestInfo *payload.RequestInfo, err error) {
+				s.Error(err)
+				s.Contains(err.Error(), "unexpected reply")
+				s.Nil(requestInfo)
+			},
+		},
+	} {
+		s.Run(name, func() {
+			s.prepareContext()
+			s.prepareAMClient()
+
+			resMsg, err := payload.NewMessage(test.response)
+			s.Require().NoError(err)
+
+			s.pulseAccessor.LatestMock.Return(pulseObject, nil)
+
+			s.busSender.SendRoleMock.Set(
+				func(
+					p context.Context,
+					msg *wmMessage.Message,
+					role insolar.DynamicRole,
+					ref insolar.Reference,
+				) (
+					<-chan *wmMessage.Message,
+					func(),
+				) {
+					payloadSetIncomingRequest := payload.SetIncomingRequest{}
+					err := payloadSetIncomingRequest.Unmarshal(msg.Payload)
+					s.Require().NoError(err)
+
+					rec := record.Unwrap(&payloadSetIncomingRequest.Request)
+					s.Require().IsType((*record.IncomingRequest)(nil), rec)
+
+					meta := payload.Meta{
+						Payload: resMsg.Payload,
+					}
+					buf, err := meta.Marshal()
+					s.Require().NoError(err)
+
+					resMsg.Payload = buf
+
+					ch := make(chan *wmMessage.Message, 1)
+					ch <- resMsg
+					return ch, func() {}
+				},
+			)
+
+			reqInfo, err := s.amClient.RegisterIncomingRequest(s.ctx, incoming)
+
+			test.check(reqInfo, err)
+		})
+	}
+}
+
+func (s *ArtifactsMangerClientSuite) TestRegisterOutgoingRequest() {
+	// Arrange
+	incoming, requestRef := genIncomingRequest()
+	objectRef := *incoming.Object
+	outgoing := (*record.OutgoingRequest)(incoming)
+	initialPulseNumber, pulseOffset := gen.PulseNumber(), insolar.PulseNumber(0)
+
+	_ = &payload.RequestInfo{
+		ObjectID:  *objectRef.GetLocal(),
+		RequestID: *requestRef.GetLocal(),
+		Request:   nil,
+		Result:    nil,
+	}
+
+	for name, test := range map[string]struct {
+		response []payload.Payload
+		check    func(*payload.RequestInfo, error)
+	}{
+		"success": {
+			response: []payload.Payload{
+				&payload.RequestInfo{
+					ObjectID:  *objectRef.GetLocal(),
+					RequestID: *requestRef.GetLocal(),
+					Request:   nil,
+					Result:    nil,
+				},
+			},
+			check: func(requestInfo *payload.RequestInfo, err error) {
+				s.Equal(*objectRef.GetLocal(), requestInfo.ObjectID)
+				s.Equal(*requestRef.GetLocal(), requestInfo.RequestID)
+				s.Nil(requestInfo.Request)
+				s.Nil(requestInfo.Result)
+			},
+		},
+		"flow cancelled": {
+			response: []payload.Payload{
+				&payload.Error{
+					Code: payload.CodeFlowCanceled,
+					Text: "flow cancelled",
+				},
+				&payload.Error{
+					Code: payload.CodeFlowCanceled,
+					Text: "flow cancelled",
+				},
+			},
+			check: func(requestInfo *payload.RequestInfo, err error) {
+				s.Nil(requestInfo)
+				s.Error(err)
+				s.Contains(err.Error(), "timeout while awaiting reply from watermill")
+			},
+		},
+		"other error": {
+			response: []payload.Payload{
+				&payload.Error{
+					Text: "some error",
+					Code: payload.CodeUnknown,
+				},
+			},
+			check: func(requestInfo *payload.RequestInfo, err error) {
+				s.Error(err)
+				s.Contains(err.Error(), "some error")
+				s.Nil(requestInfo)
+			},
+		},
+		"unknown payload": {
+			response: []payload.Payload{
+				&payload.PendingFinished{},
+			},
+			check: func(requestInfo *payload.RequestInfo, err error) {
+				s.Error(err)
+				s.Contains(err.Error(), "unexpected reply")
+				s.Nil(requestInfo)
+			},
+		},
+	} {
+		s.Run(name, func() {
+			s.prepareContext()
+			s.prepareAMClient()
+
+			s.pulseAccessor.LatestMock.Set(
+				func(ctx context.Context) (insolar.Pulse, error) {
+					pulseOffset += 10
+					return insolar.Pulse{PulseNumber: initialPulseNumber + pulseOffset}, nil
+				},
+			)
+
+			s.busSender.SendRoleMock.Set(
+				func(
+					p context.Context,
+					msg *wmMessage.Message,
+					role insolar.DynamicRole,
+					ref insolar.Reference,
+				) (
+					<-chan *wmMessage.Message,
+					func(),
+				) {
+					payloadSetOutgoingRequest := payload.SetOutgoingRequest{}
+					err := payloadSetOutgoingRequest.Unmarshal(msg.Payload)
+					s.Require().NoError(err)
+
+					rec := record.Unwrap(&payloadSetOutgoingRequest.Request)
+					s.Require().IsType((*record.OutgoingRequest)(nil), rec)
+
+					ch := make(chan *wmMessage.Message, 10)
+
+					for _, pl := range test.response {
+						resMsg, err := payload.NewMessage(pl)
+						s.Require().NoError(err)
+
+						meta := payload.Meta{
+							Payload: resMsg.Payload,
+						}
+						buf, err := meta.Marshal()
+						s.Require().NoError(err)
+
+						resMsg.Payload = buf
+
+						ch <- resMsg
+					}
+					return ch, func() { close(ch) }
+				},
+			)
+
+			reqInfo, err := s.amClient.RegisterOutgoingRequest(s.ctx, outgoing)
+
+			test.check(reqInfo, err)
+		})
+	}
+}
+
+func (s *ArtifactsMangerClientSuite) TestGetCode() {
+
+}
+
+func (s *ArtifactsMangerClientSuite) TestGetObject() {
+
+}
+
+func (s *ArtifactsMangerClientSuite) TestActivatePrototype() {
+
+}
+
+func (s *ArtifactsMangerClientSuite) TestRegisterResult() {
+
 }

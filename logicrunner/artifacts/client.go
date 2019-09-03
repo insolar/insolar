@@ -23,12 +23,12 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
-	"github.com/insolar/insolar/insolar/pulse"
+	insPulse "github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/pulse"
 
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
@@ -83,10 +83,8 @@ func newLocalStorage() *localStorage {
 
 // Client provides concrete API to storage for processing module.
 type client struct {
-	JetStorage     jet.Storage                        `inject:""`
-	PCS            insolar.PlatformCryptographyScheme `inject:""`
-	PulseAccessor  pulse.Accessor                     `inject:""`
-	JetCoordinator jet.Coordinator                    `inject:""`
+	PCS           insolar.PlatformCryptographyScheme `inject:""`
+	PulseAccessor insPulse.Accessor                  `inject:""`
 
 	sender       bus.Sender
 	localStorage *localStorage
@@ -131,11 +129,9 @@ func (m *client) registerRequest(
 		return p, nil
 	case *payload.Error:
 		if p.Code == payload.CodeFlowCanceled {
-			err = flow.ErrCancelled
-		} else {
-			err = &payload.CodedError{Code: p.Code, Text: p.Text}
+			return nil, flow.ErrCancelled
 		}
-		return nil, err
+		return nil, &payload.CodedError{Code: p.Code, Text: p.Text}
 	default:
 		err = fmt.Errorf("registerRequest: unexpected reply: %#v", p)
 		return nil, err
@@ -167,10 +163,10 @@ func (m *client) RegisterIncomingRequest(ctx context.Context, request *record.In
 // RegisterOutgoingRequest sends message for outgoing request registration,
 // returns request record Ref if request successfully created or already exists.
 func (m *client) RegisterOutgoingRequest(ctx context.Context, request *record.OutgoingRequest) (*payload.RequestInfo, error) {
+	retrySender := bus.NewRetrySender(m.sender, m.PulseAccessor, 1, 1)
 	outgoingRequest := &payload.SetOutgoingRequest{Request: record.Wrap(request)}
-	res, err := m.registerRequest(
-		ctx, request, outgoingRequest, bus.NewRetrySender(m.sender, m.PulseAccessor, 1, 1),
-	)
+
+	res, err := m.registerRequest(ctx, request, outgoingRequest, retrySender)
 	if err != nil {
 		return nil, errors.Wrap(err, "RegisterOutgoingRequest")
 	}
@@ -489,8 +485,8 @@ func (m *client) HasPendings(
 // CodeRef records are used to activate prototype or as migration code for an object.
 func (m *client) DeployCode(
 	ctx context.Context,
-	domain insolar.Reference,
-	request insolar.Reference,
+	_ insolar.Reference,
+	_ insolar.Reference,
 	code []byte,
 	machineType insolar.MachineType,
 ) (*insolar.ID, error) {
@@ -575,14 +571,13 @@ func (m *client) ActivatePrototype(
 }
 
 // pulse returns current PulseNumber for artifact manager
-func (m *client) pulse(ctx context.Context) (pn insolar.PulseNumber, err error) {
-	pulse, err := m.PulseAccessor.Latest(ctx)
+func (m *client) pulse(ctx context.Context) (insolar.PulseNumber, error) {
+	pulseObject, err := m.PulseAccessor.Latest(ctx)
 	if err != nil {
-		return
+		return pulse.Unknown, err
 	}
 
-	pn = pulse.PulseNumber
-	return
+	return pulseObject.PulseNumber, nil
 }
 
 func (m *client) activateObject(
