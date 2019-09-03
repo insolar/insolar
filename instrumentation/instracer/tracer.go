@@ -23,6 +23,7 @@ import (
 	"contrib.go.opencensus.io/exporter/jaeger"
 	"go.opencensus.io/trace"
 
+	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
@@ -98,7 +99,7 @@ func StartSpan(ctx context.Context, name string, o ...trace.StartOption) (contex
 	// At the time of writing we are not very concerned with extra traffic created
 	// by two TraceIds thus this seems to be not a major issue.
 	span.AddAttributes(
-		trace.StringAttribute("insTraceId", inslogger.TraceID(ctx)),
+		trace.StringAttribute("insTraceId", utils.TraceID(ctx)),
 	)
 	setSpanEntries(span, GetBaggage(spanctx)...)
 	return spanctx, span
