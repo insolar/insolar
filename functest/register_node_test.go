@@ -73,7 +73,7 @@ func TestRegisterNodeNotExistRole(t *testing.T) {
 	require.Error(t, err)
 	require.IsType(t, &requester.Error{}, err)
 	data := err.(*requester.Error).Data
-	require.Contains(t, data.Trace, "role is not supported: some_not_fancy_role")
+	require.Contains(t, data.Trace, "role is not supported")
 }
 
 func TestRegisterNodeByNoRoot(t *testing.T) {

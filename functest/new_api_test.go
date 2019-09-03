@@ -52,14 +52,14 @@ func TestBadSeed(t *testing.T) {
 	ctx := context.TODO()
 	rootCfg, err := requester.CreateUserConfig(launchnet.Root.Ref, launchnet.Root.PrivKey, launchnet.Root.PubKey)
 	require.NoError(t, err)
-	_, err = requester.SendWithSeed(ctx, launchnet.TestRPCUrlPublic, rootCfg, &requester.Params{
+	res, err := requester.SendWithSeed(ctx, launchnet.TestRPCUrlPublic, rootCfg, &requester.Params{
 		CallSite:  "member.create",
 		PublicKey: rootCfg.PublicKey},
 		"MTExMQ==")
 	require.NoError(t, err)
-	require.IsType(t, &requester.Error{}, err)
-	data := err.(*requester.Error).Data
-	require.Contains(t, data.Trace, "[ checkSeed ] Bad seed param")
+	var resData = requester.Response{}
+	_ = json.Unmarshal(res, &resData)
+	require.Contains(t, resData.Error.Data.Trace, "bad input seed")
 }
 
 func TestIncorrectSeed(t *testing.T) {
@@ -71,9 +71,9 @@ func TestIncorrectSeed(t *testing.T) {
 		PublicKey: rootCfg.PublicKey},
 		"z2vgMVDXx0s+g5mkagOLqCP0q/8YTfoQkII5pjNF1ag=")
 	require.NoError(t, err)
-	require.IsType(t, &requester.Error{}, contractError(res))
-	data := err.(*requester.Error).Data
-	require.Contains(t, data.Trace, "[ checkSeed ] Incorrect seed")
+	var resData = requester.Response{}
+	_ = json.Unmarshal(res, &resData)
+	require.Contains(t, resData.Error.Data.Trace, "incorrect seed")
 }
 
 func customSend(data string) (map[string]interface{}, error) {
@@ -129,10 +129,10 @@ func TestIncorrectSign(t *testing.T) {
 	var res requester.ContractResponse
 	err = json.Unmarshal(body, &res)
 	require.NoError(t, err)
-	require.IsType(t, &requester.Error{}, err)
-	data := err.(*requester.Error).Data
-	require.Contains(t, data.Trace, "error while verify signature")
-	require.Contains(t, data.Trace, "structure error")
+	var resData = requester.Response{}
+	_ = json.Unmarshal(body, &resData)
+	require.Contains(t, resData.Error.Data.Trace, "error while verify signature")
+	require.Contains(t, resData.Error.Data.Trace, "structure error")
 }
 
 func TestEmptySign(t *testing.T) {
@@ -156,9 +156,9 @@ func TestEmptySign(t *testing.T) {
 	var res requester.ContractResponse
 	err = json.Unmarshal(body, &res)
 	require.NoError(t, err)
-	require.IsType(t, &requester.Error{}, err)
-	data := err.(*requester.Error).Data
-	require.Contains(t, data.Trace, "invalid signature")
+	var resData = requester.Response{}
+	_ = json.Unmarshal(body, &resData)
+	require.Contains(t, resData.Error.Data.Trace, "invalid signature")
 }
 
 func TestRequestWithSignFromOtherMember(t *testing.T) {
@@ -196,9 +196,9 @@ func TestRequestWithSignFromOtherMember(t *testing.T) {
 	var res requester.ContractResponse
 	err = json.Unmarshal(body, &res)
 	require.NoError(t, err)
-	require.IsType(t, &requester.Error{}, err)
-	data := err.(*requester.Error).Data
-	require.Contains(t, data.Trace, "error while verify signature: invalid signature")
+	var resData = requester.Response{}
+	_ = json.Unmarshal(body, &resData)
+	require.Contains(t, resData.Error.Data.Trace, "invalid signature")
 }
 
 func TestIncorrectMethodName(t *testing.T) {
@@ -224,7 +224,7 @@ func TestIncorrectParams(t *testing.T) {
 	require.Error(t, err)
 	require.IsType(t, &requester.Error{}, err)
 	data := err.(*requester.Error).Data
-	require.Contains(t, data.Trace, "failed to cast call params: expected 'map[string]interface{}', got 'string'")
+	require.Contains(t, data.Trace, "expected 'map[string]interface{}', got 'string'")
 }
 
 func TestNilParams(t *testing.T) {
@@ -255,7 +255,5 @@ func TestNotAllowedMethod(t *testing.T) {
 	_, _, err := makeSignedRequest(launchnet.TestRPCUrlPublic, member, "member.getBalance",
 		map[string]interface{}{"reference": member.Ref})
 	require.Error(t, err)
-	require.IsType(t, &requester.Error{}, err)
-	data := err.(*requester.Error).Data
-	require.Contains(t, data.Trace, "method not allowed")
+	require.Equal(t, "Method does not exist / is not available.", err.Error())
 }
