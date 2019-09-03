@@ -69,7 +69,7 @@ func (p *SendFilament) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "failed to fetch filament")
 	}
 	if len(records) == 0 {
-		return errors.New("requests not found")
+		return p.replyError(ctx, p.message, "requests not found", payload.CodeNotFound)
 	}
 
 	msg, err := payload.NewMessage(&payload.FilamentSegment{
@@ -80,5 +80,23 @@ func (p *SendFilament) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "failed to create message")
 	}
 	p.dep.sender.Reply(ctx, p.message, msg)
+	return nil
+}
+
+func (p *SendFilament) replyError(
+	ctx context.Context,
+	inputMessage payload.Meta,
+	text string,
+	code uint32,
+) error {
+	msg, err := payload.NewMessage(&payload.Error{
+		Text: text,
+		Code: code,
+	})
+	if err != nil {
+		return errors.Wrap(err, "failed to create reply")
+	}
+
+	p.dep.sender.Reply(ctx, inputMessage, msg)
 	return nil
 }

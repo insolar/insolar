@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
@@ -29,6 +30,8 @@ import (
 
 type PassState struct {
 	message payload.Meta
+	stateID insolar.ID
+	origin  payload.Meta
 
 	dep struct {
 		sender  bus.Sender
@@ -36,9 +39,11 @@ type PassState struct {
 	}
 }
 
-func NewPassState(meta payload.Meta) *PassState {
+func NewPassState(meta payload.Meta, stateID insolar.ID, origin payload.Meta) *PassState {
 	return &PassState{
 		message: meta,
+		stateID: stateID,
+		origin:  origin,
 	}
 }
 
@@ -52,16 +57,27 @@ func (p *PassState) Dep(
 
 func (p *PassState) Proceed(ctx context.Context) error {
 
+	sendError := func(text string, code uint32) error {
+		// Replying to origin
+		err := p.replyError(ctx, p.origin, text, code)
+		if err != nil {
+			return errors.Wrap(err, "failed to create message")
+		}
+
+		// Replying to passer
+		return errors.New(text)
+	}
+
 	sendObject := func(rec record.Material, origin payload.Meta) error {
 		virtual := rec.Virtual
 		concrete := record.Unwrap(&virtual)
 		state, ok := concrete.(record.State)
 		if !ok {
-			return p.replyError(ctx, fmt.Sprintf("invalid object record %#v", virtual), payload.CodeInvalidRequest)
+			return fmt.Errorf("invalid object record %#v", virtual)
 		}
 
 		if state.ID() == record.StateDeactivation {
-			return p.replyError(ctx, "object is deactivated", payload.CodeDeactivated)
+			return sendError("object is deactivated", payload.CodeDeactivated)
 		}
 
 		buf, err := rec.Marshal()
@@ -80,24 +96,12 @@ func (p *PassState) Proceed(ctx context.Context) error {
 		return nil
 	}
 
-	pass := payload.PassState{}
-	err := pass.Unmarshal(p.message.Payload)
-	if err != nil {
-		return errors.Wrap(err, "failed to decode PassState payload")
-	}
-
-	origin := payload.Meta{}
-	err = origin.Unmarshal(pass.Origin)
-	if err != nil {
-		return errors.Wrap(err, "failed to decode origin message")
-	}
-
-	rec, err := p.dep.records.ForID(ctx, pass.StateID)
+	rec, err := p.dep.records.ForID(ctx, p.stateID)
 	switch err {
 	case nil:
-		return sendObject(rec, origin)
+		return sendObject(rec, p.origin)
 	case object.ErrNotFound:
-		return p.replyError(ctx, "state not found", payload.CodeNotFound)
+		return sendError("state not found", payload.CodeNotFound)
 	default:
 		return errors.Wrap(err, "failed to fetch object state")
 	}
@@ -105,6 +109,7 @@ func (p *PassState) Proceed(ctx context.Context) error {
 
 func (p *PassState) replyError(
 	ctx context.Context,
+	inputMessage payload.Meta,
 	text string,
 	code uint32,
 ) error {
@@ -116,6 +121,6 @@ func (p *PassState) replyError(
 		return errors.Wrap(err, "failed to create reply")
 	}
 
-	p.dep.sender.Reply(ctx, p.message, msg)
+	p.dep.sender.Reply(ctx, inputMessage, msg)
 	return nil
 }

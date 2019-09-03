@@ -51,10 +51,11 @@ func TestPassState_Proceed(t *testing.T) {
 		setup()
 		defer mc.Finish()
 
+		stateID := gen.ID()
 		origMsg, _ := (&payload.Meta{}).Marshal()
 		passed, _ := (&payload.PassState{
 			Origin:  origMsg,
-			StateID: gen.ID(),
+			StateID: stateID,
 		}).Marshal()
 
 		msg := payload.Meta{
@@ -77,20 +78,24 @@ func TestPassState_Proceed(t *testing.T) {
 			assert.Equal(t, expectedMsg.Payload, reply.Payload)
 		}).Return()
 
-		p := proc.NewPassState(msg)
+		p := proc.NewPassState(msg, stateID, payload.Meta{})
 		p.Dep(records, sender)
 
 		err = p.Proceed(ctx)
 		assert.NoError(t, err)
 	})
 
-	t.Run("Object not found sends error", func(t *testing.T) {
+	t.Run("Object not found sends error to origin and last sender", func(t *testing.T) {
 		setup()
 		defer mc.Finish()
 
-		origMsg, _ := (&payload.Meta{}).Marshal()
+		stateID := gen.ID()
+		origMsg := payload.Meta{
+			Receiver: gen.Reference(),
+		}
+		origMsgBuf, _ := (&origMsg).Marshal()
 		passed, _ := (&payload.PassState{
-			Origin:  origMsg,
+			Origin:  origMsgBuf,
 			StateID: gen.ID(),
 		}).Marshal()
 
@@ -106,22 +111,27 @@ func TestPassState_Proceed(t *testing.T) {
 		})
 		sender.ReplyMock.Inspect(func(ctx context.Context, origin payload.Meta, reply *message.Message) {
 			assert.Equal(t, expectedError.Payload, reply.Payload)
+			assert.Equal(t, origMsg, origin)
 		}).Return()
 
-		p := proc.NewPassState(msg)
+		p := proc.NewPassState(msg, stateID, origMsg)
 		p.Dep(records, sender)
 
 		err := p.Proceed(ctx)
-		assert.NoError(t, err)
+		assert.Error(t, err)
 	})
 
-	t.Run("Deactivated object sends error", func(t *testing.T) {
+	t.Run("Deactivated object sends error to origin and last sender", func(t *testing.T) {
 		setup()
 		defer mc.Finish()
 
-		origMsg, _ := (&payload.Meta{}).Marshal()
+		stateID := gen.ID()
+		origMsg := payload.Meta{
+			Receiver: gen.Reference(),
+		}
+		origMsgBuf, _ := (&origMsg).Marshal()
 		passed, _ := (&payload.PassState{
-			Origin:  origMsg,
+			Origin:  origMsgBuf,
 			StateID: gen.ID(),
 		}).Marshal()
 
@@ -143,12 +153,13 @@ func TestPassState_Proceed(t *testing.T) {
 		})
 		sender.ReplyMock.Inspect(func(ctx context.Context, origin payload.Meta, reply *message.Message) {
 			assert.Equal(t, expectedError.Payload, reply.Payload)
+			assert.Equal(t, origMsg, origin)
 		}).Return()
 
-		p := proc.NewPassState(msg)
+		p := proc.NewPassState(msg, stateID, origMsg)
 		p.Dep(records, sender)
 
 		err := p.Proceed(ctx)
-		assert.NoError(t, err)
+		assert.Error(t, err)
 	})
 }
