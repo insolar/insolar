@@ -157,10 +157,6 @@ type NodeNetwork interface {
 type NodeKeeper interface {
 	NodeNetwork
 
-	// GetCloudHash returns current cloud hash
-	GetCloudHash(insolar.PulseNumber) []byte
-	// SetCloudHash set new cloud hash
-	SetCloudHash(insolar.PulseNumber, []byte)
 	// SetInitialSnapshot set initial snapshot for nodekeeper
 	SetInitialSnapshot(nodes []insolar.NetworkNode)
 	// Sync move unsync -> sync

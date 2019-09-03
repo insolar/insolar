@@ -79,7 +79,7 @@ func New() (*Two, error) {
 func NewWithOne(oneNumber int) (*Two, error) {
 	holder := one.NewWithNumber(oneNumber)
 
-	objOne, err := holder.AsChild(foundation.GetRequestReference())
+	objOne, err := holder.AsChild(foundation.GetRootDomain())
 
 	if err != nil {
 		return nil, err

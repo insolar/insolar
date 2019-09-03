@@ -33,7 +33,8 @@ type Error struct {
 }
 
 type Data struct {
-	TraceID string `json:"traceID,omitempty"`
+	TraceID          string `json:"traceID,omitempty"`
+	RequestReference string `json:"requestReference,omitempty"`
 }
 
 type ContractResponse struct {

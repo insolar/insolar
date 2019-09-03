@@ -17,14 +17,16 @@
 package rootdomain
 
 import (
+	"sync"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/genesisrefs"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/member"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/migrationdaemon"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/migrationshard"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/pkshard"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/insolar/insolar/pulse"
 )
 
 const (
@@ -36,9 +38,14 @@ func init() {
 		genesisrefs.PredefinedPrototypes[el+GenesisPrototypeSuffix] = *member.PrototypeReference
 	}
 
+	for _, el := range insolar.GenesisNameMigrationDaemons {
+		genesisrefs.PredefinedPrototypes[el+GenesisPrototypeSuffix] = *migrationdaemon.PrototypeReference
+	}
+
 	for _, el := range insolar.GenesisNamePublicKeyShards {
 		genesisrefs.PredefinedPrototypes[el+GenesisPrototypeSuffix] = *pkshard.PrototypeReference
 	}
+
 	for _, el := range insolar.GenesisNameMigrationAddressShards {
 		genesisrefs.PredefinedPrototypes[el+GenesisPrototypeSuffix] = *migrationshard.PrototypeReference
 	}
@@ -48,7 +55,10 @@ var genesisPulse = insolar.GenesisPulse.PulseNumber
 
 // Record provides methods to calculate root domain's identifiers.
 type Record struct {
-	PCS insolar.PlatformCryptographyScheme
+	once                sync.Once
+	rootDomainID        insolar.ID
+	rootDomainReference insolar.Reference
+	PCS                 insolar.PlatformCryptographyScheme
 }
 
 // RootDomain is the root domain instance.
@@ -56,34 +66,28 @@ var RootDomain = &Record{
 	PCS: platformpolicy.NewPlatformCryptographyScheme(),
 }
 
-// Ref returns insolar.Reference to root domain object.
-func (r Record) Ref() insolar.Reference {
-	return *insolar.NewReference(r.ID())
-}
-
-// ID returns insolar.ID  to root domain object.
-func (r Record) ID() insolar.ID {
-	req := record.IncomingRequest{
+func (r *Record) initialize() {
+	rootRecord := record.IncomingRequest{
 		CallType: record.CTGenesis,
 		Method:   insolar.GenesisNameRootDomain,
 	}
-	virtRec := record.Wrap(&req)
-	hash := record.HashVirtual(r.PCS.ReferenceHasher(), virtRec)
-	return *insolar.NewID(genesisPulse, hash)
+	virtualRec := record.Wrap(&rootRecord)
+	hash := record.HashVirtual(r.PCS.ReferenceHasher(), virtualRec)
+
+	r.rootDomainID = *insolar.NewID(genesisPulse, hash)
+	r.rootDomainReference = *insolar.NewReference(r.rootDomainID)
 }
 
-// GenesisRef returns reference to any genesis records based on the root domain.
-func GenesisRef(name string) insolar.Reference {
-	if ref, ok := genesisrefs.PredefinedPrototypes[name]; ok {
-		return ref
-	}
-	pcs := platformpolicy.NewPlatformCryptographyScheme()
-	req := record.IncomingRequest{
-		CallType: record.CTGenesis,
-		Method:   name,
-	}
-	virtRec := record.Wrap(&req)
-	hash := record.HashVirtual(pcs.ReferenceHasher(), virtRec)
-	id := insolar.NewID(pulse.MinTimePulse, hash)
-	return *insolar.NewReference(*id)
+// ID returns insolar.ID  to root domain object.
+func (r *Record) ID() insolar.ID {
+	r.once.Do(r.initialize)
+
+	return r.rootDomainID
+}
+
+// Reference returns insolar.Reference to root domain object
+func (r *Record) Reference() insolar.Reference {
+	r.once.Do(r.initialize)
+
+	return r.rootDomainReference
 }

@@ -67,7 +67,7 @@ if [[ $# -lt 1 ]]; then
     echo "# Kibana: http://localhost:5601 (starts slowly, be patient)"
     echo ""
     echo "enable collection of jaeger traces in launchnet by env variable:"
-    echo "    INSOLAR_TRACER_JAEGER_AGENTENDPOINT=http://localhost:6831"
+    echo "    INSOLAR_TRACER_JAEGER_AGENTENDPOINT=localhost:6831"
     exit
 fi
 

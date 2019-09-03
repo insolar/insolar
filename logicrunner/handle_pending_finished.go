@@ -29,6 +29,17 @@ import (
 	"github.com/insolar/insolar/logicrunner/writecontroller"
 )
 
+func checkPayloadPendingFinished(finished payload.PendingFinished) error {
+	if finished.ObjectRef.IsEmpty() {
+		return errors.New("Got PendingFinished message, but field ObjectRef is empty")
+	}
+	if !finished.ObjectRef.IsObjectReference() {
+		return errors.Errorf("PendingFinished.ObjectRef should be RecordReference; ref=%s", finished.ObjectRef.String())
+	}
+
+	return nil
+}
+
 type HandlePendingFinished struct {
 	dep *Dependencies
 
@@ -44,6 +55,10 @@ func (h *HandlePendingFinished) Present(ctx context.Context, _ flow.Flow) error 
 	err := message.Unmarshal(h.Message.Payload)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal message")
+	}
+
+	if err := checkPayloadPendingFinished(message); err != nil {
+		return err
 	}
 
 	done, err := h.dep.WriteAccessor.Begin(ctx, flow.Pulse(ctx))

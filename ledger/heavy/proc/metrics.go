@@ -23,7 +23,7 @@ import (
 
 var (
 	statReceivedHeavyPayloadCount = stats.Int64(
-		"heavysyncer/heavypayload/count",
+		"heavysyncer_heavypayload_count",
 		"How many heavy-payload messages were received from a light-node",
 		stats.UnitDimensionless,
 	)

@@ -68,7 +68,10 @@ func (r *ContractConstructorHolder) AsChild(objRef insolar.Reference) (*Deposit,
 }
 
 // GetObject returns proxy object
-func GetObject(ref insolar.Reference) (r *Deposit) {
+func GetObject(ref insolar.Reference) *Deposit {
+	if !ref.IsObjectReference() {
+		return nil
+	}
 	return &Deposit{Reference: ref}
 }
 

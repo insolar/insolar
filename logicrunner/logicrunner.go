@@ -85,7 +85,6 @@ func NewLogicRunner(cfg *configuration.LogicRunner, publisher watermillMsg.Publi
 		Sender:    sender,
 	}
 
-	res.ResultsMatcher = newResultsMatcher(&res)
 	return &res, nil
 }
 
@@ -107,6 +106,7 @@ func (lr *LogicRunner) Init(ctx context.Context) error {
 		lr.OutgoingSender,
 		lr.ShutdownFlag,
 	)
+	lr.ResultsMatcher = newResultsMatcher(lr.Sender, lr.PulseAccessor)
 
 	lr.rpc = lrCommon.NewRPC(
 		NewRPCMethods(
@@ -320,5 +320,6 @@ func (lr *LogicRunner) AddUnwantedResponse(ctx context.Context, msg insolar.Payl
 	}
 	defer done()
 
-	return lr.ResultsMatcher.AddUnwantedResponse(ctx, m)
+	lr.ResultsMatcher.AddUnwantedResponse(ctx, *m)
+	return nil
 }

@@ -6,12 +6,46 @@ Integrating with Insolar
 
 .. note::
 
-   Upon the public network release, this chapter will be expanded to include the appropriate integration instructions.
+   Upon the MainNet release, this section will be expanded to include the appropriate integration instructions.
 
-Join or set up the Insolar network:
+To join or set up an Insolar network, check the :ref:`hardware requirements <sys_requirements>` and:
 
 * :ref:`Connect to TestNet 1.1 <connecting_to_testnet>`. Participation in this network is permissioned, with participants invited by the Insolar Core Development Team based on their ability to fulfill the respective SLA.
 * :ref:`Set up a network <setting_up_devnet>` locally for development and test purposes. The local setup is done on one computer with no particular system requirements, and the 'network nodes' are simply services listening on different ports.
+
+.. _sys_requirements:
+
+Hardware Requirements
+---------------------
+
+The recommended setup for a proof-of-concept private Insolar network is to consist of **at least 5 nodes** that may be deployed both on virtual or physical servers in a data center.
+
+The minimal hardware requirements for all servers are as follows:
+
++-------------------------+-------+---------+-------------------+
+| Processor               | RAM   | Storage | Network bandwidth |
++=========================+=======+=========+===================+
+| 4 cores (8 recommended) | 16 GB | 50 GB   | 1 Gbps            |
++-------------------------+-------+---------+-------------------+
+
+.. note:: The storage capacity may need to be expanded depending on the size of the data to be stored.
+
+Insolar runs on Linux, e.g., **CentOS**.
+
+.. _test_net_hw:
+
+TestNet 1.1
+~~~~~~~~~~~
+
+Preferable hardware requirements for virtual nodes on TestNet 1.1 are as follows:
+
++-----------+-------+------------+
+| Processor | RAM   | Storage    |
++===========+=======+============+
+| 40 cores  | 32 GB | 256 GB SSD |
++-----------+-------+------------+
+
+All servers wishing to join the Insolar test network must have **public IP addresses**.
 
 .. _connecting_to_testnet:
 
@@ -20,7 +54,7 @@ Connecting to Test Network
 
 To connect to Insolar TestNet 1.1:
 
-#. Skim through :ref:`known issues and limitations <issues_and_limitations>` and :ref:`system requirements <sys_requirements>`.
+#. Skim through :ref:`known issues and limitations <issues_and_limitations>` and check the :ref:`TestNet 1.1 hardware requirements <test_net_hw>`.
 #. :ref:`Set up and connect <connect_to_testnet>` a node.
 
 .. _issues_and_limitations:
@@ -60,23 +94,6 @@ On TestNet 1.1:
 * Only pre-built smart contracts are available. Custom contracts will be available on TestNet 2.0.
 * All user wallets are created with a starting balance of 1,000,000 coins.
 * Only one contract can be called via the node's API. All other methods (e.g., coin transfer) are called via the ``Call`` method on a ``member`` object.
-
-.. _sys_requirements:
-
-Test Network System Requirements
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Preferable system requirements for virtual nodes on TestNet 1.1 are as follows:
-
-+-----------+-------+------------+
-| Processor | RAM   | Storage    |
-+===========+=======+============+
-| 40 cores  | 32 GB | 256 GB SSD |
-+-----------+-------+------------+
-
-Insolar is meant to run on Linux, e.g., **CentOS**.
-
-All servers wishing to join the Insolar test network must have **public IP addresses**.
 
 .. _connect_to_testnet:
 

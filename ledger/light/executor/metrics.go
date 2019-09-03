@@ -22,14 +22,14 @@ import (
 )
 
 var (
-	statHotObjectsTotal = stats.Int64("hotdata/objects/total", "Amount of hot records for next executors", stats.UnitDimensionless)
-	statHotObjectsSend  = stats.Int64("hotdata/objects/send", "Amount of hot records actually sent to next executors", stats.UnitDimensionless)
+	statHotObjectsTotal = stats.Int64("hotdata_objects_total", "Amount of hot records prepared to send for next executors", stats.UnitDimensionless)
+	statHotObjectsSend  = stats.Int64("hotdata_objects_send", "Amount of hot records actually sent to next executors", stats.UnitDimensionless)
 
 	statJets      = stats.Int64("jets", "jets counter", stats.UnitDimensionless)
-	statJetSplits = stats.Int64("jet/splits", "jet splits counter", stats.UnitDimensionless)
+	statJetSplits = stats.Int64("jet_splits", "jet splits counter", stats.UnitDimensionless)
 
 	statDrop        = stats.Int64("drops", "How many drop records have created", stats.UnitDimensionless)
-	statDropRecords = stats.Int64("drop/records", "Amount of records in drop", stats.UnitDimensionless)
+	statDropRecords = stats.Int64("drop_records", "Amount of records in drop", stats.UnitDimensionless)
 
 	statLastReplicatedPulse = stats.Int64(
 		"light_last_sent_pulse",

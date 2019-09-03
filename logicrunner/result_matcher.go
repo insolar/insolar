@@ -23,14 +23,15 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/logicrunner.ResultMatcher -o ./ -s _mock.go -g
 
 type ResultMatcher interface {
-	AddStillExecution(ctx context.Context, msg *payload.StillExecuting)
-	AddUnwantedResponse(ctx context.Context, msg *payload.ReturnResults) error
+	AddStillExecution(ctx context.Context, msg payload.StillExecuting)
+	AddUnwantedResponse(ctx context.Context, msg payload.ReturnResults)
 	Clear(ctx context.Context)
 }
 
@@ -40,38 +41,24 @@ type resultWithContext struct {
 }
 
 type resultsMatcher struct {
-	lr                *LogicRunner
-	lock              sync.RWMutex
+	sender        bus.Sender
+	pulseAccessor pulse.Accessor
+
+	lock              sync.Mutex
 	executionNodes    map[insolar.Reference]insolar.Reference
 	unwantedResponses map[insolar.Reference]resultWithContext
 }
 
-func newResultsMatcher(lr *LogicRunner) *resultsMatcher {
+func newResultsMatcher(sender bus.Sender, pa pulse.Accessor) *resultsMatcher {
 	return &resultsMatcher{
-		lr:                lr,
-		lock:              sync.RWMutex{},
+		sender:            sender,
+		pulseAccessor:     pa,
 		executionNodes:    make(map[insolar.Reference]insolar.Reference),
 		unwantedResponses: make(map[insolar.Reference]resultWithContext),
 	}
 }
 
-func (rm *resultsMatcher) send(ctx context.Context, msg *payload.ReturnResults, receiver insolar.Reference) {
-	logger := inslogger.FromContext(ctx)
-
-	logger.Debug("resending result of request ", msg.RequestRef.String(), " to ", receiver.String())
-
-	sender := bus.NewWaitOKWithRetrySender(rm.lr.Sender, rm.lr.PulseAccessor, 1)
-
-	msgData, err := payload.NewResultMessage(msg)
-	if err != nil {
-		inslogger.FromContext(ctx).Debug("failed to serialize message")
-		return
-	}
-
-	sender.SendTarget(ctx, msgData, receiver)
-}
-
-func (rm *resultsMatcher) AddStillExecution(ctx context.Context, msg *payload.StillExecuting) {
+func (rm *resultsMatcher) AddStillExecution(ctx context.Context, msg payload.StillExecuting) {
 	rm.lock.Lock()
 	defer rm.lock.Unlock()
 
@@ -80,14 +67,14 @@ func (rm *resultsMatcher) AddStillExecution(ctx context.Context, msg *payload.St
 	for _, reqRef := range msg.RequestRefs {
 		if response, ok := rm.unwantedResponses[reqRef]; ok {
 			ctx := response.ctx
-			go rm.send(ctx, &response.result, msg.Executor)
+			go rm.send(ctx, response.result, msg.Executor)
 			delete(rm.unwantedResponses, reqRef)
 		}
 		rm.executionNodes[reqRef] = msg.Executor
 	}
 }
 
-func (rm *resultsMatcher) AddUnwantedResponse(ctx context.Context, msg *payload.ReturnResults) error {
+func (rm *resultsMatcher) AddUnwantedResponse(ctx context.Context, msg payload.ReturnResults) {
 	rm.lock.Lock()
 	defer rm.lock.Unlock()
 
@@ -95,14 +82,12 @@ func (rm *resultsMatcher) AddUnwantedResponse(ctx context.Context, msg *payload.
 
 	if node, ok := rm.executionNodes[msg.Reason]; ok {
 		go rm.send(ctx, msg, node)
-		return nil
+		return
 	}
 	rm.unwantedResponses[msg.Reason] = resultWithContext{
 		ctx:    ctx,
-		result: *msg,
+		result: msg,
 	}
-
-	return nil
 }
 
 func (rm *resultsMatcher) Clear(ctx context.Context) {
@@ -116,4 +101,19 @@ func (rm *resultsMatcher) Clear(ctx context.Context) {
 		logger.Warn("not claimed response to request ", reqRef.String(), ", not confirmed pending?")
 	}
 	rm.unwantedResponses = make(map[insolar.Reference]resultWithContext)
+}
+
+func (rm *resultsMatcher) send(ctx context.Context, msg payload.ReturnResults, receiver insolar.Reference) {
+	logger := inslogger.FromContext(ctx)
+
+	logger.Debug("resending result of request ", msg.RequestRef.String(), " to ", receiver.String())
+
+	msgData, err := payload.NewResultMessage(&msg)
+	if err != nil {
+		inslogger.FromContext(ctx).Debug("failed to serialize message")
+		return
+	}
+
+	sender := bus.NewWaitOKWithRetrySender(rm.sender, rm.pulseAccessor, 1)
+	sender.SendTarget(ctx, msgData, receiver)
 }
