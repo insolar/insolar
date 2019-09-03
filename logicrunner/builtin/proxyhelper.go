@@ -19,6 +19,8 @@ package builtin
 import (
 	"reflect"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	lrCommon "github.com/insolar/insolar/logicrunner/common"
@@ -85,6 +87,9 @@ func (h *ProxyHelper) SaveAsChild(
 ) (
 	*insolar.Reference, []byte, error,
 ) {
+	if !parentRef.IsObjectReference() {
+		return nil, nil, errors.Errorf("Failed to save AsChild: objRef should be ObjectReference; ref=%s", parentRef.String())
+	}
 
 	if h.GetSystemError() != nil {
 		// There was a system error during execution of the contract.

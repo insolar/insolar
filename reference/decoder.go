@@ -42,7 +42,7 @@ var defaultDecoder GlobalDecoder
 
 func DefaultDecoder() GlobalDecoder {
 	defaultDecoderOnce.Do(func() {
-		defaultDecoder = NewDefaultDecoder(AllowLegacy & AllowRecords)
+		defaultDecoder = NewDefaultDecoder(AllowLegacy | AllowRecords)
 	})
 	return defaultDecoder
 }

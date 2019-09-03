@@ -106,6 +106,9 @@ func (rf *requestsFetcher) fetch(ctx context.Context) error {
 
 	logger := inslogger.FromContext(ctx)
 	for _, reqRef := range reqRefs {
+		if !reqRef.IsRecordScope() {
+			logger.Errorf("skipping request with bad reference, ref=%s", reqRef.String())
+		}
 		if rf.broker.IsKnownRequest(ctx, reqRef) {
 			logger.Debug("skipping known request ", reqRef.String())
 			continue
@@ -126,9 +129,17 @@ func (rf *requestsFetcher) fetch(ctx context.Context) error {
 
 		switch v := request.(type) {
 		case *record.IncomingRequest:
+			if err := checkIncomingRequest(ctx, v); err != nil {
+				logger.Errorf("failed to check incoming request: %s", err.Error())
+				continue
+			}
 			tr := common.NewTranscriptCloneContext(ctx, reqRef, *v)
 			rf.broker.AddRequestsFromLedger(ctx, tr)
 		case *record.OutgoingRequest:
+			if err := checkOutgoingRequest(ctx, v); err != nil {
+				logger.Errorf("failed to check outgoing request: %s", err.Error())
+				continue
+			}
 			rf.os.SendAbandonedOutgoingRequest(ctx, reqRef, v)
 		default:
 			logger.Error("requestsFetcher.fetch: request is nor IncomingRequest or OutgoingRequest")

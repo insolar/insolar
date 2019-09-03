@@ -36,6 +36,14 @@ import (
 	"github.com/insolar/insolar/logicrunner/common"
 )
 
+func checkPayloadCallMethod(ctx context.Context, callMethod payload.CallMethod) error {
+	if err := checkIncomingRequest(ctx, callMethod.Request); err != nil {
+		return errors.Wrap(err, "failed to verify callMethod.Request")
+	}
+
+	return nil
+}
+
 type HandleCall struct {
 	dep *Dependencies
 
@@ -156,31 +164,33 @@ func (h *HandleCall) handleActual(
 	}
 
 	reqInfo := procRegisterRequest.getResult()
-	requestRef := insolar.NewReference(reqInfo.RequestID)
+	requestRef := *getRequestReference(reqInfo)
 
-	objRef := request.Object
 	if request.CallType != record.CTMethod {
-		objRef = requestRef
+		request.Object = insolar.NewReference(reqInfo.RequestID)
 	}
-	if objRef == nil {
+
+	objectRef := request.Object
+
+	if objectRef == nil || !objectRef.IsSelfScope() {
 		return nil, errors.New("can't get object reference")
 	}
 
 	ctx, logger := inslogger.WithFields(
 		ctx,
 		map[string]interface{}{
-			"object":  objRef.String(),
+			"object":  objectRef.String(),
 			"request": requestRef.String(),
 			"method":  request.Method,
 		},
 	)
 	logger.Debug("registered request")
 
-	if !objRef.GetLocal().Equal(reqInfo.ObjectID) {
+	if !objectRef.GetLocal().Equal(reqInfo.ObjectID) {
 		return nil, errors.New("object id we calculated doesn't match ledger")
 	}
 
-	registeredRequestReply := &reply.RegisterRequest{Request: *requestRef}
+	registeredRequestReply := &reply.RegisterRequest{Request: requestRef}
 
 	if len(reqInfo.Request) != 0 {
 		logger.Debug("duplicated request")
@@ -189,7 +199,7 @@ func (h *HandleCall) handleActual(
 	if len(reqInfo.Result) != 0 {
 		logger.Debug("request already has result on ledger, returning it")
 		go func() {
-			err := h.sendRequestResult(ctx, *objRef, *requestRef, *request, *reqInfo)
+			err := h.sendRequestResult(ctx, *objectRef, requestRef, *request, *reqInfo)
 			if err != nil {
 				logger.Error("couldn't send request result: ", err.Error())
 			}
@@ -197,11 +207,11 @@ func (h *HandleCall) handleActual(
 		return registeredRequestReply, nil
 	}
 
-	if h.checkExecutionLoop(ctx, *requestRef, *request) {
+	if h.checkExecutionLoop(ctx, requestRef, *request) {
 		proc := &RecordErrorResult{
 			err:             errors.New("loop detected"),
-			requestRef:      *requestRef,
-			objectRef:       *objRef,
+			requestRef:      requestRef,
+			objectRef:       *objectRef,
 			artifactManager: h.dep.ArtifactManager,
 		}
 		err := f.Procedure(ctx, proc, false)
@@ -209,22 +219,22 @@ func (h *HandleCall) handleActual(
 			return nil, errors.Wrap(err, "couldn't record error result")
 		}
 
-		return &reply.CallMethod{Object: objRef, Result: proc.result}, nil
+		return &reply.CallMethod{Object: objectRef, Result: proc.result}, nil
 	}
 
 	done, err := h.dep.WriteAccessor.Begin(ctx, flow.Pulse(ctx))
 	if err != nil {
 		if err == writecontroller.ErrWriteClosed {
-			go h.sendToNextExecutor(ctx, *objRef, *requestRef, *request)
+			go h.sendToNextExecutor(ctx, *objectRef, requestRef, *request)
 			return registeredRequestReply, nil
 		}
 		return nil, errors.Wrap(err, "failed to acquire write access")
 	}
 	defer done()
 
-	broker := h.dep.StateStorage.UpsertExecutionState(*objRef)
+	broker := h.dep.StateStorage.UpsertExecutionState(*objectRef)
 
-	proc := AddFreshRequest{broker: broker, requestRef: *requestRef, request: *request}
+	proc := AddFreshRequest{broker: broker, requestRef: requestRef, request: *request}
 	if err := f.Procedure(ctx, &proc, true); err != nil {
 		return nil, errors.Wrap(err, "couldn't pass request to broker")
 	}
@@ -239,6 +249,10 @@ func (h *HandleCall) Present(ctx context.Context, f flow.Flow) error {
 	err := message.Unmarshal(h.Message.Payload)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal message")
+	}
+
+	if err := checkPayloadCallMethod(ctx, message); err != nil {
+		return err
 	}
 
 	rep, err := h.handleActual(ctx, message, f)

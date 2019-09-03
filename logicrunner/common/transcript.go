@@ -44,6 +44,14 @@ func NewTranscript(
 	}
 }
 
+func convertRecordReferenceToSelfReference(recordRef insolar.Reference) *insolar.Reference {
+	if !recordRef.IsRecordScope() {
+		panic("recordRef is not record reference, ref=" + recordRef.String())
+	}
+	recordID := recordRef.GetLocal()
+	return insolar.NewReference(*recordID)
+}
+
 // NewTranscriptCloneContext creates a transcript with fresh context created from
 // contextSource which can be either other Context or ServiceData. In general
 // transcript shouldn't be created with context as execution can take minutes.
@@ -52,6 +60,10 @@ func NewTranscriptCloneContext(
 	requestRef insolar.Reference,
 	request record.IncomingRequest,
 ) *Transcript {
+	if request.CallType != record.CTMethod {
+		request.Object = convertRecordReferenceToSelfReference(requestRef)
+	}
+
 	var ctx context.Context
 
 	switch sourceTyped := ctxSource.(type) {
@@ -63,15 +75,11 @@ func NewTranscriptCloneContext(
 		panic(fmt.Errorf("unexpected type of context source: %T", ctxSource))
 	}
 
-	objRef := request.Object
-	if objRef == nil {
-		objRef = &requestRef
-	}
 	ctx, _ = inslogger.WithFields(
 		ctx,
 		map[string]interface{}{
 			"request": requestRef.String(),
-			"object":  objRef.String(),
+			"object":  request.Object.String(),
 			"method":  request.Method,
 		},
 	)

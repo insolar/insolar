@@ -350,7 +350,7 @@ func main() {
 				output := newOutputFlag("")
 				err := openDefaultProxyPath(output, insolar.MachineTypeBuiltin, contract.Parsed)
 				checkError(err)
-				reference := genesisrefs.GenerateFromContractID(preprocessor.PrototypeType, contract.Name, contract.Version)
+				reference := genesisrefs.GenerateProtoReferenceFromContractID(preprocessor.PrototypeType, contract.Name, contract.Version)
 				err = contract.Parsed.WriteProxy(reference.String(), output.writer)
 				checkError(err)
 
