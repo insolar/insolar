@@ -166,7 +166,7 @@ func main() {
 
 		discoveryNodesConfigs = append(discoveryNodesConfigs, conf)
 
-		promVars.addTarget(node.Role, conf)
+		promVars.addTarget("insolard", conf)
 
 		pwConfig.Nodes = append(pwConfig.Nodes, conf.AdminAPIRunner.Address)
 	}
@@ -208,7 +208,7 @@ func main() {
 
 		nodesConfigs = append(nodesConfigs, conf)
 
-		promVars.addTarget(node.Role, conf)
+		promVars.addTarget("insolard", conf)
 
 		pwConfig.Nodes = append(pwConfig.Nodes, conf.AdminAPIRunner.Address)
 	}

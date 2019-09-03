@@ -19,13 +19,14 @@
 package functest
 
 import (
-	"fmt"
-	"github.com/insolar/insolar/insolar/gen"
-	"github.com/insolar/insolar/testutils/launchnet"
-	"github.com/stretchr/testify/require"
 	"math/big"
 	"testing"
 	"time"
+
+	"github.com/insolar/insolar/api/requester"
+	"github.com/insolar/insolar/insolar/gen"
+	"github.com/insolar/insolar/testutils/launchnet"
+	"github.com/stretchr/testify/require"
 )
 
 const times = 5
@@ -88,8 +89,9 @@ func TestTransferMoneyFromNotExist(t *testing.T) {
 	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, firstMember, "member.transfer",
 		map[string]interface{}{"amount": amount, "toMemberReference": secondMember.Ref})
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "index not found")
-
+	require.IsType(t, &requester.Error{}, err)
+	data := err.(*requester.Error).Data
+	require.Contains(t, data.Trace, "index not found")
 	newSecondBalance := getBalanceNoErr(t, secondMember, secondMember.Ref)
 	require.Equal(t, oldSecondBalance, newSecondBalance)
 }
@@ -104,7 +106,9 @@ func TestTransferMoneyToNotExist(t *testing.T) {
 		map[string]interface{}{"amount": amount, "toMemberReference": gen.Reference().String()})
 	require.Error(t, err)
 	fmt.Println(err)
-	require.Contains(t, err.Error(), "index not found")
+	require.IsType(t, &requester.Error{}, err)
+	data := err.(*requester.Error).Data
+	require.Contains(t, data.Trace, "index not found")
 
 	newFirstBalance := getBalanceNoErr(t, firstMember, firstMember.Ref)
 	require.Equal(t, oldFirstBalance, newFirstBalance)
@@ -161,7 +165,9 @@ func TestTransferMoreThanAvailableAmount(t *testing.T) {
 	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, firstMember, "member.transfer",
 		map[string]interface{}{"amount": amount.String(), "toMemberReference": secondMember.Ref})
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "balance is too low")
+	require.IsType(t, &requester.Error{}, err)
+	data := err.(*requester.Error).Data
+	require.Contains(t, data.Trace, "balance is too low")
 	newFirstBalance := getBalanceNoErr(t, firstMember, firstMember.Ref)
 	newSecondBalance := getBalanceNoErr(t, secondMember, secondMember.Ref)
 	require.Equal(t, oldFirstBalance, newFirstBalance)
@@ -177,7 +183,9 @@ func TestTransferToMyself(t *testing.T) {
 	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, member, "member.transfer",
 		map[string]interface{}{"amount": amount, "toMemberReference": member.Ref})
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "recipient must be different from the sender")
+	require.IsType(t, &requester.Error{}, err)
+	data := err.(*requester.Error).Data
+	require.Contains(t, data.Trace, "recipient must be different from the sender")
 	newMemberBalance := getBalanceNoErr(t, member, member.Ref)
 	require.Equal(t, oldMemberBalance, newMemberBalance)
 }

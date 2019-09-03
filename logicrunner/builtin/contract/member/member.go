@@ -189,14 +189,14 @@ func (m *Member) Call(signedRequest []byte) (interface{}, error) {
 	case "deposit.transfer":
 		return m.depositTransferCall(params)
 	}
-	return nil, fmt.Errorf("unknown method: '%s'", request.Params.CallSite)
+	return nil, fmt.Errorf("unknown method '%s'", request.Params.CallSite)
 }
 
 func (m *Member) getNodeRefCall(params map[string]interface{}) (interface{}, error) {
 
 	publicKey, ok := params["publicKey"].(string)
 	if !ok {
-		return nil, fmt.Errorf("incorrect input: failed to get 'publicKey' param")
+		return nil, fmt.Errorf("failed to get 'publicKey' param")
 	}
 
 	return m.getNodeRef(publicKey)
@@ -206,12 +206,12 @@ func (m *Member) registerNodeCall(params map[string]interface{}) (interface{}, e
 
 	publicKey, ok := params["publicKey"].(string)
 	if !ok {
-		return nil, fmt.Errorf("incorrect input: failed to get 'publicKey' param")
+		return nil, fmt.Errorf("failed to get 'publicKey' param")
 	}
 
 	role, ok := params["role"].(string)
 	if !ok {
-		return nil, fmt.Errorf("incorrect input: failed to get 'role' param")
+		return nil, fmt.Errorf("failed to get 'role' param")
 	}
 
 	return m.registerNode(publicKey, role)
@@ -225,7 +225,7 @@ type GetBalanceResponse struct {
 func (m *Member) getBalanceCall(params map[string]interface{}) (interface{}, error) {
 	referenceStr, ok := params["reference"].(string)
 	if !ok {
-		return nil, fmt.Errorf("incorrect input: failed to get 'reference' param")
+		return nil, fmt.Errorf("failed to get 'reference' param")
 	}
 
 	reference, err := insolar.NewReferenceFromBase58(referenceStr)
@@ -266,12 +266,12 @@ type TransferResponse struct {
 func (m *Member) transferCall(params map[string]interface{}) (interface{}, error) {
 	recipientReferenceStr, ok := params["toMemberReference"].(string)
 	if !ok {
-		return nil, fmt.Errorf("incorrect input: failed to get 'toMemberReference' param")
+		return nil, fmt.Errorf("failed to get 'toMemberReference' param")
 	}
 
 	amount, ok := params["amount"].(string)
 	if !ok {
-		return nil, fmt.Errorf("incorrect input: failed to get 'amount' param")
+		return nil, fmt.Errorf("failed to get 'amount' param")
 	}
 
 	asset, ok := params["asset"].(string)
@@ -298,12 +298,12 @@ func (m *Member) depositTransferCall(params map[string]interface{}) (interface{}
 
 	ethTxHash, ok := params["ethTxHash"].(string)
 	if !ok {
-		return nil, fmt.Errorf("incorrect input: failed to get 'ethTxHash' param")
+		return nil, fmt.Errorf("failed to get 'ethTxHash' param")
 	}
 
 	amount, ok := params["amount"].(string)
 	if !ok {
-		return nil, fmt.Errorf("incorrect input: failed to get 'amount' param")
+		return nil, fmt.Errorf("failed to get 'amount' param")
 	}
 	w := wallet.GetObject(m.Wallet)
 	find, dRef, err := w.FindDeposit(ethTxHash)
@@ -322,7 +322,7 @@ func (m *Member) depositMigrationCall(params map[string]interface{}) (*DepositMi
 
 	amountStr, ok := params["amount"].(string)
 	if !ok {
-		return nil, fmt.Errorf("incorrect input: failed to get 'amount' param")
+		return nil, fmt.Errorf("failed to get 'amount' param")
 	}
 
 	amount := new(big.Int)
@@ -335,12 +335,12 @@ func (m *Member) depositMigrationCall(params map[string]interface{}) (*DepositMi
 	}
 	txId, ok := params["ethTxHash"].(string)
 	if !ok {
-		return nil, fmt.Errorf("incorrect input: failed to get 'ethTxHash' param")
+		return nil, fmt.Errorf("failed to get 'ethTxHash' param")
 	}
 
 	migrationAddress, ok := params["migrationAddress"].(string)
 	if !ok {
-		return nil, fmt.Errorf("incorrect input: failed to get 'migrationAddress' param")
+		return nil, fmt.Errorf("failed to get 'migrationAddress' param")
 	}
 	base, _ := new(big.Int).SetString(CONVERSION, 10)
 	amountXns := new(big.Int).Mul(amount, base)
@@ -469,10 +469,10 @@ func (m *Member) depositMigration(txHash string, migrationAddress string, amount
 	migrationAdminContract := migrationadmin.GetObject(foundation.GetMigrationAdmin())
 	migrationDaemonContractRef, err := foundation.GetMigrationDaemon(m.GetReference())
 	if err != nil {
-		return nil, fmt.Errorf(" get migration daemon contract from foundation failed, %s ", err.Error())
+		return nil, fmt.Errorf("get migration daemon contract from foundation failed, %s ", err.Error())
 	}
 	if migrationDaemonContractRef.IsEmpty() {
-		return nil, fmt.Errorf(" the member is not migration daemon, %s ", m.GetReference())
+		return nil, fmt.Errorf("the member is not migration daemon")
 	}
 
 	migrationDaemonContract := migrationdaemon.GetObject(migrationDaemonContractRef)
