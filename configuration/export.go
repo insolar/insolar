@@ -17,6 +17,8 @@
 package configuration
 
 // Exporter holds exporter configuration.
+// Is was assumed, that exporter will be used for exporting data for observer
+// Exporter is grpc-base service
 type Exporter struct {
 	// Addr specifies address where exporter server starts
 	Addr string

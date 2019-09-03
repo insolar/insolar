@@ -49,7 +49,6 @@ import (
 	"github.com/insolar/insolar/network/termination"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/server/internal"
-	"github.com/insolar/insolar/version/manager"
 )
 
 type bootstrapComponents struct {
@@ -134,7 +133,6 @@ func initComponents(
 	metricsHandler, err := metrics.NewMetrics(ctx, cfg.Metrics, metrics.GetInsolarRegistry("virtual"), "virtual")
 	checkError(ctx, err, "failed to start Metrics")
 
-	_, err = manager.NewVersionManager(cfg.VersionManager)
 	checkError(ctx, err, "failed to load VersionManager: ")
 
 	jc := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit)
