@@ -147,7 +147,7 @@ func loadLastBackupedVersion(fileName string) (uint64, error) {
 const lastBackupedVersionTmpFile = "last_backuped_version.json"
 
 // saveLastBackupedInfo rewrites file with last backup version
-func saveLastBackupedInfo(ctx context.Context, to string, tmpDir string, lastBackupedVersion uint64) error {
+func saveLastBackupedInfo(ctx context.Context, to string, lastBackupedVersion uint64) error {
 	backupInfo := LastBackupInfo{
 		LastBackupedVersion: lastBackupedVersion,
 	}
@@ -156,7 +156,7 @@ func saveLastBackupedInfo(ctx context.Context, to string, tmpDir string, lastBac
 		return errors.Wrap(err, "can't marshal last backup info")
 	}
 
-	tmpFile := tmpDir + "/" + lastBackupedVersionTmpFile
+	tmpFile := to + "._tmp"
 
 	err = ioutil.WriteFile(tmpFile, rawInfo, 0600)
 	if err != nil {
@@ -433,7 +433,7 @@ func (b *BackupMakerDefault) MakeBackup(ctx context.Context, lastFinalizedPulse 
 
 	b.lastBackupedPulse = lastFinalizedPulse
 	b.lastBackupedVersion = currentBkpVersion
-	err = saveLastBackupedInfo(ctx, b.config.LastBackupInfoFile, b.config.TmpDirectory, currentBkpVersion)
+	err = saveLastBackupedInfo(ctx, b.config.LastBackupInfoFile, currentBkpVersion)
 	if err != nil {
 		return errors.Wrap(err, "failed to saveLastBackupedVersion")
 	}
