@@ -63,7 +63,7 @@ var (
 
 var (
 	statBootstrapReconnectRequired = stats.Int64(
-		"network/bootstrap/reconnects",
+		"network_bootstrap_reconnects",
 		"number of bootstrap requests that are required to be retried",
 		stats.UnitDimensionless,
 	)

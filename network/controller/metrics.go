@@ -65,17 +65,17 @@ var (
 
 var (
 	statParcelsSentSizeBytes = stats.Int64(
-		"network/parcels/sent/size",
+		"network_parcels_sent_size",
 		"size of sent parcels",
 		stats.UnitBytes,
 	)
 	statParcelsReplySizeBytes = stats.Int64(
-		"network/parcels/reply/size",
+		"network_parcels_reply_size",
 		"size of replies to parcels",
 		stats.UnitBytes,
 	)
 	statPacketsReceived = stats.Int64(
-		"network/packets/received",
+		"network_packets_received",
 		"number of received packets",
 		stats.UnitDimensionless,
 	)
@@ -83,11 +83,6 @@ var (
 
 func init() {
 	err := view.Register(
-		&view.View{
-			Measure:     statParcelsSentSizeBytes,
-			Aggregation: view.Distribution(16, 32, 64, 128, 256, 512, 1024, 16*1<<10, 512*1<<10, 1<<20),
-			TagKeys:     []tag.Key{tagMessageType},
-		},
 		&view.View{
 			Measure:     statParcelsReplySizeBytes,
 			Aggregation: view.Distribution(16, 32, 64, 128, 256, 512, 1024, 16*1<<10, 512*1<<10, 1<<20),

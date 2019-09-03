@@ -22,7 +22,7 @@ import (
 )
 
 var (
-	statPulseGenerated = stats.Int64("pulsar/pulse/generated", "count of generated pulses", stats.UnitDimensionless)
+	statPulseGenerated = stats.Int64("pulsar_pulse_generated", "count of generated pulses", stats.UnitDimensionless)
 )
 
 func init() {
