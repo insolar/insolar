@@ -50,11 +50,11 @@ type SendObject struct {
 
 func NewSendObject(
 	msg payload.Meta,
-	id insolar.ID,
+	objectID insolar.ID,
 ) *SendObject {
 	return &SendObject{
 		message:  msg,
-		objectID: id,
+		objectID: objectID,
 	}
 }
 
@@ -84,12 +84,7 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 		}
 
 		if state.ID() == record.StateDeactivation {
-			msg, err := payload.NewMessage(&payload.Error{Text: "object is deactivated", Code: payload.CodeDeactivated})
-			if err != nil {
-				return errors.Wrap(err, "failed to create reply")
-			}
-			p.dep.sender.Reply(ctx, p.message, msg)
-			return nil
+			return p.replyError(ctx, p.message, "object is deactivated", payload.CodeDeactivated)
 		}
 
 		buf, err := rec.Marshal()
@@ -164,14 +159,11 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 
 	lifeline := idx.Lifeline
 
-	if lifeline.StateID == record.StateDeactivation {
-		return errors.New("object is deactivated")
+	if lifeline.StateID == record.StateDeactivation || lifeline.LatestState == nil {
+		return p.replyError(ctx, p.message, "object is deactivated", payload.CodeDeactivated)
 	}
 
-	if lifeline.LatestState == nil {
-		return ErrNotActivated
-	}
-
+	// Sending indexes
 	{
 		buf, err := lifeline.Marshal()
 		if err != nil {
@@ -196,4 +188,22 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 	default:
 		return errors.Wrap(err, "failed to fetch record")
 	}
+}
+
+func (p *SendObject) replyError(
+	ctx context.Context,
+	inputMessage payload.Meta,
+	text string,
+	code uint32,
+) error {
+	msg, err := payload.NewMessage(&payload.Error{
+		Text: text,
+		Code: code,
+	})
+	if err != nil {
+		return errors.Wrap(err, "failed to create reply")
+	}
+
+	p.dep.sender.Reply(ctx, inputMessage, msg)
+	return nil
 }

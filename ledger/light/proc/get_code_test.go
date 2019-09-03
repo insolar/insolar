@@ -19,6 +19,7 @@ package proc_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/gojuno/minimock"
@@ -84,6 +85,7 @@ func TestGetCode_Proceed(t *testing.T) {
 	t.Run("Passing request on heavy", func(t *testing.T) {
 		setup()
 		defer mc.Finish()
+		defer mc.Wait(10 * time.Second)
 
 		records.ForIDMock.Return(record.Material{}, object.ErrNotFound)
 

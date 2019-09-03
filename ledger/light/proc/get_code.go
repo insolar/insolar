@@ -119,9 +119,11 @@ func (p *GetCode) Proceed(ctx context.Context) error {
 			node = *l
 		}
 
-		_, done := p.dep.sender.SendTarget(ctx, msg, node)
-		done()
-		logger.Debug("passed GetCode")
+		go func() {
+			_, done := p.dep.sender.SendTarget(ctx, msg, node)
+			done()
+			logger.Debug("passed GetCode")
+		}()
 		return nil
 	}
 
