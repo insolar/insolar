@@ -53,7 +53,8 @@ func ChangeTags(ctx context.Context, mutator ...tag.Mutator) context.Context {
 	return ctx
 }
 
-type errorer interface {
+// Errorer is a logger with error
+type Errorer interface {
 	Error(...interface{})
 }
 
@@ -62,7 +63,7 @@ func RegisterPrometheus(
 	namespace string,
 	registry *prometheusclient.Registry,
 	reportperiod time.Duration,
-	logger errorer,
+	logger Errorer,
 	nodeRole string,
 ) (*prometheus.Exporter, error) {
 	exporter, err := prometheus.NewExporter(prometheus.Options{

@@ -36,12 +36,12 @@ var (
 
 var (
 	statLogCalls = stats.Int64(
-		"log/calls",
+		"log_calls",
 		"number of log calls",
 		stats.UnitDimensionless,
 	)
 	statLogWrites = stats.Int64(
-		"log/written",
+		"log_written",
 		"number of log actually written",
 		stats.UnitDimensionless,
 	)
