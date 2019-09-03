@@ -22,6 +22,7 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/gojuno/minimock"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/insolar"
@@ -89,21 +90,16 @@ func TestGetRequest_Proceed(t *testing.T) {
 
 		records.ForIDMock.Return(record.Material{}, object.ErrNotFound)
 
-		expectedError, _ := payload.NewMessage(&payload.Error{
-			Text: "request not found",
-			Code: payload.CodeNotFound,
-		})
-		sender.ReplyMock.Inspect(func(ctx context.Context, origin payload.Meta, reply *message.Message) {
-			assert.Equal(t, expectedError.Payload, reply.Payload)
-		}).Return()
-
 		meta := payload.Meta{}
 
 		p := proc.NewGetRequest(meta, gen.ID(), gen.ID(), false)
 		p.Dep(records, sender, coordinator, fetcher)
 
 		err := p.Proceed(ctx)
-		assert.NoError(t, err)
+		assert.Error(t, err)
+		insError, ok := errors.Cause(err).(*payload.CodedError)
+		assert.True(t, ok)
+		assert.Equal(t, uint32(payload.CodeNotFound), insError.GetCode())
 	})
 
 	t.Run("Simple success", func(t *testing.T) {

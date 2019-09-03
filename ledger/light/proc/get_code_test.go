@@ -23,6 +23,7 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/gojuno/minimock"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/insolar"
@@ -122,19 +123,13 @@ func TestGetCode_Proceed(t *testing.T) {
 		msg := payload.Meta{}
 		records.ForIDMock.Return(record.Material{}, object.ErrNotFound)
 
-		expectedError, _ := payload.NewMessage(&payload.Error{
-			Text: "code not found",
-			Code: payload.CodeNotFound,
-		})
-		sender.ReplyMock.Inspect(func(ctx context.Context, origin payload.Meta, reply *message.Message) {
-			assert.Equal(t, expectedError.Payload, reply.Payload)
-			assert.Equal(t, msg, origin)
-		}).Return()
-
 		p := proc.NewGetCode(msg, gen.ID(), false)
 		p.Dep(records, coordinator, fetcher, sender)
 
 		err := p.Proceed(ctx)
-		assert.NoError(t, err)
+		assert.Error(t, err)
+		insError, ok := errors.Cause(err).(*payload.CodedError)
+		assert.True(t, ok)
+		assert.Equal(t, uint32(payload.CodeNotFound), insError.GetCode())
 	})
 }

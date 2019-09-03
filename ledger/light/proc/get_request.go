@@ -135,16 +135,10 @@ func (p *GetRequest) Proceed(ctx context.Context) error {
 			return sendPassRequest()
 		}
 
-		msg, err := payload.NewMessage(&payload.Error{
+		return &payload.CodedError{
 			Text: "request not found",
 			Code: payload.CodeNotFound,
-		})
-		if err != nil {
-			return errors.Wrap(err, "failed to create reply")
 		}
-
-		p.dep.sender.Reply(ctx, p.message, msg)
-		return nil
 
 	default:
 		return errors.Wrap(err, "failed to fetch record")

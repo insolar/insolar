@@ -137,16 +137,10 @@ func (p *GetCode) Proceed(ctx context.Context) error {
 			logger.Info("code not found (sending pass)")
 			return sendPassCode()
 		}
-		msg, err := payload.NewMessage(&payload.Error{
+		return &payload.CodedError{
 			Text: "code not found",
 			Code: payload.CodeNotFound,
-		})
-		if err != nil {
-			return errors.Wrap(err, "failed to create reply")
 		}
-
-		p.dep.sender.Reply(ctx, p.message, msg)
-		return nil
 
 	default:
 		return errors.Wrap(err, "failed to fetch record")
