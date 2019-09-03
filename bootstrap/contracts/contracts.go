@@ -115,8 +115,8 @@ func GetAccountGenesisContractState(balance string, name string, parent string) 
 	}
 }
 
-func GetCostCenterGenesisContractState(feeMember insolar.Reference) insolar.GenesisContractState {
-	cc, err := costcenter.New(&feeMember)
+func GetCostCenterGenesisContractState() insolar.GenesisContractState {
+	cc, err := costcenter.New(&genesisrefs.ContractFeeMember)
 	if err != nil {
 		panic("failed to create cost center instance")
 	}
