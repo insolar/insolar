@@ -48,46 +48,90 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package adapters
+package storage
 
 import (
 	"context"
-
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
+	"github.com/insolar/insolar/network/node"
+	"sync"
 )
 
-func ConsensusContext(ctx context.Context) context.Context {
-	ctx, _ = inslogger.WithFields(ctx, map[string]interface{}{
-		"component": "consensus",
-	})
+const entriesCount = 10
 
-	return ctx
+// NewMemoryStorage constructor creates MemoryStorage
+func NewMemoryStorage() *MemoryStorage {
+	return &MemoryStorage{
+		entries:         make([]insolar.Pulse, 0),
+		snapshotEntries: make(map[insolar.PulseNumber]*node.Snapshot),
+	}
 }
 
-func PacketEarlyLogger(ctx context.Context, senderAddr string) (context.Context, insolar.Logger) {
-	ctx = ConsensusContext(ctx)
-
-	ctx, logger := inslogger.WithFields(ctx, map[string]interface{}{
-		"sender_address": senderAddr,
-	})
-
-	return ctx, logger
+type MemoryStorage struct {
+	lock            sync.RWMutex
+	entries         []insolar.Pulse
+	snapshotEntries map[insolar.PulseNumber]*node.Snapshot
 }
 
-func PacketLateLogger(ctx context.Context, parser transport.PacketParser) (context.Context, insolar.Logger) {
-	ctx, logger := inslogger.WithFields(ctx, map[string]interface{}{
-		"sender_id":    parser.GetSourceID(),
-		"packet_type":  parser.GetPacketType().String(),
-		"packet_pulse": parser.GetPulseNumber(),
-	})
+// truncate deletes all entries except Count
+func (m *MemoryStorage) truncate(count int) {
+	if len(m.entries) <= count {
+		return
+	}
 
-	return ctx, logger
+	truncatePulses := m.entries[:len(m.entries)-count]
+	m.entries = m.entries[len(truncatePulses):]
+	for _, p := range truncatePulses {
+		delete(m.snapshotEntries, p.PulseNumber)
+	}
 }
 
-func ReportContext(report api.UpstreamReport) context.Context {
-	return network.NewPulseContext(context.Background(), uint32(report.PulseNumber))
+func (m *MemoryStorage) AppendPulse(ctx context.Context, pulse insolar.Pulse) error {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	m.entries = append(m.entries, pulse)
+	m.truncate(entriesCount)
+	return nil
+}
+
+func (m *MemoryStorage) GetPulse(ctx context.Context, number insolar.PulseNumber) (insolar.Pulse, error) {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+
+	for _, p := range m.entries {
+		if p.PulseNumber == number {
+			return p, nil
+		}
+	}
+
+	return *insolar.GenesisPulse, ErrNotFound
+}
+
+func (m *MemoryStorage) GetLatestPulse(ctx context.Context) (insolar.Pulse, error) {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+
+	if len(m.entries) == 0 {
+		return *insolar.GenesisPulse, ErrNotFound
+	}
+	return m.entries[len(m.entries)-1], nil
+}
+
+func (m *MemoryStorage) Append(pulse insolar.PulseNumber, snapshot *node.Snapshot) error {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	m.snapshotEntries[pulse] = snapshot
+	return nil
+}
+
+func (m *MemoryStorage) ForPulseNumber(pulse insolar.PulseNumber) (*node.Snapshot, error) {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+
+	if s, ok := m.snapshotEntries[pulse]; ok {
+		return s, nil
+	}
+	return nil, ErrNotFound
 }

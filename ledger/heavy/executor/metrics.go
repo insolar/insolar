@@ -22,6 +22,7 @@ import (
 )
 
 var (
+	statJets           = stats.Int64("heavy_jets", "jets counter", stats.UnitDimensionless)
 	statFinalizedPulse = stats.Int64(
 		"heavy_finalized_pulse",
 		"last pulse with fully finalized data",
@@ -35,6 +36,12 @@ func init() {
 			Name:        statFinalizedPulse.Name(),
 			Description: statFinalizedPulse.Description(),
 			Measure:     statFinalizedPulse,
+			Aggregation: view.LastValue(),
+		},
+		&view.View{
+			Name:        "heavy_jets_counter",
+			Description: "how many jets on start of pulse",
+			Measure:     statJets,
 			Aggregation: view.LastValue(),
 		},
 	)

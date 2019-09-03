@@ -192,6 +192,9 @@ func (p *NodePhantom) postponePacket(ctx context.Context, packet transport.Packe
 func (p *NodePhantom) DispatchAnnouncement(ctx context.Context, rank member.Rank, profile profiles.StaticProfile,
 	announcement profiles.MemberAnnouncement) error {
 
+	inslogger.FromContext(ctx).Debugf("DispatchAnnouncement to NodePhantom: s=%d, t=%d %v %+v %+v",
+		p.purgatory.hook.GetLocalNodeID(), p.GetNodeID(), rank, profile, announcement)
+
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 
@@ -251,13 +254,13 @@ func (p *figment) dispatchAnnouncement(ctx context.Context, phantom *NodePhantom
 	if p.phantom == nil {
 		p.phantom = phantom
 		p.rank = rank
-		inslogger.FromContext(ctx).Debugf("Phantom node added: s=%d, t=%d, announcedBy=%d, profile=%s, rank=%v",
+		inslogger.FromContext(ctx).Debugf("Phantom node added: s=%d t=%d announcedBy=%d profile=%s rank=%v",
 			p.phantom.purgatory.hook.GetLocalNodeID(), p.phantom.nodeID, announcedBy, profileCategory, rank)
 
 		flags |= population.FlagCreated
 	} else {
-		inslogger.FromContext(ctx).Debugf("Phantom node update attempt: s=%d, t=%d, announcedBy=%d, profile=%s, rank=%v, "+
-			"figmentRank=%v, figmentProfile=%+v, ann=%+v",
+		inslogger.FromContext(ctx).Debugf("Phantom node update attempt: s=%d t=%d announcedBy=%d profile=%s rank=%v "+
+			"figmentRank=%v figmentProfile=%+v ann=%+v",
 			p.phantom.purgatory.hook.GetLocalNodeID(), p.phantom.nodeID, announcedBy, profileCategory, rank,
 			p.rank, p.profile, announcement,
 		)
@@ -318,10 +321,10 @@ func (p *figment) dispatchAnnouncement(ctx context.Context, phantom *NodePhantom
 	switch {
 	case p.rank.IsJoiner() && p.announcerID.IsAbsent():
 		/* self-ascension is not allowed for joiners */
-		inslogger.FromContext(ctx).Debugf("Phantom joiner ascension postponed: s=%d, t=%d, announcedBy=%d",
+		inslogger.FromContext(ctx).Debugf("Phantom joiner ascension postponed: s=%d t=%d announcedBy=%d",
 			p.phantom.purgatory.hook.GetLocalNodeID(), p.phantom.nodeID, announcedBy)
 	case p.profile.GetExtension() != nil || ascentWithBrief:
-		inslogger.FromContext(ctx).Debugf("Phantom node ascension: s=%d, t=%d, full=%v",
+		inslogger.FromContext(ctx).Debugf("Phantom node ascension: s=%d t=%d full=%v",
 			p.phantom.purgatory.hook.GetLocalNodeID(), p.phantom.nodeID, p.profile.GetExtension() != nil)
 
 		p.phantom.ascend(ctx, nil, p)

@@ -202,7 +202,6 @@ func NewJoinerAnnouncement(brief StaticProfile,
 	announcerID insolar.ShortNodeID) MemberAnnouncement {
 
 	// TODO joiner secret
-
 	return MemberAnnouncement{
 		MemberID:               brief.GetStaticNodeID(),
 		MembershipAnnouncement: NewMembershipAnnouncement(NewMembershipProfileForJoiner(brief)),
@@ -211,6 +210,14 @@ func NewJoinerAnnouncement(brief StaticProfile,
 			JoinerProfile:  brief,
 			IntroducedByID: announcerID,
 		},
+	}
+}
+
+func NewJoinerIDAnnouncement(joinerID, announcerID insolar.ShortNodeID) MemberAnnouncement {
+
+	return MemberAnnouncement{
+		MemberID:      joinerID,
+		AnnouncedByID: announcerID,
 	}
 }
 

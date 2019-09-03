@@ -34,33 +34,33 @@ var (
 
 var (
 	statSent = stats.Int64(
-		"bus/sent",
+		"bus_sent",
 		"sent messages stats",
 		stats.UnitDimensionless,
 	)
 	statSentTime = stats.Float64(
-		"bus/sent/latency",
+		"bus_sent_latency",
 		"time spent on sending parcels",
 		stats.UnitMilliseconds,
 	)
 	statRetries = stats.Int64(
-		"bus/sent/retries",
+		"bus_sent_retries",
 		"retries on send messages",
 		stats.UnitDimensionless,
 	)
 
 	statReply = stats.Int64(
-		"bus/reply",
+		"bus_reply",
 		"reply messages stats",
 		stats.UnitDimensionless,
 	)
 	statReplyTimeouts = stats.Int64(
-		"bus/reply/timeouts",
+		"bus_reply_timeouts",
 		"reply messages stats",
 		stats.UnitDimensionless,
 	)
 	statReplyTime = stats.Float64(
-		"bus/reply/latency",
+		"bus_reply_latency",
 		"time spent on sending parcels",
 		stats.UnitMilliseconds,
 	)

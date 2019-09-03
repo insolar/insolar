@@ -193,7 +193,7 @@ func ApplyMemberAnnouncement(ctx context.Context, reader transport.AnnouncementP
 	}
 
 	addJoiner := func(ma profiles.MemberAnnouncement) error {
-		return realm.GetPurgatory().AddJoinerAndEnsureAscendancy(ma.Joiner, ma.AnnouncedByID)
+		return realm.GetPurgatory().AddJoinerAndEnsureAscendancy(ctx, ma.Joiner, ma.AnnouncedByID)
 	}
 
 	if ma.Joiner.IsEmpty() || // it can be EMPTY when !ma.JoinerID.IsAbsent() - it is normal
@@ -201,7 +201,13 @@ func ApplyMemberAnnouncement(ctx context.Context, reader transport.AnnouncementP
 		addJoiner = nil
 	}
 
+	inslogger.FromContext(ctx).Debugf("Before ApplyNodeMembership: s=%d t=%d %v %+v %+v",
+		realm.GetSelfNodeID(), n.GetNodeID(), addJoiner, ma, profile)
+
 	modified, err := n.ApplyNodeMembership(ma, addJoiner)
+
+	inslogger.FromContext(ctx).Debugf("After ApplyNodeMembership: s=%d t=%d %v %+v",
+		realm.GetSelfNodeID(), n.GetNodeID(), modified, err)
 
 	return modified, ma.Joiner.JoinerProfile, err
 }
@@ -237,6 +243,10 @@ func AnnouncementFromReaderNotForJoiner(senderID insolar.ShortNodeID, ma transpo
 		ja.JoinerProfile = pf.CreateFullIntroProfile(jar.GetFullIntroduction())
 	} else {
 		ja.JoinerProfile = pf.CreateUpgradableIntroProfile(jar.GetBriefIntroduction())
+	}
+
+	if ja.JoinerProfile == nil || ma.GetJoinerID() != ja.JoinerProfile.GetStaticNodeID() {
+		panic("illegal state")
 	}
 
 	return profiles.NewMemberAnnouncementWithJoiner(senderID, mp, ja, announcerID), ma.GetJoinerID()

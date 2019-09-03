@@ -21,10 +21,11 @@ import (
 	"runtime/debug"
 	"sync"
 
+	"go.opencensus.io/stats"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/log"
-	"go.opencensus.io/stats"
 )
 
 type IndexStorageMemory struct {
@@ -123,9 +124,7 @@ func (i *IndexStorageMemory) Set(ctx context.Context, pn insolar.PulseNumber, bu
 
 	i.buckets[pn][bucket.ObjID] = &bucket
 
-	stats.Record(ctx,
-		statBucketAddedCount.M(1),
-	)
+	stats.Record(ctx, statIndexesAddedCount.M(1))
 }
 
 // DeleteForPN deletes all buckets for a provided pulse number
@@ -133,6 +132,7 @@ func (i *IndexStorageMemory) DeleteForPN(ctx context.Context, pn insolar.PulseNu
 	i.bucketsLock.Lock()
 	defer i.bucketsLock.Unlock()
 
+	stats.Record(ctx, statIndexesRemovedCount.M(int64(len(i.buckets[pn]))))
 	delete(i.buckets, pn)
 }
 

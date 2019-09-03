@@ -1,10 +1,13 @@
-name, type, description
+name,type,description
+insolar_artifactmanager_calls,counter,The number of AM method calls
+insolar_artifactmanager_latency,histogram,The latency in milliseconds per AM call
 insolar_bus_reply_milliseconds,histogram,reply messages latency
 insolar_bus_reply_total,counter,reply messages total count
 insolar_bus_sent_bytes,histogram,sent messages payload size
 insolar_bus_sent_milliseconds,histogram,sent messages latency
+insolar_bus_sent_retries,counter,sent messages retries count
 insolar_bus_sent_total,counter,sent messages total count
-insolar_consensus_activenodes_count,gauge,Active nodes count after consensus
+insolar_consensus_active_nodes_count,gauge,Active nodes count after consensus
 insolar_consensus_packets_recv_bytes,counter,Consensus received packets size
 insolar_consensus_packets_sent_bytes,counter,Consensus sent packets size
 insolar_current_pulse,gauge,current node pulse
@@ -16,9 +19,11 @@ insolar_flow_dispatcher_handler_latency,histogram,handlers latency
 insolar_flow_dispatcher_process_latency,histogram,process handlers call latency (handlers latency+overhead)
 insolar_flow_procedure_latency,histogram,time spent on procedure run
 insolar_heavy_finalized_pulse,gauge,last pulse with fully finalized data
+insolar_heavy_jets_counter,gauge,how many jets on start of pulse
 insolar_heavysyncer_heavypayload_count,counter,How many heavy-payload messages were received from a light-node
 insolar_hotdata_objects_send,counter,Amount of hot records actually sent to next executors
-insolar_hotdata_objects_total,counter,Amount of hot records for next executors
+insolar_hotdata_objects_total,counter,Amount of hot records prepared to send for next executors
+insolar_jet_splits_total,counter,how many jet splits performed
 insolar_jets_counter,gauge,how many jets on start of pulse
 insolar_light_last_sent_pulse,gauge,last pulse sent to heavy
 insolar_log_calls,counter,number of log calls
@@ -31,4 +36,9 @@ insolar_network_packets_received,counter,number of received packets
 insolar_network_parcels_reply_size,histogram,size of replies to parcels
 insolar_network_recv_bytes,counter,Recieved by transport
 insolar_network_sent_bytes,counter,Sent by transport
-insolar_object_bucket_added_count,counter,How many bucket have been created on a node
+insolar_object_indexes_added_count,counter,How many bucket have been created on a node
+insolar_object_indexes_removed_count,counter,How many bucket have been removed from a node
+insolar_record_storage_added_count,counter,How many records have been saved to a in-memory storage
+insolar_record_storage_removed_count,counter,How many records have been removed from a in-memory storage
+insolar_requests_closed,counter,How many requests are closed
+insolar_requests_opened,counter,How many requests in hot data

@@ -30,7 +30,7 @@ var (
 
 var (
 	procCallTime = stats.Float64(
-		"flow/procedure/latency",
+		"flow_procedure_latency",
 		"time spent on procedure run",
 		stats.UnitMilliseconds,
 	)

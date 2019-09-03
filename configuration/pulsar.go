@@ -16,29 +16,9 @@
 
 package configuration
 
-type ConnectionType string
-
-const (
-	TCP ConnectionType = "tcp"
-)
-
-func (ct ConnectionType) String() string {
-	return string(ct)
-}
-
 // Pulsar holds configuration for pulsar node.
 type Pulsar struct {
-	ConnectionType      ConnectionType
-	MainListenerAddress string
-	Storage             Storage
-
-	PulseTime                      int32 // ms
-	ReceivingSignTimeout           int32 // ms
-	ReceivingNumberTimeout         int32 // ms
-	ReceivingVectorTimeout         int32 // ms
-	ReceivingSignsForChosenTimeout int32 // ms
-
-	Neighbours []PulsarNodeAddress
+	PulseTime int32 // ms
 
 	NumberDelta uint32
 
@@ -52,25 +32,14 @@ type PulseDistributor struct {
 }
 
 type PulsarNodeAddress struct {
-	Address        string
-	ConnectionType ConnectionType
-	PublicKey      string
+	Address   string
+	PublicKey string
 }
 
 // NewPulsar creates new default configuration for pulsar node.
 func NewPulsar() Pulsar {
 	return Pulsar{
-		MainListenerAddress: "0.0.0.0:18090",
-
-		ConnectionType: TCP,
-
-		PulseTime:              10000,
-		ReceivingSignTimeout:   1000,
-		ReceivingNumberTimeout: 1000,
-		ReceivingVectorTimeout: 1000,
-
-		Neighbours: []PulsarNodeAddress{},
-		Storage:    Storage{DataDirectory: "./.artifacts/pulsar_data"},
+		PulseTime: 10000,
 
 		NumberDelta: 10,
 		DistributionTransport: Transport{

@@ -83,17 +83,17 @@ func CreateDefaultBundleFactoryConfig() BundleFactoryConfig {
 
 func CreateDefaultBundleConfig() BundleConfig {
 	return BundleConfig{
-		loopingMinimalDelay,
-		transport.OnlyBriefIntroAboutJoiner,
-		0,
-		0,
-		false,
-		false,
-		false,
-		false,
-		true,
-		true,
-		true,
+		LoopingMinimalDelay:             loopingMinimalDelay,
+		MemberPacketOptions:             transport.OnlyBriefIntroAboutJoiner,
+		JoinerPacketOptions:             0,
+		VectorInspectInliningLimit:      0,
+		DisableVectorInspectionOnJoiner: false,
+		EnableFastPhase3:                false,
+		IgnoreVectorHashes:              false,
+		DisableAggressivePhasing:        false,
+		IgnoreHostVerificationForPulses: true,
+		LockOSThreadForWorker:           true,
+		RetrySendPhase3:                 true,
 	}
 }
 
