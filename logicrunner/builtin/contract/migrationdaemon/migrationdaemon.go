@@ -119,7 +119,7 @@ func (md *MigrationDaemon) depositMigration(txHash string, migrationAddress stri
 	// If deposit doesn't exist - create new deposit
 	if !isFound {
 		vestingParams, _ := migrationAdminContract.GetDepositParameters()
-		dHolder := deposit.New(caller, txHash, amount.String(), vestingParams)
+		dHolder := deposit.New(caller, txHash, amount.String(), vestingParams.Lockup, vestingParams.Vesting, vestingParams.VestingStep)
 		txDeposit, err := dHolder.AsChild(*tokenHolderRef)
 		if err != nil {
 			return nil, fmt.Errorf("failed to save as child: %s", err.Error())
