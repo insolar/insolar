@@ -19,6 +19,7 @@ package api
 import (
 	"context"
 	"net/http"
+	"strings"
 
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/insolar/utils"
@@ -26,10 +27,26 @@ import (
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/rpc/v2"
 	"github.com/insolar/rpc/v2/json2"
-	"github.com/pkg/errors"
 )
 
-const defaultError = -32000
+const (
+	ParseError                 = -31700
+	ParseErrorMessage          = "Parsing error on the server side: received an invalid JSON."
+	InvalidRequestError        = -31600
+	InvalidRequestErrorMessage = "The JSON received is not a valid request payload."
+	MethodNotFoundError        = -31601
+	MethodNotFoundErrorMessage = "Method does not exist / is not available."
+	InvalidParamsError         = -31602
+	InvalidParamsErrorMessage  = "Invalid method parameter(s)."
+	InternalError              = -31603
+	InternalErrorMessage       = "Internal JSON RPC error."
+	TimeoutError               = -31106
+	TimeoutErrorMessage        = "Request's timeout has expired."
+	UnauthorizedError          = -31401
+	UnauthorizedErrorMessage   = "Action is not authorized."
+	ExecutionError             = -31103
+	ExecutionErrorMessage      = "Execution error."
+)
 
 func wrapCall(runner *Runner, allowedMethods map[string]bool, req *http.Request, args *requester.Params, requestBody *rpc.RequestBody, result *requester.ContractResult) error {
 	traceID := utils.RandTraceID()
@@ -42,7 +59,13 @@ func wrapCall(runner *Runner, allowedMethods map[string]bool, req *http.Request,
 
 	_, ok := allowedMethods[args.CallSite]
 	if !ok {
-		return errors.New("method not allowed")
+		return &json2.Error{
+			Code:    MethodNotFoundError,
+			Message: MethodNotFoundErrorMessage,
+			Data: requester.Data{
+				TraceID: traceID,
+			},
+		}
 	}
 
 	if args.Test != "" {
@@ -51,17 +74,31 @@ func wrapCall(runner *Runner, allowedMethods map[string]bool, req *http.Request,
 
 	signature, err := validateRequestHeaders(req.Header.Get(requester.Digest), req.Header.Get(requester.Signature), requestBody.Raw)
 	if err != nil {
-		return err
+		return &json2.Error{
+			Code:    InvalidParamsError,
+			Message: InvalidParamsErrorMessage,
+			Data: requester.Data{
+				Trace:   strings.Split(err.Error(), ": "),
+				TraceID: traceID,
+			},
+		}
 	}
 
 	seedPulse, err := runner.checkSeed(args.Seed)
 	if err != nil {
-		return err
+		return &json2.Error{
+			Code:    InvalidRequestError,
+			Message: InvalidRequestErrorMessage,
+			Data: requester.Data{
+				Trace:   strings.Split(err.Error(), ": "),
+				TraceID: traceID,
+			},
+		}
 	}
 
 	setRootReferenceIfNeeded(args)
 
-	callResult, requestRef, err := runner.makeCall(ctx, "contract.call", *args, requestBody.Raw, signature, 0, seedPulse)
+	callResult, requestRef, err := runner.makeCall(ctx, "contract.call", *args, requestBody.Raw, signature, seedPulse)
 
 	var ref string
 	if requestRef != nil {
@@ -73,10 +110,10 @@ func wrapCall(runner *Runner, allowedMethods map[string]bool, req *http.Request,
 		logger.Error(err.Error())
 
 		return &json2.Error{
-			// TODO: correct error codes
-			Code:    defaultError,
-			Message: err.Error(),
+			Code:    ExecutionError,
+			Message: ExecutionErrorMessage,
 			Data: requester.Data{
+				Trace:            strings.Split(err.Error(), ": "),
 				TraceID:          traceID,
 				RequestReference: ref,
 			},

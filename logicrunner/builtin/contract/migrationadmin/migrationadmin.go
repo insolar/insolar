@@ -88,7 +88,7 @@ func (mA *MigrationAdmin) getMigrationDamon(params map[string]interface{}, calle
 
 func (mA *MigrationAdmin) activateDaemonCall(params map[string]interface{}, caller insolar.Reference) (interface{}, error) {
 	if caller != mA.MigrationAdminMember {
-		return nil, fmt.Errorf(" only migration admin can activate migration demons ")
+		return nil, fmt.Errorf("only migration admin can activate migration demons")
 	}
 	migrationDaemonContract, err := mA.getMigrationDamon(params, caller)
 	if err != nil {
@@ -107,7 +107,7 @@ func (mA *MigrationAdmin) activateDaemonCall(params map[string]interface{}, call
 
 func (mA *MigrationAdmin) deactivateDaemonCall(params map[string]interface{}, memberRef insolar.Reference) (interface{}, error) {
 	if memberRef != mA.MigrationAdminMember {
-		return nil, fmt.Errorf(" only migration admin can deactivate migration demons ")
+		return nil, fmt.Errorf("only migration admin can deactivate migration demons")
 	}
 	migrationDaemonContract, err := mA.getMigrationDamon(params, memberRef)
 	if err != nil {
@@ -154,7 +154,7 @@ func (mA *MigrationAdmin) addMigrationAddressesCall(params map[string]interface{
 func (mA *MigrationAdmin) checkDaemonCall(params map[string]interface{}, caller insolar.Reference) (interface{}, error) {
 
 	if caller != mA.MigrationAdminMember && !foundation.IsMigrationDaemonMember(caller) {
-		return nil, fmt.Errorf(" permission denied to information about migration daemons")
+		return nil, fmt.Errorf("permission denied to information about migration daemons")
 	}
 	migrationDaemonContract, err := mA.getMigrationDamon(params, caller)
 	if err != nil {
