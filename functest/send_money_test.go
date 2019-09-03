@@ -19,13 +19,12 @@
 package functest
 
 import (
-	"math/big"
-	"testing"
-	"time"
-
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/testutils/launchnet"
 	"github.com/stretchr/testify/require"
+	"math/big"
+	"testing"
+	"time"
 )
 
 const times = 5
@@ -139,7 +138,6 @@ func TestTransferAllAmount(t *testing.T) {
 
 	summ := new(big.Int)
 	summ.Add(oldSecondBalance, oldFirstBalance)
-
 	_, err := signedRequest(t, launchnet.TestRPCUrlPublic, firstMember, "member.transfer",
 		map[string]interface{}{"amount": amount, "toMemberReference": secondMember.Ref})
 	require.NoError(t, err)

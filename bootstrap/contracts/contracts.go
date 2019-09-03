@@ -151,7 +151,6 @@ func GetMigrationAdminGenesisContractState(lokup int64, vesting int64, vestingSt
 		Prototype:  insolar.GenesisNameMigrationAdmin,
 		ParentName: insolar.GenesisNameRootDomain,
 		Memory: mustGenMemory(&migrationadmin.MigrationAdmin{
-			MigrationDaemons:       migrationDaemons,
 			MigrationAddressShards: genesisrefs.ContractMigrationAddressShards,
 			MigrationAdminMember:   genesisrefs.ContractMigrationAdminMember,
 			VestingParams: &migrationadmin.VestingParams{
