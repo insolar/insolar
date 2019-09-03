@@ -137,7 +137,6 @@ func initComponents(
 	metricsHandler, err := metrics.NewMetrics(ctx, cfg.Metrics, metrics.GetInsolarRegistry("virtual"), "virtual")
 	checkError(ctx, err, "failed to start Metrics")
 
-	_, err = manager.NewVersionManager(cfg.VersionManager)
 	checkError(ctx, err, "failed to load VersionManager: ")
 
 	jc := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit)
