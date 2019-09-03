@@ -79,7 +79,7 @@ func TestTransferMoneyFromNotExist(t *testing.T) {
 	require.Error(t, err)
 	require.IsType(t, &requester.Error{}, err)
 	data := err.(*requester.Error).Data
-	require.Contains(t, data.Trace, "index not found")
+	require.Contains(t, data.Trace, "failed to fetch index from heavy")
 	newSecondBalance := getBalanceNoErr(t, secondMember, secondMember.Ref)
 	require.Equal(t, oldSecondBalance, newSecondBalance)
 }
@@ -95,7 +95,7 @@ func TestTransferMoneyToNotExist(t *testing.T) {
 	require.Error(t, err)
 	require.IsType(t, &requester.Error{}, err)
 	data := err.(*requester.Error).Data
-	require.Contains(t, data.Trace, "index not found")
+	require.Contains(t, data.Trace, "failed to fetch index from heavy")
 
 	newFirstBalance := getBalanceNoErr(t, firstMember, firstMember.Ref)
 	require.Equal(t, oldFirstBalance, newFirstBalance)

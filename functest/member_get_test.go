@@ -63,7 +63,7 @@ func TestMemberGetWrongPublicKey(t *testing.T) {
 	require.Error(t, err)
 	require.IsType(t, &requester.Error{}, err)
 	data := err.(*requester.Error).Data
-	require.Contains(t, data.Trace, "failed to get reference by public key: failed to get reference in shard: failed to find reference by key")
+	require.Contains(t, data.Trace, "failed to find reference by key")
 }
 
 func TestMemberGetGenesisMember(t *testing.T) {
