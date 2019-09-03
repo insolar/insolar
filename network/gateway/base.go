@@ -105,7 +105,7 @@ type Base struct {
 	// Next request backoff.
 	backoff time.Duration // nolint
 
-	newPulseCh chan *struct{}
+	newPulseCh chan struct{}
 }
 
 // NewGateway creates new gateway on top of existing
@@ -161,9 +161,9 @@ func (g *Base) OnPulseFromPulsar(ctx context.Context, pu insolar.Pulse, original
 
 func (g *Base) OnPulseFromConsensus(ctx context.Context, pu insolar.Pulse) {
 	if g.newPulseCh != nil {
-		g.newPulseCh <- &struct{}{}
+		g.newPulseCh <- struct{}{}
 	} else {
-		g.newPulseCh = make(chan *struct{})
+		g.newPulseCh = make(chan struct{})
 		newPulseWatchdog(ctx, g.Gatewayer, g.Options.PulseWatchdogTimeout, g.newPulseCh)
 	}
 
