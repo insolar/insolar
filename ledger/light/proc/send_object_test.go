@@ -23,6 +23,7 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/gojuno/minimock"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/insolar"
@@ -75,21 +76,14 @@ func TestSendObject_Proceed(t *testing.T) {
 		}, nil)
 
 		msg := payload.Meta{}
-
-		expectedError, _ := payload.NewMessage(&payload.Error{
-			Text: "object is deactivated",
-			Code: payload.CodeDeactivated,
-		})
-		sender.ReplyMock.Inspect(func(ctx context.Context, origin payload.Meta, reply *message.Message) {
-			assert.Equal(t, expectedError.Payload, reply.Payload)
-			assert.Equal(t, msg, origin)
-		}).Return()
-
 		p := proc.NewSendObject(msg, objectID)
 		p.Dep(coordinator, jets, fetcher, records, indexes, sender)
 
 		err := p.Proceed(ctx)
-		assert.NoError(t, err)
+		assert.Error(t, err)
+		insError, ok := errors.Cause(err).(*payload.CodedError)
+		assert.True(t, ok)
+		assert.Equal(t, uint32(payload.CodeDeactivated), insError.GetCode())
 	})
 
 	t.Run("Simple success", func(t *testing.T) {
@@ -172,25 +166,10 @@ func TestSendObject_Proceed(t *testing.T) {
 			ObjectID: objectID,
 		}
 		records.ForIDMock.Return(rec, nil)
-
-		buf, _ = rec.Marshal()
-		expectedError, _ := payload.NewMessage(&payload.Error{
-			Text: "object is deactivated",
-			Code: payload.CodeDeactivated,
-		})
-
 		msg := payload.Meta{}
 
 		sender.ReplyMock.Inspect(func(ctx context.Context, origin payload.Meta, reply *message.Message) {
-			// First message, index
-			if sender.ReplyAfterCounter() == 0 {
-				assert.Equal(t, expectedIndex.Payload, reply.Payload)
-			}
-
-			// Second message, record
-			if sender.ReplyAfterCounter() == 1 {
-				assert.Equal(t, expectedError.Payload, reply.Payload)
-			}
+			assert.Equal(t, expectedIndex.Payload, reply.Payload)
 			assert.Equal(t, msg, origin)
 		}).Return()
 
@@ -198,7 +177,10 @@ func TestSendObject_Proceed(t *testing.T) {
 		p.Dep(coordinator, jets, fetcher, records, indexes, sender)
 
 		err = p.Proceed(ctx)
-		assert.NoError(t, err)
+		assert.Error(t, err)
+		insError, ok := errors.Cause(err).(*payload.CodedError)
+		assert.True(t, ok)
+		assert.Equal(t, uint32(payload.CodeDeactivated), insError.GetCode())
 	})
 
 	t.Run("Send PassState on heavy", func(t *testing.T) {

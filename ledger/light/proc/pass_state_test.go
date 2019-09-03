@@ -52,9 +52,10 @@ func TestPassState_Proceed(t *testing.T) {
 		defer mc.Finish()
 
 		stateID := gen.ID()
-		origMsg, _ := (&payload.Meta{}).Marshal()
+		origMsg := payload.Meta{}
+		origMsgBuf, _ := (&origMsg).Marshal()
 		passed, _ := (&payload.PassState{
-			Origin:  origMsg,
+			Origin:  origMsgBuf,
 			StateID: stateID,
 		}).Marshal()
 
@@ -76,9 +77,10 @@ func TestPassState_Proceed(t *testing.T) {
 
 		sender.ReplyMock.Inspect(func(ctx context.Context, origin payload.Meta, reply *message.Message) {
 			assert.Equal(t, expectedMsg.Payload, reply.Payload)
+			assert.Equal(t, origMsg, origin)
 		}).Return()
 
-		p := proc.NewPassState(msg, stateID, payload.Meta{})
+		p := proc.NewPassState(msg, stateID, origMsg)
 		p.Dep(records, sender)
 
 		err = p.Proceed(ctx)

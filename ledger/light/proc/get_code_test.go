@@ -66,6 +66,7 @@ func TestGetCode_Proceed(t *testing.T) {
 		}
 		records.ForIDMock.Return(rec, nil)
 
+		msg := payload.Meta{}
 		buf, err := rec.Marshal()
 		expectedMsg, _ := payload.NewMessage(&payload.Code{
 			Record: buf,
@@ -73,9 +74,10 @@ func TestGetCode_Proceed(t *testing.T) {
 
 		sender.ReplyMock.Inspect(func(ctx context.Context, origin payload.Meta, reply *message.Message) {
 			assert.Equal(t, expectedMsg.Payload, reply.Payload)
+			assert.Equal(t, msg, origin)
 		}).Return()
 
-		p := proc.NewGetCode(payload.Meta{}, gen.ID(), true)
+		p := proc.NewGetCode(msg, gen.ID(), true)
 		p.Dep(records, coordinator, fetcher, sender)
 
 		err = p.Proceed(ctx)
@@ -85,7 +87,7 @@ func TestGetCode_Proceed(t *testing.T) {
 	t.Run("Passing request on heavy", func(t *testing.T) {
 		setup()
 		defer mc.Finish()
-		defer mc.Wait(10 * time.Second)
+		defer mc.Wait(10 * time.Minute)
 
 		records.ForIDMock.Return(record.Material{}, object.ErrNotFound)
 
@@ -117,6 +119,7 @@ func TestGetCode_Proceed(t *testing.T) {
 		setup()
 		defer mc.Finish()
 
+		msg := payload.Meta{}
 		records.ForIDMock.Return(record.Material{}, object.ErrNotFound)
 
 		expectedError, _ := payload.NewMessage(&payload.Error{
@@ -125,9 +128,10 @@ func TestGetCode_Proceed(t *testing.T) {
 		})
 		sender.ReplyMock.Inspect(func(ctx context.Context, origin payload.Meta, reply *message.Message) {
 			assert.Equal(t, expectedError.Payload, reply.Payload)
+			assert.Equal(t, msg, origin)
 		}).Return()
 
-		p := proc.NewGetCode(payload.Meta{}, gen.ID(), false)
+		p := proc.NewGetCode(msg, gen.ID(), false)
 		p.Dep(records, coordinator, fetcher, sender)
 
 		err := p.Proceed(ctx)

@@ -59,13 +59,20 @@ func (p *PassState) Proceed(ctx context.Context) error {
 
 	sendError := func(text string, code uint32) error {
 		// Replying to origin
-		err := p.replyError(ctx, p.origin, text, code)
+		msg, err := payload.NewMessage(&payload.Error{
+			Text: text,
+			Code: code,
+		})
 		if err != nil {
-			return errors.Wrap(err, "failed to create message")
+			return errors.Wrap(err, "failed to create reply")
 		}
+		p.dep.sender.Reply(ctx, p.origin, msg)
 
 		// Replying to passer
-		return errors.New(text)
+		return &payload.CodedError{
+			Text: text,
+			Code: code,
+		}
 	}
 
 	sendObject := func(rec record.Material, origin payload.Meta) error {
@@ -105,22 +112,4 @@ func (p *PassState) Proceed(ctx context.Context) error {
 	default:
 		return errors.Wrap(err, "failed to fetch object state")
 	}
-}
-
-func (p *PassState) replyError(
-	ctx context.Context,
-	inputMessage payload.Meta,
-	text string,
-	code uint32,
-) error {
-	msg, err := payload.NewMessage(&payload.Error{
-		Text: text,
-		Code: code,
-	})
-	if err != nil {
-		return errors.Wrap(err, "failed to create reply")
-	}
-
-	p.dep.sender.Reply(ctx, inputMessage, msg)
-	return nil
 }

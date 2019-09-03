@@ -22,6 +22,7 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/gojuno/minimock"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/insolar/bus"
@@ -67,6 +68,7 @@ func TestSendFilament_Proceed(t *testing.T) {
 
 		sender.ReplyMock.Inspect(func(ctx context.Context, origin payload.Meta, reply *message.Message) {
 			assert.Equal(t, expectedMsg.Payload, reply.Payload)
+			assert.Equal(t, msg, origin)
 		}).Return()
 
 		p := proc.NewSendFilament(msg, obj, gen.ID(), gen.PulseNumber())
@@ -90,18 +92,14 @@ func TestSendFilament_Proceed(t *testing.T) {
 		var storageRecs []record.CompositeFilamentRecord
 		filaments.RequestsMock.Return(storageRecs, nil)
 
-		expectedError, _ := payload.NewMessage(&payload.Error{
-			Text: "requests not found",
-			Code: payload.CodeNotFound,
-		})
-		sender.ReplyMock.Inspect(func(ctx context.Context, origin payload.Meta, reply *message.Message) {
-			assert.Equal(t, expectedError.Payload, reply.Payload)
-		}).Return()
-
 		p := proc.NewSendFilament(msg, obj, gen.ID(), gen.PulseNumber())
 		p.Dep(sender, filaments)
 
 		err := p.Proceed(ctx)
-		assert.NoError(t, err)
+		assert.Error(t, err)
+		insError, ok := errors.Cause(err).(*payload.CodedError)
+		assert.True(t, ok)
+		assert.Equal(t, uint32(payload.CodeNotFound), insError.GetCode())
+
 	})
 }
