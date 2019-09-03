@@ -17,6 +17,8 @@
 package exporter
 
 import (
+	"context"
+
 	"github.com/insolar/insolar/insolar"
 	insolarPulse "github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -87,4 +89,10 @@ func (p *PulseServer) Export(getPulses *GetPulses, stream PulseExporter_ExportSe
 	}
 
 	return nil
+}
+
+func (p *PulseServer) TopSyncPulse(ctx context.Context, _ *GetTopSyncPulse) (*TopSyncPulseResponse, error) {
+	return &TopSyncPulseResponse{
+		PulseNumber: p.jetKeeper.TopSyncPulse().AsUint32(),
+	}, nil
 }
