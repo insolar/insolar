@@ -130,7 +130,8 @@ func TestIncorrectSign(t *testing.T) {
 	err = json.Unmarshal(body, &res)
 	require.NoError(t, err)
 	var resData = requester.Response{}
-	_ = json.Unmarshal(body, &resData)
+	err = json.Unmarshal(body, &resData)
+	require.NoError(t, err)
 	require.Contains(t, resData.Error.Data.Trace, "error while verify signature")
 	require.Contains(t, resData.Error.Data.Trace, "structure error")
 }
@@ -157,7 +158,8 @@ func TestEmptySign(t *testing.T) {
 	err = json.Unmarshal(body, &res)
 	require.NoError(t, err)
 	var resData = requester.Response{}
-	_ = json.Unmarshal(body, &resData)
+	err = json.Unmarshal(body, &resData)
+	require.NoError(t, err)
 	require.Contains(t, resData.Error.Data.Trace, "invalid signature")
 }
 
@@ -197,7 +199,8 @@ func TestRequestWithSignFromOtherMember(t *testing.T) {
 	err = json.Unmarshal(body, &res)
 	require.NoError(t, err)
 	var resData = requester.Response{}
-	_ = json.Unmarshal(body, &resData)
+	err = json.Unmarshal(body, &resData)
+	require.NoError(t, err)
 	require.Contains(t, resData.Error.Data.Trace, "invalid signature")
 }
 
