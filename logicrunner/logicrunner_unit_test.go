@@ -143,17 +143,14 @@ func (suite *LogicRunnerTestSuite) AfterTest(suiteName, testName string) {
 }
 
 func (suite *LogicRunnerTestSuite) TestSagaCallAcceptNotificationHandler() {
-	outgoing := record.OutgoingRequest{
-		Caller:     gen.Reference(),
-		Reason:     gen.Reference(),
-		ReturnMode: record.ReturnSaga,
-	}
-	virtual := record.Wrap(&outgoing)
+	outgoing := (*record.OutgoingRequest)(genIncomingRequest())
+
+	virtual := record.Wrap(outgoing)
 	outgoingBytes, err := virtual.Marshal()
 	suite.Require().NoError(err)
 
 	outgoingReqId := gen.ID()
-	outgoingRequestRef := insolar.NewReference(outgoingReqId)
+	outgoingRequestRef := insolar.NewRecordReference(outgoingReqId)
 
 	pl := &payload.SagaCallAcceptNotification{
 		DetachedRequestID: outgoingReqId,
@@ -177,7 +174,7 @@ func (suite *LogicRunnerTestSuite) TestSagaCallAcceptNotificationHandler() {
 	buf, err := meta.Marshal()
 	msg.Payload = buf
 
-	dummyRequestRef := gen.Reference()
+	dummyRequestRef := gen.RecordReference()
 	callMethodChan := make(chan struct{})
 	var usedCaller insolar.Reference
 	var usedReason insolar.Reference
@@ -286,7 +283,7 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 	objectRef := gen.Reference()
 	parentRef := gen.Reference()
 	protoRef := gen.Reference()
-	codeRef := gen.Reference()
+	codeRef := gen.RecordReference()
 
 	notMeRef := gen.Reference()
 
@@ -336,14 +333,13 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 	})
 	for i := 0; i < num; i++ {
 		go func(i int) {
+			incoming := genIncomingRequest()
+			incoming.Object = &objectRef
+			incoming.Prototype = &protoRef
 			payloadData := &payload.CallMethod{
-				Request: &record.IncomingRequest{
-					Prototype:    &protoRef,
-					Object:       &objectRef,
-					Method:       "some",
-					APIRequestID: utils.RandTraceID(),
-				},
+				Request: incoming,
 			}
+
 			msg, err := payload.Marshal(payloadData)
 			require.NoError(syncT, err, "NewMessage")
 			wrapper := payload.Meta{
@@ -416,6 +412,8 @@ func TestLogicRunner_OnPulse(t *testing.T) {
 						isDone()
 					})
 
+				lr.ResultsMatcher = newResultsMatcher(lr.Sender, lr.PulseAccessor)
+
 				return lr
 			},
 		},
@@ -438,6 +436,8 @@ func TestLogicRunner_OnPulse(t *testing.T) {
 					func(ctx context.Context, isDone func() bool) {
 						isDone()
 					})
+
+				lr.ResultsMatcher = newResultsMatcher(lr.Sender, lr.PulseAccessor)
 
 				return lr
 			},
@@ -509,6 +509,8 @@ func TestLogicRunner_OnPulse_Order(t *testing.T) {
 			orderChan <- OrderFlagDone
 			isDone()
 		})
+
+	lr.ResultsMatcher = newResultsMatcher(lr.Sender, lr.PulseAccessor)
 
 	oldPulse := insolar.Pulse{PulseNumber: pulse.MinTimePulse}
 	newPulse := insolar.Pulse{PulseNumber: pulse.MinTimePulse + 1}

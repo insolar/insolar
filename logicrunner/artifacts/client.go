@@ -152,8 +152,6 @@ func (m *client) calculateAffinityReference(ctx context.Context, requestRecord r
 		return nil, err
 	}
 	return record.CalculateRequestAffinityRef(requestRecord, pulseNumber, m.PCS), nil
-	// recID := *insolar.NewID(currentPN, h.Sum(nil))
-	// return insolar.NewReference(recID), nil
 }
 
 // RegisterIncomingRequest sends message for incoming request registration,
@@ -433,7 +431,7 @@ func (m *client) GetPendings(ctx context.Context, object insolar.Reference) ([]i
 	case *payload.IDs:
 		res := make([]insolar.Reference, len(concrete.IDs))
 		for i := range concrete.IDs {
-			res[i] = *insolar.NewReference(concrete.IDs[i])
+			res[i] = *insolar.NewRecordReference(concrete.IDs[i])
 		}
 		return res, nil
 	case *payload.Error:
@@ -535,7 +533,7 @@ func (m *client) DeployCode(
 
 	pl, err := m.sendToLight(
 		ctx, bus.NewRetrySender(m.sender, m.PulseAccessor, 1, 1),
-		psc, *insolar.NewReference(recID),
+		psc, *insolar.NewRecordReference(recID),
 	)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to send SetCode")

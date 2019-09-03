@@ -280,7 +280,7 @@ func (sdk *SDK) DoRequest(urls *ringBuffer, user *requester.UserConfigJSON, meth
 	}
 
 	if response.Error != nil {
-		return nil, errors.New(response.Error.Message + ". TraceId: " + response.Error.Data.TraceID)
+		return nil, errors.New(response.Error.Message + ". TraceId: " + response.Error.Data.TraceID + ". RequestRef: " + response.Error.Data.RequestReference)
 	}
 
 	return response.Result, nil

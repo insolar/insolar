@@ -43,7 +43,7 @@ func TestReference(t *testing.T) {
 	rootRecord := &Record{
 		PCS: initPCS(),
 	}
-	require.Equal(t, refHex, hex.EncodeToString(rootRecord.Ref().Bytes()), "root domain Ref should always be the same")
+	require.Equal(t, refHex, hex.EncodeToString(rootRecord.Reference().Bytes()), "root domain Ref should always be the same")
 
 }
 

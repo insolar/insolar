@@ -146,3 +146,8 @@ func (r *RecordErrorResult) Proceed(ctx context.Context) error {
 
 	return nil
 }
+
+func ProcessLogicalError(err error) bool {
+	e, ok := errors.Cause(err).(*payload.CodedError)
+	return ok && e.Code == payload.CodeNotFound
+}

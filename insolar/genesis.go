@@ -37,6 +37,8 @@ const (
 	GenesisNameCostCenter = "costcenter"
 	// GenesisNameMigrationAdmin is the name of migration admin contract for genesis record.
 	GenesisNameMigrationAdmin = "migrationadmin"
+	// GenesisNameMigrationAdmin is the name of migration daemon contract,which is associated with MigrationDaemonMember  for genesis record.
+	GenesisNameMigrationDaemon = "migrationdaemon"
 	// GenesisNamePKShard is the name of public key shard contract for genesis record.
 	GenesisNamePKShard = "pkshard"
 	// GenesisNameMigrationShard is the name of migration address shard contract for genesis record.
@@ -53,14 +55,20 @@ const (
 
 	GenesisAmountMigrationDaemonMembers       = 10
 	GenesisAmountActiveMigrationDaemonMembers = 3
-
-	GenesisAmountPublicKeyShards        = 10
-	GenesisAmountMigrationAddressShards = 10
+	GenesisAmountPublicKeyShards              = 10
+	GenesisAmountMigrationAddressShards       = 10
 )
 
 var GenesisNameMigrationDaemonMembers = func() (result [GenesisAmountMigrationDaemonMembers]string) {
 	for i := 0; i < GenesisAmountMigrationDaemonMembers; i++ {
 		result[i] = "migration_daemon_" + strconv.Itoa(i) + "_" + GenesisNameMember
+	}
+	return
+}()
+
+var GenesisNameMigrationDaemons = func() (result [GenesisAmountMigrationDaemonMembers]string) {
+	for i := 0; i < GenesisAmountMigrationDaemonMembers; i++ {
+		result[i] = GenesisNameMigrationDaemon + "_" + strconv.Itoa(i)
 	}
 	return
 }()
