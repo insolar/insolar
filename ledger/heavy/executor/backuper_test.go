@@ -76,6 +76,9 @@ func TestBackuper_BadConfig(t *testing.T) {
 	require.Contains(t, err.Error(), "LastBackupInfoFile can't be empty")
 
 	tmpDir := "/tmp/BKP/"
+	err = os.MkdirAll(tmpDir, 0777)
+	defer os.RemoveAll(tmpDir)
+	require.NoError(t, err)
 	lastBackupedVersionFile := tmpDir + "/last_version.json"
 	addLastBackupFile(t, lastBackupedVersionFile, 200)
 

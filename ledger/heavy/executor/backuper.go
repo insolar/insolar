@@ -144,8 +144,6 @@ func loadLastBackupedVersion(fileName string) (uint64, error) {
 	return backupInfo.LastBackupedVersion, nil
 }
 
-const lastBackupedVersionTmpFile = "last_backuped_version.json"
-
 // saveLastBackupedInfo rewrites file with last backup version
 func saveLastBackupedInfo(ctx context.Context, to string, lastBackupedVersion uint64) error {
 	backupInfo := LastBackupInfo{
