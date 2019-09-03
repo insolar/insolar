@@ -15,7 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1567516477027,
+  "iteration": 1567523169573,
   "links": [],
   "panels": [
     {
@@ -804,7 +804,7 @@
     ]
   },
   "timezone": "",
-  "title": "Message Bus",
+  "title": "INS-Message Bus",
   "uid": "3O4gwpdWz",
   "version": 1
 }

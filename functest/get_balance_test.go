@@ -19,6 +19,7 @@
 package functest
 
 import (
+	"github.com/insolar/insolar/api/requester"
 	"math/big"
 	"testing"
 
@@ -39,5 +40,7 @@ func TestGetBalanceWrongRef(t *testing.T) {
 	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, &launchnet.Root, "member.getBalance",
 		map[string]interface{}{"reference": gen.Reference().String()})
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "index not found")
+	require.IsType(t, &requester.Error{}, err)
+	data := err.(*requester.Error).Data
+	require.Contains(t, data.Trace, "failed to fetch index from heavy")
 }

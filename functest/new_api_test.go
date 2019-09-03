@@ -52,12 +52,14 @@ func TestBadSeed(t *testing.T) {
 	ctx := context.TODO()
 	rootCfg, err := requester.CreateUserConfig(launchnet.Root.Ref, launchnet.Root.PrivKey, launchnet.Root.PubKey)
 	require.NoError(t, err)
-	res, err := requester.SendWithSeed(ctx, launchnet.TestRPCUrlPublic, rootCfg, &requester.Params{
+	_, err = requester.SendWithSeed(ctx, launchnet.TestRPCUrlPublic, rootCfg, &requester.Params{
 		CallSite:  "member.create",
 		PublicKey: rootCfg.PublicKey},
 		"MTExMQ==")
 	require.NoError(t, err)
-	require.EqualError(t, contractError(res), "[ checkSeed ] Bad seed param")
+	require.IsType(t, &requester.Error{}, err)
+	data := err.(*requester.Error).Data
+	require.Contains(t, data.Trace, "[ checkSeed ] Bad seed param")
 }
 
 func TestIncorrectSeed(t *testing.T) {
@@ -69,7 +71,9 @@ func TestIncorrectSeed(t *testing.T) {
 		PublicKey: rootCfg.PublicKey},
 		"z2vgMVDXx0s+g5mkagOLqCP0q/8YTfoQkII5pjNF1ag=")
 	require.NoError(t, err)
-	require.EqualError(t, contractError(res), "[ checkSeed ] Incorrect seed")
+	require.IsType(t, &requester.Error{}, contractError(res))
+	data := err.(*requester.Error).Data
+	require.Contains(t, data.Trace, "[ checkSeed ] Incorrect seed")
 }
 
 func customSend(data string) (map[string]interface{}, error) {
@@ -125,8 +129,10 @@ func TestIncorrectSign(t *testing.T) {
 	var res requester.ContractResponse
 	err = json.Unmarshal(body, &res)
 	require.NoError(t, err)
-	require.Contains(t, res.Error.Message, "error while verify signature")
-	require.Contains(t, res.Error.Message, "structure error")
+	require.IsType(t, &requester.Error{}, err)
+	data := err.(*requester.Error).Data
+	require.Contains(t, data.Trace, "error while verify signature")
+	require.Contains(t, data.Trace, "structure error")
 }
 
 func TestEmptySign(t *testing.T) {
@@ -150,7 +156,9 @@ func TestEmptySign(t *testing.T) {
 	var res requester.ContractResponse
 	err = json.Unmarshal(body, &res)
 	require.NoError(t, err)
-	require.Equal(t, res.Error.Message, "invalid signature")
+	require.IsType(t, &requester.Error{}, err)
+	data := err.(*requester.Error).Data
+	require.Contains(t, data.Trace, "invalid signature")
 }
 
 func TestRequestWithSignFromOtherMember(t *testing.T) {
@@ -188,7 +196,9 @@ func TestRequestWithSignFromOtherMember(t *testing.T) {
 	var res requester.ContractResponse
 	err = json.Unmarshal(body, &res)
 	require.NoError(t, err)
-	require.Contains(t, res.Error.Message, "error while verify signature: invalid signature")
+	require.IsType(t, &requester.Error{}, err)
+	data := err.(*requester.Error).Data
+	require.Contains(t, data.Trace, "error while verify signature: invalid signature")
 }
 
 func TestIncorrectMethodName(t *testing.T) {
@@ -212,7 +222,9 @@ func TestIncorrectParams(t *testing.T) {
 
 	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, firstMember, "member.transfer", firstMember.Ref)
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "failed to cast call params: expected 'map[string]interface{}', got 'string'")
+	require.IsType(t, &requester.Error{}, err)
+	data := err.(*requester.Error).Data
+	require.Contains(t, data.Trace, "failed to cast call params: expected 'map[string]interface{}', got 'string'")
 }
 
 func TestNilParams(t *testing.T) {
@@ -220,7 +232,9 @@ func TestNilParams(t *testing.T) {
 
 	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, firstMember, "member.transfer", nil)
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "call params are nil")
+	require.IsType(t, &requester.Error{}, err)
+	data := err.(*requester.Error).Data
+	require.Contains(t, data.Trace, "call params are nil")
 }
 
 func TestRequestReference(t *testing.T) {
@@ -241,5 +255,7 @@ func TestNotAllowedMethod(t *testing.T) {
 	_, _, err := makeSignedRequest(launchnet.TestRPCUrlPublic, member, "member.getBalance",
 		map[string]interface{}{"reference": member.Ref})
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "method not allowed")
+	require.IsType(t, &requester.Error{}, err)
+	data := err.(*requester.Error).Data
+	require.Contains(t, data.Trace, "method not allowed")
 }

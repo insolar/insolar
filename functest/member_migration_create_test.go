@@ -20,6 +20,7 @@ package functest
 
 import (
 	"fmt"
+	"github.com/insolar/insolar/api/requester"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -44,7 +45,9 @@ func TestMemberMigrationCreateWithBadKey(t *testing.T) {
 	member.PubKey = "fake"
 	_, err = signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, member, "member.migrationCreate", nil)
 	require.Error(t, err)
-	require.Contains(t, err.Error(), fmt.Sprintf("problems with decoding. Key - %s", member.PubKey))
+	require.IsType(t, &requester.Error{}, err)
+	data := err.(*requester.Error).Data
+	require.Contains(t, data.Trace, fmt.Sprintf("problems with decoding. Key - %s", member.PubKey))
 }
 
 func TestMemberMigrationCreateWithSamePublicKey(t *testing.T) {
@@ -56,5 +59,7 @@ func TestMemberMigrationCreateWithSamePublicKey(t *testing.T) {
 
 	_, err = signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, member, "member.migrationCreate", map[string]interface{}{})
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "failed to set reference in public key shard: can't set reference because this key already exists")
+	require.IsType(t, &requester.Error{}, err)
+	data := err.(*requester.Error).Data
+	require.Contains(t, data.Trace, "failed to set reference in public key shard: can't set reference because this key already exists")
 }

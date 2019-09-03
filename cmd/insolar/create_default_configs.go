@@ -23,7 +23,7 @@ import (
 	"github.com/insolar/insolar/bootstrap"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar/defaults"
-	yaml "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v2"
 )
 
 func baseDir() string {
@@ -66,7 +66,7 @@ func writeBootstrapConfig(outputDir string) {
 		MDBalance:              "50000000000000000000",
 		VestingPeriodInPulses:  10,
 		VestingStepInPulses:    10,
-		LokupPeriodInPulses:    20,
+		LockupPeriodInPulses:   20,
 		Contracts: bootstrap.Contracts{
 			Insgocc: path.Join("bin", "insgocc"),
 			OutDir:  path.Join(baseDir(), "plugins"),

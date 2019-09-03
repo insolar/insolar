@@ -15,7 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1567508856323,
+  "iteration": 1567523660850,
   "links": [],
   "panels": [
     {
@@ -178,7 +178,7 @@
       ],
       "repeat": null,
       "repeatDirection": "h",
-      "repeatIteration": 1567508856323,
+      "repeatIteration": 1567523660850,
       "repeatPanelId": 28,
       "scopedVars": {
         "instance": {
@@ -382,7 +382,7 @@
       ],
       "repeat": null,
       "repeatDirection": "h",
-      "repeatIteration": 1567508856323,
+      "repeatIteration": 1567523660850,
       "repeatPanelId": 22,
       "scopedVars": {
         "instance": {
@@ -1244,7 +1244,7 @@
     ]
   },
   "timezone": "",
-  "title": "Light Material Nodes",
+  "title": "INS-Light Nodes",
   "uid": "8cp74fKZz",
   "version": 1
 }

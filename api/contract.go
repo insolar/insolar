@@ -60,32 +60,32 @@ func (cs *ContractService) Call(req *http.Request, args *requester.Params, reque
 func (ar *Runner) checkSeed(paramsSeed string) (insolar.PulseNumber, error) {
 	decoded, err := base64.StdEncoding.DecodeString(paramsSeed)
 	if err != nil {
-		return 0, errors.New("[ checkSeed ] Failed to decode seed from string")
+		return 0, errors.New("failed to decode seed from string")
 	}
 	seed := seedmanager.SeedFromBytes(decoded)
 	if seed == nil {
-		return 0, errors.New("[ checkSeed ] Bad seed param")
+		return 0, errors.New("bad input seed")
 	}
 
 	if pulse, ok := ar.SeedManager.Pop(*seed); ok {
 		return pulse, nil
 	}
 
-	return 0, errors.New("[ checkSeed ] Incorrect seed")
+	return 0, errors.New("incorrect seed")
 }
 
-func (ar *Runner) makeCall(ctx context.Context, method string, params requester.Params, rawBody []byte, signature string, pulseTimeStamp int64, seedPulse insolar.PulseNumber) (interface{}, *insolar.Reference, error) {
+func (ar *Runner) makeCall(ctx context.Context, method string, params requester.Params, rawBody []byte, signature string, seedPulse insolar.PulseNumber) (interface{}, *insolar.Reference, error) {
 	ctx, span := instracer.StartSpan(ctx, "SendRequest "+method)
 	defer span.End()
 
 	reference, err := insolar.NewReferenceFromBase58(params.Reference)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "[ makeCall ] failed to parse params.Reference")
+		return nil, nil, errors.Wrap(err, "failed to parse params.Reference")
 	}
 
-	requestArgs, err := insolar.Serialize([]interface{}{rawBody, signature, pulseTimeStamp})
+	requestArgs, err := insolar.Serialize([]interface{}{rawBody, signature})
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "[ makeCall ] failed to marshal arguments")
+		return nil, nil, errors.Wrap(err, "failed to marshal arguments")
 	}
 
 	res, ref, err := ar.ContractRequester.SendRequest(
@@ -97,17 +97,17 @@ func (ar *Runner) makeCall(ctx context.Context, method string, params requester.
 	)
 
 	if err != nil {
-		return nil, ref, errors.Wrap(err, "[ makeCall ] Can't send request")
+		return nil, ref, err
 	}
 
 	result, contractErr, err := extractor.CallResponse(res.(*reply.CallMethod).Result)
 
 	if err != nil {
-		return nil, ref, errors.Wrap(err, "[ makeCall ] Can't extract response")
+		return nil, ref, errors.Wrap(err, "can't extract response")
 	}
 
 	if contractErr != nil {
-		return nil, ref, errors.Wrap(errors.New(contractErr.S), "[ makeCall ] Error in called method")
+		return nil, ref, contractErr
 	}
 
 	return result, ref, nil
