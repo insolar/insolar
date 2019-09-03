@@ -73,7 +73,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 	}
 
 	ctx, logger := inslogger.WithField(ctx, "new_pulse", newPulse.PulseNumber.String())
-	logger.Debug("received pulse")
+	logger.Info("received pulse")
 
 	ctx, span := instracer.StartSpan(
 		ctx, "PulseManager.Set", trace.WithSampler(trace.AlwaysSample()),
@@ -84,7 +84,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 	defer span.End()
 
 	// Dealing with node lists.
-	logger.Debug("dealing with node lists.")
+	logger.Info("dealing with node lists.")
 	{
 		fromNetwork := m.NodeNet.GetAccessor(newPulse.PulseNumber).GetWorkingNodes()
 		if len(fromNetwork) == 0 {
@@ -101,6 +101,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 		}
 	}
 
+	logger.Info("PulseAccessor.Latest")
 	storagePulse, err := m.PulseAccessor.Latest(ctx)
 	if err == pulse.ErrNotFound {
 		storagePulse = *insolar.GenesisPulse
@@ -108,24 +109,29 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 		return errors.Wrap(err, "call of GetLatestPulseNumber failed")
 	}
 
+	logger.Info("dispatchers ClosePulse")
 	for _, d := range m.dispatchers {
 		d.ClosePulse(ctx, storagePulse)
 	}
 
+	logger.Info("JetModifier.Clone")
 	err = m.JetModifier.Clone(ctx, storagePulse.PulseNumber, newPulse.PulseNumber, false)
 	if err != nil {
 		return errors.Wrapf(err, "failed to clone jet.Tree fromPulse=%v toPulse=%v", storagePulse.PulseNumber, newPulse.PulseNumber)
 	}
 
+	logger.Info("PulseAppender.Append")
 	if err := m.PulseAppender.Append(ctx, newPulse); err != nil {
 		return errors.Wrap(err, "call of AddPulse failed")
 	}
 
+	logger.Info("LogicRunner.OnPulse")
 	err = m.LogicRunner.OnPulse(ctx, storagePulse, newPulse)
 	if err != nil {
 		return err
 	}
 
+	logger.Info("dispatchers BeginPulse")
 	for _, d := range m.dispatchers {
 		d.BeginPulse(ctx, newPulse)
 	}
