@@ -15,7 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1565962064202,
+  "iteration": 1567516477027,
   "links": [],
   "panels": [
     {
@@ -38,12 +38,15 @@
         "y": 0
       },
       "heatmap": {},
+      "hideZeroBuckets": false,
       "highlightCards": true,
       "id": 16,
       "legend": {
         "show": false
       },
       "links": [],
+      "options": {},
+      "reverseYBuckets": false,
       "targets": [
         {
           "expr": "sum(insolar_bus_sent_bytes_bucket{message_type=~\"$type\", instance=~\"$instance\"}) by (le)",
@@ -84,6 +87,7 @@
       "dashLength": 10,
       "dashes": false,
       "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
         "h": 4,
         "w": 12,
@@ -104,6 +108,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -114,10 +121,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(insolar_bus_sent_bytes_sum{message_type=~\"$type\", instance=~\"$instance\"} / insolar_bus_sent_bytes_count{message_type=~\"$type\", instance=~\"$instance\"})",
+          "expr": "sum(rate(insolar_bus_sent_bytes_sum{message_type=~\"$type\", instance=~\"$instance\"}[1m])) / sum(rate(insolar_bus_sent_bytes_count{message_type=~\"$type\", instance=~\"$instance\"}[1m]))",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "avg size",
+          "legendFormat": "Size (bytes), avg by minute",
           "refId": "A"
         }
       ],
@@ -169,6 +176,7 @@
       "dashes": false,
       "decimals": null,
       "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
         "h": 4,
         "w": 12,
@@ -191,6 +199,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -201,10 +212,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(insolar_bus_reply_timeouts{instance=~\"$instance\"})",
+          "expr": "sum(rate(insolar_bus_reply_timeouts{instance=~\"$instance\",message_type=~\"$type\"}[1m]))",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "",
+          "legendFormat": "per minute",
           "refId": "A"
         }
       ],
@@ -256,6 +267,7 @@
       "dashLength": 10,
       "dashes": false,
       "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
         "h": 4,
         "w": 12,
@@ -276,6 +288,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -286,10 +301,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(insolar_bus_sent_retries{message_type=~\"$type\", instance=~\"$instance\"}) by (job)",
+          "expr": "sum(rate(insolar_bus_sent_retries{message_type=~\"$type\",instance=~\"$instance\"}[1m])) by (job)",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{ job }}",
+          "legendFormat": "{{ job }} / minute",
           "refId": "A"
         }
       ],
@@ -340,12 +355,14 @@
       "dashLength": 10,
       "dashes": false,
       "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
         "h": 5,
         "w": 12,
         "x": 0,
         "y": 8
       },
+      "hideTimeOverride": false,
       "id": 2,
       "legend": {
         "avg": false,
@@ -360,6 +377,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -370,10 +390,11 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(insolar_bus_sent_total{message_type=~\"$type\", instance=~\"$instance\"})",
+          "expr": "sum(rate(insolar_bus_sent_total{instance=~\"$instance\",message_type=~\"$type\"}[1m]))",
           "format": "time_series",
+          "instant": false,
           "intervalFactor": 1,
-          "legendFormat": "{{ job }}",
+          "legendFormat": "rate per minute",
           "refId": "A"
         }
       ],
@@ -424,6 +445,7 @@
       "dashLength": 10,
       "dashes": false,
       "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
         "h": 5,
         "w": 12,
@@ -445,6 +467,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -455,10 +480,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(insolar_bus_reply_total{message_type=~\"$type\", instance=~\"$instance\"})",
+          "expr": "sum(rate(insolar_bus_reply_total{instance=~\"$instance\",message_type=~\"$type\"}[1m]))",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{ job }}",
+          "legendFormat": "rate per minute",
           "refId": "A"
         }
       ],
@@ -523,12 +548,15 @@
         "y": 13
       },
       "heatmap": {},
+      "hideZeroBuckets": false,
       "highlightCards": true,
       "id": 6,
       "legend": {
         "show": false
       },
       "links": [],
+      "options": {},
+      "reverseYBuckets": false,
       "targets": [
         {
           "expr": "sum(insolar_bus_sent_milliseconds_bucket{message_type=~\"$type\", instance=~\"$instance\"}) by (le)",
@@ -582,12 +610,15 @@
         "y": 13
       },
       "heatmap": {},
+      "hideZeroBuckets": false,
       "highlightCards": true,
       "id": 8,
       "legend": {
         "show": false
       },
       "links": [],
+      "options": {},
+      "reverseYBuckets": false,
       "targets": [
         {
           "expr": "sum(insolar_bus_reply_milliseconds_bucket{message_type=~\"$type\", instance=~\"$instance\"}) by (le)",
@@ -622,7 +653,8 @@
       "yBucketSize": null
     }
   ],
-  "schemaVersion": 16,
+  "refresh": "10s",
+  "schemaVersion": 19,
   "style": "dark",
   "tags": [],
   "templating": {
@@ -630,6 +662,7 @@
       {
         "allValue": null,
         "current": {
+          "tags": [],
           "text": "All",
           "value": "$__all"
         },
@@ -742,7 +775,7 @@
     ]
   },
   "time": {
-    "from": "now-30m",
+    "from": "now-15m",
     "to": "now"
   },
   "timepicker": {
