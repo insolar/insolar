@@ -58,7 +58,8 @@ func TestBadSeed(t *testing.T) {
 		"MTExMQ==")
 	require.NoError(t, err)
 	var resData = requester.Response{}
-	_ = json.Unmarshal(res, &resData)
+	err = json.Unmarshal(res, &resData)
+	require.NoError(t, err)
 	require.Contains(t, resData.Error.Data.Trace, "bad input seed")
 }
 
@@ -72,7 +73,8 @@ func TestIncorrectSeed(t *testing.T) {
 		"z2vgMVDXx0s+g5mkagOLqCP0q/8YTfoQkII5pjNF1ag=")
 	require.NoError(t, err)
 	var resData = requester.Response{}
-	_ = json.Unmarshal(res, &resData)
+	err = json.Unmarshal(res, &resData)
+	require.NoError(t, err)
 	require.Contains(t, resData.Error.Data.Trace, "incorrect seed")
 }
 
