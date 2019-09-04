@@ -141,7 +141,7 @@ func TestBackuper(t *testing.T) {
 	testPulse := insolar.GenesisPulse.PulseNumber + insolar.PulseNumber(rand.Int()%20000+1)
 	// writing data to db
 	go func() {
-		for i := 0; i < 2000000; i++ {
+		for i := 0; ; i++ {
 			if atomic.LoadUint32(&stopWriting) != 0 {
 				break
 			}
