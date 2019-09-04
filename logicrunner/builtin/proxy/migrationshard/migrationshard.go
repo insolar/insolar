@@ -67,7 +67,10 @@ func (r *ContractConstructorHolder) AsChild(objRef insolar.Reference) (*Migratio
 }
 
 // GetObject returns proxy object
-func GetObject(ref insolar.Reference) (r *MigrationShard) {
+func GetObject(ref insolar.Reference) *MigrationShard {
+	if !ref.IsObjectReference() {
+		return nil
+	}
 	return &MigrationShard{Reference: ref}
 }
 

@@ -294,10 +294,9 @@ func signedRequest(t *testing.T, URL string, user *launchnet.User, method string
 	if err != nil {
 		errMsg = err.Error()
 	}
-	emptyRef := insolar.NewEmptyReference()
 
 	require.NotEqual(t, "", refStr, "request ref is empty: %s", errMsg)
-	require.NotEqual(t, emptyRef.String(), refStr, "request ref is zero: %s", errMsg)
+	require.NotEqual(t, insolar.NewEmptyReference().String(), refStr, "request ref is zero: %s", errMsg)
 
 	_, err = insolar.NewReferenceFromBase58(refStr)
 	require.Nil(t, err)
@@ -355,7 +354,7 @@ func makeSignedRequest(URL string, user *launchnet.User, method string, params i
 	}
 
 	if resp.Error != nil {
-		return nil, "", errors.New(resp.Error.Message)
+		return nil, "", resp.Error
 	}
 
 	if resp.Result == nil {
@@ -431,9 +430,7 @@ func uploadContract(t testing.TB, contractName string, contractCode string) *ins
 
 	prototypeRef, err := insolar.NewReferenceFromBase58(uploadRes.Result.PrototypeRef)
 	require.NoError(t, err)
-
-	emptyRef := make([]byte, insolar.RecordRefSize)
-	require.NotEqual(t, insolar.NewReferenceFromBytes(emptyRef), prototypeRef)
+	require.False(t, prototypeRef.IsEmpty())
 
 	return prototypeRef
 }

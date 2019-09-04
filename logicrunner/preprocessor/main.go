@@ -469,7 +469,7 @@ func (pf *ParsedFile) WriteProxy(classReference string, out io.Writer) error {
 	}
 
 	if classReference == "" {
-		classReference = genesisrefs.GenerateFromCode(0, pf.code).String()
+		classReference = genesisrefs.GenerateProtoReferenceFromCode(0, pf.code).String()
 	}
 
 	_, err = insolar.NewReferenceFromBase58(classReference)
@@ -943,8 +943,8 @@ func generateContractList(contracts ContractList) interface{} {
 			"Name":               contract.Name,
 			"ImportName":         contract.Name,
 			"ImportPath":         contract.ImportPath,
-			"CodeReference":      genesisrefs.GenerateFromContractID(CodeType, contract.Name, contract.Version).String(),
-			"PrototypeReference": genesisrefs.GenerateFromContractID(PrototypeType, contract.Name, contract.Version).String(),
+			"CodeReference":      genesisrefs.GenerateCodeReferenceFromContractID(CodeType, contract.Name, contract.Version).String(),
+			"PrototypeReference": genesisrefs.GenerateProtoReferenceFromContractID(PrototypeType, contract.Name, contract.Version).String(),
 		}
 		importList = append(importList, data)
 	}

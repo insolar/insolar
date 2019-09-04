@@ -81,18 +81,18 @@ func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) 
 	return state, ret, err
 }
 
-func INSMETHOD_GetFeeAccount(object []byte, data []byte) ([]byte, []byte, error) {
+func INSMETHOD_GetFeeMember(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
 	self := new(CostCenter)
 
 	if len(object) == 0 {
-		return nil, nil, &foundation.Error{S: "[ FakeGetFeeAccount ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+		return nil, nil, &foundation.Error{S: "[ FakeGetFeeMember ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
 	}
 
 	err := ph.Deserialize(object, self)
 	if err != nil {
-		e := &foundation.Error{S: "[ FakeGetFeeAccount ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		e := &foundation.Error{S: "[ FakeGetFeeMember ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
 		return nil, nil, e
 	}
 
@@ -100,11 +100,11 @@ func INSMETHOD_GetFeeAccount(object []byte, data []byte) ([]byte, []byte, error)
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
-		e := &foundation.Error{S: "[ FakeGetFeeAccount ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		e := &foundation.Error{S: "[ FakeGetFeeMember ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
 		return nil, nil, e
 	}
 
-	ret0, ret1 := self.GetFeeAccount()
+	ret0, ret1 := self.GetFeeMember()
 
 	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()
@@ -185,7 +185,7 @@ func INSCONSTRUCTOR_New(data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
 	args := make([]interface{}, 1)
-	var args0 insolar.Reference
+	var args0 *insolar.Reference
 	args[0] = &args0
 
 	err := ph.Deserialize(data, &args)
@@ -232,8 +232,8 @@ func Initialize() XXX_insolar.ContractWrapper {
 		GetCode:      INSMETHOD_GetCode,
 		GetPrototype: INSMETHOD_GetPrototype,
 		Methods: XXX_insolar.ContractMethods{
-			"GetFeeAccount": INSMETHOD_GetFeeAccount,
-			"CalcFee":       INSMETHOD_CalcFee,
+			"GetFeeMember": INSMETHOD_GetFeeMember,
+			"CalcFee":      INSMETHOD_CalcFee,
 		},
 		Constructors: XXX_insolar.ContractConstructors{
 			"New": INSCONSTRUCTOR_New,

@@ -41,12 +41,14 @@ import (
 
 type inputParams struct {
 	configPath string
+	port       string
 }
 
 func parseInputParams() inputParams {
 	var rootCmd = &cobra.Command{Use: "insolard"}
 	var result inputParams
 	rootCmd.Flags().StringVarP(&result.configPath, "config", "c", "", "path to config file")
+	rootCmd.Flags().StringVarP(&result.port, "port", "port", "", "port for test pulsar")
 	err := rootCmd.Execute()
 	if err != nil {
 		fmt.Println("Wrong input params:", err.Error())
@@ -91,7 +93,7 @@ func main() {
 	})
 
 	fmt.Printf("Starting server for testing HTTP POST...\n")
-	if err := http.ListenAndServe(cfgHolder.Configuration.Pulsar.MainListenerAddress, nil); err != nil {
+	if err := http.ListenAndServe(params.port, nil); err != nil {
 		panic(err)
 	}
 }

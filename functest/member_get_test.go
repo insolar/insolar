@@ -20,6 +20,7 @@ package functest
 
 import (
 	"fmt"
+	"github.com/insolar/insolar/api/requester"
 	"testing"
 
 	"github.com/insolar/insolar/testutils/launchnet"
@@ -60,7 +61,9 @@ func TestMemberGetWrongPublicKey(t *testing.T) {
 	member1, _ := newUserWithKeys()
 	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, member1, "member.get", nil)
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "failed to get reference by public key: failed to get reference in shard: failed to find reference by key")
+	require.IsType(t, &requester.Error{}, err)
+	data := err.(*requester.Error).Data
+	require.Contains(t, data.Trace, "failed to find reference by key")
 }
 
 func TestMemberGetGenesisMember(t *testing.T) {

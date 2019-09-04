@@ -319,3 +319,20 @@ func TestDecoder_Decode_aliases(t *testing.T) {
 		}
 	}
 }
+
+func TestCycle(t *testing.T) {
+	inp := "15qwjxArNbE36WiUvT3NRQ9JqyUdW3mCRMBHKY31dJh6"
+
+	var err error
+	dec := NewDefaultDecoder(0)
+	enc := NewBase58Encoder(0)
+
+	gl, err := dec.Decode(inp)
+	assert.NoError(t, err)
+
+	out, err := enc.Encode(&gl)
+	assert.NoError(t, err)
+
+	assert.Equal(t, inp, out)
+
+}

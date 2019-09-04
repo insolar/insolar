@@ -50,6 +50,7 @@ const TestRPCUrlPublic = HOST + PublicPort + "/api/rpc"
 
 const insolarRootMemberKeys = "root_member_keys.json"
 const insolarMigrationAdminMemberKeys = "migration_admin_member_keys.json"
+const insolarFeeMemberKeys = "fee_member_keys.json"
 
 var cmd *exec.Cmd
 var cmdCompleted = make(chan error, 1)
@@ -100,6 +101,7 @@ func Run(cb func() int) int {
 var info *requester.InfoResponse
 var Root User
 var MigrationAdmin User
+var FeeMember User
 var MigrationDaemons [insolar.GenesisAmountMigrationDaemonMembers]*User
 
 type User struct {
@@ -139,6 +141,7 @@ func launchnetPath(a ...string) (string, error) {
 func GetNodesCount() (int, error) {
 	type nodesConf struct {
 		DiscoverNodes []interface{} `yaml:"discovery_nodes"`
+		Nodes         []interface{} `yaml:"nodes"`
 	}
 
 	var conf nodesConf
@@ -157,7 +160,7 @@ func GetNodesCount() (int, error) {
 		return 0, errors.Wrap(err, "[ getNumberNodes ] Can't parse bootstrap config")
 	}
 
-	return len(conf.DiscoverNodes), nil
+	return len(conf.DiscoverNodes) + len(conf.Nodes), nil
 }
 
 func loadMemberKeys(keysPath string, member *User) error {
@@ -185,6 +188,14 @@ func loadAllMembersKeys() error {
 		return err
 	}
 	err = loadMemberKeys(path, &Root)
+	if err != nil {
+		return err
+	}
+	path, err = launchnetPath("configs", insolarFeeMemberKeys)
+	if err != nil {
+		return err
+	}
+	err = loadMemberKeys(path, &FeeMember)
 	if err != nil {
 		return err
 	}

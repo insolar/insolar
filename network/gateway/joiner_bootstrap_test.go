@@ -52,6 +52,9 @@ package gateway
 
 import (
 	"context"
+	"testing"
+	"time"
+
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/insolar"
@@ -61,8 +64,6 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	mock "github.com/insolar/insolar/testutils/network"
 	"github.com/stretchr/testify/assert"
-	"testing"
-	"time"
 )
 
 type fixture struct {

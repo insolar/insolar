@@ -23,7 +23,7 @@ import (
 
 var (
 	statHotsAbandoned = stats.Int64(
-		"hots_abandoned",
+		"requests_abandoned",
 		"How many abandoned requests in hot data",
 		stats.UnitDimensionless,
 	)

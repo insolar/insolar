@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -e
+set -em
 # requires: lsof, awk, sed, grep, pgrep
 
 # Changeable environment variables (parameters)
@@ -73,7 +73,7 @@ kill_port()
     for pid in $pids
     do
         echo "killing pid $pid"
-        kill -9 $pid
+        kill -ABRT $pid
     done
 }
 
@@ -192,10 +192,27 @@ generate_root_member_keys()
 {
     echo "generate members keys in dir: $CONFIGS_DIR"
     bin/insolar gen-key-pair > ${CONFIGS_DIR}root_member_keys.json
+    bin/insolar gen-key-pair > ${CONFIGS_DIR}fee_member_keys.json
     bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_admin_member_keys.json
+    bin/insolar gen-key-pair > ${CONFIGS_DIR}funds_and_enterprise_member_keys.json
     for (( b = 0; b < 10; b++ ))
     do
     bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_daemon_${b}_member_keys.json
+    done
+
+    for (( b = 0; b < 40; b++ ))
+    do
+    bin/insolar gen-key-pair > ${CONFIGS_DIR}network_incentives_${b}_member_keys.json
+    done
+
+    for (( b = 0; b < 40; b++ ))
+    do
+    bin/insolar gen-key-pair > ${CONFIGS_DIR}application_incentives_${b}_member_keys.json
+    done
+
+    for (( b = 0; b < 14; b++ ))
+    do
+    bin/insolar gen-key-pair > ${CONFIGS_DIR}foundation_${b}_member_keys.json
     done
 }
 
@@ -382,6 +399,14 @@ then
 else
     echo "insgorund launch skip"
 fi
+
+handle_sigchld()
+{
+  jobs -pn
+  echo "someone left the network"
+}
+
+trap 'handle_sigchld' SIGCHLD
 
 echo "start heavy node"
 set -x

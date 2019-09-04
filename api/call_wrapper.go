@@ -19,13 +19,33 @@ package api
 import (
 	"context"
 	"net/http"
+	"strings"
 
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/rpc/v2"
-	"github.com/pkg/errors"
+	"github.com/insolar/rpc/v2/json2"
+)
+
+const (
+	ParseError                 = -31700
+	ParseErrorMessage          = "Parsing error on the server side: received an invalid JSON."
+	InvalidRequestError        = -31600
+	InvalidRequestErrorMessage = "The JSON received is not a valid request payload."
+	MethodNotFoundError        = -31601
+	MethodNotFoundErrorMessage = "Method does not exist / is not available."
+	InvalidParamsError         = -31602
+	InvalidParamsErrorMessage  = "Invalid method parameter(s)."
+	InternalError              = -31603
+	InternalErrorMessage       = "Internal JSON RPC error."
+	TimeoutError               = -31106
+	TimeoutErrorMessage        = "Request's timeout has expired."
+	UnauthorizedError          = -31401
+	UnauthorizedErrorMessage   = "Action is not authorized."
+	ExecutionError             = -31103
+	ExecutionErrorMessage      = "Execution error."
 )
 
 func wrapCall(runner *Runner, allowedMethods map[string]bool, req *http.Request, args *requester.Params, requestBody *rpc.RequestBody, result *requester.ContractResult) error {
@@ -39,7 +59,13 @@ func wrapCall(runner *Runner, allowedMethods map[string]bool, req *http.Request,
 
 	_, ok := allowedMethods[args.CallSite]
 	if !ok {
-		return errors.New("method not allowed")
+		return &json2.Error{
+			Code:    MethodNotFoundError,
+			Message: MethodNotFoundErrorMessage,
+			Data: requester.Data{
+				TraceID: traceID,
+			},
+		}
 	}
 
 	if args.Test != "" {
@@ -48,25 +74,77 @@ func wrapCall(runner *Runner, allowedMethods map[string]bool, req *http.Request,
 
 	signature, err := validateRequestHeaders(req.Header.Get(requester.Digest), req.Header.Get(requester.Signature), requestBody.Raw)
 	if err != nil {
-		return err
+		return &json2.Error{
+			Code:    InvalidParamsError,
+			Message: InvalidParamsErrorMessage,
+			Data: requester.Data{
+				Trace:   strings.Split(err.Error(), ": "),
+				TraceID: traceID,
+			},
+		}
 	}
 
 	logger.Infof("[ ContractService.Call ] After validate headers: %s", req.RequestURI)
 	seedPulse, err := runner.checkSeed(ctx, args.Seed)
 	if err != nil {
-		return err
+		return &json2.Error{
+			Code:    InvalidRequestError,
+			Message: InvalidRequestErrorMessage,
+			Data: requester.Data{
+				Trace:   []string{err.Error()},
+				TraceID: traceID,
+			},
+		}
 	}
 
 	setRootReferenceIfNeeded(args)
 
-	callResult, requestRef, err := runner.makeCall(ctx, "contract.call", *args, requestBody.Raw, signature, 0, seedPulse)
-	if err != nil {
-		return err
+	callResult, requestRef, err := runner.makeCall(ctx, "contract.call", *args, requestBody.Raw, signature, seedPulse)
+
+	var ref string
+	if requestRef != nil {
+		ref = requestRef.String()
 	}
 
-	if requestRef != nil {
-		result.RequestReference = requestRef.String()
+	if err != nil {
+		// TODO: white list of errors that doesnt require log
+		logger.Error(err.Error())
+		if strings.Contains(err.Error(), "invalid signature") {
+			return &json2.Error{
+				Code:    UnauthorizedError,
+				Message: UnauthorizedErrorMessage,
+				Data: requester.Data{
+					Trace:            strings.Split(err.Error(), ": "),
+					TraceID:          traceID,
+					RequestReference: ref,
+				},
+			}
+		}
+
+		if strings.Contains(err.Error(), "failed to parse") {
+			return &json2.Error{
+				Code:    ParseError,
+				Message: ParseErrorMessage,
+				Data: requester.Data{
+					Trace:            strings.Split(err.Error(), ": "),
+					TraceID:          traceID,
+					RequestReference: ref,
+				},
+			}
+		}
+
+		return &json2.Error{
+			Code:    ExecutionError,
+			Message: ExecutionErrorMessage,
+			Data: requester.Data{
+				Trace:            strings.Split(err.Error(), ": "),
+				TraceID:          traceID,
+				RequestReference: ref,
+			},
+		}
 	}
+
+	result.RequestReference = ref
 	result.CallResult = callResult
 	result.TraceID = traceID
 	return nil

@@ -138,9 +138,9 @@ func (p *PrepRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 		limiter = limiterI.(*phases.AtomicPacketLimiter)
 	}
 
-	//if !limiter.GetPacketLimiter().CanReceivePacket(pt) {
+	// if !limiter.GetPacketLimiter().CanReceivePacket(pt) {
 	//	return fmt.Errorf("packet type (%v) limit exceeded: from=%v", pt, from)
-	//}
+	// }
 
 	var pd population.PacketDispatcher
 

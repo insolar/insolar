@@ -163,7 +163,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetPendings_Success() {
 	mc := minimock.NewController(s.T())
 	defer mc.Finish()
 	objectRef := gen.Reference()
-	requestRef := gen.Reference()
+	requestRef := gen.RecordReference()
 
 	jc := jet.NewCoordinatorMock(mc)
 

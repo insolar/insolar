@@ -63,14 +63,39 @@ func GetRootMember() insolar.Reference {
 	return genesisrefs.ContractRootMember
 }
 
-// Get reference on  MigrationAdmin contract.
+// Get reference on MigrationAdmin contract.
 func GetMigrationAdmin() insolar.Reference {
 	return genesisrefs.ContractMigrationAdmin
 }
 
-// Get reference on  RootDomain contract.
+// Get reference on FeeMember contract.
+func GetFeeMember() insolar.Reference {
+	return genesisrefs.ContractFeeMember
+}
+
+// Get reference on RootDomain contract.
 func GetRootDomain() insolar.Reference {
 	return genesisrefs.ContractRootDomain
+}
+
+// Get reference on  migrationdaemon contract by  migration member.
+func GetMigrationDaemon(migrationMember insolar.Reference) (insolar.Reference, error) {
+	for i := range genesisrefs.ContractMigrationDaemonMembers {
+		if migrationMember.Equal(genesisrefs.ContractMigrationDaemonMembers[i]) {
+			return genesisrefs.ContractMigrationDaemons[i], nil
+		}
+	}
+	return insolar.Reference{}, nil
+}
+
+// Check member is migration daemon member or not
+func IsMigrationDaemonMember(member insolar.Reference) bool {
+	for _, mDaemonMember := range genesisrefs.ContractMigrationDaemonMembers {
+		if mDaemonMember.Equal(member) {
+			return true
+		}
+	}
+	return false
 }
 
 // TrimPublicKey trim public key
