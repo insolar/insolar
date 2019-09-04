@@ -16,28 +16,6 @@
 
 package smachine
 
-type StateMachineDeclaration interface {
-	IsConsecutive(cur, next StateFunc) bool
-	GetInitStateFor(StateMachine) InitFunc
-	GetMigrateFn(StateFunc) MigrateFunc
-}
-
-type StateMachineDeclTemplate struct {
-}
-
-//var _ StateMachineDeclaration = &StateMachineDeclTemplate{}
-//
-//func (s *StateMachineDeclTemplate) GetInitStateFor(StateMachine) InitFunc {
-//	panic("implement me")
-//}
-
-func (s *StateMachineDeclTemplate) IsConsecutive(cur, next StateFunc) bool {
-	return false
-}
-
-func (s *StateMachineDeclTemplate) GetMigrateFn(StateFunc) MigrateFunc {
-	return nil
-}
-
-type specialMachineDeclaration interface {
+type SlotMachineState interface {
+	SlotMachineState()
 }

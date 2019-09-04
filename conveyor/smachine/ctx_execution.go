@@ -169,7 +169,8 @@ var _ ExecutionContext = &executionContext{}
 
 type executionContext struct {
 	slotContext
-	worker          *SlotWorker
+	machine         *SlotMachine
+	worker          WorkerContext
 	countAsyncCalls uint16
 }
 
@@ -202,7 +203,7 @@ func (p *executionContext) Wait() StateConditionalUpdate {
 
 func (p *executionContext) SyncOneStep(key string, weight int32, broadcastFn BroadcastReceiveFunc) Syncronizer {
 	p.ensureExactState(execContext)
-	return p.worker.machine.stepSync.Join(p.s, key, weight, broadcastFn)
+	return p.machine.stepSync.Join(p.s, key, weight, broadcastFn)
 }
 
 func (p *executionContext) NewChild(fn CreateFunc) SlotLink {
@@ -210,7 +211,7 @@ func (p *executionContext) NewChild(fn CreateFunc) SlotLink {
 	if fn == nil {
 		panic("illegal value")
 	}
-	_, link := p.worker.machine.applySlotCreate(nil, p.s.NewLink(), fn)
+	_, link := p.machine.applySlotCreate(nil, p.s.NewLink(), fn)
 	return link
 }
 
@@ -241,7 +242,7 @@ func (p *executionContext) executeNextStep() (stopNow bool, stateUpdate StateUpd
 			}
 		case stateUpdNextLoop:
 			ns := getShortLoopTransition(updParam)
-			if ns == nil || !p.s.machine.IsConsecutive(current.Transition, ns) {
+			if ns == nil || !p.s.declaration.IsConsecutive(current.Transition, ns) {
 				break
 			}
 			p.s.incStep()

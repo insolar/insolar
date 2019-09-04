@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/insolar/insolar/conveyor/smachine"
+	"github.com/insolar/insolar/conveyor/smachine/smadapter"
 	"time"
 )
 
@@ -186,7 +187,7 @@ func SetInjectServiceAdapterA(svc ServiceA, machine *smachine.SlotMachine) {
 	if injectServiceAdapterA != nil {
 		panic("illegal state")
 	}
-	ach := smachine.NewChannelAdapter(context.Background(), 0, -1)
+	ach := smadapter.NewChannelAdapter(context.Background(), 0, -1)
 	adapterExec := machine.RegisterAdapter("ServiceA", &ach)
 	injectServiceAdapterA = &ServiceAdapterA{svc, adapterExec}
 

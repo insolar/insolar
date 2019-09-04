@@ -75,6 +75,7 @@ type MigrationContext interface {
 
 	Replace(CreateFunc) StateUpdate
 	Stay() StateUpdate
+	// TODO WakeUp() StateUpdate
 }
 
 type ExecutionContext interface {
@@ -96,6 +97,7 @@ type ExecutionContext interface {
 	Yield() StateConditionalUpdate
 	Poll() StateConditionalUpdate
 	WaitForActive(SlotLink) StateConditionalUpdate
+	//	WaitForInput() StateConditionalUpdate
 	Wait() StateConditionalUpdate
 }
 

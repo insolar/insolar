@@ -19,7 +19,6 @@ package smachine
 import (
 	"context"
 	"github.com/insolar/insolar/network/consensus/common/syncrun"
-	"sync/atomic"
 )
 
 var _ ExecutionAdapter = &adapterExecHelper{}
@@ -136,7 +135,7 @@ func (c *adapterCallContext) _startAsync() {
 	c.ctx.countAsyncCalls++
 
 	cancelFn := c.executor.StartCall(stepLink, c.fn, func(fn AsyncResultFunc, recovered interface{}) {
-		c.ctx.worker.machine.applyAsyncStateUpdate(stepLink, fn, recovered)
+		c.ctx.machine.applyAsyncStateUpdate(stepLink, fn, recovered)
 	}, c.cancel != nil)
 
 	if c.cancel != nil {
@@ -145,46 +144,8 @@ func (c *adapterCallContext) _startAsync() {
 }
 
 func (c *adapterCallContext) _startSync() bool {
-	stepLink := c.ctx.s.NewExactStepLink()
-	wc := c.ctx.worker.getCond()
+	resultFn := c._startSyncWithResult()
 
-	var resultFn AsyncResultFunc
-	var resultRecovered interface{}
-
-	stateHolder := &struct {
-		flags uint32
-	}{}
-
-	cancelFn := c.executor.StartCall(stepLink, c.fn, func(fn AsyncResultFunc, recovered interface{}) {
-		if !atomic.CompareAndSwapUint32(&stateHolder.flags, 0, 1) {
-			return
-		}
-		resultFn = fn
-		resultRecovered = recovered
-
-		wc.L.Lock()
-		wc.Broadcast()
-		wc.L.Unlock()
-	}, false)
-
-	wc.L.Lock()
-	// make sure that it hasn't been fired yet
-	if !atomic.CompareAndSwapUint32(&stateHolder.flags, 1, 2) {
-		wc.Wait()
-	}
-	wc.L.Unlock()
-
-	/* Condition can be triggered by Worker for emergent stop */
-	if atomic.CompareAndSwapUint32(&stateHolder.flags, 0, 2) {
-		if cancelFn != nil {
-			cancelFn()
-		}
-		return false
-	}
-
-	if resultRecovered != nil {
-		panic(resultRecovered)
-	}
 	if resultFn == nil {
 		return false
 	}
@@ -192,4 +153,55 @@ func (c *adapterCallContext) _startSync() bool {
 	rc := asyncResultContext{slot: c.ctx.s}
 	rc.executeResult(resultFn)
 	return true
+}
+
+func (c *adapterCallContext) _startSyncWithResult() AsyncResultFunc {
+
+	if ok, result := c.executor.TrySyncCall(c.fn); ok {
+		return result
+	}
+
+	stepLink := c.ctx.s.NewExactStepLink()
+	ok, wc := c.ctx.worker.GetCond()
+	if !ok {
+		return nil
+	}
+
+	var resultFn AsyncResultFunc
+	var resultRecovered interface{}
+	var callState int
+
+	cancelFn := c.executor.StartCall(stepLink, c.fn, func(fn AsyncResultFunc, recovered interface{}) {
+		wc.L.Lock()
+		if callState == 0 {
+			resultFn = fn
+			resultRecovered = recovered
+			callState = 1
+			wc.Broadcast()
+		}
+		wc.L.Unlock()
+	}, false)
+
+	wc.L.Lock()
+	if callState == 0 {
+		wc.Wait()
+
+		if callState == 0 {
+			/* Cond can be triggered by Worker for emergent stop */
+			callState = 2
+
+			wc.L.Unlock()
+
+			if cancelFn != nil {
+				cancelFn()
+			}
+			return nil
+		}
+	}
+	wc.L.Unlock()
+
+	if resultRecovered != nil {
+		panic(resultRecovered)
+	}
+	return resultFn
 }

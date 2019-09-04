@@ -18,22 +18,20 @@ package smachine
 
 import (
 	"sync/atomic"
-	"time"
 )
 
 type Slot struct {
-	idAndStep uint64 //atomic access
-	parent    SlotLink
+	idAndStep    uint64 //atomic access
+	parent       SlotLink
+	machineState SlotMachineState
 
-	machine StateMachineDeclaration
+	declaration StateMachineDeclaration
+	step        SlotStep
 
-	step       SlotStep
-	defMigrate MigrateFunc
-	defFlags   StepFlags
-
+	defMigrate   MigrateFunc
+	defFlags     StepFlags
 	workState    slotWorkFlags
 	lastWorkScan uint8
-	lastWorkAt   time.Duration // since start of the container
 
 	asyncCallCount uint16 // pending calls
 	migrationCount uint16 // can be wrapped by overflow
@@ -92,8 +90,8 @@ func (s *Slot) GetAtomicIDAndStep() (SlotID, uint32) {
 
 const stepIncrement = 1 << 32
 
-func (s *Slot) init(id SlotID, parent SlotLink, machine StateMachineDeclaration) {
-	if machine == nil {
+func (s *Slot) init(id SlotID, parent SlotLink, decl StateMachineDeclaration, machineState SlotMachineState) {
+	if decl == nil {
 		panic("illegal state")
 	}
 	if id.IsUnknown() {
@@ -102,7 +100,8 @@ func (s *Slot) init(id SlotID, parent SlotLink, machine StateMachineDeclaration)
 	s.ensureNotInQueue()
 	atomic.StoreUint64(&s.idAndStep, uint64(id)+stepIncrement)
 	s.parent = parent
-	s.machine = machine
+	s.declaration = decl
+	s.machineState = machineState
 }
 
 func (s *Slot) incStep() bool {
@@ -148,7 +147,7 @@ func (s *Slot) NewAnyStepLink() StepLink {
 }
 
 func (s *Slot) isEmpty() bool {
-	return s.machine == nil
+	return s.declaration == nil
 }
 
 func (s *Slot) isWorking() bool {
@@ -159,12 +158,11 @@ func (s *Slot) isLastScan(scanNo uint32) bool {
 	return s.lastWorkScan == uint8(scanNo)
 }
 
-func (s *Slot) startWorking(scanNo uint32, timeMark time.Duration) {
+func (s *Slot) startWorking(scanNo uint32) /* , timeMark time.Duration) */ {
 	if s.workState&Working != 0 {
 		panic("illegal state")
 	}
 	s.lastWorkScan = uint8(scanNo)
-	s.lastWorkAt = timeMark
 	s.workState |= Working
 }
 

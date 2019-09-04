@@ -16,10 +16,6 @@
 
 package smachine
 
-import (
-	"sync/atomic"
-)
-
 func NoLink() SlotLink {
 	return SlotLink{}
 }
@@ -41,7 +37,8 @@ func (p *SlotLink) IsValid() bool {
 	if p.s == nil {
 		return false
 	}
-	return p.id == SlotID(atomic.LoadUint64(&p.s.idAndStep))
+	id, _ := p.s.GetAtomicIDAndStep()
+	return p.id == id
 }
 
 type StepLink struct {

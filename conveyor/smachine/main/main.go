@@ -17,6 +17,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/insolar/insolar/conveyor/smachine"
 	"github.com/insolar/insolar/conveyor/smachine/main/example"
 	"time"
@@ -34,8 +35,10 @@ func main() {
 
 	for i := 0; ; i++ {
 		sm.ScanOnce(nil)
-		//fmt.Printf("%03d %v: slots=%v\n", i, time.Now(), sm.OccupiedSlotCount())
 		time.Sleep(1 * time.Millisecond)
+		if i%100 == 0 {
+			fmt.Printf("%03d %v ================================== slots=%v\n", i, time.Now(), sm.OccupiedSlotCount())
+		}
 	}
 }
 

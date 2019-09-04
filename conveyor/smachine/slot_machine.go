@@ -48,6 +48,8 @@ type SlotMachine struct {
 	config   SlotMachineConfig
 	injector DependencyInjector
 
+	machineState SlotMachineState
+
 	adapters map[AdapterID]*adapterExecHelper
 
 	slotCount SlotID
@@ -88,8 +90,10 @@ func (m *SlotMachine) IsEmpty() bool {
 }
 
 func (m *SlotMachine) ScanOnceAsNested(context ExecutionContext) bool {
-	workCtl := context.(*executionContext).worker.workCtl
-	return m.ScanOnce(workCtl)
+	worker := context.(*executionContext).worker.w.StartNested(m)
+	defer worker.FinishNested(m)
+
+	return m.ScanOnce(worker)
 }
 
 func (m *SlotMachine) RegisterAdapter(adapterID AdapterID, adapterExecutor AdapterExecutor) ExecutionAdapter {
@@ -106,6 +110,7 @@ func (m *SlotMachine) RegisterAdapter(adapterID AdapterID, adapterExecutor Adapt
 	if m.adapters[adapterID] != nil {
 		panic("duplicate adapter id: " + adapterID)
 	}
+	adapterExecutor.RegisterOn(m.machineState)
 	r := &adapterExecHelper{adapterID, adapterExecutor}
 	m.adapters[adapterID] = r
 
@@ -116,7 +121,7 @@ func (m *SlotMachine) GetAdapter(adapterID AdapterID) ExecutionAdapter {
 	return m.adapters[adapterID]
 }
 
-func (m *SlotMachine) ScanOnce(workCtl WorkerController) (hasUpdates bool) {
+func (m *SlotMachine) ScanOnce(worker *SlotWorker) (hasUpdates bool) {
 
 	scanTime := time.Now()
 
@@ -142,30 +147,28 @@ func (m *SlotMachine) ScanOnce(workCtl WorkerController) (hasUpdates bool) {
 		return hasUpdates
 	}
 
-	m.scanWorkingSlots(workCtl, scanTime)
+	m.scanWorkingSlots(worker, scanTime)
 
 	return true
 }
 
-func (m *SlotMachine) scanWorkingSlots(workCtl WorkerController, scanTime time.Time) {
-	sw := SlotWorker{workCtl: workCtl, machine: m}
-
+func (m *SlotMachine) scanWorkingSlots(worker *SlotWorker, scanStartTime time.Time) {
 	for {
 		currentSlot := m.workingSlots.First()
 		if currentSlot == nil {
 			return
 		}
 		currentSlot.removeFromQueue()
-		slotLink := currentSlot.NewLink()
-
-		currentSlot.startWorking(m.scanCount, time.Now().Sub(m.startedAt))
+		currentSlot.startWorking(m.scanCount) //, time.Now().Sub(m.startedAt))
 
 		stopNow := false
 		var stateUpdate StateUpdate
 		var asyncCount uint16
 
-		wasDetached, err := sw.detachableCall(func() {
-			ec := executionContext{worker: &sw, slotContext: slotContext{s: currentSlot}}
+		// TODO consider use of sync.Pool for executionContext if they are allocated on heap
+
+		wasDetached, err := worker.DetachableCall(func(workerCtx WorkerContext) {
+			ec := executionContext{machine: m, worker: workerCtx, slotContext: slotContext{s: currentSlot}}
 			stopNow, stateUpdate, asyncCount = ec.executeNextStep()
 		})
 
@@ -175,12 +178,12 @@ func (m *SlotMachine) scanWorkingSlots(workCtl WorkerController, scanTime time.T
 
 		if wasDetached {
 			// MUST NOT apply any changes in the current routine, as it is no more considered as safe
+			slotLink := currentSlot.NewLink()
 			m.applyDetachedStateUpdate(slotLink, stateUpdate, asyncCount)
-			return
+		} else {
+			currentSlot.stopWorking(asyncCount)
+			m.applyStateUpdate(currentSlot, stateUpdate)
 		}
-
-		currentSlot.stopWorking(asyncCount)
-		m.applyStateUpdate(currentSlot, stateUpdate)
 
 		if stopNow {
 			return
@@ -191,6 +194,10 @@ func (m *SlotMachine) scanWorkingSlots(workCtl WorkerController, scanTime time.T
 func (m *SlotMachine) Migrate() {
 	m.migrationCount++
 
+	for _, adapter := range m.adapters {
+		adapter.executor.Migrate(m.machineState, m.migrationCount)
+	}
+
 	if len(m.slots) == 0 {
 		return
 	}
@@ -199,13 +206,11 @@ func (m *SlotMachine) Migrate() {
 	for _, slotPage := range m.slots[1:] {
 		m.migratePage(slotPage)
 	}
-
-	// TODO inform adapters
 }
 
 func (m *SlotMachine) migratePage(slotPage []Slot) {
 	for i := range slotPage {
-		m.migrate(&slotPage[i])
+		m.migrateSlot(&slotPage[i])
 	}
 }
 
@@ -242,13 +247,13 @@ func (m *SlotMachine) prepareSlot(slot *Slot, slotID SlotID, parent SlotLink, sm
 		panic("illegal state")
 	}
 
-	slot.init(slotID, parent, smd)
+	slot.init(slotID, parent, smd, m.machineState)
 	slot.migrationCount = m.migrationCount
 	slot.lastWorkScan = uint8(m.scanCount)
 }
 
 func (m *SlotMachine) startSlot(slot *Slot, sm StateMachine) bool {
-	initState := slot.machine.GetInitStateFor(sm)
+	initState := slot.declaration.GetInitStateFor(sm)
 	if initState == nil {
 		panic("illegal state")
 	}
@@ -259,7 +264,7 @@ func (m *SlotMachine) startSlot(slot *Slot, sm StateMachine) bool {
 	return m.applyStateUpdate(slot, stateUpdate)
 }
 
-func (m *SlotMachine) migrate(slot *Slot) bool {
+func (m *SlotMachine) migrateSlot(slot *Slot) bool {
 	if slot.isEmpty() || slot.isWorking() {
 		return false
 	}
@@ -271,7 +276,7 @@ func (m *SlotMachine) migrate(slot *Slot) bool {
 	for m.migrationCount != slot.migrationCount {
 		migrateFn := slot.step.Migration
 		if migrateFn == nil {
-			migrateFn = slot.machine.GetMigrateFn(slot.step.Transition)
+			migrateFn = slot.declaration.GetMigrateFn(slot.step.Transition)
 			if migrateFn == nil {
 				migrateFn = slot.defMigrate
 			}
@@ -416,7 +421,7 @@ func (m *SlotMachine) applyDetachedStateUpdate(slotLink SlotLink, stateUpdate St
 		slot.stopWorking(asyncCount)
 		detachQueue := m.getDetachQueue(slotLink.SlotID())
 
-		if !m.applyStateUpdate(slot, stateUpdate) || !m.migrate(slot) {
+		if !m.applyStateUpdate(slot, stateUpdate) || !m.migrateSlot(slot) {
 			// TODO log warning on missed update(s)
 			//if len(detachQueue) > 0 {
 			//}

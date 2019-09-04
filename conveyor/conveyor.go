@@ -48,7 +48,7 @@ type PulseConveyor struct {
 	pulseService PulseServiceAdapter
 }
 
-func (p *PulseConveyor) ScanOnce(workCtl smachine.WorkerController) bool {
+func (p *PulseConveyor) ScanOnce(workCtl smachine.WorkerContext) bool {
 	if p.slotMachine.IsEmpty() {
 		p.slotMachine.AddNew(smachine.NoLink(), &PastPulseSM{pulseSMTemplate{ps: &p.antique, psa: &p.pulseService}})
 	}

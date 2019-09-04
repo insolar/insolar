@@ -14,15 +14,16 @@
 //    limitations under the License.
 ///
 
-package smachine
+package smadapter
 
 import (
 	"context"
+	"github.com/insolar/insolar/conveyor/smachine"
 	"github.com/insolar/insolar/network/consensus/common/syncrun"
 	"sync"
 )
 
-var _ AdapterExecutor = &ChannelAdapter{}
+var _ smachine.AdapterExecutor = &ChannelAdapter{}
 
 func NewChannelAdapter(ctx context.Context, chanLen int, overflowLimit int) ChannelAdapter {
 	return ChannelAdapter{
@@ -40,14 +41,18 @@ type ChannelAdapter struct {
 	o   int
 }
 
-func (c *ChannelAdapter) StartCall(stepLink StepLink, fn AdapterCallFunc, callback AdapterCallbackFunc, requireCancel bool) context.CancelFunc {
+func (c *ChannelAdapter) TrySyncCall(fn smachine.AdapterCallFunc) (bool, smachine.AsyncResultFunc) {
+	return false, nil
+}
+
+func (c *ChannelAdapter) StartCall(stepLink smachine.StepLink, fn smachine.AdapterCallFunc, callback smachine.AdapterCallbackFunc, requireCancel bool) context.CancelFunc {
 
 	var cancel *syncrun.ChainedCancel
 	if requireCancel {
 		cancel = syncrun.NewChainedCancel()
 	}
 
-	r := ChannelRecord{fn, AdapterCallback{stepLink, callback, cancel}}
+	r := ChannelRecord{fn, smachine.AdapterCallback{stepLink, callback, cancel}}
 	if !c.append(r, false) && !c.send(r) {
 		c.append(r, true)
 	}
@@ -139,8 +144,8 @@ func (c *ChannelAdapter) sendWorker() {
 }
 
 type ChannelRecord struct {
-	callFunc AdapterCallFunc
-	callback AdapterCallback
+	callFunc smachine.AdapterCallFunc
+	callback smachine.AdapterCallback
 }
 
 func (c ChannelRecord) RunAndSendResult() bool {
@@ -159,7 +164,7 @@ func (c ChannelRecord) RunAndSendResult() bool {
 	return true
 }
 
-func (c ChannelRecord) safeCall() (result AsyncResultFunc, recovered interface{}) {
+func (c ChannelRecord) safeCall() (result smachine.AsyncResultFunc, recovered interface{}) {
 	defer func() {
 		recovered = recover()
 	}()

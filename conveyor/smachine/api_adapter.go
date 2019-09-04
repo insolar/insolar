@@ -64,4 +64,13 @@ type AdapterExecutor interface {
 	Panics are handled by caller.
 	*/
 	StartCall(stepLink StepLink, fn AdapterCallFunc, callback AdapterCallbackFunc, requireCancel bool) context.CancelFunc
+
+	/*
+		    Performs sync call if *natively* supported by the adapter, otherwise must return (false, nil)
+			Panics are handled by caller.
+	*/
+	TrySyncCall(fn AdapterCallFunc) (bool, AsyncResultFunc)
+
+	RegisterOn(SlotMachineState)
+	Migrate(slotMachineState SlotMachineState, migrationCount uint16)
 }
