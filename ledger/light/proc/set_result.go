@@ -106,12 +106,10 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "failed to fetch index")
 	}
 	if p.sideEffect != nil && index.Lifeline.StateID == record.StateDeactivation {
-		msg, err := payload.NewMessage(&payload.Error{Text: "object is deactivated", Code: payload.CodeDeactivated})
-		if err != nil {
-			return errors.Wrap(err, "failed to create reply")
+		return &payload.CodedError{
+			Text: "object is deactivated",
+			Code: payload.CodeDeactivated,
 		}
-		p.dep.sender.Reply(ctx, p.message, msg)
-		return nil
 	}
 	if index.Lifeline.LatestRequest != nil && resultID.Pulse() < index.Lifeline.LatestRequest.Pulse() {
 		return errors.New("result from the past")

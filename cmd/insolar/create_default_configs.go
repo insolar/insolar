@@ -23,25 +23,15 @@ import (
 	"github.com/insolar/insolar/bootstrap"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar/defaults"
-	"gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v2"
 )
 
 func baseDir() string {
 	return defaults.LaunchnetDir()
 }
 
-type PulsarConfig struct {
-	Pulsar configuration.Pulsar
-	Tracer configuration.Tracer
-	Log    configuration.Log
-}
-
-func writePulsarConfgi(cfg configuration.Configuration, outputDir string) {
-	pcfg := PulsarConfig{
-		Pulsar: cfg.Pulsar,
-		Tracer: cfg.Tracer,
-		Log:    cfg.Log,
-	}
+func writePulsarConfgi(outputDir string) {
+	pcfg := configuration.NewPulsarConfiguration()
 	raw, err := yaml.Marshal(pcfg)
 	if err != nil {
 		panic(err)
@@ -125,41 +115,9 @@ func writeBootstrapConfig(outputDir string) {
 	}
 }
 
-type NodeConfiguration struct {
-	Host            configuration.HostNetwork
-	Service         configuration.ServiceNetwork
-	Ledger          configuration.Ledger
-	Log             configuration.Log
-	Metrics         configuration.Metrics
-	LogicRunner     configuration.LogicRunner
-	APIRunner       configuration.APIRunner
-	AdminAPIRunner  configuration.APIRunner
-	KeysPath        string
-	CertificatePath string
-	Tracer          configuration.Tracer
-	Introspection   configuration.Introspection
-	Exporter        configuration.Exporter
-	Bus             configuration.Bus
-}
-
-func writeNodeConfgi(cfg configuration.Configuration, outputDir string) {
-	pcfg := NodeConfiguration{
-		Host:            cfg.Host,
-		Service:         cfg.Service,
-		Ledger:          cfg.Ledger,
-		Log:             cfg.Log,
-		Metrics:         cfg.Metrics,
-		LogicRunner:     cfg.LogicRunner,
-		APIRunner:       cfg.APIRunner,
-		AdminAPIRunner:  cfg.AdminAPIRunner,
-		KeysPath:        cfg.KeysPath,
-		CertificatePath: cfg.CertificatePath,
-		Tracer:          cfg.Tracer,
-		Introspection:   cfg.Introspection,
-		Exporter:        cfg.Exporter,
-		Bus:             cfg.Bus,
-	}
-	raw, err := yaml.Marshal(pcfg)
+func writeNodeConfgi(outputDir string) {
+	cfg := configuration.NewConfiguration()
+	raw, err := yaml.Marshal(cfg)
 	if err != nil {
 		panic(err)
 	}

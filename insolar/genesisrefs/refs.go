@@ -80,7 +80,7 @@ var (
 	ContractCostCenter = GenesisRef(insolar.GenesisNameCostCenter)
 	// ContractFeeMember is the commission member contract reference.
 	ContractFeeMember = GenesisRef(insolar.GenesisNameFeeMember)
-	// ContractFeeWallet is the commission wallet contract reference.
+	// ContractFeeWallet is the fee wallet contract reference.
 	ContractFeeWallet = GenesisRef(insolar.GenesisNameFeeWallet)
 	// ContractFeeAccount is the commission account contract reference.
 	ContractFeeAccount = GenesisRef(insolar.GenesisNameFeeAccount)
@@ -99,10 +99,11 @@ var (
 		return
 	}()
 
-	// ContractMigrationDaemons is the migration daemon contracts references,which is associated with MigrationDaemonMember.
-	ContractMigrationDaemons = func() (result [insolar.GenesisAmountMigrationDaemonMembers]insolar.Reference) {
-		for i, name := range insolar.GenesisNameMigrationDaemons {
-			result[i] = GenesisRef(name)
+	// ContractMigrationMap where key is migration daemon member  references and value related migration daemon contract
+	ContractMigrationMap = func() (result map[insolar.Reference]insolar.Reference) {
+		result = make(map[insolar.Reference]insolar.Reference)
+		for i := 0; i < insolar.GenesisAmountMigrationDaemonMembers; i++ {
+			result[GenesisRef(insolar.GenesisNameMigrationDaemonMembers[i])] = GenesisRef(insolar.GenesisNameMigrationDaemons[i])
 		}
 		return
 	}()

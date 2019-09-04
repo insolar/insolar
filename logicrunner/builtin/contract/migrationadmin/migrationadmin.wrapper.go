@@ -185,6 +185,57 @@ func INSMETHOD_GetDepositParameters(object []byte, data []byte) ([]byte, []byte,
 	return state, ret, err
 }
 
+func INSMETHOD_GetMigrationDaemonByMemberRef(object []byte, data []byte) ([]byte, []byte, error) {
+	ph := common.CurrentProxyCtx
+	ph.SetSystemError(nil)
+	self := new(MigrationAdmin)
+
+	if len(object) == 0 {
+		return nil, nil, &foundation.Error{S: "[ FakeGetMigrationDaemonByMemberRef ] ( INSMETHOD_* ) ( Generated Method ) Object is nil"}
+	}
+
+	err := ph.Deserialize(object, self)
+	if err != nil {
+		e := &foundation.Error{S: "[ FakeGetMigrationDaemonByMemberRef ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Data: " + err.Error()}
+		return nil, nil, e
+	}
+
+	args := make([]interface{}, 1)
+	var args0 string
+	args[0] = &args0
+
+	err = ph.Deserialize(data, &args)
+	if err != nil {
+		e := &foundation.Error{S: "[ FakeGetMigrationDaemonByMemberRef ] ( INSMETHOD_* ) ( Generated Method ) Can't deserialize args.Arguments: " + err.Error()}
+		return nil, nil, e
+	}
+
+	ret0, ret1 := self.GetMigrationDaemonByMemberRef(args0)
+
+	if ph.GetSystemError() != nil {
+		return nil, nil, ph.GetSystemError()
+	}
+
+	state := []byte{}
+	err = ph.Serialize(self, &state)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	ret1 = ph.MakeErrorSerializable(ret1)
+
+	ret := []byte{}
+	err = ph.Serialize(
+		foundation.Result{Returns: []interface{}{ret0, ret1}},
+		&ret,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return state, ret, err
+}
+
 func INSMETHOD_GetMemberByMigrationAddress(object []byte, data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
@@ -345,11 +396,12 @@ func Initialize() XXX_insolar.ContractWrapper {
 		GetCode:      INSMETHOD_GetCode,
 		GetPrototype: INSMETHOD_GetPrototype,
 		Methods: XXX_insolar.ContractMethods{
-			"MigrationAdminCall":           INSMETHOD_MigrationAdminCall,
-			"GetDepositParameters":         INSMETHOD_GetDepositParameters,
-			"GetMemberByMigrationAddress":  INSMETHOD_GetMemberByMigrationAddress,
-			"GetFreeMigrationAddress":      INSMETHOD_GetFreeMigrationAddress,
-			"AddNewMigrationAddressToMaps": INSMETHOD_AddNewMigrationAddressToMaps,
+			"MigrationAdminCall":            INSMETHOD_MigrationAdminCall,
+			"GetDepositParameters":          INSMETHOD_GetDepositParameters,
+			"GetMigrationDaemonByMemberRef": INSMETHOD_GetMigrationDaemonByMemberRef,
+			"GetMemberByMigrationAddress":   INSMETHOD_GetMemberByMigrationAddress,
+			"GetFreeMigrationAddress":       INSMETHOD_GetFreeMigrationAddress,
+			"AddNewMigrationAddressToMaps":  INSMETHOD_AddNewMigrationAddressToMaps,
 		},
 		Constructors: XXX_insolar.ContractConstructors{},
 	}

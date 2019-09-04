@@ -22,6 +22,10 @@ import (
 	"github.com/insolar/insolar/logicrunner/common"
 )
 
+type DepositMigrationResult struct {
+	Reference string `json:"memberReference"`
+}
+
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
 var PrototypeReference, _ = insolar.NewReferenceFromBase58("0111A7jZX41e1SpH9oW3F2dgUvVQdjSqXEAGQSxhbqmD")
@@ -141,6 +145,109 @@ func (r *MigrationDaemon) GetCode() (insolar.Reference, error) {
 	}
 
 	return r.Code, nil
+}
+
+// DepositMigrationCall is proxy generated method
+func (r *MigrationDaemon) DepositMigrationCall(params map[string]interface{}, caller insolar.Reference) (*DepositMigrationResult, error) {
+	var args [2]interface{}
+	args[0] = params
+	args[1] = caller
+
+	var argsSerialized []byte
+
+	ret := make([]interface{}, 2)
+	var ret0 *DepositMigrationResult
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "DepositMigrationCall", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return ret0, err
+	}
+
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
+	if err != nil {
+		return ret0, err
+	}
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return ret0, err
+	}
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
+}
+
+// DepositMigrationCallNoWait is proxy generated method
+func (r *MigrationDaemon) DepositMigrationCallNoWait(params map[string]interface{}, caller insolar.Reference) error {
+	var args [2]interface{}
+	args[0] = params
+	args[1] = caller
+
+	var argsSerialized []byte
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "DepositMigrationCall", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// DepositMigrationCallAsImmutable is proxy generated method
+func (r *MigrationDaemon) DepositMigrationCallAsImmutable(params map[string]interface{}, caller insolar.Reference) (*DepositMigrationResult, error) {
+	var args [2]interface{}
+	args[0] = params
+	args[1] = caller
+
+	var argsSerialized []byte
+
+	ret := make([]interface{}, 2)
+	var ret0 *DepositMigrationResult
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "DepositMigrationCall", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return ret0, err
+	}
+
+	resultContainer := foundation.Result{
+		Returns: ret,
+	}
+	err = common.CurrentProxyCtx.Deserialize(res, &resultContainer)
+	if err != nil {
+		return ret0, err
+	}
+	if resultContainer.Error != nil {
+		err = resultContainer.Error
+		return ret0, err
+	}
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
 }
 
 // SetActivationStatus is proxy generated method

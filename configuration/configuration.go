@@ -36,13 +36,20 @@ type Configuration struct {
 	LogicRunner     LogicRunner
 	APIRunner       APIRunner
 	AdminAPIRunner  APIRunner
-	Pulsar          Pulsar
 	KeysPath        string
 	CertificatePath string
 	Tracer          Tracer
 	Introspection   Introspection
 	Exporter        Exporter
 	Bus             Bus
+}
+
+// PulsarConfiguration contains configuration params for the pulsar node
+type PulsarConfiguration struct {
+	Log      Log
+	Pulsar   Pulsar
+	Tracer   Tracer
+	KeysPath string
 }
 
 // Holder provides methods to manage configuration
@@ -62,7 +69,6 @@ func NewConfiguration() Configuration {
 		LogicRunner:     NewLogicRunner(),
 		APIRunner:       NewAPIRunner(false),
 		AdminAPIRunner:  NewAPIRunner(true),
-		Pulsar:          NewPulsar(),
 		KeysPath:        "./",
 		CertificatePath: "",
 		Tracer:          NewTracer(),
@@ -72,6 +78,16 @@ func NewConfiguration() Configuration {
 	}
 
 	return cfg
+}
+
+// NewPulsarConfiguration creates new default configuration for pulsar
+func NewPulsarConfiguration() PulsarConfiguration {
+	return PulsarConfiguration{
+		Log:      NewLog(),
+		Pulsar:   NewPulsar(),
+		Tracer:   NewTracer(),
+		KeysPath: "./",
+	}
 }
 
 // MustInit wrapper around Init function which panics on error.

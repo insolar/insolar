@@ -25,7 +25,6 @@ import (
 	"strconv"
 
 	"github.com/insolar/insolar/api/requester"
-	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/platformpolicy"
@@ -167,10 +166,9 @@ func main() {
 		Use:   "generate-config",
 		Short: "generate default configs for bootstrap, node and pulsar",
 		Run: func(cmd *cobra.Command, args []string) {
-			cfg := configuration.NewConfiguration()
-			writePulsarConfgi(cfg, configsOutputDir)
+			writePulsarConfgi(configsOutputDir)
 			writeBootstrapConfig(configsOutputDir)
-			writeNodeConfgi(cfg, configsOutputDir)
+			writeNodeConfgi(configsOutputDir)
 		},
 	}
 	generateDefaultConfigs.Flags().StringVarP(&configsOutputDir, "output_dir", "o", "", "path to output directory")
