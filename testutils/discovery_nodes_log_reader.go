@@ -1,4 +1,4 @@
-///
+//
 // Copyright 2019 Insolar Technologies GmbH
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,7 +12,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-///
+//
 
 package testutils
 
@@ -105,9 +105,6 @@ func findErrorsInLog(writer io.Writer, fName string, file io.ReadCloser, closeCh
 	}
 }
 
-// TODO rewrite code from goroutines to save log files size before test
-// TODO and read it after test in same goroutine
-// TODO in current realization if check() cause exit we get leaked goroutine
 func writeToOutput(out io.Writer, data string) {
 	_, err := out.Write([]byte(data))
 	check("Can't write data to output", err)
