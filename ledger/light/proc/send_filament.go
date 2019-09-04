@@ -69,7 +69,10 @@ func (p *SendFilament) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "failed to fetch filament")
 	}
 	if len(records) == 0 {
-		return errors.New("requests not found")
+		return &payload.CodedError{
+			Text: "requests not found",
+			Code: payload.CodeNotFound,
+		}
 	}
 
 	msg, err := payload.NewMessage(&payload.FilamentSegment{

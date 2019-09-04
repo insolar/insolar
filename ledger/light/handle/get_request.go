@@ -28,10 +28,9 @@ import (
 )
 
 type GetRequest struct {
-	dep *proc.Dependencies
-
-	passed  bool
+	dep     *proc.Dependencies
 	message payload.Meta
+	passed  bool
 }
 
 func NewGetRequest(dep *proc.Dependencies, msg payload.Meta, passed bool) *GetRequest {
@@ -52,7 +51,8 @@ func (s *GetRequest) Present(ctx context.Context, f flow.Flow) error {
 		return fmt.Errorf("wrong request type: %T", pl)
 	}
 
-	req := proc.NewGetRequest(s.message, msg.ObjectID, msg.RequestID, s.passed)
+	passIfNotFound := !s.passed
+	req := proc.NewGetRequest(s.message, msg.ObjectID, msg.RequestID, passIfNotFound)
 	s.dep.GetRequest(req)
 	return f.Procedure(ctx, req, false)
 }
