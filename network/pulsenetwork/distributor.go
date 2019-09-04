@@ -57,6 +57,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
 	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/insolar/pulse"
@@ -190,6 +191,7 @@ func (d *distributor) Distribute(ctx context.Context, pulse insolar.Pulse) {
 
 			err := d.sendPulseToHost(ctx, &pulse, bootstrapHost)
 			if err != nil {
+				stats.Record(ctx, statSendPulseErrorsCount.M(1))
 				logger.Warnf("Failed to send pulse %d to host: %s %s", pulse.PulseNumber, bootstrapHost.Address.String(), err)
 				return
 			}
