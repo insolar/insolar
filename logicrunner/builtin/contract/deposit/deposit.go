@@ -243,15 +243,15 @@ func (d *Deposit) Transfer(amountStr string, memberRef insolar.Reference) (inter
 	if balance.Cmp(zero) == -1 {
 		return nil, fmt.Errorf("amount must be larger then zero")
 	}
-	err := d.canTransfer(amount)
-	if err != nil {
-		return nil, fmt.Errorf("can't start transfer: %s", err.Error())
-	}
-
 	newBalance, err := safemath.Sub(balance, amount)
 	if err != nil {
 		return nil, fmt.Errorf("not enough balance for transfer: %s", err.Error())
 	}
+	err = d.canTransfer(amount)
+	if err != nil {
+		return nil, fmt.Errorf("can't start transfer: %s", err.Error())
+	}
+
 	newBalance, err = safemath.Add(balance, amount)
 	if err != nil {
 		return nil, fmt.Errorf("failed to add amount back to balance: %s", err.Error())
