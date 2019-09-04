@@ -23,6 +23,7 @@ import (
 	"go/build"
 	"io"
 	"io/ioutil"
+	"log"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -446,4 +447,27 @@ func teardown() {
 		fmt.Println("[ teardown ]  failed to stop insolard: ", err)
 	}
 	fmt.Println("[ teardown ] insolard was successfully stoped")
+}
+
+// RotateLogs rotates launchnet logs.
+func RotateLogs(dirPattern string, verbose bool) {
+	rmCmd := "rm -vf " + dirPattern
+	cmd := exec.Command("sh", "-c", rmCmd)
+	out, err := cmd.Output()
+	if err != nil {
+		log.Fatal("RotateLogs: failed to execute shell command: ", rmCmd)
+	}
+	if verbose {
+		fmt.Println("RotateLogs removed files:\n", string(out))
+	}
+
+	rotateCmd := "pkill -SIGUSR2 -l inslogrotator"
+	cmd = exec.Command("sh", "-c", rotateCmd)
+	out, err = cmd.Output()
+	if err != nil {
+		log.Fatal("RotateLogs: failed to execute shell command:", rotateCmd)
+	}
+	if verbose {
+		println("RotateLogs pkill output:", string(out))
+	}
 }

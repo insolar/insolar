@@ -65,6 +65,24 @@ do
     DISCOVERY_NODE_DIRS+=(${DISCOVERY_NODES_DATA}${i})
 done
 
+LOGGER_BIN=${LAUNCHNET_BASE_DIR}inslogrotator
+build_logger()
+{
+    echo "build logger binaries"
+    pushd scripts/_logger
+    GO111MODULE=on go build -o inslogrotator .
+    popd
+    mv scripts/_logger/inslogrotator ${LOGGER_BIN}
+}
+
+stop_logger()
+{
+    echo "kill logger"
+    set +e
+    killall inslogrotator
+    set -e
+}
+
 
 kill_port()
 {
@@ -75,6 +93,16 @@ kill_port()
         echo "killing pid $pid"
         kill -ABRT $pid
     done
+}
+
+kill_all()
+{
+  echo "kill all processes: insgorund, insolard, pulsard"
+  set +e
+  killall insgorund
+  killall insolard
+  killall pulsard
+  set -e
 }
 
 stop_listening()
@@ -107,6 +135,12 @@ stop_listening()
     done
 
     echo "stop_listening() end."
+}
+
+stop_all()
+{
+  stop_listening true
+  stop_logger
 }
 
 clear_dirs()
@@ -382,7 +416,8 @@ watch_pulse=true
 check_working_dir
 process_input_params $@
 
-trap 'stop_listening true' INT TERM EXIT
+kill_all
+trap 'stop_all' INT TERM EXIT
 
 echo "start pulsar ..."
 echo "   log: ${LAUNCHNET_LOGS_DIR}pulsar_output.log"
@@ -406,6 +441,10 @@ handle_sigchld()
   echo "someone left the network"
 }
 
+echo "prepare logger"
+stop_logger
+build_logger
+
 trap 'handle_sigchld' SIGCHLD
 
 echo "start heavy node"
@@ -413,7 +452,7 @@ set -x
 $INSOLARD \
     --config ${DISCOVERY_NODES_DATA}1/insolard.yaml \
     --heavy-genesis ${HEAVY_GENESIS_CONFIG_FILE} \
-    &> ${DISCOVERY_NODE_LOGS}1/output.log &
+    2>&1 | ${LOGGER_BIN} ${DISCOVERY_NODE_LOGS}1/output.log &
 { set +x; } 2>/dev/null
 echo "heavy node started in background"
 echo "log: ${DISCOVERY_NODE_LOGS}1/output.log"
@@ -424,7 +463,7 @@ do
     set -x
     $INSOLARD \
         --config ${DISCOVERY_NODES_DATA}${i}/insolard.yaml \
-        &> ${DISCOVERY_NODE_LOGS}${i}/output.log &
+        2>&1 | ${LOGGER_BIN} ${DISCOVERY_NODE_LOGS}${i}/output.log &
     { set +x; } 2>/dev/null
     echo "discovery node $i started in background"
     echo "log: ${DISCOVERY_NODE_LOGS}${i}/output.log"
