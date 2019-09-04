@@ -15,7 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1567523169573,
+  "iteration": 1567586513297,
   "links": [],
   "panels": [
     {
@@ -699,70 +699,9 @@
         "label": null,
         "multi": false,
         "name": "instance",
-        "options": [
-          {
-            "selected": true,
-            "text": "All",
-            "value": "$__all"
-          },
-          {
-            "selected": false,
-            "text": "host.docker.internal:8001",
-            "value": "host.docker.internal:8001"
-          },
-          {
-            "selected": false,
-            "text": "host.docker.internal:8002",
-            "value": "host.docker.internal:8002"
-          },
-          {
-            "selected": false,
-            "text": "host.docker.internal:8003",
-            "value": "host.docker.internal:8003"
-          },
-          {
-            "selected": false,
-            "text": "host.docker.internal:8004",
-            "value": "host.docker.internal:8004"
-          },
-          {
-            "selected": false,
-            "text": "host.docker.internal:8005",
-            "value": "host.docker.internal:8005"
-          },
-          {
-            "selected": false,
-            "text": "host.docker.internal:8006",
-            "value": "host.docker.internal:8006"
-          },
-          {
-            "selected": false,
-            "text": "host.docker.internal:8007",
-            "value": "host.docker.internal:8007"
-          },
-          {
-            "selected": false,
-            "text": "host.docker.internal:8008",
-            "value": "host.docker.internal:8008"
-          },
-          {
-            "selected": false,
-            "text": "host.docker.internal:8009",
-            "value": "host.docker.internal:8009"
-          },
-          {
-            "selected": false,
-            "text": "host.docker.internal:8010",
-            "value": "host.docker.internal:8010"
-          },
-          {
-            "selected": false,
-            "text": "host.docker.internal:8011",
-            "value": "host.docker.internal:8011"
-          }
-        ],
+        "options": [],
         "query": "label_values(insolar_bus_sent_total, instance)",
-        "refresh": 0,
+        "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
         "sort": 0,
