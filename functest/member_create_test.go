@@ -60,6 +60,5 @@ func TestMemberCreateWithSamePublicKey(t *testing.T) {
 	require.Error(t, err)
 	require.IsType(t, &requester.Error{}, err)
 	data := err.(*requester.Error).Data
-
 	require.Contains(t, data.Trace, "can't set reference because this key already exists")
 }

@@ -163,3 +163,16 @@ func TestPulseServer_Export(t *testing.T) {
 		require.Equal(t, pulse.MinTimePulse, int(pulses[0]))
 	})
 }
+
+func TestPulseServer_TopSyncPulse(t *testing.T) {
+	pn := pulse.MinTimePulse + 2
+	jetKeeper := executor.NewJetKeeperMock(t)
+	jetKeeper.TopSyncPulseMock.Return(insolar.PulseNumber(pn))
+	server := NewPulseServer(nil, jetKeeper)
+
+	res, err := server.TopSyncPulse(nil, nil)
+
+	require.NoError(t, err)
+	require.NotNil(t, res)
+	require.Equal(t, uint32(pn), res.PulseNumber)
+}

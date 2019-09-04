@@ -15,8 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 6,
-  "iteration": 1566295133383,
+  "iteration": 1567523058037,
   "links": [],
   "panels": [
     {
@@ -25,6 +24,7 @@
       "dashLength": 10,
       "dashes": false,
       "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
         "h": 4,
         "w": 12,
@@ -45,6 +45,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -109,6 +112,7 @@
       "dashLength": 10,
       "dashes": false,
       "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
         "h": 4,
         "w": 12,
@@ -129,6 +133,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -208,12 +215,15 @@
         "y": 4
       },
       "heatmap": {},
+      "hideZeroBuckets": false,
       "highlightCards": true,
       "id": 16,
       "legend": {
         "show": false
       },
       "links": [],
+      "options": {},
+      "reverseYBuckets": false,
       "targets": [
         {
           "expr": "sum(insolar_flow_dispatcher_process_latency_bucket{message_type=~\"$type\", instance=~\"$instance\", result=~\"$result\"}) by (le)",
@@ -269,12 +279,15 @@
         "y": 4
       },
       "heatmap": {},
+      "hideZeroBuckets": false,
       "highlightCards": true,
       "id": 18,
       "legend": {
         "show": false
       },
       "links": [],
+      "options": {},
+      "reverseYBuckets": false,
       "targets": [
         {
           "expr": "sum(insolar_flow_dispatcher_handler_latency_bucket{message_type=~\"$type\", instance=~\"$instance\", result=~\"$result\"}) by (le)",
@@ -315,6 +328,7 @@
       "dashLength": 10,
       "dashes": false,
       "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
         "h": 4,
         "w": 12,
@@ -335,6 +349,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -400,6 +417,7 @@
       "dashLength": 10,
       "dashes": false,
       "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
         "h": 4,
         "w": 12,
@@ -420,6 +438,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -480,7 +501,7 @@
       }
     }
   ],
-  "schemaVersion": 16,
+  "schemaVersion": 19,
   "style": "dark",
   "tags": [],
   "templating": {
@@ -633,7 +654,7 @@
     ]
   },
   "timezone": "",
-  "title": "Flow dispatcher",
+  "title": "INS-Flow dispatcher",
   "uid": "z7YBQQOWz",
-  "version": 17
+  "version": 1
 }

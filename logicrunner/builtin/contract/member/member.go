@@ -285,6 +285,10 @@ func (m *Member) transferCall(params map[string]interface{}) (interface{}, error
 	if m.GetReference() == *recipientReference {
 		return nil, fmt.Errorf("recipient must be different from the sender")
 	}
+	_, err = member.GetObject(*recipientReference).GetWallet()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get destination member object: %s", err.Error())
+	}
 
 	return wallet.GetObject(m.Wallet).Transfer(m.RootDomain, asset, amount, recipientReference)
 }
@@ -463,5 +467,20 @@ func (m *Member) memberGet(publicKey string) (interface{}, error) {
 	}
 
 	return GetResponse{Reference: ref.String(), MigrationAddress: ma}, nil
+}
 
+// Accept accepts transfer to balance.
+//ins:saga(INS_FLAG_NO_ROLLBACK_METHOD)
+func (m *Member) Accept(amountStr string) error {
+
+	accountRef, err := m.GetAccount(XNS)
+	if err != nil {
+		return fmt.Errorf("failed to get account reference: %s", err.Error())
+	}
+	acc := account.GetObject(*accountRef)
+	err = acc.IncreaseBalance(amountStr)
+	if err != nil {
+		return fmt.Errorf("failed to increase balance: %s", err.Error())
+	}
+	return nil
 }
