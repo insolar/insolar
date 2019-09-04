@@ -30,19 +30,19 @@ import (
 
 const CONVERSION = "10"
 
-// MigrationDaemonContract make migration procedure.
+// MigrationDaemon make migration procedure.
 type MigrationDaemon struct {
 	foundation.BaseContract
 	IsActive              bool
 	MigrationDaemonMember insolar.Reference
 }
 
-// Migration methods.
+// DepositMigrationResult struct for  return reference from contract.
 type DepositMigrationResult struct {
 	Reference string `json:"memberReference"`
 }
 
-//Call internal function migration admin from api.
+// DepositMigrationCall internal function migration admin from api.
 func (md *MigrationDaemon) DepositMigrationCall(params map[string]interface{}, caller insolar.Reference) (*DepositMigrationResult, error) {
 
 	amount, err := getAmountFromParam(params)

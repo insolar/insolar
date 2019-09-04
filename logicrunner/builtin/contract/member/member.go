@@ -46,7 +46,6 @@ type Member struct {
 
 const (
 	XNS                 = "XNS"
-	CONVERSION          = "10"
 	ACCOUNT_START_VALUE = "10000000000"
 )
 
@@ -318,7 +317,8 @@ func (m *Member) depositTransferCall(params map[string]interface{}) (interface{}
 }
 
 func (m *Member) depositMigrationCall(params map[string]interface{}) (interface{}, error) {
-	migrationDaemonRef, err := foundation.GetMigrationDaemonByMemberRef(m.GetReference().String())
+	migrationAdmin := migrationadmin.GetObject(foundation.GetMigrationAdmin())
+	migrationDaemonRef, err := migrationAdmin.GetMigrationDaemonByMemberRef(m.GetReference().String())
 	if err != nil {
 		return nil, err
 	}

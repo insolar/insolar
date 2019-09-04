@@ -99,7 +99,7 @@ var (
 		return
 	}()
 
-	//ContractMigrationMap where key is migration daemon member  references and value related migration daemon contract
+	// ContractMigrationMap where key is migration daemon member  references and value related migration daemon contract
 	ContractMigrationMap = func() (result map[insolar.Reference]insolar.Reference) {
 		result = make(map[insolar.Reference]insolar.Reference)
 		for i := 0; i < insolar.GenesisAmountMigrationDaemonMembers; i++ {
