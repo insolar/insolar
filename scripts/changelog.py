@@ -37,11 +37,8 @@ def main(args):
         print_changelog(args.current_release, args.new_release, issues)
 
 
+# git log v0.9.0-rc3..v0.9.0-rc4 --oneline | grep -E '[A-Z]+-\d+' | perl -ne '/([A-Z]+-\d+)/; print "$1\n"' | sort -u
 def get_issues_from_git(current_release, new_release):
-    # git log v0.9.0-rc3..v0.9.0-rc4 --oneline
-    #   | grep -E '[A-Z]+-\d+'
-    #   | perl -ne '/([A-Z]+-\d+)/; print "$1\n"'
-    #   | sort -u
     git_log = subprocess.run(
         ['git', 'log', f'{current_release}..{new_release}', '--oneline'],
         capture_output=True,
@@ -67,7 +64,11 @@ def get_issue_info(issue_keys, email, api_token):
             auth=(email, api_token)
         )
         try:
-            issues.append(r.json())
+            i = r.json()
+            if 'errors' in i:
+                logger.warning(f'Failed to get info for issue {key}')
+            else:
+                issues.append(i)
         except ValueError:
             logger.error(f'Failed to get info for issue {key}')
     return issues
@@ -76,8 +77,7 @@ def get_issue_info(issue_keys, email, api_token):
 def print_changelog(current, new, issues):
     print(f'Changelog from {current} to {new}:')
     for i in issues:
-        issue = i
-        print(f"{issue['key']}: {issue['fields']['summary']}")
+        print(f"{i['key']}: {i['fields']['summary']}")
 
 
 def prepare_context(context):
@@ -86,28 +86,32 @@ def prepare_context(context):
         'indeterminate': 'info',
         'done': 'success',
     }
+    parsed_issues = []
     for i in context['issues']:
-        key = i['fields']['status']['statusCategory']['key']
-        if key in status_colors:
-            i['fields']['status']['statusCategory']['status'] = status_colors[key]
+        try:
+            key = i['fields']['status']['statusCategory']['key']
+            if key in status_colors:
+                i['fields']['status']['statusCategory']['status'] = status_colors[key]
+            parsed_issues.append(i)
+        except KeyError:
+            logger.error(f'No fields in issue: {i}')
+    context['issues'] = parsed_issues
     return context
 
 
 def save_html(context, filename):
     context = prepare_context(context)
     html = render_html(context)
-    file = open(filename, 'w+')
-    file.write(html)
-    file.close()
+    with open(filename, 'w+') as f:
+        f.write(html)
 
 
 def render_html(context):
-    tpl = jinja2.Environment().from_string(page_tpl())
+    tpl = jinja2.Environment().from_string(PAGE_TPL)
     return tpl.render(context)
 
 
-def page_tpl():
-    return '''
+PAGE_TPL = '''
 <!doctype html>
 <html lang="ru">
 <head>
