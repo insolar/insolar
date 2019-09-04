@@ -18,6 +18,9 @@ package handle
 
 import (
 	"context"
+	"fmt"
+
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar/payload"
 
@@ -38,7 +41,37 @@ func NewPassState(dep *proc.Dependencies, meta payload.Meta) *PassState {
 }
 
 func (s *PassState) Present(ctx context.Context, f flow.Flow) error {
-	state := proc.NewPassState(s.meta)
+	// Pass state unmarshal pl
+	pl, err := payload.Unmarshal(s.meta.Payload)
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal payload")
+	}
+	passState, ok := pl.(*payload.PassState)
+	if !ok {
+		return fmt.Errorf("unexpected payload type %T", pl)
+	}
+
+	// Origin message unmarshal
+	pl, err = payload.Unmarshal(passState.Origin)
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal origin payload")
+	}
+	origin, ok := pl.(*payload.Meta)
+	if !ok {
+		return fmt.Errorf("unexpected payload type %T", pl)
+	}
+
+	// Origin message unmarshal pl
+	pl, err = payload.Unmarshal(origin.Payload)
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal payload")
+	}
+	_, ok = pl.(*payload.GetObject)
+	if !ok {
+		return fmt.Errorf("unexpected payload type %T", pl)
+	}
+
+	state := proc.NewPassState(s.meta, passState.StateID, *origin)
 	s.dep.PassState(state)
 	return f.Procedure(ctx, state, false)
 }

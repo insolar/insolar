@@ -137,7 +137,11 @@ func (p *GetCode) Proceed(ctx context.Context) error {
 			logger.Info("code not found (sending pass)")
 			return sendPassCode()
 		}
-		return errors.Wrap(err, "failed to fetch record")
+		return &payload.CodedError{
+			Text: "code not found",
+			Code: payload.CodeNotFound,
+		}
+
 	default:
 		return errors.Wrap(err, "failed to fetch record")
 	}

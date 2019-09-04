@@ -19,7 +19,6 @@ package member
 import (
 	"encoding/json"
 	"fmt"
-	"math/big"
 	"strings"
 
 	"github.com/insolar/insolar/insolar"
@@ -47,7 +46,6 @@ type Member struct {
 
 const (
 	XNS                 = "XNS"
-	CONVERSION          = "10"
 	ACCOUNT_START_VALUE = "10000000000"
 )
 
@@ -286,6 +284,10 @@ func (m *Member) transferCall(params map[string]interface{}) (interface{}, error
 	if m.GetReference() == *recipientReference {
 		return nil, fmt.Errorf("recipient must be different from the sender")
 	}
+	_, err = member.GetObject(*recipientReference).GetWallet()
+	if err != nil {
+		return nil, fmt.Errorf("destination member does not exists: %s", err.Error())
+	}
 
 	return wallet.GetObject(m.Wallet).Transfer(m.RootDomain, asset, amount, recipientReference)
 }
@@ -311,37 +313,18 @@ func (m *Member) depositTransferCall(params map[string]interface{}) (interface{}
 	}
 	d := deposit.GetObject(*dRef)
 
-	return d.Transfer(amount, m.Wallet)
+	return d.Transfer(amount, m.GetReference())
 }
 
-func (m *Member) depositMigrationCall(params map[string]interface{}) (*DepositMigrationResult, error) {
-
-	amountStr, ok := params["amount"].(string)
-	if !ok {
-		return nil, fmt.Errorf("failed to get 'amount' param")
+func (m *Member) depositMigrationCall(params map[string]interface{}) (interface{}, error) {
+	migrationAdmin := migrationadmin.GetObject(foundation.GetMigrationAdmin())
+	migrationDaemonRef, err := migrationAdmin.GetMigrationDaemonByMemberRef(m.GetReference().String())
+	if err != nil {
+		return nil, err
 	}
 
-	amount := new(big.Int)
-	amount, ok = amount.SetString(amountStr, 10)
-	if !ok {
-		return nil, fmt.Errorf("failed to parse amount")
-	}
-	if amount.Cmp(big.NewInt(0)) != 1 {
-		return nil, fmt.Errorf("amount must be greater than zero")
-	}
-	txId, ok := params["ethTxHash"].(string)
-	if !ok {
-		return nil, fmt.Errorf("failed to get 'ethTxHash' param")
-	}
-
-	migrationAddress, ok := params["migrationAddress"].(string)
-	if !ok {
-		return nil, fmt.Errorf("failed to get 'migrationAddress' param")
-	}
-	base, _ := new(big.Int).SetString(CONVERSION, 10)
-	amountXns := new(big.Int).Mul(amount, base)
-
-	return m.depositMigration(txId, migrationAddress, amountXns)
+	migrationDaemon := migrationdaemon.GetObject(migrationDaemonRef)
+	return migrationDaemon.DepositMigrationCall(params, m.GetReference())
 }
 
 // Platform methods.
@@ -456,76 +439,6 @@ func (m *Member) createMember(name string, key string, migrationAddress string) 
 	return created, nil
 }
 
-// Migration methods.
-type DepositMigrationResult struct {
-	Reference string `json:"memberReference"`
-}
-
-func (m *Member) depositMigration(txHash string, migrationAddress string, amount *big.Int) (*DepositMigrationResult, error) {
-	migrationAdminContract := migrationadmin.GetObject(foundation.GetMigrationAdmin())
-	migrationDaemonContractRef, err := foundation.GetMigrationDaemon(m.GetReference())
-	if err != nil {
-		return nil, fmt.Errorf("get migration daemon contract from foundation failed, %s ", err.Error())
-	}
-	if migrationDaemonContractRef.IsEmpty() {
-		return nil, fmt.Errorf("the member is not migration daemon")
-	}
-
-	migrationDaemonContract := migrationdaemon.GetObject(migrationDaemonContractRef)
-	result, err := migrationDaemonContract.GetActivationStatus()
-	if err != nil {
-		return nil, err
-	}
-	if !result {
-		return nil, fmt.Errorf("this migration daemon is not active daemons: %s", m.GetReference())
-	}
-
-	// Get member by migration address
-	tokenHolderRef, err := migrationAdminContract.GetMemberByMigrationAddress(migrationAddress)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get member by migration address")
-	}
-	tokenHolder := member.GetObject(*tokenHolderRef)
-	tokenHolderWallet, err := tokenHolder.GetWallet()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get wallet: %s", err.Error())
-	}
-
-	// Find deposit for txHash
-	w := wallet.GetObject(*tokenHolderWallet)
-	found, txDepositRef, err := w.FindDeposit(txHash)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get deposit: %s", err.Error())
-	}
-
-	depositMigrationResult := &DepositMigrationResult{Reference: tokenHolderRef.String()}
-	// If deposit doesn't exist - create new deposit
-	if !found {
-		vestingParams, _ := migrationAdminContract.GetDepositParameters()
-		dHolder := deposit.New(m.GetReference(), txHash, amount.String(), vestingParams.Lockup, vestingParams.Vesting, vestingParams.VestingStep)
-		txDeposit, err := dHolder.AsChild(*tokenHolderRef)
-		if err != nil {
-			return nil, fmt.Errorf("failed to save as child: %s", err.Error())
-		}
-		err = w.AddDeposit(txHash, txDeposit.GetReference())
-		if err != nil {
-			return nil, fmt.Errorf("failed to set deposit: %s", err.Error())
-		}
-		return depositMigrationResult, nil
-	}
-	txDeposit := deposit.GetObject(*txDepositRef)
-	unHoldPulse, err := txDeposit.GetPulseUnHold()
-	if unHoldPulse != 0 {
-		return nil, fmt.Errorf(" Migration is done for this deposit: %s", txHash)
-	}
-	// Confirm transaction by migration daemon
-	err = txDeposit.Confirm(m.GetReference().String(), txHash, amount.String())
-	if err != nil {
-		return nil, fmt.Errorf("confirmed failed: %s", err.Error())
-	}
-	return depositMigrationResult, nil
-}
-
 // ins:immutable
 func (m *Member) GetMigrationAddress() (string, error) {
 	return m.MigrationAddress, nil
@@ -554,5 +467,20 @@ func (m *Member) memberGet(publicKey string) (interface{}, error) {
 	}
 
 	return GetResponse{Reference: ref.String(), MigrationAddress: ma}, nil
+}
 
+// Accept accepts transfer to balance.
+//ins:saga(INS_FLAG_NO_ROLLBACK_METHOD)
+func (m *Member) Accept(amountStr string) error {
+
+	accountRef, err := m.GetAccount(XNS)
+	if err != nil {
+		return fmt.Errorf("failed to get account reference: %s", err.Error())
+	}
+	acc := account.GetObject(*accountRef)
+	err = acc.IncreaseBalance(amountStr)
+	if err != nil {
+		return fmt.Errorf("failed to increase balance: %s", err.Error())
+	}
+	return nil
 }

@@ -33,13 +33,11 @@ import (
 
 type Server struct {
 	cfgPath string
-	trace   bool
 }
 
-func New(cfgPath string, trace bool) *Server {
+func New(cfgPath string) *Server {
 	return &Server{
 		cfgPath: cfgPath,
-		trace:   trace,
 	}
 }
 
@@ -74,8 +72,12 @@ func (s *Server) Serve() {
 
 	traceID := "main_" + utils.RandTraceID()
 	ctx, inslog := inslogger.InitNodeLogger(ctx, cfg.Log, traceID, nodeRef, nodeRole)
-	ctx, jaegerFlush := internal.Jaeger(ctx, cfg.Tracer.Jaeger, traceID, nodeRef, nodeRole)
-	defer jaegerFlush()
+
+	if cfg.Tracer.Jaeger.AgentEndpoint != "" {
+		var jaegerFlush func()
+		ctx, jaegerFlush = internal.Jaeger(ctx, cfg.Tracer.Jaeger, traceID, nodeRef, nodeRole)
+		defer jaegerFlush()
+	}
 
 	cm, th, stopWatermill := initComponents(
 		ctx,

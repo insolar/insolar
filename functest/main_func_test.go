@@ -33,6 +33,7 @@ func TestMain(m *testing.M) {
 		if err != nil {
 			fmt.Println(errors.Wrap(err, "[ setup ] get reference daemons by public key failed ").Error())
 		}
+
 		return m.Run()
 	}))
 }
