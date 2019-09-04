@@ -23,12 +23,6 @@ type NodeKeeperMock struct {
 	beforeGetAccessorCounter uint64
 	GetAccessorMock          mNodeKeeperMockGetAccessor
 
-	funcGetCloudHash          func(p1 insolar.PulseNumber) (ba1 []byte)
-	inspectFuncGetCloudHash   func(p1 insolar.PulseNumber)
-	afterGetCloudHashCounter  uint64
-	beforeGetCloudHashCounter uint64
-	GetCloudHashMock          mNodeKeeperMockGetCloudHash
-
 	funcGetOrigin          func() (n1 insolar.NetworkNode)
 	inspectFuncGetOrigin   func()
 	afterGetOriginCounter  uint64
@@ -40,12 +34,6 @@ type NodeKeeperMock struct {
 	afterMoveSyncToActiveCounter  uint64
 	beforeMoveSyncToActiveCounter uint64
 	MoveSyncToActiveMock          mNodeKeeperMockMoveSyncToActive
-
-	funcSetCloudHash          func(p1 insolar.PulseNumber, ba1 []byte)
-	inspectFuncSetCloudHash   func(p1 insolar.PulseNumber, ba1 []byte)
-	afterSetCloudHashCounter  uint64
-	beforeSetCloudHashCounter uint64
-	SetCloudHashMock          mNodeKeeperMockSetCloudHash
 
 	funcSetInitialSnapshot          func(nodes []insolar.NetworkNode)
 	inspectFuncSetInitialSnapshot   func(nodes []insolar.NetworkNode)
@@ -70,16 +58,10 @@ func NewNodeKeeperMock(t minimock.Tester) *NodeKeeperMock {
 	m.GetAccessorMock = mNodeKeeperMockGetAccessor{mock: m}
 	m.GetAccessorMock.callArgs = []*NodeKeeperMockGetAccessorParams{}
 
-	m.GetCloudHashMock = mNodeKeeperMockGetCloudHash{mock: m}
-	m.GetCloudHashMock.callArgs = []*NodeKeeperMockGetCloudHashParams{}
-
 	m.GetOriginMock = mNodeKeeperMockGetOrigin{mock: m}
 
 	m.MoveSyncToActiveMock = mNodeKeeperMockMoveSyncToActive{mock: m}
 	m.MoveSyncToActiveMock.callArgs = []*NodeKeeperMockMoveSyncToActiveParams{}
-
-	m.SetCloudHashMock = mNodeKeeperMockSetCloudHash{mock: m}
-	m.SetCloudHashMock.callArgs = []*NodeKeeperMockSetCloudHashParams{}
 
 	m.SetInitialSnapshotMock = mNodeKeeperMockSetInitialSnapshot{mock: m}
 	m.SetInitialSnapshotMock.callArgs = []*NodeKeeperMockSetInitialSnapshotParams{}
@@ -302,221 +284,6 @@ func (m *NodeKeeperMock) MinimockGetAccessorInspect() {
 	// if func was set then invocations count should be greater than zero
 	if m.funcGetAccessor != nil && mm_atomic.LoadUint64(&m.afterGetAccessorCounter) < 1 {
 		m.t.Error("Expected call to NodeKeeperMock.GetAccessor")
-	}
-}
-
-type mNodeKeeperMockGetCloudHash struct {
-	mock               *NodeKeeperMock
-	defaultExpectation *NodeKeeperMockGetCloudHashExpectation
-	expectations       []*NodeKeeperMockGetCloudHashExpectation
-
-	callArgs []*NodeKeeperMockGetCloudHashParams
-	mutex    sync.RWMutex
-}
-
-// NodeKeeperMockGetCloudHashExpectation specifies expectation struct of the NodeKeeper.GetCloudHash
-type NodeKeeperMockGetCloudHashExpectation struct {
-	mock    *NodeKeeperMock
-	params  *NodeKeeperMockGetCloudHashParams
-	results *NodeKeeperMockGetCloudHashResults
-	Counter uint64
-}
-
-// NodeKeeperMockGetCloudHashParams contains parameters of the NodeKeeper.GetCloudHash
-type NodeKeeperMockGetCloudHashParams struct {
-	p1 insolar.PulseNumber
-}
-
-// NodeKeeperMockGetCloudHashResults contains results of the NodeKeeper.GetCloudHash
-type NodeKeeperMockGetCloudHashResults struct {
-	ba1 []byte
-}
-
-// Expect sets up expected params for NodeKeeper.GetCloudHash
-func (mmGetCloudHash *mNodeKeeperMockGetCloudHash) Expect(p1 insolar.PulseNumber) *mNodeKeeperMockGetCloudHash {
-	if mmGetCloudHash.mock.funcGetCloudHash != nil {
-		mmGetCloudHash.mock.t.Fatalf("NodeKeeperMock.GetCloudHash mock is already set by Set")
-	}
-
-	if mmGetCloudHash.defaultExpectation == nil {
-		mmGetCloudHash.defaultExpectation = &NodeKeeperMockGetCloudHashExpectation{}
-	}
-
-	mmGetCloudHash.defaultExpectation.params = &NodeKeeperMockGetCloudHashParams{p1}
-	for _, e := range mmGetCloudHash.expectations {
-		if minimock.Equal(e.params, mmGetCloudHash.defaultExpectation.params) {
-			mmGetCloudHash.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmGetCloudHash.defaultExpectation.params)
-		}
-	}
-
-	return mmGetCloudHash
-}
-
-// Inspect accepts an inspector function that has same arguments as the NodeKeeper.GetCloudHash
-func (mmGetCloudHash *mNodeKeeperMockGetCloudHash) Inspect(f func(p1 insolar.PulseNumber)) *mNodeKeeperMockGetCloudHash {
-	if mmGetCloudHash.mock.inspectFuncGetCloudHash != nil {
-		mmGetCloudHash.mock.t.Fatalf("Inspect function is already set for NodeKeeperMock.GetCloudHash")
-	}
-
-	mmGetCloudHash.mock.inspectFuncGetCloudHash = f
-
-	return mmGetCloudHash
-}
-
-// Return sets up results that will be returned by NodeKeeper.GetCloudHash
-func (mmGetCloudHash *mNodeKeeperMockGetCloudHash) Return(ba1 []byte) *NodeKeeperMock {
-	if mmGetCloudHash.mock.funcGetCloudHash != nil {
-		mmGetCloudHash.mock.t.Fatalf("NodeKeeperMock.GetCloudHash mock is already set by Set")
-	}
-
-	if mmGetCloudHash.defaultExpectation == nil {
-		mmGetCloudHash.defaultExpectation = &NodeKeeperMockGetCloudHashExpectation{mock: mmGetCloudHash.mock}
-	}
-	mmGetCloudHash.defaultExpectation.results = &NodeKeeperMockGetCloudHashResults{ba1}
-	return mmGetCloudHash.mock
-}
-
-//Set uses given function f to mock the NodeKeeper.GetCloudHash method
-func (mmGetCloudHash *mNodeKeeperMockGetCloudHash) Set(f func(p1 insolar.PulseNumber) (ba1 []byte)) *NodeKeeperMock {
-	if mmGetCloudHash.defaultExpectation != nil {
-		mmGetCloudHash.mock.t.Fatalf("Default expectation is already set for the NodeKeeper.GetCloudHash method")
-	}
-
-	if len(mmGetCloudHash.expectations) > 0 {
-		mmGetCloudHash.mock.t.Fatalf("Some expectations are already set for the NodeKeeper.GetCloudHash method")
-	}
-
-	mmGetCloudHash.mock.funcGetCloudHash = f
-	return mmGetCloudHash.mock
-}
-
-// When sets expectation for the NodeKeeper.GetCloudHash which will trigger the result defined by the following
-// Then helper
-func (mmGetCloudHash *mNodeKeeperMockGetCloudHash) When(p1 insolar.PulseNumber) *NodeKeeperMockGetCloudHashExpectation {
-	if mmGetCloudHash.mock.funcGetCloudHash != nil {
-		mmGetCloudHash.mock.t.Fatalf("NodeKeeperMock.GetCloudHash mock is already set by Set")
-	}
-
-	expectation := &NodeKeeperMockGetCloudHashExpectation{
-		mock:   mmGetCloudHash.mock,
-		params: &NodeKeeperMockGetCloudHashParams{p1},
-	}
-	mmGetCloudHash.expectations = append(mmGetCloudHash.expectations, expectation)
-	return expectation
-}
-
-// Then sets up NodeKeeper.GetCloudHash return parameters for the expectation previously defined by the When method
-func (e *NodeKeeperMockGetCloudHashExpectation) Then(ba1 []byte) *NodeKeeperMock {
-	e.results = &NodeKeeperMockGetCloudHashResults{ba1}
-	return e.mock
-}
-
-// GetCloudHash implements network.NodeKeeper
-func (mmGetCloudHash *NodeKeeperMock) GetCloudHash(p1 insolar.PulseNumber) (ba1 []byte) {
-	mm_atomic.AddUint64(&mmGetCloudHash.beforeGetCloudHashCounter, 1)
-	defer mm_atomic.AddUint64(&mmGetCloudHash.afterGetCloudHashCounter, 1)
-
-	if mmGetCloudHash.inspectFuncGetCloudHash != nil {
-		mmGetCloudHash.inspectFuncGetCloudHash(p1)
-	}
-
-	params := &NodeKeeperMockGetCloudHashParams{p1}
-
-	// Record call args
-	mmGetCloudHash.GetCloudHashMock.mutex.Lock()
-	mmGetCloudHash.GetCloudHashMock.callArgs = append(mmGetCloudHash.GetCloudHashMock.callArgs, params)
-	mmGetCloudHash.GetCloudHashMock.mutex.Unlock()
-
-	for _, e := range mmGetCloudHash.GetCloudHashMock.expectations {
-		if minimock.Equal(e.params, params) {
-			mm_atomic.AddUint64(&e.Counter, 1)
-			return e.results.ba1
-		}
-	}
-
-	if mmGetCloudHash.GetCloudHashMock.defaultExpectation != nil {
-		mm_atomic.AddUint64(&mmGetCloudHash.GetCloudHashMock.defaultExpectation.Counter, 1)
-		want := mmGetCloudHash.GetCloudHashMock.defaultExpectation.params
-		got := NodeKeeperMockGetCloudHashParams{p1}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmGetCloudHash.t.Errorf("NodeKeeperMock.GetCloudHash got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
-		}
-
-		results := mmGetCloudHash.GetCloudHashMock.defaultExpectation.results
-		if results == nil {
-			mmGetCloudHash.t.Fatal("No results are set for the NodeKeeperMock.GetCloudHash")
-		}
-		return (*results).ba1
-	}
-	if mmGetCloudHash.funcGetCloudHash != nil {
-		return mmGetCloudHash.funcGetCloudHash(p1)
-	}
-	mmGetCloudHash.t.Fatalf("Unexpected call to NodeKeeperMock.GetCloudHash. %v", p1)
-	return
-}
-
-// GetCloudHashAfterCounter returns a count of finished NodeKeeperMock.GetCloudHash invocations
-func (mmGetCloudHash *NodeKeeperMock) GetCloudHashAfterCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmGetCloudHash.afterGetCloudHashCounter)
-}
-
-// GetCloudHashBeforeCounter returns a count of NodeKeeperMock.GetCloudHash invocations
-func (mmGetCloudHash *NodeKeeperMock) GetCloudHashBeforeCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmGetCloudHash.beforeGetCloudHashCounter)
-}
-
-// Calls returns a list of arguments used in each call to NodeKeeperMock.GetCloudHash.
-// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
-func (mmGetCloudHash *mNodeKeeperMockGetCloudHash) Calls() []*NodeKeeperMockGetCloudHashParams {
-	mmGetCloudHash.mutex.RLock()
-
-	argCopy := make([]*NodeKeeperMockGetCloudHashParams, len(mmGetCloudHash.callArgs))
-	copy(argCopy, mmGetCloudHash.callArgs)
-
-	mmGetCloudHash.mutex.RUnlock()
-
-	return argCopy
-}
-
-// MinimockGetCloudHashDone returns true if the count of the GetCloudHash invocations corresponds
-// the number of defined expectations
-func (m *NodeKeeperMock) MinimockGetCloudHashDone() bool {
-	for _, e := range m.GetCloudHashMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			return false
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.GetCloudHashMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterGetCloudHashCounter) < 1 {
-		return false
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcGetCloudHash != nil && mm_atomic.LoadUint64(&m.afterGetCloudHashCounter) < 1 {
-		return false
-	}
-	return true
-}
-
-// MinimockGetCloudHashInspect logs each unmet expectation
-func (m *NodeKeeperMock) MinimockGetCloudHashInspect() {
-	for _, e := range m.GetCloudHashMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			m.t.Errorf("Expected call to NodeKeeperMock.GetCloudHash with params: %#v", *e.params)
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.GetCloudHashMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterGetCloudHashCounter) < 1 {
-		if m.GetCloudHashMock.defaultExpectation.params == nil {
-			m.t.Error("Expected call to NodeKeeperMock.GetCloudHash")
-		} else {
-			m.t.Errorf("Expected call to NodeKeeperMock.GetCloudHash with params: %#v", *m.GetCloudHashMock.defaultExpectation.params)
-		}
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcGetCloudHash != nil && mm_atomic.LoadUint64(&m.afterGetCloudHashCounter) < 1 {
-		m.t.Error("Expected call to NodeKeeperMock.GetCloudHash")
 	}
 }
 
@@ -848,194 +615,6 @@ func (m *NodeKeeperMock) MinimockMoveSyncToActiveInspect() {
 	// if func was set then invocations count should be greater than zero
 	if m.funcMoveSyncToActive != nil && mm_atomic.LoadUint64(&m.afterMoveSyncToActiveCounter) < 1 {
 		m.t.Error("Expected call to NodeKeeperMock.MoveSyncToActive")
-	}
-}
-
-type mNodeKeeperMockSetCloudHash struct {
-	mock               *NodeKeeperMock
-	defaultExpectation *NodeKeeperMockSetCloudHashExpectation
-	expectations       []*NodeKeeperMockSetCloudHashExpectation
-
-	callArgs []*NodeKeeperMockSetCloudHashParams
-	mutex    sync.RWMutex
-}
-
-// NodeKeeperMockSetCloudHashExpectation specifies expectation struct of the NodeKeeper.SetCloudHash
-type NodeKeeperMockSetCloudHashExpectation struct {
-	mock   *NodeKeeperMock
-	params *NodeKeeperMockSetCloudHashParams
-
-	Counter uint64
-}
-
-// NodeKeeperMockSetCloudHashParams contains parameters of the NodeKeeper.SetCloudHash
-type NodeKeeperMockSetCloudHashParams struct {
-	p1  insolar.PulseNumber
-	ba1 []byte
-}
-
-// Expect sets up expected params for NodeKeeper.SetCloudHash
-func (mmSetCloudHash *mNodeKeeperMockSetCloudHash) Expect(p1 insolar.PulseNumber, ba1 []byte) *mNodeKeeperMockSetCloudHash {
-	if mmSetCloudHash.mock.funcSetCloudHash != nil {
-		mmSetCloudHash.mock.t.Fatalf("NodeKeeperMock.SetCloudHash mock is already set by Set")
-	}
-
-	if mmSetCloudHash.defaultExpectation == nil {
-		mmSetCloudHash.defaultExpectation = &NodeKeeperMockSetCloudHashExpectation{}
-	}
-
-	mmSetCloudHash.defaultExpectation.params = &NodeKeeperMockSetCloudHashParams{p1, ba1}
-	for _, e := range mmSetCloudHash.expectations {
-		if minimock.Equal(e.params, mmSetCloudHash.defaultExpectation.params) {
-			mmSetCloudHash.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmSetCloudHash.defaultExpectation.params)
-		}
-	}
-
-	return mmSetCloudHash
-}
-
-// Inspect accepts an inspector function that has same arguments as the NodeKeeper.SetCloudHash
-func (mmSetCloudHash *mNodeKeeperMockSetCloudHash) Inspect(f func(p1 insolar.PulseNumber, ba1 []byte)) *mNodeKeeperMockSetCloudHash {
-	if mmSetCloudHash.mock.inspectFuncSetCloudHash != nil {
-		mmSetCloudHash.mock.t.Fatalf("Inspect function is already set for NodeKeeperMock.SetCloudHash")
-	}
-
-	mmSetCloudHash.mock.inspectFuncSetCloudHash = f
-
-	return mmSetCloudHash
-}
-
-// Return sets up results that will be returned by NodeKeeper.SetCloudHash
-func (mmSetCloudHash *mNodeKeeperMockSetCloudHash) Return() *NodeKeeperMock {
-	if mmSetCloudHash.mock.funcSetCloudHash != nil {
-		mmSetCloudHash.mock.t.Fatalf("NodeKeeperMock.SetCloudHash mock is already set by Set")
-	}
-
-	if mmSetCloudHash.defaultExpectation == nil {
-		mmSetCloudHash.defaultExpectation = &NodeKeeperMockSetCloudHashExpectation{mock: mmSetCloudHash.mock}
-	}
-
-	return mmSetCloudHash.mock
-}
-
-//Set uses given function f to mock the NodeKeeper.SetCloudHash method
-func (mmSetCloudHash *mNodeKeeperMockSetCloudHash) Set(f func(p1 insolar.PulseNumber, ba1 []byte)) *NodeKeeperMock {
-	if mmSetCloudHash.defaultExpectation != nil {
-		mmSetCloudHash.mock.t.Fatalf("Default expectation is already set for the NodeKeeper.SetCloudHash method")
-	}
-
-	if len(mmSetCloudHash.expectations) > 0 {
-		mmSetCloudHash.mock.t.Fatalf("Some expectations are already set for the NodeKeeper.SetCloudHash method")
-	}
-
-	mmSetCloudHash.mock.funcSetCloudHash = f
-	return mmSetCloudHash.mock
-}
-
-// SetCloudHash implements network.NodeKeeper
-func (mmSetCloudHash *NodeKeeperMock) SetCloudHash(p1 insolar.PulseNumber, ba1 []byte) {
-	mm_atomic.AddUint64(&mmSetCloudHash.beforeSetCloudHashCounter, 1)
-	defer mm_atomic.AddUint64(&mmSetCloudHash.afterSetCloudHashCounter, 1)
-
-	if mmSetCloudHash.inspectFuncSetCloudHash != nil {
-		mmSetCloudHash.inspectFuncSetCloudHash(p1, ba1)
-	}
-
-	params := &NodeKeeperMockSetCloudHashParams{p1, ba1}
-
-	// Record call args
-	mmSetCloudHash.SetCloudHashMock.mutex.Lock()
-	mmSetCloudHash.SetCloudHashMock.callArgs = append(mmSetCloudHash.SetCloudHashMock.callArgs, params)
-	mmSetCloudHash.SetCloudHashMock.mutex.Unlock()
-
-	for _, e := range mmSetCloudHash.SetCloudHashMock.expectations {
-		if minimock.Equal(e.params, params) {
-			mm_atomic.AddUint64(&e.Counter, 1)
-			return
-		}
-	}
-
-	if mmSetCloudHash.SetCloudHashMock.defaultExpectation != nil {
-		mm_atomic.AddUint64(&mmSetCloudHash.SetCloudHashMock.defaultExpectation.Counter, 1)
-		want := mmSetCloudHash.SetCloudHashMock.defaultExpectation.params
-		got := NodeKeeperMockSetCloudHashParams{p1, ba1}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmSetCloudHash.t.Errorf("NodeKeeperMock.SetCloudHash got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
-		}
-
-		return
-
-	}
-	if mmSetCloudHash.funcSetCloudHash != nil {
-		mmSetCloudHash.funcSetCloudHash(p1, ba1)
-		return
-	}
-	mmSetCloudHash.t.Fatalf("Unexpected call to NodeKeeperMock.SetCloudHash. %v %v", p1, ba1)
-
-}
-
-// SetCloudHashAfterCounter returns a count of finished NodeKeeperMock.SetCloudHash invocations
-func (mmSetCloudHash *NodeKeeperMock) SetCloudHashAfterCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmSetCloudHash.afterSetCloudHashCounter)
-}
-
-// SetCloudHashBeforeCounter returns a count of NodeKeeperMock.SetCloudHash invocations
-func (mmSetCloudHash *NodeKeeperMock) SetCloudHashBeforeCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmSetCloudHash.beforeSetCloudHashCounter)
-}
-
-// Calls returns a list of arguments used in each call to NodeKeeperMock.SetCloudHash.
-// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
-func (mmSetCloudHash *mNodeKeeperMockSetCloudHash) Calls() []*NodeKeeperMockSetCloudHashParams {
-	mmSetCloudHash.mutex.RLock()
-
-	argCopy := make([]*NodeKeeperMockSetCloudHashParams, len(mmSetCloudHash.callArgs))
-	copy(argCopy, mmSetCloudHash.callArgs)
-
-	mmSetCloudHash.mutex.RUnlock()
-
-	return argCopy
-}
-
-// MinimockSetCloudHashDone returns true if the count of the SetCloudHash invocations corresponds
-// the number of defined expectations
-func (m *NodeKeeperMock) MinimockSetCloudHashDone() bool {
-	for _, e := range m.SetCloudHashMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			return false
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.SetCloudHashMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterSetCloudHashCounter) < 1 {
-		return false
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcSetCloudHash != nil && mm_atomic.LoadUint64(&m.afterSetCloudHashCounter) < 1 {
-		return false
-	}
-	return true
-}
-
-// MinimockSetCloudHashInspect logs each unmet expectation
-func (m *NodeKeeperMock) MinimockSetCloudHashInspect() {
-	for _, e := range m.SetCloudHashMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			m.t.Errorf("Expected call to NodeKeeperMock.SetCloudHash with params: %#v", *e.params)
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.SetCloudHashMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterSetCloudHashCounter) < 1 {
-		if m.SetCloudHashMock.defaultExpectation.params == nil {
-			m.t.Error("Expected call to NodeKeeperMock.SetCloudHash")
-		} else {
-			m.t.Errorf("Expected call to NodeKeeperMock.SetCloudHash with params: %#v", *m.SetCloudHashMock.defaultExpectation.params)
-		}
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcSetCloudHash != nil && mm_atomic.LoadUint64(&m.afterSetCloudHashCounter) < 1 {
-		m.t.Error("Expected call to NodeKeeperMock.SetCloudHash")
 	}
 }
 
@@ -1420,13 +999,9 @@ func (m *NodeKeeperMock) MinimockFinish() {
 	if !m.minimockDone() {
 		m.MinimockGetAccessorInspect()
 
-		m.MinimockGetCloudHashInspect()
-
 		m.MinimockGetOriginInspect()
 
 		m.MinimockMoveSyncToActiveInspect()
-
-		m.MinimockSetCloudHashInspect()
 
 		m.MinimockSetInitialSnapshotInspect()
 
@@ -1455,10 +1030,8 @@ func (m *NodeKeeperMock) minimockDone() bool {
 	done := true
 	return done &&
 		m.MinimockGetAccessorDone() &&
-		m.MinimockGetCloudHashDone() &&
 		m.MinimockGetOriginDone() &&
 		m.MinimockMoveSyncToActiveDone() &&
-		m.MinimockSetCloudHashDone() &&
 		m.MinimockSetInitialSnapshotDone() &&
 		m.MinimockSyncDone()
 }

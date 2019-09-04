@@ -99,7 +99,7 @@ func TestNewSnapshotStorage(t *testing.T) {
 }
 
 func TestNewMemorySnapshotStorage(t *testing.T) {
-	ss := NewMemorySnapshotStorage()
+	ss := NewMemoryStorage()
 
 	ks := platformpolicy.NewKeyProcessor()
 	p1, err := ks.GeneratePrivateKey()

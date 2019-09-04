@@ -4,6 +4,7 @@ import (
 	"time"
 )
 
+// Bus holds some timeout options
 type Bus struct {
 	ReplyTimeout time.Duration
 }

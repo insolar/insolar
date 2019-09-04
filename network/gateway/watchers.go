@@ -1,4 +1,4 @@
-///
+//
 // Modified BSD 3-Clause Clear License
 //
 // Copyright (c) 2019 Insolar Technologies GmbH
@@ -72,7 +72,7 @@ func pulseProcessingWatchdog(ctx context.Context, pulse insolar.Pulse, done chan
 	}()
 }
 
-func newPulseWatchdog(ctx context.Context, gatewayer network.Gatewayer, timeout time.Duration, done chan *struct{}) {
+func newPulseWatchdog(ctx context.Context, gatewayer network.Gatewayer, timeout time.Duration, done chan struct{}) {
 	logger := inslogger.FromContext(ctx)
 
 	go func() {
@@ -80,8 +80,8 @@ func newPulseWatchdog(ctx context.Context, gatewayer network.Gatewayer, timeout 
 			select {
 			case <-time.After(timeout):
 				gatewayer.FailState(ctx, "New valid pulse timeout exceeded")
-			case v := <-done:
-				if v == nil {
+			case _, ok := <-done:
+				if !ok {
 					return
 				}
 

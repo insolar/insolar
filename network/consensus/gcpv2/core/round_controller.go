@@ -279,8 +279,8 @@ func (r *PhasedRoundController) _startFullRealm(prepWasSuccessful bool) {
 				panic("DEBUG FAIL-FAST: local remains as joiner")
 			}
 			panic("DEBUG FAIL-FAST: previous consensus didn't finish")
-			//r.realm.unsafeRound = true
-			//active = lastCensus.(census.Active)
+			// r.realm.unsafeRound = true
+			// active = lastCensus.(census.Active)
 		} else {
 			/* Auto-activation of the prepared lastCensus */
 			expCensus := lastCensus.(census.Expected)
@@ -335,7 +335,7 @@ func (r *PhasedRoundController) ensureStarted() bool {
 func (r *PhasedRoundController) HandlePacket(ctx context.Context, packet transport.PacketParser,
 	from endpoints.Inbound) (api.RoundControlCode, error) {
 
-	inslogger.FromContext(ctx).Warnf("processPacket %v", packet)
+	inslogger.FromContext(ctx).Debugf("processPacket %v", packet)
 	return r.handlePacket(ctx, packet, from, coreapi.DefaultVerify)
 }
 

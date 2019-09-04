@@ -25,7 +25,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/builtin/foundation/safemath"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/account"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/member"
-	"github.com/insolar/insolar/logicrunner/builtin/proxy/migrationadmin"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/migrationdaemon"
 )
 
 const (
@@ -35,12 +35,16 @@ const (
 // Deposit is like wallet. It holds migrated money.
 type Deposit struct {
 	foundation.BaseContract
-	Balance                 string                       `json:"balance"`
-	PulseDepositUnHold      insolar.PulseNumber          `json:"holdReleaseDate"`
-	MigrationDaemonConfirms foundation.StableMap         `json:"confirmerReferences"`
-	Amount                  string                       `json:"amount"`
-	TxHash                  string                       `json:"ethTxHash"`
-	VestingParams           migrationadmin.VestingParams `json:"vestingParams"`
+	Balance                 string                 `json:"balance"`
+	PulseDepositUnHold      insolar.PulseNumber    `json:"holdReleaseDate"`
+	MigrationDaemonConfirms foundation.StableMap   `json:"confirmerReferences"`
+	Amount                  string                 `json:"amount"`
+	TxHash                  string                 `json:"ethTxHash"`
+	VestingType             foundation.VestingType `json:"vestingType"`
+	MaturePulse             insolar.PulseNumber    `json:"maturePulse"`
+	Lockup                  int64                  `json:"lockupInPulses"`
+	Vesting                 int64                  `json:"vestingInPulses"`
+	VestingStep             int64                  `json:"vestingStepInPulses"`
 }
 
 // GetTxHash gets transaction hash.
@@ -62,7 +66,8 @@ func (d *Deposit) GetPulseUnHold() (insolar.PulseNumber, error) {
 }
 
 // New creates new deposit.
-func New(migrationDaemonRef insolar.Reference, txHash string, amount string, vestingParams *migrationadmin.VestingParams) (*Deposit, error) {
+func New(migrationDaemonRef insolar.Reference, txHash string, amount string,
+	lockup int64, vesting int64, vestingStep int64) (*Deposit, error) {
 
 	migrationDaemonConfirms := make(foundation.StableMap)
 	migrationDaemonConfirms[migrationDaemonRef.String()] = amount
@@ -72,7 +77,10 @@ func New(migrationDaemonRef insolar.Reference, txHash string, amount string, ves
 		MigrationDaemonConfirms: migrationDaemonConfirms,
 		Amount:                  "0",
 		TxHash:                  txHash,
-		VestingParams:           *vestingParams,
+		Lockup:                  lockup,
+		Vesting:                 vesting,
+		VestingStep:             vestingStep,
+		VestingType:             foundation.DefaultVesting,
 	}, nil
 }
 
@@ -93,10 +101,9 @@ func (d *Deposit) Confirm(migrationDaemonRef string, txHash string, amountStr st
 	d.MigrationDaemonConfirms[migrationDaemonRef] = amountStr
 
 	if len(d.MigrationDaemonConfirms) > 2 {
-		migrationAdminContract := migrationadmin.GetObject(foundation.GetMigrationAdmin())
-		activeDaemons, err := migrationAdminContract.GetActiveDaemons()
+		activeDaemons, err := d.checkStatusConfirm()
 		if err != nil {
-			return fmt.Errorf("failed to get list active daemons: %s", err.Error())
+			return err
 		}
 		err = d.checkAmount(activeDaemons)
 		if err != nil {
@@ -107,7 +114,7 @@ func (d *Deposit) Confirm(migrationDaemonRef string, txHash string, amountStr st
 			return fmt.Errorf("failed to get current pulse: %s", err.Error())
 		}
 		d.Amount = amountStr
-		d.PulseDepositUnHold = currentPulse + insolar.PulseNumber(d.VestingParams.Lokup)
+		d.PulseDepositUnHold = currentPulse + insolar.PulseNumber(d.Lockup)
 
 		ma := member.GetObject(foundation.GetMigrationAdminMember())
 		accountRef, err := ma.GetAccount(XNS)
@@ -143,6 +150,36 @@ func (d *Deposit) checkAmount(activeDaemons []string) error {
 	return nil
 }
 
+func (d *Deposit) checkStatusConfirm() ([]string, error) {
+	var activateDaemon = []string{}
+
+	for ref := range d.MigrationDaemonConfirms {
+		migrationDaemonMemberRef, err := insolar.NewReferenceFromBase58(ref)
+		if err != nil {
+			return nil, fmt.Errorf(" failed to parse params.Reference")
+		}
+
+		migrationDaemonContractRef, err := foundation.GetMigrationDaemon(*migrationDaemonMemberRef)
+		if err != nil || migrationDaemonContractRef.IsEmpty() {
+			return nil, fmt.Errorf(" get migration daemon contract from foundation failed, %s ", err)
+		}
+
+		migrationDaemonContract := migrationdaemon.GetObject(migrationDaemonContractRef)
+		result, err := migrationDaemonContract.GetActivationStatus()
+
+		if err != nil {
+			return nil, err
+		}
+		if result {
+			activateDaemon = append(activateDaemon, ref)
+		}
+	}
+	if len(activateDaemon) >= 3 {
+		return activateDaemon, nil
+	}
+	return nil, fmt.Errorf("failed to check amount in confirmation from migration daemon")
+}
+
 func (d *Deposit) canTransfer(transferAmount *big.Int) error {
 	c := 0
 	for _, r := range d.MigrationDaemonConfirms {
@@ -162,7 +199,7 @@ func (d *Deposit) canTransfer(transferAmount *big.Int) error {
 		return fmt.Errorf("hold period didn't end")
 	}
 
-	spentPeriodInPulses := big.NewInt(int64(currentPulse-d.PulseDepositUnHold) / d.VestingParams.VestingStep)
+	spentPeriodInPulses := big.NewInt(int64(currentPulse-d.PulseDepositUnHold) / d.VestingStep)
 	amount, ok := new(big.Int).SetString(d.Amount, 10)
 	if !ok {
 		return fmt.Errorf("can't parse derposit amount")
@@ -175,7 +212,7 @@ func (d *Deposit) canTransfer(transferAmount *big.Int) error {
 	// How much can we transfer for this time
 	availableForNow := new(big.Int).Div(
 		new(big.Int).Mul(amount, spentPeriodInPulses),
-		big.NewInt(int64(d.VestingParams.Vesting/d.VestingParams.VestingStep)),
+		big.NewInt(d.Vesting/d.VestingStep),
 	)
 
 	if new(big.Int).Sub(amount, availableForNow).Cmp(

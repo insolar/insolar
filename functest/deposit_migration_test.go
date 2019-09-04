@@ -20,6 +20,7 @@ package functest
 
 import (
 	"encoding/base64"
+	"github.com/insolar/insolar/api/requester"
 	"math/big"
 	"testing"
 
@@ -101,7 +102,9 @@ func TestMigrationTokenNotInTheList(t *testing.T) {
 		"deposit.migration",
 		map[string]interface{}{"amount": "1000", "ethTxHash": "TxHash", "migrationAddress": migrationAddress})
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "this migration daemon is not in the list")
+	require.IsType(t, &requester.Error{}, err)
+	data := err.(*requester.Error).Data
+	require.Contains(t, data.Trace, "the member is not migration daemon")
 }
 
 func TestMigrationTokenZeroAmount(t *testing.T) {
@@ -114,9 +117,10 @@ func TestMigrationTokenZeroAmount(t *testing.T) {
 		map[string]interface{}{"amount": "0", "ethTxHash": "TxHash", "migrationAddress": member.MigrationAddress})
 
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "amount must be greater than zero")
+	require.IsType(t, &requester.Error{}, err)
+	data := err.(*requester.Error).Data
+	require.Contains(t, data.Trace, "amount must be greater than zero")
 	require.Nil(t, result)
-
 }
 
 func TestMigrationTokenMistakeField(t *testing.T) {
@@ -128,7 +132,9 @@ func TestMigrationTokenMistakeField(t *testing.T) {
 		"deposit.migration",
 		map[string]interface{}{"amount1": "0", "ethTxHash": "TxHash", "migrationAddress": member.MigrationAddress})
 	require.Error(t, err)
-	require.Contains(t, err.Error(), " incorrect input: failed to get 'amount' param")
+	require.IsType(t, &requester.Error{}, err)
+	data := err.(*requester.Error).Data
+	require.Contains(t, data.Trace, "failed to get 'amount' param")
 	require.Nil(t, result)
 }
 
@@ -138,7 +144,9 @@ func TestMigrationTokenNilValue(t *testing.T) {
 	result, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, launchnet.MigrationDaemons[0],
 		"deposit.migration", map[string]interface{}{"amount": "20", "ethTxHash": nil, "migrationAddress": member.MigrationAddress})
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "failed to get 'ethTxHash' param")
+	require.IsType(t, &requester.Error{}, err)
+	data := err.(*requester.Error).Data
+	require.Contains(t, data.Trace, "failed to get 'ethTxHash' param")
 	require.Nil(t, result)
 
 }
@@ -173,7 +181,9 @@ func TestMigrationDoubleMigrationFromSameDaemon(t *testing.T) {
 		"deposit.migration",
 		map[string]interface{}{"amount": "20", "ethTxHash": "ethTxHash", "migrationAddress": member.MigrationAddress})
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "confirm from this migration daemon already exists")
+	require.IsType(t, &requester.Error{}, err)
+	data := err.(*requester.Error).Data
+	require.Contains(t, data.Trace, "confirm from this migration daemon already exists")
 }
 
 func TestMigrationAnotherAmountSameTx(t *testing.T) {
@@ -199,5 +209,7 @@ func TestMigrationAnotherAmountSameTx(t *testing.T) {
 		"deposit.migration",
 		map[string]interface{}{"amount": "30", "ethTxHash": "ethTxHash", "migrationAddress": member.MigrationAddress})
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "failed to check amount in confirmation from migration daemon")
+	require.IsType(t, &requester.Error{}, err)
+	data := err.(*requester.Error).Data
+	require.Contains(t, data.Trace, "failed to check amount in confirmation from migration daemon")
 }

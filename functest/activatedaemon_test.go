@@ -18,6 +18,7 @@
 package functest
 
 import (
+	"github.com/insolar/insolar/api/requester"
 	"testing"
 
 	"github.com/insolar/insolar/testutils/launchnet"
@@ -30,7 +31,9 @@ func TestActivateDaemonDoubleCall(t *testing.T) {
 		_, _, err := makeSignedRequest(launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.activateDaemon",
 			map[string]interface{}{"reference": daemon.Ref})
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "daemon member already activated")
+		require.IsType(t, &requester.Error{}, err)
+		data := err.(*requester.Error).Data
+		require.Contains(t, data.Trace, "daemon member already activated")
 	}
 }
 
@@ -75,7 +78,9 @@ func TestDeactivateDaemonDoubleCall(t *testing.T) {
 		_, _, err := makeSignedRequest(launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.deactivateDaemon",
 			map[string]interface{}{"reference": daemon.Ref})
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "daemon member already deactivated")
+		require.IsType(t, &requester.Error{}, err)
+		data := err.(*requester.Error).Data
+		require.Contains(t, data.Trace, "daemon member already deactivated")
 	}
 }
 func TestActivateAccess(t *testing.T) {
@@ -84,7 +89,9 @@ func TestActivateAccess(t *testing.T) {
 	_, _, err := makeSignedRequest(launchnet.TestRPCUrl, member, "migration.activateDaemon",
 		map[string]interface{}{"reference": launchnet.MigrationDaemons[0].Ref})
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "only migration admin can")
+	require.IsType(t, &requester.Error{}, err)
+	data := err.(*requester.Error).Data
+	require.Contains(t, data.Trace, "only migration admin can activate migration demons")
 }
 
 func TestDeactivateAccess(t *testing.T) {
@@ -93,7 +100,9 @@ func TestDeactivateAccess(t *testing.T) {
 	_, _, err := makeSignedRequest(launchnet.TestRPCUrl, member, "migration.deactivateDaemon",
 		map[string]interface{}{"reference": launchnet.MigrationDaemons[0].Ref})
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "only migration admin can")
+	require.IsType(t, &requester.Error{}, err)
+	data := err.(*requester.Error).Data
+	require.Contains(t, data.Trace, "only migration admin can deactivate migration demons")
 }
 
 func TestCheckDaemonAccess(t *testing.T) {
@@ -102,5 +111,7 @@ func TestCheckDaemonAccess(t *testing.T) {
 	_, _, err := makeSignedRequest(launchnet.TestRPCUrl, member, "migration.checkDaemon",
 		map[string]interface{}{"reference": launchnet.MigrationDaemons[0].Ref})
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "permission denied to information about migration daemons")
+	require.IsType(t, &requester.Error{}, err)
+	data := err.(*requester.Error).Data
+	require.Contains(t, data.Trace, "permission denied to information about migration daemons")
 }
