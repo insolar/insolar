@@ -387,8 +387,15 @@ func TestBackupSendDeleteRecords(t *testing.T) {
 	require.NoError(t, err)
 
 	key := &testKey{id: uint64(3)}
+	deletedKey := &testKey{id: uint64(4)}
 
 	err = db.Set(key, []byte{})
+	require.NoError(t, err)
+
+	err = db.Set(deletedKey, []byte{})
+	require.NoError(t, err)
+
+	err = db.Delete(deletedKey)
 	require.NoError(t, err)
 
 	err = bm.MakeBackup(context.Background(), 100000)
@@ -433,6 +440,9 @@ func TestBackupSendDeleteRecords(t *testing.T) {
 	defer recoveredDB.Stop(context.Background())
 
 	_, err = recoveredDB.Get(key)
+	require.EqualError(t, err, store.ErrNotFound.Error())
+
+	_, err = recoveredDB.Get(deletedKey)
 	require.EqualError(t, err, store.ErrNotFound.Error())
 }
 
