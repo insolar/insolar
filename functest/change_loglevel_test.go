@@ -31,7 +31,11 @@ import (
 func TestChangeLogLevelOk(t *testing.T) {
 	url := launchnet.HostDebug + "/debug/loglevel?level=debug"
 	resp, err := http.Get(url)
-	defer resp.Body.Close()
+	defer func() {
+		if resp != nil {
+			resp.Body.Close() //nolint: errcheck
+		}
+	}()
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 	resBody, err := ioutil.ReadAll(resp.Body)
@@ -42,7 +46,11 @@ func TestChangeLogLevelOk(t *testing.T) {
 func TestChangeLogLevelFail(t *testing.T) {
 	url := launchnet.HostDebug + "/debug/loglevel?level=ololo"
 	resp, err := http.Get(url)
-	defer resp.Body.Close()
+	defer func() {
+		if resp != nil {
+			resp.Body.Close() //nolint: errcheck
+		}
+	}()
 	require.NoError(t, err)
 	require.NotEqual(t, http.StatusOK, resp.StatusCode)
 }
