@@ -73,7 +73,7 @@ kill_port()
     for pid in $pids
     do
         echo "killing pid $pid"
-        kill -9 $pid
+        kill -ABRT $pid
     done
 }
 
