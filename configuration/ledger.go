@@ -101,9 +101,10 @@ type Backup struct {
 
 // NewLedger creates new default Ledger configuration.
 func NewLedger() Ledger {
+	dataDir := "./data"
 	return Ledger{
 		Storage: Storage{
-			DataDirectory: "./data",
+			DataDirectory: dataDir,
 		},
 
 		JetSplit: JetSplit{
@@ -121,7 +122,7 @@ func NewLedger() Ledger {
 			MetaInfoFile:       "meta.json",
 			BackupFile:         "incr.bkp",
 			ConfirmFile:        "BACKUPED",
-			LastBackupInfoFile: "last_backup_info.json",
+			LastBackupInfoFile: dataDir + "/last_backup_info.json",
 		},
 
 		CleanerDelay: 3, // 3 pulses
