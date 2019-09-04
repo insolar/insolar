@@ -28,7 +28,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/api"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/bus/meta"
 	busMeta "github.com/insolar/insolar/insolar/bus/meta"
@@ -111,16 +110,16 @@ func randomUint64() uint64 {
 	return binary.LittleEndian.Uint64(buf)
 }
 
-func (cr *ContractRequester) SendRequest(
+func (cr *ContractRequester) Call(
 	ctx context.Context, ref *insolar.Reference, method string, argsIn []interface{}, pulse insolar.PulseNumber,
 ) (insolar.Reply, *insolar.Reference, error) {
 
-	ctx, span := instracer.StartSpan(ctx, "SendRequest "+method)
+	ctx, span := instracer.StartSpan(ctx, "Call "+method)
 	defer span.End()
 
 	args, err := insolar.Serialize(argsIn)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "[ ContractRequester::SendRequest ] Can't marshal")
+		return nil, nil, errors.Wrap(err, "[ ContractRequester::Call ] Can't marshal")
 	}
 
 	msg := &payload.CallMethod{
@@ -129,14 +128,13 @@ func (cr *ContractRequester) SendRequest(
 			Method:       method,
 			Arguments:    args,
 			APIRequestID: utils.TraceID(ctx),
-			Reason:       api.MakeReason(pulse, args),
 			APINode:      cr.JetCoordinator.Me(),
 		},
 	}
 
-	routResult, ref, err := cr.Call(ctx, msg)
+	routResult, ref, err := cr.SendRequest(ctx, msg)
 	if err != nil {
-		return nil, ref, errors.Wrap(err, "[ ContractRequester::SendRequest ] Can't route call")
+		return nil, ref, errors.Wrap(err, "[ ContractRequester::Call ] Can't route call")
 	}
 
 	return routResult, ref, nil
@@ -186,10 +184,10 @@ func (cr *ContractRequester) createResultWaiter(
 	return ch, reqHash, nil
 }
 
-func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Payload) (insolar.Reply, *insolar.Reference, error) {
+func (cr *ContractRequester) SendRequest(ctx context.Context, inMsg insolar.Payload) (insolar.Reply, *insolar.Reference, error) {
 	msg := inMsg.(*payload.CallMethod)
 
-	ctx, span := instracer.StartSpan(ctx, "ContractRequester.Call")
+	ctx, span := instracer.StartSpan(ctx, "ContractRequester.SendRequest")
 	defer span.End()
 
 	async := msg.Request.ReturnMode == record.ReturnNoWait

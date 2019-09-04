@@ -30,7 +30,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/api"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/jet"
@@ -113,15 +112,11 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]stri
 
 	for name := range contracts {
 		nonce := gen.Reference()
-		pulse, err := cb.pulseAccessor.Latest(ctx)
-		if err != nil {
-			return errors.Wrap(err, "can't get current pulse")
-		}
 		request := record.IncomingRequest{
 			CallType:  record.CTDeployPrototype,
 			Prototype: &nonce,
-			Reason:    api.MakeReason(pulse.PulseNumber, []byte(name)),
-			APINode:   cb.jetCoordinator.Me(),
+
+			APINode: cb.jetCoordinator.Me(),
 		}
 		protoID, err := cb.registerRequest(ctx, &request)
 

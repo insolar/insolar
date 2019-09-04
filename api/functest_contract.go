@@ -29,7 +29,6 @@ import (
 
 	"github.com/insolar/insolar/application/extractor"
 	"github.com/insolar/insolar/insolar"
-	insolarApi "github.com/insolar/insolar/insolar/api"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
@@ -124,11 +123,6 @@ func (s *FuncTestContractService) CallConstructor(r *http.Request, args *CallCon
 		return errors.Wrap(err, "can't get protoRef")
 	}
 
-	pulse, err := s.runner.PulseAccessor.Latest(ctx)
-	if err != nil {
-		return errors.Wrap(err, "can't get current pulse")
-	}
-
 	base := insolar.GenesisRecord.Ref()
 	msg := &payload.CallMethod{
 		Request: &record.IncomingRequest{
@@ -139,8 +133,8 @@ func (s *FuncTestContractService) CallConstructor(r *http.Request, args *CallCon
 			Prototype:       protoRef,
 			CallType:        record.CTSaveAsChild,
 			APIRequestID:    utils.TraceID(ctx),
-			Reason:          insolarApi.MakeReason(pulse.PulseNumber, args.MethodArgs),
-			APINode:         s.runner.JetCoordinator.Me(),
+
+			APINode: s.runner.JetCoordinator.Me(),
 		},
 	}
 
@@ -185,19 +179,14 @@ func (s *FuncTestContractService) CallMethod(r *http.Request, args *CallMethodAr
 		return errors.Wrap(err, "can't get objectRef")
 	}
 
-	pulse, err := s.runner.PulseAccessor.Latest(ctx)
-	if err != nil {
-		return errors.Wrap(err, "can't get current pulse")
-	}
-
 	msg := &payload.CallMethod{
 		Request: &record.IncomingRequest{
 			Object:       objectRef,
 			Method:       args.Method,
 			Arguments:    args.MethodArgs,
 			APIRequestID: utils.TraceID(ctx),
-			Reason:       insolarApi.MakeReason(pulse.PulseNumber, args.MethodArgs),
-			APINode:      s.runner.JetCoordinator.Me(),
+
+			APINode: s.runner.JetCoordinator.Me(),
 		},
 	}
 
@@ -213,7 +202,7 @@ func (s *FuncTestContractService) CallMethod(r *http.Request, args *CallMethodAr
 func (s *FuncTestContractService) call(ctx context.Context, msg insolar.Payload, re *CallMethodReply) error {
 	inslog := inslogger.FromContext(ctx)
 
-	callReply, _, err := s.runner.ContractRequester.Call(ctx, msg)
+	callReply, _, err := s.runner.ContractRequester.SendRequest(ctx, msg)
 	if err != nil {
 		inslog.Error("failed to call: ", err.Error())
 		return errors.Wrap(err, "CallMethod failed with error")
