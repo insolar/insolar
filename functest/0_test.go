@@ -24,8 +24,8 @@ import (
 	"github.com/insolar/insolar/testutils/launchnet"
 )
 
-// TestRotateLogs removes send signal to log control server.
-// Should be in 'first' test file.
+// TestRotateLogs rotates launchnet logs (removes and reopen it).
+// Should be always 'first' test in package.
 func TestRotateLogs(t *testing.T) {
 	// BEWARE: it removes files by pattern!
 	launchnet.RotateLogs("../.artifacts/launchnet/logs/*/*/*.log", true)
