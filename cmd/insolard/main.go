@@ -35,7 +35,6 @@ import (
 type inputParams struct {
 	configPath        string
 	genesisConfigPath string
-	traceEnabled      bool
 }
 
 func parseInputParams() inputParams {
@@ -43,7 +42,6 @@ func parseInputParams() inputParams {
 	var result inputParams
 	rootCmd.Flags().StringVarP(&result.configPath, "config", "c", "", "path to config file")
 	rootCmd.Flags().StringVarP(&result.genesisConfigPath, "heavy-genesis", "", "", "path to genesis config for heavy node")
-	rootCmd.Flags().BoolVarP(&result.traceEnabled, "trace", "t", false, "enable tracing")
 	err := rootCmd.Execute()
 	if err != nil {
 		log.Fatal("Wrong input params:", err)
@@ -72,13 +70,13 @@ func main() {
 
 	switch role {
 	case insolar.StaticRoleHeavyMaterial:
-		s := server.NewHeavyServer(params.configPath, params.genesisConfigPath, params.traceEnabled)
+		s := server.NewHeavyServer(params.configPath, params.genesisConfigPath)
 		s.Serve()
 	case insolar.StaticRoleLightMaterial:
-		s := server.NewLightServer(params.configPath, params.traceEnabled)
+		s := server.NewLightServer(params.configPath)
 		s.Serve()
 	case insolar.StaticRoleVirtual:
-		s := server.NewVirtualServer(params.configPath, params.traceEnabled)
+		s := server.NewVirtualServer(params.configPath)
 		s.Serve()
 	}
 }

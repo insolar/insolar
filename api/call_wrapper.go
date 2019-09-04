@@ -90,7 +90,7 @@ func wrapCall(runner *Runner, allowedMethods map[string]bool, req *http.Request,
 			Code:    InvalidRequestError,
 			Message: InvalidRequestErrorMessage,
 			Data: requester.Data{
-				Trace:   strings.Split(err.Error(), ": "),
+				Trace:   []string{err.Error()},
 				TraceID: traceID,
 			},
 		}
@@ -108,6 +108,29 @@ func wrapCall(runner *Runner, allowedMethods map[string]bool, req *http.Request,
 	if err != nil {
 		// TODO: white list of errors that doesnt require log
 		logger.Error(err.Error())
+		if strings.Contains(err.Error(), "invalid signature") {
+			return &json2.Error{
+				Code:    UnauthorizedError,
+				Message: UnauthorizedErrorMessage,
+				Data: requester.Data{
+					Trace:            strings.Split(err.Error(), ": "),
+					TraceID:          traceID,
+					RequestReference: ref,
+				},
+			}
+		}
+
+		if strings.Contains(err.Error(), "failed to parse") {
+			return &json2.Error{
+				Code:    ParseError,
+				Message: ParseErrorMessage,
+				Data: requester.Data{
+					Trace:            strings.Split(err.Error(), ": "),
+					TraceID:          traceID,
+					RequestReference: ref,
+				},
+			}
+		}
 
 		return &json2.Error{
 			Code:    ExecutionError,

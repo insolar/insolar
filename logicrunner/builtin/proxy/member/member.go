@@ -25,9 +25,6 @@ import (
 type CreateResponse struct {
 	Reference string `json:"reference"`
 }
-type DepositMigrationResult struct {
-	Reference string `json:"memberReference"`
-}
 type GetBalanceResponse struct {
 	Balance  string                 `json:"balance"`
 	Deposits map[string]interface{} `json:"deposits"`
@@ -784,4 +781,27 @@ func (r *Member) GetMigrationAddress() (string, error) {
 		return ret0, ret1
 	}
 	return ret0, nil
+}
+
+// Accept is proxy generated method
+func (r *Member) Accept(amountStr string) error {
+	var args [1]interface{}
+	args[0] = amountStr
+
+	var argsSerialized []byte
+
+	ret := make([]interface{}, 1)
+	var ret0 *foundation.Error
+	ret[0] = &ret0
+
+	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, true, false, true, "Accept", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+	return nil
 }

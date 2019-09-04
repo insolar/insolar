@@ -15,8 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 7,
-  "iteration": 1566294208714,
+  "iteration": 1567523262466,
   "links": [],
   "panels": [
     {
@@ -25,6 +24,7 @@
       "dashLength": 10,
       "dashes": false,
       "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
         "h": 5,
         "w": 24,
@@ -45,6 +45,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 5,
       "points": false,
@@ -124,12 +127,15 @@
         "y": 5
       },
       "heatmap": {},
+      "hideZeroBuckets": false,
       "highlightCards": true,
       "id": 16,
       "legend": {
         "show": false
       },
       "links": [],
+      "options": {},
+      "reverseYBuckets": false,
       "targets": [
         {
           "expr": "sum(insolar_flow_procedure_latency_bucket{proc_type=~\".($type)\", instance=~\"$instance\", result=~\"$result\"}) by (le)",
@@ -165,7 +171,7 @@
       "yBucketSize": null
     }
   ],
-  "schemaVersion": 16,
+  "schemaVersion": 19,
   "style": "dark",
   "tags": [],
   "templating": {
@@ -325,7 +331,7 @@
     ]
   },
   "timezone": "",
-  "title": "Flow procedures",
+  "title": "INS-Flow procedures",
   "uid": "gRnlqwdZk",
-  "version": 7
+  "version": 1
 }

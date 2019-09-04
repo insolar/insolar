@@ -47,15 +47,13 @@ import (
 )
 
 type inputParams struct {
-	configPath   string
-	traceEnabled bool
+	configPath string
 }
 
 func parseInputParams() inputParams {
 	var rootCmd = &cobra.Command{Use: "insolard"}
 	var result inputParams
 	rootCmd.Flags().StringVarP(&result.configPath, "config", "c", "", "path to config file")
-	rootCmd.Flags().BoolVarP(&result.traceEnabled, "trace", "t", false, "enable tracing")
 	err := rootCmd.Execute()
 	if err != nil {
 		fmt.Println("Wrong input params:", err.Error())
@@ -90,7 +88,7 @@ func main() {
 	ctx, inslog := inslogger.InitNodeLogger(ctx, pCfg.Log, traceID, "", "pulsar")
 
 	jaegerflush := func() {}
-	if params.traceEnabled {
+	if pCfg.Tracer.Jaeger.AgentEndpoint != "" {
 		jconf := pCfg.Tracer.Jaeger
 		log.Infof("Tracing enabled. Agent endpoint: '%s', collector endpoint: '%s'", jconf.AgentEndpoint, jconf.CollectorEndpoint)
 		jaegerflush = instracer.ShouldRegisterJaeger(

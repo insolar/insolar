@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/insolar/flow"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/light/handle"
@@ -47,9 +48,24 @@ func TestPassState_Present(t *testing.T) {
 		setup()
 		defer mc.Finish()
 
+		getObject, _ := (&payload.GetObject{
+			Polymorph: uint32(payload.TypeGetObject),
+			ObjectID:  gen.ID(),
+		}).Marshal()
+		originMeta, _ := (&payload.Meta{
+			Polymorph: uint32(payload.TypeMeta),
+			Payload:   getObject,
+		}).Marshal()
+
+		passState, _ := (&payload.PassState{
+			Polymorph: uint32(payload.TypePassState),
+			Origin:    originMeta,
+			StateID:   gen.ID(),
+		}).Marshal()
+
 		meta = payload.Meta{
 			Polymorph: uint32(payload.TypeMeta),
-			Payload:   []byte{1, 1, 1},
+			Payload:   passState,
 		}
 
 		handler := handle.NewPassState(dep, meta)
@@ -62,14 +78,58 @@ func TestPassState_Present(t *testing.T) {
 		setup()
 		defer mc.Finish()
 
+		getObject, _ := (&payload.GetObject{
+			Polymorph: uint32(payload.TypeGetObject),
+			ObjectID:  gen.ID(),
+		}).Marshal()
+		originMeta, _ := (&payload.Meta{
+			Polymorph: uint32(payload.TypeMeta),
+			Payload:   getObject,
+		}).Marshal()
+
+		passState, _ := (&payload.PassState{
+			Polymorph: uint32(payload.TypePassState),
+			Origin:    originMeta,
+			StateID:   gen.ID(),
+		}).Marshal()
+
 		meta = payload.Meta{
 			Polymorph: uint32(payload.TypeMeta),
-			Payload:   []byte{1, 1, 1},
+			Payload:   passState,
 		}
 
 		handler := handle.NewPassState(dep, meta)
 		flowMock := flow.NewFlowMock(mc).ProcedureMock.Return(errors.New("error from PassState"))
 		err := handler.Present(ctx, flowMock)
 		assert.EqualError(t, err, "error from PassState")
+	})
+
+	t.Run("Message type is wrong returns error", func(t *testing.T) {
+		setup()
+		defer mc.Finish()
+
+		getObject, _ := (&payload.Activate{
+			Polymorph: uint32(payload.TypeActivate),
+		}).Marshal()
+		originMeta, _ := (&payload.Meta{
+			Polymorph: uint32(payload.TypeMeta),
+			Payload:   getObject,
+		}).Marshal()
+
+		passState, _ := (&payload.PassState{
+			Polymorph: uint32(payload.TypePassState),
+			Origin:    originMeta,
+			StateID:   gen.ID(),
+		}).Marshal()
+
+		meta = payload.Meta{
+			Polymorph: uint32(payload.TypeMeta),
+			Payload:   passState,
+		}
+
+		handler := handle.NewPassState(dep, meta)
+		flowMock := flow.NewFlowMock(mc)
+		err := handler.Present(ctx, flowMock)
+		assert.EqualError(t, err, "unexpected payload type *payload.Activate")
 	})
 }

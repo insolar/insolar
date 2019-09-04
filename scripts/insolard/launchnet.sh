@@ -73,7 +73,7 @@ kill_port()
     for pid in $pids
     do
         echo "killing pid $pid"
-        kill -9 $pid
+        kill -ABRT $pid
     done
 }
 
@@ -388,7 +388,7 @@ echo "start pulsar ..."
 echo "   log: ${LAUNCHNET_LOGS_DIR}pulsar_output.log"
 set -x
 mkdir -p ${PULSAR_DATA_DIR}
-${PULSARD} -c ${PULSAR_CONFIG} --trace &> ${LAUNCHNET_LOGS_DIR}pulsar_output.log &
+${PULSARD} -c ${PULSAR_CONFIG} &> ${LAUNCHNET_LOGS_DIR}pulsar_output.log &
 { set +x; } 2>/dev/null
 echo "pulsar log: ${LAUNCHNET_LOGS_DIR}pulsar_output.log"
 
@@ -413,7 +413,7 @@ set -x
 $INSOLARD \
     --config ${DISCOVERY_NODES_DATA}1/insolard.yaml \
     --heavy-genesis ${HEAVY_GENESIS_CONFIG_FILE} \
-    --trace &> ${DISCOVERY_NODE_LOGS}1/output.log &
+    &> ${DISCOVERY_NODE_LOGS}1/output.log &
 { set +x; } 2>/dev/null
 echo "heavy node started in background"
 echo "log: ${DISCOVERY_NODE_LOGS}1/output.log"
@@ -424,7 +424,7 @@ do
     set -x
     $INSOLARD \
         --config ${DISCOVERY_NODES_DATA}${i}/insolard.yaml \
-        --trace &> ${DISCOVERY_NODE_LOGS}${i}/output.log &
+        &> ${DISCOVERY_NODE_LOGS}${i}/output.log &
     { set +x; } 2>/dev/null
     echo "discovery node $i started in background"
     echo "log: ${DISCOVERY_NODE_LOGS}${i}/output.log"

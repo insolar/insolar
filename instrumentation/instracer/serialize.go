@@ -42,7 +42,14 @@ func Serialize(ctx context.Context) ([]byte, error) {
 		tracespan.SpanID = sc.SpanID[:]
 		tracespan.TraceID = sc.TraceID[:]
 	}
-	tracespan.Entries = GetBaggage(ctx)
+	tracespan.Entries = nil
+	for _, e := range GetBaggage(ctx) {
+		if e.Key == "insTraceId" {
+			continue
+		}
+		tracespan.Entries = append(tracespan.Entries, e)
+	}
+
 	return tracespan.Serialize()
 }
 
