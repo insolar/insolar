@@ -65,24 +65,21 @@ do
     DISCOVERY_NODE_DIRS+=(${DISCOVERY_NODES_DATA}${i})
 done
 
-LOGGER_BIN=${LAUNCHNET_BASE_DIR}inslogrotator
+LOGROTATOR_ENABLE=${LOGROTATOR_ENABLE:-""}
+LOGROTATOR=tee
+LOGROTATOR_BIN=${LAUNCHNET_BASE_DIR}inslogrotator
+if [[ "$LOGROTATOR_ENABLE" == "1" ]]; then
+  LOGROTATOR=${LOGROTATOR_BIN}
+fi
+
 build_logger()
 {
     echo "build logger binaries"
     pushd scripts/_logger
     GO111MODULE=on go build -o inslogrotator .
     popd
-    mv scripts/_logger/inslogrotator ${LOGGER_BIN}
+    mv scripts/_logger/inslogrotator ${LOGROTATOR_BIN}
 }
-
-stop_logger()
-{
-    echo "kill logger"
-    set +e
-    killall inslogrotator
-    set -e
-}
-
 
 kill_port()
 {
@@ -140,7 +137,7 @@ stop_listening()
 stop_all()
 {
   stop_listening true
-  stop_logger
+  kill_all
 }
 
 clear_dirs()
@@ -441,9 +438,10 @@ handle_sigchld()
   echo "someone left the network"
 }
 
-echo "prepare logger"
-stop_logger
-build_logger
+if [[ "$LOGROTATOR_ENABLE" == "1" ]]; then
+  echo "prepare logger"
+  build_logger
+fi
 
 trap 'handle_sigchld' SIGCHLD
 
@@ -452,7 +450,7 @@ set -x
 $INSOLARD \
     --config ${DISCOVERY_NODES_DATA}1/insolard.yaml \
     --heavy-genesis ${HEAVY_GENESIS_CONFIG_FILE} \
-    2>&1 | ${LOGGER_BIN} ${DISCOVERY_NODE_LOGS}1/output.log &
+    2>&1 | ${LOGROTATOR} ${DISCOVERY_NODE_LOGS}1/output.log > /dev/null &
 { set +x; } 2>/dev/null
 echo "heavy node started in background"
 echo "log: ${DISCOVERY_NODE_LOGS}1/output.log"
@@ -463,7 +461,7 @@ do
     set -x
     $INSOLARD \
         --config ${DISCOVERY_NODES_DATA}${i}/insolard.yaml \
-        2>&1 | ${LOGGER_BIN} ${DISCOVERY_NODE_LOGS}${i}/output.log &
+        2>&1 | ${LOGROTATOR} ${DISCOVERY_NODE_LOGS}${i}/output.log > /dev/null &
     { set +x; } 2>/dev/null
     echo "discovery node $i started in background"
     echo "log: ${DISCOVERY_NODE_LOGS}${i}/output.log"

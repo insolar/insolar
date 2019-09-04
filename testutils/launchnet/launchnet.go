@@ -359,6 +359,13 @@ func startNet() error {
 
 }
 
+var logRotatorEnableVar = "LOGROTATOR_ENABLE"
+
+// LogRotateEnabled checks is log rotation enabled by environment variable.
+func LogRotateEnabled() bool {
+	return os.Getenv(logRotatorEnableVar) == "1"
+}
+
 func waitForLaunch() error {
 	done := make(chan bool, 1)
 	timeout := 240 * time.Second
@@ -423,8 +430,6 @@ func setup() error {
 	fmt.Println("[ setup ] references successfully received")
 	Root.Ref = info.RootMember
 	MigrationAdmin.Ref = info.MigrationAdminMember
-
-	//Contracts = make(map[string]*contractInfo)
 
 	return nil
 }

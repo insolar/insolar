@@ -24,9 +24,16 @@ import (
 	"github.com/insolar/insolar/testutils/launchnet"
 )
 
+var functestCount int
+
 // TestRotateLogs rotates launchnet logs (removes and reopen it).
 // Should be always 'first' test in package.
 func TestRotateLogs(t *testing.T) {
+	functestCount++
+	t.Log("functest iteration:", functestCount)
+	if !launchnet.LogRotateEnabled() {
+		t.Skip("log rotate disabled")
+	}
 	// BEWARE: it removes files by pattern!
 	launchnet.RotateLogs("../.artifacts/launchnet/logs/*/*/*.log", true)
 }
