@@ -15,7 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1567523660850,
+  "iteration": 1567584906186,
   "links": [],
   "panels": [
     {
@@ -178,7 +178,7 @@
       ],
       "repeat": null,
       "repeatDirection": "h",
-      "repeatIteration": 1567523660850,
+      "repeatIteration": 1567584906186,
       "repeatPanelId": 28,
       "scopedVars": {
         "instance": {
@@ -382,7 +382,7 @@
       ],
       "repeat": null,
       "repeatDirection": "h",
-      "repeatIteration": 1567523660850,
+      "repeatIteration": 1567584906186,
       "repeatPanelId": 22,
       "scopedVars": {
         "instance": {
@@ -1184,25 +1184,9 @@
         "label": null,
         "multi": false,
         "name": "instance",
-        "options": [
-          {
-            "selected": true,
-            "text": "All",
-            "value": "$__all"
-          },
-          {
-            "selected": false,
-            "text": "host.docker.internal:8003",
-            "value": "host.docker.internal:8003"
-          },
-          {
-            "selected": false,
-            "text": "host.docker.internal:8005",
-            "value": "host.docker.internal:8005"
-          }
-        ],
+        "options": [],
         "query": "label_values(insolar_light_last_sent_pulse, instance)",
-        "refresh": 0,
+        "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
         "sort": 0,
