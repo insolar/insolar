@@ -41,6 +41,12 @@ type ChannelAdapter struct {
 	o   int
 }
 
+func (c *ChannelAdapter) RegisterOn(smachine.SlotMachineState) {
+}
+
+func (c *ChannelAdapter) Migrate(slotMachineState smachine.SlotMachineState, migrationCount uint16) {
+}
+
 func (c *ChannelAdapter) TrySyncCall(fn smachine.AdapterCallFunc) (bool, smachine.AsyncResultFunc) {
 	return false, nil
 }
@@ -52,7 +58,7 @@ func (c *ChannelAdapter) StartCall(stepLink smachine.StepLink, fn smachine.Adapt
 		cancel = syncrun.NewChainedCancel()
 	}
 
-	r := ChannelRecord{fn, smachine.AdapterCallback{stepLink, callback, cancel}}
+	r := ChannelRecord{fn, smachine.NewAdapterCallback(stepLink, callback, cancel)}
 	if !c.append(r, false) && !c.send(r) {
 		c.append(r, true)
 	}

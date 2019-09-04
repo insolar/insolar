@@ -33,8 +33,10 @@ func main() {
 
 	sm.AddNew(smachine.NoLink(), &example.StateMachine1{})
 
+	worker := smachine.NewSimpleSlotWorker(make(<-chan struct{}))
+
 	for i := 0; ; i++ {
-		sm.ScanOnce(nil)
+		sm.ScanOnce(worker)
 		time.Sleep(1 * time.Millisecond)
 		if i%100 == 0 {
 			fmt.Printf("%03d %v ================================== slots=%v\n", i, time.Now(), sm.OccupiedSlotCount())

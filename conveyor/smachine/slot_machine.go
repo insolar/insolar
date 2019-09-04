@@ -90,8 +90,8 @@ func (m *SlotMachine) IsEmpty() bool {
 }
 
 func (m *SlotMachine) ScanOnceAsNested(context ExecutionContext) bool {
-	worker := context.(*executionContext).worker.w.StartNested(m)
-	defer worker.FinishNested(m)
+	worker := context.(*executionContext).worker.StartNested(m.machineState)
+	defer worker.FinishNested(m.machineState)
 
 	return m.ScanOnce(worker)
 }
@@ -121,7 +121,7 @@ func (m *SlotMachine) GetAdapter(adapterID AdapterID) ExecutionAdapter {
 	return m.adapters[adapterID]
 }
 
-func (m *SlotMachine) ScanOnce(worker *SlotWorker) (hasUpdates bool) {
+func (m *SlotMachine) ScanOnce(worker SlotWorker) (hasUpdates bool) {
 
 	scanTime := time.Now()
 
@@ -152,7 +152,7 @@ func (m *SlotMachine) ScanOnce(worker *SlotWorker) (hasUpdates bool) {
 	return true
 }
 
-func (m *SlotMachine) scanWorkingSlots(worker *SlotWorker, scanStartTime time.Time) {
+func (m *SlotMachine) scanWorkingSlots(worker SlotWorker, scanStartTime time.Time) {
 	for {
 		currentSlot := m.workingSlots.First()
 		if currentSlot == nil {
@@ -654,6 +654,10 @@ func (m *SlotMachine) growPollingSlots() {
 	}
 }
 
+func NewAdapterCallback(stepLink StepLink, callback AdapterCallbackFunc, cancel *syncrun.ChainedCancel) AdapterCallback {
+	return AdapterCallback{stepLink, callback, cancel}
+}
+
 type AdapterCallback struct {
 	stepLink StepLink
 	callback AdapterCallbackFunc
@@ -661,7 +665,7 @@ type AdapterCallback struct {
 }
 
 func (c AdapterCallback) IsZero() bool {
-	return c.stepLink.IsEmpty() || c.callback == nil
+	return c.stepLink.IsEmpty()
 }
 
 func (c AdapterCallback) IsCancelled() bool {

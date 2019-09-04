@@ -21,9 +21,6 @@ import (
 	"sync/atomic"
 )
 
-type DetachableFunc func(WorkerContext)
-type SlotWorkerFunc func(*SlotWorker)
-
 type slotWorkerState = uint32
 
 const (
@@ -33,18 +30,17 @@ const (
 	detachedWorker
 )
 
-type SlotWorker struct {
+type DetachableSlotWorker struct {
 	// we only apply mutex for the following fields to ensure that tryDetach() has proper visibility
-	onFinish *sync.WaitGroup
-	cond     *sync.Cond
-	state    slotWorkerState
+	cond  *sync.Cond
+	state slotWorkerState
 
 	mutex        sync.Mutex
 	outerSignal  <-chan struct{}
 	innerBreaker chan struct{}
 }
 
-func (p *SlotWorker) activate(outerSignal <-chan struct{}) {
+func (p *DetachableSlotWorker) activate(outerSignal <-chan struct{}) {
 	if outerSignal == nil {
 		panic("illegal value")
 	}
@@ -55,7 +51,7 @@ func (p *SlotWorker) activate(outerSignal <-chan struct{}) {
 	//	p.innerBreaker = make(chan struct{})
 }
 
-func (p *SlotWorker) DetachableCall(fn DetachableFunc) (wasDetached bool, err error) {
+func (p *DetachableSlotWorker) DetachableCall(fn DetachableFunc) (wasDetached bool, err error) {
 	if !atomic.CompareAndSwapUint32(&p.state, activeWorker, detachableCall|activeWorker) {
 		if atomic.LoadUint32(&p.state) == 0 {
 			panic("illegal state - not initialized")
@@ -86,11 +82,11 @@ func (p *SlotWorker) DetachableCall(fn DetachableFunc) (wasDetached bool, err er
 		p.endDetachableCall()
 	}()
 
-	fn(WorkerContext{p})
+	fn(detachableWorkerContext{p})
 	return true /* the worst case */, nil
 }
 
-func (p *SlotWorker) startDetachableCall() {
+func (p *DetachableSlotWorker) startDetachableCall() {
 	//p.mutex.Lock()
 	//if p.cond == nil {
 	//	p.cond = sync.NewCond(&p.mutex)
@@ -98,7 +94,7 @@ func (p *SlotWorker) startDetachableCall() {
 	//p.mutex.Unlock()
 }
 
-func (p *SlotWorker) endDetachableCall() {
+func (p *DetachableSlotWorker) endDetachableCall() {
 	p.mutex.Lock()
 	if p.innerBreaker == nil { // fast path
 		p.mutex.Unlock()
@@ -108,7 +104,7 @@ func (p *SlotWorker) endDetachableCall() {
 	close(p.innerBreaker)
 }
 
-func (p *SlotWorker) tryDetach() bool {
+func (p *DetachableSlotWorker) tryDetach() bool {
 
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
@@ -133,19 +129,20 @@ func (p *SlotWorker) tryDetach() bool {
 		}
 	}
 
-	switch {
-	case p.innerBreaker == nil:
-		p.innerBreaker = make(chan struct{})
-		p.outerSignal = breaker
-		go p.workerDetachedBreaker()
-	case p.outerSignal != breaker:
-		panic("illegal value")
-	}
-
-	return true
+	panic("not implemented")
+	//switch {
+	//case p.innerBreaker == nil:
+	//	p.innerBreaker = make(chan struct{})
+	//	p.outerSignal = breaker
+	//	go p.workerDetachedBreaker()
+	//case p.outerSignal != breaker:
+	//	panic("illegal value")
+	//}
+	//
+	//return true
 }
 
-func (p *SlotWorker) workerDetachedBreaker() {
+func (p *DetachableSlotWorker) workerDetachedBreaker() {
 outer:
 	for {
 		select {
@@ -171,76 +168,83 @@ outer:
 	}
 }
 
-func (p *SlotWorker) hasSignal() bool {
-	return atomic.LoadUint32(&p.state) >= signalledWorking
+func (p *DetachableSlotWorker) hasSignal() bool {
+	panic("not implemented")
+	//return atomic.LoadUint32(&p.state) >= signalledWorking
 }
 
-func (p *SlotWorker) setSignal() {
-outer:
-	for {
-		prev := atomic.LoadUint32(&p.state)
-		switch prev {
-		case readyToWork:
-			if atomic.CompareAndSwapUint32(&p.state, readyToWork, signalledFinished) {
-				return
-			}
-		case detachableWorking:
-			if atomic.CompareAndSwapUint32(&p.state, detachableWorking, signalledWorking) {
-				break outer
-			}
-		case signalledWorking, detachedWorking, signalledFinished:
-			return
-		default:
-			panic("illegal state")
-		}
-	}
-
-	p.mutex.Lock()
-	defer p.mutex.Unlock()
-	if p.cond != nil {
-		p.cond.Broadcast()
-	}
+func (p *DetachableSlotWorker) setSignal() {
+	panic("not implemented")
+	//outer:
+	//	for {
+	//		prev := atomic.LoadUint32(&p.state)
+	//		switch prev {
+	//		case readyToWork:
+	//			if atomic.CompareAndSwapUint32(&p.state, readyToWork, signalledFinished) {
+	//				return
+	//			}
+	//		case detachableWorking:
+	//			if atomic.CompareAndSwapUint32(&p.state, detachableWorking, signalledWorking) {
+	//				break outer
+	//			}
+	//		case signalledWorking, detachedWorking, signalledFinished:
+	//			return
+	//		default:
+	//			panic("illegal state")
+	//		}
+	//	}
+	//
+	//	p.mutex.Lock()
+	//	defer p.mutex.Unlock()
+	//	if p.cond != nil {
+	//		p.cond.Broadcast()
+	//	}
 }
 
-func (p *SlotWorker) getCond() (bool, *sync.Cond) {
-	p.mutex.Lock()
-	defer p.mutex.Unlock()
+func (p *DetachableSlotWorker) getCond() (bool, *sync.Cond) {
 
-	prev := atomic.LoadUint32(&p.state)
-	switch prev {
-	case detachableWorking, detachedWorking, signalledWorking:
-		break
-	default:
-		panic("illegal state")
-	}
-
-	if p.cond != nil {
-		p.cond = sync.NewCond(&p.mutex)
-	}
-
-	return p.cond
+	panic("not implemented")
+	//p.mutex.Lock()
+	//defer p.mutex.Unlock()
+	//
+	//prev := atomic.LoadUint32(&p.state)
+	//switch prev {
+	//case detachableWorking, detachedWorking, signalledWorking:
+	//	break
+	//default:
+	//	panic("illegal state")
+	//}
+	//
+	//if p.cond != nil {
+	//	p.cond = sync.NewCond(&p.mutex)
+	//}
+	//
+	//return p.cond
 }
 
-func (p *SlotWorker) StartNested(machine *SlotMachine) *SlotWorker {
+func (p *DetachableSlotWorker) StartNested(state SlotMachineState) SlotWorker {
 	return p
 }
 
-func (p *SlotWorker) FinishNested(machine *SlotMachine) {
+func (p *DetachableSlotWorker) FinishNested(state SlotMachineState) {
 }
 
-type WorkerContext struct {
-	w *SlotWorker
+type detachableWorkerContext struct {
+	w *DetachableSlotWorker
 }
 
-/* Unsafe! Can only be used in the same goroutine that has entered  */
-func (p WorkerContext) GetLoopLimit() uint32 {
+func (p detachableWorkerContext) StartNested(state SlotMachineState) SlotWorker {
+	return p.w
+}
+
+func (p detachableWorkerContext) GetLoopLimit() uint32 {
 	return 10
 }
 
-func (p WorkerContext) HasSignal() bool {
+func (p detachableWorkerContext) HasSignal() bool {
 	return p.w.hasSignal()
 }
 
-func (p WorkerContext) GetCond() (bool, *sync.Cond) {
+func (p detachableWorkerContext) GetCond() (bool, *sync.Cond) {
 	return p.w.getCond()
 }
