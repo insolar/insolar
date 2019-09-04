@@ -19,6 +19,7 @@
 package functest
 
 import (
+	"fmt"
 	"math/big"
 	"testing"
 	"time"
@@ -34,6 +35,7 @@ const times = 5
 func checkBalanceFewTimes(t *testing.T, caller *launchnet.User, ref string, expected *big.Int) {
 	for i := 0; i < times; i++ {
 		balance := getBalanceNoErr(t, caller, ref)
+		fmt.Println("----------------- " + balance.String() + ", " + expected.String())
 		if balance.String() == expected.String() {
 			return
 		}

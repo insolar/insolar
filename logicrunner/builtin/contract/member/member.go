@@ -315,7 +315,7 @@ func (m *Member) depositTransferCall(params map[string]interface{}) (interface{}
 	}
 	d := deposit.GetObject(*dRef)
 
-	return d.Transfer(amount, m.Wallet)
+	return d.Transfer(amount, m.GetReference())
 }
 
 func (m *Member) depositMigrationCall(params map[string]interface{}) (*DepositMigrationResult, error) {

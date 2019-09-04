@@ -232,34 +232,33 @@ func (d *Deposit) Transfer(amountStr string, memberRef insolar.Reference) (inter
 		return nil, fmt.Errorf("can't parse input amount")
 	}
 	zero, _ := new(big.Int).SetString("0", 10)
-	if amount.Cmp(zero) == -1 {
-		return nil, fmt.Errorf("amount must be larger then zero")
-	}
 
 	balance, ok := new(big.Int).SetString(d.Balance, 10)
 	if !ok {
 		return nil, fmt.Errorf("can't parse deposit balance")
 	}
+	if balance.Cmp(zero) == -1 {
+		return nil, fmt.Errorf("amount must be larger then zero")
+	}
+	err := d.canTransfer(amount)
+	if err != nil {
+		return nil, fmt.Errorf("can't start transfer: %s", err.Error())
+	}
+
 	newBalance, err := safemath.Sub(balance, amount)
 	if err != nil {
 		return nil, fmt.Errorf("not enough balance for transfer: %s", err.Error())
 	}
-
-	err = d.canTransfer(amount)
-	if err != nil {
-		return nil, fmt.Errorf("can't start transfer: %s", err.Error())
-	}
-	d.Balance = newBalance.String()
-	m := member.GetObject(memberRef)
-
-	acceptMemberErr := m.Accept(amountStr)
-	if acceptMemberErr == nil {
-		return nil, nil
-	}
-
 	newBalance, err = safemath.Add(balance, amount)
 	if err != nil {
 		return nil, fmt.Errorf("failed to add amount back to balance: %s", err.Error())
+	}
+	d.Balance = newBalance.String()
+
+	m := member.GetObject(memberRef)
+	acceptMemberErr := m.Accept(amountStr)
+	if acceptMemberErr == nil {
+		return nil, nil
 	}
 	d.Balance = newBalance.String()
 	return nil, fmt.Errorf("failed to transfer amount: %s", acceptMemberErr.Error())
