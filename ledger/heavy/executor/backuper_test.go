@@ -252,8 +252,11 @@ func TestBackuper_Backup_OldPulse(t *testing.T) {
 	cfg := makeBackuperConfig(t, t.Name(), os.TempDir())
 	defer clearData(t, cfg)
 
+	db := store.NewDBMock(t)
+	db.GetMock.Return([]byte{}, nil)
+
 	testPulse := insolar.GenesisPulse.PulseNumber
-	bm, err := executor.NewBackupMaker(context.Background(), nil, cfg, testPulse, nil)
+	bm, err := executor.NewBackupMaker(context.Background(), nil, cfg, testPulse, db)
 	require.NoError(t, err)
 
 	err = bm.MakeBackup(context.Background(), testPulse)
