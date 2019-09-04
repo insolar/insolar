@@ -90,7 +90,7 @@ func wrapCall(runner *Runner, allowedMethods map[string]bool, req *http.Request,
 			Code:    InvalidRequestError,
 			Message: InvalidRequestErrorMessage,
 			Data: requester.Data{
-				Trace:   strings.Split(err.Error(), ": "),
+				Trace:   []string{err.Error()},
 				TraceID: traceID,
 			},
 		}

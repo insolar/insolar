@@ -121,10 +121,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(insolar_bus_sent_bytes_sum{message_type=~\"$type\", instance=~\"$instance\"} / insolar_bus_sent_bytes_count{message_type=~\"$type\", instance=~\"$instance\"})",
+          "expr": "sum(rate(insolar_bus_sent_bytes_sum{message_type=~\"$type\", instance=~\"$instance\"}[1m])) / sum(rate(insolar_bus_sent_bytes_count{message_type=~\"$type\", instance=~\"$instance\"}[1m]))",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "avg size",
+          "legendFormat": "Size (bytes), avg by minute",
           "refId": "A"
         }
       ],
@@ -212,10 +212,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(insolar_bus_reply_timeouts{instance=~\"$instance\"})",
+          "expr": "sum(rate(insolar_bus_reply_timeouts{instance=~\"$instance\",message_type=~\"$type\"}[1m]))",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "",
+          "legendFormat": "per minute",
           "refId": "A"
         }
       ],
@@ -301,10 +301,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(insolar_bus_sent_retries{message_type=~\"$type\", instance=~\"$instance\"}) by (job)",
+          "expr": "sum(rate(insolar_bus_sent_retries{message_type=~\"$type\",instance=~\"$instance\"}[1m])) by (job)",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{ job }}",
+          "legendFormat": "{{ job }} / minute",
           "refId": "A"
         }
       ],
@@ -362,6 +362,7 @@
         "x": 0,
         "y": 8
       },
+      "hideTimeOverride": false,
       "id": 2,
       "legend": {
         "avg": false,
@@ -389,10 +390,11 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(insolar_bus_sent_total{message_type=~\"$type\", instance=~\"$instance\"})",
+          "expr": "sum(rate(insolar_bus_sent_total{instance=~\"$instance\",message_type=~\"$type\"}[1m]))",
           "format": "time_series",
+          "instant": false,
           "intervalFactor": 1,
-          "legendFormat": "{{ job }}",
+          "legendFormat": "rate per minute",
           "refId": "A"
         }
       ],
@@ -478,10 +480,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(insolar_bus_reply_total{message_type=~\"$type\", instance=~\"$instance\"})",
+          "expr": "sum(rate(insolar_bus_reply_total{instance=~\"$instance\",message_type=~\"$type\"}[1m]))",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{ job }}",
+          "legendFormat": "rate per minute",
           "refId": "A"
         }
       ],
@@ -651,6 +653,7 @@
       "yBucketSize": null
     }
   ],
+  "refresh": "10s",
   "schemaVersion": 19,
   "style": "dark",
   "tags": [],
@@ -659,6 +662,7 @@
       {
         "allValue": null,
         "current": {
+          "tags": [],
           "text": "All",
           "value": "$__all"
         },
@@ -771,7 +775,7 @@
     ]
   },
   "time": {
-    "from": "now-30m",
+    "from": "now-15m",
     "to": "now"
   },
   "timepicker": {
