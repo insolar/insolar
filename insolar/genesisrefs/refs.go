@@ -80,7 +80,7 @@ var (
 	ContractCostCenter = GenesisRef(insolar.GenesisNameCostCenter)
 	// ContractFeeMember is the fee member contract reference.
 	ContractFeeMember = GenesisRef(insolar.GenesisNameFeeMember)
-	// ContractFeeWallet is the commission wallet contract reference.
+	// ContractFeeWallet is the fee wallet contract reference.
 	ContractFeeWallet = GenesisRef(insolar.GenesisNameFeeWallet)
 	// ContractFeeAccount is the commission account contract reference.
 	ContractFeeAccount = GenesisRef(insolar.GenesisNameFeeAccount)

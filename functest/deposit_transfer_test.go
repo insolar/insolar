@@ -53,6 +53,7 @@ func TestDepositTransferToken(t *testing.T) {
 			Error: &foundation.Error{err.Error()},
 		}
 	}
+
 	_, err := waitUntilRequestProcessed(anon, time.Second*30, time.Second, 30)
 	require.NoError(t, err)
 	fmt.Println(" SUCCESS")

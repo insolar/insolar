@@ -653,10 +653,10 @@ func (r *Deposit) ConfirmAsImmutable(migrationDaemonRef string, txHash string, a
 }
 
 // Transfer is proxy generated method
-func (r *Deposit) Transfer(amountStr string, wallerRef insolar.Reference) (interface{}, error) {
+func (r *Deposit) Transfer(amountStr string, memberRef insolar.Reference) (interface{}, error) {
 	var args [2]interface{}
 	args[0] = amountStr
-	args[1] = wallerRef
+	args[1] = memberRef
 
 	var argsSerialized []byte
 
@@ -694,10 +694,10 @@ func (r *Deposit) Transfer(amountStr string, wallerRef insolar.Reference) (inter
 }
 
 // TransferNoWait is proxy generated method
-func (r *Deposit) TransferNoWait(amountStr string, wallerRef insolar.Reference) error {
+func (r *Deposit) TransferNoWait(amountStr string, memberRef insolar.Reference) error {
 	var args [2]interface{}
 	args[0] = amountStr
-	args[1] = wallerRef
+	args[1] = memberRef
 
 	var argsSerialized []byte
 
@@ -715,10 +715,10 @@ func (r *Deposit) TransferNoWait(amountStr string, wallerRef insolar.Reference) 
 }
 
 // TransferAsImmutable is proxy generated method
-func (r *Deposit) TransferAsImmutable(amountStr string, wallerRef insolar.Reference) (interface{}, error) {
+func (r *Deposit) TransferAsImmutable(amountStr string, memberRef insolar.Reference) (interface{}, error) {
 	var args [2]interface{}
 	args[0] = amountStr
-	args[1] = wallerRef
+	args[1] = memberRef
 
 	var argsSerialized []byte
 
