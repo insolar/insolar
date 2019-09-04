@@ -139,7 +139,7 @@ func (p *Pulsar) Send(ctx context.Context, pulseNumber insolar.PulseNumber) erro
 	p.lastPNMutex.Unlock()
 	logger.Infof("set latest pulse: %v", pulseForSending.PulseNumber)
 
-	stats.Record(ctx, statPulseGenerated.M(1))
+	stats.Record(ctx, statPulseGenerated.M(1), statCurrentPulse.M(int64(pulseNumber)))
 	return nil
 }
 
