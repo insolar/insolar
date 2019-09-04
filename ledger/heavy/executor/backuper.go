@@ -165,6 +165,34 @@ func saveLastBackupedInfo(ctx context.Context, to string, lastBackupedVersion ui
 	return errors.Wrapf(err, "can't move file %s", to)
 }
 
+type DBInitializedKey byte
+
+func (k DBInitializedKey) Scope() store.Scope {
+	return store.ScopeDBInit
+}
+
+func (k DBInitializedKey) ID() []byte {
+	return []byte{1}
+}
+
+func setDBInitialized(db store.DB) error {
+	var key DBInitializedKey
+	_, err := db.Get(key)
+	if err != nil && err != store.ErrNotFound {
+		return errors.Wrap(err, "failed to get db initialized key")
+	}
+	if err == store.ErrNotFound {
+		value, err := time.Now().MarshalBinary()
+		if err != nil {
+			panic("failed to marshal time: " + err.Error())
+		}
+		err = db.Set(key, value)
+		return errors.Wrap(err, "failed to set db initialized key")
+	}
+
+	return nil
+}
+
 func NewBackupMaker(ctx context.Context,
 	backuper store.Backuper,
 	config configuration.Ledger,
@@ -180,12 +208,18 @@ func NewBackupMaker(ctx context.Context,
 		if err := checkConfig(config); err != nil {
 			return nil, errors.Wrap(err, "bad config")
 		}
+
 		lastBackupedVersion, err = loadLastBackupedVersion(backupConfig.LastBackupInfoFile)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to loadLastBackupedVersion")
 		}
 		inslogger.FromContext(ctx).Infof("last backuped version loaded successfully from %s. lastBackupedVersion: %d",
 			backupConfig.LastBackupInfoFile, lastBackupedVersion)
+
+		if err := setDBInitialized(db); err != nil {
+			return nil, errors.Wrap(err, "failed to setDBInitialized")
+		}
+
 	} else {
 		inslogger.FromContext(ctx).Info("Backup is disabled")
 	}

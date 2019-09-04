@@ -13,7 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// +build slowtest
 
 package executor_test
 
@@ -83,9 +82,12 @@ func TestBackuper_BadConfig(t *testing.T) {
 	lastBackupedVersionFile := tmpDir + "/last_version.json"
 	addLastBackupFile(t, lastBackupedVersionFile, 200)
 
+	db := store.NewDBMock(t)
+	db.GetMock.Return([]byte{}, nil)
+
 	cfg.LastBackupInfoFile = lastBackupedVersionFile
 	storageConfig := configuration.Storage{DataDirectory: tmpDir}
-	_, err = executor.NewBackupMaker(context.Background(), nil, configuration.Ledger{Backup: cfg, Storage: storageConfig}, testPulse, nil)
+	_, err = executor.NewBackupMaker(context.Background(), nil, configuration.Ledger{Backup: cfg, Storage: storageConfig}, testPulse, db)
 	require.NoError(t, err)
 }
 

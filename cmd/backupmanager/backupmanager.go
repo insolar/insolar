@@ -113,20 +113,6 @@ func parseMergeParams() *cobra.Command {
 	return mergeCmd
 }
 
-type dbInitializedKey insolar.PulseNumber
-
-func (k dbInitializedKey) Scope() store.Scope {
-	return store.ScopeDBInit
-}
-
-func (k dbInitializedKey) ID() []byte {
-	bytes, err := time.Now().MarshalBinary()
-	if err != nil {
-		panic("failed to marshal time: " + err.Error())
-	}
-	return bytes
-}
-
 func isDBEmpty(bdb *badger.DB) error {
 	tableInfo := bdb.Tables(true)
 	if len(tableInfo) != 0 {
@@ -158,11 +144,15 @@ func createEmptyBadger(dbDir string) {
 	}
 	log.Info("DB is empty")
 
-	var key dbInitializedKey
+	value, err := time.Now().MarshalBinary()
+	if err != nil {
+		panic("failed to marshal time: " + err.Error())
+	}
+	var key executor.DBInitializedKey
 	fullKey := append(key.Scope().Bytes(), key.ID()...)
 
 	err = bdb.Update(func(txn *badger.Txn) error {
-		return txn.Set(fullKey, []byte{})
+		return txn.Set(fullKey, value)
 	})
 	if err != nil {
 		closeRawDB(bdb, err)
@@ -170,7 +160,7 @@ func createEmptyBadger(dbDir string) {
 	}
 
 	t := time.Time{}
-	err = t.UnmarshalBinary(key.ID())
+	err = t.UnmarshalBinary(value)
 	if err != nil {
 		closeRawDB(bdb, err)
 		return
