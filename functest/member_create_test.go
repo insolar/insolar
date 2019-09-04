@@ -20,6 +20,7 @@ package functest
 
 import (
 	"fmt"
+	"github.com/insolar/insolar/api/requester"
 	"testing"
 
 	"github.com/insolar/insolar/testutils/launchnet"
@@ -43,7 +44,9 @@ func TestMemberCreateWithBadKey(t *testing.T) {
 	member.PubKey = "fake"
 	_, err = signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, member, "member.create", nil)
 	require.Error(t, err)
-	require.Contains(t, err.Error(), fmt.Sprintf("problems with decoding. Key - %s", member.PubKey))
+	require.IsType(t, &requester.Error{}, err)
+	data := err.(*requester.Error).Data
+	require.Contains(t, data.Trace, fmt.Sprintf("problems with decoding. Key - %s", member.PubKey))
 }
 
 func TestMemberCreateWithSamePublicKey(t *testing.T) {
@@ -55,5 +58,7 @@ func TestMemberCreateWithSamePublicKey(t *testing.T) {
 
 	_, err = signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, member, "member.create", nil)
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "failed to set reference in public key shard: can't set reference because this key already exists")
+	require.IsType(t, &requester.Error{}, err)
+	data := err.(*requester.Error).Data
+	require.Contains(t, data.Trace, "can't set reference because this key already exists")
 }

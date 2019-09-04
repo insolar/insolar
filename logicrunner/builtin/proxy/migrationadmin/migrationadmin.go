@@ -26,7 +26,7 @@ type CheckDaemonResponse struct {
 	Status string `json:"status"`
 }
 type VestingParams struct {
-	Lokup       int64 `json:"lokupInPulses"`
+	Lockup      int64 `json:"lockupInPulses"`
 	Vesting     int64 `json:"vestingInPulses"`
 	VestingStep int64 `json:"vestingStepInPulses"`
 }

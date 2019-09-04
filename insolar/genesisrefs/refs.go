@@ -38,8 +38,12 @@ var PredefinedPrototypes = map[string]insolar.Reference{
 	insolar.GenesisNameRootWallet + PrototypeSuffix:            *GenerateProtoReferenceFromContractID(PrototypeType, insolar.GenesisNameWallet, 0),
 	insolar.GenesisNameRootAccount + PrototypeSuffix:           *GenerateProtoReferenceFromContractID(PrototypeType, insolar.GenesisNameAccount, 0),
 	insolar.GenesisNameCostCenter + PrototypeSuffix:            *GenerateProtoReferenceFromContractID(PrototypeType, insolar.GenesisNameCostCenter, 0),
+	insolar.GenesisNameFeeMember + PrototypeSuffix:             *GenerateProtoReferenceFromContractID(PrototypeType, insolar.GenesisNameMember, 0),
 	insolar.GenesisNameFeeWallet + PrototypeSuffix:             *GenerateProtoReferenceFromContractID(PrototypeType, insolar.GenesisNameWallet, 0),
 	insolar.GenesisNameFeeAccount + PrototypeSuffix:            *GenerateProtoReferenceFromContractID(PrototypeType, insolar.GenesisNameAccount, 0),
+	insolar.GenesisNameEnterpriseMember + PrototypeSuffix:      *GenerateProtoReferenceFromContractID(PrototypeType, insolar.GenesisNameMember, 0),
+	insolar.GenesisNameEnterpriseWallet + PrototypeSuffix:      *GenerateProtoReferenceFromContractID(PrototypeType, insolar.GenesisNameWallet, 0),
+	insolar.GenesisNameEnterpriseAccount + PrototypeSuffix:     *GenerateProtoReferenceFromContractID(PrototypeType, insolar.GenesisNameAccount, 0),
 	insolar.GenesisNameDeposit + PrototypeSuffix:               *GenerateProtoReferenceFromContractID(PrototypeType, insolar.GenesisNameDeposit, 0),
 	insolar.GenesisNameMember + PrototypeSuffix:                *GenerateProtoReferenceFromContractID(PrototypeType, insolar.GenesisNameMember, 0),
 	insolar.GenesisNameMigrationAdminMember + PrototypeSuffix:  *GenerateProtoReferenceFromContractID(PrototypeType, insolar.GenesisNameMember, 0),
@@ -74,8 +78,18 @@ var (
 	ContractDeposit = GenesisRef(insolar.GenesisNameDeposit)
 	// ContractCostCenter is the cost center contract reference.
 	ContractCostCenter = GenesisRef(insolar.GenesisNameCostCenter)
+	// ContractFeeMember is the fee member contract reference.
+	ContractFeeMember = GenesisRef(insolar.GenesisNameFeeMember)
+	// ContractFeeWallet is the commission wallet contract reference.
+	ContractFeeWallet = GenesisRef(insolar.GenesisNameFeeWallet)
 	// ContractFeeAccount is the commission account contract reference.
 	ContractFeeAccount = GenesisRef(insolar.GenesisNameFeeAccount)
+	// ContractEnterpriseMember is the enterprise member contract reference.
+	ContractEnterpriseMember = GenesisRef(insolar.GenesisNameEnterpriseMember)
+	// ContractEnterpriseWallet is the enterprise wallet contract reference.
+	ContractEnterpriseWallet = GenesisRef(insolar.GenesisNameEnterpriseWallet)
+	// ContractEnterpriseAccount is the enterprise account contract reference.
+	ContractEnterpriseAccount = GenesisRef(insolar.GenesisNameEnterpriseAccount)
 
 	// ContractMigrationDaemonMembers is the migration daemon members contracts references.
 	ContractMigrationDaemonMembers = func() (result [insolar.GenesisAmountMigrationDaemonMembers]insolar.Reference) {
@@ -93,6 +107,102 @@ var (
 		return
 	}()
 
+	// ContractNetworkIncentivesMembers is the network incentives members contracts references.
+	ContractNetworkIncentivesMembers = func() (result [insolar.GenesisAmountNetworkIncentivesMembers]insolar.Reference) {
+		for i, name := range insolar.GenesisNameNetworkIncentivesMembers {
+			result[i] = GenesisRef(name)
+		}
+		return
+	}()
+
+	// ContractApplicationIncentivesMembers is the application incentives members contracts references.
+	ContractApplicationIncentivesMembers = func() (result [insolar.GenesisAmountApplicationIncentivesMembers]insolar.Reference) {
+		for i, name := range insolar.GenesisNameApplicationIncentivesMembers {
+			result[i] = GenesisRef(name)
+		}
+		return
+	}()
+
+	// ContractFoundationMembers is the foundation members contracts references.
+	ContractFoundationMembers = func() (result [insolar.GenesisAmountFoundationMembers]insolar.Reference) {
+		for i, name := range insolar.GenesisNameFoundationMembers {
+			result[i] = GenesisRef(name)
+		}
+		return
+	}()
+
+	// ContractNetworkIncentivesWallets is the network incentives members contracts references.
+	ContractNetworkIncentivesWallets = func() (result [insolar.GenesisAmountNetworkIncentivesMembers]insolar.Reference) {
+		for i, name := range insolar.GenesisNameNetworkIncentivesWallets {
+			result[i] = GenesisRef(name)
+		}
+		return
+	}()
+
+	// ContractApplicationIncentivesWallets is the application incentives members contracts references.
+	ContractApplicationIncentivesWallets = func() (result [insolar.GenesisAmountApplicationIncentivesMembers]insolar.Reference) {
+		for i, name := range insolar.GenesisNameApplicationIncentivesWallets {
+			result[i] = GenesisRef(name)
+		}
+		return
+	}()
+
+	// ContractFoundationWallets is the foundation members contracts references.
+	ContractFoundationWallets = func() (result [insolar.GenesisAmountFoundationMembers]insolar.Reference) {
+		for i, name := range insolar.GenesisNameFoundationWallets {
+			result[i] = GenesisRef(name)
+		}
+		return
+	}()
+
+	// ContractNetworkIncentivesDeposits is the network incentives deposits contracts references.
+	ContractNetworkIncentivesDeposits = func() (result [insolar.GenesisAmountNetworkIncentivesMembers]insolar.Reference) {
+		for i, name := range insolar.GenesisNameNetworkIncentivesAccounts {
+			result[i] = GenesisRef(name)
+		}
+		return
+	}()
+
+	// ContractApplicationIncentivesDeposits is the application incentives deposits contracts references.
+	ContractApplicationIncentivesDeposits = func() (result [insolar.GenesisAmountApplicationIncentivesMembers]insolar.Reference) {
+		for i, name := range insolar.GenesisNameApplicationIncentivesAccounts {
+			result[i] = GenesisRef(name)
+		}
+		return
+	}()
+
+	// ContractFoundationDeposits is the foundation deposits contracts references.
+	ContractFoundationDeposits = func() (result [insolar.GenesisAmountFoundationMembers]insolar.Reference) {
+		for i, name := range insolar.GenesisNameFoundationAccounts {
+			result[i] = GenesisRef(name)
+		}
+		return
+	}()
+
+	// ContractNetworkIncentivesAccounts is the network incentives accounts contracts references.
+	ContractNetworkIncentivesAccounts = func() (result [insolar.GenesisAmountNetworkIncentivesMembers]insolar.Reference) {
+		for i, name := range insolar.GenesisNameNetworkIncentivesAccounts {
+			result[i] = GenesisRef(name)
+		}
+		return
+	}()
+
+	// ContractApplicationIncentivesAccounts is the application incentives accounts contracts references.
+	ContractApplicationIncentivesAccounts = func() (result [insolar.GenesisAmountApplicationIncentivesMembers]insolar.Reference) {
+		for i, name := range insolar.GenesisNameApplicationIncentivesAccounts {
+			result[i] = GenesisRef(name)
+		}
+		return
+	}()
+
+	// ContractFoundationAccounts is the foundation accounts contracts references.
+	ContractFoundationAccounts = func() (result [insolar.GenesisAmountFoundationMembers]insolar.Reference) {
+		for i, name := range insolar.GenesisNameFoundationAccounts {
+			result[i] = GenesisRef(name)
+		}
+		return
+	}()
+
 	// ContractPublicKeyShards is the public key shards contracts references.
 	ContractPublicKeyShards = func() (result [insolar.GenesisAmountPublicKeyShards]insolar.Reference) {
 		for i, name := range insolar.GenesisNamePublicKeyShards {
@@ -100,6 +210,7 @@ var (
 		}
 		return
 	}()
+
 	// ContractMigrationAddressShards is the migration address shards contracts references.
 	ContractMigrationAddressShards = func() (result [insolar.GenesisAmountMigrationAddressShards]insolar.Reference) {
 		for i, name := range insolar.GenesisNameMigrationAddressShards {

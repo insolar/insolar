@@ -20,6 +20,7 @@ package functest
 
 import (
 	"encoding/json"
+	"github.com/insolar/insolar/api/requester"
 	"testing"
 
 	"github.com/insolar/insolar/certificate"
@@ -70,8 +71,9 @@ func TestRegisterNodeNotExistRole(t *testing.T) {
 	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, &launchnet.Root,
 		"contract.registerNode", map[string]interface{}{"publicKey": TESTPUBLICKEY, "role": "some_not_fancy_role"})
 	require.Error(t, err)
-	require.Contains(t, err.Error(),
-		"role is not supported: some_not_fancy_role")
+	require.IsType(t, &requester.Error{}, err)
+	data := err.(*requester.Error).Data
+	require.Contains(t, data.Trace, "role is not supported")
 }
 
 func TestRegisterNodeByNoRoot(t *testing.T) {
@@ -80,7 +82,9 @@ func TestRegisterNodeByNoRoot(t *testing.T) {
 	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, member, "contract.registerNode",
 		map[string]interface{}{"publicKey": TESTPUBLICKEY, "role": testRole})
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "only root member can register node")
+	require.IsType(t, &requester.Error{}, err)
+	data := err.(*requester.Error).Data
+	require.Contains(t, data.Trace, "only root member can register node")
 }
 
 func TestReceiveNodeCert(t *testing.T) {

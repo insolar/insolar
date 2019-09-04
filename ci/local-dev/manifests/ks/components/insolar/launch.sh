@@ -13,10 +13,27 @@ then
 
     echo "generate members keys in dir: $CONFIG_DIR"
     insolar gen-key-pair > ${CONFIG_DIR}/root_member_keys.json
+    insolar gen-key-pair > ${CONFIG_DIR}/fee_member_keys.json
     insolar gen-key-pair > ${CONFIG_DIR}/migration_admin_member_keys.json
+    insolar gen-key-pair > ${CONFIG_DIR}/funds_and_enterprise_member_keys.json
     for (( b = 0; b < 10; b++ ))
     do
     insolar gen-key-pair > ${CONFIG_DIR}/migration_daemon_${b}_member_keys.json
+    done
+
+    for (( b = 0; b < 40; b++ ))
+    do
+    insolar gen-key-pair > ${CONFIG_DIR}/network_incentives_${b}_member_keys.json
+    done
+
+    for (( b = 0; b < 40; b++ ))
+    do
+    insolar gen-key-pair > ${CONFIG_DIR}/application_incentives_${b}_member_keys.json
+    done
+
+    for (( b = 0; b < 14; b++ ))
+    do
+    insolar gen-key-pair > ${CONFIG_DIR}/foundation_${b}_member_keys.json
     done
 
     echo "generate bootstrap files"
