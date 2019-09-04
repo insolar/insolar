@@ -263,7 +263,7 @@ func (d *Deposit) Transfer(amountStr string, memberRef insolar.Reference) (inter
 	if acceptMemberErr == nil {
 		return nil, nil
 	}
-	d.Balance = newBalance.String()
+	d.Balance = balance.String()
 	return nil, fmt.Errorf("failed to transfer amount: %s", acceptMemberErr.Error())
 }
 
