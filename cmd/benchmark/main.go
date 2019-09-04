@@ -17,7 +17,6 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -34,13 +33,15 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/pkg/errors"
+	"github.com/spf13/pflag"
+
 	"github.com/insolar/insolar/api/sdk"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/backoff"
 	"github.com/insolar/insolar/insolar/defaults"
 	"github.com/insolar/insolar/log"
-	"github.com/pkg/errors"
-	"github.com/spf13/pflag"
+	"github.com/insolar/insolar/testutils"
 )
 
 const defaultStdoutPath = "-"
@@ -50,7 +51,7 @@ const backoffAttemptsCount = 20
 
 var (
 	defaultMemberFileDir      = filepath.Join(defaults.ArtifactsDir(), "bench-members")
-	defaultDiscoveryNodesLogs = filepath.Join(defaults.LaunchnetDir(), "logs", "discoverynodes")
+	defaultDiscoveryNodesLogs = defaults.LaunchnetDiscoveryNodesLogsDir()
 
 	memberFilesDir     string
 	output             string
@@ -129,7 +130,7 @@ func startScenario(ctx context.Context, s scenario) {
 	writeToOutput(s.getOut(), fmt.Sprintf("Scenario %s: Start to transfer\n", s.getName()))
 
 	start := time.Now()
-	logReaderCloseChan := nodesErrorLogReader(s)
+	logReaderCloseChan := testutils.NodesErrorLogReader(discoveryNodesLogs, s.getOut())
 
 	s.start(ctx)
 	elapsed := time.Since(start)
@@ -150,81 +151,6 @@ func printResults(s scenario) {
 		),
 	)
 	s.printResult()
-}
-
-func nodesErrorLogReader(s scenario) chan struct{} {
-	closeChan := make(chan struct{})
-	wg := sync.WaitGroup{}
-
-	logs, err := getLogs(discoveryNodesLogs)
-	if err != nil {
-		writeToOutput(s.getOut(), fmt.Sprintf("Can't find node logs: %s \n", err))
-	}
-
-	wg.Add(len(logs))
-	for _, fileName := range logs {
-		fName := fileName // be careful using loops and values in parallel code
-		go readLogs(s, &wg, fName, closeChan)
-	}
-
-	wg.Wait()
-	return closeChan
-}
-
-func getLogs(root string) ([]string, error) {
-	var files []string
-	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		if !info.IsDir() && info.Name() == "output.log" {
-			files = append(files, path)
-		}
-		return nil
-	})
-	return files, err
-}
-
-func readLogs(s scenario, wg *sync.WaitGroup, fileName string, closeChan chan struct{}) {
-	defer wg.Done()
-
-	file, err := os.Open(fileName)
-	if err != nil {
-		writeToOutput(s.getOut(), fmt.Sprintln("Can't open log file ", fileName, ", error : ", err))
-	}
-	_, err = file.Seek(-1, io.SeekEnd)
-	if err != nil {
-		writeToOutput(s.getOut(), fmt.Sprintln("Can't seek through log file ", fileName, ", error : ", err))
-	}
-
-	// for making wg.Done()
-	go findErrorsInLog(s, fileName, file, closeChan)
-}
-
-func findErrorsInLog(s scenario, fName string, file io.ReadCloser, closeChan chan struct{}) {
-	defer file.Close()
-	reader := bufio.NewReader(file)
-
-	ok := true
-	for ok {
-		select {
-		case <-time.After(time.Millisecond):
-			line, err := reader.ReadString('\n')
-			if err != nil && err != io.EOF {
-				writeToOutput(s.getOut(), fmt.Sprintln("Can't read string from ", fName, ", error: ", err))
-				ok = false
-			}
-
-			if strings.Contains(line, " ERR ") {
-				writeToOutput(s.getOut(), fmt.Sprintln("!!! THERE ARE ERRORS IN ERROR LOG !!! ", fName))
-				ok = false
-			}
-		case <-closeChan:
-			ok = false
-		}
-
-	}
 }
 
 func addMigrationAddresses(insSDK *sdk.SDK) int32 {

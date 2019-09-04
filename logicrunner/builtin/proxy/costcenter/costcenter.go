@@ -80,9 +80,9 @@ func GetPrototype() insolar.Reference {
 }
 
 // New is constructor
-func New(feeMember insolar.Reference) *ContractConstructorHolder {
+func New(feeAccount insolar.Reference) *ContractConstructorHolder {
 	var args [1]interface{}
-	args[0] = feeMember
+	args[0] = feeAccount
 
 	var argsSerialized []byte
 	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
@@ -158,13 +158,13 @@ func (r *CostCenter) GetCode() (insolar.Reference, error) {
 }
 
 // GetFeeMember is proxy generated method
-func (r *CostCenter) GetFeeMemberAsMutable() (insolar.Reference, error) {
+func (r *CostCenter) GetFeeMemberAsMutable() (*insolar.Reference, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	ret := make([]interface{}, 2)
-	var ret0 insolar.Reference
+	var ret0 *insolar.Reference
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1
@@ -216,13 +216,13 @@ func (r *CostCenter) GetFeeMemberNoWait() error {
 }
 
 // GetFeeMemberAsImmutable is proxy generated method
-func (r *CostCenter) GetFeeMember() (insolar.Reference, error) {
+func (r *CostCenter) GetFeeMember() (*insolar.Reference, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	ret := make([]interface{}, 2)
-	var ret0 insolar.Reference
+	var ret0 *insolar.Reference
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1

@@ -15,8 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 10,
-  "iteration": 1567417306707,
+  "iteration": 1567522953918,
   "links": [],
   "panels": [
     {
@@ -241,14 +240,14 @@
           ]
         },
         "datasource": "prometheus",
-        "definition": "label_values(insolar_consensus_active_nodes_count, job)",
+        "definition": "label_values(insolar_consensus_active_nodes_count, role)",
         "hide": 0,
         "includeAll": true,
         "label": "Role",
         "multi": true,
         "name": "role",
         "options": [],
-        "query": "label_values(insolar_consensus_active_nodes_count, job)",
+        "query": "label_values(insolar_consensus_active_nodes_count, role)",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
@@ -291,7 +290,7 @@
     ]
   },
   "timezone": "",
-  "title": "Consensus",
+  "title": "INS-Consensus",
   "uid": "hP-O84umk",
-  "version": 3
+  "version": 1
 }
