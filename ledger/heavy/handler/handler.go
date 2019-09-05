@@ -213,7 +213,7 @@ func (h *Handler) handle(ctx context.Context, meta payload.Meta) error {
 	}
 	if err != nil {
 		instracer.AddError(span, err)
-		h.replyError(ctx, meta, err)
+		bus.ReplyError(ctx, h.Sender, meta, err)
 	}
 	return err
 }
@@ -263,17 +263,9 @@ func (h *Handler) handlePass(ctx context.Context, meta payload.Meta) error {
 		err = fmt.Errorf("no pass handler for message type %s", payloadType.String())
 	}
 	if err != nil {
-		h.replyError(ctx, originMeta, err)
+		bus.ReplyError(ctx, h.Sender, originMeta, err)
 	}
 	return err
-}
-
-func (h *Handler) replyError(ctx context.Context, replyTo payload.Meta, err error) {
-	errMsg, err := payload.NewMessage(&payload.Error{Text: err.Error()})
-	if err != nil {
-		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to reply error"))
-	}
-	go h.Sender.Reply(ctx, replyTo, errMsg)
 }
 
 func (h *Handler) Init(ctx context.Context) error {

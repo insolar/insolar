@@ -66,7 +66,7 @@ type Backup struct {
 	// TargetDirectory is directory where backups will be moved to
 	TargetDirectory string
 
-	// MetaInfoFile contains meta info about backup. It will be in json format
+	// MetaInfoFile contains meta info about current incremental backup. It will be in json format
 	MetaInfoFile string
 
 	// ConfirmFile: we wait this file being created when backup was saved on remote host
@@ -80,6 +80,10 @@ type Backup struct {
 
 	// BackupWaitPeriod - how much time we will wait for appearing of file ConfirmFile
 	BackupWaitPeriod uint
+
+	// LastBackupInfoFile contains info about last backup. Must exist and lie inside Storage.DataDirectory
+	// Is's a full path.
+	LastBackupInfoFile string
 
 	// PostProcessBackupCmd - command which will be invoked after creating backup. It might be used to
 	// send backup to remote node and do some external checks. If everything is ok, this command must create ConfirmFile
@@ -97,9 +101,10 @@ type Backup struct {
 
 // NewLedger creates new default Ledger configuration.
 func NewLedger() Ledger {
+	dataDir := "./data"
 	return Ledger{
 		Storage: Storage{
-			DataDirectory: "./data",
+			DataDirectory: dataDir,
 		},
 
 		JetSplit: JetSplit{
@@ -111,11 +116,13 @@ func NewLedger() Ledger {
 		LightChainLimit: 5, // 5 pulses
 
 		Backup: Backup{
-			Enabled:          false,
-			DirNameTemplate:  "pulse-%d",
-			BackupWaitPeriod: 60,
-			MetaInfoFile:     "meta.json",
-			BackupFile:       "incr.bkp",
+			Enabled:            false,
+			DirNameTemplate:    "pulse-%d",
+			BackupWaitPeriod:   60,
+			MetaInfoFile:       "meta.json",
+			BackupFile:         "incr.bkp",
+			ConfirmFile:        "BACKUPED",
+			LastBackupInfoFile: dataDir + "/last_backup_info.json",
 		},
 
 		CleanerDelay: 3, // 3 pulses

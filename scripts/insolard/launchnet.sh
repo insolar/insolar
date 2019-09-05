@@ -364,6 +364,14 @@ wait_for_complete_network_state()
     done
 }
 
+# used only when backup is switched on
+generate_last_backup_info()
+{
+    echo "generate file with last backup info: $DISCOVERY_NODES_DATA/1/data/last_backup_info.json"
+    mkdir -p $DISCOVERY_NODES_DATA/1/data
+    echo "{ \"LastBackupedVersion\": 0 }" > $DISCOVERY_NODES_DATA/1/data/last_backup_info.json
+}
+
 bootstrap()
 {
     echo "bootstrap start"
@@ -377,6 +385,7 @@ bootstrap()
     generate_root_member_keys
     generate_insolard_configs
     generate_migration_addresses
+    generate_last_backup_info
 
     echo "start bootstrap ..."
     CMD="${INSOLAR_CLI} bootstrap --config=${BOOTSTRAP_CONFIG} --certificates-out-dir=${DISCOVERY_NODES_DATA}certs"

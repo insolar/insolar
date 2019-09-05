@@ -135,7 +135,7 @@ func initComponents(
 
 	checkError(ctx, err, "failed to load VersionManager: ")
 
-	jc := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit)
+	jc := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit, *certManager.GetCertificate().GetNodeRef())
 	pulses := pulse.NewStorageMem()
 	b := bus.NewBus(cfg.Bus, publisher, pulses, jc, pcs)
 

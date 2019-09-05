@@ -44,67 +44,7 @@ func writePulsarConfgi(outputDir string) {
 }
 
 func writeBootstrapConfig(outputDir string) {
-	cfg := bootstrap.Config{
-		MembersKeysDir:         path.Join(baseDir(), "configs"),
-		DiscoveryKeysDir:       path.Join(baseDir(), "reusekeys", "discovery"),
-		NotDiscoveryKeysDir:    path.Join(baseDir(), "reusekeys", "nodes"),
-		KeysNameFormat:         "/node_%02d.json",
-		ReuseKeys:              false,
-		HeavyGenesisConfigFile: path.Join(baseDir(), "configs", "heavy_genesis.json"),
-		HeavyGenesisPluginsDir: path.Join(baseDir(), "plugins"),
-		RootBalance:            "0",
-		MDBalance:              "50000000000000000000",
-		VestingPeriodInPulses:  10,
-		VestingStepInPulses:    10,
-		LockupPeriodInPulses:   20,
-		MAShardCount:           10,
-		PKShardCount:           10,
-		Contracts: bootstrap.Contracts{
-			Insgocc: path.Join("bin", "insgocc"),
-			OutDir:  path.Join(baseDir(), "plugins"),
-		},
-		MajorityRule: 5,
-		MinRoles: struct {
-			Virtual       uint `mapstructure:"virtual"`
-			HeavyMaterial uint `mapstructure:"heavy_material"`
-			LightMaterial uint `mapstructure:"light_material"`
-		}{
-			Virtual:       2,
-			HeavyMaterial: 1,
-			LightMaterial: 2,
-		},
-		DiscoveryNodes: []bootstrap.Node{
-			{
-				Host:     "127.0.0.1:13831",
-				Role:     "heavy_material",
-				CertName: "discovery_cert_1.json",
-			},
-			{
-				Host:     "127.0.0.1:23832",
-				Role:     "virtual",
-				CertName: "discovery_cert_2.json",
-			},
-			{
-				Host:     "127.0.0.1:33833",
-				Role:     "light_material",
-				CertName: "discovery_cert_3.json",
-			},
-			{
-				Host:     "127.0.0.1:43834",
-				Role:     "virtual",
-				CertName: "discovery_cert_4.json",
-			},
-			{
-				Host:     "127.0.0.1:53835",
-				Role:     "light_material",
-				CertName: "discovery_cert_5.json",
-			},
-		},
-		Nodes:            nil,
-		PulsarPublicKeys: nil,
-	}
-
-	raw, err := yaml.Marshal(cfg)
+	raw, err := yaml.Marshal(bootstrap.Config{})
 	if err != nil {
 		panic(err)
 	}
