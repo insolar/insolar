@@ -22,6 +22,7 @@ type Log struct {
 	Adapter    string
 	Formatter  string
 	BufferSize int
+	Poller     string
 }
 
 // NewLog creates new default configuration for logging
@@ -31,5 +32,6 @@ func NewLog() Log {
 		Adapter:    "zerolog",
 		Formatter:  "json",
 		BufferSize: 10 * 1024 * 1024,
+		Poller:     "0.5s",
 	}
 }

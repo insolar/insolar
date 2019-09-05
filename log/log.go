@@ -21,6 +21,7 @@ import (
 	stdlog "log"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
@@ -103,6 +104,13 @@ var GlobalLogger = func() insolar.Logger {
 	if logger == nil {
 		panic("couldn't initialize global logger with default config")
 	}
+
+	go func() {
+		for {
+			time.Sleep(time.Now().Sub(time.Now().Truncate(time.Second)))
+			logger.Debug("Logger tick")
+		}
+	}()
 
 	return logger.WithCaller(true).WithSkipFrameCount(1).WithField("loginstance", "global_default")
 }()
