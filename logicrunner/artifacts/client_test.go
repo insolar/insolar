@@ -711,13 +711,6 @@ func (s *ArtifactsMangerClientSuite) TestRegisterOutgoingRequest() {
 	outgoing := (*record.OutgoingRequest)(incoming)
 	initialPulseNumber, pulseOffset := gen.PulseNumber(), insolar.PulseNumber(0)
 
-	_ = &payload.RequestInfo{
-		ObjectID:  *objectRef.GetLocal(),
-		RequestID: *requestRef.GetLocal(),
-		Request:   nil,
-		Result:    nil,
-	}
-
 	for name, test := range map[string]struct {
 		response []payload.Payload
 		check    func(*payload.RequestInfo, error)
@@ -834,18 +827,133 @@ func (s *ArtifactsMangerClientSuite) TestRegisterOutgoingRequest() {
 	}
 }
 
+func (s *ArtifactsMangerClientSuite) packVirtualRecord(objRecord record.Record) []byte {
+	virtual := record.Wrap(objRecord)
+
+	byteRecord, err := virtual.Marshal()
+	s.Require().NoError(err)
+	return byteRecord
+}
+
+func (s *ArtifactsMangerClientSuite) packMaterialRecord(objRecord record.Record) []byte {
+	material := record.Material{Virtual: record.Wrap(objRecord)}
+
+	byteRecord, err := material.Marshal()
+	s.Require().NoError(err)
+	return byteRecord
+}
+
 func (s *ArtifactsMangerClientSuite) TestGetCode() {
+	// Arrange
+	codeID := gen.ID()
+	codeRef := insolar.NewRecordReference(codeID)
 
+	code := []byte(testutils.RandomString())
+	machineType := insolar.MachineTypeGoPlugin
+	pulseObject := insolar.Pulse{PulseNumber: gen.PulseNumber()}
+
+	for name, test := range map[string]struct {
+		response payload.Payload
+		check    func(CodeDescriptor, error)
+	}{
+		"success": {
+			response: &payload.Code{
+				Record: s.packMaterialRecord(&record.Code{
+					Request:     *insolar.NewRecordReference(codeID),
+					Code:        code,
+					MachineType: machineType,
+				}),
+			},
+			check: func(descriptor CodeDescriptor, err error) {
+				s.NoError(err)
+				gotCode, err := descriptor.Code()
+				s.NoError(err)
+				s.Equal(code, gotCode)
+				s.Equal(descriptor.MachineType(), machineType)
+			},
+		},
+		"not found": {
+			response: &payload.Error{
+				Text: "failed to fetch record",
+				Code: payload.CodeNotFound,
+			},
+			check: func(desc CodeDescriptor, err error) {
+				s.Error(err)
+				s.Contains(err.Error(), "failed to fetch record")
+			},
+		},
+		"other error": {
+			response: &payload.Error{
+				Text: "some error",
+				Code: payload.CodeUnknown,
+			},
+			check: func(desc CodeDescriptor, err error) {
+				s.Error(err)
+				s.Contains(err.Error(), "some error")
+			},
+		},
+		"unknown payload": {
+			response: &payload.PendingFinished{},
+			check: func(desc CodeDescriptor, err error) {
+				s.Contains(err.Error(), "unexpected reply")
+			},
+		},
+		"unexpected message": {
+			response: &payload.Code{
+				Record: s.packMaterialRecord(&record.Result{}),
+			},
+			check: func(desc CodeDescriptor, err error) {
+				s.Contains(err.Error(), "unexpected record")
+			},
+		},
+	} {
+		s.Run(name, func() {
+			s.prepareContext()
+
+			s.pulseAccessor.LatestMock.Return(pulseObject, nil)
+
+			s.busSender.SendRoleMock.Set(
+				func(
+					p context.Context,
+					msg *wmMessage.Message,
+					role insolar.DynamicRole,
+					ref insolar.Reference,
+				) (
+					<-chan *wmMessage.Message,
+					func(),
+				) {
+					payloadGetCode := payload.GetCode{}
+					err := payloadGetCode.Unmarshal(msg.Payload)
+					s.Require().NoError(err)
+
+					s.Equal(codeID, payloadGetCode.CodeID)
+
+					ch := make(chan *wmMessage.Message, 10)
+
+					resMsg, err := payload.NewMessage(test.response)
+					s.Require().NoError(err)
+
+					meta := payload.Meta{
+						Payload: resMsg.Payload,
+					}
+					buf, err := meta.Marshal()
+					s.Require().NoError(err)
+
+					resMsg.Payload = buf
+
+					ch <- resMsg
+					return ch, func() { close(ch) }
+				},
+			)
+
+			reqInfo, err := s.amClient.GetCode(s.ctx, *codeRef)
+
+			test.check(reqInfo, err)
+		})
+	}
 }
 
-func (s *ArtifactsMangerClientSuite) TestGetObject() {
-
-}
-
-func (s *ArtifactsMangerClientSuite) TestActivatePrototype() {
-
-}
-
-func (s *ArtifactsMangerClientSuite) TestRegisterResult() {
-
-}
+func (s *ArtifactsMangerClientSuite) TestGetObject()         {}
+func (s *ArtifactsMangerClientSuite) TestActivatePrototype() {}
+func (s *ArtifactsMangerClientSuite) TestRegisterResult()    {}
+func (s *ArtifactsMangerClientSuite) TestLocalStorage()      {}
