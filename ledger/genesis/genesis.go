@@ -206,6 +206,8 @@ func (g *Genesis) Start(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	contracts.ContractMigrationAddressShardRefs(g.ContractsConfig.MAShardCount)
+	contracts.ContractPublicKeyShardRefs(g.ContractsConfig.PKShardCount)
 
 	inslog.Info("[genesis] store contracts")
 	err = g.storeContracts(ctx)
@@ -447,10 +449,10 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 	}
 
 	// Append states for shards
-	for i, name := range contracts.ContractPublicKeyNameShards(g.ContractsConfig.PKShardCount) {
+	for i, name := range genesisrefs.ContractPublicKeyNameShards(g.ContractsConfig.PKShardCount) {
 		states = append(states, contracts.GetPKShardGenesisContractState(name, membersByPKShards[i]))
 	}
-	for i, name := range contracts.ContractMigrationAddressNameShards(g.ContractsConfig.MAShardCount) {
+	for i, name := range genesisrefs.ContractMigrationAddressNameShards(g.ContractsConfig.MAShardCount) {
 		states = append(states, contracts.GetMigrationShardGenesisContractState(name, g.ContractsConfig.MigrationAddresses[i]))
 	}
 	for _, conf := range states {

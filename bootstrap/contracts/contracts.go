@@ -18,16 +18,15 @@ package contracts
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/genesisrefs"
-	"github.com/insolar/insolar/logicrunner/builtin/contract/migrationdaemon"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/account"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/costcenter"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/deposit"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/member"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/migrationadmin"
+	"github.com/insolar/insolar/logicrunner/builtin/contract/migrationdaemon"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/migrationshard"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/nodedomain"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/pkshard"
@@ -46,7 +45,7 @@ func RootDomain(pkShardCount int) insolar.GenesisContractState {
 		ParentName: "",
 
 		Memory: mustGenMemory(&rootdomain.RootDomain{
-			PublicKeyShards: ContractPublicKeyShards(pkShardCount),
+			PublicKeyShards: genesisrefs.ContractPublicKeyShards(pkShardCount),
 			NodeDomain:      genesisrefs.ContractNodeDomain,
 			PKShardCount:    pkShardCount,
 		}),
@@ -172,7 +171,7 @@ func GetMigrationAdminGenesisContractState(lockup int64, vesting int64, vestingS
 		Prototype:  insolar.GenesisNameMigrationAdmin,
 		ParentName: insolar.GenesisNameRootDomain,
 		Memory: mustGenMemory(&migrationadmin.MigrationAdmin{
-			MigrationAddressShards: ContractMigrationAddressShards(maShardCount),
+			MigrationAddressShards: genesisrefs.ContractMigrationAddressShards(maShardCount),
 			MigrationAdminMember:   genesisrefs.ContractMigrationAdminMember,
 			VestingParams: &migrationadmin.VestingParams{
 				Lockup:      lockup,
@@ -232,42 +231,14 @@ func mustGenMemory(data interface{}) []byte {
 	return b
 }
 
-// ContractPublicKeyNameShards is the public key shards contracts names.
-func ContractPublicKeyNameShards(pkShardCount int) []string {
-	result := make([]string, pkShardCount)
-	for i := 0; i < pkShardCount; i++ {
-		name := insolar.GenesisNamePKShard + strconv.Itoa(i)
-		result[i] = name
-	}
-	return result
-}
-
-// ContractPublicKeyShards is the public key shards contracts references.
-func ContractPublicKeyShards(pkShardCount int) []insolar.Reference {
-	result := make([]insolar.Reference, pkShardCount)
-	for i, name := range ContractPublicKeyNameShards(pkShardCount) {
-		result[i] = genesisrefs.GenesisRef(name)
+func ContractPublicKeyShardRefs(pkShardCount int) {
+	for _, name := range genesisrefs.ContractPublicKeyNameShards(pkShardCount) {
 		genesisrefs.PredefinedPrototypes[name+genesisrefs.PrototypeSuffix] = *pkProxy.PrototypeReference
 	}
-	return result
 }
 
-// ContractMigrationAddressNameShards is the migration address shards contracts names.
-func ContractMigrationAddressNameShards(maShardCount int) []string {
-	result := make([]string, maShardCount)
-	for i := 0; i < maShardCount; i++ {
-		name := insolar.GenesisNameMigrationShard + strconv.Itoa(i)
-		result[i] = name
-	}
-	return result
-}
-
-// ContractMigrationAddressShards is the migration address shards contracts references.
-func ContractMigrationAddressShards(maShardCount int) []insolar.Reference {
-	result := make([]insolar.Reference, maShardCount)
-	for i, name := range ContractMigrationAddressNameShards(maShardCount) {
-		result[i] = genesisrefs.GenesisRef(name)
+func ContractMigrationAddressShardRefs(maShardCount int) {
+	for _, name := range genesisrefs.ContractMigrationAddressNameShards(maShardCount) {
 		genesisrefs.PredefinedPrototypes[name+genesisrefs.PrototypeSuffix] = *maProxy.PrototypeReference
 	}
-	return result
 }
