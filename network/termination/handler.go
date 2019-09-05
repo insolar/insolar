@@ -52,9 +52,10 @@ package termination
 
 import (
 	"context"
+	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/storage"
 	"sync"
 
-	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 
 	"github.com/insolar/insolar/insolar"
@@ -62,14 +63,14 @@ import (
 
 type terminationHandler struct {
 	sync.Mutex
-	done        chan insolar.LeaveApproved
+	done        chan struct{}
 	terminating bool
 
-	Leaver        insolar.Leaver `inject:""`
-	PulseAccessor pulse.Accessor `inject:""`
+	Leaver        insolar.Leaver        `inject:""`
+	PulseAccessor storage.PulseAccessor `inject:""`
 }
 
-func NewHandler(l insolar.Leaver) insolar.TerminationHandler {
+func NewHandler(l insolar.Leaver) network.TerminationHandler {
 	return &terminationHandler{Leaver: l}
 }
 
@@ -79,19 +80,19 @@ func (t *terminationHandler) Leave(ctx context.Context, leaveAfterPulses insolar
 	<-doneChan
 }
 
-func (t *terminationHandler) leave(ctx context.Context, leaveAfterPulses insolar.PulseNumber) chan insolar.LeaveApproved {
+func (t *terminationHandler) leave(ctx context.Context, leaveAfterPulses insolar.PulseNumber) chan struct{} {
 	t.Lock()
 	defer t.Unlock()
 
 	if !t.terminating {
 		t.terminating = true
-		t.done = make(chan insolar.LeaveApproved, 1)
+		t.done = make(chan struct{}, 1)
 
 		if leaveAfterPulses == 0 {
 			inslogger.FromContext(ctx).Debug("terminationHandler.Leave() with 0")
 			t.Leaver.Leave(ctx, 0)
 		} else {
-			pulse, err := t.PulseAccessor.Latest(ctx)
+			pulse, err := t.PulseAccessor.GetLatestPulse(ctx)
 			if err != nil {
 				inslogger.FromContext(ctx).Panicf("smth goes wrong. There is no pulse in the storage. err - %v", err)
 			}

@@ -56,7 +56,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/pulse"
+	mock "github.com/insolar/insolar/testutils/network"
 
 	"github.com/gojuno/minimock"
 	"github.com/stretchr/testify/suite"
@@ -72,7 +72,7 @@ type CommonTestSuite struct {
 	ctx           context.Context
 	handler       *terminationHandler
 	leaver        *testutils.LeaverMock
-	pulseAccessor *pulse.AccessorMock
+	pulseAccessor *mock.PulseAccessorMock
 }
 
 func TestBasics(t *testing.T) {
@@ -83,7 +83,7 @@ func (s *CommonTestSuite) BeforeTest(suiteName, testName string) {
 	s.mc = minimock.NewController(s.T())
 	s.ctx = inslogger.TestContext(s.T())
 	s.leaver = testutils.NewLeaverMock(s.T())
-	s.pulseAccessor = pulse.NewAccessorMock(s.T())
+	s.pulseAccessor = mock.NewPulseAccessorMock(s.T())
 	s.handler = &terminationHandler{Leaver: s.leaver, PulseAccessor: s.pulseAccessor}
 
 }
@@ -124,7 +124,7 @@ func (s *LeaveTestSuite) TestLeaveEta() {
 	pulseDelta := testPulse.NextPulseNumber - testPulse.PulseNumber
 	leaveAfter := insolar.PulseNumber(5)
 
-	s.pulseAccessor.LatestMock.Return(*testPulse, nil)
+	s.pulseAccessor.GetLatestPulseMock.Return(*testPulse, nil)
 	s.leaver.LeaveMock.Expect(s.ctx, mockPulseNumber+leaveAfter*pulseDelta)
 	s.handler.leave(s.ctx, leaveAfter)
 
@@ -141,7 +141,7 @@ type OnLeaveApprovedTestSuite struct {
 
 func (s *OnLeaveApprovedTestSuite) TestBasicUsage() {
 	s.handler.terminating = true
-	s.handler.done = make(chan insolar.LeaveApproved, 1)
+	s.handler.done = make(chan struct{}, 1)
 
 	s.handler.OnLeaveApproved(s.ctx)
 

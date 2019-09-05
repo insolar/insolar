@@ -245,3 +245,16 @@ type Bootstrapper interface {
 	HandleUpdateSchedule(context.Context, Packet) (Packet, error)
 	HandleReconnect(context.Context, Packet) (Packet, error)
 }
+
+//go:generate minimock -i github.com/insolar/insolar/network.TerminationHandler -o ../testutils -s _mock.go -g
+
+// TerminationHandler handles such node events as graceful stop, abort, etc.
+type TerminationHandler interface {
+	// Leave locks until network accept leaving claim
+	Leave(context.Context, insolar.PulseNumber)
+	OnLeaveApproved(context.Context)
+	// Abort forces to stop all node components
+	Abort(reason string)
+	// Terminating is an accessor
+	Terminating() bool
+}

@@ -9,10 +9,10 @@ import (
 	mm_time "time"
 
 	"github.com/gojuno/minimock"
-	mm_insolar "github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar"
 )
 
-// TerminationHandlerMock implements insolar.TerminationHandler
+// TerminationHandlerMock implements network.TerminationHandler
 type TerminationHandlerMock struct {
 	t minimock.Tester
 
@@ -22,8 +22,8 @@ type TerminationHandlerMock struct {
 	beforeAbortCounter uint64
 	AbortMock          mTerminationHandlerMockAbort
 
-	funcLeave          func(ctx context.Context, p1 mm_insolar.PulseNumber)
-	inspectFuncLeave   func(ctx context.Context, p1 mm_insolar.PulseNumber)
+	funcLeave          func(ctx context.Context, p1 insolar.PulseNumber)
+	inspectFuncLeave   func(ctx context.Context, p1 insolar.PulseNumber)
 	afterLeaveCounter  uint64
 	beforeLeaveCounter uint64
 	LeaveMock          mTerminationHandlerMockLeave
@@ -41,7 +41,7 @@ type TerminationHandlerMock struct {
 	TerminatingMock          mTerminationHandlerMockTerminating
 }
 
-// NewTerminationHandlerMock returns a mock for insolar.TerminationHandler
+// NewTerminationHandlerMock returns a mock for network.TerminationHandler
 func NewTerminationHandlerMock(t minimock.Tester) *TerminationHandlerMock {
 	m := &TerminationHandlerMock{t: t}
 	if controller, ok := t.(minimock.MockController); ok {
@@ -142,7 +142,7 @@ func (mmAbort *mTerminationHandlerMockAbort) Set(f func(reason string)) *Termina
 	return mmAbort.mock
 }
 
-// Abort implements insolar.TerminationHandler
+// Abort implements network.TerminationHandler
 func (mmAbort *TerminationHandlerMock) Abort(reason string) {
 	mm_atomic.AddUint64(&mmAbort.beforeAbortCounter, 1)
 	defer mm_atomic.AddUint64(&mmAbort.afterAbortCounter, 1)
@@ -269,11 +269,11 @@ type TerminationHandlerMockLeaveExpectation struct {
 // TerminationHandlerMockLeaveParams contains parameters of the TerminationHandler.Leave
 type TerminationHandlerMockLeaveParams struct {
 	ctx context.Context
-	p1  mm_insolar.PulseNumber
+	p1  insolar.PulseNumber
 }
 
 // Expect sets up expected params for TerminationHandler.Leave
-func (mmLeave *mTerminationHandlerMockLeave) Expect(ctx context.Context, p1 mm_insolar.PulseNumber) *mTerminationHandlerMockLeave {
+func (mmLeave *mTerminationHandlerMockLeave) Expect(ctx context.Context, p1 insolar.PulseNumber) *mTerminationHandlerMockLeave {
 	if mmLeave.mock.funcLeave != nil {
 		mmLeave.mock.t.Fatalf("TerminationHandlerMock.Leave mock is already set by Set")
 	}
@@ -293,7 +293,7 @@ func (mmLeave *mTerminationHandlerMockLeave) Expect(ctx context.Context, p1 mm_i
 }
 
 // Inspect accepts an inspector function that has same arguments as the TerminationHandler.Leave
-func (mmLeave *mTerminationHandlerMockLeave) Inspect(f func(ctx context.Context, p1 mm_insolar.PulseNumber)) *mTerminationHandlerMockLeave {
+func (mmLeave *mTerminationHandlerMockLeave) Inspect(f func(ctx context.Context, p1 insolar.PulseNumber)) *mTerminationHandlerMockLeave {
 	if mmLeave.mock.inspectFuncLeave != nil {
 		mmLeave.mock.t.Fatalf("Inspect function is already set for TerminationHandlerMock.Leave")
 	}
@@ -317,7 +317,7 @@ func (mmLeave *mTerminationHandlerMockLeave) Return() *TerminationHandlerMock {
 }
 
 //Set uses given function f to mock the TerminationHandler.Leave method
-func (mmLeave *mTerminationHandlerMockLeave) Set(f func(ctx context.Context, p1 mm_insolar.PulseNumber)) *TerminationHandlerMock {
+func (mmLeave *mTerminationHandlerMockLeave) Set(f func(ctx context.Context, p1 insolar.PulseNumber)) *TerminationHandlerMock {
 	if mmLeave.defaultExpectation != nil {
 		mmLeave.mock.t.Fatalf("Default expectation is already set for the TerminationHandler.Leave method")
 	}
@@ -330,8 +330,8 @@ func (mmLeave *mTerminationHandlerMockLeave) Set(f func(ctx context.Context, p1 
 	return mmLeave.mock
 }
 
-// Leave implements insolar.TerminationHandler
-func (mmLeave *TerminationHandlerMock) Leave(ctx context.Context, p1 mm_insolar.PulseNumber) {
+// Leave implements network.TerminationHandler
+func (mmLeave *TerminationHandlerMock) Leave(ctx context.Context, p1 insolar.PulseNumber) {
 	mm_atomic.AddUint64(&mmLeave.beforeLeaveCounter, 1)
 	defer mm_atomic.AddUint64(&mmLeave.afterLeaveCounter, 1)
 
@@ -517,7 +517,7 @@ func (mmOnLeaveApproved *mTerminationHandlerMockOnLeaveApproved) Set(f func(ctx 
 	return mmOnLeaveApproved.mock
 }
 
-// OnLeaveApproved implements insolar.TerminationHandler
+// OnLeaveApproved implements network.TerminationHandler
 func (mmOnLeaveApproved *TerminationHandlerMock) OnLeaveApproved(ctx context.Context) {
 	mm_atomic.AddUint64(&mmOnLeaveApproved.beforeOnLeaveApprovedCounter, 1)
 	defer mm_atomic.AddUint64(&mmOnLeaveApproved.afterOnLeaveApprovedCounter, 1)
@@ -694,7 +694,7 @@ func (mmTerminating *mTerminationHandlerMockTerminating) Set(f func() (b1 bool))
 	return mmTerminating.mock
 }
 
-// Terminating implements insolar.TerminationHandler
+// Terminating implements network.TerminationHandler
 func (mmTerminating *TerminationHandlerMock) Terminating() (b1 bool) {
 	mm_atomic.AddUint64(&mmTerminating.beforeTerminatingCounter, 1)
 	defer mm_atomic.AddUint64(&mmTerminating.afterTerminatingCounter, 1)
