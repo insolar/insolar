@@ -66,7 +66,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/insolar/gen"
-	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/node"
 
@@ -585,10 +584,6 @@ func (s *testSuite) preInitNode(node *networkNode) {
 
 	realKeeper, err := nodenetwork.NewNodeNetwork(cfg.Host.Transport, certManager.GetCertificate())
 	require.NoError(s.t, err)
-	terminationHandler := testutils.NewTerminationHandlerMock(s.t)
-	terminationHandler.LeaveMock.Set(func(p context.Context, p1 insolar.PulseNumber) {})
-	terminationHandler.OnLeaveApprovedMock.Set(func(p context.Context) {})
-	terminationHandler.AbortMock.Set(func(reason string) { log.Error(reason) })
 
 	keyProc := platformpolicy.NewKeyProcessor()
 	pubMock := &PublisherMock{}
@@ -613,11 +608,9 @@ func (s *testSuite) preInitNode(node *networkNode) {
 		keystore.NewInplaceKeyStore(node.privateKey),
 		serviceNetwork,
 		keyProc,
-		terminationHandler,
 		testutils.NewContractRequesterMock(s.t),
 	)
 	node.serviceNetwork = serviceNetwork
-	node.terminationHandler = terminationHandler
 
 	nodeContext, _ := inslogger.WithFields(s.ctx, map[string]interface{}{
 		"node_id":      realKeeper.GetOrigin().ShortID(),
