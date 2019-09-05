@@ -167,6 +167,11 @@ func (nk *nodekeeper) Sync(ctx context.Context, number insolar.PulseNumber, node
 	nk.syncNodes = nodes
 }
 
+func (nk *nodekeeper) updateOrigin(power insolar.Power, state insolar.NodeState) {
+	nk.origin.(node.MutableNode).SetPower(power)
+	nk.origin.(node.MutableNode).SetState(state)
+}
+
 func (nk *nodekeeper) MoveSyncToActive(ctx context.Context, number insolar.PulseNumber) {
 	nk.syncLock.Lock()
 	defer nk.syncLock.Unlock()
@@ -184,8 +189,8 @@ func (nk *nodekeeper) MoveSyncToActive(ctx context.Context, number insolar.Pulse
 		len(accessor.GetActiveNodes()),
 	)
 
-	// update origin
-	nk.origin = accessor.GetActiveNode(nk.origin.ID())
+	o := accessor.GetActiveNode(nk.origin.ID())
+	nk.updateOrigin(o.GetPower(), o.GetState())
 
 	stats.Record(ctx, network.ActiveNodes.M(int64(len(accessor.GetActiveNodes()))))
 }
