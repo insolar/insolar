@@ -48,55 +48,27 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package future
+package pulsenetwork
 
 import (
-	"context"
-
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/metrics"
-	"github.com/insolar/insolar/network/hostnetwork/packet"
+	"go.opencensus.io/stats"
+	"go.opencensus.io/stats/view"
 )
 
-type packetHandler struct {
-	futureManager Manager
-}
+var (
+	statSendPulseErrorsCount = stats.Int64("pulsar_sending_pulse_errors", "count of errors while sending pulse", stats.UnitDimensionless)
+)
 
-func NewPacketHandler(futureManager Manager) PacketHandler {
-	return &packetHandler{
-		futureManager: futureManager,
+func init() {
+	err := view.Register(
+		&view.View{
+			Name:        statSendPulseErrorsCount.Name(),
+			Description: statSendPulseErrorsCount.Description(),
+			Measure:     statSendPulseErrorsCount,
+			Aggregation: view.Sum(),
+		},
+	)
+	if err != nil {
+		panic(err)
 	}
-}
-
-func (ph *packetHandler) Handle(ctx context.Context, response *packet.ReceivedPacket) {
-	metrics.NetworkPacketReceivedTotal.WithLabelValues(response.GetType().String()).Inc()
-	if !response.IsResponse() {
-		return
-	}
-
-	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
-		"type":       response.Type,
-		"request_id": response.RequestID,
-	})
-	logger.Debugf("[ processResponse ] Processing %s response from host %s; RequestID = %d",
-		response.GetType(), response.Sender, response.RequestID)
-
-	future := ph.futureManager.Get(response.Packet)
-	if future != nil {
-		if shouldProcessPacket(future, response) {
-			logger.Debugf("[ processResponse ] Processing future RequestID = %d", future.ID())
-			future.SetResponse(response)
-			logger.Debugf("[ processResponse ] Finished processing future RequestID = %d", future.ID())
-		} else {
-			logger.Debugf("[ processResponse ] Canceling future RequestID = %d", future.ID())
-			future.Cancel()
-		}
-	}
-}
-
-func shouldProcessPacket(future Future, p *packet.ReceivedPacket) bool {
-	typesShouldBeEqual := p.GetType() == future.Request().GetType()
-	responseIsForRightSender := future.Receiver().Equal(*p.Sender)
-
-	return typesShouldBeEqual && responseIsForRightSender
 }
