@@ -59,6 +59,7 @@ func (s *StateMachine1) State1(ctx smachine.ExecutionContext) smachine.StateUpda
 
 	s.serviceA.PrepareAsync(ctx, func(svc ServiceA) smachine.AsyncResultFunc {
 		result := svc.DoSomething("y")
+
 		return func(ctx smachine.AsyncResultContext) {
 			fmt.Printf("state1 async: %d %v\n", ctx.GetSlotID(), result)
 			s.result = result

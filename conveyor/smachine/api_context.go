@@ -30,6 +30,7 @@ type BroadcastReceiveFunc func(ctx AsyncResultContext, payload interface{}) bool
 type BasicContext interface {
 	GetSlotID() SlotID
 	GetParent() SlotLink
+	//GetContext()
 }
 
 type ConstructionContext interface {
@@ -128,82 +129,4 @@ type AsyncResultContext interface {
 	BasicContext
 
 	WakeUp()
-}
-
-const UnknownSlotID SlotID = 0
-
-type SlotID uint32
-
-func (id SlotID) IsUnknown() bool {
-	return id == UnknownSlotID
-}
-
-type StepFlags uint16
-
-const (
-	StepResetAllFlags StepFlags = 1 << iota
-	StepIgnoreAsyncWakeup
-	StepForceAsyncWakeup
-	StepIgnoreAsyncPanic
-	//StepAllowAsyncJump
-)
-
-type StateUpdate struct {
-	marker  *struct{}
-	link    SlotLink
-	param   interface{}
-	step    SlotStep
-	updType uint16
-}
-
-func (u StateUpdate) IsZero() bool {
-	return u.marker == nil && u.updType == 0
-}
-
-func NewStateUpdate(marker *struct{}, updType uint16, slotStep SlotStep, param interface{}) StateUpdate {
-	return StateUpdate{
-		marker:  marker,
-		param:   param,
-		step:    slotStep,
-		updType: updType,
-	}
-}
-
-func NewStateUpdateLink(marker *struct{}, updType uint16, link SlotLink, slotStep SlotStep, param interface{}) StateUpdate {
-	return StateUpdate{
-		marker:  marker,
-		param:   param,
-		link:    link,
-		step:    slotStep,
-		updType: updType,
-	}
-}
-
-func EnsureUpdateContext(p *struct{}, u StateUpdate) StateUpdate {
-	if u.marker != p {
-		panic("illegal value")
-	}
-	return u
-}
-
-func ExtractStateUpdate(u StateUpdate) (updType uint16, slotStep SlotStep, param interface{}) {
-	return u.updType, u.step, u.param
-}
-
-func ExtractStateUpdateParam(u StateUpdate) (updType uint16, param interface{}) {
-	return u.updType, u.param
-}
-
-type SlotStep struct {
-	Transition StateFunc
-	Migration  MigrateFunc
-	StepFlags  StepFlags
-}
-
-func (s *SlotStep) IsZero() bool {
-	return s.Transition == nil && s.StepFlags == 0 && s.Migration == nil
-}
-
-func (s *SlotStep) HasTransition() bool {
-	return s.Transition != nil
 }

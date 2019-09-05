@@ -85,6 +85,10 @@ func (m *SlotMachine) OccupiedSlotCount() int {
 	return (n-1)*int(m.config.SlotPageSize) + int(m.slotPgPos) - m.unusedSlots.Count()
 }
 
+func (m *SlotMachine) AllocatedSlotCount() int {
+	return len(m.slots) * int(m.config.SlotPageSize)
+}
+
 func (m *SlotMachine) IsEmpty() bool {
 	return m.syncQueue.IsZero()
 }

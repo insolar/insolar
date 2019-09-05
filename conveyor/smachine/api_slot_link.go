@@ -16,8 +16,20 @@
 
 package smachine
 
+const UnknownSlotID SlotID = 0
+
+type SlotID uint32
+
+func (id SlotID) IsUnknown() bool {
+	return id == UnknownSlotID
+}
+
 func NoLink() SlotLink {
 	return SlotLink{}
+}
+
+func NoStepLink() StepLink {
+	return StepLink{}
 }
 
 type SlotLink struct {
