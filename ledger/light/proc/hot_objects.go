@@ -190,6 +190,9 @@ func (p *HotObjects) notifyPending(
 	lifeline record.Lifeline,
 	notifyLimit insolar.PulseNumber,
 ) {
+
+	return
+
 	// No pending requests.
 	if lifeline.EarliestOpenRequest == nil {
 		return
