@@ -17,6 +17,7 @@
 package smachine
 
 import (
+	"context"
 	"time"
 )
 
@@ -30,11 +31,12 @@ type BroadcastReceiveFunc func(ctx AsyncResultContext, payload interface{}) bool
 type BasicContext interface {
 	GetSlotID() SlotID
 	GetParent() SlotLink
-	//GetContext()
+	GetContext() context.Context
 }
 
 type ConstructionContext interface {
 	BasicContext
+	SetContext(context.Context)
 }
 
 type stepContext interface {
@@ -88,7 +90,7 @@ type ExecutionContext interface {
 	SyncOneStep(key string, weight int32, broadcastFn BroadcastReceiveFunc) Syncronizer
 	//SyncManySteps(key string)
 
-	NewChild(CreateFunc) SlotLink
+	NewChild(context.Context, CreateFunc) SlotLink
 
 	//BargeIn(BargeInValidator) BargeInContext
 

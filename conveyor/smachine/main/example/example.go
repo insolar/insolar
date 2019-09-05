@@ -102,7 +102,7 @@ func (s *StateMachine1) State3(ctx smachine.ExecutionContext) smachine.StateUpda
 		//return ctx.Repeat(0)
 		return ctx.Poll().ThenRepeat()
 	}
-	ctx.NewChild(func(ctx smachine.ConstructionContext) smachine.StateMachine {
+	ctx.NewChild(ctx.GetContext(), func(ctx smachine.ConstructionContext) smachine.StateMachine {
 		return &StateMachine1{}
 	})
 

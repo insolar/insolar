@@ -17,6 +17,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"github.com/insolar/insolar/conveyor/smachine"
 	"github.com/insolar/insolar/conveyor/smachine/main/example"
@@ -31,7 +32,7 @@ func main() {
 
 	example.SetInjectServiceAdapterA(&implA{}, &sm)
 
-	sm.AddNew(smachine.NoLink(), &example.StateMachine1{})
+	sm.AddNew(context.Background(), smachine.NoLink(), &example.StateMachine1{})
 
 	worker := smachine.NewSimpleSlotWorker(make(<-chan struct{}))
 

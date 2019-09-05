@@ -16,6 +16,8 @@
 
 package smachine
 
+import "context"
+
 type slotContextMode uint8
 
 const (
@@ -61,6 +63,10 @@ func (p *slotContext) GetSlotID() SlotID {
 
 func (p *slotContext) GetSelf() SlotLink {
 	return p.s.NewLink()
+}
+
+func (p *slotContext) GetContext() context.Context {
+	return p.s.ctx
 }
 
 func (p *slotContext) GetParent() SlotLink {
@@ -113,8 +119,20 @@ var _ ConstructionContext = &constructionContext{}
 
 type constructionContext struct {
 	contextTemplate
+	ctx    context.Context
 	slotID SlotID
 	parent SlotLink
+}
+
+func (p *constructionContext) SetContext(ctx context.Context) {
+	if ctx == nil {
+		panic("illegal value")
+	}
+	p.ctx = ctx
+}
+
+func (p *constructionContext) GetContext() context.Context {
+	return p.ctx
 }
 
 func (p *constructionContext) GetSlotID() SlotID {
@@ -206,12 +224,15 @@ func (p *executionContext) SyncOneStep(key string, weight int32, broadcastFn Bro
 	return p.machine.stepSync.Join(p.s, key, weight, broadcastFn)
 }
 
-func (p *executionContext) NewChild(fn CreateFunc) SlotLink {
+func (p *executionContext) NewChild(ctx context.Context, fn CreateFunc) SlotLink {
 	p.ensureExactState(execContext)
 	if fn == nil {
 		panic("illegal value")
 	}
-	_, link := p.machine.applySlotCreate(nil, p.s.NewLink(), fn)
+	if ctx == nil {
+		panic("illegal value")
+	}
+	_, link := p.machine.applySlotCreate(ctx, nil, p.s.NewLink(), fn)
 	return link
 }
 
@@ -261,6 +282,10 @@ var _ AsyncResultContext = &asyncResultContext{}
 type asyncResultContext struct {
 	slot   *Slot
 	wakeup bool
+}
+
+func (p *asyncResultContext) GetContext() context.Context {
+	return p.slot.ctx
 }
 
 func (p *asyncResultContext) WakeUp() {

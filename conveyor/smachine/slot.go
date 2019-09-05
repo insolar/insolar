@@ -17,6 +17,7 @@
 package smachine
 
 import (
+	"context"
 	"sync/atomic"
 )
 
@@ -24,6 +25,7 @@ type Slot struct {
 	idAndStep    uint64 //atomic access
 	parent       SlotLink
 	machineState SlotMachineState
+	ctx          context.Context
 
 	declaration StateMachineDeclaration
 	step        SlotStep
@@ -90,7 +92,9 @@ func (s *Slot) GetAtomicIDAndStep() (SlotID, uint32) {
 
 const stepIncrement = 1 << 32
 
-func (s *Slot) init(id SlotID, parent SlotLink, decl StateMachineDeclaration, machineState SlotMachineState) {
+func (s *Slot) init(ctx context.Context, id SlotID, parent SlotLink, decl StateMachineDeclaration,
+	machineState SlotMachineState) {
+
 	if decl == nil {
 		panic("illegal state")
 	}
@@ -102,6 +106,7 @@ func (s *Slot) init(id SlotID, parent SlotLink, decl StateMachineDeclaration, ma
 	s.parent = parent
 	s.declaration = decl
 	s.machineState = machineState
+	s.ctx = ctx
 }
 
 func (s *Slot) incStep() bool {

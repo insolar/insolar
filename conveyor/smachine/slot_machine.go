@@ -17,6 +17,7 @@
 package smachine
 
 import (
+	"context"
 	"fmt"
 	"github.com/insolar/insolar/network/consensus/common/syncrun"
 	"sync"
@@ -218,17 +219,20 @@ func (m *SlotMachine) migratePage(slotPage []Slot) {
 	}
 }
 
-func (m *SlotMachine) AddNew(parent SlotLink, sm StateMachine) SlotLink {
+func (m *SlotMachine) AddNew(ctx context.Context, parent SlotLink, sm StateMachine) SlotLink {
 	if sm == nil {
 		panic("illegal state")
 	}
+	if ctx == nil {
+		panic("illegal value")
+	}
 
 	m.slotCount++
-	_, link := m.addStateMachine(nil, m.slotCount, parent, sm)
+	_, link := m.addStateMachine(ctx, nil, m.slotCount, parent, sm)
 	return link
 }
 
-func (m *SlotMachine) addStateMachine(slot *Slot, newSlotID SlotID, parent SlotLink, sm StateMachine) (bool, SlotLink) {
+func (m *SlotMachine) addStateMachine(ctx context.Context, slot *Slot, newSlotID SlotID, parent SlotLink, sm StateMachine) (bool, SlotLink) {
 	smd := sm.GetStateMachineDeclaration()
 	if smd == nil {
 		panic("illegal state")
@@ -237,7 +241,7 @@ func (m *SlotMachine) addStateMachine(slot *Slot, newSlotID SlotID, parent SlotL
 	if slot == nil {
 		slot = m.allocateSlot()
 	}
-	m.prepareSlot(slot, newSlotID, parent, smd)
+	m.prepareSlot(ctx, slot, newSlotID, parent, smd)
 	link := slot.NewLink() // should happen BEFORE start as slot can die immediately
 	if m.injector != nil {
 		m.injector.InjectDependencies(sm, link.id, m)
@@ -246,12 +250,12 @@ func (m *SlotMachine) addStateMachine(slot *Slot, newSlotID SlotID, parent SlotL
 	return m.startSlot(slot, sm), link
 }
 
-func (m *SlotMachine) prepareSlot(slot *Slot, slotID SlotID, parent SlotLink, smd StateMachineDeclaration) {
+func (m *SlotMachine) prepareSlot(ctx context.Context, slot *Slot, slotID SlotID, parent SlotLink, smd StateMachineDeclaration) {
 	if smd == nil {
 		panic("illegal state")
 	}
 
-	slot.init(slotID, parent, smd, m.machineState)
+	slot.init(ctx, slotID, parent, smd, m.machineState)
 	slot.migrationCount = m.migrationCount
 	slot.lastWorkScan = uint8(m.scanCount)
 }
@@ -518,8 +522,9 @@ func (m *SlotMachine) applyStateUpdate(slot *Slot, stateUpdate StateUpdate) bool
 
 	case stateUpdReplace:
 		parent := slot.parent
+		ctx := slot.ctx
 		m.disposeSlot(slot)
-		ok, _ := m.applySlotCreate(slot, parent, param.(CreateFunc)) // recursive call inside
+		ok, _ := m.applySlotCreate(ctx, slot, parent, param.(CreateFunc)) // recursive call inside
 		return ok
 
 	case stateUpdStop:
@@ -540,12 +545,12 @@ func (m *SlotMachine) applyStateUpdate(slot *Slot, stateUpdate StateUpdate) bool
 	return false
 }
 
-func (m *SlotMachine) applySlotCreate(slot *Slot, parent SlotLink, fnCreate CreateFunc) (bool, SlotLink) {
+func (m *SlotMachine) applySlotCreate(ctx context.Context, slot *Slot, parent SlotLink, fnCreate CreateFunc) (bool, SlotLink) {
 	m.slotCount++
-	cc := constructionContext{parent: parent, slotID: m.slotCount}
+	cc := constructionContext{ctx: ctx, parent: parent, slotID: m.slotCount}
 	sm := cc.executeCreate(fnCreate)
 
-	return m.addStateMachine(slot, cc.slotID, cc.parent, sm)
+	return m.addStateMachine(cc.ctx, slot, cc.slotID, cc.parent, sm)
 }
 
 func (m *SlotMachine) slotAccessError(msg string, link SlotLink, update StateUpdate) {
