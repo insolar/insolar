@@ -16,12 +16,6 @@ import (
 type TerminationHandlerMock struct {
 	t minimock.Tester
 
-	funcAbort          func(reason string)
-	inspectFuncAbort   func(reason string)
-	afterAbortCounter  uint64
-	beforeAbortCounter uint64
-	AbortMock          mTerminationHandlerMockAbort
-
 	funcLeave          func(ctx context.Context, p1 insolar.PulseNumber)
 	inspectFuncLeave   func(ctx context.Context, p1 insolar.PulseNumber)
 	afterLeaveCounter  uint64
@@ -48,9 +42,6 @@ func NewTerminationHandlerMock(t minimock.Tester) *TerminationHandlerMock {
 		controller.RegisterMocker(m)
 	}
 
-	m.AbortMock = mTerminationHandlerMockAbort{mock: m}
-	m.AbortMock.callArgs = []*TerminationHandlerMockAbortParams{}
-
 	m.LeaveMock = mTerminationHandlerMockLeave{mock: m}
 	m.LeaveMock.callArgs = []*TerminationHandlerMockLeaveParams{}
 
@@ -60,193 +51,6 @@ func NewTerminationHandlerMock(t minimock.Tester) *TerminationHandlerMock {
 	m.TerminatingMock = mTerminationHandlerMockTerminating{mock: m}
 
 	return m
-}
-
-type mTerminationHandlerMockAbort struct {
-	mock               *TerminationHandlerMock
-	defaultExpectation *TerminationHandlerMockAbortExpectation
-	expectations       []*TerminationHandlerMockAbortExpectation
-
-	callArgs []*TerminationHandlerMockAbortParams
-	mutex    sync.RWMutex
-}
-
-// TerminationHandlerMockAbortExpectation specifies expectation struct of the TerminationHandler.Abort
-type TerminationHandlerMockAbortExpectation struct {
-	mock   *TerminationHandlerMock
-	params *TerminationHandlerMockAbortParams
-
-	Counter uint64
-}
-
-// TerminationHandlerMockAbortParams contains parameters of the TerminationHandler.Abort
-type TerminationHandlerMockAbortParams struct {
-	reason string
-}
-
-// Expect sets up expected params for TerminationHandler.Abort
-func (mmAbort *mTerminationHandlerMockAbort) Expect(reason string) *mTerminationHandlerMockAbort {
-	if mmAbort.mock.funcAbort != nil {
-		mmAbort.mock.t.Fatalf("TerminationHandlerMock.Abort mock is already set by Set")
-	}
-
-	if mmAbort.defaultExpectation == nil {
-		mmAbort.defaultExpectation = &TerminationHandlerMockAbortExpectation{}
-	}
-
-	mmAbort.defaultExpectation.params = &TerminationHandlerMockAbortParams{reason}
-	for _, e := range mmAbort.expectations {
-		if minimock.Equal(e.params, mmAbort.defaultExpectation.params) {
-			mmAbort.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmAbort.defaultExpectation.params)
-		}
-	}
-
-	return mmAbort
-}
-
-// Inspect accepts an inspector function that has same arguments as the TerminationHandler.Abort
-func (mmAbort *mTerminationHandlerMockAbort) Inspect(f func(reason string)) *mTerminationHandlerMockAbort {
-	if mmAbort.mock.inspectFuncAbort != nil {
-		mmAbort.mock.t.Fatalf("Inspect function is already set for TerminationHandlerMock.Abort")
-	}
-
-	mmAbort.mock.inspectFuncAbort = f
-
-	return mmAbort
-}
-
-// Return sets up results that will be returned by TerminationHandler.Abort
-func (mmAbort *mTerminationHandlerMockAbort) Return() *TerminationHandlerMock {
-	if mmAbort.mock.funcAbort != nil {
-		mmAbort.mock.t.Fatalf("TerminationHandlerMock.Abort mock is already set by Set")
-	}
-
-	if mmAbort.defaultExpectation == nil {
-		mmAbort.defaultExpectation = &TerminationHandlerMockAbortExpectation{mock: mmAbort.mock}
-	}
-
-	return mmAbort.mock
-}
-
-//Set uses given function f to mock the TerminationHandler.Abort method
-func (mmAbort *mTerminationHandlerMockAbort) Set(f func(reason string)) *TerminationHandlerMock {
-	if mmAbort.defaultExpectation != nil {
-		mmAbort.mock.t.Fatalf("Default expectation is already set for the TerminationHandler.Abort method")
-	}
-
-	if len(mmAbort.expectations) > 0 {
-		mmAbort.mock.t.Fatalf("Some expectations are already set for the TerminationHandler.Abort method")
-	}
-
-	mmAbort.mock.funcAbort = f
-	return mmAbort.mock
-}
-
-// Abort implements network.TerminationHandler
-func (mmAbort *TerminationHandlerMock) Abort(reason string) {
-	mm_atomic.AddUint64(&mmAbort.beforeAbortCounter, 1)
-	defer mm_atomic.AddUint64(&mmAbort.afterAbortCounter, 1)
-
-	if mmAbort.inspectFuncAbort != nil {
-		mmAbort.inspectFuncAbort(reason)
-	}
-
-	params := &TerminationHandlerMockAbortParams{reason}
-
-	// Record call args
-	mmAbort.AbortMock.mutex.Lock()
-	mmAbort.AbortMock.callArgs = append(mmAbort.AbortMock.callArgs, params)
-	mmAbort.AbortMock.mutex.Unlock()
-
-	for _, e := range mmAbort.AbortMock.expectations {
-		if minimock.Equal(e.params, params) {
-			mm_atomic.AddUint64(&e.Counter, 1)
-			return
-		}
-	}
-
-	if mmAbort.AbortMock.defaultExpectation != nil {
-		mm_atomic.AddUint64(&mmAbort.AbortMock.defaultExpectation.Counter, 1)
-		want := mmAbort.AbortMock.defaultExpectation.params
-		got := TerminationHandlerMockAbortParams{reason}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmAbort.t.Errorf("TerminationHandlerMock.Abort got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
-		}
-
-		return
-
-	}
-	if mmAbort.funcAbort != nil {
-		mmAbort.funcAbort(reason)
-		return
-	}
-	mmAbort.t.Fatalf("Unexpected call to TerminationHandlerMock.Abort. %v", reason)
-
-}
-
-// AbortAfterCounter returns a count of finished TerminationHandlerMock.Abort invocations
-func (mmAbort *TerminationHandlerMock) AbortAfterCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmAbort.afterAbortCounter)
-}
-
-// AbortBeforeCounter returns a count of TerminationHandlerMock.Abort invocations
-func (mmAbort *TerminationHandlerMock) AbortBeforeCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmAbort.beforeAbortCounter)
-}
-
-// Calls returns a list of arguments used in each call to TerminationHandlerMock.Abort.
-// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
-func (mmAbort *mTerminationHandlerMockAbort) Calls() []*TerminationHandlerMockAbortParams {
-	mmAbort.mutex.RLock()
-
-	argCopy := make([]*TerminationHandlerMockAbortParams, len(mmAbort.callArgs))
-	copy(argCopy, mmAbort.callArgs)
-
-	mmAbort.mutex.RUnlock()
-
-	return argCopy
-}
-
-// MinimockAbortDone returns true if the count of the Abort invocations corresponds
-// the number of defined expectations
-func (m *TerminationHandlerMock) MinimockAbortDone() bool {
-	for _, e := range m.AbortMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			return false
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.AbortMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterAbortCounter) < 1 {
-		return false
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcAbort != nil && mm_atomic.LoadUint64(&m.afterAbortCounter) < 1 {
-		return false
-	}
-	return true
-}
-
-// MinimockAbortInspect logs each unmet expectation
-func (m *TerminationHandlerMock) MinimockAbortInspect() {
-	for _, e := range m.AbortMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			m.t.Errorf("Expected call to TerminationHandlerMock.Abort with params: %#v", *e.params)
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.AbortMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterAbortCounter) < 1 {
-		if m.AbortMock.defaultExpectation.params == nil {
-			m.t.Error("Expected call to TerminationHandlerMock.Abort")
-		} else {
-			m.t.Errorf("Expected call to TerminationHandlerMock.Abort with params: %#v", *m.AbortMock.defaultExpectation.params)
-		}
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcAbort != nil && mm_atomic.LoadUint64(&m.afterAbortCounter) < 1 {
-		m.t.Error("Expected call to TerminationHandlerMock.Abort")
-	}
 }
 
 type mTerminationHandlerMockLeave struct {
@@ -770,8 +574,6 @@ func (m *TerminationHandlerMock) MinimockTerminatingInspect() {
 // MinimockFinish checks that all mocked methods have been called the expected number of times
 func (m *TerminationHandlerMock) MinimockFinish() {
 	if !m.minimockDone() {
-		m.MinimockAbortInspect()
-
 		m.MinimockLeaveInspect()
 
 		m.MinimockOnLeaveApprovedInspect()
@@ -800,7 +602,6 @@ func (m *TerminationHandlerMock) MinimockWait(timeout mm_time.Duration) {
 func (m *TerminationHandlerMock) minimockDone() bool {
 	done := true
 	return done &&
-		m.MinimockAbortDone() &&
 		m.MinimockLeaveDone() &&
 		m.MinimockOnLeaveApprovedDone() &&
 		m.MinimockTerminatingDone()
