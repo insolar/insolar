@@ -359,8 +359,11 @@ func main() {
 
 	var totalBalanceBefore *big.Int
 	var balancePenRetries int32
+	var balanceCheckMembers []*sdk.Member
+
 	if !noCheckBalance {
-		totalBalanceBefore, balancePenRetries = getTotalBalance(insSDK, members)
+		balanceCheckMembers = append(members, insSDK.GetFeeMember())
+		totalBalanceBefore, balancePenRetries = getTotalBalance(insSDK, balanceCheckMembers)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -401,7 +404,7 @@ func main() {
 		totalBalanceAfter := big.NewInt(0)
 		totalBalanceAfterWithFee := big.NewInt(0)
 		for nretries := 0; nretries < 3; nretries++ {
-			totalBalanceAfter, _ = getTotalBalance(insSDK, members)
+			totalBalanceAfter, _ = getTotalBalance(insSDK, balanceCheckMembers)
 			totalBalanceAfterWithFee = new(big.Int).Add(totalBalanceAfter, big.NewInt(calcFee(transferAmount)*int64(repetitions*concurrent)))
 			if totalBalanceAfterWithFee.Cmp(totalBalanceBefore) == 0 {
 				break

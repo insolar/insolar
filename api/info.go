@@ -39,6 +39,7 @@ type InfoReply struct {
 	RootDomain             string   `json:"rootDomain"`
 	RootMember             string   `json:"rootMember"`
 	MigrationAdminMember   string   `json:"migrationAdminMember"`
+	FeeMember              string   `json:"feeMember"`
 	MigrationDaemonMembers []string `json:"migrationDaemonMembers"`
 	NodeDomain             string   `json:"nodeDomain"`
 	TraceID                string   `json:"traceID"`
@@ -110,7 +111,7 @@ func (s *InfoService) GetInfo(r *http.Request, args *InfoArgs, requestBody *rpc.
 		return err
 	}
 	migrationDaemonMembers := genesisrefs.ContractMigrationDaemonMembers
-	migrationDaemonMembersStrs := []string{}
+	migrationDaemonMembersStrs := make([]string, 0)
 	for _, r := range migrationDaemonMembers {
 		if r.IsEmpty() {
 			msg := "[ INFO ] migration daemon members refs are nil"
@@ -124,6 +125,14 @@ func (s *InfoService) GetInfo(r *http.Request, args *InfoArgs, requestBody *rpc.
 	migrationAdminMember := genesisrefs.ContractMigrationAdminMember
 	if migrationAdminMember.IsEmpty() {
 		msg := "[ INFO ] migration admin member ref is nil"
+		inslog.Error(msg)
+		err := errors.New(msg)
+		instracer.AddError(span, err)
+		return err
+	}
+	feeMember := genesisrefs.ContractFeeMember
+	if feeMember.IsEmpty() {
+		msg := "[ INFO ] feeMember ref is nil"
 		inslog.Error(msg)
 		err := errors.New(msg)
 		instracer.AddError(span, err)

@@ -61,6 +61,7 @@ type SDK struct {
 	rootMember             *requester.UserConfigJSON
 	migrationAdminMember   *requester.UserConfigJSON
 	migrationDaemonMembers []*requester.UserConfigJSON
+	feeMember              *requester.UserConfigJSON
 	logLevel               string
 }
 
@@ -100,12 +101,18 @@ func NewSDK(adminUrls []string, publicUrls []string, memberKeysDirPath string) (
 		return nil, errors.Wrap(err, "failed to get migration admin member")
 	}
 
+	feeMember, err := getMember(memberKeysDirPath+"fee_member_keys.json", response.MigrationAdminMember)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get fee member")
+	}
+
 	result := &SDK{
 		adminAPIURLs:           adminBuffer,
 		publicAPIURLs:          publicBuffer,
 		rootMember:             rootMember,
 		migrationAdminMember:   migrationAdminMember,
 		migrationDaemonMembers: []*requester.UserConfigJSON{},
+		feeMember:              feeMember,
 		logLevel:               "",
 	}
 
@@ -122,6 +129,14 @@ func NewSDK(adminUrls []string, publicUrls []string, memberKeysDirPath string) (
 	}
 
 	return result, nil
+}
+
+func (sdk *SDK) GetFeeMember() *Member {
+	return &Member{
+		Reference:  sdk.feeMember.Caller,
+		PrivateKey: sdk.feeMember.PrivateKey,
+		PublicKey:  sdk.feeMember.PublicKey,
+	}
 }
 
 func (sdk *SDK) SetLogLevel(logLevel string) error {
@@ -254,6 +269,27 @@ func (sdk *SDK) GetBalance(m *Member) (*big.Int, error) {
 		"member.getBalance",
 		map[string]interface{}{"reference": m.Reference},
 	)
+	if err != nil {
+		return nil, errors.Wrap(err, "request was failed ")
+	}
+
+	result, ok := new(big.Int).SetString(response.CallResult.(map[string]interface{})["balance"].(string), 10)
+	if !ok {
+		return nil, errors.Errorf("can't parse returned balance")
+	}
+
+	return result, nil
+}
+
+// GetFeeBalance returns current balance of fee wallet.
+func (sdk *SDK) GetFeeBalance() (*big.Int, error) {
+	response, err := sdk.DoRequest(
+		sdk.adminAPIURLs,
+		sdk.feeMember,
+		"member.getBalance",
+		map[string]interface{}{"reference": sdk.feeMember.Caller},
+	)
+
 	if err != nil {
 		return nil, errors.Wrap(err, "request was failed ")
 	}
