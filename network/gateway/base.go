@@ -94,7 +94,7 @@ type Base struct {
 	PulseManager        insolar.PulseManager        `inject:""`
 	BootstrapRequester  bootstrap.Requester         `inject:""`
 	KeyProcessor        insolar.KeyProcessor        `inject:""`
-	TerminationHandler  network.TerminationHandler  `inject:""`
+	Aborter             network.Aborter             `inject:""`
 
 	ConsensusController   consensus.Controller
 	ConsensusPulseHandler network.PulseHandler
@@ -432,5 +432,12 @@ func (g *Base) EphemeralMode(nodes []insolar.NetworkNode) bool {
 }
 
 func (g *Base) FailState(ctx context.Context, reason string) {
-	g.TerminationHandler.Abort(ctx, fmt.Sprintf("%s: %s", g.Gatewayer.Gateway().GetState(), reason))
+	o := g.NodeKeeper.GetOrigin()
+	wrapReason := fmt.Sprintf("Abort node with address: %s role: %s state: %s, reason: %s",
+		o.Address(),
+		o.Role().String(),
+		g.Gatewayer.Gateway().GetState().String(),
+		reason,
+	)
+	g.Aborter.Abort(ctx, wrapReason)
 }

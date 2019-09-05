@@ -214,6 +214,7 @@ func (g *Complete) UpdateState(ctx context.Context, pulseNumber insolar.PulseNum
 		g.FailState(ctx, "MinRoles failed")
 	}
 
+	g.FailState(ctx, "my fail")
 	g.Base.UpdateState(ctx, pulseNumber, nodes, cloudStateHash)
 }
 
