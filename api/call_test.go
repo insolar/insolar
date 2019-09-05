@@ -29,6 +29,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/reply"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
@@ -127,8 +128,11 @@ func TestTimeoutSuite(t *testing.T) {
 	})
 
 	timeoutSuite.api.ContractRequester = cr
+	log.Info("Before creating API")
 	timeoutSuite.api.Start(timeoutSuite.ctx)
+	log.Info("AFTER creating API")
 	timeoutSuite.api.SeedManager = seedmanager.NewSpecified(17*time.Second, 35*time.Second)
+	log.Info("AFTER creating new Seedmanager")
 
 	requester.SetTimeout(25)
 	suite.Run(t, timeoutSuite)

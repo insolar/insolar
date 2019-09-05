@@ -18,6 +18,7 @@ package seedmanager
 
 import (
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/insolar/insolar/insolar"
@@ -45,6 +46,7 @@ type SeedManager struct {
 	seedPool map[Seed]storedSeed
 	ttl      time.Duration
 	stopped  chan struct{}
+	id       uint32
 }
 
 // New creates new seed manager with default params
@@ -52,13 +54,19 @@ func New() *SeedManager {
 	return NewSpecified(DefaultTTL, DefaultCleanPeriod)
 }
 
+var globalID uint32
+
 // NewSpecified creates new seed manager with custom params
 func NewSpecified(ttl time.Duration, cleanPeriod time.Duration) *SeedManager {
+	atomic.AddUint32(&globalID, 1)
 	sm := SeedManager{
 		seedPool: make(map[Seed]storedSeed),
 		ttl:      ttl,
 		stopped:  make(chan struct{}),
+		id:       globalID,
 	}
+
+	log.Info("Creating NewSpecified: ", ", ID: ", sm.id)
 
 	ticker := time.NewTicker(cleanPeriod)
 
@@ -95,7 +103,7 @@ func (sm *SeedManager) Add(seed Seed, pulse insolar.PulseNumber) {
 		pulse:      pulse,
 	}
 
-	log.Info("SeedManager.Add. Now: ", time.Now(),
+	log.Info("SeedManager.Add. ID: ", sm.id, ". Now: ", time.Now(),
 		", ttl: ", sm.ttl.String(),
 		", expTime:", expTime,
 		"content: ", sm.seedPool,
@@ -110,22 +118,22 @@ func (sm *SeedManager) isExpired(expTime Expiration) bool {
 
 // Exists checks whether seed in the pool
 func (sm *SeedManager) Pop(seed Seed) (insolar.PulseNumber, bool) {
-	log.Info("Pop seed: ", seed)
+	log.Info("Pop seed: ", seed, ", ID: ", sm.id, ". content: ", sm.seedPool)
 	sm.mutex.RLock()
 	stored, ok := sm.seedPool[seed]
-	log.Info("Pop: ok: ", ok, ". content: ", sm.seedPool, ", seed: ", seed)
+	log.Info("Pop: ok: ", ok, ", ID: ", sm.id, ". content: ", sm.seedPool, ", seed: ", seed)
 	sm.mutex.RUnlock()
 
 	if ok && !sm.isExpired(stored.expiration) {
 		sm.mutex.Lock()
 		defer sm.mutex.Unlock()
 
-		log.Info("Pop seed: delete: ", seed)
+		log.Info("Pop seed: delete: ", seed, ", ID: ", sm.id)
 		delete(sm.seedPool, seed)
 		return stored.pulse, true
 	}
 
-	log.Info("Pop seed: NO: ", seed)
+	log.Info("Pop seed: NO: ", seed, ", ID: ", sm.id)
 
 	return 0, false
 }
@@ -136,7 +144,7 @@ func (sm *SeedManager) deleteExpired() {
 
 	for seed, stored := range sm.seedPool {
 		if sm.isExpired(stored.expiration) {
-			log.Info("deleteExpired: ", seed)
+			log.Info("deleteExpired: ", seed, ", ID: ", sm.id)
 			delete(sm.seedPool, seed)
 		}
 	}
