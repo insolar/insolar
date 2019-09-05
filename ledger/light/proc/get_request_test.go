@@ -22,6 +22,7 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/gojuno/minimock"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/insolar"
@@ -76,34 +77,29 @@ func TestGetRequest_Proceed(t *testing.T) {
 			assert.Equal(t, expectedTarget, &target)
 		}).Return(make(chan *message.Message), func() {})
 
-		p := proc.NewGetRequest(meta, gen.ID(), gen.ID(), false)
+		p := proc.NewGetRequest(meta, gen.ID(), gen.ID(), true)
 		p.Dep(records, sender, coordinator, fetcher)
 
 		err := p.Proceed(ctx)
 		assert.NoError(t, err)
 	})
 
-	t.Run("Passing with error", func(t *testing.T) {
+	t.Run("Not passing, returns error", func(t *testing.T) {
 		setup()
 		defer mc.Finish()
 
 		records.ForIDMock.Return(record.Material{}, object.ErrNotFound)
 
-		expectedError, _ := payload.NewMessage(&payload.Error{
-			Text: "request not found",
-			Code: payload.CodeNotFound,
-		})
-		sender.ReplyMock.Inspect(func(ctx context.Context, origin payload.Meta, reply *message.Message) {
-			assert.Equal(t, expectedError.Payload, reply.Payload)
-		}).Return()
-
 		meta := payload.Meta{}
 
-		p := proc.NewGetRequest(meta, gen.ID(), gen.ID(), true)
+		p := proc.NewGetRequest(meta, gen.ID(), gen.ID(), false)
 		p.Dep(records, sender, coordinator, fetcher)
 
 		err := p.Proceed(ctx)
-		assert.NoError(t, err)
+		assert.Error(t, err)
+		insError, ok := errors.Cause(err).(*payload.CodedError)
+		assert.True(t, ok)
+		assert.Equal(t, uint32(payload.CodeNotFound), insError.GetCode())
 	})
 
 	t.Run("Simple success", func(t *testing.T) {
@@ -127,7 +123,7 @@ func TestGetRequest_Proceed(t *testing.T) {
 			assert.Equal(t, expectedMsg.Payload, reply.Payload)
 		}).Return()
 
-		p := proc.NewGetRequest(payload.Meta{}, gen.ID(), reqID, false)
+		p := proc.NewGetRequest(payload.Meta{}, gen.ID(), reqID, true)
 		p.Dep(records, sender, coordinator, fetcher)
 
 		err := p.Proceed(ctx)

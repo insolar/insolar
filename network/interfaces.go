@@ -136,8 +136,9 @@ type PulseHandler interface {
 
 //go:generate minimock -i github.com/insolar/insolar/network.OriginProvider -o ../testutils/network -s _mock.go -g
 
+//Deprecated: network internal usage only
 type OriginProvider interface {
-	// GetOrigin get origin node for the current insolard. Returns nil if the current insolard is not a working node.
+	// GetOrigin get origin node information(self).
 	GetOrigin() insolar.NetworkNode
 }
 

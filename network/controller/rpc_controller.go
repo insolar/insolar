@@ -104,12 +104,18 @@ func (rpc *rpcController) SendBytes(ctx context.Context, nodeID insolar.Referenc
 	if err != nil {
 		return nil, errors.Wrapf(err, "Error sending RPC request to node %s", nodeID.String())
 	}
+	ctx, logger := inslogger.WithFields(ctx, map[string]interface{}{
+		"request_id":     future.Request().GetRequestID(),
+		"target_node_id": nodeID.String(),
+	})
+	logger.Debug("sent RPC request")
 	response, err := future.WaitResponse(rpc.options.AckPacketTimeout)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Error getting RPC response from node %s", nodeID.String())
 	}
+	logger.Debug("received RPC response")
 	if response.GetResponse() == nil || response.GetResponse().GetRPC() == nil {
-		inslogger.FromContext(ctx).Warnf("Error getting RPC response from node %s: "+
+		logger.Warnf("Error getting RPC response from node %s: "+
 			"got invalid response protobuf message: %s", nodeID, response)
 	}
 	data := response.GetResponse().GetRPC()

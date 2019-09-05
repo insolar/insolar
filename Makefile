@@ -8,7 +8,7 @@ TESTPULSARD = testpulsard
 INSGORUND = insgorund
 BENCHMARK = benchmark
 PULSEWATCHER = pulsewatcher
-BACKUPMERGER = backupmerger
+BACKUPMANAGER = backupmanager
 APIREQUESTER = apirequester
 HEALTHCHECK = healthcheck
 
@@ -84,7 +84,7 @@ ensure: ## install all dependencies
 	dep ensure
 
 .PHONY: build
-build: $(BIN_DIR) $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(TESTPULSARD) $(INSGORUND) $(HEALTHCHECK) $(BENCHMARK) $(APIREQUESTER) $(PULSEWATCHER) $(BACKUPMERGER) ## build all binaries
+build: $(BIN_DIR) $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(TESTPULSARD) $(INSGORUND) $(HEALTHCHECK) $(BENCHMARK) $(APIREQUESTER) $(PULSEWATCHER) $(BACKUPMANAGER) ## build all binaries
 
 $(BIN_DIR):
 	mkdir -p $(BIN_DIR)
@@ -123,9 +123,9 @@ $(BENCHMARK):
 $(PULSEWATCHER):
 	$(GOBUILD) -o $(BIN_DIR)/$(PULSEWATCHER) -ldflags "${LDFLAGS}" cmd/pulsewatcher/*.go
 
-.PHONY: $(BACKUPMERGER)
-$(BACKUPMERGER):
-	$(GOBUILD) -o $(BIN_DIR)/$(BACKUPMERGER) -ldflags "${LDFLAGS}" cmd/backupmerger/*.go
+.PHONY: $(BACKUPMANAGER)
+$(BACKUPMANAGER):
+	$(GOBUILD) -o $(BIN_DIR)/$(BACKUPMANAGER) -ldflags "${LDFLAGS}" cmd/backupmanager/*.go
 
 .PHONY: $(APIREQUESTER)
 $(APIREQUESTER):
@@ -154,7 +154,7 @@ test_func: functest ## alias for functest
 
 .PHONY: test_slow
 test_slow: ## run tests with slowtest tag
-	CGO_ENABLED=1 go test $(TEST_ARGS) -tags slowtest ./logicrunner/... ./server/internal/... ./ledger/light/integration/... ./ledger/heavy/integration/...
+	CGO_ENABLED=1 go test $(TEST_ARGS) -tags slowtest ./logicrunner/... ./server/internal/... ./cmd/backupmanager/... ./ledger/light/integration/... ./ledger/heavy/executor/integration/...  ./ledger/heavy/integration/...
 
 .PHONY: test
 test: test_unit ## alias for test_unit
@@ -164,12 +164,12 @@ test_all: test_unit test_func test_slow ## run all tests (unit, func, slow)
 
 .PHONY: test_with_coverage
 test_with_coverage: $(ARTIFACTS_DIR) ## run unit tests with generation of coverage file
-	CGO_ENABLED=1 go test $(TEST_ARGS) --coverprofile=$(ARTIFACTS_DIR)/cover.all --covermode=atomic $(TESTED_PACKAGES)
+	CGO_ENABLED=1 go test $(TEST_ARGS) -tags coverage --coverprofile=$(ARTIFACTS_DIR)/cover.all --covermode=atomic $(TESTED_PACKAGES)
 	@cat $(ARTIFACTS_DIR)/cover.all | ./scripts/dev/cover-filter.sh > $(COVERPROFILE)
 
 .PHONY: test_with_coverage_fast
 test_with_coverage_fast: ## ???
-	CGO_ENABLED=1 go test $(TEST_ARGS) -count 1 --coverprofile=$(COVERPROFILE) --covermode=atomic $(ALL_PACKAGES)
+	CGO_ENABLED=1 go test $(TEST_ARGS) -tags coverage -count 1 --coverprofile=$(COVERPROFILE) --covermode=atomic $(ALL_PACKAGES)
 
 $(ARTIFACTS_DIR):
 	mkdir -p $(ARTIFACTS_DIR)
@@ -177,7 +177,7 @@ $(ARTIFACTS_DIR):
 .PHONY: ci_test_with_coverage
 ci_test_with_coverage: ## run unit tests with coverage, outputs json to stdout (CI)
 	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1 \
-		go test $(CI_TEST_ARGS) $(TEST_ARGS) -json -v -count 1 --coverprofile=$(COVERPROFILE) --covermode=atomic -tags slowtest $(ALL_PACKAGES)
+		go test $(CI_TEST_ARGS) $(TEST_ARGS) -json -v -count 1 --coverprofile=$(COVERPROFILE) --covermode=atomic -tags 'coverage slowtest' $(ALL_PACKAGES)
 
 .PHONY: ci_test_unit
 ci_test_unit: ## run unit tests 10 times and -race flag, redirects json output to file (CI)
@@ -187,7 +187,7 @@ ci_test_unit: ## run unit tests 10 times and -race flag, redirects json output t
 .PHONY: ci_test_slow
 ci_test_slow: ## run slow tests just once, redirects json output to file (CI)
 	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1 \
-		go test $(CI_TEST_ARGS) $(TEST_ARGS) -json -v -tags slowtest ./logicrunner/... ./server/internal/... ./ledger/light/integration/... -count 1 | tee -a ci_test_unit.json
+		go test $(CI_TEST_ARGS) $(TEST_ARGS) -json -v -tags slowtest ./logicrunner/... ./server/internal/... ./cmd/backupmanager/... ./ledger/heavy/executor/integration/...  ./ledger/heavy/integration/... ./ledger/light/integration/... -count 1 | tee -a ci_test_unit.json
 
 .PHONY: ci_test_func
 ci_test_func: ## run functest 3 times, redirects json output to file (CI)

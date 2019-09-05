@@ -216,8 +216,6 @@ func checkOutgoingRequest(ctx context.Context, request *record.OutgoingRequest) 
 }
 
 func checkIncomingRequest(ctx context.Context, request *record.IncomingRequest) error {
-	logger := inslogger.FromContext(ctx)
-
 	if !request.Caller.IsEmpty() && !request.Caller.IsObjectReference() {
 		return errors.Errorf("request.Caller should be ObjectReference; ref=%s", request.Caller.String())
 	}
@@ -244,12 +242,7 @@ func checkIncomingRequest(ctx context.Context, request *record.IncomingRequest) 
 			aStr = "APINode is not empty"
 		}
 
-		msg := fmt.Sprintf("failed to check request reason: one should be set, but %s and %s", rStr, aStr)
-		if !rEmpty && !aEmpty {
-			logger.Warn(msg)
-		} else {
-			return errors.Errorf(msg)
-		}
+		return errors.Errorf("failed to check request reason: one should be set, but %s and %s", rStr, aStr)
 	}
 
 	if !request.Reason.IsEmpty() && !request.Reason.IsRecordScope() {

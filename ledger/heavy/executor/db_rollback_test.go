@@ -30,17 +30,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestDBRollback_HasOnlyGenesisPulse(t *testing.T) {
-	jetKeeper := NewJetKeeperMock(t)
-	jetKeeper.TopSyncPulseMock.Set(func() (r insolar.PulseNumber) {
-		return insolar.GenesisPulse.PulseNumber
-	})
-
-	rollback := NewDBRollback(jetKeeper, nil, nil)
-	err := rollback.Start(context.Background())
-	require.NoError(t, err)
-}
-
 func TestDBRollback_TruncateReturnError(t *testing.T) {
 	jetKeeper := NewJetKeeperMock(t)
 	testPulse := insolar.GenesisPulse.PulseNumber + 1

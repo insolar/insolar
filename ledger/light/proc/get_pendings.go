@@ -58,15 +58,10 @@ func (gp *GetPendings) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "failed to calculate pending")
 	}
 	if len(pendings) == 0 {
-		msg, err := payload.NewMessage(&payload.Error{
-			Code: payload.CodeNoPendings,
+		return &payload.CodedError{
 			Text: insolar.ErrNoPendingRequest.Error(),
-		})
-		if err != nil {
-			return errors.Wrap(err, "failed to create reply")
+			Code: payload.CodeNoPendings,
 		}
-		gp.dep.sender.Reply(ctx, gp.message, msg)
-		return nil
 	}
 
 	ids := make([]insolar.ID, len(pendings))

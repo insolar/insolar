@@ -76,16 +76,6 @@ func (w *Wallet) GetBalance(assetName string) (string, error) {
 	return acc.GetBalance()
 }
 
-// Accept accepts transfer.
-func (w *Wallet) Accept(amountStr string, assetName string) error {
-	accRef, err := w.GetAccount(assetName)
-	if err != nil {
-		return fmt.Errorf("failed to get account by asset: %s", err.Error())
-	}
-	acc := account.GetObject(*accRef)
-	return acc.Accept(amountStr)
-}
-
 // AddDeposit method stores deposit reference in member it belongs to
 func (w *Wallet) AddDeposit(txId string, deposit insolar.Reference) error {
 	if _, ok := w.Deposits[txId]; ok {

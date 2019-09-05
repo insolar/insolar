@@ -178,15 +178,16 @@ func (c *RequestCheckerDefault) checkReasonForIncomingRequest(
 		return errors.Wrap(err, "reason request not found")
 	}
 
-	rec := record.Material{}
-	err = rec.Unmarshal(reasonInfo.Request)
+	material := record.Material{}
+	err = material.Unmarshal(reasonInfo.Request)
 	if err != nil {
 		return errors.Wrap(err, "can't unmarshal reason request")
 	}
 
-	_, ok := rec.Virtual.Union.(*record.Virtual_IncomingRequest)
+	virtual := record.Unwrap(&material.Virtual)
+	_, ok := virtual.(*record.IncomingRequest)
 	if !ok {
-		return fmt.Errorf("reason request must be Incoming, %T received", rec.Virtual.Union)
+		return fmt.Errorf("reason request must be Incoming, %T received", virtual)
 	}
 
 	isClosed := len(reasonInfo.Result) != 0

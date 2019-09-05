@@ -346,7 +346,7 @@ func TestRouteCallRegistersOutgoingRequestWithValidReason(t *testing.T) {
 	})
 
 	ref := gen.Reference()
-	cr.CallMock.Return(&reply.CallMethod{}, &ref, nil)
+	cr.SendRequestMock.Return(&reply.CallMethod{}, &ref, nil)
 	// Make sure the result of the outgoing request is registered as well
 	am.RegisterResultMock.Set(func(ctx context.Context, reqref insolar.Reference, result artifacts.RequestResult) (r error) {
 		if outgoingReqRef != reqref {
