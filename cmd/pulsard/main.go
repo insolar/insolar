@@ -161,7 +161,7 @@ func initPulsar(ctx context.Context, cfg configuration.PulsarConfiguration) (*co
 }
 
 func runPulsar(ctx context.Context, server *pulsar.Pulsar, cfg configuration.Pulsar) *time.Ticker {
-	nextPulseNumber := insolar.PulseNumber(pulse.OfNow())
+	nextPulseNumber := pulse.OfNow()
 	err := server.Send(ctx, nextPulseNumber)
 	if err != nil {
 		panic(err)
