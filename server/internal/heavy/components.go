@@ -172,11 +172,10 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		Pulses = insolarPulse.NewDB(DB)
 		Jets = jet.NewDBStore(DB)
 
-		c := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit)
+		c := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit, *CertManager.GetCertificate().GetNodeRef())
 		c.PulseCalculator = Pulses
 		c.PulseAccessor = Pulses
 		c.JetAccessor = Jets
-		c.OriginProvider = NetworkService
 		c.PlatformCryptographyScheme = CryptoScheme
 		c.Nodes = Nodes
 
