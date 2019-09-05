@@ -466,13 +466,13 @@ func RotateLogs(dirPattern string, verbose bool) {
 		fmt.Println("RotateLogs removed files:\n", string(out))
 	}
 
-	rotateCmd := "pkill -SIGUSR2 -l inslogrotator"
+	rotateCmd := "killall -v -SIGUSR2 inslogrotator"
 	cmd = exec.Command("sh", "-c", rotateCmd)
 	out, err = cmd.Output()
 	if err != nil {
 		log.Fatal("RotateLogs: failed to execute shell command:", rotateCmd)
 	}
 	if verbose {
-		println("RotateLogs pkill output:", string(out))
+		println("RotateLogs killall output:", string(out))
 	}
 }
