@@ -14,6 +14,7 @@
 // limitations under the License.
 //
 // +build slowtest
+// +build !coverage
 
 package intergration
 

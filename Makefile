@@ -164,12 +164,12 @@ test_all: test_unit test_func test_slow ## run all tests (unit, func, slow)
 
 .PHONY: test_with_coverage
 test_with_coverage: $(ARTIFACTS_DIR) ## run unit tests with generation of coverage file
-	CGO_ENABLED=1 go test $(TEST_ARGS) --coverprofile=$(ARTIFACTS_DIR)/cover.all --covermode=atomic $(TESTED_PACKAGES)
+	CGO_ENABLED=1 go test $(TEST_ARGS) -tags coverage --coverprofile=$(ARTIFACTS_DIR)/cover.all --covermode=atomic $(TESTED_PACKAGES)
 	@cat $(ARTIFACTS_DIR)/cover.all | ./scripts/dev/cover-filter.sh > $(COVERPROFILE)
 
 .PHONY: test_with_coverage_fast
 test_with_coverage_fast: ## ???
-	CGO_ENABLED=1 go test $(TEST_ARGS) -count 1 --coverprofile=$(COVERPROFILE) --covermode=atomic $(ALL_PACKAGES)
+	CGO_ENABLED=1 go test $(TEST_ARGS) -tags coverage -count 1 --coverprofile=$(COVERPROFILE) --covermode=atomic $(ALL_PACKAGES)
 
 $(ARTIFACTS_DIR):
 	mkdir -p $(ARTIFACTS_DIR)
@@ -177,7 +177,7 @@ $(ARTIFACTS_DIR):
 .PHONY: ci_test_with_coverage
 ci_test_with_coverage: ## run unit tests with coverage, outputs json to stdout (CI)
 	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1 \
-		go test $(CI_TEST_ARGS) $(TEST_ARGS) -json -v -count 1 --coverprofile=$(COVERPROFILE) --covermode=atomic -tags slowtest $(ALL_PACKAGES)
+		go test $(CI_TEST_ARGS) $(TEST_ARGS) -json -v -count 1 --coverprofile=$(COVERPROFILE) --covermode=atomic -tags coverage slowtest $(ALL_PACKAGES)
 
 .PHONY: ci_test_unit
 ci_test_unit: ## run unit tests 10 times and -race flag, redirects json output to file (CI)
