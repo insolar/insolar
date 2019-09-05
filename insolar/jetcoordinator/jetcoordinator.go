@@ -29,14 +29,12 @@ import (
 	insolarPulse "github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/pulse"
 	"github.com/insolar/insolar/utils/entropy"
 )
 
 // Coordinator is responsible for all jet interactions
 type Coordinator struct {
-	OriginProvider             network.OriginProvider             `inject:""`
 	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
 
 	PulseAccessor   insolarPulse.Accessor   `inject:""`
@@ -46,11 +44,12 @@ type Coordinator struct {
 	Nodes       node.Accessor `inject:""`
 
 	lightChainLimit int
+	originRef       insolar.Reference
 }
 
 // NewJetCoordinator creates new coordinator instance.
-func NewJetCoordinator(lightChainLimit int) *Coordinator {
-	return &Coordinator{lightChainLimit: lightChainLimit}
+func NewJetCoordinator(lightChainLimit int, originRef insolar.Reference) *Coordinator {
+	return &Coordinator{lightChainLimit: lightChainLimit, originRef: originRef}
 }
 
 // Hardcoded roles count for validation and execution
@@ -64,7 +63,7 @@ const (
 
 // Me returns current node.
 func (jc *Coordinator) Me() insolar.Reference {
-	return jc.OriginProvider.GetOrigin().ID()
+	return jc.originRef
 }
 
 // IsAuthorized checks for role on concrete pulse for the address.

@@ -132,7 +132,7 @@ func NewNodeKeeper(origin insolar.NetworkNode) network.NodeKeeper {
 type nodekeeper struct {
 	origin insolar.NetworkNode
 
-	syncLock  sync.Mutex
+	syncLock  sync.RWMutex
 	syncNodes []insolar.NetworkNode
 
 	SnapshotStorage storage.SnapshotStorage
@@ -153,6 +153,9 @@ func (nk *nodekeeper) GetAccessor(pn insolar.PulseNumber) network.Accessor {
 }
 
 func (nk *nodekeeper) GetOrigin() insolar.NetworkNode {
+	nk.syncLock.RLock()
+	defer nk.syncLock.RUnlock()
+
 	return nk.origin
 }
 
@@ -162,6 +165,11 @@ func (nk *nodekeeper) Sync(ctx context.Context, number insolar.PulseNumber, node
 
 	inslogger.FromContext(ctx).Debugf("Sync, nodes: %d", len(nodes))
 	nk.syncNodes = nodes
+}
+
+func (nk *nodekeeper) updateOrigin(power insolar.Power, state insolar.NodeState) {
+	nk.origin.(node.MutableNode).SetPower(power)
+	nk.origin.(node.MutableNode).SetState(state)
 }
 
 func (nk *nodekeeper) MoveSyncToActive(ctx context.Context, number insolar.PulseNumber) {
@@ -180,6 +188,9 @@ func (nk *nodekeeper) MoveSyncToActive(ctx context.Context, number insolar.Pulse
 		len(nk.syncNodes),
 		len(accessor.GetActiveNodes()),
 	)
+
+	o := accessor.GetActiveNode(nk.origin.ID())
+	nk.updateOrigin(o.GetPower(), o.GetState())
 
 	stats.Record(ctx, network.ActiveNodes.M(int64(len(accessor.GetActiveNodes()))))
 }
