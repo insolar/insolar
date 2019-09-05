@@ -334,7 +334,7 @@ func (cr *ContractRequester) result(ctx context.Context, msg *payload.ReturnResu
 	copy(reqHash[:], msg.RequestRef.GetLocal().Hash())
 	c, ok := cr.ResultMap[reqHash]
 	if !ok {
-		inslogger.FromContext(ctx).Info("unwanted results of request ", msg.RequestRef.String())
+		inslogger.FromContext(ctx).Info("unwanted results of request ", msg.RequestRef.String(), "error ", msg.Error)
 		if cr.LR != nil {
 			return cr.LR.AddUnwantedResponse(ctx, msg)
 		}
