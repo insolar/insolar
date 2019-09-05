@@ -56,7 +56,6 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/network"
 )
 
 func pulseProcessingWatchdog(ctx context.Context, pulse insolar.Pulse, done chan struct{}) {
@@ -72,14 +71,14 @@ func pulseProcessingWatchdog(ctx context.Context, pulse insolar.Pulse, done chan
 	}()
 }
 
-func newPulseWatchdog(ctx context.Context, gatewayer network.Gatewayer, timeout time.Duration, done chan struct{}) {
+func newPulseWatchdog(ctx context.Context, gateway *Base, timeout time.Duration, done chan struct{}) {
 	logger := inslogger.FromContext(ctx)
 
 	go func() {
 		for {
 			select {
 			case <-time.After(timeout):
-				gatewayer.FailState(ctx, "New valid pulse timeout exceeded")
+				gateway.FailState(ctx, "New valid pulse timeout exceeded")
 			case _, ok := <-done:
 				if !ok {
 					return

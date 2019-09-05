@@ -204,7 +204,6 @@ type Accessor interface {
 type Gatewayer interface {
 	Gateway() Gateway
 	SwitchState(ctx context.Context, state insolar.NetworkState, pulse insolar.Pulse)
-	FailState(ctx context.Context, reason string)
 }
 
 //go:generate minimock -i github.com/insolar/insolar/network.Gateway -o ../testutils/network -s _mock.go -g
@@ -254,7 +253,7 @@ type TerminationHandler interface {
 	Leave(context.Context, insolar.PulseNumber)
 	OnLeaveApproved(context.Context)
 	// Abort forces to stop all node components
-	Abort(reason string)
+	Abort(ctx context.Context, reason string)
 	// Terminating is an accessor
 	Terminating() bool
 }

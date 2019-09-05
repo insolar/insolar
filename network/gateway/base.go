@@ -52,6 +52,7 @@ package gateway
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/insolar/insolar/network/consensus"
@@ -93,6 +94,7 @@ type Base struct {
 	PulseManager        insolar.PulseManager        `inject:""`
 	BootstrapRequester  bootstrap.Requester         `inject:""`
 	KeyProcessor        insolar.KeyProcessor        `inject:""`
+	TerminationHandler  network.TerminationHandler  `inject:""`
 
 	ConsensusController   consensus.Controller
 	ConsensusPulseHandler network.PulseHandler
@@ -164,7 +166,7 @@ func (g *Base) OnPulseFromConsensus(ctx context.Context, pu insolar.Pulse) {
 		g.newPulseCh <- struct{}{}
 	} else {
 		g.newPulseCh = make(chan struct{})
-		newPulseWatchdog(ctx, g.Gatewayer, g.Options.PulseWatchdogTimeout, g.newPulseCh)
+		newPulseWatchdog(ctx, g, g.Options.PulseWatchdogTimeout, g.newPulseCh)
 	}
 
 	g.NodeKeeper.MoveSyncToActive(ctx, pu.PulseNumber)
@@ -427,4 +429,8 @@ func (g *Base) EphemeralMode(nodes []insolar.NetworkNode) bool {
 	minRole := rules.CheckMinRole(g.CertificateManager.GetCertificate(), nodes)
 
 	return !majority || !minRole
+}
+
+func (g *Base) FailState(ctx context.Context, reason string) {
+	g.TerminationHandler.Abort(ctx, fmt.Sprintf("%s: %s", g.Gatewayer.Gateway().GetState(), reason))
 }

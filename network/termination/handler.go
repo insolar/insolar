@@ -66,7 +66,7 @@ type terminationHandler struct {
 	done        chan struct{}
 	terminating bool
 
-	Leaver        insolar.Leaver        `inject:""`
+	Leaver        insolar.Leaver
 	PulseAccessor storage.PulseAccessor `inject:""`
 }
 
@@ -116,8 +116,8 @@ func (t *terminationHandler) OnLeaveApproved(ctx context.Context) {
 	}
 }
 
-func (t *terminationHandler) Abort(reason string) {
-	panic(reason)
+func (t *terminationHandler) Abort(ctx context.Context, reason string) {
+	inslogger.FromContext(ctx).Fatal(reason)
 }
 
 func (t *terminationHandler) Terminating() bool {
