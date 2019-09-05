@@ -65,6 +65,21 @@ do
     DISCOVERY_NODE_DIRS+=(${DISCOVERY_NODES_DATA}${i})
 done
 
+LOGROTATOR_ENABLE=${LOGROTATOR_ENABLE:-""}
+LOGROTATOR=tee
+LOGROTATOR_BIN=${LAUNCHNET_BASE_DIR}inslogrotator
+if [[ "$LOGROTATOR_ENABLE" == "1" ]]; then
+  LOGROTATOR=${LOGROTATOR_BIN}
+fi
+
+build_logger()
+{
+    echo "build logger binaries"
+    pushd scripts/_logger
+    GO111MODULE=on go build -o inslogrotator .
+    popd
+    mv scripts/_logger/inslogrotator ${LOGROTATOR_BIN}
+}
 
 kill_port()
 {
@@ -75,6 +90,16 @@ kill_port()
         echo "killing pid $pid"
         kill -ABRT $pid
     done
+}
+
+kill_all()
+{
+  echo "kill all processes: insgorund, insolard, pulsard"
+  set +e
+  killall insgorund
+  killall insolard
+  killall pulsard
+  set -e
 }
 
 stop_listening()
@@ -107,6 +132,12 @@ stop_listening()
     done
 
     echo "stop_listening() end."
+}
+
+stop_all()
+{
+  stop_listening true
+  kill_all
 }
 
 clear_dirs()
@@ -391,7 +422,8 @@ watch_pulse=true
 check_working_dir
 process_input_params $@
 
-trap 'stop_listening true' INT TERM EXIT
+kill_all
+trap 'stop_all' INT TERM EXIT
 
 echo "start pulsar ..."
 echo "   log: ${LAUNCHNET_LOGS_DIR}pulsar_output.log"
@@ -415,6 +447,11 @@ handle_sigchld()
   echo "someone left the network"
 }
 
+if [[ "$LOGROTATOR_ENABLE" == "1" ]]; then
+  echo "prepare logger"
+  build_logger
+fi
+
 trap 'handle_sigchld' SIGCHLD
 
 echo "start heavy node"
@@ -422,7 +459,7 @@ set -x
 $INSOLARD \
     --config ${DISCOVERY_NODES_DATA}1/insolard.yaml \
     --heavy-genesis ${HEAVY_GENESIS_CONFIG_FILE} \
-    &> ${DISCOVERY_NODE_LOGS}1/output.log &
+    2>&1 | ${LOGROTATOR} ${DISCOVERY_NODE_LOGS}1/output.log > /dev/null &
 { set +x; } 2>/dev/null
 echo "heavy node started in background"
 echo "log: ${DISCOVERY_NODE_LOGS}1/output.log"
@@ -433,7 +470,7 @@ do
     set -x
     $INSOLARD \
         --config ${DISCOVERY_NODES_DATA}${i}/insolard.yaml \
-        &> ${DISCOVERY_NODE_LOGS}${i}/output.log &
+        2>&1 | ${LOGROTATOR} ${DISCOVERY_NODE_LOGS}${i}/output.log > /dev/null &
     { set +x; } 2>/dev/null
     echo "discovery node $i started in background"
     echo "log: ${DISCOVERY_NODE_LOGS}${i}/output.log"

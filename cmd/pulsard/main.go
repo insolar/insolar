@@ -26,6 +26,7 @@ import (
 
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
+	"github.com/spf13/viper"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
@@ -66,24 +67,29 @@ func main() {
 	params := parseInputParams()
 
 	jww.SetStdoutThreshold(jww.LevelDebug)
-	cfgHolder := configuration.NewHolder()
 	var err error
+
+	vp := viper.New()
+	pCfg := configuration.NewPulsarConfiguration()
 	if len(params.configPath) != 0 {
-		err = cfgHolder.LoadFromFile(params.configPath)
-	} else {
-		err = cfgHolder.Load()
+		vp.SetConfigFile(params.configPath)
 	}
+	err = vp.ReadInConfig()
+	if err != nil {
+		log.Warn("failed to load configuration from file: ", err.Error())
+	}
+	err = vp.Unmarshal(&pCfg)
 	if err != nil {
 		log.Warn("failed to load configuration from file: ", err.Error())
 	}
 
 	traceID := utils.RandTraceID()
 	ctx := context.Background()
-	ctx, inslog := inslogger.InitNodeLogger(ctx, cfgHolder.Configuration.Log, traceID, "", "pulsar")
+	ctx, inslog := inslogger.InitNodeLogger(ctx, pCfg.Log, traceID, "", "pulsar")
 
 	jaegerflush := func() {}
-	if cfgHolder.Configuration.Tracer.Jaeger.AgentEndpoint != "" {
-		jconf := cfgHolder.Configuration.Tracer.Jaeger
+	if pCfg.Tracer.Jaeger.AgentEndpoint != "" {
+		jconf := pCfg.Tracer.Jaeger
 		log.Infof("Tracing enabled. Agent endpoint: '%s', collector endpoint: '%s'", jconf.AgentEndpoint, jconf.CollectorEndpoint)
 		jaegerflush = instracer.ShouldRegisterJaeger(
 			ctx,
@@ -95,8 +101,8 @@ func main() {
 	}
 	defer jaegerflush()
 
-	cm, server := initPulsar(ctx, cfgHolder.Configuration)
-	pulseTicker := runPulsar(ctx, server, cfgHolder.Configuration.Pulsar)
+	cm, server := initPulsar(ctx, pCfg)
+	pulseTicker := runPulsar(ctx, server, pCfg.Pulsar)
 
 	defer func() {
 		pulseTicker.Stop()
@@ -113,7 +119,7 @@ func main() {
 	<-gracefulStop
 }
 
-func initPulsar(ctx context.Context, cfg configuration.Configuration) (*component.Manager, *pulsar.Pulsar) {
+func initPulsar(ctx context.Context, cfg configuration.PulsarConfiguration) (*component.Manager, *pulsar.Pulsar) {
 	fmt.Println("Version: ", version.GetFullVersion())
 	fmt.Println("Starts with configuration:\n", configuration.ToString(cfg))
 
@@ -155,7 +161,7 @@ func initPulsar(ctx context.Context, cfg configuration.Configuration) (*componen
 }
 
 func runPulsar(ctx context.Context, server *pulsar.Pulsar, cfg configuration.Pulsar) *time.Ticker {
-	nextPulseNumber := insolar.PulseNumber(pulse.OfNow())
+	nextPulseNumber := pulse.OfNow()
 	err := server.Send(ctx, nextPulseNumber)
 	if err != nil {
 		panic(err)
