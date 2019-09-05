@@ -187,7 +187,7 @@ func (a *outgoingSenderActorState) sendOutgoingRequest(ctx context.Context, outg
 	}
 	// Actually make a call.
 	callMsg := &payload.CallMethod{Request: incoming, PulseNumber: latestPulse.PulseNumber}
-	res, _, err := a.cr.Call(ctx, callMsg)
+	res, _, err := a.cr.SendRequest(ctx, callMsg)
 	if err != nil {
 		return nil, nil, nil, err
 	}

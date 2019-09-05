@@ -164,7 +164,7 @@ func TestContractRequester_SendRequest(t *testing.T) {
 					}
 				})
 
-			result, _, err := cReq.SendRequest(ctx, &ref, "TestMethod", []interface{}{}, insolar.GenesisPulse.PulseNumber)
+			result, _, err := cReq.Call(ctx, &ref, "TestMethod", []interface{}{}, insolar.GenesisPulse.PulseNumber)
 			require.NoError(t, err)
 			require.Equal(t, &reply.CallMethod{}, result)
 		})
@@ -228,7 +228,7 @@ func TestContractRequester_Call_Timeout(t *testing.T) {
 		Request: request,
 	}
 
-	_, _, err = cReq.Call(ctx, msg)
+	_, _, err = cReq.SendRequest(ctx, msg)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "canceled")
 	require.Contains(t, err.Error(), "timeout")

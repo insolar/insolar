@@ -165,7 +165,7 @@ func (g *Complete) getNodeInfo(ctx context.Context, nodeRef *insolar.Reference) 
 		return "", "", errors.Wrap(err, "[ GetCert ] Can't get latest pulse")
 	}
 
-	res, _, err := g.ContractRequester.SendRequest(
+	res, _, err := g.ContractRequester.Call(
 		ctx, nodeRef, "GetNodeInfo", []interface{}{}, latest.PulseNumber,
 	)
 	if err != nil {
