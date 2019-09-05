@@ -266,6 +266,10 @@ func (s *testSuite) SetupNodesNetwork(nodes []*networkNode) {
 		go initNode(n)
 	}
 	s.waitResults(results, len(nodes))
+
+	for _, n := range nodes {
+		s.afterInitNode(n)
+	}
 }
 
 func (s *testSuite) StartNodesNetwork(nodes []*networkNode) {
@@ -412,6 +416,7 @@ func (s *testSuite) InitNode(node *networkNode) {
 	if node.componentManager != nil {
 		err := node.componentManager.Init(s.ctx)
 		require.NoError(s.t, err)
+		s.afterInitNode(node)
 	}
 }
 
@@ -621,6 +626,15 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	})
 
 	node.ctx = nodeContext
+}
+
+// afterInitNode called after component manager Init
+func (s *testSuite) afterInitNode(node *networkNode) {
+	aborter := network.NewAborterMock(s.t)
+	aborter.AbortMock.Set(func(ctx context.Context, reason string) {
+		panic(reason)
+	})
+	node.serviceNetwork.BaseGateway.Aborter = aborter
 }
 
 func (s *testSuite) AssertActiveNodesCountDelta(delta int) {
