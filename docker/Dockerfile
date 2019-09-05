@@ -1,97 +1,53 @@
-#                             BUILDER CONTAINER
-FROM golang:1.11.5-alpine3.9 AS insolard-builder
-MAINTAINER eugene.blikh@insolar.io
+# 1) build step (approx local build time ~4m w/o cache)
+FROM golang:1.12.9 AS build
 
-RUN set -x && \
-        mkdir -p /opt/bin /opt/config /opt/tmp /opt/log && \
-        apk update     && \
-        apk add --no-cache --virtual /opt/.build-deps \
-            git           \
-            make          \
-            alpine-sdk    \
-            bash
-
-COPY [ "/docker/genconfig/genconfig.go", \
-       "/opt/tmp/" ]
-
-COPY . /go/src/github.com/insolar/insolar
+RUN mkdir -p /go/src/github.com/insolar/insolar
 WORKDIR /go/src/github.com/insolar/insolar
 
-RUN set -x && \
-        : "--------- insolard bulding --------------" && \
-        : 'cd "/go/src/github.com/insolar/insolar"' && \
-        make install-deps ensure && \
-        make insolar insolard benchmark apirequester && \
-        cp bin/insolar bin/insolard bin/benchmark bin/apirequester /opt/bin && \
-        : "--------- helper utilities --------------" && \
-        go get gopkg.in/yaml.v2 && \
-        go build -o /opt/bin/genconfig   /opt/tmp/genconfig.go
+# Install required tools step (adds ~400mb)
+RUN echo -n "<DISK USAGE> before install_build_tools: " && du -sh / 2>/dev/null || true
+ADD ./scripts/build ./scripts/build
+RUN ./scripts/build/install_build_tools.sh
 
-#                             INSOLARD CONTAINER
-FROM alpine:3.9 AS insolard
-MAINTAINER eugene.blikh@insolar.io
+# Install go dependencies step (adds ~800mb)
+RUN echo -n "<DISK USAGE> before vendor: " && du -sh / 2>/dev/null || true
+ADD Gopkg.* ./
+RUN dep ensure --vendor-only
 
-RUN set -x && \
-        mkdir -p /var/log /opt/bin /etc/insolar /var/lib/insolar && \
-        apk add --no-cache --virtual /opt/.runtime-deps \
-            bash    \
-            curl
+# adds sources (~15mb)
+RUN echo -n "<DISK USAGE> before insolar sources copy: " && du -sh / 2>/dev/null || true
+ADD . /go/src/github.com/insolar/insolar/
 
-COPY [ "/docker/insolard.yaml.default", "/opt/tmp/" ]
-COPY [ "/docker/healthcheck.sh", "/opt/bin/" ]
+RUN echo -n "<DISK USAGE> before build: " && du -sh / 2>/dev/null || true
+# pass build variables as arguments to avoid adding .git directory
+ARG BUILD_NUMBER
+ARG BUILD_DATE
+ARG BUILD_TIME
+ARG BUILD_HASH
+ARG BUILD_VERSION
+# build step: adds 400mb
+# not really cachebale because it uses BUILD_TIME variable
+# (we can mock BUILD_TIME, but it's not worth it, besacuse build time is around 1 min)
+RUN BUILD_NUMBER=${BUILD_NUMBER} \
+    BUILD_DATE=$BUILD_DATE \
+    BUILD_TIME=$BUILD_TIME \
+    BUILD_HASH=$BUILD_HASH \
+    BUILD_VERSION=$BUILD_VERSION \
+    make build
+RUN echo -n "<DISK USAGE> after build: " && du -sh / 2>/dev/null || true
 
-COPY --from=insolard-builder        \
-        [ "/opt/bin/insolar",       \
-          "/opt/bin/insolard",      \
-          "/opt/bin/benchmark",     \
-          "/opt/bin/apirequester",  \
-          "/opt/bin/genconfig",     \
-          "/opt/bin/"]
-COPY docker/insolard-entrypoint.sh /opt/bin/docker-entrypoint.sh
+# 2) Base image for running test tests and binaries distribution iamges
+#    (approx local build time ~30s)
+FROM golang:1.12.9
+WORKDIR /go/src/github.com/insolar/insolar
 
-EXPOSE 7900 7901 8001 18182 19191
-HEALTHCHECK --start-period=5m --interval=1m --timeout=30s --retries=5 \
-    CMD [ "/opt/bin/healthcheck.sh" ]
-VOLUME [ "/etc/insolar", "/var/lib/insolar" ]
+# adds 20mb
+RUN echo -n "<DISK USAGE> before apt-get: " && du -sh / 2>/dev/null || true
+# tools for functest (launchnet)
+RUN apt-get -y update && apt-get -y install jq lsof psmisc && apt-get clean
 
-ENTRYPOINT [ "/opt/bin/docker-entrypoint.sh"  ]
-CMD []
-
-#                               GENESIS BUILDER
-FROM insolard-builder AS insolard-genesis-builder
-MAINTAINER ivan.serezhkin@insolar.io
-
-WORKDIR /opt
-RUN set -x && \
-        cp -rf /go/src/github.com/insolar/insolar/keys /opt || true && \
-        /go/src/github.com/insolar/insolar/scripts/build/genesis/genesis.sh
-
-#                              GENESIS CONTAINER
-FROM alpine:3.9 AS genesis
-MAINTAINER ivan.serezhkin@insolar.io
-
-RUN mkdir -p /opt/genesis
-COPY --from=insolard-genesis-builder    \
-        [ "/opt/data.tgz",              \
-          "/opt/keys.tgz",              \
-          "/opt/genesis/" ]
-VOLUME [ "/opt/output" ]
-CMD ['cp', '/opt/genesis', '/opt/output/genesis']
-
-#                             INSGORUND CONTAINER
-FROM alpine:3.9 AS insgorund
-MAINTAINER ivan.serezhkin@insolar.io
-
-RUN set -x && \
-        mkdir -p /var/log /opt/bin /tmp/insgorund /opt/insgorund && \
-        apk add --no-cache --virtual /opt/.runtime-deps \
-            bash    \
-            curl
-
-COPY --from=insolard-genesis-builder /opt/bin/insgorund /opt/bin/insgorund
-COPY docker/insgorund-entrypoint.sh /opt/bin/docker-entrypoint.sh
-
-EXPOSE 7777 8002
-
-ENTRYPOINT [ "/opt/bin/docker-entrypoint.sh" ]
-CMD []
+# adds 350mb (>250mb – binaries)
+RUN echo -n "<DISK USAGE> before insolar files copy: " && du -sh / 2>/dev/null || true
+COPY --from=build /go/src/github.com/insolar/insolar /go/src/github.com/insolar/insolar
+RUN ls -al ./bin && ls -al ./
+# now here we have  1.2GB

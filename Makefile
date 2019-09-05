@@ -26,8 +26,8 @@ CI_TEST_ARGS ?= -p 4
 
 BUILD_NUMBER := $(TRAVIS_BUILD_NUMBER)
 BUILD_DATE = $(shell date "+%Y-%m-%d")
-BUILD_TIME = $(shell date "+%H:%M:%S")
-BUILD_HASH = $(shell git rev-parse --short HEAD)
+BUILD_TIME ?= $(shell date "+%H:%M:%S")
+BUILD_HASH ?= $(shell git rev-parse --short HEAD)
 BUILD_VERSION ?= $(shell git describe --abbrev=0 --tags)
 
 GOPATH ?= `go env GOPATH`
@@ -206,17 +206,6 @@ CONTRACTS = $(wildcard application/contract/*)
 regen-proxies: $(BININSGOCC) ## regen contracts proxies
 	$(foreach c, $(CONTRACTS), $(BININSGOCC) proxy application/contract/$(notdir $(c))/$(notdir $(c)).go; )
 
-.PHONY: docker-insolard
-docker-insolard: ## build insolard docker image
-	docker build --target insolard --tag insolar/insolard -f ./docker/Dockerfile .
-
-.PHONY: docker-insgorund
-docker-insgorund: ## build insgorund docker image
-	docker build --target insgorund --tag insolar/insgorund -f ./docker/Dockerfile .
-
-.PHONY: docker
-docker: docker-insolard docker-insgorund ## build insolard and insgorund docker images
-
 .PHONY: generate-protobuf
 generate-protobuf: ## generate protobuf structs
 	protoc -I./vendor -I./ --gogoslick_out=./ network/node/internal/node/node.proto
@@ -263,6 +252,21 @@ prepare-inrospector-proto: ## install tools required for grpc development
 	go get -u github.com/grpc-ecosystem/grpc-gateway/protoc-gen-grpc-gateway
 	go get -u github.com/grpc-ecosystem/grpc-gateway/protoc-gen-swagger
 	go get -u github.com/golang/protobuf/protoc-gen-go
+
+.PHONY: docker_base_build
+docker_base_build: ## build base image with sources dependencies and compiled binaries
+	docker build -t insolar-base:latest \
+		--build-arg BUILD_NUMBER="$(BUILD_NUMBER)" \
+		--build-arg BUILD_DATE="$(BUILD_DATE)" \
+		--build-arg BUILD_TIME="$(BUILD_TIME)" \
+		--build-arg BUILD_HASH="$(BUILD_HASH)" \
+		--build-arg BUILD_VERSION="$BUILD_VERSION" \
+		-f docker/Dockerfile .
+	docker images "insolar-base"
+
+.PHONY: docker_clean
+docker_clean: ## force remove dangling docker images (it reset cache, beacuse they used ad intermediate layers)
+	docker images -f "dangling=true" -q | xargs docker rmi -f
 
 .PHONY: help
 help: ## Display this help screen
