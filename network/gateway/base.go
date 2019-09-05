@@ -85,6 +85,7 @@ type Base struct {
 	Self                network.Gateway
 	Gatewayer           network.Gatewayer           `inject:""`
 	NodeKeeper          network.NodeKeeper          `inject:""`
+	OriginProvider      network.OriginProvider      `inject:""`
 	ContractRequester   insolar.ContractRequester   `inject:""`
 	CryptographyService insolar.CryptographyService `inject:""`
 	CertificateManager  insolar.CertificateManager  `inject:""`
@@ -223,7 +224,7 @@ func (g *Base) checkCanAnnounceCandidate(ctx context.Context) error {
 	// 		NB: announcing in WaitConsensus state is *NOT* allowed
 
 	state := g.Gatewayer.Gateway().GetState()
-	origin := g.NodeKeeper.GetOrigin()
+	origin := g.OriginProvider.GetOrigin()
 
 	if origin.Role() == insolar.StaticRoleHeavyMaterial && state >= insolar.WaitConsensus {
 		return nil
@@ -323,7 +324,7 @@ func (g *Base) HandleNodeAuthorizeRequest(ctx context.Context, request network.R
 		return nil, errors.Errorf("process authorize: got invalid protobuf request message: %s", request)
 	}
 	data := request.GetRequest().GetAuthorize().AuthorizeData
-	o := g.NodeKeeper.GetOrigin()
+	o := g.OriginProvider.GetOrigin()
 
 	if data.Version != o.Version() {
 		return nil, errors.Errorf("wrong version in AuthorizeRequest, actual network version is: %s", o.Version())
@@ -370,7 +371,7 @@ func (g *Base) HandleNodeAuthorizeRequest(ctx context.Context, request network.R
 		return nil, err
 	}
 
-	permit, err := bootstrap.CreatePermit(g.NodeKeeper.GetOrigin().ID(),
+	permit, err := bootstrap.CreatePermit(g.OriginProvider.GetOrigin().ID(),
 		reconnectHost,
 		pubKey,
 		g.CryptographyService,
@@ -416,7 +417,7 @@ func (g *Base) OnConsensusFinished(ctx context.Context, report network.Report) {
 }
 
 func (g *Base) createCandidateProfile() {
-	origin := g.NodeKeeper.GetOrigin()
+	origin := g.OriginProvider.GetOrigin()
 
 	staticProfile := adapters.NewStaticProfile(origin, g.CertificateManager.GetCertificate(), g.KeyProcessor)
 	candidate := adapters.NewCandidate(staticProfile, g.KeyProcessor)
@@ -432,7 +433,7 @@ func (g *Base) EphemeralMode(nodes []insolar.NetworkNode) bool {
 }
 
 func (g *Base) FailState(ctx context.Context, reason string) {
-	o := g.NodeKeeper.GetOrigin()
+	o := g.OriginProvider.GetOrigin()
 	wrapReason := fmt.Sprintf("Abort node with address: %s role: %s state: %s, reason: %s",
 		o.Address(),
 		o.Role().String(),
