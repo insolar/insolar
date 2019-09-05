@@ -166,7 +166,7 @@ func newZerologAdapter(cfg configuration.Log) (*zerologAdapter, error) {
 		if err != nil {
 			panic("Can not parse time duration " + err.Error())
 		}
-		dw := diode.NewWriter(output, 0, d, missedFunc)
+		dw := diode.NewWriter(output, cfg.BufferSize, d, missedFunc)
 		za.diodeWriter = &dw
 		output = dw
 	} else if cfg.BufferSize > 0 {
