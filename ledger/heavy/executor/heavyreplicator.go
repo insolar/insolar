@@ -137,7 +137,7 @@ func (h *HeavyReplicatorDefault) sync(ctx context.Context) {
 		}
 
 		logger.Debug("heavy replicator storing drop")
-		err := storeDrop(ctx, h.drops, msg.Drop)
+		err = storeDrop(ctx, h.drops, msg.Drop)
 		if err != nil {
 			logger.Panic(errors.Wrap(err, "heavy replicator failed to store drop"))
 		}
