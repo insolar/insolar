@@ -60,6 +60,7 @@ func (s *Server) Serve() {
 	ctx := context.Background()
 	traceID := "main_" + utils.RandTraceID()
 	ctx, inslog := inslogger.InitNodeLogger(ctx, cfg.Log, traceID, "", "")
+	log.InitTicker(inslog)
 
 	cmp, err := newComponents(ctx, *cfg)
 	fatal(ctx, err, "failed to create components")

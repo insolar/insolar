@@ -72,6 +72,7 @@ func (s *Server) Serve() {
 
 	traceID := "main_" + utils.RandTraceID()
 	ctx, inslog := inslogger.InitNodeLogger(ctx, cfg.Log, traceID, nodeRef, nodeRole)
+	log.InitTicker(inslog)
 
 	if cfg.Tracer.Jaeger.AgentEndpoint != "" {
 		var jaegerFlush func()
