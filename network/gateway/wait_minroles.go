@@ -83,7 +83,7 @@ func (g *WaitMinRoles) UpdateState(ctx context.Context, pulseNumber insolar.Puls
 	workingNodes := node.Select(nodes, node.ListWorking)
 
 	if ok, _ := rules.CheckMajorityRule(g.CertificateManager.GetCertificate(), workingNodes); !ok {
-		g.FailState(ctx, "MajorityRule failed")
+		g.FailState(ctx, majorityRuleFailedMessage)
 	}
 
 	g.Base.UpdateState(ctx, pulseNumber, nodes, cloudStateHash)

@@ -52,19 +52,20 @@ package gateway
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
-func pulseProcessingWatchdog(ctx context.Context, pulse insolar.Pulse, done chan struct{}) {
+func pulseProcessingWatchdog(ctx context.Context, gateway *Base, pulse insolar.Pulse, done chan struct{}) {
 	logger := inslogger.FromContext(ctx)
 
 	go func() {
 		select {
 		case <-time.After(time.Second * time.Duration(pulse.NextPulseNumber-pulse.PulseNumber)):
-			logger.Errorf("Node stopped due to long pulse processing, pulse:%v", pulse.PulseNumber)
+			gateway.FailState(ctx, fmt.Sprintf("Node stopped due to long pulse processing, pulse:%v", pulse.PulseNumber))
 		case <-done:
 			logger.Debug("Resetting pulse processing watchdog")
 		}

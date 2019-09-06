@@ -77,7 +77,11 @@ import (
 	"github.com/insolar/insolar/network"
 )
 
-const bootstrapTimeoutMessage = "Bootstrap timeout exceeded"
+const (
+	bootstrapTimeoutMessage   = "Bootstrap timeout exceeded"
+	majorityRuleFailedMessage = "MajorityRule failed"
+	minRolesFailedMessage     = "MinRoles failed"
+)
 
 // Base is abstract class for gateways
 type Base struct {
