@@ -23,6 +23,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
@@ -158,12 +159,18 @@ func newZerologAdapter(cfg configuration.Log) (*zerologAdapter, error) {
 		},
 	}
 
-	if cfg.BufferSize > 0 {
-		dw := diode.NewWriter(
-			output,
-			cfg.BufferSize, 0,
-			func(missed int) { panic(fmt.Errorf("logger dropped %d messages", missed)) },
-		)
+	missedFunc := func(missed int) { panic(fmt.Errorf("logger dropped %d messages", missed)) }
+
+	if cfg.Poller != "" {
+		d, err := time.ParseDuration(cfg.Poller)
+		if err != nil {
+			panic("Can not parse time duration " + err.Error())
+		}
+		dw := diode.NewWriter(output, cfg.BufferSize, d, missedFunc)
+		za.diodeWriter = &dw
+		output = dw
+	} else if cfg.BufferSize > 0 {
+		dw := diode.NewWriter(output, cfg.BufferSize, 0, missedFunc)
 		za.diodeWriter = &dw
 		output = dw
 	}

@@ -56,6 +56,7 @@ import (
 	"crypto/rand"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/storage"
+	"github.com/insolar/insolar/network/termination"
 
 	"github.com/insolar/insolar/cryptography"
 
@@ -97,19 +98,18 @@ type ServiceNetwork struct {
 	CryptographyService insolar.CryptographyService        `inject:""`
 	CryptographyScheme  insolar.PlatformCryptographyScheme `inject:""`
 	KeyProcessor        insolar.KeyProcessor               `inject:""`
-	TerminationHandler  insolar.TerminationHandler         `inject:""`
 	ContractRequester   insolar.ContractRequester          `inject:""`
 
 	// watermill support interfaces
 	Pub message.Publisher `inject:""`
 
 	// subcomponents
-	RPC              controller.RPCController `inject:"subcomponent"`
-	TransportFactory transport.Factory        `inject:"subcomponent"`
-	PulseAccessor    storage.PulseAccessor    `inject:"subcomponent"`
-	PulseAppender    storage.PulseAppender    `inject:"subcomponent"`
-	NodeKeeper       network.NodeKeeper       `inject:"subcomponent"`
-	// DB               storage.DB               `inject:"subcomponent"`
+	RPC                controller.RPCController   `inject:"subcomponent"`
+	TransportFactory   transport.Factory          `inject:"subcomponent"`
+	PulseAccessor      storage.PulseAccessor      `inject:"subcomponent"`
+	PulseAppender      storage.PulseAppender      `inject:"subcomponent"`
+	NodeKeeper         network.NodeKeeper         `inject:"subcomponent"`
+	TerminationHandler network.TerminationHandler `inject:"subcomponent"`
 
 	HostNetwork network.HostNetwork
 
@@ -167,6 +167,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		n.BaseGateway,
 		n.Gatewayer,
 		storage.NewMemoryStorage(),
+		termination.NewHandler(n),
 	)
 
 	n.datagramHandler = adapters.NewDatagramHandler()

@@ -43,5 +43,5 @@ func (cc CostCenter) GetFeeMember() (*insolar.Reference, error) {
 // CalcFee calculates fee for amount. Returns fee.
 // ins:immutable
 func (cc CostCenter) CalcFee(amountStr string) (string, error) {
-	return "10000000", nil
+	return "1000000000", nil
 }

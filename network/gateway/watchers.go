@@ -52,34 +52,34 @@ package gateway
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/network"
 )
 
-func pulseProcessingWatchdog(ctx context.Context, pulse insolar.Pulse, done chan struct{}) {
+func pulseProcessingWatchdog(ctx context.Context, gateway *Base, pulse insolar.Pulse, done chan struct{}) {
 	logger := inslogger.FromContext(ctx)
 
 	go func() {
 		select {
 		case <-time.After(time.Second * time.Duration(pulse.NextPulseNumber-pulse.PulseNumber)):
-			logger.Errorf("Node stopped due to long pulse processing, pulse:%v", pulse.PulseNumber)
+			gateway.FailState(ctx, fmt.Sprintf("Node stopped due to long pulse processing, pulse:%v", pulse.PulseNumber))
 		case <-done:
 			logger.Debug("Resetting pulse processing watchdog")
 		}
 	}()
 }
 
-func newPulseWatchdog(ctx context.Context, gatewayer network.Gatewayer, timeout time.Duration, done chan struct{}) {
+func newPulseWatchdog(ctx context.Context, gateway *Base, timeout time.Duration, done chan struct{}) {
 	logger := inslogger.FromContext(ctx)
 
 	go func() {
 		for {
 			select {
 			case <-time.After(timeout):
-				gatewayer.FailState(ctx, "New valid pulse timeout exceeded")
+				gateway.FailState(ctx, "New valid pulse timeout exceeded")
 			case _, ok := <-done:
 				if !ok {
 					return

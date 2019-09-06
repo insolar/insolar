@@ -207,11 +207,11 @@ func (g *Complete) UpdateState(ctx context.Context, pulseNumber insolar.PulseNum
 	workingNodes := node.Select(nodes, node.ListWorking)
 
 	if ok, _ := rules.CheckMajorityRule(g.CertificateManager.GetCertificate(), workingNodes); !ok {
-		g.Gatewayer.FailState(ctx, "MajorityRule failed")
+		g.FailState(ctx, majorityRuleFailedMessage)
 	}
 
 	if !rules.CheckMinRole(g.CertificateManager.GetCertificate(), workingNodes) {
-		g.Gatewayer.FailState(ctx, "MinRoles failed")
+		g.FailState(ctx, minRolesFailedMessage)
 	}
 
 	g.Base.UpdateState(ctx, pulseNumber, nodes, cloudStateHash)
@@ -222,7 +222,7 @@ func (g *Complete) OnPulseFromConsensus(ctx context.Context, pulse insolar.Pulse
 
 	done := make(chan struct{})
 	defer close(done)
-	pulseProcessingWatchdog(ctx, pulse, done)
+	pulseProcessingWatchdog(ctx, g.Base, pulse, done)
 
 	logger := inslogger.FromContext(ctx)
 

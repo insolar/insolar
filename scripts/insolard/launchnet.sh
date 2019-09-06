@@ -87,7 +87,8 @@ kill_port()
     pids=$(lsof -i :$port | grep "LISTEN\|UDP" | awk '{print $2}')
     for pid in $pids
     do
-        echo "killing pid $pid"
+        echo -n "killing pid $pid at "
+        date
         kill -ABRT $pid
     done
 }

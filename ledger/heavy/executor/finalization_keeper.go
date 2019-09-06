@@ -34,7 +34,6 @@ type FinalizationKeeper interface {
 
 type FinalizationKeeperDefault struct {
 	jetKeeper       JetKeeper
-	networkStopper  insolar.TerminationHandler
 	limit           int
 	pulseCalculator pulse.Calculator
 }
