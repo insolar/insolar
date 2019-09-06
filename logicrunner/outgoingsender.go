@@ -37,11 +37,15 @@ type outgoingRequestSender struct {
 	senderPid actor.Pid
 }
 
+type actorDeps struct {
+	cr insolar.ContractRequester
+	am artifacts.Client
+	pa pulse.Accessor
+}
+
 // Currently actor has only one state.
 type outgoingSenderActorState struct {
-	cr                            insolar.ContractRequester
-	am                            artifacts.Client
-	pa                            pulse.Accessor
+	deps                          actorDeps
 	atomicRunningGoroutineCounter int32
 }
 
@@ -130,7 +134,7 @@ func (rs *outgoingRequestSender) Stop(ctx context.Context) {
 }
 
 func newOutgoingSenderActorState(cr insolar.ContractRequester, am artifacts.Client, pa pulse.Accessor) actor.Actor {
-	return &outgoingSenderActorState{cr: cr, am: am, pa: pa}
+	return &outgoingSenderActorState{deps: actorDeps{cr: cr, am: am, pa: pa}}
 }
 
 func (a *outgoingSenderActorState) Receive(message actor.Message) (actor.Actor, error) {
@@ -155,12 +159,12 @@ func (a *outgoingSenderActorState) Receive(message actor.Message) (actor.Actor, 
 			defer atomic.AddInt32(&a.atomicRunningGoroutineCounter, -1)
 
 			var res sendOutgoingResult
-			res.object, res.result, res.incoming, res.err = a.sendOutgoingRequest(v.ctx, v.requestReference, v.outgoingRequest)
+			res.object, res.result, res.incoming, res.err = a.deps.sendOutgoingRequest(v.ctx, v.requestReference, v.outgoingRequest)
 			v.resultChan <- res
 		}()
 		return a, nil
 	case sendAbandonedOutgoingRequestMessage:
-		_, _, _, err := a.sendOutgoingRequest(v.ctx, v.requestReference, v.outgoingRequest)
+		_, _, _, err := a.deps.sendOutgoingRequest(v.ctx, v.requestReference, v.outgoingRequest)
 		// It's OK to just log an error,  LME will re-send a corresponding notification anyway.
 		if err != nil {
 			inslogger.FromContext(context.Background()).Errorf("OutgoingRequestActor: sendOutgoingRequest failed %v", err)
@@ -175,7 +179,7 @@ func (a *outgoingSenderActorState) Receive(message actor.Message) (actor.Actor, 
 	}
 }
 
-func (a *outgoingSenderActorState) sendOutgoingRequest(ctx context.Context, outgoingReqRef insolar.Reference, outgoing *record.OutgoingRequest) (*insolar.Reference, insolar.Arguments, *record.IncomingRequest, error) {
+func (a *actorDeps) sendOutgoingRequest(ctx context.Context, outgoingReqRef insolar.Reference, outgoing *record.OutgoingRequest) (*insolar.Reference, insolar.Arguments, *record.IncomingRequest, error) {
 	var object *insolar.Reference
 
 	incoming := buildIncomingRequestFromOutgoing(outgoing)
