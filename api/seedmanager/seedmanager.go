@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/log"
 )
 
 // Expiration represents time of expiration
@@ -66,7 +65,7 @@ func NewSpecified(ttl time.Duration, cleanPeriod time.Duration) *SeedManager {
 		id:       atomic.LoadUint32(&globalID),
 	}
 
-	log.Info("Creating NewSpecified: ", ", ID: ", sm.id)
+	println("Creating NewSpecified: ", ", ID: ", sm.id)
 
 	ticker := time.NewTicker(cleanPeriod)
 
@@ -103,7 +102,7 @@ func (sm *SeedManager) Add(seed Seed, pulse insolar.PulseNumber) {
 		pulse:      pulse,
 	}
 
-	log.Info("SeedManager.Add. ID: ", sm.id, ". Now: ", time.Now(),
+	println("SeedManager.Add. ID: ", sm.id, ". Now: ", time.Now(),
 		", ttl: ", sm.ttl.String(),
 		", expTime:", expTime,
 		"content: ", sm.seedPool,
@@ -112,7 +111,7 @@ func (sm *SeedManager) Add(seed Seed, pulse insolar.PulseNumber) {
 }
 
 func (sm *SeedManager) isExpired(expTime Expiration) bool {
-	log.Info("isExpired. expTime: ", expTime, " , now: ", time.Now().UnixNano())
+	println("isExpired. expTime: ", expTime, " , now: ", time.Now().UnixNano())
 	return expTime < time.Now().UnixNano()
 }
 
@@ -120,19 +119,19 @@ func (sm *SeedManager) isExpired(expTime Expiration) bool {
 func (sm *SeedManager) Pop(seed Seed) (insolar.PulseNumber, bool) {
 	sm.mutex.RLock()
 	stored, ok := sm.seedPool[seed]
-	log.Info("Pop: ok: ", ok, ", ID: ", sm.id, ". content: ", sm.seedPool, ", seed: ", seed)
+	println("Pop: ok: ", ok, ", ID: ", sm.id, ". content: ", sm.seedPool, ", seed: ", seed)
 	sm.mutex.RUnlock()
 
 	if ok && !sm.isExpired(stored.expiration) {
 		sm.mutex.Lock()
 		defer sm.mutex.Unlock()
 
-		log.Info("Pop seed: delete: ", seed, ", ID: ", sm.id)
+		println("Pop seed: delete: ", seed, ", ID: ", sm.id)
 		delete(sm.seedPool, seed)
 		return stored.pulse, true
 	}
 
-	log.Info("Pop seed: NO: ", seed, ", ID: ", sm.id)
+	println("Pop seed: NO: ", seed, ", ID: ", sm.id)
 
 	return 0, false
 }
@@ -143,7 +142,7 @@ func (sm *SeedManager) deleteExpired() {
 
 	for seed, stored := range sm.seedPool {
 		if sm.isExpired(stored.expiration) {
-			log.Info("deleteExpired: ", seed, ", ID: ", sm.id)
+			println("deleteExpired: ", seed, ", ID: ", sm.id)
 			delete(sm.seedPool, seed)
 		}
 	}
