@@ -21,7 +21,6 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/stretchr/testify/require"
-	"github.com/insolar/insolar/bootstrap/contracts"
 )
 
 func TestReferences(t *testing.T) {
@@ -82,11 +81,11 @@ func TestReferences(t *testing.T) {
 			expect: "11tJEBgzYNSNXj3PVRQu65HHmZmAMYBcDTHezpCWTei",
 		},
 		insolar.GenesisNamePKShard: {
-			got:    contracts.ContractPublicKeyShards(10)[0],
+			got:    ContractPublicKeyShards(10)[0],
 			expect: "11tJE7rREfukavXjkt1M85izWsRkoh8Ktkx7hA4bccR",
 		},
 		insolar.GenesisNameMigrationShard: {
-			got:    contracts.ContractMigrationAddressShards(10)[0],
+			got:    ContractMigrationAddressShards(10)[0],
 			expect: "11tJDkVPDLVSKnWsjM8BR7DzJ1bjcZavqAZpA3SCGq7",
 		},
 		insolar.GenesisNameMigrationAdminAccount: {
