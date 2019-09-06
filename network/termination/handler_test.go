@@ -72,7 +72,7 @@ type CommonTestSuite struct {
 
 	mc            *minimock.Controller
 	ctx           context.Context
-	handler       *TerminationHandler
+	handler       *Handler
 	leaver        *testutils.LeaverMock
 	pulseAccessor *mock.PulseAccessorMock
 }
@@ -86,7 +86,7 @@ func (s *CommonTestSuite) BeforeTest(suiteName, testName string) {
 	s.ctx = inslogger.TestContext(s.T())
 	s.leaver = testutils.NewLeaverMock(s.T())
 	s.pulseAccessor = mock.NewPulseAccessorMock(s.T())
-	s.handler = &TerminationHandler{Leaver: s.leaver, PulseAccessor: s.pulseAccessor}
+	s.handler = &Handler{Leaver: s.leaver, PulseAccessor: s.pulseAccessor}
 
 }
 
