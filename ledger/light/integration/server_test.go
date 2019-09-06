@@ -52,6 +52,7 @@ import (
 	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network"
 	networknode "github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/platformpolicy"
@@ -89,6 +90,8 @@ type Server struct {
 	clientSender bus.Sender
 	replicator   executor.LightReplicator
 	cleaner      executor.Cleaner
+
+	metrics *metrics.Metrics
 }
 
 func DefaultLightConfig() configuration.Configuration {
@@ -432,12 +435,18 @@ func NewServer(
 		"heavy":   heavy.ID().String(),
 	}).Info("started test server")
 
+	m := metrics.NewMetrics(ctx, configuration.NewMetrics(), metrics.GetInsolarRegistry("test-server"), "test-server")
+	if err := m.Init(ctx); err != nil {
+		panic(err)
+	}
+
 	s := &Server{
 		pm:           PulseManager,
 		pulse:        *insolar.GenesisPulse,
 		clientSender: ClientBus,
 		replicator:   Replicator,
 		cleaner:      Cleaner,
+		metrics:      m,
 	}
 	return s, nil
 }

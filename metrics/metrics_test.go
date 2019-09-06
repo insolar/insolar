@@ -188,7 +188,6 @@ func TestMetrics_ZPages(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	rr := httptest.NewRecorder()
 	testm.Handler().ServeHTTP(rr, req)
 

@@ -18,8 +18,15 @@
 package integration_test
 
 import (
+	"bufio"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"strconv"
+	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
@@ -28,6 +35,7 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/drop"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/pulse"
 
 	"github.com/stretchr/testify/require"
@@ -147,6 +155,11 @@ func Test_AbandonedNotification(t *testing.T) {
 			}
 		}
 	})
+
+	v := fetchMetricValue(s.metrics.Handler(), "insolar_requests_abandoned")
+	vNum, err := strconv.Atoi(v)
+	require.NoError(t, err, "insolar_requests_abandoned metric value is number")
+	assert.GreaterOrEqualf(t, vNum, 100, "insolar_requests_abandoned should be grater whzn 100")
 }
 
 func Test_AbandonedNotification_WhenLightInit(t *testing.T) {
@@ -226,4 +239,33 @@ func Test_AbandonedNotification_WhenLightInit(t *testing.T) {
 			require.Equal(t, objectID, notification.ObjectID)
 		}
 	})
+
+	v := fetchMetricValue(s.metrics.Handler(), "insolar_requests_abandoned")
+	vNum, err := strconv.Atoi(v)
+	require.NoError(t, err, "insolar_requests_abandoned metric value is number")
+	assert.GreaterOrEqualf(t, vNum, 100, "insolar_requests_abandoned should be grater whzn 100")
+	// fmt.Println("v=>", v) // 228
+}
+
+func fetchMetricValue(h http.Handler, metricName string) string {
+	req, err := http.NewRequest("GET", "/metrics", nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	// fmt.Println("Metrics:\n", rr.Body.String())
+
+	scanner := bufio.NewScanner(rr.Body)
+	for scanner.Scan() {
+		s := scanner.Text()
+		if strings.HasPrefix(s, metricName) {
+			return metricValue(s)
+		}
+	}
+	return ""
+}
+
+func metricValue(s string) string {
+	return s[strings.LastIndex(s, " ")+1:]
 }
