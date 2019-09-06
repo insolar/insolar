@@ -32,6 +32,6 @@ func NewLog() Log {
 		Adapter:    "zerolog",
 		Formatter:  "json",
 		BufferSize: 10 * 1024 * 1024,
-		Poller:     "0.5s",
+		Poller:     "0.1s",
 	}
 }

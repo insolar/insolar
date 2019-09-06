@@ -108,7 +108,8 @@ var GlobalLogger = func() insolar.Logger {
 	if logger.Is(insolar.DebugLevel) {
 		go func() {
 			for {
-				time.Sleep(time.Second - time.Now().Sub(time.Now().Truncate(time.Second)))
+				// Tick between seconds
+				time.Sleep(time.Second - time.Since(time.Now().Truncate(time.Second)))
 				logger.Debug("Logger tick")
 			}
 		}()
