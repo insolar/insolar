@@ -133,7 +133,8 @@ func wrapCall(runner *Runner, allowedMethods map[string]bool, req *http.Request,
 		}
 
 		return &json2.Error{
-			Code:    ExecutionError,
+			Code: ExecutionError,
+			// TODO: remove this additional ERROR concatenation
 			Message: ExecutionErrorMessage + "; ERROR: " + err.Error(),
 			Data: requester.Data{
 				Trace:            strings.Split(err.Error(), ": "),
