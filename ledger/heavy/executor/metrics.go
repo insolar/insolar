@@ -28,6 +28,8 @@ var (
 		"last pulse with fully finalized data",
 		stats.UnitDimensionless,
 	)
+
+	statAbandonedRequests = stats.Int64("abandones", "Amount of abandoned requests", stats.UnitDimensionless)
 )
 
 func init() {
@@ -43,6 +45,12 @@ func init() {
 			Description: "how many jets on start of pulse",
 			Measure:     statJets,
 			Aggregation: view.LastValue(),
+		},
+		&view.View{
+			Name:        statAbandonedRequests.Name(),
+			Description: statAbandonedRequests.Description(),
+			Measure:     statAbandonedRequests,
+			Aggregation: view.Count(),
 		},
 	)
 	if err != nil {
