@@ -222,7 +222,7 @@ func (g *Complete) OnPulseFromConsensus(ctx context.Context, pulse insolar.Pulse
 
 	done := make(chan struct{})
 	defer close(done)
-	pulseProcessingWatchdog(ctx, g, pulse, done)
+	pulseProcessingWatchdog(ctx, g.Base, pulse, done)
 
 	logger := inslogger.FromContext(ctx)
 
