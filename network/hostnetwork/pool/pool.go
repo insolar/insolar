@@ -87,9 +87,6 @@ func newConnectionPool(t transport.StreamTransport) *connectionPool {
 
 // GetConnection returns connection from the pool, if connection isn't exist, it will be created
 func (cp *connectionPool) GetConnection(ctx context.Context, host *host.Host) (io.ReadWriter, error) {
-	logger := inslogger.FromContext(ctx)
-	logger.Debugf("[ GetConnection ] Finding entry for connection to %s in pool", host)
-
 	e := cp.getOrCreateEntry(ctx, host)
 	return e.open(ctx)
 }
@@ -105,15 +102,13 @@ func (cp *connectionPool) CloseConnection(ctx context.Context, host *host.Host) 
 }
 
 func (cp *connectionPool) getOrCreateEntry(ctx context.Context, host *host.Host) *entry {
-	logger := inslogger.FromContext(ctx)
-
 	e, ok := cp.entryHolder.get(host)
-	logger.Debugf("[ getOrCreateEntry ] Finding entry for connection to %s in pool: %t", host, ok)
 
 	if ok {
 		return e
 	}
 
+	logger := inslogger.FromContext(ctx)
 	logger.Debugf("[ getOrCreateEntry ] Failed to retrieve entry for connection to %s, creating it", host)
 
 	e = newEntry(cp.transport, nil, host, cp.CloseConnection)
