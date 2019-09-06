@@ -362,7 +362,8 @@ func main() {
 	var balanceCheckMembers []*sdk.Member
 
 	if !noCheckBalance {
-		balanceCheckMembers = append(members, insSDK.GetFeeMember())
+		copy(balanceCheckMembers, members)
+		balanceCheckMembers = append(balanceCheckMembers, insSDK.GetFeeMember())
 		totalBalanceBefore, balancePenRetries = getTotalBalance(insSDK, balanceCheckMembers)
 	}
 

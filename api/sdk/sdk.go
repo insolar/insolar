@@ -281,27 +281,6 @@ func (sdk *SDK) GetBalance(m *Member) (*big.Int, error) {
 	return result, nil
 }
 
-// GetFeeBalance returns current balance of fee wallet.
-func (sdk *SDK) GetFeeBalance() (*big.Int, error) {
-	response, err := sdk.DoRequest(
-		sdk.adminAPIURLs,
-		sdk.feeMember,
-		"member.getBalance",
-		map[string]interface{}{"reference": sdk.feeMember.Caller},
-	)
-
-	if err != nil {
-		return nil, errors.Wrap(err, "request was failed ")
-	}
-
-	result, ok := new(big.Int).SetString(response.CallResult.(map[string]interface{})["balance"].(string), 10)
-	if !ok {
-		return nil, errors.Errorf("can't parse returned balance")
-	}
-
-	return result, nil
-}
-
 func (sdk *SDK) DoRequest(urls *ringBuffer, user *requester.UserConfigJSON, method string, params map[string]interface{}) (*requester.ContractResult, error) {
 	ctx := inslogger.ContextWithTrace(context.Background(), method)
 
