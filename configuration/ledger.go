@@ -111,7 +111,7 @@ func NewLedger() Ledger {
 			// TODO: find best default values
 			ThresholdRecordsCount:  100,
 			ThresholdOverflowCount: 3,
-			DepthLimit:             10, // limit to 1024 jets
+			DepthLimit:             5, // limit to 32 jets
 		},
 		LightChainLimit: 5, // 5 pulses
 
