@@ -118,7 +118,6 @@ func (sm *SeedManager) isExpired(expTime Expiration) bool {
 
 // Exists checks whether seed in the pool
 func (sm *SeedManager) Pop(seed Seed) (insolar.PulseNumber, bool) {
-	log.Info("Pop seed: ", seed, ", ID: ", sm.id, ". content: ", sm.seedPool)
 	sm.mutex.RLock()
 	stored, ok := sm.seedPool[seed]
 	log.Info("Pop: ok: ", ok, ", ID: ", sm.id, ". content: ", sm.seedPool, ", seed: ", seed)
