@@ -84,7 +84,6 @@ func (ph *packetHandler) Handle(ctx context.Context, response *packet.ReceivedPa
 	future := ph.futureManager.Get(response.Packet)
 	if future != nil {
 		if shouldProcessPacket(future, response) {
-			logger.Debugf("[ processResponse ] Processing future RequestID = %d", future.ID())
 			future.SetResponse(response)
 			logger.Debugf("[ processResponse ] Finished processing future RequestID = %d", future.ID())
 		} else {
