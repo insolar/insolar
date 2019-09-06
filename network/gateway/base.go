@@ -86,7 +86,6 @@ type Base struct {
 	Self                network.Gateway
 	Gatewayer           network.Gatewayer           `inject:""`
 	NodeKeeper          network.NodeKeeper          `inject:""`
-	OriginProvider      network.OriginProvider      `inject:""`
 	ContractRequester   insolar.ContractRequester   `inject:""`
 	CryptographyService insolar.CryptographyService `inject:""`
 	CertificateManager  insolar.CertificateManager  `inject:""`
@@ -97,6 +96,9 @@ type Base struct {
 	BootstrapRequester  bootstrap.Requester         `inject:""`
 	KeyProcessor        insolar.KeyProcessor        `inject:""`
 	Aborter             network.Aborter             `inject:""`
+
+	// nolint
+	OriginProvider network.OriginProvider `inject:""`
 
 	ConsensusController   consensus.Controller
 	ConsensusPulseHandler network.PulseHandler
