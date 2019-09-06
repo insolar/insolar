@@ -23,6 +23,7 @@ import (
 	"go/build"
 	"io"
 	"io/ioutil"
+	"log"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -358,6 +359,13 @@ func startNet() error {
 
 }
 
+var logRotatorEnableVar = "LOGROTATOR_ENABLE"
+
+// LogRotateEnabled checks is log rotation enabled by environment variable.
+func LogRotateEnabled() bool {
+	return os.Getenv(logRotatorEnableVar) == "1"
+}
+
 func waitForLaunch() error {
 	done := make(chan bool, 1)
 	timeout := 240 * time.Second
@@ -423,8 +431,6 @@ func setup() error {
 	Root.Ref = info.RootMember
 	MigrationAdmin.Ref = info.MigrationAdminMember
 
-	//Contracts = make(map[string]*contractInfo)
-
 	return nil
 }
 
@@ -446,4 +452,27 @@ func teardown() {
 		fmt.Println("[ teardown ]  failed to stop insolard: ", err)
 	}
 	fmt.Println("[ teardown ] insolard was successfully stoped")
+}
+
+// RotateLogs rotates launchnet logs.
+func RotateLogs(dirPattern string, verbose bool) {
+	rmCmd := "rm -vf " + dirPattern
+	cmd := exec.Command("sh", "-c", rmCmd)
+	out, err := cmd.Output()
+	if err != nil {
+		log.Fatal("RotateLogs: failed to execute shell command: ", rmCmd)
+	}
+	if verbose {
+		fmt.Println("RotateLogs removed files:\n", string(out))
+	}
+
+	rotateCmd := "killall -v -SIGUSR2 inslogrotator"
+	cmd = exec.Command("sh", "-c", rotateCmd)
+	out, err = cmd.Output()
+	if err != nil {
+		log.Fatal("RotateLogs: failed to execute shell command:", rotateCmd)
+	}
+	if verbose {
+		println("RotateLogs killall output:", string(out))
+	}
 }

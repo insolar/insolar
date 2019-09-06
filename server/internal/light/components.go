@@ -49,7 +49,6 @@ import (
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/servicenetwork"
-	"github.com/insolar/insolar/network/termination"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/server/internal"
 )
@@ -121,7 +120,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 	// Network.
 	var (
 		NetworkService *servicenetwork.ServiceNetwork
-		Termination    insolar.TerminationHandler
 	)
 	{
 		var err error
@@ -130,8 +128,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start Network")
 		}
-
-		Termination = termination.NewHandler(NetworkService)
 	}
 
 	// Role calculations.
@@ -146,11 +142,10 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		Pulses = pulse.NewStorageMem()
 		Jets = jet.NewStore()
 
-		c := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit)
+		c := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit, *CertManager.GetCertificate().GetNodeRef())
 		c.PulseCalculator = Pulses
 		c.PulseAccessor = Pulses
 		c.JetAccessor = Jets
-		c.OriginProvider = NetworkService
 		c.PlatformCryptographyScheme = CryptoScheme
 		c.Nodes = Nodes
 
@@ -365,7 +360,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		ArtifactsClient,
 		APIWrapper,
 		KeyProcessor,
-		Termination,
 		CryptoScheme,
 		CryptoService,
 		CertManager,

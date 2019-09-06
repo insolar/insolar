@@ -87,10 +87,6 @@ func (n *ServiceNetwork) GetNetworkStatus() insolar.StatusReply {
 	return reply
 }
 
-func (n *ServiceNetwork) IsAlive() bool {
-	panic("implement me")
-}
-
 func init() {
 	startTime = time.Now()
 }

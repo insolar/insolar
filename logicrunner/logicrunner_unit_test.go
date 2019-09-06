@@ -180,7 +180,7 @@ func (suite *LogicRunnerTestSuite) TestSagaCallAcceptNotificationHandler() {
 	var usedReason insolar.Reference
 	var usedReturnMode record.ReturnMode
 
-	suite.cr.CallMock.Set(func(ctx context.Context, msg insolar.Payload) (insolar.Reply, *insolar.Reference, error) {
+	suite.cr.SendRequestMock.Set(func(ctx context.Context, msg insolar.Payload) (insolar.Reply, *insolar.Reference, error) {
 		_, ok := msg.(*payload.CallMethod)
 		suite.Require().True(ok, "message should be payload.CallMethod")
 		cm := msg.(*payload.CallMethod)

@@ -21,12 +21,6 @@ import (
 	"time"
 )
 
-// HealthChecker interface provides method to check network health
-type HealthChecker interface {
-	// IsAlive returns true if todo: fix requirements
-	IsAlive() bool
-}
-
 type StatusReply struct {
 	NetworkState    NetworkState
 	Origin          NetworkNode

@@ -286,7 +286,7 @@ func (m *Member) transferCall(params map[string]interface{}) (interface{}, error
 	}
 	_, err = member.GetObject(*recipientReference).GetWallet()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get destination member object: %s", err.Error())
+		return nil, fmt.Errorf("destination member does not exists: %s", err.Error())
 	}
 
 	return wallet.GetObject(m.Wallet).Transfer(m.RootDomain, asset, amount, recipientReference)
@@ -313,7 +313,7 @@ func (m *Member) depositTransferCall(params map[string]interface{}) (interface{}
 	}
 	d := deposit.GetObject(*dRef)
 
-	return d.Transfer(amount, m.Wallet)
+	return d.Transfer(amount, m.GetReference())
 }
 
 func (m *Member) depositMigrationCall(params map[string]interface{}) (interface{}, error) {

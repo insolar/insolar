@@ -72,7 +72,7 @@ func (g *WaitMajority) Run(ctx context.Context, pulse insolar.Pulse) {
 
 	select {
 	case <-g.bootstrapTimer.C:
-		g.Gatewayer.FailState(ctx, "Bootstrap timeout exceeded")
+		g.FailState(ctx, bootstrapTimeoutMessage)
 	case newPulse := <-g.majorityComplete:
 		g.Gatewayer.SwitchState(ctx, insolar.WaitMinRoles, newPulse)
 	}

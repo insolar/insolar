@@ -23,6 +23,7 @@ import (
 
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
+	"github.com/spf13/viper"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
@@ -61,21 +62,24 @@ func main() {
 	params := parseInputParams()
 
 	jww.SetStdoutThreshold(jww.LevelDebug)
-	cfgHolder := configuration.NewHolder()
-	var err error
+	vp := viper.New()
+	pCfg := configuration.NewPulsarConfiguration()
 	if len(params.configPath) != 0 {
-		err = cfgHolder.LoadFromFile(params.configPath)
-	} else {
-		err = cfgHolder.Load()
+		vp.SetConfigFile(params.configPath)
 	}
+	err := vp.ReadInConfig()
+	if err != nil {
+		log.Warn("failed to load configuration from file: ", err.Error())
+	}
+	err = vp.Unmarshal(&pCfg)
 	if err != nil {
 		log.Warn("failed to load configuration from file: ", err.Error())
 	}
 
 	traceID := utils.RandTraceID()
 	ctx := context.Background()
-	ctx, _ = inslogger.InitNodeLogger(ctx, cfgHolder.Configuration.Log, traceID, "", "test_pulsar")
-	testPulsar := initPulsar(ctx, cfgHolder.Configuration)
+	ctx, _ = inslogger.InitNodeLogger(ctx, pCfg.Log, traceID, "", "test_pulsar")
+	testPulsar := initPulsar(ctx, pCfg)
 
 	http.HandleFunc("/pulse", func(writer http.ResponseWriter, request *http.Request) {
 		err := testPulsar.SendPulse(ctx)
@@ -98,7 +102,7 @@ func main() {
 	}
 }
 
-func initPulsar(ctx context.Context, cfg configuration.Configuration) *pulsar.TestPulsar {
+func initPulsar(ctx context.Context, cfg configuration.PulsarConfiguration) *pulsar.TestPulsar {
 	fmt.Println("Version: ", version.GetFullVersion())
 	fmt.Println("Starts with configuration:\n", configuration.ToString(cfg))
 

@@ -57,7 +57,6 @@ import (
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/servicenetwork"
-	"github.com/insolar/insolar/network/termination"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulse"
 	"github.com/insolar/insolar/server/internal"
@@ -137,7 +136,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 	// Network.
 	var (
 		NetworkService *servicenetwork.ServiceNetwork
-		Termination    insolar.TerminationHandler
 	)
 	{
 		var err error
@@ -146,8 +144,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start Network")
 		}
-
-		Termination = termination.NewHandler(NetworkService)
 	}
 
 	// Storage.
@@ -172,11 +168,10 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		Pulses = insolarPulse.NewDB(DB)
 		Jets = jet.NewDBStore(DB)
 
-		c := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit)
+		c := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit, *CertManager.GetCertificate().GetNodeRef())
 		c.PulseCalculator = Pulses
 		c.PulseAccessor = Pulses
 		c.JetAccessor = Jets
-		c.OriginProvider = NetworkService
 		c.PlatformCryptographyScheme = CryptoScheme
 		c.Nodes = Nodes
 
@@ -265,15 +260,15 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		drops := drop.NewDB(DB)
 		JetKeeper = executor.NewJetKeeper(Jets, DB, Pulses)
 
-		c.rollback = executor.NewDBRollback(JetKeeper, drops, Records, indexes, Jets, Pulses, JetKeeper)
-		c.stateKeeper = executor.NewInitialStateKeeper(JetKeeper, Jets, Coordinator, indexes, drops)
-
-		sp := insolarPulse.NewStartPulse()
-
-		backupMaker, err := executor.NewBackupMaker(ctx, DB, cfg.Ledger.Backup, JetKeeper.TopSyncPulse())
+		backupMaker, err := executor.NewBackupMaker(ctx, DB, cfg.Ledger, JetKeeper.TopSyncPulse(), DB)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed create backuper")
 		}
+
+		c.rollback = executor.NewDBRollback(JetKeeper, drops, Records, indexes, Jets, Pulses, JetKeeper, backupMaker)
+		c.stateKeeper = executor.NewInitialStateKeeper(JetKeeper, Jets, Coordinator, indexes, drops)
+
+		sp := insolarPulse.NewStartPulse()
 
 		PulseManager = pulsemanager.NewPulseManager(Requester.FlowDispatcher)
 		PulseManager.NodeNet = NetworkService
@@ -373,7 +368,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		ArtifactsClient,
 		APIWrapper,
 		KeyProcessor,
-		Termination,
 		CryptoScheme,
 		CryptoService,
 		CertManager,

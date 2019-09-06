@@ -20,7 +20,6 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
 )
@@ -46,14 +45,7 @@ func NewDBRollback(jetKeeper JetKeeper, dbs ...headTruncater) *DBRollback {
 }
 
 func (d *DBRollback) Start(ctx context.Context) error {
-	logger := inslogger.FromContext(ctx)
 	lastSyncPulseNumber := d.jetKeeper.TopSyncPulse()
-
-	logger.Debug("[ DBRollback.Start ] last finalized pulse number: ", lastSyncPulseNumber)
-	if lastSyncPulseNumber == insolar.GenesisPulse.PulseNumber {
-		logger.Debug("[ DBRollback.Start ] No finalized data. Nothing done")
-		return nil
-	}
 
 	nextPulse := lastSyncPulseNumber + 1
 

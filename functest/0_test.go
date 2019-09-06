@@ -14,23 +14,26 @@
 // limitations under the License.
 //
 
-package insolar
+// +build functest
+
+package functest
 
 import (
-	"context"
+	"testing"
+
+	"github.com/insolar/insolar/testutils/launchnet"
 )
 
-type LeaveApproved struct{}
+var functestCount int
 
-//go:generate minimock -i github.com/insolar/insolar/insolar.TerminationHandler -o ../testutils -s _mock.go -g
-
-// TerminationHandler handles such node events as graceful stop, abort, etc.
-type TerminationHandler interface {
-	// Leave locks until network accept leaving claim
-	Leave(context.Context, PulseNumber)
-	OnLeaveApproved(context.Context)
-	// Abort forces to stop all node components
-	Abort(reason string)
-	// Terminating is an accessor
-	Terminating() bool
+// TestRotateLogs rotates launchnet logs (removes and reopen it).
+// Should be always 'first' test in package.
+func TestRotateLogs(t *testing.T) {
+	functestCount++
+	t.Log("functest iteration:", functestCount)
+	if !launchnet.LogRotateEnabled() {
+		t.Skip("log rotate disabled")
+	}
+	// BEWARE: it removes files by pattern!
+	launchnet.RotateLogs("../.artifacts/launchnet/logs/*/*/*.log", true)
 }

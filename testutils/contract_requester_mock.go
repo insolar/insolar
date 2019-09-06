@@ -16,14 +16,14 @@ import (
 type ContractRequesterMock struct {
 	t minimock.Tester
 
-	funcCall          func(ctx context.Context, msg mm_insolar.Payload) (r1 mm_insolar.Reply, rp1 *mm_insolar.Reference, err error)
-	inspectFuncCall   func(ctx context.Context, msg mm_insolar.Payload)
+	funcCall          func(ctx context.Context, ref *mm_insolar.Reference, method string, argsIn []interface{}, pulse mm_insolar.PulseNumber) (r1 mm_insolar.Reply, rp1 *mm_insolar.Reference, err error)
+	inspectFuncCall   func(ctx context.Context, ref *mm_insolar.Reference, method string, argsIn []interface{}, pulse mm_insolar.PulseNumber)
 	afterCallCounter  uint64
 	beforeCallCounter uint64
 	CallMock          mContractRequesterMockCall
 
-	funcSendRequest          func(ctx context.Context, ref *mm_insolar.Reference, method string, argsIn []interface{}, pulse mm_insolar.PulseNumber) (r1 mm_insolar.Reply, rp1 *mm_insolar.Reference, err error)
-	inspectFuncSendRequest   func(ctx context.Context, ref *mm_insolar.Reference, method string, argsIn []interface{}, pulse mm_insolar.PulseNumber)
+	funcSendRequest          func(ctx context.Context, msg mm_insolar.Payload) (r1 mm_insolar.Reply, rp1 *mm_insolar.Reference, err error)
+	inspectFuncSendRequest   func(ctx context.Context, msg mm_insolar.Payload)
 	afterSendRequestCounter  uint64
 	beforeSendRequestCounter uint64
 	SendRequestMock          mContractRequesterMockSendRequest
@@ -64,8 +64,11 @@ type ContractRequesterMockCallExpectation struct {
 
 // ContractRequesterMockCallParams contains parameters of the ContractRequester.Call
 type ContractRequesterMockCallParams struct {
-	ctx context.Context
-	msg mm_insolar.Payload
+	ctx    context.Context
+	ref    *mm_insolar.Reference
+	method string
+	argsIn []interface{}
+	pulse  mm_insolar.PulseNumber
 }
 
 // ContractRequesterMockCallResults contains results of the ContractRequester.Call
@@ -76,7 +79,7 @@ type ContractRequesterMockCallResults struct {
 }
 
 // Expect sets up expected params for ContractRequester.Call
-func (mmCall *mContractRequesterMockCall) Expect(ctx context.Context, msg mm_insolar.Payload) *mContractRequesterMockCall {
+func (mmCall *mContractRequesterMockCall) Expect(ctx context.Context, ref *mm_insolar.Reference, method string, argsIn []interface{}, pulse mm_insolar.PulseNumber) *mContractRequesterMockCall {
 	if mmCall.mock.funcCall != nil {
 		mmCall.mock.t.Fatalf("ContractRequesterMock.Call mock is already set by Set")
 	}
@@ -85,7 +88,7 @@ func (mmCall *mContractRequesterMockCall) Expect(ctx context.Context, msg mm_ins
 		mmCall.defaultExpectation = &ContractRequesterMockCallExpectation{}
 	}
 
-	mmCall.defaultExpectation.params = &ContractRequesterMockCallParams{ctx, msg}
+	mmCall.defaultExpectation.params = &ContractRequesterMockCallParams{ctx, ref, method, argsIn, pulse}
 	for _, e := range mmCall.expectations {
 		if minimock.Equal(e.params, mmCall.defaultExpectation.params) {
 			mmCall.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmCall.defaultExpectation.params)
@@ -96,7 +99,7 @@ func (mmCall *mContractRequesterMockCall) Expect(ctx context.Context, msg mm_ins
 }
 
 // Inspect accepts an inspector function that has same arguments as the ContractRequester.Call
-func (mmCall *mContractRequesterMockCall) Inspect(f func(ctx context.Context, msg mm_insolar.Payload)) *mContractRequesterMockCall {
+func (mmCall *mContractRequesterMockCall) Inspect(f func(ctx context.Context, ref *mm_insolar.Reference, method string, argsIn []interface{}, pulse mm_insolar.PulseNumber)) *mContractRequesterMockCall {
 	if mmCall.mock.inspectFuncCall != nil {
 		mmCall.mock.t.Fatalf("Inspect function is already set for ContractRequesterMock.Call")
 	}
@@ -120,7 +123,7 @@ func (mmCall *mContractRequesterMockCall) Return(r1 mm_insolar.Reply, rp1 *mm_in
 }
 
 //Set uses given function f to mock the ContractRequester.Call method
-func (mmCall *mContractRequesterMockCall) Set(f func(ctx context.Context, msg mm_insolar.Payload) (r1 mm_insolar.Reply, rp1 *mm_insolar.Reference, err error)) *ContractRequesterMock {
+func (mmCall *mContractRequesterMockCall) Set(f func(ctx context.Context, ref *mm_insolar.Reference, method string, argsIn []interface{}, pulse mm_insolar.PulseNumber) (r1 mm_insolar.Reply, rp1 *mm_insolar.Reference, err error)) *ContractRequesterMock {
 	if mmCall.defaultExpectation != nil {
 		mmCall.mock.t.Fatalf("Default expectation is already set for the ContractRequester.Call method")
 	}
@@ -135,14 +138,14 @@ func (mmCall *mContractRequesterMockCall) Set(f func(ctx context.Context, msg mm
 
 // When sets expectation for the ContractRequester.Call which will trigger the result defined by the following
 // Then helper
-func (mmCall *mContractRequesterMockCall) When(ctx context.Context, msg mm_insolar.Payload) *ContractRequesterMockCallExpectation {
+func (mmCall *mContractRequesterMockCall) When(ctx context.Context, ref *mm_insolar.Reference, method string, argsIn []interface{}, pulse mm_insolar.PulseNumber) *ContractRequesterMockCallExpectation {
 	if mmCall.mock.funcCall != nil {
 		mmCall.mock.t.Fatalf("ContractRequesterMock.Call mock is already set by Set")
 	}
 
 	expectation := &ContractRequesterMockCallExpectation{
 		mock:   mmCall.mock,
-		params: &ContractRequesterMockCallParams{ctx, msg},
+		params: &ContractRequesterMockCallParams{ctx, ref, method, argsIn, pulse},
 	}
 	mmCall.expectations = append(mmCall.expectations, expectation)
 	return expectation
@@ -155,15 +158,15 @@ func (e *ContractRequesterMockCallExpectation) Then(r1 mm_insolar.Reply, rp1 *mm
 }
 
 // Call implements insolar.ContractRequester
-func (mmCall *ContractRequesterMock) Call(ctx context.Context, msg mm_insolar.Payload) (r1 mm_insolar.Reply, rp1 *mm_insolar.Reference, err error) {
+func (mmCall *ContractRequesterMock) Call(ctx context.Context, ref *mm_insolar.Reference, method string, argsIn []interface{}, pulse mm_insolar.PulseNumber) (r1 mm_insolar.Reply, rp1 *mm_insolar.Reference, err error) {
 	mm_atomic.AddUint64(&mmCall.beforeCallCounter, 1)
 	defer mm_atomic.AddUint64(&mmCall.afterCallCounter, 1)
 
 	if mmCall.inspectFuncCall != nil {
-		mmCall.inspectFuncCall(ctx, msg)
+		mmCall.inspectFuncCall(ctx, ref, method, argsIn, pulse)
 	}
 
-	params := &ContractRequesterMockCallParams{ctx, msg}
+	params := &ContractRequesterMockCallParams{ctx, ref, method, argsIn, pulse}
 
 	// Record call args
 	mmCall.CallMock.mutex.Lock()
@@ -180,7 +183,7 @@ func (mmCall *ContractRequesterMock) Call(ctx context.Context, msg mm_insolar.Pa
 	if mmCall.CallMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmCall.CallMock.defaultExpectation.Counter, 1)
 		want := mmCall.CallMock.defaultExpectation.params
-		got := ContractRequesterMockCallParams{ctx, msg}
+		got := ContractRequesterMockCallParams{ctx, ref, method, argsIn, pulse}
 		if want != nil && !minimock.Equal(*want, got) {
 			mmCall.t.Errorf("ContractRequesterMock.Call got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
 		}
@@ -192,9 +195,9 @@ func (mmCall *ContractRequesterMock) Call(ctx context.Context, msg mm_insolar.Pa
 		return (*results).r1, (*results).rp1, (*results).err
 	}
 	if mmCall.funcCall != nil {
-		return mmCall.funcCall(ctx, msg)
+		return mmCall.funcCall(ctx, ref, method, argsIn, pulse)
 	}
-	mmCall.t.Fatalf("Unexpected call to ContractRequesterMock.Call. %v %v", ctx, msg)
+	mmCall.t.Fatalf("Unexpected call to ContractRequesterMock.Call. %v %v %v %v %v", ctx, ref, method, argsIn, pulse)
 	return
 }
 
@@ -282,11 +285,8 @@ type ContractRequesterMockSendRequestExpectation struct {
 
 // ContractRequesterMockSendRequestParams contains parameters of the ContractRequester.SendRequest
 type ContractRequesterMockSendRequestParams struct {
-	ctx    context.Context
-	ref    *mm_insolar.Reference
-	method string
-	argsIn []interface{}
-	pulse  mm_insolar.PulseNumber
+	ctx context.Context
+	msg mm_insolar.Payload
 }
 
 // ContractRequesterMockSendRequestResults contains results of the ContractRequester.SendRequest
@@ -297,7 +297,7 @@ type ContractRequesterMockSendRequestResults struct {
 }
 
 // Expect sets up expected params for ContractRequester.SendRequest
-func (mmSendRequest *mContractRequesterMockSendRequest) Expect(ctx context.Context, ref *mm_insolar.Reference, method string, argsIn []interface{}, pulse mm_insolar.PulseNumber) *mContractRequesterMockSendRequest {
+func (mmSendRequest *mContractRequesterMockSendRequest) Expect(ctx context.Context, msg mm_insolar.Payload) *mContractRequesterMockSendRequest {
 	if mmSendRequest.mock.funcSendRequest != nil {
 		mmSendRequest.mock.t.Fatalf("ContractRequesterMock.SendRequest mock is already set by Set")
 	}
@@ -306,7 +306,7 @@ func (mmSendRequest *mContractRequesterMockSendRequest) Expect(ctx context.Conte
 		mmSendRequest.defaultExpectation = &ContractRequesterMockSendRequestExpectation{}
 	}
 
-	mmSendRequest.defaultExpectation.params = &ContractRequesterMockSendRequestParams{ctx, ref, method, argsIn, pulse}
+	mmSendRequest.defaultExpectation.params = &ContractRequesterMockSendRequestParams{ctx, msg}
 	for _, e := range mmSendRequest.expectations {
 		if minimock.Equal(e.params, mmSendRequest.defaultExpectation.params) {
 			mmSendRequest.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmSendRequest.defaultExpectation.params)
@@ -317,7 +317,7 @@ func (mmSendRequest *mContractRequesterMockSendRequest) Expect(ctx context.Conte
 }
 
 // Inspect accepts an inspector function that has same arguments as the ContractRequester.SendRequest
-func (mmSendRequest *mContractRequesterMockSendRequest) Inspect(f func(ctx context.Context, ref *mm_insolar.Reference, method string, argsIn []interface{}, pulse mm_insolar.PulseNumber)) *mContractRequesterMockSendRequest {
+func (mmSendRequest *mContractRequesterMockSendRequest) Inspect(f func(ctx context.Context, msg mm_insolar.Payload)) *mContractRequesterMockSendRequest {
 	if mmSendRequest.mock.inspectFuncSendRequest != nil {
 		mmSendRequest.mock.t.Fatalf("Inspect function is already set for ContractRequesterMock.SendRequest")
 	}
@@ -341,7 +341,7 @@ func (mmSendRequest *mContractRequesterMockSendRequest) Return(r1 mm_insolar.Rep
 }
 
 //Set uses given function f to mock the ContractRequester.SendRequest method
-func (mmSendRequest *mContractRequesterMockSendRequest) Set(f func(ctx context.Context, ref *mm_insolar.Reference, method string, argsIn []interface{}, pulse mm_insolar.PulseNumber) (r1 mm_insolar.Reply, rp1 *mm_insolar.Reference, err error)) *ContractRequesterMock {
+func (mmSendRequest *mContractRequesterMockSendRequest) Set(f func(ctx context.Context, msg mm_insolar.Payload) (r1 mm_insolar.Reply, rp1 *mm_insolar.Reference, err error)) *ContractRequesterMock {
 	if mmSendRequest.defaultExpectation != nil {
 		mmSendRequest.mock.t.Fatalf("Default expectation is already set for the ContractRequester.SendRequest method")
 	}
@@ -356,14 +356,14 @@ func (mmSendRequest *mContractRequesterMockSendRequest) Set(f func(ctx context.C
 
 // When sets expectation for the ContractRequester.SendRequest which will trigger the result defined by the following
 // Then helper
-func (mmSendRequest *mContractRequesterMockSendRequest) When(ctx context.Context, ref *mm_insolar.Reference, method string, argsIn []interface{}, pulse mm_insolar.PulseNumber) *ContractRequesterMockSendRequestExpectation {
+func (mmSendRequest *mContractRequesterMockSendRequest) When(ctx context.Context, msg mm_insolar.Payload) *ContractRequesterMockSendRequestExpectation {
 	if mmSendRequest.mock.funcSendRequest != nil {
 		mmSendRequest.mock.t.Fatalf("ContractRequesterMock.SendRequest mock is already set by Set")
 	}
 
 	expectation := &ContractRequesterMockSendRequestExpectation{
 		mock:   mmSendRequest.mock,
-		params: &ContractRequesterMockSendRequestParams{ctx, ref, method, argsIn, pulse},
+		params: &ContractRequesterMockSendRequestParams{ctx, msg},
 	}
 	mmSendRequest.expectations = append(mmSendRequest.expectations, expectation)
 	return expectation
@@ -376,15 +376,15 @@ func (e *ContractRequesterMockSendRequestExpectation) Then(r1 mm_insolar.Reply, 
 }
 
 // SendRequest implements insolar.ContractRequester
-func (mmSendRequest *ContractRequesterMock) SendRequest(ctx context.Context, ref *mm_insolar.Reference, method string, argsIn []interface{}, pulse mm_insolar.PulseNumber) (r1 mm_insolar.Reply, rp1 *mm_insolar.Reference, err error) {
+func (mmSendRequest *ContractRequesterMock) SendRequest(ctx context.Context, msg mm_insolar.Payload) (r1 mm_insolar.Reply, rp1 *mm_insolar.Reference, err error) {
 	mm_atomic.AddUint64(&mmSendRequest.beforeSendRequestCounter, 1)
 	defer mm_atomic.AddUint64(&mmSendRequest.afterSendRequestCounter, 1)
 
 	if mmSendRequest.inspectFuncSendRequest != nil {
-		mmSendRequest.inspectFuncSendRequest(ctx, ref, method, argsIn, pulse)
+		mmSendRequest.inspectFuncSendRequest(ctx, msg)
 	}
 
-	params := &ContractRequesterMockSendRequestParams{ctx, ref, method, argsIn, pulse}
+	params := &ContractRequesterMockSendRequestParams{ctx, msg}
 
 	// Record call args
 	mmSendRequest.SendRequestMock.mutex.Lock()
@@ -401,7 +401,7 @@ func (mmSendRequest *ContractRequesterMock) SendRequest(ctx context.Context, ref
 	if mmSendRequest.SendRequestMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmSendRequest.SendRequestMock.defaultExpectation.Counter, 1)
 		want := mmSendRequest.SendRequestMock.defaultExpectation.params
-		got := ContractRequesterMockSendRequestParams{ctx, ref, method, argsIn, pulse}
+		got := ContractRequesterMockSendRequestParams{ctx, msg}
 		if want != nil && !minimock.Equal(*want, got) {
 			mmSendRequest.t.Errorf("ContractRequesterMock.SendRequest got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
 		}
@@ -413,9 +413,9 @@ func (mmSendRequest *ContractRequesterMock) SendRequest(ctx context.Context, ref
 		return (*results).r1, (*results).rp1, (*results).err
 	}
 	if mmSendRequest.funcSendRequest != nil {
-		return mmSendRequest.funcSendRequest(ctx, ref, method, argsIn, pulse)
+		return mmSendRequest.funcSendRequest(ctx, msg)
 	}
-	mmSendRequest.t.Fatalf("Unexpected call to ContractRequesterMock.SendRequest. %v %v %v %v %v", ctx, ref, method, argsIn, pulse)
+	mmSendRequest.t.Fatalf("Unexpected call to ContractRequesterMock.SendRequest. %v %v", ctx, msg)
 	return
 }
 
