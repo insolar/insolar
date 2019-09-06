@@ -30,6 +30,7 @@ import (
 )
 
 const times = 5
+const feeSize = "1000000000"
 
 func checkBalanceFewTimes(t *testing.T, caller *launchnet.User, ref string, expected *big.Int) {
 	for i := 0; i < times; i++ {
@@ -58,7 +59,7 @@ func TestTransferMoney(t *testing.T) {
 
 	amountStr := "10"
 	amount, _ := new(big.Int).SetString(amountStr, 10)
-	fee, _ := new(big.Int).SetString("10000000", 10)
+	fee, _ := new(big.Int).SetString(feeSize, 10)
 	expectedFirstBalance := new(big.Int).Sub(oldFirstBalance, amount)
 	expectedFirstBalance.Sub(expectedFirstBalance, fee)
 	expectedSecondBalance := new(big.Int).Add(oldSecondBalance, amount)

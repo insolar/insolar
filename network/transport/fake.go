@@ -163,7 +163,7 @@ func (f *fakeStreamTransport) Stop(ctx context.Context) error {
 }
 
 func (f *fakeStreamTransport) Dial(ctx context.Context, address string) (io.ReadWriteCloser, error) {
-	log.Debug("fakeStreamTransport Dial from %s to %s", f.address, address)
+	log.Debugf("fakeStreamTransport Dial from %s to %s", f.address, address)
 
 	tcpMutex.RLock()
 	defer tcpMutex.RUnlock()

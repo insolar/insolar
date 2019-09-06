@@ -166,7 +166,10 @@ func (a *Account) Transfer(rootDomainRef insolar.Reference, amountStr string, to
 	if err != nil {
 		return nil, fmt.Errorf("failed to get balance for asset: %s", err.Error())
 	}
-	currentBalance, _ := new(big.Int).SetString(currentBalanceStr, 10)
+	currentBalance, ok := new(big.Int).SetString(currentBalanceStr, 10)
+	if !ok {
+		return nil, fmt.Errorf("can't parse account balance")
+	}
 	if totalSum.Cmp(currentBalance) > 0 {
 		return nil, fmt.Errorf("balance is too low: %s", currentBalanceStr)
 	}

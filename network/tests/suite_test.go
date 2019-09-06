@@ -66,7 +66,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/insolar/gen"
-	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/node"
 
@@ -266,6 +265,10 @@ func (s *testSuite) SetupNodesNetwork(nodes []*networkNode) {
 		go initNode(n)
 	}
 	s.waitResults(results, len(nodes))
+
+	for _, n := range nodes {
+		s.afterInitNode(n)
+	}
 }
 
 func (s *testSuite) StartNodesNetwork(nodes []*networkNode) {
@@ -412,6 +415,7 @@ func (s *testSuite) InitNode(node *networkNode) {
 	if node.componentManager != nil {
 		err := node.componentManager.Init(s.ctx)
 		require.NoError(s.t, err)
+		s.afterInitNode(node)
 	}
 }
 
@@ -568,7 +572,6 @@ func (p *PublisherMock) Close() error {
 // preInitNode inits previously created node with mocks and external dependencies
 func (s *testSuite) preInitNode(node *networkNode) {
 	cfg := configuration.NewConfiguration()
-	cfg.Pulsar.PulseTime = pulseDelta * 1000
 	cfg.Host.Transport.Address = node.host
 	cfg.Service.CacheDirectory = cacheDir + node.host
 
@@ -581,10 +584,6 @@ func (s *testSuite) preInitNode(node *networkNode) {
 
 	realKeeper, err := nodenetwork.NewNodeNetwork(cfg.Host.Transport, certManager.GetCertificate())
 	require.NoError(s.t, err)
-	terminationHandler := testutils.NewTerminationHandlerMock(s.t)
-	terminationHandler.LeaveMock.Set(func(p context.Context, p1 insolar.PulseNumber) {})
-	terminationHandler.OnLeaveApprovedMock.Set(func(p context.Context) {})
-	terminationHandler.AbortMock.Set(func(reason string) { log.Error(reason) })
 
 	keyProc := platformpolicy.NewKeyProcessor()
 	pubMock := &PublisherMock{}
@@ -609,11 +608,9 @@ func (s *testSuite) preInitNode(node *networkNode) {
 		keystore.NewInplaceKeyStore(node.privateKey),
 		serviceNetwork,
 		keyProc,
-		terminationHandler,
 		testutils.NewContractRequesterMock(s.t),
 	)
 	node.serviceNetwork = serviceNetwork
-	node.terminationHandler = terminationHandler
 
 	nodeContext, _ := inslogger.WithFields(s.ctx, map[string]interface{}{
 		"node_id":      realKeeper.GetOrigin().ShortID(),
@@ -622,6 +619,15 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	})
 
 	node.ctx = nodeContext
+}
+
+// afterInitNode called after component manager Init
+func (s *testSuite) afterInitNode(node *networkNode) {
+	aborter := network.NewAborterMock(s.t)
+	aborter.AbortMock.Set(func(ctx context.Context, reason string) {
+		panic(reason)
+	})
+	node.serviceNetwork.BaseGateway.Aborter = aborter
 }
 
 func (s *testSuite) AssertActiveNodesCountDelta(delta int) {

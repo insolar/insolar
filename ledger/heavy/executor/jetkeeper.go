@@ -302,7 +302,7 @@ func (jk *DBJetKeeper) checkPulseConsistency(ctx context.Context, pulse insolar.
 
 	prev, err := jk.pulses.Backwards(ctx, pulse, 1)
 	if err != nil {
-		logger.Errorf("failed to get previous pulse for %d", pulse, err)
+		logger.Errorf("failed to get previous pulse for %d, %s", pulse, err)
 		return false
 	}
 

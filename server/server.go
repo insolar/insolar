@@ -26,14 +26,14 @@ type Server interface {
 	Serve()
 }
 
-func NewLightServer(cfgPath string, trace bool) Server {
-	return light.New(cfgPath, trace)
+func NewLightServer(cfgPath string) Server {
+	return light.New(cfgPath)
 }
 
-func NewHeavyServer(cfgPath string, gensisCfgPath string, trace bool) Server {
-	return heavy.New(cfgPath, gensisCfgPath, trace)
+func NewHeavyServer(cfgPath string, gensisCfgPath string) Server {
+	return heavy.New(cfgPath, gensisCfgPath)
 }
 
-func NewVirtualServer(cfgPath string, trace bool) Server {
-	return virtual.New(cfgPath, trace)
+func NewVirtualServer(cfgPath string) Server {
+	return virtual.New(cfgPath)
 }

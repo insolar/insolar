@@ -78,7 +78,7 @@ func (ar *Runner) checkSeed(ctx context.Context, paramsSeed string) (insolar.Pul
 }
 
 func (ar *Runner) makeCall(ctx context.Context, method string, params requester.Params, rawBody []byte, signature string, seedPulse insolar.PulseNumber) (interface{}, *insolar.Reference, error) {
-	ctx, span := instracer.StartSpan(ctx, "SendRequest "+method)
+	ctx, span := instracer.StartSpan(ctx, "Call "+method)
 	defer span.End()
 
 	reference, err := insolar.NewReferenceFromBase58(params.Reference)
@@ -91,7 +91,7 @@ func (ar *Runner) makeCall(ctx context.Context, method string, params requester.
 		return nil, nil, errors.Wrap(err, "failed to marshal arguments")
 	}
 
-	res, ref, err := ar.ContractRequester.SendRequest(
+	res, ref, err := ar.ContractRequester.Call(
 		ctx,
 		reference,
 		"Call",

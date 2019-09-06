@@ -136,8 +136,9 @@ type PulseHandler interface {
 
 //go:generate minimock -i github.com/insolar/insolar/network.OriginProvider -o ../testutils/network -s _mock.go -g
 
+//Deprecated: network internal usage only
 type OriginProvider interface {
-	// GetOrigin get origin node for the current insolard. Returns nil if the current insolard is not a working node.
+	// GetOrigin get origin node information(self).
 	GetOrigin() insolar.NetworkNode
 }
 
@@ -203,7 +204,6 @@ type Accessor interface {
 type Gatewayer interface {
 	Gateway() Gateway
 	SwitchState(ctx context.Context, state insolar.NetworkState, pulse insolar.Pulse)
-	FailState(ctx context.Context, reason string)
 }
 
 //go:generate minimock -i github.com/insolar/insolar/network.Gateway -o ../testutils/network -s _mock.go -g
@@ -243,4 +243,23 @@ type Bootstrapper interface {
 	HandleNodeBootstrapRequest(context.Context, Packet) (Packet, error)
 	HandleUpdateSchedule(context.Context, Packet) (Packet, error)
 	HandleReconnect(context.Context, Packet) (Packet, error)
+}
+
+//go:generate minimock -i github.com/insolar/insolar/network.Aborter -o ./ -s _mock.go -g
+
+// Aborter provide method for immediately stop node
+type Aborter interface {
+	// Abort forces to stop all node components
+	Abort(ctx context.Context, reason string)
+}
+
+//go:generate minimock -i github.com/insolar/insolar/network.TerminationHandler -o ../testutils -s _mock.go -g
+
+// TerminationHandler handles such node events as graceful stop, abort, etc.
+type TerminationHandler interface {
+	// Leave locks until network accept leaving claim
+	Leave(context.Context, insolar.PulseNumber)
+	OnLeaveApproved(context.Context)
+	// Terminating is an accessor
+	Terminating() bool
 }

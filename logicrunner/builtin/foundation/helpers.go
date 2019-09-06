@@ -68,11 +68,6 @@ func GetMigrationAdmin() insolar.Reference {
 	return genesisrefs.ContractMigrationAdmin
 }
 
-// Get reference on FeeMember contract.
-func GetFeeMember() insolar.Reference {
-	return genesisrefs.ContractFeeMember
-}
-
 // Get reference on RootDomain contract.
 func GetRootDomain() insolar.Reference {
 	return genesisrefs.ContractRootDomain
@@ -80,12 +75,7 @@ func GetRootDomain() insolar.Reference {
 
 // Get reference on  migrationdaemon contract by  migration member.
 func GetMigrationDaemon(migrationMember insolar.Reference) (insolar.Reference, error) {
-	for i := range genesisrefs.ContractMigrationDaemonMembers {
-		if migrationMember.Equal(genesisrefs.ContractMigrationDaemonMembers[i]) {
-			return genesisrefs.ContractMigrationDaemons[i], nil
-		}
-	}
-	return insolar.Reference{}, nil
+	return genesisrefs.ContractMigrationMap[migrationMember], nil
 }
 
 // Check member is migration daemon member or not

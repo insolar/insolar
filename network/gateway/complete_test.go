@@ -123,7 +123,7 @@ func mockReply(t *testing.T) []byte {
 
 func mockContractRequester(t *testing.T, nodeRef insolar.Reference, ok bool, r []byte) insolar.ContractRequester {
 	cr := testutils.NewContractRequesterMock(t)
-	cr.SendRequestMock.Set(func(ctx context.Context, ref *insolar.Reference, method string, argsIn []interface{}, p insolar.PulseNumber) (r1 insolar.Reply, r2 *insolar.Reference, err error) {
+	cr.CallMock.Set(func(ctx context.Context, ref *insolar.Reference, method string, argsIn []interface{}, p insolar.PulseNumber) (r1 insolar.Reply, r2 *insolar.Reference, err error) {
 		require.Equal(t, nodeRef, *ref)
 		require.Equal(t, "GetNodeInfo", method)
 		require.Equal(t, 0, len(argsIn))

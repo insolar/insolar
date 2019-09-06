@@ -142,12 +142,10 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 			return errors.Wrap(err, "failed to check an object state")
 		}
 		if index.Lifeline.StateID == record.StateDeactivation {
-			msg, err := payload.NewMessage(&payload.Error{Text: "object is deactivated", Code: payload.CodeDeactivated})
-			if err != nil {
-				return errors.Wrap(err, "failed to create reply")
+			return &payload.CodedError{
+				Text: "object is deactivated",
+				Code: payload.CodeDeactivated,
 			}
-			p.dep.sender.Reply(ctx, p.message, msg)
-			return nil
 		}
 		if idx.Lifeline.LatestRequest != nil && p.requestID.Pulse() < idx.Lifeline.LatestRequest.Pulse() {
 			return errors.New("request from the past")
