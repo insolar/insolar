@@ -17,6 +17,7 @@
 package seedmanager
 
 import (
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -102,7 +103,7 @@ func (sm *SeedManager) Add(seed Seed, pulse insolar.PulseNumber) {
 		pulse:      pulse,
 	}
 
-	println("SeedManager.Add. ID: ", sm.id, ". Now: ", time.Now(),
+	fmt.Println("SeedManager.Add. ID: ", sm.id, ". Now: ", time.Now().String(),
 		", ttl: ", sm.ttl.String(),
 		", expTime:", expTime,
 		"content: ", sm.seedPool,
@@ -119,19 +120,19 @@ func (sm *SeedManager) isExpired(expTime Expiration) bool {
 func (sm *SeedManager) Pop(seed Seed) (insolar.PulseNumber, bool) {
 	sm.mutex.RLock()
 	stored, ok := sm.seedPool[seed]
-	println("Pop: ok: ", ok, ", ID: ", sm.id, ". content: ", sm.seedPool, ", seed: ", seed)
+	fmt.Println("Pop: ok: ", ok, ", ID: ", sm.id, ". content: ", sm.seedPool, ", seed: ", seed)
 	sm.mutex.RUnlock()
 
 	if ok && !sm.isExpired(stored.expiration) {
 		sm.mutex.Lock()
 		defer sm.mutex.Unlock()
 
-		println("Pop seed: delete: ", seed, ", ID: ", sm.id)
+		fmt.Println("Pop seed: delete: ", seed, ", ID: ", sm.id)
 		delete(sm.seedPool, seed)
 		return stored.pulse, true
 	}
 
-	println("Pop seed: NO: ", seed, ", ID: ", sm.id)
+	fmt.Println("Pop seed: NO: ", seed, ", ID: ", sm.id)
 
 	return 0, false
 }
@@ -142,7 +143,7 @@ func (sm *SeedManager) deleteExpired() {
 
 	for seed, stored := range sm.seedPool {
 		if sm.isExpired(stored.expiration) {
-			println("deleteExpired: ", seed, ", ID: ", sm.id)
+			fmt.Println("deleteExpired: ", seed, ", ID: ", sm.id)
 			delete(sm.seedPool, seed)
 		}
 	}
