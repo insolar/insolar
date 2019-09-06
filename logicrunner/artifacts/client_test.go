@@ -953,7 +953,315 @@ func (s *ArtifactsMangerClientSuite) TestGetCode() {
 	}
 }
 
-func (s *ArtifactsMangerClientSuite) TestGetObject()         {}
+func (s *ArtifactsMangerClientSuite) TestRegisterResult() {
+	requestID := gen.ID()
+	requestRef := insolar.NewRecordReference(requestID)
+	objectID, resultID := gen.ID(), gen.ID()
+	stateID := gen.ID()
+
+	parentRef := gen.Reference()
+	imageRef := gen.Reference()
+
+	resultBytes := []byte(testutils.RandomString())
+	memoryBytes := []byte(testutils.RandomString())
+
+	for name, test := range map[string]struct {
+		response      payload.Payload
+		result        RequestResult
+		internalCheck func(*wmMessage.Message)
+		check         func(error)
+	}{
+		"success none": {
+			response: &payload.ResultInfo{
+				ObjectID: objectID,
+				ResultID: resultID,
+				Result:   resultBytes,
+			},
+			result: &TestRequestResult{
+				SideEffectType:     RequestSideEffectNone,
+				RawResult:          resultBytes,
+				RawObjectReference: *insolar.NewReference(objectID),
+			},
+			internalCheck: func(msg *wmMessage.Message) {
+				payloadSetResult := payload.SetResult{}
+				unmarshalError := payloadSetResult.Unmarshal(msg.Payload)
+				s.Require().NoError(unmarshalError)
+
+				virtualRec := &record.Virtual{}
+				unmarshalError = virtualRec.Unmarshal(payloadSetResult.Result)
+				s.Require().NoError(unmarshalError)
+
+				rec := record.Unwrap(virtualRec)
+				s.Require().IsType((*record.Result)(nil), rec)
+
+				resultRecord := rec.(*record.Result)
+
+				s.Equal(objectID, resultRecord.Object)
+				s.Equal(*requestRef, resultRecord.Request)
+				s.Equal(resultBytes, resultRecord.Payload)
+			},
+			check: func(err error) { s.NoError(err) },
+		},
+
+		"success activate": {
+			response: &payload.ResultInfo{
+				ObjectID: objectID,
+				ResultID: resultID,
+				Result:   resultBytes,
+			},
+			result: &TestRequestResult{
+				SideEffectType:     RequestSideEffectActivate,
+				RawResult:          resultBytes,
+				RawObjectReference: *insolar.NewReference(objectID),
+
+				ParentReference: parentRef,
+				ObjectImage:     imageRef,
+				Memory:          memoryBytes,
+			},
+			internalCheck: func(msg *wmMessage.Message) {
+				// default payload checking
+				payloadActivate := payload.Activate{}
+				unmarshalError := payloadActivate.Unmarshal(msg.Payload)
+				s.Require().NoError(unmarshalError)
+
+				// result record parsing
+				virtualRecResult := &record.Virtual{}
+				unmarshalError = virtualRecResult.Unmarshal(payloadActivate.Result)
+				s.Require().NoError(unmarshalError)
+
+				rec := record.Unwrap(virtualRecResult)
+				s.Require().IsType((*record.Result)(nil), rec)
+
+				resultRecord := rec.(*record.Result)
+				s.Equal(objectID, resultRecord.Object)
+				s.Equal(*requestRef, resultRecord.Request)
+				s.Equal(resultBytes, resultRecord.Payload)
+
+				// activate record parsing
+				virtualRecActivate := &record.Virtual{}
+				unmarshalError = virtualRecActivate.Unmarshal(payloadActivate.Record)
+				s.Require().NoError(unmarshalError)
+
+				rec = record.Unwrap(virtualRecActivate)
+				s.Require().IsType((*record.Activate)(nil), rec)
+
+				activateRecord := rec.(*record.Activate)
+				s.Equal(*requestRef, activateRecord.Request)
+				s.Equal(memoryBytes, activateRecord.Memory)
+				s.Equal(imageRef, activateRecord.Image)
+				s.Equal(false, activateRecord.IsPrototype)
+				s.Equal(parentRef, activateRecord.Parent)
+			},
+			check: func(err error) { s.NoError(err) },
+		},
+
+		"success amend": {
+			response: &payload.ResultInfo{
+				ObjectID: objectID,
+				ResultID: resultID,
+				Result:   resultBytes,
+			},
+			result: &TestRequestResult{
+				SideEffectType:     RequestSideEffectAmend,
+				RawResult:          resultBytes,
+				RawObjectReference: *insolar.NewReference(objectID),
+
+				ObjectImage:   imageRef,
+				ObjectStateID: stateID,
+				Memory:        memoryBytes,
+			},
+			internalCheck: func(msg *wmMessage.Message) {
+				// default payload checking
+				payloadUpdate := payload.Update{}
+				unmarshalError := payloadUpdate.Unmarshal(msg.Payload)
+				s.Require().NoError(unmarshalError)
+
+				// result record parsing
+				virtualRecResult := &record.Virtual{}
+				unmarshalError = virtualRecResult.Unmarshal(payloadUpdate.Result)
+				s.Require().NoError(unmarshalError)
+
+				rec := record.Unwrap(virtualRecResult)
+				s.Require().IsType((*record.Result)(nil), rec)
+
+				resultRecord := rec.(*record.Result)
+				s.Equal(objectID, resultRecord.Object)
+				s.Equal(*requestRef, resultRecord.Request)
+				s.Equal(resultBytes, resultRecord.Payload)
+
+				// amend record parsing
+				virtualRecAmend := &record.Virtual{}
+				unmarshalError = virtualRecAmend.Unmarshal(payloadUpdate.Record)
+				s.Require().NoError(unmarshalError)
+
+				rec = record.Unwrap(virtualRecAmend)
+				s.Require().IsType((*record.Amend)(nil), rec)
+
+				amendRecord := rec.(*record.Amend)
+				s.Equal(*requestRef, amendRecord.Request)
+				s.Equal(memoryBytes, amendRecord.Memory)
+				s.Equal(imageRef, amendRecord.Image)
+				s.Equal(false, amendRecord.IsPrototype)
+			},
+			check: func(err error) { s.NoError(err) },
+		},
+
+		"success deactivate": {
+			response: &payload.ResultInfo{
+				ObjectID: objectID,
+				ResultID: resultID,
+				Result:   resultBytes,
+			},
+			result: &TestRequestResult{
+				SideEffectType:     RequestSideEffectDeactivate,
+				RawResult:          resultBytes,
+				RawObjectReference: *insolar.NewReference(objectID),
+
+				ObjectStateID: stateID,
+			},
+			internalCheck: func(msg *wmMessage.Message) {
+				// default payload checking
+				payloadDeactivate := payload.Deactivate{}
+				unmarshalError := payloadDeactivate.Unmarshal(msg.Payload)
+				s.Require().NoError(unmarshalError)
+
+				// result record parsing
+				virtualRecResult := &record.Virtual{}
+				unmarshalError = virtualRecResult.Unmarshal(payloadDeactivate.Result)
+				s.Require().NoError(unmarshalError)
+
+				rec := record.Unwrap(virtualRecResult)
+				s.Require().IsType((*record.Result)(nil), rec)
+
+				resultRecord := rec.(*record.Result)
+				s.Equal(objectID, resultRecord.Object)
+				s.Equal(*requestRef, resultRecord.Request)
+				s.Equal(resultBytes, resultRecord.Payload)
+
+				// amend record parsing
+				virtualRecDeactivate := &record.Virtual{}
+				unmarshalError = virtualRecDeactivate.Unmarshal(payloadDeactivate.Record)
+				s.Require().NoError(unmarshalError)
+
+				rec = record.Unwrap(virtualRecDeactivate)
+				s.Require().IsType((*record.Deactivate)(nil), rec)
+
+				deactivateRecord := rec.(*record.Deactivate)
+				s.Equal(*requestRef, deactivateRecord.Request)
+				s.Equal(stateID, deactivateRecord.PrevState)
+			},
+			check: func(err error) { s.NoError(err) },
+		},
+
+		"unknown payload": {
+			response: &payload.PendingFinished{},
+			result: &TestRequestResult{
+				SideEffectType:     RequestSideEffectNone,
+				RawResult:          resultBytes,
+				RawObjectReference: *insolar.NewReference(objectID),
+			},
+			check: func(err error) {
+				s.Error(err)
+				s.Contains(err.Error(), "unexpected reply")
+			},
+			internalCheck: func(message *wmMessage.Message) {},
+		},
+		"other error": {
+			response: &payload.Error{
+				Text: "some error",
+				Code: payload.CodeUnknown,
+			},
+			result: &TestRequestResult{
+				SideEffectType:     RequestSideEffectNone,
+				RawResult:          resultBytes,
+				RawObjectReference: *insolar.NewReference(objectID),
+			},
+			check: func(err error) {
+				s.Error(err)
+				s.Contains(err.Error(), "some error")
+			},
+			internalCheck: func(message *wmMessage.Message) {},
+		},
+	} {
+		s.Run(name, func() {
+			s.prepareContext()
+
+			pulseObject := insolar.Pulse{PulseNumber: gen.PulseNumber()}
+			s.pulseAccessor.LatestMock.Return(pulseObject, nil)
+
+			s.busSender.SendRoleMock.Set(
+				func(
+					p context.Context,
+					msg *wmMessage.Message,
+					role insolar.DynamicRole,
+					ref insolar.Reference,
+				) (
+					<-chan *wmMessage.Message,
+					func(),
+				) {
+					test.internalCheck(msg)
+
+					ch := make(chan *wmMessage.Message, 10)
+
+					resMsg, err := payload.NewMessage(test.response)
+					s.Require().NoError(err)
+
+					meta := payload.Meta{Payload: resMsg.Payload}
+					buf, err := meta.Marshal()
+					s.Require().NoError(err)
+
+					resMsg.Payload = buf
+
+					ch <- resMsg
+					return ch, func() { close(ch) }
+				},
+			)
+
+			err := s.amClient.RegisterResult(s.ctx, *requestRef, test.result)
+
+			test.check(err)
+		})
+	}
+}
+
+func (s *ArtifactsMangerClientSuite) TestGetObject() {
+
+}
+
 func (s *ArtifactsMangerClientSuite) TestActivatePrototype() {}
-func (s *ArtifactsMangerClientSuite) TestRegisterResult()    {}
 func (s *ArtifactsMangerClientSuite) TestLocalStorage()      {}
+
+type TestRequestResult struct {
+	SideEffectType     RequestResultType // every
+	RawResult          []byte            // every
+	RawObjectReference insolar.Reference // every
+
+	ParentReference insolar.Reference // activate
+	ObjectImage     insolar.Reference // amend + activate
+	ObjectStateID   insolar.ID        // amend + deactivate
+	Memory          []byte            // amend + activate
+}
+
+func (s *TestRequestResult) Result() []byte {
+	return s.RawResult
+}
+
+func (s *TestRequestResult) Activate() (insolar.Reference, insolar.Reference, []byte) {
+	return s.ParentReference, s.ObjectImage, s.Memory
+}
+
+func (s *TestRequestResult) Amend() (insolar.ID, insolar.Reference, []byte) {
+	return s.ObjectStateID, s.ObjectImage, s.Memory
+}
+
+func (s *TestRequestResult) Deactivate() insolar.ID {
+	return s.ObjectStateID
+}
+
+func (s TestRequestResult) Type() RequestResultType {
+	return s.SideEffectType
+}
+
+func (s *TestRequestResult) ObjectReference() insolar.Reference {
+	return s.RawObjectReference
+}
