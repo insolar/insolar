@@ -77,8 +77,9 @@ import (
 	"github.com/insolar/insolar/network"
 )
 
-// Base is abstract class for gateways
+const bootstrapTimeoutMessage = "Bootstrap timeout exceeded"
 
+// Base is abstract class for gateways
 type Base struct {
 	component.Initer
 
