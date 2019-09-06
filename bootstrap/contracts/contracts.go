@@ -47,7 +47,6 @@ func RootDomain(pkShardCount int) insolar.GenesisContractState {
 		Memory: mustGenMemory(&rootdomain.RootDomain{
 			PublicKeyShards: genesisrefs.ContractPublicKeyShards(pkShardCount),
 			NodeDomain:      genesisrefs.ContractNodeDomain,
-			PKShardCount:    pkShardCount,
 		}),
 	}
 }
@@ -161,11 +160,6 @@ func GetMigrationShardGenesisContractState(name string, migrationAddresses []str
 }
 
 func GetMigrationAdminGenesisContractState(lockup int64, vesting int64, vestingStep int64, maShardCount int) insolar.GenesisContractState {
-	migrationDaemons := make(foundation.StableMap)
-	for i := 0; i < insolar.GenesisAmountMigrationDaemonMembers; i++ {
-		migrationDaemons[genesisrefs.ContractMigrationDaemonMembers[i].String()] = migrationadmin.StatusInactivate
-	}
-
 	return insolar.GenesisContractState{
 		Name:       insolar.GenesisNameMigrationAdmin,
 		Prototype:  insolar.GenesisNameMigrationAdmin,
@@ -178,7 +172,6 @@ func GetMigrationAdminGenesisContractState(lockup int64, vesting int64, vestingS
 				Vesting:     vesting,
 				VestingStep: vestingStep,
 			},
-			MAShardCount: maShardCount,
 		}),
 	}
 }

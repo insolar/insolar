@@ -198,7 +198,13 @@ func (g *Generator) Run(ctx context.Context) error {
 		}
 	}
 	maShardCount := g.config.MAShardCount
+	if g.config.MAShardCount <= 0 {
+		maShardCount = 10
+	}
 	pkShardCount := g.config.PKShardCount
+	if g.config.PKShardCount <= 0 {
+		pkShardCount = 10
+	}
 
 	inslog.Info("[ bootstrap ] create heavy genesis config ...")
 	contractsConfig := insolar.GenesisContractsConfig{

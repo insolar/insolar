@@ -35,7 +35,6 @@ type MigrationAdmin struct {
 	MigrationAdminMember   insolar.Reference
 	MigrationAddressShards []insolar.Reference
 	VestingParams          *VestingParams
-	MAShardCount           int
 }
 
 type VestingParams struct {
@@ -198,7 +197,7 @@ func (mA *MigrationAdmin) GetMigrationDaemonByMemberRef(memberRef string) (insol
 // ins:immutable
 func (mA *MigrationAdmin) GetMemberByMigrationAddress(migrationAddress string) (*insolar.Reference, error) {
 	trimmedMigrationAddress := foundation.TrimAddress(migrationAddress)
-	i := foundation.GetShardIndex(trimmedMigrationAddress, mA.MAShardCount)
+	i := foundation.GetShardIndex(trimmedMigrationAddress, len(mA.MigrationAddressShards))
 	if i >= len(mA.MigrationAddressShards) {
 		return nil, fmt.Errorf("incorect shard index")
 	}
@@ -218,10 +217,10 @@ func (mA *MigrationAdmin) GetMemberByMigrationAddress(migrationAddress string) (
 // AddMigrationAddresses adds migration addresses to list.
 // ins:immutable
 func (mA *MigrationAdmin) addMigrationAddresses(migrationAddresses []string) error {
-	newMA := make([][]string, mA.MAShardCount)
+	newMA := make([][]string, len(mA.MigrationAddressShards))
 	for _, ma := range migrationAddresses {
 		trimmedMigrationAddress := foundation.TrimAddress(ma)
-		i := foundation.GetShardIndex(trimmedMigrationAddress, mA.MAShardCount)
+		i := foundation.GetShardIndex(trimmedMigrationAddress, len(mA.MigrationAddressShards))
 		if i >= len(newMA) {
 			return fmt.Errorf("incorect migration shard index")
 		}
@@ -246,7 +245,7 @@ func (mA *MigrationAdmin) addMigrationAddresses(migrationAddresses []string) err
 // ins:immutable
 func (mA *MigrationAdmin) addMigrationAddress(migrationAddress string) error {
 	trimmedMigrationAddress := foundation.TrimAddress(migrationAddress)
-	i := foundation.GetShardIndex(trimmedMigrationAddress, mA.MAShardCount)
+	i := foundation.GetShardIndex(trimmedMigrationAddress, len(mA.MigrationAddressShards))
 	if i >= len(mA.MigrationAddressShards) {
 		return fmt.Errorf("incorect migration shard index")
 	}
@@ -263,7 +262,7 @@ func (mA *MigrationAdmin) addMigrationAddress(migrationAddress string) error {
 // ins:immutable
 func (mA *MigrationAdmin) GetFreeMigrationAddress(publicKey string) (string, error) {
 	trimmedPublicKey := foundation.TrimPublicKey(publicKey)
-	shardIndex := foundation.GetShardIndex(trimmedPublicKey, mA.MAShardCount)
+	shardIndex := foundation.GetShardIndex(trimmedPublicKey, len(mA.MigrationAddressShards))
 	if shardIndex >= len(mA.MigrationAddressShards) {
 		return "", fmt.Errorf("incorect migration address shard index")
 	}
@@ -304,7 +303,7 @@ func (mA *MigrationAdmin) GetFreeMigrationAddress(publicKey string) (string, err
 // AddNewMemberToMaps adds new member to MigrationAddressMap.
 func (mA *MigrationAdmin) AddNewMigrationAddressToMaps(migrationAddress string, memberRef insolar.Reference) error {
 	trimmedMigrationAddress := foundation.TrimAddress(migrationAddress)
-	shardIndex := foundation.GetShardIndex(trimmedMigrationAddress, mA.MAShardCount)
+	shardIndex := foundation.GetShardIndex(trimmedMigrationAddress, len(mA.MigrationAddressShards))
 	if shardIndex >= len(mA.MigrationAddressShards) {
 		return fmt.Errorf("incorect migration address shard index")
 	}
