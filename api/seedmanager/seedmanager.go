@@ -63,7 +63,7 @@ func NewSpecified(ttl time.Duration, cleanPeriod time.Duration) *SeedManager {
 		seedPool: make(map[Seed]storedSeed),
 		ttl:      ttl,
 		stopped:  make(chan struct{}),
-		id:       globalID,
+		id:       atomic.LoadUint32(&globalID),
 	}
 
 	log.Info("Creating NewSpecified: ", ", ID: ", sm.id)
