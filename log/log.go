@@ -105,17 +105,21 @@ var GlobalLogger = func() insolar.Logger {
 		panic("couldn't initialize global logger with default config")
 	}
 
+	ret := logger.WithCaller(true).WithSkipFrameCount(1).WithField("loginstance", "global_default")
+
 	if logger.Is(insolar.DebugLevel) {
 		go func() {
+			innerLogger := ret.WithCaller(false)
+			time.Sleep(time.Second)
 			for {
 				// Tick between seconds
 				time.Sleep(time.Second - time.Since(time.Now().Truncate(time.Second)))
-				logger.Debug("Logger tick")
+				innerLogger.Debug("Logger tick")
 			}
 		}()
 	}
 
-	return logger.WithCaller(true).WithSkipFrameCount(1).WithField("loginstance", "global_default")
+	return ret
 }()
 
 func SetGlobalLogger(logger insolar.Logger) {
