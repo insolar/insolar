@@ -166,9 +166,10 @@ func main() {
 		Use:   "generate-config",
 		Short: "generate default configs for bootstrap, node and pulsar",
 		Run: func(cmd *cobra.Command, args []string) {
-			writePulsarConfgi(configsOutputDir)
+			writePulsarConfig(configsOutputDir)
 			writeBootstrapConfig(configsOutputDir)
-			writeNodeConfgi(configsOutputDir)
+			writeNodeConfig(configsOutputDir)
+			writePulseWatcher(configsOutputDir)
 		},
 	}
 	generateDefaultConfigs.Flags().StringVarP(&configsOutputDir, "output_dir", "o", "", "path to output directory")

@@ -21,6 +21,7 @@ import (
 	"path"
 
 	"github.com/insolar/insolar/bootstrap"
+	pulsewatcher "github.com/insolar/insolar/cmd/pulsewatcher/config"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar/defaults"
 	yaml "gopkg.in/yaml.v2"
@@ -30,7 +31,7 @@ func baseDir() string {
 	return defaults.LaunchnetDir()
 }
 
-func writePulsarConfgi(outputDir string) {
+func writePulsarConfig(outputDir string) {
 	pcfg := configuration.NewPulsarConfiguration()
 	raw, err := yaml.Marshal(pcfg)
 	if err != nil {
@@ -55,7 +56,7 @@ func writeBootstrapConfig(outputDir string) {
 	}
 }
 
-func writeNodeConfgi(outputDir string) {
+func writeNodeConfig(outputDir string) {
 	cfg := configuration.NewConfiguration()
 	raw, err := yaml.Marshal(cfg)
 	if err != nil {
@@ -63,6 +64,18 @@ func writeNodeConfgi(outputDir string) {
 	}
 
 	err = ioutil.WriteFile(path.Join(outputDir, "node_default.yaml"), raw, 0644)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func writePulseWatcher(outputDir string) {
+	raw, err := yaml.Marshal(pulsewatcher.Config{})
+	if err != nil {
+		panic(err)
+	}
+
+	err = ioutil.WriteFile(path.Join(outputDir, "pulsewatcher_default.yaml"), raw, 0644)
 	if err != nil {
 		panic(err)
 	}
