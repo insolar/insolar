@@ -52,6 +52,8 @@ package termination
 
 import (
 	"context"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
 
@@ -70,7 +72,7 @@ type CommonTestSuite struct {
 
 	mc            *minimock.Controller
 	ctx           context.Context
-	handler       *terminationHandler
+	handler       *TerminationHandler
 	leaver        *testutils.LeaverMock
 	pulseAccessor *mock.PulseAccessorMock
 }
@@ -84,7 +86,7 @@ func (s *CommonTestSuite) BeforeTest(suiteName, testName string) {
 	s.ctx = inslogger.TestContext(s.T())
 	s.leaver = testutils.NewLeaverMock(s.T())
 	s.pulseAccessor = mock.NewPulseAccessorMock(s.T())
-	s.handler = &terminationHandler{Leaver: s.leaver, PulseAccessor: s.pulseAccessor}
+	s.handler = &TerminationHandler{Leaver: s.leaver, PulseAccessor: s.pulseAccessor}
 
 }
 
@@ -154,19 +156,19 @@ func (s *OnLeaveApprovedTestSuite) TestBasicUsage() {
 }
 
 func TestAbort(t *testing.T) {
-	suite.Run(t, new(AbortTestSuite))
-}
+	mc := minimock.NewController(t)
+	defer mc.Finish()
+	defer mc.Wait(time.Minute)
 
-type AbortTestSuite struct {
-	CommonTestSuite
-}
+	ctx := context.Background()
+	handler := NewHandler(nil)
+	require.NotNil(t, handler)
 
-func (s *AbortTestSuite) TestBasicUsage() {
-	defer func() {
-		if r := recover(); r == nil {
-			s.Fail("did not catch panic")
-		}
-	}()
+	l := insolar.NewLoggerMock(t)
+	l.FatalMock.Set(func(p1 ...interface{}) {
+		assert.Equal(t, "abort", p1[0])
+	})
 
-	s.handler.Abort("abort")
+	ctx = inslogger.SetLogger(ctx, l)
+	handler.Abort(ctx, "abort")
 }

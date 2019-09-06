@@ -52,7 +52,6 @@ package termination
 
 import (
 	"context"
-	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/storage"
 	"sync"
 
@@ -61,7 +60,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-type terminationHandler struct {
+type TerminationHandler struct {
 	sync.Mutex
 	done        chan struct{}
 	terminating bool
@@ -70,17 +69,17 @@ type terminationHandler struct {
 	PulseAccessor storage.PulseAccessor `inject:""`
 }
 
-func NewHandler(l insolar.Leaver) network.TerminationHandler {
-	return &terminationHandler{Leaver: l}
+func NewHandler(l insolar.Leaver) *TerminationHandler {
+	return &TerminationHandler{Leaver: l}
 }
 
 // TODO take ETA by role of node
-func (t *terminationHandler) Leave(ctx context.Context, leaveAfterPulses insolar.PulseNumber) {
+func (t *TerminationHandler) Leave(ctx context.Context, leaveAfterPulses insolar.PulseNumber) {
 	doneChan := t.leave(ctx, leaveAfterPulses)
 	<-doneChan
 }
 
-func (t *terminationHandler) leave(ctx context.Context, leaveAfterPulses insolar.PulseNumber) chan struct{} {
+func (t *TerminationHandler) leave(ctx context.Context, leaveAfterPulses insolar.PulseNumber) chan struct{} {
 	t.Lock()
 	defer t.Unlock()
 
@@ -89,7 +88,7 @@ func (t *terminationHandler) leave(ctx context.Context, leaveAfterPulses insolar
 		t.done = make(chan struct{}, 1)
 
 		if leaveAfterPulses == 0 {
-			inslogger.FromContext(ctx).Debug("terminationHandler.Leave() with 0")
+			inslogger.FromContext(ctx).Debug("TerminationHandler.Leave() with 0")
 			t.Leaver.Leave(ctx, 0)
 		} else {
 			pulse, err := t.PulseAccessor.GetLatestPulse(ctx)
@@ -98,7 +97,7 @@ func (t *terminationHandler) leave(ctx context.Context, leaveAfterPulses insolar
 			}
 			pulseDelta := pulse.NextPulseNumber - pulse.PulseNumber
 
-			inslogger.FromContext(ctx).Debugf("terminationHandler.Leave() with leaveAfterPulses: %+v, in pulse %+v", leaveAfterPulses, pulse.PulseNumber+leaveAfterPulses*pulseDelta)
+			inslogger.FromContext(ctx).Debugf("TerminationHandler.Leave() with leaveAfterPulses: %+v, in pulse %+v", leaveAfterPulses, pulse.PulseNumber+leaveAfterPulses*pulseDelta)
 			t.Leaver.Leave(ctx, pulse.PulseNumber+leaveAfterPulses*pulseDelta)
 		}
 	}
@@ -106,20 +105,20 @@ func (t *terminationHandler) leave(ctx context.Context, leaveAfterPulses insolar
 	return t.done
 }
 
-func (t *terminationHandler) OnLeaveApproved(ctx context.Context) {
+func (t *TerminationHandler) OnLeaveApproved(ctx context.Context) {
 	t.Lock()
 	defer t.Unlock()
 	if t.terminating {
-		inslogger.FromContext(ctx).Debug("terminationHandler.OnLeaveApproved() received")
+		inslogger.FromContext(ctx).Debug("TerminationHandler.OnLeaveApproved() received")
 		t.terminating = false
 		close(t.done)
 	}
 }
 
-func (t *terminationHandler) Abort(ctx context.Context, reason string) {
+func (t *TerminationHandler) Abort(ctx context.Context, reason string) {
 	inslogger.FromContext(ctx).Fatal(reason)
 }
 
-func (t *terminationHandler) Terminating() bool {
+func (t *TerminationHandler) Terminating() bool {
 	return t.terminating
 }
