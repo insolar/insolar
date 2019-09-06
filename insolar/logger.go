@@ -108,6 +108,8 @@ func (l LogFormat) String() string {
 	return string(l)
 }
 
+//go:generate minimock -i github.com/insolar/insolar/insolar.Logger -o ./ -s _mock.go -g
+
 // Logger is the interface for loggers used in the Insolar components.
 type Logger interface {
 	// WithLevel sets log level.

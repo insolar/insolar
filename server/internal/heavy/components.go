@@ -57,7 +57,6 @@ import (
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/servicenetwork"
-	"github.com/insolar/insolar/network/termination"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulse"
 	"github.com/insolar/insolar/server/internal"
@@ -137,7 +136,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 	// Network.
 	var (
 		NetworkService *servicenetwork.ServiceNetwork
-		Termination    insolar.TerminationHandler
 	)
 	{
 		var err error
@@ -146,8 +144,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start Network")
 		}
-
-		Termination = termination.NewHandler(NetworkService)
 	}
 
 	// Storage.
@@ -372,7 +368,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		ArtifactsClient,
 		APIWrapper,
 		KeyProcessor,
-		Termination,
 		CryptoScheme,
 		CryptoService,
 		CertManager,

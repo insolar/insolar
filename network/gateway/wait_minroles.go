@@ -73,7 +73,7 @@ func (g *WaitMinRoles) Run(ctx context.Context, pulse insolar.Pulse) {
 
 	select {
 	case <-g.bootstrapTimer.C:
-		g.Gatewayer.FailState(ctx, "Bootstrap timeout exceeded")
+		g.FailState(ctx, bootstrapTimeoutMessage)
 	case newPulse := <-g.minrolesComplete:
 		g.Gatewayer.SwitchState(ctx, insolar.WaitPulsar, newPulse)
 	}
@@ -83,7 +83,7 @@ func (g *WaitMinRoles) UpdateState(ctx context.Context, pulseNumber insolar.Puls
 	workingNodes := node.Select(nodes, node.ListWorking)
 
 	if ok, _ := rules.CheckMajorityRule(g.CertificateManager.GetCertificate(), workingNodes); !ok {
-		g.Gatewayer.FailState(ctx, "MajorityRule failed")
+		g.FailState(ctx, majorityRuleFailedMessage)
 	}
 
 	g.Base.UpdateState(ctx, pulseNumber, nodes, cloudStateHash)
