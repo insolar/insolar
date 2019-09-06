@@ -61,6 +61,7 @@ type SDK struct {
 	rootMember             *requester.UserConfigJSON
 	migrationAdminMember   *requester.UserConfigJSON
 	migrationDaemonMembers []*requester.UserConfigJSON
+	feeMember              *requester.UserConfigJSON
 	logLevel               string
 }
 
@@ -100,12 +101,18 @@ func NewSDK(adminUrls []string, publicUrls []string, memberKeysDirPath string) (
 		return nil, errors.Wrap(err, "failed to get migration admin member")
 	}
 
+	feeMember, err := getMember(memberKeysDirPath+"fee_member_keys.json", response.FeeMember)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get fee member")
+	}
+
 	result := &SDK{
 		adminAPIURLs:           adminBuffer,
 		publicAPIURLs:          publicBuffer,
 		rootMember:             rootMember,
 		migrationAdminMember:   migrationAdminMember,
 		migrationDaemonMembers: []*requester.UserConfigJSON{},
+		feeMember:              feeMember,
 		logLevel:               "",
 	}
 
@@ -122,6 +129,14 @@ func NewSDK(adminUrls []string, publicUrls []string, memberKeysDirPath string) (
 	}
 
 	return result, nil
+}
+
+func (sdk *SDK) GetFeeMember() *Member {
+	return &Member{
+		Reference:  sdk.feeMember.Caller,
+		PrivateKey: sdk.feeMember.PrivateKey,
+		PublicKey:  sdk.feeMember.PublicKey,
+	}
 }
 
 func (sdk *SDK) SetLogLevel(logLevel string) error {
