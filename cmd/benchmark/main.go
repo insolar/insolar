@@ -47,7 +47,7 @@ import (
 const defaultStdoutPath = "-"
 const defaultMemberFileName = "members.txt"
 
-const backoffAttemptsCount = 20
+const backoffAttemptsCount = 5
 
 var (
 	defaultMemberFileDir      = filepath.Join(defaults.ArtifactsDir(), "bench-members")
@@ -402,20 +402,18 @@ func main() {
 
 	if !noCheckBalance {
 		totalBalanceAfter := big.NewInt(0)
-		totalBalanceAfterWithFee := big.NewInt(0)
 		for nretries := 0; nretries < 3; nretries++ {
 			totalBalanceAfter, _ = getTotalBalance(insSDK, balanceCheckMembers)
-			totalBalanceAfterWithFee = new(big.Int).Add(totalBalanceAfter, big.NewInt(calcFee(transferAmount)*int64(repetitions*concurrent)))
-			if totalBalanceAfterWithFee.Cmp(totalBalanceBefore) == 0 {
+			if totalBalanceAfter.Cmp(totalBalanceBefore) == 0 {
 				break
 			}
 			fmt.Printf("Total balance before and after don't match: %v vs %v - retrying in 3 seconds...\n",
-				totalBalanceBefore, totalBalanceAfterWithFee)
+				totalBalanceBefore, totalBalanceAfter)
 			time.Sleep(3 * time.Second)
 
 		}
-		fmt.Printf("Total balance before: %v and after: %v\n", totalBalanceBefore, totalBalanceAfterWithFee)
-		if totalBalanceAfterWithFee.Cmp(totalBalanceBefore) != 0 {
+		fmt.Printf("Total balance before: %v and after: %v\n", totalBalanceBefore, totalBalanceAfter)
+		if totalBalanceAfter.Cmp(totalBalanceBefore) != 0 {
 			log.Fatal("Total balance mismatch!\n")
 		}
 	}

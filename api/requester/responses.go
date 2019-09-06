@@ -100,6 +100,7 @@ type InfoResponse struct {
 	RootDomain             string   `json:"rootDomain"`
 	RootMember             string   `json:"rootMember"`
 	MigrationAdminMember   string   `json:"migrationAdminMember"`
+	FeeMember              string   `json:"feeMember"`
 	MigrationDaemonMembers []string `json:"migrationDaemonMembers"`
 	NodeDomain             string   `json:"nodeDomain"`
 	TraceID                string   `json:"traceID"`

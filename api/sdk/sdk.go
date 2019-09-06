@@ -101,7 +101,7 @@ func NewSDK(adminUrls []string, publicUrls []string, memberKeysDirPath string) (
 		return nil, errors.Wrap(err, "failed to get migration admin member")
 	}
 
-	feeMember, err := getMember(memberKeysDirPath+"fee_member_keys.json", response.MigrationAdminMember)
+	feeMember, err := getMember(memberKeysDirPath+"fee_member_keys.json", response.FeeMember)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get fee member")
 	}

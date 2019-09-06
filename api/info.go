@@ -150,6 +150,7 @@ func (s *InfoService) GetInfo(r *http.Request, args *InfoArgs, requestBody *rpc.
 	reply.RootDomain = rootDomain.String()
 	reply.RootMember = rootMember.String()
 	reply.MigrationAdminMember = migrationAdminMember.String()
+	reply.FeeMember = feeMember.String()
 	reply.MigrationDaemonMembers = migrationDaemonMembersStrs
 	reply.NodeDomain = nodeDomain.String()
 	reply.TraceID = utils.RandTraceID()
