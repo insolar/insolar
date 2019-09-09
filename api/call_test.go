@@ -22,6 +22,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"net/http"
+	"sync"
 	"testing"
 	"time"
 
@@ -48,11 +49,12 @@ const CallUrl = "http://localhost:19192/api/rpc"
 type TimeoutSuite struct {
 	suite.Suite
 
-	mc    *minimock.Controller
-	ctx   context.Context
-	api   *Runner
-	user  *requester.UserConfigJSON
-	delay chan struct{}
+	mc              *minimock.Controller
+	ctx             context.Context
+	api             *Runner
+	user            *requester.UserConfigJSON
+	delay           chan struct{}
+	seedManagerLock sync.Mutex
 }
 
 func (suite *TimeoutSuite) TestRunner_callHandler() {
@@ -60,7 +62,9 @@ func (suite *TimeoutSuite) TestRunner_callHandler() {
 	suite.NoError(err)
 
 	inslogger.FromContext(suite.ctx).Info("Before SeedManager.Add: ", *seed)
+	suite.seedManagerLock.Lock()
 	suite.api.SeedManager.Add(*seed, 0)
+	suite.seedManagerLock.Unlock()
 
 	inslogger.FromContext(suite.ctx).Info("AFTER SeedManager.Add")
 
@@ -131,7 +135,9 @@ func TestTimeoutSuite(t *testing.T) {
 	log.Info("Before creating API")
 	timeoutSuite.api.Start(timeoutSuite.ctx)
 	log.Info("AFTER creating API")
+	timeoutSuite.seedManagerLock.Lock()
 	timeoutSuite.api.SeedManager = seedmanager.NewSpecified(17*time.Second, 35*time.Second)
+	timeoutSuite.seedManagerLock.Unlock()
 	log.Info("AFTER creating new Seedmanager")
 
 	requester.SetTimeout(25)
