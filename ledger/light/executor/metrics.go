@@ -58,7 +58,7 @@ func init() {
 			Name:        "jets_counter",
 			Description: "how many jets on start of pulse",
 			Measure:     statJets,
-			Aggregation: view.Sum(),
+			Aggregation: view.LastValue(),
 		},
 		&view.View{
 			Name:        "jet_splits_total",
