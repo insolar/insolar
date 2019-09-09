@@ -18,6 +18,7 @@ package wallet
 
 import (
 	"fmt"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/account"
@@ -67,6 +68,7 @@ func (w *Wallet) Transfer(rootDomainRef insolar.Reference, assetName string, amo
 }
 
 // GetBalance gets balance by asset name.
+// ins:immutable
 func (w *Wallet) GetBalance(assetName string) (string, error) {
 	accRef, err := w.GetAccount(assetName)
 	if err != nil {

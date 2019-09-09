@@ -19,9 +19,10 @@
 package functest
 
 import (
-	"github.com/insolar/insolar/api/requester"
 	"math/big"
 	"testing"
+
+	"github.com/insolar/insolar/api/requester"
 
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/testutils/launchnet"
@@ -32,7 +33,7 @@ import (
 func TestGetBalance(t *testing.T) {
 	firstMember := createMember(t)
 	firstBalance := getBalanceNoErr(t, firstMember, firstMember.Ref)
-	r := big.NewInt(10000000000)
+	r := big.NewInt(100000000000000)
 	require.Equal(t, r, firstBalance)
 }
 
