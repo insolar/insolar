@@ -359,7 +359,7 @@ func main() {
 
 	var totalBalanceBefore *big.Int
 	var balancePenRetries int32
-	var balanceCheckMembers []*sdk.Member
+	balanceCheckMembers := make([]*sdk.Member, len(members))
 
 	if !noCheckBalance {
 		copy(balanceCheckMembers, members)
