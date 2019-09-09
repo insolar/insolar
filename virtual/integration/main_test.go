@@ -195,11 +195,10 @@ func NewServer(
 		PulseManager = pulsemanager.NewPulseManager()
 	}
 
-	var wmLogger watermill.LoggerAdapter
+	wmLogger := watermill.LoggerAdapter(watermill.NopLogger{})
+
 	if verboseWM {
 		wmLogger = log.NewWatermillLogAdapter(logger)
-	} else {
-		wmLogger = watermill.NopLogger{}
 	}
 
 	// Communication.
