@@ -123,6 +123,8 @@ type ContractWrapper struct {
 	Constructors ContractConstructors
 }
 
+//go:generate stringer -type=PendingState
+
 // PendingState is a state of execution for each object
 type PendingState int
 
