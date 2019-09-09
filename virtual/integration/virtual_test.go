@@ -17,16 +17,22 @@
 package integration
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/machinesmanager"
+	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/testutils"
 )
 
 func TestVirtual_BasicOperations(t *testing.T) {
@@ -37,18 +43,18 @@ func TestVirtual_BasicOperations(t *testing.T) {
 
 	t.Run("happy path", func(t *testing.T) {
 		objRef := gen.Reference()
+		reqRef := gen.Reference()
 		objID := objRef.GetLocal()
 
-		protoRef := gen.Reference()
+		var requestID insolar.ID
 
-		incomingRequest := &record.IncomingRequest{
-			CallType:        record.CTSaveAsChild,
-			Caller:          gen.Reference(),
-			CallerPrototype: gen.Reference(),
-			APINode:         virtual.ID(),
-			Object:          &objRef,
-			Prototype:       &protoRef,
+		expectedRes := struct {
+			blip string
+		}{
+			blip: "blop",
 		}
+
+		hasher := platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher()
 
 		s, err := NewServer(t, ctx, cfg, func(meta payload.Meta, pl payload.Payload) []payload.Payload {
 			if meta.Receiver != NodeLight() {
@@ -61,44 +67,60 @@ func TestVirtual_BasicOperations(t *testing.T) {
 			indexData, err := lifeTime.Marshal()
 			require.NoError(t, err)
 
-			resRecord := &record.Activate{
-				IsPrototype: true,
-			}
-			virtResRecord := record.Wrap(resRecord)
-
-			recMaterial := &record.Material{
-				Virtual:  virtResRecord,
-				ID:       gen.ID(),
-				ObjectID: gen.ID(),
-			}
-			recordData, err := recMaterial.Marshal()
-			require.NoError(t, err)
-
 			codeRecord := &record.Material{
 				Virtual: record.Wrap(&record.Code{
-					Request: gen.Reference(),
+					Request: reqRef,
 					Code:    []byte("no code"),
 				}),
 			}
 			codeData, err := codeRecord.Marshal()
 			require.NoError(t, err)
 
-			switch pl.(type) {
+			switch data := pl.(type) {
 			// getters
-			case *payload.SetIncomingRequest, *payload.SetOutgoingRequest:
+			case *payload.SetIncomingRequest:
+				buf, err := data.Request.Marshal()
+				if err != nil {
+					panic(errors.Wrap(err, "failed to marshal request"))
+				}
+				requestID = *insolar.NewID(gen.PulseNumber(), hasher.Hash(buf))
 				return []payload.Payload{&payload.RequestInfo{
 					ObjectID:  *objID,
-					RequestID: *objID,
-					Result:    record.NewResultFromFace(&record.Result{}).Payload,
+					RequestID: requestID,
+				}}
+			case *payload.SetOutgoingRequest:
+				return []payload.Payload{&payload.RequestInfo{
+					ObjectID:  *objID,
+					RequestID: requestID,
 				}}
 			// setters
-			case *payload.SetResult, *payload.SetCode:
-				return []payload.Payload{&payload.ID{}}
+			case *payload.SetResult:
+				return []payload.Payload{&payload.ID{
+					ID: *insolar.NewID(gen.PulseNumber(), hasher.Hash(data.Result)),
+				}}
 			case *payload.Activate:
 				return []payload.Payload{&payload.ResultInfo{}}
 			case *payload.HasPendings:
-				return []payload.Payload{&payload.PendingsInfo{HasPendings: true}}
+				return []payload.Payload{&payload.PendingsInfo{HasPendings: false}}
 			case *payload.GetObject:
+				resRecord := &record.Activate{
+					Request: *insolar.NewReference(requestID),
+					Image:   walletRef,
+				}
+
+				if data.ObjectID == *walletRef.GetLocal() {
+					resRecord.IsPrototype = true
+				}
+
+				virtResRecord := record.Wrap(resRecord)
+				recMaterial := &record.Material{
+					Virtual:  virtResRecord,
+					ID:       gen.ID(),
+					ObjectID: gen.ID(),
+				}
+				recordData, err := recMaterial.Marshal()
+				require.NoError(t, err)
+
 				return []payload.Payload{
 					&payload.Index{
 						Index: indexData,
@@ -107,17 +129,26 @@ func TestVirtual_BasicOperations(t *testing.T) {
 				}
 			case *payload.GetCode:
 				return []payload.Payload{
-					&payload.Index{
-						Index: indexData,
-					},
 					&payload.Code{
 						Record: codeData,
+					},
+				}
+			case *payload.Update:
+				return []payload.Payload{
+					&payload.ResultInfo{
+						ResultID: *insolar.NewID(gen.PulseNumber(), hasher.Hash(data.Result)),
 					},
 				}
 			}
 
 			panic(fmt.Sprintf("unexpected message to light %T", pl))
-		}, machinesmanager.NewMachinesManagerMock(t))
+		}, machinesmanager.NewMachinesManagerMock(t).GetExecutorMock.Set(func(_ insolar.MachineType) (m1 insolar.MachineLogicExecutor, err error) {
+			return testutils.NewMachineLogicExecutorMock(t).CallMethodMock.Set(func(ctx context.Context, callContext *insolar.LogicCallContext, code insolar.Reference, data []byte, method string, args insolar.Arguments) (newObjectState []byte, methodResults insolar.Arguments, err error) {
+				return insolar.MustSerialize(expectedRes), insolar.MustSerialize(expectedRes), nil
+			}), nil
+		}).RegisterExecutorMock.Set(func(t insolar.MachineType, e insolar.MachineLogicExecutor) (err error) {
+			return nil
+		}))
 
 		require.NoError(t, err)
 		defer s.Stop(ctx)
@@ -125,13 +156,25 @@ func TestVirtual_BasicOperations(t *testing.T) {
 		// First pulse goes in storage then interrupts.
 		s.SetPulse(ctx)
 
-		res := SendMessage(ctx, s, &payload.CallMethod{
-			Request:     incomingRequest,
-			PulseNumber: s.pulse.PulseNumber,
-		})
+		res, requestRef, err := CallContract(
+			s, &objRef, "good.CallMethod", nil, s.pulse.PulseNumber,
+		)
 
-		_, isError := res.(*payload.Error)
-
-		require.False(t, isError, "result expected not to be error %v", res)
+		require.NoError(t, err)
+		require.NotEmpty(t, requestRef)
+		require.Equal(t, &reply.CallMethod{
+			Object: &objRef,
+			Result: insolar.MustSerialize(expectedRes),
+		}, res)
 	})
+}
+
+var walletRef = shouldLoadRef("0111A5e49cJW6GKGegWBhtgrJs7nFh1kSWhBtT2VgK4t.record")
+
+func shouldLoadRef(strRef string) insolar.Reference {
+	ref, err := insolar.NewReferenceFromBase58(strRef)
+	if err != nil {
+		panic(errors.Wrap(err, "Unexpected error, bailing out"))
+	}
+	return *ref
 }

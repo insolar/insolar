@@ -62,6 +62,7 @@ func NodeLight() insolar.Reference {
 const PulseStep insolar.PulseNumber = 10
 
 type Server struct {
+	ctx               context.Context
 	test              *testing.T
 	pm                insolar.PulseManager
 	componentManager  *component.Manager
@@ -176,11 +177,10 @@ func NewServer(
 		Pulses = pulse.NewStorageMem()
 		Jets = jet.NewStore()
 
-		Coordinator = jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit)
+		Coordinator = jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit, virtual.ref)
 		Coordinator.PulseCalculator = Pulses
 		Coordinator.PulseAccessor = Pulses
 		Coordinator.JetAccessor = Jets
-		Coordinator.OriginProvider = NodeNetwork
 		Coordinator.PlatformCryptographyScheme = CryptoScheme
 		Coordinator.Nodes = Nodes
 	}
@@ -205,11 +205,10 @@ func NewServer(
 		ExternalPubSub = pubsub
 		IncomingPubSub = pubsub
 
-		c := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit)
+		c := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit, virtual.ref)
 		c.PulseCalculator = Pulses
 		c.PulseAccessor = Pulses
 		c.JetAccessor = Jets
-		c.OriginProvider = newNodeNetMock(&virtual)
 		c.PlatformCryptographyScheme = CryptoScheme
 		c.Nodes = Nodes
 		ClientBus = bus.NewBus(cfg.Bus, IncomingPubSub, Pulses, c, CryptoScheme)
@@ -254,25 +253,46 @@ func NewServer(
 	err = cm.Init(ctx)
 	checkError(ctx, err, "failed to init components")
 
+	err = cm.Start(ctx)
+	checkError(ctx, err, "failed to start components")
+
 	// Start routers with handlers.
 	outHandler := func(msg *message.Message) error {
+		var err error
 
-		meta := payload.Meta{}
-		err := meta.Unmarshal(msg.Payload)
+		if msg.Metadata.Get(meta.Type) == meta.TypeReply {
+			err = ExternalPubSub.Publish(getIncomingTopic(msg), msg)
+			if err != nil {
+				panic(errors.Wrap(err, "failed to publish to self"))
+			}
+			return nil
+		}
+
+		msgMeta := payload.Meta{}
+		err = msgMeta.Unmarshal(msg.Payload)
 		if err != nil {
 			panic(errors.Wrap(err, "failed to unmarshal meta"))
 		}
 
-		pl, err := payload.Unmarshal(meta.Payload)
+		// Republish as incoming to self.
+		if msgMeta.Receiver == virtual.ID() {
+			err = ExternalPubSub.Publish(getIncomingTopic(msg), msg)
+			if err != nil {
+				panic(errors.Wrap(err, "failed to publish to self"))
+			}
+			return nil
+		}
+
+		pl, err := payload.Unmarshal(msgMeta.Payload)
 		if err != nil {
-			panic(nil)
+			panic(errors.Wrap(err, "failed to unmarshal payload"))
 		}
 		go func() {
 			var replies []payload.Payload
 			if receiveCallback != nil {
-				replies = receiveCallback(meta, pl)
+				replies = receiveCallback(msgMeta, pl)
 			} else {
-				replies = defaultReceiveCallback(meta, pl)
+				replies = defaultReceiveCallback(msgMeta, pl)
 			}
 
 			for _, rep := range replies {
@@ -280,18 +300,9 @@ func NewServer(
 				if err != nil {
 					panic(err)
 				}
-				ClientBus.Reply(context.Background(), meta, msg)
+				ClientBus.Reply(context.Background(), msgMeta, msg)
 			}
 		}()
-
-		// Republish as incoming to self.
-		if meta.Receiver == virtual.ID() {
-			err = ExternalPubSub.Publish(getIncomingTopic(msg), msg)
-			if err != nil {
-				panic(err)
-			}
-			return nil
-		}
 
 		clientHandler := func(msg *message.Message) (messages []*message.Message, e error) {
 			return nil, nil
@@ -320,12 +331,14 @@ func NewServer(
 	}).Info("started test server")
 
 	s := &Server{
-		test:             t,
-		pm:               PulseManager,
-		componentManager: &cm,
-		stopper:          stopper,
-		pulse:            *insolar.GenesisPulse,
-		clientSender:     ClientBus,
+		ctx:               ctx,
+		contractRequester: contractRequester,
+		test:              t,
+		pm:                PulseManager,
+		componentManager:  &cm,
+		stopper:           stopper,
+		pulse:             *insolar.GenesisPulse,
+		clientSender:      ClientBus,
 	}
 	return s, nil
 }

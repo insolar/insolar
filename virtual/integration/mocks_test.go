@@ -102,6 +102,10 @@ func (n *nodeNetMock) GetOrigin() insolar.NetworkNode {
 	return n.me
 }
 
+func CallContract(s *Server, ref *insolar.Reference, method string, argsIn []interface{}, pulse insolar.PulseNumber) (insolar.Reply, *insolar.Reference, error) {
+	return s.contractRequester.Call(s.ctx, ref, method, argsIn, pulse)
+}
+
 func SendMessage(
 	ctx context.Context, s *Server, msg payload.Payload,
 ) payload.Payload {
