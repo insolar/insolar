@@ -328,10 +328,6 @@ func loadMembers(count int) ([]*sdk.Member, error) {
 	return members, nil
 }
 
-func calcFee(amount int64) int64 {
-	return transferFee
-}
-
 func main() {
 	parseInputParams()
 
