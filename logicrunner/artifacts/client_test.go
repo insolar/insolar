@@ -603,10 +603,8 @@ func (s *ArtifactsMangerClientSuite) TestDeployCode() {
 				},
 			)
 
-			emptyRef := *insolar.NewEmptyReference()
-
 			// Act
-			deployCodeID, err := s.amClient.DeployCode(s.ctx, emptyRef, emptyRef, code, machineType)
+			deployCodeID, err := s.amClient.DeployCode(s.ctx, code, machineType)
 
 			// Assert
 			test.check(deployCodeID, err)
@@ -618,7 +616,6 @@ func (s *ArtifactsMangerClientSuite) TestDeployCode() {
 
 func (s *ArtifactsMangerClientSuite) TestDeployCode_FailedToSend() {
 	// Arrange
-	emptyRef := *insolar.NewEmptyReference()
 	code := []byte(testutils.RandomString())
 	machineType := insolar.MachineTypeGoPlugin
 
@@ -630,7 +627,7 @@ func (s *ArtifactsMangerClientSuite) TestDeployCode_FailedToSend() {
 	s.busSender.SendRoleMock.Return(ch, func() {})
 
 	// Act
-	_, err := s.amClient.DeployCode(s.ctx, emptyRef, emptyRef, code, machineType)
+	_, err := s.amClient.DeployCode(s.ctx, code, machineType)
 
 	// Assert
 	s.Error(err)

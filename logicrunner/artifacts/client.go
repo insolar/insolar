@@ -481,13 +481,7 @@ func (m *client) HasPendings(
 // DeployCode creates new code record in storage.
 //
 // CodeRef records are used to activate prototype or as migration code for an object.
-func (m *client) DeployCode(
-	ctx context.Context,
-	_ insolar.Reference,
-	_ insolar.Reference,
-	code []byte,
-	machineType insolar.MachineType,
-) (*insolar.ID, error) {
+func (m *client) DeployCode(ctx context.Context, code []byte, machineType insolar.MachineType) (*insolar.ID, error) {
 	var err error
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.DeployCode")
 	instrumenter := instrument(ctx, "DeployCode").err(&err)

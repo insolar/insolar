@@ -59,7 +59,7 @@ type Client interface {
 	// DeployCode creates new code record in storage.
 	//
 	// Code records are used to activate prototype.
-	DeployCode(ctx context.Context, domain, request insolar.Reference, code []byte, machineType insolar.MachineType) (*insolar.ID, error)
+	DeployCode(ctx context.Context, code []byte, machineType insolar.MachineType) (*insolar.ID, error)
 
 	// ActivatePrototype creates activate object record in storage. Provided prototype reference will be used as objects prototype
 	// memory as memory of created object. If memory is not provided, the prototype default memory will be used.
