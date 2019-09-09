@@ -43,3 +43,11 @@ func envVarWithDefault(name string, defaultValue string) string {
 	}
 	return defaultValue
 }
+
+// PathWithBaseDir adds base path to path if path is not absolute.
+func PathWithBaseDir(path string, base string) string {
+	if filepath.IsAbs(path) {
+		return path
+	}
+	return filepath.Join(base, path)
+}

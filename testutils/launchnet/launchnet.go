@@ -20,7 +20,6 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"go/build"
 	"io"
 	"io/ioutil"
 	"log"
@@ -435,23 +434,21 @@ func setup() error {
 }
 
 func pulseWatcherPath() (string, string, error) {
-	p, err := build.Default.Import("github.com/insolar/insolar", "", build.FindOnly)
-	if err != nil {
-		return "", "", errors.Wrap(err, "Couldn't receive path to github.com/insolar/insolar")
-	}
-	pulseWatcher := filepath.Join(p.Dir, "bin", "pulsewatcher")
-	config := filepath.Join(p.Dir, ".artifacts", "launchnet", "pulsewatcher.yaml")
+	insDir := insolar.RootModuleDir()
+	pulseWatcher := filepath.Join(insDir, "bin", "pulsewatcher")
+
+	baseDir := defaults.PathWithBaseDir(defaults.LaunchnetDir(), insDir)
+	config := filepath.Join(baseDir, "pulsewatcher.yaml")
 	return pulseWatcher, config, nil
 }
 
 func teardown() {
-	var err error
-
-	err = stopInsolard()
+	err := stopInsolard()
 	if err != nil {
-		fmt.Println("[ teardown ]  failed to stop insolard: ", err)
+		fmt.Println("[ teardown ]  failed to stop insolard:", err)
+		return
 	}
-	fmt.Println("[ teardown ] insolard was successfully stoped")
+	fmt.Println("[ teardown ] insolard was successfully stopped")
 }
 
 // RotateLogs rotates launchnet logs.
