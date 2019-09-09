@@ -129,9 +129,11 @@ func (m *client) registerRequest(
 		return p, nil
 	case *payload.Error:
 		if p.Code == payload.CodeFlowCanceled {
-			return nil, flow.ErrCancelled
+			err = flow.ErrCancelled
+		} else {
+			err = &payload.CodedError{Code: p.Code, Text: p.Text}
 		}
-		return nil, &payload.CodedError{Code: p.Code, Text: p.Text}
+		return nil, err
 	default:
 		err = fmt.Errorf("registerRequest: unexpected reply: %#v", p)
 		return nil, err
@@ -230,7 +232,7 @@ func (m *client) GetCode(
 		err = errors.New(p.Text)
 		return nil, err
 	default:
-		err = fmt.Errorf("GetObject: unexpected reply: %#v", p)
+		err = fmt.Errorf("GetCode: unexpected reply: %#v", p)
 		return nil, err
 	}
 }
@@ -278,11 +280,11 @@ func (m *client) GetObject(
 	defer done()
 
 	var (
-		index        *record.Lifeline
-		statePayload *payload.State
+		index *record.Lifeline
+		state record.State
 	)
 	success := func() bool {
-		return index != nil && statePayload != nil
+		return index != nil && state != nil
 	}
 
 	for rep := range reps {
@@ -301,7 +303,18 @@ func (m *client) GetObject(
 			}
 		case *payload.State:
 			logger.Debug("reply state")
-			statePayload = p
+			rec := record.Material{}
+			err = rec.Unmarshal(p.Record)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to unmarshal state")
+			}
+			virtual := record.Unwrap(&rec.Virtual)
+			s, ok := virtual.(record.State)
+			if !ok {
+				err = errors.New("wrong state record")
+				return nil, err
+			}
+			state = s
 		case *payload.Error:
 			logger.Debug("reply error: ", p.Text)
 			switch p.Code {
@@ -309,7 +322,6 @@ func (m *client) GetObject(
 				err = insolar.ErrDeactivated
 				return nil, err
 			default:
-				logger.Errorf("reply error: %v, objectID: %v", p.Text, head.GetLocal().DebugString())
 				err = errors.New(p.Text)
 				return nil, err
 			}
@@ -322,31 +334,18 @@ func (m *client) GetObject(
 			break
 		}
 	}
-	if !success() {
-		logger.Error(ErrNoReply)
-		err = ErrNoReply
-		return nil, ErrNoReply
-	}
 
-	rec := record.Material{}
-	err = rec.Unmarshal(statePayload.Record)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal state")
-	}
-	virtual := record.Unwrap(&rec.Virtual)
-	s, ok := virtual.(record.State)
-	if !ok {
-		err = errors.New("wrong state record")
+	if !success() {
+		err = ErrNoReply
 		return nil, err
 	}
-	state := s
 
 	desc := &objectDescriptor{
 		head:        head,
 		state:       *index.LatestState,
 		prototype:   state.GetImage(),
 		isPrototype: state.GetIsPrototype(),
-		memory:      s.GetMemory(),
+		memory:      state.GetMemory(),
 		parent:      index.Parent,
 	}
 	return desc, nil
@@ -376,8 +375,9 @@ func (m *client) GetAbandonedRequest(
 		return nil, errors.Wrap(err, "failed to send GetRequest")
 	}
 
-	if req, ok := pl.(*payload.Request); ok {
-		concrete := record.Unwrap(&req.Request)
+	switch p := pl.(type) {
+	case *payload.Request:
+		concrete := record.Unwrap(&p.Request)
 		var result record.Request
 
 		switch v := concrete.(type) {
@@ -391,15 +391,15 @@ func (m *client) GetAbandonedRequest(
 		}
 
 		return result, nil
-	} else if err, ok := pl.(*payload.Error); ok {
-		if err.Code == payload.CodeNotFound {
+	case *payload.Error:
+		if p.Code == payload.CodeNotFound {
 			return nil, insolar.ErrNotFound
 		}
-		return nil, errors.New(err.Text)
+		return nil, errors.New(p.Text)
+	default:
+		err = errors.Errorf("unexpected reply %T", pl)
+		return nil, err
 	}
-
-	err = errors.Errorf("unexpected reply %T", pl)
-	return nil, err
 }
 
 // GetPendings returns a list of pending requests

@@ -24,6 +24,7 @@ import (
 
 	wmMessage "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/gojuno/minimock"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/insolar/insolar/insolar"
@@ -38,6 +39,41 @@ import (
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 )
+
+type TestRequestResult struct {
+	SideEffectType     RequestResultType // every
+	RawResult          []byte            // every
+	RawObjectReference insolar.Reference // every
+
+	ParentReference insolar.Reference // activate
+	ObjectImage     insolar.Reference // amend + activate
+	ObjectStateID   insolar.ID        // amend + deactivate
+	Memory          []byte            // amend + activate
+}
+
+func (s *TestRequestResult) Result() []byte {
+	return s.RawResult
+}
+
+func (s *TestRequestResult) Activate() (insolar.Reference, insolar.Reference, []byte) {
+	return s.ParentReference, s.ObjectImage, s.Memory
+}
+
+func (s *TestRequestResult) Amend() (insolar.ID, insolar.Reference, []byte) {
+	return s.ObjectStateID, s.ObjectImage, s.Memory
+}
+
+func (s *TestRequestResult) Deactivate() insolar.ID {
+	return s.ObjectStateID
+}
+
+func (s TestRequestResult) Type() RequestResultType {
+	return s.SideEffectType
+}
+
+func (s *TestRequestResult) ObjectReference() insolar.Reference {
+	return s.RawObjectReference
+}
 
 func genAPIRequestID() string {
 	APIRequestID := utils.RandTraceID()
@@ -850,7 +886,6 @@ func (s *ArtifactsMangerClientSuite) TestGetCode() {
 
 	code := []byte(testutils.RandomString())
 	machineType := insolar.MachineTypeGoPlugin
-	pulseObject := insolar.Pulse{PulseNumber: gen.PulseNumber()}
 
 	for name, test := range map[string]struct {
 		response payload.Payload
@@ -910,6 +945,7 @@ func (s *ArtifactsMangerClientSuite) TestGetCode() {
 		s.Run(name, func() {
 			s.prepareContext()
 
+			pulseObject := insolar.Pulse{PulseNumber: gen.PulseNumber()}
 			s.pulseAccessor.LatestMock.Return(pulseObject, nil)
 
 			s.busSender.SendRoleMock.Set(
@@ -1224,44 +1260,403 @@ func (s *ArtifactsMangerClientSuite) TestRegisterResult() {
 	}
 }
 
+func (s *ArtifactsMangerClientSuite) marshalRecord(rec record.Record) []byte {
+	result, err := rec.Marshal()
+	s.NoError(err)
+	return result
+}
+
 func (s *ArtifactsMangerClientSuite) TestGetObject() {
+	requestID := gen.ID()
+	requestRef := insolar.NewRecordReference(requestID)
 
+	objectID := gen.ID()
+	stateID := gen.ID()
+	objectRef := insolar.NewReference(objectID)
+
+	parentRef := gen.Reference()
+	imageRef := gen.Reference()
+
+	memoryBytes := []byte(testutils.RandomString())
+
+	for name, test := range map[string]struct {
+		response []payload.Payload
+		check    func(ObjectDescriptor, error)
+	}{
+		"success_activate": {
+			response: []payload.Payload{
+				&payload.Index{
+					Index: s.marshalRecord(&record.Lifeline{
+						LatestState:         &stateID,
+						StateID:             record.StateActivation,
+						Parent:              parentRef,
+						LatestRequest:       nil,
+						EarliestOpenRequest: nil,
+					}),
+				},
+				&payload.State{
+					Record: s.packMaterialRecord(&record.Activate{
+						Request:     *requestRef,
+						Memory:      memoryBytes,
+						Image:       imageRef,
+						IsPrototype: false,
+						Parent:      parentRef,
+					}),
+				},
+			},
+			check: func(desc ObjectDescriptor, err error) {
+				s.Require().NoError(err)
+
+				code, err := desc.Code()
+				s.Error(err)
+				s.Equal(code, (*insolar.Reference)(nil))
+
+				proto, err := desc.Prototype()
+				s.NoError(err)
+				s.Equal(*proto, imageRef)
+
+				s.Equal(desc.Memory(), memoryBytes)
+				s.Equal(desc.IsPrototype(), false)
+				s.Equal(*desc.HeadRef(), *objectRef)
+				s.Equal(*desc.Parent(), parentRef)
+				s.Equal(*desc.StateID(), stateID)
+			},
+		},
+		"success_amend": {
+			response: []payload.Payload{
+				&payload.Index{
+					Index: s.marshalRecord(&record.Lifeline{
+						LatestState:         &stateID,
+						StateID:             record.StateAmend,
+						Parent:              parentRef,
+						LatestRequest:       nil,
+						EarliestOpenRequest: nil,
+					}),
+				},
+				&payload.State{
+					Record: s.packMaterialRecord(&record.Amend{
+						Request:     *requestRef,
+						Memory:      memoryBytes,
+						Image:       imageRef,
+						IsPrototype: false,
+						PrevState:   gen.ID(),
+					}),
+				},
+			},
+			check: func(desc ObjectDescriptor, err error) {
+				s.Require().NoError(err)
+
+				code, err := desc.Code()
+				s.Error(err)
+				s.Equal(code, (*insolar.Reference)(nil))
+
+				proto, err := desc.Prototype()
+				s.NoError(err)
+				s.Equal(*proto, imageRef)
+
+				s.Equal(desc.Memory(), memoryBytes)
+				s.Equal(desc.IsPrototype(), false)
+				s.Equal(*desc.HeadRef(), *objectRef)
+				s.Equal(*desc.Parent(), parentRef)
+				s.Equal(*desc.StateID(), stateID)
+			},
+		},
+		"success_deactivate_1": {
+			response: []payload.Payload{
+				&payload.Error{
+					Code: payload.CodeDeactivated,
+					Text: "object is deactivated",
+				},
+			},
+			check: func(desc ObjectDescriptor, err error) {
+				s.Require().Error(err)
+				s.Equal(err, insolar.ErrDeactivated)
+			},
+		},
+		"success_deactivate_2": {
+			response: []payload.Payload{
+				&payload.Index{
+					Index: s.marshalRecord(&record.Lifeline{
+						LatestState:         &stateID,
+						StateID:             record.StateAmend,
+						Parent:              parentRef,
+						LatestRequest:       nil,
+						EarliestOpenRequest: nil,
+					}),
+				},
+				&payload.Error{
+					Code: payload.CodeDeactivated,
+					Text: "object is deactivated",
+				},
+				&payload.State{
+					Record: s.packMaterialRecord(&record.Amend{
+						Request:     *requestRef,
+						Memory:      memoryBytes,
+						Image:       imageRef,
+						IsPrototype: false,
+						PrevState:   gen.ID(),
+					}),
+				},
+			},
+			check: func(desc ObjectDescriptor, err error) {
+				s.Require().Error(err)
+				s.Equal(err, insolar.ErrDeactivated)
+			},
+		},
+		"unknown error": {
+			response: []payload.Payload{
+				&payload.Error{
+					Code: payload.CodeUnknown,
+					Text: "some error",
+				},
+			},
+			check: func(desc ObjectDescriptor, err error) {
+				s.Require().Error(err)
+				s.Contains(err.Error(), "some error")
+			},
+		},
+		"bad lifeline": {
+			response: []payload.Payload{
+				&payload.Index{Index: s.marshalRecord(&record.Deactivate{})},
+			},
+			check: func(desc ObjectDescriptor, err error) {
+				s.Require().Error(err)
+				s.Contains(err.Error(), "failed to unmarshal index")
+			},
+		},
+		"bad state 1": {
+			response: []payload.Payload{
+				&payload.State{Record: s.packMaterialRecord(&record.IncomingRequest{})},
+			},
+			check: func(desc ObjectDescriptor, err error) {
+				s.Require().Error(err)
+				s.Contains(err.Error(), "wrong state record")
+			},
+		},
+		"bad state 2": {
+			response: []payload.Payload{
+				&payload.State{Record: s.packVirtualRecord(&record.IncomingRequest{})},
+			},
+			check: func(desc ObjectDescriptor, err error) {
+				s.Require().Error(err)
+				s.Contains(err.Error(), "wrong state record")
+			},
+		},
+		"unexpected reply": {
+			response: []payload.Payload{&payload.GetPendings{}},
+			check: func(desc ObjectDescriptor, err error) {
+				s.Require().Error(err)
+				s.Contains(err.Error(), "GetObject: unexpected reply")
+			},
+		},
+		"flow cancelled": {
+			response: []payload.Payload{
+				&payload.Error{
+					Code: payload.CodeFlowCanceled,
+					Text: "flow cancelled",
+				},
+			},
+			check: func(desc ObjectDescriptor, err error) {
+				s.Error(err)
+				s.Contains(err.Error(), "timeout while awaiting reply from watermill")
+			},
+		},
+	} {
+		s.Run(name, func() {
+			s.prepareContext()
+
+			initialPulseNumber, pulseOffset := gen.PulseNumber(), insolar.PulseNumber(0)
+			s.pulseAccessor.LatestMock.Set(
+				func(ctx context.Context) (insolar.Pulse, error) {
+					pulseOffset += 10
+					return insolar.Pulse{PulseNumber: initialPulseNumber + pulseOffset}, nil
+				},
+			)
+
+			s.busSender.SendRoleMock.Set(
+				func(
+					p context.Context,
+					msg *wmMessage.Message,
+					role insolar.DynamicRole,
+					ref insolar.Reference,
+				) (
+					<-chan *wmMessage.Message,
+					func(),
+				) {
+					payloadGetObject := payload.GetObject{}
+					err := payloadGetObject.Unmarshal(msg.Payload)
+					s.Require().NoError(err)
+
+					s.Equal(objectID, payloadGetObject.ObjectID)
+
+					ch := make(chan *wmMessage.Message, 10)
+					for _, pl := range test.response {
+						resMsg, err := payload.NewMessage(pl)
+						s.Require().NoError(err)
+
+						meta := payload.Meta{
+							Payload: resMsg.Payload,
+						}
+						buf, err := meta.Marshal()
+						s.Require().NoError(err)
+
+						resMsg.Payload = buf
+
+						ch <- resMsg
+					}
+					return ch, func() { close(ch) }
+				},
+			)
+
+			desc, err := s.amClient.GetObject(s.ctx, *objectRef)
+
+			test.check(desc, err)
+		})
+	}
 }
 
-func (s *ArtifactsMangerClientSuite) TestActivatePrototype() {}
-func (s *ArtifactsMangerClientSuite) TestLocalStorage()      {}
-
-type TestRequestResult struct {
-	SideEffectType     RequestResultType // every
-	RawResult          []byte            // every
-	RawObjectReference insolar.Reference // every
-
-	ParentReference insolar.Reference // activate
-	ObjectImage     insolar.Reference // amend + activate
-	ObjectStateID   insolar.ID        // amend + deactivate
-	Memory          []byte            // amend + activate
+func shouldLoadRef(strRef string) insolar.Reference {
+	ref, err := insolar.NewReferenceFromBase58(strRef)
+	if err != nil {
+		panic(errors.Wrap(err, "Unexpected error, bailing out"))
+	}
+	return *ref
 }
 
-func (s *TestRequestResult) Result() []byte {
-	return s.RawResult
-}
+func (s *ArtifactsMangerClientSuite) TestLocalStorage() {
+	codeDesc := NewCodeDescriptor(
+		/* code:        */ nil,
+		/* machineType: */ insolar.MachineTypeBuiltin,
+		/* ref:         */ shouldLoadRef("0111A7rimrANEAnwBT1kvAhHeHp9NPTFJMLKVng8GLH5.record"),
+	)
+	var protoDesc ObjectDescriptor
+	{ // account
+		pRef := shouldLoadRef("0111A62X73fkPeY5vK6NjcXgmL9d37DgRRNtHNLGaEse")
+		cRef := shouldLoadRef("0111A7rimrANEAnwBT1kvAhHeHp9NPTFJMLKVng8GLH5.record")
+		protoDesc = NewObjectDescriptor(
+			/* head:         */ pRef,
+			/* state:        */ *pRef.GetLocal(),
+			/* prototype:    */ &cRef,
+			/* isPrototype:  */ true,
+			/* childPointer: */ nil,
+			/* memory:       */ nil,
+			/* parent:       */ gen.Reference(),
+		)
+	}
 
-func (s *TestRequestResult) Activate() (insolar.Reference, insolar.Reference, []byte) {
-	return s.ParentReference, s.ObjectImage, s.Memory
-}
+	s.Run("objectDesc ok", func() {
+		s.prepareContext()
+		s.prepareAMClient()
 
-func (s *TestRequestResult) Amend() (insolar.ID, insolar.Reference, []byte) {
-	return s.ObjectStateID, s.ObjectImage, s.Memory
-}
+		s.amClient.InjectObjectDescriptor(*protoDesc.HeadRef(), protoDesc)
 
-func (s *TestRequestResult) Deactivate() insolar.ID {
-	return s.ObjectStateID
-}
+		desc, err := s.amClient.GetObject(s.ctx, *protoDesc.HeadRef())
+		s.NoError(err)
+		s.Equal(desc, protoDesc)
+	})
 
-func (s TestRequestResult) Type() RequestResultType {
-	return s.SideEffectType
-}
+	s.Run("codeCache ok", func() {
+		s.prepareContext()
+		s.prepareAMClient()
 
-func (s *TestRequestResult) ObjectReference() insolar.Reference {
-	return s.RawObjectReference
+		s.amClient.InjectCodeDescriptor(*codeDesc.Ref(), codeDesc)
+
+		desc, err := s.amClient.GetCode(s.ctx, *codeDesc.Ref())
+		s.NoError(err)
+		s.Equal(desc, codeDesc)
+	})
+
+	s.Run("objectDesc code ref miss", func() {
+		s.prepareContext()
+		s.prepareAMClient()
+
+		response := &payload.Error{
+			Text: "failed to fetch record",
+			Code: payload.CodeNotFound,
+		}
+
+		s.amClient.InjectCodeDescriptor(*codeDesc.Ref(), codeDesc)
+
+		pulseObject := insolar.Pulse{PulseNumber: gen.PulseNumber()}
+		s.pulseAccessor.LatestMock.Return(pulseObject, nil)
+
+		s.busSender.SendRoleMock.Set(
+			func(
+				p context.Context,
+				msg *wmMessage.Message,
+				role insolar.DynamicRole,
+				ref insolar.Reference,
+			) (
+				<-chan *wmMessage.Message,
+				func(),
+			) {
+				ch := make(chan *wmMessage.Message, 10)
+
+				resMsg, err := payload.NewMessage(response)
+				s.Require().NoError(err)
+
+				meta := payload.Meta{
+					Payload: resMsg.Payload,
+				}
+				buf, err := meta.Marshal()
+				s.Require().NoError(err)
+
+				resMsg.Payload = buf
+
+				ch <- resMsg
+				return ch, func() { close(ch) }
+			},
+		)
+
+		_, err := s.amClient.GetObject(s.ctx, *codeDesc.Ref())
+		s.Error(err)
+		s.Contains(err.Error(), "failed to fetch record")
+	})
+
+	s.Run("codeDesc object ref miss", func() {
+		s.prepareContext()
+		s.prepareAMClient()
+
+		response := &payload.Error{
+			Text: "failed to fetch record",
+			Code: payload.CodeNotFound,
+		}
+
+		s.amClient.InjectObjectDescriptor(*protoDesc.HeadRef(), protoDesc)
+
+		pulseObject := insolar.Pulse{PulseNumber: gen.PulseNumber()}
+		s.pulseAccessor.LatestMock.Return(pulseObject, nil)
+
+		s.busSender.SendRoleMock.Set(
+			func(
+				p context.Context,
+				msg *wmMessage.Message,
+				role insolar.DynamicRole,
+				ref insolar.Reference,
+			) (
+				<-chan *wmMessage.Message,
+				func(),
+			) {
+				ch := make(chan *wmMessage.Message, 10)
+
+				resMsg, err := payload.NewMessage(response)
+				s.Require().NoError(err)
+
+				meta := payload.Meta{
+					Payload: resMsg.Payload,
+				}
+				buf, err := meta.Marshal()
+				s.Require().NoError(err)
+
+				resMsg.Payload = buf
+
+				ch <- resMsg
+				return ch, func() { close(ch) }
+			},
+		)
+
+		_, err := s.amClient.GetCode(s.ctx, *protoDesc.HeadRef())
+		s.Error(err)
+		s.Contains(err.Error(), "failed to fetch record")
+	})
 }
