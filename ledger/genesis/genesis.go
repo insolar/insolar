@@ -401,58 +401,60 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 			membersDeposits,
 		))
 	}
-	pkShardCount := g.ContractsConfig.PKShardCount
-	if pkShardCount <= 0 {
+	if g.ContractsConfig.PKShardCount <= 0 {
 		panic(fmt.Sprintf("[genesis] store contracts failed: setup pk_shard_count parameter, current value %v", g.ContractsConfig.PKShardCount))
+	}
+	if g.ContractsConfig.MAShardCount <= 0 {
+		panic(fmt.Sprintf("[genesis] store contracts failed: setup ma_shard_count parameter, current value %v", g.ContractsConfig.PKShardCount))
 	}
 
 	// Split genesis members by PK shards
 	var membersByPKShards []foundation.StableMap
-	for i := 0; i < pkShardCount; i++ {
+	for i := 0; i < g.ContractsConfig.PKShardCount; i++ {
 		membersByPKShards = append(membersByPKShards, make(foundation.StableMap))
 	}
 	trimmedRootPublicKey := foundation.TrimPublicKey(g.ContractsConfig.RootPublicKey)
-	index := foundation.GetShardIndex(trimmedRootPublicKey, pkShardCount)
+	index := foundation.GetShardIndex(trimmedRootPublicKey, g.ContractsConfig.PKShardCount)
 	membersByPKShards[index][trimmedRootPublicKey] = genesisrefs.ContractRootMember.String()
 
 	trimmedMigrationAdminPublicKey := foundation.TrimPublicKey(g.ContractsConfig.MigrationAdminPublicKey)
-	index = foundation.GetShardIndex(trimmedMigrationAdminPublicKey, pkShardCount)
+	index = foundation.GetShardIndex(trimmedMigrationAdminPublicKey, g.ContractsConfig.PKShardCount)
 	membersByPKShards[index][trimmedMigrationAdminPublicKey] = genesisrefs.ContractMigrationAdminMember.String()
 
 	trimmedFeeMemberPublicKey := foundation.TrimPublicKey(g.ContractsConfig.FeePublicKey)
-	index = foundation.GetShardIndex(trimmedFeeMemberPublicKey, pkShardCount)
+	index = foundation.GetShardIndex(trimmedFeeMemberPublicKey, g.ContractsConfig.PKShardCount)
 	membersByPKShards[index][trimmedFeeMemberPublicKey] = genesisrefs.ContractFeeMember.String()
 
 	trimmedFundsAndEnterprisePublicKey := foundation.TrimPublicKey(g.ContractsConfig.FundsAndEnterprisePublicKey)
-	index = foundation.GetShardIndex(trimmedFundsAndEnterprisePublicKey, pkShardCount)
+	index = foundation.GetShardIndex(trimmedFundsAndEnterprisePublicKey, g.ContractsConfig.PKShardCount)
 	membersByPKShards[index][trimmedFundsAndEnterprisePublicKey] = genesisrefs.ContractEnterpriseMember.String()
 
 	for i, key := range g.ContractsConfig.MigrationDaemonPublicKeys {
 		trimmedMigrationDaemonPublicKey := foundation.TrimPublicKey(key)
-		index := foundation.GetShardIndex(trimmedMigrationDaemonPublicKey, pkShardCount)
+		index := foundation.GetShardIndex(trimmedMigrationDaemonPublicKey, g.ContractsConfig.PKShardCount)
 		membersByPKShards[index][trimmedMigrationDaemonPublicKey] = genesisrefs.ContractMigrationDaemonMembers[i].String()
 	}
 
 	for i, key := range g.ContractsConfig.NetworkIncentivesPublicKeys {
 		trimmedNetworkIncentivesPublicKey := foundation.TrimPublicKey(key)
-		index := foundation.GetShardIndex(trimmedNetworkIncentivesPublicKey, pkShardCount)
+		index := foundation.GetShardIndex(trimmedNetworkIncentivesPublicKey, g.ContractsConfig.PKShardCount)
 		membersByPKShards[index][trimmedNetworkIncentivesPublicKey] = genesisrefs.ContractNetworkIncentivesMembers[i].String()
 	}
 
 	for i, key := range g.ContractsConfig.ApplicationIncentivesPublicKeys {
 		trimmedApplicationIncentivesPublicKey := foundation.TrimPublicKey(key)
-		index := foundation.GetShardIndex(trimmedApplicationIncentivesPublicKey, pkShardCount)
+		index := foundation.GetShardIndex(trimmedApplicationIncentivesPublicKey, g.ContractsConfig.PKShardCount)
 		membersByPKShards[index][trimmedApplicationIncentivesPublicKey] = genesisrefs.ContractApplicationIncentivesMembers[i].String()
 	}
 
 	for i, key := range g.ContractsConfig.FoundationPublicKeys {
 		trimmedFoundationPublicKey := foundation.TrimPublicKey(key)
-		index := foundation.GetShardIndex(trimmedFoundationPublicKey, pkShardCount)
+		index := foundation.GetShardIndex(trimmedFoundationPublicKey, g.ContractsConfig.PKShardCount)
 		membersByPKShards[index][trimmedFoundationPublicKey] = genesisrefs.ContractFoundationMembers[i].String()
 	}
 
 	// Append states for shards
-	for i, name := range genesisrefs.ContractPublicKeyNameShards(pkShardCount) {
+	for i, name := range genesisrefs.ContractPublicKeyNameShards(g.ContractsConfig.PKShardCount) {
 		states = append(states, contracts.GetPKShardGenesisContractState(name, membersByPKShards[i]))
 	}
 	for i, name := range genesisrefs.ContractMigrationAddressNameShards(g.ContractsConfig.MAShardCount) {

@@ -197,14 +197,6 @@ func (g *Generator) Run(ctx context.Context) error {
 			return errors.Wrap(err, "generate not discovery certificates failed")
 		}
 	}
-	maShardCount := g.config.MAShardCount
-	if g.config.MAShardCount <= 0 {
-		maShardCount = 10
-	}
-	pkShardCount := g.config.PKShardCount
-	if g.config.PKShardCount <= 0 {
-		pkShardCount = 10
-	}
 
 	inslog.Info("[ bootstrap ] create heavy genesis config ...")
 	contractsConfig := insolar.GenesisContractsConfig{
@@ -222,8 +214,8 @@ func (g *Generator) Run(ctx context.Context) error {
 		VestingPeriodInPulses:           g.config.VestingPeriodInPulses,
 		LoсkupPeriodInPulses:            g.config.LockupPeriodInPulses,
 		VestingStepInPulses:             vestingStep,
-		MAShardCount:                    maShardCount,
-		PKShardCount:                    pkShardCount,
+		MAShardCount:                    g.config.MAShardCount,
+		PKShardCount:                    g.config.PKShardCount,
 	}
 	err = g.makeHeavyGenesisConfig(discoveryNodes, contractsConfig)
 	if err != nil {
