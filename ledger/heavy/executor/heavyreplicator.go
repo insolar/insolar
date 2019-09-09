@@ -28,9 +28,14 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/drop"
+	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
+)
+
+const (
+	abandonedNotifyThreshold = 2
 )
 
 // HeavyReplicator is a base interface for a heavy sync component.
@@ -117,13 +122,22 @@ func (h *HeavyReplicatorDefault) sync(ctx context.Context) {
 			logger.Panic(errors.Wrap(err, "heavy replicator failed to store records"))
 		}
 
+		abandonedNotifyPulse, err := h.pulseCalculator.Backwards(ctx, msg.Pulse, abandonedNotifyThreshold)
+		if err != nil {
+			if err == pulse.ErrNotFound {
+				abandonedNotifyPulse = *insolar.GenesisPulse
+			} else {
+				logger.Panic(errors.Wrap(err, "failed to calculate pending notify pulse"))
+			}
+		}
+
 		logger.Debug("heavy replicator storing indexes")
-		if err := storeIndexes(ctx, h.indexes, msg.Indexes, msg.Pulse); err != nil {
+		if err := storeIndexes(ctx, h.indexes, msg.Indexes, msg.Pulse, abandonedNotifyPulse.PulseNumber); err != nil {
 			logger.Panic(errors.Wrap(err, "heavy replicator failed to store indexes"))
 		}
 
 		logger.Debug("heavy replicator storing drop")
-		err := storeDrop(ctx, h.drops, msg.Drop)
+		err = storeDrop(ctx, h.drops, msg.Drop)
 		if err != nil {
 			logger.Panic(errors.Wrap(err, "heavy replicator failed to store drop"))
 		}
@@ -165,8 +179,13 @@ func storeIndexes(
 	mod object.IndexModifier,
 	indexes []record.Index,
 	pn insolar.PulseNumber,
+	abandonedNotifyPulse insolar.PulseNumber,
 ) error {
 	for _, idx := range indexes {
+
+		if idx.Lifeline.EarliestOpenRequest != nil && *idx.Lifeline.EarliestOpenRequest >= abandonedNotifyPulse {
+			stats.Record(ctx, statAbandonedRequests.M(1))
+		}
 		err := mod.SetIndex(ctx, pn, idx)
 		if err != nil {
 			return err
