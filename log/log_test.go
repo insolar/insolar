@@ -66,6 +66,7 @@ func TestLog_GlobalLogger(t *testing.T) {
 	assert.Panics(t, func() { capture(func() { Panic("HelloWorld") }) })
 	assert.Panics(t, func() { capture(func() { Panicf("%s", "HelloWorld") }) })
 
+	// cyclic run of this test changes loglevel, so revert it back
 	zerolog.SetGlobalLevel(zerolog.DebugLevel)
 
 	// can't catch os.exit() to test Fatal
