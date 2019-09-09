@@ -447,109 +447,104 @@ func (m *SlotMachine) applyDetachedStateUpdate(slotLink SlotLink, stateUpdate St
 
 func (m *SlotMachine) applyStateUpdate(slot *Slot, stateUpdate StateUpdate) bool {
 
-	if slot.isWorking() { // there must be no calls here from inside of custom handlers
-		panic("illegal state")
+	stillActive, recovered := m._applyStateUpdate(slot, stateUpdate)
+	if recovered == nil {
+		return stillActive
 	}
-
-	su := stateUpdType(stateUpdate.updType)
-	var failReason interface{}
-
-	if su.HasStep() {
-		switch {
-		case su.HasPrepare():
-			failReason = runStepPrepareFn(stateUpdate.param1, slot)
-			if failReason != nil {
-				su = stateUpdDispose
-				// TODO report recovered error
-				break
-			}
-			fallthrough
-		default:
-			slot.setNextStep(stateUpdate.step)
-		}
-	}
-
-	switch su {
-	case stateUpdRepeat, stateUpdNext, stateUpdNextLoop:
-		if slot.step.Transition == nil {
-			failReason = "missing transition"
-			break
-		}
-		m.addSlotToActiveOrWorkingQueue(slot)
-		return true
-
-	case stateUpdPoll:
-		if slot.step.Transition == nil {
-			failReason = "missing transition"
-			break
-		}
-		m.pollingSlots.AddLast(slot)
-		return true
-
-	case stateUpdWait:
-		if slot.step.Transition == nil {
-			failReason = "missing transition"
-			break
-		}
-
-		waitOn := stateUpdate.getLink()
-		switch {
-		case waitOn.s == slot:
-			// don't wait for self
-			fallthrough
-		case !waitOn.IsValid():
-			// don't wait for an expired slot
-			m.addSlotToActiveOrWorkingQueue(slot)
-			return true
-		default:
-			switch waitOn.s.QueueType() {
-			case ActiveSlots, WorkingSlots:
-				// don't wait
-				m.addSlotToActiveOrWorkingQueue(slot)
-				return true
-			case NoQueue:
-				waitOn.s.makeQueueHead()
-				fallthrough
-			case AnotherSlotQueue, PollingSlots:
-				waitOn.s.queue.AddLast(slot)
-				return true
-			default:
-				panic("illegal state")
-			}
-		}
-		return true
-
-	case stateUpdReplace:
-		cf, ok := stateUpdate.param1.(CreateFunc)
-		if !ok {
-			break
-		}
-		parent := slot.parent
-		ctx := slot.ctx
-		m.disposeSlot(slot)
-		ok, _ = m.applySlotCreate(ctx, slot, parent, cf) // NB! recursive call inside
-		return ok
-
-	case stateUpdStop:
-		m.disposeSlot(slot)
-		m.unusedSlots.AddLast(slot)
-		return false
-
-	case 0, stateUpdNoChange, stateUpdExpired:
-		// can't be here
-		failReason = "unexpected state update"
-
-	case stateUpdDispose:
-		break
-
-	default:
-		panic("illegal state")
-	}
+	// TODO report recovered error
 
 	fmt.Printf("slot fail: %v %+v %+v", slot.GetID(), stateUpdate, stateUpdate.param1)
 	m.disposeSlot(slot)
 	m.unusedSlots.AddLast(slot)
 	return false
+}
+
+func (m *SlotMachine) _applyStateUpdate(slot *Slot, stateUpdate StateUpdate) (stillActive bool, recovered interface{}) {
+
+	if slot.isWorking() { // there must be no calls here from inside of custom handlers
+		return false, "illegal state / slot is working"
+	}
+
+	defer func() {
+		r := recover()
+		switch {
+		case r == nil:
+			break
+		case recovered == nil:
+			recovered = r
+		default:
+			recovered = fmt.Sprintf("recovered: before={%v} after={%v}", recovered, r)
+		}
+	}()
+
+	su := stateUpdType(stateUpdate.updType)
+
+	if su.HasStep() {
+		if su.HasPrepare() && stateUpdate.param1 != nil {
+			fn := stateUpdate.param1.(StepPrepareFunc) // panic is handled
+			fn(slot)
+		}
+		slot.setNextStep(stateUpdate.step)
+		if slot.step.Transition == nil {
+			return false, "missing transition"
+		}
+	}
+
+	switch su {
+	case stateUpdRepeat, stateUpdNext, stateUpdNextLoop:
+		m.addSlotToActiveOrWorkingQueue(slot)
+		return true, nil
+
+	case stateUpdPoll:
+		m.pollingSlots.AddLast(slot)
+		return true, nil
+
+	case stateUpdWait:
+		waitOn := stateUpdate.getLink()
+		switch {
+		case waitOn.s == slot || !waitOn.IsValid():
+			// don't wait for self
+			// don't wait for an expired slot
+			m.addSlotToActiveOrWorkingQueue(slot)
+		default:
+			switch waitOn.s.QueueType() {
+			case ActiveSlots, WorkingSlots:
+				// don't wait
+				m.addSlotToActiveOrWorkingQueue(slot)
+			case NoQueue:
+				waitOn.s.makeQueueHead()
+				fallthrough
+			case AnotherSlotQueue, PollingSlots:
+				waitOn.s.queue.AddLast(slot)
+			default:
+				return false, "illegal slot queue"
+			}
+		}
+		return true, nil
+
+	case stateUpdReplace:
+		cf := stateUpdate.param1.(CreateFunc) // panic is handled
+		parent := slot.parent
+		ctx := slot.ctx
+		m.disposeSlot(slot)
+		ok, _ := m.applySlotCreate(ctx, slot, parent, cf) // NB! recursive call inside
+		return ok, nil
+
+	case stateUpdStop:
+		m.disposeSlot(slot)
+		m.unusedSlots.AddLast(slot)
+		return false, nil
+
+	case 0, stateUpdNoChange, stateUpdExpired:
+		// can't be here
+		return false, "unexpected state update"
+
+	case stateUpdDispose:
+		return false, "stateUpdDispose"
+
+	default:
+		return false, "unknown update type"
+	}
 }
 
 func (m *SlotMachine) createBargeIn(link StepLink, applyFn BargeInApplyFunc) BargeInParamFunc {

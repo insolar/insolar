@@ -59,20 +59,6 @@ func stateUpdateNext(marker *struct{}, sf StateFunc, mf MigrateFunc, canLoop boo
 
 type StepPrepareFunc func(slot *Slot)
 
-func runStepPrepareFn(p interface{}, slot *Slot) (recovered interface{}) {
-	if p == nil {
-		return nil
-	}
-
-	defer func() {
-		recovered = recover()
-	}()
-
-	fn := p.(StepPrepareFunc)
-	fn(slot)
-	return nil
-}
-
 func prepareToParam(prepare StepPrepareFunc) interface{} {
 	if prepare == nil {
 		return nil
