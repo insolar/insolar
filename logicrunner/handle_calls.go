@@ -48,7 +48,6 @@ type HandleCall struct {
 	dep *Dependencies
 
 	Message payload.Meta
-	Parcel  insolar.Parcel
 }
 
 func (h *HandleCall) sendToNextExecutor(
