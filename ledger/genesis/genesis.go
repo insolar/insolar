@@ -404,9 +404,6 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 	if g.ContractsConfig.PKShardCount <= 0 {
 		panic(fmt.Sprintf("[genesis] store contracts failed: setup pk_shard_count parameter, current value %v", g.ContractsConfig.PKShardCount))
 	}
-	if g.ContractsConfig.MAShardCount <= 0 {
-		panic(fmt.Sprintf("[genesis] store contracts failed: setup ma_shard_count parameter, current value %v", g.ContractsConfig.MAShardCount))
-	}
 
 	// Split genesis members by PK shards
 	var membersByPKShards []foundation.StableMap

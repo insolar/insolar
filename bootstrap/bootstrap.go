@@ -149,6 +149,10 @@ func (g *Generator) Run(ctx context.Context) error {
 		foundationPublicKeys = append(foundationPublicKeys, k)
 	}
 
+	if g.config.MAShardCount <= 0 {
+		panic(fmt.Sprintf("[genesis] store contracts failed: setup ma_shard_count parameter, current value %v", g.config.MAShardCount))
+	}
+
 	inslog.Info("[ bootstrap ] read migration addresses ...")
 	migrationAddresses, err := g.readMigrationAddresses()
 	if err != nil {
