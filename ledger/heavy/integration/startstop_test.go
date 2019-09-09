@@ -29,8 +29,12 @@ import (
 func TestStartStop(t *testing.T) {
 	cfg := DefaultHeavyConfig()
 	defer os.RemoveAll(cfg.Ledger.Storage.DataDirectory)
-
-	s, err := NewServer(context.Background(), cfg, insolar.GenesisHeavyConfig{}, nil)
+	heavyConfig := insolar.GenesisHeavyConfig{
+		ContractsConfig: insolar.GenesisContractsConfig{
+			PKShardCount: 10,
+		},
+	}
+	s, err := NewServer(context.Background(), cfg, heavyConfig, nil)
 	assert.NoError(t, err)
 	s.Stop()
 }
