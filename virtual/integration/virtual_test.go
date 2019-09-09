@@ -58,10 +58,6 @@ func TestVirtual_BasicOperations(t *testing.T) {
 		hasher := platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher()
 
 		s, err := NewServer(t, ctx, cfg, func(meta payload.Meta, pl payload.Payload) []payload.Payload {
-			if meta.Receiver != NodeLight() {
-				return nil
-			}
-
 			lifeTime := &record.Lifeline{
 				LatestState: objID,
 			}

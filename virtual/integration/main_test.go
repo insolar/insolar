@@ -19,6 +19,7 @@ package integration
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"io"
 	"math"
@@ -106,18 +107,18 @@ func DefaultLightResponse(pl payload.Payload) []payload.Payload {
 	panic(fmt.Sprintf("unexpected message to lightt %T", pl))
 }
 
-func defaultReceiveCallback(meta payload.Meta, pl payload.Payload) []payload.Payload {
-	if meta.Receiver == NodeLight() {
-		return DefaultLightResponse(pl)
-	}
-	return nil
-}
-
 func checkError(ctx context.Context, err error, message string) {
 	if err == nil {
 		return
 	}
 	inslogger.FromContext(ctx).Fatalf("%v: %v", message, err.Error())
+}
+
+var verboseWM bool
+
+func init() {
+	flag.BoolVar(&verboseWM, "verbose-wm", false, "flag to enable watermill logging")
+	flag.Parse()
 }
 
 func NewServer(
@@ -194,7 +195,12 @@ func NewServer(
 		PulseManager = pulsemanager.NewPulseManager()
 	}
 
-	wmLogger := log.NewWatermillLogAdapter(logger)
+	var wmLogger watermill.LoggerAdapter
+	if verboseWM {
+		wmLogger = log.NewWatermillLogAdapter(logger)
+	} else {
+		wmLogger = watermill.NopLogger{}
+	}
 
 	// Communication.
 	var (
@@ -288,22 +294,24 @@ func NewServer(
 		if err != nil {
 			panic(errors.Wrap(err, "failed to unmarshal payload"))
 		}
-		go func() {
-			var replies []payload.Payload
-			if receiveCallback != nil {
-				replies = receiveCallback(msgMeta, pl)
-			} else {
-				replies = defaultReceiveCallback(msgMeta, pl)
-			}
-
-			for _, rep := range replies {
-				msg, err := payload.NewMessage(rep)
-				if err != nil {
-					panic(err)
+		if msgMeta.Receiver == NodeLight() {
+			go func() {
+				var replies []payload.Payload
+				if receiveCallback != nil {
+					replies = receiveCallback(msgMeta, pl)
+				} else {
+					replies = DefaultLightResponse(pl)
 				}
-				ClientBus.Reply(context.Background(), msgMeta, msg)
-			}
-		}()
+
+				for _, rep := range replies {
+					msg, err := payload.NewMessage(rep)
+					if err != nil {
+						panic(err)
+					}
+					ClientBus.Reply(context.Background(), msgMeta, msg)
+				}
+			}()
+		}
 
 		clientHandler := func(msg *message.Message) (messages []*message.Message, e error) {
 			return nil, nil
