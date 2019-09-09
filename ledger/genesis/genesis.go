@@ -403,7 +403,7 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 	}
 
 	// Split genesis members by PK shards
-	membersByPKShards := make([]foundation.StableMap, g.ContractsConfig.PKShardCount)
+	var membersByPKShards [g.ContractsConfig.PKShardCount]foundation.StableMap
 	for i := 0; i < g.ContractsConfig.PKShardCount; i++ {
 		membersByPKShards[i] = make(foundation.StableMap)
 	}
