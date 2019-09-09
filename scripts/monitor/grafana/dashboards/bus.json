@@ -15,7 +15,8 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1567586513297,
+  "id": 7,
+  "iteration": 1568024960559,
   "links": [],
   "panels": [
     {
@@ -124,7 +125,7 @@
           "expr": "sum(rate(insolar_bus_sent_bytes_sum{message_type=~\"$type\", instance=~\"$instance\"}[1m])) / sum(rate(insolar_bus_sent_bytes_count{message_type=~\"$type\", instance=~\"$instance\"}[1m]))",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "Size (bytes), avg by minute",
+          "legendFormat": "Avg size",
           "refId": "A"
         }
       ],
@@ -215,7 +216,7 @@
           "expr": "sum(rate(insolar_bus_reply_timeouts{instance=~\"$instance\",message_type=~\"$type\"}[1m]))",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "per minute",
+          "legendFormat": "avg per sec",
           "refId": "A"
         }
       ],
@@ -304,7 +305,7 @@
           "expr": "sum(rate(insolar_bus_sent_retries{message_type=~\"$type\",instance=~\"$instance\"}[1m])) by (job)",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{ job }} / minute",
+          "legendFormat": "{{ job }} avg per sec",
           "refId": "A"
         }
       ],
@@ -394,7 +395,7 @@
           "format": "time_series",
           "instant": false,
           "intervalFactor": 1,
-          "legendFormat": "rate per minute",
+          "legendFormat": "avg per sec",
           "refId": "A"
         }
       ],
@@ -483,7 +484,7 @@
           "expr": "sum(rate(insolar_bus_reply_total{instance=~\"$instance\",message_type=~\"$type\"}[1m]))",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "rate per minute",
+          "legendFormat": "avg per sec",
           "refId": "A"
         }
       ],
@@ -662,7 +663,6 @@
       {
         "allValue": null,
         "current": {
-          "tags": [],
           "text": "All",
           "value": "$__all"
         },
@@ -688,7 +688,6 @@
       {
         "allValue": null,
         "current": {
-          "tags": [],
           "text": "All",
           "value": "$__all"
         },
