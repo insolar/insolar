@@ -469,6 +469,52 @@ func Test_IncomingRequest_ClosedReason(t *testing.T) {
 	})
 }
 
+func Test_IncomingRequest_ClosingWithOpenOutgoings(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+	cfg := DefaultLightConfig()
+	s, err := NewServer(ctx, cfg, nil)
+	require.NoError(t, err)
+	defer s.Stop()
+
+	// First pulse goes in storage then interrupts.
+	s.SetPulse(ctx)
+
+	var reasonID insolar.ID
+	t.Run("Incoming request can't be created w closed reason", func(t *testing.T) {
+
+		// Creating root reason request.
+		{
+			msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), insolar.ID{}, true, true)
+			rep := SendMessage(ctx, s, &msg)
+			RequireNotError(rep)
+			reasonID = rep.(*payload.RequestInfo).RequestID
+		}
+
+		s.SetPulse(ctx)
+
+		// Creating outgoing for request
+		{
+			msg, _ := MakeSetOutgoingRequest(reasonID, reasonID, false)
+			rep := SendMessage(ctx, s, &msg)
+			RequireNotError(rep)
+		}
+
+		s.SetPulse(ctx)
+
+		// Closing request
+		{
+			objectID := reasonID
+
+			resMsg, _ := MakeSetResult(objectID, reasonID)
+			// Set result.
+			rep := SendMessage(ctx, s, &resMsg)
+			RequireErrorCode(rep, payload.CodeNonClosedOutgoing)
+		}
+	})
+}
+
 func Test_IncomingRequest_ClosedReason_FromOtherObject(t *testing.T) {
 	t.Parallel()
 
