@@ -17,11 +17,24 @@
 package genesisrefs
 
 import (
+	"strconv"
 	"testing"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/stretchr/testify/require"
 )
+
+func TestContractPublicKeyShards(t *testing.T) {
+	for i, ref := range ContractPublicKeyShards(100) {
+		require.Equal(t, GenesisRef(insolar.GenesisNamePKShard+strconv.Itoa(i)), ref)
+	}
+}
+
+func TestContractMigrationAddressShards(t *testing.T) {
+	for i, ref := range ContractMigrationAddressShards(100) {
+		require.Equal(t, GenesisRef(insolar.GenesisNameMigrationShard+strconv.Itoa(i)), ref)
+	}
+}
 
 func TestReferences(t *testing.T) {
 	pairs := map[string]struct {
