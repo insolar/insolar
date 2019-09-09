@@ -50,6 +50,8 @@ type PulseManager struct {
 	writeManager     WriteManager
 	stateIniter      StateIniter
 	hotStatusChecker HotDataStatusChecker
+
+	lastJetCount int
 }
 
 // NewPulseManager creates PulseManager instance.
@@ -126,7 +128,10 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 	if err != nil {
 		logger.Panic(errors.Wrap(err, "failed to prepare light for start"))
 	}
-	stats.Record(ctx, statJets.M(int64(len(jets))))
+
+	jetCount := len(jets)
+	stats.Record(ctx, statJets.M(int64(jetCount-m.lastJetCount)))
+	m.lastJetCount = jetCount
 
 	endedPulse, err := m.pulseAccessor.Latest(ctx)
 	if err != nil {
