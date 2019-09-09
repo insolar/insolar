@@ -18,7 +18,6 @@ package common
 
 import (
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/log"
 )
 
 type Serializer interface {
@@ -29,13 +28,11 @@ type Serializer interface {
 type CBORSerializer struct{}
 
 func (s *CBORSerializer) Serialize(what interface{}, to *[]byte) (err error) {
-	log.Debugf("serializing %+v", what)
 	*to, err = insolar.Serialize(what)
 	return err
 }
 
 func (s *CBORSerializer) Deserialize(from []byte, to interface{}) error {
-	log.Debugf("de-serializing %+v", from)
 	return insolar.Deserialize(from, to)
 }
 
