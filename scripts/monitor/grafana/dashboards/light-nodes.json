@@ -16,7 +16,7 @@
   "gnetId": null,
   "graphTooltip": 0,
   "id": 17,
-  "iteration": 1568023710872,
+  "iteration": 1568028382848,
   "links": [],
   "panels": [
     {
@@ -180,7 +180,7 @@
       ],
       "repeat": null,
       "repeatDirection": "h",
-      "repeatIteration": 1568023710872,
+      "repeatIteration": 1568028382848,
       "repeatPanelId": 28,
       "scopedVars": {
         "instance": {
@@ -201,6 +201,7 @@
       "targets": [
         {
           "expr": "insolar_current_pulse{instance=~\"$instance\"}",
+          "instant": true,
           "refId": "A"
         }
       ],
@@ -274,7 +275,7 @@
       ],
       "repeat": null,
       "repeatDirection": "h",
-      "repeatIteration": 1568023710872,
+      "repeatIteration": 1568028382848,
       "repeatPanelId": 28,
       "scopedVars": {
         "instance": {
@@ -295,6 +296,7 @@
       "targets": [
         {
           "expr": "insolar_current_pulse{instance=~\"$instance\"}",
+          "instant": true,
           "refId": "A"
         }
       ],
@@ -368,7 +370,7 @@
       ],
       "repeat": null,
       "repeatDirection": "h",
-      "repeatIteration": 1568023710872,
+      "repeatIteration": 1568028382848,
       "repeatPanelId": 28,
       "scopedVars": {
         "instance": {
@@ -389,6 +391,7 @@
       "targets": [
         {
           "expr": "insolar_current_pulse{instance=~\"$instance\"}",
+          "instant": true,
           "refId": "A"
         }
       ],
@@ -462,7 +465,7 @@
       ],
       "repeat": null,
       "repeatDirection": "h",
-      "repeatIteration": 1568023710872,
+      "repeatIteration": 1568028382848,
       "repeatPanelId": 28,
       "scopedVars": {
         "instance": {
@@ -483,6 +486,7 @@
       "targets": [
         {
           "expr": "insolar_current_pulse{instance=~\"$instance\"}",
+          "instant": true,
           "refId": "A"
         }
       ],
@@ -616,12 +620,13 @@
         "y": 6
       },
       "id": 56,
+      "interval": "",
       "legend": {
         "avg": false,
         "current": false,
         "max": false,
         "min": false,
-        "show": false,
+        "show": true,
         "total": false,
         "values": false
       },
@@ -642,6 +647,7 @@
       "targets": [
         {
           "expr": "rate(insolar_drop_records_total{instance=~\"$instance\"}[1m])*10",
+          "legendFormat": "{{ instance }}",
           "refId": "A"
         }
       ],
@@ -705,7 +711,7 @@
         "current": false,
         "max": false,
         "min": false,
-        "show": true,
+        "show": false,
         "total": false,
         "values": false
       },
@@ -729,7 +735,7 @@
           "expr": "sum(insolar_requests_opened{instance=~\"$instance\"}-insolar_requests_closed{instance=~\"$instance\"})",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "count",
+          "legendFormat": "",
           "refId": "A"
         }
       ],
@@ -793,12 +799,12 @@
       "legend": {
         "alignAsTable": false,
         "avg": false,
-        "current": true,
+        "current": false,
         "max": false,
         "min": false,
         "show": true,
         "total": false,
-        "values": true
+        "values": false
       },
       "lines": true,
       "linewidth": 1,
@@ -817,7 +823,7 @@
       "targets": [
         {
           "expr": "insolar_jets_counter{instance=~\"$instance\"}",
-          "legendFormat": "sum jets light",
+          "legendFormat": "{{ instance }}",
           "refId": "A"
         }
       ],
@@ -877,12 +883,13 @@
         "y": 12
       },
       "id": 46,
+      "interval": "",
       "legend": {
         "avg": false,
         "current": false,
         "max": false,
         "min": false,
-        "show": false,
+        "show": true,
         "total": false,
         "values": false
       },
@@ -903,6 +910,7 @@
       "targets": [
         {
           "expr": "rate(insolar_hotdata_objects_send{instance=~\"$instance\"}[1m])*10",
+          "legendFormat": "{{ instance }}",
           "refId": "A"
         }
       ],
@@ -963,6 +971,7 @@
         "y": 12
       },
       "id": 36,
+      "interval": "",
       "legend": {
         "avg": false,
         "current": false,
@@ -1056,12 +1065,12 @@
       "legend": {
         "alignAsTable": false,
         "avg": false,
-        "current": true,
+        "current": false,
         "max": false,
         "min": false,
         "show": true,
         "total": false,
-        "values": true
+        "values": false
       },
       "lines": true,
       "linewidth": 1,
@@ -1194,7 +1203,7 @@
     ]
   },
   "timezone": "",
-  "title": "INS-Light Nodes",
-  "uid": "8cp74fKZz",
+  "title": "INS-Light Nodes test",
+  "uid": "8cp74fKZz2",
   "version": 2
 }
