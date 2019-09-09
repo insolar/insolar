@@ -403,9 +403,9 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 	}
 
 	// Split genesis members by PK shards
-	var membersByPKShards [g.ContractsConfig.PKShardCount]foundation.StableMap
+	var membersByPKShards []foundation.StableMap
 	for i := 0; i < g.ContractsConfig.PKShardCount; i++ {
-		membersByPKShards[i] = make(foundation.StableMap)
+		membersByPKShards = append(membersByPKShards, make(foundation.StableMap))
 	}
 	trimmedRootPublicKey := foundation.TrimPublicKey(g.ContractsConfig.RootPublicKey)
 	index := foundation.GetShardIndex(trimmedRootPublicKey, g.ContractsConfig.PKShardCount)
