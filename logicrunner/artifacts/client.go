@@ -90,10 +90,8 @@ type client struct {
 	localStorage *localStorage
 }
 
-var _ Client = (*client)(nil)
-
 // NewClient creates new client instance.
-func NewClient(sender bus.Sender) *client { // nolint
+func NewClient(sender bus.Sender) Client {
 	return &client{
 		sender:       sender,
 		localStorage: newLocalStorage(),
@@ -501,11 +499,6 @@ func (m *client) DeployCode(
 		instrumenter.end()
 	}()
 
-	currentPN, err := m.pulse(ctx)
-	if err != nil {
-		return nil, err
-	}
-
 	codeRec := record.Code{
 		Code:        code,
 		MachineType: machineType,
@@ -516,12 +509,13 @@ func (m *client) DeployCode(
 		return nil, errors.Wrap(err, "failed to marshal record")
 	}
 
-	h := m.PCS.ReferenceHasher()
-	_, err = h.Write(buf)
+	currentPN, err := m.pulse(ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to calculate hash")
+		return nil, err
 	}
-	recID := *insolar.NewID(currentPN, h.Sum(nil))
+
+	h := m.PCS.ReferenceHasher()
+	recID := *insolar.NewID(currentPN, h.Sum(buf))
 
 	psc := &payload.SetCode{
 		Record: buf,
