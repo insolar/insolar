@@ -26,7 +26,7 @@ import (
 
     XXX_insolar "github.com/insolar/insolar/insolar"
     XXX_artifacts "github.com/insolar/insolar/logicrunner/artifacts"
-    XXX_rootdomain "github.com/insolar/insolar/insolar/rootdomain"
+    XXX_genesisrefs "github.com/insolar/insolar/insolar/genesisrefs"
 )
 
 func InitializeContractMethods() map[string]XXX_insolar.ContractWrapper {
@@ -83,7 +83,7 @@ func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
             /* isPrototype:  */ true,
             /* childPointer: */ nil,
             /* memory:       */ nil,
-            /* parent:       */ XXX_rootdomain.RootDomain.Reference(),
+            /* parent:       */ XXX_genesisrefs.RootDomain.Reference(),
         ))
     }
     {{ end }}
