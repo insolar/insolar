@@ -42,7 +42,7 @@
         "total": false,
         "values": false
       },
-      "lines": false,
+      "lines": true,
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null as zero",
@@ -60,7 +60,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "insolar_network_complete_network_state",
+          "expr": "insolar_network_state",
           "instant": false,
           "legendFormat": "{{ instance }}",
           "refId": "A"
@@ -70,7 +70,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "complete network state",
+      "title": "network state",
       "tooltip": {
         "shared": true,
         "sort": 0,

@@ -72,6 +72,11 @@ var (
 		"current node pulse",
 		stats.UnitDimensionless,
 	)
+	networkState = stats.Int64(
+		"network_state",
+		"current network state",
+		stats.UnitDimensionless,
+	)
 )
 
 func init() {
@@ -88,6 +93,12 @@ func init() {
 			Name:        statPulse.Name(),
 			Description: statPulse.Description(),
 			Measure:     statPulse,
+			Aggregation: view.LastValue(),
+		},
+		&view.View{
+			Name:        networkState.Name(),
+			Description: networkState.Description(),
+			Measure:     networkState,
 			Aggregation: view.LastValue(),
 		},
 	)
