@@ -125,7 +125,7 @@
           "expr": "sum(rate(insolar_bus_sent_bytes_sum{message_type=~\"$type\", instance=~\"$instance\"}[1m])) / sum(rate(insolar_bus_sent_bytes_count{message_type=~\"$type\", instance=~\"$instance\"}[1m]))",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "Size (bytes), avg by minute",
+          "legendFormat": "Size (bytes) / sec",
           "refId": "A"
         }
       ],
@@ -213,7 +213,7 @@
           "expr": "sum(rate(insolar_bus_sent_retries{message_type=~\"$type\",instance=~\"$instance\"}[1m])) by (job)",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{ job }} / minute",
+          "legendFormat": "count / sec",
           "refId": "A"
         }
       ],
@@ -365,7 +365,7 @@
           "expr": "sum(rate(insolar_bus_reply_total{instance=~\"$instance\",message_type=~\"$type\"}[1m]))",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "rate per minute",
+          "legendFormat": "count / sec",
           "refId": "A"
         }
       ],
@@ -547,7 +547,7 @@
           "format": "time_series",
           "instant": false,
           "intervalFactor": 1,
-          "legendFormat": "rate per minute",
+          "legendFormat": "count / sec",
           "refId": "A"
         }
       ],
@@ -606,7 +606,7 @@
       },
       "dataFormat": "tsbuckets",
       "gridPos": {
-        "h": 6,
+        "h": 4,
         "w": 12,
         "x": 0,
         "y": 14
