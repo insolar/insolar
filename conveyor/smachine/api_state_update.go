@@ -20,8 +20,9 @@ type ContextMarker *struct{}
 
 type StateUpdate struct {
 	marker  ContextMarker
-	link    SlotLink
-	param   interface{}
+	link    *Slot
+	param0  uint32
+	param1  interface{}
 	step    SlotStep
 	updType uint16
 }
@@ -30,10 +31,33 @@ func (u StateUpdate) IsZero() bool {
 	return u.marker == nil && u.updType == 0
 }
 
+func (u StateUpdate) getLink() SlotLink {
+	if u.link == nil {
+		return NoLink()
+	}
+	return SlotLink{SlotID(u.param0), u.link}
+}
+
+func (u StateUpdate) ensureMarker(marker ContextMarker) StateUpdate {
+	if u.marker != marker {
+		panic("illegal state")
+	}
+	return u
+}
+
 func NewStateUpdate(marker ContextMarker, updType uint16, slotStep SlotStep, param interface{}) StateUpdate {
 	return StateUpdate{
 		marker:  marker,
-		param:   param,
+		param1:  param,
+		step:    slotStep,
+		updType: updType,
+	}
+}
+
+func NewStateUpdateUint(marker ContextMarker, updType uint16, slotStep SlotStep, param uint32) StateUpdate {
+	return StateUpdate{
+		marker:  marker,
+		param0:  param,
 		step:    slotStep,
 		updType: updType,
 	}
@@ -42,24 +66,10 @@ func NewStateUpdate(marker ContextMarker, updType uint16, slotStep SlotStep, par
 func NewStateUpdateLink(marker ContextMarker, updType uint16, link SlotLink, slotStep SlotStep, param interface{}) StateUpdate {
 	return StateUpdate{
 		marker:  marker,
-		param:   param,
-		link:    link,
+		param1:  param,
+		link:    link.s,
+		param0:  uint32(link.id),
 		step:    slotStep,
 		updType: updType,
 	}
-}
-
-func EnsureUpdateContext(p ContextMarker, u StateUpdate) StateUpdate {
-	if u.marker != p {
-		panic("illegal value")
-	}
-	return u
-}
-
-func ExtractStateUpdate(u StateUpdate) (updType uint16, slotStep SlotStep, param interface{}) {
-	return u.updType, u.step, u.param
-}
-
-func ExtractStateUpdateParam(u StateUpdate) (updType uint16, param interface{}) {
-	return u.updType, u.param
 }

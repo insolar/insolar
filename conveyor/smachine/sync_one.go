@@ -20,15 +20,15 @@ type StepSyncCatalog struct {
 	keys map[string]*SortedSlotDependencies
 }
 
-func (p *StepSyncCatalog) Join(slot *Slot, key string, weight int32, receiveFunc BroadcastReceiveFunc) Syncronizer {
-	panic("not implemented")
-	//head := p.keys[key]
-	//if head == nil {
-	//	p.keys[key] = slot
-	//	return
-	//}
-	//p.keys[key] = head
-}
+//func (p *StepSyncCatalog) Join(slot *Slot, key string, weight int32, receiveFunc BroadcastReceiveFunc) Syncronizer {
+//	panic("not implemented")
+//	//head := p.keys[key]
+//	//if head == nil {
+//	//	p.keys[key] = slot
+//	//	return
+//	//}
+//	//p.keys[key] = head
+//}
 
 //var _ Syncronizer = &stepSync{}
 //

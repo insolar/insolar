@@ -27,6 +27,7 @@ const (
 	initContext
 	execContext
 	migrateContext
+	bargeInContext
 )
 
 type contextTemplate struct {
@@ -61,7 +62,7 @@ func (p *slotContext) GetSlotID() SlotID {
 	return p.s.GetID()
 }
 
-func (p *slotContext) GetSelf() SlotLink {
+func (p *slotContext) SlotLink() SlotLink {
 	return p.s.NewLink()
 }
 
@@ -87,8 +88,11 @@ func (p *slotContext) SetDefaultFlags(flags StepFlags) {
 	}
 }
 
-func (p *slotContext) JumpOverride(fn StateFunc, mf MigrateFunc, flags StepFlags) StateUpdate {
+func (p *slotContext) JumpExt(fn StateFunc, mf MigrateFunc, flags StepFlags) StateUpdate {
 	p.ensureAtLeastState(initContext)
+	if fn == nil {
+		panic("illegal value")
+	}
 	return stateUpdateNext(&p.marker, fn, mf, true, flags)
 }
 
@@ -113,6 +117,16 @@ func (p *slotContext) Replace(fn CreateFunc) StateUpdate {
 func (p *slotContext) Repeat(limit int) StateUpdate {
 	p.ensureExactState(execContext)
 	return stateUpdateRepeat(&p.marker, limit)
+}
+
+func (p *slotContext) Stay() StateUpdate {
+	p.ensureAtLeastState(migrateContext)
+	return stateUpdateNoChange(&p.marker)
+}
+
+func (p *slotContext) WakeUp() StateUpdate {
+	p.ensureAtLeastState(migrateContext)
+	return stateUpdateRepeat(&p.marker, 0)
 }
 
 var _ ConstructionContext = &constructionContext{}
@@ -159,28 +173,36 @@ type migrationContext struct {
 	slotContext
 }
 
-func (p *migrationContext) Stay() StateUpdate {
-	return stateUpdateNoChange(&p.marker)
-}
-
 func (p *migrationContext) executeMigrate(fn MigrateFunc) StateUpdate {
 	p.setState(inactiveContext, migrateContext)
 	defer p.setState(migrateContext, discardedContext)
 
-	return EnsureUpdateContext(&p.marker, fn(p))
+	return fn(p).ensureMarker(&p.marker)
 }
 
 var _ InitializationContext = &initializationContext{}
 
 type initializationContext struct {
 	slotContext
+	machine *SlotMachine
+}
+
+func (p *initializationContext) BargeInWithParam(applyFn BargeInApplyFunc) BargeInParamFunc {
+	p.ensureAtLeastState(initContext)
+
+	return p.machine.createBargeIn(p.s.NewStepLink().AnyStep(), applyFn)
+}
+
+func (p *initializationContext) BargeIn() BargeInRequester {
+	p.ensureAtLeastState(initContext)
+	return &bargeInRequest{&p.contextTemplate, p.machine, p.s.NewStepLink().AnyStep()}
 }
 
 func (p *initializationContext) executeInitialization(fn InitFunc) StateUpdate {
 	p.setState(inactiveContext, initContext)
 	defer p.setState(initContext, discardedContext)
 
-	return EnsureUpdateContext(&p.marker, fn(p))
+	return fn(p).ensureMarker(&p.marker)
 }
 
 var _ ExecutionContext = &executionContext{}
@@ -190,6 +212,10 @@ type executionContext struct {
 	machine         *SlotMachine
 	worker          WorkerContext
 	countAsyncCalls uint16
+}
+
+func (p *executionContext) StepLink() StepLink {
+	return p.s.NewStepLink()
 }
 
 func (p *executionContext) GetPendingCallCount() int {
@@ -219,10 +245,10 @@ func (p *executionContext) Wait() StateConditionalUpdate {
 	return &conditionalUpdate{marker: &p.marker}
 }
 
-func (p *executionContext) SyncOneStep(key string, weight int32, broadcastFn BroadcastReceiveFunc) Syncronizer {
-	p.ensureExactState(execContext)
-	return p.machine.stepSync.Join(p.s, key, weight, broadcastFn)
-}
+//func (p *executionContext) SyncOneStep(key string, weight int32, broadcastFn BroadcastReceiveFunc) Syncronizer {
+//	p.ensureExactState(execContext)
+//	return p.machine.stepSync.Join(p.s, key, weight, broadcastFn)
+//}
 
 func (p *executionContext) NewChild(ctx context.Context, fn CreateFunc) SlotLink {
 	p.ensureExactState(execContext)
@@ -236,45 +262,51 @@ func (p *executionContext) NewChild(ctx context.Context, fn CreateFunc) SlotLink
 	return link
 }
 
-func (p *executionContext) executeNextStep() (stopNow bool, stateUpdate StateUpdate, asyncCount uint16) {
+func (p *executionContext) BargeInWithParam(applyFn BargeInApplyFunc) BargeInParamFunc {
+	p.ensureAtLeastState(execContext)
+
+	return p.machine.createBargeIn(p.s.NewStepLink().AnyStep(), applyFn)
+}
+
+func (p *executionContext) BargeIn() BargeInRequester {
+	p.ensureAtLeastState(execContext)
+	return &bargeInRequest{&p.contextTemplate, p.machine, p.s.NewStepLink().AnyStep()}
+}
+
+func (p *executionContext) BargeInThisStepOnly() BargeInRequester {
+	p.ensureExactState(execContext)
+	return &bargeInRequest{&p.contextTemplate, p.machine, p.s.NewStepLink()}
+}
+
+func (p *executionContext) executeNextStep() (bool, StateUpdate, uint16) {
 	p.setState(inactiveContext, execContext)
 	defer p.setState(execContext, discardedContext)
 
-	loopLimit := p.worker.GetLoopLimit()
+	for loopCount := uint32(0); ; loopCount++ {
 
-	for loopCount := uint32(0); loopCount < loopLimit; loopCount++ {
-		if p.worker.HasSignal() {
-			return true, stateUpdate, p.countAsyncCalls
+		canLoop, hasSignal := p.worker.CanLoopOrHasSignal(loopCount)
+		if hasSignal || !canLoop {
+			return hasSignal, StateUpdate{}, p.countAsyncCalls
 		}
 
 		current := p.s.step
-		stateUpdate = EnsureUpdateContext(&p.marker, current.Transition(p))
+		stateUpdate := current.Transition(p).ensureMarker(&p.marker)
 
-		if p.countAsyncCalls != 0 {
-			break
-		}
-		updType, updParam := ExtractStateUpdateParam(stateUpdate)
-
-		switch stateUpdType(updType) { // fast path(s)
+		switch stateUpdType(stateUpdate.updType) { // fast path(s)
 		case stateUpdRepeat:
-			limit := getRepeatLimit(updParam)
-			if loopCount < limit {
+			if loopCount < stateUpdate.param0 {
 				continue
 			}
 		case stateUpdNextLoop:
-			ns := getShortLoopTransition(updParam)
-			if ns == nil || !p.s.declaration.IsConsecutive(current.Transition, ns) {
+			ns := stateUpdate.step.Transition
+			if ns != nil && !p.s.declaration.IsConsecutive(current.Transition, ns) {
 				break
 			}
-			p.s.incStep()
-			_, ss, _ := ExtractStateUpdate(stateUpdate)
-			p.s.setNextStep(ss)
+			p.s.setNextStep(stateUpdate.step)
 			continue
 		}
-		break
+		return false, stateUpdate, p.countAsyncCalls
 	}
-
-	return false, stateUpdate, p.countAsyncCalls
 }
 
 var _ AsyncResultContext = &asyncResultContext{}
@@ -328,7 +360,7 @@ func (c *conditionalUpdate) ThenJump(fn StateFunc) StateUpdate {
 	return c.then(fn, nil, 0)
 }
 
-func (c *conditionalUpdate) ThenJumpOverride(fn StateFunc, mf MigrateFunc, flags StepFlags) StateUpdate {
+func (c *conditionalUpdate) ThenJumpExt(fn StateFunc, mf MigrateFunc, flags StepFlags) StateUpdate {
 	if fn == nil {
 		panic("illegal value")
 	}
@@ -352,4 +384,78 @@ func (c *conditionalUpdate) then(fn StateFunc, mf MigrateFunc, flags StepFlags) 
 		}
 		return stateUpdateWaitForSlot(c.marker, c.dependency, slotStep, c.kickOff)
 	}
+}
+
+type bargeInRequest struct {
+	u    *contextTemplate
+	m    *SlotMachine
+	link StepLink
+}
+
+func (b bargeInRequest) WithWakeUp() BargeInFunc {
+	b.u.ensureAtLeastState(initContext)
+	bfn := b.m.createBargeIn(b.link, func(ctx BargeInContext) StateUpdate {
+		return ctx.WakeUp()
+	})
+	return func() bool {
+		return bfn(nil)
+	}
+}
+
+func (b bargeInRequest) WithJumpExt(fn StateFunc, mf MigrateFunc, sf StepFlags) BargeInFunc {
+	b.u.ensureAtLeastState(initContext)
+	if fn == nil {
+		panic("illegal value")
+	}
+	bfn := b.m.createBargeIn(b.link, func(ctx BargeInContext) StateUpdate {
+		return ctx.JumpExt(fn, mf, sf)
+	})
+	return func() bool {
+		return bfn(nil)
+	}
+}
+
+func (b bargeInRequest) WithJump(fn StateFunc) BargeInFunc {
+	b.u.ensureAtLeastState(initContext)
+	if fn == nil {
+		panic("illegal value")
+	}
+	bfn := b.m.createBargeIn(b.link, func(ctx BargeInContext) StateUpdate {
+		return ctx.Jump(fn)
+	})
+	return func() bool {
+		return bfn(nil)
+	}
+}
+
+var _ BargeInContext = &bargingInContext{}
+
+type bargingInContext struct {
+	slotContext
+	param      interface{}
+	atOriginal bool
+}
+
+func (p *bargingInContext) GetBargeInParam() interface{} {
+	p.ensureExactState(bargeInContext)
+	return p.param
+}
+
+func (p *bargingInContext) IsAtOriginalStep() bool {
+	p.ensureExactState(bargeInContext)
+	return p.atOriginal
+}
+
+func (p *bargingInContext) AffectedStep() SlotStep {
+	p.ensureExactState(bargeInContext)
+	r := p.s.step
+	r.StepFlags |= StepResetAllFlags
+	return p.s.step
+}
+
+func (p *bargingInContext) executeBargeIn(bargeInFn BargeInApplyFunc) StateUpdate {
+	p.setState(inactiveContext, bargeInContext)
+	defer p.setState(bargeInContext, discardedContext)
+
+	return bargeInFn(p)
 }

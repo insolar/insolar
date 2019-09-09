@@ -18,7 +18,6 @@ package smachine
 
 import (
 	"context"
-	"time"
 )
 
 type InitFunc func(ctx InitializationContext) StateUpdate
@@ -42,57 +41,59 @@ type ConstructionContext interface {
 type stepContext interface {
 	BasicContext
 
-	GetSelf() SlotLink
+	SlotLink() SlotLink
 
 	SetDefaultMigration(fn MigrateFunc)
 	SetDefaultFlags(StepFlags)
 
-	JumpOverride(StateFunc, MigrateFunc, StepFlags) StateUpdate
+	JumpExt(StateFunc, MigrateFunc, StepFlags) StateUpdate
 	Jump(StateFunc) StateUpdate
 
 	Stop() StateUpdate
 }
 
-type BargeInPermit interface {
-	IsValid() bool
-	BargeIn()
-	Cancel()
-}
-
 type InitializationContext interface {
 	stepContext
 
-	//BargeIn(BargeInValidator) BargeInContext
+	BargeInWithParam(BargeInApplyFunc) BargeInParamFunc
+	BargeIn() BargeInRequester
 }
 
-type BargeInValidator func(sameStep bool) bool
+type BargeInApplyFunc func(BargeInContext) StateUpdate
+type BargeInParamFunc func(interface{}) bool
+type BargeInFunc func() bool
 
-type BargeInContext interface {
-	WithJumpOverride(StateFunc, MigrateFunc, StepFlags) BargeInPermit
-	WithJump(StateFunc) BargeInPermit
-	//WithStop() BargeInPermit
+type BargeInRequester interface {
+	WithJumpExt(StateFunc, MigrateFunc, StepFlags) BargeInFunc
+	WithJump(StateFunc) BargeInFunc
+	WithWakeUp() BargeInFunc
 }
 
 type MigrationContext interface {
 	stepContext
 
 	Replace(CreateFunc) StateUpdate
+	/* Keeps the last state */
 	Stay() StateUpdate
-	// TODO WakeUp() StateUpdate
+	/* Makes active if was waiting or polling */
+	WakeUp() StateUpdate
 }
 
 type ExecutionContext interface {
 	stepContext
 
+	StepLink() StepLink
 	GetPendingCallCount() int
 
 	//ListenBroadcast(key string, broadcastFn BroadcastReceiveFunc)
-	SyncOneStep(key string, weight int32, broadcastFn BroadcastReceiveFunc) Syncronizer
+	//SyncOneStep(key string, weight int32, broadcastFn BroadcastReceiveFunc) Syncronizer
 	//SyncManySteps(key string)
 
 	NewChild(context.Context, CreateFunc) SlotLink
 
-	//BargeIn(BargeInValidator) BargeInContext
+	BargeInWithParam(BargeInApplyFunc) BargeInParamFunc
+	BargeInThisStepOnly() BargeInRequester
+	BargeIn() BargeInRequester
 
 	Replace(CreateFunc) StateUpdate
 	Repeat(limit int) StateUpdate
@@ -114,21 +115,39 @@ type CallConditionalUpdate interface {
 
 type ConditionalUpdate interface {
 	ThenJump(StateFunc) StateUpdate
-	ThenJumpOverride(StateFunc, MigrateFunc, StepFlags) StateUpdate
+	ThenJumpExt(StateFunc, MigrateFunc, StepFlags) StateUpdate
 	ThenRepeat() StateUpdate
 }
 
-type Syncronizer interface {
-	IsFirst() bool
-	Broadcast(payload interface{}) (total, accepted int)
-	ReleaseAll()
-
-	Wait() StateUpdate
-	WaitOrDeadline(d time.Time) StateUpdate
-}
+//type Syncronizer interface {
+//	IsFirst() bool
+//	Broadcast(payload interface{}) (total, accepted int)
+//	ReleaseAll()
+//
+//	Wait() StateUpdate
+//	WaitOrDeadline(d time.Time) StateUpdate
+//}
 
 type AsyncResultContext interface {
 	BasicContext
 
 	WakeUp()
+}
+
+type BargeInContext interface {
+	BasicContext
+
+	GetBargeInParam() interface{}
+	IsAtOriginalStep() bool
+
+	/* A step the target slot is at */
+	AffectedStep() SlotStep
+
+	JumpExt(StateFunc, MigrateFunc, StepFlags) StateUpdate
+	Jump(StateFunc) StateUpdate
+
+	/* Keeps the last state */
+	Stay() StateUpdate
+	/* Makes active if was waiting or polling */
+	WakeUp() StateUpdate
 }

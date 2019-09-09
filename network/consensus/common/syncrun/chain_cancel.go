@@ -95,6 +95,13 @@ func (p *ChainedCancel) IsCancelled() bool {
 	return atomic.LoadUint32(&p.state)&0x01 != 0
 }
 
+/*
+	SetChain sets a chained function once.
+	The chained function can only be set once to a non-null value, further calls will panic.
+    But if the chained function was not set, the SetChain(nil) can be called multiple times.
+
+	The chained function is guaranteed to be called only once. And it will be called is IsCancelled is already true.
+*/
 func (p *ChainedCancel) SetChain(chain context.CancelFunc) {
 	if chain == nil {
 		if p.chain.Load() == nil {
@@ -106,8 +113,9 @@ func (p *ChainedCancel) SetChain(chain context.CancelFunc) {
 		lastState := atomic.LoadUint32(&p.state)
 		switch {
 		case lastState&^0x01 != 0:
+			panic("illegal state")
 			return
-		case !atomic.CompareAndSwapUint32(&p.state, lastState, lastState|0x02):
+		case !atomic.CompareAndSwapUint32(&p.state, lastState, lastState|0x02): //
 			continue
 		}
 		break

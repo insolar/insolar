@@ -27,21 +27,21 @@ func (v AdapterID) IsEmpty() bool {
 /* This is a helper interface to facilitate implementation of service adapters */
 type ExecutionAdapter interface {
 	GetAdapterID() AdapterID
-	PrepareSync(ctx ExecutionContext, fn AdapterCallFunc) SyncCallContext
-	PrepareAsync(ctx ExecutionContext, fn AdapterCallFunc) CallContext
+	PrepareSync(ctx ExecutionContext, fn AdapterCallFunc) SyncCallRequester
+	PrepareAsync(ctx ExecutionContext, fn AdapterCallFunc) AsyncCallRequester
 }
 
-type SyncCallContext interface {
+type SyncCallRequester interface {
 	TryCall() bool
 	Call()
 }
 
-type CallContext interface {
+type AsyncCallRequester interface {
 	/* Allocates and provides cancellation function. Repeated calls return the same. */
-	GetCancel(*context.CancelFunc) CallContext
+	GetCancel(*context.CancelFunc) AsyncCallRequester
 
 	/* Will automatically cancel this call when step is changed */
-	CancelOnStep(attach bool) CallContext
+	CancelOnStep(attach bool) AsyncCallRequester
 
 	/* Starts async call  */
 	Start()

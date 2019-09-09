@@ -36,12 +36,12 @@ func (p *adapterExecHelper) GetAdapterID() AdapterID {
 	return p.adapterID
 }
 
-func (p *adapterExecHelper) PrepareSync(ctx ExecutionContext, fn AdapterCallFunc) SyncCallContext {
-	return &adapterCallContext{ctx: ctx.(*executionContext), fn: fn, executor: p.executor, mode: adapterSyncCallContext}
+func (p *adapterExecHelper) PrepareSync(ctx ExecutionContext, fn AdapterCallFunc) SyncCallRequester {
+	return &adapterCallRequest{ctx: ctx.(*executionContext), fn: fn, executor: p.executor, mode: adapterSyncCallContext}
 }
 
-func (p *adapterExecHelper) PrepareAsync(ctx ExecutionContext, fn AdapterCallFunc) CallContext {
-	return &adapterCallContext{ctx: ctx.(*executionContext), fn: fn, executor: p.executor, mode: adapterAsyncCallContext}
+func (p *adapterExecHelper) PrepareAsync(ctx ExecutionContext, fn AdapterCallFunc) AsyncCallRequester {
+	return &adapterCallRequest{ctx: ctx.(*executionContext), fn: fn, executor: p.executor, mode: adapterAsyncCallContext}
 }
 
 const (
@@ -50,7 +50,7 @@ const (
 	adapterCallContextDisposed = 3
 )
 
-type adapterCallContext struct {
+type adapterCallRequest struct {
 	ctx      *executionContext
 	fn       AdapterCallFunc
 	executor AdapterExecutor
@@ -60,17 +60,17 @@ type adapterCallContext struct {
 	cancel    *syncrun.ChainedCancel
 }
 
-func (c *adapterCallContext) discard() {
+func (c *adapterCallRequest) discard() {
 	c.mode = adapterCallContextDisposed
 }
 
-func (c *adapterCallContext) ensureMode(mode uint8) {
+func (c *adapterCallRequest) ensureMode(mode uint8) {
 	if c.mode != mode {
 		panic("illegal state")
 	}
 }
 
-func (c *adapterCallContext) GetCancel(fn *context.CancelFunc) CallContext {
+func (c *adapterCallRequest) GetCancel(fn *context.CancelFunc) AsyncCallRequester {
 	if c.cancel != nil {
 		*fn = c.cancel.Cancel
 		return c
@@ -82,20 +82,20 @@ func (c *adapterCallContext) GetCancel(fn *context.CancelFunc) CallContext {
 	return &r
 }
 
-func (c *adapterCallContext) CancelOnStep(attach bool) CallContext {
+func (c *adapterCallRequest) CancelOnStep(attach bool) AsyncCallRequester {
 	r := *c
 	r.stepBound = attach
 	return &r
 }
 
-func (c *adapterCallContext) Start() {
+func (c *adapterCallRequest) Start() {
 	c.ensureMode(adapterAsyncCallContext)
 	defer c.discard()
 
 	c._startAsync()
 }
 
-func (c *adapterCallContext) Wait() CallConditionalUpdate {
+func (c *adapterCallRequest) Wait() CallConditionalUpdate {
 	c.ensureMode(adapterAsyncCallContext)
 	defer c.discard()
 
@@ -104,14 +104,14 @@ func (c *adapterCallContext) Wait() CallConditionalUpdate {
 	}}
 }
 
-func (c *adapterCallContext) TryCall() bool {
+func (c *adapterCallRequest) TryCall() bool {
 	c.ensureMode(adapterSyncCallContext)
 	defer c.discard()
 
 	return c._startSync()
 }
 
-func (c *adapterCallContext) Call() {
+func (c *adapterCallRequest) Call() {
 	c.ensureMode(adapterSyncCallContext)
 	defer c.discard()
 
@@ -120,12 +120,11 @@ func (c *adapterCallContext) Call() {
 	}
 }
 
-func (c *adapterCallContext) _startAsync() {
+func (c *adapterCallRequest) _startAsync() {
 	var stepLink StepLink
-	if c.stepBound {
-		stepLink = c.ctx.s.NewExactStepLink()
-	} else {
-		stepLink = c.ctx.s.NewAnyStepLink()
+	stepLink = c.ctx.s.NewStepLink()
+	if !c.stepBound {
+		stepLink = stepLink.AnyStep()
 	}
 
 	if c.cancel != nil && c.cancel.IsCancelled() {
@@ -135,7 +134,7 @@ func (c *adapterCallContext) _startAsync() {
 	c.ctx.countAsyncCalls++
 
 	cancelFn := c.executor.StartCall(stepLink, c.fn, func(fn AsyncResultFunc, recovered interface{}) {
-		c.ctx.machine.applyAsyncStateUpdate(stepLink, fn, recovered)
+		c.ctx.machine.applyAsyncStateUpdate(stepLink.SlotLink, fn, recovered)
 	}, c.cancel != nil)
 
 	if c.cancel != nil {
@@ -143,7 +142,7 @@ func (c *adapterCallContext) _startAsync() {
 	}
 }
 
-func (c *adapterCallContext) _startSync() bool {
+func (c *adapterCallRequest) _startSync() bool {
 	resultFn := c._startSyncWithResult()
 
 	if resultFn == nil {
@@ -155,13 +154,12 @@ func (c *adapterCallContext) _startSync() bool {
 	return true
 }
 
-func (c *adapterCallContext) _startSyncWithResult() AsyncResultFunc {
+func (c *adapterCallRequest) _startSyncWithResult() AsyncResultFunc {
 
 	if ok, result := c.executor.TrySyncCall(c.fn); ok {
 		return result
 	}
 
-	stepLink := c.ctx.s.NewExactStepLink()
 	ok, wc := c.ctx.worker.GetCond()
 	if !ok {
 		return nil
@@ -171,6 +169,7 @@ func (c *adapterCallContext) _startSyncWithResult() AsyncResultFunc {
 	var resultRecovered interface{}
 	var callState int
 
+	stepLink := c.ctx.s.NewStepLink()
 	cancelFn := c.executor.StartCall(stepLink, c.fn, func(fn AsyncResultFunc, recovered interface{}) {
 		wc.L.Lock()
 		if callState == 0 {
@@ -187,7 +186,7 @@ func (c *adapterCallContext) _startSyncWithResult() AsyncResultFunc {
 		wc.Wait()
 
 		if callState == 0 {
-			/* Cond can be triggered by Worker for emergent stop */
+			/* Cond can be triggered by Worker for emergency stop */
 			callState = 2
 
 			wc.L.Unlock()

@@ -29,7 +29,7 @@ var _ smachine.StateMachine = &StateMachine1{}
 type StateMachine1 struct {
 	smachine.StateMachineDeclTemplate
 
-	serviceA *ServiceAdapterA // inject
+	serviceA *ServiceAdapterA //`inject`
 	//mutexB   *MutexAdapterB   // inject
 
 	result string
@@ -85,11 +85,11 @@ func (s *StateMachine1) State2(ctx smachine.ExecutionContext) smachine.StateUpda
 
 	// TODO not yet ready
 
-	mutex := ctx.SyncOneStep("test", 0, nil)
-
-	if !mutex.IsFirst() {
-		return mutex.Wait()
-	}
+	//mutex := ctx.SyncOneStep("test", 0, nil)
+	//
+	//if !mutex.IsFirst() {
+	//	return mutex.Wait()
+	//}
 
 	return ctx.Jump(s.State3)
 }
@@ -171,14 +171,14 @@ type ServiceAdapterA struct {
 	exec smachine.ExecutionAdapter
 }
 
-func (a *ServiceAdapterA) PrepareSync(ctx smachine.ExecutionContext, fn func(svc ServiceA)) smachine.SyncCallContext {
+func (a *ServiceAdapterA) PrepareSync(ctx smachine.ExecutionContext, fn func(svc ServiceA)) smachine.SyncCallRequester {
 	return a.exec.PrepareSync(ctx, func() smachine.AsyncResultFunc {
 		fn(a.svc)
 		return nil
 	})
 }
 
-func (a *ServiceAdapterA) PrepareAsync(ctx smachine.ExecutionContext, fn func(svc ServiceA) smachine.AsyncResultFunc) smachine.CallContext {
+func (a *ServiceAdapterA) PrepareAsync(ctx smachine.ExecutionContext, fn func(svc ServiceA) smachine.AsyncResultFunc) smachine.AsyncCallRequester {
 	return a.exec.PrepareAsync(ctx, func() smachine.AsyncResultFunc {
 		return fn(a.svc)
 	})

@@ -28,8 +28,8 @@ type SlotWorker interface {
 }
 
 type WorkerContext interface {
-	GetLoopLimit() uint32
 	HasSignal() bool
 	GetCond() (bool, *sync.Cond)
 	StartNested(state SlotMachineState) SlotWorker
+	CanLoopOrHasSignal(loopCount uint32) (canLoop, hasSignal bool)
 }

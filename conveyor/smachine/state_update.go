@@ -24,6 +24,10 @@ func slotMachineUpdate(marker *struct{}, upd stateUpdType, step SlotStep, param 
 	return NewStateUpdate(marker, uint16(upd), step, param)
 }
 
+func slotMachineUpdateUint(marker *struct{}, upd stateUpdType, step SlotStep, param uint32) StateUpdate {
+	return NewStateUpdateUint(marker, uint16(upd), step, param)
+}
+
 func stateUpdateNoChange(marker *struct{}) StateUpdate {
 	return slotMachineUpdate(marker, stateUpdNoChange, SlotStep{}, nil)
 }
@@ -37,11 +41,7 @@ func stateUpdateRepeat(marker *struct{}, limit int) StateUpdate {
 	case limit > 0:
 		ulimit = uint32(limit)
 	}
-	return slotMachineUpdate(marker, stateUpdRepeat, SlotStep{}, ulimit)
-}
-
-func getRepeatLimit(p interface{}) uint32 {
-	return p.(uint32)
+	return NewStateUpdateUint(marker, uint16(stateUpdRepeat), SlotStep{}, ulimit)
 }
 
 func stateUpdateNext(marker *struct{}, sf StateFunc, mf MigrateFunc, canLoop bool, flags StepFlags) StateUpdate {
@@ -51,14 +51,10 @@ func stateUpdateNext(marker *struct{}, sf StateFunc, mf MigrateFunc, canLoop boo
 
 	slotStep := SlotStep{Transition: sf, Migration: mf, StepFlags: flags}
 	if canLoop {
-		return slotMachineUpdate(marker, stateUpdNextLoop, slotStep, sf)
+		return slotMachineUpdateUint(marker, stateUpdNextLoop, slotStep, math.MaxUint32)
 	}
 
-	return slotMachineUpdate(marker, stateUpdNext, slotStep, nil)
-}
-
-func getShortLoopTransition(p interface{}) StateFunc {
-	return p.(StateFunc)
+	return slotMachineUpdateUint(marker, stateUpdNext, slotStep, 0)
 }
 
 type StepPrepareFunc func(slot *Slot)

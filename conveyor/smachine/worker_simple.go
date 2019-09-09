@@ -69,12 +69,12 @@ type simpleWorkerContext struct {
 	w *SimpleSlotWorker
 }
 
-func (p simpleWorkerContext) StartNested(state SlotMachineState) SlotWorker {
-	return p.w
+func (p simpleWorkerContext) CanLoopOrHasSignal(loopCount uint32) (canLoop, hasSignal bool) {
+	return loopCount < 10, p.w.hasSignal()
 }
 
-func (p simpleWorkerContext) GetLoopLimit() uint32 {
-	return 10
+func (p simpleWorkerContext) StartNested(state SlotMachineState) SlotWorker {
+	return p.w
 }
 
 func (p simpleWorkerContext) HasSignal() bool {

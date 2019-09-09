@@ -22,10 +22,10 @@ import (
 )
 
 type Slot struct {
-	idAndStep    uint64 //atomic access
-	parent       SlotLink
-	machineState SlotMachineState
-	ctx          context.Context
+	idAndStep uint64 //atomic access
+	parent    SlotLink
+	//machineState SlotMachineState
+	ctx context.Context
 
 	declaration StateMachineDeclaration
 	step        SlotStep
@@ -41,7 +41,7 @@ type Slot struct {
 	dependency SlotDependency
 
 	/* -----------------------------------
-	   Slot fields to support processing queue
+	   Slot fields to support processing queues
 	   ----------------------------------- */
 	prevInQueue *Slot
 	nextInQueue *Slot
@@ -105,7 +105,7 @@ func (s *Slot) init(ctx context.Context, id SlotID, parent SlotLink, decl StateM
 	atomic.StoreUint64(&s.idAndStep, uint64(id)+stepIncrement)
 	s.parent = parent
 	s.declaration = decl
-	s.machineState = machineState
+	//s.machineState = machineState
 	s.ctx = ctx
 }
 
@@ -143,12 +143,8 @@ func (s *Slot) NewLink() SlotLink {
 	return SlotLink{s.GetID(), s}
 }
 
-func (s *Slot) NewExactStepLink() StepLink {
+func (s *Slot) NewStepLink() StepLink {
 	return StepLink{s.NewLink(), s.GetStep()}
-}
-
-func (s *Slot) NewAnyStepLink() StepLink {
-	return StepLink{s.NewLink(), 0}
 }
 
 func (s *Slot) isEmpty() bool {
@@ -180,11 +176,19 @@ func (s *Slot) stopWorking(asyncCount uint16) {
 }
 
 func (s *Slot) setNextStep(step SlotStep) {
-	if step.Transition == nil {
-		panic("illegal value")
-	}
-	if step.StepFlags&StepResetAllFlags == 0 {
+	switch {
+	case step.Transition == nil:
+		if step.StepFlags != 0 || step.Migration != nil {
+			panic("illegal value")
+		}
+		// leave as-is
+		return
+
+	case step.StepFlags&StepResetAllFlags == 0:
 		step.StepFlags |= s.defFlags
+	default:
+		step.StepFlags &^= StepResetAllFlags
 	}
 	s.step = step
+	s.incStep()
 }

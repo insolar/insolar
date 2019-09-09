@@ -37,15 +37,15 @@ type SlotLink struct {
 	s  *Slot
 }
 
-func (p *SlotLink) SlotID() SlotID {
+func (p SlotLink) SlotID() SlotID {
 	return p.id
 }
 
-func (p *SlotLink) IsEmpty() bool {
+func (p SlotLink) IsEmpty() bool {
 	return p.s == nil
 }
 
-func (p *SlotLink) IsValid() bool {
+func (p SlotLink) IsValid() bool {
 	if p.s == nil {
 		return false
 	}
@@ -58,10 +58,25 @@ type StepLink struct {
 	step uint32
 }
 
-func (p *StepLink) IsAtStep() bool {
+func (p StepLink) AnyStep() StepLink {
+	if p.step != 0 {
+		p.step = 0
+	}
+	return p
+}
+
+func (p StepLink) IsAtStep() bool {
 	if p.s == nil {
 		return false
 	}
 	id, step := p.s.GetAtomicIDAndStep()
 	return p.id == id && (p.step == 0 || p.step == step)
+}
+
+func (p StepLink) isValidAndAtExactStep() (valid, atExactStep bool) {
+	if p.s == nil {
+		return false, false
+	}
+	id, step := p.s.GetAtomicIDAndStep()
+	return p.id == id, p.step == step
 }

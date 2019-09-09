@@ -233,12 +233,12 @@ type detachableWorkerContext struct {
 	w *DetachableSlotWorker
 }
 
-func (p detachableWorkerContext) StartNested(state SlotMachineState) SlotWorker {
-	return p.w
+func (p detachableWorkerContext) CanLoopOrHasSignal(loopCount uint32) (canLoop, hasSignal bool) {
+	return loopCount < 10, p.w.hasSignal()
 }
 
-func (p detachableWorkerContext) GetLoopLimit() uint32 {
-	return 10
+func (p detachableWorkerContext) StartNested(state SlotMachineState) SlotWorker {
+	return p.w
 }
 
 func (p detachableWorkerContext) HasSignal() bool {
