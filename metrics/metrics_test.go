@@ -27,6 +27,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -41,8 +42,6 @@ import (
 )
 
 var (
-	// globalTestSrv *httptest.Server
-
 	metricCount      = stats.Int64("some_count", "number of processed videos", stats.UnitDimensionless)
 	metricCountValue = int64(0)
 
@@ -55,7 +54,6 @@ var (
 func newTestMetrics(ctx context.Context, config configuration.Metrics) *metrics.Metrics {
 	roleName := "testRole"
 	m := metrics.NewMetrics(
-		ctx,
 		config,
 		metrics.GetInsolarRegistry(roleName),
 		roleName,
@@ -118,18 +116,17 @@ func TestMetrics_NewMetrics(t *testing.T) {
 		respCode    int
 		lastCounter string
 		lastDist    string
-		// distValue  string
-		found int
+		found       int
 	)
 
 	// we need loop here because counters are updated asynchronously
 fetchLOOP:
 	for i := 0; i < 5; i++ {
+		time.Sleep(time.Millisecond) // give chance to metrics framework to catch up
 		rr := httptest.NewRecorder()
 		testm.Handler().ServeHTTP(rr, req)
 
 		respCode = rr.Code
-		// require.Equal(t, http.StatusOK, rr.Code, "fetched ok")
 		if http.StatusOK != respCode {
 			continue
 		}
@@ -162,6 +159,8 @@ fetchLOOP:
 		}
 		break
 	}
+
+	require.Equal(t, http.StatusOK, respCode, "fetched ok")
 	assert.Equal(t, 2, found, "all metrics found")
 	assert.Regexp(t, countRe, lastCounter, "counter value matches")
 	assert.Equalf(t, fmt.Sprintf("%v", metricDistValue), metricValue(lastDist),

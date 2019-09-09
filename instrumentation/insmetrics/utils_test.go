@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"io"
 	"io/ioutil"
-	"log"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -34,9 +33,7 @@ func TestUtils_ValueByNamePrefix(t *testing.T) {
 	r := func() io.Reader { return bytes.NewReader(b) }
 	v1 := SumMetricsValueByNamePrefix(r(), "insolar_bus_sent_milliseconds_bucket")
 	assert.Equal(t, float64(65795), v1, "check bucket sum")
-	log.Println("Value1:", v1)
 
 	v2 := SumMetricsValueByNamePrefix(r(), "insolar_bus_sent_milliseconds_sum")
-	log.Println("Value2:", v2)
 	assert.Equal(t, 1560.873845, v2, "check bucket sum")
 }

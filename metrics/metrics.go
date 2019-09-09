@@ -43,22 +43,15 @@ const insgorundNamespace = "insgorund"
 type Metrics struct {
 	config   configuration.Metrics
 	registry *prometheus.Registry
-
-	handler http.Handler
-	// listenAddr    string
-	zpagesEnables bool
-
-	server *http.Server
-
-	listener net.Listener
-
 	nodeRole string
+
+	handler  http.Handler
+	server   *http.Server
+	listener net.Listener
 }
 
-// NewMetrics creates new Metrics component.
-// TODO: remove error from signature
+// NewMetrics creates new Metrics instance.
 func NewMetrics(
-	_ context.Context,
 	cfg configuration.Metrics,
 	registry *prometheus.Registry,
 	nodeRole string,
@@ -71,13 +64,13 @@ func NewMetrics(
 	return m
 }
 
+// Init inits metrics instance. Creates and registers all handlers.
 func (m *Metrics) Init(ctx context.Context) error {
-	errlogger := &errorLogger{inslogger.FromContext(ctx)}
-
-	promhandler := promhttp.HandlerFor(m.registry, promhttp.HandlerOpts{ErrorLog: errlogger})
-
 	mux := http.NewServeMux()
-	mux.Handle("/metrics", promhandler)
+
+	errLogger := &errorLogger{inslogger.FromContext(ctx)}
+	promHandler := promhttp.HandlerFor(m.registry, promhttp.HandlerOpts{ErrorLog: errLogger})
+	mux.Handle("/metrics", promHandler)
 	mux.Handle("/_status", newProcStatus())
 	mux.Handle("/debug/loglevel", log.NewLoglevelChangeHandler())
 	pprof.Handle(mux)
@@ -86,17 +79,15 @@ func (m *Metrics) Init(ctx context.Context) error {
 		zpages.Handle(mux, "/debug")
 	}
 
-	inslog := inslogger.FromContext(ctx)
-
 	_, err := insmetrics.RegisterPrometheus(
 		m.config.Namespace,
 		m.registry,
 		m.config.ReportingPeriod,
-		inslog,
+		errLogger,
 		m.nodeRole,
 	)
 	if err != nil {
-		inslog.Error(err.Error())
+		errLogger.Error(err.Error())
 		return err
 	}
 
@@ -104,6 +95,7 @@ func (m *Metrics) Init(ctx context.Context) error {
 	return nil
 }
 
+// Handler returns http handler, created on initialization stage.
 func (m *Metrics) Handler() http.Handler {
 	return m.handler
 }
@@ -114,10 +106,6 @@ var ErrBind = errors.New("Failed to bind")
 
 // Start is implementation of insolar.Component interface.
 func (m *Metrics) Start(ctx context.Context) error {
-	if err := m.Init(ctx); err != nil {
-		return err
-	}
-
 	inslog := inslogger.FromContext(ctx)
 	m.server = &http.Server{
 		Addr:    m.config.ListenAddress,

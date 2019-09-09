@@ -120,7 +120,7 @@ func main() {
 			ZpagesEnabled: true,
 		}
 
-		m := metrics.NewMetrics(ctx, metricsConfiguration, metrics.GetInsgorundRegistry(), "virtual")
+		m := metrics.NewMetrics(metricsConfiguration, metrics.GetInsgorundRegistry(), "virtual")
 		err = m.Start(ctx)
 		if err != nil {
 			log.Fatal("couldn't setup metrics ", err)

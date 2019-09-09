@@ -541,8 +541,8 @@ func FetchAndSaveMetrics(iteration int) ([][]byte, error) {
 	return results, nil
 }
 
-func fetchMetrics(fetchUrl string) ([]byte, error) {
-	r, err := http.Get(fetchUrl)
+func fetchMetrics(fetchURL string) ([]byte, error) {
+	r, err := http.Get(fetchURL)
 	if err != nil {
 		return nil, err
 	}

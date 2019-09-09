@@ -212,7 +212,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 	}
 
 	metricsComp := metrics.NewMetrics(
-		ctx,
 		cfg.Metrics,
 		metrics.GetInsolarRegistry(comps.NodeRole),
 		comps.NodeRole,

@@ -18,13 +18,11 @@
 package integration_test
 
 import (
-	"bufio"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"strconv"
-	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -34,6 +32,7 @@ import (
 	insolarPulse "github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/pulse"
@@ -156,10 +155,10 @@ func Test_AbandonedNotification(t *testing.T) {
 		}
 	})
 
-	v := fetchMetricValue(s.metrics.Handler(), "insolar_requests_abandoned")
-	vNum, err := strconv.Atoi(v)
+	expectAtLeast := 200.0
+	v := fetchMetricValue(s.metrics.Handler(), "insolar_requests_abandoned", expectAtLeast, 5)
 	require.NoError(t, err, "insolar_requests_abandoned metric value is number")
-	assert.GreaterOrEqualf(t, vNum, 100, "insolar_requests_abandoned should be grater whzn 100")
+	assert.GreaterOrEqualf(t, v, expectAtLeast, "insolar_requests_abandoned should be grater whzn 100")
 }
 
 func Test_AbandonedNotification_WhenLightInit(t *testing.T) {
@@ -240,32 +239,28 @@ func Test_AbandonedNotification_WhenLightInit(t *testing.T) {
 		}
 	})
 
-	v := fetchMetricValue(s.metrics.Handler(), "insolar_requests_abandoned")
-	vNum, err := strconv.Atoi(v)
+	expectAtLeast := 200.0
+	v := fetchMetricValue(s.metrics.Handler(), "insolar_requests_abandoned", expectAtLeast, 5)
+
 	require.NoError(t, err, "insolar_requests_abandoned metric value is number")
-	assert.GreaterOrEqualf(t, vNum, 100, "insolar_requests_abandoned should be grater whzn 100")
-	// fmt.Println("v=>", v) // 228
+	assert.GreaterOrEqualf(t, v, expectAtLeast, "insolar_requests_abandoned should be grater whzn 100")
 }
 
-func fetchMetricValue(h http.Handler, metricName string) string {
-	req, err := http.NewRequest("GET", "/metrics", nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-	rr := httptest.NewRecorder()
-	h.ServeHTTP(rr, req)
-	// fmt.Println("Metrics:\n", rr.Body.String())
-
-	scanner := bufio.NewScanner(rr.Body)
-	for scanner.Scan() {
-		s := scanner.Text()
-		if strings.HasPrefix(s, metricName) {
-			return metricValue(s)
+func fetchMetricValue(h http.Handler, metricName string, expect float64, tries int) float64 {
+	var v float64
+	for i := 0; i < tries; i++ {
+		req, err := http.NewRequest("GET", "/metrics", nil)
+		if err != nil {
+			log.Fatal(err)
 		}
-	}
-	return ""
-}
+		rr := httptest.NewRecorder()
+		h.ServeHTTP(rr, req)
 
-func metricValue(s string) string {
-	return s[strings.LastIndex(s, " ")+1:]
+		v = insmetrics.SumMetricsValueByNamePrefix(rr.Body, metricName)
+		if v > expect {
+			break
+		}
+		time.Sleep(time.Millisecond * 10)
+	}
+	return v
 }

@@ -28,8 +28,8 @@ import (
 
 // This test file contains tests what always must be last in the package.
 
-// TestDumpMetrics saves metrics values to files in launchnet logs dir.
-func TestDumpMetrics(t *testing.T) {
+// TestMnt_DumpMetrics saves metrics values to files in launchnet logs dir.
+func TestMnt_DumpMetrics(t *testing.T) {
 	if !launchnet.DumpMetricsEnabled() {
 		t.Skip("dump metrics disabled")
 	}

@@ -435,7 +435,7 @@ func NewServer(
 		"heavy":   heavy.ID().String(),
 	}).Info("started test server")
 
-	m := metrics.NewMetrics(ctx, configuration.NewMetrics(), metrics.GetInsolarRegistry("test-server"), "test-server")
+	m := metrics.NewMetrics(configuration.NewMetrics(), metrics.GetInsolarRegistry("test-server"), "test-server")
 	if err := m.Init(ctx); err != nil {
 		panic(err)
 	}
