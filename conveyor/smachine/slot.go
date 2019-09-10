@@ -225,5 +225,5 @@ func (s *Slot) ensureLocal(link SlotLink) {
 }
 
 func (s *Slot) isPriority() bool {
-	return false
+	return s.step.StepFlags&StepPriority != 0
 }

@@ -21,6 +21,7 @@ type StepFlags uint16
 const (
 	StepResetAllFlags StepFlags = 1 << iota
 	StepWeak
+	StepPriority
 	//StepIgnoreAsyncWakeup
 	//StepForceAsyncWakeup
 	//StepIgnoreAsyncPanic
