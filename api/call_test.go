@@ -67,8 +67,6 @@ func (suite *TimeoutSuite) TestRunner_callHandler() {
 	close(suite.delay)
 	seedString := base64.StdEncoding.EncodeToString(seed[:])
 
-	requester.SetVerbose(true)
-
 	resp, err := requester.SendWithSeed(
 		suite.ctx,
 		CallUrl,
