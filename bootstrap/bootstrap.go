@@ -60,8 +60,9 @@ func NewGeneratorWithConfig(config *Config, certificatesOutDir string) *Generato
 	}
 }
 
-func readMigrationAddresses(file string) ([insolar.GenesisAmountMigrationAddressShards][]string, error) {
-	var result [insolar.GenesisAmountMigrationAddressShards][]string
+func (g *Generator) readMigrationAddresses() ([][]string, error) {
+	file := g.config.MembersKeysDir + "migration_addresses.json"
+	result := make([][]string, g.config.MAShardCount)
 	b, err := ioutil.ReadFile(file)
 	if err != nil {
 		return result, errors.Wrapf(err, " couldn't read migration addresses file %v", file)
@@ -75,7 +76,7 @@ func readMigrationAddresses(file string) ([insolar.GenesisAmountMigrationAddress
 
 	for _, a := range ma {
 		address := foundation.TrimAddress(a)
-		i := foundation.GetShardIndex(address, insolar.GenesisAmountMigrationAddressShards)
+		i := foundation.GetShardIndex(address, g.config.MAShardCount)
 		result[i] = append(result[i], address)
 	}
 	return result, nil
@@ -148,8 +149,12 @@ func (g *Generator) Run(ctx context.Context) error {
 		foundationPublicKeys = append(foundationPublicKeys, k)
 	}
 
+	if g.config.MAShardCount <= 0 {
+		panic(fmt.Sprintf("[genesis] store contracts failed: setup ma_shard_count parameter, current value %v", g.config.MAShardCount))
+	}
+
 	inslog.Info("[ bootstrap ] read migration addresses ...")
-	migrationAddresses, err := readMigrationAddresses(g.config.MembersKeysDir + "migration_addresses.json")
+	migrationAddresses, err := g.readMigrationAddresses()
 	if err != nil {
 		return errors.Wrap(err, "couldn't get migration addresses")
 	}
@@ -213,6 +218,8 @@ func (g *Generator) Run(ctx context.Context) error {
 		VestingPeriodInPulses:           g.config.VestingPeriodInPulses,
 		LoсkupPeriodInPulses:            g.config.LockupPeriodInPulses,
 		VestingStepInPulses:             vestingStep,
+		MAShardCount:                    g.config.MAShardCount,
+		PKShardCount:                    g.config.PKShardCount,
 	}
 	err = g.makeHeavyGenesisConfig(discoveryNodes, contractsConfig)
 	if err != nil {

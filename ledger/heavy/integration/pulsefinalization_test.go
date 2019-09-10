@@ -36,8 +36,14 @@ func Test_FinalizePulse(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	cfg := DefaultHeavyConfig()
 	defer os.RemoveAll(cfg.Ledger.Storage.DataDirectory)
-
-	s, err := NewServer(ctx, cfg, insolar.GenesisHeavyConfig{}, nil)
+	heavyConfig := insolar.GenesisHeavyConfig{
+		ContractsConfig: insolar.GenesisContractsConfig{
+			PKShardCount:       10,
+			MAShardCount:       10,
+			MigrationAddresses: make([][]string, 10),
+		},
+	}
+	s, err := NewServer(ctx, cfg, heavyConfig, nil)
 	assert.NoError(t, err)
 	defer s.Stop()
 

@@ -17,11 +17,24 @@
 package genesisrefs
 
 import (
+	"strconv"
 	"testing"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/stretchr/testify/require"
 )
+
+func TestContractPublicKeyShards(t *testing.T) {
+	for i, ref := range ContractPublicKeyShards(100) {
+		require.Equal(t, GenesisRef(insolar.GenesisNamePKShard+strconv.Itoa(i)), ref)
+	}
+}
+
+func TestContractMigrationAddressShards(t *testing.T) {
+	for i, ref := range ContractMigrationAddressShards(100) {
+		require.Equal(t, GenesisRef(insolar.GenesisNameMigrationShard+strconv.Itoa(i)), ref)
+	}
+}
 
 func TestReferences(t *testing.T) {
 	pairs := map[string]struct {
@@ -81,12 +94,12 @@ func TestReferences(t *testing.T) {
 			expect: "11tJEBgzYNSNXj3PVRQu65HHmZmAMYBcDTHezpCWTei",
 		},
 		insolar.GenesisNamePKShard: {
-			got:    ContractPublicKeyShards[0],
-			expect: "11tJE7rREfukavXjkt1M85izWsRkoh8Ktkx7hA4bccR",
+			got:    ContractPublicKeyShards(10)[0],
+			expect: "11tJCXnQ9AAiHGYpSee8jD9AbYu9wTJv8rbbX3kAAza",
 		},
 		insolar.GenesisNameMigrationShard: {
-			got:    ContractMigrationAddressShards[0],
-			expect: "11tJDkVPDLVSKnWsjM8BR7DzJ1bjcZavqAZpA3SCGq7",
+			got:    ContractMigrationAddressShards(10)[0],
+			expect: "11tJCcyeLGqpzYLa3doKn4gmCdtvTSVCGav6sHcbEZ2",
 		},
 		insolar.GenesisNameMigrationAdminAccount: {
 			got:    ContractMigrationAccount,

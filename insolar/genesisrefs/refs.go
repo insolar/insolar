@@ -18,6 +18,7 @@ package genesisrefs
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/record"
@@ -61,14 +62,6 @@ func init() {
 	for _, el := range insolar.GenesisNameMigrationDaemons {
 		PredefinedPrototypes[el+PrototypeSuffix] = *GenerateProtoReferenceFromContractID(PrototypeType, insolar.GenesisNameMigrationDaemon, 0)
 	}
-
-	for _, el := range insolar.GenesisNamePublicKeyShards {
-		PredefinedPrototypes[el+PrototypeSuffix] = *GenerateProtoReferenceFromContractID(PrototypeType, insolar.GenesisNamePKShard, 0)
-	}
-
-	for _, el := range insolar.GenesisNameMigrationAddressShards {
-		PredefinedPrototypes[el+PrototypeSuffix] = *GenerateProtoReferenceFromContractID(PrototypeType, insolar.GenesisNameMigrationShard, 0)
-	}
 }
 
 var (
@@ -100,7 +93,7 @@ var (
 	ContractFeeMember = GenesisRef(insolar.GenesisNameFeeMember)
 	// ContractFeeWallet is the fee wallet contract reference.
 	ContractFeeWallet = GenesisRef(insolar.GenesisNameFeeWallet)
-	// ContractFeeAccount is the commission account contract reference.
+	// ContractFeeAccount is the fee account contract reference.
 	ContractFeeAccount = GenesisRef(insolar.GenesisNameFeeAccount)
 	// ContractEnterpriseMember is the enterprise member contract reference.
 	ContractEnterpriseMember = GenesisRef(insolar.GenesisNameEnterpriseMember)
@@ -221,22 +214,6 @@ var (
 		}
 		return
 	}()
-
-	// ContractPublicKeyShards is the public key shards contracts references.
-	ContractPublicKeyShards = func() (result [insolar.GenesisAmountPublicKeyShards]insolar.Reference) {
-		for i, name := range insolar.GenesisNamePublicKeyShards {
-			result[i] = GenesisRef(name)
-		}
-		return
-	}()
-
-	// ContractMigrationAddressShards is the migration address shards contracts references.
-	ContractMigrationAddressShards = func() (result [insolar.GenesisAmountMigrationAddressShards]insolar.Reference) {
-		for i, name := range insolar.GenesisNameMigrationAddressShards {
-			result[i] = GenesisRef(name)
-		}
-		return
-	}()
 )
 
 // Generate reference from hash code.
@@ -276,4 +253,42 @@ func GenesisRef(name string) insolar.Reference {
 	hash := record.HashVirtual(pcs.ReferenceHasher(), virtRec)
 	id := insolar.NewID(pulse.MinTimePulse, hash)
 	return *insolar.NewReference(*id)
+}
+
+// ContractPublicKeyNameShards is the public key shards contracts names.
+func ContractPublicKeyNameShards(pkShardCount int) []string {
+	result := make([]string, pkShardCount)
+	for i := 0; i < pkShardCount; i++ {
+		name := insolar.GenesisNamePKShard + strconv.Itoa(i)
+		result[i] = name
+	}
+	return result
+}
+
+// ContractPublicKeyShards is the public key shards contracts references.
+func ContractPublicKeyShards(pkShardCount int) []insolar.Reference {
+	result := make([]insolar.Reference, pkShardCount)
+	for i, name := range ContractPublicKeyNameShards(pkShardCount) {
+		result[i] = GenesisRef(name)
+	}
+	return result
+}
+
+// ContractMigrationAddressNameShards is the migration address shards contracts names.
+func ContractMigrationAddressNameShards(maShardCount int) []string {
+	result := make([]string, maShardCount)
+	for i := 0; i < maShardCount; i++ {
+		name := insolar.GenesisNameMigrationShard + strconv.Itoa(i)
+		result[i] = name
+	}
+	return result
+}
+
+// ContractMigrationAddressShards is the migration address shards contracts references.
+func ContractMigrationAddressShards(maShardCount int) []insolar.Reference {
+	result := make([]insolar.Reference, maShardCount)
+	for i, name := range ContractMigrationAddressNameShards(maShardCount) {
+		result[i] = GenesisRef(name)
+	}
+	return result
 }

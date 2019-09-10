@@ -555,7 +555,7 @@ func (r *MigrationAdmin) GetFreeMigrationAddress(publicKey string) (string, erro
 }
 
 // AddNewMigrationAddressToMaps is proxy generated method
-func (r *MigrationAdmin) AddNewMigrationAddressToMapsAsMutable(migrationAddress string, memberRef insolar.Reference) error {
+func (r *MigrationAdmin) AddNewMigrationAddressToMaps(migrationAddress string, memberRef insolar.Reference) error {
 	var args [2]interface{}
 	args[0] = migrationAddress
 	args[1] = memberRef
@@ -594,7 +594,7 @@ func (r *MigrationAdmin) AddNewMigrationAddressToMapsAsMutable(migrationAddress 
 }
 
 // AddNewMigrationAddressToMapsAsImmutable is proxy generated method
-func (r *MigrationAdmin) AddNewMigrationAddressToMaps(migrationAddress string, memberRef insolar.Reference) error {
+func (r *MigrationAdmin) AddNewMigrationAddressToMapsAsImmutable(migrationAddress string, memberRef insolar.Reference) error {
 	var args [2]interface{}
 	args[0] = migrationAddress
 	args[1] = memberRef
