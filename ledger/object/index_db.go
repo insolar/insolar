@@ -171,6 +171,12 @@ func (i *IndexDB) ForPulse(ctx context.Context, pn insolar.PulseNumber) ([]recor
 	defer it.Close()
 
 	for it.Next() {
+		rawKey := it.Key()
+		currentKey := newIndexKey(rawKey)
+		if currentKey.pn != pn {
+			break
+		}
+
 		index := record.Index{}
 		rawIndex, err := it.Value()
 		err = index.Unmarshal(rawIndex)
