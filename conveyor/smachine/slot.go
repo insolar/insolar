@@ -223,3 +223,7 @@ func (s *Slot) ensureLocal(link SlotLink) {
 		panic("illegal state")
 	}
 }
+
+func (s *Slot) isPriority() bool {
+	return false
+}

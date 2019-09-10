@@ -36,12 +36,13 @@ type DependencyInjector interface {
 
 func NewSlotMachine(config SlotMachineConfig, injector DependencyInjector) SlotMachine {
 	return SlotMachine{
-		config:       config,
-		injector:     injector,
-		unusedSlots:  NewSlotQueue(UnusedSlots),
-		activeSlots:  NewSlotQueue(ActiveSlots),
-		workingSlots: NewSlotQueue(WorkingSlots),
-		syncQueue:    NewSyncQueue(&sync.Mutex{}),
+		config:        config,
+		injector:      injector,
+		unusedSlots:   NewSlotQueue(UnusedSlots),
+		activeSlots:   NewSlotQueue(ActiveSlots),
+		prioritySlots: NewSlotQueue(ActiveSlots),
+		workingSlots:  NewSlotQueue(WorkingSlots),
+		syncQueue:     NewSyncQueue(&sync.Mutex{}),
 	}
 }
 
@@ -65,8 +66,9 @@ type SlotMachine struct {
 	unusedSlots  SlotQueue
 	workingSlots SlotQueue //slots are currently in processing
 
-	activeSlots  SlotQueue //they are are moved to workingSlots on every Scan
-	pollingSlots PollingQueue
+	activeSlots   SlotQueue //they are are moved to workingSlots on every Scan
+	prioritySlots SlotQueue
+	pollingSlots  PollingQueue
 
 	syncQueue    SyncQueue // for detached/async ops, queued functions MUST BE panic-safe
 	detachQueues map[SlotID]SyncFuncList
@@ -135,13 +137,17 @@ func (m *SlotMachine) ScanOnce(worker SlotWorker) (hasUpdates bool) {
 	hasUpdates = len(syncQ) > 0
 
 	for _, fn := range syncQ {
-		fn() // allow to resync detached
+		fn() // allows to resync detached
 	}
 
 	if m.workingSlots.IsEmpty() {
+		m.workingSlots.AppendAll(&m.prioritySlots)
 		m.workingSlots.AppendAll(&m.activeSlots)
 		m.pollingSlots.FilterOut(scanTime, &m.workingSlots)
+	} else {
+		m.workingSlots.PrependAll(&m.prioritySlots)
 	}
+
 	m.pollingSlots.PrepareFor(scanTime.Add(m.config.PollingPeriod))
 
 	if m.workingSlots.IsEmpty() {
@@ -744,9 +750,17 @@ func (m *SlotMachine) slotAccessError(msg string, link SlotLink, update StateUpd
 
 func (m *SlotMachine) addSlotToActiveOrWorkingQueue(slot *Slot) {
 	if slot.isLastScan(m.scanCount) {
-		m.activeSlots.AddLast(slot)
+		if slot.isPriority() {
+			m.prioritySlots.AddLast(slot)
+		} else {
+			m.activeSlots.AddLast(slot)
+		}
 	} else {
-		m.workingSlots.AddLast(slot)
+		if slot.isPriority() {
+			m.workingSlots.AddFirst(slot)
+		} else {
+			m.workingSlots.AddLast(slot)
+		}
 	}
 }
 

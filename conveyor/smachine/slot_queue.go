@@ -51,6 +51,10 @@ func (p *SlotQueue) AppendAll(anotherQueue *SlotQueue) {
 	p.QueueHead.AppendAll(&anotherQueue.QueueHead)
 }
 
+func (p *SlotQueue) PrependAll(anotherQueue *SlotQueue) {
+	p.QueueHead.PrependAll(&anotherQueue.QueueHead)
+}
+
 type QueueHead struct {
 	head      *Slot
 	queueType QueueType
@@ -108,27 +112,39 @@ func (p *QueueHead) AddLast(slot *Slot) {
 	p.count++
 }
 
-func (p *QueueHead) AppendAll(anotherQueue *QueueHead) {
-	p.initEmpty()
-	if anotherQueue.IsEmpty() {
+func (p *QueueHead) extractAll(targetQueue *QueueHead) (head, tail *Slot, count int) {
+	if p.IsEmpty() {
 		return
 	}
 
-	next := anotherQueue.head.nextInQueue
-	prev := anotherQueue.head.prevInQueue
+	next := p.head.nextInQueue
+	prev := p.head.prevInQueue
 
-	c := anotherQueue.count
+	c := p.count
 
-	anotherQueue.count = 0
-	anotherQueue.head.nextInQueue = anotherQueue.head
-	anotherQueue.head.prevInQueue = anotherQueue.head
+	p.count = 0
+	p.head.nextInQueue = p.head
+	p.head.prevInQueue = p.head
 
-	for n := next; n != anotherQueue.head; n = n.nextInQueue {
-		n.queue = p
+	for n := next; n != p.head; n = n.nextInQueue {
+		n.queue = targetQueue
 	}
 
-	p.head._addQueuePrev(next, prev)
-	p.count += c
+	return next, prev, c
+}
+
+func (p *QueueHead) AppendAll(anotherQueue *QueueHead) {
+	p.initEmpty()
+	head, tail, count := anotherQueue.extractAll(p)
+	p.head._addQueuePrev(head, tail)
+	p.count += count
+}
+
+func (p *QueueHead) PrependAll(anotherQueue *QueueHead) {
+	p.initEmpty()
+	head, tail, count := anotherQueue.extractAll(p)
+	p.head.nextInQueue._addQueuePrev(head, tail)
+	p.count += count
 }
 
 func (p *QueueHead) RemoveAll() {
