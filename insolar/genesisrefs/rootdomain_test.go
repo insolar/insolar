@@ -14,17 +14,16 @@
 // limitations under the License.
 //
 
-package rootdomain
+package genesisrefs
 
 import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/insolar/insolar/insolar/genesisrefs"
+	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/stretchr/testify/require"
 )
 
 var (
@@ -45,15 +44,6 @@ func TestReference(t *testing.T) {
 	}
 	require.Equal(t, refHex, hex.EncodeToString(rootRecord.Reference().Bytes()), "root domain Ref should always be the same")
 
-}
-
-func TestGenesisRef(t *testing.T) {
-	var (
-		pubKey    = "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEf+vsMVU75xH8uj5WRcOqYdHXtaHH\nN0na2RVQ1xbhsVybYPae3ujNHeQCPj+RaJyMVhb6Aj/AOsTTOPFswwIDAQ==\n-----END PUBLIC KEY-----\n"
-		pubKeyRef = "11tJDfNqT8mgcjmsbdaRUr8v6j39zLC4nDnGdupKUGu"
-	)
-	genesisRef := genesisrefs.GenesisRef(pubKey)
-	require.Equal(t, pubKeyRef, genesisRef.String(), "reference by name always the same")
 }
 
 func initPCS() insolar.PlatformCryptographyScheme {
