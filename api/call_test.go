@@ -61,21 +61,15 @@ func (suite *TimeoutSuite) TestRunner_callHandler() {
 	seed, err := suite.api.SeedGenerator.Next()
 	suite.NoError(err)
 
-	inslogger.FromContext(suite.ctx).Info("Before SeedManager.Add: ", *seed)
 	suite.seedManagerLock.Lock()
 	suite.api.SeedManager.Add(*seed, 0)
 	suite.seedManagerLock.Unlock()
 
-	inslogger.FromContext(suite.ctx).Info("AFTER SeedManager.Add")
-
 	close(suite.delay)
-	inslogger.FromContext(suite.ctx).Info("AFTER close(suite.delay)")
 	seedString := base64.StdEncoding.EncodeToString(seed[:])
-	inslogger.FromContext(suite.ctx).Info("AFTER EncodeToString")
 
 	requester.SetVerbose(true)
 
-	inslogger.FromContext(suite.ctx).Info("Before SendWithSeed")
 	resp, err := requester.SendWithSeed(
 		suite.ctx,
 		CallUrl,
