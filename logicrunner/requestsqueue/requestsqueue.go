@@ -45,6 +45,8 @@ type RequestsQueue interface {
 	// NumberOfOld returns quantity of requests from ledger and previous executor
 	// (e.g not fresh, aka old)
 	NumberOfOld(ctx context.Context) int
+	// Number of elements in queue
+	Length() int
 	// Clean cleans queue
 	Clean(ctx context.Context)
 }
@@ -105,4 +107,11 @@ func (q *queue) Clean(_ context.Context) {
 	for i := 0; i < int(numberOfSources); i++ {
 		q.lists[i] = nil
 	}
+}
+
+func (q *queue) Length() int {
+	q.lock.Lock()
+	defer q.lock.Unlock()
+
+	return len(q.lists[FromLedger]) + len(q.lists[FromPreviousExecutor]) + len(q.lists[FromThisPulse])
 }

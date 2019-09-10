@@ -64,8 +64,11 @@ func (h *HandleStillExecuting) Present(ctx context.Context, f flow.Flow) error {
 		return errors.Wrap(err, "failed to unmarshal message")
 	}
 
-	ctx, logger := inslogger.WithField(ctx, "object", message.ObjectRef.String())
-	logger.Debug("handling still executing message")
+	ctx, logger := inslogger.WithFields(ctx, map[string]interface{}{
+		"object": message.ObjectRef.String(),
+		"sender": h.Message.Sender.String(),
+	})
+	logger.Debug("handle StillExecuting message")
 
 	if err := checkPayloadStillExecuting(message); err != nil {
 		return nil
@@ -73,7 +76,7 @@ func (h *HandleStillExecuting) Present(ctx context.Context, f flow.Flow) error {
 
 	done, err := h.dep.WriteAccessor.Begin(ctx, flow.Pulse(ctx))
 	if err != nil {
-		logger.Warn("late still executing message, ignoring: ", err.Error())
+		logger.Warn("late StillExecuting message, ignoring: ", err.Error())
 		return nil
 	}
 	defer done()

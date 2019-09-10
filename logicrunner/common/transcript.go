@@ -24,7 +24,6 @@ type Transcript struct {
 	Nonce            uint64
 	Deactivate       bool
 	OutgoingRequests []OutgoingRequest
-	FromLedger       bool
 }
 
 func NewTranscript(
@@ -39,8 +38,6 @@ func NewTranscript(
 		RequestRef: requestRef,
 		Nonce:      0,
 		Deactivate: false,
-
-		FromLedger: false,
 	}
 }
 

@@ -264,7 +264,7 @@ func (m *client) GetObject(
 		instrumenter.end()
 	}()
 
-	logger := inslogger.FromContext(ctx).WithField("object", head.GetLocal().DebugString())
+	logger := inslogger.FromContext(ctx).WithField("object", head.GetLocal().String())
 
 	msg, err := payload.NewMessage(&payload.GetObject{
 		ObjectID: *head.GetLocal(),
