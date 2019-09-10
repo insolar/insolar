@@ -144,7 +144,7 @@ func (r *executionRegistry) FindRequestLoop(ctx context.Context, reqRef insolar.
 
 	for _, transcript := range r.registry {
 		req := transcript.Request
-		if req.APIRequestID == apiRequestID && req.ReturnMode != record.ReturnNoWait {
+		if req.APIRequestID == apiRequestID && req.ReturnMode != record.ReturnSaga {
 			inslogger.FromContext(ctx).Error("execution loop detected with request ", transcript.RequestRef.String())
 			return true
 		}

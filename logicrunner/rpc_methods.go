@@ -335,7 +335,8 @@ func buildIncomingRequestFromOutgoing(outgoing *record.OutgoingRequest) *record.
 		CallerPrototype: outgoing.CallerPrototype,
 		Nonce:           outgoing.Nonce,
 
-		Immutable: outgoing.Immutable,
+		Immutable:  outgoing.Immutable,
+		ReturnMode: outgoing.ReturnMode,
 
 		CallType:  outgoing.CallType, // used only for CTSaveAsChild
 		Base:      outgoing.Base,     // used only for CTSaveAsChild
@@ -346,14 +347,6 @@ func buildIncomingRequestFromOutgoing(outgoing *record.OutgoingRequest) *record.
 
 		APIRequestID: outgoing.APIRequestID,
 		Reason:       outgoing.Reason,
-	}
-
-	if outgoing.ReturnMode == record.ReturnSaga {
-		// We never wait for a result of saga call
-		incoming.ReturnMode = record.ReturnNoWait
-	} else {
-		// If this is not a saga call just copy the ReturnMode
-		incoming.ReturnMode = outgoing.ReturnMode
 	}
 
 	return &incoming
