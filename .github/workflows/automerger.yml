@@ -1,5 +1,5 @@
 name: "Automerger"
-on: pull_request
+on: status
 
 jobs:
   automerge:
