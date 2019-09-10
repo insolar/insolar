@@ -196,9 +196,6 @@ func (r *IncomingRequest) IsCreationRequest() bool {
 func (r *IncomingRequest) Validate() error {
 	// Incoming requests never should't be in detached state,
 	// app code should check it and raise some kind of error.
-	if r.ReturnMode == ReturnSaga {
-		return errors.New("return mode is a return saga")
-	}
 	if r.IsAPIRequest() {
 		return nil
 	}
@@ -212,7 +209,7 @@ func (r *IncomingRequest) Validate() error {
 }
 
 func (r *IncomingRequest) IsDetachedCall() bool {
-	return r.ReturnMode == ReturnNoWait
+	return r.ReturnMode == ReturnSaga
 }
 
 func (r *IncomingRequest) IsTemporaryUploadCode() bool {

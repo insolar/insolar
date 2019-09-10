@@ -128,13 +128,13 @@ func TestHandleCall_CheckExecutionLoop(t *testing.T) {
 			},
 		},
 		{
-			name: "no loop, no wait call",
+			name: "no loop, saga (no wait) call",
 			mocks: func(t minimock.Tester) (*HandleCall, *record.IncomingRequest) {
 				h := &HandleCall{
 					dep: &Dependencies{},
 				}
 				req := &record.IncomingRequest{
-					ReturnMode: record.ReturnNoWait,
+					ReturnMode: record.ReturnSaga,
 				}
 				return h, req
 			},

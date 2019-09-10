@@ -54,14 +54,6 @@ func Test_IncomingRequest_Check(t *testing.T) {
 		RequireErrorCode(rep, payload.CodeInvalidRequest)
 	})
 
-	t.Run("detached returns error", func(t *testing.T) {
-		msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), insolar.ID{}, true, true)
-		// Faking detached request.
-		record.Unwrap(&msg.Request).(*record.IncomingRequest).ReturnMode = record.ReturnSaga
-		rep := SendMessage(ctx, s, &msg)
-		RequireErrorCode(rep, payload.CodeInvalidRequest)
-	})
-
 	t.Run("registered API request appears in pendings", func(t *testing.T) {
 		msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), insolar.ID{}, true, true)
 		rep := SendMessage(ctx, s, &msg)

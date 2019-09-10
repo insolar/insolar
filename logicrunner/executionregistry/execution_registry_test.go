@@ -215,10 +215,10 @@ func (s *ExecutionRegistrySuite) TestFindRequestLoop() {
 		registryI.(*executionRegistry).registry = make(map[insolar.Reference]*common.Transcript)
 	}
 
-	{ // go request with current apirequestid, but record returnnowait (loop not found)
+	{ // go request with current apirequestid, but record returnsaga (loop not found)
 		id := s.genAPIRequestID()
 
-		T.Request.ReturnMode = record.ReturnNoWait
+		T.Request.ReturnMode = record.ReturnSaga
 		err := registryI.Register(ctx, T)
 		s.NoError(err)
 
@@ -230,7 +230,7 @@ func (s *ExecutionRegistrySuite) TestFindRequestLoop() {
 
 	T1 := s.genTranscriptForObject()
 	T2 := s.genTranscriptForObject()
-	T2.Request.ReturnMode = record.ReturnNoWait
+	T2.Request.ReturnMode = record.ReturnSaga
 	{ // combined test
 		id := s.genAPIRequestID()
 
