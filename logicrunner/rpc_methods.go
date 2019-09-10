@@ -387,10 +387,6 @@ func buildOutgoingRequest(
 		outgoing.ReturnMode = record.ReturnSaga
 	}
 
-	//else if !req.Wait { // AALEKSEEV TODO get rid of ReturnNoWait?
-	//	outgoing.ReturnMode = record.ReturnNoWait
-	//}
-
 	return outgoing
 }
 
