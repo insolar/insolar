@@ -27,6 +27,8 @@ import (
 	"github.com/insolar/insolar/logicrunner/common"
 )
 
+const MaxFetchCount = 20
+
 //go:generate minimock -i github.com/insolar/insolar/logicrunner.RequestsFetcher -o ./ -s _mock.go -g
 
 type RequestsFetcher interface {
@@ -104,8 +106,15 @@ func (rf *requestsFetcher) fetch(ctx context.Context) error {
 		return err
 	}
 
+	uniqueTaken := 0
+
 	logger := inslogger.FromContext(ctx)
 	for _, reqRef := range reqRefs {
+		// limit count of unique and unknown taken requests to MaxFetchCount
+		if uniqueTaken >= MaxFetchCount {
+			break
+		}
+
 		if !reqRef.IsRecordScope() {
 			logger.Errorf("skipping request with bad reference, ref=%s", reqRef.String())
 		}
@@ -126,6 +135,8 @@ func (rf *requestsFetcher) fetch(ctx context.Context) error {
 			return nil
 		default:
 		}
+
+		uniqueTaken++
 
 		switch v := request.(type) {
 		case *record.IncomingRequest:
