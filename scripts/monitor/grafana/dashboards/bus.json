@@ -15,7 +15,8 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1567586513297,
+  "id": 1,
+  "iteration": 1568038244677,
   "links": [],
   "panels": [
     {
@@ -32,7 +33,7 @@
       },
       "dataFormat": "tsbuckets",
       "gridPos": {
-        "h": 4,
+        "h": 6,
         "w": 12,
         "x": 0,
         "y": 0
@@ -40,7 +41,7 @@
       "heatmap": {},
       "hideZeroBuckets": false,
       "highlightCards": true,
-      "id": 16,
+      "id": 8,
       "legend": {
         "show": false
       },
@@ -49,15 +50,15 @@
       "reverseYBuckets": false,
       "targets": [
         {
-          "expr": "sum(insolar_bus_sent_bytes_bucket{message_type=~\"$type\", instance=~\"$instance\"}) by (le)",
+          "expr": "sum(increase(insolar_bus_reply_milliseconds_bucket{message_type=~\"$type\", instance=~\"$instance\"}[1m])) by (le)",
           "format": "heatmap",
-          "hide": false,
           "intervalFactor": 1,
           "legendFormat": "{{ le }}",
           "refId": "A"
         }
       ],
-      "title": "Sizes \"$type\" ($instance)",
+      "timeFrom": null,
+      "title": "Reply latency \"$type\" ($instance)",
       "tooltip": {
         "show": true,
         "showHistogram": false
@@ -69,8 +70,8 @@
       "xBucketNumber": null,
       "xBucketSize": null,
       "yAxis": {
-        "decimals": 0,
-        "format": "decbytes",
+        "decimals": null,
+        "format": "ms",
         "logBase": 1,
         "max": null,
         "min": null,
@@ -124,7 +125,7 @@
           "expr": "sum(rate(insolar_bus_sent_bytes_sum{message_type=~\"$type\", instance=~\"$instance\"}[1m])) / sum(rate(insolar_bus_sent_bytes_count{message_type=~\"$type\", instance=~\"$instance\"}[1m]))",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "Size (bytes), avg by minute",
+          "legendFormat": "Size (bytes) / sec",
           "refId": "A"
         }
       ],
@@ -174,6 +175,246 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 12,
+        "y": 4
+      },
+      "id": 10,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum(rate(insolar_bus_sent_retries{message_type=~\"$type\",instance=~\"$instance\"}[1m])) by (job)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "count / sec",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Retries \"$type\" ($instance)",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "cards": {
+        "cardPadding": null,
+        "cardRound": null
+      },
+      "color": {
+        "cardColor": "#b4ff00",
+        "colorScale": "sqrt",
+        "colorScheme": "interpolateOranges",
+        "exponent": 0.5,
+        "mode": "opacity"
+      },
+      "dataFormat": "tsbuckets",
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 0,
+        "y": 6
+      },
+      "heatmap": {},
+      "hideZeroBuckets": false,
+      "highlightCards": true,
+      "id": 16,
+      "legend": {
+        "show": false
+      },
+      "links": [],
+      "options": {},
+      "reverseYBuckets": false,
+      "targets": [
+        {
+          "expr": "sum(increase(insolar_bus_sent_bytes_bucket{message_type=~\"$type\", instance=~\"$instance\"}[1m])) by (le)",
+          "format": "heatmap",
+          "hide": false,
+          "intervalFactor": 1,
+          "legendFormat": "{{ le }}",
+          "refId": "A"
+        }
+      ],
+      "title": "Sizes \"$type\" ($instance)",
+      "tooltip": {
+        "show": true,
+        "showHistogram": false
+      },
+      "type": "heatmap",
+      "xAxis": {
+        "show": true
+      },
+      "xBucketNumber": null,
+      "xBucketSize": null,
+      "yAxis": {
+        "decimals": 0,
+        "format": "decbytes",
+        "logBase": 1,
+        "max": null,
+        "min": null,
+        "show": true,
+        "splitFactor": null
+      },
+      "yBucketBound": "auto",
+      "yBucketNumber": null,
+      "yBucketSize": null
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 5,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
+      "hideTimeOverride": false,
+      "id": 4,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum(rate(insolar_bus_reply_total{instance=~\"$instance\",message_type=~\"$type\"}[1m]))",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "count / sec",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Replies \"$type\" ($instance)",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
       "decimals": null,
       "fill": 1,
       "fillGradient": 0,
@@ -181,7 +422,7 @@
         "h": 4,
         "w": 12,
         "x": 0,
-        "y": 4
+        "y": 10
       },
       "id": 12,
       "legend": {
@@ -269,98 +510,10 @@
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 4,
-        "w": 12,
-        "x": 12,
-        "y": 4
-      },
-      "id": 10,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "links": [],
-      "nullPointMode": "null",
-      "options": {
-        "dataLinks": []
-      },
-      "percentage": false,
-      "pointradius": 5,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "expr": "sum(rate(insolar_bus_sent_retries{message_type=~\"$type\",instance=~\"$instance\"}[1m])) by (job)",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "{{ job }} / minute",
-          "refId": "A"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "Retries \"$type\" ($instance)",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        },
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "fill": 1,
-      "fillGradient": 0,
-      "gridPos": {
         "h": 5,
         "w": 12,
-        "x": 0,
-        "y": 8
+        "x": 12,
+        "y": 13
       },
       "hideTimeOverride": false,
       "id": 2,
@@ -394,7 +547,7 @@
           "format": "time_series",
           "instant": false,
           "intervalFactor": 1,
-          "legendFormat": "rate per minute",
+          "legendFormat": "count / sec",
           "refId": "A"
         }
       ],
@@ -440,95 +593,6 @@
       }
     },
     {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "fill": 1,
-      "fillGradient": 0,
-      "gridPos": {
-        "h": 5,
-        "w": 12,
-        "x": 12,
-        "y": 8
-      },
-      "hideTimeOverride": false,
-      "id": 4,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "links": [],
-      "nullPointMode": "null",
-      "options": {
-        "dataLinks": []
-      },
-      "percentage": false,
-      "pointradius": 5,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "expr": "sum(rate(insolar_bus_reply_total{instance=~\"$instance\",message_type=~\"$type\"}[1m]))",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "rate per minute",
-          "refId": "A"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "Replies \"$type\" ($instance)",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        },
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
       "cards": {
         "cardPadding": null,
         "cardRound": null
@@ -542,10 +606,10 @@
       },
       "dataFormat": "tsbuckets",
       "gridPos": {
-        "h": 6,
+        "h": 4,
         "w": 12,
         "x": 0,
-        "y": 13
+        "y": 14
       },
       "heatmap": {},
       "hideZeroBuckets": false,
@@ -559,7 +623,7 @@
       "reverseYBuckets": false,
       "targets": [
         {
-          "expr": "sum(insolar_bus_sent_milliseconds_bucket{message_type=~\"$type\", instance=~\"$instance\"}) by (le)",
+          "expr": "sum(increase(insolar_bus_sent_milliseconds_bucket{message_type=~\"$type\", instance=~\"$instance\"}[1m])) by (le)",
           "format": "heatmap",
           "intervalFactor": 1,
           "legendFormat": "{{ le }}",
@@ -589,71 +653,9 @@
       "yBucketBound": "auto",
       "yBucketNumber": null,
       "yBucketSize": null
-    },
-    {
-      "cards": {
-        "cardPadding": null,
-        "cardRound": null
-      },
-      "color": {
-        "cardColor": "#b4ff00",
-        "colorScale": "sqrt",
-        "colorScheme": "interpolateOranges",
-        "exponent": 0.5,
-        "mode": "opacity"
-      },
-      "dataFormat": "tsbuckets",
-      "gridPos": {
-        "h": 6,
-        "w": 12,
-        "x": 12,
-        "y": 13
-      },
-      "heatmap": {},
-      "hideZeroBuckets": false,
-      "highlightCards": true,
-      "id": 8,
-      "legend": {
-        "show": false
-      },
-      "links": [],
-      "options": {},
-      "reverseYBuckets": false,
-      "targets": [
-        {
-          "expr": "sum(insolar_bus_reply_milliseconds_bucket{message_type=~\"$type\", instance=~\"$instance\"}) by (le)",
-          "format": "heatmap",
-          "intervalFactor": 1,
-          "legendFormat": "{{ le }}",
-          "refId": "A"
-        }
-      ],
-      "title": "Reply latency \"$type\" ($instance)",
-      "tooltip": {
-        "show": true,
-        "showHistogram": false
-      },
-      "type": "heatmap",
-      "xAxis": {
-        "show": true
-      },
-      "xBucketNumber": null,
-      "xBucketSize": null,
-      "yAxis": {
-        "decimals": null,
-        "format": "ms",
-        "logBase": 1,
-        "max": null,
-        "min": null,
-        "show": true,
-        "splitFactor": null
-      },
-      "yBucketBound": "auto",
-      "yBucketNumber": null,
-      "yBucketSize": null
     }
   ],
-  "refresh": "10s",
+  "refresh": "5s",
   "schemaVersion": 19,
   "style": "dark",
   "tags": [],
@@ -662,7 +664,6 @@
       {
         "allValue": null,
         "current": {
-          "tags": [],
           "text": "All",
           "value": "$__all"
         },
@@ -675,7 +676,7 @@
         "name": "type",
         "options": [],
         "query": "label_values(insolar_bus_sent_total, message_type)",
-        "refresh": 1,
+        "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
         "sort": 0,
@@ -688,7 +689,7 @@
       {
         "allValue": null,
         "current": {
-          "tags": [],
+          "selected": true,
           "text": "All",
           "value": "$__all"
         },
@@ -745,5 +746,5 @@
   "timezone": "",
   "title": "INS-Message Bus",
   "uid": "3O4gwpdWz",
-  "version": 1
+  "version": 2
 }

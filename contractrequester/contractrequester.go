@@ -129,6 +129,7 @@ func (cr *ContractRequester) Call(
 			Arguments:    args,
 			APIRequestID: utils.TraceID(ctx),
 			APINode:      cr.JetCoordinator.Me(),
+			Immutable:    false,
 		},
 	}
 

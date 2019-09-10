@@ -112,20 +112,21 @@ func TestWaitMinroles_MinrolesHappenedInETA(t *testing.T) {
 
 	ref := gen.Reference()
 	nodeKeeper := mock.NewNodeKeeperMock(mc)
-	nodeKeeper.GetAccessorMock.Set(func(p insolar.PulseNumber) (a1 network.Accessor) {
-		accessor := mock.NewAccessorMock(mc)
-		if p == pulse.MinTimePulse {
-			accessor.GetWorkingNodesMock.Set(func() (na1 []insolar.NetworkNode) {
-				return []insolar.NetworkNode{}
-			})
-		} else {
-			accessor.GetWorkingNodesMock.Set(func() (na1 []insolar.NetworkNode) {
-				n := node.NewNode(ref, insolar.StaticRoleLightMaterial, nil, "127.0.0.1:123", "")
-				return []insolar.NetworkNode{n}
-			})
-		}
 
-		return accessor
+	accessor1 := mock.NewAccessorMock(mc)
+	accessor1.GetWorkingNodesMock.Set(func() (na1 []insolar.NetworkNode) {
+		return []insolar.NetworkNode{}
+	})
+	accessor2 := mock.NewAccessorMock(mc)
+	accessor2.GetWorkingNodesMock.Set(func() (na1 []insolar.NetworkNode) {
+		n := node.NewNode(ref, insolar.StaticRoleLightMaterial, nil, "127.0.0.1:123", "")
+		return []insolar.NetworkNode{n}
+	})
+	nodeKeeper.GetAccessorMock.Set(func(p insolar.PulseNumber) (a1 network.Accessor) {
+		if p == pulse.MinTimePulse {
+			return accessor1
+		}
+		return accessor2
 	})
 
 	discoveryNode := certificate.BootstrapNode{NodeRef: ref.String()}

@@ -328,10 +328,6 @@ func loadMembers(count int) ([]*sdk.Member, error) {
 	return members, nil
 }
 
-func calcFee(amount int64) int64 {
-	return transferFee
-}
-
 func main() {
 	parseInputParams()
 
@@ -359,7 +355,7 @@ func main() {
 
 	var totalBalanceBefore *big.Int
 	var balancePenRetries int32
-	var balanceCheckMembers []*sdk.Member
+	balanceCheckMembers := make([]*sdk.Member, len(members))
 
 	if !noCheckBalance {
 		copy(balanceCheckMembers, members)
