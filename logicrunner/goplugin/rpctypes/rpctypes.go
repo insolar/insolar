@@ -81,7 +81,6 @@ type UpGetCodeResp struct {
 // UpRouteReq is a set of arguments for Send RPC in goplugin
 type UpRouteReq struct {
 	UpBaseReq
-	Wait      bool
 	Immutable bool
 	Saga      bool
 	Object    insolar.Reference

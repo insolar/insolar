@@ -387,9 +387,11 @@ func buildOutgoingRequest(
 		// OutgoingRequest with ReturnMode = ReturnSaga will be called by LME
 		// when current object finishes the execution and validation.
 		outgoing.ReturnMode = record.ReturnSaga
-	} else if !req.Wait {
-		outgoing.ReturnMode = record.ReturnNoWait
 	}
+
+	//else if !req.Wait { // AALEKSEEV TODO get rid of ReturnNoWait?
+	//	outgoing.ReturnMode = record.ReturnNoWait
+	//}
 
 	return outgoing
 }
