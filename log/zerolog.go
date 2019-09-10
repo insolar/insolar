@@ -249,38 +249,15 @@ func (z *zerologAdapter) Errorf(format string, args ...interface{}) {
 	z.loggerWithHooks().Error().Msgf(format, args...)
 }
 
-// fatalDiodeHook is a hack for log.Fatal when diode is being used.
-// We need to save the buffer, before we call for os.Exit(1)
-// We call for diodeWriter.Close(), that save the buffer to output
-// and closes itself gracefully. After that we call for os.Exit(1)
-// When standard implementation is used, some logs can be lost
-type fatalDiodeHook struct {
-	diodeWriter *diode.Writer
-}
-
-func (h fatalDiodeHook) Run(e *zerolog.Event, level zerolog.Level, msg string) {
-	if level == zerolog.FatalLevel {
-		err := h.diodeWriter.Close()
-		if err != nil {
-			e.Err(err)
-		}
-		os.Exit(1)
-	}
-}
-
 // Fatal logs a message at level Fatal on the stdout.
 func (z *zerologAdapter) Fatal(args ...interface{}) {
 	stats.Record(contextWithLogLevel(zerolog.FatalLevel), statLogCalls.M(1))
 
-	zerolog.SetGlobalLevel(zerolog.FatalLevel)
-
 	if z.diodeWriter != nil {
-		fHook := fatalDiodeHook{diodeWriter: z.diodeWriter}
-		logger := *z.loggerWithHooks()
-		loggerFatal := logger.Hook(fHook)
-
-		loggerFatal.Error().Msg(fmt.Sprintf("FATAL: %v", fmt.Sprint(args...)))
-		loggerFatal.Fatal().Msg(fmt.Sprint(args...))
+		z.logger.Error().Msg(fmt.Sprintf("FATAL: %v", fmt.Sprint(args...)))
+		zerolog.SetGlobalLevel(zerolog.FatalLevel)
+		z.diodeWriter.Close()
+		os.Exit(1)
 	}
 
 	z.loggerWithHooks().Fatal().Msg(fmt.Sprint(args...))
@@ -290,52 +267,25 @@ func (z *zerologAdapter) Fatal(args ...interface{}) {
 func (z *zerologAdapter) Fatalf(format string, args ...interface{}) {
 	stats.Record(contextWithLogLevel(zerolog.FatalLevel), statLogCalls.M(1))
 
-	zerolog.SetGlobalLevel(zerolog.FatalLevel)
-
 	if z.diodeWriter != nil {
-		fHook := fatalDiodeHook{diodeWriter: z.diodeWriter}
-		logger := *z.loggerWithHooks()
-		loggerFatal := logger.Hook(fHook)
-
-		loggerFatal.Error().Msg(fmt.Sprintf("FATAL: %v", fmt.Sprintf(format, args...)))
-		loggerFatal.Fatal().Msgf(format, args...)
+		z.logger.Error().Msg(fmt.Sprintf("FATAL: %v", fmt.Sprintf(format, args...)))
+		zerolog.SetGlobalLevel(zerolog.FatalLevel)
+		z.diodeWriter.Close()
+		os.Exit(1)
 	}
 
 	z.loggerWithHooks().Fatal().Msgf(format, args...)
-}
-
-// panicDiodeHook is a hack for panic when diode is being used.
-// We need to save the buffer, before we call for os.Exit(1)
-// We call for diodeWriter.Close(), that save the buffer to output
-// and closes itself gracefully. After that we call for panic
-// When standard implementation is used, some logs can be lost
-type panicDiodeHook struct {
-	diodeWriter *diode.Writer
-}
-
-func (h panicDiodeHook) Run(e *zerolog.Event, level zerolog.Level, msg string) {
-	if level == zerolog.PanicLevel {
-		err := h.diodeWriter.Close()
-		if err != nil {
-			e.Err(err)
-		}
-		panic(msg)
-	}
 }
 
 // Panic logs a message at level Panic on the stdout.
 func (z *zerologAdapter) Panic(args ...interface{}) {
 	stats.Record(contextWithLogLevel(zerolog.PanicLevel), statLogCalls.M(1))
 
-	zerolog.SetGlobalLevel(zerolog.PanicLevel)
-
 	if z.diodeWriter != nil {
-		fHook := panicDiodeHook{diodeWriter: z.diodeWriter}
-		logger := *z.loggerWithHooks()
-		loggerFatal := logger.Hook(fHook)
-
-		loggerFatal.Error().Msg(fmt.Sprintf("PANIC: %v", fmt.Sprint(args...)))
-		loggerFatal.Panic().Msg(fmt.Sprint(args...))
+		z.logger.Error().Msg(fmt.Sprintf("PANIC: %v", fmt.Sprint(args...)))
+		zerolog.SetGlobalLevel(zerolog.PanicLevel)
+		z.diodeWriter.Close()
+		os.Exit(1)
 	}
 
 	z.loggerWithHooks().Panic().Msg(fmt.Sprint(args...))
@@ -348,12 +298,11 @@ func (z *zerologAdapter) Panicf(format string, args ...interface{}) {
 	zerolog.SetGlobalLevel(zerolog.PanicLevel)
 
 	if z.diodeWriter != nil {
-		fHook := panicDiodeHook{diodeWriter: z.diodeWriter}
-		logger := *z.loggerWithHooks()
-		loggerFatal := logger.Hook(fHook)
+		z.logger.Error().Msg(fmt.Sprintf("PANIC: %v", fmt.Sprintf(format, args...)))
+		zerolog.SetGlobalLevel(zerolog.PanicLevel)
+		z.diodeWriter.Close()
+		os.Exit(1)
 
-		loggerFatal.Error().Msg(fmt.Sprintf("PANIC: %v", fmt.Sprintf(format, args...)))
-		loggerFatal.Panic().Msgf(format, args...)
 	}
 
 	z.loggerWithHooks().Panic().Msgf(format, args...)
