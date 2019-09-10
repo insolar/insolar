@@ -66,11 +66,7 @@ type SlotMachine struct {
 	workingSlots SlotQueue //slots are currently in processing
 
 	activeSlots  SlotQueue //they are are moved to workingSlots on every Scan
-	pollingSlots *SlotQueue
-
-	pollingSeq     []PollingSlotQueue
-	pollingSeqHead uint16
-	pollingSeqTail uint16
+	pollingSlots PollingQueue
 
 	syncQueue    SyncQueue // for detached/async ops, queued functions MUST BE panic-safe
 	detachQueues map[SlotID]SyncFuncList
@@ -144,9 +140,9 @@ func (m *SlotMachine) ScanOnce(worker SlotWorker) (hasUpdates bool) {
 
 	if m.workingSlots.IsEmpty() {
 		m.workingSlots.AppendAll(&m.activeSlots)
-		m.preparePollingSlots(scanTime)
+		m.pollingSlots.FilterOut(scanTime, &m.workingSlots)
 	}
-	m.allocatePollingSlots(scanTime)
+	m.pollingSlots.PrepareFor(scanTime.Add(m.config.PollingPeriod))
 
 	if m.workingSlots.IsEmpty() {
 		return hasUpdates
@@ -602,7 +598,7 @@ func (m *SlotMachine) _applyStateUpdate(slot *Slot, inplaceUpdate bool, stateUpd
 	case stateUpdPoll:
 		applySlotPrepareAndNextStep(slot, stateUpdate)
 		m._applyInplaceUpdate(slot, inplaceUpdate, false)
-		m.pollingSlots.AddLast(slot)
+		m.pollingSlots.Add(slot)
 		return true, nil
 
 	case stateUpdWait:
@@ -790,76 +786,6 @@ func (m *SlotMachine) disposeSlot(slot *Slot) {
 	}
 
 	slot.dispose()
-}
-
-func (m *SlotMachine) preparePollingSlots(scanTime time.Time) {
-
-	for m.pollingSeqHead != m.pollingSeqTail { // FIXME it won't pick the only non-empty polling slot queue
-		ps := &m.pollingSeq[m.pollingSeqTail]
-
-		if !ps.IsEmpty() && ps.pollingTime.After(scanTime) {
-			break
-		}
-
-		m.pollingSeqTail++
-		if int(m.pollingSeqTail) >= len(m.pollingSeq) {
-			m.pollingSeqTail = 0
-		}
-
-		m.workingSlots.AppendAll(&ps.SlotQueue)
-	}
-}
-
-func (m *SlotMachine) allocatePollingSlots(scanTime time.Time) {
-	var pollingQueue *PollingSlotQueue
-	switch {
-	case m.pollingSlots == nil:
-		if m.pollingSeqHead != 0 {
-			panic("illegal state")
-		}
-		if len(m.pollingSeq) == 0 {
-			m.growPollingSlots()
-		}
-	case !m.pollingSlots.IsEmpty():
-		m.growPollingSlots()
-		m.pollingSeqHead++
-		if int(m.pollingSeqHead) >= len(m.pollingSeq) {
-			m.pollingSeqHead = 0
-		}
-	}
-	pollingQueue = &m.pollingSeq[m.pollingSeqHead]
-
-	if !pollingQueue.SlotQueue.IsEmpty() {
-		panic("illegal state")
-	}
-
-	m.pollingSlots = &pollingQueue.SlotQueue
-	pollingQueue.pollingTime = scanTime.Add(m.config.PollingPeriod)
-}
-
-func (m *SlotMachine) growPollingSlots() {
-	switch {
-	case m.pollingSeqHead+1 == m.pollingSeqTail:
-		// full
-		sLen := len(m.pollingSeq)
-
-		cp := make([]PollingSlotQueue, sLen, 1+(sLen<<2)/3)
-		copy(cp, m.pollingSeq[m.pollingSeqTail:])
-		copy(cp[m.pollingSeqTail:], m.pollingSeq[:m.pollingSeqTail])
-		m.pollingSeq = cp
-
-		m.pollingSeqTail = 0
-		m.pollingSeqHead = uint16(sLen - 1)
-		fallthrough
-	case m.pollingSeqTail == 0 && int(m.pollingSeqHead)+1 >= len(m.pollingSeq):
-		// full
-		for {
-			m.pollingSeq = append(m.pollingSeq, PollingSlotQueue{SlotQueue: NewSlotQueue(PollingSlots)})
-			if len(m.pollingSeq) == cap(m.pollingSeq) {
-				break
-			}
-		}
-	}
 }
 
 func NewAdapterCallback(stepLink StepLink, callback AdapterCallbackFunc, cancel *syncrun.ChainedCancel) AdapterCallback {
