@@ -127,7 +127,7 @@ func (r *HelloWorld) GetPrototype() (insolar.Reference, error) {
 		var ret1 *foundation.Error
 		ret[1] = &ret1
 
-		res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetPrototype", make([]byte, 0), *PrototypeReference)
+		res, err := common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetPrototype", make([]byte, 0), *PrototypeReference)
 		if err != nil {
 			return ret0, err
 		}
@@ -157,7 +157,7 @@ func (r *HelloWorld) GetCode() (insolar.Reference, error) {
 		var ret1 *foundation.Error
 		ret[1] = &ret1
 
-		res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetCode", make([]byte, 0), *PrototypeReference)
+		res, err := common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetCode", make([]byte, 0), *PrototypeReference)
 		if err != nil {
 			return ret0, err
 		}
@@ -194,7 +194,7 @@ func (r *HelloWorld) ReturnObj() (interface{}, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "ReturnObj", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "ReturnObj", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -216,25 +216,6 @@ func (r *HelloWorld) ReturnObj() (interface{}, error) {
 	return ret0, nil
 }
 
-// ReturnObjNoWait is proxy generated method
-func (r *HelloWorld) ReturnObjNoWait() error {
-	var args [0]interface{}
-
-	var argsSerialized []byte
-
-	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
-	if err != nil {
-		return err
-	}
-
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "ReturnObj", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // ReturnObjAsImmutable is proxy generated method
 func (r *HelloWorld) ReturnObjAsImmutable() (interface{}, error) {
 	var args [0]interface{}
@@ -252,7 +233,7 @@ func (r *HelloWorld) ReturnObjAsImmutable() (interface{}, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "ReturnObj", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "ReturnObj", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -292,7 +273,7 @@ func (r *HelloWorld) Greet(name string) (interface{}, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "Greet", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "Greet", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -314,26 +295,6 @@ func (r *HelloWorld) Greet(name string) (interface{}, error) {
 	return ret0, nil
 }
 
-// GreetNoWait is proxy generated method
-func (r *HelloWorld) GreetNoWait(name string) error {
-	var args [1]interface{}
-	args[0] = name
-
-	var argsSerialized []byte
-
-	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
-	if err != nil {
-		return err
-	}
-
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "Greet", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // GreetAsImmutable is proxy generated method
 func (r *HelloWorld) GreetAsImmutable(name string) (interface{}, error) {
 	var args [1]interface{}
@@ -352,7 +313,7 @@ func (r *HelloWorld) GreetAsImmutable(name string) (interface{}, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "Greet", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "Greet", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -391,7 +352,7 @@ func (r *HelloWorld) Count() (interface{}, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "Count", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "Count", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -413,25 +374,6 @@ func (r *HelloWorld) Count() (interface{}, error) {
 	return ret0, nil
 }
 
-// CountNoWait is proxy generated method
-func (r *HelloWorld) CountNoWait() error {
-	var args [0]interface{}
-
-	var argsSerialized []byte
-
-	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
-	if err != nil {
-		return err
-	}
-
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "Count", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // CountAsImmutable is proxy generated method
 func (r *HelloWorld) CountAsImmutable() (interface{}, error) {
 	var args [0]interface{}
@@ -449,7 +391,7 @@ func (r *HelloWorld) CountAsImmutable() (interface{}, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "Count", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "Count", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -488,7 +430,7 @@ func (r *HelloWorld) Errored() (interface{}, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "Errored", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "Errored", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -510,25 +452,6 @@ func (r *HelloWorld) Errored() (interface{}, error) {
 	return ret0, nil
 }
 
-// ErroredNoWait is proxy generated method
-func (r *HelloWorld) ErroredNoWait() error {
-	var args [0]interface{}
-
-	var argsSerialized []byte
-
-	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
-	if err != nil {
-		return err
-	}
-
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "Errored", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // ErroredAsImmutable is proxy generated method
 func (r *HelloWorld) ErroredAsImmutable() (interface{}, error) {
 	var args [0]interface{}
@@ -546,7 +469,7 @@ func (r *HelloWorld) ErroredAsImmutable() (interface{}, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "Errored", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "Errored", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -585,7 +508,7 @@ func (r *HelloWorld) PulseNumber() (insolar.PulseNumber, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "PulseNumber", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "PulseNumber", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -607,25 +530,6 @@ func (r *HelloWorld) PulseNumber() (insolar.PulseNumber, error) {
 	return ret0, nil
 }
 
-// PulseNumberNoWait is proxy generated method
-func (r *HelloWorld) PulseNumberNoWait() error {
-	var args [0]interface{}
-
-	var argsSerialized []byte
-
-	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
-	if err != nil {
-		return err
-	}
-
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "PulseNumber", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // PulseNumberAsImmutable is proxy generated method
 func (r *HelloWorld) PulseNumberAsImmutable() (insolar.PulseNumber, error) {
 	var args [0]interface{}
@@ -643,7 +547,7 @@ func (r *HelloWorld) PulseNumberAsImmutable() (insolar.PulseNumber, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "PulseNumber", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "PulseNumber", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -682,7 +586,7 @@ func (r *HelloWorld) CreateChild() (interface{}, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "CreateChild", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "CreateChild", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -704,25 +608,6 @@ func (r *HelloWorld) CreateChild() (interface{}, error) {
 	return ret0, nil
 }
 
-// CreateChildNoWait is proxy generated method
-func (r *HelloWorld) CreateChildNoWait() error {
-	var args [0]interface{}
-
-	var argsSerialized []byte
-
-	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
-	if err != nil {
-		return err
-	}
-
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "CreateChild", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // CreateChildAsImmutable is proxy generated method
 func (r *HelloWorld) CreateChildAsImmutable() (interface{}, error) {
 	var args [0]interface{}
@@ -740,7 +625,7 @@ func (r *HelloWorld) CreateChildAsImmutable() (interface{}, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "CreateChild", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "CreateChild", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -780,7 +665,7 @@ func (r *HelloWorld) Call(signedRequest []byte) (interface{}, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "Call", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "Call", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -802,26 +687,6 @@ func (r *HelloWorld) Call(signedRequest []byte) (interface{}, error) {
 	return ret0, nil
 }
 
-// CallNoWait is proxy generated method
-func (r *HelloWorld) CallNoWait(signedRequest []byte) error {
-	var args [1]interface{}
-	args[0] = signedRequest
-
-	var argsSerialized []byte
-
-	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
-	if err != nil {
-		return err
-	}
-
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "Call", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // CallAsImmutable is proxy generated method
 func (r *HelloWorld) CallAsImmutable(signedRequest []byte) (interface{}, error) {
 	var args [1]interface{}
@@ -840,7 +705,7 @@ func (r *HelloWorld) CallAsImmutable(signedRequest []byte) (interface{}, error) 
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "Call", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "Call", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}

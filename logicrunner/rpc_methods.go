@@ -289,9 +289,7 @@ func (m *validationProxyImplementation) RouteCall(
 		return reqRes.Error
 	}
 
-	if req.Wait {
-		rep.Result = reqRes.Response
-	}
+	rep.Result = reqRes.Response
 
 	return nil
 }
