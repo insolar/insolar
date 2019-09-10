@@ -32,9 +32,14 @@ type Error struct {
 	Data    Data   `json:"data,omitempty"`
 }
 
+func (e *Error) Error() string {
+	return e.Message
+}
+
 type Data struct {
-	TraceID          string `json:"traceID,omitempty"`
-	RequestReference string `json:"requestReference,omitempty"`
+	Trace            []string `json:"trace,omitempty"`
+	TraceID          string   `json:"traceID,omitempty"`
+	RequestReference string   `json:"requestReference,omitempty"`
 }
 
 type ContractResponse struct {
@@ -95,6 +100,7 @@ type InfoResponse struct {
 	RootDomain             string   `json:"rootDomain"`
 	RootMember             string   `json:"rootMember"`
 	MigrationAdminMember   string   `json:"migrationAdminMember"`
+	FeeMember              string   `json:"feeMember"`
 	MigrationDaemonMembers []string `json:"migrationDaemonMembers"`
 	NodeDomain             string   `json:"nodeDomain"`
 	TraceID                string   `json:"traceID"`

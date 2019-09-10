@@ -52,6 +52,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Couldn't set log level to %q: %s", *logLevel, err)
 	}
+	log.InitTicker(log.GlobalLogger)
 
 	if *path == "" {
 		tmpDir, err := ioutil.TempDir("", "funcTestContractcache-")
@@ -119,11 +120,7 @@ func main() {
 			ZpagesEnabled: true,
 		}
 
-		m, err := metrics.NewMetrics(ctx, metricsConfiguration, metrics.GetInsgorundRegistry(), "virtual")
-		if err != nil {
-			log.Fatal("couldn't setup metrics ", err)
-			os.Exit(1)
-		}
+		m := metrics.NewMetrics(metricsConfiguration, metrics.GetInsgorundRegistry(), "virtual")
 		err = m.Start(ctx)
 		if err != nil {
 			log.Fatal("couldn't setup metrics ", err)

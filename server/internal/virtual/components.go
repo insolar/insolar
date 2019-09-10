@@ -46,7 +46,6 @@ import (
 	"github.com/insolar/insolar/logicrunner/pulsemanager"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/servicenetwork"
-	"github.com/insolar/insolar/network/termination"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/server/internal"
 )
@@ -107,7 +106,7 @@ func initComponents(
 	keyProcessor insolar.KeyProcessor,
 	certManager insolar.CertificateManager,
 
-) (*component.Manager, insolar.TerminationHandler, func()) {
+) (*component.Manager, func()) {
 	cm := component.Manager{}
 
 	// Watermill.
@@ -128,14 +127,9 @@ func initComponents(
 	nw, err := servicenetwork.NewServiceNetwork(cfg, &cm)
 	checkError(ctx, err, "failed to start Network")
 
-	terminationHandler := termination.NewHandler(nw)
+	metricsComp := metrics.NewMetrics(cfg.Metrics, metrics.GetInsolarRegistry("virtual"), "virtual")
 
-	metricsHandler, err := metrics.NewMetrics(ctx, cfg.Metrics, metrics.GetInsolarRegistry("virtual"), "virtual")
-	checkError(ctx, err, "failed to start Metrics")
-
-	checkError(ctx, err, "failed to load VersionManager: ")
-
-	jc := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit)
+	jc := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit, *certManager.GetCertificate().GetNodeRef())
 	pulses := pulse.NewStorageMem()
 	b := bus.NewBus(cfg.Bus, publisher, pulses, jc, pcs)
 
@@ -186,7 +180,6 @@ func initComponents(
 	pm := pulsemanager.NewPulseManager()
 
 	cm.Register(
-		terminationHandler,
 		pcs,
 		keyStore,
 		cryptographyService,
@@ -213,7 +206,7 @@ func initComponents(
 		node.NewStorage(),
 	}
 	components = append(components, []interface{}{
-		metricsHandler,
+		metricsComp,
 		cryptographyService,
 		keyProcessor,
 	}...)
@@ -226,7 +219,7 @@ func initComponents(
 	// this should be done after Init due to inject
 	pm.AddDispatcher(logicRunner.FlowDispatcher, contractRequester.FlowDispatcher)
 
-	return &cm, terminationHandler, startWatermill(
+	return &cm, startWatermill(
 		ctx, wmLogger, subscriber, b,
 		nw.SendMessageHandler,
 		logicRunner.FlowDispatcher.Process,

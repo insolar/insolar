@@ -56,8 +56,6 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/stretchr/testify/require"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network"
 	mock "github.com/insolar/insolar/testutils/network"
@@ -69,12 +67,11 @@ func TestWaitConsensus_ConsensusNotHappenedInETA(t *testing.T) {
 	defer mc.Finish()
 	defer mc.Wait(time.Minute)
 
+	waitConsensus := newWaitConsensus(createBase(mc))
 	gatewayer := mock.NewGatewayerMock(mc)
-	gatewayer.FailStateMock.Set(func(ctx context.Context, reason string) {
-		require.Equal(t, "Bootstrap timeout exceeded", reason)
+	gatewayer.GatewayMock.Set(func() network.Gateway {
+		return waitConsensus
 	})
-
-	waitConsensus := newWaitConsensus(&Base{})
 	waitConsensus.Gatewayer = gatewayer
 	waitConsensus.bootstrapETA = time.Millisecond
 	waitConsensus.bootstrapTimer = time.NewTimer(waitConsensus.bootstrapETA)

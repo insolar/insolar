@@ -56,9 +56,6 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
@@ -66,17 +63,13 @@ import (
 	"github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/pulse"
 	mock "github.com/insolar/insolar/testutils/network"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestWaitMajority_MajorityNotHappenedInETA(t *testing.T) {
 	mc := minimock.NewController(t)
 	defer mc.Finish()
 	defer mc.Wait(time.Minute)
-
-	gatewayer := mock.NewGatewayerMock(mc)
-	gatewayer.FailStateMock.Set(func(ctx context.Context, reason string) {
-		require.Equal(t, "Bootstrap timeout exceeded", reason)
-	})
 
 	nodeKeeper := mock.NewNodeKeeperMock(mc)
 	nodeKeeper.GetAccessorMock.Set(func(p1 insolar.PulseNumber) (a1 network.Accessor) {
@@ -88,11 +81,17 @@ func TestWaitMajority_MajorityNotHappenedInETA(t *testing.T) {
 	})
 
 	cert := &certificate.Certificate{MajorityRule: 4}
-	waitMajority := newWaitMajority(&Base{
-		CertificateManager: certificate.NewCertificateManager(cert),
-		NodeKeeper:         nodeKeeper,
-	})
+
+	b := createBase(mc)
+	b.CertificateManager = certificate.NewCertificateManager(cert)
+	b.NodeKeeper = nodeKeeper
+
+	waitMajority := newWaitMajority(b)
 	assert.Equal(t, insolar.WaitMajority, waitMajority.GetState())
+	gatewayer := mock.NewGatewayerMock(mc)
+	gatewayer.GatewayMock.Set(func() network.Gateway {
+		return waitMajority
+	})
 	waitMajority.Gatewayer = gatewayer
 	waitMajority.bootstrapETA = time.Millisecond
 	waitMajority.bootstrapTimer = time.NewTimer(waitMajority.bootstrapETA)
@@ -112,20 +111,20 @@ func TestWaitMajority_MajorityHappenedInETA(t *testing.T) {
 
 	ref := gen.Reference()
 	nodeKeeper := mock.NewNodeKeeperMock(mc)
+	accessor1 := mock.NewAccessorMock(mc)
+	accessor1.GetWorkingNodesMock.Set(func() (na1 []insolar.NetworkNode) {
+		return []insolar.NetworkNode{}
+	})
+	accessor2 := mock.NewAccessorMock(mc)
+	accessor2.GetWorkingNodesMock.Set(func() (na1 []insolar.NetworkNode) {
+		n := node.NewNode(ref, insolar.StaticRoleHeavyMaterial, nil, "127.0.0.1:123", "")
+		return []insolar.NetworkNode{n}
+	})
 	nodeKeeper.GetAccessorMock.Set(func(p insolar.PulseNumber) (a1 network.Accessor) {
-		accessor := mock.NewAccessorMock(mc)
 		if p == pulse.MinTimePulse {
-			accessor.GetWorkingNodesMock.Set(func() (na1 []insolar.NetworkNode) {
-				return []insolar.NetworkNode{}
-			})
-		} else {
-			accessor.GetWorkingNodesMock.Set(func() (na1 []insolar.NetworkNode) {
-				n := node.NewNode(ref, insolar.StaticRoleHeavyMaterial, nil, "127.0.0.1:123", "")
-				return []insolar.NetworkNode{n}
-			})
+			return accessor1
 		}
-
-		return accessor
+		return accessor2
 	})
 
 	discoveryNode := certificate.BootstrapNode{NodeRef: ref.String()}

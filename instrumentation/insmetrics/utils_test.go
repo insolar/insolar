@@ -14,23 +14,26 @@
 // limitations under the License.
 //
 
-package insolar
+package insmetrics
 
 import (
-	"context"
+	"bytes"
+	"io"
+	"io/ioutil"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-type LeaveApproved struct{}
+func TestUtils_ValueByNamePrefix(t *testing.T) {
+	b, err := ioutil.ReadFile("testdata/openmetrics.txt")
+	require.NoError(t, err, "metrics file open")
 
-//go:generate minimock -i github.com/insolar/insolar/insolar.TerminationHandler -o ../testutils -s _mock.go -g
+	r := func() io.Reader { return bytes.NewReader(b) }
+	v1 := SumMetricsValueByNamePrefix(r(), "insolar_bus_sent_milliseconds_bucket")
+	assert.Equal(t, float64(65795), v1, "check bucket sum")
 
-// TerminationHandler handles such node events as graceful stop, abort, etc.
-type TerminationHandler interface {
-	// Leave locks until network accept leaving claim
-	Leave(context.Context, PulseNumber)
-	OnLeaveApproved(context.Context)
-	// Abort forces to stop all node components
-	Abort(reason string)
-	// Terminating is an accessor
-	Terminating() bool
+	v2 := SumMetricsValueByNamePrefix(r(), "insolar_bus_sent_milliseconds_sum")
+	assert.Equal(t, 1560.873845, v2, "check bucket sum")
 }

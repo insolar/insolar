@@ -23,6 +23,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
@@ -158,12 +159,18 @@ func newZerologAdapter(cfg configuration.Log) (*zerologAdapter, error) {
 		},
 	}
 
-	if cfg.BufferSize > 0 {
-		dw := diode.NewWriter(
-			output,
-			cfg.BufferSize, 0,
-			func(missed int) { panic(fmt.Errorf("logger dropped %d messages", missed)) },
-		)
+	missedFunc := func(missed int) { panic(fmt.Errorf("logger dropped %d messages", missed)) }
+
+	if cfg.Poller != "" {
+		d, err := time.ParseDuration(cfg.Poller)
+		if err != nil {
+			panic("Can not parse time duration " + err.Error())
+		}
+		dw := diode.NewWriter(output, cfg.BufferSize, d, missedFunc)
+		za.diodeWriter = &dw
+		output = dw
+	} else if cfg.BufferSize > 0 {
+		dw := diode.NewWriter(output, cfg.BufferSize, 0, missedFunc)
 		za.diodeWriter = &dw
 		output = dw
 	}
@@ -265,6 +272,8 @@ func (h fatalDiodeHook) Run(e *zerolog.Event, level zerolog.Level, msg string) {
 func (z *zerologAdapter) Fatal(args ...interface{}) {
 	stats.Record(contextWithLogLevel(zerolog.FatalLevel), statLogCalls.M(1))
 
+	zerolog.SetGlobalLevel(zerolog.FatalLevel)
+
 	if z.diodeWriter != nil {
 		fHook := fatalDiodeHook{diodeWriter: z.diodeWriter}
 		logger := *z.loggerWithHooks()
@@ -281,12 +290,14 @@ func (z *zerologAdapter) Fatal(args ...interface{}) {
 func (z *zerologAdapter) Fatalf(format string, args ...interface{}) {
 	stats.Record(contextWithLogLevel(zerolog.FatalLevel), statLogCalls.M(1))
 
+	zerolog.SetGlobalLevel(zerolog.FatalLevel)
+
 	if z.diodeWriter != nil {
 		fHook := fatalDiodeHook{diodeWriter: z.diodeWriter}
 		logger := *z.loggerWithHooks()
 		loggerFatal := logger.Hook(fHook)
 
-		loggerFatal.Error().Msg(fmt.Sprintf("FATAL: %v", fmt.Sprint(args...)))
+		loggerFatal.Error().Msg(fmt.Sprintf("FATAL: %v", fmt.Sprintf(format, args...)))
 		loggerFatal.Fatal().Msgf(format, args...)
 	}
 
@@ -316,6 +327,8 @@ func (h panicDiodeHook) Run(e *zerolog.Event, level zerolog.Level, msg string) {
 func (z *zerologAdapter) Panic(args ...interface{}) {
 	stats.Record(contextWithLogLevel(zerolog.PanicLevel), statLogCalls.M(1))
 
+	zerolog.SetGlobalLevel(zerolog.PanicLevel)
+
 	if z.diodeWriter != nil {
 		fHook := panicDiodeHook{diodeWriter: z.diodeWriter}
 		logger := *z.loggerWithHooks()
@@ -332,12 +345,14 @@ func (z *zerologAdapter) Panic(args ...interface{}) {
 func (z *zerologAdapter) Panicf(format string, args ...interface{}) {
 	stats.Record(contextWithLogLevel(zerolog.PanicLevel), statLogCalls.M(1))
 
+	zerolog.SetGlobalLevel(zerolog.PanicLevel)
+
 	if z.diodeWriter != nil {
 		fHook := panicDiodeHook{diodeWriter: z.diodeWriter}
 		logger := *z.loggerWithHooks()
 		loggerFatal := logger.Hook(fHook)
 
-		loggerFatal.Error().Msg(fmt.Sprintf("PANIC: %v", fmt.Sprint(args...)))
+		loggerFatal.Error().Msg(fmt.Sprintf("PANIC: %v", fmt.Sprintf(format, args...)))
 		loggerFatal.Panic().Msgf(format, args...)
 	}
 

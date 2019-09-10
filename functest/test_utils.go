@@ -354,7 +354,7 @@ func makeSignedRequest(URL string, user *launchnet.User, method string, params i
 	}
 
 	if resp.Error != nil {
-		return nil, "", errors.New(resp.Error.Message)
+		return nil, "", resp.Error
 	}
 
 	if resp.Result == nil {

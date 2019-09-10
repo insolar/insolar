@@ -7,7 +7,19 @@ import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 service PulseExporter {
     rpc Export (GetPulses) returns (stream Pulse) {
     }
+    rpc TopSyncPulse (GetTopSyncPulse) returns (TopSyncPulseResponse) {
+    }
 }
+
+message GetTopSyncPulse {
+}
+
+message TopSyncPulseResponse {
+    uint32 Polymorph = 16;
+
+    uint32 PulseNumber = 20;
+}
+
 
 message GetPulses {
     uint32 Polymorph = 16;

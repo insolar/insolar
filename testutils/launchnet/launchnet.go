@@ -20,15 +20,17 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"go/build"
 	"io"
 	"io/ioutil"
+	"log"
+	"net/http"
 	"os"
 	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -50,6 +52,7 @@ const TestRPCUrlPublic = HOST + PublicPort + "/api/rpc"
 
 const insolarRootMemberKeys = "root_member_keys.json"
 const insolarMigrationAdminMemberKeys = "migration_admin_member_keys.json"
+const insolarFeeMemberKeys = "fee_member_keys.json"
 
 var cmd *exec.Cmd
 var cmdCompleted = make(chan error, 1)
@@ -100,6 +103,7 @@ func Run(cb func() int) int {
 var info *requester.InfoResponse
 var Root User
 var MigrationAdmin User
+var FeeMember User
 var MigrationDaemons [insolar.GenesisAmountMigrationDaemonMembers]*User
 
 type User struct {
@@ -186,6 +190,14 @@ func loadAllMembersKeys() error {
 		return err
 	}
 	err = loadMemberKeys(path, &Root)
+	if err != nil {
+		return err
+	}
+	path, err = launchnetPath("configs", insolarFeeMemberKeys)
+	if err != nil {
+		return err
+	}
+	err = loadMemberKeys(path, &FeeMember)
 	if err != nil {
 		return err
 	}
@@ -348,6 +360,13 @@ func startNet() error {
 
 }
 
+var logRotatorEnableVar = "LOGROTATOR_ENABLE"
+
+// LogRotateEnabled checks is log rotation enabled by environment variable.
+func LogRotateEnabled() bool {
+	return os.Getenv(logRotatorEnableVar) == "1"
+}
+
 func waitForLaunch() error {
 	done := make(chan bool, 1)
 	timeout := 240 * time.Second
@@ -413,27 +432,123 @@ func setup() error {
 	Root.Ref = info.RootMember
 	MigrationAdmin.Ref = info.MigrationAdminMember
 
-	//Contracts = make(map[string]*contractInfo)
-
 	return nil
 }
 
 func pulseWatcherPath() (string, string, error) {
-	p, err := build.Default.Import("github.com/insolar/insolar", "", build.FindOnly)
-	if err != nil {
-		return "", "", errors.Wrap(err, "Couldn't receive path to github.com/insolar/insolar")
-	}
-	pulseWatcher := filepath.Join(p.Dir, "bin", "pulsewatcher")
-	config := filepath.Join(p.Dir, ".artifacts", "launchnet", "pulsewatcher.yaml")
+	insDir := insolar.RootModuleDir()
+	pulseWatcher := filepath.Join(insDir, "bin", "pulsewatcher")
+
+	baseDir := defaults.PathWithBaseDir(defaults.LaunchnetDir(), insDir)
+	config := filepath.Join(baseDir, "pulsewatcher.yaml")
 	return pulseWatcher, config, nil
 }
 
 func teardown() {
-	var err error
-
-	err = stopInsolard()
+	err := stopInsolard()
 	if err != nil {
-		fmt.Println("[ teardown ]  failed to stop insolard: ", err)
+		fmt.Println("[ teardown ]  failed to stop insolard:", err)
+		return
 	}
-	fmt.Println("[ teardown ] insolard was successfully stoped")
+	fmt.Println("[ teardown ] insolard was successfully stopped")
+}
+
+// RotateLogs rotates launchnet logs.
+func RotateLogs(dirPattern string, verbose bool) {
+	rmCmd := "rm -vf " + dirPattern
+	cmd := exec.Command("sh", "-c", rmCmd)
+	out, err := cmd.Output()
+	if err != nil {
+		log.Fatal("RotateLogs: failed to execute shell command: ", rmCmd)
+	}
+	if verbose {
+		fmt.Println("RotateLogs removed files:\n", string(out))
+	}
+
+	rotateCmd := "killall -v -SIGUSR2 inslogrotator"
+	cmd = exec.Command("sh", "-c", rotateCmd)
+	out, err = cmd.Output()
+	if err != nil {
+		log.Fatal("RotateLogs: failed to execute shell command:", rotateCmd)
+	}
+	if verbose {
+		println("RotateLogs killall output:", string(out))
+	}
+}
+
+var dumpMetricsEnabledVar = "DUMP_METRICS_ENABLE"
+
+// LogRotateEnabled checks is log rotation enabled by environment variable.
+func DumpMetricsEnabled() bool {
+	return os.Getenv(dumpMetricsEnabledVar) == "1"
+}
+
+var lastIteration int
+
+// FetchAndSaveMetrics
+func FetchAndSaveMetrics(iteration int) ([][]byte, error) {
+	if iteration == -1 {
+		iteration = lastIteration + 1
+	}
+	lastIteration = iteration
+
+	n, err := GetNodesCount()
+	if err != nil {
+		return nil, err
+	}
+	addrs := make([]string, n)
+	for i := 0; i < n; i++ {
+		addrs[i] = fmt.Sprintf(HOST+"80%02d", i+1)
+	}
+	results := make([][]byte, n)
+	var wg sync.WaitGroup
+	wg.Add(n)
+	for i, addr := range addrs {
+		i := i
+		addr := addr + "/metrics"
+		go func() {
+			defer wg.Done()
+
+			r, err := fetchMetrics(addr)
+			if err != nil {
+				fetchErr := fmt.Sprintf("%v fetch failed: %v\n", addr, err.Error())
+				results[i] = []byte(fetchErr)
+				return
+			}
+			results[i] = r
+		}()
+	}
+	wg.Wait()
+
+	insDir := insolar.RootModuleDir()
+	subDir := fmt.Sprintf("%04d", iteration)
+	outDir := filepath.Join(insDir, defaults.LaunchnetDir(), "logs/metrics", subDir)
+	if err := os.MkdirAll(outDir, os.ModePerm); err != nil {
+		return nil, errors.Wrap(err, "failed to create metrics subdirectory")
+	}
+
+	for i, b := range results {
+		outFile := addrs[i][strings.Index(addrs[i], "://")+3:]
+		outFile = strings.ReplaceAll(outFile, ":", "-")
+		outFile = filepath.Join(outDir, outFile) + ".txt"
+
+		err := ioutil.WriteFile(outFile, b, 0640)
+		if err != nil {
+			return nil, errors.Wrap(err, "write metrics failed")
+		}
+		fmt.Printf("Dump metrics from %v to %v\n", addrs[i], outFile)
+	}
+	return results, nil
+}
+
+func fetchMetrics(fetchURL string) ([]byte, error) {
+	r, err := http.Get(fetchURL)
+	if err != nil {
+		return nil, err
+	}
+	defer r.Body.Close()
+	if r.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("Failed to fetch metrics, got %v code", r.StatusCode)
+	}
+	return ioutil.ReadAll(r.Body)
 }

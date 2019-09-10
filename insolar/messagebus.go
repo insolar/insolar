@@ -17,7 +17,6 @@
 package insolar
 
 import (
-	"context"
 	"encoding/json"
 
 	"github.com/pkg/errors"
@@ -70,51 +69,8 @@ func convertArgs(args []byte, result *[]interface{}) error {
 	return nil
 }
 
-// MessageType is an enum type of message.
-type MessageType byte
-
 // ReplyType is an enum type of message reply.
 type ReplyType byte
-
-// Message is a routable packet, ATM just a method call
-type Message interface {
-	// Type returns message type.
-	Type() MessageType
-
-	// GetCaller returns initiator of this event.
-	GetCaller() *Reference
-
-	// DefaultTarget returns of target of this event.
-	DefaultTarget() *Reference
-
-	// DefaultRole returns role for this event
-	DefaultRole() DynamicRole
-
-	// AllowedSenderObjectAndRole extracts information from message
-	// verify sender required to 's "caller" for sender
-	// verification purpose. If nil then check of sender's role is not
-	// provided by the message bus
-	AllowedSenderObjectAndRole() (*Reference, DynamicRole)
-}
-
-type MessageSignature interface {
-	GetSign() []byte
-	GetSender() Reference
-	SetSender(Reference)
-}
-
-//go:generate minimock -i github.com/insolar/insolar/insolar.Parcel -o ../testutils -s _mock.go -g
-
-// Parcel by senders private key.
-type Parcel interface {
-	Message
-	MessageSignature
-
-	Message() Message
-	Context(context.Context) context.Context
-
-	Pulse() PulseNumber
-}
 
 // Reply for an `Message`
 type Reply interface {

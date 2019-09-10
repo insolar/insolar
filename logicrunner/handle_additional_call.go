@@ -66,7 +66,6 @@ type HandleAdditionalCallFromPreviousExecutor struct {
 	dep *Dependencies
 
 	Message payload.Meta
-	Parcel  insolar.Parcel
 }
 
 // Please note that currently we lack any fraud detection here.

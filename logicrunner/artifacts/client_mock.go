@@ -24,8 +24,8 @@ type ClientMock struct {
 	beforeActivatePrototypeCounter uint64
 	ActivatePrototypeMock          mClientMockActivatePrototype
 
-	funcDeployCode          func(ctx context.Context, domain insolar.Reference, request insolar.Reference, code []byte, machineType insolar.MachineType) (ip1 *insolar.ID, err error)
-	inspectFuncDeployCode   func(ctx context.Context, domain insolar.Reference, request insolar.Reference, code []byte, machineType insolar.MachineType)
+	funcDeployCode          func(ctx context.Context, code []byte, machineType insolar.MachineType) (ip1 *insolar.ID, err error)
+	inspectFuncDeployCode   func(ctx context.Context, code []byte, machineType insolar.MachineType)
 	afterDeployCodeCounter  uint64
 	beforeDeployCodeCounter uint64
 	DeployCodeMock          mClientMockDeployCode
@@ -95,12 +95,6 @@ type ClientMock struct {
 	afterRegisterResultCounter  uint64
 	beforeRegisterResultCounter uint64
 	RegisterResultMock          mClientMockRegisterResult
-
-	funcState          func() (ba1 []byte)
-	inspectFuncState   func()
-	afterStateCounter  uint64
-	beforeStateCounter uint64
-	StateMock          mClientMockState
 }
 
 // NewClientMock returns a mock for Client
@@ -147,8 +141,6 @@ func NewClientMock(t minimock.Tester) *ClientMock {
 
 	m.RegisterResultMock = mClientMockRegisterResult{mock: m}
 	m.RegisterResultMock.callArgs = []*ClientMockRegisterResultParams{}
-
-	m.StateMock = mClientMockState{mock: m}
 
 	return m
 }
@@ -392,8 +384,6 @@ type ClientMockDeployCodeExpectation struct {
 // ClientMockDeployCodeParams contains parameters of the Client.DeployCode
 type ClientMockDeployCodeParams struct {
 	ctx         context.Context
-	domain      insolar.Reference
-	request     insolar.Reference
 	code        []byte
 	machineType insolar.MachineType
 }
@@ -405,7 +395,7 @@ type ClientMockDeployCodeResults struct {
 }
 
 // Expect sets up expected params for Client.DeployCode
-func (mmDeployCode *mClientMockDeployCode) Expect(ctx context.Context, domain insolar.Reference, request insolar.Reference, code []byte, machineType insolar.MachineType) *mClientMockDeployCode {
+func (mmDeployCode *mClientMockDeployCode) Expect(ctx context.Context, code []byte, machineType insolar.MachineType) *mClientMockDeployCode {
 	if mmDeployCode.mock.funcDeployCode != nil {
 		mmDeployCode.mock.t.Fatalf("ClientMock.DeployCode mock is already set by Set")
 	}
@@ -414,7 +404,7 @@ func (mmDeployCode *mClientMockDeployCode) Expect(ctx context.Context, domain in
 		mmDeployCode.defaultExpectation = &ClientMockDeployCodeExpectation{}
 	}
 
-	mmDeployCode.defaultExpectation.params = &ClientMockDeployCodeParams{ctx, domain, request, code, machineType}
+	mmDeployCode.defaultExpectation.params = &ClientMockDeployCodeParams{ctx, code, machineType}
 	for _, e := range mmDeployCode.expectations {
 		if minimock.Equal(e.params, mmDeployCode.defaultExpectation.params) {
 			mmDeployCode.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmDeployCode.defaultExpectation.params)
@@ -425,7 +415,7 @@ func (mmDeployCode *mClientMockDeployCode) Expect(ctx context.Context, domain in
 }
 
 // Inspect accepts an inspector function that has same arguments as the Client.DeployCode
-func (mmDeployCode *mClientMockDeployCode) Inspect(f func(ctx context.Context, domain insolar.Reference, request insolar.Reference, code []byte, machineType insolar.MachineType)) *mClientMockDeployCode {
+func (mmDeployCode *mClientMockDeployCode) Inspect(f func(ctx context.Context, code []byte, machineType insolar.MachineType)) *mClientMockDeployCode {
 	if mmDeployCode.mock.inspectFuncDeployCode != nil {
 		mmDeployCode.mock.t.Fatalf("Inspect function is already set for ClientMock.DeployCode")
 	}
@@ -449,7 +439,7 @@ func (mmDeployCode *mClientMockDeployCode) Return(ip1 *insolar.ID, err error) *C
 }
 
 //Set uses given function f to mock the Client.DeployCode method
-func (mmDeployCode *mClientMockDeployCode) Set(f func(ctx context.Context, domain insolar.Reference, request insolar.Reference, code []byte, machineType insolar.MachineType) (ip1 *insolar.ID, err error)) *ClientMock {
+func (mmDeployCode *mClientMockDeployCode) Set(f func(ctx context.Context, code []byte, machineType insolar.MachineType) (ip1 *insolar.ID, err error)) *ClientMock {
 	if mmDeployCode.defaultExpectation != nil {
 		mmDeployCode.mock.t.Fatalf("Default expectation is already set for the Client.DeployCode method")
 	}
@@ -464,14 +454,14 @@ func (mmDeployCode *mClientMockDeployCode) Set(f func(ctx context.Context, domai
 
 // When sets expectation for the Client.DeployCode which will trigger the result defined by the following
 // Then helper
-func (mmDeployCode *mClientMockDeployCode) When(ctx context.Context, domain insolar.Reference, request insolar.Reference, code []byte, machineType insolar.MachineType) *ClientMockDeployCodeExpectation {
+func (mmDeployCode *mClientMockDeployCode) When(ctx context.Context, code []byte, machineType insolar.MachineType) *ClientMockDeployCodeExpectation {
 	if mmDeployCode.mock.funcDeployCode != nil {
 		mmDeployCode.mock.t.Fatalf("ClientMock.DeployCode mock is already set by Set")
 	}
 
 	expectation := &ClientMockDeployCodeExpectation{
 		mock:   mmDeployCode.mock,
-		params: &ClientMockDeployCodeParams{ctx, domain, request, code, machineType},
+		params: &ClientMockDeployCodeParams{ctx, code, machineType},
 	}
 	mmDeployCode.expectations = append(mmDeployCode.expectations, expectation)
 	return expectation
@@ -484,15 +474,15 @@ func (e *ClientMockDeployCodeExpectation) Then(ip1 *insolar.ID, err error) *Clie
 }
 
 // DeployCode implements Client
-func (mmDeployCode *ClientMock) DeployCode(ctx context.Context, domain insolar.Reference, request insolar.Reference, code []byte, machineType insolar.MachineType) (ip1 *insolar.ID, err error) {
+func (mmDeployCode *ClientMock) DeployCode(ctx context.Context, code []byte, machineType insolar.MachineType) (ip1 *insolar.ID, err error) {
 	mm_atomic.AddUint64(&mmDeployCode.beforeDeployCodeCounter, 1)
 	defer mm_atomic.AddUint64(&mmDeployCode.afterDeployCodeCounter, 1)
 
 	if mmDeployCode.inspectFuncDeployCode != nil {
-		mmDeployCode.inspectFuncDeployCode(ctx, domain, request, code, machineType)
+		mmDeployCode.inspectFuncDeployCode(ctx, code, machineType)
 	}
 
-	params := &ClientMockDeployCodeParams{ctx, domain, request, code, machineType}
+	params := &ClientMockDeployCodeParams{ctx, code, machineType}
 
 	// Record call args
 	mmDeployCode.DeployCodeMock.mutex.Lock()
@@ -509,7 +499,7 @@ func (mmDeployCode *ClientMock) DeployCode(ctx context.Context, domain insolar.R
 	if mmDeployCode.DeployCodeMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmDeployCode.DeployCodeMock.defaultExpectation.Counter, 1)
 		want := mmDeployCode.DeployCodeMock.defaultExpectation.params
-		got := ClientMockDeployCodeParams{ctx, domain, request, code, machineType}
+		got := ClientMockDeployCodeParams{ctx, code, machineType}
 		if want != nil && !minimock.Equal(*want, got) {
 			mmDeployCode.t.Errorf("ClientMock.DeployCode got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
 		}
@@ -521,9 +511,9 @@ func (mmDeployCode *ClientMock) DeployCode(ctx context.Context, domain insolar.R
 		return (*results).ip1, (*results).err
 	}
 	if mmDeployCode.funcDeployCode != nil {
-		return mmDeployCode.funcDeployCode(ctx, domain, request, code, machineType)
+		return mmDeployCode.funcDeployCode(ctx, code, machineType)
 	}
-	mmDeployCode.t.Fatalf("Unexpected call to ClientMock.DeployCode. %v %v %v %v %v", ctx, domain, request, code, machineType)
+	mmDeployCode.t.Fatalf("Unexpected call to ClientMock.DeployCode. %v %v %v", ctx, code, machineType)
 	return
 }
 
@@ -2840,149 +2830,6 @@ func (m *ClientMock) MinimockRegisterResultInspect() {
 	}
 }
 
-type mClientMockState struct {
-	mock               *ClientMock
-	defaultExpectation *ClientMockStateExpectation
-	expectations       []*ClientMockStateExpectation
-}
-
-// ClientMockStateExpectation specifies expectation struct of the Client.State
-type ClientMockStateExpectation struct {
-	mock *ClientMock
-
-	results *ClientMockStateResults
-	Counter uint64
-}
-
-// ClientMockStateResults contains results of the Client.State
-type ClientMockStateResults struct {
-	ba1 []byte
-}
-
-// Expect sets up expected params for Client.State
-func (mmState *mClientMockState) Expect() *mClientMockState {
-	if mmState.mock.funcState != nil {
-		mmState.mock.t.Fatalf("ClientMock.State mock is already set by Set")
-	}
-
-	if mmState.defaultExpectation == nil {
-		mmState.defaultExpectation = &ClientMockStateExpectation{}
-	}
-
-	return mmState
-}
-
-// Inspect accepts an inspector function that has same arguments as the Client.State
-func (mmState *mClientMockState) Inspect(f func()) *mClientMockState {
-	if mmState.mock.inspectFuncState != nil {
-		mmState.mock.t.Fatalf("Inspect function is already set for ClientMock.State")
-	}
-
-	mmState.mock.inspectFuncState = f
-
-	return mmState
-}
-
-// Return sets up results that will be returned by Client.State
-func (mmState *mClientMockState) Return(ba1 []byte) *ClientMock {
-	if mmState.mock.funcState != nil {
-		mmState.mock.t.Fatalf("ClientMock.State mock is already set by Set")
-	}
-
-	if mmState.defaultExpectation == nil {
-		mmState.defaultExpectation = &ClientMockStateExpectation{mock: mmState.mock}
-	}
-	mmState.defaultExpectation.results = &ClientMockStateResults{ba1}
-	return mmState.mock
-}
-
-//Set uses given function f to mock the Client.State method
-func (mmState *mClientMockState) Set(f func() (ba1 []byte)) *ClientMock {
-	if mmState.defaultExpectation != nil {
-		mmState.mock.t.Fatalf("Default expectation is already set for the Client.State method")
-	}
-
-	if len(mmState.expectations) > 0 {
-		mmState.mock.t.Fatalf("Some expectations are already set for the Client.State method")
-	}
-
-	mmState.mock.funcState = f
-	return mmState.mock
-}
-
-// State implements Client
-func (mmState *ClientMock) State() (ba1 []byte) {
-	mm_atomic.AddUint64(&mmState.beforeStateCounter, 1)
-	defer mm_atomic.AddUint64(&mmState.afterStateCounter, 1)
-
-	if mmState.inspectFuncState != nil {
-		mmState.inspectFuncState()
-	}
-
-	if mmState.StateMock.defaultExpectation != nil {
-		mm_atomic.AddUint64(&mmState.StateMock.defaultExpectation.Counter, 1)
-
-		results := mmState.StateMock.defaultExpectation.results
-		if results == nil {
-			mmState.t.Fatal("No results are set for the ClientMock.State")
-		}
-		return (*results).ba1
-	}
-	if mmState.funcState != nil {
-		return mmState.funcState()
-	}
-	mmState.t.Fatalf("Unexpected call to ClientMock.State.")
-	return
-}
-
-// StateAfterCounter returns a count of finished ClientMock.State invocations
-func (mmState *ClientMock) StateAfterCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmState.afterStateCounter)
-}
-
-// StateBeforeCounter returns a count of ClientMock.State invocations
-func (mmState *ClientMock) StateBeforeCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmState.beforeStateCounter)
-}
-
-// MinimockStateDone returns true if the count of the State invocations corresponds
-// the number of defined expectations
-func (m *ClientMock) MinimockStateDone() bool {
-	for _, e := range m.StateMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			return false
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.StateMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterStateCounter) < 1 {
-		return false
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcState != nil && mm_atomic.LoadUint64(&m.afterStateCounter) < 1 {
-		return false
-	}
-	return true
-}
-
-// MinimockStateInspect logs each unmet expectation
-func (m *ClientMock) MinimockStateInspect() {
-	for _, e := range m.StateMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			m.t.Error("Expected call to ClientMock.State")
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.StateMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterStateCounter) < 1 {
-		m.t.Error("Expected call to ClientMock.State")
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcState != nil && mm_atomic.LoadUint64(&m.afterStateCounter) < 1 {
-		m.t.Error("Expected call to ClientMock.State")
-	}
-}
-
 // MinimockFinish checks that all mocked methods have been called the expected number of times
 func (m *ClientMock) MinimockFinish() {
 	if !m.minimockDone() {
@@ -3011,8 +2858,6 @@ func (m *ClientMock) MinimockFinish() {
 		m.MinimockRegisterOutgoingRequestInspect()
 
 		m.MinimockRegisterResultInspect()
-
-		m.MinimockStateInspect()
 		m.t.FailNow()
 	}
 }
@@ -3048,6 +2893,5 @@ func (m *ClientMock) minimockDone() bool {
 		m.MinimockInjectObjectDescriptorDone() &&
 		m.MinimockRegisterIncomingRequestDone() &&
 		m.MinimockRegisterOutgoingRequestDone() &&
-		m.MinimockRegisterResultDone() &&
-		m.MinimockStateDone()
+		m.MinimockRegisterResultDone()
 }

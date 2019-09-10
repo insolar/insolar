@@ -52,6 +52,7 @@ import (
 	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network"
 	networknode "github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/platformpolicy"
@@ -89,6 +90,8 @@ type Server struct {
 	clientSender bus.Sender
 	replicator   executor.LightReplicator
 	cleaner      executor.Cleaner
+
+	metrics *metrics.Metrics
 }
 
 func DefaultLightConfig() configuration.Configuration {
@@ -182,11 +185,10 @@ func NewServer(
 		Pulses = insolarPulse.NewStorageMem()
 		Jets = jet.NewStore()
 
-		c := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit)
+		c := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit, light.ref)
 		c.PulseCalculator = Pulses
 		c.PulseAccessor = Pulses
 		c.JetAccessor = Jets
-		c.OriginProvider = NodeNetwork
 		c.PlatformCryptographyScheme = CryptoScheme
 		c.Nodes = Nodes
 
@@ -205,11 +207,10 @@ func NewServer(
 		ClientPubSub = gochannel.NewGoChannel(gochannel.Config{}, logger)
 		ServerBus = bus.NewBus(cfg.Bus, ServerPubSub, Pulses, Coordinator, CryptoScheme)
 
-		c := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit)
+		c := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit, virtual.ref)
 		c.PulseCalculator = Pulses
 		c.PulseAccessor = Pulses
 		c.JetAccessor = Jets
-		c.OriginProvider = newNodeNetMock(&virtual)
 		c.PlatformCryptographyScheme = CryptoScheme
 		c.Nodes = Nodes
 		ClientBus = bus.NewBus(cfg.Bus, ClientPubSub, Pulses, c, CryptoScheme)
@@ -434,12 +435,18 @@ func NewServer(
 		"heavy":   heavy.ID().String(),
 	}).Info("started test server")
 
+	m := metrics.NewMetrics(configuration.NewMetrics(), metrics.GetInsolarRegistry("test-server"), "test-server")
+	if err := m.Init(ctx); err != nil {
+		panic(err)
+	}
+
 	s := &Server{
 		pm:           PulseManager,
 		pulse:        *insolar.GenesisPulse,
 		clientSender: ClientBus,
 		replicator:   Replicator,
 		cleaner:      Cleaner,
+		metrics:      m,
 	}
 	return s, nil
 }

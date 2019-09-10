@@ -22,6 +22,8 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/insolar/insolar/api/requester"
+
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/testutils/launchnet"
 
@@ -31,7 +33,7 @@ import (
 func TestGetBalance(t *testing.T) {
 	firstMember := createMember(t)
 	firstBalance := getBalanceNoErr(t, firstMember, firstMember.Ref)
-	r := big.NewInt(10000000000)
+	r := big.NewInt(100000000000000)
 	require.Equal(t, r, firstBalance)
 }
 
@@ -39,5 +41,7 @@ func TestGetBalanceWrongRef(t *testing.T) {
 	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, &launchnet.Root, "member.getBalance",
 		map[string]interface{}{"reference": gen.Reference().String()})
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "index not found")
+	require.IsType(t, &requester.Error{}, err)
+	data := err.(*requester.Error).Data
+	require.Contains(t, data.Trace, "failed to fetch index from heavy")
 }

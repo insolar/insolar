@@ -104,6 +104,8 @@ func Unwrap(v *Virtual) Record {
 		return r.Deactivate
 	case *Virtual_PendingFilament:
 		return r.PendingFilament
+	case nil:
+		return nil
 	default:
 		panic(fmt.Sprintf("%T virtual record unknown type", r))
 	}

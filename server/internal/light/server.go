@@ -33,13 +33,11 @@ import (
 
 type Server struct {
 	cfgPath string
-	trace   bool
 }
 
-func New(cfgPath string, trace bool) *Server {
+func New(cfgPath string) *Server {
 	return &Server{
 		cfgPath: cfgPath,
-		trace:   trace,
 	}
 }
 
@@ -62,12 +60,16 @@ func (s *Server) Serve() {
 	ctx := context.Background()
 	traceID := "main_" + utils.RandTraceID()
 	ctx, inslog := inslogger.InitNodeLogger(ctx, cfg.Log, traceID, "", "")
+	log.InitTicker(inslog)
 
 	cmp, err := newComponents(ctx, *cfg)
 	fatal(ctx, err, "failed to create components")
 
-	ctx, jaegerFlush := internal.Jaeger(ctx, cfg.Tracer.Jaeger, traceID, cmp.NodeRef, cmp.NodeRole)
-	defer jaegerFlush()
+	if cfg.Tracer.Jaeger.AgentEndpoint != "" {
+		var jaegerFlush func()
+		ctx, jaegerFlush = internal.Jaeger(ctx, cfg.Tracer.Jaeger, traceID, cmp.NodeRef, cmp.NodeRole)
+		defer jaegerFlush()
+	}
 
 	var gracefulStop = make(chan os.Signal, 1)
 	signal.Notify(gracefulStop, syscall.SIGTERM)

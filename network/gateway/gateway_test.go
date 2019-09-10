@@ -162,7 +162,7 @@ func TestDumbComplete_GetCert(t *testing.T) {
 
 	cref := gen.Reference()
 
-	CR.SendRequestMock.Set(func(ctx context.Context, ref *insolar.Reference, method string, argsIn []interface{}, p insolar.PulseNumber,
+	CR.CallMock.Set(func(ctx context.Context, ref *insolar.Reference, method string, argsIn []interface{}, p insolar.PulseNumber,
 	) (r insolar.Reply, r2 *insolar.Reference, r1 error) {
 		require.Equal(t, &cref, ref)
 		require.Equal(t, "GetNodeInfo", method)

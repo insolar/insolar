@@ -25,10 +25,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/api"
-	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/stretchr/testify/require"
 
+	"github.com/insolar/insolar/api"
+	"github.com/insolar/insolar/api/requester"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/testutils/launchnet"
 )
 
@@ -52,7 +53,8 @@ func TestDepositTransferToken(t *testing.T) {
 			Error: &foundation.Error{err.Error()},
 		}
 	}
-	_, err := waitUntilRequestProcessed(anon, time.Second*20, time.Second, 20)
+
+	_, err := waitUntilRequestProcessed(anon, time.Second*30, time.Second, 30)
 	require.NoError(t, err)
 	fmt.Println(" SUCCESS")
 	fmt.Print("Vesting STEP")
@@ -68,7 +70,7 @@ func TestDepositTransferToken(t *testing.T) {
 			Error: &foundation.Error{err.Error()},
 		}
 	}
-	_, err = waitUntilRequestProcessed(anon, time.Second*20, time.Second, 20)
+	_, err = waitUntilRequestProcessed(anon, time.Second*30, time.Second, 30)
 	require.NoError(t, err)
 	fmt.Print(" SUCCESS\n")
 	checkBalanceFewTimes(t, member, member.Ref, secondBalance)
@@ -80,7 +82,9 @@ func TestDepositTransferBeforeUnhold(t *testing.T) {
 	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, member,
 		"deposit.transfer", map[string]interface{}{"amount": "100", "ethTxHash": "Eth_TxHash_test"})
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "hold period didn't end")
+	require.IsType(t, &requester.Error{}, err)
+	data := err.(*requester.Error).Data
+	require.Contains(t, data.Trace, "hold period didn't end")
 }
 
 func TestDepositTransferBiggerAmount(t *testing.T) {
@@ -89,7 +93,9 @@ func TestDepositTransferBiggerAmount(t *testing.T) {
 	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, member,
 		"deposit.transfer", map[string]interface{}{"amount": "10000000000000", "ethTxHash": "Eth_TxHash_test"})
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "not enough balance for transfer")
+	require.IsType(t, &requester.Error{}, err)
+	data := err.(*requester.Error).Data
+	require.Contains(t, data.Trace, "not enough balance for transfer")
 }
 
 func TestDepositTransferAnotherTx(t *testing.T) {
@@ -98,7 +104,9 @@ func TestDepositTransferAnotherTx(t *testing.T) {
 	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, member,
 		"deposit.transfer", map[string]interface{}{"amount": "100", "ethTxHash": "Eth_TxHash_testNovalid"})
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "can't find deposit")
+	require.IsType(t, &requester.Error{}, err)
+	data := err.(*requester.Error).Data
+	require.Contains(t, data.Trace, "can't find deposit")
 }
 
 func TestDepositTransferWrongValueAmount(t *testing.T) {
@@ -107,7 +115,9 @@ func TestDepositTransferWrongValueAmount(t *testing.T) {
 	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, member,
 		"deposit.transfer", map[string]interface{}{"amount": "foo", "ethTxHash": "Eth_TxHash_test"})
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "can't parse input amount")
+	require.IsType(t, &requester.Error{}, err)
+	data := err.(*requester.Error).Data
+	require.Contains(t, data.Trace, "can't parse input amount")
 }
 
 func TestDepositTransferNotEnoughConfirms(t *testing.T) {
@@ -120,5 +130,7 @@ func TestDepositTransferNotEnoughConfirms(t *testing.T) {
 	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, member,
 		"deposit.transfer", map[string]interface{}{"amount": "100", "ethTxHash": "Eth_TxHash_test"})
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "not enough balance for transfer")
+	require.IsType(t, &requester.Error{}, err)
+	data := err.(*requester.Error).Data
+	require.Contains(t, data.Trace, "not enough balance for transfer")
 }

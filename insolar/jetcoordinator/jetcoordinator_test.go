@@ -37,7 +37,6 @@ import (
 	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/insolar/insolar/pulse"
 	"github.com/insolar/insolar/testutils"
-	"github.com/insolar/insolar/testutils/network"
 )
 
 type jetCoordinatorSuite struct {
@@ -74,8 +73,7 @@ func (s *jetCoordinatorSuite) BeforeTest(suiteName, testName string) {
 	storage := jet.NewStore()
 	s.jetStorage = storage
 	s.nodeStorage = node.NewAccessorMock(s.T())
-	s.coordinator = NewJetCoordinator(5)
-	s.coordinator.OriginProvider = network.NewOriginProviderMock(s.T())
+	s.coordinator = NewJetCoordinator(5, gen.Reference())
 
 	s.cm.Inject(
 		testutils.NewPlatformCryptographyScheme(),
@@ -132,12 +130,7 @@ func TestJetCoordinator_Me(t *testing.T) {
 	t.Parallel()
 	// Arrange
 	expectedID := gen.Reference()
-	nodeNet := network.NewNodeNetworkMock(t)
-	node := network.NewNetworkNodeMock(t)
-	nodeNet.GetOriginMock.Return(node)
-	node.IDMock.Return(expectedID)
-	jc := NewJetCoordinator(1)
-	jc.OriginProvider = nodeNet
+	jc := NewJetCoordinator(1, expectedID)
 
 	// Act
 	resultID := jc.Me()
@@ -149,7 +142,7 @@ func TestJetCoordinator_Me(t *testing.T) {
 func TestNewJetCoordinator(t *testing.T) {
 	t.Parallel()
 	// Act
-	calc := NewJetCoordinator(12)
+	calc := NewJetCoordinator(12, gen.Reference())
 
 	// Assert
 	require.NotNil(t, calc)
@@ -164,7 +157,7 @@ func TestJetCoordinator_IsBeyondLimit_ProblemsWithTracker(t *testing.T) {
 	pulseCalculator.BackwardsMock.Return(insolar.Pulse{}, errors.New("it's expected"))
 	pulseAccessor := insolarPulse.NewAccessorMock(t)
 	pulseAccessor.LatestMock.Return(insolar.Pulse{PulseNumber: pulse.MinTimePulse + 2}, nil)
-	calc := NewJetCoordinator(12)
+	calc := NewJetCoordinator(12, gen.Reference())
 	calc.PulseCalculator = pulseCalculator
 	calc.PulseAccessor = pulseAccessor
 
@@ -181,7 +174,7 @@ func TestJetCoordinator_IsBeyondLimit_OutsideOfLightChainLimit(t *testing.T) {
 	// Arrange
 	ctx := inslogger.TestContext(t)
 
-	coord := NewJetCoordinator(25)
+	coord := NewJetCoordinator(25, gen.Reference())
 	pulseCalculator := insolarPulse.NewCalculatorMock(t)
 	pulseCalculator.BackwardsMock.Expect(ctx, pulse.MinTimePulse, 25).Return(insolar.Pulse{PulseNumber: 34}, nil)
 	pulseAccessor := insolarPulse.NewAccessorMock(t)
@@ -204,7 +197,7 @@ func TestJetCoordinator_IsBeyondLimit_PulseNotFoundIsNotBeyondLimit(t *testing.T
 	mc := minimock.NewController(t)
 	defer mc.Finish()
 
-	coord := NewJetCoordinator(25)
+	coord := NewJetCoordinator(25, gen.Reference())
 	pulseCalculator := insolarPulse.NewCalculatorMock(mc)
 	pulseCalculator.BackwardsMock.Expect(ctx, pulse.MinTimePulse+2, 1).Return(insolar.Pulse{}, insolarPulse.ErrNotFound)
 	pulseAccessor := insolarPulse.NewAccessorMock(mc)
@@ -224,7 +217,7 @@ func TestJetCoordinator_IsBeyondLimit_InsideOfLightChainLimit(t *testing.T) {
 	t.Parallel()
 	// Arrange
 	ctx := inslogger.TestContext(t)
-	coord := NewJetCoordinator(25)
+	coord := NewJetCoordinator(25, gen.Reference())
 	pulseCalculator := insolarPulse.NewCalculatorMock(t)
 	pulseCalculator.BackwardsMock.Expect(ctx, pulse.MinTimePulse+1, 25).Return(insolar.Pulse{PulseNumber: 15}, nil)
 	pulseAccessor := insolarPulse.NewAccessorMock(t)
@@ -248,7 +241,7 @@ func TestJetCoordinator_NodeForJet_CheckLimitFailed(t *testing.T) {
 	pulseCalculator.BackwardsMock.Return(insolar.Pulse{}, errors.New("it's expected"))
 	pulseAccessor := insolarPulse.NewAccessorMock(t)
 	pulseAccessor.LatestMock.Return(insolar.Pulse{PulseNumber: pulse.MinTimePulse + 2}, nil)
-	calc := NewJetCoordinator(12)
+	calc := NewJetCoordinator(12, gen.Reference())
 	calc.PulseCalculator = pulseCalculator
 	calc.PulseAccessor = pulseAccessor
 
@@ -279,7 +272,7 @@ func TestJetCoordinator_NodeForJet_GoToHeavy(t *testing.T) {
 		return []insolar.Node{{ID: *expectedID}}, nil
 	})
 
-	coord := NewJetCoordinator(25)
+	coord := NewJetCoordinator(25, gen.Reference())
 	coord.PulseCalculator = pulseCalculator
 	coord.Nodes = activeNodesStorageMock
 	coord.PlatformCryptographyScheme = platformpolicy.NewPlatformCryptographyScheme()
@@ -313,7 +306,7 @@ func TestJetCoordinator_NodeForJet_GoToLight(t *testing.T) {
 		return []insolar.Node{{ID: *expectedID}}, nil
 	})
 
-	coord := NewJetCoordinator(25)
+	coord := NewJetCoordinator(25, gen.Reference())
 	coord.PulseAccessor = pulseAccessor
 	coord.PulseCalculator = pulseCalculator
 	coord.Nodes = activeNodesStorageMock

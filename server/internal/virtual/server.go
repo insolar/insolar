@@ -33,13 +33,11 @@ import (
 
 type Server struct {
 	cfgPath string
-	trace   bool
 }
 
-func New(cfgPath string, trace bool) *Server {
+func New(cfgPath string) *Server {
 	return &Server{
 		cfgPath: cfgPath,
-		trace:   trace,
 	}
 }
 
@@ -73,11 +71,16 @@ func (s *Server) Serve() {
 	nodeRef := certManager.GetCertificate().GetNodeRef().String()
 
 	traceID := "main_" + utils.RandTraceID()
-	ctx, inslog := inslogger.InitNodeLogger(ctx, cfg.Log, traceID, nodeRef, nodeRole)
-	ctx, jaegerFlush := internal.Jaeger(ctx, cfg.Tracer.Jaeger, traceID, nodeRef, nodeRole)
-	defer jaegerFlush()
+	ctx, logger := inslogger.InitNodeLogger(ctx, cfg.Log, traceID, nodeRef, nodeRole)
+	log.InitTicker(logger)
 
-	cm, th, stopWatermill := initComponents(
+	if cfg.Tracer.Jaeger.AgentEndpoint != "" {
+		var jaegerFlush func()
+		ctx, jaegerFlush = internal.Jaeger(ctx, cfg.Tracer.Jaeger, traceID, nodeRef, nodeRole)
+		defer jaegerFlush()
+	}
+
+	cm, stopWatermill := initComponents(
 		ctx,
 		*cfg,
 		bootstrapComponents.CryptographyService,
@@ -95,11 +98,12 @@ func (s *Server) Serve() {
 
 	go func() {
 		sig := <-gracefulStop
-		inslog.Debug("caught sig: ", sig)
+		logger.Debug("caught sig: ", sig)
 
-		inslog.Warn("GRACEFUL STOP APP")
-		th.Leave(ctx, 10)
-		inslog.Info("main leave ends ")
+		logger.Warn("GRACEFUL STOP APP")
+		// th.Leave(ctx, 10) TODO: is actual ??
+		logger.Info("main leave ends ")
+
 		err = cm.GracefulStop(ctx)
 		checkError(ctx, err, "failed to graceful stop components")
 

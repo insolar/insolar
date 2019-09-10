@@ -27,6 +27,92 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion2 // please upgrade the proto package
 
+type GetTopSyncPulse struct {
+}
+
+func (m *GetTopSyncPulse) Reset()      { *m = GetTopSyncPulse{} }
+func (*GetTopSyncPulse) ProtoMessage() {}
+func (*GetTopSyncPulse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_c59ef702cec231ca, []int{0}
+}
+func (m *GetTopSyncPulse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *GetTopSyncPulse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_GetTopSyncPulse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *GetTopSyncPulse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GetTopSyncPulse.Merge(m, src)
+}
+func (m *GetTopSyncPulse) XXX_Size() int {
+	return m.Size()
+}
+func (m *GetTopSyncPulse) XXX_DiscardUnknown() {
+	xxx_messageInfo_GetTopSyncPulse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_GetTopSyncPulse proto.InternalMessageInfo
+
+type TopSyncPulseResponse struct {
+	Polymorph   uint32 `protobuf:"varint,16,opt,name=Polymorph,proto3" json:"Polymorph,omitempty"`
+	PulseNumber uint32 `protobuf:"varint,20,opt,name=PulseNumber,proto3" json:"PulseNumber,omitempty"`
+}
+
+func (m *TopSyncPulseResponse) Reset()      { *m = TopSyncPulseResponse{} }
+func (*TopSyncPulseResponse) ProtoMessage() {}
+func (*TopSyncPulseResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_c59ef702cec231ca, []int{1}
+}
+func (m *TopSyncPulseResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *TopSyncPulseResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_TopSyncPulseResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *TopSyncPulseResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_TopSyncPulseResponse.Merge(m, src)
+}
+func (m *TopSyncPulseResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *TopSyncPulseResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_TopSyncPulseResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_TopSyncPulseResponse proto.InternalMessageInfo
+
+func (m *TopSyncPulseResponse) GetPolymorph() uint32 {
+	if m != nil {
+		return m.Polymorph
+	}
+	return 0
+}
+
+func (m *TopSyncPulseResponse) GetPulseNumber() uint32 {
+	if m != nil {
+		return m.PulseNumber
+	}
+	return 0
+}
+
 type GetPulses struct {
 	Polymorph   uint32                                         `protobuf:"varint,16,opt,name=Polymorph,proto3" json:"Polymorph,omitempty"`
 	PulseNumber github_com_insolar_insolar_insolar.PulseNumber `protobuf:"bytes,20,opt,name=PulseNumber,proto3,customtype=github.com/insolar/insolar/insolar.PulseNumber" json:"PulseNumber"`
@@ -36,7 +122,7 @@ type GetPulses struct {
 func (m *GetPulses) Reset()      { *m = GetPulses{} }
 func (*GetPulses) ProtoMessage() {}
 func (*GetPulses) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c59ef702cec231ca, []int{0}
+	return fileDescriptor_c59ef702cec231ca, []int{2}
 }
 func (m *GetPulses) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -89,7 +175,7 @@ type Pulse struct {
 func (m *Pulse) Reset()      { *m = Pulse{} }
 func (*Pulse) ProtoMessage() {}
 func (*Pulse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c59ef702cec231ca, []int{1}
+	return fileDescriptor_c59ef702cec231ca, []int{3}
 }
 func (m *Pulse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -133,6 +219,8 @@ func (m *Pulse) GetPulseTimestamp() int64 {
 }
 
 func init() {
+	proto.RegisterType((*GetTopSyncPulse)(nil), "exporter.GetTopSyncPulse")
+	proto.RegisterType((*TopSyncPulseResponse)(nil), "exporter.TopSyncPulseResponse")
 	proto.RegisterType((*GetPulses)(nil), "exporter.GetPulses")
 	proto.RegisterType((*Pulse)(nil), "exporter.Pulse")
 }
@@ -142,31 +230,83 @@ func init() {
 }
 
 var fileDescriptor_c59ef702cec231ca = []byte{
-	// 343 bytes of a gzipped FileDescriptorProto
+	// 401 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xd2, 0xca, 0x49, 0x4d, 0x49,
 	0x4f, 0x2d, 0xd2, 0xcf, 0x48, 0x4d, 0x2c, 0xab, 0xd4, 0x4f, 0xad, 0x28, 0xc8, 0x2f, 0x2a, 0x49,
 	0x2d, 0xd2, 0x2f, 0x28, 0xcd, 0x29, 0x4e, 0x8d, 0x87, 0x71, 0xf5, 0x0a, 0x8a, 0xf2, 0x4b, 0xf2,
 	0x85, 0x38, 0x60, 0x7c, 0x29, 0xdd, 0xf4, 0xcc, 0x92, 0x8c, 0xd2, 0x24, 0xbd, 0xe4, 0xfc, 0x5c,
 	0xfd, 0xf4, 0xfc, 0xf4, 0x7c, 0x7d, 0xb0, 0x82, 0xa4, 0xd2, 0x34, 0x30, 0x0f, 0xcc, 0x01, 0xb3,
-	0x20, 0x1a, 0x95, 0x66, 0x32, 0x72, 0x71, 0xba, 0xa7, 0x96, 0x04, 0x80, 0x0c, 0x2d, 0x16, 0x92,
-	0xe1, 0xe2, 0x0c, 0xc8, 0xcf, 0xa9, 0xcc, 0xcd, 0x2f, 0x2a, 0xc8, 0x90, 0x10, 0x50, 0x60, 0xd4,
-	0xe0, 0x0d, 0x42, 0x08, 0x08, 0x45, 0x70, 0x71, 0x83, 0xd5, 0xf9, 0x95, 0xe6, 0x26, 0xa5, 0x16,
-	0x49, 0x88, 0x28, 0x30, 0x6a, 0xf0, 0x38, 0x99, 0x9d, 0xb8, 0x27, 0xcf, 0x70, 0xeb, 0x9e, 0xbc,
-	0x1e, 0x92, 0xbd, 0x99, 0x79, 0xc5, 0xf9, 0x39, 0x89, 0x45, 0xe8, 0xb4, 0x1e, 0x92, 0xee, 0x20,
-	0x64, 0xa3, 0x84, 0x44, 0xb8, 0x58, 0x9d, 0xf3, 0x4b, 0xf3, 0x4a, 0x24, 0xc4, 0xc0, 0x76, 0x42,
-	0x38, 0x4a, 0x5f, 0x19, 0xb9, 0x58, 0xc1, 0xaa, 0x06, 0xcc, 0x5d, 0x3e, 0x5c, 0xec, 0xae, 0x79,
-	0x25, 0x45, 0xf9, 0x05, 0x95, 0x12, 0xa2, 0x60, 0x53, 0x8d, 0xa0, 0xa6, 0x6a, 0x11, 0x61, 0x2a,
-	0x54, 0x67, 0x10, 0xcc, 0x08, 0x21, 0x35, 0x2e, 0x3e, 0xb0, 0xe1, 0x21, 0x99, 0xb9, 0xa9, 0xc5,
-	0x25, 0x89, 0xb9, 0x05, 0x60, 0xef, 0x32, 0x07, 0xa1, 0x89, 0x1a, 0x39, 0x73, 0xf1, 0x82, 0x45,
-	0x5c, 0xa1, 0x71, 0x2a, 0x64, 0xc4, 0xc5, 0x06, 0x61, 0x0b, 0x09, 0xeb, 0xc1, 0x23, 0x1e, 0x1e,
-	0x6b, 0x52, 0xfc, 0x08, 0x41, 0xb0, 0x88, 0x12, 0x83, 0x01, 0xa3, 0x93, 0xc9, 0x85, 0x87, 0x72,
-	0x0c, 0x37, 0x1e, 0xca, 0x31, 0x7c, 0x78, 0x28, 0xc7, 0xd8, 0xf0, 0x48, 0x8e, 0x71, 0xc5, 0x23,
-	0x39, 0xc6, 0x13, 0x8f, 0xe4, 0x18, 0x2f, 0x3c, 0x92, 0x63, 0x7c, 0xf0, 0x48, 0x8e, 0xf1, 0xc5,
-	0x23, 0x39, 0x86, 0x0f, 0x8f, 0xe4, 0x18, 0x27, 0x3c, 0x96, 0x63, 0xb8, 0xf0, 0x58, 0x8e, 0xe1,
-	0xc6, 0x63, 0x39, 0x86, 0x24, 0x36, 0x70, 0xaa, 0x30, 0x06, 0x04, 0x00, 0x00, 0xff, 0xff, 0x1d,
-	0xf8, 0x34, 0xb3, 0x7c, 0x02, 0x00, 0x00,
+	0x20, 0x1a, 0x95, 0x04, 0xb9, 0xf8, 0xdd, 0x53, 0x4b, 0x42, 0xf2, 0x0b, 0x82, 0x2b, 0xf3, 0x92,
+	0x03, 0x40, 0x46, 0x2b, 0x85, 0x71, 0x89, 0x20, 0xf3, 0x83, 0x52, 0x8b, 0x0b, 0xf2, 0xf3, 0x8a,
+	0x53, 0x85, 0x64, 0xb8, 0x38, 0x03, 0xf2, 0x73, 0x2a, 0x73, 0xf3, 0x8b, 0x0a, 0x32, 0x24, 0x04,
+	0x14, 0x18, 0x35, 0x78, 0x83, 0x10, 0x02, 0x42, 0x0a, 0x5c, 0xdc, 0x60, 0xe5, 0x7e, 0xa5, 0xb9,
+	0x49, 0xa9, 0x45, 0x12, 0x22, 0x60, 0x79, 0x64, 0x21, 0xa5, 0x99, 0x8c, 0x5c, 0x9c, 0xee, 0xa9,
+	0x25, 0x60, 0xa1, 0x62, 0x02, 0xa6, 0x45, 0x60, 0x9a, 0xc6, 0xe3, 0x64, 0x76, 0xe2, 0x9e, 0x3c,
+	0xc3, 0xad, 0x7b, 0xf2, 0x7a, 0x48, 0x5e, 0xcc, 0xcc, 0x2b, 0xce, 0xcf, 0x49, 0x2c, 0x42, 0xa7,
+	0xf5, 0x90, 0x74, 0xa3, 0xb8, 0x42, 0x48, 0x84, 0x8b, 0xd5, 0x39, 0xbf, 0x34, 0xaf, 0x44, 0x42,
+	0x0c, 0x6c, 0x27, 0x84, 0xa3, 0xf4, 0x95, 0x91, 0x8b, 0x15, 0xac, 0x6a, 0xc0, 0xdc, 0xe5, 0xc3,
+	0xc5, 0xee, 0x9a, 0x57, 0x52, 0x94, 0x5f, 0x50, 0x29, 0x21, 0x0a, 0x36, 0xd5, 0x08, 0x6a, 0xaa,
+	0x16, 0x11, 0xa6, 0x42, 0x75, 0x06, 0xc1, 0x8c, 0x10, 0x52, 0xe3, 0xe2, 0x03, 0x1b, 0x1e, 0x92,
+	0x99, 0x9b, 0x5a, 0x5c, 0x92, 0x98, 0x5b, 0x00, 0xf6, 0x2e, 0x73, 0x10, 0x9a, 0xa8, 0xd1, 0x04,
+	0x46, 0x2e, 0x5e, 0xb0, 0x90, 0x2b, 0x34, 0xfd, 0x08, 0x19, 0x71, 0xb1, 0x41, 0xd8, 0x42, 0xc2,
+	0x7a, 0xf0, 0x44, 0x06, 0x8f, 0x36, 0x29, 0x7e, 0x84, 0x20, 0x24, 0xb5, 0x30, 0x18, 0x30, 0x0a,
+	0x79, 0x73, 0xf1, 0x20, 0xa7, 0x18, 0x21, 0x49, 0x14, 0x9d, 0xc8, 0x52, 0x52, 0x72, 0x08, 0x29,
+	0x6c, 0x89, 0x4c, 0x89, 0xc1, 0xc9, 0xe4, 0xc2, 0x43, 0x39, 0x86, 0x1b, 0x0f, 0xe5, 0x18, 0x3e,
+	0x3c, 0x94, 0x63, 0x6c, 0x78, 0x24, 0xc7, 0xb8, 0xe2, 0x91, 0x1c, 0xe3, 0x89, 0x47, 0x72, 0x8c,
+	0x17, 0x1e, 0xc9, 0x31, 0x3e, 0x78, 0x24, 0xc7, 0xf8, 0xe2, 0x91, 0x1c, 0xc3, 0x87, 0x47, 0x72,
+	0x8c, 0x13, 0x1e, 0xcb, 0x31, 0x5c, 0x78, 0x2c, 0xc7, 0x70, 0xe3, 0xb1, 0x1c, 0x43, 0x12, 0x1b,
+	0x38, 0x39, 0x1b, 0x03, 0x02, 0x00, 0x00, 0xff, 0xff, 0x60, 0xd1, 0xde, 0x17, 0x35, 0x03, 0x00,
+	0x00,
 }
 
+func (this *GetTopSyncPulse) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*GetTopSyncPulse)
+	if !ok {
+		that2, ok := that.(GetTopSyncPulse)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	return true
+}
+func (this *TopSyncPulseResponse) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*TopSyncPulseResponse)
+	if !ok {
+		that2, ok := that.(TopSyncPulseResponse)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if this.Polymorph != that1.Polymorph {
+		return false
+	}
+	if this.PulseNumber != that1.PulseNumber {
+		return false
+	}
+	return true
+}
 func (this *GetPulses) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
@@ -230,6 +370,26 @@ func (this *Pulse) Equal(that interface{}) bool {
 	}
 	return true
 }
+func (this *GetTopSyncPulse) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := make([]string, 0, 4)
+	s = append(s, "&exporter.GetTopSyncPulse{")
+	s = append(s, "}")
+	return strings.Join(s, "")
+}
+func (this *TopSyncPulseResponse) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := make([]string, 0, 6)
+	s = append(s, "&exporter.TopSyncPulseResponse{")
+	s = append(s, "Polymorph: "+fmt.Sprintf("%#v", this.Polymorph)+",\n")
+	s = append(s, "PulseNumber: "+fmt.Sprintf("%#v", this.PulseNumber)+",\n")
+	s = append(s, "}")
+	return strings.Join(s, "")
+}
 func (this *GetPulses) GoString() string {
 	if this == nil {
 		return "nil"
@@ -277,6 +437,7 @@ const _ = grpc.SupportPackageIsVersion4
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type PulseExporterClient interface {
 	Export(ctx context.Context, in *GetPulses, opts ...grpc.CallOption) (PulseExporter_ExportClient, error)
+	TopSyncPulse(ctx context.Context, in *GetTopSyncPulse, opts ...grpc.CallOption) (*TopSyncPulseResponse, error)
 }
 
 type pulseExporterClient struct {
@@ -319,9 +480,19 @@ func (x *pulseExporterExportClient) Recv() (*Pulse, error) {
 	return m, nil
 }
 
+func (c *pulseExporterClient) TopSyncPulse(ctx context.Context, in *GetTopSyncPulse, opts ...grpc.CallOption) (*TopSyncPulseResponse, error) {
+	out := new(TopSyncPulseResponse)
+	err := c.cc.Invoke(ctx, "/exporter.PulseExporter/TopSyncPulse", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // PulseExporterServer is the server API for PulseExporter service.
 type PulseExporterServer interface {
 	Export(*GetPulses, PulseExporter_ExportServer) error
+	TopSyncPulse(context.Context, *GetTopSyncPulse) (*TopSyncPulseResponse, error)
 }
 
 func RegisterPulseExporterServer(s *grpc.Server, srv PulseExporterServer) {
@@ -349,10 +520,33 @@ func (x *pulseExporterExportServer) Send(m *Pulse) error {
 	return x.ServerStream.SendMsg(m)
 }
 
+func _PulseExporter_TopSyncPulse_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetTopSyncPulse)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PulseExporterServer).TopSyncPulse(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/exporter.PulseExporter/TopSyncPulse",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PulseExporterServer).TopSyncPulse(ctx, req.(*GetTopSyncPulse))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _PulseExporter_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "exporter.PulseExporter",
 	HandlerType: (*PulseExporterServer)(nil),
-	Methods:     []grpc.MethodDesc{},
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "TopSyncPulse",
+			Handler:    _PulseExporter_TopSyncPulse_Handler,
+		},
+	},
 	Streams: []grpc.StreamDesc{
 		{
 			StreamName:    "Export",
@@ -361,6 +555,56 @@ var _PulseExporter_serviceDesc = grpc.ServiceDesc{
 		},
 	},
 	Metadata: "ledger/heavy/exporter/pulse_exporter.proto",
+}
+
+func (m *GetTopSyncPulse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *GetTopSyncPulse) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	return i, nil
+}
+
+func (m *TopSyncPulseResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *TopSyncPulseResponse) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	if m.Polymorph != 0 {
+		dAtA[i] = 0x80
+		i++
+		dAtA[i] = 0x1
+		i++
+		i = encodeVarintPulseExporter(dAtA, i, uint64(m.Polymorph))
+	}
+	if m.PulseNumber != 0 {
+		dAtA[i] = 0xa0
+		i++
+		dAtA[i] = 0x1
+		i++
+		i = encodeVarintPulseExporter(dAtA, i, uint64(m.PulseNumber))
+	}
+	return i, nil
 }
 
 func (m *GetPulses) Marshal() (dAtA []byte, err error) {
@@ -466,6 +710,30 @@ func encodeVarintPulseExporter(dAtA []byte, offset int, v uint64) int {
 	dAtA[offset] = uint8(v)
 	return offset + 1
 }
+func (m *GetTopSyncPulse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	return n
+}
+
+func (m *TopSyncPulseResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Polymorph != 0 {
+		n += 2 + sovPulseExporter(uint64(m.Polymorph))
+	}
+	if m.PulseNumber != 0 {
+		n += 2 + sovPulseExporter(uint64(m.PulseNumber))
+	}
+	return n
+}
+
 func (m *GetPulses) Size() (n int) {
 	if m == nil {
 		return 0
@@ -515,6 +783,26 @@ func sovPulseExporter(x uint64) (n int) {
 func sozPulseExporter(x uint64) (n int) {
 	return sovPulseExporter(uint64((x << 1) ^ uint64((int64(x) >> 63))))
 }
+func (this *GetTopSyncPulse) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&GetTopSyncPulse{`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *TopSyncPulseResponse) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&TopSyncPulseResponse{`,
+		`Polymorph:` + fmt.Sprintf("%v", this.Polymorph) + `,`,
+		`PulseNumber:` + fmt.Sprintf("%v", this.PulseNumber) + `,`,
+		`}`,
+	}, "")
+	return s
+}
 func (this *GetPulses) String() string {
 	if this == nil {
 		return "nil"
@@ -547,6 +835,150 @@ func valueToStringPulseExporter(v interface{}) string {
 	}
 	pv := reflect.Indirect(rv).Interface()
 	return fmt.Sprintf("*%v", pv)
+}
+func (m *GetTopSyncPulse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowPulseExporter
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: GetTopSyncPulse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: GetTopSyncPulse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		default:
+			iNdEx = preIndex
+			skippy, err := skipPulseExporter(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthPulseExporter
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthPulseExporter
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *TopSyncPulseResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowPulseExporter
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: TopSyncPulseResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: TopSyncPulseResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 16:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Polymorph", wireType)
+			}
+			m.Polymorph = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPulseExporter
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Polymorph |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 20:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field PulseNumber", wireType)
+			}
+			m.PulseNumber = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPulseExporter
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.PulseNumber |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		default:
+			iNdEx = preIndex
+			skippy, err := skipPulseExporter(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthPulseExporter
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthPulseExporter
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
 }
 func (m *GetPulses) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)

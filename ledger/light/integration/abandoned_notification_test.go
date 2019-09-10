@@ -19,7 +19,12 @@ package integration_test
 
 import (
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
@@ -27,7 +32,9 @@ import (
 	insolarPulse "github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/ledger/drop"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/pulse"
 
 	"github.com/stretchr/testify/require"
@@ -147,6 +154,11 @@ func Test_AbandonedNotification(t *testing.T) {
 			}
 		}
 	})
+
+	expectAtLeast := 200.0
+	v := fetchMetricValue(s.metrics.Handler(), "insolar_requests_abandoned", expectAtLeast, 5)
+	require.NoError(t, err, "insolar_requests_abandoned metric value is number")
+	assert.GreaterOrEqualf(t, v, expectAtLeast, "insolar_requests_abandoned should be grater whzn 100")
 }
 
 func Test_AbandonedNotification_WhenLightInit(t *testing.T) {
@@ -226,4 +238,29 @@ func Test_AbandonedNotification_WhenLightInit(t *testing.T) {
 			require.Equal(t, objectID, notification.ObjectID)
 		}
 	})
+
+	expectAtLeast := 200.0
+	v := fetchMetricValue(s.metrics.Handler(), "insolar_requests_abandoned", expectAtLeast, 5)
+
+	require.NoError(t, err, "insolar_requests_abandoned metric value is number")
+	assert.GreaterOrEqualf(t, v, expectAtLeast, "insolar_requests_abandoned should be grater whzn 100")
+}
+
+func fetchMetricValue(h http.Handler, metricName string, expect float64, tries int) float64 {
+	var v float64
+	for i := 0; i < tries; i++ {
+		req, err := http.NewRequest("GET", "/metrics", nil)
+		if err != nil {
+			log.Fatal(err)
+		}
+		rr := httptest.NewRecorder()
+		h.ServeHTTP(rr, req)
+
+		v = insmetrics.SumMetricsValueByNamePrefix(rr.Body, metricName)
+		if v > expect {
+			break
+		}
+		time.Sleep(time.Millisecond * 10)
+	}
+	return v
 }

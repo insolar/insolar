@@ -109,7 +109,6 @@ func (sm *SeedManager) Pop(seed Seed) (insolar.PulseNumber, bool) {
 	if ok && !sm.isExpired(stored.expiration) {
 		sm.mutex.Lock()
 		defer sm.mutex.Unlock()
-
 		delete(sm.seedPool, seed)
 		return stored.pulse, true
 	}

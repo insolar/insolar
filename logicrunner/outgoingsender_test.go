@@ -81,7 +81,7 @@ func TestOutgoingSenderSendRegularOutgoing(t *testing.T) {
 		resultChan:       resultChan,
 	}
 
-	cr.CallMock.Return(&reply.CallMethod{}, insolar.NewEmptyReference(), nil)
+	cr.SendRequestMock.Return(&reply.CallMethod{}, insolar.NewEmptyReference(), nil)
 	am.RegisterResultMock.Return(nil)
 
 	_, err := sender.Receive(msg)
@@ -120,7 +120,7 @@ func TestOutgoingSenderSendSagaOutgoing(t *testing.T) {
 		resultChan:       resultChan,
 	}
 
-	cr.CallMock.Return(&reply.CallMethod{}, insolar.NewEmptyReference(), nil)
+	cr.SendRequestMock.Return(&reply.CallMethod{}, insolar.NewEmptyReference(), nil)
 	am.RegisterResultMock.Return(nil)
 
 	_, err := sender.Receive(msg)
@@ -144,7 +144,7 @@ func TestOutgoingSenderSendAbandonedOutgoing(t *testing.T) {
 	pulseObject := insolar.Pulse{PulseNumber: gen.PulseNumber()}
 	pa := pulse.NewAccessorMock(mc).LatestMock.Return(pulseObject, nil)
 
-	sender := newOutgoingSenderActorState(cr, am, pa)
+	sender := newAbandonedSenderActorState(cr, am, pa)
 	outgoing := randomOutgoingRequest()
 	msg := sendAbandonedOutgoingRequestMessage{
 		ctx:              context.Background(),
@@ -152,7 +152,7 @@ func TestOutgoingSenderSendAbandonedOutgoing(t *testing.T) {
 		outgoingRequest:  outgoing,
 	}
 
-	cr.CallMock.Return(&reply.CallMethod{}, insolar.NewEmptyReference(), nil)
+	cr.SendRequestMock.Return(&reply.CallMethod{}, insolar.NewEmptyReference(), nil)
 	am.RegisterResultMock.Return(nil)
 
 	_, err := sender.Receive(msg)
@@ -171,7 +171,27 @@ func TestOutgoingSenderStop(t *testing.T) {
 
 	sender := newOutgoingSenderActorState(cr, am, pa)
 	resultChan := make(chan struct{}, 1)
-	msg := stopOutgoingRequestSenderMessage{
+	msg := stopRequestSenderMessage{
+		resultChan: resultChan,
+	}
+	_, err := sender.Receive(msg)
+	<-resultChan
+	require.Equal(t, errors.Terminate, err)
+}
+
+func TestAbandonedSenderStop(t *testing.T) {
+	t.Parallel()
+
+	mc := minimock.NewController(t)
+	defer mc.Wait(2 * time.Minute)
+
+	cr := testutils.NewContractRequesterMock(mc)
+	am := artifacts.NewClientMock(mc)
+	pa := pulse.NewAccessorMock(mc)
+
+	sender := newAbandonedSenderActorState(cr, am, pa)
+	resultChan := make(chan struct{}, 1)
+	msg := stopRequestSenderMessage{
 		resultChan: resultChan,
 	}
 	_, err := sender.Receive(msg)
