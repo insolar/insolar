@@ -22,7 +22,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"net/http"
-	"sync"
 	"testing"
 	"time"
 
@@ -36,7 +35,6 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/insolar/insolar/api/requester"
-	"github.com/insolar/insolar/api/seedmanager"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/platformpolicy"
@@ -48,21 +46,18 @@ const CallUrl = "http://localhost:19192/api/rpc"
 type TimeoutSuite struct {
 	suite.Suite
 
-	mc              *minimock.Controller
-	ctx             context.Context
-	api             *Runner
-	user            *requester.UserConfigJSON
-	delay           chan struct{}
-	seedManagerLock sync.Mutex
+	mc    *minimock.Controller
+	ctx   context.Context
+	api   *Runner
+	user  *requester.UserConfigJSON
+	delay chan struct{}
 }
 
 func (suite *TimeoutSuite) TestRunner_callHandler() {
 	seed, err := suite.api.SeedGenerator.Next()
 	suite.NoError(err)
 
-	suite.seedManagerLock.Lock()
 	suite.api.SeedManager.Add(*seed, 0)
-	suite.seedManagerLock.Unlock()
 
 	close(suite.delay)
 	seedString := base64.StdEncoding.EncodeToString(seed[:])
@@ -124,9 +119,6 @@ func TestTimeoutSuite(t *testing.T) {
 
 	timeoutSuite.api.ContractRequester = cr
 	timeoutSuite.api.Start(timeoutSuite.ctx)
-	timeoutSuite.seedManagerLock.Lock()
-	timeoutSuite.api.SeedManager = seedmanager.NewSpecified(17*time.Second, 35*time.Second)
-	timeoutSuite.seedManagerLock.Unlock()
 
 	requester.SetTimeout(25)
 	suite.Run(t, timeoutSuite)
