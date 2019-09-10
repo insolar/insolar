@@ -152,6 +152,23 @@ func TestGetRequest_FlowWithPassedFlag(t *testing.T) {
 		require.EqualError(t, err, "something strange from checkjet")
 	})
 
+	t.Run("passed flag is false and checkjet returns ErrNotExecutor", func(t *testing.T) {
+		t.Parallel()
+		f := flow.NewFlowMock(t)
+		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
+			switch p.(type) {
+			case *proc.FetchJet:
+				return proc.ErrNotExecutor
+			default:
+				panic("unknown procedure")
+			}
+		})
+
+		handler := handle.NewGetRequest(proc.NewDependenciesMock(), msg, false)
+		err := handler.Present(ctx, f)
+		require.NoError(t, err)
+	})
+
 	t.Run("passed flag is true and checkjet returns ErrNotExecutor", func(t *testing.T) {
 		t.Parallel()
 		f := flow.NewFlowMock(t)
