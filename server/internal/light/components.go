@@ -211,11 +211,15 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		APIWrapper = api.NewWrapper(API, AdminAPIRunner)
 	}
 
-	metricsComp := metrics.NewMetrics(
+	metricsHandler, err := metrics.NewMetrics(
+		ctx,
 		cfg.Metrics,
 		metrics.GetInsolarRegistry(comps.NodeRole),
 		comps.NodeRole,
 	)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to start Metrics")
+	}
 
 	// Light components.
 	var (
@@ -351,7 +355,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		Pulses,
 		Coordinator,
 		PulseManager,
-		metricsComp,
+		metricsHandler,
 		Requester,
 		ArtifactsClient,
 		APIWrapper,
@@ -363,7 +367,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		publisher,
 	)
 
-	err := comps.cmp.Init(ctx)
+	err = comps.cmp.Init(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to init components")
 	}
