@@ -282,10 +282,11 @@ func (z *zerologAdapter) Panic(args ...interface{}) {
 	stats.Record(contextWithLogLevel(zerolog.PanicLevel), statLogCalls.M(1))
 
 	if z.diodeWriter != nil {
-		z.logger.Error().Msg(fmt.Sprintf("PANIC: %v", fmt.Sprint(args...)))
+		msg := fmt.Sprintf("PANIC: %v", fmt.Sprint(args...))
+		z.logger.Error().Msg(msg)
 		zerolog.SetGlobalLevel(zerolog.PanicLevel)
 		z.diodeWriter.Close()
-		os.Exit(1)
+		panic(msg)
 	}
 
 	z.loggerWithHooks().Panic().Msg(fmt.Sprint(args...))
@@ -298,11 +299,11 @@ func (z *zerologAdapter) Panicf(format string, args ...interface{}) {
 	zerolog.SetGlobalLevel(zerolog.PanicLevel)
 
 	if z.diodeWriter != nil {
-		z.logger.Error().Msg(fmt.Sprintf("PANIC: %v", fmt.Sprintf(format, args...)))
+		msg := fmt.Sprintf("PANIC: %v", fmt.Sprintf(format, args...))
+		z.logger.Error().Msg(msg)
 		zerolog.SetGlobalLevel(zerolog.PanicLevel)
 		z.diodeWriter.Close()
-		os.Exit(1)
-
+		panic(msg)
 	}
 
 	z.loggerWithHooks().Panic().Msgf(format, args...)
