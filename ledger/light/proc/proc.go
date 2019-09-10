@@ -67,6 +67,7 @@ func NewDependencies(
 	jetFetcher executor.JetFetcher,
 	filaments executor.FilamentCalculator,
 	requestChecker executor.RequestChecker,
+	detachedNotifier executor.DetachedNotifier,
 ) *Dependencies {
 	dep := &Dependencies{
 		FetchJet: func(p *FetchJet) {
@@ -113,6 +114,7 @@ func NewDependencies(
 				recordStorage,
 				indexStorage,
 				pcs,
+				detachedNotifier,
 			)
 		},
 		HasPendings: func(p *HasPendings) {

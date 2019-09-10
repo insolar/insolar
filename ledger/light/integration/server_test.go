@@ -248,6 +248,7 @@ func NewServer(
 			CryptoScheme,
 			ServerBus,
 		)
+		detachedNotifier := executor.NewDetachedNotifierDefault(ServerBus)
 
 		jetCalculator := executor.NewJetCalculator(Coordinator, Jets)
 		lightCleaner := executor.NewCleaner(
@@ -308,6 +309,7 @@ func NewServer(
 			jetFetcher,
 			filamentCalculator,
 			requestChecker,
+			detachedNotifier,
 		)
 
 		initHandle := func(msg *message.Message) *handle.Init {
