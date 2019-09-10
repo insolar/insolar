@@ -45,8 +45,9 @@ type Member struct {
 }
 
 const (
-	XNS                 = "XNS"
-	ACCOUNT_START_VALUE = "10000000000"
+	XNS = "XNS"
+	// 10 ^ 14
+	ACCOUNT_START_VALUE = "100000000000000"
 )
 
 // GetName gets name.

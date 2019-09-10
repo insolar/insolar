@@ -126,6 +126,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 	if err != nil {
 		logger.Panic(errors.Wrap(err, "failed to prepare light for start"))
 	}
+
 	stats.Record(ctx, statJets.M(int64(len(jets))))
 
 	endedPulse, err := m.pulseAccessor.Latest(ctx)

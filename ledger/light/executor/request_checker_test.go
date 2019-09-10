@@ -214,7 +214,7 @@ func TestRequestCheckerDefault_CheckRequest(t *testing.T) {
 			Caller:     reasonObjectRef,
 			Object:     &reasonObjectRef,
 			Reason:     reasonRef,
-			ReturnMode: record.ReturnNoWait,
+			ReturnMode: record.ReturnSaga,
 		}
 
 		filament.RequestInfoMock.Set(func(_ context.Context, objectID insolar.ID, reqID insolar.ID, pulse insolar.PulseNumber) (foundRequest *record.CompositeFilamentRecord, foundResult *record.CompositeFilamentRecord, err error) {

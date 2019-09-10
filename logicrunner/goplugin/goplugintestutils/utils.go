@@ -160,11 +160,7 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]stri
 		}
 
 		logger.Debug("Deploying code for contract ", name)
-		codeID, err := cb.artifactManager.DeployCode(
-			ctx,
-			*insolar.NewEmptyReference(), *insolar.NewEmptyReference(),
-			pluginBinary, insolar.MachineTypeGoPlugin,
-		)
+		codeID, err := cb.artifactManager.DeployCode(ctx, pluginBinary, insolar.MachineTypeGoPlugin)
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] DeployCode returns error")
 		}

@@ -212,7 +212,7 @@ func (suite *LogicRunnerTestSuite) TestSagaCallAcceptNotificationHandler() {
 	<-callMethodChan
 	suite.Require().Equal(outgoing.Caller, usedCaller)
 	suite.Require().Equal(outgoing.Reason, usedReason)
-	suite.Require().Equal(record.ReturnNoWait, usedReturnMode)
+	suite.Require().Equal(record.ReturnSaga, usedReturnMode)
 
 	<-registerResultChan
 	suite.Require().Equal(outgoingRequestRef, &usedRequestRef)

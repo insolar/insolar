@@ -286,7 +286,7 @@ func TestValidationProxyImplementation_RouteCall(t *testing.T) {
 					},
 				},
 			},
-			req:    rpctypes.UpRouteReq{Wait: true, Object: objRef1, Prototype: protoRef1},
+			req:    rpctypes.UpRouteReq{Object: objRef1, Prototype: protoRef1},
 			result: rpctypes.UpRouteResp{Result: []byte{1, 2, 3}},
 		},
 	}
@@ -331,7 +331,7 @@ func TestRouteCallRegistersOutgoingRequestWithValidReason(t *testing.T) {
 	transcript := common.NewTranscript(ctx, requestRef, record.IncomingRequest{
 		Object: &objectRef,
 	})
-	req := rpctypes.UpRouteReq{Wait: true}
+	req := rpctypes.UpRouteReq{}
 	resp := &rpctypes.UpRouteResp{}
 
 	var outreq *record.OutgoingRequest

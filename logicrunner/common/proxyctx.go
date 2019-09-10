@@ -26,7 +26,7 @@ type ProxyHelper interface {
 	Serializer
 	RouteCall(
 		ref insolar.Reference,
-		wait bool, immutable bool, saga bool,
+		immutable bool, saga bool,
 		method string, args []byte, proxyPrototype insolar.Reference,
 	) (result []byte, err error)
 	SaveAsChild(

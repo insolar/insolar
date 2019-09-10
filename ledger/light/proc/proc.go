@@ -80,7 +80,6 @@ func NewDependencies(
 		WaitHot: func(p *WaitHot) {
 			p.Dep(
 				hotWaiter,
-				sender,
 			)
 		},
 		EnsureIndex: func(p *EnsureIndex) {

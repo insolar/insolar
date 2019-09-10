@@ -148,6 +148,10 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to find request being closed")
 	}
+	err = checkOutgoings(opened, closedRequest.RecordID)
+	if err != nil {
+		return errors.Wrap(err, "open outgoings found")
+	}
 	earliestPending, err := calcPending(opened, closedRequest.RecordID)
 	if err != nil {
 		return errors.Wrap(err, "failed to calculate earliest pending")
@@ -296,6 +300,29 @@ func findClosed(reqs []record.CompositeFilamentRecord, result record.Result) (re
 			Text: fmt.Sprintf("request %s not found", result.Request.GetLocal().DebugString()),
 			Code: payload.CodeRequestNotFound,
 		}
+}
+
+func checkOutgoings(reqs []record.CompositeFilamentRecord, closedRequestID insolar.ID) error {
+	for _, req := range reqs {
+		found := record.Unwrap(&req.Record.Virtual)
+		parsedReq, ok := found.(record.Request)
+		if !ok {
+			continue
+		}
+		out, ok := parsedReq.(*record.OutgoingRequest)
+		if !ok {
+			continue
+		}
+
+		if !out.IsDetached() && out.Reason.GetLocal().Equal(closedRequestID) {
+			return &payload.CodedError{
+				Text: "request " + closedRequestID.DebugString() + " is reason for non closed outgoing request " + req.RecordID.DebugString(),
+				Code: payload.CodeNonClosedOutgoing,
+			}
+		}
+	}
+
+	return nil
 }
 
 // notifyDetached sends notifications about detached requests that are ready for execution.

@@ -129,6 +129,7 @@ func (cr *ContractRequester) Call(
 			Arguments:    args,
 			APIRequestID: utils.TraceID(ctx),
 			APINode:      cr.JetCoordinator.Me(),
+			Immutable:    false,
 		},
 	}
 
@@ -190,7 +191,7 @@ func (cr *ContractRequester) SendRequest(ctx context.Context, inMsg insolar.Payl
 	ctx, span := instracer.StartSpan(ctx, "ContractRequester.SendRequest")
 	defer span.End()
 
-	async := msg.Request.ReturnMode == record.ReturnNoWait
+	async := msg.Request.ReturnMode == record.ReturnSaga
 
 	if msg.Request.Nonce == 0 {
 		msg.Request.Nonce = randomUint64()

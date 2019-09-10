@@ -107,7 +107,7 @@ func (r *Wallet) GetPrototype() (insolar.Reference, error) {
 		var ret1 *foundation.Error
 		ret[1] = &ret1
 
-		res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetPrototype", make([]byte, 0), *PrototypeReference)
+		res, err := common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetPrototype", make([]byte, 0), *PrototypeReference)
 		if err != nil {
 			return ret0, err
 		}
@@ -137,7 +137,7 @@ func (r *Wallet) GetCode() (insolar.Reference, error) {
 		var ret1 *foundation.Error
 		ret[1] = &ret1
 
-		res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetCode", make([]byte, 0), *PrototypeReference)
+		res, err := common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetCode", make([]byte, 0), *PrototypeReference)
 		if err != nil {
 			return ret0, err
 		}
@@ -175,7 +175,7 @@ func (r *Wallet) GetAccount(assetName string) (*insolar.Reference, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetAccount", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetAccount", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -197,26 +197,6 @@ func (r *Wallet) GetAccount(assetName string) (*insolar.Reference, error) {
 	return ret0, nil
 }
 
-// GetAccountNoWait is proxy generated method
-func (r *Wallet) GetAccountNoWait(assetName string) error {
-	var args [1]interface{}
-	args[0] = assetName
-
-	var argsSerialized []byte
-
-	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
-	if err != nil {
-		return err
-	}
-
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "GetAccount", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // GetAccountAsImmutable is proxy generated method
 func (r *Wallet) GetAccountAsImmutable(assetName string) (*insolar.Reference, error) {
 	var args [1]interface{}
@@ -235,7 +215,7 @@ func (r *Wallet) GetAccountAsImmutable(assetName string) (*insolar.Reference, er
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "GetAccount", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetAccount", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -278,7 +258,7 @@ func (r *Wallet) Transfer(rootDomainRef insolar.Reference, assetName string, amo
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "Transfer", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "Transfer", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -298,29 +278,6 @@ func (r *Wallet) Transfer(rootDomainRef insolar.Reference, assetName string, amo
 		return ret0, ret1
 	}
 	return ret0, nil
-}
-
-// TransferNoWait is proxy generated method
-func (r *Wallet) TransferNoWait(rootDomainRef insolar.Reference, assetName string, amountStr string, toMember *insolar.Reference) error {
-	var args [4]interface{}
-	args[0] = rootDomainRef
-	args[1] = assetName
-	args[2] = amountStr
-	args[3] = toMember
-
-	var argsSerialized []byte
-
-	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
-	if err != nil {
-		return err
-	}
-
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "Transfer", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 // TransferAsImmutable is proxy generated method
@@ -344,7 +301,7 @@ func (r *Wallet) TransferAsImmutable(rootDomainRef insolar.Reference, assetName 
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "Transfer", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "Transfer", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -367,7 +324,7 @@ func (r *Wallet) TransferAsImmutable(rootDomainRef insolar.Reference, assetName 
 }
 
 // GetBalance is proxy generated method
-func (r *Wallet) GetBalance(assetName string) (string, error) {
+func (r *Wallet) GetBalanceAsMutable(assetName string) (string, error) {
 	var args [1]interface{}
 	args[0] = assetName
 
@@ -384,7 +341,7 @@ func (r *Wallet) GetBalance(assetName string) (string, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetBalance", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetBalance", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -406,28 +363,8 @@ func (r *Wallet) GetBalance(assetName string) (string, error) {
 	return ret0, nil
 }
 
-// GetBalanceNoWait is proxy generated method
-func (r *Wallet) GetBalanceNoWait(assetName string) error {
-	var args [1]interface{}
-	args[0] = assetName
-
-	var argsSerialized []byte
-
-	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
-	if err != nil {
-		return err
-	}
-
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "GetBalance", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // GetBalanceAsImmutable is proxy generated method
-func (r *Wallet) GetBalanceAsImmutable(assetName string) (string, error) {
+func (r *Wallet) GetBalance(assetName string) (string, error) {
 	var args [1]interface{}
 	args[0] = assetName
 
@@ -444,7 +381,7 @@ func (r *Wallet) GetBalanceAsImmutable(assetName string) (string, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "GetBalance", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetBalance", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -483,7 +420,7 @@ func (r *Wallet) AddDeposit(txId string, deposit insolar.Reference) error {
 		return err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "AddDeposit", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "AddDeposit", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -505,27 +442,6 @@ func (r *Wallet) AddDeposit(txId string, deposit insolar.Reference) error {
 	return nil
 }
 
-// AddDepositNoWait is proxy generated method
-func (r *Wallet) AddDepositNoWait(txId string, deposit insolar.Reference) error {
-	var args [2]interface{}
-	args[0] = txId
-	args[1] = deposit
-
-	var argsSerialized []byte
-
-	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
-	if err != nil {
-		return err
-	}
-
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "AddDeposit", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // AddDepositAsImmutable is proxy generated method
 func (r *Wallet) AddDepositAsImmutable(txId string, deposit insolar.Reference) error {
 	var args [2]interface{}
@@ -543,7 +459,7 @@ func (r *Wallet) AddDepositAsImmutable(txId string, deposit insolar.Reference) e
 		return err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "AddDeposit", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "AddDeposit", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -582,7 +498,7 @@ func (r *Wallet) GetDepositsAsMutable() (map[string]interface{}, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetDeposits", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetDeposits", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -604,25 +520,6 @@ func (r *Wallet) GetDepositsAsMutable() (map[string]interface{}, error) {
 	return ret0, nil
 }
 
-// GetDepositsNoWait is proxy generated method
-func (r *Wallet) GetDepositsNoWait() error {
-	var args [0]interface{}
-
-	var argsSerialized []byte
-
-	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
-	if err != nil {
-		return err
-	}
-
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "GetDeposits", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // GetDepositsAsImmutable is proxy generated method
 func (r *Wallet) GetDeposits() (map[string]interface{}, error) {
 	var args [0]interface{}
@@ -640,7 +537,7 @@ func (r *Wallet) GetDeposits() (map[string]interface{}, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "GetDeposits", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetDeposits", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -682,7 +579,7 @@ func (r *Wallet) FindDepositAsMutable(transactionHash string) (bool, *insolar.Re
 		return ret0, ret1, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "FindDeposit", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "FindDeposit", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, ret1, err
 	}
@@ -702,26 +599,6 @@ func (r *Wallet) FindDepositAsMutable(transactionHash string) (bool, *insolar.Re
 		return ret0, ret1, ret2
 	}
 	return ret0, ret1, nil
-}
-
-// FindDepositNoWait is proxy generated method
-func (r *Wallet) FindDepositNoWait(transactionHash string) error {
-	var args [1]interface{}
-	args[0] = transactionHash
-
-	var argsSerialized []byte
-
-	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
-	if err != nil {
-		return err
-	}
-
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "FindDeposit", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 // FindDepositAsImmutable is proxy generated method
@@ -744,7 +621,7 @@ func (r *Wallet) FindDeposit(transactionHash string) (bool, *insolar.Reference, 
 		return ret0, ret1, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "FindDeposit", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "FindDeposit", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, ret1, err
 	}

@@ -14,32 +14,15 @@
 // limitations under the License.
 //
 
-package rootdomain
+package genesisrefs
 
 import (
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/genesisrefs"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/logicrunner/builtin/proxy/member"
-	"github.com/insolar/insolar/logicrunner/builtin/proxy/migrationdaemon"
 	"github.com/insolar/insolar/platformpolicy"
 )
-
-const (
-	GenesisPrototypeSuffix = "_proto"
-)
-
-func init() {
-	for _, el := range insolar.GenesisNameMigrationDaemonMembers {
-		genesisrefs.PredefinedPrototypes[el+GenesisPrototypeSuffix] = *member.PrototypeReference
-	}
-
-	for _, el := range insolar.GenesisNameMigrationDaemons {
-		genesisrefs.PredefinedPrototypes[el+GenesisPrototypeSuffix] = *migrationdaemon.PrototypeReference
-	}
-}
 
 var genesisPulse = insolar.GenesisPulse.PulseNumber
 

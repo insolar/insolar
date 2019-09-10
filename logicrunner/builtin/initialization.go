@@ -36,7 +36,7 @@ import (
 	wallet "github.com/insolar/insolar/logicrunner/builtin/contract/wallet"
 
 	XXX_insolar "github.com/insolar/insolar/insolar"
-	XXX_rootdomain "github.com/insolar/insolar/insolar/rootdomain"
+	XXX_genesisrefs "github.com/insolar/insolar/insolar/genesisrefs"
 	XXX_artifacts "github.com/insolar/insolar/logicrunner/artifacts"
 )
 
@@ -184,7 +184,7 @@ func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
 			/* isPrototype:  */ true,
 			/* childPointer: */ nil,
 			/* memory:       */ nil,
-			/* parent:       */ XXX_rootdomain.RootDomain.Reference(),
+			/* parent:       */ XXX_genesisrefs.RootDomain.Reference(),
 		))
 	}
 
@@ -198,7 +198,7 @@ func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
 			/* isPrototype:  */ true,
 			/* childPointer: */ nil,
 			/* memory:       */ nil,
-			/* parent:       */ XXX_rootdomain.RootDomain.Reference(),
+			/* parent:       */ XXX_genesisrefs.RootDomain.Reference(),
 		))
 	}
 
@@ -212,7 +212,7 @@ func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
 			/* isPrototype:  */ true,
 			/* childPointer: */ nil,
 			/* memory:       */ nil,
-			/* parent:       */ XXX_rootdomain.RootDomain.Reference(),
+			/* parent:       */ XXX_genesisrefs.RootDomain.Reference(),
 		))
 	}
 
@@ -226,7 +226,7 @@ func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
 			/* isPrototype:  */ true,
 			/* childPointer: */ nil,
 			/* memory:       */ nil,
-			/* parent:       */ XXX_rootdomain.RootDomain.Reference(),
+			/* parent:       */ XXX_genesisrefs.RootDomain.Reference(),
 		))
 	}
 
@@ -240,7 +240,7 @@ func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
 			/* isPrototype:  */ true,
 			/* childPointer: */ nil,
 			/* memory:       */ nil,
-			/* parent:       */ XXX_rootdomain.RootDomain.Reference(),
+			/* parent:       */ XXX_genesisrefs.RootDomain.Reference(),
 		))
 	}
 
@@ -254,7 +254,7 @@ func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
 			/* isPrototype:  */ true,
 			/* childPointer: */ nil,
 			/* memory:       */ nil,
-			/* parent:       */ XXX_rootdomain.RootDomain.Reference(),
+			/* parent:       */ XXX_genesisrefs.RootDomain.Reference(),
 		))
 	}
 
@@ -268,7 +268,7 @@ func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
 			/* isPrototype:  */ true,
 			/* childPointer: */ nil,
 			/* memory:       */ nil,
-			/* parent:       */ XXX_rootdomain.RootDomain.Reference(),
+			/* parent:       */ XXX_genesisrefs.RootDomain.Reference(),
 		))
 	}
 
@@ -282,7 +282,7 @@ func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
 			/* isPrototype:  */ true,
 			/* childPointer: */ nil,
 			/* memory:       */ nil,
-			/* parent:       */ XXX_rootdomain.RootDomain.Reference(),
+			/* parent:       */ XXX_genesisrefs.RootDomain.Reference(),
 		))
 	}
 
@@ -296,7 +296,7 @@ func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
 			/* isPrototype:  */ true,
 			/* childPointer: */ nil,
 			/* memory:       */ nil,
-			/* parent:       */ XXX_rootdomain.RootDomain.Reference(),
+			/* parent:       */ XXX_genesisrefs.RootDomain.Reference(),
 		))
 	}
 
@@ -310,7 +310,7 @@ func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
 			/* isPrototype:  */ true,
 			/* childPointer: */ nil,
 			/* memory:       */ nil,
-			/* parent:       */ XXX_rootdomain.RootDomain.Reference(),
+			/* parent:       */ XXX_genesisrefs.RootDomain.Reference(),
 		))
 	}
 
@@ -324,7 +324,7 @@ func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
 			/* isPrototype:  */ true,
 			/* childPointer: */ nil,
 			/* memory:       */ nil,
-			/* parent:       */ XXX_rootdomain.RootDomain.Reference(),
+			/* parent:       */ XXX_genesisrefs.RootDomain.Reference(),
 		))
 	}
 
@@ -338,7 +338,7 @@ func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
 			/* isPrototype:  */ true,
 			/* childPointer: */ nil,
 			/* memory:       */ nil,
-			/* parent:       */ XXX_rootdomain.RootDomain.Reference(),
+			/* parent:       */ XXX_genesisrefs.RootDomain.Reference(),
 		))
 	}
 
@@ -352,7 +352,7 @@ func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
 			/* isPrototype:  */ true,
 			/* childPointer: */ nil,
 			/* memory:       */ nil,
-			/* parent:       */ XXX_rootdomain.RootDomain.Reference(),
+			/* parent:       */ XXX_genesisrefs.RootDomain.Reference(),
 		))
 	}
 

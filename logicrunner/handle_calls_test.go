@@ -128,13 +128,13 @@ func TestHandleCall_CheckExecutionLoop(t *testing.T) {
 			},
 		},
 		{
-			name: "no loop, no wait call",
+			name: "no loop, saga (no wait) call",
 			mocks: func(t minimock.Tester) (*HandleCall, *record.IncomingRequest) {
 				h := &HandleCall{
 					dep: &Dependencies{},
 				}
 				req := &record.IncomingRequest{
-					ReturnMode: record.ReturnNoWait,
+					ReturnMode: record.ReturnSaga,
 				}
 				return h, req
 			},
@@ -196,7 +196,6 @@ func TestHandleCall_Present(t *testing.T) {
 				WriteAccessor:   writecontroller.NewAccessorMock(mc).BeginMock.Return(func() {}, nil),
 			},
 			Message: payload.Meta{},
-			Parcel:  nil,
 		}
 
 		msg := payload.CallMethod{
@@ -262,7 +261,6 @@ func TestHandleCall_Present(t *testing.T) {
 					LatestMock.Return(insolar.Pulse{PulseNumber: 100}, nil),
 			},
 			Message: payload.Meta{},
-			Parcel:  nil,
 		}
 
 		msg := payload.CallMethod{
@@ -313,7 +311,6 @@ func TestHandleCall_Present(t *testing.T) {
 				WriteAccessor:   writecontroller.NewAccessorMock(mc),
 			},
 			Message: payload.Meta{},
-			Parcel:  nil,
 		}
 
 		msg := payload.CallMethod{
@@ -363,7 +360,6 @@ func TestHandleCall_Present(t *testing.T) {
 				WriteAccessor:   writecontroller.NewAccessorMock(mc),
 			},
 			Message: payload.Meta{},
-			Parcel:  nil,
 		}
 
 		msg := payload.CallMethod{
@@ -413,7 +409,6 @@ func TestHandleCall_Present(t *testing.T) {
 				WriteAccessor:   writecontroller.NewAccessorMock(mc),
 			},
 			Message: payload.Meta{},
-			Parcel:  nil,
 		}
 
 		msg := payload.CallMethod{
@@ -476,7 +471,6 @@ func TestHandleCall_Present(t *testing.T) {
 					LatestMock.Return(insolar.Pulse{PulseNumber: 100}, nil),
 			},
 			Message: payload.Meta{},
-			Parcel:  nil,
 		}
 
 		msg := payload.CallMethod{
@@ -537,7 +531,6 @@ func TestHandleCall_Present(t *testing.T) {
 				RequestsExecutor: NewRequestsExecutorMock(mc).SendReplyMock.Return(),
 			},
 			Message: payload.Meta{},
-			Parcel:  nil,
 		}
 
 		msg := payload.CallMethod{
@@ -642,7 +635,6 @@ func TestHandleCall_Present(t *testing.T) {
 				ArtifactManager: artifacts.NewClientMock(mc),
 			},
 			Message: payload.Meta{},
-			Parcel:  nil,
 		}
 
 		msg := payload.CallMethod{

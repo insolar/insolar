@@ -9,6 +9,7 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
@@ -45,30 +46,79 @@ func TestEnsureIndex_Proceed(t *testing.T) {
 		locker.UnlockMock.Return()
 	}
 
-	t.Run("returns CodeNotFound if no index", func(t *testing.T) {
+	t.Run("Simple success", func(t *testing.T) {
+		setup()
+		defer mc.Finish()
+
+		pulse := gen.PulseNumber()
+		idx := record.Index{
+			ObjID:            insolar.ID{},
+			Lifeline:         record.Lifeline{},
+			LifelineLastUsed: pulse,
+			PendingRecords:   nil,
+		}
+		indexes.ForIDMock.Return(idx, nil)
+
+		indexes.SetMock.Inspect(func(ctx context.Context, pn insolar.PulseNumber, index record.Index) {
+			assert.Equal(t, pulse, pn)
+			assert.Equal(t, idx, index)
+		}).Return()
+
+		p := proc.NewEnsureIndex(gen.ID(), gen.JetID(), payload.Meta{}, pulse)
+		p.Dep(locker, indexes, cord, sender, writeAccessor)
+		err := p.Proceed(ctx)
+		assert.NoError(t, err)
+	})
+
+	t.Run("fetches from heavy if index not found, returns flow cancelled error", func(t *testing.T) {
 		setup()
 		defer mc.Finish()
 
 		indexes.ForIDMock.Return(record.Index{}, object.ErrIndexNotFound)
 		cord.HeavyMock.Return(&insolar.Reference{}, nil)
+		idx, err := (&record.Lifeline{}).Marshal()
 		reps := make(chan *message.Message, 1)
 		reps <- payload.MustNewMessage(&payload.Meta{
-			Payload: payload.MustMarshal(&payload.Error{
-				Code: payload.CodeNotFound,
+			Payload: payload.MustMarshal(&payload.Index{
+				Polymorph: 0,
+				Index:     idx,
 			}),
 		})
 		sender.SendTargetMock.Return(reps, func() {})
+		writeAccessor.BeginMock.Return(func() {}, executor.ErrWriteClosed)
 
 		p := proc.NewEnsureIndex(gen.ID(), gen.JetID(), payload.Meta{}, pulse.MinTimePulse)
 		p.Dep(locker, indexes, cord, sender, writeAccessor)
-		err := p.Proceed(ctx)
+		err = p.Proceed(ctx)
 		assert.Error(t, err)
-		coded, ok := err.(*payload.CodedError)
-		require.True(t, ok, "wrong error type")
-		assert.Equal(t, uint32(payload.CodeNotFound), coded.Code, "wrong error code")
+		assert.Equal(t, err, flow.ErrCancelled)
 	})
 
-	t.Run("fetches from heavy if not found", func(t *testing.T) {
+	t.Run("success, fetches from heavy if index not found", func(t *testing.T) {
+		setup()
+		defer mc.Finish()
+
+		indexes.ForIDMock.Return(record.Index{}, object.ErrIndexNotFound)
+		cord.HeavyMock.Return(&insolar.Reference{}, nil)
+		idx, err := (&record.Lifeline{}).Marshal()
+		reps := make(chan *message.Message, 1)
+		reps <- payload.MustNewMessage(&payload.Meta{
+			Payload: payload.MustMarshal(&payload.Index{
+				Polymorph: 0,
+				Index:     idx,
+			}),
+		})
+		sender.SendTargetMock.Return(reps, func() {})
+		writeAccessor.BeginMock.Return(func() {}, nil)
+		indexes.SetMock.Return()
+
+		p := proc.NewEnsureIndex(gen.ID(), gen.JetID(), payload.Meta{}, pulse.MinTimePulse)
+		p.Dep(locker, indexes, cord, sender, writeAccessor)
+		err = p.Proceed(ctx)
+		assert.NoError(t, err)
+	})
+
+	t.Run("fetches from heavy if not found, returns CodeNotFound", func(t *testing.T) {
 		setup()
 		defer mc.Finish()
 
