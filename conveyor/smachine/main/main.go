@@ -46,6 +46,8 @@ func main() {
 		time.Sleep(1 * time.Millisecond)
 		if i%100 == 0 {
 			fmt.Printf("%03d %v ================================== slots=%v of %v\n", i, time.Now(), sm.OccupiedSlotCount(), sm.AllocatedSlotCount())
+			sm.Cleanup()
+			fmt.Printf("%03d %v ================================== slots=%v of %v\n", i, time.Now(), sm.OccupiedSlotCount(), sm.AllocatedSlotCount())
 		}
 	}
 }

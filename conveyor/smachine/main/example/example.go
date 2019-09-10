@@ -75,6 +75,10 @@ func (s *StateMachine1) State1(ctx smachine.ExecutionContext) smachine.StateUpda
 
 	fmt.Printf("state1: %d %v\n", ctx.GetSlotID(), s.result)
 
+	ctx.NewChild(ctx.GetContext(), func(ctx smachine.ConstructionContext) smachine.StateMachine {
+		return &StateMachine1{sharedB: s.sharedB}
+	})
+
 	//mutex := ctx.SyncOneStep("test", 0, nil)
 
 	//if !mutex.IsFirst() {
@@ -105,9 +109,6 @@ func (s *StateMachine1) State3(ctx smachine.ExecutionContext) smachine.StateUpda
 		//return ctx.Repeat(0)
 		return ctx.Poll().ThenRepeat()
 	}
-	ctx.NewChild(ctx.GetContext(), func(ctx smachine.ConstructionContext) smachine.StateMachine {
-		return &StateMachine1{sharedB: s.sharedB}
-	})
 
 	return ctx.Jump(s.State4)
 }

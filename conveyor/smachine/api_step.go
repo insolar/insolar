@@ -20,10 +20,10 @@ type StepFlags uint16
 
 const (
 	StepResetAllFlags StepFlags = 1 << iota
-	StepIgnoreAsyncWakeup
-	StepForceAsyncWakeup
-	StepIgnoreAsyncPanic
-	//StepAllowAsyncJump
+	StepWeak
+	//StepIgnoreAsyncWakeup
+	//StepForceAsyncWakeup
+	//StepIgnoreAsyncPanic
 )
 
 type SlotStep struct {

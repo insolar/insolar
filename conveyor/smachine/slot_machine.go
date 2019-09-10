@@ -214,7 +214,7 @@ func (m *SlotMachine) Cleanup() {
 }
 
 func (m *SlotMachine) scanAndCleanup(scanPage func(slotPage []Slot) (isPageEmptyOrWeak, hasWeakSlots bool)) {
-	if len(m.slots) == 0 {
+	if len(m.slots) == 0 || len(m.slots) == 1 && m.slotPgPos == 0 {
 		return
 	}
 
@@ -248,7 +248,7 @@ func (m *SlotMachine) scanAndCleanup(scanPage func(slotPage []Slot) (isPageEmpty
 		}
 		m.slots = m.slots[:1]
 		m.slotPgPos = 0
-	} else {
+	} else if len(m.slots) > j {
 		m.slots = m.slots[:j]
 	}
 }
@@ -281,10 +281,12 @@ func (m *SlotMachine) verifyPage(slotPage []Slot) (isPageEmptyOrWeak, hasWeakSlo
 		case slot.isEmpty():
 			continue
 		case slot.isWorking():
-			isPageEmptyOrWeak = false
-			// TODO weak slots
-			// case slot.flags isWeak
+			break
+		case slot.step.StepFlags&StepWeak != 0:
+			hasWeakSlots = true
+			continue
 		}
+		return false, hasWeakSlots
 	}
 	return isPageEmptyOrWeak, hasWeakSlots
 }
@@ -417,7 +419,8 @@ func (m *SlotMachine) migrateSlot(slot *Slot) (isEmptyOrWeak, isAvailable bool) 
 
 		slot.migrationCount++
 	}
-	return false, true
+
+	return slot.step.StepFlags&StepWeak != 0, true
 }
 
 func (m *SlotMachine) allocateSlot() (slot *Slot) {
