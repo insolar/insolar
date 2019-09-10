@@ -263,12 +263,26 @@ func (b *Bus) sendTarget(
 		return handleError(errors.Wrapf(err, "can't publish message to %s topic", TopicOutgoing))
 	}
 
+	// Do not change this log! It is used for message type statistics.
+	logger.WithFields(map[string]interface{}{
+		"stat_type":    "sent",
+		"message_type": msgType,
+	}).Debugf("stat_log_message")
+
+	replyStart := time.Now()
 	go func() {
-		replyStart := time.Now()
 		defer func() {
+			replyTime := float64(time.Since(replyStart).Nanoseconds()) / 1e6
 			stats.Record(mctx,
-				statReplyTime.M(float64(time.Since(replyStart).Nanoseconds())/1e6),
+				statReplyTime.M(replyTime),
 				statReply.M(1))
+
+			// Do not change this log! It is used for message type statistics.
+			logger.WithFields(map[string]interface{}{
+				"stat_type":     "reply",
+				"message_type":  msgType,
+				"reply_time_ms": replyTime,
+			}).Debugf("stat_log_message")
 		}()
 
 		logger.Debug("waiting for reply")
