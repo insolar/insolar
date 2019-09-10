@@ -289,9 +289,7 @@ func (m *validationProxyImplementation) RouteCall(
 		return reqRes.Error
 	}
 
-	if req.Wait {
-		rep.Result = reqRes.Response
-	}
+	rep.Result = reqRes.Response
 
 	return nil
 }
@@ -387,8 +385,6 @@ func buildOutgoingRequest(
 		// OutgoingRequest with ReturnMode = ReturnSaga will be called by LME
 		// when current object finishes the execution and validation.
 		outgoing.ReturnMode = record.ReturnSaga
-	} else if !req.Wait {
-		outgoing.ReturnMode = record.ReturnNoWait
 	}
 
 	return outgoing
