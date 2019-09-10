@@ -25,7 +25,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/jet"
@@ -54,35 +53,6 @@ func TestGetRequest_Proceed(t *testing.T) {
 		coordinator = jet.NewCoordinatorMock(mc)
 		fetcher = executor.NewJetFetcherMock(mc)
 	}
-
-	t.Run("Passing request on heavy", func(t *testing.T) {
-		setup()
-		defer mc.Finish()
-
-		records.ForIDMock.Return(record.Material{}, object.ErrNotFound)
-
-		expectedTarget := insolar.NewReference(gen.ID())
-
-		coordinator.IsBeyondLimitMock.Return(true, nil)
-		coordinator.HeavyMock.Return(expectedTarget, nil)
-
-		meta := payload.Meta{}
-		buf, _ := meta.Marshal()
-		expectedPass, _ := payload.NewMessage(&payload.Pass{
-			Origin: buf,
-		})
-
-		sender.SendTargetMock.Inspect(func(ctx context.Context, msg *message.Message, target insolar.Reference) {
-			assert.Equal(t, expectedPass.Payload, msg.Payload)
-			assert.Equal(t, expectedTarget, &target)
-		}).Return(make(chan *message.Message), func() {})
-
-		p := proc.NewGetRequest(meta, gen.ID(), gen.ID(), true)
-		p.Dep(records, sender, coordinator, fetcher)
-
-		err := p.Proceed(ctx)
-		assert.NoError(t, err)
-	})
 
 	t.Run("Not passing, returns error", func(t *testing.T) {
 		setup()
