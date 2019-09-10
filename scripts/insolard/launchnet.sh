@@ -26,7 +26,9 @@ INSGORUND=$BIN_DIR/insgorund
 PULSARD=$BIN_DIR/pulsard
 PULSEWATCHER=$BIN_DIR/pulsewatcher
 
-# TODO: move to launchnet dir
+# DUMP_METRICS_ENABLE enables metrics dump to logs dir after every functest
+DUMP_METRICS_ENABLE=${DUMP_METRICS_ENABLE:-"1"}
+
 PULSAR_DATA_DIR=${LAUNCHNET_BASE_DIR}pulsar_data
 PULSAR_CONFIG=${LAUNCHNET_BASE_DIR}pulsar.yaml
 
@@ -38,7 +40,6 @@ PULSAR_KEYS=${CONFIGS_DIR}pulsar_keys.json
 HEAVY_GENESIS_CONFIG_FILE=${CONFIGS_DIR}heavy_genesis.json
 CONTRACTS_PLUGINS_DIR=${LAUNCHNET_BASE_DIR}contracts
 
-# TODO: use only heavy matereal data dir
 DISCOVERY_NODES_DATA=${LAUNCHNET_BASE_DIR}discoverynodes/
 
 DISCOVERY_NODES_HEAVY_DATA=${DISCOVERY_NODES_DATA}1/
@@ -65,6 +66,7 @@ do
     DISCOVERY_NODE_DIRS+=(${DISCOVERY_NODES_DATA}${i})
 done
 
+# LOGROTATOR_ENABLE enables log rotation before every functest start
 LOGROTATOR_ENABLE=${LOGROTATOR_ENABLE:-""}
 LOGROTATOR=tee
 LOGROTATOR_BIN=${LAUNCHNET_BASE_DIR}inslogrotator

@@ -14,48 +14,62 @@
 // limitations under the License.
 //
 
-// +build slowtest
-
 package metrics_test
 
 import (
+	"bufio"
 	"context"
+	"fmt"
 	"math/rand"
 	"net/http"
+	"net/http/httptest"
 	"os"
-	"os/exec"
 	"regexp"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/instrumentation/insmetrics"
-	"github.com/insolar/insolar/testutils/testmetrics"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
+
+	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/insmetrics"
+	"github.com/insolar/insolar/metrics"
 )
 
-func testMetricsServerOutput(t *testing.T) {
-	// checks is metrics server properly exports metrics added with opencensus on prometheus http endpoint
-	ctx := inslogger.TestContext(t)
-	testm, err := testmetrics.Start(ctx, t)
-	require.NoError(t, err, "metrics server start")
+var (
+	metricCount      = stats.Int64("some_count", "number of processed videos", stats.UnitDimensionless)
+	metricCountValue = int64(0)
 
-	var (
-		metricCount = stats.Int64("some_count", "number of processed videos", stats.UnitDimensionless)
-		metricDist  = stats.Int64("some_distribution", "size of processed video", stats.UnitBytes)
+	metricDist      = stats.Int64("some_distribution", "size of processed video", stats.UnitBytes)
+	metricDistValue = int64(0)
+
+	someTag = insmetrics.MustTagKey("xyz")
+)
+
+func newTestMetrics(ctx context.Context, config configuration.Metrics) *metrics.Metrics {
+	roleName := "testRole"
+	m := metrics.NewMetrics(
+		config,
+		metrics.GetInsolarRegistry(roleName),
+		roleName,
 	)
-	someTag := insmetrics.MustTagKey("xyz")
+	if err := m.Init(ctx); err != nil {
+		panic(err)
+	}
+	return m
+}
 
-	err = view.Register(
+func TestMain(m *testing.M) {
+	err := view.Register(
 		&view.View{
 			Name:        "some_metric_count",
 			Measure:     metricCount,
-			Aggregation: view.Count(),
+			Aggregation: view.Sum(),
 			TagKeys:     []tag.Key{someTag},
 		},
 		&view.View{
@@ -65,86 +79,134 @@ func testMetricsServerOutput(t *testing.T) {
 			TagKeys:     []tag.Key{someTag},
 		},
 	)
-	require.NoError(t, err)
-
-	var (
-		countRe = regexp.MustCompile(`insolar_some_metric_count{[^}]*xyz="11\.12\.13"[^}]*} 1`)
-		distRe  = regexp.MustCompile(`insolar_some_metric_distribution_count{[^}]*xyz="11\.12\.13"[^}]*} 1`)
-	)
-
-	metricsCtx := insmetrics.ChangeTags(context.Background(), tag.Insert(someTag, "11.12.13"))
-	stats.Record(metricsCtx, metricCount.M(1), metricDist.M(rand.Int63()))
-
-	var (
-		content  string
-		fetchErr error
-	)
-	// loop because at some strange circumstances at CI one fetch is not enough
-	for i := 0; i < 1000; i++ {
-		time.Sleep(500 * time.Millisecond)
-		content, fetchErr = testm.FetchContent()
-		if fetchErr != nil {
-			continue
-		}
-		if strings.Contains(content, "insolar_some_metric") {
-			break
-		}
+	if err != nil {
+		panic(err)
 	}
-
-	require.NoError(t, fetchErr, "fetch content failed")
-	assert.Regexp(t,
-		countRe,
-		content,
-		"counter value is equal to 1")
-	assert.Regexp(t,
-		distRe,
-		content,
-		"distribution counter value is equal to 1")
-
-	assert.NoError(t, testm.Stop(), "metrics server is stopped")
+	os.Exit(m.Run())
 }
 
 func TestMetrics_NewMetrics(t *testing.T) {
-	if os.Getenv("ISOLATE_METRICS_STATE") == "1" {
-		testMetricsServerOutput(t)
-		return
+	t.Parallel()
+	ctx := inslogger.TestContext(t)
+	testm := newTestMetrics(ctx, configuration.Metrics{
+		Namespace: "insolar",
+	})
+
+	// checks is metrics server properly exports metrics added with opencensus on prometheus http endpoint
+	var (
+		countRe = regexp.MustCompile(`insolar_some_metric_count{[^}]*xyz="11\.12\.13"[^}]*}`)
+		distRe  = regexp.MustCompile(`insolar_some_metric_distribution_count{[^}]*xyz="11\.12\.13"[^}]*}`)
+	)
+
+	metricsCtx := insmetrics.ChangeTags(context.Background(), tag.Insert(someTag, "11.12.13"))
+
+	cntAdd, distAdd := int64(rand.Intn(100)), int64(rand.Intn(1<<32))
+	metricCountValue += cntAdd
+	metricDistValue++
+	stats.Record(metricsCtx,
+		metricCount.M(cntAdd),
+		metricDist.M(distAdd))
+
+	req, err := http.NewRequest("GET", "/metrics", nil)
+	if err != nil {
+		t.Fatal(err)
 	}
-	cmd := exec.Command(os.Args[0], "-test.run=TestMetrics_NewMetrics")
-	cmd.Env = append(os.Environ(), "ISOLATE_METRICS_STATE=1")
-	cmd.Stderr = os.Stderr
-	cmd.Stdout = os.Stdout
-	err := cmd.Run()
-	if e, ok := err.(*exec.ExitError); ok && !e.Success() {
-		t.Fatalf("Process failed with error '%v', expects os.Exit(0)", err)
+
+	var (
+		respCode    int
+		lastCounter string
+		lastDist    string
+		found       int
+	)
+
+	// we need loop here because counters are updated asynchronously
+fetchLOOP:
+	for i := 0; i < 5; i++ {
+		time.Sleep(time.Millisecond) // give chance to metrics framework to catch up
+		rr := httptest.NewRecorder()
+		testm.Handler().ServeHTTP(rr, req)
+
+		respCode = rr.Code
+		if http.StatusOK != respCode {
+			continue
+		}
+
+		scanner := bufio.NewScanner(rr.Body)
+		found = 0
+		for scanner.Scan() {
+			s := scanner.Text()
+			if strings.HasPrefix(s, "insolar_some_metric_count") {
+				lastCounter = s
+				if !countRe.MatchString(s) {
+					continue fetchLOOP
+				}
+				if fmt.Sprintf("%v", metricCountValue) != metricValue(s) {
+					continue fetchLOOP
+				}
+				found++
+			}
+
+			if strings.HasPrefix(s, "insolar_some_metric_distribution_count") {
+				lastDist = s
+				if !distRe.MatchString(s) {
+					continue fetchLOOP
+				}
+				if fmt.Sprintf("%v", metricDistValue) != metricValue(s) {
+					continue fetchLOOP
+				}
+				found++
+			}
+		}
+		break
 	}
+
+	require.Equal(t, http.StatusOK, respCode, "fetched ok")
+	assert.Equal(t, 2, found, "all metrics found")
+	assert.Regexp(t, countRe, lastCounter, "counter value matches")
+	assert.Equalf(t, fmt.Sprintf("%v", metricDistValue), metricValue(lastDist),
+		"check value of %v", lastCounter)
+	assert.Regexp(t, distRe, lastDist, "distribution counter value matches")
+	assert.Equalf(t, fmt.Sprintf("%v", metricDistValue), metricValue(lastDist),
+		"check value of %v", lastDist)
+}
+
+func metricValue(s string) string {
+	return s[strings.LastIndex(s, " ")+1:]
 }
 
 func TestMetrics_ZPages(t *testing.T) {
 	t.Parallel()
 	ctx := inslogger.TestContext(t)
-	testm, err := testmetrics.Start(ctx, t)
-	require.NoError(t, err, "metrics server start")
+	testm := newTestMetrics(ctx, configuration.Metrics{
+		ZpagesEnabled: true,
+	})
 
 	// One more thing... from https://github.com/rakyll/opencensus-grpc-demo
 	// also check /debug/rpcz
-	code, content, err := testm.FetchURL("/debug/tracez")
-	_ = content
-	require.NoError(t, err)
-	require.Equal(t, http.StatusOK, code)
-	// fmt.Println("/debug/tracez => ", content)
+	req, err := http.NewRequest("GET", "/debug/tracez", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rr := httptest.NewRecorder()
+	testm.Handler().ServeHTTP(rr, req)
 
-	assert.NoError(t, testm.Stop())
+	require.NoError(t, err, "fetch tracez page error check")
+	require.Equal(t, http.StatusOK, rr.Code)
 }
 
+//
 func TestMetrics_Status(t *testing.T) {
 	t.Parallel()
 	ctx := inslogger.TestContext(t)
-	testm, err := testmetrics.Start(ctx, t)
-	require.NoError(t, err, "metrics server start")
+	testm := newTestMetrics(ctx, configuration.Metrics{})
 
-	code, _, err := testm.FetchURL("/_status")
-	require.NoError(t, err)
-	require.Equal(t, http.StatusOK, code)
+	req, err := http.NewRequest("GET", "/_status", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rr := httptest.NewRecorder()
+	testm.Handler().ServeHTTP(rr, req)
 
-	assert.NoError(t, testm.Stop())
+	require.NoError(t, err, "fetch status page error check")
+	require.Equal(t, http.StatusOK, rr.Code)
 }
