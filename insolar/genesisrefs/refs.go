@@ -62,14 +62,6 @@ func init() {
 	for _, el := range insolar.GenesisNameMigrationDaemons {
 		PredefinedPrototypes[el+PrototypeSuffix] = *GenerateProtoReferenceFromContractID(PrototypeType, insolar.GenesisNameMigrationDaemon, 0)
 	}
-
-	for _, el := range insolar.GenesisNamePublicKeyShards {
-		PredefinedPrototypes[el+PrototypeSuffix] = *GenerateProtoReferenceFromContractID(PrototypeType, insolar.GenesisNamePKShard, 0)
-	}
-
-	for _, el := range insolar.GenesisNameMigrationAddressShards {
-		PredefinedPrototypes[el+PrototypeSuffix] = *GenerateProtoReferenceFromContractID(PrototypeType, insolar.GenesisNameMigrationShard, 0)
-	}
 }
 
 var (
