@@ -135,10 +135,8 @@ func NewWaitHot(j insolar.JetID, pn insolar.PulseNumber, msg payload.Meta) *Wait
 
 func (p *WaitHot) Dep(
 	w executor.JetWaiter,
-	s bus.Sender,
 ) {
 	p.dep.waiter = w
-	p.dep.sender = s
 }
 
 func (p *WaitHot) Proceed(ctx context.Context) error {

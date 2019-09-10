@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
+//go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.JetWaiter -o ./ -s _mock.go -g
 // JetWaiter provides method for locking on jet id.
 type JetWaiter interface {
 	Wait(ctx context.Context, jetID insolar.JetID, pulse insolar.PulseNumber) error

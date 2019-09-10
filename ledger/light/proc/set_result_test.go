@@ -100,28 +100,52 @@ func TestSetResult_Proceed(t *testing.T) {
 			},
 		}, nil
 	})
+
+	parent := gen.Reference()
+	se := record.Activate{
+		Request: gen.Reference(),
+		Parent:  parent,
+	}
+	hash = record.HashVirtual(pcs.ReferenceHasher(), record.Wrap(&se))
+	expectedSideEffectID := *insolar.NewID(resultID.Pulse(), hash)
+	earliestID := gen.ID()
+	earliestPulse := earliestID.Pulse()
+	detachedReqID := gen.ID()
+	detachedReq := record.Wrap(&record.OutgoingRequest{
+		Reason:     *insolar.NewReference(requestID),
+		ReturnMode: record.ReturnSaga,
+	})
+	detachedReqBuf, _ := detachedReq.Marshal()
+
 	indexes.SetMock.Set(func(_ context.Context, pn insolar.PulseNumber, idx record.Index) {
 		require.Equal(t, resultID.Pulse(), pn)
 		expectedIndex := record.Index{
 			LifelineLastUsed: resultID.Pulse(),
 			Lifeline: record.Lifeline{
 				LatestRequest:       &expectedFilamentID,
-				EarliestOpenRequest: nil,
+				LatestState:         &expectedSideEffectID,
+				StateID:             record.StateActivation,
+				Parent:              parent,
+				EarliestOpenRequest: &earliestPulse,
 			},
 		}
 		require.Equal(t, expectedIndex, idx)
 	})
+
 	records := object.NewAtomicRecordModifierMock(mc)
 	records.SetAtomicMock.Set(func(_ context.Context, recs ...record.Material) (r error) {
-		require.Equal(t, 2, len(recs))
+		require.Equal(t, 3, len(recs))
 
 		result := recs[0]
 		filament := recs[1]
+		sideEffect := recs[2]
 		require.Equal(t, resultID, result.ID)
 		require.Equal(t, resultRecord, record.Unwrap(&result.Virtual))
 
 		require.Equal(t, expectedFilamentID, filament.ID)
 		require.Equal(t, &expectedFilament, record.Unwrap(&filament.Virtual))
+
+		require.Equal(t, &se, record.Unwrap(&sideEffect.Virtual))
 		return nil
 	})
 
@@ -139,13 +163,33 @@ func TestSetResult_Proceed(t *testing.T) {
 		v := record.Wrap(&record.IncomingRequest{})
 		return []record.CompositeFilamentRecord{
 			{
+				RecordID: earliestID,
+				Record:   record.Material{Virtual: v},
+			},
+			{
 				RecordID: requestID,
 				Record:   record.Material{Virtual: v},
+			},
+			{
+				RecordID: detachedReqID,
+				Record:   record.Material{Virtual: detachedReq},
 			},
 		}, nil
 	})
 
-	setResultProc := proc.NewSetResult(msg, jetID, *resultRecord, nil)
+	expectedToVirtualMsg, _ := payload.NewMessage(&payload.SagaCallAcceptNotification{
+		ObjectID:          objectID,
+		DetachedRequestID: detachedReqID,
+		Request:           detachedReqBuf,
+	})
+
+	sender.SendRoleMock.Inspect(func(ctx context.Context, msg *message.Message, role insolar.DynamicRole, object insolar.Reference) {
+		require.Equal(t, expectedToVirtualMsg.Payload, msg.Payload)
+		require.Equal(t, insolar.DynamicRoleVirtualExecutor, role)
+		require.Equal(t, *insolar.NewReference(objectID), object)
+	}).Return(make(chan *message.Message), func() {})
+
+	setResultProc := proc.NewSetResult(msg, jetID, *resultRecord, &se)
 	setResultProc.Dep(writeAccessor, sender, object.NewIndexLocker(), filaments, records, indexes, pcs)
 
 	err = setResultProc.Proceed(ctx)

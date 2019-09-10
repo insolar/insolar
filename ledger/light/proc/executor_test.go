@@ -34,6 +34,7 @@ import (
 	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/insolar/insolar/pulse"
+	"github.com/insolar/insolar/testutils"
 )
 
 func TestFetchJet_Proceed(t *testing.T) {
@@ -125,4 +126,68 @@ func TestFetchJet_Proceed(t *testing.T) {
 		assert.Equal(t, err, proc.ErrNotExecutor)
 	})
 
+}
+
+func TestWaitHot_Proceed(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+	mc := minimock.NewController(t)
+
+	var (
+		jetWaiter *executor.JetWaiterMock
+	)
+	setup := func() {
+		jetWaiter = executor.NewJetWaiterMock(mc)
+	}
+
+	t.Run("happy", func(t *testing.T) {
+		setup()
+		defer mc.Finish()
+
+		j := gen.JetID()
+		pn := gen.PulseNumber()
+
+		jetWaiter.WaitMock.Inspect(func(ctx context.Context, jetID insolar.JetID, pulse insolar.PulseNumber) {
+			assert.Equal(t, j, jetID)
+			assert.Equal(t, pn, pulse)
+		}).Return(nil)
+
+		p := proc.NewWaitHot(j, pn, payload.Meta{})
+		p.Dep(jetWaiter)
+		err := p.Proceed(ctx)
+		assert.NoError(t, err)
+	})
+}
+
+func TestCalculateID_Proceed(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+	mc := minimock.NewController(t)
+
+	var (
+		pcs insolar.PlatformCryptographyScheme
+	)
+	setup := func() {
+		pcs = testutils.NewPlatformCryptographyScheme()
+	}
+
+	t.Run("happy", func(t *testing.T) {
+		setup()
+		defer mc.Finish()
+
+		pl, _ := (&payload.Meta{
+			Polymorph:  0,
+			Payload:    nil,
+			Sender:     insolar.Reference{},
+			Receiver:   insolar.Reference{},
+			Pulse:      0,
+			ID:         nil,
+			OriginHash: payload.MessageHash{},
+		}).Marshal()
+
+		pn := gen.PulseNumber()
+
+		p := proc.NewCalculateID(pl, pn)
+		p.Dep(pcs)
+		err := p.Proceed(ctx)
+		assert.NoError(t, err)
+	})
 }
