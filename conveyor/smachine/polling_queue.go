@@ -36,10 +36,6 @@ func (p *PollingQueue) Add(slot *Slot) {
 }
 
 func (p *PollingQueue) growPollingSlots() {
-	if int(p.seqLen) < len(p.polls) {
-		return
-	}
-
 	sLen := len(p.polls)
 	sizeInc := 10
 	if sLen > 32 {
@@ -93,7 +89,9 @@ func (p *PollingQueue) PrepareFor(pollTime time.Time) {
 
 	case !p.prepared.IsEmpty():
 		p.seqLen++
-		p.growPollingSlots()
+		if int(p.seqLen) >= len(p.polls) {
+			p.growPollingSlots()
+		}
 		seqHead = p.seqTail + p.seqLen
 		if seqHead >= uint16(len(p.polls)) {
 			seqHead -= uint16(len(p.polls))
