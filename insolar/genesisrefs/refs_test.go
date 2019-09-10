@@ -106,3 +106,12 @@ func TestRootDomain(t *testing.T) {
 	ref2 := GenesisRef(insolar.GenesisNameRootDomain)
 	require.Equal(t, ref1.String(), ref2.String(), "reference is the same")
 }
+
+func TestGenesisRef(t *testing.T) {
+	var (
+		pubKey    = "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEf+vsMVU75xH8uj5WRcOqYdHXtaHH\nN0na2RVQ1xbhsVybYPae3ujNHeQCPj+RaJyMVhb6Aj/AOsTTOPFswwIDAQ==\n-----END PUBLIC KEY-----\n"
+		pubKeyRef = "11tJDfNqT8mgcjmsbdaRUr8v6j39zLC4nDnGdupKUGu"
+	)
+	genesisRef := GenesisRef(pubKey)
+	require.Equal(t, pubKeyRef, genesisRef.String(), "reference by name always the same")
+}
