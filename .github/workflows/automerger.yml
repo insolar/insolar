@@ -1,7 +1,8 @@
 name: "Automerger"
 on:
   - pull_request_review
-  - label
+  - pull_request
+  - status
 
 jobs:
   automerge:
