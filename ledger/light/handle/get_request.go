@@ -51,6 +51,16 @@ func (s *GetRequest) Present(ctx context.Context, f flow.Flow) error {
 		return fmt.Errorf("wrong request type: %T", pl)
 	}
 
+	passIfNotExecutor := !s.passed
+	jet := proc.NewFetchJet(msg.ObjectID, msg.RequestID.Pulse(), s.message, passIfNotExecutor)
+	s.dep.FetchJet(jet)
+	if err := f.Procedure(ctx, jet, false); err != nil {
+		if err == proc.ErrNotExecutor && passIfNotExecutor {
+			return nil
+		}
+		return err
+	}
+
 	passIfNotFound := !s.passed
 	req := proc.NewGetRequest(s.message, msg.ObjectID, msg.RequestID, passIfNotFound)
 	s.dep.GetRequest(req)

@@ -85,56 +85,12 @@ func (p *GetRequest) Proceed(ctx context.Context) error {
 		return nil
 	}
 
-	sendPassRequest := func() error {
-		buf, err := p.message.Marshal()
-		if err != nil {
-			return errors.Wrap(err, "failed to marshal origin meta message")
-		}
-		msg, err := payload.NewMessage(&payload.Pass{
-			Origin: buf,
-		})
-		if err != nil {
-			return errors.Wrap(err, "failed to create reply")
-		}
-
-		onHeavy, err := p.dep.coordinator.IsBeyondLimit(ctx, p.requestID.Pulse())
-		if err != nil {
-			return errors.Wrap(err, "failed to calculate pulse")
-		}
-		var node insolar.Reference
-		if onHeavy {
-			h, err := p.dep.coordinator.Heavy(ctx)
-			if err != nil {
-				return errors.Wrap(err, "failed to calculate heavy")
-			}
-			node = *h
-		} else {
-			jetID, err := p.dep.fetcher.Fetch(ctx, p.objectID, p.requestID.Pulse())
-			if err != nil {
-				return errors.Wrap(err, "failed to fetch jet")
-			}
-			l, err := p.dep.coordinator.LightExecutorForJet(ctx, *jetID, p.requestID.Pulse())
-			if err != nil {
-				return errors.Wrap(err, "failed to calculate role")
-			}
-			node = *l
-		}
-
-		_, done := p.dep.sender.SendTarget(ctx, msg, node)
-		done()
-		return nil
-	}
-
 	rec, err := p.dep.records.ForID(ctx, p.requestID)
 	switch err {
 	case nil:
 		return sendRequest(rec)
 
 	case object.ErrNotFound:
-		if p.pass {
-			return sendPassRequest()
-		}
-
 		return &payload.CodedError{
 			Text: "request not found",
 			Code: payload.CodeNotFound,
