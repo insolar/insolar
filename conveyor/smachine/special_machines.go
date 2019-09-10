@@ -28,6 +28,7 @@ func (p *sharedStateMachine) GetStateMachineDeclaration() StateMachineDeclaratio
 }
 
 func (p *sharedStateMachine) initState(ctx InitializationContext) StateUpdate {
+	ctx.SetDefaultFlags(StepWeak)
 	ctx.SetDefaultMigration(p.migrateState)
 	p.sharedLink = ctx.Share(p.state, true)
 	return ctx.Jump(p.mainState)
