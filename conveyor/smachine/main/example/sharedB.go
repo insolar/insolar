@@ -14,15 +14,21 @@
 //    limitations under the License.
 ///
 
-package smachine
+package example
 
-type StateMachine interface {
-	//GetStateMachineName() string
-	GetStateMachineDeclaration() StateMachineDeclaration
+type SharedStateB struct {
+	f string
+	g int
 }
 
-type SharedState interface {
-	CanBeDisposed(ctx BasicContext) bool
-	CanBeDisposedBy(ctx BasicContext, initiator SlotLink) bool
-	CanBeMigrated(ctx BasicContext) bool
+/* generated or provided adapter */
+type SharedStateAdapterB struct {
+	state *SharedStateB
+	//exec smachine.SharedStateAdapter
 }
+
+//func (a *SharedStateAdapterB) PrepareUpdate(ctx smachine.ExecutionContext, fn func(s *SharedStateB)) smachine.SharedUpdateRequester {
+//	return a.exec.PrepareUpdate(ctx, func() {
+//		fn(a.state)
+//	})
+//}

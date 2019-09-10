@@ -32,7 +32,9 @@ type ExecutionAdapter interface {
 }
 
 type SyncCallRequester interface {
+	/* Returns true when the call was successful. Will return false when worker has a signal / interrupt */
 	TryCall() bool
+	/* Panics when it wasn't possible to perform a sync call */
 	Call()
 }
 
@@ -51,7 +53,7 @@ type AsyncCallRequester interface {
 	//CallbackWithMigrate(fn StateFunc, mf MigrateFunc)
 
 	/* Creates an update that can be returned as a new state and will ONLY be executed if returned as a new state */
-	Wait() CallConditionalUpdate
+	DelayedStart() CallConditionalUpdate
 }
 
 type AdapterCallbackFunc func(fn AsyncResultFunc, recovered interface{})
@@ -74,3 +76,13 @@ type AdapterExecutor interface {
 	RegisterOn(SlotMachineState)
 	Migrate(slotMachineState SlotMachineState, migrationCount uint16)
 }
+
+//type SharedStateAdapter interface {
+//	PrepareUpdate(ctx ExecutionContext, fn func()) SharedUpdateRequester
+//	TryCancel(ctx ExecutionContext)
+//}
+//
+//type SharedUpdateRequester interface {
+//	TryApply() (isValid, isApplied bool)
+//	Apply()
+//}

@@ -17,6 +17,7 @@
 package smachine
 
 import (
+	"context"
 	"sync"
 )
 
@@ -65,8 +66,45 @@ func (p *SimpleSlotWorker) getCond() *sync.Cond {
 	return p.cond
 }
 
+func (p *SimpleSlotWorker) wakeUpAfterSharedAttach(slot *Slot, link StepLink) context.CancelFunc {
+	return func() {
+		if !link.IsValid() {
+			return
+		}
+		m := link.s.machine
+		m._applyInplaceUpdate(link.s, true, true)
+	}
+}
+
 type simpleWorkerContext struct {
 	w *SimpleSlotWorker
+}
+
+func (p simpleWorkerContext) AttachToShared(slot *Slot, link StepLink, wakeUpOnUse bool) (SharedAccessReport, context.CancelFunc) {
+	switch {
+	case !link.IsValid():
+		return SharedDataAbsent, nil
+	case slot == link.s:
+		// no need to wakeup
+		return SharedDataAvailableLocal, nil
+	}
+	isRemote := slot.machine != link.s.machine
+	if link.s.isWorking() {
+		if isRemote {
+			return SharedDataBusyRemote, nil
+		}
+		return SharedDataBusyLocal, nil
+	}
+
+	var finishFn context.CancelFunc
+	if wakeUpOnUse {
+		finishFn = p.w.wakeUpAfterSharedAttach(slot, link)
+	}
+
+	if isRemote {
+		return SharedDataAvailableRemote, finishFn
+	}
+	return SharedDataAvailableLocal, finishFn
 }
 
 func (p simpleWorkerContext) CanLoopOrHasSignal(loopCount uint32) (canLoop, hasSignal bool) {

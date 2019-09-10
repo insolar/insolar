@@ -23,7 +23,7 @@ type QueueType int8
 const (
 	InvalidQueue QueueType = iota
 
-	AnotherSlotQueue
+	ActivationOfSlot
 
 	UnusedSlots
 
@@ -188,7 +188,7 @@ func (s *Slot) vacateQueueHead() {
 func (s *Slot) makeQueueHead() {
 	s.ensureNotInQueue()
 
-	s.queue = &QueueHead{head: s, queueType: AnotherSlotQueue}
+	s.queue = &QueueHead{head: s, queueType: ActivationOfSlot}
 	s.nextInQueue = s
 	s.prevInQueue = s
 }

@@ -38,6 +38,3 @@ func (s *StateMachineDeclTemplate) IsConsecutive(cur, next StateFunc) bool {
 func (s *StateMachineDeclTemplate) GetMigrateFn(StateFunc) MigrateFunc {
 	return nil
 }
-
-type specialMachineDeclaration interface {
-}

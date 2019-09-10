@@ -24,8 +24,8 @@ import (
 type Slot struct {
 	idAndStep uint64 //atomic access
 	parent    SlotLink
-	//machineState SlotMachineState
-	ctx context.Context
+	machine   *SlotMachine
+	ctx       context.Context
 
 	declaration StateMachineDeclaration
 	step        SlotStep
@@ -59,10 +59,13 @@ type SlotDependency interface {
 	Remove()
 }
 
+const stepIncrementShift = 32
+const stepIncrement = 1 << stepIncrementShift
+
 type slotWorkFlags uint8
 
 const (
-	Working slotWorkFlags = 1 << iota
+	slotWorking slotWorkFlags = 1 << iota
 )
 
 func (s *Slot) ensureNotInQueue() {
@@ -82,31 +85,40 @@ func (s *Slot) GetID() SlotID {
 }
 
 func (s *Slot) GetStep() uint32 {
-	return uint32(s.idAndStep >> 32)
+	return uint32(s.idAndStep >> stepIncrementShift)
 }
 
 func (s *Slot) GetAtomicIDAndStep() (SlotID, uint32) {
 	v := atomic.LoadUint64(&s.idAndStep)
-	return SlotID(v), uint32(v >> 32)
+	return SlotID(v), uint32(v >> stepIncrementShift)
 }
 
-const stepIncrement = 1 << 32
-
 func (s *Slot) init(ctx context.Context, id SlotID, parent SlotLink, decl StateMachineDeclaration,
-	machineState SlotMachineState) {
+	machine *SlotMachine) {
 
 	if decl == nil {
-		panic("illegal state")
+		panic("illegal value")
+	}
+	if machine == nil {
+		panic("illegal value")
 	}
 	if id.IsUnknown() {
 		panic("illegal value")
 	}
+	switch {
+	case s.machine == machine:
+		break
+	case s.machine == nil:
+		s.machine = machine
+	default:
+		panic("illegal value")
+	}
+
 	s.ensureNotInQueue()
-	atomic.StoreUint64(&s.idAndStep, uint64(id)+stepIncrement)
 	s.parent = parent
 	s.declaration = decl
-	//s.machineState = machineState
 	s.ctx = ctx
+	atomic.StoreUint64(&s.idAndStep, uint64(id)+stepIncrement)
 }
 
 func (s *Slot) incStep() bool {
@@ -131,12 +143,10 @@ func (s *Slot) dispose() {
 	if s.dependency != nil {
 		panic("illegal state")
 	}
-	s.forcedDispose()
-}
 
-func (s *Slot) forcedDispose() {
 	atomic.StoreUint64(&s.idAndStep, 0)
-	*s = Slot{}
+	// this may cause data racing error ... but there is none
+	*s = Slot{machine: s.machine}
 }
 
 func (s *Slot) NewLink() SlotLink {
@@ -152,7 +162,7 @@ func (s *Slot) isEmpty() bool {
 }
 
 func (s *Slot) isWorking() bool {
-	return s.workState&Working != 0
+	return s.workState&slotWorking != 0
 }
 
 func (s *Slot) isLastScan(scanNo uint32) bool {
@@ -160,19 +170,19 @@ func (s *Slot) isLastScan(scanNo uint32) bool {
 }
 
 func (s *Slot) startWorking(scanNo uint32) /* , timeMark time.Duration) */ {
-	if s.workState&Working != 0 {
+	if s.workState&slotWorking != 0 {
 		panic("illegal state")
 	}
 	s.lastWorkScan = uint8(scanNo)
-	s.workState |= Working
+	s.workState |= slotWorking
 }
 
 func (s *Slot) stopWorking(asyncCount uint16) {
-	if s.workState&Working == 0 {
+	if s.workState&slotWorking == 0 {
 		panic("illegal state")
 	}
 	s.asyncCallCount += asyncCount
-	s.workState &^= Working
+	s.workState &^= slotWorking
 }
 
 func (s *Slot) setNextStep(step SlotStep) {
@@ -191,4 +201,25 @@ func (s *Slot) setNextStep(step SlotStep) {
 	}
 	s.step = step
 	s.incStep()
+}
+
+func (s *Slot) removeHeadedQueue(moveTo func(slot *Slot)) {
+	for {
+		next := s.QueueNext()
+		if next == nil {
+			break
+		}
+		next.removeFromQueue()
+		moveTo(next)
+	}
+	s.vacateQueueHead()
+}
+
+func (s *Slot) ensureLocal(link SlotLink) {
+	if s.machine == nil {
+		panic("illegal state")
+	}
+	if s.machine != link.s.machine {
+		panic("illegal state")
+	}
 }

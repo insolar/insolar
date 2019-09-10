@@ -32,6 +32,7 @@ func NoStepLink() StepLink {
 	return StepLink{}
 }
 
+/* A lazy link to a slot, that can detect if a slot is dead */
 type SlotLink struct {
 	id SlotID
 	s  *Slot
@@ -80,3 +81,31 @@ func (p StepLink) isValidAndAtExactStep() (valid, atExactStep bool) {
 	id, step := p.s.GetAtomicIDAndStep()
 	return p.id == id, p.step == step
 }
+
+type SharedDataFunc func(interface{})
+
+type SharedDataLink struct {
+	link   StepLink
+	wakeup bool
+	data   interface{}
+}
+
+func (v SharedDataLink) PrepareAccess(fn SharedDataFunc) SharedDataAccessor {
+	return SharedDataAccessor{v, fn}
+}
+
+type SharedDataAccessor struct {
+	link     SharedDataLink
+	accessFn SharedDataFunc
+}
+
+type SharedAccessReport uint8
+
+const (
+	SharedDataAbsent SharedAccessReport = iota
+	_
+	SharedDataBusyLocal
+	SharedDataBusyRemote
+	SharedDataAvailableLocal
+	SharedDataAvailableRemote
+)

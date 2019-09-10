@@ -17,6 +17,7 @@
 package smachine
 
 import (
+	"context"
 	"sync"
 )
 
@@ -32,4 +33,5 @@ type WorkerContext interface {
 	GetCond() (bool, *sync.Cond)
 	StartNested(state SlotMachineState) SlotWorker
 	CanLoopOrHasSignal(loopCount uint32) (canLoop, hasSignal bool)
+	AttachToShared(slot *Slot, link StepLink, wakeUpOnUse bool) (SharedAccessReport, context.CancelFunc)
 }

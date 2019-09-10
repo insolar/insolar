@@ -129,6 +129,11 @@ func (p *slotContext) WakeUp() StateUpdate {
 	return stateUpdateRepeat(&p.marker, 0)
 }
 
+func (p *slotContext) Share(data interface{}, wakeUpOnUse bool) SharedDataLink {
+	p.ensureAtLeastState(initContext)
+	return SharedDataLink{p.s.NewStepLink(), wakeUpOnUse, data}
+}
+
 var _ ConstructionContext = &constructionContext{}
 
 type constructionContext struct {
@@ -234,15 +239,37 @@ func (p *executionContext) Poll() StateConditionalUpdate {
 
 func (p *executionContext) WaitForActive(link SlotLink) StateConditionalUpdate {
 	p.ensureExactState(execContext)
-	if link.IsEmpty() {
-		panic("illegal value")
-	}
-	return &conditionalUpdate{marker: &p.marker, dependency: link}
+	p.s.ensureLocal(link)
+	return &conditionalUpdate{marker: &p.marker, updMode: stateUpdWait, dependency: link}
 }
 
 func (p *executionContext) Wait() StateConditionalUpdate {
 	p.ensureExactState(execContext)
 	return &conditionalUpdate{marker: &p.marker}
+}
+
+func (p *executionContext) WaitForShared(link SharedDataLink) StateConditionalUpdate {
+	p.ensureExactState(execContext)
+	r, releaseFn := p.worker.AttachToShared(p.s, link.link, link.wakeup)
+	if releaseFn != nil {
+		defer releaseFn()
+	}
+	if r == SharedDataBusyRemote {
+		panic("not implemented")
+	}
+	return &conditionalUpdate{marker: &p.marker, dependency: link.link.SlotLink}
+}
+
+func (p *executionContext) UseShared(a SharedDataAccessor) SharedAccessReport {
+	p.ensureExactState(execContext)
+	r, releaseFn := p.worker.AttachToShared(p.s, a.link.link, a.link.wakeup)
+	if releaseFn != nil {
+		defer releaseFn()
+	}
+	if r >= SharedDataAvailableLocal {
+		a.accessFn(a.link.data)
+	}
+	return r
 }
 
 //func (p *executionContext) SyncOneStep(key string, weight int32, broadcastFn BroadcastReceiveFunc) Syncronizer {
@@ -259,6 +286,9 @@ func (p *executionContext) NewChild(ctx context.Context, fn CreateFunc) SlotLink
 		panic("illegal value")
 	}
 	_, link := p.machine.applySlotCreate(ctx, nil, p.s.NewLink(), fn)
+	if link.IsEmpty() {
+		panic("machine was not created")
+	}
 	return link
 }
 
@@ -374,15 +404,20 @@ func (c *conditionalUpdate) ThenRepeat() StateUpdate {
 func (c *conditionalUpdate) then(fn StateFunc, mf MigrateFunc, flags StepFlags) StateUpdate {
 	slotStep := SlotStep{Transition: fn, Migration: mf, StepFlags: flags}
 	switch c.updMode {
-	case stateUpdNext: // yield
+	case stateUpdNext: // Yield
 		return stateUpdateYield(c.marker, slotStep, c.kickOff)
-	case stateUpdPoll: // poll
+	case stateUpdPoll: // Poll
 		return stateUpdatePoll(c.marker, slotStep, c.kickOff)
-	default: // wait
+	case stateUpdWait: // Wait & WaitForActive
 		if c.dependency.IsEmpty() {
 			return stateUpdateWait(c.marker, slotStep, c.kickOff)
 		}
 		return stateUpdateWaitForSlot(c.marker, c.dependency, slotStep, c.kickOff)
+	default: // WaitForShared
+		if c.kickOff != nil {
+			panic("illegal state")
+		}
+		return stateUpdateWaitForShared(c.marker, c.dependency, slotStep)
 	}
 }
 
@@ -457,5 +492,5 @@ func (p *bargingInContext) executeBargeIn(bargeInFn BargeInApplyFunc) StateUpdat
 	p.setState(inactiveContext, bargeInContext)
 	defer p.setState(bargeInContext, discardedContext)
 
-	return bargeInFn(p)
+	return bargeInFn(p).ensureMarker(&p.marker)
 }

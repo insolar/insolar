@@ -17,10 +17,8 @@
 package example
 
 import (
-	"context"
 	"fmt"
 	"github.com/insolar/insolar/conveyor/smachine"
-	"github.com/insolar/insolar/conveyor/smachine/smadapter"
 	"time"
 )
 
@@ -29,8 +27,8 @@ var _ smachine.StateMachine = &StateMachine1{}
 type StateMachine1 struct {
 	smachine.StateMachineDeclTemplate
 
-	serviceA *ServiceAdapterA //`inject`
-	//mutexB   *MutexAdapterB   // inject
+	serviceA *ServiceAdapterA     //`inject`
+	sharedB  *SharedStateAdapterB // inject
 
 	result string
 	count  int
@@ -47,10 +45,15 @@ func (s *StateMachine1) GetInitStateFor(m smachine.StateMachine) smachine.InitFu
 	return s.Init
 }
 
-var injectServiceAdapterA *ServiceAdapterA
-
 func (s *StateMachine1) Init(ctx smachine.InitializationContext) smachine.StateUpdate {
+	/* -- Emulation of injections -- */
 	s.serviceA = injectServiceAdapterA
+
+	if injectSharedAdapterB == nil {
+
+	}
+	/* ----------------------------- */
+
 	fmt.Printf("init: %d %v\n", ctx.GetSlotID(), time.Now())
 	return ctx.Jump(s.State1)
 }
@@ -103,7 +106,7 @@ func (s *StateMachine1) State3(ctx smachine.ExecutionContext) smachine.StateUpda
 		return ctx.Poll().ThenRepeat()
 	}
 	ctx.NewChild(ctx.GetContext(), func(ctx smachine.ConstructionContext) smachine.StateMachine {
-		return &StateMachine1{}
+		return &StateMachine1{sharedB: s.sharedB}
 	})
 
 	return ctx.Jump(s.State4)
@@ -111,7 +114,7 @@ func (s *StateMachine1) State3(ctx smachine.ExecutionContext) smachine.StateUpda
 
 func (s *StateMachine1) State4(ctx smachine.ExecutionContext) smachine.StateUpdate {
 	//ctx.NewChild(func(ctx smachine.ConstructionContext) smachine.StateMachine {
-	//	return &StateMachine1{}
+	//	return &StateMachine1{ sharedB:s.sharedB }
 	//})
 	if ctx.GetPendingCallCount() > 0 {
 		return ctx.Poll().ThenRepeat()
@@ -141,7 +144,7 @@ func (s *StateMachine1) State50(ctx smachine.ExecutionContext) smachine.StateUpd
 			s.result = asyncResult
 			ctx.WakeUp()
 		}
-	}).Wait().ThenJump(s.State5)
+	}).DelayedStart().ThenJump(s.State5)
 }
 
 func (s *StateMachine1) State60(ctx smachine.ExecutionContext) smachine.StateUpdate {
@@ -158,48 +161,3 @@ func (s *StateMachine1) State60(ctx smachine.ExecutionContext) smachine.StateUpd
 }
 
 // ------------------------------------------
-
-/* Actual service */
-type ServiceA interface {
-	DoSomething(param string) string
-	DoSomethingElse(param0 string, param1 int) (bool, string)
-}
-
-/* generated or provided adapter */
-type ServiceAdapterA struct {
-	svc  ServiceA
-	exec smachine.ExecutionAdapter
-}
-
-func (a *ServiceAdapterA) PrepareSync(ctx smachine.ExecutionContext, fn func(svc ServiceA)) smachine.SyncCallRequester {
-	return a.exec.PrepareSync(ctx, func() smachine.AsyncResultFunc {
-		fn(a.svc)
-		return nil
-	})
-}
-
-func (a *ServiceAdapterA) PrepareAsync(ctx smachine.ExecutionContext, fn func(svc ServiceA) smachine.AsyncResultFunc) smachine.AsyncCallRequester {
-	return a.exec.PrepareAsync(ctx, func() smachine.AsyncResultFunc {
-		return fn(a.svc)
-	})
-}
-
-func SetInjectServiceAdapterA(svc ServiceA, machine *smachine.SlotMachine) {
-	if injectServiceAdapterA != nil {
-		panic("illegal state")
-	}
-	ach := smadapter.NewChannelAdapter(context.Background(), 0, -1)
-	adapterExec := machine.RegisterAdapter("ServiceA", &ach)
-	injectServiceAdapterA = &ServiceAdapterA{svc, adapterExec}
-
-	go func() {
-		for {
-			select {
-			case <-ach.Context().Done():
-				return
-			case t := <-ach.Channel():
-				t.RunAndSendResult()
-			}
-		}
-	}()
-}

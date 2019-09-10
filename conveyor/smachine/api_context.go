@@ -49,6 +49,8 @@ type stepContext interface {
 	JumpExt(StateFunc, MigrateFunc, StepFlags) StateUpdate
 	Jump(StateFunc) StateUpdate
 
+	Share(data interface{}, wakeUpOnUse bool) SharedDataLink
+
 	Stop() StateUpdate
 }
 
@@ -90,6 +92,9 @@ type ExecutionContext interface {
 	//SyncManySteps(key string)
 
 	NewChild(context.Context, CreateFunc) SlotLink
+	//NewShared(context.Context, SharedState) SharedStateAdapter
+
+	UseShared(SharedDataAccessor) SharedAccessReport
 
 	BargeInWithParam(BargeInApplyFunc) BargeInParamFunc
 	BargeInThisStepOnly() BargeInRequester
@@ -101,6 +106,8 @@ type ExecutionContext interface {
 	Yield() StateConditionalUpdate
 	Poll() StateConditionalUpdate
 	WaitForActive(SlotLink) StateConditionalUpdate
+	WaitForShared(SharedDataLink) StateConditionalUpdate
+
 	//	WaitForInput() StateConditionalUpdate
 	Wait() StateConditionalUpdate
 }

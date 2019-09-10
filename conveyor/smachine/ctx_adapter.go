@@ -95,7 +95,7 @@ func (c *adapterCallRequest) Start() {
 	c._startAsync()
 }
 
-func (c *adapterCallRequest) Wait() CallConditionalUpdate {
+func (c *adapterCallRequest) DelayedStart() CallConditionalUpdate {
 	c.ensureMode(adapterAsyncCallContext)
 	defer c.discard()
 

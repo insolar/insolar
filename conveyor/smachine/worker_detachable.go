@@ -17,6 +17,7 @@
 package smachine
 
 import (
+	"context"
 	"sync"
 	"sync/atomic"
 )
@@ -231,6 +232,10 @@ func (p *DetachableSlotWorker) FinishNested(state SlotMachineState) {
 
 type detachableWorkerContext struct {
 	w *DetachableSlotWorker
+}
+
+func (p detachableWorkerContext) AttachToShared(slot *Slot, link StepLink, wakeUpOnUse bool) (SharedAccessReport, context.CancelFunc) {
+	panic("implement me")
 }
 
 func (p detachableWorkerContext) CanLoopOrHasSignal(loopCount uint32) (canLoop, hasSignal bool) {

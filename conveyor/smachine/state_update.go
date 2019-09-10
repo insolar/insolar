@@ -82,6 +82,10 @@ func stateUpdateWaitForSlot(marker *struct{}, waitOn SlotLink, slotStep SlotStep
 	return NewStateUpdateLink(marker, uint16(stateUpdWait), waitOn, slotStep, prepareToParam(prepare))
 }
 
+func stateUpdateWaitForShared(marker *struct{}, waitOn SlotLink, slotStep SlotStep) StateUpdate {
+	return NewStateUpdateLink(marker, uint16(stateUpdWaitForShared), waitOn, slotStep, nil)
+}
+
 func stateUpdateReplace(marker *struct{}, cf CreateFunc) StateUpdate {
 	if cf == nil {
 		panic("illegal state")
@@ -124,6 +128,7 @@ const (
 	stateUpdNext
 	stateUpdPoll
 	stateUpdWait
+	stateUpdWaitForShared
 
 	//stateUpdFlagNoWakeup = 1 << 5
 	//stateUpdFlagHasAsync = 1 << 6
