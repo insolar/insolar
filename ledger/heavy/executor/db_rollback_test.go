@@ -74,7 +74,12 @@ func TestDBRollback_HappyPath(t *testing.T) {
 			return iterNum%2 != 0
 		})
 
-		iterMock.KeyMock.Return(p.ID())
+		// IndexDB key
+		var key []byte
+		key = append(key, testPulse.Bytes()...)
+		key = append(key, p.ID()...)
+
+		iterMock.KeyMock.Return(key)
 		iterMock.CloseMock.Return()
 		iterMock.ValueMock.Return([]byte{}, nil)
 		return iterMock
