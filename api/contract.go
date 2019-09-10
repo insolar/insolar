@@ -30,7 +30,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/genesisrefs"
 	"github.com/insolar/insolar/insolar/reply"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/rpc/v2"
 	"github.com/pkg/errors"
@@ -58,7 +57,7 @@ func (cs *ContractService) Call(req *http.Request, args *requester.Params, reque
 	return wrapCall(cs.runner, cs.allowedMethods, req, args, requestBody, result)
 }
 
-func (ar *Runner) checkSeed(ctx context.Context, paramsSeed string) (insolar.PulseNumber, error) {
+func (ar *Runner) checkSeed(paramsSeed string) (insolar.PulseNumber, error) {
 	decoded, err := base64.StdEncoding.DecodeString(paramsSeed)
 	if err != nil {
 		return 0, errors.New("failed to decode seed from string")
@@ -67,8 +66,6 @@ func (ar *Runner) checkSeed(ctx context.Context, paramsSeed string) (insolar.Pul
 	if seed == nil {
 		return 0, errors.New("bad input seed")
 	}
-
-	inslogger.FromContext(ctx).Info("[ checkSeed ] before seed.Pop")
 
 	if pulse, ok := ar.SeedManager.Pop(*seed); ok {
 		return pulse, nil

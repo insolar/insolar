@@ -84,8 +84,7 @@ func wrapCall(runner *Runner, allowedMethods map[string]bool, req *http.Request,
 		}
 	}
 
-	logger.Infof("[ ContractService.Call ] After validate headers: %s", req.RequestURI)
-	seedPulse, err := runner.checkSeed(ctx, args.Seed)
+	seedPulse, err := runner.checkSeed(args.Seed)
 	if err != nil {
 		return &json2.Error{
 			Code:    InvalidRequestError,

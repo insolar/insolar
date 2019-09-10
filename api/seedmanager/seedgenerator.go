@@ -23,7 +23,7 @@ import (
 )
 
 // SeedSize is size of seed
-const SeedSize uint = 12
+const SeedSize uint = 32
 
 // Seed is a type of seed
 type Seed = [SeedSize]byte

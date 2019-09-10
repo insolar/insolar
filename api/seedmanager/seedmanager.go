@@ -18,7 +18,6 @@ package seedmanager
 
 import (
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/insolar/insolar/insolar"
@@ -45,7 +44,6 @@ type SeedManager struct {
 	seedPool map[Seed]storedSeed
 	ttl      time.Duration
 	stopped  chan struct{}
-	id       uint32
 }
 
 // New creates new seed manager with default params
@@ -53,19 +51,13 @@ func New() *SeedManager {
 	return NewSpecified(DefaultTTL, DefaultCleanPeriod)
 }
 
-var globalID uint32
-
 // NewSpecified creates new seed manager with custom params
 func NewSpecified(ttl time.Duration, cleanPeriod time.Duration) *SeedManager {
-	atomic.AddUint32(&globalID, 1)
 	sm := SeedManager{
 		seedPool: make(map[Seed]storedSeed),
 		ttl:      ttl,
 		stopped:  make(chan struct{}),
-		id:       atomic.LoadUint32(&globalID),
 	}
-
-	println("Creating NewSpecified: ", ", ID: ", sm.id)
 
 	ticker := time.NewTicker(cleanPeriod)
 
