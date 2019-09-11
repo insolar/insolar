@@ -21,6 +21,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -31,8 +32,6 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-
-	"github.com/insolar/insolar/log"
 )
 
 const (
