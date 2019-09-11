@@ -59,7 +59,7 @@ const (
 	GenesisNameEnterpriseDeposit     = "enterprise" + GenesisNameDeposit
 
 	GenesisAmountMigrationDaemonMembers       = 10
-	GenesisAmountActiveMigrationDaemonMembers = 3
+	GenesisAmountActiveMigrationDaemonMembers = 2
 
 	GenesisAmountNetworkIncentivesMembers     = 40
 	GenesisAmountApplicationIncentivesMembers = 40
