@@ -21,7 +21,6 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/insolar/insolar/version"
 	"github.com/spf13/cobra"
 )
 
@@ -61,7 +60,7 @@ func GetCommand(cmdName string) *cobra.Command {
 		Use:   "version",
 		Short: fmt.Sprintf("Print the version info of %s", cmdName),
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Println(version.GetFullVersion())
+			fmt.Println(GetFullVersion())
 			os.Exit(0)
 		},
 	}
