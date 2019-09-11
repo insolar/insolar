@@ -63,11 +63,11 @@ var (
 )
 
 var (
-	// ConsensusPacketsSentBytes consensus sent packets size.
+	// ConsensusPacketsSent consensus sent packets size.
 	ConsensusPacketsSent = stats.Int64("consensus_packets_sent", "Consensus sent packets size", stats.UnitBytes)
-	// ConsensusPacketsRecvBytes consensus received packets size.
+	// ConsensusPacketsRecv consensus received packets size.
 	ConsensusPacketsRecv = stats.Int64("consensus_packets_recv", "Consensus received packets size", stats.UnitBytes)
-	// ConsensusPacketsRecvBytes consensus received packets size.
+	// ConsensusPacketsRecvBad consensus received packets size.
 	ConsensusPacketsRecvBad = stats.Int64("consensus_packets_recv_bad", "Consensus received packets size", stats.UnitBytes)
 
 	// DeclinedClaims consensus claims declined counter.
