@@ -118,7 +118,7 @@ func (r *executionRegistry) OnPulse(_ context.Context) []payload.Payload {
 	messages := make([]payload.Payload, 0)
 	if len(r.registry) != 0 {
 		requestRefs := make([]insolar.Reference, 0, len(r.registry))
-		for requestRef, _ := range r.registry {
+		for requestRef := range r.registry {
 			requestRefs = append(requestRefs, requestRef)
 		}
 

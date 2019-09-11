@@ -533,13 +533,18 @@ func TestLogicRunner_OnPulse_Order(t *testing.T) {
 }
 
 func (suite *LogicRunnerTestSuite) TestImmutableOrder() {
+	pa := insolarPulse.NewAccessorMock(suite.mc).LatestMock.Return(
+		insolar.Pulse{PulseNumber: pulse.MinTimePulse},
+		nil,
+	)
+
 	er := executionregistry.NewExecutionRegistryMock(suite.mc).
 		RegisterMock.Return(nil).
 		DoneMock.Return(true)
 
 	// prepare default object and execution state
 	objectRef := gen.Reference()
-	broker := NewExecutionBroker(objectRef, nil, suite.re, nil, nil, er, nil, nil)
+	broker := NewExecutionBroker(objectRef, nil, suite.re, nil, nil, er, nil, pa)
 	broker.pending = insolar.NotPending
 
 	// prepare request objects
@@ -596,7 +601,6 @@ func (suite *LogicRunnerTestSuite) TestImmutableOrder() {
 			log.Debug("mutableChan 1")
 			select {
 			case _ = <-mutableChan:
-
 				log.Info("mutable got notifications")
 				return &reply.CallMethod{Result: []byte{1, 2, 3}}, nil
 			case <-time.After(2 * time.Minute):
