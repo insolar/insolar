@@ -45,7 +45,7 @@ func (u StateUpdate) ensureMarker(marker ContextMarker) StateUpdate {
 	return u
 }
 
-func NewStateUpdate(marker ContextMarker, updType uint16, slotStep SlotStep, param interface{}) StateUpdate {
+func newStateUpdate(marker ContextMarker, updType uint16, slotStep SlotStep, param interface{}) StateUpdate {
 	return StateUpdate{
 		marker:  marker,
 		param1:  param,
@@ -54,7 +54,7 @@ func NewStateUpdate(marker ContextMarker, updType uint16, slotStep SlotStep, par
 	}
 }
 
-func NewStateUpdateUint(marker ContextMarker, updType uint16, slotStep SlotStep, param uint32) StateUpdate {
+func newStateUpdateUint(marker ContextMarker, updType uint16, slotStep SlotStep, param uint32) StateUpdate {
 	return StateUpdate{
 		marker:  marker,
 		param0:  param,
@@ -63,7 +63,17 @@ func NewStateUpdateUint(marker ContextMarker, updType uint16, slotStep SlotStep,
 	}
 }
 
-func NewStateUpdateLink(marker ContextMarker, updType uint16, link SlotLink, slotStep SlotStep, param interface{}) StateUpdate {
+func newStateUpdateUintAndParam(marker ContextMarker, updType uint16, slotStep SlotStep, param0 uint32, param1 interface{}) StateUpdate {
+	return StateUpdate{
+		marker:  marker,
+		param0:  param0,
+		param1:  param1,
+		step:    slotStep,
+		updType: updType,
+	}
+}
+
+func newStateUpdateLink(marker ContextMarker, updType uint16, link SlotLink, slotStep SlotStep, param interface{}) StateUpdate {
 	return StateUpdate{
 		marker:  marker,
 		param1:  param,

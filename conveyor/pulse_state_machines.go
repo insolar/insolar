@@ -18,6 +18,8 @@ package conveyor
 
 import "github.com/insolar/insolar/conveyor/smachine"
 
+const presentSlotCycleBoost = 1
+
 type pulseSMTemplate struct {
 	smachine.StateMachineDeclTemplate
 	ps  *PulseSlot
@@ -120,8 +122,12 @@ func (sm *PresentPulseSM) stepPulseCancel(ctx smachine.ExecutionContext) smachin
 }
 
 func (sm *PresentPulseSM) stepWorking(ctx smachine.ExecutionContext) smachine.StateUpdate {
-	sm.ps.slots.ScanOnceAsNested(ctx)
-	return ctx.Yield().ThenRepeat()
+	repeatNow, nextPollTime := sm.ps.slots.ScanOnceAsNested(ctx)
+
+	if repeatNow {
+		return ctx.Repeat(presentSlotCycleBoost)
+	}
+	return ctx.WaitForEventUntil(nextPollTime).ThenRepeat()
 }
 
 func (sm *PresentPulseSM) stepSuspending(ctx smachine.ExecutionContext) smachine.StateUpdate {
@@ -164,9 +170,15 @@ func (sm *PastPulseSM) stepPulseCommitted(ctx smachine.MigrationContext) smachin
 }
 
 func (sm *PastPulseSM) stepWorking(ctx smachine.ExecutionContext) smachine.StateUpdate {
-	if sm.ps.slots.ScanOnceAsNested(ctx) {
-		return ctx.Yield().ThenRepeat()
+	repeatNow, nextPollTime := sm.ps.slots.ScanOnceAsNested(ctx)
+
+	switch {
+	case repeatNow:
+		return ctx.Repeat(0)
+	case !nextPollTime.IsZero():
+		// old pulses can be throttled down a bit
+		return ctx.Poll().ThenRepeat()
+	default:
+		return ctx.WaitForEvent().ThenRepeat()
 	}
-	// old pulses will be throttled down a bit
-	return ctx.Poll().ThenRepeat()
 }

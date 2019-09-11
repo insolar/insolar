@@ -55,7 +55,7 @@ func main() {
 		if !nextPollTime.IsZero() {
 			time.Sleep(time.Until(nextPollTime))
 		} else {
-			time.Sleep(time.Second)
+			time.Sleep(10 * time.Second)
 		}
 
 		if i%100 == 0 {

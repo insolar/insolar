@@ -21,11 +21,11 @@ import (
 )
 
 func slotMachineUpdate(marker ContextMarker, upd stateUpdType, step SlotStep, param interface{}) StateUpdate {
-	return NewStateUpdate(marker, uint16(upd), step, param)
+	return newStateUpdate(marker, uint16(upd), step, param)
 }
 
 func slotMachineUpdateUint(marker ContextMarker, upd stateUpdType, step SlotStep, param uint32) StateUpdate {
-	return NewStateUpdateUint(marker, uint16(upd), step, param)
+	return newStateUpdateUint(marker, uint16(upd), step, param)
 }
 
 func stateUpdateNoChange(marker ContextMarker) StateUpdate {
@@ -41,7 +41,7 @@ func stateUpdateRepeat(marker ContextMarker, limit int) StateUpdate {
 	case limit > 0:
 		ulimit = uint32(limit)
 	}
-	return NewStateUpdateUint(marker, uint16(stateUpdNextLoop), SlotStep{}, ulimit)
+	return newStateUpdateUint(marker, uint16(stateUpdNextLoop), SlotStep{}, ulimit)
 }
 
 func stateUpdateNext(marker ContextMarker, slotStep SlotStep, canLoop bool) StateUpdate {
@@ -75,15 +75,15 @@ func stateUpdateSleep(marker ContextMarker, slotStep SlotStep, prepare StepPrepa
 }
 
 func stateUpdateWaitForSlot(marker ContextMarker, waitOn SlotLink, slotStep SlotStep) StateUpdate {
-	return NewStateUpdateLink(marker, uint16(stateUpdSleep), waitOn, slotStep, nil)
+	return newStateUpdateLink(marker, uint16(stateUpdSleep), waitOn, slotStep, nil)
 }
 
 func stateUpdateWaitForShared(marker ContextMarker, waitOn SlotLink, slotStep SlotStep) StateUpdate {
-	return NewStateUpdateLink(marker, uint16(stateUpdWaitForShared), waitOn, slotStep, nil)
+	return newStateUpdateLink(marker, uint16(stateUpdWaitForShared), waitOn, slotStep, nil)
 }
 
-func stateUpdateWaitForEvent(marker ContextMarker, slotStep SlotStep, prepare StepPrepareFunc) StateUpdate {
-	return NewStateUpdate(marker, uint16(stateUpdWaitForEvent), slotStep, prepareToParam(prepare))
+func stateUpdateWaitForEvent(marker ContextMarker, slotStep SlotStep, prepare StepPrepareFunc, until uint32) StateUpdate {
+	return newStateUpdateUintAndParam(marker, uint16(stateUpdWaitForEvent), slotStep, until, prepareToParam(prepare))
 }
 
 func stateUpdateReplace(marker ContextMarker, cf CreateFunc) StateUpdate {

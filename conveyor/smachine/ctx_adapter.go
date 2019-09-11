@@ -204,3 +204,59 @@ func (c *adapterCallRequest) _startSyncWithResult() AsyncResultFunc {
 	}
 	return resultFn
 }
+
+func NewAdapterCallback(stepLink StepLink, callback AdapterCallbackFunc, cancel *syncrun.ChainedCancel) AdapterCallback {
+	return AdapterCallback{stepLink, callback, cancel}
+}
+
+type AdapterCallback struct {
+	stepLink StepLink
+	callback AdapterCallbackFunc
+	cancel   *syncrun.ChainedCancel
+}
+
+func (c AdapterCallback) IsZero() bool {
+	return c.stepLink.IsEmpty()
+}
+
+func (c AdapterCallback) IsCancelled() bool {
+	return !c.stepLink.IsAtStep() || c.cancel != nil && c.cancel.IsCancelled()
+}
+
+func (c AdapterCallback) SendResult(result AsyncResultFunc) {
+	if c.IsZero() {
+		panic("illegal state")
+	}
+	_sendResult(c.stepLink, result, c.callback, c.cancel)
+}
+
+// just to make sure that outer struct doesn't leak into a closure
+func _sendResult(stepLink StepLink, result AsyncResultFunc, callback AdapterCallbackFunc, cancel *syncrun.ChainedCancel) {
+
+	if result == nil {
+		// NB! Do NOT ignore "result = nil" - it MUST decrement async call count
+		callback(func(ctx AsyncResultContext) {}, nil)
+		return
+	}
+
+	callback(func(ctx AsyncResultContext) {
+		if result == nil || !stepLink.IsAtStep() || cancel != nil && cancel.IsCancelled() {
+			return
+		}
+		result(ctx)
+	}, nil)
+}
+
+func (c AdapterCallback) SendPanic(recovered interface{}) {
+	if c.IsZero() {
+		panic("illegal state")
+	}
+	c.callback(nil, recovered)
+}
+
+func (c AdapterCallback) SendCancel() {
+	if c.IsZero() {
+		panic("illegal state")
+	}
+	c.callback(nil, nil)
+}

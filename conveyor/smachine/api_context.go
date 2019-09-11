@@ -18,6 +18,7 @@ package smachine
 
 import (
 	"context"
+	"time"
 )
 
 type InitFunc func(ctx InitializationContext) StateUpdate
@@ -119,6 +120,7 @@ type ExecutionContext interface {
 	WaitForActive(SlotLink) StateConditionalUpdate
 	WaitForShared(SharedDataLink) StateConditionalUpdate
 	WaitForEvent() StateConditionalUpdate
+	WaitForEventUntil(time.Time) StateConditionalUpdate
 
 	Sleep() StateConditionalUpdate
 }

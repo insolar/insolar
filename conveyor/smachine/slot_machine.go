@@ -20,8 +20,8 @@ import (
 	"context"
 	"fmt"
 	"github.com/insolar/insolar/conveyor/smachine/tools"
-	"github.com/insolar/insolar/network/consensus/common/syncrun"
 	"github.com/pkg/errors"
+	"math"
 	"sync"
 	"time"
 )
@@ -69,8 +69,10 @@ type SlotMachine struct {
 
 	migrationCount uint16
 
-	scanCount uint32
-	startedAt time.Time
+	scanCount        uint32
+	machineStartedAt time.Time
+	scanStartedAt    time.Time
+	scanWakeUpAt     time.Time
 
 	unusedSlots  SlotQueue
 	workingSlots SlotQueue //slots are currently in processing
@@ -124,8 +126,10 @@ func (m *SlotMachine) ScanOnceAsNested(context ExecutionContext) (repeatNow bool
 func (m *SlotMachine) ScanEventsOnly() (repeatNow bool) {
 
 	scanTime := time.Now()
-	if m.startedAt.IsZero() {
-		m.startedAt = scanTime
+	m.scanStartedAt = scanTime
+
+	if m.machineStartedAt.IsZero() {
+		m.machineStartedAt = scanTime
 	}
 
 	return m.scanEvents()
@@ -147,10 +151,12 @@ func (m *SlotMachine) scanEvents() (repeatNow bool) {
 func (m *SlotMachine) ScanOnce(worker SlotWorker) (repeatNow bool, nextPollTime time.Time) {
 
 	scanTime := time.Now()
+	m.scanStartedAt = scanTime
+	m.scanWakeUpAt = time.Time{}
 
 	switch {
-	case m.startedAt.IsZero():
-		m.startedAt = scanTime
+	case m.machineStartedAt.IsZero():
+		m.machineStartedAt = scanTime
 		fallthrough
 	case m.workingSlots.IsEmpty():
 		m.scanCount++
@@ -167,14 +173,24 @@ func (m *SlotMachine) ScanOnce(worker SlotWorker) (repeatNow bool, nextPollTime 
 	repeatNow = m.scanEvents()
 
 	if m.workingSlots.IsEmpty() {
-		return repeatNow, m.pollingSlots.GetNearestPollTime()
+		return repeatNow, minTime(m.scanWakeUpAt, m.pollingSlots.GetNearestPollTime())
 	}
 
 	m.pollingSlots.PrepareFor(scanTime.Add(m.config.PollingPeriod).Truncate(m.config.PollingTruncate))
 	m.scanWorkingSlots(worker, scanTime)
 
 	repeatNow = !m.activeWaitOnly // || repeatNow
-	return repeatNow, m.pollingSlots.GetNearestPollTime()
+	return repeatNow, minTime(m.scanWakeUpAt, m.pollingSlots.GetNearestPollTime())
+}
+
+func minTime(t1, t2 time.Time) time.Time {
+	if t1.IsZero() {
+		return t2
+	}
+	if t2.IsZero() || t1.Before(t2) {
+		return t1
+	}
+	return t2
 }
 
 func (m *SlotMachine) scanWorkingSlots(worker SlotWorker, scanStartTime time.Time) {
@@ -184,7 +200,7 @@ func (m *SlotMachine) scanWorkingSlots(worker SlotWorker, scanStartTime time.Tim
 			return
 		}
 		currentSlot.removeFromQueue()
-		currentSlot.startWorking(m.scanCount) //, time.Now().Sub(m.startedAt))
+		currentSlot.startWorking(m.scanCount) //, time.Now().Sub(m.machineStartedAt))
 
 		stopNow := false
 		var stateUpdate StateUpdate
@@ -644,6 +660,9 @@ func (m *SlotMachine) _applyStateUpdate(slot *Slot, inplaceUpdate bool, stateUpd
 	case stateUpdWaitForEvent:
 		applySlotPrepareAndNextStep(slot, stateUpdate)
 		m._applyInplaceUpdate(slot, inplaceUpdate, activeWaitSlot)
+		if stateUpdate.param0 > 0 {
+			m.scanWakeUpAt = minTime(m.scanWakeUpAt, m.fromRelativeTime(stateUpdate.param0))
+		}
 		return true, nil
 
 	case stateUpdWaitForActive:
@@ -919,58 +938,39 @@ func (m *SlotMachine) _handleStateUpdateError(slot *Slot, inplaceUpdate bool, st
 	fmt.Printf("slot fail: %v %+v %v", slot.GetID(), stateUpdate, slotError)
 }
 
-func NewAdapterCallback(stepLink StepLink, callback AdapterCallbackFunc, cancel *syncrun.ChainedCancel) AdapterCallback {
-	return AdapterCallback{stepLink, callback, cancel}
-}
+func (m *SlotMachine) toRelativeTime(t time.Time) uint32 {
 
-type AdapterCallback struct {
-	stepLink StepLink
-	callback AdapterCallbackFunc
-	cancel   *syncrun.ChainedCancel
-}
-
-func (c AdapterCallback) IsZero() bool {
-	return c.stepLink.IsEmpty()
-}
-
-func (c AdapterCallback) IsCancelled() bool {
-	return !c.stepLink.IsAtStep() || c.cancel != nil && c.cancel.IsCancelled()
-}
-
-func (c AdapterCallback) SendResult(result AsyncResultFunc) {
-	if c.IsZero() {
+	if m.scanStartedAt.IsZero() {
 		panic("illegal state")
 	}
-	_sendResult(c.stepLink, result, c.callback, c.cancel)
-}
 
-// just to make sure that outer struct doesn't leak into a closure
-func _sendResult(stepLink StepLink, result AsyncResultFunc, callback AdapterCallbackFunc, cancel *syncrun.ChainedCancel) {
-
-	if result == nil {
-		// NB! Do NOT ignore "result = nil" - it MUST decrement async call count
-		callback(func(ctx AsyncResultContext) {}, nil)
-		return
+	if t.IsZero() {
+		return 0
 	}
 
-	callback(func(ctx AsyncResultContext) {
-		if result == nil || !stepLink.IsAtStep() || cancel != nil && cancel.IsCancelled() {
-			return
-		}
-		result(ctx)
-	}, nil)
+	d := t.Sub(m.scanStartedAt)
+	if d <= 0 {
+		return 1
+	}
+
+	d /= time.Microsecond
+	if d == 0 {
+		return 1
+	}
+	d++
+	if d > math.MaxUint32 {
+		panic("illegal value")
+	}
+	return uint32(d)
 }
 
-func (c AdapterCallback) SendPanic(recovered interface{}) {
-	if c.IsZero() {
-		panic("illegal state")
+func (m *SlotMachine) fromRelativeTime(rel uint32) time.Time {
+	switch rel {
+	case 0:
+		return time.Time{}
+	case 1:
+		return m.scanStartedAt
 	}
-	c.callback(nil, recovered)
-}
 
-func (c AdapterCallback) SendCancel() {
-	if c.IsZero() {
-		panic("illegal state")
-	}
-	c.callback(nil, nil)
+	return m.scanStartedAt.Add(time.Duration(rel-1) * time.Microsecond)
 }

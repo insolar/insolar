@@ -18,6 +18,7 @@ package smachine
 
 import (
 	"context"
+	"time"
 	"unsafe"
 )
 
@@ -279,6 +280,11 @@ func (p *executionContext) WaitForEvent() StateConditionalUpdate {
 	return &conditionalUpdate{marker: p.getMarker(), updMode: stateUpdWaitForEvent}
 }
 
+func (p *executionContext) WaitForEventUntil(u time.Time) StateConditionalUpdate {
+	p.ensureExactState(execContext)
+	return &conditionalUpdate{marker: p.getMarker(), updMode: stateUpdWaitForEvent, until: p.machine.toRelativeTime(u)}
+}
+
 func (p *executionContext) waitFor(link SlotLink, updMode stateUpdType) StateConditionalUpdate {
 	p.ensureExactState(execContext)
 	if link.IsEmpty() {
@@ -437,7 +443,7 @@ type conditionalUpdate struct {
 	kickOff    StepPrepareFunc
 	dependency SlotLink
 	updMode    stateUpdType
-	//flags      stepFlags
+	until      uint32
 }
 
 func (c *conditionalUpdate) ThenJump(fn StateFunc) StateUpdate {
@@ -467,7 +473,7 @@ func (c *conditionalUpdate) then(slotStep SlotStep) StateUpdate {
 		return stateUpdateSleep(c.marker, slotStep, c.kickOff)
 
 	case stateUpdWaitForEvent: // WaitForEvent
-		return stateUpdateWaitForEvent(c.marker, slotStep, c.kickOff)
+		return stateUpdateWaitForEvent(c.marker, slotStep, c.kickOff, c.until)
 
 	case stateUpdWaitForActive: // WaitForActive
 		if c.kickOff != nil {
