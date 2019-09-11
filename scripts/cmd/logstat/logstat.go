@@ -64,11 +64,11 @@ func main() {
 			parseLogs()
 		},
 	}
-	cmd.Flags().StringVarP(&params.logDir, "dir", "d", "", "directory with logs")
+	cmd.Flags().StringVarP(&params.logDir, "dir", "d", "", "Directory with logs.")
 	err := cmd.MarkFlagRequired("dir")
 	checkError(err)
-	cmd.Flags().StringVarP(&params.filePattern, "pattern", "p", "", "file pattern to parse")
-	cmd.Flags().IntVarP(&params.sampleSize, "sample", "s", 3, "trace sample size")
+	cmd.Flags().StringVarP(&params.filePattern, "pattern", "p", "", "File pattern to parse.")
+	cmd.Flags().IntVarP(&params.sampleSize, "sample", "s", 3, "Trace sample size. Controls how many traces will be shown in sample percentiles.")
 	err = cmd.Execute()
 	checkError(err)
 }
