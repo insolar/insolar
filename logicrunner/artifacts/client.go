@@ -23,12 +23,12 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
-	"github.com/insolar/insolar/insolar/pulse"
+	insPulse "github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/pulse"
 
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
@@ -83,23 +83,15 @@ func newLocalStorage() *localStorage {
 
 // Client provides concrete API to storage for processing module.
 type client struct {
-	JetStorage     jet.Storage                        `inject:""`
-	PCS            insolar.PlatformCryptographyScheme `inject:""`
-	PulseAccessor  pulse.Accessor                     `inject:""`
-	JetCoordinator jet.Coordinator                    `inject:""`
+	PCS           insolar.PlatformCryptographyScheme `inject:""`
+	PulseAccessor insPulse.Accessor                  `inject:""`
 
 	sender       bus.Sender
 	localStorage *localStorage
 }
 
-// State returns hash state for artifact manager.
-func (m *client) State() []byte {
-	// This is a temporary stab to simulate real hash.
-	return m.PCS.IntegrityHasher().Hash([]byte{1, 2, 3})
-}
-
 // NewClient creates new client instance.
-func NewClient(sender bus.Sender) *client { // nolint
+func NewClient(sender bus.Sender) Client {
 	return &client{
 		sender:       sender,
 		localStorage: newLocalStorage(),
@@ -171,10 +163,10 @@ func (m *client) RegisterIncomingRequest(ctx context.Context, request *record.In
 // RegisterOutgoingRequest sends message for outgoing request registration,
 // returns request record Ref if request successfully created or already exists.
 func (m *client) RegisterOutgoingRequest(ctx context.Context, request *record.OutgoingRequest) (*payload.RequestInfo, error) {
+	retrySender := bus.NewRetrySender(m.sender, m.PulseAccessor, 1, 1)
 	outgoingRequest := &payload.SetOutgoingRequest{Request: record.Wrap(request)}
-	res, err := m.registerRequest(
-		ctx, request, outgoingRequest, bus.NewRetrySender(m.sender, m.PulseAccessor, 1, 1),
-	)
+
+	res, err := m.registerRequest(ctx, request, outgoingRequest, retrySender)
 	if err != nil {
 		return nil, errors.Wrap(err, "RegisterOutgoingRequest")
 	}
@@ -238,7 +230,7 @@ func (m *client) GetCode(
 		err = errors.New(p.Text)
 		return nil, err
 	default:
-		err = fmt.Errorf("GetObject: unexpected reply: %#v", p)
+		err = fmt.Errorf("GetCode: unexpected reply: %#v", p)
 		return nil, err
 	}
 }
@@ -272,7 +264,7 @@ func (m *client) GetObject(
 		instrumenter.end()
 	}()
 
-	logger := inslogger.FromContext(ctx).WithField("object", head.GetLocal().DebugString())
+	logger := inslogger.FromContext(ctx).WithField("object", head.GetLocal().String())
 
 	msg, err := payload.NewMessage(&payload.GetObject{
 		ObjectID: *head.GetLocal(),
@@ -286,11 +278,11 @@ func (m *client) GetObject(
 	defer done()
 
 	var (
-		index        *record.Lifeline
-		statePayload *payload.State
+		index *record.Lifeline
+		state record.State
 	)
 	success := func() bool {
-		return index != nil && statePayload != nil
+		return index != nil && state != nil
 	}
 
 	for rep := range reps {
@@ -309,7 +301,18 @@ func (m *client) GetObject(
 			}
 		case *payload.State:
 			logger.Debug("reply state")
-			statePayload = p
+			rec := record.Material{}
+			err = rec.Unmarshal(p.Record)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to unmarshal state")
+			}
+			virtual := record.Unwrap(&rec.Virtual)
+			s, ok := virtual.(record.State)
+			if !ok {
+				err = errors.New("wrong state record")
+				return nil, err
+			}
+			state = s
 		case *payload.Error:
 			logger.Debug("reply error: ", p.Text)
 			switch p.Code {
@@ -317,7 +320,6 @@ func (m *client) GetObject(
 				err = insolar.ErrDeactivated
 				return nil, err
 			default:
-				logger.Errorf("reply error: %v, objectID: %v", p.Text, head.GetLocal().DebugString())
 				err = errors.New(p.Text)
 				return nil, err
 			}
@@ -330,31 +332,18 @@ func (m *client) GetObject(
 			break
 		}
 	}
-	if !success() {
-		logger.Error(ErrNoReply)
-		err = ErrNoReply
-		return nil, ErrNoReply
-	}
 
-	rec := record.Material{}
-	err = rec.Unmarshal(statePayload.Record)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal state")
-	}
-	virtual := record.Unwrap(&rec.Virtual)
-	s, ok := virtual.(record.State)
-	if !ok {
-		err = errors.New("wrong state record")
+	if !success() {
+		err = ErrNoReply
 		return nil, err
 	}
-	state := s
 
 	desc := &objectDescriptor{
 		head:        head,
 		state:       *index.LatestState,
 		prototype:   state.GetImage(),
 		isPrototype: state.GetIsPrototype(),
-		memory:      s.GetMemory(),
+		memory:      state.GetMemory(),
 		parent:      index.Parent,
 	}
 	return desc, nil
@@ -383,26 +372,32 @@ func (m *client) GetAbandonedRequest(
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to send GetRequest")
 	}
-	req, ok := pl.(*payload.Request)
-	if !ok {
-		err = fmt.Errorf("unexpected reply %T", pl)
-		return nil, err
-	}
 
-	concrete := record.Unwrap(&req.Request)
-	var result record.Request
+	switch p := pl.(type) {
+	case *payload.Request:
+		concrete := record.Unwrap(&p.Request)
+		var result record.Request
 
-	switch v := concrete.(type) {
-	case *record.IncomingRequest:
-		result = v
-	case *record.OutgoingRequest:
-		result = v
+		switch v := concrete.(type) {
+		case *record.IncomingRequest:
+			result = v
+		case *record.OutgoingRequest:
+			result = v
+		default:
+			err = fmt.Errorf("GetAbandonedRequest: unexpected message: %#v", concrete)
+			return nil, err
+		}
+
+		return result, nil
+	case *payload.Error:
+		if p.Code == payload.CodeNotFound {
+			return nil, insolar.ErrNotFound
+		}
+		return nil, errors.New(p.Text)
 	default:
-		err = fmt.Errorf("GetAbandonedRequest: unexpected message: %#v", concrete)
+		err = errors.Errorf("unexpected reply %T", pl)
 		return nil, err
 	}
-
-	return result, nil
 }
 
 // GetPendings returns a list of pending requests
@@ -436,7 +431,6 @@ func (m *client) GetPendings(ctx context.Context, object insolar.Reference) ([]i
 		return res, nil
 	case *payload.Error:
 		if concrete.Code == payload.CodeNoPendings {
-			err = insolar.ErrNoPendingRequest
 			return []insolar.Reference{}, insolar.ErrNoPendingRequest
 		}
 		err = errors.New(concrete.Text)
@@ -487,13 +481,7 @@ func (m *client) HasPendings(
 // DeployCode creates new code record in storage.
 //
 // CodeRef records are used to activate prototype or as migration code for an object.
-func (m *client) DeployCode(
-	ctx context.Context,
-	domain insolar.Reference,
-	request insolar.Reference,
-	code []byte,
-	machineType insolar.MachineType,
-) (*insolar.ID, error) {
+func (m *client) DeployCode(ctx context.Context, code []byte, machineType insolar.MachineType) (*insolar.ID, error) {
 	var err error
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.DeployCode")
 	instrumenter := instrument(ctx, "DeployCode").err(&err)
@@ -505,11 +493,6 @@ func (m *client) DeployCode(
 		instrumenter.end()
 	}()
 
-	currentPN, err := m.pulse(ctx)
-	if err != nil {
-		return nil, err
-	}
-
 	codeRec := record.Code{
 		Code:        code,
 		MachineType: machineType,
@@ -520,12 +503,13 @@ func (m *client) DeployCode(
 		return nil, errors.Wrap(err, "failed to marshal record")
 	}
 
-	h := m.PCS.ReferenceHasher()
-	_, err = h.Write(buf)
+	currentPN, err := m.pulse(ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to calculate hash")
+		return nil, err
 	}
-	recID := *insolar.NewID(currentPN, h.Sum(nil))
+
+	h := m.PCS.ReferenceHasher()
+	recID := *insolar.NewID(currentPN, h.Sum(buf))
 
 	psc := &payload.SetCode{
 		Record: buf,
@@ -575,14 +559,13 @@ func (m *client) ActivatePrototype(
 }
 
 // pulse returns current PulseNumber for artifact manager
-func (m *client) pulse(ctx context.Context) (pn insolar.PulseNumber, err error) {
-	pulse, err := m.PulseAccessor.Latest(ctx)
+func (m *client) pulse(ctx context.Context) (insolar.PulseNumber, error) {
+	pulseObject, err := m.PulseAccessor.Latest(ctx)
 	if err != nil {
-		return
+		return pulse.Unknown, err
 	}
 
-	pn = pulse.PulseNumber
-	return
+	return pulseObject.PulseNumber, nil
 }
 
 func (m *client) activateObject(

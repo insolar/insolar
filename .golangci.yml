@@ -36,3 +36,6 @@ issues:
     - text: "S1021:"
       linters:
         - gosimple
+    - text: "G107:"
+      linters:
+        - gosec

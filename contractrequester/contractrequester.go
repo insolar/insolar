@@ -129,13 +129,25 @@ func (cr *ContractRequester) Call(
 			Arguments:    args,
 			APIRequestID: utils.TraceID(ctx),
 			APINode:      cr.JetCoordinator.Me(),
+			Immutable:    false,
 		},
 	}
+
+	logger := inslogger.FromContext(ctx)
+	// Do not change this log! It is used for message type statistics.
+	logger.WithFields(map[string]interface{}{
+		"stat_type": "cr_call_started",
+	}).Info("stat_log_message")
 
 	routResult, ref, err := cr.SendRequest(ctx, msg)
 	if err != nil {
 		return nil, ref, errors.Wrap(err, "[ ContractRequester::Call ] Can't route call")
 	}
+
+	// Do not change this log! It is used for message type statistics.
+	logger.WithFields(map[string]interface{}{
+		"stat_type": "cr_call_returned",
+	}).Info("stat_log_message")
 
 	return routResult, ref, nil
 }
@@ -190,7 +202,7 @@ func (cr *ContractRequester) SendRequest(ctx context.Context, inMsg insolar.Payl
 	ctx, span := instracer.StartSpan(ctx, "ContractRequester.SendRequest")
 	defer span.End()
 
-	async := msg.Request.ReturnMode == record.ReturnNoWait
+	async := msg.Request.ReturnMode == record.ReturnSaga
 
 	if msg.Request.Nonce == 0 {
 		msg.Request.Nonce = randomUint64()

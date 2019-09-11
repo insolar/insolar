@@ -47,15 +47,17 @@ type HandlePendingFinished struct {
 }
 
 func (h *HandlePendingFinished) Present(ctx context.Context, _ flow.Flow) error {
-	logger := inslogger.FromContext(ctx)
-
-	logger.Debug("HandlePendingFinished.Present starts ...")
-
 	message := payload.PendingFinished{}
 	err := message.Unmarshal(h.Message.Payload)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal message")
 	}
+
+	ctx, logger := inslogger.WithFields(ctx, map[string]interface{}{
+		"object": message.ObjectRef.String(),
+		"sender": h.Message.Sender.String(),
+	})
+	logger.Debug("handle PendingFinished message")
 
 	if err := checkPayloadPendingFinished(message); err != nil {
 		return err
@@ -74,7 +76,7 @@ func (h *HandlePendingFinished) Present(ctx context.Context, _ flow.Flow) error 
 
 	err = broker.PrevExecutorSentPendingFinished(ctx)
 	if err != nil {
-		err = errors.Wrap(err, "can not finish pending")
+		err = errors.Wrap(err, "handle PendingFinished failed")
 		inslogger.FromContext(ctx).Error(err.Error())
 		return err
 	}

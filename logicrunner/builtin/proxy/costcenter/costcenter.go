@@ -107,7 +107,7 @@ func (r *CostCenter) GetPrototype() (insolar.Reference, error) {
 		var ret1 *foundation.Error
 		ret[1] = &ret1
 
-		res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetPrototype", make([]byte, 0), *PrototypeReference)
+		res, err := common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetPrototype", make([]byte, 0), *PrototypeReference)
 		if err != nil {
 			return ret0, err
 		}
@@ -137,7 +137,7 @@ func (r *CostCenter) GetCode() (insolar.Reference, error) {
 		var ret1 *foundation.Error
 		ret[1] = &ret1
 
-		res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetCode", make([]byte, 0), *PrototypeReference)
+		res, err := common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetCode", make([]byte, 0), *PrototypeReference)
 		if err != nil {
 			return ret0, err
 		}
@@ -174,7 +174,7 @@ func (r *CostCenter) GetFeeMemberAsMutable() (*insolar.Reference, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetFeeMember", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetFeeMember", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -196,25 +196,6 @@ func (r *CostCenter) GetFeeMemberAsMutable() (*insolar.Reference, error) {
 	return ret0, nil
 }
 
-// GetFeeMemberNoWait is proxy generated method
-func (r *CostCenter) GetFeeMemberNoWait() error {
-	var args [0]interface{}
-
-	var argsSerialized []byte
-
-	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
-	if err != nil {
-		return err
-	}
-
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "GetFeeMember", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // GetFeeMemberAsImmutable is proxy generated method
 func (r *CostCenter) GetFeeMember() (*insolar.Reference, error) {
 	var args [0]interface{}
@@ -232,7 +213,7 @@ func (r *CostCenter) GetFeeMember() (*insolar.Reference, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "GetFeeMember", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetFeeMember", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -272,7 +253,7 @@ func (r *CostCenter) CalcFeeAsMutable(amountStr string) (string, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "CalcFee", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "CalcFee", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -294,26 +275,6 @@ func (r *CostCenter) CalcFeeAsMutable(amountStr string) (string, error) {
 	return ret0, nil
 }
 
-// CalcFeeNoWait is proxy generated method
-func (r *CostCenter) CalcFeeNoWait(amountStr string) error {
-	var args [1]interface{}
-	args[0] = amountStr
-
-	var argsSerialized []byte
-
-	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
-	if err != nil {
-		return err
-	}
-
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "CalcFee", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // CalcFeeAsImmutable is proxy generated method
 func (r *CostCenter) CalcFee(amountStr string) (string, error) {
 	var args [1]interface{}
@@ -332,7 +293,7 @@ func (r *CostCenter) CalcFee(amountStr string) (string, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "CalcFee", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "CalcFee", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}

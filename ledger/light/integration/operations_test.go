@@ -122,7 +122,7 @@ func MakeSetIncomingRequestDetached(
 	req := record.IncomingRequest{
 		Arguments:  args,
 		Reason:     *insolar.NewReference(reasonID),
-		ReturnMode: record.ReturnNoWait,
+		ReturnMode: record.ReturnSaga,
 		Caller:     *insolar.NewReference(reasonObjectID),
 		Object:     insolar.NewReference(objectID),
 	}

@@ -150,7 +150,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 	var (
 		Coordinator jet.Coordinator
 		Pulses      *insolarPulse.DB
-		Nodes       *node.Storage
+		Nodes       *node.StorageDB
 		DB          *store.BadgerDB
 		Jets        *jet.DBStore
 	)
@@ -164,7 +164,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		if err != nil {
 			panic(errors.Wrap(err, "failed to initialize DB"))
 		}
-		Nodes = node.NewStorage()
+		Nodes = node.NewStorageDB(DB)
 		Pulses = insolarPulse.NewDB(DB)
 		Jets = jet.NewDBStore(DB)
 
@@ -237,15 +237,11 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		APIWrapper = api.NewWrapper(API, AdminAPIRunner)
 	}
 
-	metricsHandler, err := metrics.NewMetrics(
-		ctx,
+	metricsComp := metrics.NewMetrics(
 		cfg.Metrics,
 		metrics.GetInsolarRegistry(c.NodeRole),
 		c.NodeRole,
 	)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to start Metrics")
-	}
 
 	var (
 		PulseManager *pulsemanager.PulseManager
@@ -337,7 +333,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 	)
 	{
 		recordExporter = exporter.NewRecordServer(Pulses, Records, Records, JetKeeper)
-		pulseExporter = exporter.NewPulseServer(Pulses, JetKeeper)
+		pulseExporter = exporter.NewPulseServer(Pulses, JetKeeper, Nodes)
 
 		grpcServer := grpc.NewServer()
 		exporter.RegisterRecordExporterServer(grpcServer, recordExporter)
@@ -363,7 +359,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		Jets,
 		Pulses,
 		Coordinator,
-		metricsHandler,
+		metricsComp,
 		Requester,
 		ArtifactsClient,
 		APIWrapper,
@@ -374,7 +370,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		NetworkService,
 		publisher,
 	)
-	err = c.cmp.Init(ctx)
+	err := c.cmp.Init(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to init components")
 	}

@@ -20,6 +20,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/insolar/insolar/insolar/node"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/metadata"
 
@@ -63,7 +64,7 @@ func (p *pulseStreamMock) RecvMsg(m interface{}) error {
 
 func TestPulseServer_Export(t *testing.T) {
 	t.Run("fails if count is 0", func(t *testing.T) {
-		server := NewPulseServer(nil, nil)
+		server := NewPulseServer(nil, nil, nil)
 
 		err := server.Export(&GetPulses{Count: 0}, &pulseStreamMock{})
 
@@ -85,7 +86,12 @@ func TestPulseServer_Export(t *testing.T) {
 		jetKeeper := executor.NewJetKeeperMock(t)
 		jetKeeper.TopSyncPulseMock.Return(pulse.MinTimePulse + 2)
 
-		server := NewPulseServer(pulseCalculator, jetKeeper)
+		nodeList := []insolar.Node{{Role: insolar.StaticRoleLightMaterial}}
+		nodeAccessor := node.NewAccessorMock(t)
+		nodeAccessor.AllMock.When(pulse.MinTimePulse+1).Then(nodeList, nil)
+		nodeAccessor.AllMock.When(pulse.MinTimePulse+2).Then(nodeList, nil)
+
+		server := NewPulseServer(pulseCalculator, jetKeeper, nodeAccessor)
 
 		err := server.Export(&GetPulses{PulseNumber: 0, Count: 10}, &stream)
 		require.NoError(t, err)
@@ -110,7 +116,11 @@ func TestPulseServer_Export(t *testing.T) {
 		jetKeeper := executor.NewJetKeeperMock(t)
 		jetKeeper.TopSyncPulseMock.Return(pulse.MinTimePulse + 1)
 
-		server := NewPulseServer(pulseCalculator, jetKeeper)
+		nodeList := []insolar.Node{{Role: insolar.StaticRoleLightMaterial}}
+		nodeAccessor := node.NewAccessorMock(t)
+		nodeAccessor.AllMock.When(pulse.MinTimePulse+1).Then(nodeList, nil)
+
+		server := NewPulseServer(pulseCalculator, jetKeeper, nodeAccessor)
 
 		err := server.Export(&GetPulses{PulseNumber: 0, Count: 10}, &stream)
 		require.NoError(t, err)
@@ -134,7 +144,11 @@ func TestPulseServer_Export(t *testing.T) {
 		jetKeeper := executor.NewJetKeeperMock(t)
 		jetKeeper.TopSyncPulseMock.Return(pulse.MinTimePulse + 1)
 
-		server := NewPulseServer(pulseCalculator, jetKeeper)
+		nodeList := []insolar.Node{{Role: insolar.StaticRoleLightMaterial}}
+		nodeAccessor := node.NewAccessorMock(t)
+		nodeAccessor.AllMock.When(pulse.MinTimePulse+1).Then(nodeList, nil)
+
+		server := NewPulseServer(pulseCalculator, jetKeeper, nodeAccessor)
 
 		err := server.Export(&GetPulses{PulseNumber: pulse.MinTimePulse, Count: 10}, &stream)
 		require.NoError(t, err)
@@ -154,7 +168,9 @@ func TestPulseServer_Export(t *testing.T) {
 		jetKeeper := executor.NewJetKeeperMock(t)
 		jetKeeper.TopSyncPulseMock.Return(pulse.MinTimePulse + 2)
 
-		server := NewPulseServer(nil, jetKeeper)
+		nodeAccessor := node.NewAccessorMock(t)
+
+		server := NewPulseServer(nil, jetKeeper, nodeAccessor)
 
 		err := server.Export(&GetPulses{PulseNumber: 0, Count: 1}, &stream)
 		require.NoError(t, err)
@@ -168,7 +184,8 @@ func TestPulseServer_TopSyncPulse(t *testing.T) {
 	pn := pulse.MinTimePulse + 2
 	jetKeeper := executor.NewJetKeeperMock(t)
 	jetKeeper.TopSyncPulseMock.Return(insolar.PulseNumber(pn))
-	server := NewPulseServer(nil, jetKeeper)
+	nodeAccessor := node.NewAccessorMock(t)
+	server := NewPulseServer(nil, jetKeeper, nodeAccessor)
 
 	res, err := server.TopSyncPulse(nil, nil)
 

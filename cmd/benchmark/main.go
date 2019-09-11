@@ -291,11 +291,11 @@ func getMembers(insSDK *sdk.SDK) ([]*sdk.Member, int32, error) {
 }
 
 func saveMembers(members []*sdk.Member) error {
-	err := os.MkdirAll(defaultMemberFileDir, 0777)
+	err := os.MkdirAll(memberFilesDir, 0777)
 	if err != nil {
 		return errors.Wrap(err, "couldn't create dir for file")
 	}
-	file, err := os.Create(filepath.Join(defaultMemberFileDir, defaultMemberFileName))
+	file, err := os.Create(filepath.Join(memberFilesDir, defaultMemberFileName))
 	if err != nil {
 		return errors.Wrap(err, "couldn't create file")
 	}
@@ -312,7 +312,7 @@ func saveMembers(members []*sdk.Member) error {
 func loadMembers(count int) ([]*sdk.Member, error) {
 	var members []*sdk.Member
 
-	rawMembers, err := ioutil.ReadFile(filepath.Join(defaultMemberFileDir, defaultMemberFileName))
+	rawMembers, err := ioutil.ReadFile(filepath.Join(memberFilesDir, defaultMemberFileName))
 	if err != nil {
 		return nil, errors.Wrap(err, "can't read members from file")
 	}
@@ -326,10 +326,6 @@ func loadMembers(count int) ([]*sdk.Member, error) {
 		return nil, errors.Errorf("Not enough members in file: got %d, needs %d", len(members), count)
 	}
 	return members, nil
-}
-
-func calcFee(amount int64) int64 {
-	return transferFee
 }
 
 func main() {
@@ -359,7 +355,7 @@ func main() {
 
 	var totalBalanceBefore *big.Int
 	var balancePenRetries int32
-	var balanceCheckMembers []*sdk.Member
+	balanceCheckMembers := make([]*sdk.Member, len(members))
 
 	if !noCheckBalance {
 		copy(balanceCheckMembers, members)

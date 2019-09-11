@@ -40,6 +40,8 @@ func TestSetResult_Proceed(t *testing.T) {
 	t.Parallel()
 
 	mc := minimock.NewController(t)
+	defer mc.Finish()
+
 	flowPulse := insolar.GenesisPulse.PulseNumber + 2
 	ctx := flow.TestContextWithPulse(
 		inslogger.TestContext(t),
@@ -50,8 +52,10 @@ func TestSetResult_Proceed(t *testing.T) {
 	writeAccessor.BeginMock.Return(func() {}, nil)
 	pcs := testutils.NewPlatformCryptographyScheme()
 
-	sender := bus.NewSenderMock(t)
+	sender := bus.NewSenderMock(mc)
 	sender.ReplyMock.Return()
+	detachedNotifier := executor.NewDetachedNotifierMock(mc)
+	var opened []record.CompositeFilamentRecord
 
 	jetID := gen.JetID()
 	objectID := gen.ID()
@@ -100,28 +104,46 @@ func TestSetResult_Proceed(t *testing.T) {
 			},
 		}, nil
 	})
+
+	parent := gen.Reference()
+	sideEffects := record.Activate{
+		Request: gen.Reference(),
+		Parent:  parent,
+	}
+	hash = record.HashVirtual(pcs.ReferenceHasher(), record.Wrap(&sideEffects))
+	expectedSideEffectID := *insolar.NewID(resultID.Pulse(), hash)
+	earliestID := gen.ID()
+	earliestPulse := earliestID.Pulse()
+
 	indexes.SetMock.Set(func(_ context.Context, pn insolar.PulseNumber, idx record.Index) {
 		require.Equal(t, resultID.Pulse(), pn)
 		expectedIndex := record.Index{
 			LifelineLastUsed: resultID.Pulse(),
 			Lifeline: record.Lifeline{
 				LatestRequest:       &expectedFilamentID,
-				EarliestOpenRequest: nil,
+				LatestState:         &expectedSideEffectID,
+				StateID:             record.StateActivation,
+				Parent:              parent,
+				EarliestOpenRequest: &earliestPulse,
 			},
 		}
 		require.Equal(t, expectedIndex, idx)
 	})
+
 	records := object.NewAtomicRecordModifierMock(mc)
 	records.SetAtomicMock.Set(func(_ context.Context, recs ...record.Material) (r error) {
-		require.Equal(t, 2, len(recs))
+		require.Equal(t, 3, len(recs))
 
 		result := recs[0]
 		filament := recs[1]
+		sideEffect := recs[2]
 		require.Equal(t, resultID, result.ID)
 		require.Equal(t, resultRecord, record.Unwrap(&result.Virtual))
 
 		require.Equal(t, expectedFilamentID, filament.ID)
 		require.Equal(t, &expectedFilament, record.Unwrap(&filament.Virtual))
+
+		require.Equal(t, &sideEffects, record.Unwrap(&sideEffect.Virtual))
 		return nil
 	})
 
@@ -137,16 +159,36 @@ func TestSetResult_Proceed(t *testing.T) {
 		require.False(t, pendingOnly)
 
 		v := record.Wrap(&record.IncomingRequest{})
-		return []record.CompositeFilamentRecord{
+		opened = []record.CompositeFilamentRecord{
+			{
+				RecordID: earliestID,
+				Record:   record.Material{Virtual: v},
+			},
 			{
 				RecordID: requestID,
 				Record:   record.Material{Virtual: v},
 			},
-		}, nil
+			{
+				RecordID: gen.ID(),
+				Record: record.Material{
+					Virtual: record.Wrap(&record.OutgoingRequest{
+						Reason:     *insolar.NewReference(requestID),
+						ReturnMode: record.ReturnSaga,
+					}),
+				},
+			},
+		}
+		return opened, nil
 	})
 
-	setResultProc := proc.NewSetResult(msg, jetID, *resultRecord, nil)
-	setResultProc.Dep(writeAccessor, sender, object.NewIndexLocker(), filaments, records, indexes, pcs)
+	detachedNotifier.NotifyMock.Inspect(func(ctx context.Context, openedRequests []record.CompositeFilamentRecord, objID insolar.ID, closedRequestID insolar.ID) {
+		require.Equal(t, objectID, objID)
+		require.Equal(t, requestID, closedRequestID)
+		require.Equal(t, opened, openedRequests)
+	}).Return()
+
+	setResultProc := proc.NewSetResult(msg, jetID, *resultRecord, &sideEffects)
+	setResultProc.Dep(writeAccessor, sender, object.NewIndexLocker(), filaments, records, indexes, pcs, detachedNotifier)
 
 	err = setResultProc.Proceed(ctx)
 	require.NoError(t, err)
@@ -160,9 +202,10 @@ func TestSetResult_Proceed_ResultDuplicated(t *testing.T) {
 		insolar.GenesisPulse.PulseNumber+10,
 	)
 	mc := minimock.NewController(t)
+	defer mc.Finish()
 
+	detachedNotifier := executor.NewDetachedNotifierMock(mc)
 	writeAccessor := executor.NewWriteAccessorMock(mc)
-	writeAccessor.BeginMock.Return(func() {}, nil)
 	records := object.NewAtomicRecordModifierMock(mc)
 	indexes := object.NewMemoryIndexStorageMock(mc)
 	indexes.ForIDMock.Return(record.Index{}, nil)
@@ -219,7 +262,7 @@ func TestSetResult_Proceed_ResultDuplicated(t *testing.T) {
 	})
 
 	setResultProc := proc.NewSetResult(msg, jetID, *res, nil)
-	setResultProc.Dep(writeAccessor, sender, object.NewIndexLocker(), filaments, records, indexes, pcs)
+	setResultProc.Dep(writeAccessor, sender, object.NewIndexLocker(), filaments, records, indexes, pcs, detachedNotifier)
 	err = setResultProc.Proceed(ctx)
 	require.NoError(t, err)
 }

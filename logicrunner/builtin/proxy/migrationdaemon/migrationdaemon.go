@@ -97,7 +97,7 @@ func (r *MigrationDaemon) GetPrototype() (insolar.Reference, error) {
 		var ret1 *foundation.Error
 		ret[1] = &ret1
 
-		res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetPrototype", make([]byte, 0), *PrototypeReference)
+		res, err := common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetPrototype", make([]byte, 0), *PrototypeReference)
 		if err != nil {
 			return ret0, err
 		}
@@ -127,7 +127,7 @@ func (r *MigrationDaemon) GetCode() (insolar.Reference, error) {
 		var ret1 *foundation.Error
 		ret[1] = &ret1
 
-		res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetCode", make([]byte, 0), *PrototypeReference)
+		res, err := common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetCode", make([]byte, 0), *PrototypeReference)
 		if err != nil {
 			return ret0, err
 		}
@@ -166,7 +166,7 @@ func (r *MigrationDaemon) DepositMigrationCall(params map[string]interface{}, ca
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "DepositMigrationCall", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "DepositMigrationCall", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -188,27 +188,6 @@ func (r *MigrationDaemon) DepositMigrationCall(params map[string]interface{}, ca
 	return ret0, nil
 }
 
-// DepositMigrationCallNoWait is proxy generated method
-func (r *MigrationDaemon) DepositMigrationCallNoWait(params map[string]interface{}, caller insolar.Reference) error {
-	var args [2]interface{}
-	args[0] = params
-	args[1] = caller
-
-	var argsSerialized []byte
-
-	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
-	if err != nil {
-		return err
-	}
-
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "DepositMigrationCall", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // DepositMigrationCallAsImmutable is proxy generated method
 func (r *MigrationDaemon) DepositMigrationCallAsImmutable(params map[string]interface{}, caller insolar.Reference) (*DepositMigrationResult, error) {
 	var args [2]interface{}
@@ -228,7 +207,7 @@ func (r *MigrationDaemon) DepositMigrationCallAsImmutable(params map[string]inte
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "DepositMigrationCall", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "DepositMigrationCall", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -266,7 +245,7 @@ func (r *MigrationDaemon) SetActivationStatus(status bool) error {
 		return err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "SetActivationStatus", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "SetActivationStatus", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -288,26 +267,6 @@ func (r *MigrationDaemon) SetActivationStatus(status bool) error {
 	return nil
 }
 
-// SetActivationStatusNoWait is proxy generated method
-func (r *MigrationDaemon) SetActivationStatusNoWait(status bool) error {
-	var args [1]interface{}
-	args[0] = status
-
-	var argsSerialized []byte
-
-	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
-	if err != nil {
-		return err
-	}
-
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "SetActivationStatus", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // SetActivationStatusAsImmutable is proxy generated method
 func (r *MigrationDaemon) SetActivationStatusAsImmutable(status bool) error {
 	var args [1]interface{}
@@ -324,7 +283,7 @@ func (r *MigrationDaemon) SetActivationStatusAsImmutable(status bool) error {
 		return err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "SetActivationStatus", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "SetActivationStatus", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -363,7 +322,7 @@ func (r *MigrationDaemon) GetActivationStatusAsMutable() (bool, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetActivationStatus", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetActivationStatus", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -385,25 +344,6 @@ func (r *MigrationDaemon) GetActivationStatusAsMutable() (bool, error) {
 	return ret0, nil
 }
 
-// GetActivationStatusNoWait is proxy generated method
-func (r *MigrationDaemon) GetActivationStatusNoWait() error {
-	var args [0]interface{}
-
-	var argsSerialized []byte
-
-	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
-	if err != nil {
-		return err
-	}
-
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "GetActivationStatus", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // GetActivationStatusAsImmutable is proxy generated method
 func (r *MigrationDaemon) GetActivationStatus() (bool, error) {
 	var args [0]interface{}
@@ -421,7 +361,7 @@ func (r *MigrationDaemon) GetActivationStatus() (bool, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "GetActivationStatus", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetActivationStatus", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -460,7 +400,7 @@ func (r *MigrationDaemon) GetMigrationDaemonMemberAsMutable() (insolar.Reference
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetMigrationDaemonMember", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetMigrationDaemonMember", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -482,25 +422,6 @@ func (r *MigrationDaemon) GetMigrationDaemonMemberAsMutable() (insolar.Reference
 	return ret0, nil
 }
 
-// GetMigrationDaemonMemberNoWait is proxy generated method
-func (r *MigrationDaemon) GetMigrationDaemonMemberNoWait() error {
-	var args [0]interface{}
-
-	var argsSerialized []byte
-
-	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
-	if err != nil {
-		return err
-	}
-
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "GetMigrationDaemonMember", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // GetMigrationDaemonMemberAsImmutable is proxy generated method
 func (r *MigrationDaemon) GetMigrationDaemonMember() (insolar.Reference, error) {
 	var args [0]interface{}
@@ -518,7 +439,7 @@ func (r *MigrationDaemon) GetMigrationDaemonMember() (insolar.Reference, error) 
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "GetMigrationDaemonMember", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetMigrationDaemonMember", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}

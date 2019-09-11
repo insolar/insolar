@@ -48,7 +48,6 @@ type HandleCall struct {
 	dep *Dependencies
 
 	Message payload.Meta
-	Parcel  insolar.Parcel
 }
 
 func (h *HandleCall) sendToNextExecutor(
@@ -93,7 +92,7 @@ func (h *HandleCall) checkExecutionLoop(
 	ctx context.Context, reqRef insolar.Reference, request record.IncomingRequest,
 ) bool {
 
-	if request.ReturnMode == record.ReturnNoWait {
+	if request.ReturnMode == record.ReturnSaga {
 		return false
 	}
 	if request.CallType != record.CTMethod {
@@ -184,7 +183,6 @@ func (h *HandleCall) handleActual(
 			"method":  request.Method,
 		},
 	)
-	logger.Debug("registered request")
 
 	if !objectRef.GetLocal().Equal(reqInfo.ObjectID) {
 		return nil, errors.New("object id we calculated doesn't match ledger")

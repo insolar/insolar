@@ -15,7 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1567523058037,
+  "iteration": 1568208280461,
   "links": [],
   "panels": [
     {
@@ -202,10 +202,10 @@
       "color": {
         "cardColor": "#b4ff00",
         "colorScale": "sqrt",
-        "colorScheme": "interpolateOranges",
+        "colorScheme": "interpolateGreens",
         "exponent": 0.2,
         "max": null,
-        "mode": "opacity"
+        "mode": "spectrum"
       },
       "dataFormat": "tsbuckets",
       "gridPos": {
@@ -226,7 +226,7 @@
       "reverseYBuckets": false,
       "targets": [
         {
-          "expr": "sum(insolar_flow_dispatcher_process_latency_bucket{message_type=~\"$type\", instance=~\"$instance\", result=~\"$result\"}) by (le)",
+          "expr": "sum(increase(insolar_flow_dispatcher_process_latency_bucket{message_type=~\"$type\", instance=~\"$instance\", result=~\"$result\"}[1m])) by (le)",
           "format": "heatmap",
           "hide": false,
           "intervalFactor": 1,
@@ -266,10 +266,10 @@
       "color": {
         "cardColor": "#b4ff00",
         "colorScale": "sqrt",
-        "colorScheme": "interpolateOranges",
+        "colorScheme": "interpolateGreens",
         "exponent": 0.2,
         "max": null,
-        "mode": "opacity"
+        "mode": "spectrum"
       },
       "dataFormat": "tsbuckets",
       "gridPos": {
@@ -290,7 +290,7 @@
       "reverseYBuckets": false,
       "targets": [
         {
-          "expr": "sum(insolar_flow_dispatcher_handler_latency_bucket{message_type=~\"$type\", instance=~\"$instance\", result=~\"$result\"}) by (le)",
+          "expr": "sum(increase(insolar_flow_dispatcher_handler_latency_bucket{message_type=~\"$type\", instance=~\"$instance\", result=~\"$result\"}[1m])) by (le)",
           "format": "heatmap",
           "hide": false,
           "intervalFactor": 1,
@@ -501,6 +501,7 @@
       }
     }
   ],
+  "refresh": "10s",
   "schemaVersion": 19,
   "style": "dark",
   "tags": [],
@@ -509,6 +510,7 @@
       {
         "allValue": null,
         "current": {
+          "selected": true,
           "text": "All",
           "value": "$__all"
         },
@@ -534,7 +536,7 @@
       {
         "allValue": null,
         "current": {
-          "tags": [],
+          "selected": true,
           "text": "All",
           "value": "$__all"
         },
@@ -586,10 +588,10 @@
       {
         "allValue": null,
         "current": {
-          "tags": [],
-          "text": "ok",
+          "text": "ok + cancelled",
           "value": [
-            "ok"
+            "ok",
+            "cancelled"
           ]
         },
         "datasource": "prometheus",
@@ -606,7 +608,7 @@
             "value": "ok"
           },
           {
-            "selected": false,
+            "selected": true,
             "text": "cancelled",
             "value": "cancelled"
           }

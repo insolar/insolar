@@ -40,13 +40,14 @@ type SetResult struct {
 	sideEffect record.State
 
 	dep struct {
-		writer   executor.WriteAccessor
-		filament executor.FilamentCalculator
-		sender   bus.Sender
-		locker   object.IndexLocker
-		records  object.AtomicRecordModifier
-		indexes  object.MemoryIndexStorage
-		pcs      insolar.PlatformCryptographyScheme
+		writer           executor.WriteAccessor
+		filament         executor.FilamentCalculator
+		sender           bus.Sender
+		locker           object.IndexLocker
+		records          object.AtomicRecordModifier
+		indexes          object.MemoryIndexStorage
+		pcs              insolar.PlatformCryptographyScheme
+		detachedNotifier executor.DetachedNotifier
 	}
 }
 
@@ -72,6 +73,7 @@ func (p *SetResult) Dep(
 	r object.AtomicRecordModifier,
 	i object.MemoryIndexStorage,
 	pcs insolar.PlatformCryptographyScheme,
+	dn executor.DetachedNotifier,
 ) {
 	p.dep.writer = w
 	p.dep.sender = s
@@ -80,6 +82,7 @@ func (p *SetResult) Dep(
 	p.dep.records = r
 	p.dep.indexes = i
 	p.dep.pcs = pcs
+	p.dep.detachedNotifier = dn
 }
 
 func (p *SetResult) Proceed(ctx context.Context) error {
@@ -147,6 +150,10 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 	closedRequest, err := findClosed(opened, p.result)
 	if err != nil {
 		return errors.Wrap(err, "failed to find request being closed")
+	}
+	err = checkOutgoings(opened, closedRequest.RecordID)
+	if err != nil {
+		return errors.Wrap(err, "open outgoings found")
 	}
 	earliestPending, err := calcPending(opened, closedRequest.RecordID)
 	if err != nil {
@@ -232,9 +239,9 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 
 	stats.Record(ctx, statRequestsClosed.M(1))
 
-	// Only incoming request cannot be a reason. We are only interested in potential reason requests.
+	// Only incoming request can be a reason. We are only interested in potential reason requests.
 	if _, ok := record.Unwrap(&closedRequest.Record.Virtual).(*record.IncomingRequest); ok {
-		notifyDetached(ctx, p.dep.sender, opened, objectID, closedRequest.RecordID)
+		p.dep.detachedNotifier.Notify(ctx, opened, objectID, closedRequest.RecordID)
 	}
 
 	msg, err := payload.NewMessage(&payload.ResultInfo{
@@ -298,44 +305,25 @@ func findClosed(reqs []record.CompositeFilamentRecord, result record.Result) (re
 		}
 }
 
-// notifyDetached sends notifications about detached requests that are ready for execution.
-func notifyDetached(
-	ctx context.Context,
-	sender bus.Sender,
-	opened []record.CompositeFilamentRecord,
-	objectID, closedRequestID insolar.ID,
-) {
-	for _, req := range opened {
-		outgoing, ok := record.Unwrap(&req.Record.Virtual).(*record.OutgoingRequest)
+func checkOutgoings(reqs []record.CompositeFilamentRecord, closedRequestID insolar.ID) error {
+	for _, req := range reqs {
+		found := record.Unwrap(&req.Record.Virtual)
+		parsedReq, ok := found.(record.Request)
 		if !ok {
 			continue
 		}
-		if !outgoing.IsDetached() {
-			continue
-		}
-		if reasonRef := outgoing.ReasonRef(); *reasonRef.GetLocal() != closedRequestID {
+		out, ok := parsedReq.(*record.OutgoingRequest)
+		if !ok {
 			continue
 		}
 
-		buf, err := req.Record.Virtual.Marshal()
-		if err != nil {
-			inslogger.FromContext(ctx).Error(
-				errors.Wrapf(err, "failed to notify about detached %s", req.RecordID.DebugString()),
-			)
-			return
+		if !out.IsDetached() && out.Reason.GetLocal().Equal(closedRequestID) {
+			return &payload.CodedError{
+				Text: "request " + closedRequestID.DebugString() + " is reason for non closed outgoing request " + req.RecordID.DebugString(),
+				Code: payload.CodeNonClosedOutgoing,
+			}
 		}
-		msg, err := payload.NewMessage(&payload.SagaCallAcceptNotification{
-			ObjectID:          objectID,
-			DetachedRequestID: req.RecordID,
-			Request:           buf,
-		})
-		if err != nil {
-			inslogger.FromContext(ctx).Error(
-				errors.Wrapf(err, "failed to notify about detached %s", req.RecordID.DebugString()),
-			)
-			return
-		}
-		_, done := sender.SendRole(ctx, msg, insolar.DynamicRoleVirtualExecutor, *insolar.NewReference(objectID))
-		done()
 	}
+
+	return nil
 }

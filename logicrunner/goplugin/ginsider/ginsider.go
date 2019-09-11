@@ -299,7 +299,7 @@ func MakeUpBaseReq() rpctypes.UpBaseReq {
 }
 
 // RouteCall ...
-func (gi *GoInsider) RouteCall(ref insolar.Reference, wait bool, immutable bool, saga bool, method string, args []byte, proxyPrototype insolar.Reference) ([]byte, error) {
+func (gi *GoInsider) RouteCall(ref insolar.Reference, immutable bool, saga bool, method string, args []byte, proxyPrototype insolar.Reference) ([]byte, error) {
 	client, err := gi.Upstream()
 	if err != nil {
 		return nil, err
@@ -310,7 +310,6 @@ func (gi *GoInsider) RouteCall(ref insolar.Reference, wait bool, immutable bool,
 
 	req := rpctypes.UpRouteReq{
 		UpBaseReq: MakeUpBaseReq(),
-		Wait:      wait,
 		Immutable: immutable,
 		Saga:      saga,
 		Object:    ref,

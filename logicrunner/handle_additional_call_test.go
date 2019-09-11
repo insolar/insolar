@@ -55,7 +55,7 @@ func genIncomingRequest() *record.IncomingRequest {
 		Caller:          gen.Reference(),
 		CallerPrototype: gen.Reference(),
 		Nonce:           0,
-		ReturnMode:      record.ReturnNoWait,
+		ReturnMode:      record.ReturnSaga,
 		Immutable:       false,
 		Base:            &baseRef,
 		Object:          &objectRef,

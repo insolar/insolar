@@ -30,6 +30,7 @@ import (
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/executionregistry"
@@ -75,7 +76,8 @@ type processorState struct {
 }
 
 type ExecutionBroker struct {
-	Ref insolar.Reference
+	Ref  insolar.Reference
+	name string
 
 	stateLock sync.Mutex
 
@@ -115,8 +117,15 @@ func NewExecutionBroker(
 	outgoingSender OutgoingRequestSender,
 	pulseAccessor pulse.Accessor,
 ) *ExecutionBroker {
+	pulseObject, err := pulseAccessor.Latest(context.Background())
+	if err != nil {
+		log.Error("failed to create execution broker ", err.Error())
+		return nil
+	}
+
 	return &ExecutionBroker{
-		Ref: ref,
+		Ref:  ref,
+		name: "executionbroker-" + pulseObject.PulseNumber.String(),
 
 		mutable: processorState{
 			name:     "mutable",
@@ -182,7 +191,11 @@ func (q *ExecutionBroker) processTranscript(ctx context.Context, transcript *com
 		inslogger.FromContext(ctx).Error("context in transcript is nil")
 	}
 
-	ctx, logger := inslogger.WithField(ctx, "request", transcript.RequestRef.String())
+	ctx, logger := inslogger.WithFields(ctx, map[string]interface{}{
+		"request": transcript.RequestRef.String(),
+		"broker":  q.name,
+	})
+	logger.Debug("processed request")
 
 	replyData, err := q.requestsExecutor.ExecuteAndSave(ctx, transcript)
 	if err != nil {
@@ -261,30 +274,30 @@ func (q *ExecutionBroker) startProcessors(ctx context.Context) {
 // startProcessor starts processing of queue ensuring that only one processor is active
 // at the moment.
 func (q *ExecutionBroker) startProcessor(ctx context.Context, state *processorState) {
-	logger := inslogger.FromContext(ctx)
-
 	if !q.tryTakeProcessor(ctx, state) {
 		return
 	}
 
 	go func() {
 		defer q.releaseProcessor(ctx, state)
-		logger.Info("started a new ", state.name, " queue processor")
 
 		q.processQueue(ctx, state)
-
 	}()
 }
 
 func (q *ExecutionBroker) processQueue(ctx context.Context, state *processorState) {
 	q.clarifyPendingStateFromLedger(ctx)
 
+	logger := inslogger.FromContext(ctx)
+
 	ps := q.PendingState()
 	if ps != insolar.NotPending {
-		inslogger.FromContext(ctx).Debug(
-			"wont process ", state.name, " queue, pending state is ", ps,
-		)
+		logger.Debug("wont process ", state.name, " queue, pending state is ", ps)
 		return
+	}
+
+	if state.queue.Length() > 0 {
+		logger.Info("started a new ", state.name, " queue processor")
 	}
 
 	if state.parallel {
@@ -347,9 +360,7 @@ func (q *ExecutionBroker) finishPendingIfNeeded(ctx context.Context) {
 		return
 	}
 
-	inslogger.FromContext(ctx).Debug("pending finished")
-	q.pending = insolar.NotPending
-	q.PendingConfirmed = false
+	logger.Debug("pending finished")
 
 	pendingMsg, err := payload.NewMessage(&payload.PendingFinished{
 		ObjectRef: q.Ref,
@@ -375,6 +386,9 @@ func (q *ExecutionBroker) OnPulse(ctx context.Context) []payload.Payload {
 		q.immutable.queue.Clean(ctx)
 		q.finished = nil
 		q.deduplicationTable = make(map[insolar.Reference]bool)
+
+		q.pending = insolar.InPending
+		q.PendingConfirmed = true
 	}()
 
 	q.stopRequestsFetcher(ctx)
