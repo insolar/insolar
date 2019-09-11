@@ -38,9 +38,10 @@ var (
 )
 
 func main() {
-	var sendURL string
+	var sendURL, adminURL string
 	addURLFlag := func(fs *pflag.FlagSet) {
 		fs.StringVarP(&sendURL, "url", "u", defaultURL(), "API URL")
+		fs.StringVarP(&adminURL, "admin-url", "a", defaultAdminURL(), "ADMIN URL")
 	}
 
 	var rootCmd = &cobra.Command{
@@ -111,7 +112,7 @@ func main() {
 		Use:   "send-request",
 		Short: "sends request",
 		Run: func(cmd *cobra.Command, args []string) {
-			sendRequest(sendURL, rootKeysFile, paramsPath, rootAsCaller, maAsCaller)
+			sendRequest(sendURL, adminURL, rootKeysFile, paramsPath, rootAsCaller, maAsCaller)
 		},
 	}
 	addURLFlag(sendRequestCmd.Flags())
@@ -183,6 +184,13 @@ func main() {
 
 func defaultURL() string {
 	if u := os.Getenv("INSOLAR_API_URL"); u != "" {
+		return u
+	}
+	return "http://localhost:19101/admin-api/rpc"
+}
+
+func defaultAdminURL() string {
+	if u := os.Getenv("INSOLAR_ADMIN_URL"); u != "" {
 		return u
 	}
 	return "http://localhost:19001/admin-api/rpc"
@@ -290,14 +298,14 @@ func generateKeysPair() {
 	mustWrite(os.Stdout, string(result))
 }
 
-func sendRequest(sendURL string, rootKeysFile string, paramsPath string, rootAsCaller bool, maAsCaller bool) {
+func sendRequest(sendURL string, adminURL, rootKeysFile string, paramsPath string, rootAsCaller bool, maAsCaller bool) {
 	requester.SetVerbose(verbose)
 
 	userCfg, err := requester.ReadUserConfigFromFile(rootKeysFile)
 	check("[ sendRequest ]", err)
 
 	if userCfg.Caller == "" {
-		info, err := requester.Info(sendURL)
+		info, err := requester.Info(adminURL)
 		check("[ sendRequest ]", err)
 		if rootAsCaller {
 			userCfg.Caller = info.RootMember
