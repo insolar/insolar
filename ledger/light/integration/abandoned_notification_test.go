@@ -19,7 +19,13 @@ package integration_test
 
 import (
 	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"sync/atomic"
 	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
@@ -27,15 +33,17 @@ import (
 	insolarPulse "github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/ledger/drop"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/pulse"
 
 	"github.com/stretchr/testify/require"
 )
 
-func Test_AbandonedNotification(t *testing.T) {
-	t.Parallel()
+var expectAbandoned int64
 
+func Test_AbandonedNotification_WhenLightEmpty(t *testing.T) {
 	// Configs.
 	ctx := inslogger.TestContext(t)
 	cfg := DefaultLightConfig()
@@ -85,6 +93,7 @@ func Test_AbandonedNotification(t *testing.T) {
 	// Server init.
 	s, err := NewServer(ctx, cfg, func(meta payload.Meta, pl payload.Payload) []payload.Payload {
 		if notification, ok := pl.(*payload.AbandonedRequestsNotification); ok {
+			atomic.AddInt64(&expectAbandoned, 1)
 			received <- *notification
 		}
 		if confirmation, ok := pl.(*payload.GotHotConfirmation); ok {
@@ -151,7 +160,6 @@ func Test_AbandonedNotification(t *testing.T) {
 
 func Test_AbandonedNotification_WhenLightInit(t *testing.T) {
 	t.Parallel()
-
 	// Configs.
 	ctx := inslogger.TestContext(t)
 	cfg := DefaultLightConfig()
@@ -191,6 +199,7 @@ func Test_AbandonedNotification_WhenLightInit(t *testing.T) {
 	// Server init.
 	s, err := NewServer(ctx, cfg, func(meta payload.Meta, pl payload.Payload) []payload.Payload {
 		if notification, ok := pl.(*payload.AbandonedRequestsNotification); ok {
+			atomic.AddInt64(&expectAbandoned, 1)
 			received <- *notification
 		}
 		if confirmation, ok := pl.(*payload.GotHotConfirmation); ok {
@@ -225,5 +234,40 @@ func Test_AbandonedNotification_WhenLightInit(t *testing.T) {
 			notification := <-received
 			require.Equal(t, objectID, notification.ObjectID)
 		}
+
 	})
+}
+
+func Test_AbandonsMetricValue(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+	cfg := DefaultLightConfig()
+	cfg.Ledger.LightChainLimit = 5
+	s, err := NewServer(ctx, cfg, nil)
+	require.NoError(t, err)
+	defer s.Stop()
+
+	v := fetchMetricValue(s.metrics.Handler(), "insolar_requests_abandoned", float64(expectAbandoned), time.Second*5)
+	require.NoError(t, err, "fetch insolar_requests_abandoned metric value")
+	// other tests could increment counter, so we expect at least expect value
+	assert.GreaterOrEqualf(t, int64(v), expectAbandoned,
+		"fetched insolar_requests_abandoned value equals or greater than calculated value")
+}
+
+func fetchMetricValue(h http.Handler, metricName string, expect float64, maxDuration time.Duration) float64 {
+	tries := int64(5)
+	var v float64
+	for i := 0; i < int(tries); i++ {
+		req, err := http.NewRequest("GET", "/metrics", nil)
+		if err != nil {
+			log.Fatal(err)
+		}
+		rr := httptest.NewRecorder()
+		h.ServeHTTP(rr, req)
+		v = insmetrics.SumMetricsValueByNamePrefix(rr.Body, metricName)
+		if v > expect {
+			break
+		}
+		time.Sleep(time.Duration(int64(maxDuration) / tries))
+	}
+	return v
 }

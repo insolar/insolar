@@ -127,6 +127,23 @@ func UniqueReferences(a int) []insolar.Reference {
 	return refs
 }
 
+// UniqueReferences generates multiple random unique References.
+func UniqueRecordReferences(a int) []insolar.Reference {
+	refs := make([]insolar.Reference, a)
+	seen := make(map[insolar.Reference]struct{})
+
+	for i := 0; i < a; i++ {
+		for {
+			refs[i] = RecordReference()
+			if _, ok := seen[refs[i]]; !ok {
+				break
+			}
+		}
+		seen[refs[i]] = struct{}{}
+	}
+	return refs
+}
+
 func ReferenceWithPulse(pn insolar.PulseNumber) insolar.Reference {
 	return *insolar.NewReference(IDWithPulse(pn))
 }
