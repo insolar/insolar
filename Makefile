@@ -29,6 +29,7 @@ BUILD_DATE = $(shell date "+%Y-%m-%d")
 BUILD_TIME ?= $(shell date "+%H:%M:%S")
 BUILD_HASH ?= $(shell git rev-parse --short HEAD)
 BUILD_VERSION ?= $(shell git describe --abbrev=0 --tags)
+DOCKER_BASE_IMAGE_TAG ?= $(BUILD_HASH)
 
 GOPATH ?= `go env GOPATH`
 LDFLAGS += -X github.com/insolar/insolar/version.Version=${BUILD_VERSION}
@@ -254,18 +255,20 @@ prepare-inrospector-proto: ## install tools required for grpc development
 	go get -u github.com/golang/protobuf/protoc-gen-go
 
 .PHONY: docker_base_build
-docker_base_build: ## build base image with sources dependencies and compiled binaries
-	docker build -t insolar-base:latest \
+docker_base_build: ## build base image with source dependencies and compiled binaries
+	docker build -t insolar-base:$(DOCKER_BASE_IMAGE_TAG) \
 		--build-arg BUILD_NUMBER="$(BUILD_NUMBER)" \
 		--build-arg BUILD_DATE="$(BUILD_DATE)" \
 		--build-arg BUILD_TIME="$(BUILD_TIME)" \
 		--build-arg BUILD_HASH="$(BUILD_HASH)" \
 		--build-arg BUILD_VERSION="$BUILD_VERSION" \
 		-f docker/Dockerfile .
+	docker tag insolar-base:$(BUILD_VERSION) insolar-base:$(DOCKER_BASE_IMAGE_TAG)
+	docker tag insolar-base:latest insolar-base:$(DOCKER_BASE_IMAGE_TAG)
 	docker images "insolar-base"
 
 .PHONY: docker_clean
-docker_clean: ## force remove dangling docker images (it reset cache, beacuse they used ad intermediate layers)
+docker_clean: ## force remove dangling docker images (it resets cache, because they used ad intermediate layers)
 	docker images -f "dangling=true" -q | xargs docker rmi -f
 
 .PHONY: help
