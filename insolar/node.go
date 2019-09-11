@@ -16,8 +16,8 @@
 
 package insolar
 
-// Node represents insolar node.
-type Node struct {
-	ID   Reference
-	Role StaticRole
-}
+// // Node represents insolar node.
+// type Node struct {
+// 	ID   Reference
+// 	Role StaticRole
+// }
