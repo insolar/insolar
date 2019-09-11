@@ -54,6 +54,7 @@ func parseInputParams() inputParams {
 	var rootCmd = &cobra.Command{Use: "insolard"}
 	var result inputParams
 	rootCmd.Flags().StringVarP(&result.configPath, "config", "c", "", "path to config file")
+	rootCmd.AddCommand(versionCmd)
 	err := rootCmd.Execute()
 	if err != nil {
 		fmt.Println("Wrong input params:", err.Error())
