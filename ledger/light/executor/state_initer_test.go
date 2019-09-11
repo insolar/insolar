@@ -143,7 +143,7 @@ func TestStateIniterDefault_PrepareState(t *testing.T) {
 		})
 		sender.SendTargetMock.Return(reps, func() {})
 
-		heavy := []insolar.Node{{*insolar.NewReference(gen.ID()), insolar.StaticRoleHeavyMaterial}}
+		heavy := []insolar.Node{{ID: *insolar.NewReference(gen.ID()), Role: insolar.StaticRoleHeavyMaterial}}
 		s := executor.NewStateIniter(
 			jetModifier,
 			jetReleaser,
@@ -170,7 +170,7 @@ func TestStateIniterDefault_PrepareState(t *testing.T) {
 		j2 := gen.JetID()
 
 		jets := []insolar.JetID{j1, j2}
-		heavy := []insolar.Node{{*insolar.NewReference(gen.ID()), insolar.StaticRoleHeavyMaterial}}
+		heavy := []insolar.Node{{ID: *insolar.NewReference(gen.ID()), Role: insolar.StaticRoleHeavyMaterial}}
 
 		reps := make(chan *message.Message, 1)
 		reps <- payload.MustNewMessage(&payload.Meta{
