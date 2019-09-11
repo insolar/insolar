@@ -35,11 +35,10 @@ func TestMnt_IterationCounter(t *testing.T) {
 	t.Log("functest iteration:", functestCount)
 }
 
-// TestMnt_RotateLogs rotates launchnet logs (removes and reopen it).
+// TestMnt_RotateLogs rotates launchnet logs (removes and reopens them).
 func TestMnt_RotateLogs(t *testing.T) {
 	if !launchnet.LogRotateEnabled() {
 		t.Skip("log rotate disabled")
 	}
-	// BEWARE: it removes files by pattern!
-	launchnet.RotateLogs("../.artifacts/launchnet/logs/*/*/*.log", true)
+	launchnet.RotateLogs(true)
 }

@@ -453,8 +453,11 @@ func teardown() {
 	fmt.Println("[ teardown ] insolard was successfully stopped")
 }
 
-// RotateLogs rotates launchnet logs.
-func RotateLogs(dirPattern string, verbose bool) {
+// RotateLogs rotates launchnet logs, verbose flag enables printing what happens.
+func RotateLogs(verbose bool) {
+	launchnetDir := defaults.PathWithBaseDir(defaults.LaunchnetDir(), insolar.RootModuleDir())
+	dirPattern := filepath.Join(launchnetDir, "logs/*/*/*.log")
+
 	rmCmd := "rm -vf " + dirPattern
 	cmd := exec.Command("sh", "-c", rmCmd)
 	out, err := cmd.Output()
