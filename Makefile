@@ -25,10 +25,10 @@ CI_GOMAXPROCS ?= 8
 CI_TEST_ARGS ?= -p 4
 
 BUILD_NUMBER := $(TRAVIS_BUILD_NUMBER)
-BUILD_DATE = $(shell date "+%Y-%m-%d")
-BUILD_TIME ?= $(shell date "+%H:%M:%S")
+BUILD_DATE ?= $(shell ./scripts/dev/git-date-time.sh -d)
+BUILD_TIME ?= $(shell ./scripts/dev/git-date-time.sh -t)
 BUILD_HASH ?= $(shell git rev-parse --short HEAD)
-BUILD_VERSION ?= $(shell git describe --abbrev=0 --tags)
+BUILD_VERSION ?= $(shell git describe --tags)
 DOCKER_BASE_IMAGE_TAG ?= $(BUILD_HASH)
 
 GOPATH ?= `go env GOPATH`
@@ -257,14 +257,14 @@ prepare-inrospector-proto: ## install tools required for grpc development
 .PHONY: docker_base_build
 docker_base_build: ## build base image with source dependencies and compiled binaries
 	docker build -t insolar-base:$(DOCKER_BASE_IMAGE_TAG) \
-		--build-arg BUILD_NUMBER="$(BUILD_NUMBER)" \
 		--build-arg BUILD_DATE="$(BUILD_DATE)" \
 		--build-arg BUILD_TIME="$(BUILD_TIME)" \
+		--build-arg BUILD_NUMBER="$(BUILD_NUMBER)" \
 		--build-arg BUILD_HASH="$(BUILD_HASH)" \
-		--build-arg BUILD_VERSION="$BUILD_VERSION" \
+		--build-arg BUILD_VERSION="$(BUILD_VERSION)" \
 		-f docker/Dockerfile .
-	docker tag insolar-base:$(BUILD_VERSION) insolar-base:$(DOCKER_BASE_IMAGE_TAG)
-	docker tag insolar-base:latest insolar-base:$(DOCKER_BASE_IMAGE_TAG)
+	docker tag insolar-base:$(DOCKER_BASE_IMAGE_TAG) insolar-base:$(BUILD_VERSION)
+	docker tag insolar-base:$(DOCKER_BASE_IMAGE_TAG) insolar-base:latest
 	docker images "insolar-base"
 
 .PHONY: docker_clean
