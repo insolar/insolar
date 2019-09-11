@@ -24,8 +24,11 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/network"
 	networknode "github.com/insolar/insolar/network/node"
+	"github.com/pkg/errors"
 )
 
 var (
@@ -104,7 +107,29 @@ func (n *nodeNetMock) GetOrigin() insolar.NetworkNode {
 }
 
 func CallContract(s *Server, ref *insolar.Reference, method string, argsIn []interface{}, pulse insolar.PulseNumber) (insolar.Reply, *insolar.Reference, error) {
-	return s.contractRequester.Call(s.ctx, ref, method, argsIn, pulse)
+
+	args, err := insolar.Serialize(argsIn)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "Can't marshal")
+	}
+
+	msg := &payload.CallMethod{
+		Request: &record.IncomingRequest{
+			Object:       ref,
+			Method:       method,
+			Arguments:    args,
+			APIRequestID: utils.TraceID(s.ctx),
+			APINode:      s.contractRequester.JetCoordinator.Me(),
+			Immutable:    false,
+		},
+	}
+
+	routResult, ref, err := s.contractRequester.SendRequest(s.ctx, msg)
+	if err != nil {
+		return nil, ref, errors.Wrap(err, "Can't route call")
+	}
+
+	return routResult, ref, nil
 }
 
 func SendMessage(
