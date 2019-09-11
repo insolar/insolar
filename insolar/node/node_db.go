@@ -22,14 +22,13 @@ import (
 	"github.com/insolar/insolar/insolar/store"
 )
 
-// StorageDB is a badger-based impl of a node storage
+// StorageDB is a badger-based impl of a node storage.
 type StorageDB struct {
 	db *store.BadgerDB
 }
 
-// NewStorageDB create new instance of StorageDB
+// NewStorageDB create new instance of StorageDB.
 func NewStorageDB(db *store.BadgerDB) *StorageDB {
-	// return new(nodeStorage)
 	return &StorageDB{db: db}
 }
 
