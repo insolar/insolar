@@ -127,10 +127,7 @@ func initComponents(
 	nw, err := servicenetwork.NewServiceNetwork(cfg, &cm)
 	checkError(ctx, err, "failed to start Network")
 
-	metricsHandler, err := metrics.NewMetrics(ctx, cfg.Metrics, metrics.GetInsolarRegistry("virtual"), "virtual")
-	checkError(ctx, err, "failed to start Metrics")
-
-	checkError(ctx, err, "failed to load VersionManager: ")
+	metricsComp := metrics.NewMetrics(cfg.Metrics, metrics.GetInsolarRegistry("virtual"), "virtual")
 
 	jc := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit, *certManager.GetCertificate().GetNodeRef())
 	pulses := pulse.NewStorageMem()
@@ -209,7 +206,7 @@ func initComponents(
 		node.NewStorage(),
 	}
 	components = append(components, []interface{}{
-		metricsHandler,
+		metricsComp,
 		cryptographyService,
 		keyProcessor,
 	}...)

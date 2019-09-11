@@ -14,21 +14,26 @@
 // limitations under the License.
 //
 
-package insolar
+package insmetrics
 
 import (
-	"go/build"
-	"log"
+	"bytes"
+	"io"
+	"io/ioutil"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-// RootModule holds root module name.
-var RootModule = "github.com/insolar/insolar"
+func TestUtils_ValueByNamePrefix(t *testing.T) {
+	b, err := ioutil.ReadFile("testdata/openmetrics.txt")
+	require.NoError(t, err, "metrics file open")
 
-// RootModuleDir returns abs path to root module for any package where it's called.
-func RootModuleDir() string {
-	p, err := build.Default.Import(RootModule, ".", build.FindOnly)
-	if err != nil {
-		log.Fatal("failed to resolve", RootModule)
-	}
-	return p.Dir
+	r := func() io.Reader { return bytes.NewReader(b) }
+	v1 := SumMetricsValueByNamePrefix(r(), "insolar_bus_sent_milliseconds_bucket")
+	assert.Equal(t, float64(65795), v1, "check bucket sum")
+
+	v2 := SumMetricsValueByNamePrefix(r(), "insolar_bus_sent_milliseconds_sum")
+	assert.Equal(t, 1560.873845, v2, "check bucket sum")
 }
