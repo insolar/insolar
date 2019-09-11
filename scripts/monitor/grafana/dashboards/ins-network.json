@@ -15,6 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
+  "iteration": 1568221875129,
   "links": [],
   "panels": [
     {
@@ -332,12 +333,13 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "delta(insolar_consensus_packets_recv_count[20s])",
+          "expr": "sum by(instance)(delta(insolar_consensus_packets_recv_count{phase=~\"$phase\"}[20s]))",
           "legendFormat": "{{instance}}",
           "refId": "A"
         },
         {
-          "expr": "-delta(insolar_consensus_packets_sent_count[20s])",
+          "expr": "-sum by(instance)(delta(insolar_consensus_packets_sent_count{phase=~\"$phase\"}[20s]))",
+          "legendFormat": "{{instance}}",
           "refId": "B"
         }
       ],
@@ -390,7 +392,7 @@
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 8,
+        "h": 7,
         "w": 12,
         "x": 0,
         "y": 13
@@ -552,14 +554,141 @@
         "align": false,
         "alignLevel": null
       }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "prometheus",
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 20
+      },
+      "id": 14,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "delta(insolar_network_recv_bytes[20s])",
+          "refId": "A"
+        },
+        {
+          "expr": "-delta(insolar_network_sent_bytes[20s])",
+          "refId": "B"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Throughput",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     }
   ],
-  "refresh": "10s",
+  "refresh": false,
   "schemaVersion": 19,
   "style": "dark",
   "tags": [],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "allValue": null,
+        "current": {
+          "tags": [],
+          "text": "ph1 + ph2 + ph3",
+          "value": [
+            "ph1",
+            "ph2",
+            "ph3"
+          ]
+        },
+        "hide": 0,
+        "includeAll": false,
+        "label": null,
+        "multi": true,
+        "name": "phase",
+        "options": [
+          {
+            "selected": true,
+            "text": "ph1",
+            "value": "ph1"
+          },
+          {
+            "selected": true,
+            "text": "ph2",
+            "value": "ph2"
+          },
+          {
+            "selected": true,
+            "text": "ph3",
+            "value": "ph3"
+          }
+        ],
+        "query": "ph1, ph2, ph3",
+        "skipUrlSync": false,
+        "type": "custom"
+      }
+    ]
   },
   "time": {
     "from": "now-15m",
