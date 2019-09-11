@@ -2,7 +2,6 @@
 ARG GOLANG_VERSION=1.12.9
 FROM golang:${GOLANG_VERSION} AS build
 
-RUN mkdir -p /go/src/github.com/insolar/insolar
 WORKDIR /go/src/github.com/insolar/insolar
 
 # Install required tools step (adds ~400mb)
