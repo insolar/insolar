@@ -154,6 +154,13 @@ func (p *slotContext) Share(data interface{}, wakeUpOnUse bool) SharedDataLink {
 	return SharedDataLink{p.s.NewStepLink(), wakeUpOnUse, data}
 }
 
+func (p *slotContext) AffectedStep() SlotStep {
+	p.ensureExactState(migrateContext)
+	r := p.s.step
+	r.Flags |= StepResetAllFlags
+	return p.s.step
+}
+
 var _ ConstructionContext = &constructionContext{}
 
 type constructionContext struct {
@@ -201,13 +208,6 @@ var _ MigrationContext = &migrationContext{}
 
 type migrationContext struct {
 	slotContext
-}
-
-func (p *migrationContext) AffectedStep() SlotStep {
-	p.ensureExactState(migrateContext)
-	r := p.s.step
-	r.Flags |= StepResetAllFlags
-	return p.s.step
 }
 
 func (p *migrationContext) executeMigrate(fn MigrateFunc) StateUpdate {
@@ -574,13 +574,6 @@ type failureContext struct {
 	isPanic bool
 	isAsync bool
 	err     error
-}
-
-func (p *failureContext) AffectedStep() SlotStep {
-	p.ensureExactState(failContext)
-	r := p.s.step
-	r.Flags |= StepResetAllFlags
-	return p.s.step
 }
 
 func (p *failureContext) GetError() (isPanic, isAsync bool, err error) {

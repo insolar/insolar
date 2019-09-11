@@ -66,6 +66,7 @@ func (s *StateMachine1) State1(ctx smachine.ExecutionContext) smachine.StateUpda
 		return func(ctx smachine.AsyncResultContext) {
 			fmt.Printf("state1 async: %d %v\n", ctx.GetSlotID(), result)
 			s.result = result
+			ctx.WakeUp()
 		}
 	}).Start() // result of async can only be applied _after_ leaving this state
 
@@ -75,9 +76,9 @@ func (s *StateMachine1) State1(ctx smachine.ExecutionContext) smachine.StateUpda
 
 	fmt.Printf("state1: %d %v\n", ctx.GetSlotID(), s.result)
 
-	ctx.NewChild(ctx.GetContext(), func(ctx smachine.ConstructionContext) smachine.StateMachine {
-		return &StateMachine1{sharedB: s.sharedB}
-	})
+	//ctx.NewChild(ctx.GetContext(), func(ctx smachine.ConstructionContext) smachine.StateMachine {
+	//	return &StateMachine1{sharedB: s.sharedB}
+	//})
 
 	//mutex := ctx.SyncOneStep("test", 0, nil)
 
@@ -118,11 +119,12 @@ func (s *StateMachine1) State4(ctx smachine.ExecutionContext) smachine.StateUpda
 	//	return &StateMachine1{ sharedB:s.sharedB }
 	//})
 	if ctx.GetPendingCallCount() > 0 {
-		return ctx.Poll().ThenRepeat()
+		return ctx.WaitForEvent().ThenRepeat()
 	}
 
-	fmt.Printf("stop: %d %v result:%v\n", ctx.GetSlotID(), time.Now(), s.result)
-	return ctx.Stop()
+	fmt.Printf("wait: %d %v result:%v\n", ctx.GetSlotID(), time.Now(), s.result)
+	s.count = 0
+	return ctx.WaitForEvent().ThenJump(s.State1)
 }
 
 func (s *StateMachine1) State5(ctx smachine.ExecutionContext) smachine.StateUpdate {

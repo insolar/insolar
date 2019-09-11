@@ -60,15 +60,25 @@ func (p *PollingQueue) growPollingSlots() {
 }
 
 func (p *PollingQueue) FilterOut(scanTime time.Time, queue *SlotQueue) {
-	for ; p.seqLen > 0; p.seqLen-- {
+	if len(p.polls) == 0 {
+		return
+	}
+
+	for {
 		ps := p.polls[p.seqTail]
 
 		if !ps.IsEmpty() && ps.pollAfter.After(scanTime) {
 			break
 		}
+
 		queue.AppendAll(&ps.SlotQueue)
 
+		if p.seqLen == 0 {
+			return
+		}
+		p.seqLen--
 		p.seqTail++
+
 		if int(p.seqTail) >= len(p.polls) {
 			p.seqTail = 0
 		}
@@ -107,4 +117,16 @@ func (p *PollingQueue) PrepareFor(pollTime time.Time) {
 	}
 	p.prepared = p.polls[seqHead]
 	p.prepared.pollAfter = pollTime
+}
+
+func (p *PollingQueue) GetNearestPollTime() time.Time {
+	if p.seqLen > 0 {
+		return p.polls[p.seqTail].pollAfter
+	}
+
+	if p.prepared == nil || p.prepared.IsEmpty() {
+		return time.Time{}
+	}
+
+	return p.prepared.pollAfter
 }

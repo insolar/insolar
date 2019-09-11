@@ -33,8 +33,8 @@ func main() {
 
 	sm := smachine.NewSlotMachine(smachine.SlotMachineConfig{
 		SlotPageSize:    10,
-		PollingPeriod:   10 * time.Millisecond,
-		PollingTruncate: 1 * time.Millisecond,
+		PollingPeriod:   1000 * time.Millisecond,
+		PollingTruncate: 100 * time.Millisecond,
 	}, nil, nil, nil)
 
 	example.SetInjectServiceAdapterA(&implA{}, &sm)
@@ -45,8 +45,19 @@ func main() {
 	worker := smachine.NewSimpleSlotWorker(signal.Mark())
 
 	for i := 0; ; i++ {
-		sm.ScanOnce(worker)
-		time.Sleep(1 * time.Millisecond)
+		repeatNow, nextPollTime := sm.ScanOnce(worker)
+		fmt.Printf("%03d %v ================================== slots=%v of %v\n", i, time.Now(), sm.OccupiedSlotCount(), sm.AllocatedSlotCount())
+		fmt.Printf("%03d %v =============== repeatNow=%v nextPollTime=%v\n", i, time.Now(), repeatNow, nextPollTime)
+
+		if repeatNow {
+			continue
+		}
+		if !nextPollTime.IsZero() {
+			time.Sleep(time.Until(nextPollTime))
+		} else {
+			time.Sleep(time.Second)
+		}
+
 		if i%100 == 0 {
 			fmt.Printf("%03d %v ================================== slots=%v of %v\n", i, time.Now(), sm.OccupiedSlotCount(), sm.AllocatedSlotCount())
 			sm.Cleanup()

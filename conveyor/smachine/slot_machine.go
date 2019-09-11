@@ -114,14 +114,14 @@ func (m *SlotMachine) SetContainerState(s SlotMachineState) {
 	m.containerState = s
 }
 
-func (m *SlotMachine) ScanOnceAsNested(context ExecutionContext) bool {
+func (m *SlotMachine) ScanOnceAsNested(context ExecutionContext) (repeatNow bool, nextPollTime time.Time) {
 	worker := context.(*executionContext).worker.StartNested(m.containerState)
 	defer worker.FinishNested(m.containerState)
 
 	return m.ScanOnce(worker)
 }
 
-func (m *SlotMachine) ScanEventsOnly() (hasUpdates bool) {
+func (m *SlotMachine) ScanEventsOnly() (repeatNow bool) {
 
 	scanTime := time.Now()
 	if m.startedAt.IsZero() {
@@ -131,19 +131,20 @@ func (m *SlotMachine) ScanEventsOnly() (hasUpdates bool) {
 	return m.scanEvents()
 }
 
-func (m *SlotMachine) scanEvents() (hasUpdates bool) {
+func (m *SlotMachine) scanEvents() (repeatNow bool) {
 
 	syncQ := m.syncQueue.Flush()
-	hasUpdates = len(syncQ) > 0
+	if len(syncQ) == 0 {
+		return false
+	}
 
 	for _, fn := range syncQ {
 		fn() // allows to resync detached
 	}
-
 	return true
 }
 
-func (m *SlotMachine) ScanOnce(worker SlotWorker) (hasUpdates bool) {
+func (m *SlotMachine) ScanOnce(worker SlotWorker) (repeatNow bool, nextPollTime time.Time) {
 
 	scanTime := time.Now()
 
@@ -163,16 +164,17 @@ func (m *SlotMachine) ScanOnce(worker SlotWorker) (hasUpdates bool) {
 		m.workingSlots.PrependAll(&m.prioritySlots)
 	}
 
-	hasUpdates = m.scanEvents()
+	repeatNow = m.scanEvents()
 
 	if m.workingSlots.IsEmpty() {
-		return hasUpdates
+		return repeatNow, m.pollingSlots.GetNearestPollTime()
 	}
 
 	m.pollingSlots.PrepareFor(scanTime.Add(m.config.PollingPeriod).Truncate(m.config.PollingTruncate))
 	m.scanWorkingSlots(worker, scanTime)
 
-	return true
+	repeatNow = !m.activeWaitOnly // || repeatNow
+	return repeatNow, m.pollingSlots.GetNearestPollTime()
 }
 
 func (m *SlotMachine) scanWorkingSlots(worker SlotWorker, scanStartTime time.Time) {
@@ -828,6 +830,7 @@ func (m *SlotMachine) addSlotToActiveOrWorkingQueue(slot *Slot, activeWait bool)
 		}
 		return
 	}
+
 	if slot.isPriority() {
 		m.prioritySlots.AddLast(slot)
 	} else {
