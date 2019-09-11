@@ -29,25 +29,146 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/spf13/cobra"
+
+	"github.com/insolar/insolar/log"
 )
 
 const (
-	logDir         = ".artifacts/launchnet/logs/"
 	statLogMessage = "stat_log_message"
 
 	typeSent         = "sent"
 	typeReply        = "reply"
-	typeCallStarted  = "cr_call_started"
+	typeCallStarted  = "cr_call_started" // nolint
 	typeCallReturned = "cr_call_returned"
-
-	tracePerBucketSample = 3
 )
-
-var pattern = regexp.MustCompile(".*output.log$")
 
 var ignoreTracePrefixes = []string{
 	"main_",
 	"pulse_",
+}
+
+type paramsHolder struct {
+	filePattern string
+	logDir      string
+	sampleSize  int
+}
+
+var params = paramsHolder{}
+
+func main() {
+	var cmd = &cobra.Command{
+		Use: "logstat",
+		Run: func(cmd *cobra.Command, args []string) {
+			parseLogs()
+		},
+	}
+	cmd.Flags().StringVarP(&params.logDir, "dir", "d", "", "directory with logs")
+	err := cmd.MarkFlagRequired("dir")
+	checkError(err)
+	cmd.Flags().StringVarP(&params.filePattern, "pattern", "p", "", "file pattern to parse")
+	cmd.Flags().IntVarP(&params.sampleSize, "sample", "s", 3, "trace sample size")
+	err = cmd.Execute()
+	checkError(err)
+}
+
+func parseLogs() {
+	var parsedCount uint64
+
+	shouldParse := func(log StatLog) bool {
+		if log.Message != statLogMessage {
+			return false
+		}
+		if log.TraceID == "" {
+			return false
+		}
+		for _, i := range ignoreTracePrefixes {
+			if strings.HasPrefix(log.TraceID, i) {
+				return false
+			}
+		}
+
+		return true
+	}
+
+	parseFile := func(stats *Stats, filename string) {
+		file, err := os.Open(filename)
+		if err != nil {
+			return
+		}
+		scanner := bufio.NewScanner(file)
+		for scanner.Scan() {
+			line := scanner.Bytes()
+			if !bytes.Contains(line, []byte(statLogMessage)) {
+				continue
+			}
+
+			log := StatLog{}
+			err = json.Unmarshal(line, &log)
+			if err != nil {
+				continue
+			}
+
+			if !shouldParse(log) {
+				continue
+			}
+
+			atomic.AddUint64(&parsedCount, 1)
+			stats.GetOrCreate(log.TraceID).Parse(log)
+		}
+	}
+
+	pattern := regexp.MustCompile(params.filePattern)
+
+	var files []string
+	err := filepath.Walk(params.logDir, func(path string, info os.FileInfo, err error) error {
+		if info.IsDir() {
+			return nil
+		}
+
+		if !pattern.MatchString(path) {
+			return nil
+		}
+
+		files = append(files, path)
+		return nil
+	})
+	checkError(err)
+
+	stats := NewStats()
+	var wg sync.WaitGroup
+	wg.Add(len(files))
+	for _, path := range files {
+		path := path
+		go func() {
+			parseFile(stats, path)
+			wg.Done()
+		}()
+	}
+	wg.Wait()
+
+	aggregate := MetaAggregate{
+		TotalTraces: len(stats.stats),
+		TotalLogs:   parsedCount,
+		Aggregates: []Aggregator{
+			NewAggSent(),
+			NewAggReply(),
+			NewAggTraceTimes(params.sampleSize),
+		},
+	}
+	aggregate.Aggregate(stats)
+	out := bufio.NewWriter(os.Stdout)
+	_, err = out.Write([]byte(aggregate.String()))
+	checkError(err)
+	err = out.Flush()
+	checkError(err)
+}
+
+func checkError(err error) {
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 type StatLog struct {
@@ -129,102 +250,6 @@ func (s *TraceStats) Parse(log StatLog) {
 		s.ReplyTimings[log.MessageType] = append(s.ReplyTimings[log.MessageType], log.ReplyTimeMS)
 	case typeCallReturned:
 		s.CallReturned = log.Time
-	}
-}
-
-func main() {
-	var parsedCount uint64
-
-	shouldParse := func(log StatLog) bool {
-		if log.Message != statLogMessage {
-			return false
-		}
-		if log.TraceID == "" {
-			return false
-		}
-		for _, i := range ignoreTracePrefixes {
-			if strings.HasPrefix(log.TraceID, i) {
-				return false
-			}
-		}
-
-		return true
-	}
-
-	parseFile := func(stats *Stats, filename string) {
-		file, err := os.Open(filename)
-		if err != nil {
-			return
-		}
-		scanner := bufio.NewScanner(file)
-		for scanner.Scan() {
-			line := scanner.Bytes()
-			if !bytes.Contains(line, []byte(statLogMessage)) {
-				continue
-			}
-
-			log := StatLog{}
-			err = json.Unmarshal(line, &log)
-			if err != nil {
-				continue
-			}
-
-			if !shouldParse(log) {
-				continue
-			}
-
-			atomic.AddUint64(&parsedCount, 1)
-			stats.GetOrCreate(log.TraceID).Parse(log)
-		}
-	}
-
-	var files []string
-	err := filepath.Walk(logDir, func(path string, info os.FileInfo, err error) error {
-		if info.IsDir() {
-			return nil
-		}
-
-		if !pattern.MatchString(path) {
-			return nil
-		}
-
-		files = append(files, path)
-		return nil
-	})
-	checkError(err)
-
-	stats := NewStats()
-	var wg sync.WaitGroup
-	wg.Add(len(files))
-	for _, path := range files {
-		path := path
-		go func() {
-			parseFile(stats, path)
-			wg.Done()
-		}()
-	}
-	wg.Wait()
-
-	aggregate := MetaAggregate{
-		TotalTraces: len(stats.stats),
-		TotalLogs:   parsedCount,
-		Aggregates: []Aggregator{
-			NewAggSent(),
-			NewAggReply(),
-			&AggTraceTimes{},
-		},
-	}
-	aggregate.Aggregate(stats)
-	out := bufio.NewWriter(os.Stdout)
-	_, err = out.Write([]byte(aggregate.String()))
-	checkError(err)
-	err = out.Flush()
-	checkError(err)
-}
-
-func checkError(err error) {
-	if err != nil {
-		panic(err)
 	}
 }
 
@@ -384,6 +409,14 @@ type AggTraceTimes struct {
 
 	callSamples  [traceTimeBucketCount + 1][]*TraceStats
 	totalSamples [traceTimeBucketCount + 1][]*TraceStats
+
+	sampleSize int
+}
+
+func NewAggTraceTimes(sampleSize int) *AggTraceTimes {
+	return &AggTraceTimes{
+		sampleSize: sampleSize,
+	}
 }
 
 func (a *AggTraceTimes) String() string {
@@ -392,9 +425,8 @@ func (a *AggTraceTimes) String() string {
 			return
 		}
 		for _, t := range a.callSamples[bucket] {
-			b.WriteString(fmt.Sprintf("   %s (%s)\n", t.TraceID, t.CallDuration()))
+			b.WriteString(fmt.Sprintf("   %s | %s\n", t.TraceID, t.CallDuration()))
 		}
-		b.WriteString("   . . .\n")
 	}
 
 	writeTotalSample := func(b *strings.Builder, bucket int) {
@@ -402,19 +434,18 @@ func (a *AggTraceTimes) String() string {
 			return
 		}
 		for _, t := range a.totalSamples[bucket] {
-			b.WriteString(fmt.Sprintf("   %s (%s)\n", t.TraceID, t.TotalDuration()))
+			b.WriteString(fmt.Sprintf("   %s | %s\n", t.TraceID, t.TotalDuration()))
 		}
-		b.WriteString("   . . .\n")
 	}
 
 	b := strings.Builder{}
 	b.WriteString("[Call return percentiles]\n")
 	for i := 0; i < len(a.callTimes)-1; i++ {
-		b.WriteString(fmt.Sprintf("< %s (%d) \n", traceTimeBuckets[i], a.callTimes[i]))
+		b.WriteString(fmt.Sprintf("< %s | %d\n", traceTimeBuckets[i], a.callTimes[i]))
 		writeCallSample(&b, i)
 	}
 	b.WriteString(fmt.Sprintf(
-		"> %s (%d) \n",
+		"> %s | %d\n",
 		traceTimeBuckets[len(traceTimeBuckets)-1],
 		a.callTimes[len(a.callTimes)-1]),
 	)
@@ -423,7 +454,7 @@ func (a *AggTraceTimes) String() string {
 
 	b.WriteString("[Total time percentiles]\n")
 	for i := 0; i < len(a.totalTimes)-1; i++ {
-		b.WriteString(fmt.Sprintf("< %s (%d) \n", traceTimeBuckets[i], a.totalTimes[i]))
+		b.WriteString(fmt.Sprintf("< %s | %d\n", traceTimeBuckets[i], a.totalTimes[i]))
 		writeTotalSample(&b, i)
 	}
 	b.WriteString(fmt.Sprintf(
@@ -459,12 +490,12 @@ func (a *AggTraceTimes) add(stat *TraceStats) {
 
 	if stat.CallDuration() != 0 {
 		bucket := addCall(stat.CallDuration())
-		if len(a.callSamples[bucket]) < tracePerBucketSample {
+		if len(a.callSamples[bucket]) < a.sampleSize {
 			a.callSamples[bucket] = append(a.callSamples[bucket], stat)
 		}
 	}
 	bucket := addTotal(stat.TotalDuration())
-	if len(a.totalSamples[bucket]) < tracePerBucketSample {
+	if len(a.totalSamples[bucket]) < a.sampleSize {
 		a.totalSamples[bucket] = append(a.totalSamples[bucket], stat)
 	}
 }
