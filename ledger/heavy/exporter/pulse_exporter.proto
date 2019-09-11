@@ -3,6 +3,7 @@ syntax = "proto3";
 package exporter;
 
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+import "github.com/insolar/insolar/insolar/node.proto";
 
 service PulseExporter {
     rpc Export (GetPulses) returns (stream Pulse) {
@@ -34,6 +35,8 @@ message Pulse {
     bytes PulseNumber = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
     bytes Entropy = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Entropy", (gogoproto.nullable) = false];
     int64 PulseTimestamp = 22;
+
+    repeated insolar.Node Nodes = 23 [(gogoproto.nullable) = false];
 }
 
 
