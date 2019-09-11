@@ -237,15 +237,11 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		APIWrapper = api.NewWrapper(API, AdminAPIRunner)
 	}
 
-	metricsHandler, err := metrics.NewMetrics(
-		ctx,
+	metricsComp := metrics.NewMetrics(
 		cfg.Metrics,
 		metrics.GetInsolarRegistry(c.NodeRole),
 		c.NodeRole,
 	)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to start Metrics")
-	}
 
 	var (
 		PulseManager *pulsemanager.PulseManager
@@ -363,7 +359,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		Jets,
 		Pulses,
 		Coordinator,
-		metricsHandler,
+		metricsComp,
 		Requester,
 		ArtifactsClient,
 		APIWrapper,
@@ -374,7 +370,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		NetworkService,
 		publisher,
 	)
-	err = c.cmp.Init(ctx)
+	err := c.cmp.Init(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to init components")
 	}
