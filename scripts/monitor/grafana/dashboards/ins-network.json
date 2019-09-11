@@ -15,7 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1568221875129,
+  "iteration": 1568222808265,
   "links": [],
   "panels": [
     {
@@ -423,7 +423,8 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "delta(insolar_network_futures[20s])",
+          "expr": "delta(insolar_network_futures{packetType=~\"$packetType\"}[20s])",
+          "legendFormat": "{{instance}} {{packetType}}",
           "refId": "A"
         }
       ],
@@ -687,6 +688,34 @@
         "query": "ph1, ph2, ph3",
         "skipUrlSync": false,
         "type": "custom"
+      },
+      {
+        "allValue": null,
+        "current": {
+          "tags": [],
+          "text": "All",
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": "prometheus",
+        "definition": "label_values(insolar_network_futures, packetType)",
+        "hide": 0,
+        "includeAll": true,
+        "label": null,
+        "multi": true,
+        "name": "packetType",
+        "options": [],
+        "query": "label_values(insolar_network_futures, packetType)",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
       }
     ]
   },
@@ -711,5 +740,5 @@
   "timezone": "",
   "title": "INS-Network",
   "uid": "LmD-fXFZz",
-  "version": 1
+  "version": 2
 }
