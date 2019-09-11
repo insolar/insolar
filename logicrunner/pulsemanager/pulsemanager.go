@@ -19,8 +19,12 @@ package pulsemanager
 import (
 	"context"
 	"sync"
+	"time"
+
+	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/logicrunner/metrics"
 	"github.com/insolar/insolar/network"
 
 	"github.com/insolar/insolar/insolar"
@@ -68,6 +72,10 @@ func (m *PulseManager) AddDispatcher(d ...dispatcher.Dispatcher) {
 func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 	m.setLock.Lock()
 	defer m.setLock.Unlock()
+	onPulseStart := time.Now()
+	defer func() {
+		stats.Record(ctx, metrics.PulseManagerOnPulseTiming.M(float64(time.Since(onPulseStart).Nanoseconds())/1e6))
+	}()
 	if m.stopped {
 		return errors.New("can't call Set method on PulseManager after stop")
 	}

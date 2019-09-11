@@ -20,9 +20,11 @@ import (
 	"context"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
@@ -30,11 +32,18 @@ import (
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/executionregistry"
+	"github.com/insolar/insolar/logicrunner/metrics"
 	"github.com/insolar/insolar/logicrunner/requestsqueue"
+)
+
+var (
+	ErrNotInPending     = errors.New("state is not in pending")
+	ErrAlreadyExecuting = errors.New("already executing")
 )
 
 // passToNextLimit - number of requests we pass to next executor on pulse change,
@@ -54,7 +63,7 @@ type ExecutionBrokerI interface {
 	AddAdditionalRequestFromPrevExecutor(ctx context.Context, transcript *common.Transcript)
 
 	PendingState() insolar.PendingState
-	PrevExecutorStillExecuting(ctx context.Context)
+	PrevExecutorStillExecuting(ctx context.Context) error
 	PrevExecutorPendingResult(ctx context.Context, prevExecState insolar.PendingState)
 	PrevExecutorSentPendingFinished(ctx context.Context) error
 	SetNotPending(ctx context.Context)
@@ -163,6 +172,9 @@ func (q *ExecutionBroker) getTask(ctx context.Context, queue requestsqueue.Reque
 
 		err := q.executionRegistry.Register(ctx, transcript)
 		if err != nil {
+			if err == executionregistry.ErrAlreadyRegistered {
+				stats.Record(ctx, metrics.ExecutionBrokerTranscriptAlreadyRegistered.M(1))
+			}
 			inslogger.FromContext(ctx).Error("couldn't register transcript, skipping: ", err.Error())
 			continue
 		}
@@ -185,6 +197,9 @@ func (q *ExecutionBroker) finishTask(ctx context.Context, transcript *common.Tra
 }
 
 func (q *ExecutionBroker) processTranscript(ctx context.Context, transcript *common.Transcript) {
+	ctx = insmetrics.InsertTag(ctx, metrics.TagExecutionBrokerName, q.name)
+	stats.Record(ctx, metrics.ExecutionBrokerExecutionStarted.M(1))
+	defer stats.Record(ctx, metrics.ExecutionBrokerExecutionFinished.M(1))
 	if transcript.Context != nil {
 		ctx = transcript.Context
 	} else {
@@ -232,16 +247,26 @@ func (q *ExecutionBroker) storeWithoutDuplication(ctx context.Context, transcrip
 func (q *ExecutionBroker) add(
 	ctx context.Context, source requestsqueue.RequestSource, transcripts ...*common.Transcript,
 ) {
+	ctx = insmetrics.InsertTag(ctx, metrics.TagExecutionBrokerName, q.name)
 	for _, transcript := range transcripts {
+		queueName := "mutable"
+		if transcript.Request.Immutable {
+			queueName = "immutable"
+		}
+		ctx = insmetrics.InsertTag(ctx, metrics.TagExecutionQueueName, queueName)
 		if q.storeWithoutDuplication(ctx, transcript) {
+			stats.Record(ctx, metrics.ExecutionBrokerTranscriptDuplicate.M(1))
 			continue
 		}
 		if q.executionRegistry.GetActiveTranscript(transcript.RequestRef) != nil {
+			stats.Record(ctx, metrics.ExecutionBrokerTranscriptExecuting.M(1))
 			inslogger.FromContext(transcript.Context).Warn(
 				"this node already executing request, won't add to queue",
 			)
 			continue
 		}
+
+		stats.Record(ctx, metrics.ExecutionBrokerTranscriptRegistered.M(1))
 
 		inslogger.FromContext(transcript.Context).Debug("appending request to queue")
 
@@ -376,6 +401,13 @@ func (q *ExecutionBroker) finishPendingIfNeeded(ctx context.Context) {
 }
 
 func (q *ExecutionBroker) OnPulse(ctx context.Context) []payload.Payload {
+	ctx = insmetrics.InsertTag(ctx, metrics.TagExecutionBrokerName, q.name)
+	onPulseStart := time.Now()
+	defer func(ctx context.Context) {
+		stats.Record(ctx,
+			metrics.ExecutionBrokerOnPulseTiming.M(float64(time.Since(onPulseStart).Nanoseconds())/1e6))
+	}(ctx)
+
 	logger := inslogger.FromContext(ctx)
 	q.stateLock.Lock()
 	defer q.stateLock.Unlock()
@@ -395,13 +427,17 @@ func (q *ExecutionBroker) OnPulse(ctx context.Context) []payload.Payload {
 
 	sendExecResults := false
 
-	requests, hasMore := requestsqueue.FirstNFromMany(ctx, passToNextLimit, q.mutable.queue, q.immutable.queue)
+	requests, rest := requestsqueue.SplitNFromMany(ctx, passToNextLimit, q.mutable.queue, q.immutable.queue)
+	if len(rest) > 0 {
+		stats.Record(ctx, metrics.ExecutionBrokerTruncatedRequests.M(int64(len(rest))))
+	}
 
 	switch {
 	case q.isActive():
 		q.pending = insolar.InPending
 		sendExecResults = true
 	case q.notConfirmedPending():
+		stats.Record(ctx, metrics.ExecutionBrokerOnPulseNotConfirmed.M(1))
 		logger.Warn("looks like pending executor died, continuing execution on next executor")
 		q.pending = insolar.NotPending
 		sendExecResults = true
@@ -416,7 +452,7 @@ func (q *ExecutionBroker) OnPulse(ctx context.Context) []payload.Payload {
 		// TODO: we also should send when executed something for validation
 		// TODO: now validation is disabled
 		messagesQueue := common.ConvertQueueToMessageQueue(ctx, requests)
-		ledgerHasMoreRequests := q.ledgerHasMoreRequests || hasMore
+		ledgerHasMoreRequests := q.ledgerHasMoreRequests || len(rest) > 0
 
 		messages = append(messages, &payload.ExecutorResults{
 			RecordRef:             q.Ref,
@@ -473,7 +509,7 @@ func (q *ExecutionBroker) PrevExecutorPendingResult(ctx context.Context, prevExe
 	}
 }
 
-func (q *ExecutionBroker) PrevExecutorStillExecuting(ctx context.Context) {
+func (q *ExecutionBroker) PrevExecutorStillExecuting(ctx context.Context) error {
 	q.stateLock.Lock()
 	defer q.stateLock.Unlock()
 
@@ -483,7 +519,7 @@ func (q *ExecutionBroker) PrevExecutorStillExecuting(ctx context.Context) {
 	switch q.pending {
 	case insolar.NotPending:
 		// It might be when StillExecuting comes after PendingFinished
-		logger.Warn("got StillExecuting message, but our state says that it's not in pending")
+		return ErrNotInPending
 	case insolar.InPending:
 		q.PendingConfirmed = true
 	case insolar.PendingUnknown:
@@ -491,6 +527,7 @@ func (q *ExecutionBroker) PrevExecutorStillExecuting(ctx context.Context) {
 		q.pending = insolar.InPending
 		q.PendingConfirmed = true
 	}
+	return nil
 }
 
 func (q *ExecutionBroker) PrevExecutorSentPendingFinished(ctx context.Context) error {
@@ -498,7 +535,7 @@ func (q *ExecutionBroker) PrevExecutorSentPendingFinished(ctx context.Context) e
 	defer q.stateLock.Unlock()
 
 	if q.isActive() {
-		return errors.New("already executing")
+		return ErrAlreadyExecuting
 	}
 
 	q.pending = insolar.NotPending

@@ -20,6 +20,7 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/payload"
@@ -29,6 +30,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
+	"github.com/insolar/insolar/logicrunner/metrics"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/logicrunner.ProxyImplementation -o ./ -s _mock.go -g
@@ -221,6 +223,15 @@ func (m *executionProxyImplementation) SaveAsChild(
 	outReqInfo, err := m.am.RegisterOutgoingRequest(ctx, outgoing)
 	if err != nil {
 		return err
+	}
+
+	switch {
+	case outReqInfo.Result != nil:
+		stats.Record(ctx, metrics.OutgoingRequestsClosed.M(1))
+	case outReqInfo.Request != nil:
+		stats.Record(ctx, metrics.OutgoingRequestsDuplicate.M(1))
+	default:
+		stats.Record(ctx, metrics.OutgoingRequestsNew.M(1))
 	}
 
 	// Register result of the outgoing method

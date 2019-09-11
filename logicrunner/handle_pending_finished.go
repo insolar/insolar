@@ -20,12 +20,14 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/logicrunner/metrics"
 	"github.com/insolar/insolar/logicrunner/writecontroller"
 )
 
@@ -76,6 +78,9 @@ func (h *HandlePendingFinished) Present(ctx context.Context, _ flow.Flow) error 
 
 	err = broker.PrevExecutorSentPendingFinished(ctx)
 	if err != nil {
+		if err == ErrAlreadyExecuting {
+			stats.Record(ctx, metrics.PendingFinishedAlreadyExecuting.M(1))
+		}
 		err = errors.Wrap(err, "handle PendingFinished failed")
 		inslogger.FromContext(ctx).Error(err.Error())
 		return err
