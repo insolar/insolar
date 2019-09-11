@@ -52,6 +52,7 @@ package adapters
 
 import (
 	"context"
+
 	"github.com/insolar/insolar/network"
 	"go.opencensus.io/stats"
 
@@ -79,11 +80,9 @@ func (ps *PacketSender) SendPacketToTransport(ctx context.Context, to transport2
 	})
 
 	buf := payload.([]byte)
-	stats.Record(ctx, network.ConsensusPacketsSentBytes.M(int64(len(buf))))
+	stats.Record(ctx, network.ConsensusPacketsSent.M(int64(len(buf))))
 	err := ps.datagramTransport.SendDatagram(ctx, addr, buf)
 	if err != nil {
 		logger.Error("Failed to send datagram: ", err)
 	}
-
-	stats.Record(ctx, network.ConsensusPacketsSent.M(1))
 }

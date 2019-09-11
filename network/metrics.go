@@ -60,17 +60,16 @@ import (
 var (
 	// TagPhase is a tag for consensus metrics.
 	TagPhase = insmetrics.MustTagKey("phase")
+	TagRole  = insmetrics.MustTagKey("role")
 )
 
 var (
-	// ConsensusPacketsSent urrent consensus transport packets sent counter.
-	ConsensusPacketsSent = stats.Int64("consensus_packets_sent", "Current consensus transport packets sent counter", stats.UnitDimensionless)
-	// ConsensusPacketsRecv current consensus transport packets recv counter.
-	ConsensusPacketsRecv = stats.Int64("consensus_packets_recv", "Current consensus transport packets recv counter", stats.UnitDimensionless)
 	// ConsensusPacketsSentBytes consensus sent packets size.
-	ConsensusPacketsSentBytes = stats.Int64("consensus_packets_sent_bytes", "Consensus sent packets size", stats.UnitBytes)
+	ConsensusPacketsSent = stats.Int64("consensus_packets_sent", "Consensus sent packets size", stats.UnitBytes)
 	// ConsensusPacketsRecvBytes consensus received packets size.
-	ConsensusPacketsRecvBytes = stats.Int64("consensus_packets_recv_bytes", "Consensus received packets size", stats.UnitBytes)
+	ConsensusPacketsRecv = stats.Int64("consensus_packets_recv", "Consensus received packets size", stats.UnitBytes)
+	// ConsensusPacketsRecvBytes consensus received packets size.
+	ConsensusPacketsRecvBad = stats.Int64("consensus_packets_recv_bad", "Consensus received packets size", stats.UnitBytes)
 
 	// DeclinedClaims consensus claims declined counter.
 	DeclinedClaims = stats.Int64("consensus_claims_declined", "Consensus claims declined counter", stats.UnitDimensionless)
@@ -104,16 +103,32 @@ func init() {
 			Aggregation: view.Count(),
 		},
 		&view.View{
-			Name:        ConsensusPacketsSentBytes.Name(),
-			Description: ConsensusPacketsSentBytes.Description(),
-			Measure:     ConsensusPacketsSentBytes,
-			Aggregation: view.Count(),
+			Name:        ConsensusPacketsSent.Name() + "_bytes",
+			Description: ConsensusPacketsSent.Description(),
+			Measure:     ConsensusPacketsSent,
+			Aggregation: view.Sum(),
+			TagKeys:     commontags,
 		},
 		&view.View{
-			Name:        ConsensusPacketsRecvBytes.Name(),
-			Description: ConsensusPacketsRecvBytes.Description(),
-			Measure:     ConsensusPacketsRecvBytes,
+			Name:        ConsensusPacketsSent.Name() + "_count",
+			Description: ConsensusPacketsSent.Description(),
+			Measure:     ConsensusPacketsSent,
 			Aggregation: view.Count(),
+			TagKeys:     commontags,
+		},
+		&view.View{
+			Name:        ConsensusPacketsRecv.Name() + "_bytes",
+			Description: ConsensusPacketsRecv.Description(),
+			Measure:     ConsensusPacketsRecv,
+			Aggregation: view.Sum(),
+			TagKeys:     commontags,
+		},
+		&view.View{
+			Name:        ConsensusPacketsRecv.Name() + "_count",
+			Description: ConsensusPacketsRecv.Description(),
+			Measure:     ConsensusPacketsRecv,
+			Aggregation: view.Count(),
+			TagKeys:     commontags,
 		},
 		&view.View{
 			Name:        FailedCheckProof.Name(),
