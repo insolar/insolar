@@ -60,7 +60,6 @@ import (
 var (
 	// TagPhase is a tag for consensus metrics.
 	TagPhase = insmetrics.MustTagKey("phase")
-	TagRole  = insmetrics.MustTagKey("role")
 )
 
 var (
