@@ -51,7 +51,10 @@ func (k nodeHistoryKey) ID() []byte {
 
 // Set saves active nodes for pulse in memory.
 func (s *StorageDB) Set(pulse insolar.PulseNumber, nodes []insolar.Node) error {
-	nodesList := &insolar.NodeList{Nodes: nodes}
+	nodesList := &insolar.NodeList{}
+	if len(nodes) != 0 {
+		nodesList.Nodes = nodes
+	}
 	rawNodes, err := nodesList.Marshal()
 	if err != nil {
 		return err
@@ -59,6 +62,14 @@ func (s *StorageDB) Set(pulse insolar.PulseNumber, nodes []insolar.Node) error {
 	return s.db.Backend().Update(func(txn *badger.Txn) error {
 		key := nodeHistoryKey(pulse)
 		fullKey := append(key.Scope().Bytes(), key.ID()...)
+		_, err = txn.Get(fullKey)
+		if err != nil && err != badger.ErrKeyNotFound {
+			return err
+		}
+		if err == nil {
+			return ErrOverride
+		}
+
 		return txn.Set(fullKey, rawNodes)
 	})
 }
