@@ -39,6 +39,8 @@ const (
 	typeReply        = "reply"
 	typeCallStarted  = "cr_call_started"
 	typeCallReturned = "cr_call_returned"
+
+	tracePerBucketSample = 3
 )
 
 var pattern = regexp.MustCompile(".*output.log$")
@@ -96,6 +98,17 @@ func NewTraceStats(trace string) *TraceStats {
 		ReplyTimings: map[string][]float32{},
 		SentCounts:   map[string]uint64{},
 	}
+}
+
+func (s *TraceStats) CallDuration() time.Duration {
+	if s.CallReturned.IsZero() {
+		return 0
+	}
+	return s.CallReturned.Sub(s.First)
+}
+
+func (s *TraceStats) TotalDuration() time.Duration {
+	return s.Last.Sub(s.First)
 }
 
 func (s *TraceStats) Parse(log StatLog) {
@@ -355,7 +368,6 @@ func (a *AggReply) Aggregate(logStats *Stats) {
 
 const (
 	traceTimeBucketCount = 5
-	tracePerBucketSample = 3
 )
 
 var traceTimeBuckets = [traceTimeBucketCount]time.Duration{
@@ -370,20 +382,56 @@ type AggTraceTimes struct {
 	callTimes  [traceTimeBucketCount + 1]uint64
 	totalTimes [traceTimeBucketCount + 1]uint64
 
-	totalTimeTraceSamples [traceTimeBucketCount + 1][]string
+	callSamples  [traceTimeBucketCount + 1][]*TraceStats
+	totalSamples [traceTimeBucketCount + 1][]*TraceStats
 }
 
 func (a *AggTraceTimes) String() string {
+	writeCallSample := func(b *strings.Builder, bucket int) {
+		if len(a.callSamples[bucket]) == 0 {
+			return
+		}
+		for _, t := range a.callSamples[bucket] {
+			b.WriteString(fmt.Sprintf("   %s (%s)\n", t.TraceID, t.CallDuration()))
+		}
+		b.WriteString("   . . .\n")
+	}
+
+	writeTotalSample := func(b *strings.Builder, bucket int) {
+		if len(a.totalSamples[bucket]) == 0 {
+			return
+		}
+		for _, t := range a.totalSamples[bucket] {
+			b.WriteString(fmt.Sprintf("   %s (%s)\n", t.TraceID, t.TotalDuration()))
+		}
+		b.WriteString("   . . .\n")
+	}
+
 	b := strings.Builder{}
 	b.WriteString("[Call return percentiles]\n")
 	for i := 0; i < len(a.callTimes)-1; i++ {
-		b.WriteString(fmt.Sprintf("< %s - %d \n", traceTimeBuckets[i], a.callTimes[i]))
+		b.WriteString(fmt.Sprintf("< %s (%d) \n", traceTimeBuckets[i], a.callTimes[i]))
+		writeCallSample(&b, i)
 	}
 	b.WriteString(fmt.Sprintf(
-		"> %s - %d \n",
+		"> %s (%d) \n",
 		traceTimeBuckets[len(traceTimeBuckets)-1],
 		a.callTimes[len(a.callTimes)-1]),
 	)
+	writeCallSample(&b, len(a.callTimes)-1)
+	b.WriteString("\n")
+
+	b.WriteString("[Total time percentiles]\n")
+	for i := 0; i < len(a.totalTimes)-1; i++ {
+		b.WriteString(fmt.Sprintf("< %s (%d) \n", traceTimeBuckets[i], a.totalTimes[i]))
+		writeTotalSample(&b, i)
+	}
+	b.WriteString(fmt.Sprintf(
+		"> %s (%d) \n",
+		traceTimeBuckets[len(traceTimeBuckets)-1],
+		a.callTimes[len(a.totalTimes)-1]),
+	)
+	writeTotalSample(&b, len(a.totalTimes)-1)
 
 	return b.String()
 }
@@ -409,12 +457,15 @@ func (a *AggTraceTimes) add(stat *TraceStats) {
 		return len(traceTimeBuckets)
 	}
 
-	if !stat.CallReturned.IsZero() {
-		addCall(stat.CallReturned.Sub(stat.First))
+	if stat.CallDuration() != 0 {
+		bucket := addCall(stat.CallDuration())
+		if len(a.callSamples[bucket]) < tracePerBucketSample {
+			a.callSamples[bucket] = append(a.callSamples[bucket], stat)
+		}
 	}
-	bucket := addTotal(stat.Last.Sub(stat.First))
-	if len(a.totalTimeTraceSamples[bucket]) < tracePerBucketSample {
-		a.totalTimeTraceSamples[bucket] = append(a.totalTimeTraceSamples[bucket], stat.TraceID)
+	bucket := addTotal(stat.TotalDuration())
+	if len(a.totalSamples[bucket]) < tracePerBucketSample {
+		a.totalSamples[bucket] = append(a.totalSamples[bucket], stat)
 	}
 }
 
