@@ -53,8 +53,9 @@ package adapters
 import (
 	"bytes"
 	"context"
-	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"io"
+
+	"github.com/insolar/insolar/instrumentation/insmetrics"
 
 	"go.opencensus.io/stats"
 
@@ -136,7 +137,6 @@ func (dh *DatagramHandler) HandleDatagram(ctx context.Context, address string, b
 
 	ctx = insmetrics.InsertTag(ctx, network.TagPhase, packetParser.GetPacketType().String())
 	stats.Record(ctx, network.ConsensusPacketsRecv.M(int64(len(buf))))
-	stats.Record(ctx, network.ConsensusPacketsRecv.M(1))
 
 	dh.packetHandler.handlePacket(ctx, packetParser, address)
 }
