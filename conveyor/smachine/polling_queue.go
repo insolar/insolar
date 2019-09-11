@@ -88,6 +88,10 @@ func (p *PollingQueue) PrepareFor(pollTime time.Time) {
 		}
 
 	case !p.prepared.IsEmpty():
+		if p.prepared.pollAfter.Equal(pollTime) {
+			return
+		}
+
 		p.seqLen++
 		if int(p.seqLen) >= len(p.polls) {
 			p.growPollingSlots()

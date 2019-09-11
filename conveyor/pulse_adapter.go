@@ -16,13 +16,43 @@
 
 package conveyor
 
-import "github.com/insolar/insolar/conveyor/smachine"
+import (
+	"github.com/insolar/insolar/conveyor/smachine"
+	"github.com/insolar/insolar/pulse"
+)
 
 type PulseService struct {
+	preparePulse    smachine.BargeInFunc
+	cancelPulse     smachine.BargeInFunc
+	preparePulseOut chan<- PreparedState
 }
 
-func (a *PulseService) subscribe(ctx smachine.BasicContext, prepareState, cancelState smachine.StateFunc) {
+func (p *PulseService) subscribe(preparePulse smachine.BargeInFunc, cancelPulse smachine.BargeInFunc) {
+	if p.preparePulse != nil || p.cancelPulse != nil {
+		panic("illegal state")
+	}
+	p.preparePulse = preparePulse
+	p.cancelPulse = cancelPulse
+}
 
+func (p PulseService) onPreparePulseChange(out chan<- PreparedState) {
+	p.preparePulseOut = out
+	if p.preparePulse != nil {
+		p.preparePulse()
+	}
+}
+
+func (p PulseService) onCancelPulseChange() {
+	p.preparePulseOut = nil
+	if p.cancelPulse != nil {
+		p.cancelPulse()
+	}
+}
+
+func (p PulseService) onCommitPulseChange(pulse.Data) {
+	p.preparePulseOut = nil
+	p.preparePulse = nil
+	p.cancelPulse = nil
 }
 
 type PulseServiceAdapter struct {

@@ -18,6 +18,7 @@ package smachine
 
 import (
 	"context"
+	"github.com/insolar/insolar/conveyor/smachine/tools"
 	"sync"
 	"sync/atomic"
 )
@@ -37,18 +38,18 @@ type DetachableSlotWorker struct {
 	state slotWorkerState
 
 	mutex        sync.Mutex
-	outerSignal  <-chan struct{}
+	outerSignal  tools.SignalVersion
 	innerBreaker chan struct{}
 }
 
-func (p *DetachableSlotWorker) activate(outerSignal <-chan struct{}) {
-	if outerSignal == nil {
-		panic("illegal value")
-	}
-	if p.outerSignal != nil {
-		panic("illegal state")
-	}
-	p.outerSignal = outerSignal
+func (p *DetachableSlotWorker) activate(outerSignal tools.SignalVersion) {
+	//if outerSignal == nil {
+	//	panic("illegal value")
+	//}
+	//if p.outerSignal != nil {
+	//	panic("illegal state")
+	//}
+	//p.outerSignal = outerSignal
 	//	p.innerBreaker = make(chan struct{})
 }
 
@@ -147,12 +148,12 @@ func (p *DetachableSlotWorker) workerDetachedBreaker() {
 outer:
 	for {
 		select {
-		case <-p.outerSignal:
+		case <-p.outerSignal.Channel():
 			p.setSignal()
 			break outer
 		case <-p.innerBreaker:
 			select {
-			case <-p.outerSignal:
+			case <-p.outerSignal.Channel():
 				p.setSignal()
 			default:
 			}

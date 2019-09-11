@@ -38,7 +38,7 @@ func (p *sharedStateMachine) mainState(ctx ExecutionContext) StateUpdate {
 	if p.state.CanBeDisposed(ctx) {
 		return ctx.Jump(p.stopState)
 	}
-	return ctx.Wait().ThenRepeat()
+	return ctx.Sleep().ThenRepeat()
 }
 
 func (p *sharedStateMachine) migrateState(ctx MigrationContext) StateUpdate {

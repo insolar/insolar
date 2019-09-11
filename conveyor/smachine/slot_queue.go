@@ -113,10 +113,6 @@ func (p *QueueHead) AddLast(slot *Slot) {
 }
 
 func (p *QueueHead) extractAll(targetQueue *QueueHead) (head, tail *Slot, count int) {
-	if p.IsEmpty() {
-		return
-	}
-
 	next := p.head.nextInQueue
 	prev := p.head.prevInQueue
 
@@ -135,6 +131,9 @@ func (p *QueueHead) extractAll(targetQueue *QueueHead) (head, tail *Slot, count 
 
 func (p *QueueHead) AppendAll(anotherQueue *QueueHead) {
 	p.initEmpty()
+	if anotherQueue.IsEmpty() {
+		return
+	}
 	head, tail, count := anotherQueue.extractAll(p)
 	p.head._addQueuePrev(head, tail)
 	p.count += count
@@ -142,6 +141,9 @@ func (p *QueueHead) AppendAll(anotherQueue *QueueHead) {
 
 func (p *QueueHead) PrependAll(anotherQueue *QueueHead) {
 	p.initEmpty()
+	if anotherQueue.IsEmpty() {
+		return
+	}
 	head, tail, count := anotherQueue.extractAll(p)
 	p.head.nextInQueue._addQueuePrev(head, tail)
 	p.count += count

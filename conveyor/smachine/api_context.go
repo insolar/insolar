@@ -26,11 +26,13 @@ type MigrateFunc func(ctx MigrationContext) StateUpdate
 type CreateFunc func(ctx ConstructionContext) StateMachine
 type AsyncResultFunc func(ctx AsyncResultContext)
 type BroadcastReceiveFunc func(ctx AsyncResultContext, payload interface{}) bool
+type ErrorHandlerFunc func(ctx FailureContext)
 
 type BasicContext interface {
 	GetSlotID() SlotID
 	GetParent() SlotLink
 	GetContext() context.Context
+	GetContainer() SlotMachineState
 }
 
 type ConstructionContext interface {
@@ -44,13 +46,15 @@ type stepContext interface {
 	SlotLink() SlotLink
 
 	SetDefaultMigration(fn MigrateFunc)
+	//SetDefaultErrorHandler(fn ErrorHandlerFunc)
 	SetDefaultFlags(StepFlags)
 
-	JumpExt(StateFunc, MigrateFunc, StepFlags) StateUpdate
+	JumpExt(SlotStep) StateUpdate
 	Jump(StateFunc) StateUpdate
 
 	Share(data interface{}, wakeUpOnUse bool) SharedDataLink
 
+	Error(error) StateUpdate
 	Stop() StateUpdate
 }
 
@@ -66,7 +70,7 @@ type BargeInParamFunc func(interface{}) bool
 type BargeInFunc func() bool
 
 type BargeInRequester interface {
-	WithJumpExt(StateFunc, MigrateFunc, StepFlags) BargeInFunc
+	WithJumpExt(SlotStep) BargeInFunc
 	WithJump(StateFunc) BargeInFunc
 	WithWakeUp() BargeInFunc
 }
@@ -74,7 +78,12 @@ type BargeInRequester interface {
 type MigrationContext interface {
 	stepContext
 
+	/* A step the target slot is at */
+	AffectedStep() SlotStep
+
 	Replace(CreateFunc) StateUpdate
+	ReplaceWith(StateMachine) StateUpdate
+
 	/* Keeps the last state */
 	Stay() StateUpdate
 	/* Makes active if was waiting or polling */
@@ -101,15 +110,17 @@ type ExecutionContext interface {
 	BargeIn() BargeInRequester
 
 	Replace(CreateFunc) StateUpdate
+	ReplaceWith(StateMachine) StateUpdate
 	Repeat(limit int) StateUpdate
 
 	Yield() StateConditionalUpdate
 	Poll() StateConditionalUpdate
+
 	WaitForActive(SlotLink) StateConditionalUpdate
 	WaitForShared(SharedDataLink) StateConditionalUpdate
+	WaitForEvent() StateConditionalUpdate
 
-	//	WaitForInput() StateConditionalUpdate
-	Wait() StateConditionalUpdate
+	Sleep() StateConditionalUpdate
 }
 
 type StateConditionalUpdate interface {
@@ -122,7 +133,7 @@ type CallConditionalUpdate interface {
 
 type ConditionalUpdate interface {
 	ThenJump(StateFunc) StateUpdate
-	ThenJumpExt(StateFunc, MigrateFunc, StepFlags) StateUpdate
+	ThenJumpExt(SlotStep) StateUpdate
 	ThenRepeat() StateUpdate
 }
 
@@ -150,11 +161,21 @@ type BargeInContext interface {
 	/* A step the target slot is at */
 	AffectedStep() SlotStep
 
-	JumpExt(StateFunc, MigrateFunc, StepFlags) StateUpdate
+	JumpExt(SlotStep) StateUpdate
 	Jump(StateFunc) StateUpdate
 
 	/* Keeps the last state */
 	Stay() StateUpdate
 	/* Makes active if was waiting or polling */
 	WakeUp() StateUpdate
+}
+
+type FailureContext interface {
+	BasicContext
+
+	/* A step the target slot is at */
+	AffectedStep() SlotStep
+
+	Panic() (bool, interface{})
+	Error() error
 }

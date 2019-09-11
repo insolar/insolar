@@ -30,8 +30,10 @@ type Slot struct {
 	declaration StateMachineDeclaration
 	step        SlotStep
 
-	defMigrate   MigrateFunc
-	defFlags     StepFlags
+	defMigrate      MigrateFunc
+	defErrorHandler ErrorHandlerFunc
+	defFlags        StepFlags
+
 	workState    slotWorkFlags
 	lastWorkScan uint8
 
@@ -188,16 +190,16 @@ func (s *Slot) stopWorking(asyncCount uint16) {
 func (s *Slot) setNextStep(step SlotStep) {
 	switch {
 	case step.Transition == nil:
-		if step.StepFlags != 0 || step.Migration != nil {
+		if step.Flags != 0 || step.Migration != nil {
 			panic("illegal value")
 		}
 		// leave as-is
 		return
 
-	case step.StepFlags&StepResetAllFlags == 0:
-		step.StepFlags |= s.defFlags
+	case step.Flags&StepResetAllFlags == 0:
+		step.Flags |= s.defFlags
 	default:
-		step.StepFlags &^= StepResetAllFlags
+		step.Flags &^= StepResetAllFlags
 	}
 	s.step = step
 	s.incStep()
@@ -225,5 +227,16 @@ func (s *Slot) ensureLocal(link SlotLink) {
 }
 
 func (s *Slot) isPriority() bool {
-	return s.step.StepFlags&StepPriority != 0
+	return s.step.Flags&StepPriority != 0
+}
+
+func (s *Slot) getMigration() MigrateFunc {
+	migrateFn := s.step.Migration
+	if migrateFn == nil {
+		//migrateFn = s.declaration.GetMigrateFn(s.step.Transition)
+		//if migrateFn == nil {
+		migrateFn = s.defMigrate
+		//}
+	}
+	return migrateFn
 }

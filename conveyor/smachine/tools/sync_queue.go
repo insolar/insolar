@@ -14,9 +14,12 @@
 //    limitations under the License.
 ///
 
-package smachine
+package tools
 
-import "sync"
+import (
+	"github.com/insolar/insolar/network/consensus/common/rwlock"
+	"sync"
+)
 
 func NewSyncQueue(locker sync.Locker) SyncQueue {
 	if locker == nil {
@@ -25,12 +28,31 @@ func NewSyncQueue(locker sync.Locker) SyncQueue {
 	return SyncQueue{locker: locker}
 }
 
+func NewSignalCondQueue(signal *sync.Cond) SyncQueue {
+	if signal == nil {
+		panic("illegal value")
+	}
+	return SyncQueue{locker: signal.L, signalFn: signal.Broadcast}
+}
+
+func NewSignalFuncQueue(locker sync.Locker, signalFn func()) SyncQueue {
+	if locker == nil {
+		panic("illegal value")
+	}
+	return SyncQueue{locker: locker, signalFn: signalFn}
+}
+
+func NewNoSyncQueue() SyncQueue {
+	return SyncQueue{locker: rwlock.DummyLocker()}
+}
+
 type SyncFunc func()
 type SyncFuncList []SyncFunc
 
 type SyncQueue struct {
-	locker sync.Locker
-	queue  SyncFuncList
+	locker   sync.Locker
+	signalFn func()
+	queue    SyncFuncList
 }
 
 func (p *SyncQueue) IsZero() bool {
@@ -45,6 +67,9 @@ func (p *SyncQueue) Add(fn SyncFunc) {
 	defer p.locker.Unlock()
 
 	p.queue = append(p.queue, fn)
+	if p.signalFn != nil {
+		p.signalFn()
+	}
 }
 
 func (p *SyncQueue) Flush() []SyncFunc {

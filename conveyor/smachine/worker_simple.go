@@ -18,20 +18,19 @@ package smachine
 
 import (
 	"context"
+	"github.com/insolar/insolar/conveyor/smachine/tools"
 	"sync"
 )
 
-func NewSimpleSlotWorker(outerSignal <-chan struct{}) *SimpleSlotWorker {
-	if outerSignal == nil {
-		panic("")
-	}
+func NewSimpleSlotWorker(outerSignal tools.SignalVersion) *SimpleSlotWorker {
 	return &SimpleSlotWorker{outerSignal: outerSignal}
 }
 
 var _ SlotWorker = &SimpleSlotWorker{}
 
 type SimpleSlotWorker struct {
-	outerSignal <-chan struct{}
+	outerSignal tools.SignalVersion
+	innerSignal func()
 	cond        *sync.Cond
 }
 
@@ -50,13 +49,8 @@ func (p *SimpleSlotWorker) DetachableCall(fn DetachableFunc) (wasDetached bool, 
 	return false, nil
 }
 
-func (p *SimpleSlotWorker) hasSignal() bool {
-	select {
-	case _, ok := <-p.outerSignal:
-		return !ok
-	default:
-		return false
-	}
+func (p *SimpleSlotWorker) HasSignal() bool {
+	return p.outerSignal.HasSignal()
 }
 
 func (p *SimpleSlotWorker) getCond() *sync.Cond {
@@ -108,7 +102,7 @@ func (p simpleWorkerContext) AttachToShared(slot *Slot, link StepLink, wakeUpOnU
 }
 
 func (p simpleWorkerContext) CanLoopOrHasSignal(loopCount uint32) (canLoop, hasSignal bool) {
-	return loopCount < 10, p.w.hasSignal()
+	return loopCount < 10, p.w.HasSignal()
 }
 
 func (p simpleWorkerContext) StartNested(state SlotMachineState) SlotWorker {
@@ -116,7 +110,7 @@ func (p simpleWorkerContext) StartNested(state SlotMachineState) SlotWorker {
 }
 
 func (p simpleWorkerContext) HasSignal() bool {
-	return p.w.hasSignal()
+	return p.w.HasSignal()
 }
 
 func (p simpleWorkerContext) GetCond() (bool, *sync.Cond) {

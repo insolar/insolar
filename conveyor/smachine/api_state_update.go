@@ -16,7 +16,7 @@
 
 package smachine
 
-type ContextMarker *struct{}
+type ContextMarker = uint64
 
 type StateUpdate struct {
 	marker  ContextMarker
@@ -28,7 +28,7 @@ type StateUpdate struct {
 }
 
 func (u StateUpdate) IsZero() bool {
-	return u.marker == nil && u.updType == 0
+	return u.marker == 0 && u.updType == 0
 }
 
 func (u StateUpdate) getLink() SlotLink {

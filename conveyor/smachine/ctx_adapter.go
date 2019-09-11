@@ -99,7 +99,7 @@ func (c *adapterCallRequest) DelayedStart() CallConditionalUpdate {
 	c.ensureMode(adapterAsyncCallContext)
 	defer c.discard()
 
-	return &conditionalUpdate{marker: &c.ctx.marker, kickOff: func(*Slot) {
+	return &conditionalUpdate{marker: c.ctx.getMarker(), kickOff: func(*Slot) {
 		c._startAsync()
 	}}
 }

@@ -14,26 +14,16 @@
 //    limitations under the License.
 ///
 
-package smachine
+package tools
 
-type StateMachineDeclaration interface {
-	IsConsecutive(cur, next StateFunc) bool
-	GetInitStateFor(StateMachine) InitFunc
+func ClosedChannel() <-chan struct{} {
+	return closedChan
 }
 
-type StateMachineDeclTemplate struct {
-}
+var closedChan chan struct{}
 
-//var _ StateMachineDeclaration = &StateMachineDeclTemplate{}
-//
-//func (s *StateMachineDeclTemplate) GetInitStateFor(StateMachine) InitFunc {
-//	panic("implement me")
-//}
-
-func (s *StateMachineDeclTemplate) IsConsecutive(cur, next StateFunc) bool {
-	return false
-}
-
-func (s *StateMachineDeclTemplate) GetMigrateFn(StateFunc) MigrateFunc {
-	return nil
+func init() {
+	c := make(chan struct{})
+	close(c)
+	closedChan = c
 }

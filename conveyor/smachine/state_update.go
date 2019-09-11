@@ -20,19 +20,19 @@ import (
 	"math"
 )
 
-func slotMachineUpdate(marker *struct{}, upd stateUpdType, step SlotStep, param interface{}) StateUpdate {
+func slotMachineUpdate(marker ContextMarker, upd stateUpdType, step SlotStep, param interface{}) StateUpdate {
 	return NewStateUpdate(marker, uint16(upd), step, param)
 }
 
-func slotMachineUpdateUint(marker *struct{}, upd stateUpdType, step SlotStep, param uint32) StateUpdate {
+func slotMachineUpdateUint(marker ContextMarker, upd stateUpdType, step SlotStep, param uint32) StateUpdate {
 	return NewStateUpdateUint(marker, uint16(upd), step, param)
 }
 
-func stateUpdateNoChange(marker *struct{}) StateUpdate {
+func stateUpdateNoChange(marker ContextMarker) StateUpdate {
 	return slotMachineUpdate(marker, stateUpdNoChange, SlotStep{}, nil)
 }
 
-func stateUpdateRepeat(marker *struct{}, limit int) StateUpdate {
+func stateUpdateRepeat(marker ContextMarker, limit int) StateUpdate {
 	ulimit := uint32(0)
 
 	switch {
@@ -44,12 +44,8 @@ func stateUpdateRepeat(marker *struct{}, limit int) StateUpdate {
 	return NewStateUpdateUint(marker, uint16(stateUpdRepeat), SlotStep{}, ulimit)
 }
 
-func stateUpdateNext(marker *struct{}, sf StateFunc, mf MigrateFunc, canLoop bool, flags StepFlags) StateUpdate {
-	if sf == nil {
-		panic("illegal value")
-	}
-
-	slotStep := SlotStep{Transition: sf, Migration: mf, StepFlags: flags}
+func stateUpdateNext(marker ContextMarker, slotStep SlotStep, canLoop bool) StateUpdate {
+	slotStep.ensureTransition()
 	if canLoop {
 		return slotMachineUpdateUint(marker, stateUpdNextLoop, slotStep, math.MaxUint32)
 	}
@@ -66,43 +62,58 @@ func prepareToParam(prepare StepPrepareFunc) interface{} {
 	return prepare
 }
 
-func stateUpdateYield(marker *struct{}, slotStep SlotStep, prepare StepPrepareFunc) StateUpdate {
+func stateUpdateYield(marker ContextMarker, slotStep SlotStep, prepare StepPrepareFunc) StateUpdate {
 	return slotMachineUpdate(marker, stateUpdNext, slotStep, prepareToParam(prepare))
 }
 
-func stateUpdatePoll(marker *struct{}, slotStep SlotStep, prepare StepPrepareFunc) StateUpdate {
+func stateUpdatePoll(marker ContextMarker, slotStep SlotStep, prepare StepPrepareFunc) StateUpdate {
 	return slotMachineUpdate(marker, stateUpdPoll, slotStep, prepareToParam(prepare))
 }
 
-func stateUpdateWait(marker *struct{}, slotStep SlotStep, prepare StepPrepareFunc) StateUpdate {
-	return slotMachineUpdate(marker, stateUpdWait, slotStep, prepareToParam(prepare))
+func stateUpdateSleep(marker ContextMarker, slotStep SlotStep, prepare StepPrepareFunc) StateUpdate {
+	return slotMachineUpdate(marker, stateUpdSleep, slotStep, prepareToParam(prepare))
 }
 
-func stateUpdateWaitForSlot(marker *struct{}, waitOn SlotLink, slotStep SlotStep, prepare StepPrepareFunc) StateUpdate {
-	return NewStateUpdateLink(marker, uint16(stateUpdWait), waitOn, slotStep, prepareToParam(prepare))
+func stateUpdateWaitForSlot(marker ContextMarker, waitOn SlotLink, slotStep SlotStep, prepare StepPrepareFunc) StateUpdate {
+	return NewStateUpdateLink(marker, uint16(stateUpdSleep), waitOn, slotStep, prepareToParam(prepare))
 }
 
-func stateUpdateWaitForShared(marker *struct{}, waitOn SlotLink, slotStep SlotStep) StateUpdate {
+func stateUpdateWaitForShared(marker ContextMarker, waitOn SlotLink, slotStep SlotStep) StateUpdate {
 	return NewStateUpdateLink(marker, uint16(stateUpdWaitForShared), waitOn, slotStep, nil)
 }
 
-func stateUpdateReplace(marker *struct{}, cf CreateFunc) StateUpdate {
+func stateUpdateWaitForEvent(marker ContextMarker, slotStep SlotStep) StateUpdate {
+	return NewStateUpdate(marker, uint16(stateUpdWaitForEvent), slotStep, nil)
+}
+
+func stateUpdateReplace(marker ContextMarker, cf CreateFunc) StateUpdate {
 	if cf == nil {
 		panic("illegal state")
 	}
 	return slotMachineUpdate(marker, stateUpdReplace, SlotStep{}, cf)
 }
 
-func stateUpdateStop(marker *struct{}) StateUpdate {
+func stateUpdateReplaceWith(marker ContextMarker, sm StateMachine) StateUpdate {
+	if sm == nil {
+		panic("illegal state")
+	}
+	return slotMachineUpdate(marker, stateUpdReplaceWith, SlotStep{}, sm)
+}
+
+func stateUpdateStop(marker ContextMarker) StateUpdate {
 	return slotMachineUpdate(marker, stateUpdStop, SlotStep{}, nil)
 }
 
-func stateUpdateFailed(err error) StateUpdate {
-	return slotMachineUpdate(nil, stateUpdDispose, SlotStep{}, err)
+func stateUpdateError(marker ContextMarker, err error) StateUpdate {
+	return slotMachineUpdate(marker, stateUpdFailed, SlotStep{}, err)
+}
+
+func stateUpdateInternalError(err error) StateUpdate {
+	return slotMachineUpdate(0, stateUpdFailed, SlotStep{}, err)
 }
 
 func stateUpdateExpired(slotStep SlotStep, info interface{}) StateUpdate {
-	return slotMachineUpdate(nil, stateUpdExpired, slotStep, info)
+	return slotMachineUpdate(0, stateUpdExpired, slotStep, info)
 }
 
 type stateUpdType uint32
@@ -119,16 +130,18 @@ const (
 	_ stateUpdType = iota
 	stateUpdNoChange
 	stateUpdStop
-	stateUpdDispose
+	stateUpdFailed
 	stateUpdExpired
 	stateUpdReplace
+	stateUpdReplaceWith
 
 	stateUpdRepeat   // supports short-loop, no prepare
 	stateUpdNextLoop // supports short-loop, no prepare
 	stateUpdNext
 	stateUpdPoll
-	stateUpdWait
+	stateUpdSleep
 	stateUpdWaitForShared
+	stateUpdWaitForEvent
 
 	//stateUpdFlagNoWakeup = 1 << 5
 	//stateUpdFlagHasAsync = 1 << 6

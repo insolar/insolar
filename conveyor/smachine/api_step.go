@@ -30,13 +30,16 @@ const (
 type SlotStep struct {
 	Transition StateFunc
 	Migration  MigrateFunc
-	StepFlags  StepFlags
+	Flags      StepFlags
+	Handler    ErrorHandlerFunc
 }
 
 func (s *SlotStep) IsZero() bool {
-	return s.Transition == nil && s.StepFlags == 0 && s.Migration == nil
+	return s.Transition == nil && s.Flags == 0 && s.Migration == nil
 }
 
-func (s *SlotStep) HasTransition() bool {
-	return s.Transition != nil
+func (s *SlotStep) ensureTransition() {
+	if s.Transition == nil {
+		panic("illegal value")
+	}
 }

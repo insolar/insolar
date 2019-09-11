@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"github.com/insolar/insolar/conveyor/smachine"
 	"github.com/insolar/insolar/conveyor/smachine/main/example"
+	"github.com/insolar/insolar/conveyor/smachine/tools"
 	"time"
 )
 
@@ -31,15 +32,17 @@ func main() {
 	fn1(&implA{}, "test")
 
 	sm := smachine.NewSlotMachine(smachine.SlotMachineConfig{
-		SlotPageSize:  10,
-		PollingPeriod: 10 * time.Millisecond,
-	}, nil)
+		SlotPageSize:    10,
+		PollingPeriod:   10 * time.Millisecond,
+		PollingTruncate: 1 * time.Millisecond,
+	}, nil, nil)
 
 	example.SetInjectServiceAdapterA(&implA{}, &sm)
 
 	sm.AddNew(context.Background(), smachine.NoLink(), &example.StateMachine1{})
 
-	worker := smachine.NewSimpleSlotWorker(make(<-chan struct{}))
+	signal := tools.NewVersionedSignal()
+	worker := smachine.NewSimpleSlotWorker(signal.Mark())
 
 	for i := 0; ; i++ {
 		sm.ScanOnce(worker)
