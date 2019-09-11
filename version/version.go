@@ -18,7 +18,11 @@ package version
 
 import (
 	"fmt"
+	"os"
 	"runtime"
+
+	"github.com/insolar/insolar/version"
+	"github.com/spf13/cobra"
 )
 
 var (
@@ -50,4 +54,15 @@ func GetFullVersion() string {
 		runtime.Compiler, runtime.GOOS, runtime.GOARCH)
 
 	return result
+}
+
+func GetCommand(cmdName string) *cobra.Command {
+	return &cobra.Command{
+		Use:   "version",
+		Short: fmt.Sprintf("Print the version info of %s", cmdName),
+		Run: func(cmd *cobra.Command, args []string) {
+			fmt.Println(version.GetFullVersion())
+			os.Exit(0)
+		},
+	}
 }
