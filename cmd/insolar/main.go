@@ -186,7 +186,7 @@ func defaultURL() string {
 	if u := os.Getenv("INSOLAR_API_URL"); u != "" {
 		return u
 	}
-	return "http://localhost:19101/admin-api/rpc"
+	return "http://localhost:19101/api/rpc"
 }
 
 func defaultAdminURL() string {
