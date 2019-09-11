@@ -18,34 +18,43 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
-const logDir = ".artifacts/launchnet/logs/"
-const statLogMessage = "stat_log_message"
-const typeSent = "sent"
-const typeReply = "reply"
+const (
+	logDir         = ".artifacts/launchnet/logs/"
+	statLogMessage = "stat_log_message"
+
+	typeSent         = "sent"
+	typeReply        = "reply"
+	typeCallStarted  = "cr_call_started"
+	typeCallReturned = "cr_call_returned"
+)
 
 var pattern = regexp.MustCompile(".*output.log$")
 
 var ignoreTracePrefixes = []string{
-	"main",
-	"pulse",
+	"main_",
+	"pulse_",
 }
 
 type StatLog struct {
-	StatType    string  `json:"stat_type"`
-	TraceID     string  `json:"traceid"`
-	Message     string  `json:"message"`
-	MessageType string  `json:"message_type"`
-	ReplyTimeMS float32 `json:"reply_time_ms"`
+	StatType    string    `json:"stat_type"`
+	TraceID     string    `json:"traceid"`
+	Message     string    `json:"message"`
+	MessageType string    `json:"message_type"`
+	ReplyTimeMS float32   `json:"reply_time_ms"`
+	Time        time.Time `json:"time"`
 }
 
 type Stats struct {
@@ -66,28 +75,53 @@ func (s *Stats) GetOrCreate(trace string) *TraceStats {
 		return stat
 	}
 
-	stat := NewTraceStats()
+	stat := NewTraceStats(trace)
 	s.stats[trace] = stat
 	return stat
 }
 
 type TraceStats struct {
 	sync.RWMutex
-	First, Last time.Time
+	TraceID                   string
+	First, CallReturned, Last time.Time
 	// Message type to reply times.
 	ReplyTimings map[string][]float32
 	// Message type to sent count.
 	SentCounts map[string]uint64
 }
 
-func NewTraceStats() *TraceStats {
+func NewTraceStats(trace string) *TraceStats {
 	return &TraceStats{
+		TraceID:      trace,
 		ReplyTimings: map[string][]float32{},
 		SentCounts:   map[string]uint64{},
 	}
 }
 
+func (s *TraceStats) Parse(log StatLog) {
+	s.Lock()
+	defer s.Unlock()
+
+	if s.First.IsZero() || s.First.After(log.Time) {
+		s.First = log.Time
+	}
+	if s.Last.IsZero() || s.Last.Before(log.Time) {
+		s.Last = log.Time
+	}
+
+	switch log.StatType {
+	case typeSent:
+		s.SentCounts[log.MessageType]++
+	case typeReply:
+		s.ReplyTimings[log.MessageType] = append(s.ReplyTimings[log.MessageType], log.ReplyTimeMS)
+	case typeCallReturned:
+		s.CallReturned = log.Time
+	}
+}
+
 func main() {
+	var parsedCount uint64
+
 	shouldParse := func(log StatLog) bool {
 		if log.Message != statLogMessage {
 			return false
@@ -111,8 +145,13 @@ func main() {
 		}
 		scanner := bufio.NewScanner(file)
 		for scanner.Scan() {
+			line := scanner.Bytes()
+			if !bytes.Contains(line, []byte(statLogMessage)) {
+				continue
+			}
+
 			log := StatLog{}
-			err = json.Unmarshal(scanner.Bytes(), &log)
+			err = json.Unmarshal(line, &log)
 			if err != nil {
 				continue
 			}
@@ -121,7 +160,8 @@ func main() {
 				continue
 			}
 
-			parseLog(log, stats.GetOrCreate(log.TraceID))
+			atomic.AddUint64(&parsedCount, 1)
+			stats.GetOrCreate(log.TraceID).Parse(log)
 		}
 	}
 
@@ -152,29 +192,21 @@ func main() {
 	}
 	wg.Wait()
 
-	aggregate := Aggregate{
-		Sent:  aggregateSent(stats),
-		Reply: aggregateReply(stats),
+	aggregate := MetaAggregate{
+		TotalTraces: len(stats.stats),
+		TotalLogs:   parsedCount,
+		Aggregates: []Aggregator{
+			NewAggSent(),
+			NewAggReply(),
+			&AggTraceTimes{},
+		},
 	}
-	// aggregateJSON, err := json.Marshal(aggregate)
-	// checkError(err)
+	aggregate.Aggregate(stats)
 	out := bufio.NewWriter(os.Stdout)
 	_, err = out.Write([]byte(aggregate.String()))
 	checkError(err)
 	err = out.Flush()
 	checkError(err)
-}
-
-func parseLog(log StatLog, stat *TraceStats) {
-	stat.Lock()
-	defer stat.Unlock()
-
-	switch log.StatType {
-	case typeSent:
-		stat.SentCounts[log.MessageType] += 1
-	case typeReply:
-		stat.ReplyTimings[log.MessageType] = append(stat.ReplyTimings[log.MessageType], log.ReplyTimeMS)
-	}
 }
 
 func checkError(err error) {
@@ -183,21 +215,31 @@ func checkError(err error) {
 	}
 }
 
-type Aggregate struct {
-	Sent  AggSent
-	Reply AggReply
+type Aggregator interface {
+	fmt.Stringer
+	Aggregate(*Stats)
 }
 
-func (a *Aggregate) String() string {
-	b := strings.Builder{}
-	b.WriteString("[Sent]\n")
-	b.WriteString(a.Sent.String())
-	b.WriteString("\n")
-	b.WriteString("[Reply]\n")
-	b.WriteString(a.Reply.String())
-	b.WriteString("\n")
+type MetaAggregate struct {
+	TotalTraces int
+	TotalLogs   uint64
+	Aggregates  []Aggregator
+}
 
+func (a *MetaAggregate) String() string {
+	b := strings.Builder{}
+	b.WriteString(fmt.Sprintf("Analysed %d logs in %d traces.\n", a.TotalLogs, a.TotalTraces))
+	for _, a := range a.Aggregates {
+		b.WriteString(a.String())
+		b.WriteString("\n")
+	}
 	return b.String()
+}
+
+func (a *MetaAggregate) Aggregate(s *Stats) {
+	for _, a := range a.Aggregates {
+		a.Aggregate(s)
+	}
 }
 
 type AggSent struct {
@@ -208,19 +250,28 @@ type AggSent struct {
 func (a *AggSent) String() string {
 	b := strings.Builder{}
 
-	b.WriteString("[Average count per trace]\n")
+	type cnt struct {
+		msgType string
+		count   float32
+	}
+	counts := make([]cnt, 0, len(a.AVGCount))
 	for msgType, count := range a.AVGCount {
-		b.WriteString("    " + msgType + ": " + fmt.Sprintf("%f", count) + "\n")
+		counts = append(counts, cnt{msgType: msgType, count: float32(count)})
+	}
+	sort.Slice(counts, func(i, j int) bool {
+		return counts[i].count > counts[j].count
+	})
+
+	b.WriteString("[Average count per trace]\n")
+	for _, c := range counts {
+		b.WriteString("    " + c.msgType + ": " + fmt.Sprintf("%.1f", c.count) + "\n")
 	}
 
 	return b.String()
 }
 
-func aggregateSent(logStats *Stats) AggSent {
-	logStats.lock.RLock()
-	defer logStats.lock.RUnlock()
-
-	var aggs []AggSent
+func (a *AggSent) Aggregate(logStats *Stats) {
+	var aggs []*AggSent
 	for _, stats := range logStats.stats {
 		agg := NewAggSent()
 		for msgType, count := range stats.SentCounts {
@@ -229,23 +280,20 @@ func aggregateSent(logStats *Stats) AggSent {
 		aggs = append(aggs, agg)
 	}
 
-	totals := NewAggSent()
 	for _, agg := range aggs {
 		for msgType, count := range agg.AVGCount {
-			totals.AVGCount[msgType] += count
+			a.AVGCount[msgType] += count
 		}
 	}
 
 	avgDivider := len(aggs)
-	for msgType, _ := range totals.AVGCount {
-		totals.AVGCount[msgType] /= float64(avgDivider)
+	for msgType := range a.AVGCount {
+		a.AVGCount[msgType] /= float64(avgDivider)
 	}
-
-	return totals
 }
 
-func NewAggSent() AggSent {
-	return AggSent{AVGCount: map[string]float64{}}
+func NewAggSent() *AggSent {
+	return &AggSent{AVGCount: map[string]float64{}}
 }
 
 type AggReply struct {
@@ -253,26 +301,34 @@ type AggReply struct {
 	AVGReplyTime map[string]float64 `json:"avg_reply_time"`
 }
 
-func NewAggReply() AggReply {
-	return AggReply{AVGReplyTime: map[string]float64{}}
+func NewAggReply() *AggReply {
+	return &AggReply{AVGReplyTime: map[string]float64{}}
 }
 
 func (a *AggReply) String() string {
-	b := strings.Builder{}
-
-	b.WriteString("[Average reply times per trace, ms]\n")
+	type rep struct {
+		msgType   string
+		replyTime int
+	}
+	reps := make([]rep, 0, len(a.AVGReplyTime))
 	for msgType, replyTime := range a.AVGReplyTime {
-		b.WriteString("    " + msgType + ": " + fmt.Sprintf("%f", replyTime) + "\n")
+		reps = append(reps, rep{msgType: msgType, replyTime: int(replyTime)})
+	}
+	sort.Slice(reps, func(i, j int) bool {
+		return reps[i].replyTime > reps[j].replyTime
+	})
+
+	b := strings.Builder{}
+	b.WriteString("[Average reply times per trace, ms]\n")
+	for _, r := range reps {
+		b.WriteString("    " + r.msgType + ": " + fmt.Sprintf("%d", r.replyTime) + "\n")
 	}
 
 	return b.String()
 }
 
-func aggregateReply(logStats *Stats) AggReply {
-	logStats.lock.RLock()
-	defer logStats.lock.RUnlock()
-
-	var aggs []AggReply
+func (a *AggReply) Aggregate(logStats *Stats) {
+	var aggs []*AggReply
 	for _, stats := range logStats.stats {
 		agg := NewAggReply()
 		for msgType, timings := range stats.ReplyTimings {
@@ -285,17 +341,85 @@ func aggregateReply(logStats *Stats) AggReply {
 		aggs = append(aggs, agg)
 	}
 
-	totals := NewAggReply()
 	for _, agg := range aggs {
 		for msgType, replyTime := range agg.AVGReplyTime {
-			totals.AVGReplyTime[msgType] += replyTime
+			a.AVGReplyTime[msgType] += replyTime
 		}
 	}
 
 	avgDivider := len(aggs)
-	for msgType, _ := range totals.AVGReplyTime {
-		totals.AVGReplyTime[msgType] /= float64(avgDivider)
+	for msgType := range a.AVGReplyTime {
+		a.AVGReplyTime[msgType] /= float64(avgDivider)
+	}
+}
+
+const (
+	traceTimeBucketCount = 5
+	tracePerBucketSample = 3
+)
+
+var traceTimeBuckets = [traceTimeBucketCount]time.Duration{
+	time.Second,
+	10 * time.Second,
+	20 * time.Second,
+	40 * time.Second,
+	time.Minute,
+}
+
+type AggTraceTimes struct {
+	callTimes  [traceTimeBucketCount + 1]uint64
+	totalTimes [traceTimeBucketCount + 1]uint64
+
+	totalTimeTraceSamples [traceTimeBucketCount + 1][]string
+}
+
+func (a *AggTraceTimes) String() string {
+	b := strings.Builder{}
+	b.WriteString("[Call return percentiles]\n")
+	for i := 0; i < len(a.callTimes)-1; i++ {
+		b.WriteString(fmt.Sprintf("< %s - %d \n", traceTimeBuckets[i], a.callTimes[i]))
+	}
+	b.WriteString(fmt.Sprintf(
+		"> %s - %d \n",
+		traceTimeBuckets[len(traceTimeBuckets)-1],
+		a.callTimes[len(a.callTimes)-1]),
+	)
+
+	return b.String()
+}
+
+func (a *AggTraceTimes) add(stat *TraceStats) {
+	addCall := func(dur time.Duration) int {
+		for i, t := range traceTimeBuckets {
+			if dur < t {
+				a.callTimes[i]++
+				return i
+			}
+		}
+		return len(traceTimeBuckets)
 	}
 
-	return totals
+	addTotal := func(dur time.Duration) int {
+		for i, t := range traceTimeBuckets {
+			if dur < t {
+				a.totalTimes[i]++
+				return i
+			}
+		}
+		return len(traceTimeBuckets)
+	}
+
+	if !stat.CallReturned.IsZero() {
+		addCall(stat.CallReturned.Sub(stat.First))
+	}
+	bucket := addTotal(stat.Last.Sub(stat.First))
+	if len(a.totalTimeTraceSamples[bucket]) < tracePerBucketSample {
+		a.totalTimeTraceSamples[bucket] = append(a.totalTimeTraceSamples[bucket], stat.TraceID)
+	}
+}
+
+func (a *AggTraceTimes) Aggregate(logStats *Stats) {
+	for _, stats := range logStats.stats {
+		a.add(stats)
+	}
 }

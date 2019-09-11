@@ -267,7 +267,7 @@ func (b *Bus) sendTarget(
 	logger.WithFields(map[string]interface{}{
 		"stat_type":    "sent",
 		"message_type": msgType,
-	}).Debugf("stat_log_message")
+	}).Info("stat_log_message")
 
 	replyStart := time.Now()
 	go func() {
@@ -282,7 +282,7 @@ func (b *Bus) sendTarget(
 				"stat_type":     "reply",
 				"message_type":  msgType,
 				"reply_time_ms": replyTime,
-			}).Debugf("stat_log_message")
+			}).Info("stat_log_message")
 		}()
 
 		logger.Debug("waiting for reply")

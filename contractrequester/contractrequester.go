@@ -133,10 +133,21 @@ func (cr *ContractRequester) Call(
 		},
 	}
 
+	logger := inslogger.FromContext(ctx)
+	// Do not change this log! It is used for message type statistics.
+	logger.WithFields(map[string]interface{}{
+		"stat_type": "cr_call_started",
+	}).Info("stat_log_message")
+
 	routResult, ref, err := cr.SendRequest(ctx, msg)
 	if err != nil {
 		return nil, ref, errors.Wrap(err, "[ ContractRequester::Call ] Can't route call")
 	}
+
+	// Do not change this log! It is used for message type statistics.
+	logger.WithFields(map[string]interface{}{
+		"stat_type": "cr_call_returned",
+	}).Info("stat_log_message")
 
 	return routResult, ref, nil
 }
