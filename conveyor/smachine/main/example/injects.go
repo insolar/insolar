@@ -31,7 +31,7 @@ func SetInjectServiceAdapterA(svc ServiceA, machine *smachine.SlotMachine) {
 		panic("illegal state")
 	}
 	ach := smadapter.NewChannelAdapter(context.Background(), 0, -1)
-	adapterExec := machine.RegisterAdapter("ServiceA", &ach)
+	adapterExec := machine.GetAdapters().RegisterAdapter("ServiceA", &ach)
 	injectServiceAdapterA = &ServiceAdapterA{svc, adapterExec}
 
 	go func() {

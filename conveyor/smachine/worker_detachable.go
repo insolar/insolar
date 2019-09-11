@@ -64,7 +64,7 @@ func (p *DetachableSlotWorker) DetachableCall(fn DetachableFunc) (wasDetached bo
 
 	p.startDetachableCall()
 	defer func() {
-		err = recoverToErr("slot execution has failed", recover(), err)
+		err = recoverSlotPanic("slot execution has failed", recover(), err)
 
 		if atomic.CompareAndSwapUint32(&p.state, detachableCall|activeWorker, activeWorker) { // fast path
 			wasDetached = false
@@ -235,7 +235,7 @@ type detachableWorkerContext struct {
 	w *DetachableSlotWorker
 }
 
-func (p detachableWorkerContext) AttachToShared(slot *Slot, link StepLink, wakeUpOnUse bool) (SharedAccessReport, context.CancelFunc) {
+func (p detachableWorkerContext) AttachTo(slot *Slot, link SlotLink, wakeUpOnUse bool) (SharedAccessReport, context.CancelFunc) {
 	panic("implement me")
 }
 

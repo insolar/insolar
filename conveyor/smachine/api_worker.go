@@ -33,5 +33,5 @@ type WorkerContext interface {
 	GetCond() (bool, *sync.Cond)
 	StartNested(state SlotMachineState) SlotWorker
 	CanLoopOrHasSignal(loopCount uint32) (canLoop, hasSignal bool)
-	AttachToShared(slot *Slot, link StepLink, wakeUpOnUse bool) (SharedAccessReport, context.CancelFunc)
+	AttachTo(slot *Slot, link SlotLink, wakeUpOnUse bool) (SharedAccessReport, context.CancelFunc)
 }

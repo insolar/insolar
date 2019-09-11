@@ -41,7 +41,7 @@ func stateUpdateRepeat(marker ContextMarker, limit int) StateUpdate {
 	case limit > 0:
 		ulimit = uint32(limit)
 	}
-	return NewStateUpdateUint(marker, uint16(stateUpdRepeat), SlotStep{}, ulimit)
+	return NewStateUpdateUint(marker, uint16(stateUpdNextLoop), SlotStep{}, ulimit)
 }
 
 func stateUpdateNext(marker ContextMarker, slotStep SlotStep, canLoop bool) StateUpdate {
@@ -74,16 +74,16 @@ func stateUpdateSleep(marker ContextMarker, slotStep SlotStep, prepare StepPrepa
 	return slotMachineUpdate(marker, stateUpdSleep, slotStep, prepareToParam(prepare))
 }
 
-func stateUpdateWaitForSlot(marker ContextMarker, waitOn SlotLink, slotStep SlotStep, prepare StepPrepareFunc) StateUpdate {
-	return NewStateUpdateLink(marker, uint16(stateUpdSleep), waitOn, slotStep, prepareToParam(prepare))
+func stateUpdateWaitForSlot(marker ContextMarker, waitOn SlotLink, slotStep SlotStep) StateUpdate {
+	return NewStateUpdateLink(marker, uint16(stateUpdSleep), waitOn, slotStep, nil)
 }
 
 func stateUpdateWaitForShared(marker ContextMarker, waitOn SlotLink, slotStep SlotStep) StateUpdate {
 	return NewStateUpdateLink(marker, uint16(stateUpdWaitForShared), waitOn, slotStep, nil)
 }
 
-func stateUpdateWaitForEvent(marker ContextMarker, slotStep SlotStep) StateUpdate {
-	return NewStateUpdate(marker, uint16(stateUpdWaitForEvent), slotStep, nil)
+func stateUpdateWaitForEvent(marker ContextMarker, slotStep SlotStep, prepare StepPrepareFunc) StateUpdate {
+	return NewStateUpdate(marker, uint16(stateUpdWaitForEvent), slotStep, prepareToParam(prepare))
 }
 
 func stateUpdateReplace(marker ContextMarker, cf CreateFunc) StateUpdate {
@@ -105,11 +105,11 @@ func stateUpdateStop(marker ContextMarker) StateUpdate {
 }
 
 func stateUpdateError(marker ContextMarker, err error) StateUpdate {
-	return slotMachineUpdate(marker, stateUpdFailed, SlotStep{}, err)
+	return slotMachineUpdate(marker, stateUpdError, SlotStep{}, err)
 }
 
-func stateUpdateInternalError(err error) StateUpdate {
-	return slotMachineUpdate(0, stateUpdFailed, SlotStep{}, err)
+func stateUpdatePanic(recovered error) StateUpdate {
+	return slotMachineUpdate(0, stateUpdPanic, SlotStep{}, recovered)
 }
 
 func stateUpdateExpired(slotStep SlotStep, info interface{}) StateUpdate {
@@ -119,32 +119,34 @@ func stateUpdateExpired(slotStep SlotStep, info interface{}) StateUpdate {
 type stateUpdType uint32
 
 func (u stateUpdType) HasStep() bool {
-	return u >= stateUpdRepeat
+	return u >= stateUpdWaitForActive
 }
 
 func (u stateUpdType) HasPrepare() bool {
-	return u > stateUpdNextLoop
+	return u >= stateUpdNext
 }
 
 const (
 	_ stateUpdType = iota
+
+	// no step
 	stateUpdNoChange
 	stateUpdStop
-	stateUpdFailed
+	stateUpdError
+	stateUpdPanic
 	stateUpdExpired
 	stateUpdReplace
 	stateUpdReplaceWith
 
-	stateUpdRepeat   // supports short-loop, no prepare
-	stateUpdNextLoop // supports short-loop, no prepare
+	// step, no prepare
+	stateUpdWaitForActive
+	stateUpdWaitForShared
+	stateUpdRepeat   // supports short-loop
+	stateUpdNextLoop // supports short-loop
+
+	// step and prepare
 	stateUpdNext
 	stateUpdPoll
 	stateUpdSleep
-	stateUpdWaitForShared
 	stateUpdWaitForEvent
-
-	//stateUpdFlagNoWakeup = 1 << 5
-	//stateUpdFlagHasAsync = 1 << 6
-	//stateUpdFlagYield    = 1 << 7
-	//stateUpdateMask     stateUpdateFlags = 0x0F
 )

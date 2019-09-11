@@ -231,12 +231,15 @@ func (s *Slot) isPriority() bool {
 }
 
 func (s *Slot) getMigration() MigrateFunc {
-	migrateFn := s.step.Migration
-	if migrateFn == nil {
-		//migrateFn = s.declaration.GetMigrateFn(s.step.Transition)
-		//if migrateFn == nil {
-		migrateFn = s.defMigrate
-		//}
+	if s.step.Migration != nil {
+		return s.step.Migration
 	}
-	return migrateFn
+	return s.defMigrate
+}
+
+func (s *Slot) getErrorHandler() ErrorHandlerFunc {
+	if s.step.Handler != nil {
+		return s.step.Handler
+	}
+	return s.defErrorHandler
 }

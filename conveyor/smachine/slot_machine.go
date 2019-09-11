@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"github.com/insolar/insolar/conveyor/smachine/tools"
 	"github.com/insolar/insolar/network/consensus/common/syncrun"
+	"github.com/pkg/errors"
 	"sync"
 	"time"
 )
@@ -35,10 +36,17 @@ type DependencyInjector interface {
 	InjectDependencies(sm StateMachine, slotID SlotID, container *SlotMachine)
 }
 
-func NewSlotMachine(config SlotMachineConfig, injector DependencyInjector, internalSignal func()) SlotMachine {
+func NewSlotMachine(config SlotMachineConfig, injector DependencyInjector, adapters *AdapterRegistry, internalSignal func()) SlotMachine {
+	ownsAdapters := false
+	if adapters == nil {
+		adapters = NewAdapterRegistry()
+		ownsAdapters = true
+	}
 	return SlotMachine{
 		config:        config,
 		injector:      injector,
+		adapters:      adapters,
+		ownsAdapters:  ownsAdapters,
 		unusedSlots:   NewSlotQueue(UnusedSlots),
 		activeSlots:   NewSlotQueue(ActiveSlots),
 		prioritySlots: NewSlotQueue(ActiveSlots),
@@ -48,12 +56,12 @@ func NewSlotMachine(config SlotMachineConfig, injector DependencyInjector, inter
 }
 
 type SlotMachine struct {
-	config   SlotMachineConfig
-	injector DependencyInjector
+	config       SlotMachineConfig
+	injector     DependencyInjector
+	adapters     *AdapterRegistry
+	ownsAdapters bool
 
 	containerState SlotMachineState
-
-	adapters map[AdapterID]*adapterExecHelper
 
 	lastSlotID SlotID
 	slots      [][]Slot
@@ -67,14 +75,19 @@ type SlotMachine struct {
 	unusedSlots  SlotQueue
 	workingSlots SlotQueue //slots are currently in processing
 
-	activeSlots   SlotQueue //they are are moved to workingSlots on every Scan
-	prioritySlots SlotQueue
-	pollingSlots  PollingQueue
+	activeWaitOnly bool
+	activeSlots    SlotQueue //they are are moved to workingSlots on every Scan
+	prioritySlots  SlotQueue
+	pollingSlots   PollingQueue
 
 	syncQueue    tools.SyncQueue // for detached/async ops, queued functions MUST BE panic-safe
 	detachQueues map[SlotID]tools.SyncFuncList
 
 	stepSync StepSyncCatalog
+}
+
+func (m *SlotMachine) GetAdapters() *AdapterRegistry {
+	return m.adapters
 }
 
 func (m *SlotMachine) OccupiedSlotCount() int {
@@ -99,31 +112,6 @@ func (m *SlotMachine) IsEmpty() bool {
 
 func (m *SlotMachine) SetContainerState(s SlotMachineState) {
 	m.containerState = s
-}
-
-func (m *SlotMachine) RegisterAdapter(adapterID AdapterID, adapterExecutor AdapterExecutor) ExecutionAdapter {
-	if adapterID.IsEmpty() {
-		panic("illegal value")
-	}
-	if adapterExecutor == nil {
-		panic("illegal value")
-	}
-
-	if m.adapters == nil {
-		m.adapters = make(map[AdapterID]*adapterExecHelper)
-	}
-	if m.adapters[adapterID] != nil {
-		panic("duplicate adapter id: " + adapterID)
-	}
-	adapterExecutor.RegisterOn(m.containerState)
-	r := &adapterExecHelper{adapterID, adapterExecutor}
-	m.adapters[adapterID] = r
-
-	return r
-}
-
-func (m *SlotMachine) GetAdapter(adapterID AdapterID) ExecutionAdapter {
-	return m.adapters[adapterID]
 }
 
 func (m *SlotMachine) ScanOnceAsNested(context ExecutionContext) bool {
@@ -166,6 +154,7 @@ func (m *SlotMachine) ScanOnce(worker SlotWorker) (hasUpdates bool) {
 	case m.workingSlots.IsEmpty():
 		m.scanCount++
 
+		m.activeWaitOnly = true
 		m.workingSlots.AppendAll(&m.prioritySlots)
 		m.workingSlots.AppendAll(&m.activeSlots)
 		m.pollingSlots.FilterOut(scanTime, &m.workingSlots)
@@ -207,7 +196,7 @@ func (m *SlotMachine) scanWorkingSlots(worker SlotWorker, scanStartTime time.Tim
 		})
 
 		if err != nil {
-			stateUpdate = stateUpdateInternalError(err)
+			stateUpdate = stateUpdatePanic(err)
 		}
 
 		if wasDetached {
@@ -231,8 +220,8 @@ func (m *SlotMachine) scanWorkingSlots(worker SlotWorker, scanStartTime time.Tim
 func (m *SlotMachine) Migrate(cleanupWeak bool) {
 	m.migrationCount++
 
-	for _, adapter := range m.adapters {
-		adapter.executor.Migrate(m.containerState, m.migrationCount)
+	if m.ownsAdapters {
+		m.adapters.migrate(m.containerState, m.migrationCount)
 	}
 
 	m.scanAndCleanup(cleanupWeak, m.migratePage)
@@ -485,13 +474,13 @@ func (m *SlotMachine) allocateSlot() (slot *Slot) {
 	return slot
 }
 
-func (m *SlotMachine) syncSafe(slotLink SlotLink, fn func(*Slot)) {
+func (m *SlotMachine) slotAsyncCall(slotLink SlotLink, fn func(*Slot)) {
 	m.syncQueue.Add(func() {
-		m.safeWrapAndHandleError(slotLink, fn)
+		m.slotDirectCall(slotLink, fn)
 	})
 }
 
-func (m *SlotMachine) safeWrapAndHandleError(slotLink SlotLink, fn func(*Slot)) {
+func (m *SlotMachine) slotDirectCall(slotLink SlotLink, fn func(*Slot)) {
 	if !slotLink.IsValid() {
 		m.getDetachQueue(slotLink.SlotID()) // cleanup
 
@@ -505,21 +494,23 @@ func (m *SlotMachine) safeWrapAndHandleError(slotLink SlotLink, fn func(*Slot)) 
 		return
 	}
 
-	stateUpdate := stateUpdateInternalError(err)
-	m.slotAccessError("adapter callback panic", slotLink, stateUpdate)
+	stateUpdate := stateUpdatePanic(err)
 	m.applyStateUpdate(slotLink.s, false, stateUpdate)
 }
 
-func recoverToErr(msg string, recovered interface{}, defErr error) error {
+func recoverSlotPanic(msg string, recovered interface{}, prev error) error {
 	if recovered == nil {
-		return defErr
+		return prev
 	}
-	return fmt.Errorf("%s: %v", msg, recovered)
+	if prev != nil {
+		return errors.Wrap(prev, fmt.Sprintf("%s: %v", msg, recovered))
+	}
+	return errors.Errorf("%s: %v", msg, recovered)
 }
 
-func safeSlotCall(slot *Slot, fn func(*Slot)) (err error) {
+func safeSlotCall(slot *Slot, fn func(*Slot)) (recovered error) {
 	defer func() {
-		err = recoverToErr("async result has failed", recover(), err)
+		recovered = recoverSlotPanic("async result has failed", recover(), recovered)
 	}()
 	fn(slot)
 	return nil
@@ -527,7 +518,7 @@ func safeSlotCall(slot *Slot, fn func(*Slot)) (err error) {
 
 func (m *SlotMachine) applyAsyncStateUpdate(link SlotLink, resultFn AsyncResultFunc, recovered interface{}) {
 
-	m.syncSafe(link, func(slot *Slot) {
+	m.slotAsyncCall(link, func(slot *Slot) {
 		if !slot.isWorking() {
 			m._applyAsyncStateUpdate(slot, resultFn)
 			return
@@ -539,7 +530,7 @@ func (m *SlotMachine) applyAsyncStateUpdate(link SlotLink, resultFn AsyncResultF
 
 		dq := m.detachQueues[link.SlotID()]
 		dq = append(dq, func() {
-			m.safeWrapAndHandleError(link, func(slot *Slot) {
+			m.slotDirectCall(link, func(slot *Slot) {
 				m._applyAsyncStateUpdate(slot, resultFn)
 			})
 		})
@@ -566,11 +557,11 @@ func (m *SlotMachine) _applyAsyncStateUpdate(slot *Slot, resultFn AsyncResultFun
 	if !rc.executeResult(resultFn) {
 		return
 	}
-	m._applyInplaceUpdate(slot, true, true)
+	m._applyInplaceUpdate(slot, true, activateSlot)
 }
 
 func (m *SlotMachine) applyDetachedStateUpdate(slotLink SlotLink, stateUpdate StateUpdate, asyncCount uint16) {
-	m.syncSafe(slotLink, func(slot *Slot) {
+	m.slotAsyncCall(slotLink, func(slot *Slot) {
 		slot.stopWorking(asyncCount)
 		detachQueue := m.getDetachQueue(slotLink.SlotID())
 
@@ -596,20 +587,18 @@ func (m *SlotMachine) applyDetachedStateUpdate(slotLink SlotLink, stateUpdate St
 
 func (m *SlotMachine) applyStateUpdate(slot *Slot, inplaceUpdate bool, stateUpdate StateUpdate) bool {
 
-	stillActive, recovered := m._applyStateUpdate(slot, inplaceUpdate, stateUpdate)
+	isAvailable, recovered := m._applyStateUpdate(slot, inplaceUpdate, stateUpdate)
 	if recovered == nil {
-		return stillActive
+		return isAvailable
 	}
-	// TODO report recovered error
-	// TODO error handling
 
-	fmt.Printf("slot fail: %v %+v %+v", slot.GetID(), stateUpdate, stateUpdate.param1)
+	m._handleStateUpdateError(slot, inplaceUpdate, stateUpdate, recovered)
 	m.disposeSlot(slot)
 	m.unusedSlots.AddLast(slot)
 	return false
 }
 
-func (m *SlotMachine) _applyStateUpdate(slot *Slot, inplaceUpdate bool, stateUpdate StateUpdate) (stillActive bool, recovered interface{}) {
+func (m *SlotMachine) _applyStateUpdate(slot *Slot, inplaceUpdate bool, stateUpdate StateUpdate) (isAvailable bool, errMsg interface{}) {
 
 	if slot.isWorking() { // there must be no calls here from inside of custom handlers
 		return false, "illegal state / slot is working"
@@ -617,14 +606,14 @@ func (m *SlotMachine) _applyStateUpdate(slot *Slot, inplaceUpdate bool, stateUpd
 
 	defer func() {
 		r := recover()
-		switch {
-		case r == nil:
-			break
-		case recovered == nil:
-			recovered = r
-		default:
-			recovered = fmt.Sprintf("recovered: before={%v} after={%v}", recovered, r)
+		if r == nil {
+			return
 		}
+		var err error
+		if errMsg != nil {
+			err = fmt.Errorf("%s", errMsg)
+		}
+		errMsg = recoverSlotPanic("apply has failed", r, err)
 	}()
 
 	switch stateUpdType(stateUpdate.updType) {
@@ -636,33 +625,43 @@ func (m *SlotMachine) _applyStateUpdate(slot *Slot, inplaceUpdate bool, stateUpd
 
 	case stateUpdNext:
 		applySlotPrepareAndNextStep(slot, stateUpdate)
-		m._applyInplaceUpdate(slot, inplaceUpdate, true)
+		m._applyInplaceUpdate(slot, inplaceUpdate, activateSlot)
 		return true, nil
 
 	case stateUpdPoll:
 		applySlotPrepareAndNextStep(slot, stateUpdate)
-		m._applyInplaceUpdate(slot, inplaceUpdate, false)
+		m._applyInplaceUpdate(slot, inplaceUpdate, deactivateSlot)
 		m.pollingSlots.Add(slot)
 		return true, nil
 
 	case stateUpdSleep:
+		applySlotPrepareAndNextStep(slot, stateUpdate)
+		m._applyInplaceUpdate(slot, inplaceUpdate, deactivateSlot)
+		return true, nil
+
+	case stateUpdWaitForEvent:
+		applySlotPrepareAndNextStep(slot, stateUpdate)
+		m._applyInplaceUpdate(slot, inplaceUpdate, activeWaitSlot)
+		return true, nil
+
+	case stateUpdWaitForActive:
 		applySlotPrepareAndNextStep(slot, stateUpdate)
 		waitOn := stateUpdate.getLink()
 		switch {
 		case waitOn.s == slot || !waitOn.IsValid():
 			// don't wait for self
 			// don't wait for an expired slot
-			m._applyInplaceUpdate(slot, inplaceUpdate, true)
+			m._applyInplaceUpdate(slot, inplaceUpdate, activateSlot)
 		default:
 			switch waitOn.s.QueueType() {
 			case ActiveSlots, WorkingSlots:
 				// don't wait
-				m._applyInplaceUpdate(slot, inplaceUpdate, true)
+				m._applyInplaceUpdate(slot, inplaceUpdate, activateSlot)
 			case NoQueue:
 				waitOn.s.makeQueueHead()
 				fallthrough
 			case ActivationOfSlot, PollingSlots:
-				m._applyInplaceUpdate(slot, inplaceUpdate, false)
+				m._applyInplaceUpdate(slot, inplaceUpdate, deactivateSlot)
 				waitOn.s.queue.AddLast(slot)
 			default:
 				return false, "illegal slot queue"
@@ -672,9 +671,6 @@ func (m *SlotMachine) _applyStateUpdate(slot *Slot, inplaceUpdate bool, stateUpd
 
 	case stateUpdWaitForShared:
 		//applySlotPrepareAndNextStep(slot, stateUpdate)
-		panic("not implemented") // TODO
-
-	case stateUpdWaitForEvent:
 		panic("not implemented") // TODO
 
 	case stateUpdReplace:
@@ -721,22 +717,31 @@ func (m *SlotMachine) _applyStateUpdate(slot *Slot, inplaceUpdate bool, stateUpd
 		// can't be here
 		return false, "unexpected state update"
 
-	case stateUpdFailed:
-		return false, "stateUpdFailed"
+	case stateUpdError, stateUpdPanic:
+		return false, "error was reported"
 
 	default:
 		return false, "unknown update type"
 	}
 }
 
-func (m *SlotMachine) _applyInplaceUpdate(slot *Slot, inplaceUpdate bool, activation bool) {
+type slotActivationMode uint8
 
-	if inplaceUpdate && !m.removeSlotQueue(slot, activation) {
+const (
+	deactivateSlot slotActivationMode = iota
+	activateSlot
+	activeWaitSlot
+)
+
+func (m *SlotMachine) _applyInplaceUpdate(slot *Slot, inplaceUpdate bool, activation slotActivationMode) {
+
+	if inplaceUpdate && !m.removeSlotQueue(slot, activation == activateSlot) {
 		return
 	}
-	if activation {
-		m.addSlotToActiveOrWorkingQueue(slot)
+	if activation == deactivateSlot {
+		return
 	}
+	m.addSlotToActiveOrWorkingQueue(slot, activation == activeWaitSlot)
 }
 
 func applySlotPrepareAndNextStep(slot *Slot, stateUpdate StateUpdate) {
@@ -804,19 +809,29 @@ func (m *SlotMachine) slotAccessError(msg string, link SlotLink, update StateUpd
 	fmt.Printf("%s: %+v %+v", msg, link, update)
 }
 
-func (m *SlotMachine) addSlotToActiveOrWorkingQueue(slot *Slot) {
-	if slot.isLastScan(m.scanCount) {
-		if slot.isPriority() {
-			m.prioritySlots.AddLast(slot)
-		} else {
-			m.activeSlots.AddLast(slot)
-		}
-	} else {
+func (m *SlotMachine) addSlotToActiveOrWorkingQueueNoWait(slot *Slot) {
+	m.addSlotToActiveOrWorkingQueue(slot, false)
+}
+
+func (m *SlotMachine) addSlotToActiveOrWorkingQueue(slot *Slot, activeWait bool) {
+	switch {
+	case activeWait:
+		break
+	case slot.isLastScan(m.scanCount):
+		m.activeWaitOnly = false
+		break
+	default:
 		if slot.isPriority() {
 			m.workingSlots.AddFirst(slot)
 		} else {
 			m.workingSlots.AddLast(slot)
 		}
+		return
+	}
+	if slot.isPriority() {
+		m.prioritySlots.AddLast(slot)
+	} else {
+		m.activeSlots.AddLast(slot)
 	}
 }
 
@@ -835,7 +850,7 @@ func (m *SlotMachine) removeSlotQueue(slot *Slot, keepActive bool) bool {
 
 	switch slot.QueueType() {
 	case ActivationOfSlot:
-		slot.removeHeadedQueue(m.addSlotToActiveOrWorkingQueue)
+		slot.removeHeadedQueue(m.addSlotToActiveOrWorkingQueueNoWait)
 	default:
 		panic("illegal state")
 	}
@@ -850,12 +865,55 @@ func (m *SlotMachine) disposeSlot(slot *Slot) {
 	}
 
 	if slot.isQueueHead() {
-		slot.removeHeadedQueue(m.addSlotToActiveOrWorkingQueue)
+		slot.removeHeadedQueue(m.addSlotToActiveOrWorkingQueueNoWait)
 	} else {
 		slot.removeFromQueue()
 	}
 
 	slot.dispose()
+}
+
+func (m *SlotMachine) _handleStateUpdateError(slot *Slot, inplaceUpdate bool, stateUpdate StateUpdate, recovered interface{}) {
+	var slotError error
+
+	isAsync := inplaceUpdate
+	isPanic := true
+	switch msg := recovered.(type) {
+	case string:
+		switch stateUpdType(stateUpdate.updType) {
+		case stateUpdError:
+			isPanic = false
+			fallthrough
+		case stateUpdPanic:
+			switch p := stateUpdate.param1.(type) {
+			case error:
+				slotError = p
+			default:
+				slotError = fmt.Errorf("unknown error/panic payload: %v", p)
+			}
+		default:
+			slotError = fmt.Errorf("%s: update=%v", msg, stateUpdate)
+		}
+	case error:
+		slotError = errors.WithMessage(msg, fmt.Sprintf("internal error: update=%v", stateUpdate))
+	default:
+		slotError = fmt.Errorf("internal error: msg=%v update=%v", msg, stateUpdate)
+	}
+
+	// TODO log error
+
+	handler := slot.getErrorHandler()
+	if handler != nil {
+		ec := failureContext{slotContext{s: slot}, m, isPanic, isAsync, slotError}
+		err := ec.executeErrorHandlerSafe(handler)
+		if err == nil {
+			return
+		}
+		slotError = errors.WithMessage(slotError, err.Error())
+	}
+
+	// TODO log unhandled error
+	fmt.Printf("slot fail: %v %+v %v", slot.GetID(), stateUpdate, slotError)
 }
 
 func NewAdapterCallback(stepLink StepLink, callback AdapterCallbackFunc, cancel *syncrun.ChainedCancel) AdapterCallback {

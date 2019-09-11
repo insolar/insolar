@@ -40,7 +40,8 @@ func NewPulseConveyor(conveyorMachineConfig smachine.SlotMachineConfig, factoryF
 		injector:   injector,
 	}
 	r.signalQueue = tools.NewSignalFuncQueue(&r.mutex, r.externalSignal.NextBroadcast)
-	r.slotMachine = smachine.NewSlotMachine(conveyorMachineConfig, nil, r.internalSignal.NextBroadcast)
+	r.slotMachine = smachine.NewSlotMachine(conveyorMachineConfig, nil, nil,
+		r.internalSignal.NextBroadcast)
 
 	return r
 }
@@ -64,6 +65,10 @@ type PulseConveyor struct {
 	injector     smachine.DependencyInjector
 	factoryFn    StateMachineFactoryFn
 	pulseService PulseServiceAdapter
+}
+
+func (m *PulseConveyor) GetAdapters() *smachine.AdapterRegistry {
+	return m.slotMachine.GetAdapters()
 }
 
 func (p *PulseConveyor) AddInput(ctx context.Context, pn pulse.Number, event InputEvent) error {
@@ -133,13 +138,15 @@ func (p *PulseConveyor) CommitPulseChange(pd pulse.Data) {
 			p.present = p.future
 			p.future = nil
 		} else {
-			p.present = newPulseSlot(pd, p.slotConfig, p.injector, p.internalSignal.NextBroadcast)
+			p.present = newPulseSlot(pd,
+				p.slotConfig, p.injector, p.GetAdapters(), p.internalSignal.NextBroadcast)
 
 			p.slotMachine.AddNew(p.workerCtx, smachine.NoLink(),
 				&PresentPulseSM{pulseSMTemplate{ps: p.present, psa: &p.pulseService}})
 		}
 
-		p.future = newPulseSlot(pd.CreateNextExpected(), p.slotConfig, p.injector, p.internalSignal.NextBroadcast)
+		p.future = newPulseSlot(pd.CreateNextExpected(),
+			p.slotConfig, p.injector, p.GetAdapters(), p.internalSignal.NextBroadcast)
 
 		p.slotMachine.AddNew(p.workerCtx, smachine.NoLink(),
 			&FuturePulseSM{pulseSMTemplate{ps: p.future, psa: &p.pulseService}})
@@ -147,6 +154,7 @@ func (p *PulseConveyor) CommitPulseChange(pd pulse.Data) {
 		p.past[p.future.pd.PulseNumber] = p.future
 
 		p.pulseService.svc.onCommitPulseChange(pd)
+		p.slotMachine.Migrate(true)
 	})
 }
 
@@ -203,8 +211,10 @@ const (
 	Past
 )
 
-func newPulseSlot(pd pulse.Data, config smachine.SlotMachineConfig, injector smachine.DependencyInjector, internalSignal func()) *PulseSlot {
-	r := &PulseSlot{pd: pd, slots: smachine.NewSlotMachine(config, injector, internalSignal)}
+func newPulseSlot(pd pulse.Data, config smachine.SlotMachineConfig, injector smachine.DependencyInjector,
+	adapters *smachine.AdapterRegistry, internalSignal func()) *PulseSlot {
+
+	r := &PulseSlot{pd: pd, slots: smachine.NewSlotMachine(config, injector, adapters, internalSignal)}
 	r.slots.SetContainerState(r)
 	return r
 }

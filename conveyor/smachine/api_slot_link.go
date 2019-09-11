@@ -102,10 +102,22 @@ type SharedDataAccessor struct {
 type SharedAccessReport uint8
 
 const (
-	SharedDataAbsent SharedAccessReport = iota
+	SharedSlotAbsent SharedAccessReport = iota
 	_
-	SharedDataBusyLocal
-	SharedDataBusyRemote
-	SharedDataAvailableLocal
-	SharedDataAvailableRemote
+	SharedSlotLocalAvailable
+	SharedSlotLocalBusy
+	SharedSlotRemoteAvailable
+	SharedSlotRemoteBusy
 )
+
+func (v SharedAccessReport) IsAvailable() bool {
+	return v == SharedSlotLocalAvailable || v == SharedSlotRemoteAvailable
+}
+
+func (v SharedAccessReport) IsRemote() bool {
+	return v == SharedSlotRemoteBusy || v == SharedSlotRemoteAvailable
+}
+
+func (v SharedAccessReport) IsAbsent() bool {
+	return v == SharedSlotAbsent
+}

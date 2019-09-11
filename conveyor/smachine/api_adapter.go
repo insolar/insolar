@@ -73,7 +73,6 @@ type AdapterExecutor interface {
 	*/
 	TrySyncCall(fn AdapterCallFunc) (bool, AsyncResultFunc)
 
-	RegisterOn(SlotMachineState)
 	Migrate(slotMachineState SlotMachineState, migrationCount uint16)
 }
 

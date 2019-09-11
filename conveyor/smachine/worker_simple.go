@@ -41,7 +41,7 @@ func (p *SimpleSlotWorker) DetachableCall(fn DetachableFunc) (wasDetached bool, 
 	wCtx := simpleWorkerContext{p}
 
 	defer func() {
-		err = recoverToErr("slot execution has failed", recover(), err)
+		err = recoverSlotPanic("slot execution has failed", recover(), err)
 		wCtx.w = nil
 	}()
 
@@ -60,13 +60,13 @@ func (p *SimpleSlotWorker) getCond() *sync.Cond {
 	return p.cond
 }
 
-func (p *SimpleSlotWorker) wakeUpAfterSharedAttach(slot *Slot, link StepLink) context.CancelFunc {
+func (p *SimpleSlotWorker) wakeUpAfterSharedAttach(slot *Slot, link SlotLink) context.CancelFunc {
 	return func() {
 		if !link.IsValid() {
 			return
 		}
 		m := link.s.machine
-		m._applyInplaceUpdate(link.s, true, true)
+		m._applyInplaceUpdate(link.s, true, activateSlot)
 	}
 }
 
@@ -74,20 +74,20 @@ type simpleWorkerContext struct {
 	w *SimpleSlotWorker
 }
 
-func (p simpleWorkerContext) AttachToShared(slot *Slot, link StepLink, wakeUpOnUse bool) (SharedAccessReport, context.CancelFunc) {
+func (p simpleWorkerContext) AttachTo(slot *Slot, link SlotLink, wakeUpOnUse bool) (SharedAccessReport, context.CancelFunc) {
 	switch {
 	case !link.IsValid():
-		return SharedDataAbsent, nil
+		return SharedSlotAbsent, nil
 	case slot == link.s:
 		// no need to wakeup
-		return SharedDataAvailableLocal, nil
+		return SharedSlotLocalAvailable, nil
 	}
 	isRemote := slot.machine != link.s.machine
 	if link.s.isWorking() {
 		if isRemote {
-			return SharedDataBusyRemote, nil
+			return SharedSlotRemoteBusy, nil
 		}
-		return SharedDataBusyLocal, nil
+		return SharedSlotLocalBusy, nil
 	}
 
 	var finishFn context.CancelFunc
@@ -96,9 +96,9 @@ func (p simpleWorkerContext) AttachToShared(slot *Slot, link StepLink, wakeUpOnU
 	}
 
 	if isRemote {
-		return SharedDataAvailableRemote, finishFn
+		return SharedSlotRemoteAvailable, finishFn
 	}
-	return SharedDataAvailableLocal, finishFn
+	return SharedSlotLocalAvailable, finishFn
 }
 
 func (p simpleWorkerContext) CanLoopOrHasSignal(loopCount uint32) (canLoop, hasSignal bool) {

@@ -125,6 +125,7 @@ type ExecutionContext interface {
 
 type StateConditionalUpdate interface {
 	ConditionalUpdate
+	IsAvailable() bool
 }
 
 type CallConditionalUpdate interface {
@@ -173,9 +174,10 @@ type BargeInContext interface {
 type FailureContext interface {
 	BasicContext
 
-	/* A step the target slot is at */
+	/* A step the slot is at */
 	AffectedStep() SlotStep
 
-	Panic() (bool, interface{})
-	Error() error
+	GetError() (isPanic, isAsync bool, err error)
+
+	NewChild(context.Context, CreateFunc) SlotLink
 }

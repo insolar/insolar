@@ -35,7 +35,7 @@ func main() {
 		SlotPageSize:    10,
 		PollingPeriod:   10 * time.Millisecond,
 		PollingTruncate: 1 * time.Millisecond,
-	}, nil, nil)
+	}, nil, nil, nil)
 
 	example.SetInjectServiceAdapterA(&implA{}, &sm)
 

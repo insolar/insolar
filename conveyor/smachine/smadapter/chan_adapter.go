@@ -41,9 +41,6 @@ type ChannelAdapter struct {
 	o   int
 }
 
-func (c *ChannelAdapter) RegisterOn(smachine.SlotMachineState) {
-}
-
 func (c *ChannelAdapter) Migrate(slotMachineState smachine.SlotMachineState, migrationCount uint16) {
 }
 

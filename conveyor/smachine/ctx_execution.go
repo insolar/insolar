@@ -269,15 +269,6 @@ func (p *executionContext) Poll() StateConditionalUpdate {
 	return &conditionalUpdate{marker: p.getMarker(), updMode: stateUpdPoll}
 }
 
-func (p *executionContext) WaitForActive(link SlotLink) StateConditionalUpdate {
-	p.ensureExactState(execContext)
-	if link.IsEmpty() {
-		panic("illegal value")
-	}
-	p.s.ensureLocal(link)
-	return &conditionalUpdate{marker: p.getMarker(), updMode: stateUpdSleep, dependency: link}
-}
-
 func (p *executionContext) Sleep() StateConditionalUpdate {
 	p.ensureExactState(execContext)
 	return &conditionalUpdate{marker: p.getMarker(), updMode: stateUpdSleep}
@@ -288,29 +279,44 @@ func (p *executionContext) WaitForEvent() StateConditionalUpdate {
 	return &conditionalUpdate{marker: p.getMarker(), updMode: stateUpdWaitForEvent}
 }
 
-func (p *executionContext) WaitForShared(link SharedDataLink) StateConditionalUpdate {
+func (p *executionContext) waitFor(link SlotLink, updMode stateUpdType) StateConditionalUpdate {
 	p.ensureExactState(execContext)
-	if link.link.IsEmpty() {
+	if link.IsEmpty() {
 		panic("illegal value")
+		//		return &conditionalUpdate{marker: p.getMarker()}
 	}
 
-	r, releaseFn := p.worker.AttachToShared(p.s, link.link, link.wakeup)
+	r, releaseFn := p.worker.AttachTo(p.s, link, false)
 	if releaseFn != nil {
 		defer releaseFn()
 	}
-	if r == SharedDataBusyRemote {
+	switch r {
+	case SharedSlotAbsent, SharedSlotLocalAvailable:
+		// no wait
+		return &conditionalUpdate{marker: p.getMarker()}
+
+	case SharedSlotRemoteBusy, SharedSlotRemoteAvailable:
+		// state has to be re-detected upon applying the update
 		panic("not implemented")
 	}
-	return &conditionalUpdate{marker: p.getMarker(), updMode: stateUpdWaitForShared, dependency: link.link.SlotLink}
+	return &conditionalUpdate{marker: p.getMarker(), updMode: updMode, dependency: link}
+}
+
+func (p *executionContext) WaitForActive(link SlotLink) StateConditionalUpdate {
+	return p.waitFor(link, stateUpdWaitForActive)
+}
+
+func (p *executionContext) WaitForShared(link SharedDataLink) StateConditionalUpdate {
+	return p.waitFor(link.link.SlotLink, stateUpdWaitForShared)
 }
 
 func (p *executionContext) UseShared(a SharedDataAccessor) SharedAccessReport {
 	p.ensureExactState(execContext)
-	r, releaseFn := p.worker.AttachToShared(p.s, a.link.link, a.link.wakeup)
+	r, releaseFn := p.worker.AttachTo(p.s, a.link.link.SlotLink, a.link.wakeup)
 	if releaseFn != nil {
 		defer releaseFn()
 	}
-	if r >= SharedDataAvailableLocal {
+	if r.IsAvailable() {
 		a.accessFn(a.link.data)
 	}
 	return r
@@ -377,6 +383,9 @@ func (p *executionContext) executeNextStep() (bool, StateUpdate, uint16) {
 				break
 			}
 			p.s.setNextStep(stateUpdate.step)
+			if loopCount < stateUpdate.param0 {
+				continue
+			}
 			continue
 		}
 		return false, stateUpdate, p.countAsyncCalls
@@ -444,30 +453,41 @@ func (c *conditionalUpdate) ThenRepeat() StateUpdate {
 	return c.then(SlotStep{})
 }
 
+func (c *conditionalUpdate) IsAvailable() bool {
+	return c.updMode == 0
+}
+
 func (c *conditionalUpdate) then(slotStep SlotStep) StateUpdate {
 	switch c.updMode {
-	case stateUpdNext: // Yield
+	case stateUpdNext: // Yield & Call
 		return stateUpdateYield(c.marker, slotStep, c.kickOff)
-	case stateUpdPoll: // Poll
+	case stateUpdPoll:
 		return stateUpdatePoll(c.marker, slotStep, c.kickOff)
-	case stateUpdSleep: // Sleep & WaitForActive
-		if c.dependency.IsEmpty() {
-			return stateUpdateSleep(c.marker, slotStep, c.kickOff)
+	case stateUpdSleep:
+		return stateUpdateSleep(c.marker, slotStep, c.kickOff)
+
+	case stateUpdWaitForEvent: // WaitForEvent
+		return stateUpdateWaitForEvent(c.marker, slotStep, c.kickOff)
+
+	case stateUpdWaitForActive: // WaitForActive
+		if c.kickOff != nil {
+			panic("illegal value")
 		}
-		//if c.kickOff != nil {
-		//	panic("illegal value")
-		//}
-		return stateUpdateWaitForSlot(c.marker, c.dependency, slotStep, c.kickOff)
+		return stateUpdateWaitForSlot(c.marker, c.dependency, slotStep)
+
 	case stateUpdWaitForShared: // WaitForShared
 		if c.kickOff != nil {
 			panic("illegal value")
 		}
 		return stateUpdateWaitForShared(c.marker, c.dependency, slotStep)
-	case stateUpdWaitForEvent: // WaitForEvent
+
+	case 0:
+		// WaitForShared or WaitForActive with true condition
 		if c.kickOff != nil {
 			panic("illegal value")
 		}
-		return stateUpdateWaitForEvent(c.marker, slotStep)
+		return stateUpdateNext(c.marker, slotStep, true)
+
 	default:
 		panic("illegal value")
 	}
@@ -550,8 +570,10 @@ var _ FailureContext = &failureContext{}
 
 type failureContext struct {
 	slotContext
-	recoveredPanic interface{}
-	err            error
+	machine *SlotMachine
+	isPanic bool
+	isAsync bool
+	err     error
 }
 
 func (p *failureContext) AffectedStep() SlotStep {
@@ -561,12 +583,33 @@ func (p *failureContext) AffectedStep() SlotStep {
 	return p.s.step
 }
 
-func (p *failureContext) Panic() (bool, interface{}) {
+func (p *failureContext) GetError() (isPanic, isAsync bool, err error) {
 	p.ensureExactState(failContext)
-	return p.recoveredPanic != nil, p.recoveredPanic
+	return p.isPanic, false, p.err
 }
 
-func (p *failureContext) Error() error {
+func (p *failureContext) NewChild(ctx context.Context, fn CreateFunc) SlotLink {
 	p.ensureExactState(failContext)
-	return p.err
+	if fn == nil {
+		panic("illegal value")
+	}
+	if ctx == nil {
+		panic("illegal value")
+	}
+	_, link := p.machine.applySlotCreate(ctx, nil, p.s.NewLink(), fn)
+	if link.IsEmpty() {
+		panic("machine was not created")
+	}
+	return link
+}
+
+func (p *failureContext) executeErrorHandlerSafe(handlerFunc ErrorHandlerFunc) (err error) {
+	p.setState(inactiveContext, failContext)
+	defer func() {
+		p.setState(failContext, discardedContext)
+		err = recoverSlotPanic("error handling has failed", recover(), err)
+	}()
+
+	handlerFunc(p)
+	return nil
 }
