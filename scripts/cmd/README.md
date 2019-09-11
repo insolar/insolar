@@ -81,7 +81,7 @@ Analysed 36848 logs in 216 traces.
 < 20s | 0
 < 40s | 0
 < 1m0s | 0
-> 1m0s (0)
+> 1m0s | 0
 ```
 
 Use `logstat -h` for more info.

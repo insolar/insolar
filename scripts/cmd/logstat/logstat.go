@@ -458,7 +458,7 @@ func (a *AggTraceTimes) String() string {
 		writeTotalSample(&b, i)
 	}
 	b.WriteString(fmt.Sprintf(
-		"> %s (%d) \n",
+		"> %s | %d\n",
 		traceTimeBuckets[len(traceTimeBuckets)-1],
 		a.callTimes[len(a.totalTimes)-1]),
 	)
