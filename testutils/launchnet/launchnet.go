@@ -486,15 +486,9 @@ func DumpMetricsEnabled() bool {
 	return os.Getenv(dumpMetricsEnabledVar) == "1"
 }
 
-var lastIteration int
-
-// FetchAndSaveMetrics
+// FetchAndSaveMetrics fetches all nodes metric endpoints and saves result to files in
+// logs/metrics/$iteration/<node-addr>.txt files.
 func FetchAndSaveMetrics(iteration int) ([][]byte, error) {
-	if iteration == -1 {
-		iteration = lastIteration + 1
-	}
-	lastIteration = iteration
-
 	n, err := GetNodesCount()
 	if err != nil {
 		return nil, err
