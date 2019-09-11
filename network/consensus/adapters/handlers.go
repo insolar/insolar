@@ -53,6 +53,7 @@ package adapters
 import (
 	"bytes"
 	"context"
+	"go.opencensus.io/stats"
 	"io"
 
 	"github.com/insolar/insolar/insolar"
@@ -124,12 +125,14 @@ func (dh *DatagramHandler) HandleDatagram(ctx context.Context, address string, b
 		return
 	}
 
+	stats.Record(ctx, network.ConsensusPacketsRecvBytes.M(int64(len(buf))))
 	packetParser, err := dh.packetParserFactory.ParsePacket(ctx, bytes.NewReader(buf))
 	if err != nil {
 		logger.Warnf("Failed to get PacketParser: ", err)
 		return
 	}
 
+	stats.Record(ctx, network.ConsensusPacketsRecv.M(1))
 	dh.packetHandler.handlePacket(ctx, packetParser, address)
 }
 
