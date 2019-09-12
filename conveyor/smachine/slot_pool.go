@@ -71,7 +71,7 @@ func (p *SlotPool) IsZero() bool {
 	return p.mutex == nil
 }
 
-func (p *SlotPool) AllocateSlot() (slot *Slot) {
+func (p *SlotPool) AllocateSlot(m *SlotMachine) (slot *Slot) {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 
@@ -79,6 +79,9 @@ func (p *SlotPool) AllocateSlot() (slot *Slot) {
 	case !p.unusedSlots.IsEmpty():
 		slot = p.unusedSlots.First()
 		slot.removeFromQueue()
+		if slot.machine != m {
+			panic("illegal state")
+		}
 	case p.slots == nil:
 		panic("illegal state")
 		//m.slots = make([][]Slot, 1)
@@ -93,6 +96,7 @@ func (p *SlotPool) AllocateSlot() (slot *Slot) {
 			p.slotPgPos = 0
 		}
 		slot = &p.slots[0][p.slotPgPos]
+		slot.machine = m
 		p.slotPgPos++
 	}
 	return slot

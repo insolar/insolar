@@ -34,6 +34,8 @@ type BasicContext interface {
 	GetParent() SlotLink
 	GetContext() context.Context
 	GetContainer() SlotMachineState
+
+	//SlotLink() SlotLink
 }
 
 type ConstructionContext interface {
@@ -48,7 +50,7 @@ type stepContext interface {
 	SlotLink() SlotLink
 
 	SetDefaultMigration(fn MigrateFunc)
-	//SetDefaultErrorHandler(fn ErrorHandlerFunc)
+	SetDefaultErrorHandler(fn ErrorHandlerFunc)
 	SetDefaultFlags(StepFlags)
 
 	JumpExt(SlotStep) StateUpdate

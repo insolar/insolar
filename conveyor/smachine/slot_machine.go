@@ -424,8 +424,8 @@ func (m *SlotMachine) migrateSlot(slot *Slot) (isEmptyOrWeak, isAvailable bool) 
 	return slot.step.Flags&StepWeak != 0, true
 }
 
-func (m *SlotMachine) allocateSlot() (slot *Slot) {
-	return m.slotPool.AllocateSlot()
+func (m *SlotMachine) allocateSlot() *Slot {
+	return m.slotPool.AllocateSlot(m)
 }
 
 func (m *SlotMachine) slotAsyncCallback(slotLink SlotLink, fn func(*Slot)) {
@@ -546,6 +546,10 @@ func (m *SlotMachine) applyDetachedStateUpdate(slotLink SlotLink, stateUpdate St
 }
 
 func (m *SlotMachine) applyStateUpdate(slot *Slot, inplaceUpdate bool, stateUpdate StateUpdate) bool {
+
+	if slot.machine != m {
+		panic("illegal state")
+	}
 
 	isAvailable, recovered := m._applyStateUpdate(slot, inplaceUpdate, stateUpdate)
 	if recovered == nil {

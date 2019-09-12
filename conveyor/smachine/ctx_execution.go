@@ -197,10 +197,11 @@ var _ ConstructionContext = &constructionContext{}
 
 type constructionContext struct {
 	contextTemplate
-	ctx     context.Context
-	slotID  SlotID
-	parent  SlotLink
-	machine *SlotMachine
+	ctx            context.Context
+	slotID         SlotID
+	parent         SlotLink
+	migrationCount uint16
+	machine        *SlotMachine
 }
 
 func (p *constructionContext) GetContext() context.Context {
