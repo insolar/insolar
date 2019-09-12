@@ -40,11 +40,17 @@ type contextTemplate struct {
 }
 
 func (p *contextTemplate) getMarker() ContextMarker {
-	return ContextMarker(uintptr(unsafe.Pointer(p)))
+	return ContextMarker(uintptr(unsafe.Pointer(p))) // TODO replace with getting an atomic counter?
 }
 
 func (p *contextTemplate) ensureExactState(expected slotContextMode) {
 	if p.mode != expected {
+		panic("illegal state")
+	}
+}
+
+func (p *contextTemplate) ensureStateOf(expected0, expected1 slotContextMode) {
+	if p.mode != expected0 && p.mode != expected1 {
 		panic("illegal state")
 	}
 }
@@ -150,9 +156,9 @@ func (p *slotContext) WakeUp() StateUpdate {
 	return stateUpdateRepeat(p.getMarker(), 0)
 }
 
-func (p *slotContext) Share(data interface{}, wakeUpOnUse bool) SharedDataLink {
+func (p *slotContext) Share(data interface{}, wakeUpAfterUse bool) SharedDataLink {
 	p.ensureAtLeastState(initContext)
-	return SharedDataLink{p.s.NewStepLink(), wakeUpOnUse, data}
+	return SharedDataLink{p.s.NewStepLink(), wakeUpAfterUse, data}
 }
 
 func (p *slotContext) AffectedStep() SlotStep {
@@ -160,6 +166,31 @@ func (p *slotContext) AffectedStep() SlotStep {
 	r := p.s.step
 	r.Flags |= StepResetAllFlags
 	return p.s.step
+}
+
+func (p *slotContext) NewChild(ctx context.Context, fn CreateFunc) SlotLink {
+	p.ensureStateOf(execContext, failContext)
+	if fn == nil {
+		panic("illegal value")
+	}
+	if ctx == nil {
+		panic("illegal value")
+	}
+	_, link := p.s.machine.applySlotCreate(ctx, nil, p.s.NewLink(), fn)
+	if link.IsEmpty() {
+		panic("machine was not created")
+	}
+	return link
+}
+
+func (p *slotContext) BargeInWithParam(applyFn BargeInApplyFunc) BargeInParamFunc {
+	p.ensureStateOf(initContext, execContext)
+	return p.s.machine.createBargeIn(p.s.NewStepLink().AnyStep(), applyFn)
+}
+
+func (p *slotContext) BargeIn() BargeInRequester {
+	p.ensureStateOf(initContext, execContext)
+	return &bargeInRequest{&p.contextTemplate, p.s.machine, p.s.NewStepLink().AnyStep()}
 }
 
 var _ ConstructionContext = &constructionContext{}
@@ -172,15 +203,15 @@ type constructionContext struct {
 	machine *SlotMachine
 }
 
+func (p *constructionContext) GetContext() context.Context {
+	return p.ctx
+}
+
 func (p *constructionContext) SetContext(ctx context.Context) {
 	if ctx == nil {
 		panic("illegal value")
 	}
 	p.ctx = ctx
-}
-
-func (p *constructionContext) GetContext() context.Context {
-	return p.ctx
 }
 
 func (p *constructionContext) GetContainer() SlotMachineState {
@@ -196,6 +227,10 @@ func (p *constructionContext) GetSlotID() SlotID {
 
 func (p *constructionContext) GetParent() SlotLink {
 	return p.parent
+}
+
+func (p *constructionContext) SetParent(parent SlotLink) {
+	p.parent = parent
 }
 
 func (p *constructionContext) executeCreate(nextCreate CreateFunc) StateMachine {
@@ -222,18 +257,6 @@ var _ InitializationContext = &initializationContext{}
 
 type initializationContext struct {
 	slotContext
-	machine *SlotMachine
-}
-
-func (p *initializationContext) BargeInWithParam(applyFn BargeInApplyFunc) BargeInParamFunc {
-	p.ensureAtLeastState(initContext)
-
-	return p.machine.createBargeIn(p.s.NewStepLink().AnyStep(), applyFn)
-}
-
-func (p *initializationContext) BargeIn() BargeInRequester {
-	p.ensureAtLeastState(initContext)
-	return &bargeInRequest{&p.contextTemplate, p.machine, p.s.NewStepLink().AnyStep()}
 }
 
 func (p *initializationContext) executeInitialization(fn InitFunc) StateUpdate {
@@ -247,7 +270,6 @@ var _ ExecutionContext = &executionContext{}
 
 type executionContext struct {
 	slotContext
-	machine         *SlotMachine
 	worker          WorkerContext
 	countAsyncCalls uint16
 }
@@ -275,14 +297,18 @@ func (p *executionContext) Sleep() StateConditionalUpdate {
 	return &conditionalUpdate{marker: p.getMarker(), updMode: stateUpdSleep}
 }
 
-func (p *executionContext) WaitForEvent() StateConditionalUpdate {
+func (p *executionContext) WaitAny() StateConditionalUpdate {
 	p.ensureExactState(execContext)
 	return &conditionalUpdate{marker: p.getMarker(), updMode: stateUpdWaitForEvent}
 }
 
-func (p *executionContext) WaitForEventUntil(u time.Time) StateConditionalUpdate {
+func (p *executionContext) WaitAnyUntil(until time.Time) StateConditionalUpdate {
 	p.ensureExactState(execContext)
-	return &conditionalUpdate{marker: p.getMarker(), updMode: stateUpdWaitForEvent, until: p.machine.toRelativeTime(u)}
+	u := p.s.machine.toRelativeTime(until)
+	if u != 0 && !until.After(time.Now()) {
+		return &conditionalUpdate{marker: p.getMarker()}
+	}
+	return &conditionalUpdate{marker: p.getMarker(), updMode: stateUpdWaitForEvent, until: u}
 }
 
 func (p *executionContext) waitFor(link SlotLink, updMode stateUpdType) StateConditionalUpdate {
@@ -297,7 +323,7 @@ func (p *executionContext) waitFor(link SlotLink, updMode stateUpdType) StateCon
 		defer releaseFn()
 	}
 	switch r {
-	case SharedSlotAbsent, SharedSlotLocalAvailable:
+	case SharedSlotAbsent, SharedSlotAvailableAlways:
 		// no wait
 		return &conditionalUpdate{marker: p.getMarker()}
 
@@ -308,11 +334,11 @@ func (p *executionContext) waitFor(link SlotLink, updMode stateUpdType) StateCon
 	return &conditionalUpdate{marker: p.getMarker(), updMode: updMode, dependency: link}
 }
 
-func (p *executionContext) WaitForActive(link SlotLink) StateConditionalUpdate {
+func (p *executionContext) WaitActivation(link SlotLink) StateConditionalUpdate {
 	return p.waitFor(link, stateUpdWaitForActive)
 }
 
-func (p *executionContext) WaitForShared(link SharedDataLink) StateConditionalUpdate {
+func (p *executionContext) WaitShared(link SharedDataLink) StateConditionalUpdate {
 	return p.waitFor(link.link.SlotLink, stateUpdWaitForShared)
 }
 
@@ -333,35 +359,9 @@ func (p *executionContext) UseShared(a SharedDataAccessor) SharedAccessReport {
 //	return p.machine.stepSync.Join(p.s, key, weight, broadcastFn)
 //}
 
-func (p *executionContext) NewChild(ctx context.Context, fn CreateFunc) SlotLink {
-	p.ensureExactState(execContext)
-	if fn == nil {
-		panic("illegal value")
-	}
-	if ctx == nil {
-		panic("illegal value")
-	}
-	_, link := p.machine.applySlotCreate(ctx, nil, p.s.NewLink(), fn)
-	if link.IsEmpty() {
-		panic("machine was not created")
-	}
-	return link
-}
-
-func (p *executionContext) BargeInWithParam(applyFn BargeInApplyFunc) BargeInParamFunc {
-	p.ensureAtLeastState(execContext)
-
-	return p.machine.createBargeIn(p.s.NewStepLink().AnyStep(), applyFn)
-}
-
-func (p *executionContext) BargeIn() BargeInRequester {
-	p.ensureAtLeastState(execContext)
-	return &bargeInRequest{&p.contextTemplate, p.machine, p.s.NewStepLink().AnyStep()}
-}
-
 func (p *executionContext) BargeInThisStepOnly() BargeInRequester {
 	p.ensureExactState(execContext)
-	return &bargeInRequest{&p.contextTemplate, p.machine, p.s.NewStepLink()}
+	return &bargeInRequest{&p.contextTemplate, p.s.machine, p.s.NewStepLink()}
 }
 
 func (p *executionContext) executeNextStep() (bool, StateUpdate, uint16) {
@@ -472,23 +472,23 @@ func (c *conditionalUpdate) then(slotStep SlotStep) StateUpdate {
 	case stateUpdSleep:
 		return stateUpdateSleep(c.marker, slotStep, c.kickOff)
 
-	case stateUpdWaitForEvent: // WaitForEvent
+	case stateUpdWaitForEvent: // WaitAny
 		return stateUpdateWaitForEvent(c.marker, slotStep, c.kickOff, c.until)
 
-	case stateUpdWaitForActive: // WaitForActive
+	case stateUpdWaitForActive: // WaitActivation
 		if c.kickOff != nil {
 			panic("illegal value")
 		}
 		return stateUpdateWaitForSlot(c.marker, c.dependency, slotStep)
 
-	case stateUpdWaitForShared: // WaitForShared
+	case stateUpdWaitForShared: // WaitShared
 		if c.kickOff != nil {
 			panic("illegal value")
 		}
 		return stateUpdateWaitForShared(c.marker, c.dependency, slotStep)
 
 	case 0:
-		// WaitForShared or WaitForActive with true condition
+		// WaitShared or WaitActivation with true condition
 		if c.kickOff != nil {
 			panic("illegal value")
 		}
@@ -576,7 +576,6 @@ var _ FailureContext = &failureContext{}
 
 type failureContext struct {
 	slotContext
-	machine *SlotMachine
 	isPanic bool
 	isAsync bool
 	err     error
@@ -585,21 +584,6 @@ type failureContext struct {
 func (p *failureContext) GetError() (isPanic, isAsync bool, err error) {
 	p.ensureExactState(failContext)
 	return p.isPanic, false, p.err
-}
-
-func (p *failureContext) NewChild(ctx context.Context, fn CreateFunc) SlotLink {
-	p.ensureExactState(failContext)
-	if fn == nil {
-		panic("illegal value")
-	}
-	if ctx == nil {
-		panic("illegal value")
-	}
-	_, link := p.machine.applySlotCreate(ctx, nil, p.s.NewLink(), fn)
-	if link.IsEmpty() {
-		panic("machine was not created")
-	}
-	return link
 }
 
 func (p *failureContext) executeErrorHandlerSafe(handlerFunc ErrorHandlerFunc) (err error) {

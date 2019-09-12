@@ -39,6 +39,7 @@ type BasicContext interface {
 type ConstructionContext interface {
 	BasicContext
 	SetContext(context.Context)
+	SetParent(SlotLink)
 }
 
 type stepContext interface {
@@ -53,7 +54,7 @@ type stepContext interface {
 	JumpExt(SlotStep) StateUpdate
 	Jump(StateFunc) StateUpdate
 
-	Share(data interface{}, wakeUpOnUse bool) SharedDataLink
+	Share(data interface{}, wakeUpAfterUse bool) SharedDataLink
 
 	Error(error) StateUpdate
 	Stop() StateUpdate
@@ -117,16 +118,18 @@ type ExecutionContext interface {
 	Yield() StateConditionalUpdate
 	Poll() StateConditionalUpdate
 
-	WaitForActive(SlotLink) StateConditionalUpdate
-	WaitForShared(SharedDataLink) StateConditionalUpdate
-	WaitForEvent() StateConditionalUpdate
-	WaitForEventUntil(time.Time) StateConditionalUpdate
+	WaitActivation(SlotLink) StateConditionalUpdate
+	WaitShared(SharedDataLink) StateConditionalUpdate
+	WaitAny() StateConditionalUpdate
+	WaitAnyUntil(time.Time) StateConditionalUpdate
 
 	Sleep() StateConditionalUpdate
 }
 
 type StateConditionalUpdate interface {
 	ConditionalUpdate
+
+	/* Returns true when condition is already true */
 	IsAvailable() bool
 }
 

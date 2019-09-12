@@ -113,16 +113,20 @@ func (p *QueueHead) AddLast(slot *Slot) {
 }
 
 func (p *QueueHead) extractAll(targetQueue *QueueHead) (head, tail *Slot, count int) {
+	c := p.count
+	if c == 0 {
+		return nil, nil, 0
+	}
+
 	next := p.head.nextInQueue
 	prev := p.head.prevInQueue
-
-	c := p.count
+	prev.nextInQueue = nil
 
 	p.count = 0
 	p.head.nextInQueue = p.head
 	p.head.prevInQueue = p.head
 
-	for n := next; n != p.head; n = n.nextInQueue {
+	for n := next; n != nil; n = n.nextInQueue {
 		n.queue = targetQueue
 	}
 

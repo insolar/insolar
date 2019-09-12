@@ -51,12 +51,13 @@ type Slot struct {
 }
 
 type SlotDependency interface {
-	GetKey() string
-	GetWeight() int32
+	//GetKey() string
+	//GetWeight() int32
+	//OnBroadcast(payload interface{}) (accepted, wakeup bool)
 
-	OnStepChanged()
+	OnSlotWorking() bool
+	OnStepChanged() bool
 	OnSlotDisposed()
-	OnBroadcast(payload interface{}) (accepted, wakeup bool)
 
 	Remove()
 }
@@ -171,20 +172,36 @@ func (s *Slot) isLastScan(scanNo uint32) bool {
 	return s.lastWorkScan == uint8(scanNo)
 }
 
-func (s *Slot) startWorking(scanNo uint32) /* , timeMark time.Duration) */ {
+func (s *Slot) startWorking(scanNo uint32) (prevStepNo uint32) {
 	if s.workState&slotWorking != 0 {
 		panic("illegal state")
 	}
 	s.lastWorkScan = uint8(scanNo)
 	s.workState |= slotWorking
+
+	if s.dependency == nil {
+		return 0
+	}
+	if !s.dependency.OnSlotWorking() {
+		return s.GetStep()
+	}
+	s.dependency = nil
+	return 0
 }
 
-func (s *Slot) stopWorking(asyncCount uint16) {
+func (s *Slot) stopWorking(asyncCount uint16, prevStepNo uint32) {
 	if s.workState&slotWorking == 0 {
 		panic("illegal state")
 	}
+
 	s.asyncCallCount += asyncCount
 	s.workState &^= slotWorking
+
+	if prevStepNo != 0 && s.dependency != nil && prevStepNo != s.GetStep() {
+		if s.dependency.OnStepChanged() {
+			s.dependency = nil
+		}
+	}
 }
 
 func (s *Slot) setNextStep(step SlotStep) {
@@ -205,16 +222,10 @@ func (s *Slot) setNextStep(step SlotStep) {
 	s.incStep()
 }
 
-func (s *Slot) removeHeadedQueue(moveTo func(slot *Slot)) {
-	for {
-		next := s.QueueNext()
-		if next == nil {
-			break
-		}
-		next.removeFromQueue()
-		moveTo(next)
-	}
+func (s *Slot) removeHeadedQueue() *Slot {
+	nextDep, _, _ := s.queue.extractAll(nil)
 	s.vacateQueueHead()
+	return nextDep
 }
 
 func (s *Slot) ensureLocal(link SlotLink) {

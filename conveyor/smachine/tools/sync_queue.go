@@ -72,7 +72,7 @@ func (p *SyncQueue) Add(fn SyncFunc) {
 	}
 }
 
-func (p *SyncQueue) Flush() []SyncFunc {
+func (p *SyncQueue) Flush() SyncFuncList {
 	p.locker.Lock()
 	defer p.locker.Unlock()
 
@@ -85,7 +85,7 @@ func (p *SyncQueue) Flush() []SyncFunc {
 		nextCap >>= 1
 	}
 	queue := p.queue
-	p.queue = make([]SyncFunc, 0, nextCap)
+	p.queue = make(SyncFuncList, 0, nextCap)
 
 	return queue
 }

@@ -134,7 +134,7 @@ func (c *adapterCallRequest) _startAsync() {
 	c.ctx.countAsyncCalls++
 
 	cancelFn := c.executor.StartCall(stepLink, c.fn, func(fn AsyncResultFunc, recovered interface{}) {
-		c.ctx.machine.applyAsyncStateUpdate(stepLink.SlotLink, fn, recovered)
+		c.ctx.s.machine.applyAsyncStateUpdate(stepLink.SlotLink, fn, recovered)
 	}, c.cancel != nil)
 
 	if c.cancel != nil {

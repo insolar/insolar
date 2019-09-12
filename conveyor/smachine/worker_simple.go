@@ -60,7 +60,7 @@ func (p *SimpleSlotWorker) getCond() *sync.Cond {
 	return p.cond
 }
 
-func (p *SimpleSlotWorker) wakeUpAfterSharedAttach(slot *Slot, link SlotLink) context.CancelFunc {
+func (p *SimpleSlotWorker) wakeUpAfterSharedAccess(slot *Slot, link SlotLink) context.CancelFunc {
 	return func() {
 		if !link.IsValid() {
 			return
@@ -79,9 +79,13 @@ func (p simpleWorkerContext) AttachTo(slot *Slot, link SlotLink, wakeUpOnUse boo
 	case !link.IsValid():
 		return SharedSlotAbsent, nil
 	case slot == link.s:
-		// no need to wakeup
-		return SharedSlotLocalAvailable, nil
+		// no need to wakeup ourselves
+		return SharedSlotAvailableAlways, nil
 	}
+	if link.s.machine == nil {
+		panic("illegal state")
+	}
+
 	isRemote := slot.machine != link.s.machine
 	if link.s.isWorking() {
 		if isRemote {
@@ -92,13 +96,13 @@ func (p simpleWorkerContext) AttachTo(slot *Slot, link SlotLink, wakeUpOnUse boo
 
 	var finishFn context.CancelFunc
 	if wakeUpOnUse {
-		finishFn = p.w.wakeUpAfterSharedAttach(slot, link)
+		finishFn = p.w.wakeUpAfterSharedAccess(slot, link)
 	}
 
 	if isRemote {
 		return SharedSlotRemoteAvailable, finishFn
 	}
-	return SharedSlotLocalAvailable, finishFn
+	return SharedSlotAvailableAlways, finishFn
 }
 
 func (p simpleWorkerContext) CanLoopOrHasSignal(loopCount uint32) (canLoop, hasSignal bool) {

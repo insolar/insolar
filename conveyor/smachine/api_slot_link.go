@@ -103,15 +103,15 @@ type SharedAccessReport uint8
 
 const (
 	SharedSlotAbsent SharedAccessReport = iota
-	_
-	SharedSlotLocalAvailable
 	SharedSlotLocalBusy
-	SharedSlotRemoteAvailable
 	SharedSlotRemoteBusy
+	SharedSlotAvailableAlways
+	SharedSlotLocalAvailable
+	SharedSlotRemoteAvailable
 )
 
 func (v SharedAccessReport) IsAvailable() bool {
-	return v == SharedSlotLocalAvailable || v == SharedSlotRemoteAvailable
+	return v >= SharedSlotAvailableAlways
 }
 
 func (v SharedAccessReport) IsRemote() bool {

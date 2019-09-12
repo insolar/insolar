@@ -100,6 +100,14 @@ type SlotDep struct {
 	c  *SortedSlotDependencies
 }
 
+func (s *SlotDep) OnSlotWorking() bool {
+	panic("implement me")
+}
+
+func (s *SlotDep) OnStepChanged() bool {
+	panic("implement me")
+}
+
 func (s *SlotDep) GetWeight() int32 {
 	return s.w
 }
@@ -112,10 +120,6 @@ func (s *SlotDep) Remove() {
 
 func (s *SlotDep) GetKey() string {
 	return s.c.key
-}
-
-func (s *SlotDep) OnStepChanged() {
-	panic("implement me")
 }
 
 func (s *SlotDep) OnSlotDisposed() {

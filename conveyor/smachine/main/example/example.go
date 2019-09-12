@@ -119,13 +119,13 @@ func (s *StateMachine1) State4(ctx smachine.ExecutionContext) smachine.StateUpda
 	//	return &StateMachine1{ sharedB:s.sharedB }
 	//})
 	if ctx.GetPendingCallCount() > 0 {
-		return ctx.WaitForEvent().ThenRepeat()
+		return ctx.WaitAny().ThenRepeat()
 	}
 
 	fmt.Printf("wait: %d %v result:%v\n", ctx.GetSlotID(), time.Now(), s.result)
 	s.count = 0
-	//return ctx.WaitForEvent().ThenJump(s.State1)
-	return ctx.WaitForEventUntil(time.Now().Add(time.Second)).ThenJump(s.State1)
+	//return ctx.WaitAny().ThenJump(s.State1)
+	return ctx.WaitAnyUntil(time.Now().Add(time.Second)).ThenJump(s.State1)
 }
 
 func (s *StateMachine1) State5(ctx smachine.ExecutionContext) smachine.StateUpdate {

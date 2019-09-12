@@ -127,7 +127,7 @@ func (sm *PresentPulseSM) stepWorking(ctx smachine.ExecutionContext) smachine.St
 	if repeatNow {
 		return ctx.Repeat(presentSlotCycleBoost)
 	}
-	return ctx.WaitForEventUntil(nextPollTime).ThenRepeat()
+	return ctx.WaitAnyUntil(nextPollTime).ThenRepeat()
 }
 
 func (sm *PresentPulseSM) stepSuspending(ctx smachine.ExecutionContext) smachine.StateUpdate {
@@ -179,6 +179,6 @@ func (sm *PastPulseSM) stepWorking(ctx smachine.ExecutionContext) smachine.State
 		// old pulses can be throttled down a bit
 		return ctx.Poll().ThenRepeat()
 	default:
-		return ctx.WaitForEvent().ThenRepeat()
+		return ctx.WaitAny().ThenRepeat()
 	}
 }
