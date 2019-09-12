@@ -267,8 +267,8 @@ docker_base_build: ## build base image with source dependencies and compiled bin
 	docker images "insolar-base"
 
 .PHONY: docker_clean
-docker_clean: ## force remove dangling docker images (it resets cache, because they used ad intermediate layers)
-	docker images -f "dangling=true" -q | xargs docker rmi -f
+docker_clean: ## removes intermediate docker image layers w/o tags (beware: it clean up space, but resets caches)
+	docker image prune -f
 
 .PHONY: help
 help: ## Display this help screen
