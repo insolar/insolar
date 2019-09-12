@@ -219,10 +219,11 @@ func (d *distributor) sendPulseToHost(ctx context.Context, p *insolar.Pulse, hos
 
 	pulseRequest := NewPulsePacketWithTrace(ctx, p, d.pulsarHost, host, uint64(d.generateID()))
 
-	_, err := d.sendRequestToHost(ctx, pulseRequest, host)
+	f, err := d.sendRequestToHost(ctx, pulseRequest, host)
 	if err != nil {
 		return err
 	}
+	f.Cancel()
 	return nil
 }
 

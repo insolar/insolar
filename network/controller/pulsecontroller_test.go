@@ -196,7 +196,6 @@ func TestProcessIncorrectPacket(t *testing.T) {
 	request.SetRequest(&packet.RPCRequest{})
 	_, err := controller.processPulse(context.Background(), request)
 	assert.Error(t, err)
-	request.SetResponse(&packet.BasicResponse{Success: true})
 	_, err = controller.processPulse(context.Background(), request)
 	assert.Error(t, err)
 }
