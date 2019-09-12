@@ -72,10 +72,6 @@ func (m *PulseManager) AddDispatcher(d ...dispatcher.Dispatcher) {
 func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 	m.setLock.Lock()
 	defer m.setLock.Unlock()
-	onPulseStart := time.Now()
-	defer func() {
-		stats.Record(ctx, metrics.PulseManagerOnPulseTiming.M(float64(time.Since(onPulseStart).Nanoseconds())/1e6))
-	}()
 	if m.stopped {
 		return errors.New("can't call Set method on PulseManager after stop")
 	}
@@ -89,7 +85,12 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 	span.AddAttributes(
 		trace.Int64Attribute("pulse.PulseNumber", int64(newPulse.PulseNumber)),
 	)
-	defer span.End()
+
+	onPulseStart := time.Now()
+	defer func() {
+		stats.Record(ctx, metrics.PulseManagerOnPulseTiming.M(float64(time.Since(onPulseStart).Nanoseconds())/1e6))
+		span.End()
+	}()
 
 	// Dealing with node lists.
 	logger.Debug("dealing with node lists.")

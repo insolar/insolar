@@ -239,12 +239,12 @@ func (lr *LogicRunner) GracefulStop(ctx context.Context) error {
 
 func (lr *LogicRunner) OnPulse(ctx context.Context, oldPulse insolar.Pulse, newPulse insolar.Pulse) error {
 	onPulseStart := time.Now()
+	ctx, span := instracer.StartSpan(ctx, "pulse.logicrunner")
 	defer func(ctx context.Context) {
 		stats.Record(ctx,
 			metrics.LogicRunnerOnPulseTiming.M(float64(time.Since(onPulseStart).Nanoseconds())/1e6))
+		span.End()
 	}(ctx)
-	ctx, span := instracer.StartSpan(ctx, "pulse.logicrunner")
-	defer span.End()
 
 	err := lr.WriteController.CloseAndWait(ctx, oldPulse.PulseNumber)
 	if err != nil {

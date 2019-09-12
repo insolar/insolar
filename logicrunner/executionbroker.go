@@ -401,16 +401,17 @@ func (q *ExecutionBroker) finishPendingIfNeeded(ctx context.Context) {
 }
 
 func (q *ExecutionBroker) OnPulse(ctx context.Context) []payload.Payload {
+	q.stateLock.Lock()
+	defer q.stateLock.Unlock()
+
+	logger := inslogger.FromContext(ctx)
+
 	ctx = insmetrics.InsertTag(ctx, metrics.TagExecutionBrokerName, q.name)
 	onPulseStart := time.Now()
 	defer func(ctx context.Context) {
 		stats.Record(ctx,
 			metrics.ExecutionBrokerOnPulseTiming.M(float64(time.Since(onPulseStart).Nanoseconds())/1e6))
 	}(ctx)
-
-	logger := inslogger.FromContext(ctx)
-	q.stateLock.Lock()
-	defer q.stateLock.Unlock()
 
 	defer func() {
 		// clean everything, just in case
