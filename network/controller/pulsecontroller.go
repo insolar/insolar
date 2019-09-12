@@ -53,15 +53,15 @@ package controller
 import (
 	"context"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 	"github.com/insolar/insolar/pulsar"
-	"github.com/pkg/errors"
 )
 
 type PulseController interface {
@@ -97,7 +97,7 @@ func (pc *pulseController) processPulse(ctx context.Context, request network.Rec
 	}
 
 	go pc.PulseHandler.HandlePulse(ctx, p, request)
-	return pc.Network.BuildResponse(ctx, request, &packet.BasicResponse{Success: true, Error: ""}), nil
+	return nil, nil
 }
 
 func (pc *pulseController) verifyPulseSign(pulse insolar.Pulse) error {
