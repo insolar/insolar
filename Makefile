@@ -29,7 +29,7 @@ BUILD_DATE ?= $(shell ./scripts/dev/git-date-time.sh -d)
 BUILD_TIME ?= $(shell ./scripts/dev/git-date-time.sh -t)
 BUILD_HASH ?= $(shell git rev-parse --short HEAD)
 BUILD_VERSION ?= $(shell git describe --tags)
-DOCKER_BASE_IMAGE_TAG ?= $(BUILD_HASH)
+DOCKER_BASE_IMAGE_TAG ?= $(BUILD_VERSION)
 
 GOPATH ?= `go env GOPATH`
 LDFLAGS += -X github.com/insolar/insolar/version.Version=${BUILD_VERSION}
@@ -263,7 +263,6 @@ docker_base_build: ## build base image with source dependencies and compiled bin
 		--build-arg BUILD_HASH="$(BUILD_HASH)" \
 		--build-arg BUILD_VERSION="$(BUILD_VERSION)" \
 		-f docker/Dockerfile .
-	docker tag insolar-base:$(DOCKER_BASE_IMAGE_TAG) insolar-base:$(BUILD_VERSION)
 	docker tag insolar-base:$(DOCKER_BASE_IMAGE_TAG) insolar-base:latest
 	docker images "insolar-base"
 
