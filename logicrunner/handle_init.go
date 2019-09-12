@@ -142,10 +142,10 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 
 	ctx = insmetrics.InsertTag(ctx, metrics.TagHandlePayloadType, payloadType.String())
 	stats.Record(ctx, metrics.HandleStarted.M(1))
-	defer func(ctx context.Context) {
+	defer func() {
 		stats.Record(ctx,
-			metrics.HandleTiming.M(float64(time.Since(handleStart).Nanoseconds())/1e6), metrics.HandleFinished.M(1))
-	}(ctx)
+			metrics.HandleTiming.M(float64(time.Since(handleStart).Nanoseconds())/1e6))
+	}()
 
 	ctx, _ = inslogger.WithField(ctx, "msg_type", payloadType.String())
 
@@ -212,6 +212,7 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 	if err != nil {
 		bus.ReplyError(ctx, s.dep.Sender, originMeta, err)
 		ctx = insmetrics.InsertTag(ctx, metrics.TagFinishedWithError, errors.Cause(err).Error())
+		stats.Record(ctx, metrics.HandleFinished.M(1))
 	}
 	return err
 }

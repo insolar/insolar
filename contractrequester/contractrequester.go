@@ -400,6 +400,7 @@ func (cr *ContractRequester) ReceiveResult(ctx context.Context, msg *message.Mes
 	if err != nil {
 		bus.ReplyError(ctx, cr.Sender, *payloadMeta, err)
 		ctx = insmetrics.InsertTag(ctx, metrics.TagFinishedWithError, errors.Cause(err).Error())
+		stats.Record(ctx, metrics.HandleFinished.M(1))
 		return nil
 	}
 	stats.Record(ctx, metrics.HandleFinished.M(1))
