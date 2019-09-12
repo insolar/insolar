@@ -22,6 +22,8 @@ import (
 	"errors"
 	"time"
 
+	"go.opencensus.io/stats"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/instrumentation/instracer"
@@ -30,7 +32,6 @@ import (
 	lrCommon "github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 	"github.com/insolar/insolar/logicrunner/metrics"
-	"go.opencensus.io/stats"
 )
 
 type LogicRunnerRPCStub interface {
