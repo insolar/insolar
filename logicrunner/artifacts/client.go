@@ -20,6 +20,8 @@ import (
 	"context"
 	"fmt"
 
+	"go.opencensus.io/stats"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
@@ -28,6 +30,7 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/logicrunner/metrics"
 	"github.com/insolar/insolar/pulse"
 
 	"github.com/pkg/errors"
@@ -157,6 +160,14 @@ func (m *client) RegisterIncomingRequest(ctx context.Context, request *record.In
 	if err != nil {
 		return nil, errors.Wrap(err, "RegisterIncomingRequest")
 	}
+	switch {
+	case res.Result != nil:
+		stats.Record(ctx, metrics.IncomingRequestsClosed.M(1))
+	case res.Request != nil:
+		stats.Record(ctx, metrics.IncomingRequestsDuplicate.M(1))
+	default:
+		stats.Record(ctx, metrics.IncomingRequestsNew.M(1))
+	}
 	return res, err
 }
 
@@ -170,6 +181,16 @@ func (m *client) RegisterOutgoingRequest(ctx context.Context, request *record.Ou
 	if err != nil {
 		return nil, errors.Wrap(err, "RegisterOutgoingRequest")
 	}
+
+	switch {
+	case res.Result != nil:
+		stats.Record(ctx, metrics.OutgoingRequestsClosed.M(1))
+	case res.Request != nil:
+		stats.Record(ctx, metrics.OutgoingRequestsDuplicate.M(1))
+	default:
+		stats.Record(ctx, metrics.OutgoingRequestsNew.M(1))
+	}
+
 	return res, err
 }
 

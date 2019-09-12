@@ -21,12 +21,14 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/common"
+	"github.com/insolar/insolar/logicrunner/metrics"
 )
 
 const MaxFetchCount = 20
@@ -123,11 +125,11 @@ func (rf *requestFetcher) fetchWrapper(ctx context.Context) {
 func (rf *requestFetcher) fetch(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
 
+	stats.Record(ctx, metrics.RequestFetcherFetchCall.M(1))
 	reqRefs, err := rf.am.GetPendings(ctx, rf.object)
 	if err != nil {
 		if err == insolar.ErrNoPendingRequest {
 			logger.Debug("no more pendings on ledger")
-
 			rf.broker.NoMoreRequestsOnLedger(ctx)
 			return nil
 		}
@@ -150,10 +152,12 @@ func (rf *requestFetcher) fetch(ctx context.Context) error {
 			logger.Errorf("skipping request with bad reference, ref=%s", reqRef.String())
 		} else if rf.broker.IsKnownRequest(ctx, reqRef) {
 			logger.Debug("skipping known request ", reqRef.String())
+			stats.Record(ctx, metrics.RequestFetcherFetchKnown.M(1))
 			continue
 		}
 
 		logger.Debug("getting abandoned request from ledger")
+		stats.Record(ctx, metrics.RequestFetcherFetchUnique.M(1))
 		request, err := rf.am.GetAbandonedRequest(ctx, rf.object, reqRef)
 		if err != nil {
 			return errors.Wrap(err, "couldn't get request")
