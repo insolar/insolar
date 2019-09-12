@@ -40,8 +40,7 @@ func NewPulseConveyor(conveyorMachineConfig smachine.SlotMachineConfig, factoryF
 		injector:   injector,
 	}
 	r.signalQueue = tools.NewSignalFuncQueue(&r.mutex, r.externalSignal.NextBroadcast)
-	r.slotMachine = smachine.NewSlotMachine(conveyorMachineConfig, nil, nil,
-		r.internalSignal.NextBroadcast)
+	r.slotMachine = smachine.NewSlotMachine(conveyorMachineConfig, nil, nil)
 
 	return r
 }
@@ -67,7 +66,7 @@ type PulseConveyor struct {
 	pulseService PulseServiceAdapter
 }
 
-func (m *PulseConveyor) GetAdapters() *smachine.AdapterRegistry {
+func (m *PulseConveyor) GetAdapters() *smachine.SharedRegistry {
 	return m.slotMachine.GetAdapters()
 }
 
@@ -139,14 +138,14 @@ func (p *PulseConveyor) CommitPulseChange(pd pulse.Data) {
 			p.future = nil
 		} else {
 			p.present = newPulseSlot(pd,
-				p.slotConfig, p.injector, p.GetAdapters(), p.internalSignal.NextBroadcast)
+				p.slotConfig, p.injector, p.GetAdapters())
 
 			p.slotMachine.AddNew(p.workerCtx, smachine.NoLink(),
 				&PresentPulseSM{pulseSMTemplate{ps: p.present, psa: &p.pulseService}})
 		}
 
 		p.future = newPulseSlot(pd.CreateNextExpected(),
-			p.slotConfig, p.injector, p.GetAdapters(), p.internalSignal.NextBroadcast)
+			p.slotConfig, p.injector, p.GetAdapters())
 
 		p.slotMachine.AddNew(p.workerCtx, smachine.NoLink(),
 			&FuturePulseSM{pulseSMTemplate{ps: p.future, psa: &p.pulseService}})
@@ -212,9 +211,9 @@ const (
 )
 
 func newPulseSlot(pd pulse.Data, config smachine.SlotMachineConfig, injector smachine.DependencyInjector,
-	adapters *smachine.AdapterRegistry, internalSignal func()) *PulseSlot {
+	adapters *smachine.SharedRegistry) *PulseSlot {
 
-	r := &PulseSlot{pd: pd, slots: smachine.NewSlotMachine(config, injector, adapters, internalSignal)}
+	r := &PulseSlot{pd: pd, slots: smachine.NewSlotMachine(config, injector, adapters)}
 	r.slots.SetContainerState(r)
 	return r
 }

@@ -22,6 +22,7 @@ import (
 	"github.com/insolar/insolar/conveyor/smachine"
 	"github.com/insolar/insolar/conveyor/smachine/main/example"
 	"github.com/insolar/insolar/conveyor/smachine/tools"
+	"github.com/insolar/insolar/network/consensus/common/rwlock"
 	"time"
 )
 
@@ -32,10 +33,11 @@ func main() {
 	fn1(&implA{}, "test")
 
 	sm := smachine.NewSlotMachine(smachine.SlotMachineConfig{
+		SyncStrategy:    &syncStrategy{},
 		SlotPageSize:    10,
 		PollingPeriod:   1000 * time.Millisecond,
 		PollingTruncate: 100 * time.Millisecond,
-	}, nil, nil, nil)
+	}, nil, nil)
 
 	example.SetInjectServiceAdapterA(&implA{}, &sm)
 
@@ -75,4 +77,17 @@ func (*implA) DoSomething(param string) string {
 
 func (*implA) DoSomethingElse(param0 string, param1 int) (bool, string) {
 	return param1 != 0, param0
+}
+
+var _ smachine.WorkSynchronizationStrategy = &syncStrategy{}
+
+type syncStrategy struct {
+}
+
+func (*syncStrategy) NewSlotPoolLocker() rwlock.RWLocker {
+	return rwlock.DummyLocker()
+}
+
+func (*syncStrategy) GetInternalSignalCallback() smachine.SignalCallbackFunc {
+	return nil
 }

@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/insolar/insolar/conveyor/smachine/tools"
-	"github.com/insolar/insolar/network/consensus/common/rwlock"
 	"github.com/pkg/errors"
 	"math"
 	"sync"
@@ -29,6 +28,7 @@ import (
 )
 
 type SlotMachineConfig struct {
+	SyncStrategy    WorkSynchronizationStrategy
 	PollingPeriod   time.Duration
 	PollingTruncate time.Duration
 	SlotPageSize    uint16
@@ -38,10 +38,11 @@ type DependencyInjector interface {
 	InjectDependencies(sm StateMachine, slotID SlotID, container *SlotMachine)
 }
 
-func NewSlotMachine(config SlotMachineConfig, injector DependencyInjector, adapters *AdapterRegistry, internalSignal func()) SlotMachine {
+//WorkSynchronizationStrategy
+func NewSlotMachine(config SlotMachineConfig, injector DependencyInjector, adapters *SharedRegistry) SlotMachine {
 	ownsAdapters := false
 	if adapters == nil {
-		adapters = NewAdapterRegistry()
+		adapters = NewSharedRegistry()
 		ownsAdapters = true
 	}
 	return SlotMachine{
@@ -49,11 +50,11 @@ func NewSlotMachine(config SlotMachineConfig, injector DependencyInjector, adapt
 		injector:      injector,
 		adapters:      adapters,
 		ownsAdapters:  ownsAdapters,
-		slotPool:      NewSlotPool(rwlock.DummyLocker(), config.SlotPageSize),
+		slotPool:      NewSlotPool(config.SyncStrategy.NewSlotPoolLocker(), config.SlotPageSize),
 		activeSlots:   NewSlotQueue(ActiveSlots),
 		prioritySlots: NewSlotQueue(ActiveSlots),
 		workingSlots:  NewSlotQueue(WorkingSlots),
-		syncQueue:     tools.NewSignalFuncQueue(&sync.Mutex{}, internalSignal),
+		syncQueue:     tools.NewSignalFuncQueue(&sync.Mutex{}, config.SyncStrategy.GetInternalSignalCallback()),
 	}
 }
 
@@ -61,7 +62,7 @@ type SlotMachine struct {
 	config         SlotMachineConfig
 	injector       DependencyInjector
 	containerState SlotMachineState
-	adapters       *AdapterRegistry
+	adapters       *SharedRegistry
 	ownsAdapters   bool
 
 	migrationCount uint16
@@ -99,7 +100,7 @@ func (m *SlotMachine) allocateNextSlotID() SlotID {
 	}
 }
 
-func (m *SlotMachine) GetAdapters() *AdapterRegistry {
+func (m *SlotMachine) GetAdapters() *SharedRegistry {
 	return m.adapters
 }
 
@@ -137,39 +138,17 @@ func (m *SlotMachine) ScanEventsOnly() (repeatNow bool, nextPollTime time.Time) 
 
 	repeatNow = m.scanEvents()
 
-	m.afterScan()
 	return repeatNow, time.Time{}
 }
 
-func (m *SlotMachine) PrepareScan(collector WorkCollector) (canWait bool, nextPollTime time.Time) {
+func (m *SlotMachine) ProcessEventsOnly(scanTime time.Time) (waitForSignal bool, nextPollTime time.Time) {
 
-	nextPollTime = minTime(m.scanWakeUpAt, m.pollingSlots.GetNearestPollTime())
-	canWait = m.hotWaitOnly
-
-	scanTime := collector.GetScanTime()
 	m.beforeScan(scanTime)
 
-	if m.machineStartedAt.IsZero() {
-		m.machineStartedAt = scanTime
-	}
-
-	if collector.IsContinuation() {
-		collector.AddPriority(&m.prioritySlots)
-	} else {
-		collector.AddPriority(&m.prioritySlots)
-		collector.AddWorking(&m.activeSlots)
-		m.pollingSlots.FilterOut(scanTime, collector.AddWorking)
-
-		m.scanCount++
-		m.hotWaitOnly = true
-	}
-
 	m.pollingSlots.PrepareFor(scanTime.Add(m.config.PollingPeriod).Truncate(m.config.PollingTruncate))
-	if m.scanEvents() {
-		canWait = false
-	}
 
-	return canWait, nextPollTime
+	waitForSignal = !m.scanEvents()
+	return waitForSignal, minTime(m.scanWakeUpAt, m.pollingSlots.GetNearestPollTime())
 }
 
 func (m *SlotMachine) ScanOnce(worker SlotWorker) (repeatNow bool, nextPollTime time.Time) {
@@ -199,7 +178,7 @@ func (m *SlotMachine) ScanOnce(worker SlotWorker) (repeatNow bool, nextPollTime 
 	m.scanWorkingSlots(worker, scanTime)
 
 	repeatNow = repeatNow || !m.hotWaitOnly
-	return repeatNow, minTime(m.afterScan(), m.pollingSlots.GetNearestPollTime())
+	return repeatNow, minTime(m.scanWakeUpAt, m.pollingSlots.GetNearestPollTime())
 }
 
 func minTime(t1, t2 time.Time) time.Time {
@@ -220,11 +199,7 @@ func (m *SlotMachine) beforeScan(scanTime time.Time) {
 	m.scanWakeUpAt = time.Time{}
 }
 
-func (m *SlotMachine) afterScan() time.Time {
-	return m.scanWakeUpAt
-}
-
-func (m *SlotMachine) scanEvents() (repeatNow bool) {
+func (m *SlotMachine) scanEvents() bool {
 
 	syncQ := m.syncQueue.Flush()
 	if len(syncQ) == 0 {

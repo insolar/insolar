@@ -16,14 +16,33 @@
 
 package smachine
 
-import "time"
+import (
+	"github.com/insolar/insolar/network/consensus/common/rwlock"
+	"time"
+)
+
+type WorkRegion interface {
+}
+
+type SignalCallbackFunc func()
+
+type WorkSynchronizationStrategy interface {
+	NewSlotPoolLocker() rwlock.RWLocker
+	GetInternalSignalCallback() SignalCallbackFunc
+}
 
 type WorkCollector interface {
-	GetScanTime() time.Time
+	AddPrioritySlots(*SlotQueue)
+	AddRegularSlots(*SlotQueue)
 
-	AddPriority(*SlotQueue)
-	AddWorking(*SlotQueue)
-	AddHotWait(*SlotQueue)
+	AddPrioritySlot(*Slot)
+	AddRegularSlot(*Slot)
+}
 
-	IsContinuation() bool
+type WorkDispenser interface {
+	//	AttachToRegion(WorkRegion)
+	//NextWorkingSlot() *Slot
+
+	PrepareSlots(scanTime time.Time, collector WorkCollector) (waitForSignal bool, nextPollTime time.Time)
+	ProcessEventsOnly(scanTime time.Time) (waitForSignal bool, nextPollTime time.Time)
 }

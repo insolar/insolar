@@ -18,17 +18,17 @@ package smachine
 
 import "sync"
 
-func NewAdapterRegistry() *AdapterRegistry {
-	return &AdapterRegistry{}
+func NewSharedRegistry() *SharedRegistry {
+	return &SharedRegistry{}
 }
 
-type AdapterRegistry struct {
+type SharedRegistry struct {
 	mutex sync.RWMutex
 
 	adapters map[AdapterID]*adapterExecHelper
 }
 
-func (m *AdapterRegistry) RegisterAdapter(adapterID AdapterID, adapterExecutor AdapterExecutor) ExecutionAdapter {
+func (m *SharedRegistry) RegisterAdapter(adapterID AdapterID, adapterExecutor AdapterExecutor) ExecutionAdapter {
 	if adapterID.IsEmpty() {
 		panic("illegal value")
 	}
@@ -52,14 +52,14 @@ func (m *AdapterRegistry) RegisterAdapter(adapterID AdapterID, adapterExecutor A
 	return r
 }
 
-func (m *AdapterRegistry) GetAdapter(adapterID AdapterID) ExecutionAdapter {
+func (m *SharedRegistry) GetAdapter(adapterID AdapterID) ExecutionAdapter {
 	m.mutex.RLock()
 	a := m.adapters[adapterID]
 	m.mutex.RUnlock()
 	return a
 }
 
-func (m *AdapterRegistry) migrate(state SlotMachineState, migrationCount uint16) {
+func (m *SharedRegistry) migrate(state SlotMachineState, migrationCount uint16) {
 	m.mutex.RLock()
 	defer m.mutex.RUnlock()
 	for _, adapter := range m.adapters {
