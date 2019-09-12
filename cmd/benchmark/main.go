@@ -376,9 +376,9 @@ func main() {
 			if totalBalanceAfter.Cmp(totalBalanceBefore) == 0 {
 				break
 			}
-			fmt.Printf("Total balance before and after don't match: %v vs %v - retrying in %s seconds...\n",
+			fmt.Printf("Total balance before and after don't match: %v vs %v - retrying in %s ...\n",
 				totalBalanceBefore, totalBalanceAfter, balanceCheckDelay)
-			time.Sleep(balanceCheckDelay * time.Second)
+			time.Sleep(balanceCheckDelay)
 
 		}
 		fmt.Printf("Total balance before: %v and after: %v\n", totalBalanceBefore, totalBalanceAfter)
