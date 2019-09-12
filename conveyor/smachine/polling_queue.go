@@ -59,7 +59,7 @@ func (p *PollingQueue) growPollingSlots() {
 	}
 }
 
-func (p *PollingQueue) FilterOut(scanTime time.Time, queue *SlotQueue) {
+func (p *PollingQueue) FilterOut(scanTime time.Time, addSlots func(*SlotQueue)) {
 	if len(p.polls) == 0 {
 		return
 	}
@@ -71,9 +71,9 @@ func (p *PollingQueue) FilterOut(scanTime time.Time, queue *SlotQueue) {
 			break
 		}
 
-		queue.AppendAll(&ps.SlotQueue)
+		addSlots(&ps.SlotQueue)
 
-		if p.seqLen == 0 {
+		if !ps.SlotQueue.IsEmpty() || p.seqLen == 0 {
 			return
 		}
 		p.seqLen--

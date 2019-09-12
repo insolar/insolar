@@ -378,21 +378,31 @@ func (p *executionContext) executeNextStep() (bool, StateUpdate, uint16) {
 		current := p.s.step
 		stateUpdate := current.Transition(p).ensureMarker(p.getMarker())
 
-		switch stateUpdType(stateUpdate.updType) { // fast path(s)
+		su := stateUpdType(stateUpdate.updType)
+		switch su { // fast path(s)
 		case stateUpdRepeat:
-			if loopCount < stateUpdate.param0 {
-				continue
+			if loopCount >= stateUpdate.param0 {
+				break
 			}
+			continue
 		case stateUpdNextLoop:
+			if loopCount >= stateUpdate.param0 {
+				break
+			}
 			ns := stateUpdate.step.Transition
 			if ns != nil && !p.s.declaration.IsConsecutive(current.Transition, ns) {
 				break
 			}
 			p.s.setNextStep(stateUpdate.step)
-			if loopCount < stateUpdate.param0 {
-				continue
-			}
 			continue
+		//case stateUpdReplace:
+		//	cf := stateUpdate.param1.(CreateFunc)
+
+		default:
+			if su.HasPrepare() && stateUpdate.param1 != nil {
+				fn := stateUpdate.param1.(StepPrepareFunc)
+				fn()
+			}
 		}
 		return false, stateUpdate, p.countAsyncCalls
 	}

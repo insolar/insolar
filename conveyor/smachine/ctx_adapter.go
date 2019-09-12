@@ -99,9 +99,7 @@ func (c *adapterCallRequest) DelayedStart() CallConditionalUpdate {
 	c.ensureMode(adapterAsyncCallContext)
 	defer c.discard()
 
-	return &conditionalUpdate{marker: c.ctx.getMarker(), updMode: stateUpdNext, kickOff: func(*Slot) {
-		c._startAsync()
-	}}
+	return &conditionalUpdate{marker: c.ctx.getMarker(), updMode: stateUpdNext, kickOff: c._startAsync}
 }
 
 func (c *adapterCallRequest) TryCall() bool {

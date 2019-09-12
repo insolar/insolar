@@ -161,6 +161,8 @@ type AsyncResultContext interface {
 type BargeInContext interface {
 	BasicContext
 
+	SlotLink() SlotLink
+
 	GetBargeInParam() interface{}
 	IsAtOriginalStep() bool
 
@@ -178,6 +180,8 @@ type BargeInContext interface {
 
 type FailureContext interface {
 	BasicContext
+
+	SlotLink() SlotLink
 
 	/* A step the slot is at */
 	AffectedStep() SlotStep

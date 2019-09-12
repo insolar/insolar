@@ -53,7 +53,7 @@ func stateUpdateNext(marker ContextMarker, slotStep SlotStep, canLoop bool) Stat
 	return slotMachineUpdateUint(marker, stateUpdNext, slotStep, 0)
 }
 
-type StepPrepareFunc func(slot *Slot)
+type StepPrepareFunc func()
 
 func prepareToParam(prepare StepPrepareFunc) interface{} {
 	if prepare == nil {
@@ -132,10 +132,10 @@ const (
 	// no step
 	stateUpdNoChange
 	stateUpdStop
-	stateUpdError
-	stateUpdPanic
+	stateUpdError // external handler, cant be detached
+	stateUpdPanic // external handler, cant be detached
 	stateUpdExpired
-	stateUpdReplace
+	stateUpdReplace // external handler, cant be detached
 	stateUpdReplaceWith
 
 	// step, no prepare
@@ -144,7 +144,7 @@ const (
 	stateUpdRepeat   // supports short-loop
 	stateUpdNextLoop // supports short-loop
 
-	// step and prepare
+	// step and prepare // prepare should be executed in-sync
 	stateUpdNext
 	stateUpdPoll
 	stateUpdSleep
