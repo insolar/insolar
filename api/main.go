@@ -54,6 +54,7 @@ type Runner struct {
 	JetCoordinator    jet.Coordinator
 	NetworkStatus     insolar.NetworkStatus
 
+	handler       http.Handler
 	server        *http.Server
 	rpcServer     *rpc.Server
 	cfg           *configuration.APIRunner
@@ -166,17 +167,7 @@ func NewRunner(cfg *configuration.APIRunner,
 		}
 	}
 
-	return &ar, nil
-}
-
-// IsAPIRunner is implementation of APIRunner interface for component manager
-func (ar *Runner) IsAPIRunner() bool {
-	return true
-}
-
-// Start runs api server
-func (ar *Runner) Start(ctx context.Context) error {
-	logger := inslogger.FromContext(ctx)
+	// init handler
 	hc := NewHealthChecker(ar.CertificateManager, ar.NodeNetwork, ar.PulseAccessor)
 
 	router := http.NewServeMux()
@@ -185,7 +176,24 @@ func (ar *Runner) Start(ctx context.Context) error {
 
 	router.HandleFunc("/healthcheck", hc.CheckHandler)
 	router.Handle(ar.cfg.RPC, ar.rpcServer)
+	ar.handler = router
 
+	return &ar, nil
+}
+
+// IsAPIRunner is implementation of APIRunner interface for component manager
+func (ar *Runner) IsAPIRunner() bool {
+	return true
+}
+
+// Handler returns root http handler.
+func (ar *Runner) Handler() http.Handler {
+	return ar.handler
+}
+
+// Start runs api server
+func (ar *Runner) Start(ctx context.Context) error {
+	logger := inslogger.FromContext(ctx)
 	logger.Info("Starting ApiRunner ...")
 	logger.Info("Config: ", ar.cfg)
 	listener, err := net.Listen("tcp", ar.server.Addr)
