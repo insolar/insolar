@@ -79,6 +79,7 @@ func (b *BuiltIn) CallConstructor(
 	ctx = insmetrics.InsertTag(ctx, metrics.TagContractPrototype, b.PrototypeRefRegistry[codeRef])
 	ctx = insmetrics.InsertTag(ctx, metrics.TagContractMethodName, "Constructor")
 	defer func(ctx context.Context) {
+
 		stats.Record(ctx, metrics.ContractExecutionTime.M(float64(time.Since(executeStart).Nanoseconds())/1e6))
 	}(ctx)
 

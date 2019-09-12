@@ -18,6 +18,7 @@ package metrics
 
 import (
 	"go.opencensus.io/stats"
+	"go.opencensus.io/stats/view"
 )
 
 var (
@@ -43,3 +44,35 @@ var (
 		stats.UnitDimensionless,
 	)
 )
+
+func init() {
+	err := view.Register(
+		&view.View{
+			Name:        ResultsMatcherAddStillExecution.Name(),
+			Description: ResultsMatcherAddStillExecution.Description(),
+			Measure:     ResultsMatcherAddStillExecution,
+			Aggregation: view.Sum(),
+		},
+		&view.View{
+			Name:        ResultsMatcherAddUnwantedResponse.Name(),
+			Description: ResultsMatcherAddUnwantedResponse.Description(),
+			Measure:     ResultsMatcherAddUnwantedResponse,
+			Aggregation: view.Sum(),
+		},
+		&view.View{
+			Name:        ResultsMatcherSentResults.Name(),
+			Description: ResultsMatcherSentResults.Description(),
+			Measure:     ResultsMatcherSentResults,
+			Aggregation: view.Sum(),
+		},
+		&view.View{
+			Name:        ResultsMatcherDroppedResults.Name(),
+			Description: ResultsMatcherDroppedResults.Description(),
+			Measure:     ResultsMatcherDroppedResults,
+			Aggregation: view.Sum(),
+		},
+	)
+	if err != nil {
+		panic(err)
+	}
+}

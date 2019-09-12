@@ -18,6 +18,7 @@ package metrics
 
 import (
 	"go.opencensus.io/stats"
+	"go.opencensus.io/stats/view"
 )
 
 // IncomingRequests related stats
@@ -57,3 +58,48 @@ var (
 		stats.UnitDimensionless,
 	)
 )
+
+func init() {
+	err := view.Register(
+		&view.View{
+			Name:        IncomingRequestsNew.Name(),
+			Description: IncomingRequestsNew.Description(),
+			Measure:     IncomingRequestsNew,
+			Aggregation: view.Sum(),
+		},
+		&view.View{
+			Name:        IncomingRequestsDuplicate.Name(),
+			Description: IncomingRequestsDuplicate.Description(),
+			Measure:     IncomingRequestsDuplicate,
+			Aggregation: view.Sum(),
+		},
+		&view.View{
+			Name:        IncomingRequestsClosed.Name(),
+			Description: IncomingRequestsClosed.Description(),
+			Measure:     IncomingRequestsClosed,
+			Aggregation: view.Sum(),
+		},
+
+		&view.View{
+			Name:        OutgoingRequestsNew.Name(),
+			Description: OutgoingRequestsNew.Description(),
+			Measure:     OutgoingRequestsNew,
+			Aggregation: view.Sum(),
+		},
+		&view.View{
+			Name:        OutgoingRequestsDuplicate.Name(),
+			Description: OutgoingRequestsDuplicate.Description(),
+			Measure:     OutgoingRequestsDuplicate,
+			Aggregation: view.Sum(),
+		},
+		&view.View{
+			Name:        OutgoingRequestsClosed.Name(),
+			Description: OutgoingRequestsClosed.Description(),
+			Measure:     OutgoingRequestsClosed,
+			Aggregation: view.Sum(),
+		},
+	)
+	if err != nil {
+		panic(err)
+	}
+}

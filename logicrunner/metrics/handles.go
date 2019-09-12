@@ -18,6 +18,8 @@ package metrics
 
 import (
 	"go.opencensus.io/stats"
+	"go.opencensus.io/stats/view"
+	"go.opencensus.io/tag"
 
 	"github.com/insolar/insolar/instrumentation/insmetrics"
 )
@@ -67,6 +69,104 @@ var (
 		stats.UnitDimensionless,
 	)
 )
+
+func init() {
+	err := view.Register(
+		&view.View{
+			Name:        HandlingParsingError.Name(),
+			Description: HandlingParsingError.Description(),
+			Measure:     HandlingParsingError,
+			Aggregation: view.Sum(),
+		},
+		&view.View{
+			Name:        HandleTiming.Name(),
+			Description: HandleTiming.Description(),
+			Measure:     HandleTiming,
+			TagKeys:     []tag.Key{TagHandlePayloadType},
+			Aggregation: view.Distribution(0.001, 0.01, 0.1, 1, 10, 100, 1000, 5000, 10000, 20000),
+		},
+		&view.View{
+			Name:        HandleStarted.Name(),
+			Description: HandleStarted.Description(),
+			Measure:     HandleStarted,
+			TagKeys:     []tag.Key{TagHandlePayloadType},
+			Aggregation: view.Sum(),
+		},
+		&view.View{
+			Name:        HandlePast.Name(),
+			Description: HandlePast.Description(),
+			Measure:     HandlePast,
+			TagKeys:     []tag.Key{TagHandlePayloadType},
+			Aggregation: view.Sum(),
+		},
+		&view.View{
+			Name:        HandlePastFlowCancelled.Name(),
+			Description: HandlePastFlowCancelled.Description(),
+			Measure:     HandlePastFlowCancelled,
+			TagKeys:     []tag.Key{TagHandlePayloadType},
+			Aggregation: view.Sum(),
+		},
+		&view.View{
+			Name:        HandleFuture.Name(),
+			Description: HandleFuture.Description(),
+			Measure:     HandleFuture,
+			TagKeys:     []tag.Key{TagHandlePayloadType},
+			Aggregation: view.Sum(),
+		},
+		&view.View{
+			Name:        HandleFinished.Name(),
+			Description: HandleFinished.Description(),
+			Measure:     HandleFinished,
+			TagKeys:     []tag.Key{TagHandlePayloadType, TagFinishedWithError},
+			Aggregation: view.Sum(),
+		},
+		&view.View{
+			Name:        HandleUnknownMessageType.Name(),
+			Description: HandleUnknownMessageType.Description(),
+			Measure:     HandleUnknownMessageType,
+			Aggregation: view.Sum(),
+		},
+		&view.View{
+			Name:        CallMethodLogicalError.Name(),
+			Description: CallMethodLogicalError.Description(),
+			Measure:     CallMethodLogicalError,
+			Aggregation: view.Sum(),
+		},
+		&view.View{
+			Name:        CallMethodAdditionalCall.Name(),
+			Description: CallMethodAdditionalCall.Description(),
+			Measure:     CallMethodAdditionalCall,
+			Aggregation: view.Sum(),
+		},
+		&view.View{
+			Name:        CallMethodLoopDetected.Name(),
+			Description: CallMethodLoopDetected.Description(),
+			Measure:     CallMethodLoopDetected,
+			Aggregation: view.Sum(),
+		},
+		&view.View{
+			Name:        ExecutorResultsRequestsFromPrevExecutor.Name(),
+			Description: ExecutorResultsRequestsFromPrevExecutor.Description(),
+			Measure:     ExecutorResultsRequestsFromPrevExecutor,
+			Aggregation: view.Sum(),
+		},
+		&view.View{
+			Name:        PendingFinishedAlreadyExecuting.Name(),
+			Description: PendingFinishedAlreadyExecuting.Description(),
+			Measure:     PendingFinishedAlreadyExecuting,
+			Aggregation: view.Sum(),
+		},
+		&view.View{
+			Name:        StillExecutingAlreadyExecuting.Name(),
+			Description: StillExecutingAlreadyExecuting.Description(),
+			Measure:     StillExecutingAlreadyExecuting,
+			Aggregation: view.Sum(),
+		},
+	)
+	if err != nil {
+		panic(err)
+	}
+}
 
 // unknown message type error
 var (

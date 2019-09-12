@@ -204,13 +204,12 @@ func (cr *ContractRequester) SendRequest(ctx context.Context, inMsg insolar.Payl
 	sendingStarted := time.Now()
 	ctx = insmetrics.InsertTag(ctx, metrics.CallMethodName, msg.Request.Method)
 	ctx = insmetrics.InsertTag(ctx, metrics.CallReturnMode, msg.Request.ReturnMode.String())
+	ctx, span := instracer.StartSpan(ctx, "ContractRequester.SendRequest")
 	defer func(ctx context.Context) {
 		stats.Record(ctx,
 			metrics.SendMessageTiming.M(float64(time.Since(sendingStarted).Nanoseconds())/1e6))
+		span.End()
 	}(ctx)
-
-	ctx, span := instracer.StartSpan(ctx, "ContractRequester.SendRequest")
-	defer span.End()
 
 	async := msg.Request.ReturnMode == record.ReturnSaga
 

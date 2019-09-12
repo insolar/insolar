@@ -140,20 +140,20 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 		payloadType = *s.payloadType
 	}
 
-	ctx = insmetrics.InsertTag(ctx, metrics.TagHandlePayloadType, payloadType.String())
-	stats.Record(ctx, metrics.HandleStarted.M(1))
-	defer func() {
-		stats.Record(ctx,
-			metrics.HandleTiming.M(float64(time.Since(handleStart).Nanoseconds())/1e6))
-	}()
-
 	ctx, _ = inslogger.WithField(ctx, "msg_type", payloadType.String())
 
 	ctx, span := instracer.StartSpan(ctx, "HandleCall.Present")
 	span.AddAttributes(
 		trace.StringAttribute("msg.Type", payloadType.String()),
 	)
-	defer span.End()
+
+	ctx = insmetrics.InsertTag(ctx, metrics.TagHandlePayloadType, payloadType.String())
+	stats.Record(ctx, metrics.HandleStarted.M(1))
+	defer func() {
+		stats.Record(ctx,
+			metrics.HandleTiming.M(float64(time.Since(handleStart).Nanoseconds())/1e6))
+		span.End()
+	}()
 
 	switch payloadType {
 	case payload.TypeSagaCallAcceptNotification:
