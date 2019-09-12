@@ -50,6 +50,7 @@ type PulsarConfiguration struct {
 	Pulsar   Pulsar
 	Tracer   Tracer
 	KeysPath string
+	Metrics  Metrics
 }
 
 // Holder provides methods to manage configuration
@@ -87,6 +88,7 @@ func NewPulsarConfiguration() PulsarConfiguration {
 		Pulsar:   NewPulsar(),
 		Tracer:   NewTracer(),
 		KeysPath: "./",
+		Metrics:  NewMetrics(),
 	}
 }
 
