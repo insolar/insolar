@@ -25,10 +25,11 @@ CI_GOMAXPROCS ?= 8
 CI_TEST_ARGS ?= -p 4
 
 BUILD_NUMBER := $(TRAVIS_BUILD_NUMBER)
-BUILD_DATE = $(shell date "+%Y-%m-%d")
-BUILD_TIME = $(shell date "+%H:%M:%S")
-BUILD_HASH = $(shell git rev-parse --short HEAD)
-BUILD_VERSION ?= $(shell git describe --abbrev=0 --tags)
+BUILD_DATE ?= $(shell ./scripts/dev/git-date-time.sh -d)
+BUILD_TIME ?= $(shell ./scripts/dev/git-date-time.sh -t)
+BUILD_HASH ?= $(shell git rev-parse --short HEAD)
+BUILD_VERSION ?= $(shell git describe --tags)
+DOCKER_BASE_IMAGE_TAG ?= $(BUILD_VERSION)
 
 GOPATH ?= `go env GOPATH`
 LDFLAGS += -X github.com/insolar/insolar/version.Version=${BUILD_VERSION}
@@ -206,17 +207,6 @@ CONTRACTS = $(wildcard application/contract/*)
 regen-proxies: $(BININSGOCC) ## regen contracts proxies
 	$(foreach c, $(CONTRACTS), $(BININSGOCC) proxy application/contract/$(notdir $(c))/$(notdir $(c)).go; )
 
-.PHONY: docker-insolard
-docker-insolard: ## build insolard docker image
-	docker build --target insolard --tag insolar/insolard -f ./docker/Dockerfile .
-
-.PHONY: docker-insgorund
-docker-insgorund: ## build insgorund docker image
-	docker build --target insgorund --tag insolar/insgorund -f ./docker/Dockerfile .
-
-.PHONY: docker
-docker: docker-insolard docker-insgorund ## build insolard and insgorund docker images
-
 .PHONY: generate-protobuf
 generate-protobuf: ## generate protobuf structs
 	protoc -I./vendor -I./ --gogoslick_out=./ network/node/internal/node/node.proto
@@ -264,6 +254,22 @@ prepare-inrospector-proto: ## install tools required for grpc development
 	go get -u github.com/grpc-ecosystem/grpc-gateway/protoc-gen-grpc-gateway
 	go get -u github.com/grpc-ecosystem/grpc-gateway/protoc-gen-swagger
 	go get -u github.com/golang/protobuf/protoc-gen-go
+
+.PHONY: docker_base_build
+docker_base_build: ## build base image with source dependencies and compiled binaries
+	docker build -t insolar-base:$(DOCKER_BASE_IMAGE_TAG) \
+		--build-arg BUILD_DATE="$(BUILD_DATE)" \
+		--build-arg BUILD_TIME="$(BUILD_TIME)" \
+		--build-arg BUILD_NUMBER="$(BUILD_NUMBER)" \
+		--build-arg BUILD_HASH="$(BUILD_HASH)" \
+		--build-arg BUILD_VERSION="$(BUILD_VERSION)" \
+		-f docker/Dockerfile .
+	docker tag insolar-base:$(DOCKER_BASE_IMAGE_TAG) insolar-base:latest
+	docker images "insolar-base"
+
+.PHONY: docker_clean
+docker_clean: ## removes intermediate docker image layers w/o tags (beware: it clean up space, but resets caches)
+	docker image prune -f
 
 .PHONY: help
 help: ## Display this help screen
