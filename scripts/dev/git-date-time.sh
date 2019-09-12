@@ -21,7 +21,7 @@ usage()
 
 gnu_date_available()
 {
-    ${DATE_CMD} -d "@1568213332" 2>&1 >/dev/null && RC=$? || RC=$?
+    ${DATE_CMD} -d "@1568213332" &> /dev/null && RC=$? || RC=$?
     return $RC
 }
 
