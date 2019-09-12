@@ -39,11 +39,11 @@ import (
 
 // passToNextLimit - number of requests we pass to next executor on pulse change,
 // the rest it should fetch of the ledger
-const passToNextLimit = 10
+const passToNextLimit = 50
 
 // prefetchLimit - when we reach this number of requests in queue, we start
 // pre-fetching requests from ledger
-const prefetchLimit = 3
+const prefetchLimit = 5
 
 //go:generate minimock -i github.com/insolar/insolar/logicrunner.ExecutionBrokerI -o ./ -s _mock.go -g
 
@@ -89,7 +89,7 @@ type ExecutionBroker struct {
 	outgoingSender OutgoingRequestSender
 
 	executionRegistry executionregistry.ExecutionRegistry
-	requestsFetcher   RequestsFetcher
+	requestsFetcher   RequestFetcher
 
 	pulseAccessor pulse.Accessor
 
@@ -438,13 +438,6 @@ func (q *ExecutionBroker) notConfirmedPending() bool {
 func (q *ExecutionBroker) NoMoreRequestsOnLedger(ctx context.Context) {
 	q.stateLock.Lock()
 	defer q.stateLock.Unlock()
-
-	select {
-	case <-ctx.Done():
-		inslogger.FromContext(ctx).Debug("pulse changed, skipping")
-		return
-	default:
-	}
 
 	q.ledgerHasMoreRequests = false
 	q.stopRequestsFetcher(ctx)
