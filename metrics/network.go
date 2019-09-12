@@ -71,15 +71,7 @@ var NetworkFutures = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 // NetworkConnections is current network transport connections count metric
 var NetworkConnections = prometheus.NewGauge(prometheus.GaugeOpts{
 	Name:      "connections",
-	Help:      "Current network transport connections count",
-	Namespace: insolarNamespace,
-	Subsystem: "network",
-})
-
-// NetworkComplete is metric that is committed when the node reaches complete network state
-var NetworkComplete = prometheus.NewGauge(prometheus.GaugeOpts{
-	Name:      "complete_network_state",
-	Help:      "Timestamp when the node reaches complete network state",
+	Help:      "Connections count in connection pool",
 	Namespace: insolarNamespace,
 	Subsystem: "network",
 })

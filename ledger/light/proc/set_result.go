@@ -40,13 +40,14 @@ type SetResult struct {
 	sideEffect record.State
 
 	dep struct {
-		writer   executor.WriteAccessor
-		filament executor.FilamentCalculator
-		sender   bus.Sender
-		locker   object.IndexLocker
-		records  object.AtomicRecordModifier
-		indexes  object.MemoryIndexStorage
-		pcs      insolar.PlatformCryptographyScheme
+		writer           executor.WriteAccessor
+		filament         executor.FilamentCalculator
+		sender           bus.Sender
+		locker           object.IndexLocker
+		records          object.AtomicRecordModifier
+		indexes          object.MemoryIndexStorage
+		pcs              insolar.PlatformCryptographyScheme
+		detachedNotifier executor.DetachedNotifier
 	}
 }
 
@@ -72,6 +73,7 @@ func (p *SetResult) Dep(
 	r object.AtomicRecordModifier,
 	i object.MemoryIndexStorage,
 	pcs insolar.PlatformCryptographyScheme,
+	dn executor.DetachedNotifier,
 ) {
 	p.dep.writer = w
 	p.dep.sender = s
@@ -80,6 +82,7 @@ func (p *SetResult) Dep(
 	p.dep.records = r
 	p.dep.indexes = i
 	p.dep.pcs = pcs
+	p.dep.detachedNotifier = dn
 }
 
 func (p *SetResult) Proceed(ctx context.Context) error {
@@ -236,9 +239,9 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 
 	stats.Record(ctx, statRequestsClosed.M(1))
 
-	// Only incoming request cannot be a reason. We are only interested in potential reason requests.
+	// Only incoming request can be a reason. We are only interested in potential reason requests.
 	if _, ok := record.Unwrap(&closedRequest.Record.Virtual).(*record.IncomingRequest); ok {
-		notifyDetached(ctx, p.dep.sender, opened, objectID, closedRequest.RecordID)
+		p.dep.detachedNotifier.Notify(ctx, opened, objectID, closedRequest.RecordID)
 	}
 
 	msg, err := payload.NewMessage(&payload.ResultInfo{
@@ -323,46 +326,4 @@ func checkOutgoings(reqs []record.CompositeFilamentRecord, closedRequestID insol
 	}
 
 	return nil
-}
-
-// notifyDetached sends notifications about detached requests that are ready for execution.
-func notifyDetached(
-	ctx context.Context,
-	sender bus.Sender,
-	opened []record.CompositeFilamentRecord,
-	objectID, closedRequestID insolar.ID,
-) {
-	for _, req := range opened {
-		outgoing, ok := record.Unwrap(&req.Record.Virtual).(*record.OutgoingRequest)
-		if !ok {
-			continue
-		}
-		if !outgoing.IsDetached() {
-			continue
-		}
-		if reasonRef := outgoing.ReasonRef(); *reasonRef.GetLocal() != closedRequestID {
-			continue
-		}
-
-		buf, err := req.Record.Virtual.Marshal()
-		if err != nil {
-			inslogger.FromContext(ctx).Error(
-				errors.Wrapf(err, "failed to notify about detached %s", req.RecordID.DebugString()),
-			)
-			return
-		}
-		msg, err := payload.NewMessage(&payload.SagaCallAcceptNotification{
-			ObjectID:          objectID,
-			DetachedRequestID: req.RecordID,
-			Request:           buf,
-		})
-		if err != nil {
-			inslogger.FromContext(ctx).Error(
-				errors.Wrapf(err, "failed to notify about detached %s", req.RecordID.DebugString()),
-			)
-			return
-		}
-		_, done := sender.SendRole(ctx, msg, insolar.DynamicRoleVirtualExecutor, *insolar.NewReference(objectID))
-		done()
-	}
 }

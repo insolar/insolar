@@ -17,16 +17,20 @@
 package logicrunner
 
 import (
+	"context"
 	"testing"
 	"time"
 
 	"github.com/gojuno/minimock"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/artifacts"
+	"github.com/insolar/insolar/logicrunner/common"
 )
 
 func TestRequestsFetcher_New(t *testing.T) {
@@ -70,4 +74,74 @@ func TestRequestsFetcher_FetchPendings(t *testing.T) {
 			rf.FetchPendings(ctx)
 		})
 	}
+}
+
+func checkRequestRef(reference insolar.Reference, array []insolar.Reference, takenFrom int, takenTo int, lastElement int) bool {
+	for i := 0; i < lastElement; i++ {
+		if i >= takenFrom && i < takenTo && array[i].Equal(reference) {
+			return false
+		}
+
+		if array[i].Equal(reference) {
+			return true
+		}
+	}
+
+	panic("unreachable")
+}
+
+func isKnownRequest(reference insolar.Reference, array []insolar.Reference, takenFrom int, takenTo int) bool {
+	for i := takenFrom; i < takenTo; i++ {
+		if array[i].Equal(reference) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func TestRequestsFetcher_Limits(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+
+	mc := minimock.NewController(t)
+	defer mc.Wait(1 * time.Minute)
+
+	objectRef := gen.Reference()
+	pendingsCount := 50
+	pendings := gen.UniqueRecordReferences(pendingsCount)
+	alreadyPresentedFrom, alreadyPresentedTo := 10, 20
+	lastElement := (alreadyPresentedTo - alreadyPresentedFrom) + MaxFetchCount
+
+	am := artifacts.NewClientMock(mc).
+		GetPendingsMock.Return(pendings, nil).
+		GetAbandonedRequestMock.Set(
+		func(ctx context.Context, objectRef insolar.Reference, requestRef insolar.Reference) (record.Request, error) {
+			assert.True(
+				t,
+				checkRequestRef(requestRef, pendings, alreadyPresentedFrom, alreadyPresentedTo, lastElement),
+				"only first ten and third ten requsts should be taken",
+			)
+			return genIncomingRequest(), nil
+		})
+
+	eb := NewExecutionBrokerIMock(mc).
+		IsKnownRequestMock.Set(
+		func(ctx context.Context, req insolar.Reference) (b1 bool) {
+			return isKnownRequest(req, pendings, alreadyPresentedFrom, alreadyPresentedTo)
+		}).
+		AddRequestsFromLedgerMock.Set(
+		func(ctx context.Context, transcripts ...*common.Transcript) {
+			assert.False(
+				t,
+				isKnownRequest(transcripts[0].RequestRef, pendings, alreadyPresentedFrom, alreadyPresentedTo),
+				"only first ten and third ten requsts should be taken",
+			)
+		})
+
+	fetcher := NewRequestsFetcher(objectRef, am, eb, nil)
+
+	fetcherOriginal := fetcher.(*requestsFetcher)
+	err := fetcherOriginal.fetch(ctx)
+	assert.NoError(t, err)
+	assert.Equal(t, uint64(20), am.GetAbandonedRequestAfterCounter())
 }

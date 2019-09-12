@@ -57,12 +57,10 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/pkg/errors"
-	"go.opencensus.io/stats"
-
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/resolver"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -102,12 +100,11 @@ func (t *udpTransport) SendDatagram(ctx context.Context, address string, data []
 		return errors.Wrap(err, "failed to resolve UDP address")
 	}
 
-	n, err := t.conn.WriteTo(data, udpAddr)
+	_, err = t.conn.WriteTo(data, udpAddr)
 	if err != nil {
 		// TODO: may be try to send second time if error
 		return errors.Wrap(err, "failed to write data")
 	}
-	stats.Record(ctx, network.SentSize.M(int64(n)))
 	return nil
 }
 
@@ -169,7 +166,6 @@ func (t *udpTransport) loop(ctx context.Context) {
 			continue
 		}
 
-		stats.Record(ctx, network.RecvSize.M(int64(n)))
 		go t.handler.HandleDatagram(ctx, addr.String(), buf[:n])
 	}
 }

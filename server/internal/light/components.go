@@ -22,10 +22,6 @@ import (
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
-	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/flow/dispatcher"
-	"github.com/insolar/insolar/ledger/light/handle"
-	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/api"
@@ -36,6 +32,8 @@ import (
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/flow"
+	"github.com/insolar/insolar/insolar/flow/dispatcher"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/jetcoordinator"
 	"github.com/insolar/insolar/insolar/node"
@@ -44,6 +42,8 @@ import (
 	"github.com/insolar/insolar/keystore"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/light/executor"
+	"github.com/insolar/insolar/ledger/light/handle"
+	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/artifacts"
@@ -211,15 +211,11 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		APIWrapper = api.NewWrapper(API, AdminAPIRunner)
 	}
 
-	metricsHandler, err := metrics.NewMetrics(
-		ctx,
+	metricsComp := metrics.NewMetrics(
 		cfg.Metrics,
 		metrics.GetInsolarRegistry(comps.NodeRole),
 		comps.NodeRole,
 	)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to start Metrics")
-	}
 
 	// Light components.
 	var (
@@ -254,6 +250,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			CryptoScheme,
 			Sender,
 		)
+		detachedNotifier := executor.NewDetachedNotifierDefault(Sender)
 
 		jetCalculator := executor.NewJetCalculator(Coordinator, Jets)
 		lightCleaner := executor.NewCleaner(
@@ -316,6 +313,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			jetFetcher,
 			filamentCalculator,
 			requestChecker,
+			detachedNotifier,
 		)
 
 		initHandle := func(msg *message.Message) *handle.Init {
@@ -355,7 +353,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		Pulses,
 		Coordinator,
 		PulseManager,
-		metricsHandler,
+		metricsComp,
 		Requester,
 		ArtifactsClient,
 		APIWrapper,
@@ -367,7 +365,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		publisher,
 	)
 
-	err = comps.cmp.Init(ctx)
+	err := comps.cmp.Init(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to init components")
 	}
