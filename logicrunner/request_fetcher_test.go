@@ -56,7 +56,8 @@ func TestRequestsFetcher_FetchPendings(t *testing.T) {
 
 				broker := NewExecutionBrokerIMock(t).
 					IsKnownRequestMock.Return(false).
-					AddRequestsFromLedgerMock.Return()
+					AddRequestsFromLedgerMock.Return().
+					NoMoreRequestsOnLedgerMock.Return()
 
 				return *incoming.Object, am, broker
 			},
@@ -66,6 +67,7 @@ func TestRequestsFetcher_FetchPendings(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			ctx := inslogger.TestContext(t)
 			mc := minimock.NewController(t)
+
 			defer mc.Finish()
 			defer mc.Wait(1 * time.Minute)
 
@@ -140,7 +142,7 @@ func TestRequestsFetcher_Limits(t *testing.T) {
 
 	fetcher := NewRequestsFetcher(objectRef, am, eb, nil)
 
-	fetcherOriginal := fetcher.(*requestsFetcher)
+	fetcherOriginal := fetcher.(*requestFetcher)
 	err := fetcherOriginal.fetch(ctx)
 	assert.NoError(t, err)
 	assert.Equal(t, uint64(20), am.GetAbandonedRequestAfterCounter())
