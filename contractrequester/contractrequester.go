@@ -399,12 +399,12 @@ func (cr *ContractRequester) ReceiveResult(ctx context.Context, msg *message.Mes
 	if err != nil {
 		bus.ReplyError(ctx, cr.Sender, *payloadMeta, err)
 		ctx = insmetrics.InsertTag(ctx, metrics.TagFinishedWithError, errors.Cause(err).Error())
-		stats.Record(ctx, metrics.HandleFinished.M(1))
-		return nil
+	} else {
+		cr.Sender.Reply(ctx, *payloadMeta, bus.ReplyAsMessage(ctx, &reply.OK{}))
 	}
 	stats.Record(ctx, metrics.HandleFinished.M(1))
-	cr.Sender.Reply(ctx, *payloadMeta, bus.ReplyAsMessage(ctx, &reply.OK{}))
-	return nil
+
+	return err
 }
 
 func (cr *ContractRequester) handleMessage(ctx context.Context, payloadMeta *payload.Meta) error {

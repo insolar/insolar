@@ -212,8 +212,8 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 	if err != nil {
 		bus.ReplyError(ctx, s.dep.Sender, originMeta, err)
 		ctx = insmetrics.InsertTag(ctx, metrics.TagFinishedWithError, errors.Cause(err).Error())
-		stats.Record(ctx, metrics.HandleFinished.M(1))
 	}
+	stats.Record(ctx, metrics.HandleFinished.M(1))
 	return err
 }
 
