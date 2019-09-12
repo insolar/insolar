@@ -84,6 +84,7 @@ func TestTimeoutSuite(t *testing.T) {
 
 	api.ContractRequester = cr
 	api.Start(ctx)
+	defer api.Stop(ctx)
 
 	seed, err := api.SeedGenerator.Next()
 	require.NoError(t, err)
@@ -107,8 +108,6 @@ func TestTimeoutSuite(t *testing.T) {
 	require.NoError(t, err)
 	require.Nil(t, result.Error)
 	require.Equal(t, "OK", result.Result.CallResult)
-
-	api.Stop(ctx)
 }
 
 func TestDigestParser(t *testing.T) {
