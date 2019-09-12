@@ -166,14 +166,6 @@ func (h *HandleCall) handleActual(
 	}
 
 	reqInfo := procRegisterRequest.getResult()
-	switch {
-	case reqInfo.Result != nil:
-		stats.Record(ctx, metrics.IncomingRequestsClosed.M(1))
-	case reqInfo.Request != nil:
-		stats.Record(ctx, metrics.IncomingRequestsDuplicate.M(1))
-	default:
-		stats.Record(ctx, metrics.IncomingRequestsNew.M(1))
-	}
 	requestRef := *getRequestReference(reqInfo)
 
 	if request.CallType != record.CTMethod {

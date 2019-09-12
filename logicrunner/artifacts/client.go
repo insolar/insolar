@@ -160,6 +160,14 @@ func (m *client) RegisterIncomingRequest(ctx context.Context, request *record.In
 	if err != nil {
 		return nil, errors.Wrap(err, "RegisterIncomingRequest")
 	}
+	switch {
+	case res.Result != nil:
+		stats.Record(ctx, metrics.IncomingRequestsClosed.M(1))
+	case res.Request != nil:
+		stats.Record(ctx, metrics.IncomingRequestsDuplicate.M(1))
+	default:
+		stats.Record(ctx, metrics.IncomingRequestsNew.M(1))
+	}
 	return res, err
 }
 
