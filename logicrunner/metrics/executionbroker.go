@@ -25,8 +25,6 @@ import (
 )
 
 var (
-	TagExecutionBrokerName = insmetrics.MustTagKey("vm_execution_broker_name")
-
 	TagExecutionQueueName = insmetrics.MustTagKey("vm_execution_broker_queue_name")
 )
 
@@ -108,42 +106,40 @@ func init() {
 			Name:        ExecutionBrokerTranscriptRegistered.Name(),
 			Description: ExecutionBrokerTranscriptRegistered.Description(),
 			Measure:     ExecutionBrokerTranscriptRegistered,
-			TagKeys:     []tag.Key{TagExecutionBrokerName, TagExecutionQueueName},
+			TagKeys:     []tag.Key{TagExecutionQueueName},
 			Aggregation: view.Sum(),
 		},
 		&view.View{
 			Name:        ExecutionBrokerTranscriptDuplicate.Name(),
 			Description: ExecutionBrokerTranscriptDuplicate.Description(),
 			Measure:     ExecutionBrokerTranscriptDuplicate,
-			TagKeys:     []tag.Key{TagExecutionBrokerName, TagExecutionQueueName},
+			TagKeys:     []tag.Key{TagExecutionQueueName},
 			Aggregation: view.Sum(),
 		},
 		&view.View{
 			Name:        ExecutionBrokerTranscriptExecuting.Name(),
 			Description: ExecutionBrokerTranscriptExecuting.Description(),
 			Measure:     ExecutionBrokerTranscriptExecuting,
-			TagKeys:     []tag.Key{TagExecutionBrokerName, TagExecutionQueueName},
+			TagKeys:     []tag.Key{TagExecutionQueueName},
 			Aggregation: view.Sum(),
 		},
 		&view.View{
 			Name:        ExecutionBrokerTranscriptAlreadyRegistered.Name(),
 			Description: ExecutionBrokerTranscriptAlreadyRegistered.Description(),
 			Measure:     ExecutionBrokerTranscriptAlreadyRegistered,
-			TagKeys:     []tag.Key{TagExecutionBrokerName, TagExecutionQueueName},
+			TagKeys:     []tag.Key{TagExecutionQueueName},
 			Aggregation: view.Sum(),
 		},
 		&view.View{
 			Name:        ExecutionBrokerExecutionStarted.Name(),
 			Description: ExecutionBrokerExecutionStarted.Description(),
 			Measure:     ExecutionBrokerExecutionStarted,
-			TagKeys:     []tag.Key{TagExecutionBrokerName},
 			Aggregation: view.Sum(),
 		},
 		&view.View{
 			Name:        ExecutionBrokerExecutionFinished.Name(),
 			Description: ExecutionBrokerExecutionFinished.Description(),
 			Measure:     ExecutionBrokerExecutionFinished,
-			TagKeys:     []tag.Key{TagExecutionBrokerName},
 			Aggregation: view.Sum(),
 		},
 	)

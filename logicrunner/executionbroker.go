@@ -197,7 +197,6 @@ func (q *ExecutionBroker) finishTask(ctx context.Context, transcript *common.Tra
 }
 
 func (q *ExecutionBroker) processTranscript(ctx context.Context, transcript *common.Transcript) {
-	ctx = insmetrics.InsertTag(ctx, metrics.TagExecutionBrokerName, q.name)
 	stats.Record(ctx, metrics.ExecutionBrokerExecutionStarted.M(1))
 	defer stats.Record(ctx, metrics.ExecutionBrokerExecutionFinished.M(1))
 	if transcript.Context != nil {
@@ -247,7 +246,6 @@ func (q *ExecutionBroker) storeWithoutDuplication(ctx context.Context, transcrip
 func (q *ExecutionBroker) add(
 	ctx context.Context, source requestsqueue.RequestSource, transcripts ...*common.Transcript,
 ) {
-	ctx = insmetrics.InsertTag(ctx, metrics.TagExecutionBrokerName, q.name)
 	for _, transcript := range transcripts {
 		queueName := "mutable"
 		if transcript.Request.Immutable {
@@ -406,7 +404,6 @@ func (q *ExecutionBroker) OnPulse(ctx context.Context) []payload.Payload {
 
 	logger := inslogger.FromContext(ctx)
 
-	ctx = insmetrics.InsertTag(ctx, metrics.TagExecutionBrokerName, q.name)
 	onPulseStart := time.Now()
 	defer func(ctx context.Context) {
 		stats.Record(ctx,
