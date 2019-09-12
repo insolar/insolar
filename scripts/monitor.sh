@@ -22,8 +22,8 @@ IFS=$'\n\t'
 INSOLAR_ARTIFACTS_DIR=${INSOLAR_ARTIFACTS_DIR:-".artifacts"}/
 LAUNCHNET_BASE_DIR=${LAUNCHNET_BASE_DIR:-"${INSOLAR_ARTIFACTS_DIR}launchnet"}/
 
+# Used by docker-compose config. DO NOT REMOVE.
 PROMETHEUS_IN_CONFIG=${LAUNCHNET_BASE_DIR}prometheus.yaml
-CONFIG_DIR=scripts/monitor/prometheus/
 
 JAEGER_WAIT_ATTEMPTS=20
 
@@ -38,7 +38,6 @@ if [[ $# -lt 1 ]]; then
 # * wait until Jaeger starts (we want to be sure tracer works before start benchmark)
     echo "pre-gen launchnet configs (required for prometheus config generation)"
     ./scripts/insolard/launchnet.sh -C
-    mkdir -p ${CONFIG_DIR}
 
     echo "start monitoring stack"
     cd scripts/
