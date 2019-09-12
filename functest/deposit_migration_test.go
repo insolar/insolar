@@ -64,7 +64,7 @@ func TestMigrationToken(t *testing.T) {
 }
 
 func TestMigrationTokenFourActiveDaemon(t *testing.T) {
-	activeDaemons := activateDaemons(t, countFourActiveDaemon)
+	activeDaemons := activateDaemons(t, countTreeActiveDaemon)
 	member := createMigrationMemberForMA(t)
 	var deposit map[string]interface{}
 	for i := 1; i < len(activeDaemons); i++ {
