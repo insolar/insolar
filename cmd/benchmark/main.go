@@ -25,8 +25,8 @@ import (
 	"math/big"
 	"os"
 	"os/signal"
+	"path"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -45,15 +45,14 @@ import (
 )
 
 const defaultStdoutPath = "-"
-const defaultMemberFileName = "members.txt"
 
 const backoffAttemptsCount = 5
 
 var (
-	defaultMemberFileDir      = filepath.Join(defaults.ArtifactsDir(), "bench-members")
+	defaultMemberFile         = filepath.Join(defaults.ArtifactsDir(), "bench-members", "members.txt")
 	defaultDiscoveryNodesLogs = defaults.LaunchnetDiscoveryNodesLogsDir()
 
-	memberFilesDir     string
+	memberFile         string
 	output             string
 	concurrent         int
 	repetitions        int
@@ -79,7 +78,7 @@ func parseInputParams() {
 	pflag.StringVarP(&logLevelServer, "loglevelserver", "L", "", "server log level")
 	pflag.BoolVarP(&saveMembersToFile, "savemembers", "s", false, "save members to file")
 	pflag.BoolVarP(&useMembersFromFile, "usemembers", "m", false, "use members from file")
-	pflag.StringVarP(&memberFilesDir, "members-dir", "", defaultMemberFileDir, "dir for saving memebers data")
+	pflag.StringVarP(&memberFile, "members-file", "", defaultMemberFile, "dir for saving members data")
 	pflag.BoolVarP(&noCheckBalance, "nocheckbalance", "b", false, "don't check balance at the end")
 	pflag.StringVarP(&discoveryNodesLogs, "discovery-nodes-logs-dir", "", defaultDiscoveryNodesLogs, "launchnet logs dir for checking errors")
 	pflag.Parse()
@@ -151,34 +150,6 @@ func printResults(s scenario) {
 		),
 	)
 	s.printResult()
-}
-
-func addMigrationAddresses(insSDK *sdk.SDK) int32 {
-	var err error
-	var retriesCount int32
-
-	bof := backoff.Backoff{Min: 1 * time.Second, Max: 10 * time.Second}
-	for bof.Attempt() < backoffAttemptsCount {
-		migrationAddresses := []string{}
-		for j := 0; j < concurrent*2; j++ {
-			migrationAddresses = append(migrationAddresses, "fake_burn_address_"+strconv.Itoa(j))
-		}
-		traceID, err := insSDK.AddMigrationAddresses(migrationAddresses)
-		if err == nil {
-			break
-		}
-
-		if strings.Contains(err.Error(), insolar.ErrTooManyPendingRequests.Error()) {
-			retriesCount++
-		} else {
-			fmt.Printf("Retry to add burn address. TraceID: %s Error is: %s\n", traceID, err.Error())
-		}
-		time.Sleep(bof.Duration())
-	}
-	check(fmt.Sprintf("Couldn't add burn address after retries: %d", backoffAttemptsCount), err)
-	bof.Reset()
-
-	return retriesCount
 }
 
 func createMembers(insSDK *sdk.SDK, count int) ([]*sdk.Member, int32) {
@@ -291,11 +262,12 @@ func getMembers(insSDK *sdk.SDK) ([]*sdk.Member, int32, error) {
 }
 
 func saveMembers(members []*sdk.Member) error {
-	err := os.MkdirAll(memberFilesDir, 0777)
+	dir, _ := path.Split(memberFile)
+	err := os.MkdirAll(dir, 0777)
 	if err != nil {
 		return errors.Wrap(err, "couldn't create dir for file")
 	}
-	file, err := os.Create(filepath.Join(memberFilesDir, defaultMemberFileName))
+	file, err := os.Create(memberFile)
 	if err != nil {
 		return errors.Wrap(err, "couldn't create file")
 	}
@@ -312,7 +284,7 @@ func saveMembers(members []*sdk.Member) error {
 func loadMembers(count int) ([]*sdk.Member, error) {
 	var members []*sdk.Member
 
-	rawMembers, err := ioutil.ReadFile(filepath.Join(memberFilesDir, defaultMemberFileName))
+	rawMembers, err := ioutil.ReadFile(memberFile)
 	if err != nil {
 		return nil, errors.Wrap(err, "can't read members from file")
 	}
@@ -347,9 +319,6 @@ func main() {
 	err = insSDK.SetLogLevel(logLevelServer)
 	check("Failed to parse log level: ", err)
 
-	crBaPenBefore := addMigrationAddresses(insSDK)
-	check("Error while adding burn addresses: ", err)
-
 	members, crMemPenBefore, err := getMembers(insSDK)
 	check("Error while loading members: ", err)
 
@@ -369,7 +338,7 @@ func main() {
 	var sigChan = make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGHUP)
 
-	s := newScenarios(out, insSDK, members, concurrent, repetitions, crBaPenBefore+crMemPenBefore+balancePenRetries)
+	s := newScenarios(out, insSDK, members, concurrent, repetitions, crMemPenBefore+balancePenRetries)
 	go func() {
 		stopGracefully := true
 		for {
