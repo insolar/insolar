@@ -103,7 +103,7 @@ func (s *StreamHandler) HandleStream(ctx context.Context, address string, reader
 	}()
 
 	for {
-		p, err := packet.DeserializePacket(mainLogger, reader)
+		p, length, err := packet.DeserializePacket(mainLogger, reader)
 
 		if err != nil {
 			if err == io.EOF || err == io.ErrUnexpectedEOF {
@@ -118,22 +118,23 @@ func (s *StreamHandler) HandleStream(ctx context.Context, address string, reader
 			}
 
 			mainLogger.Warnf("[ HandleStream ] Failed to deserialize packet: ", err.Error())
-		} else {
-			packetCtx, logger := inslogger.WithTraceField(packetCtx, p.TraceID)
-			span, err := instracer.Deserialize(p.TraceSpanData)
-			if err == nil {
-				packetCtx = instracer.WithParentSpan(packetCtx, span)
-			} else {
-				inslogger.FromContext(packetCtx).Warn("Incoming packet without span")
-			}
-			logger.Debugf("[ HandleStream ] Handling packet RequestID = %d", p.RequestID)
-
-			if p.IsResponse() {
-				go s.responseHandler.Handle(packetCtx, p)
-			} else {
-				go s.requestHandler(packetCtx, p)
-			}
 		}
+
+		packetCtx, logger := inslogger.WithTraceField(packetCtx, p.TraceID)
+		span, err := instracer.Deserialize(p.TraceSpanData)
+		if err == nil {
+			packetCtx = instracer.WithParentSpan(packetCtx, span)
+		} else {
+			inslogger.FromContext(packetCtx).Warn("Incoming packet without span")
+		}
+		logger.Debugf("[ HandleStream ] Handling packet RequestID = %d, size = %d", p.RequestID, length)
+		metrics.NetworkRecvSize.Observe(float64(length))
+		if p.IsResponse() {
+			go s.responseHandler.Handle(packetCtx, p)
+		} else {
+			go s.requestHandler(packetCtx, p)
+		}
+
 	}
 }
 
@@ -162,7 +163,7 @@ func SendPacket(ctx context.Context, pool pool.ConnectionPool, p *packet.Packet)
 		n, err = conn.Write(data)
 	}
 	if err == nil {
-		metrics.NetworkSentSize.Add(float64(n))
+		metrics.NetworkSentSize.Observe(float64(n))
 		return nil
 	}
 	return errors.Wrap(err, "[ SendPacket ] Failed to write data")

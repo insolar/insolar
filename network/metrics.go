@@ -103,42 +103,35 @@ func init() {
 		},
 		&view.View{
 			Name:        ConsensusPacketsSent.Name() + "_bytes",
-			Description: ConsensusPacketsSent.Description(),
 			Measure:     ConsensusPacketsSent,
 			Aggregation: view.Sum(),
 			TagKeys:     commontags,
 		},
 		&view.View{
 			Name:        ConsensusPacketsSent.Name() + "_count",
-			Description: ConsensusPacketsSent.Description(),
 			Measure:     ConsensusPacketsSent,
 			Aggregation: view.Count(),
 			TagKeys:     commontags,
 		},
 		&view.View{
 			Name:        ConsensusPacketsRecv.Name() + "_bytes",
-			Description: ConsensusPacketsRecv.Description(),
 			Measure:     ConsensusPacketsRecv,
 			Aggregation: view.Sum(),
 			TagKeys:     commontags,
 		},
 		&view.View{
 			Name:        ConsensusPacketsRecv.Name() + "_count",
-			Description: ConsensusPacketsRecv.Description(),
 			Measure:     ConsensusPacketsRecv,
 			Aggregation: view.Count(),
 			TagKeys:     commontags,
 		},
 		&view.View{
 			Name:        FailedCheckProof.Name(),
-			Description: FailedCheckProof.Description(),
 			Measure:     FailedCheckProof,
 			Aggregation: view.Count(),
 		},
-
 		&view.View{
 			Name:        ActiveNodes.Name(),
-			Description: ActiveNodes.Description(),
 			Measure:     ActiveNodes,
 			Aggregation: view.LastValue(),
 		},
