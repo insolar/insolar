@@ -22,6 +22,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -46,7 +47,7 @@ func TestTimeoutSuite(t *testing.T) {
 
 	ctx, _ := inslogger.WithTraceField(context.Background(), "APItests")
 	mc := minimock.NewController(t)
-	defer mc.Wait(64 * time.Second)
+	defer mc.Wait(17 * time.Second)
 	defer mc.Finish()
 
 	ks := platformpolicy.NewKeyProcessor()
@@ -83,7 +84,6 @@ func TestTimeoutSuite(t *testing.T) {
 	})
 
 	api.ContractRequester = cr
-	api.Start(ctx)
 
 	seed, err := api.SeedGenerator.Next()
 	require.NoError(t, err)
@@ -93,22 +93,25 @@ func TestTimeoutSuite(t *testing.T) {
 	seedString := base64.StdEncoding.EncodeToString(seed[:])
 
 	requester.SetTimeout(25)
-	resp, err := requester.SendWithSeed(
+	req, err := requester.MakeRequestWithSeed(
 		ctx,
 		CallUrl,
 		user,
 		&requester.Params{CallSite: "member.create", CallParams: map[string]interface{}{}, PublicKey: user.PublicKey},
 		seedString,
 	)
-	require.NoError(t, err)
+	require.NoError(t, err, "make request with seed error")
+
+	rr := httptest.NewRecorder()
+	api.Handler().ServeHTTP(rr, req)
+	require.Equal(t, http.StatusOK, rr.Code, "got StatusOK http code")
 
 	var result requester.ContractResponse
-	err = json.Unmarshal(resp, &result)
-	require.NoError(t, err)
-	require.Nil(t, result.Error)
-	require.Equal(t, "OK", result.Result.CallResult)
-
-	api.Stop(ctx)
+	// fmt.Println("response:", rr.Body.String())
+	err = json.Unmarshal(rr.Body.Bytes(), &result)
+	require.NoError(t, err, "json unmarshal error")
+	require.Nil(t, result.Error, "error should be nil in result")
+	require.Equal(t, "OK", result.Result.CallResult, "call result is OK")
 }
 
 func TestDigestParser(t *testing.T) {

@@ -33,3 +33,10 @@ tracer:
     collectorendpoint: ""
     agentendpoint: "{{ .AgentEndpoint }}"
     probabilityrate: 1
+metrics:
+  listenaddress: 127.0.0.1:7999
+  namespace: insolar
+  zpagesenabled: false
+  reportingperiod: 0s
+log:
+  level: debug

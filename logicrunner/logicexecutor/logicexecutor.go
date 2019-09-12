@@ -21,6 +21,7 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
+
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"

@@ -116,6 +116,14 @@ type Params struct {
 
 // GetResponseBodyContract makes request to contract and extracts body
 func GetResponseBodyContract(url string, postP ContractRequest, signature string) ([]byte, error) {
+	req, err := MakeContractRequest(url, postP, signature)
+	if err != nil {
+		return nil, err
+	}
+	return doReq(req)
+}
+
+func MakeContractRequest(url string, postP ContractRequest, signature string) (*http.Request, error) {
 	req, jsonValue, err := prepareReq(url, postP)
 	if err != nil {
 		return nil, errors.Wrap(err, "problem with preparing contract request")
@@ -130,7 +138,7 @@ func GetResponseBodyContract(url string, postP ContractRequest, signature string
 	req.Header.Set(Digest, "SHA-256="+sha)
 	req.Header.Set(Signature, "keyId=\"member-pub-key\", algorithm=\"ecdsa\", headers=\"digest\", signature="+signature)
 
-	return doReq(req)
+	return req, nil
 }
 
 // GetResponseBodyContract makes request to platform and extracts body
@@ -215,8 +223,18 @@ func GetSeed(url string) (string, error) {
 
 // SendWithSeed sends request with known seed
 func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, params *Params, seed string) ([]byte, error) {
+	req, err := MakeRequestWithSeed(ctx, url, userCfg, params, seed)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ SendWithSeed ] Problem with creating target request")
+	}
+	b, err := doReq(req)
+	return b, errors.Wrap(err, "[ SendWithSeed ] Problem with sending target request")
+}
+
+// MakeRequestWithSeed creates request with provided url, user config, params and seed.
+func MakeRequestWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, params *Params, seed string) (*http.Request, error) {
 	if userCfg == nil || params == nil {
-		return nil, errors.New("[ SendWithSeed ] Configs must be initialized")
+		return nil, errors.New("configs must be initialized")
 	}
 
 	params.Reference = userCfg.Caller
@@ -234,20 +252,15 @@ func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, para
 	verboseInfo(ctx, "Signing request ...")
 	dataToSign, err := json.Marshal(request)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ SendWithSeed ] Config request marshaling failed")
+		return nil, errors.Wrap(err, "config request marshaling failed")
 	}
 	signature, err := Sign(userCfg.privateKeyObject, dataToSign)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ SendWithSeed ] Problem with signing request")
+		return nil, errors.Wrap(err, "problem with signing request")
 	}
 	verboseInfo(ctx, "Signing request completed")
 
-	body, err := GetResponseBodyContract(url, *request, signature)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ SendWithSeed ] Problem with sending target request")
-	}
-
-	return body, nil
+	return MakeContractRequest(url, *request, signature)
 }
 
 func Sign(privateKey crypto.PrivateKey, data []byte) (string, error) {

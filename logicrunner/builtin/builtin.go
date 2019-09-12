@@ -20,13 +20,18 @@ package builtin
 import (
 	"context"
 	"errors"
+	"time"
+
+	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	lrCommon "github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
+	"github.com/insolar/insolar/logicrunner/metrics"
 )
 
 type LogicRunnerRPCStub interface {
@@ -42,8 +47,9 @@ type BuiltIn struct {
 	// PrototypeRegistry    map[string]preprocessor.ContractWrapper
 	// PrototypeRefRegistry map[insolar.Reference]string
 	// Code ->
-	CodeRegistry    map[string]insolar.ContractWrapper
-	CodeRefRegistry map[insolar.Reference]string
+	CodeRegistry         map[string]insolar.ContractWrapper
+	CodeRefRegistry      map[insolar.Reference]string
+	PrototypeRefRegistry map[insolar.Reference]string
 }
 
 // NewBuiltIn is an constructor
@@ -70,6 +76,13 @@ func (b *BuiltIn) CallConstructor(
 	ctx context.Context, callCtx *insolar.LogicCallContext, codeRef insolar.Reference,
 	name string, args insolar.Arguments,
 ) ([]byte, insolar.Arguments, error) {
+	executeStart := time.Now()
+	ctx = insmetrics.InsertTag(ctx, metrics.TagContractPrototype, b.PrototypeRefRegistry[codeRef])
+	ctx = insmetrics.InsertTag(ctx, metrics.TagContractMethodName, "Constructor")
+	defer func(ctx context.Context) {
+
+		stats.Record(ctx, metrics.ContractExecutionTime.M(float64(time.Since(executeStart).Nanoseconds())/1e6))
+	}(ctx)
 
 	ctx, span := instracer.StartSpan(ctx, "builtin.CallConstructor")
 	defer span.End()
@@ -93,6 +106,12 @@ func (b *BuiltIn) CallConstructor(
 
 func (b *BuiltIn) CallMethod(ctx context.Context, callCtx *insolar.LogicCallContext, codeRef insolar.Reference,
 	data []byte, method string, args insolar.Arguments) ([]byte, insolar.Arguments, error) {
+	executeStart := time.Now()
+	ctx = insmetrics.InsertTag(ctx, metrics.TagContractPrototype, b.PrototypeRefRegistry[codeRef])
+	ctx = insmetrics.InsertTag(ctx, metrics.TagContractMethodName, method)
+	defer func(ctx context.Context) {
+		stats.Record(ctx, metrics.ContractExecutionTime.M(float64(time.Since(executeStart).Nanoseconds())/1e6))
+	}(ctx)
 
 	ctx, span := instracer.StartSpan(ctx, "builtin.CallMethod")
 	defer span.End()

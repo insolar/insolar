@@ -44,9 +44,12 @@ import (
 	"github.com/insolar/insolar/testutils"
 )
 
-const defaultStdoutPath = "-"
-
-const backoffAttemptsCount = 5
+const (
+	defaultStdoutPath    = "-"
+	backoffAttemptsCount = 5
+	balanceCheckRetries  = 10
+	balanceCheckDelay    = 5 * time.Second
+)
 
 var (
 	defaultMemberFile         = filepath.Join(defaults.ArtifactsDir(), "bench-members", "members.txt")
@@ -368,14 +371,14 @@ func main() {
 
 	if !noCheckBalance {
 		totalBalanceAfter := big.NewInt(0)
-		for nretries := 0; nretries < 3; nretries++ {
+		for nretries := 0; nretries < balanceCheckRetries; nretries++ {
 			totalBalanceAfter, _ = getTotalBalance(insSDK, balanceCheckMembers)
 			if totalBalanceAfter.Cmp(totalBalanceBefore) == 0 {
 				break
 			}
-			fmt.Printf("Total balance before and after don't match: %v vs %v - retrying in 3 seconds...\n",
-				totalBalanceBefore, totalBalanceAfter)
-			time.Sleep(3 * time.Second)
+			fmt.Printf("Total balance before and after don't match: %v vs %v - retrying in %s ...\n",
+				totalBalanceBefore, totalBalanceAfter, balanceCheckDelay)
+			time.Sleep(balanceCheckDelay)
 
 		}
 		fmt.Printf("Total balance before: %v and after: %v\n", totalBalanceBefore, totalBalanceAfter)

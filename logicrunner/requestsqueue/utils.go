@@ -22,20 +22,19 @@ import (
 	"github.com/insolar/insolar/logicrunner/common"
 )
 
-// FirstNFromMany utility function that extracts from multiple queues returning no more than
-// N elements and flag telling if queues had more or not. NOTE: queues shouldn't be used
-// after this as they may contain
-func FirstNFromMany(ctx context.Context, n int, qs ...RequestsQueue) ([]*common.Transcript, bool) {
-	res := make([]*common.Transcript, 0)
+// SplitNFromMany utility function that extracts from multiple queues slits to no more than N elements and rest.
+func SplitNFromMany(ctx context.Context, n int, qs ...RequestsQueue) ([]*common.Transcript, []*common.Transcript) {
+	res := make([]*common.Transcript, 0, n)
+	rest := []*common.Transcript(nil)
 	for i := 0; i < int(numberOfSources); i++ {
 		for _, q := range qs {
-			res = append(res, q.TakeAllOriginatedFrom(ctx, RequestSource(i))...)
-			if len(res) > n {
-				res = res[:n]
-				return res, true
+			if len(res) < n {
+				res = append(res, q.TakeAllOriginatedFrom(ctx, RequestSource(i))...)
+			} else {
+				rest = append(rest, q.TakeAllOriginatedFrom(ctx, RequestSource(i))...)
 			}
 		}
 	}
 
-	return res, false
+	return res, rest
 }

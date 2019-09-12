@@ -86,6 +86,26 @@ func InitializeCodeRefs() map[XXX_insolar.Reference]string {
 	return rv
 }
 
+func InitializePrototypeRefs() map[XXX_insolar.Reference]string {
+	rv := make(map[XXX_insolar.Reference]string, 0)
+
+	rv[shouldLoadRef("0111A62X73fkPeY5vK6NjcXgmL9d37DgRRNtHNLGaEse")] = "account"
+	rv[shouldLoadRef("0111A62HrJvAimG7M1r8XdeBVMw4X6ge8hGzVStfnn4e")] = "costcenter"
+	rv[shouldLoadRef("0111A7ctasuNUug8BoK4VJNuAFJ73rnH8bH5zqd5HrDj")] = "deposit"
+	rv[shouldLoadRef("0111A85JAZugtAkQErbDe3eAaTw56DPLku8QGymJUCt2")] = "helloworld"
+	rv[shouldLoadRef("0111A7UqbgvFXj9vkCAaNYSAkWLapu62eU5AUSv3y4JY")] = "member"
+	rv[shouldLoadRef("0111A8DhUhw5pzyvzVg1qXomNEHXs7kDtJRQGSD1PUpc")] = "migrationadmin"
+	rv[shouldLoadRef("0111A7jZX41e1SpH9oW3F2dgUvVQdjSqXEAGQSxhbqmD")] = "migrationdaemon"
+	rv[shouldLoadRef("0111A7FNYLZLYXYWZPbkMhCAPwV9nYrWWE7L57CtdJCj")] = "migrationshard"
+	rv[shouldLoadRef("0111A6NKbCjpzFr9MttfcWV8vX8eFjiyGPPfSH1AMtwN")] = "nodedomain"
+	rv[shouldLoadRef("0111A5fZeApbGhcsLrbfGy82kKLgapF93GhNPMLSYaPY")] = "noderecord"
+	rv[shouldLoadRef("0111A5x8N1VJTm7BKYgzSe6TWHcFi98QZgw3AnkYiKML")] = "pkshard"
+	rv[shouldLoadRef("0111A84uiiTD1LXAHNP4GMA6YJFjbnCdkRia2pCqwBV5")] = "rootdomain"
+	rv[shouldLoadRef("0111A5gmRD1ZbHjQh7DgH9SrCK4a1qfwEUP5xAir6i8L")] = "wallet"
+
+	return rv
+}
+
 func InitializeCodeDescriptors() []XXX_artifacts.CodeDescriptor {
 	rv := make([]XXX_artifacts.CodeDescriptor, 0)
 
