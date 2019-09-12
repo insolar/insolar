@@ -227,12 +227,14 @@ func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, para
 	if err != nil {
 		return nil, errors.Wrap(err, "[ SendWithSeed ] Problem with creating target request")
 	}
-	return doReq(req)
+	b, err := doReq(req)
+	return b, errors.Wrap(err, "[ SendWithSeed ] Problem with sending target request")
 }
 
+// MakeRequestWithSeed creates request with provided url, user config, params and seed.
 func MakeRequestWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, params *Params, seed string) (*http.Request, error) {
 	if userCfg == nil || params == nil {
-		return nil, errors.New("[ SendWithSeed ] Configs must be initialized")
+		return nil, errors.New("configs must be initialized")
 	}
 
 	params.Reference = userCfg.Caller
@@ -250,11 +252,11 @@ func MakeRequestWithSeed(ctx context.Context, url string, userCfg *UserConfigJSO
 	verboseInfo(ctx, "Signing request ...")
 	dataToSign, err := json.Marshal(request)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ SendWithSeed ] Config request marshaling failed")
+		return nil, errors.Wrap(err, "config request marshaling failed")
 	}
 	signature, err := Sign(userCfg.privateKeyObject, dataToSign)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ SendWithSeed ] Problem with signing request")
+		return nil, errors.Wrap(err, "problem with signing request")
 	}
 	verboseInfo(ctx, "Signing request completed")
 
