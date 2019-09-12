@@ -120,24 +120,18 @@ func (p *GetRequest) Proceed(ctx context.Context) error {
 			}
 			node = *l
 
-			if node != p.dep.coordinator.Me() {
-				inslogger.FromContext(ctx).Warn("virtual node missed jet")
-				if !p.pass {
-					return ErrNotExecutor
-				}
+			inslogger.FromContext(ctx).Warn("virtual node missed jet")
 
-				// Send calculated jet to virtual node.
-				msg, err = payload.NewMessage(&payload.UpdateJet{
-					Pulse: p.requestID.Pulse(),
-					JetID: insolar.JetID(*jetID),
-				})
-				if err != nil {
-					return errors.Wrap(err, "failed to create jet message")
-				}
-				_, done := p.dep.sender.SendTarget(ctx, msg, p.message.Sender)
-				done()
-				return ErrNotExecutor
+			// Send calculated jet to virtual node.
+			msg, err = payload.NewMessage(&payload.UpdateJet{
+				Pulse: p.requestID.Pulse(),
+				JetID: insolar.JetID(*jetID),
+			})
+			if err != nil {
+				return errors.Wrap(err, "failed to create jet message")
 			}
+			_, done := p.dep.sender.SendTarget(ctx, msg, p.message.Sender)
+			done()
 		}
 
 		_, done := p.dep.sender.SendTarget(ctx, msg, node)
