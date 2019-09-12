@@ -70,10 +70,8 @@ import (
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/pkg/errors"
 
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/metrics"
-
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
 func newComplete(b *Base) *Complete {
@@ -92,7 +90,6 @@ func (g *Complete) Run(ctx context.Context, pulse insolar.Pulse) {
 	}
 
 	g.HostNetwork.RegisterRequestHandler(types.SignCert, g.signCertHandler)
-	metrics.NetworkComplete.Set(float64(time.Now().Unix()))
 }
 
 func (g *Complete) GetState() insolar.NetworkState {

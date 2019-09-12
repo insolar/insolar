@@ -52,6 +52,7 @@ package gateway
 
 import (
 	"context"
+	"go.opencensus.io/stats"
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
@@ -93,4 +94,5 @@ func (n *gatewayer) SwitchState(ctx context.Context, state insolar.NetworkState,
 
 	n.gateway = gateway
 	go n.gateway.Run(ctx, pulse)
+	stats.Record(ctx, networkState.M(int64(state)))
 }
