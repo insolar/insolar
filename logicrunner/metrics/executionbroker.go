@@ -76,7 +76,7 @@ var (
 		stats.UnitDimensionless,
 	)
 	ExecutionBrokerExecutionFinished = stats.Int64(
-		"vm_execution_broker_execution_started",
+		"vm_execution_broker_execution_finished",
 		"execution broker started execution",
 		stats.UnitDimensionless,
 	)

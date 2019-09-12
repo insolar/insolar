@@ -382,7 +382,7 @@ func TestReceiveResult_UnwantedResultWithError(t *testing.T) {
 	res, err := serializeReply(msg)
 	require.NoError(t, err)
 	err = cReq.ReceiveResult(ctx, res)
-	require.NoError(t, err)
+	require.Error(t, err)
 }
 
 func serializeReply(msg *message.Message) (*message.Message, error) {
