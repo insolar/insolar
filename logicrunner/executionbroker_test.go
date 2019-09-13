@@ -382,7 +382,7 @@ func TestExecutionBroker_OnPulse(t *testing.T) {
 					IsEmptyMock.Return(true)
 				broker := NewExecutionBroker(objectRef, nil, nil, nil, nil, er, nil, pa)
 				// fetcher is stopped
-				broker.requestsFetcher = NewRequestsFetcherMock(t).AbortMock.Return()
+				broker.requestsFetcher = NewRequestFetcherMock(t).AbortMock.Return()
 				broker.mutable.queue.Append(ctx, requestsqueue.FromLedger, randTranscript(ctx), randTranscript(ctx))
 				return broker
 			},
@@ -640,7 +640,7 @@ func TestExecutionBroker_NoMoreRequestsOnLedger(t *testing.T) {
 	)
 
 	b.ledgerHasMoreRequests = true
-	b.requestsFetcher = NewRequestsFetcherMock(mc).AbortMock.Return()
+	b.requestsFetcher = NewRequestFetcherMock(mc).AbortMock.Return()
 	b.NoMoreRequestsOnLedger(ctx)
 
 	require.False(t, b.ledgerHasMoreRequests)
@@ -661,7 +661,7 @@ func TestExecutionBroker_AbandonedRequestsOnLedger(t *testing.T) {
 		objectRef, nil, nil, nil, nil, nil, nil, pa,
 	)
 
-	b.requestsFetcher = NewRequestsFetcherMock(mc).FetchPendingsMock.Return()
+	b.requestsFetcher = NewRequestFetcherMock(mc).FetchPendingsMock.Return()
 	b.AbandonedRequestsOnLedger(ctx)
 }
 
