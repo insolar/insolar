@@ -67,7 +67,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/metrics"
-	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/hostnetwork/future"
 	"github.com/insolar/insolar/network/hostnetwork/host"
@@ -219,23 +218,23 @@ func (d *distributor) sendPulseToHost(ctx context.Context, p *insolar.Pulse, hos
 
 	pulseRequest := NewPulsePacketWithTrace(ctx, p, d.pulsarHost, host, uint64(d.generateID()))
 
-	_, err := d.sendRequestToHost(ctx, pulseRequest, host)
+	err := d.sendRequestToHost(ctx, pulseRequest, host)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (d *distributor) sendRequestToHost(ctx context.Context, packet *packet.Packet, receiver *host.Host) (network.Future, error) {
+func (d *distributor) sendRequestToHost(ctx context.Context, packet *packet.Packet, receiver *host.Host) error {
 	inslogger.FromContext(ctx).Debugf("Send %s request to %s with RequestID = %d",
 		packet.GetType(), receiver.String(), packet.GetRequestID())
 
 	err := hostnetwork.SendPacket(ctx, d.pool, packet)
 	if err != nil {
-		return nil, errors.Wrap(err, "Failed to send transport packet")
+		return errors.Wrap(err, "Failed to send transport packet")
 	}
 	metrics.NetworkPacketSentTotal.WithLabelValues(packet.GetType().String()).Inc()
-	return nil, nil
+	return nil
 }
 
 func NewPulsePacket(p *insolar.Pulse, pulsarHost, to *host.Host, id uint64) *packet.Packet {

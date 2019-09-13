@@ -449,7 +449,7 @@
       "fillGradient": 0,
       "gridPos": {
         "h": 8,
-        "w": 12,
+        "w": 11,
         "x": 0,
         "y": 10
       },
@@ -479,7 +479,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "rate(insolar_heavy_abandones[1m])",
+          "expr": "rate(insolar_requests_abandoned{role=\"heavy_material\"}[1m])*10",
           "refId": "A"
         }
       ],
@@ -487,7 +487,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Heavy abandoned",
+      "title": "Abandoned requests per pulse",
       "tooltip": {
         "shared": true,
         "sort": 0,

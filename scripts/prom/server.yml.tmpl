@@ -11,3 +11,7 @@ scrape_configs:
     - "{{ . }}"
     {{- end }}
 {{ end }}
+- job_name: pulsar
+  static_configs:
+  - targets:
+    - "host.docker.internal:7999"

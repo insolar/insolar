@@ -20,9 +20,11 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/logicrunner/common"
+	"github.com/insolar/insolar/logicrunner/metrics"
 	"github.com/insolar/insolar/logicrunner/writecontroller"
 
 	"github.com/insolar/insolar/insolar/flow"
@@ -90,6 +92,7 @@ func (h *HandleExecutorResults) handleMessage(ctx context.Context, msg payload.E
 	broker.PrevExecutorPendingResult(ctx, msg.Pending)
 
 	if msg.LedgerHasMoreRequests {
+		stats.Record(ctx, metrics.ExecutorResultsRequestsFromPrevExecutor.M(1))
 		broker.MoreRequestsOnLedger(ctx)
 	}
 

@@ -21,9 +21,11 @@ import (
 	"context"
 	"strconv"
 	"sync"
+	"time"
 
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
 	"go.opencensus.io/trace"
 
 	"github.com/insolar/go-actors/actor/system"
@@ -43,6 +45,7 @@ import (
 	lrCommon "github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/goplugin"
 	"github.com/insolar/insolar/logicrunner/machinesmanager"
+	"github.com/insolar/insolar/logicrunner/metrics"
 	"github.com/insolar/insolar/logicrunner/shutdown"
 	"github.com/insolar/insolar/logicrunner/writecontroller"
 	"github.com/insolar/insolar/pulse"
@@ -235,8 +238,13 @@ func (lr *LogicRunner) GracefulStop(ctx context.Context) error {
 }
 
 func (lr *LogicRunner) OnPulse(ctx context.Context, oldPulse insolar.Pulse, newPulse insolar.Pulse) error {
+	onPulseStart := time.Now()
 	ctx, span := instracer.StartSpan(ctx, "pulse.logicrunner")
-	defer span.End()
+	defer func(ctx context.Context) {
+		stats.Record(ctx,
+			metrics.LogicRunnerOnPulseTiming.M(float64(time.Since(onPulseStart).Nanoseconds())/1e6))
+		span.End()
+	}(ctx)
 
 	err := lr.WriteController.CloseAndWait(ctx, oldPulse.PulseNumber)
 	if err != nil {

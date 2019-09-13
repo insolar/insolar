@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
@@ -85,12 +86,69 @@ func (p *GetRequest) Proceed(ctx context.Context) error {
 		return nil
 	}
 
+	sendPassRequest := func() error {
+		buf, err := p.message.Marshal()
+		if err != nil {
+			return errors.Wrap(err, "failed to marshal origin meta message")
+		}
+		msg, err := payload.NewMessage(&payload.Pass{
+			Origin: buf,
+		})
+		if err != nil {
+			return errors.Wrap(err, "failed to create reply")
+		}
+
+		onHeavy, err := p.dep.coordinator.IsBeyondLimit(ctx, p.requestID.Pulse())
+		if err != nil {
+			return errors.Wrap(err, "failed to calculate pulse")
+		}
+		var node insolar.Reference
+		if onHeavy {
+			h, err := p.dep.coordinator.Heavy(ctx)
+			if err != nil {
+				return errors.Wrap(err, "failed to calculate heavy")
+			}
+			node = *h
+		} else {
+			jetID, err := p.dep.fetcher.Fetch(ctx, p.objectID, p.requestID.Pulse())
+			if err != nil {
+				return errors.Wrap(err, "failed to fetch jet")
+			}
+			l, err := p.dep.coordinator.LightExecutorForJet(ctx, *jetID, p.requestID.Pulse())
+			if err != nil {
+				return errors.Wrap(err, "failed to calculate role")
+			}
+			node = *l
+
+			inslogger.FromContext(ctx).Warn("virtual node missed jet")
+
+			// Send calculated jet to virtual node.
+			msg, err = payload.NewMessage(&payload.UpdateJet{
+				Pulse: p.requestID.Pulse(),
+				JetID: insolar.JetID(*jetID),
+			})
+			if err != nil {
+				return errors.Wrap(err, "failed to create jet message")
+			}
+			_, done := p.dep.sender.SendTarget(ctx, msg, p.message.Sender)
+			done()
+		}
+
+		_, done := p.dep.sender.SendTarget(ctx, msg, node)
+		done()
+		return nil
+	}
+
 	rec, err := p.dep.records.ForID(ctx, p.requestID)
 	switch err {
 	case nil:
 		return sendRequest(rec)
 
 	case object.ErrNotFound:
+		if p.pass {
+			return sendPassRequest()
+		}
+
 		return &payload.CodedError{
 			Text: "request not found",
 			Code: payload.CodeNotFound,

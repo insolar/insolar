@@ -394,6 +394,7 @@ func (b *Bus) IncomingMessageRouter(handle message.HandlerFunc) message.HandlerF
 		if err != nil {
 			instracer.AddError(span, err)
 			logger.Error(errors.Wrap(err, "failed to receive message"))
+			span.End()
 			return nil, nil
 		}
 
@@ -401,6 +402,7 @@ func (b *Bus) IncomingMessageRouter(handle message.HandlerFunc) message.HandlerF
 		err = msgHash.Unmarshal(meta.ID)
 		if err != nil {
 			logger.Error(errors.Wrap(err, "failed to unmarshal message id"))
+			span.End()
 			return nil, nil
 		}
 		msg.Metadata.Set("msg_hash", msgHash.String())
@@ -416,6 +418,7 @@ func (b *Bus) IncomingMessageRouter(handle message.HandlerFunc) message.HandlerF
 			if err != nil {
 				logger.Error(errors.Wrap(err, "message handler returned error"))
 			}
+			span.End()
 			return nil, nil
 		}
 
@@ -427,6 +430,7 @@ func (b *Bus) IncomingMessageRouter(handle message.HandlerFunc) message.HandlerF
 		if !ok {
 			logger.Warn("reply discarded")
 			b.repliesMutex.RUnlock()
+			span.End()
 			return nil, nil
 		}
 
