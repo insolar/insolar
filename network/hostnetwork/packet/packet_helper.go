@@ -148,42 +148,42 @@ func SerializePacket(p *Packet) ([]byte, error) {
 	return result, nil
 }
 
-func DeserializePacketRaw(conn io.Reader) (*ReceivedPacket, error) {
+func DeserializePacketRaw(conn io.Reader) (*ReceivedPacket, uint64, error) {
 	reader := NewCapturingReader(conn)
 
 	lengthBytes := make([]byte, 8)
 	if _, err := io.ReadFull(reader, lengthBytes); err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	lengthReader := bytes.NewReader(lengthBytes)
 	length, err := binary.ReadUvarint(lengthReader)
 	if err != nil {
-		return nil, io.ErrUnexpectedEOF
+		return nil, 0, io.ErrUnexpectedEOF
 	}
 
 	buf := make([]byte, length)
 	if _, err := io.ReadFull(reader, buf); err != nil {
-		return nil, errors.Wrap(err, "failed to read packet")
+		return nil, 0, errors.Wrap(err, "failed to read packet")
 	}
 
 	msg := &Packet{}
 	err = msg.Unmarshal(buf)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to decode packet")
+		return nil, 0, errors.Wrap(err, "failed to decode packet")
 	}
 
 	receivedPacket := NewReceivedPacket(msg, reader.Captured())
-	return receivedPacket, nil
+	return receivedPacket, length, nil
 }
 
 // DeserializePacket reads packet from io.Reader.
-func DeserializePacket(logger insolar.Logger, conn io.Reader) (*ReceivedPacket, error) {
-	receivedPacket, err := DeserializePacketRaw(conn)
+func DeserializePacket(logger insolar.Logger, conn io.Reader) (*ReceivedPacket, uint64, error) {
+	receivedPacket, length, err := DeserializePacketRaw(conn)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	logger.Debugf("[ DeserializePacket ] decoded packet to %s", receivedPacket.DebugString())
-	return receivedPacket, nil
+	return receivedPacket, length, nil
 }
 
 func (p *Packet) DebugString() string {
