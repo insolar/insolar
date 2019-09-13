@@ -118,6 +118,7 @@ func (s *StreamHandler) HandleStream(ctx context.Context, address string, reader
 			}
 
 			mainLogger.Warnf("[ HandleStream ] Failed to deserialize packet: ", err.Error())
+			return
 		}
 
 		packetCtx, logger := inslogger.WithTraceField(packetCtx, p.TraceID)
