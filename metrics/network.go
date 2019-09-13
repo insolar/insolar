@@ -61,7 +61,7 @@ var NetworkPacketTimeoutTotal = prometheus.NewCounterVec(prometheus.CounterOpts{
 }, []string{"packetType"})
 
 // NetworkFutures is current network transport futures count metric
-var NetworkFutures = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+var NetworkFutures = prometheus.NewCounterVec(prometheus.CounterOpts{
 	Name:      "futures",
 	Help:      "Current network transport futures count",
 	Namespace: insolarNamespace,

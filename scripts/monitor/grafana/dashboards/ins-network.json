@@ -15,7 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1568303217493,
+  "iteration": 1568381084420,
   "links": [],
   "panels": [
     {
@@ -687,7 +687,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "insolar_network_futures{packetType=~\"$packetType\"}",
+          "expr": "irate(insolar_network_futures{packetType=~\"$packetType\"}[60s])",
           "legendFormat": "{{instance}} {{packetType}}",
           "refId": "A"
         }

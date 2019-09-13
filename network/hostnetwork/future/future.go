@@ -136,6 +136,5 @@ func (f *future) Cancel() {
 
 func (f *future) finish() {
 	close(f.response)
-	metrics.NetworkFutures.WithLabelValues(f.request.GetType().String()).Dec()
 	f.cancelCallback(f)
 }
