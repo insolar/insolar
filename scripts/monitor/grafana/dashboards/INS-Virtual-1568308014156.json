@@ -1346,7 +1346,35 @@
   "style": "dark",
   "tags": [],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "allValue": null,
+        "current": {
+          "text": "\"\"",
+          "value": "\"\""
+        },
+        "hide": 0,
+        "includeAll": false,
+        "label": null,
+        "multi": false,
+        "name": "installation",
+        "options": [
+          {
+            "selected": true,
+            "text": "\"\"",
+            "value": "\"\""
+          },
+          {
+            "selected": false,
+            "text": "\"dev-main\"",
+            "value": "\"dev-main\""
+          }
+        ],
+        "query": "\"\", \"dev-main\"",
+        "skipUrlSync": false,
+        "type": "custom"
+      }
+    ]
   },
   "time": {
     "from": "2019-09-12T13:24:20.671Z",

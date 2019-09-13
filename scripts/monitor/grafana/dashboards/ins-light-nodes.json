@@ -863,6 +863,33 @@
       {
         "allValue": null,
         "current": {
+          "text": "\"\"",
+          "value": "\"\""
+        },
+        "hide": 0,
+        "includeAll": false,
+        "label": null,
+        "multi": false,
+        "name": "installation",
+        "options": [
+          {
+            "selected": true,
+            "text": "\"\"",
+            "value": "\"\""
+          },
+          {
+            "selected": false,
+            "text": "\"dev-main\"",
+            "value": "\"dev-main\""
+          }
+        ],
+        "query": "\"\", \"dev-main\"",
+        "skipUrlSync": false,
+        "type": "custom"
+      },
+      {
+        "allValue": null,
+        "current": {
           "text": "All",
           "value": "$__all"
         },
