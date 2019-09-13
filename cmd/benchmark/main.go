@@ -67,6 +67,7 @@ var (
 	saveMembersToFile  bool
 	useMembersFromFile bool
 	noCheckBalance     bool
+	onlyCreateMembers  bool
 	discoveryNodesLogs string
 )
 
@@ -83,6 +84,7 @@ func parseInputParams() {
 	pflag.BoolVarP(&useMembersFromFile, "usemembers", "m", false, "use members from file")
 	pflag.StringVarP(&memberFile, "members-file", "", defaultMemberFile, "dir for saving members data")
 	pflag.BoolVarP(&noCheckBalance, "nocheckbalance", "b", false, "don't check balance at the end")
+	pflag.BoolVarP(&onlyCreateMembers, "onlycreatemembers", "z", false, "only create members without transfer money")
 	pflag.StringVarP(&discoveryNodesLogs, "discovery-nodes-logs-dir", "", defaultDiscoveryNodesLogs, "launchnet logs dir for checking errors")
 	pflag.Parse()
 }
@@ -113,7 +115,7 @@ func check(msg string, err error) {
 	}
 }
 
-func newScenarios(out io.Writer, insSDK *sdk.SDK, members []*sdk.Member, concurrent int, repetitions int, penRetries int32) scenario {
+func newTransferDifferentMemberScenarios(out io.Writer, insSDK *sdk.SDK, members []*sdk.Member, concurrent int, repetitions int, penRetries int32) scenario {
 	return &transferDifferentMembersScenario{
 		concurrent:  concurrent,
 		repetitions: repetitions,
@@ -125,18 +127,29 @@ func newScenarios(out io.Writer, insSDK *sdk.SDK, members []*sdk.Member, concurr
 	}
 }
 
+func newCreateMemberScenarios(out io.Writer, insSDK *sdk.SDK, concurrent int, repetitions int, penRetries int32) scenario {
+	return &createMembersScenario{
+		concurrent:  concurrent,
+		repetitions: repetitions,
+		name:        "CreateMember",
+		out:         out,
+		insSDK:      insSDK,
+		penRetries:  penRetries,
+	}
+}
+
 func startScenario(ctx context.Context, s scenario) {
 	err := s.canBeStarted()
 	check(fmt.Sprintf("Scenario %s can not be started:", s.getName()), err)
 
-	writeToOutput(s.getOut(), fmt.Sprintf("Scenario %s: Start to transfer\n", s.getName()))
+	writeToOutput(s.getOut(), fmt.Sprintf("Scenario %s started: \n", s.getName()))
 
 	start := time.Now()
 	logReaderCloseChan := testutils.NodesErrorLogReader(discoveryNodesLogs, s.getOut())
 
 	s.start(ctx)
 	elapsed := time.Since(start)
-	writeToOutput(s.getOut(), fmt.Sprintf("Scenario %s: Transferring took %s \n", s.getName(), elapsed))
+	writeToOutput(s.getOut(), fmt.Sprintf("Scenario %s took: %s \n", s.getName(), elapsed))
 
 	close(logReaderCloseChan)
 	printResults(s)
@@ -274,7 +287,7 @@ func saveMembers(members []*sdk.Member) error {
 	if err != nil {
 		return errors.Wrap(err, "couldn't create file")
 	}
-	defer file.Close() //nolint: errcheck
+	defer file.Close() // nolint: errcheck
 
 	result, err := json.MarshalIndent(members, "", "    ")
 	if err != nil {
@@ -325,23 +338,18 @@ func main() {
 	members, crMemPenBefore, err := getMembers(insSDK)
 	check("Error while loading members: ", err)
 
-	var totalBalanceBefore *big.Int
-	var balancePenRetries int32
-	balanceCheckMembers := make([]*sdk.Member, len(members))
-
-	if !noCheckBalance {
-		copy(balanceCheckMembers, members)
-		balanceCheckMembers = append(balanceCheckMembers, insSDK.GetFeeMember())
-		totalBalanceBefore, balancePenRetries = getTotalBalance(insSDK, balanceCheckMembers)
-	}
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	var sigChan = make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGHUP)
 
-	s := newScenarios(out, insSDK, members, concurrent, repetitions, crMemPenBefore+balancePenRetries)
+	var s scenario
+	if onlyCreateMembers {
+		s = newCreateMemberScenarios(out, insSDK, concurrent, repetitions, crMemPenBefore)
+	} else {
+		s = newTransferDifferentMemberScenarios(out, insSDK, members, concurrent, repetitions, crMemPenBefore)
+	}
 	go func() {
 		stopGracefully := true
 		for {
@@ -363,27 +371,13 @@ func main() {
 		}
 	}()
 
+	s.prepare()
+
 	startScenario(ctx, s)
 
 	// Finish benchmark time
 	t = time.Now()
 	fmt.Printf("\nFinish: %s\n\n", t.String())
 
-	if !noCheckBalance {
-		totalBalanceAfter := big.NewInt(0)
-		for nretries := 0; nretries < balanceCheckRetries; nretries++ {
-			totalBalanceAfter, _ = getTotalBalance(insSDK, balanceCheckMembers)
-			if totalBalanceAfter.Cmp(totalBalanceBefore) == 0 {
-				break
-			}
-			fmt.Printf("Total balance before and after don't match: %v vs %v - retrying in %s ...\n",
-				totalBalanceBefore, totalBalanceAfter, balanceCheckDelay)
-			time.Sleep(balanceCheckDelay)
-
-		}
-		fmt.Printf("Total balance before: %v and after: %v\n", totalBalanceBefore, totalBalanceAfter)
-		if totalBalanceAfter.Cmp(totalBalanceBefore) != 0 {
-			log.Fatal("Total balance mismatch!\n")
-		}
-	}
+	s.checkResult()
 }

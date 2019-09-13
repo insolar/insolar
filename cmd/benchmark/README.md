@@ -53,5 +53,7 @@ or you can run benchmark with
                 Path to file for saving members data
         -b nocheckbalance
                 If true, don't check balance at the start/end of transfers. Default is false. 
+        -z onlycreatemembers
+                If true, only create members without transfer money. 
         --discovery-nodes-logs-dir
                 Launchnet logs dir for checking errors
