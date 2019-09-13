@@ -58,7 +58,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(irate(insolard_messagebus_parcels_sent_count{messageType=~\"TypeCallConstructor|TypeCallMethod\", instance=~\"$node\", role=~\"$role\"}[1m]))",
+          "expr": "sum(irate(insolard_messagebus_parcels_sent_count{messageType=~\"TypeCallConstructor|TypeCallMethod\", instance=~\"$node\", role=~\"$role\", installation=$installation}[1m]))",
           "format": "time_series",
           "instant": false,
           "intervalFactor": 1,
@@ -145,7 +145,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "insolard_consensus_activenodes_count{instance=~\"$node\", role=~\"$role\"}",
+          "expr": "insolard_consensus_activenodes_count{instance=~\"$node\", role=~\"$role\", installation=$installation}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{job}}-{{instance}}",
@@ -245,7 +245,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(insolard_consensus_packets_sent{instance=~\"$node\", role=~\"$role\", phase=\"Phase1\"}[1m])*10",
+          "expr": "irate(insolard_consensus_packets_sent{instance=~\"$node\", role=~\"$role\", phase=\"Phase1\", installation=$installation}[1m])*10",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{job}}-{{instance}}",
@@ -331,7 +331,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "rate(insolard_consensus_packets_recv{instance=~\"$node\", role=~\"$role\", phase=\"phase 1\"}[1m]) * 10",
+          "expr": "rate(insolard_consensus_packets_recv{instance=~\"$node\", role=~\"$role\", phase=\"phase 1\", installation=$installation}[1m]) * 10",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{job}}-{{instance}}",
@@ -417,7 +417,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(insolard_consensus_packets_sent{instance=~\"$node\", role=~\"$role\", phase=\"Phase2\"}[1m])*10",
+          "expr": "irate(insolard_consensus_packets_sent{instance=~\"$node\", role=~\"$role\", phase=\"Phase2\", installation=$installation}[1m])*10",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{job}}-{{instance}}",
@@ -503,7 +503,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(insolard_consensus_packets_recv{instance=~\"$node\", role=~\"$role\", phase=\"phase 2\"}[1m])*10",
+          "expr": "irate(insolard_consensus_packets_recv{instance=~\"$node\", role=~\"$role\", phase=\"phase 2\", installation=$installation}[1m])*10",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{job}}-{{instance}}",
@@ -589,7 +589,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(insolard_consensus_packets_recv{instance=~\"$node\", role=~\"$role\", phase=\"phase 21\"}[1m])*10",
+          "expr": "irate(insolard_consensus_packets_recv{instance=~\"$node\", role=~\"$role\", phase=\"phase 21\", installation=$installation}[1m])*10",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{job}}-{{instance}}",
@@ -675,7 +675,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(insolard_consensus_packets_sent{instance=~\"$node\", role=~\"$role\", phase=\"Phase3\"}[1m])*10",
+          "expr": "irate(insolard_consensus_packets_sent{instance=~\"$node\", role=~\"$role\", phase=\"Phase3\", installation=$installation}[1m])*10",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{job}}-{{instance}}",
@@ -761,7 +761,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(insolard_consensus_packets_recv{instance=~\"$node\", role=~\"$role\", phase=\"phase 3\"}[1m])*10",
+          "expr": "irate(insolard_consensus_packets_recv{instance=~\"$node\", role=~\"$role\", phase=\"phase 3\", installation=$installation}[1m])*10",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{job}}-{{instance}}",
@@ -869,7 +869,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum by(messageType) (rate(insolard_messagebus_parcels_sent_count{instance=~\"$node\", role=~\"$role\"}[1m]))",
+              "expr": "sum by(messageType) (rate(insolard_messagebus_parcels_sent_count{instance=~\"$node\", role=~\"$role\", installation=$installation}[1m]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{messageType}}",
@@ -954,7 +954,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum by(instance, job) (rate(insolard_messagebus_parcels_sent_count{instance=~\"$node\", role=~\"$role\"}[1m]))",
+              "expr": "sum by(instance, job) (rate(insolard_messagebus_parcels_sent_count{instance=~\"$node\", role=~\"$role\", installation=$installation}[1m]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{job}}-{{instance}}",
@@ -1033,7 +1033,7 @@
           "reverseYBuckets": false,
           "targets": [
             {
-              "expr": "sum (rate(insolard_messagebus_parcels_time_bucket{instance=~\"$node\", role=~\"$role\"}[1m])) by (le)",
+              "expr": "sum (rate(insolard_messagebus_parcels_time_bucket{instance=~\"$node\", role=~\"$role\", installation=$installation}[1m])) by (le)",
               "format": "heatmap",
               "interval": "5m",
               "intervalFactor": 1,
@@ -1116,7 +1116,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "irate(insolard_hotdata_pending_total{instance=~\"$node\", role=~\"$role\"}[1m])*10",
+              "expr": "irate(insolard_hotdata_pending_total{instance=~\"$node\", role=~\"$role\", installation=$installation}[1m])*10",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{job}}-{{instance}}",
@@ -1201,7 +1201,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(insolar_badger_disk_reads_total{instance=~\"$node\", role=~\"$role\"}[1m])",
+              "expr": "rate(insolar_badger_disk_reads_total{instance=~\"$node\", role=~\"$role\", installation=$installation}[1m])",
               "format": "time_series",
               "hide": false,
               "instant": false,
@@ -1301,7 +1301,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(insolard_artifactmanager_redirects{instance=~\"$node\", role=~\"$role\"}[1m])) by(service)",
+              "expr": "sum(rate(insolard_artifactmanager_redirects{instance=~\"$node\", role=~\"$role\", installation=$installation}[1m])) by(service)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Occured on {{service}}",
@@ -1386,7 +1386,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(insolar_badger_disk_writes_total{instance=~\"$node\", role=~\"$role\"}[1m])",
+              "expr": "rate(insolar_badger_disk_writes_total{instance=~\"$node\", role=~\"$role\", installation=$installation}[1m])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{job}}-{{instance}}",
@@ -1471,7 +1471,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(insolard_heavyserver_synced_records{instance=~\"$node\", role=~\"$role\"}[1m])",
+              "expr": "rate(insolard_heavyserver_synced_records{instance=~\"$node\", role=~\"$role\", installation=$installation}[1m])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Jet {{jet}}",
@@ -1572,7 +1572,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "count (rate(insgorund_contract_execution_time_count{instance=~\"$node\", role=~\"$role\"}[100s])) by (method)",
+              "expr": "count (rate(insgorund_contract_execution_time_count{instance=~\"$node\", role=~\"$role\", installation=$installation}[100s])) by (method)",
               "format": "time_series",
               "intervalFactor": 1,
               "refId": "B"
@@ -1658,7 +1658,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "(avg(rate(insolar_goplugin_contract_execution_time_count{instance=~\"$node\", role=~\"$role\"}[100s])) by(method)) / 100",
+              "expr": "(avg(rate(insolar_goplugin_contract_execution_time_count{instance=~\"$node\", role=~\"$role\", installation=$installation}[100s])) by(method)) / 100",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{method}}",
@@ -1745,7 +1745,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "avg(insgorund_contract_execution_time_count{instance=~\"$node\", role=~\"$role\"}) by(instance)",
+              "expr": "avg(insgorund_contract_execution_time_count{instance=~\"$node\", role=~\"$role\", installation=$installation}) by(instance)",
               "format": "time_series",
               "intervalFactor": 1,
               "refId": "A"
@@ -1844,7 +1844,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "insolar_network_connections{instance=~\"$node\", role=~\"$role\"}",
+              "expr": "insolar_network_connections{instance=~\"$node\", role=~\"$role\", installation=$installation}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{job}}-{{instance}}",
@@ -1929,7 +1929,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum by(instance, job) (rate(insolar_network_futures{instance=~\"$node\", role=~\"$role\"}[1m]))",
+              "expr": "sum by(instance, job) (rate(insolar_network_futures{instance=~\"$node\", role=~\"$role\", installation=$installation}[1m]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{job}}-{{instance}}",
@@ -2014,7 +2014,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum by(instance, job) (rate(insolard_network_parcels_sent_size_count{instance=~\"$node\", role=~\"$role\"}[1m]))",
+              "expr": "sum by(instance, job) (rate(insolard_network_parcels_sent_size_count{instance=~\"$node\", role=~\"$role\", installation=$installation}[1m]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{job}}-{{instance}}",
@@ -2099,7 +2099,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum by(instance, job) (rate(insolard_network_parcels_reply_size_count{instance=~\"$node\", role=~\"$role\"}[1m]))",
+              "expr": "sum by(instance, job) (rate(insolard_network_parcels_reply_size_count{instance=~\"$node\", role=~\"$role\", installation=$installation}[1m]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{job}}-{{instance}}",
@@ -2184,7 +2184,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum by(packetType) (rate(insolar_network_packet_sent_total{instance=~\"$node\", role=~\"$role\"}[1m]))",
+              "expr": "sum by(packetType) (rate(insolar_network_packet_sent_total{instance=~\"$node\", role=~\"$role\", installation=$installation}[1m]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{packetType}}",
@@ -2269,7 +2269,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum by(instance, job) (rate(insolar_network_packet_sent_total{instance=~\"$node\", role=~\"$role\"}[1m]))",
+              "expr": "sum by(instance, job) (rate(insolar_network_packet_sent_total{instance=~\"$node\", role=~\"$role\", installation=$installation}[1m]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{job}}-{{instance}}",
@@ -2354,7 +2354,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum by(packetType) (rate(insolar_network_packet_received_total{instance=~\"$node\", role=~\"$role\"}[1m]))",
+              "expr": "sum by(packetType) (rate(insolar_network_packet_received_total{instance=~\"$node\", role=~\"$role\", installation=$installation}[1m]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{packetType}}",
@@ -2439,7 +2439,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum by(instance) (rate(insolar_network_packet_received_total{instance=~\"$node\", role=~\"$role\"}[1m]))",
+              "expr": "sum by(instance) (rate(insolar_network_packet_received_total{instance=~\"$node\", role=~\"$role\", installation=$installation}[1m]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{instance}}",
@@ -2524,7 +2524,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum by(instance) (rate(insolar_network_packet_timeout_total{instance=~\"$node\", role=~\"$role\"}[1m]))",
+              "expr": "sum by(instance) (rate(insolar_network_packet_timeout_total{instance=~\"$node\", role=~\"$role\", installation=$installation}[1m]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{instance}}",
@@ -2630,7 +2630,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(insolar_process_cpu_seconds_total{role=~\"$role\", instance=~\"$node\"}[1m])",
+              "expr": "rate(insolar_process_cpu_seconds_total{role=~\"$role\", instance=~\"$node\", installation=$installation}[1m])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{job}}-{{instance}}",
@@ -2722,7 +2722,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "go_goroutines{instance=~\"$node\", role=~\"$role\"}",
+              "expr": "go_goroutines{instance=~\"$node\", role=~\"$role\", installation=$installation}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{job}}-{{instance}}",
@@ -2807,7 +2807,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "go_memstats_heap_inuse_bytes{role=~\"$role\", instance=~\"$node\"}",
+              "expr": "go_memstats_heap_inuse_bytes{role=~\"$role\", instance=~\"$node\", installation=$installation}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{job}}-{{instance}}",
@@ -2892,7 +2892,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(go_memstats_gc_sys_bytes{role=~\"$role\", instance=~\"$node\"}[1m]) ",
+              "expr": "rate(go_memstats_gc_sys_bytes{role=~\"$role\", instance=~\"$node\", installation=$installation}[1m]) ",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{job}}-{{instance}}",

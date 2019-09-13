@@ -80,7 +80,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "insolar_current_pulse{role=\"heavy_material\"}",
+          "expr": "insolar_current_pulse{role=\"heavy_material\", installation=$installation}",
           "instant": true,
           "refId": "A"
         }
@@ -249,7 +249,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "(insolar_current_pulse{role=\"heavy_material\"} - insolar_heavy_finalized_pulse{role=\"heavy_material\"}) / 10",
+          "expr": "(insolar_current_pulse{role=\"heavy_material\", installation=$installation} - insolar_heavy_finalized_pulse{role=\"heavy_material\", installation=$installation}) / 10",
           "instant": true,
           "refId": "A"
         }
@@ -309,7 +309,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "rate(insolar_heavysyncer_heavypayload_count[1m])",
+          "expr": "rate(insolar_heavysyncer_heavypayload_count{installation=$installation}[1m])",
           "legendFormat": "",
           "refId": "A"
         }
@@ -394,7 +394,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(insolar_bus_sent_total{message_type=\"TypeReplication\"}[1m]))",
+          "expr": "sum(rate(insolar_bus_sent_total{message_type=\"TypeReplication\", installation=$installation}[1m]))",
           "legendFormat": "rps",
           "refId": "A"
         }
@@ -479,7 +479,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "rate(insolar_requests_abandoned{role=\"heavy_material\"}[1m])*10",
+          "expr": "rate(insolar_requests_abandoned{role=\"heavy_material\", installation=$installation}[1m])*10",
           "refId": "A"
         }
       ],

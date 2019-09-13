@@ -54,7 +54,7 @@
         "steppedLine": false,
         "targets": [
           {
-            "expr": "histogram_quantile(0.95, insolard_artifactmanager_latency_bucket)",
+            "expr": "histogram_quantile(0.95, insolard_artifactmanager_latency_bucket{installation=$installation})",
             "format": "time_series",
             "intervalFactor": 1,
             "refId": "A"
@@ -137,7 +137,7 @@
         "steppedLine": false,
         "targets": [
           {
-            "expr": "histogram_quantile(0.99, insolard_artifactmanager_latency_bucket)",
+            "expr": "histogram_quantile(0.99, insolard_artifactmanager_latency_bucket{installation=$installation})",
             "format": "time_series",
             "intervalFactor": 1,
             "refId": "A"
@@ -220,7 +220,7 @@
         "steppedLine": false,
         "targets": [
           {
-            "expr": "go_gc_duration_seconds_sum / go_gc_duration_seconds_count ",
+            "expr": "go_gc_duration_seconds_sum{installation=$installation} / go_gc_duration_seconds_count{installation=$installation} ",
             "format": "time_series",
             "hide": false,
             "intervalFactor": 1,
@@ -304,7 +304,7 @@
         "steppedLine": false,
         "targets": [
           {
-            "expr": "go_goroutines",
+            "expr": "go_goroutines{installation=$installation}",
             "format": "time_series",
             "intervalFactor": 1,
             "refId": "A"
@@ -387,7 +387,7 @@
         "steppedLine": false,
         "targets": [
           {
-            "expr": "go_memstats_heap_sys_bytes",
+            "expr": "go_memstats_heap_sys_bytes{installation=$installation}",
             "format": "time_series",
             "intervalFactor": 1,
             "refId": "A"
@@ -470,7 +470,7 @@
         "steppedLine": false,
         "targets": [
           {
-            "expr": "go_memstats_alloc_bytes_total ",
+            "expr": "go_memstats_alloc_bytes_total{installation=$installation} ",
             "format": "time_series",
             "intervalFactor": 1,
             "refId": "A"
@@ -553,7 +553,7 @@
         "steppedLine": false,
         "targets": [
           {
-            "expr": "go_memstats_frees_total",
+            "expr": "go_memstats_frees_total{installation=$installation}",
             "format": "time_series",
             "intervalFactor": 1,
             "refId": "A"
@@ -636,7 +636,7 @@
         "steppedLine": false,
         "targets": [
           {
-            "expr": "go_memstats_heap_objects",
+            "expr": "go_memstats_heap_objects{installation=$installation}",
             "format": "time_series",
             "intervalFactor": 1,
             "refId": "A"

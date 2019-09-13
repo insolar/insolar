@@ -104,7 +104,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "insolar_current_pulse{instance=~\"$instance\"}",
+          "expr": "insolar_current_pulse{instance=~\"$instance\", installation=$installation}",
           "instant": true,
           "refId": "A"
         }
@@ -199,7 +199,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "insolar_current_pulse{instance=~\"$instance\"}",
+          "expr": "insolar_current_pulse{instance=~\"$instance\", installation=$installation}",
           "instant": true,
           "refId": "A"
         }
@@ -273,7 +273,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "insolar_object_indexes_added_count{instance=~\"$instance\"}-insolar_object_indexes_removed_count{instance=~\"$instance\"}",
+          "expr": "insolar_object_indexes_added_count{instance=~\"$instance\", installation=$installation}-insolar_object_indexes_removed_count{instance=~\"$instance\", installation=$installation}",
           "legendFormat": "{{ instance }}",
           "refId": "A"
         }
@@ -360,7 +360,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "rate(insolar_drop_records_total{instance=~\"$instance\"}[1m])*10",
+          "expr": "rate(insolar_drop_records_total{instance=~\"$instance\", installation=$installation}[1m])*10",
           "legendFormat": "{{ instance }}",
           "refId": "A"
         }
@@ -446,7 +446,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(insolar_requests_opened{instance=~\"$instance\"}-insolar_requests_closed{instance=~\"$instance\"})",
+          "expr": "sum(insolar_requests_opened{instance=~\"$instance\", installation=$installation}-insolar_requests_closed{instance=~\"$instance\", installation=$installation})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "",
@@ -536,7 +536,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "insolar_jets_counter{instance=~\"$instance\"}",
+          "expr": "insolar_jets_counter{instance=~\"$instance\", installation=$installation}",
           "legendFormat": "{{ instance }}",
           "refId": "A"
         }
@@ -623,7 +623,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "rate(insolar_hotdata_objects_send{instance=~\"$instance\"}[1m])*10",
+          "expr": "rate(insolar_hotdata_objects_send{instance=~\"$instance\", installation=$installation}[1m])*10",
           "legendFormat": "{{ instance }}",
           "refId": "A"
         }
@@ -712,7 +712,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(insolar_requests_abandoned{instance=~\"$instance\"}[1m]))*10",
+          "expr": "sum(rate(insolar_requests_abandoned{instance=~\"$instance\", installation=$installation}[1m]))*10",
           "format": "time_series",
           "instant": false,
           "legendFormat": "count",
@@ -802,7 +802,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(insolar_jets_counter{instance=~\"$instance\"})",
+          "expr": "sum(insolar_jets_counter{instance=~\"$instance\", installation=$installation})",
           "legendFormat": "sum jets light",
           "refId": "A"
         },

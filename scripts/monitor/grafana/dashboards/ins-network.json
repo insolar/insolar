@@ -64,7 +64,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "deriv(insolar_current_pulse{job=\"insolard\"}[60s])",
+          "expr": "deriv(insolar_current_pulse{job=\"insolard\", installation=$installation}[60s])",
           "hide": false,
           "instant": false,
           "legendFormat": "P {{instance}}",
@@ -151,7 +151,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "insolar_consensus_active_nodes_count",
+          "expr": "insolar_consensus_active_nodes_count{installation=$installation}",
           "legendFormat": "{{ instance }}",
           "refId": "A"
         }
@@ -238,12 +238,12 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum by(instance)(delta(insolar_consensus_packets_recv_count{phase=~\"$phase\"}[60s]))",
+          "expr": "sum by(instance)(delta(insolar_consensus_packets_recv_count{phase=~\"$phase\", installation=$installation}[60s]))",
           "legendFormat": "{{instance}}",
           "refId": "A"
         },
         {
-          "expr": "-sum by(instance)(delta(insolar_consensus_packets_sent_count{phase=~\"$phase\"}[60s]))",
+          "expr": "-sum by(instance)(delta(insolar_consensus_packets_sent_count{phase=~\"$phase\", installation=$installation}[60s]))",
           "legendFormat": "{{instance}}",
           "refId": "B"
         }
@@ -328,12 +328,12 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "deriv(insolar_consensus_packets_recv_bytes[60s])",
+          "expr": "deriv(insolar_consensus_packets_recv_bytes{installation=$installation}[60s])",
           "legendFormat": "{{instance}}",
           "refId": "A"
         },
         {
-          "expr": "-deriv(insolar_consensus_packets_sent_bytes[60s])",
+          "expr": "-deriv(insolar_consensus_packets_sent_bytes{installation=$installation}[60s])",
           "legendFormat": "{{instance}}",
           "refId": "B"
         }
@@ -422,7 +422,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "insolar_network_state",
+          "expr": "insolar_network_state{installation=$installation}",
           "instant": false,
           "legendFormat": "{{ instance }}",
           "refId": "A"
@@ -512,7 +512,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "insolar_network_connections",
+          "expr": "insolar_network_connections{installation=$installation}",
           "legendFormat": "{{ instance }}",
           "refId": "A"
         }
@@ -597,12 +597,12 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "rate(insolar_network_recv_bytes_count[60s])",
+          "expr": "rate(insolar_network_recv_bytes_count{installation=$installation}[60s])",
           "legendFormat": "RCV {{instance}}",
           "refId": "A"
         },
         {
-          "expr": "-rate(insolar_network_sent_bytes_count[60s])",
+          "expr": "-rate(insolar_network_sent_bytes_count{installation=$installation}[60s])",
           "legendFormat": "SNT {{instance}}",
           "refId": "B"
         }
@@ -687,7 +687,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(insolar_network_futures{packetType=~\"$packetType\"}[60s])",
+          "expr": "irate(insolar_network_futures{packetType=~\"$packetType\", installation=$installation}[60s])",
           "legendFormat": "{{instance}} {{packetType}}",
           "refId": "A"
         }
@@ -773,12 +773,12 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "rate(insolar_network_recv_bytes_sum[60s])",
+          "expr": "rate(insolar_network_recv_bytes_sum{installation=$installation}[60s])",
           "legendFormat": "{{instance}}",
           "refId": "A"
         },
         {
-          "expr": "-rate(insolar_network_sent_bytes_sum[60s])",
+          "expr": "-rate(insolar_network_sent_bytes_sum{installation=$installation}[60s])",
           "legendFormat": "{{instance}}",
           "refId": "B"
         }
