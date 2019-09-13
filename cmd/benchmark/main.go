@@ -67,7 +67,7 @@ var (
 	saveMembersToFile  bool
 	useMembersFromFile bool
 	noCheckBalance     bool
-	onlyCreateMembers  bool
+	scenarioName       string
 	discoveryNodesLogs string
 )
 
@@ -84,7 +84,7 @@ func parseInputParams() {
 	pflag.BoolVarP(&useMembersFromFile, "usemembers", "m", false, "use members from file")
 	pflag.StringVarP(&memberFile, "members-file", "", defaultMemberFile, "dir for saving members data")
 	pflag.BoolVarP(&noCheckBalance, "nocheckbalance", "b", false, "don't check balance at the end")
-	pflag.BoolVarP(&onlyCreateMembers, "onlycreatemembers", "z", false, "only create members without transfer money")
+	pflag.StringVarP(&scenarioName, "scenarioname", "t", "", "name of scenario")
 	pflag.StringVarP(&discoveryNodesLogs, "discovery-nodes-logs-dir", "", defaultDiscoveryNodesLogs, "launchnet logs dir for checking errors")
 	pflag.Parse()
 }
@@ -345,11 +345,13 @@ func main() {
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGHUP)
 
 	var s scenario
-	if onlyCreateMembers {
+	switch scenarioName {
+	case "createMember":
 		s = newCreateMemberScenarios(out, insSDK, concurrent, repetitions, crMemPenBefore)
-	} else {
+	default:
 		s = newTransferDifferentMemberScenarios(out, insSDK, members, concurrent, repetitions, crMemPenBefore)
 	}
+
 	go func() {
 		stopGracefully := true
 		for {
