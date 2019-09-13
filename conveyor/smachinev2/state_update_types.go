@@ -211,9 +211,9 @@ var stateUpdateTypes = []StateUpdateType{
 	},
 
 	stateUpdWaitForActive: {
-		filter:  updCtxExec,
-		params:  updParamStep | updParamVar,
-		prepare: stateUpdateDefaultNoArgPrepare,
+		filter: updCtxExec,
+		params: updParamStep | updParamLink,
+		//		prepare: stateUpdateDefaultNoArgPrepare,
 		apply: func(slot *Slot, stateUpdate StateUpdate, worker WorkerContext) (isAvailable bool, err error) {
 			m := slot.machine
 			slot.setNextStep(stateUpdate.step)
@@ -244,7 +244,7 @@ var stateUpdateTypes = []StateUpdateType{
 
 	stateUpdWaitForShared: {
 		filter:  updCtxExec,
-		params:  updParamStep | updParamVar,
+		params:  updParamStep | updParamLink,
 		prepare: stateUpdateDefaultNoArgPrepare,
 		apply:   nil, // TODO not implemented
 	},
@@ -254,12 +254,12 @@ func stateUpdateDefaultNoArgPrepare(slot *Slot, stateUpdate *StateUpdate) {
 	if stateUpdate.param1 == nil {
 		return
 	}
-	fn := stateUpdate.param1.(func())
+	fn := stateUpdate.param1.(StepPrepareFunc)
 	fn()
 }
 
 func stateUpdateDefaultVerifyNoArgFn(u interface{}) {
-	runtime.KeepAlive(u.(func()))
+	runtime.KeepAlive(u.(StepPrepareFunc))
 }
 
 func stateUpdateDefaultVerifyError(u interface{}) {

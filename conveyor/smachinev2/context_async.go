@@ -16,6 +16,8 @@
 
 package smachine
 
+import "context"
+
 type bargeInRequest struct {
 	p    *contextTemplate
 	m    *SlotMachine
@@ -89,4 +91,41 @@ func (p *bargingInContext) executeBargeIn(fn BargeInApplyFunc) StateUpdate {
 	defer p.setDiscarded()
 
 	return p.ensureAndPrepare(p.s, fn(p))
+}
+
+/* ========================================================================= */
+
+var _ AsyncResultContext = &asyncResultContext{}
+
+type asyncResultContext struct {
+	contextTemplate
+	slot   *Slot
+	wakeup bool
+}
+
+func (p *asyncResultContext) SlotLink() SlotLink {
+	p.setMode(updCtxAsyncCallback)
+	return p.slot.NewLink()
+}
+
+func (p *asyncResultContext) ParentLink() SlotLink {
+	return p.slot.parent
+}
+
+func (p *asyncResultContext) GetContext() context.Context {
+	p.setMode(updCtxAsyncCallback)
+	return p.slot.ctx
+}
+
+func (p *asyncResultContext) WakeUp() {
+	p.setMode(updCtxAsyncCallback)
+	p.wakeup = true
+}
+
+func (p *asyncResultContext) executeResult(fn AsyncResultFunc) bool {
+	p.setMode(updCtxAsyncCallback)
+	defer p.setDiscarded()
+
+	fn(p)
+	return p.wakeup
 }

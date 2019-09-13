@@ -76,6 +76,7 @@ const (
 	updCtxDiscarded updCtxMode = 1 << iota
 	updCtxConstruction
 	updCtxBargeIn
+	updCtxAsyncCallback
 	updCtxFail
 	updCtxInit
 	updCtxExec
@@ -168,7 +169,9 @@ func (v StateUpdateTemplate) newNoArg() StateUpdate {
 	}
 }
 
-func (v StateUpdateTemplate) newStep(slotStep SlotStep, prepare func()) StateUpdate {
+type StepPrepareFunc func()
+
+func (v StateUpdateTemplate) newStep(slotStep SlotStep, prepare StepPrepareFunc) StateUpdate {
 	v.ensureTemplate(updParamStep | updParamVar)
 	return StateUpdate{
 		marker:  v.marker,
