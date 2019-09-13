@@ -100,3 +100,11 @@ required = [
 [[constraint]]
   branch = "v1"
   name = "github.com/insolar/rpc"
+
+[[constraint]]
+  name = "go.uber.org/ratelimit"
+  version = "0.1.0"
+
+[[constraint]]
+  branch = "master"
+  name = "golang.org/x/time"

@@ -18,6 +18,7 @@ package exporter
 
 import (
 	"context"
+	"sync"
 
 	"github.com/insolar/insolar/insolar"
 	insolarPulse "github.com/insolar/insolar/insolar/pulse"
@@ -34,6 +35,8 @@ type RecordServer struct {
 	recordIndex     object.RecordPositionAccessor
 	recordAccessor  object.RecordAccessor
 	jetKeeper       executor.JetKeeper
+
+	lock sync.Mutex
 }
 
 func NewRecordServer(
@@ -51,6 +54,9 @@ func NewRecordServer(
 }
 
 func (r *RecordServer) Export(getRecords *GetRecords, stream RecordExporter_ExportServer) error {
+	r.lock.Lock()
+	defer r.lock.Unlock()
+
 	ctx := stream.Context()
 	logger := inslogger.FromContext(ctx)
 
