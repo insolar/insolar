@@ -398,6 +398,13 @@ func (b *Bus) IncomingMessageRouter(handle message.HandlerFunc) message.HandlerF
 			return nil, nil
 		}
 
+		receivedType, err := payload.UnmarshalType(meta.Payload)
+		if err == nil {
+			if receivedType == payload.TypeError {
+				stats.Record(ctx, statReplyError.M(1))
+			}
+		}
+
 		msgHash := payload.MessageHash{}
 		err = msgHash.Unmarshal(meta.ID)
 		if err != nil {
