@@ -170,7 +170,7 @@ func (sdk *SDK) getResponse(body []byte) (*requester.ContractResponse, error) {
 }
 
 // CreateMember api request creates member with new random keys
-func (sdk *SDK) CreateMember() (*Member, string, error) {
+func (sdk *SDK) CreateMember(memberReference string) (*Member, string, error) {
 	ks := platformpolicy.NewKeyProcessor()
 
 	privateKey, err := ks.GeneratePrivateKey()
@@ -190,7 +190,7 @@ func (sdk *SDK) CreateMember() (*Member, string, error) {
 	}
 	publicKeyStr := string(publicKey)
 
-	userConfig, err := requester.CreateUserConfig("", privateKeyStr, publicKeyStr)
+	userConfig, err := requester.CreateUserConfig(memberReference, privateKeyStr, publicKeyStr)
 	if err != nil {
 		return nil, "", errors.Wrap(err, "failed to create user config for request")
 	}
