@@ -136,16 +136,16 @@ func (b *benchmark) startMember(ctx context.Context, index int, wg *sync.WaitGro
 			goroutineTime += stop
 		} else if netErr, ok := errors.Cause(err).(net.Error); ok && netErr.Timeout() {
 			atomic.AddUint32(&b.timeouts, 1)
-			writeToOutput(b.out, fmt.Sprintf("[Member №%d] Transfer error. Timeout. Error: %b \n", index, err.Error()))
+			writeToOutput(b.out, fmt.Sprintf("[Member №%d] Transfer error. Timeout. Error: %s \n", index, err.Error()))
 		} else {
 			atomic.AddUint32(&b.errors, 1)
 			atomic.AddInt64(&b.totalTime, int64(stop))
 			goroutineTime += stop
 
 			if strings.Contains(err.Error(), "invalid state record") {
-				writeToOutput(b.out, fmt.Sprintf("[ OK ] Invalid state record.    Trace: %b.\n", traceID))
+				writeToOutput(b.out, fmt.Sprintf("[ OK ] Invalid state record.    Trace: %s.\n", traceID))
 			} else {
-				writeToOutput(b.out, fmt.Sprintf("[Member №%d] Transfer error with traceID: %b. Response: %b.\n", index, traceID, err.Error()))
+				writeToOutput(b.out, fmt.Sprintf("[Member №%d] Transfer error with traceID: %s. Response: %s.\n", index, traceID, err.Error()))
 			}
 		}
 	}
