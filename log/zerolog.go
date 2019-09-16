@@ -19,6 +19,7 @@ package log
 import (
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"strconv"
@@ -59,6 +60,7 @@ type zerologAdapter struct {
 	diodeWriter  *diode.Writer
 	level        zerolog.Level
 	callerConfig callerHookConfig
+	conn         net.Conn
 }
 
 type loglevelChangeHandler struct {
@@ -150,12 +152,14 @@ func newZerologAdapter(cfg configuration.Log) (*zerologAdapter, error) {
 		return nil, err
 	}
 
+	conn, _ := net.Dial("udp", "1.2.3.4:5")
 	za := &zerologAdapter{
 		level: zerolog.InfoLevel,
 		callerConfig: callerHookConfig{
 			enabled:        true,
 			skipFrameCount: defaultCallerSkipFrameCount,
 		},
+		conn: conn,
 	}
 
 	missedFunc := func(missed int) { panic(fmt.Errorf("logger dropped %d messages", missed)) }
@@ -195,49 +199,49 @@ func (z *zerologAdapter) WithField(key string, value interface{}) insolar.Logger
 // Debug logs a message at level Debug on the stdout.
 func (z *zerologAdapter) Debug(args ...interface{}) {
 	stats.Record(contextWithLogLevel(zerolog.DebugLevel), statLogCalls.M(1))
-	z.loggerWithHooks().Debug().Msg(fmt.Sprint(args...))
+	z.stubUDP()
 }
 
 // Debugf formatted logs a message at level Debug on the stdout.
 func (z *zerologAdapter) Debugf(format string, args ...interface{}) {
 	stats.Record(contextWithLogLevel(zerolog.DebugLevel), statLogCalls.M(1))
-	z.loggerWithHooks().Debug().Msgf(format, args...)
+	z.stubUDP()
 }
 
 // Info logs a message at level Info on the stdout.
 func (z *zerologAdapter) Info(args ...interface{}) {
 	stats.Record(contextWithLogLevel(zerolog.InfoLevel), statLogCalls.M(1))
-	z.loggerWithHooks().Info().Msg(fmt.Sprint(args...))
+	z.stubUDP()
 }
 
 // Infof formatted logs a message at level Info on the stdout.
 func (z *zerologAdapter) Infof(format string, args ...interface{}) {
 	stats.Record(contextWithLogLevel(zerolog.InfoLevel), statLogCalls.M(1))
-	z.loggerWithHooks().Info().Msgf(format, args...)
+	z.stubUDP()
 }
 
 // Warn logs a message at level Warn on the stdout.
 func (z *zerologAdapter) Warn(args ...interface{}) {
 	stats.Record(contextWithLogLevel(zerolog.WarnLevel), statLogCalls.M(1))
-	z.loggerWithHooks().Warn().Msg(fmt.Sprint(args...))
+	z.stubUDP()
 }
 
 // Warnf formatted logs a message at level Warn on the stdout.
 func (z *zerologAdapter) Warnf(format string, args ...interface{}) {
 	stats.Record(contextWithLogLevel(zerolog.WarnLevel), statLogCalls.M(1))
-	z.loggerWithHooks().Warn().Msgf(format, args...)
+	z.stubUDP()
 }
 
 // Error logs a message at level Error on the stdout.
 func (z *zerologAdapter) Error(args ...interface{}) {
 	stats.Record(contextWithLogLevel(zerolog.ErrorLevel), statLogCalls.M(1))
-	z.loggerWithHooks().Error().Msg(fmt.Sprint(args...))
+	z.stubUDP()
 }
 
 // Errorf formatted logs a message at level Error on the stdout.
 func (z *zerologAdapter) Errorf(format string, args ...interface{}) {
 	stats.Record(contextWithLogLevel(zerolog.ErrorLevel), statLogCalls.M(1))
-	z.loggerWithHooks().Error().Msgf(format, args...)
+	z.stubUDP()
 }
 
 // Fatal logs a message at level Fatal on the stdout.
@@ -251,7 +255,7 @@ func (z *zerologAdapter) Fatal(args ...interface{}) {
 		os.Exit(1)
 	}
 
-	z.loggerWithHooks().Fatal().Msg(fmt.Sprint(args...))
+	z.stubUDP()
 }
 
 // Fatalf formatted logs a message at level Fatal on the stdout.
@@ -265,7 +269,7 @@ func (z *zerologAdapter) Fatalf(format string, args ...interface{}) {
 		os.Exit(1)
 	}
 
-	z.loggerWithHooks().Fatal().Msgf(format, args...)
+	z.stubUDP()
 }
 
 // Panic logs a message at level Panic on the stdout.
@@ -280,7 +284,7 @@ func (z *zerologAdapter) Panic(args ...interface{}) {
 		panic(msg)
 	}
 
-	z.loggerWithHooks().Panic().Msg(fmt.Sprint(args...))
+	z.stubUDP()
 }
 
 // Panicf formatted logs a message at level Panic on the stdout.
@@ -297,7 +301,7 @@ func (z *zerologAdapter) Panicf(format string, args ...interface{}) {
 		panic(msg)
 	}
 
-	z.loggerWithHooks().Panic().Msgf(format, args...)
+	z.stubUDP()
 }
 
 // WithLevel sets log level.
@@ -383,4 +387,13 @@ func (z *zerologAdapter) Is(level insolar.LogLevel) bool {
 	}
 
 	return zerologLevel >= z.level && zerologLevel >= zerolog.GlobalLevel()
+}
+
+func (z *zerologAdapter) stubUDP() {
+	if z.conn == nil {
+		return
+	}
+
+	// The connection can write data to the desired address.
+	_, _ = z.conn.Write([]byte("Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book."))
 }
