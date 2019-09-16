@@ -39,7 +39,11 @@ type inputParams struct {
 }
 
 func parseInputParams() inputParams {
-	var rootCmd = &cobra.Command{Use: "insolard"}
+	var rootCmd = &cobra.Command{
+		Use: "insolard",
+		// cobra raises error inside itself and prints help if no Run/RunE provided.
+		Run: func(_ *cobra.Command, _ []string) {},
+	}
 	var result inputParams
 	rootCmd.Flags().StringVarP(&result.configPath, "config", "c", "", "path to config file")
 	rootCmd.Flags().StringVarP(&result.genesisConfigPath, "heavy-genesis", "", "", "path to genesis config for heavy node")
