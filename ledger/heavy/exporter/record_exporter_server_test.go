@@ -334,7 +334,9 @@ func TestRecordServer_Export(t *testing.T) {
 	t.Parallel()
 
 	t.Run("count can't be 0", func(t *testing.T) {
-		server := &RecordServer{}
+		server := &RecordServer{
+			limiter: NewOneRequestLimiter(time.Microsecond),
+		}
 
 		err := server.Export(&GetRecords{Count: 0}, &streamMock{})
 
@@ -346,6 +348,7 @@ func TestRecordServer_Export(t *testing.T) {
 		jetKeeper.TopSyncPulseMock.Return(insolar.PulseNumber(0))
 		server := &RecordServer{
 			jetKeeper: jetKeeper,
+			limiter:   NewOneRequestLimiter(time.Microsecond),
 		}
 
 		err := server.Export(&GetRecords{Count: 1, PulseNumber: pulse.MinTimePulse}, &streamMock{})
