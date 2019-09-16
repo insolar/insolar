@@ -53,6 +53,7 @@ package hostnetwork
 import (
 	"context"
 	"io"
+	"runtime"
 
 	"github.com/insolar/insolar/network"
 
@@ -84,6 +85,7 @@ func NewStreamHandler(requestHandler RequestHandler, responseHandler future.Pack
 }
 
 func (s *StreamHandler) HandleStream(ctx context.Context, address string, reader io.ReadWriteCloser) {
+	runtime.LockOSThread()
 	mainLogger := inslogger.FromContext(ctx)
 
 	logLevel := inslogger.GetLoggerLevel(ctx)

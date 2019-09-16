@@ -54,6 +54,7 @@ import (
 	"context"
 	"io"
 	"net"
+	"runtime"
 	"sync/atomic"
 	"time"
 
@@ -134,6 +135,7 @@ func (t *tcpTransport) Start(ctx context.Context) error {
 }
 
 func (t *tcpTransport) listen(ctx context.Context) {
+	runtime.LockOSThread()
 	logger := inslogger.FromContext(ctx)
 
 	for {

@@ -54,6 +54,7 @@ import (
 	"bytes"
 	"context"
 	"io"
+	"runtime"
 
 	"github.com/insolar/insolar/instrumentation/insmetrics"
 
@@ -116,6 +117,7 @@ func (dh *DatagramHandler) SetPacketParserFactory(packetParserFactory PacketPars
 }
 
 func (dh *DatagramHandler) HandleDatagram(ctx context.Context, address string, buf []byte) {
+	runtime.LockOSThread()
 	ctx, logger := PacketEarlyLogger(ctx, address)
 
 	if dh.packetHandler == nil {
@@ -156,6 +158,8 @@ func (ph *PulseHandler) SetPacketProcessor(packetProcessor PacketProcessor) {
 func (ph *PulseHandler) SetPacketParserFactory(PacketParserFactory) {}
 
 func (ph *PulseHandler) HandlePulse(ctx context.Context, pulse insolar.Pulse, packet network.ReceivedPacket) {
+	runtime.LockOSThread()
+
 	ctx, logger := PacketEarlyLogger(ctx, "pulsar")
 
 	if ph.packetHandler == nil {

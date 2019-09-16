@@ -54,6 +54,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"runtime"
 	"sync"
 	"sync/atomic"
 
@@ -141,6 +142,8 @@ func (t *udpTransport) Start(ctx context.Context) error {
 }
 
 func (t *udpTransport) loop(ctx context.Context) {
+	runtime.LockOSThread()
+
 	logger := inslogger.FromContext(ctx)
 
 	t.mutex.RLock()
