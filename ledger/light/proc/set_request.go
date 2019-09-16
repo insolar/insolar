@@ -254,6 +254,7 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 	// Save updated index.
 	index.LifelineLastUsed = p.requestID.Pulse()
 	index.Lifeline.LatestRequest = &Filament.ID
+	index.Lifeline.OpenRequests++
 	if index.Lifeline.EarliestOpenRequest == nil {
 		pn := p.requestID.Pulse()
 		index.Lifeline.EarliestOpenRequest = &pn

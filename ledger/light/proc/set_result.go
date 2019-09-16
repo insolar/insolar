@@ -230,6 +230,7 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 		index.LifelineLastUsed = flow.Pulse(ctx)
 		index.Lifeline.LatestRequest = &Filament.ID
 		index.Lifeline.EarliestOpenRequest = earliestPending
+		index.Lifeline.OpenRequests--
 		p.dep.indexes.Set(ctx, resultID.Pulse(), index)
 		return nil
 	}()
