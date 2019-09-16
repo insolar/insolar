@@ -115,6 +115,7 @@ func (r *RecordServer) Export(getRecords *GetRecords, stream RecordExporter_Expo
 		r.jetKeeper,
 		r.pulseCalculator,
 	)
+	read := 0
 
 	var numSent int
 	for iter.HasNext(stream.Context()) {
@@ -125,6 +126,18 @@ func (r *RecordServer) Export(getRecords *GetRecords, stream RecordExporter_Expo
 		}
 
 		err = stream.Send(record)
+		if err != nil {
+			logger.Error(err)
+			return err
+		}
+		read++
+	}
+
+	if read == 0 {
+		topPulse := r.jetKeeper.TopSyncPulse()
+		err := stream.Send(&Record{
+			ShouldIterateFrom: &topPulse,
+		})
 		if err != nil {
 			logger.Error(err)
 			return err
