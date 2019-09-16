@@ -10,8 +10,12 @@ scrape_configs:
     {{- range $value }}
     - "{{ . }}"
     {{- end }}
+    labels:
+      installation: local
 {{ end }}
 - job_name: pulsar
   static_configs:
   - targets:
     - "host.docker.internal:7999"
+    labels:
+      installation: local
