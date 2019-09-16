@@ -18,11 +18,12 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
 	"os"
-	"strconv"
 
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/insolar"
@@ -263,12 +264,21 @@ func mustWrite(out io.Writer, data string) {
 	check("Can't write data to output", err)
 }
 
+func randomHex(n int) (string, error) {
+	bytes := make([]byte, n)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(bytes), nil
+}
+
 func generateMigrationAddresses() {
 	maLen := 20000
 	ma := make([]string, maLen)
 
 	for i := 0; i < maLen; i++ {
-		ma[i] = "fake_ma_" + strconv.Itoa(i)
+		ethAddr, _ := randomHex(40)
+		ma[i] = "0x" + ethAddr
 	}
 
 	result, err := json.MarshalIndent(ma, "", "    ")
