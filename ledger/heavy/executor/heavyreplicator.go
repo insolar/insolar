@@ -182,8 +182,7 @@ func storeIndexes(
 	abandonedNotifyPulse insolar.PulseNumber,
 ) error {
 	for _, idx := range indexes {
-
-		if idx.Lifeline.EarliestOpenRequest != nil && *idx.Lifeline.EarliestOpenRequest >= abandonedNotifyPulse {
+		if idx.Lifeline.EarliestOpenRequest != nil && *idx.Lifeline.EarliestOpenRequest < abandonedNotifyPulse {
 			stats.Record(ctx, statAbandonedRequests.M(1))
 		}
 		err := mod.SetIndex(ctx, pn, idx)

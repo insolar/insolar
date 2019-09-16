@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/dgraph-io/badger"
 	"github.com/pkg/errors"
@@ -333,7 +334,9 @@ func TestRecordServer_Export(t *testing.T) {
 	t.Parallel()
 
 	t.Run("count can't be 0", func(t *testing.T) {
-		server := &RecordServer{}
+		server := &RecordServer{
+			limiter: NewOneRequestLimiter(time.Microsecond),
+		}
 
 		err := server.Export(&GetRecords{Count: 0}, &streamMock{})
 
@@ -345,42 +348,12 @@ func TestRecordServer_Export(t *testing.T) {
 		jetKeeper.TopSyncPulseMock.Return(insolar.PulseNumber(0))
 		server := &RecordServer{
 			jetKeeper: jetKeeper,
+			limiter:   NewOneRequestLimiter(time.Microsecond),
 		}
 
 		err := server.Export(&GetRecords{Count: 1, PulseNumber: pulse.MinTimePulse}, &streamMock{})
 
 		require.Error(t, err)
-	})
-
-	t.Run("returns empty slice of records, if no records", func(t *testing.T) {
-		jetKeeper := executor.NewJetKeeperMock(t)
-		jetKeeper.TopSyncPulseMock.Return(pulse.MinTimePulse)
-
-		tmpdir, err := ioutil.TempDir("", "bdb-test-")
-		defer os.RemoveAll(tmpdir)
-		require.NoError(t, err)
-
-		db, err := store.NewBadgerDB(BadgerDefaultOptions(tmpdir))
-		require.NoError(t, err)
-		defer db.Stop(context.Background())
-
-		recordPosition := object.NewRecordDB(db)
-		pulses := insolarPulse.NewDB(db)
-
-		recordServer := NewRecordServer(pulses, recordPosition, nil, jetKeeper)
-
-		streamMock := &streamMock{checker: func(i *Record) error {
-			t.Error("it shouldn't be called")
-			return nil
-		}}
-
-		err = recordServer.Export(&GetRecords{
-			PulseNumber:  pulse.MinTimePulse,
-			RecordNumber: 0,
-			Count:        10,
-		}, streamMock)
-
-		require.NoError(t, err)
 	})
 }
 
@@ -478,7 +451,7 @@ func TestRecordServer_Export_Composite(t *testing.T) {
 	err = pulseStorage.Append(ctx, insolar.Pulse{PulseNumber: secondPN})
 	require.NoError(t, err)
 
-	recordServer := NewRecordServer(pulseStorage, recordPosition, recordStorage, jetKeeper)
+	recordServer := NewRecordServer(pulseStorage, recordPosition, recordStorage, jetKeeper, NewOneRequestLimiter(time.Microsecond))
 
 	t.Run("export 1 of 3. first pulse", func(t *testing.T) {
 		var recs []*Record
@@ -640,7 +613,7 @@ func TestRecordServer_Export_Composite_BatchVersion(t *testing.T) {
 	err = pulseStorage.Append(ctx, insolar.Pulse{PulseNumber: secondPN})
 	require.NoError(t, err)
 
-	recordServer := NewRecordServer(pulseStorage, recordPosition, recordStorage, jetKeeper)
+	recordServer := NewRecordServer(pulseStorage, recordPosition, recordStorage, jetKeeper, NewOneRequestLimiter(time.Microsecond))
 
 	t.Run("export 1 of 3. first pulse", func(t *testing.T) {
 		var recs []*Record
@@ -738,6 +711,72 @@ func TestRecordServer_Export_Composite_BatchVersion(t *testing.T) {
 		require.Equal(t, uint32(2), resRecord.RecordNumber)
 		require.Equal(t, secondID, resRecord.Record.ID)
 		require.Equal(t, secondRec, resRecord.Record)
+	})
+
+}
+
+func TestRecordServer_Export_ReturnTopPulseWhenNoRecords(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+
+	// Pulses
+	firstPN := insolar.PulseNumber(pulse.MinTimePulse + 100)
+	secondPN := insolar.PulseNumber(firstPN + 10)
+
+	// JetKeeper
+	jetKeeper := executor.NewJetKeeperMock(t)
+	jetKeeper.TopSyncPulseMock.Return(secondPN)
+	// TempDB
+	tmpdir, err := ioutil.TempDir("", "bdb-test-")
+	defer os.RemoveAll(tmpdir)
+	require.NoError(t, err)
+
+	ops := BadgerDefaultOptions(tmpdir)
+	db, err := store.NewBadgerDB(ops)
+	require.NoError(t, err)
+	defer db.Stop(context.Background())
+
+	pulseStorage := insolarPulse.NewDB(db)
+	recordStorage := object.NewRecordDB(db)
+	recordPosition := object.NewRecordDB(db)
+
+	// Pulses
+
+	// Trash pulses without data
+	err = pulseStorage.Append(ctx, insolar.Pulse{PulseNumber: pulse.MinTimePulse})
+	require.NoError(t, err)
+	err = pulseStorage.Append(ctx, insolar.Pulse{PulseNumber: pulse.MinTimePulse + 10})
+	require.NoError(t, err)
+	err = pulseStorage.Append(ctx, insolar.Pulse{PulseNumber: pulse.MinTimePulse + 20})
+	require.NoError(t, err)
+
+	// LegalInfo
+	err = pulseStorage.Append(ctx, insolar.Pulse{PulseNumber: firstPN})
+	require.NoError(t, err)
+	err = pulseStorage.Append(ctx, insolar.Pulse{PulseNumber: secondPN})
+	require.NoError(t, err)
+
+	recordServer := NewRecordServer(pulseStorage, recordPosition, recordStorage, jetKeeper, NewOneRequestLimiter(time.Microsecond))
+
+	t.Run("calling for pulse with empty pulses after returns the last pulse", func(t *testing.T) {
+		var recs []*Record
+		streamMock := &streamMock{checker: func(i *Record) error {
+			recs = append(recs, i)
+			return nil
+		}}
+
+		err := recordServer.Export(&GetRecords{
+			PulseNumber:  pulse.MinTimePulse,
+			RecordNumber: 1,
+			Count:        1,
+		}, streamMock)
+		require.NoError(t, err)
+		require.Equal(t, 1, len(recs))
+
+		resRecord := recs[0]
+		require.NotNil(t, resRecord.ShouldIterateFrom)
+		require.NotNil(t, secondPN, *resRecord.ShouldIterateFrom)
 	})
 
 }
