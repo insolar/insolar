@@ -120,7 +120,7 @@
       },
       "gridPos": {
         "h": 3,
-        "w": 8,
+        "w": 9,
         "x": 9,
         "y": 0
       },
@@ -205,8 +205,8 @@
       },
       "gridPos": {
         "h": 3,
-        "w": 5,
-        "x": 17,
+        "w": 6,
+        "x": 18,
         "y": 0
       },
       "id": 6,
@@ -279,7 +279,7 @@
       "fillGradient": 0,
       "gridPos": {
         "h": 7,
-        "w": 11,
+        "w": 12,
         "x": 0,
         "y": 3
       },
@@ -364,8 +364,8 @@
       "fillGradient": 0,
       "gridPos": {
         "h": 7,
-        "w": 11,
-        "x": 11,
+        "w": 12,
+        "x": 12,
         "y": 3
       },
       "id": 10,
@@ -448,8 +448,8 @@
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 8,
-        "w": 11,
+        "h": 5,
+        "w": 24,
         "x": 0,
         "y": 10
       },
@@ -523,6 +523,195 @@
         "align": false,
         "alignLevel": null
       }
+    },
+    {
+      "cards": {
+        "cardPadding": null,
+        "cardRound": null
+      },
+      "color": {
+        "cardColor": "#b4ff00",
+        "colorScale": "sqrt",
+        "colorScheme": "interpolateGreens",
+        "exponent": 0.5,
+        "mode": "spectrum"
+      },
+      "dataFormat": "tsbuckets",
+      "datasource": "prometheus",
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 0,
+        "y": 15
+      },
+      "heatmap": {},
+      "hideZeroBuckets": false,
+      "highlightCards": true,
+      "id": 14,
+      "legend": {
+        "show": false
+      },
+      "options": {},
+      "reverseYBuckets": false,
+      "targets": [
+        {
+          "expr": "sum(increase(insolar_heavy_exporter_method_timing_bucket{heavy_exporter_method_name=\"record-export\"}[1m])) by (le)",
+          "format": "heatmap",
+          "legendFormat": "{{ le }}",
+          "refId": "A"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Record export timing",
+      "tooltip": {
+        "show": true,
+        "showHistogram": false
+      },
+      "type": "heatmap",
+      "xAxis": {
+        "show": true
+      },
+      "xBucketNumber": null,
+      "xBucketSize": null,
+      "yAxis": {
+        "decimals": null,
+        "format": "ms",
+        "logBase": 1,
+        "max": null,
+        "min": null,
+        "show": true,
+        "splitFactor": null
+      },
+      "yBucketBound": "auto",
+      "yBucketNumber": null,
+      "yBucketSize": null
+    },
+    {
+      "cards": {
+        "cardPadding": null,
+        "cardRound": null
+      },
+      "color": {
+        "cardColor": "#b4ff00",
+        "colorScale": "sqrt",
+        "colorScheme": "interpolateGreens",
+        "exponent": 0.5,
+        "mode": "spectrum"
+      },
+      "dataFormat": "tsbuckets",
+      "datasource": "prometheus",
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 8,
+        "y": 15
+      },
+      "heatmap": {},
+      "hideZeroBuckets": false,
+      "highlightCards": true,
+      "id": 15,
+      "legend": {
+        "show": false
+      },
+      "options": {},
+      "reverseYBuckets": false,
+      "targets": [
+        {
+          "expr": "sum(increase(insolar_heavy_exporter_method_timing_bucket{heavy_exporter_method_name=\"pulse-export\"}[1m])) by (le)",
+          "format": "heatmap",
+          "legendFormat": "{{ le }}",
+          "refId": "A"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Pulse export timing",
+      "tooltip": {
+        "show": true,
+        "showHistogram": false
+      },
+      "type": "heatmap",
+      "xAxis": {
+        "show": true
+      },
+      "xBucketNumber": null,
+      "xBucketSize": null,
+      "yAxis": {
+        "decimals": null,
+        "format": "ms",
+        "logBase": 1,
+        "max": null,
+        "min": null,
+        "show": true,
+        "splitFactor": null
+      },
+      "yBucketBound": "auto",
+      "yBucketNumber": null,
+      "yBucketSize": null
+    },
+    {
+      "cards": {
+        "cardPadding": null,
+        "cardRound": null
+      },
+      "color": {
+        "cardColor": "#b4ff00",
+        "colorScale": "sqrt",
+        "colorScheme": "interpolateGreens",
+        "exponent": 0.5,
+        "mode": "spectrum"
+      },
+      "dataFormat": "tsbuckets",
+      "datasource": "prometheus",
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 16,
+        "y": 15
+      },
+      "heatmap": {},
+      "hideZeroBuckets": false,
+      "highlightCards": true,
+      "id": 16,
+      "legend": {
+        "show": false
+      },
+      "options": {},
+      "reverseYBuckets": false,
+      "targets": [
+        {
+          "expr": "sum(increase(insolar_heavy_exporter_method_timing_bucket{heavy_exporter_method_name=\"pulse-top-sync-pulse\"}[1m])) by (le)",
+          "format": "heatmap",
+          "legendFormat": "{{ le }}",
+          "refId": "A"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Top sync pulse timing",
+      "tooltip": {
+        "show": true,
+        "showHistogram": false
+      },
+      "type": "heatmap",
+      "xAxis": {
+        "show": true
+      },
+      "xBucketNumber": null,
+      "xBucketSize": null,
+      "yAxis": {
+        "decimals": null,
+        "format": "ms",
+        "logBase": 1,
+        "max": null,
+        "min": null,
+        "show": true,
+        "splitFactor": null
+      },
+      "yBucketBound": "auto",
+      "yBucketNumber": null,
+      "yBucketSize": null
     }
   ],
   "refresh": "10s",
