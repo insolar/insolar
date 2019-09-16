@@ -18,6 +18,7 @@ package exporter
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"go.opencensus.io/stats"
@@ -33,11 +34,43 @@ import (
 	"github.com/pkg/errors"
 )
 
+type OneRequestLimiter struct {
+	durationBetweenReq time.Duration
+	lastRequest        *time.Time
+	lock               sync.Mutex
+}
+
+func NewOneRequestLimiter(durationBetweenReq time.Duration) *OneRequestLimiter {
+	return &OneRequestLimiter{
+		durationBetweenReq: durationBetweenReq,
+	}
+}
+
+func (l *OneRequestLimiter) Take(ctx context.Context) {
+	l.lock.Lock()
+	defer l.lock.Unlock()
+	t := time.Now()
+
+	if l.lastRequest == nil {
+		l.lastRequest = &t
+		return
+	}
+
+	nextReq := l.lastRequest.Add(l.durationBetweenReq)
+	if time.Now().After(nextReq) {
+		l.lastRequest = &t
+		return
+	}
+
+	<-time.After(l.lastRequest.Add(l.durationBetweenReq).Sub(t))
+}
+
 type RecordServer struct {
 	pulseCalculator insolarPulse.Calculator
 	recordIndex     object.RecordPositionAccessor
 	recordAccessor  object.RecordAccessor
 	jetKeeper       executor.JetKeeper
+	limiter         *OneRequestLimiter
 }
 
 func NewRecordServer(
@@ -45,16 +78,20 @@ func NewRecordServer(
 	recordIndex object.RecordPositionAccessor,
 	recordAccessor object.RecordAccessor,
 	jetKeeper executor.JetKeeper,
+	limiter *OneRequestLimiter,
 ) *RecordServer {
 	return &RecordServer{
 		pulseCalculator: pulseCalculator,
 		recordIndex:     recordIndex,
 		recordAccessor:  recordAccessor,
 		jetKeeper:       jetKeeper,
+		limiter:         limiter,
 	}
 }
 
 func (r *RecordServer) Export(getRecords *GetRecords, stream RecordExporter_ExportServer) error {
+	r.limiter.Take(stream.Context())
+
 	ctx := stream.Context()
 
 	exportStart := time.Now()
@@ -90,6 +127,7 @@ func (r *RecordServer) Export(getRecords *GetRecords, stream RecordExporter_Expo
 		r.jetKeeper,
 		r.pulseCalculator,
 	)
+	read := 0
 
 	var numSent int
 	for iter.HasNext(stream.Context()) {
@@ -100,6 +138,18 @@ func (r *RecordServer) Export(getRecords *GetRecords, stream RecordExporter_Expo
 		}
 
 		err = stream.Send(record)
+		if err != nil {
+			logger.Error(err)
+			return err
+		}
+		read++
+	}
+
+	if read == 0 {
+		topPulse := r.jetKeeper.TopSyncPulse()
+		err := stream.Send(&Record{
+			ShouldIterateFrom: &topPulse,
+		})
 		if err != nil {
 			logger.Error(err)
 			return err
