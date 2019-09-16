@@ -645,32 +645,31 @@
   "templating": {
     "list": [
       {
-      "allValue": null,
-      "current": {
-        "text": "\"\"",
-        "value": "\"\""
-      },
-      "hide": 0,
-      "includeAll": false,
-      "label": null,
-      "multi": false,
-      "name": "installation",
-      "options": [
-        {
-          "selected": true,
-          "text": "\"\"",
-          "value": "\"\""
+        "allValue": null,
+        "current": {
+          "tags": [],
+          "text": "local",
+          "value": "local"
         },
-        {
-          "selected": false,
-          "text": "\"dev-main\"",
-          "value": "\"dev-main\""
-        }
-      ],
-      "query": "\"\", \"dev-main\"",
-      "skipUrlSync": false,
-      "type": "custom"
-    }
+        "datasource": "prometheus",
+        "definition": "label_values(insolar_light_last_sent_pulse, installation)",
+        "hide": 0,
+        "includeAll": false,
+        "label": null,
+        "multi": false,
+        "name": "installation",
+        "options": [],
+        "query": "label_values(insolar_light_last_sent_pulse, installation)",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      }
     ]
   },
   "time": {
