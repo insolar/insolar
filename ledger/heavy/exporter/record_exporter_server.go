@@ -53,7 +53,7 @@ func NewRecordServer(
 func (r *RecordServer) Export(getRecords *GetRecords, stream RecordExporter_ExportServer) error {
 	ctx := stream.Context()
 	logger := inslogger.FromContext(ctx)
-	logger.Warn("Incoming request: ", getRecords.String())
+	logger.Info("Incoming request: ", getRecords.String())
 
 	if getRecords.Count == 0 {
 		return errors.New("count can't be 0")
@@ -93,7 +93,7 @@ func (r *RecordServer) Export(getRecords *GetRecords, stream RecordExporter_Expo
 		}
 		numSent++
 	}
-	logger.Warnf("exported %d record", numSent)
+	logger.Info("exported %d record", numSent)
 
 	return nil
 }
