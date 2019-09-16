@@ -207,7 +207,7 @@ func (m *SlotMachine) scanEvents() bool {
 	}
 
 	for _, fn := range syncQ {
-		fn() // allows to resync detached
+		fn(nil) // allows to resync detached
 	}
 	return true
 }
@@ -325,7 +325,7 @@ func (m *SlotMachine) AddAsyncNew(ctx context.Context, parent SlotLink, sm State
 	}
 
 	id := m.allocateNextSlotID()
-	m.syncQueue.Add(func() {
+	m.syncQueue.Add(func(interface{}) {
 		m._addStateMachine(ctx, nil, id, parent, sm)
 	})
 
@@ -429,7 +429,7 @@ func (m *SlotMachine) allocateSlot() *Slot {
 }
 
 func (m *SlotMachine) slotAsyncCallback(slotLink SlotLink, fn func(*Slot)) {
-	m.syncQueue.Add(func() {
+	m.syncQueue.Add(func(interface{}) {
 		m.slotDirectCallback(slotLink, fn)
 	})
 }
@@ -487,7 +487,7 @@ func (m *SlotMachine) applyAsyncStateUpdate(link SlotLink, resultFn AsyncResultF
 			dq = &dqs
 		}
 
-		dq.Add(func() {
+		dq.Add(func(interface{}) {
 			m.slotDirectCallback(link, func(slot *Slot) {
 				m._applyAsyncStateUpdate(slot, resultFn)
 			})
@@ -540,7 +540,7 @@ func (m *SlotMachine) applyDetachedStateUpdate(slotLink SlotLink, stateUpdate St
 		}
 
 		for _, fn := range detachQueue {
-			fn()
+			fn(nil)
 		}
 	})
 }
@@ -861,7 +861,7 @@ func (m *SlotMachine) _reactivateDependencies(current *Slot, activeWait bool) {
 			m.activateDependedSlot(next, addToActive)
 		} else {
 			// TODO inefficient for multiple dependencies
-			nm.syncQueue.Add(func() {
+			nm.syncQueue.Add(func(interface{}) {
 				nm.activateDependedSlot(next, addToActive)
 			})
 		}
