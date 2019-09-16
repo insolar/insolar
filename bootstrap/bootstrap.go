@@ -75,9 +75,11 @@ func (g *Generator) readMigrationAddresses() ([][]string, error) {
 	}
 
 	for _, a := range ma {
-		address := foundation.TrimAddress(a)
-		i := foundation.GetShardIndex(address, g.config.MAShardCount)
-		result[i] = append(result[i], address)
+		if foundation.IsEthereumAddress(a) {
+			address := foundation.TrimAddress(a)
+			i := foundation.GetShardIndex(address, g.config.MAShardCount)
+			result[i] = append(result[i], address)
+		}
 	}
 	return result, nil
 }
