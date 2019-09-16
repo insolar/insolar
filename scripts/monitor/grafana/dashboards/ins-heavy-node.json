@@ -15,6 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
+  "iteration": 1568639485603,
   "links": [],
   "panels": [
     {
@@ -164,7 +165,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "insolar_heavy_finalized_pulse",
+          "expr": "insolar_heavy_finalized_pulse{installation=\"$installation\"}",
           "instant": true,
           "refId": "A"
         }
@@ -555,7 +556,7 @@
       "reverseYBuckets": false,
       "targets": [
         {
-          "expr": "sum(increase(insolar_heavy_exporter_method_timing_bucket{heavy_exporter_method_name=\"record-export\"}[1m])) by (le)",
+          "expr": "sum(increase(insolar_heavy_exporter_method_timing_bucket{heavy_exporter_method_name=\"record-export\", installation=\"$installation\"}[1m])) by (le)",
           "format": "heatmap",
           "legendFormat": "{{ le }}",
           "refId": "A"
@@ -618,7 +619,7 @@
       "reverseYBuckets": false,
       "targets": [
         {
-          "expr": "sum(increase(insolar_heavy_exporter_method_timing_bucket{heavy_exporter_method_name=\"pulse-export\"}[1m])) by (le)",
+          "expr": "sum(increase(insolar_heavy_exporter_method_timing_bucket{heavy_exporter_method_name=\"pulse-export\", installation=\"$installation\"}[1m])) by (le)",
           "format": "heatmap",
           "legendFormat": "{{ le }}",
           "refId": "A"
@@ -681,7 +682,7 @@
       "reverseYBuckets": false,
       "targets": [
         {
-          "expr": "sum(increase(insolar_heavy_exporter_method_timing_bucket{heavy_exporter_method_name=\"pulse-top-sync-pulse\"}[1m])) by (le)",
+          "expr": "sum(increase(insolar_heavy_exporter_method_timing_bucket{heavy_exporter_method_name=\"pulse-top-sync-pulse\", installation=\"$installation\"}[1m])) by (le)",
           "format": "heatmap",
           "legendFormat": "{{ le }}",
           "refId": "A"
@@ -717,13 +718,14 @@
   "refresh": "10s",
   "schemaVersion": 19,
   "style": "dark",
-  "tags": [],
+  "tags": [
+    "INS"
+  ],
   "templating": {
     "list": [
       {
         "allValue": null,
         "current": {
-          "tags": [],
           "text": "local",
           "value": "local"
         },

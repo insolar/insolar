@@ -15,7 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1568213192262,
+  "iteration": 1568639484610,
   "links": [],
   "panels": [
     {
@@ -127,7 +127,7 @@
         "y": 5
       },
       "heatmap": {},
-      "hideZeroBuckets": false,
+      "hideZeroBuckets": true,
       "highlightCards": true,
       "id": 16,
       "legend": {
@@ -174,13 +174,14 @@
   "refresh": "10s",
   "schemaVersion": 19,
   "style": "dark",
-  "tags": [],
+  "tags": [
+    "INS"
+  ],
   "templating": {
     "list": [
       {
         "allValue": null,
         "current": {
-          "tags": [],
           "text": "local",
           "value": "local"
         },
@@ -231,7 +232,6 @@
       {
         "allValue": null,
         "current": {
-          "tags": [],
           "text": "All",
           "value": "$__all"
         },
@@ -247,6 +247,11 @@
             "selected": true,
             "text": "All",
             "value": "$__all"
+          },
+          {
+            "selected": false,
+            "text": "host.docker.internal:8001",
+            "value": "host.docker.internal:8001"
           },
           {
             "selected": false,
@@ -284,33 +289,36 @@
         "allValue": null,
         "current": {
           "tags": [],
-          "text": "cancelled + ok + error",
+          "text": "All",
           "value": [
-            "cancelled",
-            "ok",
-            "error"
+            "$__all"
           ]
         },
         "datasource": "prometheus",
         "definition": "label_values(insolar_flow_procedure_latency_count, result)",
         "hide": 0,
-        "includeAll": false,
+        "includeAll": true,
         "label": null,
         "multi": true,
         "name": "result",
         "options": [
           {
             "selected": true,
-            "text": "cancelled",
-            "value": "cancelled"
+            "text": "All",
+            "value": "$__all"
           },
           {
-            "selected": true,
+            "selected": false,
             "text": "ok",
             "value": "ok"
           },
           {
-            "selected": true,
+            "selected": false,
+            "text": "cancelled",
+            "value": "cancelled"
+          },
+          {
+            "selected": false,
             "text": "error",
             "value": "error"
           }

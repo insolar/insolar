@@ -15,7 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1568632693155,
+  "iteration": 1568639490587,
   "links": [],
   "panels": [
     {
@@ -160,7 +160,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "active list size",
+      "title": "Active list size",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -432,7 +432,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "network state",
+      "title": "Network state",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -521,7 +521,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "connections",
+      "title": "Connections",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -696,7 +696,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "futures count",
+      "title": "Futures count",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -825,16 +825,17 @@
       }
     }
   ],
-  "refresh": false,
+  "refresh": "10s",
   "schemaVersion": 19,
   "style": "dark",
-  "tags": [],
+  "tags": [
+    "INS"
+  ],
   "templating": {
     "list": [
       {
         "allValue": null,
         "current": {
-          "tags": [],
           "text": "local",
           "value": "local"
         },
@@ -860,31 +861,35 @@
       {
         "allValue": null,
         "current": {
-          "text": "ph1 + ph2 + ph3",
+          "tags": [],
+          "text": "All",
           "value": [
-            "ph1",
-            "ph2",
-            "ph3"
+            "$__all"
           ]
         },
         "hide": 0,
-        "includeAll": false,
+        "includeAll": true,
         "label": null,
         "multi": true,
         "name": "phase",
         "options": [
           {
             "selected": true,
+            "text": "All",
+            "value": "$__all"
+          },
+          {
+            "selected": false,
             "text": "ph1",
             "value": "ph1"
           },
           {
-            "selected": true,
+            "selected": false,
             "text": "ph2",
             "value": "ph2"
           },
           {
-            "selected": true,
+            "selected": false,
             "text": "ph3",
             "value": "ph3"
           }
