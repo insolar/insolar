@@ -103,7 +103,7 @@ type ExecutionContext interface {
 	//SyncOneStep(key string, weight int32, broadcastFn BroadcastReceiveFunc) Syncronizer
 	//SyncManySteps(key string)
 
-	NewChild(CreateFunc) SlotLink
+	NewChild(context.Context, CreateFunc) SlotLink
 	//NewShared(context.Context, SharedState) SharedStateAdapter
 
 	UseShared(SharedDataAccessor) SharedAccessReport

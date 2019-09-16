@@ -85,10 +85,6 @@ func (p *SlotPool) AllocateSlot(m *SlotMachine, id SlotID) (slot *Slot) {
 		}
 	case p.slots == nil:
 		panic("illegal state")
-		//m.slots = make([][]Slot, 1)
-		//m.slots[0] = make([]Slot, m.config.SlotPageSize)
-		//m.slotPgPos = 1
-		//slot = &m.slots[0][0]
 	default:
 		lenSlots := len(p.slots[0])
 		if int(p.slotPgPos) == lenSlots {

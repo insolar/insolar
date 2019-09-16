@@ -46,13 +46,17 @@ func NewNoSyncQueue() SyncQueue {
 	return SyncQueue{locker: rwlock.DummyLocker()}
 }
 
-type SyncFunc func()
+type SyncFunc func(interface{})
 type SyncFuncList []SyncFunc
 
 type SyncQueue struct {
 	locker   sync.Locker
 	signalFn func()
 	queue    SyncFuncList
+}
+
+func (p *SyncQueue) Locker() sync.Locker {
+	return p.locker
 }
 
 func (p *SyncQueue) IsZero() bool {
@@ -88,4 +92,15 @@ func (p *SyncQueue) Flush() SyncFuncList {
 	p.queue = make(SyncFuncList, 0, nextCap)
 
 	return queue
+}
+
+func (p *SyncQueue) AddAll(list SyncFuncList) {
+	if len(list) == 0 {
+		return
+	}
+
+	p.locker.Lock()
+	defer p.locker.Unlock()
+
+	p.queue = append(p.queue, list...)
 }

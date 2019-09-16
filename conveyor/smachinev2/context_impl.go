@@ -93,7 +93,7 @@ func (p *contextTemplate) setDiscarded() {
 type slotContext struct {
 	contextTemplate
 	s *Slot
-	w SlotWorker
+	w DetachableSlotWorker
 }
 
 func (p *slotContext) clone() slotContext {
@@ -197,26 +197,28 @@ func (p *slotContext) AffectedStep() SlotStep {
 	return p.s.step
 }
 
-func (p *slotContext) NewChild( /* ctx context.Context, */ fn CreateFunc) SlotLink {
+func (p *slotContext) NewChild(ctx context.Context, fn CreateFunc) SlotLink {
 	p.ensureAny2(updCtxExec, updCtxFail)
 	if fn == nil {
 		panic("illegal value")
 	}
-	//if ctx == nil {
-	//	panic("illegal value")
-	//}
+	if ctx == nil {
+		panic("illegal value")
+	}
 
 	m := p.s.machine
 	newSlot := m.allocateSlot()
-	newSlot.ctx = p.s.ctx
+	newSlot.ctx = ctx
 	newSlot.parent = p.s.NewLink()
 	link := newSlot.NewLink()
 
 	m.prepareNewSlot(newSlot, p.s, fn, nil)
 
-	p.w.NonDetachableOrAsyncCall(newSlot, func(s *Slot, w WorkerContext) {
-		s.machine.startNewSlot(s, w)
-	})
+	if !p.w.NonDetachableCall(func(w DetachableSlotWorker) {
+		m.startNewSlot(p.s, w)
+	}) {
+		m.syncQueue.AddAsyncUpdate(link, m.startNewSlot)
+	}
 
 	return link
 }
@@ -242,7 +244,7 @@ var _ ExecutionContext = &executionContext{}
 
 type executionContext struct {
 	slotContext
-	worker          WorkerContext
+	worker          DetachableSlotWorker
 	countAsyncCalls uint16
 }
 
@@ -341,6 +343,9 @@ func (p *executionContext) executeNextStep() (bool, StateUpdate, uint16) {
 
 		canLoop, hasSignal := p.worker.CanLoopOrHasSignal(loopCount)
 		if hasSignal || !canLoop {
+			if loopCount == 0 {
+				return hasSignal, StateUpdate{updType: uint8(stateUpdInternalRepeatNow)}, p.countAsyncCalls
+			}
 			return hasSignal, StateUpdate{}, p.countAsyncCalls
 		}
 
@@ -446,45 +451,14 @@ func (c *conditionalUpdate) IsAvailable() bool {
 
 func (c *conditionalUpdate) then(slotStep SlotStep) StateUpdate {
 	if c.dependency.IsEmpty() {
-		return c.template.newStep(slotStep, c.kickOff)
+		if c.until == 0 {
+			return c.template.newStep(slotStep, c.kickOff)
+		}
 		return c.template.newStepUntil(slotStep, c.kickOff, c.until)
 	} else {
+		if c.until != 0 {
+			panic("illegal value")
+		}
 		return c.template.newStepLink(slotStep, c.dependency)
 	}
-
-	//
-	//switch c.updMode {
-	//case stateUpdNext: // Yield & Call
-	//	return p.template(stateUpdStop).newNoArg()
-	//	return stateUpdateYield(c.marker, slotStep, c.kickOff)
-	//case stateUpdPoll:
-	//	return stateUpdatePoll(c.marker, slotStep, c.kickOff)
-	//case stateUpdSleep:
-	//	return stateUpdateSleep(c.marker, slotStep, c.kickOff)
-	//
-	//case stateUpdWaitForEvent: // WaitAny
-	//	return stateUpdateWaitForEvent(c.marker, slotStep, c.kickOff, c.until)
-	//
-	//case stateUpdWaitForActive: // WaitActivation
-	//	if c.kickOff != nil {
-	//		panic("illegal value")
-	//	}
-	//	return stateUpdateWaitForSlot(c.marker, c.dependency, slotStep)
-	//
-	//case stateUpdWaitForShared: // WaitShared
-	//	if c.kickOff != nil {
-	//		panic("illegal value")
-	//	}
-	//	return stateUpdateWaitForShared(c.marker, c.dependency, slotStep)
-	//
-	//case 0:
-	//	// WaitShared or WaitActivation with true condition
-	//	if c.kickOff != nil {
-	//		panic("illegal value")
-	//	}
-	//	return stateUpdateNext(c.marker, slotStep, true)
-	//
-	//default:
-	//	panic("illegal value")
-	//}
 }

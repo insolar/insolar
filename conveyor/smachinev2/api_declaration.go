@@ -16,9 +16,17 @@
 
 package smachine
 
+import "reflect"
+
+type DependencyInjector interface {
+	InjectDependencies(StateMachine, SlotLink, *SlotMachine)
+	FindDependency(id string, targetType reflect.Type, s *SlotMachine) interface{}
+}
+
 type StateMachineDeclaration interface {
 	IsConsecutive(cur, next StateFunc) bool
 	GetInitStateFor(StateMachine) InitFunc
+	InjectDependencies(StateMachine, SlotLink, *SlotMachine, DependencyInjector) bool
 }
 
 type StateMachineDeclTemplate struct {
@@ -36,4 +44,8 @@ func (s *StateMachineDeclTemplate) IsConsecutive(cur, next StateFunc) bool {
 
 func (s *StateMachineDeclTemplate) GetMigrateFn(StateFunc) MigrateFunc {
 	return nil
+}
+
+func (s *StateMachineDeclTemplate) InjectDependencies(StateMachine, SlotLink, *SlotMachine, DependencyInjector) bool {
+	return false
 }

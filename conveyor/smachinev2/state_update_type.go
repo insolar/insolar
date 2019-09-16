@@ -36,7 +36,7 @@ func typeOfStateUpdateForMode(contextMode updCtxMode, stateUpdate StateUpdate) S
 	return stateUpdateTypes[stateUpdate.updType].getForMode(contextMode)
 }
 
-type SlotUpdateFunc func(slot *Slot, stateUpdate StateUpdate, worker WorkerContext) (isAvailable bool, err error)
+type SlotUpdateFunc func(slot *Slot, stateUpdate StateUpdate, worker DetachableSlotWorker) (isAvailable bool, err error)
 type SlotUpdatePrepareFunc func(slot *Slot, stateUpdate *StateUpdate)
 type SlotUpdateShortLoopFunc func(slot *Slot, stateUpdate StateUpdate, loopCount uint32) bool
 
@@ -145,7 +145,7 @@ func (v *StateUpdateType) Prepare(slot *Slot, stateUpdate *StateUpdate) {
 	}
 }
 
-func (v *StateUpdateType) Apply(slot *Slot, stateUpdate StateUpdate, worker WorkerContext) (isAvailable bool, err error) {
+func (v *StateUpdateType) Apply(slot *Slot, stateUpdate StateUpdate, worker DetachableSlotWorker) (isAvailable bool, err error) {
 	if v.apply == nil {
 		return false, errors.New("not implemented")
 	}
@@ -156,7 +156,7 @@ func (v StateUpdateTemplate) ensureTemplate(params stateUpdParam) {
 	if v.ctxType == 0 {
 		panic("illegal state")
 	}
-	if v.t.params != params {
+	if v.t.params&params != params {
 		panic("illegal value")
 	}
 }
