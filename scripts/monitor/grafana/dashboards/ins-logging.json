@@ -84,7 +84,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(insolar_log_calls{level=\"error\", installation=$installation})",
+          "expr": "sum(insolar_log_calls{level=\"error\", installation=\"$installation\"})",
           "instant": false,
           "refId": "A"
         }
@@ -170,7 +170,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(insolar_log_calls{level=\"warn\", installation=$installation})",
+          "expr": "sum(insolar_log_calls{level=\"warn\", installation=\"$installation\"})",
           "instant": false,
           "refId": "A"
         }
@@ -257,7 +257,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(insolar_log_calls{level=\"info\", installation=$installation})",
+          "expr": "sum(insolar_log_calls{level=\"info\", installation=\"$installation\"})",
           "instant": false,
           "refId": "A"
         }
@@ -322,7 +322,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(insolar_log_calls{installation=$installation}[1m]))",
+          "expr": "sum(rate(insolar_log_calls{installation=\"$installation\"}[1m]))",
           "instant": false,
           "legendFormat": " ",
           "refId": "A"
@@ -414,7 +414,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(insolar_log_written{installation=$installation}[1m]))",
+          "expr": "sum(rate(insolar_log_written{installation=\"$installation\"}[1m]))",
           "instant": false,
           "legendFormat": " ",
           "refId": "A"
@@ -502,7 +502,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(insolar_log_written{installation=$installation}[1m])) by (level)",
+          "expr": "sum(rate(insolar_log_written{installation=\"$installation\"}[1m])) by (level)",
           "legendFormat": "{{ level }}",
           "refId": "A"
         }
@@ -591,7 +591,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(insolar_log_calls{installation=$installation}[1m])) by (level, role)",
+          "expr": "sum(rate(insolar_log_calls{installation=\"$installation\"}[1m])) by (level, role)",
           "legendFormat": "{{ level }}: {{ role }}",
           "refId": "A"
         }

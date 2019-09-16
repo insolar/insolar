@@ -50,7 +50,7 @@
       "reverseYBuckets": false,
       "targets": [
         {
-          "expr": "sum(increase(insolar_bus_reply_milliseconds_bucket{message_type=~\"$type\", instance=~\"$instance\", installation=$installation}[1m])) by (le)",
+          "expr": "sum(increase(insolar_bus_reply_milliseconds_bucket{message_type=~\"$type\", instance=~\"$instance\", installation=\"$installation\"}[1m])) by (le)",
           "format": "heatmap",
           "intervalFactor": 1,
           "legendFormat": "{{ le }}",
@@ -210,7 +210,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(insolar_bus_sent_retries{message_type=~\"$type\",instance=~\"$instance\", installation=$installation}[1m])) by (job)",
+          "expr": "sum(rate(insolar_bus_sent_retries{message_type=~\"$type\",instance=~\"$instance\", installation=\"$installation\"}[1m])) by (job)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "count / sec",
@@ -301,7 +301,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(insolar_bus_reply_timeouts{instance=~\"$instance\",message_type=~\"$type\", installation=$installation}[1m]))",
+          "expr": "sum(rate(insolar_bus_reply_timeouts{instance=~\"$instance\",message_type=~\"$type\", installation=\"$installation\"}[1m]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "per minute",
@@ -391,7 +391,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(insolar_bus_reply_total{instance=~\"$instance\",message_type=~\"$type\", installation=$installation}[1m]))",
+          "expr": "sum(rate(insolar_bus_reply_total{instance=~\"$instance\",message_type=~\"$type\", installation=\"$installation\"}[1m]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "count / sec",
@@ -482,7 +482,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(insolar_bus_reply_error_total{instance=~\"$instance\",message_type=~\"$type\", installation=$installation}[1m]))*10",
+          "expr": "sum(rate(insolar_bus_reply_error_total{instance=~\"$instance\",message_type=~\"$type\", installation=\"$installation\"}[1m]))*10",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "per pulse",
@@ -572,7 +572,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(insolar_bus_sent_total{instance=~\"$instance\",message_type=~\"$type\", installation=$installation}[1m]))",
+          "expr": "sum(rate(insolar_bus_sent_total{instance=~\"$instance\",message_type=~\"$type\", installation=\"$installation\"}[1m]))",
           "format": "time_series",
           "instant": false,
           "intervalFactor": 1,
@@ -652,7 +652,7 @@
       "reverseYBuckets": false,
       "targets": [
         {
-          "expr": "sum(increase(insolar_bus_sent_bytes_bucket{message_type=~\"$type\", instance=~\"$instance\", installation=$installation}[1m])) by (le)",
+          "expr": "sum(increase(insolar_bus_sent_bytes_bucket{message_type=~\"$type\", instance=~\"$instance\", installation=\"$installation\"}[1m])) by (le)",
           "format": "heatmap",
           "hide": false,
           "intervalFactor": 1,
@@ -715,7 +715,7 @@
       "reverseYBuckets": false,
       "targets": [
         {
-          "expr": "sum(increase(insolar_bus_sent_milliseconds_bucket{message_type=~\"$type\", instance=~\"$instance\", installation=$installation}[1m])) by (le)",
+          "expr": "sum(increase(insolar_bus_sent_milliseconds_bucket{message_type=~\"$type\", instance=~\"$instance\", installation=\"$installation\"}[1m])) by (le)",
           "format": "heatmap",
           "intervalFactor": 1,
           "legendFormat": "{{ le }}",

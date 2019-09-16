@@ -81,7 +81,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "insolar_pulsar_current_pulse{installation=$installation}",
+          "expr": "insolar_pulsar_current_pulse{installation=\"$installation\"}",
           "instant": true,
           "intervalFactor": 1,
           "refId": "A"
@@ -165,7 +165,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "insolar_pulsar_sending_pulse_errors{installation=$installation}",
+          "expr": "insolar_pulsar_sending_pulse_errors{installation=\"$installation\"}",
           "instant": false,
           "refId": "A"
         }
@@ -224,7 +224,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(insolar_pulsar_pulse_generated{installation=$installation}[1m]) * 10",
+          "expr": "irate(insolar_pulsar_pulse_generated{installation=\"$installation\"}[1m]) * 10",
           "legendFormat": "",
           "refId": "A"
         }

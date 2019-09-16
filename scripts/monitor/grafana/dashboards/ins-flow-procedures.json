@@ -58,7 +58,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(insolar_flow_procedure_latency_bucket{proc_type=~\".($type)\", instance=~\"$instance\", result=~\"$result\", installation=$installation}[1m]))",
+          "expr": "sum(rate(insolar_flow_procedure_latency_bucket{proc_type=~\".($type)\", instance=~\"$instance\", result=~\"$result\", installation=\"$installation\"}[1m]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "1m rate",
@@ -138,7 +138,7 @@
       "reverseYBuckets": false,
       "targets": [
         {
-          "expr": "sum(increase(insolar_flow_procedure_latency_bucket{proc_type=~\".($type)\", instance=~\"$instance\", result=~\"$result\", installation=$installation}[1m])) by (le)",
+          "expr": "sum(increase(insolar_flow_procedure_latency_bucket{proc_type=~\".($type)\", instance=~\"$instance\", result=~\"$result\", installation=\"$installation\"}[1m])) by (le)",
           "format": "heatmap",
           "hide": false,
           "intervalFactor": 1,

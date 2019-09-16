@@ -59,7 +59,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "insolar_consensus_active_nodes_count{instance=~\"$node\", job=~\"$role\", installation=$installation}",
+          "expr": "insolar_consensus_active_nodes_count{instance=~\"$node\", job=~\"$role\", installation=\"$installation\"}",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -148,12 +148,12 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(insolar_consensus_packets_recv_bytes{instance=~\"$node\", role=~\"$role\", installation=$installation}[1m]))",
+          "expr": "sum(rate(insolar_consensus_packets_recv_bytes{instance=~\"$node\", role=~\"$role\", installation=\"$installation\"}[1m]))",
           "legendFormat": "recv",
           "refId": "A"
         },
         {
-          "expr": "-sum(rate(insolar_consensus_packets_sent_bytes{instance=~\"$node\", role=~\"$role\", installation=$installation}[1m]))",
+          "expr": "-sum(rate(insolar_consensus_packets_sent_bytes{instance=~\"$node\", role=~\"$role\", installation=\"$installation\"}[1m]))",
           "legendFormat": "sent",
           "refId": "B"
         }

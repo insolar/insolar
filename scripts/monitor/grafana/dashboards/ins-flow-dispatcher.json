@@ -58,7 +58,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(insolar_flow_dispatcher_process_latency_bucket{message_type=~\"$type\", instance=~\"$instance\", result=~\"$result\", installation=$installation}[1m]))",
+          "expr": "sum(rate(insolar_flow_dispatcher_process_latency_bucket{message_type=~\"$type\", instance=~\"$instance\", result=~\"$result\", installation=\"$installation\"}[1m]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ result }}",
@@ -146,7 +146,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(insolar_flow_dispatcher_handler_latency_count{message_type=~\"$type\", instance=~\"$instance\", result=~\"$result\", installation=$installation}[1m]))",
+          "expr": "sum(rate(insolar_flow_dispatcher_handler_latency_count{message_type=~\"$type\", instance=~\"$instance\", result=~\"$result\", installation=\"$installation\"}[1m]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ result }}",
@@ -226,7 +226,7 @@
       "reverseYBuckets": false,
       "targets": [
         {
-          "expr": "sum(increase(insolar_flow_dispatcher_process_latency_bucket{message_type=~\"$type\", instance=~\"$instance\", result=~\"$result\", installation=$installation}[1m])) by (le)",
+          "expr": "sum(increase(insolar_flow_dispatcher_process_latency_bucket{message_type=~\"$type\", instance=~\"$instance\", result=~\"$result\", installation=\"$installation\"}[1m])) by (le)",
           "format": "heatmap",
           "hide": false,
           "intervalFactor": 1,
@@ -290,7 +290,7 @@
       "reverseYBuckets": false,
       "targets": [
         {
-          "expr": "sum(increase(insolar_flow_dispatcher_handler_latency_bucket{message_type=~\"$type\", instance=~\"$instance\", result=~\"$result\", installation=$installation}[1m])) by (le)",
+          "expr": "sum(increase(insolar_flow_dispatcher_handler_latency_bucket{message_type=~\"$type\", instance=~\"$instance\", result=~\"$result\", installation=\"$installation\"}[1m])) by (le)",
           "format": "heatmap",
           "hide": false,
           "intervalFactor": 1,
@@ -362,7 +362,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(irate(insolar_flow_dispatcher_process_latency_count{message_type=~\"$type\", instance=~\"$instance\", result=\"cancelled\", installation=$installation}[1m]))",
+          "expr": "sum(irate(insolar_flow_dispatcher_process_latency_count{message_type=~\"$type\", instance=~\"$instance\", result=\"cancelled\", installation=\"$installation\"}[1m]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ job }}",
@@ -451,7 +451,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(irate(insolar_flow_dispatcher_handler_latency_count{message_type=~\"$type\", instance=~\"$instance\", result=\"cancelled\", installation=$installation}[1m]))",
+          "expr": "sum(irate(insolar_flow_dispatcher_handler_latency_count{message_type=~\"$type\", instance=~\"$instance\", result=\"cancelled\", installation=\"$installation\"}[1m]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ job }}",
