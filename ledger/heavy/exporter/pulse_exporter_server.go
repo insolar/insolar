@@ -18,11 +18,15 @@ package exporter
 
 import (
 	"context"
+	"time"
+
+	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/node"
 	insolarPulse "github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/ledger/heavy/executor"
 	"github.com/insolar/insolar/pulse"
 
@@ -45,6 +49,15 @@ func NewPulseServer(pulses insolarPulse.Calculator, jetKeeper executor.JetKeeper
 
 func (p *PulseServer) Export(getPulses *GetPulses, stream PulseExporter_ExportServer) error {
 	ctx := stream.Context()
+
+	exportStart := time.Now()
+	defer func(ctx context.Context) {
+		stats.Record(
+			insmetrics.InsertTag(ctx, TagHeavyExporterMethodName, "pulse-export"),
+			HeavyExporterMethodTiming.M(float64(time.Since(exportStart).Nanoseconds())/1e6),
+		)
+	}(ctx)
+
 	logger := inslogger.FromContext(ctx)
 
 	if getPulses.Count == 0 {
@@ -101,6 +114,14 @@ func (p *PulseServer) Export(getPulses *GetPulses, stream PulseExporter_ExportSe
 }
 
 func (p *PulseServer) TopSyncPulse(ctx context.Context, _ *GetTopSyncPulse) (*TopSyncPulseResponse, error) {
+	exportStart := time.Now()
+	defer func(ctx context.Context) {
+		stats.Record(
+			insmetrics.InsertTag(ctx, TagHeavyExporterMethodName, "pulse-top-sync-pulse"),
+			HeavyExporterMethodTiming.M(float64(time.Since(exportStart).Nanoseconds())/1e6),
+		)
+	}(ctx)
+
 	return &TopSyncPulseResponse{
 		PulseNumber: p.jetKeeper.TopSyncPulse().AsUint32(),
 	}, nil
