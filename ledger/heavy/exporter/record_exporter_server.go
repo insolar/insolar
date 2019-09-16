@@ -91,6 +91,7 @@ func (r *RecordServer) Export(getRecords *GetRecords, stream RecordExporter_Expo
 
 	ctx := stream.Context()
 	logger := inslogger.FromContext(ctx)
+	logger.Info("Incoming request: ", getRecords.String())
 
 	if getRecords.Count == 0 {
 		return errors.New("count can't be 0")
@@ -114,8 +115,8 @@ func (r *RecordServer) Export(getRecords *GetRecords, stream RecordExporter_Expo
 		r.jetKeeper,
 		r.pulseCalculator,
 	)
-	read := 0
 
+	var numSent int
 	for iter.HasNext(stream.Context()) {
 		record, err := iter.Next(stream.Context())
 		if err != nil {
@@ -128,19 +129,9 @@ func (r *RecordServer) Export(getRecords *GetRecords, stream RecordExporter_Expo
 			logger.Error(err)
 			return err
 		}
-		read++
+		numSent++
 	}
-
-	if read == 0 {
-		topPulse := r.jetKeeper.TopSyncPulse()
-		err := stream.Send(&Record{
-			ShouldIterateFrom: &topPulse,
-		})
-		if err != nil {
-			logger.Error(err)
-			return err
-		}
-	}
+	logger.Info("exported %d record", numSent)
 
 	return nil
 }

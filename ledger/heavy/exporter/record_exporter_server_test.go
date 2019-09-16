@@ -355,6 +355,37 @@ func TestRecordServer_Export(t *testing.T) {
 
 		require.Error(t, err)
 	})
+
+	t.Run("returns empty slice of records, if no records", func(t *testing.T) {
+		jetKeeper := executor.NewJetKeeperMock(t)
+		jetKeeper.TopSyncPulseMock.Return(pulse.MinTimePulse)
+
+		tmpdir, err := ioutil.TempDir("", "bdb-test-")
+		defer os.RemoveAll(tmpdir)
+		require.NoError(t, err)
+
+		db, err := store.NewBadgerDB(BadgerDefaultOptions(tmpdir))
+		require.NoError(t, err)
+		defer db.Stop(context.Background())
+
+		recordPosition := object.NewRecordDB(db)
+		pulses := insolarPulse.NewDB(db)
+
+		recordServer := NewRecordServer(pulses, recordPosition, nil, jetKeeper)
+
+		streamMock := &streamMock{checker: func(i *Record) error {
+			t.Error("it shouldn't be called")
+			return nil
+		}}
+
+		err = recordServer.Export(&GetRecords{
+			PulseNumber:  pulse.MinTimePulse,
+			RecordNumber: 0,
+			Count:        10,
+		}, streamMock)
+
+		require.NoError(t, err)
+	})
 }
 
 // getVirtualRecord generates random Virtual record
