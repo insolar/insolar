@@ -15,7 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1568208285430,
+  "iteration": 1568639487608,
   "links": [],
   "panels": [
     {
@@ -179,7 +179,7 @@
       ],
       "repeat": null,
       "repeatDirection": "h",
-      "repeatIteration": 1568208285430,
+      "repeatIteration": 1568639487608,
       "repeatPanelId": 28,
       "scopedVars": {
         "instance": {
@@ -857,13 +857,14 @@
   "refresh": "10s",
   "schemaVersion": 19,
   "style": "dark",
-  "tags": [],
+  "tags": [
+    "INS"
+  ],
   "templating": {
     "list": [
       {
         "allValue": null,
         "current": {
-          "tags": [],
           "text": "local",
           "value": "local"
         },
