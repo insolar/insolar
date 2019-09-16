@@ -20,13 +20,14 @@ import (
 	"context"
 	"github.com/insolar/insolar/conveyor/smachine/tools"
 	"math"
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
 )
 
 type SlotMachineConfig struct {
-	//SyncStrategy    WorkSynchronizationStrategy
+	SyncStrategy    WorkSynchronizationStrategy
 	PollingPeriod   time.Duration
 	PollingTruncate time.Duration
 	SlotPageSize    uint16
@@ -83,26 +84,61 @@ func (m *SlotMachine) IsEmpty() bool {
 	return m.slotPool.IsEmpty()
 }
 
-/* -------------------------------- */
+/* -- Methods to run state machines ------------------------------ */
 
 func (m *SlotMachine) scanWorkingSlots(worker SlotWorker) {
+	worker.EnsureMode(NonDetachableContext)
+
+	hasSignal := false
 	for {
 		currentSlot := m.workingSlots.First()
 		if currentSlot == nil {
 			return
 		}
+
+		prevStepNo := currentSlot.startWorking(m.scanCount) // its counterpart is in postSlotExecution()
 		currentSlot.removeFromQueue()
-		prevStepNo := currentSlot.startWorking(m.scanCount)
 
-		stopNow := false
 		var stateUpdate StateUpdate
-		var asyncCount uint16
-
+		var err error
 		// TODO consider use of sync.Pool for executionContext if they are allocated on heap
 
-		wasDetached, err := worker.DetachableCall(func(workerCtx DetachableSlotWorker) {
-			ec := executionContext{worker: workerCtx, slotContext: slotContext{s: currentSlot}}
-			stopNow, stateUpdate, asyncCount = ec.executeNextStep()
+		wasDetached := worker.DetachableCall(func(worker DetachableSlotWorker) {
+			defer func() {
+				err = recoverSlotPanic("slot execution failed", recover(), nil)
+			}()
+
+			for loopCount := uint32(0); ; loopCount++ {
+				canLoop := false
+				canLoop, hasSignal = worker.CanLoopOrHasSignal(loopCount)
+				if !canLoop || hasSignal {
+					if loopCount == 0 {
+						// a very special update type
+						stateUpdate = StateUpdate{updType: uint8(stateUpdInternalRepeatNow)}
+					} else {
+						stateUpdate = newStateUpdateTemplate(updCtxExec, 0, stateUpdRepeat).newNoArg()
+					}
+					return
+				}
+
+				ec := executionContext{worker: worker, slotContext: slotContext{s: currentSlot}}
+
+				var asyncCnt uint16
+				var sut StateUpdateType
+				stateUpdate, sut, asyncCnt = ec.executeNextStep()
+
+				if asyncCnt > 0 {
+					asyncCnt += currentSlot.asyncCallCount
+					if asyncCnt <= currentSlot.asyncCallCount {
+						panic("overflow")
+					}
+					currentSlot.asyncCallCount = asyncCnt
+				}
+
+				if !sut.ShortLoop(currentSlot, stateUpdate, loopCount) {
+					return
+				}
+			}
 		})
 
 		if err != nil {
@@ -111,32 +147,166 @@ func (m *SlotMachine) scanWorkingSlots(worker SlotWorker) {
 
 		if wasDetached {
 			// MUST NOT apply any changes in the current routine, as it is no more safe to update queues
-			slotLink := currentSlot.NewLink()
-			m.applyDetachedStateUpdate(slotLink, stateUpdate, asyncCount, prevStepNo)
+			m.detachedPostSlotExecution(currentSlot, stateUpdate, worker, prevStepNo)
 			return
 		}
+		hasAsync := m.postSlotExecution(currentSlot, stateUpdate, worker, prevStepNo, false)
+		if !hasAsync && !hasSignal {
+			continue
+		}
 
-		if !stateUpdate.IsZero() {
-			m.applyStateUpdate(currentSlot, stateUpdate, worker)
-		}
-		if currentSlot.stopWorking(asyncCount, prevStepNo) {
-			// TODO apply migrate after initialization
-		}
-		if stopNow {
+		hasSignal, wasDetached = m.syncQueue.ProcessCallbacks(worker)
+		if hasSignal || wasDetached {
 			return
 		}
-
-		// TODO if has async or barge-in then check for a detached queue
-		if currentSlot.hasAsyncOrBargeIn() {
-			// TODO process queues
-		}
-
 	}
 }
 
-/* -------------------------------- */
+func (m *SlotMachine) postSlotExecution(slot *Slot, stateUpdate StateUpdate, worker SlotWorker,
+	prevStepNo uint32, wasAsync bool) (hasAsync bool) {
 
-func (m *SlotMachine) recycleSlot(slot *Slot, w DetachableSlotWorker) {
+	if !stateUpdate.IsZero() {
+		slotLink := slot.NewLink()
+		if !m.applyStateUpdate(slot, stateUpdate, worker) {
+			m._flushMissingSlotQueue(slotLink)
+			return false
+		}
+	}
+
+	if slot.canMigrateWorking(prevStepNo, wasAsync) {
+		slotLink := slot.NewLink()
+		if _, isAvailable := m._migrateSlot(slot, worker); !isAvailable {
+			m._flushMissingSlotQueue(slotLink)
+			return false
+		}
+	}
+
+	hasAsync = wasAsync || slot.hasAsyncOrBargeIn()
+	if hasAsync {
+		m.syncQueue.AppendSlotDetachQueue(slot.GetSlotID())
+	}
+	slot.stopWorking(prevStepNo)
+	return hasAsync
+}
+
+func (m *SlotMachine) _flushMissingSlotQueue(slotLink SlotLink) {
+	detached := m.syncQueue.flushDetachQueue(slotLink.SlotID())
+	if len(detached) > 0 {
+		m._handleMissedSlotCallback(slotLink, nil, detached)
+	}
+}
+
+func (m *SlotMachine) detachedPostSlotExecution(s *Slot, stateUpdate StateUpdate, worker SlotWorker,
+	prevStepNo uint32,
+) {
+	s.asyncCallCount++
+	m.syncQueue.AddAsyncUpdate(s.NewLink(), func(link SlotLink, worker SlotWorker) {
+		if !link.IsValid() {
+			return
+		}
+		slot := link.s
+		slot.asyncCallCount--
+		m.postSlotExecution(slot, stateUpdate, worker, prevStepNo, true)
+	})
+}
+
+/* -- Methods to migrate slots ------------------------------ */
+
+func (m *SlotMachine) Migrate(cleanupWeak bool, worker SlotWorker) {
+	worker.EnsureMode(NonDetachableContext)
+
+	m.migrationCount++
+	//if m.ownsAdapters {
+	//	m.adapters.migrate(m.containerState, m.migrationCount)
+	//}
+
+	m.slotPool.ScanAndCleanup(cleanupWeak, worker, m.recycleSlot, m.migratePage)
+}
+
+func (m *SlotMachine) migratePage(slotPage []Slot, worker SlotWorker) (isPageEmptyOrWeak, hasWeakSlots bool) {
+	isPageEmptyOrWeak = true
+	hasWeakSlots = false
+	for i := range slotPage {
+		isSlotEmptyOrWeak, isSlotAvailable := m.migrateSlot(&slotPage[i], worker)
+		switch {
+		case !isSlotEmptyOrWeak:
+			isPageEmptyOrWeak = false
+		case isSlotAvailable:
+			hasWeakSlots = true
+		}
+	}
+	return isPageEmptyOrWeak, hasWeakSlots
+}
+
+func (m *SlotMachine) migrateSlot(slot *Slot, w SlotWorker) (isEmptyOrWeak, isAvailable bool) {
+	if isEmpty, isStarted := slot.tryStartMigrate(); !isStarted {
+		return isEmpty, false
+	}
+	isEmptyOrWeak, isAvailable = m._migrateSlot(slot, w)
+	if isAvailable {
+		slot.stopMigrate()
+	}
+	return isEmptyOrWeak, isAvailable
+}
+
+func (m *SlotMachine) _migrateSlot(slot *Slot, worker SlotWorker) (isEmptyOrWeak, isAvailable bool) {
+	if m.migrationCount < slot.migrationCount {
+		panic("illegal state")
+	}
+
+	for m.migrationCount != slot.migrationCount {
+		migrateFn := slot.getMigration()
+		if migrateFn == nil {
+			slot.migrationCount = m.migrationCount
+			break
+		}
+
+		mc := migrationContext{slotContext{s: slot}}
+		stateUpdate := mc.executeMigration(migrateFn)
+
+		slotLink := slot.NewLink()
+		if !m.applyStateUpdate(slot, stateUpdate, worker) {
+			m._flushMissingSlotQueue(slotLink)
+			// slot was stopped
+			if !slot.isEmpty() {
+				panic("illegal state")
+			}
+			return true, false
+		}
+		slot.migrationCount++
+	}
+
+	return slot.step.Flags&StepWeak != 0, true
+}
+
+/* -- Methods to dispose/reuse slots ------------------------------ */
+
+func (m *SlotMachine) Cleanup(worker SlotWorker) {
+	m.slotPool.ScanAndCleanup(true, worker, m.recycleSlot, m.verifyPage)
+}
+
+func (m *SlotMachine) verifyPage(slotPage []Slot, _ SlotWorker) (isPageEmptyOrWeak, hasWeakSlots bool) {
+	isPageEmptyOrWeak = true
+	hasWeakSlots = false
+
+	for i := range slotPage {
+		slot := &slotPage[i]
+
+		switch {
+		case slot.isEmpty():
+			continue
+		case slot.isWorking():
+			break
+		case slot.step.Flags&StepWeak != 0:
+			hasWeakSlots = true
+			continue
+		}
+		return false, hasWeakSlots
+	}
+	return isPageEmptyOrWeak, hasWeakSlots
+}
+
+func (m *SlotMachine) recycleSlot(slot *Slot, w SlotWorker) {
 	dependants := m._recycleSlot(slot)
 	if dependants != nil {
 		w.ActivateLinkedList(dependants, false)
@@ -172,7 +342,7 @@ func (m *SlotMachine) _cleanupSlot(slot *Slot) *Slot {
 	return nil
 }
 
-/* -------------------------------- */
+/* -- Methods to create/allocate and start new slots ------------------------------ */
 
 func (m *SlotMachine) AddNew(ctx context.Context, parent SlotLink, sm StateMachine) SlotLink {
 	link := m._addNewPrepare(ctx, parent, sm)
@@ -260,15 +430,15 @@ func (m *SlotMachine) prepareNewSlot(slot, creator *Slot, fn CreateFunc, sm Stat
 	return true
 }
 
-func (m *SlotMachine) startNewSlot(slot *Slot, worker DetachableSlotWorker) {
+func (m *SlotMachine) startNewSlot(slot *Slot, worker SlotWorker) {
 	slot.ensureInitializing()
-	slot.stopWorking(0, 0)
+	slot.stopWorking(0)
 	m.updateSlotQueue(slot, worker, activateSlot)
 }
 
 func (m *SlotMachine) _startAddedSlot(slot *Slot) {
 	slot.ensureInitializing()
-	slot.stopWorking(0, 0)
+	slot.stopWorking(0)
 	list := m._updateSlotQueue(slot, false, activateSlot)
 	if list != nil {
 		panic("unexpected")
@@ -291,7 +461,7 @@ func (m *SlotMachine) allocateSlot() *Slot {
 	return m.slotPool.AllocateSlot(m, m.allocateNextSlotID())
 }
 
-/* -------------------------------- */
+/* -- Methods to manage processing queues, activate/deactivate slots ------------------------------ */
 
 type slotActivationMode uint8
 
@@ -410,10 +580,10 @@ func (m *SlotMachine) _applyStateUpdate(slot *Slot, stateUpdate StateUpdate, w D
 	return typeOfStateUpdate(stateUpdate).Apply(slot, stateUpdate, w)
 }
 
-func (m *SlotMachine) applyDetachedStateUpdate(slotLink SlotLink, stateUpdate StateUpdate, asyncCount uint16, prevStepNo uint32,
+func (m *SlotMachine) applyDetachedStateUpdate(slotLink SlotLink, stateUpdate StateUpdate, prevStepNo uint32,
 ) {
 	m.syncQueue.AddSlotCall(slotLink, func(slot *Slot, w DetachableSlotWorker) {
-		slot.stopWorking(asyncCount, prevStepNo)
+		slot.stopWorking(prevStepNo)
 		detachQueue := m.pullDetachQueue(slotLink.SlotID())
 
 		if !stateUpdate.IsZero() && !m.applyStateUpdate(slot, stateUpdate, w) {
@@ -440,6 +610,8 @@ func (m *SlotMachine) applyDetachedStateUpdate(slotLink SlotLink, stateUpdate St
 /* -------------------------------- */
 
 func (m *SlotMachine) createBargeIn(link StepLink, applyFn BargeInApplyFunc) BargeInParamFunc {
+	// TODO link.s.bargeInCount++
+
 	//return func(param interface{}) bool {
 	//	if !link.IsValid() {
 	//		return false

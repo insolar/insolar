@@ -108,16 +108,22 @@ func (p *SlotPool) RecycleSlot(slot *Slot) {
 	p.unusedSlots.AddFirst(slot)
 }
 
-func (p *SlotPool) ScanAndCleanup(cleanupWeak bool, disposeFn func(*Slot), scanPageFn func(slotPage []Slot) (isPageEmptyOrWeak, hasWeakSlots bool)) {
+type SlotPageScanFunc func([]Slot, SlotWorker) (isPageEmptyOrWeak, hasWeakSlots bool)
+type SlotDisposeFunc func(*Slot, SlotWorker)
+
+func (p *SlotPool) ScanAndCleanup(cleanupWeak bool, w SlotWorker,
+	disposeFn SlotDisposeFunc,
+	scanPageFn SlotPageScanFunc,
+) {
 	if len(p.slots) == 0 || len(p.slots) == 1 && p.slotPgPos == 0 {
 		return
 	}
 
-	isAllEmptyOrWeak, hasSomeWeakSlots := scanPageFn(p.slots[0][:p.slotPgPos])
+	isAllEmptyOrWeak, hasSomeWeakSlots := scanPageFn(p.slots[0][:p.slotPgPos], w)
 
 	j := 1
 	for i, slotPage := range p.slots[1:] {
-		isPageEmptyOrWeak, hasWeakSlots := scanPageFn(slotPage)
+		isPageEmptyOrWeak, hasWeakSlots := scanPageFn(slotPage, w)
 		switch {
 		case !isPageEmptyOrWeak:
 			isAllEmptyOrWeak = false
@@ -138,7 +144,13 @@ func (p *SlotPool) ScanAndCleanup(cleanupWeak bool, disposeFn func(*Slot), scanP
 
 	if isAllEmptyOrWeak && (cleanupWeak || !hasSomeWeakSlots) {
 		for _, slotPage := range p.slots {
-			p.disposePageSlots(slotPage, disposeFn)
+			for i := range slotPage {
+				slot := &slotPage[i]
+				if slot.isEmpty() {
+					continue
+				}
+				disposeFn(slot, w)
+			}
 		}
 		p.slots = p.slots[:1]
 		p.slotPgPos = 0
@@ -147,16 +159,6 @@ func (p *SlotPool) ScanAndCleanup(cleanupWeak bool, disposeFn func(*Slot), scanP
 
 	if len(p.slots) > j {
 		p.slots = p.slots[:j]
-	}
-}
-
-func (p *SlotPool) disposePageSlots(slotPage []Slot, disposeFn func(*Slot)) {
-	for i := range slotPage {
-		slot := &slotPage[i]
-		if slot.isEmpty() {
-			continue
-		}
-		disposeFn(slot)
 	}
 }
 

@@ -60,6 +60,7 @@ type slotData struct {
 	slotCreateData
 	lastWorkScan uint8
 
+	bargeInCount   uint8  //no overflow, capped by max
 	asyncCallCount uint16 // pending calls
 	migrationCount uint16 // can be wrapped by overflow
 
@@ -113,7 +114,7 @@ func (s *Slot) isEmpty() bool {
 	return atomic.LoadUint64(&s.idAndStep) == 0
 }
 
-func (s *Slot) isWorking() bool { // TODO rename to BUSY
+func (s *Slot) isWorking() bool {
 	return atomic.LoadUint64(&s.idAndStep)&slotFlagBusy != 0
 }
 
@@ -246,29 +247,25 @@ func (s *Slot) _tryCall(fn func(*Slot)) bool {
 	return true
 }
 
-func (s *Slot) startWorking(scanNo uint32) (prevStepNo uint32) {
+func (s *Slot) _tryStart(minStepNo uint32) (isEmpty, isStarted bool, prevStepNo uint32) {
 	for {
 		v := atomic.LoadUint64(&s.idAndStep)
-		if v&slotFlagBusy != 0 {
-			panic("illegal state")
+		if v == 0 /* isEmpty() */ {
+			return true, false, 0
 		}
+
 		prevStepNo = uint32(v >> stepIncrementShift)
-		if prevStepNo == 0 {
-			panic("illegal state")
+		if v&slotFlagBusy != 0 /* isWorking() */ || prevStepNo < minStepNo {
+			return false, false, prevStepNo
 		}
 
 		if atomic.CompareAndSwapUint64(&s.idAndStep, v, v|slotFlagBusy) {
-			s.lastWorkScan = uint8(scanNo)
-
-			if s.dependency != nil && s.dependency.OnSlotWorking() {
-				s.dependency = nil
-			}
-			return prevStepNo
+			return false, true, prevStepNo
 		}
 	}
 }
 
-func (s *Slot) stopWorking(asyncCount uint16, prevStepNo uint32) (wasInit bool) {
+func (s *Slot) _stopWorking() (prevStepNo uint32) {
 	for {
 		v := atomic.LoadUint64(&s.idAndStep)
 		if v&slotFlagBusy == 0 {
@@ -276,17 +273,40 @@ func (s *Slot) stopWorking(asyncCount uint16, prevStepNo uint32) (wasInit bool) 
 		}
 
 		if atomic.CompareAndSwapUint64(&s.idAndStep, v, v&^slotFlagBusy) {
-			s.asyncCallCount += asyncCount
-
-			if prevStepNo > 1 {
-				if s.dependency != nil && prevStepNo != uint32(v>>stepIncrementShift) && s.dependency.OnStepChanged() {
-					s.dependency = nil
-				}
-				return false
-			}
-			return prevStepNo == 1
+			return uint32(v >> stepIncrementShift)
 		}
 	}
+}
+
+func (s *Slot) tryStartMigrate() (isEmpty, isStarted bool) {
+	isEmpty, isStarted, _ = s._tryStart(1)
+	return isEmpty, isStarted
+}
+
+func (s *Slot) stopMigrate() {
+	s._stopWorking()
+}
+
+func (s *Slot) startWorking(scanNo uint32) (prevStepNo uint32) {
+	isStarted := false
+	if _, isStarted, prevStepNo = s._tryStart(2); isStarted {
+		return
+	}
+	panic("illegal state")
+}
+
+func (s *Slot) stopWorking(prevStepNo uint32) {
+	newStepNo := s._stopWorking()
+	if newStepNo > 1 && s.dependency != nil && prevStepNo != newStepNo && s.dependency.OnStepChanged() {
+		s.dependency = nil
+	}
+}
+
+func (s *Slot) canMigrateWorking(prevStepNo uint32, migrateIsNeeded bool) bool {
+	if prevStepNo > 1 {
+		return migrateIsNeeded
+	}
+	return prevStepNo == 1 && atomic.LoadUint64(&s.idAndStep) >= stepIncrement*2
 }
 
 func (s *slotData) isLastScan(scanNo uint32) bool {
@@ -342,4 +362,8 @@ func (s *Slot) getErrorHandler() ErrorHandlerFunc {
 		return s.step.Handler
 	}
 	return s.defErrorHandler
+}
+
+func (s *Slot) hasAsyncOrBargeIn() bool {
+	return s.asyncCallCount > 0 || s.bargeInCount > 0
 }

@@ -22,6 +22,7 @@ import (
 )
 
 type DetachableFunc func(DetachableSlotWorker)
+type NonDetachableFunc func(SlotWorker)
 type SlotDetachableFunc func(*Slot, DetachableSlotWorker)
 
 type WorkerContextMode uint8
@@ -44,7 +45,7 @@ type DetachableSlotWorker interface {
 	AttachTo(slot *Slot, link SlotLink, wakeUpOnUse bool) (SharedAccessReport, context.CancelFunc)
 	IsInplaceUpdate() bool
 
-	NonDetachableCall(DetachableFunc) (wasExecuted bool)
+	NonDetachableCall(NonDetachableFunc) (wasExecuted bool)
 
 	ActivateLinkedList(linkedList *Slot, hotWait bool)
 	IsDetached() bool
@@ -54,5 +55,5 @@ type SlotWorker interface {
 	DetachableSlotWorker
 
 	FinishNested()
-	DetachableCall(DetachableFunc) (wasDetached bool, err error)
+	DetachableCall(DetachableFunc) (wasDetached bool)
 }
