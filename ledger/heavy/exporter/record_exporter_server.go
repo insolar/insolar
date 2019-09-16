@@ -21,9 +21,12 @@ import (
 	"sync"
 	"time"
 
+	"go.opencensus.io/stats"
+
 	"github.com/insolar/insolar/insolar"
 	insolarPulse "github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/ledger/heavy/executor"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/pulse"
@@ -90,6 +93,15 @@ func (r *RecordServer) Export(getRecords *GetRecords, stream RecordExporter_Expo
 	r.limiter.Take(stream.Context())
 
 	ctx := stream.Context()
+
+	exportStart := time.Now()
+	defer func(ctx context.Context) {
+		stats.Record(
+			insmetrics.InsertTag(ctx, TagHeavyExporterMethodName, "record-export"),
+			HeavyExporterMethodTiming.M(float64(time.Since(exportStart).Nanoseconds())/1e6),
+		)
+	}(ctx)
+
 	logger := inslogger.FromContext(ctx)
 	logger.Info("Incoming request: ", getRecords.String())
 
