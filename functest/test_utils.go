@@ -139,8 +139,16 @@ func createMigrationMemberForMA(t *testing.T) *launchnet.User {
 
 }
 
+func generateMigrationAddress() (string, error) {
+	bytes := make([]byte, 20)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(bytes), nil
+}
+
 func addMigrationAddress(t *testing.T) {
-	ba := testutils.RandomString()
+	ba := testutils.newMigrationAddress()
 	_, err := signedRequest(t, launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.addAddresses",
 		map[string]interface{}{"migrationAddresses": []string{ba}})
 	require.NoError(t, err)
@@ -188,10 +196,6 @@ func migrate(t *testing.T, memberRef string, amount string, tx string, ma string
 	require.Equal(t, amount+"0", sm[launchnet.MigrationDaemons[mdNum].Ref])
 
 	return deposit
-}
-
-func generateMigrationAddress() string {
-	return testutils.RandomString()
 }
 
 const migrationAmount = "360000"
@@ -294,7 +298,7 @@ func signedRequest(t *testing.T, URL string, user *launchnet.User, method string
 	if err != nil {
 		errMsg = err.Error()
 	}
-
+	fmt.Println("Error: " + err.Error())
 	require.NotEqual(t, "", refStr, "request ref is empty: %s", errMsg)
 	require.NotEqual(t, insolar.NewEmptyReference().String(), refStr, "request ref is zero: %s", errMsg)
 
@@ -316,6 +320,7 @@ func makeSignedRequest(URL string, user *launchnet.User, method string, params i
 	ctx := context.TODO()
 	rootCfg, err := requester.CreateUserConfig(user.Ref, user.PrivKey, user.PubKey)
 	if err != nil {
+		fmt.Println("Error message: " + err.Error())
 		return nil, "", err
 	}
 
