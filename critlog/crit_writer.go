@@ -17,14 +17,11 @@
 package critlog
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"github.com/rs/zerolog"
 	"io"
-	"math"
 	"runtime"
-	"sync"
 	"sync/atomic"
 )
 
@@ -43,16 +40,12 @@ import (
 		logger -> CriticalWriter -> ... -> output writer
 */
 
-func NewCriticalWriter(ctx context.Context, w io.Writer, bufLen int) LevelWriteCloser {
-	r := &criticalWriter{w: AsLevelWriter(w), spinCount: 10}
-	r.start(ctx, bufLen)
-	return r
+func NewCriticalWriter(w io.Writer) LevelWriteCloser {
+	return &criticalWriter{w: AsLevelWriter(w), spinWaitCount: 10}
 }
 
-func NewCriticalWriterExt(ctx context.Context, w io.Writer, bufLen int, skippedFormatter SkippedFormatterFunc, spinWaitCount int) LevelWriteCloser {
-	r := &criticalWriter{w: AsLevelWriter(w), skippedFn: skippedFormatter, spinCount: spinWaitCount}
-	r.start(ctx, bufLen)
-	return r
+func NewCriticalWriterExt(w io.Writer, skippedFormatter SkippedFormatterFunc, spinWaitCount int) LevelWriteCloser {
+	return &criticalWriter{w: AsLevelWriter(w), skippedFormatter: skippedFormatter, spinWaitCount: spinWaitCount}
 }
 
 type TimeCriticalWriter interface {
@@ -64,113 +57,92 @@ var _ zerolog.LevelWriter = &criticalWriter{}
 var _ TimeCriticalWriter = &criticalWriter{}
 
 type criticalWriter struct {
-	buffer    chan bufferEntry
-	w         zerolog.LevelWriter
-	skippedFn SkippedFormatterFunc
-	spinCount int
-	missCount uint32 // atomic
+	w                zerolog.LevelWriter
+	skippedFormatter SkippedFormatterFunc
+	spinWaitCount    int
+	state            uint32 // atomic
 }
 
-type bufferEntry struct {
-	p     []byte
-	level zerolog.Level
-	wg    *sync.WaitGroup
-}
-
-func (w *criticalWriter) waitFlush(closeBuf bool) (ok bool) {
-	defer func() {
-		ok = recover() == nil
-	}()
-
-	if closeBuf {
-		close(w.buffer)
+func (w *criticalWriter) Flush() error {
+	if f, ok := w.w.(Flusher); ok {
+		return f.Flush()
 	}
-
-	wg := sync.WaitGroup{}
-	wg.Add(1)
-	w.buffer <- bufferEntry{wg: &wg}
-	wg.Wait()
-
-	return true
+	return errors.New("unsupported: Flush")
 }
 
-func (w *criticalWriter) Flush() (err error) {
-	if w.waitFlush(false) {
-		if f, ok := w.w.(Flusher); ok {
-			return f.Flush()
-		}
-		return errors.New("unsupported: Flush")
+func (w *criticalWriter) Close() error {
+	if f, ok := w.w.(io.Closer); ok {
+		return f.Close()
 	}
-	return errors.New("closed")
+	return errors.New("unsupported: Close")
 }
 
-func (w *criticalWriter) Close() (err error) {
-	if w.waitFlush(true) {
-		if f, ok := w.w.(io.Closer); ok {
-			return f.Close()
-		}
-		return errors.New("unsupported: Close")
+func (w *criticalWriter) Sync() error {
+	if f, ok := w.w.(Syncer); ok {
+		return f.Sync()
 	}
-	return errors.New("closed")
-}
-
-func (w *criticalWriter) Sync() (err error) {
-	if w.waitFlush(false) {
-		if f, ok := w.w.(Syncer); ok {
-			return f.Sync()
-		}
-		return errors.New("unsupported: Sync")
-	}
-	return errors.New("closed")
+	return errors.New("unsupported: Sync")
 }
 
 func (w *criticalWriter) IsTimeCriticalWriter() bool {
 	return true
 }
 
-const writeWithoutLevel zerolog.Level = math.MaxUint8
-
 func (w *criticalWriter) Write(p []byte) (int, error) {
-	return len(p), w.writeLevel(bufferEntry{p: p, level: writeWithoutLevel})
+	w.spinWrite(func() {
+		_, _ = w.w.Write(p)
+	})
+	return len(p), nil
 }
 
 func (w *criticalWriter) WriteLevel(level zerolog.Level, p []byte) (int, error) {
-	if level == writeWithoutLevel {
-		panic("illegal value")
-	}
-	return len(p), w.writeLevel(bufferEntry{p: p, level: level})
+	w.spinWrite(func() {
+		_, _ = w.w.WriteLevel(level, p)
+	})
+	return len(p), nil
 }
 
-func (w *criticalWriter) writeLevel(entry bufferEntry) (err error) {
-	defer func() {
-		_ = recover()
-		//recovered := recover()
-		//if recovered != nil {
-		//	err = fmt.Errorf("%v", recovered)
-		//}
-	}()
-
+func (w *criticalWriter) spinWrite(fn func()) {
 	for i := 0; ; i++ {
-		select {
-		case w.buffer <- entry:
-			return nil
+		c := atomic.LoadUint32(&w.state)
+
+		switch {
+		case c == 0:
+			if !atomic.CompareAndSwapUint32(&w.state, 0, 1) {
+				continue
+			}
+		case i > 0 && i >= w.spinWaitCount:
+			if !atomic.CompareAndSwapUint32(&w.state, c, c+1) {
+				continue
+			}
+			return
 		default:
+			runtime.Gosched()
+			continue
 		}
 
-		if i > 0 && i >= w.spinCount {
-			c := atomic.LoadUint32(&w.missCount)
-			if atomic.CompareAndSwapUint32(&w.missCount, c, c+1) {
-				return nil
+		break
+	}
+
+	go func() {
+		fn()
+
+		for {
+			c := atomic.LoadUint32(&w.state)
+			if atomic.CompareAndSwapUint32(&w.state, c, 0) {
+				if c > 1 {
+					w.reportMissed(c - 1)
+				}
+				return
 			}
 		}
-		runtime.Gosched()
-	}
+	}()
 }
 
 func (w *criticalWriter) reportMissed(missed uint32) {
 	var skippedMsg []byte
-	if w.skippedFn != nil {
-		skippedMsg = w.skippedFn(missed)
+	if w.skippedFormatter != nil {
+		skippedMsg = w.skippedFormatter(missed)
 		if len(skippedMsg) == 0 {
 			return
 		}
@@ -178,46 +150,4 @@ func (w *criticalWriter) reportMissed(missed uint32) {
 		skippedMsg = ([]byte)(fmt.Sprintf("critical logger dropped %d messages", missed))
 	}
 	_, _ = w.w.WriteLevel(zerolog.WarnLevel, skippedMsg)
-}
-
-func (w *criticalWriter) start(ctx context.Context, bufLen int) {
-	w.buffer = make(chan bufferEntry, bufLen)
-	go w.worker(ctx)
-}
-
-func (w *criticalWriter) worker(ctx context.Context) {
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case entry, ok := <-w.buffer:
-			if !ok {
-				return
-			}
-			if entry.wg != nil {
-				entry.wg.Done()
-				continue
-			}
-			w.writeEntry(entry)
-		}
-	}
-}
-
-func (w *criticalWriter) writeEntry(entry bufferEntry) {
-	if entry.level == writeWithoutLevel {
-		_, _ = w.w.Write(entry.p)
-	} else {
-		_, _ = w.w.WriteLevel(entry.level, entry.p)
-	}
-
-	for {
-		c := atomic.LoadUint32(&w.missCount)
-		if c == 0 {
-			return
-		}
-		if atomic.CompareAndSwapUint32(&w.missCount, c, 0) {
-			w.reportMissed(c)
-			return
-		}
-	}
 }
