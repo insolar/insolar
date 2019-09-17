@@ -131,7 +131,7 @@ func selectFormatter(format insolar.LogFormat) (io.Writer, error) {
 	case insolar.TextFormat:
 		output = newDefaultTextOutput()
 	case insolar.JSONFormat:
-		output = os.Stderr
+		output = os.Stdout
 	default:
 		return nil, errors.New("unknown formatter " + format.String())
 	}
