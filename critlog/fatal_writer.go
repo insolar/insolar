@@ -41,11 +41,11 @@ import (
 */
 
 // This flusher will hard-lock any writes after first Fatal
-func FatalFlusher(w io.Writer) zerolog.LevelWriter {
+func FatalFlusher(w io.Writer) LevelWriteCloser {
 	return &fatalFlusher{w: AsLevelWriter(w), lockPostFatal: true}
 }
 
-func FatalFlusherExt(w io.Writer, lockPostFatal bool) zerolog.LevelWriter {
+func FatalFlusherExt(w io.Writer, lockPostFatal bool) LevelWriteCloser {
 	return &fatalFlusher{w: AsLevelWriter(w), lockPostFatal: lockPostFatal}
 }
 

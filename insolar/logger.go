@@ -166,3 +166,8 @@ type Logger interface {
 	// Is returns if passed log level equal current log level
 	Is(level LogLevel) bool
 }
+
+type SpecialLoggerFactory interface {
+	CreateCriticalLogger(bufSize int) Logger
+	CreateBufferedLogger(bufSize int) Logger
+}

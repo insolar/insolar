@@ -17,6 +17,7 @@
 package critlog
 
 import (
+	"errors"
 	"fmt"
 	"github.com/rs/zerolog"
 	"io"
@@ -39,23 +40,52 @@ import (
 		logger -> CriticalWriter -> ... -> output writer
 */
 
-func NewCriticalWriter(w io.Writer) zerolog.LevelWriter {
+func NewCriticalWriter(w io.Writer) LevelWriteCloser {
 	return &criticalWriter{w: AsLevelWriter(w), spinWaitCount: 10}
 }
 
-func NewCriticalWriterExt(w io.Writer, skippedFormatter SkippedFormatterFunc, spinWaitCount int) zerolog.LevelWriter {
+func NewCriticalWriterExt(w io.Writer, skippedFormatter SkippedFormatterFunc, spinWaitCount int) LevelWriteCloser {
 	return &criticalWriter{w: AsLevelWriter(w), skippedFormatter: skippedFormatter, spinWaitCount: spinWaitCount}
 }
 
+type TimeCriticalWriter interface {
+	IsTimeCriticalWriter() bool
+}
 type SkippedFormatterFunc func(missed uint32) []byte
 
 var _ zerolog.LevelWriter = &criticalWriter{}
+var _ TimeCriticalWriter = &criticalWriter{}
 
 type criticalWriter struct {
 	w                zerolog.LevelWriter
 	skippedFormatter SkippedFormatterFunc
 	spinWaitCount    int
 	state            uint32 // atomic
+}
+
+func (w *criticalWriter) Flush() error {
+	if f, ok := w.w.(Flusher); ok {
+		return f.Flush()
+	}
+	return errors.New("unsupported: Flush")
+}
+
+func (w *criticalWriter) Close() error {
+	if f, ok := w.w.(io.Closer); ok {
+		return f.Close()
+	}
+	return errors.New("unsupported: Close")
+}
+
+func (w *criticalWriter) Sync() error {
+	if f, ok := w.w.(Syncer); ok {
+		return f.Sync()
+	}
+	return errors.New("unsupported: Sync")
+}
+
+func (w *criticalWriter) IsTimeCriticalWriter() bool {
+	return true
 }
 
 func (w *criticalWriter) Write(p []byte) (int, error) {

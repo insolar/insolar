@@ -22,6 +22,11 @@ import (
 	"io"
 )
 
+type LevelWriteCloser interface {
+	zerolog.LevelWriter
+	io.Closer
+}
+
 type Flusher interface {
 	Flush() error
 }

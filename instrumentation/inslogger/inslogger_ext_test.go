@@ -168,3 +168,30 @@ func logCallerGlobal(ctx context.Context, t *testing.T) (loggerField, string) {
 	l.Info("test")
 	return logFields(t, b.Bytes()), strconv.Itoa(line + 1)
 }
+
+func Test_TimeCritical_Reuse(t *testing.T) {
+	ctx0 := context.Background()
+
+	ctx1 := inslogger.WithTimeCriticalLogger(ctx0, 10)
+	assert.NotEqual(t, ctx0, ctx1)
+
+	ctx2 := inslogger.WithTimeCriticalLogger(ctx1, 15)
+	assert.Equal(t, ctx1, ctx2)
+}
+
+func Test_Buffer_Reuse(t *testing.T) {
+	logPut, _ := log.NewLog(configuration.Log{
+		Level:     "info",
+		Adapter:   "zerolog",
+		Formatter: "json",
+	})
+	log.SetGlobalLogger(logPut)
+
+	ctx0 := context.Background()
+
+	ctx1 := inslogger.WithBuffer(ctx0, 10)
+	assert.NotEqual(t, ctx0, ctx1)
+
+	ctx2 := inslogger.WithBuffer(ctx1, 15) // number is irrelevant on repeat
+	assert.Equal(t, ctx1, ctx2)
+}

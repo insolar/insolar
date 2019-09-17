@@ -19,17 +19,16 @@ package log
 import (
 	"fmt"
 	"github.com/insolar/insolar/critlog"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/diode"
+	"go.opencensus.io/stats"
 	"io"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
 	"syscall"
-
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/diode"
-	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
@@ -56,12 +55,23 @@ type callerHookConfig struct {
 	funcname       bool
 }
 
+var _ insolar.Logger = &zerologAdapter{}
+var _ insolar.SpecialLoggerFactory = &zerologAdapter{}
+
 type zerologAdapter struct {
 	logger       zerolog.Logger
-	diodeWriter  *diode.Writer
+	output       io.WriteCloser
+	outputWraps  outputWrapFlag
 	level        zerolog.Level
 	callerConfig callerHookConfig
 }
+
+type outputWrapFlag uint32
+
+const (
+	outputWrappedWithBuffer outputWrapFlag = 1 << iota
+	outputWrappedWithCritical
+)
 
 type loglevelChangeHandler struct {
 }
@@ -171,11 +181,6 @@ func newZerologAdapter(cfg configuration.Log) (*zerologAdapter, error) {
 		return nil, err
 	}
 
-	output, err := selectFormatter(format)
-	if err != nil {
-		return nil, err
-	}
-
 	za := &zerologAdapter{
 		level: zerolog.InfoLevel,
 		callerConfig: callerHookConfig{
@@ -184,15 +189,18 @@ func newZerologAdapter(cfg configuration.Log) (*zerologAdapter, error) {
 		},
 	}
 
-	missedFunc := func(missed int) { panic(fmt.Errorf("logger dropped %d messages", missed)) }
-
-	if cfg.BufferSize > 0 {
-		dw := diode.NewWriter(output, cfg.BufferSize, 0, missedFunc)
-		za.diodeWriter = &dw
-		output = dw
+	za.output, err = selectFormatter(format)
+	if err != nil {
+		return nil, err
 	}
 
-	logger := zerolog.New(critlog.FatalFlusher(output)).Level(zerolog.InfoLevel).With().Timestamp().Logger()
+	if cfg.BufferSize > 0 {
+		za.output = createBufferedLogger(za.output, cfg.BufferSize)
+		za.outputWraps |= outputWrappedWithBuffer
+	}
+	za.output = critlog.FatalFlusher(za.output)
+
+	logger := zerolog.New(za.output).Level(zerolog.InfoLevel).With().Timestamp().Logger()
 	logger = logger.Hook(&metricsHook{})
 	za.logger = logger
 
@@ -269,60 +277,24 @@ func (z *zerologAdapter) Errorf(format string, args ...interface{}) {
 // Fatal logs a message at level Fatal on the stdout.
 func (z *zerologAdapter) Fatal(args ...interface{}) {
 	stats.Record(contextWithLogLevel(zerolog.FatalLevel), statLogCalls.M(1))
-
-	if z.diodeWriter != nil {
-		z.logger.Error().Msg(fmt.Sprintf("FATAL: %v", fmt.Sprint(args...)))
-		zerolog.SetGlobalLevel(zerolog.FatalLevel)
-		z.diodeWriter.Close()
-		os.Exit(1)
-	}
-
 	z.loggerWithHooks().Fatal().Msg(fmt.Sprint(args...))
 }
 
 // Fatalf formatted logs a message at level Fatal on the stdout.
 func (z *zerologAdapter) Fatalf(format string, args ...interface{}) {
 	stats.Record(contextWithLogLevel(zerolog.FatalLevel), statLogCalls.M(1))
-
-	if z.diodeWriter != nil {
-		z.logger.Error().Msg(fmt.Sprintf("FATAL: %v", fmt.Sprintf(format, args...)))
-		zerolog.SetGlobalLevel(zerolog.FatalLevel)
-		z.diodeWriter.Close()
-		os.Exit(1)
-	}
-
 	z.loggerWithHooks().Fatal().Msgf(format, args...)
 }
 
 // Panic logs a message at level Panic on the stdout.
 func (z *zerologAdapter) Panic(args ...interface{}) {
 	stats.Record(contextWithLogLevel(zerolog.PanicLevel), statLogCalls.M(1))
-
-	if z.diodeWriter != nil {
-		msg := fmt.Sprintf("PANIC: %v", fmt.Sprint(args...))
-		z.logger.Error().Msg(msg)
-		zerolog.SetGlobalLevel(zerolog.PanicLevel)
-		z.diodeWriter.Close()
-		panic(msg)
-	}
-
 	z.loggerWithHooks().Panic().Msg(fmt.Sprint(args...))
 }
 
 // Panicf formatted logs a message at level Panic on the stdout.
 func (z *zerologAdapter) Panicf(format string, args ...interface{}) {
 	stats.Record(contextWithLogLevel(zerolog.PanicLevel), statLogCalls.M(1))
-
-	zerolog.SetGlobalLevel(zerolog.PanicLevel)
-
-	if z.diodeWriter != nil {
-		msg := fmt.Sprintf("PANIC: %v", fmt.Sprintf(format, args...))
-		z.logger.Error().Msg(msg)
-		zerolog.SetGlobalLevel(zerolog.PanicLevel)
-		z.diodeWriter.Close()
-		panic(msg)
-	}
-
 	z.loggerWithHooks().Panic().Msgf(format, args...)
 }
 
@@ -409,4 +381,43 @@ func (z *zerologAdapter) Is(level insolar.LogLevel) bool {
 	}
 
 	return zerologLevel >= z.level && zerologLevel >= zerolog.GlobalLevel()
+}
+
+func (z *zerologAdapter) CreateCriticalLogger(bufSize int) insolar.Logger {
+	if z.outputWraps&outputWrappedWithCritical != 0 {
+		return z
+	}
+	zCopy := *z
+	zCopy.output = critlog.NewCriticalWriter(z.output)
+
+	// we disregard existence of a previous buffer for critical events
+	zCopy.outputWraps = (z.outputWraps &^ outputWrappedWithBuffer) | outputWrappedWithCritical
+
+	if bufSize > 0 {
+		zCopy.output = createBufferedLogger(zCopy.output, bufSize)
+		zCopy.outputWraps |= outputWrappedWithBuffer
+	}
+
+	zCopy.logger = z.logger.Output(zCopy.output)
+	return &zCopy
+}
+
+func createBufferedLogger(output io.WriteCloser, bufSize int) io.WriteCloser {
+	if bufSize <= 0 {
+		panic("illegal value")
+	}
+	missedFunc := func(missed int) { panic(fmt.Errorf("logger dropped %d messages", missed)) }
+	dw := diode.NewWriter(output, bufSize, 0, missedFunc)
+	return &dw
+}
+
+func (z *zerologAdapter) CreateBufferedLogger(bufSize int) insolar.Logger {
+	if bufSize <= 0 || z.outputWraps&outputWrappedWithBuffer != 0 {
+		return z
+	}
+	zCopy := *z
+	zCopy.output = createBufferedLogger(z.output, bufSize)
+	zCopy.outputWraps |= outputWrappedWithBuffer
+	zCopy.logger = z.logger.Output(zCopy.output)
+	return &zCopy
 }
