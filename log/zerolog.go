@@ -151,10 +151,10 @@ func (wtw *writeTimeWatcher) Write(buff []byte) (int, error) {
 		timemark := []byte(", \"writeTime\":\"" + time.Now().Format(timestampFormat) + "\"")
 		if buff[bufflen-2] == '}' {
 			timemark = append(timemark, '}', '\n')
-			out = append(buff[:bufflen-2], timemark...)
+			out = append(buff[:bufflen-2], timemark...) // nolint
 		} else {
 			timemark = append(timemark, '\n')
-			out = append(buff[:bufflen-1], timemark...)
+			out = append(buff[:bufflen-1], timemark...) // nolint
 		}
 	}
 	cnt, err := wtw.Out.Write(out)
