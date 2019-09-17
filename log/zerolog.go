@@ -159,7 +159,6 @@ func (wtw *writeTimeWatcher) Write(buff []byte) (int, error) {
 	}
 	cnt, err := wtw.Out.Write(out)
 	if err != nil {
-		panic(err)
 		return cnt, err
 	}
 	return cnt, nil
