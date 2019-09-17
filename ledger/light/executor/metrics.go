@@ -36,6 +36,19 @@ var (
 		"last pulse sent to heavy",
 		stats.UnitDimensionless,
 	)
+
+	// StatRequestsOpened specifies a metric about opened requests for the current light
+	StatRequestsOpened = stats.Int64(
+		"requests_opened",
+		"How many requests are opened",
+		stats.UnitDimensionless,
+	)
+	// StatRequestsClosed specifies a metric about closed requests for the current light
+	StatRequestsClosed = stats.Int64(
+		"requests_closed",
+		"How many requests are closed",
+		stats.UnitDimensionless,
+	)
 )
 
 func init() {
@@ -85,6 +98,18 @@ func init() {
 			Description: statLastReplicatedPulse.Description(),
 			Measure:     statLastReplicatedPulse,
 			Aggregation: view.LastValue(),
+		},
+		&view.View{
+			Name:        StatRequestsOpened.Name(),
+			Description: StatRequestsOpened.Description(),
+			Measure:     StatRequestsOpened,
+			Aggregation: view.Sum(),
+		},
+		&view.View{
+			Name:        StatRequestsClosed.Name(),
+			Description: StatRequestsClosed.Description(),
+			Measure:     StatRequestsClosed,
+			Aggregation: view.Sum(),
 		},
 	)
 	if err != nil {

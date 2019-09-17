@@ -101,6 +101,7 @@ func TestSetResult_Proceed(t *testing.T) {
 			Lifeline: record.Lifeline{
 				LatestRequest:       &LatestRequest,
 				EarliestOpenRequest: &earliestPN,
+				OpenRequestsCount:   1,
 			},
 		}, nil
 	})
