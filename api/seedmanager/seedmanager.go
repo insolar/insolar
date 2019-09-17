@@ -40,7 +40,7 @@ type storedSeed struct {
 // SeedManager manages working with seed pool
 // It's thread safe
 type SeedManager struct {
-	mutex    sync.RWMutex
+	mutex    sync.Mutex
 	seedPool map[Seed]storedSeed
 	ttl      time.Duration
 	stopped  chan struct{}
@@ -102,13 +102,11 @@ func (sm *SeedManager) isExpired(expTime Expiration) bool {
 
 // Exists checks whether seed in the pool
 func (sm *SeedManager) Pop(seed Seed) (insolar.PulseNumber, bool) {
-	sm.mutex.RLock()
+	sm.mutex.Lock()
+	defer sm.mutex.Unlock()
 	stored, ok := sm.seedPool[seed]
-	sm.mutex.RUnlock()
 
 	if ok && !sm.isExpired(stored.expiration) {
-		sm.mutex.Lock()
-		defer sm.mutex.Unlock()
 		delete(sm.seedPool, seed)
 		return stored.pulse, true
 	}

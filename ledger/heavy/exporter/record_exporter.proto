@@ -24,6 +24,8 @@ message Record {
 
     uint32 RecordNumber = 20;
     record.Material Record = 21 [(gogoproto.nullable) = false];
+
+    bytes ShouldIterateFrom = 22 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = true];
 }
 
 

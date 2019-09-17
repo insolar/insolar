@@ -440,40 +440,69 @@ func (a *AggTraceTimes) String() string {
 	b := strings.Builder{}
 	b.WriteString("[Call return percentiles]\n")
 	for i := 0; i < len(a.callTimes)-1; i++ {
-		b.WriteString(fmt.Sprintf("< %s | %d\n", traceTimeBuckets[i], a.callTimes[i]))
+		b.WriteString(fmt.Sprintf(
+			"< %s | %d (%.2f%%) \n",
+			traceTimeBuckets[i],
+			a.callTimes[i],
+			float32(a.callTimes[i])/float32(a.callCount())*100,
+		))
 		writeCallSample(&b, i)
 	}
 	b.WriteString(fmt.Sprintf(
-		"> %s | %d\n",
+		"> %s | %d (%.2f%%)\n",
 		traceTimeBuckets[len(traceTimeBuckets)-1],
-		a.callTimes[len(a.callTimes)-1]),
-	)
+		a.callTimes[len(a.callTimes)-1],
+		float32(a.callTimes[len(a.callTimes)-1])/float32(a.callCount())*100,
+	))
 	writeCallSample(&b, len(a.callTimes)-1)
 	b.WriteString("\n")
 
 	b.WriteString("[Total time percentiles]\n")
 	for i := 0; i < len(a.totalTimes)-1; i++ {
-		b.WriteString(fmt.Sprintf("< %s | %d\n", traceTimeBuckets[i], a.totalTimes[i]))
+		b.WriteString(fmt.Sprintf(
+			"< %s | %d (%.2f%%)\n",
+			traceTimeBuckets[i],
+			a.totalTimes[i],
+			float32(a.totalTimes[i])/float32(a.totalCount())*100,
+		))
 		writeTotalSample(&b, i)
 	}
 	b.WriteString(fmt.Sprintf(
-		"> %s | %d\n",
+		"> %s | %d (%.2f%%)\n",
 		traceTimeBuckets[len(traceTimeBuckets)-1],
-		a.callTimes[len(a.totalTimes)-1]),
-	)
+		a.totalTimes[len(a.totalTimes)-1],
+		float32(a.totalTimes[len(a.totalTimes)-1])/float32(a.totalCount())*100,
+	))
 	writeTotalSample(&b, len(a.totalTimes)-1)
 
 	return b.String()
 }
 
+func (a *AggTraceTimes) callCount() uint64 {
+	var sum uint64
+	for _, c := range a.callTimes {
+		sum += c
+	}
+	return sum
+}
+
+func (a *AggTraceTimes) totalCount() uint64 {
+	var sum uint64
+	for _, c := range a.totalTimes {
+		sum += c
+	}
+	return sum
+}
+
 func (a *AggTraceTimes) add(stat *TraceStats) {
 	addCall := func(dur time.Duration) int {
 		for i, t := range traceTimeBuckets {
+			a.callTimes[i]++
 			if dur < t {
-				a.callTimes[i]++
 				return i
 			}
 		}
+		a.callTimes[len(traceTimeBuckets)]++
 		return len(traceTimeBuckets)
 	}
 
@@ -484,6 +513,7 @@ func (a *AggTraceTimes) add(stat *TraceStats) {
 				return i
 			}
 		}
+		a.totalTimes[len(traceTimeBuckets)]++
 		return len(traceTimeBuckets)
 	}
 

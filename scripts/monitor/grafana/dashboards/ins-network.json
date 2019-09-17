@@ -15,7 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1568222808265,
+  "iteration": 1568639490587,
   "links": [],
   "panels": [
     {
@@ -29,7 +29,7 @@
       "fill": 0,
       "fillGradient": 0,
       "gridPos": {
-        "h": 5,
+        "h": 8,
         "w": 12,
         "x": 0,
         "y": 0
@@ -64,7 +64,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "deriv(insolar_current_pulse{job=\"insolard\"}[100s])",
+          "expr": "deriv(insolar_current_pulse{job=\"insolard\", installation=\"$installation\"}[60s])",
           "hide": false,
           "instant": false,
           "legendFormat": "P {{instance}}",
@@ -115,19 +115,17 @@
     {
       "aliasColors": {},
       "bars": false,
-      "cacheTimeout": null,
       "dashLength": 10,
       "dashes": false,
-      "description": "",
-      "fill": 0,
+      "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 5,
+        "h": 8,
         "w": 12,
         "x": 12,
         "y": 0
       },
-      "id": 2,
+      "id": 18,
       "legend": {
         "avg": false,
         "current": false,
@@ -139,24 +137,21 @@
       },
       "lines": true,
       "linewidth": 1,
-      "links": [],
-      "nullPointMode": "null as zero",
+      "nullPointMode": "null",
       "options": {
         "dataLinks": []
       },
-      "percentage": false,
-      "pluginVersion": "6.3.3",
-      "pointradius": 4,
-      "points": true,
+      "percentage": true,
+      "pointradius": 2,
+      "points": false,
       "renderer": "flot",
       "seriesOverrides": [],
       "spaceLength": 10,
-      "stack": false,
+      "stack": true,
       "steppedLine": false,
       "targets": [
         {
-          "expr": "insolar_network_state",
-          "instant": false,
+          "expr": "insolar_consensus_active_nodes_count{installation=\"$installation\"}",
           "legendFormat": "{{ instance }}",
           "refId": "A"
         }
@@ -165,97 +160,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "network state",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "none",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": false
-        },
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": false
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "fill": 1,
-      "fillGradient": 0,
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 5
-      },
-      "id": 10,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "nullPointMode": "null as zero",
-      "options": {
-        "dataLinks": []
-      },
-      "percentage": false,
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "expr": "deriv(insolar_consensus_packets_recv_bytes[20s])",
-          "legendFormat": "{{instance}}",
-          "refId": "A"
-        },
-        {
-          "expr": "-deriv(insolar_consensus_packets_sent_bytes[20s])",
-          "legendFormat": "{{instance}}",
-          "refId": "B"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "Consensus avg bytes",
+      "title": "Active list size",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -303,8 +208,8 @@
       "gridPos": {
         "h": 8,
         "w": 12,
-        "x": 12,
-        "y": 5
+        "x": 0,
+        "y": 8
       },
       "id": 8,
       "interval": "",
@@ -333,12 +238,12 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum by(instance)(delta(insolar_consensus_packets_recv_count{phase=~\"$phase\"}[20s]))",
+          "expr": "sum by(instance)(delta(insolar_consensus_packets_recv_count{phase=~\"$phase\", installation=\"$installation\"}[60s]))",
           "legendFormat": "{{instance}}",
           "refId": "A"
         },
         {
-          "expr": "-sum by(instance)(delta(insolar_consensus_packets_sent_count{phase=~\"$phase\"}[20s]))",
+          "expr": "-sum by(instance)(delta(insolar_consensus_packets_sent_count{phase=~\"$phase\", installation=\"$installation\"}[60s]))",
           "legendFormat": "{{instance}}",
           "refId": "B"
         }
@@ -392,12 +297,196 @@
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
+      "id": 10,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null as zero",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "deriv(insolar_consensus_packets_recv_bytes{installation=\"$installation\"}[60s])",
+          "legendFormat": "{{instance}}",
+          "refId": "A"
+        },
+        {
+          "expr": "-deriv(insolar_consensus_packets_sent_bytes{installation=\"$installation\"}[60s])",
+          "legendFormat": "{{instance}}",
+          "refId": "B"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Consensus avg bytes",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "cacheTimeout": null,
+      "dashLength": 10,
+      "dashes": false,
+      "description": "",
+      "fill": 0,
+      "fillGradient": 0,
+      "gridPos": {
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 13
+        "y": 16
       },
-      "id": 12,
+      "id": 2,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null as zero",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pluginVersion": "6.3.3",
+      "pointradius": 4,
+      "points": true,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "insolar_network_state{installation=\"$installation\"}",
+          "instant": false,
+          "legendFormat": "{{ instance }}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Network state",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "decimals": null,
+          "format": "none",
+          "label": "",
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "decimals": null,
+          "format": "none",
+          "label": "",
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "description": "",
+      "fill": 0,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 16
+      },
+      "id": 4,
+      "interval": "",
       "legend": {
         "avg": false,
         "current": false,
@@ -423,8 +512,8 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "delta(insolar_network_futures{packetType=~\"$packetType\"}[20s])",
-          "legendFormat": "{{instance}} {{packetType}}",
+          "expr": "insolar_network_connections{installation=\"$installation\"}",
+          "legendFormat": "{{ instance }}",
           "refId": "A"
         }
       ],
@@ -432,7 +521,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "futures count",
+      "title": "Connections",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -474,17 +563,15 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "description": "",
-      "fill": 0,
+      "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 12,
-        "x": 12,
-        "y": 13
+        "x": 0,
+        "y": 23
       },
-      "id": 4,
-      "interval": "",
+      "id": 16,
       "legend": {
         "avg": false,
         "current": false,
@@ -506,12 +593,102 @@
       "renderer": "flot",
       "seriesOverrides": [],
       "spaceLength": 10,
-      "stack": true,
+      "stack": false,
       "steppedLine": false,
       "targets": [
         {
-          "expr": "insolar_network_connections",
-          "legendFormat": "{{ instance }}",
+          "expr": "rate(insolar_network_recv_bytes_count{installation=\"$installation\"}[60s])",
+          "legendFormat": "RCV {{instance}}",
+          "refId": "A"
+        },
+        {
+          "expr": "-rate(insolar_network_sent_bytes_count{installation=\"$installation\"}[60s])",
+          "legendFormat": "SNT {{instance}}",
+          "refId": "B"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Packet exchange",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 12,
+        "y": 24
+      },
+      "id": 12,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "irate(insolar_network_futures{packetType=~\"$packetType\", installation=\"$installation\"}[60s])",
+          "legendFormat": "{{instance}} {{packetType}}",
           "refId": "A"
         }
       ],
@@ -519,7 +696,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "connections",
+      "title": "Futures count",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -567,8 +744,8 @@
       "gridPos": {
         "h": 8,
         "w": 12,
-        "x": 0,
-        "y": 20
+        "x": 12,
+        "y": 31
       },
       "id": 14,
       "legend": {
@@ -596,11 +773,13 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "delta(insolar_network_recv_bytes[20s])",
+          "expr": "rate(insolar_network_recv_bytes_sum{installation=\"$installation\"}[60s])",
+          "legendFormat": "{{instance}}",
           "refId": "A"
         },
         {
-          "expr": "-delta(insolar_network_sent_bytes[20s])",
+          "expr": "-rate(insolar_network_sent_bytes_sum{installation=\"$installation\"}[60s])",
+          "legendFormat": "{{instance}}",
           "refId": "B"
         }
       ],
@@ -624,7 +803,7 @@
       },
       "yaxes": [
         {
-          "format": "short",
+          "format": "bytes",
           "label": null,
           "logBase": 1,
           "max": null,
@@ -632,12 +811,12 @@
           "show": true
         },
         {
-          "format": "short",
+          "format": "decbytes",
           "label": null,
           "logBase": 1,
           "max": null,
           "min": null,
-          "show": true
+          "show": false
         }
       ],
       "yaxis": {
@@ -646,41 +825,71 @@
       }
     }
   ],
-  "refresh": false,
+  "refresh": "10s",
   "schemaVersion": 19,
   "style": "dark",
-  "tags": [],
+  "tags": [
+    "INS"
+  ],
   "templating": {
     "list": [
       {
         "allValue": null,
         "current": {
+          "text": "local",
+          "value": "local"
+        },
+        "datasource": "prometheus",
+        "definition": "label_values(insolar_light_last_sent_pulse, installation)",
+        "hide": 0,
+        "includeAll": false,
+        "label": null,
+        "multi": false,
+        "name": "installation",
+        "options": [],
+        "query": "label_values(insolar_light_last_sent_pulse, installation)",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "allValue": null,
+        "current": {
           "tags": [],
-          "text": "ph1 + ph2 + ph3",
+          "text": "All",
           "value": [
-            "ph1",
-            "ph2",
-            "ph3"
+            "$__all"
           ]
         },
         "hide": 0,
-        "includeAll": false,
+        "includeAll": true,
         "label": null,
         "multi": true,
         "name": "phase",
         "options": [
           {
             "selected": true,
+            "text": "All",
+            "value": "$__all"
+          },
+          {
+            "selected": false,
             "text": "ph1",
             "value": "ph1"
           },
           {
-            "selected": true,
+            "selected": false,
             "text": "ph2",
             "value": "ph2"
           },
           {
-            "selected": true,
+            "selected": false,
             "text": "ph3",
             "value": "ph3"
           }
@@ -692,7 +901,6 @@
       {
         "allValue": null,
         "current": {
-          "tags": [],
           "text": "All",
           "value": [
             "$__all"
@@ -740,5 +948,5 @@
   "timezone": "",
   "title": "INS-Network",
   "uid": "LmD-fXFZz",
-  "version": 2
+  "version": 1
 }

@@ -15,6 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
+  "iteration": 1568639489609,
   "links": [],
   "panels": [
     {
@@ -84,7 +85,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(insolar_log_calls{level=\"error\"})",
+          "expr": "sum(insolar_log_calls{level=\"error\", installation=~\"$installation\", role=~\"$role\"})",
           "instant": false,
           "refId": "A"
         }
@@ -170,7 +171,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(insolar_log_calls{level=\"warn\"})",
+          "expr": "sum(insolar_log_calls{level=\"warn\", installation=\"$installation\", role=~\"$role\"})",
           "instant": false,
           "refId": "A"
         }
@@ -257,7 +258,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(insolar_log_calls{level=\"info\"})",
+          "expr": "sum(insolar_log_calls{level=\"info\", installation=\"$installation\", role=~\"$role\"})",
           "instant": false,
           "refId": "A"
         }
@@ -322,7 +323,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(insolar_log_calls[1m]))",
+          "expr": "sum(rate(insolar_log_calls{installation=\"$installation\", role=~\"$role\"}[1m]))",
           "instant": false,
           "legendFormat": " ",
           "refId": "A"
@@ -414,7 +415,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(insolar_log_written[1m]))",
+          "expr": "sum(rate(insolar_log_written{installation=\"$installation\", role=~\"$role\"}[1m]))",
           "instant": false,
           "legendFormat": " ",
           "refId": "A"
@@ -502,7 +503,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(insolar_log_written[1m])) by (level)",
+          "expr": "sum(rate(insolar_log_written{installation=\"$installation\", role=~\"$role\"}[1m])) by (level)",
           "legendFormat": "{{ level }}",
           "refId": "A"
         }
@@ -591,7 +592,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(insolar_log_calls[1m])) by (level, role)",
+          "expr": "sum(rate(insolar_log_calls{installation=\"$installation\", role=~\"$role\"}[1m])) by (level, role)",
           "legendFormat": "{{ level }}: {{ role }}",
           "refId": "A"
         }
@@ -641,9 +642,65 @@
   "refresh": "10s",
   "schemaVersion": 19,
   "style": "dark",
-  "tags": [],
+  "tags": [
+    "INS"
+  ],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "allValue": null,
+        "current": {
+          "text": "local",
+          "value": "local"
+        },
+        "datasource": "prometheus",
+        "definition": "label_values(insolar_light_last_sent_pulse, installation)",
+        "hide": 0,
+        "includeAll": false,
+        "label": null,
+        "multi": false,
+        "name": "installation",
+        "options": [],
+        "query": "label_values(insolar_light_last_sent_pulse, installation)",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "allValue": null,
+        "current": {
+          "tags": [],
+          "text": "All",
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": "prometheus",
+        "definition": "label_values(insolar_bus_sent_total, role)",
+        "hide": 0,
+        "includeAll": true,
+        "label": null,
+        "multi": true,
+        "name": "role",
+        "options": [],
+        "query": "label_values(insolar_bus_sent_total, role)",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      }
+    ]
   },
   "time": {
     "from": "now-15m",

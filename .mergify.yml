@@ -1,0 +1,15 @@
+pull_request_rules:
+  - name: automatic merge when all checks are green
+    conditions:
+      - status-success=Mergeable
+      - status-success=Codegen (Awesome CI)
+      - status-success=Func Tests (Awesome CI)
+      - status-success=GolangCI
+      - status-success=Jepsen tests (Awesome CI)
+      - status-success=Net Integration Tests (Awesome CI)
+      - status-success=Test Coverage (Awesome CI)
+      - status-success=Unit Tests (Awesome CI)
+      - label=ready-to-merge
+    actions:
+      merge:
+        method: merge

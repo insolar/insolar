@@ -32,9 +32,9 @@ func TestFirstNFromMany(t *testing.T) {
 	t.Run("empty", func(t *testing.T) {
 		q1 := New()
 		q2 := New()
-		requests, hasMore := FirstNFromMany(ctx, 2, q1, q2)
+		requests, rest := SplitNFromMany(ctx, 2, q1, q2)
 		require.Empty(t, requests)
-		require.False(t, hasMore)
+		require.Empty(t, rest)
 	})
 
 	t.Run("order", func(t *testing.T) {
@@ -55,9 +55,9 @@ func TestFirstNFromMany(t *testing.T) {
 		q2.Append(ctx, FromPreviousExecutor, r5)
 		q2.Append(ctx, FromThisPulse, r6)
 
-		requests, hasMore := FirstNFromMany(ctx, 6, q1, q2)
+		requests, rest := SplitNFromMany(ctx, 6, q1, q2)
 		require.Equal(t, []*common.Transcript{r1, r4, r2, r5, r3, r6}, requests)
-		require.False(t, hasMore)
+		require.Empty(t, rest)
 	})
 
 	t.Run("size limit", func(t *testing.T) {
@@ -78,8 +78,8 @@ func TestFirstNFromMany(t *testing.T) {
 		q2.Append(ctx, FromPreviousExecutor, r5)
 		q2.Append(ctx, FromThisPulse, r6)
 
-		requests, hasMore := FirstNFromMany(ctx, 4, q1, q2)
-		require.Equal(t, []*common.Transcript{r1, r4, r2, r5}, requests)
-		require.True(t, hasMore)
+		requests, rest := SplitNFromMany(ctx, 4, q1, q2)
+		require.Equal(t, []*common.Transcript{r1, r4, r2, r5}, requests, "first")
+		require.Equal(t, []*common.Transcript{r3, r6}, rest, "rest")
 	})
 }
