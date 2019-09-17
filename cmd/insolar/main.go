@@ -277,7 +277,7 @@ func generateMigrationAddresses() {
 	ma := make([]string, maLen)
 
 	for i := 0; i < maLen; i++ {
-		ethAddr, _ := randomHex(40)
+		ethAddr, _ := randomHex(20)
 		ma[i] = "0x" + ethAddr
 	}
 

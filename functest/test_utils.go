@@ -20,7 +20,9 @@ package functest
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -36,7 +38,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/launchnet"
 
 	"github.com/insolar/rpc/v2/json2"
@@ -148,8 +149,9 @@ func generateMigrationAddress() (string, error) {
 }
 
 func addMigrationAddress(t *testing.T) {
-	ba := testutils.newMigrationAddress()
-	_, err := signedRequest(t, launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.addAddresses",
+	ba, err := generateMigrationAddress()
+	require.NoError(t, err)
+	_, err = signedRequest(t, launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.addAddresses",
 		map[string]interface{}{"migrationAddresses": []string{ba}})
 	require.NoError(t, err)
 }
@@ -297,8 +299,8 @@ func signedRequest(t *testing.T, URL string, user *launchnet.User, method string
 	var errMsg string
 	if err != nil {
 		errMsg = err.Error()
+		fmt.Println("Error: " + err.(*requester.Error).Data.Trace[0])
 	}
-	fmt.Println("Error: " + err.Error())
 	require.NotEqual(t, "", refStr, "request ref is empty: %s", errMsg)
 	require.NotEqual(t, insolar.NewEmptyReference().String(), refStr, "request ref is zero: %s", errMsg)
 
@@ -320,7 +322,7 @@ func makeSignedRequest(URL string, user *launchnet.User, method string, params i
 	ctx := context.TODO()
 	rootCfg, err := requester.CreateUserConfig(user.Ref, user.PrivKey, user.PubKey)
 	if err != nil {
-		fmt.Println("Error message: " + err.Error())
+		fmt.Println("Error: " + err.(*requester.Error).Data.Trace[0])
 		return nil, "", err
 	}
 
@@ -365,7 +367,6 @@ func makeSignedRequest(URL string, user *launchnet.User, method string, params i
 	if resp.Result == nil {
 		return nil, "", errors.New("Error and result are nil")
 	}
-
 	return resp.Result.CallResult, resp.Result.RequestReference, nil
 
 }

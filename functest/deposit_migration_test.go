@@ -96,8 +96,9 @@ func TestMigrationTokenOnDifferentDeposits(t *testing.T) {
 }
 
 func TestMigrationTokenNotInTheList(t *testing.T) {
-	migrationAddress := generateMigrationAddress()
-	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl,
+	migrationAddress, err := generateMigrationAddress()
+	require.NoError(t, err)
+	_, err = signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl,
 		&launchnet.MigrationAdmin,
 		"deposit.migration",
 		map[string]interface{}{"amount": "1000", "ethTxHash": "TxHash", "migrationAddress": migrationAddress})
