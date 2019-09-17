@@ -26,7 +26,7 @@ import (
 
 /*
 	Purpose:
-	FatalFlusher does flush of a wrapped io.Writer on Panic or Fatal events.
+	FatalFlusher does flush/sync of a wrapped io.Writer on Panic or Fatal events.
 	If the writer doesn't support Flusher, then on Fatal level event FatalFlusher will try to close the writer.
 	All events after Fatal can be hard-locked or ignored.
 
@@ -98,29 +98,36 @@ func (w *fatalFlusher) WriteLevel(level zerolog.Level, p []byte) (n int, err err
 	}
 }
 
+func (w *fatalFlusher) Sync() error {
+	if f, ok := w.w.(Syncer); ok {
+		return f.Sync()
+	}
+	return errors.New("unsupported: Sync")
+}
+
 func (w *fatalFlusher) Flush() error {
 	if f, ok := w.w.(Flusher); ok {
 		return f.Flush()
 	}
-	return errors.New("unsupported")
+	return errors.New("unsupported: Flush")
 }
 
 func (w *fatalFlusher) Close() error {
 	if f, ok := w.w.(io.Closer); ok {
 		return f.Close()
 	}
-	// any other approaches? e.g. write a long (4kB) padding?
-	return errors.New("unsupported")
+	return errors.New("unsupported: Close")
 }
 
 func (w *fatalFlusher) flush() bool {
-	return w.Flush() == nil
+	return w.Flush() == nil || w.Sync() == nil
 }
 
 func (w *fatalFlusher) flushOrClose() {
 	if w.flush() {
 		return
 	}
+	// any other approaches? e.g. write a long (4kB) padding?
 	_ = w.Close()
 }
 

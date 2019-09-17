@@ -26,6 +26,10 @@ type Flusher interface {
 	Flush() error
 }
 
+type Syncer interface {
+	Sync() error
+}
+
 var _ zerolog.LevelWriter = &writerAdapter{}
 
 func AsLevelWriter(w io.Writer) zerolog.LevelWriter {
@@ -51,12 +55,19 @@ func (w *writerAdapter) Flush() error {
 	if f, ok := w.w.(Flusher); ok {
 		return f.Flush()
 	}
-	return errors.New("unsupported")
+	return errors.New("unsupported: Flush")
 }
 
 func (w *writerAdapter) Close() error {
 	if f, ok := w.w.(io.Closer); ok {
 		return f.Close()
 	}
-	return errors.New("unsupported")
+	return errors.New("unsupported: Close")
+}
+
+func (w *writerAdapter) Sync() error {
+	if f, ok := w.w.(Syncer); ok {
+		return f.Sync()
+	}
+	return errors.New("unsupported: Sync")
 }
