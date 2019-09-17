@@ -17,7 +17,6 @@
 package critlog
 
 import (
-	"context"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"io"
@@ -132,5 +131,5 @@ func (w *fatalFlusher) flushOrClose() {
 }
 
 func lockDown() {
-	<-context.Background().Done()
+	select {}
 }
