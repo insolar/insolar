@@ -147,7 +147,7 @@ func (w *criticalWriter) reportMissed(missed uint32) {
 			return
 		}
 	} else {
-		skippedMsg = ([]byte)(fmt.Sprintf("events were skipped by critical write: n=%d", missed))
+		skippedMsg = ([]byte)(fmt.Sprintf("critical logger dropped %d messages", missed))
 	}
 	_, _ = w.w.WriteLevel(zerolog.WarnLevel, skippedMsg)
 }
