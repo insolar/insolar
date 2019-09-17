@@ -249,12 +249,12 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "failed to save records")
 	}
 
-	stats.Record(ctx, statRequestsOpened.M(1))
+	stats.Record(ctx, executor.StatRequestsOpened.M(1))
 
 	// Save updated index.
 	index.LifelineLastUsed = p.requestID.Pulse()
 	index.Lifeline.LatestRequest = &Filament.ID
-	index.Lifeline.OpenRequests++
+	index.Lifeline.OpenRequestsCount++
 	if index.Lifeline.EarliestOpenRequest == nil {
 		pn := p.requestID.Pulse()
 		index.Lifeline.EarliestOpenRequest = &pn

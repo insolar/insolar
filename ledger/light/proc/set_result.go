@@ -230,7 +230,7 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 		index.LifelineLastUsed = flow.Pulse(ctx)
 		index.Lifeline.LatestRequest = &Filament.ID
 		index.Lifeline.EarliestOpenRequest = earliestPending
-		index.Lifeline.OpenRequests--
+		index.Lifeline.OpenRequestsCount--
 		p.dep.indexes.Set(ctx, resultID.Pulse(), index)
 		return nil
 	}()
@@ -238,7 +238,7 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 		return err
 	}
 
-	stats.Record(ctx, statRequestsClosed.M(1))
+	stats.Record(ctx, executor.StatRequestsClosed.M(1))
 
 	// Only incoming request can be a reason. We are only interested in potential reason requests.
 	if _, ok := record.Unwrap(&closedRequest.Record.Virtual).(*record.IncomingRequest); ok {

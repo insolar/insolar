@@ -141,7 +141,7 @@ message Lifeline {
     bytes LatestRequest = 23 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = true];
     bytes EarliestOpenRequest = 24 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = true];
 
-    uint32 OpenRequests = 25;
+    uint32 OpenRequestsCount = 25;
 }
 
 message Index {
