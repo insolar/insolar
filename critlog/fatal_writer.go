@@ -24,19 +24,32 @@ import (
 	"sync/atomic"
 )
 
-var _ zerolog.LevelWriter = &fatalFlusher{}
+/*
+	Purpose:
+	FatalFlusher does flush of a wrapped io.Writer on Panic or Fatal events.
+	If the writer doesn't support Flusher, then on Fatal level event FatalFlusher will try to close the writer.
+	All events after Fatal can be hard-locked or ignored.
 
-type Flusher interface {
-	Flush() error
-}
+	Usage:
+	- FatalFlusher MUST be applied BEFORE a buffer
+	- the wrapped writer MUST implement either io.Closer or critlog.Flusher
+	- FatalFlusher will call WriteLevel() if the wrapped writer implements zerolog.LevelWriter
 
-func FatalFlusher(w io.Writer, lockPostFatal bool) zerolog.LevelWriter {
+	Examples:
+		logger -> .. -> FatalFlusher -> a buffered writer -> output writer
+		logger -> .. -> FatalFlusher -> output writer
+*/
+
+// This flusher will hard-lock any writes after first Fatal
+func FatalFlusher(w io.Writer) zerolog.LevelWriter {
 	return &fatalFlusher{w: AsLevelWriter(w), lockPostFatal: true}
 }
 
 func FatalFlusherExt(w io.Writer, lockPostFatal bool) zerolog.LevelWriter {
 	return &fatalFlusher{w: AsLevelWriter(w), lockPostFatal: lockPostFatal}
 }
+
+var _ zerolog.LevelWriter = &fatalFlusher{}
 
 type fatalFlusher struct {
 	w             zerolog.LevelWriter
@@ -96,6 +109,7 @@ func (w *fatalFlusher) Close() error {
 	if f, ok := w.w.(io.Closer); ok {
 		return f.Close()
 	}
+	// any other approaches? e.g. write a long (4kB) padding?
 	return errors.New("unsupported")
 }
 
@@ -107,11 +121,7 @@ func (w *fatalFlusher) flushOrClose() {
 	if w.flush() {
 		return
 	}
-	if c, ok := w.w.(io.Closer); ok {
-		_ = c.Close()
-		return
-	}
-	// TODO any other approaches? e.g. write a long (4kB) padding?
+	_ = w.Close()
 }
 
 func lockDown() {

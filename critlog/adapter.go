@@ -22,6 +22,10 @@ import (
 	"io"
 )
 
+type Flusher interface {
+	Flush() error
+}
+
 var _ zerolog.LevelWriter = &writerAdapter{}
 
 func AsLevelWriter(w io.Writer) zerolog.LevelWriter {
