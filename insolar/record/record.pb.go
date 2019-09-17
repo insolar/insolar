@@ -452,13 +452,16 @@ func (m *PendingFilament) XXX_DiscardUnknown() {
 var xxx_messageInfo_PendingFilament proto.InternalMessageInfo
 
 type Lifeline struct {
-	Polymorph           int32                                           `protobuf:"varint,16,opt,name=Polymorph,proto3" json:"Polymorph,omitempty"`
-	LatestState         *github_com_insolar_insolar_insolar.ID          `protobuf:"bytes,20,opt,name=LatestState,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"LatestState,omitempty"`
-	StateID             StateID                                         `protobuf:"varint,21,opt,name=StateID,proto3,customtype=StateID" json:"StateID"`
-	Parent              github_com_insolar_insolar_insolar.Reference    `protobuf:"bytes,22,opt,name=Parent,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Parent"`
-	LatestRequest       *github_com_insolar_insolar_insolar.ID          `protobuf:"bytes,23,opt,name=LatestRequest,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"LatestRequest,omitempty"`
+	Polymorph   int32                                        `protobuf:"varint,16,opt,name=Polymorph,proto3" json:"Polymorph,omitempty"`
+	LatestState *github_com_insolar_insolar_insolar.ID       `protobuf:"bytes,20,opt,name=LatestState,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"LatestState,omitempty"`
+	StateID     StateID                                      `protobuf:"varint,21,opt,name=StateID,proto3,customtype=StateID" json:"StateID"`
+	Parent      github_com_insolar_insolar_insolar.Reference `protobuf:"bytes,22,opt,name=Parent,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Parent"`
+	// LatestRequest holds id of the last known request for the object
+	LatestRequest *github_com_insolar_insolar_insolar.ID `protobuf:"bytes,23,opt,name=LatestRequest,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"LatestRequest,omitempty"`
+	// EarliestOpenRequest holds the earliest pulse where there are open requests
 	EarliestOpenRequest *github_com_insolar_insolar_insolar.PulseNumber `protobuf:"bytes,24,opt,name=EarliestOpenRequest,proto3,customtype=github.com/insolar/insolar/insolar.PulseNumber" json:"EarliestOpenRequest,omitempty"`
-	OpenRequestsCount   uint32                                          `protobuf:"varint,25,opt,name=OpenRequestsCount,proto3" json:"OpenRequestsCount,omitempty"`
+	// OpenRequestsCount holds the count of open requests for the object
+	OpenRequestsCount uint32 `protobuf:"varint,25,opt,name=OpenRequestsCount,proto3" json:"OpenRequestsCount,omitempty"`
 }
 
 func (m *Lifeline) Reset()      { *m = Lifeline{} }
