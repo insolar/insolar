@@ -15,7 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 11,
+  "iteration": 1568640910948,
   "links": [],
   "panels": [
     {
@@ -57,7 +57,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(irate(insolar_vm_handle_future{installation=\"$installation\"}[1m])) by (vm_handle_payload_type)",
+          "expr": "sum(irate(insolar_vm_handle_future{installation=\"$installation\", instance=~\"$instance\"}[1m])) by (vm_handle_payload_type)",
           "legendFormat": "{{vm_handle_payload_type}}",
           "refId": "A"
         }
@@ -142,7 +142,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(irate(insolar_vm_handle_past{installation=\"$installation\"}[1m])) by (vm_handle_payload_type)",
+          "expr": "sum(irate(insolar_vm_handle_past{installation=\"$installation\", instance=~\"$instance\"}[1m])) by (vm_handle_payload_type)",
           "legendFormat": "{{vm_handle_payload_type}}",
           "refId": "A"
         }
@@ -227,17 +227,17 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(irate(insolar_vm_pulse_manager_onpulse_timing_sum{installation=\"$installation\"}[1m])) / sum(irate(insolar_vm_pulse_manager_onpulse_timing_count{installation=\"$installation\"}[1m]))",
+          "expr": "sum(irate(insolar_vm_pulse_manager_onpulse_timing_sum{installation=\"$installation\", instance=~\"$instance\"}[1m])) / sum(irate(insolar_vm_pulse_manager_onpulse_timing_count{installation=\"$installation\", instance=~\"$instance\"}[1m]))",
           "legendFormat": "pulsemanager",
           "refId": "A"
         },
         {
-          "expr": "sum(irate(insolar_vm_logicrunner_onpulse_timing_sum{installation=\"$installation\"}[1m])) / sum(irate(insolar_vm_logicrunner_onpulse_timing_count{installation=\"$installation\"}[1m]))",
+          "expr": "sum(irate(insolar_vm_logicrunner_onpulse_timing_sum{installation=\"$installation\", instance=~\"$instance\"}[1m])) / sum(irate(insolar_vm_logicrunner_onpulse_timing_count{installation=\"$installation\", instance=~\"$instance\"}[1m]))",
           "legendFormat": "logicrunner",
           "refId": "B"
         },
         {
-          "expr": "sum(irate(insolar_vm_execution_broker_onpulse_timing_sum{installation=\"$installation\"}[1m])) / sum(irate(insolar_vm_execution_broker_onpulse_timing_count{installation=\"$installation\"}[1m]))",
+          "expr": "sum(irate(insolar_vm_execution_broker_onpulse_timing_sum{installation=\"$installation\", instance=~\"$instance\"}[1m])) / sum(irate(insolar_vm_execution_broker_onpulse_timing_count{installation=\"$installation\", instance=~\"$instance\"}[1m]))",
           "legendFormat": "executionbrokers",
           "refId": "C"
         }
@@ -246,7 +246,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "VM Onpulse timing",
+      "title": "VM OnPulse average timing",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -322,7 +322,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(irate(insolar_vm_handle_started{installation=\"$installation\"}[1m])) by (vm_handle_payload_type) - sum(irate(insolar_vm_handle_finished{installation=\"$installation\"}[1m])) by (vm_handle_payload_type)",
+          "expr": "sum(irate(insolar_vm_handle_started{installation=\"$installation\", instance=~\"$instance\"}[1m])) by (vm_handle_payload_type) - sum(irate(insolar_vm_handle_finished{installation=\"$installation\", instance=~\"$instance\"}[1m])) by (vm_handle_payload_type)",
           "legendFormat": "{{vm_handle_payload_type}}",
           "refId": "A"
         }
@@ -407,7 +407,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(irate(insolar_vm_handle_started{installation=\"$installation\"}[5m])) by (vm_handle_payload_type)",
+          "expr": "sum(irate(insolar_vm_handle_started{installation=\"$installation\", instance=~\"$instance\"}[5m])) by (vm_handle_payload_type)",
           "legendFormat": "{{vm_handle_payload_type}}",
           "refId": "A"
         }
@@ -492,7 +492,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(irate(insolar_vm_handle_finished{vm_handle_finished_with_error!=\"\", installation=\"$installation\"}[5m])) by (vm_handle_payload_type,vm_handle_finished_with_error)",
+          "expr": "sum(irate(insolar_vm_handle_finished{vm_handle_finished_with_error!=\"\", installation=\"$installation\", instance=~\"$instance\"}[5m])) by (vm_handle_payload_type, vm_handle_finished_with_error)",
           "legendFormat": "{{vm_handle_payload_type}} , {{vm_handle_finished_with_error}}",
           "refId": "A"
         }
@@ -577,7 +577,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(irate(insolar_vm_handle_latency_sum{installation=\"$installation\"}[1m])) by (vm_handle_payload_type)/sum(irate(insolar_vm_handle_latency_count{installation=\"$installation\"}[1m])) by (vm_handle_payload_type)",
+          "expr": "sum(irate(insolar_vm_handle_latency_sum{installation=\"$installation\", instance=~\"$instance\"}[1m])) by (vm_handle_payload_type)/sum(irate(insolar_vm_handle_latency_count{installation=\"$installation\", instance=~\"$instance\"}[1m])) by (vm_handle_payload_type)",
           "instant": false,
           "legendFormat": "{{vm_handle_payload_type}}",
           "refId": "A"
@@ -664,7 +664,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(insolar_contract_requester_handle_started{installation=\"$installation\"}[5m])",
+          "expr": "irate(insolar_contract_requester_handle_started{installation=\"$installation\", instance=~\"$instance\"}[5m])",
           "legendFormat": "{{role}}",
           "refId": "A"
         }
@@ -749,7 +749,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(increase(insolar_vm_contracts_timing_sum{installation=\"$installation\"}[1m])) by (vm_execution_contract_method_name) / sum(increase(insolar_vm_contracts_timing_count{installation=\"$installation\"}[1m])) by (vm_execution_contract_method_name)",
+          "expr": "sum(increase(insolar_vm_contracts_timing_sum{installation=\"$installation\", instance=~\"$instance\"}[1m])) by (vm_execution_contract_method_name) / sum(increase(insolar_vm_contracts_timing_count{installation=\"$installation\", instance=~\"$instance\"}[1m])) by (vm_execution_contract_method_name)",
           "legendFormat": "{{vm_execution_contract_method_name}}",
           "refId": "A"
         }
@@ -834,17 +834,17 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(irate(insolar_vm_outgoing_request_new{installation=\"$installation\"}[1m]))",
+          "expr": "sum(irate(insolar_vm_outgoing_request_new{installation=\"$installation\", instance=~\"$instance\"}[1m]))",
           "legendFormat": "new",
           "refId": "A"
         },
         {
-          "expr": "sum(irate(vm_outgoing_request_duplicate{installation=\"$installation\"}[1m]))",
+          "expr": "sum(irate(vm_outgoing_request_duplicate{installation=\"$installation\", instance=~\"$instance\"}[1m]))",
           "legendFormat": "duplicates",
           "refId": "B"
         },
         {
-          "expr": "sum(irate(vm_outgoing_request_closed{installation=\"$installation\"}[1m]))",
+          "expr": "sum(irate(vm_outgoing_request_closed{installation=\"$installation\", instance=~\"$instance\"}[1m]))",
           "legendFormat": "with results",
           "refId": "C"
         }
@@ -899,7 +899,7 @@
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 9,
+        "h": 8,
         "w": 12,
         "x": 12,
         "y": 40
@@ -930,7 +930,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(irate(insolar_contract_requester_handle_finished{role=\"virtual\",vm_handle_finished_with_error!=\"\", installation=\"$installation\"}[1m])) by (vm_handle_finished_with_error)",
+          "expr": "sum(irate(insolar_contract_requester_handle_finished{role=\"virtual\",vm_handle_finished_with_error!=\"\", installation=\"$installation\", instance=~\"$instance\"}[1m])) by (vm_handle_finished_with_error)",
           "legendFormat": "{{vm_handle_finished_with_error}}",
           "refId": "A"
         }
@@ -1015,17 +1015,17 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(irate(insolar_vm_incoming_request_new{installation=\"$installation\"}[1m]))",
+          "expr": "sum(irate(insolar_vm_incoming_request_new{installation=\"$installation\", instance=~\"$instance\"}[1m]))",
           "legendFormat": "new",
           "refId": "A"
         },
         {
-          "expr": "sum(irate(insolar_vm_outgoing_request_duplicate{installation=\"$installation\"}[1m]))",
+          "expr": "sum(irate(insolar_vm_outgoing_request_duplicate{installation=\"$installation\", instance=~\"$instance\"}[1m]))",
           "legendFormat": "duplicates",
           "refId": "B"
         },
         {
-          "expr": "sum(irate(insolar_vm_outgoing_request_closed{installation=\"$installation\"}[1m]))",
+          "expr": "sum(irate(insolar_vm_outgoing_request_closed{installation=\"$installation\", instance=~\"$instance\"}[1m]))",
           "legendFormat": "with results",
           "refId": "C"
         }
@@ -1082,7 +1082,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 49
+        "y": 48
       },
       "id": 25,
       "legend": {
@@ -1110,7 +1110,8 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(irate(insolar_vm_execution_broker_execution_started{installation=\"$installation\"}[1m])) - sum(irate(insolar_vm_execution_broker_execution_finished{installation=\"$installation\"}[1m]))",
+          "expr": "sum(irate(insolar_vm_execution_broker_execution_started{installation=\"$installation\", instance=~\"$instance\"}[1m])) - sum(irate(insolar_vm_execution_broker_execution_finished{installation=\"$installation\", instance=~\"$instance\"}[1m]))",
+          "legendFormat": "Executions in progress",
           "refId": "A"
         }
       ],
@@ -1194,22 +1195,22 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(irate(insolar_vm_execution_broker_transcript_new{installation=\"$installation\"}[1m])) by (vm_execution_broker_queue_name)",
+          "expr": "sum(irate(insolar_vm_execution_broker_transcript_new{installation=\"$installation\", instance=~\"$instance\"}[1m])) by (vm_execution_broker_queue_name)",
           "legendFormat": "new {{vm_execution_broker_queue_name}}",
           "refId": "A"
         },
         {
-          "expr": "sum(irate(vm_execution_broker_transcript_duplicate{installation=\"$installation\"}[1m])) by (vm_execution_broker_queue_name)",
+          "expr": "sum(irate(vm_execution_broker_transcript_duplicate{installation=\"$installation\", instance=~\"$instance\"}[1m])) by (vm_execution_broker_queue_name)",
           "legendFormat": "duplicates {{vm_execution_broker_queue_name}}",
           "refId": "B"
         },
         {
-          "expr": "sum(irate(vm_execution_broker_transcript_executing{installation=\"$installation\"}[1m])) by (vm_execution_broker_queue_name)",
+          "expr": "sum(irate(vm_execution_broker_transcript_executing{installation=\"$installation\", instance=~\"$instance\"}[1m])) by (vm_execution_broker_queue_name)",
           "legendFormat": "executing right now {{vm_execution_broker_queue_name}}",
           "refId": "C"
         },
         {
-          "expr": "sum(irate(vm_execution_broker_transcript_already_registered{installation=\"$installation\"}[1m])) by (vm_execution_broker_queue_name)",
+          "expr": "sum(irate(vm_execution_broker_transcript_already_registered{installation=\"$installation\", instance=~\"$instance\"}[1m])) by (vm_execution_broker_queue_name)",
           "legendFormat": "already registered {{vm_execution_broker_queue_name}}",
           "refId": "D"
         }
@@ -1266,7 +1267,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 57
+        "y": 56
       },
       "id": 27,
       "legend": {
@@ -1294,7 +1295,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(irate(insolar_vm_outgoing_sender_goroutines{installation=\"$installation\"}[1m]))",
+          "expr": "sum(irate(insolar_vm_outgoing_sender_goroutines{installation=\"$installation\", instance=~\"$instance\"}[1m]))",
           "legendFormat": "goroutines",
           "refId": "A"
         }
@@ -1341,16 +1342,17 @@
       }
     }
   ],
-  "refresh": false,
+  "refresh": "10s",
   "schemaVersion": 19,
   "style": "dark",
-  "tags": [],
+  "tags": [
+    "INS"
+  ],
   "templating": {
     "list": [
       {
         "allValue": null,
         "current": {
-          "tags": [],
           "text": "local",
           "value": "local"
         },
@@ -1372,12 +1374,40 @@
         "tagsQuery": "",
         "type": "query",
         "useTags": false
+      },
+      {
+        "allValue": null,
+        "current": {
+          "tags": [],
+          "text": "All",
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": "prometheus",
+        "definition": "label_values(insolar_bus_sent_total, instance)",
+        "hide": 0,
+        "includeAll": true,
+        "label": null,
+        "multi": true,
+        "name": "instance",
+        "options": [],
+        "query": "label_values(insolar_bus_sent_total, instance)",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
       }
     ]
   },
   "time": {
-    "from": "2019-09-12T13:24:20.671Z",
-    "to": "2019-09-12T14:25:46.817Z"
+    "from": "now-15m",
+    "to": "now"
   },
   "timepicker": {
     "refresh_intervals": [
@@ -1396,5 +1426,5 @@
   "timezone": "",
   "title": "INS-Virtual",
   "uid": "9cpRPL5Zk",
-  "version": 4
+  "version": 1
 }
