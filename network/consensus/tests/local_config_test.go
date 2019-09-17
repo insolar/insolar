@@ -73,14 +73,28 @@ var RoundTimingsFor1s = api.RoundTimings{
 	BeforeInPhase3ChasingDelay: 0 * time.Millisecond,
 }
 
+var EphemeralRoundTimingsFor1s = api.RoundTimings{
+	StartPhase0At: 100 * time.Millisecond, // Not scaled
+
+	StartPhase1RetryAt: 0 * time.Millisecond, // 0 for no retries
+	EndOfPhase1:        200 * time.Millisecond,
+	EndOfPhase2:        600 * time.Millisecond,
+	EndOfPhase3:        800 * time.Millisecond,
+	EndOfConsensus:     900 * time.Millisecond,
+
+	BeforeInPhase2ChasingDelay: 0 * time.Millisecond,
+	BeforeInPhase3ChasingDelay: 0 * time.Millisecond,
+}
+
 func NewEmuLocalConfig(ctx context.Context) api.LocalNodeConfiguration {
-	r := emuLocalConfig{timings: RoundTimingsFor1s, ctx: ctx}
+	r := emuLocalConfig{timings: RoundTimingsFor1s, ephemeralTimings: EphemeralRoundTimingsFor1s, ctx: ctx}
 	return &r
 }
 
 type emuLocalConfig struct {
-	timings api.RoundTimings
-	ctx     context.Context
+	timings          api.RoundTimings
+	ephemeralTimings api.RoundTimings
+	ctx              context.Context
 }
 
 func (r *emuLocalConfig) GetNodeCountHint() int {
@@ -101,12 +115,11 @@ func (r *emuLocalConfig) AsPublicKeyStore() cryptkit.PublicKeyStore {
 func (r *emuLocalConfig) PrivateKeyStore() {
 }
 
-func (r *emuLocalConfig) GetConsensusTimings(nextPulseDelta uint16) api.RoundTimings {
+func (r *emuLocalConfig) getConsensusTimings(t api.RoundTimings, nextPulseDelta uint16) api.RoundTimings {
 	if nextPulseDelta == 1 {
-		return r.timings
+		return t
 	}
 	m := time.Duration(nextPulseDelta) // this is NOT a duration, but a multiplier
-	t := r.timings
 
 	t.StartPhase0At *= 1 // don't scale!
 	t.StartPhase1RetryAt *= m
@@ -118,6 +131,14 @@ func (r *emuLocalConfig) GetConsensusTimings(nextPulseDelta uint16) api.RoundTim
 	t.BeforeInPhase3ChasingDelay *= m
 
 	return t
+}
+
+func (r *emuLocalConfig) GetConsensusTimings(nextPulseDelta uint16) api.RoundTimings {
+	return r.getConsensusTimings(r.timings, nextPulseDelta)
+}
+
+func (r *emuLocalConfig) GetEphemeralTimings(nextPulseDelta uint16) api.RoundTimings {
+	return r.getConsensusTimings(r.ephemeralTimings, nextPulseDelta)
 }
 
 func (r *emuLocalConfig) GetSecretKeyStore() cryptkit.SecretKeyStore {
