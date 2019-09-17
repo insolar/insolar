@@ -393,9 +393,7 @@ func (z *zerologAdapter) CreateCriticalLogger(bufSize int) insolar.Logger {
 
 	// we disregard existence of a previous buffer for critical events
 	zCopy.outputWraps = (z.outputWraps &^ outputWrappedWithBuffer) | outputWrappedWithCritical
-
 	if bufSize > 0 {
-		zCopy.output = createBufferedLogger(zCopy.output, bufSize)
 		zCopy.outputWraps |= outputWrappedWithBuffer
 	}
 
