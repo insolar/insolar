@@ -125,7 +125,5 @@ func (w *fatalFlusher) flushOrClose() {
 }
 
 func lockDown() {
-	select {
-	case <-context.Background().Done():
-	}
+	_ = <-context.Background().Done()
 }
