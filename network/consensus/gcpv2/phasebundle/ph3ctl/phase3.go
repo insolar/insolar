@@ -286,6 +286,7 @@ outer:
 			allCount := indexedCount + int(addedCount) - int(ascentCount) + int(briefCount)
 
 			// We have some-trusted from all nodes, and the majority of them are well-trusted
+			// TODO: joiner should finished as "all and complete"
 			if isComplete && fraudCount == 0 && int(bySelfCount) >= allCount &&
 				fullCount >= briefCount && ascentCount >= addedCount &&
 				c.consensusStrategy.CanStartVectorsEarly(indexedCount, int(fraudCount), int(bySomeCount), int(byNeighborsCount)) {

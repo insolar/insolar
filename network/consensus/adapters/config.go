@@ -78,8 +78,8 @@ var defaultEphemeralTimings = api.RoundTimings{
 
 	StartPhase1RetryAt: 0 * time.Millisecond, // 0 for no retries
 	EndOfPhase1:        200 * time.Millisecond,
-	EndOfPhase2:        300 * time.Millisecond,
-	EndOfPhase3:        600 * time.Millisecond,
+	EndOfPhase2:        600 * time.Millisecond,
+	EndOfPhase3:        800 * time.Millisecond,
 	EndOfConsensus:     900 * time.Millisecond,
 
 	BeforeInPhase2ChasingDelay: 0 * time.Millisecond,

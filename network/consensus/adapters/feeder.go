@@ -336,7 +336,7 @@ func (f *EphemeralControlFeeder) EphemeralConsensusFinished(isNextEphemeral bool
 }
 
 func (f *EphemeralControlFeeder) GetEphemeralTimings(config api.LocalNodeConfiguration) api.RoundTimings {
-	delta := 10 * time.Second
+	delta := 2
 	return config.GetEphemeralTimings(uint16(delta))
 }
 
