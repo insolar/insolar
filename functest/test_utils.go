@@ -47,8 +47,8 @@ import (
 )
 
 const (
-	countThreeActiveDaemon = iota + 3
-	countFourActiveDaemon
+	countTwoActiveDaemon = iota + 2
+	countTreeActiveDaemon
 )
 
 type contractInfo struct {
@@ -197,7 +197,7 @@ func generateMigrationAddress() string {
 const migrationAmount = "360000"
 
 func fullMigration(t *testing.T, txHash string) *launchnet.User {
-	activeDaemons := activateDaemons(t, countThreeActiveDaemon)
+	activeDaemons := activateDaemons(t, countTwoActiveDaemon)
 
 	member := createMigrationMemberForMA(t)
 	for i := range activeDaemons {

@@ -28,9 +28,8 @@ import (
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/migrationdaemon"
 )
 
-const (
-	XNS = "XNS"
-)
+const XNS = "XNS"
+const numConfirmation = 2
 
 // Deposit is like wallet. It holds migrated money.
 type Deposit struct {
@@ -99,7 +98,7 @@ func (d *Deposit) Confirm(migrationDaemonRef string, txHash string, amountStr st
 		return fmt.Errorf("confirm from this migration daemon already exists: '%s' ", migrationDaemonRef)
 	}
 
-	if len(d.MigrationDaemonConfirms) >= 2 {
+	if len(d.MigrationDaemonConfirms) > 0 {
 		err := d.checkConfirm(migrationDaemonRef, amountStr)
 		if err != nil {
 			return err
@@ -173,7 +172,7 @@ func (d *Deposit) checkConfirm(migrationDaemonRef string, amountStr string) erro
 	}
 	d.MigrationDaemonConfirms[migrationDaemonRef] = amountStr
 	activateDaemons = append(activateDaemons, migrationDaemonRef)
-	if len(activateDaemons) >= 3 {
+	if len(activateDaemons) >= numConfirmation {
 		err := d.checkAmount(activateDaemons)
 		if err != nil {
 			return fmt.Errorf("failed to check amount in confirmation from migration daemon: '%s'", err.Error())
@@ -190,8 +189,8 @@ func (d *Deposit) canTransfer(transferAmount *big.Int) error {
 			c++
 		}
 	}
-	if c < 3 {
-		return fmt.Errorf("number of confirms is less then 3")
+	if c < numConfirmation {
+		return fmt.Errorf("number of confirms is less then 2")
 	}
 
 	currentPulse, err := foundation.GetPulseNumber()

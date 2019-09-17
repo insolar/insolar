@@ -20,17 +20,17 @@ package functest
 
 import (
 	"encoding/base64"
-	"github.com/insolar/insolar/api/requester"
 	"math/big"
 	"testing"
 
+	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/testutils/launchnet"
 	"github.com/stretchr/testify/require"
 )
 
 func TestMigrationToken(t *testing.T) {
-	activeDaemons := activateDaemons(t, countThreeActiveDaemon)
+	activeDaemons := activateDaemons(t, countTwoActiveDaemon)
 	member := createMigrationMemberForMA(t)
 
 	deposit := migrate(t, member.Ref, "1000", "Test_TxHash", member.MigrationAddress, 0)
@@ -64,7 +64,7 @@ func TestMigrationToken(t *testing.T) {
 }
 
 func TestMigrationTokenFourActiveDaemon(t *testing.T) {
-	activeDaemons := activateDaemons(t, countFourActiveDaemon)
+	activeDaemons := activateDaemons(t, countTreeActiveDaemon)
 	member := createMigrationMemberForMA(t)
 	var deposit map[string]interface{}
 	for i := 1; i < len(activeDaemons); i++ {
@@ -76,7 +76,7 @@ func TestMigrationTokenFourActiveDaemon(t *testing.T) {
 }
 
 func TestMigrationTokenOnDifferentDeposits(t *testing.T) {
-	activateDaemons(t, countThreeActiveDaemon)
+	activateDaemons(t, countTwoActiveDaemon)
 	member := createMigrationMemberForMA(t)
 
 	_ = migrate(t, member.Ref, "1000", "Test_TxHash", member.MigrationAddress, 0)
@@ -152,7 +152,7 @@ func TestMigrationTokenNilValue(t *testing.T) {
 }
 
 func TestMigrationTokenMaxAmount(t *testing.T) {
-	activateDaemons(t, countThreeActiveDaemon)
+	activateDaemons(t, countTwoActiveDaemon)
 	member := createMigrationMemberForMA(t)
 
 	result, err := signedRequest(t,
@@ -165,7 +165,7 @@ func TestMigrationTokenMaxAmount(t *testing.T) {
 }
 
 func TestMigrationDoubleMigrationFromSameDaemon(t *testing.T) {
-	activateDaemons(t, countThreeActiveDaemon)
+	activateDaemons(t, countTwoActiveDaemon)
 	member := createMigrationMemberForMA(t)
 
 	resultMigr1, err := signedRequest(t,
@@ -187,7 +187,7 @@ func TestMigrationDoubleMigrationFromSameDaemon(t *testing.T) {
 }
 
 func TestMigrationAnotherAmountSameTx(t *testing.T) {
-	activateDaemons(t, countThreeActiveDaemon)
+	activateDaemons(t, countTwoActiveDaemon)
 
 	member := createMigrationMemberForMA(t)
 
@@ -195,13 +195,6 @@ func TestMigrationAnotherAmountSameTx(t *testing.T) {
 		launchnet.TestRPCUrl,
 		launchnet.MigrationDaemons[0], "deposit.migration",
 		map[string]interface{}{"amount": "20", "ethTxHash": "ethTxHash", "migrationAddress": member.MigrationAddress})
-
-	_, err = signedRequest(t,
-		launchnet.TestRPCUrl,
-		launchnet.MigrationDaemons[1],
-		"deposit.migration",
-		map[string]interface{}{"amount": "30", "ethTxHash": "ethTxHash", "migrationAddress": member.MigrationAddress})
-	require.NoError(t, err)
 
 	_, _, err = makeSignedRequest(
 		launchnet.TestRPCUrl,
