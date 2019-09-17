@@ -98,14 +98,20 @@ func TestDBRollback_HappyPath(t *testing.T) {
 	jets := jet.NewDBStore(db)
 	pulses := pulse.NewDB(db)
 
+	nodes := NewHeadTruncaterMock(t)
+	nodes.TruncateHeadMock.Set(func(ctx context.Context, from insolar.PulseNumber) (err error) {
+		hits[store.ScopeNodeHistory] = 1
+		return nil
+	})
+
 	calculator := pulse.NewCalculatorMock(t)
 	calculator.ForwardsMock.Set(func(p context.Context, p1 insolar.PulseNumber, p2 int) (r insolar.Pulse, r1 error) {
 		return insolar.Pulse{PulseNumber: p1 + 1}, nil
 	})
 
-	rollback := NewDBRollback(jetKeeper, drops, records, indexes, jets, pulses)
+	rollback := NewDBRollback(jetKeeper, drops, records, indexes, jets, pulses, nodes)
 	err := rollback.Start(context.Background())
-	require.Len(t, hits, 5) // drops, record, jets, indexes, pulses
+	require.Len(t, hits, 6) // drops, record, jets, indexes, pulses, nodes
 	expectedScopes := []struct {
 		scope   store.Scope
 		numHits int
@@ -114,6 +120,7 @@ func TestDBRollback_HappyPath(t *testing.T) {
 		{store.ScopeRecord, 1},
 		{store.ScopeIndex, 2},
 		{store.ScopeJetTree, 1},
+		{store.ScopeNodeHistory, 1},
 		{store.ScopePulse, 1}}
 	for _, s := range expectedScopes {
 		actualNum, ok := hits[s.scope]

@@ -38,7 +38,6 @@ type DBRollback struct {
 }
 
 func NewDBRollback(jetKeeper JetKeeper, dbs ...headTruncater) *DBRollback {
-
 	return &DBRollback{
 		jetKeeper: jetKeeper,
 		dbs:       dbs,
