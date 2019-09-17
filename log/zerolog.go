@@ -402,7 +402,7 @@ func (z *zerologAdapter) CreateCriticalLogger(bufSize int) insolar.Logger {
 	return &zCopy
 }
 
-func createBufferedLogger(output io.WriteCloser, bufSize int) io.WriteCloser {
+func createBufferedLogger(output io.Writer, bufSize int) io.WriteCloser {
 	if bufSize <= 0 {
 		panic("illegal value")
 	}
