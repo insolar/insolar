@@ -156,7 +156,7 @@ func NewServer(
 		Coordinator jet.Coordinator
 		Pulses      *insolarPulse.DB
 		Jets        *jet.DBStore
-		Nodes       *node.Storage
+		Nodes       *node.StorageDB
 		DB          *store.BadgerDB
 		DBRollback  *executor.DBRollback
 	)
@@ -166,7 +166,7 @@ func NewServer(
 		if err != nil {
 			panic(errors.Wrap(err, "failed to initialize DB"))
 		}
-		Nodes = node.NewStorage()
+		Nodes = node.NewStorageDB(DB)
 		Pulses = insolarPulse.NewDB(DB)
 		Jets = jet.NewDBStore(DB)
 
@@ -215,7 +215,7 @@ func NewServer(
 		indexes := object.NewIndexDB(DB, Records)
 		drops := drop.NewDB(DB)
 		JetKeeper = executor.NewJetKeeper(Jets, DB, Pulses)
-		DBRollback = executor.NewDBRollback(JetKeeper, drops, Records, indexes, Jets, Pulses, JetKeeper)
+		DBRollback = executor.NewDBRollback(JetKeeper, drops, Records, indexes, Jets, Pulses, JetKeeper, Nodes)
 
 		sp := insolarPulse.NewStartPulse()
 
