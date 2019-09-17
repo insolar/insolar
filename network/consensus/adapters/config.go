@@ -73,12 +73,26 @@ var defaultRoundTimings = api.RoundTimings{
 	BeforeInPhase3ChasingDelay: 0 * time.Millisecond,
 }
 
+var defaultEphemeralTimings = api.RoundTimings{
+	StartPhase0At: 100 * time.Millisecond, // Not scaled
+
+	StartPhase1RetryAt: 0 * time.Millisecond, // 0 for no retries
+	EndOfPhase1:        200 * time.Millisecond,
+	EndOfPhase2:        300 * time.Millisecond,
+	EndOfPhase3:        600 * time.Millisecond,
+	EndOfConsensus:     900 * time.Millisecond,
+
+	BeforeInPhase2ChasingDelay: 0 * time.Millisecond,
+	BeforeInPhase3ChasingDelay: 0 * time.Millisecond,
+}
+
 // var _ api.LocalNodeConfiguration = &LocalNodeConfiguration{}
 
 type LocalNodeConfiguration struct {
-	ctx            context.Context
-	timings        api.RoundTimings
-	secretKeyStore cryptkit.SecretKeyStore
+	ctx              context.Context
+	timings          api.RoundTimings
+	ephemeralTimings api.RoundTimings
+	secretKeyStore   cryptkit.SecretKeyStore
 }
 
 func (c *LocalNodeConfiguration) GetNodeCountHint() int {
@@ -94,9 +108,10 @@ func NewLocalNodeConfiguration(ctx context.Context, keyStore insolar.KeyStore) *
 	ecdsaPrivateKey := privateKey.(*ecdsa.PrivateKey)
 
 	return &LocalNodeConfiguration{
-		ctx:            ctx,
-		timings:        defaultRoundTimings,
-		secretKeyStore: NewECDSASecretKeyStore(ecdsaPrivateKey),
+		ctx:              ctx,
+		timings:          defaultRoundTimings,
+		ephemeralTimings: defaultEphemeralTimings,
+		secretKeyStore:   NewECDSASecretKeyStore(ecdsaPrivateKey),
 	}
 }
 
@@ -104,12 +119,11 @@ func (c *LocalNodeConfiguration) GetParentContext() context.Context {
 	return c.ctx
 }
 
-func (c *LocalNodeConfiguration) GetConsensusTimings(nextPulseDelta uint16) api.RoundTimings {
+func (c *LocalNodeConfiguration) getConsensusTimings(t api.RoundTimings, nextPulseDelta uint16) api.RoundTimings {
 	if nextPulseDelta == 1 {
-		return c.timings
+		return t
 	}
 	m := time.Duration(nextPulseDelta) // this is NOT a duration, but a multiplier
-	t := c.timings
 
 	t.StartPhase0At *= 1 // don't scale!
 	t.StartPhase1RetryAt *= m
@@ -121,6 +135,14 @@ func (c *LocalNodeConfiguration) GetConsensusTimings(nextPulseDelta uint16) api.
 	t.BeforeInPhase3ChasingDelay *= m
 
 	return t
+}
+
+func (c *LocalNodeConfiguration) GetConsensusTimings(nextPulseDelta uint16) api.RoundTimings {
+	return c.getConsensusTimings(c.timings, nextPulseDelta)
+}
+
+func (c *LocalNodeConfiguration) GetEphemeralTimings(nextPulseDelta uint16) api.RoundTimings {
+	return c.getConsensusTimings(c.ephemeralTimings, nextPulseDelta)
 }
 
 func (c *LocalNodeConfiguration) GetSecretKeyStore() cryptkit.SecretKeyStore {
