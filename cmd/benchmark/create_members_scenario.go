@@ -29,9 +29,7 @@ func (s *createMembersScenario) canBeStarted() error {
 	return nil
 }
 
-func (s *createMembersScenario) prepare() int32 {
-	return 0
-}
+func (s *createMembersScenario) prepare() {}
 
 func (s *createMembersScenario) scenario(index int) (string, error) {
 	creator := s.members[index]
@@ -40,6 +38,4 @@ func (s *createMembersScenario) scenario(index int) (string, error) {
 	return traceID, err
 }
 
-func (s *createMembersScenario) checkResult() {
-
-}
+func (s *createMembersScenario) checkResult() {}
