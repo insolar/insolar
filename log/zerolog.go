@@ -116,7 +116,7 @@ func InternalLevelToZerologLevel(level insolar.LogLevel) (zerolog.Level, error) 
 
 func newDefaultTextOutput() io.Writer {
 	return zerolog.ConsoleWriter{
-		Out:          os.Stderr,
+		Out:          os.Stdout,
 		NoColor:      true,
 		TimeFormat:   timestampFormat,
 		PartsOrder:   fieldsOrder,
