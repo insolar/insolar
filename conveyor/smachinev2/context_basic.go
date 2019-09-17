@@ -87,6 +87,19 @@ func (p *contextTemplate) setDiscarded() {
 	p.mode = updCtxDiscarded
 }
 
+func (p *contextTemplate) discardAndCapture(msg string, recovered interface{}, err *error) {
+	p.mode = updCtxDiscarded
+	if recovered == nil {
+		return
+	}
+	*err = recoverSlotPanic(msg, recovered, *err)
+}
+
+func (p *contextTemplate) discardAndUpdate(msg string, recovered interface{}, update *StateUpdate) {
+	p.mode = updCtxDiscarded
+	recoverSlotPanicAsUpdate(update, msg, recovered, nil)
+}
+
 /* ========================================================================= */
 
 type slotContext struct {

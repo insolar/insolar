@@ -36,6 +36,10 @@ func typeOfStateUpdateForMode(contextMode updCtxMode, stateUpdate StateUpdate) S
 	return stateUpdateTypes[stateUpdate.updType].getForMode(contextMode)
 }
 
+func newPanicStateUpdate(err error) StateUpdate {
+	return StateUpdateTemplate{t: &stateUpdateTypes[stateUpdPanic]}.newError(err)
+}
+
 type SlotUpdateFunc func(slot *Slot, stateUpdate StateUpdate, worker DetachableSlotWorker) (isAvailable bool, err error)
 type SlotUpdatePrepareFunc func(slot *Slot, stateUpdate *StateUpdate)
 type SlotUpdateShortLoopFunc func(slot *Slot, stateUpdate StateUpdate, loopCount uint32) bool
@@ -152,8 +156,11 @@ func (v *StateUpdateType) Apply(slot *Slot, stateUpdate StateUpdate, worker Deta
 	return v.apply(slot, stateUpdate, worker)
 }
 
+func (v *StateUpdateType) ApplyInline(slot *Slot, stateUpdate StateUpdate, worker SlotWorker) (isAvailable bool, err error) {
+}
+
 func (v StateUpdateTemplate) ensureTemplate(params stateUpdParam) {
-	if v.ctxType == 0 {
+	if v.t == nil {
 		panic("illegal state")
 	}
 	if v.t.params&params != params {

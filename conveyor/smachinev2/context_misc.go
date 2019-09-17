@@ -67,9 +67,11 @@ type initializationContext struct {
 	slotContext
 }
 
-func (p *initializationContext) executeInitialization(fn InitFunc) StateUpdate {
+func (p *initializationContext) executeInitialization(fn InitFunc) (stateUpdate StateUpdate) {
 	p.setMode(updCtxInit)
-	defer p.setDiscarded()
+	defer func() {
+		p.discardAndUpdate("initialization", recover(), &stateUpdate)
+	}()
 
 	return p.ensureAndPrepare(p.s, fn(p))
 }
@@ -82,9 +84,11 @@ type migrationContext struct {
 	slotContext
 }
 
-func (p *migrationContext) executeMigration(fn MigrateFunc) StateUpdate {
+func (p *migrationContext) executeMigration(fn MigrateFunc) (stateUpdate StateUpdate) {
 	p.setMode(updCtxMigrate)
-	defer p.setDiscarded()
+	defer func() {
+		p.discardAndUpdate("migration", recover(), &stateUpdate)
+	}()
 
 	return p.ensureAndPrepare(p.s, fn(p))
 }

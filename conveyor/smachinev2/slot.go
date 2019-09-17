@@ -278,13 +278,13 @@ func (s *Slot) _stopWorking() (prevStepNo uint32) {
 	}
 }
 
-func (s *Slot) tryStartMigrate() (isEmpty, isStarted bool) {
-	isEmpty, isStarted, _ = s._tryStart(1)
-	return isEmpty, isStarted
+func (s *Slot) tryStartMigrate() (isEmpty, isStarted bool, prevStepNo uint32) {
+	isEmpty, isStarted, prevStepNo = s._tryStart(1)
+	return
 }
 
-func (s *Slot) stopMigrate() {
-	s._stopWorking()
+func (s *Slot) stopMigrate(prevStepNo uint32) {
+	s.stopWorking(prevStepNo)
 }
 
 func (s *Slot) startWorking(scanNo uint32) (prevStepNo uint32) {
@@ -366,4 +366,12 @@ func (s *Slot) getErrorHandler() ErrorHandlerFunc {
 
 func (s *Slot) hasAsyncOrBargeIn() bool {
 	return s.asyncCallCount > 0 || s.bargeInCount > 0
+}
+
+func (s *Slot) addAsyncCount(asyncCnt uint16) {
+	asyncCnt += s.asyncCallCount
+	if asyncCnt <= s.asyncCallCount {
+		panic("overflow")
+	}
+	s.asyncCallCount = asyncCnt
 }

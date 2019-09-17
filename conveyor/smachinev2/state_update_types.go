@@ -142,7 +142,7 @@ var stateUpdateTypes = []StateUpdateType{
 	},
 
 	stateUpdRepeat: {
-		filter: updCtxExec,
+		filter: updCtxExec | updCtxBargeIn,
 		params: updParamUint,
 
 		shortLoop: func(slot *Slot, stateUpdate StateUpdate, loopCount uint32) bool {
@@ -157,7 +157,7 @@ var stateUpdateTypes = []StateUpdateType{
 	},
 
 	stateUpdNextLoop: {
-		filter: updCtxExec,
+		filter: updCtxExec | updCtxBargeIn,
 		params: updParamStep | updParamUint,
 
 		shortLoop: func(slot *Slot, stateUpdate StateUpdate, loopCount uint32) bool {
@@ -176,7 +176,7 @@ var stateUpdateTypes = []StateUpdateType{
 	},
 
 	stateUpdNext: {
-		filter:    updCtxExec,
+		filter:    updCtxExec | updCtxBargeIn,
 		params:    updParamStep | updParamVar,
 		prepare:   stateUpdateDefaultNoArgPrepare,
 		varVerify: stateUpdateDefaultVerifyNoArgFn,

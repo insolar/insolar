@@ -86,9 +86,11 @@ func (p *bargingInContext) AffectedStep() SlotStep {
 	return p.s.step
 }
 
-func (p *bargingInContext) executeBargeIn(fn BargeInApplyFunc) StateUpdate {
+func (p *bargingInContext) executeBargeIn(fn BargeInApplyFunc) (stateUpdate StateUpdate) {
 	p.setMode(updCtxBargeIn)
-	defer p.setDiscarded()
+	defer func() {
+		p.discardAndUpdate("barge in", recover(), &stateUpdate)
+	}()
 
 	return p.ensureAndPrepare(p.s, fn(p))
 }

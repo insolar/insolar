@@ -113,14 +113,16 @@ func (p *executionContext) UseShared(a SharedDataAccessor) SharedAccessReport {
 	return r
 }
 
-func (p *executionContext) executeNextStep() (StateUpdate, StateUpdateType, uint16) {
+func (p *executionContext) executeNextStep() (stateUpdate StateUpdate, sut StateUpdateType, asyncCallCount uint16) {
 	p.setMode(updCtxExec)
-	defer p.setDiscarded()
+	defer func() {
+		p.discardAndUpdate("execution", recover(), &stateUpdate)
+	}()
 
 	current := p.s.step
 
-	stateUpdate := current.Transition(p).ensureMarker(p.getMarker())
-	sut := typeOfStateUpdateForMode(p.mode, stateUpdate)
+	stateUpdate = current.Transition(p).ensureMarker(p.getMarker())
+	sut = typeOfStateUpdateForMode(p.mode, stateUpdate)
 	sut.Prepare(p.s, &stateUpdate)
 
 	return stateUpdate, sut, p.countAsyncCalls

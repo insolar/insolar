@@ -17,9 +17,7 @@
 package smachine
 
 import (
-	"fmt"
 	"github.com/insolar/insolar/conveyor/smachine/tools"
-	"github.com/pkg/errors"
 	"sync"
 )
 
@@ -44,6 +42,7 @@ func (m *SlotMachineSync) IsZero() bool {
 	return m.locker == nil
 }
 
+/* This method MUST ONLY be used for own operations of SlotMachine, no StateMachine handlers are allowed  */
 func (m *SlotMachineSync) AddAsyncUpdate(link SlotLink, fn func(link SlotLink, worker SlotWorker)) {
 	if fn == nil {
 		panic("illegal value")
@@ -109,41 +108,6 @@ func (m *SlotMachineSync) flushDetachQueue(slotID SlotID) tools.SyncFuncList {
 	}
 	delete(m.detachQueues, slotID)
 	return dq.Flush()
-}
-
-func (m *SlotMachineSync) _slotCall(slotLink SlotLink, fn SlotDetachableFunc) {
-	if !slotLink.IsValid() {
-		detached := m.flushDetachQueue(slotLink.SlotID()) // cleanup
-		if slotLink.s == nil || slotLink.s.machine == nil {
-			return
-		}
-
-		slotLink.s.machine._handleMissedSlotCallback(slotLink, fn, detached)
-		return
-	}
-
-	err := m._slotSafeCall(slotLink.s, fn)
-	if err == nil {
-		return
-	}
-	slotLink.s.machine._handleSlotAsyncPanic(slotLink, fn, err)
-}
-
-func recoverSlotPanic(msg string, recovered interface{}, prev error) error {
-	if recovered == nil {
-		return prev
-	}
-	if prev != nil {
-		return errors.Wrap(prev, fmt.Sprintf("%s: %v", msg, recovered))
-	}
-	return errors.Errorf("%s: %v", msg, recovered)
-}
-
-func (m *SlotMachineSync) _slotSafeCall(slot *Slot, fn SlotDetachableFunc) (recovered error) {
-	defer func() {
-		recovered = recoverSlotPanic("async result has failed", recover(), recovered)
-	}()
-	return m.getWorker().TryExclusiveSlotCall(slot, fn), nil
 }
 
 func (m *SlotMachineSync) AppendSlotDetachQueue(id SlotID) {
