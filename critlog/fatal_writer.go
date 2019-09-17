@@ -132,5 +132,5 @@ func (w *fatalFlusher) flushOrClose() {
 }
 
 func lockDown() {
-	_ = <-context.Background().Done()
+	<-context.Background().Done()
 }
