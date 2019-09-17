@@ -335,13 +335,13 @@ func TestGlobulaConsensusPacketBody_Phases_Flag0(t *testing.T) {
 		{
 			"phase0",
 			phases.PacketPhase0,
-			431,
+			401,
 			phase1p,
 		},
 		{
 			"phase1",
 			phases.PacketPhase1,
-			434,
+			404,
 			phase1p,
 		},
 		{

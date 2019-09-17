@@ -19,7 +19,6 @@ package instracer
 import (
 	"context"
 
-	"github.com/insolar/insolar/insolar"
 	"go.opencensus.io/trace"
 )
 
@@ -42,14 +41,6 @@ func Serialize(ctx context.Context) ([]byte, error) {
 		tracespan.SpanID = sc.SpanID[:]
 		tracespan.TraceID = sc.TraceID[:]
 	}
-	tracespan.Entries = nil
-	for _, e := range GetBaggage(ctx) {
-		if e.Key == "insTraceId" {
-			continue
-		}
-		tracespan.Entries = append(tracespan.Entries, e)
-	}
-
 	return tracespan.Serialize()
 }
 
@@ -65,11 +56,11 @@ func MustDeserialize(b []byte) TraceSpan {
 // Deserialize decode baggage entries from bytes.
 func Deserialize(b []byte) (TraceSpan, error) {
 	var ts TraceSpan
-	err := insolar.Deserialize(b, &ts)
+	err := ts.Unmarshal(b)
 	return ts, err
 }
 
 // Serialize method encodes TraceSpan to bytes.
 func (ts TraceSpan) Serialize() ([]byte, error) {
-	return insolar.Serialize(ts)
+	return ts.Marshal()
 }

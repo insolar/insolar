@@ -219,7 +219,8 @@ generate-protobuf: ## generate protobuf structs
 	protoc -I./vendor -I./ --gogoslick_out=./ insolar/pulse/pulse.proto
 	protoc -I./vendor -I./ --gogoslick_out=./ --proto_path=${GOPATH}/src network/hostnetwork/packet/packet.proto
 	protoc -I./vendor -I./ --gogoslick_out=./ --proto_path=${GOPATH}/src network/consensus/adapters/candidate/profile.proto
-		protoc -I./vendor -I./ --gogoslick_out=./ ledger/heavy/executor/jetinfo.proto
+	protoc -I./vendor -I./ --gogoslick_out=./ ledger/heavy/executor/jetinfo.proto
+	protoc -I./vendor -I./ --gogoslick_out=./ instrumentation/instracer/span_data.proto
 		protoc -I/usr/local/include -I./ \
     		-I$(GOPATH)/src \
     		--gogoslick_out=plugins=grpc:./  \
