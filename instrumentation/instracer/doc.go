@@ -29,7 +29,6 @@ Example:
 	entryvalue := "entryvalue"
 	ctx := context.Background()
 	jaegerflush = instracer.ShouldRegisterJaeger(ctx, "insolard", "localhost:6831", "")
-	ctx = instracer.SetBaggage(ctx, instracer.Entry{Key: "someentry", Value: entryvalue})
 	defer jaegerflush() // wait all trace data to send on jaeger server
 
 	// serialize clientctx
