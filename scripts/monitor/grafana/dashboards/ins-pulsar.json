@@ -15,7 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 11,
+  "iteration": 1568639492883,
   "links": [],
   "panels": [
     {
@@ -291,13 +291,14 @@
   "refresh": "10s",
   "schemaVersion": 19,
   "style": "dark",
-  "tags": [],
+  "tags": [
+    "INS"
+  ],
   "templating": {
     "list": [
       {
         "allValue": null,
         "current": {
-          "tags": [],
           "text": "local",
           "value": "local"
         },
@@ -323,7 +324,7 @@
     ]
   },
   "time": {
-    "from": "now-6h",
+    "from": "now-15m",
     "to": "now"
   },
   "timepicker": {
@@ -343,5 +344,5 @@
   "timezone": "",
   "title": "INS-Pulsar",
   "uid": "kXT2cLcWz",
-  "version": 5
+  "version": 1
 }

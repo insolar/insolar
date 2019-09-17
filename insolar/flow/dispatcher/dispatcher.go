@@ -139,7 +139,7 @@ func (d *dispatcher) Process(msg *message.Message) error {
 		procDuration := time.Since(processStart)
 		result := "ok"
 		if err != nil {
-			if err == flow.ErrCancelled {
+			if errors.Cause(err) == flow.ErrCancelled {
 				result = "cancelled"
 				logger.Info(errors.Wrap(err, "flow handling failed"))
 			} else {
