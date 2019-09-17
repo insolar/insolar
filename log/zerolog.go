@@ -17,6 +17,7 @@
 package log
 
 import (
+	"context"
 	"fmt"
 	"github.com/insolar/insolar/critlog"
 	"github.com/pkg/errors"
@@ -388,7 +389,7 @@ func (z *zerologAdapter) CreateCriticalLogger(bufSize int) insolar.Logger {
 		return z
 	}
 	zCopy := *z
-	zCopy.output = critlog.NewCriticalWriter(z.output)
+	zCopy.output = critlog.NewCriticalWriter(context.Background(), z.output, bufSize)
 
 	// we disregard existence of a previous buffer for critical events
 	zCopy.outputWraps = (z.outputWraps &^ outputWrappedWithBuffer) | outputWrappedWithCritical
