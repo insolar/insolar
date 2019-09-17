@@ -23,6 +23,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
@@ -116,7 +117,7 @@ func InternalLevelToZerologLevel(level insolar.LogLevel) (zerolog.Level, error) 
 
 func newDefaultTextOutput() io.Writer {
 	return zerolog.ConsoleWriter{
-		Out:          os.Stderr,
+		Out:          os.Stdout,
 		NoColor:      true,
 		TimeFormat:   timestampFormat,
 		PartsOrder:   fieldsOrder,
@@ -131,12 +132,37 @@ func selectFormatter(format insolar.LogFormat) (io.Writer, error) {
 	case insolar.TextFormat:
 		output = newDefaultTextOutput()
 	case insolar.JSONFormat:
-		output = os.Stderr
+		output = os.Stdout
 	default:
 		return nil, errors.New("unknown formatter " + format.String())
 	}
 
 	return output, nil
+}
+
+type writeTimeWatcher struct {
+	Out io.Writer
+}
+
+func (wtw *writeTimeWatcher) Write(buff []byte) (int, error) {
+	bufflen := len(buff)
+	out := buff
+	if buff[bufflen-1] == '\n' {
+		timemark := []byte(", \"writeTime\":\"" + time.Now().Format(timestampFormat) + "\"")
+		if buff[bufflen-2] == '}' {
+			timemark = append(timemark, '}', '\n')
+			out = append(buff[:bufflen-2], timemark...)
+		} else {
+			timemark = append(timemark, '\n')
+			out = append(buff[:bufflen-1], timemark...)
+		}
+	}
+	cnt, err := wtw.Out.Write(out)
+	if err != nil {
+		panic(err)
+		return cnt, err
+	}
+	return cnt, nil
 }
 
 func newZerologAdapter(cfg configuration.Log) (*zerologAdapter, error) {
@@ -149,6 +175,7 @@ func newZerologAdapter(cfg configuration.Log) (*zerologAdapter, error) {
 	if err != nil {
 		return nil, err
 	}
+	output = &writeTimeWatcher{output}
 
 	za := &zerologAdapter{
 		level: zerolog.InfoLevel,
