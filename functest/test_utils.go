@@ -20,7 +20,9 @@ package functest
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -36,7 +38,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/launchnet"
 
 	"github.com/insolar/rpc/v2/json2"
@@ -139,9 +140,18 @@ func createMigrationMemberForMA(t *testing.T) *launchnet.User {
 
 }
 
+func generateMigrationAddress() (string, error) {
+	bytes := make([]byte, 20)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(bytes), nil
+}
+
 func addMigrationAddress(t *testing.T) {
-	ba := testutils.RandomString()
-	_, err := signedRequest(t, launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.addAddresses",
+	ba, err := generateMigrationAddress()
+	require.NoError(t, err)
+	_, err = signedRequest(t, launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.addAddresses",
 		map[string]interface{}{"migrationAddresses": []string{ba}})
 	require.NoError(t, err)
 }
@@ -188,10 +198,6 @@ func migrate(t *testing.T, memberRef string, amount string, tx string, ma string
 	require.Equal(t, amount+"0", sm[launchnet.MigrationDaemons[mdNum].Ref])
 
 	return deposit
-}
-
-func generateMigrationAddress() string {
-	return testutils.RandomString()
 }
 
 const migrationAmount = "360000"
@@ -293,8 +299,8 @@ func signedRequest(t *testing.T, URL string, user *launchnet.User, method string
 	var errMsg string
 	if err != nil {
 		errMsg = err.Error()
+		fmt.Println("Error: " + err.(*requester.Error).Data.Trace[0])
 	}
-
 	require.NotEqual(t, "", refStr, "request ref is empty: %s", errMsg)
 	require.NotEqual(t, insolar.NewEmptyReference().String(), refStr, "request ref is zero: %s", errMsg)
 
@@ -316,6 +322,7 @@ func makeSignedRequest(URL string, user *launchnet.User, method string, params i
 	ctx := context.TODO()
 	rootCfg, err := requester.CreateUserConfig(user.Ref, user.PrivKey, user.PubKey)
 	if err != nil {
+		fmt.Println("Error: " + err.(*requester.Error).Data.Trace[0])
 		return nil, "", err
 	}
 
@@ -360,7 +367,6 @@ func makeSignedRequest(URL string, user *launchnet.User, method string, params i
 	if resp.Result == nil {
 		return nil, "", errors.New("Error and result are nil")
 	}
-
 	return resp.Result.CallResult, resp.Result.RequestReference, nil
 
 }
