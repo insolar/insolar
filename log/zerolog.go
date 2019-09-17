@@ -18,11 +18,13 @@ package log
 
 import (
 	"fmt"
+	"github.com/insolar/insolar/critlog"
 	"io"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
+	"syscall"
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
@@ -114,24 +116,48 @@ func InternalLevelToZerologLevel(level insolar.LogLevel) (zerolog.Level, error) 
 	return zerolog.NoLevel, errors.New("Unknown internal level")
 }
 
-func newDefaultTextOutput() io.Writer {
-	return zerolog.ConsoleWriter{
-		Out:          os.Stderr,
+var _ io.WriteCloser = &closableConsoleWriter{}
+
+type closableConsoleWriter struct {
+	zerolog.ConsoleWriter
+}
+
+func (p *closableConsoleWriter) Close() error {
+	if c, ok := p.Out.(io.Closer); ok {
+		return c.Close()
+	}
+	return errors.New("unsupported: Close")
+}
+
+func (p *closableConsoleWriter) Sync() error {
+	if c, ok := p.Out.(*os.File); ok {
+		return c.Sync()
+	}
+	return errors.New("unsupported: Sync")
+}
+
+func newIsolatedOutput() io.WriteCloser {
+	return os.NewFile(uintptr(syscall.Stderr), "/dev/stderr")
+}
+
+func newDefaultTextOutput() io.WriteCloser {
+	return &closableConsoleWriter{zerolog.ConsoleWriter{
+		Out:          newIsolatedOutput(),
 		NoColor:      true,
 		TimeFormat:   timestampFormat,
 		PartsOrder:   fieldsOrder,
 		FormatCaller: formatCaller(),
-	}
+	}}
 }
 
-func selectFormatter(format insolar.LogFormat) (io.Writer, error) {
-	var output io.Writer
+func selectFormatter(format insolar.LogFormat) (io.WriteCloser, error) {
+	var output io.WriteCloser
 
 	switch format {
 	case insolar.TextFormat:
 		output = newDefaultTextOutput()
 	case insolar.JSONFormat:
-		output = os.Stderr
+		output = newIsolatedOutput()
 	default:
 		return nil, errors.New("unknown formatter " + format.String())
 	}
@@ -166,7 +192,7 @@ func newZerologAdapter(cfg configuration.Log) (*zerologAdapter, error) {
 		output = dw
 	}
 
-	logger := zerolog.New(output).Level(zerolog.InfoLevel).With().Timestamp().Logger()
+	logger := zerolog.New(critlog.FatalFlusher(output)).Level(zerolog.InfoLevel).With().Timestamp().Logger()
 	logger = logger.Hook(&metricsHook{})
 	za.logger = logger
 
