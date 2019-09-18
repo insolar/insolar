@@ -23,6 +23,7 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
 	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/insolar"
@@ -573,6 +574,10 @@ func (i *filamentIterator) Prev(ctx context.Context) (record.CompositeFilamentRe
 		return record.CompositeFilamentRecord{}, object.ErrNotFound
 	}
 
+	defer func() {
+		stats.Record(ctx, statFilamentLength.M(1))
+	}()
+
 	composite, ok := i.cache.cache[*i.currentID]
 	if ok {
 		virtual := record.Unwrap(&composite.Meta.Virtual)
@@ -742,6 +747,7 @@ func (i *fetchingIterator) fetchFromNetwork(
 	}
 	switch p := pl.(type) {
 	case *payload.FilamentSegment:
+		stats.Record(ctx, statFilamentFetchedCount.M(int64(len(p.Records))))
 		return p.Records, nil
 	case *payload.Error:
 		return nil, errors.New(p.Text)
