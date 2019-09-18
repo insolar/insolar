@@ -310,6 +310,7 @@ func NewServer(
 			filamentCalculator,
 			requestChecker,
 			detachedNotifier,
+			configuration.NewLedger(),
 		)
 
 		initHandle := func(msg *message.Message) *handle.Init {

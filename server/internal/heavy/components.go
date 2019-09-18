@@ -150,7 +150,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 	var (
 		Coordinator jet.Coordinator
 		Pulses      *insolarPulse.DB
-		Nodes       *node.Storage
+		Nodes       *node.StorageDB
 		DB          *store.BadgerDB
 		Jets        *jet.DBStore
 	)
@@ -164,7 +164,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		if err != nil {
 			panic(errors.Wrap(err, "failed to initialize DB"))
 		}
-		Nodes = node.NewStorage()
+		Nodes = node.NewStorageDB(DB)
 		Pulses = insolarPulse.NewDB(DB)
 		Jets = jet.NewDBStore(DB)
 
@@ -261,7 +261,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 			return nil, errors.Wrap(err, "failed create backuper")
 		}
 
-		c.rollback = executor.NewDBRollback(JetKeeper, drops, Records, indexes, Jets, Pulses, JetKeeper, backupMaker)
+		c.rollback = executor.NewDBRollback(JetKeeper, drops, Records, indexes, Jets, Pulses, JetKeeper, Nodes, backupMaker)
 		c.stateKeeper = executor.NewInitialStateKeeper(JetKeeper, Jets, Coordinator, indexes, drops)
 
 		sp := insolarPulse.NewStartPulse()
@@ -332,8 +332,8 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		pulseExporter  *exporter.PulseServer
 	)
 	{
-		recordExporter = exporter.NewRecordServer(Pulses, Records, Records, JetKeeper)
-		pulseExporter = exporter.NewPulseServer(Pulses, JetKeeper)
+		recordExporter = exporter.NewRecordServer(Pulses, Records, Records, JetKeeper, exporter.NewOneRequestLimiter(cfg.Exporter.DurationBetweenRequests))
+		pulseExporter = exporter.NewPulseServer(Pulses, JetKeeper, Nodes)
 
 		grpcServer := grpc.NewServer()
 		exporter.RegisterRecordExporterServer(grpcServer, recordExporter)

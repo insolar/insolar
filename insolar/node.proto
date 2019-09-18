@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package insolar;
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+option (gogoproto.goproto_getters_all) = false;
+
+message Node {
+
+    int32 polymorph = 16;
+
+    bytes ID = 20 [(gogoproto.customtype) = "Reference", (gogoproto.nullable) = false];
+    uint32 Role = 21 [(gogoproto.customtype) = "StaticRole", (gogoproto.nullable) = false];
+}
+
+message NodeList {
+    int32 polymorph = 16;
+
+    repeated Node Nodes = 20 [(gogoproto.nullable) = false];
+}

@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
@@ -118,6 +119,19 @@ func (p *GetRequest) Proceed(ctx context.Context) error {
 				return errors.Wrap(err, "failed to calculate role")
 			}
 			node = *l
+
+			inslogger.FromContext(ctx).Warn("virtual node missed jet")
+
+			// Send calculated jet to virtual node.
+			updateMsg, err := payload.NewMessage(&payload.UpdateJet{
+				Pulse: p.requestID.Pulse(),
+				JetID: insolar.JetID(*jetID),
+			})
+			if err != nil {
+				return errors.Wrap(err, "failed to create jet message")
+			}
+			_, done := p.dep.sender.SendTarget(ctx, updateMsg, p.message.Sender)
+			done()
 		}
 
 		_, done := p.dep.sender.SendTarget(ctx, msg, node)

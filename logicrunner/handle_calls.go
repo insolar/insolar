@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
@@ -29,6 +30,7 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/logicrunner/metrics"
 	"github.com/insolar/insolar/logicrunner/writecontroller"
 	"github.com/insolar/insolar/platformpolicy"
 
@@ -92,7 +94,7 @@ func (h *HandleCall) checkExecutionLoop(
 	ctx context.Context, reqRef insolar.Reference, request record.IncomingRequest,
 ) bool {
 
-	if request.ReturnMode == record.ReturnNoWait {
+	if request.ReturnMode == record.ReturnSaga {
 		return false
 	}
 	if request.CallType != record.CTMethod {
@@ -157,6 +159,7 @@ func (h *HandleCall) handleActual(
 			if err != nil {
 				return nil, errors.Wrap(err, "can't create error result")
 			}
+			stats.Record(ctx, metrics.CallMethodLogicalError.M(1))
 			return &reply.CallMethod{Result: resultWithErr}, nil
 		}
 		return nil, errors.Wrap(err, "[ HandleCall.handleActual ] can't create request")
@@ -206,6 +209,8 @@ func (h *HandleCall) handleActual(
 	}
 
 	if h.checkExecutionLoop(ctx, requestRef, *request) {
+		stats.Record(ctx, metrics.CallMethodLoopDetected.M(1))
+
 		proc := &RecordErrorResult{
 			err:             errors.New("loop detected"),
 			requestRef:      requestRef,
@@ -216,13 +221,13 @@ func (h *HandleCall) handleActual(
 		if err != nil {
 			return nil, errors.Wrap(err, "couldn't record error result")
 		}
-
 		return &reply.CallMethod{Object: objectRef, Result: proc.result}, nil
 	}
 
 	done, err := h.dep.WriteAccessor.Begin(ctx, flow.Pulse(ctx))
 	if err != nil {
 		if err == writecontroller.ErrWriteClosed {
+			stats.Record(ctx, metrics.CallMethodAdditionalCall.M(1))
 			go h.sendToNextExecutor(ctx, *objectRef, requestRef, *request)
 			return registeredRequestReply, nil
 		}

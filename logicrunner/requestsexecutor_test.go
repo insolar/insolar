@@ -343,7 +343,7 @@ func TestRequestsExecutor_SendReply(t *testing.T) {
 		go func() { res <- replyMessage(msg) }()
 		return res, func() { close(res) }
 	}
-	sendTargetHelper :=	func(ctx context.Context, msg *message.Message, target insolar.Reference) (<-chan *message.Message, func()) {
+	sendTargetHelper := func(ctx context.Context, msg *message.Message, target insolar.Reference) (<-chan *message.Message, func()) {
 		res := make(chan *message.Message)
 		go func() { res <- replyMessage(msg) }()
 		return res, func() { close(res) }
@@ -408,15 +408,15 @@ func TestRequestsExecutor_SendReply(t *testing.T) {
 			request: record.IncomingRequest{
 				Caller: gen.Reference(),
 			},
-			err:   errors.New("some"),
+			err: errors.New("some"),
 		},
 		{
-			name: "return mode NoWait, no reply required",
+			name: "return mode saga, no reply required",
 			mocks: func(ctx context.Context, mc minimock.Tester) RequestsExecutor {
 				return &requestsExecutor{}
 			},
 			request: record.IncomingRequest{
-				ReturnMode: record.ReturnNoWait,
+				ReturnMode: record.ReturnSaga,
 			},
 		},
 		{
@@ -424,8 +424,7 @@ func TestRequestsExecutor_SendReply(t *testing.T) {
 			mocks: func(ctx context.Context, mc minimock.Tester) RequestsExecutor {
 				return &requestsExecutor{}
 			},
-			request: record.IncomingRequest{
-			},
+			request: record.IncomingRequest{},
 		},
 	}
 

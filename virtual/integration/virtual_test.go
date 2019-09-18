@@ -92,8 +92,8 @@ func TestVirtual_BasicOperations(t *testing.T) {
 				}}
 			// setters
 			case *payload.SetResult:
-				return []payload.Payload{&payload.ID{
-					ID: *insolar.NewID(gen.PulseNumber(), hasher.Hash(data.Result)),
+				return []payload.Payload{&payload.ResultInfo{
+					ResultID: *insolar.NewID(gen.PulseNumber(), hasher.Hash(data.Result)),
 				}}
 			case *payload.Activate:
 				return []payload.Payload{&payload.ResultInfo{}}

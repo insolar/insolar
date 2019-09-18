@@ -204,7 +204,19 @@ func TestDBIndexStorage_ForPulse(t *testing.T) {
 	t.Parallel()
 
 	ctx := inslogger.TestContext(t)
-	pn := gen.PulseNumber()
+	prevPn := gen.PulseNumber()
+	pn := prevPn + 10
+	nextPn := pn + 20
+
+	// Sort indexes for proper compare
+	// For now badger iterator already sorted by key but this behavior can change
+	sortIndexes := func(slice []record.Index) {
+		cmp := func(i, j int) bool {
+			cmp := bytes.Compare(slice[i].ObjID.Bytes(), slice[j].ObjID.Bytes())
+			return cmp < 0
+		}
+		sort.Slice(slice, cmp)
+	}
 
 	t.Run("empty index storage", func(t *testing.T) {
 		t.Parallel()
@@ -245,21 +257,52 @@ func TestDBIndexStorage_ForPulse(t *testing.T) {
 
 		realIndexes, err := storage.ForPulse(ctx, pn)
 		require.NoError(t, err)
-		require.Equal(t, indexCount, len(indexes))
-
-		// Sort indexes for proper compare
-		// For now badger iterator already sorted by key but this behavior can change
-		sortIndexes := func(slice []record.Index) {
-			cmp := func(i, j int) bool {
-				cmp := bytes.Compare(slice[i].ObjID.Bytes(), slice[j].ObjID.Bytes())
-				return cmp < 0
-			}
-			sort.Slice(slice, cmp)
-		}
+		require.Equal(t, len(indexes), len(realIndexes))
 
 		sortIndexes(realIndexes)
 		sortIndexes(indexes)
+		for i := 0; i < indexCount; i++ {
+			require.Equal(t, indexes[i], realIndexes[i])
+		}
+	})
 
+	t.Run("index storage with couple values in different pulses", func(t *testing.T) {
+		t.Parallel()
+
+		tmpdir, err := ioutil.TempDir("", "bdb-test-")
+		defer os.RemoveAll(tmpdir)
+		require.NoError(t, err)
+
+		db, err := store.NewBadgerDB(BadgerDefaultOptions(tmpdir))
+		require.NoError(t, err)
+		defer db.Stop(context.Background())
+		storage := NewIndexDB(db, nil)
+
+		var indexes []record.Index
+		for i := 0; i < indexCount; i++ {
+			indexes = append(indexes, record.Index{ObjID: gen.ID()})
+			err = storage.SetIndex(ctx, pn, indexes[i])
+			require.NoError(t, err)
+		}
+
+		// add some values in prev pulse
+		for i := 0; i < indexCount; i++ {
+			err = storage.SetIndex(ctx, prevPn, record.Index{ObjID: gen.ID()})
+			require.NoError(t, err)
+		}
+
+		// add some values in next pulse
+		for i := 0; i < indexCount; i++ {
+			err = storage.SetIndex(ctx, nextPn, record.Index{ObjID: gen.ID()})
+			require.NoError(t, err)
+		}
+
+		realIndexes, err := storage.ForPulse(ctx, pn)
+		require.NoError(t, err)
+		require.Equal(t, len(indexes), len(realIndexes))
+
+		sortIndexes(realIndexes)
+		sortIndexes(indexes)
 		for i := 0; i < indexCount; i++ {
 			require.Equal(t, indexes[i], realIndexes[i])
 		}

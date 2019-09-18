@@ -64,6 +64,11 @@ var (
 		"time spent on sending parcels",
 		stats.UnitMilliseconds,
 	)
+	statReplyError = stats.Int64(
+		"bus_reply_error",
+		"reply error messages stats",
+		stats.UnitDimensionless,
+	)
 )
 
 func init() {
@@ -118,6 +123,12 @@ func init() {
 			Measure:     statReplyTimeouts,
 			Aggregation: view.Count(),
 			TagKeys:     []tag.Key{tagMessageType},
+		},
+		&view.View{
+			Name:        "bus_reply_error_total",
+			Description: "reply error messages total count",
+			Measure:     statReplyError,
+			Aggregation: view.Count(),
 		},
 	)
 	if err != nil {

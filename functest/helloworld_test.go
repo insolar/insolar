@@ -222,6 +222,7 @@ func (i *HelloWorldInstance) ReturnObj(ctx context.Context) (map[string]interfac
 }
 
 func TestCallHelloWorld(t *testing.T) {
+	t.Skip("Immutable call need to be skipped for now")
 	a, r := assert.New(t), require.New(t)
 	ctx := context.TODO()
 
@@ -237,9 +238,8 @@ func TestCallHelloWorld(t *testing.T) {
 
 	count, err := hw.Count(ctx)
 	r.NoError(err)
-	// tip: right now deduplication is not presented in our system, so number of created
-	//      requests should be less or equal to result count of registered requests
-	a.LessOrEqual(100, count)
+
+	a.Equal(100, count)
 }
 
 func TestCallPulseNumber(t *testing.T) {

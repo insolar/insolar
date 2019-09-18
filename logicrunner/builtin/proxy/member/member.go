@@ -145,7 +145,7 @@ func (r *Member) GetPrototype() (insolar.Reference, error) {
 		var ret1 *foundation.Error
 		ret[1] = &ret1
 
-		res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetPrototype", make([]byte, 0), *PrototypeReference)
+		res, err := common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetPrototype", make([]byte, 0), *PrototypeReference)
 		if err != nil {
 			return ret0, err
 		}
@@ -175,7 +175,7 @@ func (r *Member) GetCode() (insolar.Reference, error) {
 		var ret1 *foundation.Error
 		ret[1] = &ret1
 
-		res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetCode", make([]byte, 0), *PrototypeReference)
+		res, err := common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetCode", make([]byte, 0), *PrototypeReference)
 		if err != nil {
 			return ret0, err
 		}
@@ -212,7 +212,7 @@ func (r *Member) GetNameAsMutable() (string, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetName", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetName", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -234,25 +234,6 @@ func (r *Member) GetNameAsMutable() (string, error) {
 	return ret0, nil
 }
 
-// GetNameNoWait is proxy generated method
-func (r *Member) GetNameNoWait() error {
-	var args [0]interface{}
-
-	var argsSerialized []byte
-
-	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
-	if err != nil {
-		return err
-	}
-
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "GetName", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // GetNameAsImmutable is proxy generated method
 func (r *Member) GetName() (string, error) {
 	var args [0]interface{}
@@ -270,7 +251,7 @@ func (r *Member) GetName() (string, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "GetName", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetName", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -309,7 +290,7 @@ func (r *Member) GetWalletAsMutable() (*insolar.Reference, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetWallet", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetWallet", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -331,25 +312,6 @@ func (r *Member) GetWalletAsMutable() (*insolar.Reference, error) {
 	return ret0, nil
 }
 
-// GetWalletNoWait is proxy generated method
-func (r *Member) GetWalletNoWait() error {
-	var args [0]interface{}
-
-	var argsSerialized []byte
-
-	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
-	if err != nil {
-		return err
-	}
-
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "GetWallet", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // GetWalletAsImmutable is proxy generated method
 func (r *Member) GetWallet() (*insolar.Reference, error) {
 	var args [0]interface{}
@@ -367,7 +329,7 @@ func (r *Member) GetWallet() (*insolar.Reference, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "GetWallet", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetWallet", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -407,7 +369,7 @@ func (r *Member) GetAccountAsMutable(assetName string) (*insolar.Reference, erro
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetAccount", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetAccount", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -429,26 +391,6 @@ func (r *Member) GetAccountAsMutable(assetName string) (*insolar.Reference, erro
 	return ret0, nil
 }
 
-// GetAccountNoWait is proxy generated method
-func (r *Member) GetAccountNoWait(assetName string) error {
-	var args [1]interface{}
-	args[0] = assetName
-
-	var argsSerialized []byte
-
-	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
-	if err != nil {
-		return err
-	}
-
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "GetAccount", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // GetAccountAsImmutable is proxy generated method
 func (r *Member) GetAccount(assetName string) (*insolar.Reference, error) {
 	var args [1]interface{}
@@ -467,7 +409,7 @@ func (r *Member) GetAccount(assetName string) (*insolar.Reference, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "GetAccount", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetAccount", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -506,7 +448,7 @@ func (r *Member) GetPublicKeyAsMutable() (string, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetPublicKey", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetPublicKey", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -528,25 +470,6 @@ func (r *Member) GetPublicKeyAsMutable() (string, error) {
 	return ret0, nil
 }
 
-// GetPublicKeyNoWait is proxy generated method
-func (r *Member) GetPublicKeyNoWait() error {
-	var args [0]interface{}
-
-	var argsSerialized []byte
-
-	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
-	if err != nil {
-		return err
-	}
-
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "GetPublicKey", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // GetPublicKeyAsImmutable is proxy generated method
 func (r *Member) GetPublicKey() (string, error) {
 	var args [0]interface{}
@@ -564,7 +487,7 @@ func (r *Member) GetPublicKey() (string, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "GetPublicKey", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetPublicKey", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -604,7 +527,7 @@ func (r *Member) CallAsMutable(signedRequest []byte) (interface{}, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "Call", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "Call", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -626,26 +549,6 @@ func (r *Member) CallAsMutable(signedRequest []byte) (interface{}, error) {
 	return ret0, nil
 }
 
-// CallNoWait is proxy generated method
-func (r *Member) CallNoWait(signedRequest []byte) error {
-	var args [1]interface{}
-	args[0] = signedRequest
-
-	var argsSerialized []byte
-
-	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
-	if err != nil {
-		return err
-	}
-
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "Call", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // CallAsImmutable is proxy generated method
 func (r *Member) Call(signedRequest []byte) (interface{}, error) {
 	var args [1]interface{}
@@ -664,7 +567,7 @@ func (r *Member) Call(signedRequest []byte) (interface{}, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "Call", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "Call", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -703,7 +606,7 @@ func (r *Member) GetMigrationAddressAsMutable() (string, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, false, "GetMigrationAddress", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, false, false, "GetMigrationAddress", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -725,25 +628,6 @@ func (r *Member) GetMigrationAddressAsMutable() (string, error) {
 	return ret0, nil
 }
 
-// GetMigrationAddressNoWait is proxy generated method
-func (r *Member) GetMigrationAddressNoWait() error {
-	var args [0]interface{}
-
-	var argsSerialized []byte
-
-	err := common.CurrentProxyCtx.Serialize(args, &argsSerialized)
-	if err != nil {
-		return err
-	}
-
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, false, false, "GetMigrationAddress", argsSerialized, *PrototypeReference)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // GetMigrationAddressAsImmutable is proxy generated method
 func (r *Member) GetMigrationAddress() (string, error) {
 	var args [0]interface{}
@@ -761,7 +645,7 @@ func (r *Member) GetMigrationAddress() (string, error) {
 		return ret0, err
 	}
 
-	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, true, false, "GetMigrationAddress", argsSerialized, *PrototypeReference)
+	res, err := common.CurrentProxyCtx.RouteCall(r.Reference, true, false, "GetMigrationAddress", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -799,7 +683,7 @@ func (r *Member) Accept(amountStr string) error {
 		return err
 	}
 
-	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, true, false, true, "Accept", argsSerialized, *PrototypeReference)
+	_, err = common.CurrentProxyCtx.RouteCall(r.Reference, false, true, "Accept", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}

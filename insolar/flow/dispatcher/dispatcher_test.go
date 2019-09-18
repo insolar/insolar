@@ -129,6 +129,31 @@ func TestDispatcher_Process_ReplyError(t *testing.T) {
 	require.Contains(t, rep.Error(), "reply error")
 }
 
+func TestDispatcher_Process_ReplyFlowCancelled(t *testing.T) {
+	t.Parallel()
+
+	d := &dispatcher{
+		controller: thread.NewController(),
+	}
+	replyChan := make(chan struct{}, 1)
+	d.handles.present = func(msg *message.Message) flow.Handle {
+		return func(ctx context.Context, f flow.Flow) error {
+			close(replyChan)
+			return errors.Wrap(flow.ErrCancelled, "wrapped flow cancelled")
+		}
+	}
+
+	ctx := context.Background()
+	currentPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(100)}
+	d.pulses = pulse.NewAccessorMock(t).LatestMock.Return(currentPulse, nil)
+
+	msg := makeMessage(t, ctx, currentPulse.PulseNumber)
+
+	err := d.Process(msg)
+	require.NoError(t, err)
+	<-replyChan
+}
+
 func TestDispatcher_Process_CallFutureDispatcher(t *testing.T) {
 	t.Parallel()
 	d := &dispatcher{

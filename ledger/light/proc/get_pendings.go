@@ -19,17 +19,19 @@ package proc
 import (
 	"context"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/ledger/light/executor"
-	"github.com/pkg/errors"
 )
 
 type GetPendings struct {
 	message  payload.Meta
 	objectID insolar.ID
+	count    int
 
 	dep struct {
 		filaments executor.FilamentCalculator
@@ -37,23 +39,24 @@ type GetPendings struct {
 	}
 }
 
-func NewGetPendings(msg payload.Meta, objectID insolar.ID) *GetPendings {
+func NewGetPendings(msg payload.Meta, objectID insolar.ID, count int) *GetPendings {
 	return &GetPendings{
 		message:  msg,
 		objectID: objectID,
+		count:    count,
 	}
 }
 
-func (gp *GetPendings) Dep(
+func (p *GetPendings) Dep(
 	f executor.FilamentCalculator,
 	s bus.Sender,
 ) {
-	gp.dep.filaments = f
-	gp.dep.sender = s
+	p.dep.filaments = f
+	p.dep.sender = s
 }
 
-func (gp *GetPendings) Proceed(ctx context.Context) error {
-	pendings, err := gp.dep.filaments.OpenedRequests(ctx, flow.Pulse(ctx), gp.objectID, true)
+func (p *GetPendings) Proceed(ctx context.Context) error {
+	pendings, err := p.dep.filaments.OpenedRequests(ctx, flow.Pulse(ctx), p.objectID, true)
 	if err != nil {
 		return errors.Wrap(err, "failed to calculate pending")
 	}
@@ -64,9 +67,12 @@ func (gp *GetPendings) Proceed(ctx context.Context) error {
 		}
 	}
 
-	ids := make([]insolar.ID, len(pendings))
+	var ids []insolar.ID
 	for i, pend := range pendings {
-		ids[i] = pend.RecordID
+		if i >= p.count {
+			break
+		}
+		ids = append(ids, pend.RecordID)
 	}
 
 	msg, err := payload.NewMessage(&payload.IDs{
@@ -76,6 +82,6 @@ func (gp *GetPendings) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "failed to create reply")
 	}
 
-	gp.dep.sender.Reply(ctx, gp.message, msg)
+	p.dep.sender.Reply(ctx, p.message, msg)
 	return nil
 }

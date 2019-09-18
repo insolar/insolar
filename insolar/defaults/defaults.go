@@ -21,7 +21,7 @@ import (
 	"path/filepath"
 )
 
-// LaunchnetDir returns path of artifacts dir.
+// ArtifactsDir returns path of artifacts dir.
 func ArtifactsDir() string {
 	return envVarWithDefault("INSOLAR_ARTIFACTS_DIR", ".artifacts")
 }

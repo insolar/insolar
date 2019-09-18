@@ -49,9 +49,12 @@ or you can run benchmark with
         -m usemembers
                 Use members from file .artifacts/bench-members/members.txt.
                 If false, wright info about created members in this file. Default is false. 
-        --members-dir
-                Dir for saving memebers data
+        --members-file
+                Path to file for saving members data
         -b nocheckbalance
                 If true, don't check balance at the start/end of transfers. Default is false. 
+        -t scenarioname
+                Name of scenario. Default scenario is transfer scenario.
+                You can choose "createMember" for create member scenario.
         --discovery-nodes-logs-dir
                 Launchnet logs dir for checking errors

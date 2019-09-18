@@ -30,6 +30,10 @@ import (
 	"github.com/insolar/insolar/logicrunner/common"
 )
 
+var (
+	ErrAlreadyRegistered = errors.New("trying to register task that is executing right now")
+)
+
 type Registry interface {
 	Register(transcript *common.Transcript)
 }
@@ -88,7 +92,7 @@ func (r *executionRegistry) Register(ctx context.Context, transcript *common.Tra
 	defer r.registryLock.Unlock()
 
 	if _, ok := r.registry[requestRef]; ok {
-		return errors.New("trying to register task that is executing right now")
+		return ErrAlreadyRegistered
 	}
 
 	r.registry[requestRef] = transcript
@@ -144,7 +148,7 @@ func (r *executionRegistry) FindRequestLoop(ctx context.Context, reqRef insolar.
 
 	for _, transcript := range r.registry {
 		req := transcript.Request
-		if req.APIRequestID == apiRequestID && req.ReturnMode != record.ReturnNoWait {
+		if req.APIRequestID == apiRequestID && req.ReturnMode != record.ReturnSaga {
 			inslogger.FromContext(ctx).Error("execution loop detected with request ", transcript.RequestRef.String())
 			return true
 		}

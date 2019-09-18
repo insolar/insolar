@@ -37,6 +37,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/keystore"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/pulsenetwork"
 	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/platformpolicy"
@@ -54,6 +55,7 @@ func parseInputParams() inputParams {
 	var rootCmd = &cobra.Command{Use: "insolard"}
 	var result inputParams
 	rootCmd.Flags().StringVarP(&result.configPath, "config", "c", "", "path to config file")
+	rootCmd.AddCommand(version.GetCommand("pulsard"))
 	err := rootCmd.Execute()
 	if err != nil {
 		fmt.Println("Wrong input params:", err.Error())
@@ -100,6 +102,18 @@ func main() {
 			jconf.ProbabilityRate)
 	}
 	defer jaegerflush()
+
+	m := metrics.NewMetrics(pCfg.Metrics, metrics.GetInsolarRegistry("pulsar"), "pulsar")
+	err = m.Init(ctx)
+	if err != nil {
+		log.Fatal("Couldn't init metrics:", err)
+		os.Exit(1)
+	}
+	err = m.Start(ctx)
+	if err != nil {
+		log.Fatal("Couldn't start metrics:", err)
+		os.Exit(1)
+	}
 
 	cm, server := initPulsar(ctx, pCfg)
 	pulseTicker := runPulsar(ctx, server, pCfg.Pulsar)

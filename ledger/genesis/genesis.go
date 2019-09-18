@@ -206,6 +206,8 @@ func (g *Genesis) Start(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	contracts.ContractMigrationAddressShardRefs(g.ContractsConfig.MAShardCount)
+	contracts.ContractPublicKeyShardRefs(g.ContractsConfig.PKShardCount)
 
 	inslog.Info("[genesis] store contracts")
 	err = g.storeContracts(ctx)
@@ -238,7 +240,7 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 
 	// Hint: order matters, because of dependency contracts on each other.
 	states := []insolar.GenesisContractState{
-		contracts.RootDomain(),
+		contracts.RootDomain(g.ContractsConfig.PKShardCount),
 		contracts.NodeDomain(),
 		contracts.GetMemberGenesisContractState(g.ContractsConfig.RootPublicKey, insolar.GenesisNameRootMember, insolar.GenesisNameRootDomain, genesisrefs.ContractRootWallet),
 		contracts.GetMemberGenesisContractState(g.ContractsConfig.MigrationAdminPublicKey, insolar.GenesisNameMigrationAdminMember, insolar.GenesisNameRootDomain, genesisrefs.ContractMigrationWallet),
@@ -277,7 +279,7 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 			insolar.GenesisNameMigrationAdminDeposit,
 			insolar.GenesisNameRootDomain,
 		),
-		contracts.GetMigrationAdminGenesisContractState(g.ContractsConfig.LoсkupPeriodInPulses, g.ContractsConfig.VestingPeriodInPulses, g.ContractsConfig.VestingStepInPulses),
+		contracts.GetMigrationAdminGenesisContractState(g.ContractsConfig.LoсkupPeriodInPulses, g.ContractsConfig.VestingPeriodInPulses, g.ContractsConfig.VestingStepInPulses, g.ContractsConfig.MAShardCount),
 		contracts.GetCostCenterGenesisContractState(),
 	}
 
@@ -399,57 +401,60 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 			membersDeposits,
 		))
 	}
+	if g.ContractsConfig.PKShardCount <= 0 {
+		panic(fmt.Sprintf("[genesis] store contracts failed: setup pk_shard_count parameter, current value %v", g.ContractsConfig.PKShardCount))
+	}
 
 	// Split genesis members by PK shards
-	var MembersByPKShards [insolar.GenesisAmountPublicKeyShards]foundation.StableMap
-	for i := 0; i < insolar.GenesisAmountPublicKeyShards; i++ {
-		MembersByPKShards[i] = make(foundation.StableMap)
+	var membersByPKShards []foundation.StableMap
+	for i := 0; i < g.ContractsConfig.PKShardCount; i++ {
+		membersByPKShards = append(membersByPKShards, make(foundation.StableMap))
 	}
 	trimmedRootPublicKey := foundation.TrimPublicKey(g.ContractsConfig.RootPublicKey)
-	index := foundation.GetShardIndex(trimmedRootPublicKey, insolar.GenesisAmountPublicKeyShards)
-	MembersByPKShards[index][trimmedRootPublicKey] = genesisrefs.ContractRootMember.String()
+	index := foundation.GetShardIndex(trimmedRootPublicKey, g.ContractsConfig.PKShardCount)
+	membersByPKShards[index][trimmedRootPublicKey] = genesisrefs.ContractRootMember.String()
 
 	trimmedMigrationAdminPublicKey := foundation.TrimPublicKey(g.ContractsConfig.MigrationAdminPublicKey)
-	index = foundation.GetShardIndex(trimmedMigrationAdminPublicKey, insolar.GenesisAmountPublicKeyShards)
-	MembersByPKShards[index][trimmedMigrationAdminPublicKey] = genesisrefs.ContractMigrationAdminMember.String()
+	index = foundation.GetShardIndex(trimmedMigrationAdminPublicKey, g.ContractsConfig.PKShardCount)
+	membersByPKShards[index][trimmedMigrationAdminPublicKey] = genesisrefs.ContractMigrationAdminMember.String()
 
-	trimmedFeeAdminPublicKey := foundation.TrimPublicKey(g.ContractsConfig.FeePublicKey)
-	index = foundation.GetShardIndex(trimmedFeeAdminPublicKey, insolar.GenesisAmountPublicKeyShards)
-	MembersByPKShards[index][trimmedFeeAdminPublicKey] = genesisrefs.ContractFeeMember.String()
+	trimmedFeeMemberPublicKey := foundation.TrimPublicKey(g.ContractsConfig.FeePublicKey)
+	index = foundation.GetShardIndex(trimmedFeeMemberPublicKey, g.ContractsConfig.PKShardCount)
+	membersByPKShards[index][trimmedFeeMemberPublicKey] = genesisrefs.ContractFeeMember.String()
 
 	trimmedFundsAndEnterprisePublicKey := foundation.TrimPublicKey(g.ContractsConfig.FundsAndEnterprisePublicKey)
-	index = foundation.GetShardIndex(trimmedFundsAndEnterprisePublicKey, insolar.GenesisAmountPublicKeyShards)
-	MembersByPKShards[index][trimmedFundsAndEnterprisePublicKey] = genesisrefs.ContractEnterpriseMember.String()
+	index = foundation.GetShardIndex(trimmedFundsAndEnterprisePublicKey, g.ContractsConfig.PKShardCount)
+	membersByPKShards[index][trimmedFundsAndEnterprisePublicKey] = genesisrefs.ContractEnterpriseMember.String()
 
 	for i, key := range g.ContractsConfig.MigrationDaemonPublicKeys {
 		trimmedMigrationDaemonPublicKey := foundation.TrimPublicKey(key)
-		index := foundation.GetShardIndex(trimmedMigrationDaemonPublicKey, insolar.GenesisAmountPublicKeyShards)
-		MembersByPKShards[index][trimmedMigrationDaemonPublicKey] = genesisrefs.ContractMigrationDaemonMembers[i].String()
+		index := foundation.GetShardIndex(trimmedMigrationDaemonPublicKey, g.ContractsConfig.PKShardCount)
+		membersByPKShards[index][trimmedMigrationDaemonPublicKey] = genesisrefs.ContractMigrationDaemonMembers[i].String()
 	}
 
 	for i, key := range g.ContractsConfig.NetworkIncentivesPublicKeys {
 		trimmedNetworkIncentivesPublicKey := foundation.TrimPublicKey(key)
-		index := foundation.GetShardIndex(trimmedNetworkIncentivesPublicKey, insolar.GenesisAmountPublicKeyShards)
-		MembersByPKShards[index][trimmedNetworkIncentivesPublicKey] = genesisrefs.ContractNetworkIncentivesMembers[i].String()
+		index := foundation.GetShardIndex(trimmedNetworkIncentivesPublicKey, g.ContractsConfig.PKShardCount)
+		membersByPKShards[index][trimmedNetworkIncentivesPublicKey] = genesisrefs.ContractNetworkIncentivesMembers[i].String()
 	}
 
 	for i, key := range g.ContractsConfig.ApplicationIncentivesPublicKeys {
 		trimmedApplicationIncentivesPublicKey := foundation.TrimPublicKey(key)
-		index := foundation.GetShardIndex(trimmedApplicationIncentivesPublicKey, insolar.GenesisAmountPublicKeyShards)
-		MembersByPKShards[index][trimmedApplicationIncentivesPublicKey] = genesisrefs.ContractApplicationIncentivesMembers[i].String()
+		index := foundation.GetShardIndex(trimmedApplicationIncentivesPublicKey, g.ContractsConfig.PKShardCount)
+		membersByPKShards[index][trimmedApplicationIncentivesPublicKey] = genesisrefs.ContractApplicationIncentivesMembers[i].String()
 	}
 
 	for i, key := range g.ContractsConfig.FoundationPublicKeys {
 		trimmedFoundationPublicKey := foundation.TrimPublicKey(key)
-		index := foundation.GetShardIndex(trimmedFoundationPublicKey, insolar.GenesisAmountPublicKeyShards)
-		MembersByPKShards[index][trimmedFoundationPublicKey] = genesisrefs.ContractFoundationMembers[i].String()
+		index := foundation.GetShardIndex(trimmedFoundationPublicKey, g.ContractsConfig.PKShardCount)
+		membersByPKShards[index][trimmedFoundationPublicKey] = genesisrefs.ContractFoundationMembers[i].String()
 	}
 
 	// Append states for shards
-	for i, name := range insolar.GenesisNamePublicKeyShards {
-		states = append(states, contracts.GetPKShardGenesisContractState(name, MembersByPKShards[i]))
+	for i, name := range genesisrefs.ContractPublicKeyNameShards(g.ContractsConfig.PKShardCount) {
+		states = append(states, contracts.GetPKShardGenesisContractState(name, membersByPKShards[i]))
 	}
-	for i, name := range insolar.GenesisNameMigrationAddressShards {
+	for i, name := range genesisrefs.ContractMigrationAddressNameShards(g.ContractsConfig.MAShardCount) {
 		states = append(states, contracts.GetMigrationShardGenesisContractState(name, g.ContractsConfig.MigrationAddresses[i]))
 	}
 	for _, conf := range states {

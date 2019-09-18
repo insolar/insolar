@@ -15,7 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1567523058037,
+  "iteration": 1568639482582,
   "links": [],
   "panels": [
     {
@@ -58,7 +58,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(insolar_flow_dispatcher_process_latency_bucket{message_type=~\"$type\", instance=~\"$instance\", result=~\"$result\"}[1m]))",
+          "expr": "sum(rate(insolar_flow_dispatcher_process_latency_bucket{message_type=~\"$type\", instance=~\"$instance\", result=~\"$result\", installation=\"$installation\"}[1m]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ result }}",
@@ -146,7 +146,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(insolar_flow_dispatcher_handler_latency_count{message_type=~\"$type\", instance=~\"$instance\", result=~\"$result\"}[1m]))",
+          "expr": "sum(rate(insolar_flow_dispatcher_handler_latency_count{message_type=~\"$type\", instance=~\"$instance\", result=~\"$result\", installation=\"$installation\"}[1m]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ result }}",
@@ -202,10 +202,10 @@
       "color": {
         "cardColor": "#b4ff00",
         "colorScale": "sqrt",
-        "colorScheme": "interpolateOranges",
+        "colorScheme": "interpolateGreens",
         "exponent": 0.2,
         "max": null,
-        "mode": "opacity"
+        "mode": "spectrum"
       },
       "dataFormat": "tsbuckets",
       "gridPos": {
@@ -215,7 +215,7 @@
         "y": 4
       },
       "heatmap": {},
-      "hideZeroBuckets": false,
+      "hideZeroBuckets": true,
       "highlightCards": true,
       "id": 16,
       "legend": {
@@ -226,7 +226,7 @@
       "reverseYBuckets": false,
       "targets": [
         {
-          "expr": "sum(insolar_flow_dispatcher_process_latency_bucket{message_type=~\"$type\", instance=~\"$instance\", result=~\"$result\"}) by (le)",
+          "expr": "sum(increase(insolar_flow_dispatcher_process_latency_bucket{message_type=~\"$type\", instance=~\"$instance\", result=~\"$result\", installation=\"$installation\"}[1m])) by (le)",
           "format": "heatmap",
           "hide": false,
           "intervalFactor": 1,
@@ -266,10 +266,10 @@
       "color": {
         "cardColor": "#b4ff00",
         "colorScale": "sqrt",
-        "colorScheme": "interpolateOranges",
+        "colorScheme": "interpolateGreens",
         "exponent": 0.2,
         "max": null,
-        "mode": "opacity"
+        "mode": "spectrum"
       },
       "dataFormat": "tsbuckets",
       "gridPos": {
@@ -279,7 +279,7 @@
         "y": 4
       },
       "heatmap": {},
-      "hideZeroBuckets": false,
+      "hideZeroBuckets": true,
       "highlightCards": true,
       "id": 18,
       "legend": {
@@ -290,7 +290,7 @@
       "reverseYBuckets": false,
       "targets": [
         {
-          "expr": "sum(insolar_flow_dispatcher_handler_latency_bucket{message_type=~\"$type\", instance=~\"$instance\", result=~\"$result\"}) by (le)",
+          "expr": "sum(increase(insolar_flow_dispatcher_handler_latency_bucket{message_type=~\"$type\", instance=~\"$instance\", result=~\"$result\", installation=\"$installation\"}[1m])) by (le)",
           "format": "heatmap",
           "hide": false,
           "intervalFactor": 1,
@@ -362,7 +362,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(irate(insolar_flow_dispatcher_process_latency_count{message_type=~\"$type\", instance=~\"$instance\", result=\"cancelled\"}[1m]))",
+          "expr": "sum(irate(insolar_flow_dispatcher_process_latency_count{message_type=~\"$type\", instance=~\"$instance\", result=\"cancelled\", installation=\"$installation\"}[1m]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ job }}",
@@ -451,7 +451,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(irate(insolar_flow_dispatcher_handler_latency_count{message_type=~\"$type\", instance=~\"$instance\", result=\"cancelled\"}[1m]))",
+          "expr": "sum(irate(insolar_flow_dispatcher_handler_latency_count{message_type=~\"$type\", instance=~\"$instance\", result=\"cancelled\", installation=\"$installation\"}[1m]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ job }}",
@@ -501,11 +501,39 @@
       }
     }
   ],
+  "refresh": "10s",
   "schemaVersion": 19,
   "style": "dark",
-  "tags": [],
+  "tags": [
+    "INS"
+  ],
   "templating": {
     "list": [
+      {
+        "allValue": null,
+        "current": {
+          "text": "local",
+          "value": "local"
+        },
+        "datasource": "prometheus",
+        "definition": "label_values(insolar_light_last_sent_pulse, installation)",
+        "hide": 0,
+        "includeAll": false,
+        "label": null,
+        "multi": false,
+        "name": "installation",
+        "options": [],
+        "query": "label_values(insolar_light_last_sent_pulse, installation)",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
       {
         "allValue": null,
         "current": {
@@ -534,7 +562,7 @@
       {
         "allValue": null,
         "current": {
-          "tags": [],
+          "selected": true,
           "text": "All",
           "value": "$__all"
         },
@@ -586,10 +614,10 @@
       {
         "allValue": null,
         "current": {
-          "tags": [],
-          "text": "ok",
+          "text": "ok + cancelled",
           "value": [
-            "ok"
+            "ok",
+            "cancelled"
           ]
         },
         "datasource": "prometheus",
@@ -606,7 +634,7 @@
             "value": "ok"
           },
           {
-            "selected": false,
+            "selected": true,
             "text": "cancelled",
             "value": "cancelled"
           }

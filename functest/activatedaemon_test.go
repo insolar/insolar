@@ -26,7 +26,7 @@ import (
 )
 
 func TestActivateDaemonDoubleCall(t *testing.T) {
-	activeDaemons := activateDaemons(t, countThreeActiveDaemon)
+	activeDaemons := activateDaemons(t, countTwoActiveDaemon)
 	for _, daemon := range activeDaemons {
 		_, _, err := makeSignedRequest(launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.activateDaemon",
 			map[string]interface{}{"reference": daemon.Ref})
@@ -38,7 +38,7 @@ func TestActivateDaemonDoubleCall(t *testing.T) {
 }
 
 func TestActivateDeactivateDaemon(t *testing.T) {
-	activeDaemons := activateDaemons(t, countThreeActiveDaemon)
+	activeDaemons := activateDaemons(t, countTwoActiveDaemon)
 	for _, daemon := range activeDaemons {
 		_, err := signedRequest(t, launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.deactivateDaemon",
 			map[string]interface{}{"reference": daemon.Ref})
@@ -68,7 +68,7 @@ func TestActivateDeactivateDaemon(t *testing.T) {
 	}
 }
 func TestDeactivateDaemonDoubleCall(t *testing.T) {
-	activeDaemons := activateDaemons(t, countThreeActiveDaemon)
+	activeDaemons := activateDaemons(t, countTwoActiveDaemon)
 	for _, daemon := range activeDaemons {
 		_, _, err := makeSignedRequest(launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.deactivateDaemon",
 			map[string]interface{}{"reference": daemon.Ref})

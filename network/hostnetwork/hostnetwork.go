@@ -204,6 +204,10 @@ func (hn *hostNetwork) handleRequest(ctx context.Context, p *packet.ReceivedPack
 		return
 	}
 
+	if response == nil {
+		return
+	}
+
 	responsePacket := response.(*packet.Packet)
 	responsePacket.RequestID = p.RequestID
 	err = SendPacket(ctx, hn.pool, responsePacket)

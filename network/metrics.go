@@ -63,19 +63,17 @@ var (
 )
 
 var (
-	// PacketsSent urrent consensus transport packets sent counter.
-	PacketsSent = stats.Int64("consensus_packets_sent", "Current consensus transport packets sent counter", stats.UnitDimensionless)
-	// PacketsRecv current consensus transport packets recv counter.
-	PacketsRecv = stats.Int64("consensus_packets_recv", "Current consensus transport packets recv counter", stats.UnitDimensionless)
+	// ConsensusPacketsSent consensus sent packets size.
+	ConsensusPacketsSent = stats.Int64("consensus_packets_sent", "Consensus sent packets size", stats.UnitBytes)
+	// ConsensusPacketsRecv consensus received packets size.
+	ConsensusPacketsRecv = stats.Int64("consensus_packets_recv", "Consensus received packets size", stats.UnitBytes)
+	// ConsensusPacketsRecvBad consensus received packets size.
+	ConsensusPacketsRecvBad = stats.Int64("consensus_packets_recv_bad", "Consensus received packets size", stats.UnitBytes)
+
 	// DeclinedClaims consensus claims declined counter.
 	DeclinedClaims = stats.Int64("consensus_claims_declined", "Consensus claims declined counter", stats.UnitDimensionless)
-	// SentSize consensus sent packets size.
-	SentSize = stats.Int64("consensus_packets_sent_bytes", "Consensus sent packets size", stats.UnitDimensionless)
-	// RecvSize consensus received packets size.
-	RecvSize = stats.Int64("consensus_packets_recv_bytes", "Consensus received packets size", stats.UnitDimensionless)
 	// FailedCheckProof consensus validate proof fails.
 	FailedCheckProof = stats.Int64("consensus_proof_failed", "Consensus validate proof fails", stats.UnitDimensionless)
-
 	// ActiveNodes active nodes count after consensus.
 	ActiveNodes = stats.Int64("consensus_active_nodes_count", "Active nodes count after consensus", stats.UnitDimensionless)
 )
@@ -84,16 +82,16 @@ func init() {
 	commontags := []tag.Key{TagPhase}
 	err := view.Register(
 		&view.View{
-			Name:        PacketsSent.Name(),
-			Description: PacketsSent.Description(),
-			Measure:     PacketsSent,
+			Name:        ConsensusPacketsSent.Name(),
+			Description: ConsensusPacketsSent.Description(),
+			Measure:     ConsensusPacketsSent,
 			Aggregation: view.Count(),
 			TagKeys:     commontags,
 		},
 		&view.View{
-			Name:        PacketsRecv.Name(),
-			Description: PacketsRecv.Description(),
-			Measure:     PacketsRecv,
+			Name:        ConsensusPacketsRecv.Name(),
+			Description: ConsensusPacketsRecv.Description(),
+			Measure:     ConsensusPacketsRecv,
 			Aggregation: view.Count(),
 			TagKeys:     commontags,
 		},
@@ -104,27 +102,36 @@ func init() {
 			Aggregation: view.Count(),
 		},
 		&view.View{
-			Name:        SentSize.Name(),
-			Description: SentSize.Description(),
-			Measure:     SentSize,
-			Aggregation: view.Count(),
+			Name:        ConsensusPacketsSent.Name() + "_bytes",
+			Measure:     ConsensusPacketsSent,
+			Aggregation: view.Sum(),
+			TagKeys:     commontags,
 		},
 		&view.View{
-			Name:        RecvSize.Name(),
-			Description: RecvSize.Description(),
-			Measure:     RecvSize,
+			Name:        ConsensusPacketsSent.Name() + "_count",
+			Measure:     ConsensusPacketsSent,
 			Aggregation: view.Count(),
+			TagKeys:     commontags,
+		},
+		&view.View{
+			Name:        ConsensusPacketsRecv.Name() + "_bytes",
+			Measure:     ConsensusPacketsRecv,
+			Aggregation: view.Sum(),
+			TagKeys:     commontags,
+		},
+		&view.View{
+			Name:        ConsensusPacketsRecv.Name() + "_count",
+			Measure:     ConsensusPacketsRecv,
+			Aggregation: view.Count(),
+			TagKeys:     commontags,
 		},
 		&view.View{
 			Name:        FailedCheckProof.Name(),
-			Description: FailedCheckProof.Description(),
 			Measure:     FailedCheckProof,
 			Aggregation: view.Count(),
 		},
-
 		&view.View{
 			Name:        ActiveNodes.Name(),
-			Description: ActiveNodes.Description(),
 			Measure:     ActiveNodes,
 			Aggregation: view.LastValue(),
 		},

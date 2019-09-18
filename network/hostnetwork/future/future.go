@@ -131,7 +131,6 @@ func (f *future) WaitResponse(duration time.Duration) (network.ReceivedPacket, e
 func (f *future) Cancel() {
 	if atomic.CompareAndSwapUint32(&f.finished, 0, 1) {
 		f.finish()
-		metrics.NetworkFutures.WithLabelValues(f.request.GetType().String()).Dec()
 	}
 }
 

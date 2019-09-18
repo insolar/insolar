@@ -29,7 +29,11 @@ var (
 		stats.UnitDimensionless,
 	)
 
-	statAbandonedRequests = stats.Int64("heavy_abandones", "Amount of abandoned requests on heavy", stats.UnitDimensionless)
+	statAbandonedRequests = stats.Int64(
+		"requests_abandoned",
+		"Amount of abandoned requests on heavy",
+		stats.UnitDimensionless,
+	)
 )
 
 func init() {

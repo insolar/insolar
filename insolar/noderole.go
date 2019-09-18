@@ -59,3 +59,7 @@ func (nr StaticRole) String() string {
 
 	return "unknown"
 }
+
+func (nr StaticRole) Equal(anr StaticRole) bool {
+	return nr == anr
+}

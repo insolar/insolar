@@ -63,7 +63,6 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork"
-	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 	"github.com/insolar/insolar/network/transport"
 	mock "github.com/insolar/insolar/testutils/network"
@@ -105,7 +104,7 @@ func TestDistributor_Distribute(t *testing.T) {
 		log.Info("handle Pulse")
 		pulse := r.GetRequest().GetPulse()
 		assert.EqualValues(t, PULSENUMBER, pulse.Pulse.PulseNumber)
-		return n1.BuildResponse(ctx, r, &packet.BasicResponse{Success: true}), nil
+		return nil, nil
 	}
 	n1.RegisterRequestHandler(types.Pulse, handler)
 

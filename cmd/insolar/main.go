@@ -18,11 +18,12 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
 	"os"
-	"strconv"
 
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/insolar"
@@ -38,9 +39,10 @@ var (
 )
 
 func main() {
-	var sendURL string
+	var sendURL, adminURL string
 	addURLFlag := func(fs *pflag.FlagSet) {
 		fs.StringVarP(&sendURL, "url", "u", defaultURL(), "API URL")
+		fs.StringVarP(&adminURL, "admin-url", "a", defaultAdminURL(), "ADMIN URL")
 	}
 
 	var rootCmd = &cobra.Command{
@@ -111,7 +113,7 @@ func main() {
 		Use:   "send-request",
 		Short: "sends request",
 		Run: func(cmd *cobra.Command, args []string) {
-			sendRequest(sendURL, rootKeysFile, paramsPath, rootAsCaller, maAsCaller)
+			sendRequest(sendURL, adminURL, rootKeysFile, paramsPath, rootAsCaller, maAsCaller)
 		},
 	}
 	addURLFlag(sendRequestCmd.Flags())
@@ -185,6 +187,13 @@ func defaultURL() string {
 	if u := os.Getenv("INSOLAR_API_URL"); u != "" {
 		return u
 	}
+	return "http://localhost:19101/api/rpc"
+}
+
+func defaultAdminURL() string {
+	if u := os.Getenv("INSOLAR_ADMIN_URL"); u != "" {
+		return u
+	}
 	return "http://localhost:19001/admin-api/rpc"
 }
 
@@ -255,12 +264,21 @@ func mustWrite(out io.Writer, data string) {
 	check("Can't write data to output", err)
 }
 
+func randomHex(n int) (string, error) {
+	bytes := make([]byte, n)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(bytes), nil
+}
+
 func generateMigrationAddresses() {
 	maLen := 20000
 	ma := make([]string, maLen)
 
 	for i := 0; i < maLen; i++ {
-		ma[i] = "fake_ma_" + strconv.Itoa(i)
+		ethAddr, _ := randomHex(20)
+		ma[i] = "0x" + ethAddr
 	}
 
 	result, err := json.MarshalIndent(ma, "", "    ")
@@ -290,14 +308,14 @@ func generateKeysPair() {
 	mustWrite(os.Stdout, string(result))
 }
 
-func sendRequest(sendURL string, rootKeysFile string, paramsPath string, rootAsCaller bool, maAsCaller bool) {
+func sendRequest(sendURL string, adminURL, rootKeysFile string, paramsPath string, rootAsCaller bool, maAsCaller bool) {
 	requester.SetVerbose(verbose)
 
 	userCfg, err := requester.ReadUserConfigFromFile(rootKeysFile)
 	check("[ sendRequest ]", err)
 
 	if userCfg.Caller == "" {
-		info, err := requester.Info(sendURL)
+		info, err := requester.Info(adminURL)
 		check("[ sendRequest ]", err)
 		if rootAsCaller {
 			userCfg.Caller = info.RootMember

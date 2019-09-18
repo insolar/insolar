@@ -240,7 +240,7 @@ func TestSendWithSeed_WithBadUrl(t *testing.T) {
 func TestSendWithSeed_NilConfigs(t *testing.T) {
 	ctx := inslogger.ContextWithTrace(context.Background(), "TestSendWithSeed_NilConfigs")
 	_, err := SendWithSeed(ctx, URL, nil, nil, TESTSEED)
-	require.EqualError(t, err, "[ SendWithSeed ] Configs must be initialized")
+	require.EqualError(t, err, "[ SendWithSeed ] Problem with creating target request: configs must be initialized")
 }
 
 func TestInfo(t *testing.T) {

@@ -67,7 +67,6 @@ func (w *SagaTestWallet) RegularMethodAfterRollback(amount int) error {
 // Make sure proxy doesn't contain:
 // 1. Rollback method of the saga
 // 2. AsImmutable-versions of Accept/Rollback methods
-// 3. NoWait-versions of Accept/Rollback methods
 func (s *SagasSuite) TestSagaAdditionalMethodsAreMissingInProxy() {
 	tmpDir, err := ioutil.TempDir("", "test-")
 	s.NoError(err)
@@ -87,14 +86,11 @@ func (s *SagasSuite) TestSagaAdditionalMethodsAreMissingInProxy() {
 
 	s.Contains(proxyCode, "TheAcceptMethod")
 	s.NotContains(proxyCode, "TheRollbackMethod")
-	s.NotContains(proxyCode, "TheAcceptMethodNoWait")
-	s.NotContains(proxyCode, "TheRollbackMethodNoWait")
 	s.NotContains(proxyCode, "TheAcceptMethodAsImmutable")
 	s.NotContains(proxyCode, "TheRollbackMethodAsImmutable")
 
 	// Make sure that a regular method after the rollback method was processes as usual
 	s.Contains(proxyCode, "RegularMethodAfterRollback")
-	s.Contains(proxyCode, "RegularMethodAfterRollbackNoWait")
 	s.Contains(proxyCode, "RegularMethodAfterRollbackAsImmutable")
 }
 
@@ -414,7 +410,6 @@ func (w *SagaTestWallet) TheAcceptMethod(amount int) error {
 	wrapperCode := bufWrapper.String()
 
 	s.Contains(wrapperCode, "TheAcceptMethod")
-	s.NotContains(wrapperCode, "TheAcceptMethodNoWait")
 	s.NotContains(wrapperCode, "TheAcceptMethodAsImmutable")
 
 	var bufProxy bytes.Buffer
@@ -423,7 +418,6 @@ func (w *SagaTestWallet) TheAcceptMethod(amount int) error {
 	proxyCode := bufProxy.String()
 
 	s.Contains(proxyCode, "TheAcceptMethod")
-	s.NotContains(proxyCode, "TheAcceptMethodNoWait")
 	s.NotContains(proxyCode, "TheAcceptMethodAsImmutable")
 }
 

@@ -188,6 +188,7 @@ type RoundControllerFactory interface {
 
 type LocalNodeConfiguration interface {
 	GetConsensusTimings(nextPulseDelta uint16) RoundTimings
+	GetEphemeralTimings(nextPulseDelta uint16) RoundTimings
 	GetSecretKeyStore() cryptkit.SecretKeyStore
 	GetParentContext() context.Context
 	GetNodeCountHint() int

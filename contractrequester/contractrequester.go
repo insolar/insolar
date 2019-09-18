@@ -26,7 +26,9 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
 
+	"github.com/insolar/insolar/contractrequester/metrics"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/bus/meta"
@@ -40,6 +42,7 @@ import (
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
 )
@@ -129,14 +132,25 @@ func (cr *ContractRequester) Call(
 			Arguments:    args,
 			APIRequestID: utils.TraceID(ctx),
 			APINode:      cr.JetCoordinator.Me(),
-			Immutable:    false,
+			Immutable:    true,
 		},
 	}
+
+	logger := inslogger.FromContext(ctx)
+	// Do not change this log! It is used for message type statistics.
+	logger.WithFields(map[string]interface{}{
+		"stat_type": "cr_call_started",
+	}).Info("stat_log_message")
 
 	routResult, ref, err := cr.SendRequest(ctx, msg)
 	if err != nil {
 		return nil, ref, errors.Wrap(err, "[ ContractRequester::Call ] Can't route call")
 	}
+
+	// Do not change this log! It is used for message type statistics.
+	logger.WithFields(map[string]interface{}{
+		"stat_type": "cr_call_returned",
+	}).Info("stat_log_message")
 
 	return routResult, ref, nil
 }
@@ -187,11 +201,17 @@ func (cr *ContractRequester) createResultWaiter(
 
 func (cr *ContractRequester) SendRequest(ctx context.Context, inMsg insolar.Payload) (insolar.Reply, *insolar.Reference, error) {
 	msg := inMsg.(*payload.CallMethod)
-
+	sendingStarted := time.Now()
+	ctx = insmetrics.InsertTag(ctx, metrics.CallMethodName, msg.Request.Method)
+	ctx = insmetrics.InsertTag(ctx, metrics.CallReturnMode, msg.Request.ReturnMode.String())
 	ctx, span := instracer.StartSpan(ctx, "ContractRequester.SendRequest")
-	defer span.End()
+	defer func(ctx context.Context) {
+		stats.Record(ctx,
+			metrics.SendMessageTiming.M(float64(time.Since(sendingStarted).Nanoseconds())/1e6))
+		span.End()
+	}(ctx)
 
-	async := msg.Request.ReturnMode == record.ReturnNoWait
+	async := msg.Request.ReturnMode == record.ReturnSaga
 
 	if msg.Request.Nonce == 0 {
 		msg.Request.Nonce = randomUint64()
@@ -371,16 +391,20 @@ func (cr *ContractRequester) ReceiveResult(ctx context.Context, msg *message.Mes
 	payloadMeta := &payload.Meta{}
 	err = payloadMeta.Unmarshal(msg.Payload)
 	if err != nil {
+		stats.Record(ctx, metrics.HandlingParsingError.M(1))
 		return err
 	}
 
 	err = cr.handleMessage(ctx, payloadMeta)
 	if err != nil {
 		bus.ReplyError(ctx, cr.Sender, *payloadMeta, err)
-		return nil
+		ctx = insmetrics.InsertTag(ctx, metrics.TagFinishedWithError, errors.Cause(err).Error())
+	} else {
+		cr.Sender.Reply(ctx, *payloadMeta, bus.ReplyAsMessage(ctx, &reply.OK{}))
 	}
-	cr.Sender.Reply(ctx, *payloadMeta, bus.ReplyAsMessage(ctx, &reply.OK{}))
-	return nil
+	stats.Record(ctx, metrics.HandleFinished.M(1))
+
+	return err
 }
 
 func (cr *ContractRequester) handleMessage(ctx context.Context, payloadMeta *payload.Meta) error {

@@ -94,7 +94,7 @@ func genIncomingRequest() (*record.IncomingRequest, insolar.Reference) {
 		Caller:          gen.Reference(),
 		CallerPrototype: gen.Reference(),
 		Nonce:           0,
-		ReturnMode:      record.ReturnNoWait,
+		ReturnMode:      record.ReturnSaga,
 		Immutable:       false,
 		Base:            &baseRef,
 		Object:          &objectRef,

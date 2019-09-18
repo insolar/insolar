@@ -20,6 +20,7 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
 )
@@ -37,7 +38,6 @@ type DBRollback struct {
 }
 
 func NewDBRollback(jetKeeper JetKeeper, dbs ...headTruncater) *DBRollback {
-
 	return &DBRollback{
 		jetKeeper: jetKeeper,
 		dbs:       dbs,
@@ -47,18 +47,20 @@ func NewDBRollback(jetKeeper JetKeeper, dbs ...headTruncater) *DBRollback {
 func (d *DBRollback) Start(ctx context.Context) error {
 	lastSyncPulseNumber := d.jetKeeper.TopSyncPulse()
 
+	inslogger.FromContext(ctx).Info("db rollback starts. topSyncPulse: ", lastSyncPulseNumber)
+
 	nextPulse := lastSyncPulseNumber + 1
 
 	for idx, db := range d.dbs {
+		err := db.TruncateHead(ctx, nextPulse)
+		if err != nil {
+			return errors.Wrapf(err, "can't truncate %d db since pulse: %d", idx, nextPulse)
+		}
+
 		if indexDB, ok := db.(object.IndexModifier); ok {
 			if err := indexDB.UpdateLastKnownPulse(ctx, lastSyncPulseNumber); err != nil {
 				return errors.Wrap(err, "can't update last sync pulse")
 			}
-		}
-
-		err := db.TruncateHead(ctx, nextPulse)
-		if err != nil {
-			return errors.Wrapf(err, "can't truncate %d db since pulse: %d", idx, nextPulse)
 		}
 	}
 

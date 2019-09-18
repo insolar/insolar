@@ -20,10 +20,12 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/logicrunner/metrics"
 )
 
 func checkPayloadStillExecuting(msg payload.StillExecuting) error {
@@ -64,8 +66,11 @@ func (h *HandleStillExecuting) Present(ctx context.Context, f flow.Flow) error {
 		return errors.Wrap(err, "failed to unmarshal message")
 	}
 
-	ctx, logger := inslogger.WithField(ctx, "object", message.ObjectRef.String())
-	logger.Debug("handling still executing message")
+	ctx, logger := inslogger.WithFields(ctx, map[string]interface{}{
+		"object": message.ObjectRef.String(),
+		"sender": h.Message.Sender.String(),
+	})
+	logger.Debug("handle StillExecuting message")
 
 	if err := checkPayloadStillExecuting(message); err != nil {
 		return nil
@@ -73,7 +78,7 @@ func (h *HandleStillExecuting) Present(ctx context.Context, f flow.Flow) error {
 
 	done, err := h.dep.WriteAccessor.Begin(ctx, flow.Pulse(ctx))
 	if err != nil {
-		logger.Warn("late still executing message, ignoring: ", err.Error())
+		logger.Warn("late StillExecuting message, ignoring: ", err.Error())
 		return nil
 	}
 	defer done()
@@ -81,7 +86,13 @@ func (h *HandleStillExecuting) Present(ctx context.Context, f flow.Flow) error {
 	h.dep.ResultsMatcher.AddStillExecution(ctx, message)
 
 	broker := h.dep.StateStorage.UpsertExecutionState(message.ObjectRef)
-	broker.PrevExecutorStillExecuting(ctx)
+	err = broker.PrevExecutorStillExecuting(ctx)
+	if err != nil {
+		logger.Warn(err)
+		if err == ErrNotInPending {
+			stats.Record(ctx, metrics.StillExecutingAlreadyExecuting.M(1))
+		}
+	}
 
 	return nil
 }

@@ -15,7 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1567522953918,
+  "iteration": 1568639480534,
   "links": [],
   "panels": [
     {
@@ -59,7 +59,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "insolar_consensus_active_nodes_count{instance=~\"$node\", job=~\"$role\"}",
+          "expr": "insolar_consensus_active_nodes_count{instance=~\"$instance\", job=~\"$role\", installation=\"$installation\"}",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -148,12 +148,12 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(insolar_consensus_packets_recv_bytes{instance=~\"$node\", role=~\"$role\"}[1m]))",
+          "expr": "sum(rate(insolar_consensus_packets_recv_bytes{instance=~\"$instance\", role=~\"$role\", installation=\"$installation\"}[1m]))",
           "legendFormat": "recv",
           "refId": "A"
         },
         {
-          "expr": "-sum(rate(insolar_consensus_packets_sent_bytes{instance=~\"$node\", role=~\"$role\"}[1m]))",
+          "expr": "-sum(rate(insolar_consensus_packets_sent_bytes{instance=~\"$instance\", role=~\"$role\", installation=\"$installation\"}[1m]))",
           "legendFormat": "sent",
           "refId": "B"
         }
@@ -201,11 +201,39 @@
       }
     }
   ],
+  "refresh": "10s",
   "schemaVersion": 19,
   "style": "dark",
-  "tags": [],
+  "tags": [
+    "INS"
+  ],
   "templating": {
     "list": [
+      {
+        "allValue": null,
+        "current": {
+          "text": "local",
+          "value": "local"
+        },
+        "datasource": "prometheus",
+        "definition": "label_values(insolar_light_last_sent_pulse, installation)",
+        "hide": 0,
+        "includeAll": false,
+        "label": null,
+        "multi": false,
+        "name": "installation",
+        "options": [],
+        "query": "label_values(insolar_light_last_sent_pulse, installation)",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
       {
         "allValue": null,
         "current": {
@@ -216,9 +244,9 @@
         "definition": "label_values(insolar_consensus_active_nodes_count, instance)",
         "hide": 0,
         "includeAll": true,
-        "label": "Node",
+        "label": "",
         "multi": true,
-        "name": "node",
+        "name": "instance",
         "options": [],
         "query": "label_values(insolar_consensus_active_nodes_count, instance)",
         "refresh": 1,
@@ -261,7 +289,7 @@
     ]
   },
   "time": {
-    "from": "now-30m",
+    "from": "now-15m",
     "to": "now"
   },
   "timepicker": {

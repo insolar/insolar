@@ -20,11 +20,14 @@ import (
 	"context"
 	"sync"
 
+	"go.opencensus.io/stats"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/logicrunner/metrics"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/logicrunner.ResultMatcher -o ./ -s _mock.go -g
@@ -97,6 +100,7 @@ func (rm *resultsMatcher) Clear(ctx context.Context) {
 	rm.executionNodes = make(map[insolar.Reference]insolar.Reference)
 
 	logger := inslogger.FromContext(ctx)
+	stats.Record(ctx, metrics.ResultsMatcherDroppedResults.M(int64(len(rm.unwantedResponses))))
 	for reqRef := range rm.unwantedResponses {
 		logger.Warn("not claimed response to request ", reqRef.String(), ", not confirmed pending?")
 	}
@@ -104,6 +108,7 @@ func (rm *resultsMatcher) Clear(ctx context.Context) {
 }
 
 func (rm *resultsMatcher) send(ctx context.Context, msg payload.ReturnResults, receiver insolar.Reference) {
+	stats.Record(ctx, metrics.ResultsMatcherSentResults.M(1))
 	logger := inslogger.FromContext(ctx)
 
 	logger.Debug("resending result of request ", msg.RequestRef.String(), " to ", receiver.String())

@@ -26,7 +26,7 @@ import (
 
 func oneSimpleRequest(insSDK *sdk.SDK) {
 	fmt.Println("Try to create new member:")
-	m, traceID, err := insSDK.CreateMember()
+	m, traceID, err := insSDK.CreateMember("")
 	check("Can not create member, error: ", err)
 	fmt.Println("Success! New member ref: ", m.Reference, ". TraceId: ", traceID)
 	fmt.Print("oneSimpleRequest done just fine\n\n")
@@ -35,7 +35,7 @@ func oneSimpleRequest(insSDK *sdk.SDK) {
 func severalSimpleRequestToRootMember(insSDK *sdk.SDK) {
 	fmt.Println("Try to create several new members:")
 	for i := 0; i < 10; i++ {
-		m, traceID, err := insSDK.CreateMember()
+		m, traceID, err := insSDK.CreateMember("")
 		check("Can not create member, error: ", err)
 		fmt.Println("Success! New member ref: ", m.Reference, ". TraceId: ", traceID)
 	}
@@ -47,7 +47,7 @@ func severalSimpleRequestToDifferentMembers(insSDK *sdk.SDK) {
 	fmt.Println("Creating some members for transfer ...")
 	var members []*sdk.Member
 	for i := 0; i < 20; i++ {
-		m, traceID, err := insSDK.CreateMember()
+		m, traceID, err := insSDK.CreateMember("")
 		check("Can not create member, error: ", err)
 		members = append(members, m)
 		fmt.Println("Success! New member ref: ", m.Reference, ". TraceId: ", traceID)
@@ -68,7 +68,7 @@ func severalParallelRequestToRootMember(insSDK *sdk.SDK) {
 	for i := 0; i < 10; i++ {
 		go func() {
 			defer wg.Done()
-			m, traceID, err := insSDK.CreateMember()
+			m, traceID, err := insSDK.CreateMember("")
 			check("Can not create member, error: ", err)
 			fmt.Println("Success! New member ref: ", m.Reference, ". TraceId: ", traceID)
 		}()
@@ -82,7 +82,7 @@ func severalParallelRequestToDifferentMembers(insSDK *sdk.SDK) {
 	fmt.Println("Creating some members for transfer ...")
 	var members []*sdk.Member
 	for i := 0; i < 20; i++ {
-		m, traceID, err := insSDK.CreateMember()
+		m, traceID, err := insSDK.CreateMember("")
 		check("Can not create member, error: ", err)
 		fmt.Println("Success! New member ref: ", m.Reference, ". TraceId: ", traceID)
 		members = append(members, m)

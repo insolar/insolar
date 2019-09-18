@@ -90,7 +90,7 @@ type ExecutionBrokerIMock struct {
 	beforePrevExecutorSentPendingFinishedCounter uint64
 	PrevExecutorSentPendingFinishedMock          mExecutionBrokerIMockPrevExecutorSentPendingFinished
 
-	funcPrevExecutorStillExecuting          func(ctx context.Context)
+	funcPrevExecutorStillExecuting          func(ctx context.Context) (err error)
 	inspectFuncPrevExecutorStillExecuting   func(ctx context.Context)
 	afterPrevExecutorStillExecutingCounter  uint64
 	beforePrevExecutorStillExecutingCounter uint64
@@ -2455,15 +2455,20 @@ type mExecutionBrokerIMockPrevExecutorStillExecuting struct {
 
 // ExecutionBrokerIMockPrevExecutorStillExecutingExpectation specifies expectation struct of the ExecutionBrokerI.PrevExecutorStillExecuting
 type ExecutionBrokerIMockPrevExecutorStillExecutingExpectation struct {
-	mock   *ExecutionBrokerIMock
-	params *ExecutionBrokerIMockPrevExecutorStillExecutingParams
-
+	mock    *ExecutionBrokerIMock
+	params  *ExecutionBrokerIMockPrevExecutorStillExecutingParams
+	results *ExecutionBrokerIMockPrevExecutorStillExecutingResults
 	Counter uint64
 }
 
 // ExecutionBrokerIMockPrevExecutorStillExecutingParams contains parameters of the ExecutionBrokerI.PrevExecutorStillExecuting
 type ExecutionBrokerIMockPrevExecutorStillExecutingParams struct {
 	ctx context.Context
+}
+
+// ExecutionBrokerIMockPrevExecutorStillExecutingResults contains results of the ExecutionBrokerI.PrevExecutorStillExecuting
+type ExecutionBrokerIMockPrevExecutorStillExecutingResults struct {
+	err error
 }
 
 // Expect sets up expected params for ExecutionBrokerI.PrevExecutorStillExecuting
@@ -2498,7 +2503,7 @@ func (mmPrevExecutorStillExecuting *mExecutionBrokerIMockPrevExecutorStillExecut
 }
 
 // Return sets up results that will be returned by ExecutionBrokerI.PrevExecutorStillExecuting
-func (mmPrevExecutorStillExecuting *mExecutionBrokerIMockPrevExecutorStillExecuting) Return() *ExecutionBrokerIMock {
+func (mmPrevExecutorStillExecuting *mExecutionBrokerIMockPrevExecutorStillExecuting) Return(err error) *ExecutionBrokerIMock {
 	if mmPrevExecutorStillExecuting.mock.funcPrevExecutorStillExecuting != nil {
 		mmPrevExecutorStillExecuting.mock.t.Fatalf("ExecutionBrokerIMock.PrevExecutorStillExecuting mock is already set by Set")
 	}
@@ -2506,12 +2511,12 @@ func (mmPrevExecutorStillExecuting *mExecutionBrokerIMockPrevExecutorStillExecut
 	if mmPrevExecutorStillExecuting.defaultExpectation == nil {
 		mmPrevExecutorStillExecuting.defaultExpectation = &ExecutionBrokerIMockPrevExecutorStillExecutingExpectation{mock: mmPrevExecutorStillExecuting.mock}
 	}
-
+	mmPrevExecutorStillExecuting.defaultExpectation.results = &ExecutionBrokerIMockPrevExecutorStillExecutingResults{err}
 	return mmPrevExecutorStillExecuting.mock
 }
 
 //Set uses given function f to mock the ExecutionBrokerI.PrevExecutorStillExecuting method
-func (mmPrevExecutorStillExecuting *mExecutionBrokerIMockPrevExecutorStillExecuting) Set(f func(ctx context.Context)) *ExecutionBrokerIMock {
+func (mmPrevExecutorStillExecuting *mExecutionBrokerIMockPrevExecutorStillExecuting) Set(f func(ctx context.Context) (err error)) *ExecutionBrokerIMock {
 	if mmPrevExecutorStillExecuting.defaultExpectation != nil {
 		mmPrevExecutorStillExecuting.mock.t.Fatalf("Default expectation is already set for the ExecutionBrokerI.PrevExecutorStillExecuting method")
 	}
@@ -2524,8 +2529,29 @@ func (mmPrevExecutorStillExecuting *mExecutionBrokerIMockPrevExecutorStillExecut
 	return mmPrevExecutorStillExecuting.mock
 }
 
+// When sets expectation for the ExecutionBrokerI.PrevExecutorStillExecuting which will trigger the result defined by the following
+// Then helper
+func (mmPrevExecutorStillExecuting *mExecutionBrokerIMockPrevExecutorStillExecuting) When(ctx context.Context) *ExecutionBrokerIMockPrevExecutorStillExecutingExpectation {
+	if mmPrevExecutorStillExecuting.mock.funcPrevExecutorStillExecuting != nil {
+		mmPrevExecutorStillExecuting.mock.t.Fatalf("ExecutionBrokerIMock.PrevExecutorStillExecuting mock is already set by Set")
+	}
+
+	expectation := &ExecutionBrokerIMockPrevExecutorStillExecutingExpectation{
+		mock:   mmPrevExecutorStillExecuting.mock,
+		params: &ExecutionBrokerIMockPrevExecutorStillExecutingParams{ctx},
+	}
+	mmPrevExecutorStillExecuting.expectations = append(mmPrevExecutorStillExecuting.expectations, expectation)
+	return expectation
+}
+
+// Then sets up ExecutionBrokerI.PrevExecutorStillExecuting return parameters for the expectation previously defined by the When method
+func (e *ExecutionBrokerIMockPrevExecutorStillExecutingExpectation) Then(err error) *ExecutionBrokerIMock {
+	e.results = &ExecutionBrokerIMockPrevExecutorStillExecutingResults{err}
+	return e.mock
+}
+
 // PrevExecutorStillExecuting implements ExecutionBrokerI
-func (mmPrevExecutorStillExecuting *ExecutionBrokerIMock) PrevExecutorStillExecuting(ctx context.Context) {
+func (mmPrevExecutorStillExecuting *ExecutionBrokerIMock) PrevExecutorStillExecuting(ctx context.Context) (err error) {
 	mm_atomic.AddUint64(&mmPrevExecutorStillExecuting.beforePrevExecutorStillExecutingCounter, 1)
 	defer mm_atomic.AddUint64(&mmPrevExecutorStillExecuting.afterPrevExecutorStillExecutingCounter, 1)
 
@@ -2543,7 +2569,7 @@ func (mmPrevExecutorStillExecuting *ExecutionBrokerIMock) PrevExecutorStillExecu
 	for _, e := range mmPrevExecutorStillExecuting.PrevExecutorStillExecutingMock.expectations {
 		if minimock.Equal(e.params, params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
-			return
+			return e.results.err
 		}
 	}
 
@@ -2555,15 +2581,17 @@ func (mmPrevExecutorStillExecuting *ExecutionBrokerIMock) PrevExecutorStillExecu
 			mmPrevExecutorStillExecuting.t.Errorf("ExecutionBrokerIMock.PrevExecutorStillExecuting got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
 		}
 
-		return
-
+		results := mmPrevExecutorStillExecuting.PrevExecutorStillExecutingMock.defaultExpectation.results
+		if results == nil {
+			mmPrevExecutorStillExecuting.t.Fatal("No results are set for the ExecutionBrokerIMock.PrevExecutorStillExecuting")
+		}
+		return (*results).err
 	}
 	if mmPrevExecutorStillExecuting.funcPrevExecutorStillExecuting != nil {
-		mmPrevExecutorStillExecuting.funcPrevExecutorStillExecuting(ctx)
-		return
+		return mmPrevExecutorStillExecuting.funcPrevExecutorStillExecuting(ctx)
 	}
 	mmPrevExecutorStillExecuting.t.Fatalf("Unexpected call to ExecutionBrokerIMock.PrevExecutorStillExecuting. %v", ctx)
-
+	return
 }
 
 // PrevExecutorStillExecutingAfterCounter returns a count of finished ExecutionBrokerIMock.PrevExecutorStillExecuting invocations

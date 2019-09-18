@@ -100,6 +100,8 @@ func (i *IndexDB) UpdateLastKnownPulse(ctx context.Context, topSyncPulse insolar
 	i.lock.Lock()
 	defer i.lock.Unlock()
 
+	inslogger.FromContext(ctx).Info("UpdateLastKnownPulse starts. topSyncPulse: ", topSyncPulse)
+
 	indexes, err := i.ForPulse(ctx, topSyncPulse)
 	if err != nil && err != ErrIndexNotFound {
 		return errors.Wrapf(err, "failed to get indexes for pulse: %d", topSyncPulse)
@@ -171,6 +173,12 @@ func (i *IndexDB) ForPulse(ctx context.Context, pn insolar.PulseNumber) ([]recor
 	defer it.Close()
 
 	for it.Next() {
+		rawKey := it.Key()
+		currentKey := newIndexKey(rawKey)
+		if currentKey.pn != pn {
+			break
+		}
+
 		index := record.Index{}
 		rawIndex, err := it.Value()
 		err = index.Unmarshal(rawIndex)

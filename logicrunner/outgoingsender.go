@@ -6,6 +6,7 @@ import (
 	"sync/atomic"
 
 	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
 
 	"github.com/insolar/go-actors/actor"
 	aerr "github.com/insolar/go-actors/actor/errors"
@@ -17,6 +18,7 @@ import (
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/artifacts"
+	"github.com/insolar/insolar/logicrunner/metrics"
 	"github.com/insolar/insolar/logicrunner/requestresult"
 )
 
@@ -181,8 +183,12 @@ func (a *outgoingSenderActorState) Receive(message actor.Message) (actor.Actor, 
 		// it's impossible to exceed the limit. It's possible that for a short period of time we'll
 		// allow to create a little less goroutines that the limit says, but that's fine.
 		atomic.AddInt32(&a.atomicRunningGoroutineCounter, 1)
+		stats.Record(v.ctx, metrics.OutgoingSenderActorGoroutines.M(1))
 		go func() {
-			defer atomic.AddInt32(&a.atomicRunningGoroutineCounter, -1)
+			defer func() {
+				atomic.AddInt32(&a.atomicRunningGoroutineCounter, -1)
+				stats.Record(v.ctx, metrics.OutgoingSenderActorGoroutines.M(-1))
+			}()
 
 			var res sendOutgoingResult
 			res.object, res.result, res.incoming, res.err = a.deps.sendOutgoingRequest(v.ctx, v.requestReference, v.outgoingRequest)

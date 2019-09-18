@@ -33,9 +33,11 @@ import (
 	"github.com/insolar/insolar/logicrunner/builtin/contract/rootdomain"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/wallet"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
+	maProxy "github.com/insolar/insolar/logicrunner/builtin/proxy/migrationshard"
+	pkProxy "github.com/insolar/insolar/logicrunner/builtin/proxy/pkshard"
 )
 
-func RootDomain() insolar.GenesisContractState {
+func RootDomain(pkShardCount int) insolar.GenesisContractState {
 
 	return insolar.GenesisContractState{
 		Name:       insolar.GenesisNameRootDomain,
@@ -43,7 +45,7 @@ func RootDomain() insolar.GenesisContractState {
 		ParentName: "",
 
 		Memory: mustGenMemory(&rootdomain.RootDomain{
-			PublicKeyShards: genesisrefs.ContractPublicKeyShards,
+			PublicKeyShards: genesisrefs.ContractPublicKeyShards(pkShardCount),
 			NodeDomain:      genesisrefs.ContractNodeDomain,
 		}),
 	}
@@ -157,14 +159,13 @@ func GetMigrationShardGenesisContractState(name string, migrationAddresses []str
 	}
 }
 
-func GetMigrationAdminGenesisContractState(lockup int64, vesting int64, vestingStep int64) insolar.GenesisContractState {
-
+func GetMigrationAdminGenesisContractState(lockup int64, vesting int64, vestingStep int64, maShardCount int) insolar.GenesisContractState {
 	return insolar.GenesisContractState{
 		Name:       insolar.GenesisNameMigrationAdmin,
 		Prototype:  insolar.GenesisNameMigrationAdmin,
 		ParentName: insolar.GenesisNameRootDomain,
 		Memory: mustGenMemory(&migrationadmin.MigrationAdmin{
-			MigrationAddressShards: genesisrefs.ContractMigrationAddressShards,
+			MigrationAddressShards: genesisrefs.ContractMigrationAddressShards(maShardCount),
 			MigrationAdminMember:   genesisrefs.ContractMigrationAdminMember,
 			VestingParams: &migrationadmin.VestingParams{
 				Lockup:      lockup,
@@ -221,4 +222,16 @@ func mustGenMemory(data interface{}) []byte {
 		panic("failed to serialize contract data")
 	}
 	return b
+}
+
+func ContractPublicKeyShardRefs(pkShardCount int) {
+	for _, name := range genesisrefs.ContractPublicKeyNameShards(pkShardCount) {
+		genesisrefs.PredefinedPrototypes[name+genesisrefs.PrototypeSuffix] = *pkProxy.PrototypeReference
+	}
+}
+
+func ContractMigrationAddressShardRefs(maShardCount int) {
+	for _, name := range genesisrefs.ContractMigrationAddressNameShards(maShardCount) {
+		genesisrefs.PredefinedPrototypes[name+genesisrefs.PrototypeSuffix] = *maProxy.PrototypeReference
+	}
 }

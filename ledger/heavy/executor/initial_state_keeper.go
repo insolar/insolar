@@ -88,11 +88,11 @@ func (isk *InitialStateKeeper) Start(ctx context.Context) error {
 	isk.lock.Lock()
 	defer isk.lock.Unlock()
 
-	logger.Debug("[ InitialStateKeeper ] Prepare drops for JetIds")
+	logger.Info("[ InitialStateKeeper ] Prepare drops for JetIds")
 	isk.prepareDrops(ctx)
-	logger.Debug("[ InitialStateKeeper ] Prepare abandon request indexes")
+	logger.Info("[ InitialStateKeeper ] Prepare abandon request indexes")
 	isk.prepareAbandonRequests(ctx)
-	logger.Debug("[ InitialStateKeeper ] Initial state prepared")
+	logger.Info("[ InitialStateKeeper ] Initial state prepared")
 
 	return nil
 }
@@ -154,7 +154,7 @@ func (isk *InitialStateKeeper) addIndexToState(ctx context.Context, index record
 		// If this ever happens - we need to stop network
 		logger.Fatal("Jet tree changed on preparing state. New jet: ", indexJet)
 	}
-	logger.Debugf("Prepare index with abandon request: %s in jet %s", index.ObjID.String(), indexJet.DebugString())
+	logger.Info("Prepare index with abandon request: %s in jet %s", index.ObjID.DebugString(), indexJet.DebugString())
 	isk.abandonRequestIndexes[indexJet] = append(indexes, index)
 }
 
@@ -168,7 +168,7 @@ func (isk *InitialStateKeeper) Get(ctx context.Context, lightExecutor insolar.Re
 	drops := make([]drop.Drop, 0)
 	indexes := make([]record.Index, 0)
 
-	logger.Debugf("[ InitialStateKeeper ] Getting drops for: %s in pulse: %s", lightExecutor.String(), pulse.String())
+	logger.Infof("[ InitialStateKeeper ] Getting drops for: %s in pulse: %s", lightExecutor.String(), pulse.String())
 
 	// Must not send two equal drops to single LME after split
 	existingDrops := make(map[insolar.JetID]struct{})
@@ -193,7 +193,7 @@ func (isk *InitialStateKeeper) Get(ctx context.Context, lightExecutor insolar.Re
 		}
 	}
 
-	logger.Debugf("[ InitialStateKeeper ] Getting indexes for: %s in pulse: %s", lightExecutor.String(), pulse.String())
+	logger.Infof("[ InitialStateKeeper ] Getting indexes for: %s in pulse: %s", lightExecutor.String(), pulse.String())
 	for _, id := range jetIDs {
 		indexes = append(indexes, isk.abandonRequestIndexes[id]...)
 	}

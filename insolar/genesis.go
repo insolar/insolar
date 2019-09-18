@@ -59,9 +59,7 @@ const (
 	GenesisNameEnterpriseDeposit     = "enterprise" + GenesisNameDeposit
 
 	GenesisAmountMigrationDaemonMembers       = 10
-	GenesisAmountActiveMigrationDaemonMembers = 3
-	GenesisAmountPublicKeyShards              = 10
-	GenesisAmountMigrationAddressShards       = 10
+	GenesisAmountActiveMigrationDaemonMembers = 2
 
 	GenesisAmountNetworkIncentivesMembers     = 40
 	GenesisAmountApplicationIncentivesMembers = 40
@@ -168,20 +166,6 @@ var GenesisNameFoundationAccounts = func() (result [GenesisAmountFoundationMembe
 	return
 }()
 
-var GenesisNameMigrationAddressShards = func() (result [GenesisAmountMigrationAddressShards]string) {
-	for i := 0; i < GenesisAmountMigrationAddressShards; i++ {
-		result[i] = GenesisNameMigrationShard + "_" + strconv.Itoa(i)
-	}
-	return
-}()
-
-var GenesisNamePublicKeyShards = func() (result [GenesisAmountPublicKeyShards]string) {
-	for i := 0; i < GenesisAmountPublicKeyShards; i++ {
-		result[i] = GenesisNamePKShard + "_" + strconv.Itoa(i)
-	}
-	return
-}()
-
 type genesisBinary []byte
 
 // GenesisRecord is initial chain record.
@@ -223,10 +207,12 @@ type GenesisContractsConfig struct {
 	VestingPeriodInPulses           int64
 	LoсkupPeriodInPulses            int64
 	VestingStepInPulses             int64
-	MigrationAddresses              [GenesisAmountMigrationAddressShards][]string
+	MigrationAddresses              [][]string
 	NetworkIncentivesPublicKeys     []string
 	ApplicationIncentivesPublicKeys []string
 	FoundationPublicKeys            []string
+	PKShardCount                    int
+	MAShardCount                    int
 }
 
 // GenesisHeavyConfig carries data required for initial genesis on heavy node.

@@ -15,8 +15,8 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 17,
-  "iteration": 1568028382848,
+  "id": 3,
+  "iteration": 1568815964079,
   "links": [],
   "panels": [
     {
@@ -51,7 +51,7 @@
       },
       "gridPos": {
         "h": 2,
-        "w": 6,
+        "w": 12,
         "x": 0,
         "y": 1
       },
@@ -90,8 +90,8 @@
       "scopedVars": {
         "instance": {
           "selected": false,
-          "text": "light-01.vm.insolar.io:8080",
-          "value": "light-01.vm.insolar.io:8080"
+          "text": "host.docker.internal:8003",
+          "value": "host.docker.internal:8003"
         }
       },
       "sparkline": {
@@ -105,7 +105,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "insolar_current_pulse{instance=~\"$instance\"}",
+          "expr": "insolar_current_pulse{instance=~\"$instance\", installation=\"$installation\"}",
           "instant": true,
           "refId": "A"
         }
@@ -144,8 +144,8 @@
       },
       "gridPos": {
         "h": 2,
-        "w": 6,
-        "x": 6,
+        "w": 12,
+        "x": 12,
         "y": 1
       },
       "id": 68,
@@ -180,13 +180,13 @@
       ],
       "repeat": null,
       "repeatDirection": "h",
-      "repeatIteration": 1568028382848,
+      "repeatIteration": 1568815964079,
       "repeatPanelId": 28,
       "scopedVars": {
         "instance": {
           "selected": false,
-          "text": "light-02.vm.insolar.io:8080",
-          "value": "light-02.vm.insolar.io:8080"
+          "text": "host.docker.internal:8005",
+          "value": "host.docker.internal:8005"
         }
       },
       "sparkline": {
@@ -200,292 +200,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "insolar_current_pulse{instance=~\"$instance\"}",
-          "instant": true,
-          "refId": "A"
-        }
-      ],
-      "thresholds": "",
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "$instance",
-      "type": "singlestat",
-      "valueFontSize": "80%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ],
-      "valueName": "current"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": false,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "format": "none",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 2,
-        "w": 6,
-        "x": 12,
-        "y": 1
-      },
-      "id": 69,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "maxPerRow": 4,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "options": {},
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "repeat": null,
-      "repeatDirection": "h",
-      "repeatIteration": 1568028382848,
-      "repeatPanelId": 28,
-      "scopedVars": {
-        "instance": {
-          "selected": false,
-          "text": "light-03.vm.insolar.io:8080",
-          "value": "light-03.vm.insolar.io:8080"
-        }
-      },
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": false,
-        "ymax": null,
-        "ymin": null
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "expr": "insolar_current_pulse{instance=~\"$instance\"}",
-          "instant": true,
-          "refId": "A"
-        }
-      ],
-      "thresholds": "",
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "$instance",
-      "type": "singlestat",
-      "valueFontSize": "80%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ],
-      "valueName": "current"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": false,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "format": "none",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 2,
-        "w": 6,
-        "x": 18,
-        "y": 1
-      },
-      "id": 70,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "maxPerRow": 4,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "options": {},
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "repeat": null,
-      "repeatDirection": "h",
-      "repeatIteration": 1568028382848,
-      "repeatPanelId": 28,
-      "scopedVars": {
-        "instance": {
-          "selected": false,
-          "text": "light-04.vm.insolar.io:8080",
-          "value": "light-04.vm.insolar.io:8080"
-        }
-      },
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": false,
-        "ymax": null,
-        "ymin": null
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "expr": "insolar_current_pulse{instance=~\"$instance\"}",
-          "instant": true,
-          "refId": "A"
-        }
-      ],
-      "thresholds": "",
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "$instance",
-      "type": "singlestat",
-      "valueFontSize": "80%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ],
-      "valueName": "current"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": false,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "format": "none",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 2,
-        "w": 6,
-        "x": 0,
-        "y": 3
-      },
-      "id": 71,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "maxPerRow": 4,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "options": {},
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "repeat": null,
-      "repeatDirection": "h",
-      "repeatIteration": 1568028382848,
-      "repeatPanelId": 28,
-      "scopedVars": {
-        "instance": {
-          "selected": false,
-          "text": "light-05.vm.insolar.io:8080",
-          "value": "light-05.vm.insolar.io:8080"
-        }
-      },
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": false,
-        "ymax": null,
-        "ymin": null
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "expr": "insolar_current_pulse{instance=~\"$instance\"}",
+          "expr": "insolar_current_pulse{instance=~\"$instance\", installation=\"$installation\"}",
           "instant": true,
           "refId": "A"
         }
@@ -511,7 +226,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 5
+        "y": 3
       },
       "id": 52,
       "panels": [],
@@ -530,7 +245,7 @@
         "h": 6,
         "w": 8,
         "x": 0,
-        "y": 6
+        "y": 4
       },
       "id": 50,
       "interval": "",
@@ -559,7 +274,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "insolar_object_indexes_added_count{instance=~\"$instance\"}-insolar_object_indexes_removed_count{instance=~\"$instance\"}",
+          "expr": "insolar_object_indexes_added_count{instance=~\"$instance\", installation=\"$installation\"}-insolar_object_indexes_removed_count{instance=~\"$instance\", installation=\"$installation\"}",
           "legendFormat": "{{ instance }}",
           "refId": "A"
         }
@@ -617,7 +332,7 @@
         "h": 6,
         "w": 8,
         "x": 8,
-        "y": 6
+        "y": 4
       },
       "id": 56,
       "interval": "",
@@ -646,7 +361,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "rate(insolar_drop_records_total{instance=~\"$instance\"}[1m])*10",
+          "expr": "rate(insolar_drop_records_total{instance=~\"$instance\", installation=\"$installation\"}[1m])*10",
           "legendFormat": "{{ instance }}",
           "refId": "A"
         }
@@ -703,7 +418,7 @@
         "h": 6,
         "w": 8,
         "x": 16,
-        "y": 6
+        "y": 4
       },
       "id": 14,
       "legend": {
@@ -732,7 +447,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(insolar_requests_opened{instance=~\"$instance\"}-insolar_requests_closed{instance=~\"$instance\"})",
+          "expr": "sum(insolar_requests_opened{instance=~\"$instance\", installation=\"$installation\"}-insolar_requests_closed{instance=~\"$instance\", installation=\"$installation\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "",
@@ -793,7 +508,7 @@
         "h": 6,
         "w": 8,
         "x": 0,
-        "y": 12
+        "y": 10
       },
       "id": 67,
       "legend": {
@@ -822,7 +537,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "insolar_jets_counter{instance=~\"$instance\"}",
+          "expr": "insolar_jets_counter{instance=~\"$instance\", installation=\"$installation\"}",
           "legendFormat": "{{ instance }}",
           "refId": "A"
         }
@@ -880,7 +595,7 @@
         "h": 6,
         "w": 8,
         "x": 8,
-        "y": 12
+        "y": 10
       },
       "id": 46,
       "interval": "",
@@ -909,7 +624,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "rate(insolar_hotdata_objects_send{instance=~\"$instance\"}[1m])*10",
+          "expr": "rate(insolar_hotdata_objects_send{instance=~\"$instance\", installation=\"$installation\"}[1m])*10",
           "legendFormat": "{{ instance }}",
           "refId": "A"
         }
@@ -968,7 +683,7 @@
         "h": 6,
         "w": 8,
         "x": 16,
-        "y": 12
+        "y": 10
       },
       "id": 36,
       "interval": "",
@@ -998,7 +713,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(insolar_requests_abandoned{instance=~\"$instance\"}[1m]))*10",
+          "expr": "sum(rate(insolar_requests_abandoned{instance=~\"$instance\", installation=\"$installation\"}[1m]))*10",
           "format": "time_series",
           "instant": false,
           "legendFormat": "count",
@@ -1059,7 +774,7 @@
         "h": 6,
         "w": 8,
         "x": 0,
-        "y": 18
+        "y": 16
       },
       "id": 62,
       "legend": {
@@ -1088,7 +803,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(insolar_jets_counter{instance=~\"$instance\"})",
+          "expr": "sum(insolar_jets_counter{instance=~\"$instance\", installation=\"$installation\"})",
           "legendFormat": "sum jets light",
           "refId": "A"
         },
@@ -1138,14 +853,215 @@
         "align": false,
         "alignLevel": null
       }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "description": "",
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 8,
+        "y": 16
+      },
+      "id": 69,
+      "interval": "",
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "rate(insolar_filament_length{instance=~\"$instance\", installation=\"$installation\"}[1m])*10",
+          "legendFormat": "{{ instance }}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Filament records iterated per pulse",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "description": "",
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 8,
+        "y": 22
+      },
+      "id": 70,
+      "interval": "",
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "rate(insolar_filament_fetched_count{instance=~\"$instance\", installation=\"$installation\"}[1m])*10",
+          "legendFormat": "{{ instance }}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Filament records fetched per pulse",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     }
   ],
-  "refresh": "5s",
+  "refresh": "10s",
   "schemaVersion": 19,
   "style": "dark",
-  "tags": [],
+  "tags": [
+    "INS"
+  ],
   "templating": {
     "list": [
+      {
+        "allValue": null,
+        "current": {
+          "text": "local",
+          "value": "local"
+        },
+        "datasource": "prometheus",
+        "definition": "label_values(insolar_light_last_sent_pulse, installation)",
+        "hide": 0,
+        "includeAll": false,
+        "label": null,
+        "multi": false,
+        "name": "installation",
+        "options": [],
+        "query": "label_values(insolar_light_last_sent_pulse, installation)",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
       {
         "allValue": null,
         "current": {
@@ -1174,7 +1090,7 @@
     ]
   },
   "time": {
-    "from": "now-1h",
+    "from": "now-15m",
     "to": "now"
   },
   "timepicker": {
@@ -1203,7 +1119,7 @@
     ]
   },
   "timezone": "",
-  "title": "INS-Light Nodes test",
+  "title": "INS-Light Nodes",
   "uid": "8cp74fKZz2",
-  "version": 2
+  "version": 1
 }

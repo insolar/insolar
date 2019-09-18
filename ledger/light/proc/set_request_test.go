@@ -116,6 +116,7 @@ func TestSetRequest_Proceed(t *testing.T) {
 					StateID:             record.StateActivation,
 					EarliestOpenRequest: &pn,
 					LatestRequest:       pendingID,
+					OpenRequestsCount:   1,
 				},
 			}
 			require.Equal(t, expectedIndex, idx)

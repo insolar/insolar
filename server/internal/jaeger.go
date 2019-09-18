@@ -27,6 +27,5 @@ func Jaeger(
 		cfg.CollectorEndpoint,
 		cfg.ProbabilityRate,
 	)
-	ctx = instracer.SetBaggage(ctx, instracer.Entry{Key: "traceid", Value: traceID})
 	return ctx, flush
 }
