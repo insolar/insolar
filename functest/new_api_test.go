@@ -243,12 +243,10 @@ func TestNilParams(t *testing.T) {
 }
 
 func TestRequestReference(t *testing.T) {
-	firstMember := createMember(t)
-	secondMember := createMember(t)
-	amount := "10"
+	member, err := newUserWithKeys()
+	require.NoError(t, err)
 
-	_, ref, err := makeSignedRequest(launchnet.TestRPCUrlPublic, firstMember, "member.transfer",
-		map[string]interface{}{"amount": amount, "toMemberReference": secondMember.Ref})
+	_, ref, err := makeSignedRequest(launchnet.TestRPCUrlPublic, member, "member.create", nil)
 	require.NoError(t, err)
 	require.NotEqual(t, "", ref)
 	require.NotEqual(t, "11111111111111111111111111111111.11111111111111111111111111111111", ref)
