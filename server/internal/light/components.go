@@ -314,6 +314,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			filamentCalculator,
 			requestChecker,
 			detachedNotifier,
+			conf,
 		)
 
 		initHandle := func(msg *message.Message) *handle.Init {

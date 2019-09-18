@@ -18,6 +18,7 @@ package proc
 
 import (
 	"context"
+	"sync"
 
 	"github.com/insolar/insolar/insolar/bus"
 	wbus "github.com/insolar/insolar/insolar/bus"
@@ -40,12 +41,23 @@ const (
 	pendingNotifyThreshold = 2
 )
 
+type notificationLimiter struct {
+	lock         sync.Mutex
+	currentCount uint
+	maxCount     uint
+}
+
+func newNotificationLimiter(maxCount uint) *notificationLimiter {
+	return &notificationLimiter{maxCount: maxCount}
+}
+
 type HotObjects struct {
-	meta    payload.Meta
-	jetID   insolar.JetID
-	drop    drop.Drop
-	indexes []record.Index
-	pulse   insolar.PulseNumber
+	meta          payload.Meta
+	jetID         insolar.JetID
+	drop          drop.Drop
+	indexes       []record.Index
+	pulse         insolar.PulseNumber
+	notifyLimiter *notificationLimiter
 
 	dep struct {
 		drops       drop.Modifier
@@ -65,13 +77,15 @@ func NewHotObjects(
 	jetID insolar.JetID,
 	drop drop.Drop,
 	indexes []record.Index,
+	limitConfig uint,
 ) *HotObjects {
 	return &HotObjects{
-		meta:    meta,
-		jetID:   jetID,
-		drop:    drop,
-		indexes: indexes,
-		pulse:   pn,
+		meta:          meta,
+		jetID:         jetID,
+		drop:          drop,
+		indexes:       indexes,
+		pulse:         pn,
+		notifyLimiter: newNotificationLimiter(limitConfig),
 	}
 }
 
@@ -199,6 +213,14 @@ func (p *HotObjects) notifyPending(
 	if *lifeline.EarliestOpenRequest >= notifyLimit {
 		return
 	}
+
+	p.notifyLimiter.lock.Lock()
+	if p.notifyLimiter.currentCount >= p.notifyLimiter.maxCount {
+		p.notifyLimiter.lock.Unlock()
+		return
+	}
+	p.notifyLimiter.currentCount++
+	p.notifyLimiter.lock.Unlock()
 
 	msg, err := payload.NewMessage(&payload.AbandonedRequestsNotification{
 		ObjectID: objectID,
