@@ -408,9 +408,10 @@ func CallGetObject(ctx context.Context, s *Server, objectID insolar.ID) (payload
 	return lifeline, state
 }
 
-func CallGetPendings(ctx context.Context, s *Server, objectID insolar.ID) payload.Payload {
+func CallGetPendings(ctx context.Context, s *Server, objectID insolar.ID, count int) payload.Payload {
 	reps, done := s.Send(ctx, &payload.GetPendings{
 		ObjectID: objectID,
+		Count:    uint32(count),
 	})
 	defer done()
 
