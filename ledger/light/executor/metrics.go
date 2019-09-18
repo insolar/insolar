@@ -22,6 +22,19 @@ import (
 )
 
 var (
+	// StatRequestsOpened specifies a metric about opened requests for the current light
+	StatRequestsOpened = stats.Int64(
+		"requests_opened",
+		"How many requests are opened",
+		stats.UnitDimensionless,
+	)
+	// StatRequestsClosed specifies a metric about closed requests for the current light
+	StatRequestsClosed = stats.Int64(
+		"requests_closed",
+		"How many requests are closed",
+		stats.UnitDimensionless,
+	)
+
 	statHotObjectsTotal = stats.Int64("hotdata_objects_total", "Amount of hot records prepared to send for next executors", stats.UnitDimensionless)
 	statHotObjectsSend  = stats.Int64("hotdata_objects_send", "Amount of hot records actually sent to next executors", stats.UnitDimensionless)
 
@@ -37,22 +50,33 @@ var (
 		stats.UnitDimensionless,
 	)
 
-	// StatRequestsOpened specifies a metric about opened requests for the current light
-	StatRequestsOpened = stats.Int64(
-		"requests_opened",
-		"How many requests are opened",
+	statFilamentLength = stats.Int64(
+		"filament_length",
+		"How many records are in filaments during iterations",
 		stats.UnitDimensionless,
 	)
-	// StatRequestsClosed specifies a metric about closed requests for the current light
-	StatRequestsClosed = stats.Int64(
-		"requests_closed",
-		"How many requests are closed",
+	statFilamentFetchedCount = stats.Int64(
+		"filament_fetched_count",
+		"How many records are in fetched from network filament segment",
 		stats.UnitDimensionless,
 	)
 )
 
 func init() {
 	err := view.Register(
+		&view.View{
+			Name:        StatRequestsOpened.Name(),
+			Description: StatRequestsOpened.Description(),
+			Measure:     StatRequestsOpened,
+			Aggregation: view.Sum(),
+		},
+		&view.View{
+			Name:        StatRequestsClosed.Name(),
+			Description: StatRequestsClosed.Description(),
+			Measure:     StatRequestsClosed,
+			Aggregation: view.Sum(),
+		},
+
 		&view.View{
 			Name:        statHotObjectsTotal.Name(),
 			Description: statHotObjectsTotal.Description(),
@@ -92,23 +116,23 @@ func init() {
 			Measure:     statDropRecords,
 			Aggregation: view.Sum(),
 		},
-
 		&view.View{
 			Name:        statLastReplicatedPulse.Name(),
 			Description: statLastReplicatedPulse.Description(),
 			Measure:     statLastReplicatedPulse,
 			Aggregation: view.LastValue(),
 		},
+
 		&view.View{
-			Name:        StatRequestsOpened.Name(),
-			Description: StatRequestsOpened.Description(),
-			Measure:     StatRequestsOpened,
+			Name:        statFilamentLength.Name(),
+			Description: statFilamentLength.Description(),
+			Measure:     statFilamentLength,
 			Aggregation: view.Sum(),
 		},
 		&view.View{
-			Name:        StatRequestsClosed.Name(),
-			Description: StatRequestsClosed.Description(),
-			Measure:     StatRequestsClosed,
+			Name:        statFilamentFetchedCount.Name(),
+			Description: statFilamentFetchedCount.Description(),
+			Measure:     statFilamentFetchedCount,
 			Aggregation: view.Sum(),
 		},
 	)
