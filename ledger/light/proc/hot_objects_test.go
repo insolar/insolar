@@ -124,7 +124,7 @@ func TestHotObjects_Proceed(t *testing.T) {
 		}).Return(make(chan *message.Message), func() {})
 
 		// start test
-		p := proc.NewHotObjects(meta, expectedPulse.PulseNumber, expectedJetID, expectedDrop, idxs)
+		p := proc.NewHotObjects(meta, expectedPulse.PulseNumber, expectedJetID, expectedDrop, idxs, 10)
 		p.Dep(drops, indexes, jetStorage, jetFetcher, jetReleaser, coordinator, calculator, sender)
 
 		err := p.Proceed(ctx)
@@ -210,7 +210,7 @@ func TestHotObjects_Proceed(t *testing.T) {
 		}).Return(make(chan *message.Message), func() {})
 
 		// start test
-		p := proc.NewHotObjects(meta, currentPulse.PulseNumber, expectedJetID, expectedDrop, idxs)
+		p := proc.NewHotObjects(meta, currentPulse.PulseNumber, expectedJetID, expectedDrop, idxs, 10)
 		p.Dep(drops, indexes, jetStorage, jetFetcher, jetReleaser, coordinator, calculator, sender)
 
 		err := p.Proceed(ctx)

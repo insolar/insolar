@@ -17,6 +17,7 @@
 package proc
 
 import (
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
@@ -44,6 +45,7 @@ type Dependencies struct {
 	SetCode        func(*SetCode)
 	SendFilament   func(*SendFilament)
 	HasPendings    func(*HasPendings)
+	Config         func() configuration.Ledger
 }
 
 func NewDependencies(
@@ -68,6 +70,8 @@ func NewDependencies(
 	filaments executor.FilamentCalculator,
 	requestChecker executor.RequestChecker,
 	detachedNotifier executor.DetachedNotifier,
+
+	config configuration.Ledger,
 ) *Dependencies {
 	dep := &Dependencies{
 		FetchJet: func(p *FetchJet) {
@@ -203,6 +207,9 @@ func NewDependencies(
 				sender,
 			)
 		},
+		Config: func() configuration.Ledger {
+			return config
+		},
 	}
 	return dep
 }
@@ -229,5 +236,6 @@ func NewDependenciesMock() *Dependencies {
 		SendFilament:   func(*SendFilament) {},
 		HasPendings:    func(*HasPendings) {},
 		GetRequestInfo: func(*SendRequestInfo) {},
+		Config:         configuration.NewLedger,
 	}
 }
