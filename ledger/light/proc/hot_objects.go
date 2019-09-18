@@ -18,7 +18,6 @@ package proc
 
 import (
 	"context"
-	"sync"
 
 	"github.com/insolar/insolar/insolar/bus"
 	wbus "github.com/insolar/insolar/insolar/bus"
@@ -41,23 +40,14 @@ const (
 	pendingNotifyThreshold = 2
 )
 
-type notificationLimiter struct {
-	lock         sync.Mutex
-	currentCount uint
-	maxCount     uint
-}
-
-func newNotificationLimiter(maxCount uint) *notificationLimiter {
-	return &notificationLimiter{maxCount: maxCount}
-}
-
 type HotObjects struct {
-	meta          payload.Meta
-	jetID         insolar.JetID
-	drop          drop.Drop
-	indexes       []record.Index
-	pulse         insolar.PulseNumber
-	notifyLimiter *notificationLimiter
+	meta                     payload.Meta
+	jetID                    insolar.JetID
+	drop                     drop.Drop
+	indexes                  []record.Index
+	pulse                    insolar.PulseNumber
+	currentNotificationCount uint
+	maxNotificationCount     uint
 
 	dep struct {
 		drops       drop.Modifier
@@ -77,15 +67,15 @@ func NewHotObjects(
 	jetID insolar.JetID,
 	drop drop.Drop,
 	indexes []record.Index,
-	limitConfig uint,
+	maxNotificationCount uint,
 ) *HotObjects {
 	return &HotObjects{
-		meta:          meta,
-		jetID:         jetID,
-		drop:          drop,
-		indexes:       indexes,
-		pulse:         pn,
-		notifyLimiter: newNotificationLimiter(limitConfig),
+		meta:                 meta,
+		jetID:                jetID,
+		drop:                 drop,
+		indexes:              indexes,
+		pulse:                pn,
+		maxNotificationCount: maxNotificationCount,
 	}
 }
 
@@ -159,7 +149,10 @@ func (p *HotObjects) Proceed(ctx context.Context) error {
 		)
 		logger.Debugf("[handleHotRecords] lifeline with id - %v saved", idx.ObjID.DebugString())
 
-		go p.notifyPending(ctx, idx.ObjID, idx.Lifeline, pendingNotifyPulse.PulseNumber)
+		if p.currentNotificationCount < p.maxNotificationCount {
+			p.currentNotificationCount++
+			p.notifyPending(ctx, idx.ObjID, idx.Lifeline, pendingNotifyPulse.PulseNumber)
+		}
 	}
 
 	logger.Infof("before releasing jetFetcher for jet %s and pulse %s", p.jetID.DebugString(), p.pulse)
@@ -213,14 +206,6 @@ func (p *HotObjects) notifyPending(
 	if *lifeline.EarliestOpenRequest >= notifyLimit {
 		return
 	}
-
-	p.notifyLimiter.lock.Lock()
-	if p.notifyLimiter.currentCount >= p.notifyLimiter.maxCount {
-		p.notifyLimiter.lock.Unlock()
-		return
-	}
-	p.notifyLimiter.currentCount++
-	p.notifyLimiter.lock.Unlock()
 
 	msg, err := payload.NewMessage(&payload.AbandonedRequestsNotification{
 		ObjectID: objectID,
