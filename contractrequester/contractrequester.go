@@ -30,6 +30,7 @@ import (
 
 	"github.com/insolar/insolar/contractrequester/metrics"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/api"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/bus/meta"
 	busMeta "github.com/insolar/insolar/insolar/bus/meta"
@@ -132,6 +133,7 @@ func (cr *ContractRequester) Call(
 			Arguments:    args,
 			APIRequestID: utils.TraceID(ctx),
 			APINode:      cr.JetCoordinator.Me(),
+			Reason:       api.MakeReason(pulse, args),
 			Immutable:    true,
 		},
 	}
