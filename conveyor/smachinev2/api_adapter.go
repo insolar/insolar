@@ -55,6 +55,10 @@ type AsyncCallRequester interface {
 type AdapterCallbackFunc func(fn AsyncResultFunc, recovered interface{})
 type AdapterCallFunc func() AsyncResultFunc
 
+type AdapterNestedEvent interface {
+	SendNestedEvent(precursor StepLink, eventPayload interface{}, requireCancel bool) context.CancelFunc
+}
+
 /* Provided by internal adapter */
 type AdapterExecutor interface {
 	/* Schedules asynchronous execution, MAY return native cancellation function if supported.

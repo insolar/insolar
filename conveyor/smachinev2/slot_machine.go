@@ -713,3 +713,7 @@ func (m *SlotMachine) fromRelativeTime(rel uint32) time.Time {
 	}
 	return m.scanStartedAt.Add(time.Duration(rel-1) * time.Microsecond)
 }
+
+func (m *SlotMachine) addAdapterCallback(link SlotLink, resultFunc AsyncResultFunc, recovered interface{}) {
+
+}

@@ -57,7 +57,7 @@ var stateUpdateTypes = []StateUpdateType{
 	stateUpdNoChange: {
 		filter: updCtxMigrate | updCtxBargeIn,
 
-		apply: func(slot *Slot, stateUpdate StateUpdate, worker DetachableSlotWorker) (isAvailable bool, err error) {
+		applyDetachable: func(slot *Slot, stateUpdate StateUpdate, worker DetachableSlotWorker) (isAvailable bool, err error) {
 			if worker.IsInplaceUpdate() {
 				return true, nil
 			}
@@ -67,7 +67,7 @@ var stateUpdateTypes = []StateUpdateType{
 
 	stateUpdInternalRepeatNow: {
 		filter: 0, // this can't be created with templates
-		apply: func(slot *Slot, stateUpdate StateUpdate, worker DetachableSlotWorker) (isAvailable bool, err error) {
+		applyDetachable: func(slot *Slot, stateUpdate StateUpdate, worker DetachableSlotWorker) (isAvailable bool, err error) {
 			if worker.IsInplaceUpdate() {
 				return false, errors.New("unexpected internal repeat")
 			}
@@ -78,22 +78,22 @@ var stateUpdateTypes = []StateUpdateType{
 	},
 
 	stateUpdStop: {
-		filter: updCtxExec | updCtxInit | updCtxMigrate,
-		apply:  stateUpdateDefaultStop,
+		filter:          updCtxExec | updCtxInit | updCtxMigrate,
+		applyDetachable: stateUpdateDefaultStop,
 	},
 
 	stateUpdError: {
-		filter:    updCtxExec | updCtxInit | updCtxMigrate,
-		params:    updParamVar,
-		varVerify: stateUpdateDefaultVerifyError,
-		apply:     stateUpdateDefaultError,
+		filter:          updCtxExec | updCtxInit | updCtxMigrate,
+		params:          updParamVar,
+		varVerify:       stateUpdateDefaultVerifyError,
+		applyDetachable: stateUpdateDefaultError,
 	},
 
 	stateUpdPanic: {
-		filter:    updCtxExec | updCtxInit | updCtxMigrate,
-		params:    updParamVar,
-		varVerify: stateUpdateDefaultVerifyError,
-		apply:     stateUpdateDefaultError,
+		filter:          updCtxExec | updCtxInit | updCtxMigrate,
+		params:          updParamVar,
+		varVerify:       stateUpdateDefaultVerifyError,
+		applyDetachable: stateUpdateDefaultError,
 	},
 
 	stateUpdReplaceWith: {
@@ -116,7 +116,7 @@ var stateUpdateTypes = []StateUpdateType{
 			stateUpdate.link = newSlot
 		},
 
-		apply: stateUpdateDefaultReplace,
+		applyDetachable: stateUpdateDefaultReplace,
 	},
 
 	stateUpdReplace: {
@@ -138,7 +138,7 @@ var stateUpdateTypes = []StateUpdateType{
 			stateUpdate.link = newSlot
 		},
 
-		apply: stateUpdateDefaultReplace,
+		applyDetachable: stateUpdateDefaultReplace,
 	},
 
 	stateUpdRepeat: {
@@ -149,7 +149,7 @@ var stateUpdateTypes = []StateUpdateType{
 			return loopCount < stateUpdate.param0
 		},
 
-		apply: func(slot *Slot, stateUpdate StateUpdate, worker DetachableSlotWorker) (isAvailable bool, err error) {
+		applyDetachable: func(slot *Slot, stateUpdate StateUpdate, worker DetachableSlotWorker) (isAvailable bool, err error) {
 			m := slot.machine
 			m.updateSlotQueue(slot, worker, activateSlot)
 			return true, nil
@@ -172,22 +172,22 @@ var stateUpdateTypes = []StateUpdateType{
 			return true
 		},
 
-		apply: stateUpdateDefaultJump,
+		applyDetachable: stateUpdateDefaultJump,
 	},
 
 	stateUpdNext: {
-		filter:    updCtxExec | updCtxBargeIn,
-		params:    updParamStep | updParamVar,
-		prepare:   stateUpdateDefaultNoArgPrepare,
-		varVerify: stateUpdateDefaultVerifyNoArgFn,
-		apply:     stateUpdateDefaultJump,
+		filter:          updCtxExec | updCtxBargeIn,
+		params:          updParamStep | updParamVar,
+		prepare:         stateUpdateDefaultNoArgPrepare,
+		varVerify:       stateUpdateDefaultVerifyNoArgFn,
+		applyDetachable: stateUpdateDefaultJump,
 	},
 
 	stateUpdPoll: {
 		filter:  updCtxExec,
 		params:  updParamStep | updParamVar,
 		prepare: stateUpdateDefaultNoArgPrepare,
-		apply: func(slot *Slot, stateUpdate StateUpdate, worker DetachableSlotWorker) (isAvailable bool, err error) {
+		applyDetachable: func(slot *Slot, stateUpdate StateUpdate, worker DetachableSlotWorker) (isAvailable bool, err error) {
 			m := slot.machine
 			slot.setNextStep(stateUpdate.step)
 			m.updateSlotQueue(slot, worker, deactivateSlot)
@@ -200,7 +200,7 @@ var stateUpdateTypes = []StateUpdateType{
 		filter:  updCtxExec,
 		params:  updParamStep | updParamVar,
 		prepare: stateUpdateDefaultNoArgPrepare,
-		apply: func(slot *Slot, stateUpdate StateUpdate, worker DetachableSlotWorker) (isAvailable bool, err error) {
+		applyDetachable: func(slot *Slot, stateUpdate StateUpdate, worker DetachableSlotWorker) (isAvailable bool, err error) {
 			m := slot.machine
 			slot.setNextStep(stateUpdate.step)
 			m.updateSlotQueue(slot, worker, deactivateSlot)
@@ -212,7 +212,7 @@ var stateUpdateTypes = []StateUpdateType{
 		filter:  updCtxExec,
 		params:  updParamStep | updParamUint | updParamVar,
 		prepare: stateUpdateDefaultNoArgPrepare,
-		apply: func(slot *Slot, stateUpdate StateUpdate, worker DetachableSlotWorker) (isAvailable bool, err error) {
+		applyDetachable: func(slot *Slot, stateUpdate StateUpdate, worker DetachableSlotWorker) (isAvailable bool, err error) {
 			m := slot.machine
 			slot.setNextStep(stateUpdate.step)
 			m.updateSlotQueue(slot, worker, activateHotWaitSlot)
@@ -228,7 +228,7 @@ var stateUpdateTypes = []StateUpdateType{
 		filter: updCtxExec,
 		params: updParamStep | updParamLink,
 		//		prepare: stateUpdateDefaultNoArgPrepare,
-		apply: func(slot *Slot, stateUpdate StateUpdate, worker DetachableSlotWorker) (isAvailable bool, err error) {
+		applyDetachable: func(slot *Slot, stateUpdate StateUpdate, worker DetachableSlotWorker) (isAvailable bool, err error) {
 			m := slot.machine
 			slot.setNextStep(stateUpdate.step)
 			waitOn := stateUpdate.getLink()
@@ -257,10 +257,10 @@ var stateUpdateTypes = []StateUpdateType{
 	},
 
 	stateUpdWaitForShared: {
-		filter:  updCtxExec,
-		params:  updParamStep | updParamLink,
-		prepare: stateUpdateDefaultNoArgPrepare,
-		apply:   nil, // TODO not implemented
+		filter:          updCtxExec,
+		params:          updParamStep | updParamLink,
+		prepare:         stateUpdateDefaultNoArgPrepare,
+		applyDetachable: nil, // TODO not implemented
 	},
 }
 

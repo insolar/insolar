@@ -23,7 +23,6 @@ import (
 
 type DetachableFunc func(DetachableSlotWorker)
 type NonDetachableFunc func(SlotWorker)
-type SlotDetachableFunc func(*Slot, DetachableSlotWorker)
 
 type WorkerContextMode uint8
 
@@ -37,18 +36,18 @@ const (
 type DetachableSlotWorker interface {
 	EnsureMode(expectedMode WorkerContextMode)
 
+	IsDetached() bool
 	HasSignal() bool
-	GetCond() (bool, *sync.Cond)
-	StartNested() SlotWorker
-
 	CanLoopOrHasSignal(loopCount uint32) (canLoop, hasSignal bool)
+
+	GetCond() (bool, *sync.Cond)
+
 	AttachTo(slot *Slot, link SlotLink, wakeUpOnUse bool) (SharedAccessReport, context.CancelFunc)
 	IsInplaceUpdate() bool
 
 	NonDetachableCall(NonDetachableFunc) (wasExecuted bool)
 
 	ActivateLinkedList(linkedList *Slot, hotWait bool)
-	IsDetached() bool
 }
 
 type SlotWorker interface {

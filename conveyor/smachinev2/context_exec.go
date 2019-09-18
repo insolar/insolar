@@ -22,7 +22,6 @@ var _ ExecutionContext = &executionContext{}
 
 type executionContext struct {
 	slotContext
-	worker          DetachableSlotWorker
 	countAsyncCalls uint16
 }
 
@@ -72,7 +71,7 @@ func (p *executionContext) waitFor(link SlotLink, updMode stateUpdType) StateCon
 		//		return &conditionalUpdate{marker: p.getMarker()}
 	}
 
-	r, releaseFn := p.worker.AttachTo(p.s, link, false)
+	r, releaseFn := p.w.AttachTo(p.s, link, false)
 	if releaseFn != nil {
 		defer releaseFn()
 	}
@@ -103,7 +102,7 @@ func (p *executionContext) WaitShared(link SharedDataLink) StateConditionalUpdat
 
 func (p *executionContext) UseShared(a SharedDataAccessor) SharedAccessReport {
 	p.ensure(updCtxExec)
-	r, releaseFn := p.worker.AttachTo(p.s, a.link.link.SlotLink, a.link.wakeup)
+	r, releaseFn := p.w.AttachTo(p.s, a.link.link.SlotLink, a.link.wakeup)
 	if releaseFn != nil {
 		defer releaseFn()
 	}

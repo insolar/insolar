@@ -54,10 +54,6 @@ func (p *dummyWorkerContext) NonDetachableCall(DetachableFunc) (wasExecuted bool
 	panic("implement me")
 }
 
-func (p *dummyWorkerContext) NonDetachableOrAsyncCall(*Slot, SlotDetachableFunc) (wasExecuted bool) {
-	panic("implement me")
-}
-
 func (p *dummyWorkerContext) ActivateLinkedList(linkedList *Slot, mode slotActivationMode) {
 	panic("implement me")
 }

@@ -53,7 +53,7 @@ type StateUpdateType struct {
 	prepare SlotUpdatePrepareFunc
 
 	/* Runs inside the Machine / non-detachable */
-	apply SlotUpdateFunc
+	applyDetachable SlotUpdateFunc
 
 	filter    updCtxMode
 	params    stateUpdParam
@@ -101,7 +101,7 @@ func (v *StateUpdateType) verify(ctxType updCtxMode) {
 	if v.updType == 0 {
 		panic("unknown type")
 	}
-	if v.apply == nil {
+	if v.applyDetachable == nil {
 		panic("not implemented")
 	}
 	if ctxType&v.filter != ctxType {
@@ -123,7 +123,7 @@ func (v *StateUpdateType) get() StateUpdateType {
 	if v.updType == 0 {
 		panic("unknown type")
 	}
-	if v.apply == nil {
+	if v.applyDetachable == nil {
 		panic("not implemented")
 	}
 	return *v
@@ -150,10 +150,10 @@ func (v *StateUpdateType) Prepare(slot *Slot, stateUpdate *StateUpdate) {
 }
 
 func (v *StateUpdateType) Apply(slot *Slot, stateUpdate StateUpdate, worker DetachableSlotWorker) (isAvailable bool, err error) {
-	if v.apply == nil {
+	if v.applyDetachable == nil {
 		return false, errors.New("not implemented")
 	}
-	return v.apply(slot, stateUpdate, worker)
+	return v.applyDetachable(slot, stateUpdate, worker)
 }
 
 func (v *StateUpdateType) ApplyInline(slot *Slot, stateUpdate StateUpdate, worker SlotWorker) (isAvailable bool, err error) {
