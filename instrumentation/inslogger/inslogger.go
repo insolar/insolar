@@ -147,7 +147,7 @@ func GetLoggerLevel(ctx context.Context) insolar.LogLevel {
 
 func WithTimeCriticalLogger(ctx context.Context, bufSize int) context.Context {
 	lgr := getLogger(ctx)
-	critLogger := lgr.(insolar.SpecialLoggerFactory).CreateCriticalLogger(bufSize)
+	critLogger := lgr.(insolar.SpecialLoggerFactory).WithTimeCriticalBuffer(bufSize, true)
 	if lgr == critLogger {
 		return ctx
 	}
@@ -156,7 +156,7 @@ func WithTimeCriticalLogger(ctx context.Context, bufSize int) context.Context {
 
 func WithBuffer(ctx context.Context, bufSize int) context.Context {
 	lgr := getLogger(ctx)
-	critLogger := lgr.(insolar.SpecialLoggerFactory).CreateBufferedLogger(bufSize)
+	critLogger := lgr.(insolar.SpecialLoggerFactory).WithBuffer(bufSize)
 	if lgr == critLogger {
 		return ctx
 	}

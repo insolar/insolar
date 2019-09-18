@@ -22,6 +22,7 @@ type Log struct {
 	Adapter    string
 	Formatter  string
 	BufferSize int
+	OutputType string
 }
 
 // NewLog creates new default configuration for logging
@@ -30,6 +31,7 @@ func NewLog() Log {
 		Level:      "Info",
 		Adapter:    "zerolog",
 		Formatter:  "json",
+		OutputType: "stderr",
 		BufferSize: 10 * 1024 * 1024,
 	}
 }

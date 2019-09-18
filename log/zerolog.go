@@ -19,7 +19,8 @@ package log
 import (
 	"context"
 	"fmt"
-	"github.com/insolar/insolar/critlog"
+	"github.com/insolar/insolar/log/critlog"
+	"github.com/insolar/insolar/log/inssyslog"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/diode"
@@ -57,12 +58,12 @@ type callerHookConfig struct {
 }
 
 var _ insolar.Logger = &zerologAdapter{}
-var _ insolar.SpecialLoggerFactory = &zerologAdapter{}
 
 type zerologAdapter struct {
-	logger       zerolog.Logger
-	output       io.WriteCloser
-	outputWraps  outputWrapFlag
+	logger      zerolog.Logger
+	output      io.Writer
+	outputWraps outputWrapFlag
+	//	bareOutput   io.WriteCloser
 	level        zerolog.Level
 	callerConfig callerHookConfig
 }
@@ -72,6 +73,7 @@ type outputWrapFlag uint32
 const (
 	outputWrappedWithBuffer outputWrapFlag = 1 << iota
 	outputWrappedWithCritical
+	outputWrappedWithFormatter
 )
 
 type loglevelChangeHandler struct {
@@ -147,13 +149,9 @@ func (p *closableConsoleWriter) Sync() error {
 	return errors.New("unsupported: Sync")
 }
 
-func newIsolatedOutput() io.WriteCloser {
-	return os.NewFile(uintptr(syscall.Stderr), "/dev/stderr")
-}
-
-func newDefaultTextOutput() io.WriteCloser {
+func newDefaultTextOutput(out io.Writer) io.WriteCloser {
 	return &closableConsoleWriter{zerolog.ConsoleWriter{
-		Out:          newIsolatedOutput(),
+		Out:          out,
 		NoColor:      true,
 		TimeFormat:   timestampFormat,
 		PartsOrder:   fieldsOrder,
@@ -161,23 +159,41 @@ func newDefaultTextOutput() io.WriteCloser {
 	}}
 }
 
-func selectFormatter(format insolar.LogFormat) (io.WriteCloser, error) {
-	var output io.WriteCloser
+func selectOutput(output insolar.LogOutput) (io.WriteCloser, error) {
+	switch output {
+	case insolar.StdErrOutput:
+		// we open a separate file handle as it will be closed, so it should not interfere with os.Stderr
+		return os.NewFile(uintptr(syscall.Stderr), "/dev/stderr"), nil
+	case insolar.SysLogOutput:
+		return inssyslog.ConnectDefaultSyslog("insolar") // breaks dependency on windows
+	default:
+		return nil, errors.New("unknown output " + output.String())
+	}
+}
 
+func selectFormatter(format insolar.LogFormat, output io.Writer) (io.Writer, error) {
 	switch format {
 	case insolar.TextFormat:
-		output = newDefaultTextOutput()
+		return newDefaultTextOutput(output), nil
 	case insolar.JSONFormat:
-		output = newIsolatedOutput()
+		return output, nil
 	default:
 		return nil, errors.New("unknown formatter " + format.String())
 	}
-
-	return output, nil
 }
 
+const (
+	defaultLogFormat = insolar.TextFormat
+	defaultLogOutput = insolar.StdErrOutput
+)
+
 func newZerologAdapter(cfg configuration.Log) (*zerologAdapter, error) {
-	format, err := insolar.ParseFormat(cfg.Formatter)
+	outputType, err := insolar.ParseOutput(cfg.OutputType, defaultLogOutput)
+	if err != nil {
+		return nil, err
+	}
+
+	format, err := insolar.ParseFormat(cfg.Formatter, defaultLogFormat)
 	if err != nil {
 		return nil, err
 	}
@@ -190,9 +206,18 @@ func newZerologAdapter(cfg configuration.Log) (*zerologAdapter, error) {
 		},
 	}
 
-	za.output, err = selectFormatter(format)
+	za.output, err = selectOutput(outputType)
 	if err != nil {
 		return nil, err
+	}
+	bareOutput := za.output
+
+	za.output, err = selectFormatter(format, za.output)
+	if err != nil {
+		return nil, err
+	}
+	if za.output != bareOutput {
+		za.outputWraps |= outputWrappedWithFormatter
 	}
 
 	if cfg.BufferSize > 0 {
@@ -326,6 +351,8 @@ func (z *zerologAdapter) WithLevelNumber(level insolar.LogLevel) (insolar.Logger
 // SetOutput sets the output destination for the logger.
 func (z *zerologAdapter) WithOutput(w io.Writer) insolar.Logger {
 	zCopy := *z
+	zCopy.output = w
+	zCopy.outputWraps = 0
 	zCopy.logger = z.logger.Output(w)
 	return &zCopy
 }
@@ -356,8 +383,9 @@ func (z *zerologAdapter) WithFuncName(flag bool) insolar.Logger {
 }
 
 // WithFormat sets logger output format
+// Deprecated: format change has no proper impact actually
 func (z *zerologAdapter) WithFormat(format insolar.LogFormat) (insolar.Logger, error) {
-	output, err := selectFormatter(format)
+	output, err := selectFormatter(format, z.output)
 	if err != nil {
 		return nil, err
 	}
@@ -384,7 +412,7 @@ func (z *zerologAdapter) Is(level insolar.LogLevel) bool {
 	return zerologLevel >= z.level && zerologLevel >= zerolog.GlobalLevel()
 }
 
-func (z *zerologAdapter) CreateCriticalLogger(bufSize int) insolar.Logger {
+func (z *zerologAdapter) WithTimeCriticalBuffer(bufSize int, dropLast bool) insolar.Logger {
 	if z.outputWraps&outputWrappedWithCritical != 0 {
 		return z
 	}
@@ -410,7 +438,7 @@ func createBufferedLogger(output io.Writer, bufSize int) io.WriteCloser {
 	return &dw
 }
 
-func (z *zerologAdapter) CreateBufferedLogger(bufSize int) insolar.Logger {
+func (z *zerologAdapter) WithBuffer(bufSize int) insolar.Logger {
 	if bufSize <= 0 || z.outputWraps&outputWrappedWithBuffer != 0 {
 		return z
 	}

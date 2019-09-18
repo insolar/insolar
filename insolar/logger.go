@@ -88,14 +88,16 @@ const (
 	JSONFormat
 )
 
-func ParseFormat(formatStr string) (LogFormat, error) {
+func ParseFormat(formatStr string, defValue LogFormat) (LogFormat, error) {
 	switch strings.ToLower(formatStr) {
+	case "", "default":
+		return defValue, nil
 	case TextFormat.String():
 		return TextFormat, nil
 	case JSONFormat.String():
 		return JSONFormat, nil
 	}
-	return TextFormat, fmt.Errorf("unknown Format String: '%s', defaulting to TextFormat", formatStr)
+	return defValue, fmt.Errorf("unknown Format: '%s', replaced with '%s'", formatStr, defValue)
 }
 
 func (l LogFormat) String() string {
@@ -104,6 +106,35 @@ func (l LogFormat) String() string {
 		return "text"
 	case JSONFormat:
 		return "json"
+	}
+	return string(l)
+}
+
+type LogOutput uint8
+
+const (
+	StdErrOutput LogOutput = iota
+	SysLogOutput
+)
+
+func ParseOutput(outputStr string, defValue LogOutput) (LogOutput, error) {
+	switch strings.ToLower(outputStr) {
+	case "", "default":
+		return defValue, nil
+	case StdErrOutput.String():
+		return StdErrOutput, nil
+	case SysLogOutput.String():
+		return SysLogOutput, nil
+	}
+	return defValue, fmt.Errorf("unknown Output: '%s', replaced with '%s'", outputStr, defValue)
+}
+
+func (l LogOutput) String() string {
+	switch l {
+	case StdErrOutput:
+		return "stderr"
+	case SysLogOutput:
+		return "syslog"
 	}
 	return string(l)
 }
@@ -168,6 +199,8 @@ type Logger interface {
 }
 
 type SpecialLoggerFactory interface {
-	CreateCriticalLogger(bufSize int) Logger
-	CreateBufferedLogger(bufSize int) Logger
+	// WithTimeCriticalBuffer allocates a buffer that is able to skip/drop excessive messages
+	WithTimeCriticalBuffer(bufSize int, dropLast bool) Logger
+	// WithTimeCriticalBuffer allocates a buffer that preserves all messages and stops writers on overflow
+	WithBuffer(bufSize int) Logger
 }
