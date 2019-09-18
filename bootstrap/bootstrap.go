@@ -119,11 +119,6 @@ func (g *Generator) Run(ctx context.Context) error {
 		migrationDaemonPublicKeys = append(migrationDaemonPublicKeys, k)
 	}
 
-	fundsAndEnterprisePublicKey, err := secrets.GetPublicKeyFromFile(g.config.MembersKeysDir + "funds_and_enterprise_member_keys.json")
-	if err != nil {
-		return errors.Wrap(err, "couldn't get enterprise keys")
-	}
-
 	networkIncentivesPublicKeys := []string{}
 	for i := 0; i < insolar.GenesisAmountNetworkIncentivesMembers; i++ {
 		k, err := secrets.GetPublicKeyFromFile(g.config.MembersKeysDir + GetFundPath(i, "network_incentives_"))
@@ -149,6 +144,24 @@ func (g *Generator) Run(ctx context.Context) error {
 			return errors.Wrap(err, "couldn't get foundation keys")
 		}
 		foundationPublicKeys = append(foundationPublicKeys, k)
+	}
+
+	fundsPublicKeys := []string{}
+	for i := 0; i < insolar.GenesisAmountFundsMembers; i++ {
+		k, err := secrets.GetPublicKeyFromFile(g.config.MembersKeysDir + GetFundPath(i, "funds_"))
+		if err != nil {
+			return errors.Wrap(err, "couldn't get funds keys")
+		}
+		fundsPublicKeys = append(fundsPublicKeys, k)
+	}
+
+	enterprisePublicKeys := []string{}
+	for i := 0; i < insolar.GenesisAmountEnterpriseMembers; i++ {
+		k, err := secrets.GetPublicKeyFromFile(g.config.MembersKeysDir + GetFundPath(i, "enterprise_"))
+		if err != nil {
+			return errors.Wrap(err, "couldn't get enterprise keys")
+		}
+		enterprisePublicKeys = append(enterprisePublicKeys, k)
 	}
 
 	if g.config.MAShardCount <= 0 {
@@ -210,15 +223,16 @@ func (g *Generator) Run(ctx context.Context) error {
 		MDBalance:                       g.config.MDBalance,
 		RootPublicKey:                   rootPublicKey,
 		FeePublicKey:                    feePublicKey,
-		FundsAndEnterprisePublicKey:     fundsAndEnterprisePublicKey,
 		MigrationAdminPublicKey:         migrationAdminPublicKey,
 		MigrationDaemonPublicKeys:       migrationDaemonPublicKeys,
 		NetworkIncentivesPublicKeys:     networkIncentivesPublicKeys,
 		ApplicationIncentivesPublicKeys: applicationIncentivesPublicKeys,
 		FoundationPublicKeys:            foundationPublicKeys,
+		FundsPublicKeys:                 fundsPublicKeys,
+		EnterprisePublicKeys:            enterprisePublicKeys,
 		MigrationAddresses:              migrationAddresses,
 		VestingPeriodInPulses:           g.config.VestingPeriodInPulses,
-		LoсkupPeriodInPulses:            g.config.LockupPeriodInPulses,
+		LockupPeriodInPulses:            g.config.LockupPeriodInPulses,
 		VestingStepInPulses:             vestingStep,
 		MAShardCount:                    g.config.MAShardCount,
 		PKShardCount:                    g.config.PKShardCount,
