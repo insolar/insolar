@@ -80,9 +80,36 @@ type ExecutionBrokerI interface {
 }
 
 type processorState struct {
-	name    string
-	limiter common.RunnerRestrainer
-	queue   requestsqueue.RequestsQueue
+	name         string
+	queue        requestsqueue.RequestsQueue
+	workers      int
+	workersLimit int
+}
+
+// dismissWorker frees worker (decrements currently used worker count)
+// one should be certain that he calls that after engageWorker and only once
+// that function should be called under ExecutionBroker lock
+func (ps *processorState) dismissWorker() {
+	if ps.workers <= 0 {
+		panic("unreachable")
+	}
+	ps.workers--
+}
+
+// engageWorker occupies worker (increments currently used worker count)
+// one should check count of available workers before calling that function
+// that function should be called under ExecutionBroker lock
+func (ps *processorState) engageWorker() {
+	if ps.workers >= ps.workersLimit {
+		panic("unreachable")
+	}
+	ps.workers++
+}
+
+// availableWorkers returns number of available workers in the worker queue
+// that function should be called under ExecutionBroker lock
+func (ps processorState) availableWorkers() int {
+	return ps.workersLimit - ps.workers
 }
 
 type ExecutionBroker struct {
@@ -138,14 +165,16 @@ func NewExecutionBroker(
 		name: "executionbroker-" + pulseObject.PulseNumber.String(),
 
 		mutable: processorState{
-			name:    "mutable",
-			limiter: common.NewRunnerRestrainer(mutableExecutionLimit),
-			queue:   requestsqueue.New(),
+			name:         "mutable",
+			workers:      0,
+			workersLimit: mutableExecutionLimit,
+			queue:        requestsqueue.New(),
 		},
 		immutable: processorState{
-			name:    "immutable",
-			limiter: common.NewRunnerRestrainer(immutableExecutionLimit),
-			queue:   requestsqueue.New(),
+			name:         "immutable",
+			workers:      0,
+			workersLimit: immutableExecutionLimit,
+			queue:        requestsqueue.New(),
 		},
 
 		outgoingSender: outgoingSender,
@@ -170,7 +199,7 @@ func (q *ExecutionBroker) getTask(ctx context.Context, state *processorState) *c
 		if transcript == nil {
 			// when we finished processing queue (nothing left in the queue) - while we under lock,
 			// release (we've finished processing everything and we should finish current executor)
-			state.limiter.Release(ctx)
+			state.dismissWorker()
 			return nil
 		}
 
@@ -294,6 +323,7 @@ func (q *ExecutionBroker) IsKnownRequest(ctx context.Context, req insolar.Refere
 }
 
 // startProcessors starts independent processing of mutable and immutable queues
+// should be started only under q.stateLock
 func (q *ExecutionBroker) startProcessors(ctx context.Context) {
 	q.startProcessor(ctx, &q.mutable)
 
@@ -304,7 +334,7 @@ func (q *ExecutionBroker) startProcessors(ctx context.Context) {
 
 func (q *ExecutionBroker) startProcessorCount(ctx context.Context, state *processorState) int {
 	queueLength := state.queue.Length()
-	workerAvailable := state.limiter.Available(ctx)
+	workerAvailable := state.availableWorkers()
 
 	if queueLength > workerAvailable {
 		return workerAvailable
@@ -317,12 +347,13 @@ func (q *ExecutionBroker) startProcessorCount(ctx context.Context, state *proces
 func (q *ExecutionBroker) startProcessor(ctx context.Context, state *processorState) bool {
 	if state.queue.Length() == 0 {
 		return false
-	} else if !state.limiter.TryTake(ctx) {
+	} else if state.availableWorkers() == 0 {
 		return false
 	}
 
-	go q.processQueue(ctx, state)
+	state.engageWorker()
 
+	go q.processQueue(ctx, state)
 	return true
 }
 
@@ -340,7 +371,10 @@ func (q *ExecutionBroker) processQueueInner(ctx context.Context, state *processo
 	if ps != insolar.NotPending {
 		logger.Debug("wont process, pending state is ", ps)
 
-		state.limiter.Release(ctx)
+		q.stateLock.Lock()
+		state.dismissWorker()
+		q.stateLock.Unlock()
+
 		return
 	}
 
