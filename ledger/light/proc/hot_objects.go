@@ -149,10 +149,8 @@ func (p *HotObjects) Proceed(ctx context.Context) error {
 		)
 		logger.Debugf("[handleHotRecords] lifeline with id - %v saved", idx.ObjID.DebugString())
 
-		if p.currentNotificationCount < p.maxNotificationCount {
-			p.currentNotificationCount++
-			p.notifyPending(ctx, idx.ObjID, idx.Lifeline, pendingNotifyPulse.PulseNumber)
-		}
+		p.notifyPending(ctx, idx.ObjID, idx.Lifeline, pendingNotifyPulse.PulseNumber)
+
 	}
 
 	logger.Infof("before releasing jetFetcher for jet %s and pulse %s", p.jetID.DebugString(), p.pulse)
@@ -206,6 +204,11 @@ func (p *HotObjects) notifyPending(
 	if *lifeline.EarliestOpenRequest >= notifyLimit {
 		return
 	}
+
+	if p.currentNotificationCount > p.maxNotificationCount {
+		return
+	}
+	p.currentNotificationCount++
 
 	msg, err := payload.NewMessage(&payload.AbandonedRequestsNotification{
 		ObjectID: objectID,
