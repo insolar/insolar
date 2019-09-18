@@ -147,7 +147,7 @@ func (d *Deposit) checkAmount(activeDaemons []string) error {
 }
 
 func (d *Deposit) checkConfirm(migrationDaemonRef string, amountStr string) error {
-	var activateDaemons = []string{}
+	var activateDaemons []string
 
 	for ref := range d.MigrationDaemonConfirms {
 		migrationDaemonMemberRef, err := insolar.NewReferenceFromBase58(ref)
@@ -233,14 +233,13 @@ func (d *Deposit) Transfer(amountStr string, memberRef insolar.Reference) (inter
 	if !ok {
 		return nil, fmt.Errorf("can't parse input amount")
 	}
-	zero, _ := new(big.Int).SetString("0", 10)
 
 	balance, ok := new(big.Int).SetString(d.Balance, 10)
 	if !ok {
 		return nil, fmt.Errorf("can't parse deposit balance")
 	}
-	if balance.Cmp(zero) == -1 {
-		return nil, fmt.Errorf("amount must be larger then zero")
+	if balance.Sign() <= 0 {
+		return nil, fmt.Errorf("not enough balance for transfer")
 	}
 	newBalance, err := safemath.Sub(balance, amount)
 	if err != nil {
