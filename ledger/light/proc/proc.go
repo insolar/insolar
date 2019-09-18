@@ -236,8 +236,6 @@ func NewDependenciesMock() *Dependencies {
 		SendFilament:   func(*SendFilament) {},
 		HasPendings:    func(*HasPendings) {},
 		GetRequestInfo: func(*SendRequestInfo) {},
-		Config: func() configuration.Ledger {
-			return configuration.NewLedger()
-		},
+		Config:         configuration.NewLedger,
 	}
 }

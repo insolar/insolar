@@ -41,13 +41,12 @@ const (
 )
 
 type HotObjects struct {
-	meta                     payload.Meta
-	jetID                    insolar.JetID
-	drop                     drop.Drop
-	indexes                  []record.Index
-	pulse                    insolar.PulseNumber
-	currentNotificationCount uint
-	maxNotificationCount     uint
+	meta                   payload.Meta
+	jetID                  insolar.JetID
+	drop                   drop.Drop
+	indexes                []record.Index
+	pulse                  insolar.PulseNumber
+	availableNotifications uint
 
 	dep struct {
 		drops       drop.Modifier
@@ -67,15 +66,15 @@ func NewHotObjects(
 	jetID insolar.JetID,
 	drop drop.Drop,
 	indexes []record.Index,
-	maxNotificationCount uint,
+	availableNotifications uint,
 ) *HotObjects {
 	return &HotObjects{
-		meta:                 meta,
-		jetID:                jetID,
-		drop:                 drop,
-		indexes:              indexes,
-		pulse:                pn,
-		maxNotificationCount: maxNotificationCount,
+		meta:                   meta,
+		jetID:                  jetID,
+		drop:                   drop,
+		indexes:                indexes,
+		pulse:                  pn,
+		availableNotifications: availableNotifications,
 	}
 }
 
@@ -205,10 +204,11 @@ func (p *HotObjects) notifyPending(
 		return
 	}
 
-	if p.currentNotificationCount > p.maxNotificationCount {
+	if p.availableNotifications > 0 {
+		inslogger.FromContext(ctx).Error("out of AbandonedRequestsNotification limit")
 		return
 	}
-	p.currentNotificationCount++
+	p.availableNotifications--
 
 	msg, err := payload.NewMessage(&payload.AbandonedRequestsNotification{
 		ObjectID: objectID,
