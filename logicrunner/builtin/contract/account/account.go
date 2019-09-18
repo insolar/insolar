@@ -23,7 +23,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation/safemath"
-	"github.com/insolar/insolar/logicrunner/builtin/proxy/costcenter"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/deposit"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/member"
 )
@@ -138,28 +137,29 @@ func (a *Account) Transfer(rootDomainRef insolar.Reference, amountStr string, to
 		return nil, fmt.Errorf("amount must be larger then zero")
 	}
 
-	ccRef := foundation.GetCostCenter()
+	// ccRef := foundation.GetCostCenter()
+	//
+	// cc := costcenter.GetObject(ccRef)
+	// feeStr, err := cc.CalcFee(amountStr)
+	// if err != nil {
+	// 	return nil, fmt.Errorf("failed to calculate fee for amount: %s", err.Error())
+	// }
+	//
+	// fee, ok := new(big.Int).SetString(feeStr, 10)
+	// if !ok {
+	// 	return nil, fmt.Errorf("can't parse input feeStr")
+	// }
+	//
+	// toFeeMember, err := cc.GetFeeMember()
+	// if err != nil {
+	// 	return nil, fmt.Errorf("failed to get fee member: %s", err.Error())
+	// }
 
-	cc := costcenter.GetObject(ccRef)
-	feeStr, err := cc.CalcFee(amountStr)
-	if err != nil {
-		return nil, fmt.Errorf("failed to calculate fee for amount: %s", err.Error())
-	}
-
-	fee, ok := new(big.Int).SetString(feeStr, 10)
-	if !ok {
-		return nil, fmt.Errorf("can't parse input feeStr")
-	}
-
-	toFeeMember, err := cc.GetFeeMember()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get fee member: %s", err.Error())
-	}
-
-	totalSum, err := safemath.Add(fee, amount)
-	if err != nil {
-		return nil, fmt.Errorf("failed to calculate totalSum for amount: %s", err.Error())
-	}
+	totalSum := amount
+	// totalSum, err := safemath.Add(fee, amount)
+	// if err != nil {
+	// 	return nil, fmt.Errorf("failed to calculate totalSum for amount: %s", err.Error())
+	// }
 
 	currentBalanceStr, err := a.GetBalance()
 	if err != nil {
@@ -184,12 +184,13 @@ func (a *Account) Transfer(rootDomainRef insolar.Reference, amountStr string, to
 		return nil, fmt.Errorf("failed to transfer amount: %s", err.Error())
 	}
 
-	err = a.TransferToMember(feeStr, *toFeeMember)
-	if err != nil {
-		return nil, fmt.Errorf("failed to transfer fee: %s", err.Error())
-	}
+	// err = a.TransferToMember(feeStr, *toFeeMember)
+	// if err != nil {
+	// 	return nil, fmt.Errorf("failed to transfer fee: %s", err.Error())
+	// }
 
-	return member.TransferResponse{Fee: feeStr}, nil
+	// return member.TransferResponse{Fee: feeStr}, nil
+	return member.TransferResponse{}, nil
 }
 
 // IncreaseBalance increases the current balance by the amount.
