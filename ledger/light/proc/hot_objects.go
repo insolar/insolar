@@ -204,8 +204,8 @@ func (p *HotObjects) notifyPending(
 		return
 	}
 
-	if p.availableNotifications > 0 {
-		inslogger.FromContext(ctx).Error("out of AbandonedRequestsNotification limit")
+	if p.availableNotifications <= 0 {
+		inslogger.FromContext(ctx).Warn("out of AbandonedRequestsNotification limit")
 		return
 	}
 	p.availableNotifications--
