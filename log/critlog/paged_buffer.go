@@ -90,9 +90,9 @@ func (p *PagedBuffer) addPage(checkExpected bool, expectedPage, newPage *BufferP
 		}
 
 		newPage.next = current
-		if atomic.CompareAndSwapPointer(&p.next, current, newPage) {
+		if atomic.CompareAndSwapPointer(&p.next, unsafe.Pointer(current), unsafe.Pointer(newPage)) {
 			if p.trimHead {
-				atomic.StorePointer(&current.prev, newPage)
+				atomic.StorePointer(&current.prev, unsafe.Pointer(newPage))
 			}
 			current.stopAccess()
 			return true
@@ -167,7 +167,7 @@ func (p *PagedBuffer) allocateBuffer(reqLen uint32) (*BufferPage, []byte) {
 					return current, current.data[pos+serviceHeaderLen : pos+reqLen : pos+reqLen]
 				}
 			}
-			atomic.AddUint32(&current.active, -1)
+			atomic.AddUint32(&current.active, math.MaxUint32)
 
 			if p.trimHead {
 				if current.next != nil && current.totalCapacity >= p.capacityLimit {
@@ -279,7 +279,7 @@ func (b *BufferPage) startAccess() bool {
 }
 
 func (b *BufferPage) stopAccess() {
-	atomic.AddUint32(&b.active, -1)
+	atomic.AddUint32(&b.active, math.MaxUint32)
 }
 
 func (b *BufferPage) startExclusiveAccess() bool {
