@@ -313,10 +313,12 @@ func (r *PhasedRoundController) _startFullRealm(prepWasSuccessful bool) {
 	r.roundWorker.SetTimeout(endOf)
 
 	inslogger.FromContext(r.realm.roundContext).Warnf(
-		"Starting consensus full realm: self={%v}, ephemeral=%v, unsafe=%v, startedAt=%v, endOf=%v, census=%+v", r.realm.GetLocalProfile(),
+		"Starting consensus full realm: self={%v}, ephemeral=%v, unsafe=%v, startedAt=%v, endOf=%v, census=%+v, timings=%s", r.realm.GetLocalProfile(),
 		r.realm.ephemeralFeeder != nil, r.realm.unsafeRound,
 		args.LazyTimeFmt("15:04:05.000000", r.realm.GetStartedAt()),
-		args.LazyTimeFmt("15:04:05.000000", endOf), active)
+		args.LazyTimeFmt("15:04:05.000000", endOf), active,
+		r.realm.timings.String(),
+	)
 }
 
 func (r *PhasedRoundController) ensureStarted() bool {
