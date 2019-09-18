@@ -52,11 +52,13 @@ package packet
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 	"io"
 	"strconv"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 	"github.com/pkg/errors"
@@ -160,6 +162,8 @@ func DeserializePacketRaw(conn io.Reader) (*ReceivedPacket, error) {
 	if err != nil {
 		return nil, io.ErrUnexpectedEOF
 	}
+
+	inslogger.FromContext(context.Background()).Info("--- DeserializePacketRaw: length: ", length)
 
 	buf := make([]byte, length)
 	if _, err := io.ReadFull(reader, buf); err != nil {
