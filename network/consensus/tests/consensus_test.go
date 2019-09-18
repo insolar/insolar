@@ -219,9 +219,6 @@ func (*EmuRoundStrategy) ShuffleNodeSequence(n int, swap func(i, j int)) {
 	rand.Shuffle(n, swap)
 }
 
-func (*EmuRoundStrategy) AdjustConsensusTimings(timings *api.RoundTimings) {
-}
-
 var _ api.ConsensusControlFeeder = &EmuControlFeeder{}
 
 type EmuControlFeeder struct {

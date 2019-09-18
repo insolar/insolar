@@ -77,7 +77,6 @@ type RoundStrategy interface {
 	ShuffleNodeSequence(n int, swap func(i, j int))
 
 	ConfigureRoundContext(ctx context.Context, expectedPulse pulse.Number, self profiles.LocalNode) context.Context
-	AdjustConsensusTimings(timings *api.RoundTimings)
 }
 
 var _ api.RoundController = &PhasedRoundController{}

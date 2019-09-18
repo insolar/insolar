@@ -200,7 +200,6 @@ func (r *FullRealm) initBefore(transport transport.Factory) transport.Neighbourh
 
 	if r.ephemeralFeeder != nil {
 		r.timings = r.ephemeralFeeder.GetEphemeralTimings(r.config)
-		r.strategy.AdjustConsensusTimings(&r.timings)
 	}
 
 	r.packetSender = transport.GetPacketSender()
@@ -215,7 +214,6 @@ func (r *FullRealm) initBasics(census census.Active) {
 
 	if r.ephemeralFeeder == nil { // ephemeral timings are initialized earlier, in initBefore()
 		r.timings = r.config.GetConsensusTimings(r.pulseData.NextPulseDelta)
-		r.strategy.AdjustConsensusTimings(&r.timings)
 	}
 
 	if r.expectedPopulationSize == 0 {
