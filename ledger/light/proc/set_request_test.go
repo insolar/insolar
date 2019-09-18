@@ -167,6 +167,11 @@ func TestSetRequest_Proceed(t *testing.T) {
 				StateID: record.StateActivation,
 			},
 		}, nil)
+		checker.CheckRequestMock.Set(func(_ context.Context, id insolar.ID, req record.Request) (r error) {
+			require.Equal(t, requestID, id)
+			require.Equal(t, &request, req)
+			return nil
+		})
 		filaments.RequestDuplicateMock.Return(
 			&record.CompositeFilamentRecord{RecordID: reqID},
 			&record.CompositeFilamentRecord{RecordID: resID},

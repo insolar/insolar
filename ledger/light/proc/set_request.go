@@ -153,6 +153,12 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 		index = idx
 	}
 
+	// Checking request validity.
+	err = p.dep.checker.CheckRequest(ctx, p.requestID, p.request)
+	if err != nil {
+		return errors.Wrap(err, "request check failed")
+	}
+
 	// Check for request duplicates.
 	{
 		var (
@@ -199,12 +205,6 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 			}).Debug("duplicate found")
 			return nil
 		}
-	}
-
-	// Checking request validity.
-	err = p.dep.checker.CheckRequest(ctx, p.requestID, p.request)
-	if err != nil {
-		return errors.Wrap(err, "request check failed")
 	}
 
 	// Start writing to db.

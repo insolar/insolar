@@ -652,6 +652,10 @@ func (i *fetchingIterator) HasPrev() bool {
 func (i *fetchingIterator) Prev(ctx context.Context) (record.CompositeFilamentRecord, error) {
 	logger := inslogger.FromContext(ctx)
 
+	if i.readUntil == 0 {
+		return record.CompositeFilamentRecord{}, errors.New("invalid fetching parameters")
+	}
+
 	rec, err := i.iter.Prev(ctx)
 	if err == nil {
 		return rec, nil
