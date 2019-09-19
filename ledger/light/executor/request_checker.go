@@ -71,13 +71,6 @@ func (c *RequestCheckerDefault) CheckRequest(ctx context.Context, requestID inso
 	reasonRef := request.ReasonRef()
 	reasonID := *reasonRef.GetLocal()
 
-	if reasonID.IsEmpty() {
-		return &payload.CodedError{
-			Text: "reason is empty",
-			Code: payload.CodeInvalidRequest,
-		}
-	}
-
 	if reasonID.Pulse() > requestID.Pulse() {
 		return &payload.CodedError{
 			Text: "request is older than its reason",
