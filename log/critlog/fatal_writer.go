@@ -17,119 +17,78 @@
 package critlog
 
 import (
-	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"io"
 	"sync/atomic"
 )
 
-/*
-	Purpose:
-	FatalFlusher does flush/sync of a wrapped io.Writer on Panic or Fatal events.
-	If the writer doesn't support Flusher, then on Fatal level event FatalFlusher will try to close the writer.
-	All events after Fatal can be hard-locked or ignored.
-
-	Usage:
-	- FatalFlusher MUST be applied BEFORE a buffer
-	- the wrapped writer MUST implement either io.Closer or critlog.Flusher
-	- FatalFlusher will call WriteLevel() if the wrapped writer implements zerolog.LevelWriter
-
-	Examples:
-		logger -> .. -> FatalFlusher -> a buffered writer -> output writer
-		logger -> .. -> FatalFlusher -> output writer
-*/
-
-// This flusher will hard-lock any writes after first Fatal
-func FatalFlusher(w io.Writer) LevelWriteCloser {
-	return &fatalFlusher{w: AsLevelWriter(w), lockPostFatal: true}
-}
-
-func FatalFlusherExt(w io.Writer, lockPostFatal bool) LevelWriteCloser {
-	return &fatalFlusher{w: AsLevelWriter(w), lockPostFatal: lockPostFatal}
-}
-
-var _ zerolog.LevelWriter = &fatalFlusher{}
-
-type fatalFlusher struct {
-	w             zerolog.LevelWriter
-	lockPostFatal bool
-	state         uint32 // atomic
-}
-
-func (w *fatalFlusher) hasFatal() bool {
-	return atomic.LoadUint32(&w.state) != 0
-}
-
-func (w *fatalFlusher) setFatal() bool {
-	return atomic.CompareAndSwapUint32(&w.state, 0, 1)
-}
-
-func (w *fatalFlusher) Write(p []byte) (n int, err error) {
-	if !w.hasFatal() {
-		return w.w.Write(p)
+func NewFatalDirectWriter(output io.Writer) *FatalDirectWriter {
+	return &FatalDirectWriter{
+		output: outputGuard{output},
 	}
-	if w.lockPostFatal {
-		lockDown()
-	}
-	return len(p), nil
 }
 
-func (w *fatalFlusher) WriteLevel(level zerolog.Level, p []byte) (n int, err error) {
-	switch {
-	case level == zerolog.FatalLevel:
-		if w.setFatal() {
-			n, err = w.w.Write(p)
-			w.flushOrClose()
-			return
+var _ zerolog.LevelWriter = &FatalDirectWriter{}
+var _ io.WriteCloser = &FatalDirectWriter{}
+
+type FatalDirectWriter struct {
+	output          outputGuard
+	state           uint32 // atomic
+	unlockPostFatal bool
+}
+
+func (p *FatalDirectWriter) Close() error {
+	return p.output.close()
+}
+
+func (p *FatalDirectWriter) Flush() error {
+	_ = p.output.flush()
+	return nil
+}
+
+func (p *FatalDirectWriter) Write(b []byte) (n int, err error) {
+	if p.isFatal() {
+		return p.onFatal(zerolog.NoLevel, b)
+	}
+	return p.output.Write(b)
+}
+
+func (p *FatalDirectWriter) WriteLevel(level zerolog.Level, b []byte) (n int, err error) {
+	if p.isFatal() {
+		return p.onFatal(level, b)
+	}
+
+	switch level {
+	case zerolog.FatalLevel:
+		if !p.setFatal() {
+			return p.onFatal(level, b)
 		}
-		fallthrough
-	case w.hasFatal():
-		if w.lockPostFatal {
-			lockDown()
+		n, _ = p.output.writeLevel(level, b)
+		return n, p.Close()
+
+	case zerolog.PanicLevel:
+		n, err = p.output.writeLevel(level, b)
+		if err != nil {
+			_ = p.Flush()
+			return n, err
 		}
-		return len(p), nil
-	case level == zerolog.PanicLevel:
-		n, err = w.w.Write(p)
-		w.flush()
-		return
+		return n, p.Flush()
 	default:
-		return w.w.Write(p)
+		return p.output.writeLevel(level, b)
 	}
 }
 
-func (w *fatalFlusher) Sync() error {
-	if f, ok := w.w.(Syncer); ok {
-		return f.Sync()
+func (p *FatalDirectWriter) setFatal() bool {
+	return atomic.CompareAndSwapUint32(&p.state, 0, 1)
+}
+
+func (p *FatalDirectWriter) isFatal() bool {
+	return atomic.LoadUint32(&p.state) != 0
+}
+
+func (p *FatalDirectWriter) onFatal(level zerolog.Level, bytes []byte) (int, error) {
+	if p.unlockPostFatal {
+		return len(bytes), nil
 	}
-	return errors.New("unsupported: Sync")
-}
-
-func (w *fatalFlusher) Flush() error {
-	if f, ok := w.w.(Flusher); ok {
-		return f.Flush()
-	}
-	return errors.New("unsupported: Flush")
-}
-
-func (w *fatalFlusher) Close() error {
-	if f, ok := w.w.(io.Closer); ok {
-		return f.Close()
-	}
-	return errors.New("unsupported: Close")
-}
-
-func (w *fatalFlusher) flush() bool {
-	return w.Flush() == nil || w.Sync() == nil
-}
-
-func (w *fatalFlusher) flushOrClose() {
-	if w.flush() {
-		return
-	}
-	// any other approaches? e.g. write a long (4kB) padding?
-	_ = w.Close()
-}
-
-func lockDown() {
 	select {}
 }

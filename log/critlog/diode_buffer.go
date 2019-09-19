@@ -26,16 +26,20 @@ import (
 	"unsafe"
 )
 
+type SkippedFormatterFunc func(missed int) []byte
+
 func NewDiodeBufferedLevelWriter(output io.Writer, bufSize int, bufPollInterval time.Duration,
 	dropBufOnFatal bool, skippedFn SkippedFormatterFunc,
-) DiodeBufferedLevelWriter {
-	return DiodeBufferedLevelWriter{
+) *DiodeBufferedLevelWriter {
+	bw := DiodeBufferedLevelWriter{
 		output:          outputGuard{output},
 		bufSize:         bufSize,
 		bufPollInterval: bufPollInterval,
 		skippedFn:       skippedFn,
 		dropBufOnFatal:  dropBufOnFatal,
 	}
+	bw.buffer = (unsafe.Pointer)(bw.newBuffer())
+	return &bw
 }
 
 var _ zerolog.LevelWriter = &DiodeBufferedLevelWriter{}
@@ -45,7 +49,7 @@ type DiodeBufferedLevelWriter struct {
 	output          outputGuard
 	bufSize         int
 	bufPollInterval time.Duration
-	lockPostFatal   bool
+	unlockPostFatal bool
 	dropBufOnFatal  bool
 	skippedFn       SkippedFormatterFunc
 
@@ -97,20 +101,27 @@ func (p *outputGuard) writeLevel(level zerolog.Level, b []byte) (n int, err erro
 
 /* =================================== */
 
-func (p *DiodeBufferedLevelWriter) newBuffer() *diode.Writer {
-
+func newDiodeBuffer(output *outputGuard, bufSize int, bufPollInterval time.Duration, skippedFn SkippedFormatterFunc) *diode.Writer {
 	var alertFn func(int)
-	if p.skippedFn != nil {
+	if skippedFn != nil {
 		alertFn = func(missed int) {
-			msg := p.skippedFn(uint32(missed))
-			if len(msg) > 0 {
-				_, _ = p.output.writeLevel(zerolog.WarnLevel, msg)
-			}
+			writeMissedMsg(output, skippedFn, missed)
 		}
 	}
 
-	nb := diode.NewWriter(&p.output, p.bufSize, p.bufPollInterval, alertFn)
+	nb := diode.NewWriter(output, bufSize, bufPollInterval, alertFn)
 	return &nb
+}
+
+func writeMissedMsg(output *outputGuard, skippedFn SkippedFormatterFunc, missed int) {
+	msg := skippedFn(missed)
+	if len(msg) > 0 {
+		_, _ = output.writeLevel(zerolog.WarnLevel, msg)
+	}
+}
+
+func (p *DiodeBufferedLevelWriter) newBuffer() *diode.Writer {
+	return newDiodeBuffer(&p.output, p.bufSize, p.bufPollInterval, p.skippedFn)
 }
 
 func (p *DiodeBufferedLevelWriter) getBuffer() *diode.Writer {
@@ -118,7 +129,12 @@ func (p *DiodeBufferedLevelWriter) getBuffer() *diode.Writer {
 }
 
 func (p *DiodeBufferedLevelWriter) dropBuffer() *diode.Writer {
-	return (*diode.Writer)(atomic.SwapPointer(&p.buffer, nil))
+	buf := (*diode.Writer)(atomic.SwapPointer(&p.buffer, nil))
+	if buf == nil {
+		return nil
+	}
+	_ = buf.Close()
+	return buf
 }
 
 func (p *DiodeBufferedLevelWriter) replaceBuffer() *diode.Writer {
@@ -140,11 +156,9 @@ func (p *DiodeBufferedLevelWriter) replaceBuffer() *diode.Writer {
 }
 
 func (p *DiodeBufferedLevelWriter) Close() error {
-	buf := p.dropBuffer()
-	if buf == nil {
+	if p.dropBuffer() == nil {
 		return nil
 	}
-	_ = buf.Close()
 	return p.output.close()
 }
 
@@ -185,7 +199,9 @@ func (p *DiodeBufferedLevelWriter) WriteLevel(level zerolog.Level, b []byte) (n 
 		}
 
 		if p.dropBufOnFatal {
-			p.dropBuffer()
+			if p.dropBuffer() != nil && p.skippedFn != nil {
+				writeMissedMsg(&p.output, p.skippedFn, -1)
+			}
 		} else {
 			err = p.Close()
 		}
@@ -212,8 +228,8 @@ func (p *DiodeBufferedLevelWriter) isFatal() bool {
 }
 
 func (p *DiodeBufferedLevelWriter) onFatal(level zerolog.Level, bytes []byte) (int, error) {
-	if p.lockPostFatal {
-		select {}
+	if p.unlockPostFatal {
+		return len(bytes), nil
 	}
-	return len(bytes), nil
+	select {}
 }
