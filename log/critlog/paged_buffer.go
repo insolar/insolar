@@ -46,6 +46,14 @@ type PagedBuffer struct {
 	//lastKnownHead *BufferPage
 }
 
+type pageFifo struct {
+	next unsafe.Pointer // atomic, *BufferPage
+}
+
+func (p *pageFifo) add(page *BufferPage) {
+
+}
+
 type BufferPage struct {
 	active uint32 // atomic
 	offset uint32 // atomic
@@ -63,7 +71,7 @@ type BufferPage struct {
 
 type BufferTrim struct {
 	active          uint32 // atomic
-	trimmedCapacity uint32 // atomic
+	trimmedCapacity uint32
 	target          *BufferPage
 }
 
