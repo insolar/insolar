@@ -88,7 +88,7 @@ type RoundTimings struct {
 	EndOfConsensus time.Duration
 }
 
-func (t *RoundTimings) String() string {
+func (t RoundTimings) String() string {
 	return fmt.Sprintf("EndOfConsensus: %s, EndOfPhase1: %s, EndOfPhase2: %s, EndOfPhase3: %s",
 		t.EndOfConsensus,
 		t.EndOfPhase1,

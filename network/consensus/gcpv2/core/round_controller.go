@@ -317,7 +317,7 @@ func (r *PhasedRoundController) _startFullRealm(prepWasSuccessful bool) {
 		r.realm.ephemeralFeeder != nil, r.realm.unsafeRound,
 		args.LazyTimeFmt("15:04:05.000000", r.realm.GetStartedAt()),
 		args.LazyTimeFmt("15:04:05.000000", endOf), active,
-		r.realm.timings.String(),
+		r.realm.timings,
 	)
 }
 
