@@ -104,19 +104,7 @@ func TestRules_CheckMajorityRule(t *testing.T) {
 	netNodes = netNodes[:len(netNodes)-len(netNodes)/2]
 	count, err = CheckMajorityRule(cert, netNodes)
 	require.Error(t, err)
-
 	require.Equal(t, len(netNodes), count)
-}
-
-func TestRules_checkMinRoleError(t *testing.T) {
-	nodes := []insolar.NetworkNode{
-		node.NewNode(gen.Reference(), insolar.StaticRoleHeavyMaterial, nil, "", ""),
-	}
-	require.NotEmpty(t, checkMinRoleError(nodes, insolar.StaticRoleHeavyMaterial, 1, 2))
-
-	require.Empty(t, checkMinRoleError(nodes, insolar.StaticRoleHeavyMaterial, 2, 2))
-
-	require.NotEmpty(t, checkMinRoleError(nodes, insolar.StaticRoleLightMaterial, 1, 2))
 }
 
 func getDiscoveryNodes(count int) ([]insolar.NetworkNode, []insolar.DiscoveryNode) {

@@ -51,8 +51,9 @@
 package rules
 
 import (
-	"errors"
 	"fmt"
+
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
@@ -67,7 +68,7 @@ func CheckMajorityRule(cert insolar.Certificate, nodes []insolar.NetworkNode) (i
 	if activeDiscoveryNodesLen >= majorityRule {
 		return activeDiscoveryNodesLen, nil
 	}
-	strErr := fmt.Sprintf("MajorityRule failed. Active discovery nodes len: actual %d, expected %d. Diff:\n",
+	strErr := fmt.Sprintf("Active discovery nodes len actual %d, expected %d. Not active ",
 		activeDiscoveryNodesLen, majorityRule)
 	discoveries := cert.GetDiscoveryNodes()
 	for _, d := range discoveries {
@@ -79,10 +80,10 @@ func CheckMajorityRule(cert insolar.Certificate, nodes []insolar.NetworkNode) (i
 			}
 		}
 		if !found {
-			strErr += "host: " + d.GetHost() + " role: " + d.GetRole().String() + "\n"
+			strErr += d.GetHost() + " " + d.GetRole().String() + " "
 		}
 	}
-	return activeDiscoveryNodesLen, errors.New(strErr)
+	return activeDiscoveryNodesLen, errors.Wrap(errors.New(strErr), "MajorityRule failed")
 }
 
 // CheckMinRole returns true if MinRole check passed
@@ -108,21 +109,9 @@ func CheckMinRole(cert insolar.Certificate, nodes []insolar.NetworkNode) error {
 		return nil
 	}
 
-	strErr := "MinRoles failed. " + checkMinRoleError(nodes, insolar.StaticRoleVirtual, virtualCount, v) +
-		checkMinRoleError(nodes, insolar.StaticRoleHeavyMaterial, heavyCount, h) +
-		checkMinRoleError(nodes, insolar.StaticRoleLightMaterial, lightCount, l)
-	return errors.New(strErr)
-}
-
-func checkMinRoleError(nodes []insolar.NetworkNode, role insolar.StaticRole, count uint, minRole uint) string {
-	var strErr string
-	if count < minRole {
-		strErr += fmt.Sprintf(role.String()+": actual %d, expected %d\n", count, minRole)
-		for _, node := range nodes {
-			if role == node.Role() {
-				strErr += "host: " + node.Address() + "\n"
-			}
-		}
-	}
-	return strErr
+	err := errors.New(fmt.Sprintf("%s actual %d expected %d, %s actual %d expected %d, %s actual %d expected %d",
+		insolar.StaticRoleVirtual.String(), virtualCount, v,
+		insolar.StaticRoleHeavyMaterial.String(), heavyCount, h,
+		insolar.StaticRoleLightMaterial.String(), lightCount, l))
+	return errors.Wrap(err, "MinRoles failed")
 }
