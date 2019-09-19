@@ -58,6 +58,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
+	"github.com/insolar/insolar/network/consensus/common/warning"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
@@ -108,7 +109,7 @@ func (r *FullRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 
 	switch {
 	case pt.GetLimitPerSender() == 0 || int(pt) >= len(r.packetDispatchers) || r.packetDispatchers[pt] == nil:
-		return fmt.Errorf("packet type (%v) is unknown", pt)
+		return warning.New(fmt.Errorf("packet type (%v) is unknown", pt))
 	case pt.IsMemberPacket():
 		selfID := r.GetSelfNodeID()
 		strict, err := coreapi.VerifyPacketRoute(ctx, packet, selfID, from)
