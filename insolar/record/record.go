@@ -194,8 +194,8 @@ func (r *IncomingRequest) IsCreationRequest() bool {
 }
 
 func (r *IncomingRequest) Validate() error {
-	if r.ReasonRef().IsEmpty() {
-		return errors.New("reason ref is empty")
+	if r.ReasonRef().GetLocal().IsEmpty() {
+		return errors.New("reason is empty")
 	}
 	// Incoming requests never should't be in detached state,
 	// app code should check it and raise some kind of error.
@@ -245,8 +245,8 @@ func (r *OutgoingRequest) Validate() error {
 	if r.IsCreationRequest() {
 		return errors.New("outgoing request cannot be creating request")
 	}
-	if r.ReasonRef().IsEmpty() {
-		return errors.New("reason ref is empty")
+	if r.ReasonRef().GetLocal().IsEmpty() {
+		return errors.New("reason is empty")
 	}
 
 	return nil
