@@ -51,7 +51,6 @@
 package rules
 
 import (
-	"fmt"
 	"strconv"
 	"testing"
 
@@ -84,7 +83,6 @@ func TestRules_CheckMinRole(t *testing.T) {
 		return 3, 2, 4
 	})
 	err = CheckMinRole(cert, nodes)
-	fmt.Println(err)
 	require.Error(t, err)
 }
 
@@ -106,7 +104,6 @@ func TestRules_CheckMajorityRule(t *testing.T) {
 	netNodes = netNodes[:len(netNodes)-len(netNodes)/2]
 	count, err = CheckMajorityRule(cert, netNodes)
 	require.Error(t, err)
-	fmt.Println(err)
 
 	require.Equal(t, len(netNodes), count)
 }
