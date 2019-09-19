@@ -144,7 +144,7 @@ func getAmountFromParam(params map[string]interface{}) (*big.Int, error) {
 	if !ok {
 		return nil, fmt.Errorf("failed to parse amount")
 	}
-	if amount.Cmp(big.NewInt(0)) != 1 {
+	if amount.Sign() <= 0 {
 		return nil, fmt.Errorf("amount must be greater than zero")
 	}
 	return amount, nil

@@ -29,8 +29,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/api/sdk"
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/backoff"
 )
 
 type benchmark struct {
@@ -45,12 +43,11 @@ type benchmark struct {
 	errors         uint32
 	timeouts       uint32
 	insSDK         *sdk.SDK
-	penRetries     int32
 }
 
 type scenario interface {
 	canBeStarted() error
-	prepare() int32
+	prepare()
 	scenario(int) (string, error)
 	checkResult()
 }
@@ -96,7 +93,7 @@ func (b *benchmark) start(ctx context.Context) {
 }
 
 func (b *benchmark) printResult() {
-	writeToOutput(b.out, fmt.Sprintf("Scenario result:\n\tSuccesses: %d\n\tErrors: %d\n\tTimeouts: %d\n\tPending retries: %d\n", b.successes, b.errors, b.timeouts, b.penRetries))
+	writeToOutput(b.out, fmt.Sprintf("Scenario result:\n\tSuccesses: %d\n\tErrors: %d\n\tTimeouts: %d\n", b.successes, b.errors, b.timeouts))
 }
 
 func (b *benchmark) startMember(ctx context.Context, index int, wg *sync.WaitGroup) {
@@ -114,21 +111,9 @@ func (b *benchmark) startMember(ctx context.Context, index int, wg *sync.WaitGro
 		var traceID string
 		var err error
 
-		bof := backoff.Backoff{Min: 500 * time.Millisecond, Max: 20 * time.Second}
-
-		retry := true
-		for retry && bof.Attempt() < backoffAttemptsCount {
-			start = time.Now()
-			traceID, err = b.scenario.scenario(index)
-			stop = time.Since(start)
-
-			if err != nil && strings.Contains(err.Error(), insolar.ErrTooManyPendingRequests.Error()) {
-				time.Sleep(bof.Duration())
-				atomic.AddInt32(&b.penRetries, 1)
-			} else {
-				retry = false
-			}
-		}
+		start = time.Now()
+		traceID, err = b.scenario.scenario(index)
+		stop = time.Since(start)
 
 		if err == nil {
 			atomic.AddUint32(&b.successes, 1)

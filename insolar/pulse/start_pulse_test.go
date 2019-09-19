@@ -14,28 +14,29 @@
 // limitations under the License.
 //
 
-package main
+package pulse
 
 import (
-	"github.com/insolar/insolar/api/sdk"
+	"testing"
+
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/gen"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/testutils"
 )
 
-type createMembersScenario struct {
-	insSDK  *sdk.SDK
-	members []*sdk.Member
+func ReadPulses(t testing.TB, pulser StartPulse) func() {
+	return func() {
+		pulser.PulseNumber()
+	}
 }
 
-func (s *createMembersScenario) canBeStarted() error {
-	return nil
+func TestStartPulseRace(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+	startPulse := NewStartPulse()
+	syncTest := &testutils.SyncT{T: t}
+	for i := 0; i < 10; i++ {
+		go ReadPulses(syncTest, startPulse)()
+	}
+	startPulse.SetStartPulse(ctx, insolar.Pulse{PulseNumber: gen.PulseNumber()})
 }
-
-func (s *createMembersScenario) prepare() {}
-
-func (s *createMembersScenario) scenario(index int) (string, error) {
-	creator := s.members[index]
-
-	_, traceID, err := s.insSDK.CreateMember(creator.Reference)
-	return traceID, err
-}
-
-func (s *createMembersScenario) checkResult() {}

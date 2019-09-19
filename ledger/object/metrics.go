@@ -32,16 +32,6 @@ var (
 		"How many bucket have been removed from a node",
 		stats.UnitDimensionless,
 	)
-	statObjectPendingRequestsInMemoryAddedCount = stats.Int64(
-		"object_pendings_requests_added_count",
-		"How many requests have been registered",
-		stats.UnitDimensionless,
-	)
-	statObjectPendingResultsInMemoryAddedCount = stats.Int64(
-		"object_pendings_results_added_count",
-		"How many succeed results have been registered",
-		stats.UnitDimensionless,
-	)
 	statRecordInMemoryAddedCount = stats.Int64(
 		"record_storage_added_count",
 		"How many records have been saved to a in-memory storage",
@@ -72,6 +62,12 @@ func init() {
 			Name:        statRecordInMemoryAddedCount.Name(),
 			Description: statRecordInMemoryAddedCount.Description(),
 			Measure:     statRecordInMemoryAddedCount,
+			Aggregation: view.Sum(),
+		},
+		&view.View{
+			Name:        statRecordInMemoryRemovedCount.Name(),
+			Description: statRecordInMemoryRemovedCount.Description(),
+			Measure:     statRecordInMemoryRemovedCount,
 			Aggregation: view.Sum(),
 		},
 		&view.View{

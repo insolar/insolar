@@ -43,19 +43,14 @@ func (s *transferDifferentMembersScenario) canBeStarted() error {
 	return nil
 }
 
-func (s *transferDifferentMembersScenario) prepare() int32 {
+func (s *transferDifferentMembersScenario) prepare() {
 	s.balanceCheckMembers = make([]*sdk.Member, len(s.members))
 
 	if !noCheckBalance {
-		var balancePenRetries int32
-
 		copy(s.balanceCheckMembers, s.members)
 		s.balanceCheckMembers = append(s.balanceCheckMembers, s.insSDK.GetFeeMember())
-		s.totalBalanceBefore, balancePenRetries = getTotalBalance(s.insSDK, s.balanceCheckMembers)
-		return balancePenRetries
+		s.totalBalanceBefore = getTotalBalance(s.insSDK, s.balanceCheckMembers)
 	}
-
-	return 0
 }
 
 func (s *transferDifferentMembersScenario) scenario(index int) (string, error) {
@@ -69,7 +64,7 @@ func (s *transferDifferentMembersScenario) checkResult() {
 	if !noCheckBalance {
 		totalBalanceAfter := big.NewInt(0)
 		for nretries := 0; nretries < balanceCheckRetries; nretries++ {
-			totalBalanceAfter, _ = getTotalBalance(s.insSDK, s.balanceCheckMembers)
+			totalBalanceAfter = getTotalBalance(s.insSDK, s.balanceCheckMembers)
 			if totalBalanceAfter.Cmp(s.totalBalanceBefore) == 0 {
 				break
 			}

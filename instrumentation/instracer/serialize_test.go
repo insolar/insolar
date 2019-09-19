@@ -29,22 +29,17 @@ import (
 func TestSerialize(t *testing.T) {
 	ttable := []struct {
 		name    string
-		entries []instracer.Entry
 	}{
 		{name: "empty"},
-		{name: "one", entries: []instracer.Entry{
-			{Key: "key", Value: "value"},
-		}},
+		{name: "one"},
 	}
 	for _, tt := range ttable {
 		t.Run(tt.name, func(t *testing.T) {
 			ctxIn, span := trace.StartSpan(context.Background(), "test")
 			spanctx := span.SpanContext()
-			ctxIn = instracer.SetBaggage(ctxIn, tt.entries...)
 
 			b := instracer.MustSerialize(ctxIn)
 			spanOut := instracer.MustDeserialize(b)
-			assert.Equal(t, tt.entries, spanOut.Entries)
 			assert.Equal(t, spanctx.SpanID[:], spanOut.SpanID)
 			assert.Equal(t, spanctx.TraceID[:], spanOut.TraceID)
 			// assert.NotNil(t, span)

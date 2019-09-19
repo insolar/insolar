@@ -219,12 +219,14 @@ func (mA *MigrationAdmin) GetMemberByMigrationAddress(migrationAddress string) (
 func (mA *MigrationAdmin) addMigrationAddresses(migrationAddresses []string) error {
 	newMA := make([][]string, len(mA.MigrationAddressShards))
 	for _, ma := range migrationAddresses {
-		trimmedMigrationAddress := foundation.TrimAddress(ma)
-		i := foundation.GetShardIndex(trimmedMigrationAddress, len(mA.MigrationAddressShards))
-		if i >= len(newMA) {
-			return fmt.Errorf("incorect migration shard index")
+		if foundation.IsEthereumAddress(ma) {
+			trimmedMigrationAddress := foundation.TrimAddress(ma)
+			i := foundation.GetShardIndex(trimmedMigrationAddress, len(mA.MigrationAddressShards))
+			if i >= len(newMA) {
+				return fmt.Errorf("incorect migration shard index")
+			}
+			newMA[i] = append(newMA[i], trimmedMigrationAddress)
 		}
-		newMA[i] = append(newMA[i], trimmedMigrationAddress)
 	}
 
 	for i, ma := range newMA {

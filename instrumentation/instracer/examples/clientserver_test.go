@@ -73,8 +73,6 @@ func Example_ClientServer() {
 		ctx, "client", "nodeRef", jconf.AgentEndpoint, jconf.CollectorEndpoint, jconf.ProbabilityRate)
 	defer donefn()
 
-	ctx = instracer.SetBaggage(
-		ctx, instracer.Entry{Key: "traceid", Value: traceid})
 	ctx, span := instracer.StartSpan(ctx, "root")
 	defer span.End()
 
@@ -132,9 +130,6 @@ func dataForServer(tracestring string) (context.Context, []byte) {
 	tracespan := instracer.TraceSpan{
 		TraceID: []byte(traceid),
 		SpanID:  []byte(spanid),
-		Entries: []instracer.Entry{
-			{Key: "traceid", Value: instraceid},
-		},
 	}
 	ctx := inslogger.ContextWithTrace(context.Background(), instraceid)
 	b, err := tracespan.Serialize()

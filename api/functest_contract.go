@@ -29,6 +29,7 @@ import (
 
 	"github.com/insolar/insolar/application/extractor"
 	"github.com/insolar/insolar/insolar"
+	insolarApi "github.com/insolar/insolar/insolar/api"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
@@ -123,6 +124,11 @@ func (s *FuncTestContractService) CallConstructor(r *http.Request, args *CallCon
 		return errors.Wrap(err, "can't get protoRef")
 	}
 
+	pulse, err := s.runner.PulseAccessor.Latest(ctx)
+	if err != nil {
+		return errors.Wrap(err, "can't get current pulse")
+	}
+
 	base := insolar.GenesisRecord.Ref()
 	msg := &payload.CallMethod{
 		Request: &record.IncomingRequest{
@@ -133,8 +139,8 @@ func (s *FuncTestContractService) CallConstructor(r *http.Request, args *CallCon
 			Prototype:       protoRef,
 			CallType:        record.CTSaveAsChild,
 			APIRequestID:    utils.TraceID(ctx),
-
-			APINode: s.runner.JetCoordinator.Me(),
+			Reason:          insolarApi.MakeReason(pulse.PulseNumber, args.MethodArgs),
+			APINode:         s.runner.JetCoordinator.Me(),
 		},
 	}
 
@@ -179,14 +185,19 @@ func (s *FuncTestContractService) CallMethod(r *http.Request, args *CallMethodAr
 		return errors.Wrap(err, "can't get objectRef")
 	}
 
+	pulse, err := s.runner.PulseAccessor.Latest(ctx)
+	if err != nil {
+		return errors.Wrap(err, "can't get current pulse")
+	}
+
 	msg := &payload.CallMethod{
 		Request: &record.IncomingRequest{
 			Object:       objectRef,
 			Method:       args.Method,
 			Arguments:    args.MethodArgs,
 			APIRequestID: utils.TraceID(ctx),
-
-			APINode: s.runner.JetCoordinator.Me(),
+			Reason:       insolarApi.MakeReason(pulse.PulseNumber, args.MethodArgs),
+			APINode:      s.runner.JetCoordinator.Me(),
 		},
 	}
 

@@ -27,9 +27,7 @@ import (
 	"os/signal"
 	"path"
 	"path/filepath"
-	"strings"
 	"sync"
-	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -37,18 +35,16 @@ import (
 	"github.com/spf13/pflag"
 
 	"github.com/insolar/insolar/api/sdk"
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/backoff"
 	"github.com/insolar/insolar/insolar/defaults"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/testutils"
 )
 
 const (
-	defaultStdoutPath    = "-"
-	backoffAttemptsCount = 5
-	balanceCheckRetries  = 10
-	balanceCheckDelay    = 5 * time.Second
+	defaultStdoutPath   = "-"
+	createMemberRetries = 5
+	balanceCheckRetries = 10
+	balanceCheckDelay   = 5 * time.Second
 )
 
 var (
@@ -115,7 +111,7 @@ func check(msg string, err error) {
 	}
 }
 
-func newTransferDifferentMemberScenarios(out io.Writer, insSDK *sdk.SDK, members []*sdk.Member, concurrent int, repetitions int, penRetries int32) benchmark {
+func newTransferDifferentMemberScenarios(out io.Writer, insSDK *sdk.SDK, members []*sdk.Member, concurrent int, repetitions int) benchmark {
 	return benchmark{
 		scenario: &transferDifferentMembersScenario{
 			insSDK:  insSDK,
@@ -125,11 +121,10 @@ func newTransferDifferentMemberScenarios(out io.Writer, insSDK *sdk.SDK, members
 		repetitions: repetitions,
 		name:        "TransferDifferentMembers",
 		out:         out,
-		penRetries:  penRetries,
 	}
 }
 
-func newCreateMemberScenarios(out io.Writer, insSDK *sdk.SDK, members []*sdk.Member, concurrent int, repetitions int, penRetries int32) benchmark {
+func newCreateMemberScenarios(out io.Writer, insSDK *sdk.SDK, members []*sdk.Member, concurrent int, repetitions int) benchmark {
 	return benchmark{
 		scenario: &createMembersScenario{
 			insSDK:  insSDK,
@@ -139,7 +134,6 @@ func newCreateMemberScenarios(out io.Writer, insSDK *sdk.SDK, members []*sdk.Mem
 		repetitions: repetitions,
 		name:        "CreateMember",
 		out:         out,
-		penRetries:  penRetries,
 	}
 }
 
@@ -173,36 +167,29 @@ func printResults(b benchmark) {
 	b.printResult()
 }
 
-func createMembers(insSDK *sdk.SDK, count int) ([]*sdk.Member, int32) {
+func createMembers(insSDK *sdk.SDK, count int) []*sdk.Member {
 	var members []*sdk.Member
 	var member *sdk.Member
 	var traceID string
 	var err error
-	var retriesCount int32
 
 	for i := 0; i < count; i++ {
-		bof := backoff.Backoff{Min: 1 * time.Second, Max: 10 * time.Second}
-		for bof.Attempt() < backoffAttemptsCount {
+		retries := createMemberRetries
+		for retries > 0 {
 			member, traceID, err = insSDK.CreateMember("")
 			if err == nil {
 				members = append(members, member)
 				break
 			}
-
-			if strings.Contains(err.Error(), insolar.ErrTooManyPendingRequests.Error()) {
-				retriesCount++
-			} else {
-				fmt.Printf("Retry to create member. TraceID: %s Error is: %s\n", traceID, err.Error())
-			}
-			time.Sleep(bof.Duration())
+			fmt.Printf("Retry to create member. TraceID: %s Error is: %s\n", traceID, err.Error())
+			retries--
 		}
-		check(fmt.Sprintf("Couldn't create member after retries: %d", backoffAttemptsCount), err)
-		bof.Reset()
+		check(fmt.Sprintf("Couldn't create member after retries: %d", createMemberRetries), err)
 	}
-	return members, retriesCount
+	return members
 }
 
-func getTotalBalance(insSDK *sdk.SDK, members []*sdk.Member) (totalBalance *big.Int, penRetires int32) {
+func getTotalBalance(insSDK *sdk.SDK, members []*sdk.Member) (totalBalance *big.Int) {
 	type Result struct {
 		num     int
 		balance *big.Int
@@ -217,22 +204,8 @@ func getTotalBalance(insSDK *sdk.SDK, members []*sdk.Member) (totalBalance *big.
 	// execute all queries in parallel
 	for i := 0; i < nmembers; i++ {
 		go func(m *sdk.Member, num int) {
-			bof := backoff.Backoff{Min: 1 * time.Second, Max: 10 * time.Second}
-
 			res := Result{num: num}
-			for bof.Attempt() < backoffAttemptsCount {
-				res.balance, res.err = insSDK.GetBalance(m)
-				if res.err == nil {
-					break
-				}
-				if strings.Contains(res.err.Error(), insolar.ErrTooManyPendingRequests.Error()) {
-					atomic.AddInt32(&penRetires, 1)
-				} else {
-					// retry
-					fmt.Printf("Retry to fetch balance for %v-th member: %v\n", res.num, res.err)
-				}
-				time.Sleep(bof.Duration())
-			}
+			res.balance, res.err = insSDK.GetBalance(m)
 			results <- res
 			wg.Done()
 		}(members[i], i)
@@ -243,31 +216,28 @@ func getTotalBalance(insSDK *sdk.SDK, members []*sdk.Member) (totalBalance *big.
 	for i := 0; i < nmembers; i++ {
 		res := <-results
 		if res.err != nil {
-			if !strings.Contains(res.err.Error(), insolar.ErrTooManyPendingRequests.Error()) {
-				fmt.Printf("Can't get balance for %v-th member: %v\n", res.num, res.err)
-			}
+			fmt.Printf("Can't get balance for %v-th member: %v\n", res.num, res.err)
 			continue
 		}
 		b := totalBalance
 		totalBalance.Add(b, res.balance)
 	}
 
-	return totalBalance, penRetires
+	return totalBalance
 }
 
-func getMembers(insSDK *sdk.SDK) ([]*sdk.Member, int32, error) {
+func getMembers(insSDK *sdk.SDK) ([]*sdk.Member, error) {
 	var members []*sdk.Member
 	var err error
-	var retriesCount int32
 
 	if useMembersFromFile {
 		members, err = loadMembers(concurrent * 2)
 		if err != nil {
-			return nil, 0, errors.Wrap(err, "error while loading members: ")
+			return nil, errors.Wrap(err, "error while loading members: ")
 		}
 	} else {
 		start := time.Now()
-		members, retriesCount = createMembers(insSDK, concurrent*2)
+		members = createMembers(insSDK, concurrent*2)
 		creationTime := time.Since(start)
 		fmt.Printf("Members were created in %s\n", creationTime)
 		fmt.Printf("Average creation of member time - %s\n", time.Duration(int64(creationTime)/int64(concurrent*2)))
@@ -276,10 +246,10 @@ func getMembers(insSDK *sdk.SDK) ([]*sdk.Member, int32, error) {
 	if saveMembersToFile {
 		err = saveMembers(members)
 		if err != nil {
-			return nil, 0, errors.Wrap(err, "save member done with error: ")
+			return nil, errors.Wrap(err, "save member done with error: ")
 		}
 	}
-	return members, retriesCount, nil
+	return members, nil
 }
 
 func saveMembers(members []*sdk.Member) error {
@@ -340,7 +310,7 @@ func main() {
 	err = insSDK.SetLogLevel(logLevelServer)
 	check("Failed to parse log level: ", err)
 
-	members, crMemPenBefore, err := getMembers(insSDK)
+	members, err := getMembers(insSDK)
 	check("Error while loading members: ", err)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -352,9 +322,9 @@ func main() {
 	var b benchmark
 	switch scenarioName {
 	case "createMember":
-		b = newCreateMemberScenarios(out, insSDK, members, concurrent, repetitions, crMemPenBefore)
+		b = newCreateMemberScenarios(out, insSDK, members, concurrent, repetitions)
 	default:
-		b = newTransferDifferentMemberScenarios(out, insSDK, members, concurrent, repetitions, crMemPenBefore)
+		b = newTransferDifferentMemberScenarios(out, insSDK, members, concurrent, repetitions)
 	}
 
 	go func() {
@@ -378,7 +348,7 @@ func main() {
 		}
 	}()
 
-	b.penRetries += b.scenario.prepare()
+	b.scenario.prepare()
 
 	startScenario(ctx, b)
 

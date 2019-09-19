@@ -261,7 +261,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 			return nil, errors.Wrap(err, "failed create backuper")
 		}
 
-		c.rollback = executor.NewDBRollback(JetKeeper, drops, Records, indexes, Jets, Pulses, JetKeeper, backupMaker)
+		c.rollback = executor.NewDBRollback(JetKeeper, drops, Records, indexes, Jets, Pulses, JetKeeper, Nodes, backupMaker)
 		c.stateKeeper = executor.NewInitialStateKeeper(JetKeeper, Jets, Coordinator, indexes, drops)
 
 		sp := insolarPulse.NewStartPulse()

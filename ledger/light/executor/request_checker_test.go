@@ -72,6 +72,20 @@ func TestRequestCheckerDefault_CheckRequest(t *testing.T) {
 		assert.Equal(t, uint32(payload.CodeInvalidRequest), coded.Code)
 	})
 
+	t.Run("reason is empty returns error", func(t *testing.T) {
+		setup()
+		defer mc.Finish()
+
+		req := record.IncomingRequest{
+			Caller:  gen.ReferenceWithPulse(pulse.MinTimePulse + 1),
+			APINode: gen.Reference(),
+			Reason:  insolar.Reference{},
+		}
+
+		err := checker.CheckRequest(ctx, gen.IDWithPulse(pulse.MinTimePulse+2), &req)
+		assert.Error(t, err)
+	})
+
 	t.Run("reason is older than request returns error", func(t *testing.T) {
 		setup()
 		defer mc.Finish()
@@ -93,6 +107,7 @@ func TestRequestCheckerDefault_CheckRequest(t *testing.T) {
 		req := record.IncomingRequest{
 			Caller:  gen.ReferenceWithPulse(pulse.MinTimePulse + 1),
 			APINode: gen.Reference(),
+			Reason:  gen.ReferenceWithPulse(pulse.MinTimePulse + 1),
 		}
 
 		err := checker.CheckRequest(ctx, gen.IDWithPulse(pulse.MinTimePulse+2), &req)
