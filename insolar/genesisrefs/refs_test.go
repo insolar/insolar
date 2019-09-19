@@ -81,18 +81,6 @@ func TestReferences(t *testing.T) {
 			got:    ContractFeeWallet,
 			expect: "11tJCcTZXZY7zBBsNMtimx1iceLkYCED85Anu1D9R3p",
 		},
-		insolar.GenesisNameEnterpriseMember: {
-			got:    ContractEnterpriseMember,
-			expect: "11tJDFu9hDnRvvBKHWcAeDdoYb43nRHHJAm1GdnGaSd",
-		},
-		insolar.GenesisNameEnterpriseWallet: {
-			got:    ContractEnterpriseAccount,
-			expect: "11tJEBgzYNSNXj3PVRQu65HHmZmAMYBcDTHezpCWTei",
-		},
-		insolar.GenesisNameEnterpriseAccount: {
-			got:    ContractEnterpriseAccount,
-			expect: "11tJEBgzYNSNXj3PVRQu65HHmZmAMYBcDTHezpCWTei",
-		},
 		insolar.GenesisNamePKShard: {
 			got:    ContractPublicKeyShards(10)[0],
 			expect: "11tJCXnQ9AAiHGYpSee8jD9AbYu9wTJv8rbbX3kAAza",
