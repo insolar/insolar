@@ -60,7 +60,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
-	"github.com/insolar/insolar/network/consensus/common/warning"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/census"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/member"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
@@ -116,7 +115,7 @@ func (p *PrepRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 	var limiterKey string
 	switch {
 	case pt.GetLimitPerSender() == 0:
-		return warning.New(fmt.Errorf("packet type (%v) is unknown", pt))
+		return errors.UnknownPacketType(pt)
 	case pt.IsMemberPacket():
 		strict, err := coreapi.VerifyPacketRoute(ctx, packet, selfID, from)
 		if err != nil {
@@ -166,7 +165,7 @@ func (p *PrepRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 	}
 
 	if !limiter.SetPacketReceived(pt) {
-		return warning.New(fmt.Errorf("packet type (%v) limit exceeded: from=%v", pt, from))
+		return errors.LimitExceeded(pt, packet.GetSourceID(), from)
 	}
 
 	if pd != nil {
