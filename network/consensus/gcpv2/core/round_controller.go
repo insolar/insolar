@@ -131,7 +131,7 @@ func (r *PhasedRoundController) PrepareConsensusRound(upstream api.UpstreamContr
 	r.realm.coreRealm.postponedPacketFn = func(packet transport.PacketParser, from endpoints.Inbound, verifyFlags coreapi.PacketVerifyFlags) bool {
 		// There is no real context for delayed reprocessing, so we use the round context
 		ctx := r.realm.coreRealm.roundContext
-		inslogger.FromContext(ctx).Warnf("replayPacket %v", packet)
+		inslogger.FromContext(ctx).Debugf("replayPacket %v", packet)
 		_, err := r.handlePacket(ctx, packet, from, verifyFlags)
 		if err != nil {
 			inslogger.FromContext(ctx).Error(err)
@@ -139,7 +139,7 @@ func (r *PhasedRoundController) PrepareConsensusRound(upstream api.UpstreamContr
 		return true
 	}
 
-	inslogger.FromContext(r.realm.roundContext).Warnf(
+	inslogger.FromContext(r.realm.roundContext).Infof(
 		"Starting consensus round: self={%v}, ephemeral=%v, bundle=%v, census=%+v", r.realm.GetLocalProfile(),
 		r.realm.ephemeralFeeder != nil, r.bundle, r.realm.initialCensus)
 
@@ -206,7 +206,7 @@ func (r *PhasedRoundController) onConsensusStopper() {
 		}
 	}
 
-	inslogger.FromContext(r.realm.roundContext).Warnf(
+	inslogger.FromContext(r.realm.roundContext).Infof(
 		"Stopping consensus round: self={%v}, ephemeral=%v, bundle=%v, census=%+v, expected=%+v", r.realm.GetLocalProfile(),
 		r.realm.ephemeralFeeder != nil, r.bundle, r.realm.census, expt)
 
@@ -312,7 +312,7 @@ func (r *PhasedRoundController) _startFullRealm(prepWasSuccessful bool) {
 	endOf := r.realm.roundStartedAt.Add(r.realm.timings.EndOfConsensus)
 	r.roundWorker.SetTimeout(endOf)
 
-	inslogger.FromContext(r.realm.roundContext).Warnf(
+	inslogger.FromContext(r.realm.roundContext).Infof(
 		"Starting consensus full realm: self={%v}, ephemeral=%v, unsafe=%v, startedAt=%v, endOf=%v, census=%+v, timings=%s", r.realm.GetLocalProfile(),
 		r.realm.ephemeralFeeder != nil, r.realm.unsafeRound,
 		args.LazyTimeFmt("15:04:05.000000", r.realm.GetStartedAt()),
