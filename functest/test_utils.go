@@ -30,6 +30,7 @@ import (
 	"net/http"
 	"regexp"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -298,8 +299,7 @@ func signedRequest(t *testing.T, URL string, user *launchnet.User, method string
 
 	var errMsg string
 	if err != nil {
-		errMsg = err.Error()
-		fmt.Println("Error: " + err.(*requester.Error).Data.Trace[0])
+		t.Error(err.Error() + ": " + strings.Join(err.(*requester.Error).Data.Trace, ": "))
 	}
 	require.NotEqual(t, "", refStr, "request ref is empty: %s", errMsg)
 	require.NotEqual(t, insolar.NewEmptyReference().String(), refStr, "request ref is zero: %s", errMsg)

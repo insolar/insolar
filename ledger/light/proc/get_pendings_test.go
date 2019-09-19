@@ -57,7 +57,7 @@ func TestGetPendings_Proceed(t *testing.T) {
 
 		filaments.OpenedRequestsMock.Return([]record.CompositeFilamentRecord{}, nil)
 
-		p := proc.NewGetPendings(payload.Meta{}, gen.ID())
+		p := proc.NewGetPendings(payload.Meta{}, gen.ID(), 1)
 		p.Dep(filaments, sender)
 
 		err := p.Proceed(ctx)
@@ -92,7 +92,39 @@ func TestGetPendings_Proceed(t *testing.T) {
 			assert.Equal(t, expectedMsg.Payload, reply.Payload)
 		}).Return()
 
-		p := proc.NewGetPendings(payload.Meta{}, gen.ID())
+		p := proc.NewGetPendings(payload.Meta{}, gen.ID(), 10)
+		p.Dep(filaments, sender)
+
+		err := p.Proceed(ctx)
+		assert.NoError(t, err)
+	})
+
+	t.Run("requested less than exists returns correct", func(t *testing.T) {
+		setup()
+		defer mc.Finish()
+		pendings := []record.CompositeFilamentRecord{
+			{RecordID: gen.ID()},
+			{RecordID: gen.ID()},
+			{RecordID: gen.ID()},
+			{RecordID: gen.ID()},
+		}
+
+		ids := make([]insolar.ID, len(pendings))
+		for i, pend := range pendings {
+			ids[i] = pend.RecordID
+		}
+
+		expectedMsg, _ := payload.NewMessage(&payload.IDs{
+			IDs: ids[:3],
+		})
+
+		filaments.OpenedRequestsMock.Return(pendings, nil)
+
+		sender.ReplyMock.Inspect(func(ctx context.Context, origin payload.Meta, reply *message.Message) {
+			assert.Equal(t, expectedMsg.Payload, reply.Payload)
+		}).Return()
+
+		p := proc.NewGetPendings(payload.Meta{}, gen.ID(), 3)
 		p.Dep(filaments, sender)
 
 		err := p.Proceed(ctx)

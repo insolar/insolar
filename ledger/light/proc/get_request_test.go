@@ -84,6 +84,56 @@ func TestGetRequest_Proceed(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
+	t.Run("Passing request on light", func(t *testing.T) {
+		setup()
+		defer mc.Finish()
+
+		records.ForIDMock.Return(record.Material{}, object.ErrNotFound)
+
+		expectedTarget := insolar.NewReference(gen.ID())
+
+		coordinator.IsBeyondLimitMock.Return(false, nil)
+		expectedJetID := gen.ID()
+		fetcher.FetchMock.Return(&expectedJetID, nil)
+		coordinator.LightExecutorForJetMock.Inspect(func(ctx context.Context, jetID insolar.ID, pulse insolar.PulseNumber) {
+			assert.Equal(t, jetID, expectedJetID)
+		}).Return(expectedTarget, nil)
+		requestID := gen.IDWithPulse(gen.PulseNumber())
+		expectedUpdateJet, _ := payload.NewMessage(&payload.UpdateJet{
+			Pulse: requestID.Pulse(),
+			JetID: insolar.JetID(expectedJetID),
+		})
+
+		meta := payload.Meta{
+			Sender: gen.Reference(),
+		}
+		buf, _ := meta.Marshal()
+		expectedPass, _ := payload.NewMessage(&payload.Pass{
+			Origin: buf,
+		})
+
+		sender.SendTargetMock.Inspect(func(ctx context.Context, msg *message.Message, target insolar.Reference) {
+			pl, _ := payload.Unmarshal(msg.Payload)
+			switch pl.(type) {
+			case *payload.UpdateJet:
+				assert.Equal(t, expectedUpdateJet.Payload, msg.Payload)
+				assert.Equal(t, meta.Sender, target)
+
+			case *payload.Pass:
+				assert.Equal(t, expectedPass.Payload, msg.Payload)
+				assert.Equal(t, expectedTarget, &target)
+			default:
+				assert.True(t, false, "Expected type Pass or UpdateJet")
+			}
+		}).Return(make(chan *message.Message), func() {})
+
+		p := proc.NewGetRequest(meta, gen.ID(), requestID, true)
+		p.Dep(records, sender, coordinator, fetcher)
+
+		err := p.Proceed(ctx)
+		assert.NoError(t, err)
+	})
+
 	t.Run("Not passing, returns error", func(t *testing.T) {
 		setup()
 		defer mc.Finish()

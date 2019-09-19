@@ -116,6 +116,41 @@ func TestGetCode_Proceed(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
+	t.Run("Passing request on light", func(t *testing.T) {
+		setup()
+		defer mc.Finish()
+		defer mc.Wait(10 * time.Minute)
+
+		records.ForIDMock.Return(record.Material{}, object.ErrNotFound)
+
+		expectedTarget := insolar.NewReference(gen.ID())
+
+		coordinator.IsBeyondLimitMock.Return(false, nil)
+		expectedJetID := gen.ID()
+		fetcher.FetchMock.Return(&expectedJetID, nil)
+		coordinator.LightExecutorForJetMock.Inspect(func(ctx context.Context, jetID insolar.ID, pulse insolar.PulseNumber) {
+			assert.Equal(t, jetID, expectedJetID)
+		}).Return(expectedTarget, nil)
+
+		meta := payload.Meta{}
+		buf, _ := meta.Marshal()
+		expectedPass, _ := payload.NewMessage(&payload.Pass{
+			Origin: buf,
+		})
+
+		sender.SendTargetMock.Inspect(func(ctx context.Context, msg *message.Message, target insolar.Reference) {
+			assert.Equal(t, expectedPass.Payload, msg.Payload)
+			assert.Equal(t, expectedTarget, &target)
+		}).Return(
+			make(chan *message.Message), func() {})
+
+		p := proc.NewGetCode(meta, gen.ID(), true)
+		p.Dep(records, coordinator, fetcher, sender)
+
+		err := p.Proceed(ctx)
+		assert.NoError(t, err)
+	})
+
 	t.Run("Not passing, returns error", func(t *testing.T) {
 		setup()
 		defer mc.Finish()
