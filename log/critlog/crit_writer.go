@@ -77,6 +77,11 @@ type bufferEntry struct {
 	wg    *sync.WaitGroup
 }
 
+func newBufferEntry(p []byte, level zerolog.Level) bufferEntry {
+	var cp []byte
+	return bufferEntry{p: append(cp, p...), level: level}
+}
+
 func (w *criticalWriter) waitFlush(closeBuf bool) (ok bool) {
 	defer func() {
 		ok = recover() == nil
@@ -131,14 +136,14 @@ func (w *criticalWriter) IsTimeCriticalWriter() bool {
 const writeWithoutLevel zerolog.Level = math.MaxUint8
 
 func (w *criticalWriter) Write(p []byte) (int, error) {
-	return len(p), w.writeLevel(bufferEntry{p: p, level: writeWithoutLevel})
+	return len(p), w.writeLevel(newBufferEntry(p, writeWithoutLevel))
 }
 
 func (w *criticalWriter) WriteLevel(level zerolog.Level, p []byte) (int, error) {
 	if level == writeWithoutLevel {
 		panic("illegal value")
 	}
-	return len(p), w.writeLevel(bufferEntry{p: p, level: level})
+	return len(p), w.writeLevel(newBufferEntry(p, level))
 }
 
 func (w *criticalWriter) writeLevel(entry bufferEntry) (err error) {
