@@ -254,9 +254,6 @@ func checkOutgoingRequest(ctx context.Context, request *record.OutgoingRequest) 
 }
 
 func checkIncomingRequest(ctx context.Context, request *record.IncomingRequest) error {
-	if !request.Caller.IsEmpty() && !request.Caller.IsObjectReference() {
-		return errors.Errorf("request.Caller should be ObjectReference; ref=%s", request.Caller.String())
-	}
 	if !request.CallerPrototype.IsEmpty() && !request.CallerPrototype.IsObjectReference() {
 		return errors.Errorf("request.CallerPrototype should be ObjectReference; ref=%s", request.CallerPrototype.String())
 	}
@@ -269,25 +266,28 @@ func checkIncomingRequest(ctx context.Context, request *record.IncomingRequest) 
 	if request.Prototype != nil && !request.Prototype.IsObjectReference() {
 		return errors.Errorf("request.Prototype should be ObjectReference; ref=%s", request.Prototype.String())
 	}
-
-	if rEmpty, aEmpty := request.Reason.IsEmpty(), request.APINode.IsEmpty(); rEmpty == aEmpty {
-		rStr := "Reason is empty"
-		if !rEmpty {
-			rStr = "Reason is not empty"
-		}
-		aStr := "APINode is empty"
-		if !aEmpty {
-			aStr = "APINode is not empty"
-		}
-
-		return errors.Errorf("failed to check request reason: one should be set, but %s and %s", rStr, aStr)
-	}
-
-	if !request.Reason.IsEmpty() && !request.Reason.IsRecordScope() {
+	if request.Reason.IsEmpty() || !request.Reason.IsRecordScope() {
 		return errors.Errorf("request.Reason should be RecordReference; ref=%s", request.Reason.String())
 	}
+
+	if rEmpty, cEmpty := request.APINode.IsEmpty(), request.Caller.IsEmpty(); rEmpty == cEmpty {
+		rStr := "Caller is empty"
+		if !rEmpty {
+			rStr = "Caller is not empty"
+		}
+		cStr := "APINode is empty"
+		if !cEmpty {
+			cStr = "APINode is not empty"
+		}
+
+		return errors.Errorf("failed to check request origin: one should be set, but %s and %s", rStr, cStr)
+	}
+
+	if !request.Caller.IsEmpty() && !request.Caller.IsObjectReference() {
+		return errors.Errorf("request.Caller should be ObjectReference; ref=%s", request.Caller.String())
+	}
 	if !request.APINode.IsEmpty() && !request.APINode.IsObjectReference() {
-		return errors.Errorf("request.APINode should be ObjectReference; ref=%s", request.Reason.String())
+		return errors.Errorf("request.APINode should be ObjectReference; ref=%s", request.APINode.String())
 	}
 
 	return nil
