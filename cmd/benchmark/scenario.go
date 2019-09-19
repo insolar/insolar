@@ -48,8 +48,8 @@ type benchmark struct {
 type scenario interface {
 	canBeStarted() error
 	prepare()
-	scenario(int) (string, error)
-	checkResult()
+	start(int, int) (string, error)
+	getBalanceCheckMembers() []sdk.Member
 }
 
 func (b *benchmark) getOperationsNumber() int {
@@ -85,9 +85,9 @@ func (b *benchmark) getOut() io.Writer {
 
 func (b *benchmark) start(ctx context.Context) {
 	var wg sync.WaitGroup
-	for i := 0; i < b.concurrent*2; i += 2 {
+	for i := 0; i < b.concurrent; i += 1 {
 		wg.Add(1)
-		go b.startMember(ctx, i, &wg)
+		go b.startScenario(ctx, i, &wg)
 	}
 	wg.Wait()
 }
@@ -96,7 +96,7 @@ func (b *benchmark) printResult() {
 	writeToOutput(b.out, fmt.Sprintf("Scenario result:\n\tSuccesses: %d\n\tErrors: %d\n\tTimeouts: %d\n", b.successes, b.errors, b.timeouts))
 }
 
-func (b *benchmark) startMember(ctx context.Context, index int, wg *sync.WaitGroup) {
+func (b *benchmark) startScenario(ctx context.Context, concurrentIndex int, wg *sync.WaitGroup) {
 	defer wg.Done()
 	goroutineTime := time.Duration(0)
 	for j := 0; j < b.repetitions; j++ {
@@ -112,7 +112,7 @@ func (b *benchmark) startMember(ctx context.Context, index int, wg *sync.WaitGro
 		var err error
 
 		start = time.Now()
-		traceID, err = b.scenario.scenario(index)
+		traceID, err = b.scenario.start(concurrentIndex, j)
 		stop = time.Since(start)
 
 		if err == nil {
@@ -121,7 +121,7 @@ func (b *benchmark) startMember(ctx context.Context, index int, wg *sync.WaitGro
 			goroutineTime += stop
 		} else if netErr, ok := errors.Cause(err).(net.Error); ok && netErr.Timeout() {
 			atomic.AddUint32(&b.timeouts, 1)
-			writeToOutput(b.out, fmt.Sprintf("[Member №%d] Transfer error. Timeout. Error: %s \n", index, err.Error()))
+			writeToOutput(b.out, fmt.Sprintf("[Member №%d] Scenario error. Timeout. Error: %s \n", concurrentIndex, err.Error()))
 		} else {
 			atomic.AddUint32(&b.errors, 1)
 			atomic.AddInt64(&b.totalTime, int64(stop))
@@ -130,7 +130,7 @@ func (b *benchmark) startMember(ctx context.Context, index int, wg *sync.WaitGro
 			if strings.Contains(err.Error(), "invalid state record") {
 				writeToOutput(b.out, fmt.Sprintf("[ OK ] Invalid state record.    Trace: %s.\n", traceID))
 			} else {
-				writeToOutput(b.out, fmt.Sprintf("[Member №%d] Transfer error with traceID: %s. Response: %s.\n", index, traceID, err.Error()))
+				writeToOutput(b.out, fmt.Sprintf("[Member №%d] Scenario error with traceID: %s. Response: %s.\n", concurrentIndex, traceID, err.Error()))
 			}
 		}
 	}
