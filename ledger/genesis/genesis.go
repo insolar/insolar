@@ -66,28 +66,28 @@ const (
 	MigrationDaemonMaturePulse = 1635638400
 
 	EnterpriseLockup      = 0
-	EnterpriseVesting     = 0
-	EnterpriseVestingStep = 1
+	EnterpriseVesting     = 10
+	EnterpriseVestingStep = 10
 	EnterpriseMaturePulse = 0
 
 	FundsLockup      = 0
-	FundsVesting     = 0
-	FundsVestingStep = 1
+	FundsVesting     = 10
+	FundsVestingStep = 10
 	FundsMaturePulse = 0
 
 	NetworkIncentivesLockup      = 1593475200
-	NetworkIncentivesVesting     = 1635724800
-	NetworkIncentivesVestingStep = 1
+	NetworkIncentivesVesting     = 315569520
+	NetworkIncentivesVestingStep = 2629746
 	NetworkIncentivesMaturePulse = 1909008000
 
 	ApplicationIncentivesLockup      = 1593475200
-	ApplicationIncentivesVesting     = 1735689600
+	ApplicationIncentivesVesting     = 315569520
 	ApplicationIncentivesVestingStep = 2629746
 	ApplicationIncentivesMaturePulse = 1909008000
 
 	FoundationLockup      = 1672444800
-	FoundationVesting     = 1735689600
-	FoundationVestingStep = 2629746
+	FoundationVesting     = 10
+	FoundationVestingStep = 10
 	FoundationMaturePulse = 1672444800
 )
 
