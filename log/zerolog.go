@@ -59,10 +59,11 @@ type callerHookConfig struct {
 var _ insolar.Logger = &zerologAdapter{}
 
 type zerologAdapter struct {
-	logger      zerolog.Logger
-	output      io.Writer
-	outputWraps outputWrapFlag
-	//	bareOutput   io.WriteCloser
+	logger     zerolog.Logger
+	bareOutput io.Writer
+	output     io.Writer
+
+	outputWraps  outputWrapFlag
 	level        zerolog.Level
 	callerConfig callerHookConfig
 
@@ -206,17 +207,17 @@ func newZerologAdapter(cfg configuration.Log) (*zerologAdapter, error) {
 			enabled:        true,
 			skipFrameCount: defaultCallerSkipFrameCount,
 		},
+		format:     format,
+		bufferSize: cfg.BufferSize,
 	}
 
-	za.output, err = selectOutput(outputType)
+	var bareOutput io.Writer
+	bareOutput, err = selectOutput(outputType)
 	if err != nil {
 		return nil, err
 	}
 
-	za.format = format
-	za.bufferSize = cfg.BufferSize
-
-	err = za.prepareOutput()
+	err = za.prepareOutput(bareOutput)
 	if err != nil {
 		return nil, err
 	}
@@ -228,15 +229,17 @@ func newZerologAdapter(cfg configuration.Log) (*zerologAdapter, error) {
 	return za, nil
 }
 
-func (z *zerologAdapter) prepareOutput() error {
+func (z *zerologAdapter) prepareOutput(w io.Writer) error {
+
 	var err error
-	bareOutput := z.output
-	z.output, err = selectFormatter(z.format, z.output)
+	z.bareOutput = w
+	z.output, err = selectFormatter(z.format, w)
 	if err != nil {
 		return err
 	}
+	z.outputWraps = 0
 
-	if z.output != bareOutput {
+	if z.output != w {
 		z.outputWraps |= outputWrappedWithFormatter
 	}
 
@@ -372,19 +375,24 @@ func (z *zerologAdapter) WithLevelNumber(level insolar.LogLevel) (insolar.Logger
 	return &zCopy, nil
 }
 
-// SetOutput sets the output destination for the logger.
-func (z *zerologAdapter) WithOutput(w io.Writer) insolar.Logger {
+func (z *zerologAdapter) withOutput(w io.Writer) (insolar.Logger, error) {
 	zCopy := *z
-	zCopy.output = w
-	zCopy.outputWraps = 0
 
-	err := zCopy.prepareOutput()
+	err := zCopy.prepareOutput(w)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	zCopy.logger = z.logger.Output(zCopy.output)
-	return &zCopy
+	return &zCopy, nil
+}
+
+func (z *zerologAdapter) WithOutput(w io.Writer) insolar.Logger {
+	logger, err := z.withOutput(w)
+	if err != nil {
+		panic(err)
+	}
+	return logger
 }
 
 // WithCaller switch on/off 'caller' field computation.
@@ -413,14 +421,9 @@ func (z *zerologAdapter) WithFuncName(flag bool) insolar.Logger {
 }
 
 // WithFormat sets logger output format
-// Deprecated: format change has no proper impact actually
 func (z *zerologAdapter) WithFormat(format insolar.LogFormat) (insolar.Logger, error) {
-	output, err := selectFormatter(format, z.output)
-	if err != nil {
-		return nil, err
-	}
-
-	return z.WithOutput(output), nil
+	z.format = format
+	return z.withOutput(z.bareOutput)
 }
 
 func (z *zerologAdapter) loggerWithHooks() *zerolog.Logger {
