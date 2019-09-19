@@ -67,7 +67,7 @@ func CheckMajorityRule(cert insolar.Certificate, nodes []insolar.NetworkNode) (i
 	if activeDiscoveryNodesLen >= majorityRule {
 		return activeDiscoveryNodesLen, nil
 	}
-	strErr := fmt.Sprintf("MajorityRule failed. Active discovery nodes len %d of %d (majorityRule). Diff:\n",
+	strErr := fmt.Sprintf("MajorityRule failed. Active discovery nodes len: actual %d, expected %d. Diff:\n",
 		activeDiscoveryNodesLen, majorityRule)
 	discoveries := cert.GetDiscoveryNodes()
 	for _, d := range discoveries {
@@ -117,7 +117,7 @@ func CheckMinRole(cert insolar.Certificate, nodes []insolar.NetworkNode) error {
 func checkMinRoleError(nodes []insolar.NetworkNode, role insolar.StaticRole, count uint, minRole uint) string {
 	var strErr string
 	if count < minRole {
-		strErr += fmt.Sprintf(role.String()+" %d of %d\n", count, minRole)
+		strErr += fmt.Sprintf(role.String()+": actual %d, expected %d\n", count, minRole)
 		for _, node := range nodes {
 			if role == node.Role() {
 				strErr += "host: " + node.Address() + "\n"
