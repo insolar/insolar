@@ -87,12 +87,12 @@ func (g *WaitMajority) OnConsensusFinished(ctx context.Context, report network.R
 }
 
 func (g *WaitMajority) switchOnMajorityRule(ctx context.Context, pulse insolar.Pulse) {
-	majorityRule, _ := rules.CheckMajorityRule(
+	_, err := rules.CheckMajorityRule(
 		g.CertificateManager.GetCertificate(),
 		g.NodeKeeper.GetAccessor(pulse.PulseNumber).GetWorkingNodes(),
 	)
 
-	if majorityRule {
+	if err == nil {
 		g.majorityComplete <- pulse
 		close(g.majorityComplete)
 	}

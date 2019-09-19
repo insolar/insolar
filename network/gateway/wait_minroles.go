@@ -82,8 +82,8 @@ func (g *WaitMinRoles) Run(ctx context.Context, pulse insolar.Pulse) {
 func (g *WaitMinRoles) UpdateState(ctx context.Context, pulseNumber insolar.PulseNumber, nodes []insolar.NetworkNode, cloudStateHash []byte) {
 	workingNodes := node.Select(nodes, node.ListWorking)
 
-	if ok, _ := rules.CheckMajorityRule(g.CertificateManager.GetCertificate(), workingNodes); !ok {
-		g.FailState(ctx, majorityRuleFailedMessage)
+	if _, err := rules.CheckMajorityRule(g.CertificateManager.GetCertificate(), workingNodes); err != nil {
+		g.FailState(ctx, err.Error())
 	}
 
 	g.Base.UpdateState(ctx, pulseNumber, nodes, cloudStateHash)
@@ -98,12 +98,12 @@ func (g *WaitMinRoles) OnConsensusFinished(ctx context.Context, report network.R
 }
 
 func (g *WaitMinRoles) switchOnMinRoles(ctx context.Context, pulse insolar.Pulse) {
-	minRole := rules.CheckMinRole(
+	err := rules.CheckMinRole(
 		g.CertificateManager.GetCertificate(),
 		g.NodeKeeper.GetAccessor(pulse.PulseNumber).GetWorkingNodes(),
 	)
 
-	if minRole {
+	if err == nil {
 		g.minrolesComplete <- pulse
 		close(g.minrolesComplete)
 	}
