@@ -51,20 +51,42 @@
 package rules
 
 import (
+	"errors"
+	"fmt"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 )
 
-// CheckMajorityRule returns true id MajorityRule check passed, also returns active discovery nodes count
-func CheckMajorityRule(cert insolar.Certificate, nodes []insolar.NetworkNode) (bool, int) {
+// CheckMajorityRule returns error if MajorityRule check not passed, also returns active discovery nodes count
+func CheckMajorityRule(cert insolar.Certificate, nodes []insolar.NetworkNode) (int, error) {
 	majorityRule := cert.GetMajorityRule()
-	activeDiscoveryNodesLen := len(network.FindDiscoveriesInNodeList(nodes, cert))
-	return activeDiscoveryNodesLen >= majorityRule, activeDiscoveryNodesLen
+	discoveriesInList := network.FindDiscoveriesInNodeList(nodes, cert)
+	activeDiscoveryNodesLen := len(discoveriesInList)
+	if activeDiscoveryNodesLen >= majorityRule {
+		return activeDiscoveryNodesLen, nil
+	}
+	strErr := fmt.Sprintf("MajorityRule failed. Active discovery nodes len %d of %d (majorityRule). Diff:\n",
+		activeDiscoveryNodesLen, majorityRule)
+	discoveries := cert.GetDiscoveryNodes()
+	for _, d := range discoveries {
+		var found bool
+		for _, n := range nodes {
+			if d.GetNodeRef().Equal(n.ID()) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			strErr += "host: " + d.GetHost() + " role: " + d.GetRole().String() + "\n"
+		}
+	}
+	return activeDiscoveryNodesLen, errors.New(strErr)
 }
 
 // CheckMinRole returns true if MinRole check passed
-func CheckMinRole(cert insolar.Certificate, nodes []insolar.NetworkNode) bool {
+func CheckMinRole(cert insolar.Certificate, nodes []insolar.NetworkNode) error {
 	var virtualCount, heavyCount, lightCount uint
 	for _, n := range nodes {
 		switch n.Role() {
@@ -80,7 +102,27 @@ func CheckMinRole(cert insolar.Certificate, nodes []insolar.NetworkNode) bool {
 	}
 
 	v, h, l := cert.GetMinRoles()
-	return virtualCount >= v &&
+	if virtualCount >= v &&
 		heavyCount >= h &&
-		lightCount >= l
+		lightCount >= l {
+		return nil
+	}
+
+	strErr := "MinRoles failed. " + checkMinRoleError(nodes, insolar.StaticRoleVirtual, virtualCount, v) +
+		checkMinRoleError(nodes, insolar.StaticRoleHeavyMaterial, heavyCount, h) +
+		checkMinRoleError(nodes, insolar.StaticRoleLightMaterial, lightCount, l)
+	return errors.New(strErr)
+}
+
+func checkMinRoleError(nodes []insolar.NetworkNode, role insolar.StaticRole, count uint, minRole uint) string {
+	var strErr string
+	if count < minRole {
+		strErr += fmt.Sprintf(role.String()+" %d of %d\n", count, minRole)
+		for _, node := range nodes {
+			if role == node.Role() {
+				strErr += "host: " + node.Address() + "\n"
+			}
+		}
+	}
+	return strErr
 }
