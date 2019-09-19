@@ -113,14 +113,18 @@ func TestGetRequest_Proceed(t *testing.T) {
 		})
 
 		sender.SendTargetMock.Inspect(func(ctx context.Context, msg *message.Message, target insolar.Reference) {
-			if sender.SendTargetAfterCounter() == 0 {
+			pl, _ := payload.Unmarshal(msg.Payload)
+			switch pl.(type) {
+			case *payload.UpdateJet:
 				assert.Equal(t, expectedUpdateJet.Payload, msg.Payload)
 				assert.Equal(t, meta.Sender, target)
-			} else {
+
+			case *payload.Pass:
 				assert.Equal(t, expectedPass.Payload, msg.Payload)
 				assert.Equal(t, expectedTarget, &target)
+			default:
+				assert.True(t, false, "Expected type Pass or UpdateJet")
 			}
-
 		}).Return(make(chan *message.Message), func() {})
 
 		p := proc.NewGetRequest(meta, gen.ID(), requestID, true)
