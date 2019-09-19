@@ -166,7 +166,7 @@ func (p *PrepRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 	}
 
 	if !limiter.SetPacketReceived(pt) {
-		return fmt.Errorf("packet type (%v) limit exceeded: from=%v", pt, from)
+		return warning.New(fmt.Errorf("packet type (%v) limit exceeded: from=%v", pt, from))
 	}
 
 	if pd != nil {
