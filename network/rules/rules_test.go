@@ -51,7 +51,10 @@
 package rules
 
 import (
+	"strconv"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/network/node"
@@ -59,7 +62,6 @@ import (
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/testutils"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestRules_CheckMinRole(t *testing.T) {
@@ -71,48 +73,53 @@ func TestRules_CheckMinRole(t *testing.T) {
 		node.NewNode(gen.Reference(), insolar.StaticRoleVirtual, nil, "", ""),
 		node.NewNode(gen.Reference(), insolar.StaticRoleVirtual, nil, "", ""),
 	}
-
 	cert.GetMinRolesMock.Set(func() (r uint, r1 uint, r2 uint) {
 		return 1, 0, 0
 	})
+	err := CheckMinRole(cert, nodes)
+	require.NoError(t, err)
 
-	result := CheckMinRole(cert, nodes)
-	assert.True(t, result)
+	cert.GetMinRolesMock.Set(func() (r uint, r1 uint, r2 uint) {
+		return 3, 2, 4
+	})
+	err = CheckMinRole(cert, nodes)
+	require.Error(t, err)
 }
 
 func TestRules_CheckMajorityRule(t *testing.T) {
-	netNodes, discoveryNodes := getDiscoveryNodes(5)
+	discNodesCount := 5
+	netNodes, discoveryNodes := getDiscoveryNodes(discNodesCount)
 	cert := testutils.NewCertificateMock(t)
 	cert.GetDiscoveryNodesMock.Set(func() (r []insolar.DiscoveryNode) {
 		return discoveryNodes
 	})
-
 	cert.GetMajorityRuleMock.Set(func() (r int) {
-		return 4
+		return discNodesCount
 	})
+	count, err := CheckMajorityRule(cert, netNodes)
+	require.NoError(t, err)
 
-	netNodes = append(netNodes, newNode(gen.Reference()))
+	require.Equal(t, discNodesCount, count)
 
-	result, count := CheckMajorityRule(cert, netNodes)
-	assert.True(t, result)
-	assert.Equal(t, 5, count)
+	netNodes = netNodes[:len(netNodes)-len(netNodes)/2]
+	count, err = CheckMajorityRule(cert, netNodes)
+	require.Error(t, err)
+	require.Equal(t, len(netNodes), count)
 }
 
 func getDiscoveryNodes(count int) ([]insolar.NetworkNode, []insolar.DiscoveryNode) {
 	netNodes := make([]insolar.NetworkNode, count)
 	discoveryNodes := make([]insolar.DiscoveryNode, count)
-
 	for i := 0; i < count; i++ {
-		n := newNode(gen.Reference())
-		d := certificate.NewBootstrapNode(nil, "", "127.0.0.1:3000", n.ID().String(), n.Role().String())
+		n := newNode(gen.Reference(), i)
+		d := certificate.NewBootstrapNode(nil, "", n.Address(), n.ID().String(), n.Role().String())
 		netNodes[i] = n
 		discoveryNodes[i] = d
 	}
-
 	return netNodes, discoveryNodes
 }
 
-func newNode(ref insolar.Reference) insolar.NetworkNode {
-	n := node.NewNode(ref, insolar.StaticRoleVirtual, nil, "127.0.0.1:3000", "")
-	return n
+func newNode(ref insolar.Reference, i int) insolar.NetworkNode {
+	return node.NewNode(ref, insolar.AllStaticRoles[i%len(insolar.AllStaticRoles)], nil,
+		"127.0.0.1:"+strconv.Itoa(30000+i), "")
 }
