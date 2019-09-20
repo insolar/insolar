@@ -19,27 +19,13 @@
 package inssyslog
 
 import (
-	"github.com/insolar/insolar/log/critlog"
 	"github.com/pkg/errors"
-	"io"
 )
 
-// SyslogWriter is an interface matching a syslog.Writer struct.
-type SyslogWriteCloser interface {
-	io.Closer
-	io.Writer
-	Debug(m string) error
-	Info(m string) error
-	Warning(m string) error
-	Err(m string) error
-	Emerg(m string) error
-	Crit(m string) error
-}
-
-func ConnectDefaultSyslog(tag string) (critlog.LevelWriteCloser, error) {
+func ConnectDefaultSyslog(tag string) (LogLevelWriteCloser, error) {
 	return nil, errors.New("not implemented for Windows")
 }
 
-func ConnectRemoteSyslog(network, raddr string, tag string) (critlog.LevelWriteCloser, error) {
+func ConnectRemoteSyslog(network, raddr string, tag string) (LogLevelWriteCloser, error) {
 	return nil, errors.New("not implemented for Windows")
 }

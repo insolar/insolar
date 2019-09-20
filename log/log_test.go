@@ -18,25 +18,26 @@ package log
 
 import (
 	"bytes"
+	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/insolar"
+	"github.com/rs/zerolog"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"io"
 	"regexp"
 	"testing"
-
-	"github.com/rs/zerolog"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
-	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/insolar"
 )
 
 func capture(f func()) string {
+	defer SaveGlobalLogger()()
+
 	var buf bytes.Buffer
 
-	orig := GlobalLogger
-	GlobalLogger = GlobalLogger.WithOutput(&buf)
-	defer func() { GlobalLogger = orig }()
+	gl, err := GlobalLogger().Copy().WithOutput(&buf).Build()
+	if err != nil {
+		panic(err)
+	}
+	SetGlobalLogger(gl)
 
 	f()
 
@@ -137,11 +138,12 @@ func TestLog_AddFields(t *testing.T) {
 
 	for _, tItem := range tt {
 		t.Run(tItem.name, func(t *testing.T) {
-			la, err := newZerologAdapter(configuration.NewLog())
+			la, err := NewLog(configuration.NewLog())
 			assert.NoError(t, err)
 
 			var b bytes.Buffer
-			logger := la.WithOutput(&b)
+			logger, err := la.Copy().WithOutput(&b).Build()
+			assert.NoError(t, err)
 
 			tItem.fieldfn(logger).Error(errtxt1)
 			logger.Error(errtxt2)
@@ -170,14 +172,15 @@ func TestLog_Timestamp(t *testing.T) {
 	for _, adapter := range []string{"zerolog"} {
 		adapter := adapter
 		t.Run(adapter, func(t *testing.T) {
-			log, err := NewLog(configuration.Log{Level: "info", Adapter: adapter, Formatter: "json"})
+			logger, err := NewLog(configuration.Log{Level: "info", Adapter: adapter, Formatter: "json"})
 			require.NoError(t, err)
-			require.NotNil(t, log)
+			require.NotNil(t, logger)
 
 			var buf bytes.Buffer
-			log = log.WithOutput(&buf)
+			logger, err = logger.Copy().WithOutput(&buf).Build()
+			assert.NoError(t, err)
 
-			log.Error("test")
+			logger.Error("test")
 
 			require.Regexp(t, regexp.MustCompile("[0-9][0-9]:[0-9][0-9]:[0-9][0-9]"), buf.String())
 		})

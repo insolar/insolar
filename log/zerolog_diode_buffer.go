@@ -14,9 +14,11 @@
 //    limitations under the License.
 ///
 
-package critlog
+package log
 
 import (
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/log/critlog"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/diode"
@@ -32,7 +34,7 @@ func NewDiodeBufferedLevelWriter(output io.Writer, bufSize int, bufPollInterval 
 	dropBufOnFatal bool, skippedFn SkippedFormatterFunc,
 ) *DiodeBufferedLevelWriter {
 	bw := DiodeBufferedLevelWriter{
-		output:          outputGuard{output},
+		output:          outputGuard{critlog.OutputHelper{Writer: output}},
 		bufSize:         bufSize,
 		bufPollInterval: bufPollInterval,
 		skippedFn:       skippedFn,
@@ -42,6 +44,7 @@ func NewDiodeBufferedLevelWriter(output io.Writer, bufSize int, bufPollInterval 
 	return &bw
 }
 
+var _ insolar.LogLevelWriter = &DiodeBufferedLevelWriter{}
 var _ zerolog.LevelWriter = &DiodeBufferedLevelWriter{}
 var _ io.WriteCloser = &DiodeBufferedLevelWriter{}
 
@@ -58,7 +61,7 @@ type DiodeBufferedLevelWriter struct {
 }
 
 type outputGuard struct {
-	io.Writer
+	critlog.OutputHelper
 }
 
 func (p *outputGuard) Close() error {
@@ -66,35 +69,12 @@ func (p *outputGuard) Close() error {
 	return nil
 }
 
-func (p *outputGuard) flush() (err error) {
-	if f, ok := p.Writer.(Flusher); ok {
-		err = f.Flush()
-		if err == nil {
-			return nil
-		}
+func (p *outputGuard) writeLevel(level insolar.LogLevel, b []byte) (n int, err error) {
+	if lw, ok := p.Writer.(insolar.LogLevelWriter); ok {
+		return lw.LogLevelWrite(level, b)
 	}
-	if f, ok := p.Writer.(Syncer); ok {
-		err = f.Sync()
-		if err == nil {
-			return nil
-		}
-	}
-	if err != nil {
-		return err
-	}
-	return errors.New("unsupported: Flush")
-}
-
-func (p *outputGuard) close() error {
-	if f, ok := p.Writer.(io.Closer); ok {
-		return f.Close()
-	}
-	return errors.New("unsupported: Close")
-}
-
-func (p *outputGuard) writeLevel(level zerolog.Level, b []byte) (n int, err error) {
 	if lw, ok := p.Writer.(zerolog.LevelWriter); ok {
-		return lw.WriteLevel(level, b)
+		return lw.WriteLevel(ToZerologLevel(level), b)
 	}
 	return p.Writer.Write(b)
 }
@@ -116,7 +96,7 @@ func newDiodeBuffer(output *outputGuard, bufSize int, bufPollInterval time.Durat
 func writeMissedMsg(output *outputGuard, skippedFn SkippedFormatterFunc, missed int) {
 	msg := skippedFn(missed)
 	if len(msg) > 0 {
-		_, _ = output.writeLevel(zerolog.WarnLevel, msg)
+		_, _ = output.writeLevel(insolar.WarnLevel, msg)
 	}
 }
 
@@ -159,7 +139,7 @@ func (p *DiodeBufferedLevelWriter) Close() error {
 	if p.dropBuffer() == nil {
 		return nil
 	}
-	return p.output.close()
+	return p.output.DoClose()
 }
 
 func (p *DiodeBufferedLevelWriter) Flush() error {
@@ -168,13 +148,13 @@ func (p *DiodeBufferedLevelWriter) Flush() error {
 		return errors.New("closed")
 	}
 	_ = buf.Close()
-	_ = p.output.flush()
+	_ = p.output.DoFlush()
 	return nil
 }
 
 func (p *DiodeBufferedLevelWriter) Write(b []byte) (n int, err error) {
 	if p.isFatal() {
-		return p.onFatal(zerolog.NoLevel, b)
+		return p.onFatal(insolar.NoLevel, b)
 	}
 	return p._write(b)
 }
@@ -187,13 +167,13 @@ func (p *DiodeBufferedLevelWriter) _write(b []byte) (n int, err error) {
 	return buf.Write(b)
 }
 
-func (p *DiodeBufferedLevelWriter) WriteLevel(level zerolog.Level, b []byte) (n int, err error) {
+func (p *DiodeBufferedLevelWriter) LogLevelWrite(level insolar.LogLevel, b []byte) (n int, err error) {
 	if p.isFatal() {
 		return p.onFatal(level, b)
 	}
 
 	switch level {
-	case zerolog.FatalLevel:
+	case insolar.FatalLevel:
 		if !p.setFatal() {
 			return p.onFatal(level, b)
 		}
@@ -208,7 +188,7 @@ func (p *DiodeBufferedLevelWriter) WriteLevel(level zerolog.Level, b []byte) (n 
 		// direct write to the underlying
 		return p.output.writeLevel(level, b)
 
-	case zerolog.PanicLevel:
+	case insolar.PanicLevel:
 		n, err = p._write(b)
 		if err != nil {
 			return
@@ -219,6 +199,10 @@ func (p *DiodeBufferedLevelWriter) WriteLevel(level zerolog.Level, b []byte) (n 
 	}
 }
 
+func (p *DiodeBufferedLevelWriter) WriteLevel(level zerolog.Level, b []byte) (n int, err error) {
+	return p.LogLevelWrite(FromZerologLevel(level), b)
+}
+
 func (p *DiodeBufferedLevelWriter) setFatal() bool {
 	return atomic.CompareAndSwapUint32(&p.state, 0, 1)
 }
@@ -227,9 +211,53 @@ func (p *DiodeBufferedLevelWriter) isFatal() bool {
 	return atomic.LoadUint32(&p.state) != 0
 }
 
-func (p *DiodeBufferedLevelWriter) onFatal(level zerolog.Level, bytes []byte) (int, error) {
+func (p *DiodeBufferedLevelWriter) onFatal(_ insolar.LogLevel, bytes []byte) (int, error) {
 	if p.unlockPostFatal {
 		return len(bytes), nil
 	}
 	select {}
+}
+
+/* ================================= */
+
+var _ zerolog.LevelWriter = &writerAdapter{}
+
+func AsLevelWriter(w io.Writer) zerolog.LevelWriter {
+	if lw, ok := w.(zerolog.LevelWriter); ok {
+		return lw
+	}
+	return &writerAdapter{w}
+}
+
+type writerAdapter struct {
+	w io.Writer
+}
+
+func (w *writerAdapter) WriteLevel(level zerolog.Level, p []byte) (n int, err error) {
+	return w.w.Write(p)
+}
+
+func (w *writerAdapter) Write(p []byte) (n int, err error) {
+	return w.w.Write(p)
+}
+
+func (w *writerAdapter) Flush() error {
+	if f, ok := w.w.(critlog.Flusher); ok {
+		return f.Flush()
+	}
+	return errors.New("unsupported: Flush")
+}
+
+func (w *writerAdapter) Close() error {
+	if f, ok := w.w.(io.Closer); ok {
+		return f.Close()
+	}
+	return errors.New("unsupported: Close")
+}
+
+func (w *writerAdapter) Sync() error {
+	if f, ok := w.w.(critlog.Syncer); ok {
+		return f.Sync()
+	}
+	return errors.New("unsupported: Sync")
 }

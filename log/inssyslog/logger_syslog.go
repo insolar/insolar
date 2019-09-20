@@ -17,8 +17,8 @@
 package inssyslog
 
 import (
-	critlog2 "github.com/insolar/insolar/log/critlog"
-	"github.com/rs/zerolog"
+	"github.com/insolar/insolar/insolar"
+	"io"
 )
 
 /*
@@ -26,9 +26,26 @@ import (
 	Here we can't use zerolog/syslog.go as it is based on syslog package that breaks OS compatibility.
 */
 
+type LogLevelWriteCloser interface {
+	insolar.LogLevelWriter
+	io.Closer
+}
+
+// SyslogWriter is an interface matching a syslog.Writer struct.
+type SyslogWriteCloser interface {
+	io.Closer
+	io.Writer
+	Debug(m string) error
+	Info(m string) error
+	Warning(m string) error
+	Err(m string) error
+	Emerg(m string) error
+	Crit(m string) error
+}
+
 // SyslogLevelWriter wraps a SyslogWriter and call the right syslog level
 // method matching the zerolog level.
-func NewSyslogLevelWriter(w SyslogWriteCloser) critlog2.LevelWriteCloser {
+func NewSyslogLevelWriter(w SyslogWriteCloser) LogLevelWriteCloser {
 	return &syslogWriter{w}
 }
 
@@ -45,21 +62,21 @@ func (sw *syslogWriter) Write(p []byte) (n int, err error) {
 }
 
 // WriteLevel implements LevelWriter interface.
-func (sw *syslogWriter) WriteLevel(level zerolog.Level, p []byte) (n int, err error) {
+func (sw *syslogWriter) LogLevelWrite(level insolar.LogLevel, p []byte) (n int, err error) {
 	switch level {
-	case zerolog.DebugLevel:
+	case insolar.DebugLevel:
 		err = sw.w.Debug(string(p))
-	case zerolog.InfoLevel:
+	case insolar.InfoLevel:
 		err = sw.w.Info(string(p))
-	case zerolog.WarnLevel:
+	case insolar.WarnLevel:
 		err = sw.w.Warning(string(p))
-	case zerolog.ErrorLevel:
+	case insolar.ErrorLevel:
 		err = sw.w.Err(string(p))
-	case zerolog.FatalLevel:
+	case insolar.FatalLevel:
 		err = sw.w.Emerg(string(p))
-	case zerolog.PanicLevel:
+	case insolar.PanicLevel:
 		err = sw.w.Crit(string(p))
-	case zerolog.NoLevel:
+	case insolar.NoLevel:
 		err = sw.w.Info(string(p))
 	default:
 		panic("invalid level")

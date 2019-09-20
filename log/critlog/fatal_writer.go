@@ -17,64 +17,73 @@
 package critlog
 
 import (
-	"github.com/rs/zerolog"
+	"errors"
+	"github.com/insolar/insolar/insolar"
 	"io"
 	"sync/atomic"
 )
 
 func NewFatalDirectWriter(output io.Writer) *FatalDirectWriter {
 	return &FatalDirectWriter{
-		output: outputGuard{output},
+		output: OutputHelper{output},
 	}
 }
 
-var _ zerolog.LevelWriter = &FatalDirectWriter{}
+type Flusher interface {
+	Flush() error
+}
+
+type Syncer interface {
+	Sync() error
+}
+
+var _ insolar.LogLevelWriter = &FatalDirectWriter{}
 var _ io.WriteCloser = &FatalDirectWriter{}
 
 type FatalDirectWriter struct {
-	output          outputGuard
+	output          OutputHelper
 	state           uint32 // atomic
 	unlockPostFatal bool
 }
 
 func (p *FatalDirectWriter) Close() error {
-	return p.output.close()
+	return p.output.DoClose()
 }
 
 func (p *FatalDirectWriter) Flush() error {
-	_ = p.output.flush()
+	_ = p.output.DoFlush()
 	return nil
 }
 
 func (p *FatalDirectWriter) Write(b []byte) (n int, err error) {
 	if p.isFatal() {
-		return p.onFatal(zerolog.NoLevel, b)
+		return p.onFatal(insolar.NoLevel, b)
 	}
 	return p.output.Write(b)
 }
 
-func (p *FatalDirectWriter) WriteLevel(level zerolog.Level, b []byte) (n int, err error) {
+func (p *FatalDirectWriter) LogLevelWrite(level insolar.LogLevel, b []byte) (n int, err error) {
 	if p.isFatal() {
 		return p.onFatal(level, b)
 	}
 
 	switch level {
-	case zerolog.FatalLevel:
+	case insolar.FatalLevel:
 		if !p.setFatal() {
 			return p.onFatal(level, b)
 		}
-		n, _ = p.output.writeLevel(level, b)
+		n, _ = p.output.DoWriteLevel(level, b)
 		return n, p.Close()
 
-	case zerolog.PanicLevel:
-		n, err = p.output.writeLevel(level, b)
+	case insolar.PanicLevel:
+		n, err = p.output.DoWriteLevel(level, b)
 		if err != nil {
 			_ = p.Flush()
 			return n, err
 		}
 		return n, p.Flush()
 	default:
-		return p.output.writeLevel(level, b)
+		return p.output.DoWriteLevel(level, b)
 	}
 }
 
@@ -86,9 +95,48 @@ func (p *FatalDirectWriter) isFatal() bool {
 	return atomic.LoadUint32(&p.state) != 0
 }
 
-func (p *FatalDirectWriter) onFatal(level zerolog.Level, bytes []byte) (int, error) {
+func (p *FatalDirectWriter) onFatal(level insolar.LogLevel, bytes []byte) (int, error) {
 	if p.unlockPostFatal {
 		return len(bytes), nil
 	}
 	select {}
+}
+
+/* =============================== */
+
+type OutputHelper struct {
+	io.Writer
+}
+
+func (p *OutputHelper) DoFlush() (err error) {
+	if f, ok := p.Writer.(Flusher); ok {
+		err = f.Flush()
+		if err == nil {
+			return nil
+		}
+	}
+	if f, ok := p.Writer.(Syncer); ok {
+		err = f.Sync()
+		if err == nil {
+			return nil
+		}
+	}
+	if err != nil {
+		return err
+	}
+	return errors.New("unsupported: Flush")
+}
+
+func (p *OutputHelper) DoClose() error {
+	if f, ok := p.Writer.(io.Closer); ok {
+		return f.Close()
+	}
+	return errors.New("unsupported: Close")
+}
+
+func (p *OutputHelper) DoWriteLevel(level insolar.LogLevel, b []byte) (n int, err error) {
+	if lw, ok := p.Writer.(insolar.LogLevelWriter); ok {
+		return lw.LogLevelWrite(level, b)
+	}
+	return p.Writer.Write(b)
 }

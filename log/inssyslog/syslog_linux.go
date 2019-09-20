@@ -19,21 +19,12 @@
 package inssyslog
 
 import (
-	"github.com/insolar/insolar/log/critlog"
-	"github.com/rs/zerolog"
-	"io"
 	"log/syslog"
 )
 
 const defaultSyslogPriority = syslog.LOG_LOCAL0 | syslog.LOG_DEBUG
 
-// SyslogWriter is an interface matching a syslog.Writer struct.
-type SyslogWriteCloser interface {
-	zerolog.SyslogWriter
-	io.Closer
-}
-
-func ConnectDefaultSyslog(tag string) (critlog.LevelWriteCloser, error) {
+func ConnectDefaultSyslog(tag string) (LogLevelWriteCloser, error) {
 	w, err := syslog.New(defaultSyslogPriority, tag)
 	if err != nil {
 		return nil, err
@@ -41,7 +32,7 @@ func ConnectDefaultSyslog(tag string) (critlog.LevelWriteCloser, error) {
 	return NewSyslogLevelWriter(w), nil
 }
 
-func ConnectRemoteSyslog(network, raddr string, tag string) (critlog.LevelWriteCloser, error) {
+func ConnectRemoteSyslog(network, raddr string, tag string) (LogLevelWriteCloser, error) {
 	w, err := syslog.Dial(network, raddr, defaultSyslogPriority, tag)
 	if err != nil {
 		return nil, err

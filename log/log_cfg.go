@@ -17,32 +17,34 @@
 package log
 
 import (
-	"runtime"
-	"strings"
+	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/insolar"
 )
 
-// callInfo bundles the info about the call environment
-// when a logging statement occurred.
-type callInfo struct {
-	fileName string
-	funcName string
-	line     int
+type parsedLogConfig struct {
+	OutputType insolar.LogOutput
+	LogFormat  insolar.LogFormat
+	LogLevel   insolar.LogLevel
+
+	SkipFrameBaselineDelta int
 }
 
-func getCallInfo(skipCallNumber int) *callInfo {
-	pc, file, line, _ := runtime.Caller(skipCallNumber)
+func parseLogConfig(cfg configuration.Log) (pc parsedLogConfig, err error) {
 
-	parts := strings.Split(runtime.FuncForPC(pc).Name(), ".")
-	pl := len(parts)
-	funcName := parts[pl-1]
-
-	if pl > 1 && strings.HasPrefix(parts[pl-2], "(") {
-		funcName = parts[pl-2] + "." + funcName
+	pc.OutputType, err = insolar.ParseOutput(cfg.OutputType, insolar.DefaultLogOutput)
+	if err != nil {
+		return
 	}
 
-	return &callInfo{
-		fileName: trimInsolarPrefix(file, line),
-		funcName: funcName,
-		line:     line,
+	pc.LogFormat, err = insolar.ParseFormat(cfg.Formatter, insolar.DefaultLogFormat)
+	if err != nil {
+		return
 	}
+
+	pc.LogLevel, err = insolar.ParseLevel(cfg.Level)
+	if err != nil {
+		return
+	}
+
+	return
 }

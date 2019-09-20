@@ -26,8 +26,12 @@ type WatermillLogAdapter struct {
 }
 
 func NewWatermillLogAdapter(log insolar.Logger) *WatermillLogAdapter {
+	wLog, err := log.Copy().WithSkipFrameCount(1).Build()
+	if err != nil {
+		panic(err)
+	}
 	return &WatermillLogAdapter{
-		log: log.WithField("service", "watermill").WithSkipFrameCount(1),
+		log: wLog.WithField("service", "watermill"),
 	}
 }
 

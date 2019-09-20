@@ -88,6 +88,8 @@ const (
 	JSONFormat
 )
 
+const DefaultLogFormat = TextFormat
+
 func ParseFormat(formatStr string, defValue LogFormat) (LogFormat, error) {
 	switch strings.ToLower(formatStr) {
 	case "", "default":
@@ -115,7 +117,10 @@ type LogOutput uint8
 const (
 	StdErrOutput LogOutput = iota
 	SysLogOutput
+	JournalDOutput
 )
+
+const DefaultLogOutput = StdErrOutput
 
 func ParseOutput(outputStr string, defValue LogOutput) (LogOutput, error) {
 	switch strings.ToLower(outputStr) {
@@ -125,6 +130,8 @@ func ParseOutput(outputStr string, defValue LogOutput) (LogOutput, error) {
 		return StdErrOutput, nil
 	case SysLogOutput.String():
 		return SysLogOutput, nil
+	case JournalDOutput.String():
+		return JournalDOutput, nil
 	}
 	return defValue, fmt.Errorf("unknown Output: '%s', replaced with '%s'", outputStr, defValue)
 }
@@ -135,28 +142,25 @@ func (l LogOutput) String() string {
 		return "stderr"
 	case SysLogOutput:
 		return "syslog"
+	case JournalDOutput:
+		return "journald"
 	}
 	return string(l)
+}
+
+type LogLevelReader interface {
+	GetLogLevel() LogLevel
+}
+
+type LogLevelWriter interface {
+	io.Writer
+	LogLevelWrite(LogLevel, []byte) (int, error)
 }
 
 //go:generate minimock -i github.com/insolar/insolar/insolar.Logger -o ./ -s _mock.go -g
 
 // Logger is the interface for loggers used in the Insolar components.
 type Logger interface {
-	// WithLevel sets log level.
-	WithLevel(string) (Logger, error)
-	// WithLevelNumber sets log level with number
-	WithLevelNumber(level LogLevel) (Logger, error)
-	// WithFormat sets logger output format
-	WithFormat(format LogFormat) (Logger, error)
-
-	// WithCaller switch on/off 'caller' field computation.
-	WithCaller(flag bool) Logger
-	// WithSkipFrameCount changes skipFrameCount by delta value (it can be negative).
-	WithSkipFrameCount(delta int) Logger
-	// WithFuncName switch on/off 'func' field computation.
-	WithFuncName(flag bool) Logger
-
 	// Debug logs a message at level Debug.
 	Debug(...interface{})
 	// Debugf formatted logs a message at level Debug.
@@ -187,20 +191,50 @@ type Logger interface {
 	// Panicf formatted logs a message at level Panic and than call panic().
 	Panicf(string, ...interface{})
 
-	// SetOutput sets the output destination for the logger.
-	WithOutput(w io.Writer) Logger
+	// Event logs a message with the given level
+	Event(level LogLevel, args ...interface{})
+	// Eventf formats and logs a message with the given level
+	Eventf(level LogLevel, fmt string, args ...interface{})
+
+	// Is() returns true when a message of the given level will get to output
+	Is(level LogLevel) bool
+
 	// WithFields return copy of Logger with predefined fields.
 	WithFields(map[string]interface{}) Logger
 	// WithField return copy of Logger with predefined single field.
 	WithField(string, interface{}) Logger
 
-	// Is returns if passed log level equal current log level
-	Is(level LogLevel) bool
+	Copy() LoggerBuilder
+
+	Level(lvl LogLevel) Logger
 }
 
-type SpecialLoggerFactory interface {
-	// WithTimeCriticalBuffer allocates a buffer that is able to skip/drop excessive messages
-	WithTimeCriticalBuffer(bufSize int, dropLast bool) Logger
-	// WithTimeCriticalBuffer allocates a buffer that preserves all messages and stops writers on overflow
-	WithBuffer(bufSize int) Logger
+type CallerFieldMode uint8
+
+const (
+	NoCallerField CallerFieldMode = iota
+	CallerField
+	CallerFieldWithFuncName
+)
+
+type LoggerBuilder interface {
+	GetOutput() io.Writer
+
+	// SetOutput sets the output destination for the logger.
+	WithOutput(w io.Writer) LoggerBuilder
+	// WithLevel sets log level.
+	WithLevel(level LogLevel) LoggerBuilder
+	// WithLevel sets log level.
+	WithDynamicLevel(level LogLevelReader) LoggerBuilder
+	// WithFormat sets logger output format
+	WithFormat(format LogFormat) LoggerBuilder
+
+	// WithCaller switch on/off 'caller' field computation.
+	WithCaller(mode CallerFieldMode) LoggerBuilder
+
+	// WithSkipFrameCountDelta changes skipFrameCount by delta value (it can be negative).
+	WithSkipFrameCount(skipFrameCount int) LoggerBuilder
+
+	//BuildForTimeCritical(bufSize int) (Logger, error)
+	Build() (Logger, error)
 }

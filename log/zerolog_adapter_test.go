@@ -18,6 +18,7 @@ package log
 
 import (
 	"bytes"
+	"github.com/insolar/insolar/insolar"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -25,15 +26,33 @@ import (
 	"github.com/insolar/insolar/configuration"
 )
 
+func TestZeroLogAdapter_CallerInfoWithFunc(t *testing.T) {
+	log, err := NewLog(configuration.Log{Level: "info", Adapter: "zerolog", Formatter: "json"})
+	require.NoError(t, err)
+	require.NotNil(t, log)
+
+	var buf bytes.Buffer
+	log, err = log.Copy().WithOutput(&buf).WithCaller(insolar.CallerFieldWithFuncName).Build()
+	require.NoError(t, err)
+
+	log.Error("test")
+
+	s := buf.String()
+	require.Contains(t, s, "zerolog_adapter_test.go:38")
+	require.Contains(t, s, "TestZeroLogAdapter_CallerInfoWithFunc")
+}
+
 func TestZeroLogAdapter_CallerInfo(t *testing.T) {
 	log, err := NewLog(configuration.Log{Level: "info", Adapter: "zerolog", Formatter: "json"})
 	require.NoError(t, err)
 	require.NotNil(t, log)
 
 	var buf bytes.Buffer
-	log = log.WithOutput(&buf)
+	log, err = log.Copy().WithOutput(&buf).WithCaller(insolar.CallerField).Build()
+	require.NoError(t, err)
 
 	log.Error("test")
 
-	require.Contains(t, buf.String(), "zerolog_test.go:36")
+	s := buf.String()
+	require.Contains(t, s, "zerolog_adapter_test.go:54")
 }
