@@ -85,7 +85,7 @@ func (b *benchmark) getOut() io.Writer {
 
 func (b *benchmark) start(ctx context.Context) {
 	var wg sync.WaitGroup
-	for i := 0; i < b.concurrent; i += 1 {
+	for i := 0; i < b.concurrent; i++ {
 		wg.Add(1)
 		go b.startScenario(ctx, i, &wg)
 	}

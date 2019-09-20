@@ -31,7 +31,6 @@ type MigrationScenario struct {
 	members          []sdk.Member
 	migrationDaemons []sdk.Member
 
-	totalBalanceBefore  *big.Int
 	balanceCheckMembers []sdk.Member
 }
 
@@ -67,8 +66,8 @@ func (s *MigrationScenario) start(concurrentIndex int, repetitionIndex int) (str
 		return "", fmt.Errorf("unexpected member type: %T", s.members[concurrentIndex])
 	}
 
-	if traceId, err := s.insSDK.Migration(s.migrationDaemons[0], "tx_hash_"+strconv.Itoa(repetitionIndex), big.NewInt(migrationAmount).String(), migrationMember.MigrationAddress); err != nil {
-		return traceId, err
+	if traceID, err := s.insSDK.Migration(s.migrationDaemons[0], "tx_hash_"+strconv.Itoa(repetitionIndex), big.NewInt(migrationAmount).String(), migrationMember.MigrationAddress); err != nil {
+		return traceID, err
 	}
 	return s.insSDK.Migration(s.migrationDaemons[1], "tx_hash_"+strconv.Itoa(repetitionIndex), big.NewInt(migrationAmount).String(), migrationMember.MigrationAddress)
 }

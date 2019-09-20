@@ -72,11 +72,13 @@ func TestMigrationTokenThreeActiveDaemons(t *testing.T) {
 
 	_, err := signedRequest(t,
 		launchnet.TestRPCUrl,
-		launchnet.MigrationDaemons[2],
+		launchnet.MigrationDaemons[countThreeActiveDaemon-1],
 		"deposit.migration",
 		map[string]interface{}{"amount": "1000", "ethTxHash": "Test_TxHash", "migrationAddress": member.MigrationAddress})
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "Migration is done for this deposit")
+	require.IsType(t, &requester.Error{}, err)
+	data := err.(*requester.Error).Data
+	require.Contains(t, data.Trace, "Migration is done for this deposit")
 }
 
 func TestMigrationTokenOnDifferentDeposits(t *testing.T) {

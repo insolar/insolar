@@ -29,7 +29,6 @@ type walletToWalletTransferScenario struct {
 	insSDK  *sdk.SDK
 	members []sdk.Member
 
-	totalBalanceBefore  *big.Int
 	balanceCheckMembers []sdk.Member
 }
 
