@@ -54,32 +54,32 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/pulse"
+	"github.com/insolar/insolar/network/consensus/common/endpoints"
+	"github.com/insolar/insolar/network/consensus/common/warning"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
 )
 
-func NewPulseRoundMismatchError(pn pulse.Number, msg string) error {
-	return &nextPulseRoundError{pn: pn, s: msg}
-}
+func LimitExceeded(packetType phases.PacketType, sourceID insolar.ShortNodeID, sourceEndpoint endpoints.Inbound) error {
+	err := fmt.Errorf(
+		"packet type (%v) limit exceeded: from=%v(%v)",
+		packetType,
+		sourceID,
+		sourceEndpoint,
+	)
 
-func NewPulseRoundMismatchErrorDef(pn pulse.Number, filterPN pulse.Number, localID insolar.ShortNodeID, from interface{}, details string) error {
-	msg := fmt.Sprintf("packet pulse number mismatched: expected=%v, actual=%v, local=%d, from=%v, details=%v",
-		filterPN, pn, localID, from, details)
-	return NewPulseRoundMismatchError(pn, msg)
-}
-
-func IsMismatchPulseError(err error) (bool, pulse.Number) {
-	pr, ok := err.(*nextPulseRoundError)
-	if !ok {
-		return false, pulse.Unknown
+	if packetType == phases.PacketPhase3 {
+		return warning.New(err)
 	}
-	return !pr.pn.IsUnknown(), pr.pn
+
+	return err
 }
 
-type nextPulseRoundError struct {
-	pn pulse.Number
-	s  string
-}
+func UnknownPacketType(packetType phases.PacketType) error {
+	err := fmt.Errorf("packet type (%v) is unknown", packetType)
 
-func (e *nextPulseRoundError) Error() string {
-	return e.s
+	if packetType == phases.PacketPulsarPulse {
+		return warning.New(err)
+	}
+
+	return err
 }

@@ -68,6 +68,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 	"github.com/insolar/insolar/network/consensus/gcpv2/censusimpl"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/errors"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetdispatch"
 	pop "github.com/insolar/insolar/network/consensus/gcpv2/core/population"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/purgatory"
@@ -108,7 +109,7 @@ func (r *FullRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 
 	switch {
 	case pt.GetLimitPerSender() == 0 || int(pt) >= len(r.packetDispatchers) || r.packetDispatchers[pt] == nil:
-		return fmt.Errorf("packet type (%v) is unknown", pt)
+		return errors.UnknownPacketType(pt)
 	case pt.IsMemberPacket():
 		selfID := r.GetSelfNodeID()
 		strict, err := coreapi.VerifyPacketRoute(ctx, packet, selfID, from)
@@ -142,7 +143,7 @@ func (r *FullRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 	}
 
 	if sourceNode != nil && !sourceNode.CanReceivePacket(pt) {
-		return fmt.Errorf("packet type (%v) limit exceeded: from=%v(%v)", pt, sourceNode.GetNodeID(), from)
+		return errors.LimitExceeded(pt, sourceNode.GetNodeID(), from)
 	}
 
 	// this enables lazy parsing - packet is fully parsed AFTER validation, hence makes it less prone to exploits for non-members
