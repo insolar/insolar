@@ -178,11 +178,11 @@ func TestLog_Timestamp(t *testing.T) {
 
 			var buf bytes.Buffer
 			logger, err = logger.Copy().WithOutput(&buf).Build()
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			logger.Error("test")
 
-			require.Regexp(t, regexp.MustCompile("[0-9][0-9]:[0-9][0-9]:[0-9][0-9]"), buf.String())
+			assert.Regexp(t, regexp.MustCompile("[0-9][0-9]:[0-9][0-9]:[0-9][0-9]"), buf.String())
 		})
 	}
 }
