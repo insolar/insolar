@@ -204,10 +204,16 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 
 	lifeline := idx.Lifeline
 
-	if lifeline.StateID == record.StateDeactivation || lifeline.LatestState == nil {
+	if lifeline.StateID == record.StateDeactivation {
 		return &payload.CodedError{
 			Text: "object is deactivated",
 			Code: payload.CodeDeactivated,
+		}
+	}
+	if lifeline.LatestState == nil {
+		return &payload.CodedError{
+			Text: "object isn't activated",
+			Code: payload.CodeNonActivated,
 		}
 	}
 
