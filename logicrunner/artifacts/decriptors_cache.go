@@ -81,7 +81,7 @@ func (c *descriptorsCache) GetPrototype(
 	ObjectDescriptor, error,
 ) {
 	res, err := c.protoCache.get(ref, func() (interface{}, error) {
-		return c.Client.GetObject(ctx, ref)
+		return c.Client.GetObject(ctx, ref, nil)
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get object")
