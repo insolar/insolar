@@ -33,7 +33,7 @@ var (
 )
 
 var (
-	statSent = stats.Int64(
+	statSentBytes = stats.Int64(
 		"bus_sent",
 		"sent messages stats",
 		stats.UnitDimensionless,
@@ -77,15 +77,15 @@ func init() {
 		&view.View{
 			Name:        "bus_sent_total",
 			Description: "sent messages total count",
-			Measure:     statSent,
+			Measure:     statSentBytes,
 			Aggregation: view.Count(),
 			TagKeys:     []tag.Key{tagMessageType},
 		},
 		&view.View{
 			Name:        "bus_sent_bytes",
 			Description: "sent messages payload size",
-			Measure:     statSent,
-			Aggregation: view.Distribution(1*kb, 10*kb, 100*kb, 1*mb, 10*mb),
+			Measure:     statSentBytes,
+			Aggregation: view.Distribution(1*kb, 10*kb, 100*kb, 1*mb, 10*mb, 100*mb),
 			TagKeys:     []tag.Key{tagMessageType},
 		},
 		&view.View{
