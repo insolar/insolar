@@ -215,7 +215,7 @@ func (sdk *SDK) CreateMember(memberReference string) (*Member, string, error) {
 		return nil, "", errors.Errorf("failed to cast reference: expected string, got %T", contractResultCasted["reference"])
 	}
 
-	return NewMember(memberRef, privateKeyStr, publicKeyStr), response.TraceID, nil
+	return NewMember(memberRef, userConfig.PrivateKey, userConfig.PublicKey), response.TraceID, nil
 }
 
 // addMigrationAddresses method add burn addresses
@@ -295,9 +295,20 @@ func (sdk *SDK) DoRequest(urls *ringBuffer, user *requester.UserConfigJSON, meth
 	}
 
 	if response.Error != nil {
-		return nil, errors.New(response.Error.Message + ". TraceId: " + response.Error.Data.TraceID + ". RequestRef: " + response.Error.Data.RequestReference)
+		return nil, errors.New(sdk.buildErrorMsg(response) + ". TraceId: " + response.Error.Data.TraceID + ". RequestRef: " + response.Error.Data.RequestReference)
 	}
 
 	return response.Result, nil
+}
 
+func (sdk *SDK) buildErrorMsg(response *requester.ContractResponse) string {
+	if response.Error == nil {
+		return ""
+	}
+
+	err := response.Error.Message
+	for _, trace := range response.Error.Data.Trace {
+		err += ": " + trace
+	}
+	return err
 }
