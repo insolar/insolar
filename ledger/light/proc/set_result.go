@@ -271,8 +271,7 @@ func checkRequest(request record.CompositeFilamentRecord) error {
 			Code: payload.CodeRequestIsWrong,
 		}
 	case *record.IncomingRequest:
-		// todo::: if !req.IsMutalble {
-		if req.Immutable {
+		if !req.IsMutable() {
 			return &payload.CodedError{
 				Text: "immutable incoming request can't change object state, id: " + request.RecordID.DebugString(),
 				Code: payload.CodeRequestIsWrong,
