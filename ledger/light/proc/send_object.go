@@ -105,6 +105,7 @@ func (p *SendObject) hasEarliest(ctx context.Context) (bool, record.CompositeFil
 	}
 
 	for _, openReq := range openReqs {
+		openReq := openReq
 		if isMutableIncoming(&openReq) && openReq.RecordID != *p.requestID {
 			return true, openReq, nil
 		}
