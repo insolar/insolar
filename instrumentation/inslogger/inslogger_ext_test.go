@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"github.com/insolar/insolar/insolar"
 	"runtime"
 	"strconv"
 	"testing"
@@ -55,9 +56,10 @@ func logFields(t *testing.T, b []byte) loggerField {
 func TestExt_Global(t *testing.T) {
 
 	l := inslogger.FromContext(context.Background())
-	l, _ = l.WithLevel("info")
+
 	var b bytes.Buffer
-	l = l.WithOutput(&b)
+	l, err := l.Copy().WithOutput(&b).WithCaller(insolar.CallerField).WithLevel(insolar.InfoLevel).Build()
+	require.NoError(t, err)
 
 	_, _, line, _ := runtime.Caller(0)
 	l.Info("test")
@@ -70,9 +72,9 @@ func TestExt_Global(t *testing.T) {
 func TestExt_Global_WithFunc(t *testing.T) {
 	l := inslogger.FromContext(context.Background())
 	var b bytes.Buffer
-	l = l.WithOutput(&b)
-	l = l.WithFuncName(true)
-	l, _ = l.WithLevel("info")
+
+	l, err := l.Copy().WithOutput(&b).WithCaller(insolar.CallerFieldWithFuncName).WithLevel(insolar.InfoLevel).Build()
+	require.NoError(t, err)
 
 	_, _, line, _ := runtime.Caller(0)
 	l.Info("test")
@@ -93,7 +95,9 @@ func TestExt_Log(t *testing.T) {
 
 	l := inslogger.FromContext(ctx)
 	var b bytes.Buffer
-	l = l.WithOutput(&b)
+
+	l, err = l.Copy().WithOutput(&b).WithCaller(insolar.CallerField).Build()
+	require.NoError(t, err)
 
 	_, _, line, _ := runtime.Caller(0)
 	l.Info("test")
@@ -114,9 +118,9 @@ func TestExt_Log_WithFunc(t *testing.T) {
 
 	l := inslogger.FromContext(ctx)
 	var b bytes.Buffer
-	l = l.WithOutput(&b)
-	l = l.WithFuncName(true)
-	l, _ = l.WithLevel("info")
+
+	l, err = l.Copy().WithOutput(&b).WithCaller(insolar.CallerFieldWithFuncName).Build()
+	require.NoError(t, err)
 
 	_, _, line, _ := runtime.Caller(0)
 	l.Info("test")
@@ -134,7 +138,10 @@ func TestExt_Log_SubCall(t *testing.T) {
 		Formatter: "json",
 	})
 	require.NoError(t, err, "log creation")
-	ctx := inslogger.SetLogger(context.TODO(), logPut.WithFuncName(true))
+	logPut, err = logPut.Copy().WithCaller(insolar.CallerFieldWithFuncName).Build()
+	require.NoError(t, err)
+
+	ctx := inslogger.SetLogger(context.TODO(), logPut)
 
 	lf, line := logCaller(ctx, t)
 	assert.Regexp(t, callerRe+line, lf.Caller, "log contains call place")
@@ -144,7 +151,10 @@ func TestExt_Log_SubCall(t *testing.T) {
 func logCaller(ctx context.Context, t *testing.T) (loggerField, string) {
 	l := inslogger.FromContext(ctx)
 	var b bytes.Buffer
-	l = l.WithOutput(&b)
+
+	var err error
+	l, err = l.Copy().WithOutput(&b).WithCaller(insolar.CallerFieldWithFuncName).Build()
+	require.NoError(t, err)
 
 	_, _, line, _ := runtime.Caller(0)
 	l.Info("test")
@@ -159,10 +169,11 @@ func TestExt_Global_SubCall(t *testing.T) {
 
 func logCallerGlobal(ctx context.Context, t *testing.T) (loggerField, string) {
 	l := inslogger.FromContext(ctx)
-	l, _ = l.WithLevel("info")
 
 	var b bytes.Buffer
-	l = l.WithOutput(&b)
+	var err error
+	l, err = l.Copy().WithOutput(&b).WithCaller(insolar.CallerFieldWithFuncName).WithLevel(insolar.InfoLevel).Build()
+	require.NoError(t, err)
 
 	_, _, line, _ := runtime.Caller(0)
 	l.Info("test")
