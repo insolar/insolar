@@ -30,6 +30,7 @@ const (
 
 var (
 	tagMessageType = insmetrics.MustTagKey("message_type")
+	tagMessageRole = insmetrics.MustTagKey("message_role")
 )
 
 var (
@@ -79,14 +80,14 @@ func init() {
 			Description: "sent messages total count",
 			Measure:     statSentBytes,
 			Aggregation: view.Count(),
-			TagKeys:     []tag.Key{tagMessageType},
+			TagKeys:     []tag.Key{tagMessageType, tagMessageRole},
 		},
 		&view.View{
 			Name:        "bus_sent_bytes",
 			Description: "sent messages payload size",
 			Measure:     statSentBytes,
 			Aggregation: view.Distribution(1*kb, 10*kb, 100*kb, 1*mb, 10*mb, 100*mb),
-			TagKeys:     []tag.Key{tagMessageType},
+			TagKeys:     []tag.Key{tagMessageType, tagMessageRole},
 		},
 		&view.View{
 			Name:        "bus_sent_milliseconds",
