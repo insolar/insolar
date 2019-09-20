@@ -70,7 +70,7 @@ func TestMigrationTokenThreeActiveDaemons(t *testing.T) {
 		_ = migrate(t, member.Ref, "1000", "Test_TxHash", member.MigrationAddress, i)
 	}
 
-	_, err := signedRequest(t,
+	_, err := signedRequestWithEmptyRequestRef(t,
 		launchnet.TestRPCUrl,
 		launchnet.MigrationDaemons[countThreeActiveDaemon-1],
 		"deposit.migration",
