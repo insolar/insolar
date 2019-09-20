@@ -47,7 +47,7 @@ func (p *pageLifo) pushExpected(expected, page *BufferPage) bool {
 		p.prepareFn(page)
 	}
 	page.next = expected
-	return atomic.CompareAndSwapPointer(&p.next, (unsafe.Pointer)(expected), (unsafe.Pointer)(page))
+	return atomic.CompareAndSwapPointer(&p.next, unsafe.Pointer(expected), unsafe.Pointer(page))
 }
 
 func (p *pageLifo) pop() *BufferPage {
@@ -71,7 +71,7 @@ func (p *pageLifo) flush() *BufferPage {
 }
 
 func (p *pageLifo) replace(page *BufferPage) *BufferPage {
-	return (*BufferPage)(atomic.SwapPointer(&p.next, page))
+	return (*BufferPage)(atomic.SwapPointer(&p.next, unsafe.Pointer(page)))
 }
 
 /* ============================ */

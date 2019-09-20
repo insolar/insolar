@@ -183,7 +183,7 @@ func (p *DiodeBufferedLevelWriter) LogLevelWrite(level insolar.LogLevel, b []byt
 				writeMissedMsg(&p.output, p.skippedFn, -1)
 			}
 		} else {
-			err = p.Close()
+			_ = p.Close()
 		}
 		// direct write to the underlying
 		return p.output.writeLevel(level, b)
