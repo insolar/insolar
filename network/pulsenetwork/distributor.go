@@ -162,9 +162,9 @@ func (d *distributor) Distribute(ctx context.Context, pulse insolar.Pulse) {
 	defer span.End()
 
 	// TODO: Move to config reader or DECIDE WHEN WE NEED TO RESOLVE INS-3507
-	bootstrapHosts := make([]net.TCPAddr, 0, len(d.bootstrapHosts))
+	adresses := make([]net.TCPAddr, 0, len(d.bootstrapHosts))
+	amu := sync.Mutex{}
 	dnswg := sync.WaitGroup{}
-	bsmu := sync.Mutex{}
 
 	for _, node := range d.bootstrapHosts {
 		dnswg.Add(1)
@@ -172,36 +172,36 @@ func (d *distributor) Distribute(ctx context.Context, pulse insolar.Pulse) {
 			defer dnswg.Done()
 			addr, err := net.ResolveTCPAddr("tcp", node)
 			if err != nil {
-				logger.Warn(err, "failed to create bootstrap node host")
+				logger.Warnf("failed to resolve bootstrap node address %s, %s", node, err.Error())
 				return
 			}
-			bsmu.Lock()
-			defer bsmu.Unlock()
-			bootstrapHosts = append(bootstrapHosts, *addr)
+			amu.Lock()
+			defer amu.Unlock()
+			adresses = append(adresses, *addr)
 		}(node)
 	}
 	dnswg.Wait()
 
-	if len(bootstrapHosts) == 0 {
+	if len(adresses) == 0 {
 		logger.Warn("No bootstrap hosts to distribute")
 		return
 	}
 
 	wg := sync.WaitGroup{}
-	wg.Add(len(bootstrapHosts))
+	wg.Add(len(adresses))
 
-	for _, bootstrapHost := range bootstrapHosts {
-		go func(ctx context.Context, pulse insolar.Pulse, bootstrapHost net.TCPAddr) {
+	for _, nodeAddr := range adresses {
+		go func(ctx context.Context, pulse insolar.Pulse, nodeAddr net.TCPAddr) {
 			defer wg.Done()
 
-			err := d.sendPulseToHost(ctx, &pulse, &bootstrapHost)
+			err := d.sendPulseToHost(ctx, &pulse, &nodeAddr)
 			if err != nil {
 				stats.Record(ctx, statSendPulseErrorsCount.M(1))
-				logger.Warnf("Failed to send pulse %d to host: %s %s", pulse.PulseNumber, bootstrapHost.String(), err)
+				logger.Warnf("Failed to send pulse %d to host: %s %s", pulse.PulseNumber, nodeAddr.String(), err)
 				return
 			}
-			logger.Infof("Successfully sent pulse %d to node %s", pulse.PulseNumber, bootstrapHost)
-		}(ctx, pulse, bootstrapHost)
+			logger.Infof("Successfully sent pulse %d to node %s", pulse.PulseNumber, nodeAddr)
+		}(ctx, pulse, nodeAddr)
 	}
 
 	wg.Wait()
@@ -258,7 +258,7 @@ func (d *distributor) sendRequestToHost(ctx context.Context, p *packet.Packet, r
 }
 
 func NewPulsePacket(p *insolar.Pulse, pulsarHost *host.Host, to *net.TCPAddr, id uint64) *packet.Packet {
-	rcv := host.Host{Address: &host.Address{net.UDPAddr{IP: to.IP, Port: to.Port, Zone: to.Zone}}}
+	rcv := host.Host{Address: &host.Address{net.UDPAddr{IP: to.IP, Port: to.Port, Zone: to.Zone}}} //nolint
 	pulseRequest := packet.NewPacket(pulsarHost, &rcv, types.Pulse, id)
 	request := &packet.PulseRequest{
 		Pulse: pulse.ToProto(p),
