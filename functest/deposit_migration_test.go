@@ -78,7 +78,7 @@ func TestMigrationTokenThreeActiveDaemons(t *testing.T) {
 	require.Error(t, err)
 	require.IsType(t, &requester.Error{}, err)
 	data := err.(*requester.Error).Data
-	require.Contains(t, data.Trace, "Migration is done for this deposit")
+	require.Contains(t, data.Trace, "migration is done for this deposit: Test_TxHash")
 }
 
 func TestMigrationTokenOnDifferentDeposits(t *testing.T) {
