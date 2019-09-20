@@ -66,6 +66,8 @@ func merge(targetDBPath string, backupFileName string, numberOfWorkers int) {
 		return
 	}
 
+	log.Info("Backup file opened")
+
 	err = bdb.Load(bkpFile, numberOfWorkers)
 	if err != nil {
 		closeRawDB(bdb, err)
@@ -231,7 +233,7 @@ func finalizeLastPulse(ctx context.Context, bdb store.DB) (insolar.PulseNumber, 
 	log.Info("All jet confirmed for pulse: ", pulseNumber.String())
 	err := jetKeeper.AddBackupConfirmation(ctx, pulseNumber)
 	if err != nil {
-		return 0, errors.New("failed to add backup confirmation for pulse" + pulseNumber.String())
+		return 0, errors.Wrap(err, "failed to add backup confirmation for pulse"+pulseNumber.String())
 	}
 
 	if jetKeeper.TopSyncPulse() != pulseNumber {
