@@ -233,9 +233,9 @@ func initPulsar(ctx context.Context, delta uint16, ns InitializedNodes) {
 
 func initLogger(level insolar.LogLevel) context.Context {
 	ctx := context.Background()
-	logger := inslogger.FromContext(ctx).WithCaller(false)
-	logger, _ = logger.WithLevelNumber(level)
-	logger, _ = logger.WithFormat(insolar.TextFormat)
+	builder := inslogger.FromContext(ctx).Copy()
+	builder.WithCaller(insolar.CallerField).WithLevel(level).WithFormat(insolar.TextFormat)
+	logger, _ := builder.Build()
 	ctx = inslogger.SetLogger(ctx, logger)
 	return ctx
 }

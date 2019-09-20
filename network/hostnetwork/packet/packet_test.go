@@ -92,7 +92,7 @@ func TestDeserializePacket(t *testing.T) {
 
 	buffer.Write(serialized)
 
-	deserialized, _, err := DeserializePacket(log.GlobalLogger, &buffer)
+	deserialized, _, err := DeserializePacket(log.GlobalLogger(), &buffer)
 
 	require.NoError(t, err)
 	require.Equal(t, deserialized.Packet, msg)
@@ -112,7 +112,7 @@ func TestDeserializeBigPacket(t *testing.T) {
 	var buffer bytes.Buffer
 	buffer.Write(serialized)
 
-	deserializedMsg, _, err := DeserializePacket(log.GlobalLogger, &buffer)
+	deserializedMsg, _, err := DeserializePacket(log.GlobalLogger(), &buffer)
 	require.NoError(t, err)
 
 	deserializedData := deserializedMsg.GetRequest().GetRPC().Data
