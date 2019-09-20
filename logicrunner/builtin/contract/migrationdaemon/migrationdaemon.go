@@ -154,7 +154,7 @@ func addConfirmToDeposit(tokenHolderRef string, txDepositRef insolar.Reference, 
 	txDeposit := deposit.GetObject(txDepositRef)
 	unHoldPulse, err := txDeposit.GetPulseUnHold()
 	if unHoldPulse != 0 {
-		return nil, fmt.Errorf("migration is done for this deposit: %s", txHash)
+		return nil, fmt.Errorf("migration is done for this deposit %s", txHash)
 	}
 	err = txDeposit.Confirm(caller, txHash, amount)
 	if err != nil {
