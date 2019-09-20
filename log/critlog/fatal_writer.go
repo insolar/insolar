@@ -41,9 +41,8 @@ var _ insolar.LogLevelWriter = &FatalDirectWriter{}
 var _ io.WriteCloser = &FatalDirectWriter{}
 
 type FatalDirectWriter struct {
-	output          OutputHelper
-	state           uint32 // atomic
-	unlockPostFatal bool
+	output OutputHelper
+	fatal  FatalHelper
 }
 
 func (p *FatalDirectWriter) Close() error {
@@ -56,21 +55,21 @@ func (p *FatalDirectWriter) Flush() error {
 }
 
 func (p *FatalDirectWriter) Write(b []byte) (n int, err error) {
-	if p.isFatal() {
-		return p.onFatal(insolar.NoLevel, b)
+	if p.fatal.IsFatal() {
+		return p.fatal.PostFatalWrite(insolar.NoLevel, b)
 	}
 	return p.output.Write(b)
 }
 
 func (p *FatalDirectWriter) LogLevelWrite(level insolar.LogLevel, b []byte) (n int, err error) {
-	if p.isFatal() {
-		return p.onFatal(level, b)
+	if p.fatal.IsFatal() {
+		return p.fatal.PostFatalWrite(level, b)
 	}
 
 	switch level {
 	case insolar.FatalLevel:
-		if !p.setFatal() {
-			return p.onFatal(level, b)
+		if !p.fatal.SetFatal() {
+			return p.fatal.PostFatalWrite(level, b)
 		}
 		n, _ = p.output.DoWriteLevel(level, b)
 		return n, p.Close()
@@ -87,19 +86,31 @@ func (p *FatalDirectWriter) LogLevelWrite(level insolar.LogLevel, b []byte) (n i
 	}
 }
 
-func (p *FatalDirectWriter) setFatal() bool {
+/* =============================== */
+
+type FatalHelper struct {
+	state           uint32 // atomic
+	unlockPostFatal bool
+}
+
+func (p *FatalHelper) SetFatal() bool {
 	return atomic.CompareAndSwapUint32(&p.state, 0, 1)
 }
 
-func (p *FatalDirectWriter) isFatal() bool {
+func (p *FatalHelper) IsFatal() bool {
 	return atomic.LoadUint32(&p.state) != 0
 }
 
-func (p *FatalDirectWriter) onFatal(_ insolar.LogLevel, bytes []byte) (int, error) {
+func (p *FatalHelper) LockFatal() {
 	if p.unlockPostFatal {
-		return len(bytes), nil
+		return
 	}
 	select {}
+}
+
+func (p *FatalHelper) PostFatalWrite(_ insolar.LogLevel, b []byte) (int, error) {
+	p.LockFatal()
+	return len(b), nil
 }
 
 /* =============================== */
