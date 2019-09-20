@@ -19,14 +19,18 @@ package node
 import (
 	"context"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/dgraph-io/badger"
 	fuzz "github.com/google/gofuzz"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/store"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/pulse"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -251,4 +255,87 @@ func TestNodeStorageDB_Set(t *testing.T) {
 		err = nodeStorage.Set(pulse, nodes)
 		require.Equal(t, ErrOverride, err)
 	})
+}
+
+func TestNodeStorageDB_TruncateHead_NoSuchPulse(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+	tmpdir, err := ioutil.TempDir("", "bdb-test-")
+	defer os.RemoveAll(tmpdir)
+	assert.NoError(t, err)
+
+	ops := BadgerDefaultOptions(tmpdir)
+	dbMock, err := store.NewBadgerDB(ops)
+	defer dbMock.Stop(ctx)
+	require.NoError(t, err)
+
+	dropStore := NewStorageDB(dbMock)
+
+	err = dropStore.TruncateHead(ctx, insolar.GenesisPulse.PulseNumber)
+	require.NoError(t, err)
+}
+
+func TestDropStorageDB_TruncateHead(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+	tmpdir, err := ioutil.TempDir("", "bdb-test-")
+	defer os.RemoveAll(tmpdir)
+	assert.NoError(t, err)
+
+	ops := BadgerDefaultOptions(tmpdir)
+	dbMock, err := store.NewBadgerDB(ops)
+	defer dbMock.Stop(ctx)
+	require.NoError(t, err)
+
+	nodeStor := NewStorageDB(dbMock)
+
+	nodeSets := make([]struct {
+		nodes []insolar.Node
+		pn    insolar.PulseNumber
+	}, 10)
+
+	for i := range nodeSets {
+		nodeSets[i].pn = pulse.Number(pulse.MinTimePulse + (i * 10))
+		nodeSets[i].nodes = []insolar.Node{
+			{
+				Role: insolar.StaticRoleHeavyMaterial,
+			},
+			{
+				Role: insolar.StaticRoleLightMaterial,
+			},
+			{
+				Role: insolar.StaticRoleVirtual,
+			},
+		}
+	}
+
+	rand.Seed(time.Now().UnixNano())
+	rand.Shuffle(len(nodeSets), func(i, j int) { nodeSets[i], nodeSets[j] = nodeSets[j], nodeSets[i] })
+
+	for _, nodeSet := range nodeSets {
+		err := nodeStor.Set(nodeSet.pn, nodeSet.nodes)
+		require.NoError(t, err)
+	}
+
+	for i := 0; i < 10; i++ {
+		_, err := nodeStor.All(pulse.Number(pulse.MinTimePulse + (i * 10)))
+		require.NoError(t, err)
+	}
+
+	numLeftElements := 10 / 2
+	err = nodeStor.TruncateHead(ctx, pulse.MinTimePulse+insolar.PulseNumber(numLeftElements*10))
+	require.NoError(t, err)
+
+	for i := 0; i < numLeftElements; i++ {
+		_, err := nodeStor.All(pulse.Number(pulse.MinTimePulse + (i * 10)))
+		require.NoError(t, err)
+	}
+
+	for i := numLeftElements - 1; i >= numLeftElements; i-- {
+		p := pulse.MinTimePulse + insolar.PulseNumber(numLeftElements*10)
+		_, err := nodeStor.All(p)
+		require.EqualError(t, err, ErrNoNodes.Error(), "Pulse: ", p.String())
+	}
 }

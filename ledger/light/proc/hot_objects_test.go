@@ -124,7 +124,7 @@ func TestHotObjects_Proceed(t *testing.T) {
 		}).Return(make(chan *message.Message), func() {})
 
 		// start test
-		p := proc.NewHotObjects(meta, expectedPulse.PulseNumber, expectedJetID, expectedDrop, idxs)
+		p := proc.NewHotObjects(meta, expectedPulse.PulseNumber, expectedJetID, expectedDrop, idxs, 10)
 		p.Dep(drops, indexes, jetStorage, jetFetcher, jetReleaser, coordinator, calculator, sender)
 
 		err := p.Proceed(ctx)
@@ -210,7 +210,83 @@ func TestHotObjects_Proceed(t *testing.T) {
 		}).Return(make(chan *message.Message), func() {})
 
 		// start test
-		p := proc.NewHotObjects(meta, currentPulse.PulseNumber, expectedJetID, expectedDrop, idxs)
+		p := proc.NewHotObjects(meta, currentPulse.PulseNumber, expectedJetID, expectedDrop, idxs, 10)
+		p.Dep(drops, indexes, jetStorage, jetFetcher, jetReleaser, coordinator, calculator, sender)
+
+		err := p.Proceed(ctx)
+		assert.NoError(t, err)
+	})
+
+	t.Run("ok, with pending limitation to 0", func(t *testing.T) {
+		setup(mc)
+		defer mc.Finish()
+
+		currentPulse := insolar.Pulse{
+			PulseNumber: pulse.MinTimePulse + 100,
+		}
+		abandonedRequestPulse := insolar.Pulse{
+			PulseNumber: pulse.MinTimePulse,
+		}
+		thresholdAbandonedRequestPulse := insolar.Pulse{
+			PulseNumber: pulse.MinTimePulse + 80,
+		}
+
+		expectedJetID := gen.JetID()
+		expectedObjJetID := expectedJetID
+		expectedObjectID := gen.ID()
+		meta := payload.Meta{}
+		expectedDrop := drop.Drop{
+			Pulse: currentPulse.PulseNumber,
+			JetID: expectedJetID,
+			Split: false,
+		}
+		idxs := []record.Index{
+			{
+				ObjID: expectedObjectID,
+				Lifeline: record.Lifeline{
+					EarliestOpenRequest: &abandonedRequestPulse.PulseNumber,
+				},
+				// this is hack, PendingRecords in record.Index should be always empty
+				PendingRecords: []insolar.ID{},
+			},
+		}
+
+		drops.SetMock.Inspect(func(ctx context.Context, drop drop.Drop) {
+			assert.Equal(t, expectedDrop, drop, "didn't set drop")
+		}).Return(nil)
+
+		jetStorage.UpdateMock.Inspect(func(ctx context.Context, pulse insolar.PulseNumber, actual bool, ids ...insolar.JetID) {
+			assert.Equal(t, currentPulse.PulseNumber, pulse, "wrong pulse received")
+			assert.Equal(t, expectedJetID, ids[0], "wrong jetID received")
+		}).Return(nil)
+
+		calculator.BackwardsMock.Return(thresholdAbandonedRequestPulse, nil)
+		jetStorage.ForIDMock.Return(expectedObjJetID, false)
+
+		indexes.SetMock.Inspect(func(ctx context.Context, pn insolar.PulseNumber, index record.Index) {
+			assert.Equal(t, idxs[0], index)
+		}).Return()
+
+		jetFetcher.ReleaseMock.Inspect(func(ctx context.Context, jetID insolar.JetID, pulse insolar.PulseNumber) {
+			assert.Equal(t, expectedJetID, jetID)
+		}).Return()
+		jetReleaser.UnlockMock.Inspect(func(ctx context.Context, pulse insolar.PulseNumber, jetID insolar.JetID) {
+			assert.Equal(t, expectedJetID, jetID)
+		}).Return(nil)
+
+		expectedToHeavyMsg, _ := payload.NewMessage(&payload.GotHotConfirmation{
+			JetID: expectedJetID,
+			Pulse: currentPulse.PulseNumber,
+			Split: expectedDrop.Split,
+		})
+
+		sender.SendRoleMock.Inspect(func(ctx context.Context, msg *message.Message, role insolar.DynamicRole, object insolar.Reference) {
+			assert.Equal(t, expectedToHeavyMsg.Payload, msg.Payload)
+			assert.Equal(t, insolar.DynamicRoleHeavyExecutor, role)
+		}).Return(make(chan *message.Message), func() {})
+
+		// start test
+		p := proc.NewHotObjects(meta, currentPulse.PulseNumber, expectedJetID, expectedDrop, idxs, 0)
 		p.Dep(drops, indexes, jetStorage, jetFetcher, jetReleaser, coordinator, calculator, sender)
 
 		err := p.Proceed(ctx)

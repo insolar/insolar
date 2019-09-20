@@ -886,7 +886,7 @@ func TestExecutionBroker_getTask(t *testing.T) {
 			mc := minimock.NewController(t)
 
 			broker := test.mocks(ctx, mc)
-			task := broker.getTask(ctx, broker.mutable.queue)
+			task := broker.getTask(ctx, &broker.mutable)
 
 			mc.Wait(1 * time.Minute)
 			mc.Finish()

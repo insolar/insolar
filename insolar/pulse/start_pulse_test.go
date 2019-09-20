@@ -14,34 +14,29 @@
 // limitations under the License.
 //
 
-package costcenter
+package pulse
 
 import (
+	"testing"
+
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/logicrunner/builtin/foundation"
+	"github.com/insolar/insolar/insolar/gen"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/testutils"
 )
 
-type CostCenter struct {
-	foundation.BaseContract
-	FeeMember *insolar.Reference
+func ReadPulses(t testing.TB, pulser StartPulse) func() {
+	return func() {
+		pulser.PulseNumber()
+	}
 }
 
-// New creates new CostCenter.
-func New(feeMember *insolar.Reference) (*CostCenter, error) {
-	return &CostCenter{
-		FeeMember: feeMember,
-	}, nil
-}
-
-// GetFeeMember gets fee member reference.
-// ins:immutable
-func (cc CostCenter) GetFeeMember() (*insolar.Reference, error) {
-	return cc.FeeMember, nil
-}
-
-// CalcFee calculates fee for amount. Returns fee.
-// ins:immutable
-func (cc CostCenter) CalcFee(amountStr string) (string, error) {
-	// 10 ^ 9
-	return "1000000000", nil
+func TestStartPulseRace(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+	startPulse := NewStartPulse()
+	syncTest := &testutils.SyncT{T: t}
+	for i := 0; i < 10; i++ {
+		go ReadPulses(syncTest, startPulse)()
+	}
+	startPulse.SetStartPulse(ctx, insolar.Pulse{PulseNumber: gen.PulseNumber()})
 }

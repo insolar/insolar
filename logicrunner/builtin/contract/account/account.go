@@ -18,14 +18,14 @@ package account
 
 import (
 	"fmt"
-	"github.com/insolar/insolar/logicrunner/builtin/proxy/costcenter"
-	"github.com/insolar/insolar/logicrunner/builtin/proxy/member"
 	"math/big"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation/safemath"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/costcenter"
 	"github.com/insolar/insolar/logicrunner/builtin/proxy/deposit"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/member"
 )
 
 type Account struct {
@@ -134,8 +134,7 @@ func (a *Account) Transfer(rootDomainRef insolar.Reference, amountStr string, to
 	if !ok {
 		return nil, fmt.Errorf("can't parse input amount")
 	}
-	zero, _ := new(big.Int).SetString("0", 10)
-	if amount.Cmp(zero) < 1 {
+	if amount.Sign() <= 0 {
 		return nil, fmt.Errorf("amount must be larger then zero")
 	}
 
@@ -198,6 +197,9 @@ func (a *Account) IncreaseBalance(amountStr string) error {
 	amount, ok := new(big.Int).SetString(amountStr, 10)
 	if !ok {
 		return fmt.Errorf("can't parse input amount")
+	}
+	if amount.Sign() <= 0 {
+		return fmt.Errorf("amount should be greater then zero")
 	}
 	balance, ok := new(big.Int).SetString(a.Balance, 10)
 	if !ok {

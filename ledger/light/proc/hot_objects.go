@@ -41,11 +41,12 @@ const (
 )
 
 type HotObjects struct {
-	meta    payload.Meta
-	jetID   insolar.JetID
-	drop    drop.Drop
-	indexes []record.Index
-	pulse   insolar.PulseNumber
+	meta                   payload.Meta
+	jetID                  insolar.JetID
+	drop                   drop.Drop
+	indexes                []record.Index
+	pulse                  insolar.PulseNumber
+	availableNotifications uint
 
 	dep struct {
 		drops       drop.Modifier
@@ -65,13 +66,15 @@ func NewHotObjects(
 	jetID insolar.JetID,
 	drop drop.Drop,
 	indexes []record.Index,
+	availableNotifications uint,
 ) *HotObjects {
 	return &HotObjects{
-		meta:    meta,
-		jetID:   jetID,
-		drop:    drop,
-		indexes: indexes,
-		pulse:   pn,
+		meta:                   meta,
+		jetID:                  jetID,
+		drop:                   drop,
+		indexes:                indexes,
+		pulse:                  pn,
+		availableNotifications: availableNotifications,
 	}
 }
 
@@ -145,7 +148,8 @@ func (p *HotObjects) Proceed(ctx context.Context) error {
 		)
 		logger.Debugf("[handleHotRecords] lifeline with id - %v saved", idx.ObjID.DebugString())
 
-		go p.notifyPending(ctx, idx.ObjID, idx.Lifeline, pendingNotifyPulse.PulseNumber)
+		p.notifyPending(ctx, idx.ObjID, idx.Lifeline, pendingNotifyPulse.PulseNumber)
+
 	}
 
 	logger.Infof("before releasing jetFetcher for jet %s and pulse %s", p.jetID.DebugString(), p.pulse)
@@ -199,6 +203,12 @@ func (p *HotObjects) notifyPending(
 	if *lifeline.EarliestOpenRequest >= notifyLimit {
 		return
 	}
+
+	if p.availableNotifications <= 0 {
+		inslogger.FromContext(ctx).Warn("out of AbandonedRequestsNotification limit")
+		return
+	}
+	p.availableNotifications--
 
 	msg, err := payload.NewMessage(&payload.AbandonedRequestsNotification{
 		ObjectID: objectID,
