@@ -52,6 +52,7 @@ package pulsenetwork
 
 import (
 	"context"
+	"log"
 	"net"
 	"strconv"
 	"sync"
@@ -180,6 +181,7 @@ func (d *distributor) Distribute(ctx context.Context, pulse insolar.Pulse) {
 			bootstrapHosts = append(bootstrapHosts, *addr)
 		}(node)
 	}
+	dnswg.Wait()
 
 	if len(bootstrapHosts) == 0 {
 		logger.Warn("No bootstrap hosts to distribute")
@@ -239,7 +241,7 @@ func (d *distributor) sendRequestToHost(ctx context.Context, p *packet.Packet, r
 		return errors.Wrap(err, "Failed to serialize packet")
 	}
 
-	conn, err := net.DialTCP("ip", nil, receiver)
+	conn, err := net.DialTCP("tcp", nil, receiver)
 	if err != nil {
 		return errors.Wrap(err, "Unable to connect")
 	}
