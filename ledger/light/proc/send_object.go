@@ -114,7 +114,7 @@ func (p *SendObject) hasEarliest(ctx context.Context) (bool, record.CompositeFil
 }
 
 func (p *SendObject) Proceed(ctx context.Context) error {
-	sendState := func(rec record.Material) error {
+	sendState := func(rec record.Material, earliestRequestID *insolar.ID, earliestRequest []byte) error {
 		virtual := rec.Virtual
 		concrete := record.Unwrap(&virtual)
 		state, ok := concrete.(record.State)
@@ -133,29 +133,12 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to marshal state record")
 		}
-		payloadState := &payload.State{
-			Record: buf,
-		}
 
-		// We know the request, that is processing by ve
-		// if the request isn't earliest, we return object + earliest request instead
-		if p.requestID != nil {
-			hasEarliest, earliestReq, err := p.hasEarliest(ctx)
-			if err != nil {
-				return errors.Wrap(err, "failed to check request id")
-			}
-			if hasEarliest {
-				reqBuf, err := earliestReq.Record.Virtual.Marshal()
-				if err != nil {
-					return errors.Wrap(err, "failed to marshal request record")
-				}
-
-				payloadState.EarliestRequestID = &earliestReq.RecordID
-				payloadState.EarliestRequest = reqBuf
-			}
-		}
-
-		msg, err := payload.NewMessage(payloadState)
+		msg, err := payload.NewMessage(&payload.State{
+			Record:            buf,
+			EarliestRequest:   earliestRequest,
+			EarliestRequestID: earliestRequestID,
+		})
 		if err != nil {
 			return errors.Wrap(err, "failed to create message")
 		}
@@ -244,10 +227,31 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 		p.dep.sender.Reply(ctx, p.message, msg)
 	}
 
+	var earliestRequestID *insolar.ID
+	var earliestRequest []byte
+
+	// We know the request, that is processing by ve
+	// if the request isn't earliest, we return object + earliest request instead
+	if p.requestID != nil {
+		hasEarliest, earliestReq, err := p.hasEarliest(ctx)
+		if err != nil {
+			return errors.Wrap(err, "failed to check request id")
+		}
+		if hasEarliest {
+			reqBuf, err := earliestReq.Record.Virtual.Marshal()
+			if err != nil {
+				return errors.Wrap(err, "failed to marshal request record")
+			}
+
+			earliestRequestID = &earliestReq.RecordID
+			earliestRequest = reqBuf
+		}
+	}
+
 	rec, err := p.dep.records.ForID(ctx, *lifeline.LatestState)
 	switch err {
 	case nil:
-		return sendState(rec)
+		return sendState(rec, earliestRequestID, earliestRequest)
 	case object.ErrNotFound:
 		return sendPassState(*lifeline.LatestState)
 	default:
