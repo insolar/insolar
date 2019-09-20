@@ -35,8 +35,9 @@ import (
 )
 
 type SendObject struct {
-	message  payload.Meta
-	objectID insolar.ID
+	message   payload.Meta
+	objectID  insolar.ID
+	requestID *insolar.ID
 
 	dep struct {
 		coordinator jet.Coordinator
@@ -45,16 +46,19 @@ type SendObject struct {
 		records     object.RecordAccessor
 		indexes     object.IndexAccessor
 		sender      bus.Sender
+		filament    executor.FilamentCalculator
 	}
 }
 
 func NewSendObject(
 	msg payload.Meta,
 	objectID insolar.ID,
+	requestID *insolar.ID,
 ) *SendObject {
 	return &SendObject{
-		message:  msg,
-		objectID: objectID,
+		message:   msg,
+		objectID:  objectID,
+		requestID: requestID,
 	}
 }
 
@@ -65,6 +69,7 @@ func (p *SendObject) Dep(
 	records object.RecordAccessor,
 	indexes object.IndexAccessor,
 	sender bus.Sender,
+	filament executor.FilamentCalculator,
 ) {
 	p.dep.coordinator = coordinator
 	p.dep.jets = jets
@@ -72,6 +77,40 @@ func (p *SendObject) Dep(
 	p.dep.records = records
 	p.dep.indexes = indexes
 	p.dep.sender = sender
+	p.dep.filament = filament
+}
+
+func (p *SendObject) hasEarliest(ctx context.Context) (bool, record.CompositeFilamentRecord, error) {
+	originReq, _, err := p.dep.filament.RequestInfo(ctx, p.objectID, *p.requestID, flow.Pulse(ctx))
+	if err != nil {
+		return false, record.CompositeFilamentRecord{}, err
+	}
+
+	isMutableIncoming := func(rec *record.CompositeFilamentRecord) bool {
+		req := record.Unwrap(&rec.Record.Virtual).(record.Request)
+		_, isIn := req.(*record.IncomingRequest)
+		return isIn && req.IsMutable()
+	}
+
+	if !isMutableIncoming(originReq) {
+		return false, record.CompositeFilamentRecord{}, nil
+	}
+
+	openReqs, err := p.dep.filament.OpenedRequests(ctx, flow.Pulse(ctx), p.objectID, false)
+	if err != nil {
+		return false, record.CompositeFilamentRecord{}, err
+	}
+	if len(openReqs) == 0 {
+		return false, record.CompositeFilamentRecord{}, nil
+	}
+
+	for _, openReq := range openReqs {
+		if isMutableIncoming(&openReq) && openReq.RecordID != *p.requestID {
+			return true, openReq, nil
+		}
+	}
+
+	return false, record.CompositeFilamentRecord{}, nil
 }
 
 func (p *SendObject) Proceed(ctx context.Context) error {
@@ -94,9 +133,29 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to marshal state record")
 		}
-		msg, err := payload.NewMessage(&payload.State{
+		payloadState := &payload.State{
 			Record: buf,
-		})
+		}
+
+		// We know the request, that is processing by ve
+		// if the request isn't earliest, we return object + earliest request instead
+		if p.requestID != nil {
+			hasEarliest, earliestReq, err := p.hasEarliest(ctx)
+			if err != nil {
+				return errors.Wrap(err, "failed to check request id")
+			}
+			if hasEarliest {
+				reqBuf, err := earliestReq.Record.Virtual.Marshal()
+				if err != nil {
+					return errors.Wrap(err, "failed to marshal request record")
+				}
+
+				payloadState.EarliestRequestID = &earliestReq.RecordID
+				payloadState.EarliestRequest = reqBuf
+			}
+		}
+
+		msg, err := payload.NewMessage(payloadState)
 		if err != nil {
 			return errors.Wrap(err, "failed to create message")
 		}
