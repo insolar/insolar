@@ -267,6 +267,7 @@ func (m *client) GetCode(
 func (m *client) GetObject(
 	ctx context.Context,
 	head insolar.Reference,
+	request *insolar.Reference,
 ) (ObjectDescriptor, error) {
 	var (
 		err error
@@ -291,9 +292,14 @@ func (m *client) GetObject(
 
 	logger := inslogger.FromContext(ctx).WithField("object", head.GetLocal().String())
 
-	msg, err := payload.NewMessage(&payload.GetObject{
+	pl := payload.GetObject{
 		ObjectID: *head.GetLocal(),
-	})
+	}
+	if request != nil {
+		pl.RequestID = request.GetLocal()
+	}
+
+	msg, err := payload.NewMessage(&pl)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to marshal message")
 	}
@@ -602,7 +608,7 @@ func (m *client) activateObject(
 	parent insolar.Reference,
 	memory []byte,
 ) error {
-	_, err := m.GetObject(ctx, parent)
+	_, err := m.GetObject(ctx, parent, nil)
 	if err != nil {
 		return errors.Wrap(err, "wrong parent")
 	}
