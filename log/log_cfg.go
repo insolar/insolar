@@ -26,7 +26,7 @@ type parsedLogConfig struct {
 	LogFormat  insolar.LogFormat
 	LogLevel   insolar.LogLevel
 
-	SkipFrameBaselineDelta int
+	SkipFrameBaselineAdjustment int
 }
 
 func parseLogConfig(cfg configuration.Log) (pc parsedLogConfig, err error) {

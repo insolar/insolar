@@ -189,7 +189,7 @@ func newZerologAdapter(cfg configuration.Log, pCfg parsedLogConfig) (insolar.Log
 		zerologAdapterConfig: zerologAdapterConfig{
 			format:                 pCfg.LogFormat,
 			bufferSize:             cfg.BufferSize,
-			skipFrameCountBaseline: zerologSkipFrameCount + pCfg.SkipFrameBaselineDelta,
+			skipFrameCountBaseline: zerologSkipFrameCount + pCfg.SkipFrameBaselineAdjustment,
 		},
 	}
 

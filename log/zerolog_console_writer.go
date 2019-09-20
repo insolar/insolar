@@ -18,6 +18,7 @@ package log
 
 import (
 	"errors"
+	"fmt"
 	"github.com/rs/zerolog"
 	"io"
 	"os"
@@ -68,5 +69,16 @@ func formatCaller() zerolog.Formatter {
 			c = "file=" + c
 		}
 		return c
+	}
+}
+
+var cwd string
+
+func init() {
+	var err error
+	cwd, err = os.Getwd()
+	if err != nil {
+		cwd = ""
+		fmt.Println("couldn't get current working directory: ", err.Error())
 	}
 }

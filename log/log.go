@@ -17,13 +17,11 @@
 package log
 
 import (
-	"fmt"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	stdlog "log"
-	"os"
 	"strings"
 	"sync"
 	"time"
@@ -40,29 +38,18 @@ var fieldsOrder = []string{
 	zerolog.CallerFieldName,
 }
 
-var cwd string
-
-func init() {
-	var err error
-	cwd, err = os.Getwd()
-	if err != nil {
-		cwd = ""
-		fmt.Println("couldn't get current working directory: ", err.Error())
-	}
-}
-
 // NewLog creates logger instance with particular configuration
 func NewLog(cfg configuration.Log) (insolar.Logger, error) {
 	return NewLogExt(cfg, 0)
 }
 
 // NewLog creates logger instance with particular configuration
-func NewLogExt(cfg configuration.Log, skipFrameBaselineDelta int) (insolar.Logger, error) {
+func NewLogExt(cfg configuration.Log, skipFrameBaselineAdjustment int) (insolar.Logger, error) {
 	pCfg, err := parseLogConfig(cfg)
 	if err == nil {
 		var logger insolar.Logger
 
-		pCfg.SkipFrameBaselineDelta = skipFrameBaselineDelta
+		pCfg.SkipFrameBaselineAdjustment = skipFrameBaselineAdjustment
 		switch strings.ToLower(cfg.Adapter) {
 		case "zerolog":
 			logger, err = newZerologAdapter(cfg, pCfg)
