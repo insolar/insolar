@@ -148,6 +148,10 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "failed to calculate pending requests")
 	}
 	closedRequest, err := findClosed(opened, p.result)
+
+	if p.sideEffect != nil {
+		err = checkRequest(closedRequest)
+	}
 	if err != nil {
 		return errors.Wrap(err, "failed to find request being closed")
 	}
@@ -257,6 +261,28 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 	return nil
 }
 
+// If we have side effect than check that request of received result is not outgoing and not immutable incoming
+func checkRequest(request record.CompositeFilamentRecord) error {
+	rec := record.Unwrap(&request.Record.Virtual)
+	switch req := rec.(type) {
+	case *record.OutgoingRequest:
+		return &payload.CodedError{
+			Text: "outgoing request can't change object state, id: " + request.RecordID.DebugString(),
+			Code: payload.CodeRequestIsWrong,
+		}
+	case *record.IncomingRequest:
+		// todo::: if !req.IsMutalble {
+		if req.Immutable {
+			return &payload.CodedError{
+				Text: "immutable incoming request can't change object state, id: " + request.RecordID.DebugString(),
+				Code: payload.CodeRequestIsWrong,
+			}
+		}
+	}
+
+	return nil
+}
+
 // calcPending checks if received result closes earliest request. If so, it should return new earliest request or
 // nil if the last request was closed.
 func calcPending(opened []record.CompositeFilamentRecord, closedRequestID insolar.ID) (*insolar.PulseNumber, error) {
@@ -306,8 +332,8 @@ func findClosed(reqs []record.CompositeFilamentRecord, result record.Result) (re
 		}
 }
 
-func checkOutgoings(reqs []record.CompositeFilamentRecord, closedRequestID insolar.ID) error {
-	for _, req := range reqs {
+func checkOutgoings(openedRequests []record.CompositeFilamentRecord, closedRequestID insolar.ID) error {
+	for _, req := range openedRequests {
 		found := record.Unwrap(&req.Record.Virtual)
 		parsedReq, ok := found.(record.Request)
 		if !ok {
@@ -318,6 +344,7 @@ func checkOutgoings(reqs []record.CompositeFilamentRecord, closedRequestID insol
 			continue
 		}
 
+		// Is not saga and reason of opened outgoing is equal request closed by this set_result
 		if !out.IsDetached() && out.Reason.GetLocal().Equal(closedRequestID) {
 			return &payload.CodedError{
 				Text: "request " + closedRequestID.DebugString() + " is reason for non closed outgoing request " + req.RecordID.DebugString(),

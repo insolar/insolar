@@ -30,6 +30,8 @@ const (
 	CodeReasonNotFound    = 1008
 	CodeReasonIsWrong     = 1009
 	CodeNonClosedOutgoing = 1010
+
+	CodeRequestIsWrong = 1011
 )
 
 type CodedError struct {
