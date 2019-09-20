@@ -269,6 +269,7 @@ func (p *BufferTrim) start() bool {
 		p.mutex.Lock()
 		return true
 	}
+	return false
 }
 
 func (p *BufferTrim) stop() {
