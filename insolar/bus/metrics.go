@@ -30,6 +30,7 @@ const (
 
 var (
 	tagMessageType = insmetrics.MustTagKey("message_type")
+	tagMessageRole = insmetrics.MustTagKey("message_role")
 )
 
 var (
