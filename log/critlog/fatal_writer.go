@@ -95,7 +95,7 @@ func (p *FatalDirectWriter) isFatal() bool {
 	return atomic.LoadUint32(&p.state) != 0
 }
 
-func (p *FatalDirectWriter) onFatal(level insolar.LogLevel, bytes []byte) (int, error) {
+func (p *FatalDirectWriter) onFatal(_ insolar.LogLevel, bytes []byte) (int, error) {
 	if p.unlockPostFatal {
 		return len(bytes), nil
 	}

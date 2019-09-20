@@ -225,9 +225,13 @@ func (z *zerologAdapter) newEvent(level insolar.LogLevel) *zerolog.Event {
 	m := getLevelMapping(level)
 	stats.Record(m.metrics, statLogCalls.M(1))
 	event := m.fn(&z.logger)
-	if event != nil {
-		stats.Record(m.metrics, statLogWrites.M(1))
+	if event == nil {
+		return nil
 	}
+	if z.config.dynLevel != nil && z.config.dynLevel.GetLogLevel() > level {
+		return nil
+	}
+	stats.Record(m.metrics, statLogWrites.M(1))
 	return event
 }
 
@@ -388,10 +392,7 @@ func (z zerologBuilder) Build() (insolar.Logger, error) {
 		}
 	}
 
-	err := zNew.prepareLogger(z.level)
-	if err != nil {
-		return nil, err
-	}
+	zNew.prepareLogger(z.level)
 
 	return &zNew, nil
 }
@@ -423,7 +424,7 @@ func (z *zerologAdapter) prepareOutput() error {
 	return nil
 }
 
-func (z *zerologAdapter) prepareLogger(level zerolog.Level) error {
+func (z *zerologAdapter) prepareLogger(level zerolog.Level) {
 
 	ls := zerolog.New(z.output).Level(level)
 	if z.config.callerMode == insolar.CallerFieldWithFuncName {
@@ -437,6 +438,4 @@ func (z *zerologAdapter) prepareLogger(level zerolog.Level) error {
 	}
 
 	z.logger = lc.Logger()
-
-	return nil
 }
