@@ -52,7 +52,6 @@ package pulsenetwork
 
 import (
 	"context"
-	"log"
 	"net"
 	"strconv"
 	"sync"
