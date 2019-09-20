@@ -200,7 +200,6 @@ func (r *FullRealm) initBefore(transport transport.Factory) transport.Neighbourh
 
 	if r.ephemeralFeeder != nil {
 		r.timings = r.ephemeralFeeder.GetEphemeralTimings(r.config)
-		r.strategy.AdjustConsensusTimings(&r.timings)
 	}
 
 	r.packetSender = transport.GetPacketSender()
@@ -215,7 +214,6 @@ func (r *FullRealm) initBasics(census census.Active) {
 
 	if r.ephemeralFeeder == nil { // ephemeral timings are initialized earlier, in initBefore()
 		r.timings = r.config.GetConsensusTimings(r.pulseData.NextPulseDelta)
-		r.strategy.AdjustConsensusTimings(&r.timings)
 	}
 
 	if r.expectedPopulationSize == 0 {
@@ -284,7 +282,7 @@ func (r *FullRealm) initPopulation(needsDynamic bool, population census.OnlinePo
 
 	hookCfg := pop.NewSharedNodeContext(r.assistant, r, uint8(r.nbhSizes.NeighbourhoodTrustThreshold), r.getEphemeralMode(),
 		func(report misbehavior.Report) interface{} {
-			log.Warnf("Got Report: %+v", report)
+			log.Debugf("Got Report: %+v", report)
 			r.census.GetMisbehaviorRegistry().AddReport(report)
 			return nil
 		})
@@ -458,20 +456,20 @@ func (r *FullRealm) PreparePulseChange() (bool, <-chan api.UpstreamState) {
 	report := r.getUpstreamReport()
 
 	if r.IsLocalStateful() {
-		inslogger.FromContext(r.roundContext).Warnf("PreparePulseChange: self=%s, eph=%v", r.self, r.populationHook.GetEphemeralMode())
+		inslogger.FromContext(r.roundContext).Debugf("PreparePulseChange: self=%s, eph=%v", r.self, r.populationHook.GetEphemeralMode())
 		ch := make(chan api.UpstreamState, 1)
 		r.stateMachine.PreparePulseChange(report, ch)
 		return true, ch
 	}
 
-	inslogger.FromContext(r.roundContext).Warnf("PrepareAndCommitStatelessPulseChange: self=%s, eph=%v", r.self, r.populationHook.GetEphemeralMode())
+	inslogger.FromContext(r.roundContext).Debugf("PrepareAndCommitStatelessPulseChange: self=%s, eph=%v", r.self, r.populationHook.GetEphemeralMode())
 	r.stateMachine.CommitPulseChangeByStateless(report, r.pulseData, r.census)
 	return false, nil
 }
 
 func (r *FullRealm) CommitPulseChange() {
 	report := r.getUpstreamReport()
-	inslogger.FromContext(r.roundContext).Warnf("CommitPulseChange: self=%s", r.self)
+	inslogger.FromContext(r.roundContext).Debugf("CommitPulseChange: self=%s", r.self)
 
 	r.stateMachine.CommitPulseChange(report, r.pulseData, r.census)
 }
