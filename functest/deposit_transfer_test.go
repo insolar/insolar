@@ -19,7 +19,6 @@
 package functest
 
 import (
-	"fmt"
 	"math/big"
 	"strings"
 	"testing"
@@ -39,40 +38,37 @@ func TestDepositTransferToken(t *testing.T) {
 
 	firstBalance := getBalanceNoErr(t, member, member.Ref)
 	secondBalance := new(big.Int).Add(firstBalance, big.NewInt(1000))
-	fmt.Print("Lockup STEP")
 
 	anon := func() api.CallMethodReply {
 		_, _, err := makeSignedRequest(launchnet.TestRPCUrlPublic, member,
 			"deposit.transfer", map[string]interface{}{"amount": "1000", "ethTxHash": "Eth_TxHash_test"})
 		require.Error(t, err)
-		fmt.Print(".")
-		if !strings.Contains(err.Error(), "hold period didn't end") {
-			return api.CallMethodReply{}
+		require.IsType(t, &requester.Error{}, err)
+		data := err.(*requester.Error).Data
+		for _, v := range data.Trace {
+			if !strings.Contains(v, "hold period didn't end") {
+				return api.CallMethodReply{}
+			}
 		}
 		return api.CallMethodReply{
-			Error: &foundation.Error{err.Error()},
+			Error: &foundation.Error{S: err.Error()},
 		}
 	}
 
 	_, err := waitUntilRequestProcessed(anon, time.Second*30, time.Second, 30)
 	require.NoError(t, err)
-	fmt.Println(" SUCCESS")
-	fmt.Print("Vesting STEP")
-
 	anon = func() api.CallMethodReply {
 		_, _, err := makeSignedRequest(launchnet.TestRPCUrlPublic, member,
 			"deposit.transfer", map[string]interface{}{"amount": "1000", "ethTxHash": "Eth_TxHash_test"})
 		if err == nil {
 			return api.CallMethodReply{}
 		}
-		fmt.Print(".")
 		return api.CallMethodReply{
-			Error: &foundation.Error{err.Error()},
+			Error: &foundation.Error{S: err.Error()},
 		}
 	}
 	_, err = waitUntilRequestProcessed(anon, time.Second*30, time.Second, 30)
 	require.NoError(t, err)
-	fmt.Print(" SUCCESS\n")
 	checkBalanceFewTimes(t, member, member.Ref, secondBalance)
 }
 

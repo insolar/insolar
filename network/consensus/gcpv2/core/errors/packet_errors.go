@@ -48,42 +48,38 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package adapters
+package errors
 
 import (
-	"context"
-	"math/rand"
+	"fmt"
 
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api"
-	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
-	"github.com/insolar/insolar/pulse"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/consensus/common/endpoints"
+	"github.com/insolar/insolar/network/consensus/common/warning"
+	"github.com/insolar/insolar/network/consensus/gcpv2/api/phases"
 )
 
-type RoundStrategy struct {
-	localConfig api.LocalNodeConfiguration
-}
+func LimitExceeded(packetType phases.PacketType, sourceID insolar.ShortNodeID, sourceEndpoint endpoints.Inbound) error {
+	err := fmt.Errorf(
+		"packet type (%v) limit exceeded: from=%v(%v)",
+		packetType,
+		sourceID,
+		sourceEndpoint,
+	)
 
-func NewRoundStrategy(
-	localConfig api.LocalNodeConfiguration,
-) *RoundStrategy {
-	return &RoundStrategy{
-		localConfig: localConfig,
+	if packetType == phases.PacketPhase3 {
+		return warning.New(err)
 	}
+
+	return err
 }
 
-func (rs *RoundStrategy) ConfigureRoundContext(ctx context.Context, expectedPulse pulse.Number, self profiles.LocalNode) context.Context {
-	ctx, _ = inslogger.WithFields(ctx, map[string]interface{}{
-		"is_joiner":   self.IsJoiner(),
-		"round_pulse": expectedPulse,
-	})
-	return ctx
-}
+func UnknownPacketType(packetType phases.PacketType) error {
+	err := fmt.Errorf("packet type (%v) is unknown", packetType)
 
-func (rs *RoundStrategy) GetBaselineWeightForNeighbours() uint32 {
-	return rand.Uint32()
-}
+	if packetType == phases.PacketPulsarPulse {
+		return warning.New(err)
+	}
 
-func (rs *RoundStrategy) ShuffleNodeSequence(n int, swap func(i, j int)) {
-	rand.Shuffle(n, swap)
+	return err
 }

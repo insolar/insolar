@@ -238,12 +238,12 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum by(instance)(irate(insolar_consensus_packets_recv_count{phase=~\"$phase\", installation=\"$installation\"}[30s]))",
+          "expr": "sum by(instance)(irate(insolar_consensus_packets_recv_count{phase=~\"$phase\", installation=\"$installation\"}[60s]))",
           "legendFormat": "{{instance}}",
           "refId": "A"
         },
         {
-          "expr": "-sum by(instance)(irate(insolar_consensus_packets_sent_count{phase=~\"$phase\", installation=\"$installation\"}[30s]))",
+          "expr": "-sum by(instance)(irate(insolar_consensus_packets_sent_count{phase=~\"$phase\", installation=\"$installation\"}[60s]))",
           "legendFormat": "{{instance}}",
           "refId": "B"
         }

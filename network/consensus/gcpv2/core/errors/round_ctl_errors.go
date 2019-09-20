@@ -52,7 +52,6 @@ package errors
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/pulse"
@@ -66,14 +65,6 @@ func NewPulseRoundMismatchErrorDef(pn pulse.Number, filterPN pulse.Number, local
 	msg := fmt.Sprintf("packet pulse number mismatched: expected=%v, actual=%v, local=%d, from=%v, details=%v",
 		filterPN, pn, localID, from, details)
 	return NewPulseRoundMismatchError(pn, msg)
-}
-
-func PulseRoundErrorMessageToWarn(msg string) string {
-	pos := strings.IndexRune(msg, ':')
-	if pos < 0 {
-		return msg
-	}
-	return "pulse number change detected" + msg[pos:]
 }
 
 func IsMismatchPulseError(err error) (bool, pulse.Number) {
