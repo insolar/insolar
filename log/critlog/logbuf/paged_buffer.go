@@ -19,6 +19,7 @@ package logbuf
 import (
 	"math"
 	"runtime"
+	"sync"
 	"sync/atomic"
 	"unsafe"
 )
@@ -31,7 +32,7 @@ func NewPagedBufferTrimFromOldest(pageSize, sizeLimit int, recycler ByteBufferRe
 	}
 
 	return newPagedBuffer(pageSize, sizeLimit, true, recycler, func(newPage *BufferPage) {
-		newPage.totalCapacity = uint32(len(newPage.data))
+		newPage.bufferCleanupData.totalCapacity = uint32(len(newPage.data))
 		n := newPage.next
 		if n == nil {
 			newPage.head = newPage
@@ -97,6 +98,7 @@ type ByteBufferRecycler interface {
 
 type BufferTrim struct {
 	active          uint32 // atomic
+	mutex           sync.Mutex
 	trimmedCapacity uint32
 	target          *BufferPage
 }
@@ -240,36 +242,40 @@ func (p *PagedBuffer) trimFromHead(current *BufferPage) {
 		panic("illegal state")
 	}
 
-	trim := current.head.trim
+	trim := current.head.bufferCleanupData.trim
 	if !trim.start() {
 		return
 	}
 	defer trim.stop()
 
 	if trim.target == nil {
-		trim.target = current.head
+		trim.target = current.bufferCleanupData.head
 	}
 
 	for p.capacityLimit+trim.trimmedCapacity < current.totalCapacity {
-		if !trim.target.startExclusiveAccess() {
+		if trim.target == nil || !trim.target.startExclusiveAccess() {
 			return
 		}
 		trim.trimmedCapacity += trim.target.trimData(p.byteRecycle, p.defaultPageSize)
 		trim.target.stopExclusiveAccess()
-		trim.target = (*BufferPage)(atomic.LoadPointer(&trim.target.prev))
+		trim.target = (*BufferPage)(atomic.LoadPointer(&trim.target.bufferCleanupData.prev))
 	}
 }
 
 /* ============================ */
 
 func (p *BufferTrim) start() bool {
-	return atomic.CompareAndSwapUint32(&p.active, 0, 1)
+	if atomic.CompareAndSwapUint32(&p.active, 0, 1) {
+		p.mutex.Lock()
+		return true
+	}
 }
 
 func (p *BufferTrim) stop() {
 	if !atomic.CompareAndSwapUint32(&p.active, 1, 0) {
 		panic("illegal state")
 	}
+	p.mutex.Unlock()
 }
 
 /* ============================ */

@@ -139,5 +139,5 @@ func (w joiningWriter) Write(b []byte) (int, error) {
 		copy(b[pos:], w.filler)
 		pos += chunkLen
 	}
-	return w.Write(b)
+	return w.w.Write(b)
 }

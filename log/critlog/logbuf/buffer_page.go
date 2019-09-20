@@ -46,7 +46,7 @@ func (p *pageLifo) pushExpected(expected, page *BufferPage) bool {
 	if p.prepareFn != nil {
 		p.prepareFn(page)
 	}
-	page.next = expected
+	page.bufferCleanupData.next = expected
 	return atomic.CompareAndSwapPointer(&p.next, unsafe.Pointer(expected), unsafe.Pointer(page))
 }
 
@@ -144,7 +144,7 @@ func (b *BufferPage) stopExclusiveAccess() {
 }
 
 func (b *BufferPage) getBufLen() uint32 {
-	pos := atomic.LoadUint32(&b.offset)
+	pos := atomic.LoadUint32(&b.bufferCleanupData.offset)
 	if pos == math.MaxUint32 {
 		return 0
 	}
@@ -170,6 +170,7 @@ func (b *BufferPage) allocateSlice(reqLen uint32) []byte {
 		}
 
 		if atomic.CompareAndSwapUint32(&b.offset, pos, pos+reqLen) {
+			atomic.AddUint32(&b.bufferCleanupData.count, 1)
 			return b.data[pos : pos+reqLen : pos+reqLen]
 		}
 	}
