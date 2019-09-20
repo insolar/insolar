@@ -142,7 +142,7 @@ func newMigrationScenarios(out io.Writer, insSDK *sdk.SDK, concurrent int, repet
 		},
 		concurrent:  concurrent,
 		repetitions: repetitions,
-		name:        "CreateMember",
+		name:        "Migration",
 		out:         out,
 	}
 }
@@ -220,17 +220,19 @@ func getTotalBalance(insSDK *sdk.SDK, members []sdk.Member) (totalBalance *big.I
 		go func(m sdk.Member, num int) {
 			res := Result{num: num}
 			balance, deposits, err := insSDK.GetBalance(m)
-			for _, d := range deposits {
-				depositBalanceStr, ok := d.(map[string]interface{})["balance"].(string)
-				if !ok {
-					err = errors.New("failed to get balance from deposit")
-				}
-				depositBalance, ok := new(big.Int).SetString(depositBalanceStr, 10)
-				if !ok {
-					err = errors.New("failed to parse balance to big.Int")
-				}
+			if err != nil {
+				for _, d := range deposits {
+					depositBalanceStr, ok := d.(map[string]interface{})["balance"].(string)
+					if !ok {
+						err = errors.New("failed to get balance from deposit")
+					}
+					depositBalance, ok := new(big.Int).SetString(depositBalanceStr, 10)
+					if !ok {
+						err = errors.New("failed to parse balance to big.Int")
+					}
 
-				balance = balance.Add(balance, depositBalance)
+					balance = balance.Add(balance, depositBalance)
+				}
 			}
 			res.balance, res.err = balance, err
 			results <- res

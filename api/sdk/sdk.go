@@ -315,7 +315,7 @@ func (sdk *SDK) AddMigrationAddresses(migrationAddresses []string) (string, erro
 	return response.TraceID, nil
 }
 
-// Migration method migrate INS from ethereum network to XNS in MainNet
+// ActivateDaemon activate daemon from migration admin
 func (sdk *SDK) ActivateDaemon(daemonReference string) (string, error) {
 	userConfig, err := requester.CreateUserConfig(sdk.migrationAdminMember.Caller, sdk.migrationAdminMember.PrivateKey, sdk.migrationAdminMember.PublicKey)
 	if err != nil {
