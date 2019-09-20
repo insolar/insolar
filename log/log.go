@@ -18,15 +18,15 @@ package log
 
 import (
 	"fmt"
+	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/insolar"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	stdlog "log"
 	"os"
 	"strings"
 	"sync"
-
-	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/insolar"
+	"time"
 )
 
 const timestampFormat = "2006-01-02T15:04:05.000000000Z07:00"
@@ -126,6 +126,26 @@ func SaveGlobalLogger() func() {
 		globalLogger.logger = loggerCopy
 		globalLogger.output.setTarget(outputCopy)
 	}
+}
+
+var globalTickerOnce sync.Once
+
+func InitTicker() {
+	globalTickerOnce.Do(func() {
+		// as we use GlobalLogger() - the copy will follow any redirection made on the GlobalLogger()
+		tickLogger, err := GlobalLogger().Copy().WithCaller(insolar.NoCallerField).Build()
+		if err != nil {
+			panic(err)
+		}
+
+		go func() {
+			for {
+				// Tick between seconds
+				time.Sleep(time.Second - time.Since(time.Now().Truncate(time.Second)))
+				tickLogger.Debug("Logger tick")
+			}
+		}()
+	})
 }
 
 // GlobalLogger creates global logger with correct skipCallNumber
