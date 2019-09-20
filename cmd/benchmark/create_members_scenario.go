@@ -14,31 +14,28 @@
 // limitations under the License.
 //
 
-package proc
+package main
 
 import (
-	"go.opencensus.io/stats"
-	"go.opencensus.io/stats/view"
+	"github.com/insolar/insolar/api/sdk"
 )
 
-var (
-	statHotsAbandoned = stats.Int64(
-		"requests_abandoned",
-		"How many abandoned requests in hot data",
-		stats.UnitDimensionless,
-	)
-)
-
-func init() {
-	err := view.Register(
-		&view.View{
-			Name:        statHotsAbandoned.Name(),
-			Description: statHotsAbandoned.Description(),
-			Measure:     statHotsAbandoned,
-			Aggregation: view.Count(),
-		},
-	)
-	if err != nil {
-		panic(err)
-	}
+type createMembersScenario struct {
+	insSDK  *sdk.SDK
+	members []*sdk.Member
 }
+
+func (s *createMembersScenario) canBeStarted() error {
+	return nil
+}
+
+func (s *createMembersScenario) prepare() {}
+
+func (s *createMembersScenario) scenario(index int) (string, error) {
+	creator := s.members[index]
+
+	_, traceID, err := s.insSDK.CreateMember(creator.Reference)
+	return traceID, err
+}
+
+func (s *createMembersScenario) checkResult() {}

@@ -19,6 +19,7 @@ package pulse
 import (
 	"context"
 	"errors"
+	"sync"
 
 	"github.com/insolar/insolar/insolar"
 )
@@ -29,6 +30,7 @@ type StartPulse interface {
 }
 
 type startPulse struct {
+	sync.RWMutex
 	pulse *insolar.Pulse
 }
 
@@ -37,12 +39,18 @@ func NewStartPulse() StartPulse {
 }
 
 func (sp *startPulse) SetStartPulse(ctx context.Context, pulse insolar.Pulse) {
+	sp.Lock()
+	defer sp.Unlock()
+
 	if sp.pulse == nil {
 		sp.pulse = &pulse
 	}
 }
 
 func (sp *startPulse) PulseNumber() (insolar.PulseNumber, error) {
+	sp.RLock()
+	defer sp.RUnlock()
+
 	if sp.pulse == nil {
 		return 0, errors.New("start pulse in nil")
 	}

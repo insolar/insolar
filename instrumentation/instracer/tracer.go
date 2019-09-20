@@ -27,55 +27,11 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
-// Entry represents one key-value pair in a list of key-value pair of Tracestate.
-type Entry struct {
-	// Key is an opaque string up to 256 characters printable. It MUST begin with a lowercase letter,
-	// and can only contain lowercase letters a-z, digits 0-9, underscores _, dashes -, asterisks *, and
-	// forward slashes /.
-	Key string
-	// Value is an opaque string up to 256 characters printable ASCII RFC0020 characters (i.e., the
-	// range 0x20 to 0x7E) except comma , and =.
-	Value string
-}
-
-// TraceSpan represents all span context required for propagating between services.
-type TraceSpan struct {
-	TraceID []byte
-	SpanID  []byte
-	Entries []Entry
-}
-
-func setSpanEntries(span *trace.Span, e ...Entry) {
-	for _, entry := range e {
-		span.AddAttributes(
-			trace.StringAttribute(entry.Key, entry.Value),
-		)
-	}
-}
-
 // spanContext returns trace.SpanContext with initialized TraceID and SpanID.
 func (ts TraceSpan) spanContext() (sc trace.SpanContext) {
 	copy(sc.TraceID[:], ts.TraceID)
 	copy(sc.SpanID[:], ts.SpanID)
 	return
-}
-
-type baggageKey struct{}
-
-// SetBaggage stores provided entries as context baggage and returns new context.
-//
-// Baggage is set of entries that should be attached to all new spans.
-func SetBaggage(ctx context.Context, e ...Entry) context.Context {
-	return context.WithValue(ctx, baggageKey{}, e)
-}
-
-// GetBaggage returns trace entries have set as trace baggage.
-func GetBaggage(ctx context.Context) []Entry {
-	val := ctx.Value(baggageKey{})
-	if val == nil {
-		return nil
-	}
-	return val.([]Entry)
 }
 
 // StartSpan starts span with stored baggage and with parent span if find in context.
@@ -101,7 +57,6 @@ func StartSpan(ctx context.Context, name string, o ...trace.StartOption) (contex
 	span.AddAttributes(
 		trace.StringAttribute("insTraceId", utils.TraceID(ctx)),
 	)
-	setSpanEntries(span, GetBaggage(spanctx)...)
 	return spanctx, span
 }
 
@@ -109,7 +64,6 @@ type parentSpanKey struct{}
 
 // WithParentSpan returns new context with provided parent span.
 func WithParentSpan(ctx context.Context, pspan TraceSpan) context.Context {
-	ctx = SetBaggage(ctx, pspan.Entries...)
 	return context.WithValue(ctx, parentSpanKey{}, pspan)
 }
 

@@ -87,6 +87,3 @@ func (rs *RoundStrategy) GetBaselineWeightForNeighbours() uint32 {
 func (rs *RoundStrategy) ShuffleNodeSequence(n int, swap func(i, j int)) {
 	rand.Shuffle(n, swap)
 }
-
-func (rs *RoundStrategy) AdjustConsensusTimings(timings *api.RoundTimings) {
-}

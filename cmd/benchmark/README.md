@@ -53,5 +53,8 @@ or you can run benchmark with
                 Path to file for saving members data
         -b nocheckbalance
                 If true, don't check balance at the start/end of transfers. Default is false. 
+        -t scenarioname
+                Name of scenario. Default scenario is transfer scenario.
+                You can choose "createMember" for create member scenario.
         --discovery-nodes-logs-dir
                 Launchnet logs dir for checking errors

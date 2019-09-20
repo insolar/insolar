@@ -51,6 +51,7 @@
 package api
 
 import (
+	"fmt"
 	"time"
 )
 
@@ -85,4 +86,13 @@ type RoundTimings struct {
 
 	// Hard stop for all consensus operations
 	EndOfConsensus time.Duration
+}
+
+func (t RoundTimings) String() string {
+	return fmt.Sprintf("EndOfConsensus: %s, EndOfPhase1: %s, EndOfPhase2: %s, EndOfPhase3: %s",
+		t.EndOfConsensus,
+		t.EndOfPhase1,
+		t.EndOfPhase2,
+		t.EndOfPhase3,
+	)
 }

@@ -53,6 +53,9 @@ type Ledger struct {
 	// CleanerDelay holds value of pulses, that should happen before end of LightChainLimit and start
 	// of LME's data cleaning
 	CleanerDelay int
+
+	// MaxNotificationsPerPulse holds the limit for abandoned requests notifications limit
+	MaxNotificationsPerPulse uint
 }
 
 // Backup holds configuration for backuping.
@@ -125,6 +128,7 @@ func NewLedger() Ledger {
 			LastBackupInfoFile: dataDir + "/last_backup_info.json",
 		},
 
-		CleanerDelay: 3, // 3 pulses
+		CleanerDelay:             3,   // 3 pulses
+		MaxNotificationsPerPulse: 100, // 100 objects
 	}
 }

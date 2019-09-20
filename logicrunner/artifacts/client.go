@@ -37,6 +37,10 @@ import (
 	"go.opencensus.io/trace"
 )
 
+const (
+	getPendingLimit = 100
+)
+
 type localStorage struct {
 	initialized bool
 	storage     map[insolar.Reference]interface{}
@@ -436,6 +440,7 @@ func (m *client) GetPendings(ctx context.Context, object insolar.Reference) ([]i
 
 	getPendingsPl := &payload.GetPendings{
 		ObjectID: *object.GetLocal(),
+		Count:    getPendingLimit,
 	}
 
 	pl, err := m.sendToLight(ctx, m.sender, getPendingsPl, object)

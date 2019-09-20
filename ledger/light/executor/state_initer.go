@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/ThreeDotsLabs/watermill/message"
+	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/backoff"
@@ -236,6 +237,7 @@ func (s *StateIniterDefault) loadStateRetry(
 
 	for _, idx := range state.Indexes {
 		s.indexes.Set(ctx, pn, idx)
+		stats.Record(ctx, StatRequestsOpened.M(int64(idx.Lifeline.OpenRequestsCount)))
 	}
 
 	return state.JetIDs, nil

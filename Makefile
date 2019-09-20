@@ -188,7 +188,7 @@ ci_test_unit: ## run unit tests 10 times and -race flag, redirects json output t
 .PHONY: ci_test_slow
 ci_test_slow: ## run slow tests just once, redirects json output to file (CI)
 	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1 \
-		go test $(CI_TEST_ARGS) $(TEST_ARGS) -json -v -tags slowtest ./logicrunner/... ./server/internal/... ./cmd/backupmanager/... ./ledger/heavy/executor/integration/...  ./ledger/heavy/integration/... ./ledger/light/integration/... -count 1 | tee -a ci_test_unit.json
+		go test $(CI_TEST_ARGS) $(TEST_ARGS) -json -v -failfast -tags slowtest ./logicrunner/... ./server/internal/... ./cmd/backupmanager/... ./ledger/heavy/executor/integration/...  ./ledger/heavy/integration/... ./ledger/light/integration/... -count 1 | tee -a ci_test_unit.json
 
 .PHONY: ci_test_func
 ci_test_func: ## run functest 3 times, redirects json output to file (CI)
@@ -219,7 +219,8 @@ generate-protobuf: ## generate protobuf structs
 	protoc -I./vendor -I./ --gogoslick_out=./ insolar/pulse/pulse.proto
 	protoc -I./vendor -I./ --gogoslick_out=./ --proto_path=${GOPATH}/src network/hostnetwork/packet/packet.proto
 	protoc -I./vendor -I./ --gogoslick_out=./ --proto_path=${GOPATH}/src network/consensus/adapters/candidate/profile.proto
-		protoc -I./vendor -I./ --gogoslick_out=./ ledger/heavy/executor/jetinfo.proto
+	protoc -I./vendor -I./ --gogoslick_out=./ ledger/heavy/executor/jetinfo.proto
+	protoc -I./vendor -I./ --gogoslick_out=./ instrumentation/instracer/span_data.proto
 		protoc -I/usr/local/include -I./ \
     		-I$(GOPATH)/src \
     		--gogoslick_out=plugins=grpc:./  \

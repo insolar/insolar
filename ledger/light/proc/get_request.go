@@ -123,14 +123,14 @@ func (p *GetRequest) Proceed(ctx context.Context) error {
 			inslogger.FromContext(ctx).Warn("virtual node missed jet")
 
 			// Send calculated jet to virtual node.
-			msg, err = payload.NewMessage(&payload.UpdateJet{
+			updateMsg, err := payload.NewMessage(&payload.UpdateJet{
 				Pulse: p.requestID.Pulse(),
 				JetID: insolar.JetID(*jetID),
 			})
 			if err != nil {
 				return errors.Wrap(err, "failed to create jet message")
 			}
-			_, done := p.dep.sender.SendTarget(ctx, msg, p.message.Sender)
+			_, done := p.dep.sender.SendTarget(ctx, updateMsg, p.message.Sender)
 			done()
 		}
 
