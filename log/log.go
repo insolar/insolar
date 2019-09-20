@@ -86,6 +86,10 @@ var globalLogger = struct {
 	logger insolar.Logger
 }{}
 
+func g() insolar.EmbeddedLogger {
+	return GlobalLogger().Embeddable()
+}
+
 func GlobalLogger() insolar.Logger {
 	globalLogger.mutex.RLock()
 	l := globalLogger.logger
@@ -104,6 +108,10 @@ func GlobalLogger() insolar.Logger {
 	return globalLogger.logger
 }
 
+func CopyGlobalLoggerForContext() insolar.Logger {
+	return GlobalLogger()
+}
+
 func SaveGlobalLogger() func() {
 	globalLogger.mutex.RLock()
 	defer globalLogger.mutex.RUnlock()
@@ -119,8 +127,6 @@ func SaveGlobalLogger() func() {
 		globalLogger.output.setTarget(outputCopy)
 	}
 }
-
-const globalLoggerCallerSkipFrameDelta = 1
 
 // GlobalLogger creates global logger with correct skipCallNumber
 func createGlobalLogger() {
@@ -145,7 +151,6 @@ func setGlobalLogger(logger insolar.Logger, isDefault bool) error {
 	globalLogger.output.setTarget(b.GetOutput())
 	b = b.WithOutput(&globalLogger.output)
 
-	b = b.WithSkipFrameCount(globalLoggerCallerSkipFrameDelta)
 	if isDefault {
 		b = b.WithCaller(insolar.CallerField)
 	}
@@ -199,62 +204,62 @@ func SetLevel(level string) error {
 	return nil
 }
 
-// Debug logs a message at level Debug to the global logger.
+/*
+We use EmbeddedEvent functions here to avoid SkipStackFrame corrections
+*/
+
 func Debug(args ...interface{}) {
-	GlobalLogger().Debug(args...)
+	g().EmbeddedEvent(insolar.DebugLevel, args...)
 }
 
-// Debugf logs a message at level Debug to the global logger.
 func Debugf(format string, args ...interface{}) {
-	GlobalLogger().Debugf(format, args...)
+	g().EmbeddedEventf(insolar.DebugLevel, format, args...)
 }
 
-// Info logs a message at level Info to the global logger.
 func Info(args ...interface{}) {
-	GlobalLogger().Info(args...)
+	g().EmbeddedEvent(insolar.InfoLevel, args...)
 }
 
-// Infof logs a message at level Info to the global logger.
 func Infof(format string, args ...interface{}) {
-	GlobalLogger().Infof(format, args...)
+	g().EmbeddedEventf(insolar.InfoLevel, format, args...)
 }
 
-// Warn logs a message at level Warn to the global logger.
 func Warn(args ...interface{}) {
-	GlobalLogger().Warn(args...)
+	g().EmbeddedEvent(insolar.WarnLevel, args...)
 }
 
-// Warnf logs a message at level Warn to the global logger.
 func Warnf(format string, args ...interface{}) {
-	GlobalLogger().Warnf(format, args...)
+	g().EmbeddedEventf(insolar.WarnLevel, format, args...)
 }
 
-// Error logs a message at level Error to the global logger.
 func Error(args ...interface{}) {
-	GlobalLogger().Error(args...)
+	g().EmbeddedEvent(insolar.ErrorLevel, args...)
 }
 
-// Errorf logs a message at level Error to the global logger.
 func Errorf(format string, args ...interface{}) {
-	GlobalLogger().Errorf(format, args...)
+	g().EmbeddedEventf(insolar.ErrorLevel, format, args...)
 }
 
-// Fatal logs a message at level Fatal to the global logger.
 func Fatal(args ...interface{}) {
-	GlobalLogger().Fatal(args...)
+	g().EmbeddedEvent(insolar.FatalLevel, args...)
 }
 
-// Fatalf logs a message at level Fatal to the global logger.
 func Fatalf(format string, args ...interface{}) {
-	GlobalLogger().Fatalf(format, args...)
+	g().EmbeddedEventf(insolar.FatalLevel, format, args...)
 }
 
-// Panic logs a message at level Panic to the global logger.
 func Panic(args ...interface{}) {
-	GlobalLogger().Panic(args...)
+	g().EmbeddedEvent(insolar.PanicLevel, args...)
 }
 
-// Panicf logs a message at level Panic to the global logger.
 func Panicf(format string, args ...interface{}) {
-	GlobalLogger().Panicf(format, args...)
+	g().EmbeddedEventf(insolar.PanicLevel, format, args...)
+}
+
+func Event(level insolar.LogLevel, args ...interface{}) {
+	g().EmbeddedEvent(level, args...)
+}
+
+func Eventf(level insolar.LogLevel, format string, args ...interface{}) {
+	g().EmbeddedEventf(level, format, args...)
 }

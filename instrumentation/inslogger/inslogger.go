@@ -27,7 +27,6 @@ import (
 )
 
 type loggerKey struct{}
-type loggerLevelKey struct{}
 
 func InitNodeLogger(
 	ctx context.Context,
@@ -73,16 +72,20 @@ func SetLogger(ctx context.Context, l insolar.Logger) context.Context {
 
 // SetLoggerLevel returns context with provided insolar.LogLevel and set logLevel on logger,
 func WithLoggerLevel(ctx context.Context, logLevel insolar.LogLevel) context.Context {
-	if logLevel != insolar.NoLevel {
-		oldLogger := FromContext(ctx)
-		logCopy, err := oldLogger.WithLevelNumber(logLevel)
-		if err != nil {
-			oldLogger.Error("failed to set log level: ", err.Error())
-			return ctx
-		}
-		ctx = SetLogger(ctx, logCopy)
+	if logLevel == insolar.NoLevel {
+		return ctx
 	}
-	return context.WithValue(ctx, loggerLevelKey{}, logLevel)
+	oldLogger := FromContext(ctx)
+	b := oldLogger.Copy()
+	if b.GetLogLevel() == logLevel {
+		return ctx
+	}
+	logCopy, err := b.WithLevel(logLevel).Build()
+	if err != nil {
+		oldLogger.Error("failed to set log level: ", err.Error())
+		return ctx
+	}
+	return SetLogger(ctx, logCopy)
 }
 
 // WithField returns context with logger initialized with provided field's key value and logger itself.
@@ -115,14 +118,9 @@ func ContextWithTrace(ctx context.Context, traceid string) context.Context {
 func getLogger(ctx context.Context) insolar.Logger {
 	val := ctx.Value(loggerKey{})
 	if val == nil {
-		val = logger.GlobalLogger.WithSkipFrameCount(-1)
+		return logger.CopyGlobalLoggerForContext()
 	}
-	l := val.(insolar.Logger)
-	ln := GetLoggerLevel(ctx)
-	if ln != insolar.NoLevel {
-		l, _ = l.WithLevelNumber(ln)
-	}
-	return l
+	return val.(insolar.Logger)
 }
 
 // TestContext returns context with initalized log field "testname" equal t.Name() value.
@@ -132,15 +130,5 @@ func TestContext(t *testing.T) context.Context {
 }
 
 func GetLoggerLevel(ctx context.Context) insolar.LogLevel {
-	logLevel := ctx.Value(loggerLevelKey{})
-	if logLevel == nil {
-		return insolar.NoLevel
-	}
-
-	logLevelValue, ok := logLevel.(insolar.LogLevel)
-	if !ok {
-		return insolar.NoLevel
-	}
-
-	return logLevelValue
+	return getLogger(ctx).Copy().GetLogLevel()
 }

@@ -231,60 +231,68 @@ func (z *zerologAdapter) newEvent(level insolar.LogLevel) *zerolog.Event {
 	return event
 }
 
-func (z *zerologAdapter) Event(level insolar.LogLevel, args ...interface{}) {
+func (z *zerologAdapter) EmbeddedEvent(level insolar.LogLevel, args ...interface{}) {
 	z.newEvent(level).Msg(fmt.Sprint(args...))
 }
 
-func (z *zerologAdapter) Eventf(level insolar.LogLevel, fmt string, args ...interface{}) {
+func (z *zerologAdapter) EmbeddedEventf(level insolar.LogLevel, fmt string, args ...interface{}) {
 	z.newEvent(level).Msgf(fmt, args...)
 }
 
+func (z *zerologAdapter) Event(level insolar.LogLevel, args ...interface{}) {
+	z.EmbeddedEvent(level, args...)
+}
+
+func (z *zerologAdapter) Eventf(level insolar.LogLevel, fmt string, args ...interface{}) {
+	z.EmbeddedEventf(level, fmt, args...)
+}
+
 func (z *zerologAdapter) Debug(args ...interface{}) {
-	z.Event(insolar.DebugLevel, args...)
+	z.EmbeddedEvent(insolar.DebugLevel, args...)
 }
 
 func (z *zerologAdapter) Debugf(format string, args ...interface{}) {
-	z.Eventf(insolar.DebugLevel, format, args...)
+	z.EmbeddedEventf(insolar.DebugLevel, format, args...)
 }
 
 func (z *zerologAdapter) Info(args ...interface{}) {
-	z.Event(insolar.InfoLevel, args...)
+	z.EmbeddedEvent(insolar.InfoLevel, args...)
 }
 
 func (z *zerologAdapter) Infof(format string, args ...interface{}) {
-	z.Eventf(insolar.InfoLevel, format, args...)
+	z.EmbeddedEventf(insolar.InfoLevel, format, args...)
 }
 
 func (z *zerologAdapter) Warn(args ...interface{}) {
-	z.Event(insolar.WarnLevel, args...)
+	z.EmbeddedEvent(insolar.WarnLevel, args...)
 }
 
 func (z *zerologAdapter) Warnf(format string, args ...interface{}) {
-	z.Eventf(insolar.WarnLevel, format, args...)
+	z.EmbeddedEventf(insolar.WarnLevel, format, args...)
 }
 
 func (z *zerologAdapter) Error(args ...interface{}) {
-	z.Event(insolar.ErrorLevel, args...)
+	z.EmbeddedEvent(insolar.ErrorLevel, args...)
 }
 
 func (z *zerologAdapter) Errorf(format string, args ...interface{}) {
-	z.Eventf(insolar.ErrorLevel, format, args...)
+	z.EmbeddedEventf(insolar.ErrorLevel, format, args...)
 }
 
 func (z *zerologAdapter) Fatal(args ...interface{}) {
-	z.Event(insolar.FatalLevel, args...)
+	z.EmbeddedEvent(insolar.FatalLevel, args...)
 }
 
 func (z *zerologAdapter) Fatalf(format string, args ...interface{}) {
-	z.Eventf(insolar.FatalLevel, format, args...)
+	z.EmbeddedEventf(insolar.FatalLevel, format, args...)
 }
 
 func (z *zerologAdapter) Panic(args ...interface{}) {
-	z.Event(insolar.PanicLevel, args...)
+	z.EmbeddedEvent(insolar.PanicLevel, args...)
 }
 
 func (z *zerologAdapter) Panicf(format string, args ...interface{}) {
-	z.Eventf(insolar.PanicLevel, format, args...)
+	z.EmbeddedEventf(insolar.PanicLevel, format, args...)
 }
 
 func (z *zerologAdapter) Is(level insolar.LogLevel) bool {
@@ -301,6 +309,10 @@ func (z *zerologAdapter) Level(lvl insolar.LogLevel) insolar.Logger {
 	return &zCopy
 }
 
+func (z *zerologAdapter) Embeddable() insolar.EmbeddedLogger {
+	return z
+}
+
 /* =========================== */
 
 type zerologBuilder struct {
@@ -311,6 +323,10 @@ type zerologBuilder struct {
 
 func (z zerologBuilder) GetOutput() io.Writer {
 	return z.bareOutput
+}
+
+func (z zerologBuilder) GetLogLevel() insolar.LogLevel {
+	return FromZerologLevel(z.level)
 }
 
 func (z zerologBuilder) WithOutput(w io.Writer) insolar.LoggerBuilder {

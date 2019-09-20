@@ -207,6 +207,19 @@ type Logger interface {
 	Copy() LoggerBuilder
 
 	Level(lvl LogLevel) Logger
+
+	Embeddable() EmbeddedLogger
+}
+
+/*
+	This interface provides methods with -1 call levels.
+	DO NOT USE directly, otherwise WithCaller functionality will be broken.
+*/
+type EmbeddedLogger interface {
+	// Event logs a message with the given level
+	EmbeddedEvent(level LogLevel, args ...interface{})
+	// Eventf formats and logs a message with the given level
+	EmbeddedEventf(level LogLevel, fmt string, args ...interface{})
 }
 
 type CallerFieldMode uint8
@@ -218,23 +231,27 @@ const (
 )
 
 type LoggerBuilder interface {
+	// Returns the current output
 	GetOutput() io.Writer
+	// Returns the current log level
+	GetLogLevel() LogLevel
 
 	// SetOutput sets the output destination for the logger.
 	WithOutput(w io.Writer) LoggerBuilder
-	// WithLevel sets log level.
+	// WithLevel sets log level. Disables WithDynamicLevel.
 	WithLevel(level LogLevel) LoggerBuilder
-	// WithLevel sets log level.
+	// WithDynamicLevel sets a dynamic log level. Nil value will panic
 	WithDynamicLevel(level LogLevelReader) LoggerBuilder
 	// WithFormat sets logger output format
 	WithFormat(format LogFormat) LoggerBuilder
-
-	// WithCaller switch on/off 'caller' field computation.
+	// Controls 'func' and 'caller' field computation.
 	WithCaller(mode CallerFieldMode) LoggerBuilder
 
-	// WithSkipFrameCountDelta changes skipFrameCount by delta value (it can be negative).
+	// WithSkipFrameCount changes skipFrameCount to the absolute value. But the value can be negative, and it is applied to a baseline
 	WithSkipFrameCount(skipFrameCount int) LoggerBuilder
 
-	//BuildForTimeCritical(bufSize int) (Logger, error)
+	// Creates a logger
 	Build() (Logger, error)
+
+	//BuildForTimeCritical(bufSize int) (Logger, error)
 }

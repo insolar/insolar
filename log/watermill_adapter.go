@@ -26,17 +26,17 @@ type WatermillLogAdapter struct {
 }
 
 func NewWatermillLogAdapter(log insolar.Logger) *WatermillLogAdapter {
-	wLog, err := log.Copy().WithSkipFrameCount(1).Build()
-	if err != nil {
-		panic(err)
-	}
 	return &WatermillLogAdapter{
-		log: wLog.WithField("service", "watermill"),
+		log: log.WithField("service", "watermill"),
 	}
 }
 
 func (w *WatermillLogAdapter) addFields(fields watermill.LogFields) insolar.Logger {
 	return w.log.WithFields(fields)
+}
+
+func (w *WatermillLogAdapter) event(fields watermill.LogFields, level insolar.LogLevel, args ...interface{}) {
+	w.addFields(fields).Embeddable().EmbeddedEvent(level, args...)
 }
 
 func (w *WatermillLogAdapter) With(fields watermill.LogFields) watermill.LoggerAdapter {
@@ -45,23 +45,19 @@ func (w *WatermillLogAdapter) With(fields watermill.LogFields) watermill.LoggerA
 }
 
 func (w *WatermillLogAdapter) Error(msg string, err error, fields watermill.LogFields) {
-	logger := w.addFields(fields)
-	logger.Error(msg, " | Error: "+err.Error())
+	w.event(fields, insolar.ErrorLevel, msg, " | Error: "+err.Error())
 }
 
 func (w *WatermillLogAdapter) Info(msg string, fields watermill.LogFields) {
-	logger := w.addFields(fields)
-	logger.Info(msg)
+	w.event(fields, insolar.InfoLevel, msg)
 }
 
 func (w *WatermillLogAdapter) Debug(msg string, fields watermill.LogFields) {
-	logger := w.addFields(fields)
-	logger.Debug(msg)
+	w.event(fields, insolar.DebugLevel, msg)
 }
 
 func (w *WatermillLogAdapter) Trace(msg string, fields watermill.LogFields) {
 	// don't use w.Debug(), value of the "file=..." field would be incorrect
 	// in the output
-	logger := w.addFields(fields)
-	logger.Debug(msg)
+	w.event(fields, insolar.DebugLevel, msg)
 }
