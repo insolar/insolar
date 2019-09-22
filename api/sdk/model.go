@@ -16,6 +16,10 @@
 
 package sdk
 
+import (
+	"fmt"
+)
+
 type Member interface {
 	GetReference() string
 	GetPrivateKey() string
@@ -56,6 +60,10 @@ func (m *CommonMember) GetPublicKey() string {
 	return m.PublicKey
 }
 
+func (m *CommonMember) String() string {
+	return fmt.Sprintf("Reference: %s; Private key: %s, Public key: %s. \n", m.Reference, m.PrivateKey, m.PublicKey)
+}
+
 // NewMigrationMember creates new MigrationMember
 func NewMigrationMember(ref string, migrationAddress string, privateKey string, publicKey string) *MigrationMember {
 	return &MigrationMember{
@@ -66,4 +74,8 @@ func NewMigrationMember(ref string, migrationAddress string, privateKey string, 
 		},
 		MigrationAddress: migrationAddress,
 	}
+}
+
+func (m *MigrationMember) String() string {
+	return fmt.Sprintf("Reference: %s; Private key: %s, Public key: %s, Migration address: %s. \n", m.Reference, m.PrivateKey, m.PublicKey, m.MigrationAddress)
 }

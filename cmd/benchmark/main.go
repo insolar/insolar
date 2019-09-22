@@ -256,11 +256,18 @@ func getTotalBalance(insSDK *sdk.SDK, members []sdk.Member) (totalBalance *big.I
 }
 
 func getMembers(insSDK *sdk.SDK, number int, migration bool) ([]sdk.Member, error) {
-	var members []sdk.Member
+	var members = make([]sdk.Member, number)
 	var err error
 
 	if useMembersFromFile {
-		members, err = loadMembers(number)
+		for i := range members {
+			if migration {
+				members[i] = &sdk.MigrationMember{}
+			} else {
+				members[i] = &sdk.CommonMember{}
+			}
+		}
+		err = loadMembers(members)
 		if err != nil {
 			return nil, errors.Wrap(err, "error while loading members: ")
 		}
@@ -301,23 +308,18 @@ func saveMembers(members []sdk.Member) error {
 	return errors.Wrap(err, "couldn't save members in file")
 }
 
-func loadMembers(count int) ([]sdk.Member, error) {
-	var members []sdk.Member
-
+func loadMembers(members []sdk.Member) error {
 	rawMembers, err := ioutil.ReadFile(memberFile)
 	if err != nil {
-		return nil, errors.Wrap(err, "can't read members from file")
+		return errors.Wrap(err, "can't read members from file")
 	}
 
 	err = json.Unmarshal(rawMembers, &members)
 	if err != nil {
-		return nil, errors.Wrap(err, "can't unmarshal members from file")
+		return errors.Wrap(err, "can't unmarshal members from file")
 	}
 
-	if count > len(members) {
-		return nil, errors.Errorf("Not enough members in file: got %d, needs %d", len(members), count)
-	}
-	return members, nil
+	return nil
 }
 
 func main() {
