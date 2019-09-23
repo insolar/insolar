@@ -96,7 +96,7 @@ func (p *SendObject) ensureOldestRequest(ctx context.Context) (*record.Composite
 		return nil, errors.Wrap(err, "request isn't opened")
 	}
 
-	inReq, isIn := record.Unwrap(&reqBody.Record.Virtual).(record.Request).(*record.IncomingRequest)
+	inReq, isIn := record.Unwrap(&reqBody.Record.Virtual).(*record.IncomingRequest)
 	if !isIn || inReq.Immutable {
 		return nil, nil
 	}
