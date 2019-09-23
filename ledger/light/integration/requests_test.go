@@ -51,7 +51,7 @@ func Test_IncomingRequest_Check(t *testing.T) {
 	t.Run("registered is older than reason returns error", func(t *testing.T) {
 		msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()+1), insolar.ID{}, true, true)
 		rep := SendMessage(ctx, s, &msg)
-		RequireErrorCode(rep, payload.CodeInvalidRequest)
+		RequireErrorCode(rep, payload.CodeRequestInvalid)
 	})
 
 	t.Run("registered API request appears in pendings", func(t *testing.T) {
