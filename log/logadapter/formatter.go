@@ -43,8 +43,10 @@ func GetDefaultLogMsgFormatter() MsgFormatConfig {
 func SpecialSprint(a ...interface{}) string {
 	if len(a) == 1 {
 		switch v := a[0].(type) {
-		case nil, string: // the most obvious case(s)
+		case nil: // the most obvious case(s)
 			break
+		case string: // the most obvious case(s)
+			return v
 		case LogStringer:
 			return v.LogString()
 		default:

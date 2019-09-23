@@ -164,6 +164,7 @@ func NewZerologAdapter(pCfg logadapter.ParsedLogConfig, msgFmt logadapter.MsgFor
 
 	zc := logadapter.Config{}
 	zc.Output = pCfg.Output
+	zc.Instruments = pCfg.Instruments
 	zc.MsgFormat = msgFmt
 	zc.Instruments.SkipFrameCountBaseline = uint8(sfb)
 

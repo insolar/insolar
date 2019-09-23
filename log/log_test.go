@@ -48,6 +48,31 @@ func assertHelloWorld(t *testing.T, out string) {
 	assert.Contains(t, out, "HelloWorld")
 }
 
+func TestLog_GlobalLogger_redirection(t *testing.T) {
+	defer SaveGlobalLogger()()
+
+	originalG := GlobalLogger()
+
+	var buf bytes.Buffer
+	newGL, err := GlobalLogger().Copy().WithOutput(&buf).Build()
+	if err != nil {
+		panic(err)
+	}
+	SetGlobalLogger(newGL)
+	newCopyLL, _ := GlobalLogger().Copy().BuildLowLatency()
+
+	originalG.Info("viaOriginalGlobal")
+	newGL.Info("viaNewInstance")
+	GlobalLogger().Info("viaNewGlobal")
+	newCopyLL.Info("viaNewLLCopyOfGlobal")
+
+	s := buf.String()
+	require.Contains(t, s, "viaOriginalGlobal")
+	require.Contains(t, s, "viaNewInstance")
+	require.Contains(t, s, "viaNewGlobal")
+	require.Contains(t, s, "viaNewLLCopyOfGlobal")
+}
+
 func TestLog_GlobalLogger(t *testing.T) {
 
 	assert.NoError(t, SetLevel("debug"))
