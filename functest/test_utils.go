@@ -50,7 +50,7 @@ import (
 
 const (
 	countTwoActiveDaemon = iota + 2
-	countTreeActiveDaemon
+	countThreeActiveDaemon
 )
 
 type contractInfo struct {
