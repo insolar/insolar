@@ -1,4 +1,4 @@
-///
+//
 //    Copyright 2019 Insolar Technologies
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,7 +12,7 @@
 //    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
-///
+//
 
 // +build slowtest
 
@@ -31,16 +31,20 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"gonum.org/v1/gonum/stat"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/stretchr/testify/require"
 )
 
 func Test_BackpressureBuffer_Deviations(t *testing.T) {
+	threads := 100
+	iterations := 100
+
 	logStorage := NewConcurrentBuilder(500000)
 	logger := NewTestLogger(context.Background(), logStorage, 3)
 
-	generateLogs(logger, 10, 10)
+	generateLogs(logger, threads, iterations)
 
 	err := logStorage.Close()
 	require.NoError(t, err)
@@ -55,22 +59,22 @@ func Test_BackpressureBuffer_Deviations(t *testing.T) {
 	out, err := parseOutput(logString)
 	require.NoError(t, err)
 
-	t.Run("log sequence", func(t *testing.T) {
-		checkLogSequence(t, out)
-	})
-}
+	/* ============================ */
 
-func checkLogSequence(t *testing.T, out []logOutput) {
 	lastVal := make(map[uint64]logOutput)
-	for _, o := range out {
-		lv, ok := lastVal[o.Thread]
+	distances := make(map[uint64][]float64)
+	for _, v := range out {
+		lv, ok := lastVal[v.Thread]
 		if ok {
-			assert.Equal(t, int(lv.Iteration+1), int(o.Iteration),
-				"Bad sequence in thread %d. Last iteration: %d, current iteration: %d.",
-				o.Thread, lv.Iteration, o.Iteration,
-			)
+			distances[v.Thread] = append(distances[v.Thread], v.Time.Sub(lv.Time).Seconds())
 		}
-		lastVal[o.Thread] = o
+		lastVal[v.Thread] = v
+	}
+	for k, v := range distances {
+		assert.Equal(t, iterations, len(v)+1, "Incorrect number of log records in thread %d", k)
+
+		mean, std := stat.MeanStdDev(v, nil)
+		fmt.Printf("Thread %03d: mean = %8.2f us, std.dev. = %8.2f us\n", k, mean*1000000, std*1000000)
 	}
 }
 
