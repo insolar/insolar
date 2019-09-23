@@ -203,7 +203,8 @@ func (b *Bus) sendTarget(
 	msgType := messagePayloadTypeName(msg)
 
 	mctx := insmetrics.InsertTag(ctx, tagMessageType, msgType)
-	stats.Record(mctx, statSent.M(int64(len(msg.Payload))))
+	mctx = insmetrics.InsertTag(mctx, tagMessageRole, "request")
+	stats.Record(mctx, statSentBytes.M(int64(len(msg.Payload))))
 	defer func() {
 		stats.Record(mctx, statSentTime.M(float64(time.Since(start).Nanoseconds())/1e6))
 	}()
@@ -315,6 +316,11 @@ func (b *Bus) Reply(ctx context.Context, origin payload.Meta, reply *message.Mes
 		trace.StringAttribute("sender", origin.Sender.String()),
 	)
 	defer span.End()
+
+	msgType := messagePayloadTypeName(reply)
+	mctx := insmetrics.InsertTag(ctx, tagMessageType, msgType)
+	mctx = insmetrics.InsertTag(mctx, tagMessageRole, "reply")
+	stats.Record(mctx, statSentBytes.M(int64(len(reply.Payload))))
 
 	originHash := payload.MessageHash{}
 	err := originHash.Unmarshal(origin.ID)
