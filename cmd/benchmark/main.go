@@ -29,7 +29,6 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -37,18 +36,16 @@ import (
 	"github.com/spf13/pflag"
 
 	"github.com/insolar/insolar/api/sdk"
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/backoff"
 	"github.com/insolar/insolar/insolar/defaults"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/testutils"
 )
 
 const (
-	defaultStdoutPath    = "-"
-	backoffAttemptsCount = 5
-	balanceCheckRetries  = 10
-	balanceCheckDelay    = 5 * time.Second
+	defaultStdoutPath   = "-"
+	createMemberRetries = 5
+	balanceCheckRetries = 10
+	balanceCheckDelay   = 5 * time.Second
 )
 
 var (
@@ -67,6 +64,7 @@ var (
 	saveMembersToFile  bool
 	useMembersFromFile bool
 	noCheckBalance     bool
+	scenarioName       string
 	discoveryNodesLogs string
 )
 
@@ -83,6 +81,7 @@ func parseInputParams() {
 	pflag.BoolVarP(&useMembersFromFile, "usemembers", "m", false, "use members from file")
 	pflag.StringVarP(&memberFile, "members-file", "", defaultMemberFile, "dir for saving members data")
 	pflag.BoolVarP(&noCheckBalance, "nocheckbalance", "b", false, "don't check balance at the end")
+	pflag.StringVarP(&scenarioName, "scenarioname", "t", "", "name of scenario")
 	pflag.StringVarP(&discoveryNodesLogs, "discovery-nodes-logs-dir", "", defaultDiscoveryNodesLogs, "launchnet logs dir for checking errors")
 	pflag.Parse()
 }
@@ -113,78 +112,99 @@ func check(msg string, err error) {
 	}
 }
 
-func newScenarios(out io.Writer, insSDK *sdk.SDK, members []*sdk.Member, concurrent int, repetitions int, penRetries int32) scenario {
-	return &transferDifferentMembersScenario{
+func newTransferDifferentMemberScenarios(out io.Writer, insSDK *sdk.SDK, concurrent int, repetitions int) benchmark {
+	return benchmark{
+		scenario: &walletToWalletTransferScenario{
+			insSDK: insSDK,
+		},
 		concurrent:  concurrent,
 		repetitions: repetitions,
 		name:        "TransferDifferentMembers",
 		out:         out,
-		members:     members,
-		insSDK:      insSDK,
-		penRetries:  penRetries,
 	}
 }
 
-func startScenario(ctx context.Context, s scenario) {
-	err := s.canBeStarted()
-	check(fmt.Sprintf("Scenario %s can not be started:", s.getName()), err)
+func newCreateMemberScenarios(out io.Writer, insSDK *sdk.SDK, concurrent int, repetitions int) benchmark {
+	return benchmark{
+		scenario: &createMemberScenario{
+			insSDK: insSDK,
+		},
+		concurrent:  concurrent,
+		repetitions: repetitions,
+		name:        "CreateMember",
+		out:         out,
+	}
+}
 
-	writeToOutput(s.getOut(), fmt.Sprintf("Scenario %s: Start to transfer\n", s.getName()))
+func newMigrationScenarios(out io.Writer, insSDK *sdk.SDK, concurrent int, repetitions int) benchmark {
+	return benchmark{
+		scenario: &migrationScenario{
+			insSDK: insSDK,
+		},
+		concurrent:  concurrent,
+		repetitions: repetitions,
+		name:        "Migration",
+		out:         out,
+	}
+}
+
+func startScenario(ctx context.Context, b benchmark) {
+	err := b.scenario.canBeStarted()
+	check(fmt.Sprintf("Scenario %s can not be started:", b.getName()), err)
+
+	writeToOutput(b.getOut(), fmt.Sprintf("Scenario %s started: \n", b.getName()))
 
 	start := time.Now()
-	logReaderCloseChan := testutils.NodesErrorLogReader(discoveryNodesLogs, s.getOut())
+	logReaderCloseChan := testutils.NodesErrorLogReader(discoveryNodesLogs, b.getOut())
 
-	s.start(ctx)
+	b.start(ctx)
 	elapsed := time.Since(start)
-	writeToOutput(s.getOut(), fmt.Sprintf("Scenario %s: Transferring took %s \n", s.getName(), elapsed))
+	writeToOutput(b.getOut(), fmt.Sprintf("Scenario %s took: %s \n", b.getName(), elapsed))
 
 	close(logReaderCloseChan)
-	printResults(s)
+	printResults(b)
 }
 
-func printResults(s scenario) {
-	speed := s.getOperationPerSecond()
-	writeToOutput(s.getOut(), fmt.Sprintf("Scenario %s: Speed - %f resp/s \n", s.getName(), speed))
+func printResults(b benchmark) {
+	speed := b.getOperationPerSecond()
+	writeToOutput(b.getOut(), fmt.Sprintf("Scenario %s: Speed - %f resp/s \n", b.getName(), speed))
 	writeToOutput(
-		s.getOut(),
+		b.getOut(),
 		fmt.Sprintf(
 			"Scenario %s: Average Request Duration - %s\n",
-			s.getName(), s.getAverageOperationDuration(),
+			b.getName(), b.getAverageOperationDuration(),
 		),
 	)
-	s.printResult()
+	b.printResult()
 }
 
-func createMembers(insSDK *sdk.SDK, count int) ([]*sdk.Member, int32) {
-	var members []*sdk.Member
-	var member *sdk.Member
+func createMembers(insSDK *sdk.SDK, count int, migration bool) []sdk.Member {
+	var members []sdk.Member
+	var member sdk.Member
 	var traceID string
 	var err error
-	var retriesCount int32
 
 	for i := 0; i < count; i++ {
-		bof := backoff.Backoff{Min: 1 * time.Second, Max: 10 * time.Second}
-		for bof.Attempt() < backoffAttemptsCount {
-			member, traceID, err = insSDK.CreateMember()
+		retries := createMemberRetries
+		for retries > 0 {
+			if migration {
+				member, traceID, err = insSDK.MigrationCreateMember()
+			} else {
+				member, traceID, err = insSDK.CreateMember()
+			}
 			if err == nil {
 				members = append(members, member)
 				break
 			}
-
-			if strings.Contains(err.Error(), insolar.ErrTooManyPendingRequests.Error()) {
-				retriesCount++
-			} else {
-				fmt.Printf("Retry to create member. TraceID: %s Error is: %s\n", traceID, err.Error())
-			}
-			time.Sleep(bof.Duration())
+			fmt.Printf("Retry to create member. TraceID: %s Error is: %s\n", traceID, err.Error())
+			retries--
 		}
-		check(fmt.Sprintf("Couldn't create member after retries: %d", backoffAttemptsCount), err)
-		bof.Reset()
+		check(fmt.Sprintf("Couldn't create member after retries: %d", createMemberRetries), err)
 	}
-	return members, retriesCount
+	return members
 }
 
-func getTotalBalance(insSDK *sdk.SDK, members []*sdk.Member) (totalBalance *big.Int, penRetires int32) {
+func getTotalBalance(insSDK *sdk.SDK, members []sdk.Member) (totalBalance *big.Int) {
 	type Result struct {
 		num     int
 		balance *big.Int
@@ -198,23 +218,24 @@ func getTotalBalance(insSDK *sdk.SDK, members []*sdk.Member) (totalBalance *big.
 
 	// execute all queries in parallel
 	for i := 0; i < nmembers; i++ {
-		go func(m *sdk.Member, num int) {
-			bof := backoff.Backoff{Min: 1 * time.Second, Max: 10 * time.Second}
-
+		go func(m sdk.Member, num int) {
 			res := Result{num: num}
-			for bof.Attempt() < backoffAttemptsCount {
-				res.balance, res.err = insSDK.GetBalance(m)
-				if res.err == nil {
-					break
+			balance, deposits, err := insSDK.GetBalance(m)
+			if err == nil {
+				for _, d := range deposits {
+					depositBalanceStr, ok := d.(map[string]interface{})["balance"].(string)
+					if !ok {
+						err = errors.New("failed to get balance from deposit")
+					}
+					depositBalance, ok := new(big.Int).SetString(depositBalanceStr, 10)
+					if !ok {
+						err = errors.New("failed to parse balance to big.Int")
+					}
+
+					balance = balance.Add(balance, depositBalance)
 				}
-				if strings.Contains(res.err.Error(), insolar.ErrTooManyPendingRequests.Error()) {
-					atomic.AddInt32(&penRetires, 1)
-				} else {
-					// retry
-					fmt.Printf("Retry to fetch balance for %v-th member: %v\n", res.num, res.err)
-				}
-				time.Sleep(bof.Duration())
 			}
+			res.balance, res.err = balance, err
 			results <- res
 			wg.Done()
 		}(members[i], i)
@@ -225,31 +246,35 @@ func getTotalBalance(insSDK *sdk.SDK, members []*sdk.Member) (totalBalance *big.
 	for i := 0; i < nmembers; i++ {
 		res := <-results
 		if res.err != nil {
-			if !strings.Contains(res.err.Error(), insolar.ErrTooManyPendingRequests.Error()) {
-				fmt.Printf("Can't get balance for %v-th member: %v\n", res.num, res.err)
-			}
+			fmt.Printf("Can't get balance for %v-th member: %v\n", res.num, res.err)
 			continue
 		}
 		b := totalBalance
 		totalBalance.Add(b, res.balance)
 	}
 
-	return totalBalance, penRetires
+	return totalBalance
 }
 
-func getMembers(insSDK *sdk.SDK) ([]*sdk.Member, int32, error) {
-	var members []*sdk.Member
+func getMembers(insSDK *sdk.SDK, number int, migration bool) ([]sdk.Member, error) {
+	var members = make([]sdk.Member, number)
 	var err error
-	var retriesCount int32
 
 	if useMembersFromFile {
-		members, err = loadMembers(concurrent * 2)
+		for i := range members {
+			if migration {
+				members[i] = &sdk.MigrationMember{}
+			} else {
+				members[i] = &sdk.CommonMember{}
+			}
+		}
+		err = loadMembers(&members)
 		if err != nil {
-			return nil, 0, errors.Wrap(err, "error while loading members: ")
+			return nil, errors.Wrap(err, "error while loading members: ")
 		}
 	} else {
 		start := time.Now()
-		members, retriesCount = createMembers(insSDK, concurrent*2)
+		members = createMembers(insSDK, number, migration)
 		creationTime := time.Since(start)
 		fmt.Printf("Members were created in %s\n", creationTime)
 		fmt.Printf("Average creation of member time - %s\n", time.Duration(int64(creationTime)/int64(concurrent*2)))
@@ -258,13 +283,13 @@ func getMembers(insSDK *sdk.SDK) ([]*sdk.Member, int32, error) {
 	if saveMembersToFile {
 		err = saveMembers(members)
 		if err != nil {
-			return nil, 0, errors.Wrap(err, "save member done with error: ")
+			return nil, errors.Wrap(err, "save member done with error: ")
 		}
 	}
-	return members, retriesCount, nil
+	return members, nil
 }
 
-func saveMembers(members []*sdk.Member) error {
+func saveMembers(members []sdk.Member) error {
 	dir, _ := path.Split(memberFile)
 	err := os.MkdirAll(dir, 0777)
 	if err != nil {
@@ -274,7 +299,7 @@ func saveMembers(members []*sdk.Member) error {
 	if err != nil {
 		return errors.Wrap(err, "couldn't create file")
 	}
-	defer file.Close() //nolint: errcheck
+	defer file.Close() // nolint: errcheck
 
 	result, err := json.MarshalIndent(members, "", "    ")
 	if err != nil {
@@ -284,23 +309,18 @@ func saveMembers(members []*sdk.Member) error {
 	return errors.Wrap(err, "couldn't save members in file")
 }
 
-func loadMembers(count int) ([]*sdk.Member, error) {
-	var members []*sdk.Member
-
+func loadMembers(members *[]sdk.Member) error {
 	rawMembers, err := ioutil.ReadFile(memberFile)
 	if err != nil {
-		return nil, errors.Wrap(err, "can't read members from file")
+		return errors.Wrap(err, "can't read members from file")
 	}
 
-	err = json.Unmarshal(rawMembers, &members)
+	err = json.Unmarshal(rawMembers, members)
 	if err != nil {
-		return nil, errors.Wrap(err, "can't unmarshal members from file")
+		return errors.Wrap(err, "can't unmarshal members from file")
 	}
 
-	if count > len(members) {
-		return nil, errors.Errorf("Not enough members in file: got %d, needs %d", len(members), count)
-	}
-	return members, nil
+	return nil
 }
 
 func main() {
@@ -322,26 +342,14 @@ func main() {
 	err = insSDK.SetLogLevel(logLevelServer)
 	check("Failed to parse log level: ", err)
 
-	members, crMemPenBefore, err := getMembers(insSDK)
-	check("Error while loading members: ", err)
-
-	var totalBalanceBefore *big.Int
-	var balancePenRetries int32
-	balanceCheckMembers := make([]*sdk.Member, len(members))
-
-	if !noCheckBalance {
-		copy(balanceCheckMembers, members)
-		balanceCheckMembers = append(balanceCheckMembers, insSDK.GetFeeMember())
-		totalBalanceBefore, balancePenRetries = getTotalBalance(insSDK, balanceCheckMembers)
-	}
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	var sigChan = make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGHUP)
 
-	s := newScenarios(out, insSDK, members, concurrent, repetitions, crMemPenBefore+balancePenRetries)
+	b := switchScenario(out, insSDK)
+
 	go func() {
 		stopGracefully := true
 		for {
@@ -349,7 +357,7 @@ func main() {
 
 			switch sig {
 			case syscall.SIGHUP:
-				printResults(s)
+				printResults(b)
 			case syscall.SIGINT:
 				if !stopGracefully {
 					log.Fatal("Force quiting.")
@@ -363,27 +371,59 @@ func main() {
 		}
 	}()
 
-	startScenario(ctx, s)
+	b.scenario.prepare()
+
+	var totalBalanceBefore *big.Int
+	if !noCheckBalance {
+		totalBalanceBefore = getTotalBalance(insSDK, b.scenario.getBalanceCheckMembers())
+	}
+
+	startScenario(ctx, b)
 
 	// Finish benchmark time
 	t = time.Now()
 	fmt.Printf("\nFinish: %s\n\n", t.String())
 
 	if !noCheckBalance {
-		totalBalanceAfter := big.NewInt(0)
-		for nretries := 0; nretries < balanceCheckRetries; nretries++ {
-			totalBalanceAfter, _ = getTotalBalance(insSDK, balanceCheckMembers)
-			if totalBalanceAfter.Cmp(totalBalanceBefore) == 0 {
-				break
-			}
-			fmt.Printf("Total balance before and after don't match: %v vs %v - retrying in %s ...\n",
-				totalBalanceBefore, totalBalanceAfter, balanceCheckDelay)
-			time.Sleep(balanceCheckDelay)
+		checkBalance(insSDK, totalBalanceBefore, b.scenario.getBalanceCheckMembers())
+	}
+}
 
+func switchScenario(out io.Writer, insSDK *sdk.SDK) benchmark {
+	var b benchmark
+
+	switch scenarioName {
+	case "createMember":
+		b = newCreateMemberScenarios(out, insSDK, concurrent, repetitions)
+	case "migration":
+		for _, md := range insSDK.GetMigrationDaemonMembers() {
+			_, err := insSDK.ActivateDaemon(md.GetReference())
+			if err != nil && !strings.Contains(err.Error(), "[daemon member already activated]") {
+				check("Error while activating daemons: ", err)
+			}
 		}
-		fmt.Printf("Total balance before: %v and after: %v\n", totalBalanceBefore, totalBalanceAfter)
-		if totalBalanceAfter.Cmp(totalBalanceBefore) != 0 {
-			log.Fatal("Total balance mismatch!\n")
+		b = newMigrationScenarios(out, insSDK, concurrent, repetitions)
+	default:
+		b = newTransferDifferentMemberScenarios(out, insSDK, concurrent, repetitions)
+	}
+
+	return b
+}
+
+func checkBalance(insSDK *sdk.SDK, totalBalanceBefore *big.Int, balanceCheckMembers []sdk.Member) {
+	totalBalanceAfter := big.NewInt(0)
+	for nretries := 0; nretries < balanceCheckRetries; nretries++ {
+		totalBalanceAfter = getTotalBalance(insSDK, balanceCheckMembers)
+		if totalBalanceAfter.Cmp(totalBalanceBefore) == 0 {
+			break
 		}
+		fmt.Printf("Total balance before and after don't match: %v vs %v - retrying in %s ...\n",
+			totalBalanceBefore, totalBalanceAfter, balanceCheckDelay)
+		time.Sleep(balanceCheckDelay)
+
+	}
+	fmt.Printf("Total balance before: %v and after: %v\n", totalBalanceBefore, totalBalanceAfter)
+	if totalBalanceAfter.Cmp(totalBalanceBefore) != 0 {
+		log.Fatal("Total balance mismatch!\n")
 	}
 }

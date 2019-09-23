@@ -156,7 +156,7 @@ func Test_BasicOperations(t *testing.T) {
 				return p
 			})
 
-			lifeline, _ := CallGetObject(ctx, s, objectID)
+			lifeline, _ := CallGetObject(ctx, s, objectID, nil)
 			_, ok := lifeline.(*payload.Error)
 			assert.True(t, ok)
 		}
@@ -185,7 +185,7 @@ func Test_BasicOperations(t *testing.T) {
 }
 
 func requireGetObject(ctx context.Context, t *testing.T, s *Server, objectID insolar.ID) (record.Lifeline, record.Material) {
-	lifelinePL, statePL := CallGetObject(ctx, s, objectID)
+	lifelinePL, statePL := CallGetObject(ctx, s, objectID, nil)
 	RequireNotError(lifelinePL)
 	RequireNotError(statePL)
 

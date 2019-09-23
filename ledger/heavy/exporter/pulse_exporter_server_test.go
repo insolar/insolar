@@ -187,7 +187,7 @@ func TestPulseServer_TopSyncPulse(t *testing.T) {
 	nodeAccessor := node.NewAccessorMock(t)
 	server := NewPulseServer(nil, jetKeeper, nodeAccessor)
 
-	res, err := server.TopSyncPulse(nil, nil)
+	res, err := server.TopSyncPulse(context.Background(), nil)
 
 	require.NoError(t, err)
 	require.NotNil(t, res)

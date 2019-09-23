@@ -18,6 +18,7 @@ package proc
 
 import (
 	"context"
+	"encoding/base64"
 
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
@@ -153,6 +154,12 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 		index = idx
 	}
 
+	// Checking request validity.
+	err = p.dep.checker.CheckRequest(ctx, p.requestID, p.request)
+	if err != nil {
+		return errors.Wrap(err, "request check failed")
+	}
+
 	// Check for request duplicates.
 	{
 		var (
@@ -201,12 +208,6 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 		}
 	}
 
-	// Checking request validity.
-	err = p.dep.checker.CheckRequest(ctx, p.requestID, p.request)
-	if err != nil {
-		return errors.Wrap(err, "request check failed")
-	}
-
 	// Start writing to db.
 	done, err := p.dep.writer.Begin(ctx, flow.Pulse(ctx))
 	if err != nil {
@@ -249,11 +250,12 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "failed to save records")
 	}
 
-	stats.Record(ctx, statRequestsOpened.M(1))
+	stats.Record(ctx, executor.StatRequestsOpened.M(1))
 
 	// Save updated index.
 	index.LifelineLastUsed = p.requestID.Pulse()
 	index.Lifeline.LatestRequest = &Filament.ID
+	index.Lifeline.OpenRequestsCount++
 	if index.Lifeline.EarliestOpenRequest == nil {
 		pn := p.requestID.Pulse()
 		index.Lifeline.EarliestOpenRequest = &pn
@@ -268,9 +270,20 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "failed to create reply")
 	}
 	p.dep.sender.Reply(ctx, p.message, msg)
+
+	buf, err := p.request.Marshal()
+	if err != nil {
+		return errors.Wrap(err, "failed to marshal request")
+	}
 	logger.WithFields(map[string]interface{}{
 		"is_creation":                p.request.IsCreationRequest(),
 		"latest_pending_filament_id": Filament.ID.DebugString(),
+		"reason_id":                  p.request.ReasonRef().GetLocal().DebugString(),
+		"request_body":               base64.StdEncoding.EncodeToString(buf),
+		"is_outgoing": func() bool {
+			_, ok := p.request.(*record.OutgoingRequest)
+			return ok
+		}(),
 	}).Debug("request saved")
 	return nil
 }

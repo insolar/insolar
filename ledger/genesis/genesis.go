@@ -60,30 +60,35 @@ func (Key) Scope() store.Scope {
 const (
 	XNS                        = "XNS"
 	FundsDepositName           = "genesis_deposit"
-	MigrationDaemonLockup      = 1604188800
+	MigrationDaemonLockup      = 1604102400
 	MigrationDaemonVesting     = 1735689600
 	MigrationDaemonVestingStep = 2629746
-	MigrationDaemonMaturePulse = 1735689600
+	MigrationDaemonMaturePulse = 1635638400
 
-	FundsAndEnterpriseLockup      = 0
-	FundsAndEnterpriseVesting     = 0
-	FundsAndEnterpriseVestingStep = 1
-	FundsAndEnterpriseMaturePulse = 0
+	EnterpriseLockup      = 0
+	EnterpriseVesting     = 10
+	EnterpriseVestingStep = 10
+	EnterpriseMaturePulse = 0
 
-	NetworkIncentivesLockup      = 1672531200
-	NetworkIncentivesVesting     = 1635724800
-	NetworkIncentivesVestingStep = 1
-	NetworkIncentivesMaturePulse = 1735689600
+	FundsLockup      = 0
+	FundsVesting     = 10
+	FundsVestingStep = 10
+	FundsMaturePulse = 0
 
-	ApplicationIncentivesLockup      = 1672531200
-	ApplicationIncentivesVesting     = 1735689600
+	NetworkIncentivesLockup      = 1593475200
+	NetworkIncentivesVesting     = 315569520
+	NetworkIncentivesVestingStep = 2629746
+	NetworkIncentivesMaturePulse = 1909008000
+
+	ApplicationIncentivesLockup      = 1593475200
+	ApplicationIncentivesVesting     = 315569520
 	ApplicationIncentivesVestingStep = 2629746
-	ApplicationIncentivesMaturePulse = 1735689600
+	ApplicationIncentivesMaturePulse = 1909008000
 
-	FoundationLockup      = 1672531200
-	FoundationVesting     = 1735689600
-	FoundationVestingStep = 2629746
-	FoundationMaturePulse = 1735689600
+	FoundationLockup      = 1672444800
+	FoundationVesting     = 10
+	FoundationVestingStep = 10
+	FoundationMaturePulse = 1672444800
 )
 
 // IsGenesisRequired checks if genesis record already exists.
@@ -245,29 +250,15 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 		contracts.GetMemberGenesisContractState(g.ContractsConfig.RootPublicKey, insolar.GenesisNameRootMember, insolar.GenesisNameRootDomain, genesisrefs.ContractRootWallet),
 		contracts.GetMemberGenesisContractState(g.ContractsConfig.MigrationAdminPublicKey, insolar.GenesisNameMigrationAdminMember, insolar.GenesisNameRootDomain, genesisrefs.ContractMigrationWallet),
 		contracts.GetMemberGenesisContractState(g.ContractsConfig.FeePublicKey, insolar.GenesisNameFeeMember, insolar.GenesisNameRootDomain, genesisrefs.ContractFeeWallet),
-		contracts.GetMemberGenesisContractState(g.ContractsConfig.FundsAndEnterprisePublicKey, insolar.GenesisNameEnterpriseMember, insolar.GenesisNameRootDomain, genesisrefs.ContractEnterpriseWallet),
 
 		contracts.GetWalletGenesisContractState(insolar.GenesisNameRootWallet, insolar.GenesisNameRootDomain, genesisrefs.ContractRootAccount),
 		contracts.GetWalletGenesisContractState(insolar.GenesisNameMigrationAdminWallet, insolar.GenesisNameRootDomain, genesisrefs.ContractMigrationAccount),
 		contracts.GetWalletGenesisContractState(insolar.GenesisNameFeeWallet, insolar.GenesisNameRootDomain, genesisrefs.ContractFeeAccount),
-		contracts.GetWalletGenesisContractState(insolar.GenesisNameEnterpriseWallet, insolar.GenesisNameRootDomain, genesisrefs.ContractEnterpriseAccount),
 
 		contracts.GetAccountGenesisContractState(g.ContractsConfig.RootBalance, insolar.GenesisNameRootAccount, insolar.GenesisNameRootDomain),
 		contracts.GetAccountGenesisContractState(g.ContractsConfig.MDBalance, insolar.GenesisNameMigrationAdminAccount, insolar.GenesisNameRootDomain),
 		contracts.GetAccountGenesisContractState("0", insolar.GenesisNameFeeAccount, insolar.GenesisNameRootDomain),
-		contracts.GetAccountGenesisContractState(insolar.DefaultDistributionAmount, insolar.GenesisNameEnterpriseAccount, insolar.GenesisNameRootDomain),
 
-		contracts.GetDepositGenesisContractState(
-			insolar.DefaultDistributionAmount,
-			int64(pulse.OfUnixTime(FundsAndEnterpriseLockup)),
-			int64(pulse.OfUnixTime(FundsAndEnterpriseVesting)),
-			FundsAndEnterpriseVestingStep,
-			foundation.Vesting1,
-			FundsAndEnterpriseMaturePulse,
-			0,
-			insolar.GenesisNameEnterpriseDeposit,
-			insolar.GenesisNameRootDomain,
-		),
 		contracts.GetDepositGenesisContractState(
 			"0",
 			int64(pulse.OfUnixTime(MigrationDaemonLockup)),
@@ -279,7 +270,7 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 			insolar.GenesisNameMigrationAdminDeposit,
 			insolar.GenesisNameRootDomain,
 		),
-		contracts.GetMigrationAdminGenesisContractState(g.ContractsConfig.LoсkupPeriodInPulses, g.ContractsConfig.VestingPeriodInPulses, g.ContractsConfig.VestingStepInPulses, g.ContractsConfig.MAShardCount),
+		contracts.GetMigrationAdminGenesisContractState(g.ContractsConfig.LockupPeriodInPulses, g.ContractsConfig.VestingPeriodInPulses, g.ContractsConfig.VestingStepInPulses, g.ContractsConfig.MAShardCount),
 		contracts.GetCostCenterGenesisContractState(),
 	}
 
@@ -300,6 +291,14 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 		states = append(states, contracts.GetMemberGenesisContractState(key, insolar.GenesisNameFoundationMembers[i], insolar.GenesisNameRootDomain, genesisrefs.ContractFoundationMembers[i]))
 	}
 
+	for i, key := range g.ContractsConfig.FundsPublicKeys {
+		states = append(states, contracts.GetMemberGenesisContractState(key, insolar.GenesisNameFundsMembers[i], insolar.GenesisNameRootDomain, genesisrefs.ContractFundsMembers[i]))
+	}
+
+	for i, key := range g.ContractsConfig.EnterprisePublicKeys {
+		states = append(states, contracts.GetMemberGenesisContractState(key, insolar.GenesisNameEnterpriseMembers[i], insolar.GenesisNameRootDomain, genesisrefs.ContractEnterpriseMembers[i]))
+	}
+
 	for i := range g.ContractsConfig.ApplicationIncentivesPublicKeys {
 		states = append(states, contracts.GetAccountGenesisContractState("0", insolar.GenesisNameApplicationIncentivesAccounts[i], insolar.GenesisNameRootDomain))
 	}
@@ -310,6 +309,14 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 
 	for i := range g.ContractsConfig.FoundationPublicKeys {
 		states = append(states, contracts.GetAccountGenesisContractState("0", insolar.GenesisNameFoundationAccounts[i], insolar.GenesisNameRootDomain))
+	}
+
+	for i := range g.ContractsConfig.FundsPublicKeys {
+		states = append(states, contracts.GetAccountGenesisContractState("0", insolar.GenesisNameFundsAccounts[i], insolar.GenesisNameRootDomain))
+	}
+
+	for i := range g.ContractsConfig.EnterprisePublicKeys {
+		states = append(states, contracts.GetAccountGenesisContractState("0", insolar.GenesisNameEnterpriseAccounts[i], insolar.GenesisNameRootDomain))
 	}
 
 	for i := range g.ContractsConfig.NetworkIncentivesPublicKeys {
@@ -350,6 +357,34 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 			pulse.OfUnixTime(FoundationMaturePulse),
 			0,
 			insolar.GenesisNameFoundationDeposits[i],
+			insolar.GenesisNameRootDomain,
+		))
+	}
+
+	for i := range g.ContractsConfig.FundsPublicKeys {
+		states = append(states, contracts.GetDepositGenesisContractState(
+			insolar.DefaultDistributionAmount,
+			int64(pulse.OfUnixTime(FundsLockup)),
+			int64(pulse.OfUnixTime(FundsVesting)),
+			FundsVestingStep,
+			foundation.Vesting2,
+			pulse.OfUnixTime(FundsMaturePulse),
+			0,
+			insolar.GenesisNameFundsDeposits[i],
+			insolar.GenesisNameRootDomain,
+		))
+	}
+
+	for i := range g.ContractsConfig.EnterprisePublicKeys {
+		states = append(states, contracts.GetDepositGenesisContractState(
+			insolar.DefaultDistributionAmount,
+			int64(pulse.OfUnixTime(EnterpriseLockup)),
+			int64(pulse.OfUnixTime(EnterpriseVesting)),
+			EnterpriseVestingStep,
+			foundation.Vesting2,
+			pulse.OfUnixTime(EnterpriseMaturePulse),
+			0,
+			insolar.GenesisNameEnterpriseDeposits[i],
 			insolar.GenesisNameRootDomain,
 		))
 	}
@@ -401,6 +436,39 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 			membersDeposits,
 		))
 	}
+
+	for i := range g.ContractsConfig.FundsPublicKeys {
+		membersAccounts := make(foundation.StableMap)
+		membersAccounts[XNS] = genesisrefs.ContractFundsAccounts[i].String()
+
+		membersDeposits := make(foundation.StableMap)
+		membersDeposits[FundsDepositName] = genesisrefs.ContractFundsDeposits[i].String()
+
+		states = append(states, contracts.GetPreWalletGenesisContractState(
+			insolar.GenesisNameFundsWallets[i],
+			insolar.GenesisNameRootDomain,
+			genesisrefs.ContractFundsWallets[i],
+			membersAccounts,
+			membersDeposits,
+		))
+	}
+
+	for i := range g.ContractsConfig.EnterprisePublicKeys {
+		membersAccounts := make(foundation.StableMap)
+		membersAccounts[XNS] = genesisrefs.ContractEnterpriseAccounts[i].String()
+
+		membersDeposits := make(foundation.StableMap)
+		membersDeposits[FundsDepositName] = genesisrefs.ContractEnterpriseDeposits[i].String()
+
+		states = append(states, contracts.GetPreWalletGenesisContractState(
+			insolar.GenesisNameEnterpriseWallets[i],
+			insolar.GenesisNameRootDomain,
+			genesisrefs.ContractEnterpriseWallets[i],
+			membersAccounts,
+			membersDeposits,
+		))
+	}
+
 	if g.ContractsConfig.PKShardCount <= 0 {
 		panic(fmt.Sprintf("[genesis] store contracts failed: setup pk_shard_count parameter, current value %v", g.ContractsConfig.PKShardCount))
 	}
@@ -421,10 +489,6 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 	trimmedFeeMemberPublicKey := foundation.TrimPublicKey(g.ContractsConfig.FeePublicKey)
 	index = foundation.GetShardIndex(trimmedFeeMemberPublicKey, g.ContractsConfig.PKShardCount)
 	membersByPKShards[index][trimmedFeeMemberPublicKey] = genesisrefs.ContractFeeMember.String()
-
-	trimmedFundsAndEnterprisePublicKey := foundation.TrimPublicKey(g.ContractsConfig.FundsAndEnterprisePublicKey)
-	index = foundation.GetShardIndex(trimmedFundsAndEnterprisePublicKey, g.ContractsConfig.PKShardCount)
-	membersByPKShards[index][trimmedFundsAndEnterprisePublicKey] = genesisrefs.ContractEnterpriseMember.String()
 
 	for i, key := range g.ContractsConfig.MigrationDaemonPublicKeys {
 		trimmedMigrationDaemonPublicKey := foundation.TrimPublicKey(key)
@@ -448,6 +512,18 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 		trimmedFoundationPublicKey := foundation.TrimPublicKey(key)
 		index := foundation.GetShardIndex(trimmedFoundationPublicKey, g.ContractsConfig.PKShardCount)
 		membersByPKShards[index][trimmedFoundationPublicKey] = genesisrefs.ContractFoundationMembers[i].String()
+	}
+
+	for i, key := range g.ContractsConfig.FundsPublicKeys {
+		trimmedFundsPublicKey := foundation.TrimPublicKey(key)
+		index := foundation.GetShardIndex(trimmedFundsPublicKey, g.ContractsConfig.PKShardCount)
+		membersByPKShards[index][trimmedFundsPublicKey] = genesisrefs.ContractFundsMembers[i].String()
+	}
+
+	for i, key := range g.ContractsConfig.EnterprisePublicKeys {
+		trimmedEnterprisePublicKey := foundation.TrimPublicKey(key)
+		index := foundation.GetShardIndex(trimmedEnterprisePublicKey, g.ContractsConfig.PKShardCount)
+		membersByPKShards[index][trimmedEnterprisePublicKey] = genesisrefs.ContractEnterpriseMembers[i].String()
 	}
 
 	// Append states for shards

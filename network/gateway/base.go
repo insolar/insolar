@@ -78,9 +78,7 @@ import (
 )
 
 const (
-	bootstrapTimeoutMessage   = "Bootstrap timeout exceeded"
-	majorityRuleFailedMessage = "MajorityRule failed"
-	minRolesFailedMessage     = "MinRoles failed"
+	bootstrapTimeoutMessage = "Bootstrap timeout exceeded"
 )
 
 // Base is abstract class for gateways
@@ -433,10 +431,10 @@ func (g *Base) createCandidateProfile() {
 }
 
 func (g *Base) EphemeralMode(nodes []insolar.NetworkNode) bool {
-	majority, _ := rules.CheckMajorityRule(g.CertificateManager.GetCertificate(), nodes)
-	minRole := rules.CheckMinRole(g.CertificateManager.GetCertificate(), nodes)
+	_, majorityErr := rules.CheckMajorityRule(g.CertificateManager.GetCertificate(), nodes)
+	minRoleErr := rules.CheckMinRole(g.CertificateManager.GetCertificate(), nodes)
 
-	return !majority || !minRole
+	return majorityErr != nil || minRoleErr != nil
 }
 
 func (g *Base) FailState(ctx context.Context, reason string) {

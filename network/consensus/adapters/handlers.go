@@ -56,6 +56,7 @@ import (
 	"io"
 
 	"github.com/insolar/insolar/instrumentation/insmetrics"
+	"github.com/insolar/insolar/network/consensus/common/warning"
 
 	"go.opencensus.io/stats"
 
@@ -93,8 +94,14 @@ func (ph *packetHandler) handlePacket(ctx context.Context, packetParser transpor
 	err := ph.packetProcessor.ProcessPacket(ctx, packetParser, &endpoints.InboundConnection{
 		Addr: endpoints.Name(sender),
 	})
+
 	if err != nil {
-		logger.Error("Failed to process packet: ", err)
+		switch err.(type) {
+		case warning.Warning:
+			logger.Warn("Failed to process packet: ", err)
+		default:
+			logger.Error("Failed to process packet: ", err)
+		}
 	}
 }
 

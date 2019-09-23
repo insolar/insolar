@@ -203,12 +203,12 @@ func (g *Complete) EphemeralMode(nodes []insolar.NetworkNode) bool {
 func (g *Complete) UpdateState(ctx context.Context, pulseNumber insolar.PulseNumber, nodes []insolar.NetworkNode, cloudStateHash []byte) {
 	workingNodes := node.Select(nodes, node.ListWorking)
 
-	if ok, _ := rules.CheckMajorityRule(g.CertificateManager.GetCertificate(), workingNodes); !ok {
-		g.FailState(ctx, majorityRuleFailedMessage)
+	if _, err := rules.CheckMajorityRule(g.CertificateManager.GetCertificate(), workingNodes); err != nil {
+		g.FailState(ctx, err.Error())
 	}
 
-	if !rules.CheckMinRole(g.CertificateManager.GetCertificate(), workingNodes) {
-		g.FailState(ctx, minRolesFailedMessage)
+	if err := rules.CheckMinRole(g.CertificateManager.GetCertificate(), workingNodes); err != nil { // Return error
+		g.FailState(ctx, err.Error())
 	}
 
 	g.Base.UpdateState(ctx, pulseNumber, nodes, cloudStateHash)

@@ -20,17 +20,17 @@ package functest
 
 import (
 	"encoding/base64"
-	"github.com/insolar/insolar/api/requester"
 	"math/big"
 	"testing"
 
+	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/testutils/launchnet"
 	"github.com/stretchr/testify/require"
 )
 
 func TestMigrationToken(t *testing.T) {
-	activeDaemons := activateDaemons(t, countThreeActiveDaemon)
+	activeDaemons := activateDaemons(t, countTwoActiveDaemon)
 	member := createMigrationMemberForMA(t)
 
 	deposit := migrate(t, member.Ref, "1000", "Test_TxHash", member.MigrationAddress, 0)
@@ -63,20 +63,26 @@ func TestMigrationToken(t *testing.T) {
 	require.Equal(t, "10000", dif.String())
 }
 
-func TestMigrationTokenFourActiveDaemon(t *testing.T) {
-	activeDaemons := activateDaemons(t, countFourActiveDaemon)
+func TestMigrationTokenThreeActiveDaemons(t *testing.T) {
+	activeDaemons := activateDaemons(t, countThreeActiveDaemon)
 	member := createMigrationMemberForMA(t)
-	var deposit map[string]interface{}
-	for i := 1; i < len(activeDaemons); i++ {
-		deposit = migrate(t, member.Ref, "1000", "Test_TxHash", member.MigrationAddress, i)
+	for i := 0; i < len(activeDaemons)-1; i++ {
+		_ = migrate(t, member.Ref, "1000", "Test_TxHash", member.MigrationAddress, i)
 	}
 
-	require.Equal(t, deposit["ethTxHash"], "Test_TxHash")
-	require.Equal(t, deposit["amount"], "10000")
+	_, err := signedRequestWithEmptyRequestRef(t,
+		launchnet.TestRPCUrl,
+		launchnet.MigrationDaemons[countThreeActiveDaemon-1],
+		"deposit.migration",
+		map[string]interface{}{"amount": "1000", "ethTxHash": "Test_TxHash", "migrationAddress": member.MigrationAddress})
+	require.Error(t, err)
+	require.IsType(t, &requester.Error{}, err)
+	data := err.(*requester.Error).Data
+	require.Contains(t, data.Trace, "migration is done for this deposit Test_TxHash")
 }
 
 func TestMigrationTokenOnDifferentDeposits(t *testing.T) {
-	activateDaemons(t, countThreeActiveDaemon)
+	activateDaemons(t, countTwoActiveDaemon)
 	member := createMigrationMemberForMA(t)
 
 	_ = migrate(t, member.Ref, "1000", "Test_TxHash", member.MigrationAddress, 0)
@@ -96,8 +102,9 @@ func TestMigrationTokenOnDifferentDeposits(t *testing.T) {
 }
 
 func TestMigrationTokenNotInTheList(t *testing.T) {
-	migrationAddress := generateMigrationAddress()
-	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl,
+	migrationAddress, err := generateMigrationAddress()
+	require.NoError(t, err)
+	_, err = signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl,
 		&launchnet.MigrationAdmin,
 		"deposit.migration",
 		map[string]interface{}{"amount": "1000", "ethTxHash": "TxHash", "migrationAddress": migrationAddress})
@@ -152,7 +159,7 @@ func TestMigrationTokenNilValue(t *testing.T) {
 }
 
 func TestMigrationTokenMaxAmount(t *testing.T) {
-	activateDaemons(t, countThreeActiveDaemon)
+	activateDaemons(t, countTwoActiveDaemon)
 	member := createMigrationMemberForMA(t)
 
 	result, err := signedRequest(t,
@@ -165,7 +172,7 @@ func TestMigrationTokenMaxAmount(t *testing.T) {
 }
 
 func TestMigrationDoubleMigrationFromSameDaemon(t *testing.T) {
-	activateDaemons(t, countThreeActiveDaemon)
+	activateDaemons(t, countTwoActiveDaemon)
 	member := createMigrationMemberForMA(t)
 
 	resultMigr1, err := signedRequest(t,
@@ -187,7 +194,7 @@ func TestMigrationDoubleMigrationFromSameDaemon(t *testing.T) {
 }
 
 func TestMigrationAnotherAmountSameTx(t *testing.T) {
-	activateDaemons(t, countThreeActiveDaemon)
+	activateDaemons(t, countTwoActiveDaemon)
 
 	member := createMigrationMemberForMA(t)
 
@@ -195,13 +202,6 @@ func TestMigrationAnotherAmountSameTx(t *testing.T) {
 		launchnet.TestRPCUrl,
 		launchnet.MigrationDaemons[0], "deposit.migration",
 		map[string]interface{}{"amount": "20", "ethTxHash": "ethTxHash", "migrationAddress": member.MigrationAddress})
-
-	_, err = signedRequest(t,
-		launchnet.TestRPCUrl,
-		launchnet.MigrationDaemons[1],
-		"deposit.migration",
-		map[string]interface{}{"amount": "30", "ethTxHash": "ethTxHash", "migrationAddress": member.MigrationAddress})
-	require.NoError(t, err)
 
 	_, _, err = makeSignedRequest(
 		launchnet.TestRPCUrl,

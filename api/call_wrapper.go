@@ -107,7 +107,7 @@ func wrapCall(runner *Runner, allowedMethods map[string]bool, req *http.Request,
 
 	if err != nil {
 		// TODO: white list of errors that doesnt require log
-		logger.Error(err.Error())
+		logger.Error("API return error: ", err.Error())
 		if strings.Contains(err.Error(), "invalid signature") {
 			return &json2.Error{
 				Code:    UnauthorizedError,
@@ -133,9 +133,8 @@ func wrapCall(runner *Runner, allowedMethods map[string]bool, req *http.Request,
 		}
 
 		return &json2.Error{
-			Code: ExecutionError,
-			// TODO: remove this additional ERROR concatenation
-			Message: ExecutionErrorMessage + "; ERROR: " + err.Error(),
+			Code:    ExecutionError,
+			Message: ExecutionErrorMessage,
 			Data: requester.Data{
 				Trace:            strings.Split(err.Error(), ": "),
 				TraceID:          traceID,

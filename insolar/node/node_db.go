@@ -17,9 +17,13 @@
 package node
 
 import (
+	"context"
+
 	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/store"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/pkg/errors"
 )
 
 // StorageDB is a badger-based impl of a node storage.
@@ -122,4 +126,27 @@ func (s *StorageDB) InRole(pulse insolar.PulseNumber, role insolar.StaticRole) (
 // DeleteForPN erases nodes for specified pulse.
 func (s *StorageDB) DeleteForPN(pulse insolar.PulseNumber) {
 	panic("implement me")
+}
+
+// TruncateHead remove all records after lastPulse
+func (s *StorageDB) TruncateHead(ctx context.Context, from insolar.PulseNumber) error {
+	it := s.db.NewIterator(nodeHistoryKey(from), false)
+	defer it.Close()
+
+	var hasKeys bool
+	for it.Next() {
+		hasKeys = true
+		key := nodeHistoryKey(insolar.NewPulseNumber(it.Key()))
+		err := s.db.Delete(&key)
+		if err != nil {
+			return errors.Wrapf(err, "can't delete key: %+v", key)
+		}
+
+		inslogger.FromContext(ctx).Debugf("Node db. Erased key. Pulse number: %s", key.DebugString())
+	}
+	if !hasKeys {
+		inslogger.FromContext(ctx).Debug("Node db. No records. Nothing done. Pulse number: " + from.String())
+	}
+
+	return nil
 }

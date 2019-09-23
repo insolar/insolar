@@ -15,6 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
+  "iteration": 1568639485603,
   "links": [],
   "panels": [
     {
@@ -80,7 +81,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "insolar_current_pulse{role=\"heavy_material\"}",
+          "expr": "insolar_current_pulse{role=\"heavy_material\", installation=\"$installation\"}",
           "instant": true,
           "refId": "A"
         }
@@ -120,7 +121,7 @@
       },
       "gridPos": {
         "h": 3,
-        "w": 8,
+        "w": 9,
         "x": 9,
         "y": 0
       },
@@ -164,7 +165,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "insolar_heavy_finalized_pulse",
+          "expr": "insolar_heavy_finalized_pulse{installation=\"$installation\"}",
           "instant": true,
           "refId": "A"
         }
@@ -205,8 +206,8 @@
       },
       "gridPos": {
         "h": 3,
-        "w": 5,
-        "x": 17,
+        "w": 6,
+        "x": 18,
         "y": 0
       },
       "id": 6,
@@ -249,7 +250,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "(insolar_current_pulse{role=\"heavy_material\"} - insolar_heavy_finalized_pulse{role=\"heavy_material\"}) / 10",
+          "expr": "(insolar_current_pulse{role=\"heavy_material\", installation=\"$installation\"} - insolar_heavy_finalized_pulse{role=\"heavy_material\", installation=\"$installation\"}) / 10",
           "instant": true,
           "refId": "A"
         }
@@ -279,7 +280,7 @@
       "fillGradient": 0,
       "gridPos": {
         "h": 7,
-        "w": 11,
+        "w": 12,
         "x": 0,
         "y": 3
       },
@@ -309,7 +310,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "rate(insolar_heavysyncer_heavypayload_count[1m])",
+          "expr": "rate(insolar_heavysyncer_heavypayload_count{installation=\"$installation\"}[1m])",
           "legendFormat": "",
           "refId": "A"
         }
@@ -364,8 +365,8 @@
       "fillGradient": 0,
       "gridPos": {
         "h": 7,
-        "w": 11,
-        "x": 11,
+        "w": 12,
+        "x": 12,
         "y": 3
       },
       "id": 10,
@@ -394,7 +395,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(insolar_bus_sent_total{message_type=\"TypeReplication\"}[1m]))",
+          "expr": "sum(rate(insolar_bus_sent_total{message_type=\"TypeReplication\", installation=\"$installation\"}[1m]))",
           "legendFormat": "rps",
           "refId": "A"
         }
@@ -448,8 +449,8 @@
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 8,
-        "w": 11,
+        "h": 5,
+        "w": 24,
         "x": 0,
         "y": 10
       },
@@ -479,7 +480,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "rate(insolar_requests_abandoned{role=\"heavy_material\"}[1m])*10",
+          "expr": "rate(insolar_requests_abandoned{role=\"heavy_material\", installation=\"$installation\"}[1m])*10",
           "refId": "A"
         }
       ],
@@ -523,14 +524,231 @@
         "align": false,
         "alignLevel": null
       }
+    },
+    {
+      "cards": {
+        "cardPadding": null,
+        "cardRound": null
+      },
+      "color": {
+        "cardColor": "#b4ff00",
+        "colorScale": "sqrt",
+        "colorScheme": "interpolateGreens",
+        "exponent": 0.5,
+        "mode": "spectrum"
+      },
+      "dataFormat": "tsbuckets",
+      "datasource": "prometheus",
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 0,
+        "y": 15
+      },
+      "heatmap": {},
+      "hideZeroBuckets": false,
+      "highlightCards": true,
+      "id": 14,
+      "legend": {
+        "show": false
+      },
+      "options": {},
+      "reverseYBuckets": false,
+      "targets": [
+        {
+          "expr": "sum(increase(insolar_heavy_exporter_method_timing_bucket{heavy_exporter_method_name=\"record-export\", installation=\"$installation\"}[1m])) by (le)",
+          "format": "heatmap",
+          "legendFormat": "{{ le }}",
+          "refId": "A"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Record export timing",
+      "tooltip": {
+        "show": true,
+        "showHistogram": false
+      },
+      "type": "heatmap",
+      "xAxis": {
+        "show": true
+      },
+      "xBucketNumber": null,
+      "xBucketSize": null,
+      "yAxis": {
+        "decimals": null,
+        "format": "ms",
+        "logBase": 1,
+        "max": null,
+        "min": null,
+        "show": true,
+        "splitFactor": null
+      },
+      "yBucketBound": "auto",
+      "yBucketNumber": null,
+      "yBucketSize": null
+    },
+    {
+      "cards": {
+        "cardPadding": null,
+        "cardRound": null
+      },
+      "color": {
+        "cardColor": "#b4ff00",
+        "colorScale": "sqrt",
+        "colorScheme": "interpolateGreens",
+        "exponent": 0.5,
+        "mode": "spectrum"
+      },
+      "dataFormat": "tsbuckets",
+      "datasource": "prometheus",
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 8,
+        "y": 15
+      },
+      "heatmap": {},
+      "hideZeroBuckets": false,
+      "highlightCards": true,
+      "id": 15,
+      "legend": {
+        "show": false
+      },
+      "options": {},
+      "reverseYBuckets": false,
+      "targets": [
+        {
+          "expr": "sum(increase(insolar_heavy_exporter_method_timing_bucket{heavy_exporter_method_name=\"pulse-export\", installation=\"$installation\"}[1m])) by (le)",
+          "format": "heatmap",
+          "legendFormat": "{{ le }}",
+          "refId": "A"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Pulse export timing",
+      "tooltip": {
+        "show": true,
+        "showHistogram": false
+      },
+      "type": "heatmap",
+      "xAxis": {
+        "show": true
+      },
+      "xBucketNumber": null,
+      "xBucketSize": null,
+      "yAxis": {
+        "decimals": null,
+        "format": "ms",
+        "logBase": 1,
+        "max": null,
+        "min": null,
+        "show": true,
+        "splitFactor": null
+      },
+      "yBucketBound": "auto",
+      "yBucketNumber": null,
+      "yBucketSize": null
+    },
+    {
+      "cards": {
+        "cardPadding": null,
+        "cardRound": null
+      },
+      "color": {
+        "cardColor": "#b4ff00",
+        "colorScale": "sqrt",
+        "colorScheme": "interpolateGreens",
+        "exponent": 0.5,
+        "mode": "spectrum"
+      },
+      "dataFormat": "tsbuckets",
+      "datasource": "prometheus",
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 16,
+        "y": 15
+      },
+      "heatmap": {},
+      "hideZeroBuckets": false,
+      "highlightCards": true,
+      "id": 16,
+      "legend": {
+        "show": false
+      },
+      "options": {},
+      "reverseYBuckets": false,
+      "targets": [
+        {
+          "expr": "sum(increase(insolar_heavy_exporter_method_timing_bucket{heavy_exporter_method_name=\"pulse-top-sync-pulse\", installation=\"$installation\"}[1m])) by (le)",
+          "format": "heatmap",
+          "legendFormat": "{{ le }}",
+          "refId": "A"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Top sync pulse timing",
+      "tooltip": {
+        "show": true,
+        "showHistogram": false
+      },
+      "type": "heatmap",
+      "xAxis": {
+        "show": true
+      },
+      "xBucketNumber": null,
+      "xBucketSize": null,
+      "yAxis": {
+        "decimals": null,
+        "format": "ms",
+        "logBase": 1,
+        "max": null,
+        "min": null,
+        "show": true,
+        "splitFactor": null
+      },
+      "yBucketBound": "auto",
+      "yBucketNumber": null,
+      "yBucketSize": null
     }
   ],
   "refresh": "10s",
   "schemaVersion": 19,
   "style": "dark",
-  "tags": [],
+  "tags": [
+    "INS"
+  ],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "allValue": null,
+        "current": {
+          "text": "local",
+          "value": "local"
+        },
+        "datasource": "prometheus",
+        "definition": "label_values(insolar_light_last_sent_pulse, installation)",
+        "hide": 0,
+        "includeAll": false,
+        "label": null,
+        "multi": false,
+        "name": "installation",
+        "options": [],
+        "query": "label_values(insolar_light_last_sent_pulse, installation)",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      }
+    ]
   },
   "time": {
     "from": "now-15m",

@@ -57,7 +57,8 @@ func (s *HotObjects) Present(ctx context.Context, f flow.Flow) error {
 		"jet_id": hots.JetID.DebugString(),
 	})
 
-	hdProc := proc.NewHotObjects(s.meta, hots.Pulse, hots.JetID, hots.Drop, hots.Indexes)
+	notificationLimit := s.dep.Config().MaxNotificationsPerPulse
+	hdProc := proc.NewHotObjects(s.meta, hots.Pulse, hots.JetID, hots.Drop, hots.Indexes, notificationLimit)
 	s.dep.HotObjects(hdProc)
 	if err := f.Procedure(ctx, hdProc, false); err != nil {
 		return err

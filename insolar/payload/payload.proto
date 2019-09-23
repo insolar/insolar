@@ -30,6 +30,7 @@ message GetObject {
     uint32 Polymorph = 16;
 
     bytes ObjectID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+    bytes RequestID = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = true];
 }
 
 message GetCode {
@@ -61,6 +62,9 @@ message Index {
     uint32 Polymorph = 16;
 
     bytes Index = 20;
+
+    bytes EarliestRequestID = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = true];
+    bytes EarliestRequest = 22;
 }
 
 message Code {
@@ -288,6 +292,7 @@ message GetPendings {
     uint32 Polymorph = 16;
 
     bytes ObjectID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+    uint32 Count = 21;
 }
 
 message HasPendings {

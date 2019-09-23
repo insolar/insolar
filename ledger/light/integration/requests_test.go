@@ -51,7 +51,7 @@ func Test_IncomingRequest_Check(t *testing.T) {
 	t.Run("registered is older than reason returns error", func(t *testing.T) {
 		msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()+1), insolar.ID{}, true, true)
 		rep := SendMessage(ctx, s, &msg)
-		RequireErrorCode(rep, payload.CodeInvalidRequest)
+		RequireErrorCode(rep, payload.CodeRequestInvalid)
 	})
 
 	t.Run("registered API request appears in pendings", func(t *testing.T) {
@@ -62,7 +62,7 @@ func Test_IncomingRequest_Check(t *testing.T) {
 
 		s.SetPulse(ctx)
 
-		rep = CallGetPendings(ctx, s, reqInfo.RequestID)
+		rep = CallGetPendings(ctx, s, reqInfo.RequestID, 1)
 		RequireNotError(rep)
 
 		ids := rep.(*payload.IDs)
@@ -85,7 +85,7 @@ func Test_IncomingRequest_Check(t *testing.T) {
 
 		s.SetPulse(ctx)
 
-		secondPendings := CallGetPendings(ctx, s, secondReqInfo.RequestID)
+		secondPendings := CallGetPendings(ctx, s, secondReqInfo.RequestID, 1)
 		RequireNotError(secondPendings)
 
 		ids := secondPendings.(*payload.IDs)
@@ -106,7 +106,7 @@ func Test_IncomingRequest_Check(t *testing.T) {
 
 		s.SetPulse(ctx)
 
-		p = CallGetPendings(ctx, s, reqInfo.RequestID)
+		p = CallGetPendings(ctx, s, reqInfo.RequestID, 1)
 
 		err := p.(*payload.Error)
 		require.Equal(t, insolar.ErrNoPendingRequest.Error(), err.Text)
@@ -780,7 +780,7 @@ func Test_OutgoingDetached_InPendings(t *testing.T) {
 
 		s.SetPulse(ctx)
 
-		firstPendings := CallGetPendings(ctx, s, rootID)
+		firstPendings := CallGetPendings(ctx, s, rootID, 1)
 		RequireNotError(firstPendings)
 
 		ids := firstPendings.(*payload.IDs)
@@ -799,7 +799,7 @@ func Test_OutgoingDetached_InPendings(t *testing.T) {
 
 		s.SetPulse(ctx)
 
-		secondPendings := CallGetPendings(ctx, s, rootID)
+		secondPendings := CallGetPendings(ctx, s, rootID, 1)
 		RequireNotError(secondPendings)
 
 		ids := secondPendings.(*payload.IDs)

@@ -148,6 +148,10 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "failed to calculate pending requests")
 	}
 	closedRequest, err := findClosed(opened, p.result)
+
+	if p.sideEffect != nil {
+		err = checkRequestCanChangeState(closedRequest)
+	}
 	if err != nil {
 		return errors.Wrap(err, "failed to find request being closed")
 	}
@@ -230,6 +234,7 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 		index.LifelineLastUsed = flow.Pulse(ctx)
 		index.Lifeline.LatestRequest = &Filament.ID
 		index.Lifeline.EarliestOpenRequest = earliestPending
+		index.Lifeline.OpenRequestsCount--
 		p.dep.indexes.Set(ctx, resultID.Pulse(), index)
 		return nil
 	}()
@@ -237,7 +242,7 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 		return err
 	}
 
-	stats.Record(ctx, statRequestsClosed.M(1))
+	stats.Record(ctx, executor.StatRequestsClosed.M(1))
 
 	// Only incoming request can be a reason. We are only interested in potential reason requests.
 	if _, ok := record.Unwrap(&closedRequest.Record.Virtual).(*record.IncomingRequest); ok {
@@ -253,6 +258,27 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 	}
 	logger.Debug("result saved")
 	p.dep.sender.Reply(ctx, p.message, msg)
+	return nil
+}
+
+// If we have side effect than check that request of received result is not outgoing and not immutable incoming
+func checkRequestCanChangeState(request record.CompositeFilamentRecord) error {
+	rec := record.Unwrap(&request.Record.Virtual)
+	switch req := rec.(type) {
+	case *record.OutgoingRequest:
+		return &payload.CodedError{
+			Text: "outgoing request can't change object state, id: " + request.RecordID.DebugString(),
+			Code: payload.CodeRequestInvalid,
+		}
+	case *record.IncomingRequest:
+		if req.Immutable {
+			return &payload.CodedError{
+				Text: "immutable incoming request can't change object state, id: " + request.RecordID.DebugString(),
+				Code: payload.CodeRequestInvalid,
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -305,8 +331,8 @@ func findClosed(reqs []record.CompositeFilamentRecord, result record.Result) (re
 		}
 }
 
-func checkOutgoings(reqs []record.CompositeFilamentRecord, closedRequestID insolar.ID) error {
-	for _, req := range reqs {
+func checkOutgoings(openedRequests []record.CompositeFilamentRecord, closedRequestID insolar.ID) error {
+	for _, req := range openedRequests {
 		found := record.Unwrap(&req.Record.Virtual)
 		parsedReq, ok := found.(record.Request)
 		if !ok {
@@ -317,6 +343,7 @@ func checkOutgoings(reqs []record.CompositeFilamentRecord, closedRequestID insol
 			continue
 		}
 
+		// Is not saga and reason of opened outgoing is equal request closed by this set_result
 		if !out.IsDetached() && out.Reason.GetLocal().Equal(closedRequestID) {
 			return &payload.CodedError{
 				Text: "request " + closedRequestID.DebugString() + " is reason for non closed outgoing request " + req.RecordID.DebugString(),

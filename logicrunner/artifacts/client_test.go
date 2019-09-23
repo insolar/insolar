@@ -1505,7 +1505,7 @@ func (s *ArtifactsMangerClientSuite) TestGetObject() {
 				},
 			)
 
-			desc, err := s.amClient.GetObject(s.ctx, *objectRef)
+			desc, err := s.amClient.GetObject(s.ctx, *objectRef, nil)
 
 			test.check(desc, err)
 		})
@@ -1547,7 +1547,7 @@ func (s *ArtifactsMangerClientSuite) TestLocalStorage() {
 
 		s.amClient.InjectObjectDescriptor(*protoDesc.HeadRef(), protoDesc)
 
-		desc, err := s.amClient.GetObject(s.ctx, *protoDesc.HeadRef())
+		desc, err := s.amClient.GetObject(s.ctx, *protoDesc.HeadRef(), nil)
 		s.NoError(err)
 		s.Equal(desc, protoDesc)
 	})
@@ -1605,7 +1605,7 @@ func (s *ArtifactsMangerClientSuite) TestLocalStorage() {
 			},
 		)
 
-		_, err := s.amClient.GetObject(s.ctx, *codeDesc.Ref())
+		_, err := s.amClient.GetObject(s.ctx, *codeDesc.Ref(), nil)
 		s.Error(err)
 		s.Contains(err.Error(), "failed to fetch record")
 	})

@@ -203,7 +203,8 @@ func (b *Bus) sendTarget(
 	msgType := messagePayloadTypeName(msg)
 
 	mctx := insmetrics.InsertTag(ctx, tagMessageType, msgType)
-	stats.Record(mctx, statSent.M(int64(len(msg.Payload))))
+	mctx = insmetrics.InsertTag(mctx, tagMessageRole, "request")
+	stats.Record(mctx, statSentBytes.M(int64(len(msg.Payload))))
 	defer func() {
 		stats.Record(mctx, statSentTime.M(float64(time.Since(start).Nanoseconds())/1e6))
 	}()
@@ -316,6 +317,11 @@ func (b *Bus) Reply(ctx context.Context, origin payload.Meta, reply *message.Mes
 	)
 	defer span.End()
 
+	msgType := messagePayloadTypeName(reply)
+	mctx := insmetrics.InsertTag(ctx, tagMessageType, msgType)
+	mctx = insmetrics.InsertTag(mctx, tagMessageRole, "reply")
+	stats.Record(mctx, statSentBytes.M(int64(len(reply.Payload))))
+
 	originHash := payload.MessageHash{}
 	err := originHash.Unmarshal(origin.ID)
 	if err != nil {
@@ -384,57 +390,70 @@ func (b *Bus) IncomingMessageRouter(handle message.HandlerFunc) message.HandlerF
 			inslogger.FromContext(ctx).Error(err)
 		}
 
-		ctx, span := instracer.StartSpan(ctx, "Bus.IncomingMessageRouter starts")
-		span.AddAttributes(
-			trace.StringAttribute("type", "bus"),
-		)
+		var span *trace.Span
+		reply := func() *lockedReply {
+			ctx, span = instracer.StartSpan(ctx, "Bus.IncomingMessageRouter starts")
+			span.AddAttributes(
+				trace.StringAttribute("type", "bus"),
+			)
+			defer span.End()
 
-		meta := payload.Meta{}
-		err = meta.Unmarshal(msg.Payload)
-		if err != nil {
-			instracer.AddError(span, err)
-			logger.Error(errors.Wrap(err, "failed to receive message"))
-			return nil, nil
-		}
-
-		msgHash := payload.MessageHash{}
-		err = msgHash.Unmarshal(meta.ID)
-		if err != nil {
-			logger.Error(errors.Wrap(err, "failed to unmarshal message id"))
-			return nil, nil
-		}
-		msg.Metadata.Set("msg_hash", msgHash.String())
-		logger = logger.WithField("msg_hash", msgHash.String())
-
-		msg.Metadata.Set("pulse", meta.Pulse.String())
-
-		logger.Debug("received message")
-		if meta.OriginHash.IsZero() {
-			logger.Debug("not a reply (calling handler)")
-			_, err := handle(msg)
-			logger.Debug("handling finished")
+			meta := payload.Meta{}
+			err = meta.Unmarshal(msg.Payload)
 			if err != nil {
-				logger.Error(errors.Wrap(err, "message handler returned error"))
+				instracer.AddError(span, err)
+				logger.Error(errors.Wrap(err, "failed to receive message"))
+				return nil
 			}
+
+			receivedType, err := payload.UnmarshalType(meta.Payload)
+			if err == nil {
+				if receivedType == payload.TypeError {
+					stats.Record(ctx, statReplyError.M(1))
+				}
+			}
+
+			msgHash := payload.MessageHash{}
+			err = msgHash.Unmarshal(meta.ID)
+			if err != nil {
+				logger.Error(errors.Wrap(err, "failed to unmarshal message id"))
+				return nil
+			}
+			msg.Metadata.Set("msg_hash", msgHash.String())
+			logger = logger.WithField("msg_hash", msgHash.String())
+
+			msg.Metadata.Set("pulse", meta.Pulse.String())
+
+			logger.Debug("received message")
+			if meta.OriginHash.IsZero() {
+				logger.Debug("not a reply (calling handler)")
+				_, err := handle(msg)
+				logger.Debug("handling finished")
+				if err != nil {
+					logger.Error(errors.Wrap(err, "message handler returned error"))
+				}
+				return nil
+			}
+
+			msg.Metadata.Set("msg_hash_origin", meta.OriginHash.String())
+			logger = logger.WithField("msg_hash_origin", meta.OriginHash.String())
+
+			b.repliesMutex.RLock()
+			defer b.repliesMutex.RUnlock()
+			reply, ok := b.replies[meta.OriginHash]
+			if !ok {
+				logger.Warn("reply discarded")
+				return nil
+			}
+
+			logger.Debug("reply received")
+			reply.wg.Add(1)
+			return reply
+		}()
+
+		if reply == nil {
 			return nil, nil
 		}
-
-		msg.Metadata.Set("msg_hash_origin", meta.OriginHash.String())
-		logger = logger.WithField("msg_hash_origin", meta.OriginHash.String())
-
-		b.repliesMutex.RLock()
-		reply, ok := b.replies[meta.OriginHash]
-		if !ok {
-			logger.Warn("reply discarded")
-			b.repliesMutex.RUnlock()
-			return nil, nil
-		}
-
-		logger.Debug("reply received")
-		reply.wg.Add(1)
-		b.repliesMutex.RUnlock()
-
-		span.End()
 
 		_, span = instracer.StartSpan(ctx, "Bus.IncomingMessageRouter waiting")
 		span.AddAttributes(

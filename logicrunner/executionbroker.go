@@ -19,7 +19,6 @@ package logicrunner
 import (
 	"context"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
@@ -54,6 +53,9 @@ const passToNextLimit = 50
 // pre-fetching requests from ledger
 const prefetchLimit = 5
 
+const mutableExecutionLimit = 1
+const immutableExecutionLimit = 30
+
 //go:generate minimock -i github.com/insolar/insolar/logicrunner.ExecutionBrokerI -o ./ -s _mock.go -g
 
 type ExecutionBrokerI interface {
@@ -78,10 +80,36 @@ type ExecutionBrokerI interface {
 }
 
 type processorState struct {
-	name     string
-	active   uint32
-	parallel bool
-	queue    requestsqueue.RequestsQueue
+	name         string
+	queue        requestsqueue.RequestsQueue
+	workers      int
+	workersLimit int
+}
+
+// dismissWorker frees worker (decrements currently used worker count)
+// one should be certain that he calls that after engageWorker and only once
+// that function should be called under ExecutionBroker lock
+func (ps *processorState) dismissWorker() {
+	if ps.workers <= 0 {
+		panic("unreachable")
+	}
+	ps.workers--
+}
+
+// engageWorker occupies worker (increments currently used worker count)
+// one should check count of available workers before calling that function
+// that function should be called under ExecutionBroker lock
+func (ps *processorState) engageWorker() {
+	if ps.workers >= ps.workersLimit {
+		panic("unreachable")
+	}
+	ps.workers++
+}
+
+// availableWorkers returns number of available workers in the worker queue
+// that function should be called under ExecutionBroker lock
+func (ps processorState) availableWorkers() int {
+	return ps.workersLimit - ps.workers
 }
 
 type ExecutionBroker struct {
@@ -137,14 +165,16 @@ func NewExecutionBroker(
 		name: "executionbroker-" + pulseObject.PulseNumber.String(),
 
 		mutable: processorState{
-			name:     "mutable",
-			parallel: false,
-			queue:    requestsqueue.New(),
+			name:         "mutable",
+			workers:      0,
+			workersLimit: mutableExecutionLimit,
+			queue:        requestsqueue.New(),
 		},
 		immutable: processorState{
-			name:     "immutable",
-			parallel: true,
-			queue:    requestsqueue.New(),
+			name:         "immutable",
+			workers:      0,
+			workersLimit: immutableExecutionLimit,
+			queue:        requestsqueue.New(),
 		},
 
 		outgoingSender: outgoingSender,
@@ -160,13 +190,16 @@ func NewExecutionBroker(
 	}
 }
 
-func (q *ExecutionBroker) getTask(ctx context.Context, queue requestsqueue.RequestsQueue) *common.Transcript {
+func (q *ExecutionBroker) getTask(ctx context.Context, state *processorState) *common.Transcript {
 	q.stateLock.Lock()
 	defer q.stateLock.Unlock()
 
 	for {
-		transcript := queue.TakeFirst(ctx)
+		transcript := state.queue.TakeFirst(ctx)
 		if transcript == nil {
+			// when we finished processing queue (nothing left in the queue) - while we under lock,
+			// release (we've finished processing everything and we should finish current executor)
+			state.dismissWorker()
 			return nil
 		}
 
@@ -199,6 +232,7 @@ func (q *ExecutionBroker) finishTask(ctx context.Context, transcript *common.Tra
 func (q *ExecutionBroker) processTranscript(ctx context.Context, transcript *common.Transcript) {
 	stats.Record(ctx, metrics.ExecutionBrokerExecutionStarted.M(1))
 	defer stats.Record(ctx, metrics.ExecutionBrokerExecutionFinished.M(1))
+
 	if transcript.Context != nil {
 		ctx = transcript.Context
 	} else {
@@ -218,9 +252,7 @@ func (q *ExecutionBroker) processTranscript(ctx context.Context, transcript *com
 
 	q.finishTask(ctx, transcript)
 
-	go q.requestsExecutor.SendReply(
-		ctx, transcript.RequestRef, *transcript.Request, replyData, err,
-	)
+	go q.requestsExecutor.SendReply(ctx, transcript.RequestRef, *transcript.Request, replyData, err)
 
 	// we're checking here that pulse was changed and we should send
 	// a message that we've finished processing tasks
@@ -275,6 +307,8 @@ func (q *ExecutionBroker) add(
 			list = q.mutable.queue
 		}
 		list.Append(ctx, source, transcript)
+
+		inslogger.FromContext(transcript.Context).Debug("request appended to queue")
 	}
 }
 
@@ -289,61 +323,75 @@ func (q *ExecutionBroker) IsKnownRequest(ctx context.Context, req insolar.Refere
 }
 
 // startProcessors starts independent processing of mutable and immutable queues
+// should be started only under q.stateLock
 func (q *ExecutionBroker) startProcessors(ctx context.Context) {
-	q.startProcessor(ctx, &q.immutable)
 	q.startProcessor(ctx, &q.mutable)
+
+	for i := q.startProcessorCount(ctx, &q.immutable); i > 0; i-- {
+		q.startProcessor(ctx, &q.immutable)
+	}
+}
+
+func (q *ExecutionBroker) startProcessorCount(ctx context.Context, state *processorState) int {
+	queueLength := state.queue.Length()
+	workerAvailable := state.availableWorkers()
+
+	if queueLength > workerAvailable {
+		return workerAvailable
+	}
+	return queueLength
 }
 
 // startProcessor starts processing of queue ensuring that only one processor is active
 // at the moment.
-func (q *ExecutionBroker) startProcessor(ctx context.Context, state *processorState) {
-	if !q.tryTakeProcessor(ctx, state) {
-		return
+func (q *ExecutionBroker) startProcessor(ctx context.Context, state *processorState) bool {
+	if state.queue.Length() == 0 {
+		return false
+	} else if state.availableWorkers() == 0 {
+		return false
 	}
 
-	go func() {
-		defer q.releaseProcessor(ctx, state)
+	state.engageWorker()
 
-		q.processQueue(ctx, state)
-	}()
+	go q.processQueue(ctx, state)
+	return true
 }
 
 func (q *ExecutionBroker) processQueue(ctx context.Context, state *processorState) {
+	inslogger.FromContext(ctx).Error("processQueue")
+	q.processQueueInner(ctx, state)
+}
+
+func (q *ExecutionBroker) processQueueInner(ctx context.Context, state *processorState) {
 	q.clarifyPendingStateFromLedger(ctx)
 
-	logger := inslogger.FromContext(ctx)
+	ctx, logger := inslogger.WithField(ctx, "processorType", state.name)
 
 	ps := q.PendingState()
 	if ps != insolar.NotPending {
-		logger.Debug("wont process ", state.name, " queue, pending state is ", ps)
+		logger.Debug("wont process, pending state is ", ps)
+
+		q.stateLock.Lock()
+		state.dismissWorker()
+		q.stateLock.Unlock()
+
 		return
 	}
 
-	if state.queue.Length() > 0 {
-		logger.Info("started a new ", state.name, " queue processor")
-	}
+	logger.Info("started a new queue processor")
 
-	if state.parallel {
-		for elem := q.getTask(ctx, state.queue); elem != nil; elem = q.getTask(ctx, state.queue) {
-			go q.processTranscript(ctx, elem)
-		}
+	for elem := q.getTask(ctx, state); elem != nil; elem = q.getTask(ctx, state) {
+		q.processTranscript(ctx, elem)
 		q.fetchMoreFromLedgerIfNeeded(ctx)
-	} else {
-		for elem := q.getTask(ctx, state.queue); elem != nil; elem = q.getTask(ctx, state.queue) {
-			q.processTranscript(ctx, elem)
-			q.fetchMoreFromLedgerIfNeeded(ctx)
-		}
 	}
-}
 
-// tryTakeProcessor tries to get right to execute queue processor, returns true if you won.
-func (q *ExecutionBroker) tryTakeProcessor(_ context.Context, state *processorState) bool {
-	return atomic.CompareAndSwapUint32(&state.active, 0, 1)
-}
+	logger.Debug("queue processor has finished")
 
-// releaseProcessor marks processor as inactive
-func (q *ExecutionBroker) releaseProcessor(_ context.Context, state *processorState) {
-	atomic.SwapUint32(&state.active, 0)
+	// we shouldn't release lock here, since we're releasing it in getTask function
+	// buf it's important to finish ASAP (and do nothing with data) after we exit
+	// the for loop.
+	// otherwise we should think that multiple queue processor can exist and 'fight'
+	// for data
 }
 
 func (q *ExecutionBroker) fetchMoreFromLedgerIfNeeded(ctx context.Context) {
@@ -406,8 +454,7 @@ func (q *ExecutionBroker) OnPulse(ctx context.Context) []payload.Payload {
 
 	onPulseStart := time.Now()
 	defer func(ctx context.Context) {
-		stats.Record(ctx,
-			metrics.ExecutionBrokerOnPulseTiming.M(float64(time.Since(onPulseStart).Nanoseconds())/1e6))
+		stats.Record(ctx, metrics.ExecutionBrokerOnPulseTiming.M(float64(time.Since(onPulseStart).Nanoseconds())/1e6))
 	}(ctx)
 
 	defer func() {

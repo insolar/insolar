@@ -107,7 +107,7 @@ func (p *Pulsar) Pulse(ctx context.Context, attempts int) {
 	pp := pulsenetwork.NewPulsePacketWithTrace(ctx, &pu, ph, th, 0)
 
 	bs, _ := packet.SerializePacket(pp)
-	rp, _ := packet.DeserializePacketRaw(bytes.NewReader(bs))
+	rp, _, _ := packet.DeserializePacketRaw(bytes.NewReader(bs))
 
 	go func() {
 		for i := 0; i < attempts; i++ {

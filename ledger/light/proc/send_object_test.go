@@ -76,8 +76,8 @@ func TestSendObject_Proceed(t *testing.T) {
 		}, nil)
 
 		msg := payload.Meta{}
-		p := proc.NewSendObject(msg, objectID)
-		p.Dep(coordinator, jets, fetcher, records, indexes, sender)
+		p := proc.NewSendObject(msg, objectID, nil)
+		p.Dep(coordinator, jets, fetcher, records, indexes, sender, nil)
 
 		err := p.Proceed(ctx)
 		assert.Error(t, err)
@@ -132,8 +132,8 @@ func TestSendObject_Proceed(t *testing.T) {
 			assert.Equal(t, msg, origin)
 		}).Return()
 
-		p := proc.NewSendObject(msg, objectID)
-		p.Dep(coordinator, jets, fetcher, records, indexes, sender)
+		p := proc.NewSendObject(msg, objectID, nil)
+		p.Dep(coordinator, jets, fetcher, records, indexes, sender, nil)
 
 		err = p.Proceed(ctx)
 		assert.NoError(t, err)
@@ -173,14 +173,70 @@ func TestSendObject_Proceed(t *testing.T) {
 			assert.Equal(t, msg, origin)
 		}).Return()
 
-		p := proc.NewSendObject(msg, objectID)
-		p.Dep(coordinator, jets, fetcher, records, indexes, sender)
+		p := proc.NewSendObject(msg, objectID, nil)
+		p.Dep(coordinator, jets, fetcher, records, indexes, sender, nil)
 
 		err = p.Proceed(ctx)
 		assert.Error(t, err)
 		insError, ok := errors.Cause(err).(*payload.CodedError)
 		assert.True(t, ok)
 		assert.Equal(t, uint32(payload.CodeDeactivated), insError.GetCode())
+	})
+
+	t.Run("Send PassState on light", func(t *testing.T) {
+		setup()
+		defer mc.Finish()
+		defer mc.Wait(10 * time.Second)
+
+		objectID := gen.ID()
+		latestState := gen.ID()
+		index := record.Index{
+			ObjID: objectID,
+			Lifeline: record.Lifeline{
+				LatestState: &latestState,
+				StateID:     record.StateActivation,
+			},
+		}
+
+		indexes.ForIDMock.Return(index, nil)
+		buf, err := index.Lifeline.Marshal()
+		expectedIndex, _ := payload.NewMessage(&payload.Index{
+			Index: buf,
+		})
+
+		records.ForIDMock.Return(record.Material{}, object.ErrNotFound)
+
+		msg := payload.Meta{}
+		buf, _ = msg.Marshal()
+		expectedMsg, _ := payload.NewMessage(&payload.PassState{
+			Origin:  buf,
+			StateID: latestState,
+		})
+
+		expectedTarget := insolar.NewReference(gen.ID())
+
+		coordinator.IsBeyondLimitMock.Return(false, nil)
+		expectedJetID := gen.ID()
+		fetcher.FetchMock.Return(&expectedJetID, nil)
+		coordinator.LightExecutorForJetMock.Inspect(func(ctx context.Context, jetID insolar.ID, pulse insolar.PulseNumber) {
+			assert.Equal(t, jetID, expectedJetID)
+		}).Return(expectedTarget, nil)
+
+		sender.ReplyMock.Inspect(func(ctx context.Context, origin payload.Meta, reply *message.Message) {
+			assert.Equal(t, expectedIndex.Payload, reply.Payload)
+			assert.Equal(t, msg, origin)
+		}).Return()
+
+		sender.SendTargetMock.Inspect(func(ctx context.Context, msg *message.Message, target insolar.Reference) {
+			assert.Equal(t, expectedMsg.Payload, msg.Payload)
+			assert.Equal(t, expectedTarget, &target)
+		}).Return(make(chan *message.Message), func() {})
+
+		p := proc.NewSendObject(msg, objectID, nil)
+		p.Dep(coordinator, jets, fetcher, records, indexes, sender, nil)
+
+		err = p.Proceed(ctx)
+		assert.NoError(t, err)
 	})
 
 	t.Run("Send PassState on heavy", func(t *testing.T) {
@@ -227,8 +283,8 @@ func TestSendObject_Proceed(t *testing.T) {
 			assert.Equal(t, expectedTarget, &target)
 		}).Return(make(chan *message.Message), func() {})
 
-		p := proc.NewSendObject(msg, objectID)
-		p.Dep(coordinator, jets, fetcher, records, indexes, sender)
+		p := proc.NewSendObject(msg, objectID, nil)
+		p.Dep(coordinator, jets, fetcher, records, indexes, sender, nil)
 
 		err = p.Proceed(ctx)
 		assert.NoError(t, err)

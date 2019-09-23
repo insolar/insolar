@@ -37,7 +37,7 @@ var NetworkPacketReceivedTotal = prometheus.NewCounterVec(prometheus.CounterOpts
 }, []string{"packetType"})
 
 // NetworkSentSize is total sent bytes
-var NetworkSentSize = prometheus.NewCounter(prometheus.CounterOpts{
+var NetworkSentSize = prometheus.NewSummary(prometheus.SummaryOpts{
 	Name:      "sent_bytes",
 	Help:      "Sent by transport",
 	Namespace: insolarNamespace,
@@ -45,9 +45,9 @@ var NetworkSentSize = prometheus.NewCounter(prometheus.CounterOpts{
 })
 
 // NetworkRecvSize is total received bytes
-var NetworkRecvSize = prometheus.NewCounter(prometheus.CounterOpts{
+var NetworkRecvSize = prometheus.NewSummary(prometheus.SummaryOpts{
 	Name:      "recv_bytes",
-	Help:      "Recieved by transport",
+	Help:      "Received by transport",
 	Namespace: insolarNamespace,
 	Subsystem: "network",
 })
@@ -61,7 +61,7 @@ var NetworkPacketTimeoutTotal = prometheus.NewCounterVec(prometheus.CounterOpts{
 }, []string{"packetType"})
 
 // NetworkFutures is current network transport futures count metric
-var NetworkFutures = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+var NetworkFutures = prometheus.NewCounterVec(prometheus.CounterOpts{
 	Name:      "futures",
 	Help:      "Current network transport futures count",
 	Namespace: insolarNamespace,

@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package instracer;
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+option (gogoproto.goproto_getters_all) = false;
+option (gogoproto.populate_all) = false;
+
+message TraceSpan {
+    bytes TraceID = 20;
+    bytes SpanID = 21;
+}
+

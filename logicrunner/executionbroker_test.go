@@ -89,7 +89,7 @@ func TestExecutionBroker_AddFreshRequest(t *testing.T) {
 	objectRef := gen.Reference()
 
 	ctx := inslogger.TestContext(t)
-	reqRef := gen.Reference()
+	reqRef := gen.RecordReference()
 	transcript := common.NewTranscript(ctx, reqRef, record.IncomingRequest{})
 
 	pa := insolarPulse.NewAccessorMock(t).LatestMock.Return(
@@ -139,7 +139,7 @@ func TestExecutionBroker_AddFreshRequest(t *testing.T) {
 
 func TestExecutionBroker_Deduplication(t *testing.T) {
 	objectRef := gen.Reference()
-	reqRef := gen.Reference()
+	reqRef := gen.RecordReference()
 
 	pa := insolarPulse.NewAccessorMock(t).LatestMock.Return(
 		insolar.Pulse{PulseNumber: pulse.MinTimePulse},
@@ -336,7 +336,7 @@ func TestExecutionBroker_ExecuteImmutable(t *testing.T) {
 	broker := NewExecutionBroker(objectRef, nil, re, nil, nil, er, nil, pa)
 	broker.pending = insolar.NotPending
 
-	immutableRequestRef1 := gen.Reference()
+	immutableRequestRef1 := gen.RecordReference()
 	immutableRequest1 := record.IncomingRequest{
 		ReturnMode:   record.ReturnResult,
 		Object:       &objectRef,
@@ -355,7 +355,7 @@ func TestExecutionBroker_ExecuteImmutable(t *testing.T) {
 
 func TestExecutionBroker_OnPulse(t *testing.T) {
 	randTranscript := func(ctx context.Context) *common.Transcript {
-		reqRef := gen.Reference()
+		reqRef := gen.RecordReference()
 		return common.NewTranscript(ctx, reqRef, record.IncomingRequest{})
 	}
 
@@ -478,7 +478,7 @@ func TestExecutionBroker_AddFreshRequestWithOnPulse(t *testing.T) {
 	objectRef := gen.Reference()
 
 	ctx := inslogger.TestContext(t)
-	reqRef := gen.Reference()
+	reqRef := gen.RecordReference()
 	transcript := common.NewTranscript(ctx, reqRef, record.IncomingRequest{})
 
 	pa := insolarPulse.NewAccessorMock(t).LatestMock.Return(
@@ -694,7 +694,7 @@ func TestExecutionBroker_AbandonedRequestsOnLedger_Integration(t *testing.T) {
 		{
 			name: "request on ledger, abort during fetch",
 			mocks: func(t minimock.Tester) *ExecutionBroker {
-				reqRef := gen.Reference()
+				reqRef := gen.RecordReference()
 				am := artifacts.NewClientMock(mc).
 					GetPendingsMock.
 					Return([]insolar.Reference{reqRef}, nil)
@@ -840,7 +840,7 @@ func TestExecutionBroker_getTask(t *testing.T) {
 					objectRef, nil, nil, nil, nil, er, nil, pa,
 				)
 
-				reqRef := gen.Reference()
+				reqRef := gen.RecordReference()
 				tr := common.NewTranscript(ctx, reqRef, record.IncomingRequest{})
 				b.add(ctx, requestsqueue.FromLedger, tr)
 
@@ -871,7 +871,7 @@ func TestExecutionBroker_getTask(t *testing.T) {
 					objectRef, nil, nil, nil, nil, er, nil, pa,
 				)
 
-				reqRef := gen.Reference()
+				reqRef := gen.RecordReference()
 				tr := common.NewTranscript(ctx, reqRef, record.IncomingRequest{})
 				b.add(ctx, requestsqueue.FromLedger, tr)
 
@@ -886,7 +886,8 @@ func TestExecutionBroker_getTask(t *testing.T) {
 			mc := minimock.NewController(t)
 
 			broker := test.mocks(ctx, mc)
-			task := broker.getTask(ctx, broker.mutable.queue)
+			broker.mutable.engageWorker()
+			task := broker.getTask(ctx, &broker.mutable)
 
 			mc.Wait(1 * time.Minute)
 			mc.Finish()

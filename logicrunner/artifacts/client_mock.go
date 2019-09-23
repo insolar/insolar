@@ -42,8 +42,8 @@ type ClientMock struct {
 	beforeGetCodeCounter uint64
 	GetCodeMock          mClientMockGetCode
 
-	funcGetObject          func(ctx context.Context, head insolar.Reference) (o1 ObjectDescriptor, err error)
-	inspectFuncGetObject   func(ctx context.Context, head insolar.Reference)
+	funcGetObject          func(ctx context.Context, head insolar.Reference, request *insolar.Reference) (o1 ObjectDescriptor, err error)
+	inspectFuncGetObject   func(ctx context.Context, head insolar.Reference, request *insolar.Reference)
 	afterGetObjectCounter  uint64
 	beforeGetObjectCounter uint64
 	GetObjectMock          mClientMockGetObject
@@ -1036,8 +1036,9 @@ type ClientMockGetObjectExpectation struct {
 
 // ClientMockGetObjectParams contains parameters of the Client.GetObject
 type ClientMockGetObjectParams struct {
-	ctx  context.Context
-	head insolar.Reference
+	ctx     context.Context
+	head    insolar.Reference
+	request *insolar.Reference
 }
 
 // ClientMockGetObjectResults contains results of the Client.GetObject
@@ -1047,7 +1048,7 @@ type ClientMockGetObjectResults struct {
 }
 
 // Expect sets up expected params for Client.GetObject
-func (mmGetObject *mClientMockGetObject) Expect(ctx context.Context, head insolar.Reference) *mClientMockGetObject {
+func (mmGetObject *mClientMockGetObject) Expect(ctx context.Context, head insolar.Reference, request *insolar.Reference) *mClientMockGetObject {
 	if mmGetObject.mock.funcGetObject != nil {
 		mmGetObject.mock.t.Fatalf("ClientMock.GetObject mock is already set by Set")
 	}
@@ -1056,7 +1057,7 @@ func (mmGetObject *mClientMockGetObject) Expect(ctx context.Context, head insola
 		mmGetObject.defaultExpectation = &ClientMockGetObjectExpectation{}
 	}
 
-	mmGetObject.defaultExpectation.params = &ClientMockGetObjectParams{ctx, head}
+	mmGetObject.defaultExpectation.params = &ClientMockGetObjectParams{ctx, head, request}
 	for _, e := range mmGetObject.expectations {
 		if minimock.Equal(e.params, mmGetObject.defaultExpectation.params) {
 			mmGetObject.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmGetObject.defaultExpectation.params)
@@ -1067,7 +1068,7 @@ func (mmGetObject *mClientMockGetObject) Expect(ctx context.Context, head insola
 }
 
 // Inspect accepts an inspector function that has same arguments as the Client.GetObject
-func (mmGetObject *mClientMockGetObject) Inspect(f func(ctx context.Context, head insolar.Reference)) *mClientMockGetObject {
+func (mmGetObject *mClientMockGetObject) Inspect(f func(ctx context.Context, head insolar.Reference, request *insolar.Reference)) *mClientMockGetObject {
 	if mmGetObject.mock.inspectFuncGetObject != nil {
 		mmGetObject.mock.t.Fatalf("Inspect function is already set for ClientMock.GetObject")
 	}
@@ -1091,7 +1092,7 @@ func (mmGetObject *mClientMockGetObject) Return(o1 ObjectDescriptor, err error) 
 }
 
 //Set uses given function f to mock the Client.GetObject method
-func (mmGetObject *mClientMockGetObject) Set(f func(ctx context.Context, head insolar.Reference) (o1 ObjectDescriptor, err error)) *ClientMock {
+func (mmGetObject *mClientMockGetObject) Set(f func(ctx context.Context, head insolar.Reference, request *insolar.Reference) (o1 ObjectDescriptor, err error)) *ClientMock {
 	if mmGetObject.defaultExpectation != nil {
 		mmGetObject.mock.t.Fatalf("Default expectation is already set for the Client.GetObject method")
 	}
@@ -1106,14 +1107,14 @@ func (mmGetObject *mClientMockGetObject) Set(f func(ctx context.Context, head in
 
 // When sets expectation for the Client.GetObject which will trigger the result defined by the following
 // Then helper
-func (mmGetObject *mClientMockGetObject) When(ctx context.Context, head insolar.Reference) *ClientMockGetObjectExpectation {
+func (mmGetObject *mClientMockGetObject) When(ctx context.Context, head insolar.Reference, request *insolar.Reference) *ClientMockGetObjectExpectation {
 	if mmGetObject.mock.funcGetObject != nil {
 		mmGetObject.mock.t.Fatalf("ClientMock.GetObject mock is already set by Set")
 	}
 
 	expectation := &ClientMockGetObjectExpectation{
 		mock:   mmGetObject.mock,
-		params: &ClientMockGetObjectParams{ctx, head},
+		params: &ClientMockGetObjectParams{ctx, head, request},
 	}
 	mmGetObject.expectations = append(mmGetObject.expectations, expectation)
 	return expectation
@@ -1126,15 +1127,15 @@ func (e *ClientMockGetObjectExpectation) Then(o1 ObjectDescriptor, err error) *C
 }
 
 // GetObject implements Client
-func (mmGetObject *ClientMock) GetObject(ctx context.Context, head insolar.Reference) (o1 ObjectDescriptor, err error) {
+func (mmGetObject *ClientMock) GetObject(ctx context.Context, head insolar.Reference, request *insolar.Reference) (o1 ObjectDescriptor, err error) {
 	mm_atomic.AddUint64(&mmGetObject.beforeGetObjectCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetObject.afterGetObjectCounter, 1)
 
 	if mmGetObject.inspectFuncGetObject != nil {
-		mmGetObject.inspectFuncGetObject(ctx, head)
+		mmGetObject.inspectFuncGetObject(ctx, head, request)
 	}
 
-	params := &ClientMockGetObjectParams{ctx, head}
+	params := &ClientMockGetObjectParams{ctx, head, request}
 
 	// Record call args
 	mmGetObject.GetObjectMock.mutex.Lock()
@@ -1151,7 +1152,7 @@ func (mmGetObject *ClientMock) GetObject(ctx context.Context, head insolar.Refer
 	if mmGetObject.GetObjectMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetObject.GetObjectMock.defaultExpectation.Counter, 1)
 		want := mmGetObject.GetObjectMock.defaultExpectation.params
-		got := ClientMockGetObjectParams{ctx, head}
+		got := ClientMockGetObjectParams{ctx, head, request}
 		if want != nil && !minimock.Equal(*want, got) {
 			mmGetObject.t.Errorf("ClientMock.GetObject got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
 		}
@@ -1163,9 +1164,9 @@ func (mmGetObject *ClientMock) GetObject(ctx context.Context, head insolar.Refer
 		return (*results).o1, (*results).err
 	}
 	if mmGetObject.funcGetObject != nil {
-		return mmGetObject.funcGetObject(ctx, head)
+		return mmGetObject.funcGetObject(ctx, head, request)
 	}
-	mmGetObject.t.Fatalf("Unexpected call to ClientMock.GetObject. %v %v", ctx, head)
+	mmGetObject.t.Fatalf("Unexpected call to ClientMock.GetObject. %v %v %v", ctx, head, request)
 	return
 }
 

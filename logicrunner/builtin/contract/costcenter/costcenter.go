@@ -18,7 +18,6 @@ package costcenter
 
 import (
 	"github.com/insolar/insolar/insolar"
-
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 )
 

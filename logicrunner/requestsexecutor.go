@@ -88,7 +88,7 @@ func (e *requestsExecutor) Execute(
 	inslogger.FromContext(ctx).Debug("Executing request")
 
 	if transcript.Request.CallType == record.CTMethod {
-		objDesc, err := e.ArtifactManager.GetObject(ctx, *transcript.Request.Object)
+		objDesc, err := e.ArtifactManager.GetObject(ctx, *transcript.Request.Object, &transcript.RequestRef)
 		if err != nil {
 			return nil, errors.Wrap(err, "couldn't get object")
 		}

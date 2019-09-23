@@ -144,7 +144,7 @@ func getAmountFromParam(params map[string]interface{}) (*big.Int, error) {
 	if !ok {
 		return nil, fmt.Errorf("failed to parse amount")
 	}
-	if amount.Cmp(big.NewInt(0)) != 1 {
+	if amount.Sign() <= 0 {
 		return nil, fmt.Errorf("amount must be greater than zero")
 	}
 	return amount, nil
@@ -154,7 +154,7 @@ func addConfirmToDeposit(tokenHolderRef string, txDepositRef insolar.Reference, 
 	txDeposit := deposit.GetObject(txDepositRef)
 	unHoldPulse, err := txDeposit.GetPulseUnHold()
 	if unHoldPulse != 0 {
-		return nil, fmt.Errorf(" Migration is done for this deposit: %s", txHash)
+		return nil, fmt.Errorf("migration is done for this deposit %s", txHash)
 	}
 	err = txDeposit.Confirm(caller, txHash, amount)
 	if err != nil {

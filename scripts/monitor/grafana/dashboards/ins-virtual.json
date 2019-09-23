@@ -14,8 +14,8 @@
   },
   "editable": true,
   "gnetId": null,
-  "graphTooltip": 0,
-  "id": 11,
+  "graphTooltip": 1,
+  "iteration": 1568717290622,
   "links": [],
   "panels": [
     {
@@ -26,7 +26,7 @@
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 8,
+        "h": 6,
         "w": 12,
         "x": 0,
         "y": 0
@@ -57,8 +57,8 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(irate(insolar_vm_handle_future[1m])) by (vm_handle_payload_type)",
-          "legendFormat": "{{vm_handle_payload_type}}",
+          "expr": "sum(increase(insolar_vm_handle_future{installation=\"$installation\", instance=~\"$instance\"}[1m])) by (vm_handle_payload_type, instance)",
+          "legendFormat": "{{vm_handle_payload_type}}: {{instance}}",
           "refId": "A"
         }
       ],
@@ -111,7 +111,7 @@
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 8,
+        "h": 6,
         "w": 12,
         "x": 12,
         "y": 0
@@ -142,8 +142,8 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(irate(insolar_vm_handle_past[1m])) by (vm_handle_payload_type)",
-          "legendFormat": "{{vm_handle_payload_type}}",
+          "expr": "sum(increase(insolar_vm_handle_past{installation=\"$installation\", instance=~\"$instance\"}[1m])) by (vm_handle_payload_type, instance)",
+          "legendFormat": "{{vm_handle_payload_type}}: {{instance}}",
           "refId": "A"
         }
       ],
@@ -196,13 +196,14 @@
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 8,
-        "w": 12,
+        "h": 5,
+        "w": 24,
         "x": 0,
-        "y": 8
+        "y": 6
       },
       "id": 18,
       "legend": {
+        "alignAsTable": false,
         "avg": false,
         "current": false,
         "max": false,
@@ -227,18 +228,18 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(irate(insolar_vm_pulse_manager_onpulse_timing_sum[1m])) / sum(irate(insolar_vm_pulse_manager_onpulse_timing_count[1m]))",
-          "legendFormat": "pulsemanager",
+          "expr": "sum(irate(insolar_vm_pulse_manager_onpulse_timing_sum{installation=\"$installation\", instance=~\"$instance\"}[1m])) by (instance) / sum(irate(insolar_vm_pulse_manager_onpulse_timing_count{installation=\"$installation\", instance=~\"$instance\"}[1m])) by (instance)",
+          "legendFormat": "pulsemanager: {{ instance }}",
           "refId": "A"
         },
         {
-          "expr": "sum(irate(insolar_vm_logicrunner_onpulse_timing_sum[1m])) / sum(irate(insolar_vm_logicrunner_onpulse_timing_count[1m]))",
-          "legendFormat": "logicrunner",
+          "expr": "sum(irate(insolar_vm_logicrunner_onpulse_timing_sum{installation=\"$installation\", instance=~\"$instance\"}[1m])) by (instance) / sum(irate(insolar_vm_logicrunner_onpulse_timing_count{installation=\"$installation\", instance=~\"$instance\"}[1m])) by (instance) ",
+          "legendFormat": "logicrunner: {{ instance }}",
           "refId": "B"
         },
         {
-          "expr": "sum(irate(insolar_vm_execution_broker_onpulse_timing_sum[1m])) / sum(irate(insolar_vm_execution_broker_onpulse_timing_count[1m]))",
-          "legendFormat": "executionbrokers",
+          "expr": "sum(irate(insolar_vm_execution_broker_onpulse_timing_sum{installation=\"$installation\", instance=~\"$instance\"}[1m])) by (instance) / sum(irate(insolar_vm_execution_broker_onpulse_timing_count{installation=\"$installation\", instance=~\"$instance\"}[1m])) by (instance)",
+          "legendFormat": "executionbrokers: {{ instance }}",
           "refId": "C"
         }
       ],
@@ -246,7 +247,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "VM Onpulse timing",
+      "title": "VM OnPulse avg timing",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -284,6 +285,201 @@
       }
     },
     {
+      "cards": {
+        "cardPadding": null,
+        "cardRound": null
+      },
+      "color": {
+        "cardColor": "#b4ff00",
+        "colorScale": "sqrt",
+        "colorScheme": "interpolateGreens",
+        "exponent": 0.5,
+        "max": null,
+        "min": null,
+        "mode": "spectrum"
+      },
+      "dataFormat": "tsbuckets",
+      "gridPos": {
+        "h": 5,
+        "w": 8,
+        "x": 0,
+        "y": 11
+      },
+      "heatmap": {},
+      "hideZeroBuckets": true,
+      "highlightCards": true,
+      "id": 33,
+      "legend": {
+        "show": false
+      },
+      "options": {},
+      "reverseYBuckets": false,
+      "targets": [
+        {
+          "expr": "sum(increase(insolar_vm_pulse_manager_onpulse_timing_bucket{installation=\"$installation\", instance=~\"$instance\"}[1m])) by (le)",
+          "format": "heatmap",
+          "instant": false,
+          "legendFormat": "{{le}}",
+          "refId": "A"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "PulseManager OnPulse timing",
+      "tooltip": {
+        "show": true,
+        "showHistogram": false
+      },
+      "type": "heatmap",
+      "xAxis": {
+        "show": true
+      },
+      "xBucketNumber": null,
+      "xBucketSize": null,
+      "yAxis": {
+        "decimals": null,
+        "format": "ms",
+        "logBase": 1,
+        "max": null,
+        "min": null,
+        "show": true,
+        "splitFactor": null
+      },
+      "yBucketBound": "auto",
+      "yBucketNumber": null,
+      "yBucketSize": null
+    },
+    {
+      "cards": {
+        "cardPadding": null,
+        "cardRound": null
+      },
+      "color": {
+        "cardColor": "#b4ff00",
+        "colorScale": "sqrt",
+        "colorScheme": "interpolateGreens",
+        "exponent": 0.5,
+        "max": null,
+        "min": null,
+        "mode": "spectrum"
+      },
+      "dataFormat": "tsbuckets",
+      "gridPos": {
+        "h": 5,
+        "w": 8,
+        "x": 8,
+        "y": 11
+      },
+      "heatmap": {},
+      "hideZeroBuckets": true,
+      "highlightCards": true,
+      "id": 34,
+      "legend": {
+        "show": false
+      },
+      "options": {},
+      "reverseYBuckets": false,
+      "targets": [
+        {
+          "expr": "sum(increase(insolar_vm_logicrunner_onpulse_timing_bucket{installation=\"$installation\", instance=~\"$instance\"}[1m])) by (le)",
+          "format": "heatmap",
+          "instant": false,
+          "legendFormat": "{{le}}",
+          "refId": "A"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "LogicRunner OnPulse timing",
+      "tooltip": {
+        "show": true,
+        "showHistogram": false
+      },
+      "type": "heatmap",
+      "xAxis": {
+        "show": true
+      },
+      "xBucketNumber": null,
+      "xBucketSize": null,
+      "yAxis": {
+        "decimals": null,
+        "format": "ms",
+        "logBase": 1,
+        "max": null,
+        "min": null,
+        "show": true,
+        "splitFactor": null
+      },
+      "yBucketBound": "auto",
+      "yBucketNumber": null,
+      "yBucketSize": null
+    },
+    {
+      "cards": {
+        "cardPadding": null,
+        "cardRound": null
+      },
+      "color": {
+        "cardColor": "#b4ff00",
+        "colorScale": "sqrt",
+        "colorScheme": "interpolateGreens",
+        "exponent": 0.5,
+        "max": null,
+        "min": null,
+        "mode": "spectrum"
+      },
+      "dataFormat": "tsbuckets",
+      "gridPos": {
+        "h": 5,
+        "w": 8,
+        "x": 16,
+        "y": 11
+      },
+      "heatmap": {},
+      "hideZeroBuckets": true,
+      "highlightCards": true,
+      "id": 32,
+      "legend": {
+        "show": false
+      },
+      "options": {},
+      "reverseYBuckets": false,
+      "targets": [
+        {
+          "expr": "sum(increase(insolar_vm_execution_broker_onpulse_timing_bucket{installation=\"$installation\", instance=~\"$instance\"}[1m])) by (le)",
+          "format": "heatmap",
+          "instant": false,
+          "legendFormat": "{{le}}",
+          "refId": "A"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "ExecutionBroker OnPulse timing",
+      "tooltip": {
+        "show": true,
+        "showHistogram": false
+      },
+      "type": "heatmap",
+      "xAxis": {
+        "show": true
+      },
+      "xBucketNumber": null,
+      "xBucketSize": null,
+      "yAxis": {
+        "decimals": null,
+        "format": "ms",
+        "logBase": 1,
+        "max": null,
+        "min": null,
+        "show": true,
+        "splitFactor": null
+      },
+      "yBucketBound": "auto",
+      "yBucketNumber": null,
+      "yBucketSize": null
+    },
+    {
       "aliasColors": {},
       "bars": false,
       "dashLength": 10,
@@ -291,10 +487,95 @@
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 8
+        "h": 7,
+        "w": 8,
+        "x": 0,
+        "y": 16
+      },
+      "id": 4,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum(irate(insolar_vm_handle_started{installation=\"$installation\", instance=~\"$instance\"}[5m])) by (vm_handle_payload_type, instance)",
+          "legendFormat": "{{vm_handle_payload_type}}: {{instance}}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "VM handles started",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 8,
+        "y": 16
       },
       "id": 8,
       "legend": {
@@ -322,8 +603,8 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(irate(insolar_vm_handle_started[1m])) by (vm_handle_payload_type) - sum(irate(insolar_vm_handle_finished[1m])) by (vm_handle_payload_type)",
-          "legendFormat": "{{vm_handle_payload_type}}",
+          "expr": "sum(increase(insolar_vm_handle_started{installation=\"$installation\", instance=~\"$instance\"}[1m])) by (vm_handle_payload_type, instance) - sum(increase(insolar_vm_handle_finished{installation=\"$installation\", instance=~\"$instance\"}[1m])) by (vm_handle_payload_type, instance)",
+          "legendFormat": "{{vm_handle_payload_type}}: {{ instance }}",
           "refId": "A"
         }
       ],
@@ -376,94 +657,9 @@
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 16
-      },
-      "id": 4,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "nullPointMode": "null",
-      "options": {
-        "dataLinks": []
-      },
-      "percentage": false,
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "expr": "sum(irate(insolar_vm_handle_started[5m])) by (vm_handle_payload_type)",
-          "legendFormat": "{{vm_handle_payload_type}}",
-          "refId": "A"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "Virtual handles started",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        },
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "fill": 1,
-      "fillGradient": 0,
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
+        "h": 7,
+        "w": 8,
+        "x": 16,
         "y": 16
       },
       "id": 10,
@@ -492,8 +688,8 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(irate(insolar_vm_handle_finished{vm_handle_finished_with_error!=\"\"}[5m])) by (vm_handle_payload_type,vm_handle_finished_with_error)",
-          "legendFormat": "{{vm_handle_payload_type}} , {{vm_handle_finished_with_error}}",
+          "expr": "sum(increase(insolar_vm_handle_finished{vm_handle_finished_with_error!=\"\", installation=\"$installation\", instance=~\"$instance\"}[5m])) by (vm_handle_payload_type, vm_handle_finished_with_error, instance)",
+          "legendFormat": "{{vm_handle_payload_type}}: {{instance}} \"{{vm_handle_finished_with_error}}\"",
           "refId": "A"
         }
       ],
@@ -546,10 +742,10 @@
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 7,
-        "w": 24,
+        "h": 6,
+        "w": 12,
         "x": 0,
-        "y": 24
+        "y": 23
       },
       "id": 6,
       "legend": {
@@ -577,9 +773,9 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(irate(insolar_vm_handle_latency_sum[1m])) by (vm_handle_payload_type)/sum(irate(insolar_vm_handle_latency_count[1m])) by (vm_handle_payload_type)",
+          "expr": "sum(irate(insolar_vm_handle_latency_sum{installation=\"$installation\", instance=~\"$instance\"}[1m])) by (vm_handle_payload_type,instance)/sum(irate(insolar_vm_handle_latency_count{installation=\"$installation\", instance=~\"$instance\"}[1m])) by (vm_handle_payload_type,instance)",
           "instant": false,
-          "legendFormat": "{{vm_handle_payload_type}}",
+          "legendFormat": "{{vm_handle_payload_type}}: {{instance}}",
           "refId": "A"
         }
       ],
@@ -587,7 +783,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "VM handling avg timing",
+      "title": "VM handlers avg timing",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -625,6 +821,71 @@
       }
     },
     {
+      "cards": {
+        "cardPadding": null,
+        "cardRound": null
+      },
+      "color": {
+        "cardColor": "#b4ff00",
+        "colorScale": "sqrt",
+        "colorScheme": "interpolateGreens",
+        "exponent": 0.5,
+        "max": null,
+        "min": null,
+        "mode": "spectrum"
+      },
+      "dataFormat": "tsbuckets",
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 12,
+        "y": 23
+      },
+      "heatmap": {},
+      "hideZeroBuckets": true,
+      "highlightCards": true,
+      "id": 35,
+      "legend": {
+        "show": false
+      },
+      "options": {},
+      "reverseYBuckets": false,
+      "targets": [
+        {
+          "expr": "sum(increase(insolar_vm_handle_latency_bucket{installation=\"$installation\", instance=~\"$instance\"}[1m])) by (le)",
+          "format": "heatmap",
+          "instant": false,
+          "legendFormat": "{{le}}",
+          "refId": "A"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "VM handlers timings",
+      "tooltip": {
+        "show": true,
+        "showHistogram": false
+      },
+      "type": "heatmap",
+      "xAxis": {
+        "show": true
+      },
+      "xBucketNumber": null,
+      "xBucketSize": null,
+      "yAxis": {
+        "decimals": null,
+        "format": "ms",
+        "logBase": 1,
+        "max": null,
+        "min": null,
+        "show": true,
+        "splitFactor": null
+      },
+      "yBucketBound": "auto",
+      "yBucketNumber": null,
+      "yBucketSize": null
+    },
+    {
       "aliasColors": {},
       "bars": false,
       "dashLength": 10,
@@ -633,10 +894,10 @@
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 9,
+        "h": 7,
         "w": 12,
         "x": 0,
-        "y": 31
+        "y": 29
       },
       "id": 2,
       "legend": {
@@ -664,8 +925,8 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(insolar_contract_requester_handle_started[5m])",
-          "legendFormat": "{{role}}",
+          "expr": "irate(insolar_contract_requester_handle_started{installation=\"$installation\", instance=~\"$instance\"}[5m])",
+          "legendFormat": "{{instance}} ({{role}})",
           "refId": "A"
         }
       ],
@@ -718,10 +979,10 @@
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 9,
+        "h": 7,
         "w": 12,
         "x": 12,
-        "y": 31
+        "y": 29
       },
       "id": 20,
       "legend": {
@@ -749,7 +1010,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(increase(insolar_vm_contracts_timing_sum[1m])) by (vm_execution_contract_method_name) / sum(increase(insolar_vm_contracts_timing_count[1m])) by (vm_execution_contract_method_name)",
+          "expr": "sum(increase(insolar_vm_contracts_timing_sum{installation=\"$installation\", instance=~\"$instance\"}[1m])) by (vm_execution_contract_method_name) / sum(increase(insolar_vm_contracts_timing_count{installation=\"$installation\", instance=~\"$instance\"}[1m])) by (vm_execution_contract_method_name)",
           "legendFormat": "{{vm_execution_contract_method_name}}",
           "refId": "A"
         }
@@ -803,10 +1064,10 @@
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 8,
+        "h": 6,
         "w": 12,
         "x": 0,
-        "y": 40
+        "y": 36
       },
       "id": 29,
       "legend": {
@@ -834,18 +1095,18 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(irate(insolar_vm_outgoing_request_new[1m]))",
-          "legendFormat": "new",
+          "expr": "sum(irate(insolar_vm_outgoing_request_new{installation=\"$installation\", instance=~\"$instance\"}[1m])) by (instance)",
+          "legendFormat": "new: {{instance}}",
           "refId": "A"
         },
         {
-          "expr": "sum(irate(vm_outgoing_request_duplicate[1m]))",
-          "legendFormat": "duplicates",
+          "expr": "sum(irate(vm_outgoing_request_duplicate{installation=\"$installation\", instance=~\"$instance\"}[1m])) by (instance)",
+          "legendFormat": "duplicates: {{instance}}",
           "refId": "B"
         },
         {
-          "expr": "sum(irate(vm_outgoing_request_closed[1m]))",
-          "legendFormat": "with results",
+          "expr": "sum(irate(vm_outgoing_request_closed{installation=\"$installation\", instance=~\"$instance\"}[1m])) by (instance)",
+          "legendFormat": "with results: {{instance}}",
           "refId": "C"
         }
       ],
@@ -899,10 +1160,10 @@
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 9,
+        "h": 6,
         "w": 12,
         "x": 12,
-        "y": 40
+        "y": 36
       },
       "id": 21,
       "legend": {
@@ -930,8 +1191,8 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(irate(insolar_contract_requester_handle_finished{role=\"virtual\",vm_handle_finished_with_error!=\"\"}[1m])) by (vm_handle_finished_with_error)",
-          "legendFormat": "{{vm_handle_finished_with_error}}",
+          "expr": "sum(irate(insolar_contract_requester_handle_finished{role=\"virtual\",vm_handle_finished_with_error!=\"\", installation=\"$installation\", instance=~\"$instance\"}[1m])) by (vm_handle_finished_with_error, instance)",
+          "legendFormat": "{{vm_handle_finished_with_error}}: {{instance}}",
           "refId": "A"
         }
       ],
@@ -984,10 +1245,10 @@
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 8,
+        "h": 6,
         "w": 12,
         "x": 0,
-        "y": 48
+        "y": 42
       },
       "id": 30,
       "legend": {
@@ -1015,18 +1276,18 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(irate(insolar_vm_incoming_request_new[1m]))",
-          "legendFormat": "new",
+          "expr": "sum(irate(insolar_vm_incoming_request_new{installation=\"$installation\", instance=~\"$instance\"}[1m])) by (instance)",
+          "legendFormat": "new: {{instance}}",
           "refId": "A"
         },
         {
-          "expr": "sum(irate(insolar_vm_outgoing_request_duplicate[1m]))",
-          "legendFormat": "duplicates",
+          "expr": "sum(irate(insolar_vm_outgoing_request_duplicate{installation=\"$installation\", instance=~\"$instance\"}[1m])) by (instance)",
+          "legendFormat": "duplicates: {{instance}}",
           "refId": "B"
         },
         {
-          "expr": "sum(irate(insolar_vm_outgoing_request_closed[1m]))",
-          "legendFormat": "with results",
+          "expr": "sum(irate(insolar_vm_outgoing_request_closed{installation=\"$installation\", instance=~\"$instance\"}[1m])) by (instance)",
+          "legendFormat": "with results: {{instance}}",
           "refId": "C"
         }
       ],
@@ -1079,10 +1340,10 @@
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 8,
+        "h": 6,
         "w": 12,
         "x": 12,
-        "y": 49
+        "y": 42
       },
       "id": 25,
       "legend": {
@@ -1110,7 +1371,8 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(irate(insolar_vm_execution_broker_execution_started[1m])) - sum(irate(insolar_vm_execution_broker_execution_finished[1m]))",
+          "expr": "sum(irate(insolar_vm_execution_broker_execution_started{installation=\"$installation\", instance=~\"$instance\"}[1m])) by (instance) - sum(irate(insolar_vm_execution_broker_execution_finished{installation=\"$installation\", instance=~\"$instance\"}[1m])) by (instance)",
+          "legendFormat": "Executions in progress: {{instance}}",
           "refId": "A"
         }
       ],
@@ -1163,10 +1425,10 @@
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 8,
+        "h": 6,
         "w": 12,
         "x": 0,
-        "y": 56
+        "y": 48
       },
       "id": 23,
       "legend": {
@@ -1194,23 +1456,23 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(irate(insolar_vm_execution_broker_transcript_new[1m])) by (vm_execution_broker_queue_name)",
-          "legendFormat": "new {{vm_execution_broker_queue_name}}",
+          "expr": "sum(irate(insolar_vm_execution_broker_transcript_new{installation=\"$installation\", instance=~\"$instance\"}[1m])) by (vm_execution_broker_queue_name,instance)",
+          "legendFormat": "new {{vm_execution_broker_queue_name}}: {{instance}}",
           "refId": "A"
         },
         {
-          "expr": "sum(irate(vm_execution_broker_transcript_duplicate[1m])) by (vm_execution_broker_queue_name)",
-          "legendFormat": "duplicates {{vm_execution_broker_queue_name}}",
+          "expr": "sum(irate(vm_execution_broker_transcript_duplicate{installation=\"$installation\", instance=~\"$instance\"}[1m])) by (vm_execution_broker_queue_name,instance)",
+          "legendFormat": "duplicates {{vm_execution_broker_queue_name}}: {{instance}}",
           "refId": "B"
         },
         {
-          "expr": "sum(irate(vm_execution_broker_transcript_executing[1m])) by (vm_execution_broker_queue_name)",
-          "legendFormat": "executing right now {{vm_execution_broker_queue_name}}",
+          "expr": "sum(irate(vm_execution_broker_transcript_executing{installation=\"$installation\", instance=~\"$instance\"}[1m])) by (vm_execution_broker_queue_name,instance)",
+          "legendFormat": "executing right now {{vm_execution_broker_queue_name}}: {{instance}}",
           "refId": "C"
         },
         {
-          "expr": "sum(irate(vm_execution_broker_transcript_already_registered[1m])) by (vm_execution_broker_queue_name)",
-          "legendFormat": "already registered {{vm_execution_broker_queue_name}}",
+          "expr": "sum(irate(vm_execution_broker_transcript_already_registered{installation=\"$installation\", instance=~\"$instance\"}[1m])) by (vm_execution_broker_queue_name,instance)",
+          "legendFormat": "already registered {{vm_execution_broker_queue_name}}: {{instance}}",
           "refId": "D"
         }
       ],
@@ -1263,10 +1525,10 @@
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 8,
+        "h": 6,
         "w": 12,
         "x": 12,
-        "y": 57
+        "y": 48
       },
       "id": 27,
       "legend": {
@@ -1294,8 +1556,8 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(irate(insolar_vm_outgoing_sender_goroutines[1m]))",
-          "legendFormat": "goroutines",
+          "expr": "sum(irate(insolar_vm_outgoing_sender_goroutines{installation=\"$installation\", instance=~\"$instance\"}[1m])) by (instance)",
+          "legendFormat": "goroutines: {{instance}}",
           "refId": "A"
         }
       ],
@@ -1341,16 +1603,71 @@
       }
     }
   ],
-  "refresh": false,
+  "refresh": "10s",
   "schemaVersion": 19,
   "style": "dark",
-  "tags": [],
+  "tags": [
+    "INS"
+  ],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "allValue": null,
+        "current": {
+          "text": "local",
+          "value": "local"
+        },
+        "datasource": "prometheus",
+        "definition": "label_values(insolar_light_last_sent_pulse, installation)",
+        "hide": 0,
+        "includeAll": false,
+        "label": null,
+        "multi": false,
+        "name": "installation",
+        "options": [],
+        "query": "label_values(insolar_light_last_sent_pulse, installation)",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "allValue": null,
+        "current": {
+          "text": "All",
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": "prometheus",
+        "definition": "label_values(insolar_bus_sent_total, instance)",
+        "hide": 0,
+        "includeAll": true,
+        "label": null,
+        "multi": true,
+        "name": "instance",
+        "options": [],
+        "query": "label_values(insolar_bus_sent_total, instance)",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      }
+    ]
   },
   "time": {
-    "from": "2019-09-12T13:24:20.671Z",
-    "to": "2019-09-12T14:25:46.817Z"
+    "from": "now-15m",
+    "to": "now"
   },
   "timepicker": {
     "refresh_intervals": [
@@ -1369,5 +1686,5 @@
   "timezone": "",
   "title": "INS-Virtual",
   "uid": "9cpRPL5Zk",
-  "version": 4
+  "version": 1
 }

@@ -15,7 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1568208295451,
+  "iteration": 1568639479660,
   "links": [],
   "panels": [
     {
@@ -38,7 +38,7 @@
         "y": 0
       },
       "heatmap": {},
-      "hideZeroBuckets": false,
+      "hideZeroBuckets": true,
       "highlightCards": true,
       "id": 8,
       "legend": {
@@ -49,7 +49,7 @@
       "reverseYBuckets": false,
       "targets": [
         {
-          "expr": "sum(increase(insolar_bus_reply_milliseconds_bucket{message_type=~\"$type\", instance=~\"$instance\"}[1m])) by (le)",
+          "expr": "sum(increase(insolar_bus_reply_milliseconds_bucket{message_type=~\"$type\", instance=~\"$instance\", installation=\"$installation\", role=~\"$role\"}[1m])) by (le)",
           "format": "heatmap",
           "intervalFactor": 1,
           "legendFormat": "{{ le }}",
@@ -121,7 +121,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(insolar_bus_sent_bytes_sum{message_type=~\"$type\", instance=~\"$instance\"}[1m])) / sum(rate(insolar_bus_sent_bytes_count{message_type=~\"$type\", instance=~\"$instance\"}[1m]))",
+          "expr": "sum(rate(insolar_bus_sent_bytes_sum{message_type=~\"$type\", instance=~\"$instance\"}[1m])) /\nsum(rate(insolar_bus_sent_bytes_count{message_type=~\"$type\", instance=~\"$instance\", role=~\"$role\"}[1m]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Size (bytes) / sec",
@@ -209,7 +209,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(insolar_bus_sent_retries{message_type=~\"$type\",instance=~\"$instance\"}[1m])) by (job)",
+          "expr": "sum(rate(insolar_bus_sent_retries{message_type=~\"$type\",instance=~\"$instance\", installation=\"$installation\", role=~\"$role\"}[1m])) by (job)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "count / sec",
@@ -258,67 +258,98 @@
       }
     },
     {
-      "cards": {
-        "cardPadding": null,
-        "cardRound": null
-      },
-      "color": {
-        "cardColor": "#b4ff00",
-        "colorScale": "sqrt",
-        "colorScheme": "interpolateGreens",
-        "exponent": 0.5,
-        "mode": "spectrum"
-      },
-      "dataFormat": "tsbuckets",
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "decimals": null,
+      "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
         "h": 4,
         "w": 12,
         "x": 0,
         "y": 6
       },
-      "heatmap": {},
-      "hideZeroBuckets": false,
-      "highlightCards": true,
-      "id": 16,
+      "id": 12,
       "legend": {
-        "show": false
+        "alignAsTable": true,
+        "avg": false,
+        "current": false,
+        "hideZero": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "sort": null,
+        "sortDesc": null,
+        "total": true,
+        "values": true
       },
+      "lines": true,
+      "linewidth": 1,
       "links": [],
-      "options": {},
-      "reverseYBuckets": false,
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(increase(insolar_bus_sent_bytes_bucket{message_type=~\"$type\", instance=~\"$instance\"}[1m])) by (le)",
-          "format": "heatmap",
-          "hide": false,
+          "expr": "sum(rate(insolar_bus_reply_timeouts{instance=~\"$instance\",message_type=~\"$type\",installation=\"$installation\",role=~\"$role\"}[1m]))",
+          "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{ le }}",
+          "legendFormat": "per minute",
           "refId": "A"
         }
       ],
-      "title": "Sizes \"$type\" ($instance)",
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Total reply timeouts ($instance)",
       "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
         "show": true,
-        "showHistogram": false
+        "values": []
       },
-      "type": "heatmap",
-      "xAxis": {
-        "show": true
-      },
-      "xBucketNumber": null,
-      "xBucketSize": null,
-      "yAxis": {
-        "decimals": 0,
-        "format": "decbytes",
-        "logBase": 1,
-        "max": null,
-        "min": null,
-        "show": true,
-        "splitFactor": null
-      },
-      "yBucketBound": "auto",
-      "yBucketNumber": null,
-      "yBucketSize": null
+      "yaxes": [
+        {
+          "decimals": null,
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     },
     {
       "aliasColors": {},
@@ -361,7 +392,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(insolar_bus_reply_total{instance=~\"$instance\",message_type=~\"$type\"}[1m]))",
+          "expr": "sum(rate(insolar_bus_reply_total{instance=~\"$instance\",message_type=~\"$type\", installation=\"$installation\", role=~\"$role\"}[1m]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "count / sec",
@@ -423,7 +454,7 @@
         "x": 0,
         "y": 10
       },
-      "id": 12,
+      "id": 17,
       "legend": {
         "alignAsTable": true,
         "avg": false,
@@ -452,10 +483,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(insolar_bus_reply_timeouts{instance=~\"$instance\",message_type=~\"$type\"}[1m]))",
+          "expr": "sum(rate(insolar_bus_reply_error_total{instance=~\"$instance\",message_type=~\"$type\",installation=\"$installation\",role=~\"$role\"}[1m]))*10",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "per minute",
+          "legendFormat": "per pulse",
           "refId": "A"
         }
       ],
@@ -463,7 +494,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Total reply timeouts ($instance)",
+      "title": "Reply errors per pulse",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -542,7 +573,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(insolar_bus_sent_total{instance=~\"$instance\",message_type=~\"$type\"}[1m]))",
+          "expr": "sum(rate(insolar_bus_sent_total{instance=~\"$instance\",message_type=~\"$type\", installation=\"$installation\", role=~\"$role\"}[1m]))",
           "format": "time_series",
           "instant": false,
           "intervalFactor": 1,
@@ -597,7 +628,7 @@
         "cardRound": null
       },
       "color": {
-        "cardColor": "#73BF69",
+        "cardColor": "#b4ff00",
         "colorScale": "sqrt",
         "colorScheme": "interpolateGreens",
         "exponent": 0.5,
@@ -611,7 +642,70 @@
         "y": 14
       },
       "heatmap": {},
-      "hideZeroBuckets": false,
+      "hideZeroBuckets": true,
+      "highlightCards": true,
+      "id": 16,
+      "legend": {
+        "show": false
+      },
+      "links": [],
+      "options": {},
+      "reverseYBuckets": false,
+      "targets": [
+        {
+          "expr": "sum(increase(insolar_bus_sent_bytes_bucket{message_type=~\"$type\", instance=~\"$instance\", installation=\"$installation\", role=~\"$role\"}[1m])) by (le)",
+          "format": "heatmap",
+          "hide": false,
+          "intervalFactor": 1,
+          "legendFormat": "{{ le }}",
+          "refId": "A"
+        }
+      ],
+      "title": "Sizes \"$type\" ($instance)",
+      "tooltip": {
+        "show": true,
+        "showHistogram": false
+      },
+      "type": "heatmap",
+      "xAxis": {
+        "show": true
+      },
+      "xBucketNumber": null,
+      "xBucketSize": null,
+      "yAxis": {
+        "decimals": 0,
+        "format": "decbytes",
+        "logBase": 1,
+        "max": null,
+        "min": null,
+        "show": true,
+        "splitFactor": null
+      },
+      "yBucketBound": "auto",
+      "yBucketNumber": null,
+      "yBucketSize": null
+    },
+    {
+      "cards": {
+        "cardPadding": null,
+        "cardRound": null
+      },
+      "color": {
+        "cardColor": "#73BF69",
+        "colorScale": "sqrt",
+        "colorScheme": "interpolateGreens",
+        "exponent": 0.5,
+        "mode": "spectrum"
+      },
+      "dataFormat": "tsbuckets",
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 0,
+        "y": 18
+      },
+      "heatmap": {},
+      "hideZeroBuckets": true,
       "highlightCards": true,
       "id": 6,
       "legend": {
@@ -622,7 +716,7 @@
       "reverseYBuckets": false,
       "targets": [
         {
-          "expr": "sum(increase(insolar_bus_sent_milliseconds_bucket{message_type=~\"$type\", instance=~\"$instance\"}[1m])) by (le)",
+          "expr": "sum(increase(insolar_bus_sent_milliseconds_bucket{message_type=~\"$type\", instance=~\"$instance\", installation=\"$installation\", role=~\"$role\"}[1m])) by (le)",
           "format": "heatmap",
           "intervalFactor": 1,
           "legendFormat": "{{ le }}",
@@ -657,9 +751,36 @@
   "refresh": "10s",
   "schemaVersion": 19,
   "style": "dark",
-  "tags": [],
+  "tags": [
+    "INS"
+  ],
   "templating": {
     "list": [
+      {
+        "allValue": null,
+        "current": {
+          "text": "local",
+          "value": "local"
+        },
+        "datasource": "prometheus",
+        "definition": "label_values(insolar_light_last_sent_pulse, installation)",
+        "hide": 0,
+        "includeAll": false,
+        "label": null,
+        "multi": false,
+        "name": "installation",
+        "options": [],
+        "query": "label_values(insolar_light_last_sent_pulse, installation)",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
       {
         "allValue": null,
         "current": {
@@ -688,7 +809,6 @@
       {
         "allValue": null,
         "current": {
-          "selected": true,
           "text": "All",
           "value": "$__all"
         },
@@ -702,6 +822,54 @@
         "options": [],
         "query": "label_values(insolar_bus_sent_total, instance)",
         "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "allValue": null,
+        "current": {
+          "text": "All",
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": "prometheus",
+        "definition": "label_values(insolar_bus_sent_total, role)",
+        "hide": 0,
+        "includeAll": true,
+        "label": null,
+        "multi": true,
+        "name": "role",
+        "options": [
+          {
+            "selected": true,
+            "text": "All",
+            "value": "$__all"
+          },
+          {
+            "selected": false,
+            "text": "heavy_material",
+            "value": "heavy_material"
+          },
+          {
+            "selected": false,
+            "text": "virtual",
+            "value": "virtual"
+          },
+          {
+            "selected": false,
+            "text": "light_material",
+            "value": "light_material"
+          }
+        ],
+        "query": "label_values(insolar_bus_sent_total, role)",
+        "refresh": 0,
         "regex": "",
         "skipUrlSync": false,
         "sort": 0,

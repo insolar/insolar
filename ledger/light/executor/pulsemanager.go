@@ -152,7 +152,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 				}).Debug("before hotStatusChecker.IsReceived")
 
 				if !m.hotStatusChecker.IsReceived(ctx, jet, endedPulse.PulseNumber) {
-					log.Fatal("hot data for jet: %s and pulse: %d wasn't received", jet.DebugString(), endedPulse.PulseNumber)
+					log.Fatalf("hot data for jet: %s and pulse: %d wasn't received", jet.DebugString(), endedPulse.PulseNumber)
 				}
 			}
 

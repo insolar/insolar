@@ -15,7 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 11,
+  "iteration": 1568639492883,
   "links": [],
   "panels": [
     {
@@ -81,7 +81,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "insolar_pulsar_current_pulse",
+          "expr": "insolar_pulsar_current_pulse{installation=\"$installation\"}",
           "instant": true,
           "intervalFactor": 1,
           "refId": "A"
@@ -165,7 +165,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "insolar_pulsar_sending_pulse_errors",
+          "expr": "insolar_pulsar_sending_pulse_errors{installation=\"$installation\"}",
           "instant": false,
           "refId": "A"
         }
@@ -224,7 +224,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(insolar_pulsar_pulse_generated[1m]) * 10",
+          "expr": "irate(insolar_pulsar_pulse_generated{installation=\"$installation\"}[1m]) * 10",
           "legendFormat": "",
           "refId": "A"
         }
@@ -291,12 +291,40 @@
   "refresh": "10s",
   "schemaVersion": 19,
   "style": "dark",
-  "tags": [],
+  "tags": [
+    "INS"
+  ],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "allValue": null,
+        "current": {
+          "text": "local",
+          "value": "local"
+        },
+        "datasource": "prometheus",
+        "definition": "label_values(insolar_light_last_sent_pulse, installation)",
+        "hide": 0,
+        "includeAll": false,
+        "label": null,
+        "multi": false,
+        "name": "installation",
+        "options": [],
+        "query": "label_values(insolar_light_last_sent_pulse, installation)",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      }
+    ]
   },
   "time": {
-    "from": "now-6h",
+    "from": "now-15m",
     "to": "now"
   },
   "timepicker": {
@@ -316,5 +344,5 @@
   "timezone": "",
   "title": "INS-Pulsar",
   "uid": "kXT2cLcWz",
-  "version": 5
+  "version": 1
 }

@@ -119,45 +119,51 @@ func TestMetrics_NewMetrics(t *testing.T) {
 		found       int
 	)
 
-	// we need loop here because counters are updated asynchronously
-fetchLOOP:
+	// we need a loop here because counters are updated asynchronously
 	for i := 0; i < 5; i++ {
-		time.Sleep(time.Millisecond) // give chance to metrics framework to catch up
-		rr := httptest.NewRecorder()
-		testm.Handler().ServeHTTP(rr, req)
+		fmt.Println("fetch loop:", i)
+		fetch := func() bool {
+			rr := httptest.NewRecorder()
+			testm.Handler().ServeHTTP(rr, req)
 
-		respCode = rr.Code
-		if http.StatusOK != respCode {
-			continue
-		}
-
-		scanner := bufio.NewScanner(rr.Body)
-		found = 0
-		for scanner.Scan() {
-			s := scanner.Text()
-			if strings.HasPrefix(s, "insolar_some_metric_count") {
-				lastCounter = s
-				if !countRe.MatchString(s) {
-					continue fetchLOOP
-				}
-				if fmt.Sprintf("%v", metricCountValue) != metricValue(s) {
-					continue fetchLOOP
-				}
-				found++
+			respCode = rr.Code
+			if http.StatusOK != respCode {
+				return false
 			}
 
-			if strings.HasPrefix(s, "insolar_some_metric_distribution_count") {
-				lastDist = s
-				if !distRe.MatchString(s) {
-					continue fetchLOOP
+			scanner := bufio.NewScanner(rr.Body)
+			found = 0
+			for scanner.Scan() {
+				s := scanner.Text()
+				if strings.HasPrefix(s, "insolar_some_metric_count") {
+					lastCounter = s
+					if !countRe.MatchString(s) {
+						return false
+					}
+					if fmt.Sprintf("%v", metricCountValue) != metricValue(s) {
+						return false
+					}
+					found++
 				}
-				if fmt.Sprintf("%v", metricDistValue) != metricValue(s) {
-					continue fetchLOOP
+
+				if strings.HasPrefix(s, "insolar_some_metric_distribution_count") {
+					lastDist = s
+					if !distRe.MatchString(s) {
+						return false
+					}
+					if fmt.Sprintf("%v", metricDistValue) != metricValue(s) {
+						return false
+					}
+					found++
 				}
-				found++
 			}
+			return found == 2
 		}
-		break
+		if ok := fetch(); ok {
+			break
+		}
+		// sleep for giving a chance to metrics framework update metrics
+		time.Sleep(time.Millisecond * 500)
 	}
 
 	require.Equal(t, http.StatusOK, respCode, "fetched ok")

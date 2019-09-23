@@ -30,10 +30,11 @@ const (
 
 var (
 	tagMessageType = insmetrics.MustTagKey("message_type")
+	tagMessageRole = insmetrics.MustTagKey("message_role")
 )
 
 var (
-	statSent = stats.Int64(
+	statSentBytes = stats.Int64(
 		"bus_sent",
 		"sent messages stats",
 		stats.UnitDimensionless,
@@ -64,6 +65,11 @@ var (
 		"time spent on sending parcels",
 		stats.UnitMilliseconds,
 	)
+	statReplyError = stats.Int64(
+		"bus_reply_error",
+		"reply error messages stats",
+		stats.UnitDimensionless,
+	)
 )
 
 func init() {
@@ -72,16 +78,16 @@ func init() {
 		&view.View{
 			Name:        "bus_sent_total",
 			Description: "sent messages total count",
-			Measure:     statSent,
+			Measure:     statSentBytes,
 			Aggregation: view.Count(),
-			TagKeys:     []tag.Key{tagMessageType},
+			TagKeys:     []tag.Key{tagMessageType, tagMessageRole},
 		},
 		&view.View{
 			Name:        "bus_sent_bytes",
 			Description: "sent messages payload size",
-			Measure:     statSent,
-			Aggregation: view.Distribution(1*kb, 10*kb, 100*kb, 1*mb, 10*mb),
-			TagKeys:     []tag.Key{tagMessageType},
+			Measure:     statSentBytes,
+			Aggregation: view.Distribution(1*kb, 10*kb, 100*kb, 1*mb, 10*mb, 100*mb),
+			TagKeys:     []tag.Key{tagMessageType, tagMessageRole},
 		},
 		&view.View{
 			Name:        "bus_sent_milliseconds",
@@ -118,6 +124,12 @@ func init() {
 			Measure:     statReplyTimeouts,
 			Aggregation: view.Count(),
 			TagKeys:     []tag.Key{tagMessageType},
+		},
+		&view.View{
+			Name:        "bus_reply_error_total",
+			Description: "reply error messages total count",
+			Measure:     statReplyError,
+			Aggregation: view.Count(),
 		},
 	)
 	if err != nil {
