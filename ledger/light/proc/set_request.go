@@ -280,6 +280,10 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 		"latest_pending_filament_id": Filament.ID.DebugString(),
 		"reason_id":                  p.request.ReasonRef().GetLocal().DebugString(),
 		"request_body":               base64.StdEncoding.EncodeToString(buf),
+		"is_outgoing": func() bool {
+			_, ok := p.request.(*record.OutgoingRequest)
+			return ok
+		}(),
 	}).Debug("request saved")
 	return nil
 }
