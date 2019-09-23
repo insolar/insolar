@@ -221,7 +221,7 @@ func getTotalBalance(insSDK *sdk.SDK, members []sdk.Member) (totalBalance *big.I
 		go func(m sdk.Member, num int) {
 			res := Result{num: num}
 			balance, deposits, err := insSDK.GetBalance(m)
-			if err != nil {
+			if err == nil {
 				for _, d := range deposits {
 					depositBalanceStr, ok := d.(map[string]interface{})["balance"].(string)
 					if !ok {
