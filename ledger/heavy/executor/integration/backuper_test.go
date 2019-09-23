@@ -509,3 +509,98 @@ func TestBackup_FullCycle(t *testing.T) {
 	// pulse must be finalized when prepare_backup complete without error
 	require.Equal(t, testPulse, recoveredJetKeeper.TopSyncPulse())
 }
+
+func copyDir(src, dst string) error {
+	cmd := exec.Command("cp", "-vR", src+"/", dst)
+	output, err := cmd.CombinedOutput()
+	println("copyDir: ", string(output))
+
+	return err
+}
+
+// 1. Create db
+// 2. Add not all confirmations
+// 3. Copy db to different place - backup place
+// 4. Make backup and merge it to backup db
+// 5. Launch on backup db and check top sync pulse
+func TestBackup_UseMainDBAsBackup(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+	tmpdir, err := ioutil.TempDir("", "bdb-test-")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpdir)
+
+	cfg := makeBackuperConfig(t, t.Name(), tmpdir)
+	defer clearData(t, cfg)
+
+	db, err := store.NewBadgerDB(badger.DefaultOptions(tmpdir))
+	require.NoError(t, err)
+
+	testPulse := insolar.GenesisPulse.PulseNumber + 10
+	testJet := insolar.ZeroJetID
+
+	pulsesDB := pulse.NewDB(db)
+	err = pulsesDB.Append(ctx, insolar.Pulse{PulseNumber: insolar.GenesisPulse.PulseNumber})
+	require.NoError(t, err)
+	err = pulsesDB.Append(ctx, insolar.Pulse{PulseNumber: testPulse})
+	require.NoError(t, err)
+
+	jetsDB := jet.NewDBStore(db)
+	err = jetsDB.Update(ctx, testPulse, true, testJet)
+	require.NoError(t, err)
+
+	jetKeeper := executor.NewJetKeeper(jetsDB, db, pulsesDB)
+
+	err = jetKeeper.AddHotConfirmation(ctx, testPulse, testJet, false)
+	require.NoError(t, err)
+	err = jetKeeper.AddDropConfirmation(ctx, testPulse, testJet, false)
+	require.NoError(t, err)
+
+	require.Equal(t, insolar.GenesisPulse.PulseNumber, jetKeeper.TopSyncPulse())
+
+	// Stop db and copy it to backup place
+	err = db.Stop(ctx)
+	require.NoError(t, err)
+
+	var backupTmpDir string
+	{
+		// -------------------- Copy db to backup db
+		backupTmpDir, err = ioutil.TempDir("", "bdb-test-")
+		require.NoError(t, err)
+		defer os.RemoveAll(backupTmpDir)
+
+		err = copyDir(tmpdir, backupTmpDir)
+		require.NoError(t, err)
+	}
+
+	{
+		// -------------------- run on db again
+		db, err = store.NewBadgerDB(badger.DefaultOptions(tmpdir))
+		require.NoError(t, err)
+		defer db.Stop(ctx)
+
+		// -------------------- make backup
+		bm, err := executor.NewBackupMaker(context.Background(), db, cfg, insolar.GenesisPulse.PulseNumber, db)
+		require.NoError(t, err)
+		err = bm.MakeBackup(ctx, testPulse)
+		require.NoError(t, err)
+
+		// -------------------- merge backup
+		bkpFileName := filepath.Join(
+			cfg.Backup.TargetDirectory,
+			fmt.Sprintf(cfg.Backup.DirNameTemplate, testPulse),
+			cfg.Backup.BackupFile,
+		)
+		loadIncrementalBackup(t, backupTmpDir, bkpFileName)
+
+		prepareBackup(t, backupTmpDir, filepath.Base(cfg.Backup.LastBackupInfoFile))
+		recoveredDB, err := store.NewBadgerDB(badger.DefaultOptions(backupTmpDir))
+		require.NoError(t, err)
+		defer recoveredDB.Stop(context.Background())
+
+		// check that db is ok
+		recoveredJetKeeper := executor.NewJetKeeper(jet.NewDBStore(recoveredDB), recoveredDB, pulse.NewDB(recoveredDB))
+
+		// pulse must be finalized when prepare_backup complete without error
+		require.Equal(t, testPulse, recoveredJetKeeper.TopSyncPulse())
+	}
+}
