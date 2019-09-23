@@ -37,7 +37,7 @@ type FatalDirectWriter struct {
 }
 
 func (p *FatalDirectWriter) Close() error {
-	return p.Close()
+	return p.output.Close()
 }
 
 func (p *FatalDirectWriter) Flush() error {
