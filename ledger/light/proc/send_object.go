@@ -24,7 +24,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/light/executor"
-	"github.com/insolar/insolar/ledger/light/proc/internal"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -103,7 +102,7 @@ func (p *SendObject) ensureOldestRequest(ctx context.Context) (*record.Composite
 		return nil, nil
 	}
 
-	oldest := internal.OldestMutable(openReqs)
+	oldest := oldestMutable(openReqs)
 	if oldest == nil {
 		return nil, nil
 	}

@@ -14,15 +14,15 @@
 // limitations under the License.
 //
 
-package internal
+package proc
 
 import (
 	"github.com/insolar/insolar/insolar/record"
 )
 
-// OldestMutable searches for a oldest mutable request through a provided list of open requests
-// openRequests MUST be pulse-ascending order
-func OldestMutable(openRequests []record.CompositeFilamentRecord) *record.CompositeFilamentRecord {
+// oldestMutable searches for a oldest mutable request through a provided list of open requests
+// openRequests MUST be time-ascending order
+func oldestMutable(openRequests []record.CompositeFilamentRecord) *record.CompositeFilamentRecord {
 	isMutableIncoming := func(rec record.CompositeFilamentRecord) bool {
 		req := record.Unwrap(&rec.Record.Virtual).(record.Request)
 		inReq, isIn := req.(*record.IncomingRequest)

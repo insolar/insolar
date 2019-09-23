@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package internal
+package proc
 
 import (
 	"testing"
@@ -26,7 +26,7 @@ import (
 
 func TestOldestMutable(t *testing.T) {
 	t.Run("return nothing if recieve nothing", func(t *testing.T) {
-		res := OldestMutable(nil)
+		res := oldestMutable(nil)
 		require.Nil(t, res)
 	})
 
@@ -63,7 +63,7 @@ func TestOldestMutable(t *testing.T) {
 			},
 		}
 
-		res := OldestMutable([]record.CompositeFilamentRecord{
+		res := oldestMutable([]record.CompositeFilamentRecord{
 			outCom, inImCom, expected,
 		})
 
