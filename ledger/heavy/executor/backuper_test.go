@@ -265,3 +265,45 @@ func TestBackuper_Backup_OldPulse(t *testing.T) {
 	err = bm.MakeBackup(context.Background(), testPulse-1)
 	require.Equal(t, err, executor.ErrAlreadyDone)
 }
+
+func TestBackuper_TruncateHead(t *testing.T) {
+
+	testPulse := insolar.GenesisPulse.PulseNumber + 1
+
+	tmpdir, err := ioutil.TempDir("", "bdb-test-")
+	defer os.RemoveAll(tmpdir)
+	require.NoError(t, err)
+
+	cfg := makeBackuperConfig(t, t.Name(), tmpdir)
+	defer clearData(t, cfg)
+
+	ops := BadgerDefaultOptions(tmpdir)
+	db, err := store.NewBadgerDB(ops)
+	require.NoError(t, err)
+	defer db.Stop(context.Background())
+
+	bm, err := executor.NewBackupMaker(context.Background(), db, cfg, testPulse, db)
+	require.NoError(t, err)
+
+	numElements := 10
+
+	for i := 0; i < numElements; i++ {
+		err = db.Set(executor.BackupStartKey(testPulse+insolar.PulseNumber(i)), []byte{})
+		require.NoError(t, err)
+	}
+
+	numLeftElements := numElements / 2
+
+	err = bm.TruncateHead(context.Background(), testPulse+insolar.PulseNumber(numLeftElements))
+	require.NoError(t, err)
+
+	for i := 0; i < numLeftElements; i++ {
+		_, err = db.Get(executor.BackupStartKey(testPulse + insolar.PulseNumber(i)))
+		require.NoError(t, err)
+	}
+
+	for i := numElements - 1; i >= numLeftElements; i-- {
+		_, err = db.Get(executor.BackupStartKey(testPulse + insolar.PulseNumber(i)))
+		require.EqualError(t, err, store.ErrNotFound.Error())
+	}
+}
