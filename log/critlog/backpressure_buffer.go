@@ -245,12 +245,8 @@ func (p *internalBackpressureBuffer) checkWrite(level insolar.LogLevel, b []byte
 		runtime.Gosched()
 	}
 
-	n, err := p._flushWrite(level, b, noFlush, startNano)
-	atomic.AddUint32(&p.pendingWrites, ^uint32(0)) // -1
-	if err == errAddToQueue {
-		return p.queueWrite(level, b)
-	}
-	return n, err
+	defer atomic.AddUint32(&p.pendingWrites, ^uint32(0)) // -1
+	return p.flushWrite(level, b, noFlush, startNano)
 }
 
 type bufferFlushMode uint8
@@ -273,9 +269,6 @@ func (p *internalBackpressureBuffer) fairQueueWrite(level insolar.LogLevel, b []
 }
 
 func (p *internalBackpressureBuffer) queueWrite(level insolar.LogLevel, b []byte) (int, error) {
-	if level == internalOpLevel && b == nil {
-		return 0, nil
-	}
 	p.buffer <- p.newQueueEntry(level, b)
 	return len(b), nil
 }
@@ -292,17 +285,7 @@ func (p *internalBackpressureBuffer) directWrite(level insolar.LogLevel, b []byt
 	return n, err
 }
 
-var errAddToQueue = errors.New("event must be added to queue")
-
 func (p *internalBackpressureBuffer) flushWrite(level insolar.LogLevel, b []byte, flush bufferFlushMode, startNano int64) (int, error) {
-	n, err := p._flushWrite(level, b, flush, startNano)
-	if err == errAddToQueue {
-		return p.queueWrite(level, b)
-	}
-	return n, err
-}
-
-func (p *internalBackpressureBuffer) _flushWrite(level insolar.LogLevel, b []byte, flush bufferFlushMode, startNano int64) (int, error) {
 
 	penalty := 1 // every worker has to write at least +1 event from the queue
 	switch flush {
@@ -377,7 +360,7 @@ func (p *internalBackpressureBuffer) _flushWrite(level insolar.LogLevel, b []byt
 		We paid our penalty and the queue didn't became empty.
 		Lets leave our event for someone else to pick.
 	*/
-	return -1, errAddToQueue
+	return p.queueWrite(level, b)
 }
 
 func (p *internalBackpressureBuffer) worker(ctx context.Context) {

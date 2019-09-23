@@ -141,7 +141,7 @@ func NewTestLogger(ctx context.Context, w io.Writer, parWrites uint8) insolar.Lo
 		return NewFatalDirectWriter(w)
 	}
 	bp := NewBackpressureBuffer(w, 100, 0, parWrites, 0, nil)
-	//bp.StartWorker(ctx)
+	bp.StartWorker(ctx)
 	return bp
 
 }
