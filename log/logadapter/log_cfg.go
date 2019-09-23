@@ -43,8 +43,11 @@ func DefaultLogConfig() ParsedLogConfig {
 }
 
 func ParseLogConfig(cfg configuration.Log) (plc ParsedLogConfig, err error) {
+	return ParseLogConfigWithDefaults(cfg, DefaultLogConfig())
+}
 
-	plc = DefaultLogConfig()
+func ParseLogConfigWithDefaults(cfg configuration.Log, defaults ParsedLogConfig) (plc ParsedLogConfig, err error) {
+	plc = defaults
 
 	plc.OutputType, err = insolar.ParseOutput(cfg.OutputType, insolar.DefaultLogOutput)
 	if err != nil {
