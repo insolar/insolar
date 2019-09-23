@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/light/executor"
+	"github.com/insolar/insolar/ledger/light/proc/internal"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -80,42 +81,41 @@ func (p *SendObject) Dep(
 	p.dep.filament = filament
 }
 
-func (p *SendObject) hasEarliest(ctx context.Context) (bool, record.CompositeFilamentRecord, error) {
-	originReq, _, err := p.dep.filament.RequestInfo(ctx, p.objectID, *p.requestID, flow.Pulse(ctx))
-	if err != nil {
-		return false, record.CompositeFilamentRecord{}, err
-	}
-
-	isMutableIncoming := func(rec *record.CompositeFilamentRecord) bool {
-		req := record.Unwrap(&rec.Record.Virtual).(record.Request)
-		_, isIn := req.(*record.IncomingRequest)
-		return isIn && req.IsMutable()
-	}
-
-	if !isMutableIncoming(originReq) {
-		return false, record.CompositeFilamentRecord{}, nil
-	}
-
+func (p *SendObject) ensureOldestRequest(ctx context.Context) (*record.CompositeFilamentRecord, error) {
 	openReqs, err := p.dep.filament.OpenedRequests(ctx, flow.Pulse(ctx), p.objectID, false)
 	if err != nil {
-		return false, record.CompositeFilamentRecord{}, err
+		return nil, errors.Wrap(err, "failed to fetch filament")
 	}
-	if len(openReqs) == 0 {
-		return false, record.CompositeFilamentRecord{}, nil
-	}
+	var reqBody *record.CompositeFilamentRecord
 
 	for _, openReq := range openReqs {
 		openReq := openReq
-		if isMutableIncoming(&openReq) && openReq.RecordID != *p.requestID {
-			return true, openReq, nil
+		if openReq.RecordID == *p.requestID {
+			reqBody = &openReq
 		}
 	}
+	if reqBody == nil {
+		return nil, errors.Wrap(err, "request isn't opened")
+	}
 
-	return false, record.CompositeFilamentRecord{}, nil
+	inReq, isIn := record.Unwrap(&reqBody.Record.Virtual).(record.Request).(*record.IncomingRequest)
+	if !isIn || inReq.Immutable {
+		return nil, nil
+	}
+
+	oldest := internal.OldestMutable(openReqs)
+	if oldest == nil {
+		return nil, nil
+	}
+
+	if oldest.RecordID != reqBody.RecordID {
+		return oldest, nil
+	}
+	return nil, nil
 }
 
 func (p *SendObject) Proceed(ctx context.Context) error {
-	sendState := func(rec record.Material, earliestRequestID *insolar.ID, earliestRequest []byte) error {
+	sendState := func(rec record.Material) error {
 		virtual := rec.Virtual
 		concrete := record.Unwrap(&virtual)
 		state, ok := concrete.(record.State)
@@ -136,9 +136,7 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 		}
 
 		msg, err := payload.NewMessage(&payload.State{
-			Record:            buf,
-			EarliestRequest:   earliestRequest,
-			EarliestRequestID: earliestRequestID,
+			Record: buf,
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to create message")
@@ -218,6 +216,26 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 		}
 	}
 
+	var earliestRequestID *insolar.ID
+	var earliestRequest []byte
+
+	// We know the request, that is processing by ve
+	// if the request isn't earliest, we return object + earliest request instead
+	if p.requestID != nil {
+		oldest, err := p.ensureOldestRequest(ctx)
+		if err != nil {
+			return errors.Wrap(err, "failed to check request status")
+		}
+		if oldest != nil {
+			reqBuf, err := oldest.Record.Virtual.Marshal()
+			if err != nil {
+				return errors.Wrap(err, "failed to marshal request")
+			}
+			earliestRequestID = &oldest.RecordID
+			earliestRequest = reqBuf
+		}
+	}
+
 	// Sending indexes
 	{
 		buf, err := lifeline.Marshal()
@@ -225,7 +243,9 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 			return errors.Wrap(err, "failed to marshal index")
 		}
 		msg, err := payload.NewMessage(&payload.Index{
-			Index: buf,
+			Index:             buf,
+			EarliestRequestID: earliestRequestID,
+			EarliestRequest:   earliestRequest,
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to create reply")
@@ -234,31 +254,10 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 		p.dep.sender.Reply(ctx, p.message, msg)
 	}
 
-	var earliestRequestID *insolar.ID
-	var earliestRequest []byte
-
-	// We know the request, that is processing by ve
-	// if the request isn't earliest, we return object + earliest request instead
-	if p.requestID != nil {
-		hasEarliest, earliestReq, err := p.hasEarliest(ctx)
-		if err != nil {
-			return errors.Wrap(err, "failed to check request id")
-		}
-		if hasEarliest {
-			reqBuf, err := earliestReq.Record.Virtual.Marshal()
-			if err != nil {
-				return errors.Wrap(err, "failed to marshal request record")
-			}
-
-			earliestRequestID = &earliestReq.RecordID
-			earliestRequest = reqBuf
-		}
-	}
-
 	rec, err := p.dep.records.ForID(ctx, *lifeline.LatestState)
 	switch err {
 	case nil:
-		return sendState(rec, earliestRequestID, earliestRequest)
+		return sendState(rec)
 	case object.ErrNotFound:
 		return sendPassState(*lifeline.LatestState)
 	default:

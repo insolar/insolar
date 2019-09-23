@@ -55,7 +55,7 @@ func Test_GetObject_PassingRequestID(t *testing.T) {
 		s.SetPulse(ctx)
 
 		var secondReqID insolar.ID
-		var thirdID insolar.ID
+		var thirdreqID insolar.ID
 		// Register second request
 		{
 			msg, _ := MakeSetIncomingRequest(firstReqID, firstReqID, insolar.ID{}, false, true)
@@ -66,20 +66,20 @@ func Test_GetObject_PassingRequestID(t *testing.T) {
 			msg, _ = MakeSetIncomingRequest(firstReqID, firstReqID, insolar.ID{}, false, true)
 			rep = SendMessage(ctx, s, &msg)
 			RequireNotError(rep)
-			thirdID = rep.(*payload.RequestInfo).RequestID
+			thirdreqID = rep.(*payload.RequestInfo).RequestID
 		}
 
 		s.SetPulse(ctx)
 		// Call get object with second ID (while first isn't closed)
 		{
-			lifelinePL, statePL := CallGetObject(ctx, s, firstReqID, &thirdID)
+			lifelinePL, statePL := CallGetObject(ctx, s, firstReqID, &thirdreqID)
 			RequireNotError(lifelinePL)
 			RequireNotError(statePL)
 
-			parsedState := statePL.(*payload.State)
-			require.NotNil(t, parsedState.EarliestRequestID)
-			require.NotNil(t, parsedState.EarliestRequest)
-			require.Equal(t, secondReqID, *parsedState.EarliestRequestID)
+			lifeline := lifelinePL.(*payload.Index)
+			require.NotNil(t, lifeline.EarliestRequestID)
+			require.NotNil(t, lifeline.EarliestRequest)
+			require.Equal(t, secondReqID, *lifeline.EarliestRequestID)
 		}
 	})
 }
