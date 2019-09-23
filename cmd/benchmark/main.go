@@ -138,7 +138,7 @@ func newCreateMemberScenarios(out io.Writer, insSDK *sdk.SDK, concurrent int, re
 
 func newMigrationScenarios(out io.Writer, insSDK *sdk.SDK, concurrent int, repetitions int) benchmark {
 	return benchmark{
-		scenario: &MigrationScenario{
+		scenario: &migrationScenario{
 			insSDK: insSDK,
 		},
 		concurrent:  concurrent,
@@ -268,7 +268,7 @@ func getMembers(insSDK *sdk.SDK, number int, migration bool) ([]sdk.Member, erro
 				members[i] = &sdk.CommonMember{}
 			}
 		}
-		err = loadMembers(members)
+		err = loadMembers(&members)
 		if err != nil {
 			return nil, errors.Wrap(err, "error while loading members: ")
 		}
@@ -309,13 +309,13 @@ func saveMembers(members []sdk.Member) error {
 	return errors.Wrap(err, "couldn't save members in file")
 }
 
-func loadMembers(members []sdk.Member) error {
+func loadMembers(members *[]sdk.Member) error {
 	rawMembers, err := ioutil.ReadFile(memberFile)
 	if err != nil {
 		return errors.Wrap(err, "can't read members from file")
 	}
 
-	err = json.Unmarshal(rawMembers, &members)
+	err = json.Unmarshal(rawMembers, members)
 	if err != nil {
 		return errors.Wrap(err, "can't unmarshal members from file")
 	}

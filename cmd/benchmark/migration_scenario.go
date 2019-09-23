@@ -26,7 +26,7 @@ import (
 
 const migrationAmount = 101
 
-type MigrationScenario struct {
+type migrationScenario struct {
 	insSDK           *sdk.SDK
 	members          []sdk.Member
 	migrationDaemons []sdk.Member
@@ -34,7 +34,7 @@ type MigrationScenario struct {
 	balanceCheckMembers []sdk.Member
 }
 
-func (s *MigrationScenario) canBeStarted() error {
+func (s *migrationScenario) canBeStarted() error {
 	if len(s.members) < concurrent {
 		return fmt.Errorf("not enough members for start")
 	}
@@ -45,7 +45,7 @@ func (s *MigrationScenario) canBeStarted() error {
 	return nil
 }
 
-func (s *MigrationScenario) prepare() {
+func (s *migrationScenario) prepare() {
 	members, err := getMembers(s.insSDK, concurrent, true)
 	check("Error while loading members: ", err)
 	s.members = members
@@ -59,7 +59,7 @@ func (s *MigrationScenario) prepare() {
 	}
 }
 
-func (s *MigrationScenario) start(concurrentIndex int, repetitionIndex int) (string, error) {
+func (s *migrationScenario) start(concurrentIndex int, repetitionIndex int) (string, error) {
 	var migrationMember *sdk.MigrationMember
 	migrationMember, ok := s.members[concurrentIndex].(*sdk.MigrationMember)
 	if !ok {
@@ -72,6 +72,6 @@ func (s *MigrationScenario) start(concurrentIndex int, repetitionIndex int) (str
 	return s.insSDK.Migration(s.migrationDaemons[1], "tx_hash_"+strconv.Itoa(repetitionIndex), big.NewInt(migrationAmount).String(), migrationMember.MigrationAddress)
 }
 
-func (s *MigrationScenario) getBalanceCheckMembers() []sdk.Member {
+func (s *migrationScenario) getBalanceCheckMembers() []sdk.Member {
 	return s.balanceCheckMembers
 }
