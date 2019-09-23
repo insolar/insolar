@@ -52,6 +52,7 @@ package pulsenetwork
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"strconv"
 	"sync"
@@ -220,16 +221,17 @@ func (d *distributor) sendPulseToHost(ctx context.Context, p *insolar.Pulse, hos
 	return nil
 }
 
-func (d *distributor) sendRequestToHost(ctx context.Context, p *packet.Packet, receiver *net.TCPAddr) error {
+func (d *distributor) sendRequestToHost(ctx context.Context, p *packet.Packet, receiver fmt.Stringer) error {
+	rcv := receiver.String()
 	inslogger.FromContext(ctx).Debugf("Send %s request to %s with RequestID = %d",
-		p.GetType(), receiver.String(), p.GetRequestID())
+		p.GetType(), rcv, p.GetRequestID())
 
 	data, err := packet.SerializePacket(p)
 	if err != nil {
 		return errors.Wrap(err, "Failed to serialize packet")
 	}
 
-	conn, err := d.transport.Dial(ctx, receiver.String())
+	conn, err := d.transport.Dial(ctx, rcv)
 	if err != nil {
 		return errors.Wrap(err, "Unable to connect")
 	}
