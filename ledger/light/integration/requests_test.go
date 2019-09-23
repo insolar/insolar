@@ -646,7 +646,7 @@ func Test_OutgoingRequest_ClosedReason(t *testing.T) {
 		{
 			pl, _ := MakeSetOutgoingRequest(reasonID, reasonID, false)
 			rep := SendMessage(ctx, s, &pl)
-			RequireErrorCode(rep, payload.CodeReasonNotFound)
+			RequireErrorCode(rep, payload.CodeReasonIsWrong)
 		}
 	})
 }
@@ -700,7 +700,7 @@ func Test_Requests_OutgoingReason(t *testing.T) {
 		{
 			msg, _ := MakeSetOutgoingRequest(rootID, reasonID, false)
 			rep := SendMessage(ctx, s, &msg)
-			RequireErrorCode(rep, payload.CodeReasonNotFound)
+			RequireErrorCode(rep, payload.CodeReasonIsWrong)
 		}
 	})
 }
@@ -741,7 +741,7 @@ func Test_OutgoingRequests_DifferentObjects(t *testing.T) {
 		{
 			pl, _ := MakeSetOutgoingRequest(rootID, rootID2, false)
 			rep := SendMessage(ctx, s, &pl)
-			RequireErrorCode(rep, payload.CodeReasonNotFound)
+			RequireErrorCode(rep, payload.CodeReasonIsWrong)
 		}
 	})
 }

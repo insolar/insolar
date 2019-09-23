@@ -86,6 +86,22 @@ func TestRequestCheckerDefault_CheckRequest(t *testing.T) {
 		assert.Error(t, err)
 	})
 
+	t.Run("reason is random id, returns error", func(t *testing.T) {
+		setup()
+		defer mc.Finish()
+
+		req := record.IncomingRequest{
+			Caller: gen.ReferenceWithPulse(pulse.MinTimePulse + 1),
+			Reason: gen.ReferenceWithPulse(pulse.MinTimePulse + 1),
+		}
+
+		err := checker.CheckRequest(ctx, gen.IDWithPulse(pulse.MinTimePulse+2), &req)
+		require.Error(t, err)
+		insError, ok := errors.Cause(err).(*payload.CodedError)
+		require.True(t, ok)
+		require.Equal(t, uint32(payload.CodeReasonIsWrong), insError.GetCode())
+	})
+
 	t.Run("reason is older than request returns error", func(t *testing.T) {
 		setup()
 		defer mc.Finish()
@@ -159,6 +175,48 @@ func TestRequestCheckerDefault_CheckRequest(t *testing.T) {
 		assert.Nil(t, err)
 	})
 
+	t.Run("incoming network reason check failed, request not found error", func(t *testing.T) {
+		setup()
+		defer mc.Finish()
+
+		requestID := gen.IDWithPulse(pulse.MinTimePulse + 2)
+		reasonObjectRef := gen.ReferenceWithPulse(pulse.MinTimePulse + 1)
+		jetID := gen.JetID()
+		nodeRef := gen.Reference()
+		req := record.IncomingRequest{
+			Caller:   reasonObjectRef,
+			CallType: record.CTSaveAsChild,
+			Reason:   gen.ReferenceWithPulse(pulse.MinTimePulse + 1),
+		}
+
+		fetcher.FetchMock.Inspect(func(_ context.Context, target insolar.ID, pulse insolar.PulseNumber) {
+			require.Equal(t, reasonObjectRef.GetLocal(), &target)
+			require.Equal(t, requestID.Pulse(), pulse)
+		}).Return((*insolar.ID)(&jetID), nil)
+
+		jets.LightExecutorForJetMock.Inspect(func(_ context.Context, j insolar.ID, pulse insolar.PulseNumber) {
+			require.Equal(t, insolar.ID(jetID), j)
+			require.Equal(t, requestID.Pulse(), pulse)
+		}).Return(&nodeRef, nil)
+
+		sender.SendTargetMock.Set(func(_ context.Context, msg *message.Message, target insolar.Reference) (<-chan *message.Message, func()) {
+			ch := make(chan *message.Message, 1)
+			ch <- payload.MustNewMessage(&payload.Meta{
+				Payload: payload.MustMarshal(&payload.RequestInfo{
+					Request: nil,
+					Result:  nil,
+				}),
+			})
+			return ch, func() {}
+		})
+
+		err := checker.CheckRequest(ctx, requestID, &req)
+		require.Error(t, err)
+		insError, ok := errors.Cause(err).(*payload.CodedError)
+		require.True(t, ok)
+		require.Equal(t, uint32(payload.CodeReasonNotFound), insError.GetCode())
+	})
+
 	t.Run("incoming local reason check is ok", func(t *testing.T) {
 		setup()
 		defer mc.Finish()
@@ -185,6 +243,34 @@ func TestRequestCheckerDefault_CheckRequest(t *testing.T) {
 
 		err := checker.CheckRequest(ctx, requestID, &req)
 		assert.Nil(t, err)
+	})
+
+	t.Run("incoming local reason check failed, returns request not found error", func(t *testing.T) {
+		setup()
+		defer mc.Finish()
+
+		requestID := gen.IDWithPulse(pulse.MinTimePulse + 2)
+		reasonObjectRef := gen.ReferenceWithPulse(pulse.MinTimePulse + 1)
+		reasonRef := gen.ReferenceWithPulse(pulse.MinTimePulse + 1)
+		req := record.IncomingRequest{
+			Caller: reasonObjectRef,
+			Object: &reasonObjectRef,
+			Reason: reasonRef,
+		}
+
+		filament.RequestInfoMock.Set(func(_ context.Context, objectID insolar.ID, reqID insolar.ID, pulse insolar.PulseNumber) (foundRequest *record.CompositeFilamentRecord, foundResult *record.CompositeFilamentRecord, err error) {
+			require.Equal(t, reasonObjectRef.GetLocal(), &objectID)
+			require.Equal(t, reasonRef.GetLocal(), &reqID)
+			require.Equal(t, requestID.Pulse(), pulse)
+
+			return nil, nil, nil
+		})
+
+		err := checker.CheckRequest(ctx, requestID, &req)
+		require.Error(t, err)
+		insError, ok := errors.Cause(err).(*payload.CodedError)
+		require.True(t, ok)
+		require.Equal(t, uint32(payload.CodeReasonNotFound), insError.GetCode())
 	})
 
 	t.Run("incoming reason is closed for regular request", func(t *testing.T) {
@@ -215,7 +301,10 @@ func TestRequestCheckerDefault_CheckRequest(t *testing.T) {
 		})
 
 		err := checker.CheckRequest(ctx, requestID, &req)
-		assert.EqualError(t, err, "reason request is closed for a regular (not detached) call")
+		require.Error(t, err)
+		insError, ok := errors.Cause(err).(*payload.CodedError)
+		require.True(t, ok)
+		require.Equal(t, uint32(payload.CodeReasonIsWrong), insError.GetCode())
 	})
 
 	t.Run("incoming reason is not closed for detached request", func(t *testing.T) {
@@ -244,7 +333,10 @@ func TestRequestCheckerDefault_CheckRequest(t *testing.T) {
 		})
 
 		err := checker.CheckRequest(ctx, requestID, &req)
-		assert.EqualError(t, err, "reason request is not closed for a detached call")
+		require.Error(t, err)
+		insError, ok := errors.Cause(err).(*payload.CodedError)
+		require.True(t, ok)
+		require.Equal(t, uint32(payload.CodeReasonIsWrong), insError.GetCode())
 	})
 
 	t.Run("outgoing reason is not found returns error", func(t *testing.T) {
@@ -263,7 +355,7 @@ func TestRequestCheckerDefault_CheckRequest(t *testing.T) {
 		require.Error(t, err)
 		insError, ok := errors.Cause(err).(*payload.CodedError)
 		require.True(t, ok)
-		require.Equal(t, uint32(payload.CodeReasonNotFound), insError.GetCode())
+		require.Equal(t, uint32(payload.CodeReasonIsWrong), insError.GetCode())
 	})
 
 	t.Run("outgoing reason is not the oldest", func(t *testing.T) {

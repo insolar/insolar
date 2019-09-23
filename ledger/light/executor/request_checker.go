@@ -83,10 +83,7 @@ func (c *RequestCheckerDefault) CheckRequest(ctx context.Context, requestID inso
 		if !r.IsAPIRequest() {
 			err := c.checkReasonForIncomingRequest(ctx, r, reasonID, requestID)
 			if err != nil {
-				return &payload.CodedError{
-					Text: err.Error(),
-					Code: payload.CodeReasonIsWrong,
-				}
+				return errors.Wrap(err, "request check failed")
 			}
 		}
 	case *record.OutgoingRequest:
@@ -157,7 +154,7 @@ func (c *RequestCheckerDefault) checkReasonIsOpen(
 
 	return record.CompositeFilamentRecord{}, &payload.CodedError{
 		Text: "request reason not found in opened requests",
-		Code: payload.CodeReasonNotFound,
+		Code: payload.CodeReasonIsWrong,
 	}
 }
 
@@ -212,6 +209,13 @@ func (c *RequestCheckerDefault) checkReasonForIncomingRequest(
 
 		objectID = *insolar.NewID(requestID.Pulse(), hasher.Sum(nil))
 	} else {
+		// Object ref can't be empty
+		if incomingRequest.AffinityRef() == nil {
+			return &payload.CodedError{
+				Text: "request reason has wrong object",
+				Code: payload.CodeReasonIsWrong,
+			}
+		}
 		objectID = *incomingRequest.AffinityRef().GetLocal()
 	}
 
@@ -230,9 +234,16 @@ func (c *RequestCheckerDefault) checkReasonForIncomingRequest(
 		reasonInfo, err = c.getRequest(ctx, reasonObjectID, reasonID, requestID.Pulse())
 	}
 	if err != nil {
-		return errors.Wrap(err, "reason request not found")
+		return errors.Wrap(err, "reason request search failed")
 	}
 
+	// Reason request not found in filaments
+	if reasonInfo.Request == nil {
+		return &payload.CodedError{
+			Text: "request reason not found",
+			Code: payload.CodeReasonNotFound,
+		}
+	}
 	material := record.Material{}
 	err = material.Unmarshal(reasonInfo.Request)
 	if err != nil {
@@ -242,18 +253,28 @@ func (c *RequestCheckerDefault) checkReasonForIncomingRequest(
 	virtual := record.Unwrap(&material.Virtual)
 	_, ok := virtual.(*record.IncomingRequest)
 	if !ok {
-		return fmt.Errorf("reason request must be Incoming, %T received", virtual)
+		return &payload.CodedError{
+			// Text: fmt.Sprintf("reason request must be Incoming, %T received", virtual),
+			Text: "reason request must be Incoming, %T received",
+			Code: payload.CodeReasonIsWrong,
+		}
 	}
 
 	isClosed := len(reasonInfo.Result) != 0
 	if !incomingRequest.IsDetachedCall() && isClosed {
 		// This is regular request, should NOT have closed reason.
-		return errors.New("reason request is closed for a regular (not detached) call")
+		return &payload.CodedError{
+			Text: "reason request is closed for a regular (not detached) call",
+			Code: payload.CodeReasonIsWrong,
+		}
 	}
 
 	if incomingRequest.IsDetachedCall() && !isClosed {
 		// This is "detached incoming request", should have closed reason.
-		return errors.New("reason request is not closed for a detached call")
+		return &payload.CodedError{
+			Text: "reason request is not closed for a detached call",
+			Code: payload.CodeReasonIsWrong,
+		}
 	}
 
 	return nil
@@ -341,7 +362,6 @@ func (c *RequestCheckerDefault) getRequestLocal(
 			return nil, errors.Wrap(err, "failed to marshal local request record")
 		}
 		reqInfo.Request = reqBuf
-
 	}
 
 	if foundResult != nil {
