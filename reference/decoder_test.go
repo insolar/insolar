@@ -161,7 +161,7 @@ func TestDecoder_Decode_new(t *testing.T) {
 	}
 
 	newReference_with_authority := "insolarv1://authority/0114CxjQofp9Rrh2jwVAdqaqVPfZEsrP27WaP8dgnHY3.record"
-	newReference_with_empty_authority := "insolarv1://0114CxjQofp9Rrh2jwVAdqaqVPfZEsrP27WaP8dgnHY3.record"
+	newReference_with_empty_authority := "insolarv1:///0114CxjQofp9Rrh2jwVAdqaqVPfZEsrP27WaP8dgnHY3.record"
 	newReference_with_bad_authority := "insolarv1://0114CxjQofp9Rrh2jwVAdqaqVPfZEsrP27WaP8dgnHY3.record"
 	{
 		var err error
