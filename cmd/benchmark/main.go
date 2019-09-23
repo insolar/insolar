@@ -27,6 +27,7 @@ import (
 	"os/signal"
 	"path"
 	"path/filepath"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -397,7 +398,9 @@ func switchScenario(out io.Writer, insSDK *sdk.SDK) benchmark {
 	case "migration":
 		for _, md := range insSDK.GetMigrationDaemonMembers() {
 			_, err := insSDK.ActivateDaemon(md.GetReference())
-			check("Error while activating daemons: ", err)
+			if err != nil && !strings.Contains(err.Error(), "[daemon member already activated]") {
+				check("Error while activating daemons: ", err)
+			}
 		}
 		b = newMigrationScenarios(out, insSDK, concurrent, repetitions)
 	default:
