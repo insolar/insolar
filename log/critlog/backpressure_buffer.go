@@ -269,6 +269,9 @@ func (p *internalBackpressureBuffer) fairQueueWrite(level insolar.LogLevel, b []
 }
 
 func (p *internalBackpressureBuffer) queueWrite(level insolar.LogLevel, b []byte) (int, error) {
+	if level == internalOpLevel && b == nil {
+		return 0, nil
+	}
 	p.buffer <- p.newQueueEntry(level, b)
 	return len(b), nil
 }
