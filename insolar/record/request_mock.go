@@ -38,12 +38,6 @@ type RequestMock struct {
 	beforeIsCreationRequestCounter uint64
 	IsCreationRequestMock          mRequestMockIsCreationRequest
 
-	funcIsMutable          func() (b1 bool)
-	inspectFuncIsMutable   func()
-	afterIsMutableCounter  uint64
-	beforeIsMutableCounter uint64
-	IsMutableMock          mRequestMockIsMutable
-
 	funcIsTemporaryUploadCode          func() (b1 bool)
 	inspectFuncIsTemporaryUploadCode   func()
 	afterIsTemporaryUploadCodeCounter  uint64
@@ -89,8 +83,6 @@ func NewRequestMock(t minimock.Tester) *RequestMock {
 	m.IsAPIRequestMock = mRequestMockIsAPIRequest{mock: m}
 
 	m.IsCreationRequestMock = mRequestMockIsCreationRequest{mock: m}
-
-	m.IsMutableMock = mRequestMockIsMutable{mock: m}
 
 	m.IsTemporaryUploadCodeMock = mRequestMockIsTemporaryUploadCode{mock: m}
 
@@ -674,149 +666,6 @@ func (m *RequestMock) MinimockIsCreationRequestInspect() {
 	// if func was set then invocations count should be greater than zero
 	if m.funcIsCreationRequest != nil && mm_atomic.LoadUint64(&m.afterIsCreationRequestCounter) < 1 {
 		m.t.Error("Expected call to RequestMock.IsCreationRequest")
-	}
-}
-
-type mRequestMockIsMutable struct {
-	mock               *RequestMock
-	defaultExpectation *RequestMockIsMutableExpectation
-	expectations       []*RequestMockIsMutableExpectation
-}
-
-// RequestMockIsMutableExpectation specifies expectation struct of the Request.IsMutable
-type RequestMockIsMutableExpectation struct {
-	mock *RequestMock
-
-	results *RequestMockIsMutableResults
-	Counter uint64
-}
-
-// RequestMockIsMutableResults contains results of the Request.IsMutable
-type RequestMockIsMutableResults struct {
-	b1 bool
-}
-
-// Expect sets up expected params for Request.IsMutable
-func (mmIsMutable *mRequestMockIsMutable) Expect() *mRequestMockIsMutable {
-	if mmIsMutable.mock.funcIsMutable != nil {
-		mmIsMutable.mock.t.Fatalf("RequestMock.IsMutable mock is already set by Set")
-	}
-
-	if mmIsMutable.defaultExpectation == nil {
-		mmIsMutable.defaultExpectation = &RequestMockIsMutableExpectation{}
-	}
-
-	return mmIsMutable
-}
-
-// Inspect accepts an inspector function that has same arguments as the Request.IsMutable
-func (mmIsMutable *mRequestMockIsMutable) Inspect(f func()) *mRequestMockIsMutable {
-	if mmIsMutable.mock.inspectFuncIsMutable != nil {
-		mmIsMutable.mock.t.Fatalf("Inspect function is already set for RequestMock.IsMutable")
-	}
-
-	mmIsMutable.mock.inspectFuncIsMutable = f
-
-	return mmIsMutable
-}
-
-// Return sets up results that will be returned by Request.IsMutable
-func (mmIsMutable *mRequestMockIsMutable) Return(b1 bool) *RequestMock {
-	if mmIsMutable.mock.funcIsMutable != nil {
-		mmIsMutable.mock.t.Fatalf("RequestMock.IsMutable mock is already set by Set")
-	}
-
-	if mmIsMutable.defaultExpectation == nil {
-		mmIsMutable.defaultExpectation = &RequestMockIsMutableExpectation{mock: mmIsMutable.mock}
-	}
-	mmIsMutable.defaultExpectation.results = &RequestMockIsMutableResults{b1}
-	return mmIsMutable.mock
-}
-
-//Set uses given function f to mock the Request.IsMutable method
-func (mmIsMutable *mRequestMockIsMutable) Set(f func() (b1 bool)) *RequestMock {
-	if mmIsMutable.defaultExpectation != nil {
-		mmIsMutable.mock.t.Fatalf("Default expectation is already set for the Request.IsMutable method")
-	}
-
-	if len(mmIsMutable.expectations) > 0 {
-		mmIsMutable.mock.t.Fatalf("Some expectations are already set for the Request.IsMutable method")
-	}
-
-	mmIsMutable.mock.funcIsMutable = f
-	return mmIsMutable.mock
-}
-
-// IsMutable implements Request
-func (mmIsMutable *RequestMock) IsMutable() (b1 bool) {
-	mm_atomic.AddUint64(&mmIsMutable.beforeIsMutableCounter, 1)
-	defer mm_atomic.AddUint64(&mmIsMutable.afterIsMutableCounter, 1)
-
-	if mmIsMutable.inspectFuncIsMutable != nil {
-		mmIsMutable.inspectFuncIsMutable()
-	}
-
-	if mmIsMutable.IsMutableMock.defaultExpectation != nil {
-		mm_atomic.AddUint64(&mmIsMutable.IsMutableMock.defaultExpectation.Counter, 1)
-
-		results := mmIsMutable.IsMutableMock.defaultExpectation.results
-		if results == nil {
-			mmIsMutable.t.Fatal("No results are set for the RequestMock.IsMutable")
-		}
-		return (*results).b1
-	}
-	if mmIsMutable.funcIsMutable != nil {
-		return mmIsMutable.funcIsMutable()
-	}
-	mmIsMutable.t.Fatalf("Unexpected call to RequestMock.IsMutable.")
-	return
-}
-
-// IsMutableAfterCounter returns a count of finished RequestMock.IsMutable invocations
-func (mmIsMutable *RequestMock) IsMutableAfterCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmIsMutable.afterIsMutableCounter)
-}
-
-// IsMutableBeforeCounter returns a count of RequestMock.IsMutable invocations
-func (mmIsMutable *RequestMock) IsMutableBeforeCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmIsMutable.beforeIsMutableCounter)
-}
-
-// MinimockIsMutableDone returns true if the count of the IsMutable invocations corresponds
-// the number of defined expectations
-func (m *RequestMock) MinimockIsMutableDone() bool {
-	for _, e := range m.IsMutableMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			return false
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.IsMutableMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterIsMutableCounter) < 1 {
-		return false
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcIsMutable != nil && mm_atomic.LoadUint64(&m.afterIsMutableCounter) < 1 {
-		return false
-	}
-	return true
-}
-
-// MinimockIsMutableInspect logs each unmet expectation
-func (m *RequestMock) MinimockIsMutableInspect() {
-	for _, e := range m.IsMutableMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			m.t.Error("Expected call to RequestMock.IsMutable")
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.IsMutableMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterIsMutableCounter) < 1 {
-		m.t.Error("Expected call to RequestMock.IsMutable")
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcIsMutable != nil && mm_atomic.LoadUint64(&m.afterIsMutableCounter) < 1 {
-		m.t.Error("Expected call to RequestMock.IsMutable")
 	}
 }
 
@@ -1547,8 +1396,6 @@ func (m *RequestMock) MinimockFinish() {
 
 		m.MinimockIsCreationRequestInspect()
 
-		m.MinimockIsMutableInspect()
-
 		m.MinimockIsTemporaryUploadCodeInspect()
 
 		m.MinimockMarshalInspect()
@@ -1585,7 +1432,6 @@ func (m *RequestMock) minimockDone() bool {
 		m.MinimockGetCallTypeDone() &&
 		m.MinimockIsAPIRequestDone() &&
 		m.MinimockIsCreationRequestDone() &&
-		m.MinimockIsMutableDone() &&
 		m.MinimockIsTemporaryUploadCodeDone() &&
 		m.MinimockMarshalDone() &&
 		m.MinimockReasonAffinityRefDone() &&
