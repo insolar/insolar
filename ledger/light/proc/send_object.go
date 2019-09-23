@@ -101,15 +101,7 @@ func (p *SendObject) ensureOldestRequest(ctx context.Context) (*record.Composite
 		return nil, nil
 	}
 
-	oldest := oldestMutable(openReqs)
-	if oldest == nil {
-		return nil, nil
-	}
-
-	if oldest.RecordID != reqBody.RecordID {
-		return oldest, nil
-	}
-	return nil, nil
+	return oldestMutable(openReqs), nil
 }
 
 func (p *SendObject) Proceed(ctx context.Context) error {
@@ -224,7 +216,7 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to check request status")
 		}
-		if oldest != nil {
+		if oldest.RecordID != *p.requestID {
 			reqBuf, err := oldest.Record.Virtual.Marshal()
 			if err != nil {
 				return errors.Wrap(err, "failed to marshal request")
