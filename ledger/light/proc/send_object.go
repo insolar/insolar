@@ -87,10 +87,9 @@ func (p *SendObject) ensureOldestRequest(ctx context.Context) (*record.Composite
 	}
 	var reqBody *record.CompositeFilamentRecord
 
-	for _, openReq := range openReqs {
-		openReq := openReq
-		if openReq.RecordID == *p.requestID {
-			reqBody = &openReq
+	for i := range openReqs {
+		if openReqs[i].RecordID == *p.requestID {
+			reqBody = &openReqs[i]
 		}
 	}
 	if reqBody == nil {
