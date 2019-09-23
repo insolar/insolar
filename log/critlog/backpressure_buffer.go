@@ -30,21 +30,28 @@ func NewBackpressureBuffer(output io.Writer, bufSize int, extraPenalty uint8, ma
 		panic("illegal value")
 	}
 
-	return &BackpressureBuffer{
+	return &BackpressureBuffer{&internalBackpressureBuffer{
 		output:       NewFlushBypass(output),
 		flags:        flags,
 		extraPenalty: extraPenalty,
 		maxParWrites: maxParWrites,
 		missFn:       missFn,
 		buffer:       make(chan bufEntry, bufSize),
-	}
+	}}
 }
 
 type MissedEventFunc func(missed int) (insolar.LogLevel, []byte)
 
-var _ insolar.LogLevelWriter = &BackpressureBuffer{}
+var _ insolar.LogLevelWriter = &internalBackpressureBuffer{}
 
+/*
+Provides weak-reference behavior to enable auto-stop of workers
+*/
 type BackpressureBuffer struct {
+	*internalBackpressureBuffer
+}
+
+type internalBackpressureBuffer struct {
 	output FlushBypass
 	fatal  FatalHelper
 	missFn MissedEventFunc
@@ -68,15 +75,26 @@ type bufEntry struct {
 	flushMark bufferFlushMode
 }
 
-/* The buffer requires a worker to scrap the buffer. Multiple workers are ok, but aren't necessary. */
-func (p *BackpressureBuffer) StartWorker(ctx context.Context) *BackpressureBuffer {
+/*
+The buffer requires a worker to scrap the buffer. Multiple workers are ok, but aren't necessary.
+Start of the worker will also attach a finalizer to the buffer.
+*/
+func (p *BackpressureBuffer) StartWorker(ctx context.Context, stopOnNoProducers bool) *BackpressureBuffer {
 	go p.worker(ctx)
+
+	if stopOnNoProducers {
+		runtime.SetFinalizer(p, nil) //reset all as we only need one finalizer
+		runtime.SetFinalizer(p, func(p *BackpressureBuffer) {
+			p.closeWorker()
+		})
+	}
+
 	return p
 }
 
 const internalOpLevel = insolar.LogLevel(255)
 
-func (p *BackpressureBuffer) Close() error {
+func (p *internalBackpressureBuffer) Close() error {
 	if p.fatal.IsFatal() {
 		if p.output.SetClosed() {
 			_, _ = p.output.DoClose()
@@ -94,25 +112,32 @@ func (p *BackpressureBuffer) Close() error {
 	return nil
 }
 
-func (p *BackpressureBuffer) Flush() error {
+func (p *internalBackpressureBuffer) closeWorker() {
+	if p.fatal.IsFatal() || p.output.IsClosed() {
+		return
+	}
+	_, _ = p.flushWrite(internalOpLevel, nil, tillDepletion, 0)
+}
+
+func (p *internalBackpressureBuffer) Flush() error {
 	_, err := p.flushWrite(internalOpLevel, nil, tillFlushMark, 0)
 	_, _ = p.output.DoFlushOrSync()
 	return err
 }
 
-func (p *BackpressureBuffer) Write(b []byte) (n int, err error) {
+func (p *internalBackpressureBuffer) Write(b []byte) (n int, err error) {
 	return p.LogLevelWrite(insolar.NoLevel, b)
 }
 
-func (p *BackpressureBuffer) IsLowLatencySupported() bool {
+func (p *internalBackpressureBuffer) IsLowLatencySupported() bool {
 	return true
 }
 
-func (p *BackpressureBuffer) GetBareOutput() io.Writer {
+func (p *internalBackpressureBuffer) GetBareOutput() io.Writer {
 	return p.output.Writer
 }
 
-func (p *BackpressureBuffer) LowLatencyWrite(level insolar.LogLevel, b []byte) (n int, err error) {
+func (p *internalBackpressureBuffer) LowLatencyWrite(level insolar.LogLevel, b []byte) (n int, err error) {
 	if p.fatal.IsFatal() {
 		return p.fatal.PostFatalWrite(level, b)
 	}
@@ -138,7 +163,7 @@ func (p *BackpressureBuffer) LowLatencyWrite(level insolar.LogLevel, b []byte) (
 	return len(b), nil
 }
 
-func (p *BackpressureBuffer) newQueueEntry(level insolar.LogLevel, b []byte) bufEntry {
+func (p *internalBackpressureBuffer) newQueueEntry(level insolar.LogLevel, b []byte) bufEntry {
 	if p.flags&BufferReuse != 0 {
 		return bufEntry{lvl: level, b: b}
 	}
@@ -146,7 +171,7 @@ func (p *BackpressureBuffer) newQueueEntry(level insolar.LogLevel, b []byte) buf
 	return bufEntry{lvl: level, b: append(v, b...)}
 }
 
-func (p *BackpressureBuffer) LogLevelWrite(level insolar.LogLevel, b []byte) (n int, err error) {
+func (p *internalBackpressureBuffer) LogLevelWrite(level insolar.LogLevel, b []byte) (n int, err error) {
 	if p.fatal.IsFatal() {
 		return p.fatal.PostFatalWrite(level, b)
 	}
@@ -172,7 +197,7 @@ func (p *BackpressureBuffer) LogLevelWrite(level insolar.LogLevel, b []byte) (n 
 	}
 }
 
-func (p *BackpressureBuffer) writeFatal(level insolar.LogLevel, b []byte) (n int, err error) {
+func (p *internalBackpressureBuffer) writeFatal(level insolar.LogLevel, b []byte) (n int, err error) {
 	if !p.fatal.SetFatal() {
 		return p.fatal.PostFatalWrite(level, b)
 	}
@@ -190,7 +215,7 @@ func (p *BackpressureBuffer) writeFatal(level insolar.LogLevel, b []byte) (n int
 	return n, p.output.Close()
 }
 
-func (p *BackpressureBuffer) checkWrite(level insolar.LogLevel, b []byte, startNano int64) (int, error) {
+func (p *internalBackpressureBuffer) checkWrite(level insolar.LogLevel, b []byte, startNano int64) (int, error) {
 	writeId := atomic.AddUint32(&p.writeSeq, 1)
 
 	for i := uint8(0); ; i++ {
@@ -223,7 +248,7 @@ const (
 	tillDepletion
 )
 
-func (p *BackpressureBuffer) fairQueueWrite(level insolar.LogLevel, b []byte, startNano int64) (int, error) {
+func (p *internalBackpressureBuffer) fairQueueWrite(level insolar.LogLevel, b []byte, startNano int64) (int, error) {
 	n, err := p.queueWrite(level, b)
 	if startNano != 0 && p.flags&BufferWriteDelayFairness != 0 {
 		waitNano := int64(p.GetWriteDuration()) - (time.Now().UnixNano() - startNano)
@@ -234,12 +259,12 @@ func (p *BackpressureBuffer) fairQueueWrite(level insolar.LogLevel, b []byte, st
 	return n, err
 }
 
-func (p *BackpressureBuffer) queueWrite(level insolar.LogLevel, b []byte) (int, error) {
+func (p *internalBackpressureBuffer) queueWrite(level insolar.LogLevel, b []byte) (int, error) {
 	p.buffer <- p.newQueueEntry(level, b)
 	return len(b), nil
 }
 
-func (p *BackpressureBuffer) directWrite(level insolar.LogLevel, b []byte, startNano int64) (int, error) {
+func (p *internalBackpressureBuffer) directWrite(level insolar.LogLevel, b []byte, startNano int64) (int, error) {
 	if level == internalOpLevel && b == nil {
 		return 0, nil
 	}
@@ -251,7 +276,7 @@ func (p *BackpressureBuffer) directWrite(level insolar.LogLevel, b []byte, start
 	return n, err
 }
 
-func (p *BackpressureBuffer) flushWrite(level insolar.LogLevel, b []byte, flush bufferFlushMode, startNano int64) (int, error) {
+func (p *internalBackpressureBuffer) flushWrite(level insolar.LogLevel, b []byte, flush bufferFlushMode, startNano int64) (int, error) {
 
 	penalty := 1 // every worker has to write at least +1 event from the queue
 	switch flush {
@@ -329,7 +354,7 @@ func (p *BackpressureBuffer) flushWrite(level insolar.LogLevel, b []byte, flush 
 	return p.queueWrite(level, b)
 }
 
-func (p *BackpressureBuffer) worker(ctx context.Context) {
+func (p *internalBackpressureBuffer) worker(ctx context.Context) {
 
 	atomic.AddUint32(&p.pendingWrites, 1)
 	defer atomic.AddUint32(&p.pendingWrites, ^uint32(0)) // -1
@@ -371,22 +396,22 @@ func (p *BackpressureBuffer) worker(ctx context.Context) {
 	}
 }
 
-func (p *BackpressureBuffer) drawStraw(writeId uint32, writersInQueue uint32) bool {
+func (p *internalBackpressureBuffer) drawStraw(writeId uint32, writersInQueue uint32) bool {
 	return writersInQueue == 0 || (writeId%args.Prime(int(writersInQueue-1))) == 0
 }
 
-func (p *BackpressureBuffer) getMissedCount() int {
+func (p *internalBackpressureBuffer) getMissedCount() int {
 	return int(atomic.SwapUint32(&p.missCount, 0))
 }
 
-func (p *BackpressureBuffer) getAndWriteMissed() {
+func (p *internalBackpressureBuffer) getAndWriteMissed() {
 	if p.missFn == nil || p.output.IsClosed() || p.fatal.IsFatal() {
 		return
 	}
 	p.writeMissedCount(p.getMissedCount())
 }
 
-func (p *BackpressureBuffer) writeMissedCount(missedCount int) {
+func (p *internalBackpressureBuffer) writeMissedCount(missedCount int) {
 	if p.missFn == nil || missedCount == 0 {
 		return
 	}
@@ -397,11 +422,11 @@ func (p *BackpressureBuffer) writeMissedCount(missedCount int) {
 	_, _ = p.output.DoLevelWrite(lvl, missMsg)
 }
 
-func (p *BackpressureBuffer) GetWriteDuration() time.Duration {
+func (p *internalBackpressureBuffer) GetWriteDuration() time.Duration {
 	return time.Duration(atomic.LoadUint32(&p.avgDelayMicro)) * time.Microsecond
 }
 
-func (p *BackpressureBuffer) ApplyWriteDuration(d time.Duration) {
+func (p *internalBackpressureBuffer) ApplyWriteDuration(d time.Duration) {
 	for {
 		v := atomic.LoadUint32(&p.avgDelayMicro)
 
