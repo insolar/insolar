@@ -161,50 +161,39 @@ func (d *distributor) Distribute(ctx context.Context, pulse insolar.Pulse) {
 	)
 	defer span.End()
 
-	// TODO: Move to config reader or DECIDE WHEN WE NEED TO RESOLVE INS-3507
-	adresses := make([]net.TCPAddr, 0, len(d.bootstrapHosts))
-	amu := sync.Mutex{}
-	dnswg := sync.WaitGroup{}
-
-	for _, node := range d.bootstrapHosts {
-		dnswg.Add(1)
-		go func(node string) {
-			defer dnswg.Done()
-			addr, err := net.ResolveTCPAddr("tcp", node)
-			if err != nil {
-				logger.Warnf("failed to resolve bootstrap node address %s, %s", node, err.Error())
-				return
-			}
-			amu.Lock()
-			defer amu.Unlock()
-			adresses = append(adresses, *addr)
-		}(node)
-	}
-	dnswg.Wait()
-
-	if len(adresses) == 0 {
-		logger.Warn("No bootstrap hosts to distribute")
-		return
-	}
-
 	wg := sync.WaitGroup{}
-	wg.Add(len(adresses))
+	wg.Add(len(d.bootstrapHosts))
 
-	for _, nodeAddr := range adresses {
-		go func(ctx context.Context, pulse insolar.Pulse, nodeAddr net.TCPAddr) {
+	distributed := 0
+	for _, nodeAddr := range d.bootstrapHosts {
+		go func(ctx context.Context, pulse insolar.Pulse, nodeAddr string) {
 			defer wg.Done()
 
-			err := d.sendPulseToHost(ctx, &pulse, &nodeAddr)
+			addr, err := net.ResolveTCPAddr("tcp", nodeAddr)
 			if err != nil {
-				stats.Record(ctx, statSendPulseErrorsCount.M(1))
-				logger.Warnf("Failed to send pulse %d to host: %s %s", pulse.PulseNumber, nodeAddr.String(), err)
+				logger.Warnf("failed to resolve bootstrap node address %s, %s", nodeAddr, err.Error())
 				return
 			}
+
+			err = d.sendPulseToHost(ctx, &pulse, addr)
+			if err != nil {
+				stats.Record(ctx, statSendPulseErrorsCount.M(1))
+				logger.Warnf("Failed to send pulse %d to host: %s %s", pulse.PulseNumber, nodeAddr, err)
+				return
+			}
+
+			distributed++
 			logger.Infof("Successfully sent pulse %d to node %s", pulse.PulseNumber, nodeAddr)
 		}(ctx, pulse, nodeAddr)
 	}
-
 	wg.Wait()
+
+	if distributed == 0 {
+		logger.Warn("No bootstrap hosts to distribute")
+	} else {
+		logger.Infof("Pulse distributed to %d hosts", distributed)
+	}
+
 }
 
 func (d *distributor) generateID() types.RequestID {
@@ -240,7 +229,7 @@ func (d *distributor) sendRequestToHost(ctx context.Context, p *packet.Packet, r
 		return errors.Wrap(err, "Failed to serialize packet")
 	}
 
-	conn, err := net.DialTCP("tcp", nil, receiver)
+	conn, err := d.transport.Dial(ctx, receiver.String())
 	if err != nil {
 		return errors.Wrap(err, "Unable to connect")
 	}
