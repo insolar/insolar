@@ -150,7 +150,7 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 	closedRequest, err := findClosed(opened, p.result)
 
 	if p.sideEffect != nil {
-		err = checkRequest(closedRequest)
+		err = checkRequestCanChangeState(closedRequest)
 	}
 	if err != nil {
 		return errors.Wrap(err, "failed to find request being closed")
@@ -262,19 +262,19 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 }
 
 // If we have side effect than check that request of received result is not outgoing and not immutable incoming
-func checkRequest(request record.CompositeFilamentRecord) error {
+func checkRequestCanChangeState(request record.CompositeFilamentRecord) error {
 	rec := record.Unwrap(&request.Record.Virtual)
 	switch req := rec.(type) {
 	case *record.OutgoingRequest:
 		return &payload.CodedError{
 			Text: "outgoing request can't change object state, id: " + request.RecordID.DebugString(),
-			Code: payload.CodeRequestIsWrong,
+			Code: payload.CodeRequestInvalid,
 		}
 	case *record.IncomingRequest:
-		if !req.IsMutable() {
+		if req.Immutable {
 			return &payload.CodedError{
 				Text: "immutable incoming request can't change object state, id: " + request.RecordID.DebugString(),
-				Code: payload.CodeRequestIsWrong,
+				Code: payload.CodeRequestInvalid,
 			}
 		}
 	}

@@ -384,7 +384,7 @@ func TestSetResult_Proceed_ImmutableRequest_Error(t *testing.T) {
 	require.Error(t, err)
 	insError, ok := errors.Cause(err).(*payload.CodedError)
 	require.True(t, ok)
-	require.Equal(t, uint32(payload.CodeRequestIsWrong), insError.GetCode())
+	require.Equal(t, uint32(payload.CodeRequestInvalid), insError.GetCode())
 }
 
 func TestSetResult_Proceed_OutgoingRequest_Error(t *testing.T) {
@@ -499,5 +499,5 @@ func TestSetResult_Proceed_OutgoingRequest_Error(t *testing.T) {
 	require.Error(t, err)
 	insError, ok := errors.Cause(err).(*payload.CodedError)
 	require.True(t, ok)
-	require.Equal(t, uint32(payload.CodeRequestIsWrong), insError.GetCode())
+	require.Equal(t, uint32(payload.CodeRequestInvalid), insError.GetCode())
 }

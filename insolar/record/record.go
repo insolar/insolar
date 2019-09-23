@@ -164,8 +164,6 @@ type Request interface {
 	// IsTemporaryUploadCode tells us that that request is temporary hack
 	// for uploading code.
 	IsTemporaryUploadCode() bool
-	// IsMutable returns mutable-state of request
-	IsMutable() bool
 }
 
 func (r *IncomingRequest) AffinityRef() *insolar.Reference {
@@ -218,10 +216,6 @@ func (r *IncomingRequest) IsTemporaryUploadCode() bool {
 	return r.GetCallType() == CTDeployPrototype
 }
 
-func (r *IncomingRequest) IsMutable() bool {
-	return !r.Immutable
-}
-
 func (r *OutgoingRequest) AffinityRef() *insolar.Reference {
 	// OutgoingRequests are affine to the Caller which created the Request.
 	return &r.Caller
@@ -260,10 +254,6 @@ func (r *OutgoingRequest) Validate() error {
 
 func (r *OutgoingRequest) IsTemporaryUploadCode() bool {
 	return false
-}
-
-func (r *OutgoingRequest) IsMutable() bool {
-	return !r.Immutable
 }
 
 func CalculateRequestAffinityRef(
