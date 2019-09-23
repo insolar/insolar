@@ -19,6 +19,7 @@ const (
 	BufferWriteDelayFairness
 	BufferDirectForRegular
 	BufferTrackWriteDuration
+	BufferCloseOnStop
 	BufferReuse
 )
 
@@ -37,7 +38,7 @@ func NewBackpressureBuffer(output io.Writer, bufSize int, extraPenalty uint8, ma
 		maxParWrites: maxParWrites,
 		missFn:       missFn,
 		buffer:       make(chan bufEntry, bufSize),
-	}}
+	}, 0}
 }
 
 type MissedEventFunc func(missed int) (insolar.LogLevel, []byte)
@@ -49,6 +50,7 @@ Provides weak-reference behavior to enable auto-stop of workers
 */
 type BackpressureBuffer struct {
 	*internalBackpressureBuffer
+	status uint32 // atomic
 }
 
 type internalBackpressureBuffer struct {
@@ -79,13 +81,20 @@ type bufEntry struct {
 The buffer requires a worker to scrap the buffer. Multiple workers are ok, but aren't necessary.
 Start of the worker will also attach a finalizer to the buffer.
 */
-func (p *BackpressureBuffer) StartWorker(ctx context.Context, stopOnNoProducers bool) *BackpressureBuffer {
+func (p *BackpressureBuffer) StartWorker(ctx context.Context) *BackpressureBuffer {
 	go p.worker(ctx)
 
-	if stopOnNoProducers {
-		runtime.SetFinalizer(p, nil) //reset all as we only need one finalizer
-		runtime.SetFinalizer(p, func(p *BackpressureBuffer) {
-			p.closeWorker()
+	if atomic.SwapUint32(&p.status, 1) != 0 {
+		return p
+	}
+
+	if p.flags&BufferCloseOnStop != 0 {
+		runtime.SetFinalizer(p, func(pp *BackpressureBuffer) {
+			_ = pp.Close()
+		})
+	} else {
+		runtime.SetFinalizer(p, func(pp *BackpressureBuffer) {
+			pp.closeWorker()
 		})
 	}
 
