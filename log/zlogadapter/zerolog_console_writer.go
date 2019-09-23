@@ -1,4 +1,4 @@
-//
+///
 //    Copyright 2019 Insolar Technologies
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,18 +12,26 @@
 //    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
-//
+///
 
-package log
+package zlogadapter
 
 import (
 	"errors"
 	"fmt"
+	"github.com/insolar/insolar/log/logadapter"
 	"github.com/rs/zerolog"
 	"io"
 	"os"
 	"strings"
 )
+
+var fieldsOrder = []string{
+	zerolog.TimestampFieldName,
+	zerolog.LevelFieldName,
+	zerolog.MessageFieldName,
+	zerolog.CallerFieldName,
+}
 
 var _ io.WriteCloser = &closableConsoleWriter{}
 
@@ -49,7 +57,7 @@ func newDefaultTextOutput(out io.Writer) io.WriteCloser {
 	return &closableConsoleWriter{zerolog.ConsoleWriter{
 		Out:          out,
 		NoColor:      true,
-		TimeFormat:   timestampFormat,
+		TimeFormat:   logadapter.TimestampFormat,
 		PartsOrder:   fieldsOrder,
 		FormatCaller: formatCaller(),
 	}}

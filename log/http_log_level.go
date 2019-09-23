@@ -19,6 +19,7 @@ package log
 import (
 	"fmt"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/log/zlogadapter"
 	"github.com/rs/zerolog"
 	"net/http"
 )
@@ -45,7 +46,7 @@ func (h *loglevelChangeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	zLevel := ToZerologLevel(level)
+	zLevel := zlogadapter.ToZerologLevel(level)
 	zerolog.SetGlobalLevel(zLevel)
 
 	w.WriteHeader(200)

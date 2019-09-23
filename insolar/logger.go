@@ -36,7 +36,10 @@ const (
 	ErrorLevel
 	FatalLevel
 	PanicLevel
+	maxLogLevel
 )
+
+const LogLevelCount = int(maxLogLevel)
 
 func (l LogLevel) Equal(other LogLevel) bool {
 	return l == other
@@ -279,8 +282,8 @@ type LoggerBuilder interface {
 
 	// Creates a logger
 	Build() (Logger, error)
-
-	//BuildForTimeCritical(bufSize int) (Logger, error)
+	// Creates a logger with no write delays
+	BuildLowLatency() (Logger, error)
 }
 
 type LoggerOutputGetter interface {

@@ -21,24 +21,13 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log/critlog"
 	"github.com/insolar/insolar/log/logadapter"
+	"github.com/insolar/insolar/log/zlogadapter"
 	"github.com/pkg/errors"
-	"github.com/rs/zerolog"
 	stdlog "log"
 	"strings"
 	"sync"
 	"time"
 )
-
-const timestampFormat = "2006-01-02T15:04:05.000000000Z07:00"
-
-const defaultCallerSkipFrameCount = 1
-
-var fieldsOrder = []string{
-	zerolog.TimestampFieldName,
-	zerolog.LevelFieldName,
-	zerolog.MessageFieldName,
-	zerolog.CallerFieldName,
-}
 
 // NewLog creates logger instance with particular configuration
 func NewLog(cfg configuration.Log) (insolar.Logger, error) {
@@ -47,18 +36,17 @@ func NewLog(cfg configuration.Log) (insolar.Logger, error) {
 
 // NewLog creates logger instance with particular configuration
 func NewLogExt(cfg configuration.Log, skipFrameBaselineAdjustment int8) (insolar.Logger, error) {
-	pCfg, err := parseLogConfig(cfg)
+	pCfg, err := logadapter.ParseLogConfig(cfg)
 	if err == nil {
 		var logger insolar.Logger
 
 		pCfg.SkipFrameBaselineAdjustment = skipFrameBaselineAdjustment
-		//pCfg.Output.EnableFairness = true
 
 		msgFmt := logadapter.GetDefaultLogMsgFormatter()
 
 		switch strings.ToLower(cfg.Adapter) {
 		case "zerolog":
-			logger, err = newZerologAdapter(cfg, pCfg, msgFmt)
+			logger, err = zlogadapter.NewZerologAdapter(pCfg, msgFmt)
 		default:
 			err = errors.New("unknown adapter")
 		}

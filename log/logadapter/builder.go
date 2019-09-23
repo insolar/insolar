@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log/critlog"
+	"github.com/insolar/insolar/log/logmetrics"
 	"io"
 	"math"
 )
@@ -30,7 +31,7 @@ type Config struct {
 	BuildConfig
 	MsgFormat    MsgFormatConfig
 	LoggerOutput insolar.LoggerOutput
-	Metrics      *MetricsHelper
+	Metrics      *logmetrics.MetricsHelper
 }
 
 type BuildConfig struct {
@@ -63,7 +64,9 @@ type InstrumentationConfig struct {
 }
 
 type Factory interface {
-	PrepareBareOutput(output io.Writer, metrics *MetricsHelper, config BuildConfig) (io.Writer, error)
+	PrepareBareOutput(output io.Writer, metrics *logmetrics.MetricsHelper, config BuildConfig) (io.Writer, error)
+
+	CreateNewLowLatencyLogger(level insolar.LogLevel, config Config) (insolar.Logger, error)
 	CreateNewLogger(level insolar.LogLevel, config Config) (insolar.Logger, error)
 
 	CanReuseMsgBuffer() bool
@@ -161,11 +164,19 @@ func (z LoggerBuilder) WithSkipFrameCount(skipFrameCount int) insolar.LoggerBuil
 }
 
 func (z LoggerBuilder) Build() (insolar.Logger, error) {
+	return z.build(false)
+}
 
-	var metrics *MetricsHelper
+func (z LoggerBuilder) BuildLowLatency() (insolar.Logger, error) {
+	return z.build(true)
+}
+
+func (z LoggerBuilder) build(needsLowLatency bool) (insolar.Logger, error) {
+
+	var metrics *logmetrics.MetricsHelper
 
 	if z.Config.Instruments.MetricsMode != insolar.NoLogMetrics {
-		metrics = &MetricsHelper{}
+		metrics = logmetrics.NewMetricsHelper(z.Config.Instruments.Recorder)
 	}
 
 	var output insolar.LoggerOutput
@@ -178,6 +189,9 @@ func (z LoggerBuilder) Build() (insolar.Logger, error) {
 
 		if origConfig.BuildConfig == z.Config.BuildConfig {
 			if z.bareOutput == origConfig.LoggerOutput || z.bareOutput == origConfig.LoggerOutput.GetBareOutput() {
+				if needsLowLatency && !origConfig.LoggerOutput.IsLowLatencySupported() {
+					break
+				}
 				return template.GetTemplateLogger(), nil
 			}
 		}
@@ -189,10 +203,10 @@ func (z LoggerBuilder) Build() (insolar.Logger, error) {
 			output = origConfig.LoggerOutput
 			break
 		}
-		fallthrough
-	default:
+	}
+	if output == nil || needsLowLatency && !output.IsLowLatencySupported() {
 		var err error
-		output, err = z.prepareOutput(metrics)
+		output, err = z.prepareOutput(metrics, needsLowLatency)
 		if err != nil {
 			return nil, err
 		}
@@ -200,11 +214,13 @@ func (z LoggerBuilder) Build() (insolar.Logger, error) {
 
 	z.Config.Metrics = metrics
 	z.Config.LoggerOutput = output
-
+	if needsLowLatency {
+		return z.factory.CreateNewLowLatencyLogger(z.level, z.Config)
+	}
 	return z.factory.CreateNewLogger(z.level, z.Config)
 }
 
-func (z LoggerBuilder) prepareOutput(metrics *MetricsHelper) (insolar.LoggerOutput, error) {
+func (z LoggerBuilder) prepareOutput(metrics *logmetrics.MetricsHelper, needsLowLatency bool) (insolar.LoggerOutput, error) {
 
 	output, err := z.factory.PrepareBareOutput(z.bareOutput, metrics, z.Config.BuildConfig)
 	if err != nil {
@@ -241,6 +257,10 @@ func (z LoggerBuilder) prepareOutput(metrics *MetricsHelper) (insolar.LoggerOutp
 			z.Config.Output.BufferSize, 0, pw, flags, missedFn)
 		bpb.StartWorker(context.Background())
 		return bpb, nil
+	} else {
+		if needsLowLatency {
+			return nil, errors.New("low latency buffer is disabled but was required")
+		}
 	}
 	return critlog.NewFatalDirectWriter(output), nil
 }

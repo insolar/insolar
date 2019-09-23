@@ -1,20 +1,20 @@
+///
+//    Copyright 2019 Insolar Technologies
 //
-// Copyright 2019 Insolar Technologies GmbH
+//    Licensed under the Apache License, Version 2.0 (the "License");
+//    you may not use this file except in compliance with the License.
+//    You may obtain a copy of the License at
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+//        http://www.apache.org/licenses/LICENSE-2.0
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
+//    Unless required by applicable law or agreed to in writing, software
+//    distributed under the License is distributed on an "AS IS" BASIS,
+//    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//    See the License for the specific language governing permissions and
+//    limitations under the License.
+///
 
-package log
+package zlogadapter
 
 import (
 	"bytes"
@@ -24,10 +24,10 @@ import (
 	"fmt"
 	"github.com/insolar/insolar/log/inssyslog"
 	"github.com/insolar/insolar/log/logadapter"
+	"github.com/insolar/insolar/log/logmetrics"
 	"github.com/insolar/insolar/network/consensus/common/args"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
-	"go.opencensus.io/tag"
 	"io"
 	"os"
 	"runtime"
@@ -36,7 +36,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 )
 
@@ -51,7 +50,7 @@ func trimInsolarPrefix(file string, line int) string {
 }
 
 func init() {
-	zerolog.TimeFieldFormat = timestampFormat
+	zerolog.TimeFieldFormat = logadapter.TimestampFormat
 	zerolog.CallerMarshalFunc = trimInsolarPrefix
 	initLevelMappings()
 }
@@ -87,11 +86,7 @@ func initLevelMappings() {
 		if zLevelMax < zerologLevelMapping[i].zl {
 			zLevelMax = zerologLevelMapping[i].zl
 		}
-		ctx, err := tag.New(context.Background(), tag.Insert(tagLevel, insolar.LogLevel(i).String()))
-		if err != nil {
-			panic(err)
-		}
-		zerologLevelMapping[i].metrics = ctx
+		zerologLevelMapping[i].metrics = logmetrics.GetLogLevelContext(insolar.LogLevel(i))
 	}
 
 	zerologReverseMapping = make([]insolar.LogLevel, zLevelMax+1)
@@ -153,9 +148,9 @@ func selectFormatter(format insolar.LogFormat, output io.Writer) (io.Writer, err
 	}
 }
 
-const zerologSkipFrameCount = 3 + defaultCallerSkipFrameCount
+const zerologSkipFrameCount = 4
 
-func newZerologAdapter(_ configuration.Log, pCfg parsedLogConfig, msgFmt logadapter.MsgFormatConfig) (insolar.Logger, error) {
+func NewZerologAdapter(pCfg logadapter.ParsedLogConfig, msgFmt logadapter.MsgFormatConfig) (insolar.Logger, error) {
 
 	bareOutput, err := selectOutput(pCfg.OutputType)
 	if err != nil {
@@ -316,8 +311,8 @@ var _ logadapter.Factory = &zerologFactory{}
 type zerologFactory struct {
 }
 
-func (zf zerologFactory) getWriteDelayHookParams(metrics *logadapter.MetricsHelper,
-	config logadapter.BuildConfig) (needsHook bool, fieldName string, preferTrim bool, reportFn logadapter.DurationReportFunc) {
+func (zf zerologFactory) getWriteDelayHookParams(metrics *logmetrics.MetricsHelper,
+	config logadapter.BuildConfig) (needsHook bool, fieldName string, preferTrim bool, reportFn logmetrics.DurationReportFunc) {
 
 	metricsMode := config.Instruments.MetricsMode
 	if metricsMode&(insolar.LogMetricsWriteDelayField|insolar.LogMetricsWriteDelayReport) == 0 {
@@ -339,7 +334,7 @@ func (zf zerologFactory) getWriteDelayHookParams(metrics *logadapter.MetricsHelp
 	return true, fieldName, false, nil
 }
 
-func (zf zerologFactory) PrepareBareOutput(output io.Writer, metrics *logadapter.MetricsHelper, config logadapter.BuildConfig) (io.Writer, error) {
+func (zf zerologFactory) PrepareBareOutput(output io.Writer, metrics *logmetrics.MetricsHelper, config logadapter.BuildConfig) (io.Writer, error) {
 	var err error
 	output, err = selectFormatter(config.Output.Format, output)
 
@@ -359,9 +354,17 @@ func (zf zerologFactory) CanReuseMsgBuffer() bool {
 	return false
 }
 
-func (zf zerologFactory) CreateNewLogger(level insolar.LogLevel, config logadapter.Config) (insolar.Logger, error) {
+func (zf zerologFactory) CreateNewLowLatencyLogger(level insolar.LogLevel, config logadapter.Config) (insolar.Logger, error) {
+	return zf.createNewLogger(zerologAdapterLLOutput{config.LoggerOutput}, level, config)
+}
 
-	ls := zerolog.New(zerologAdapterOutput{config.LoggerOutput}).Level(ToZerologLevel(level))
+func (zf zerologFactory) CreateNewLogger(level insolar.LogLevel, config logadapter.Config) (insolar.Logger, error) {
+	return zf.createNewLogger(zerologAdapterOutput{config.LoggerOutput}, level, config)
+}
+
+func (zf zerologFactory) createNewLogger(output zerolog.LevelWriter, level insolar.LogLevel, config logadapter.Config) (insolar.Logger, error) {
+
+	ls := zerolog.New(output).Level(ToZerologLevel(level))
 
 	if ok, name, trim, _ := zf.getWriteDelayHookParams(config.Metrics, config.BuildConfig); ok {
 		// MUST be the first Hook
@@ -423,6 +426,18 @@ func (z zerologAdapterOutput) WriteLevel(level zerolog.Level, b []byte) (int, er
 
 /* ========================================= */
 
+var _ zerolog.LevelWriter = &zerologAdapterLLOutput{}
+
+type zerologAdapterLLOutput struct {
+	insolar.LoggerOutput
+}
+
+func (z zerologAdapterLLOutput) WriteLevel(level zerolog.Level, b []byte) (int, error) {
+	return z.LoggerOutput.LowLatencyWrite(FromZerologLevel(level), b)
+}
+
+/* ========================================= */
+
 const internalTempFieldName = "_TWD_"
 const fieldHeaderFmt = `,"%s":"%*v`
 const tempHexFieldLength = 16 // HEX for Uint64
@@ -468,7 +483,7 @@ func (h *writeDelayHook) Run(e *zerolog.Event, level zerolog.Level, message stri
 	e.Hex(h.searchField, buf)
 }
 
-func newWriteDelayPostHook(output io.Writer, fieldName string, preferTrim bool, statReportFn logadapter.DurationReportFunc) *writeDelayPostHook {
+func newWriteDelayPostHook(output io.Writer, fieldName string, preferTrim bool, statReportFn logmetrics.DurationReportFunc) *writeDelayPostHook {
 	fieldWidth, searchField := getWriteDelayHookParams(fieldName, preferTrim)
 	return &writeDelayPostHook{
 		output:       output,

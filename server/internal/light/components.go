@@ -18,6 +18,7 @@ package light
 
 import (
 	"context"
+	"github.com/insolar/insolar/log/logwatermill"
 
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
@@ -45,7 +46,6 @@ import (
 	"github.com/insolar/insolar/ledger/light/handle"
 	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/insolar/insolar/ledger/object"
-	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/servicenetwork"
@@ -104,12 +104,12 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 
 	// Watermill stuff.
 	var (
-		wmLogger   *log.WatermillLogAdapter
+		wmLogger   *logwatermill.WatermillLogAdapter
 		publisher  message.Publisher
 		subscriber message.Subscriber
 	)
 	{
-		wmLogger = log.NewWatermillLogAdapter(inslogger.FromContext(ctx))
+		wmLogger = logwatermill.NewWatermillLogAdapter(inslogger.FromContext(ctx))
 		pubsub := gochannel.NewGoChannel(gochannel.Config{}, wmLogger)
 		subscriber = pubsub
 		publisher = pubsub
