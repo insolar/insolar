@@ -278,15 +278,26 @@ outer:
 			}
 
 			logger.Debug(fmt.Sprintf("workerPrePhase3: id=%d upd=%d count=%d dyns=%v purg=%v trust=%v",
-				c.R.GetSelfNodeID(), updID,
+				c.R.GetSelfNodeID(),
+				updID,
 				indexedCount,
-				args.AsUint16Slice(briefCount, fullCount), args.AsUint16Slice(addedCount, ascentCount),
-				args.AsUint16Slice(fraudCount, bySelfCount, bySomeCount, byNeighborsCount)))
+				args.AsUint16Slice(briefCount, fullCount),
+				args.AsUint16Slice(addedCount, ascentCount),
+				args.AsUint16Slice(fraudCount, bySelfCount, bySomeCount, byNeighborsCount)),
+			)
 
-			allCount := indexedCount + int(addedCount) - int(ascentCount) + int(briefCount)
+			allCount := int(addedCount) - int(ascentCount) + int(briefCount)
+
+			allAndCompletePreCondition := false
+			if c.R.IsJoiner() {
+				allAndCompletePreCondition = int(briefCount) > indexedCount
+			} else {
+				allCount += indexedCount
+				allAndCompletePreCondition = true
+			}
 
 			// We have some-trusted from all nodes, and the majority of them are well-trusted
-			if isComplete && fraudCount == 0 && int(bySelfCount) >= allCount &&
+			if allAndCompletePreCondition && isComplete && fraudCount == 0 && int(bySelfCount) >= allCount &&
 				fullCount >= briefCount && ascentCount >= addedCount &&
 				c.consensusStrategy.CanStartVectorsEarly(indexedCount, int(fraudCount), int(bySomeCount), int(byNeighborsCount)) {
 				// (countTrustBySome >= bftMajority || countTrustByNeighbors >= 1+indexedCount>>1) {
