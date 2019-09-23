@@ -92,10 +92,7 @@ func (c *RequestCheckerDefault) CheckRequest(ctx context.Context, requestID inso
 	case *record.OutgoingRequest:
 		err := c.checkReasonForOutgoingRequest(ctx, r, reasonID, requestID)
 		if err != nil {
-			return &payload.CodedError{
-				Text: err.Error(),
-				Code: payload.CodeReasonNotFound,
-			}
+			return errors.Wrap(err, "request check failed")
 		}
 	}
 
@@ -106,27 +103,85 @@ func (c *RequestCheckerDefault) checkReasonForOutgoingRequest(
 	ctx context.Context,
 	outgoingRequest *record.OutgoingRequest,
 	reasonID insolar.ID,
-	requestID insolar.ID,
+	outgoingRequestID insolar.ID,
 ) error {
-	// FIXME: replace with "FindRequest" calculator method.
-	requests, err := c.filaments.OpenedRequests(
+
+	openedRequests, err := c.filaments.OpenedRequests(
 		ctx,
-		requestID.Pulse(),
+		outgoingRequestID.Pulse(),
 		*outgoingRequest.AffinityRef().GetLocal(),
 		true,
 	)
 	if err != nil {
 		return &payload.CodedError{
 			Text: "failed fetch pending requests",
-			Code: payload.CodeReasonNotFound,
+			Code: payload.CodeUnknown,
 		}
 	}
 
-	found := findRecord(requests, reasonID)
-	if !found {
+	// Search reason in opened
+	reasonRequest, err := c.checkReasonIsOpen(ctx, openedRequests, reasonID)
+	if err != nil {
+		return errors.Wrap(err, "checkReasonIsOpen on outgoing failed")
+	}
+
+	rec := record.Unwrap(&reasonRequest.Record.Virtual)
+	out, ok := rec.(*record.IncomingRequest)
+	if !ok {
 		return &payload.CodedError{
-			Text: "request reason not found in opened requests",
-			Code: payload.CodeReasonNotFound,
+			Text: "reason is not incoming",
+			Code: payload.CodeReasonIsWrong,
+		}
+	}
+
+	// If reason is mutable incoming request, than check that it is the oldest
+	if !out.Immutable {
+		err = c.checkReasonIsOldest(ctx, openedRequests, reasonRequest)
+		return errors.Wrap(err, "checkReasonIsOldest on outgoing failed")
+	}
+
+	return nil
+}
+
+func (c *RequestCheckerDefault) checkReasonIsOpen(
+	ctx context.Context,
+	requests []record.CompositeFilamentRecord,
+	reasonID insolar.ID,
+) (record.CompositeFilamentRecord, error) {
+
+	for _, p := range requests {
+		if p.RecordID == reasonID {
+			return p, nil
+		}
+	}
+
+	return record.CompositeFilamentRecord{}, &payload.CodedError{
+		Text: "request reason not found in opened requests",
+		Code: payload.CodeReasonNotFound,
+	}
+}
+
+func (c *RequestCheckerDefault) checkReasonIsOldest(
+	ctx context.Context,
+	requests []record.CompositeFilamentRecord,
+	reasonRequest record.CompositeFilamentRecord,
+) error {
+	older := false
+	for _, p := range requests {
+		if older {
+			rec := record.Unwrap(&p.Record.Virtual)
+			// Found mutable incoming older
+			if out, ok := rec.(*record.IncomingRequest); ok && !out.Immutable {
+				return &payload.CodedError{
+					Text: "request reason is not the oldest in filament",
+					Code: payload.CodeReasonIsWrong,
+				}
+			}
+		}
+
+		// Skipping everything before we found reason
+		if p.RecordID == reasonRequest.RecordID {
+			older = true
 		}
 	}
 
@@ -303,16 +358,4 @@ func (c *RequestCheckerDefault) getRequestLocal(
 	}).Debug("local result info found")
 
 	return &reqInfo, nil
-}
-
-func findRecord(
-	filamentRecords []record.CompositeFilamentRecord,
-	requestID insolar.ID,
-) bool {
-	for _, p := range filamentRecords {
-		if p.RecordID == requestID {
-			return true
-		}
-	}
-	return false
 }
