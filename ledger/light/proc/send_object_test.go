@@ -76,8 +76,8 @@ func TestSendObject_Proceed(t *testing.T) {
 		}, nil)
 
 		msg := payload.Meta{}
-		p := proc.NewSendObject(msg, objectID)
-		p.Dep(coordinator, jets, fetcher, records, indexes, sender)
+		p := proc.NewSendObject(msg, objectID, nil)
+		p.Dep(coordinator, jets, fetcher, records, indexes, sender, nil)
 
 		err := p.Proceed(ctx)
 		assert.Error(t, err)
@@ -132,8 +132,8 @@ func TestSendObject_Proceed(t *testing.T) {
 			assert.Equal(t, msg, origin)
 		}).Return()
 
-		p := proc.NewSendObject(msg, objectID)
-		p.Dep(coordinator, jets, fetcher, records, indexes, sender)
+		p := proc.NewSendObject(msg, objectID, nil)
+		p.Dep(coordinator, jets, fetcher, records, indexes, sender, nil)
 
 		err = p.Proceed(ctx)
 		assert.NoError(t, err)
@@ -173,8 +173,8 @@ func TestSendObject_Proceed(t *testing.T) {
 			assert.Equal(t, msg, origin)
 		}).Return()
 
-		p := proc.NewSendObject(msg, objectID)
-		p.Dep(coordinator, jets, fetcher, records, indexes, sender)
+		p := proc.NewSendObject(msg, objectID, nil)
+		p.Dep(coordinator, jets, fetcher, records, indexes, sender, nil)
 
 		err = p.Proceed(ctx)
 		assert.Error(t, err)
@@ -232,8 +232,8 @@ func TestSendObject_Proceed(t *testing.T) {
 			assert.Equal(t, expectedTarget, &target)
 		}).Return(make(chan *message.Message), func() {})
 
-		p := proc.NewSendObject(msg, objectID)
-		p.Dep(coordinator, jets, fetcher, records, indexes, sender)
+		p := proc.NewSendObject(msg, objectID, nil)
+		p.Dep(coordinator, jets, fetcher, records, indexes, sender, nil)
 
 		err = p.Proceed(ctx)
 		assert.NoError(t, err)
@@ -283,8 +283,8 @@ func TestSendObject_Proceed(t *testing.T) {
 			assert.Equal(t, expectedTarget, &target)
 		}).Return(make(chan *message.Message), func() {})
 
-		p := proc.NewSendObject(msg, objectID)
-		p.Dep(coordinator, jets, fetcher, records, indexes, sender)
+		p := proc.NewSendObject(msg, objectID, nil)
+		p.Dep(coordinator, jets, fetcher, records, indexes, sender, nil)
 
 		err = p.Proceed(ctx)
 		assert.NoError(t, err)

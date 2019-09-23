@@ -33,52 +33,51 @@ import (
 	"github.com/insolar/insolar/version"
 )
 
-type inputParams struct {
-	configPath        string
-	genesisConfigPath string
-}
+func main() {
+	var (
+		configPath        string
+		genesisConfigPath string
+	)
 
-func parseInputParams() inputParams {
-	var rootCmd = &cobra.Command{Use: "insolard"}
-	var result inputParams
-	rootCmd.Flags().StringVarP(&result.configPath, "config", "c", "", "path to config file")
-	rootCmd.Flags().StringVarP(&result.genesisConfigPath, "heavy-genesis", "", "", "path to genesis config for heavy node")
+	var rootCmd = &cobra.Command{
+		Use: "insolard",
+		Run: func(_ *cobra.Command, _ []string) {
+			runInsolardServer(configPath, genesisConfigPath)
+		},
+	}
+	rootCmd.Flags().StringVarP(&configPath, "config", "c", "", "path to config file")
+	rootCmd.Flags().StringVarP(&genesisConfigPath, "heavy-genesis", "", "", "path to genesis config for heavy node")
 	rootCmd.AddCommand(version.GetCommand("insolard"))
 	err := rootCmd.Execute()
 	if err != nil {
-		log.Fatal("Wrong input params:", err)
+		log.Fatal("insolard execution failed:", err)
 	}
-
-	return result
 }
 
-// toLaunch is an array of routines created in instrumentations
-var toLaunch []func(inputParams) error
+// psAgentLauncher is a stub for gops agent launcher (available with 'debug' build tag)
+var psAgentLauncher = func() error { return nil }
 
-func main() {
-	params := parseInputParams()
+func runInsolardServer(configPath string, genesisConfigPath string) {
 	jww.SetStdoutThreshold(jww.LevelDebug)
 
-	role, err := readRole(params.configPath)
+	role, err := readRole(configPath)
 	if err != nil {
 		log.Fatal(errors.Wrap(err, "readRole failed"))
 	}
 
-	for _, f := range toLaunch {
-		if err := f(params); err != nil {
-			log.Warnf("Error when launch startup routine: %s", err)
-		}
+	if err := psAgentLauncher(); err != nil {
+		log.Warnf("Failed to launch gops agent: %s", err)
 	}
 
 	switch role {
 	case insolar.StaticRoleHeavyMaterial:
-		s := server.NewHeavyServer(params.configPath, params.genesisConfigPath)
+		s := server.NewHeavyServer(configPath, genesisConfigPath)
 		s.Serve()
 	case insolar.StaticRoleLightMaterial:
-		s := server.NewLightServer(params.configPath)
+		s := server.NewLightServer(configPath)
 		s.Serve()
 	case insolar.StaticRoleVirtual:
-		s := server.NewVirtualServer(params.configPath)
+		s := server.NewVirtualServer(configPath)
 		s.Serve()
 	}
 }

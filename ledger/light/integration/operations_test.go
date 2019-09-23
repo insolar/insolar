@@ -372,9 +372,10 @@ func CallDeactivateObject(ctx context.Context, s *Server, objectID, requestID in
 	return pl, rec
 }
 
-func CallGetObject(ctx context.Context, s *Server, objectID insolar.ID) (payload.Payload, payload.Payload) {
+func CallGetObject(ctx context.Context, s *Server, objectID insolar.ID, requestID *insolar.ID) (payload.Payload, payload.Payload) {
 	reps, d := s.Send(ctx, &payload.GetObject{
-		ObjectID: objectID,
+		ObjectID:  objectID,
+		RequestID: requestID,
 	})
 	defer d()
 

@@ -63,16 +63,22 @@ func TestMigrationToken(t *testing.T) {
 	require.Equal(t, "10000", dif.String())
 }
 
-func TestMigrationTokenFourActiveDaemon(t *testing.T) {
-	activeDaemons := activateDaemons(t, countTreeActiveDaemon)
+func TestMigrationTokenThreeActiveDaemons(t *testing.T) {
+	activeDaemons := activateDaemons(t, countThreeActiveDaemon)
 	member := createMigrationMemberForMA(t)
-	var deposit map[string]interface{}
-	for i := 1; i < len(activeDaemons); i++ {
-		deposit = migrate(t, member.Ref, "1000", "Test_TxHash", member.MigrationAddress, i)
+	for i := 0; i < len(activeDaemons)-1; i++ {
+		_ = migrate(t, member.Ref, "1000", "Test_TxHash", member.MigrationAddress, i)
 	}
 
-	require.Equal(t, deposit["ethTxHash"], "Test_TxHash")
-	require.Equal(t, deposit["amount"], "10000")
+	_, err := signedRequestWithEmptyRequestRef(t,
+		launchnet.TestRPCUrl,
+		launchnet.MigrationDaemons[countThreeActiveDaemon-1],
+		"deposit.migration",
+		map[string]interface{}{"amount": "1000", "ethTxHash": "Test_TxHash", "migrationAddress": member.MigrationAddress})
+	require.Error(t, err)
+	require.IsType(t, &requester.Error{}, err)
+	data := err.(*requester.Error).Data
+	require.Contains(t, data.Trace, "migration is done for this deposit Test_TxHash")
 }
 
 func TestMigrationTokenOnDifferentDeposits(t *testing.T) {
