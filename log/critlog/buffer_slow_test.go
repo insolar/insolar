@@ -32,29 +32,30 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gonum.org/v1/gonum/stat"
 
 	"github.com/insolar/insolar/insolar"
 )
 
 func Test_BackpressureBuffer_Deviations(t *testing.T) {
-	threads := 100
-	iterations := 100
+	threads := 1000
+	iterations := 1000
 
 	logStorage := NewConcurrentBuilder(500000)
 	logger := NewTestLogger(context.Background(), logStorage, 3)
 
 	generateLogs(logger, threads, iterations)
 
-	err := logStorage.Close()
+	err := logger.Close()
 	require.NoError(t, err)
+	err = logStorage.Close()
+	require.EqualError(t, err, "writer is closed")
 	for !logStorage.IsFlushed() {
 		time.Sleep(100 * time.Millisecond)
 	}
 
 	logString := logStorage.String()
 
-	fmt.Println(logString)
+	// fmt.Println(logString)
 
 	out, err := parseOutput(logString)
 	require.NoError(t, err)
@@ -73,8 +74,8 @@ func Test_BackpressureBuffer_Deviations(t *testing.T) {
 	for k, v := range distances {
 		assert.Equal(t, iterations, len(v)+1, "Incorrect number of log records in thread %d", k)
 
-		mean, std := stat.MeanStdDev(v, nil)
-		fmt.Printf("Thread %03d: mean = %8.2f us, std.dev. = %8.2f us\n", k, mean*1000000, std*1000000)
+		// mean, std := stat.MeanStdDev(v, nil)
+		// fmt.Printf("Thread %03d: mean = %8.2f us, std.dev. = %8.2f us\n", k, mean*1000000, std*1000000)
 	}
 }
 
