@@ -17,14 +17,14 @@
 package insolar_test
 
 import (
-	"encoding/base64"
 	"testing"
+
+	"github.com/jbenet/go-base58"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
-	base58 "github.com/jbenet/go-base58"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // ID and Reference serialization tests
@@ -48,7 +48,7 @@ func TestNewIDFromBase58(t *testing.T) {
 
 func TestRecordID_String(t *testing.T) {
 	id := gen.ID()
-	idStr := "1" + base64.StdEncoding.EncodeToString(id.Bytes()) + ".record"
+	idStr := "1GxB7fBsBi2Vwe_OlDdjYM_ubnodP9QwcUyxwfBMeZGM.record"
 
 	assert.Equal(t, idStr, id.String())
 }
