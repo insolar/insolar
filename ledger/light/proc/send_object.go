@@ -216,7 +216,7 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to check request status")
 		}
-		if oldest.RecordID != *p.requestID {
+		if oldest != nil && oldest.RecordID != *p.requestID {
 			reqBuf, err := oldest.Record.Virtual.Marshal()
 			if err != nil {
 				return errors.Wrap(err, "failed to marshal request")
