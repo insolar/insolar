@@ -64,7 +64,7 @@ func (c *RequestCheckerDefault) CheckRequest(ctx context.Context, requestID inso
 	if err := request.Validate(); err != nil {
 		return &payload.CodedError{
 			Text: err.Error(),
-			Code: payload.CodeInvalidRequest,
+			Code: payload.CodeRequestInvalid,
 		}
 	}
 
@@ -74,7 +74,7 @@ func (c *RequestCheckerDefault) CheckRequest(ctx context.Context, requestID inso
 	if reasonID.Pulse() > requestID.Pulse() {
 		return &payload.CodedError{
 			Text: "request is older than its reason",
-			Code: payload.CodeInvalidRequest,
+			Code: payload.CodeRequestInvalid,
 		}
 	}
 
