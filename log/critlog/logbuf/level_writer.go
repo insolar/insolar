@@ -18,7 +18,7 @@ package logbuf
 
 import (
 	"encoding/binary"
-	"github.com/rs/zerolog"
+	"github.com/insolar/insolar/insolar"
 	"io"
 )
 
@@ -41,7 +41,7 @@ func NewChunkingLevelBuffer(buffer PlainBuffer) LevelBuffer {
 	}
 }
 
-var _ zerolog.LevelWriter = &LevelBuffer{}
+//var _ insolar.LogLevelWriter = &LevelBuffer{}
 
 type LevelBuffer struct {
 	buffer PlainBuffer
@@ -54,7 +54,7 @@ const serviceHeaderSizeMin = 5
 
 var byteOrder = binary.LittleEndian
 
-func (p *LevelBuffer) WriteLevel(level zerolog.Level, b []byte) (n int, err error) {
+func (p *LevelBuffer) LogLevelWrite(level insolar.LogLevel, b []byte) (int, error) {
 	segmentLen := p.serviceHeaderSize + uint32(len(b))
 
 	pg, buf := p.buffer.buffer.allocateBuffer(segmentLen)
@@ -67,10 +67,10 @@ func (p *LevelBuffer) WriteLevel(level zerolog.Level, b []byte) (n int, err erro
 }
 
 func (p *LevelBuffer) Write(b []byte) (n int, err error) {
-	return p.WriteLevel(zerolog.NoLevel, b)
+	return p.LogLevelWrite(insolar.NoLevel, b)
 }
 
-func (p *LevelBuffer) LevelWriteTo(w zerolog.LevelWriter) (int64, error) {
+func (p *LevelBuffer) LevelWriteTo(w insolar.LogLevelWriter) (int64, error) {
 	return p.buffer.WriteTo(chunkingLevelWriter{w, p.serviceHeaderSize})
 }
 
@@ -84,7 +84,7 @@ func (p *LevelBuffer) WriteTo(w io.Writer) (int64, error) {
 /* ============================ */
 
 type chunkingLevelWriter struct {
-	w                 zerolog.LevelWriter
+	w                 insolar.LogLevelWriter
 	serviceHeaderSize uint32
 }
 
@@ -94,8 +94,8 @@ func (w chunkingLevelWriter) Write(b []byte) (int, error) {
 	max := uint32(len(b))
 	for pos < max {
 		chunkLen := byteOrder.Uint32(b[pos:])
-		level := zerolog.Level(b[pos+w.serviceHeaderSize-1])
-		n, err := w.w.WriteLevel(level, b[pos+w.serviceHeaderSize:pos+chunkLen])
+		level := insolar.LogLevel(b[pos+w.serviceHeaderSize-1])
+		n, err := w.w.LogLevelWrite(level, b[pos+w.serviceHeaderSize:pos+chunkLen])
 		totalN += n
 		if err != nil {
 			return totalN, err

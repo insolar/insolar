@@ -19,6 +19,8 @@ package log
 import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/log/critlog"
+	"github.com/insolar/insolar/log/logadapter"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	stdlog "log"
@@ -44,15 +46,19 @@ func NewLog(cfg configuration.Log) (insolar.Logger, error) {
 }
 
 // NewLog creates logger instance with particular configuration
-func NewLogExt(cfg configuration.Log, skipFrameBaselineAdjustment int) (insolar.Logger, error) {
+func NewLogExt(cfg configuration.Log, skipFrameBaselineAdjustment int8) (insolar.Logger, error) {
 	pCfg, err := parseLogConfig(cfg)
 	if err == nil {
 		var logger insolar.Logger
 
 		pCfg.SkipFrameBaselineAdjustment = skipFrameBaselineAdjustment
+		//pCfg.Output.EnableFairness = true
+
+		msgFmt := logadapter.GetDefaultLogMsgFormatter()
+
 		switch strings.ToLower(cfg.Adapter) {
 		case "zerolog":
-			logger, err = newZerologAdapter(cfg, pCfg)
+			logger, err = newZerologAdapter(cfg, pCfg, msgFmt)
 		default:
 			err = errors.New("unknown adapter")
 		}
@@ -69,7 +75,7 @@ func NewLogExt(cfg configuration.Log, skipFrameBaselineAdjustment int) (insolar.
 
 var globalLogger = struct {
 	mutex  sync.RWMutex
-	output ProxyWriter
+	output critlog.ProxyLoggerOutput
 	logger insolar.Logger
 }{}
 
@@ -104,14 +110,14 @@ func SaveGlobalLogger() func() {
 	defer globalLogger.mutex.RUnlock()
 
 	loggerCopy := globalLogger.logger
-	outputCopy := globalLogger.output.getTarget()
+	outputCopy := globalLogger.output.GetTarget()
 
 	return func() {
 		globalLogger.mutex.Lock()
 		defer globalLogger.mutex.Unlock()
 
 		globalLogger.logger = loggerCopy
-		globalLogger.output.setTarget(outputCopy)
+		globalLogger.output.SetTarget(outputCopy)
 	}
 }
 
@@ -155,10 +161,11 @@ func createGlobalLogger() {
 
 func setGlobalLogger(logger insolar.Logger, isDefault bool) error {
 	b := logger.Copy()
-	globalLogger.output.setTarget(b.GetOutput())
+	globalLogger.output.SetTarget(b.(insolar.LoggerOutputGetter).GetLoggerOutput())
 	b = b.WithOutput(&globalLogger.output)
 
 	if isDefault {
+		// TODO move to logger construction configuration?
 		b = b.WithCaller(insolar.CallerField)
 	}
 

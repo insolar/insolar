@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"time"
 )
 
 // full copy of zerolog functions to work with logging level
@@ -117,7 +118,7 @@ type LogOutput uint8
 const (
 	StdErrOutput LogOutput = iota
 	SysLogOutput
-	JournalDOutput
+	//JournalDOutput
 )
 
 const DefaultLogOutput = StdErrOutput
@@ -130,8 +131,8 @@ func ParseOutput(outputStr string, defValue LogOutput) (LogOutput, error) {
 		return StdErrOutput, nil
 	case SysLogOutput.String():
 		return SysLogOutput, nil
-	case JournalDOutput.String():
-		return JournalDOutput, nil
+		//case JournalDOutput.String():
+		//	return JournalDOutput, nil
 	}
 	return defValue, fmt.Errorf("unknown Output: '%s', replaced with '%s'", outputStr, defValue)
 }
@@ -142,19 +143,21 @@ func (l LogOutput) String() string {
 		return "stderr"
 	case SysLogOutput:
 		return "syslog"
-	case JournalDOutput:
-		return "journald"
+		//case JournalDOutput:
+		//	return "journald"
 	}
 	return string(l)
 }
 
-type LogLevelReader interface {
+type LogLevelGetter interface {
 	GetLogLevel() LogLevel
 }
 
 type LogLevelWriter interface {
 	io.Writer
+	io.Closer
 	LogLevelWrite(LogLevel, []byte) (int, error)
+	Flush() error
 }
 
 //go:generate minimock -i github.com/insolar/insolar/insolar.Logger -o ./ -s _mock.go -g
@@ -204,10 +207,12 @@ type Logger interface {
 	// WithField return copy of Logger with predefined single field.
 	WithField(string, interface{}) Logger
 
+	// Provides a builder based on configuration of this logger
 	Copy() LoggerBuilder
-
+	// Provides a copy of this logger with a filer set to lvl
 	Level(lvl LogLevel) Logger
 
+	// DO NOT USE directly. Provides access to an embeddable methods of this logger.
 	Embeddable() EmbeddedLogger
 }
 
@@ -230,7 +235,23 @@ const (
 	CallerFieldWithFuncName
 )
 
+type LogMetricsRecorder interface {
+	RecordLogEvent(level LogLevel)
+	RecordLogWrite(level LogLevel)
+	RecordLogDelay(level LogLevel, d time.Duration)
+}
+
+type LogMetricsMode uint8
+
+const NoLogMetrics LogMetricsMode = 0
+const (
+	LogMetricsEventCount LogMetricsMode = 1 << iota
+	LogMetricsWriteDelayReport
+	LogMetricsWriteDelayField
+)
+
 type LoggerBuilder interface {
+
 	// Returns the current output
 	GetOutput() io.Writer
 	// Returns the current log level
@@ -241,17 +262,34 @@ type LoggerBuilder interface {
 	// WithLevel sets log level. Disables WithDynamicLevel.
 	WithLevel(level LogLevel) LoggerBuilder
 	// WithDynamicLevel sets a dynamic log level. Nil value will panic
-	WithDynamicLevel(level LogLevelReader) LoggerBuilder
+	WithDynamicLevel(level LogLevelGetter) LoggerBuilder
 	// WithFormat sets logger output format
 	WithFormat(format LogFormat) LoggerBuilder
 	// Controls 'func' and 'caller' field computation.
 	WithCaller(mode CallerFieldMode) LoggerBuilder
+	// Controls collection of metrics.
+	WithMetrics(mode LogMetricsMode) LoggerBuilder
+	//Sets a recorder for metric collection
+	//WithMetricsRecorder(recorder LogMetricsRecorder) LoggerBuilder
 
-	// WithSkipFrameCount changes skipFrameCount to the absolute value. But the value can be negative, and it is applied to a baseline
+	//WithMsgFormat
+
+	// WithSkipFrameCount changes skipFrameCount to the absolute value. But the value can be negative, and it is applied to a baseline. Value exceeding int8 will panic
 	WithSkipFrameCount(skipFrameCount int) LoggerBuilder
 
 	// Creates a logger
 	Build() (Logger, error)
 
 	//BuildForTimeCritical(bufSize int) (Logger, error)
+}
+
+type LoggerOutputGetter interface {
+	GetLoggerOutput() LoggerOutput
+}
+
+type LoggerOutput interface {
+	LogLevelWriter
+	LowLatencyWrite(LogLevel, []byte) (int, error)
+	IsLowLatencySupported() bool
+	GetBareOutput() io.Writer
 }

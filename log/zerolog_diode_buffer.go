@@ -34,7 +34,7 @@ func NewDiodeBufferedLevelWriter(output io.Writer, bufSize int, bufPollInterval 
 	dropBufOnFatal bool, skippedFn SkippedFormatterFunc,
 ) *DiodeBufferedLevelWriter {
 	bw := DiodeBufferedLevelWriter{
-		output:          outputGuard{critlog.OutputHelper{Writer: output}},
+		output:          outputGuard{critlog.FlushBypass{Writer: output}},
 		bufSize:         bufSize,
 		bufPollInterval: bufPollInterval,
 		skippedFn:       skippedFn,
@@ -61,7 +61,11 @@ type DiodeBufferedLevelWriter struct {
 }
 
 type outputGuard struct {
-	critlog.OutputHelper
+	critlog.FlushBypass
+}
+
+func (p *outputGuard) Flush() error {
+	return p.FlushOrSync()
 }
 
 func (p *outputGuard) Close() error {
@@ -139,7 +143,7 @@ func (p *DiodeBufferedLevelWriter) Close() error {
 	if p.dropBuffer() == nil {
 		return nil
 	}
-	return p.output.DoClose()
+	return p.output.FlushBypass.Close()
 }
 
 func (p *DiodeBufferedLevelWriter) Flush() error {
@@ -148,7 +152,7 @@ func (p *DiodeBufferedLevelWriter) Flush() error {
 		return errors.New("closed")
 	}
 	_ = buf.Close()
-	_ = p.output.DoFlush()
+	_ = p.output.Flush()
 	return nil
 }
 
@@ -216,48 +220,4 @@ func (p *DiodeBufferedLevelWriter) onFatal(_ insolar.LogLevel, bytes []byte) (in
 		return len(bytes), nil
 	}
 	select {}
-}
-
-/* ================================= */
-
-var _ zerolog.LevelWriter = &writerAdapter{}
-
-func AsLevelWriter(w io.Writer) zerolog.LevelWriter {
-	if lw, ok := w.(zerolog.LevelWriter); ok {
-		return lw
-	}
-	return &writerAdapter{w}
-}
-
-type writerAdapter struct {
-	w io.Writer
-}
-
-func (w *writerAdapter) WriteLevel(level zerolog.Level, p []byte) (n int, err error) {
-	return w.w.Write(p)
-}
-
-func (w *writerAdapter) Write(p []byte) (n int, err error) {
-	return w.w.Write(p)
-}
-
-func (w *writerAdapter) Flush() error {
-	if f, ok := w.w.(critlog.Flusher); ok {
-		return f.Flush()
-	}
-	return errors.New("unsupported: Flush")
-}
-
-func (w *writerAdapter) Close() error {
-	if f, ok := w.w.(io.Closer); ok {
-		return f.Close()
-	}
-	return errors.New("unsupported: Close")
-}
-
-func (w *writerAdapter) Sync() error {
-	if f, ok := w.w.(critlog.Syncer); ok {
-		return f.Sync()
-	}
-	return errors.New("unsupported: Sync")
 }

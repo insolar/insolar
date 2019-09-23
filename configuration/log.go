@@ -18,11 +18,12 @@ package configuration
 
 // Log holds configuration for logging
 type Log struct {
-	Level      string
-	Adapter    string
-	Formatter  string
-	BufferSize int
-	OutputType string
+	Level        string
+	Adapter      string
+	Formatter    string
+	OutputType   string
+	BufferSize   int
+	LLBufferSize int
 }
 
 // NewLog creates new default configuration for logging

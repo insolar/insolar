@@ -17,16 +17,20 @@
 package log
 
 import (
+	"bytes"
 	"context"
+	"encoding/binary"
+	"encoding/hex"
 	"fmt"
-	"github.com/insolar/insolar/log/critlog"
 	"github.com/insolar/insolar/log/inssyslog"
+	"github.com/insolar/insolar/log/logadapter"
+	"github.com/insolar/insolar/network/consensus/common/args"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
-	"go.opencensus.io/stats"
 	"go.opencensus.io/tag"
 	"io"
 	"os"
+	"runtime"
 	"strconv"
 	"strings"
 	"syscall"
@@ -51,37 +55,6 @@ func init() {
 	zerolog.CallerMarshalFunc = trimInsolarPrefix
 	initLevelMappings()
 }
-
-var _ insolar.Logger = &zerologAdapter{}
-
-type zerologAdapter struct {
-	logger      zerolog.Logger
-	output      io.Writer
-	outputWraps outputWrapFlag
-	config      zerologAdapterConfig
-}
-
-type zerologAdapterConfig struct {
-	bareOutput io.Writer
-
-	format     insolar.LogFormat
-	bufferSize int
-
-	callerMode             insolar.CallerFieldMode
-	skipFrameCountBaseline int
-	skipFrameCount         int
-
-	dynLevel     insolar.LogLevelReader
-	pollInterval time.Duration
-}
-
-type outputWrapFlag uint32
-
-const (
-	outputWrappedWithBuffer outputWrapFlag = 1 << iota
-	outputWrappedWithCritical
-	outputWrappedWithFormatter
-)
 
 type zerologMapping struct {
 	zl      zerolog.Level
@@ -182,24 +155,33 @@ func selectFormatter(format insolar.LogFormat, output io.Writer) (io.Writer, err
 
 const zerologSkipFrameCount = 3 + defaultCallerSkipFrameCount
 
-func newZerologAdapter(cfg configuration.Log, pCfg parsedLogConfig) (insolar.Logger, error) {
+func newZerologAdapter(_ configuration.Log, pCfg parsedLogConfig, msgFmt logadapter.MsgFormatConfig) (insolar.Logger, error) {
 
-	zb := zerologBuilder{
-		level: ToZerologLevel(pCfg.LogLevel),
-		zerologAdapterConfig: zerologAdapterConfig{
-			format:                 pCfg.LogFormat,
-			bufferSize:             cfg.BufferSize,
-			skipFrameCountBaseline: zerologSkipFrameCount + pCfg.SkipFrameBaselineAdjustment,
-		},
-	}
-
-	var err error
-	zb.bareOutput, err = selectOutput(pCfg.OutputType)
+	bareOutput, err := selectOutput(pCfg.OutputType)
 	if err != nil {
 		return nil, err
 	}
 
+	sfb := zerologSkipFrameCount + pCfg.SkipFrameBaselineAdjustment
+	if sfb < 0 {
+		sfb = 0
+	}
+
+	zc := logadapter.Config{}
+	zc.Output = pCfg.Output
+	zc.MsgFormat = msgFmt
+	zc.Instruments.SkipFrameCountBaseline = uint8(sfb)
+
+	zb := logadapter.NewBuilder(zerologFactory{}, bareOutput, zc, pCfg.LogLevel)
+
 	return zb.Build()
+}
+
+var _ insolar.Logger = &zerologAdapter{}
+
+type zerologAdapter struct {
+	logger zerolog.Logger
+	config *logadapter.Config
 }
 
 // WithFields return copy of adapter with predefined fields.
@@ -223,24 +205,30 @@ func (z *zerologAdapter) WithField(key string, value interface{}) insolar.Logger
 
 func (z *zerologAdapter) newEvent(level insolar.LogLevel) *zerolog.Event {
 	m := getLevelMapping(level)
-	stats.Record(m.metrics, statLogCalls.M(1))
+	z.config.Metrics.OnNewEvent(m.metrics, level)
 	event := m.fn(&z.logger)
 	if event == nil {
 		return nil
 	}
-	if z.config.dynLevel != nil && z.config.dynLevel.GetLogLevel() > level {
+	if z.config.DynLevel != nil && z.config.DynLevel.GetLogLevel() > level {
 		return nil
 	}
-	stats.Record(m.metrics, statLogWrites.M(1))
+	z.config.Metrics.OnFilteredEvent(m.metrics, level)
 	return event
 }
 
 func (z *zerologAdapter) EmbeddedEvent(level insolar.LogLevel, args ...interface{}) {
-	z.newEvent(level).Msg(fmt.Sprint(args...))
+	event := z.newEvent(level)
+	if event != nil { // avoid unnecessary call to fmt.Sprint
+		event.Msg(z.config.MsgFormat.Sformat(args...))
+	}
 }
 
 func (z *zerologAdapter) EmbeddedEventf(level insolar.LogLevel, fmt string, args ...interface{}) {
-	z.newEvent(level).Msgf(fmt, args...)
+	event := z.newEvent(level)
+	if event != nil { // avoid unnecessary call to fmt.Sprintf
+		event.Msg(z.config.MsgFormat.Sformatf(fmt, args...))
+	}
 }
 
 func (z *zerologAdapter) Event(level insolar.LogLevel, args ...interface{}) {
@@ -304,7 +292,7 @@ func (z *zerologAdapter) Is(level insolar.LogLevel) bool {
 }
 
 func (z *zerologAdapter) Copy() insolar.LoggerBuilder {
-	return zerologBuilder{z, z.logger.GetLevel(), z.config}
+	return logadapter.NewBuilderWithTemplate(zerologTemplate{template: z}, FromZerologLevel(z.logger.GetLevel()))
 }
 
 func (z *zerologAdapter) Level(lvl insolar.LogLevel) insolar.Logger {
@@ -317,125 +305,235 @@ func (z *zerologAdapter) Embeddable() insolar.EmbeddedLogger {
 	return z
 }
 
+func (z *zerologAdapter) GetLoggerOutput() insolar.LoggerOutput {
+	return z.config.LoggerOutput
+}
+
 /* =========================== */
 
-type zerologBuilder struct {
-	template *zerologAdapter
-	level    zerolog.Level
-	zerologAdapterConfig
+var _ logadapter.Factory = &zerologFactory{}
+
+type zerologFactory struct {
 }
 
-func (z zerologBuilder) GetOutput() io.Writer {
-	return z.bareOutput
-}
+func (zf zerologFactory) getWriteDelayHookParams(metrics *logadapter.MetricsHelper,
+	config logadapter.BuildConfig) (needsHook bool, fieldName string, preferTrim bool, reportFn logadapter.DurationReportFunc) {
 
-func (z zerologBuilder) GetLogLevel() insolar.LogLevel {
-	return FromZerologLevel(z.level)
-}
-
-func (z zerologBuilder) WithOutput(w io.Writer) insolar.LoggerBuilder {
-	z.bareOutput = w
-	return z
-}
-
-func (z zerologBuilder) WithLevel(level insolar.LogLevel) insolar.LoggerBuilder {
-	z.level = getLevelMapping(level).zl
-	z.dynLevel = nil
-	return z
-}
-
-func (z zerologBuilder) WithDynamicLevel(level insolar.LogLevelReader) insolar.LoggerBuilder {
-	z.dynLevel = level
-	z.level = zerolog.DebugLevel
-	return z
-}
-
-func (z zerologBuilder) WithFormat(format insolar.LogFormat) insolar.LoggerBuilder {
-	z.format = format
-	return z
-}
-
-func (z zerologBuilder) WithCaller(mode insolar.CallerFieldMode) insolar.LoggerBuilder {
-	z.callerMode = mode
-	return z
-}
-
-func (z zerologBuilder) WithSkipFrameCount(skipFrameCount int) insolar.LoggerBuilder {
-	z.skipFrameCount = skipFrameCount
-	return z
-}
-
-//func (z zerologBuilder) WithSkipFrameCount(delta int) insolar.LoggerBuilder {
-//	z.skipFrameCount = delta
-//	return z
-//}
-
-func (z zerologBuilder) Build() (insolar.Logger, error) {
-	zNew := zerologAdapter{config: z.zerologAdapterConfig}
-
-	switch {
-	case z.bareOutput == nil:
-		return nil, errors.New("output is nil")
-	case z.template != nil && z.template.config.bareOutput == z.bareOutput:
-		if z.template.config == z.zerologAdapterConfig {
-			return z.template, nil
-		}
-		if z.template.config.format == z.format {
-			zNew.output = z.template.output
-			break
-		}
-		fallthrough
-	default:
-		err := zNew.prepareOutput()
-		if err != nil {
-			return nil, err
-		}
+	metricsMode := config.Instruments.MetricsMode
+	if metricsMode&(insolar.LogMetricsWriteDelayField|insolar.LogMetricsWriteDelayReport) == 0 {
+		return
 	}
 
-	zNew.prepareLogger(z.level)
+	if metricsMode&insolar.LogMetricsWriteDelayField != 0 {
+		fieldName = "writeDuration"
+	}
 
-	return &zNew, nil
+	if metricsMode&insolar.LogMetricsWriteDelayReport != 0 {
+		reportFn = metrics.GetOnWriteDurationReport()
+	}
+
+	if len(fieldName) == 0 { // && reportFn == nil {
+		return
+	}
+
+	return true, fieldName, false, nil
 }
 
-func (z *zerologAdapter) prepareOutput() error {
+func (zf zerologFactory) PrepareBareOutput(output io.Writer, metrics *logadapter.MetricsHelper, config logadapter.BuildConfig) (io.Writer, error) {
 	var err error
-	z.output, err = selectFormatter(z.config.format, z.config.bareOutput)
+	output, err = selectFormatter(config.Output.Format, output)
+
 	if err != nil {
-		return err
-	}
-	if z.output != z.config.bareOutput {
-		z.outputWraps |= outputWrappedWithFormatter
+		return nil, err
 	}
 
-	if z.config.bufferSize > 0 {
-		dropBufOnFatal := z.config.bufferSize > 1000
-
-		z.output = NewDiodeBufferedLevelWriter(z.output, z.config.bufferSize,
-			z.config.pollInterval, dropBufOnFatal,
-			func(missed int) []byte {
-				return ([]byte)(fmt.Sprintf("logger dropped %d messages", missed))
-			},
-		)
-		z.outputWraps |= outputWrappedWithBuffer | outputWrappedWithCritical
-	} else {
-		z.output = critlog.NewFatalDirectWriter(z.output)
+	if ok, name, trim, reportFn := zf.getWriteDelayHookParams(metrics, config); ok {
+		output = newWriteDelayPostHook(output, name, trim, reportFn)
 	}
 
-	return nil
+	return output, nil
 }
 
-func (z *zerologAdapter) prepareLogger(level zerolog.Level) {
+func (zf zerologFactory) CanReuseMsgBuffer() bool {
+	// zerolog does recycling of []byte buffers
+	return false
+}
 
-	ls := zerolog.New(z.output).Level(level)
-	if z.config.callerMode == insolar.CallerFieldWithFuncName {
-		ls = ls.Hook(newCallerHook(z.config.skipFrameCountBaseline + 2 + z.config.skipFrameCount))
+func (zf zerologFactory) CreateNewLogger(level insolar.LogLevel, config logadapter.Config) (insolar.Logger, error) {
+
+	ls := zerolog.New(zerologAdapterOutput{config.LoggerOutput}).Level(ToZerologLevel(level))
+
+	if ok, name, trim, _ := zf.getWriteDelayHookParams(config.Metrics, config.BuildConfig); ok {
+		// MUST be the first Hook
+		ls = ls.Hook(newWriteDelayPreHook(name, trim))
 	}
 
 	lc := ls.With().Timestamp()
 
-	if z.config.callerMode == insolar.CallerField {
-		lc = lc.CallerWithSkipFrameCount(z.config.skipFrameCountBaseline + z.config.skipFrameCount)
+	skipFrames := int(config.Instruments.SkipFrameCountBaseline) + int(config.Instruments.SkipFrameCount)
+	callerMode := config.Instruments.CallerMode
+
+	if callerMode == insolar.CallerField {
+		lc = lc.CallerWithSkipFrameCount(skipFrames)
+	}
+	ls = lc.Logger()
+	if callerMode == insolar.CallerFieldWithFuncName {
+		ls = ls.Hook(newCallerHook(2 + skipFrames))
 	}
 
-	z.logger = lc.Logger()
+	if config.Instruments.MetricsMode == insolar.NoLogMetrics {
+		config.Metrics = nil
+	}
+
+	return &zerologAdapter{logger: ls, config: &config}, nil
+}
+
+/* =========================== */
+
+var _ logadapter.Template = &zerologTemplate{}
+
+type zerologTemplate struct {
+	zerologFactory
+	template *zerologAdapter
+}
+
+func (zf zerologTemplate) GetLoggerOutput() insolar.LoggerOutput {
+	return zf.template.GetLoggerOutput()
+}
+
+func (zf zerologTemplate) GetTemplateConfig() logadapter.Config {
+	return *zf.template.config
+}
+
+func (zf zerologTemplate) GetTemplateLogger() insolar.Logger {
+	return zf.template
+}
+
+/* ========================================= */
+
+var _ zerolog.LevelWriter = &zerologAdapterOutput{}
+
+type zerologAdapterOutput struct {
+	insolar.LoggerOutput
+}
+
+func (z zerologAdapterOutput) WriteLevel(level zerolog.Level, b []byte) (int, error) {
+	return z.LoggerOutput.LogLevelWrite(FromZerologLevel(level), b)
+}
+
+/* ========================================= */
+
+const internalTempFieldName = "_TWD_"
+const fieldHeaderFmt = `,"%s":"%*v`
+const tempHexFieldLength = 16 // HEX for Uint64
+const writeDelayResultFieldOverflowContent = "ovrflw"
+const writeDelayResultFieldMinWidth = len(writeDelayResultFieldOverflowContent)
+
+func getWriteDelayHookParams(fieldName string, preferTrim bool) (fieldWidth int, searchField string) {
+	searchField = internalTempFieldName
+	if len(fieldName) != 0 {
+		fieldWidth = writeDelayResultFieldMinWidth
+		paddingLen := (len(fieldName) + fieldWidth) - (len(searchField) + tempHexFieldLength)
+
+		if paddingLen < 0 {
+			// we have more space than needed
+			if !preferTrim {
+				// ensure proper wipe out of temporary field data
+				fieldWidth -= paddingLen
+			}
+		} else {
+			if paddingLen > len(fieldName) {
+				searchField += fieldName + strings.Repeat("_", paddingLen-len(fieldName))
+			} else {
+				searchField += fieldName[:paddingLen]
+			}
+		}
+	}
+	return
+}
+
+func newWriteDelayPreHook(fieldName string, preferTrim bool) *writeDelayHook {
+	_, searchField := getWriteDelayHookParams(fieldName, preferTrim)
+	return &writeDelayHook{searchField: searchField}
+}
+
+type writeDelayHook struct {
+	searchField string
+}
+
+func (h *writeDelayHook) Run(e *zerolog.Event, level zerolog.Level, message string) {
+	buf := make([]byte, tempHexFieldLength/2)
+	binary.LittleEndian.PutUint64(buf, uint64(time.Now().UnixNano()))
+
+	e.Hex(h.searchField, buf)
+}
+
+func newWriteDelayPostHook(output io.Writer, fieldName string, preferTrim bool, statReportFn logadapter.DurationReportFunc) *writeDelayPostHook {
+	fieldWidth, searchField := getWriteDelayHookParams(fieldName, preferTrim)
+	return &writeDelayPostHook{
+		output:       output,
+		searchBytes:  []byte(fmt.Sprintf(fieldHeaderFmt, searchField, 0, "")),
+		fieldName:    fieldName,
+		fieldWidth:   fieldWidth,
+		statReportFn: statReportFn,
+	}
+}
+
+type writeDelayPostHook struct {
+	output       io.Writer
+	searchBytes  []byte
+	fieldName    string
+	fieldWidth   int
+	statReportFn func(d time.Duration)
+}
+
+func (h *writeDelayPostHook) Write(p []byte) (n int, err error) {
+	s := string(p)
+	runtime.KeepAlive(s)
+
+	ofs := -1
+	searchLimit := len(h.searchBytes) + 64
+	if searchLimit >= len(p) {
+		ofs = bytes.Index(p, h.searchBytes)
+	} else {
+		ofs = bytes.Index(p[:searchLimit], h.searchBytes)
+	}
+
+	if ofs > 0 {
+		fieldLen := len(h.searchBytes) + tempHexFieldLength
+		fieldEnd := ofs + fieldLen
+		newLen := h.replaceField(p[ofs:fieldEnd:fieldEnd])
+
+		if newLen > 0 && newLen != fieldLen {
+			copy(p[ofs+newLen:], p[fieldEnd:])
+			p = p[:len(p)-fieldEnd+newLen+ofs]
+		}
+	}
+	ss := string(p)
+	runtime.KeepAlive(ss)
+	return h.output.Write(p)
+}
+
+func (h *writeDelayPostHook) replaceField(b []byte) int {
+
+	buf := make([]byte, tempHexFieldLength/2)
+	if _, err := hex.Decode(buf, b[len(h.searchBytes):]); err != nil {
+		return -1
+	}
+
+	nanoDuration := time.Duration(time.Now().UnixNano() - int64(binary.LittleEndian.Uint64(buf)))
+
+	if h.statReportFn != nil {
+		h.statReportFn(nanoDuration)
+	}
+
+	if h.fieldWidth == 0 {
+		return 0
+	}
+
+	s := args.DurationFixedLen(nanoDuration, h.fieldWidth)
+	if len(s) > h.fieldWidth {
+		s = writeDelayResultFieldOverflowContent
+	}
+	return copy(b, fmt.Sprintf(fieldHeaderFmt, h.fieldName, h.fieldWidth, s))
 }

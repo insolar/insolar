@@ -19,32 +19,51 @@ package log
 import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/log/logadapter"
 )
 
 type parsedLogConfig struct {
 	OutputType insolar.LogOutput
-	LogFormat  insolar.LogFormat
 	LogLevel   insolar.LogLevel
 
-	SkipFrameBaselineAdjustment int
+	Output logadapter.OutputConfig
+
+	SkipFrameBaselineAdjustment int8
 }
 
-func parseLogConfig(cfg configuration.Log) (pc parsedLogConfig, err error) {
+const defaultLowLatencyBufferSize = 100
 
-	pc.OutputType, err = insolar.ParseOutput(cfg.OutputType, insolar.DefaultLogOutput)
+func parseLogConfig(cfg configuration.Log) (plc parsedLogConfig, err error) {
+
+	plc.OutputType, err = insolar.ParseOutput(cfg.OutputType, insolar.DefaultLogOutput)
 	if err != nil {
 		return
 	}
 
-	pc.LogFormat, err = insolar.ParseFormat(cfg.Formatter, insolar.DefaultLogFormat)
+	plc.Output.Format, err = insolar.ParseFormat(cfg.Formatter, insolar.DefaultLogFormat)
 	if err != nil {
 		return
 	}
 
-	pc.LogLevel, err = insolar.ParseLevel(cfg.Level)
+	plc.LogLevel, err = insolar.ParseLevel(cfg.Level)
 	if err != nil {
 		return
 	}
+
+	switch {
+	case cfg.LLBufferSize < 0:
+		// LL buffer is disabled
+		plc.Output.BufferSize = cfg.BufferSize
+	case cfg.LLBufferSize > 0:
+		plc.Output.BufferSize = cfg.LLBufferSize
+	default:
+		plc.Output.BufferSize = defaultLowLatencyBufferSize
+	}
+
+	if plc.Output.BufferSize < cfg.BufferSize {
+		plc.Output.BufferSize = cfg.BufferSize
+	}
+	plc.Output.EnableBuffer = cfg.BufferSize > 0
 
 	return
 }

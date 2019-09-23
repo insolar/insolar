@@ -28,7 +28,6 @@ import (
 
 type LogLevelWriteCloser interface {
 	insolar.LogLevelWriter
-	io.Closer
 }
 
 // SyslogWriter is an interface matching a syslog.Writer struct.
@@ -51,6 +50,10 @@ func NewSyslogLevelWriter(w SyslogWriteCloser) LogLevelWriteCloser {
 
 type syslogWriter struct {
 	w SyslogWriteCloser
+}
+
+func (sw *syslogWriter) Flush() error {
+	return nil
 }
 
 func (sw *syslogWriter) Close() error {

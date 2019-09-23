@@ -17,7 +17,6 @@
 package critlog
 
 import (
-	"errors"
 	"github.com/insolar/insolar/insolar"
 	"io"
 	"sync/atomic"
@@ -25,40 +24,43 @@ import (
 
 func NewFatalDirectWriter(output io.Writer) *FatalDirectWriter {
 	return &FatalDirectWriter{
-		output: OutputHelper{output},
+		output: NewFlushBypass(output),
 	}
-}
-
-type Flusher interface {
-	Flush() error
-}
-
-type Syncer interface {
-	Sync() error
 }
 
 var _ insolar.LogLevelWriter = &FatalDirectWriter{}
 var _ io.WriteCloser = &FatalDirectWriter{}
 
 type FatalDirectWriter struct {
-	output OutputHelper
+	output FlushBypass
 	fatal  FatalHelper
 }
 
 func (p *FatalDirectWriter) Close() error {
-	return p.output.DoClose()
+	return p.Close()
 }
 
 func (p *FatalDirectWriter) Flush() error {
-	_ = p.output.DoFlush()
-	return nil
+	return p.output.FlushOrSync()
 }
 
 func (p *FatalDirectWriter) Write(b []byte) (n int, err error) {
 	if p.fatal.IsFatal() {
 		return p.fatal.PostFatalWrite(insolar.NoLevel, b)
 	}
-	return p.output.Write(b)
+	return p.output.DoWrite(b)
+}
+
+func (p *FatalDirectWriter) LowLatencyWrite(level insolar.LogLevel, b []byte) (int, error) {
+	return p.LogLevelWrite(level, b)
+}
+
+func (p *FatalDirectWriter) IsLowLatencySupported() bool {
+	return false
+}
+
+func (p *FatalDirectWriter) GetBareOutput() io.Writer {
+	return p.output.Writer
 }
 
 func (p *FatalDirectWriter) LogLevelWrite(level insolar.LogLevel, b []byte) (n int, err error) {
@@ -71,18 +73,18 @@ func (p *FatalDirectWriter) LogLevelWrite(level insolar.LogLevel, b []byte) (n i
 		if !p.fatal.SetFatal() {
 			return p.fatal.PostFatalWrite(level, b)
 		}
-		n, _ = p.output.DoWriteLevel(level, b)
+		n, _ = p.output.LogLevelWrite(level, b)
 		return n, p.Close()
 
 	case insolar.PanicLevel:
-		n, err = p.output.DoWriteLevel(level, b)
+		n, err = p.output.LogLevelWrite(level, b)
 		if err != nil {
 			_ = p.Flush()
 			return n, err
 		}
 		return n, p.Flush()
 	default:
-		return p.output.DoWriteLevel(level, b)
+		return p.output.LogLevelWrite(level, b)
 	}
 }
 
@@ -111,43 +113,4 @@ func (p *FatalHelper) LockFatal() {
 func (p *FatalHelper) PostFatalWrite(_ insolar.LogLevel, b []byte) (int, error) {
 	p.LockFatal()
 	return len(b), nil
-}
-
-/* =============================== */
-
-type OutputHelper struct {
-	io.Writer
-}
-
-func (p *OutputHelper) DoFlush() (err error) {
-	if f, ok := p.Writer.(Flusher); ok {
-		err = f.Flush()
-		if err == nil {
-			return nil
-		}
-	}
-	if f, ok := p.Writer.(Syncer); ok {
-		err = f.Sync()
-		if err == nil {
-			return nil
-		}
-	}
-	if err != nil {
-		return err
-	}
-	return errors.New("unsupported: Flush")
-}
-
-func (p *OutputHelper) DoClose() error {
-	if f, ok := p.Writer.(io.Closer); ok {
-		return f.Close()
-	}
-	return errors.New("unsupported: Close")
-}
-
-func (p *OutputHelper) DoWriteLevel(level insolar.LogLevel, b []byte) (n int, err error) {
-	if lw, ok := p.Writer.(insolar.LogLevelWriter); ok {
-		return lw.LogLevelWrite(level, b)
-	}
-	return p.Writer.Write(b)
 }
