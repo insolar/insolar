@@ -33,9 +33,9 @@ func OldestMutable(openRequests []record.CompositeFilamentRecord) *record.Compos
 		return nil
 	}
 
-	for _, openReq := range openRequests {
-		if isMutableIncoming(openReq) {
-			return &openReq
+	for i := 0; i < len(openRequests); i++ {
+		if isMutableIncoming(openRequests[i]) {
+			return &openRequests[i]
 		}
 	}
 
