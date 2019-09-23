@@ -17,6 +17,7 @@
 package insolar_test
 
 import (
+	"encoding/base64"
 	"testing"
 
 	"github.com/insolar/insolar/insolar"
@@ -47,7 +48,7 @@ func TestNewIDFromBase58(t *testing.T) {
 
 func TestRecordID_String(t *testing.T) {
 	id := gen.ID()
-	idStr := "1" + base58.Encode(id.Bytes()) + ".record"
+	idStr := "1" + base64.StdEncoding.EncodeToString(id.Bytes()) + ".record"
 
 	assert.Equal(t, idStr, id.String())
 }
