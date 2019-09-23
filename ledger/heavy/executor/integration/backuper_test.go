@@ -13,7 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// +build slowtest
 // +build !coverage
 
 package intergration
@@ -521,8 +520,9 @@ func copyDir(src, dst string) error {
 // 1. Create db
 // 2. Add not all confirmations
 // 3. Copy db to different place - backup place
-// 4. Make backup and merge it to backup db
-// 5. Launch on backup db and check top sync pulse
+// 4. Finalize current pulse and add confirmations for next one
+// 5. Make backup and merge it to backup db
+// 6. Launch on backup db and check top sync pulse
 func TestBackup_UseMainDBAsBackup(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	tmpdir, err := ioutil.TempDir("", "bdb-test-")
@@ -578,16 +578,34 @@ func TestBackup_UseMainDBAsBackup(t *testing.T) {
 		require.NoError(t, err)
 		defer db.Stop(ctx)
 
+		// -------------------- finalize pulse
+		pulsesDB = pulse.NewDB(db)
+		jetsDB = jet.NewDBStore(db)
+		jetKeeper = executor.NewJetKeeper(jetsDB, db, pulsesDB)
+		jetKeeper.AddBackupConfirmation(ctx, testPulse)
+		require.Equal(t, testPulse, jetKeeper.TopSyncPulse())
+
+		// -------------------- and prepare next
+		nextPulse := testPulse + 10
+		err = jetKeeper.AddHotConfirmation(ctx, nextPulse, testJet, false)
+		require.NoError(t, err)
+		err = jetKeeper.AddDropConfirmation(ctx, nextPulse, testJet, false)
+		require.NoError(t, err)
+		err = jetsDB.Update(ctx, nextPulse, true, testJet)
+		require.NoError(t, err)
+		err = pulsesDB.Append(ctx, insolar.Pulse{PulseNumber: nextPulse})
+		require.NoError(t, err)
+
 		// -------------------- make backup
 		bm, err := executor.NewBackupMaker(context.Background(), db, cfg, insolar.GenesisPulse.PulseNumber, db)
 		require.NoError(t, err)
-		err = bm.MakeBackup(ctx, testPulse)
+		err = bm.MakeBackup(ctx, nextPulse)
 		require.NoError(t, err)
 
 		// -------------------- merge backup
 		bkpFileName := filepath.Join(
 			cfg.Backup.TargetDirectory,
-			fmt.Sprintf(cfg.Backup.DirNameTemplate, testPulse),
+			fmt.Sprintf(cfg.Backup.DirNameTemplate, nextPulse),
 			cfg.Backup.BackupFile,
 		)
 		loadIncrementalBackup(t, backupTmpDir, bkpFileName)
@@ -601,6 +619,6 @@ func TestBackup_UseMainDBAsBackup(t *testing.T) {
 		recoveredJetKeeper := executor.NewJetKeeper(jet.NewDBStore(recoveredDB), recoveredDB, pulse.NewDB(recoveredDB))
 
 		// pulse must be finalized when prepare_backup complete without error
-		require.Equal(t, testPulse, recoveredJetKeeper.TopSyncPulse())
+		require.Equal(t, nextPulse, recoveredJetKeeper.TopSyncPulse())
 	}
 }
