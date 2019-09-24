@@ -584,9 +584,19 @@ func TestSetResult_Proceed_NotFoundInOpened_Error(t *testing.T) {
 		opened = []record.CompositeFilamentRecord{
 			{
 				RecordID: gen.ID(),
+				Record: record.Material{
+					Virtual: record.Wrap(&record.IncomingRequest{
+						Immutable: true,
+					}),
+				},
 			},
 			{
 				RecordID: gen.ID(),
+				Record: record.Material{
+					Virtual: record.Wrap(&record.IncomingRequest{
+						Immutable: true,
+					}),
+				},
 			},
 		}
 		return opened, nil
@@ -716,7 +726,7 @@ func TestSetResult_Proceed_HasOpenedOutgoing_Error(t *testing.T) {
 	require.Error(t, err)
 	insError, ok := errors.Cause(err).(*payload.CodedError)
 	require.True(t, ok)
-	require.Equal(t, uint32(payload.CodeNonClosedOutgoing), insError.GetCode())
+	require.Equal(t, uint32(payload.CodeRequestNonClosedOutgoing), insError.GetCode())
 }
 
 func TestSetResult_Proceed_OldestMutableRequest(t *testing.T) {
@@ -831,5 +841,5 @@ func TestSetResult_Proceed_OldestMutableRequest(t *testing.T) {
 	require.Error(t, err)
 	insError, ok := errors.Cause(err).(*payload.CodedError)
 	require.True(t, ok)
-	require.Equal(t, uint32(payload.CodeNonOldestMutableRequest), insError.GetCode())
+	require.Equal(t, uint32(payload.CodeRequestNonOldestMutable), insError.GetCode())
 }

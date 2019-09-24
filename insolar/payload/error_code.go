@@ -25,15 +25,15 @@ const (
 	CodeNoPendings   = 1004
 	CodeNoStartPulse = 1005
 
-	CodeRequestNotFound   = 1006
-	CodeRequestInvalid    = 1007
+	CodeRequestNotFound          = 1006
+	CodeRequestInvalid           = 1007
 	CodeRequestNonClosedOutgoing = 1008
-	CodeRequestNonOldestMutable = 1009
+	CodeRequestNonOldestMutable  = 1009
 
-	CodeReasonNotFound    = 1010
-	CodeReasonIsWrong     = 1011
+	CodeReasonNotFound = 1010
+	CodeReasonIsWrong  = 1011
 
-	CodeNonActivated      = 1012
+	CodeNonActivated = 1012
 
 	CodeFilamentTooBig = 1013
 )

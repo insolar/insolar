@@ -167,7 +167,7 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 		if oldestMutable != nil && !oldestMutable.RecordID.Equal(resultRequestID) {
 			return &payload.CodedError{
 				Text: "attempt to close the non-oldest mutable request",
-				Code: payload.CodeNonOldestMutableRequest,
+				Code: payload.CodeRequestNonOldestMutable,
 			}
 		}
 	}
@@ -376,7 +376,7 @@ func checkOutgoings(openedRequests []record.CompositeFilamentRecord, closedReque
 		if !out.IsDetached() && out.Reason.GetLocal().Equal(closedRequestID) {
 			return &payload.CodedError{
 				Text: "request " + closedRequestID.DebugString() + " is reason for non closed outgoing request " + req.RecordID.DebugString(),
-				Code: payload.CodeNonClosedOutgoing,
+				Code: payload.CodeRequestNonClosedOutgoing,
 			}
 		}
 	}
