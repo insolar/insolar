@@ -6,7 +6,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/common/args"
 	"io"
-	"math"
 	"runtime"
 	"sync/atomic"
 	"time"
@@ -29,6 +28,11 @@ func NewBackpressureBuffer(output io.Writer, bufSize int, extraPenalty uint8, ma
 
 	if bufSize <= 1 {
 		panic("illegal value")
+	}
+
+	if maxParWrites == 1 {
+		// fairness is slower with single writer
+		flags &^= BufferWriteDelayFairness
 	}
 
 	return &BackpressureBuffer{&internalBackpressureBuffer{
@@ -63,7 +67,7 @@ type internalBackpressureBuffer struct {
 	writeSeq      uint32 // atomic
 	pendingWrites uint32 // atomic
 	missCount     uint32 // atomic
-	avgDelayMicro uint32 // atomic
+	avgDelayNano  uint64 // atomic
 
 	maxParWrites uint8
 	extraPenalty uint8
@@ -497,7 +501,7 @@ func (p *internalBackpressureBuffer) worker(ctx context.Context) {
 				*/
 				p.buffer <- be
 				if prevWasMark == true {
-					time.Sleep(10 * time.Millisecond)
+					time.Sleep(1 * time.Millisecond)
 				} else {
 					prevWasMark = true
 				}
@@ -536,26 +540,21 @@ func (p *internalBackpressureBuffer) writeMissedCount(missedCount int) {
 }
 
 func (p *internalBackpressureBuffer) GetWriteDuration() time.Duration {
-	return time.Duration(atomic.LoadUint32(&p.avgDelayMicro)) * time.Microsecond
+	return time.Duration(atomic.LoadUint64(&p.avgDelayNano))
 }
 
 func (p *internalBackpressureBuffer) ApplyWriteDuration(d time.Duration) {
+	if d <= 0 {
+		return
+	}
 	for {
-		v := atomic.LoadUint32(&p.avgDelayMicro)
-
-		vv := uint64(d / time.Microsecond)
-		switch {
-		case vv == 0:
-			vv = 1
-		case vv > math.MaxUint32:
-			vv = math.MaxUint32
+		v := p.GetWriteDuration()
+		vv := d
+		if v > 0 {
+			vv = (vv + v) >> 1
 		}
 
-		if v != 0 {
-			vv = (vv + uint64(v)) >> 1
-		}
-
-		if atomic.CompareAndSwapUint32(&p.avgDelayMicro, v, uint32(vv)) {
+		if atomic.CompareAndSwapUint64(&p.avgDelayNano, uint64(v), uint64(vv)) {
 			return
 		}
 	}
