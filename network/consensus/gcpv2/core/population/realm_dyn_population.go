@@ -320,16 +320,11 @@ func (p *DynamicRealmPopulation) GetSealedCapacity() (int, bool) {
 	return len(p.nodeIndex), p.indexedLenSet
 }
 
-func (p *DynamicRealmPopulation) GetCountAndCompleteness(includeJoiners bool) (int, bool) {
+func (p *DynamicRealmPopulation) GetIndexedCountAndCompleteness() (int, bool) {
 	p.rw.RLock()
 	defer p.rw.RUnlock()
 
-	count := p.indexedCount
-	if includeJoiners {
-		count += p.joinerCount
-	}
-
-	return count, p.indexedLenSet && len(p.nodeIndex) == p.indexedCount
+	return p.indexedCount, p.indexedLenSet && len(p.nodeIndex) == p.indexedCount
 }
 
 func (p *DynamicRealmPopulation) CreatePacketLimiter(isJoiner bool) phases.PacketLimiter {

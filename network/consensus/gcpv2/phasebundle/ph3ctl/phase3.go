@@ -264,7 +264,7 @@ outer:
 			break outer
 		case upd := <-c.queueTrustUpdated:
 			logger.Debug(">>>>workerPrePhase3: c.queueTrustUpdated")
-			indexedCount, isComplete := pop.GetCountAndCompleteness(false)
+			indexedCount, isComplete := pop.GetIndexedCountAndCompleteness()
 			bftMajority := consensuskit.BftMajority(indexedCount)
 
 			/* Order of getting counts is VITAL */
@@ -278,26 +278,38 @@ outer:
 			}
 
 			logger.Debug(fmt.Sprintf("workerPrePhase3: id=%d upd=%d count=%d dyns=%v purg=%v trust=%v",
-				c.R.GetSelfNodeID(), updID,
+				c.R.GetSelfNodeID(),
+				updID,
 				indexedCount,
-				args.AsUint16Slice(briefCount, fullCount), args.AsUint16Slice(addedCount, ascentCount),
-				args.AsUint16Slice(fraudCount, bySelfCount, bySomeCount, byNeighborsCount)))
+				args.AsUint16Slice(briefCount, fullCount),
+				args.AsUint16Slice(addedCount, ascentCount),
+				args.AsUint16Slice(fraudCount, bySelfCount, bySomeCount, byNeighborsCount)),
+			)
 
-			allCount := indexedCount + int(addedCount) - int(ascentCount) + int(briefCount)
+			allMembersCount := indexedCount + int(addedCount) - int(ascentCount) + int(briefCount)
 
-			// We have some-trusted from all nodes, and the majority of them are well-trusted
-			// TODO: joiner should finished as "all and complete"
-			if isComplete && fraudCount == 0 && int(bySelfCount) >= allCount &&
-				fullCount >= briefCount && ascentCount >= addedCount &&
+			joinerPreCondition := true
+			if c.R.IsJoiner() {
+				// condition for fast PrePhase3 quit if node is joiner
+				joinerPreCondition = int(briefCount) > indexedCount
+				// calculate correct allMembersCount for joiner
+				allMembersCount -= indexedCount
+			}
+
+			// We could finish PrePhase3 faster if we have some-trusted from all nodes, and the majority of them are well-trusted
+			if joinerPreCondition &&
+				isComplete && // we have some-trusted from all nodes
+				fraudCount == 0 && // no fraud
+				int(bySelfCount) >= allMembersCount && // majority of members are well-trusted
+				fullCount >= briefCount && ascentCount >= addedCount && // other conditions for fast quit
 				c.consensusStrategy.CanStartVectorsEarly(indexedCount, int(fraudCount), int(bySomeCount), int(byNeighborsCount)) {
-				// (countTrustBySome >= bftMajority || countTrustByNeighbors >= 1+indexedCount>>1) {
 
 				logger.Debugf(">>>>workerPrePhase3: all and complete: %d", c.R.GetSelfNodeID())
 				break outer
 			}
 
 			// if we didn't went for a full phase3 sending, but we have all nodes, then should try a shortcut
-			if c.isFastPacketEnabled && isComplete && int(bySelfCount) >= allCount &&
+			if c.isFastPacketEnabled && isComplete && int(bySelfCount) >= allMembersCount &&
 				addedCount == 0 && briefCount == 0 && fullCount == 0 &&
 				!didFastPhase3 {
 
@@ -353,7 +365,6 @@ func (c *Phase3Controller) workerSendFastPhase3(ctx context.Context) {
 }
 
 func (c *Phase3Controller) workerSendPhase3(ctx context.Context, selfData statevector.Vector) {
-
 	p3 := c.R.GetPacketBuilder().PreparePhase3Packet(c.R.CreateLocalAnnouncement(), selfData,
 		c.packetPrepareOptions)
 
@@ -438,7 +449,7 @@ func (c *Phase3Controller) workerRecvPhase3(ctx context.Context, localInspector 
 
 outer:
 	for {
-		popCount, popCompleteness := pop.GetCountAndCompleteness(false)
+		popCount, popCompleteness := pop.GetIndexedCountAndCompleteness()
 		/* if popCount > processedNodesFlawlessly // try to improve something */
 
 		if popCompleteness && popCount <= verifiedStatTbl.RowCount() {

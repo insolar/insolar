@@ -91,7 +91,7 @@ do
     set -x
     $INSOLARD_CMD \
         --config ${NODES_DATA}${i}/insolard.yaml \
-        --trace &> ${NODES_LOGS}${i}/output.log &
+        &> ${NODES_LOGS}${i}/output.log &
     { set +x; } 2>/dev/null
     echo "NODE $i STARTED in background"
 done
