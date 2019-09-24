@@ -151,7 +151,6 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to find request being closed")
 	}
-
 	if p.sideEffect != nil {
 		err = checkRequestCanChangeState(closedRequest)
 		if err != nil {
