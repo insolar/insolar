@@ -55,7 +55,7 @@ func TestRequestsExecutor_ExecuteAndSave(t *testing.T) {
 		transcript *common.Transcript
 		am         artifacts.Client
 		le         logicexecutor.LogicExecutor
-		reply      insolar.Reply
+		result     artifacts.RequestResult
 		error      bool
 	}{
 		{
@@ -77,8 +77,11 @@ func TestRequestsExecutor_ExecuteAndSave(t *testing.T) {
 					},
 					nil,
 				),
-			am:    artifacts.NewClientMock(mc).RegisterResultMock.Return(nil),
-			reply: &reply.CallMethod{Object: &requestRef},
+			am: artifacts.NewClientMock(mc).RegisterResultMock.Return(nil),
+			result: &requestresult.RequestResult{
+				SideEffectType:     artifacts.RequestSideEffectActivate,
+				RawObjectReference: requestRef,
+			},
 		},
 	}
 
@@ -90,7 +93,7 @@ func TestRequestsExecutor_ExecuteAndSave(t *testing.T) {
 			if !test.error {
 				require.NoError(t, err)
 				require.NotNil(t, res)
-				require.Equal(t, test.reply, res)
+				require.Equal(t, test.result, res)
 			} else {
 				require.Error(t, err)
 				require.Nil(t, res)
@@ -131,8 +134,8 @@ func TestRequestsExecutor_Execute(t *testing.T) {
 				Request: &record.IncomingRequest{
 					Object: &objRef,
 				},
+				ObjectDescriptor: artifacts.NewObjectDescriptorMock(t),
 			},
-			am:     artifacts.NewClientMock(mc).GetObjectMock.Return(nil, nil),
 			le:     logicexecutor.NewLogicExecutorMock(mc).ExecuteMock.Return(&requestresult.RequestResult{SideEffectType: artifacts.RequestSideEffectActivate}, nil),
 			result: &requestresult.RequestResult{SideEffectType: artifacts.RequestSideEffectActivate},
 		},
@@ -142,8 +145,9 @@ func TestRequestsExecutor_Execute(t *testing.T) {
 				Request: &record.IncomingRequest{
 					Object: &objRef,
 				},
+				ObjectDescriptor: artifacts.NewObjectDescriptorMock(t),
 			},
-			am:    artifacts.NewClientMock(mc).GetObjectMock.Return(nil, errors.New("some")),
+			le:    logicexecutor.NewLogicExecutorMock(mc).ExecuteMock.Return(nil, errors.New("some")),
 			error: true,
 		},
 		{
@@ -152,8 +156,8 @@ func TestRequestsExecutor_Execute(t *testing.T) {
 				Request: &record.IncomingRequest{
 					Object: &objRef,
 				},
+				ObjectDescriptor: artifacts.NewObjectDescriptorMock(t),
 			},
-			am:    artifacts.NewClientMock(mc).GetObjectMock.Return(nil, nil),
 			le:    logicexecutor.NewLogicExecutorMock(mc).ExecuteMock.Return(nil, errors.New("some")),
 			error: true,
 		},
@@ -193,7 +197,6 @@ func TestRequestsExecutor_Save(t *testing.T) {
 		transcript *common.Transcript
 		am         artifacts.Client
 		error      bool
-		reply      insolar.Reply
 	}{
 		{
 			name: "activation",
@@ -208,8 +211,7 @@ func TestRequestsExecutor_Save(t *testing.T) {
 				SideEffectType:     artifacts.RequestSideEffectActivate,
 				RawObjectReference: requestRef,
 			},
-			am:    artifacts.NewClientMock(mc).RegisterResultMock.Return(nil),
-			reply: &reply.CallMethod{Object: &requestRef},
+			am: artifacts.NewClientMock(mc).RegisterResultMock.Return(nil),
 		},
 		{
 			name: "activation error",
@@ -236,9 +238,6 @@ func TestRequestsExecutor_Save(t *testing.T) {
 				RawObjectReference: requestRef,
 			},
 			am: artifacts.NewClientMock(mc).RegisterResultMock.Return(nil),
-			reply: &reply.CallMethod{
-				Result: []byte{1, 2, 3}, Object: &requestRef,
-			},
 		},
 		{
 			name: "deactivation error",
@@ -263,10 +262,6 @@ func TestRequestsExecutor_Save(t *testing.T) {
 				RawObjectReference: requestRef,
 			},
 			am: artifacts.NewClientMock(mc).RegisterResultMock.Return(nil),
-			reply: &reply.CallMethod{
-				Result: []byte{1, 2, 3},
-				Object: &requestRef,
-			},
 		},
 		{
 			name: "update error",
@@ -290,10 +285,6 @@ func TestRequestsExecutor_Save(t *testing.T) {
 				RawObjectReference: requestRef,
 			},
 			am: artifacts.NewClientMock(mc).RegisterResultMock.Return(nil),
-			reply: &reply.CallMethod{
-				Result: []byte{1, 2, 3},
-				Object: &requestRef,
-			},
 		},
 		{
 			name: "result without update, error",
@@ -311,14 +302,11 @@ func TestRequestsExecutor_Save(t *testing.T) {
 		test := test
 		t.Run(test.name, func(t *testing.T) {
 			re := &requestsExecutor{ArtifactManager: test.am}
-			replyVal, err := re.Save(ctx, test.transcript, test.result)
+			err := re.Save(ctx, test.transcript, test.result)
 			if !test.error {
 				require.NoError(t, err)
-				require.NotNil(t, replyVal)
-				require.Equal(t, test.reply, replyVal)
 			} else {
 				require.Error(t, err)
-				require.Nil(t, replyVal)
 			}
 		})
 	}

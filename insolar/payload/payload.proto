@@ -64,7 +64,6 @@ message Index {
     bytes Index = 20;
 
     bytes EarliestRequestID = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = true];
-    bytes EarliestRequest = 22;
 }
 
 message SearchIndexInfo {

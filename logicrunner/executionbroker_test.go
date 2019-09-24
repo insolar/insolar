@@ -35,12 +35,12 @@ import (
 	"github.com/insolar/insolar/insolar/payload"
 	insolarPulse "github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/executionregistry"
+	"github.com/insolar/insolar/logicrunner/requestresult"
 	"github.com/insolar/insolar/logicrunner/requestsqueue"
 	"github.com/insolar/insolar/pulse"
 )
@@ -90,7 +90,7 @@ func TestExecutionBroker_AddFreshRequest(t *testing.T) {
 
 	ctx := inslogger.TestContext(t)
 	reqRef := gen.RecordReference()
-	transcript := common.NewTranscript(ctx, reqRef, record.IncomingRequest{})
+	transcript := common.NewTranscript(ctx, reqRef, record.IncomingRequest{Object: &objectRef})
 
 	pa := insolarPulse.NewAccessorMock(t).LatestMock.Return(
 		insolar.Pulse{PulseNumber: pulse.MinTimePulse},
@@ -109,14 +109,16 @@ func TestExecutionBroker_AddFreshRequest(t *testing.T) {
 					DoneMock.Return(true).
 					GetActiveTranscriptMock.When(reqRef).Then(nil)
 				am := artifacts.NewClientMock(t).
-					HasPendingsMock.Return(false, nil)
+					HasPendingsMock.Return(false, nil).
+					GetObjectMock.Return(artifacts.NewObjectDescriptorMock(t).EarliestRequestIDMock.Return(reqRef.GetLocal()), nil)
 				re := NewRequestsExecutorMock(t).
-					SendReplyMock.Return()
-				broker := NewExecutionBroker(objectRef, nil, re, nil, am, er, nil, pa)
-
-				re.ExecuteAndSaveMock.Set(func(ctx context.Context, tr *common.Transcript) (insolar.Reply, error) {
-					return &reply.OK{}, nil
+					SendReplyMock.Set(func(ctx context.Context, reqRef insolar.Reference, req record.IncomingRequest, re insolar.Reply, err error) {
+					require.NoError(t, err)
+				}).ExecuteAndSaveMock.Set(func(ctx context.Context, tr *common.Transcript) (artifacts.RequestResult, error) {
+					return &requestresult.RequestResult{}, nil
 				})
+				broker := NewExecutionBroker(objectRef,
+					nil, re, nil, am, er, nil, pa)
 				return broker
 			},
 		},
@@ -330,10 +332,14 @@ func TestExecutionBroker_ExecuteImmutable(t *testing.T) {
 		nil,
 	)
 
+	am := artifacts.NewClientMock(t).GetObjectMock.Set(func(ctx context.Context, head insolar.Reference, request *insolar.Reference) (o1 artifacts.ObjectDescriptor, err error) {
+		return artifacts.NewObjectDescriptorMock(t), nil
+	})
+
 	// prepare default object and execution state
 	objectRef := gen.Reference()
 	re := NewRequestsExecutorMock(mc)
-	broker := NewExecutionBroker(objectRef, nil, re, nil, nil, er, nil, pa)
+	broker := NewExecutionBroker(objectRef, nil, re, nil, am, er, nil, pa)
 	broker.pending = insolar.NotPending
 
 	immutableRequestRef1 := gen.RecordReference()
@@ -347,7 +353,7 @@ func TestExecutionBroker_ExecuteImmutable(t *testing.T) {
 	er.GetActiveTranscriptMock.When(immutableRequestRef1).Then(nil).
 		DoneMock.Return(true)
 
-	re.ExecuteAndSaveMock.Return(&reply.CallMethod{Result: []byte{1, 2, 3}}, nil)
+	re.ExecuteAndSaveMock.Return(requestresult.New([]byte{1, 2, 3}, gen.Reference()), nil)
 	re.SendReplyMock.Return()
 
 	broker.AddFreshRequest(ctx, immutableTranscript1)
@@ -479,7 +485,7 @@ func TestExecutionBroker_AddFreshRequestWithOnPulse(t *testing.T) {
 
 	ctx := inslogger.TestContext(t)
 	reqRef := gen.RecordReference()
-	transcript := common.NewTranscript(ctx, reqRef, record.IncomingRequest{})
+	transcript := common.NewTranscript(ctx, reqRef, record.IncomingRequest{Object: &objectRef})
 
 	pa := insolarPulse.NewAccessorMock(t).LatestMock.Return(
 		insolar.Pulse{PulseNumber: pulse.MinTimePulse},
@@ -528,7 +534,7 @@ func TestExecutionBroker_AddFreshRequestWithOnPulse(t *testing.T) {
 					DoneMock.Set(func(_ *common.Transcript) bool { doneCalled = true; return true }).
 					GetActiveTranscriptMock.When(reqRef).Then(nil)
 				am := artifacts.NewClientMock(t).
-					HasPendingsMock.Return(false, nil)
+					HasPendingsMock.Return(false, nil).GetObjectMock.Return(artifacts.NewObjectDescriptorMock(t).EarliestRequestIDMock.Return(reqRef.GetLocal()), nil)
 				re := NewRequestsExecutorMock(t).
 					SendReplyMock.Return()
 				sender := bus.NewSenderMock(t).SendRoleMock.Return(nil, func() { return })
@@ -541,9 +547,9 @@ func TestExecutionBroker_AddFreshRequestWithOnPulse(t *testing.T) {
 				broker := NewExecutionBroker(objectRef, nil, re, sender, am, er, nil, pulseMock)
 
 				var msgs []payload.Payload
-				re.ExecuteAndSaveMock.Set(func(ctx context.Context, tr *common.Transcript) (insolar.Reply, error) {
+				re.ExecuteAndSaveMock.Set(func(ctx context.Context, tr *common.Transcript) (artifacts.RequestResult, error) {
 					msgs = broker.OnPulse(ctx)
-					return &reply.OK{}, nil
+					return &requestresult.RequestResult{}, nil
 				})
 				return broker, &msgs
 			},

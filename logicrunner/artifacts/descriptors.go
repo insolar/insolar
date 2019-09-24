@@ -52,52 +52,19 @@ func (d *codeDescriptor) Code() ([]byte, error) {
 	return d.code, nil
 }
 
-func NewObjectDescriptor(head insolar.Reference, state insolar.ID, prototype *insolar.Reference, isPrototype bool,
-	childPointer *insolar.ID, memory []byte, parent insolar.Reference) ObjectDescriptor {
-
-	return &objectDescriptor{
-		head:         head,
-		state:        state,
-		prototype:    prototype,
-		isPrototype:  isPrototype,
-		childPointer: childPointer,
-		memory:       memory,
-		parent:       parent,
-	}
-}
-
 // ObjectDescriptor represents meta info required to fetch all object data.
 type objectDescriptor struct {
-	head         insolar.Reference
-	state        insolar.ID
-	prototype    *insolar.Reference
-	isPrototype  bool
-	childPointer *insolar.ID // can be nil.
-	memory       []byte
-	parent       insolar.Reference
-}
+	head      insolar.Reference
+	state     insolar.ID
+	prototype *insolar.Reference
+	memory    []byte
+	parent    insolar.Reference
 
-// IsPrototype determines if the object is a prototype.
-func (d *objectDescriptor) IsPrototype() bool {
-	return d.isPrototype
-}
-
-// Code returns code reference.
-func (d *objectDescriptor) Code() (*insolar.Reference, error) {
-	if !d.IsPrototype() {
-		return nil, errors.New("object is not a prototype")
-	}
-	if d.prototype == nil {
-		return nil, errors.New("object has no code")
-	}
-	return d.prototype, nil
+	requestID *insolar.ID
 }
 
 // Prototype returns prototype reference.
 func (d *objectDescriptor) Prototype() (*insolar.Reference, error) {
-	if d.IsPrototype() {
-		return nil, errors.New("object is not an instance")
-	}
 	if d.prototype == nil {
 		return nil, errors.New("object has no prototype")
 	}
@@ -114,11 +81,6 @@ func (d *objectDescriptor) StateID() *insolar.ID {
 	return &d.state
 }
 
-// ChildPointer returns the latest child for this object.
-func (d *objectDescriptor) ChildPointer() *insolar.ID {
-	return d.childPointer
-}
-
 // Memory fetches latest memory of the object known to storage.
 func (d *objectDescriptor) Memory() []byte {
 	return d.memory
@@ -127,4 +89,39 @@ func (d *objectDescriptor) Memory() []byte {
 // Parent returns object's parent.
 func (d *objectDescriptor) Parent() *insolar.Reference {
 	return &d.parent
+}
+
+func (d *objectDescriptor) EarliestRequestID() *insolar.ID {
+	return d.requestID
+}
+
+func NewPrototypeDescriptor(
+	head insolar.Reference, state insolar.ID, code insolar.Reference,
+) PrototypeDescriptor {
+	return &prototypeDescriptor{
+		head:  head,
+		state: state,
+		code:  code,
+	}
+}
+
+type prototypeDescriptor struct {
+	head  insolar.Reference
+	state insolar.ID
+	code  insolar.Reference
+}
+
+// Code returns code reference.
+func (d *prototypeDescriptor) Code() *insolar.Reference {
+	return &d.code
+}
+
+// HeadRef returns reference to represented object record.
+func (d *prototypeDescriptor) HeadRef() *insolar.Reference {
+	return &d.head
+}
+
+// StateID returns reference to object state record.
+func (d *prototypeDescriptor) StateID() *insolar.ID {
+	return &d.state
 }
