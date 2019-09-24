@@ -21,6 +21,9 @@ or you can run benchmark with
 
 ### Options
 
+        -e check-every-member
+                If true, just check balance of every member from file and don't run any scenario. Default is false.
+
         -c concurrency
                 Number of concurrent users. Default is one. 
 
@@ -43,22 +46,26 @@ or you can run benchmark with
                 Log level (default - info).
 
         -s savemembers
-                Saves members to file .artifacts/bench-members/members.txt.
+                Saves members to file .artifacts/bench-members/members.txt (file can be change with members-file option).
                 If false, file wont be updated. Default is false.
+                If nocheckbalance set to True, and run was successful, balances in file will be updated after scenario.
 
         -m usemembers
-                Use members from file .artifacts/bench-members/members.txt.
+                Use members from file .artifacts/bench-members/members.txt (file can be change with members-file option).
                 If false, wright info about created members in this file. Default is false. 
+                If nocheckbalance set to True, and run was successful, balances in file will be updated after scenario.
+
         --members-file
                 Path to file for saving members data
+
         -b nocheckbalance
-                If true, don't check balance at the start/end of transfers. Default is false. 
-        -e check-every-member
-                If true, check balance of every member from file before start. Default is false.
-                If run was successful, balances in file will be updated after scenario.
+                If true, don't check balance at the start/end of transfers. Default is false.
+                If savemembers or usemembers provided, and run was successful, balances in file will be updated after scenario.
+
         -t scenarioname
                 Name of scenario. Default scenario is transfer scenario.
                 You can choose "createMember" for create member scenario.
                 You can choose "migration" for migration scenario.
+
         --discovery-nodes-logs-dir
                 Launchnet logs dir for checking errors
