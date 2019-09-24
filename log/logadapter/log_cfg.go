@@ -88,5 +88,5 @@ func ParseLogConfigWithDefaults(cfg configuration.Log, defaults ParsedLogConfig)
 	}
 	plc.Output.EnableBuffer = cfg.BufferSize > 0
 
-	return
+	return plc, nil
 }

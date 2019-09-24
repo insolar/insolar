@@ -348,9 +348,17 @@ func (zf zerologFactory) PrepareBareOutput(output io.Writer, metrics *logmetrics
 	return output, nil
 }
 
+func checkNewLoggerOutput(output zerolog.LevelWriter) zerolog.LevelWriter {
+	if output == nil {
+		panic("illegal value")
+	}
+	//
+	return output
+}
+
 func (zf zerologFactory) createNewLogger(output zerolog.LevelWriter, level insolar.LogLevel, config logadapter.Config) (insolar.Logger, error) {
 
-	ls := zerolog.New(output).Level(ToZerologLevel(level))
+	ls := zerolog.New(checkNewLoggerOutput(output)).Level(ToZerologLevel(level))
 
 	if ok, name, trim, _ := getWriteDelayConfig(config.Metrics, config.BuildConfig); ok {
 		// MUST be the first Hook

@@ -41,7 +41,7 @@ func initLevelContexts() (contexts []context.Context) {
 }
 
 func GetLogLevelContext(level insolar.LogLevel) context.Context {
-	if level < 0 || int(level) >= len(levelContexts) {
+	if int(level) >= len(levelContexts) {
 		return context.Background()
 	}
 	return levelContexts[level]

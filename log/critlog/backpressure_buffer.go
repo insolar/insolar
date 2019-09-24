@@ -509,8 +509,8 @@ func (p *internalBackpressureBuffer) worker(ctx context.Context) {
 	}
 }
 
-func (p *internalBackpressureBuffer) drawStraw(writeId uint32, writersInQueue uint32) bool {
-	return writersInQueue == 0 || (writeId%args.Prime(int(writersInQueue-1))) == 0
+func (p *internalBackpressureBuffer) drawStraw(writerSeq uint32, writersInQueue uint32) bool {
+	return writersInQueue == 0 || (writerSeq%args.Prime(int(writersInQueue-1))) == 0
 }
 
 func (p *internalBackpressureBuffer) getAndResetMissedCount() int {

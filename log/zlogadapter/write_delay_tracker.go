@@ -37,6 +37,7 @@ const fieldHeaderFmt = `,"%s":"%*v`
 const tempHexFieldLength = 16 // HEX for Uint64
 const writeDelayResultFieldOverflowContent = "ovrflw"
 const writeDelayResultFieldMinWidth = len(writeDelayResultFieldOverflowContent)
+const writeDelayPreferTrim = false
 
 func getWriteDelayConfig(metrics *logmetrics.MetricsHelper,
 	config logadapter.BuildConfig) (needsHook bool, fieldName string, preferTrim bool, reportFn logmetrics.DurationReportFunc) {
@@ -50,15 +51,11 @@ func getWriteDelayConfig(metrics *logmetrics.MetricsHelper,
 		fieldName = "writeDuration"
 	}
 
-	if metricsMode&insolar.LogMetricsWriteDelayReport != 0 {
+	if metricsMode&insolar.LogMetricsWriteDelayReport != 0 && metrics != nil {
 		reportFn = metrics.GetOnWriteDurationReport()
 	}
 
-	if len(fieldName) == 0 { // && reportFn == nil {
-		return
-	}
-
-	return true, fieldName, false, nil
+	return len(fieldName) != 0 && reportFn != nil, fieldName, writeDelayPreferTrim, reportFn
 }
 
 func getWriteDelayHookParams(fieldName string, preferTrim bool) (fieldWidth int, searchField string) {
@@ -123,7 +120,7 @@ func (h *writeDelayPostHook) Write(p []byte) (n int, err error) {
 	s := string(p)
 	runtime.KeepAlive(s)
 
-	ofs := -1
+	var ofs int
 	searchLimit := len(h.searchBytes) + 64
 	if searchLimit >= len(p) {
 		ofs = bytes.Index(p, h.searchBytes)

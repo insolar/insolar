@@ -266,16 +266,16 @@ func (z LoggerBuilder) prepareOutput(metrics *logmetrics.MetricsHelper, needsLow
 			z.Config.Output.BufferSize, 0, pw, flags, missedFn)
 		bpb.StartWorker(context.Background())
 		return bpb, nil
-	} else {
-		if needsLowLatency {
-			return nil, errors.New("low latency buffer is disabled but was required")
-		}
+	}
+
+	if needsLowLatency {
+		return nil, errors.New("low latency buffer is disabled but was required")
 	}
 	return critlog.NewFatalDirectWriter(output), nil
 }
 
 func (z LoggerBuilder) loggerMissedEvent(level insolar.LogLevel) critlog.MissedEventFunc {
-	return func(missed int) (level insolar.LogLevel, bytes []byte) {
+	return func(missed int) (insolar.LogLevel, []byte) {
 		return level, ([]byte)(
 			fmt.Sprintf(`{"level":"%v","message":"logger dropped %d messages"}`, level.String(), missed))
 	}
