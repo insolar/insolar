@@ -365,7 +365,6 @@ func (c *Phase3Controller) workerSendFastPhase3(ctx context.Context) {
 }
 
 func (c *Phase3Controller) workerSendPhase3(ctx context.Context, selfData statevector.Vector) {
-	time.Sleep(time.Second * 2)
 	p3 := c.R.GetPacketBuilder().PreparePhase3Packet(c.R.CreateLocalAnnouncement(), selfData,
 		c.packetPrepareOptions)
 
