@@ -208,8 +208,6 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 	}
 
 	var earliestRequestID *insolar.ID
-	var earliestRequest []byte
-
 	// We know the request, that is processing by ve
 	// if the request isn't earliest, we return object + earliest request instead
 	if p.requestID != nil {
@@ -218,12 +216,7 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 			return errors.Wrap(err, "failed to check request status")
 		}
 		if oldest != nil && oldest.RecordID != *p.requestID {
-			reqBuf, err := oldest.Record.Virtual.Marshal()
-			if err != nil {
-				return errors.Wrap(err, "failed to marshal request")
-			}
 			earliestRequestID = &oldest.RecordID
-			earliestRequest = reqBuf
 		}
 	}
 
@@ -236,7 +229,6 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 		msg, err := payload.NewMessage(&payload.Index{
 			Index:             buf,
 			EarliestRequestID: earliestRequestID,
-			EarliestRequest:   earliestRequest,
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to create reply")

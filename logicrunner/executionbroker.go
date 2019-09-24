@@ -30,6 +30,7 @@ import (
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/log"
@@ -51,7 +52,7 @@ const passToNextLimit = 50
 
 // prefetchLimit - when we reach this number of requests in queue, we start
 // pre-fetching requests from ledger
-const prefetchLimit = 5
+const prefetchLimit = 0
 
 const mutableExecutionLimit = 1
 const immutableExecutionLimit = 30
@@ -144,6 +145,11 @@ type ExecutionBroker struct {
 	deduplicationTable map[insolar.Reference]bool
 }
 
+const (
+	ImmutableQueueName = "immutable"
+	MutableQueueName   = "mutable"
+)
+
 func NewExecutionBroker(
 	ref insolar.Reference,
 	publisher watermillMsg.Publisher,
@@ -159,19 +165,18 @@ func NewExecutionBroker(
 		log.Error("failed to create execution broker ", err.Error())
 		return nil
 	}
-
 	return &ExecutionBroker{
 		Ref:  ref,
 		name: "executionbroker-" + pulseObject.PulseNumber.String(),
 
 		mutable: processorState{
-			name:         "mutable",
+			name:         MutableQueueName,
 			workers:      0,
 			workersLimit: mutableExecutionLimit,
 			queue:        requestsqueue.New(),
 		},
 		immutable: processorState{
-			name:         "immutable",
+			name:         ImmutableQueueName,
 			workers:      0,
 			workersLimit: immutableExecutionLimit,
 			queue:        requestsqueue.New(),
@@ -229,6 +234,14 @@ func (q *ExecutionBroker) finishTask(ctx context.Context, transcript *common.Tra
 	}
 }
 
+func (q *ExecutionBroker) cleanMutableQueue(ctx context.Context) {
+	q.stateLock.Lock()
+	defer q.stateLock.Unlock()
+
+	q.mutable.queue.Clean(ctx)
+	q.deduplicationTable = make(map[insolar.Reference]bool)
+}
+
 func (q *ExecutionBroker) processTranscript(ctx context.Context, transcript *common.Transcript) {
 	stats.Record(ctx, metrics.ExecutionBrokerExecutionStarted.M(1))
 	defer stats.Record(ctx, metrics.ExecutionBrokerExecutionFinished.M(1))
@@ -243,11 +256,39 @@ func (q *ExecutionBroker) processTranscript(ctx context.Context, transcript *com
 		"request": transcript.RequestRef.String(),
 		"broker":  q.name,
 	})
-	logger.Debug("processed request")
 
-	replyData, err := q.requestsExecutor.ExecuteAndSave(ctx, transcript)
-	if err != nil {
-		logger.Warn("contract execution error: ", err)
+	var (
+		replyData insolar.Reply
+		err       error
+	)
+
+	if transcript.Request.CallType == record.CTMethod {
+		logger.Info("processing transcript with method")
+		var objDesc artifacts.ObjectDescriptor
+		objDesc, err = q.artifactsManager.GetObject(ctx, *transcript.Request.Object, &transcript.RequestRef)
+		if err == nil {
+			transcript.ObjectDescriptor = objDesc
+
+			if !transcript.Request.Immutable &&
+				transcript.ObjectDescriptor.EarliestRequestID() != nil &&
+				!transcript.RequestRef.GetLocal().Equal(*transcript.ObjectDescriptor.EarliestRequestID()) {
+				logger.Info("Got different earliest request from ledger")
+
+				q.cleanMutableQueue(ctx)
+				q.ledgerHasMoreRequests = true
+			}
+		}
+	}
+
+	if err == nil {
+		var result artifacts.RequestResult
+		result, err = q.requestsExecutor.ExecuteAndSave(ctx, transcript)
+		if err != nil {
+			logger.Warn("contract execution error: ", err)
+		} else {
+			objRef := result.ObjectReference()
+			replyData = &reply.CallMethod{Result: result.Result(), Object: &objRef}
+		}
 	}
 
 	q.finishTask(ctx, transcript)

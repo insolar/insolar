@@ -104,11 +104,11 @@ func (i *IndexStorageMemory) Set(ctx context.Context, pn insolar.PulseNumber, bu
 
 		if savedBuck.Lifeline.LatestRequest != nil && bucket.Lifeline.LatestRequest == nil {
 			debug.PrintStack()
-			log.Fatal("savedBuck.Lifeline.LatestRequest != nil && bucket.Lifeline.LatestRequest == nil")
+			log.Fatal("savedBuck.Lifeline.EarliestRequest != nil && bucket.Lifeline.EarliestRequest == nil")
 		}
 		if savedBuck.Lifeline.LatestRequest != nil && savedBuck.Lifeline.LatestRequest.Pulse() > bucket.Lifeline.LatestRequest.Pulse() {
 			debug.PrintStack()
-			log.Fatal("savedBuck.Lifeline.LatestRequest.Pulse() < bucket.Lifeline.LatestRequest.Pulse()")
+			log.Fatal("savedBuck.Lifeline.EarliestRequest.Pulse() < bucket.Lifeline.EarliestRequest.Pulse()")
 		}
 
 		if savedBuck.Lifeline.LatestState != nil && bucket.Lifeline.LatestState == nil {
