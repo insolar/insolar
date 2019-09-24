@@ -116,7 +116,7 @@ func (c *RequestCheckerDefault) checkReasonForOutgoingRequest(
 	}
 
 	// Search reason in opened
-	reasonRequest, err := c.checkReasonIsOpen(ctx, openedRequests, reasonID)
+	reasonRequest, err := c.checkReasonIsOpen(openedRequests, reasonID)
 	if err != nil {
 		return errors.Wrap(err, "checkReasonIsOpen on outgoing failed")
 	}
@@ -132,7 +132,7 @@ func (c *RequestCheckerDefault) checkReasonForOutgoingRequest(
 
 	// If reason is mutable incoming request, than check that it is the oldest
 	if !incoming.Immutable {
-		err = c.checkReasonIsOldest(ctx, openedRequests, reasonRequest)
+		err = c.checkReasonIsOldest(openedRequests, reasonRequest)
 		return errors.Wrap(err, "checkReasonIsOldest on outgoing failed")
 	}
 
@@ -140,7 +140,6 @@ func (c *RequestCheckerDefault) checkReasonForOutgoingRequest(
 }
 
 func (c *RequestCheckerDefault) checkReasonIsOpen(
-	ctx context.Context,
 	requests []record.CompositeFilamentRecord,
 	reasonID insolar.ID,
 ) (record.CompositeFilamentRecord, error) {
@@ -158,7 +157,6 @@ func (c *RequestCheckerDefault) checkReasonIsOpen(
 }
 
 func (c *RequestCheckerDefault) checkReasonIsOldest(
-	ctx context.Context,
 	requests []record.CompositeFilamentRecord,
 	reasonRequest record.CompositeFilamentRecord,
 ) error {
@@ -255,7 +253,7 @@ func (c *RequestCheckerDefault) checkReasonForIncomingRequest(
 		}
 	}
 
-	if !inc.Immutable && reasonInfo.Oldest == false {
+	if !inc.Immutable && !reasonInfo.Oldest {
 		return &payload.CodedError{
 			Text: "request reason is not the oldest in filament",
 			Code: payload.CodeReasonIsWrong,
