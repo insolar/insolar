@@ -358,7 +358,6 @@ func (q *ExecutionBroker) startProcessor(ctx context.Context, state *processorSt
 }
 
 func (q *ExecutionBroker) processQueue(ctx context.Context, state *processorState) {
-	inslogger.FromContext(ctx).Error("processQueue")
 	q.processQueueInner(ctx, state)
 }
 
