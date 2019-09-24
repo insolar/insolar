@@ -148,12 +148,15 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "failed to calculate pending requests")
 	}
 	closedRequest, err := findClosed(opened, p.result)
+	if err != nil {
+		return errors.Wrap(err, "failed to find request being closed")
+	}
 
 	if p.sideEffect != nil {
 		err = checkRequestCanChangeState(closedRequest)
-	}
-	if err != nil {
-		return errors.Wrap(err, "failed to find request being closed")
+		if err != nil {
+			return errors.Wrap(err, "failed checkRequestCanChangeState")
+		}
 	}
 	err = checkOutgoings(opened, closedRequest.RecordID)
 	if err != nil {
