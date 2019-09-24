@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 
@@ -129,14 +130,24 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 			if err != nil {
 				return errors.Wrap(err, "failed to marshal result")
 			}
-			msg, err := payload.NewMessage(&payload.ResultInfo{
-				ObjectID: p.result.Object,
-				ResultID: res.RecordID,
-				Result:   resBuf,
-			})
+
+			var msg *message.Message
+			if res.RecordID == resultID {
+				msg, err = payload.NewMessage(&payload.ResultInfo{
+					ObjectID: p.result.Object,
+					ResultID: res.RecordID,
+				})
+			} else {
+				msg, err = payload.NewMessage(&payload.ErrorResultExists{
+					ObjectID: p.result.Object,
+					ResultID: res.RecordID,
+					Result:   resBuf,
+				})
+			}
 			if err != nil {
 				return errors.Wrap(err, "failed to create reply")
 			}
+
 			logger.Debug("result duplicate found")
 			p.dep.sender.Reply(ctx, p.message, msg)
 			return nil
@@ -151,12 +162,14 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to find request being closed")
 	}
+
 	if p.sideEffect != nil {
 		err = checkRequestCanChangeState(closedRequest)
 		if err != nil {
-			return errors.Wrap(err, "failed checkRequestCanChangeState")
+			return errors.Wrap(err, "request is not allowed to change object state")
 		}
 	}
+
 	err = checkOutgoings(opened, closedRequest.RecordID)
 	if err != nil {
 		return errors.Wrap(err, "open outgoings found")

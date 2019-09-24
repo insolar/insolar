@@ -258,10 +258,13 @@ func TestSetResult_Proceed_ResultDuplicated(t *testing.T) {
 		resp, err := payload.Unmarshal(resMsg.Payload)
 		require.NoError(t, err)
 
-		res, ok := resp.(*payload.ResultInfo)
+		res, ok := resp.(*payload.ErrorResultExists)
 		require.True(t, ok)
-		require.Equal(t, duplicateBuf, res.Result)
 		require.Equal(t, resultID, res.ResultID)
+		receivedResult := record.Material{}
+		err = receivedResult.Unmarshal(res.Result)
+		require.NoError(t, err)
+		require.Equal(t, virtual, receivedResult.Virtual)
 	})
 
 	setResultProc := proc.NewSetResult(msg, jetID, *res, nil)
