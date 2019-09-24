@@ -166,6 +166,7 @@ func TestRequestCheckerDefault_CheckRequest(t *testing.T) {
 						}
 						return buf
 					}(),
+					Oldest: true,
 				}),
 			})
 			return ch, func() {}
@@ -240,6 +241,7 @@ func TestRequestCheckerDefault_CheckRequest(t *testing.T) {
 				Request: &record.CompositeFilamentRecord{
 					Record: record.Material{Virtual: record.Wrap(&record.IncomingRequest{})},
 				},
+				Oldest: true,
 			}
 			return request, nil
 		})

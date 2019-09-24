@@ -163,6 +163,14 @@ func Test_IncomingRequest_Duplicate(t *testing.T) {
 		RequireNotError(rep)
 		objectID := rep.(*payload.RequestInfo).ObjectID
 
+		// Closing 2 request
+		{
+			resMsg, _ := MakeSetResult(objectID, objectID)
+			// Set result.
+			rep := SendMessage(ctx, s, &resMsg)
+			RequireNotError(rep)
+		}
+
 		s.SetPulse(ctx)
 
 		msg, _ = MakeSetIncomingRequest(objectID, reasonID, rootObject, false, false)

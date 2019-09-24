@@ -439,6 +439,7 @@ func (c *FilamentCalculatorDefault) RequestInfo(
 		if rec.RecordID == requestID {
 			foundRequestInfo.Request = &rec
 			logger.Debugf("found request %s", rec.RecordID.DebugString())
+			continue
 		}
 
 		virtual := record.Unwrap(&rec.Record.Virtual)

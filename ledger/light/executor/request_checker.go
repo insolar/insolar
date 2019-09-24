@@ -247,10 +247,17 @@ func (c *RequestCheckerDefault) checkReasonForIncomingRequest(
 	}
 
 	virtual := record.Unwrap(&material.Virtual)
-	_, ok := virtual.(*record.IncomingRequest)
+	inc, ok := virtual.(*record.IncomingRequest)
 	if !ok {
 		return &payload.CodedError{
 			Text: fmt.Sprintf("reason request must be Incoming, %T received", virtual),
+			Code: payload.CodeReasonIsWrong,
+		}
+	}
+
+	if !inc.Immutable && reasonInfo.Oldest == false {
+		return &payload.CodedError{
+			Text: "request reason is not the oldest in filament",
 			Code: payload.CodeReasonIsWrong,
 		}
 	}
@@ -366,6 +373,8 @@ func (c *RequestCheckerDefault) getRequestLocal(
 		}
 		reqInfo.Result = resBuf
 	}
+
+	reqInfo.Oldest = foundReqInfo.Oldest
 
 	logger.WithFields(map[string]interface{}{
 		"request":    foundReqInfo.Request != nil,
