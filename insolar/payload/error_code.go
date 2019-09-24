@@ -42,6 +42,7 @@ type CodedError struct {
 func (e *CodedError) GetCode() uint32 {
 	return e.Code
 }
+
 func (e *CodedError) Error() string {
 	return e.Text
 }
