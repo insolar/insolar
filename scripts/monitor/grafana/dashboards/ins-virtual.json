@@ -1614,8 +1614,8 @@
       {
         "allValue": null,
         "current": {
-          "text": "dev-alpha",
-          "value": "dev-alpha"
+          "text": "local",
+          "value": "local"
         },
         "datasource": "prometheus",
         "definition": "label_values(insolar_light_last_sent_pulse, installation)",
@@ -1666,7 +1666,7 @@
     ]
   },
   "time": {
-    "from": "now-1h",
+    "from": "now-15m",
     "to": "now"
   },
   "timepicker": {
