@@ -115,64 +115,18 @@ func (c *RequestCheckerDefault) checkReasonForOutgoingRequest(
 		}
 	}
 
-	// Search reason in opened
-	reasonRequest, err := c.checkReasonIsOpen(openedRequests, reasonID)
-	if err != nil {
-		return errors.Wrap(err, "checkReasonIsOpen on outgoing failed")
-	}
-
-	rec := record.Unwrap(&reasonRequest.Record.Virtual)
-	incoming, ok := rec.(*record.IncomingRequest)
-	if !ok {
+	oldestRequest := OldestMutable(openedRequests)
+	if oldestRequest == nil {
 		return &payload.CodedError{
-			Text: "reason is not incoming",
+			Text: "reason not found in opened requests",
 			Code: payload.CodeReasonIsWrong,
 		}
 	}
 
-	// If reason is mutable incoming request, than check that it is the oldest
-	if !incoming.Immutable {
-		err = c.checkReasonIsOldest(openedRequests, reasonRequest)
-		return errors.Wrap(err, "checkReasonIsOldest on outgoing failed")
-	}
-
-	return nil
-}
-
-func (c *RequestCheckerDefault) checkReasonIsOpen(
-	requests []record.CompositeFilamentRecord,
-	reasonID insolar.ID,
-) (record.CompositeFilamentRecord, error) {
-
-	for _, p := range requests {
-		if p.RecordID == reasonID {
-			return p, nil
-		}
-	}
-
-	return record.CompositeFilamentRecord{}, &payload.CodedError{
-		Text: "request reason not found in opened requests",
-		Code: payload.CodeReasonIsWrong,
-	}
-}
-
-func (c *RequestCheckerDefault) checkReasonIsOldest(
-	requests []record.CompositeFilamentRecord,
-	reasonRequest record.CompositeFilamentRecord,
-) error {
-	for _, p := range requests {
-		// Searching only before this record
-		if p.RecordID == reasonRequest.RecordID {
-			return nil
-		}
-
-		rec := record.Unwrap(&p.Record.Virtual)
-		if in, ok := rec.(*record.IncomingRequest); ok && !in.Immutable {
-			// Found mutable incoming older than reasonRequest
-			return &payload.CodedError{
-				Text: "request reason is not the oldest in filament",
-				Code: payload.CodeReasonIsWrong,
-			}
+	if oldestRequest.RecordID != reasonID {
+		return &payload.CodedError{
+			Text: "request reason is not the oldest in filament",
+			Code: payload.CodeReasonIsWrong,
 		}
 	}
 
