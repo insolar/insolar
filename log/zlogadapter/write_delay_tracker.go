@@ -40,7 +40,7 @@ const writeDelayResultFieldMinWidth = len(writeDelayResultFieldOverflowContent)
 const writeDelayPreferTrim = false
 
 func getWriteDelayConfig(metrics *logmetrics.MetricsHelper,
-	config logadapter.BuildConfig) (needsHook bool, fieldName string, preferTrim bool, reportFn logmetrics.DurationReportFunc) {
+	config logadapter.BuildConfig) (needsHook bool, fieldName string, reportFn logmetrics.DurationReportFunc) {
 
 	metricsMode := config.Instruments.MetricsMode
 	if metricsMode&(insolar.LogMetricsWriteDelayField|insolar.LogMetricsWriteDelayReport) == 0 {
@@ -55,7 +55,7 @@ func getWriteDelayConfig(metrics *logmetrics.MetricsHelper,
 		reportFn = metrics.GetOnWriteDurationReport()
 	}
 
-	return len(fieldName) != 0 && reportFn != nil, fieldName, writeDelayPreferTrim, reportFn
+	return len(fieldName) != 0 && reportFn != nil, fieldName, reportFn
 }
 
 func getWriteDelayHookParams(fieldName string, preferTrim bool) (fieldWidth int, searchField string) {

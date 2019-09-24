@@ -234,12 +234,12 @@ func (p *internalBackpressureBuffer) writeFatal(level insolar.LogLevel, b []byte
 }
 
 func (p *internalBackpressureBuffer) checkWrite(level insolar.LogLevel, b []byte, startNano int64) (int, error) {
-	writeId := atomic.AddUint32(&p.writeSeq, 1)
+	writeSeq := atomic.AddUint32(&p.writeSeq, 1)
 
 	for i := uint8(0); ; i++ {
 		pendingWrites := atomic.LoadUint32(&p.pendingWrites)
 
-		if pendingWrites >= uint32(p.maxParWrites) || !p.drawStraw(writeId, pendingWrites) {
+		if pendingWrites >= uint32(p.maxParWrites) || !p.drawStraw(writeSeq, pendingWrites) {
 			return p.fairQueueWrite(level, b, startNano)
 		}
 
@@ -500,7 +500,7 @@ func (p *internalBackpressureBuffer) worker(ctx context.Context) {
 					so this worker can hands off for a while.
 				*/
 				p.buffer <- be
-				if prevWasMark == true {
+				if prevWasMark {
 					time.Sleep(1 * time.Millisecond)
 				} else {
 					prevWasMark = true

@@ -341,8 +341,8 @@ func (zf zerologFactory) PrepareBareOutput(output io.Writer, metrics *logmetrics
 		return nil, err
 	}
 
-	if ok, name, trim, reportFn := getWriteDelayConfig(metrics, config); ok {
-		output = newWriteDelayPostHook(output, name, trim, reportFn)
+	if ok, name, reportFn := getWriteDelayConfig(metrics, config); ok {
+		output = newWriteDelayPostHook(output, name, writeDelayPreferTrim, reportFn)
 	}
 
 	return output, nil
@@ -360,9 +360,9 @@ func (zf zerologFactory) createNewLogger(output zerolog.LevelWriter, level insol
 
 	ls := zerolog.New(checkNewLoggerOutput(output)).Level(ToZerologLevel(level))
 
-	if ok, name, trim, _ := getWriteDelayConfig(config.Metrics, config.BuildConfig); ok {
+	if ok, name, _ := getWriteDelayConfig(config.Metrics, config.BuildConfig); ok {
 		// MUST be the first Hook
-		ls = ls.Hook(newWriteDelayPreHook(name, trim))
+		ls = ls.Hook(newWriteDelayPreHook(name, writeDelayPreferTrim))
 	}
 
 	lc := ls.With().Timestamp()
