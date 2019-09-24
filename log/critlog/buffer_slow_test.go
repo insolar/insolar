@@ -32,15 +32,16 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gonum.org/v1/gonum/stat"
 
 	"github.com/insolar/insolar/insolar"
 )
 
 func Test_BackpressureBuffer_Deviations(t *testing.T) {
-	threads := 1000
-	iterations := 1000
+	threads := 50
+	iterations := 50
 
-	logStorage := NewConcurrentBuilder(500000)
+	logStorage := NewConcurrentBuilder(50000, 2*time.Millisecond)
 	logger := NewTestLogger(context.Background(), logStorage, 3)
 
 	generateLogs(logger, threads, iterations)
@@ -74,8 +75,9 @@ func Test_BackpressureBuffer_Deviations(t *testing.T) {
 	for k, v := range distances {
 		assert.Equal(t, iterations, len(v)+1, "Incorrect number of log records in thread %d", k)
 
-		// mean, std := stat.MeanStdDev(v, nil)
-		// fmt.Printf("Thread %03d: mean = %8.2f us, std.dev. = %8.2f us\n", k, mean*1000000, std*1000000)
+		mean, std := stat.MeanStdDev(v, nil)
+		_, _ = mean, std
+		// fmt.Printf("Thread %03d: mean = %8.2f ms, std.dev. = %8.2f ms\n", k, mean*1e3, std*1e3)
 	}
 }
 
@@ -145,7 +147,7 @@ func NewTestLogger(ctx context.Context, w io.Writer, parWrites uint8) insolar.Lo
 	if parWrites == 0 {
 		return NewFatalDirectWriter(w)
 	}
-	bp := NewBackpressureBuffer(w, 100, 0, parWrites, 0, nil)
+	bp := NewBackpressureBuffer(w, 100, 0, parWrites, BufferWriteDelayFairness|BufferTrackWriteDuration, nil)
 	bp.StartWorker(ctx)
 	return bp
 
@@ -157,12 +159,14 @@ type ConcurrentBuilder struct {
 	queue               chan []byte
 	isClosed, isFlushed bool
 	lock                sync.RWMutex
+	writeDelay          time.Duration
 }
 
-func NewConcurrentBuilder(bufSize int) *ConcurrentBuilder {
+func NewConcurrentBuilder(bufSize int, delay time.Duration) *ConcurrentBuilder {
 	cb := ConcurrentBuilder{
-		builder: &strings.Builder{},
-		queue:   make(chan []byte, bufSize),
+		builder:    &strings.Builder{},
+		queue:      make(chan []byte, bufSize),
+		writeDelay: delay,
 	}
 	go cb.loop()
 	return &cb
@@ -185,6 +189,9 @@ func (cb *ConcurrentBuilder) Write(p []byte) (int, error) {
 	}
 	data := make([]byte, len(p))
 	n := copy(data, p)
+	if cb.writeDelay > 0 {
+		time.Sleep(cb.writeDelay)
+	}
 	cb.queue <- data
 	return n, nil
 }
