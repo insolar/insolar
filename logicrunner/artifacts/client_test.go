@@ -1008,7 +1008,6 @@ func (s *ArtifactsMangerClientSuite) TestRegisterResult() {
 			response: &payload.ResultInfo{
 				ObjectID: objectID,
 				ResultID: resultID,
-				Result:   resultBytes,
 			},
 			result: &TestRequestResult{
 				SideEffectType:     RequestSideEffectNone,
@@ -1040,7 +1039,6 @@ func (s *ArtifactsMangerClientSuite) TestRegisterResult() {
 			response: &payload.ResultInfo{
 				ObjectID: objectID,
 				ResultID: resultID,
-				Result:   resultBytes,
 			},
 			result: &TestRequestResult{
 				SideEffectType:     RequestSideEffectActivate,
@@ -1092,7 +1090,6 @@ func (s *ArtifactsMangerClientSuite) TestRegisterResult() {
 			response: &payload.ResultInfo{
 				ObjectID: objectID,
 				ResultID: resultID,
-				Result:   resultBytes,
 			},
 			result: &TestRequestResult{
 				SideEffectType:     RequestSideEffectAmend,
@@ -1143,7 +1140,6 @@ func (s *ArtifactsMangerClientSuite) TestRegisterResult() {
 			response: &payload.ResultInfo{
 				ObjectID: objectID,
 				ResultID: resultID,
-				Result:   resultBytes,
 			},
 			result: &TestRequestResult{
 				SideEffectType:     RequestSideEffectDeactivate,
