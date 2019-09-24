@@ -251,7 +251,7 @@ func (z LoggerBuilder) prepareOutput(metrics *logmetrics.MetricsHelper, needsLow
 			flags |= critlog.BufferWriteDelayFairness | critlog.BufferTrackWriteDuration
 		}
 
-		pw := uint8(5)
+		pw := uint8(insolar.DefaultOutputParallelLimit)
 		if z.Config.Output.ParallelWriters > 0 && z.Config.Output.ParallelWriters <= math.MaxInt8 {
 			pw = uint8(z.Config.Output.ParallelWriters)
 		}

@@ -19,6 +19,7 @@ package logadapter
 import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
+	"strconv"
 )
 
 const TimestampFormat = "2006-01-02T15:04:05.000000000Z07:00"
@@ -66,6 +67,15 @@ func ParseLogConfigWithDefaults(cfg configuration.Log, defaults ParsedLogConfig)
 	plc.LogLevel, err = insolar.ParseLevel(cfg.Level)
 	if err != nil {
 		return
+	}
+
+	if len(cfg.OutputParallelLimit) > 0 {
+		plc.Output.ParallelWriters, err = strconv.Atoi(cfg.OutputParallelLimit)
+		if err != nil {
+			return
+		}
+	} else {
+		plc.Output.ParallelWriters = 0
 	}
 
 	//plc.GlobalLevel, err = insolar.ParseLevel(cfg.GlobalLevel)

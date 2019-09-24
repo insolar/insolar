@@ -28,6 +28,8 @@ type Log struct {
 	Formatter string
 	// Log output type - e.g. stderr, syslog
 	OutputType string
+	// Write-parallel limit for the output
+	OutputParallelLimit string
 	// Parameter for output - depends on OutputType
 	OutputParams string
 

@@ -125,6 +125,7 @@ const (
 )
 
 const DefaultLogOutput = StdErrOutput
+const DefaultOutputParallelLimit = 5
 
 func ParseOutput(outputStr string, defValue LogOutput) (LogOutput, error) {
 	switch strings.ToLower(outputStr) {
