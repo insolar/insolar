@@ -24,12 +24,14 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/insolar/insolar/api/instrumenter"
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/api/seedmanager"
 	"github.com/insolar/insolar/application/extractor"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/genesisrefs"
 	"github.com/insolar/insolar/insolar/reply"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/rpc/v2"
 	"github.com/pkg/errors"
@@ -54,7 +56,13 @@ func NewContractService(runner *Runner) *ContractService {
 }
 
 func (cs *ContractService) Call(req *http.Request, args *requester.Params, requestBody *rpc.RequestBody, result *requester.ContractResult) error {
-	return wrapCall(cs.runner, cs.allowedMethods, req, args, requestBody, result)
+	ctx, instr := instrumenter.NewMethodInstrument("ContractService.call")
+	defer instr.End()
+
+	logger := inslogger.FromContext(ctx)
+	logger.Infof("[ ContractService.call ] Incoming request: %s", req.RequestURI)
+
+	return wrapCall(ctx, cs.runner, cs.allowedMethods, req, args, requestBody, result)
 }
 
 func (ar *Runner) checkSeed(paramsSeed string) (insolar.PulseNumber, error) {
