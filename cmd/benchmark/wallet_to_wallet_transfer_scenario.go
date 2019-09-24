@@ -53,11 +53,9 @@ func (s *walletToWalletTransferScenario) prepare() {
 
 	s.members = members
 
-	if !noCheckBalance {
-		s.balanceCheckMembers = make([]sdk.Member, len(s.members))
-		copy(s.balanceCheckMembers, s.members)
-		s.balanceCheckMembers = append(s.balanceCheckMembers, s.insSDK.GetFeeMember())
-	}
+	s.balanceCheckMembers = make([]sdk.Member, len(s.members))
+	copy(s.balanceCheckMembers, s.members)
+	s.balanceCheckMembers = append(s.balanceCheckMembers, s.insSDK.GetFeeMember())
 }
 
 func (s *walletToWalletTransferScenario) start(concurrentIndex int, repetitionIndex int) (string, error) {

@@ -61,11 +61,9 @@ func (s *migrationScenario) prepare() {
 
 	s.migrationDaemons = s.insSDK.GetMigrationDaemonMembers()
 
-	if !noCheckBalance {
-		s.balanceCheckMembers = make([]sdk.Member, len(s.members), len(s.members)+1)
-		copy(s.balanceCheckMembers, s.members)
-		s.balanceCheckMembers = append(s.balanceCheckMembers, s.insSDK.GetMigrationAdminMember())
-	}
+	s.balanceCheckMembers = make([]sdk.Member, len(s.members), len(s.members)+1)
+	copy(s.balanceCheckMembers, s.members)
+	s.balanceCheckMembers = append(s.balanceCheckMembers, s.insSDK.GetMigrationAdminMember())
 }
 
 func (s *migrationScenario) start(concurrentIndex int, repetitionIndex int) (string, error) {
