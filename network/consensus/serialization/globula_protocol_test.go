@@ -54,6 +54,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
+	"net"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -84,7 +85,7 @@ func TestEmbeddedPulsarData_DeserializeFrom(t *testing.T) {
 	pu := adapters.NewPulse(data)
 	ph, err := host.NewHost("127.0.0.1:1")
 	require.NoError(t, err)
-	th, err := host.NewHost("127.0.0.1:2")
+	th, err := net.ResolveTCPAddr("tcp", "127.0.0.1:2")
 	require.NoError(t, err)
 	pp := pulsenetwork.NewPulsePacketWithTrace(context.Background(), &pu, ph, th, 0)
 
@@ -303,7 +304,7 @@ func TestGlobulaConsensusPacketBody_Phases_Flag0(t *testing.T) {
 	pu := adapters.NewPulse(data)
 	ph, err := host.NewHost("127.0.0.1:1")
 	require.NoError(t, err)
-	th, err := host.NewHost("127.0.0.1:2")
+	th, err := net.ResolveTCPAddr("tcp", "127.0.0.1:2")
 	require.NoError(t, err)
 	pp := pulsenetwork.NewPulsePacketWithTrace(context.Background(), &pu, ph, th, 0)
 
@@ -385,7 +386,7 @@ func TestGlobulaConsensusPacketBody_Phases_Flag0Reset(t *testing.T) {
 	pu := adapters.NewPulse(data)
 	ph, err := host.NewHost("127.0.0.1:1")
 	require.NoError(t, err)
-	th, err := host.NewHost("127.0.0.1:2")
+	th, err := net.ResolveTCPAddr("tcp", "127.0.0.1:2")
 	require.NoError(t, err)
 	pp := pulsenetwork.NewPulsePacketWithTrace(context.Background(), &pu, ph, th, 0)
 

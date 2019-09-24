@@ -20,22 +20,21 @@ import (
 	"github.com/insolar/insolar/api/sdk"
 )
 
-type createMembersScenario struct {
-	insSDK  *sdk.SDK
-	members []*sdk.Member
+type createMemberScenario struct {
+	insSDK *sdk.SDK
 }
 
-func (s *createMembersScenario) canBeStarted() error {
+func (s *createMemberScenario) canBeStarted() error {
 	return nil
 }
 
-func (s *createMembersScenario) prepare() {}
+func (s *createMemberScenario) prepare() {}
 
-func (s *createMembersScenario) scenario(index int) (string, error) {
-	creator := s.members[index]
-
-	_, traceID, err := s.insSDK.CreateMember(creator.Reference)
+func (s *createMemberScenario) start(concurrentIndex int, repetitionIndex int) (string, error) {
+	_, traceID, err := s.insSDK.CreateMember()
 	return traceID, err
 }
 
-func (s *createMembersScenario) checkResult() {}
+func (s *createMemberScenario) getBalanceCheckMembers() []sdk.Member {
+	return nil
+}

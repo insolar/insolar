@@ -54,7 +54,7 @@ type Client interface {
 	//
 	// If provided state is nil, the latest state will be returned (with deactivation check). Returned descriptor will
 	// provide methods for fetching all related data.
-	GetObject(ctx context.Context, head insolar.Reference) (ObjectDescriptor, error)
+	GetObject(ctx context.Context, head insolar.Reference, request *insolar.Reference) (ObjectDescriptor, error)
 
 	// DeployCode creates new code record in storage.
 	//

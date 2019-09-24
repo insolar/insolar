@@ -135,6 +135,7 @@ func NewDependencies(
 				recordStorage,
 				indexStorage,
 				sender,
+				filaments,
 			)
 		},
 		GetCode: func(p *GetCode) {
