@@ -93,19 +93,19 @@ func (p *SendRequestInfo) Proceed(ctx context.Context) error {
 		reqBuf []byte
 		resBuf []byte
 	)
-	foundRequest, foundResult, err := p.dep.filament.RequestInfo(ctx, p.objectID, p.requestID, p.pulse)
+	foundReqInfo, err := p.dep.filament.RequestInfo(ctx, p.objectID, p.requestID, p.pulse)
 	if err != nil {
 		return errors.Wrap(err, "failed to get request info")
 	}
 
-	if foundRequest != nil {
-		reqBuf, err = foundRequest.Record.Marshal()
+	if foundReqInfo.Request != nil {
+		reqBuf, err = foundReqInfo.Request.Record.Marshal()
 		if err != nil {
 			return errors.Wrap(err, "failed to marshal request record")
 		}
 	}
-	if foundResult != nil {
-		resBuf, err = foundResult.Record.Marshal()
+	if foundReqInfo.Result != nil {
+		resBuf, err = foundReqInfo.Result.Record.Marshal()
 		if err != nil {
 			return errors.Wrap(err, "failed to marshal result record")
 		}
@@ -116,6 +116,7 @@ func (p *SendRequestInfo) Proceed(ctx context.Context) error {
 		RequestID: p.requestID,
 		Request:   reqBuf,
 		Result:    resBuf,
+		Oldest:    foundReqInfo.Oldest,
 	})
 	if err != nil {
 		return errors.Wrap(err, "failed to create reply")
@@ -124,8 +125,8 @@ func (p *SendRequestInfo) Proceed(ctx context.Context) error {
 	p.dep.sender.Reply(ctx, p.message, msg)
 
 	logger.WithFields(map[string]interface{}{
-		"request":    foundRequest != nil,
-		"has_result": foundResult != nil,
+		"request":    foundReqInfo.Request != nil,
+		"has_result": foundReqInfo.Result != nil,
 	}).Debug("send request info finished")
 	return nil
 }

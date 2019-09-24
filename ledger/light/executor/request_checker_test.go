@@ -72,7 +72,7 @@ func TestRequestCheckerDefault_CheckRequest(t *testing.T) {
 		assert.Equal(t, uint32(payload.CodeRequestInvalid), coded.Code)
 	})
 
-	t.Run("reason is empty returns error", func(t *testing.T) {
+	t.Run("incoming, reason is empty returns error", func(t *testing.T) {
 		setup()
 		defer mc.Finish()
 
@@ -86,7 +86,7 @@ func TestRequestCheckerDefault_CheckRequest(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	t.Run("reason is random id, returns error", func(t *testing.T) {
+	t.Run("incoming, reason is random id, returns error", func(t *testing.T) {
 		setup()
 		defer mc.Finish()
 
@@ -230,15 +230,18 @@ func TestRequestCheckerDefault_CheckRequest(t *testing.T) {
 			Reason: reasonRef,
 		}
 
-		filament.RequestInfoMock.Set(func(_ context.Context, objectID insolar.ID, reqID insolar.ID, pulse insolar.PulseNumber) (foundRequest *record.CompositeFilamentRecord, foundResult *record.CompositeFilamentRecord, err error) {
+		filament.RequestInfoMock.Set(func(ctx context.Context, objectID insolar.ID, reqID insolar.ID, pulse insolar.PulseNumber) (requestInfo executor.FilamentsRequestInfo, err error) {
+
 			require.Equal(t, reasonObjectRef.GetLocal(), &objectID)
 			require.Equal(t, reasonRef.GetLocal(), &reqID)
 			require.Equal(t, requestID.Pulse(), pulse)
 
-			request := record.CompositeFilamentRecord{
-				Record: record.Material{Virtual: record.Wrap(&record.IncomingRequest{})},
+			request := executor.FilamentsRequestInfo{
+				Request: &record.CompositeFilamentRecord{
+					Record: record.Material{Virtual: record.Wrap(&record.IncomingRequest{})},
+				},
 			}
-			return &request, nil, nil
+			return request, nil
 		})
 
 		err := checker.CheckRequest(ctx, requestID, &req)
@@ -258,12 +261,12 @@ func TestRequestCheckerDefault_CheckRequest(t *testing.T) {
 			Reason: reasonRef,
 		}
 
-		filament.RequestInfoMock.Set(func(_ context.Context, objectID insolar.ID, reqID insolar.ID, pulse insolar.PulseNumber) (foundRequest *record.CompositeFilamentRecord, foundResult *record.CompositeFilamentRecord, err error) {
+		filament.RequestInfoMock.Set(func(_ context.Context, objectID insolar.ID, reqID insolar.ID, pulse insolar.PulseNumber) (requestInfo executor.FilamentsRequestInfo, err error) {
 			require.Equal(t, reasonObjectRef.GetLocal(), &objectID)
 			require.Equal(t, reasonRef.GetLocal(), &reqID)
 			require.Equal(t, requestID.Pulse(), pulse)
 
-			return nil, nil, nil
+			return executor.FilamentsRequestInfo{}, nil
 		})
 
 		err := checker.CheckRequest(ctx, requestID, &req)
@@ -286,7 +289,7 @@ func TestRequestCheckerDefault_CheckRequest(t *testing.T) {
 			Reason: reasonRef,
 		}
 
-		filament.RequestInfoMock.Set(func(_ context.Context, objectID insolar.ID, reqID insolar.ID, pulse insolar.PulseNumber) (foundRequest *record.CompositeFilamentRecord, foundResult *record.CompositeFilamentRecord, err error) {
+		filament.RequestInfoMock.Set(func(_ context.Context, objectID insolar.ID, reqID insolar.ID, pulse insolar.PulseNumber) (requestInfo executor.FilamentsRequestInfo, err error) {
 			require.Equal(t, reasonObjectRef.GetLocal(), &objectID)
 			require.Equal(t, reasonRef.GetLocal(), &reqID)
 			require.Equal(t, requestID.Pulse(), pulse)
@@ -297,7 +300,11 @@ func TestRequestCheckerDefault_CheckRequest(t *testing.T) {
 			result := record.CompositeFilamentRecord{
 				Record: record.Material{Virtual: record.Wrap(&record.Result{})},
 			}
-			return &request, &result, nil
+			requestInfo = executor.FilamentsRequestInfo{
+				Request: &request,
+				Result:  &result,
+			}
+			return requestInfo, nil
 		})
 
 		err := checker.CheckRequest(ctx, requestID, &req)
@@ -321,15 +328,17 @@ func TestRequestCheckerDefault_CheckRequest(t *testing.T) {
 			ReturnMode: record.ReturnSaga,
 		}
 
-		filament.RequestInfoMock.Set(func(_ context.Context, objectID insolar.ID, reqID insolar.ID, pulse insolar.PulseNumber) (foundRequest *record.CompositeFilamentRecord, foundResult *record.CompositeFilamentRecord, err error) {
+		filament.RequestInfoMock.Set(func(_ context.Context, objectID insolar.ID, reqID insolar.ID, pulse insolar.PulseNumber) (requestInfo executor.FilamentsRequestInfo, err error) {
 			require.Equal(t, reasonObjectRef.GetLocal(), &objectID)
 			require.Equal(t, reasonRef.GetLocal(), &reqID)
 			require.Equal(t, requestID.Pulse(), pulse)
 
-			request := record.CompositeFilamentRecord{
-				Record: record.Material{Virtual: record.Wrap(&record.IncomingRequest{})},
+			request := executor.FilamentsRequestInfo{
+				Request: &record.CompositeFilamentRecord{
+					Record: record.Material{Virtual: record.Wrap(&record.IncomingRequest{})},
+				},
 			}
-			return &request, nil, nil
+			return request, nil
 		})
 
 		err := checker.CheckRequest(ctx, requestID, &req)
@@ -358,7 +367,7 @@ func TestRequestCheckerDefault_CheckRequest(t *testing.T) {
 		require.Equal(t, uint32(payload.CodeReasonIsWrong), insError.GetCode())
 	})
 
-	t.Run("outgoing reason is not the oldest", func(t *testing.T) {
+	t.Run("outgoing, reason is not the oldest", func(t *testing.T) {
 		setup()
 		defer mc.Finish()
 
@@ -380,22 +389,12 @@ func TestRequestCheckerDefault_CheckRequest(t *testing.T) {
 				},
 			}
 			return []record.CompositeFilamentRecord{
-				// reason
-				req,
 				// garbage
 				{
 					RecordID: gen.ID(),
 					Record: record.Material{
 						Virtual: record.Wrap(&record.OutgoingRequest{
 							ReturnMode: record.ReturnSaga,
-						}),
-					},
-				},
-				{
-					RecordID: gen.ID(),
-					Record: record.Material{
-						Virtual: record.Wrap(&record.IncomingRequest{
-							Immutable: true,
 						}),
 					},
 				},
@@ -408,6 +407,17 @@ func TestRequestCheckerDefault_CheckRequest(t *testing.T) {
 						}),
 					},
 				},
+				// garbage
+				{
+					RecordID: gen.ID(),
+					Record: record.Material{
+						Virtual: record.Wrap(&record.IncomingRequest{
+							Immutable: true,
+						}),
+					},
+				},
+				// reason
+				req,
 			}, nil
 		})
 		err := checker.CheckRequest(ctx, requestID, &req)
@@ -417,7 +427,7 @@ func TestRequestCheckerDefault_CheckRequest(t *testing.T) {
 		require.Equal(t, uint32(payload.CodeReasonIsWrong), insError.GetCode())
 	})
 
-	t.Run("outgoing reason is the oldest mutable", func(t *testing.T) {
+	t.Run("outgoing, reason is the oldest mutable", func(t *testing.T) {
 		setup()
 		defer mc.Finish()
 
@@ -439,8 +449,6 @@ func TestRequestCheckerDefault_CheckRequest(t *testing.T) {
 				},
 			}
 			return []record.CompositeFilamentRecord{
-				// reason
-				req,
 				// garbage
 				{
 					RecordID: gen.ID(),
@@ -458,6 +466,8 @@ func TestRequestCheckerDefault_CheckRequest(t *testing.T) {
 						}),
 					},
 				},
+				// reason
+				req,
 			}, nil
 		})
 		err := checker.CheckRequest(ctx, requestID, &req)

@@ -100,7 +100,10 @@ func TestSendRequestInfo_Proceed(t *testing.T) {
 			Result:    resBuf,
 		})
 
-		filament.RequestInfoMock.Return(&request, &result, nil)
+		filament.RequestInfoMock.Return(executor.FilamentsRequestInfo{
+			Request: &request,
+			Result:  &result,
+		}, nil)
 
 		sender.ReplyMock.Inspect(func(ctx context.Context, origin payload.Meta, reply *message.Message) {
 			assert.Equal(t, reply.Payload, replyMsg.Payload)

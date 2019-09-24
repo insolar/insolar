@@ -312,7 +312,7 @@ func calcPending(opened []record.CompositeFilamentRecord, closedRequestID insola
 	return &p, nil
 }
 
-// findClosed looks for request that was closed by provided result. Returns error if not found.
+// findClosed looks for request that are closing by provided result. Returns error if not found.
 func findClosed(reqs []record.CompositeFilamentRecord, result record.Result) (record.CompositeFilamentRecord, error) {
 	for _, req := range reqs {
 		if req.RecordID == *result.Request.GetLocal() {

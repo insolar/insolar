@@ -339,12 +339,6 @@ func Test_DetachedRequest_notification(t *testing.T) {
 		rep := SendMessage(ctx, s, &msg)
 		RequireNotError(rep)
 		objectID := rep.(*payload.RequestInfo).ObjectID
-
-		s.SetPulse(ctx)
-
-		msg, _ = MakeSetIncomingRequest(objectID, gen.IDWithPulse(s.Pulse()), insolar.ID{}, false, true)
-		rep = SendMessage(ctx, s, &msg)
-		RequireNotError(rep)
 		reasonID := rep.(*payload.RequestInfo).RequestID
 
 		s.SetPulse(ctx)
@@ -537,21 +531,13 @@ func Test_IncomingRequest_ClosedReason_FromOtherObject(t *testing.T) {
 				})
 				RequireNotError(rep)
 				objectID = rep.(*payload.RequestInfo).ObjectID
-			}
-
-			// Creating root reason request.
-			{
-				msg, _ := MakeSetIncomingRequest(objectID, gen.IDWithPulse(s.Pulse()), insolar.ID{}, false, true)
-				rep := retryIfCancelled(func() payload.Payload {
-					return SendMessage(ctx, s, &msg)
-				})
-				RequireNotError(rep)
 				reasonID = rep.(*payload.RequestInfo).RequestID
 			}
 
 			// Creating detached outgoing request
 			{
 				p, _ := CallSetOutgoingRequest(ctx, s, objectID, reasonID, true)
+				// fixme flacky flow cancelled
 				RequireNotError(p)
 			}
 

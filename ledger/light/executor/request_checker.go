@@ -102,7 +102,6 @@ func (c *RequestCheckerDefault) checkReasonForOutgoingRequest(
 	reasonID insolar.ID,
 	outgoingRequestID insolar.ID,
 ) error {
-
 	openedRequests, err := c.filaments.OpenedRequests(
 		ctx,
 		outgoingRequestID.Pulse(),
@@ -123,7 +122,7 @@ func (c *RequestCheckerDefault) checkReasonForOutgoingRequest(
 	}
 
 	rec := record.Unwrap(&reasonRequest.Record.Virtual)
-	out, ok := rec.(*record.IncomingRequest)
+	incoming, ok := rec.(*record.IncomingRequest)
 	if !ok {
 		return &payload.CodedError{
 			Text: "reason is not incoming",
@@ -132,7 +131,7 @@ func (c *RequestCheckerDefault) checkReasonForOutgoingRequest(
 	}
 
 	// If reason is mutable incoming request, than check that it is the oldest
-	if !out.Immutable {
+	if !incoming.Immutable {
 		err = c.checkReasonIsOldest(ctx, openedRequests, reasonRequest)
 		return errors.Wrap(err, "checkReasonIsOldest on outgoing failed")
 	}
@@ -163,22 +162,19 @@ func (c *RequestCheckerDefault) checkReasonIsOldest(
 	requests []record.CompositeFilamentRecord,
 	reasonRequest record.CompositeFilamentRecord,
 ) error {
-	older := false
 	for _, p := range requests {
-		if older {
-			rec := record.Unwrap(&p.Record.Virtual)
-			// Found mutable incoming older
-			if out, ok := rec.(*record.IncomingRequest); ok && !out.Immutable {
-				return &payload.CodedError{
-					Text: "request reason is not the oldest in filament",
-					Code: payload.CodeReasonIsWrong,
-				}
-			}
+		// Searching only before this record
+		if p.RecordID == reasonRequest.RecordID {
+			return nil
 		}
 
-		// Skipping everything before we found reason
-		if p.RecordID == reasonRequest.RecordID {
-			older = true
+		rec := record.Unwrap(&p.Record.Virtual)
+		if in, ok := rec.(*record.IncomingRequest); ok && !in.Immutable {
+			// Found mutable incoming older than reasonRequest
+			return &payload.CodedError{
+				Text: "request reason is not the oldest in filament",
+				Code: payload.CodeReasonIsWrong,
+			}
 		}
 	}
 
@@ -254,8 +250,7 @@ func (c *RequestCheckerDefault) checkReasonForIncomingRequest(
 	_, ok := virtual.(*record.IncomingRequest)
 	if !ok {
 		return &payload.CodedError{
-			// Text: fmt.Sprintf("reason request must be Incoming, %T received", virtual),
-			Text: "reason request must be Incoming, %T received",
+			Text: fmt.Sprintf("reason request must be Incoming, %T received", virtual),
 			Code: payload.CodeReasonIsWrong,
 		}
 	}
@@ -349,23 +344,23 @@ func (c *RequestCheckerDefault) getRequestLocal(
 		reqBuf []byte
 		resBuf []byte
 	)
-	foundRequest, foundResult, err := c.filaments.RequestInfo(ctx, reasonObjectID, reasonID, currentPulse)
+	foundReqInfo, err := c.filaments.RequestInfo(ctx, reasonObjectID, reasonID, currentPulse)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get local request info")
 	}
 
 	var reqInfo payload.RequestInfo
 
-	if foundRequest != nil {
-		reqBuf, err = foundRequest.Record.Marshal()
+	if foundReqInfo.Request != nil {
+		reqBuf, err = foundReqInfo.Request.Record.Marshal()
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to marshal local request record")
 		}
 		reqInfo.Request = reqBuf
 	}
 
-	if foundResult != nil {
-		resBuf, err = foundResult.Record.Marshal()
+	if foundReqInfo.Result != nil {
+		resBuf, err = foundReqInfo.Result.Record.Marshal()
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to marshal local result record")
 		}
@@ -373,8 +368,8 @@ func (c *RequestCheckerDefault) getRequestLocal(
 	}
 
 	logger.WithFields(map[string]interface{}{
-		"request":    foundRequest != nil,
-		"has_result": foundResult != nil,
+		"request":    foundReqInfo.Request != nil,
+		"has_result": foundReqInfo.Result != nil,
 	}).Debug("local result info found")
 
 	return &reqInfo, nil
