@@ -18,12 +18,22 @@ package configuration
 
 // Log holds configuration for logging
 type Log struct {
-	Level        string
-	Adapter      string
-	Formatter    string
-	OutputType   string
+	// Default level for logger
+	Level string
+	//// Default level for global filtering
+	//GlobalLevel string
+	// Logging adapter - only zerolog by now
+	Adapter string
+	// Log output format - e.g. json or text
+	Formatter string
+	// Log output type - e.g. stderr, syslog
+	OutputType string
+	// Parameter for output - depends on OutputType
 	OutputParams string
-	BufferSize   int
+
+	// Number of regular log events that can be buffered, =0 to disable
+	BufferSize int
+	// Number of low-latency log events that can be buffered, =-1 to disable, =0 - default size
 	LLBufferSize int
 }
 

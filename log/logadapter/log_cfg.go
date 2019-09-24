@@ -26,6 +26,7 @@ const TimestampFormat = "2006-01-02T15:04:05.000000000Z07:00"
 type ParsedLogConfig struct {
 	OutputType insolar.LogOutput
 	LogLevel   insolar.LogLevel
+	//GlobalLevel insolar.LogLevel
 
 	OutputParam string
 
@@ -66,6 +67,11 @@ func ParseLogConfigWithDefaults(cfg configuration.Log, defaults ParsedLogConfig)
 	if err != nil {
 		return
 	}
+
+	//plc.GlobalLevel, err = insolar.ParseLevel(cfg.GlobalLevel)
+	//if err != nil {
+	//	plc.GlobalLevel = insolar.NoLevel
+	//}
 
 	switch {
 	case cfg.LLBufferSize < 0:
