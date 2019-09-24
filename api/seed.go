@@ -20,10 +20,12 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/pkg/errors"
 
 	"github.com/insolar/rpc/v2"
+	"github.com/insolar/rpc/v2/json2"
 
 	"github.com/insolar/insolar/api/instrumenter"
 	"github.com/insolar/insolar/api/requester"
@@ -56,8 +58,8 @@ func NewNodeService(runner *Runner) *NodeService {
 //	{
 //		"jsonrpc": "2.0",
 //		"result": {
-//			"Seed": str, // correct seed for new Call request
-//			"TraceID": str // traceID for request
+//			"seed": str, // correct seed for new Call request
+//			"traceID": str // traceID for request
 //		},
 //		"id": str|int|null // same as in request
 //	}
@@ -67,7 +69,7 @@ func (s *NodeService) getSeed(ctx context.Context, _ *http.Request, _ *SeedArgs,
 
 	seed, err := s.runner.SeedGenerator.Next()
 	if err != nil {
-		return errors.Wrap(err, "failed to get next seed")
+		return err
 	}
 
 	pulse, err := s.runner.PulseAccessor.Latest(context.Background())
@@ -95,8 +97,16 @@ func (s *NodeService) GetSeed(r *http.Request, args *SeedArgs, requestBody *rpc.
 	err := s.getSeed(ctx, r, args, requestBody, reply)
 	if err != nil {
 		logger.Error("[ NodeService.getSeed ] failed to execute: ", err.Error())
-		err = errors.Wrap(err, "failed to execute NodeService.getSeed")
+
 		instr.SetError(err, InternalErrorShort)
+		return &json2.Error{
+			Code:    InternalError,
+			Message: InternalErrorMessage,
+			Data: requester.Data{
+				Trace:   strings.Split(err.Error(), ": "),
+				TraceID: instr.TraceID(),
+			},
+		}
 	}
-	return err
+	return nil
 }
