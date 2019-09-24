@@ -390,6 +390,7 @@ func (p *internalBackpressureBuffer) flushTillDepletion(level insolar.LogLevel, 
 	prevWasFlushMark := false
 	markEntry := bufEntry{flushMark: depletionMark}
 
+outer:
 	for {
 		isContinue, markType, err := p.writeOneFromQueue(depletionMark)
 		switch {
@@ -407,11 +408,7 @@ func (p *internalBackpressureBuffer) flushTillDepletion(level insolar.LogLevel, 
 			}
 			fallthrough
 		default:
-			if level == internalOpLevel && b == nil {
-				return 0, nil
-			}
-			p.getAndWriteMissed()
-			return p.directWrite(level, b, startNano)
+			break outer
 		}
 
 		switch {
@@ -426,6 +423,19 @@ func (p *internalBackpressureBuffer) flushTillDepletion(level insolar.LogLevel, 
 			prevWasFlushMark = true
 		}
 	}
+
+	p.getAndWriteMissed()
+
+	var n int
+	var err error
+	if level != internalOpLevel || b != nil {
+		n, err = p.directWrite(level, b, startNano)
+	}
+
+	for atomic.LoadUint32(&p.pendingWrites) > 0 {
+		time.Sleep(time.Millisecond)
+	}
+	return n, err
 }
 
 func (p *internalBackpressureBuffer) writeOneFromQueue(flush bufferMark) (bool, bufferMark, error) {
@@ -478,6 +488,8 @@ func (p *internalBackpressureBuffer) worker(ctx context.Context) {
 
 	prevWasMark := false
 	for {
+		p.getAndWriteMissed()
+
 		select {
 		case <-ctx.Done():
 			return
@@ -489,6 +501,19 @@ func (p *internalBackpressureBuffer) worker(ctx context.Context) {
 				prevWasMark = false
 				_, _ = p.directWrite(be.lvl, be.b, be.start)
 			case be.flushMark == depletionMark:
+				// make sure to clean up the queue
+				select {
+				case be2, ok := <-p.buffer:
+					if !ok {
+						return
+					}
+					p.buffer <- be2
+					if be2.flushMark != depletionMark {
+						p.buffer <- be
+					}
+					continue
+				default:
+				}
 				// return the mark and stop
 				p.buffer <- be
 				return
@@ -509,7 +534,6 @@ func (p *internalBackpressureBuffer) worker(ctx context.Context) {
 				panic("illegal state")
 			}
 		}
-		p.getAndWriteMissed()
 	}
 }
 
