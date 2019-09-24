@@ -147,6 +147,20 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to calculate pending requests")
 	}
+
+	// Check oldest opened mutable request.
+	{
+		oldestMutable := oldestMutable(opened)
+		resultRequestID := *p.result.Request.GetLocal()
+		// We should return error if current result trying to close non-oldest opened mutable request.
+		if oldestMutable != nil && !oldestMutable.RecordID.Equal(resultRequestID) {
+			return &payload.CodedError{
+				Text: "attempt to close the non-oldest mutable request",
+				Code: payload.CodeNonOldestMutableRequest,
+			}
+		}
+	}
+
 	closedRequest, err := findClosed(opened, p.result)
 
 	if p.sideEffect != nil {

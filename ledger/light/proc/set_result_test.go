@@ -161,15 +161,16 @@ func TestSetResult_Proceed(t *testing.T) {
 		require.Equal(t, flow.Pulse(ctx), pn)
 		require.False(t, pendingOnly)
 
-		v := record.Wrap(&record.IncomingRequest{})
+		vImmut := record.Wrap(&record.IncomingRequest{Immutable: true})
+		vMut := record.Wrap(&record.IncomingRequest{})
 		opened = []record.CompositeFilamentRecord{
 			{
 				RecordID: earliestID,
-				Record:   record.Material{Virtual: v},
+				Record:   record.Material{Virtual: vImmut},
 			},
 			{
 				RecordID: requestID,
-				Record:   record.Material{Virtual: v},
+				Record:   record.Material{Virtual: vMut},
 			},
 			{
 				RecordID: gen.ID(),
@@ -343,7 +344,6 @@ func TestSetResult_Proceed_ImmutableRequest_Error(t *testing.T) {
 		Parent:  parent,
 	}
 	hash = record.HashVirtual(pcs.ReferenceHasher(), record.Wrap(&sideEffects))
-	earliestID := gen.ID()
 
 	records := object.NewAtomicRecordModifierMock(mc)
 
@@ -358,12 +358,7 @@ func TestSetResult_Proceed_ImmutableRequest_Error(t *testing.T) {
 		require.Equal(t, flow.Pulse(ctx), pn)
 		require.False(t, pendingOnly)
 
-		v := record.Wrap(&record.IncomingRequest{})
 		opened = []record.CompositeFilamentRecord{
-			{
-				RecordID: earliestID,
-				Record:   record.Material{Virtual: v},
-			},
 			// req that we closing
 			{
 				RecordID: requestID,
@@ -460,7 +455,6 @@ func TestSetResult_Proceed_OutgoingRequest_Error(t *testing.T) {
 		Parent:  parent,
 	}
 	hash = record.HashVirtual(pcs.ReferenceHasher(), record.Wrap(&sideEffects))
-	earliestID := gen.ID()
 
 	records := object.NewAtomicRecordModifierMock(mc)
 
@@ -475,12 +469,7 @@ func TestSetResult_Proceed_OutgoingRequest_Error(t *testing.T) {
 		require.Equal(t, flow.Pulse(ctx), pn)
 		require.False(t, pendingOnly)
 
-		v := record.Wrap(&record.IncomingRequest{})
 		opened = []record.CompositeFilamentRecord{
-			{
-				RecordID: earliestID,
-				Record:   record.Material{Virtual: v},
-			},
 			// req that we closing
 			{
 				RecordID: requestID,
