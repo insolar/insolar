@@ -18,6 +18,7 @@ package proc_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/ThreeDotsLabs/watermill/message"
@@ -203,7 +204,6 @@ func TestSetRequest_Proceed(t *testing.T) {
 
 	resetComponents()
 	t.Run("wrong sender", func(t *testing.T) {
-		t.Skip("virtual doesn't pass this check")
 		coordinator.VirtualExecutorForObjectMock.Set(func(_ context.Context, objID insolar.ID, pn insolar.PulseNumber) (r *insolar.Reference, r1 error) {
 			require.Equal(t, flowPN, pn)
 			require.Equal(t, *ref.GetLocal(), objID)
@@ -217,7 +217,72 @@ func TestSetRequest_Proceed(t *testing.T) {
 
 		err = p.Proceed(ctx)
 		require.Error(t, err)
-		require.Equal(t, err.Error(), proc.ErrExecutorMismatch.Error())
+
+		mc.Finish()
+	})
+
+	resetComponents()
+	t.Run("lifeline.EOR is beyond limit", func(t *testing.T) {
+		pn := insolar.PulseNumber(999)
+		idxStorage.ForIDMock.Return(record.Index{
+			Lifeline: record.Lifeline{
+				StateID:             record.StateActivation,
+				EarliestOpenRequest: &pn,
+			},
+		}, nil)
+
+		coordinator.VirtualExecutorForObjectMock.Set(func(_ context.Context, objID insolar.ID, pn insolar.PulseNumber) (r *insolar.Reference, r1 error) {
+			require.Equal(t, flowPN, pn)
+			require.Equal(t, *ref.GetLocal(), objID)
+
+			return &virtualRef, nil
+		})
+		coordinator.IsBeyondLimitMock.Set(func(ctx context.Context, targetPN insolar.PulseNumber) (b1 bool, err error) {
+			require.Equal(t, pn, targetPN)
+			return true, nil
+		})
+
+		p := proc.NewSetRequest(msg, &request, requestID, jetID)
+		p.Dep(writeAccessor, filaments, sender, object.NewIndexLocker(), idxStorage, records, pcs, checker, coordinator)
+
+		err = p.Proceed(ctx)
+		require.Error(t, err)
+
+		codedError, ok := err.(*payload.CodedError)
+		require.True(t, ok)
+		require.Equal(t, uint32(payload.CodeFilamentTooBig), codedError.GetCode())
+
+		mc.Finish()
+	})
+
+	resetComponents()
+	t.Run("checking beyond limit fails", func(t *testing.T) {
+		pn := insolar.PulseNumber(999)
+		idxStorage.ForIDMock.Return(record.Index{
+			Lifeline: record.Lifeline{
+				StateID:             record.StateActivation,
+				EarliestOpenRequest: &pn,
+			},
+		}, nil)
+
+		coordinator.VirtualExecutorForObjectMock.Set(func(_ context.Context, objID insolar.ID, pn insolar.PulseNumber) (r *insolar.Reference, r1 error) {
+			require.Equal(t, flowPN, pn)
+			require.Equal(t, *ref.GetLocal(), objID)
+
+			return &virtualRef, nil
+		})
+		coordinator.IsBeyondLimitMock.Set(func(ctx context.Context, targetPN insolar.PulseNumber) (b1 bool, err error) {
+			require.Equal(t, pn, targetPN)
+			return true, errors.New("custom err")
+		})
+
+		p := proc.NewSetRequest(msg, &request, requestID, jetID)
+		p.Dep(writeAccessor, filaments, sender, object.NewIndexLocker(), idxStorage, records, pcs, checker, coordinator)
+
+		err = p.Proceed(ctx)
+
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "custom err")
 
 		mc.Finish()
 	})

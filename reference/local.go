@@ -174,7 +174,7 @@ func (p *byteWriter) isFull() bool {
 
 // String implements stringer on ID and returns base58 encoded value
 func (v Local) String() string {
-	repr, err := DefaultEncoder().EncodeRecord(&v)
+	repr, err := Base64Encoder().EncodeRecord(&v)
 	if err != nil {
 		return ""
 	}

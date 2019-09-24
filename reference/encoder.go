@@ -46,11 +46,21 @@ type Encoder interface {
 var defaultEncoderOnce sync.Once
 var defaultEncoder Encoder
 
+var base64EncoderOnce sync.Once
+var base64Encoder Encoder
+
 func DefaultEncoder() Encoder {
 	defaultEncoderOnce.Do(func() {
 		defaultEncoder = NewBase58Encoder(0)
 	})
 	return defaultEncoder
+}
+
+func Base64Encoder() Encoder {
+	base64EncoderOnce.Do(func() {
+		base64Encoder = NewBase64Encoder(0)
+	})
+	return base64Encoder
 }
 
 type encoder struct {
@@ -77,7 +87,7 @@ func NewBase64Encoder(opts EncoderOptions) Encoder {
 		byteEncoder:     byteEncodeBase64,
 		byteEncoderName: "base64",
 		authorityName:   "",
-		options:         opts & FormatSchema,
+		options:         opts | FormatSchema,
 	}
 }
 

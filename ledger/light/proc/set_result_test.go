@@ -259,10 +259,13 @@ func TestSetResult_Proceed_ResultDuplicated(t *testing.T) {
 		resp, err := payload.Unmarshal(resMsg.Payload)
 		require.NoError(t, err)
 
-		res, ok := resp.(*payload.ResultInfo)
+		res, ok := resp.(*payload.ErrorResultExists)
 		require.True(t, ok)
-		require.Equal(t, duplicateBuf, res.Result)
 		require.Equal(t, resultID, res.ResultID)
+		receivedResult := record.Material{}
+		err = receivedResult.Unmarshal(res.Result)
+		require.NoError(t, err)
+		require.Equal(t, virtual, receivedResult.Virtual)
 	})
 
 	setResultProc := proc.NewSetResult(msg, jetID, *res, nil)
@@ -489,6 +492,231 @@ func TestSetResult_Proceed_OutgoingRequest_Error(t *testing.T) {
 	insError, ok := errors.Cause(err).(*payload.CodedError)
 	require.True(t, ok)
 	require.Equal(t, uint32(payload.CodeRequestInvalid), insError.GetCode())
+}
+
+func TestSetResult_Proceed_NotFoundInOpened_Error(t *testing.T) {
+	t.Parallel()
+
+	mc := minimock.NewController(t)
+	defer mc.Finish()
+
+	flowPulse := insolar.GenesisPulse.PulseNumber + 2
+	ctx := flow.TestContextWithPulse(
+		inslogger.TestContext(t),
+		flowPulse,
+	)
+
+	writeAccessor := executor.NewWriteAccessorMock(mc)
+	pcs := testutils.NewPlatformCryptographyScheme()
+
+	sender := bus.NewSenderMock(mc)
+	detachedNotifier := executor.NewDetachedNotifierMock(mc)
+	var opened []record.CompositeFilamentRecord
+
+	jetID := gen.JetID()
+	objectID := gen.ID()
+	requestID := gen.ID()
+
+	resultRecord := &record.Result{
+		Request: *insolar.NewReference(requestID),
+		Object:  objectID,
+	}
+	virtual := record.Virtual{
+		Union: &record.Virtual_Result{
+			Result: resultRecord,
+		},
+	}
+	hash := record.HashVirtual(pcs.ReferenceHasher(), virtual)
+	resultID := *insolar.NewID(flow.Pulse(ctx), hash)
+	virtualBuf, err := virtual.Marshal()
+	require.NoError(t, err)
+
+	result := payload.SetResult{
+		Result: virtualBuf,
+	}
+	resultBuf, err := result.Marshal()
+	require.NoError(t, err)
+
+	msg := payload.Meta{
+		Payload: resultBuf,
+	}
+	LatestRequest := gen.IDWithPulse(flowPulse)
+	expectedFilament := record.PendingFilament{
+		RecordID:       resultID,
+		PreviousRecord: &LatestRequest,
+	}
+	hash = record.HashVirtual(pcs.ReferenceHasher(), record.Wrap(&expectedFilament))
+
+	indexes := object.NewMemoryIndexStorageMock(mc)
+	indexes.ForIDMock.Set(func(_ context.Context, pn insolar.PulseNumber, id insolar.ID) (record.Index, error) {
+		require.Equal(t, flow.Pulse(ctx), pn)
+		require.Equal(t, objectID, id)
+		earliestPN := requestID.Pulse()
+		return record.Index{
+			Lifeline: record.Lifeline{
+				LatestRequest:       &LatestRequest,
+				EarliestOpenRequest: &earliestPN,
+				OpenRequestsCount:   1,
+			},
+		}, nil
+	})
+
+	parent := gen.Reference()
+	sideEffects := record.Activate{
+		Request: gen.Reference(),
+		Parent:  parent,
+	}
+	hash = record.HashVirtual(pcs.ReferenceHasher(), record.Wrap(&sideEffects))
+
+	records := object.NewAtomicRecordModifierMock(mc)
+
+	filaments := executor.NewFilamentCalculatorMock(mc)
+	filaments.ResultDuplicateMock.Set(func(_ context.Context, objID insolar.ID, resID insolar.ID, r record.Result) (*record.CompositeFilamentRecord, error) {
+		require.Equal(t, objectID, objID)
+		require.Equal(t, *resultRecord, r)
+		return nil, nil
+	})
+	filaments.OpenedRequestsMock.Set(func(_ context.Context, pn insolar.PulseNumber, objID insolar.ID, pendingOnly bool) ([]record.CompositeFilamentRecord, error) {
+		require.Equal(t, objectID, objID)
+		require.Equal(t, flow.Pulse(ctx), pn)
+		require.False(t, pendingOnly)
+
+		opened = []record.CompositeFilamentRecord{
+			{
+				RecordID: gen.ID(),
+			},
+			{
+				RecordID: gen.ID(),
+			},
+		}
+		return opened, nil
+	})
+
+	setResultProc := proc.NewSetResult(msg, jetID, *resultRecord, &sideEffects)
+	setResultProc.Dep(writeAccessor, sender, object.NewIndexLocker(), filaments, records, indexes, pcs, detachedNotifier)
+
+	err = setResultProc.Proceed(ctx)
+	require.Error(t, err)
+	insError, ok := errors.Cause(err).(*payload.CodedError)
+	require.True(t, ok)
+	require.Equal(t, uint32(payload.CodeRequestNotFound), insError.GetCode())
+}
+
+func TestSetResult_Proceed_HasOpenedOutgoing_Error(t *testing.T) {
+	t.Parallel()
+
+	mc := minimock.NewController(t)
+	defer mc.Finish()
+
+	flowPulse := insolar.GenesisPulse.PulseNumber + 2
+	ctx := flow.TestContextWithPulse(
+		inslogger.TestContext(t),
+		flowPulse,
+	)
+
+	writeAccessor := executor.NewWriteAccessorMock(mc)
+	pcs := testutils.NewPlatformCryptographyScheme()
+
+	sender := bus.NewSenderMock(mc)
+	detachedNotifier := executor.NewDetachedNotifierMock(mc)
+	var opened []record.CompositeFilamentRecord
+
+	jetID := gen.JetID()
+	objectID := gen.ID()
+	requestID := gen.ID()
+
+	resultRecord := &record.Result{
+		Request: *insolar.NewReference(requestID),
+		Object:  objectID,
+	}
+	virtual := record.Virtual{
+		Union: &record.Virtual_Result{
+			Result: resultRecord,
+		},
+	}
+	hash := record.HashVirtual(pcs.ReferenceHasher(), virtual)
+	resultID := *insolar.NewID(flow.Pulse(ctx), hash)
+	virtualBuf, err := virtual.Marshal()
+	require.NoError(t, err)
+
+	result := payload.SetResult{
+		Result: virtualBuf,
+	}
+	resultBuf, err := result.Marshal()
+	require.NoError(t, err)
+
+	msg := payload.Meta{
+		Payload: resultBuf,
+	}
+	LatestRequest := gen.IDWithPulse(flowPulse)
+	expectedFilament := record.PendingFilament{
+		RecordID:       resultID,
+		PreviousRecord: &LatestRequest,
+	}
+	hash = record.HashVirtual(pcs.ReferenceHasher(), record.Wrap(&expectedFilament))
+
+	indexes := object.NewMemoryIndexStorageMock(mc)
+	indexes.ForIDMock.Set(func(_ context.Context, pn insolar.PulseNumber, id insolar.ID) (record.Index, error) {
+		require.Equal(t, flow.Pulse(ctx), pn)
+		require.Equal(t, objectID, id)
+		earliestPN := requestID.Pulse()
+		return record.Index{
+			Lifeline: record.Lifeline{
+				LatestRequest:       &LatestRequest,
+				EarliestOpenRequest: &earliestPN,
+				OpenRequestsCount:   1,
+			},
+		}, nil
+	})
+
+	parent := gen.Reference()
+	sideEffects := record.Activate{
+		Request: gen.Reference(),
+		Parent:  parent,
+	}
+	hash = record.HashVirtual(pcs.ReferenceHasher(), record.Wrap(&sideEffects))
+	records := object.NewAtomicRecordModifierMock(mc)
+
+	filaments := executor.NewFilamentCalculatorMock(mc)
+	filaments.ResultDuplicateMock.Set(func(_ context.Context, objID insolar.ID, resID insolar.ID, r record.Result) (*record.CompositeFilamentRecord, error) {
+		require.Equal(t, objectID, objID)
+		require.Equal(t, *resultRecord, r)
+		return nil, nil
+	})
+	filaments.OpenedRequestsMock.Set(func(_ context.Context, pn insolar.PulseNumber, objID insolar.ID, pendingOnly bool) ([]record.CompositeFilamentRecord, error) {
+		require.Equal(t, objectID, objID)
+		require.Equal(t, flow.Pulse(ctx), pn)
+		require.False(t, pendingOnly)
+
+		opened = []record.CompositeFilamentRecord{
+			// req that we closing
+			{
+				RecordID: requestID,
+				Record: record.Material{
+					Virtual: record.Wrap(&record.IncomingRequest{}),
+				},
+			},
+			// outgoing where reason is closing incoming
+			{
+				RecordID: gen.ID(),
+				Record: record.Material{
+					Virtual: record.Wrap(&record.OutgoingRequest{
+						Reason: *insolar.NewReference(requestID),
+					}),
+				},
+			},
+		}
+		return opened, nil
+	})
+
+	setResultProc := proc.NewSetResult(msg, jetID, *resultRecord, &sideEffects)
+	setResultProc.Dep(writeAccessor, sender, object.NewIndexLocker(), filaments, records, indexes, pcs, detachedNotifier)
+
+	err = setResultProc.Proceed(ctx)
+	require.Error(t, err)
+	insError, ok := errors.Cause(err).(*payload.CodedError)
+	require.True(t, ok)
+	require.Equal(t, uint32(payload.CodeNonClosedOutgoing), insError.GetCode())
 }
 
 func TestSetResult_Proceed_OldestMutableRequest(t *testing.T) {

@@ -23,6 +23,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"
@@ -410,7 +411,7 @@ func Test_Result_Duplicate(t *testing.T) {
 
 	s.SetPulse(ctx)
 
-	resMsg, resultVirtual := MakeSetResult(objectID, requestID)
+	resMsg, _ := MakeSetResult(objectID, requestID)
 	// Set result.
 	rep = SendMessage(ctx, s, &resMsg)
 	RequireNotError(rep)
@@ -420,15 +421,6 @@ func Test_Result_Duplicate(t *testing.T) {
 	// Try to set it again.
 	rep = SendMessage(ctx, s, &resMsg)
 	RequireNotError(rep)
-
-	resultInfo := rep.(*payload.ResultInfo)
-	require.NotNil(t, resultInfo.Result)
-
-	// Check duplicate.
-	receivedResult := record.Material{}
-	err = receivedResult.Unmarshal(resultInfo.Result)
-	require.NoError(t, err)
-	require.Equal(t, resultVirtual, receivedResult.Virtual)
 }
 
 func Test_IncomingRequest_ClosedReason(t *testing.T) {
@@ -862,10 +854,12 @@ func Test_IncomingRequest_DifferentResults(t *testing.T) {
 		s.SetPulse(ctx)
 
 		// Closing request
+		var originalResult record.Virtual
 		{
-			resMsg, _ := MakeSetResult(reasonID, reasonID)
+			resMsg, virtual := MakeSetResult(reasonID, reasonID)
 			rep := SendMessage(ctx, s, &resMsg)
 			RequireNotError(rep)
+			originalResult = virtual
 		}
 
 		s.SetPulse(ctx)
@@ -873,7 +867,12 @@ func Test_IncomingRequest_DifferentResults(t *testing.T) {
 		{
 			resMsg, _ := MakeSetResult(reasonID, reasonID)
 			rep := SendMessage(ctx, s, &resMsg)
-			RequireErrorCode(rep, payload.CodeRequestNotFound)
+			res, ok := rep.(*payload.ErrorResultExists)
+			require.True(t, ok, "returned ErrorResultExists")
+			receivedResult := record.Material{}
+			err := receivedResult.Unmarshal(res.Result)
+			require.NoError(t, err)
+			assert.Equal(t, originalResult, receivedResult.Virtual)
 		}
 	})
 }

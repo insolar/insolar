@@ -74,7 +74,7 @@ type RealmPopulation interface {
 	GetShuffledOtherNodes() []*NodeAppearance /* excludes joiners and self */
 	GetIndexedNodes() []*NodeAppearance       /* no joiners included */
 	GetIndexedNodesAndHasNil() ([]*NodeAppearance, bool)
-	GetCountAndCompleteness(includeJoiners bool) (int, bool)
+	GetIndexedCountAndCompleteness() (int, bool)
 
 	GetSelf() *NodeAppearance
 
