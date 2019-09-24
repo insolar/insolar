@@ -117,13 +117,13 @@ func FromZerologLevel(zLevel zerolog.Level) insolar.LogLevel {
 	return zerologReverseMapping[zLevel]
 }
 
-func selectOutput(output insolar.LogOutput) (io.WriteCloser, error) {
+func selectOutput(output insolar.LogOutput, param string) (io.WriteCloser, error) {
 	switch output {
 	case insolar.StdErrOutput:
 		// we open a separate file handle as it will be closed, so it should not interfere with os.Stderr
 		return os.NewFile(uintptr(syscall.Stderr), "/dev/stderr"), nil
 	case insolar.SysLogOutput:
-		return inssyslog.ConnectDefaultSyslog("insolar") // breaks dependency on windows
+		return inssyslog.ConnectSyslogByParam(param, "insolar") // breaks dependency on windows
 	default:
 		return nil, errors.New("unknown output " + output.String())
 	}
@@ -144,7 +144,7 @@ const zerologSkipFrameCount = 4
 
 func NewZerologAdapter(pCfg logadapter.ParsedLogConfig, msgFmt logadapter.MsgFormatConfig) (insolar.Logger, error) {
 
-	bareOutput, err := selectOutput(pCfg.OutputType)
+	bareOutput, err := selectOutput(pCfg.OutputType, pCfg.OutputParam)
 	if err != nil {
 		return nil, err
 	}

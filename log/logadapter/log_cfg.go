@@ -27,6 +27,8 @@ type ParsedLogConfig struct {
 	OutputType insolar.LogOutput
 	LogLevel   insolar.LogLevel
 
+	OutputParam string
+
 	Output      OutputConfig
 	Instruments InstrumentationConfig
 
@@ -53,6 +55,7 @@ func ParseLogConfigWithDefaults(cfg configuration.Log, defaults ParsedLogConfig)
 	if err != nil {
 		return
 	}
+	plc.OutputParam = cfg.OutputParams
 
 	plc.Output.Format, err = insolar.ParseFormat(cfg.Formatter, insolar.DefaultLogFormat)
 	if err != nil {

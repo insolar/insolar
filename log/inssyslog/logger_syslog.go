@@ -19,6 +19,7 @@ package inssyslog
 import (
 	"github.com/insolar/insolar/insolar"
 	"io"
+	"regexp"
 )
 
 /*
@@ -40,6 +41,27 @@ type SyslogWriteCloser interface {
 	Err(m string) error
 	Emerg(m string) error
 	Crit(m string) error
+}
+
+const DefaultSyslogNetwork = "udp"
+
+var addrRegex = regexp.MustCompile(`^((ip|tcp|udp)(|4|6)|unix|unixgram|unixpacket):`)
+
+func toNetworkAndAddress(s string) (string, string) {
+	indexes := addrRegex.FindStringSubmatchIndex(s)
+	if len(indexes) == 0 {
+		return DefaultSyslogNetwork, s
+	}
+	return s[:indexes[3]], s[indexes[3]+1:]
+}
+
+func ConnectSyslogByParam(outputParam, tag string) (LogLevelWriteCloser, error) {
+	if len(outputParam) == 0 || outputParam == "localhost" {
+		return ConnectDefaultSyslog(tag)
+	}
+
+	nw, addr := toNetworkAndAddress(outputParam)
+	return ConnectRemoteSyslog(nw, addr, tag)
 }
 
 // SyslogLevelWriter wraps a SyslogWriter and call the right syslog level

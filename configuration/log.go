@@ -22,6 +22,7 @@ type Log struct {
 	Adapter      string
 	Formatter    string
 	OutputType   string
+	OutputParams string
 	BufferSize   int
 	LLBufferSize int
 }
