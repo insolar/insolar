@@ -48,7 +48,7 @@ func (p *FatalDirectWriter) Write(b []byte) (n int, err error) {
 	if p.fatal.IsFatal() {
 		return p.fatal.PostFatalWrite(insolar.NoLevel, b)
 	}
-	return p.output.DoWrite(b)
+	return p.output.Write(b)
 }
 
 func (p *FatalDirectWriter) LowLatencyWrite(level insolar.LogLevel, b []byte) (int, error) {
@@ -74,15 +74,19 @@ func (p *FatalDirectWriter) LogLevelWrite(level insolar.LogLevel, b []byte) (n i
 			return p.fatal.PostFatalWrite(level, b)
 		}
 		n, _ = p.output.LogLevelWrite(level, b)
-		return n, p.Close()
+		if ok, err := p.output.DoFlushOrSync(); ok && err == nil {
+			return n, nil
+		}
+
+		return n, p.output.Close()
 
 	case insolar.PanicLevel:
 		n, err = p.output.LogLevelWrite(level, b)
-		if err != nil {
-			_ = p.Flush()
-			return n, err
+		if err == nil {
+			_, _ = p.output.DoFlushOrSync()
 		}
-		return n, p.Flush()
+		return n, err
+
 	default:
 		return p.output.LogLevelWrite(level, b)
 	}
