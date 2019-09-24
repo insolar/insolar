@@ -94,12 +94,18 @@ func test_BackpressureBuffer_Deviations(t *testing.T, threads, iterations, bufSi
 	lastVal := make(map[uint64]logOutput, threads)
 	distances := make(map[uint64][]float64, threads)
 	allDistances := make([]float64, 0, threads*iterations)
+	displacements := make([]float64, 0)
 	for _, v := range out {
 		lv, ok := lastVal[v.Thread]
 		if ok {
 			dist := v.Time.Sub(lv.Time).Seconds()
 			distances[v.Thread] = append(distances[v.Thread], dist)
 			allDistances = append(allDistances, dist)
+
+			if v.Iteration < lv.Iteration {
+				displacements = append(displacements, float64(lv.Iteration-v.Iteration))
+				// fmt.Printf("\tCurrent < last in thread %d: current=%d last=%d\n", v.Thread, v.Iteration, lv.Iteration)
+			}
 		}
 		lastVal[v.Thread] = v
 	}
@@ -111,14 +117,19 @@ func test_BackpressureBuffer_Deviations(t *testing.T, threads, iterations, bufSi
 	}
 
 	for k, v := range distances {
-		assert.Equal(t, iterations, len(v)+1, "Incorrect number of log records in thread %d", k)
+		if iterations != len(v)+1 {
+			assert.Equal(t, iterations, len(v)+1, "Incorrect number of log records in thread %d", k)
+		}
 
 		mean, std := stat.MeanStdDev(v, nil)
 		_, _ = mean, std
-		fmt.Printf("Thread %03d: mean = %8.2f ms %+6.2f%%, stddev = %8.2f ms %+6.2f%%\n", k,
-			mean*1e3, 100*(mean-ttlMean)/ttlMean, std*1e3, 100*(std-ttlStd)/ttlStd)
+		// fmt.Printf("Thread %03d: mean = %8.2f ms %+6.2f%%, stddev = %8.2f ms %+6.2f%%\n", k,
+		// 	mean*1e3, 100*(mean-ttlMean)/ttlMean, std*1e3, 100*(std-ttlStd)/ttlStd)
 	}
-	fmt.Printf("Total: sum = %8.2f s, mean = %8.2f ms, stddev = %8.2f ms\n", ttlSum, ttlMean*1e3, ttlStd*1e3)
+
+	fmt.Printf("\tTotal: sum = %8.2f s, mean = %8.2f ms, stddev = %8.2f ms\n", ttlSum, ttlMean*1e3, ttlStd*1e3)
+	meanDisplace, stdDisplace := stat.MeanStdDev(displacements, nil)
+	fmt.Printf("\tDisplacements: total = %d, mean = %.2f (std = %.2f)\n", len(displacements), meanDisplace, stdDisplace)
 }
 
 func generateLogs(logger insolar.LoggerOutput, threads, iterations int, generateDelay time.Duration) {
@@ -240,10 +251,10 @@ func (cb *ConcurrentBuilder) Write(p []byte) (int, error) {
 	}
 	data := make([]byte, len(p))
 	n := copy(data, p)
-	cb.queue <- data
 	if cb.writeDelay > 0 {
 		time.Sleep(cb.writeDelay)
 	}
+	cb.queue <- data
 	return n, nil
 }
 
