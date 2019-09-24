@@ -21,6 +21,7 @@ import (
 	"math/big"
 
 	"github.com/insolar/insolar/api/sdk"
+	"github.com/insolar/insolar/log"
 )
 
 const transferAmount = 101
@@ -42,6 +43,14 @@ func (s *walletToWalletTransferScenario) canBeStarted() error {
 func (s *walletToWalletTransferScenario) prepare() {
 	members, err := getMembers(s.insSDK, concurrent*2, false)
 	check("Error while loading members: ", err)
+
+	if useMembersFromFile {
+		if members[len(members)-1].GetReference() != s.insSDK.GetFeeMember().GetReference() {
+			log.Fatal("last element must be fee member, but its not")
+		}
+		members = members[:len(members)-1]
+	}
+
 	s.members = members
 
 	if !noCheckBalance {
