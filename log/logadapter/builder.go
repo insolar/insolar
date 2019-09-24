@@ -46,8 +46,7 @@ type OutputConfig struct {
 	Format          insolar.LogFormat
 
 	// allow buffer for regular events
-	EnableBuffer   bool
-	EnableFairness bool
+	EnableBuffer bool
 }
 
 func (v OutputConfig) CanBeReusedAs(config OutputConfig) bool {
@@ -237,7 +236,7 @@ func (z LoggerBuilder) prepareOutput(metrics *logmetrics.MetricsHelper, needsLow
 	}
 
 	if z.Config.Output.BufferSize > 0 {
-		var flags critlog.BackpressureBufferFlags
+		flags := critlog.BufferWriteDelayFairness | critlog.BufferTrackWriteDuration
 
 		if z.Config.Output.BufferSize > 100 {
 			flags |= critlog.BufferDropOnFatal
@@ -245,10 +244,6 @@ func (z LoggerBuilder) prepareOutput(metrics *logmetrics.MetricsHelper, needsLow
 
 		if z.factory.CanReuseMsgBuffer() {
 			flags |= critlog.BufferReuse
-		}
-
-		if z.Config.Output.EnableFairness {
-			flags |= critlog.BufferWriteDelayFairness | critlog.BufferTrackWriteDuration
 		}
 
 		pw := uint8(insolar.DefaultOutputParallelLimit)

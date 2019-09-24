@@ -172,7 +172,8 @@ func testBackpressureBufferLimit(t *testing.T, parWriters, bufSize int, startWor
 	require.NoError(t, bb.Flush(), "flush")
 	for i := 0; i <= 9; i++ {
 		require.NoError(t, bb.Flush(), "flush")
-		if producersCount == int(atomic.LoadUint32(&producersDone)) && len(bb.buffer) == 0 {
+		if producersCount == int(atomic.LoadUint32(&producersDone)) && len(bb.buffer) == 0 &&
+			producersCount+1 != int(atomic.LoadUint32(&cw.total)) && int(atomic.LoadUint32(&cw.parallel)) == 0 {
 			break
 		}
 		time.Sleep(time.Duration(i+1) * 5 * time.Millisecond)
