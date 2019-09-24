@@ -52,8 +52,7 @@ func (s *migrationScenario) prepare() {
 
 	if useMembersFromFile {
 		if members[len(members)-1].GetReference() != s.insSDK.GetMigrationAdminMember().GetReference() {
-			log.Fatal("last element must be migration admin, but its" +
-				" not")
+			log.Fatal("last element must be migration admin, but its not")
 		}
 		members = members[:len(members)-1]
 	}
