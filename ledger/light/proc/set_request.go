@@ -20,7 +20,6 @@ import (
 	"context"
 	"encoding/base64"
 
-	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 
@@ -78,7 +77,6 @@ func (p *SetRequest) Dep(
 	pcs insolar.PlatformCryptographyScheme,
 	rc executor.RequestChecker,
 	c jet.Coordinator,
-	pls pulse.Accessor,
 ) {
 	p.dep.writer = w
 	p.dep.filament = f
