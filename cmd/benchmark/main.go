@@ -65,6 +65,7 @@ var (
 	useMembersFromFile bool
 	noCheckBalance     bool
 	checkEveryMember   bool
+	checkTotalBalance  bool
 	scenarioName       string
 	discoveryNodesLogs string
 )
@@ -82,7 +83,8 @@ func parseInputParams() {
 	pflag.BoolVarP(&useMembersFromFile, "usemembers", "m", false, "use members from file")
 	pflag.StringVarP(&memberFile, "members-file", "", defaultMemberFile, "dir for saving members data")
 	pflag.BoolVarP(&noCheckBalance, "nocheckbalance", "b", false, "don't check balance at the end")
-	pflag.BoolVarP(&checkEveryMember, "check-every-member", "e", false, "check balance of every member from file, don't run any scenario")
+	pflag.BoolVarP(&checkEveryMember, "check-every-member", "", false, "check balance of every member from file, don't run any scenario")
+	pflag.BoolVarP(&checkTotalBalance, "check-total-balance", "", false, "check total balance of members from file before run any scenario")
 	pflag.StringVarP(&scenarioName, "scenarioname", "t", "", "name of scenario")
 	pflag.StringVarP(&discoveryNodesLogs, "discovery-nodes-logs-dir", "", defaultDiscoveryNodesLogs, "launchnet logs dir for checking errors")
 	pflag.Parse()
@@ -397,7 +399,7 @@ func main() {
 	var membersWithBalanceMap map[string]*big.Int
 	if !noCheckBalance {
 		totalBalanceBefore, membersWithBalanceMap = getTotalBalance(insSDK, b.scenario.getBalanceCheckMembers())
-		if useMembersFromFile {
+		if useMembersFromFile && checkTotalBalance {
 			checkBalanceAtFile(totalBalanceBefore, membersWithBalanceMap)
 		}
 	}

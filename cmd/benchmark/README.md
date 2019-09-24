@@ -21,8 +21,12 @@ or you can run benchmark with
 
 ### Options
 
-        -e check-every-member
+        --check-every-member
                 If true, just check balance of every member from file and don't run any scenario. Default is false.
+
+        --check-total-balance
+                If true, check total balance of members from file and after that run scenario. Default is false.
+                If nocheckbalance True, check will not be done. 
 
         -c concurrency
                 Number of concurrent users. Default is one. 
@@ -48,19 +52,20 @@ or you can run benchmark with
         -s savemembers
                 Saves members to file .artifacts/bench-members/members.txt (file can be change with members-file option).
                 If false, file wont be updated. Default is false.
-                If nocheckbalance set to True, and run was successful, balances in file will be updated after scenario.
+                If nocheckbalance set to false, and run was successful, balances in file will be updated after scenario.
 
         -m usemembers
                 Use members from file .artifacts/bench-members/members.txt (file can be change with members-file option).
                 If false, wright info about created members in this file. Default is false. 
-                If nocheckbalance set to True, and run was successful, balances in file will be updated after scenario.
+                If nocheckbalance set to false, and run was successful, balances in file will be updated after scenario.
 
         --members-file
                 Path to file for saving members data
 
         -b nocheckbalance
                 If true, don't check balance at the start/end of transfers. Default is false.
-                If savemembers or usemembers provided, and run was successful, balances in file will be updated after scenario.
+                If true, check-total-balance option will be ignored.
+                If false, and savemembers or usemembers provided, and run was successful, balances in file will be updated after scenario.
 
         -t scenarioname
                 Name of scenario. Default scenario is transfer scenario.
