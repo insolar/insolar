@@ -62,9 +62,10 @@ func NewLogExt(cfg configuration.Log, skipFrameBaselineAdjustment int8) (insolar
 }
 
 var globalLogger = struct {
-	mutex  sync.RWMutex
-	output critlog.ProxyLoggerOutput
-	logger insolar.Logger
+	mutex   sync.RWMutex
+	output  critlog.ProxyLoggerOutput
+	logger  insolar.Logger
+	adapter insolar.GlobalLogAdapter
 }{}
 
 func g() insolar.EmbeddedLogger {
@@ -147,15 +148,25 @@ func createGlobalLogger() {
 	}
 }
 
+func getGlobalLogAdapter(b insolar.LoggerBuilder) insolar.GlobalLogAdapter {
+	if f, ok := b.(insolar.GlobalLogAdapterFactory); ok {
+		return f.CreateGlobalLogAdapter()
+	}
+	return nil
+}
+
 func setGlobalLogger(logger insolar.Logger, isDefault bool) error {
 	b := logger.Copy()
-	globalLogger.output.SetTarget(b.(insolar.LoggerOutputGetter).GetLoggerOutput())
+
+	output := b.(insolar.LoggerOutputGetter).GetLoggerOutput()
 	b = b.WithOutput(&globalLogger.output)
 
 	if isDefault {
 		// TODO move to logger construction configuration?
 		b = b.WithCaller(insolar.CallerField)
 	}
+
+	adapter := getGlobalLogAdapter(b)
 
 	var err error
 	logger, err = b.Build()
@@ -168,7 +179,12 @@ func setGlobalLogger(logger insolar.Logger, isDefault bool) error {
 		logger = logger.WithField("loginstance", "global")
 	}
 
+	if globalLogger.adapter != nil && adapter != nil && globalLogger.adapter != adapter {
+		adapter.SetGlobalLoggerFilter(globalLogger.adapter.GetGlobalLoggerFilter())
+	}
+	globalLogger.adapter = adapter
 	globalLogger.logger = logger
+	globalLogger.output.SetTarget(output)
 	return nil
 }
 
@@ -195,6 +211,11 @@ func SetLevel(level string) error {
 		return err
 	}
 
+	SetLogLevel(lvl)
+	return nil
+}
+
+func SetLogLevel(level insolar.LogLevel) {
 	globalLogger.mutex.Lock()
 	defer globalLogger.mutex.Unlock()
 
@@ -202,8 +223,28 @@ func SetLevel(level string) error {
 		createGlobalLogger()
 	}
 
-	globalLogger.logger = globalLogger.logger.Level(lvl)
-	return nil
+	globalLogger.logger = globalLogger.logger.Level(level)
+}
+
+func SetGlobalLevelFilter(level insolar.LogLevel) error {
+	globalLogger.mutex.RLock()
+	defer globalLogger.mutex.RUnlock()
+
+	if globalLogger.adapter != nil {
+		globalLogger.adapter.SetGlobalLoggerFilter(level)
+		return nil
+	}
+	return errors.New("not supported")
+}
+
+func GetGlobalLevelFilter() insolar.LogLevel {
+	globalLogger.mutex.RLock()
+	defer globalLogger.mutex.RUnlock()
+
+	if globalLogger.adapter != nil {
+		return globalLogger.adapter.GetGlobalLoggerFilter()
+	}
+	return insolar.NoLevel
 }
 
 /*

@@ -98,12 +98,21 @@ func NewBuilder(factory Factory, bareOutput io.Writer, config Config, level inso
 	}
 }
 
+var _ insolar.GlobalLogAdapterFactory = &LoggerBuilder{}
+
 type LoggerBuilder struct {
 	factory     Factory
 	bareOutput  io.Writer
 	hasTemplate bool
 	level       insolar.LogLevel
 	Config
+}
+
+func (z LoggerBuilder) CreateGlobalLogAdapter() insolar.GlobalLogAdapter {
+	if f, ok := z.factory.(insolar.GlobalLogAdapterFactory); ok {
+		return f.CreateGlobalLogAdapter()
+	}
+	return nil
 }
 
 func (z LoggerBuilder) GetOutput() io.Writer {

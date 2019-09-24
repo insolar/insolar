@@ -19,8 +19,6 @@ package log
 import (
 	"fmt"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/log/zlogadapter"
-	"github.com/rs/zerolog"
 	"net/http"
 )
 
@@ -46,9 +44,14 @@ func (h *loglevelChangeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	zLevel := zlogadapter.ToZerologLevel(level)
-	zerolog.SetGlobalLevel(zLevel)
+	err = SetGlobalLevelFilter(level)
 
-	w.WriteHeader(200)
-	_, _ = fmt.Fprintf(w, "New log level: '%v'\n", levelStr)
+	if err == nil {
+		w.WriteHeader(200)
+		_, _ = fmt.Fprintf(w, "New log level: '%v'\n", levelStr)
+		return
+	}
+
+	w.WriteHeader(500)
+	_, _ = fmt.Fprintf(w, "Logger doesn't support global log level(s): %v\n", err)
 }

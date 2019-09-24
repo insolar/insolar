@@ -152,6 +152,17 @@ func (l LogOutput) String() string {
 	return string(l)
 }
 
+type LogObjectWriter interface {
+	AddStructFields(s interface{})
+	AddFieldMap(map[string]interface{})
+	AddField(key string, v interface{})
+	AddRawJSON(key string, b []byte)
+}
+
+type LogObjectMarshaller interface {
+	MarshalLogObject(LogObjectWriter) string
+}
+
 type LogLevelGetter interface {
 	GetLogLevel() LogLevel
 }
@@ -228,6 +239,15 @@ type EmbeddedLogger interface {
 	EmbeddedEvent(level LogLevel, args ...interface{})
 	// Eventf formats and logs a message with the given level
 	EmbeddedEventf(level LogLevel, fmt string, args ...interface{})
+}
+
+type GlobalLogAdapterFactory interface {
+	CreateGlobalLogAdapter() GlobalLogAdapter
+}
+
+type GlobalLogAdapter interface {
+	SetGlobalLoggerFilter(level LogLevel)
+	GetGlobalLoggerFilter() LogLevel
 }
 
 type CallerFieldMode uint8

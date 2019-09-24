@@ -74,7 +74,7 @@ type bufEntry struct {
 	lvl       insolar.LogLevel
 	b         []byte
 	start     int64
-	flushMark bufferFlushMode
+	flushMark bufferMark
 }
 
 /*
@@ -84,7 +84,7 @@ Start of the worker will also attach a finalizer to the buffer.
 func (p *BackpressureBuffer) StartWorker(ctx context.Context) *BackpressureBuffer {
 	go p.worker(ctx)
 
-	if atomic.SwapUint32(&p.status, 1) != 0 {
+	if atomic.AddUint32(&p.status, 1) != 1 {
 		return p
 	}
 
@@ -116,7 +116,7 @@ func (p *internalBackpressureBuffer) Close() error {
 		return errors.New("closed")
 	}
 
-	_, _ = p.flushWrite(internalOpLevel, nil, tillDepletion, 0)
+	_, _ = p.flushTillDepletion(internalOpLevel, nil, 0)
 	_, _ = p.output.DoClose()
 	return nil
 }
@@ -125,11 +125,16 @@ func (p *internalBackpressureBuffer) closeWorker() {
 	if p.fatal.IsFatal() || p.output.IsClosed() {
 		return
 	}
-	_, _ = p.flushWrite(internalOpLevel, nil, tillDepletion, 0)
+	_, _ = p.flushTillDepletion(internalOpLevel, nil, 0)
 }
 
+// NB! Flush() may NOT be able to clean up whole buffer when there are too many pending writers
 func (p *internalBackpressureBuffer) Flush() error {
-	_, err := p.flushWrite(internalOpLevel, nil, tillFlushMark, 0)
+	if p.fatal.IsFatal() || p.output.IsClosed() {
+		return nil
+	}
+
+	_, err := p.flushTillMark(internalOpLevel, nil, 0)
 	_, _ = p.output.DoFlushOrSync()
 	return err
 }
@@ -155,7 +160,7 @@ func (p *internalBackpressureBuffer) LowLatencyWrite(level insolar.LogLevel, b [
 		return p.writeFatal(level, b)
 	}
 
-	be := p.newQueueEntry(level, b)
+	be := p.newQueueEntry(level, b, time.Now().UnixNano())
 
 	for i := 0; ; i++ {
 		select {
@@ -172,12 +177,12 @@ func (p *internalBackpressureBuffer) LowLatencyWrite(level insolar.LogLevel, b [
 	return len(b), nil
 }
 
-func (p *internalBackpressureBuffer) newQueueEntry(level insolar.LogLevel, b []byte) bufEntry {
+func (p *internalBackpressureBuffer) newQueueEntry(level insolar.LogLevel, b []byte, startNano int64) bufEntry {
 	if p.flags&BufferReuse != 0 {
-		return bufEntry{lvl: level, b: b}
+		return bufEntry{lvl: level, b: b, start: startNano}
 	}
 	var v []byte
-	return bufEntry{lvl: level, b: append(v, b...)}
+	return bufEntry{lvl: level, b: append(v, b...), start: startNano}
 }
 
 func (p *internalBackpressureBuffer) LogLevelWrite(level insolar.LogLevel, b []byte) (n int, err error) {
@@ -192,7 +197,7 @@ func (p *internalBackpressureBuffer) LogLevelWrite(level insolar.LogLevel, b []b
 		return p.writeFatal(level, b)
 
 	case insolar.PanicLevel:
-		n, err = p.flushWrite(level, b, tillFlushMark, 0)
+		n, err = p.flushTillMark(level, b, 0)
 		if err == nil {
 			_, _ = p.output.DoFlushOrSync()
 		}
@@ -200,7 +205,7 @@ func (p *internalBackpressureBuffer) LogLevelWrite(level insolar.LogLevel, b []b
 
 	default:
 		if p.flags&BufferDirectForRegular != 0 {
-			return p.flushWrite(level, b, noFlush, startNano)
+			return p.flushWrite(level, b, startNano)
 		}
 		return p.checkWrite(level, b, startNano)
 	}
@@ -211,11 +216,11 @@ func (p *internalBackpressureBuffer) writeFatal(level insolar.LogLevel, b []byte
 		return p.fatal.PostFatalWrite(level, b)
 	}
 	if p.flags&BufferDropOnFatal != 0 {
-		n, _ = p.flushWrite(level, b, tillDepletion, 0)
+		n, _ = p.flushTillDepletion(level, b, 0)
 	} else {
 		n, _ = p.directWrite(level, b, 0)
 	}
-	p.writeMissedCount(p.getMissedCount() + len(p.buffer))
+	p.writeMissedCount(p.getAndResetMissedCount() + len(p.buffer))
 
 	if ok, err := p.output.DoFlushOrSync(); ok && err == nil {
 		return n, nil
@@ -246,20 +251,20 @@ func (p *internalBackpressureBuffer) checkWrite(level insolar.LogLevel, b []byte
 	}
 
 	defer atomic.AddUint32(&p.pendingWrites, ^uint32(0)) // -1
-	return p.flushWrite(level, b, noFlush, startNano)
+	return p.flushWrite(level, b, startNano)
 }
 
-type bufferFlushMode uint8
+type bufferMark uint8
 
 const (
-	noFlush bufferFlushMode = iota
-	tillFlushMark
-	tillDepletion
+	noMark bufferMark = iota
+	flushMark
+	depletionMark
 )
 
 func (p *internalBackpressureBuffer) fairQueueWrite(level insolar.LogLevel, b []byte, startNano int64) (int, error) {
-	n, err := p.queueWrite(level, b)
-	if startNano != 0 && p.flags&BufferWriteDelayFairness != 0 {
+	n, err := p.queueWrite(level, b, startNano)
+	if n > 0 && err == nil && startNano != 0 && p.flags&BufferWriteDelayFairness != 0 {
 		waitNano := int64(p.GetWriteDuration()) - (time.Now().UnixNano() - startNano)
 		if waitNano > 0 {
 			time.Sleep(time.Duration(waitNano))
@@ -268,102 +273,198 @@ func (p *internalBackpressureBuffer) fairQueueWrite(level insolar.LogLevel, b []
 	return n, err
 }
 
-func (p *internalBackpressureBuffer) queueWrite(level insolar.LogLevel, b []byte) (int, error) {
-	if level == internalOpLevel && b == nil {
-		return 0, nil
-	}
-	p.buffer <- p.newQueueEntry(level, b)
+func (p *internalBackpressureBuffer) queueWrite(level insolar.LogLevel, b []byte, startName int64) (int, error) {
+	p.buffer <- p.newQueueEntry(level, b, startName)
 	return len(b), nil
 }
 
 func (p *internalBackpressureBuffer) directWrite(level insolar.LogLevel, b []byte, startNano int64) (int, error) {
-	if level == internalOpLevel && b == nil {
-		return 0, nil
-	}
 	n, err := p.output.DoLevelWrite(level, b)
-	if startNano > 0 && p.flags&BufferTrackWriteDuration != 0 {
+	if n > 0 && err == nil && startNano > 0 && p.flags&BufferTrackWriteDuration != 0 {
 		writeDuration := time.Now().UnixNano() - startNano
 		p.ApplyWriteDuration(time.Duration(writeDuration))
 	}
 	return n, err
 }
 
-func (p *internalBackpressureBuffer) flushWrite(level insolar.LogLevel, b []byte, flush bufferFlushMode, startNano int64) (int, error) {
+func (p *internalBackpressureBuffer) flushWrite(level insolar.LogLevel, b []byte, startNano int64) (int, error) {
 
-	penalty := 1 // every worker has to write at least +1 event from the queue
-	switch flush {
-	case tillDepletion:
-		// nothing
-	case tillFlushMark:
-		p.buffer <- bufEntry{flushMark: tillFlushMark}
-	default:
-		bufLen := len(p.buffer)
-		if bufLen == 0 { // dirty check
-			// direct write
-			return p.directWrite(level, b, startNano)
-		}
-		// extra penalty is added proportionally to queue occupation
-		penalty += int(p.extraPenalty+1) * len(p.buffer) / (1 + cap(p.buffer))
-	}
-
-	hasDepletionMark := false
-	prevWasFlushMark := false
-	for i := 0; flush != noFlush || i <= penalty; i++ {
-		select {
-		case be, ok := <-p.buffer:
-			/*
-				There is a chance that we will get a mark of someone else, but it is ok as long as
-				the total count of flush writers and queued marks is equal.
-
-				The full depletion writer must present the depletion mark before exiting.
-			*/
-			switch {
-			case !ok:
-				// break
-			case be.flushMark == noFlush:
-				prevWasFlushMark = false
-				_, _ = p.directWrite(be.lvl, be.b, startNano)
-				continue
-			case be.flushMark == tillDepletion:
-				// return the mark and stop
-				hasDepletionMark = true
-				p.buffer <- be
-				// break
-			case be.flushMark == tillFlushMark:
-				prevWasFlushMark = true
-				switch flush {
-				case tillDepletion:
-					/* we don't need it - put it back for another worker */
-					p.buffer <- be
-					if prevWasFlushMark == true {
-						time.Sleep(1 * time.Millisecond)
-					} else {
-						prevWasFlushMark = true
-					}
-					continue
-				case noFlush:
-					/* we don't need it - put it back for another worker */
-					p.buffer <- be
-					continue
-				}
-				// break
-			default:
-				panic("illegal state")
-			}
-		default:
-			if flush == tillDepletion && !hasDepletionMark {
-				/* It will stay in the queue to signal other writers and the worker to stop */
-				p.buffer <- bufEntry{flushMark: tillDepletion}
-			}
-		}
+	bufLen := len(p.buffer)
+	if bufLen == 0 { // dirty check
 		return p.directWrite(level, b, startNano)
 	}
 
+	// every worker has to write at least +1 event from the queue
+	// extra penalty is added proportionally to queue occupation
+	penalty := 1 + int(p.extraPenalty+1)*len(p.buffer)/(1+cap(p.buffer))
+
+	hasPrevFlushMark := false
+	for i := 0; i <= penalty; i++ {
+		isContinue, markType, err := p.writeOneFromQueue(noMark)
+
+		switch {
+		case err != nil:
+			return 0, err
+		case !isContinue:
+			return p.directWrite(level, b, startNano)
+		case markType == noMark:
+			hasPrevFlushMark = false
+		case markType != flushMark:
+			panic("illegal state")
+		case hasPrevFlushMark:
+			time.Sleep(1 * time.Millisecond)
+		default:
+			hasPrevFlushMark = true
+		}
+	}
 	/*
 		We paid our penalty and the queue didn't became empty.
 		Lets leave our event for someone else to pick.
 	*/
-	return p.queueWrite(level, b)
+	return p.queueWrite(level, b, startNano)
+}
+
+func (p *internalBackpressureBuffer) flushTillMark(level insolar.LogLevel, b []byte, startNano int64) (int, error) {
+
+	hasPrevFlushMark := false
+	hasAddedFlushMark := false
+
+	markEntry := bufEntry{flushMark: flushMark}
+
+outer:
+	for maxFlushCount := len(p.buffer); maxFlushCount >= 0; maxFlushCount-- {
+		select {
+		case p.buffer <- markEntry:
+			hasAddedFlushMark = true
+			break outer
+		default:
+			isContinue, markType, err := p.writeOneFromQueue(noMark)
+			switch {
+			case err != nil:
+				return 0, err
+			case !isContinue:
+				break outer
+			case markType == noMark:
+				hasPrevFlushMark = false
+			case markType != flushMark:
+				panic("illegal state")
+			case hasPrevFlushMark:
+				time.Sleep(1 * time.Millisecond)
+			default:
+				hasPrevFlushMark = true
+			}
+		}
+	}
+
+	if hasAddedFlushMark {
+		// clean up till the mark
+		for {
+			isContinue, markType, err := p.writeOneFromQueue(flushMark)
+			switch {
+			case err != nil:
+				return 0, err
+			case isContinue:
+				continue
+			case markType == noMark:
+				// buffer is empty ... another worker pulled the marker out
+				time.Sleep(1 * time.Millisecond)
+				continue
+			}
+			break
+		}
+	}
+
+	p.getAndWriteMissed()
+	if level == internalOpLevel && b == nil {
+		return 0, nil
+	}
+	return p.directWrite(level, b, startNano)
+}
+
+func (p *internalBackpressureBuffer) flushTillDepletion(level insolar.LogLevel, b []byte, startNano int64) (int, error) {
+
+	prevWasFlushMark := false
+	markEntry := bufEntry{flushMark: depletionMark}
+
+	for {
+		isContinue, markType, err := p.writeOneFromQueue(depletionMark)
+		switch {
+		case err != nil:
+			return 0, err
+		case isContinue:
+			// buffer is not empty, continue
+		case markType != depletionMark:
+			select {
+			case p.buffer <- markEntry:
+				//
+			default:
+				// buffer should be empty by now .. but lets try again
+				continue
+			}
+			fallthrough
+		default:
+			if level == internalOpLevel && b == nil {
+				return 0, nil
+			}
+			p.getAndWriteMissed()
+			return p.directWrite(level, b, startNano)
+		}
+
+		switch {
+		case markType == noMark:
+			prevWasFlushMark = false
+		case markType != flushMark:
+			panic("illegal state")
+		case prevWasFlushMark:
+			// let flusher(s) do the job first
+			time.Sleep(1 * time.Millisecond)
+		default:
+			prevWasFlushMark = true
+		}
+	}
+}
+
+func (p *internalBackpressureBuffer) writeOneFromQueue(flush bufferMark) (bool, bufferMark, error) {
+	select {
+	case be, ok := <-p.buffer:
+		/*
+			There is a chance that we will get a mark of someone else, but it is ok as long as
+			the total count of flush writers and queued marks is equal.
+
+			The full depletion writer must present the depletion mark before exiting.
+		*/
+		switch {
+		case !ok:
+			return false, 0, errors.New("buffer channel is closed")
+
+		case be.flushMark == noMark:
+			_, _ = p.directWrite(be.lvl, be.b, be.start)
+			return true, noMark, nil
+
+		case be.flushMark == depletionMark:
+			// restore the mark and stop
+			p.buffer <- be
+			return false, depletionMark, nil
+
+		case be.flushMark == flushMark:
+			switch flush {
+			case flushMark:
+				// consume the mark and stop
+				return false, flushMark, nil
+			case depletionMark, noMark:
+				/* we don't need flushMark - put it back for another worker */
+				p.buffer <- be
+			default:
+				panic("illegal state")
+			}
+			return true, flushMark, nil
+
+		default:
+			panic("illegal state")
+		}
+	default:
+		return false, noMark, nil
+	}
 }
 
 func (p *internalBackpressureBuffer) worker(ctx context.Context) {
@@ -380,14 +481,14 @@ func (p *internalBackpressureBuffer) worker(ctx context.Context) {
 			switch {
 			case !ok:
 				return
-			case be.flushMark == noFlush:
+			case be.flushMark == noMark:
 				prevWasMark = false
 				_, _ = p.directWrite(be.lvl, be.b, be.start)
-			case be.flushMark == tillDepletion:
+			case be.flushMark == depletionMark:
 				// return the mark and stop
 				p.buffer <- be
 				return
-			case be.flushMark == tillFlushMark:
+			case be.flushMark == flushMark:
 				/*
 					Never take out the marks, otherwise the write will stuck.
 
@@ -412,7 +513,7 @@ func (p *internalBackpressureBuffer) drawStraw(writeId uint32, writersInQueue ui
 	return writersInQueue == 0 || (writeId%args.Prime(int(writersInQueue-1))) == 0
 }
 
-func (p *internalBackpressureBuffer) getMissedCount() int {
+func (p *internalBackpressureBuffer) getAndResetMissedCount() int {
 	return int(atomic.SwapUint32(&p.missCount, 0))
 }
 
@@ -420,7 +521,7 @@ func (p *internalBackpressureBuffer) getAndWriteMissed() {
 	if p.missFn == nil || p.output.IsClosed() || p.fatal.IsFatal() {
 		return
 	}
-	p.writeMissedCount(p.getMissedCount())
+	p.writeMissedCount(p.getAndResetMissedCount())
 }
 
 func (p *internalBackpressureBuffer) writeMissedCount(missedCount int) {

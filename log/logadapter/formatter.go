@@ -18,44 +18,52 @@ package logadapter
 
 import (
 	"fmt"
+	"github.com/insolar/insolar/insolar"
 	"reflect"
 )
 
-type LogStringer interface {
-	LogString() string
-}
-
 type FormatFunc func(...interface{}) string
 type FormatfFunc func(string, ...interface{}) string
+
+func GetDefaultLogMsgFormatter() MsgFormatConfig {
+	return MsgFormatConfig{
+		Sformat:  fmt.Sprint,
+		Sformatf: fmt.Sprintf,
+	}
+}
 
 type MsgFormatConfig struct {
 	Sformat  FormatFunc
 	Sformatf FormatfFunc
 }
 
-func GetDefaultLogMsgFormatter() MsgFormatConfig {
-	return MsgFormatConfig{
-		Sformat:  SpecialSprint,
-		Sformatf: fmt.Sprintf,
-	}
-}
-
-func SpecialSprint(a ...interface{}) string {
+func (v MsgFormatConfig) TryLogObject(a ...interface{}) (insolar.LogObjectMarshaller, string) {
 	if len(a) == 1 {
 		switch v := a[0].(type) {
 		case nil: // the most obvious case(s)
 			break
 		case string: // the most obvious case(s)
-			return v
-		case LogStringer:
-			return v.LogString()
+			return nil, v
+		case insolar.LogObjectMarshaller:
+			return v, ""
 		default:
-			vt := reflect.TypeOf(v)
-			if vt.Kind() == reflect.Struct && len(vt.Name()) == 0 {
-				return fmt.Sprintf("%+v", v)
+			vt := reflect.ValueOf(v)
+			if vt.Kind() == reflect.Struct && len(vt.Type().Name()) == 0 {
+				return GetInlineLogObjectMarshaller(vt), ""
 			}
 		}
 	}
+	return nil, v.Sformat(a...)
+}
 
-	return fmt.Sprint(a...)
+func GetInlineLogObjectMarshaller(v reflect.Value) insolar.LogObjectMarshaller {
+	return defaultLogObjectMarshaller{v}
+}
+
+type defaultLogObjectMarshaller struct {
+	v reflect.Value
+}
+
+func (v defaultLogObjectMarshaller) MarshalLogObject(insolar.LogObjectWriter) string {
+	return fmt.Sprintf("%+v", v.v)
 }

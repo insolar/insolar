@@ -44,7 +44,7 @@
   version = "v1.0.0-rc.1"
 
 [[projects]]
-  digest = "1:b39cf81d5f440b9c0757a25058432d33af867e5201109bf53621356d9dab4b73"
+  digest = "1:66e8ee7ce0244de8a4d49823042a021151ae4ba102a4428f4fe7cfa0c3fb9f04"
   name = "github.com/apache/thrift"
   packages = ["lib/go/thrift"]
   pruneopts = "UT"
@@ -376,7 +376,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:7e8b852581596acce37bcb939a05d7d5ff27156045b50057e659e299c16fc1ca"
+  digest = "1:06c4e87e7489159b6a71aee72232e0851bcac6501d22503965e6ae1c0791fe5b"
   name = "github.com/mmcloughlin/avo"
   packages = [
     "attr",
@@ -716,7 +716,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:93ecad96da65efe1fe889994a592a58ead84012fcdae99ebfc91963473a8903b"
+  digest = "1:173ced03fc65c3179af694474190164e4054aafa679f435395a6e32e2f872102"
   name = "gonum.org/v1/gonum"
   packages = [
     "blas",
