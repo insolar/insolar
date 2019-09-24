@@ -15,7 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1568639484610,
+  "iteration": 1569339171213,
   "links": [],
   "panels": [
     {
@@ -182,8 +182,8 @@
       {
         "allValue": null,
         "current": {
-          "text": "local",
-          "value": "local"
+          "text": "dev-alpha",
+          "value": "dev-alpha"
         },
         "datasource": "prometheus",
         "definition": "label_values(insolar_light_last_sent_pulse, installation)",
@@ -230,7 +230,7 @@
         "useTags": false
       },
       {
-        "allValue": null,
+        "allValue": ".*",
         "current": {
           "text": "All",
           "value": "$__all"
@@ -250,28 +250,208 @@
           },
           {
             "selected": false,
-            "text": "host.docker.internal:8001",
-            "value": "host.docker.internal:8001"
+            "text": "dev-insolar-alpha-1.vm.insolar.io:8080",
+            "value": "dev-insolar-alpha-1.vm.insolar.io:8080"
           },
           {
             "selected": false,
-            "text": "host.docker.internal:8002",
-            "value": "host.docker.internal:8002"
+            "text": "dev-insolar-alpha-10.vm.insolar.io:8080",
+            "value": "dev-insolar-alpha-10.vm.insolar.io:8080"
           },
           {
             "selected": false,
-            "text": "host.docker.internal:8003",
-            "value": "host.docker.internal:8003"
+            "text": "dev-insolar-alpha-2.vm.insolar.io:8080",
+            "value": "dev-insolar-alpha-2.vm.insolar.io:8080"
           },
           {
             "selected": false,
-            "text": "host.docker.internal:8004",
-            "value": "host.docker.internal:8004"
+            "text": "dev-insolar-alpha-3.vm.insolar.io:8080",
+            "value": "dev-insolar-alpha-3.vm.insolar.io:8080"
           },
           {
             "selected": false,
-            "text": "host.docker.internal:8005",
-            "value": "host.docker.internal:8005"
+            "text": "dev-insolar-alpha-4.vm.insolar.io:8080",
+            "value": "dev-insolar-alpha-4.vm.insolar.io:8080"
+          },
+          {
+            "selected": false,
+            "text": "dev-insolar-alpha-5.vm.insolar.io:8080",
+            "value": "dev-insolar-alpha-5.vm.insolar.io:8080"
+          },
+          {
+            "selected": false,
+            "text": "dev-insolar-alpha-6.vm.insolar.io:8080",
+            "value": "dev-insolar-alpha-6.vm.insolar.io:8080"
+          },
+          {
+            "selected": false,
+            "text": "dev-insolar-alpha-7.vm.insolar.io:8080",
+            "value": "dev-insolar-alpha-7.vm.insolar.io:8080"
+          },
+          {
+            "selected": false,
+            "text": "dev-insolar-alpha-8.vm.insolar.io:8080",
+            "value": "dev-insolar-alpha-8.vm.insolar.io:8080"
+          },
+          {
+            "selected": false,
+            "text": "dev-insolar-alpha-9.vm.insolar.io:8080",
+            "value": "dev-insolar-alpha-9.vm.insolar.io:8080"
+          },
+          {
+            "selected": false,
+            "text": "dev-insolar-beta-1.vm.insolar.io:8080",
+            "value": "dev-insolar-beta-1.vm.insolar.io:8080"
+          },
+          {
+            "selected": false,
+            "text": "dev-insolar-beta-2.vm.insolar.io:8080",
+            "value": "dev-insolar-beta-2.vm.insolar.io:8080"
+          },
+          {
+            "selected": false,
+            "text": "dev-insolar-beta-3.vm.insolar.io:8080",
+            "value": "dev-insolar-beta-3.vm.insolar.io:8080"
+          },
+          {
+            "selected": false,
+            "text": "dev-insolar-beta-4.vm.insolar.io:8080",
+            "value": "dev-insolar-beta-4.vm.insolar.io:8080"
+          },
+          {
+            "selected": false,
+            "text": "dev-insolar-beta-5.vm.insolar.io:8080",
+            "value": "dev-insolar-beta-5.vm.insolar.io:8080"
+          },
+          {
+            "selected": false,
+            "text": "dev-insolar-gamma-1.vm.insolar.io:8080",
+            "value": "dev-insolar-gamma-1.vm.insolar.io:8080"
+          },
+          {
+            "selected": false,
+            "text": "dev-insolar-gamma-10.vm.insolar.io:8080",
+            "value": "dev-insolar-gamma-10.vm.insolar.io:8080"
+          },
+          {
+            "selected": false,
+            "text": "dev-insolar-gamma-2.vm.insolar.io:8080",
+            "value": "dev-insolar-gamma-2.vm.insolar.io:8080"
+          },
+          {
+            "selected": false,
+            "text": "dev-insolar-gamma-3.vm.insolar.io:8080",
+            "value": "dev-insolar-gamma-3.vm.insolar.io:8080"
+          },
+          {
+            "selected": false,
+            "text": "dev-insolar-gamma-4.vm.insolar.io:8080",
+            "value": "dev-insolar-gamma-4.vm.insolar.io:8080"
+          },
+          {
+            "selected": false,
+            "text": "dev-insolar-gamma-5.vm.insolar.io:8080",
+            "value": "dev-insolar-gamma-5.vm.insolar.io:8080"
+          },
+          {
+            "selected": false,
+            "text": "dev-insolar-gamma-6.vm.insolar.io:8080",
+            "value": "dev-insolar-gamma-6.vm.insolar.io:8080"
+          },
+          {
+            "selected": false,
+            "text": "dev-insolar-gamma-7.vm.insolar.io:8080",
+            "value": "dev-insolar-gamma-7.vm.insolar.io:8080"
+          },
+          {
+            "selected": false,
+            "text": "dev-insolar-gamma-8.vm.insolar.io:8080",
+            "value": "dev-insolar-gamma-8.vm.insolar.io:8080"
+          },
+          {
+            "selected": false,
+            "text": "dev-insolar-gamma-9.vm.insolar.io:8080",
+            "value": "dev-insolar-gamma-9.vm.insolar.io:8080"
+          },
+          {
+            "selected": false,
+            "text": "light-01.vm.insolar.io:8080",
+            "value": "light-01.vm.insolar.io:8080"
+          },
+          {
+            "selected": false,
+            "text": "light-02.vm.insolar.io:8080",
+            "value": "light-02.vm.insolar.io:8080"
+          },
+          {
+            "selected": false,
+            "text": "light-03.vm.insolar.io:8080",
+            "value": "light-03.vm.insolar.io:8080"
+          },
+          {
+            "selected": false,
+            "text": "light-04.vm.insolar.io:8080",
+            "value": "light-04.vm.insolar.io:8080"
+          },
+          {
+            "selected": false,
+            "text": "light-05.vm.insolar.io:8080",
+            "value": "light-05.vm.insolar.io:8080"
+          },
+          {
+            "selected": false,
+            "text": "qa-insolar-0.vm.insolar.io:8080",
+            "value": "qa-insolar-0.vm.insolar.io:8080"
+          },
+          {
+            "selected": false,
+            "text": "qa-insolar-1.vm.insolar.io:8080",
+            "value": "qa-insolar-1.vm.insolar.io:8080"
+          },
+          {
+            "selected": false,
+            "text": "qa-insolar-10.vm.insolar.io:8080",
+            "value": "qa-insolar-10.vm.insolar.io:8080"
+          },
+          {
+            "selected": false,
+            "text": "qa-insolar-2.vm.insolar.io:8080",
+            "value": "qa-insolar-2.vm.insolar.io:8080"
+          },
+          {
+            "selected": false,
+            "text": "qa-insolar-3.vm.insolar.io:8080",
+            "value": "qa-insolar-3.vm.insolar.io:8080"
+          },
+          {
+            "selected": false,
+            "text": "qa-insolar-4.vm.insolar.io:8080",
+            "value": "qa-insolar-4.vm.insolar.io:8080"
+          },
+          {
+            "selected": false,
+            "text": "qa-insolar-5.vm.insolar.io:8080",
+            "value": "qa-insolar-5.vm.insolar.io:8080"
+          },
+          {
+            "selected": false,
+            "text": "qa-insolar-6.vm.insolar.io:8080",
+            "value": "qa-insolar-6.vm.insolar.io:8080"
+          },
+          {
+            "selected": false,
+            "text": "qa-insolar-7.vm.insolar.io:8080",
+            "value": "qa-insolar-7.vm.insolar.io:8080"
+          },
+          {
+            "selected": false,
+            "text": "qa-insolar-8.vm.insolar.io:8080",
+            "value": "qa-insolar-8.vm.insolar.io:8080"
+          },
+          {
+            "selected": false,
+            "text": "qa-insolar-9.vm.insolar.io:8080",
+            "value": "qa-insolar-9.vm.insolar.io:8080"
           }
         ],
         "query": "label_values(insolar_flow_dispatcher_handler_latency_count, instance)",
