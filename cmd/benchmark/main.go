@@ -212,7 +212,6 @@ func getTotalBalance(insSDK *sdk.SDK, members []sdk.Member) (*big.Int, map[strin
 		balance *big.Int
 		err     error
 	}
-	totalBalance := &big.Int{}
 	nmembers := len(members)
 
 	membersWithBalanceMap := make(map[string]*big.Int, nmembers)
@@ -251,7 +250,7 @@ func getTotalBalance(insSDK *sdk.SDK, members []sdk.Member) (*big.Int, map[strin
 	}
 
 	wg.Wait()
-	totalBalance = big.NewInt(0)
+	totalBalance := big.NewInt(0)
 	for i := 0; i < nmembers; i++ {
 		res := <-results
 		if res.err != nil {
