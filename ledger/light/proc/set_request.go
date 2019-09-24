@@ -151,6 +151,19 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 		if idx.Lifeline.LatestRequest != nil && p.requestID.Pulse() < idx.Lifeline.LatestRequest.Pulse() {
 			return errors.New("request from the past")
 		}
+		if idx.Lifeline.EarliestOpenRequest != nil {
+			isBeyond, err := p.dep.coordinator.IsBeyondLimit(ctx, *idx.Lifeline.EarliestOpenRequest)
+			if err != nil {
+				return errors.Wrap(err, "failed to check EarliestOpenRequest")
+			}
+			if isBeyond {
+				return &payload.CodedError{
+					Text: "there are too old open requests",
+					Code: payload.CodeFilamentTooBig,
+				}
+			}
+		}
+
 		index = idx
 	}
 
