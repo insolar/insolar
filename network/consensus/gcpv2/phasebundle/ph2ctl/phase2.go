@@ -303,7 +303,7 @@ func (c *Phase2Controller) workerPhase2(ctx context.Context) {
 		maxWeight := weightScaler.ScaleInt64(time.Since(startedAt).Nanoseconds())
 
 		pop := c.R.GetPopulation()
-		nodeCount, isComplete := pop.GetCountAndCompleteness(false)
+		nodeCount, isComplete := pop.GetIndexedCountAndCompleteness()
 		nodeCapacity, _ := pop.GetSealedCapacity()
 		remainingNodes := nodeCount - processedNodes
 		// TODO there are may be a racing when joiners are added?
