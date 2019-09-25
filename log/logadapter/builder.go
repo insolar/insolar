@@ -117,6 +117,7 @@ type LoggerBuilder struct {
 	bareOutput  io.Writer
 	hasTemplate bool
 	level       insolar.LogLevel
+	fields      map[string]interface{}
 	Config
 }
 
@@ -194,6 +195,24 @@ func (z LoggerBuilder) WithSkipFrameCount(skipFrameCount int) insolar.LoggerBuil
 	return z
 }
 
+func (z LoggerBuilder) WithFields(fields map[string]interface{}) insolar.LoggerBuilder {
+	if z.fields == nil {
+		z.fields = make(map[string]interface{}, len(fields))
+	}
+	for k, v := range fields {
+		z.fields[k] = v
+	}
+	return z
+}
+
+func (z LoggerBuilder) WithField(k string, v interface{}) insolar.LoggerBuilder {
+	if z.fields == nil {
+		z.fields = make(map[string]interface{})
+	}
+	z.fields[k] = v
+	return z
+}
+
 func (z LoggerBuilder) Build() (insolar.Logger, error) {
 	return z.build(false)
 }
@@ -248,10 +267,19 @@ func (z LoggerBuilder) build(needsLowLatency bool) (insolar.Logger, error) {
 
 	z.Config.Metrics = metrics
 	z.Config.LoggerOutput = output
+
+	var logger insolar.Logger
+	var err error
 	if needsLowLatency {
-		return z.factory.CreateNewLowLatencyLogger(z.level, z.Config)
+		logger, err = z.factory.CreateNewLowLatencyLogger(z.level, z.Config)
+	} else {
+		logger, err = z.factory.CreateNewLogger(z.level, z.Config)
 	}
-	return z.factory.CreateNewLogger(z.level, z.Config)
+
+	if len(z.fields) > 0 && logger != nil && err == nil {
+		logger = logger.WithFields(z.fields)
+	}
+	return logger, err
 }
 
 func (z LoggerBuilder) prepareOutput(metrics *logmetrics.MetricsHelper, needsLowLatency bool) (insolar.LoggerOutput, error) {

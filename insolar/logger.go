@@ -145,6 +145,11 @@ type LoggerBuilder interface {
 	//Sets an custom recorder for metric collection.
 	WithMetricsRecorder(recorder LogMetricsRecorder) LoggerBuilder
 
+	// WithFields adds fields for to-be-built logger.
+	WithFields(map[string]interface{}) LoggerBuilder
+	// WithField add a fields for to-be-built logger.
+	WithField(string, interface{}) LoggerBuilder
+
 	// Creates a logger.
 	Build() (Logger, error)
 	// Creates a logger with no write delays.
