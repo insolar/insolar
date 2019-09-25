@@ -66,9 +66,9 @@ func TestCleaner_cleanPulse(t *testing.T) {
 	}, nil)
 
 	fc := NewFilamentCleanerMock(ctrl)
-	fc.ClearMock.Expect(objID)
+	fc.ClearIfLongerMock.Expect(objID, 0)
 
-	cleaner := NewCleaner(jm, nm, dc, rc, ic, ps, nil, ia, fc, 0, 0)
+	cleaner := NewCleaner(jm, nm, dc, rc, ic, ps, nil, ia, fc, 0, 0, 100)
 
 	cleaner.cleanPulse(ctx, inputPulse.PulseNumber)
 
@@ -129,9 +129,9 @@ func TestCleaner_clean(t *testing.T) {
 		}, nil
 	})
 	fc := NewFilamentCleanerMock(ctrl)
-	fc.ClearMock.Expect(objID)
+	fc.ClearIfLongerMock.Expect(objID, 0)
 
-	cleaner := NewCleaner(jm, nm, dc, rc, ic, ps, pc, ia, fc, limit, 1)
+	cleaner := NewCleaner(jm, nm, dc, rc, ic, ps, pc, ia, fc, limit, 1, 100)
 	defer close(cleaner.pulseForClean)
 
 	go cleaner.clean(ctx)
@@ -187,9 +187,9 @@ func TestLightCleaner_NotifyAboutPulse(t *testing.T) {
 		}, nil
 	})
 	fc := NewFilamentCleanerMock(ctrl)
-	fc.ClearMock.Expect(objID)
+	fc.ClearIfLongerMock.Expect(objID, 0)
 
-	cleaner := NewCleaner(jm, nm, dc, rc, ic, ps, pc, ia, fc, limit, 1)
+	cleaner := NewCleaner(jm, nm, dc, rc, ic, ps, pc, ia, fc, limit, 1, 100)
 	defer close(cleaner.pulseForClean)
 
 	go cleaner.NotifyAboutPulse(ctx, inputPulse.PulseNumber)

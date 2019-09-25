@@ -56,6 +56,9 @@ type Ledger struct {
 
 	// MaxNotificationsPerPulse holds the limit for abandoned requests notifications limit
 	MaxNotificationsPerPulse uint
+
+	// FilamentCacheLimit holds the limit for cache items for an object
+	FilamentCacheLimit int
 }
 
 // Backup holds configuration for backuping.
@@ -128,7 +131,8 @@ func NewLedger() Ledger {
 			LastBackupInfoFile: dataDir + "/last_backup_info.json",
 		},
 
-		CleanerDelay:             3,   // 3 pulses
-		MaxNotificationsPerPulse: 100, // 100 objects
+		CleanerDelay:             3,    // 3 pulses
+		MaxNotificationsPerPulse: 100,  // 100 objects
+		FilamentCacheLimit:       3000, // 3000 records for every object
 	}
 }
