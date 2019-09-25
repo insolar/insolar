@@ -39,7 +39,7 @@ const (
 	InvalidParamsError         = -31602
 	InvalidParamsErrorMessage  = "Invalid method parameter(s)."
 	InternalError              = -31603
-	InternalErrorMessage       = "Internal platform error."
+	InternalErrorMessage       = "Internal Platform error."
 	TimeoutError               = -31106
 	TimeoutErrorMessage        = "Request's timeout has expired."
 	UnauthorizedError          = -31401
