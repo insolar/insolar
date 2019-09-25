@@ -56,6 +56,7 @@ import (
 	"net"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/pkg/errors"
@@ -165,7 +166,7 @@ func (d *distributor) Distribute(ctx context.Context, pulse insolar.Pulse) {
 	wg := sync.WaitGroup{}
 	wg.Add(len(d.bootstrapHosts))
 
-	distributed := 0
+	distributed := int32(0)
 	for _, nodeAddr := range d.bootstrapHosts {
 		go func(ctx context.Context, pulse insolar.Pulse, nodeAddr string) {
 			defer wg.Done()
@@ -183,7 +184,7 @@ func (d *distributor) Distribute(ctx context.Context, pulse insolar.Pulse) {
 				return
 			}
 
-			distributed++
+			atomic.AddInt32(&distributed, 1)
 			logger.Infof("Successfully sent pulse %d to node %s", pulse.PulseNumber, nodeAddr)
 		}(ctx, pulse, nodeAddr)
 	}
