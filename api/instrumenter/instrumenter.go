@@ -55,6 +55,7 @@ func NewMethodInstrument(methodName string) (context.Context, *MethodInstrumente
 		startTime:  time.Now(),
 		methodName: methodName,
 		span:       span,
+		traceID:    traceID,
 	}
 	ctx = context.WithValue(ctx, methodInstrumenterKey{}, instrumenter)
 

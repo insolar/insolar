@@ -45,7 +45,7 @@ const (
 	InvalidParamsErrorMessage  = "Invalid method parameter(s)."
 	InternalError              = -31603
 	InternalErrorShort         = "Internal"
-	InternalErrorMessage       = "Internal JSON RPC error."
+	InternalErrorMessage       = "Internal Platform error."
 	TimeoutError               = -31106
 	TimeoutErrorShort          = "Timeout"
 	TimeoutErrorMessage        = "Request's timeout has expired."
