@@ -111,7 +111,7 @@ func (p *FatalHelper) LockFatal() {
 	if p.unlockPostFatal {
 		return
 	}
-	select {}
+	select {} // lock it down forever
 }
 
 func (p *FatalHelper) PostFatalWrite(_ insolar.LogLevel, b []byte) (int, error) {
