@@ -39,15 +39,14 @@ type ParsedLogConfig struct {
 
 const defaultLowLatencyBufferSize = 100
 
-func DefaultLogConfig() ParsedLogConfig {
+func DefaultLoggerSettings() ParsedLogConfig {
 	r := ParsedLogConfig{}
-	r.Instruments.MetricsMode = insolar.LogMetricsEventCount
-	//r.Output.EnableFairness = true
+	r.Instruments.MetricsMode = insolar.LogMetricsEventCount | insolar.LogMetricsWriteDelayReport | insolar.LogMetricsWriteDelayField
 	return r
 }
 
 func ParseLogConfig(cfg configuration.Log) (plc ParsedLogConfig, err error) {
-	return ParseLogConfigWithDefaults(cfg, DefaultLogConfig())
+	return ParseLogConfigWithDefaults(cfg, DefaultLoggerSettings())
 }
 
 func ParseLogConfigWithDefaults(cfg configuration.Log, defaults ParsedLogConfig) (plc ParsedLogConfig, err error) {

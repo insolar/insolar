@@ -259,13 +259,21 @@ func TestLog_WriteDuration(t *testing.T) {
 			require.NotNil(t, logger)
 
 			var buf bytes.Buffer
-			logger, err = logger.Copy().WithOutput(&buf).WithMetrics(insolar.LogMetricsWriteDelayField).Build()
+			logger, err = logger.Copy().WithOutput(&buf).WithMetrics(insolar.LogMetricsResetMode).Build()
+			require.NoError(t, err)
+
+			logger2, err := logger.Copy().WithMetrics(insolar.LogMetricsWriteDelayField).Build()
+			require.NoError(t, err)
+
+			logger3, err := logger.Copy().WithMetrics(insolar.LogMetricsResetMode).Build()
 			require.NoError(t, err)
 
 			logger.Error("test")
-
-			s := buf.String()
-			assert.Contains(t, s, `,"writeDuration":"`)
+			assert.NotContains(t, buf.String(), `,"writeDuration":"`)
+			logger3.Error("test")
+			assert.NotContains(t, buf.String(), `,"writeDuration":"`)
+			logger2.Error("test2")
+			assert.Contains(t, buf.String(), `,"writeDuration":"`)
 		})
 	}
 }

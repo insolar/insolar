@@ -49,7 +49,7 @@ type OutputConfig struct {
 	EnableRegularBuffer bool
 }
 
-func (v OutputConfig) CanBeReusedAs(config OutputConfig) bool {
+func (v OutputConfig) CanReuseOutputFor(config OutputConfig) bool {
 	return v.Format == config.Format &&
 		(v.BufferSize > 0 || config.BufferSize <= 0)
 }
@@ -60,6 +60,19 @@ type InstrumentationConfig struct {
 	CallerMode             insolar.CallerFieldMode
 	SkipFrameCountBaseline uint8
 	SkipFrameCount         int8
+}
+
+const writeDelayFieldFlags = insolar.LogMetricsWriteDelayReport | insolar.LogMetricsWriteDelayField
+
+func (v InstrumentationConfig) CanReuseOutputFor(config InstrumentationConfig) bool {
+	vTWD := v.MetricsMode&writeDelayFieldFlags != 0
+	cTWD := config.MetricsMode&writeDelayFieldFlags != 0
+
+	if v.Recorder != config.Recorder {
+		return !cTWD && !vTWD
+	}
+
+	return vTWD == cTWD || vTWD && !cTWD
 }
 
 type Factory interface {
@@ -211,7 +224,10 @@ func (z LoggerBuilder) build(needsLowLatency bool) (insolar.Logger, error) {
 			output = lo
 			break
 		}
-		if z.bareOutput == origConfig.LoggerOutput.GetBareOutput() && origConfig.Output.CanBeReusedAs(z.Output) {
+		if z.bareOutput == origConfig.LoggerOutput.GetBareOutput() &&
+			origConfig.Output.CanReuseOutputFor(z.Output) &&
+			origConfig.Instruments.CanReuseOutputFor(z.Instruments) {
+
 			output = origConfig.LoggerOutput
 			break
 		}
