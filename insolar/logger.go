@@ -269,10 +269,14 @@ type LogMetricsMode uint8
 
 const NoLogMetrics LogMetricsMode = 0
 const (
+	// Logger will report every event to metrics
 	LogMetricsEventCount LogMetricsMode = 1 << iota
+	// Logger will report to metrics a write duration (time since an event was created till it was directed to the output)
 	LogMetricsWriteDelayReport
+	// Logger will add a write duration field into to the output
 	LogMetricsWriteDelayField
-	LogMetricsReset
+	// No effect on logger. Indicates that WithMetrics should replace the mode, instead of adding it.
+	LogMetricsResetMode
 )
 
 type LoggerBuilder interface {
@@ -292,12 +296,10 @@ type LoggerBuilder interface {
 	WithFormat(format LogFormat) LoggerBuilder
 	// Controls 'func' and 'caller' field computation.
 	WithCaller(mode CallerFieldMode) LoggerBuilder
-	// Controls collection of metrics.
+	// Controls collection of metrics. Required flags are ADDED to the current flags. Include specify LogMetricsResetMode to replace flags.
 	WithMetrics(mode LogMetricsMode) LoggerBuilder
-	//Sets a recorder for metric collection
-	//WithMetricsRecorder(recorder LogMetricsRecorder) LoggerBuilder
-
-	//WithMsgFormat
+	//Sets an custom recorder for metric collection.
+	WithMetricsRecorder(recorder LogMetricsRecorder) LoggerBuilder
 
 	// WithSkipFrameCount changes skipFrameCount to the absolute value. But the value can be negative, and it is applied to a baseline. Value exceeding int8 will panic
 	WithSkipFrameCount(skipFrameCount int) LoggerBuilder
