@@ -165,6 +165,30 @@ func NewZerologAdapter(pCfg logadapter.ParsedLogConfig, msgFmt logadapter.MsgFor
 	return zb.Build()
 }
 
+/* ============================ */
+
+type zerologMarshaller struct {
+	event *zerolog.Event
+}
+
+func (m zerologMarshaller) AddStructFields(s interface{}) {
+	panic("implement me")
+}
+
+func (m zerologMarshaller) AddFieldMap(fields map[string]interface{}) {
+	m.event.Fields(fields)
+}
+
+func (m zerologMarshaller) AddField(key string, v interface{}) {
+	m.event.Interface(key, v)
+}
+
+func (m zerologMarshaller) AddRawJSON(key string, b []byte) {
+	m.event.RawJSON(key, b)
+}
+
+/* ============================ */
+
 var _ insolar.Logger = &zerologAdapter{}
 
 type zerologAdapter struct {
@@ -203,26 +227,6 @@ func (z *zerologAdapter) newEvent(level insolar.LogLevel) *zerolog.Event {
 	}
 	z.config.Metrics.OnFilteredEvent(m.metrics, level)
 	return event
-}
-
-type zerologMarshaller struct {
-	event *zerolog.Event
-}
-
-func (m zerologMarshaller) AddStructFields(s interface{}) {
-	panic("implement me")
-}
-
-func (m zerologMarshaller) AddFieldMap(fields map[string]interface{}) {
-	m.event.Fields(fields)
-}
-
-func (m zerologMarshaller) AddField(key string, v interface{}) {
-	m.event.Interface(key, v)
-}
-
-func (m zerologMarshaller) AddRawJSON(key string, b []byte) {
-	m.event.RawJSON(key, b)
 }
 
 func (z *zerologAdapter) EmbeddedEvent(level insolar.LogLevel, args ...interface{}) {

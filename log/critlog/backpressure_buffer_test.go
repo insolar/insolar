@@ -117,8 +117,8 @@ func testBackpressureBufferLimit(t *testing.T, parWriters, bufSize int, startWor
 	}
 
 	for i := 0; i <= 9; i++ {
-		if parWriters == int(atomic.LoadUint32(&cw.total)) && len(bb.buffer) == bufSize &&
-			parWriters == int(atomic.LoadUint32(&cw.parallel)) {
+		if parWriters == int(atomic.LoadUint32(&cw.parallel)) && len(bb.buffer) == bufSize &&
+			parWriters == int(atomic.LoadUint32(&bb.pendingWrites)) {
 			break
 		}
 		time.Sleep(time.Duration(i+1) * 5 * time.Millisecond)
