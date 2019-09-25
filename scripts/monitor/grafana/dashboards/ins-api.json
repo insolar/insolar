@@ -15,7 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1569409528444,
+  "iteration": 1569423009177,
   "links": [],
   "panels": [
     {
@@ -166,7 +166,7 @@
       ],
       "repeat": null,
       "repeatDirection": "h",
-      "repeatIteration": 1569409528444,
+      "repeatIteration": 1569423009177,
       "repeatPanelId": 34,
       "scopedVars": {
         "instance": {
@@ -261,7 +261,7 @@
       ],
       "repeat": null,
       "repeatDirection": "h",
-      "repeatIteration": 1569409528444,
+      "repeatIteration": 1569423009177,
       "repeatPanelId": 34,
       "scopedVars": {
         "instance": {
@@ -355,7 +355,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(insolar_api_time_count{installation=~\"$installation\", instance=~\"$instance\", method=\"ContractService.call\"}[1m])) by (subMethod)",
+          "expr": "sum(rate(insolar_api_time_count{installation=\"$installation\", instance=~\"$instance\", method=\"ContractService.call\"}[1m])) by (subMethod)",
           "instant": false,
           "intervalFactor": 1,
           "legendFormat": "{{ subMethod }}",
@@ -442,7 +442,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(insolar_api_time_count{installation=~\"$installation\", instance=~\"$instance\", method=\"AdminContractService.call\"}[1m])) by (subMethod)",
+          "expr": "sum(rate(insolar_api_time_count{installation=\"$installation\", instance=~\"$instance\", method=\"AdminContractService.call\"}[1m])) by (subMethod)",
           "legendFormat": "{{ subMethod }}",
           "refId": "A"
         }
@@ -530,7 +530,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(insolar_api_time_count{installation=~\"$installation\", instance=~\"$instance\", method!=\"ContractService.call\",method!=\"AdminContractService.call\"}[1m])) by (method)",
+          "expr": "sum(rate(insolar_api_time_count{installation=\"$installation\", instance=~\"$instance\", method!=\"ContractService.call\",method!=\"AdminContractService.call\"}[1m])) by (method)",
           "legendFormat": "{{ method }}",
           "refId": "A"
         }
@@ -615,17 +615,17 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(insolar_api_time_count{installation=~\"$installation\", instance=~\"$instance\", method=\"ContractService.call\", error!=\"\"}[1m]))",
+          "expr": "sum(rate(insolar_api_time_count{installation=\"$installation\", instance=~\"$instance\", method=\"ContractService.call\", error!=\"\"}[1m]))",
           "legendFormat": "\"ContractService\" error rate",
           "refId": "A"
         },
         {
-          "expr": "sum(rate(insolar_api_time_count{installation=~\"$installation\", instance=~\"$instance\", method=\"AdminContractService.call\", error!=\"\"}[1m]))",
+          "expr": "sum(rate(insolar_api_time_count{installation=\"$installation\", instance=~\"$instance\", method=\"AdminContractService.call\", error!=\"\"}[1m]))",
           "legendFormat": "\"AdminContractService\" error rate",
           "refId": "B"
         },
         {
-          "expr": "sum(rate(insolar_api_time_count{installation=~\"$installation\", instance=~\"$instance\", method!=\"ContractService.call\", method!=\"AdminContractService.call\", error!=\"\"}[1m]))",
+          "expr": "sum(rate(insolar_api_time_count{installation=\"$installation\", instance=~\"$instance\", method!=\"ContractService.call\", method!=\"AdminContractService.call\", error!=\"\"}[1m]))",
           "legendFormat": "\"Other\" error rate",
           "refId": "C"
         }
@@ -714,7 +714,7 @@
       "reverseYBuckets": false,
       "targets": [
         {
-          "expr": "sum(increase(insolar_api_time_bucket{installation=~\"$installation\", instance=~\"$instance\", method=\"ContractService.call\", subMethod=\"member.create\"}[1m])) by (le)",
+          "expr": "sum(increase(insolar_api_time_bucket{installation=\"$installation\", instance=~\"$instance\", method=\"ContractService.call\", subMethod=\"member.create\"}[1m])) by (le)",
           "format": "heatmap",
           "hide": false,
           "instant": false,
@@ -778,7 +778,7 @@
       "reverseYBuckets": false,
       "targets": [
         {
-          "expr": "sum(increase(insolar_api_time_bucket{installation=~\"$installation\", instance=~\"$instance\", method=\"ContractService.call\", subMethod=\"member.get\"}[1m])) by (le)",
+          "expr": "sum(increase(insolar_api_time_bucket{installation=\"$installation\", instance=~\"$instance\", method=\"ContractService.call\", subMethod=\"member.get\"}[1m])) by (le)",
           "format": "heatmap",
           "hide": false,
           "instant": false,
@@ -906,7 +906,7 @@
       "reverseYBuckets": false,
       "targets": [
         {
-          "expr": "sum(increase(insolar_api_time_bucket{installation=~\"$installation\", instance=~\"$instance\", method=\"ContractService.call\", subMethod=\"member.migrationCreate\"}[1m])) by (le)",
+          "expr": "sum(increase(insolar_api_time_bucket{installation=\"$installation\", instance=~\"$instance\", method=\"ContractService.call\", subMethod=\"member.migrationCreate\"}[1m])) by (le)",
           "format": "heatmap",
           "hide": false,
           "instant": false,
@@ -970,7 +970,7 @@
       "reverseYBuckets": false,
       "targets": [
         {
-          "expr": "sum(increase(insolar_api_time_bucket{installation=~\"$installation\", instance=~\"$instance\", method=\"ContractService.call\", subMethod=\"deposit.transfer\"}[1m])) by (le)",
+          "expr": "sum(increase(insolar_api_time_bucket{installation=\"$installation\", instance=~\"$instance\", method=\"ContractService.call\", subMethod=\"deposit.transfer\"}[1m])) by (le)",
           "format": "heatmap",
           "hide": false,
           "instant": false,
@@ -1044,7 +1044,7 @@
           "reverseYBuckets": false,
           "targets": [
             {
-              "expr": "sum(increase(insolar_api_time_bucket{installation=~\"$installation\", instance=~\"$instance\", method=\"AdminContractService.call\", subMethod=\"migration.getInfo\"}[1m])) by (le)",
+              "expr": "sum(increase(insolar_api_time_bucket{installation=\"$installation\", instance=~\"$instance\", method=\"AdminContractService.call\", subMethod=\"migration.getInfo\"}[1m])) by (le)",
               "format": "heatmap",
               "hide": false,
               "instant": false,
@@ -1108,7 +1108,7 @@
           "reverseYBuckets": false,
           "targets": [
             {
-              "expr": "sum(increase(insolar_api_time_bucket{installation=~\"$installation\", instance=~\"$instance\", method=\"ContractService.call\", subMethod=\"migration.deactivateDaemon\"}[1m])) by (le)",
+              "expr": "sum(increase(insolar_api_time_bucket{installation=\"$installation\", instance=~\"$instance\", method=\"ContractService.call\", subMethod=\"migration.deactivateDaemon\"}[1m])) by (le)",
               "format": "heatmap",
               "hide": false,
               "instant": false,
@@ -1172,7 +1172,7 @@
           "reverseYBuckets": false,
           "targets": [
             {
-              "expr": "sum(increase(insolar_api_time_bucket{installation=~\"$installation\", instance=~\"$instance\", method=\"AdminContractService.call\", subMethod=\"migration.activateDaemon\"}[1m])) by (le)",
+              "expr": "sum(increase(insolar_api_time_bucket{installation=\"$installation\", instance=~\"$instance\", method=\"AdminContractService.call\", subMethod=\"migration.activateDaemon\"}[1m])) by (le)",
               "format": "heatmap",
               "hide": false,
               "instant": false,
@@ -1236,7 +1236,7 @@
           "reverseYBuckets": false,
           "targets": [
             {
-              "expr": "sum(increase(insolar_api_time_bucket{installation=~\"$installation\", instance=~\"$instance\", method=\"AdminContractService.call\", subMethod=\"migration.checkDaemon\"}[1m])) by (le)",
+              "expr": "sum(increase(insolar_api_time_bucket{installation=\"$installation\", instance=~\"$instance\", method=\"AdminContractService.call\", subMethod=\"migration.checkDaemon\"}[1m])) by (le)",
               "format": "heatmap",
               "hide": false,
               "instant": false,
@@ -1300,7 +1300,7 @@
           "reverseYBuckets": false,
           "targets": [
             {
-              "expr": "sum(increase(insolar_api_time_bucket{installation=~\"$installation\", instance=~\"$instance\", method=\"AdminContractService.call\", subMethod=\"migration.addAddresses\"}[1m])) by (le)",
+              "expr": "sum(increase(insolar_api_time_bucket{installation=\"$installation\", instance=~\"$instance\", method=\"AdminContractService.call\", subMethod=\"migration.addAddresses\"}[1m])) by (le)",
               "format": "heatmap",
               "hide": false,
               "instant": false,
@@ -1364,7 +1364,7 @@
           "reverseYBuckets": false,
           "targets": [
             {
-              "expr": "sum(increase(insolar_api_time_bucket{installation=~\"$installation\", instance=~\"$instance\", method=\"AdminContractService.call\", subMethod=\"deposit.migration\"}[1m])) by (le)",
+              "expr": "sum(increase(insolar_api_time_bucket{installation=\"$installation\", instance=~\"$instance\", method=\"AdminContractService.call\", subMethod=\"deposit.migration\"}[1m])) by (le)",
               "format": "heatmap",
               "hide": false,
               "instant": false,
@@ -1428,7 +1428,7 @@
           "reverseYBuckets": false,
           "targets": [
             {
-              "expr": "sum(increase(insolar_api_time_bucket{installation=~\"$installation\", instance=~\"$instance\", method=\"AdminContractService.call\", subMethod=\"member.getBalance\"}[1m])) by (le)",
+              "expr": "sum(increase(insolar_api_time_bucket{installation=\"$installation\", instance=~\"$instance\", method=\"AdminContractService.call\", subMethod=\"member.getBalance\"}[1m])) by (le)",
               "format": "heatmap",
               "hide": false,
               "instant": false,
@@ -1492,7 +1492,7 @@
           "reverseYBuckets": false,
           "targets": [
             {
-              "expr": "sum(increase(insolar_api_time_bucket{installation=~\"$installation\", instance=~\"$instance\", method=\"AdminContractService.call\", subMethod=\"contract.registerNode\"}[1m])) by (le)",
+              "expr": "sum(increase(insolar_api_time_bucket{installation=\"$installation\", instance=~\"$instance\", method=\"AdminContractService.call\", subMethod=\"contract.registerNode\"}[1m])) by (le)",
               "format": "heatmap",
               "hide": false,
               "instant": false,
@@ -1556,7 +1556,7 @@
           "reverseYBuckets": false,
           "targets": [
             {
-              "expr": "sum(increase(insolar_api_time_bucket{installation=~\"$installation\", instance=~\"$instance\", method=\"AdminContractService.call\", subMethod=\"contract.getNodeRef\"}[1m])) by (le)",
+              "expr": "sum(increase(insolar_api_time_bucket{installation=\"$installation\", instance=~\"$instance\", method=\"AdminContractService.call\", subMethod=\"contract.getNodeRef\"}[1m])) by (le)",
               "format": "heatmap",
               "hide": false,
               "instant": false,
@@ -1634,7 +1634,7 @@
           "reverseYBuckets": false,
           "targets": [
             {
-              "expr": "sum(increase(insolar_api_time_bucket{installation=~\"$installation\", instance=~\"$instance\", method=\"NodeService.getSeed\"}[1m])) by (le)",
+              "expr": "sum(increase(insolar_api_time_bucket{installation=\"$installation\", instance=~\"$instance\", method=\"NodeService.getSeed\"}[1m])) by (le)",
               "format": "heatmap",
               "hide": false,
               "instant": false,
@@ -1698,7 +1698,7 @@
           "reverseYBuckets": false,
           "targets": [
             {
-              "expr": "sum(increase(insolar_api_time_bucket{installation=~\"$installation\", instance=~\"$instance\", method=\"NodeCertService.get\"}[1m])) by (le)",
+              "expr": "sum(increase(insolar_api_time_bucket{installation=\"$installation\", instance=~\"$instance\", method=\"NodeCertService.get\"}[1m])) by (le)",
               "format": "heatmap",
               "hide": false,
               "instant": false,
@@ -1762,7 +1762,7 @@
           "reverseYBuckets": false,
           "targets": [
             {
-              "expr": "sum(increase(insolar_api_time_bucket{installation=~\"$installation\", instance=~\"$instance\", method=\"InfoService.getInfo\"}[1m])) by (le)",
+              "expr": "sum(increase(insolar_api_time_bucket{installation=\"$installation\", instance=~\"$instance\", method=\"InfoService.getInfo\"}[1m])) by (le)",
               "format": "heatmap",
               "hide": false,
               "instant": false,
@@ -1801,7 +1801,7 @@
       "type": "row"
     }
   ],
-  "refresh": "5s",
+  "refresh": "10s",
   "schemaVersion": 19,
   "style": "dark",
   "tags": [
@@ -1812,13 +1812,13 @@
       {
         "allValue": null,
         "current": {
-          "text": "All",
-          "value": "$__all"
+          "text": "local",
+          "value": "local"
         },
         "datasource": "prometheus",
         "definition": "label_values(insolar_api_incoming, installation)",
         "hide": 0,
-        "includeAll": true,
+        "includeAll": false,
         "label": null,
         "multi": false,
         "name": "installation",
@@ -1835,7 +1835,7 @@
         "useTags": false
       },
       {
-        "allValue": null,
+        "allValue": ".*",
         "current": {
           "text": "All",
           "value": "$__all"
@@ -1862,7 +1862,7 @@
     ]
   },
   "time": {
-    "from": "now-30m",
+    "from": "now-15m",
     "to": "now"
   },
   "timepicker": {
