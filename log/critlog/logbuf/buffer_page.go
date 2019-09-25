@@ -134,7 +134,14 @@ func (b *BufferPage) stopAccess() {
 }
 
 func (b *BufferPage) startExclusiveAccess() bool {
-	return atomic.CompareAndSwapUint32(&b.active, 0, math.MaxUint32)
+	for {
+		if atomic.CompareAndSwapUint32(&b.active, 0, math.MaxUint32) {
+			return true
+		}
+		if atomic.LoadUint32(&b.active) == math.MaxUint32 {
+			panic("illegal state")
+		}
+	}
 }
 
 func (b *BufferPage) stopExclusiveAccess() {

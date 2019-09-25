@@ -46,7 +46,7 @@ type OutputConfig struct {
 	Format          insolar.LogFormat
 
 	// allow buffer for regular events
-	EnableBuffer bool
+	EnableRegularBuffer bool
 }
 
 func (v OutputConfig) CanBeReusedAs(config OutputConfig) bool {
@@ -235,10 +235,16 @@ func (z LoggerBuilder) prepareOutput(metrics *logmetrics.MetricsHelper, needsLow
 		return nil, err
 	}
 
+	if z.Config.Output.ParallelWriters > 0 && z.Config.Output.ParallelWriters*2 < z.Config.Output.BufferSize {
+		// to limit write parallelism - buffer must be active
+		return nil, errors.New("write parallelism limiter requires BufferSize >= ParallelWriters*2 ")
+	}
+
 	if z.Config.Output.BufferSize > 0 {
+
 		flags := critlog.BufferWriteDelayFairness | critlog.BufferTrackWriteDuration
 
-		if z.Config.Output.BufferSize > 100 {
+		if z.Config.Output.BufferSize > 1000 {
 			flags |= critlog.BufferDropOnFatal
 		}
 
@@ -249,22 +255,20 @@ func (z LoggerBuilder) prepareOutput(metrics *logmetrics.MetricsHelper, needsLow
 		pw := uint8(insolar.DefaultOutputParallelLimit)
 		if z.Config.Output.ParallelWriters > 0 && z.Config.Output.ParallelWriters <= math.MaxInt8 {
 			pw = uint8(z.Config.Output.ParallelWriters)
-		}
-
-		if !z.Config.Output.EnableBuffer {
-			flags |= critlog.BufferDirectForRegular
+		} else if !z.Config.Output.EnableRegularBuffer {
+			flags |= critlog.BufferBypassForRegular
 		}
 
 		missedFn := z.loggerMissedEvent(insolar.WarnLevel)
 
-		bpb := critlog.NewBackpressureBuffer(output,
-			z.Config.Output.BufferSize, 0, pw, flags, missedFn)
+		bpb := critlog.NewBackpressureBuffer(output, z.Config.Output.BufferSize, 0, pw, flags, missedFn)
 		bpb.StartWorker(context.Background())
+
 		return bpb, nil
 	}
 
 	if needsLowLatency {
-		return nil, errors.New("low latency buffer is disabled but was required")
+		return nil, errors.New("low latency buffer was disabled but is required")
 	}
 	return critlog.NewFatalDirectWriter(output), nil
 }

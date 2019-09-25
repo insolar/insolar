@@ -14,11 +14,21 @@ import (
 type BackpressureBufferFlags uint8
 
 const (
+	// Buffer content will not be flushed on fatal, instead a "missing X" message will be added
 	BufferDropOnFatal BackpressureBufferFlags = 1 << iota
+	// Buffer may apply additional delay to writes done into a queue to equalize timings
+	// This mode requires either BufferTrackWriteDuration flag or use of SetAvgWriteDuration
+	// This flag has no effect when BufferBypassForRegular is set
 	BufferWriteDelayFairness
-	BufferDirectForRegular
+	// With this flags the buffer will update GetAvgWriteDuration with every regular write
 	BufferTrackWriteDuration
+	// Regular (not-lowLatency) writes will go directly to output, ignoring queue and parallel write limits
+	BufferBypassForRegular
+	// When a worker is started, but all links to BackpressureBuffer were lost, then the worker will be stopped.
+	// And with this flag present, the buffer (and its underlying) will also be closed.
 	BufferCloseOnStop
+	// USE WITH CAUTION! This flag enables to use argument of Write([]byte) outside of the call.
+	// This is AGAINST existing conventions and MUST ONLY be used when a writer's code is proprietary and never reuses the argument.
 	BufferReuse
 )
 
@@ -64,10 +74,10 @@ type internalBackpressureBuffer struct {
 
 	buffer chan bufEntry
 
-	writeSeq      uint32 // atomic
-	pendingWrites uint32 // atomic
-	missCount     uint32 // atomic
-	avgDelayNano  uint64 // atomic
+	writeSeq      uint32        // atomic
+	pendingWrites uint32        // atomic
+	missCount     uint32        // atomic
+	avgDelayNano  time.Duration // atomic
 
 	maxParWrites uint8
 	extraPenalty uint8
@@ -208,7 +218,7 @@ func (p *internalBackpressureBuffer) LogLevelWrite(level insolar.LogLevel, b []b
 		return n, err
 
 	default:
-		if p.flags&BufferDirectForRegular != 0 {
+		if p.flags&BufferBypassForRegular != 0 {
 			return p.flushWrite(level, b, startNano)
 		}
 		return p.checkWrite(level, b, startNano)
@@ -267,13 +277,16 @@ const (
 )
 
 func (p *internalBackpressureBuffer) fairQueueWrite(level insolar.LogLevel, b []byte, startNano int64) (int, error) {
+	waitNano := int64(p.GetAvgWriteDuration())
 	n, err := p.queueWrite(level, b, startNano)
-	if n > 0 && err == nil && startNano != 0 && p.flags&BufferWriteDelayFairness != 0 {
-		waitNano := int64(p.GetWriteDuration()) - (time.Now().UnixNano() - startNano)
+
+	if n > 0 && err == nil && startNano > 0 && p.flags&BufferWriteDelayFairness != 0 {
+		waitNano -= time.Now().UnixNano() - startNano
 		if waitNano > 0 {
 			time.Sleep(time.Duration(waitNano))
 		}
 	}
+
 	return n, err
 }
 
@@ -284,9 +297,10 @@ func (p *internalBackpressureBuffer) queueWrite(level insolar.LogLevel, b []byte
 
 func (p *internalBackpressureBuffer) directWrite(level insolar.LogLevel, b []byte, startNano int64) (int, error) {
 	n, err := p.output.DoLevelWrite(level, b)
+
 	if n > 0 && err == nil && startNano > 0 && p.flags&BufferTrackWriteDuration != 0 {
 		writeDuration := time.Now().UnixNano() - startNano
-		p.ApplyWriteDuration(time.Duration(writeDuration))
+		p.updateWriteDuration(time.Duration(writeDuration))
 	}
 	return n, err
 }
@@ -563,22 +577,29 @@ func (p *internalBackpressureBuffer) writeMissedCount(missedCount int) {
 	_, _ = p.output.DoLevelWrite(lvl, missMsg)
 }
 
-func (p *internalBackpressureBuffer) GetWriteDuration() time.Duration {
-	return time.Duration(atomic.LoadUint64(&p.avgDelayNano))
+func (p *internalBackpressureBuffer) GetAvgWriteDuration() time.Duration {
+	return time.Duration(atomic.LoadInt64((*int64)(&p.avgDelayNano)))
 }
 
-func (p *internalBackpressureBuffer) ApplyWriteDuration(d time.Duration) {
+func (p *internalBackpressureBuffer) SetAvgWriteDuration(d time.Duration) {
+	if d < 0 {
+		d = 0
+	}
+	atomic.StoreInt64((*int64)(&p.avgDelayNano), int64(d))
+}
+
+func (p *internalBackpressureBuffer) updateWriteDuration(d time.Duration) {
 	if d <= 0 {
 		return
 	}
 	for {
-		v := p.GetWriteDuration()
+		v := p.GetAvgWriteDuration()
 		vv := d
 		if v > 0 {
-			vv = (vv + v) >> 1
+			vv = (vv + 3*v) >> 2
 		}
 
-		if atomic.CompareAndSwapUint64(&p.avgDelayNano, uint64(v), uint64(vv)) {
+		if atomic.CompareAndSwapInt64((*int64)(&p.avgDelayNano), int64(v), int64(vv)) {
 			return
 		}
 	}

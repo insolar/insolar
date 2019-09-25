@@ -111,16 +111,22 @@ func (p *PagedBuffer) addPageWithExpected(replaced, newPage *BufferPage) bool {
 	if !p.buffer.pushExpected(replaced, newPage) {
 		return false
 	}
-	if p.trimHead {
-		atomic.StorePointer(&replaced.prev, unsafe.Pointer(newPage))
+	if replaced != nil {
+		if p.trimHead {
+			atomic.StorePointer(&replaced.prev, unsafe.Pointer(newPage))
+		}
+		replaced.stopAccess()
 	}
 	return true
 }
 
 func (p *PagedBuffer) addPage(newPage *BufferPage) {
 	replaced := p.buffer.push(newPage)
-	if p.trimHead {
-		atomic.StorePointer(&replaced.prev, unsafe.Pointer(newPage))
+	if replaced != nil {
+		if p.trimHead {
+			atomic.StorePointer(&replaced.prev, unsafe.Pointer(newPage))
+		}
+		replaced.stopAccess()
 	}
 }
 
@@ -140,6 +146,7 @@ func (p *PagedBuffer) createPage() *BufferPage {
 		if recycledPage.tryInitAccess() && uint32(len(recycledPage.data)) == p.defaultPageSize {
 			//recycledPages.bufferCleanupData = bufferCleanupData{}
 			recycledPage.next = nil
+			recycledPage.stopAccess()
 			return recycledPage
 		}
 	}
@@ -195,8 +202,8 @@ func (p *PagedBuffer) allocateBuffer(reqLen uint32) (*BufferPage, []byte) {
 			if buf != nil {
 				return current, buf
 			}
-			// we need more space than available in the page
-			current.stopAccess()
+
+			// we need more space than available in the page, but have to check limits and try to trim
 
 			if p.trimHead {
 				if current.next != nil && current.totalCapacity >= p.capacityLimit {
@@ -217,6 +224,7 @@ func (p *PagedBuffer) allocateBuffer(reqLen uint32) (*BufferPage, []byte) {
 
 		if newPage == nil {
 			newPage = p.createPage()
+			newPage.initAccess()
 		}
 		if p.addPageWithExpected(current, newPage) {
 			current = newPage

@@ -14,72 +14,60 @@
 //    limitations under the License.
 //
 
-// +build slowtest
-
-package critlog
+package logbuf
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/insolar/insolar/network/consensus/common/args"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"gonum.org/v1/gonum/stat"
 	"io"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
 	"testing"
 	"time"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"gonum.org/v1/gonum/stat"
-
-	"github.com/insolar/insolar/insolar"
 )
 
-func Test_BackpressureBuffer_Deviations(t *testing.T) {
+func Test_LongBuffer_Deviations(t *testing.T) {
+	//threads, iterations := 10, 1000
 
-	generateDelay := time.Microsecond
+	generateDelay := 0 * time.Microsecond
 	writeDelay := generateDelay * 2
 
-	threads, iterations := 10, 1000
-	t.Run(fmt.Sprintf("th=%d iter=%d buf=%d - bypass", threads, iterations, 0), func(t *testing.T) {
-		test_BackpressureBuffer_Deviations(t, threads, iterations, 0, 5, false, generateDelay, writeDelay)
-	})
+	//t.Run(fmt.Sprintf("th=%d iter=%d buf=%d - bypass", threads, iterations, 0), func(t *testing.T) {
+	//	deviations(t, threads, iterations, 0, 5, false, generateDelay, writeDelay)
+	//})
 
-	for _, threads := range []int{1, 10, 100, 1000} {
-		iterations := 5000 / threads
+	for _, threads := range []int{1, 10, 100, 1000, 10000} {
+		iterations := 1000000 / threads
 		if iterations > 1000 {
 			iterations = 1000
 		}
-		for _, bufSize := range []int{10, 100, 1000} {
-			for _, parWrites := range []int{1, 5, 10, 100} {
-				if parWrites > threads {
-					continue
-				}
-				t.Run(fmt.Sprintf("th=%d iter=%d buf=%d wr=%d m=unfair", threads, iterations, bufSize, parWrites), func(t *testing.T) {
-					test_BackpressureBuffer_Deviations(t, threads, iterations, bufSize, parWrites, false, generateDelay, writeDelay)
-				})
-				t.Run(fmt.Sprintf("th=%d iter=%d buf=%d wr=%d m=fair", threads, iterations, bufSize, parWrites), func(t *testing.T) {
-					test_BackpressureBuffer_Deviations(t, threads, iterations, bufSize, parWrites, true, generateDelay, writeDelay)
-				})
-			}
+		for _, bufSize := range []int{100000} {
+			t.Run(fmt.Sprintf("th=%d iter=%d buf=%d", threads, iterations, bufSize), func(t *testing.T) {
+				deviations(t, threads, iterations, bufSize, generateDelay, writeDelay)
+			})
 		}
 	}
 }
 
-func test_BackpressureBuffer_Deviations(t *testing.T, threads, iterations, bufSize, parWrites int, fair bool,
-	generateDelay, writeDelay time.Duration) {
+func deviations(t *testing.T, threads, iterations, bufSize int, generateDelay, writeDelay time.Duration) {
 
 	logStorage := NewConcurrentBuilder(threads*iterations+iterations, writeDelay)
-	logger := NewTestLogger(context.Background(), logStorage, uint8(parWrites), bufSize, fair)
+	logger := NewTestLogger(bufSize)
 
-	generateLogs(logger, threads, iterations, generateDelay)
+	genDuration := generateLogs(logger, threads, iterations, generateDelay)
 
-	err := logger.Close()
+	genDataSize, err := logger.WriteTo(logStorage)
 	require.NoError(t, err)
 	err = logStorage.Close()
-	require.EqualError(t, err, "writer is closed")
+	require.NoError(t, err)
+	//require.EqualError(t, err, "writer is closed")
 	for !logStorage.IsFlushed() {
 		time.Sleep(100 * time.Millisecond)
 	}
@@ -116,13 +104,15 @@ func test_BackpressureBuffer_Deviations(t *testing.T, threads, iterations, bufSi
 		ttlSum += d
 	}
 
+	genMessages := 0
 	for k, v := range distances {
 		if iterations != len(v)+1 {
 			assert.Equal(t, iterations, len(v)+1, "Incorrect number of log records in thread %d", k)
 		}
+		genMessages += len(v) + 1
 
-		mean, std := stat.MeanStdDev(v, nil)
-		_, _ = mean, std
+		//mean, std := stat.MeanStdDev(v, nil)
+		//_, _ = mean, std
 		// fmt.Printf("Thread %03d: mean = %8.2f ms %+6.2f%%, stddev = %8.2f ms %+6.2f%%\n", k,
 		// 	mean*1e3, 100*(mean-ttlMean)/ttlMean, std*1e3, 100*(std-ttlStd)/ttlStd)
 	}
@@ -130,12 +120,17 @@ func test_BackpressureBuffer_Deviations(t *testing.T, threads, iterations, bufSi
 	fmt.Printf("\tTotal: sum = %8.2f s, mean = %8.2f ms, stddev = %8.2f ms\n", ttlSum, ttlMean*1e3, ttlStd*1e3)
 	meanDisplace, stdDisplace := stat.MeanStdDev(displacements, nil)
 	fmt.Printf("\tDisplacements: total = %d, mean = %.2f (std = %.2f)\n", len(displacements), meanDisplace, stdDisplace)
+	fmt.Printf("\tGeneration: duration = %s, size = %.2f kB ( %.2f kB/s), messages = %d msg ( %.2f kMsg/s)\n",
+		args.DurationFixedLen(genDuration, 6), float64(genDataSize)/1024, float64(genDataSize)/genDuration.Seconds()/1024,
+		genMessages, float64(genMessages)/genDuration.Seconds()/1000)
 }
 
-func generateLogs(logger insolar.LoggerOutput, threads, iterations int, generateDelay time.Duration) {
+func generateLogs(logger io.Writer, threads, iterations int, generateDelay time.Duration) time.Duration {
+
 	var start, finish sync.WaitGroup
-	start.Add(threads)
+	start.Add(threads + 1)
 	finish.Add(threads)
+
 	for i := 0; i < threads; i++ {
 		threadID := i
 		go func() {
@@ -143,7 +138,7 @@ func generateLogs(logger insolar.LoggerOutput, threads, iterations int, generate
 			for j := 0; j < iterations; j++ {
 				msg := fmt.Sprintf(`{"message":"%d %d %d"}%s`, threadID, j, time.Now().UnixNano(), "\n")
 
-				_, _ = logger.LogLevelWrite(insolar.InfoLevel, []byte(msg))
+				_, _ = logger.Write([]byte(msg))
 				if generateDelay > 0 {
 					time.Sleep(generateDelay)
 				}
@@ -152,7 +147,10 @@ func generateLogs(logger insolar.LoggerOutput, threads, iterations int, generate
 		}()
 		start.Done()
 	}
+	startedAt := time.Now()
+	start.Done()
 	finish.Wait()
+	return time.Now().Sub(startedAt)
 }
 
 func parseOutput(o string) ([]logOutput, error) {
@@ -197,22 +195,18 @@ type logOutput struct {
 	Time              time.Time
 }
 
-func NewTestLogger(ctx context.Context, w io.Writer, parWrites uint8, bufSize int, fair bool) insolar.LoggerOutput {
-	if parWrites == 0 {
-		return NewFatalDirectWriter(w)
-	}
-	flags := BufferWriteDelayFairness | BufferTrackWriteDuration
-	if !fair {
-		flags = 0
-	}
-	if bufSize == 0 {
-		flags |= BufferBypassForRegular
-		bufSize = 100
-	}
+func NewTestLogger(bufSize int) *LevelBuffer {
 
-	bp := NewBackpressureBuffer(w, bufSize, 0, parWrites, flags, nil)
-	bp.StartWorker(ctx)
-	return bp
+	pb := NewJoiningLevelBuffer(
+		NewPlainBuffer(
+			NewPagedBufferTrimFromLatest(1024, bufSize*256),
+			runtime.Gosched,
+			func(missed uint32) {
+				panic("overflow")
+			}),
+		[]byte("     "))
+
+	return &pb
 }
 
 // ConcurrentBuilder is a simple thread safe io.Writer implementation based on strings.Builder.
