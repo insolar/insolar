@@ -390,7 +390,6 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 	return foundRequest, foundResult, nil
 }
 
-// todo: create test
 func (c *FilamentCalculatorDefault) RequestInfo(
 	ctx context.Context,
 	objectID insolar.ID,
@@ -423,12 +422,20 @@ func (c *FilamentCalculatorDefault) RequestInfo(
 	cache.Lock()
 	defer cache.Unlock()
 
+	// Select the min pulse to we can search for closed requests
+	var minPulse insolar.PulseNumber
+	if idx.Lifeline.EarliestOpenRequest != nil && *idx.Lifeline.EarliestOpenRequest <= requestID.GetPulseNumber() {
+		minPulse = *idx.Lifeline.EarliestOpenRequest
+	} else {
+		minPulse = requestID.GetPulseNumber()
+	}
+
 	iter := newFetchingIterator(
 		ctx,
 		cache,
 		objectID,
 		*idx.Lifeline.LatestRequest,
-		requestID.Pulse(),
+		minPulse,
 		c.jetFetcher,
 		c.coordinator,
 		c.sender,
@@ -438,19 +445,31 @@ func (c *FilamentCalculatorDefault) RequestInfo(
 	foundRequestInfo.OldestMutable = true
 	closedRequests := map[insolar.ID]struct{}{}
 
+	isMutableRequest := func(virtual record.Record) bool {
+		if in, ok := virtual.(*record.IncomingRequest); ok && !in.Immutable {
+			return true
+		}
+		return false
+	}
+
 	for iter.HasPrev() {
 		rec, err := iter.Prev(ctx)
 		if err != nil {
 			return FilamentsRequestInfo{}, errors.Wrap(err, "failed to calculate filament")
 		}
+		virtual := record.Unwrap(&rec.Record.Virtual)
 
 		if rec.RecordID == requestID {
 			foundRequestInfo.Request = &rec
 			logger.Debugf("found request %s", rec.RecordID.DebugString())
+			// if immutable found, we can don't need to search deeper
+			if !isMutableRequest(virtual) {
+				foundRequestInfo.OldestMutable = false
+				return foundRequestInfo, nil
+			}
 			continue
 		}
 
-		virtual := record.Unwrap(&rec.Record.Virtual)
 		if r, ok := virtual.(*record.Result); ok {
 			closedRequests[*r.Request.GetLocal()] = struct{}{}
 
@@ -459,16 +478,24 @@ func (c *FilamentCalculatorDefault) RequestInfo(
 				logger.Debugf("found result %s", rec.RecordID.DebugString())
 			}
 		}
+
 		// request found, check if we have another opened mutable incoming older than that
 		if foundRequestInfo.Request != nil {
 			if _, ok := closedRequests[rec.RecordID]; !ok {
-				if in, ok := virtual.(*record.IncomingRequest); ok && !in.Immutable {
+				if isMutableRequest(virtual) {
 					foundRequestInfo.OldestMutable = false
 					logger.Debugf("found oldest %s", rec.RecordID.DebugString())
 				}
 			}
 		}
+	}
 
+	if foundRequestInfo.Request == nil {
+		return FilamentsRequestInfo{},
+			&payload.CodedError{
+				Text: fmt.Sprintf("requestInfo not found request %s", requestID.DebugString()),
+				Code: payload.CodeRequestNotFound,
+			}
 	}
 
 	return foundRequestInfo, nil

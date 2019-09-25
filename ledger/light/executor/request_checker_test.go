@@ -18,6 +18,7 @@ package executor_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/ThreeDotsLabs/watermill/message"
@@ -203,9 +204,9 @@ func TestRequestCheckerDefault_CheckRequest(t *testing.T) {
 		sender.SendTargetMock.Set(func(_ context.Context, msg *message.Message, target insolar.Reference) (<-chan *message.Message, func()) {
 			ch := make(chan *message.Message, 1)
 			ch <- payload.MustNewMessage(&payload.Meta{
-				Payload: payload.MustMarshal(&payload.RequestInfo{
-					Request: nil,
-					Result:  nil,
+				Payload: payload.MustMarshal(&payload.Error{
+					Text: "not found",
+					Code: payload.CodeRequestNotFound,
 				}),
 			})
 			return ch, func() {}
@@ -215,7 +216,7 @@ func TestRequestCheckerDefault_CheckRequest(t *testing.T) {
 		require.Error(t, err)
 		insError, ok := errors.Cause(err).(*payload.CodedError)
 		require.True(t, ok)
-		require.Equal(t, uint32(payload.CodeReasonNotFound), insError.GetCode())
+		require.Equal(t, uint32(payload.CodeRequestNotFound), insError.GetCode())
 	})
 
 	t.Run("incoming local reason check is ok", func(t *testing.T) {
@@ -268,14 +269,17 @@ func TestRequestCheckerDefault_CheckRequest(t *testing.T) {
 			require.Equal(t, reasonRef.GetLocal(), &reqID)
 			require.Equal(t, requestID.Pulse(), pulse)
 
-			return executor.FilamentsRequestInfo{}, nil
+			return executor.FilamentsRequestInfo{}, &payload.CodedError{
+				Text: fmt.Sprintf("requestInfo not found request %s", requestID.DebugString()),
+				Code: payload.CodeRequestNotFound,
+			}
 		})
 
 		err := checker.CheckRequest(ctx, requestID, &req)
 		require.Error(t, err)
 		insError, ok := errors.Cause(err).(*payload.CodedError)
 		require.True(t, ok)
-		require.Equal(t, uint32(payload.CodeReasonNotFound), insError.GetCode())
+		require.Equal(t, uint32(payload.CodeRequestNotFound), insError.GetCode())
 	})
 
 	t.Run("incoming reason is closed for regular request", func(t *testing.T) {

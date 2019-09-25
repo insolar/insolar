@@ -98,12 +98,11 @@ func (p *SendRequestInfo) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "failed to get request info")
 	}
 
-	if foundReqInfo.Request != nil {
-		reqBuf, err = foundReqInfo.Request.Record.Marshal()
-		if err != nil {
-			return errors.Wrap(err, "failed to marshal request record")
-		}
+	reqBuf, err = foundReqInfo.Request.Record.Marshal()
+	if err != nil {
+		return errors.Wrap(err, "failed to marshal request record")
 	}
+
 	if foundReqInfo.Result != nil {
 		resBuf, err = foundReqInfo.Result.Record.Marshal()
 		if err != nil {

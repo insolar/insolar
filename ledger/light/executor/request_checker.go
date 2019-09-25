@@ -182,13 +182,6 @@ func (c *RequestCheckerDefault) checkReasonForIncomingRequest(
 		return errors.Wrap(err, "reason request search failed")
 	}
 
-	// Reason request not found in filaments
-	if reasonInfo.Request == nil {
-		return &payload.CodedError{
-			Text: "request reason not found",
-			Code: payload.CodeReasonNotFound,
-		}
-	}
 	material := record.Material{}
 	err = material.Unmarshal(reasonInfo.Request)
 	if err != nil {
@@ -277,7 +270,10 @@ func (c *RequestCheckerDefault) getRequest(
 		return concrete, nil
 	case *payload.Error:
 		inslogger.FromContext(ctx).Debug("SendTarget failed: ", reasonObjectID.DebugString(), currentPulse.String())
-		return nil, errors.New(concrete.Text)
+		return nil, &payload.CodedError{
+			Text: concrete.Text,
+			Code: concrete.Code,
+		}
 	default:
 		return nil, fmt.Errorf("unexpected reply %T", pl)
 	}
@@ -307,13 +303,11 @@ func (c *RequestCheckerDefault) getRequestLocal(
 
 	var reqInfo payload.RequestInfo
 
-	if foundReqInfo.Request != nil {
-		reqBuf, err = foundReqInfo.Request.Record.Marshal()
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to marshal local request record")
-		}
-		reqInfo.Request = reqBuf
+	reqBuf, err = foundReqInfo.Request.Record.Marshal()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to marshal local request record")
 	}
+	reqInfo.Request = reqBuf
 
 	if foundReqInfo.Result != nil {
 		resBuf, err = foundReqInfo.Result.Record.Marshal()
