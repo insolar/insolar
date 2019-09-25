@@ -21,15 +21,16 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+	"io"
+	"strings"
+	"time"
+
+	"github.com/rs/zerolog"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log/logadapter"
 	"github.com/insolar/insolar/log/logmetrics"
 	"github.com/insolar/insolar/network/consensus/common/args"
-	"github.com/rs/zerolog"
-	"io"
-	"runtime"
-	"strings"
-	"time"
 )
 
 const internalTempFieldName = "_TWD_"
@@ -117,9 +118,6 @@ type writeDelayPostHook struct {
 }
 
 func (h *writeDelayPostHook) Write(p []byte) (n int, err error) {
-	s := string(p)
-	runtime.KeepAlive(s)
-
 	var ofs int
 	searchLimit := len(h.searchBytes) + 64
 	if searchLimit >= len(p) {
@@ -138,8 +136,6 @@ func (h *writeDelayPostHook) Write(p []byte) (n int, err error) {
 			p = p[:len(p)-fieldEnd+newLen+ofs]
 		}
 	}
-	ss := string(p)
-	runtime.KeepAlive(ss)
 	return h.output.Write(p)
 }
 
