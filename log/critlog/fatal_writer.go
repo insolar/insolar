@@ -96,7 +96,7 @@ func (p *FatalDirectWriter) LogLevelWrite(level insolar.LogLevel, b []byte) (n i
 
 type FatalHelper struct {
 	state           uint32 // atomic
-	unlockPostFatal bool
+	unlockPostFatal bool   // for test usage
 }
 
 func (p *FatalHelper) SetFatal() bool {
