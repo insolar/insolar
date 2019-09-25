@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"runtime"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -102,10 +103,16 @@ func testBackpressureBufferLimit(t *testing.T, parWriters, bufSize int, startWor
 
 	producersCount := bufSize + parWriters*2 + 1
 
+	wgStarted := sync.WaitGroup{}
+	wgFinished := sync.WaitGroup{}
+	wgStarted.Add(producersCount)
+	wgFinished.Add(producersCount)
+
 	var producersDone uint32
 	for i := 0; i < producersCount; i++ {
 		msg := fmt.Sprintf("test msg %d\n", i)
 		go func() {
+			wgStarted.Done()
 			n, err := bb.Write([]byte(msg))
 
 			if n != len(msg) || err != nil {
@@ -113,8 +120,11 @@ func testBackpressureBufferLimit(t *testing.T, parWriters, bufSize int, startWor
 			}
 
 			atomic.AddUint32(&producersDone, 1)
+			wgFinished.Done()
 		}()
 	}
+
+	wgStarted.Wait()
 
 	for i := 0; i <= 9; i++ {
 		if parWriters == int(atomic.LoadUint32(&cw.parallel)) && len(bb.buffer) == bufSize &&
@@ -124,7 +134,7 @@ func testBackpressureBufferLimit(t *testing.T, parWriters, bufSize int, startWor
 		time.Sleep(time.Duration(i+1) * 5 * time.Millisecond)
 	}
 
-	require.Equal(t, parWriters, int(atomic.LoadUint32(&bb.pendingWrites)), "all write slots are occupied")
+	require.Equal(t, parWriters, int(atomic.LoadUint32(&bb.pendingWrites)), "not all write slots are occupied")
 	require.Equal(t, parWriters, int(atomic.LoadUint32(&cw.total)), "io.Writer is hit by exactly the number of write slots")
 	require.Equal(t, parWriters, int(atomic.LoadUint32(&cw.parallel)), "io.Writer is hit by exactly the number of write slots")
 	require.Equal(t, 0, int(atomic.LoadUint32(&bb.missCount)), "no misses")
@@ -179,6 +189,8 @@ func testBackpressureBufferLimit(t *testing.T, parWriters, bufSize int, startWor
 		}
 		time.Sleep(time.Duration(i+1) * 5 * time.Millisecond)
 	}
+
+	wgFinished.Wait()
 
 	require.Equal(t, producersCount, int(atomic.LoadUint32(&producersDone)), "all writers are done")
 	require.Equal(t, 0, len(bb.buffer), "buffer is flushed and no marks left")
