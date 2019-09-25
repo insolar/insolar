@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"github.com/insolar/rpc/v2/json2"
 	"net/http"
+	"strings"
 
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/insolar/utils"
@@ -55,18 +56,12 @@ func NewNodeService(runner *Runner) *NodeService {
 // 	{
 // 		"jsonrpc": "2.0",
 // 		"result": {
-// 			"Seed": str, // correct seed for new Call request
-// 			"TraceID": str // traceID for request
+// 			"seed": str, // correct seed for new Call request
+// 			"traceID": str // traceID for request
 // 		},
 // 		"id": str|int|null // same as in request
 // 	}
 //
-const (
-	PulseNotFoundError        = -31100
-	PulseNotFoundErrorMessage = "Pulse not found."
-	SeedError                 = -31101
-	SeedErrorMessage          = "Failed to get next seed."
-)
 
 func (s *NodeService) GetSeed(r *http.Request, args *SeedArgs, requestBody *rpc.RequestBody, reply *requester.SeedReply) error {
 	traceID := utils.RandTraceID()
@@ -83,9 +78,10 @@ func (s *NodeService) GetSeed(r *http.Request, args *SeedArgs, requestBody *rpc.
 	if err != nil {
 		instracer.AddError(span, err)
 		return &json2.Error{
-			Code:    SeedError,
-			Message: SeedErrorMessage,
+			Code:    ExecutionError,
+			Message: ExecutionErrorMessage,
 			Data: requester.Data{
+				Trace:   strings.Split(err.Error(), ": "),
 				TraceID: traceID,
 			},
 		}
@@ -95,9 +91,10 @@ func (s *NodeService) GetSeed(r *http.Request, args *SeedArgs, requestBody *rpc.
 	if err != nil {
 		instracer.AddError(span, err)
 		return &json2.Error{
-			Code:    PulseNotFoundError,
-			Message: PulseNotFoundErrorMessage,
+			Code:    ExecutionError,
+			Message: ExecutionErrorMessage,
 			Data: requester.Data{
+				Trace:   strings.Split(err.Error(), ": "),
 				TraceID: traceID,
 			},
 		}
