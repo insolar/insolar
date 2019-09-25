@@ -95,11 +95,16 @@ func CopyGlobalLoggerForContext() insolar.Logger {
 }
 
 func SaveGlobalLogger() func() {
+	return SaveGlobalLoggerAndFilter(false)
+}
+
+func SaveGlobalLoggerAndFilter(includeFilter bool) func() {
 	globalLogger.mutex.RLock()
 	defer globalLogger.mutex.RUnlock()
 
 	loggerCopy := globalLogger.logger
 	outputCopy := globalLogger.output.GetTarget()
+	hasLoggerFilter, loggerFilter := getGlobalLevelFilter()
 
 	return func() {
 		globalLogger.mutex.Lock()
@@ -107,6 +112,10 @@ func SaveGlobalLogger() func() {
 
 		globalLogger.logger = loggerCopy
 		globalLogger.output.SetTarget(outputCopy)
+
+		if includeFilter && hasLoggerFilter {
+			_ = setGlobalLevelFilter(loggerFilter)
+		}
 	}
 }
 
@@ -230,6 +239,10 @@ func SetGlobalLevelFilter(level insolar.LogLevel) error {
 	globalLogger.mutex.RLock()
 	defer globalLogger.mutex.RUnlock()
 
+	return setGlobalLevelFilter(level)
+}
+
+func setGlobalLevelFilter(level insolar.LogLevel) error {
 	if globalLogger.adapter != nil {
 		globalLogger.adapter.SetGlobalLoggerFilter(level)
 		return nil
@@ -241,10 +254,15 @@ func GetGlobalLevelFilter() insolar.LogLevel {
 	globalLogger.mutex.RLock()
 	defer globalLogger.mutex.RUnlock()
 
+	_, l := getGlobalLevelFilter()
+	return l
+}
+
+func getGlobalLevelFilter() (bool, insolar.LogLevel) {
 	if globalLogger.adapter != nil {
-		return globalLogger.adapter.GetGlobalLoggerFilter()
+		return true, globalLogger.adapter.GetGlobalLoggerFilter()
 	}
-	return insolar.NoLevel
+	return false, insolar.NoLevel
 }
 
 /*

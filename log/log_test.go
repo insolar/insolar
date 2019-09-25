@@ -129,9 +129,47 @@ func TestLog_NewLog_Config(t *testing.T) {
 }
 
 func TestLog_GlobalLogger_Level(t *testing.T) {
-	defer SetLevel("info")
+	defer SaveGlobalLogger()()
+
 	assert.NoError(t, SetLevel("error"))
 	assert.Error(t, SetLevel("errorrr"))
+}
+
+func TestLog_GlobalLogger_FilterLevel(t *testing.T) {
+	defer SaveGlobalLoggerAndFilter(true)()
+
+	assert.NoError(t, SetLevel("debug"))
+	assert.NoError(t, SetGlobalLevelFilter(insolar.DebugLevel))
+	assertHelloWorld(t, capture(func() { Debug("HelloWorld") }))
+	assert.NoError(t, SetGlobalLevelFilter(insolar.InfoLevel))
+	assert.Equal(t, "", capture(func() { Debug("HelloWorld") }))
+}
+
+func TestLog_GlobalLogger_Save(t *testing.T) {
+	assert.NotNil(t, GlobalLogger()) // ensure initialization
+
+	restoreFn := SaveGlobalLoggerAndFilter(true)
+	level := GlobalLogger().Copy().GetLogLevel()
+	filter := GetGlobalLevelFilter()
+
+	if level != insolar.PanicLevel {
+		SetLogLevel(level + 1)
+	} else {
+		SetLogLevel(insolar.DebugLevel)
+	}
+	assert.NotEqual(t, level, GlobalLogger().Copy().GetLogLevel())
+
+	if filter != insolar.PanicLevel {
+		assert.NoError(t, SetGlobalLevelFilter(filter+1))
+	} else {
+		assert.NoError(t, SetGlobalLevelFilter(insolar.DebugLevel))
+	}
+	assert.NotEqual(t, filter, GetGlobalLevelFilter())
+
+	restoreFn()
+
+	assert.Equal(t, level, GlobalLogger().Copy().GetLogLevel())
+	assert.Equal(t, filter, GetGlobalLevelFilter())
 }
 
 func TestLog_AddFields(t *testing.T) {
