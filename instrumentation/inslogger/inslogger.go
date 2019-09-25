@@ -70,6 +70,18 @@ func SetLogger(ctx context.Context, l insolar.Logger) context.Context {
 	return context.WithValue(ctx, loggerKey{}, l)
 }
 
+func UpdateLogger(ctx context.Context, fn func(insolar.Logger) (insolar.Logger, error)) context.Context {
+	lOrig := FromContext(ctx)
+	lNew, err := fn(lOrig)
+	if err != nil {
+		panic(err)
+	}
+	if lOrig == lNew {
+		return ctx
+	}
+	return SetLogger(ctx, lNew)
+}
+
 // SetLoggerLevel returns context with provided insolar.LogLevel and set logLevel on logger,
 func WithLoggerLevel(ctx context.Context, logLevel insolar.LogLevel) context.Context {
 	if logLevel == insolar.NoLevel {

@@ -33,7 +33,9 @@ func TestComponents(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	require.NoError(t, err)
 
-	ctx := context.Background()
+	ctx := inslogger.UpdateLogger(context.Background(), func(logger insolar.Logger) (insolar.Logger, error) {
+		return logger.Copy().WithBuffer(100, false).Build()
+	})
 	cfg := configuration.NewConfiguration()
 	cfg.KeysPath = "testdata/bootstrap_keys.json"
 	cfg.CertificatePath = "testdata/certificate.json"
@@ -41,6 +43,7 @@ func TestComponents(t *testing.T) {
 	cfg.APIRunner.Address = "0.0.0.0:0"
 	cfg.Ledger.Storage.DataDirectory = tmpdir
 	cfg.Exporter.Addr = ":0"
+	cfg.Log.LLBufferSize = 0 // = use default
 
 	_, err = newComponents(ctx, cfg, insolar.GenesisHeavyConfig{Skip: true})
 	require.NoError(t, err)

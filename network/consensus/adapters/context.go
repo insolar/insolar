@@ -52,7 +52,6 @@ package adapters
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -62,15 +61,12 @@ import (
 )
 
 func ConsensusContext(ctx context.Context) context.Context {
-	logger, err := inslogger.FromContext(ctx).Copy().WithMetrics(insolar.LogMetricsWriteDelayField).BuildLowLatency()
-	if err != nil {
-		panic(fmt.Sprintf("failed to BuildLowLatency logger: %s", err))
-	}
-
-	return inslogger.SetLogger(ctx, logger.WithFields(map[string]interface{}{
-		"component":  "consensus",
-		"LowLatency": true,
-	}))
+	return inslogger.UpdateLogger(ctx, func(logger insolar.Logger) (insolar.Logger, error) {
+		return logger.WithFields(map[string]interface{}{
+			"component":  "consensus",
+			"LowLatency": true,
+		}).Copy().WithMetrics(insolar.LogMetricsWriteDelayField).BuildLowLatency()
+	})
 }
 
 func PacketEarlyLogger(ctx context.Context, senderAddr string) (context.Context, insolar.Logger) {
