@@ -19,7 +19,9 @@ package api
 import (
 	"context"
 	"fmt"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/rpc/v2/json2"
+	"github.com/pkg/errors"
 	"net/http"
 	"strings"
 
@@ -80,7 +82,6 @@ func (s *NodeService) getSeed(ctx context.Context, _ *http.Request, _ *SeedArgs,
 
 	pulse, err := s.runner.PulseAccessor.Latest(context.Background())
 	if err != nil {
-		return errors.Wrap(err, "couldn't receive pulse")
 		instracer.AddError(span, err)
 		return &json2.Error{
 			Code:    InternalError,
