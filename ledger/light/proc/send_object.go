@@ -20,11 +20,12 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/light/executor"
-	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
@@ -101,7 +102,7 @@ func (p *SendObject) ensureOldestRequest(ctx context.Context) (*record.Composite
 		return nil, nil
 	}
 
-	return oldestMutable(openReqs), nil
+	return executor.OldestMutable(openReqs), nil
 }
 
 func (p *SendObject) Proceed(ctx context.Context) error {

@@ -161,7 +161,7 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 
 	// Check oldest opened mutable request.
 	{
-		oldestMutable := oldestMutable(opened)
+		oldestMutable := executor.OldestMutable(opened)
 		resultRequestID := *p.result.Request.GetLocal()
 		// We should return error if current result trying to close non-oldest opened mutable request.
 		if oldestMutable != nil && !oldestMutable.RecordID.Equal(resultRequestID) {
@@ -341,7 +341,7 @@ func calcPending(opened []record.CompositeFilamentRecord, closedRequestID insola
 	return &p, nil
 }
 
-// findClosed looks for request that was closed by provided result. Returns error if not found.
+// findClosed looks for request that are closing by provided result. Returns error if not found.
 func findClosed(reqs []record.CompositeFilamentRecord, result record.Result) (record.CompositeFilamentRecord, error) {
 	for _, req := range reqs {
 		if req.RecordID == *result.Request.GetLocal() {

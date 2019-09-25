@@ -83,19 +83,13 @@ func (c *RequestCheckerDefault) CheckRequest(ctx context.Context, requestID inso
 		if !r.IsAPIRequest() {
 			err := c.checkReasonForIncomingRequest(ctx, r, reasonID, requestID)
 			if err != nil {
-				return &payload.CodedError{
-					Text: err.Error(),
-					Code: payload.CodeReasonIsWrong,
-				}
+				return errors.Wrap(err, "incoming request check failed")
 			}
 		}
 	case *record.OutgoingRequest:
 		err := c.checkReasonForOutgoingRequest(ctx, r, reasonID, requestID)
 		if err != nil {
-			return &payload.CodedError{
-				Text: err.Error(),
-				Code: payload.CodeReasonNotFound,
-			}
+			return errors.Wrap(err, "outgoing request check failed")
 		}
 	}
 
@@ -106,27 +100,30 @@ func (c *RequestCheckerDefault) checkReasonForOutgoingRequest(
 	ctx context.Context,
 	outgoingRequest *record.OutgoingRequest,
 	reasonID insolar.ID,
-	requestID insolar.ID,
+	outgoingRequestID insolar.ID,
 ) error {
-	// FIXME: replace with "FindRequest" calculator method.
-	requests, err := c.filaments.OpenedRequests(
+	openedRequests, err := c.filaments.OpenedRequests(
 		ctx,
-		requestID.Pulse(),
+		outgoingRequestID.Pulse(),
 		*outgoingRequest.AffinityRef().GetLocal(),
 		true,
 	)
 	if err != nil {
+		return errors.Wrap(err, "failed fetch pending requests")
+	}
+
+	oldestRequest := OldestMutable(openedRequests)
+	if oldestRequest == nil {
 		return &payload.CodedError{
-			Text: "failed fetch pending requests",
-			Code: payload.CodeReasonNotFound,
+			Text: "reason not found in opened requests",
+			Code: payload.CodeReasonIsWrong,
 		}
 	}
 
-	found := findRecord(requests, reasonID)
-	if !found {
+	if oldestRequest.RecordID != reasonID {
 		return &payload.CodedError{
-			Text: "request reason not found in opened requests",
-			Code: payload.CodeReasonNotFound,
+			Text: fmt.Sprintf("request reason is not the oldest in filament, oldest %s", oldestRequest.RecordID.DebugString()),
+			Code: payload.CodeReasonIsWrong,
 		}
 	}
 
@@ -157,6 +154,13 @@ func (c *RequestCheckerDefault) checkReasonForIncomingRequest(
 
 		objectID = *insolar.NewID(requestID.Pulse(), hasher.Sum(nil))
 	} else {
+		// Object ref can't be empty
+		if incomingRequest.AffinityRef() == nil {
+			return &payload.CodedError{
+				Text: "request reason has empty object",
+				Code: payload.CodeReasonIsWrong,
+			}
+		}
 		objectID = *incomingRequest.AffinityRef().GetLocal()
 	}
 
@@ -175,7 +179,7 @@ func (c *RequestCheckerDefault) checkReasonForIncomingRequest(
 		reasonInfo, err = c.getRequest(ctx, reasonObjectID, reasonID, requestID.Pulse())
 	}
 	if err != nil {
-		return errors.Wrap(err, "reason request not found")
+		return errors.Wrap(err, "reason request search failed")
 	}
 
 	material := record.Material{}
@@ -185,20 +189,36 @@ func (c *RequestCheckerDefault) checkReasonForIncomingRequest(
 	}
 
 	virtual := record.Unwrap(&material.Virtual)
-	_, ok := virtual.(*record.IncomingRequest)
+	inc, ok := virtual.(*record.IncomingRequest)
 	if !ok {
-		return fmt.Errorf("reason request must be Incoming, %T received", virtual)
+		return &payload.CodedError{
+			Text: fmt.Sprintf("reason request must be Incoming, %T received", virtual),
+			Code: payload.CodeReasonIsWrong,
+		}
+	}
+
+	if !inc.Immutable && !reasonInfo.OldestMutable {
+		return &payload.CodedError{
+			Text: "request reason is not the oldest in filament",
+			Code: payload.CodeReasonIsWrong,
+		}
 	}
 
 	isClosed := len(reasonInfo.Result) != 0
 	if !incomingRequest.IsDetachedCall() && isClosed {
 		// This is regular request, should NOT have closed reason.
-		return errors.New("reason request is closed for a regular (not detached) call")
+		return &payload.CodedError{
+			Text: "reason request is closed for a regular (not detached) call",
+			Code: payload.CodeReasonIsWrong,
+		}
 	}
 
 	if incomingRequest.IsDetachedCall() && !isClosed {
 		// This is "detached incoming request", should have closed reason.
-		return errors.New("reason request is not closed for a detached call")
+		return &payload.CodedError{
+			Text: "reason request is not closed for a detached call",
+			Code: payload.CodeReasonIsWrong,
+		}
 	}
 
 	return nil
@@ -250,7 +270,10 @@ func (c *RequestCheckerDefault) getRequest(
 		return concrete, nil
 	case *payload.Error:
 		inslogger.FromContext(ctx).Debug("SendTarget failed: ", reasonObjectID.DebugString(), currentPulse.String())
-		return nil, errors.New(concrete.Text)
+		return nil, &payload.CodedError{
+			Text: concrete.Text,
+			Code: concrete.Code,
+		}
 	default:
 		return nil, fmt.Errorf("unexpected reply %T", pl)
 	}
@@ -273,46 +296,33 @@ func (c *RequestCheckerDefault) getRequestLocal(
 		reqBuf []byte
 		resBuf []byte
 	)
-	foundRequest, foundResult, err := c.filaments.RequestInfo(ctx, reasonObjectID, reasonID, currentPulse)
+	foundReqInfo, err := c.filaments.RequestInfo(ctx, reasonObjectID, reasonID, currentPulse)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get local request info")
 	}
 
 	var reqInfo payload.RequestInfo
 
-	if foundRequest != nil {
-		reqBuf, err = foundRequest.Record.Marshal()
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to marshal local request record")
-		}
-		reqInfo.Request = reqBuf
-
+	reqBuf, err = foundReqInfo.Request.Record.Marshal()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to marshal local request record")
 	}
+	reqInfo.Request = reqBuf
 
-	if foundResult != nil {
-		resBuf, err = foundResult.Record.Marshal()
+	if foundReqInfo.Result != nil {
+		resBuf, err = foundReqInfo.Result.Record.Marshal()
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to marshal local result record")
 		}
 		reqInfo.Result = resBuf
 	}
 
+	reqInfo.OldestMutable = foundReqInfo.OldestMutable
+
 	logger.WithFields(map[string]interface{}{
-		"request":    foundRequest != nil,
-		"has_result": foundResult != nil,
+		"request":    foundReqInfo.Request != nil,
+		"has_result": foundReqInfo.Result != nil,
 	}).Debug("local result info found")
 
 	return &reqInfo, nil
-}
-
-func findRecord(
-	filamentRecords []record.CompositeFilamentRecord,
-	requestID insolar.ID,
-) bool {
-	for _, p := range filamentRecords {
-		if p.RecordID == requestID {
-			return true
-		}
-	}
-	return false
 }

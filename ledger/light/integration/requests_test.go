@@ -165,6 +165,14 @@ func Test_IncomingRequest_Duplicate(t *testing.T) {
 		RequireNotError(rep)
 		objectID := rep.(*payload.RequestInfo).ObjectID
 
+		// Closing 2 request
+		{
+			resMsg, _ := MakeSetResult(objectID, objectID)
+			// Set result.
+			rep := SendMessage(ctx, s, &resMsg)
+			RequireNotError(rep)
+		}
+
 		s.SetPulse(ctx)
 
 		msg, _ = MakeSetIncomingRequest(objectID, reasonID, rootObject, false, false)
@@ -571,8 +579,11 @@ func Test_IncomingRequest_ClosedReason_FromOtherObject(t *testing.T) {
 
 			// Creating detached outgoing request
 			{
-				p, _ := CallSetOutgoingRequest(ctx, s, objectID, reasonID, true)
-				RequireNotError(p)
+				rep := retryIfCancelled(func() payload.Payload {
+					p, _ := CallSetOutgoingRequest(ctx, s, objectID, reasonID, true)
+					return p
+				})
+				RequireNotError(rep)
 			}
 
 			// Creating another object.
@@ -666,7 +677,7 @@ func Test_OutgoingRequest_ClosedReason(t *testing.T) {
 		{
 			pl, _ := MakeSetOutgoingRequest(reasonID, reasonID, false)
 			rep := SendMessage(ctx, s, &pl)
-			RequireErrorCode(rep, payload.CodeReasonNotFound)
+			RequireErrorCode(rep, payload.CodeReasonIsWrong)
 		}
 	})
 }
@@ -720,7 +731,7 @@ func Test_Requests_OutgoingReason(t *testing.T) {
 		{
 			msg, _ := MakeSetOutgoingRequest(rootID, reasonID, false)
 			rep := SendMessage(ctx, s, &msg)
-			RequireErrorCode(rep, payload.CodeReasonNotFound)
+			RequireErrorCode(rep, payload.CodeReasonIsWrong)
 		}
 	})
 }
@@ -761,7 +772,7 @@ func Test_OutgoingRequests_DifferentObjects(t *testing.T) {
 		{
 			pl, _ := MakeSetOutgoingRequest(rootID, rootID2, false)
 			rep := SendMessage(ctx, s, &pl)
-			RequireErrorCode(rep, payload.CodeReasonNotFound)
+			RequireErrorCode(rep, payload.CodeReasonIsWrong)
 		}
 	})
 }

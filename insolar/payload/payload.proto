@@ -181,6 +181,7 @@ message RequestInfo {
     bytes RequestID = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
     bytes Request = 22;
     bytes Result = 23;
+    bool OldestMutable = 24;
 }
 
 message GotHotConfirmation {

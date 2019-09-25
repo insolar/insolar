@@ -30,8 +30,7 @@ const (
 	CodeRequestNonClosedOutgoing = 1008
 	CodeRequestNonOldestMutable  = 1009
 
-	CodeReasonNotFound = 1010
-	CodeReasonIsWrong  = 1011
+	CodeReasonIsWrong = 1011
 
 	CodeNonActivated = 1012
 )
