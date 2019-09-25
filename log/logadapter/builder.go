@@ -144,6 +144,12 @@ func (z LoggerBuilder) WithOutput(w io.Writer) insolar.LoggerBuilder {
 	return z
 }
 
+func (z LoggerBuilder) WithBuffer(bufferSize int, bufferForAll bool) insolar.LoggerBuilder {
+	z.Output.BufferSize = bufferSize
+	z.Output.EnableRegularBuffer = bufferForAll
+	return z
+}
+
 func (z LoggerBuilder) WithLevel(level insolar.LogLevel) insolar.LoggerBuilder {
 	z.level = level
 	z.DynLevel = nil

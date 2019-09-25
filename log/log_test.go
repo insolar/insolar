@@ -56,12 +56,12 @@ func TestLog_GlobalLogger_redirection(t *testing.T) {
 	originalG := GlobalLogger()
 
 	var buf bytes.Buffer
-	newGL, err := GlobalLogger().Copy().WithOutput(&buf).Build()
-	if err != nil {
-		panic(err)
-	}
+	newGL, err := GlobalLogger().Copy().WithOutput(&buf).WithBuffer(10, false).Build()
+	require.NoError(t, err)
+
 	SetGlobalLogger(newGL)
-	newCopyLL, _ := GlobalLogger().Copy().BuildLowLatency()
+	newCopyLL, err := GlobalLogger().Copy().BuildLowLatency()
+	require.NoError(t, err)
 
 	originalG.Info("viaOriginalGlobal")
 	newGL.Info("viaNewInstance")

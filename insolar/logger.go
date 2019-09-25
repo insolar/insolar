@@ -123,10 +123,12 @@ type LoggerBuilder interface {
 	// Returns the current log level
 	GetLogLevel() LogLevel
 
-	// SetOutput sets the output destination for the logger.
+	// Sets the output destination for the logger.
 	WithOutput(w io.Writer) LoggerBuilder
 	// WithFormat sets logger output format.
 	WithFormat(format LogFormat) LoggerBuilder
+	// Set buffer size and applicability of the buffer. Will be IGNORED when a reused output is already buffered.
+	WithBuffer(bufferSize int, bufferForAll bool) LoggerBuilder
 
 	// WithLevel sets log level. Cancels WithDynamicLevel()
 	WithLevel(level LogLevel) LoggerBuilder

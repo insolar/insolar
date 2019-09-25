@@ -87,7 +87,7 @@ func GlobalLogger() insolar.Logger {
 	globalLogger.mutex.Lock()
 	defer globalLogger.mutex.Unlock()
 	if globalLogger.logger == nil {
-		createGlobalLogger()
+		createNoConfigGlobalLogger()
 	}
 
 	return globalLogger.logger
@@ -143,10 +143,13 @@ func InitTicker() {
 }
 
 // GlobalLogger creates global logger with correct skipCallNumber
-func createGlobalLogger() {
+func createNoConfigGlobalLogger() {
 	holder := configuration.NewHolder().MustInit(false)
 	logCfg := holder.Configuration.Log
-	logCfg.BufferSize = 0 // enforce buffer-less for a non-configured logger
+
+	// enforce buffer-less for a non-configured logger
+	logCfg.BufferSize = 0
+	logCfg.LLBufferSize = -1
 
 	logger, err := NewLog(logCfg)
 
@@ -232,7 +235,7 @@ func SetLogLevel(level insolar.LogLevel) {
 	defer globalLogger.mutex.Unlock()
 
 	if globalLogger.logger == nil {
-		createGlobalLogger()
+		createNoConfigGlobalLogger()
 	}
 
 	globalLogger.logger = globalLogger.logger.Level(level)
