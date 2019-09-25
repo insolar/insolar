@@ -67,6 +67,7 @@ const (
 	TypeGetLightInitialState
 	TypeLightInitialState
 	TypeGetIndex
+	TypeSearchIndex
 	TypeUpdateJet
 	TypeReturnResults
 	TypeCallMethod
@@ -305,6 +306,9 @@ func Marshal(payload Payload) ([]byte, error) {
 	case *GetIndex:
 		pl.Polymorph = uint32(TypeGetIndex)
 		return pl.Marshal()
+	case *SearchIndex:
+		pl.Polymorph = uint32(TypeSearchIndex)
+		return pl.Marshal()
 	case *UpdateJet:
 		pl.Polymorph = uint32(TypeUpdateJet)
 		return pl.Marshal()
@@ -504,6 +508,10 @@ func Unmarshal(data []byte) (Payload, error) {
 		return &pl, err
 	case TypeGetIndex:
 		pl := GetIndex{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeSearchIndex:
+		pl := SearchIndex{}
 		err := pl.Unmarshal(data)
 		return &pl, err
 	case TypeUpdateJet:

@@ -325,10 +325,17 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 	var lifeline record.Lifeline
 	if request.IsCreationRequest() {
 		l, err := c.findLifeline(ctx, reasonID.Pulse(), requestID)
-		if err != nil {
-			if err == object.ErrIndexNotFound {
-				return nil, nil, nil
+		if err != nil && err == object.ErrIndexNotFound {
+			// Searching for the requests in the network
+			// We need to be sure, that there is no duplicate of creationg request
+			// INS-3607
+			lfl, err := c.checkHeavyForLifeline(ctx, requestID, reasonID.Pulse())
+			if err != nil && err != object.ErrIndexNotFound {
+				return nil, nil, errors.Wrap(err, "failed to fetch index")
 			}
+			lifeline = lfl
+
+		} else if err != nil {
 			return nil, nil, errors.Wrap(err, "failed to find index")
 		}
 		lifeline = l
@@ -458,6 +465,55 @@ func (c *FilamentCalculatorDefault) RequestInfo(
 
 func (c *FilamentCalculatorDefault) ClearIfLonger(objID insolar.ID, limit int) {
 	c.cache.DeleteIfLonger(objID, limit)
+}
+
+func (c FilamentCalculatorDefault) checkHeavyForLifeline(
+	ctx context.Context, objID insolar.ID, readUntil insolar.PulseNumber,
+) (record.Lifeline, error) {
+	node, err := c.coordinator.Heavy(ctx)
+	if err != nil {
+		return record.Lifeline{}, errors.Wrap(err, "failed to check index origin")
+	}
+
+	ensureIndex, err := payload.NewMessage(&payload.SearchIndex{
+		ObjectID: objID,
+		Until:    readUntil,
+	})
+	if err != nil {
+		return record.Lifeline{}, object.ErrIndexNotFound
+	}
+
+	reps, done := c.sender.SendTarget(ctx, ensureIndex, *node)
+	defer done()
+
+	res, ok := <-reps
+	if !ok {
+		return record.Lifeline{}, errors.New("no reply")
+	}
+
+	pl, err := payload.UnmarshalFromMeta(res.Payload)
+	if err != nil {
+		return record.Lifeline{}, errors.Wrap(err, "failed to unmarshal reply")
+	}
+
+	switch rep := pl.(type) {
+	case *payload.Index:
+		idx, err := object.DecodeLifeline(rep.Index)
+		if err != nil {
+			return record.Lifeline{}, errors.Wrap(err, "failed to decode index")
+		}
+		return idx, nil
+	case *payload.Error:
+		if rep.Code == payload.CodeNotFound {
+			return record.Lifeline{}, object.ErrIndexNotFound
+		}
+		return record.Lifeline{}, &payload.CodedError{
+			Text: fmt.Sprint("failed to fetch index from heavy: ", rep.Text),
+			Code: rep.Code,
+		}
+	default:
+		return record.Lifeline{}, fmt.Errorf("unexpected reply %T", pl)
+	}
 }
 
 func (c *FilamentCalculatorDefault) findLifeline(
