@@ -37,6 +37,9 @@ func (p *MetricsHelper) OnNewEvent(ctx context.Context, level insolar.LogLevel) 
 	if p == nil {
 		return
 	}
+	if ctx == nil {
+		ctx = GetLogLevelContext(level)
+	}
 	stats.Record(ctx, statLogCalls.M(1))
 	if p.recorder != nil {
 		p.recorder.RecordLogEvent(level)
@@ -46,6 +49,9 @@ func (p *MetricsHelper) OnNewEvent(ctx context.Context, level insolar.LogLevel) 
 func (p *MetricsHelper) OnFilteredEvent(ctx context.Context, level insolar.LogLevel) {
 	if p == nil {
 		return
+	}
+	if ctx == nil {
+		ctx = GetLogLevelContext(level)
 	}
 	stats.Record(ctx, statLogWrites.M(1))
 	if p.recorder != nil {
@@ -57,13 +63,14 @@ func (p *MetricsHelper) OnWriteDuration(d time.Duration) {
 	if p == nil {
 		return
 	}
+	stats.Record(context.Background(), statLogWriteDelays.M(int64(d)))
 	if p.recorder != nil {
 		p.recorder.RecordLogDelay(insolar.NoLevel, d)
 	}
 }
 
 func (p *MetricsHelper) GetOnWriteDurationReport() DurationReportFunc {
-	if p == nil || p.recorder == nil {
+	if p == nil {
 		return nil
 	}
 	return p.OnWriteDuration

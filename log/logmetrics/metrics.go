@@ -22,6 +22,7 @@ import (
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
+	"time"
 )
 
 var levelContexts = initLevelContexts()
@@ -70,6 +71,11 @@ var (
 		"number of log actually written",
 		stats.UnitDimensionless,
 	)
+	statLogWriteDelays = stats.Int64(
+		"log_write_delays",
+		"duration of log writes",
+		"ns",
+	)
 )
 
 func init() {
@@ -88,7 +94,15 @@ func init() {
 			Measure:     statLogWrites,
 			Aggregation: view.Count(),
 			TagKeys:     tags,
-		})
+		},
+		&view.View{
+			Name:        statLogWriteDelays.Name(),
+			Description: statLogWriteDelays.Description(),
+			Measure:     statLogWriteDelays,
+			Aggregation: view.Distribution(0.0, float64(time.Second)),
+			TagKeys:     tags,
+		},
+	)
 	if err != nil {
 		panic(err)
 	}
