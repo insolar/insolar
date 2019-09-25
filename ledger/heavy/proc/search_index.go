@@ -65,7 +65,7 @@ func (p *SearchIndex) Proceed(ctx context.Context) error {
 
 	var idx *record.Index
 	for currentPN >= searchIndex.Until {
-		savedIdx, err := p.dep.indexes.ForID(ctx, p.meta.Pulse, searchIndex.ObjectID)
+		savedIdx, err := p.dep.indexes.ForID(ctx, currentPN, searchIndex.ObjectID)
 		if err != nil && err != object.ErrIndexNotFound {
 			return errors.Wrapf(
 				err,
