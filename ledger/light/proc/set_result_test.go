@@ -161,15 +161,16 @@ func TestSetResult_Proceed(t *testing.T) {
 		require.Equal(t, flow.Pulse(ctx), pn)
 		require.False(t, pendingOnly)
 
-		v := record.Wrap(&record.IncomingRequest{})
+		vImmut := record.Wrap(&record.IncomingRequest{Immutable: true})
+		vMut := record.Wrap(&record.IncomingRequest{})
 		opened = []record.CompositeFilamentRecord{
 			{
 				RecordID: earliestID,
-				Record:   record.Material{Virtual: v},
+				Record:   record.Material{Virtual: vImmut},
 			},
 			{
 				RecordID: requestID,
-				Record:   record.Material{Virtual: v},
+				Record:   record.Material{Virtual: vMut},
 			},
 			{
 				RecordID: gen.ID(),
@@ -346,7 +347,6 @@ func TestSetResult_Proceed_ImmutableRequest_Error(t *testing.T) {
 		Parent:  parent,
 	}
 	hash = record.HashVirtual(pcs.ReferenceHasher(), record.Wrap(&sideEffects))
-	earliestID := gen.ID()
 
 	records := object.NewAtomicRecordModifierMock(mc)
 
@@ -361,12 +361,7 @@ func TestSetResult_Proceed_ImmutableRequest_Error(t *testing.T) {
 		require.Equal(t, flow.Pulse(ctx), pn)
 		require.False(t, pendingOnly)
 
-		v := record.Wrap(&record.IncomingRequest{})
 		opened = []record.CompositeFilamentRecord{
-			{
-				RecordID: earliestID,
-				Record:   record.Material{Virtual: v},
-			},
 			// req that we closing
 			{
 				RecordID: requestID,
@@ -463,7 +458,6 @@ func TestSetResult_Proceed_OutgoingRequest_Error(t *testing.T) {
 		Parent:  parent,
 	}
 	hash = record.HashVirtual(pcs.ReferenceHasher(), record.Wrap(&sideEffects))
-	earliestID := gen.ID()
 
 	records := object.NewAtomicRecordModifierMock(mc)
 
@@ -478,12 +472,7 @@ func TestSetResult_Proceed_OutgoingRequest_Error(t *testing.T) {
 		require.Equal(t, flow.Pulse(ctx), pn)
 		require.False(t, pendingOnly)
 
-		v := record.Wrap(&record.IncomingRequest{})
 		opened = []record.CompositeFilamentRecord{
-			{
-				RecordID: earliestID,
-				Record:   record.Material{Virtual: v},
-			},
 			// req that we closing
 			{
 				RecordID: requestID,
@@ -595,9 +584,19 @@ func TestSetResult_Proceed_NotFoundInOpened_Error(t *testing.T) {
 		opened = []record.CompositeFilamentRecord{
 			{
 				RecordID: gen.ID(),
+				Record: record.Material{
+					Virtual: record.Wrap(&record.IncomingRequest{
+						Immutable: true,
+					}),
+				},
 			},
 			{
 				RecordID: gen.ID(),
+				Record: record.Material{
+					Virtual: record.Wrap(&record.IncomingRequest{
+						Immutable: true,
+					}),
+				},
 			},
 		}
 		return opened, nil
@@ -727,5 +726,120 @@ func TestSetResult_Proceed_HasOpenedOutgoing_Error(t *testing.T) {
 	require.Error(t, err)
 	insError, ok := errors.Cause(err).(*payload.CodedError)
 	require.True(t, ok)
-	require.Equal(t, uint32(payload.CodeNonClosedOutgoing), insError.GetCode())
+	require.Equal(t, uint32(payload.CodeRequestNonClosedOutgoing), insError.GetCode())
+}
+
+func TestSetResult_Proceed_OldestMutableRequest(t *testing.T) {
+	t.Parallel()
+
+	mc := minimock.NewController(t)
+	defer mc.Finish()
+
+	flowPulse := insolar.GenesisPulse.PulseNumber + 2
+	ctx := flow.TestContextWithPulse(
+		inslogger.TestContext(t),
+		flowPulse,
+	)
+
+	writeAccessor := executor.NewWriteAccessorMock(mc)
+	pcs := testutils.NewPlatformCryptographyScheme()
+
+	sender := bus.NewSenderMock(mc)
+	detachedNotifier := executor.NewDetachedNotifierMock(mc)
+	var opened []record.CompositeFilamentRecord
+
+	jetID := gen.JetID()
+	objectID := gen.ID()
+	requestID := gen.ID()
+
+	resultRecord := &record.Result{
+		Request: *insolar.NewReference(requestID),
+		Object:  objectID,
+	}
+	virtual := record.Virtual{
+		Union: &record.Virtual_Result{
+			Result: resultRecord,
+		},
+	}
+	hash := record.HashVirtual(pcs.ReferenceHasher(), virtual)
+	resultID := *insolar.NewID(flow.Pulse(ctx), hash)
+	virtualBuf, err := virtual.Marshal()
+	require.NoError(t, err)
+
+	result := payload.SetResult{
+		Result: virtualBuf,
+	}
+	resultBuf, err := result.Marshal()
+	require.NoError(t, err)
+
+	msg := payload.Meta{
+		Payload: resultBuf,
+	}
+	LatestRequest := gen.IDWithPulse(flowPulse)
+	expectedFilament := record.PendingFilament{
+		RecordID:       resultID,
+		PreviousRecord: &LatestRequest,
+	}
+	hash = record.HashVirtual(pcs.ReferenceHasher(), record.Wrap(&expectedFilament))
+
+	indexes := object.NewMemoryIndexStorageMock(mc)
+	indexes.ForIDMock.Set(func(_ context.Context, pn insolar.PulseNumber, id insolar.ID) (record.Index, error) {
+		require.Equal(t, flow.Pulse(ctx), pn)
+		require.Equal(t, objectID, id)
+		earliestPN := requestID.Pulse()
+		return record.Index{
+			Lifeline: record.Lifeline{
+				LatestRequest:       &LatestRequest,
+				EarliestOpenRequest: &earliestPN,
+				OpenRequestsCount:   1,
+			},
+		}, nil
+	})
+
+	records := object.NewAtomicRecordModifierMock(mc)
+
+	filaments := executor.NewFilamentCalculatorMock(mc)
+	filaments.ResultDuplicateMock.Set(func(_ context.Context, objID insolar.ID, resID insolar.ID, r record.Result) (*record.CompositeFilamentRecord, error) {
+		require.Equal(t, objectID, objID)
+		require.Equal(t, *resultRecord, r)
+		return nil, nil
+	})
+	filaments.OpenedRequestsMock.Set(func(_ context.Context, pn insolar.PulseNumber, objID insolar.ID, pendingOnly bool) ([]record.CompositeFilamentRecord, error) {
+		require.Equal(t, objectID, objID)
+		require.Equal(t, flow.Pulse(ctx), pn)
+		require.False(t, pendingOnly)
+
+		opened = []record.CompositeFilamentRecord{
+			// Here we have unclosed Mutable request (Immutable == false below)
+			// and other IDs for closing attempt. We should get an error from check this record.
+			{
+				RecordID: gen.ID(),
+				Record: record.Material{
+					Virtual: record.Wrap(&record.IncomingRequest{
+						Immutable: false,
+					}),
+				},
+			},
+			// We shouldn't process this record,
+			// because we have unclosed oldest mutable request (see above).
+			{
+				RecordID: requestID,
+				Record: record.Material{
+					Virtual: record.Wrap(&record.IncomingRequest{
+						Immutable: false,
+					}),
+				},
+			},
+		}
+		return opened, nil
+	})
+
+	setResultProc := proc.NewSetResult(msg, jetID, *resultRecord, nil)
+	setResultProc.Dep(writeAccessor, sender, object.NewIndexLocker(), filaments, records, indexes, pcs, detachedNotifier)
+
+	err = setResultProc.Proceed(ctx)
+	require.Error(t, err)
+	insError, ok := errors.Cause(err).(*payload.CodedError)
+	require.True(t, ok)
+	require.Equal(t, uint32(payload.CodeRequestNonOldestMutable), insError.GetCode())
 }
