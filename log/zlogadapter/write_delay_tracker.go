@@ -51,7 +51,7 @@ func getWriteDelayConfig(metrics *logmetrics.MetricsHelper,
 		fieldName = "writeDuration"
 	}
 
-	if metricsMode&insolar.LogMetricsWriteDelayReport != 0 && metrics != nil {
+	if metrics != nil {
 		reportFn = metrics.GetOnWriteDurationReport()
 	}
 
