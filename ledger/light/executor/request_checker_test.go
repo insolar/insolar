@@ -241,7 +241,7 @@ func TestRequestCheckerDefault_CheckRequest(t *testing.T) {
 				Request: &record.CompositeFilamentRecord{
 					Record: record.Material{Virtual: record.Wrap(&record.IncomingRequest{})},
 				},
-				Oldest: true,
+				OldestMutable: true,
 			}
 			return request, nil
 		})

@@ -83,13 +83,13 @@ func (c *RequestCheckerDefault) CheckRequest(ctx context.Context, requestID inso
 		if !r.IsAPIRequest() {
 			err := c.checkReasonForIncomingRequest(ctx, r, reasonID, requestID)
 			if err != nil {
-				return errors.Wrap(err, "request check failed")
+				return errors.Wrap(err, "incoming request check failed")
 			}
 		}
 	case *record.OutgoingRequest:
 		err := c.checkReasonForOutgoingRequest(ctx, r, reasonID, requestID)
 		if err != nil {
-			return errors.Wrap(err, "request check failed")
+			return errors.Wrap(err, "outgoing request check failed")
 		}
 	}
 
@@ -109,10 +109,7 @@ func (c *RequestCheckerDefault) checkReasonForOutgoingRequest(
 		true,
 	)
 	if err != nil {
-		return &payload.CodedError{
-			Text: "failed fetch pending requests",
-			Code: payload.CodeUnknown,
-		}
+		return errors.Wrap(err, "failed fetch pending requests")
 	}
 
 	oldestRequest := OldestMutable(openedRequests)
@@ -125,7 +122,7 @@ func (c *RequestCheckerDefault) checkReasonForOutgoingRequest(
 
 	if oldestRequest.RecordID != reasonID {
 		return &payload.CodedError{
-			Text: "request reason is not the oldest in filament",
+			Text: fmt.Sprintf("request reason is not the oldest in filament, oldest %s", oldestRequest.RecordID.DebugString()),
 			Code: payload.CodeReasonIsWrong,
 		}
 	}
@@ -160,7 +157,7 @@ func (c *RequestCheckerDefault) checkReasonForIncomingRequest(
 		// Object ref can't be empty
 		if incomingRequest.AffinityRef() == nil {
 			return &payload.CodedError{
-				Text: "request reason has wrong object",
+				Text: "request reason has empty object",
 				Code: payload.CodeReasonIsWrong,
 			}
 		}
@@ -207,7 +204,7 @@ func (c *RequestCheckerDefault) checkReasonForIncomingRequest(
 		}
 	}
 
-	if !inc.Immutable && !reasonInfo.Oldest {
+	if !inc.Immutable && !reasonInfo.OldestMutable {
 		return &payload.CodedError{
 			Text: "request reason is not the oldest in filament",
 			Code: payload.CodeReasonIsWrong,
@@ -326,7 +323,7 @@ func (c *RequestCheckerDefault) getRequestLocal(
 		reqInfo.Result = resBuf
 	}
 
-	reqInfo.Oldest = foundReqInfo.Oldest
+	reqInfo.OldestMutable = foundReqInfo.OldestMutable
 
 	logger.WithFields(map[string]interface{}{
 		"request":    foundReqInfo.Request != nil,

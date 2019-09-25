@@ -112,11 +112,11 @@ func (p *SendRequestInfo) Proceed(ctx context.Context) error {
 	}
 
 	msg, err := payload.NewMessage(&payload.RequestInfo{
-		ObjectID:  p.objectID,
-		RequestID: p.requestID,
-		Request:   reqBuf,
-		Result:    resBuf,
-		Oldest:    foundReqInfo.Oldest,
+		ObjectID:      p.objectID,
+		RequestID:     p.requestID,
+		Request:       reqBuf,
+		Result:        resBuf,
+		OldestMutable: foundReqInfo.OldestMutable,
 	})
 	if err != nil {
 		return errors.Wrap(err, "failed to create reply")

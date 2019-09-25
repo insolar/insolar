@@ -92,9 +92,9 @@ type FilamentCalculator interface {
 }
 
 type FilamentsRequestInfo struct {
-	Request *record.CompositeFilamentRecord
-	Result  *record.CompositeFilamentRecord
-	Oldest  bool
+	Request       *record.CompositeFilamentRecord
+	Result        *record.CompositeFilamentRecord
+	OldestMutable bool
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.FilamentCleaner -o ./ -s _mock.go -g
@@ -407,7 +407,7 @@ func (c *FilamentCalculatorDefault) RequestInfo(
 	}
 
 	if idx.Lifeline.LatestRequest == nil {
-		return FilamentsRequestInfo{}, errors.Wrap(err, "latest request in lifeline is empty")
+		return FilamentsRequestInfo{}, errors.New("latest request in lifeline is empty")
 	}
 
 	logger.Debugf("latest request from index %s", idx.Lifeline.LatestRequest.DebugString())
@@ -428,7 +428,8 @@ func (c *FilamentCalculatorDefault) RequestInfo(
 	)
 
 	var foundRequestInfo FilamentsRequestInfo
-	foundRequestInfo.Oldest = true
+	foundRequestInfo.OldestMutable = true
+	closedRequests := map[insolar.ID]struct{}{}
 
 	for iter.HasPrev() {
 		rec, err := iter.Prev(ctx)
@@ -444,16 +445,20 @@ func (c *FilamentCalculatorDefault) RequestInfo(
 
 		virtual := record.Unwrap(&rec.Record.Virtual)
 		if r, ok := virtual.(*record.Result); ok {
+			closedRequests[*r.Request.GetLocal()] = struct{}{}
 
 			if *r.Request.GetLocal() == requestID {
 				foundRequestInfo.Result = &rec
 				logger.Debugf("found result %s", rec.RecordID.DebugString())
 			}
 		}
-		// request found, check if we have another mutable incoming older than that
+		// request found, check if we have another opened mutable incoming older than that
 		if foundRequestInfo.Request != nil {
-			if in, ok := virtual.(*record.IncomingRequest); ok && !in.Immutable {
-				foundRequestInfo.Oldest = false
+			if _, ok := closedRequests[rec.RecordID]; !ok {
+				if in, ok := virtual.(*record.IncomingRequest); ok && !in.Immutable {
+					foundRequestInfo.OldestMutable = false
+					logger.Debugf("found oldest %s", rec.RecordID.DebugString())
+				}
 			}
 		}
 

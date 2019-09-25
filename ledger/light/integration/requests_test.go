@@ -530,6 +530,7 @@ func Test_IncomingRequest_ClosedReason_FromOtherObject(t *testing.T) {
 			var objectID insolar.ID  // Root reason object.
 			var reasonID insolar.ID  // Root reason request.
 			var anotherID insolar.ID // Another object.
+			var creationID insolar.ID
 
 			// Creating root reason object.
 			{
@@ -539,14 +540,33 @@ func Test_IncomingRequest_ClosedReason_FromOtherObject(t *testing.T) {
 				})
 				RequireNotError(rep)
 				objectID = rep.(*payload.RequestInfo).ObjectID
+				creationID = rep.(*payload.RequestInfo).RequestID
+			}
+			{
+				resMsg, _ := MakeSetResult(objectID, creationID)
+				rep := retryIfCancelled(func() payload.Payload {
+					return SendMessage(ctx, s, &resMsg)
+				})
+				RequireNotError(rep)
+			}
+
+			// Creating root reason request.
+			{
+				msg, _ := MakeSetIncomingRequest(objectID, gen.IDWithPulse(s.Pulse()), insolar.ID{}, false, true)
+				rep := retryIfCancelled(func() payload.Payload {
+					return SendMessage(ctx, s, &msg)
+				})
+				RequireNotError(rep)
 				reasonID = rep.(*payload.RequestInfo).RequestID
 			}
 
 			// Creating detached outgoing request
 			{
-				p, _ := CallSetOutgoingRequest(ctx, s, objectID, reasonID, true)
-				// fixme flacky flow cancelled
-				RequireNotError(p)
+				rep := retryIfCancelled(func() payload.Payload {
+					p, _ := CallSetOutgoingRequest(ctx, s, objectID, reasonID, true)
+					return p
+				})
+				RequireNotError(rep)
 			}
 
 			// Creating another object.
