@@ -14,18 +14,18 @@ import (
 type BackpressureBufferFlags uint8
 
 const (
-	// Buffer content will not be flushed on fatal, instead a "missing X" message will be added
+	// Buffer content will not be flushed on fatal, instead a "missing X" message will be added.
 	BufferDropOnFatal BackpressureBufferFlags = 1 << iota
-	// Buffer may apply additional delay to writes done into a queue to equalize timings
-	// This mode requires either BufferTrackWriteDuration flag or use of SetAvgWriteDuration
-	// This flag has no effect when BufferBypassForRegular is set
+	// Buffer may apply additional delay to writes done into a queue to equalize timings.
+	// This mode requires either BufferTrackWriteDuration flag or use of SetAvgWriteDuration() externally.
+	// This flag has no effect when BufferBypassForRegular is set.
 	BufferWriteDelayFairness
-	// With this flags the buffer will update GetAvgWriteDuration with every regular write
+	// With this flag the buffer will update GetAvgWriteDuration with every regular write.
 	BufferTrackWriteDuration
-	// Regular (not-lowLatency) writes will go directly to output, ignoring queue and parallel write limits
+	// Regular (not-lowLatency) writes will go directly to output, ignoring queue and parallel write limits.
 	BufferBypassForRegular
 	// When a worker is started, but all links to BackpressureBuffer were lost, then the worker will be stopped.
-	// And with this flag present, the buffer (and its underlying) will also be closed.
+	// And with this flag present, the buffer (and its underlying output) will also be closed.
 	BufferCloseOnStop
 	// USE WITH CAUTION! This flag enables to use argument of Write([]byte) outside of the call.
 	// This is AGAINST existing conventions and MUST ONLY be used when a writer's code is proprietary and never reuses the argument.
@@ -204,8 +204,6 @@ func (p *internalBackpressureBuffer) LogLevelWrite(level insolar.LogLevel, b []b
 		return p.fatal.PostFatalWrite(level, b)
 	}
 
-	startNano := time.Now().UnixNano()
-
 	switch level {
 	case insolar.FatalLevel:
 		return p.writeFatal(level, b)
@@ -218,6 +216,8 @@ func (p *internalBackpressureBuffer) LogLevelWrite(level insolar.LogLevel, b []b
 		return n, err
 
 	default:
+		startNano := time.Now().UnixNano()
+
 		if p.flags&BufferBypassForRegular != 0 {
 			return p.flushWrite(level, b, startNano)
 		}
