@@ -95,7 +95,7 @@ type FilamentCalculator interface {
 //go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.FilamentCleaner -o ./ -s _mock.go -g
 
 type FilamentCleaner interface {
-	Clear(objID insolar.ID)
+	ClearIfLonger(objID insolar.ID, limit int)
 }
 
 type FilamentCalculatorDefault struct {
@@ -456,8 +456,8 @@ func (c *FilamentCalculatorDefault) RequestInfo(
 	return foundRequest, foundResult, nil
 }
 
-func (c *FilamentCalculatorDefault) Clear(objID insolar.ID) {
-	c.cache.Delete(objID)
+func (c *FilamentCalculatorDefault) ClearIfLonger(objID insolar.ID, limit int) {
+	c.cache.DeleteIfLonger(objID, limit)
 }
 
 func (c *FilamentCalculatorDefault) findLifeline(
@@ -530,6 +530,14 @@ func (c *cacheStore) Delete(id insolar.ID) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	delete(c.caches, id)
+}
+
+func (c *cacheStore) DeleteIfLonger(id insolar.ID, limit int) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	if len(c.caches[id].cache) > limit {
+		delete(c.caches, id)
+	}
 }
 
 type filamentCache struct {
