@@ -62,7 +62,7 @@ import (
 )
 
 func ConsensusContext(ctx context.Context) context.Context {
-	logger, err := inslogger.FromContext(ctx).Copy().BuildLowLatency()
+	logger, err := inslogger.FromContext(ctx).Copy().WithMetrics(insolar.LogMetricsWriteDelayField).BuildLowLatency()
 	if err != nil {
 		panic(fmt.Sprintf("failed to BuildLowLatency logger: %s", err))
 	}
