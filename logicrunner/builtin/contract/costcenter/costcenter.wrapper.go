@@ -184,9 +184,11 @@ func INSMETHOD_CalcFee(object []byte, data []byte) ([]byte, []byte, error) {
 func INSCONSTRUCTOR_New(data []byte) ([]byte, []byte, error) {
 	ph := common.CurrentProxyCtx
 	ph.SetSystemError(nil)
-	args := make([]interface{}, 1)
+	args := make([]interface{}, 2)
 	var args0 *insolar.Reference
 	args[0] = &args0
+	var args1 string
+	args[1] = &args1
 
 	err := ph.Deserialize(data, &args)
 	if err != nil {
@@ -194,7 +196,7 @@ func INSCONSTRUCTOR_New(data []byte) ([]byte, []byte, error) {
 		return nil, nil, e
 	}
 
-	ret0, ret1 := New(args0)
+	ret0, ret1 := New(args0, args1)
 	ret1 = ph.MakeErrorSerializable(ret1)
 	if ret0 == nil && ret1 == nil {
 		ret1 = &foundation.Error{S: "constructor returned nil"}
