@@ -43,7 +43,6 @@ func TestComponents(t *testing.T) {
 	cfg.APIRunner.Address = "0.0.0.0:0"
 	cfg.Ledger.Storage.DataDirectory = tmpdir
 	cfg.Exporter.Addr = ":0"
-	cfg.Log.LLBufferSize = 0 // = use default
 
 	_, err = newComponents(ctx, cfg, insolar.GenesisHeavyConfig{Skip: true})
 	require.NoError(t, err)
