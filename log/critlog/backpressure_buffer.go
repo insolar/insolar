@@ -246,7 +246,7 @@ func (p *internalBackpressureBuffer) writeFatal(level insolar.LogLevel, b []byte
 func (p *internalBackpressureBuffer) checkWrite(level insolar.LogLevel, b []byte, startNano int64) (int, error) {
 	writeSeq := atomic.AddUint32(&p.writeSeq, 1)
 
-	for i := uint8(0); ; i++ {
+	for i := 0; ; i++ {
 		pendingWrites := atomic.LoadUint32(&p.pendingWrites)
 
 		if pendingWrites >= uint32(p.maxParWrites) || !p.drawStraw(writeSeq, pendingWrites) {
@@ -257,7 +257,7 @@ func (p *internalBackpressureBuffer) checkWrite(level insolar.LogLevel, b []byte
 			break
 		}
 
-		if i >= (1+p.maxParWrites)<<1 {
+		if i >= (1+int(p.maxParWrites))<<1 {
 			// too many retries
 			return p.fairQueueWrite(level, b, startNano)
 		}
