@@ -78,8 +78,8 @@ func (s *NodeService) GetSeed(r *http.Request, args *SeedArgs, requestBody *rpc.
 	if err != nil {
 		instracer.AddError(span, err)
 		return &json2.Error{
-			Code:    ExecutionError,
-			Message: ExecutionErrorMessage,
+			Code:    InternalError,
+			Message: InternalErrorMessage,
 			Data: requester.Data{
 				Trace:   strings.Split(err.Error(), ": "),
 				TraceID: traceID,
@@ -91,8 +91,8 @@ func (s *NodeService) GetSeed(r *http.Request, args *SeedArgs, requestBody *rpc.
 	if err != nil {
 		instracer.AddError(span, err)
 		return &json2.Error{
-			Code:    ExecutionError,
-			Message: ExecutionErrorMessage,
+			Code:    InternalError,
+			Message: InternalErrorMessage,
 			Data: requester.Data{
 				Trace:   strings.Split(err.Error(), ": "),
 				TraceID: traceID,
