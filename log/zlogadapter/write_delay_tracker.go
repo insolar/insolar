@@ -24,6 +24,7 @@ import (
 	"io"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/rs/zerolog"
 
@@ -157,8 +158,12 @@ func (h *writeDelayPostHook) replaceField(b []byte) int {
 	}
 
 	s := args.DurationFixedLen(nanoDuration, h.fieldWidth)
-	if len(s) > h.fieldWidth {
+	w := h.fieldWidth
+	if len(s) > w {
 		s = writeDelayResultFieldOverflowContent
+	} else {
+		w -= len(s) - utf8.RuneCountInString(s)
 	}
-	return copy(b, fmt.Sprintf(fieldHeaderFmt, h.fieldName, h.fieldWidth, s))
+	rs := fmt.Sprintf(fieldHeaderFmt, h.fieldName, w, s)
+	return copy(b, rs)
 }

@@ -18,14 +18,16 @@ package log
 
 import (
 	"bytes"
-	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/insolar"
-	"github.com/rs/zerolog"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"io"
 	"regexp"
 	"testing"
+
+	"github.com/rs/zerolog"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/insolar"
 )
 
 func capture(f func()) string {
@@ -275,7 +277,8 @@ func TestLog_WriteDuration(t *testing.T) {
 			logger3.Error("test")
 			assert.NotContains(t, buf.String(), `,"writeDuration":"`)
 			logger2.Error("test2")
-			assert.Contains(t, buf.String(), `,"writeDuration":"`)
+			s := buf.String()
+			assert.Contains(t, s, `,"writeDuration":"`)
 		})
 	}
 }
