@@ -84,7 +84,7 @@ func parseInputParams() {
 	pflag.StringVarP(&memberFile, "members-file", "", defaultMemberFile, "dir for saving members data")
 	pflag.BoolVarP(&noCheckBalance, "nocheckbalance", "b", false, "don't check balance at the end")
 	pflag.BoolVarP(&checkEveryMember, "check-every-member", "", false, "check balance of every member from file, don't run any scenario")
-	pflag.BoolVarP(&checkTotalBalance, "check-total-balance", "", false, "check total balance of members from file before run any scenario")
+	pflag.BoolVarP(&checkTotalBalance, "check-total-balance", "", false, "check total balance of members from file, don't run any scenario")
 	pflag.StringVarP(&scenarioName, "scenarioname", "t", "", "name of scenario")
 	pflag.StringVarP(&discoveryNodesLogs, "discovery-nodes-logs-dir", "", defaultDiscoveryNodesLogs, "launchnet logs dir for checking errors")
 	pflag.Parse()
@@ -375,7 +375,7 @@ func main() {
 		}
 	}()
 
-	if checkEveryMember {
+	if checkEveryMember || checkTotalBalance {
 		var commonMembers []*sdk.CommonMember
 		rawMembers, err := ioutil.ReadFile(memberFile)
 		check("Can't read members from file: ", err)
@@ -396,12 +396,8 @@ func main() {
 	b.scenario.prepare()
 
 	var totalBalanceBefore *big.Int
-	var membersWithBalanceMap map[string]*big.Int
 	if !noCheckBalance {
-		totalBalanceBefore, membersWithBalanceMap = getTotalBalance(insSDK, b.scenario.getBalanceCheckMembers())
-		if useMembersFromFile && checkTotalBalance {
-			checkBalanceAtFile(totalBalanceBefore, membersWithBalanceMap)
-		}
+		totalBalanceBefore, _ = getTotalBalance(insSDK, b.scenario.getBalanceCheckMembers())
 	}
 
 	if saveMembersToFile {

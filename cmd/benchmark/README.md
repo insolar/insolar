@@ -25,8 +25,7 @@ or you can run benchmark with
                 If true, just check balance of every member from file and don't run any scenario. Default is false.
 
         --check-total-balance
-                If true, check total balance of members from file and after that run scenario. Default is false.
-                If nocheckbalance True, check will not be done. 
+                If true, check total balance of members from file and don't run any scenario. Default is false.
 
         -c concurrency
                 Number of concurrent users. Default is one. 
@@ -64,7 +63,6 @@ or you can run benchmark with
 
         -b nocheckbalance
                 If true, don't check balance at the start/end of transfers. Default is false.
-                If true, check-total-balance option will be ignored.
                 If false, and savemembers or usemembers provided, and run was successful, balances in file will be updated after scenario.
 
         -t scenarioname
