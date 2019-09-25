@@ -511,7 +511,7 @@ func Test_IncomingRequest_ClosingWithOpenOutgoings(t *testing.T) {
 			resMsg, _ := MakeSetResult(objectID, reasonID)
 			// Set result.
 			rep := SendMessage(ctx, s, &resMsg)
-			RequireErrorCode(rep, payload.CodeNonClosedOutgoing)
+			RequireErrorCode(rep, payload.CodeRequestNonClosedOutgoing)
 		}
 	})
 }
