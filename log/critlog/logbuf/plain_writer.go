@@ -14,6 +14,8 @@
 //    limitations under the License.
 //
 
+// +build ignore
+
 package logbuf
 
 import "io"
