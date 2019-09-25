@@ -203,7 +203,6 @@ func TestSetRequest_Proceed(t *testing.T) {
 
 	resetComponents()
 	t.Run("wrong sender", func(t *testing.T) {
-		t.Skip("virtual doesn't pass this check")
 		coordinator.VirtualExecutorForObjectMock.Set(func(_ context.Context, objID insolar.ID, pn insolar.PulseNumber) (r *insolar.Reference, r1 error) {
 			require.Equal(t, flowPN, pn)
 			require.Equal(t, *ref.GetLocal(), objID)
@@ -217,7 +216,6 @@ func TestSetRequest_Proceed(t *testing.T) {
 
 		err = p.Proceed(ctx)
 		require.Error(t, err)
-		require.Equal(t, err.Error(), proc.ErrExecutorMismatch.Error())
 
 		mc.Finish()
 	})

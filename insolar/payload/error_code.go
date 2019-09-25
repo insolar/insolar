@@ -25,12 +25,15 @@ const (
 	CodeNoPendings   = 1004
 	CodeNoStartPulse = 1005
 
-	CodeRequestNotFound   = 1006
-	CodeRequestInvalid    = 1007
-	CodeReasonNotFound    = 1008
-	CodeReasonIsWrong     = 1009
-	CodeNonClosedOutgoing = 1010
-	CodeNonActivated      = 1011
+	CodeRequestNotFound          = 1006
+	CodeRequestInvalid           = 1007
+	CodeRequestNonClosedOutgoing = 1008
+	CodeRequestNonOldestMutable  = 1009
+
+	CodeReasonNotFound = 1010
+	CodeReasonIsWrong  = 1011
+
+	CodeNonActivated = 1012
 )
 
 type CodedError struct {
@@ -41,6 +44,7 @@ type CodedError struct {
 func (e *CodedError) GetCode() uint32 {
 	return e.Code
 }
+
 func (e *CodedError) Error() string {
 	return e.Text
 }

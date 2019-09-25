@@ -293,6 +293,13 @@ func (c *FilamentCalculatorDefault) ResultDuplicate(
 			return &rec, nil
 		}
 
+		// Another result already exists, return it.
+		if res, ok := record.Unwrap(&rec.Record.Virtual).(*record.Result); ok {
+			if *res.Request.GetLocal() == *result.Request.GetLocal() {
+				return &rec, nil
+			}
+		}
+
 		// Request found, return nil. It means we didn't find the result since result goes before request on
 		// iteration.
 		if bytes.Equal(rec.RecordID.Hash(), result.Request.GetLocal().Hash()) {

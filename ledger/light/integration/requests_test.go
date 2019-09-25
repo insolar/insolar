@@ -23,12 +23,14 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/stretchr/testify/require"
 )
 
 // For better coverage of corner cases (pulse changing, messages from different pulses, etc)
@@ -197,24 +199,33 @@ func Test_IncomingRequest_Duplicate(t *testing.T) {
 	})
 
 	t.Run("method request duplicate with result found", func(t *testing.T) {
+		// Creating root object.
 		msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), insolar.ID{}, true, true)
 		rep := SendMessage(ctx, s, &msg)
 		RequireNotError(rep)
-		rootObject := rep.(*payload.RequestInfo).ObjectID
+		rootObjectID := rep.(*payload.RequestInfo).ObjectID
 		reasonID := rep.(*payload.RequestInfo).RequestID
 
 		s.SetPulse(ctx)
 
+		// Creating another object.
 		msg, _ = MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), insolar.ID{}, true, true)
 		rep = SendMessage(ctx, s, &msg)
 		RequireNotError(rep)
-		objectID := rep.(*payload.RequestInfo).ObjectID
+		anotherObjectID := rep.(*payload.RequestInfo).ObjectID
+		anotherReqID := rep.(*payload.RequestInfo).RequestID
+
+		// Set result - closing creation request for another object.
+		resMsg, _ := MakeSetResult(anotherObjectID, anotherReqID)
+		rep = SendMessage(ctx, s, &resMsg)
+		RequireNotError(rep)
 
 		s.SetPulse(ctx)
 
-		requestMsg, _ := MakeSetIncomingRequest(objectID, reasonID, rootObject, false, false)
+		// Creating request on second object with reason on root object.
+		requestMsg, _ := MakeSetIncomingRequest(anotherObjectID, reasonID, rootObjectID, false, false)
 
-		// Set first request.
+		// Set first request on second object.
 		rep = SendMessage(ctx, s, &requestMsg)
 		RequireNotError(rep)
 		require.Nil(t, rep.(*payload.RequestInfo).Request)
@@ -223,8 +234,8 @@ func Test_IncomingRequest_Duplicate(t *testing.T) {
 
 		s.SetPulse(ctx)
 
-		// Set result.
-		resMsg, resultVirtual := MakeSetResult(objectID, requestID)
+		// Set result on second object..
+		resMsg, resultVirtual := MakeSetResult(anotherObjectID, requestID)
 		rep = SendMessage(ctx, s, &resMsg)
 		RequireNotError(rep)
 
@@ -343,10 +354,23 @@ func Test_DetachedRequest_notification(t *testing.T) {
 	s.SetPulse(ctx)
 
 	t.Run("detached notification sent on detached reason close", func(t *testing.T) {
+		// Creating root object.
 		msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), insolar.ID{}, true, true)
 		rep := SendMessage(ctx, s, &msg)
 		RequireNotError(rep)
 		objectID := rep.(*payload.RequestInfo).ObjectID
+		rootReqID := rep.(*payload.RequestInfo).RequestID
+
+		// Set result - closing creation request for root object.
+		resMsg, _ := MakeSetResult(objectID, rootReqID)
+		rep = SendMessage(ctx, s, &resMsg)
+		RequireNotError(rep)
+
+		s.SetPulse(ctx)
+
+		msg, _ = MakeSetIncomingRequest(objectID, gen.IDWithPulse(s.Pulse()), insolar.ID{}, false, true)
+		rep = SendMessage(ctx, s, &msg)
+		RequireNotError(rep)
 		reasonID := rep.(*payload.RequestInfo).RequestID
 
 		s.SetPulse(ctx)
@@ -357,7 +381,7 @@ func Test_DetachedRequest_notification(t *testing.T) {
 
 		s.SetPulse(ctx)
 
-		resMsg, _ := MakeSetResult(objectID, reasonID)
+		resMsg, _ = MakeSetResult(objectID, reasonID)
 		rep = SendMessage(ctx, s, &resMsg)
 		RequireNotError(rep)
 
@@ -395,7 +419,7 @@ func Test_Result_Duplicate(t *testing.T) {
 
 	s.SetPulse(ctx)
 
-	resMsg, resultVirtual := MakeSetResult(objectID, requestID)
+	resMsg, _ := MakeSetResult(objectID, requestID)
 	// Set result.
 	rep = SendMessage(ctx, s, &resMsg)
 	RequireNotError(rep)
@@ -405,15 +429,6 @@ func Test_Result_Duplicate(t *testing.T) {
 	// Try to set it again.
 	rep = SendMessage(ctx, s, &resMsg)
 	RequireNotError(rep)
-
-	resultInfo := rep.(*payload.ResultInfo)
-	require.NotNil(t, resultInfo.Result)
-
-	// Check duplicate.
-	receivedResult := record.Material{}
-	err = receivedResult.Unmarshal(resultInfo.Result)
-	require.NoError(t, err)
-	require.Equal(t, resultVirtual, receivedResult.Virtual)
 }
 
 func Test_IncomingRequest_ClosedReason(t *testing.T) {
@@ -504,7 +519,7 @@ func Test_IncomingRequest_ClosingWithOpenOutgoings(t *testing.T) {
 			resMsg, _ := MakeSetResult(objectID, reasonID)
 			// Set result.
 			rep := SendMessage(ctx, s, &resMsg)
-			RequireErrorCode(rep, payload.CodeNonClosedOutgoing)
+			RequireErrorCode(rep, payload.CodeRequestNonClosedOutgoing)
 		}
 	})
 }
@@ -527,10 +542,10 @@ func Test_IncomingRequest_ClosedReason_FromOtherObject(t *testing.T) {
 	// 		t.Run("happy concurrent", func(t *testing.T) {...})
 	t.Run("detached incoming request from another object on closed reason", func(t *testing.T) {
 		runner := func(t *testing.T) {
-			var objectID insolar.ID  // Root reason object.
-			var reasonID insolar.ID  // Root reason request.
-			var anotherID insolar.ID // Another object.
-			var creationID insolar.ID
+			var creationID insolar.ID // Creation Request ID of root object.
+			var objectID insolar.ID   // Root reason object.
+			var reasonID insolar.ID   // Root reason request.
+			var anotherID insolar.ID  // Another object.
 
 			// Creating root reason object.
 			{
@@ -542,6 +557,8 @@ func Test_IncomingRequest_ClosedReason_FromOtherObject(t *testing.T) {
 				objectID = rep.(*payload.RequestInfo).ObjectID
 				creationID = rep.(*payload.RequestInfo).RequestID
 			}
+
+			// Closing creation request of root object.
 			{
 				resMsg, _ := MakeSetResult(objectID, creationID)
 				rep := retryIfCancelled(func() payload.Payload {
@@ -848,10 +865,12 @@ func Test_IncomingRequest_DifferentResults(t *testing.T) {
 		s.SetPulse(ctx)
 
 		// Closing request
+		var originalResult record.Virtual
 		{
-			resMsg, _ := MakeSetResult(reasonID, reasonID)
+			resMsg, virtual := MakeSetResult(reasonID, reasonID)
 			rep := SendMessage(ctx, s, &resMsg)
 			RequireNotError(rep)
+			originalResult = virtual
 		}
 
 		s.SetPulse(ctx)
@@ -859,7 +878,12 @@ func Test_IncomingRequest_DifferentResults(t *testing.T) {
 		{
 			resMsg, _ := MakeSetResult(reasonID, reasonID)
 			rep := SendMessage(ctx, s, &resMsg)
-			RequireErrorCode(rep, payload.CodeRequestNotFound)
+			res, ok := rep.(*payload.ErrorResultExists)
+			require.True(t, ok, "returned ErrorResultExists")
+			receivedResult := record.Material{}
+			err := receivedResult.Unmarshal(res.Result)
+			require.NoError(t, err)
+			assert.Equal(t, originalResult, receivedResult.Virtual)
 		}
 	})
 }

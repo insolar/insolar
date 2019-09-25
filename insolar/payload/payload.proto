@@ -196,6 +196,13 @@ message ResultInfo {
 
     bytes ObjectID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
     bytes ResultID = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+}
+
+message ErrorResultExists {
+    uint32 Polymorph = 16;
+
+    bytes ObjectID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+    bytes ResultID = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
     bytes Result = 22;
 }
 

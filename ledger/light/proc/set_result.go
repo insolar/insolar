@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 
@@ -129,14 +130,24 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 			if err != nil {
 				return errors.Wrap(err, "failed to marshal result")
 			}
-			msg, err := payload.NewMessage(&payload.ResultInfo{
-				ObjectID: p.result.Object,
-				ResultID: res.RecordID,
-				Result:   resBuf,
-			})
+
+			var msg *message.Message
+			if res.RecordID == resultID {
+				msg, err = payload.NewMessage(&payload.ResultInfo{
+					ObjectID: p.result.Object,
+					ResultID: res.RecordID,
+				})
+			} else {
+				msg, err = payload.NewMessage(&payload.ErrorResultExists{
+					ObjectID: p.result.Object,
+					ResultID: res.RecordID,
+					Result:   resBuf,
+				})
+			}
 			if err != nil {
 				return errors.Wrap(err, "failed to create reply")
 			}
+
 			logger.Debug("result duplicate found")
 			p.dep.sender.Reply(ctx, p.message, msg)
 			return nil
@@ -147,14 +158,32 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to calculate pending requests")
 	}
-	closedRequest, err := findClosed(opened, p.result)
 
-	if p.sideEffect != nil {
-		err = checkRequestCanChangeState(closedRequest)
+	// Check oldest opened mutable request.
+	{
+		oldestMutable := oldestMutable(opened)
+		resultRequestID := *p.result.Request.GetLocal()
+		// We should return error if current result trying to close non-oldest opened mutable request.
+		if oldestMutable != nil && !oldestMutable.RecordID.Equal(resultRequestID) {
+			return &payload.CodedError{
+				Text: "attempt to close the non-oldest mutable request",
+				Code: payload.CodeRequestNonOldestMutable,
+			}
+		}
 	}
+
+	closedRequest, err := findClosed(opened, p.result)
 	if err != nil {
 		return errors.Wrap(err, "failed to find request being closed")
 	}
+
+	if p.sideEffect != nil {
+		err = checkRequestCanChangeState(closedRequest)
+		if err != nil {
+			return errors.Wrap(err, "request is not allowed to change object state")
+		}
+	}
+
 	err = checkOutgoings(opened, closedRequest.RecordID)
 	if err != nil {
 		return errors.Wrap(err, "open outgoings found")
@@ -347,7 +376,7 @@ func checkOutgoings(openedRequests []record.CompositeFilamentRecord, closedReque
 		if !out.IsDetached() && out.Reason.GetLocal().Equal(closedRequestID) {
 			return &payload.CodedError{
 				Text: "request " + closedRequestID.DebugString() + " is reason for non closed outgoing request " + req.RecordID.DebugString(),
-				Code: payload.CodeNonClosedOutgoing,
+				Code: payload.CodeRequestNonClosedOutgoing,
 			}
 		}
 	}
