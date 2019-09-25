@@ -567,7 +567,7 @@
           "value": "$__all"
         },
         "datasource": "prometheus",
-        "definition": "label_values(insolar_flow_dispatcher_handler_latency_count, instance)",
+        "definition": "label_values(insolar_flow_dispatcher_handler_latency_count{installation=\"$installation\"}, instance)",
         "hide": 0,
         "includeAll": true,
         "label": null,
@@ -600,7 +600,7 @@
             "value": "host.docker.internal:8005"
           }
         ],
-        "query": "label_values(insolar_flow_dispatcher_handler_latency_count, instance)",
+        "query": "label_values(insolar_flow_dispatcher_handler_latency_count{installation=\"$installation\"}, instance)",
         "refresh": 0,
         "regex": "",
         "skipUrlSync": false,
