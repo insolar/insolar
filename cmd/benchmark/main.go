@@ -269,15 +269,16 @@ func getTotalBalance(insSDK *sdk.SDK, members []sdk.Member) (*big.Int, map[strin
 }
 
 func getMembers(insSDK *sdk.SDK, number int, migration bool) ([]sdk.Member, error) {
-	var members = make([]sdk.Member, number+1)
+	var members []sdk.Member
 	var err error
 
 	if useMembersFromFile {
-		for i := range members {
+		// from file we load not just number of members, but also migration admin or fee member
+		for i := 0; i < number+1; i++ {
 			if migration {
-				members[i] = &sdk.MigrationMember{}
+				members = append(members, &sdk.MigrationMember{})
 			} else {
-				members[i] = &sdk.CommonMember{}
+				members = append(members, &sdk.CommonMember{})
 			}
 		}
 		err = loadMembers(&members)
