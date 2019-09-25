@@ -43,7 +43,7 @@ func Test_LongBuffer_Deviations(t *testing.T) {
 	//	deviations(t, threads, iterations, 0, 5, false, generateDelay, writeDelay)
 	//})
 
-	for _, threads := range []int{1, 10, 100, 1000, 10000} {
+	for _, threads := range []int{1, 10, 100, 1000, 8000 /* race check is limited by 8192 */} {
 		iterations := 1000000 / threads
 		if iterations > 1000 {
 			iterations = 1000

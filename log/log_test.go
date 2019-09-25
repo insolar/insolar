@@ -51,6 +51,8 @@ func assertHelloWorld(t *testing.T, out string) {
 func TestLog_GlobalLogger_redirection(t *testing.T) {
 	defer SaveGlobalLogger()()
 
+	SetLogLevel(insolar.InfoLevel)
+
 	originalG := GlobalLogger()
 
 	var buf bytes.Buffer
