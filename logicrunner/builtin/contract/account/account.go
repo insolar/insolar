@@ -146,19 +146,22 @@ func (a *Account) Transfer(rootDomainRef insolar.Reference, amountStr string, to
 		return nil, fmt.Errorf("failed to calculate fee for amount: %s", err.Error())
 	}
 
-	fee, ok := new(big.Int).SetString(feeStr, 10)
-	if !ok {
-		return nil, fmt.Errorf("can't parse input feeStr")
-	}
+	var toFeeMember *insolar.Reference
+	if feeStr != "0" {
+		fee, ok := new(big.Int).SetString(feeStr, 10)
+		if !ok {
+			return nil, fmt.Errorf("can't parse input feeStr")
+		}
 
-	toFeeMember, err := cc.GetFeeMember()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get fee member: %s", err.Error())
-	}
+		toFeeMember, err = cc.GetFeeMember()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get fee member: %s", err.Error())
+		}
 
-	totalSum, err := safemath.Add(fee, amount)
-	if err != nil {
-		return nil, fmt.Errorf("failed to calculate totalSum for amount: %s", err.Error())
+		amount, err = safemath.Add(fee, amount)
+		if err != nil {
+			return nil, fmt.Errorf("failed to calculate totalSum for amount: %s", err.Error())
+		}
 	}
 
 	currentBalanceStr, err := a.GetBalance()
@@ -169,11 +172,11 @@ func (a *Account) Transfer(rootDomainRef insolar.Reference, amountStr string, to
 	if !ok {
 		return nil, fmt.Errorf("can't parse account balance")
 	}
-	if totalSum.Cmp(currentBalance) > 0 {
+	if amount.Cmp(currentBalance) > 0 {
 		return nil, fmt.Errorf("balance is too low: %s", currentBalanceStr)
 	}
 
-	newBalance, err := safemath.Sub(currentBalance, totalSum)
+	newBalance, err := safemath.Sub(currentBalance, amount)
 	if err != nil {
 		return nil, fmt.Errorf("not enough balance for transfer: %s", err.Error())
 	}
@@ -184,9 +187,11 @@ func (a *Account) Transfer(rootDomainRef insolar.Reference, amountStr string, to
 		return nil, fmt.Errorf("failed to transfer amount: %s", err.Error())
 	}
 
-	err = a.TransferToMember(feeStr, *toFeeMember)
-	if err != nil {
-		return nil, fmt.Errorf("failed to transfer fee: %s", err.Error())
+	if feeStr != "0" {
+		err = a.TransferToMember(feeStr, *toFeeMember)
+		if err != nil {
+			return nil, fmt.Errorf("failed to transfer fee: %s", err.Error())
+		}
 	}
 
 	return member.TransferResponse{Fee: feeStr}, nil

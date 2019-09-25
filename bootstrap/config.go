@@ -60,6 +60,8 @@ type Config struct {
 
 	// RootBalance is a start balance for the root member's wallet.
 	RootBalance string `mapstructure:"root_balance" yaml:"root_balance"`
+	// Fee is a transfer from wallet to wallet fee
+	Fee string `mapstructure:"fee" yaml:"fee"`
 	// MDBalance is a start balance for the migration admin member's wallet.
 	MDBalance string `mapstructure:"md_balance" yaml:"md_balance"`
 	// VestingPeriodInPulses - interval of count pulses for the full period of partial release.

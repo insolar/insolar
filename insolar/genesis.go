@@ -251,6 +251,7 @@ type GenesisContractState struct {
 // GenesisContractsConfig carries data required for contract object initialization via genesis.
 type GenesisContractsConfig struct {
 	RootBalance                     string
+	Fee                             string
 	MDBalance                       string
 	RootPublicKey                   string
 	FeePublicKey                    string

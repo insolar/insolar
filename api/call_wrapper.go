@@ -18,47 +18,53 @@ package api
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strings"
 
+	"github.com/insolar/insolar/api/instrumenter"
 	"github.com/insolar/insolar/api/requester"
-	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/instrumentation/instracer"
+
 	"github.com/insolar/rpc/v2"
 	"github.com/insolar/rpc/v2/json2"
 )
 
 const (
 	ParseError                 = -31700
+	ParseErrorShort            = "ParseError"
 	ParseErrorMessage          = "Parsing error on the server side: received an invalid JSON."
 	InvalidRequestError        = -31600
+	InvalidRequestErrorShort   = "InvalidRequest"
 	InvalidRequestErrorMessage = "The JSON received is not a valid request payload."
 	MethodNotFoundError        = -31601
+	MethodNotFoundErrorShort   = "MethodNotFound"
 	MethodNotFoundErrorMessage = "Method does not exist / is not available."
 	InvalidParamsError         = -31602
+	InvalidParamsErrorShort    = "InvalidParams"
 	InvalidParamsErrorMessage  = "Invalid method parameter(s)."
 	InternalError              = -31603
+	InternalErrorShort         = "Internal"
 	InternalErrorMessage       = "Internal Platform error."
 	TimeoutError               = -31106
+	TimeoutErrorShort          = "Timeout"
 	TimeoutErrorMessage        = "Request's timeout has expired."
 	UnauthorizedError          = -31401
+	UnauthorizedErrorShort     = "Unauthorized"
 	UnauthorizedErrorMessage   = "Action is not authorized."
 	ExecutionError             = -31103
+	ExecutionErrorShort        = "Execution"
 	ExecutionErrorMessage      = "Execution error."
 )
 
-func wrapCall(runner *Runner, allowedMethods map[string]bool, req *http.Request, args *requester.Params, requestBody *rpc.RequestBody, result *requester.ContractResult) error {
-	traceID := utils.RandTraceID()
-	ctx, logger := inslogger.WithTraceField(context.Background(), traceID)
-
-	ctx, span := instracer.StartSpan(ctx, "Call")
-	defer span.End()
-
-	logger.Infof("[ ContractService.Call ] Incoming request: %s", req.RequestURI)
+func wrapCall(ctx context.Context, runner *Runner, allowedMethods map[string]bool, req *http.Request, args *requester.Params, requestBody *rpc.RequestBody, result *requester.ContractResult) error {
+	instr := instrumenter.GetInstrumenter(ctx)
+	traceID := instr.TraceID()
+	logger := inslogger.FromContext(ctx)
 
 	_, ok := allowedMethods[args.CallSite]
 	if !ok {
+		instr.SetError(errors.New(MethodNotFoundErrorMessage), MethodNotFoundErrorShort)
 		return &json2.Error{
 			Code:    MethodNotFoundError,
 			Message: MethodNotFoundErrorMessage,
@@ -71,9 +77,11 @@ func wrapCall(runner *Runner, allowedMethods map[string]bool, req *http.Request,
 	if args.Test != "" {
 		logger.Infof("ContractRequest related to %s", args.Test)
 	}
+	instr.SetCallSite(args.CallSite)
 
 	signature, err := validateRequestHeaders(req.Header.Get(requester.Digest), req.Header.Get(requester.Signature), requestBody.Raw)
 	if err != nil {
+		instr.SetError(err, InvalidParamsErrorShort)
 		return &json2.Error{
 			Code:    InvalidParamsError,
 			Message: InvalidParamsErrorMessage,
@@ -86,6 +94,7 @@ func wrapCall(runner *Runner, allowedMethods map[string]bool, req *http.Request,
 
 	seedPulse, err := runner.checkSeed(args.Seed)
 	if err != nil {
+		instr.SetError(err, InvalidRequestErrorShort)
 		return &json2.Error{
 			Code:    InvalidRequestError,
 			Message: InvalidRequestErrorMessage,
@@ -109,6 +118,7 @@ func wrapCall(runner *Runner, allowedMethods map[string]bool, req *http.Request,
 		// TODO: white list of errors that doesnt require log
 		logger.Error("API return error: ", err.Error())
 		if strings.Contains(err.Error(), "invalid signature") {
+			instr.SetError(err, UnauthorizedErrorShort)
 			return &json2.Error{
 				Code:    UnauthorizedError,
 				Message: UnauthorizedErrorMessage,
@@ -121,6 +131,7 @@ func wrapCall(runner *Runner, allowedMethods map[string]bool, req *http.Request,
 		}
 
 		if strings.Contains(err.Error(), "failed to parse") {
+			instr.SetError(err, ParseErrorShort)
 			return &json2.Error{
 				Code:    ParseError,
 				Message: ParseErrorMessage,
@@ -132,6 +143,7 @@ func wrapCall(runner *Runner, allowedMethods map[string]bool, req *http.Request,
 			}
 		}
 
+		instr.SetError(err, ExecutionErrorShort)
 		return &json2.Error{
 			Code:    ExecutionError,
 			Message: ExecutionErrorMessage,

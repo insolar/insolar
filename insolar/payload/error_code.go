@@ -31,8 +31,6 @@ const (
 	CodeReasonIsWrong     = 1009
 	CodeNonClosedOutgoing = 1010
 	CodeNonActivated      = 1011
-
-	CodeFilamentTooBig = 1012
 )
 
 type CodedError struct {
