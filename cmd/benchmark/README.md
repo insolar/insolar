@@ -24,6 +24,9 @@ or you can run benchmark with
         --check-every-member
                 If true, just check balance of every member from file and don't run any scenario. Default is false.
 
+        --check-balance-without-fee
+                If true, just check balance of every member from file, except fee wallet, and don't run any scenario. Default is false.
+
         --check-total-balance
                 If true, check total balance of members from file and don't run any scenario. Default is false.
 
