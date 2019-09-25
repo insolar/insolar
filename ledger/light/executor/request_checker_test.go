@@ -166,7 +166,7 @@ func TestRequestCheckerDefault_CheckRequest(t *testing.T) {
 						}
 						return buf
 					}(),
-					Oldest: true,
+					OldestMutable: true,
 				}),
 			})
 			return ch, func() {}

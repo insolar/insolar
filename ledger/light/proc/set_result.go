@@ -161,7 +161,7 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 
 	// Check oldest opened mutable request.
 	{
-		oldestMutable := oldestMutable(opened)
+		oldestMutable := executor.OldestMutable(opened)
 		resultRequestID := *p.result.Request.GetLocal()
 		// We should return error if current result trying to close non-oldest opened mutable request.
 		if oldestMutable != nil && !oldestMutable.RecordID.Equal(resultRequestID) {
