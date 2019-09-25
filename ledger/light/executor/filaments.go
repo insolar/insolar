@@ -535,7 +535,7 @@ func (c *cacheStore) Delete(id insolar.ID) {
 func (c *cacheStore) DeleteIfLonger(id insolar.ID, limit int) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	if len(c.caches[id].cache) > limit {
+	if _, ok := c.caches[id]; ok && len(c.caches[id].cache) > limit {
 		delete(c.caches, id)
 	}
 }
