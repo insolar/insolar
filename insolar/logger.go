@@ -272,6 +272,7 @@ const (
 	LogMetricsEventCount LogMetricsMode = 1 << iota
 	LogMetricsWriteDelayReport
 	LogMetricsWriteDelayField
+	LogMetricsReset
 )
 
 type LoggerBuilder interface {

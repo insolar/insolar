@@ -154,7 +154,11 @@ func (z LoggerBuilder) WithCaller(mode insolar.CallerFieldMode) insolar.LoggerBu
 }
 
 func (z LoggerBuilder) WithMetrics(mode insolar.LogMetricsMode) insolar.LoggerBuilder {
-	z.Instruments.MetricsMode = mode
+	if mode&insolar.LogMetricsReset != 0 {
+		z.Instruments.MetricsMode = 0
+		mode &^= insolar.LogMetricsReset
+	}
+	z.Instruments.MetricsMode |= mode
 	return z
 }
 

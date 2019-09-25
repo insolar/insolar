@@ -211,3 +211,23 @@ func TestLog_Timestamp(t *testing.T) {
 		})
 	}
 }
+
+func TestLog_WriteDuration(t *testing.T) {
+	for _, adapter := range []string{"zerolog"} {
+		adapter := adapter
+		t.Run(adapter, func(t *testing.T) {
+			logger, err := NewLog(configuration.Log{Level: "info", Adapter: adapter, Formatter: "json"})
+			require.NoError(t, err)
+			require.NotNil(t, logger)
+
+			var buf bytes.Buffer
+			logger, err = logger.Copy().WithOutput(&buf).WithMetrics(insolar.LogMetricsWriteDelayField).Build()
+			require.NoError(t, err)
+
+			logger.Error("test")
+
+			s := buf.String()
+			assert.Contains(t, s, `,"writeDuration":"`)
+		})
+	}
+}

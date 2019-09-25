@@ -55,7 +55,7 @@ func getWriteDelayConfig(metrics *logmetrics.MetricsHelper,
 		reportFn = metrics.GetOnWriteDurationReport()
 	}
 
-	return len(fieldName) != 0 && reportFn != nil, fieldName, reportFn
+	return len(fieldName) != 0 || reportFn != nil, fieldName, reportFn
 }
 
 func getWriteDelayHookParams(fieldName string, preferTrim bool) (fieldWidth int, searchField string) {
