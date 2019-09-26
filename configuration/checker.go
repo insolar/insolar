@@ -14,20 +14,23 @@
 // limitations under the License.
 //
 
-package insolar
+package configuration
 
-import (
-	"context"
-)
-
-// APIRunner
-type APIRunner interface {
-	IsAPIRunner() bool
+// AvailabilityChecker holds configuration for checking is network available for process API calls
+type AvailabilityChecker struct {
+	Enabled        bool
+	KeeperURL      string
+	RequestTimeout uint
+	CheckPeriod    uint
 }
 
-//go:generate minimock -i github.com/insolar/insolar/insolar.AvailabilityChecker -o ../testutils -s _mock.go -g
-
-// AvailabilityChecker component checks if insolar network can't process any new requests
-type AvailabilityChecker interface {
-	IsAvailable(context.Context) bool
+func NewAvailabilityChecker() AvailabilityChecker {
+	return AvailabilityChecker{
+		Enabled: true,
+		// TODO: set local keeperd address when its done
+		// TODO: launch it in functests
+		KeeperURL:      "",
+		RequestTimeout: 15,
+		CheckPeriod:    5,
+	}
 }
