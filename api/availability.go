@@ -39,7 +39,7 @@ type keeperResponse struct {
 type NetworkChecker struct {
 	client    *http.Client
 	enabled   bool
-	keeperUrl string
+	keeperURL string
 
 	lock        *sync.RWMutex
 	isAvailable bool
@@ -52,7 +52,7 @@ func NewNetworkChecker(cfg configuration.AvailabilityChecker) *NetworkChecker {
 			Timeout:   keeperRequestTimeout,
 		},
 		enabled:     cfg.Enabled,
-		keeperUrl:   cfg.KeeperUrl,
+		keeperURL:   cfg.keeperURL,
 		lock:        &sync.RWMutex{},
 		isAvailable: false,
 	}
@@ -77,7 +77,7 @@ func (nc *NetworkChecker) Start(ctx context.Context) error {
 
 func (nc *NetworkChecker) updateAvailability(ctx context.Context) {
 	logger := inslogger.FromContext(ctx)
-	resp, err := nc.client.Get(nc.keeperUrl)
+	resp, err := nc.client.Get(nc.keeperURL)
 	defer func() {
 		if resp != nil && resp.Body != nil {
 			err := resp.Body.Close()
