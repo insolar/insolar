@@ -43,7 +43,6 @@ func (p *keyLoader) Load(file string) (crypto.PrivateKey, error) {
 		return nil, errors.Wrap(err, "[ Load ] Could't read private key")
 	}
 
-	// todo: use pksc8 https://github.com/golang/go/blob/master/src/crypto/x509/pkcs8.go
 	signer, err := p.parseFunc(key)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Load ] Could't parse private key")
