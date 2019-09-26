@@ -69,7 +69,7 @@ func TestBackpressureBuffer_stop(t *testing.T) {
 }
 
 func TestBackpressureBuffer_parallel_write_limits_on_buffer(t *testing.T) {
-	t.SkipNow()
+	//t.SkipNow()
 
 	for repeat := 1; repeat > 0; repeat-- {
 		for parWriters := 1; parWriters <= 20; parWriters++ {
@@ -83,7 +83,7 @@ func TestBackpressureBuffer_parallel_write_limits_on_buffer(t *testing.T) {
 }
 
 func TestBackpressureBuffer_parallel_write_limits_on_bypass(t *testing.T) {
-	t.SkipNow()
+	//t.SkipNow()
 
 	for repeat := 1; repeat > 0; repeat-- {
 		for parWriters := 1; parWriters <= 20; parWriters++ {
@@ -122,8 +122,8 @@ func testBackpressureBufferLimit(t *testing.T, parWriters int, hasBuffer bool, s
 
 	wgStarted := sync.WaitGroup{}
 
-	wgFinished := sync.WaitGroup{}
-	wgFinished.Add(producersCount)
+	wgFinished := Semaphore{}
+	wgFinished.Add(bufSize)
 
 	var produceIndex int
 	var producersDone uint32
@@ -176,6 +176,8 @@ func testBackpressureBufferLimit(t *testing.T, parWriters int, hasBuffer bool, s
 		produceIndex++
 	}
 	wgStarted.Wait()
+	wgFinished.Wait()
+	wgFinished.Add(producersCount - bufSize)
 
 	require.Equal(t, bufSize, len(bb.buffer), "buffer is full")
 
@@ -242,7 +244,7 @@ func testBackpressureBufferLimit(t *testing.T, parWriters int, hasBuffer bool, s
 		if len(bb.buffer) == 0 && int(atomic.LoadUint32(&cw.parallel)) == 0 {
 			break
 		}
-		require.NoError(t, bb.Flush(), "flush error")
+		require.NoError(t, bb.Flush(), "repeated flush error")
 		time.Sleep(time.Duration(i+1) * 5 * time.Millisecond)
 	}
 
@@ -382,7 +384,7 @@ type chanWriter struct {
 	total    uint32
 	parallel uint32
 	wgBefore sync.WaitGroup
-	wgAfter  sync.WaitGroup
+	wgAfter  Semaphore
 }
 
 func (c *chanWriter) Write(p []byte) (int, error) {
@@ -401,4 +403,48 @@ func (c *chanWriter) Write(p []byte) (int, error) {
 func (c *chanWriter) Close() (err error) {
 	close(c.out)
 	return nil
+}
+
+type Semaphore struct {
+	sync.Mutex
+	cond    *sync.Cond
+	counter int32
+}
+
+func (p *Semaphore) init() {
+	if p.cond == nil {
+		p.cond = sync.NewCond(&p.Mutex)
+	}
+}
+
+func (p *Semaphore) Done() {
+	p.Add(-1)
+}
+
+func (p *Semaphore) Add(increment int) int {
+	p.Lock()
+	p.init()
+
+	before := p.counter
+	p.counter += int32(increment)
+	if before > 0 && p.counter <= 0 {
+		p.cond.Broadcast()
+	}
+	v := int(p.counter)
+	p.Unlock()
+
+	return v
+}
+
+func (p *Semaphore) Wait() {
+	p.Lock()
+	p.init()
+
+	for {
+		if p.counter <= 0 {
+			break
+		}
+		p.cond.Wait()
+	}
+	p.Unlock()
 }
