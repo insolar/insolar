@@ -47,14 +47,18 @@ func (p *FlushBypass) DoWrite(b []byte) (n int, err error) {
 
 func (p *FlushBypass) LogLevelWrite(level insolar.LogLevel, b []byte) (int, error) {
 	if p.IsClosed() {
-		return 0, errors.New("closed")
+		return 0, p.ClosedError()
 	}
 	return p.DoLevelWrite(level, b)
 }
 
+func (p *FlushBypass) ClosedError() error {
+	return errors.New("closed")
+}
+
 func (p *FlushBypass) Write(b []byte) (int, error) {
 	if p.IsClosed() {
-		return 0, errors.New("closed")
+		return 0, p.ClosedError()
 	}
 	return p.DoLevelWrite(insolar.NoLevel, b)
 }
@@ -111,12 +115,12 @@ func (p *FlushBypass) Close() error {
 		_, _ = p.DoClose()
 		return nil
 	}
-	return errors.New("closed")
+	return p.ClosedError()
 }
 
 func (p *FlushBypass) Flush() error {
 	if p.IsClosed() {
-		return errors.New("closed")
+		return p.ClosedError()
 	}
 	_, err := p.DoFlush()
 	return err
@@ -124,7 +128,7 @@ func (p *FlushBypass) Flush() error {
 
 func (p *FlushBypass) Sync() error {
 	if p.IsClosed() {
-		return errors.New("closed")
+		return p.ClosedError()
 	}
 	_, err := p.DoSync()
 	return err
@@ -132,7 +136,7 @@ func (p *FlushBypass) Sync() error {
 
 func (p *FlushBypass) FlushOrSync() error {
 	if p.IsClosed() {
-		return errors.New("closed")
+		return p.ClosedError()
 	}
 	_, err := p.DoFlushOrSync()
 	return err

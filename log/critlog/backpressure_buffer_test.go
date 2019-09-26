@@ -21,8 +21,10 @@ import (
 	"context"
 	"fmt"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/consensus/common/args"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"io"
 	"runtime"
 	"sync"
 	"sync/atomic"
@@ -31,148 +33,195 @@ import (
 )
 
 func TestBackpressureBuffer_stop(t *testing.T) {
-	// BufferCloseOnStop
-	var internal *internalBackpressureBuffer
-	init := func() {
-		bb := NewBackpressureBuffer(&bytes.Buffer{}, 10, 0, 0, 0, nil)
-		internal = bb.internalBackpressureBuffer
 
-		bb.StartWorker(context.Background())
+	for _, c := range constructors {
+		t.Run(c.name, func(t *testing.T) {
+
+			// BufferCloseOnStop
+			var internal *internalBackpressureBuffer
+			init := func() {
+				bb := c.fn(&bytes.Buffer{})
+				internal = bb.internalBackpressureBuffer
+				bb.StartWorker(context.Background())
+			}
+
+			init()
+			init = nil // make sure that *BackpressureBuffer is lost
+
+			time.Sleep(time.Millisecond) // and make sure that the worker has started
+			require.Equal(t, int32(1+1<<16), atomic.LoadInt32(&internal.writerCounts))
+
+			runtime.GC()                 // the init func() and *BackpressureBuffer are lost, finalizer is created
+			time.Sleep(time.Millisecond) // make sure the finalizer was executed
+			runtime.GC()                 // finalizer is released
+
+			time.Sleep(time.Millisecond) // not needed, just to be safe
+			runtime.GC()
+
+			require.Equal(t, int32(0), atomic.LoadInt32(&internal.writerCounts))
+
+			be := <-internal.buffer
+			// depletionMark mark in the buffer indicates that any worker will stop
+			require.Equal(t, depletionMark, be.flushMark)
+			require.Equal(t, 0, len(internal.buffer))
+		})
 	}
-
-	init()
-	init = nil // make sure that *BackpressureBuffer is lost
-
-	time.Sleep(time.Millisecond) // and make sure that the worker has started
-	require.Equal(t, uint32(1), atomic.LoadUint32(&internal.pendingWrites))
-
-	runtime.GC()                 // the init func() and *BackpressureBuffer are lost, finalizer is created
-	time.Sleep(time.Millisecond) // make sure the finalizer was executed
-	runtime.GC()                 // finalizer is released
-
-	time.Sleep(time.Millisecond) // not needed, just to be safe
-	runtime.GC()
-
-	require.Equal(t, uint32(0), atomic.LoadUint32(&internal.pendingWrites))
-
-	be := <-internal.buffer
-	// depletionMark mark in the buffer indicates that any worker will stop
-	require.Equal(t, depletionMark, be.flushMark)
-	require.Equal(t, 0, len(internal.buffer))
 }
 
-type chanWriter struct {
-	out      chan<- []byte
-	total    uint32
-	parallel uint32
-}
-
-func (c *chanWriter) Write(p []byte) (int, error) {
-	atomic.AddUint32(&c.total, 1)
-	atomic.AddUint32(&c.parallel, 1)
-	//fmt.Println("before out <- ", string(p), "\n", string(debug.Stack()))
-	c.out <- p
-	//fmt.Println("after out <- ", string(p))
-	atomic.AddUint32(&c.parallel, ^uint32(0))
-	return len(p), nil
-}
-
-func (c *chanWriter) Close() (err error) {
-	close(c.out)
-	return nil
-}
-
-func TestBackpressureBuffer_parallel_write_limits(t *testing.T) {
-	t.Skip("this test may fail on high load of CPU")
-	for parWriters := 1; parWriters < 10; parWriters++ {
-		for useWorker := 0; useWorker <= 1; useWorker++ {
-			t.Run(fmt.Sprintf("parWriters=%v useWorker=%v", parWriters, useWorker != 0), func(t *testing.T) {
-				testBackpressureBufferLimit(t, parWriters, 10, useWorker != 0)
-			})
+func TestBackpressureBuffer_parallel_write_limits_on_buffer(t *testing.T) {
+	//t.Skip("this test may fail on high load of CPU")
+	for repeat := 1; repeat > 0; repeat-- {
+		for parWriters := 1; parWriters <= 20; parWriters++ {
+			for useWorker := 0; useWorker <= 1; useWorker++ {
+				t.Run(fmt.Sprintf("buffer parWriters=%v useWorker=%v", parWriters, useWorker != 0), func(t *testing.T) {
+					testBackpressureBufferLimit(t, parWriters, true, useWorker != 0)
+				})
+			}
 		}
 	}
 }
 
-func testBackpressureBufferLimit(t *testing.T, parWriters, bufSize int, startWorker bool) {
+func TestBackpressureBuffer_parallel_write_limits_on_bypass(t *testing.T) {
+	//t.Skip("this test may fail on high load of CPU")
+	for repeat := 1; repeat > 0; repeat-- {
+		for parWriters := 1; parWriters <= 20; parWriters++ {
+			for useWorker := 0; useWorker <= 1; useWorker++ {
+				t.Run(fmt.Sprintf("bypass parWriters=%v useWorker=%v", parWriters, useWorker != 0), func(t *testing.T) {
+					testBackpressureBufferLimit(t, parWriters, false, useWorker != 0)
+				})
+			}
+		}
+	}
+}
+
+func testBackpressureBufferLimit(t *testing.T, parWriters int, hasBuffer bool, startWorker bool) {
 
 	ch := make(chan []byte)
 	cw := &chanWriter{out: ch}
-	bb := NewBackpressureBuffer(cw, bufSize, 0, uint8(parWriters), 0,
-		func(missed int) (level insolar.LogLevel, i []byte) {
-			return insolar.WarnLevel, []byte(fmt.Sprintf("missed %d", missed))
-		})
 
-	producersCount := bufSize + parWriters*2 + 1
+	missedFn := func(missed int) (level insolar.LogLevel, i []byte) {
+		return insolar.WarnLevel, []byte(fmt.Sprintf("missed %d", missed))
+	}
+
+	allocatedBufSize := int(args.Prime(parWriters)) * 2
+	var bb *BackpressureBuffer
+	if hasBuffer {
+		bb = NewBackpressureBuffer(cw, allocatedBufSize, uint8(parWriters), 0, missedFn)
+	} else {
+		bb = NewBackpressureBufferWithBypass(cw, allocatedBufSize, uint8(parWriters), 0, missedFn)
+	}
+
+	producersCount := allocatedBufSize + parWriters*2 + 1
+
+	bufSize := 0
+	if hasBuffer {
+		bufSize = allocatedBufSize
+	}
 
 	wgStarted := sync.WaitGroup{}
+
 	wgFinished := sync.WaitGroup{}
-	wgStarted.Add(producersCount)
 	wgFinished.Add(producersCount)
 
+	var produceIndex int
 	var producersDone uint32
-	for i := 0; i < producersCount; i++ {
-		msg := fmt.Sprintf("test msg %d\n", i)
-		go func() {
-			wgStarted.Done()
-			n, err := bb.Write([]byte(msg))
 
-			if n != len(msg) || err != nil {
-				panic("write was wrong")
-			}
+	nextProduce := func(i int) {
+		msg := fmt.Sprintf("test msg %d", i)
+		wgStarted.Done()
+		//go fmt.Println("before: ", msg)
+		n, err := bb.Write([]byte(msg))
+		//go fmt.Println(" after: ", msg)
 
-			atomic.AddUint32(&producersDone, 1)
-			wgFinished.Done()
-		}()
+		if n != len(msg) || err != nil {
+			panic("write was wrong")
+		}
+
+		atomic.AddUint32(&producersDone, 1)
+		wgFinished.Done()
 	}
 
-	wgStarted.Wait()
+	cw.wgBefore.Add(parWriters)
 
-	for i := 0; i <= 9; i++ {
-		if parWriters == int(atomic.LoadUint32(&cw.parallel)) && len(bb.buffer) == bufSize &&
-			parWriters == int(atomic.LoadUint32(&bb.pendingWrites)) {
+	// fill up all writing slots
+	// NB! some writers will also capture +1 event, so we need to put more
+	for i := bufSize + parWriters*2; i > 0; i-- {
+		if produceIndex >= producersCount {
 			break
 		}
-		time.Sleep(time.Duration(i+1) * 5 * time.Millisecond)
+		wgStarted.Add(1)
+		go nextProduce(produceIndex)
+		produceIndex++
 	}
+	wgStarted.Wait()
 
-	require.Equal(t, parWriters, int(atomic.LoadUint32(&bb.pendingWrites)), "not all write slots are occupied")
+	cw.wgBefore.Wait()
+	cw.wgBefore.Add(producersCount - parWriters)
+
 	require.Equal(t, parWriters, int(atomic.LoadUint32(&cw.total)), "io.Writer is hit by exactly the number of write slots")
 	require.Equal(t, parWriters, int(atomic.LoadUint32(&cw.parallel)), "io.Writer is hit by exactly the number of write slots")
+	require.Equal(t, parWriters, bb.getPendingWrites(), "not all write slots are occupied")
 	require.Equal(t, 0, int(atomic.LoadUint32(&bb.missCount)), "no misses")
+
+	entriesPickedByWriters := bufSize - len(bb.buffer)
+	// fill up whole buffer
+	for i := entriesPickedByWriters; i > 0; i-- {
+		wgStarted.Add(1)
+		go nextProduce(produceIndex)
+		produceIndex++
+	}
+	wgStarted.Wait()
+
 	require.Equal(t, bufSize, len(bb.buffer), "buffer is full")
 
-	require.LessOrEqual(t, bufSize, int(atomic.LoadUint32(&producersDone)), "only producers that fit the buffer")
-	// there could be up-to 2*parWriters difference because each writer can pick something from a queue
+	//there could be up-to parWriters difference because each writer can pick something from a queue
+	require.LessOrEqual(t, bufSize, int(atomic.LoadUint32(&producersDone)))
 	require.GreaterOrEqual(t, bufSize+parWriters*2, int(atomic.LoadUint32(&producersDone)), "producers that hit output")
 
-	producersLLDone := uint32(0)
+	require.Equal(t, parWriters, int(atomic.LoadUint32(&cw.total)), "io.Writer is hit by exactly the number of write slots")
+	require.Equal(t, parWriters, int(atomic.LoadUint32(&cw.parallel)), "io.Writer is hit by exactly the number of write slots")
+	require.Equal(t, parWriters, bb.getPendingWrites(), "not all write slots are occupied")
+	require.Equal(t, 0, int(atomic.LoadUint32(&bb.missCount)), "no misses")
+
+	// add up remaining producers
+	for i := producersCount - produceIndex; i > 0; i-- {
+		wgStarted.Add(1)
+		go nextProduce(produceIndex)
+		produceIndex++
+	}
+	wgStarted.Wait()
+
+	wgLLFinished := sync.WaitGroup{}
+
+	expectedMiss := producersCount - cap(bb.buffer) + len(bb.buffer)
 	for i := 0; i < producersCount; i++ {
-		msg := fmt.Sprintf("test ll msg %d\n", i)
+		wgLLFinished.Add(1)
+		msg := fmt.Sprintf("test LL msg %d", i)
 		go func() {
+			//go fmt.Println("before: ", msg)
 			n, err := bb.LowLatencyWrite(insolar.InfoLevel, []byte(msg))
+			//go fmt.Println(" after: ", msg)
 
 			require.Equal(t, n, len(msg))
 			require.NoError(t, err)
 
-			atomic.AddUint32(&producersLLDone, 1)
+			wgLLFinished.Done()
 		}()
 	}
+	wgLLFinished.Wait()
 
-	for i := 0; i <= 9; i++ {
-		if producersCount == int(atomic.LoadUint32(&producersLLDone)) {
-			break
-		}
-		time.Sleep(time.Duration(i+1) * 5 * time.Millisecond)
-	}
-
-	require.Equal(t, producersCount, int(atomic.LoadUint32(&producersLLDone)), "all LL producers are done")
-	require.Equal(t, producersCount, int(atomic.LoadUint32(&bb.missCount)), "all LL write were missed")
-	require.Equal(t, parWriters, int(atomic.LoadUint32(&bb.pendingWrites)), "all write slots are still occupied after LL")
+	require.Equal(t, expectedMiss, int(atomic.LoadUint32(&bb.missCount)), "all LL writes were missed")
+	require.Equal(t, parWriters, bb.getPendingWrites(), "all write slots are still occupied after LL")
 	require.Equal(t, parWriters, int(atomic.LoadUint32(&cw.total)), "io.Writer is hit by exactly the number of write slots after LL")
 	require.Equal(t, parWriters, int(atomic.LoadUint32(&cw.parallel)), "io.Writer is hit by exactly the number of write slots after LL")
 
+	cw.wgBefore.Add(producersCount - expectedMiss + 1)
+	cw.wgAfter.Add(producersCount*2 - expectedMiss + 1)
+
 	go func() {
-		for range ch {
+		for p := range ch {
+			//go fmt.Println("   out: ", string(p))
+			runtime.KeepAlive(p)
 		}
 	}()
 
@@ -180,44 +229,40 @@ func testBackpressureBufferLimit(t *testing.T, parWriters, bufSize int, startWor
 		bb.StartWorker(context.Background())
 	}
 
-	// NB! Flush() may NOT be able to clean up whole buffer when there are many pending writers, so we will retry
 	require.NoError(t, bb.Flush(), "flush")
+	require.Equal(t, 0, int(atomic.LoadUint32(&bb.missCount)), "miss counter was flushed")
+
+	// NB! Flush() may NOT be able to clean up whole buffer when there are many pending writers, so we will retry
 	for i := 0; i <= 9; i++ {
-		require.NoError(t, bb.Flush(), "flush")
-		if producersCount == int(atomic.LoadUint32(&producersDone)) && len(bb.buffer) == 0 &&
-			producersCount+1 == int(atomic.LoadUint32(&cw.total)) && int(atomic.LoadUint32(&cw.parallel)) == 0 {
+		if len(bb.buffer) == 0 && int(atomic.LoadUint32(&cw.parallel)) == 0 {
 			break
 		}
+		require.NoError(t, bb.Flush(), "flush error")
 		time.Sleep(time.Duration(i+1) * 5 * time.Millisecond)
 	}
 
 	wgFinished.Wait()
-
-	require.Equal(t, producersCount, int(atomic.LoadUint32(&producersDone)), "all writers are done")
-	require.Equal(t, 0, len(bb.buffer), "buffer is flushed and no marks left")
-	require.Equal(t, 0, int(atomic.LoadUint32(&bb.missCount)), "miss counter was flushed")
-	require.Equal(t, producersCount+1, int(atomic.LoadUint32(&cw.total)), "producers + miss message")
-	require.Equal(t, 0, int(atomic.LoadUint32(&cw.parallel)), "io.Writer is hit by exactly the number of write slots after LL")
+	//cw.wgBefore.Wait()
+	//cw.wgAfter.Wait()
+	//
+	//require.Equal(t, 0, len(bb.buffer), "buffer is flushed and no marks left")
+	//require.Equal(t, producersCount*2+1-expectedMiss, int(atomic.LoadUint32(&cw.total)), "producers + miss message")
+	//require.Equal(t, 0, int(atomic.LoadUint32(&cw.parallel)), "io.Writer is hit by exactly the number of write slots after LL")
 
 	expectedWrites := 0
 	if startWorker {
 		expectedWrites++
 	}
-	require.Equal(t, expectedWrites, int(atomic.LoadUint32(&bb.pendingWrites)), "no writers but worker")
+	require.Equal(t, expectedWrites, bb.getPendingWrites(), "no writers but worker")
 
 	require.NoError(t, bb.Close(), "close")
-	require.Errorf(t, bb.Close(), "closed", "must be closed")
+	require.Equal(t, 1, len(bb.buffer), "depletion mark")
 
-	// make sure that the worker will enough time to find a mark and put it back
-	for i := 0; i <= 10; i++ {
-		if int(atomic.LoadUint32(&bb.pendingWrites)) == 0 && len(bb.buffer) == 1 {
-			break
-		}
-		time.Sleep(time.Duration(i+1) * 5 * time.Millisecond)
-	}
+	require.Error(t, bb.Close(), "must be closed")
+	require.Equal(t, 1, len(bb.buffer), "depletion mark")
 
-	require.Equal(t, producersCount+1, int(atomic.LoadUint32(&cw.total)), "no more messages")
-	require.Equal(t, 0, int(atomic.LoadUint32(&bb.pendingWrites)))
+	require.Equal(t, producersCount*2+1-expectedMiss, int(atomic.LoadUint32(&cw.total)), "no more messages")
+	require.Equal(t, 0, bb.getPendingWrites())
 	require.Equal(t, 1, len(bb.buffer), "depletion mark")
 	require.Panics(t, func() {
 		ch <- nil
@@ -225,77 +270,130 @@ func testBackpressureBufferLimit(t *testing.T, parWriters, bufSize int, startWor
 }
 
 func TestBackpressureBuffer_mute_on_fatal(t *testing.T) {
-	tw := testWriter{}
-	writer := NewBackpressureBuffer(&tw, 10, 0, 0, 0, nil)
-	// We don't want to lock the writer on fatal in tests.
-	writer.fatal.unlockPostFatal = true
-	tw.flushSupported = true
 
-	var err error
+	for _, c := range constructors {
+		tw := testWriter{}
+		writer := c.fn(&tw)
 
-	_, err = writer.LogLevelWrite(insolar.WarnLevel, []byte("WARN must pass\n"))
-	require.NoError(t, err)
-	_, err = writer.LogLevelWrite(insolar.ErrorLevel, []byte("ERROR must pass\n"))
-	require.NoError(t, err)
+		t.Run(c.name, func(t *testing.T) {
+			// We don't want to lock the writer on fatal in tests.
+			writer.fatal.unlockPostFatal = true
+			tw.flushSupported = true
 
-	assert.False(t, tw.flushed)
-	_, err = writer.LogLevelWrite(insolar.PanicLevel, []byte("PANIC must pass\n"))
-	require.NoError(t, err)
-	assert.True(t, tw.flushed)
+			var err error
 
-	tw.flushed = false
-	_, err = writer.LogLevelWrite(insolar.FatalLevel, []byte("FATAL must pass\n"))
-	require.NoError(t, err)
-	assert.True(t, tw.flushed)
-	assert.False(t, tw.closed)
+			_, err = writer.LogLevelWrite(insolar.WarnLevel, []byte("WARN must pass\n"))
+			require.NoError(t, err)
+			_, err = writer.LogLevelWrite(insolar.ErrorLevel, []byte("ERROR must pass\n"))
+			require.NoError(t, err)
 
-	_, err = writer.LogLevelWrite(insolar.WarnLevel, []byte("WARN must NOT pass\n"))
-	require.NoError(t, err)
-	_, err = writer.LogLevelWrite(insolar.ErrorLevel, []byte("ERROR must NOT pass\n"))
-	require.NoError(t, err)
-	_, err = writer.LogLevelWrite(insolar.PanicLevel, []byte("PANIC must NOT pass\n"))
-	require.NoError(t, err)
+			assert.False(t, tw.flushed)
+			_, err = writer.LogLevelWrite(insolar.PanicLevel, []byte("PANIC must pass\n"))
+			require.NoError(t, err)
+			assert.True(t, tw.flushed)
 
-	testLog := tw.String()
-	assert.Contains(t, testLog, "WARN must pass")
-	assert.Contains(t, testLog, "ERROR must pass")
-	assert.Contains(t, testLog, "FATAL must pass")
-	assert.NotContains(t, testLog, "must NOT pass")
+			tw.flushed = false
+			_, err = writer.LogLevelWrite(insolar.FatalLevel, []byte("FATAL must pass\n"))
+			require.NoError(t, err)
+			assert.True(t, tw.flushed)
+			assert.False(t, tw.closed)
+
+			_, err = writer.LogLevelWrite(insolar.WarnLevel, []byte("WARN must NOT pass\n"))
+			require.NoError(t, err)
+			_, err = writer.LogLevelWrite(insolar.ErrorLevel, []byte("ERROR must NOT pass\n"))
+			require.NoError(t, err)
+			_, err = writer.LogLevelWrite(insolar.PanicLevel, []byte("PANIC must NOT pass\n"))
+			require.NoError(t, err)
+
+			testLog := tw.String()
+			assert.Contains(t, testLog, "WARN must pass")
+			assert.Contains(t, testLog, "ERROR must pass")
+			assert.Contains(t, testLog, "FATAL must pass")
+			assert.NotContains(t, testLog, "must NOT pass")
+		})
+	}
+}
+
+var constructors = []struct {
+	name string
+	fn   func(output io.Writer) *BackpressureBuffer
+}{
+	{name: "unlimited_bypass", fn: func(output io.Writer) *BackpressureBuffer {
+		return NewBackpressureBufferWithBypass(output, 10, 0, 0, nil)
+	}},
+	{name: "limited_bypass", fn: func(output io.Writer) *BackpressureBuffer {
+		return NewBackpressureBufferWithBypass(output, 10, 5, 0, nil)
+	}},
+	{name: "limited_buffer", fn: func(output io.Writer) *BackpressureBuffer {
+		return NewBackpressureBuffer(output, 10, 5, 0, nil)
+	}},
 }
 
 func TestBackpressureBuffer_close_on_no_flush(t *testing.T) {
-	tw := testWriter{}
-	writer := NewBackpressureBuffer(&tw, 10, 0, 0, 0, nil)
-	// We don't want to lock the writer on fatal in tests.
-	writer.fatal.unlockPostFatal = true
-	tw.flushSupported = false
 
-	var err error
+	for _, c := range constructors {
+		tw := testWriter{}
+		writer := c.fn(&tw)
 
-	_, err = writer.LogLevelWrite(insolar.WarnLevel, []byte("WARN must pass\n"))
-	require.NoError(t, err)
-	_, err = writer.LogLevelWrite(insolar.ErrorLevel, []byte("ERROR must pass\n"))
-	require.NoError(t, err)
+		t.Run(c.name, func(t *testing.T) {
+			// We don't want to lock the writer on fatal in tests.
+			writer.fatal.unlockPostFatal = true
+			tw.flushSupported = false
 
-	_, err = writer.LogLevelWrite(insolar.PanicLevel, []byte("PANIC must pass\n"))
-	require.NoError(t, err)
-	assert.False(t, tw.flushed)
+			var err error
 
-	_, err = writer.LogLevelWrite(insolar.FatalLevel, []byte("FATAL must pass\n"))
-	require.NoError(t, err)
-	assert.False(t, tw.flushed)
-	assert.True(t, tw.closed)
+			_, err = writer.LogLevelWrite(insolar.WarnLevel, []byte("WARN must pass\n"))
+			require.NoError(t, err)
+			_, err = writer.LogLevelWrite(insolar.ErrorLevel, []byte("ERROR must pass\n"))
+			require.NoError(t, err)
 
-	_, err = writer.LogLevelWrite(insolar.WarnLevel, []byte("WARN must NOT pass\n"))
-	require.NoError(t, err)
-	_, err = writer.LogLevelWrite(insolar.ErrorLevel, []byte("ERROR must NOT pass\n"))
-	require.NoError(t, err)
-	_, err = writer.LogLevelWrite(insolar.PanicLevel, []byte("PANIC must NOT pass\n"))
-	require.NoError(t, err)
+			_, err = writer.LogLevelWrite(insolar.PanicLevel, []byte("PANIC must pass\n"))
+			require.NoError(t, err)
+			assert.False(t, tw.flushed)
 
-	testLog := tw.String()
-	assert.Contains(t, testLog, "WARN must pass")
-	assert.Contains(t, testLog, "ERROR must pass")
-	assert.Contains(t, testLog, "FATAL must pass")
-	assert.NotContains(t, testLog, "must NOT pass")
+			_, err = writer.LogLevelWrite(insolar.FatalLevel, []byte("FATAL must pass\n"))
+			require.NoError(t, err)
+			assert.False(t, tw.flushed)
+			assert.True(t, tw.closed)
+
+			_, err = writer.LogLevelWrite(insolar.WarnLevel, []byte("WARN must NOT pass\n"))
+			require.NoError(t, err)
+			_, err = writer.LogLevelWrite(insolar.ErrorLevel, []byte("ERROR must NOT pass\n"))
+			require.NoError(t, err)
+			_, err = writer.LogLevelWrite(insolar.PanicLevel, []byte("PANIC must NOT pass\n"))
+			require.NoError(t, err)
+
+			testLog := tw.String()
+			assert.Contains(t, testLog, "WARN must pass")
+			assert.Contains(t, testLog, "ERROR must pass")
+			assert.Contains(t, testLog, "FATAL must pass")
+			assert.NotContains(t, testLog, "must NOT pass")
+		})
+	}
+}
+
+type chanWriter struct {
+	out      chan<- []byte
+	total    uint32
+	parallel uint32
+	wgBefore sync.WaitGroup
+	wgAfter  sync.WaitGroup
+}
+
+func (c *chanWriter) Write(p []byte) (int, error) {
+	atomic.AddUint32(&c.total, 1)
+	// maxParallel :=
+	atomic.AddUint32(&c.parallel, 1)
+	//fmt.Println("before: ", string(p))//, "\n", string(debug.Stack()))
+	c.wgBefore.Done()
+	c.out <- p
+	//fmt.Println(" after: ", string(p))
+	atomic.AddUint32(&c.parallel, ^uint32(0))
+	c.wgAfter.Done()
+	return len(p), nil
+}
+
+func (c *chanWriter) Close() (err error) {
+	close(c.out)
+	return nil
 }

@@ -7,6 +7,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/common/args"
 	"io"
 	"runtime"
+	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -22,21 +23,39 @@ const (
 	BufferWriteDelayFairness
 	// With this flag the buffer will update GetAvgWriteDuration with every regular write.
 	BufferTrackWriteDuration
-	// Regular (not-lowLatency) writes will go directly to output, ignoring queue and parallel write limits.
-	BufferBypassForRegular
 	// When a worker is started, but all links to BackpressureBuffer were lost, then the worker will be stopped.
 	// And with this flag present, the buffer (and its underlying output) will also be closed.
 	BufferCloseOnStop
 	// USE WITH CAUTION! This flag enables to use argument of Write([]byte) outside of the call.
 	// This is AGAINST existing conventions and MUST ONLY be used when a writer's code is proprietary and never reuses the argument.
 	BufferReuse
+	// Regular (not-lowLatency) writes will go directly to output, ignoring queue and parallel write limits.
+	bufferBypassForRegular
 )
 
-func NewBackpressureBuffer(output io.Writer, bufSize int, extraPenalty uint8, maxParWrites uint8,
+func NewBackpressureBufferWithBypass(output io.Writer, bufSize int, maxParWrites uint8,
 	flags BackpressureBufferFlags, missFn MissedEventFunc,
 ) *BackpressureBuffer {
 
-	if bufSize <= 1 {
+	if flags >= bufferBypassForRegular {
+		panic("illegal value")
+	}
+
+	var bypassCond *sync.Cond
+	if maxParWrites == 0 {
+		maxParWrites = 255 //no limit
+	} else {
+		bypassCond = sync.NewCond(&sync.Mutex{})
+	}
+
+	return newBackpressureBuffer(output, bufSize, 0, maxParWrites, flags|bufferBypassForRegular, missFn, bypassCond)
+}
+
+func NewBackpressureBuffer(output io.Writer, bufSize int, maxParWrites uint8,
+	flags BackpressureBufferFlags, missFn MissedEventFunc,
+) *BackpressureBuffer {
+
+	if flags >= bufferBypassForRegular {
 		panic("illegal value")
 	}
 
@@ -45,14 +64,41 @@ func NewBackpressureBuffer(output io.Writer, bufSize int, extraPenalty uint8, ma
 		flags &^= BufferWriteDelayFairness
 	}
 
-	return &BackpressureBuffer{&internalBackpressureBuffer{
+	return newBackpressureBuffer(output, bufSize, 0, maxParWrites, flags, missFn, nil)
+}
+
+func newBackpressureBuffer(output io.Writer, bufSize int, extraPenalty uint8, maxParWrites uint8,
+	flags BackpressureBufferFlags, missFn MissedEventFunc, bypassCond *sync.Cond,
+) *BackpressureBuffer {
+
+	if bufSize <= 1 {
+		panic("illegal value")
+	}
+
+	if maxParWrites == 0 {
+		panic("illegal value")
+	}
+
+	internal := &internalBackpressureBuffer{
 		output:       NewFlushBypass(output),
 		flags:        flags,
 		extraPenalty: extraPenalty,
 		maxParWrites: maxParWrites,
 		missFn:       missFn,
 		buffer:       make(chan bufEntry, bufSize),
-	}, 0}
+		bypassCond:   bypassCond,
+	}
+
+	switch {
+	case flags&bufferBypassForRegular == 0:
+		internal.writeFn = internal.checkWrite
+	case bypassCond != nil:
+		internal.writeFn = internal.bypassWrite
+	default:
+		internal.writeFn = internal.flushWrite
+	}
+
+	return &BackpressureBuffer{internal}
 }
 
 type MissedEventFunc func(missed int) (insolar.LogLevel, []byte)
@@ -64,20 +110,22 @@ Provides weak-reference behavior to enable auto-stop of workers
 */
 type BackpressureBuffer struct {
 	*internalBackpressureBuffer
-	status uint32 // atomic
 }
 
 type internalBackpressureBuffer struct {
-	output FlushBypass
-	fatal  FatalHelper
-	missFn MissedEventFunc
+	output  FlushBypass
+	fatal   FatalHelper
+	missFn  MissedEventFunc
+	writeFn func(insolar.LogLevel, []byte, int64) (int, error)
 
 	buffer chan bufEntry
 
-	writeSeq      uint32        // atomic
-	pendingWrites uint32        // atomic
-	missCount     uint32        // atomic
-	avgDelayNano  time.Duration // atomic
+	bypassCond *sync.Cond
+
+	writerCounts int32         // atomic
+	writeSeq     uint32        // atomic
+	missCount    uint32        // atomic
+	avgDelayNano time.Duration // atomic
 
 	maxParWrites uint8
 	extraPenalty uint8
@@ -91,14 +139,22 @@ type bufEntry struct {
 	flushMark bufferMark
 }
 
+const (
+	noMark bufferMark = iota
+	flushMark
+	depletionMark
+)
+
 /*
 The buffer requires a worker to scrap the buffer. Multiple workers are ok, but aren't necessary.
 Start of the worker will also attach a finalizer to the buffer.
 */
 func (p *BackpressureBuffer) StartWorker(ctx context.Context) *BackpressureBuffer {
+
+	isFirst := atomic.AddInt32(&p.writerCounts, 1+1<<16)>>16 == 1
 	go p.worker(ctx)
 
-	if atomic.AddUint32(&p.status, 1) != 1 {
+	if !isFirst {
 		return p
 	}
 
@@ -184,7 +240,7 @@ func (p *internalBackpressureBuffer) LowLatencyWrite(level insolar.LogLevel, b [
 				runtime.Gosched()
 				continue
 			}
-			atomic.AddUint32(&p.missCount, 1)
+			p.incMissCount()
 		}
 		break
 	}
@@ -214,24 +270,24 @@ func (p *internalBackpressureBuffer) LogLevelWrite(level insolar.LogLevel, b []b
 			_, _ = p.output.DoFlushOrSync()
 		}
 		return n, err
-
-	default:
-		startNano := time.Now().UnixNano()
-
-		if p.flags&BufferBypassForRegular != 0 {
-			return p.flushWrite(level, b, startNano)
-		}
-		return p.checkWrite(level, b, startNano)
 	}
+
+	startNano := time.Now().UnixNano()
+	return p.writeFn(level, b, startNano)
 }
 
 func (p *internalBackpressureBuffer) writeFatal(level insolar.LogLevel, b []byte) (n int, err error) {
 	if !p.fatal.SetFatal() {
 		return p.fatal.PostFatalWrite(level, b)
 	}
+
 	if p.flags&BufferDropOnFatal != 0 {
 		n, _ = p.flushTillDepletion(level, b, 0)
 	} else {
+		if p.bypassCond != nil {
+			p.bypassCond.Broadcast() // wake all on fatal with buffer drop
+		}
+
 		n, _ = p.directWrite(level, b, 0)
 	}
 	p.writeMissedCount(p.getAndResetMissedCount() + len(p.buffer))
@@ -243,38 +299,76 @@ func (p *internalBackpressureBuffer) writeFatal(level insolar.LogLevel, b []byte
 	return n, p.output.Close()
 }
 
+func (p *internalBackpressureBuffer) bypassWrite(level insolar.LogLevel, b []byte, startNano int64) (int, error) {
+	p.bypassCond.L.Lock() // ensure ordering
+	for {
+		counts := atomic.LoadInt32(&p.writerCounts)
+
+		if uint16(counts) < uint16(p.maxParWrites) {
+			if atomic.CompareAndSwapInt32(&p.writerCounts, counts, counts+1) {
+				break
+			}
+			continue
+		}
+		if counts >= 1<<16 && (counts>>16) >= int32(p.maxParWrites) {
+			// workers occupy all write slots - fall back to queue, otherwise we will hang up
+			p.bypassCond.L.Unlock()
+			return p.queueWrite(level, b, startNano)
+		}
+
+		switch {
+		case p.fatal.IsFatal():
+			p.incMissCount()
+			p.bypassCond.L.Unlock()
+			return p.fatal.PostFatalWrite(level, b)
+		case p.output.IsClosed():
+			p.incMissCount()
+			p.bypassCond.L.Unlock()
+			return 0, p.output.ClosedError()
+		}
+		p.bypassCond.Wait()
+	}
+	p.bypassCond.L.Unlock()
+
+	n, err := p.flushWrite(level, b, startNano)
+
+	p.bypassCond.L.Lock()                // ensure ordering
+	atomic.AddInt32(&p.writerCounts, -1) // bypassWrite
+	p.bypassCond.Signal()                // pass the stick
+	p.bypassCond.L.Unlock()
+
+	return n, err
+}
+
 func (p *internalBackpressureBuffer) checkWrite(level insolar.LogLevel, b []byte, startNano int64) (int, error) {
 	writeSeq := atomic.AddUint32(&p.writeSeq, 1)
 
 	for i := 0; ; i++ {
-		pendingWrites := atomic.LoadUint32(&p.pendingWrites)
+		counts := atomic.LoadInt32(&p.writerCounts)
 
-		if pendingWrites >= uint32(p.maxParWrites) || !p.drawStraw(writeSeq, pendingWrites) {
+		if uint16(counts) >= uint16(p.maxParWrites) || !p.drawStraw(writeSeq, uint16(counts)) {
 			return p.fairQueueWrite(level, b, startNano)
 		}
 
-		if atomic.CompareAndSwapUint32(&p.pendingWrites, pendingWrites, pendingWrites+1) {
+		if atomic.CompareAndSwapInt32(&p.writerCounts, counts, counts+1) {
 			break
 		}
 
-		if i >= (1+int(p.maxParWrites))<<1 {
+		if i >= (1+int(p.maxParWrites)*2)<<1 {
 			// too many retries
 			return p.fairQueueWrite(level, b, startNano)
 		}
 		runtime.Gosched()
 	}
-
-	defer atomic.AddUint32(&p.pendingWrites, ^uint32(0)) // -1
+	defer atomic.AddInt32(&p.writerCounts, -1) // checkWrite
 	return p.flushWrite(level, b, startNano)
 }
 
-type bufferMark uint8
+func (p *internalBackpressureBuffer) drawStraw(writerSeq uint32, writersInQueue uint16) bool {
+	return writersInQueue == 0 || (writerSeq%args.Prime(int(writersInQueue-1))) == 0
+}
 
-const (
-	noMark bufferMark = iota
-	flushMark
-	depletionMark
-)
+type bufferMark uint8
 
 func (p *internalBackpressureBuffer) fairQueueWrite(level insolar.LogLevel, b []byte, startNano int64) (int, error) {
 	waitNano := int64(p.GetAvgWriteDuration())
@@ -287,21 +381,6 @@ func (p *internalBackpressureBuffer) fairQueueWrite(level insolar.LogLevel, b []
 		}
 	}
 
-	return n, err
-}
-
-func (p *internalBackpressureBuffer) queueWrite(level insolar.LogLevel, b []byte, startName int64) (int, error) {
-	p.buffer <- p.newQueueEntry(level, b, startName)
-	return len(b), nil
-}
-
-func (p *internalBackpressureBuffer) directWrite(level insolar.LogLevel, b []byte, startNano int64) (int, error) {
-	n, err := p.output.DoLevelWrite(level, b)
-
-	if n > 0 && err == nil && startNano > 0 && p.flags&BufferTrackWriteDuration != 0 {
-		writeDuration := time.Now().UnixNano() - startNano
-		p.updateWriteDuration(time.Duration(writeDuration))
-	}
 	return n, err
 }
 
@@ -342,7 +421,26 @@ func (p *internalBackpressureBuffer) flushWrite(level insolar.LogLevel, b []byte
 	return p.queueWrite(level, b, startNano)
 }
 
+func (p *internalBackpressureBuffer) queueWrite(level insolar.LogLevel, b []byte, startName int64) (int, error) {
+	p.buffer <- p.newQueueEntry(level, b, startName)
+	return len(b), nil
+}
+
+func (p *internalBackpressureBuffer) directWrite(level insolar.LogLevel, b []byte, startNano int64) (int, error) {
+	n, err := p.output.DoLevelWrite(level, b)
+
+	if n > 0 && err == nil && startNano > 0 && p.flags&BufferTrackWriteDuration != 0 {
+		writeDuration := time.Now().UnixNano() - startNano
+		p.updateWriteDuration(time.Duration(writeDuration))
+	}
+	return n, err
+}
+
 func (p *internalBackpressureBuffer) flushTillMark(level insolar.LogLevel, b []byte, startNano int64) (int, error) {
+
+	if p.bypassCond != nil {
+		p.bypassCond.Broadcast() // wake all on flush
+	}
 
 	hasPrevFlushMark := false
 	hasAddedFlushMark := false
@@ -384,7 +482,7 @@ outer:
 			case isContinue:
 				continue
 			case markType == noMark:
-				// buffer is empty ... another worker pulled the marker out
+				// buffer is empty ... another worker has pulled the marker out
 				time.Sleep(1 * time.Millisecond)
 				continue
 			}
@@ -400,6 +498,10 @@ outer:
 }
 
 func (p *internalBackpressureBuffer) flushTillDepletion(level insolar.LogLevel, b []byte, startNano int64) (int, error) {
+
+	if p.bypassCond != nil {
+		p.bypassCond.Broadcast() // wake all depletion
+	}
 
 	prevWasFlushMark := false
 	markEntry := bufEntry{flushMark: depletionMark}
@@ -446,7 +548,7 @@ outer:
 		n, err = p.directWrite(level, b, startNano)
 	}
 
-	for atomic.LoadUint32(&p.pendingWrites) > 0 {
+	for p.getPendingWrites() > 0 {
 		time.Sleep(time.Millisecond)
 	}
 	return n, err
@@ -495,10 +597,18 @@ func (p *internalBackpressureBuffer) writeOneFromQueue(flush bufferMark) (bool, 
 	}
 }
 
+func (p *internalBackpressureBuffer) getPendingWrites() int {
+	return int(uint16(atomic.LoadInt32(&p.writerCounts)))
+}
+
 func (p *internalBackpressureBuffer) worker(ctx context.Context) {
 
-	atomic.AddUint32(&p.pendingWrites, 1)
-	defer atomic.AddUint32(&p.pendingWrites, ^uint32(0)) // -1
+	defer func() {
+		atomic.AddInt32(&p.writerCounts, -(1 + 1<<16)) // worker
+		if p.bypassCond != nil {
+			defer p.bypassCond.Broadcast()
+		}
+	}()
 
 	prevWasMark := false
 	for {
@@ -516,6 +626,9 @@ func (p *internalBackpressureBuffer) worker(ctx context.Context) {
 				_, _ = p.directWrite(be.lvl, be.b, be.start)
 			case be.flushMark == depletionMark:
 				// make sure to clean up the queue
+				if p.bypassCond != nil {
+					p.bypassCond.Broadcast()
+				}
 				select {
 				case be2, ok := <-p.buffer:
 					if !ok {
@@ -549,10 +662,6 @@ func (p *internalBackpressureBuffer) worker(ctx context.Context) {
 			}
 		}
 	}
-}
-
-func (p *internalBackpressureBuffer) drawStraw(writerSeq uint32, writersInQueue uint32) bool {
-	return writersInQueue == 0 || (writerSeq%args.Prime(int(writersInQueue-1))) == 0
 }
 
 func (p *internalBackpressureBuffer) getAndResetMissedCount() int {
@@ -603,4 +712,8 @@ func (p *internalBackpressureBuffer) updateWriteDuration(d time.Duration) {
 			return
 		}
 	}
+}
+
+func (p *internalBackpressureBuffer) incMissCount() {
+	atomic.AddUint32(&p.missCount, 1)
 }
