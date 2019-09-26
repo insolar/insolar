@@ -480,7 +480,7 @@ func (c FilamentCalculatorDefault) checkHeavyForLifeline(
 		Until:    readUntil,
 	})
 	if err != nil {
-		return record.Lifeline{}, object.ErrIndexNotFound
+		return record.Lifeline{}, errors.Wrap(err, "failed to create message")
 	}
 
 	reps, done := c.sender.SendTarget(ctx, ensureIndex, *node)
