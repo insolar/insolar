@@ -19,6 +19,8 @@ package log
 import (
 	"fmt"
 	"io"
+	"log"
+	"log/syslog"
 	"net/http"
 	"os"
 	"strconv"
@@ -140,16 +142,6 @@ func selectFormatter(format insolar.LogFormat) (io.Writer, error) {
 }
 
 func newZerologAdapter(cfg configuration.Log) (*zerologAdapter, error) {
-	format, err := insolar.ParseFormat(cfg.Formatter)
-	if err != nil {
-		return nil, err
-	}
-
-	output, err := selectFormatter(format)
-	if err != nil {
-		return nil, err
-	}
-
 	za := &zerologAdapter{
 		level: zerolog.InfoLevel,
 		callerConfig: callerHookConfig{
@@ -158,15 +150,13 @@ func newZerologAdapter(cfg configuration.Log) (*zerologAdapter, error) {
 		},
 	}
 
-	missedFunc := func(missed int) { panic(fmt.Errorf("logger dropped %d messages", missed)) }
-
-	if cfg.BufferSize > 0 {
-		dw := diode.NewWriter(output, cfg.BufferSize, 0, missedFunc)
-		za.diodeWriter = &dw
-		output = dw
+	sysLog, err := syslog.Dial("udp", "localhost:514",
+		syslog.LOG_DEBUG|syslog.LOG_DAEMON, "demotag")
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	logger := zerolog.New(output).Level(zerolog.InfoLevel).With().Timestamp().Logger()
+	logger := zerolog.New(sysLog).Level(zerolog.InfoLevel).With().Timestamp().Logger()
 	logger = logger.Hook(&metricsHook{})
 	za.logger = logger
 
