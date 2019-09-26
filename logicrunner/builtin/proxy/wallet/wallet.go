@@ -485,13 +485,13 @@ func (r *Wallet) AddDepositAsImmutable(txId string, deposit insolar.Reference) e
 }
 
 // GetDeposits is proxy generated method
-func (r *Wallet) GetDepositsAsMutable() (map[string]interface{}, error) {
+func (r *Wallet) GetDepositsAsMutable() ([]interface{}, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	ret := make([]interface{}, 2)
-	var ret0 map[string]interface{}
+	var ret0 []interface{}
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1
@@ -524,13 +524,13 @@ func (r *Wallet) GetDepositsAsMutable() (map[string]interface{}, error) {
 }
 
 // GetDepositsAsImmutable is proxy generated method
-func (r *Wallet) GetDeposits() (map[string]interface{}, error) {
+func (r *Wallet) GetDeposits() ([]interface{}, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	ret := make([]interface{}, 2)
-	var ret0 map[string]interface{}
+	var ret0 []interface{}
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1

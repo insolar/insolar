@@ -246,11 +246,8 @@ func TestMigrationTokenDoubleSpend(t *testing.T) {
 	}
 	wg.Wait()
 
-	res, err := signedRequest(t, launchnet.TestRPCUrl, anotherMember, "member.getBalance", map[string]interface{}{"reference": member.Ref})
-	require.NoError(t, err)
-	deposits, ok := res.(map[string]interface{})["deposits"].(map[string]interface{})
-	require.True(t, ok)
-	deposit, ok = deposits["Test_TxHash"].(map[string]interface{})
+	_, deposits := getBalanceAndDepositsNoErr(t, anotherMember, member.Ref)
+	deposit, ok := deposits["Test_TxHash"].(map[string]interface{})
 	require.True(t, ok)
 
 	require.Equal(t, deposit["ethTxHash"], "Test_TxHash")
