@@ -24,5 +24,6 @@ type Dependencies struct {
 	Replication      func(*Replication)
 	SendJet          func(*SendJet)
 	SendIndex        func(*SendIndex)
+	SearchIndex      func(*SearchIndex)
 	SendInitialState func(*SendInitialState)
 }
