@@ -126,7 +126,7 @@ func (c *RequestCheckerDefault) checkReasonForOutgoingRequest(
 		oldestRequest := OldestMutable(openedRequests)
 		if oldestRequest == nil {
 			return &payload.CodedError{
-				Text: "reason not found in opened requests",
+				Text: "reason is not the oldest mutable",
 				Code: payload.CodeReasonIsWrong,
 			}
 		}
