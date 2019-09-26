@@ -110,9 +110,11 @@ const (
 const cacheDir = "network_cache/"
 
 func initLogger(ctx context.Context, level insolar.LogLevel) context.Context {
-	logger := inslogger.FromContext(ctx).WithCaller(false)
-	logger, _ = logger.WithLevelNumber(level)
-	logger, _ = logger.WithFormat(insolar.TextFormat)
+	logger, _ := inslogger.FromContext(ctx).Copy().
+		WithCaller(insolar.NoCallerField).
+		WithLevel(level).
+		WithFormat(insolar.TextFormat).
+		Build()
 	ctx = inslogger.SetLogger(ctx, logger)
 	return ctx
 }
