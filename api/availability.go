@@ -77,6 +77,7 @@ func (nc *NetworkChecker) Start(ctx context.Context) error {
 
 func (nc *NetworkChecker) updateAvailability(ctx context.Context) {
 	logger := inslogger.FromContext(ctx)
+	logger.Debug("[ NetworkChecker ] update availability started")
 	resp, err := nc.client.Get(nc.keeperURL)
 	defer func() {
 		if resp != nil && resp.Body != nil {
