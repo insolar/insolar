@@ -159,19 +159,6 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "failed to calculate pending requests")
 	}
 
-	// Check oldest opened mutable request.
-	{
-		oldestMutable := executor.OldestMutable(opened)
-		resultRequestID := *p.result.Request.GetLocal()
-		// We should return error if current result trying to close non-oldest opened mutable request.
-		if oldestMutable != nil && !oldestMutable.RecordID.Equal(resultRequestID) {
-			return &payload.CodedError{
-				Text: "attempt to close the non-oldest mutable request",
-				Code: payload.CodeRequestNonOldestMutable,
-			}
-		}
-	}
-
 	closedRequest, err := findClosed(opened, p.result)
 	if err != nil {
 		return errors.Wrap(err, "failed to find request being closed")
@@ -181,6 +168,21 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 		err = checkRequestCanChangeState(closedRequest)
 		if err != nil {
 			return errors.Wrap(err, "request is not allowed to change object state")
+		}
+	}
+
+	incoming, isIncomingRequest := record.Unwrap(&closedRequest.Record.Virtual).(*record.IncomingRequest)
+
+	// If closing request is mutable incoming then check oldest opened mutable request.
+	if isIncomingRequest && !incoming.Immutable {
+		oldestMutable := executor.OldestMutable(opened)
+		resultRequestID := *p.result.Request.GetLocal()
+		// We should return error if current result trying to close non-oldest opened mutable request.
+		if oldestMutable != nil && !oldestMutable.RecordID.Equal(resultRequestID) {
+			return &payload.CodedError{
+				Text: "attempt to close the non-oldest mutable request",
+				Code: payload.CodeRequestNonOldestMutable,
+			}
 		}
 	}
 
@@ -274,7 +276,7 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 	stats.Record(ctx, executor.StatRequestsClosed.M(1))
 
 	// Only incoming request can be a reason. We are only interested in potential reason requests.
-	if _, ok := record.Unwrap(&closedRequest.Record.Virtual).(*record.IncomingRequest); ok {
+	if isIncomingRequest {
 		p.dep.detachedNotifier.Notify(ctx, opened, objectID, closedRequest.RecordID)
 	}
 
