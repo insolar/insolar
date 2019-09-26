@@ -47,12 +47,13 @@ type Runner struct {
 	CertificateManager insolar.CertificateManager
 	ContractRequester  insolar.ContractRequester
 	// nolint
-	NodeNetwork       network.NodeNetwork
-	CertificateGetter insolar.CertificateGetter
-	PulseAccessor     pulse.Accessor
-	ArtifactManager   artifacts.Client
-	JetCoordinator    jet.Coordinator
-	NetworkStatus     insolar.NetworkStatus
+	NodeNetwork         network.NodeNetwork
+	CertificateGetter   insolar.CertificateGetter
+	PulseAccessor       pulse.Accessor
+	ArtifactManager     artifacts.Client
+	JetCoordinator      jet.Coordinator
+	NetworkStatus       insolar.NetworkStatus
+	AvailabilityChecker AvailabilityChecker
 
 	handler       http.Handler
 	server        *http.Server
@@ -131,6 +132,7 @@ func NewRunner(cfg *configuration.APIRunner,
 	artifactManager artifacts.Client,
 	jetCoordinator jet.Coordinator,
 	networkStatus insolar.NetworkStatus,
+	availabilityChecker AvailabilityChecker,
 ) (*Runner, error) {
 
 	if err := checkConfig(cfg); err != nil {
@@ -140,19 +142,20 @@ func NewRunner(cfg *configuration.APIRunner,
 	addrStr := fmt.Sprint(cfg.Address)
 	rpcServer := rpc.NewServer()
 	ar := Runner{
-		CertificateManager: certificateManager,
-		ContractRequester:  contractRequester,
-		NodeNetwork:        nodeNetwork,
-		CertificateGetter:  certificateGetter,
-		PulseAccessor:      pulseAccessor,
-		ArtifactManager:    artifactManager,
-		JetCoordinator:     jetCoordinator,
-		NetworkStatus:      networkStatus,
-		server:             &http.Server{Addr: addrStr},
-		rpcServer:          rpcServer,
-		cfg:                cfg,
-		keyCache:           make(map[string]crypto.PublicKey),
-		cacheLock:          &sync.RWMutex{},
+		CertificateManager:  certificateManager,
+		ContractRequester:   contractRequester,
+		NodeNetwork:         nodeNetwork,
+		CertificateGetter:   certificateGetter,
+		PulseAccessor:       pulseAccessor,
+		ArtifactManager:     artifactManager,
+		JetCoordinator:      jetCoordinator,
+		NetworkStatus:       networkStatus,
+		AvailabilityChecker: availabilityChecker,
+		server:              &http.Server{Addr: addrStr},
+		rpcServer:           rpcServer,
+		cfg:                 cfg,
+		keyCache:            make(map[string]crypto.PublicKey),
+		cacheLock:           &sync.RWMutex{},
 	}
 
 	rpcServer.RegisterCodec(jsonrpc.NewCodec(), "application/json")

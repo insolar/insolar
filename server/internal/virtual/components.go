@@ -145,6 +145,7 @@ func initComponents(
 	checkError(ctx, err, "failed to start ContractRequester")
 
 	artifactsClient := artifacts.NewClient(b)
+	availabilityChecker := api.NewNetworkChecker(cfg.AvailabilityChecker)
 
 	API, err := api.NewRunner(
 		&cfg.APIRunner,
@@ -156,6 +157,7 @@ func initComponents(
 		artifactsClient,
 		jc,
 		nw,
+		availabilityChecker,
 	)
 	checkError(ctx, err, "failed to start ApiRunner")
 
@@ -169,6 +171,7 @@ func initComponents(
 		artifactsClient,
 		jc,
 		nw,
+		availabilityChecker,
 	)
 	checkError(ctx, err, "failed to start AdminAPIRunner")
 

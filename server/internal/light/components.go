@@ -162,9 +162,10 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 
 	// API.
 	var (
-		Requester       *contractrequester.ContractRequester
-		ArtifactsClient = artifacts.NewClient(Sender)
-		APIWrapper      *api.RunnerWrapper
+		Requester           *contractrequester.ContractRequester
+		ArtifactsClient     = artifacts.NewClient(Sender)
+		AvailabilityChecker = api.NewNetworkChecker(cfg.AvailabilityChecker)
+		APIWrapper          *api.RunnerWrapper
 	)
 	{
 		var err error
@@ -188,6 +189,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			ArtifactsClient,
 			Coordinator,
 			NetworkService,
+			AvailabilityChecker,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start ApiRunner")
@@ -203,6 +205,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			ArtifactsClient,
 			Coordinator,
 			NetworkService,
+			AvailabilityChecker,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start AdminAPIRunner")
