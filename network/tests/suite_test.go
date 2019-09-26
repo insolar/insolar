@@ -63,6 +63,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/insolar/utils"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/insolar/gen"
@@ -110,10 +111,12 @@ const (
 const cacheDir = "network_cache/"
 
 func initLogger(ctx context.Context, level insolar.LogLevel) context.Context {
-	logger := inslogger.FromContext(ctx).WithCaller(false)
-	logger, _ = logger.WithLevelNumber(level)
-	logger, _ = logger.WithFormat(insolar.TextFormat)
-	ctx = inslogger.SetLogger(ctx, logger)
+	cfg := configuration.NewLog()
+	cfg.LLBufferSize = 0
+	cfg.Level = level.String()
+	cfg.Formatter = insolar.TextFormat.String()
+
+	ctx, _ = inslogger.InitNodeLogger(ctx, cfg, "main_"+utils.RandTraceID(), "", "")
 	return ctx
 }
 
