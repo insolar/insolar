@@ -88,7 +88,15 @@ func (s *NodeService) GetSeed(r *http.Request, args *SeedArgs, requestBody *rpc.
 	ctx, instr := instrumenter.NewMethodInstrument("NodeService.getSeed")
 	defer instr.End()
 
+	msg := fmt.Sprint("Incoming request: ", r.RequestURI)
+	instr.Annotate(msg)
+
+	logger := inslogger.FromContext(ctx)
+	logger.Info("[ NodeService.getSeed ] ", msg)
+
 	if !s.runner.AvailabilityChecker.IsAvailable(ctx) {
+		logger.Error("[ NodeService.getSeed ] API is not available")
+
 		instr.SetError(errors.New(ServiceUnavailableErrorMessage), ServiceUnavailableErrorShort)
 		return &json2.Error{
 			Code:    ServiceUnavailableError,
@@ -98,12 +106,6 @@ func (s *NodeService) GetSeed(r *http.Request, args *SeedArgs, requestBody *rpc.
 			},
 		}
 	}
-
-	msg := fmt.Sprint("Incoming request: ", r.RequestURI)
-	instr.Annotate(msg)
-
-	logger := inslogger.FromContext(ctx)
-	logger.Info("[ NodeService.getSeed ] ", msg)
 
 	err := s.getSeed(ctx, r, args, requestBody, reply)
 	if err != nil {
