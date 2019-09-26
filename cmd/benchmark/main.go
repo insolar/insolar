@@ -487,6 +487,7 @@ func checkBalanceAtFile(members []sdk.Member, membersWithBalanceMap map[string]*
 
 	for _, m := range members {
 		b := m.GetBalance()
+		fmt.Printf("Member with ref %s, system balance - %s, file balance - %s\n", m.GetReference(), membersWithBalanceMap[m.GetReference()], m.GetBalance())
 		totalFileBalance = totalFileBalance.Add(totalFileBalance, b)
 
 		if checkEveryMember || checkBalanceWithoutFee {
