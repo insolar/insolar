@@ -86,7 +86,14 @@ func Test_AbandonedNotification_WhenLightEmpty(t *testing.T) {
 					{JetID: insolar.ZeroJetID, Pulse: pulse.MinTimePulse},
 				},
 			}}
+		case *payload.SearchIndex:
+			return []payload.Payload{
+				&payload.Error{
+					Code: payload.CodeNotFound,
+				},
+			}
 		}
+
 		panic(fmt.Sprintf("unexpected message to heavy %T", pl))
 	}
 
