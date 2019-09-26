@@ -120,12 +120,15 @@ type writeDelayPostHook struct {
 
 func (h *writeDelayPostHook) Write(p []byte) (n int, err error) {
 	var ofs int
-	searchLimit := len(h.searchBytes) + 32
-	if searchLimit >= len(p) {
-		ofs = bytes.Index(p, h.searchBytes)
-	} else {
-		ofs = bytes.Index(p[:searchLimit], h.searchBytes)
-	}
+	//searchLimit := len(h.searchBytes) + 32
+	//if searchLimit >= len(p) {
+	ofs = bytes.Index(p, h.searchBytes)
+	//} else {
+	//	ofs = bytes.Index(p[:searchLimit], h.searchBytes)
+	//}
+
+	//s := string(p)
+	//runtime.KeepAlive(s)
 
 	if ofs < 0 {
 		return h.output.Write(p)
