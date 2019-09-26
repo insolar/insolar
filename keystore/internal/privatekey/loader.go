@@ -78,9 +78,13 @@ func pemParse(key []byte) (crypto.PrivateKey, error) {
 	}
 
 	x509Encoded := block.Bytes
-	privateKey, err := x509.ParseECPrivateKey(x509Encoded)
+	privateKey, err := x509.ParsePKCS8PrivateKey(x509Encoded)
 	if err != nil {
-		return nil, errors.Errorf("[ Parse ] Problems with parsing. Key - %v", key)
+		// try to read old version marshalled with x509.MarshalECPrivateKey()
+		privateKey, err = x509.ParseECPrivateKey(x509Encoded)
+		if err != nil {
+			return nil, errors.Errorf("[ Parse ] Problems with parsing. Key - %v", key)
+		}
 	}
 
 	return privateKey, nil
