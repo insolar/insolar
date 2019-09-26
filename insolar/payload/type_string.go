@@ -48,20 +48,21 @@ func _() {
 	_ = x[TypeLightInitialState-37]
 	_ = x[TypeGetIndex-38]
 	_ = x[TypeSearchIndex-39]
-	_ = x[TypeUpdateJet-40]
-	_ = x[TypeReturnResults-41]
-	_ = x[TypeCallMethod-42]
-	_ = x[TypeExecutorResults-43]
-	_ = x[TypePendingFinished-44]
-	_ = x[TypeAdditionalCallFromPreviousExecutor-45]
-	_ = x[TypeStillExecuting-46]
-	_ = x[TypeErrorResultExitsts-47]
-	_ = x[_latestType-48]
+	_ = x[TypeSearchIndexInfo-40]
+	_ = x[TypeUpdateJet-41]
+	_ = x[TypeReturnResults-42]
+	_ = x[TypeCallMethod-43]
+	_ = x[TypeExecutorResults-44]
+	_ = x[TypePendingFinished-45]
+	_ = x[TypeAdditionalCallFromPreviousExecutor-46]
+	_ = x[TypeStillExecuting-47]
+	_ = x[TypeErrorResultExitsts-48]
+	_ = x[_latestType-49]
 }
 
-const _Type_name = "TypeUnknownTypeMetaTypeErrorTypeIDTypeIDsTypeJetTypeStateTypeGetObjectTypePassStateTypeIndexTypePassTypeGetCodeTypeCodeTypeSetCodeTypeSetIncomingRequestTypeSetOutgoingRequestTypeSagaCallAcceptNotificationTypeGetFilamentTypeGetRequestTypeRequestTypeFilamentSegmentTypeSetResultTypeActivateTypeRequestInfoTypeGetRequestInfoTypeGotHotConfirmationTypeDeactivateTypeUpdateTypeHotObjectsTypeResultInfoTypeGetPendingsTypeHasPendingsTypePendingsInfoTypeReplicationTypeGetJetTypeAbandonedRequestsNotificationTypeGetLightInitialStateTypeLightInitialStateTypeGetIndexTypeSearchIndexTypeUpdateJetTypeReturnResultsTypeCallMethodTypeExecutorResultsTypePendingFinishedTypeAdditionalCallFromPreviousExecutorTypeStillExecutingTypeErrorResultExitsts_latestType"
+const _Type_name = "TypeUnknownTypeMetaTypeErrorTypeIDTypeIDsTypeJetTypeStateTypeGetObjectTypePassStateTypeIndexTypePassTypeGetCodeTypeCodeTypeSetCodeTypeSetIncomingRequestTypeSetOutgoingRequestTypeSagaCallAcceptNotificationTypeGetFilamentTypeGetRequestTypeRequestTypeFilamentSegmentTypeSetResultTypeActivateTypeRequestInfoTypeGetRequestInfoTypeGotHotConfirmationTypeDeactivateTypeUpdateTypeHotObjectsTypeResultInfoTypeGetPendingsTypeHasPendingsTypePendingsInfoTypeReplicationTypeGetJetTypeAbandonedRequestsNotificationTypeGetLightInitialStateTypeLightInitialStateTypeGetIndexTypeSearchIndexTypeSearchIndexInfoTypeUpdateJetTypeReturnResultsTypeCallMethodTypeExecutorResultsTypePendingFinishedTypeAdditionalCallFromPreviousExecutorTypeStillExecutingTypeErrorResultExitsts_latestType"
 
-var _Type_index = [...]uint16{0, 11, 19, 28, 34, 41, 48, 57, 70, 83, 92, 100, 111, 119, 130, 152, 174, 204, 219, 233, 244, 263, 276, 288, 303, 321, 343, 357, 367, 381, 395, 410, 425, 441, 456, 466, 499, 523, 544, 556, 571, 584, 601, 615, 634, 653, 691, 709, 731, 742}
+var _Type_index = [...]uint16{0, 11, 19, 28, 34, 41, 48, 57, 70, 83, 92, 100, 111, 119, 130, 152, 174, 204, 219, 233, 244, 263, 276, 288, 303, 321, 343, 357, 367, 381, 395, 410, 425, 441, 456, 466, 499, 523, 544, 556, 571, 590, 603, 620, 634, 653, 672, 710, 728, 750, 761}
 
 func (i Type) String() string {
 	if i >= Type(len(_Type_index)-1) {

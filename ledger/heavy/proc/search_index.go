@@ -18,7 +18,6 @@ package proc
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
@@ -86,16 +85,9 @@ func (p *SearchIndex) Proceed(ctx context.Context) error {
 		}
 		currentPN = prev.PulseNumber
 	}
-	if idx == nil {
-		return &payload.CodedError{
-			Code: payload.CodeNotFound,
-			Text: fmt.Sprintf("index not found for %v", searchIndex.ObjectID.DebugString()),
-		}
-	}
 
-	buf := object.EncodeLifeline(idx.Lifeline)
-	msg, err := payload.NewMessage(&payload.Index{
-		Index: buf,
+	msg, err := payload.NewMessage(&payload.SearchIndexInfo{
+		Index: idx,
 	})
 	if err != nil {
 		return errors.Wrap(err, "failed to create reply")

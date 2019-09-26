@@ -67,6 +67,12 @@ message Index {
     bytes EarliestRequest = 22;
 }
 
+message SearchIndexInfo {
+    uint32 Polymorph = 16;
+
+    record.Index Index = 20 [(gogoproto.nullable) = true];
+}
+
 message Code {
     uint32 Polymorph = 16;
 

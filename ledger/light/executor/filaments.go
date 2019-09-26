@@ -497,16 +497,13 @@ func (c FilamentCalculatorDefault) checkHeavyForLifeline(
 	}
 
 	switch rep := pl.(type) {
-	case *payload.Index:
-		idx, err := object.DecodeLifeline(rep.Index)
-		if err != nil {
-			return record.Lifeline{}, errors.Wrap(err, "failed to decode index")
-		}
-		return idx, nil
-	case *payload.Error:
-		if rep.Code == payload.CodeNotFound {
+	case *payload.SearchIndexInfo:
+		if rep.Index == nil {
 			return record.Lifeline{}, object.ErrIndexNotFound
 		}
+
+		return rep.Index.Lifeline, nil
+	case *payload.Error:
 		return record.Lifeline{}, &payload.CodedError{
 			Text: fmt.Sprint("failed to fetch index from heavy: ", rep.Text),
 			Code: rep.Code,

@@ -88,9 +88,7 @@ func Test_AbandonedNotification_WhenLightEmpty(t *testing.T) {
 			}}
 		case *payload.SearchIndex:
 			return []payload.Payload{
-				&payload.Error{
-					Code: payload.CodeNotFound,
-				},
+				&payload.SearchIndexInfo{},
 			}
 		}
 

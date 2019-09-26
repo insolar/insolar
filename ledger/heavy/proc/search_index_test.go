@@ -97,14 +97,10 @@ func TestSearchIndex_Proceed(t *testing.T) {
 			resp, err := payload.Unmarshal(rep.Payload)
 			require.NoError(t, err)
 
-			res, ok := resp.(*payload.Index)
+			res, ok := resp.(*payload.SearchIndexInfo)
 			require.True(t, ok)
 
-			lfl := record.Lifeline{}
-			err = lfl.Unmarshal(res.Index)
-			require.NoError(t, err)
-
-			require.Equal(t, lflParent, lfl.Parent)
+			require.Equal(t, lflParent, res.Index.Lifeline.Parent)
 		})
 
 		err = p.Proceed(ctx)
@@ -139,13 +135,22 @@ func TestSearchIndex_Proceed(t *testing.T) {
 		buf, err := msg.Marshal()
 		require.NoError(t, err)
 		receivedMeta := payload.Meta{Payload: buf}
+		sender.ReplyMock.Set(func(_ context.Context, origin payload.Meta, rep *message.Message) {
+			require.Equal(t, receivedMeta, origin)
+
+			resp, err := payload.Unmarshal(rep.Payload)
+			require.NoError(t, err)
+
+			res, ok := resp.(*payload.SearchIndexInfo)
+			require.True(t, ok)
+
+			require.Nil(t, res.Index)
+		})
+
 		p := newProc(receivedMeta)
 
 		err = p.Proceed(ctx)
-		require.Error(t, err)
-
-		codedError := err.(*payload.CodedError)
-		require.Equal(t, uint32(payload.CodeNotFound), codedError.Code)
+		require.NoError(t, err)
 
 		mc.Finish()
 	})
