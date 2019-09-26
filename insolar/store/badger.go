@@ -39,6 +39,8 @@ type BadgerDB struct {
 // NewBadgerDB creates new BadgerDB instance.
 // Creates new badger.DB instance with provided working dir and use it as backend for BadgerDB.
 func NewBadgerDB(ops badger.Options) (*BadgerDB, error) {
+	// always allow to truncate vlog if necessary (actually it should have been a default behavior)
+	ops.Truncate = true
 	bdb, err := badger.Open(ops)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to open badger")
