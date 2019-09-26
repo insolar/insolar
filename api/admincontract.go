@@ -19,7 +19,10 @@ package api
 import (
 	"net/http"
 
+	"github.com/insolar/insolar/api/instrumenter"
 	"github.com/insolar/insolar/api/requester"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+
 	"github.com/insolar/rpc/v2"
 )
 
@@ -52,5 +55,11 @@ func NewAdminContractService(runner *Runner) *AdminContractService {
 }
 
 func (cs *AdminContractService) Call(req *http.Request, args *requester.Params, requestBody *rpc.RequestBody, result *requester.ContractResult) error {
-	return wrapCall(cs.runner, cs.allowedMethods, req, args, requestBody, result)
+	ctx, instr := instrumenter.NewMethodInstrument("AdminContractService.call")
+	defer instr.End()
+
+	logger := inslogger.FromContext(ctx)
+	logger.Infof("[ AdminContractService.call ] Incoming request: %s", req.RequestURI)
+
+	return wrapCall(ctx, cs.runner, cs.allowedMethods, req, args, requestBody, result)
 }

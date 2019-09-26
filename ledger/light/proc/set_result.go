@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 
@@ -129,14 +130,24 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 			if err != nil {
 				return errors.Wrap(err, "failed to marshal result")
 			}
-			msg, err := payload.NewMessage(&payload.ResultInfo{
-				ObjectID: p.result.Object,
-				ResultID: res.RecordID,
-				Result:   resBuf,
-			})
+
+			var msg *message.Message
+			if res.RecordID == resultID {
+				msg, err = payload.NewMessage(&payload.ResultInfo{
+					ObjectID: p.result.Object,
+					ResultID: res.RecordID,
+				})
+			} else {
+				msg, err = payload.NewMessage(&payload.ErrorResultExists{
+					ObjectID: p.result.Object,
+					ResultID: res.RecordID,
+					Result:   resBuf,
+				})
+			}
 			if err != nil {
 				return errors.Wrap(err, "failed to create reply")
 			}
+
 			logger.Debug("result duplicate found")
 			p.dep.sender.Reply(ctx, p.message, msg)
 			return nil
@@ -151,6 +162,14 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to find request being closed")
 	}
+
+	if p.sideEffect != nil {
+		err = checkRequestCanChangeState(closedRequest)
+		if err != nil {
+			return errors.Wrap(err, "request is not allowed to change object state")
+		}
+	}
+
 	err = checkOutgoings(opened, closedRequest.RecordID)
 	if err != nil {
 		return errors.Wrap(err, "open outgoings found")
@@ -257,6 +276,27 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 	return nil
 }
 
+// If we have side effect than check that request of received result is not outgoing and not immutable incoming
+func checkRequestCanChangeState(request record.CompositeFilamentRecord) error {
+	rec := record.Unwrap(&request.Record.Virtual)
+	switch req := rec.(type) {
+	case *record.OutgoingRequest:
+		return &payload.CodedError{
+			Text: "outgoing request can't change object state, id: " + request.RecordID.DebugString(),
+			Code: payload.CodeRequestInvalid,
+		}
+	case *record.IncomingRequest:
+		if req.Immutable {
+			return &payload.CodedError{
+				Text: "immutable incoming request can't change object state, id: " + request.RecordID.DebugString(),
+				Code: payload.CodeRequestInvalid,
+			}
+		}
+	}
+
+	return nil
+}
+
 // calcPending checks if received result closes earliest request. If so, it should return new earliest request or
 // nil if the last request was closed.
 func calcPending(opened []record.CompositeFilamentRecord, closedRequestID insolar.ID) (*insolar.PulseNumber, error) {
@@ -306,8 +346,8 @@ func findClosed(reqs []record.CompositeFilamentRecord, result record.Result) (re
 		}
 }
 
-func checkOutgoings(reqs []record.CompositeFilamentRecord, closedRequestID insolar.ID) error {
-	for _, req := range reqs {
+func checkOutgoings(openedRequests []record.CompositeFilamentRecord, closedRequestID insolar.ID) error {
+	for _, req := range openedRequests {
 		found := record.Unwrap(&req.Record.Virtual)
 		parsedReq, ok := found.(record.Request)
 		if !ok {
@@ -318,6 +358,7 @@ func checkOutgoings(reqs []record.CompositeFilamentRecord, closedRequestID insol
 			continue
 		}
 
+		// Is not saga and reason of opened outgoing is equal request closed by this set_result
 		if !out.IsDetached() && out.Reason.GetLocal().Equal(closedRequestID) {
 			return &payload.CodedError{
 				Text: "request " + closedRequestID.DebugString() + " is reason for non closed outgoing request " + req.RecordID.DebugString(),

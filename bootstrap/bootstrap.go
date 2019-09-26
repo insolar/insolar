@@ -220,6 +220,7 @@ func (g *Generator) Run(ctx context.Context) error {
 	inslog.Info("[ bootstrap ] create heavy genesis config ...")
 	contractsConfig := insolar.GenesisContractsConfig{
 		RootBalance:                     g.config.RootBalance,
+		Fee:                             g.config.Fee,
 		MDBalance:                       g.config.MDBalance,
 		RootPublicKey:                   rootPublicKey,
 		FeePublicKey:                    feePublicKey,

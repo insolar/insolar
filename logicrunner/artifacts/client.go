@@ -692,6 +692,8 @@ func (m *client) RegisterResult(
 		switch p := payloadOutput.(type) {
 		case *payload.ResultInfo:
 			return &payloadOutput.(*payload.ResultInfo).ResultID, nil
+		case *payload.ErrorResultExists:
+			return nil, errors.New("another result already exists")
 		case *payload.Error:
 			return nil, errors.New(p.Text)
 		default:

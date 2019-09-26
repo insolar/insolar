@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/log/logwatermill"
 	"io"
 	"math"
+	"os"
 	"sync"
 	"testing"
 	"time"
@@ -118,7 +119,6 @@ var verboseWM bool
 
 func init() {
 	flag.BoolVar(&verboseWM, "verbose-wm", false, "flag to enable watermill logging")
-	flag.Parse()
 }
 
 func NewServer(
@@ -457,4 +457,9 @@ func getIncomingTopic(msg *message.Message) string {
 		topic = bus.TopicIncomingRequestResults
 	}
 	return topic
+}
+
+func TestMain(m *testing.M) {
+	flag.Parse()
+	os.Exit(m.Run())
 }

@@ -69,7 +69,7 @@ func TestRequestCheckerDefault_CheckRequest(t *testing.T) {
 		err := checker.CheckRequest(ctx, gen.ID(), req)
 		coded, ok := err.(*payload.CodedError)
 		require.True(t, ok, "should be coded error")
-		assert.Equal(t, uint32(payload.CodeInvalidRequest), coded.Code)
+		assert.Equal(t, uint32(payload.CodeRequestInvalid), coded.Code)
 	})
 
 	t.Run("reason is empty returns error", func(t *testing.T) {
@@ -97,7 +97,7 @@ func TestRequestCheckerDefault_CheckRequest(t *testing.T) {
 		err := checker.CheckRequest(ctx, gen.IDWithPulse(pulse.MinTimePulse+1), req)
 		coded, ok := err.(*payload.CodedError)
 		require.True(t, ok, "should be coded error")
-		assert.Equal(t, uint32(payload.CodeInvalidRequest), coded.Code)
+		assert.Equal(t, uint32(payload.CodeRequestInvalid), coded.Code)
 	})
 
 	t.Run("incoming API request is ok", func(t *testing.T) {

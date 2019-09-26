@@ -15,7 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 1,
-  "iteration": 1568717290622,
+  "iteration": 1569340025205,
   "links": [],
   "panels": [
     {
@@ -1371,7 +1371,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(irate(insolar_vm_execution_broker_execution_started{installation=\"$installation\", instance=~\"$instance\"}[1m])) by (instance) - sum(irate(insolar_vm_execution_broker_execution_finished{installation=\"$installation\", instance=~\"$instance\"}[1m])) by (instance)",
+          "expr": "sum(insolar_vm_execution_broker_execution_started{installation=\"$installation\", instance=~\"$instance\"}[1m]) by (instance) - sum(insolar_vm_execution_broker_execution_finished{installation=\"$installation\", instance=~\"$instance\"}[1m]) by (instance)",
           "legendFormat": "Executions in progress: {{instance}}",
           "refId": "A"
         }
@@ -1637,7 +1637,7 @@
         "useTags": false
       },
       {
-        "allValue": null,
+        "allValue": ".*",
         "current": {
           "text": "All",
           "value": [
@@ -1645,14 +1645,14 @@
           ]
         },
         "datasource": "prometheus",
-        "definition": "label_values(insolar_bus_sent_total, instance)",
+        "definition": "label_values(insolar_bus_sent_total{installation=\"$installation\"}, instance)",
         "hide": 0,
         "includeAll": true,
         "label": null,
         "multi": true,
         "name": "instance",
         "options": [],
-        "query": "label_values(insolar_bus_sent_total, instance)",
+        "query": "label_values(insolar_bus_sent_total{installation=\"$installation\"}, instance)",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
@@ -1686,5 +1686,5 @@
   "timezone": "",
   "title": "INS-Virtual",
   "uid": "9cpRPL5Zk",
-  "version": 1
+  "version": 4
 }

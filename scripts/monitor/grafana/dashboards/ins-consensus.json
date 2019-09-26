@@ -15,7 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1568639480534,
+  "iteration": 1569338832562,
   "links": [],
   "panels": [
     {
@@ -235,20 +235,20 @@
         "useTags": false
       },
       {
-        "allValue": null,
+        "allValue": ".*",
         "current": {
           "text": "All",
           "value": "$__all"
         },
         "datasource": "prometheus",
-        "definition": "label_values(insolar_consensus_active_nodes_count, instance)",
+        "definition": "label_values(insolar_consensus_active_nodes_count{installation=\"$installation\"},  instance)",
         "hide": 0,
         "includeAll": true,
         "label": "",
         "multi": true,
         "name": "instance",
         "options": [],
-        "query": "label_values(insolar_consensus_active_nodes_count, instance)",
+        "query": "label_values(insolar_consensus_active_nodes_count{installation=\"$installation\"}, instance)",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,

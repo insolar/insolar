@@ -47,12 +47,16 @@ func closeRawDB(bdb *badger.DB, err error) {
 }
 
 func merge(targetDBPath string, backupFileName string, numberOfWorkers int) {
+	log.Info("merge. targetDBPath: ", targetDBPath, ", backupFileName: ", backupFileName,
+		", numberOfWorkers: ", numberOfWorkers)
 	ops := badger.DefaultOptions(targetDBPath)
 	bdb, err := badger.Open(ops)
 	if err != nil {
 		printError("failed to open badger", err)
 		os.Exit(1)
 	}
+
+	log.Info("DB is opened")
 
 	if err := isDBEmpty(bdb); err == nil {
 		closeRawDB(bdb, errors.New("db must not be empty"))
@@ -65,6 +69,8 @@ func merge(targetDBPath string, backupFileName string, numberOfWorkers int) {
 		closeRawDB(bdb, err)
 		return
 	}
+
+	log.Info("Backup file is opened")
 
 	err = bdb.Load(bkpFile, numberOfWorkers)
 	if err != nil {
@@ -129,6 +135,7 @@ func isDBEmpty(bdb *badger.DB) error {
 }
 
 func createEmptyBadger(dbDir string) {
+	log.Info("createEmptyBadger. dbDir: ", dbDir)
 	ops := badger.DefaultOptions(dbDir)
 	var err error
 	bdb, err := badger.Open(ops)
@@ -136,6 +143,7 @@ func createEmptyBadger(dbDir string) {
 		printError("failed to open badger", err)
 		os.Exit(1)
 	}
+	log.Info("DB is opened")
 
 	err = isDBEmpty(bdb)
 	if err != nil {
@@ -158,6 +166,8 @@ func createEmptyBadger(dbDir string) {
 		closeRawDB(bdb, err)
 		return
 	}
+
+	log.Info("DBInitializedKey is set")
 
 	t := time.Time{}
 	err = t.UnmarshalBinary(value)
@@ -231,7 +241,7 @@ func finalizeLastPulse(ctx context.Context, bdb store.DB) (insolar.PulseNumber, 
 	log.Info("All jet confirmed for pulse: ", pulseNumber.String())
 	err := jetKeeper.AddBackupConfirmation(ctx, pulseNumber)
 	if err != nil {
-		return 0, errors.New("failed to add backup confirmation for pulse" + pulseNumber.String())
+		return 0, errors.Wrap(err, "failed to add backup confirmation for pulse"+pulseNumber.String())
 	}
 
 	if jetKeeper.TopSyncPulse() != pulseNumber {
@@ -253,12 +263,14 @@ func (nopWriter) Write(p []byte) (n int, err error) {
 // 2. gets last backuped version
 // 3. write 2. to file
 func prepareBackup(dbDir string, lastBackupedVersionFile string) {
+	log.Info("prepareBackup. dbDir: ", dbDir, ", lastBackupedVersionFile: ", lastBackupedVersionFile)
 	ops := badger.DefaultOptions(dbDir)
 	bdb, err := store.NewBadgerDB(ops)
 	if err != nil {
 		printError("failed to open badger", err)
 		os.Exit(1)
 	}
+	log.Info("DB is opened")
 	ctx := context.Background()
 	closeDB := func(err error) {
 		errStop := bdb.Stop(ctx)
@@ -351,7 +363,7 @@ func printError(message string, err error) {
 	println(errors.Wrap(err, "ERROR "+message).Error())
 }
 
-func main() {
+func initLogger() {
 	err := log.SetLevel("Debug")
 	if err != nil {
 		printError("failed to set log level", err)
@@ -364,5 +376,9 @@ func main() {
 	l, _ := log.NewLog(cfg)
 
 	log.SetGlobalLogger(l)
+}
+
+func main() {
+	initLogger()
 	parseInputParams()
 }

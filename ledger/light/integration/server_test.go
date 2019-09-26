@@ -263,6 +263,7 @@ func NewServer(
 			filamentCalculator,
 			conf.LightChainLimit,
 			conf.CleanerDelay,
+			conf.FilamentCacheLimit,
 		)
 		Cleaner = lightCleaner
 

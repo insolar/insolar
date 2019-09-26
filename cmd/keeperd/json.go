@@ -16,26 +16,25 @@
 
 package main
 
-import (
-	"github.com/insolar/insolar/api/sdk"
-)
-
-type createMembersScenario struct {
-	insSDK  *sdk.SDK
-	members []*sdk.Member
+type KeeperRsp struct {
+	Available bool `json:"available"`
 }
 
-func (s *createMembersScenario) canBeStarted() error {
-	return nil
+type PromRsp struct {
+	Status string `json:"status"`
+	Data   struct {
+		ResultType string `json:"resultType"`
+		Result     []struct {
+			Metric struct {
+				Installation string `json:"installation"`
+				Instance     string `json:"instance"`
+				Job          string `json:"job"`
+				Role         string `json:"role"`
+			} `json:"metric"`
+			Value []interface{} `json:"value"`
+		} `json:"result"`
+	} `json:"data"`
+
+	ErrorType string `json:"errorType"`
+	Error     string `json:"error"`
 }
-
-func (s *createMembersScenario) prepare() {}
-
-func (s *createMembersScenario) scenario(index int) (string, error) {
-	creator := s.members[index]
-
-	_, traceID, err := s.insSDK.CreateMember(creator.Reference)
-	return traceID, err
-}
-
-func (s *createMembersScenario) checkResult() {}

@@ -60,6 +60,7 @@ type LightCleaner struct {
 
 	filamentCleaner FilamentCleaner
 
+	filamentLimit   int
 	lightChainLimit int
 	cleanerDelay    int
 }
@@ -77,6 +78,7 @@ func NewCleaner(
 	filamentCleaner FilamentCleaner,
 	lightChainLimit int,
 	cleanerDelay int,
+	filamentLimit int,
 ) *LightCleaner {
 	return &LightCleaner{
 		jetCleaner:      jetCleaner,
@@ -92,6 +94,7 @@ func NewCleaner(
 		indexAccessor:   indexAccessor,
 		pulseForClean:   make(chan insolar.PulseNumber),
 		done:            make(chan struct{}),
+		filamentLimit:   filamentLimit,
 	}
 }
 
@@ -165,7 +168,9 @@ func (c *LightCleaner) cleanPulse(ctx context.Context, pn insolar.PulseNumber) {
 	if err == nil {
 		for _, idx := range idxs {
 			if idx.LifelineLastUsed < pn {
-				c.filamentCleaner.Clear(idx.ObjID)
+				c.filamentCleaner.ClearIfLonger(idx.ObjID, 0)
+			} else {
+				c.filamentCleaner.ClearIfLonger(idx.ObjID, c.filamentLimit)
 			}
 		}
 
