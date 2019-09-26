@@ -3,13 +3,14 @@ package critlog
 import (
 	"context"
 	"errors"
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensus/common/args"
 	"io"
 	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/consensus/common/args"
 )
 
 type BackpressureBufferFlags uint8
@@ -30,14 +31,14 @@ const (
 	// This is AGAINST existing conventions and MUST ONLY be used when a writer's code is proprietary and never reuses the argument.
 	BufferReuse
 	// Regular (not-lowLatency) writes will go directly to output, ignoring queue and parallel write limits.
-	bufferBypassForRegular
+	BufferBypassForRegular
 )
 
 func NewBackpressureBufferWithBypass(output io.Writer, bufSize int, maxParWrites uint8,
 	flags BackpressureBufferFlags, missFn MissedEventFunc,
 ) *BackpressureBuffer {
 
-	if flags >= bufferBypassForRegular {
+	if flags >= BufferBypassForRegular {
 		panic("illegal value")
 	}
 
@@ -48,14 +49,14 @@ func NewBackpressureBufferWithBypass(output io.Writer, bufSize int, maxParWrites
 		bypassCond = sync.NewCond(&sync.Mutex{})
 	}
 
-	return newBackpressureBuffer(output, bufSize, 0, maxParWrites, flags|bufferBypassForRegular, missFn, bypassCond)
+	return newBackpressureBuffer(output, bufSize, 0, maxParWrites, flags|BufferBypassForRegular, missFn, bypassCond)
 }
 
 func NewBackpressureBuffer(output io.Writer, bufSize int, maxParWrites uint8,
 	flags BackpressureBufferFlags, missFn MissedEventFunc,
 ) *BackpressureBuffer {
 
-	if flags >= bufferBypassForRegular {
+	if flags >= BufferBypassForRegular {
 		panic("illegal value")
 	}
 
@@ -90,7 +91,7 @@ func newBackpressureBuffer(output io.Writer, bufSize int, extraPenalty uint8, ma
 	}
 
 	switch {
-	case flags&bufferBypassForRegular == 0:
+	case flags&BufferBypassForRegular == 0:
 		internal.writeFn = internal.checkWrite
 	case bypassCond != nil:
 		internal.writeFn = internal.bypassWrite
