@@ -20,7 +20,9 @@ package functest
 
 import (
 	"encoding/base64"
+	"fmt"
 	"math/big"
+	"sync"
 	"testing"
 
 	"github.com/insolar/insolar/api/requester"
@@ -215,7 +217,9 @@ func TestMigrationAnotherAmountSameTx(t *testing.T) {
 }
 
 func TestMigrationTokenDoubleSpend(t *testing.T) {
-	activeDaemons := activateDaemons(t, countTwoActiveDaemon)
+	var wg sync.WaitGroup
+	wg.Add(3)
+	_ = activateDaemons(t, countTwoActiveDaemon)
 	member := createMigrationMemberForMA(t)
 	anotherMember := createMember(t)
 
@@ -224,14 +228,23 @@ func TestMigrationTokenDoubleSpend(t *testing.T) {
 
 	require.Equal(t, "0", firstMemberBalance)
 	firstMABalance := getBalanceNoErr(t, &launchnet.MigrationAdmin, launchnet.MigrationAdmin.Ref)
+	for i := 0; i < countThreeActiveDaemon; i++ {
+		go func(i int) {
 
-	for i := 1; i < countThreeActiveDaemon; i++ {
-		makeSignedRequest(
-			launchnet.TestRPCUrl,
-			launchnet.MigrationDaemons[i],
-			"deposit.migration",
-			map[string]interface{}{"amount": "1000", "ethTxHash": "Test_TxHash", "migrationAddress": member.MigrationAddress})
+			res, _, err := makeSignedRequest(
+				launchnet.TestRPCUrl,
+				launchnet.MigrationDaemons[i],
+				"deposit.migration",
+				map[string]interface{}{"amount": "1000", "ethTxHash": "Test_TxHash", "migrationAddress": member.MigrationAddress})
+			if err != nil {
+				fmt.Println(err.(*requester.Error).Data)
+			} else {
+				fmt.Println(res)
+			}
+			wg.Done()
+		}(i)
 	}
+	wg.Wait()
 
 	res, err := signedRequest(t, launchnet.TestRPCUrl, anotherMember, "member.getBalance", map[string]interface{}{"reference": member.Ref})
 	require.NoError(t, err)
@@ -239,17 +252,6 @@ func TestMigrationTokenDoubleSpend(t *testing.T) {
 	require.True(t, ok)
 	deposit, ok = deposits["Test_TxHash"].(map[string]interface{})
 	require.True(t, ok)
-
-	sm := make(foundation.StableMap)
-	confirmerReferencesMap := deposit["confirmerReferences"].(string)
-	decoded, err := base64.StdEncoding.DecodeString(confirmerReferencesMap)
-	require.NoError(t, err)
-
-	err = sm.UnmarshalBinary(decoded)
-
-	for _, daemons := range activeDaemons {
-		require.Equal(t, sm[daemons.Ref], "10000")
-	}
 
 	require.Equal(t, deposit["ethTxHash"], "Test_TxHash")
 	require.Equal(t, deposit["amount"], "10000")
