@@ -88,6 +88,17 @@ func (s *NodeService) GetSeed(r *http.Request, args *SeedArgs, requestBody *rpc.
 	ctx, instr := instrumenter.NewMethodInstrument("NodeService.getSeed")
 	defer instr.End()
 
+	if !s.runner.AvailabilityChecker.IsAvailable(ctx) {
+		instr.SetError(errors.New(ServiceUnavailableErrorMessage), ServiceUnavailableErrorShort)
+		return &json2.Error{
+			Code:    ServiceUnavailableError,
+			Message: ServiceUnavailableErrorMessage,
+			Data: requester.Data{
+				TraceID: instr.TraceID(),
+			},
+		}
+	}
+
 	msg := fmt.Sprint("Incoming request: ", r.RequestURI)
 	instr.Annotate(msg)
 
