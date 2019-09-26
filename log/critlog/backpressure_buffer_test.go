@@ -69,7 +69,6 @@ func TestBackpressureBuffer_stop(t *testing.T) {
 }
 
 func TestBackpressureBuffer_parallel_write_limits_on_buffer(t *testing.T) {
-	//t.Skip("this test may fail on high load of CPU")
 	for repeat := 1; repeat > 0; repeat-- {
 		for parWriters := 1; parWriters <= 20; parWriters++ {
 			for useWorker := 0; useWorker <= 1; useWorker++ {
@@ -82,7 +81,6 @@ func TestBackpressureBuffer_parallel_write_limits_on_buffer(t *testing.T) {
 }
 
 func TestBackpressureBuffer_parallel_write_limits_on_bypass(t *testing.T) {
-	//t.Skip("this test may fail on high load of CPU")
 	for repeat := 1; repeat > 0; repeat-- {
 		for parWriters := 1; parWriters <= 20; parWriters++ {
 			for useWorker := 0; useWorker <= 1; useWorker++ {
@@ -166,6 +164,9 @@ func testBackpressureBufferLimit(t *testing.T, parWriters int, hasBuffer bool, s
 	entriesPickedByWriters := bufSize - len(bb.buffer)
 	// fill up whole buffer
 	for i := entriesPickedByWriters; i > 0; i-- {
+		if produceIndex >= producersCount {
+			break
+		}
 		wgStarted.Add(1)
 		go nextProduce(produceIndex)
 		produceIndex++
