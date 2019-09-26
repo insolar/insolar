@@ -476,6 +476,8 @@ func checkBalance(insSDK *sdk.SDK, totalBalanceBefore *big.Int, balanceCheckMemb
 	fmt.Printf("Total balance before: %v and after: %v\n", totalBalanceBefore, totalBalanceAfter)
 	if totalBalanceAfter.Cmp(totalBalanceBefore) != 0 {
 		log.Fatal("Total balance mismatch!\n")
+	} else {
+		fmt.Printf("Total balance successfully matched\n")
 	}
 	return membersWithBalanceMap
 }
