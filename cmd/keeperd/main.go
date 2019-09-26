@@ -146,9 +146,11 @@ func (k *Keeper) checkMetric(ctx context.Context, query string) bool {
 		return false
 	}
 	defer func() {
-		err = resp.Body.Close()
-		if err != nil {
-			logger.Warnf("Failed to close response body: %s", err.Error())
+		if resp != nil && resp.Body != nil {
+			err = resp.Body.Close()
+			if err != nil {
+				logger.Warnf("Failed to close response body: %s", err.Error())
+			}
 		}
 	}()
 
