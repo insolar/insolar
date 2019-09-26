@@ -66,7 +66,7 @@ func (*keyProcessor) ImportPublicKeyPEM(pemEncoded []byte) (crypto.PublicKey, er
 func (*keyProcessor) ImportPrivateKeyPEM(pemEncoded []byte) (crypto.PrivateKey, error) {
 	block, _ := pem.Decode(pemEncoded)
 	if block == nil {
-		return nil, fmt.Errorf("[ ImportPrivateKey ] Problems with decoding. Key - %v", pemEncoded)
+		return nil, fmt.Errorf("[ ImportPrivateKey ] Problems with decoding PEM")
 	}
 	x509Encoded := block.Bytes
 	privateKey, err := x509.ParsePKCS8PrivateKey(x509Encoded)
@@ -74,7 +74,7 @@ func (*keyProcessor) ImportPrivateKeyPEM(pemEncoded []byte) (crypto.PrivateKey, 
 		// try to read old version marshalled with x509.MarshalECPrivateKey()
 		privateKey, err = x509.ParseECPrivateKey(x509Encoded)
 		if err != nil {
-			return nil, fmt.Errorf("[ ImportPrivateKey ] Problems with parsing. Key - %v", pemEncoded)
+			return nil, fmt.Errorf("[ ImportPrivateKey ] Problems with parsing private key")
 		}
 	}
 
