@@ -66,13 +66,18 @@ func (*keyProcessor) ImportPublicKeyPEM(pemEncoded []byte) (crypto.PublicKey, er
 func (*keyProcessor) ImportPrivateKeyPEM(pemEncoded []byte) (crypto.PrivateKey, error) {
 	block, _ := pem.Decode(pemEncoded)
 	if block == nil {
-		return nil, fmt.Errorf("[ ImportPrivateKey ] Problems with decoding. Key - %v", pemEncoded)
+		return nil, fmt.Errorf("[ ImportPrivateKey ] Problems with decoding PEM")
 	}
 	x509Encoded := block.Bytes
-	privateKey, err := x509.ParseECPrivateKey(x509Encoded)
+	privateKey, err := x509.ParsePKCS8PrivateKey(x509Encoded)
 	if err != nil {
-		return nil, fmt.Errorf("[ ImportPrivateKey ] Problems with parsing. Key - %v", pemEncoded)
+		// try to read old version marshalled with x509.MarshalECPrivateKey()
+		privateKey, err = x509.ParseECPrivateKey(x509Encoded)
+		if err != nil {
+			return nil, fmt.Errorf("[ ImportPrivateKey ] Problems with parsing private key")
+		}
 	}
+
 	return privateKey, nil
 }
 
@@ -88,7 +93,7 @@ func (*keyProcessor) ExportPublicKeyPEM(publicKey crypto.PublicKey) ([]byte, err
 
 func (*keyProcessor) ExportPrivateKeyPEM(privateKey crypto.PrivateKey) ([]byte, error) {
 	ecdsaPrivateKey := sign.MustConvertPrivateKeyToEcdsa(privateKey)
-	x509Encoded, err := x509.MarshalECPrivateKey(ecdsaPrivateKey)
+	x509Encoded, err := x509.MarshalPKCS8PrivateKey(ecdsaPrivateKey)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ExportPrivateKey ]")
 	}

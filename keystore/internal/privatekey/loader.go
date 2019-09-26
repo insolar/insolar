@@ -50,7 +50,7 @@ func (p *keyLoader) Load(file string) (crypto.PrivateKey, error) {
 	return signer, nil
 }
 
-// TODO: deprecated, use PEM format
+// deprecated, todo: use PEM format
 func readJSON(path string) ([]byte, error) {
 	data, err := ioutil.ReadFile(filepath.Clean(path))
 	if err != nil {
@@ -73,13 +73,17 @@ func readJSON(path string) ([]byte, error) {
 func pemParse(key []byte) (crypto.PrivateKey, error) {
 	block, _ := pem.Decode(key)
 	if block == nil {
-		return nil, errors.Errorf("[ Parse ] Problems with decoding. Key - %v", key)
+		return nil, errors.Errorf("[ Parse ] Problems with decoding PEM")
 	}
 
 	x509Encoded := block.Bytes
-	privateKey, err := x509.ParseECPrivateKey(x509Encoded)
+	privateKey, err := x509.ParsePKCS8PrivateKey(x509Encoded)
 	if err != nil {
-		return nil, errors.Errorf("[ Parse ] Problems with parsing. Key - %v", key)
+		// try to read old version marshalled with x509.MarshalECPrivateKey()
+		privateKey, err = x509.ParseECPrivateKey(x509Encoded)
+		if err != nil {
+			return nil, errors.Errorf("[ Parse ] Problems with parsing private key")
+		}
 	}
 
 	return privateKey, nil
