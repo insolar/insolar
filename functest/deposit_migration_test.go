@@ -213,3 +213,49 @@ func TestMigrationAnotherAmountSameTx(t *testing.T) {
 	data := err.(*requester.Error).Data
 	require.Contains(t, data.Trace, "failed to check amount in confirmation from migration daemon")
 }
+
+func TestMigrationTokenDoubleSpend(t *testing.T) {
+	activeDaemons := activateDaemons(t, countTwoActiveDaemon)
+	member := createMigrationMemberForMA(t)
+	anotherMember := createMember(t)
+
+	deposit := migrate(t, member.Ref, "1000", "Test_TxHash", member.MigrationAddress, 0)
+	firstMemberBalance := deposit["balance"].(string)
+
+	require.Equal(t, "0", firstMemberBalance)
+	firstMABalance := getBalanceNoErr(t, &launchnet.MigrationAdmin, launchnet.MigrationAdmin.Ref)
+
+	for i := 1; i < countThreeActiveDaemon; i++ {
+		makeSignedRequest(
+			launchnet.TestRPCUrl,
+			launchnet.MigrationDaemons[i],
+			"deposit.migration",
+			map[string]interface{}{"amount": "1000", "ethTxHash": "Test_TxHash", "migrationAddress": member.MigrationAddress})
+	}
+
+	res, err := signedRequest(t, launchnet.TestRPCUrl, anotherMember, "member.getBalance", map[string]interface{}{"reference": member.Ref})
+	require.NoError(t, err)
+	deposits, ok := res.(map[string]interface{})["deposits"].(map[string]interface{})
+	require.True(t, ok)
+	deposit, ok = deposits["Test_TxHash"].(map[string]interface{})
+	require.True(t, ok)
+
+	sm := make(foundation.StableMap)
+	confirmerReferencesMap := deposit["confirmerReferences"].(string)
+	decoded, err := base64.StdEncoding.DecodeString(confirmerReferencesMap)
+	require.NoError(t, err)
+
+	err = sm.UnmarshalBinary(decoded)
+
+	for _, daemons := range activeDaemons {
+		require.Equal(t, sm[daemons.Ref], "10000")
+	}
+
+	require.Equal(t, deposit["ethTxHash"], "Test_TxHash")
+	require.Equal(t, deposit["amount"], "10000")
+	secondMemberBalance := deposit["balance"].(string)
+	require.Equal(t, "10000", secondMemberBalance)
+	secondMABalance := getBalanceNoErr(t, &launchnet.MigrationAdmin, launchnet.MigrationAdmin.Ref)
+	dif := new(big.Int).Sub(firstMABalance, secondMABalance)
+	require.Equal(t, "10000", dif.String())
+}

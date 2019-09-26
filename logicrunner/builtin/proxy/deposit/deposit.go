@@ -163,7 +163,7 @@ func (r *Deposit) GetCode() (insolar.Reference, error) {
 }
 
 // GetTxHash is proxy generated method
-func (r *Deposit) GetTxHashAsMutable() (string, error) {
+func (r *Deposit) GetTxHash() (string, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
@@ -202,7 +202,7 @@ func (r *Deposit) GetTxHashAsMutable() (string, error) {
 }
 
 // GetTxHashAsImmutable is proxy generated method
-func (r *Deposit) GetTxHash() (string, error) {
+func (r *Deposit) GetTxHashAsImmutable() (string, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
