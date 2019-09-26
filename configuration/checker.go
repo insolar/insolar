@@ -18,8 +18,10 @@ package configuration
 
 // AvailabilityChecker holds configuration for checking is network available for process API calls
 type AvailabilityChecker struct {
-	Enabled   bool
-	KeeperUrl string
+	Enabled        bool
+	KeeperURL      string
+	RequestTimeout uint
+	CheckPeriod    uint
 }
 
 func NewAvailabilityChecker() AvailabilityChecker {
@@ -27,6 +29,8 @@ func NewAvailabilityChecker() AvailabilityChecker {
 		Enabled: true,
 		// TODO: set local keeperd address when its done
 		// TODO: launch it in functests
-		KeeperUrl: "",
+		KeeperURL:      "",
+		RequestTimeout: 15,
+		CheckPeriod:    5,
 	}
 }

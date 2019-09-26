@@ -28,18 +28,16 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
-const keeperRequestTimeout = 15 * time.Second
-const checkAvailabilityPeriod = 5 * time.Second
-
 type keeperResponse struct {
 	Available bool `json:"available"`
 }
 
 // NetworkChecker is AvailabilityChecker implementation that checks can we process any API requests based on keeper status
 type NetworkChecker struct {
-	client    *http.Client
-	enabled   bool
-	keeperURL string
+	client      *http.Client
+	enabled     bool
+	keeperURL   string
+	checkPeriod time.Duration
 
 	lock        *sync.RWMutex
 	isAvailable bool
@@ -49,10 +47,12 @@ func NewNetworkChecker(cfg configuration.AvailabilityChecker) *NetworkChecker {
 	return &NetworkChecker{
 		client: &http.Client{
 			Transport: &http.Transport{},
-			Timeout:   keeperRequestTimeout,
+			Timeout:   time.Duration(cfg.RequestTimeout) * time.Second,
 		},
+
 		enabled:     cfg.Enabled,
-		keeperURL:   cfg.keeperURL,
+		keeperURL:   cfg.KeeperURL,
+		checkPeriod: time.Duration(cfg.CheckPeriod) * time.Second,
 		lock:        &sync.RWMutex{},
 		isAvailable: false,
 	}
@@ -68,7 +68,7 @@ func (nc *NetworkChecker) Start(ctx context.Context) error {
 	}
 
 	go func(ctx context.Context) {
-		for range time.NewTicker(checkAvailabilityPeriod).C {
+		for range time.NewTicker(nc.checkPeriod).C {
 			nc.updateAvailability(ctx)
 		}
 	}(ctx)
@@ -81,7 +81,9 @@ func (nc *NetworkChecker) updateAvailability(ctx context.Context) {
 	defer func() {
 		if resp != nil && resp.Body != nil {
 			err := resp.Body.Close()
-			logger.Error("[ NetworkChecker ] Can't close body: ", err)
+			if err != nil {
+				logger.Error("[ NetworkChecker ] Can't close body: ", err)
+			}
 		}
 	}()
 
@@ -117,9 +119,7 @@ func (nc *NetworkChecker) updateAvailability(ctx context.Context) {
 
 	if !respObj.Available {
 		logger.Error("[ NetworkChecker ] Network is not available for request processing")
-		return
 	}
-
 	nc.isAvailable = respObj.Available
 }
 
