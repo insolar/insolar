@@ -15,21 +15,58 @@ use FindBin;
 use JSON::XS;
 
 
-our @FILES = map {"$FindBin::Bin/../../.artifacts/launchnet/logs/discoverynodes/$_/output.log"} (1..5);
+our @F = map {LogFile->new("$FindBin::Bin/../../.artifacts/launchnet/logs/discoverynodes/$_/output.log", $_)->init} (1..5);
 
-my @F = map { LogFile->new($_)->init } @FILES;
+my $mixer = new LogMixer(@F);
 
-while (my $obj = $F[0]->read_line) {
-    say( encode_json $obj );
-}
-
-
+$mixer->get_pulse();
 
 
 package ConsensusAnalyzer;
 
 use 5.018;
 
+
+
+
+
+package LogMixer;
+
+use 5.018;
+use Date::Parse;
+
+sub new {
+    my ($class, @inputs) = @_;
+    my $self = bless {inputs => \@inputs}, $class;
+}
+
+sub get_pulse {
+    my $self = shift;
+    my @ret;
+
+    for my $source (@{ $self->{inputs} }) {
+        my $starttime = 0;
+        while(my $obj = $source->read_line) {
+            $obj->{time} = str2time($obj->{time});
+            $source->putback(), last if $starttime != 0 and $obj->{time} - 10 > $starttime;
+            push @ret, $obj;
+        }
+    }
+    return @ret;
+}
+
+sub enchance {
+    my $obj = shift;
+    if ($obj->{message} =~ /^Consensus started/) {
+
+    } elsif (1) {
+
+    } else {
+        die "Unhandled consensus log record: ", Dumper($obj);
+    }
+
+    return $obj;
+}
 
 
 
@@ -42,6 +79,7 @@ sub new {
     my $class = shift;
     return bless {
         fname => $_[0],
+        id    => $_[1],
     };
 }
 
@@ -62,9 +100,14 @@ sub read_head {
     my $self = shift;
     my $fd = $self->{fd};
     while(<$fd>) {
-        $self->{headbuff} = decode_json($_) , last if /^\{/;
+        $self->putback(decode_json($_)), last if /^\{/;
         $self->{head} .= $_;
     }
+}
+
+sub putback {
+    my ($self, $obj) = @_;
+    $self->{headbuff} = $obj;
 }
 
 sub read_line {
@@ -72,12 +115,12 @@ sub read_line {
     if (exists $self->{headbuff}) {
         my $obj = $self->{headbuff};
         delete $self->{headbuff};
-        return $obj if $obj->{component} == "consensus";
+        return $obj if $obj->{component} eq "consensus";
     }
     my $fd = $self->{fd};
     while(<$fd>) {
         next unless /^\{/;
         my $obj = decode_json($_);
-        return $obj if $obj->{component} == "consensus";
+        return $obj if $obj->{component} eq "consensus";
     }
 }
