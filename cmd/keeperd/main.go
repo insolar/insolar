@@ -120,8 +120,8 @@ func (k *Keeper) checkMetric(ctx context.Context, query string) bool {
 	logger := inslogger.FromContext(ctx)
 	logger.Debugf("Checking metric: %s", query)
 
-	metricUrl := k.config.QueryUrl + url.QueryEscape(query)
-	resp, err := http.Get(metricUrl)
+	metricURL := k.config.QueryURL + url.QueryEscape(query)
+	resp, err := http.Get(metricURL)
 	if err != nil {
 		logger.Errorf("Error while getting <<%s>> query: %s", query, err.Error())
 		return false
