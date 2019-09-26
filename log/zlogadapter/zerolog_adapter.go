@@ -1,4 +1,4 @@
-///
+//
 //    Copyright 2019 Insolar Technologies
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,23 +12,24 @@
 //    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
-///
+//
 
 package zlogadapter
 
 import (
 	"context"
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/log/inssyslog"
-	"github.com/insolar/insolar/log/logadapter"
-	"github.com/insolar/insolar/log/logmetrics"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog"
 	"io"
 	"os"
 	"strconv"
 	"strings"
-	"syscall"
+
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog"
+
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/log/inssyslog"
+	"github.com/insolar/insolar/log/logadapter"
+	"github.com/insolar/insolar/log/logmetrics"
 )
 
 var insolarPrefix = "github.com/insolar/insolar/"
@@ -120,8 +121,7 @@ func FromZerologLevel(zLevel zerolog.Level) insolar.LogLevel {
 func selectOutput(output insolar.LogOutput, param string) (io.WriteCloser, error) {
 	switch output {
 	case insolar.StdErrOutput:
-		// we open a separate file handle as it will be closed, so it should not interfere with os.Stderr
-		return os.NewFile(uintptr(syscall.Stderr), "/dev/stderr"), nil
+		return os.Stderr, nil
 	case insolar.SysLogOutput:
 		return inssyslog.ConnectSyslogByParam(param, "insolar") // breaks dependency on windows
 	default:

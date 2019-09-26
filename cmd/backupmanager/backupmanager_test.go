@@ -27,9 +27,11 @@ import (
 	"time"
 
 	"github.com/dgraph-io/badger"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/insolar/insolar/insolar/store"
 	"github.com/insolar/insolar/ledger/heavy/executor"
-	"github.com/stretchr/testify/require"
 )
 
 var binaryPath string
@@ -65,7 +67,7 @@ func TestNoCreateToExistingDir(t *testing.T) {
 		output, err := invoke("create", "-d", tmpdir)
 		_, ok := err.(*exec.ExitError)
 		require.True(t, ok)
-		require.Contains(t, output, "ERROR : DB must be empty")
+		require.Contains(t, output, "DB must be empty")
 	}
 }
 
@@ -110,11 +112,12 @@ func TestNoMergeToEmptyDb(t *testing.T) {
 	tmpdir, err := ioutil.TempDir("", "bdb-test-")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
+
 	for i := 0; i < 3; i++ {
 		output, err := invoke("merge", "-t", tmpdir, "-n", "TEST")
 		_, ok := err.(*exec.ExitError)
-		require.True(t, ok)
-		require.Contains(t, output, "ERROR : db must not be empty")
+		assert.True(t, ok)
+		require.Contains(t, output, "db must not be empty")
 	}
 }
 
@@ -122,13 +125,14 @@ func TestMergeNoBackupFile(t *testing.T) {
 	tmpdir, err := ioutil.TempDir("", "bdb-test-")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
+
 	_, err = invoke("create", "-d", tmpdir)
 	require.NoError(t, err)
 
 	for i := 0; i < 3; i++ {
 		output, err := invoke("merge", "-t", tmpdir, "-n", "TEST")
 		_, ok := err.(*exec.ExitError)
-		require.True(t, ok)
+		assert.True(t, ok)
 		require.Contains(t, output, "open TEST: no such file or directory")
 	}
 }
@@ -138,10 +142,11 @@ func TestNoPrepareBackupToEmptyDb(t *testing.T) {
 	tmpdir, err := ioutil.TempDir("", "bdb-test-")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
+
 	for i := 0; i < 3; i++ {
 		output, err := invoke("prepare_backup", "-d", tmpdir, "-l", "TEST")
 		_, ok := err.(*exec.ExitError)
-		require.True(t, ok)
+		assert.True(t, ok)
 		require.Contains(t, output, "no backup start keys")
 	}
 }
