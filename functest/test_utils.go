@@ -199,8 +199,8 @@ func getBalanceAndDeposits(t *testing.T, caller *launchnet.User, reference strin
 			confirmerReferences[reference] = amount
 		}
 
-		depositsMap["confirmerReferences"] = confirmerReferences
-		depositsMap[ethTxHash] = depositsMap
+		dMap["confirmerReferences"] = confirmerReferences
+		depositsMap[ethTxHash] = dMap
 	}
 
 	return balance, depositsMap, nil
