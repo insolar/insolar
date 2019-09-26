@@ -333,6 +333,9 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 			if err != nil && err != object.ErrIndexNotFound {
 				return nil, nil, errors.Wrap(err, "failed to fetch index")
 			}
+			if err == object.ErrIndexNotFound {
+				return nil, nil, nil
+			}
 			lifeline = lfl
 
 		} else if err != nil {
