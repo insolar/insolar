@@ -28,11 +28,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
-// AvailabilityChecker component checks if insolar network can't process any new requests
-type AvailabilityChecker interface {
-	IsAvailable(context.Context) bool
-}
-
 const keeperRequestTimeout = 15 * time.Second
 const checkAvailabilityPeriod = 5 * time.Second
 
@@ -40,6 +35,7 @@ type keeperResponse struct {
 	Available bool `json:"available"`
 }
 
+// NetworkChecker is AvailabilityChecker implementation that checks can we process any API requests based on keeper status
 type NetworkChecker struct {
 	client    *http.Client
 	enabled   bool
@@ -83,8 +79,10 @@ func (nc *NetworkChecker) updateAvailability(ctx context.Context) {
 	logger := inslogger.FromContext(ctx)
 	resp, err := nc.client.Get(nc.keeperUrl)
 	defer func() {
-		err := resp.Body.Close()
-		logger.Error("Can't close body: ", err)
+		if resp != nil && resp.Body != nil {
+			err := resp.Body.Close()
+			logger.Error("[ NetworkChecker ] Can't close body: ", err)
+		}
 	}()
 
 	nc.lock.Lock()
@@ -92,29 +90,34 @@ func (nc *NetworkChecker) updateAvailability(ctx context.Context) {
 
 	if err != nil {
 		nc.isAvailable = false
-		logger.Error("Can't get keeper status: ", err)
+		logger.Error("[ NetworkChecker ] Can't get keeper status: ", err)
+		return
 	}
 
 	if resp != nil && resp.StatusCode != http.StatusOK {
 		nc.isAvailable = false
-		logger.Error("Can't get keeper status: no response or bad StatusCode")
+		logger.Error("[ NetworkChecker ] Can't get keeper status: no response or bad StatusCode")
+		return
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		nc.isAvailable = false
-		logger.Error("Can't get keeper status: Can't read body: ", err)
+		logger.Error("[ NetworkChecker ] Can't get keeper status: Can't read body: ", err)
+		return
 	}
 
 	respObj := &keeperResponse{}
 	err = json.Unmarshal(body, respObj)
 	if err != nil {
 		nc.isAvailable = false
-		logger.Error("Can't get keeper status: Can't unmarshal body: ", err)
+		logger.Error("[ NetworkChecker ] Can't get keeper status: Can't unmarshal body: ", err)
+		return
 	}
 
 	if !respObj.Available {
-		logger.Error("Network is not available for request processing")
+		logger.Error("[ NetworkChecker ] Network is not available for request processing")
+		return
 	}
 
 	nc.isAvailable = respObj.Available

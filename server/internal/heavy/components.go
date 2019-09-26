@@ -366,6 +366,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		Requester,
 		ArtifactsClient,
 		APIWrapper,
+		AvailabilityChecker,
 		KeyProcessor,
 		CryptoScheme,
 		CryptoService,

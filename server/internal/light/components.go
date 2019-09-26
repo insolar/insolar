@@ -362,6 +362,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		Requester,
 		ArtifactsClient,
 		APIWrapper,
+		AvailabilityChecker,
 		KeyProcessor,
 		CryptoScheme,
 		CryptoService,

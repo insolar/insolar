@@ -53,7 +53,7 @@ type Runner struct {
 	ArtifactManager     artifacts.Client
 	JetCoordinator      jet.Coordinator
 	NetworkStatus       insolar.NetworkStatus
-	AvailabilityChecker AvailabilityChecker
+	AvailabilityChecker insolar.AvailabilityChecker
 
 	handler       http.Handler
 	server        *http.Server
@@ -132,7 +132,7 @@ func NewRunner(cfg *configuration.APIRunner,
 	artifactManager artifacts.Client,
 	jetCoordinator jet.Coordinator,
 	networkStatus insolar.NetworkStatus,
-	availabilityChecker AvailabilityChecker,
+	availabilityChecker insolar.AvailabilityChecker,
 ) (*Runner, error) {
 
 	if err := checkConfig(cfg); err != nil {

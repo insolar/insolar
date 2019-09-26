@@ -193,6 +193,7 @@ func initComponents(
 		logicrunner.NewRequestsExecutor(),
 		machinesmanager.NewMachinesManager(),
 		APIWrapper,
+		availabilityChecker,
 		nw,
 		pm,
 	)
