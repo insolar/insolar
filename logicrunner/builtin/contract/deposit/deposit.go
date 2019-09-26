@@ -47,7 +47,6 @@ type Deposit struct {
 }
 
 // GetTxHash gets transaction hash.
-// ins:immutable
 func (d *Deposit) GetTxHash() (string, error) {
 	return d.TxHash, nil
 }
@@ -91,6 +90,10 @@ func (d *Deposit) Itself() (interface{}, error) {
 
 // Confirm adds confirm for deposit by migration daemon.
 func (d *Deposit) Confirm(migrationDaemonRef string, txHash string, amountStr string) error {
+
+	if d.PulseDepositUnHold != 0 {
+		return fmt.Errorf("migration is done for this deposit %s", txHash)
+	}
 	if txHash != d.TxHash {
 		return fmt.Errorf("transaction hash is incorrect")
 	}
