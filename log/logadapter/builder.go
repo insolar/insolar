@@ -289,12 +289,15 @@ func (z LoggerBuilder) prepareOutput(metrics *logmetrics.MetricsHelper, needsLow
 		return nil, err
 	}
 
-	if z.Config.Output.ParallelWriters > 0 && z.Config.Output.ParallelWriters*2 < z.Config.Output.BufferSize {
-		// to limit write parallelism - buffer must be active
-		return nil, errors.New("write parallelism limiter requires BufferSize >= ParallelWriters*2 ")
+	if z.Config.Output.ParallelWriters < 0 || z.Config.Output.ParallelWriters > math.MaxInt8 {
+		return nil, errors.New("argument ParallelWriters is out of bounds")
 	}
 
 	if z.Config.Output.BufferSize > 0 {
+		if z.Config.Output.ParallelWriters > 0 && z.Config.Output.ParallelWriters*2 < z.Config.Output.BufferSize {
+			// to limit write parallelism - buffer must be active
+			return nil, errors.New("write parallelism limiter requires BufferSize >= ParallelWriters*2 ")
+		}
 
 		flags := critlog.BufferWriteDelayFairness | critlog.BufferTrackWriteDuration
 
@@ -306,19 +309,30 @@ func (z LoggerBuilder) prepareOutput(metrics *logmetrics.MetricsHelper, needsLow
 			flags |= critlog.BufferReuse
 		}
 
-		pw := uint8(insolar.DefaultOutputParallelLimit)
-		if z.Config.Output.ParallelWriters > 0 && z.Config.Output.ParallelWriters <= math.MaxInt8 {
-			pw = uint8(z.Config.Output.ParallelWriters)
-		} else if !z.Config.Output.EnableRegularBuffer {
-			flags |= critlog.BufferBypassForRegular
-		}
-
 		missedFn := z.loggerMissedEvent(insolar.WarnLevel)
 
-		bpb := critlog.NewBackpressureBuffer(output, z.Config.Output.BufferSize, 0, pw, flags, missedFn)
-		bpb.StartWorker(context.Background())
+		var bpb *critlog.BackpressureBuffer
+		switch {
+		case z.Config.Output.EnableRegularBuffer:
+			pw := uint8(insolar.DefaultOutputParallelLimit)
+			if z.Config.Output.ParallelWriters != 0 {
+				pw = uint8(z.Config.Output.ParallelWriters)
+			}
+			bpb = critlog.NewBackpressureBuffer(output, z.Config.Output.BufferSize, pw, flags, missedFn)
+		case z.Config.Output.ParallelWriters == 0:
+			bpb = critlog.NewBackpressureBufferWithBypass(output, z.Config.Output.BufferSize,
+				insolar.DefaultOutputParallelLimit, flags, missedFn)
+		default:
+			bpb = critlog.NewBackpressureBufferWithBypass(output, z.Config.Output.BufferSize,
+				uint8(z.Config.Output.ParallelWriters), flags, missedFn)
+		}
 
+		bpb.StartWorker(context.Background())
 		return bpb, nil
+	}
+
+	if z.Config.Output.ParallelWriters > 0 {
+
 	}
 
 	if needsLowLatency {

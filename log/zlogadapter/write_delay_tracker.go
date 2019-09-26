@@ -120,41 +120,46 @@ type writeDelayPostHook struct {
 
 func (h *writeDelayPostHook) Write(p []byte) (n int, err error) {
 	var ofs int
-	searchLimit := len(h.searchBytes) + 64
+	searchLimit := len(h.searchBytes) + 32
 	if searchLimit >= len(p) {
 		ofs = bytes.Index(p, h.searchBytes)
 	} else {
 		ofs = bytes.Index(p[:searchLimit], h.searchBytes)
 	}
 
-	if ofs > 0 {
-		fieldLen := len(h.searchBytes) + tempHexFieldLength
-		fieldEnd := ofs + fieldLen
-		newLen := h.replaceField(p[ofs:fieldEnd:fieldEnd])
-
-		if newLen > 0 && newLen != fieldLen {
-			copy(p[ofs+newLen:], p[fieldEnd:])
-			p = p[:len(p)-fieldEnd+newLen+ofs]
-		}
-	}
-	return h.output.Write(p)
-}
-
-func (h *writeDelayPostHook) replaceField(b []byte) int {
-
-	buf := make([]byte, tempHexFieldLength/2)
-	if _, err := hex.Decode(buf, b[len(h.searchBytes):]); err != nil {
-		return -1
+	if ofs < 0 {
+		return h.output.Write(p)
 	}
 
-	nanoDuration := time.Duration(time.Now().UnixNano() - int64(binary.LittleEndian.Uint64(buf)))
+	fieldLen := len(h.searchBytes) + tempHexFieldLength
+	fieldEnd := ofs + fieldLen
+	newLen, startedAt := h.replaceField(p[ofs:fieldEnd:fieldEnd])
 
-	if h.statReportFn != nil {
+	if newLen > 0 && newLen != fieldLen {
+		copy(p[ofs+newLen:], p[fieldEnd:])
+		p = p[:len(p)-fieldEnd+newLen+ofs]
+	}
+	n, err = h.output.Write(p)
+
+	if h.statReportFn != nil && startedAt > 0 {
+		nanoDuration := time.Duration(time.Now().UnixNano() - startedAt)
 		h.statReportFn(nanoDuration)
 	}
 
+	return n, err
+}
+
+func (h *writeDelayPostHook) replaceField(b []byte) (int, int64) {
+
+	buf := make([]byte, tempHexFieldLength/2)
+	if _, err := hex.Decode(buf, b[len(h.searchBytes):]); err != nil {
+		return -1, 0
+	}
+	startedAt := int64(binary.LittleEndian.Uint64(buf))
+	nanoDuration := time.Duration(time.Now().UnixNano() - startedAt)
+
 	if h.fieldWidth == 0 {
-		return 0
+		return 0, startedAt
 	}
 
 	s := args.DurationFixedLen(nanoDuration, h.fieldWidth)
@@ -165,5 +170,5 @@ func (h *writeDelayPostHook) replaceField(b []byte) int {
 		w -= len(s) - utf8.RuneCountInString(s)
 	}
 	rs := fmt.Sprintf(fieldHeaderFmt, h.fieldName, w, s)
-	return copy(b, rs)
+	return copy(b, rs), startedAt
 }
