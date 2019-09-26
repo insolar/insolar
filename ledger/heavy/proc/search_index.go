@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
@@ -65,11 +66,11 @@ func (p *SearchIndex) Proceed(ctx context.Context) error {
 
 	var idx *record.Index
 	for currentPN >= searchIndex.Until {
-		savedIdx, err := p.dep.indexes.ForID(ctx, currentPN, searchIndex.ObjectID)
+		savedIdx, err := p.dep.indexes.ForID(ctx, currentPN, *insolar.NewID(currentPN, searchIndex.ObjectID.Hash()))
 		if err != nil && err != object.ErrIndexNotFound {
 			return errors.Wrapf(
 				err,
-				"failed to fetch object index for %v", searchIndex.ObjectID.String(),
+				"failed to fetch object index for %v", *insolar.NewID(currentPN, searchIndex.ObjectID.Hash()),
 			)
 		}
 		if err == nil {

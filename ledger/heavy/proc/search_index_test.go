@@ -71,8 +71,8 @@ func TestSearchIndex_Proceed(t *testing.T) {
 		}
 
 		index.ForIDMock.When(ctx, insolar.PulseNumber(100), objID).Then(record.Index{}, object.ErrIndexNotFound)
-		index.ForIDMock.When(ctx, insolar.PulseNumber(99), objID).Then(record.Index{}, object.ErrIndexNotFound)
-		index.ForIDMock.When(ctx, insolar.PulseNumber(98), objID).Then(expectedIdx, nil)
+		index.ForIDMock.When(ctx, insolar.PulseNumber(99), *insolar.NewID(99, []byte{1, 2, 3, 4})).Then(record.Index{}, object.ErrIndexNotFound)
+		index.ForIDMock.When(ctx, insolar.PulseNumber(98), *insolar.NewID(98, []byte{1, 2, 3, 4})).Then(expectedIdx, nil)
 
 		pulses.BackwardsMock.When(ctx, insolar.PulseNumber(100), 1).Then(insolar.Pulse{
 			PulseNumber: 99,
@@ -118,8 +118,8 @@ func TestSearchIndex_Proceed(t *testing.T) {
 		objID := *insolar.NewID(100, []byte{1, 2, 3, 4})
 
 		index.ForIDMock.When(ctx, insolar.PulseNumber(100), objID).Then(record.Index{}, object.ErrIndexNotFound)
-		index.ForIDMock.When(ctx, insolar.PulseNumber(99), objID).Then(record.Index{}, object.ErrIndexNotFound)
-		index.ForIDMock.When(ctx, insolar.PulseNumber(98), objID).Then(record.Index{}, object.ErrIndexNotFound)
+		index.ForIDMock.When(ctx, insolar.PulseNumber(99), *insolar.NewID(99, []byte{1, 2, 3, 4})).Then(record.Index{}, object.ErrIndexNotFound)
+		index.ForIDMock.When(ctx, insolar.PulseNumber(98), *insolar.NewID(98, []byte{1, 2, 3, 4})).Then(record.Index{}, object.ErrIndexNotFound)
 
 		pulses.BackwardsMock.When(ctx, insolar.PulseNumber(100), 1).Then(insolar.Pulse{
 			PulseNumber: 99,
