@@ -121,21 +121,22 @@ func (c *RequestCheckerDefault) checkReasonForOutgoingRequest(
 		return errors.New("reason is not incoming")
 	}
 
-	// Checking reason is oldest if its mutable.
-	if !incomingReason.Immutable {
-		oldestRequest := OldestMutable(openedRequests)
-		if oldestRequest == nil {
-			return &payload.CodedError{
-				Text: "reason is not the oldest mutable",
-				Code: payload.CodeReasonIsWrong,
-			}
-		}
+	if incomingReason.Immutable {
+		return nil
+	}
 
-		if oldestRequest.RecordID != reasonID {
-			return &payload.CodedError{
-				Text: fmt.Sprintf("request reason is not the oldest in filament, oldest %s", oldestRequest.RecordID.DebugString()),
-				Code: payload.CodeReasonIsWrong,
-			}
+	// Checking reason is oldest if its mutable.
+	oldestRequest := OldestMutable(openedRequests)
+	if oldestRequest == nil {
+		return &payload.CodedError{
+			Text: "reason is not the oldest mutable",
+			Code: payload.CodeReasonIsWrong,
+		}
+	}
+	if oldestRequest.RecordID != reasonID {
+		return &payload.CodedError{
+			Text: fmt.Sprintf("request reason is not the oldest in filament, oldest %s", oldestRequest.RecordID.DebugString()),
+			Code: payload.CodeReasonIsWrong,
 		}
 	}
 
