@@ -20,11 +20,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"math"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log/critlog"
 	"github.com/insolar/insolar/log/logmetrics"
-	"io"
-	"math"
 )
 
 type Config struct {
