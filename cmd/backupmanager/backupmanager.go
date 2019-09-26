@@ -272,27 +272,35 @@ func prepareBackup(dbDir string, lastBackupedVersionFile string) {
 	}
 	log.Info("DB is opened")
 	ctx := context.Background()
+	closeDB := func(err error) {
+		errStop := bdb.Stop(ctx)
+		if err != nil || errStop != nil {
+			printError("", err)
+			printError("failed to close db", errStop)
+			os.Exit(1)
+		}
+	}
 
 	topSyncPulse, err := finalizeLastPulse(ctx, bdb)
 	if err != nil {
-		closeRawDB(bdb.Backend(), errors.Wrap(err, "failed to finalizeLastPulse"))
+		closeDB(errors.Wrap(err, "failed to finalizeLastPulse"))
 		return
 	}
 
 	lastVersion, err := bdb.Backup(nopWriter{}, 0)
 	if err != nil {
-		closeRawDB(bdb.Backend(), errors.Wrap(err, "failed to calculate last backuped version"))
+		closeDB(errors.Wrap(err, "failed to calculate last backuped version"))
 		return
 	}
 	log.Info("Got last backup version: ", lastVersion)
 
 	if err := writeLastBackupFile(lastBackupedVersionFile, lastVersion); err != nil {
-		closeRawDB(bdb.Backend(), errors.Wrap(err, "failed to writeLastBackupFile"))
+		closeDB(errors.Wrap(err, "failed to writeLastBackupFile"))
 		return
 	}
 	log.Info("Write last backup version file: ", lastBackupedVersionFile)
 
-	closeRawDB(bdb.Backend(), nil)
+	closeDB(nil)
 	log.Info("New top sync pulse: ", topSyncPulse.String())
 }
 
