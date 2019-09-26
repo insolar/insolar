@@ -331,10 +331,6 @@ func (z LoggerBuilder) prepareOutput(metrics *logmetrics.MetricsHelper, needsLow
 		return bpb, nil
 	}
 
-	if z.Config.Output.ParallelWriters > 0 {
-
-	}
-
 	if needsLowLatency {
 		return nil, errors.New("low latency buffer was disabled but is required")
 	}
