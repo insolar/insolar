@@ -14,16 +14,27 @@
 // limitations under the License.
 //
 
-package proc
+package main
 
-type Dependencies struct {
-	PassState        func(*PassState)
-	SendCode         func(*SendCode)
-	SendRequests     func(*SendRequests)
-	SendRequest      func(*SendRequest)
-	Replication      func(*Replication)
-	SendJet          func(*SendJet)
-	SendIndex        func(*SendIndex)
-	SearchIndex      func(*SearchIndex)
-	SendInitialState func(*SendInitialState)
+type KeeperRsp struct {
+	Available bool `json:"available"`
+}
+
+type PromRsp struct {
+	Status string `json:"status"`
+	Data   struct {
+		ResultType string `json:"resultType"`
+		Result     []struct {
+			Metric struct {
+				Installation string `json:"installation"`
+				Instance     string `json:"instance"`
+				Job          string `json:"job"`
+				Role         string `json:"role"`
+			} `json:"metric"`
+			Value []interface{} `json:"value"`
+		} `json:"result"`
+	} `json:"data"`
+
+	ErrorType string `json:"errorType"`
+	Error     string `json:"error"`
 }
