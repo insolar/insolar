@@ -330,3 +330,7 @@ func Event(level insolar.LogLevel, args ...interface{}) {
 func Eventf(level insolar.LogLevel, format string, args ...interface{}) {
 	g().EmbeddedEventf(level, format, args...)
 }
+
+func Flush() {
+	g().EmbeddedFlush("Global logger flush")
+}

@@ -165,6 +165,8 @@ type EmbeddedLogger interface {
 	EmbeddedEvent(level LogLevel, args ...interface{})
 	// Eventf formats and logs a message with the given level. DO NOT USE directly.
 	EmbeddedEventf(level LogLevel, fmt string, args ...interface{})
+	// Does flushing of an underlying buffer. Implementation and factual output may vary.
+	EmbeddedFlush(msg string)
 }
 
 type GlobalLogAdapterFactory interface {

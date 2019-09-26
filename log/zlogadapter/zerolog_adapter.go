@@ -247,6 +247,13 @@ func (z *zerologAdapter) EmbeddedEventf(level insolar.LogLevel, fmt string, args
 	}
 }
 
+func (z *zerologAdapter) EmbeddedFlush(msg string) {
+	if len(msg) > 0 {
+		z.newEvent(insolar.WarnLevel).Msg(msg)
+	}
+	_ = z.config.LoggerOutput.Flush()
+}
+
 func (z *zerologAdapter) Event(level insolar.LogLevel, args ...interface{}) {
 	z.EmbeddedEvent(level, args...)
 }
