@@ -28,6 +28,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
 	"github.com/spf13/viper"
@@ -69,10 +70,22 @@ func rootCommand(cmd *cobra.Command, args []string) {
 	}
 
 	ctx := context.Background()
-	ctx, _ = inslogger.InitNodeLogger(ctx, cfg.Log, "main", "", "keeperd")
+	ctx, logger := inslogger.InitNodeLogger(ctx, cfg.Log, "main", "", "keeperd")
 
 	keeper := NewKeeper(cfg.Keeper)
 	keeper.Run(ctx)
+
+	vp.WatchConfig()
+	vp.OnConfigChange(func(e fsnotify.Event) {
+		logger.Info("Reloading config file")
+		cfg := NewConfig()
+		err := vp.Unmarshal(&cfg)
+		if err != nil {
+			logger.Errorf("Failed to reload config: %s", err.Error())
+			return
+		}
+		keeper.SetConfig(cfg.Keeper)
+	})
 
 	var gracefulStop = make(chan os.Signal, 1)
 	signal.Notify(gracefulStop, syscall.SIGTERM)
@@ -86,11 +99,15 @@ type Keeper struct {
 	isAvailable uint32
 }
 
-func NewKeeper(cfg KeeperConfig) Keeper {
-	return Keeper{
+func NewKeeper(cfg KeeperConfig) *Keeper {
+	return &Keeper{
 		config:      cfg,
 		isAvailable: 0,
 	}
+}
+
+func (k *Keeper) SetConfig(cfg KeeperConfig) {
+	k.config = cfg
 }
 
 func (k *Keeper) Run(ctx context.Context) {
@@ -108,9 +125,11 @@ func (k *Keeper) startChecker(ctx context.Context) {
 func (k *Keeper) checkMetrics(ctx context.Context) {
 	queries := k.config.Queries
 	var isOK uint32 = 1
-	for _, q := range queries {
-		if !k.checkMetric(ctx, q) {
-			isOK = 0
+	if !k.config.FakeTrue {
+		for _, q := range queries {
+			if !k.checkMetric(ctx, q) {
+				isOK = 0
+			}
 		}
 	}
 	atomic.StoreUint32(&k.isAvailable, isOK)
@@ -136,11 +155,11 @@ func (k *Keeper) checkMetric(ctx context.Context, query string) bool {
 	promRsp := PromRsp{}
 	err = json.NewDecoder(resp.Body).Decode(&promRsp)
 	if err != nil {
-		logger.Errorf("Failed to parse Prometheus response: %s", err.Error())
+		logger.Errorf("Metric <<%s>>. Failed to parse Prometheus response: %s", query, err.Error())
 		return false
 	}
 	if promRsp.Status != "success" {
-		logger.Errorf("Bad response from Prometheus: %s: %s", promRsp.ErrorType, promRsp.Error)
+		logger.Errorf("Metric <<%s>>. Bad response from Prometheus: %s: %s", query, promRsp.ErrorType, promRsp.Error)
 		return false
 	}
 	for _, res := range promRsp.Data.Result {

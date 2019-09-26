@@ -36,6 +36,7 @@ func NewConfig() Config {
 
 type KeeperConfig struct {
 	ListenAddress string
+	FakeTrue      bool
 	PollPeriod    time.Duration
 	QueryURL      string
 	Queries       []string
@@ -45,6 +46,7 @@ type KeeperConfig struct {
 func NewKeeperConfig() KeeperConfig {
 	return KeeperConfig{
 		ListenAddress: ":12012",
+		FakeTrue:      false,
 		PollPeriod:    5 * time.Second,
 		QueryURL:      "https://prometheus.insolar.io/api/v1/query?query=",
 		Queries:       make([]string, 0),
