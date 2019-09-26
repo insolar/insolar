@@ -21,7 +21,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
-	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -37,7 +36,6 @@ import (
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils/launchnet"
 
@@ -220,14 +218,8 @@ func migrate(t *testing.T, memberRef string, amount string, tx string, ma string
 	_, deposits := getBalanceAndDepositsNoErr(t, anotherMember, memberRef)
 	deposit, ok := deposits[tx].(map[string]interface{})
 	require.True(t, ok)
-	sm := make(foundation.StableMap)
-	require.NoError(t, err)
-	confirmerReferencesMap := deposit["confirmerReferences"].(string)
-	decoded, err := base64.StdEncoding.DecodeString(confirmerReferencesMap)
-	require.NoError(t, err)
-	err = sm.UnmarshalBinary(decoded)
-	require.True(t, ok)
-	require.Equal(t, amount+"0", sm[launchnet.MigrationDaemons[mdNum].Ref])
+	confirmations := deposit["confirmerReferences"].(map[string]interface{})
+	require.Equal(t, amount+"0", confirmations[launchnet.MigrationDaemons[mdNum].Ref])
 
 	return deposit
 }
