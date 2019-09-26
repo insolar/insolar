@@ -61,11 +61,12 @@ import (
 )
 
 func ConsensusContext(ctx context.Context) context.Context {
-	ctx, _ = inslogger.WithFields(ctx, map[string]interface{}{
-		"component": "consensus",
+	return inslogger.UpdateLogger(ctx, func(logger insolar.Logger) (insolar.Logger, error) {
+		return logger.Copy().WithFields(map[string]interface{}{
+			"component":  "consensus",
+			"LowLatency": true,
+		}).WithMetrics(insolar.LogMetricsWriteDelayField).BuildLowLatency()
 	})
-
-	return ctx
 }
 
 func PacketEarlyLogger(ctx context.Context, senderAddr string) (context.Context, insolar.Logger) {

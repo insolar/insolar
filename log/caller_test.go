@@ -19,16 +19,16 @@ package log
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/insolar"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"runtime"
 	"strconv"
 	"testing"
-
-	"github.com/insolar/insolar/configuration"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
-// IMPORTANT: Beware, test results there depends on test file name (caller_test.go)!
+// Beware, test results there depends on test file name (caller_test.go)!
 
 type loggerField struct {
 	Caller string
@@ -51,7 +51,8 @@ func TestLog_ZerologCaller(t *testing.T) {
 	require.NoError(t, err, "log creation")
 
 	var b bytes.Buffer
-	l = l.WithOutput(&b)
+	l, err = l.Copy().WithOutput(&b).WithCaller(insolar.CallerField).Build()
+	require.NoError(t, err)
 
 	_, _, line, _ := runtime.Caller(0)
 	l.Info("test")
@@ -72,8 +73,8 @@ func TestLog_ZerologCallerWithFunc(t *testing.T) {
 	require.NoError(t, err, "log creation")
 
 	var b bytes.Buffer
-	l = l.WithFuncName(true)
-	l = l.WithOutput(&b)
+	l, err = l.Copy().WithOutput(&b).WithCaller(insolar.CallerFieldWithFuncName).Build()
+	require.NoError(t, err)
 
 	_, _, line, _ := runtime.Caller(0)
 	l.Info("test")
@@ -85,35 +86,45 @@ func TestLog_ZerologCallerWithFunc(t *testing.T) {
 }
 
 func TestLog_GlobalCaller(t *testing.T) {
-	gl := GlobalLogger
-	defer func() { GlobalLogger = gl }()
+	defer SaveGlobalLogger()()
 
 	var b bytes.Buffer
-	GlobalLogger = GlobalLogger.WithOutput(&b)
-	SetLevel("info")
+	gl2, err := GlobalLogger().Copy().WithOutput(&b).WithCaller(insolar.CallerField).Build()
+	require.NoError(t, err)
+	SetGlobalLogger(gl2)
+
+	err = SetLevel("info")
+	require.NoError(t, err)
 
 	_, _, line, _ := runtime.Caller(0)
 	Info("test")
+	Debug("test2shouldNotBeThere")
 
-	lf := logFields(t, b.Bytes())
+	s := b.String()
+	lf := logFields(t, []byte(s))
 	assert.Regexp(t, "^log/caller_test.go:"+strconv.Itoa(line+1), lf.Caller, "log contains proper call place")
 	assert.Equal(t, "", lf.Func, "log not contains func name")
+	assert.NotContains(t, s, "test2shouldNotBeThere")
 }
 
-// this test result depends on test name!
 func TestLog_GlobalCallerWithFunc(t *testing.T) {
-	gl := GlobalLogger
-	defer func() { GlobalLogger = gl }()
+	defer SaveGlobalLogger()()
 
 	var b bytes.Buffer
-	GlobalLogger = GlobalLogger.WithOutput(&b)
-	GlobalLogger = GlobalLogger.WithFuncName(true)
-	SetLevel("info")
+	gl2, err := GlobalLogger().Copy().WithOutput(&b).WithCaller(insolar.CallerFieldWithFuncName).Build()
+	require.NoError(t, err)
+	SetGlobalLogger(gl2)
+
+	err = SetLevel("info")
+	require.NoError(t, err)
 
 	_, _, line, _ := runtime.Caller(0)
 	Info("test")
+	Debug("test2shouldNotBeThere")
 
-	lf := logFields(t, b.Bytes())
-	assert.Regexp(t, "^log/caller_test.go:", lf.Caller+strconv.Itoa(line+1), "log contains call place")
-	assert.Equal(t, "TestLog_GlobalCallerWithFunc", lf.Func, "log contains call place")
+	s := b.String()
+	lf := logFields(t, []byte(s))
+	assert.Regexp(t, "^log/caller_test.go:"+strconv.Itoa(line+1), lf.Caller, "log contains proper call place")
+	assert.Equal(t, "TestLog_GlobalCallerWithFunc", lf.Func, "log contains func name")
+	assert.NotContains(t, s, "test2shouldNotBeThere")
 }

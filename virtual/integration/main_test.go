@@ -21,6 +21,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/insolar/insolar/log/logwatermill"
 	"io"
 	"math"
 	"os"
@@ -48,7 +49,6 @@ import (
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/keystore"
-	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/logicexecutor"
@@ -198,7 +198,7 @@ func NewServer(
 	wmLogger := watermill.LoggerAdapter(watermill.NopLogger{})
 
 	if verboseWM {
-		wmLogger = log.NewWatermillLogAdapter(logger)
+		wmLogger = logwatermill.NewWatermillLogAdapter(logger)
 	}
 
 	// Communication.
