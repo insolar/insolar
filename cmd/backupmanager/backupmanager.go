@@ -407,7 +407,6 @@ func initLogger() context.Context {
 	cfg := configuration.NewLog()
 	cfg.Level = "Debug"
 	cfg.Formatter = "text"
-	cfg.OutputType = "stdout"
 
 	ctx, logger := inslogger.InitNodeLogger(context.Background(), cfg, "", "", "backuper")
 	badgerLogger.Logger = logger.WithField("component", "badger")
