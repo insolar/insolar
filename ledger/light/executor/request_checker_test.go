@@ -373,7 +373,7 @@ func TestRequestCheckerDefault_CheckRequest(t *testing.T) {
 		require.Equal(t, uint32(payload.CodeReasonIsWrong), insError.GetCode())
 	})
 
-	t.Run("outgoing, reason is not the oldest", func(t *testing.T) {
+	t.Run("outgoing, reason is immutable does not have to be the latest", func(t *testing.T) {
 		setup()
 		defer mc.Finish()
 
@@ -390,7 +390,7 @@ func TestRequestCheckerDefault_CheckRequest(t *testing.T) {
 				RecordID: *reasonRef.GetLocal(),
 				Record: record.Material{
 					Virtual: record.Wrap(&record.IncomingRequest{
-						Immutable: false,
+						Immutable: true,
 					}),
 				},
 			}
@@ -427,10 +427,54 @@ func TestRequestCheckerDefault_CheckRequest(t *testing.T) {
 			}, nil
 		})
 		err := checker.CheckRequest(ctx, requestID, &req)
-		require.Error(t, err)
-		insError, ok := errors.Cause(err).(*payload.CodedError)
-		require.True(t, ok)
-		require.Equal(t, uint32(payload.CodeReasonIsWrong), insError.GetCode())
+		require.NoError(t, err)
+	})
+
+	t.Run("outgoing, reason is the oldest mutable", func(t *testing.T) {
+		setup()
+		defer mc.Finish()
+
+		requestID := gen.IDWithPulse(pulse.MinTimePulse + 2)
+		reasonRef := gen.ReferenceWithPulse(pulse.MinTimePulse + 1)
+		req := record.OutgoingRequest{
+			Reason: reasonRef,
+		}
+
+		filament.OpenedRequestsMock.Set(func(_ context.Context, pulse insolar.PulseNumber, objectID insolar.ID, pendingOnly bool) (ca1 []record.CompositeFilamentRecord, err error) {
+			require.Equal(t, requestID.Pulse(), pulse)
+
+			req := record.CompositeFilamentRecord{
+				RecordID: *reasonRef.GetLocal(),
+				Record: record.Material{
+					Virtual: record.Wrap(&record.IncomingRequest{
+						Immutable: false,
+					}),
+				},
+			}
+			return []record.CompositeFilamentRecord{
+				// garbage
+				{
+					RecordID: gen.ID(),
+					Record: record.Material{
+						Virtual: record.Wrap(&record.OutgoingRequest{
+							ReturnMode: record.ReturnSaga,
+						}),
+					},
+				},
+				{
+					RecordID: gen.ID(),
+					Record: record.Material{
+						Virtual: record.Wrap(&record.IncomingRequest{
+							Immutable: true,
+						}),
+					},
+				},
+				// reason
+				req,
+			}, nil
+		})
+		err := checker.CheckRequest(ctx, requestID, &req)
+		assert.Nil(t, err)
 	})
 
 	t.Run("outgoing, reason is the oldest mutable", func(t *testing.T) {
