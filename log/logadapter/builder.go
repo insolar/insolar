@@ -289,7 +289,7 @@ func (z LoggerBuilder) prepareOutput(metrics *logmetrics.MetricsHelper, needsLow
 		return nil, err
 	}
 
-	if z.Config.Output.ParallelWriters < 0 || z.Config.Output.ParallelWriters > math.MaxInt8 {
+	if z.Config.Output.ParallelWriters < 0 || z.Config.Output.ParallelWriters > math.MaxUint8 {
 		return nil, errors.New("argument ParallelWriters is out of bounds")
 	}
 
@@ -319,9 +319,9 @@ func (z LoggerBuilder) prepareOutput(metrics *logmetrics.MetricsHelper, needsLow
 				pw = uint8(z.Config.Output.ParallelWriters)
 			}
 			bpb = critlog.NewBackpressureBuffer(output, z.Config.Output.BufferSize, pw, flags, missedFn)
-		case z.Config.Output.ParallelWriters == 0:
+		case z.Config.Output.ParallelWriters == 0 || z.Config.Output.ParallelWriters == math.MaxUint8:
 			bpb = critlog.NewBackpressureBufferWithBypass(output, z.Config.Output.BufferSize,
-				insolar.DefaultOutputParallelLimit, flags, missedFn)
+				0 /* no limit */, flags, missedFn)
 		default:
 			bpb = critlog.NewBackpressureBufferWithBypass(output, z.Config.Output.BufferSize,
 				uint8(z.Config.Output.ParallelWriters), flags, missedFn)
