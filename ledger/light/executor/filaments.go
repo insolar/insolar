@@ -475,7 +475,7 @@ func (c FilamentCalculatorDefault) checkHeavyForLifeline(
 		return record.Lifeline{}, errors.Wrap(err, "failed to check index origin")
 	}
 
-	ensureIndex, err := payload.NewMessage(&payload.SearchIndex{
+	msg, err := payload.NewMessage(&payload.SearchIndex{
 		ObjectID: objID,
 		Until:    readUntil,
 	})
@@ -483,7 +483,7 @@ func (c FilamentCalculatorDefault) checkHeavyForLifeline(
 		return record.Lifeline{}, errors.Wrap(err, "failed to create message")
 	}
 
-	reps, done := c.sender.SendTarget(ctx, ensureIndex, *node)
+	reps, done := c.sender.SendTarget(ctx, msg, *node)
 	defer done()
 
 	res, ok := <-reps
