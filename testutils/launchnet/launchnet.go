@@ -472,10 +472,10 @@ func RotateLogs(verbose bool) {
 	cmd = exec.Command("sh", "-c", rotateCmd)
 	out, err = cmd.Output()
 	if err != nil {
+		if verbose {
+			println("RotateLogs killall output:", string(out))
+		}
 		log.Fatal("RotateLogs: failed to execute shell command:", rotateCmd)
-	}
-	if verbose {
-		println("RotateLogs killall output:", string(out))
 	}
 }
 

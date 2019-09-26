@@ -18,12 +18,15 @@ package sdk
 
 import (
 	"fmt"
+	"math/big"
 )
 
 type Member interface {
 	GetReference() string
 	GetPrivateKey() string
 	GetPublicKey() string
+	GetBalance() *big.Int
+	SetBalance(*big.Int)
 }
 
 // Member model object
@@ -31,6 +34,7 @@ type CommonMember struct {
 	Reference  string
 	PrivateKey string
 	PublicKey  string
+	Balance    *big.Int
 }
 
 // MigrationMember model object
@@ -58,6 +62,14 @@ func (m *CommonMember) GetPrivateKey() string {
 
 func (m *CommonMember) GetPublicKey() string {
 	return m.PublicKey
+}
+
+func (m *CommonMember) GetBalance() *big.Int {
+	return m.Balance
+}
+
+func (m *CommonMember) SetBalance(b *big.Int) {
+	m.Balance = b
 }
 
 func (m *CommonMember) String() string {

@@ -22,6 +22,7 @@ import (
 	"strconv"
 
 	"github.com/insolar/insolar/api/sdk"
+	"github.com/insolar/insolar/log"
 )
 
 const migrationAmount = 101
@@ -48,15 +49,21 @@ func (s *migrationScenario) canBeStarted() error {
 func (s *migrationScenario) prepare() {
 	members, err := getMembers(s.insSDK, concurrent, true)
 	check("Error while loading members: ", err)
+
+	if useMembersFromFile {
+		if members[len(members)-1].GetReference() != s.insSDK.GetMigrationAdminMember().GetReference() {
+			log.Fatal("last element must be migration admin, but its not")
+		}
+		members = members[:len(members)-1]
+	}
+
 	s.members = members
 
 	s.migrationDaemons = s.insSDK.GetMigrationDaemonMembers()
 
-	if !noCheckBalance {
-		s.balanceCheckMembers = make([]sdk.Member, len(s.members), len(s.members)+1)
-		copy(s.balanceCheckMembers, s.members)
-		s.balanceCheckMembers = append(s.balanceCheckMembers, s.insSDK.GetMigrationAdminMember())
-	}
+	s.balanceCheckMembers = make([]sdk.Member, len(s.members), len(s.members)+1)
+	copy(s.balanceCheckMembers, s.members)
+	s.balanceCheckMembers = append(s.balanceCheckMembers, s.insSDK.GetMigrationAdminMember())
 }
 
 func (s *migrationScenario) start(concurrentIndex int, repetitionIndex int) (string, error) {
