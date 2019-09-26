@@ -124,6 +124,10 @@ func DefaultHeavyResponse(pl payload.Payload) []payload.Payload {
 		return nil
 	case *payload.GetLightInitialState:
 		return []payload.Payload{DefaultLightInitialState()}
+	case *payload.SearchIndex:
+		return []payload.Payload{&payload.Error{
+			Code: payload.CodeNotFound,
+		}}
 	}
 
 	panic(fmt.Sprintf("unexpected message to heavy %T", pl))
