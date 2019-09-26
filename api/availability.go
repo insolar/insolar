@@ -96,7 +96,7 @@ func (nc *NetworkChecker) updateAvailability(ctx context.Context) {
 		return
 	}
 
-	if resp != nil && resp.StatusCode != http.StatusOK {
+	if resp != nil || resp.StatusCode != http.StatusOK {
 		nc.isAvailable = false
 		logger.Error("[ NetworkChecker ] Can't get keeper status: no response or bad StatusCode")
 		return
@@ -104,7 +104,6 @@ func (nc *NetworkChecker) updateAvailability(ctx context.Context) {
 
 	respObj := &keeperResponse{}
 	err = json.NewDecoder(resp.Body).Decode(respObj)
-
 	if err != nil {
 		nc.isAvailable = false
 		logger.Error("[ NetworkChecker ] Can't get keeper status: Can't decode body: ", err)
