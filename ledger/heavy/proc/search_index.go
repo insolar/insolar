@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
 )
@@ -78,10 +79,11 @@ func (p *SearchIndex) Proceed(ctx context.Context) error {
 		}
 		prev, err := p.dep.pulses.Backwards(ctx, currentPN, 1)
 		if err != nil {
-			return errors.Wrapf(
+			inslogger.FromContext(ctx).Error(errors.Wrapf(
 				err,
 				"failed to fetch previous pulse for %v", currentPN,
-			)
+			))
+			break
 		}
 		currentPN = prev.PulseNumber
 	}
