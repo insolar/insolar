@@ -234,12 +234,16 @@ func (q *ExecutionBroker) finishTask(ctx context.Context, transcript *common.Tra
 	}
 }
 
-func (q *ExecutionBroker) cleanMutableQueue(ctx context.Context) {
+func (q *ExecutionBroker) resetMutableQueue(ctx context.Context) {
 	q.stateLock.Lock()
 	defer q.stateLock.Unlock()
 
-	q.mutable.queue.Clean(ctx)
-	q.deduplicationTable = make(map[insolar.Reference]bool)
+	items := q.mutable.queue.Clean(ctx)
+	for _, item := range items {
+		delete(q.deduplicationTable, item.RequestRef)
+	}
+
+	q.ledgerHasMoreRequests = true
 }
 
 func (q *ExecutionBroker) processTranscript(ctx context.Context, transcript *common.Transcript) {
@@ -274,8 +278,7 @@ func (q *ExecutionBroker) processTranscript(ctx context.Context, transcript *com
 				!transcript.RequestRef.GetLocal().Equal(*transcript.ObjectDescriptor.EarliestRequestID()) {
 				logger.Info("Got different earliest request from ledger")
 
-				q.cleanMutableQueue(ctx)
-				q.ledgerHasMoreRequests = true
+				q.resetMutableQueue(ctx)
 			}
 		}
 	}

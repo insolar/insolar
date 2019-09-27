@@ -22,7 +22,7 @@ type RequestsQueueMock struct {
 	beforeAppendCounter uint64
 	AppendMock          mRequestsQueueMockAppend
 
-	funcClean          func(ctx context.Context)
+	funcClean          func(ctx context.Context) (tpa1 []*common.Transcript)
 	inspectFuncClean   func(ctx context.Context)
 	afterCleanCounter  uint64
 	beforeCleanCounter uint64
@@ -280,15 +280,20 @@ type mRequestsQueueMockClean struct {
 
 // RequestsQueueMockCleanExpectation specifies expectation struct of the RequestsQueue.Clean
 type RequestsQueueMockCleanExpectation struct {
-	mock   *RequestsQueueMock
-	params *RequestsQueueMockCleanParams
-
+	mock    *RequestsQueueMock
+	params  *RequestsQueueMockCleanParams
+	results *RequestsQueueMockCleanResults
 	Counter uint64
 }
 
 // RequestsQueueMockCleanParams contains parameters of the RequestsQueue.Clean
 type RequestsQueueMockCleanParams struct {
 	ctx context.Context
+}
+
+// RequestsQueueMockCleanResults contains results of the RequestsQueue.Clean
+type RequestsQueueMockCleanResults struct {
+	tpa1 []*common.Transcript
 }
 
 // Expect sets up expected params for RequestsQueue.Clean
@@ -323,7 +328,7 @@ func (mmClean *mRequestsQueueMockClean) Inspect(f func(ctx context.Context)) *mR
 }
 
 // Return sets up results that will be returned by RequestsQueue.Clean
-func (mmClean *mRequestsQueueMockClean) Return() *RequestsQueueMock {
+func (mmClean *mRequestsQueueMockClean) Return(tpa1 []*common.Transcript) *RequestsQueueMock {
 	if mmClean.mock.funcClean != nil {
 		mmClean.mock.t.Fatalf("RequestsQueueMock.Clean mock is already set by Set")
 	}
@@ -331,12 +336,12 @@ func (mmClean *mRequestsQueueMockClean) Return() *RequestsQueueMock {
 	if mmClean.defaultExpectation == nil {
 		mmClean.defaultExpectation = &RequestsQueueMockCleanExpectation{mock: mmClean.mock}
 	}
-
+	mmClean.defaultExpectation.results = &RequestsQueueMockCleanResults{tpa1}
 	return mmClean.mock
 }
 
 //Set uses given function f to mock the RequestsQueue.Clean method
-func (mmClean *mRequestsQueueMockClean) Set(f func(ctx context.Context)) *RequestsQueueMock {
+func (mmClean *mRequestsQueueMockClean) Set(f func(ctx context.Context) (tpa1 []*common.Transcript)) *RequestsQueueMock {
 	if mmClean.defaultExpectation != nil {
 		mmClean.mock.t.Fatalf("Default expectation is already set for the RequestsQueue.Clean method")
 	}
@@ -349,8 +354,29 @@ func (mmClean *mRequestsQueueMockClean) Set(f func(ctx context.Context)) *Reques
 	return mmClean.mock
 }
 
+// When sets expectation for the RequestsQueue.Clean which will trigger the result defined by the following
+// Then helper
+func (mmClean *mRequestsQueueMockClean) When(ctx context.Context) *RequestsQueueMockCleanExpectation {
+	if mmClean.mock.funcClean != nil {
+		mmClean.mock.t.Fatalf("RequestsQueueMock.Clean mock is already set by Set")
+	}
+
+	expectation := &RequestsQueueMockCleanExpectation{
+		mock:   mmClean.mock,
+		params: &RequestsQueueMockCleanParams{ctx},
+	}
+	mmClean.expectations = append(mmClean.expectations, expectation)
+	return expectation
+}
+
+// Then sets up RequestsQueue.Clean return parameters for the expectation previously defined by the When method
+func (e *RequestsQueueMockCleanExpectation) Then(tpa1 []*common.Transcript) *RequestsQueueMock {
+	e.results = &RequestsQueueMockCleanResults{tpa1}
+	return e.mock
+}
+
 // Clean implements RequestsQueue
-func (mmClean *RequestsQueueMock) Clean(ctx context.Context) {
+func (mmClean *RequestsQueueMock) Clean(ctx context.Context) (tpa1 []*common.Transcript) {
 	mm_atomic.AddUint64(&mmClean.beforeCleanCounter, 1)
 	defer mm_atomic.AddUint64(&mmClean.afterCleanCounter, 1)
 
@@ -368,7 +394,7 @@ func (mmClean *RequestsQueueMock) Clean(ctx context.Context) {
 	for _, e := range mmClean.CleanMock.expectations {
 		if minimock.Equal(e.params, params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
-			return
+			return e.results.tpa1
 		}
 	}
 
@@ -380,15 +406,17 @@ func (mmClean *RequestsQueueMock) Clean(ctx context.Context) {
 			mmClean.t.Errorf("RequestsQueueMock.Clean got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
 		}
 
-		return
-
+		results := mmClean.CleanMock.defaultExpectation.results
+		if results == nil {
+			mmClean.t.Fatal("No results are set for the RequestsQueueMock.Clean")
+		}
+		return (*results).tpa1
 	}
 	if mmClean.funcClean != nil {
-		mmClean.funcClean(ctx)
-		return
+		return mmClean.funcClean(ctx)
 	}
 	mmClean.t.Fatalf("Unexpected call to RequestsQueueMock.Clean. %v", ctx)
-
+	return
 }
 
 // CleanAfterCounter returns a count of finished RequestsQueueMock.Clean invocations
