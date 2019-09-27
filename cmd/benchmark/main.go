@@ -52,23 +52,23 @@ var (
 	defaultMemberFile         = filepath.Join(defaults.ArtifactsDir(), "bench-members", "members.txt")
 	defaultDiscoveryNodesLogs = defaults.LaunchnetDiscoveryNodesLogsDir()
 
-	memberFile             string
-	output                 string
-	concurrent             int
-	repetitions            int
-	memberKeys             string
-	adminAPIURLs           []string
-	publicAPIURLs          []string
-	logLevel               string
-	logLevelServer         string
-	saveMembersToFile      bool
-	useMembersFromFile     bool
-	noCheckBalance         bool
-	checkEveryMember       bool
-	checkBalanceWithoutFee bool
-	checkTotalBalance      bool
-	scenarioName           string
-	discoveryNodesLogs     string
+	memberFile                 string
+	output                     string
+	concurrent                 int
+	repetitions                int
+	memberKeys                 string
+	adminAPIURLs               []string
+	publicAPIURLs              []string
+	logLevel                   string
+	logLevelServer             string
+	saveMembersToFile          bool
+	useMembersFromFile         bool
+	noCheckBalance             bool
+	checkEveryMember           bool
+	checkBalanceWithoutGeneral bool
+	checkTotalBalance          bool
+	scenarioName               string
+	discoveryNodesLogs         string
 )
 
 func parseInputParams() {
@@ -85,7 +85,7 @@ func parseInputParams() {
 	pflag.StringVarP(&memberFile, "members-file", "", defaultMemberFile, "dir for saving members data")
 	pflag.BoolVarP(&noCheckBalance, "nocheckbalance", "b", false, "don't check balance at the end")
 	pflag.BoolVarP(&checkEveryMember, "check-every-member", "", false, "check balance of every member from file, don't run any scenario")
-	pflag.BoolVarP(&checkBalanceWithoutFee, "check-balance-without-fee", "", false, "check balance of every member from file, except fee wallet, and don't run any scenario")
+	pflag.BoolVarP(&checkBalanceWithoutGeneral, "check-balance-without-general", "", false, "check balance of every member from file, except general objects (i.e. fee wallet, migration admin), and don't run any scenario")
 	pflag.BoolVarP(&checkTotalBalance, "check-total-balance", "", false, "check total balance of members from file, don't run any scenario")
 	pflag.StringVarP(&scenarioName, "scenarioname", "t", "", "name of scenario")
 	pflag.StringVarP(&discoveryNodesLogs, "discovery-nodes-logs-dir", "", defaultDiscoveryNodesLogs, "launchnet logs dir for checking errors")
@@ -274,7 +274,7 @@ func getMembers(insSDK *sdk.SDK, number int, migration bool) ([]sdk.Member, erro
 
 	if useMembersFromFile {
 		// from file we load not just number of members, but also migration admin or fee member
-		for i := 0; i < number+1; i++ {
+		for i := 0; i < number+2; i++ {
 			if migration {
 				members = append(members, &sdk.MigrationMember{})
 			} else {
@@ -378,7 +378,7 @@ func main() {
 		}
 	}()
 
-	if checkEveryMember || checkTotalBalance || checkBalanceWithoutFee {
+	if checkEveryMember || checkTotalBalance || checkBalanceWithoutGeneral {
 		var commonMembers []*sdk.CommonMember
 		rawMembers, err := ioutil.ReadFile(memberFile)
 		check("Can't read members from file: ", err)
@@ -388,9 +388,13 @@ func main() {
 		var members []sdk.Member
 
 		feeMemberRef := insSDK.GetFeeMember().GetReference()
+		migrationAdminRef := insSDK.GetMigrationAdminMember().GetReference()
 		for _, m := range commonMembers {
-			if checkBalanceWithoutFee {
+			if checkBalanceWithoutGeneral {
 				if m.GetReference() == feeMemberRef {
+					continue
+				}
+				if m.GetReference() == migrationAdminRef {
 					continue
 				}
 			}
@@ -489,7 +493,7 @@ func checkBalanceAtFile(members []sdk.Member, membersWithBalanceMap map[string]*
 		b := m.GetBalance()
 		totalFileBalance = totalFileBalance.Add(totalFileBalance, b)
 
-		if checkEveryMember || checkBalanceWithoutFee {
+		if checkEveryMember || checkBalanceWithoutGeneral {
 			if membersWithBalanceMap[m.GetReference()] == nil {
 				log.Fatalf("Balance mismatch: member with ref %s exists in file, but we didn't get its system balance. Balance at file - %s. \n", m.GetReference(), m.GetBalance())
 			}
