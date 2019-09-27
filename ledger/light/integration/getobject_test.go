@@ -99,7 +99,6 @@ func Test_GetObject_PassingRequestID(t *testing.T) {
 
 			lifeline := lifelinePL.(*payload.Index)
 			require.NotNil(t, lifeline.EarliestRequestID)
-			require.NotNil(t, lifeline.EarliestRequest)
 			require.Equal(t, secondReqID, *lifeline.EarliestRequestID)
 		}
 	})
