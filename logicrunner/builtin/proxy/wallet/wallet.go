@@ -20,6 +20,7 @@
 package wallet
 
 import (
+	"encoding/hex"
 	"fmt"
 
 	"github.com/insolar/insolar/insolar"
@@ -194,6 +195,7 @@ func (r *Wallet) GetAccount(assetName string) (*insolar.Reference, error) {
 	}
 	fmt.Println("love xoxo resultContainer - ", resultContainer)
 	fmt.Println("love xoxo ret - ", ret)
+	fmt.Println("dump: ", hex.Dump(res))
 	fmt.Println("love xoxo ret0 - ", ret0)
 	if resultContainer.Error != nil {
 		err = resultContainer.Error
