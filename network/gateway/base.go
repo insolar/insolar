@@ -58,8 +58,10 @@ import (
 	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/consensus/adapters"
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/profiles"
+	"github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/network/rules"
 	"github.com/insolar/insolar/network/storage"
+	"github.com/insolar/insolar/network/transport"
 
 	"github.com/pkg/errors"
 
@@ -86,24 +88,31 @@ type Base struct {
 	component.Initer
 
 	Self                network.Gateway
-	Gatewayer           network.Gatewayer           `inject:""`
-	NodeKeeper          network.NodeKeeper          `inject:""`
-	ContractRequester   insolar.ContractRequester   `inject:""`
-	CryptographyService insolar.CryptographyService `inject:""`
-	CertificateManager  insolar.CertificateManager  `inject:""`
-	HostNetwork         network.HostNetwork         `inject:""`
-	PulseAccessor       storage.PulseAccessor       `inject:""`
-	PulseAppender       storage.PulseAppender       `inject:""`
-	PulseManager        insolar.PulseManager        `inject:""`
-	BootstrapRequester  bootstrap.Requester         `inject:""`
-	KeyProcessor        insolar.KeyProcessor        `inject:""`
-	Aborter             network.Aborter             `inject:""`
+	Gatewayer           network.Gatewayer                  `inject:""`
+	NodeKeeper          network.NodeKeeper                 `inject:""`
+	ContractRequester   insolar.ContractRequester          `inject:""`
+	CryptographyService insolar.CryptographyService        `inject:""`
+	CryptographyScheme  insolar.PlatformCryptographyScheme `inject:""`
+	CertificateManager  insolar.CertificateManager         `inject:""`
+	HostNetwork         network.HostNetwork                `inject:""`
+	PulseAccessor       storage.PulseAccessor              `inject:""`
+	PulseAppender       storage.PulseAppender              `inject:""`
+	PulseManager        insolar.PulseManager               `inject:""`
+	BootstrapRequester  bootstrap.Requester                `inject:""`
+	KeyProcessor        insolar.KeyProcessor               `inject:""`
+	Aborter             network.Aborter                    `inject:""`
+	TransportFactory    transport.Factory                  `inject:""`
 
 	// nolint
 	OriginProvider network.OriginProvider `inject:""`
 
+	datagramHandler   *adapters.DatagramHandler
+	datagramTransport transport.DatagramTransport
+
+	ConsensusMode         consensus.Mode
+	consensusInstaller    consensus.Installer
 	ConsensusController   consensus.Controller
-	ConsensusPulseHandler network.PulseHandler
+	consensusPulseHandler network.PulseHandler
 
 	Options         *network.Options
 	bootstrapTimer  *time.Timer // nolint
@@ -127,6 +136,10 @@ func (g *Base) NewGateway(ctx context.Context, state insolar.NetworkState) netwo
 	case insolar.JoinerBootstrap:
 		g.Self = newJoinerBootstrap(g)
 	case insolar.WaitConsensus:
+		err := g.StartConsensus(ctx)
+		if err != nil {
+			g.FailState(ctx, fmt.Sprintf("Failed to start consensus: %s", err))
+		}
 		g.Self = newWaitConsensus(g)
 	case insolar.WaitMajority:
 		g.Self = newWaitMajority(g)
@@ -150,12 +163,17 @@ func (g *Base) Init(ctx context.Context) error {
 	g.HostNetwork.RegisterRequestHandler(types.UpdateSchedule, g.HandleUpdateSchedule)
 	g.HostNetwork.RegisterRequestHandler(types.Reconnect, g.HandleReconnect)
 
-	g.createCandidateProfile()
 	g.bootstrapETA = g.Options.BootstrapTimeout
-	return nil
+
+	return g.initConsensus(ctx)
 }
 
 func (g *Base) Stop(ctx context.Context) error {
+	err := g.datagramTransport.Stop(ctx)
+	if err != nil {
+		return errors.Wrap(err, "failed to stop datagram transport")
+	}
+
 	if g.newPulseCh != nil {
 		close(g.newPulseCh)
 	}
@@ -163,8 +181,82 @@ func (g *Base) Stop(ctx context.Context) error {
 	return nil
 }
 
+func (g *Base) initConsensus(ctx context.Context) error {
+	g.ConsensusMode = consensus.Joiner
+	g.datagramHandler = adapters.NewDatagramHandler()
+	datagramTransport, err := g.TransportFactory.CreateDatagramTransport(g.datagramHandler)
+	if err != nil {
+		return errors.Wrap(err, "failed to create datagramTransport")
+	}
+	g.datagramTransport = datagramTransport
+
+	// sign origin
+	origin := g.NodeKeeper.GetOrigin()
+	mutableOrigin := origin.(node.MutableNode)
+	mutableOrigin.SetAddress(datagramTransport.Address())
+	keyStore := getKeyStore(g.CryptographyService)
+
+	digest, sign, err := getAnnounceSignature(
+		origin,
+		network.OriginIsDiscovery(g.CertificateManager.GetCertificate()),
+		g.KeyProcessor,
+		keyStore,
+		g.CryptographyScheme,
+	)
+	if err != nil {
+		return errors.Wrap(err, "failed to getAnnounceSignature")
+	}
+	mutableOrigin.SetSignature(digest, *sign)
+	g.NodeKeeper.SetInitialSnapshot([]insolar.NetworkNode{origin})
+
+	staticProfile := adapters.NewStaticProfile(origin, g.CertificateManager.GetCertificate(), g.KeyProcessor)
+	candidate := adapters.NewCandidate(staticProfile, g.KeyProcessor)
+	g.originCandidate = candidate
+
+	g.consensusInstaller = consensus.New(ctx, consensus.Dep{
+		KeyProcessor:        g.KeyProcessor,
+		Scheme:              g.CryptographyScheme,
+		CertificateManager:  g.CertificateManager,
+		KeyStore:            keyStore,
+		NodeKeeper:          g.NodeKeeper,
+		StateGetter:         randomState{},
+		PulseChanger:        g,
+		StateUpdater:        g,
+		DatagramTransport:   g.datagramTransport,
+		EphemeralController: g,
+	})
+
+	return nil
+}
+
+func (g *Base) StartConsensus(ctx context.Context) error {
+
+	err := g.datagramTransport.Start(ctx)
+	if err != nil {
+		return errors.Wrap(err, "failed to start datagram transport")
+	}
+
+	if g.NodeKeeper.GetOrigin().Role() == insolar.StaticRoleHeavyMaterial {
+		g.ConsensusMode = consensus.ReadyNetwork
+	}
+
+	pulseHandler := adapters.NewPulseHandler()
+	g.ConsensusController = g.consensusInstaller.ControllerFor(g.ConsensusMode, pulseHandler, g.datagramHandler)
+	g.ConsensusController.RegisterFinishedNotifier(func(ctx context.Context, report network.Report) {
+		g.Gatewayer.Gateway().OnConsensusFinished(ctx, report)
+	})
+
+	g.consensusPulseHandler = pulseHandler
+	return nil
+}
+
+// ChangePulse process pulse from Consensus
+func (g *Base) ChangePulse(ctx context.Context, pulse insolar.Pulse) {
+	g.Gatewayer.Gateway().OnPulseFromConsensus(ctx, pulse)
+}
+
 func (g *Base) OnPulseFromPulsar(ctx context.Context, pu insolar.Pulse, originalPacket network.ReceivedPacket) {
-	g.ConsensusPulseHandler.HandlePulse(ctx, pu, originalPacket)
+	g.consensusPulseHandler.HandlePulse(ctx, pu, originalPacket)
 }
 
 func (g *Base) OnPulseFromConsensus(ctx context.Context, pu insolar.Pulse) {
@@ -419,15 +511,6 @@ func (g *Base) HandleReconnect(ctx context.Context, request network.ReceivedPack
 
 func (g *Base) OnConsensusFinished(ctx context.Context, report network.Report) {
 	inslogger.FromContext(ctx).Infof("OnConsensusFinished for pulse %d", report.PulseNumber)
-}
-
-func (g *Base) createCandidateProfile() {
-	origin := g.OriginProvider.GetOrigin()
-
-	staticProfile := adapters.NewStaticProfile(origin, g.CertificateManager.GetCertificate(), g.KeyProcessor)
-	candidate := adapters.NewCandidate(staticProfile, g.KeyProcessor)
-
-	g.originCandidate = candidate
 }
 
 func (g *Base) EphemeralMode(nodes []insolar.NetworkNode) bool {
