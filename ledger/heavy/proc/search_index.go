@@ -24,8 +24,8 @@ import (
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/object"
+	pulse_core "github.com/insolar/insolar/pulse"
 	"github.com/pkg/errors"
 )
 
@@ -33,20 +33,23 @@ type SearchIndex struct {
 	meta payload.Meta
 
 	dep struct {
-		indexes object.IndexAccessor
-		pulses  pulse.Calculator
-		sender  bus.Sender
+		indexes         object.IndexAccessor
+		pulseCalculator pulse.Calculator
+		pulseStorage    pulse.Accessor
+		sender          bus.Sender
 	}
 }
 
 func (p *SearchIndex) Dep(
 	indexes object.IndexAccessor,
-	pulses pulse.Calculator,
+	pulseCalculator pulse.Calculator,
+	pulseStorage pulse.Accessor,
 	sender bus.Sender,
 ) {
 	p.dep.indexes = indexes
 	p.dep.sender = sender
-	p.dep.pulses = pulses
+	p.dep.pulseCalculator = pulseCalculator
+	p.dep.pulseStorage = pulseStorage
 }
 
 func NewSearchIndex(meta payload.Meta) *SearchIndex {
@@ -62,7 +65,19 @@ func (p *SearchIndex) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "failed to unmarshal searchIndex message")
 	}
 
-	currentPN := searchIndex.ObjectID.Pulse()
+	if searchIndex.Until < pulse_core.MinTimePulse {
+		return errors.New("searching index with until less than MinTimePulse is impossible")
+	}
+
+	currentP, err := p.dep.pulseStorage.Latest(ctx)
+	if err != nil {
+		return errors.Wrap(err, "fail to fetch pulse")
+	}
+	currentPN := currentP.PulseNumber
+
+	if currentPN < searchIndex.Until {
+		return errors.New("searching index with until more than heavy's current pulse is impossible")
+	}
 
 	var idx *record.Index
 	for currentPN >= searchIndex.Until {
@@ -77,13 +92,12 @@ func (p *SearchIndex) Proceed(ctx context.Context) error {
 			idx = &savedIdx
 			break
 		}
-		prev, err := p.dep.pulses.Backwards(ctx, currentPN, 1)
+		prev, err := p.dep.pulseCalculator.Backwards(ctx, currentPN, 1)
 		if err != nil {
-			inslogger.FromContext(ctx).Error(errors.Wrapf(
+			return errors.Wrapf(
 				err,
 				"failed to fetch previous pulse for %v", currentPN,
-			))
-			break
+			)
 		}
 		currentPN = prev.PulseNumber
 	}
