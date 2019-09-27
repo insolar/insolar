@@ -90,34 +90,6 @@ func (h *HandleCall) sendToNextExecutor(
 	sender.SendRole(ctx, msg, insolar.DynamicRoleVirtualExecutor, objectRef)
 }
 
-func (h *HandleCall) checkExecutionLoop(
-	ctx context.Context, reqRef insolar.Reference, request record.IncomingRequest,
-) bool {
-
-	if request.ReturnMode == record.ReturnSaga {
-		return false
-	}
-	if request.CallType != record.CTMethod {
-		return false
-	}
-	if request.Object == nil {
-		// should be catched by other code
-		return false
-	}
-
-	registry := h.dep.StateStorage.GetExecutionRegistry(*request.Object)
-	if registry == nil {
-		return false
-	}
-
-	if !registry.FindRequestLoop(ctx, reqRef, request.APIRequestID) {
-		return false
-	}
-
-	inslogger.FromContext(ctx).Error("loop detected")
-	return true
-}
-
 func (h *HandleCall) handleActual(
 	ctx context.Context,
 	msg payload.CallMethod,
@@ -152,7 +124,7 @@ func (h *HandleCall) handleActual(
 			// Requests need to be deduplicated. For now in case of ErrCancelled we may have 2 registered requests
 			return nil, err // message bus will retry on the calling side in ContractRequester
 		}
-		if isLogicalError := ProcessLogicalError(err); isLogicalError {
+		if isLogicalError := ProcessLogicalError(ctx, err); isLogicalError {
 			inslogger.FromContext(ctx).Warn("request to not existing object")
 
 			resultWithErr, err := foundation.MarshalMethodErrorResult(err)
@@ -206,22 +178,6 @@ func (h *HandleCall) handleActual(
 			}
 		}()
 		return registeredRequestReply, nil
-	}
-
-	if h.checkExecutionLoop(ctx, requestRef, *request) {
-		stats.Record(ctx, metrics.CallMethodLoopDetected.M(1))
-
-		proc := &RecordErrorResult{
-			err:             errors.New("loop detected"),
-			requestRef:      requestRef,
-			objectRef:       *objectRef,
-			artifactManager: h.dep.ArtifactManager,
-		}
-		err := f.Procedure(ctx, proc, false)
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't record error result")
-		}
-		return &reply.CallMethod{Object: objectRef, Result: proc.result}, nil
 	}
 
 	done, err := h.dep.WriteAccessor.Begin(ctx, flow.Pulse(ctx))

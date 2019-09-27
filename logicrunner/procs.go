@@ -20,6 +20,7 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
@@ -30,6 +31,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/common"
+	"github.com/insolar/insolar/logicrunner/metrics"
 	"github.com/insolar/insolar/logicrunner/requestresult"
 )
 
@@ -147,7 +149,16 @@ func (r *RecordErrorResult) Proceed(ctx context.Context) error {
 	return nil
 }
 
-func ProcessLogicalError(err error) bool {
+func ProcessLogicalError(ctx context.Context, err error) bool {
 	e, ok := errors.Cause(err).(*payload.CodedError)
-	return ok && e.Code == payload.CodeNotFound
+	if ok {
+		switch e.Code {
+		case payload.CodeNotFound:
+			return true
+		case payload.CodeLoopDetected:
+			stats.Record(ctx, metrics.CallMethodLoopDetected.M(1))
+			return true
+		}
+	}
+	return false
 }
