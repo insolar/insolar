@@ -53,6 +53,7 @@ package gateway
 import (
 	"context"
 	"fmt"
+	"sync/atomic"
 	"time"
 
 	"github.com/insolar/insolar/network/consensus"
@@ -113,6 +114,7 @@ type Base struct {
 	consensusInstaller    consensus.Installer
 	ConsensusController   consensus.Controller
 	consensusPulseHandler network.PulseHandler
+	consensusStarted      uint32
 
 	Options         *network.Options
 	bootstrapTimer  *time.Timer // nolint
@@ -247,6 +249,7 @@ func (g *Base) StartConsensus(ctx context.Context) error {
 	})
 
 	g.consensusPulseHandler = pulseHandler
+	atomic.StoreUint32(&g.consensusStarted, 1)
 	return nil
 }
 
@@ -256,7 +259,9 @@ func (g *Base) ChangePulse(ctx context.Context, pulse insolar.Pulse) {
 }
 
 func (g *Base) OnPulseFromPulsar(ctx context.Context, pu insolar.Pulse, originalPacket network.ReceivedPacket) {
-	g.consensusPulseHandler.HandlePulse(ctx, pu, originalPacket)
+	if atomic.LoadUint32(&g.consensusStarted) == 1 {
+		g.consensusPulseHandler.HandlePulse(ctx, pu, originalPacket)
+	}
 }
 
 func (g *Base) OnPulseFromConsensus(ctx context.Context, pu insolar.Pulse) {
