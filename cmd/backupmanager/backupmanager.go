@@ -320,13 +320,8 @@ func prepareBackup(_ context.Context, dbDir string, lastBackupedVersionFile stri
 	ops.Logger = badgerLogger
 	bdb, err := store.NewBadgerDB(ops)
 	if err != nil {
-<<<<<<< HEAD
-		printError("failed to open DB", err)
-		os.Exit(1)
-=======
-		err := errors.Wrap(err, "failed to open")
+		err := errors.Wrap(err, "failed to open DB")
 		exitWithError(err)
->>>>>>> origin/master
 	}
 	log.Info("DB is opened")
 	ctx := context.Background()
