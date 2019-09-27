@@ -113,9 +113,8 @@ type ServiceNetwork struct {
 
 	HostNetwork network.HostNetwork
 
-	CurrentPulse insolar.Pulse
-	Gatewayer    network.Gatewayer
-	BaseGateway  *gateway.Base
+	Gatewayer   network.Gatewayer
+	BaseGateway *gateway.Base
 
 	datagramHandler   *adapters.DatagramHandler
 	datagramTransport transport.DatagramTransport
@@ -205,8 +204,6 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to init internal components")
 	}
-
-	n.CurrentPulse = *insolar.GenesisPulse
 
 	n.consensusInstaller = consensus.New(ctx, consensus.Dep{
 		KeyProcessor:        n.KeyProcessor,
@@ -303,7 +300,6 @@ func (n *ServiceNetwork) GetAccessor(p insolar.PulseNumber) network.Accessor {
 
 // ChangePulse process pulse from Consensus
 func (n *ServiceNetwork) ChangePulse(ctx context.Context, pulse insolar.Pulse) {
-	n.CurrentPulse = pulse
 	n.Gatewayer.Gateway().OnPulseFromConsensus(ctx, pulse)
 }
 
