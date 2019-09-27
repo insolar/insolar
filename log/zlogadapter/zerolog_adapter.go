@@ -118,7 +118,7 @@ func FromZerologLevel(zLevel zerolog.Level) insolar.LogLevel {
 	return zerologReverseMapping[zLevel]
 }
 
-func selectOutput(output insolar.LogOutput, param string) (io.WriteCloser, error) {
+func selectOutput(output insolar.LogOutput, param string) (w io.Writer, err error) {
 	switch output {
 	case insolar.StdErrOutput:
 		return os.Stderr, nil
@@ -169,10 +169,6 @@ func NewZerologAdapter(pCfg logadapter.ParsedLogConfig, msgFmt logadapter.MsgFor
 
 type zerologMarshaller struct {
 	event *zerolog.Event
-}
-
-func (m zerologMarshaller) AddStructFields(s interface{}) {
-	panic("implement me")
 }
 
 func (m zerologMarshaller) AddFieldMap(fields map[string]interface{}) {
