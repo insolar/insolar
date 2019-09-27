@@ -66,6 +66,7 @@ func (m Member) GetWallet() (*insolar.Reference, error) {
 // ins:immutable
 func (m Member) GetAccount(assetName string) (*insolar.Reference, error) {
 	w := wallet.GetObject(m.Wallet)
+	fmt.Println("HI LOVE, w wallet - ", w)
 	return w.GetAccount(assetName)
 }
 
@@ -478,6 +479,7 @@ func (m *Member) Accept(amountStr string) error {
 	if err != nil {
 		return fmt.Errorf("failed to get account reference: %s", err.Error())
 	}
+	fmt.Println("HI LOVE, accountRef - ", accountRef)
 	acc := account.GetObject(*accountRef)
 	err = acc.IncreaseBalance(amountStr)
 	if err != nil {

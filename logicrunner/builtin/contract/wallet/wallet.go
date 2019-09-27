@@ -54,6 +54,8 @@ func (w *Wallet) GetAccount(assetName string) (*insolar.Reference, error) {
 	if !ok {
 		return nil, fmt.Errorf("asset not found: %s", assetName)
 	}
+	fmt.Println("HI LOVE, accountReference - ", accountReference)
+	fmt.Println("HI LOVE, assetName - ", assetName)
 	return insolar.NewReferenceFromBase58(accountReference)
 }
 
