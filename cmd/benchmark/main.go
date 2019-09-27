@@ -52,20 +52,23 @@ var (
 	defaultMemberFile         = filepath.Join(defaults.ArtifactsDir(), "bench-members", "members.txt")
 	defaultDiscoveryNodesLogs = defaults.LaunchnetDiscoveryNodesLogsDir()
 
-	memberFile         string
-	output             string
-	concurrent         int
-	repetitions        int
-	memberKeys         string
-	adminAPIURLs       []string
-	publicAPIURLs      []string
-	logLevel           string
-	logLevelServer     string
-	saveMembersToFile  bool
-	useMembersFromFile bool
-	noCheckBalance     bool
-	scenarioName       string
-	discoveryNodesLogs string
+	memberFile             string
+	output                 string
+	concurrent             int
+	repetitions            int
+	memberKeys             string
+	adminAPIURLs           []string
+	publicAPIURLs          []string
+	logLevel               string
+	logLevelServer         string
+	saveMembersToFile      bool
+	useMembersFromFile     bool
+	noCheckBalance         bool
+	checkEveryMember       bool
+	checkBalanceWithoutFee bool
+	checkTotalBalance      bool
+	scenarioName           string
+	discoveryNodesLogs     string
 )
 
 func parseInputParams() {
@@ -81,6 +84,9 @@ func parseInputParams() {
 	pflag.BoolVarP(&useMembersFromFile, "usemembers", "m", false, "use members from file")
 	pflag.StringVarP(&memberFile, "members-file", "", defaultMemberFile, "dir for saving members data")
 	pflag.BoolVarP(&noCheckBalance, "nocheckbalance", "b", false, "don't check balance at the end")
+	pflag.BoolVarP(&checkEveryMember, "check-every-member", "", false, "check balance of every member from file, don't run any scenario")
+	pflag.BoolVarP(&checkBalanceWithoutFee, "check-balance-without-fee", "", false, "check balance of every member from file, except fee wallet, and don't run any scenario")
+	pflag.BoolVarP(&checkTotalBalance, "check-total-balance", "", false, "check total balance of members from file, don't run any scenario")
 	pflag.StringVarP(&scenarioName, "scenarioname", "t", "", "name of scenario")
 	pflag.StringVarP(&discoveryNodesLogs, "discovery-nodes-logs-dir", "", defaultDiscoveryNodesLogs, "launchnet logs dir for checking errors")
 	pflag.Parse()
@@ -204,14 +210,17 @@ func createMembers(insSDK *sdk.SDK, count int, migration bool) []sdk.Member {
 	return members
 }
 
-func getTotalBalance(insSDK *sdk.SDK, members []sdk.Member) (totalBalance *big.Int) {
+func getTotalBalance(insSDK *sdk.SDK, members []sdk.Member) (*big.Int, map[string]*big.Int) {
 	type Result struct {
 		num     int
 		balance *big.Int
 		err     error
 	}
-
 	nmembers := len(members)
+
+	membersWithBalanceMap := make(map[string]*big.Int, nmembers)
+	membersWithBalanceMapLock := sync.Mutex{}
+
 	var wg sync.WaitGroup
 	wg.Add(nmembers)
 	results := make(chan Result, nmembers)
@@ -237,12 +246,15 @@ func getTotalBalance(insSDK *sdk.SDK, members []sdk.Member) (totalBalance *big.I
 			}
 			res.balance, res.err = balance, err
 			results <- res
+			membersWithBalanceMapLock.Lock()
+			membersWithBalanceMap[m.GetReference()] = res.balance
+			membersWithBalanceMapLock.Unlock()
 			wg.Done()
 		}(members[i], i)
 	}
 
 	wg.Wait()
-	totalBalance = big.NewInt(0)
+	totalBalance := big.NewInt(0)
 	for i := 0; i < nmembers; i++ {
 		res := <-results
 		if res.err != nil {
@@ -253,19 +265,20 @@ func getTotalBalance(insSDK *sdk.SDK, members []sdk.Member) (totalBalance *big.I
 		totalBalance.Add(b, res.balance)
 	}
 
-	return totalBalance
+	return totalBalance, membersWithBalanceMap
 }
 
 func getMembers(insSDK *sdk.SDK, number int, migration bool) ([]sdk.Member, error) {
-	var members = make([]sdk.Member, number)
+	var members []sdk.Member
 	var err error
 
 	if useMembersFromFile {
-		for i := range members {
+		// from file we load not just number of members, but also migration admin or fee member
+		for i := 0; i < number+1; i++ {
 			if migration {
-				members[i] = &sdk.MigrationMember{}
+				members = append(members, &sdk.MigrationMember{})
 			} else {
-				members[i] = &sdk.CommonMember{}
+				members = append(members, &sdk.CommonMember{})
 			}
 		}
 		err = loadMembers(&members)
@@ -280,12 +293,6 @@ func getMembers(insSDK *sdk.SDK, number int, migration bool) ([]sdk.Member, erro
 		fmt.Printf("Average creation of member time - %s\n", time.Duration(int64(creationTime)/int64(concurrent*2)))
 	}
 
-	if saveMembersToFile {
-		err = saveMembers(members)
-		if err != nil {
-			return nil, errors.Wrap(err, "save member done with error: ")
-		}
-	}
 	return members, nil
 }
 
@@ -371,11 +378,44 @@ func main() {
 		}
 	}()
 
+	if checkEveryMember || checkTotalBalance || checkBalanceWithoutFee {
+		var commonMembers []*sdk.CommonMember
+		rawMembers, err := ioutil.ReadFile(memberFile)
+		check("Can't read members from file: ", err)
+
+		err = json.Unmarshal(rawMembers, &commonMembers)
+		check("Error while loading members for checking balances: ", err)
+		var members []sdk.Member
+
+		feeMemberRef := insSDK.GetFeeMember().GetReference()
+		for _, m := range commonMembers {
+			if checkBalanceWithoutFee {
+				if m.GetReference() == feeMemberRef {
+					continue
+				}
+			}
+			members = append(members, m)
+		}
+
+		totalBalance, membersWithBalanceMap := getTotalBalance(insSDK, members)
+		totalFileBalance := checkBalanceAtFile(members, membersWithBalanceMap)
+		if totalFileBalance.Cmp(totalBalance) != 0 {
+			log.Fatalf("Total balance mismatch: all members balance at file - %s, all members balance at system - %s \n", totalFileBalance, totalBalance)
+		}
+		log.Info("Balances for members from file was successfully checked.")
+		return
+	}
+
 	b.scenario.prepare()
 
 	var totalBalanceBefore *big.Int
 	if !noCheckBalance {
-		totalBalanceBefore = getTotalBalance(insSDK, b.scenario.getBalanceCheckMembers())
+		totalBalanceBefore, _ = getTotalBalance(insSDK, b.scenario.getBalanceCheckMembers())
+	}
+
+	if saveMembersToFile {
+		err = saveMembers(b.scenario.getBalanceCheckMembers())
+		check("Error while saving members before scenario: ", err)
 	}
 
 	startScenario(ctx, b)
@@ -385,7 +425,16 @@ func main() {
 	fmt.Printf("\nFinish: %s\n\n", t.String())
 
 	if !noCheckBalance {
-		checkBalance(insSDK, totalBalanceBefore, b.scenario.getBalanceCheckMembers())
+		membersWithBalanceMap := checkBalance(insSDK, totalBalanceBefore, b.scenario.getBalanceCheckMembers())
+		// update balances in file
+		for _, m := range b.scenario.getBalanceCheckMembers() {
+			b := membersWithBalanceMap[m.GetReference()]
+			m.SetBalance(b)
+		}
+		if saveMembersToFile || useMembersFromFile {
+			err := saveMembers(b.scenario.getBalanceCheckMembers())
+			check("Error while saving members after scenario: ", err)
+		}
 	}
 }
 
@@ -410,10 +459,12 @@ func switchScenario(out io.Writer, insSDK *sdk.SDK) benchmark {
 	return b
 }
 
-func checkBalance(insSDK *sdk.SDK, totalBalanceBefore *big.Int, balanceCheckMembers []sdk.Member) {
+func checkBalance(insSDK *sdk.SDK, totalBalanceBefore *big.Int, balanceCheckMembers []sdk.Member) map[string]*big.Int {
 	totalBalanceAfter := big.NewInt(0)
+	var membersWithBalanceMap map[string]*big.Int
+
 	for nretries := 0; nretries < balanceCheckRetries; nretries++ {
-		totalBalanceAfter = getTotalBalance(insSDK, balanceCheckMembers)
+		totalBalanceAfter, membersWithBalanceMap = getTotalBalance(insSDK, balanceCheckMembers)
 		if totalBalanceAfter.Cmp(totalBalanceBefore) == 0 {
 			break
 		}
@@ -425,5 +476,27 @@ func checkBalance(insSDK *sdk.SDK, totalBalanceBefore *big.Int, balanceCheckMemb
 	fmt.Printf("Total balance before: %v and after: %v\n", totalBalanceBefore, totalBalanceAfter)
 	if totalBalanceAfter.Cmp(totalBalanceBefore) != 0 {
 		log.Fatal("Total balance mismatch!\n")
+	} else {
+		fmt.Printf("Total balance successfully matched\n")
 	}
+	return membersWithBalanceMap
+}
+
+func checkBalanceAtFile(members []sdk.Member, membersWithBalanceMap map[string]*big.Int) *big.Int {
+	totalFileBalance := big.NewInt(0)
+
+	for _, m := range members {
+		b := m.GetBalance()
+		totalFileBalance = totalFileBalance.Add(totalFileBalance, b)
+
+		if checkEveryMember || checkBalanceWithoutFee {
+			if membersWithBalanceMap[m.GetReference()] == nil {
+				log.Fatalf("Balance mismatch: member with ref %s exists in file, but we didn't get its system balance. Balance at file - %s. \n", m.GetReference(), m.GetBalance())
+			}
+			if b.Cmp(membersWithBalanceMap[m.GetReference()]) != 0 {
+				log.Fatalf("Balance mismatch: member with ref %s, balance at file - %s, balance at system - %s \n", m.GetReference(), m.GetBalance(), membersWithBalanceMap[m.GetReference()])
+			}
+		}
+	}
+	return totalFileBalance
 }

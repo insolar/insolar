@@ -89,9 +89,9 @@ func (w *Wallet) AddDeposit(txId string, deposit insolar.Reference) error {
 
 // GetDeposits get all deposits for this wallet
 // ins:immutable
-func (w *Wallet) GetDeposits() (map[string]interface{}, error) {
-	result := map[string]interface{}{}
-	for tx, dRef := range w.Deposits {
+func (w *Wallet) GetDeposits() ([]interface{}, error) {
+	result := []interface{}{}
+	for _, dRef := range w.Deposits {
 
 		reference, err := insolar.NewReferenceFromBase58(dRef)
 		if err != nil {
@@ -104,7 +104,7 @@ func (w *Wallet) GetDeposits() (map[string]interface{}, error) {
 			return nil, fmt.Errorf("failed to get deposit itself: %s", err.Error())
 		}
 
-		result[tx] = depositInfo
+		result = append(result, depositInfo)
 	}
 	return result, nil
 }

@@ -18,6 +18,7 @@ package bus
 
 import (
 	"context"
+	"github.com/insolar/insolar/log/logwatermill"
 	"math/rand"
 	"sync"
 	"testing"
@@ -33,7 +34,6 @@ import (
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
@@ -43,7 +43,7 @@ var defaultConfig = configuration.Bus{ReplyTimeout: 15 * time.Second}
 
 func TestMessageBus_SendTarget(t *testing.T) {
 	ctx := context.Background()
-	logger := log.NewWatermillLogAdapter(inslogger.FromContext(ctx))
+	logger := logwatermill.NewWatermillLogAdapter(inslogger.FromContext(ctx))
 	pubsub := gochannel.NewGoChannel(gochannel.Config{}, logger)
 	defer pubsub.Close()
 
@@ -153,7 +153,7 @@ func isReplyExist(b *Bus, h payload.MessageHash) bool {
 
 func TestMessageBus_Send_Timeout(t *testing.T) {
 	ctx := context.Background()
-	logger := log.NewWatermillLogAdapter(inslogger.FromContext(ctx))
+	logger := logwatermill.NewWatermillLogAdapter(inslogger.FromContext(ctx))
 	pubsub := gochannel.NewGoChannel(gochannel.Config{}, logger)
 	defer pubsub.Close()
 
@@ -190,7 +190,7 @@ func TestMessageBus_Send_Timeout(t *testing.T) {
 
 func TestMessageBus_Send_Timeout_Close_Race(t *testing.T) {
 	ctx := context.Background()
-	logger := log.NewWatermillLogAdapter(inslogger.FromContext(ctx))
+	logger := logwatermill.NewWatermillLogAdapter(inslogger.FromContext(ctx))
 	pubsub := gochannel.NewGoChannel(gochannel.Config{}, logger)
 	defer pubsub.Close()
 
@@ -215,7 +215,7 @@ func TestMessageBus_Send_Timeout_Close_Race(t *testing.T) {
 
 func TestMessageBus_IncomingMessageRouter_Request(t *testing.T) {
 	incomingHandlerCalls := 0
-	logger := log.NewWatermillLogAdapter(inslogger.FromContext(context.Background()))
+	logger := logwatermill.NewWatermillLogAdapter(inslogger.FromContext(context.Background()))
 	pubsub := gochannel.NewGoChannel(gochannel.Config{}, logger)
 	defer pubsub.Close()
 
@@ -247,7 +247,7 @@ func TestMessageBus_IncomingMessageRouter_Request(t *testing.T) {
 
 func TestMessageBus_IncomingMessageRouter_Reply(t *testing.T) {
 	incomingHandlerCalls := 0
-	logger := log.NewWatermillLogAdapter(inslogger.FromContext(context.Background()))
+	logger := logwatermill.NewWatermillLogAdapter(inslogger.FromContext(context.Background()))
 	pubsub := gochannel.NewGoChannel(gochannel.Config{}, logger)
 	defer pubsub.Close()
 
@@ -307,7 +307,7 @@ func TestMessageBus_IncomingMessageRouter_Reply(t *testing.T) {
 
 func TestMessageBus_IncomingMessageRouter_ReplyTimeout(t *testing.T) {
 	incomingHandlerCalls := 0
-	logger := log.NewWatermillLogAdapter(inslogger.FromContext(context.Background()))
+	logger := logwatermill.NewWatermillLogAdapter(inslogger.FromContext(context.Background()))
 	pubsub := gochannel.NewGoChannel(gochannel.Config{}, logger)
 	defer pubsub.Close()
 

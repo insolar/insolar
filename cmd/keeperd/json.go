@@ -14,29 +14,27 @@
 // limitations under the License.
 //
 
-package log
+package main
 
-import (
-	"github.com/rs/zerolog"
-)
-
-// FuncFieldName is the field name used for func field.
-var FuncFieldName = "func"
-
-type callerHook struct {
-	callerSkipFrameCount int
+type KeeperRsp struct {
+	Available bool `json:"available"`
 }
 
-func newCallerHook(skipFrameCount int) *callerHook {
-	return &callerHook{callerSkipFrameCount: skipFrameCount}
-}
+type PromRsp struct {
+	Status string `json:"status"`
+	Data   struct {
+		ResultType string `json:"resultType"`
+		Result     []struct {
+			Metric struct {
+				Installation string `json:"installation"`
+				Instance     string `json:"instance"`
+				Job          string `json:"job"`
+				Role         string `json:"role"`
+			} `json:"metric"`
+			Value []interface{} `json:"value"`
+		} `json:"result"`
+	} `json:"data"`
 
-// Run implements zerolog.Hook.
-func (ch *callerHook) Run(e *zerolog.Event, level zerolog.Level, msg string) {
-	if level == zerolog.NoLevel {
-		return
-	}
-	info := getCallInfo(ch.callerSkipFrameCount)
-	e.Str(zerolog.CallerFieldName, info.fileName)
-	e.Str(FuncFieldName, info.funcName)
+	ErrorType string `json:"errorType"`
+	Error     string `json:"error"`
 }

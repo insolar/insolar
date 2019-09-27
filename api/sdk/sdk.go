@@ -354,7 +354,7 @@ func (sdk *SDK) Transfer(amount string, from Member, to Member) (string, error) 
 }
 
 // GetBalance returns current balance of the given member.
-func (sdk *SDK) GetBalance(m Member) (*big.Int, map[string]interface{}, error) {
+func (sdk *SDK) GetBalance(m Member) (*big.Int, []interface{}, error) {
 	userConfig, err := requester.CreateUserConfig(m.GetReference(), m.GetPrivateKey(), m.GetPublicKey())
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to create user config for request")
@@ -374,9 +374,9 @@ func (sdk *SDK) GetBalance(m Member) (*big.Int, map[string]interface{}, error) {
 		return nil, nil, errors.Errorf("can't parse returned balance")
 	}
 
-	deposits, ok := response.CallResult.(map[string]interface{})["deposits"].(map[string]interface{})
+	deposits, ok := response.CallResult.(map[string]interface{})["deposits"].([]interface{})
 	if !ok {
-		return nil, nil, errors.Errorf("can't parse returned deposits map")
+		return nil, nil, errors.Errorf("can't parse returned deposits")
 	}
 
 	return balance, deposits, nil

@@ -4,14 +4,10 @@
 Integrating with Insolar
 ========================
 
-.. note::
+To set up or join an Insolar network, check the :ref:`hardware requirements <sys_requirements>` and:
 
-   Upon the MainNet release, this section will be expanded to include the appropriate integration instructions.
-
-To join or set up an Insolar network, check the :ref:`hardware requirements <sys_requirements>` and:
-
+* :ref:`Set up a network <setting_up_devnet>` locally for development and test purposes. The local setup is done on one computer, and the "network nodes" are simply services listening to different ports.
 * :ref:`Connect to TestNet 1.1 <connecting_to_testnet>`. Participation in this network is permissioned, with participants invited by the Insolar Core Development Team based on their ability to fulfill the respective SLA.
-* :ref:`Set up a network <setting_up_devnet>` locally for development and test purposes. The local setup is done on one computer with no particular system requirements, and the 'network nodes' are simply services listening on different ports.
 
 .. _sys_requirements:
 
@@ -47,6 +43,47 @@ Preferable hardware requirements for virtual nodes on TestNet 1.1 are as follows
 
 All servers wishing to join the Insolar test network must have **public IP addresses**.
 
+.. _setting_up_devnet:
+
+Setting Up Network Locally
+--------------------------
+
+To set up the network locally, do the following:
+
+#. Since Insolar is written in Go, install its `programming tools <https://golang.org/doc/install#install>`_.
+
+   .. note:: Make sure the ``$GOPATH`` environment variable is set. 
+
+#. Download the Insolar package:
+
+   .. code-block:: bash
+
+      go get github.com/insolar/insolar
+
+#. Go to the package directory:
+
+   .. code-block:: bash
+
+      cd $GOPATH/src/github.com/insolar/insolar
+
+#. Install dependencies and build binaries: simply run ``make``.
+
+#. Take a look at the ``scripts/insolard/bootstrap_template.yaml`` file. Here, you can find a list of nodes to be launched. In local setup, the "nodes" are simply services listening to different ports.
+
+   To add more nodes to the "network", uncomment some.
+
+#. Run the launcher:
+
+   .. code-block:: bash
+
+      scripts/insolard/launchnet.sh -g
+
+   The launcher generates bootstrap data, starts the nodes and a pulse watcher, and logs events to ``.artifacts/launchnet/logs``.
+
+When the pulse watcher says ``INSOLAR STATE: READY``, the network is up and has achieved consensus. You can start running test scripts and `benchmarks <https://github.com/insolar/insolar/blob/master/cmd/benchmark/README.md>`_.
+
+Also, you can manually bring up :ref:`logging and monitoring <logs_and_monitor>` by running ``scripts/monitor.sh``.
+
 .. _connecting_to_testnet:
 
 Connecting to Test Network
@@ -71,7 +108,7 @@ On TestNet 1.1:
 * Only computational (virtual) nodes are available to external participants. Data storage is provided by Insolar nodes.
 * All discovery nodes are hosted by Insolar. Other nodes use them to reconnect to the network.
 * In the unlikely event of short-term storage (light material) nodes having to reconnect, multiple errors may occur for a few pulses.
-* Only one long-term (heavy material) node and one pulsar are deployed. If either of the nodes is missing, the network will go down but, upon the node's restart, will recover.
+* Only one long-term (heavy material) node and one pulsar are deployed. If either of the nodes is missing, the network will go down but, upon the node restart, will recover.
 * Storage node crash may lead to data loss.
 * Under certain conditions, the node’s process (``insolard`` daemon) may exit and its Docker container will restart it automatically. Insolar may also ask node holders for assistance with a manual restart.
 * Nodes joining the network produce errors when other nodes are leaving the network.
@@ -87,7 +124,7 @@ On TestNet 1.1:
 **Performance**
 
 * A simplistic rate limiter is implemented for light material nodes, so they reject incoming requests when the number of pending requests reaches a certain limit. This results in an exponential backoff on our benchmark tool -- the retry interval increases exponentially.
-* The rate limiter does not consider the request's origin. So, when a user puts an excessive load on the network, other users may suffer.
+* The rate limiter does not consider the request origin. So, when a user puts an excessive load on the network, other users may suffer.
 
 **Application level**
 
@@ -104,13 +141,13 @@ To connect to the Insolar test network, do the following:
 
 #. Install `Docker and Docker Compose <https://docs.docker.com/v17.12/install/>`_ and run the Docker daemon.
 
-#. Download the Insolar's ``insolar-node-<version>.tar.gz`` archive from the `latest release <https://github.com/insolar/insolar/releases>`_. You can find it under the :guilabel:`Assets` drop-down list.
+#. Download the Insolar ``insolar-node-<version>.tar.gz`` archive from the `latest release <https://github.com/insolar/insolar/releases>`_. You can find it under the :guilabel:`Assets` drop-down list.
 
 #. Unpack the archive on your server. A good place is under the ``/opt/insolar`` directory.
 
 #. Go to the unpacked directory, open the ``docker-compose.yml`` file in a text editor, and insert your server's public IP address to the ``INSOLARD_TRANSPORT_FIXED_ADDRESS`` field.
 
-#. Acquire ``cert.json`` and ``keys.json`` files from Insolar. You can ask for them in our `Telegram developer's chat <https://t.me/InsolarTech>`_.
+#. Acquire ``cert.json`` and ``keys.json`` files from Insolar. You can ask for them in our `Telegram developer chat <https://t.me/InsolarTech>`_.
 
    Put the files to the ``configs`` directory.
 
@@ -118,7 +155,7 @@ To connect to the Insolar test network, do the following:
 
 Enjoy being a part of the Insolar Network!
 
-.. note:: The Insolar's API is under development and not yet finalized. Please, await its first release.
+.. note:: The Insolar API is under development and not yet finalized. Please, await its first release.
 
 In addition to the Insolar node, the Docker Compose starts Kibana and Grafana services to take care of :ref:`logging and monitoring <logs_and_monitor>`.
 
@@ -145,47 +182,6 @@ Insolar uses the following ports:
 +--------------+----------+-----------------------------------------------------+
 | 8080         | TCP      | Prometheus metrics endpoint.                        |
 +--------------+----------+-----------------------------------------------------+
-
-.. _setting_up_devnet:
-
-Setting Up Network Locally
---------------------------
-
-To set up the network locally, do the following:
-
-#. Since Insolar is written in Go, install its `programming tools <https://golang.org/doc/install#install>`_.
-
-   .. note:: Make sure the ``$GOPATH`` environment variable is set. 
-
-#. Download the Insolar package:
-
-   .. code-block:: bash
-
-      go get github.com/insolar/insolar
-
-#. Go to the package directory:
-
-   .. code-block:: bash
-
-      cd $GOPATH/src/github.com/insolar/insolar
-
-#. Install dependencies and build binaries: simply run ``make``.
-
-#. Take a look at the ``scripts/insolard/bootstrap_template.yaml`` file. Here, you can find a list of nodes to be launched. In local setup, the 'nodes' are simply services listening on different ports.
-
-   To add more nodes to the 'network', uncomment some.
-
-#. Run the launcher:
-
-   .. code-block:: bash
-
-      scripts/insolard/launchnet.sh -g
-
-   The launcher generates bootstrap data, starts the nodes and a pulse watcher, and logs events to ``.artifacts/launchnet/logs``.
-
-When the pulse watcher says ``INSOLAR STATE: READY``, the network is up and has achieved consensus. You can start running test scripts and `benchmarks <https://github.com/insolar/insolar/blob/master/cmd/benchmark/README.md>`_.
-
-Also, you can manually bring up :ref:`logging and monitoring <logs_and_monitor>` by running ``scripts/monitor.sh``.
 
 .. _logs_and_monitor:
 
