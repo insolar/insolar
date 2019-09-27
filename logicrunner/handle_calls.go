@@ -98,6 +98,9 @@ func (h *HandleCall) handleActual(
 	var pcs = platformpolicy.NewPlatformCryptographyScheme() // TODO: create message factory
 	target := record.CalculateRequestAffinityRef(msg.Request, msg.PulseNumber, pcs)
 
+	request := msg.Request
+	ctx, logger := inslogger.WithField(ctx, "method", request.Method)
+
 	procCheckRole := CheckOurRole{
 		target:         *target,
 		role:           insolar.DynamicRoleVirtualExecutor,
@@ -113,8 +116,6 @@ func (h *HandleCall) handleActual(
 		}
 		return nil, errors.Wrap(err, "[ HandleCall.handleActual ] can't play role")
 	}
-
-	request := msg.Request
 
 	procRegisterRequest := NewRegisterIncomingRequest(*request, h.dep)
 	err := f.Procedure(ctx, procRegisterRequest, true)
@@ -150,12 +151,11 @@ func (h *HandleCall) handleActual(
 		return nil, errors.New("can't get object reference")
 	}
 
-	ctx, logger := inslogger.WithFields(
+	ctx, logger = inslogger.WithFields(
 		ctx,
 		map[string]interface{}{
 			"object":  objectRef.String(),
 			"request": requestRef.String(),
-			"method":  request.Method,
 		},
 	)
 
