@@ -745,10 +745,8 @@ func Test_OutgoingDetached_InPendings(t *testing.T) {
 		reasonObject = CreateAndActivateObject(ctx, s)
 	}
 
-	t.Run("detached request not appears in pendings", func(t *testing.T) {
-
-		s.SetPulse(ctx)
-
+	s.SetPulse(ctx)
+	{
 		// Creating reason request.
 		{
 			msg, _ := MakeSetIncomingRequest(reasonObject, gen.IDWithPulse(s.Pulse()), insolar.ID{}, false, true)
@@ -768,28 +766,30 @@ func Test_OutgoingDetached_InPendings(t *testing.T) {
 		firstPendings := CallGetPendings(ctx, s, reasonObject, 1)
 		RequireNotError(firstPendings)
 
+		// detached request does not appears in pendings
 		ids := firstPendings.(*payload.IDs)
 		require.Equal(t, 1, len(ids.IDs))
 		require.NotEqual(t, outReqId, ids.IDs[0])
-	})
-
-	// Detached request appears in pendings after closing root request.
-	//
-	// Closing reason request.
-	{
-		resMsg, _ := MakeSetResult(reasonObject, reasonID)
-		rep := SendMessage(ctx, s, &resMsg)
-		RequireNotError(rep)
 	}
 
-	s.SetPulse(ctx)
+	// Detached request appears in pendings after closing root request.
+	// Closing reason request.
+	{
+		{
+			resMsg, _ := MakeSetResult(reasonObject, reasonID)
+			rep := SendMessage(ctx, s, &resMsg)
+			RequireNotError(rep)
+		}
 
-	secondPendings := CallGetPendings(ctx, s, reasonObject, 1)
-	RequireNotError(secondPendings)
+		s.SetPulse(ctx)
 
-	ids := secondPendings.(*payload.IDs)
-	require.Equal(t, 1, len(ids.IDs))
-	require.Equal(t, outReqId, ids.IDs[0])
+		secondPendings := CallGetPendings(ctx, s, reasonObject, 1)
+		RequireNotError(secondPendings)
+
+		ids := secondPendings.(*payload.IDs)
+		require.Equal(t, 1, len(ids.IDs))
+		require.Equal(t, outReqId, ids.IDs[0])
+	}
 }
 
 func Test_IncomingRequest_DifferentResults(t *testing.T) {
