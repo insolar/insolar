@@ -199,10 +199,10 @@ func (r *Wallet) GetAccount(assetName string) (*insolar.Reference, error) {
 		err = resultContainer.Error
 		return ret0, err
 	}
-	if ret1 != nil {
-		return ret0, ret1
+	if ret[1] != nil {
+		return ret[0], ret[1]
 	}
-	return ret0, nil
+	return ret[0], nil
 }
 
 // GetAccountAsImmutable is proxy generated method
