@@ -32,6 +32,39 @@ import (
 	"time"
 )
 
+func TestBackpressureBuffer_close(t *testing.T) {
+	for _, c := range constructors {
+		t.Run(c.name, func(t *testing.T) {
+
+			tw := testWriter{}
+			writer := c.fn(&tw)
+
+			assert.False(t, tw.closed)
+			require.NoError(t, writer.Close())
+			assert.True(t, tw.closed)
+			require.Error(t, writer.Close())
+			assert.True(t, tw.closed)
+		})
+	}
+}
+
+func TestBackpressureBuffer_no_close(t *testing.T) {
+	for _, c := range constructors {
+		t.Run(c.name, func(t *testing.T) {
+
+			tw := testWriter{}
+			writer := c.fn(&tw)
+			writer.SetNoClosePropagation()
+
+			assert.False(t, tw.closed)
+			require.NoError(t, writer.Close())
+			assert.False(t, tw.closed)
+			require.Error(t, writer.Close())
+			assert.False(t, tw.closed)
+		})
+	}
+}
+
 func TestBackpressureBuffer_stop(t *testing.T) {
 
 	for _, c := range constructors {

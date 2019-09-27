@@ -172,23 +172,31 @@ func (p *BackpressureBuffer) StartWorker(ctx context.Context) *BackpressureBuffe
 	return p
 }
 
+func (p *internalBackpressureBuffer) SetNoClosePropagation() bool {
+	return p.output.SetNoClosePropagation()
+}
+
 const internalOpLevel = insolar.LogLevel(255)
 
 func (p *internalBackpressureBuffer) Close() error {
+	ok, closeDown := p.output.SetClosed()
+
 	if p.fatal.IsFatal() {
-		if p.output.SetClosed() {
+		if closeDown {
 			_, _ = p.output.DoClose()
 		}
 		p.fatal.LockFatal()
 		return nil
 	}
 
-	if !p.output.SetClosed() {
+	if !ok {
 		return errors.New("closed")
 	}
 
 	_, _ = p.flushTillDepletion(internalOpLevel, nil, 0)
-	_, _ = p.output.DoClose()
+	if closeDown {
+		_, _ = p.output.DoClose()
+	}
 	return nil
 }
 
