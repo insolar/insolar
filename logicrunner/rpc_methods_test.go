@@ -364,6 +364,52 @@ func TestRouteCallRegistersOutgoingRequestWithValidReason(t *testing.T) {
 	as.AwaitTermination()
 }
 
+func TestRouteCallRegistersOutgoingRequestAlreadyHasResult(t *testing.T) {
+	t.Parallel()
+	mc := minimock.NewController(t)
+	defer mc.Finish()
+
+	ctx := inslogger.TestContext(t)
+
+	pa := pulse.NewAccessorMock(mc)
+
+	am := artifacts.NewClientMock(mc)
+	dc := artifacts.NewDescriptorsCacheMock(mc)
+	cr := testutils.NewContractRequesterMock(mc)
+	as := system.New()
+	os := NewOutgoingRequestSender(as, cr, am, pa)
+
+	objectRef := gen.Reference()
+	requestRef := gen.RecordReference()
+
+	rpcm := NewExecutionProxyImplementation(dc, cr, am, os)
+	transcript := common.NewTranscript(ctx, requestRef, record.IncomingRequest{
+		Object: &objectRef,
+	})
+	req := rpctypes.UpRouteReq{}
+	resp := &rpctypes.UpRouteResp{}
+
+	var outreq *record.OutgoingRequest
+	outgoingReqRef := gen.RecordReference()
+	// Make sure an outgoing request is registered
+	am.RegisterOutgoingRequestMock.Set(func(ctx context.Context, r *record.OutgoingRequest) (*payload.RequestInfo, error) {
+		require.Nil(t, outreq)
+		require.Equal(t, record.ReturnResult, r.ReturnMode)
+		outreq = r
+		id := *outgoingReqRef.GetLocal()
+		result := append(make([]byte, 1),1)
+		return &payload.RequestInfo{RequestID: id, Result: result}, nil
+	})
+
+	err := rpcm.RouteCall(ctx, transcript, req, resp)
+	require.NoError(t, err)
+	require.NotNil(t, outreq)
+	require.Equal(t, requestRef, outreq.Reason)
+
+	os.Stop(ctx)
+	as.AwaitTermination()
+}
+
 func TestRouteCallRegistersSaga(t *testing.T) {
 	t.Parallel()
 
@@ -396,6 +442,39 @@ func TestRouteCallRegistersSaga(t *testing.T) {
 	err := rpcm.RouteCall(ctx, transcript, req, resp)
 	require.NoError(t, err)
 	require.NotNil(t, outreq)
+	require.Equal(t, requestRef, outreq.Reason)
+}
+
+func TestRouteCallFailedAfterReturningResultForSaga(t *testing.T) {
+	t.Parallel()
+
+	am := artifacts.NewClientMock(t)
+	dc := artifacts.NewDescriptorsCacheMock(t)
+	cr := testutils.NewContractRequesterMock(t)
+	os := NewOutgoingRequestSenderMock(t)
+
+	requestRef := gen.Reference()
+
+	rpcm := NewExecutionProxyImplementation(dc, cr, am, os)
+	ctx := context.Background()
+	transcript := common.NewTranscript(ctx, requestRef, record.IncomingRequest{})
+	req := rpctypes.UpRouteReq{Saga: true}
+	resp := &rpctypes.UpRouteResp{}
+
+	var outreq *record.OutgoingRequest
+	outgoingReqID := gen.ID()
+	// Make sure an outgoing request is registered
+	am.RegisterOutgoingRequestMock.Set(func(ctx context.Context, r *record.OutgoingRequest) (*payload.RequestInfo, error) {
+		require.Nil(t, outreq)
+		require.Equal(t, record.ReturnSaga, r.ReturnMode)
+		outreq = r
+		id := outgoingReqID
+		result := append(make([]byte, 1), 1)
+		return &payload.RequestInfo{RequestID: id, Result: result}, nil
+	})
+
+	err := rpcm.RouteCall(ctx, transcript, req, resp)
+	require.Error(t, err)
 	require.Equal(t, requestRef, outreq.Reason)
 }
 

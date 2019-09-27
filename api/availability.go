@@ -37,6 +37,7 @@ type NetworkChecker struct {
 	enabled     bool
 	keeperURL   string
 	checkPeriod time.Duration
+	stopped     chan struct{}
 
 	lock        *sync.RWMutex
 	isAvailable bool
@@ -52,6 +53,7 @@ func NewNetworkChecker(cfg configuration.AvailabilityChecker) *NetworkChecker {
 		enabled:     cfg.Enabled,
 		keeperURL:   cfg.KeeperURL,
 		checkPeriod: time.Duration(cfg.CheckPeriod) * time.Second,
+		stopped:     make(chan struct{}),
 		lock:        &sync.RWMutex{},
 		isAvailable: false,
 	}
@@ -67,11 +69,24 @@ func (nc *NetworkChecker) Start(ctx context.Context) error {
 	}
 
 	go func(ctx context.Context) {
-		for range time.NewTicker(nc.checkPeriod).C {
-			nc.updateAvailability(ctx)
+		ticker := time.NewTicker(nc.checkPeriod)
+		stop := false
+		for !stop {
+			select {
+			case <-ticker.C:
+				nc.updateAvailability(ctx)
+			case <-nc.stopped:
+				stop = true
+			}
 		}
+		nc.stopped <- struct{}{}
 	}(ctx)
 	return nil
+}
+
+func (nc *NetworkChecker) Stop() {
+	nc.stopped <- struct{}{}
+	<-nc.stopped
 }
 
 func (nc *NetworkChecker) updateAvailability(ctx context.Context) {
@@ -96,9 +111,9 @@ func (nc *NetworkChecker) updateAvailability(ctx context.Context) {
 		return
 	}
 
-	if resp != nil || resp.StatusCode != http.StatusOK {
+	if resp == nil || resp.StatusCode != http.StatusOK {
 		nc.isAvailable = false
-		logger.Error("[ NetworkChecker ] Can't get keeper status: no response or bad StatusCode")
+		logger.Error("[ NetworkChecker ] Can't get keeper status: no response or bad StatusCode: ", resp.StatusCode)
 		return
 	}
 
