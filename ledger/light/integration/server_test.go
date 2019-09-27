@@ -21,6 +21,7 @@ import (
 	"context"
 	"crypto"
 	"fmt"
+	"github.com/insolar/insolar/log/logwatermill"
 	"math"
 	"sync"
 	"time"
@@ -51,7 +52,6 @@ import (
 	"github.com/insolar/insolar/ledger/light/handle"
 	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/insolar/insolar/ledger/object"
-	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network"
 	networknode "github.com/insolar/insolar/network/node"
@@ -124,6 +124,8 @@ func DefaultHeavyResponse(pl payload.Payload) []payload.Payload {
 		return nil
 	case *payload.GetLightInitialState:
 		return []payload.Payload{DefaultLightInitialState()}
+	case *payload.SearchIndex:
+		return []payload.Payload{&payload.SearchIndexInfo{}}
 	}
 
 	panic(fmt.Sprintf("unexpected message to heavy %T", pl))
@@ -195,7 +197,7 @@ func NewServer(
 		Coordinator = c
 	}
 
-	logger := log.NewWatermillLogAdapter(inslogger.FromContext(ctx))
+	logger := logwatermill.NewWatermillLogAdapter(inslogger.FromContext(ctx))
 
 	// Communication.
 	var (

@@ -94,6 +94,19 @@ func (s *NodeService) GetSeed(r *http.Request, args *SeedArgs, requestBody *rpc.
 	logger := inslogger.FromContext(ctx)
 	logger.Info("[ NodeService.getSeed ] ", msg)
 
+	if !s.runner.AvailabilityChecker.IsAvailable(ctx) {
+		logger.Error("[ NodeService.getSeed ] API is not available")
+
+		instr.SetError(errors.New(ServiceUnavailableErrorMessage), ServiceUnavailableErrorShort)
+		return &json2.Error{
+			Code:    ServiceUnavailableError,
+			Message: ServiceUnavailableErrorMessage,
+			Data: requester.Data{
+				TraceID: instr.TraceID(),
+			},
+		}
+	}
+
 	err := s.getSeed(ctx, r, args, requestBody, reply)
 	if err != nil {
 		logger.Error("[ NodeService.getSeed ] failed to execute: ", err.Error())
