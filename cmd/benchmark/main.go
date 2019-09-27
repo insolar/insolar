@@ -52,23 +52,23 @@ var (
 	defaultMemberFile         = filepath.Join(defaults.ArtifactsDir(), "bench-members", "members.txt")
 	defaultDiscoveryNodesLogs = defaults.LaunchnetDiscoveryNodesLogsDir()
 
-	memberFile                 string
-	output                     string
-	concurrent                 int
-	repetitions                int
-	memberKeys                 string
-	adminAPIURLs               []string
-	publicAPIURLs              []string
-	logLevel                   string
-	logLevelServer             string
-	saveMembersToFile          bool
-	useMembersFromFile         bool
-	noCheckBalance             bool
-	checkEveryMember           bool
-	checkBalanceWithoutGeneral bool
-	checkTotalBalance          bool
-	scenarioName               string
-	discoveryNodesLogs         string
+	memberFile          string
+	output              string
+	concurrent          int
+	repetitions         int
+	memberKeys          string
+	adminAPIURLs        []string
+	publicAPIURLs       []string
+	logLevel            string
+	logLevelServer      string
+	saveMembersToFile   bool
+	useMembersFromFile  bool
+	noCheckBalance      bool
+	checkMembersBalance bool
+	checkAllBalance     bool
+	checkTotalBalance   bool
+	scenarioName        string
+	discoveryNodesLogs  string
 )
 
 func parseInputParams() {
@@ -84,8 +84,8 @@ func parseInputParams() {
 	pflag.BoolVarP(&useMembersFromFile, "usemembers", "m", false, "use members from file")
 	pflag.StringVarP(&memberFile, "members-file", "", defaultMemberFile, "dir for saving members data")
 	pflag.BoolVarP(&noCheckBalance, "nocheckbalance", "b", false, "don't check balance at the end")
-	pflag.BoolVarP(&checkEveryMember, "check-every-member", "", false, "check balance of every member from file, don't run any scenario")
-	pflag.BoolVarP(&checkBalanceWithoutGeneral, "check-balance-without-general", "", false, "check balance of every member from file, except general objects (i.e. fee wallet, migration admin), and don't run any scenario")
+	pflag.BoolVarP(&checkMembersBalance, "check-members-balance", "", false, "check balance of every ordinary member from file, don't run any scenario")
+	pflag.BoolVarP(&checkAllBalance, "check-all-balance", "", false, "check balance of every object from file, and don't run any scenario")
 	pflag.BoolVarP(&checkTotalBalance, "check-total-balance", "", false, "check total balance of members from file, don't run any scenario")
 	pflag.StringVarP(&scenarioName, "scenarioname", "t", "", "name of scenario")
 	pflag.StringVarP(&discoveryNodesLogs, "discovery-nodes-logs-dir", "", defaultDiscoveryNodesLogs, "launchnet logs dir for checking errors")
@@ -378,7 +378,7 @@ func main() {
 		}
 	}()
 
-	if checkEveryMember || checkTotalBalance || checkBalanceWithoutGeneral {
+	if checkMembersBalance || checkTotalBalance || checkAllBalance {
 		var commonMembers []*sdk.CommonMember
 		rawMembers, err := ioutil.ReadFile(memberFile)
 		check("Can't read members from file: ", err)
@@ -390,7 +390,7 @@ func main() {
 		feeMemberRef := insSDK.GetFeeMember().GetReference()
 		migrationAdminRef := insSDK.GetMigrationAdminMember().GetReference()
 		for _, m := range commonMembers {
-			if checkBalanceWithoutGeneral {
+			if checkAllBalance {
 				if m.GetReference() == feeMemberRef {
 					continue
 				}
@@ -493,7 +493,7 @@ func checkBalanceAtFile(members []sdk.Member, membersWithBalanceMap map[string]*
 		b := m.GetBalance()
 		totalFileBalance = totalFileBalance.Add(totalFileBalance, b)
 
-		if checkEveryMember || checkBalanceWithoutGeneral {
+		if checkMembersBalance || checkAllBalance {
 			if membersWithBalanceMap[m.GetReference()] == nil {
 				log.Fatalf("Balance mismatch: member with ref %s exists in file, but we didn't get its system balance. Balance at file - %s. \n", m.GetReference(), m.GetBalance())
 			}
