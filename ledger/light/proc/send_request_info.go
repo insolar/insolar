@@ -105,10 +105,13 @@ func (p *SendRequestInfo) Proceed(ctx context.Context) error {
 		}
 	}
 	if foundResult != nil {
+		logger.Error("love of my life, foundResult - ", foundResult)
+		logger.Error("love of my life, foundResult.Record - ", foundResult.Record)
 		resBuf, err = foundResult.Record.Marshal()
 		if err != nil {
 			return errors.Wrap(err, "failed to marshal result record")
 		}
+		logger.Error("love of my life, resBuf - ", resBuf)
 	}
 
 	msg, err := payload.NewMessage(&payload.RequestInfo{

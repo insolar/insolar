@@ -197,6 +197,7 @@ func (m *executionProxyImplementation) RouteCall(
 
 	// if we replay abandoned request after node was down we can already have Result
 	if outReqInfo.Result != nil {
+		inslogger.FromContext(ctx).Error("outReqInfo.Result love of my love - ", outReqInfo.Result)
 		rep.Result = outReqInfo.Result
 		return nil
 	}
