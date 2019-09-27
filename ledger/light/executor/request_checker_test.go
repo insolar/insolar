@@ -87,22 +87,6 @@ func TestRequestCheckerDefault_CheckRequest(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	t.Run("incoming, reason is random id, returns error", func(t *testing.T) {
-		setup()
-		defer mc.Finish()
-
-		req := record.IncomingRequest{
-			Caller: gen.ReferenceWithPulse(pulse.MinTimePulse + 1),
-			Reason: gen.ReferenceWithPulse(pulse.MinTimePulse + 1),
-		}
-
-		err := checker.CheckRequest(ctx, gen.IDWithPulse(pulse.MinTimePulse+2), &req)
-		require.Error(t, err)
-		insError, ok := errors.Cause(err).(*payload.CodedError)
-		require.True(t, ok)
-		require.Equal(t, uint32(payload.CodeReasonIsWrong), insError.GetCode())
-	})
-
 	t.Run("reason is older than request returns error", func(t *testing.T) {
 		setup()
 		defer mc.Finish()
@@ -121,10 +105,14 @@ func TestRequestCheckerDefault_CheckRequest(t *testing.T) {
 		setup()
 		defer mc.Finish()
 
+		filament.OpenedRequestsMock.Return(nil, nil)
+
+		objectRef := gen.Reference()
 		req := record.IncomingRequest{
 			Caller:  gen.ReferenceWithPulse(pulse.MinTimePulse + 1),
 			APINode: gen.Reference(),
 			Reason:  gen.ReferenceWithPulse(pulse.MinTimePulse + 1),
+			Object:  &objectRef,
 		}
 
 		err := checker.CheckRequest(ctx, gen.IDWithPulse(pulse.MinTimePulse+2), &req)
@@ -231,6 +219,11 @@ func TestRequestCheckerDefault_CheckRequest(t *testing.T) {
 			Object: &reasonObjectRef,
 			Reason: reasonRef,
 		}
+		filament.OpenedRequestsMock.Inspect(func(_ context.Context, pn insolar.PulseNumber, objectID insolar.ID, pendingOnly bool) {
+			require.Equal(t, requestID.Pulse(), pn)
+			require.Equal(t, *reasonObjectRef.GetLocal(), objectID)
+			require.False(t, pendingOnly)
+		}).Return(nil, nil)
 
 		filament.RequestInfoMock.Set(func(ctx context.Context, objectID insolar.ID, reqID insolar.ID, pulse insolar.PulseNumber) (requestInfo executor.FilamentsRequestInfo, err error) {
 
@@ -264,6 +257,12 @@ func TestRequestCheckerDefault_CheckRequest(t *testing.T) {
 			Reason: reasonRef,
 		}
 
+		filament.OpenedRequestsMock.Inspect(func(_ context.Context, pn insolar.PulseNumber, objectID insolar.ID, pendingOnly bool) {
+			require.Equal(t, requestID.Pulse(), pn)
+			require.Equal(t, *reasonObjectRef.GetLocal(), objectID)
+			require.False(t, pendingOnly)
+		}).Return(nil, nil)
+
 		filament.RequestInfoMock.Set(func(_ context.Context, objectID insolar.ID, reqID insolar.ID, pulse insolar.PulseNumber) (requestInfo executor.FilamentsRequestInfo, err error) {
 			require.Equal(t, reasonObjectRef.GetLocal(), &objectID)
 			require.Equal(t, reasonRef.GetLocal(), &reqID)
@@ -294,6 +293,12 @@ func TestRequestCheckerDefault_CheckRequest(t *testing.T) {
 			Object: &reasonObjectRef,
 			Reason: reasonRef,
 		}
+
+		filament.OpenedRequestsMock.Inspect(func(_ context.Context, pn insolar.PulseNumber, objectID insolar.ID, pendingOnly bool) {
+			require.Equal(t, requestID.Pulse(), pn)
+			require.Equal(t, *reasonObjectRef.GetLocal(), objectID)
+			require.False(t, pendingOnly)
+		}).Return(nil, nil)
 
 		filament.RequestInfoMock.Set(func(_ context.Context, objectID insolar.ID, reqID insolar.ID, pulse insolar.PulseNumber) (requestInfo executor.FilamentsRequestInfo, err error) {
 			require.Equal(t, reasonObjectRef.GetLocal(), &objectID)
@@ -333,6 +338,12 @@ func TestRequestCheckerDefault_CheckRequest(t *testing.T) {
 			Reason:     reasonRef,
 			ReturnMode: record.ReturnSaga,
 		}
+
+		filament.OpenedRequestsMock.Inspect(func(_ context.Context, pn insolar.PulseNumber, objectID insolar.ID, pendingOnly bool) {
+			require.Equal(t, requestID.Pulse(), pn)
+			require.Equal(t, *reasonObjectRef.GetLocal(), objectID)
+			require.False(t, pendingOnly)
+		}).Return(nil, nil)
 
 		filament.RequestInfoMock.Set(func(_ context.Context, objectID insolar.ID, reqID insolar.ID, pulse insolar.PulseNumber) (requestInfo executor.FilamentsRequestInfo, err error) {
 			require.Equal(t, reasonObjectRef.GetLocal(), &objectID)
