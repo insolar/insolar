@@ -52,24 +52,30 @@ func TestBadSeed(t *testing.T) {
 	ctx := context.TODO()
 	rootCfg, err := requester.CreateUserConfig(launchnet.Root.Ref, launchnet.Root.PrivKey, launchnet.Root.PubKey)
 	require.NoError(t, err)
-	res, err := requester.SendWithSeed(ctx, launchnet.TestRPCUrl, rootCfg, &requester.Params{
+	res, err := requester.SendWithSeed(ctx, launchnet.TestRPCUrlPublic, rootCfg, &requester.Params{
 		CallSite:  "member.create",
 		PublicKey: rootCfg.PublicKey},
 		"MTExMQ==")
 	require.NoError(t, err)
-	require.EqualError(t, contractError(res), "[ checkSeed ] Bad seed param")
+	var resData = requester.Response{}
+	err = json.Unmarshal(res, &resData)
+	require.NoError(t, err)
+	require.Contains(t, resData.Error.Data.Trace, "bad input seed")
 }
 
 func TestIncorrectSeed(t *testing.T) {
 	ctx := context.TODO()
 	rootCfg, err := requester.CreateUserConfig(launchnet.Root.Ref, launchnet.Root.PrivKey, launchnet.Root.PubKey)
 	require.NoError(t, err)
-	res, err := requester.SendWithSeed(ctx, launchnet.TestRPCUrl, rootCfg, &requester.Params{
+	res, err := requester.SendWithSeed(ctx, launchnet.TestRPCUrlPublic, rootCfg, &requester.Params{
 		CallSite:  "member.create",
 		PublicKey: rootCfg.PublicKey},
 		"z2vgMVDXx0s+g5mkagOLqCP0q/8YTfoQkII5pjNF1ag=")
 	require.NoError(t, err)
-	require.EqualError(t, contractError(res), "[ checkSeed ] Incorrect seed")
+	var resData = requester.Response{}
+	err = json.Unmarshal(res, &resData)
+	require.NoError(t, err)
+	require.Contains(t, resData.Error.Data.Trace, "incorrect seed")
 }
 
 func customSend(data string) (map[string]interface{}, error) {
@@ -107,7 +113,7 @@ func TestCrazyJSON(t *testing.T) {
 
 func TestIncorrectSign(t *testing.T) {
 	testMember := createMember(t)
-	seed, err := requester.GetSeed(launchnet.TestAPIURL)
+	seed, err := requester.GetSeed(launchnet.TestRPCUrl)
 	require.NoError(t, err)
 	body, err := requester.GetResponseBodyContract(
 		launchnet.TestRPCUrl,
@@ -125,13 +131,16 @@ func TestIncorrectSign(t *testing.T) {
 	var res requester.ContractResponse
 	err = json.Unmarshal(body, &res)
 	require.NoError(t, err)
-	require.Contains(t, res.Error.Message, "error while verify signature")
-	require.Contains(t, res.Error.Message, "structure error")
+	var resData = requester.Response{}
+	err = json.Unmarshal(body, &resData)
+	require.NoError(t, err)
+	require.Contains(t, resData.Error.Data.Trace, "error while verify signature")
+	require.Contains(t, resData.Error.Data.Trace, "structure error")
 }
 
 func TestEmptySign(t *testing.T) {
 	testMember := createMember(t)
-	seed, err := requester.GetSeed(launchnet.TestAPIURL)
+	seed, err := requester.GetSeed(launchnet.TestRPCUrl)
 	require.NoError(t, err)
 	body, err := requester.GetResponseBodyContract(
 		launchnet.TestRPCUrl,
@@ -141,7 +150,8 @@ func TestEmptySign(t *testing.T) {
 				ID:      1,
 				Method:  "contract.call",
 			},
-			Params: requester.Params{Seed: seed, Reference: testMember.Ref, PublicKey: testMember.PubKey, CallSite: "wallet.getBalance", CallParams: map[string]interface{}{"reference": testMember.Ref}},
+			Params: requester.Params{Seed: seed, Reference: testMember.Ref, PublicKey: testMember.PubKey,
+				CallSite: "member.getBalance", CallParams: map[string]interface{}{"reference": testMember.Ref}},
 		},
 		"",
 	)
@@ -149,12 +159,15 @@ func TestEmptySign(t *testing.T) {
 	var res requester.ContractResponse
 	err = json.Unmarshal(body, &res)
 	require.NoError(t, err)
-	require.Equal(t, res.Error.Message, "invalid signature")
+	var resData = requester.Response{}
+	err = json.Unmarshal(body, &resData)
+	require.NoError(t, err)
+	require.Contains(t, resData.Error.Data.Trace, "invalid signature")
 }
 
 func TestRequestWithSignFromOtherMember(t *testing.T) {
 	memberForParam := createMember(t)
-	seed, err := requester.GetSeed(launchnet.TestAPIURL)
+	seed, err := requester.GetSeed(launchnet.TestRPCUrl)
 	require.NoError(t, err)
 
 	request := requester.ContractRequest{
@@ -163,7 +176,7 @@ func TestRequestWithSignFromOtherMember(t *testing.T) {
 			ID:      1,
 			Method:  "contract.call",
 		},
-		Params: requester.Params{Seed: seed, Reference: memberForParam.Ref, PublicKey: memberForParam.PubKey, CallSite: "wallet.getBalance", CallParams: map[string]interface{}{"reference": memberForParam.Ref}},
+		Params: requester.Params{Seed: seed, Reference: memberForParam.Ref, PublicKey: memberForParam.PubKey, CallSite: "member.getBalance", CallParams: map[string]interface{}{"reference": memberForParam.Ref}},
 	}
 
 	dataToSign, err := json.Marshal(request)
@@ -187,7 +200,10 @@ func TestRequestWithSignFromOtherMember(t *testing.T) {
 	var res requester.ContractResponse
 	err = json.Unmarshal(body, &res)
 	require.NoError(t, err)
-	require.Contains(t, res.Error.Message, "error while verify signature: invalid signature")
+	var resData = requester.Response{}
+	err = json.Unmarshal(body, &resData)
+	require.NoError(t, err)
+	require.Contains(t, resData.Error.Data.Trace, "invalid signature")
 }
 
 func TestIncorrectMethodName(t *testing.T) {
@@ -209,26 +225,38 @@ func TestIncorrectMethodName(t *testing.T) {
 func TestIncorrectParams(t *testing.T) {
 	firstMember := createMember(t)
 
-	_, err := signedRequestWithEmptyRequestRef(t, firstMember, "member.transfer", firstMember.Ref)
+	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, firstMember, "member.transfer", firstMember.Ref)
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "failed to cast call params: expected 'map[string]interface{}', got 'string'")
+	require.IsType(t, &requester.Error{}, err)
+	data := err.(*requester.Error).Data
+	require.Contains(t, data.Trace, "expected 'map[string]interface{}', got 'string'")
 }
 
 func TestNilParams(t *testing.T) {
 	firstMember := createMember(t)
 
-	_, err := signedRequestWithEmptyRequestRef(t, firstMember, "member.transfer", nil)
+	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrlPublic, firstMember, "member.transfer", nil)
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "call params are nil")
+	require.IsType(t, &requester.Error{}, err)
+	data := err.(*requester.Error).Data
+	require.Contains(t, data.Trace, "call params are nil")
 }
 
 func TestRequestReference(t *testing.T) {
-	firstMember := createMember(t)
-	secondMember := createMember(t)
-	amount := "10"
+	member, err := newUserWithKeys()
+	require.NoError(t, err)
 
-	_, ref, err := makeSignedRequest(firstMember, "member.transfer", map[string]interface{}{"amount": amount, "toMemberReference": secondMember.Ref})
+	_, ref, err := makeSignedRequest(launchnet.TestRPCUrlPublic, member, "member.create", nil)
 	require.NoError(t, err)
 	require.NotEqual(t, "", ref)
 	require.NotEqual(t, "11111111111111111111111111111111.11111111111111111111111111111111", ref)
+}
+
+func TestNotAllowedMethod(t *testing.T) {
+	member := createMember(t)
+
+	_, _, err := makeSignedRequest(launchnet.TestRPCUrlPublic, member, "member.getBalance",
+		map[string]interface{}{"reference": member.Ref})
+	require.Error(t, err)
+	require.Equal(t, "Method does not exist / is not available.", err.Error())
 }

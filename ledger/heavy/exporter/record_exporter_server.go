@@ -18,39 +18,92 @@ package exporter
 
 import (
 	"context"
+	"sync"
+	"time"
+
+	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/pulse"
+	insolarPulse "github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/ledger/heavy/executor"
 	"github.com/insolar/insolar/ledger/object"
+	"github.com/insolar/insolar/pulse"
+
 	"github.com/pkg/errors"
 )
 
+type OneRequestLimiter struct {
+	durationBetweenReq time.Duration
+	lastRequest        *time.Time
+	lock               sync.Mutex
+}
+
+func NewOneRequestLimiter(durationBetweenReq time.Duration) *OneRequestLimiter {
+	return &OneRequestLimiter{
+		durationBetweenReq: durationBetweenReq,
+	}
+}
+
+func (l *OneRequestLimiter) Take(ctx context.Context) {
+	l.lock.Lock()
+	defer l.lock.Unlock()
+	t := time.Now()
+
+	if l.lastRequest == nil {
+		l.lastRequest = &t
+		return
+	}
+
+	nextReq := l.lastRequest.Add(l.durationBetweenReq)
+	if time.Now().After(nextReq) {
+		l.lastRequest = &t
+		return
+	}
+
+	<-time.After(l.lastRequest.Add(l.durationBetweenReq).Sub(t))
+}
+
 type RecordServer struct {
-	pulseCalculator pulse.Calculator
+	pulseCalculator insolarPulse.Calculator
 	recordIndex     object.RecordPositionAccessor
 	recordAccessor  object.RecordAccessor
 	jetKeeper       executor.JetKeeper
+	limiter         *OneRequestLimiter
 }
 
 func NewRecordServer(
-	pulseCalculator pulse.Calculator,
+	pulseCalculator insolarPulse.Calculator,
 	recordIndex object.RecordPositionAccessor,
 	recordAccessor object.RecordAccessor,
 	jetKeeper executor.JetKeeper,
+	limiter *OneRequestLimiter,
 ) *RecordServer {
 	return &RecordServer{
 		pulseCalculator: pulseCalculator,
 		recordIndex:     recordIndex,
 		recordAccessor:  recordAccessor,
 		jetKeeper:       jetKeeper,
+		limiter:         limiter,
 	}
 }
 
 func (r *RecordServer) Export(getRecords *GetRecords, stream RecordExporter_ExportServer) error {
+	r.limiter.Take(stream.Context())
+
 	ctx := stream.Context()
+
+	exportStart := time.Now()
+	defer func(ctx context.Context) {
+		stats.Record(
+			insmetrics.InsertTag(ctx, TagHeavyExporterMethodName, "record-export"),
+			HeavyExporterMethodTiming.M(float64(time.Since(exportStart).Nanoseconds())/1e6),
+		)
+	}(ctx)
+
 	logger := inslogger.FromContext(ctx)
+	logger.Info("Incoming request: ", getRecords.String())
 
 	if getRecords.Count == 0 {
 		return errors.New("count can't be 0")
@@ -62,7 +115,7 @@ func (r *RecordServer) Export(getRecords *GetRecords, stream RecordExporter_Expo
 			return errors.New("trying to get a non-finalized pulse data")
 		}
 	} else {
-		getRecords.PulseNumber = insolar.FirstPulseNumber
+		getRecords.PulseNumber = pulse.MinTimePulse
 	}
 
 	iter := newRecordIterator(
@@ -74,7 +127,9 @@ func (r *RecordServer) Export(getRecords *GetRecords, stream RecordExporter_Expo
 		r.jetKeeper,
 		r.pulseCalculator,
 	)
+	read := 0
 
+	var numSent int
 	for iter.HasNext(stream.Context()) {
 		record, err := iter.Next(stream.Context())
 		if err != nil {
@@ -87,7 +142,21 @@ func (r *RecordServer) Export(getRecords *GetRecords, stream RecordExporter_Expo
 			logger.Error(err)
 			return err
 		}
+		read++
 	}
+
+	if read == 0 {
+		topPulse := r.jetKeeper.TopSyncPulse()
+		err := stream.Send(&Record{
+			ShouldIterateFrom: &topPulse,
+		})
+		if err != nil {
+			logger.Error(err)
+			return err
+		}
+		numSent++
+	}
+	logger.Info("exported %d record", numSent)
 
 	return nil
 }
@@ -102,7 +171,7 @@ type recordIterator struct {
 	recordIndex     object.RecordPositionAccessor
 	recordAccessor  object.RecordAccessor
 	jetKeeper       executor.JetKeeper
-	pulseCalculator pulse.Calculator
+	pulseCalculator insolarPulse.Calculator
 }
 
 func newRecordIterator(
@@ -112,7 +181,7 @@ func newRecordIterator(
 	recordIndex object.RecordPositionAccessor,
 	recordAccessor object.RecordAccessor,
 	jetKeeper executor.JetKeeper,
-	pulseCalculator pulse.Calculator,
+	pulseCalculator insolarPulse.Calculator,
 ) *recordIterator {
 	return &recordIterator{
 		needToRead:      takeCount,

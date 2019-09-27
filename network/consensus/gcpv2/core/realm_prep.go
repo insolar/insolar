@@ -115,7 +115,7 @@ func (p *PrepRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 	var limiterKey string
 	switch {
 	case pt.GetLimitPerSender() == 0:
-		return fmt.Errorf("packet type (%v) is unknown", pt)
+		return errors.UnknownPacketType(pt)
 	case pt.IsMemberPacket():
 		strict, err := coreapi.VerifyPacketRoute(ctx, packet, selfID, from)
 		if err != nil {
@@ -138,9 +138,9 @@ func (p *PrepRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 		limiter = limiterI.(*phases.AtomicPacketLimiter)
 	}
 
-	//if !limiter.GetPacketLimiter().CanReceivePacket(pt) {
+	// if !limiter.GetPacketLimiter().CanReceivePacket(pt) {
 	//	return fmt.Errorf("packet type (%v) limit exceeded: from=%v", pt, from)
-	//}
+	// }
 
 	var pd population.PacketDispatcher
 
@@ -165,7 +165,7 @@ func (p *PrepRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 	}
 
 	if !limiter.SetPacketReceived(pt) {
-		return fmt.Errorf("packet type (%v) limit exceeded: from=%v", pt, from)
+		return errors.LimitExceeded(pt, packet.GetSourceID(), from)
 	}
 
 	if pd != nil {
@@ -282,7 +282,7 @@ func (p *PrepRealm) pushEphemeralPulse(ctx context.Context) {
 	p.Lock()
 	defer p.Unlock()
 
-	if p.disableEphemeral {
+	if p.disableEphemeral || p.ephemeralFeeder == nil {
 		return // ephemeral mode was deactivated
 	}
 

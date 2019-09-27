@@ -42,7 +42,7 @@ type InitialState struct {
 	// JetIds for passed executor (not all ids). If JetDrop for this jet has Split flag - both jets will be in slice
 	JetIDs []insolar.JetID
 	// Drops for JetIDs above
-	Drops [][]byte
+	Drops []drop.Drop
 	// Indexes only for Lifelines that has pending requests
 	Indexes []record.Index
 }
@@ -54,9 +54,11 @@ type InitialStateKeeper struct {
 	indexStorage   object.IndexAccessor
 	dropStorage    drop.Accessor
 
+	syncPulse insolar.PulseNumber
+
 	lock                  sync.RWMutex
-	syncPulse             insolar.PulseNumber
-	jetDrops              map[insolar.JetID][]byte
+	jetSiblings           map[insolar.JetID]insolar.JetID
+	jetDrops              map[insolar.JetID]drop.Drop
 	abandonRequestIndexes map[insolar.JetID][]record.Index
 }
 
@@ -73,7 +75,8 @@ func NewInitialStateKeeper(
 		indexStorage:          indexStorage,
 		dropStorage:           dropStorage,
 		syncPulse:             jetKeeper.TopSyncPulse(),
-		jetDrops:              make(map[insolar.JetID][]byte),
+		jetSiblings:           make(map[insolar.JetID]insolar.JetID),
+		jetDrops:              make(map[insolar.JetID]drop.Drop),
 		abandonRequestIndexes: make(map[insolar.JetID][]record.Index),
 	}
 }
@@ -85,31 +88,32 @@ func (isk *InitialStateKeeper) Start(ctx context.Context) error {
 	isk.lock.Lock()
 	defer isk.lock.Unlock()
 
-	logger.Debug("[ InitialStateKeeper ] Prepare drops for JetIds")
+	logger.Info("[ InitialStateKeeper ] Prepare drops for JetIds")
 	isk.prepareDrops(ctx)
-	logger.Debug("[ InitialStateKeeper ] Prepare abandon request indexes")
+	logger.Info("[ InitialStateKeeper ] Prepare abandon request indexes")
 	isk.prepareAbandonRequests(ctx)
-	logger.Debug("[ InitialStateKeeper ] Initial state prepared")
+	logger.Info("[ InitialStateKeeper ] Initial state prepared")
 
 	return nil
 }
 
 func (isk *InitialStateKeeper) prepareDrops(ctx context.Context) {
-	logger := inslogger.FromContext(ctx)
 	for _, jetID := range isk.jetAccessor.All(ctx, isk.syncPulse) {
 		dr, err := isk.dropStorage.ForPulse(ctx, jetID, isk.syncPulse)
 		if err != nil {
-			logger.Fatal("No drop found for pulse: ", isk.syncPulse.String())
+			inslogger.FromContext(ctx).Fatal("No drop found for pulse: ", isk.syncPulse.String())
 		}
-
-		jetDrop := drop.MustEncode(&dr)
 
 		if dr.Split {
 			left, right := jet.Siblings(jetID)
-			isk.jetDrops[left] = jetDrop
-			isk.jetDrops[right] = jetDrop
+
+			isk.jetSiblings[left] = right
+			isk.jetSiblings[right] = left
+
+			isk.jetDrops[left] = dr
+			isk.jetDrops[right] = dr
 		} else {
-			isk.jetDrops[jetID] = jetDrop
+			isk.jetDrops[jetID] = dr
 		}
 	}
 }
@@ -117,7 +121,9 @@ func (isk *InitialStateKeeper) prepareDrops(ctx context.Context) {
 func (isk *InitialStateKeeper) prepareAbandonRequests(ctx context.Context) {
 	logger := inslogger.FromContext(ctx)
 
+	tree := jet.NewTree(true)
 	for jetID := range isk.jetDrops {
+		tree.Update(jetID, true)
 		isk.abandonRequestIndexes[jetID] = []record.Index{}
 	}
 
@@ -134,20 +140,21 @@ func (isk *InitialStateKeeper) prepareAbandonRequests(ctx context.Context) {
 	for _, index := range indexes {
 
 		if index.Lifeline.EarliestOpenRequest != nil {
-			isk.addIndexToState(ctx, index)
+			isk.addIndexToState(ctx, index, tree)
 		}
 	}
 }
 
-func (isk *InitialStateKeeper) addIndexToState(ctx context.Context, index record.Index) {
+func (isk *InitialStateKeeper) addIndexToState(ctx context.Context, index record.Index, tree *jet.Tree) {
 	logger := inslogger.FromContext(ctx)
-	indexJet, _ := isk.jetAccessor.ForID(ctx, isk.syncPulse, index.ObjID)
+	indexJet, _ := tree.Find(index.ObjID)
 	indexes, ok := isk.abandonRequestIndexes[indexJet]
 	if !ok {
 		// Someone changed jetTree in sync pulse while starting heavy material node
 		// If this ever happens - we need to stop network
 		logger.Fatal("Jet tree changed on preparing state. New jet: ", indexJet)
 	}
+	logger.Info("Prepare index with abandon request: %s in jet %s", index.ObjID.DebugString(), indexJet.DebugString())
 	isk.abandonRequestIndexes[indexJet] = append(indexes, index)
 }
 
@@ -158,10 +165,14 @@ func (isk *InitialStateKeeper) Get(ctx context.Context, lightExecutor insolar.Re
 	defer isk.lock.RUnlock()
 
 	jetIDs := make([]insolar.JetID, 0)
-	drops := make([][]byte, 0)
+	drops := make([]drop.Drop, 0)
 	indexes := make([]record.Index, 0)
 
-	logger.Debugf("[ InitialStateKeeper ] Getting drops for: %s in pulse: %s", lightExecutor.String(), pulse.String())
+	logger.Infof("[ InitialStateKeeper ] Getting drops for: %s in pulse: %s", lightExecutor.String(), pulse.String())
+
+	// Must not send two equal drops to single LME after split
+	existingDrops := make(map[insolar.JetID]struct{})
+
 	for id, jetDrop := range isk.jetDrops {
 		light, err := isk.jetCoordinator.LightExecutorForJet(ctx, insolar.ID(id), pulse)
 		if err != nil {
@@ -170,11 +181,19 @@ func (isk *InitialStateKeeper) Get(ctx context.Context, lightExecutor insolar.Re
 
 		if light.Equal(lightExecutor) {
 			jetIDs = append(jetIDs, id)
+
+			if _, ok := existingDrops[id]; ok {
+				continue
+			}
+
 			drops = append(drops, jetDrop)
+			if siblingID, ok := isk.jetSiblings[id]; ok {
+				existingDrops[siblingID] = struct{}{}
+			}
 		}
 	}
 
-	logger.Debugf("[ InitialStateKeeper ] Getting indexes for: %s in pulse: %s", lightExecutor.String(), pulse.String())
+	logger.Infof("[ InitialStateKeeper ] Getting indexes for: %s in pulse: %s", lightExecutor.String(), pulse.String())
 	for _, id := range jetIDs {
 		indexes = append(indexes, isk.abandonRequestIndexes[id]...)
 	}

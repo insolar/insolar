@@ -21,12 +21,17 @@ import (
 	"context"
 	"testing"
 
-	"github.com/insolar/insolar/configuration"
 	"github.com/stretchr/testify/require"
+
+	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
 func TestComponents(t *testing.T) {
-	ctx := context.Background()
+	ctx := inslogger.UpdateLogger(context.Background(), func(logger insolar.Logger) (insolar.Logger, error) {
+		return logger.Copy().WithBuffer(100, false).Build()
+	})
 	cfg := configuration.NewConfiguration()
 	cfg.KeysPath = "testdata/bootstrap_keys.json"
 	cfg.CertificatePath = "testdata/certificate.json"
@@ -40,7 +45,7 @@ func TestComponents(t *testing.T) {
 		bootstrapComponents.CryptographyService,
 		bootstrapComponents.KeyProcessor,
 	)
-	cm, _, stopWatermill := initComponents(
+	cm, stopWatermill := initComponents(
 		ctx,
 		cfg,
 		bootstrapComponents.CryptographyService,

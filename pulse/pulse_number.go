@@ -17,7 +17,9 @@
 package pulse
 
 import (
+	"encoding/binary"
 	"errors"
+	"strconv"
 	"time"
 )
 
@@ -26,8 +28,15 @@ type Number uint32
 const (
 	Unknown       Number = 0
 	LocalRelative        = 65536
-	MinTimePulse         = LocalRelative + 1
-	MaxTimePulse         = 1<<30 - 1
+	// MinTimePulse is the hardcoded first pulse number. Because first 65536 numbers are saved for the system's needs
+	MinTimePulse = LocalRelative + 1
+	MaxTimePulse = 1<<30 - 1
+	// Jet is a special pulse number value that signifies jet ID.
+	Jet Number = 1
+	// BuiltinContract declares special pulse number that creates namespace for builtin contracts
+	BuiltinContract Number = 200
+	// PulseNumberSize declares the number of bytes in the pulse number
+	NumberSize int = 4
 )
 const UnixTimeOfMinTimePulse = 1546300800                                           // 2019-01-01 00:00:00 +0000 UTC
 const UnixTimeOfMaxTimePulse = UnixTimeOfMinTimePulse - MinTimePulse + MaxTimePulse // 2053-01-08 19:24:46 +0000 UTC
@@ -115,6 +124,45 @@ func (n Number) WithFlags(flags uint8) uint32 {
 		panic("illegal value")
 	}
 	return n.AsUint32() | uint32(flags)<<30
+}
+
+// Bytes serializes pulse number.
+func (n Number) Bytes() []byte {
+	var buf [NumberSize]byte
+	binary.BigEndian.PutUint32(buf[:], uint32(n))
+	return buf[:]
+}
+
+func (n Number) String() string {
+	return strconv.FormatUint(uint64(n), 10)
+}
+
+func (n Number) MarshalTo(data []byte) (int, error) {
+	if len(data) < NumberSize {
+		return 0, errors.New("not enough bytes to marshal pulse.Number")
+	}
+	binary.BigEndian.PutUint32(data, uint32(n))
+	return NumberSize, nil
+}
+
+func (n *Number) Unmarshal(data []byte) error {
+	if len(data) < NumberSize {
+		return errors.New("not enough bytes to unmarshal pulse.Number")
+	}
+	*n = Number(binary.BigEndian.Uint32(data))
+	return nil
+}
+
+func (n Number) Equal(other Number) bool {
+	return n == other
+}
+
+func (n Number) Size() int {
+	return NumberSize
+}
+
+func (n Number) IsJet() bool {
+	return n == Jet
 }
 
 func IsValidAsPulseNumber(n int) bool {

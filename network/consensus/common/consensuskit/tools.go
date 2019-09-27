@@ -50,10 +50,8 @@
 
 package consensuskit
 
-/*
-This function guarantees that
-	(float(bftMajorityCount)/nodeCount > 2.0/3.0)	AND	(float(bftMajorityCount - 1)/nodeCount <= 2.0/3.0)
-*/func BftMajority(nodeCount int) int {
+// BftMajority function guarantees that (float(bftMajorityCount)/nodeCount > 2.0/3.0)	AND	(float(bftMajorityCount - 1)/nodeCount <= 2.0/3.0)
+func BftMajority(nodeCount int) int {
 	return nodeCount - BftMinority(nodeCount)
 }
 

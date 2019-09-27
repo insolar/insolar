@@ -54,12 +54,12 @@ type Client interface {
 	//
 	// If provided state is nil, the latest state will be returned (with deactivation check). Returned descriptor will
 	// provide methods for fetching all related data.
-	GetObject(ctx context.Context, head insolar.Reference) (ObjectDescriptor, error)
+	GetObject(ctx context.Context, head insolar.Reference, request *insolar.Reference) (ObjectDescriptor, error)
 
 	// DeployCode creates new code record in storage.
 	//
 	// Code records are used to activate prototype.
-	DeployCode(ctx context.Context, domain, request insolar.Reference, code []byte, machineType insolar.MachineType) (*insolar.ID, error)
+	DeployCode(ctx context.Context, code []byte, machineType insolar.MachineType) (*insolar.ID, error)
 
 	// ActivatePrototype creates activate object record in storage. Provided prototype reference will be used as objects prototype
 	// memory as memory of created object. If memory is not provided, the prototype default memory will be used.
@@ -70,9 +70,6 @@ type Client interface {
 		request, parent, code insolar.Reference,
 		memory []byte,
 	) error
-
-	// State returns hash state for artifact manager.
-	State() []byte
 
 	// InjectCodeDescriptor injects code descriptor needed by builtin contracts
 	InjectCodeDescriptor(insolar.Reference, CodeDescriptor)

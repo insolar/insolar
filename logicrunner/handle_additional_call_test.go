@@ -17,6 +17,8 @@
 package logicrunner
 
 import (
+	"math/rand"
+	"strings"
 	"testing"
 	"time"
 
@@ -29,9 +31,42 @@ import (
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/writecontroller"
 )
+
+func genAPIRequestID() string {
+	APIRequestID := utils.RandTraceID()
+	if strings.Contains(APIRequestID, "createRandomTraceIDFailed") {
+		panic("Failed to generate uuid: " + APIRequestID)
+	}
+	return APIRequestID
+}
+
+func genIncomingRequest() *record.IncomingRequest {
+	baseRef := gen.Reference()
+	objectRef := gen.Reference()
+	prototypeRef := gen.Reference()
+
+	return &record.IncomingRequest{
+		Polymorph:       rand.Int31(),
+		CallType:        record.CTMethod,
+		Caller:          gen.Reference(),
+		CallerPrototype: gen.Reference(),
+		Nonce:           0,
+		ReturnMode:      record.ReturnSaga,
+		Immutable:       false,
+		Base:            &baseRef,
+		Object:          &objectRef,
+		Prototype:       &prototypeRef,
+		Method:          "Call",
+		Arguments:       []byte{},
+		APIRequestID:    genAPIRequestID(),
+		Reason:          gen.RecordReference(),
+		APINode:         insolar.Reference{},
+	}
+}
 
 func TestHandleAdditionalCallFromPreviousExecutor_Present(t *testing.T) {
 	table := []struct {
@@ -44,14 +79,13 @@ func TestHandleAdditionalCallFromPreviousExecutor_Present(t *testing.T) {
 		{
 			name: "Happy path",
 			mocks: func(t minimock.Tester) (*HandleAdditionalCallFromPreviousExecutor, flow.Flow) {
-				obj := gen.Reference()
-				reqRef := gen.Reference()
+				incoming := genIncomingRequest()
 
 				receivedPayload := &payload.AdditionalCallFromPreviousExecutor{
-					RequestRef:      reqRef,
+					RequestRef:      gen.RecordReference(),
 					Pending:         insolar.NotPending,
-					ObjectReference: obj,
-					Request:         &record.IncomingRequest{},
+					ObjectReference: *incoming.Object,
+					Request:         incoming,
 					ServiceData:     &payload.ServiceData{},
 				}
 
@@ -96,22 +130,20 @@ func TestAdditionalCallFromPreviousExecutor_Proceed(t *testing.T) {
 
 	t.Run("Proceed without pending", func(t *testing.T) {
 		t.Parallel()
-
 		mc := minimock.NewController(t)
 
 		ctx := inslogger.TestContext(t)
-		obj := gen.Reference()
-		reqRef := gen.Reference()
+		incoming := genIncomingRequest()
 
 		msg := &payload.AdditionalCallFromPreviousExecutor{
-			ObjectReference: obj,
-			RequestRef:      reqRef,
-			Request:         &record.IncomingRequest{},
+			ObjectReference: *incoming.Object,
+			RequestRef:      gen.RecordReference(),
+			Request:         incoming,
 			Pending:         insolar.NotPending,
 		}
 
 		stateStorage := NewStateStorageMock(t).
-			UpsertExecutionStateMock.Expect(obj).Return(
+			UpsertExecutionStateMock.Expect(*incoming.Object).Return(
 			NewExecutionBrokerIMock(t).
 				AddAdditionalRequestFromPrevExecutorMock.Return().
 				SetNotPendingMock.Return(),
@@ -132,18 +164,17 @@ func TestAdditionalCallFromPreviousExecutor_Proceed(t *testing.T) {
 		mc := minimock.NewController(t)
 
 		ctx := inslogger.TestContext(t)
-		obj := gen.Reference()
-		reqRef := gen.Reference()
+		incoming := genIncomingRequest()
 
 		msg := &payload.AdditionalCallFromPreviousExecutor{
-			ObjectReference: obj,
-			RequestRef:      reqRef,
-			Request:         &record.IncomingRequest{},
+			ObjectReference: *incoming.Object,
+			RequestRef:      gen.RecordReference(),
+			Request:         incoming,
 			Pending:         insolar.InPending,
 		}
 
 		stateStorage := NewStateStorageMock(t).
-			UpsertExecutionStateMock.Expect(obj).Return(
+			UpsertExecutionStateMock.Expect(*incoming.Object).Return(
 			NewExecutionBrokerIMock(t).
 				AddAdditionalRequestFromPrevExecutorMock.Return(),
 		)

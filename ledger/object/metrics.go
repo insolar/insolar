@@ -22,33 +22,23 @@ import (
 )
 
 var (
-	statBucketAddedCount = stats.Int64(
-		"object/bucket/added/count",
+	statIndexesAddedCount = stats.Int64(
+		"object_indexes_added_count",
 		"How many bucket have been created on a node",
 		stats.UnitDimensionless,
 	)
-	statBucketRemovedCount = stats.Int64(
-		"object/bucket/removed/count",
+	statIndexesRemovedCount = stats.Int64(
+		"object_indexes_removed_count",
 		"How many bucket have been removed from a node",
 		stats.UnitDimensionless,
 	)
-	statObjectPendingRequestsInMemoryAddedCount = stats.Int64(
-		"object/pendings/requests/added/count",
-		"How many requests have been registered",
-		stats.UnitDimensionless,
-	)
-	statObjectPendingResultsInMemoryAddedCount = stats.Int64(
-		"object/pendings/results/added/count",
-		"How many succeed results have been registered",
-		stats.UnitDimensionless,
-	)
 	statRecordInMemoryAddedCount = stats.Int64(
-		"recordstorage/added/count",
+		"record_storage_added_count",
 		"How many records have been saved to a in-memory storage",
 		stats.UnitDimensionless,
 	)
 	statRecordInMemoryRemovedCount = stats.Int64(
-		"recordstorage/removed/count",
+		"record_storage_removed_count",
 		"How many records have been removed from a in-memory storage",
 		stats.UnitDimensionless,
 	)
@@ -57,15 +47,15 @@ var (
 func init() {
 	err := view.Register(
 		&view.View{
-			Name:        statBucketAddedCount.Name(),
-			Description: statBucketAddedCount.Description(),
-			Measure:     statBucketAddedCount,
+			Name:        statIndexesAddedCount.Name(),
+			Description: statIndexesAddedCount.Description(),
+			Measure:     statIndexesAddedCount,
 			Aggregation: view.Sum(),
 		},
 		&view.View{
-			Name:        statBucketRemovedCount.Name(),
-			Description: statBucketRemovedCount.Description(),
-			Measure:     statBucketRemovedCount,
+			Name:        statIndexesRemovedCount.Name(),
+			Description: statIndexesRemovedCount.Description(),
+			Measure:     statIndexesRemovedCount,
 			Aggregation: view.Sum(),
 		},
 		&view.View{
@@ -81,15 +71,9 @@ func init() {
 			Aggregation: view.Sum(),
 		},
 		&view.View{
-			Name:        statObjectPendingRequestsInMemoryAddedCount.Name(),
-			Description: statObjectPendingRequestsInMemoryAddedCount.Description(),
-			Measure:     statObjectPendingRequestsInMemoryAddedCount,
-			Aggregation: view.Sum(),
-		},
-		&view.View{
-			Name:        statObjectPendingResultsInMemoryAddedCount.Name(),
-			Description: statObjectPendingResultsInMemoryAddedCount.Description(),
-			Measure:     statObjectPendingResultsInMemoryAddedCount,
+			Name:        statRecordInMemoryRemovedCount.Name(),
+			Description: statRecordInMemoryRemovedCount.Description(),
+			Measure:     statRecordInMemoryRemovedCount,
 			Aggregation: view.Sum(),
 		},
 	)

@@ -20,6 +20,10 @@ import (
 	"context"
 	"testing"
 
+	"github.com/pkg/errors"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/gen"
@@ -28,22 +32,60 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/light/handle"
 	"github.com/insolar/insolar/ledger/light/proc"
-	"github.com/pkg/errors"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
+
+func TestDeactivateObject_NilMsgPayload(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+	msg := payload.Meta{
+		Polymorph: uint32(payload.TypeMeta),
+		Payload:   nil,
+	}
+
+	handler := handle.NewDeactivateObject(nil, msg, false)
+
+	err := handler.Present(ctx, flow.NewFlowMock(t))
+	require.Error(t, err)
+}
 
 func TestDeactivateObject_BadMsgPayload(t *testing.T) {
 	t.Parallel()
 
 	ctx := inslogger.TestContext(t)
 	msg := payload.Meta{
-		Payload: []byte{1, 2, 3, 4, 5},
+		Polymorph: uint32(payload.TypeMeta),
+		Payload:   []byte{1, 2, 3, 4, 5},
 	}
 
 	handler := handle.NewDeactivateObject(nil, msg, false)
 
 	err := handler.Present(ctx, flow.NewFlowMock(t))
+	require.Error(t, err)
+}
+
+func TestDeactivateObject_IncorrectTypeMsgPayload(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+	f := flow.NewFlowMock(t)
+
+	// Incorrect type (SetIncomingRequest instead of Deactivate).
+	result := payload.SetIncomingRequest{
+		Polymorph: uint32(payload.TypeSetIncomingRequest),
+		Request:   record.Virtual{},
+	}
+	buf, err := result.Marshal()
+	require.NoError(t, err)
+
+	msg := payload.Meta{
+		Polymorph: uint32(payload.TypeMeta),
+		Payload:   buf,
+	}
+
+	handler := handle.NewDeactivateObject(proc.NewDependenciesMock(), msg, false)
+
+	err = handler.Present(ctx, f)
 	require.Error(t, err)
 }
 
@@ -54,12 +96,15 @@ func TestDeactivateObject_BadWrappedVirtualRecord(t *testing.T) {
 	f := flow.NewFlowMock(t)
 
 	deactivate := payload.Deactivate{
+		Polymorph: uint32(payload.TypeDeactivate),
+		// Just a byte slice, not a correct virtual record.
 		Record: []byte{1, 2, 3, 4, 5},
 	}
 	buf, err := deactivate.Marshal()
 	require.NoError(t, err)
 
 	msg := payload.Meta{
+		Polymorph: uint32(payload.TypeMeta),
 		// This buf is not wrapped as virtual record.
 		Payload: buf,
 	}
@@ -76,7 +121,7 @@ func TestDeactivateObject_IncorrectDeactivateRecordInVirtual(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	f := flow.NewFlowMock(t)
 
-	// Incorrect record in virtual.
+	// Incorrect record type in virtual.
 	virtual := record.Virtual{
 		Union: &record.Virtual_Genesis{
 			Genesis: &record.Genesis{
@@ -88,13 +133,15 @@ func TestDeactivateObject_IncorrectDeactivateRecordInVirtual(t *testing.T) {
 	require.NoError(t, err)
 
 	deactivate := payload.Deactivate{
-		Record: virtualBuf,
+		Polymorph: uint32(payload.TypeDeactivate),
+		Record:    virtualBuf,
 	}
 	deactivateBuf, err := deactivate.Marshal()
 	require.NoError(t, err)
 
 	msg := payload.Meta{
-		Payload: deactivateBuf,
+		Polymorph: uint32(payload.TypeMeta),
+		Payload:   deactivateBuf,
 	}
 
 	handler := handle.NewDeactivateObject(proc.NewDependenciesMock(), msg, false)
@@ -106,19 +153,8 @@ func TestDeactivateObject_IncorrectDeactivateRecordInVirtual(t *testing.T) {
 func TestDeactivateObject_IncorrectDeactivateResultPayload(t *testing.T) {
 	t.Parallel()
 
-	ctx := flow.TestContextWithPulse(
-		inslogger.TestContext(t),
-		insolar.GenesisPulse.PulseNumber+10,
-	)
+	ctx := inslogger.TestContext(t)
 	f := flow.NewFlowMock(t)
-	f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
-		switch p.(type) {
-		case *proc.CalculateID:
-			return nil
-		default:
-			panic("unknown procedure")
-		}
-	})
 
 	virtualDeactivate := record.Virtual{
 		Union: &record.Virtual_Deactivate{
@@ -129,14 +165,62 @@ func TestDeactivateObject_IncorrectDeactivateResultPayload(t *testing.T) {
 	require.NoError(t, err)
 
 	deactivate := payload.Deactivate{
-		Record: virtualDeactivateBuf,
+		Polymorph: uint32(payload.TypeDeactivate),
+		Record:    virtualDeactivateBuf,
+		// Just a byte slice, not a correct virtual record.
 		Result: []byte{1, 2, 3, 4, 5},
 	}
 	deactivateBuf, err := deactivate.Marshal()
 	require.NoError(t, err)
 
 	msg := payload.Meta{
-		Payload: deactivateBuf,
+		Polymorph: uint32(payload.TypeMeta),
+		Payload:   deactivateBuf,
+	}
+
+	handler := handle.NewDeactivateObject(proc.NewDependenciesMock(), msg, false)
+
+	err = handler.Present(ctx, f)
+	require.Error(t, err)
+}
+
+func TestDeactivateObject_WrongTypeDeactivateResultInVirtual(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+	f := flow.NewFlowMock(t)
+
+	virtualDeactivate := record.Virtual{
+		Union: &record.Virtual_Deactivate{
+			Deactivate: &record.Deactivate{},
+		},
+	}
+	virtualDeactivateBuf, err := virtualDeactivate.Marshal()
+	require.NoError(t, err)
+
+	// Incorrect record in virtual.
+	virtualResult := record.Virtual{
+		Union: &record.Virtual_Genesis{
+			Genesis: &record.Genesis{
+				Hash: []byte{1, 2, 3, 4, 5},
+			},
+		},
+	}
+	virtualResultBuf, err := virtualResult.Marshal()
+	require.NoError(t, err)
+
+	deactivate := payload.Deactivate{
+		Polymorph: uint32(payload.TypeDeactivate),
+		Record:    virtualDeactivateBuf,
+		// Incorrect value.
+		Result: virtualResultBuf,
+	}
+	deactivateBuf, err := deactivate.Marshal()
+	require.NoError(t, err)
+
+	msg := payload.Meta{
+		Polymorph: uint32(payload.TypeMeta),
+		Payload:   deactivateBuf,
 	}
 
 	handler := handle.NewDeactivateObject(proc.NewDependenciesMock(), msg, false)
@@ -148,19 +232,8 @@ func TestDeactivateObject_IncorrectDeactivateResultPayload(t *testing.T) {
 func TestDeactivateObject_EmptyDeactivateResultObject(t *testing.T) {
 	t.Parallel()
 
-	ctx := flow.TestContextWithPulse(
-		inslogger.TestContext(t),
-		insolar.GenesisPulse.PulseNumber+10,
-	)
+	ctx := inslogger.TestContext(t)
 	f := flow.NewFlowMock(t)
-	f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
-		switch p.(type) {
-		case *proc.CalculateID:
-			return nil
-		default:
-			panic("unknown procedure")
-		}
-	})
 
 	virtualDeactivate := record.Virtual{
 		Union: &record.Virtual_Deactivate{
@@ -182,73 +255,22 @@ func TestDeactivateObject_EmptyDeactivateResultObject(t *testing.T) {
 	require.NoError(t, err)
 
 	deactivate := payload.Deactivate{
-		Record: virtualDeactivateBuf,
-		Result: virtualResultBuf,
+		Polymorph: uint32(payload.TypeDeactivate),
+		Record:    virtualDeactivateBuf,
+		Result:    virtualResultBuf,
 	}
 	deactivateBuf, err := deactivate.Marshal()
 	require.NoError(t, err)
 
 	msg := payload.Meta{
-		Payload: deactivateBuf,
+		Polymorph: uint32(payload.TypeMeta),
+		Payload:   deactivateBuf,
 	}
 
 	handler := handle.NewDeactivateObject(proc.NewDependenciesMock(), msg, false)
 
 	err = handler.Present(ctx, f)
 	assert.EqualError(t, err, "object is nil")
-}
-
-func TestDeactivateObject_WrongTypeDeactivateResultInVirtual(t *testing.T) {
-	t.Parallel()
-
-	ctx := flow.TestContextWithPulse(
-		inslogger.TestContext(t),
-		insolar.GenesisPulse.PulseNumber+10,
-	)
-	f := flow.NewFlowMock(t)
-	f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
-		switch p.(type) {
-		case *proc.CalculateID:
-			return nil
-		default:
-			panic("unknown procedure")
-		}
-	})
-
-	virtualDeactivate := record.Virtual{
-		Union: &record.Virtual_Deactivate{
-			Deactivate: &record.Deactivate{},
-		},
-	}
-	virtualDeactivateBuf, err := virtualDeactivate.Marshal()
-	require.NoError(t, err)
-
-	// Incorrect record in virtual.
-	virtualResult := record.Virtual{
-		Union: &record.Virtual_Genesis{
-			Genesis: &record.Genesis{
-				Hash: []byte{1, 2, 3, 4, 5},
-			},
-		},
-	}
-	virtualResultBuf, err := virtualResult.Marshal()
-	require.NoError(t, err)
-
-	deactivate := payload.Deactivate{
-		Record: virtualDeactivateBuf,
-		Result: virtualResultBuf,
-	}
-	deactivateBuf, err := deactivate.Marshal()
-	require.NoError(t, err)
-
-	msg := payload.Meta{
-		Payload: deactivateBuf,
-	}
-
-	handler := handle.NewDeactivateObject(proc.NewDependenciesMock(), msg, false)
-
-	err = handler.Present(ctx, f)
-	require.Error(t, err)
 }
 
 func TestDeactivateObject_FlowWithPassedFlag(t *testing.T) {
@@ -265,8 +287,6 @@ func TestDeactivateObject_FlowWithPassedFlag(t *testing.T) {
 		f := flow.NewFlowMock(t)
 		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
 			switch p.(type) {
-			case *proc.CalculateID:
-				return nil
 			case *proc.FetchJet:
 				return errors.New("something strange from checkjet")
 			default:
@@ -284,8 +304,6 @@ func TestDeactivateObject_FlowWithPassedFlag(t *testing.T) {
 		f := flow.NewFlowMock(t)
 		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
 			switch p.(type) {
-			case *proc.CalculateID:
-				return nil
 			case *proc.FetchJet:
 				return proc.ErrNotExecutor
 			default:
@@ -303,8 +321,6 @@ func TestDeactivateObject_FlowWithPassedFlag(t *testing.T) {
 		f := flow.NewFlowMock(t)
 		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
 			switch p.(type) {
-			case *proc.CalculateID:
-				return nil
 			case *proc.FetchJet:
 				return proc.ErrNotExecutor
 			default:
@@ -333,8 +349,6 @@ func TestDeactivateObject_ErrorFromWaitHot(t *testing.T) {
 		f := flow.NewFlowMock(t)
 		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
 			switch p.(type) {
-			case *proc.CalculateID:
-				return nil
 			case *proc.FetchJet:
 				return nil
 			case *proc.WaitHot:
@@ -349,13 +363,12 @@ func TestDeactivateObject_ErrorFromWaitHot(t *testing.T) {
 		assert.EqualError(t, err, "error from waithot")
 	})
 
+	// Happy path, everything is fine.
 	t.Run("waithot procedure returns nil err", func(t *testing.T) {
 		t.Parallel()
 		f := flow.NewFlowMock(t)
 		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
 			switch p.(type) {
-			case *proc.CalculateID:
-				return nil
 			case *proc.FetchJet:
 				return nil
 			case *proc.WaitHot:
@@ -389,8 +402,6 @@ func TestDeactivateObject_ErrorFromEnsureIndex(t *testing.T) {
 		f := flow.NewFlowMock(t)
 		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
 			switch p.(type) {
-			case *proc.CalculateID:
-				return nil
 			case *proc.FetchJet:
 				return nil
 			case *proc.WaitHot:
@@ -408,13 +419,12 @@ func TestDeactivateObject_ErrorFromEnsureIndex(t *testing.T) {
 		assert.EqualError(t, err, "error from ensureindex")
 	})
 
+	// Happy path, everything is fine.
 	t.Run("ensureindex procedure returns nil err", func(t *testing.T) {
 		t.Parallel()
 		f := flow.NewFlowMock(t)
 		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
 			switch p.(type) {
-			case *proc.CalculateID:
-				return nil
 			case *proc.FetchJet:
 				return nil
 			case *proc.WaitHot:
@@ -448,8 +458,6 @@ func TestDeactivateObject_ErrorFromDeactivateObject(t *testing.T) {
 		f := flow.NewFlowMock(t)
 		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
 			switch p.(type) {
-			case *proc.CalculateID:
-				return nil
 			case *proc.FetchJet:
 				return nil
 			case *proc.WaitHot:
@@ -468,13 +476,12 @@ func TestDeactivateObject_ErrorFromDeactivateObject(t *testing.T) {
 		assert.EqualError(t, err, "error from SetResult")
 	})
 
+	// Happy path, everything is fine.
 	t.Run("SetResult procedure returns nil err", func(t *testing.T) {
 		t.Parallel()
 		f := flow.NewFlowMock(t)
 		f.ProcedureMock.Set(func(ctx context.Context, p flow.Procedure, passed bool) (r error) {
 			switch p.(type) {
-			case *proc.CalculateID:
-				return nil
 			case *proc.FetchJet:
 				return nil
 			case *proc.WaitHot:
@@ -515,14 +522,16 @@ func metaDeactivateMsg(t *testing.T) payload.Meta {
 	require.NoError(t, err)
 
 	deactivate := payload.Deactivate{
-		Record: virtualDeactivateBuf,
-		Result: virtualResultBuf,
+		Polymorph: uint32(payload.TypeDeactivate),
+		Record:    virtualDeactivateBuf,
+		Result:    virtualResultBuf,
 	}
 	deactivateBuf, err := deactivate.Marshal()
 	require.NoError(t, err)
 
 	msg := payload.Meta{
-		Payload: deactivateBuf,
+		Polymorph: uint32(payload.TypeMeta),
+		Payload:   deactivateBuf,
 	}
 	return msg
 }

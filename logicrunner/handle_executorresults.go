@@ -20,91 +20,89 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/logicrunner/common"
+	"github.com/insolar/insolar/logicrunner/metrics"
+	"github.com/insolar/insolar/logicrunner/writecontroller"
 
-	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 )
 
-type initializeExecutionState struct {
-	dep *Dependencies
-	msg *payload.ExecutorResults
-}
-
-func (p *initializeExecutionState) Proceed(ctx context.Context) error {
-	ref := p.msg.RecordRef
-
-	broker := p.dep.StateStorage.UpsertExecutionState(ref)
-	broker.PrevExecutorPendingResult(ctx, p.msg.Pending)
-
-	if p.msg.LedgerHasMoreRequests {
-		broker.MoreRequestsOnLedger(ctx)
-	}
-
-	if len(p.msg.Queue) > 0 {
-		transcripts := make([]*common.Transcript, len(p.msg.Queue))
-		for i, qe := range p.msg.Queue {
-			transcripts[i] = common.NewTranscriptCloneContext(qe.ServiceData, qe.RequestRef, *qe.Incoming)
-		}
-		broker.AddRequestsFromPrevExecutor(ctx, transcripts...)
-	}
-
-	return nil
-}
-
 type HandleExecutorResults struct {
 	dep *Dependencies
 
-	Message payload.Meta
+	meta payload.Meta
 }
 
-func (h *HandleExecutorResults) realHandleExecutorState(ctx context.Context, f flow.Flow, msg payload.ExecutorResults) error {
-	done, err := h.dep.WriteAccessor.Begin(ctx, flow.Pulse(ctx))
-	defer done()
-
-	if err != nil {
-		return nil
+func checkPayloadExecutorResults(ctx context.Context, results payload.ExecutorResults) error {
+	if !results.Caller.IsEmpty() && !results.Caller.IsObjectReference() {
+		return errors.Errorf("results.Caller should be ObjectReference; ref=%s", results.Caller.String())
+	}
+	if !results.RecordRef.IsObjectReference() {
+		return errors.Errorf("results.RecordRef should be ObjectReference; ref=%s", results.RecordRef.String())
 	}
 
-	procInitializeExecutionState := initializeExecutionState{
-		dep: h.dep,
-		msg: &msg,
-	}
-	err = f.Procedure(ctx, &procInitializeExecutionState, true)
-	if err != nil {
-		if err == flow.ErrCancelled {
-			return nil
+	for _, elem := range results.Queue {
+		if !elem.RequestRef.IsRecordScope() {
+			return errors.Errorf("results.RecordRef should be RecordReference; ref=%s", results.RecordRef.String())
 		}
-		err := errors.Wrap(err, "[ HandleExecutorResults ] Failed to initialize execution state")
-		return err
+		if err := checkIncomingRequest(ctx, elem.Incoming); err != nil {
+			return errors.Wrap(err, "failed to check ExecutionQueue of ExecutorResults")
+		}
 	}
 
 	return nil
 }
 
 func (h *HandleExecutorResults) Present(ctx context.Context, f flow.Flow) error {
-	logger := inslogger.FromContext(ctx)
-
-	logger.Debug("HandleExecutorResults.Present starts ...")
-
 	message := payload.ExecutorResults{}
-	err := message.Unmarshal(h.Message.Payload)
+	err := message.Unmarshal(h.meta.Payload)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal message")
 	}
 
+	ctx, logger := inslogger.WithField(ctx, "object", message.RecordRef.String())
+	logger.Debug("handling ExecutorResults")
+
 	ctx, span := instracer.StartSpan(ctx, "HandleExecutorResults.Present")
 	defer span.End()
 
-	err = h.realHandleExecutorState(ctx, f, message)
-	if err != nil {
+	if err := checkPayloadExecutorResults(ctx, message); err != nil {
 		return err
 	}
-	go h.dep.Sender.Reply(ctx, h.Message, bus.ReplyAsMessage(ctx, &reply.OK{}))
+
+	return h.handleMessage(ctx, message)
+}
+
+func (h *HandleExecutorResults) handleMessage(ctx context.Context, msg payload.ExecutorResults) error {
+	done, err := h.dep.WriteAccessor.Begin(ctx, flow.Pulse(ctx))
+	if err != nil {
+		if err == writecontroller.ErrWriteClosed {
+			return flow.ErrCancelled
+		}
+		return errors.Wrap(err, "failed to acquire write access")
+	}
+	defer done()
+
+	broker := h.dep.StateStorage.UpsertExecutionState(msg.RecordRef)
+	broker.PrevExecutorPendingResult(ctx, msg.Pending)
+
+	if msg.LedgerHasMoreRequests {
+		stats.Record(ctx, metrics.ExecutorResultsRequestsFromPrevExecutor.M(1))
+		broker.MoreRequestsOnLedger(ctx)
+	}
+
+	if len(msg.Queue) > 0 {
+		transcripts := make([]*common.Transcript, len(msg.Queue))
+		for i, qe := range msg.Queue {
+			transcripts[i] = common.NewTranscriptCloneContext(qe.ServiceData, qe.RequestRef, *qe.Incoming)
+		}
+		broker.AddRequestsFromPrevExecutor(ctx, transcripts...)
+	}
+
 	return nil
 }

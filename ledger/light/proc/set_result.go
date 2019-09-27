@@ -20,6 +20,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
@@ -28,8 +32,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/object"
-	"github.com/pkg/errors"
-	"go.opencensus.io/stats"
 )
 
 type SetResult struct {
@@ -39,13 +41,14 @@ type SetResult struct {
 	sideEffect record.State
 
 	dep struct {
-		writer   executor.WriteAccessor
-		filament executor.FilamentCalculator
-		sender   bus.Sender
-		locker   object.IndexLocker
-		records  object.AtomicRecordModifier
-		indexes  object.MemoryIndexStorage
-		pcs      insolar.PlatformCryptographyScheme
+		writer           executor.WriteAccessor
+		filament         executor.FilamentCalculator
+		sender           bus.Sender
+		locker           object.IndexLocker
+		records          object.AtomicRecordModifier
+		indexes          object.MemoryIndexStorage
+		pcs              insolar.PlatformCryptographyScheme
+		detachedNotifier executor.DetachedNotifier
 	}
 }
 
@@ -71,6 +74,7 @@ func (p *SetResult) Dep(
 	r object.AtomicRecordModifier,
 	i object.MemoryIndexStorage,
 	pcs insolar.PlatformCryptographyScheme,
+	dn executor.DetachedNotifier,
 ) {
 	p.dep.writer = w
 	p.dep.sender = s
@@ -79,6 +83,7 @@ func (p *SetResult) Dep(
 	p.dep.records = r
 	p.dep.indexes = i
 	p.dep.pcs = pcs
+	p.dep.detachedNotifier = dn
 }
 
 func (p *SetResult) Proceed(ctx context.Context) error {
@@ -92,7 +97,7 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
 		"object_id":  objectID.DebugString(),
 		"result_id":  resultID.DebugString(),
-		"request_id": p.result.Request.Record().DebugString(),
+		"request_id": p.result.Request.GetLocal().DebugString(),
 	})
 	logger.Debug("trying to save result")
 
@@ -105,12 +110,10 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "failed to fetch index")
 	}
 	if p.sideEffect != nil && index.Lifeline.StateID == record.StateDeactivation {
-		msg, err := payload.NewMessage(&payload.Error{Text: "object is deactivated", Code: payload.CodeDeactivated})
-		if err != nil {
-			return errors.Wrap(err, "failed to create reply")
+		return &payload.CodedError{
+			Text: "object is deactivated",
+			Code: payload.CodeDeactivated,
 		}
-		p.dep.sender.Reply(ctx, p.message, msg)
-		return nil
 	}
 	if index.Lifeline.LatestRequest != nil && resultID.Pulse() < index.Lifeline.LatestRequest.Pulse() {
 		return errors.New("result from the past")
@@ -127,14 +130,24 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 			if err != nil {
 				return errors.Wrap(err, "failed to marshal result")
 			}
-			msg, err := payload.NewMessage(&payload.ResultInfo{
-				ObjectID: p.result.Object,
-				ResultID: res.RecordID,
-				Result:   resBuf,
-			})
+
+			var msg *message.Message
+			if res.RecordID == resultID {
+				msg, err = payload.NewMessage(&payload.ResultInfo{
+					ObjectID: p.result.Object,
+					ResultID: res.RecordID,
+				})
+			} else {
+				msg, err = payload.NewMessage(&payload.ErrorResultExists{
+					ObjectID: p.result.Object,
+					ResultID: res.RecordID,
+					Result:   resBuf,
+				})
+			}
 			if err != nil {
 				return errors.Wrap(err, "failed to create reply")
 			}
+
 			logger.Debug("result duplicate found")
 			p.dep.sender.Reply(ctx, p.message, msg)
 			return nil
@@ -148,6 +161,18 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 	closedRequest, err := findClosed(opened, p.result)
 	if err != nil {
 		return errors.Wrap(err, "failed to find request being closed")
+	}
+
+	if p.sideEffect != nil {
+		err = checkRequestCanChangeState(closedRequest)
+		if err != nil {
+			return errors.Wrap(err, "request is not allowed to change object state")
+		}
+	}
+
+	err = checkOutgoings(opened, closedRequest.RecordID)
+	if err != nil {
+		return errors.Wrap(err, "open outgoings found")
 	}
 	earliestPending, err := calcPending(opened, closedRequest.RecordID)
 	if err != nil {
@@ -224,6 +249,7 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 		index.LifelineLastUsed = flow.Pulse(ctx)
 		index.Lifeline.LatestRequest = &Filament.ID
 		index.Lifeline.EarliestOpenRequest = earliestPending
+		index.Lifeline.OpenRequestsCount--
 		p.dep.indexes.Set(ctx, resultID.Pulse(), index)
 		return nil
 	}()
@@ -231,11 +257,11 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 		return err
 	}
 
-	stats.Record(ctx, statRequestsClosed.M(1))
+	stats.Record(ctx, executor.StatRequestsClosed.M(1))
 
-	// Only incoming request cannot be a reason. We are only interested in potential reason requests.
+	// Only incoming request can be a reason. We are only interested in potential reason requests.
 	if _, ok := record.Unwrap(&closedRequest.Record.Virtual).(*record.IncomingRequest); ok {
-		notifyDetached(ctx, p.dep.sender, opened, objectID, closedRequest.RecordID)
+		p.dep.detachedNotifier.Notify(ctx, opened, objectID, closedRequest.RecordID)
 	}
 
 	msg, err := payload.NewMessage(&payload.ResultInfo{
@@ -247,6 +273,27 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 	}
 	logger.Debug("result saved")
 	p.dep.sender.Reply(ctx, p.message, msg)
+	return nil
+}
+
+// If we have side effect than check that request of received result is not outgoing and not immutable incoming
+func checkRequestCanChangeState(request record.CompositeFilamentRecord) error {
+	rec := record.Unwrap(&request.Record.Virtual)
+	switch req := rec.(type) {
+	case *record.OutgoingRequest:
+		return &payload.CodedError{
+			Text: "outgoing request can't change object state, id: " + request.RecordID.DebugString(),
+			Code: payload.CodeRequestInvalid,
+		}
+	case *record.IncomingRequest:
+		if req.Immutable {
+			return &payload.CodedError{
+				Text: "immutable incoming request can't change object state, id: " + request.RecordID.DebugString(),
+				Code: payload.CodeRequestInvalid,
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -283,7 +330,7 @@ func calcPending(opened []record.CompositeFilamentRecord, closedRequestID insola
 // findClosed looks for request that was closed by provided result. Returns error if not found.
 func findClosed(reqs []record.CompositeFilamentRecord, result record.Result) (record.CompositeFilamentRecord, error) {
 	for _, req := range reqs {
-		if req.RecordID == *result.Request.Record() {
+		if req.RecordID == *result.Request.GetLocal() {
 			found := record.Unwrap(&req.Record.Virtual)
 			if _, ok := found.(record.Request); ok {
 				return req, nil
@@ -294,49 +341,31 @@ func findClosed(reqs []record.CompositeFilamentRecord, result record.Result) (re
 
 	return record.CompositeFilamentRecord{},
 		&payload.CodedError{
-			Text: fmt.Sprintf("request %s not found", result.Request.Record().DebugString()),
+			Text: fmt.Sprintf("request %s not found", result.Request.GetLocal().DebugString()),
 			Code: payload.CodeRequestNotFound,
 		}
 }
 
-// notifyDetached sends notifications about detached requests that are ready for execution.
-func notifyDetached(
-	ctx context.Context,
-	sender bus.Sender,
-	opened []record.CompositeFilamentRecord,
-	objectID, closedRequestID insolar.ID,
-) {
-	for _, req := range opened {
-		outgoing, ok := record.Unwrap(&req.Record.Virtual).(*record.OutgoingRequest)
+func checkOutgoings(openedRequests []record.CompositeFilamentRecord, closedRequestID insolar.ID) error {
+	for _, req := range openedRequests {
+		found := record.Unwrap(&req.Record.Virtual)
+		parsedReq, ok := found.(record.Request)
 		if !ok {
 			continue
 		}
-		if !outgoing.IsDetached() {
-			continue
-		}
-		if reasonRef := outgoing.ReasonRef(); *reasonRef.Record() != closedRequestID {
+		out, ok := parsedReq.(*record.OutgoingRequest)
+		if !ok {
 			continue
 		}
 
-		buf, err := req.Record.Virtual.Marshal()
-		if err != nil {
-			inslogger.FromContext(ctx).Error(
-				errors.Wrapf(err, "failed to notify about detached %s", req.RecordID.DebugString()),
-			)
-			return
+		// Is not saga and reason of opened outgoing is equal request closed by this set_result
+		if !out.IsDetached() && out.Reason.GetLocal().Equal(closedRequestID) {
+			return &payload.CodedError{
+				Text: "request " + closedRequestID.DebugString() + " is reason for non closed outgoing request " + req.RecordID.DebugString(),
+				Code: payload.CodeNonClosedOutgoing,
+			}
 		}
-		msg, err := payload.NewMessage(&payload.SagaCallAcceptNotification{
-			ObjectID:          objectID,
-			DetachedRequestID: req.RecordID,
-			Request:           buf,
-		})
-		if err != nil {
-			inslogger.FromContext(ctx).Error(
-				errors.Wrapf(err, "failed to notify about detached %s", req.RecordID.DebugString()),
-			)
-			return
-		}
-		_, done := sender.SendRole(ctx, msg, insolar.DynamicRoleVirtualExecutor, *insolar.NewReference(objectID))
-		done()
 	}
+
+	return nil
 }

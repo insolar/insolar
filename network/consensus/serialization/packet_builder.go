@@ -53,6 +53,9 @@ package serialization
 import (
 	"bytes"
 	"context"
+	"github.com/insolar/insolar/instrumentation/insmetrics"
+	"github.com/insolar/insolar/network"
+	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
@@ -183,10 +186,6 @@ func (pb *PacketBuilder) PreparePhase2Packet(
 		packet.Header.setPacketType(phases.PacketExtPhase2)
 	}
 
-	if !options.HasAny(transport.OnlyBriefIntroAboutJoiner) {
-		packet.Header.SetFlag(FlagHasJoinerExt)
-	}
-
 	packet.Header.SetFlag(FlagSelfIntro1)
 	if welcome != nil {
 		packet.Header.ClearFlag(FlagSelfIntro1)
@@ -255,12 +254,15 @@ func (p *PreparedPacketSender) SendTo(
 	var buf [packetMaxSize]byte
 	buffer := bytes.NewBuffer(buf[0:0:packetMaxSize])
 
-	_, err := p.packet.SerializeTo(ctx, buffer, p.digester, p.signer)
+	n, err := p.packet.SerializeTo(ctx, buffer, p.digester, p.signer)
 	if err != nil {
 		inslogger.FromContext(ctx).Error(err)
 	}
 
 	sender.SendPacketToTransport(ctx, target, sendOptions, buffer.Bytes())
+
+	ctx = insmetrics.InsertTag(ctx, network.TagPhase, p.packet.Header.GetPacketType().String())
+	stats.Record(ctx, network.ConsensusPacketsSent.M(n))
 }
 
 func (p *PreparedPacketSender) SendToMany(

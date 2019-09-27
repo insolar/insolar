@@ -52,74 +52,73 @@ package termination
 
 import (
 	"context"
-	"fmt"
+	"github.com/insolar/insolar/network/storage"
 	"sync"
 
-	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 
 	"github.com/insolar/insolar/insolar"
 )
 
-type terminationHandler struct {
+type Handler struct {
 	sync.Mutex
-	done        chan insolar.LeaveApproved
+	done        chan struct{}
 	terminating bool
 
-	Network       insolar.Network `inject:""`
-	PulseAccessor pulse.Accessor  `inject:""`
+	Leaver        insolar.Leaver
+	PulseAccessor storage.PulseAccessor `inject:""`
 }
 
-func NewHandler(nw insolar.Network) insolar.TerminationHandler {
-	return &terminationHandler{Network: nw}
+func NewHandler(l insolar.Leaver) *Handler {
+	return &Handler{Leaver: l}
 }
 
 // TODO take ETA by role of node
-func (t *terminationHandler) Leave(ctx context.Context, leaveAfterPulses insolar.PulseNumber) {
+func (t *Handler) Leave(ctx context.Context, leaveAfterPulses insolar.PulseNumber) {
 	doneChan := t.leave(ctx, leaveAfterPulses)
 	<-doneChan
 }
 
-func (t *terminationHandler) leave(ctx context.Context, leaveAfterPulses insolar.PulseNumber) chan insolar.LeaveApproved {
+func (t *Handler) leave(ctx context.Context, leaveAfterPulses insolar.PulseNumber) chan struct{} {
 	t.Lock()
 	defer t.Unlock()
 
 	if !t.terminating {
 		t.terminating = true
-		t.done = make(chan insolar.LeaveApproved, 1)
+		t.done = make(chan struct{}, 1)
 
 		if leaveAfterPulses == 0 {
-			inslogger.FromContext(ctx).Debug("terminationHandler.Leave() with 0")
-			t.Network.Leave(ctx, 0)
+			inslogger.FromContext(ctx).Debug("Handler.Leave() with 0")
+			t.Leaver.Leave(ctx, 0)
 		} else {
-			pulse, err := t.PulseAccessor.Latest(ctx)
+			pulse, err := t.PulseAccessor.GetLatestPulse(ctx)
 			if err != nil {
-				panic(fmt.Sprintf("smth goes wrong. There is no pulse in the storage. err - %v", err))
+				inslogger.FromContext(ctx).Panicf("smth goes wrong. There is no pulse in the storage. err - %v", err)
 			}
 			pulseDelta := pulse.NextPulseNumber - pulse.PulseNumber
 
-			inslogger.FromContext(ctx).Debugf("terminationHandler.Leave() with leaveAfterPulses: %+v, in pulse %+v", leaveAfterPulses, pulse.PulseNumber+leaveAfterPulses*pulseDelta)
-			t.Network.Leave(ctx, pulse.PulseNumber+leaveAfterPulses*pulseDelta)
+			inslogger.FromContext(ctx).Debugf("Handler.Leave() with leaveAfterPulses: %+v, in pulse %+v", leaveAfterPulses, pulse.PulseNumber+leaveAfterPulses*pulseDelta)
+			t.Leaver.Leave(ctx, pulse.PulseNumber+leaveAfterPulses*pulseDelta)
 		}
 	}
 
 	return t.done
 }
 
-func (t *terminationHandler) OnLeaveApproved(ctx context.Context) {
+func (t *Handler) OnLeaveApproved(ctx context.Context) {
 	t.Lock()
 	defer t.Unlock()
 	if t.terminating {
-		inslogger.FromContext(ctx).Debug("terminationHandler.OnLeaveApproved() received")
+		inslogger.FromContext(ctx).Debug("Handler.OnLeaveApproved() received")
 		t.terminating = false
 		close(t.done)
 	}
 }
 
-func (t *terminationHandler) Abort(reason string) {
-	panic(reason)
+func (t *Handler) Abort(ctx context.Context, reason string) {
+	inslogger.FromContext(ctx).Fatal(reason)
 }
 
-func (t *terminationHandler) Terminating() bool {
+func (t *Handler) Terminating() bool {
 	return t.terminating
 }

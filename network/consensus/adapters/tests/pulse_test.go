@@ -54,6 +54,7 @@ import (
 	"bytes"
 	"context"
 	"math/rand"
+	"net"
 	"sync"
 	"time"
 
@@ -103,11 +104,11 @@ func (p *Pulsar) Pulse(ctx context.Context, attempts int) {
 
 	pu := adapters.NewPulse(data)
 	ph, _ := host.NewHost("127.0.0.1:1")
-	th, _ := host.NewHost("127.0.0.1:2")
+	th, _ := net.ResolveTCPAddr("tcp", "127.0.0.1:2")
 	pp := pulsenetwork.NewPulsePacketWithTrace(ctx, &pu, ph, th, 0)
 
 	bs, _ := packet.SerializePacket(pp)
-	rp, _ := packet.DeserializePacketRaw(bytes.NewReader(bs))
+	rp, _, _ := packet.DeserializePacketRaw(bytes.NewReader(bs))
 
 	go func() {
 		for i := 0; i < attempts; i++ {

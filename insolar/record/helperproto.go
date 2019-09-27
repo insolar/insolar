@@ -28,18 +28,6 @@ func Wrap(record Record) Virtual {
 				Genesis: generic,
 			},
 		}
-	case *Child:
-		return Virtual{
-			Union: &Virtual_Child{
-				Child: generic,
-			},
-		}
-	case *Jet:
-		return Virtual{
-			Union: &Virtual_Jet{
-				Jet: generic,
-			},
-		}
 	case *IncomingRequest:
 		return Virtual{
 			Union: &Virtual_IncomingRequest{
@@ -56,12 +44,6 @@ func Wrap(record Record) Virtual {
 		return Virtual{
 			Union: &Virtual_Result{
 				Result: generic,
-			},
-		}
-	case *Type:
-		return Virtual{
-			Union: &Virtual_Type{
-				Type: generic,
 			},
 		}
 	case *Code:
@@ -106,18 +88,12 @@ func Unwrap(v *Virtual) Record {
 	switch r := v.Union.(type) {
 	case *Virtual_Genesis:
 		return r.Genesis
-	case *Virtual_Child:
-		return r.Child
-	case *Virtual_Jet:
-		return r.Jet
 	case *Virtual_IncomingRequest:
 		return r.IncomingRequest
 	case *Virtual_OutgoingRequest:
 		return r.OutgoingRequest
 	case *Virtual_Result:
 		return r.Result
-	case *Virtual_Type:
-		return r.Type
 	case *Virtual_Code:
 		return r.Code
 	case *Virtual_Activate:
@@ -128,6 +104,8 @@ func Unwrap(v *Virtual) Record {
 		return r.Deactivate
 	case *Virtual_PendingFilament:
 		return r.PendingFilament
+	case nil:
+		return nil
 	default:
 		panic(fmt.Sprintf("%T virtual record unknown type", r))
 	}

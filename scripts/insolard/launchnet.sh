@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-set -e
+set -em
 # requires: lsof, awk, sed, grep, pgrep
 
 # Changeable environment variables (parameters)
 INSOLAR_ARTIFACTS_DIR=${INSOLAR_ARTIFACTS_DIR:-".artifacts"}/
 LAUNCHNET_BASE_DIR=${LAUNCHNET_BASE_DIR:-"${INSOLAR_ARTIFACTS_DIR}launchnet"}/
 
-INSOLAR_LOG_FORMATTER=${INSOLAR_LOG_FORMATTER:-"text"}
+INSOLAR_LOG_FORMATTER=${INSOLAR_LOG_FORMATTER:-""}
 INSOLAR_LOG_LEVEL=${INSOLAR_LOG_LEVEL:-"debug"}
 GORUND_LOG_LEVEL=${GORUND_LOG_LEVEL:-${INSOLAR_LOG_LEVEL}}
 # we can skip build binaries (by default in CI environment they skips)
@@ -26,7 +26,9 @@ INSGORUND=$BIN_DIR/insgorund
 PULSARD=$BIN_DIR/pulsard
 PULSEWATCHER=$BIN_DIR/pulsewatcher
 
-# TODO: move to launchnet dir
+# DUMP_METRICS_ENABLE enables metrics dump to logs dir after every functest
+DUMP_METRICS_ENABLE=${DUMP_METRICS_ENABLE:-"1"}
+
 PULSAR_DATA_DIR=${LAUNCHNET_BASE_DIR}pulsar_data
 PULSAR_CONFIG=${LAUNCHNET_BASE_DIR}pulsar.yaml
 
@@ -38,7 +40,6 @@ PULSAR_KEYS=${CONFIGS_DIR}pulsar_keys.json
 HEAVY_GENESIS_CONFIG_FILE=${CONFIGS_DIR}heavy_genesis.json
 CONTRACTS_PLUGINS_DIR=${LAUNCHNET_BASE_DIR}contracts
 
-# TODO: use only heavy matereal data dir
 DISCOVERY_NODES_DATA=${LAUNCHNET_BASE_DIR}discoverynodes/
 
 DISCOVERY_NODES_HEAVY_DATA=${DISCOVERY_NODES_DATA}1/
@@ -65,6 +66,22 @@ do
     DISCOVERY_NODE_DIRS+=(${DISCOVERY_NODES_DATA}${i})
 done
 
+# LOGROTATOR_ENABLE enables log rotation before every functest start
+LOGROTATOR_ENABLE=${LOGROTATOR_ENABLE:-""}
+LOGROTATOR=tee
+LOGROTATOR_BIN=${LAUNCHNET_BASE_DIR}inslogrotator
+if [[ "$LOGROTATOR_ENABLE" == "1" ]]; then
+  LOGROTATOR=${LOGROTATOR_BIN}
+fi
+
+build_logger()
+{
+    echo "build logger binaries"
+    pushd scripts/_logger
+    GO111MODULE=on go build -o inslogrotator .
+    popd
+    mv scripts/_logger/inslogrotator ${LOGROTATOR_BIN}
+}
 
 kill_port()
 {
@@ -72,9 +89,20 @@ kill_port()
     pids=$(lsof -i :$port | grep "LISTEN\|UDP" | awk '{print $2}')
     for pid in $pids
     do
-        echo "killing pid $pid"
-        kill -9 $pid
+        echo -n "killing pid $pid at "
+        date
+        kill -ABRT $pid
     done
+}
+
+kill_all()
+{
+  echo "kill all processes: insgorund, insolard, pulsard"
+  set +e
+  killall insgorund
+  killall insolard
+  killall pulsard
+  set -e
 }
 
 stop_listening()
@@ -107,6 +135,12 @@ stop_listening()
     done
 
     echo "stop_listening() end."
+}
+
+stop_all()
+{
+  stop_listening true
+  kill_all
 }
 
 clear_dirs()
@@ -192,10 +226,36 @@ generate_root_member_keys()
 {
     echo "generate members keys in dir: $CONFIGS_DIR"
     bin/insolar gen-key-pair > ${CONFIGS_DIR}root_member_keys.json
+    bin/insolar gen-key-pair > ${CONFIGS_DIR}fee_member_keys.json
     bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_admin_member_keys.json
     for (( b = 0; b < 10; b++ ))
     do
     bin/insolar gen-key-pair > ${CONFIGS_DIR}migration_daemon_${b}_member_keys.json
+    done
+
+    for (( b = 0; b < 30; b++ ))
+    do
+    bin/insolar gen-key-pair > ${CONFIGS_DIR}network_incentives_${b}_member_keys.json
+    done
+
+    for (( b = 0; b < 30; b++ ))
+    do
+    bin/insolar gen-key-pair > ${CONFIGS_DIR}application_incentives_${b}_member_keys.json
+    done
+
+    for (( b = 0; b < 30; b++ ))
+    do
+    bin/insolar gen-key-pair > ${CONFIGS_DIR}foundation_${b}_member_keys.json
+    done
+
+    for (( b = 0; b < 2; b++ ))
+    do
+    bin/insolar gen-key-pair > ${CONFIGS_DIR}funds_${b}_member_keys.json
+    done
+
+    for (( b = 0; b < 3; b++ ))
+    do
+    bin/insolar gen-key-pair > ${CONFIGS_DIR}enterprise_${b}_member_keys.json
     done
 }
 
@@ -316,6 +376,14 @@ wait_for_complete_network_state()
     done
 }
 
+# used only when backup is switched on
+generate_last_backup_info()
+{
+    echo "generate file with last backup info: $DISCOVERY_NODES_DATA/1/data/last_backup_info.json"
+    mkdir -p $DISCOVERY_NODES_DATA/1/data
+    echo "{ \"LastBackupedVersion\": 0 }" > $DISCOVERY_NODES_DATA/1/data/last_backup_info.json
+}
+
 bootstrap()
 {
     echo "bootstrap start"
@@ -329,6 +397,7 @@ bootstrap()
     generate_root_member_keys
     generate_insolard_configs
     generate_migration_addresses
+    generate_last_backup_info
 
     echo "start bootstrap ..."
     CMD="${INSOLAR_CLI} bootstrap --config=${BOOTSTRAP_CONFIG} --certificates-out-dir=${DISCOVERY_NODES_DATA}certs"
@@ -365,13 +434,14 @@ watch_pulse=true
 check_working_dir
 process_input_params $@
 
-trap 'stop_listening true' INT TERM EXIT
+kill_all
+trap 'stop_all' INT TERM EXIT
 
 echo "start pulsar ..."
 echo "   log: ${LAUNCHNET_LOGS_DIR}pulsar_output.log"
 set -x
 mkdir -p ${PULSAR_DATA_DIR}
-${PULSARD} -c ${PULSAR_CONFIG} --trace &> ${LAUNCHNET_LOGS_DIR}pulsar_output.log &
+${PULSARD} -c ${PULSAR_CONFIG} &> ${LAUNCHNET_LOGS_DIR}pulsar_output.log &
 { set +x; } 2>/dev/null
 echo "pulsar log: ${LAUNCHNET_LOGS_DIR}pulsar_output.log"
 
@@ -383,12 +453,25 @@ else
     echo "insgorund launch skip"
 fi
 
+handle_sigchld()
+{
+  jobs -pn
+  echo "someone left the network"
+}
+
+if [[ "$LOGROTATOR_ENABLE" == "1" ]]; then
+  echo "prepare logger"
+  build_logger
+fi
+
+trap 'handle_sigchld' SIGCHLD
+
 echo "start heavy node"
 set -x
 $INSOLARD \
     --config ${DISCOVERY_NODES_DATA}1/insolard.yaml \
     --heavy-genesis ${HEAVY_GENESIS_CONFIG_FILE} \
-    --trace &> ${DISCOVERY_NODE_LOGS}1/output.log &
+    2>&1 | ${LOGROTATOR} ${DISCOVERY_NODE_LOGS}1/output.log > /dev/null &
 { set +x; } 2>/dev/null
 echo "heavy node started in background"
 echo "log: ${DISCOVERY_NODE_LOGS}1/output.log"
@@ -399,7 +482,7 @@ do
     set -x
     $INSOLARD \
         --config ${DISCOVERY_NODES_DATA}${i}/insolard.yaml \
-        --trace &> ${DISCOVERY_NODE_LOGS}${i}/output.log &
+        2>&1 | ${LOGROTATOR} ${DISCOVERY_NODE_LOGS}${i}/output.log > /dev/null &
     { set +x; } 2>/dev/null
     echo "discovery node $i started in background"
     echo "log: ${DISCOVERY_NODE_LOGS}${i}/output.log"

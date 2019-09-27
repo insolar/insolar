@@ -23,7 +23,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/store"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/jbenet/go-base58"
+	base58 "github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 )
 
@@ -66,11 +66,13 @@ func (ds *DB) ForPulse(ctx context.Context, jetID insolar.JetID, pulse insolar.P
 	if err != nil {
 		return Drop{}, err
 	}
-	drop, err := Decode(buf)
+
+	drop := Drop{}
+	err = drop.Unmarshal(buf)
 	if err != nil {
 		return Drop{}, err
 	}
-	return *drop, nil
+	return drop, nil
 }
 
 // Set saves a provided Drop to a db.
@@ -82,7 +84,11 @@ func (ds *DB) Set(ctx context.Context, drop Drop) error {
 		return ErrOverride
 	}
 
-	encoded := MustEncode(&drop)
+	encoded, err := drop.Marshal()
+	if err != nil {
+		return err
+	}
+
 	return ds.db.Set(&k, encoded)
 }
 

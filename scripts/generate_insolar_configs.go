@@ -151,6 +151,8 @@ func main() {
 		}
 
 		conf.APIRunner.Address = fmt.Sprintf(defaultHost+":191%02d", nodeIndex)
+		conf.AvailabilityChecker.Enabled = false
+		conf.AdminAPIRunner.Address = fmt.Sprintf(defaultHost+":190%02d", nodeIndex)
 		conf.Metrics.ListenAddress = fmt.Sprintf(defaultHost+":80%02d", nodeIndex)
 		conf.Introspection.Addr = fmt.Sprintf(defaultHost+":555%02d", nodeIndex)
 
@@ -165,9 +167,9 @@ func main() {
 
 		discoveryNodesConfigs = append(discoveryNodesConfigs, conf)
 
-		promVars.addTarget(node.Role, conf)
+		promVars.addTarget("insolard", conf)
 
-		pwConfig.Nodes = append(pwConfig.Nodes, conf.APIRunner.Address)
+		pwConfig.Nodes = append(pwConfig.Nodes, conf.AdminAPIRunner.Address)
 	}
 
 	// process extra nodes
@@ -192,6 +194,7 @@ func main() {
 		}
 
 		conf.APIRunner.Address = fmt.Sprintf(defaultHost+":191%02d", nodeIndex+len(bootstrapConf.DiscoveryNodes))
+		conf.AdminAPIRunner.Address = fmt.Sprintf(defaultHost+":190%02d", nodeIndex+len(bootstrapConf.DiscoveryNodes))
 		conf.Metrics.ListenAddress = fmt.Sprintf(defaultHost+":80%02d", nodeIndex+len(bootstrapConf.DiscoveryNodes))
 		conf.Introspection.Addr = fmt.Sprintf(defaultHost+":555%02d", nodeIndex+len(bootstrapConf.DiscoveryNodes))
 
@@ -206,9 +209,9 @@ func main() {
 
 		nodesConfigs = append(nodesConfigs, conf)
 
-		promVars.addTarget(node.Role, conf)
+		promVars.addTarget("insolard", conf)
 
-		pwConfig.Nodes = append(pwConfig.Nodes, conf.APIRunner.Address)
+		pwConfig.Nodes = append(pwConfig.Nodes, conf.AdminAPIRunner.Address)
 	}
 
 	writePromConfig(promVars)

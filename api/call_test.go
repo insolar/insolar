@@ -22,85 +22,33 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
 	"github.com/gojuno/minimock"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
+	"github.com/insolar/insolar/insolar/reply"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
-	"github.com/stretchr/testify/suite"
 
 	"github.com/insolar/insolar/api/requester"
-	"github.com/insolar/insolar/api/seedmanager"
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 )
 
 const CallUrl = "http://localhost:19192/api/rpc"
 
-type TimeoutSuite struct {
-	suite.Suite
-
-	mc    *minimock.Controller
-	ctx   context.Context
-	api   *Runner
-	user  *requester.UserConfigJSON
-	delay chan struct{}
-}
-
-func (suite *TimeoutSuite) TestRunner_callHandler_NoTimeout() {
-	seed, err := suite.api.SeedGenerator.Next()
-	suite.NoError(err)
-	suite.api.SeedManager.Add(*seed, 0)
-
-	close(suite.delay)
-	suite.api.timeout = 60 * time.Second
-	seedString := base64.StdEncoding.EncodeToString(seed[:])
-
-	resp, err := requester.SendWithSeed(
-		suite.ctx,
-		CallUrl,
-		suite.user,
-		&requester.Params{CallSite: "member.create", CallParams: map[string]interface{}{}, PublicKey: suite.user.PublicKey},
-		seedString,
-	)
-	suite.NoError(err)
-
-	var result requester.ContractResponse
-	err = json.Unmarshal(resp, &result)
-	suite.NoError(err)
-	suite.Nil(result.Error)
-	suite.Equal("OK", result.Result.CallResult)
-}
-
-func (suite *TimeoutSuite) TestRunner_callHandler_Timeout() {
-	seed, err := suite.api.SeedGenerator.Next()
-	suite.NoError(err)
-	suite.api.SeedManager.Add(*seed, 0)
-
-	suite.api.timeout = 1 * time.Millisecond
-
-	seedString := base64.StdEncoding.EncodeToString(seed[:])
-
-	_, err = requester.SendWithSeed(
-		suite.ctx,
-		CallUrl,
-		suite.user,
-		nil,
-		seedString,
-	)
-	suite.Error(err, "Client.Timeout exceeded while awaiting headers")
-}
-
 func TestTimeoutSuite(t *testing.T) {
-	timeoutSuite := new(TimeoutSuite)
-	timeoutSuite.ctx, _ = inslogger.WithTraceField(context.Background(), "APItests")
-	timeoutSuite.mc = minimock.NewController(t)
+
+	ctx, _ := inslogger.WithTraceField(context.Background(), "APItests")
+	mc := minimock.NewController(t)
+	defer mc.Wait(17 * time.Second)
+	defer mc.Finish()
 
 	ks := platformpolicy.NewKeyProcessor()
 	sKey, err := ks.GeneratePrivateKey()
@@ -112,43 +60,69 @@ func TestTimeoutSuite(t *testing.T) {
 	require.NoError(t, err)
 
 	userRef := gen.Reference().String()
-	timeoutSuite.user, err = requester.CreateUserConfig(userRef, string(sKeyString), string(pKeyString))
+	user, err := requester.CreateUserConfig(userRef, string(sKeyString), string(pKeyString))
 
-	http.DefaultServeMux = new(http.ServeMux)
-	cfg := configuration.NewAPIRunner()
-	cfg.Address = "localhost:19192"
-	timeoutSuite.api, err = NewRunner(&cfg)
-	require.NoError(t, err)
-	timeoutSuite.api.timeout = 1 * time.Second
-
-	cr := testutils.NewContractRequesterMock(timeoutSuite.mc)
-	cr.SendRequestWithPulseMock.Set(func(p context.Context, p1 *insolar.Reference, method string, p3 []interface{}, p4 insolar.PulseNumber) (insolar.Reply, *insolar.Reference, error) {
-		requestReference, _ := insolar.NewReferenceFromBase58("4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.4FFB8zfQoGznSmzDxwv4njX1aR9ioL8GHSH17QXH2AFa")
+	cr := testutils.NewContractRequesterMock(mc)
+	cr.CallMock.Set(func(p context.Context, p1 *insolar.Reference, method string, p3 []interface{}, p4 insolar.PulseNumber) (insolar.Reply, *insolar.Reference, error) {
+		requestReference, _ := insolar.NewReferenceFromBase58("14K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.14FFB8zfQoGznSmzDxwv4njX1aR9ioL8GHSH17QXH2AFa")
 		switch method {
-		case "GetPublicKey":
-			var result = string(pKeyString)
-			data, _ := foundation.MarshalMethodResult(result, nil)
-			return &reply.CallMethod{
-				Result: data,
-			}, requestReference, nil
-		default:
-			<-timeoutSuite.delay
+		case "Call":
 			var result = "OK"
 			data, _ := foundation.MarshalMethodResult(result, nil)
 			return &reply.CallMethod{
 				Result: data,
 			}, requestReference, nil
+		default:
+			return nil, nil, errors.New("Unknown method: " + method)
 		}
 	})
 
-	timeoutSuite.api.ContractRequester = cr
-	timeoutSuite.api.Start(timeoutSuite.ctx)
-	timeoutSuite.api.SeedManager = seedmanager.NewSpecified(time.Minute, time.Minute)
+	checker := testutils.NewAvailabilityCheckerMock(mc)
+	checker.IsAvailableMock.Return(true)
+
+	http.DefaultServeMux = new(http.ServeMux)
+	cfg := configuration.NewAPIRunner(false)
+	cfg.Address = "localhost:19192"
+	api, err := NewRunner(
+		&cfg,
+		nil,
+		cr,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		checker,
+	)
+	require.NoError(t, err)
+	seed, err := api.SeedGenerator.Next()
+	require.NoError(t, err)
+
+	api.SeedManager.Add(*seed, 0)
+
+	seedString := base64.StdEncoding.EncodeToString(seed[:])
 
 	requester.SetTimeout(25)
-	suite.Run(t, timeoutSuite)
+	req, err := requester.MakeRequestWithSeed(
+		ctx,
+		CallUrl,
+		user,
+		&requester.Params{CallSite: "member.create", CallParams: map[string]interface{}{}, PublicKey: user.PublicKey},
+		seedString,
+	)
+	require.NoError(t, err, "make request with seed error")
 
-	timeoutSuite.api.Stop(timeoutSuite.ctx)
+	rr := httptest.NewRecorder()
+	api.Handler().ServeHTTP(rr, req)
+	require.Equal(t, http.StatusOK, rr.Code, "got StatusOK http code")
+
+	var result requester.ContractResponse
+	// fmt.Println("response:", rr.Body.String())
+	err = json.Unmarshal(rr.Body.Bytes(), &result)
+	require.NoError(t, err, "json unmarshal error")
+	require.Nil(t, result.Error, "error should be nil in result")
+	require.Equal(t, "OK", result.Result.CallResult, "call result is OK")
 }
 
 func TestDigestParser(t *testing.T) {
@@ -182,13 +156,4 @@ func TestValidateRequestHeaders(t *testing.T) {
 	sig, err := validateRequestHeaders(calculatedDigest, signature, body)
 	require.NoError(t, err)
 	require.Equal(t, "bar", sig)
-}
-
-func (suite *TimeoutSuite) BeforeTest(suiteName, testName string) {
-	suite.delay = make(chan struct{}, 0)
-}
-
-func (suite *TimeoutSuite) AfterTest(suiteName, testName string) {
-	suite.mc.Wait(1 * time.Minute)
-	suite.mc.Finish()
 }

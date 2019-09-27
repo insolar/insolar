@@ -52,6 +52,7 @@ package gateway
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/insolar/insolar/network/consensus"
@@ -76,8 +77,11 @@ import (
 	"github.com/insolar/insolar/network"
 )
 
-// Base is abstract class for gateways
+const (
+	bootstrapTimeoutMessage = "Bootstrap timeout exceeded"
+)
 
+// Base is abstract class for gateways
 type Base struct {
 	component.Initer
 
@@ -93,6 +97,10 @@ type Base struct {
 	PulseManager        insolar.PulseManager        `inject:""`
 	BootstrapRequester  bootstrap.Requester         `inject:""`
 	KeyProcessor        insolar.KeyProcessor        `inject:""`
+	Aborter             network.Aborter             `inject:""`
+
+	// nolint
+	OriginProvider network.OriginProvider `inject:""`
 
 	ConsensusController   consensus.Controller
 	ConsensusPulseHandler network.PulseHandler
@@ -104,6 +112,8 @@ type Base struct {
 
 	// Next request backoff.
 	backoff time.Duration // nolint
+
+	newPulseCh chan struct{}
 }
 
 // NewGateway creates new gateway on top of existing
@@ -125,7 +135,7 @@ func (g *Base) NewGateway(ctx context.Context, state insolar.NetworkState) netwo
 	case insolar.WaitPulsar:
 		g.Self = newWaitPulsar(g)
 	default:
-		panic("Try to switch network to unknown state. Memory of process is inconsistent.")
+		inslogger.FromContext(ctx).Panic("Try to switch network to unknown state. Memory of process is inconsistent.")
 	}
 	return g.Self
 }
@@ -139,12 +149,17 @@ func (g *Base) Init(ctx context.Context) error {
 	)
 	g.HostNetwork.RegisterRequestHandler(types.UpdateSchedule, g.HandleUpdateSchedule)
 	g.HostNetwork.RegisterRequestHandler(types.Reconnect, g.HandleReconnect)
-	g.HostNetwork.RegisterRequestHandler(types.Ping, func(ctx context.Context, req network.ReceivedPacket) (network.Packet, error) {
-		return g.HostNetwork.BuildResponse(ctx, req, &packet.Ping{}), nil
-	})
 
 	g.createCandidateProfile()
 	g.bootstrapETA = g.Options.BootstrapTimeout
+	return nil
+}
+
+func (g *Base) Stop(ctx context.Context) error {
+	if g.newPulseCh != nil {
+		close(g.newPulseCh)
+	}
+
 	return nil
 }
 
@@ -153,10 +168,17 @@ func (g *Base) OnPulseFromPulsar(ctx context.Context, pu insolar.Pulse, original
 }
 
 func (g *Base) OnPulseFromConsensus(ctx context.Context, pu insolar.Pulse) {
+	if g.newPulseCh != nil {
+		g.newPulseCh <- struct{}{}
+	} else {
+		g.newPulseCh = make(chan struct{})
+		newPulseWatchdog(ctx, g, g.Options.PulseWatchdogTimeout, g.newPulseCh)
+	}
+
 	g.NodeKeeper.MoveSyncToActive(ctx, pu.PulseNumber)
 	err := g.PulseAppender.AppendPulse(ctx, pu)
 	if err != nil {
-		panic("failed to append pulse:" + err.Error())
+		inslogger.FromContext(ctx).Panic("failed to append pulse: ", err.Error())
 	}
 
 	nodes := g.NodeKeeper.GetAccessor(pu.PulseNumber).GetActiveNodes()
@@ -166,7 +188,6 @@ func (g *Base) OnPulseFromConsensus(ctx context.Context, pu insolar.Pulse) {
 // UpdateState called then Consensus done
 func (g *Base) UpdateState(ctx context.Context, pulseNumber insolar.PulseNumber, nodes []insolar.NetworkNode, cloudStateHash []byte) {
 	g.NodeKeeper.Sync(ctx, pulseNumber, nodes)
-	g.NodeKeeper.SetCloudHash(pulseNumber, cloudStateHash)
 }
 
 func (g *Base) BeforeRun(ctx context.Context, pulse insolar.Pulse) {}
@@ -208,7 +229,7 @@ func (g *Base) checkCanAnnounceCandidate(ctx context.Context) error {
 	// 		NB: announcing in WaitConsensus state is *NOT* allowed
 
 	state := g.Gatewayer.Gateway().GetState()
-	origin := g.NodeKeeper.GetOrigin()
+	origin := g.OriginProvider.GetOrigin()
 
 	if origin.Role() == insolar.StaticRoleHeavyMaterial && state >= insolar.WaitConsensus {
 		return nil
@@ -308,7 +329,7 @@ func (g *Base) HandleNodeAuthorizeRequest(ctx context.Context, request network.R
 		return nil, errors.Errorf("process authorize: got invalid protobuf request message: %s", request)
 	}
 	data := request.GetRequest().GetAuthorize().AuthorizeData
-	o := g.NodeKeeper.GetOrigin()
+	o := g.OriginProvider.GetOrigin()
 
 	if data.Version != o.Version() {
 		return nil, errors.Errorf("wrong version in AuthorizeRequest, actual network version is: %s", o.Version())
@@ -355,7 +376,7 @@ func (g *Base) HandleNodeAuthorizeRequest(ctx context.Context, request network.R
 		return nil, err
 	}
 
-	permit, err := bootstrap.CreatePermit(g.NodeKeeper.GetOrigin().ID(),
+	permit, err := bootstrap.CreatePermit(g.OriginProvider.GetOrigin().ID(),
 		reconnectHost,
 		pubKey,
 		g.CryptographyService,
@@ -401,7 +422,7 @@ func (g *Base) OnConsensusFinished(ctx context.Context, report network.Report) {
 }
 
 func (g *Base) createCandidateProfile() {
-	origin := g.NodeKeeper.GetOrigin()
+	origin := g.OriginProvider.GetOrigin()
 
 	staticProfile := adapters.NewStaticProfile(origin, g.CertificateManager.GetCertificate(), g.KeyProcessor)
 	candidate := adapters.NewCandidate(staticProfile, g.KeyProcessor)
@@ -410,8 +431,19 @@ func (g *Base) createCandidateProfile() {
 }
 
 func (g *Base) EphemeralMode(nodes []insolar.NetworkNode) bool {
-	majority, _ := rules.CheckMajorityRule(g.CertificateManager.GetCertificate(), nodes)
-	minRole := rules.CheckMinRole(g.CertificateManager.GetCertificate(), nodes)
+	_, majorityErr := rules.CheckMajorityRule(g.CertificateManager.GetCertificate(), nodes)
+	minRoleErr := rules.CheckMinRole(g.CertificateManager.GetCertificate(), nodes)
 
-	return !majority || !minRole
+	return majorityErr != nil || minRoleErr != nil
+}
+
+func (g *Base) FailState(ctx context.Context, reason string) {
+	o := g.OriginProvider.GetOrigin()
+	wrapReason := fmt.Sprintf("Abort node with address: %s role: %s state: %s, reason: %s",
+		o.Address(),
+		o.Role().String(),
+		g.Gatewayer.Gateway().GetState().String(),
+		reason,
+	)
+	g.Aborter.Abort(ctx, wrapReason)
 }

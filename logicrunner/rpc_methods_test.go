@@ -29,6 +29,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -285,7 +286,7 @@ func TestValidationProxyImplementation_RouteCall(t *testing.T) {
 					},
 				},
 			},
-			req:    rpctypes.UpRouteReq{Wait: true, Object: objRef1, Prototype: protoRef1},
+			req:    rpctypes.UpRouteReq{Object: objRef1, Prototype: protoRef1},
 			result: rpctypes.UpRouteResp{Result: []byte{1, 2, 3}},
 		},
 	}
@@ -312,37 +313,45 @@ func TestRouteCallRegistersOutgoingRequestWithValidReason(t *testing.T) {
 	mc := minimock.NewController(t)
 	defer mc.Finish()
 
+	ctx := inslogger.TestContext(t)
+
+	pulseObject := insolar.Pulse{PulseNumber: gen.PulseNumber()}
+	pa := pulse.NewAccessorMock(mc).LatestMock.Return(pulseObject, nil)
+
 	am := artifacts.NewClientMock(mc)
 	dc := artifacts.NewDescriptorsCacheMock(mc)
 	cr := testutils.NewContractRequesterMock(mc)
 	as := system.New()
-	os := NewOutgoingRequestSender(as, cr, am)
+	os := NewOutgoingRequestSender(as, cr, am, pa)
 
-	requestRef := gen.Reference()
+	objectRef := gen.Reference()
+	requestRef := gen.RecordReference()
 
 	rpcm := NewExecutionProxyImplementation(dc, cr, am, os)
-	ctx := context.Background()
-	transcript := common.NewTranscript(ctx, requestRef, record.IncomingRequest{})
-	req := rpctypes.UpRouteReq{Wait: true}
+	transcript := common.NewTranscript(ctx, requestRef, record.IncomingRequest{
+		Object: &objectRef,
+	})
+	req := rpctypes.UpRouteReq{}
 	resp := &rpctypes.UpRouteResp{}
 
 	var outreq *record.OutgoingRequest
-	outgoingReqID := gen.ID()
-	outgoingReqRef := insolar.NewReference(outgoingReqID)
+	outgoingReqRef := gen.RecordReference()
 	// Make sure an outgoing request is registered
 	am.RegisterOutgoingRequestMock.Set(func(ctx context.Context, r *record.OutgoingRequest) (*payload.RequestInfo, error) {
 		require.Nil(t, outreq)
 		require.Equal(t, record.ReturnResult, r.ReturnMode)
 		outreq = r
-		id := outgoingReqID
+		id := *outgoingReqRef.GetLocal()
 		return &payload.RequestInfo{RequestID: id}, nil
 	})
 
 	ref := gen.Reference()
-	cr.CallMock.Return(&reply.CallMethod{}, &ref, nil)
+	cr.SendRequestMock.Return(&reply.CallMethod{}, &ref, nil)
 	// Make sure the result of the outgoing request is registered as well
 	am.RegisterResultMock.Set(func(ctx context.Context, reqref insolar.Reference, result artifacts.RequestResult) (r error) {
-		require.Equal(t, outgoingReqRef, &reqref)
+		if outgoingReqRef != reqref {
+			return errors.Errorf("outgoingReqRef != reqref, ref1=%s, ref2=%s", outgoingReqRef.String(), reqref.String())
+		}
 		return nil
 	})
 
@@ -350,7 +359,9 @@ func TestRouteCallRegistersOutgoingRequestWithValidReason(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, outreq)
 	require.Equal(t, requestRef, outreq.Reason)
-	as.CloseAll()
+
+	os.Stop(ctx)
+	as.AwaitTermination()
 }
 
 func TestRouteCallRegistersSaga(t *testing.T) {

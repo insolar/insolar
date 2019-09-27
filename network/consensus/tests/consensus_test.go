@@ -189,15 +189,13 @@ type EmuRoundStrategyFactory struct {
 	bundleFactory core.PhaseControllersBundleFactory
 }
 
-func (p *EmuRoundStrategyFactory) CreateRoundStrategy(chronicle api.ConsensusChronicles,
+func (p *EmuRoundStrategyFactory) CreateRoundStrategy(pop census.OnlinePopulation,
 	config api.LocalNodeConfiguration) (core.RoundStrategy, core.PhaseControllersBundle) {
 
 	if p.bundleFactory == nil {
 		p.bundleFactory = phasebundle.NewStandardBundleFactoryDefault()
 	}
 
-	lastCensus, _ := chronicle.GetLatestCensus()
-	pop := lastCensus.GetOnlinePopulation()
 	bundle := p.bundleFactory.CreateControllersBundle(pop, config)
 	return &p.roundStrategy, bundle
 }
@@ -219,9 +217,6 @@ func (*EmuRoundStrategy) GetBaselineWeightForNeighbours() uint32 {
 
 func (*EmuRoundStrategy) ShuffleNodeSequence(n int, swap func(i, j int)) {
 	rand.Shuffle(n, swap)
-}
-
-func (*EmuRoundStrategy) AdjustConsensusTimings(timings *api.RoundTimings) {
 }
 
 var _ api.ConsensusControlFeeder = &EmuControlFeeder{}

@@ -20,15 +20,17 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"go/build"
 	"io"
 	"io/ioutil"
+	"log"
+	"net/http"
 	"os"
 	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -40,13 +42,17 @@ import (
 	"github.com/pkg/errors"
 )
 
-const HOST = "http://localhost:19102"
-const HOST_DEBUG = "http://localhost:8001"
-const TestAPIURL = HOST + "/api"
-const TestRPCUrl = TestAPIURL + "/rpc"
+const HOST = "http://localhost:"
+const AdminPort = "19002"
+const PublicPort = "19102"
+const HostDebug = "http://localhost:8001"
+const TestAdminRPCUrl = "/admin-api/rpc"
+const TestRPCUrl = HOST + AdminPort + TestAdminRPCUrl
+const TestRPCUrlPublic = HOST + PublicPort + "/api/rpc"
 
 const insolarRootMemberKeys = "root_member_keys.json"
 const insolarMigrationAdminMemberKeys = "migration_admin_member_keys.json"
+const insolarFeeMemberKeys = "fee_member_keys.json"
 
 var cmd *exec.Cmd
 var cmdCompleted = make(chan error, 1)
@@ -71,6 +77,8 @@ func Run(cb func() int) int {
 		sig := <-c
 		fmt.Printf("Got %s signal. Aborting...\n", sig)
 		teardown()
+
+		os.Exit(2)
 	}()
 
 	pulseWatcher, config, err := pulseWatcherPath()
@@ -95,12 +103,14 @@ func Run(cb func() int) int {
 var info *requester.InfoResponse
 var Root User
 var MigrationAdmin User
+var FeeMember User
 var MigrationDaemons [insolar.GenesisAmountMigrationDaemonMembers]*User
 
 type User struct {
-	Ref     string
-	PrivKey string
-	PubKey  string
+	Ref              string
+	PrivKey          string
+	PubKey           string
+	MigrationAddress string
 }
 
 func launchnetPath(a ...string) (string, error) {
@@ -133,6 +143,7 @@ func launchnetPath(a ...string) (string, error) {
 func GetNodesCount() (int, error) {
 	type nodesConf struct {
 		DiscoverNodes []interface{} `yaml:"discovery_nodes"`
+		Nodes         []interface{} `yaml:"nodes"`
 	}
 
 	var conf nodesConf
@@ -151,7 +162,7 @@ func GetNodesCount() (int, error) {
 		return 0, errors.Wrap(err, "[ getNumberNodes ] Can't parse bootstrap config")
 	}
 
-	return len(conf.DiscoverNodes), nil
+	return len(conf.DiscoverNodes) + len(conf.Nodes), nil
 }
 
 func loadMemberKeys(keysPath string, member *User) error {
@@ -182,6 +193,14 @@ func loadAllMembersKeys() error {
 	if err != nil {
 		return err
 	}
+	path, err = launchnetPath("configs", insolarFeeMemberKeys)
+	if err != nil {
+		return err
+	}
+	err = loadMemberKeys(path, &FeeMember)
+	if err != nil {
+		return err
+	}
 	path, err = launchnetPath("configs", insolarMigrationAdminMemberKeys)
 	if err != nil {
 		return err
@@ -208,7 +227,7 @@ func loadAllMembersKeys() error {
 
 func setInfo() error {
 	var err error
-	info, err = requester.Info(TestAPIURL)
+	info, err = requester.Info(TestRPCUrl)
 	if err != nil {
 		return errors.Wrap(err, "[ setInfo ] error sending request")
 	}
@@ -246,11 +265,11 @@ func waitForNet() error {
 	numAttempts := 90
 	// TODO: read ports from bootstrap config
 	ports := []string{
-		"19101",
-		"19102",
-		"19103",
-		"19104",
-		"19105",
+		"19001",
+		"19002",
+		"19003",
+		"19004",
+		"19005",
 		// "19106",
 		// "19107",
 		// "19108",
@@ -263,7 +282,7 @@ func waitForNet() error {
 	for i := 0; i < numAttempts; i++ {
 		currentOk = 0
 		for _, port := range ports {
-			resp, err := requester.Status(fmt.Sprintf("http://127.0.0.1:%s/api", port))
+			resp, err := requester.Status(fmt.Sprintf("%s%s%s", HOST, port, TestAdminRPCUrl))
 			if err != nil {
 				fmt.Println("[ waitForNet ] Problem with port " + port + ". Err: " + err.Error())
 				break
@@ -341,6 +360,13 @@ func startNet() error {
 
 }
 
+var logRotatorEnableVar = "LOGROTATOR_ENABLE"
+
+// LogRotateEnabled checks is log rotation enabled by environment variable.
+func LogRotateEnabled() bool {
+	return os.Getenv(logRotatorEnableVar) == "1"
+}
+
 func waitForLaunch() error {
 	done := make(chan bool, 1)
 	timeout := 240 * time.Second
@@ -406,27 +432,120 @@ func setup() error {
 	Root.Ref = info.RootMember
 	MigrationAdmin.Ref = info.MigrationAdminMember
 
-	//Contracts = make(map[string]*contractInfo)
-
 	return nil
 }
 
 func pulseWatcherPath() (string, string, error) {
-	p, err := build.Default.Import("github.com/insolar/insolar", "", build.FindOnly)
-	if err != nil {
-		return "", "", errors.Wrap(err, "Couldn't receive path to github.com/insolar/insolar")
-	}
-	pulseWatcher := filepath.Join(p.Dir, "bin", "pulsewatcher")
-	config := filepath.Join(p.Dir, ".artifacts", "launchnet", "pulsewatcher.yaml")
+	insDir := insolar.RootModuleDir()
+	pulseWatcher := filepath.Join(insDir, "bin", "pulsewatcher")
+
+	baseDir := defaults.PathWithBaseDir(defaults.LaunchnetDir(), insDir)
+	config := filepath.Join(baseDir, "pulsewatcher.yaml")
 	return pulseWatcher, config, nil
 }
 
 func teardown() {
-	var err error
-
-	err = stopInsolard()
+	err := stopInsolard()
 	if err != nil {
-		fmt.Println("[ teardown ]  failed to stop insolard: ", err)
+		fmt.Println("[ teardown ]  failed to stop insolard:", err)
+		return
 	}
-	fmt.Println("[ teardown ] insolard was successfully stoped")
+	fmt.Println("[ teardown ] insolard was successfully stopped")
+}
+
+// RotateLogs rotates launchnet logs, verbose flag enables printing what happens.
+func RotateLogs(verbose bool) {
+	launchnetDir := defaults.PathWithBaseDir(defaults.LaunchnetDir(), insolar.RootModuleDir())
+	dirPattern := filepath.Join(launchnetDir, "logs/*/*/*.log")
+
+	rmCmd := "rm -vf " + dirPattern
+	cmd := exec.Command("sh", "-c", rmCmd)
+	out, err := cmd.Output()
+	if err != nil {
+		log.Fatal("RotateLogs: failed to execute shell command: ", rmCmd)
+	}
+	if verbose {
+		fmt.Println("RotateLogs removed files:\n", string(out))
+	}
+
+	rotateCmd := "killall -v -SIGUSR2 inslogrotator"
+	cmd = exec.Command("sh", "-c", rotateCmd)
+	out, err = cmd.Output()
+	if err != nil {
+		if verbose {
+			println("RotateLogs killall output:", string(out))
+		}
+		log.Fatal("RotateLogs: failed to execute shell command:", rotateCmd)
+	}
+}
+
+var dumpMetricsEnabledVar = "DUMP_METRICS_ENABLE"
+
+// LogRotateEnabled checks is log rotation enabled by environment variable.
+func DumpMetricsEnabled() bool {
+	return os.Getenv(dumpMetricsEnabledVar) == "1"
+}
+
+// FetchAndSaveMetrics fetches all nodes metric endpoints and saves result to files in
+// logs/metrics/$iteration/<node-addr>.txt files.
+func FetchAndSaveMetrics(iteration int) ([][]byte, error) {
+	n, err := GetNodesCount()
+	if err != nil {
+		return nil, err
+	}
+	addrs := make([]string, n)
+	for i := 0; i < n; i++ {
+		addrs[i] = fmt.Sprintf(HOST+"80%02d", i+1)
+	}
+	results := make([][]byte, n)
+	var wg sync.WaitGroup
+	wg.Add(n)
+	for i, addr := range addrs {
+		i := i
+		addr := addr + "/metrics"
+		go func() {
+			defer wg.Done()
+
+			r, err := fetchMetrics(addr)
+			if err != nil {
+				fetchErr := fmt.Sprintf("%v fetch failed: %v\n", addr, err.Error())
+				results[i] = []byte(fetchErr)
+				return
+			}
+			results[i] = r
+		}()
+	}
+	wg.Wait()
+
+	insDir := insolar.RootModuleDir()
+	subDir := fmt.Sprintf("%04d", iteration)
+	outDir := filepath.Join(insDir, defaults.LaunchnetDir(), "logs/metrics", subDir)
+	if err := os.MkdirAll(outDir, os.ModePerm); err != nil {
+		return nil, errors.Wrap(err, "failed to create metrics subdirectory")
+	}
+
+	for i, b := range results {
+		outFile := addrs[i][strings.Index(addrs[i], "://")+3:]
+		outFile = strings.ReplaceAll(outFile, ":", "-")
+		outFile = filepath.Join(outDir, outFile) + ".txt"
+
+		err := ioutil.WriteFile(outFile, b, 0640)
+		if err != nil {
+			return nil, errors.Wrap(err, "write metrics failed")
+		}
+		fmt.Printf("Dump metrics from %v to %v\n", addrs[i], outFile)
+	}
+	return results, nil
+}
+
+func fetchMetrics(fetchURL string) ([]byte, error) {
+	r, err := http.Get(fetchURL)
+	if err != nil {
+		return nil, err
+	}
+	defer r.Body.Close()
+	if r.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("Failed to fetch metrics, got %v code", r.StatusCode)
+	}
+	return ioutil.ReadAll(r.Body)
 }

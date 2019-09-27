@@ -67,14 +67,16 @@ const (
 	TypeGetLightInitialState
 	TypeLightInitialState
 	TypeGetIndex
+	TypeSearchIndex
+	TypeSearchIndexInfo
 	TypeUpdateJet
-
 	TypeReturnResults
 	TypeCallMethod
 	TypeExecutorResults
 	TypePendingFinished
 	TypeAdditionalCallFromPreviousExecutor
 	TypeStillExecuting
+	TypeErrorResultExitsts
 
 	// should be the last (required by TypesMap)
 	_latestType
@@ -200,6 +202,9 @@ func Marshal(payload Payload) ([]byte, error) {
 	case *Index:
 		pl.Polymorph = uint32(TypeIndex)
 		return pl.Marshal()
+	case *SearchIndexInfo:
+		pl.Polymorph = uint32(TypeSearchIndexInfo)
+		return pl.Marshal()
 	case *Pass:
 		pl.Polymorph = uint32(TypePass)
 		return pl.Marshal()
@@ -305,8 +310,14 @@ func Marshal(payload Payload) ([]byte, error) {
 	case *GetIndex:
 		pl.Polymorph = uint32(TypeGetIndex)
 		return pl.Marshal()
+	case *SearchIndex:
+		pl.Polymorph = uint32(TypeSearchIndex)
+		return pl.Marshal()
 	case *UpdateJet:
 		pl.Polymorph = uint32(TypeUpdateJet)
+		return pl.Marshal()
+	case *ErrorResultExists:
+		pl.Polymorph = uint32(TypeErrorResultExitsts)
 		return pl.Marshal()
 	}
 
@@ -503,8 +514,20 @@ func Unmarshal(data []byte) (Payload, error) {
 		pl := GetIndex{}
 		err := pl.Unmarshal(data)
 		return &pl, err
+	case TypeSearchIndex:
+		pl := SearchIndex{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeSearchIndexInfo:
+		pl := SearchIndexInfo{}
+		err := pl.Unmarshal(data)
+		return &pl, err
 	case TypeUpdateJet:
 		pl := UpdateJet{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeErrorResultExitsts:
+		pl := ErrorResultExists{}
 		err := pl.Unmarshal(data)
 		return &pl, err
 	}

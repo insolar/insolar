@@ -8,19 +8,25 @@ import (
 )
 
 func ConvertQueueToMessageQueue(ctx context.Context, queue []*Transcript) []*payload.ExecutionQueueElement {
-	mq := make([]*payload.ExecutionQueueElement, 0)
+	logger := inslogger.FromContext(ctx)
+
+	mq := make([]*payload.ExecutionQueueElement, len(queue))
 	var traces string
-	for _, elem := range queue {
-		mq = append(mq, &payload.ExecutionQueueElement{
-			RequestRef:  elem.RequestRef,
-			Incoming:    elem.Request,
-			ServiceData: ServiceDataFromContext(elem.Context),
-		})
+	if len(queue) > 0 {
+		for i, elem := range queue {
+			mq[i] = &payload.ExecutionQueueElement{
+				RequestRef:  elem.RequestRef,
+				Incoming:    elem.Request,
+				ServiceData: ServiceDataFromContext(elem.Context),
+			}
 
-		traces += inslogger.TraceID(elem.Context) + ", "
+			traces += inslogger.TraceID(elem.Context) + ", "
+		}
+
+		logger.Debug("ConvertQueueToMessageQueue: ", traces)
+	} else {
+		logger.Debug("ConvertQueueToMessageQueue: empty queue ")
 	}
-
-	inslogger.FromContext(ctx).Debug("ConvertQueueToMessageQueue: ", traces)
 
 	return mq
 }

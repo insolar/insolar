@@ -23,7 +23,7 @@ import (
 	"github.com/gojuno/minimock"
 	"github.com/stretchr/testify/require"
 
-	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/payload"
@@ -41,7 +41,9 @@ func TestHandleStillExecuting_Present(t *testing.T) {
 			mocks: func(t minimock.Tester) (*HandleStillExecuting, flow.Flow) {
 				obj := gen.Reference()
 				receivedPayload := &payload.StillExecuting{
-					ObjectRef: obj,
+					ObjectRef:   obj,
+					Executor:    gen.Reference(),
+					RequestRefs: []insolar.Reference{gen.RecordReference()},
 				}
 
 				buf, err := payload.Marshal(receivedPayload)
@@ -49,12 +51,41 @@ func TestHandleStillExecuting_Present(t *testing.T) {
 
 				h := &HandleStillExecuting{
 					dep: &Dependencies{
-						Sender: bus.NewSenderMock(t).ReplyMock.Return(),
 						StateStorage: NewStateStorageMock(t).
 							UpsertExecutionStateMock.Expect(obj).
 							Return(
 								NewExecutionBrokerIMock(t).
-									PrevExecutorStillExecutingMock.Return(),
+									PrevExecutorStillExecutingMock.Return(nil),
+							),
+						ResultsMatcher: NewResultMatcherMock(t).
+							AddStillExecutionMock.Return(),
+						WriteAccessor: writecontroller.NewWriteControllerMock(t).BeginMock.Return(func() {}, nil),
+					},
+					Message: payload.Meta{Payload: buf},
+				}
+				return h, flow.NewFlowMock(t)
+			},
+		},
+		{
+			name: "not in pending",
+			mocks: func(t minimock.Tester) (*HandleStillExecuting, flow.Flow) {
+				obj := gen.Reference()
+				receivedPayload := &payload.StillExecuting{
+					ObjectRef:   obj,
+					Executor:    gen.Reference(),
+					RequestRefs: []insolar.Reference{gen.RecordReference()},
+				}
+
+				buf, err := payload.Marshal(receivedPayload)
+				require.NoError(t, err, "marshal")
+
+				h := &HandleStillExecuting{
+					dep: &Dependencies{
+						StateStorage: NewStateStorageMock(t).
+							UpsertExecutionStateMock.Expect(obj).
+							Return(
+								NewExecutionBrokerIMock(t).
+									PrevExecutorStillExecutingMock.Return(ErrNotInPending),
 							),
 						ResultsMatcher: NewResultMatcherMock(t).
 							AddStillExecutionMock.Return(),

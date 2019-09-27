@@ -19,12 +19,12 @@ package handle
 import (
 	"context"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/light/proc"
-	"github.com/pkg/errors"
 )
 
 type HotObjects struct {
@@ -57,12 +57,8 @@ func (s *HotObjects) Present(ctx context.Context, f flow.Flow) error {
 		"jet_id": hots.JetID.DebugString(),
 	})
 
-	d, err := drop.Decode(hots.Drop)
-	if err != nil {
-		return errors.Wrap(err, "failed to unmarshal drop")
-	}
-
-	hdProc := proc.NewHotObjects(s.meta, hots.Pulse, hots.JetID, *d, hots.Indexes)
+	notificationLimit := s.dep.Config().MaxNotificationsPerPulse
+	hdProc := proc.NewHotObjects(s.meta, hots.Pulse, hots.JetID, hots.Drop, hots.Indexes, notificationLimit)
 	s.dep.HotObjects(hdProc)
 	if err := f.Procedure(ctx, hdProc, false); err != nil {
 		return err

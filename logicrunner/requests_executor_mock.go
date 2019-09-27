@@ -10,6 +10,7 @@ import (
 
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/common"
 )
@@ -36,8 +37,8 @@ type RequestsExecutorMock struct {
 	beforeSaveCounter uint64
 	SaveMock          mRequestsExecutorMockSave
 
-	funcSendReply          func(ctx context.Context, current *common.Transcript, re insolar.Reply, err error)
-	inspectFuncSendReply   func(ctx context.Context, current *common.Transcript, re insolar.Reply, err error)
+	funcSendReply          func(ctx context.Context, reqRef insolar.Reference, req record.IncomingRequest, re insolar.Reply, err error)
+	inspectFuncSendReply   func(ctx context.Context, reqRef insolar.Reference, req record.IncomingRequest, re insolar.Reply, err error)
 	afterSendReplyCounter  uint64
 	beforeSendReplyCounter uint64
 	SendReplyMock          mRequestsExecutorMockSendReply
@@ -736,14 +737,15 @@ type RequestsExecutorMockSendReplyExpectation struct {
 
 // RequestsExecutorMockSendReplyParams contains parameters of the RequestsExecutor.SendReply
 type RequestsExecutorMockSendReplyParams struct {
-	ctx     context.Context
-	current *common.Transcript
-	re      insolar.Reply
-	err     error
+	ctx    context.Context
+	reqRef insolar.Reference
+	req    record.IncomingRequest
+	re     insolar.Reply
+	err    error
 }
 
 // Expect sets up expected params for RequestsExecutor.SendReply
-func (mmSendReply *mRequestsExecutorMockSendReply) Expect(ctx context.Context, current *common.Transcript, re insolar.Reply, err error) *mRequestsExecutorMockSendReply {
+func (mmSendReply *mRequestsExecutorMockSendReply) Expect(ctx context.Context, reqRef insolar.Reference, req record.IncomingRequest, re insolar.Reply, err error) *mRequestsExecutorMockSendReply {
 	if mmSendReply.mock.funcSendReply != nil {
 		mmSendReply.mock.t.Fatalf("RequestsExecutorMock.SendReply mock is already set by Set")
 	}
@@ -752,7 +754,7 @@ func (mmSendReply *mRequestsExecutorMockSendReply) Expect(ctx context.Context, c
 		mmSendReply.defaultExpectation = &RequestsExecutorMockSendReplyExpectation{}
 	}
 
-	mmSendReply.defaultExpectation.params = &RequestsExecutorMockSendReplyParams{ctx, current, re, err}
+	mmSendReply.defaultExpectation.params = &RequestsExecutorMockSendReplyParams{ctx, reqRef, req, re, err}
 	for _, e := range mmSendReply.expectations {
 		if minimock.Equal(e.params, mmSendReply.defaultExpectation.params) {
 			mmSendReply.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmSendReply.defaultExpectation.params)
@@ -763,7 +765,7 @@ func (mmSendReply *mRequestsExecutorMockSendReply) Expect(ctx context.Context, c
 }
 
 // Inspect accepts an inspector function that has same arguments as the RequestsExecutor.SendReply
-func (mmSendReply *mRequestsExecutorMockSendReply) Inspect(f func(ctx context.Context, current *common.Transcript, re insolar.Reply, err error)) *mRequestsExecutorMockSendReply {
+func (mmSendReply *mRequestsExecutorMockSendReply) Inspect(f func(ctx context.Context, reqRef insolar.Reference, req record.IncomingRequest, re insolar.Reply, err error)) *mRequestsExecutorMockSendReply {
 	if mmSendReply.mock.inspectFuncSendReply != nil {
 		mmSendReply.mock.t.Fatalf("Inspect function is already set for RequestsExecutorMock.SendReply")
 	}
@@ -787,7 +789,7 @@ func (mmSendReply *mRequestsExecutorMockSendReply) Return() *RequestsExecutorMoc
 }
 
 //Set uses given function f to mock the RequestsExecutor.SendReply method
-func (mmSendReply *mRequestsExecutorMockSendReply) Set(f func(ctx context.Context, current *common.Transcript, re insolar.Reply, err error)) *RequestsExecutorMock {
+func (mmSendReply *mRequestsExecutorMockSendReply) Set(f func(ctx context.Context, reqRef insolar.Reference, req record.IncomingRequest, re insolar.Reply, err error)) *RequestsExecutorMock {
 	if mmSendReply.defaultExpectation != nil {
 		mmSendReply.mock.t.Fatalf("Default expectation is already set for the RequestsExecutor.SendReply method")
 	}
@@ -801,15 +803,15 @@ func (mmSendReply *mRequestsExecutorMockSendReply) Set(f func(ctx context.Contex
 }
 
 // SendReply implements RequestsExecutor
-func (mmSendReply *RequestsExecutorMock) SendReply(ctx context.Context, current *common.Transcript, re insolar.Reply, err error) {
+func (mmSendReply *RequestsExecutorMock) SendReply(ctx context.Context, reqRef insolar.Reference, req record.IncomingRequest, re insolar.Reply, err error) {
 	mm_atomic.AddUint64(&mmSendReply.beforeSendReplyCounter, 1)
 	defer mm_atomic.AddUint64(&mmSendReply.afterSendReplyCounter, 1)
 
 	if mmSendReply.inspectFuncSendReply != nil {
-		mmSendReply.inspectFuncSendReply(ctx, current, re, err)
+		mmSendReply.inspectFuncSendReply(ctx, reqRef, req, re, err)
 	}
 
-	params := &RequestsExecutorMockSendReplyParams{ctx, current, re, err}
+	params := &RequestsExecutorMockSendReplyParams{ctx, reqRef, req, re, err}
 
 	// Record call args
 	mmSendReply.SendReplyMock.mutex.Lock()
@@ -826,7 +828,7 @@ func (mmSendReply *RequestsExecutorMock) SendReply(ctx context.Context, current 
 	if mmSendReply.SendReplyMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmSendReply.SendReplyMock.defaultExpectation.Counter, 1)
 		want := mmSendReply.SendReplyMock.defaultExpectation.params
-		got := RequestsExecutorMockSendReplyParams{ctx, current, re, err}
+		got := RequestsExecutorMockSendReplyParams{ctx, reqRef, req, re, err}
 		if want != nil && !minimock.Equal(*want, got) {
 			mmSendReply.t.Errorf("RequestsExecutorMock.SendReply got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
 		}
@@ -835,10 +837,10 @@ func (mmSendReply *RequestsExecutorMock) SendReply(ctx context.Context, current 
 
 	}
 	if mmSendReply.funcSendReply != nil {
-		mmSendReply.funcSendReply(ctx, current, re, err)
+		mmSendReply.funcSendReply(ctx, reqRef, req, re, err)
 		return
 	}
-	mmSendReply.t.Fatalf("Unexpected call to RequestsExecutorMock.SendReply. %v %v %v %v", ctx, current, re, err)
+	mmSendReply.t.Fatalf("Unexpected call to RequestsExecutorMock.SendReply. %v %v %v %v %v", ctx, reqRef, req, re, err)
 
 }
 

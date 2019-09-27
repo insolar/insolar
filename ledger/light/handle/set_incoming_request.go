@@ -20,11 +20,12 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/ledger/light/proc"
-	"github.com/pkg/errors"
 )
 
 type SetIncomingRequest struct {
@@ -42,24 +43,27 @@ func NewSetIncomingRequest(dep *proc.Dependencies, msg payload.Meta, passed bool
 }
 
 func (s *SetIncomingRequest) Present(ctx context.Context, f flow.Flow) error {
-	msg := payload.SetIncomingRequest{}
-	err := msg.Unmarshal(s.message.Payload)
+	pl, err := payload.Unmarshal(s.message.Payload)
 	if err != nil {
-		return errors.Wrap(err, "SetIncomingRequest.Present: failed to unmarshal SetRequest message")
+		return errors.Wrap(err, "failed to unmarshal SetIncomingRequest message")
+	}
+	msg, ok := pl.(*payload.SetIncomingRequest)
+	if !ok {
+		return fmt.Errorf("wrong request type: %T", pl)
 	}
 
 	virtual := msg.Request
 	rec := record.Unwrap(&virtual)
 	request, ok := rec.(*record.IncomingRequest)
 	if !ok {
-		return fmt.Errorf("SetIncomingRequest.Present: wrong request type: %T", rec)
+		return fmt.Errorf("wrong request type: %T", rec)
 	}
 
 	if request.IsCreationRequest() {
-		return s.setActivationRequest(ctx, msg, request, f)
+		return s.setActivationRequest(ctx, *msg, request, f)
 	}
 
-	return s.setRequest(ctx, msg, request, f)
+	return s.setRequest(ctx, *msg, request, f)
 }
 
 func (s *SetIncomingRequest) setActivationRequest(
@@ -125,7 +129,7 @@ func (s *SetIncomingRequest) setRequest(
 	reqID := calc.Result.ID
 
 	passIfNotExecutor := !s.passed
-	jet := proc.NewFetchJet(*request.Object.Record(), flow.Pulse(ctx), s.message, passIfNotExecutor)
+	jet := proc.NewFetchJet(*request.Object.GetLocal(), flow.Pulse(ctx), s.message, passIfNotExecutor)
 	s.dep.FetchJet(jet)
 	if err := f.Procedure(ctx, jet, true); err != nil {
 		if err == proc.ErrNotExecutor && passIfNotExecutor {
@@ -142,8 +146,8 @@ func (s *SetIncomingRequest) setRequest(
 	}
 
 	// To ensure, that we have the index. Because index can be on a heavy node.
-	// If we don't have it and heavy does, SetRequest fails because it should update light's index state
-	getIndex := proc.NewEnsureIndex(*request.Object.Record(), objJetID, s.message, flow.Pulse(ctx))
+	// If we don't have it and heavy does, SetIncomingRequest fails because it should update light's index state.
+	getIndex := proc.NewEnsureIndex(*request.Object.GetLocal(), objJetID, s.message, flow.Pulse(ctx))
 	s.dep.EnsureIndex(getIndex)
 	if err := f.Procedure(ctx, getIndex, false); err != nil {
 		return err

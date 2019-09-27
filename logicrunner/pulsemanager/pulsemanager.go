@@ -19,8 +19,12 @@ package pulsemanager
 import (
 	"context"
 	"sync"
+	"time"
+
+	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/logicrunner/metrics"
 	"github.com/insolar/insolar/network"
 
 	"github.com/insolar/insolar/insolar"
@@ -36,13 +40,13 @@ import (
 
 // PulseManager implements insolar.PulseManager.
 type PulseManager struct {
-	LogicRunner    insolar.LogicRunner `inject:""`
-	NodeNet        network.NodeNetwork `inject:""` //nolint:staticcheck
-	NodeSetter     node.Modifier       `inject:""`
-	PulseAccessor  pulse.Accessor      `inject:""`
-	PulseAppender  pulse.Appender      `inject:""`
-	JetModifier    jet.Modifier        `inject:""`
-	FlowDispatcher dispatcher.Dispatcher
+	LogicRunner   insolar.LogicRunner `inject:""`
+	NodeNet       network.NodeNetwork `inject:""` //nolint:staticcheck
+	NodeSetter    node.Modifier       `inject:""`
+	PulseAccessor pulse.Accessor      `inject:""`
+	PulseAppender pulse.Appender      `inject:""`
+	JetModifier   jet.Modifier        `inject:""`
+	dispatchers   []dispatcher.Dispatcher
 
 	// setLock locks Set method call.
 	setLock sync.RWMutex
@@ -53,6 +57,15 @@ type PulseManager struct {
 // NewPulseManager creates PulseManager instance.
 func NewPulseManager() *PulseManager {
 	return &PulseManager{}
+}
+
+// AddDispatcher adds dispatchers to handling
+// that could be done only when Set is not happening
+func (m *PulseManager) AddDispatcher(d ...dispatcher.Dispatcher) {
+	m.setLock.Lock()
+	defer m.setLock.Unlock()
+
+	m.dispatchers = append(m.dispatchers, d...)
 }
 
 // Set set's new pulse.
@@ -72,7 +85,12 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 	span.AddAttributes(
 		trace.Int64Attribute("pulse.PulseNumber", int64(newPulse.PulseNumber)),
 	)
-	defer span.End()
+
+	onPulseStart := time.Now()
+	defer func() {
+		stats.Record(ctx, metrics.PulseManagerOnPulseTiming.M(float64(time.Since(onPulseStart).Nanoseconds())/1e6))
+		span.End()
+	}()
 
 	// Dealing with node lists.
 	logger.Debug("dealing with node lists.")
@@ -99,7 +117,9 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 		return errors.Wrap(err, "call of GetLatestPulseNumber failed")
 	}
 
-	m.FlowDispatcher.ClosePulse(ctx, storagePulse)
+	for _, d := range m.dispatchers {
+		d.ClosePulse(ctx, storagePulse)
+	}
 
 	err = m.JetModifier.Clone(ctx, storagePulse.PulseNumber, newPulse.PulseNumber, false)
 	if err != nil {
@@ -115,7 +135,9 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 		return err
 	}
 
-	m.FlowDispatcher.BeginPulse(ctx, newPulse)
+	for _, d := range m.dispatchers {
+		d.BeginPulse(ctx, newPulse)
+	}
 
 	return nil
 }

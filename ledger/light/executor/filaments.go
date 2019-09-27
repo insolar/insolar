@@ -23,6 +23,7 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
 	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/insolar"
@@ -94,7 +95,7 @@ type FilamentCalculator interface {
 //go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.FilamentCleaner -o ./ -s _mock.go -g
 
 type FilamentCleaner interface {
-	Clear(objID insolar.ID)
+	ClearIfLonger(objID insolar.ID, limit int)
 }
 
 type FilamentCalculatorDefault struct {
@@ -211,13 +212,13 @@ func (c *FilamentCalculatorDefault) OpenedRequests(ctx context.Context, pulse in
 		switch r := virtual.(type) {
 		// result should always go first, before initial request
 		case *record.Result:
-			hasResult[*r.Request.Record()] = struct{}{}
+			hasResult[*r.Request.GetLocal()] = struct{}{}
 
 		case *record.IncomingRequest:
 			opened = append(opened, rec)
 
 		case *record.OutgoingRequest:
-			_, reasonClosed := hasResult[*r.Reason.Record()]
+			_, reasonClosed := hasResult[*r.Reason.GetLocal()]
 			isReadyDetached := r.IsDetached() && reasonClosed
 			if pendingOnly && !isReadyDetached {
 				break
@@ -243,7 +244,7 @@ func (c *FilamentCalculatorDefault) ResultDuplicate(
 	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
 		"object_id":  objectID.DebugString(),
 		"result_id":  resultID.DebugString(),
-		"request_id": result.Request.Record().DebugString(),
+		"request_id": result.Request.GetLocal().DebugString(),
 	})
 
 	logger.Debug("started to search for duplicated results")
@@ -269,7 +270,7 @@ func (c *FilamentCalculatorDefault) ResultDuplicate(
 		cache,
 		objectID,
 		*idx.Lifeline.LatestRequest,
-		result.Request.Record().Pulse(),
+		result.Request.GetLocal().Pulse(),
 		c.jetFetcher,
 		c.coordinator,
 		c.sender,
@@ -287,16 +288,23 @@ func (c *FilamentCalculatorDefault) ResultDuplicate(
 			return &rec, nil
 		}
 
+		// Another result already exists, return it.
+		if res, ok := record.Unwrap(&rec.Record.Virtual).(*record.Result); ok {
+			if *res.Request.GetLocal() == *result.Request.GetLocal() {
+				return &rec, nil
+			}
+		}
+
 		// Request found, return nil. It means we didn't find the result since result goes before request on
 		// iteration.
-		if bytes.Equal(rec.RecordID.Hash(), result.Request.Record().Hash()) {
+		if bytes.Equal(rec.RecordID.Hash(), result.Request.GetLocal().Hash()) {
 			return nil, nil
 		}
 	}
 
 	return nil, fmt.Errorf(
 		"request %s for result %s is not found",
-		result.Request.Record().DebugString(),
+		result.Request.GetLocal().DebugString(),
 		resultID.DebugString(),
 	)
 }
@@ -313,14 +321,24 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 	defer logger.Debug("finished searching for duplicated requests")
 
 	reasonRef := request.ReasonRef()
-	reasonID := *reasonRef.Record()
+	reasonID := *reasonRef.GetLocal()
 	var lifeline record.Lifeline
 	if request.IsCreationRequest() {
 		l, err := c.findLifeline(ctx, reasonID.Pulse(), requestID)
-		if err != nil {
+		if err != nil && err == object.ErrIndexNotFound {
+			// Searching for the requests in the network
+			// We need to be sure, that there is no duplicate of creationg request
+			// INS-3607
+			lfl, err := c.checkHeavyForLifeline(ctx, requestID, reasonID.Pulse())
+			if err != nil && err != object.ErrIndexNotFound {
+				return nil, nil, errors.Wrap(err, "failed to fetch index")
+			}
 			if err == object.ErrIndexNotFound {
 				return nil, nil, nil
 			}
+			lifeline = lfl
+
+		} else if err != nil {
 			return nil, nil, errors.Wrap(err, "failed to find index")
 		}
 		lifeline = l
@@ -367,7 +385,7 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 
 		virtual := record.Unwrap(&rec.Record.Virtual)
 		if r, ok := virtual.(*record.Result); ok {
-			if bytes.Equal(r.Request.Record().Hash(), requestID.Hash()) {
+			if bytes.Equal(r.Request.GetLocal().Hash(), requestID.Hash()) {
 				foundResult = &rec
 				logger.Debugf("found result %s", rec.RecordID.DebugString())
 			}
@@ -438,7 +456,7 @@ func (c *FilamentCalculatorDefault) RequestInfo(
 		virtual := record.Unwrap(&rec.Record.Virtual)
 		if r, ok := virtual.(*record.Result); ok {
 
-			if *r.Request.Record() == requestID {
+			if *r.Request.GetLocal() == requestID {
 				foundResult = &rec
 				logger.Debugf("found result %s", rec.RecordID.DebugString())
 			}
@@ -448,8 +466,54 @@ func (c *FilamentCalculatorDefault) RequestInfo(
 	return foundRequest, foundResult, nil
 }
 
-func (c *FilamentCalculatorDefault) Clear(objID insolar.ID) {
-	c.cache.Delete(objID)
+func (c *FilamentCalculatorDefault) ClearIfLonger(objID insolar.ID, limit int) {
+	c.cache.DeleteIfLonger(objID, limit)
+}
+
+func (c FilamentCalculatorDefault) checkHeavyForLifeline(
+	ctx context.Context, objID insolar.ID, readUntil insolar.PulseNumber,
+) (record.Lifeline, error) {
+	node, err := c.coordinator.Heavy(ctx)
+	if err != nil {
+		return record.Lifeline{}, errors.Wrap(err, "failed to check index origin")
+	}
+
+	msg, err := payload.NewMessage(&payload.SearchIndex{
+		ObjectID: objID,
+		Until:    readUntil,
+	})
+	if err != nil {
+		return record.Lifeline{}, errors.Wrap(err, "failed to create message")
+	}
+
+	reps, done := c.sender.SendTarget(ctx, msg, *node)
+	defer done()
+
+	res, ok := <-reps
+	if !ok {
+		return record.Lifeline{}, errors.New("no reply")
+	}
+
+	pl, err := payload.UnmarshalFromMeta(res.Payload)
+	if err != nil {
+		return record.Lifeline{}, errors.Wrap(err, "failed to unmarshal reply")
+	}
+
+	switch rep := pl.(type) {
+	case *payload.SearchIndexInfo:
+		if rep.Index == nil {
+			return record.Lifeline{}, object.ErrIndexNotFound
+		}
+
+		return rep.Index.Lifeline, nil
+	case *payload.Error:
+		return record.Lifeline{}, &payload.CodedError{
+			Text: fmt.Sprint("failed to fetch index from heavy: ", rep.Text),
+			Code: rep.Code,
+		}
+	default:
+		return record.Lifeline{}, fmt.Errorf("unexpected reply %T", pl)
+	}
 }
 
 func (c *FilamentCalculatorDefault) findLifeline(
@@ -524,6 +588,14 @@ func (c *cacheStore) Delete(id insolar.ID) {
 	delete(c.caches, id)
 }
 
+func (c *cacheStore) DeleteIfLonger(id insolar.ID, limit int) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	if _, ok := c.caches[id]; ok && len(c.caches[id].cache) > limit {
+		delete(c.caches, id)
+	}
+}
+
 type filamentCache struct {
 	sync.RWMutex
 	cache map[insolar.ID]record.CompositeFilamentRecord
@@ -572,6 +644,8 @@ func (i *filamentIterator) Prev(ctx context.Context) (record.CompositeFilamentRe
 	if i.currentID == nil {
 		return record.CompositeFilamentRecord{}, object.ErrNotFound
 	}
+
+	defer stats.Record(ctx, statFilamentLength.M(1))
 
 	composite, ok := i.cache.cache[*i.currentID]
 	if ok {
@@ -648,6 +722,10 @@ func (i *fetchingIterator) HasPrev() bool {
 
 func (i *fetchingIterator) Prev(ctx context.Context) (record.CompositeFilamentRecord, error) {
 	logger := inslogger.FromContext(ctx)
+
+	if i.readUntil == 0 {
+		return record.CompositeFilamentRecord{}, errors.New("invalid fetching parameters")
+	}
 
 	rec, err := i.iter.Prev(ctx)
 	if err == nil {
@@ -742,6 +820,7 @@ func (i *fetchingIterator) fetchFromNetwork(
 	}
 	switch p := pl.(type) {
 	case *payload.FilamentSegment:
+		stats.Record(ctx, statFilamentFetchedCount.M(int64(len(p.Records))))
 		return p.Records, nil
 	case *payload.Error:
 		return nil, errors.New(p.Text)

@@ -20,13 +20,14 @@ package integration_test
 import (
 	"context"
 	"crypto"
+	"github.com/insolar/insolar/log/logwatermill"
 	"io/ioutil"
 	"math"
 	"sync"
 	"time"
 
 	"github.com/dgraph-io/badger"
-	"github.com/insolar/insolar/network"
+	"github.com/pkg/errors"
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
@@ -41,7 +42,7 @@ import (
 	"github.com/insolar/insolar/insolar/jetcoordinator"
 	"github.com/insolar/insolar/insolar/node"
 	"github.com/insolar/insolar/insolar/payload"
-	"github.com/insolar/insolar/insolar/pulse"
+	insolarPulse "github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/store"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/keystore"
@@ -53,9 +54,10 @@ import (
 	"github.com/insolar/insolar/ledger/heavy/pulsemanager"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/network"
 	networknode "github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/pkg/errors"
+	"github.com/insolar/insolar/pulse"
 )
 
 var (
@@ -153,9 +155,9 @@ func NewServer(
 	// Role calculations.
 	var (
 		Coordinator jet.Coordinator
-		Pulses      *pulse.DB
+		Pulses      *insolarPulse.DB
 		Jets        *jet.DBStore
-		Nodes       *node.Storage
+		Nodes       *node.StorageDB
 		DB          *store.BadgerDB
 		DBRollback  *executor.DBRollback
 	)
@@ -165,22 +167,21 @@ func NewServer(
 		if err != nil {
 			panic(errors.Wrap(err, "failed to initialize DB"))
 		}
-		Nodes = node.NewStorage()
-		Pulses = pulse.NewDB(DB)
+		Nodes = node.NewStorageDB(DB)
+		Pulses = insolarPulse.NewDB(DB)
 		Jets = jet.NewDBStore(DB)
 
-		c := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit)
+		c := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit, light.ref)
 		c.PulseCalculator = Pulses
 		c.PulseAccessor = Pulses
 		c.JetAccessor = Jets
-		c.OriginProvider = NodeNetwork
 		c.PlatformCryptographyScheme = CryptoScheme
 		c.Nodes = Nodes
 
 		Coordinator = c
 	}
 
-	logger := log.NewWatermillLogAdapter(inslogger.FromContext(ctx))
+	logger := logwatermill.NewWatermillLogAdapter(inslogger.FromContext(ctx))
 	// Communication.
 	var (
 		ServerBus, ClientBus       *bus.Bus
@@ -191,11 +192,10 @@ func NewServer(
 		ClientPubSub = gochannel.NewGoChannel(gochannel.Config{}, logger)
 		ServerBus = bus.NewBus(cfg.Bus, ServerPubSub, Pulses, Coordinator, CryptoScheme)
 
-		c := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit)
+		c := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit, virtual.ref)
 		c.PulseCalculator = Pulses
 		c.PulseAccessor = Pulses
 		c.JetAccessor = Jets
-		c.OriginProvider = newNodeNetMock(&virtual)
 		c.PlatformCryptographyScheme = CryptoScheme
 		c.Nodes = Nodes
 		ClientBus = bus.NewBus(cfg.Bus, ClientPubSub, Pulses, c, CryptoScheme)
@@ -209,25 +209,25 @@ func NewServer(
 		Handler      *handler.Handler
 		Genesis      *genesis.Genesis
 		Records      *object.RecordDB
-		JetKeeper    executor.JetKeeper
+		JetKeeper    *executor.DBJetKeeper
 	)
 	{
 		Records = object.NewRecordDB(DB)
 		indexes := object.NewIndexDB(DB, Records)
 		drops := drop.NewDB(DB)
 		JetKeeper = executor.NewJetKeeper(Jets, DB, Pulses)
-		DBRollback = executor.NewDBRollback(JetKeeper, drops, Records, indexes, Jets, Pulses, JetKeeper)
+		DBRollback = executor.NewDBRollback(JetKeeper, drops, Records, indexes, Jets, Pulses, JetKeeper, Nodes)
 
-		sp := pulse.NewStartPulse()
+		sp := insolarPulse.NewStartPulse()
 
-		backupMaker, err := executor.NewBackupMaker(ctx, DB, cfg.Ledger.Backup, JetKeeper.TopSyncPulse())
+		backupMaker, err := executor.NewBackupMaker(ctx, DB, cfg.Ledger, JetKeeper.TopSyncPulse(), DB)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed create backuper")
 		}
 
 		replicator = executor.NewHeavyReplicatorDefault(Records, indexes, CryptoScheme, Pulses, drops, JetKeeper, backupMaker, Jets)
 
-		pm := pulsemanager.NewPulseManager()
+		pm := pulsemanager.NewPulseManager(nil)
 		pm.NodeNet = NodeNetwork
 		pm.NodeSetter = Nodes
 		pm.Nodes = Nodes
@@ -261,7 +261,7 @@ func NewServer(
 		Handler = h
 
 		artifactManager := &artifact.Scope{
-			PulseNumber:    insolar.FirstPulseNumber,
+			PulseNumber:    pulse.MinTimePulse,
 			PCS:            CryptoScheme,
 			RecordAccessor: Records,
 			RecordModifier: Records,

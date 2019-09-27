@@ -55,6 +55,11 @@ import (
 	"context"
 	"io"
 
+	"github.com/insolar/insolar/instrumentation/insmetrics"
+	"github.com/insolar/insolar/network/consensus/common/warning"
+
+	"go.opencensus.io/stats"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensus/common/endpoints"
@@ -89,8 +94,14 @@ func (ph *packetHandler) handlePacket(ctx context.Context, packetParser transpor
 	err := ph.packetProcessor.ProcessPacket(ctx, packetParser, &endpoints.InboundConnection{
 		Addr: endpoints.Name(sender),
 	})
+
 	if err != nil {
-		logger.Error("Failed to process packet: ", err)
+		switch err.(type) {
+		case warning.Warning:
+			logger.Warn("Failed to process packet: ", err)
+		default:
+			logger.Error("Failed to process packet: ", err)
+		}
 	}
 }
 
@@ -126,9 +137,13 @@ func (dh *DatagramHandler) HandleDatagram(ctx context.Context, address string, b
 
 	packetParser, err := dh.packetParserFactory.ParsePacket(ctx, bytes.NewReader(buf))
 	if err != nil {
+		stats.Record(ctx, network.ConsensusPacketsRecvBad.M(int64(len(buf))))
 		logger.Warnf("Failed to get PacketParser: ", err)
 		return
 	}
+
+	ctx = insmetrics.InsertTag(ctx, network.TagPhase, packetParser.GetPacketType().String())
+	stats.Record(ctx, network.ConsensusPacketsRecv.M(int64(len(buf))))
 
 	dh.packetHandler.handlePacket(ctx, packetParser, address)
 }

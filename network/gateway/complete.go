@@ -70,10 +70,8 @@ import (
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/pkg/errors"
 
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/metrics"
-
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
 func newComplete(b *Base) *Complete {
@@ -92,7 +90,6 @@ func (g *Complete) Run(ctx context.Context, pulse insolar.Pulse) {
 	}
 
 	g.HostNetwork.RegisterRequestHandler(types.SignCert, g.signCertHandler)
-	metrics.NetworkComplete.Set(float64(time.Now().Unix()))
 }
 
 func (g *Complete) GetState() insolar.NetworkState {
@@ -160,7 +157,14 @@ func (g *Complete) requestCertSign(ctx context.Context, discoveryNode insolar.Di
 }
 
 func (g *Complete) getNodeInfo(ctx context.Context, nodeRef *insolar.Reference) (string, string, error) {
-	res, err := g.ContractRequester.SendRequest(ctx, nodeRef, "GetNodeInfo", []interface{}{})
+	latest, err := g.PulseAccessor.GetLatestPulse(ctx)
+	if err != nil {
+		return "", "", errors.Wrap(err, "[ GetCert ] Can't get latest pulse")
+	}
+
+	res, _, err := g.ContractRequester.Call(
+		ctx, nodeRef, "GetNodeInfo", []interface{}{}, latest.PulseNumber,
+	)
 	if err != nil {
 		return "", "", errors.Wrap(err, "[ GetCert ] Couldn't call GetNodeInfo")
 	}
@@ -199,12 +203,12 @@ func (g *Complete) EphemeralMode(nodes []insolar.NetworkNode) bool {
 func (g *Complete) UpdateState(ctx context.Context, pulseNumber insolar.PulseNumber, nodes []insolar.NetworkNode, cloudStateHash []byte) {
 	workingNodes := node.Select(nodes, node.ListWorking)
 
-	if ok, _ := rules.CheckMajorityRule(g.CertificateManager.GetCertificate(), workingNodes); !ok {
-		g.Gatewayer.FailState(ctx, "MajorityRule failed")
+	if _, err := rules.CheckMajorityRule(g.CertificateManager.GetCertificate(), workingNodes); err != nil {
+		g.FailState(ctx, err.Error())
 	}
 
-	if !rules.CheckMinRole(g.CertificateManager.GetCertificate(), workingNodes) {
-		g.Gatewayer.FailState(ctx, "MinRoles failed")
+	if err := rules.CheckMinRole(g.CertificateManager.GetCertificate(), workingNodes); err != nil { // Return error
+		g.FailState(ctx, err.Error())
 	}
 
 	g.Base.UpdateState(ctx, pulseNumber, nodes, cloudStateHash)
@@ -215,7 +219,7 @@ func (g *Complete) OnPulseFromConsensus(ctx context.Context, pulse insolar.Pulse
 
 	done := make(chan struct{})
 	defer close(done)
-	pulseProcessingWatchdog(ctx, pulse, done)
+	pulseProcessingWatchdog(ctx, g.Base, pulse, done)
 
 	logger := inslogger.FromContext(ctx)
 
@@ -232,16 +236,4 @@ func (g *Complete) OnPulseFromConsensus(ctx context.Context, pulse insolar.Pulse
 	}
 	logger.Infof("Set new current pulse number: %d", pulse.PulseNumber)
 	stats.Record(ctx, statPulse.M(int64(pulse.PulseNumber)))
-}
-
-func pulseProcessingWatchdog(ctx context.Context, pulse insolar.Pulse, done chan struct{}) {
-	logger := inslogger.FromContext(ctx)
-
-	go func() {
-		select {
-		case <-time.After(time.Second * time.Duration(pulse.NextPulseNumber-pulse.PulseNumber)):
-			logger.Errorf("Node stopped due to long pulse processing, pulse:%v", pulse.PulseNumber)
-		case <-done:
-		}
-	}()
 }

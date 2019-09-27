@@ -54,8 +54,9 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
-
+	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/storage"
+	"github.com/insolar/insolar/network/termination"
 
 	"github.com/insolar/insolar/cryptography"
 
@@ -97,19 +98,18 @@ type ServiceNetwork struct {
 	CryptographyService insolar.CryptographyService        `inject:""`
 	CryptographyScheme  insolar.PlatformCryptographyScheme `inject:""`
 	KeyProcessor        insolar.KeyProcessor               `inject:""`
-	NodeKeeper          network.NodeKeeper                 `inject:""`
-	TerminationHandler  insolar.TerminationHandler         `inject:""`
 	ContractRequester   insolar.ContractRequester          `inject:""`
 
 	// watermill support interfaces
 	Pub message.Publisher `inject:""`
 
 	// subcomponents
-	RPC              controller.RPCController `inject:"subcomponent"`
-	TransportFactory transport.Factory        `inject:"subcomponent"`
-	PulseAccessor    storage.PulseAccessor    `inject:"subcomponent"`
-	PulseAppender    storage.PulseAppender    `inject:"subcomponent"`
-	// DB               storage.DB               `inject:"subcomponent"`
+	RPC                controller.RPCController   `inject:"subcomponent"`
+	TransportFactory   transport.Factory          `inject:"subcomponent"`
+	PulseAccessor      storage.PulseAccessor      `inject:"subcomponent"`
+	PulseAppender      storage.PulseAppender      `inject:"subcomponent"`
+	NodeKeeper         network.NodeKeeper         `inject:"subcomponent"`
+	TerminationHandler network.TerminationHandler `inject:"subcomponent"`
 
 	HostNetwork network.HostNetwork
 
@@ -132,21 +132,6 @@ func NewServiceNetwork(conf configuration.Configuration, rootCm *component.Manag
 	return serviceNetwork, nil
 }
 
-// SendMessage sends a message from MessageBus.
-func (n *ServiceNetwork) SendMessage(nodeID insolar.Reference, method string, msg insolar.Parcel) ([]byte, error) {
-	return n.RPC.SendMessage(nodeID, method, msg)
-}
-
-// SendCascadeMessage sends a message from MessageBus to a cascade of nodes
-func (n *ServiceNetwork) SendCascadeMessage(data insolar.Cascade, method string, msg insolar.Parcel) error {
-	return n.RPC.SendCascadeMessage(data, method, msg)
-}
-
-// RemoteProcedureRegister registers procedure for remote call on this host.
-func (n *ServiceNetwork) RemoteProcedureRegister(name string, method insolar.RemoteProcedure) {
-	n.RPC.RemoteProcedureRegister(name, method)
-}
-
 // Init implements component.Initer
 func (n *ServiceNetwork) Init(ctx context.Context) error {
 	hostNetwork, err := hostnetwork.NewHostNetwork(n.CertificateManager.GetCertificate().GetNodeRef().String())
@@ -159,10 +144,14 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 
 	cert := n.CertificateManager.GetCertificate()
 
+	nodeNetwork, err := nodenetwork.NewNodeNetwork(n.cfg.Host.Transport, cert)
+	if err != nil {
+		return errors.Wrap(err, "failed to create NodeNetwork")
+	}
+
 	n.BaseGateway = &gateway.Base{Options: options}
 	n.Gatewayer = gateway.NewGatewayer(n.BaseGateway.NewGateway(ctx, insolar.NoNetworkState))
 
-	pulseStorage := storage.NewMemoryPulseStorage()
 	table := &routing.Table{}
 
 	n.cm.Inject(n,
@@ -170,15 +159,15 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		cert,
 		transport.NewFactory(n.cfg.Host.Transport),
 		hostNetwork,
+		nodeNetwork,
 		controller.NewRPCController(options),
 		controller.NewPulseController(),
 		bootstrap.NewRequester(options),
-		// db,
-		pulseStorage,
-		storage.NewMemoryCloudHashStorage(),
-		storage.NewMemorySnapshotStorage(),
+		storage.NewMemoryStorage(),
 		n.BaseGateway,
 		n.Gatewayer,
+		storage.NewMemoryStorage(),
+		termination.NewHandler(n),
 	)
 
 	n.datagramHandler = adapters.NewDatagramHandler()
@@ -262,7 +251,7 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 	n.initConsensus()
 	n.Gatewayer.Gateway().Run(ctx, bootstrapPulse)
 
-	n.RemoteProcedureRegister(deliverWatermillMsg, n.processIncoming)
+	n.RPC.RemoteProcedureRegister(deliverWatermillMsg, n.processIncoming)
 
 	return nil
 }
@@ -297,13 +286,17 @@ func (n *ServiceNetwork) Stop(ctx context.Context) error {
 	return n.cm.Stop(ctx)
 }
 
-func (n *ServiceNetwork) GetState() insolar.NetworkState {
-	return n.Gatewayer.Gateway().GetState()
-}
-
 // HandlePulse process pulse from PulseController
 func (n *ServiceNetwork) HandlePulse(ctx context.Context, pulse insolar.Pulse, originalPacket network.ReceivedPacket) {
 	n.Gatewayer.Gateway().OnPulseFromPulsar(ctx, pulse, originalPacket)
+}
+
+func (n *ServiceNetwork) GetOrigin() insolar.NetworkNode {
+	return n.NodeKeeper.GetOrigin()
+}
+
+func (n *ServiceNetwork) GetAccessor(p insolar.PulseNumber) network.Accessor {
+	return n.NodeKeeper.GetAccessor(p)
 }
 
 // consensus handlers here

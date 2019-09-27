@@ -60,8 +60,9 @@ func NewGeneratorWithConfig(config *Config, certificatesOutDir string) *Generato
 	}
 }
 
-func readMigrationAddresses(file string) ([insolar.GenesisAmountMigrationAddressShards][]string, error) {
-	var result [insolar.GenesisAmountMigrationAddressShards][]string
+func (g *Generator) readMigrationAddresses() ([][]string, error) {
+	file := g.config.MembersKeysDir + "migration_addresses.json"
+	result := make([][]string, g.config.MAShardCount)
 	b, err := ioutil.ReadFile(file)
 	if err != nil {
 		return result, errors.Wrapf(err, " couldn't read migration addresses file %v", file)
@@ -74,10 +75,12 @@ func readMigrationAddresses(file string) ([insolar.GenesisAmountMigrationAddress
 	}
 
 	for _, a := range ma {
-		i := foundation.GetShardIndex(a, insolar.GenesisAmountMigrationAddressShards)
-		result[i] = append(result[i])
+		if foundation.IsEthereumAddress(a) {
+			address := foundation.TrimAddress(a)
+			i := foundation.GetShardIndex(address, g.config.MAShardCount)
+			result[i] = append(result[i], address)
+		}
 	}
-
 	return result, nil
 }
 
@@ -97,6 +100,12 @@ func (g *Generator) Run(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "couldn't get root keys")
 	}
+
+	feePublicKey, err := secrets.GetPublicKeyFromFile(g.config.MembersKeysDir + "fee_member_keys.json")
+	if err != nil {
+		return errors.Wrap(err, "couldn't get fees keys")
+	}
+
 	migrationAdminPublicKey, err := secrets.GetPublicKeyFromFile(g.config.MembersKeysDir + "migration_admin_member_keys.json")
 	if err != nil {
 		return errors.Wrap(err, "couldn't get migration admin keys")
@@ -110,13 +119,62 @@ func (g *Generator) Run(ctx context.Context) error {
 		migrationDaemonPublicKeys = append(migrationDaemonPublicKeys, k)
 	}
 
+	networkIncentivesPublicKeys := []string{}
+	for i := 0; i < insolar.GenesisAmountNetworkIncentivesMembers; i++ {
+		k, err := secrets.GetPublicKeyFromFile(g.config.MembersKeysDir + GetFundPath(i, "network_incentives_"))
+		if err != nil {
+			return errors.Wrap(err, "couldn't get network incentives keys")
+		}
+		networkIncentivesPublicKeys = append(networkIncentivesPublicKeys, k)
+	}
+
+	applicationIncentivesPublicKeys := []string{}
+	for i := 0; i < insolar.GenesisAmountApplicationIncentivesMembers; i++ {
+		k, err := secrets.GetPublicKeyFromFile(g.config.MembersKeysDir + GetFundPath(i, "application_incentives_"))
+		if err != nil {
+			return errors.Wrap(err, "couldn't get application incentives keys")
+		}
+		applicationIncentivesPublicKeys = append(applicationIncentivesPublicKeys, k)
+	}
+
+	foundationPublicKeys := []string{}
+	for i := 0; i < insolar.GenesisAmountFoundationMembers; i++ {
+		k, err := secrets.GetPublicKeyFromFile(g.config.MembersKeysDir + GetFundPath(i, "foundation_"))
+		if err != nil {
+			return errors.Wrap(err, "couldn't get foundation keys")
+		}
+		foundationPublicKeys = append(foundationPublicKeys, k)
+	}
+
+	fundsPublicKeys := []string{}
+	for i := 0; i < insolar.GenesisAmountFundsMembers; i++ {
+		k, err := secrets.GetPublicKeyFromFile(g.config.MembersKeysDir + GetFundPath(i, "funds_"))
+		if err != nil {
+			return errors.Wrap(err, "couldn't get funds keys")
+		}
+		fundsPublicKeys = append(fundsPublicKeys, k)
+	}
+
+	enterprisePublicKeys := []string{}
+	for i := 0; i < insolar.GenesisAmountEnterpriseMembers; i++ {
+		k, err := secrets.GetPublicKeyFromFile(g.config.MembersKeysDir + GetFundPath(i, "enterprise_"))
+		if err != nil {
+			return errors.Wrap(err, "couldn't get enterprise keys")
+		}
+		enterprisePublicKeys = append(enterprisePublicKeys, k)
+	}
+
+	if g.config.MAShardCount <= 0 {
+		panic(fmt.Sprintf("[genesis] store contracts failed: setup ma_shard_count parameter, current value %v", g.config.MAShardCount))
+	}
+
 	inslog.Info("[ bootstrap ] read migration addresses ...")
-	migrationAddresses, err := readMigrationAddresses(g.config.MembersKeysDir + "migration_addresses.json")
+	migrationAddresses, err := g.readMigrationAddresses()
 	if err != nil {
 		return errors.Wrap(err, "couldn't get migration addresses")
 	}
 
-	inslog.Info("[ bootstrap ] create keys ...")
+	inslog.Info("[ bootstrap ] create discovery keys ...")
 	discoveryNodes, err := createKeysInDir(
 		ctx,
 		g.config.DiscoveryKeysDir,
@@ -128,22 +186,57 @@ func (g *Generator) Run(ctx context.Context) error {
 		return errors.Wrapf(err, "create keys step failed")
 	}
 
-	inslog.Info("[ bootstrap ] create certificates ...")
-	err = g.makeCertificates(ctx, discoveryNodes)
+	inslog.Info("[ bootstrap ] create discovery certificates ...")
+	err = g.makeCertificates(ctx, discoveryNodes, discoveryNodes)
 	if err != nil {
 		return errors.Wrap(err, "generate discovery certificates failed")
 	}
 
+	vestingStep := g.config.VestingStepInPulses
+	if vestingStep == 0 {
+		vestingStep = 60 * 60 * 24
+	}
+
+	if g.config.NotDiscoveryKeysDir != "" {
+		inslog.Info("[ bootstrap ] create not discovery keys ...")
+		nodes, err := createKeysInDir(
+			ctx,
+			g.config.NotDiscoveryKeysDir,
+			g.config.KeysNameFormat,
+			g.config.Nodes,
+			g.config.ReuseKeys,
+		)
+		if err != nil {
+			return errors.Wrapf(err, "create keys step failed")
+		}
+
+		inslog.Info("[ bootstrap ] create not discovery certificates ...", nodes)
+		err = g.makeCertificates(ctx, nodes, discoveryNodes)
+		if err != nil {
+			return errors.Wrap(err, "generate not discovery certificates failed")
+		}
+	}
+
 	inslog.Info("[ bootstrap ] create heavy genesis config ...")
 	contractsConfig := insolar.GenesisContractsConfig{
-		RootBalance:               g.config.RootBalance,
-		MDBalance:                 g.config.MDBalance,
-		RootPublicKey:             rootPublicKey,
-		MigrationAdminPublicKey:   migrationAdminPublicKey,
-		MigrationDaemonPublicKeys: migrationDaemonPublicKeys,
-		MigrationAddresses:        migrationAddresses,
-		VestingPeriodInPulses:     g.config.VestingPeriodInPulses,
-		LokupPeriodInPulses:       g.config.LokupPeriodInPulses,
+		RootBalance:                     g.config.RootBalance,
+		Fee:                             g.config.Fee,
+		MDBalance:                       g.config.MDBalance,
+		RootPublicKey:                   rootPublicKey,
+		FeePublicKey:                    feePublicKey,
+		MigrationAdminPublicKey:         migrationAdminPublicKey,
+		MigrationDaemonPublicKeys:       migrationDaemonPublicKeys,
+		NetworkIncentivesPublicKeys:     networkIncentivesPublicKeys,
+		ApplicationIncentivesPublicKeys: applicationIncentivesPublicKeys,
+		FoundationPublicKeys:            foundationPublicKeys,
+		FundsPublicKeys:                 fundsPublicKeys,
+		EnterprisePublicKeys:            enterprisePublicKeys,
+		MigrationAddresses:              migrationAddresses,
+		VestingPeriodInPulses:           g.config.VestingPeriodInPulses,
+		LockupPeriodInPulses:            g.config.LockupPeriodInPulses,
+		VestingStepInPulses:             vestingStep,
+		MAShardCount:                    g.config.MAShardCount,
+		PKShardCount:                    g.config.PKShardCount,
 	}
 	err = g.makeHeavyGenesisConfig(discoveryNodes, contractsConfig)
 	if err != nil {
@@ -157,15 +250,16 @@ type nodeInfo struct {
 	privateKey crypto.PrivateKey
 	publicKey  string
 	role       string
+	certName   string
 }
 
 func (ni nodeInfo) reference() insolar.Reference {
 	return genesisrefs.GenesisRef(ni.publicKey)
 }
 
-func (g *Generator) makeCertificates(ctx context.Context, discoveryNodes []nodeInfo) error {
+func (g *Generator) makeCertificates(ctx context.Context, nodesInfo []nodeInfo, discoveryNodes []nodeInfo) error {
 	certs := make([]certificate.Certificate, 0, len(g.config.DiscoveryNodes))
-	for _, node := range discoveryNodes {
+	for _, node := range nodesInfo {
 		c := certificate.Certificate{
 			AuthorizationCertificate: certificate.AuthorizationCertificate{
 				PublicKey: node.publicKey,
@@ -195,7 +289,7 @@ func (g *Generator) makeCertificates(ctx context.Context, discoveryNodes []nodeI
 	}
 
 	var err error
-	for i, node := range g.config.DiscoveryNodes {
+	for i, node := range nodesInfo {
 		for j := range g.config.DiscoveryNodes {
 			dn := discoveryNodes[j]
 
@@ -218,11 +312,11 @@ func (g *Generator) makeCertificates(ctx context.Context, discoveryNodes []nodeI
 			return errors.Wrapf(err, "can't MarshalIndent")
 		}
 
-		if len(node.CertName) == 0 {
+		if len(node.certName) == 0 {
 			return errors.New("cert_name must not be empty for node number " + strconv.Itoa(i+1))
 		}
 
-		certFile := path.Join(g.certificatesOutDir, node.CertName)
+		certFile := path.Join(g.certificatesOutDir, node.certName)
 		err = ioutil.WriteFile(certFile, cert, 0600)
 		if err != nil {
 			return errors.Wrapf(err, "failed to create certificate: %v", certFile)
@@ -269,4 +363,9 @@ func dumpAsJSON(data interface{}) string {
 // GetMigrationDaemonPath generate key file name for migration daemon
 func GetMigrationDaemonPath(i int) string {
 	return "migration_daemon_" + strconv.Itoa(i) + "_member_keys.json"
+}
+
+// GetFundPath generate key file name for composite name
+func GetFundPath(i int, prefix string) string {
+	return prefix + strconv.Itoa(i) + "_member_keys.json"
 }

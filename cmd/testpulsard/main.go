@@ -23,6 +23,7 @@ import (
 
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
+	"github.com/spf13/viper"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
@@ -41,12 +42,14 @@ import (
 
 type inputParams struct {
 	configPath string
+	port       string
 }
 
 func parseInputParams() inputParams {
 	var rootCmd = &cobra.Command{Use: "insolard"}
 	var result inputParams
 	rootCmd.Flags().StringVarP(&result.configPath, "config", "c", "", "path to config file")
+	rootCmd.Flags().StringVarP(&result.port, "port", "port", "", "port for test pulsar")
 	err := rootCmd.Execute()
 	if err != nil {
 		fmt.Println("Wrong input params:", err.Error())
@@ -59,21 +62,24 @@ func main() {
 	params := parseInputParams()
 
 	jww.SetStdoutThreshold(jww.LevelDebug)
-	cfgHolder := configuration.NewHolder()
-	var err error
+	vp := viper.New()
+	pCfg := configuration.NewPulsarConfiguration()
 	if len(params.configPath) != 0 {
-		err = cfgHolder.LoadFromFile(params.configPath)
-	} else {
-		err = cfgHolder.Load()
+		vp.SetConfigFile(params.configPath)
 	}
+	err := vp.ReadInConfig()
+	if err != nil {
+		log.Warn("failed to load configuration from file: ", err.Error())
+	}
+	err = vp.Unmarshal(&pCfg)
 	if err != nil {
 		log.Warn("failed to load configuration from file: ", err.Error())
 	}
 
 	traceID := utils.RandTraceID()
 	ctx := context.Background()
-	ctx, _ = inslogger.InitNodeLogger(ctx, cfgHolder.Configuration.Log, traceID, "", "test_pulsar")
-	testPulsar := initPulsar(ctx, cfgHolder.Configuration)
+	ctx, _ = inslogger.InitNodeLogger(ctx, pCfg.Log, traceID, "", "test_pulsar")
+	testPulsar := initPulsar(ctx, pCfg)
 
 	http.HandleFunc("/pulse", func(writer http.ResponseWriter, request *http.Request) {
 		err := testPulsar.SendPulse(ctx)
@@ -91,18 +97,18 @@ func main() {
 	})
 
 	fmt.Printf("Starting server for testing HTTP POST...\n")
-	if err := http.ListenAndServe(cfgHolder.Configuration.Pulsar.MainListenerAddress, nil); err != nil {
-		log.Fatal(err)
+	if err := http.ListenAndServe(params.port, nil); err != nil {
+		panic(err)
 	}
 }
 
-func initPulsar(ctx context.Context, cfg configuration.Configuration) *pulsar.TestPulsar {
+func initPulsar(ctx context.Context, cfg configuration.PulsarConfiguration) *pulsar.TestPulsar {
 	fmt.Println("Version: ", version.GetFullVersion())
 	fmt.Println("Starts with configuration:\n", configuration.ToString(cfg))
 
 	keyStore, err := keystore.NewKeyStore(cfg.KeysPath)
 	if err != nil {
-		inslogger.FromContext(ctx).Fatal(err)
+		panic(err)
 	}
 	cryptographyScheme := platformpolicy.NewPlatformCryptographyScheme()
 	cryptographyService := cryptography.NewCryptographyService()
@@ -110,7 +116,7 @@ func initPulsar(ctx context.Context, cfg configuration.Configuration) *pulsar.Te
 
 	pulseDistributor, err := pulsenetwork.NewDistributor(cfg.Pulsar.PulseDistributor)
 	if err != nil {
-		inslogger.FromContext(ctx).Fatal(err)
+		panic(err)
 	}
 
 	cm := &component.Manager{}
@@ -118,11 +124,11 @@ func initPulsar(ctx context.Context, cfg configuration.Configuration) *pulsar.Te
 	cm.Inject(cryptographyService, pulseDistributor)
 
 	if err = cm.Init(ctx); err != nil {
-		inslogger.FromContext(ctx).Fatal(err)
+		panic(err)
 	}
 
 	if err = cm.Start(ctx); err != nil {
-		inslogger.FromContext(ctx).Fatal(err)
+		panic(err)
 	}
 
 	return pulsar.NewTestPulsar(cfg.Pulsar, pulseDistributor, &entropygenerator.StandardEntropyGenerator{})

@@ -23,18 +23,8 @@ import (
 
 var (
 	statHotsAbandoned = stats.Int64(
-		"hots_abandoned",
+		"requests_abandoned",
 		"How many abandoned requests in hot data",
-		stats.UnitDimensionless,
-	)
-	statRequestsOpened = stats.Int64(
-		"requests_opened",
-		"How many requests in hot data",
-		stats.UnitDimensionless,
-	)
-	statRequestsClosed = stats.Int64(
-		"requests_closed",
-		"How many requests are closed",
 		stats.UnitDimensionless,
 	)
 )
@@ -45,18 +35,6 @@ func init() {
 			Name:        statHotsAbandoned.Name(),
 			Description: statHotsAbandoned.Description(),
 			Measure:     statHotsAbandoned,
-			Aggregation: view.Count(),
-		},
-		&view.View{
-			Name:        statRequestsOpened.Name(),
-			Description: statRequestsOpened.Description(),
-			Measure:     statRequestsOpened,
-			Aggregation: view.Count(),
-		},
-		&view.View{
-			Name:        statRequestsClosed.Name(),
-			Description: statRequestsClosed.Description(),
-			Measure:     statRequestsClosed,
 			Aggregation: view.Count(),
 		},
 	)

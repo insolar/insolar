@@ -23,7 +23,6 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/trace"
@@ -155,7 +154,7 @@ func (b *Bus) SendRole(
 		instracer.AddError(span, err)
 		return handleError(errors.Wrap(err, "failed to fetch pulse"))
 	}
-	nodes, err := b.coordinator.QueryRole(ctx, role, *object.Record(), latestPulse.PulseNumber)
+	nodes, err := b.coordinator.QueryRole(ctx, role, *object.GetLocal(), latestPulse.PulseNumber)
 	if err != nil {
 		instracer.AddError(span, err)
 		return handleError(errors.Wrap(err, "failed to calculate role"))
@@ -204,14 +203,15 @@ func (b *Bus) sendTarget(
 	msgType := messagePayloadTypeName(msg)
 
 	mctx := insmetrics.InsertTag(ctx, tagMessageType, msgType)
-	stats.Record(mctx, statSent.M(int64(len(msg.Payload))))
+	mctx = insmetrics.InsertTag(mctx, tagMessageRole, "request")
+	stats.Record(mctx, statSentBytes.M(int64(len(msg.Payload))))
 	defer func() {
 		stats.Record(mctx, statSentTime.M(float64(time.Since(start).Nanoseconds())/1e6))
 	}()
 
 	// configure logger
 	ctx, _ = inslogger.WithField(ctx, "sending_type", msgType)
-	logger := inslogger.FromContext(ctx)
+	ctx, logger := inslogger.WithField(ctx, "sending_uuid", msg.UUID)
 	span.AddAttributes(
 		trace.StringAttribute("sending_type", msg.Metadata.Get(meta.Type)),
 	)
@@ -241,6 +241,8 @@ func (b *Bus) sendTarget(
 		return handleError(errors.Wrap(err, "failed to unmarshal hash"))
 	}
 
+	ctx, logger = inslogger.WithField(ctx, "sending_msg_hash", msgHash.String())
+
 	reply := &lockedReply{
 		messages: make(chan *message.Message),
 		done:     make(chan struct{}),
@@ -254,7 +256,7 @@ func (b *Bus) sendTarget(
 	b.replies[msgHash] = reply
 	b.repliesMutex.Unlock()
 
-	logger.Debugf("sending message %s. uuid = %s", msgHash.String(), msg.UUID)
+	logger.Debugf("sending message")
 	err = b.pub.Publish(TopicOutgoing, msg)
 	if err != nil {
 		done()
@@ -262,12 +264,26 @@ func (b *Bus) sendTarget(
 		return handleError(errors.Wrapf(err, "can't publish message to %s topic", TopicOutgoing))
 	}
 
+	// Do not change this log! It is used for message type statistics.
+	logger.WithFields(map[string]interface{}{
+		"stat_type":    "sent",
+		"message_type": msgType,
+	}).Info("stat_log_message")
+
+	replyStart := time.Now()
 	go func() {
-		replyStart := time.Now()
 		defer func() {
+			replyTime := float64(time.Since(replyStart).Nanoseconds()) / 1e6
 			stats.Record(mctx,
-				statReplyTime.M(float64(time.Since(replyStart).Nanoseconds())/1e6),
+				statReplyTime.M(replyTime),
 				statReply.M(1))
+
+			// Do not change this log! It is used for message type statistics.
+			logger.WithFields(map[string]interface{}{
+				"stat_type":     "reply",
+				"message_type":  msgType,
+				"reply_time_ms": replyTime,
+			}).Info("stat_log_message")
 		}()
 
 		logger.Debug("waiting for reply")
@@ -301,6 +317,11 @@ func (b *Bus) Reply(ctx context.Context, origin payload.Meta, reply *message.Mes
 	)
 	defer span.End()
 
+	msgType := messagePayloadTypeName(reply)
+	mctx := insmetrics.InsertTag(ctx, tagMessageType, msgType)
+	mctx = insmetrics.InsertTag(mctx, tagMessageRole, "reply")
+	stats.Record(mctx, statSentBytes.M(int64(len(reply.Payload))))
+
 	originHash := payload.MessageHash{}
 	err := originHash.Unmarshal(origin.ID)
 	if err != nil {
@@ -317,6 +338,8 @@ func (b *Bus) Reply(ctx context.Context, origin payload.Meta, reply *message.Mes
 		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to fetch pulse"))
 	}
 
+	ctx, logger = inslogger.WithField(ctx, "replying_type", messagePayloadTypeName(reply))
+
 	wrapped, reply, err := b.wrapMeta(ctx, reply, origin.Sender, originHash, pn)
 	if err != nil {
 		instracer.AddError(span, err)
@@ -324,7 +347,16 @@ func (b *Bus) Reply(ctx context.Context, origin payload.Meta, reply *message.Mes
 		return
 	}
 
-	replyHash := wrapped.ID
+	replyHash := payload.MessageHash{}
+	err = replyHash.Unmarshal(wrapped.ID)
+	if err != nil {
+		instracer.AddError(span, err)
+		logger.Error(errors.Wrap(err, "failed to unmarshal hash"))
+		return
+	}
+
+	ctx, _ = inslogger.WithField(ctx, "origin_hash", originHash.String())
+	ctx, logger = inslogger.WithField(ctx, "sending_reply_hash", replyHash.String())
 
 	reply.Metadata.Set(meta.TraceID, inslogger.TraceID(ctx))
 
@@ -338,7 +370,7 @@ func (b *Bus) Reply(ctx context.Context, origin payload.Meta, reply *message.Mes
 
 	reply.SetContext(ctx)
 
-	logger.Debugf("sending reply %s", base58.Encode(replyHash))
+	logger.Debugf("sending reply")
 	err = b.pub.Publish(TopicOutgoing, reply)
 	if err != nil {
 		instracer.AddError(span, err)
@@ -358,57 +390,70 @@ func (b *Bus) IncomingMessageRouter(handle message.HandlerFunc) message.HandlerF
 			inslogger.FromContext(ctx).Error(err)
 		}
 
-		ctx, span := instracer.StartSpan(ctx, "Bus.IncomingMessageRouter starts")
-		span.AddAttributes(
-			trace.StringAttribute("type", "bus"),
-		)
+		var span *trace.Span
+		reply := func() *lockedReply {
+			ctx, span = instracer.StartSpan(ctx, "Bus.IncomingMessageRouter starts")
+			span.AddAttributes(
+				trace.StringAttribute("type", "bus"),
+			)
+			defer span.End()
 
-		meta := payload.Meta{}
-		err = meta.Unmarshal(msg.Payload)
-		if err != nil {
-			instracer.AddError(span, err)
-			logger.Error(errors.Wrap(err, "failed to receive message"))
-			return nil, nil
-		}
-
-		msgHash := payload.MessageHash{}
-		err = msgHash.Unmarshal(meta.ID)
-		if err != nil {
-			logger.Error(errors.Wrap(err, "failed to unmarshal message id"))
-			return nil, nil
-		}
-		msg.Metadata.Set("msg_hash", msgHash.String())
-		logger = logger.WithField("msg_hash", msgHash.String())
-
-		msg.Metadata.Set("pulse", meta.Pulse.String())
-
-		logger.Debug("received message")
-		if meta.OriginHash.IsZero() {
-			logger.Debug("not a reply (calling handler)")
-			_, err := handle(msg)
-			logger.Debug("handling finished")
+			meta := payload.Meta{}
+			err = meta.Unmarshal(msg.Payload)
 			if err != nil {
-				logger.Error(errors.Wrap(err, "message handler returned error"))
+				instracer.AddError(span, err)
+				logger.Error(errors.Wrap(err, "failed to receive message"))
+				return nil
 			}
+
+			receivedType, err := payload.UnmarshalType(meta.Payload)
+			if err == nil {
+				if receivedType == payload.TypeError {
+					stats.Record(ctx, statReplyError.M(1))
+				}
+			}
+
+			msgHash := payload.MessageHash{}
+			err = msgHash.Unmarshal(meta.ID)
+			if err != nil {
+				logger.Error(errors.Wrap(err, "failed to unmarshal message id"))
+				return nil
+			}
+			msg.Metadata.Set("msg_hash", msgHash.String())
+			logger = logger.WithField("msg_hash", msgHash.String())
+
+			msg.Metadata.Set("pulse", meta.Pulse.String())
+
+			logger.Debug("received message")
+			if meta.OriginHash.IsZero() {
+				logger.Debug("not a reply (calling handler)")
+				_, err := handle(msg)
+				logger.Debug("handling finished")
+				if err != nil {
+					logger.Error(errors.Wrap(err, "message handler returned error"))
+				}
+				return nil
+			}
+
+			msg.Metadata.Set("msg_hash_origin", meta.OriginHash.String())
+			logger = logger.WithField("msg_hash_origin", meta.OriginHash.String())
+
+			b.repliesMutex.RLock()
+			defer b.repliesMutex.RUnlock()
+			reply, ok := b.replies[meta.OriginHash]
+			if !ok {
+				logger.Warn("reply discarded")
+				return nil
+			}
+
+			logger.Debug("reply received")
+			reply.wg.Add(1)
+			return reply
+		}()
+
+		if reply == nil {
 			return nil, nil
 		}
-
-		msg.Metadata.Set("msg_hash_origin", meta.OriginHash.String())
-		logger = logger.WithField("msg_hash_origin", meta.OriginHash.String())
-
-		b.repliesMutex.RLock()
-		reply, ok := b.replies[meta.OriginHash]
-		if !ok {
-			logger.Warn("reply discarded")
-			b.repliesMutex.RUnlock()
-			return nil, nil
-		}
-
-		logger.Debug("reply received")
-		reply.wg.Add(1)
-		b.repliesMutex.RUnlock()
-
-		span.End()
 
 		_, span = instracer.StartSpan(ctx, "Bus.IncomingMessageRouter waiting")
 		span.AddAttributes(
@@ -439,6 +484,7 @@ func (b *Bus) wrapMeta(
 	msg = msg.Copy()
 
 	meta := payload.Meta{
+		Polymorph:  uint32(payload.TypeMeta),
 		Payload:    msg.Payload,
 		Receiver:   receiver,
 		Sender:     b.coordinator.Me(),

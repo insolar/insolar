@@ -52,31 +52,51 @@ package gateway
 
 import (
 	"context"
+	"github.com/insolar/insolar/insolar/gen"
+	"github.com/insolar/insolar/network/node"
+	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
 
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/pulse"
 	mock "github.com/insolar/insolar/testutils/network"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
+
+func createBase(mc *minimock.Controller) *Base {
+	b := &Base{}
+
+	op := mock.NewOriginProviderMock(mc)
+	op.GetOriginMock.Set(func() insolar.NetworkNode {
+		return node.NewNode(gen.Reference(), insolar.StaticRoleVirtual, nil, "127.0.0.1:123", "")
+	})
+
+	aborter := network.NewAborterMock(mc)
+	aborter.AbortMock.Set(func(ctx context.Context, reason string) {
+		require.Contains(mc, reason, bootstrapTimeoutMessage)
+	})
+
+	b.Aborter = aborter
+	b.OriginProvider = op
+	return b
+}
 
 func TestWaitPulsar_PulseNotArrivedInETA(t *testing.T) {
 	mc := minimock.NewController(t)
 	defer mc.Finish()
 	defer mc.Wait(time.Minute)
 
+	waitPulsar := newWaitPulsar(createBase(mc))
+	assert.Equal(t, insolar.WaitPulsar, waitPulsar.GetState())
 	gatewayer := mock.NewGatewayerMock(mc)
-	gatewayer.FailStateMock.Set(func(ctx context.Context, reason string) {
-		require.Equal(t, "Bootstrap timeout exceeded", reason)
+	waitPulsar.Gatewayer = gatewayer
+	gatewayer.GatewayMock.Set(func() network.Gateway {
+		return waitPulsar
 	})
 
-	waitPulsar := newWaitPulsar(&Base{})
-	assert.Equal(t, insolar.WaitPulsar, waitPulsar.GetState())
-
-	waitPulsar.Gatewayer = gatewayer
 	waitPulsar.bootstrapETA = time.Millisecond
 	waitPulsar.bootstrapTimer = time.NewTimer(waitPulsar.bootstrapETA)
 
@@ -110,5 +130,5 @@ func TestWaitPulsar_PulseArrivedInETA(t *testing.T) {
 	go waitPulsar.Run(context.Background(), *insolar.GenesisPulse)
 	time.Sleep(100 * time.Millisecond)
 
-	waitPulsar.OnConsensusFinished(context.Background(), network.Report{PulseNumber: insolar.FirstPulseNumber + 10})
+	waitPulsar.OnConsensusFinished(context.Background(), network.Report{PulseNumber: pulse.MinTimePulse + 10})
 }

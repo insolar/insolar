@@ -28,6 +28,12 @@ type RequestsQueueMock struct {
 	beforeCleanCounter uint64
 	CleanMock          mRequestsQueueMockClean
 
+	funcLength          func() (i1 int)
+	inspectFuncLength   func()
+	afterLengthCounter  uint64
+	beforeLengthCounter uint64
+	LengthMock          mRequestsQueueMockLength
+
 	funcNumberOfOld          func(ctx context.Context) (i1 int)
 	inspectFuncNumberOfOld   func(ctx context.Context)
 	afterNumberOfOldCounter  uint64
@@ -59,6 +65,8 @@ func NewRequestsQueueMock(t minimock.Tester) *RequestsQueueMock {
 
 	m.CleanMock = mRequestsQueueMockClean{mock: m}
 	m.CleanMock.callArgs = []*RequestsQueueMockCleanParams{}
+
+	m.LengthMock = mRequestsQueueMockLength{mock: m}
 
 	m.NumberOfOldMock = mRequestsQueueMockNumberOfOld{mock: m}
 	m.NumberOfOldMock.callArgs = []*RequestsQueueMockNumberOfOldParams{}
@@ -445,6 +453,149 @@ func (m *RequestsQueueMock) MinimockCleanInspect() {
 	// if func was set then invocations count should be greater than zero
 	if m.funcClean != nil && mm_atomic.LoadUint64(&m.afterCleanCounter) < 1 {
 		m.t.Error("Expected call to RequestsQueueMock.Clean")
+	}
+}
+
+type mRequestsQueueMockLength struct {
+	mock               *RequestsQueueMock
+	defaultExpectation *RequestsQueueMockLengthExpectation
+	expectations       []*RequestsQueueMockLengthExpectation
+}
+
+// RequestsQueueMockLengthExpectation specifies expectation struct of the RequestsQueue.Length
+type RequestsQueueMockLengthExpectation struct {
+	mock *RequestsQueueMock
+
+	results *RequestsQueueMockLengthResults
+	Counter uint64
+}
+
+// RequestsQueueMockLengthResults contains results of the RequestsQueue.Length
+type RequestsQueueMockLengthResults struct {
+	i1 int
+}
+
+// Expect sets up expected params for RequestsQueue.Length
+func (mmLength *mRequestsQueueMockLength) Expect() *mRequestsQueueMockLength {
+	if mmLength.mock.funcLength != nil {
+		mmLength.mock.t.Fatalf("RequestsQueueMock.Length mock is already set by Set")
+	}
+
+	if mmLength.defaultExpectation == nil {
+		mmLength.defaultExpectation = &RequestsQueueMockLengthExpectation{}
+	}
+
+	return mmLength
+}
+
+// Inspect accepts an inspector function that has same arguments as the RequestsQueue.Length
+func (mmLength *mRequestsQueueMockLength) Inspect(f func()) *mRequestsQueueMockLength {
+	if mmLength.mock.inspectFuncLength != nil {
+		mmLength.mock.t.Fatalf("Inspect function is already set for RequestsQueueMock.Length")
+	}
+
+	mmLength.mock.inspectFuncLength = f
+
+	return mmLength
+}
+
+// Return sets up results that will be returned by RequestsQueue.Length
+func (mmLength *mRequestsQueueMockLength) Return(i1 int) *RequestsQueueMock {
+	if mmLength.mock.funcLength != nil {
+		mmLength.mock.t.Fatalf("RequestsQueueMock.Length mock is already set by Set")
+	}
+
+	if mmLength.defaultExpectation == nil {
+		mmLength.defaultExpectation = &RequestsQueueMockLengthExpectation{mock: mmLength.mock}
+	}
+	mmLength.defaultExpectation.results = &RequestsQueueMockLengthResults{i1}
+	return mmLength.mock
+}
+
+//Set uses given function f to mock the RequestsQueue.Length method
+func (mmLength *mRequestsQueueMockLength) Set(f func() (i1 int)) *RequestsQueueMock {
+	if mmLength.defaultExpectation != nil {
+		mmLength.mock.t.Fatalf("Default expectation is already set for the RequestsQueue.Length method")
+	}
+
+	if len(mmLength.expectations) > 0 {
+		mmLength.mock.t.Fatalf("Some expectations are already set for the RequestsQueue.Length method")
+	}
+
+	mmLength.mock.funcLength = f
+	return mmLength.mock
+}
+
+// Length implements RequestsQueue
+func (mmLength *RequestsQueueMock) Length() (i1 int) {
+	mm_atomic.AddUint64(&mmLength.beforeLengthCounter, 1)
+	defer mm_atomic.AddUint64(&mmLength.afterLengthCounter, 1)
+
+	if mmLength.inspectFuncLength != nil {
+		mmLength.inspectFuncLength()
+	}
+
+	if mmLength.LengthMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmLength.LengthMock.defaultExpectation.Counter, 1)
+
+		results := mmLength.LengthMock.defaultExpectation.results
+		if results == nil {
+			mmLength.t.Fatal("No results are set for the RequestsQueueMock.Length")
+		}
+		return (*results).i1
+	}
+	if mmLength.funcLength != nil {
+		return mmLength.funcLength()
+	}
+	mmLength.t.Fatalf("Unexpected call to RequestsQueueMock.Length.")
+	return
+}
+
+// LengthAfterCounter returns a count of finished RequestsQueueMock.Length invocations
+func (mmLength *RequestsQueueMock) LengthAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmLength.afterLengthCounter)
+}
+
+// LengthBeforeCounter returns a count of RequestsQueueMock.Length invocations
+func (mmLength *RequestsQueueMock) LengthBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmLength.beforeLengthCounter)
+}
+
+// MinimockLengthDone returns true if the count of the Length invocations corresponds
+// the number of defined expectations
+func (m *RequestsQueueMock) MinimockLengthDone() bool {
+	for _, e := range m.LengthMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			return false
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.LengthMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterLengthCounter) < 1 {
+		return false
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcLength != nil && mm_atomic.LoadUint64(&m.afterLengthCounter) < 1 {
+		return false
+	}
+	return true
+}
+
+// MinimockLengthInspect logs each unmet expectation
+func (m *RequestsQueueMock) MinimockLengthInspect() {
+	for _, e := range m.LengthMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			m.t.Error("Expected call to RequestsQueueMock.Length")
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.LengthMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterLengthCounter) < 1 {
+		m.t.Error("Expected call to RequestsQueueMock.Length")
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcLength != nil && mm_atomic.LoadUint64(&m.afterLengthCounter) < 1 {
+		m.t.Error("Expected call to RequestsQueueMock.Length")
 	}
 }
 
@@ -1101,6 +1252,8 @@ func (m *RequestsQueueMock) MinimockFinish() {
 
 		m.MinimockCleanInspect()
 
+		m.MinimockLengthInspect()
+
 		m.MinimockNumberOfOldInspect()
 
 		m.MinimockTakeAllOriginatedFromInspect()
@@ -1131,6 +1284,7 @@ func (m *RequestsQueueMock) minimockDone() bool {
 	return done &&
 		m.MinimockAppendDone() &&
 		m.MinimockCleanDone() &&
+		m.MinimockLengthDone() &&
 		m.MinimockNumberOfOldDone() &&
 		m.MinimockTakeAllOriginatedFromDone() &&
 		m.MinimockTakeFirstDone()

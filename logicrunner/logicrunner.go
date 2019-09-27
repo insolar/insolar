@@ -21,9 +21,11 @@ import (
 	"context"
 	"strconv"
 	"sync"
+	"time"
 
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
 	"go.opencensus.io/trace"
 
 	"github.com/insolar/go-actors/actor/system"
@@ -35,7 +37,7 @@ import (
 	"github.com/insolar/insolar/insolar/flow/dispatcher"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
-	"github.com/insolar/insolar/insolar/pulse"
+	insolarPulse "github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
@@ -43,15 +45,17 @@ import (
 	lrCommon "github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/goplugin"
 	"github.com/insolar/insolar/logicrunner/machinesmanager"
+	"github.com/insolar/insolar/logicrunner/metrics"
 	"github.com/insolar/insolar/logicrunner/shutdown"
 	"github.com/insolar/insolar/logicrunner/writecontroller"
+	"github.com/insolar/insolar/pulse"
 )
 
 // LogicRunner is a general interface of contract executor
 type LogicRunner struct {
 	ContractRequester          insolar.ContractRequester          `inject:""`
 	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
-	PulseAccessor              pulse.Accessor                     `inject:""`
+	PulseAccessor              insolarPulse.Accessor              `inject:""`
 	ArtifactManager            artifacts.Client                   `inject:""`
 	DescriptorsCache           artifacts.DescriptorsCache         `inject:""`
 	JetCoordinator             jet.Coordinator                    `inject:""`
@@ -84,7 +88,6 @@ func NewLogicRunner(cfg *configuration.LogicRunner, publisher watermillMsg.Publi
 		Sender:    sender,
 	}
 
-	res.ResultsMatcher = newResultsMatcher(&res)
 	return &res, nil
 }
 
@@ -94,7 +97,7 @@ func (lr *LogicRunner) Init(ctx context.Context) error {
 	lr.ShutdownFlag = shutdown.NewFlag()
 
 	as := system.New()
-	lr.OutgoingSender = NewOutgoingRequestSender(as, lr.ContractRequester, lr.ArtifactManager)
+	lr.OutgoingSender = NewOutgoingRequestSender(as, lr.ContractRequester, lr.ArtifactManager, lr.PulseAccessor)
 
 	lr.StateStorage = NewStateStorage(
 		lr.Publisher,
@@ -106,6 +109,7 @@ func (lr *LogicRunner) Init(ctx context.Context) error {
 		lr.OutgoingSender,
 		lr.ShutdownFlag,
 	)
+	lr.ResultsMatcher = newResultsMatcher(lr.Sender, lr.PulseAccessor)
 
 	lr.rpc = lrCommon.NewRPC(
 		NewRPCMethods(
@@ -119,7 +123,7 @@ func (lr *LogicRunner) Init(ctx context.Context) error {
 	)
 
 	lr.WriteController = writecontroller.NewWriteController()
-	err := lr.WriteController.Open(ctx, insolar.FirstPulseNumber)
+	err := lr.WriteController.Open(ctx, pulse.MinTimePulse)
 	if err != nil {
 		return errors.Wrap(err, "failed to initialize write controller")
 	}
@@ -131,15 +135,17 @@ func (lr *LogicRunner) Init(ctx context.Context) error {
 
 func (lr *LogicRunner) initHandlers() {
 	dep := &Dependencies{
+		ArtifactManager:  lr.ArtifactManager,
 		Publisher:        lr.Publisher,
 		StateStorage:     lr.StateStorage,
 		ResultsMatcher:   lr.ResultsMatcher,
-		lr:               lr,
 		Sender:           lr.Sender,
 		JetStorage:       lr.JetStorage,
+		JetCoordinator:   lr.JetCoordinator,
 		WriteAccessor:    lr.WriteController,
 		OutgoingSender:   lr.OutgoingSender,
 		RequestsExecutor: lr.RequestsExecutor,
+		PulseAccessor:    lr.PulseAccessor,
 	}
 
 	initHandle := func(msg *watermillMsg.Message) *Init {
@@ -232,8 +238,13 @@ func (lr *LogicRunner) GracefulStop(ctx context.Context) error {
 }
 
 func (lr *LogicRunner) OnPulse(ctx context.Context, oldPulse insolar.Pulse, newPulse insolar.Pulse) error {
+	onPulseStart := time.Now()
 	ctx, span := instracer.StartSpan(ctx, "pulse.logicrunner")
-	defer span.End()
+	defer func(ctx context.Context) {
+		stats.Record(ctx,
+			metrics.LogicRunnerOnPulseTiming.M(float64(time.Since(onPulseStart).Nanoseconds())/1e6))
+		span.End()
+	}(ctx)
 
 	err := lr.WriteController.CloseAndWait(ctx, oldPulse.PulseNumber)
 	if err != nil {
@@ -308,42 +319,15 @@ func contextWithServiceData(ctx context.Context, data *payload.ServiceData) cont
 
 func (lr *LogicRunner) AddUnwantedResponse(ctx context.Context, msg insolar.Payload) error {
 	m := msg.(*payload.ReturnResults)
-	currentPulse, err := lr.PulseAccessor.Latest(ctx)
+	done, err := lr.WriteController.Begin(ctx, flow.Pulse(ctx))
 	if err != nil {
-		return errors.Wrap(err, "failed to get current pulse")
+		if err == writecontroller.ErrWriteClosed {
+			return flow.ErrCancelled
+		}
+		return errors.Wrap(err, "couldn't obtain writecontroller lock")
 	}
-	done, err := lr.WriteController.Begin(ctx, currentPulse.PulseNumber)
 	defer done()
-	if err != nil {
-		return flow.ErrCancelled
-	}
 
-	// TODO: move towards flow.Dispatcher in INS-3341
-	err = lr.isStillExecutor(ctx, *m.Target.Record())
-	if err != nil {
-		return err
-	}
-
-	return lr.ResultsMatcher.AddUnwantedResponse(ctx, m)
-}
-
-func (lr *LogicRunner) isStillExecutor(ctx context.Context, object insolar.ID) error {
-	currentPulse, err := lr.PulseAccessor.Latest(ctx)
-	if err != nil {
-		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to get current pulse"))
-		return flow.ErrCancelled
-	}
-
-	node, err := lr.JetCoordinator.VirtualExecutorForObject(ctx, object, currentPulse.PulseNumber)
-	if err != nil {
-		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to calculate current executor"))
-		return flow.ErrCancelled
-	}
-
-	if *node != lr.JetCoordinator.Me() {
-		inslogger.FromContext(ctx).Debug("I'm not executor")
-		return flow.ErrCancelled
-	}
-
+	lr.ResultsMatcher.AddUnwantedResponse(ctx, *m)
 	return nil
 }

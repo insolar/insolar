@@ -10,6 +10,7 @@ import (
 
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/jet"
 )
 
 // JetKeeperMock implements JetKeeper
@@ -40,6 +41,12 @@ type JetKeeperMock struct {
 	beforeHasAllJetConfirmsCounter uint64
 	HasAllJetConfirmsMock          mJetKeeperMockHasAllJetConfirms
 
+	funcStorage          func() (s1 jet.Storage)
+	inspectFuncStorage   func()
+	afterStorageCounter  uint64
+	beforeStorageCounter uint64
+	StorageMock          mJetKeeperMockStorage
+
 	funcTopSyncPulse          func() (p1 insolar.PulseNumber)
 	inspectFuncTopSyncPulse   func()
 	afterTopSyncPulseCounter  uint64
@@ -65,6 +72,8 @@ func NewJetKeeperMock(t minimock.Tester) *JetKeeperMock {
 
 	m.HasAllJetConfirmsMock = mJetKeeperMockHasAllJetConfirms{mock: m}
 	m.HasAllJetConfirmsMock.callArgs = []*JetKeeperMockHasAllJetConfirmsParams{}
+
+	m.StorageMock = mJetKeeperMockStorage{mock: m}
 
 	m.TopSyncPulseMock = mJetKeeperMockTopSyncPulse{mock: m}
 
@@ -939,6 +948,149 @@ func (m *JetKeeperMock) MinimockHasAllJetConfirmsInspect() {
 	}
 }
 
+type mJetKeeperMockStorage struct {
+	mock               *JetKeeperMock
+	defaultExpectation *JetKeeperMockStorageExpectation
+	expectations       []*JetKeeperMockStorageExpectation
+}
+
+// JetKeeperMockStorageExpectation specifies expectation struct of the JetKeeper.Storage
+type JetKeeperMockStorageExpectation struct {
+	mock *JetKeeperMock
+
+	results *JetKeeperMockStorageResults
+	Counter uint64
+}
+
+// JetKeeperMockStorageResults contains results of the JetKeeper.Storage
+type JetKeeperMockStorageResults struct {
+	s1 jet.Storage
+}
+
+// Expect sets up expected params for JetKeeper.Storage
+func (mmStorage *mJetKeeperMockStorage) Expect() *mJetKeeperMockStorage {
+	if mmStorage.mock.funcStorage != nil {
+		mmStorage.mock.t.Fatalf("JetKeeperMock.Storage mock is already set by Set")
+	}
+
+	if mmStorage.defaultExpectation == nil {
+		mmStorage.defaultExpectation = &JetKeeperMockStorageExpectation{}
+	}
+
+	return mmStorage
+}
+
+// Inspect accepts an inspector function that has same arguments as the JetKeeper.Storage
+func (mmStorage *mJetKeeperMockStorage) Inspect(f func()) *mJetKeeperMockStorage {
+	if mmStorage.mock.inspectFuncStorage != nil {
+		mmStorage.mock.t.Fatalf("Inspect function is already set for JetKeeperMock.Storage")
+	}
+
+	mmStorage.mock.inspectFuncStorage = f
+
+	return mmStorage
+}
+
+// Return sets up results that will be returned by JetKeeper.Storage
+func (mmStorage *mJetKeeperMockStorage) Return(s1 jet.Storage) *JetKeeperMock {
+	if mmStorage.mock.funcStorage != nil {
+		mmStorage.mock.t.Fatalf("JetKeeperMock.Storage mock is already set by Set")
+	}
+
+	if mmStorage.defaultExpectation == nil {
+		mmStorage.defaultExpectation = &JetKeeperMockStorageExpectation{mock: mmStorage.mock}
+	}
+	mmStorage.defaultExpectation.results = &JetKeeperMockStorageResults{s1}
+	return mmStorage.mock
+}
+
+//Set uses given function f to mock the JetKeeper.Storage method
+func (mmStorage *mJetKeeperMockStorage) Set(f func() (s1 jet.Storage)) *JetKeeperMock {
+	if mmStorage.defaultExpectation != nil {
+		mmStorage.mock.t.Fatalf("Default expectation is already set for the JetKeeper.Storage method")
+	}
+
+	if len(mmStorage.expectations) > 0 {
+		mmStorage.mock.t.Fatalf("Some expectations are already set for the JetKeeper.Storage method")
+	}
+
+	mmStorage.mock.funcStorage = f
+	return mmStorage.mock
+}
+
+// Storage implements JetKeeper
+func (mmStorage *JetKeeperMock) Storage() (s1 jet.Storage) {
+	mm_atomic.AddUint64(&mmStorage.beforeStorageCounter, 1)
+	defer mm_atomic.AddUint64(&mmStorage.afterStorageCounter, 1)
+
+	if mmStorage.inspectFuncStorage != nil {
+		mmStorage.inspectFuncStorage()
+	}
+
+	if mmStorage.StorageMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmStorage.StorageMock.defaultExpectation.Counter, 1)
+
+		results := mmStorage.StorageMock.defaultExpectation.results
+		if results == nil {
+			mmStorage.t.Fatal("No results are set for the JetKeeperMock.Storage")
+		}
+		return (*results).s1
+	}
+	if mmStorage.funcStorage != nil {
+		return mmStorage.funcStorage()
+	}
+	mmStorage.t.Fatalf("Unexpected call to JetKeeperMock.Storage.")
+	return
+}
+
+// StorageAfterCounter returns a count of finished JetKeeperMock.Storage invocations
+func (mmStorage *JetKeeperMock) StorageAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmStorage.afterStorageCounter)
+}
+
+// StorageBeforeCounter returns a count of JetKeeperMock.Storage invocations
+func (mmStorage *JetKeeperMock) StorageBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmStorage.beforeStorageCounter)
+}
+
+// MinimockStorageDone returns true if the count of the Storage invocations corresponds
+// the number of defined expectations
+func (m *JetKeeperMock) MinimockStorageDone() bool {
+	for _, e := range m.StorageMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			return false
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.StorageMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterStorageCounter) < 1 {
+		return false
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcStorage != nil && mm_atomic.LoadUint64(&m.afterStorageCounter) < 1 {
+		return false
+	}
+	return true
+}
+
+// MinimockStorageInspect logs each unmet expectation
+func (m *JetKeeperMock) MinimockStorageInspect() {
+	for _, e := range m.StorageMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			m.t.Error("Expected call to JetKeeperMock.Storage")
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.StorageMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterStorageCounter) < 1 {
+		m.t.Error("Expected call to JetKeeperMock.Storage")
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcStorage != nil && mm_atomic.LoadUint64(&m.afterStorageCounter) < 1 {
+		m.t.Error("Expected call to JetKeeperMock.Storage")
+	}
+}
+
 type mJetKeeperMockTopSyncPulse struct {
 	mock               *JetKeeperMock
 	defaultExpectation *JetKeeperMockTopSyncPulseExpectation
@@ -1093,6 +1245,8 @@ func (m *JetKeeperMock) MinimockFinish() {
 
 		m.MinimockHasAllJetConfirmsInspect()
 
+		m.MinimockStorageInspect()
+
 		m.MinimockTopSyncPulseInspect()
 		m.t.FailNow()
 	}
@@ -1121,5 +1275,6 @@ func (m *JetKeeperMock) minimockDone() bool {
 		m.MinimockAddDropConfirmationDone() &&
 		m.MinimockAddHotConfirmationDone() &&
 		m.MinimockHasAllJetConfirmsDone() &&
+		m.MinimockStorageDone() &&
 		m.MinimockTopSyncPulseDone()
 }

@@ -17,7 +17,6 @@
 package insolar
 
 import (
-	"context"
 	"encoding/json"
 
 	"github.com/pkg/errors"
@@ -70,105 +69,11 @@ func convertArgs(args []byte, result *[]interface{}) error {
 	return nil
 }
 
-// MessageType is an enum type of message.
-type MessageType byte
-
 // ReplyType is an enum type of message reply.
 type ReplyType byte
-
-// Message is a routable packet, ATM just a method call
-type Message interface {
-	// Type returns message type.
-	Type() MessageType
-
-	// GetCaller returns initiator of this event.
-	GetCaller() *Reference
-
-	// DefaultTarget returns of target of this event.
-	DefaultTarget() *Reference
-
-	// DefaultRole returns role for this event
-	DefaultRole() DynamicRole
-
-	// AllowedSenderObjectAndRole extracts information from message
-	// verify sender required to 's "caller" for sender
-	// verification purpose. If nil then check of sender's role is not
-	// provided by the message bus
-	AllowedSenderObjectAndRole() (*Reference, DynamicRole)
-}
-
-type MessageSignature interface {
-	GetSign() []byte
-	GetSender() Reference
-	SetSender(Reference)
-}
-
-//go:generate minimock -i github.com/insolar/insolar/insolar.Parcel -o ../testutils -s _mock.go -g
-
-// Parcel by senders private key.
-type Parcel interface {
-	Message
-	MessageSignature
-
-	Message() Message
-	Context(context.Context) context.Context
-
-	Pulse() PulseNumber
-
-	DelegationToken() DelegationToken
-}
 
 // Reply for an `Message`
 type Reply interface {
 	// Type returns message type.
 	Type() ReplyType
 }
-
-// RedirectReply is used to create redirected messages.
-type RedirectReply interface {
-	// Redirected creates redirected message from redirect data.
-	Redirected(genericMsg Message) Message
-	// GetReceiver returns node reference to send message to.
-	GetReceiver() *Reference
-	// GetToken returns delegation token.
-	GetToken() DelegationToken
-}
-
-// MessageSendOptions represents options for message sending.
-type MessageSendOptions struct {
-	Receiver *Reference
-	Token    DelegationToken
-}
-
-// Safe returns original options, falling back on defaults if nil.
-func (o *MessageSendOptions) Safe() *MessageSendOptions {
-	if o == nil {
-		return &MessageSendOptions{}
-	}
-	return o
-}
-
-// MessageHandler is a function for message handling. It should be registered via Register method.
-type MessageHandler func(context.Context, Parcel) (Reply, error)
-
-//go:generate stringer -type=MessageType
-const (
-	// TypeValidationResults sends from Validator to new Executor with results of validation actions of previous Executor
-	TypeValidationResults MessageType = iota
-	// TypeAdditionalCallFromPreviousExecutor is sent by the old executor to the current executor when Flow
-	// cancels after registering the request but before adding the request to the execution queue.
-
-	// TypeGenesisRequest used for bootstrap object generation.
-	TypeGenesisRequest
-)
-
-// DelegationTokenType is an enum type of delegation token
-type DelegationTokenType byte
-
-//go:generate stringer -type=DelegationTokenType
-const (
-	// DTTypePendingExecution allows to continue method calls
-	DTTypePendingExecution DelegationTokenType = iota + 1
-	DTTypeGetObjectRedirect
-	DTTypeGetCodeRedirect
-)

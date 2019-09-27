@@ -245,7 +245,7 @@ func jetInList(jets []insolar.JetID, jetID insolar.JetID) bool {
 
 func jsort(jets []insolar.JetID) []string {
 	sort.Slice(jets, func(i, j int) bool {
-		return bytes.Compare(jets[i][:], jets[j][:]) == -1
+		return bytes.Compare(jets[i].Prefix(), jets[j].Prefix()) == -1
 	})
 	result := make([]string, 0, len(jets))
 	for _, j := range jets {

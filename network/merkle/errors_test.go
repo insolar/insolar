@@ -56,20 +56,19 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/insolar/insolar/network"
-	network2 "github.com/insolar/insolar/testutils/network"
-
-	"github.com/insolar/insolar/insolar/jet"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
-	pulse2 "github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar/pulsartestutils"
 	"github.com/insolar/insolar/testutils"
+	network2 "github.com/insolar/insolar/testutils/network"
 )
 
 type calculatorErrorSuite struct {
@@ -180,7 +179,7 @@ func TestCalculatorError(t *testing.T) {
 	})
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
 
-	ps := pulse2.NewStorageMem()
+	ps := pulse.NewStorageMem()
 
 	op := network2.NewOriginProviderMock(t)
 	op.GetOriginMock.Set(func() insolar.NetworkNode {
@@ -206,7 +205,7 @@ func TestCalculatorError(t *testing.T) {
 	err := cm.Init(context.Background())
 	require.NoError(t, err)
 
-	pulse := &insolar.Pulse{
+	pulseObject := &insolar.Pulse{
 		PulseNumber:     insolar.PulseNumber(1337),
 		NextPulseNumber: insolar.PulseNumber(1347),
 		Entropy:         pulsartestutils.MockEntropyGenerator{}.GenerateEntropy(),
@@ -215,7 +214,7 @@ func TestCalculatorError(t *testing.T) {
 	s := &calculatorErrorSuite{
 		Suite:          suite.Suite{},
 		calculator:     calculator,
-		pulse:          pulse,
+		pulse:          pulseObject,
 		originProvider: op,
 		service:        service,
 	}

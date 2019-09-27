@@ -16,4 +16,19 @@
 
 package insolar
 
+import (
+	"go/build"
+	"log"
+)
+
+// RootModule holds root module name.
 var RootModule = "github.com/insolar/insolar"
+
+// RootModuleDir returns abs path to root module for any package where it's called.
+func RootModuleDir() string {
+	p, err := build.Default.Import(RootModule, ".", build.FindOnly)
+	if err != nil {
+		log.Fatal("failed to resolve", RootModule)
+	}
+	return p.Dir
+}

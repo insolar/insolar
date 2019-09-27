@@ -53,6 +53,7 @@ package core
 import (
 	"context"
 	"fmt"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/consensus/common/cryptkit"
@@ -67,6 +68,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/gcpv2/api/transport"
 	"github.com/insolar/insolar/network/consensus/gcpv2/censusimpl"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/coreapi"
+	"github.com/insolar/insolar/network/consensus/gcpv2/core/errors"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/packetdispatch"
 	pop "github.com/insolar/insolar/network/consensus/gcpv2/core/population"
 	"github.com/insolar/insolar/network/consensus/gcpv2/core/purgatory"
@@ -107,7 +109,7 @@ func (r *FullRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 
 	switch {
 	case pt.GetLimitPerSender() == 0 || int(pt) >= len(r.packetDispatchers) || r.packetDispatchers[pt] == nil:
-		return fmt.Errorf("packet type (%v) is unknown", pt)
+		return errors.UnknownPacketType(pt)
 	case pt.IsMemberPacket():
 		selfID := r.GetSelfNodeID()
 		strict, err := coreapi.VerifyPacketRoute(ctx, packet, selfID, from)
@@ -141,7 +143,7 @@ func (r *FullRealm) dispatchPacket(ctx context.Context, packet transport.PacketP
 	}
 
 	if sourceNode != nil && !sourceNode.CanReceivePacket(pt) {
-		return fmt.Errorf("packet type (%v) limit exceeded: from=%v(%v)", pt, sourceNode.GetNodeID(), from)
+		return errors.LimitExceeded(pt, sourceNode.GetNodeID(), from)
 	}
 
 	// this enables lazy parsing - packet is fully parsed AFTER validation, hence makes it less prone to exploits for non-members
@@ -199,7 +201,6 @@ func (r *FullRealm) initBefore(transport transport.Factory) transport.Neighbourh
 
 	if r.ephemeralFeeder != nil {
 		r.timings = r.ephemeralFeeder.GetEphemeralTimings(r.config)
-		r.strategy.AdjustConsensusTimings(&r.timings)
 	}
 
 	r.packetSender = transport.GetPacketSender()
@@ -214,7 +215,6 @@ func (r *FullRealm) initBasics(census census.Active) {
 
 	if r.ephemeralFeeder == nil { // ephemeral timings are initialized earlier, in initBefore()
 		r.timings = r.config.GetConsensusTimings(r.pulseData.NextPulseDelta)
-		r.strategy.AdjustConsensusTimings(&r.timings)
 	}
 
 	if r.expectedPopulationSize == 0 {
@@ -283,7 +283,7 @@ func (r *FullRealm) initPopulation(needsDynamic bool, population census.OnlinePo
 
 	hookCfg := pop.NewSharedNodeContext(r.assistant, r, uint8(r.nbhSizes.NeighbourhoodTrustThreshold), r.getEphemeralMode(),
 		func(report misbehavior.Report) interface{} {
-			log.Warnf("Got Report: %+v", report)
+			log.Debugf("Got Report: %+v", report)
 			r.census.GetMisbehaviorRegistry().AddReport(report)
 			return nil
 		})
@@ -457,20 +457,20 @@ func (r *FullRealm) PreparePulseChange() (bool, <-chan api.UpstreamState) {
 	report := r.getUpstreamReport()
 
 	if r.IsLocalStateful() {
-		inslogger.FromContext(r.roundContext).Warnf("PreparePulseChange: self=%s, eph=%v", r.self, r.populationHook.GetEphemeralMode())
+		inslogger.FromContext(r.roundContext).Debugf("PreparePulseChange: self=%s, eph=%v", r.self, r.populationHook.GetEphemeralMode())
 		ch := make(chan api.UpstreamState, 1)
 		r.stateMachine.PreparePulseChange(report, ch)
 		return true, ch
 	}
 
-	inslogger.FromContext(r.roundContext).Warnf("PrepareAndCommitStatelessPulseChange: self=%s, eph=%v", r.self, r.populationHook.GetEphemeralMode())
+	inslogger.FromContext(r.roundContext).Debugf("PrepareAndCommitStatelessPulseChange: self=%s, eph=%v", r.self, r.populationHook.GetEphemeralMode())
 	r.stateMachine.CommitPulseChangeByStateless(report, r.pulseData, r.census)
 	return false, nil
 }
 
 func (r *FullRealm) CommitPulseChange() {
 	report := r.getUpstreamReport()
-	inslogger.FromContext(r.roundContext).Warnf("CommitPulseChange: self=%s", r.self)
+	inslogger.FromContext(r.roundContext).Debugf("CommitPulseChange: self=%s", r.self)
 
 	r.stateMachine.CommitPulseChange(report, r.pulseData, r.census)
 }

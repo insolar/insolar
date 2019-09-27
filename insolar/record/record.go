@@ -194,25 +194,22 @@ func (r *IncomingRequest) IsCreationRequest() bool {
 }
 
 func (r *IncomingRequest) Validate() error {
+	if r.ReasonRef().GetLocal().IsEmpty() {
+		return errors.New("reason is empty")
+	}
 	// Incoming requests never should't be in detached state,
 	// app code should check it and raise some kind of error.
-	if r.ReturnMode == ReturnSaga {
-		return errors.New("return mode is a return saga")
-	}
 	if r.IsAPIRequest() {
 		return nil
 	}
 	if r.ReasonAffinityRef().IsEmpty() {
 		return errors.New("reason object is not set on incoming request")
 	}
-	if r.ReasonRef().IsEmpty() {
-		return errors.New("reason ref is empty")
-	}
 	return nil
 }
 
 func (r *IncomingRequest) IsDetachedCall() bool {
-	return r.ReturnMode == ReturnNoWait
+	return r.ReturnMode == ReturnSaga
 }
 
 func (r *IncomingRequest) IsTemporaryUploadCode() bool {
@@ -248,8 +245,8 @@ func (r *OutgoingRequest) Validate() error {
 	if r.IsCreationRequest() {
 		return errors.New("outgoing request cannot be creating request")
 	}
-	if r.ReasonRef().IsEmpty() {
-		return errors.New("reason ref is empty")
+	if r.ReasonRef().GetLocal().IsEmpty() {
+		return errors.New("reason is empty")
 	}
 
 	return nil

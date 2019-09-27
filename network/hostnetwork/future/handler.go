@@ -52,11 +52,11 @@ package future
 
 import (
 	"context"
+	"time"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
-	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 )
 
 type packetHandler struct {
@@ -85,8 +85,9 @@ func (ph *packetHandler) Handle(ctx context.Context, response *packet.ReceivedPa
 	future := ph.futureManager.Get(response.Packet)
 	if future != nil {
 		if shouldProcessPacket(future, response) {
-			logger.Debugf("[ processResponse ] Processing future RequestID = %d", future.ID())
+			start := time.Now()
 			future.SetResponse(response)
+			logger.Debugf("[ processResponse ] Finished processing future RequestID = %d in %s", future.ID(), time.Since(start).String())
 		} else {
 			logger.Debugf("[ processResponse ] Canceling future RequestID = %d", future.ID())
 			future.Cancel()
@@ -98,5 +99,5 @@ func shouldProcessPacket(future Future, p *packet.ReceivedPacket) bool {
 	typesShouldBeEqual := p.GetType() == future.Request().GetType()
 	responseIsForRightSender := future.Receiver().Equal(*p.Sender)
 
-	return typesShouldBeEqual && (responseIsForRightSender || p.GetType() == types.Ping)
+	return typesShouldBeEqual && responseIsForRightSender
 }

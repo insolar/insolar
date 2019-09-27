@@ -20,6 +20,7 @@ package functest
 
 import (
 	"encoding/json"
+	"github.com/insolar/insolar/api/requester"
 	"testing"
 
 	"github.com/insolar/insolar/certificate"
@@ -35,7 +36,7 @@ var keyProcessor = platformpolicy.NewKeyProcessor()
 const TESTPUBLICKEY = "some_fancy_public_key"
 
 func registerNodeSignedCall(t *testing.T, params map[string]interface{}) (string, error) {
-	res, err := signedRequest(t, &launchnet.Root, "contract.registerNode", params)
+	res, err := signedRequest(t, launchnet.TestRPCUrl, &launchnet.Root, "contract.registerNode", params)
 	if err != nil {
 		return "", err
 	}
@@ -67,18 +68,23 @@ func TestRegisterNodeLightMaterial(t *testing.T) {
 }
 
 func TestRegisterNodeNotExistRole(t *testing.T) {
-	_, err := signedRequestWithEmptyRequestRef(t, &launchnet.Root, "contract.registerNode", map[string]interface{}{"publicKey": TESTPUBLICKEY, "role": "some_not_fancy_role"})
+	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, &launchnet.Root,
+		"contract.registerNode", map[string]interface{}{"publicKey": TESTPUBLICKEY, "role": "some_not_fancy_role"})
 	require.Error(t, err)
-	require.Contains(t, err.Error(),
-		"role is not supported: some_not_fancy_role")
+	require.IsType(t, &requester.Error{}, err)
+	data := err.(*requester.Error).Data
+	require.Contains(t, data.Trace, "role is not supported")
 }
 
 func TestRegisterNodeByNoRoot(t *testing.T) {
 	member := createMember(t)
 	const testRole = "virtual"
-	_, err := signedRequestWithEmptyRequestRef(t, member, "contract.registerNode", map[string]interface{}{"publicKey": TESTPUBLICKEY, "role": testRole})
+	_, err := signedRequestWithEmptyRequestRef(t, launchnet.TestRPCUrl, member, "contract.registerNode",
+		map[string]interface{}{"publicKey": TESTPUBLICKEY, "role": testRole})
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "only root member can register node")
+	require.IsType(t, &requester.Error{}, err)
+	data := err.(*requester.Error).Data
+	require.Contains(t, data.Trace, "only root member can register node")
 }
 
 func TestReceiveNodeCert(t *testing.T) {
@@ -86,7 +92,7 @@ func TestReceiveNodeCert(t *testing.T) {
 	ref, err := registerNodeSignedCall(t, map[string]interface{}{"publicKey": TESTPUBLICKEY, "role": testRole})
 	require.NoError(t, err)
 
-	body := getRPSResponseBody(t, postParams{
+	body := getRPSResponseBody(t, launchnet.TestRPCUrl, postParams{
 		"jsonrpc": "2.0",
 		"method":  "cert.get",
 		"id":      "",

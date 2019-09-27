@@ -20,18 +20,25 @@ import (
 	"context"
 	"fmt"
 
+	"go.opencensus.io/stats"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
-	"github.com/insolar/insolar/insolar/pulse"
+	insPulse "github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/logicrunner/metrics"
+	"github.com/insolar/insolar/pulse"
 
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
+)
+
+const (
+	getPendingLimit = 100
 )
 
 type localStorage struct {
@@ -83,23 +90,15 @@ func newLocalStorage() *localStorage {
 
 // Client provides concrete API to storage for processing module.
 type client struct {
-	JetStorage     jet.Storage                        `inject:""`
-	PCS            insolar.PlatformCryptographyScheme `inject:""`
-	PulseAccessor  pulse.Accessor                     `inject:""`
-	JetCoordinator jet.Coordinator                    `inject:""`
+	PCS           insolar.PlatformCryptographyScheme `inject:""`
+	PulseAccessor insPulse.Accessor                  `inject:""`
 
 	sender       bus.Sender
 	localStorage *localStorage
 }
 
-// State returns hash state for artifact manager.
-func (m *client) State() []byte {
-	// This is a temporary stab to simulate real hash.
-	return m.PCS.IntegrityHasher().Hash([]byte{1, 2, 3})
-}
-
 // NewClient creates new client instance.
-func NewClient(sender bus.Sender) *client { // nolint
+func NewClient(sender bus.Sender) Client {
 	return &client{
 		sender:       sender,
 		localStorage: newLocalStorage(),
@@ -152,8 +151,6 @@ func (m *client) calculateAffinityReference(ctx context.Context, requestRecord r
 		return nil, err
 	}
 	return record.CalculateRequestAffinityRef(requestRecord, pulseNumber, m.PCS), nil
-	// recID := *insolar.NewID(currentPN, h.Sum(nil))
-	// return insolar.NewReference(recID), nil
 }
 
 // RegisterIncomingRequest sends message for incoming request registration,
@@ -167,19 +164,37 @@ func (m *client) RegisterIncomingRequest(ctx context.Context, request *record.In
 	if err != nil {
 		return nil, errors.Wrap(err, "RegisterIncomingRequest")
 	}
+	switch {
+	case res.Result != nil:
+		stats.Record(ctx, metrics.IncomingRequestsClosed.M(1))
+	case res.Request != nil:
+		stats.Record(ctx, metrics.IncomingRequestsDuplicate.M(1))
+	default:
+		stats.Record(ctx, metrics.IncomingRequestsNew.M(1))
+	}
 	return res, err
 }
 
 // RegisterOutgoingRequest sends message for outgoing request registration,
 // returns request record Ref if request successfully created or already exists.
 func (m *client) RegisterOutgoingRequest(ctx context.Context, request *record.OutgoingRequest) (*payload.RequestInfo, error) {
+	retrySender := bus.NewRetrySender(m.sender, m.PulseAccessor, 1, 1)
 	outgoingRequest := &payload.SetOutgoingRequest{Request: record.Wrap(request)}
-	res, err := m.registerRequest(
-		ctx, request, outgoingRequest, bus.NewRetrySender(m.sender, m.PulseAccessor, 1, 1),
-	)
+
+	res, err := m.registerRequest(ctx, request, outgoingRequest, retrySender)
 	if err != nil {
 		return nil, errors.Wrap(err, "RegisterOutgoingRequest")
 	}
+
+	switch {
+	case res.Result != nil:
+		stats.Record(ctx, metrics.OutgoingRequestsClosed.M(1))
+	case res.Request != nil:
+		stats.Record(ctx, metrics.OutgoingRequestsDuplicate.M(1))
+	default:
+		stats.Record(ctx, metrics.OutgoingRequestsNew.M(1))
+	}
+
 	return res, err
 }
 
@@ -209,7 +224,7 @@ func (m *client) GetCode(
 		instrumenter.end()
 	}()
 
-	getCodePl := &payload.GetCode{CodeID: *code.Record()}
+	getCodePl := &payload.GetCode{CodeID: *code.GetLocal()}
 
 	pl, err := m.sendToLight(
 		ctx, bus.NewRetrySender(m.sender, m.PulseAccessor, 1, 1), getCodePl, code,
@@ -240,7 +255,7 @@ func (m *client) GetCode(
 		err = errors.New(p.Text)
 		return nil, err
 	default:
-		err = fmt.Errorf("GetObject: unexpected reply: %#v", p)
+		err = fmt.Errorf("GetCode: unexpected reply: %#v", p)
 		return nil, err
 	}
 }
@@ -252,6 +267,7 @@ func (m *client) GetCode(
 func (m *client) GetObject(
 	ctx context.Context,
 	head insolar.Reference,
+	request *insolar.Reference,
 ) (ObjectDescriptor, error) {
 	var (
 		err error
@@ -274,11 +290,16 @@ func (m *client) GetObject(
 		instrumenter.end()
 	}()
 
-	logger := inslogger.FromContext(ctx).WithField("object", head.Record().DebugString())
+	logger := inslogger.FromContext(ctx).WithField("object", head.GetLocal().String())
 
-	msg, err := payload.NewMessage(&payload.GetObject{
-		ObjectID: *head.Record(),
-	})
+	pl := payload.GetObject{
+		ObjectID: *head.GetLocal(),
+	}
+	if request != nil {
+		pl.RequestID = request.GetLocal()
+	}
+
+	msg, err := payload.NewMessage(&pl)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to marshal message")
 	}
@@ -288,11 +309,11 @@ func (m *client) GetObject(
 	defer done()
 
 	var (
-		index        *record.Lifeline
-		statePayload *payload.State
+		index *record.Lifeline
+		state record.State
 	)
 	success := func() bool {
-		return index != nil && statePayload != nil
+		return index != nil && state != nil
 	}
 
 	for rep := range reps {
@@ -311,7 +332,18 @@ func (m *client) GetObject(
 			}
 		case *payload.State:
 			logger.Debug("reply state")
-			statePayload = p
+			rec := record.Material{}
+			err = rec.Unmarshal(p.Record)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to unmarshal state")
+			}
+			virtual := record.Unwrap(&rec.Virtual)
+			s, ok := virtual.(record.State)
+			if !ok {
+				err = errors.New("wrong state record")
+				return nil, err
+			}
+			state = s
 		case *payload.Error:
 			logger.Debug("reply error: ", p.Text)
 			switch p.Code {
@@ -319,7 +351,6 @@ func (m *client) GetObject(
 				err = insolar.ErrDeactivated
 				return nil, err
 			default:
-				logger.Errorf("reply error: %v, objectID: %v", p.Text, head.Record().DebugString())
 				err = errors.New(p.Text)
 				return nil, err
 			}
@@ -332,31 +363,18 @@ func (m *client) GetObject(
 			break
 		}
 	}
-	if !success() {
-		logger.Error(ErrNoReply)
-		err = ErrNoReply
-		return nil, ErrNoReply
-	}
 
-	rec := record.Material{}
-	err = rec.Unmarshal(statePayload.Record)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal state")
-	}
-	virtual := record.Unwrap(&rec.Virtual)
-	s, ok := virtual.(record.State)
-	if !ok {
-		err = errors.New("wrong state record")
+	if !success() {
+		err = ErrNoReply
 		return nil, err
 	}
-	state := s
 
 	desc := &objectDescriptor{
 		head:        head,
 		state:       *index.LatestState,
 		prototype:   state.GetImage(),
 		isPrototype: state.GetIsPrototype(),
-		memory:      statePayload.Memory,
+		memory:      state.GetMemory(),
 		parent:      index.Parent,
 	}
 	return desc, nil
@@ -377,34 +395,40 @@ func (m *client) GetAbandonedRequest(
 	}()
 
 	getRequestPl := &payload.GetRequest{
-		ObjectID:  *object.Record(),
-		RequestID: *reqRef.Record(),
+		ObjectID:  *object.GetLocal(),
+		RequestID: *reqRef.GetLocal(),
 	}
 
 	pl, err := m.sendToLight(ctx, m.sender, getRequestPl, object)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to send GetRequest")
 	}
-	req, ok := pl.(*payload.Request)
-	if !ok {
-		err = fmt.Errorf("unexpected reply %T", pl)
-		return nil, err
-	}
 
-	concrete := record.Unwrap(&req.Request)
-	var result record.Request
+	switch p := pl.(type) {
+	case *payload.Request:
+		concrete := record.Unwrap(&p.Request)
+		var result record.Request
 
-	switch v := concrete.(type) {
-	case *record.IncomingRequest:
-		result = v
-	case *record.OutgoingRequest:
-		result = v
+		switch v := concrete.(type) {
+		case *record.IncomingRequest:
+			result = v
+		case *record.OutgoingRequest:
+			result = v
+		default:
+			err = fmt.Errorf("GetAbandonedRequest: unexpected message: %#v", concrete)
+			return nil, err
+		}
+
+		return result, nil
+	case *payload.Error:
+		if p.Code == payload.CodeNotFound {
+			return nil, insolar.ErrNotFound
+		}
+		return nil, errors.New(p.Text)
 	default:
-		err = fmt.Errorf("GetAbandonedRequest: unexpected message: %#v", concrete)
+		err = errors.Errorf("unexpected reply %T", pl)
 		return nil, err
 	}
-
-	return result, nil
 }
 
 // GetPendings returns a list of pending requests
@@ -421,7 +445,8 @@ func (m *client) GetPendings(ctx context.Context, object insolar.Reference) ([]i
 	}()
 
 	getPendingsPl := &payload.GetPendings{
-		ObjectID: *object.Record(),
+		ObjectID: *object.GetLocal(),
+		Count:    getPendingLimit,
 	}
 
 	pl, err := m.sendToLight(ctx, m.sender, getPendingsPl, object)
@@ -433,12 +458,11 @@ func (m *client) GetPendings(ctx context.Context, object insolar.Reference) ([]i
 	case *payload.IDs:
 		res := make([]insolar.Reference, len(concrete.IDs))
 		for i := range concrete.IDs {
-			res[i] = *insolar.NewReference(concrete.IDs[i])
+			res[i] = *insolar.NewRecordReference(concrete.IDs[i])
 		}
 		return res, nil
 	case *payload.Error:
 		if concrete.Code == payload.CodeNoPendings {
-			err = insolar.ErrNoPendingRequest
 			return []insolar.Reference{}, insolar.ErrNoPendingRequest
 		}
 		err = errors.New(concrete.Text)
@@ -465,7 +489,7 @@ func (m *client) HasPendings(
 	}()
 
 	hasPendingsPl := &payload.HasPendings{
-		ObjectID: *object.Record(),
+		ObjectID: *object.GetLocal(),
 	}
 
 	pl, err := m.sendToLight(ctx, m.sender, hasPendingsPl, object)
@@ -489,13 +513,7 @@ func (m *client) HasPendings(
 // DeployCode creates new code record in storage.
 //
 // CodeRef records are used to activate prototype or as migration code for an object.
-func (m *client) DeployCode(
-	ctx context.Context,
-	domain insolar.Reference,
-	request insolar.Reference,
-	code []byte,
-	machineType insolar.MachineType,
-) (*insolar.ID, error) {
+func (m *client) DeployCode(ctx context.Context, code []byte, machineType insolar.MachineType) (*insolar.ID, error) {
 	var err error
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.DeployCode")
 	instrumenter := instrument(ctx, "DeployCode").err(&err)
@@ -507,13 +525,7 @@ func (m *client) DeployCode(
 		instrumenter.end()
 	}()
 
-	currentPN, err := m.pulse(ctx)
-	if err != nil {
-		return nil, err
-	}
-
 	codeRec := record.Code{
-		Domain:      domain,
 		Code:        code,
 		MachineType: machineType,
 	}
@@ -523,12 +535,13 @@ func (m *client) DeployCode(
 		return nil, errors.Wrap(err, "failed to marshal record")
 	}
 
-	h := m.PCS.ReferenceHasher()
-	_, err = h.Write(buf)
+	currentPN, err := m.pulse(ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to calculate hash")
+		return nil, err
 	}
-	recID := *insolar.NewID(currentPN, h.Sum(nil))
+
+	h := m.PCS.ReferenceHasher()
+	recID := *insolar.NewID(currentPN, h.Sum(buf))
 
 	psc := &payload.SetCode{
 		Record: buf,
@@ -536,7 +549,7 @@ func (m *client) DeployCode(
 
 	pl, err := m.sendToLight(
 		ctx, bus.NewRetrySender(m.sender, m.PulseAccessor, 1, 1),
-		psc, *insolar.NewReference(recID),
+		psc, *insolar.NewRecordReference(recID),
 	)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to send SetCode")
@@ -578,14 +591,13 @@ func (m *client) ActivatePrototype(
 }
 
 // pulse returns current PulseNumber for artifact manager
-func (m *client) pulse(ctx context.Context) (pn insolar.PulseNumber, err error) {
-	pulse, err := m.PulseAccessor.Latest(ctx)
+func (m *client) pulse(ctx context.Context) (insolar.PulseNumber, error) {
+	pulseObject, err := m.PulseAccessor.Latest(ctx)
 	if err != nil {
-		return
+		return pulse.Unknown, err
 	}
 
-	pn = pulse.PulseNumber
-	return
+	return pulseObject.PulseNumber, nil
 }
 
 func (m *client) activateObject(
@@ -596,7 +608,7 @@ func (m *client) activateObject(
 	parent insolar.Reference,
 	memory []byte,
 ) error {
-	_, err := m.GetObject(ctx, parent)
+	_, err := m.GetObject(ctx, parent, nil)
 	if err != nil {
 		return errors.Wrap(err, "wrong parent")
 	}
@@ -610,7 +622,7 @@ func (m *client) activateObject(
 	}
 
 	result := record.Result{
-		Object:  *obj.Record(),
+		Object:  *obj.GetLocal(),
 		Request: obj,
 	}
 
@@ -680,6 +692,8 @@ func (m *client) RegisterResult(
 		switch p := payloadOutput.(type) {
 		case *payload.ResultInfo:
 			return &payloadOutput.(*payload.ResultInfo).ResultID, nil
+		case *payload.ErrorResultExists:
+			return nil, errors.New("another result already exists")
 		case *payload.Error:
 			return nil, errors.New(p.Text)
 		default:
@@ -705,7 +719,7 @@ func (m *client) RegisterResult(
 
 	objReference := result.ObjectReference()
 	resultRecord := record.Result{
-		Object:  *objReference.Record(),
+		Object:  *objReference.GetLocal(),
 		Request: request,
 		Payload: result.Result(),
 	}

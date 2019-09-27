@@ -16,15 +16,24 @@
 
 package configuration
 
+import (
+	"time"
+)
+
 // Exporter holds exporter configuration.
+// Is was assumed, that exporter will be used for exporting data for observer
+// Exporter is grpc-base service
 type Exporter struct {
 	// Addr specifies address where exporter server starts
 	Addr string
+	// DurationBetweenRequests specifies time limit between requests to exporter
+	DurationBetweenRequests time.Duration
 }
 
 // NewExporter creates new default configuration for export.
 func NewExporter() Exporter {
 	return Exporter{
-		Addr: ":5678",
+		Addr:                    ":5678",
+		DurationBetweenRequests: 10 * time.Second,
 	}
 }

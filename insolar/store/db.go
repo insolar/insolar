@@ -94,4 +94,10 @@ const (
 	ScopeJetKeeperSyncPulse Scope = 9
 	// ScopeRecordPosition is the scope for records' positions.
 	ScopeRecordPosition Scope = 10
+	// ScopeBackupStart is the scope for backup starts.
+	ScopeBackupStart Scope = 11
+	// ScopeDBInit is scope for one key which means db is initialized.
+	ScopeDBInit Scope = 12
+	// ScopeNodeHistory is scope for list of nodes for every pulse
+	ScopeNodeHistory Scope = 13
 )

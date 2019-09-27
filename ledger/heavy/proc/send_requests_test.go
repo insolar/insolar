@@ -8,6 +8,9 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/gojuno/minimock"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/gen"
@@ -16,9 +19,8 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/heavy/proc"
 	"github.com/insolar/insolar/ledger/object"
+	"github.com/insolar/insolar/pulse"
 	"github.com/insolar/insolar/testutils"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestSendRequests_Proceed(t *testing.T) {
@@ -82,10 +84,10 @@ func TestSendRequests_Proceed(t *testing.T) {
 	resetComponents()
 	t.Run("happy basic", func(t *testing.T) {
 		b := newFilamentBuilder(ctx, pcs, records)
-		rec1 := b.Append(insolar.FirstPulseNumber+1, &record.IncomingRequest{Nonce: rand.Uint64()})
-		rec2 := b.Append(insolar.FirstPulseNumber+2, &record.IncomingRequest{Nonce: rand.Uint64()})
-		rec3 := b.Append(insolar.FirstPulseNumber+4, &record.IncomingRequest{Nonce: rand.Uint64()})
-		b.Append(insolar.FirstPulseNumber+5, &record.IncomingRequest{Nonce: rand.Uint64()})
+		rec1 := b.Append(pulse.MinTimePulse+1, &record.IncomingRequest{Nonce: rand.Uint64()})
+		rec2 := b.Append(pulse.MinTimePulse+2, &record.IncomingRequest{Nonce: rand.Uint64()})
+		rec3 := b.Append(pulse.MinTimePulse+4, &record.IncomingRequest{Nonce: rand.Uint64()})
+		b.Append(pulse.MinTimePulse+5, &record.IncomingRequest{Nonce: rand.Uint64()})
 
 		msg := payload.GetFilament{
 			ObjectID:  gen.ID(),

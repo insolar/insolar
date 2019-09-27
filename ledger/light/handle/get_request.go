@@ -18,18 +18,19 @@ package handle
 
 import (
 	"context"
+	"fmt"
+
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/ledger/light/proc"
-	"github.com/pkg/errors"
 )
 
 type GetRequest struct {
-	dep *proc.Dependencies
-
-	passed  bool
+	dep     *proc.Dependencies
 	message payload.Meta
+	passed  bool
 }
 
 func NewGetRequest(dep *proc.Dependencies, msg payload.Meta, passed bool) *GetRequest {
@@ -41,13 +42,17 @@ func NewGetRequest(dep *proc.Dependencies, msg payload.Meta, passed bool) *GetRe
 }
 
 func (s *GetRequest) Present(ctx context.Context, f flow.Flow) error {
-	msg := payload.GetRequest{}
-	err := msg.Unmarshal(s.message.Payload)
+	pl, err := payload.Unmarshal(s.message.Payload)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal GetRequest message")
 	}
+	msg, ok := pl.(*payload.GetRequest)
+	if !ok {
+		return fmt.Errorf("wrong request type: %T", pl)
+	}
 
-	req := proc.NewGetRequest(s.message, msg.ObjectID, msg.RequestID, s.passed)
+	passIfNotFound := !s.passed
+	req := proc.NewGetRequest(s.message, msg.ObjectID, msg.RequestID, passIfNotFound)
 	s.dep.GetRequest(req)
 	return f.Procedure(ctx, req, false)
 }

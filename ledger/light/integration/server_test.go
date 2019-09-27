@@ -21,6 +21,7 @@ import (
 	"context"
 	"crypto"
 	"fmt"
+	"github.com/insolar/insolar/log/logwatermill"
 	"math"
 	"sync"
 	"time"
@@ -43,7 +44,7 @@ import (
 	"github.com/insolar/insolar/insolar/jetcoordinator"
 	"github.com/insolar/insolar/insolar/node"
 	"github.com/insolar/insolar/insolar/payload"
-	"github.com/insolar/insolar/insolar/pulse"
+	insolarPulse "github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/keystore"
 	"github.com/insolar/insolar/ledger/drop"
@@ -51,10 +52,11 @@ import (
 	"github.com/insolar/insolar/ledger/light/handle"
 	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/insolar/insolar/ledger/object"
-	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network"
 	networknode "github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/pulse"
 )
 
 var (
@@ -88,6 +90,8 @@ type Server struct {
 	clientSender bus.Sender
 	replicator   executor.LightReplicator
 	cleaner      executor.Cleaner
+
+	metrics *metrics.Metrics
 }
 
 func DefaultLightConfig() configuration.Configuration {
@@ -105,11 +109,11 @@ func DefaultLightInitialState() *payload.LightInitialState {
 	return &payload.LightInitialState{
 		NetworkStart: true,
 		JetIDs:       []insolar.JetID{insolar.ZeroJetID},
-		Pulse: pulse.PulseProto{
-			PulseNumber: insolar.FirstPulseNumber,
+		Pulse: insolarPulse.PulseProto{
+			PulseNumber: pulse.MinTimePulse,
 		},
-		Drops: [][]byte{
-			drop.MustEncode(&drop.Drop{JetID: insolar.ZeroJetID, Pulse: insolar.FirstPulseNumber}),
+		Drops: []drop.Drop{
+			{JetID: insolar.ZeroJetID, Pulse: pulse.MinTimePulse},
 		},
 	}
 }
@@ -120,6 +124,8 @@ func DefaultHeavyResponse(pl payload.Payload) []payload.Payload {
 		return nil
 	case *payload.GetLightInitialState:
 		return []payload.Payload{DefaultLightInitialState()}
+	case *payload.SearchIndex:
+		return []payload.Payload{&payload.SearchIndexInfo{}}
 	}
 
 	panic(fmt.Sprintf("unexpected message to heavy %T", pl))
@@ -172,27 +178,26 @@ func NewServer(
 	// Role calculations.
 	var (
 		Coordinator jet.Coordinator
-		Pulses      *pulse.StorageMem
+		Pulses      *insolarPulse.StorageMem
 		Jets        jet.Storage
 		Nodes       *node.Storage
 	)
 	{
 		Nodes = node.NewStorage()
-		Pulses = pulse.NewStorageMem()
+		Pulses = insolarPulse.NewStorageMem()
 		Jets = jet.NewStore()
 
-		c := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit)
+		c := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit, light.ref)
 		c.PulseCalculator = Pulses
 		c.PulseAccessor = Pulses
 		c.JetAccessor = Jets
-		c.OriginProvider = NodeNetwork
 		c.PlatformCryptographyScheme = CryptoScheme
 		c.Nodes = Nodes
 
 		Coordinator = c
 	}
 
-	logger := log.NewWatermillLogAdapter(inslogger.FromContext(ctx))
+	logger := logwatermill.NewWatermillLogAdapter(inslogger.FromContext(ctx))
 
 	// Communication.
 	var (
@@ -204,11 +209,10 @@ func NewServer(
 		ClientPubSub = gochannel.NewGoChannel(gochannel.Config{}, logger)
 		ServerBus = bus.NewBus(cfg.Bus, ServerPubSub, Pulses, Coordinator, CryptoScheme)
 
-		c := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit)
+		c := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit, virtual.ref)
 		c.PulseCalculator = Pulses
 		c.PulseAccessor = Pulses
 		c.JetAccessor = Jets
-		c.OriginProvider = newNodeNetMock(&virtual)
 		c.PlatformCryptographyScheme = CryptoScheme
 		c.Nodes = Nodes
 		ClientBus = bus.NewBus(cfg.Bus, ClientPubSub, Pulses, c, CryptoScheme)
@@ -246,6 +250,7 @@ func NewServer(
 			CryptoScheme,
 			ServerBus,
 		)
+		detachedNotifier := executor.NewDetachedNotifierDefault(ServerBus)
 
 		jetCalculator := executor.NewJetCalculator(Coordinator, Jets)
 		lightCleaner := executor.NewCleaner(
@@ -260,6 +265,7 @@ func NewServer(
 			filamentCalculator,
 			conf.LightChainLimit,
 			conf.CleanerDelay,
+			conf.FilamentCacheLimit,
 		)
 		Cleaner = lightCleaner
 
@@ -306,6 +312,8 @@ func NewServer(
 			jetFetcher,
 			filamentCalculator,
 			requestChecker,
+			detachedNotifier,
+			configuration.NewLedger(),
 		)
 
 		initHandle := func(msg *message.Message) *handle.Init {
@@ -325,7 +333,7 @@ func NewServer(
 
 		PulseManager = executor.NewPulseManager(
 			NodeNetwork,
-			FlowDispatcher,
+			[]dispatcher.Dispatcher{FlowDispatcher},
 			Nodes,
 			Pulses,
 			Pulses,
@@ -433,12 +441,18 @@ func NewServer(
 		"heavy":   heavy.ID().String(),
 	}).Info("started test server")
 
+	m := metrics.NewMetrics(configuration.NewMetrics(), metrics.GetInsolarRegistry("test-server"), "test-server")
+	if err := m.Init(ctx); err != nil {
+		panic(err)
+	}
+
 	s := &Server{
 		pm:           PulseManager,
 		pulse:        *insolar.GenesisPulse,
 		clientSender: ClientBus,
 		replicator:   Replicator,
 		cleaner:      Cleaner,
+		metrics:      m,
 	}
 	return s, nil
 }

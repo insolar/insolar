@@ -43,39 +43,61 @@ const insgorundNamespace = "insgorund"
 type Metrics struct {
 	config   configuration.Metrics
 	registry *prometheus.Registry
+	nodeRole string
 
+	handler  http.Handler
 	server   *http.Server
 	listener net.Listener
-
-	nodeRole string
 }
 
-// NewMetrics creates new Metrics component.
-func NewMetrics(ctx context.Context, cfg configuration.Metrics, registry *prometheus.Registry, nodeRole string) (*Metrics, error) {
-	errlogger := &errorLogger{inslogger.FromContext(ctx)}
-	promhandler := promhttp.HandlerFor(registry, promhttp.HandlerOpts{ErrorLog: errlogger})
+// NewMetrics creates new Metrics instance.
+func NewMetrics(
+	cfg configuration.Metrics,
+	registry *prometheus.Registry,
+	nodeRole string,
+) *Metrics {
+	m := &Metrics{
+		config:   cfg,
+		registry: registry,
+		nodeRole: nodeRole,
+	}
+	return m
+}
 
+// Init inits metrics instance. Creates and registers all handlers.
+func (m *Metrics) Init(ctx context.Context) error {
 	mux := http.NewServeMux()
-	mux.Handle("/metrics", promhandler)
+
+	errLogger := &errorLogger{inslogger.FromContext(ctx)}
+	promHandler := promhttp.HandlerFor(m.registry, promhttp.HandlerOpts{ErrorLog: errLogger})
+	mux.Handle("/metrics", promHandler)
 	mux.Handle("/_status", newProcStatus())
 	mux.Handle("/debug/loglevel", log.NewLoglevelChangeHandler())
 	pprof.Handle(mux)
-	if cfg.ZpagesEnabled {
+	if m.config.ZpagesEnabled {
 		// https://opencensus.io/zpages/
 		zpages.Handle(mux, "/debug")
 	}
 
-	m := &Metrics{
-		config:   cfg,
-		registry: registry,
-		server: &http.Server{
-			Addr:    cfg.ListenAddress,
-			Handler: mux,
-		},
-		nodeRole: nodeRole,
+	_, err := insmetrics.RegisterPrometheus(
+		m.config.Namespace,
+		m.registry,
+		m.config.ReportingPeriod,
+		errLogger,
+		m.nodeRole,
+	)
+	if err != nil {
+		errLogger.Error(err.Error())
+		return err
 	}
 
-	return m, nil
+	m.handler = mux
+	return nil
+}
+
+// Handler returns http handler, created on initialization stage.
+func (m *Metrics) Handler() http.Handler {
+	return m.handler
 }
 
 // ErrBind special case for Start method.
@@ -85,13 +107,9 @@ var ErrBind = errors.New("Failed to bind")
 // Start is implementation of insolar.Component interface.
 func (m *Metrics) Start(ctx context.Context) error {
 	inslog := inslogger.FromContext(ctx)
-
-	_, err := insmetrics.RegisterPrometheus(
-		m.config.Namespace, m.registry, m.config.ReportingPeriod,
-		inslog, m.nodeRole,
-	)
-	if err != nil {
-		inslog.Error(err.Error())
+	m.server = &http.Server{
+		Addr:    m.config.ListenAddress,
+		Handler: m.handler,
 	}
 
 	listener, err := net.Listen("tcp", m.server.Addr)
@@ -104,12 +122,12 @@ func (m *Metrics) Start(ctx context.Context) error {
 		return errors.Wrap(err, "Failed to listen at address")
 	}
 	m.listener = listener
-	inslog.Info("Started metrics server", m.AddrString())
+	inslog.Info("Started metrics server: ", m.listener.Addr().String())
 
 	go func() {
-		inslog.Debug("metrics server starting on", m.server.Addr)
+		inslog.Debug("Metrics server starting on ", m.server.Addr)
 		if err := m.server.Serve(listener); err != http.ErrServerClosed {
-			inslog.Error("failed to start metrics server", err)
+			inslog.Error("Failed to start metrics server ", err)
 		}
 	}()
 
@@ -118,21 +136,17 @@ func (m *Metrics) Start(ctx context.Context) error {
 
 // Stop is implementation of insolar.Component interface.
 func (m *Metrics) Stop(ctx context.Context) error {
+	if m.server == nil {
+		return nil
+	}
+
 	const timeOut = 3
 	inslogger.FromContext(ctx).Info("Shutting down metrics server")
 	ctxWithTimeout, cancel := context.WithTimeout(ctx, time.Duration(timeOut)*time.Second)
 	defer cancel()
+
 	err := m.server.Shutdown(ctxWithTimeout)
-	if err != nil {
-		return errors.Wrap(err, "Can't gracefully stop metrics server")
-	}
-
-	return nil
-}
-
-// AddrString returns listener address.
-func (m *Metrics) AddrString() string {
-	return m.listener.Addr().String()
+	return errors.Wrap(err, "Can't gracefully stop metrics server")
 }
 
 // errorLogger wrapper for error logs.
@@ -140,7 +154,7 @@ type errorLogger struct {
 	insolar.Logger
 }
 
-// Println is wrapper method for ErrorLn.
+// Println is wrapper method for Error method.
 func (e *errorLogger) Println(v ...interface{}) {
 	e.Error(v)
 }

@@ -18,14 +18,26 @@ package gen
 
 import (
 	fuzz "github.com/google/gofuzz"
+
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/bits"
+	"github.com/insolar/insolar/reference"
 )
 
 // ID generates random id.
-func ID() (id insolar.ID) {
-	fuzz.New().NilChance(0).Fuzz(&id)
-	return
+func ID() insolar.ID {
+	var id insolar.ID
+
+	f := fuzz.New().NilChance(0).Funcs(func(id *insolar.ID, c fuzz.Continue) {
+		var hash [reference.LocalBinaryHashSize]byte
+		c.Fuzz(&hash)
+
+		pn := PulseNumber()
+
+		*id = *insolar.NewID(pn, hash[:])
+	})
+	f.Fuzz(&id)
+
+	return id
 }
 
 // UniqueIDs generates multiple random unique IDs.
@@ -46,34 +58,29 @@ func UniqueIDs(a int) []insolar.ID {
 }
 
 // IDWithPulse generates random id with provided pulse.
-func IDWithPulse(pn insolar.PulseNumber) (id insolar.ID) {
-	copy(id[:insolar.PulseNumberSize], pn.Bytes())
-	fill := id[insolar.PulseNumberSize:]
+func IDWithPulse(pn insolar.PulseNumber) insolar.ID {
+	hash := make([]byte, reference.LocalBinaryHashSize)
+
 	fuzz.New().
 		NilChance(0).
 		NumElements(insolar.RecordHashSize, insolar.RecordHashSize).
-		Fuzz(&fill)
-	copy(id[insolar.PulseNumberSize:], fill)
-	return
+		Fuzz(&hash)
+	return *insolar.NewID(pn, hash)
 }
 
 // JetID generates random jet id.
-func JetID() (jetID insolar.JetID) {
+func JetID() insolar.JetID {
+	var jetID insolar.JetID
 	f := fuzz.New().Funcs(func(jet *insolar.JetID, c fuzz.Continue) {
-		id := ID()
-		copy(jet[:], id[:])
-		// set special pulse number
-		copy(jet[:insolar.PulseNumberSize], insolar.PulseNumberJet.Bytes())
-		// set depth
-		// adds 1 because Intn returns [0,n)
-		depth := byte(c.Intn(insolar.JetMaximumDepth + 1))
-		jet[insolar.PulseNumberSize] = depth
+		prefix := make([]byte, insolar.JetPrefixSize)
+		c.Fuzz(&prefix)
+		depth := c.Intn(insolar.JetMaximumDepth + 1)
 
-		resetJet := bits.ResetBits(jet[:], depth+insolar.PulseNumberSize*8)
-		copy(jet[:], resetJet)
+		*jet = *insolar.NewJetID(uint8(depth), prefix)
 	})
 	f.Fuzz(&jetID)
-	return
+
+	return jetID
 }
 
 // UniqueJetIDs generates several different jet ids
@@ -98,6 +105,11 @@ func Reference() insolar.Reference {
 	return *insolar.NewReference(ID())
 }
 
+// RecordReference generates random record reference.
+func RecordReference() insolar.Reference {
+	return *insolar.NewRecordReference(ID())
+}
+
 // UniqueReferences generates multiple random unique References.
 func UniqueReferences(a int) []insolar.Reference {
 	refs := make([]insolar.Reference, a)
@@ -113,4 +125,25 @@ func UniqueReferences(a int) []insolar.Reference {
 		seen[refs[i]] = struct{}{}
 	}
 	return refs
+}
+
+// UniqueReferences generates multiple random unique References.
+func UniqueRecordReferences(a int) []insolar.Reference {
+	refs := make([]insolar.Reference, a)
+	seen := make(map[insolar.Reference]struct{})
+
+	for i := 0; i < a; i++ {
+		for {
+			refs[i] = RecordReference()
+			if _, ok := seen[refs[i]]; !ok {
+				break
+			}
+		}
+		seen[refs[i]] = struct{}{}
+	}
+	return refs
+}
+
+func ReferenceWithPulse(pn insolar.PulseNumber) insolar.Reference {
+	return *insolar.NewReference(IDWithPulse(pn))
 }

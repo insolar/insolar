@@ -18,12 +18,7 @@ package light
 
 import (
 	"context"
-
-	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/flow/dispatcher"
-	"github.com/insolar/insolar/ledger/light/handle"
-	"github.com/insolar/insolar/ledger/light/proc"
-	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/log/logwatermill"
 
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
@@ -38,7 +33,8 @@ import (
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
-	"github.com/insolar/insolar/insolar/delegationtoken"
+	"github.com/insolar/insolar/insolar/flow"
+	"github.com/insolar/insolar/insolar/flow/dispatcher"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/jetcoordinator"
 	"github.com/insolar/insolar/insolar/node"
@@ -47,13 +43,12 @@ import (
 	"github.com/insolar/insolar/keystore"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/light/executor"
+	"github.com/insolar/insolar/ledger/light/handle"
+	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/insolar/insolar/ledger/object"
-	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/metrics"
-	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/servicenetwork"
-	"github.com/insolar/insolar/network/termination"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/server/internal"
 )
@@ -109,12 +104,12 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 
 	// Watermill stuff.
 	var (
-		wmLogger   *log.WatermillLogAdapter
+		wmLogger   *logwatermill.WatermillLogAdapter
 		publisher  message.Publisher
 		subscriber message.Subscriber
 	)
 	{
-		wmLogger = log.NewWatermillLogAdapter(inslogger.FromContext(ctx))
+		wmLogger = logwatermill.NewWatermillLogAdapter(inslogger.FromContext(ctx))
 		pubsub := gochannel.NewGoChannel(gochannel.Config{}, wmLogger)
 		subscriber = pubsub
 		publisher = pubsub
@@ -125,8 +120,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 	// Network.
 	var (
 		NetworkService *servicenetwork.ServiceNetwork
-		NodeNetwork    network.NodeNetwork
-		Termination    insolar.TerminationHandler
 	)
 	{
 		var err error
@@ -135,15 +128,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start Network")
 		}
-
-		Termination = termination.NewHandler(NetworkService)
-
-		// Node info.
-		NodeNetwork, err = nodenetwork.NewNodeNetwork(cfg.Host.Transport, CertManager.GetCertificate())
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to start NodeNetwork")
-		}
-
 	}
 
 	// Role calculations.
@@ -158,11 +142,10 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		Pulses = pulse.NewStorageMem()
 		Jets = jet.NewStore()
 
-		c := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit)
+		c := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit, *CertManager.GetCertificate().GetNodeRef())
 		c.PulseCalculator = Pulses
 		c.PulseAccessor = Pulses
 		c.JetAccessor = Jets
-		c.OriginProvider = NodeNetwork
 		c.PlatformCryptographyScheme = CryptoScheme
 		c.Nodes = Nodes
 
@@ -171,45 +154,75 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 
 	// Communication.
 	var (
-		Tokens insolar.DelegationTokenFactory
 		Sender *bus.Bus
 	)
 	{
-		Tokens = delegationtoken.NewDelegationTokenFactory()
 		Sender = bus.NewBus(cfg.Bus, publisher, Pulses, Coordinator, CryptoScheme)
 	}
 
 	// API.
 	var (
-		Requester *contractrequester.ContractRequester
-		API       insolar.APIRunner
+		Requester           *contractrequester.ContractRequester
+		ArtifactsClient     = artifacts.NewClient(Sender)
+		AvailabilityChecker = api.NewNetworkChecker(cfg.AvailabilityChecker)
+		APIWrapper          *api.RunnerWrapper
 	)
 	{
 		var err error
-		Requester, err = contractrequester.New()
+		Requester, err = contractrequester.New(
+			Sender,
+			Pulses,
+			Coordinator,
+			CryptoScheme,
+		)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start ContractRequester")
 		}
 
-		API, err = api.NewRunner(&cfg.APIRunner)
+		API, err := api.NewRunner(
+			&cfg.APIRunner,
+			CertManager,
+			Requester,
+			NetworkService,
+			NetworkService,
+			Pulses,
+			ArtifactsClient,
+			Coordinator,
+			NetworkService,
+			AvailabilityChecker,
+		)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start ApiRunner")
 		}
+
+		AdminAPIRunner, err := api.NewRunner(
+			&cfg.AdminAPIRunner,
+			CertManager,
+			Requester,
+			NetworkService,
+			NetworkService,
+			Pulses,
+			ArtifactsClient,
+			Coordinator,
+			NetworkService,
+			AvailabilityChecker,
+		)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to start AdminAPIRunner")
+		}
+
+		APIWrapper = api.NewWrapper(API, AdminAPIRunner)
 	}
 
-	metricsHandler, err := metrics.NewMetrics(
-		ctx,
+	metricsComp := metrics.NewMetrics(
 		cfg.Metrics,
 		metrics.GetInsolarRegistry(comps.NodeRole),
 		comps.NodeRole,
 	)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to start Metrics")
-	}
 
 	// Light components.
 	var (
-		PulseManager   insolar.PulseManager
+		PulseManager   *executor.PulseManager
 		FlowDispatcher dispatcher.Dispatcher
 	)
 	{
@@ -240,6 +253,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			CryptoScheme,
 			Sender,
 		)
+		detachedNotifier := executor.NewDetachedNotifierDefault(Sender)
 
 		jetCalculator := executor.NewJetCalculator(Coordinator, Jets)
 		lightCleaner := executor.NewCleaner(
@@ -254,6 +268,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			filamentCalculator,
 			conf.LightChainLimit,
 			conf.CleanerDelay,
+			conf.FilamentCacheLimit,
 		)
 		comps.cleaner = lightCleaner
 
@@ -302,6 +317,8 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			jetFetcher,
 			filamentCalculator,
 			requestChecker,
+			detachedNotifier,
+			conf,
 		)
 
 		initHandle := func(msg *message.Message) *handle.Init {
@@ -320,8 +337,8 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		)
 
 		PulseManager = executor.NewPulseManager(
-			NodeNetwork,
-			FlowDispatcher,
+			NetworkService,
+			[]dispatcher.Dispatcher{FlowDispatcher, Requester.FlowDispatcher},
 			Nodes,
 			Pulses,
 			Pulses,
@@ -341,27 +358,25 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		Pulses,
 		Coordinator,
 		PulseManager,
-		metricsHandler,
+		metricsComp,
 		Requester,
-		Tokens,
-		artifacts.NewClient(Sender),
-		API,
+		ArtifactsClient,
+		APIWrapper,
+		AvailabilityChecker,
 		KeyProcessor,
-		Termination,
 		CryptoScheme,
 		CryptoService,
 		CertManager,
-		NodeNetwork,
 		NetworkService,
 		publisher,
 	)
 
-	err = comps.cmp.Init(ctx)
+	err := comps.cmp.Init(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to init components")
 	}
 
-	comps.startWatermill(ctx, wmLogger, subscriber, Sender, NetworkService.SendMessageHandler, FlowDispatcher.Process, Requester.ReceiveResult)
+	comps.startWatermill(ctx, wmLogger, subscriber, Sender, NetworkService.SendMessageHandler, FlowDispatcher.Process, Requester.FlowDispatcher.Process)
 
 	return comps, nil
 }

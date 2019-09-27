@@ -32,6 +32,7 @@ import (
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -127,13 +128,13 @@ func TestHandleCall_CheckExecutionLoop(t *testing.T) {
 			},
 		},
 		{
-			name: "no loop, no wait call",
+			name: "no loop, saga (no wait) call",
 			mocks: func(t minimock.Tester) (*HandleCall, *record.IncomingRequest) {
 				h := &HandleCall{
 					dep: &Dependencies{},
 				}
 				req := &record.IncomingRequest{
-					ReturnMode: record.ReturnNoWait,
+					ReturnMode: record.ReturnSaga,
 				}
 				return h, req
 			},
@@ -161,7 +162,6 @@ func TestHandleCall_Present(t *testing.T) {
 
 		ctx := flow.TestContextWithPulse(inslogger.TestContext(t), gen.PulseNumber())
 		mc := minimock.NewController(t)
-		defer mc.Wait(time.Minute)
 
 		objRef := gen.Reference()
 
@@ -171,7 +171,7 @@ func TestHandleCall_Present(t *testing.T) {
 			case *CheckOurRole:
 				return nil
 			case *RegisterIncomingRequest:
-				p.result <- &payload.RequestInfo{RequestID: gen.ID(), ObjectID: *objRef.Record()}
+				p.result <- &payload.RequestInfo{RequestID: gen.ID(), ObjectID: *objRef.GetLocal()}
 				return nil
 			case *AddFreshRequest:
 				return nil
@@ -189,16 +189,13 @@ func TestHandleCall_Present(t *testing.T) {
 					executionregistry.NewExecutionRegistryMock(mc).FindRequestLoopMock.Return(false),
 				).
 					UpsertExecutionStateMock.Expect(objRef).Return(nil),
-				ResultsMatcher: nil,
-				lr: &LogicRunner{
-					ArtifactManager: artifacts.NewClientMock(mc),
-				},
-				Sender:        nil,
-				JetStorage:    nil,
-				WriteAccessor: writecontroller.NewAccessorMock(mc).BeginMock.Return(func() {}, nil),
+				ResultsMatcher:  nil,
+				ArtifactManager: artifacts.NewClientMock(mc),
+				Sender:          nil,
+				JetStorage:      nil,
+				WriteAccessor:   writecontroller.NewAccessorMock(mc).BeginMock.Return(func() {}, nil),
 			},
 			Message: payload.Meta{},
-			Parcel:  nil,
 		}
 
 		msg := payload.CallMethod{
@@ -211,6 +208,9 @@ func TestHandleCall_Present(t *testing.T) {
 		reply, err := handler.handleActual(ctx, msg, fm)
 		assert.NotNil(t, reply)
 		assert.NoError(t, err)
+
+		mc.Wait(time.Minute)
+		mc.Finish()
 	})
 
 	t.Run("write accessor failed to fetch lock", func(t *testing.T) {
@@ -218,7 +218,7 @@ func TestHandleCall_Present(t *testing.T) {
 
 		ctx := flow.TestContextWithPulse(inslogger.TestContext(t), gen.PulseNumber())
 		mc := minimock.NewController(t)
-		defer mc.Wait(time.Second)
+		defer mc.Wait(time.Minute)
 
 		objRef := gen.Reference()
 
@@ -228,7 +228,7 @@ func TestHandleCall_Present(t *testing.T) {
 			case *CheckOurRole:
 				return nil
 			case *RegisterIncomingRequest:
-				p.result <- &payload.RequestInfo{RequestID: gen.ID(), ObjectID: *objRef.Record()}
+				p.result <- &payload.RequestInfo{RequestID: gen.ID(), ObjectID: *objRef.GetLocal()}
 				return nil
 			case *AddFreshRequest:
 				return nil
@@ -253,15 +253,14 @@ func TestHandleCall_Present(t *testing.T) {
 						require.Equal(t, payload.TypeAdditionalCallFromPreviousExecutor, payloadType)
 						return nil, func() {}
 					}),
-				lr: &LogicRunner{
-					ArtifactManager: artifacts.NewClientMock(mc),
-				},
-				JetStorage: nil,
+				ArtifactManager: artifacts.NewClientMock(mc),
+				JetStorage:      nil,
 				WriteAccessor: writecontroller.NewAccessorMock(mc).
 					BeginMock.Return(func() {}, writecontroller.ErrWriteClosed),
+				PulseAccessor: pulse.NewAccessorMock(mc).
+					LatestMock.Return(insolar.Pulse{PulseNumber: 100}, nil),
 			},
 			Message: payload.Meta{},
-			Parcel:  nil,
 		}
 
 		msg := payload.CallMethod{
@@ -274,6 +273,9 @@ func TestHandleCall_Present(t *testing.T) {
 		reply, err := handler.handleActual(ctx, msg, fm)
 		assert.NotNil(t, reply)
 		assert.NoError(t, err)
+
+		mc.Wait(time.Minute)
+		mc.Finish()
 	})
 
 	t.Run("failed to authorize", func(t *testing.T) {
@@ -281,10 +283,8 @@ func TestHandleCall_Present(t *testing.T) {
 
 		ctx := flow.TestContextWithPulse(inslogger.TestContext(t), gen.PulseNumber())
 		mc := minimock.NewController(t)
-		defer mc.Wait(time.Minute)
 
 		fm := flow.NewFlowMock(mc)
-
 		fm.ProcedureMock.Set(func(ctx context.Context, proc flow.Procedure, cancelable bool) (err error) {
 			switch proc.(type) {
 			case *CheckOurRole:
@@ -302,18 +302,15 @@ func TestHandleCall_Present(t *testing.T) {
 		objRef := gen.Reference()
 		handler := HandleCall{
 			dep: &Dependencies{
-				Publisher:      nil,
-				StateStorage:   NewStateStorageMock(mc),
-				ResultsMatcher: nil,
-				lr: &LogicRunner{
-					ArtifactManager: artifacts.NewClientMock(mc),
-				},
-				Sender:        nil,
-				JetStorage:    nil,
-				WriteAccessor: writecontroller.NewAccessorMock(mc),
+				Publisher:       nil,
+				StateStorage:    NewStateStorageMock(mc),
+				ResultsMatcher:  nil,
+				ArtifactManager: artifacts.NewClientMock(mc),
+				Sender:          nil,
+				JetStorage:      nil,
+				WriteAccessor:   writecontroller.NewAccessorMock(mc),
 			},
 			Message: payload.Meta{},
-			Parcel:  nil,
 		}
 
 		msg := payload.CallMethod{
@@ -326,6 +323,9 @@ func TestHandleCall_Present(t *testing.T) {
 		reply, err := handler.handleActual(ctx, msg, fm)
 		assert.Nil(t, reply)
 		assert.EqualError(t, err, flow.ErrCancelled.Error())
+
+		mc.Wait(time.Minute)
+		mc.Finish()
 	})
 
 	t.Run("failed to register incoming request", func(t *testing.T) {
@@ -333,10 +333,8 @@ func TestHandleCall_Present(t *testing.T) {
 
 		ctx := flow.TestContextWithPulse(inslogger.TestContext(t), gen.PulseNumber())
 		mc := minimock.NewController(t)
-		defer mc.Wait(time.Minute)
 
 		fm := flow.NewFlowMock(mc)
-
 		fm.ProcedureMock.Set(func(ctx context.Context, proc flow.Procedure, cancelable bool) (err error) {
 			switch proc.(type) {
 			case *CheckOurRole:
@@ -354,17 +352,14 @@ func TestHandleCall_Present(t *testing.T) {
 		objRef := gen.Reference()
 		handler := HandleCall{
 			dep: &Dependencies{
-				Publisher:      nil,
-				ResultsMatcher: nil,
-				lr: &LogicRunner{
-					ArtifactManager: artifacts.NewClientMock(mc),
-				},
-				Sender:        nil,
-				JetStorage:    nil,
-				WriteAccessor: writecontroller.NewAccessorMock(mc),
+				Publisher:       nil,
+				ResultsMatcher:  nil,
+				ArtifactManager: artifacts.NewClientMock(mc),
+				Sender:          nil,
+				JetStorage:      nil,
+				WriteAccessor:   writecontroller.NewAccessorMock(mc),
 			},
 			Message: payload.Meta{},
-			Parcel:  nil,
 		}
 
 		msg := payload.CallMethod{
@@ -377,6 +372,9 @@ func TestHandleCall_Present(t *testing.T) {
 		reply, err := handler.handleActual(ctx, msg, fm)
 		assert.Nil(t, reply)
 		assert.EqualError(t, err, flow.ErrCancelled.Error())
+
+		mc.Wait(time.Minute)
+		mc.Finish()
 	})
 
 	t.Run("objectRef for CTMethod is empty", func(t *testing.T) {
@@ -384,10 +382,8 @@ func TestHandleCall_Present(t *testing.T) {
 
 		ctx := flow.TestContextWithPulse(inslogger.TestContext(t), gen.PulseNumber())
 		mc := minimock.NewController(t)
-		defer mc.Wait(time.Second)
 
 		fm := flow.NewFlowMock(mc)
-
 		fm.ProcedureMock.Set(func(ctx context.Context, proc flow.Procedure, cancelable bool) (err error) {
 			switch proc.(type) {
 			case *CheckOurRole:
@@ -404,18 +400,15 @@ func TestHandleCall_Present(t *testing.T) {
 
 		handler := HandleCall{
 			dep: &Dependencies{
-				Publisher:      nil,
-				StateStorage:   NewStateStorageMock(mc),
-				ResultsMatcher: nil,
-				lr: &LogicRunner{
-					ArtifactManager: artifacts.NewClientMock(mc),
-				},
-				Sender:        nil,
-				JetStorage:    nil,
-				WriteAccessor: writecontroller.NewAccessorMock(mc),
+				Publisher:       nil,
+				StateStorage:    NewStateStorageMock(mc),
+				ResultsMatcher:  nil,
+				ArtifactManager: artifacts.NewClientMock(mc),
+				Sender:          nil,
+				JetStorage:      nil,
+				WriteAccessor:   writecontroller.NewAccessorMock(mc),
 			},
 			Message: payload.Meta{},
-			Parcel:  nil,
 		}
 
 		msg := payload.CallMethod{
@@ -423,11 +416,15 @@ func TestHandleCall_Present(t *testing.T) {
 				CallType: record.CTMethod,
 				Object:   nil,
 			},
+			PulseNumber: gen.PulseNumber(),
 		}
 
 		reply, err := handler.handleActual(ctx, msg, fm)
 		assert.Nil(t, reply)
 		assert.Error(t, err)
+
+		mc.Wait(time.Minute)
+		mc.Finish()
 	})
 
 	t.Run("write accessor failed to fetch lock AND registry is empty after on pulse", func(t *testing.T) {
@@ -435,7 +432,6 @@ func TestHandleCall_Present(t *testing.T) {
 
 		ctx := flow.TestContextWithPulse(inslogger.TestContext(t), gen.PulseNumber())
 		mc := minimock.NewController(t)
-		defer mc.Wait(time.Minute)
 
 		objRef := gen.Reference()
 
@@ -445,7 +441,7 @@ func TestHandleCall_Present(t *testing.T) {
 			case *CheckOurRole:
 				return nil
 			case *RegisterIncomingRequest:
-				p.result <- &payload.RequestInfo{RequestID: gen.ID(), ObjectID: *objRef.Record()}
+				p.result <- &payload.RequestInfo{RequestID: gen.ID(), ObjectID: *objRef.GetLocal()}
 				return nil
 			case *AddFreshRequest:
 				return nil
@@ -460,10 +456,8 @@ func TestHandleCall_Present(t *testing.T) {
 				Publisher: nil,
 				StateStorage: NewStateStorageMock(mc).
 					GetExecutionRegistryMock.Expect(objRef).Return(nil),
-				ResultsMatcher: nil,
-				lr: &LogicRunner{
-					ArtifactManager: artifacts.NewClientMock(mc),
-				},
+				ResultsMatcher:  nil,
+				ArtifactManager: artifacts.NewClientMock(mc),
 				Sender: bus.NewSenderMock(mc).SendRoleMock.Set(
 					func(ctx context.Context, msg *wmMessage.Message, role insolar.DynamicRole, obj insolar.Reference) (<-chan *wmMessage.Message, func()) {
 						payloadType, err := payload.UnmarshalType(msg.Payload)
@@ -473,9 +467,10 @@ func TestHandleCall_Present(t *testing.T) {
 					}),
 				JetStorage:    nil,
 				WriteAccessor: writecontroller.NewAccessorMock(mc).BeginMock.Return(func() {}, writecontroller.ErrWriteClosed),
+				PulseAccessor: pulse.NewAccessorMock(mc).
+					LatestMock.Return(insolar.Pulse{PulseNumber: 100}, nil),
 			},
 			Message: payload.Meta{},
-			Parcel:  nil,
 		}
 
 		msg := payload.CallMethod{
@@ -483,11 +478,15 @@ func TestHandleCall_Present(t *testing.T) {
 				CallType: record.CTMethod,
 				Object:   &objRef,
 			},
+			PulseNumber: gen.PulseNumber(),
 		}
 
 		reply, err := handler.handleActual(ctx, msg, fm)
 		assert.NotNil(t, reply)
 		assert.NoError(t, err)
+
+		mc.Wait(time.Minute)
+		mc.Finish()
 	})
 
 	t.Run("already completed request", func(t *testing.T) {
@@ -495,10 +494,9 @@ func TestHandleCall_Present(t *testing.T) {
 
 		ctx := flow.TestContextWithPulse(inslogger.TestContext(t), gen.PulseNumber())
 		mc := minimock.NewController(t)
-		defer mc.Wait(time.Minute)
 
 		objRef := gen.Reference()
-		reqRef := gen.Reference()
+		reqRef := gen.RecordReference()
 
 		resRecord := &record.Result{Payload: []byte{3, 2, 1}}
 		virtResRecord := record.Wrap(resRecord)
@@ -513,8 +511,8 @@ func TestHandleCall_Present(t *testing.T) {
 				return nil
 			case *RegisterIncomingRequest:
 				p.result <- &payload.RequestInfo{
-					RequestID: *reqRef.Record(),
-					ObjectID:  *objRef.Record(),
+					RequestID: *reqRef.GetLocal(),
+					ObjectID:  *objRef.GetLocal(),
 					Request:   []byte{1, 2, 3},
 					Result:    matRecordSerialized,
 				}
@@ -529,13 +527,10 @@ func TestHandleCall_Present(t *testing.T) {
 
 		handler := HandleCall{
 			dep: &Dependencies{
-				lr: &LogicRunner{
-					ArtifactManager: artifacts.NewClientMock(mc),
-				},
+				ArtifactManager:  artifacts.NewClientMock(mc),
 				RequestsExecutor: NewRequestsExecutorMock(mc).SendReplyMock.Return(),
 			},
 			Message: payload.Meta{},
-			Parcel:  nil,
 		}
 
 		msg := payload.CallMethod{
@@ -548,6 +543,9 @@ func TestHandleCall_Present(t *testing.T) {
 		gotReply, err := handler.handleActual(ctx, msg, fm)
 		require.NoError(t, err)
 		require.Equal(t, &reply.RegisterRequest{Request: reqRef}, gotReply)
+
+		mc.Wait(time.Minute)
+		mc.Finish()
 	})
 
 	t.Run("object not found during request registration", func(t *testing.T) {
@@ -555,7 +553,6 @@ func TestHandleCall_Present(t *testing.T) {
 
 		ctx := flow.TestContextWithPulse(inslogger.TestContext(t), gen.PulseNumber())
 		mc := minimock.NewController(t)
-		defer mc.Wait(time.Minute)
 
 		objRef := gen.Reference()
 
@@ -565,7 +562,9 @@ func TestHandleCall_Present(t *testing.T) {
 			case *CheckOurRole:
 				return nil
 			case *RegisterIncomingRequest:
-				return &payload.CodedError{Code: payload.CodeNotFound, Text: "index not found"}
+				return errors.Wrap(
+					&payload.CodedError{Code: payload.CodeNotFound, Text: "index not found"},
+					"RegisterIncomingRequest")
 			case *AddFreshRequest:
 				return nil
 			default:
@@ -576,12 +575,9 @@ func TestHandleCall_Present(t *testing.T) {
 
 		handler := HandleCall{
 			dep: &Dependencies{
-				lr: &LogicRunner{
-					ArtifactManager: artifacts.NewClientMock(mc),
-				},
+				ArtifactManager: artifacts.NewClientMock(mc),
 			},
 			Message: payload.Meta{},
-			Parcel:  nil,
 		}
 
 		msg := payload.CallMethod{
@@ -591,7 +587,7 @@ func TestHandleCall_Present(t *testing.T) {
 			},
 		}
 
-		expectedResult, err := foundation.MarshalMethodErrorResult(errors.New("index not found"))
+		expectedResult, err := foundation.MarshalMethodErrorResult(errors.New("RegisterIncomingRequest: index not found"))
 		require.NoError(t, err)
 
 		expectedReply := &reply.CallMethod{Result: expectedResult}
@@ -599,6 +595,8 @@ func TestHandleCall_Present(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, expectedReply, gotReply)
 
+		mc.Wait(time.Minute)
+		mc.Finish()
 	})
 
 	t.Run("loop detected", func(t *testing.T) {
@@ -606,7 +604,6 @@ func TestHandleCall_Present(t *testing.T) {
 
 		ctx := flow.TestContextWithPulse(inslogger.TestContext(t), gen.PulseNumber())
 		mc := minimock.NewController(t)
-		defer mc.Wait(time.Minute)
 
 		objRef := gen.Reference()
 
@@ -616,7 +613,7 @@ func TestHandleCall_Present(t *testing.T) {
 			case *CheckOurRole:
 				return nil
 			case *RegisterIncomingRequest:
-				p.result <- &payload.RequestInfo{RequestID: gen.ID(), ObjectID: *objRef.Record()}
+				p.result <- &payload.RequestInfo{RequestID: gen.ID(), ObjectID: *objRef.GetLocal()}
 				return nil
 			case *RecordErrorResult:
 				p.result = []byte{3, 2, 1}
@@ -634,13 +631,10 @@ func TestHandleCall_Present(t *testing.T) {
 					GetExecutionRegistryMock.Expect(objRef).Return(
 					executionregistry.NewExecutionRegistryMock(mc).FindRequestLoopMock.Return(true),
 				),
-				ResultsMatcher: nil,
-				lr: &LogicRunner{
-					ArtifactManager: artifacts.NewClientMock(mc),
-				},
+				ResultsMatcher:  nil,
+				ArtifactManager: artifacts.NewClientMock(mc),
 			},
 			Message: payload.Meta{},
-			Parcel:  nil,
 		}
 
 		msg := payload.CallMethod{
@@ -655,5 +649,7 @@ func TestHandleCall_Present(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, expectedReply, gotReply)
 
+		mc.Wait(time.Minute)
+		mc.Finish()
 	})
 }

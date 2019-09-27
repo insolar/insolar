@@ -30,20 +30,20 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func panicIfErr(err error) {
-	if err != nil {
-		panic(err)
-	}
-}
-
 func Test_FinalizePulse(t *testing.T) {
 	t.Parallel()
 
 	ctx := inslogger.TestContext(t)
 	cfg := DefaultHeavyConfig()
 	defer os.RemoveAll(cfg.Ledger.Storage.DataDirectory)
-
-	s, err := NewServer(ctx, cfg, insolar.GenesisHeavyConfig{}, nil)
+	heavyConfig := insolar.GenesisHeavyConfig{
+		ContractsConfig: insolar.GenesisContractsConfig{
+			PKShardCount:       10,
+			MAShardCount:       10,
+			MigrationAddresses: make([][]string, 10),
+		},
+	}
+	s, err := NewServer(ctx, cfg, heavyConfig, nil)
 	assert.NoError(t, err)
 	defer s.Stop()
 
@@ -70,7 +70,7 @@ func Test_FinalizePulse(t *testing.T) {
 	_, done = s.Send(ctx, &payload.Replication{
 		JetID: insolar.ZeroJetID,
 		Pulse: targetPulse,
-		Drop:  drop.MustEncode(&d),
+		Drop:  d,
 	})
 	done()
 

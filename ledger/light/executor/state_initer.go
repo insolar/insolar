@@ -22,16 +22,20 @@ import (
 	"time"
 
 	"github.com/ThreeDotsLabs/watermill/message"
+	"go.opencensus.io/stats"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/backoff"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/node"
 	"github.com/insolar/insolar/insolar/payload"
-	"github.com/insolar/insolar/insolar/pulse"
+	insolarPulse "github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/object"
+	"github.com/insolar/insolar/pulse"
+
 	"github.com/pkg/errors"
 )
 
@@ -52,8 +56,8 @@ func NewStateIniter(
 	drops drop.Modifier,
 	nodes node.Accessor,
 	sender bus.Sender,
-	pulseAppender pulse.Appender,
-	pulseAccessor pulse.Accessor,
+	pulseAppender insolarPulse.Appender,
+	pulseAccessor insolarPulse.Accessor,
 	calc JetCalculator,
 	indexes object.MemoryIndexModifier,
 ) *StateIniterDefault {
@@ -83,8 +87,8 @@ type StateIniterDefault struct {
 	drops         drop.Modifier
 	nodes         node.Accessor
 	sender        bus.Sender
-	pulseAppender pulse.Appender
-	pulseAccessor pulse.Accessor
+	pulseAppender insolarPulse.Appender
+	pulseAccessor insolarPulse.Accessor
 	jetCalculator JetCalculator
 	backoff       backoff.Backoff
 	indexes       object.MemoryIndexModifier
@@ -94,7 +98,7 @@ func (s *StateIniterDefault) PrepareState(
 	ctx context.Context,
 	forPulse insolar.PulseNumber,
 ) (bool, []insolar.JetID, error) {
-	if forPulse < insolar.FirstPulseNumber {
+	if forPulse < pulse.MinTimePulse {
 		return false, nil, errors.Errorf("invalid pulse %s for light state initialization ", forPulse)
 	}
 
@@ -107,7 +111,7 @@ func (s *StateIniterDefault) PrepareState(
 		}
 		return false, myJets, nil
 	}
-	if err != pulse.ErrNotFound {
+	if err != insolarPulse.ErrNotFound {
 		return false, nil, errors.Wrap(err, "failed to fetch latest pulse")
 	}
 
@@ -187,7 +191,7 @@ func (s *StateIniterDefault) loadStateRetry(
 		return nil, fmt.Errorf("unexpected reply %T", pl)
 	}
 
-	prevPulse := pulse.FromProto(&state.Pulse)
+	prevPulse := insolarPulse.FromProto(&state.Pulse)
 	err = s.pulseAppender.Append(ctx, *prevPulse)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to append pulse")
@@ -221,15 +225,11 @@ func (s *StateIniterDefault) loadStateRetry(
 		}
 	}
 
-	for _, buf := range state.Drops {
-		d, err := drop.Decode(buf)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to decode drop")
-		}
+	for _, d := range state.Drops {
 		if d.Pulse != prevPulse.PulseNumber {
 			return nil, errors.New("received drop with wrong pulse")
 		}
-		err = s.drops.Set(ctx, *d)
+		err = s.drops.Set(ctx, d)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to set drop")
 		}
@@ -237,6 +237,7 @@ func (s *StateIniterDefault) loadStateRetry(
 
 	for _, idx := range state.Indexes {
 		s.indexes.Set(ctx, pn, idx)
+		stats.Record(ctx, StatRequestsOpened.M(int64(idx.Lifeline.OpenRequestsCount)))
 	}
 
 	return state.JetIDs, nil

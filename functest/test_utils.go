@@ -20,7 +20,8 @@ package functest
 import (
 	"bytes"
 	"context"
-	"encoding/base64"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -28,15 +29,14 @@ import (
 	"net/http"
 	"regexp"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/launchnet"
 
 	"github.com/insolar/rpc/v2/json2"
@@ -47,8 +47,8 @@ import (
 )
 
 const (
-	countThreeActiveDaemon = iota + 3
-	countFourActiveDaemon
+	countTwoActiveDaemon = iota + 2
+	countThreeActiveDaemon
 )
 
 type contractInfo struct {
@@ -113,7 +113,7 @@ func createMember(t *testing.T) *launchnet.User {
 	require.NoError(t, err)
 	member.Ref = launchnet.Root.Ref
 
-	result, err := signedRequest(t, member, "member.create", nil)
+	result, err := signedRequest(t, launchnet.TestRPCUrlPublic, member, "member.create", nil)
 	require.NoError(t, err)
 	ref, ok := result.(map[string]interface{})["reference"].(string)
 	require.True(t, ok)
@@ -121,93 +121,125 @@ func createMember(t *testing.T) *launchnet.User {
 	return member
 }
 
-func createMigrationMemberForMA(t *testing.T, ma string) *launchnet.User {
+func createMigrationMemberForMA(t *testing.T) *launchnet.User {
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
 	member.Ref = launchnet.Root.Ref
 
-	_, err = signedRequest(t, &launchnet.MigrationAdmin, "migration.addAddresses", map[string]interface{}{"migrationAddresses": []string{ma}})
-	require.NoError(t, err)
-
-	result, err := signedRequest(t, member, "member.migrationCreate", nil)
+	result, err := signedRequest(t, launchnet.TestRPCUrlPublic, member, "member.migrationCreate", nil)
 	require.NoError(t, err)
 	ref, ok := result.(map[string]interface{})["reference"].(string)
 	require.True(t, ok)
 	member.Ref = ref
+
+	ma, ok := result.(map[string]interface{})["migrationAddress"].(string)
+	require.True(t, ok)
+	member.MigrationAddress = ma
 	return member
 
 }
 
-func addMigrationAddress(t *testing.T) {
-	ba := testutils.RandomString()
-	_, err := signedRequest(t, &launchnet.MigrationAdmin, "migration.addAddresses", map[string]interface{}{"migrationAddresses": []string{ba}})
-	require.NoError(t, err)
+func generateMigrationAddress() (string, error) {
+	bytes := make([]byte, 20)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(bytes), nil
 }
 
 func getBalanceNoErr(t *testing.T, caller *launchnet.User, reference string) *big.Int {
-	balance, err := getBalance(t, caller, reference)
-	require.NoError(t, err)
+	balance, _ := getBalanceAndDepositsNoErr(t, caller, reference)
 	return balance
 }
 
-func getBalance(t *testing.T, caller *launchnet.User, reference string) (*big.Int, error) {
-	res, err := signedRequest(t, caller, "member.getBalance", map[string]interface{}{"reference": reference})
+func getBalanceAndDepositsNoErr(t *testing.T, caller *launchnet.User, reference string) (*big.Int, map[string]interface{}) {
+	balance, deposits, err := getBalanceAndDeposits(t, caller, reference)
+	require.NoError(t, err)
+	return balance, deposits
+}
+
+func getBalanceAndDeposits(t *testing.T, caller *launchnet.User, reference string) (*big.Int, map[string]interface{}, error) {
+	res, err := signedRequest(t, launchnet.TestRPCUrl, caller, "member.getBalance", map[string]interface{}{"reference": reference})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	amount, ok := new(big.Int).SetString(res.(map[string]interface{})["balance"].(string), 10)
+	balance, ok := new(big.Int).SetString(res.(map[string]interface{})["balance"].(string), 10)
 	if !ok {
-		return nil, fmt.Errorf("can't parse input amount")
+		return nil, nil, fmt.Errorf("can't parse balance")
 	}
-	return amount, nil
+	depositsSliced, ok := res.(map[string]interface{})["deposits"].([]interface{})
+	if !ok {
+		return balance, nil, fmt.Errorf("can't parse deposits")
+	}
+
+	var depositsMap = map[string]interface{}{}
+	for _, d := range depositsSliced {
+		dMap := d.(map[string]interface{})
+		ethTxHash, ok := dMap["ethTxHash"].(string)
+		if !ok {
+			return balance, nil, fmt.Errorf("can't parse ethTxHash")
+		}
+
+		confirmerReferencesSliced, ok := dMap["confirmerReferences"].([]interface{})
+		if !ok {
+			return balance, nil, fmt.Errorf("can't parse confirmerReferences")
+		}
+
+		var confirmerReferences = map[string]interface{}{}
+		for _, cr := range confirmerReferencesSliced {
+			crMap := cr.(map[string]interface{})
+			reference, ok := crMap["reference"].(string)
+			if !ok {
+				return balance, nil, fmt.Errorf("can't parse reference")
+			}
+			amount, ok := crMap["amount"]
+			if !ok {
+				return balance, nil, fmt.Errorf("can't get amount")
+			}
+			confirmerReferences[reference] = amount
+		}
+
+		dMap["confirmerReferences"] = confirmerReferences
+		depositsMap[ethTxHash] = dMap
+	}
+
+	return balance, depositsMap, nil
 }
 
 func migrate(t *testing.T, memberRef string, amount string, tx string, ma string, mdNum int) map[string]interface{} {
 	anotherMember := createMember(t)
 
 	_, err := signedRequest(t,
+		launchnet.TestRPCUrl,
 		launchnet.MigrationDaemons[mdNum],
 		"deposit.migration",
 		map[string]interface{}{"amount": amount, "ethTxHash": tx, "migrationAddress": ma})
 	require.NoError(t, err)
-	res, err := signedRequest(t, anotherMember, "member.getBalance", map[string]interface{}{"reference": memberRef})
-	require.NoError(t, err)
-	deposits, ok := res.(map[string]interface{})["deposits"].(map[string]interface{})
-	require.True(t, ok)
+	_, deposits := getBalanceAndDepositsNoErr(t, anotherMember, memberRef)
 	deposit, ok := deposits[tx].(map[string]interface{})
-	sm := make(foundation.StableMap)
-	require.NoError(t, err)
-	confirmerReferencesMap := deposit["confirmerReferences"].(string)
-	decoded, err := base64.StdEncoding.DecodeString(confirmerReferencesMap)
-	require.NoError(t, err)
-	err = sm.UnmarshalBinary(decoded)
 	require.True(t, ok)
-	require.Equal(t, amount+"0", sm[launchnet.MigrationDaemons[mdNum].Ref])
+	confirmations := deposit["confirmerReferences"].(map[string]interface{})
+	require.Equal(t, amount+"0", confirmations[launchnet.MigrationDaemons[mdNum].Ref])
 
 	return deposit
-}
-
-func generateMigrationAddress() string {
-	return testutils.RandomString()
 }
 
 const migrationAmount = "360000"
 
 func fullMigration(t *testing.T, txHash string) *launchnet.User {
-	activeDaemons := activateDaemons(t, countThreeActiveDaemon)
+	activeDaemons := activateDaemons(t, countTwoActiveDaemon)
 
-	migrationAddress := testutils.RandomString()
-	member := createMigrationMemberForMA(t, migrationAddress)
+	member := createMigrationMemberForMA(t)
 	for i := range activeDaemons {
-		migrate(t, member.Ref, migrationAmount, txHash, migrationAddress, i)
+		migrate(t, member.Ref, migrationAmount, txHash, member.MigrationAddress, i)
 	}
 	return member
 }
 
-func getRPSResponseBody(t testing.TB, postParams map[string]interface{}) []byte {
+func getRPSResponseBody(t testing.TB, URL string, postParams map[string]interface{}) []byte {
 	jsonValue, _ := json.Marshal(postParams)
 
-	postResp, err := http.Post(launchnet.TestRPCUrl, "application/json", bytes.NewBuffer(jsonValue))
+	postResp, err := http.Post(URL, "application/json", bytes.NewBuffer(jsonValue))
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, postResp.StatusCode)
 	body, err := ioutil.ReadAll(postResp.Body)
@@ -216,7 +248,7 @@ func getRPSResponseBody(t testing.TB, postParams map[string]interface{}) []byte 
 }
 
 func getSeed(t testing.TB) string {
-	body := getRPSResponseBody(t, postParams{
+	body := getRPSResponseBody(t, launchnet.TestRPCUrl, postParams{
 		"jsonrpc": "2.0",
 		"method":  "node.getSeed",
 		"id":      "",
@@ -233,7 +265,7 @@ func getInfo(t testing.TB) infoResponse {
 		"method":  "network.getInfo",
 		"id":      "",
 	}
-	body := getRPSResponseBody(t, pp)
+	body := getRPSResponseBody(t, launchnet.TestRPCUrl, pp)
 	rpcInfoResponse := &rpcInfoResponse{}
 	unmarshalRPCResponse(t, body, rpcInfoResponse)
 	require.NotNil(t, rpcInfoResponse.Result)
@@ -241,7 +273,7 @@ func getInfo(t testing.TB) infoResponse {
 }
 
 func getStatus(t testing.TB) statusResponse {
-	body := getRPSResponseBody(t, postParams{
+	body := getRPSResponseBody(t, launchnet.TestRPCUrl, postParams{
 		"jsonrpc": "2.0",
 		"method":  "node.getStatus",
 		"id":      "",
@@ -256,13 +288,15 @@ func activateDaemons(t *testing.T, countDaemon int) []*launchnet.User {
 	var activeDaemons []*launchnet.User
 	for i := 0; i < countDaemon; i++ {
 		if len(launchnet.MigrationDaemons[i].Ref) > 0 {
-			res, err := signedRequest(t, &launchnet.MigrationAdmin, "migration.checkDaemon", map[string]interface{}{"reference": launchnet.MigrationDaemons[i].Ref})
+			res, err := signedRequest(t, launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.checkDaemon",
+				map[string]interface{}{"reference": launchnet.MigrationDaemons[i].Ref})
 			require.NoError(t, err)
 
 			status := res.(map[string]interface{})["status"].(string)
 
 			if status == "inactive" {
-				_, err := signedRequest(t, &launchnet.MigrationAdmin, "migration.activateDaemon", map[string]interface{}{"reference": launchnet.MigrationDaemons[i].Ref})
+				_, err := signedRequest(t, launchnet.TestRPCUrl, &launchnet.MigrationAdmin,
+					"migration.activateDaemon", map[string]interface{}{"reference": launchnet.MigrationDaemons[i].Ref})
 				require.NoError(t, err)
 			}
 			activeDaemons = append(activeDaemons, launchnet.MigrationDaemons[i])
@@ -283,17 +317,15 @@ func unmarshalCallResponse(t testing.TB, body []byte, response *requester.Contra
 	require.NoError(t, err)
 }
 
-func signedRequest(t *testing.T, user *launchnet.User, method string, params interface{}) (interface{}, error) {
-	res, refStr, err := makeSignedRequest(user, method, params)
+func signedRequest(t *testing.T, URL string, user *launchnet.User, method string, params interface{}) (interface{}, error) {
+	res, refStr, err := makeSignedRequest(URL, user, method, params)
 
 	var errMsg string
 	if err != nil {
-		errMsg = err.Error()
+		t.Error(err.Error() + ": " + strings.Join(err.(*requester.Error).Data.Trace, ": "))
 	}
-	emptyRef := insolar.NewEmptyReference()
-
 	require.NotEqual(t, "", refStr, "request ref is empty: %s", errMsg)
-	require.NotEqual(t, emptyRef.String(), refStr, "request ref is zero: %s", errMsg)
+	require.NotEqual(t, insolar.NewEmptyReference().String(), refStr, "request ref is zero: %s", errMsg)
 
 	_, err = insolar.NewReferenceFromBase58(refStr)
 	require.Nil(t, err)
@@ -301,18 +333,19 @@ func signedRequest(t *testing.T, user *launchnet.User, method string, params int
 	return res, err
 }
 
-func signedRequestWithEmptyRequestRef(t *testing.T, user *launchnet.User, method string, params interface{}) (interface{}, error) {
-	res, refStr, err := makeSignedRequest(user, method, params)
+func signedRequestWithEmptyRequestRef(t *testing.T, URL string, user *launchnet.User, method string, params interface{}) (interface{}, error) {
+	res, refStr, err := makeSignedRequest(URL, user, method, params)
 
 	require.Equal(t, "", refStr)
 
 	return res, err
 }
 
-func makeSignedRequest(user *launchnet.User, method string, params interface{}) (interface{}, string, error) {
+func makeSignedRequest(URL string, user *launchnet.User, method string, params interface{}) (interface{}, string, error) {
 	ctx := context.TODO()
 	rootCfg, err := requester.CreateUserConfig(user.Ref, user.PrivKey, user.PubKey)
 	if err != nil {
+		fmt.Println("Error: " + err.(*requester.Error).Data.Trace[0])
 		return nil, "", err
 	}
 
@@ -329,11 +362,16 @@ func makeSignedRequest(user *launchnet.User, method string, params interface{}) 
 		caller = ""
 	}
 
-	res, err := requester.Send(ctx, launchnet.TestAPIURL, rootCfg, &requester.Params{
+	seed, err := requester.GetSeed(URL)
+	if err != nil {
+		return nil, "", err
+	}
+
+	res, err := requester.SendWithSeed(ctx, URL, rootCfg, &requester.Params{
 		CallSite:   method,
 		CallParams: params,
 		PublicKey:  user.PubKey,
-		Test:       caller})
+		Test:       caller}, seed)
 
 	if err != nil {
 		return nil, "", err
@@ -346,13 +384,12 @@ func makeSignedRequest(user *launchnet.User, method string, params interface{}) 
 	}
 
 	if resp.Error != nil {
-		return nil, "", errors.New(resp.Error.Message)
+		return nil, "", resp.Error
 	}
 
 	if resp.Result == nil {
 		return nil, "", errors.New("Error and result are nil")
 	}
-
 	return resp.Result.CallResult, resp.Result.RequestReference, nil
 
 }
@@ -398,7 +435,7 @@ func uploadContractOnce(t testing.TB, name string, code string) *insolar.Referen
 }
 
 func uploadContract(t testing.TB, contractName string, contractCode string) *insolar.Reference {
-	uploadBody := getRPSResponseBody(t, postParams{
+	uploadBody := getRPSResponseBody(t, launchnet.TestRPCUrl, postParams{
 		"jsonrpc": "2.0",
 		"method":  "funcTestContract.upload",
 		"id":      "",
@@ -422,9 +459,7 @@ func uploadContract(t testing.TB, contractName string, contractCode string) *ins
 
 	prototypeRef, err := insolar.NewReferenceFromBase58(uploadRes.Result.PrototypeRef)
 	require.NoError(t, err)
-
-	emptyRef := make([]byte, insolar.RecordRefSize)
-	require.NotEqual(t, insolar.NewReferenceFromBytes(emptyRef), prototypeRef)
+	require.False(t, prototypeRef.IsEmpty())
 
 	return prototypeRef
 }
@@ -433,7 +468,7 @@ func callConstructor(t testing.TB, prototypeRef *insolar.Reference, method strin
 	argsSerialized, err := insolar.Serialize(args)
 	require.NoError(t, err)
 
-	objectBody := getRPSResponseBody(t, postParams{
+	objectBody := getRPSResponseBody(t, launchnet.TestRPCUrl, postParams{
 		"jsonrpc": "2.0",
 		"method":  "funcTestContract.callConstructor",
 		"id":      "",
@@ -491,7 +526,7 @@ func callMethodNoChecks(t testing.TB, objectRef *insolar.Reference, method strin
 	argsSerialized, err := insolar.Serialize(args)
 	require.NoError(t, err)
 
-	respBody := getRPSResponseBody(t, postParams{
+	respBody := getRPSResponseBody(t, launchnet.TestRPCUrl, postParams{
 		"jsonrpc": "2.0",
 		"method":  "funcTestContract.callMethod",
 		"id":      "",
@@ -555,7 +590,7 @@ func setMigrationDaemonsRef() error {
 	for i, mDaemon := range launchnet.MigrationDaemons {
 		daemon := mDaemon
 		daemon.Ref = launchnet.Root.Ref
-		res, _, err := makeSignedRequest(daemon, "member.get", nil)
+		res, _, err := makeSignedRequest(launchnet.TestRPCUrlPublic, daemon, "member.get", nil)
 		if err != nil {
 			return errors.Wrap(err, "[ setup ] get member by public key failed ,key ")
 		}

@@ -35,8 +35,9 @@ import (
 )
 
 type SendObject struct {
-	message  payload.Meta
-	objectID insolar.ID
+	message   payload.Meta
+	objectID  insolar.ID
+	requestID *insolar.ID
 
 	dep struct {
 		coordinator jet.Coordinator
@@ -45,16 +46,19 @@ type SendObject struct {
 		records     object.RecordAccessor
 		indexes     object.IndexAccessor
 		sender      bus.Sender
+		filament    executor.FilamentCalculator
 	}
 }
 
 func NewSendObject(
 	msg payload.Meta,
-	id insolar.ID,
+	objectID insolar.ID,
+	requestID *insolar.ID,
 ) *SendObject {
 	return &SendObject{
-		message:  msg,
-		objectID: id,
+		message:   msg,
+		objectID:  objectID,
+		requestID: requestID,
 	}
 }
 
@@ -65,6 +69,7 @@ func (p *SendObject) Dep(
 	records object.RecordAccessor,
 	indexes object.IndexAccessor,
 	sender bus.Sender,
+	filament executor.FilamentCalculator,
 ) {
 	p.dep.coordinator = coordinator
 	p.dep.jets = jets
@@ -72,6 +77,31 @@ func (p *SendObject) Dep(
 	p.dep.records = records
 	p.dep.indexes = indexes
 	p.dep.sender = sender
+	p.dep.filament = filament
+}
+
+func (p *SendObject) ensureOldestRequest(ctx context.Context) (*record.CompositeFilamentRecord, error) {
+	openReqs, err := p.dep.filament.OpenedRequests(ctx, flow.Pulse(ctx), p.objectID, false)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to fetch filament")
+	}
+	var reqBody *record.CompositeFilamentRecord
+
+	for i := range openReqs {
+		if openReqs[i].RecordID == *p.requestID {
+			reqBody = &openReqs[i]
+		}
+	}
+	if reqBody == nil {
+		return nil, errors.Wrap(err, "request isn't opened")
+	}
+
+	inReq, isIn := record.Unwrap(&reqBody.Record.Virtual).(*record.IncomingRequest)
+	if !isIn || inReq.Immutable {
+		return nil, nil
+	}
+
+	return oldestMutable(openReqs), nil
 }
 
 func (p *SendObject) Proceed(ctx context.Context) error {
@@ -84,21 +114,19 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 		}
 
 		if state.ID() == record.StateDeactivation {
-			msg, err := payload.NewMessage(&payload.Error{Text: "object is deactivated", Code: payload.CodeDeactivated})
-			if err != nil {
-				return errors.Wrap(err, "failed to create reply")
+			return &payload.CodedError{
+				Text: "object is deactivated",
+				Code: payload.CodeDeactivated,
 			}
-			p.dep.sender.Reply(ctx, p.message, msg)
-			return nil
 		}
 
 		buf, err := rec.Marshal()
 		if err != nil {
 			return errors.Wrap(err, "failed to marshal state record")
 		}
+
 		msg, err := payload.NewMessage(&payload.State{
 			Record: buf,
-			Memory: state.GetMemory(),
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to create message")
@@ -166,20 +194,48 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 	lifeline := idx.Lifeline
 
 	if lifeline.StateID == record.StateDeactivation {
-		return errors.New("object is deactivated")
+		return &payload.CodedError{
+			Text: "object is deactivated",
+			Code: payload.CodeDeactivated,
+		}
 	}
-
 	if lifeline.LatestState == nil {
-		return ErrNotActivated
+		return &payload.CodedError{
+			Text: "object isn't activated",
+			Code: payload.CodeNonActivated,
+		}
 	}
 
+	var earliestRequestID *insolar.ID
+	var earliestRequest []byte
+
+	// We know the request, that is processing by ve
+	// if the request isn't earliest, we return object + earliest request instead
+	if p.requestID != nil {
+		oldest, err := p.ensureOldestRequest(ctx)
+		if err != nil {
+			return errors.Wrap(err, "failed to check request status")
+		}
+		if oldest != nil && oldest.RecordID != *p.requestID {
+			reqBuf, err := oldest.Record.Virtual.Marshal()
+			if err != nil {
+				return errors.Wrap(err, "failed to marshal request")
+			}
+			earliestRequestID = &oldest.RecordID
+			earliestRequest = reqBuf
+		}
+	}
+
+	// Sending indexes
 	{
 		buf, err := lifeline.Marshal()
 		if err != nil {
 			return errors.Wrap(err, "failed to marshal index")
 		}
 		msg, err := payload.NewMessage(&payload.Index{
-			Index: buf,
+			Index:             buf,
+			EarliestRequestID: earliestRequestID,
+			EarliestRequest:   earliestRequest,
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to create reply")

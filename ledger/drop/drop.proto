@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package drop;
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+option (gogoproto.goproto_getters_all) = false;
+
+message Drop {
+    int32 polymorph = 16;
+
+    bytes Pulse = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
+    bytes JetID = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.JetID", (gogoproto.nullable) = false];
+    int64 SplitThresholdExceeded = 22;
+    bool Split = 23;
+}

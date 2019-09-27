@@ -22,7 +22,6 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/gojuno/minimock"
 	uuid "github.com/satori/go.uuid"
 	"golang.org/x/crypto/sha3"
 
@@ -111,11 +110,6 @@ func (m *cryptographySchemeMock) IntegrityHashSize() int {
 func NewPlatformCryptographyScheme() insolar.PlatformCryptographyScheme {
 	return &cryptographySchemeMock{}
 }
-
-func GetTestNetwork(t minimock.Tester) insolar.Network {
-	return NewNetworkMock(t)
-}
-
 type SyncT struct {
 	*testing.T
 

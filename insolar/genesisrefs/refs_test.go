@@ -17,11 +17,24 @@
 package genesisrefs
 
 import (
+	"strconv"
 	"testing"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/stretchr/testify/require"
 )
+
+func TestContractPublicKeyShards(t *testing.T) {
+	for i, ref := range ContractPublicKeyShards(100) {
+		require.Equal(t, GenesisRef(insolar.GenesisNamePKShard+strconv.Itoa(i)), ref)
+	}
+}
+
+func TestContractMigrationAddressShards(t *testing.T) {
+	for i, ref := range ContractMigrationAddressShards(100) {
+		require.Equal(t, GenesisRef(insolar.GenesisNameMigrationShard+strconv.Itoa(i)), ref)
+	}
+}
 
 func TestReferences(t *testing.T) {
 	pairs := map[string]struct {
@@ -30,51 +43,55 @@ func TestReferences(t *testing.T) {
 	}{
 		insolar.GenesisNameRootDomain: {
 			got:    ContractRootDomain,
-			expect: "1tJD1hMFxYYt9rHcYuvCMLdCn4AZdPfy4HPaavNWn8.11111111111111111111111111111111",
+			expect: "11tJDjojfnTYn2YqF6kxCQimgYhRHuL82ep8NzqrEeE",
 		},
 		insolar.GenesisNameNodeDomain: {
 			got:    ContractNodeDomain,
-			expect: "1tJDPJd6QDhsKhhgc5bCCJuDEZyrPpe2EkSCVgMoeQ.11111111111111111111111111111111",
+			expect: "11tJCQmJvVAEzDUartxvGk2t2U2S642nnHAHSCDNdPa",
 		},
 		insolar.GenesisNameNodeRecord: {
 			got:    ContractNodeRecord,
-			expect: "1tJCCeN3WNGKi6w3YqxHPV7tjxLxsCcookXTe9i6uD.11111111111111111111111111111111",
+			expect: "11tJBoja1SMYWkw8xHdJJCu5fdjQAJZ6XfMx8YcrBq5",
 		},
 		insolar.GenesisNameRootMember: {
 			got:    ContractRootMember,
-			expect: "1tJDb3zZnEns6R4ChKhE4RFhzbUVxvxUdj58YF22yP.11111111111111111111111111111111",
+			expect: "11tJCjvL9bzK1HdmaFnvmHGMvNnHYJz2qrN83if4fEf",
 		},
 		insolar.GenesisNameRootWallet: {
 			got:    ContractRootWallet,
-			expect: "1tJCLgYKxM4TABHW8tY3DBxeBZZixWua6iwReJAL4g.11111111111111111111111111111111",
+			expect: "11tJCWaEGnNwk97PS5RbKDErnopfH9wx5r2N1tJnqwc",
 		},
 		insolar.GenesisNameRootAccount: {
 			got:    ContractRootAccount,
-			expect: "1tJC166eWveiffkDiF3zyqc3zhHyqULzkNUMn1VmSc.11111111111111111111111111111111",
+			expect: "11tJD3c7peF6Yd7VimufekgnFJg6QvtJBf643JW76L9",
 		},
 		insolar.GenesisNameDeposit: {
 			got:    ContractDeposit,
-			expect: "1tJCUhUMyeumaDA9wPksSjugbQ5uFJ5iYfpsX9yZ7j.11111111111111111111111111111111",
+			expect: "11tJCbm34yHNdh91AsgmbUBpqAyjeMgy45jZD3kjGa8",
 		},
 		insolar.GenesisNameCostCenter: {
 			got:    ContractCostCenter,
-			expect: "1tJDyWCLK4y4JLw7dsCaD9KzEqYTgyGXN5Zp4HuteA.11111111111111111111111111111111",
+			expect: "11tJC1eCWVFJ6digscGgBs2TdrgWntNHCYYAdaAoWEH",
 		},
 		insolar.GenesisNameFeeAccount: {
 			got:    ContractFeeAccount,
-			expect: "1tJEHA5P78QZLoboHnrVKNAxGys78xmBGVXDVca2HE.11111111111111111111111111111111",
+			expect: "11tJDMf8Y83BKeEyn9qjjtgAskhRa5mzVbxdVB7Pjez",
+		},
+		insolar.GenesisNameFeeWallet: {
+			got:    ContractFeeWallet,
+			expect: "11tJCcTZXZY7zBBsNMtimx1iceLkYCED85Anu1D9R3p",
 		},
 		insolar.GenesisNamePKShard: {
-			got:    ContractPublicKeyShards[0],
-			expect: "1tJCPZRjHWbFXQT5xNMzhm33ZWMQMSw2f5s39hYkNM.11111111111111111111111111111111",
+			got:    ContractPublicKeyShards(10)[0],
+			expect: "11tJCXnQ9AAiHGYpSee8jD9AbYu9wTJv8rbbX3kAAza",
 		},
 		insolar.GenesisNameMigrationShard: {
-			got:    ContractMigrationAddressShards[0],
-			expect: "1tJDMfQ7GmZ2AU4efkVyPYjQ9ExkpN9uMqpqBieYwA.11111111111111111111111111111111",
+			got:    ContractMigrationAddressShards(10)[0],
+			expect: "11tJCcyeLGqpzYLa3doKn4gmCdtvTSVCGav6sHcbEZ2",
 		},
 		insolar.GenesisNameMigrationAdminAccount: {
 			got:    ContractMigrationAccount,
-			expect: "1tJEFK9k1NtRjxCVbTAshtt8CDuZjV6W8m6f6RYXxD.11111111111111111111111111111111",
+			expect: "11tJD1cMXNkRUY1yYNtNwse2KBB59nZmUNUHq1vrXLD",
 		},
 	}
 
@@ -89,4 +106,13 @@ func TestRootDomain(t *testing.T) {
 	ref1 := ContractRootDomain
 	ref2 := GenesisRef(insolar.GenesisNameRootDomain)
 	require.Equal(t, ref1.String(), ref2.String(), "reference is the same")
+}
+
+func TestGenesisRef(t *testing.T) {
+	var (
+		pubKey    = "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEf+vsMVU75xH8uj5WRcOqYdHXtaHH\nN0na2RVQ1xbhsVybYPae3ujNHeQCPj+RaJyMVhb6Aj/AOsTTOPFswwIDAQ==\n-----END PUBLIC KEY-----\n"
+		pubKeyRef = "11tJDfNqT8mgcjmsbdaRUr8v6j39zLC4nDnGdupKUGu"
+	)
+	genesisRef := GenesisRef(pubKey)
+	require.Equal(t, pubKeyRef, genesisRef.String(), "reference by name always the same")
 }

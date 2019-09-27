@@ -18,30 +18,31 @@ package costcenter
 
 import (
 	"github.com/insolar/insolar/insolar"
-
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 )
 
 type CostCenter struct {
 	foundation.BaseContract
-	FeeAccount insolar.Reference
+	FeeMember *insolar.Reference
+	Fee       string
 }
 
 // New creates new CostCenter.
-func New(feeAccount insolar.Reference) (*CostCenter, error) {
+func New(feeMember *insolar.Reference, fee string) (*CostCenter, error) {
 	return &CostCenter{
-		FeeAccount: feeAccount,
+		FeeMember: feeMember,
+		Fee:       fee,
 	}, nil
 }
 
-// GetFeeAccount gets fee account reference.
+// GetFeeMember gets fee member reference.
 // ins:immutable
-func (cc CostCenter) GetFeeAccount() (insolar.Reference, error) {
-	return cc.FeeAccount, nil
+func (cc CostCenter) GetFeeMember() (*insolar.Reference, error) {
+	return cc.FeeMember, nil
 }
 
 // CalcFee calculates fee for amount. Returns fee.
 // ins:immutable
 func (cc CostCenter) CalcFee(amountStr string) (string, error) {
-	return "10000000", nil
+	return cc.Fee, nil
 }

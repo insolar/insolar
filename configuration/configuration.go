@@ -28,21 +28,30 @@ import (
 
 // Configuration contains configuration params for all Insolar components
 type Configuration struct {
-	Host            HostNetwork
-	Service         ServiceNetwork
-	Ledger          Ledger
-	Log             Log
-	Metrics         Metrics
-	LogicRunner     LogicRunner
-	APIRunner       APIRunner
-	Pulsar          Pulsar
-	VersionManager  VersionManager
-	KeysPath        string
-	CertificatePath string
-	Tracer          Tracer
-	Introspection   Introspection
-	Exporter        Exporter
-	Bus             Bus
+	Host                HostNetwork
+	Service             ServiceNetwork
+	Ledger              Ledger
+	Log                 Log
+	Metrics             Metrics
+	LogicRunner         LogicRunner
+	APIRunner           APIRunner
+	AdminAPIRunner      APIRunner
+	AvailabilityChecker AvailabilityChecker
+	KeysPath            string
+	CertificatePath     string
+	Tracer              Tracer
+	Introspection       Introspection
+	Exporter            Exporter
+	Bus                 Bus
+}
+
+// PulsarConfiguration contains configuration params for the pulsar node
+type PulsarConfiguration struct {
+	Log      Log
+	Pulsar   Pulsar
+	Tracer   Tracer
+	KeysPath string
+	Metrics  Metrics
 }
 
 // Holder provides methods to manage configuration
@@ -54,24 +63,35 @@ type Holder struct {
 // NewConfiguration creates new default configuration
 func NewConfiguration() Configuration {
 	cfg := Configuration{
-		Host:            NewHostNetwork(),
-		Service:         NewServiceNetwork(),
-		Ledger:          NewLedger(),
-		Log:             NewLog(),
-		Metrics:         NewMetrics(),
-		LogicRunner:     NewLogicRunner(),
-		APIRunner:       NewAPIRunner(),
-		Pulsar:          NewPulsar(),
-		VersionManager:  NewVersionManager(),
-		KeysPath:        "./",
-		CertificatePath: "",
-		Tracer:          NewTracer(),
-		Introspection:   NewIntrospection(),
-		Exporter:        NewExporter(),
-		Bus:             NewBus(),
+		Host:                NewHostNetwork(),
+		Service:             NewServiceNetwork(),
+		Ledger:              NewLedger(),
+		Log:                 NewLog(),
+		Metrics:             NewMetrics(),
+		LogicRunner:         NewLogicRunner(),
+		APIRunner:           NewAPIRunner(false),
+		AdminAPIRunner:      NewAPIRunner(true),
+		AvailabilityChecker: NewAvailabilityChecker(),
+		KeysPath:            "./",
+		CertificatePath:     "",
+		Tracer:              NewTracer(),
+		Introspection:       NewIntrospection(),
+		Exporter:            NewExporter(),
+		Bus:                 NewBus(),
 	}
 
 	return cfg
+}
+
+// NewPulsarConfiguration creates new default configuration for pulsar
+func NewPulsarConfiguration() PulsarConfiguration {
+	return PulsarConfiguration{
+		Log:      NewLog(),
+		Pulsar:   NewPulsar(),
+		Tracer:   NewTracer(),
+		KeysPath: "./",
+		Metrics:  NewMetrics(),
+	}
 }
 
 // MustInit wrapper around Init function which panics on error.

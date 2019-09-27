@@ -18,12 +18,12 @@ package artifacts
 
 import (
 	"context"
-	"github.com/insolar/insolar/insolar/flow"
 	"time"
 
 	"go.opencensus.io/stats"
 	"go.opencensus.io/tag"
 
+	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
 )

@@ -44,6 +44,7 @@ func TestSeedFromBytes(t *testing.T) {
 func TestNew(t *testing.T) {
 	sm := New()
 	require.Empty(t, sm.seedPool)
+	sm.Stop()
 }
 
 func getSeed(t *testing.T) Seed {
@@ -60,6 +61,7 @@ func TestSeedManager_Add(t *testing.T) {
 	pulse, exists := sm.Pop(seed)
 	require.True(t, exists)
 	require.Equal(t, insolar.PulseNumber(5), pulse)
+	sm.Stop()
 }
 
 func TestSeedManager_ExpiredSeed(t *testing.T) {
@@ -70,6 +72,7 @@ func TestSeedManager_ExpiredSeed(t *testing.T) {
 	sm.seedPool[seed] = storedSeed{time.Now().UnixNano() - 1000, 0}
 	_, exists := sm.Pop(seed)
 	require.False(t, exists)
+	sm.Stop()
 }
 
 func TestSeedManager_ExpiredSeedAfterCleaning(t *testing.T) {
@@ -80,6 +83,7 @@ func TestSeedManager_ExpiredSeedAfterCleaning(t *testing.T) {
 	sm.seedPool[seed] = storedSeed{time.Now().UnixNano() - 1000, 0}
 	_, exists := sm.Pop(seed)
 	require.False(t, exists)
+	sm.Stop()
 }
 
 func TestRace(t *testing.T) {

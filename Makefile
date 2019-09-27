@@ -8,9 +8,10 @@ TESTPULSARD = testpulsard
 INSGORUND = insgorund
 BENCHMARK = benchmark
 PULSEWATCHER = pulsewatcher
-BACKUPMERGER = backupmerger
+BACKUPMANAGER = backupmanager
 APIREQUESTER = apirequester
 HEALTHCHECK = healthcheck
+KEEPERD = keeperd
 
 ALL_PACKAGES = ./...
 MOCKS_PACKAGE = github.com/insolar/insolar/testutils
@@ -25,10 +26,11 @@ CI_GOMAXPROCS ?= 8
 CI_TEST_ARGS ?= -p 4
 
 BUILD_NUMBER := $(TRAVIS_BUILD_NUMBER)
-BUILD_DATE = $(shell date "+%Y-%m-%d")
-BUILD_TIME = $(shell date "+%H:%M:%S")
-BUILD_HASH = $(shell git rev-parse --short HEAD)
-BUILD_VERSION ?= $(shell git describe --abbrev=0 --tags)
+BUILD_DATE ?= $(shell ./scripts/dev/git-date-time.sh -d)
+BUILD_TIME ?= $(shell ./scripts/dev/git-date-time.sh -t)
+BUILD_HASH ?= $(shell git rev-parse --short HEAD)
+BUILD_VERSION ?= $(shell git describe --tags)
+DOCKER_BASE_IMAGE_TAG ?= $(BUILD_VERSION)
 
 GOPATH ?= `go env GOPATH`
 LDFLAGS += -X github.com/insolar/insolar/version.Version=${BUILD_VERSION}
@@ -84,7 +86,7 @@ ensure: ## install all dependencies
 	dep ensure
 
 .PHONY: build
-build: $(BIN_DIR) $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(TESTPULSARD) $(INSGORUND) $(HEALTHCHECK) $(BENCHMARK) $(APIREQUESTER) $(PULSEWATCHER) $(BACKUPMERGER) ## build all binaries
+build: $(BIN_DIR) $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(TESTPULSARD) $(INSGORUND) $(HEALTHCHECK) $(BENCHMARK) $(APIREQUESTER) $(PULSEWATCHER) $(BACKUPMANAGER) $(KEEPERD) ## build all binaries
 
 $(BIN_DIR):
 	mkdir -p $(BIN_DIR)
@@ -123,9 +125,9 @@ $(BENCHMARK):
 $(PULSEWATCHER):
 	$(GOBUILD) -o $(BIN_DIR)/$(PULSEWATCHER) -ldflags "${LDFLAGS}" cmd/pulsewatcher/*.go
 
-.PHONY: $(BACKUPMERGER)
-$(BACKUPMERGER):
-	$(GOBUILD) -o $(BIN_DIR)/$(BACKUPMERGER) -ldflags "${LDFLAGS}" cmd/backupmerger/*.go
+.PHONY: $(BACKUPMANAGER)
+$(BACKUPMANAGER):
+	$(GOBUILD) -o $(BIN_DIR)/$(BACKUPMANAGER) -ldflags "${LDFLAGS}" cmd/backupmanager/*.go
 
 .PHONY: $(APIREQUESTER)
 $(APIREQUESTER):
@@ -135,13 +137,18 @@ $(APIREQUESTER):
 $(HEALTHCHECK):
 	$(GOBUILD) -o $(BIN_DIR)/$(HEALTHCHECK) -ldflags "${LDFLAGS}" cmd/healthcheck/*.go
 
+.PHONY: $(KEEPERD)
+$(KEEPERD):
+	$(GOBUILD) -o $(BIN_DIR)/$(KEEPERD) -ldflags "${LDFLAGS}" cmd/keeperd/*.go
+
+
 .PHONY: test_unit
 test_unit: ## run all unit tests
 	CGO_ENABLED=1 go test $(TEST_ARGS) $(ALL_PACKAGES)
 
 .PHONY: functest
 functest: ## run functest FUNCTEST_COUNT times
-	CGO_ENABLED=1 go test -test.v $(TEST_ARGS) -tags functest ./functest -count=$(FUNCTEST_COUNT)
+	CGO_ENABLED=1 go test -test.v $(TEST_ARGS) -tags "functest bloattest" ./functest -count=$(FUNCTEST_COUNT)
 
 .PNONY: functest_race
 functest_race: ## run functest 10 times with -race flag
@@ -154,7 +161,7 @@ test_func: functest ## alias for functest
 
 .PHONY: test_slow
 test_slow: ## run tests with slowtest tag
-	CGO_ENABLED=1 go test $(TEST_ARGS) -tags slowtest ./logicrunner/... ./server/internal/... ./ledger/light/integration/...
+	CGO_ENABLED=1 go test $(TEST_ARGS) -tags slowtest ./logicrunner/... ./server/internal/... ./cmd/backupmanager/... ./ledger/light/integration/... ./ledger/heavy/executor/integration/...  ./ledger/heavy/integration/... ./virtual/integration
 
 .PHONY: test
 test: test_unit ## alias for test_unit
@@ -164,12 +171,12 @@ test_all: test_unit test_func test_slow ## run all tests (unit, func, slow)
 
 .PHONY: test_with_coverage
 test_with_coverage: $(ARTIFACTS_DIR) ## run unit tests with generation of coverage file
-	CGO_ENABLED=1 go test $(TEST_ARGS) --coverprofile=$(ARTIFACTS_DIR)/cover.all --covermode=atomic $(TESTED_PACKAGES)
+	CGO_ENABLED=1 go test $(TEST_ARGS) -tags coverage --coverprofile=$(ARTIFACTS_DIR)/cover.all --covermode=count $(TESTED_PACKAGES)
 	@cat $(ARTIFACTS_DIR)/cover.all | ./scripts/dev/cover-filter.sh > $(COVERPROFILE)
 
 .PHONY: test_with_coverage_fast
 test_with_coverage_fast: ## ???
-	CGO_ENABLED=1 go test $(TEST_ARGS) -count 1 --coverprofile=$(COVERPROFILE) --covermode=atomic $(ALL_PACKAGES)
+	CGO_ENABLED=1 go test $(TEST_ARGS) -tags coverage -count 1 --coverprofile=$(COVERPROFILE) --covermode=count $(ALL_PACKAGES)
 
 $(ARTIFACTS_DIR):
 	mkdir -p $(ARTIFACTS_DIR)
@@ -177,7 +184,7 @@ $(ARTIFACTS_DIR):
 .PHONY: ci_test_with_coverage
 ci_test_with_coverage: ## run unit tests with coverage, outputs json to stdout (CI)
 	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1 \
-		go test $(CI_TEST_ARGS) $(TEST_ARGS) -json -v -count 1 --coverprofile=$(COVERPROFILE) --covermode=atomic -tags slowtest $(ALL_PACKAGES)
+		go test $(CI_TEST_ARGS) $(TEST_ARGS) -json -v -count 1 --coverprofile=$(COVERPROFILE) --covermode=count -tags 'coverage slowtest' $(ALL_PACKAGES)
 
 .PHONY: ci_test_unit
 ci_test_unit: ## run unit tests 10 times and -race flag, redirects json output to file (CI)
@@ -187,14 +194,14 @@ ci_test_unit: ## run unit tests 10 times and -race flag, redirects json output t
 .PHONY: ci_test_slow
 ci_test_slow: ## run slow tests just once, redirects json output to file (CI)
 	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1 \
-		go test $(CI_TEST_ARGS) $(TEST_ARGS) -json -v -tags slowtest ./logicrunner/... ./server/internal/... ./ledger/light/integration/... -count 1 | tee -a ci_test_unit.json
+		go test $(CI_TEST_ARGS) $(TEST_ARGS) -json -v -failfast -tags slowtest ./logicrunner/... ./server/internal/... ./cmd/backupmanager/... ./ledger/heavy/executor/integration/...  ./ledger/heavy/integration/... ./ledger/light/integration/... -count 1 | tee -a ci_test_unit.json
 
 .PHONY: ci_test_func
 ci_test_func: ## run functest 3 times, redirects json output to file (CI)
 	# GOMAXPROCS=2, because we launch at least 5 insolard nodes in functest + 1 pulsar,
 	# so try to be more honest with processors allocation.
 	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1  \
-		go test $(CI_TEST_ARGS) $(TEST_ARGS) -json -tags functest -v ./functest -count 3 -failfast | tee ci_test_func.json
+		go test $(CI_TEST_ARGS) $(TEST_ARGS) -json -tags "functest bloattest" -v ./functest -count 3 -failfast | tee ci_test_func.json
 
 .PHONY: ci_test_integrtest
 ci_test_integrtest: ## run networktest 1 time, redirects json output to file (CI)
@@ -206,26 +213,20 @@ CONTRACTS = $(wildcard application/contract/*)
 regen-proxies: $(BININSGOCC) ## regen contracts proxies
 	$(foreach c, $(CONTRACTS), $(BININSGOCC) proxy application/contract/$(notdir $(c))/$(notdir $(c)).go; )
 
-.PHONY: docker-insolard
-docker-insolard: ## build insolard docker image
-	docker build --target insolard --tag insolar/insolard -f ./docker/Dockerfile .
-
-.PHONY: docker-insgorund
-docker-insgorund: ## build insgorund docker image
-	docker build --target insgorund --tag insolar/insgorund -f ./docker/Dockerfile .
-
-.PHONY: docker
-docker: docker-insolard docker-insgorund ## build insolard and insgorund docker images
-
 .PHONY: generate-protobuf
 generate-protobuf: ## generate protobuf structs
 	protoc -I./vendor -I./ --gogoslick_out=./ network/node/internal/node/node.proto
 	protoc -I./vendor -I./ --gogoslick_out=./ insolar/record/record.proto
 	protoc -I./vendor -I./ --gogoslick_out=./ insolar/jet/jet.proto
+	protoc -I./vendor -I./ --gogoslick_out=./ insolar/node.proto
+	protoc -I./vendor -I./ --gogoslick_out=./ ledger/drop/drop.proto
+	protoc -I./vendor -I./ --gogoslick_out=./ insolar/record/record.proto
 	protoc -I./vendor -I./ --gogoslick_out=./ --proto_path=${GOPATH}/src insolar/payload/payload.proto
 	protoc -I./vendor -I./ --gogoslick_out=./ insolar/pulse/pulse.proto
 	protoc -I./vendor -I./ --gogoslick_out=./ --proto_path=${GOPATH}/src network/hostnetwork/packet/packet.proto
 	protoc -I./vendor -I./ --gogoslick_out=./ --proto_path=${GOPATH}/src network/consensus/adapters/candidate/profile.proto
+	protoc -I./vendor -I./ --gogoslick_out=./ ledger/heavy/executor/jetinfo.proto
+	protoc -I./vendor -I./ --gogoslick_out=./ instrumentation/instracer/span_data.proto
 		protoc -I/usr/local/include -I./ \
     		-I$(GOPATH)/src \
     		--gogoslick_out=plugins=grpc:./  \
@@ -260,6 +261,22 @@ prepare-inrospector-proto: ## install tools required for grpc development
 	go get -u github.com/grpc-ecosystem/grpc-gateway/protoc-gen-grpc-gateway
 	go get -u github.com/grpc-ecosystem/grpc-gateway/protoc-gen-swagger
 	go get -u github.com/golang/protobuf/protoc-gen-go
+
+.PHONY: docker_base_build
+docker_base_build: ## build base image with source dependencies and compiled binaries
+	docker build -t insolar-base:$(DOCKER_BASE_IMAGE_TAG) \
+		--build-arg BUILD_DATE="$(BUILD_DATE)" \
+		--build-arg BUILD_TIME="$(BUILD_TIME)" \
+		--build-arg BUILD_NUMBER="$(BUILD_NUMBER)" \
+		--build-arg BUILD_HASH="$(BUILD_HASH)" \
+		--build-arg BUILD_VERSION="$(BUILD_VERSION)" \
+		-f docker/Dockerfile .
+	docker tag insolar-base:$(DOCKER_BASE_IMAGE_TAG) insolar-base:latest
+	docker images "insolar-base"
+
+.PHONY: docker_clean
+docker_clean: ## removes intermediate docker image layers w/o tags (beware: it clean up space, but resets caches)
+	docker image prune -f
 
 .PHONY: help
 help: ## Display this help screen

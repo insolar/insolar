@@ -24,13 +24,13 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/insolar/insolar/api/instrumenter"
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/api/seedmanager"
 	"github.com/insolar/insolar/application/extractor"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/genesisrefs"
 	"github.com/insolar/insolar/insolar/reply"
-	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/rpc/v2"
@@ -39,85 +39,64 @@ import (
 
 // ContractService is a service that provides API for working with smart contracts.
 type ContractService struct {
-	runner *Runner
+	runner         *Runner
+	allowedMethods map[string]bool
 }
 
 // NewContractService creates new Contract service instance.
 func NewContractService(runner *Runner) *ContractService {
-	return &ContractService{runner: runner}
+	methods := map[string]bool{
+		"member.create":          true,
+		"member.get":             true,
+		"member.transfer":        true,
+		"member.migrationCreate": true,
+		"deposit.transfer":       true,
+	}
+	return &ContractService{runner: runner, allowedMethods: methods}
 }
 
 func (cs *ContractService) Call(req *http.Request, args *requester.Params, requestBody *rpc.RequestBody, result *requester.ContractResult) error {
-	traceID := utils.RandTraceID()
-	ctx, logger := inslogger.WithTraceField(context.Background(), traceID)
+	ctx, instr := instrumenter.NewMethodInstrument("ContractService.call")
+	defer instr.End()
 
-	ctx, span := instracer.StartSpan(ctx, "Call")
-	defer span.End()
+	logger := inslogger.FromContext(ctx)
+	logger.Infof("[ ContractService.call ] Incoming request: %s", req.RequestURI)
 
-	logger.Infof("[ ContractService.Call ] Incoming request: %s", req.RequestURI)
-
-	if args.Test != "" {
-		logger.Infof("ContractRequest related to %s", args.Test)
-	}
-
-	signature, err := validateRequestHeaders(req.Header.Get(requester.Digest), req.Header.Get(requester.Signature), requestBody.Raw)
-	if err != nil {
-		return err
-	}
-
-	seedPulse, err := cs.runner.checkSeed(args.Seed)
-	if err != nil {
-		return err
-	}
-
-	setRootReferenceIfNeeded(args)
-
-	callResult, requestRef, err := cs.runner.makeCall(ctx, "contract.call", *args, requestBody.Raw, signature, 0, seedPulse)
-	if err != nil {
-		return err
-	}
-
-	if requestRef != nil {
-		result.RequestReference = requestRef.String()
-	}
-	result.CallResult = callResult
-	result.TraceID = traceID
-
-	return nil
+	return wrapCall(ctx, cs.runner, cs.allowedMethods, req, args, requestBody, result)
 }
 
 func (ar *Runner) checkSeed(paramsSeed string) (insolar.PulseNumber, error) {
 	decoded, err := base64.StdEncoding.DecodeString(paramsSeed)
 	if err != nil {
-		return 0, errors.New("[ checkSeed ] Failed to decode seed from string")
+		return 0, errors.New("failed to decode seed from string")
 	}
 	seed := seedmanager.SeedFromBytes(decoded)
 	if seed == nil {
-		return 0, errors.New("[ checkSeed ] Bad seed param")
+		return 0, errors.New("bad input seed")
 	}
 
 	if pulse, ok := ar.SeedManager.Pop(*seed); ok {
 		return pulse, nil
 	}
 
-	return 0, errors.New("[ checkSeed ] Incorrect seed")
+	return 0, errors.New("incorrect seed")
 }
 
-func (ar *Runner) makeCall(ctx context.Context, method string, params requester.Params, rawBody []byte, signature string, pulseTimeStamp int64, seedPulse insolar.PulseNumber) (interface{}, *insolar.Reference, error) {
-	ctx, span := instracer.StartSpan(ctx, "SendRequest "+method)
+func (ar *Runner) makeCall(ctx context.Context, method string, params requester.Params, rawBody []byte, signature string, seedPulse insolar.PulseNumber) (interface{}, *insolar.Reference, error) {
+	ctx, span := instracer.StartSpan(ctx, "Call "+method)
 	defer span.End()
 
 	reference, err := insolar.NewReferenceFromBase58(params.Reference)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "[ makeCall ] failed to parse params.Reference")
+		return nil, nil, errors.Wrap(err, "failed to parse params.Reference")
 	}
 
-	requestArgs, err := insolar.Serialize([]interface{}{rawBody, signature, pulseTimeStamp})
+	requestArgs, err := insolar.Serialize([]interface{}{rawBody, signature})
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "[ makeCall ] failed to marshal arguments")
+		return nil, nil, errors.Wrap(err, "failed to marshal arguments")
 	}
 
-	res, ref, err := ar.ContractRequester.SendRequestWithPulse(
+	res, ref, err := ar.ContractRequester.Call(
 		ctx,
 		reference,
 		"Call",
@@ -126,17 +105,17 @@ func (ar *Runner) makeCall(ctx context.Context, method string, params requester.
 	)
 
 	if err != nil {
-		return nil, ref, errors.Wrap(err, "[ makeCall ] Can't send request")
+		return nil, ref, err
 	}
 
 	result, contractErr, err := extractor.CallResponse(res.(*reply.CallMethod).Result)
 
 	if err != nil {
-		return nil, ref, errors.Wrap(err, "[ makeCall ] Can't extract response")
+		return nil, ref, errors.Wrap(err, "can't extract response")
 	}
 
 	if contractErr != nil {
-		return nil, ref, errors.Wrap(errors.New(contractErr.S), "[ makeCall ] Error in called method")
+		return nil, ref, contractErr
 	}
 
 	return result, ref, nil

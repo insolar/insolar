@@ -122,7 +122,7 @@ func MakeSetIncomingRequestDetached(
 	req := record.IncomingRequest{
 		Arguments:  args,
 		Reason:     *insolar.NewReference(reasonID),
-		ReturnMode: record.ReturnNoWait,
+		ReturnMode: record.ReturnSaga,
 		Caller:     *insolar.NewReference(reasonObjectID),
 		Object:     insolar.NewReference(objectID),
 	}
@@ -372,9 +372,10 @@ func CallDeactivateObject(ctx context.Context, s *Server, objectID, requestID in
 	return pl, rec
 }
 
-func CallGetObject(ctx context.Context, s *Server, objectID insolar.ID) (payload.Payload, payload.Payload) {
+func CallGetObject(ctx context.Context, s *Server, objectID insolar.ID, requestID *insolar.ID) (payload.Payload, payload.Payload) {
 	reps, d := s.Send(ctx, &payload.GetObject{
-		ObjectID: objectID,
+		ObjectID:  objectID,
+		RequestID: requestID,
 	})
 	defer d()
 
@@ -408,9 +409,10 @@ func CallGetObject(ctx context.Context, s *Server, objectID insolar.ID) (payload
 	return lifeline, state
 }
 
-func CallGetPendings(ctx context.Context, s *Server, objectID insolar.ID) payload.Payload {
+func CallGetPendings(ctx context.Context, s *Server, objectID insolar.ID, count int) payload.Payload {
 	reps, done := s.Send(ctx, &payload.GetPendings{
 		ObjectID: objectID,
+		Count:    uint32(count),
 	})
 	defer done()
 

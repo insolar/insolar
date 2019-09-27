@@ -56,16 +56,19 @@ type memberKeys struct {
 
 // SDK is used to send messages to API
 type SDK struct {
-	apiURLs                *ringBuffer
+	adminAPIURLs           *ringBuffer
+	publicAPIURLs          *ringBuffer
 	rootMember             *requester.UserConfigJSON
 	migrationAdminMember   *requester.UserConfigJSON
 	migrationDaemonMembers []*requester.UserConfigJSON
+	feeMember              *requester.UserConfigJSON
 	logLevel               string
 }
 
 // NewSDK creates insSDK object
-func NewSDK(urls []string, memberKeysDirPath string) (*SDK, error) {
-	buffer := &ringBuffer{urls: urls}
+func NewSDK(adminUrls []string, publicUrls []string, memberKeysDirPath string) (*SDK, error) {
+	adminBuffer := &ringBuffer{urls: adminUrls}
+	publicBuffer := &ringBuffer{urls: publicUrls}
 
 	getMember := func(keyPath string, ref string) (*requester.UserConfigJSON, error) {
 
@@ -83,7 +86,7 @@ func NewSDK(urls []string, memberKeysDirPath string) (*SDK, error) {
 		return requester.CreateUserConfig(ref, keys.Private, keys.Public)
 	}
 
-	response, err := requester.Info(buffer.next())
+	response, err := requester.Info(adminBuffer.next())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get info")
 	}
@@ -98,11 +101,18 @@ func NewSDK(urls []string, memberKeysDirPath string) (*SDK, error) {
 		return nil, errors.Wrap(err, "failed to get migration admin member")
 	}
 
+	feeMember, err := getMember(memberKeysDirPath+"fee_member_keys.json", response.FeeMember)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get fee member")
+	}
+
 	result := &SDK{
-		apiURLs:                buffer,
+		adminAPIURLs:           adminBuffer,
+		publicAPIURLs:          publicBuffer,
 		rootMember:             rootMember,
 		migrationAdminMember:   migrationAdminMember,
 		migrationDaemonMembers: []*requester.UserConfigJSON{},
+		feeMember:              feeMember,
 		logLevel:               "",
 	}
 
@@ -121,6 +131,34 @@ func NewSDK(urls []string, memberKeysDirPath string) (*SDK, error) {
 	return result, nil
 }
 
+func (sdk *SDK) GetFeeMember() Member {
+	return &CommonMember{
+		Reference:  sdk.feeMember.Caller,
+		PrivateKey: sdk.feeMember.PrivateKey,
+		PublicKey:  sdk.feeMember.PublicKey,
+	}
+}
+
+func (sdk *SDK) GetMigrationAdminMember() Member {
+	return &CommonMember{
+		Reference:  sdk.migrationAdminMember.Caller,
+		PrivateKey: sdk.migrationAdminMember.PrivateKey,
+		PublicKey:  sdk.migrationAdminMember.PublicKey,
+	}
+}
+
+func (sdk *SDK) GetMigrationDaemonMembers() []Member {
+	r := make([]Member, len(sdk.migrationDaemonMembers))
+	for i, m := range sdk.migrationDaemonMembers {
+		r[i] = &CommonMember{
+			Reference:  m.Caller,
+			PrivateKey: m.PrivateKey,
+			PublicKey:  m.PublicKey,
+		}
+	}
+	return r
+}
+
 func (sdk *SDK) SetLogLevel(logLevel string) error {
 	_, err := insolar.ParseLevel(logLevel)
 	if err != nil {
@@ -130,10 +168,10 @@ func (sdk *SDK) SetLogLevel(logLevel string) error {
 	return nil
 }
 
-func (sdk *SDK) sendRequest(ctx context.Context, method string, params map[string]interface{}, userCfg *requester.UserConfigJSON) ([]byte, error) {
+func (sdk *SDK) sendRequest(ctx context.Context, urls *ringBuffer, method string, params map[string]interface{}, userCfg *requester.UserConfigJSON) ([]byte, error) {
 	reqParams := requester.Params{CallParams: params, CallSite: method, PublicKey: userCfg.PublicKey, LogLevel: sdk.logLevel}
 
-	body, err := requester.Send(ctx, sdk.apiURLs.next(), userCfg, &reqParams)
+	body, err := requester.Send(ctx, urls.next(), userCfg, &reqParams)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to send request")
 	}
@@ -151,33 +189,66 @@ func (sdk *SDK) getResponse(body []byte) (*requester.ContractResponse, error) {
 	return res, nil
 }
 
-// CreateMember api request creates member with new random keys
-func (sdk *SDK) CreateMember() (*Member, string, error) {
+func createUserConfig(callerMemberReference string) (*requester.UserConfigJSON, error) {
 	ks := platformpolicy.NewKeyProcessor()
 
 	privateKey, err := ks.GeneratePrivateKey()
 	if err != nil {
-		return nil, "", errors.Wrap(err, "failed to generate private key")
+		return nil, errors.Wrap(err, "failed to generate private key")
 	}
 
 	privateKeyBytes, err := ks.ExportPrivateKeyPEM(privateKey)
 	if err != nil {
-		return nil, "", errors.Wrap(err, "failed to export private key")
+		return nil, errors.Wrap(err, "failed to export private key")
 	}
 	privateKeyStr := string(privateKeyBytes)
 
 	publicKey, err := ks.ExportPublicKeyPEM(ks.ExtractPublicKey(privateKey))
 	if err != nil {
-		return nil, "", errors.Wrap(err, "failed to extract public key")
+		return nil, errors.Wrap(err, "failed to extract public key")
 	}
 	publicKeyStr := string(publicKey)
 
-	userConfig, err := requester.CreateUserConfig("", privateKeyStr, publicKeyStr)
+	return requester.CreateUserConfig(callerMemberReference, privateKeyStr, publicKeyStr)
+}
+
+func parseReference(callResult interface{}) (string, error) {
+	var memberRef string
+	var contractResultCasted map[string]interface{}
+	var ok bool
+	if contractResultCasted, ok = callResult.(map[string]interface{}); !ok {
+		return "", errors.Errorf("failed to cast result: expected map[string]interface{}, got %T", callResult)
+	}
+	if memberRef, ok = contractResultCasted["reference"].(string); !ok {
+		return "", errors.Errorf("failed to cast reference: expected string, got %T", contractResultCasted["reference"])
+	}
+
+	return memberRef, nil
+}
+
+func parseMigrationAddress(callResult interface{}) (string, error) {
+	var migrationAddress string
+	var contractResultCasted map[string]interface{}
+	var ok bool
+	if contractResultCasted, ok = callResult.(map[string]interface{}); !ok {
+		return "", errors.Errorf("failed to cast result: expected map[string]interface{}, got %T", callResult)
+	}
+	if migrationAddress, ok = contractResultCasted["migrationAddress"].(string); !ok {
+		return "", errors.Errorf("failed to cast migrationAddress: expected string, got %T", contractResultCasted["migrationAddress"])
+	}
+
+	return migrationAddress, nil
+}
+
+// CreateMember api request creates member with new random keys
+func (sdk *SDK) CreateMember() (Member, string, error) {
+	userConfig, err := createUserConfig("")
 	if err != nil {
 		return nil, "", errors.Wrap(err, "failed to create user config for request")
 	}
 
 	response, err := sdk.DoRequest(
+		sdk.publicAPIURLs,
 		userConfig,
 		"member.create",
 		map[string]interface{}{},
@@ -186,17 +257,42 @@ func (sdk *SDK) CreateMember() (*Member, string, error) {
 		return nil, "", errors.Wrap(err, "request was failed ")
 	}
 
-	var memberRef string
-	var contractResultCasted map[string]interface{}
-	var ok bool
-	if contractResultCasted, ok = response.CallResult.(map[string]interface{}); !ok {
-		return nil, "", errors.Errorf("failed to cast result: expected map[string]interface{}, got %T", response.CallResult)
-	}
-	if memberRef, ok = contractResultCasted["reference"].(string); !ok {
-		return nil, "", errors.Errorf("failed to cast reference: expected string, got %T", contractResultCasted["reference"])
+	memberRef, err := parseReference(response.CallResult)
+	if err != nil {
+		return nil, "", errors.Wrap(err, "failed to parse call result")
 	}
 
-	return NewMember(memberRef, privateKeyStr, publicKeyStr), response.TraceID, nil
+	return NewMember(memberRef, userConfig.PrivateKey, userConfig.PublicKey), response.TraceID, nil
+}
+
+// MigrationCreateMember api request creates migration member with new random keys
+func (sdk *SDK) MigrationCreateMember() (Member, string, error) {
+	userConfig, err := createUserConfig("")
+	if err != nil {
+		return nil, "", errors.Wrap(err, "failed to create user config for request")
+	}
+
+	response, err := sdk.DoRequest(
+		sdk.publicAPIURLs,
+		userConfig,
+		"member.migrationCreate",
+		map[string]interface{}{},
+	)
+	if err != nil {
+		return nil, "", errors.Wrap(err, "request was failed ")
+	}
+
+	memberRef, err := parseReference(response.CallResult)
+	if err != nil {
+		return nil, "", errors.Wrap(err, "failed to parse reference")
+	}
+
+	migrationAddress, err := parseMigrationAddress(response.CallResult)
+	if err != nil {
+		return nil, "", errors.Wrap(err, "failed to parse migrationAddress")
+	}
+
+	return NewMigrationMember(memberRef, migrationAddress, userConfig.PrivateKey, userConfig.PublicKey), response.TraceID, nil
 }
 
 // addMigrationAddresses method add burn addresses
@@ -207,6 +303,7 @@ func (sdk *SDK) AddMigrationAddresses(migrationAddresses []string) (string, erro
 	}
 
 	response, err := sdk.DoRequest(
+		sdk.adminAPIURLs,
 		userConfig,
 		"migration.addAddresses",
 		map[string]interface{}{"migrationAddresses": migrationAddresses},
@@ -218,16 +315,36 @@ func (sdk *SDK) AddMigrationAddresses(migrationAddresses []string) (string, erro
 	return response.TraceID, nil
 }
 
-// Transfer method send money from one member to another
-func (sdk *SDK) Transfer(amount string, from *Member, to *Member) (string, error) {
-	userConfig, err := requester.CreateUserConfig(from.Reference, from.PrivateKey, from.PublicKey)
+// ActivateDaemon activate daemon from migration admin
+func (sdk *SDK) ActivateDaemon(daemonReference string) (string, error) {
+	userConfig, err := requester.CreateUserConfig(sdk.migrationAdminMember.Caller, sdk.migrationAdminMember.PrivateKey, sdk.migrationAdminMember.PublicKey)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to create user config for request")
 	}
 	response, err := sdk.DoRequest(
+		sdk.adminAPIURLs,
+		userConfig,
+		"migration.activateDaemon",
+		map[string]interface{}{"reference": daemonReference},
+	)
+	if err != nil {
+		return "", errors.Wrap(err, "request was failed ")
+	}
+
+	return response.TraceID, nil
+}
+
+// Transfer method send money from one member to another
+func (sdk *SDK) Transfer(amount string, from Member, to Member) (string, error) {
+	userConfig, err := requester.CreateUserConfig(from.GetReference(), from.GetPrivateKey(), from.GetPublicKey())
+	if err != nil {
+		return "", errors.Wrap(err, "failed to create user config for request")
+	}
+	response, err := sdk.DoRequest(
+		sdk.publicAPIURLs,
 		userConfig,
 		"member.transfer",
-		map[string]interface{}{"amount": amount, "toMemberReference": to.Reference},
+		map[string]interface{}{"amount": amount, "toMemberReference": to.GetReference()},
 	)
 	if err != nil {
 		return "", errors.Wrap(err, "request was failed ")
@@ -237,32 +354,57 @@ func (sdk *SDK) Transfer(amount string, from *Member, to *Member) (string, error
 }
 
 // GetBalance returns current balance of the given member.
-func (sdk *SDK) GetBalance(m *Member) (*big.Int, error) {
-	userConfig, err := requester.CreateUserConfig(m.Reference, m.PrivateKey, m.PublicKey)
+func (sdk *SDK) GetBalance(m Member) (*big.Int, []interface{}, error) {
+	userConfig, err := requester.CreateUserConfig(m.GetReference(), m.GetPrivateKey(), m.GetPublicKey())
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to create user config for request")
+		return nil, nil, errors.Wrap(err, "failed to create user config for request")
 	}
 	response, err := sdk.DoRequest(
+		sdk.adminAPIURLs,
 		userConfig,
 		"member.getBalance",
-		map[string]interface{}{"reference": m.Reference},
+		map[string]interface{}{"reference": m.GetReference()},
 	)
 	if err != nil {
-		return nil, errors.Wrap(err, "request was failed ")
+		return nil, nil, errors.Wrap(err, "request was failed ")
 	}
 
-	result, ok := new(big.Int).SetString(response.CallResult.(map[string]interface{})["balance"].(string), 10)
+	balance, ok := new(big.Int).SetString(response.CallResult.(map[string]interface{})["balance"].(string), 10)
 	if !ok {
-		return nil, errors.Errorf("can't parse returned balance")
+		return nil, nil, errors.Errorf("can't parse returned balance")
 	}
 
-	return result, nil
+	deposits, ok := response.CallResult.(map[string]interface{})["deposits"].([]interface{})
+	if !ok {
+		return nil, nil, errors.Errorf("can't parse returned deposits")
+	}
+
+	return balance, deposits, nil
 }
 
-func (sdk *SDK) DoRequest(user *requester.UserConfigJSON, method string, params map[string]interface{}) (*requester.ContractResult, error) {
+// Migration method migrate INS from ethereum network to XNS in MainNet
+func (sdk *SDK) Migration(daemon Member, ethTxHash string, amount string, migrationAddress string) (string, error) {
+	userConfig, err := requester.CreateUserConfig(daemon.GetReference(), daemon.GetPrivateKey(), daemon.GetPublicKey())
+	if err != nil {
+		return "", errors.Wrap(err, "failed to create user config for request")
+	}
+	response, err := sdk.DoRequest(
+		sdk.adminAPIURLs,
+		userConfig,
+		"deposit.migration",
+		map[string]interface{}{"ethTxHash": ethTxHash, "migrationAddress": migrationAddress, "amount": amount},
+	)
+	if err != nil {
+		return "", errors.Wrap(err, "request was failed ")
+	}
+
+	return response.TraceID, nil
+}
+
+func (sdk *SDK) DoRequest(urls *ringBuffer, user *requester.UserConfigJSON, method string, params map[string]interface{}) (*requester.ContractResult, error) {
 	ctx := inslogger.ContextWithTrace(context.Background(), method)
 
-	body, err := sdk.sendRequest(ctx, method, params, user)
+	body, err := sdk.sendRequest(ctx, urls, method, params, user)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to send request")
 	}
@@ -273,7 +415,11 @@ func (sdk *SDK) DoRequest(user *requester.UserConfigJSON, method string, params 
 	}
 
 	if response.Error != nil {
-		return nil, errors.New(response.Error.Message + ". TraceId: " + response.Error.Data.TraceID)
+		return nil, errors.Errorf("Message: %s. Trace: %v. TraceId: %s. RequestRef: %s",
+			response.Error.Message,
+			response.Error.Data.Trace,
+			response.Error.Data.TraceID,
+			response.Error.Data.RequestReference)
 	}
 
 	return response.Result, nil

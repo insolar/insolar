@@ -17,6 +17,7 @@
 package proc
 
 import (
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
@@ -42,8 +43,9 @@ type Dependencies struct {
 	PassState      func(*PassState)
 	CalculateID    func(*CalculateID)
 	SetCode        func(*SetCode)
-	SendRequests   func(*SendRequests)
+	SendFilament   func(*SendFilament)
 	HasPendings    func(*HasPendings)
+	Config         func() configuration.Ledger
 }
 
 func NewDependencies(
@@ -67,6 +69,9 @@ func NewDependencies(
 	jetFetcher executor.JetFetcher,
 	filaments executor.FilamentCalculator,
 	requestChecker executor.RequestChecker,
+	detachedNotifier executor.DetachedNotifier,
+
+	config configuration.Ledger,
 ) *Dependencies {
 	dep := &Dependencies{
 		FetchJet: func(p *FetchJet) {
@@ -80,7 +85,6 @@ func NewDependencies(
 		WaitHot: func(p *WaitHot) {
 			p.Dep(
 				hotWaiter,
-				sender,
 			)
 		},
 		EnsureIndex: func(p *EnsureIndex) {
@@ -114,6 +118,7 @@ func NewDependencies(
 				recordStorage,
 				indexStorage,
 				pcs,
+				detachedNotifier,
 			)
 		},
 		HasPendings: func(p *HasPendings) {
@@ -130,6 +135,7 @@ func NewDependencies(
 				recordStorage,
 				indexStorage,
 				sender,
+				filaments,
 			)
 		},
 		GetCode: func(p *GetCode) {
@@ -179,7 +185,7 @@ func NewDependencies(
 				sender,
 			)
 		},
-		SendRequests: func(p *SendRequests) {
+		SendFilament: func(p *SendFilament) {
 			p.Dep(
 				sender,
 				filaments,
@@ -202,6 +208,9 @@ func NewDependencies(
 				sender,
 			)
 		},
+		Config: func() configuration.Ledger {
+			return config
+		},
 	}
 	return dep
 }
@@ -217,6 +226,7 @@ func NewDependenciesMock() *Dependencies {
 		SendObject:     func(*SendObject) {},
 		GetCode:        func(*GetCode) {},
 		SetRequest:     func(*SetRequest) {},
+		GetRequest:     func(*GetRequest) {},
 		SetResult:      func(*SetResult) {},
 		GetPendings:    func(*GetPendings) {},
 		GetJet:         func(*GetJet) {},
@@ -224,8 +234,9 @@ func NewDependenciesMock() *Dependencies {
 		PassState:      func(*PassState) {},
 		CalculateID:    func(*CalculateID) {},
 		SetCode:        func(*SetCode) {},
-		SendRequests:   func(*SendRequests) {},
+		SendFilament:   func(*SendFilament) {},
 		HasPendings:    func(*HasPendings) {},
 		GetRequestInfo: func(*SendRequestInfo) {},
+		Config:         configuration.NewLedger,
 	}
 }

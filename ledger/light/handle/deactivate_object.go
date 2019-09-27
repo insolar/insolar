@@ -20,11 +20,12 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/ledger/light/proc"
-	"github.com/pkg/errors"
 )
 
 type DeactivateObject struct {
@@ -42,10 +43,13 @@ func NewDeactivateObject(dep *proc.Dependencies, msg payload.Meta, passed bool) 
 }
 
 func (s *DeactivateObject) Present(ctx context.Context, f flow.Flow) error {
-	msg := payload.Deactivate{}
-	err := msg.Unmarshal(s.message.Payload)
+	pl, err := payload.Unmarshal(s.message.Payload)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal Deactivate message")
+	}
+	msg, ok := pl.(*payload.Deactivate)
+	if !ok {
+		return fmt.Errorf("wrong request type: %T", pl)
 	}
 
 	deactivateVirt := record.Virtual{}
@@ -95,10 +99,10 @@ func (s *DeactivateObject) Present(ctx context.Context, f flow.Flow) error {
 	}
 
 	// To ensure, that we have the index. Because index can be on a heavy node.
-	// If we don't have it and heavy does, DeactivateObject fails because it should update light's index state
-	getIndex := proc.NewEnsureIndex(obj, objJetID, s.message, flow.Pulse(ctx))
-	s.dep.EnsureIndex(getIndex)
-	if err := f.Procedure(ctx, getIndex, false); err != nil {
+	// If we don't have it and heavy does, DeactivateObject fails because it should update light's index state.
+	ensureIdx := proc.NewEnsureIndex(obj, objJetID, s.message, flow.Pulse(ctx))
+	s.dep.EnsureIndex(ensureIdx)
+	if err := f.Procedure(ctx, ensureIdx, false); err != nil {
 		return err
 	}
 

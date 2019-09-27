@@ -28,12 +28,13 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/pulse"
 )
 
 func Test_LightReplication(t *testing.T) {
 	t.Parallel()
 
-	var secondPulseNumber = insolar.FirstPulseNumber + (PulseStep * 2)
+	var secondPulseNumber = pulse.MinTimePulse + (PulseStep * 2)
 	var expectedLifeline record.Lifeline
 	var expectedObjectID insolar.ID
 

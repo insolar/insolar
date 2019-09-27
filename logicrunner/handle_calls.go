@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
@@ -29,17 +30,26 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/logicrunner/metrics"
+	"github.com/insolar/insolar/logicrunner/writecontroller"
 	"github.com/insolar/insolar/platformpolicy"
 
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/common"
 )
 
+func checkPayloadCallMethod(ctx context.Context, callMethod payload.CallMethod) error {
+	if err := checkIncomingRequest(ctx, callMethod.Request); err != nil {
+		return errors.Wrap(err, "failed to verify callMethod.Request")
+	}
+
+	return nil
+}
+
 type HandleCall struct {
 	dep *Dependencies
 
 	Message payload.Meta
-	Parcel  insolar.Parcel
 }
 
 func (h *HandleCall) sendToNextExecutor(
@@ -76,18 +86,15 @@ func (h *HandleCall) sendToNextExecutor(
 		logger.Error("[ HandleCall.handleActual.sendToNextExecutor ] failed to serialize payload message", err)
 	}
 
-	resp, done := h.dep.Sender.SendRole(ctx, msg, insolar.DynamicRoleVirtualExecutor, objectRef)
-	done()
-	if _, ok := <-resp; !ok {
-		logger.Error("[ HandleCall.handleActual.sendToNextExecutor ] no reply")
-	}
+	sender := bus.NewWaitOKWithRetrySender(h.dep.Sender, h.dep.PulseAccessor, 1)
+	sender.SendRole(ctx, msg, insolar.DynamicRoleVirtualExecutor, objectRef)
 }
 
 func (h *HandleCall) checkExecutionLoop(
 	ctx context.Context, reqRef insolar.Reference, request record.IncomingRequest,
 ) bool {
 
-	if request.ReturnMode == record.ReturnNoWait {
+	if request.ReturnMode == record.ReturnSaga {
 		return false
 	}
 	if request.CallType != record.CTMethod {
@@ -116,16 +123,13 @@ func (h *HandleCall) handleActual(
 	msg payload.CallMethod,
 	f flow.Flow,
 ) (insolar.Reply, error) {
-
-	lr := h.dep.lr
-
 	var pcs = platformpolicy.NewPlatformCryptographyScheme() // TODO: create message factory
 	target := record.CalculateRequestAffinityRef(msg.Request, msg.PulseNumber, pcs)
 
 	procCheckRole := CheckOurRole{
 		target:         *target,
 		role:           insolar.DynamicRoleVirtualExecutor,
-		jetCoordinator: h.dep.lr.JetCoordinator,
+		jetCoordinator: h.dep.JetCoordinator,
 		pulseNumber:    flow.Pulse(ctx),
 	}
 
@@ -148,44 +152,46 @@ func (h *HandleCall) handleActual(
 			// Requests need to be deduplicated. For now in case of ErrCancelled we may have 2 registered requests
 			return nil, err // message bus will retry on the calling side in ContractRequester
 		}
-		if e, ok := errors.Cause(err).(*payload.CodedError); ok && e.Code == payload.CodeNotFound {
+		if isLogicalError := ProcessLogicalError(err); isLogicalError {
 			inslogger.FromContext(ctx).Warn("request to not existing object")
 
 			resultWithErr, err := foundation.MarshalMethodErrorResult(err)
 			if err != nil {
 				return nil, errors.Wrap(err, "can't create error result")
 			}
+			stats.Record(ctx, metrics.CallMethodLogicalError.M(1))
 			return &reply.CallMethod{Result: resultWithErr}, nil
 		}
 		return nil, errors.Wrap(err, "[ HandleCall.handleActual ] can't create request")
 	}
 
 	reqInfo := procRegisterRequest.getResult()
-	requestRef := insolar.NewReference(reqInfo.RequestID)
+	requestRef := *getRequestReference(reqInfo)
 
-	objRef := request.Object
 	if request.CallType != record.CTMethod {
-		objRef = requestRef
+		request.Object = insolar.NewReference(reqInfo.RequestID)
 	}
-	if objRef == nil {
+
+	objectRef := request.Object
+
+	if objectRef == nil || !objectRef.IsSelfScope() {
 		return nil, errors.New("can't get object reference")
 	}
 
 	ctx, logger := inslogger.WithFields(
 		ctx,
 		map[string]interface{}{
-			"object":  objRef.String(),
+			"object":  objectRef.String(),
 			"request": requestRef.String(),
 			"method":  request.Method,
 		},
 	)
-	logger.Debug("registered request")
 
-	if !objRef.Record().Equal(reqInfo.ObjectID) {
+	if !objectRef.GetLocal().Equal(reqInfo.ObjectID) {
 		return nil, errors.New("object id we calculated doesn't match ledger")
 	}
 
-	registeredRequestReply := &reply.RegisterRequest{Request: *requestRef}
+	registeredRequestReply := &reply.RegisterRequest{Request: requestRef}
 
 	if len(reqInfo.Request) != 0 {
 		logger.Debug("duplicated request")
@@ -194,7 +200,7 @@ func (h *HandleCall) handleActual(
 	if len(reqInfo.Result) != 0 {
 		logger.Debug("request already has result on ledger, returning it")
 		go func() {
-			err := h.sendRequestResult(ctx, *objRef, *requestRef, *request, *reqInfo)
+			err := h.sendRequestResult(ctx, *objectRef, requestRef, *request, *reqInfo)
 			if err != nil {
 				logger.Error("couldn't send request result: ", err.Error())
 			}
@@ -202,32 +208,36 @@ func (h *HandleCall) handleActual(
 		return registeredRequestReply, nil
 	}
 
-	if h.checkExecutionLoop(ctx, *requestRef, *request) {
+	if h.checkExecutionLoop(ctx, requestRef, *request) {
+		stats.Record(ctx, metrics.CallMethodLoopDetected.M(1))
+
 		proc := &RecordErrorResult{
 			err:             errors.New("loop detected"),
-			requestRef:      *requestRef,
-			objectRef:       *objRef,
-			artifactManager: lr.ArtifactManager,
+			requestRef:      requestRef,
+			objectRef:       *objectRef,
+			artifactManager: h.dep.ArtifactManager,
 		}
 		err := f.Procedure(ctx, proc, false)
 		if err != nil {
 			return nil, errors.Wrap(err, "couldn't record error result")
 		}
-
-		return &reply.CallMethod{Object: objRef, Result: proc.result}, nil
+		return &reply.CallMethod{Object: objectRef, Result: proc.result}, nil
 	}
 
 	done, err := h.dep.WriteAccessor.Begin(ctx, flow.Pulse(ctx))
+	if err != nil {
+		if err == writecontroller.ErrWriteClosed {
+			stats.Record(ctx, metrics.CallMethodAdditionalCall.M(1))
+			go h.sendToNextExecutor(ctx, *objectRef, requestRef, *request)
+			return registeredRequestReply, nil
+		}
+		return nil, errors.Wrap(err, "failed to acquire write access")
+	}
 	defer done()
 
-	if err != nil {
-		go h.sendToNextExecutor(ctx, *objRef, *requestRef, *request)
-		return registeredRequestReply, nil
-	}
+	broker := h.dep.StateStorage.UpsertExecutionState(*objectRef)
 
-	broker := h.dep.StateStorage.UpsertExecutionState(*objRef)
-
-	proc := AddFreshRequest{broker: broker, requestRef: *requestRef, request: *request}
+	proc := AddFreshRequest{broker: broker, requestRef: requestRef, request: *request}
 	if err := f.Procedure(ctx, &proc, true); err != nil {
 		return nil, errors.Wrap(err, "couldn't pass request to broker")
 	}
@@ -244,8 +254,11 @@ func (h *HandleCall) Present(ctx context.Context, f flow.Flow) error {
 		return errors.Wrap(err, "failed to unmarshal message")
 	}
 
-	rep, err := h.handleActual(ctx, message, f)
+	if err := checkPayloadCallMethod(ctx, message); err != nil {
+		return err
+	}
 
+	rep, err := h.handleActual(ctx, message, f)
 	if err != nil {
 		return err
 	}
@@ -277,8 +290,7 @@ func (h *HandleCall) sendRequestResult(
 	}
 
 	repl := &reply.CallMethod{Result: resultRecord.Payload, Object: &objRef}
-	tr := common.NewTranscript(ctx, reqRef, request)
-	h.dep.RequestsExecutor.SendReply(ctx, tr, repl, nil)
+	h.dep.RequestsExecutor.SendReply(ctx, reqRef, request, repl, nil)
 
 	return nil
 }

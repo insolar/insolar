@@ -38,7 +38,7 @@ type HelloWorldInstance struct {
 }
 
 func NewHelloWorld(ctx context.Context) (*HelloWorldInstance, error) {
-	seed, err := requester.GetSeed(launchnet.TestAPIURL)
+	seed, err := requester.GetSeed(launchnet.TestRPCUrl)
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +76,7 @@ func NewHelloWorld(ctx context.Context) (*HelloWorldInstance, error) {
 }
 
 func (i *HelloWorldInstance) Greet(ctx context.Context, name string) (string, error) {
-	seed, err := requester.GetSeed(launchnet.TestAPIURL)
+	seed, err := requester.GetSeed(launchnet.TestRPCUrl)
 	if err != nil {
 		return "", err
 	}
@@ -109,7 +109,7 @@ func (i *HelloWorldInstance) Greet(ctx context.Context, name string) (string, er
 }
 
 func (i *HelloWorldInstance) Count(ctx context.Context) (int, error) {
-	seed, err := requester.GetSeed(launchnet.TestAPIURL)
+	seed, err := requester.GetSeed(launchnet.TestRPCUrl)
 	if err != nil {
 		return 0, err
 	}
@@ -140,8 +140,8 @@ func (i *HelloWorldInstance) Count(ctx context.Context) (int, error) {
 }
 
 func (i *HelloWorldInstance) PulseNumber(t *testing.T, ctx context.Context) (int, error) {
-	member := &launchnet.User{i.Ref.String(), launchnet.Root.PrivKey, launchnet.Root.PubKey}
-	result, err := signedRequest(t, member, "PulseNumber", nil)
+	member := &launchnet.User{i.Ref.String(), launchnet.Root.PrivKey, launchnet.Root.PubKey, ""}
+	result, err := signedRequest(t, launchnet.TestRPCUrl, member, "PulseNumber", nil)
 	if err != nil {
 		return 0, err
 	}
@@ -153,7 +153,7 @@ func (i *HelloWorldInstance) PulseNumber(t *testing.T, ctx context.Context) (int
 }
 
 func (i *HelloWorldInstance) CreateChild(ctx context.Context) (*HelloWorldInstance, error) {
-	seed, err := requester.GetSeed(launchnet.TestAPIURL)
+	seed, err := requester.GetSeed(launchnet.TestRPCUrl)
 	if err != nil {
 		return nil, err
 	}
@@ -191,7 +191,7 @@ func (i *HelloWorldInstance) CreateChild(ctx context.Context) (*HelloWorldInstan
 }
 
 func (i *HelloWorldInstance) ReturnObj(ctx context.Context) (map[string]interface{}, error) {
-	seed, err := requester.GetSeed(launchnet.TestAPIURL)
+	seed, err := requester.GetSeed(launchnet.TestRPCUrl)
 	if err != nil {
 		return nil, err
 	}
@@ -222,6 +222,7 @@ func (i *HelloWorldInstance) ReturnObj(ctx context.Context) (map[string]interfac
 }
 
 func TestCallHelloWorld(t *testing.T) {
+	t.Skip("Immutable call need to be skipped for now")
 	a, r := assert.New(t), require.New(t)
 	ctx := context.TODO()
 
@@ -237,9 +238,8 @@ func TestCallHelloWorld(t *testing.T) {
 
 	count, err := hw.Count(ctx)
 	r.NoError(err)
-	// tip: right now deduplication is not presented in our system, so number of created
-	//      requests should be less or equal to result count of registered requests
-	a.LessOrEqual(100, count)
+
+	a.Equal(100, count)
 }
 
 func TestCallPulseNumber(t *testing.T) {

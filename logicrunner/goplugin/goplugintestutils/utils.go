@@ -112,11 +112,12 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]stri
 	logger := inslogger.FromContext(ctx)
 
 	for name := range contracts {
-		nonce := gen.Reference()
 		pulse, err := cb.pulseAccessor.Latest(ctx)
 		if err != nil {
 			return errors.Wrap(err, "can't get current pulse")
 		}
+
+		nonce := gen.Reference()
 		request := record.IncomingRequest{
 			CallType:  record.CTDeployPrototype,
 			Prototype: &nonce,
@@ -165,11 +166,7 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]stri
 		}
 
 		logger.Debug("Deploying code for contract ", name)
-		codeID, err := cb.artifactManager.DeployCode(
-			ctx,
-			*insolar.NewEmptyReference(), *insolar.NewEmptyReference(),
-			pluginBinary, insolar.MachineTypeGoPlugin,
-		)
+		codeID, err := cb.artifactManager.DeployCode(ctx, pluginBinary, insolar.MachineTypeGoPlugin)
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] DeployCode returns error")
 		}

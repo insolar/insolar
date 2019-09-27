@@ -19,6 +19,8 @@ package builtin
 import (
 	"reflect"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	lrCommon "github.com/insolar/insolar/logicrunner/common"
@@ -50,7 +52,7 @@ func (h *ProxyHelper) getUpBaseReq() rpctypes.UpBaseReq {
 	}
 }
 
-func (h *ProxyHelper) RouteCall(ref insolar.Reference, wait bool, immutable bool, saga bool, method string, args []byte,
+func (h *ProxyHelper) RouteCall(ref insolar.Reference, immutable bool, saga bool, method string, args []byte,
 	proxyPrototype insolar.Reference) ([]byte, error) {
 
 	if h.GetSystemError() != nil {
@@ -62,7 +64,6 @@ func (h *ProxyHelper) RouteCall(ref insolar.Reference, wait bool, immutable bool
 		UpBaseReq: h.getUpBaseReq(),
 
 		Object:    ref,
-		Wait:      wait,
 		Immutable: immutable,
 		Saga:      saga,
 		Method:    method,
@@ -85,6 +86,9 @@ func (h *ProxyHelper) SaveAsChild(
 ) (
 	*insolar.Reference, []byte, error,
 ) {
+	if !parentRef.IsObjectReference() {
+		return nil, nil, errors.Errorf("Failed to save AsChild: objRef should be ObjectReference; ref=%s", parentRef.String())
+	}
 
 	if h.GetSystemError() != nil {
 		// There was a system error during execution of the contract.

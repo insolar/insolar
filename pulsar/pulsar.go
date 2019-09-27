@@ -87,7 +87,7 @@ func NewPulsar(
 
 func (p *Pulsar) Send(ctx context.Context, pulseNumber insolar.PulseNumber) error {
 	logger := inslogger.FromContext(ctx)
-	logger.Info("before sending new pulseNumber: %v", pulseNumber)
+	logger.Infof("before sending new pulseNumber: %v", pulseNumber)
 
 	entropy, _, err := p.generateNewEntropyAndSign()
 	if err != nil {
@@ -139,7 +139,7 @@ func (p *Pulsar) Send(ctx context.Context, pulseNumber insolar.PulseNumber) erro
 	p.lastPNMutex.Unlock()
 	logger.Infof("set latest pulse: %v", pulseForSending.PulseNumber)
 
-	stats.Record(ctx, statPulseGenerated.M(1))
+	stats.Record(ctx, statPulseGenerated.M(1), statCurrentPulse.M(int64(pulseNumber.AsUint32())))
 	return nil
 }
 

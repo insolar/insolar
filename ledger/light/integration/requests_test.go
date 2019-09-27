@@ -28,6 +28,7 @@ import (
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -51,15 +52,7 @@ func Test_IncomingRequest_Check(t *testing.T) {
 	t.Run("registered is older than reason returns error", func(t *testing.T) {
 		msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()+1), insolar.ID{}, true, true)
 		rep := SendMessage(ctx, s, &msg)
-		RequireErrorCode(rep, payload.CodeInvalidRequest)
-	})
-
-	t.Run("detached returns error", func(t *testing.T) {
-		msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), insolar.ID{}, true, true)
-		// Faking detached request.
-		record.Unwrap(&msg.Request).(*record.IncomingRequest).ReturnMode = record.ReturnSaga
-		rep := SendMessage(ctx, s, &msg)
-		RequireErrorCode(rep, payload.CodeInvalidRequest)
+		RequireErrorCode(rep, payload.CodeRequestInvalid)
 	})
 
 	t.Run("registered API request appears in pendings", func(t *testing.T) {
@@ -70,7 +63,7 @@ func Test_IncomingRequest_Check(t *testing.T) {
 
 		s.SetPulse(ctx)
 
-		rep = CallGetPendings(ctx, s, reqInfo.RequestID)
+		rep = CallGetPendings(ctx, s, reqInfo.RequestID, 1)
 		RequireNotError(rep)
 
 		ids := rep.(*payload.IDs)
@@ -93,7 +86,7 @@ func Test_IncomingRequest_Check(t *testing.T) {
 
 		s.SetPulse(ctx)
 
-		secondPendings := CallGetPendings(ctx, s, secondReqInfo.RequestID)
+		secondPendings := CallGetPendings(ctx, s, secondReqInfo.RequestID, 1)
 		RequireNotError(secondPendings)
 
 		ids := secondPendings.(*payload.IDs)
@@ -114,7 +107,7 @@ func Test_IncomingRequest_Check(t *testing.T) {
 
 		s.SetPulse(ctx)
 
-		p = CallGetPendings(ctx, s, reqInfo.RequestID)
+		p = CallGetPendings(ctx, s, reqInfo.RequestID, 1)
 
 		err := p.(*payload.Error)
 		require.Equal(t, insolar.ErrNoPendingRequest.Error(), err.Text)
@@ -401,7 +394,7 @@ func Test_Result_Duplicate(t *testing.T) {
 
 	s.SetPulse(ctx)
 
-	resMsg, resultVirtual := MakeSetResult(objectID, requestID)
+	resMsg, _ := MakeSetResult(objectID, requestID)
 	// Set result.
 	rep = SendMessage(ctx, s, &resMsg)
 	RequireNotError(rep)
@@ -411,15 +404,6 @@ func Test_Result_Duplicate(t *testing.T) {
 	// Try to set it again.
 	rep = SendMessage(ctx, s, &resMsg)
 	RequireNotError(rep)
-
-	resultInfo := rep.(*payload.ResultInfo)
-	require.NotNil(t, resultInfo.Result)
-
-	// Check duplicate.
-	receivedResult := record.Material{}
-	err = receivedResult.Unmarshal(resultInfo.Result)
-	require.NoError(t, err)
-	require.Equal(t, resultVirtual, receivedResult.Virtual)
 }
 
 func Test_IncomingRequest_ClosedReason(t *testing.T) {
@@ -465,6 +449,52 @@ func Test_IncomingRequest_ClosedReason(t *testing.T) {
 			msg, _ := MakeSetIncomingRequest(gen.ID(), reasonID, reasonID, true, false)
 			rep := SendMessage(ctx, s, &msg)
 			RequireErrorCode(rep, payload.CodeReasonIsWrong)
+		}
+	})
+}
+
+func Test_IncomingRequest_ClosingWithOpenOutgoings(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+	cfg := DefaultLightConfig()
+	s, err := NewServer(ctx, cfg, nil)
+	require.NoError(t, err)
+	defer s.Stop()
+
+	// First pulse goes in storage then interrupts.
+	s.SetPulse(ctx)
+
+	var reasonID insolar.ID
+	t.Run("Incoming request can't be created w closed reason", func(t *testing.T) {
+
+		// Creating root reason request.
+		{
+			msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), insolar.ID{}, true, true)
+			rep := SendMessage(ctx, s, &msg)
+			RequireNotError(rep)
+			reasonID = rep.(*payload.RequestInfo).RequestID
+		}
+
+		s.SetPulse(ctx)
+
+		// Creating outgoing for request
+		{
+			msg, _ := MakeSetOutgoingRequest(reasonID, reasonID, false)
+			rep := SendMessage(ctx, s, &msg)
+			RequireNotError(rep)
+		}
+
+		s.SetPulse(ctx)
+
+		// Closing request
+		{
+			objectID := reasonID
+
+			resMsg, _ := MakeSetResult(objectID, reasonID)
+			// Set result.
+			rep := SendMessage(ctx, s, &resMsg)
+			RequireErrorCode(rep, payload.CodeNonClosedOutgoing)
 		}
 	})
 }
@@ -742,7 +772,7 @@ func Test_OutgoingDetached_InPendings(t *testing.T) {
 
 		s.SetPulse(ctx)
 
-		firstPendings := CallGetPendings(ctx, s, rootID)
+		firstPendings := CallGetPendings(ctx, s, rootID, 1)
 		RequireNotError(firstPendings)
 
 		ids := firstPendings.(*payload.IDs)
@@ -761,7 +791,7 @@ func Test_OutgoingDetached_InPendings(t *testing.T) {
 
 		s.SetPulse(ctx)
 
-		secondPendings := CallGetPendings(ctx, s, rootID)
+		secondPendings := CallGetPendings(ctx, s, rootID, 1)
 		RequireNotError(secondPendings)
 
 		ids := secondPendings.(*payload.IDs)
@@ -796,18 +826,24 @@ func Test_IncomingRequest_DifferentResults(t *testing.T) {
 		s.SetPulse(ctx)
 
 		// Closing request
+		var originalResult record.Virtual
 		{
-			resMsg, _ := MakeSetResult(reasonID, reasonID)
+			resMsg, virtual := MakeSetResult(reasonID, reasonID)
 			rep := SendMessage(ctx, s, &resMsg)
 			RequireNotError(rep)
+			originalResult = virtual
 		}
 
 		s.SetPulse(ctx)
-
 		{
 			resMsg, _ := MakeSetResult(reasonID, reasonID)
 			rep := SendMessage(ctx, s, &resMsg)
-			RequireErrorCode(rep, payload.CodeRequestNotFound)
+			res, ok := rep.(*payload.ErrorResultExists)
+			require.True(t, ok, "returned ErrorResultExists")
+			receivedResult := record.Material{}
+			err := receivedResult.Unmarshal(res.Result)
+			require.NoError(t, err)
+			assert.Equal(t, originalResult, receivedResult.Virtual)
 		}
 	})
 }

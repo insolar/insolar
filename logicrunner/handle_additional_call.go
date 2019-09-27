@@ -28,6 +28,7 @@ import (
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/common"
+	"github.com/insolar/insolar/logicrunner/writecontroller"
 )
 
 type AdditionalCallFromPreviousExecutor struct {
@@ -48,11 +49,23 @@ func (p *AdditionalCallFromPreviousExecutor) Proceed(ctx context.Context) error 
 	return nil
 }
 
+func checkPayloadAdditionalCallFromPreviousExecutor(ctx context.Context, msg payload.AdditionalCallFromPreviousExecutor) error {
+	if !msg.ObjectReference.IsObjectReference() {
+		return errors.Errorf("StillExecuting.ObjectReference should be ObjectReference; ref=%s", msg.ObjectReference.String())
+	}
+	if !msg.RequestRef.IsRecordScope() {
+		return errors.Errorf("StillExecuting.RequestRef should be RecordReference; ref=%s", msg.RequestRef.String())
+	}
+	if err := checkIncomingRequest(ctx, msg.Request); err != nil {
+		return errors.Wrap(err, "failed to check IncomingRequest of AdditionalCallFromPreviousExecutor")
+	}
+	return nil
+}
+
 type HandleAdditionalCallFromPreviousExecutor struct {
 	dep *Dependencies
 
 	Message payload.Meta
-	Parcel  insolar.Parcel
 }
 
 // Please note that currently we lack any fraud detection here.
@@ -82,16 +95,16 @@ func (h *HandleAdditionalCallFromPreviousExecutor) Present(ctx context.Context, 
 
 	ctx = contextWithServiceData(ctx, message.ServiceData)
 
+	if err := checkPayloadAdditionalCallFromPreviousExecutor(ctx, message); err != nil {
+		return err
+	}
+
 	done, err := h.dep.WriteAccessor.Begin(ctx, flow.Pulse(ctx))
-	if err != nil { // pulse changed, send that message to next executor
-		// ensure OK response because we might catch flow cancelled
-		msg, err := payload.NewMessage(&message)
-		if err != nil {
-			return errors.Wrap(err, "failed to serialize message")
+	if err != nil {
+		if err == writecontroller.ErrWriteClosed {
+			return flow.ErrCancelled
 		}
-		_, done := h.dep.Sender.SendRole(ctx, msg, insolar.DynamicRoleVirtualExecutor, message.RequestRef)
-		done()
-		return nil
+		return errors.Wrap(err, "failed to acquire write access")
 	}
 	defer done()
 

@@ -37,7 +37,6 @@ func GetInsolarRegistry(nodeRole string) *prometheus.Registry {
 	registerer.MustRegister(NetworkConnections)
 	registerer.MustRegister(NetworkPacketTimeoutTotal)
 	registerer.MustRegister(NetworkPacketReceivedTotal)
-	registerer.MustRegister(NetworkComplete)
 	registerer.MustRegister(NetworkSentSize)
 	registerer.MustRegister(NetworkRecvSize)
 

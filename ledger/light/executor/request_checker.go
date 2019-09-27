@@ -64,17 +64,17 @@ func (c *RequestCheckerDefault) CheckRequest(ctx context.Context, requestID inso
 	if err := request.Validate(); err != nil {
 		return &payload.CodedError{
 			Text: err.Error(),
-			Code: payload.CodeInvalidRequest,
+			Code: payload.CodeRequestInvalid,
 		}
 	}
 
 	reasonRef := request.ReasonRef()
-	reasonID := *reasonRef.Record()
+	reasonID := *reasonRef.GetLocal()
 
 	if reasonID.Pulse() > requestID.Pulse() {
 		return &payload.CodedError{
 			Text: "request is older than its reason",
-			Code: payload.CodeInvalidRequest,
+			Code: payload.CodeRequestInvalid,
 		}
 	}
 
@@ -112,7 +112,7 @@ func (c *RequestCheckerDefault) checkReasonForOutgoingRequest(
 	requests, err := c.filaments.OpenedRequests(
 		ctx,
 		requestID.Pulse(),
-		*outgoingRequest.AffinityRef().Record(),
+		*outgoingRequest.AffinityRef().GetLocal(),
 		true,
 	)
 	if err != nil {
@@ -157,7 +157,7 @@ func (c *RequestCheckerDefault) checkReasonForIncomingRequest(
 
 		objectID = *insolar.NewID(requestID.Pulse(), hasher.Sum(nil))
 	} else {
-		objectID = *incomingRequest.AffinityRef().Record()
+		objectID = *incomingRequest.AffinityRef().GetLocal()
 	}
 
 	var (
@@ -166,7 +166,7 @@ func (c *RequestCheckerDefault) checkReasonForIncomingRequest(
 	)
 	reasonObject := incomingRequest.ReasonAffinityRef()
 
-	reasonObjectID := *reasonObject.Record()
+	reasonObjectID := *reasonObject.GetLocal()
 	// If reasonObject is same as requestObject then go local
 	// (this fixes deadlock in saga requests).
 	if objectID.Equal(reasonObjectID) {
@@ -178,15 +178,16 @@ func (c *RequestCheckerDefault) checkReasonForIncomingRequest(
 		return errors.Wrap(err, "reason request not found")
 	}
 
-	rec := record.Material{}
-	err = rec.Unmarshal(reasonInfo.Request)
+	material := record.Material{}
+	err = material.Unmarshal(reasonInfo.Request)
 	if err != nil {
 		return errors.Wrap(err, "can't unmarshal reason request")
 	}
 
-	_, ok := rec.Virtual.Union.(*record.Virtual_IncomingRequest)
+	virtual := record.Unwrap(&material.Virtual)
+	_, ok := virtual.(*record.IncomingRequest)
 	if !ok {
-		return fmt.Errorf("reason request must be Incoming, %T received", rec.Virtual.Union)
+		return fmt.Errorf("reason request must be Incoming, %T received", virtual)
 	}
 
 	isClosed := len(reasonInfo.Result) != 0

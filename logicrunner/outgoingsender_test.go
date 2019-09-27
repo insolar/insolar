@@ -4,8 +4,14 @@ import (
 	"context"
 	"math/rand"
 	"testing"
+	"time"
+
+	"github.com/insolar/go-actors/actor/errors"
+
+	"github.com/gojuno/minimock"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/reply"
 
 	"github.com/stretchr/testify/require"
@@ -35,7 +41,7 @@ func randomOutgoingRequest() *record.OutgoingRequest {
 		Method:          "RandomMethodName",
 		Arguments:       arguments,
 		APIRequestID:    "dummy-api-request-id",
-		Reason:          gen.Reference(),
+		Reason:          gen.RecordReference(),
 	}
 	return outgoing
 }
@@ -56,10 +62,16 @@ func checkIncomingAndOutgoingMatch(t *testing.T, incoming *record.IncomingReques
 func TestOutgoingSenderSendRegularOutgoing(t *testing.T) {
 	t.Parallel()
 
-	cr := testutils.NewContractRequesterMock(t)
-	am := artifacts.NewClientMock(t)
+	mc := minimock.NewController(t)
+	defer mc.Wait(2 * time.Minute)
 
-	sender := newOutgoingSenderActorState(cr, am)
+	cr := testutils.NewContractRequesterMock(mc)
+	am := artifacts.NewClientMock(mc)
+
+	pulseObject := insolar.Pulse{PulseNumber: gen.PulseNumber()}
+	pa := pulse.NewAccessorMock(mc).LatestMock.Return(pulseObject, nil)
+
+	sender := newOutgoingSenderActorState(cr, am, pa)
 	resultChan := make(chan sendOutgoingResult, 1)
 	outgoing := randomOutgoingRequest()
 	msg := sendOutgoingRequestMessage{
@@ -69,7 +81,7 @@ func TestOutgoingSenderSendRegularOutgoing(t *testing.T) {
 		resultChan:       resultChan,
 	}
 
-	cr.CallMock.Return(&reply.CallMethod{}, insolar.NewEmptyReference(), nil)
+	cr.SendRequestMock.Return(&reply.CallMethod{}, insolar.NewEmptyReference(), nil)
 	am.RegisterResultMock.Return(nil)
 
 	_, err := sender.Receive(msg)
@@ -81,16 +93,19 @@ func TestOutgoingSenderSendRegularOutgoing(t *testing.T) {
 	require.Equal(t, outgoing.ReturnMode, res.incoming.ReturnMode)
 }
 
-// Special case: outgoing request is marked with ReturnMode = ReturnSaga.
-// A corresponding incoming request is not an exact copy of the outgoing request,
-// it has ReturnMode = ReturnNoWait.
 func TestOutgoingSenderSendSagaOutgoing(t *testing.T) {
 	t.Parallel()
 
-	cr := testutils.NewContractRequesterMock(t)
-	am := artifacts.NewClientMock(t)
+	mc := minimock.NewController(t)
+	defer mc.Wait(2 * time.Minute)
 
-	sender := newOutgoingSenderActorState(cr, am)
+	cr := testutils.NewContractRequesterMock(mc)
+	am := artifacts.NewClientMock(mc)
+
+	pulseObject := insolar.Pulse{PulseNumber: gen.PulseNumber()}
+	pa := pulse.NewAccessorMock(mc).LatestMock.Return(pulseObject, nil)
+
+	sender := newOutgoingSenderActorState(cr, am, pa)
 	resultChan := make(chan sendOutgoingResult, 1)
 	outgoing := randomOutgoingRequest()
 	outgoing.ReturnMode = record.ReturnSaga
@@ -102,7 +117,7 @@ func TestOutgoingSenderSendSagaOutgoing(t *testing.T) {
 		resultChan:       resultChan,
 	}
 
-	cr.CallMock.Return(&reply.CallMethod{}, insolar.NewEmptyReference(), nil)
+	cr.SendRequestMock.Return(&reply.CallMethod{}, insolar.NewEmptyReference(), nil)
 	am.RegisterResultMock.Return(nil)
 
 	_, err := sender.Receive(msg)
@@ -111,26 +126,72 @@ func TestOutgoingSenderSendSagaOutgoing(t *testing.T) {
 	res := <-resultChan
 	require.NoError(t, res.err)
 	checkIncomingAndOutgoingMatch(t, res.incoming, outgoing)
-	require.Equal(t, record.ReturnNoWait, res.incoming.ReturnMode)
+	require.Equal(t, record.ReturnSaga, res.incoming.ReturnMode)
 }
 
 func TestOutgoingSenderSendAbandonedOutgoing(t *testing.T) {
 	t.Parallel()
 
-	cr := testutils.NewContractRequesterMock(t)
-	am := artifacts.NewClientMock(t)
+	mc := minimock.NewController(t)
+	defer mc.Wait(2 * time.Minute)
 
-	sender := newOutgoingSenderActorState(cr, am)
+	cr := testutils.NewContractRequesterMock(mc)
+	am := artifacts.NewClientMock(mc)
+
+	pulseObject := insolar.Pulse{PulseNumber: gen.PulseNumber()}
+	pa := pulse.NewAccessorMock(mc).LatestMock.Return(pulseObject, nil)
+
+	sender := newAbandonedSenderActorState(cr, am, pa)
 	outgoing := randomOutgoingRequest()
 	msg := sendAbandonedOutgoingRequestMessage{
 		ctx:              context.Background(),
-		requestReference: gen.Reference(),
+		requestReference: gen.RecordReference(),
 		outgoingRequest:  outgoing,
 	}
 
-	cr.CallMock.Return(&reply.CallMethod{}, insolar.NewEmptyReference(), nil)
+	cr.SendRequestMock.Return(&reply.CallMethod{}, insolar.NewEmptyReference(), nil)
 	am.RegisterResultMock.Return(nil)
 
 	_, err := sender.Receive(msg)
 	require.NoError(t, err)
+}
+
+func TestOutgoingSenderStop(t *testing.T) {
+	t.Parallel()
+
+	mc := minimock.NewController(t)
+	defer mc.Wait(2 * time.Minute)
+
+	cr := testutils.NewContractRequesterMock(mc)
+	am := artifacts.NewClientMock(mc)
+	pa := pulse.NewAccessorMock(mc)
+
+	sender := newOutgoingSenderActorState(cr, am, pa)
+	resultChan := make(chan struct{}, 1)
+	msg := stopRequestSenderMessage{
+		resultChan: resultChan,
+	}
+	_, err := sender.Receive(msg)
+	<-resultChan
+	require.Equal(t, errors.Terminate, err)
+}
+
+func TestAbandonedSenderStop(t *testing.T) {
+	t.Parallel()
+
+	mc := minimock.NewController(t)
+	defer mc.Wait(2 * time.Minute)
+
+	cr := testutils.NewContractRequesterMock(mc)
+	am := artifacts.NewClientMock(mc)
+	pa := pulse.NewAccessorMock(mc)
+
+	sender := newAbandonedSenderActorState(cr, am, pa)
+	resultChan := make(chan struct{}, 1)
+	msg := stopRequestSenderMessage{
+		resultChan: resultChan,
+	}
+	_, err := sender.Receive(msg)
+	<-resultChan
+	require.Equal(t, errors.Terminate, err)
 }

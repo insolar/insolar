@@ -18,6 +18,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"net/http"
 
 	"github.com/insolar/rpc/v2"
@@ -26,7 +27,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/version"
 )
 
 // Get returns status info
@@ -35,7 +35,9 @@ func (s *NodeService) GetStatus(r *http.Request, args *interface{}, requestBody 
 	ctx, inslog := inslogger.WithTraceField(context.Background(), traceID)
 
 	inslog.Infof("[ NodeService.GetStatus ] Incoming request: %s", r.RequestURI)
-
+	if !s.runner.cfg.IsAdmin {
+		return errors.New("method not allowed")
+	}
 	statusReply := s.runner.NetworkStatus.GetNetworkStatus()
 
 	reply.NetworkState = statusReply.NetworkState.String()
@@ -69,7 +71,7 @@ func (s *NodeService) GetStatus(r *http.Request, args *interface{}, requestBody 
 	reply.PulseNumber = uint32(p.PulseNumber)
 
 	reply.Entropy = statusReply.Pulse.Entropy[:]
-	reply.Version = version.Version
+	reply.Version = statusReply.Version
 	reply.StartTime = statusReply.StartTime
 	reply.Timestamp = statusReply.Timestamp
 

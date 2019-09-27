@@ -21,6 +21,7 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
+
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -161,7 +162,7 @@ func (le *logicExecutor) ExecuteConstructor(
 		return nil, errors.New("return of constructor is empty")
 	}
 
-	res := requestresult.New(result, transcript.RequestRef)
+	res := requestresult.New(result, *transcript.Request.Object)
 	if newData != nil {
 		res.SetActivate(*request.Base, *request.Prototype, newData)
 	}
@@ -196,7 +197,7 @@ func (le *logicExecutor) genLogicCallContext(
 		// should be the same as request.Object
 		res.Callee = oDesc.HeadRef()
 	} else {
-		res.Callee = &reqRef
+		res.Callee = transcript.Request.Object
 	}
 
 	return res

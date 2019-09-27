@@ -75,7 +75,6 @@ func TestSetRequest_Proceed(t *testing.T) {
 	request := record.IncomingRequest{
 		Object:   &ref,
 		CallType: record.CTMethod,
-		// APINode:  gen.Reference(),
 	}
 	virtual := record.Virtual{
 		Union: &record.Virtual_IncomingRequest{
@@ -117,6 +116,7 @@ func TestSetRequest_Proceed(t *testing.T) {
 					StateID:             record.StateActivation,
 					EarliestOpenRequest: &pn,
 					LatestRequest:       pendingID,
+					OpenRequestsCount:   1,
 				},
 			}
 			require.Equal(t, expectedIndex, idx)
@@ -127,7 +127,7 @@ func TestSetRequest_Proceed(t *testing.T) {
 		sender.ReplyMock.Return()
 		coordinator.VirtualExecutorForObjectMock.Set(func(_ context.Context, objID insolar.ID, pn insolar.PulseNumber) (r *insolar.Reference, r1 error) {
 			require.Equal(t, flowPN, pn)
-			require.Equal(t, *ref.Record(), objID)
+			require.Equal(t, *ref.GetLocal(), objID)
 
 			return &virtualRef, nil
 		})
@@ -167,6 +167,11 @@ func TestSetRequest_Proceed(t *testing.T) {
 				StateID: record.StateActivation,
 			},
 		}, nil)
+		checker.CheckRequestMock.Set(func(_ context.Context, id insolar.ID, req record.Request) (r error) {
+			require.Equal(t, requestID, id)
+			require.Equal(t, &request, req)
+			return nil
+		})
 		filaments.RequestDuplicateMock.Return(
 			&record.CompositeFilamentRecord{RecordID: reqID},
 			&record.CompositeFilamentRecord{RecordID: resID},
@@ -182,7 +187,7 @@ func TestSetRequest_Proceed(t *testing.T) {
 		})
 		coordinator.VirtualExecutorForObjectMock.Set(func(_ context.Context, objID insolar.ID, pn insolar.PulseNumber) (r *insolar.Reference, r1 error) {
 			require.Equal(t, flowPN, pn)
-			require.Equal(t, *ref.Record(), objID)
+			require.Equal(t, *ref.GetLocal(), objID)
 
 			return &virtualRef, nil
 		})
@@ -198,10 +203,9 @@ func TestSetRequest_Proceed(t *testing.T) {
 
 	resetComponents()
 	t.Run("wrong sender", func(t *testing.T) {
-		t.Skip("virtual doesn't pass this check")
 		coordinator.VirtualExecutorForObjectMock.Set(func(_ context.Context, objID insolar.ID, pn insolar.PulseNumber) (r *insolar.Reference, r1 error) {
 			require.Equal(t, flowPN, pn)
-			require.Equal(t, *ref.Record(), objID)
+			require.Equal(t, *ref.GetLocal(), objID)
 
 			virtualRef := gen.Reference()
 			return &virtualRef, nil
@@ -212,7 +216,6 @@ func TestSetRequest_Proceed(t *testing.T) {
 
 		err = p.Proceed(ctx)
 		require.Error(t, err)
-		require.Equal(t, err.Error(), proc.ErrExecutorMismatch.Error())
 
 		mc.Finish()
 	})

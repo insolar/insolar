@@ -40,10 +40,10 @@ type storedSeed struct {
 // SeedManager manages working with seed pool
 // It's thread safe
 type SeedManager struct {
-	mutex    sync.RWMutex
+	mutex    sync.Mutex
 	seedPool map[Seed]storedSeed
 	ttl      time.Duration
-	stopped  bool
+	stopped  chan struct{}
 }
 
 // New creates new seed manager with default params
@@ -53,25 +53,33 @@ func New() *SeedManager {
 
 // NewSpecified creates new seed manager with custom params
 func NewSpecified(ttl time.Duration, cleanPeriod time.Duration) *SeedManager {
-	sm := SeedManager{seedPool: make(map[Seed]storedSeed), ttl: ttl, stopped: false}
+	sm := SeedManager{
+		seedPool: make(map[Seed]storedSeed),
+		ttl:      ttl,
+		stopped:  make(chan struct{}),
+	}
+
+	ticker := time.NewTicker(cleanPeriod)
+
 	go func() {
-		for range time.Tick(cleanPeriod) {
-			sm.deleteExpired()
-			sm.mutex.RLock()
-			if sm.stopped {
-				break
+		var stop = false
+		for !stop {
+			select {
+			case <-ticker.C:
+				sm.deleteExpired()
+			case <-sm.stopped:
+				stop = true
 			}
-			sm.mutex.RUnlock()
 		}
+		sm.stopped <- struct{}{}
 	}()
 
 	return &sm
 }
 
 func (sm *SeedManager) Stop() {
-	sm.mutex.Lock()
-	defer sm.mutex.Unlock()
-	sm.stopped = true
+	sm.stopped <- struct{}{}
+	<-sm.stopped
 }
 
 // Add adds seed to pool
@@ -94,14 +102,11 @@ func (sm *SeedManager) isExpired(expTime Expiration) bool {
 
 // Exists checks whether seed in the pool
 func (sm *SeedManager) Pop(seed Seed) (insolar.PulseNumber, bool) {
-	sm.mutex.RLock()
+	sm.mutex.Lock()
+	defer sm.mutex.Unlock()
 	stored, ok := sm.seedPool[seed]
-	sm.mutex.RUnlock()
 
 	if ok && !sm.isExpired(stored.expiration) {
-		sm.mutex.Lock()
-		defer sm.mutex.Unlock()
-
 		delete(sm.seedPool, seed)
 		return stored.pulse, true
 	}

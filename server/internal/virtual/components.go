@@ -18,6 +18,7 @@ package virtual
 
 import (
 	"context"
+	"github.com/insolar/insolar/log/logwatermill"
 	"io"
 
 	"github.com/ThreeDotsLabs/watermill"
@@ -32,26 +33,21 @@ import (
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
-	"github.com/insolar/insolar/insolar/delegationtoken"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/jetcoordinator"
 	"github.com/insolar/insolar/insolar/node"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/keystore"
-	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/logicexecutor"
 	"github.com/insolar/insolar/logicrunner/machinesmanager"
 	"github.com/insolar/insolar/logicrunner/pulsemanager"
 	"github.com/insolar/insolar/metrics"
-	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/servicenetwork"
-	"github.com/insolar/insolar/network/termination"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/server/internal"
-	"github.com/insolar/insolar/version/manager"
 )
 
 type bootstrapComponents struct {
@@ -110,17 +106,17 @@ func initComponents(
 	keyProcessor insolar.KeyProcessor,
 	certManager insolar.CertificateManager,
 
-) (*component.Manager, insolar.TerminationHandler, func()) {
+) (*component.Manager, func()) {
 	cm := component.Manager{}
 
 	// Watermill.
 	var (
-		wmLogger   *log.WatermillLogAdapter
+		wmLogger   *logwatermill.WatermillLogAdapter
 		publisher  message.Publisher
 		subscriber message.Subscriber
 	)
 	{
-		wmLogger = log.NewWatermillLogAdapter(inslogger.FromContext(ctx))
+		wmLogger = logwatermill.NewWatermillLogAdapter(inslogger.FromContext(ctx))
 		pubsub := gochannel.NewGoChannel(gochannel.Config{}, wmLogger)
 		subscriber = pubsub
 		publisher = pubsub
@@ -128,34 +124,58 @@ func initComponents(
 		publisher = internal.PublisherWrapper(ctx, &cm, cfg.Introspection, publisher)
 	}
 
-	nodeNetwork, err := nodenetwork.NewNodeNetwork(cfg.Host.Transport, certManager.GetCertificate())
-	checkError(ctx, err, "failed to start NodeNetwork")
-
 	nw, err := servicenetwork.NewServiceNetwork(cfg, &cm)
 	checkError(ctx, err, "failed to start Network")
 
-	terminationHandler := termination.NewHandler(nw)
+	metricsComp := metrics.NewMetrics(cfg.Metrics, metrics.GetInsolarRegistry("virtual"), "virtual")
 
-	delegationTokenFactory := delegationtoken.NewDelegationTokenFactory()
-
-	apiRunner, err := api.NewRunner(&cfg.APIRunner)
-	checkError(ctx, err, "failed to start ApiRunner")
-
-	metricsHandler, err := metrics.NewMetrics(ctx, cfg.Metrics, metrics.GetInsolarRegistry("virtual"), "virtual")
-	checkError(ctx, err, "failed to start Metrics")
-
-	_, err = manager.NewVersionManager(cfg.VersionManager)
-	checkError(ctx, err, "failed to load VersionManager: ")
-
-	jc := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit)
+	jc := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit, *certManager.GetCertificate().GetNodeRef())
 	pulses := pulse.NewStorageMem()
 	b := bus.NewBus(cfg.Bus, publisher, pulses, jc, pcs)
 
 	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner, publisher, b)
 	checkError(ctx, err, "failed to start LogicRunner")
 
-	contractRequester, err := contractrequester.New()
+	contractRequester, err := contractrequester.New(
+		b,
+		pulses,
+		jc,
+		pcs,
+	)
 	checkError(ctx, err, "failed to start ContractRequester")
+
+	artifactsClient := artifacts.NewClient(b)
+	availabilityChecker := api.NewNetworkChecker(cfg.AvailabilityChecker)
+
+	API, err := api.NewRunner(
+		&cfg.APIRunner,
+		certManager,
+		contractRequester,
+		nw,
+		nw,
+		pulses,
+		artifactsClient,
+		jc,
+		nw,
+		availabilityChecker,
+	)
+	checkError(ctx, err, "failed to start ApiRunner")
+
+	AdminAPIRunner, err := api.NewRunner(
+		&cfg.AdminAPIRunner,
+		certManager,
+		contractRequester,
+		nw,
+		nw,
+		pulses,
+		artifactsClient,
+		jc,
+		nw,
+		availabilityChecker,
+	)
+	checkError(ctx, err, "failed to start AdminAPIRunner")
+
+	APIWrapper := api.NewWrapper(API, AdminAPIRunner)
 
 	// TODO: remove this hack in INS-3341
 	contractRequester.LR = logicRunner
@@ -163,7 +183,6 @@ func initComponents(
 	pm := pulsemanager.NewPulseManager()
 
 	cm.Register(
-		terminationHandler,
 		pcs,
 		keyStore,
 		cryptographyService,
@@ -173,8 +192,8 @@ func initComponents(
 		logicexecutor.NewLogicExecutor(),
 		logicrunner.NewRequestsExecutor(),
 		machinesmanager.NewMachinesManager(),
-		apiRunner,
-		nodeNetwork,
+		APIWrapper,
+		availabilityChecker,
 		nw,
 		pm,
 	)
@@ -183,16 +202,15 @@ func initComponents(
 		b,
 		publisher,
 		contractRequester,
-		artifacts.NewClient(b),
+		artifactsClient,
 		artifacts.NewDescriptorsCache(),
 		jc,
 		pulses,
 		jet.NewStore(),
 		node.NewStorage(),
-		delegationTokenFactory,
 	}
 	components = append(components, []interface{}{
-		metricsHandler,
+		metricsComp,
 		cryptographyService,
 		keyProcessor,
 	}...)
@@ -202,13 +220,14 @@ func initComponents(
 	err = cm.Init(ctx)
 	checkError(ctx, err, "failed to init components")
 
-	pm.FlowDispatcher = logicRunner.FlowDispatcher
+	// this should be done after Init due to inject
+	pm.AddDispatcher(logicRunner.FlowDispatcher, contractRequester.FlowDispatcher)
 
-	return &cm, terminationHandler, startWatermill(
+	return &cm, startWatermill(
 		ctx, wmLogger, subscriber, b,
 		nw.SendMessageHandler,
 		logicRunner.FlowDispatcher.Process,
-		contractRequester.ReceiveResult,
+		contractRequester.FlowDispatcher.Process,
 	)
 }
 

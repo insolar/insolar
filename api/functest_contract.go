@@ -213,7 +213,7 @@ func (s *FuncTestContractService) CallMethod(r *http.Request, args *CallMethodAr
 func (s *FuncTestContractService) call(ctx context.Context, msg insolar.Payload, re *CallMethodReply) error {
 	inslog := inslogger.FromContext(ctx)
 
-	callReply, _, err := s.runner.ContractRequester.Call(ctx, msg)
+	callReply, _, err := s.runner.ContractRequester.SendRequest(ctx, msg)
 	if err != nil {
 		inslog.Error("failed to call: ", err.Error())
 		return errors.Wrap(err, "CallMethod failed with error")

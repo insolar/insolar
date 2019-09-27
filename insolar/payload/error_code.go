@@ -25,10 +25,12 @@ const (
 	CodeNoPendings   = 1004
 	CodeNoStartPulse = 1005
 
-	CodeRequestNotFound = 1006
-	CodeInvalidRequest  = 1007
-	CodeReasonNotFound  = 1008
-	CodeReasonIsWrong   = 1009
+	CodeRequestNotFound   = 1006
+	CodeRequestInvalid    = 1007
+	CodeReasonNotFound    = 1008
+	CodeReasonIsWrong     = 1009
+	CodeNonClosedOutgoing = 1010
+	CodeNonActivated      = 1011
 )
 
 type CodedError struct {

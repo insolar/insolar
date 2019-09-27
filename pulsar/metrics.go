@@ -22,7 +22,8 @@ import (
 )
 
 var (
-	statPulseGenerated = stats.Int64("pulsar/pulse/generated", "count of generated pulses", stats.UnitDimensionless)
+	statPulseGenerated = stats.Int64("pulsar_pulse_generated", "count of generated pulses", stats.UnitDimensionless)
+	statCurrentPulse   = stats.Int64("pulsar_current_pulse", "last generated pulse", stats.UnitDimensionless)
 )
 
 func init() {
@@ -32,6 +33,12 @@ func init() {
 			Description: statPulseGenerated.Description(),
 			Measure:     statPulseGenerated,
 			Aggregation: view.Sum(),
+		},
+		&view.View{
+			Name:        statCurrentPulse.Name(),
+			Description: statCurrentPulse.Description(),
+			Measure:     statCurrentPulse,
+			Aggregation: view.LastValue(),
 		},
 	)
 	if err != nil {

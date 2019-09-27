@@ -20,14 +20,16 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/pkg/errors"
 
-	"github.com/insolar/insolar/api/requester"
-	"github.com/insolar/insolar/insolar/utils"
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/rpc/v2"
+	"github.com/insolar/rpc/v2/json2"
+
+	"github.com/insolar/insolar/api/instrumenter"
+	"github.com/insolar/insolar/api/requester"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
 // SeedArgs is arguments that Seed service accepts.
@@ -45,49 +47,79 @@ func NewNodeService(runner *Runner) *NodeService {
 
 // Get returns new active seed.
 //
-//   Request structure:
-//   {
-//     "jsonrpc": "2.0",
-//     "method": "node.getSeed",
-//     "id": str|int|null
-//   }
+//	Request structure:
+//	{
+//		"jsonrpc": "2.0",
+//		"method": "node.getSeed",
+//		"id": str|int|null
+//	}
 //
-//     Response structure:
-// 	{
-// 		"jsonrpc": "2.0",
-// 		"result": {
-// 			"Seed": str, // correct seed for new Call request
-// 			"TraceID": str // traceID for request
-// 		},
-// 		"id": str|int|null // same as in request
-// 	}
+//	Response structure:
+//	{
+//		"jsonrpc": "2.0",
+//		"result": {
+//			"seed": str, // correct seed for new Call request
+//			"traceID": str // traceID for request
+//		},
+//		"id": str|int|null // same as in request
+//	}
 //
-func (s *NodeService) GetSeed(r *http.Request, args *SeedArgs, requestBody *rpc.RequestBody, reply *requester.SeedReply) error {
-	traceID := utils.RandTraceID()
-	ctx, inslog := inslogger.WithTraceField(context.Background(), traceID)
-
-	_, span := instracer.StartSpan(ctx, "NodeService.getSeed")
-	defer span.End()
-
-	info := fmt.Sprintf("[ NodeService.GetSeed ] Incoming request: %s", r.RequestURI)
-	inslog.Infof(info)
-	span.Annotate(nil, info)
+func (s *NodeService) getSeed(ctx context.Context, _ *http.Request, _ *SeedArgs, _ *rpc.RequestBody, reply *requester.SeedReply) error {
+	traceID := instrumenter.GetTraceID(ctx)
 
 	seed, err := s.runner.SeedGenerator.Next()
 	if err != nil {
-		instracer.AddError(span, err)
-		return errors.Wrap(err, "failed to get next seed")
+		return err
 	}
 
 	pulse, err := s.runner.PulseAccessor.Latest(context.Background())
 	if err != nil {
-		instracer.AddError(span, err)
-		return errors.Wrap(err, "[ NodeService::GetSeed ] Couldn't receive pulse")
+		return errors.Wrap(err, "couldn't receive pulse")
 	}
 	s.runner.SeedManager.Add(*seed, pulse.PulseNumber)
 
 	reply.Seed = seed[:]
 	reply.TraceID = traceID
 
+	return nil
+}
+
+func (s *NodeService) GetSeed(r *http.Request, args *SeedArgs, requestBody *rpc.RequestBody, reply *requester.SeedReply) error {
+	ctx, instr := instrumenter.NewMethodInstrument("NodeService.getSeed")
+	defer instr.End()
+
+	msg := fmt.Sprint("Incoming request: ", r.RequestURI)
+	instr.Annotate(msg)
+
+	logger := inslogger.FromContext(ctx)
+	logger.Info("[ NodeService.getSeed ] ", msg)
+
+	if !s.runner.AvailabilityChecker.IsAvailable(ctx) {
+		logger.Error("[ NodeService.getSeed ] API is not available")
+
+		instr.SetError(errors.New(ServiceUnavailableErrorMessage), ServiceUnavailableErrorShort)
+		return &json2.Error{
+			Code:    ServiceUnavailableError,
+			Message: ServiceUnavailableErrorMessage,
+			Data: requester.Data{
+				TraceID: instr.TraceID(),
+			},
+		}
+	}
+
+	err := s.getSeed(ctx, r, args, requestBody, reply)
+	if err != nil {
+		logger.Error("[ NodeService.getSeed ] failed to execute: ", err.Error())
+
+		instr.SetError(err, InternalErrorShort)
+		return &json2.Error{
+			Code:    InternalError,
+			Message: InternalErrorMessage,
+			Data: requester.Data{
+				Trace:   strings.Split(err.Error(), ": "),
+				TraceID: instr.TraceID(),
+			},
+		}
+	}
 	return nil
 }

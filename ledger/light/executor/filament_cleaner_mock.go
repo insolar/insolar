@@ -15,11 +15,11 @@ import (
 type FilamentCleanerMock struct {
 	t minimock.Tester
 
-	funcClear          func(objID insolar.ID)
-	inspectFuncClear   func(objID insolar.ID)
-	afterClearCounter  uint64
-	beforeClearCounter uint64
-	ClearMock          mFilamentCleanerMockClear
+	funcClearIfLonger          func(objID insolar.ID, limit int)
+	inspectFuncClearIfLonger   func(objID insolar.ID, limit int)
+	afterClearIfLongerCounter  uint64
+	beforeClearIfLongerCounter uint64
+	ClearIfLongerMock          mFilamentCleanerMockClearIfLonger
 }
 
 // NewFilamentCleanerMock returns a mock for FilamentCleaner
@@ -29,203 +29,204 @@ func NewFilamentCleanerMock(t minimock.Tester) *FilamentCleanerMock {
 		controller.RegisterMocker(m)
 	}
 
-	m.ClearMock = mFilamentCleanerMockClear{mock: m}
-	m.ClearMock.callArgs = []*FilamentCleanerMockClearParams{}
+	m.ClearIfLongerMock = mFilamentCleanerMockClearIfLonger{mock: m}
+	m.ClearIfLongerMock.callArgs = []*FilamentCleanerMockClearIfLongerParams{}
 
 	return m
 }
 
-type mFilamentCleanerMockClear struct {
+type mFilamentCleanerMockClearIfLonger struct {
 	mock               *FilamentCleanerMock
-	defaultExpectation *FilamentCleanerMockClearExpectation
-	expectations       []*FilamentCleanerMockClearExpectation
+	defaultExpectation *FilamentCleanerMockClearIfLongerExpectation
+	expectations       []*FilamentCleanerMockClearIfLongerExpectation
 
-	callArgs []*FilamentCleanerMockClearParams
+	callArgs []*FilamentCleanerMockClearIfLongerParams
 	mutex    sync.RWMutex
 }
 
-// FilamentCleanerMockClearExpectation specifies expectation struct of the FilamentCleaner.Clear
-type FilamentCleanerMockClearExpectation struct {
+// FilamentCleanerMockClearIfLongerExpectation specifies expectation struct of the FilamentCleaner.ClearIfLonger
+type FilamentCleanerMockClearIfLongerExpectation struct {
 	mock   *FilamentCleanerMock
-	params *FilamentCleanerMockClearParams
+	params *FilamentCleanerMockClearIfLongerParams
 
 	Counter uint64
 }
 
-// FilamentCleanerMockClearParams contains parameters of the FilamentCleaner.Clear
-type FilamentCleanerMockClearParams struct {
+// FilamentCleanerMockClearIfLongerParams contains parameters of the FilamentCleaner.ClearIfLonger
+type FilamentCleanerMockClearIfLongerParams struct {
 	objID insolar.ID
+	limit int
 }
 
-// Expect sets up expected params for FilamentCleaner.Clear
-func (mmClear *mFilamentCleanerMockClear) Expect(objID insolar.ID) *mFilamentCleanerMockClear {
-	if mmClear.mock.funcClear != nil {
-		mmClear.mock.t.Fatalf("FilamentCleanerMock.Clear mock is already set by Set")
+// Expect sets up expected params for FilamentCleaner.ClearIfLonger
+func (mmClearIfLonger *mFilamentCleanerMockClearIfLonger) Expect(objID insolar.ID, limit int) *mFilamentCleanerMockClearIfLonger {
+	if mmClearIfLonger.mock.funcClearIfLonger != nil {
+		mmClearIfLonger.mock.t.Fatalf("FilamentCleanerMock.ClearIfLonger mock is already set by Set")
 	}
 
-	if mmClear.defaultExpectation == nil {
-		mmClear.defaultExpectation = &FilamentCleanerMockClearExpectation{}
+	if mmClearIfLonger.defaultExpectation == nil {
+		mmClearIfLonger.defaultExpectation = &FilamentCleanerMockClearIfLongerExpectation{}
 	}
 
-	mmClear.defaultExpectation.params = &FilamentCleanerMockClearParams{objID}
-	for _, e := range mmClear.expectations {
-		if minimock.Equal(e.params, mmClear.defaultExpectation.params) {
-			mmClear.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmClear.defaultExpectation.params)
+	mmClearIfLonger.defaultExpectation.params = &FilamentCleanerMockClearIfLongerParams{objID, limit}
+	for _, e := range mmClearIfLonger.expectations {
+		if minimock.Equal(e.params, mmClearIfLonger.defaultExpectation.params) {
+			mmClearIfLonger.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmClearIfLonger.defaultExpectation.params)
 		}
 	}
 
-	return mmClear
+	return mmClearIfLonger
 }
 
-// Inspect accepts an inspector function that has same arguments as the FilamentCleaner.Clear
-func (mmClear *mFilamentCleanerMockClear) Inspect(f func(objID insolar.ID)) *mFilamentCleanerMockClear {
-	if mmClear.mock.inspectFuncClear != nil {
-		mmClear.mock.t.Fatalf("Inspect function is already set for FilamentCleanerMock.Clear")
+// Inspect accepts an inspector function that has same arguments as the FilamentCleaner.ClearIfLonger
+func (mmClearIfLonger *mFilamentCleanerMockClearIfLonger) Inspect(f func(objID insolar.ID, limit int)) *mFilamentCleanerMockClearIfLonger {
+	if mmClearIfLonger.mock.inspectFuncClearIfLonger != nil {
+		mmClearIfLonger.mock.t.Fatalf("Inspect function is already set for FilamentCleanerMock.ClearIfLonger")
 	}
 
-	mmClear.mock.inspectFuncClear = f
+	mmClearIfLonger.mock.inspectFuncClearIfLonger = f
 
-	return mmClear
+	return mmClearIfLonger
 }
 
-// Return sets up results that will be returned by FilamentCleaner.Clear
-func (mmClear *mFilamentCleanerMockClear) Return() *FilamentCleanerMock {
-	if mmClear.mock.funcClear != nil {
-		mmClear.mock.t.Fatalf("FilamentCleanerMock.Clear mock is already set by Set")
+// Return sets up results that will be returned by FilamentCleaner.ClearIfLonger
+func (mmClearIfLonger *mFilamentCleanerMockClearIfLonger) Return() *FilamentCleanerMock {
+	if mmClearIfLonger.mock.funcClearIfLonger != nil {
+		mmClearIfLonger.mock.t.Fatalf("FilamentCleanerMock.ClearIfLonger mock is already set by Set")
 	}
 
-	if mmClear.defaultExpectation == nil {
-		mmClear.defaultExpectation = &FilamentCleanerMockClearExpectation{mock: mmClear.mock}
+	if mmClearIfLonger.defaultExpectation == nil {
+		mmClearIfLonger.defaultExpectation = &FilamentCleanerMockClearIfLongerExpectation{mock: mmClearIfLonger.mock}
 	}
 
-	return mmClear.mock
+	return mmClearIfLonger.mock
 }
 
-//Set uses given function f to mock the FilamentCleaner.Clear method
-func (mmClear *mFilamentCleanerMockClear) Set(f func(objID insolar.ID)) *FilamentCleanerMock {
-	if mmClear.defaultExpectation != nil {
-		mmClear.mock.t.Fatalf("Default expectation is already set for the FilamentCleaner.Clear method")
+//Set uses given function f to mock the FilamentCleaner.ClearIfLonger method
+func (mmClearIfLonger *mFilamentCleanerMockClearIfLonger) Set(f func(objID insolar.ID, limit int)) *FilamentCleanerMock {
+	if mmClearIfLonger.defaultExpectation != nil {
+		mmClearIfLonger.mock.t.Fatalf("Default expectation is already set for the FilamentCleaner.ClearIfLonger method")
 	}
 
-	if len(mmClear.expectations) > 0 {
-		mmClear.mock.t.Fatalf("Some expectations are already set for the FilamentCleaner.Clear method")
+	if len(mmClearIfLonger.expectations) > 0 {
+		mmClearIfLonger.mock.t.Fatalf("Some expectations are already set for the FilamentCleaner.ClearIfLonger method")
 	}
 
-	mmClear.mock.funcClear = f
-	return mmClear.mock
+	mmClearIfLonger.mock.funcClearIfLonger = f
+	return mmClearIfLonger.mock
 }
 
-// Clear implements FilamentCleaner
-func (mmClear *FilamentCleanerMock) Clear(objID insolar.ID) {
-	mm_atomic.AddUint64(&mmClear.beforeClearCounter, 1)
-	defer mm_atomic.AddUint64(&mmClear.afterClearCounter, 1)
+// ClearIfLonger implements FilamentCleaner
+func (mmClearIfLonger *FilamentCleanerMock) ClearIfLonger(objID insolar.ID, limit int) {
+	mm_atomic.AddUint64(&mmClearIfLonger.beforeClearIfLongerCounter, 1)
+	defer mm_atomic.AddUint64(&mmClearIfLonger.afterClearIfLongerCounter, 1)
 
-	if mmClear.inspectFuncClear != nil {
-		mmClear.inspectFuncClear(objID)
+	if mmClearIfLonger.inspectFuncClearIfLonger != nil {
+		mmClearIfLonger.inspectFuncClearIfLonger(objID, limit)
 	}
 
-	params := &FilamentCleanerMockClearParams{objID}
+	params := &FilamentCleanerMockClearIfLongerParams{objID, limit}
 
 	// Record call args
-	mmClear.ClearMock.mutex.Lock()
-	mmClear.ClearMock.callArgs = append(mmClear.ClearMock.callArgs, params)
-	mmClear.ClearMock.mutex.Unlock()
+	mmClearIfLonger.ClearIfLongerMock.mutex.Lock()
+	mmClearIfLonger.ClearIfLongerMock.callArgs = append(mmClearIfLonger.ClearIfLongerMock.callArgs, params)
+	mmClearIfLonger.ClearIfLongerMock.mutex.Unlock()
 
-	for _, e := range mmClear.ClearMock.expectations {
+	for _, e := range mmClearIfLonger.ClearIfLongerMock.expectations {
 		if minimock.Equal(e.params, params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
 			return
 		}
 	}
 
-	if mmClear.ClearMock.defaultExpectation != nil {
-		mm_atomic.AddUint64(&mmClear.ClearMock.defaultExpectation.Counter, 1)
-		want := mmClear.ClearMock.defaultExpectation.params
-		got := FilamentCleanerMockClearParams{objID}
+	if mmClearIfLonger.ClearIfLongerMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmClearIfLonger.ClearIfLongerMock.defaultExpectation.Counter, 1)
+		want := mmClearIfLonger.ClearIfLongerMock.defaultExpectation.params
+		got := FilamentCleanerMockClearIfLongerParams{objID, limit}
 		if want != nil && !minimock.Equal(*want, got) {
-			mmClear.t.Errorf("FilamentCleanerMock.Clear got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+			mmClearIfLonger.t.Errorf("FilamentCleanerMock.ClearIfLonger got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
 		}
 
 		return
 
 	}
-	if mmClear.funcClear != nil {
-		mmClear.funcClear(objID)
+	if mmClearIfLonger.funcClearIfLonger != nil {
+		mmClearIfLonger.funcClearIfLonger(objID, limit)
 		return
 	}
-	mmClear.t.Fatalf("Unexpected call to FilamentCleanerMock.Clear. %v", objID)
+	mmClearIfLonger.t.Fatalf("Unexpected call to FilamentCleanerMock.ClearIfLonger. %v %v", objID, limit)
 
 }
 
-// ClearAfterCounter returns a count of finished FilamentCleanerMock.Clear invocations
-func (mmClear *FilamentCleanerMock) ClearAfterCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmClear.afterClearCounter)
+// ClearIfLongerAfterCounter returns a count of finished FilamentCleanerMock.ClearIfLonger invocations
+func (mmClearIfLonger *FilamentCleanerMock) ClearIfLongerAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmClearIfLonger.afterClearIfLongerCounter)
 }
 
-// ClearBeforeCounter returns a count of FilamentCleanerMock.Clear invocations
-func (mmClear *FilamentCleanerMock) ClearBeforeCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmClear.beforeClearCounter)
+// ClearIfLongerBeforeCounter returns a count of FilamentCleanerMock.ClearIfLonger invocations
+func (mmClearIfLonger *FilamentCleanerMock) ClearIfLongerBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmClearIfLonger.beforeClearIfLongerCounter)
 }
 
-// Calls returns a list of arguments used in each call to FilamentCleanerMock.Clear.
+// Calls returns a list of arguments used in each call to FilamentCleanerMock.ClearIfLonger.
 // The list is in the same order as the calls were made (i.e. recent calls have a higher index)
-func (mmClear *mFilamentCleanerMockClear) Calls() []*FilamentCleanerMockClearParams {
-	mmClear.mutex.RLock()
+func (mmClearIfLonger *mFilamentCleanerMockClearIfLonger) Calls() []*FilamentCleanerMockClearIfLongerParams {
+	mmClearIfLonger.mutex.RLock()
 
-	argCopy := make([]*FilamentCleanerMockClearParams, len(mmClear.callArgs))
-	copy(argCopy, mmClear.callArgs)
+	argCopy := make([]*FilamentCleanerMockClearIfLongerParams, len(mmClearIfLonger.callArgs))
+	copy(argCopy, mmClearIfLonger.callArgs)
 
-	mmClear.mutex.RUnlock()
+	mmClearIfLonger.mutex.RUnlock()
 
 	return argCopy
 }
 
-// MinimockClearDone returns true if the count of the Clear invocations corresponds
+// MinimockClearIfLongerDone returns true if the count of the ClearIfLonger invocations corresponds
 // the number of defined expectations
-func (m *FilamentCleanerMock) MinimockClearDone() bool {
-	for _, e := range m.ClearMock.expectations {
+func (m *FilamentCleanerMock) MinimockClearIfLongerDone() bool {
+	for _, e := range m.ClearIfLongerMock.expectations {
 		if mm_atomic.LoadUint64(&e.Counter) < 1 {
 			return false
 		}
 	}
 
 	// if default expectation was set then invocations count should be greater than zero
-	if m.ClearMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterClearCounter) < 1 {
+	if m.ClearIfLongerMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterClearIfLongerCounter) < 1 {
 		return false
 	}
 	// if func was set then invocations count should be greater than zero
-	if m.funcClear != nil && mm_atomic.LoadUint64(&m.afterClearCounter) < 1 {
+	if m.funcClearIfLonger != nil && mm_atomic.LoadUint64(&m.afterClearIfLongerCounter) < 1 {
 		return false
 	}
 	return true
 }
 
-// MinimockClearInspect logs each unmet expectation
-func (m *FilamentCleanerMock) MinimockClearInspect() {
-	for _, e := range m.ClearMock.expectations {
+// MinimockClearIfLongerInspect logs each unmet expectation
+func (m *FilamentCleanerMock) MinimockClearIfLongerInspect() {
+	for _, e := range m.ClearIfLongerMock.expectations {
 		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			m.t.Errorf("Expected call to FilamentCleanerMock.Clear with params: %#v", *e.params)
+			m.t.Errorf("Expected call to FilamentCleanerMock.ClearIfLonger with params: %#v", *e.params)
 		}
 	}
 
 	// if default expectation was set then invocations count should be greater than zero
-	if m.ClearMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterClearCounter) < 1 {
-		if m.ClearMock.defaultExpectation.params == nil {
-			m.t.Error("Expected call to FilamentCleanerMock.Clear")
+	if m.ClearIfLongerMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterClearIfLongerCounter) < 1 {
+		if m.ClearIfLongerMock.defaultExpectation.params == nil {
+			m.t.Error("Expected call to FilamentCleanerMock.ClearIfLonger")
 		} else {
-			m.t.Errorf("Expected call to FilamentCleanerMock.Clear with params: %#v", *m.ClearMock.defaultExpectation.params)
+			m.t.Errorf("Expected call to FilamentCleanerMock.ClearIfLonger with params: %#v", *m.ClearIfLongerMock.defaultExpectation.params)
 		}
 	}
 	// if func was set then invocations count should be greater than zero
-	if m.funcClear != nil && mm_atomic.LoadUint64(&m.afterClearCounter) < 1 {
-		m.t.Error("Expected call to FilamentCleanerMock.Clear")
+	if m.funcClearIfLonger != nil && mm_atomic.LoadUint64(&m.afterClearIfLongerCounter) < 1 {
+		m.t.Error("Expected call to FilamentCleanerMock.ClearIfLonger")
 	}
 }
 
 // MinimockFinish checks that all mocked methods have been called the expected number of times
 func (m *FilamentCleanerMock) MinimockFinish() {
 	if !m.minimockDone() {
-		m.MinimockClearInspect()
+		m.MinimockClearIfLongerInspect()
 		m.t.FailNow()
 	}
 }
@@ -249,5 +250,5 @@ func (m *FilamentCleanerMock) MinimockWait(timeout mm_time.Duration) {
 func (m *FilamentCleanerMock) minimockDone() bool {
 	done := true
 	return done &&
-		m.MinimockClearDone()
+		m.MinimockClearIfLongerDone()
 }

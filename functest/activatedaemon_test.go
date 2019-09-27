@@ -18,85 +18,100 @@
 package functest
 
 import (
+	"github.com/insolar/insolar/api/requester"
 	"testing"
 
-	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/launchnet"
 	"github.com/stretchr/testify/require"
 )
 
 func TestActivateDaemonDoubleCall(t *testing.T) {
-	t.Skip("Test is constantly failing. Skipping until INS-3344 is fixed.")
-	activeDaemons := activateDaemons(t, countThreeActiveDaemon)
+	activeDaemons := activateDaemons(t, countTwoActiveDaemon)
 	for _, daemon := range activeDaemons {
-		_, _, err := makeSignedRequest(&launchnet.MigrationAdmin, "migration.activateDaemon", map[string]interface{}{"reference": daemon.Ref})
-
+		_, _, err := makeSignedRequest(launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.activateDaemon",
+			map[string]interface{}{"reference": daemon.Ref})
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "daemon member already activated")
+		require.IsType(t, &requester.Error{}, err)
+		data := err.(*requester.Error).Data
+		require.Contains(t, data.Trace, "daemon member already activated")
 	}
 }
 
 func TestActivateDeactivateDaemon(t *testing.T) {
-	activeDaemons := activateDaemons(t, countThreeActiveDaemon)
+	activeDaemons := activateDaemons(t, countTwoActiveDaemon)
 	for _, daemon := range activeDaemons {
-		_, err := signedRequest(t, &launchnet.MigrationAdmin, "migration.deactivateDaemon", map[string]interface{}{"reference": daemon.Ref})
+		_, err := signedRequest(t, launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.deactivateDaemon",
+			map[string]interface{}{"reference": daemon.Ref})
 		require.NoError(t, err)
 	}
 
 	for _, daemon := range activeDaemons {
-		res, _, err := makeSignedRequest(&launchnet.MigrationAdmin, "migration.checkDaemon", map[string]interface{}{"reference": daemon.Ref})
+		res, _, err := makeSignedRequest(launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.checkDaemon",
+			map[string]interface{}{"reference": daemon.Ref})
 		require.NoError(t, err)
 		status := res.(map[string]interface{})["status"].(string)
 		require.Equal(t, status, "inactive")
 	}
 
 	for _, daemon := range activeDaemons {
-		_, err := signedRequest(t, &launchnet.MigrationAdmin, "migration.activateDaemon", map[string]interface{}{"reference": daemon.Ref})
+		_, err := signedRequest(t, launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.activateDaemon",
+			map[string]interface{}{"reference": daemon.Ref})
 		require.NoError(t, err)
 	}
 
 	for _, daemon := range activeDaemons {
-		res, _, err := makeSignedRequest(&launchnet.MigrationAdmin, "migration.checkDaemon", map[string]interface{}{"reference": daemon.Ref})
+		res, _, err := makeSignedRequest(launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.checkDaemon",
+			map[string]interface{}{"reference": daemon.Ref})
 		require.NoError(t, err)
 		status := res.(map[string]interface{})["status"].(string)
 		require.Equal(t, status, "active")
 	}
 }
 func TestDeactivateDaemonDoubleCall(t *testing.T) {
-	activeDaemons := activateDaemons(t, countThreeActiveDaemon)
+	activeDaemons := activateDaemons(t, countTwoActiveDaemon)
 	for _, daemon := range activeDaemons {
-		_, _, err := makeSignedRequest(&launchnet.MigrationAdmin, "migration.deactivateDaemon", map[string]interface{}{"reference": daemon.Ref})
+		_, _, err := makeSignedRequest(launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.deactivateDaemon",
+			map[string]interface{}{"reference": daemon.Ref})
 		require.NoError(t, err)
 	}
 	for _, daemon := range activeDaemons {
-		_, _, err := makeSignedRequest(&launchnet.MigrationAdmin, "migration.deactivateDaemon", map[string]interface{}{"reference": daemon.Ref})
+		_, _, err := makeSignedRequest(launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.deactivateDaemon",
+			map[string]interface{}{"reference": daemon.Ref})
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "daemon member already deactivated")
+		require.IsType(t, &requester.Error{}, err)
+		data := err.(*requester.Error).Data
+		require.Contains(t, data.Trace, "daemon member already deactivated")
 	}
 }
 func TestActivateAccess(t *testing.T) {
 
-	migrationAddress := testutils.RandomString()
-	member := createMigrationMemberForMA(t, migrationAddress)
-	_, _, err := makeSignedRequest(member, "migration.activateDaemon", map[string]interface{}{"reference": launchnet.MigrationDaemons[0].Ref})
+	member := createMigrationMemberForMA(t)
+	_, _, err := makeSignedRequest(launchnet.TestRPCUrl, member, "migration.activateDaemon",
+		map[string]interface{}{"reference": launchnet.MigrationDaemons[0].Ref})
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "only migration admin can")
+	require.IsType(t, &requester.Error{}, err)
+	data := err.(*requester.Error).Data
+	require.Contains(t, data.Trace, "only migration admin can activate migration demons")
 }
 
 func TestDeactivateAccess(t *testing.T) {
 
-	migrationAddress := testutils.RandomString()
-	member := createMigrationMemberForMA(t, migrationAddress)
-	_, _, err := makeSignedRequest(member, "migration.deactivateDaemon", map[string]interface{}{"reference": launchnet.MigrationDaemons[0].Ref})
+	member := createMigrationMemberForMA(t)
+	_, _, err := makeSignedRequest(launchnet.TestRPCUrl, member, "migration.deactivateDaemon",
+		map[string]interface{}{"reference": launchnet.MigrationDaemons[0].Ref})
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "only migration admin can")
+	require.IsType(t, &requester.Error{}, err)
+	data := err.(*requester.Error).Data
+	require.Contains(t, data.Trace, "only migration admin can deactivate migration demons")
 }
 
 func TestCheckDaemonAccess(t *testing.T) {
 
-	migrationAddress := testutils.RandomString()
-	member := createMigrationMemberForMA(t, migrationAddress)
-	_, _, err := makeSignedRequest(member, "migration.checkDaemon", map[string]interface{}{"reference": launchnet.MigrationDaemons[0].Ref})
+	member := createMigrationMemberForMA(t)
+	_, _, err := makeSignedRequest(launchnet.TestRPCUrl, member, "migration.checkDaemon",
+		map[string]interface{}{"reference": launchnet.MigrationDaemons[0].Ref})
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "permission denied to information about migration daemons")
+	require.IsType(t, &requester.Error{}, err)
+	data := err.(*requester.Error).Data
+	require.Contains(t, data.Trace, "permission denied to information about migration daemons")
 }

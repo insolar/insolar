@@ -22,6 +22,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
@@ -43,6 +44,10 @@ type RPCMethods struct {
 	ss         StateStorage
 	execution  ProxyImplementation
 	validation ProxyImplementation
+}
+
+func getRequestReference(info *payload.RequestInfo) *insolar.Reference {
+	return insolar.NewRecordReference(info.RequestID)
 }
 
 func NewRPCMethods(
@@ -189,10 +194,10 @@ func (m *executionProxyImplementation) RouteCall(
 
 	// Step 2. Send the request and register the result (both is done by outgoingSender)
 
-	outgoingReqRef := insolar.NewReference(outReqInfo.RequestID)
+	outgoingReqRef := *getRequestReference(outReqInfo)
 
 	var incoming *record.IncomingRequest
-	_, rep.Result, incoming, err = m.outgoingSender.SendOutgoingRequest(ctx, *outgoingReqRef, outgoing)
+	_, rep.Result, incoming, err = m.outgoingSender.SendOutgoingRequest(ctx, outgoingReqRef, outgoing)
 	if incoming != nil {
 		current.AddOutgoingRequest(ctx, *incoming, rep.Result, nil, err)
 	}
@@ -219,9 +224,10 @@ func (m *executionProxyImplementation) SaveAsChild(
 	}
 
 	// Register result of the outgoing method
-	outgoingReqRef := insolar.NewReference(outReqInfo.RequestID)
+	outgoingReqRef := *getRequestReference(outReqInfo)
+
 	var incoming *record.IncomingRequest
-	rep.Reference, rep.Result, incoming, err = m.outgoingSender.SendOutgoingRequest(ctx, *outgoingReqRef, outgoing)
+	rep.Reference, rep.Result, incoming, err = m.outgoingSender.SendOutgoingRequest(ctx, outgoingReqRef, outgoing)
 	if incoming != nil {
 		current.AddOutgoingRequest(ctx, *incoming, rep.Result, nil, err)
 	}
@@ -283,9 +289,7 @@ func (m *validationProxyImplementation) RouteCall(
 		return reqRes.Error
 	}
 
-	if req.Wait {
-		rep.Result = reqRes.Response
-	}
+	rep.Result = reqRes.Response
 
 	return nil
 }
@@ -331,7 +335,8 @@ func buildIncomingRequestFromOutgoing(outgoing *record.OutgoingRequest) *record.
 		CallerPrototype: outgoing.CallerPrototype,
 		Nonce:           outgoing.Nonce,
 
-		Immutable: outgoing.Immutable,
+		Immutable:  outgoing.Immutable,
+		ReturnMode: outgoing.ReturnMode,
 
 		CallType:  outgoing.CallType, // used only for CTSaveAsChild
 		Base:      outgoing.Base,     // used only for CTSaveAsChild
@@ -342,14 +347,6 @@ func buildIncomingRequestFromOutgoing(outgoing *record.OutgoingRequest) *record.
 
 		APIRequestID: outgoing.APIRequestID,
 		Reason:       outgoing.Reason,
-	}
-
-	if outgoing.ReturnMode == record.ReturnSaga {
-		// We never wait for a result of saga call
-		incoming.ReturnMode = record.ReturnNoWait
-	} else {
-		// If this is not a saga call just copy the ReturnMode
-		incoming.ReturnMode = outgoing.ReturnMode
 	}
 
 	return &incoming
@@ -381,8 +378,6 @@ func buildOutgoingRequest(
 		// OutgoingRequest with ReturnMode = ReturnSaga will be called by LME
 		// when current object finishes the execution and validation.
 		outgoing.ReturnMode = record.ReturnSaga
-	} else if !req.Wait {
-		outgoing.ReturnMode = record.ReturnNoWait
 	}
 
 	return outgoing

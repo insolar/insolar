@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
@@ -29,6 +30,8 @@ import (
 
 type PassState struct {
 	message payload.Meta
+	stateID insolar.ID
+	origin  payload.Meta
 
 	dep struct {
 		sender  bus.Sender
@@ -36,9 +39,11 @@ type PassState struct {
 	}
 }
 
-func NewPassState(meta payload.Meta) *PassState {
+func NewPassState(meta payload.Meta, stateID insolar.ID, origin payload.Meta) *PassState {
 	return &PassState{
 		message: meta,
+		stateID: stateID,
+		origin:  origin,
 	}
 }
 
@@ -51,62 +56,60 @@ func (p *PassState) Dep(
 }
 
 func (p *PassState) Proceed(ctx context.Context) error {
-	pass := payload.PassState{}
-	err := pass.Unmarshal(p.message.Payload)
-	if err != nil {
-		return errors.Wrap(err, "failed to decode PassState payload")
-	}
 
-	origin := payload.Meta{}
-	err = origin.Unmarshal(pass.Origin)
-	if err != nil {
-		return errors.Wrap(err, "failed to decode origin message")
-	}
-
-	rec, err := p.dep.records.ForID(ctx, pass.StateID)
-	if err == object.ErrNotFound {
-		msg, err := payload.NewMessage(&payload.Error{Text: "no such state"})
+	sendError := func(text string, code uint32) error {
+		// Replying to origin
+		msg, err := payload.NewMessage(&payload.Error{
+			Text: text,
+			Code: code,
+		})
 		if err != nil {
 			return errors.Wrap(err, "failed to create reply")
 		}
+		p.dep.sender.Reply(ctx, p.origin, msg)
 
-		p.dep.sender.Reply(ctx, origin, msg)
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-
-	virtual := rec.Virtual
-	concrete := record.Unwrap(&virtual)
-	state, ok := concrete.(record.State)
-	if !ok {
-		return fmt.Errorf("invalid object record %#v", virtual)
+		// Replying to passer
+		return &payload.CodedError{
+			Text: text,
+			Code: code,
+		}
 	}
 
-	if state.ID() == record.StateDeactivation {
-		msg, err := payload.NewMessage(&payload.Error{Text: "object is deactivated", Code: payload.CodeDeactivated})
+	sendObject := func(rec record.Material, origin payload.Meta) error {
+		virtual := rec.Virtual
+		concrete := record.Unwrap(&virtual)
+		state, ok := concrete.(record.State)
+		if !ok {
+			return fmt.Errorf("invalid object record %#v", virtual)
+		}
+
+		if state.ID() == record.StateDeactivation {
+			return sendError("object is deactivated", payload.CodeDeactivated)
+		}
+
+		buf, err := rec.Marshal()
 		if err != nil {
-			return errors.Wrap(err, "failed to create reply")
+			return errors.Wrap(err, "failed to marshal state record")
+		}
+		msg, err := payload.NewMessage(&payload.State{
+			Record: buf,
+		})
+		if err != nil {
+			return errors.Wrap(err, "failed to create message")
 		}
 
 		p.dep.sender.Reply(ctx, origin, msg)
+
 		return nil
 	}
 
-	buf, err := rec.Marshal()
-	if err != nil {
-		return errors.Wrap(err, "failed to marshal state record")
+	rec, err := p.dep.records.ForID(ctx, p.stateID)
+	switch err {
+	case nil:
+		return sendObject(rec, p.origin)
+	case object.ErrNotFound:
+		return sendError("state not found", payload.CodeNotFound)
+	default:
+		return errors.Wrap(err, "failed to fetch object state")
 	}
-	msg, err := payload.NewMessage(&payload.State{
-		Record: buf,
-		Memory: state.GetMemory(),
-	})
-	if err != nil {
-		return errors.Wrap(err, "failed to create message")
-	}
-
-	p.dep.sender.Reply(ctx, origin, msg)
-
-	return nil
 }

@@ -22,9 +22,16 @@ import (
 )
 
 var (
+	statJets           = stats.Int64("heavy_jets", "jets counter", stats.UnitDimensionless)
 	statFinalizedPulse = stats.Int64(
 		"heavy_finalized_pulse",
 		"last pulse with fully finalized data",
+		stats.UnitDimensionless,
+	)
+
+	statAbandonedRequests = stats.Int64(
+		"requests_abandoned",
+		"Amount of abandoned requests on heavy",
 		stats.UnitDimensionless,
 	)
 )
@@ -36,6 +43,18 @@ func init() {
 			Description: statFinalizedPulse.Description(),
 			Measure:     statFinalizedPulse,
 			Aggregation: view.LastValue(),
+		},
+		&view.View{
+			Name:        "heavy_jets_counter",
+			Description: "how many jets on start of pulse",
+			Measure:     statJets,
+			Aggregation: view.LastValue(),
+		},
+		&view.View{
+			Name:        statAbandonedRequests.Name(),
+			Description: statAbandonedRequests.Description(),
+			Measure:     statAbandonedRequests,
+			Aggregation: view.Count(),
 		},
 	)
 	if err != nil {

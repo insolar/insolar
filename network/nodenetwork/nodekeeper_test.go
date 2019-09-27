@@ -52,7 +52,7 @@ package nodenetwork
 
 import (
 	"crypto"
-	"crypto/rand"
+	"github.com/insolar/insolar/network/storage"
 	"testing"
 
 	"github.com/insolar/insolar/configuration"
@@ -97,6 +97,7 @@ func newNodeKeeper(t *testing.T, service insolar.CryptographyService) network.No
 	certMock.GetDiscoveryNodesMock.Set(func() []insolar.DiscoveryNode { return nil })
 	nw, err := NewNodeNetwork(cfg, certMock)
 	require.NoError(t, err)
+	nw.(*nodekeeper).SnapshotStorage = storage.NewMemoryStorage()
 	return nw.(network.NodeKeeper)
 }
 
@@ -106,12 +107,4 @@ func TestNewNodeKeeper(t *testing.T) {
 	assert.NotNil(t, origin)
 	nk.SetInitialSnapshot([]insolar.NetworkNode{origin})
 	assert.NotNil(t, nk.GetAccessor(insolar.GenesisPulse.PulseNumber))
-}
-
-func TestNodekeeper_GetCloudHash(t *testing.T) {
-	nk := newNodeKeeper(t, nil)
-	cloudHash := make([]byte, 64)
-	_, _ = rand.Read(cloudHash)
-	nk.SetCloudHash(0, cloudHash)
-	assert.Equal(t, cloudHash, nk.GetCloudHash(0))
 }

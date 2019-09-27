@@ -52,11 +52,15 @@ package pulsenetwork
 
 import (
 	"context"
+	"fmt"
+	"net"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
 	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/insolar/pulse"
@@ -66,13 +70,11 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/metrics"
-	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/hostnetwork/future"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
-	"github.com/insolar/insolar/network/hostnetwork/pool"
 	"github.com/insolar/insolar/network/sequence"
 	"github.com/insolar/insolar/network/transport"
 )
@@ -89,7 +91,6 @@ type distributor struct {
 	bootstrapHosts  []string
 	futureManager   future.Manager
 	responseHandler future.PacketHandler
-	pool            pool.ConnectionPool
 }
 
 // NewDistributor creates a new distributor object of pulses
@@ -118,7 +119,6 @@ func (d *distributor) Init(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "Failed to create transport")
 	}
-	d.pool = pool.NewConnectionPool(d.transport)
 
 	return nil
 }
@@ -163,48 +163,46 @@ func (d *distributor) Distribute(ctx context.Context, pulse insolar.Pulse) {
 	)
 	defer span.End()
 
-	// TODO: Move to config reader
-	bootstrapHosts := make([]*host.Host, 0, len(d.bootstrapHosts))
-	for _, node := range d.bootstrapHosts {
-		bootstrapHost, err := host.NewHost(node)
-		if err != nil {
-			logger.Warn(err, "failed to create bootstrap node host")
-			continue
-		}
-		bootstrapHosts = append(bootstrapHosts, bootstrapHost)
-	}
-
-	if len(bootstrapHosts) == 0 {
-		logger.Warn("No bootstrap hosts to distribute")
-		return
-	}
-
-	d.pool.Reset()
-
 	wg := sync.WaitGroup{}
-	wg.Add(len(bootstrapHosts))
+	wg.Add(len(d.bootstrapHosts))
 
-	for _, bootstrapHost := range bootstrapHosts {
-		go func(ctx context.Context, pulse insolar.Pulse, bootstrapHost *host.Host) {
+	distributed := int32(0)
+	for _, nodeAddr := range d.bootstrapHosts {
+		go func(ctx context.Context, pulse insolar.Pulse, nodeAddr string) {
 			defer wg.Done()
 
-			err := d.sendPulseToHost(ctx, &pulse, bootstrapHost)
+			addr, err := net.ResolveTCPAddr("tcp", nodeAddr)
 			if err != nil {
-				logger.Warnf("Failed to send pulse %d to host: %s %s", pulse.PulseNumber, bootstrapHost.Address.String(), err)
+				logger.Warnf("failed to resolve bootstrap node address %s, %s", nodeAddr, err.Error())
 				return
 			}
-			logger.Infof("Successfully sent pulse %d to node %s", pulse.PulseNumber, bootstrapHost)
-		}(ctx, pulse, bootstrapHost)
+
+			err = d.sendPulseToHost(ctx, &pulse, addr)
+			if err != nil {
+				stats.Record(ctx, statSendPulseErrorsCount.M(1))
+				logger.Warnf("Failed to send pulse %d to host: %s %s", pulse.PulseNumber, nodeAddr, err)
+				return
+			}
+
+			atomic.AddInt32(&distributed, 1)
+			logger.Infof("Successfully sent pulse %d to node %s", pulse.PulseNumber, nodeAddr)
+		}(ctx, pulse, nodeAddr)
+	}
+	wg.Wait()
+
+	if distributed == 0 {
+		logger.Warn("No bootstrap hosts to distribute")
+	} else {
+		logger.Infof("Pulse distributed to %d hosts", distributed)
 	}
 
-	wg.Wait()
 }
 
 func (d *distributor) generateID() types.RequestID {
 	return types.RequestID(d.idGenerator.Generate())
 }
 
-func (d *distributor) sendPulseToHost(ctx context.Context, p *insolar.Pulse, host *host.Host) error {
+func (d *distributor) sendPulseToHost(ctx context.Context, p *insolar.Pulse, host *net.TCPAddr) error {
 	logger := inslogger.FromContext(ctx)
 	defer func() {
 		if x := recover(); x != nil {
@@ -217,27 +215,43 @@ func (d *distributor) sendPulseToHost(ctx context.Context, p *insolar.Pulse, hos
 
 	pulseRequest := NewPulsePacketWithTrace(ctx, p, d.pulsarHost, host, uint64(d.generateID()))
 
-	_, err := d.sendRequestToHost(ctx, pulseRequest, host)
+	err := d.sendRequestToHost(ctx, pulseRequest, host)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (d *distributor) sendRequestToHost(ctx context.Context, packet *packet.Packet, receiver *host.Host) (network.Future, error) {
+func (d *distributor) sendRequestToHost(ctx context.Context, p *packet.Packet, receiver fmt.Stringer) error {
+	rcv := receiver.String()
 	inslogger.FromContext(ctx).Debugf("Send %s request to %s with RequestID = %d",
-		packet.GetType(), receiver.String(), packet.GetRequestID())
+		p.GetType(), rcv, p.GetRequestID())
 
-	err := hostnetwork.SendPacket(ctx, d.pool, packet)
+	data, err := packet.SerializePacket(p)
 	if err != nil {
-		return nil, errors.Wrap(err, "Failed to send transport packet")
+		return errors.Wrap(err, "Failed to serialize packet")
 	}
-	metrics.NetworkPacketSentTotal.WithLabelValues(packet.GetType().String()).Inc()
-	return nil, nil
+
+	conn, err := d.transport.Dial(ctx, rcv)
+	if err != nil {
+		return errors.Wrap(err, "Unable to connect")
+	}
+	defer conn.Close() //nolint
+
+	n, err := conn.Write(data)
+	if err != nil {
+		return errors.Wrap(err, "[ SendPacket ] Failed to write data")
+	}
+
+	metrics.NetworkSentSize.Observe(float64(n))
+	metrics.NetworkPacketSentTotal.WithLabelValues(p.GetType().String()).Inc()
+
+	return nil
 }
 
-func NewPulsePacket(p *insolar.Pulse, pulsarHost, to *host.Host, id uint64) *packet.Packet {
-	pulseRequest := packet.NewPacket(pulsarHost, to, types.Pulse, id)
+func NewPulsePacket(p *insolar.Pulse, pulsarHost *host.Host, to *net.TCPAddr, id uint64) *packet.Packet {
+	rcv := host.Host{Address: &host.Address{net.UDPAddr{IP: to.IP, Port: to.Port, Zone: to.Zone}}} //nolint
+	pulseRequest := packet.NewPacket(pulsarHost, &rcv, types.Pulse, id)
 	request := &packet.PulseRequest{
 		Pulse: pulse.ToProto(p),
 	}
@@ -245,7 +259,7 @@ func NewPulsePacket(p *insolar.Pulse, pulsarHost, to *host.Host, id uint64) *pac
 	return pulseRequest
 }
 
-func NewPulsePacketWithTrace(ctx context.Context, p *insolar.Pulse, pulsarHost, to *host.Host, id uint64) *packet.Packet {
+func NewPulsePacketWithTrace(ctx context.Context, p *insolar.Pulse, pulsarHost *host.Host, to *net.TCPAddr, id uint64) *packet.Packet {
 	pulsePacket := NewPulsePacket(p, pulsarHost, to, id)
 	pulsePacket.TraceSpanData = instracer.MustSerialize(ctx)
 	return pulsePacket

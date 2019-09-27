@@ -26,12 +26,16 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
 
+	"github.com/insolar/insolar/contractrequester/metrics"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/api"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/bus/meta"
 	busMeta "github.com/insolar/insolar/insolar/bus/meta"
+	"github.com/insolar/insolar/insolar/flow"
+	"github.com/insolar/insolar/insolar/flow/dispatcher"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
@@ -39,20 +43,23 @@ import (
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
 )
 
 // ContractRequester helps to call contracts
 type ContractRequester struct {
-	Sender                     bus.Sender                         `inject:""`
-	PulseAccessor              pulse.Accessor                     `inject:""`
-	JetCoordinator             jet.Coordinator                    `inject:""`
-	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
+	Sender                     bus.Sender
+	PulseAccessor              pulse.Accessor
+	JetCoordinator             jet.Coordinator
+	PlatformCryptographyScheme insolar.PlatformCryptographyScheme
 
 	// TODO: remove this hack in INS-3341
 	// we need ResultMatcher, not Logicrunner
 	LR insolar.LogicRunner
+
+	FlowDispatcher dispatcher.Dispatcher
 
 	ResultMutex sync.Mutex
 	ResultMap   map[[insolar.RecordHashSize]byte]chan *payload.ReturnResults
@@ -63,11 +70,38 @@ type ContractRequester struct {
 }
 
 // New creates new ContractRequester
-func New() (*ContractRequester, error) {
-	return &ContractRequester{
+func New(
+	sender bus.Sender,
+	pulses pulse.Accessor,
+	jetCoordinator jet.Coordinator,
+	pcs insolar.PlatformCryptographyScheme,
+) (*ContractRequester, error) {
+	cr := &ContractRequester{
 		ResultMap:   make(map[[insolar.RecordHashSize]byte]chan *payload.ReturnResults),
 		callTimeout: 25 * time.Second,
-	}, nil
+
+		Sender:                     sender,
+		PulseAccessor:              pulses,
+		JetCoordinator:             jetCoordinator,
+		PlatformCryptographyScheme: pcs,
+	}
+
+	handle := func(msg *message.Message) *handleResults {
+		return &handleResults{
+			cr:      cr,
+			Message: msg,
+		}
+	}
+
+	cr.FlowDispatcher = dispatcher.NewDispatcher(cr.PulseAccessor,
+		func(msg *message.Message) flow.Handle {
+			return handle(msg).Present
+		}, func(msg *message.Message) flow.Handle {
+			return handle(msg).Future
+		}, func(msg *message.Message) flow.Handle {
+			return handle(msg).Past
+		})
+	return cr, nil
 }
 
 func randomUint64() uint64 {
@@ -80,24 +114,16 @@ func randomUint64() uint64 {
 	return binary.LittleEndian.Uint64(buf)
 }
 
-// SendRequest makes synchronously call to method of contract by its ref without additional information
-func (cr *ContractRequester) SendRequest(ctx context.Context, ref *insolar.Reference, method string, argsIn []interface{}) (insolar.Reply, error) {
-	pulse, err := cr.PulseAccessor.Latest(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ ContractRequester::SendRequest ] Couldn't fetch current pulse")
-	}
+func (cr *ContractRequester) Call(
+	ctx context.Context, ref *insolar.Reference, method string, argsIn []interface{}, pulse insolar.PulseNumber,
+) (insolar.Reply, *insolar.Reference, error) {
 
-	r, _, err := cr.SendRequestWithPulse(ctx, ref, method, argsIn, pulse.PulseNumber)
-	return r, err
-}
-
-func (cr *ContractRequester) SendRequestWithPulse(ctx context.Context, ref *insolar.Reference, method string, argsIn []interface{}, pulse insolar.PulseNumber) (insolar.Reply, *insolar.Reference, error) {
-	ctx, span := instracer.StartSpan(ctx, "SendRequest "+method)
+	ctx, span := instracer.StartSpan(ctx, "Call "+method)
 	defer span.End()
 
 	args, err := insolar.Serialize(argsIn)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "[ ContractRequester::SendRequest ] Can't marshal")
+		return nil, nil, errors.Wrap(err, "[ ContractRequester::Call ] Can't marshal")
 	}
 
 	msg := &payload.CallMethod{
@@ -106,15 +132,27 @@ func (cr *ContractRequester) SendRequestWithPulse(ctx context.Context, ref *inso
 			Method:       method,
 			Arguments:    args,
 			APIRequestID: utils.TraceID(ctx),
-			Reason:       api.MakeReason(pulse, args),
 			APINode:      cr.JetCoordinator.Me(),
+			Reason:       api.MakeReason(pulse, args),
+			Immutable:    true,
 		},
 	}
 
-	routResult, ref, err := cr.Call(ctx, msg)
+	logger := inslogger.FromContext(ctx)
+	// Do not change this log! It is used for message type statistics.
+	logger.WithFields(map[string]interface{}{
+		"stat_type": "cr_call_started",
+	}).Info("stat_log_message")
+
+	routResult, ref, err := cr.SendRequest(ctx, msg)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "[ ContractRequester::SendRequest ] Can't route call")
+		return nil, ref, errors.Wrap(err, "[ ContractRequester::Call ] Can't route call")
 	}
+
+	// Do not change this log! It is used for message type statistics.
+	logger.WithFields(map[string]interface{}{
+		"stat_type": "cr_call_returned",
+	}).Info("stat_log_message")
 
 	return routResult, ref, nil
 }
@@ -163,16 +201,29 @@ func (cr *ContractRequester) createResultWaiter(
 	return ch, reqHash, nil
 }
 
-func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Payload) (insolar.Reply, *insolar.Reference, error) {
+func (cr *ContractRequester) SendRequest(ctx context.Context, inMsg insolar.Payload) (insolar.Reply, *insolar.Reference, error) {
 	msg := inMsg.(*payload.CallMethod)
+	sendingStarted := time.Now()
+	ctx = insmetrics.InsertTag(ctx, metrics.CallMethodName, msg.Request.Method)
+	ctx = insmetrics.InsertTag(ctx, metrics.CallReturnMode, msg.Request.ReturnMode.String())
+	ctx, span := instracer.StartSpan(ctx, "ContractRequester.SendRequest")
+	defer func(ctx context.Context) {
+		stats.Record(ctx,
+			metrics.SendMessageTiming.M(float64(time.Since(sendingStarted).Nanoseconds())/1e6))
+		span.End()
+	}(ctx)
 
-	ctx, span := instracer.StartSpan(ctx, "ContractRequester.Call")
-	defer span.End()
-
-	async := msg.Request.ReturnMode == record.ReturnNoWait
+	async := msg.Request.ReturnMode == record.ReturnSaga
 
 	if msg.Request.Nonce == 0 {
 		msg.Request.Nonce = randomUint64()
+	}
+	if msg.PulseNumber == 0 {
+		pulseObject, err := cr.PulseAccessor.Latest(ctx)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "failed to get latest pulse")
+		}
+		msg.PulseNumber = pulseObject.PulseNumber
 	}
 
 	logger := inslogger.FromContext(ctx)
@@ -268,7 +319,7 @@ func (cr *ContractRequester) handleRegisterResult(ctx context.Context, r *reply.
 		return r, &r.Request, nil
 	}
 
-	if !bytes.Equal(r.Request.Record().Hash(), reqHash[:]) {
+	if !bytes.Equal(r.Request.GetLocal().Hash(), reqHash[:]) {
 		return nil, &r.Request, errors.New("Registered request has different hash")
 	}
 
@@ -303,10 +354,10 @@ func (cr *ContractRequester) result(ctx context.Context, msg *payload.ReturnResu
 	defer cr.ResultMutex.Unlock()
 
 	var reqHash [insolar.RecordHashSize]byte
-	copy(reqHash[:], msg.RequestRef.Record().Hash())
+	copy(reqHash[:], msg.RequestRef.GetLocal().Hash())
 	c, ok := cr.ResultMap[reqHash]
 	if !ok {
-		inslogger.FromContext(ctx).Info("unwanted results of request ", msg.RequestRef.String())
+		inslogger.FromContext(ctx).Info("unwanted results of request ", msg.RequestRef.String(), "error ", msg.Error)
 		if cr.LR != nil {
 			return cr.LR.AddUnwantedResponse(ctx, msg)
 		}
@@ -319,13 +370,11 @@ func (cr *ContractRequester) result(ctx context.Context, msg *payload.ReturnResu
 	return nil
 }
 
-func (cr *ContractRequester) ReceiveResult(msg *message.Message) error {
+func (cr *ContractRequester) ReceiveResult(ctx context.Context, msg *message.Message) error {
 	if msg == nil {
 		log.Error("can't deserialize payload of nil message")
 		return nil
 	}
-
-	ctx := inslogger.ContextWithTrace(context.Background(), msg.Metadata.Get(busMeta.TraceID))
 
 	parentSpan, err := instracer.Deserialize([]byte(msg.Metadata.Get(busMeta.SpanData)))
 	if err == nil {
@@ -341,13 +390,27 @@ func (cr *ContractRequester) ReceiveResult(msg *message.Message) error {
 		ctx, _ = inslogger.WithField(ctx, k, v)
 	}
 
-	meta := payload.Meta{}
-	err = meta.Unmarshal(msg.Payload)
+	payloadMeta := &payload.Meta{}
+	err = payloadMeta.Unmarshal(msg.Payload)
 	if err != nil {
+		stats.Record(ctx, metrics.HandlingParsingError.M(1))
 		return err
 	}
 
-	payloadType, err := payload.UnmarshalType(meta.Payload)
+	err = cr.handleMessage(ctx, payloadMeta)
+	if err != nil {
+		bus.ReplyError(ctx, cr.Sender, *payloadMeta, err)
+		ctx = insmetrics.InsertTag(ctx, metrics.TagFinishedWithError, errors.Cause(err).Error())
+	} else {
+		cr.Sender.Reply(ctx, *payloadMeta, bus.ReplyAsMessage(ctx, &reply.OK{}))
+	}
+	stats.Record(ctx, metrics.HandleFinished.M(1))
+
+	return err
+}
+
+func (cr *ContractRequester) handleMessage(ctx context.Context, payloadMeta *payload.Meta) error {
+	payloadType, err := payload.UnmarshalType(payloadMeta.Payload)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal payload type")
 	}
@@ -361,7 +424,7 @@ func (cr *ContractRequester) ReceiveResult(msg *message.Message) error {
 	}
 
 	res := payload.ReturnResults{}
-	err = res.Unmarshal(meta.Payload)
+	err = res.Unmarshal(payloadMeta.Payload)
 	if err != nil {
 		return errors.Wrap(err, "failed to unmarshal payload.ReturnResults")
 	}

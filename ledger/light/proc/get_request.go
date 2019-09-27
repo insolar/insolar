@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
@@ -33,7 +34,7 @@ import (
 type GetRequest struct {
 	message             payload.Meta
 	objectID, requestID insolar.ID
-	passed              bool
+	pass                bool
 
 	dep struct {
 		records     object.RecordAccessor
@@ -43,12 +44,12 @@ type GetRequest struct {
 	}
 }
 
-func NewGetRequest(msg payload.Meta, objectID, requestID insolar.ID, passed bool) *GetRequest {
+func NewGetRequest(msg payload.Meta, objectID, requestID insolar.ID, pass bool) *GetRequest {
 	return &GetRequest{
 		requestID: requestID,
 		objectID:  objectID,
 		message:   msg,
-		passed:    passed,
+		pass:      pass,
 	}
 }
 
@@ -118,6 +119,19 @@ func (p *GetRequest) Proceed(ctx context.Context) error {
 				return errors.Wrap(err, "failed to calculate role")
 			}
 			node = *l
+
+			inslogger.FromContext(ctx).Warn("virtual node missed jet")
+
+			// Send calculated jet to virtual node.
+			updateMsg, err := payload.NewMessage(&payload.UpdateJet{
+				Pulse: p.requestID.Pulse(),
+				JetID: insolar.JetID(*jetID),
+			})
+			if err != nil {
+				return errors.Wrap(err, "failed to create jet message")
+			}
+			_, done := p.dep.sender.SendTarget(ctx, updateMsg, p.message.Sender)
+			done()
 		}
 
 		_, done := p.dep.sender.SendTarget(ctx, msg, node)
@@ -131,20 +145,14 @@ func (p *GetRequest) Proceed(ctx context.Context) error {
 		return sendRequest(rec)
 
 	case object.ErrNotFound:
-		if !p.passed {
+		if p.pass {
 			return sendPassRequest()
 		}
 
-		msg, err := payload.NewMessage(&payload.Error{
+		return &payload.CodedError{
 			Text: "request not found",
 			Code: payload.CodeNotFound,
-		})
-		if err != nil {
-			return errors.Wrap(err, "failed to create reply")
 		}
-
-		p.dep.sender.Reply(ctx, p.message, msg)
-		return nil
 
 	default:
 		return errors.Wrap(err, "failed to fetch record")
