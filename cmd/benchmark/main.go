@@ -390,7 +390,7 @@ func main() {
 		feeMemberRef := insSDK.GetFeeMember().GetReference()
 		migrationAdminRef := insSDK.GetMigrationAdminMember().GetReference()
 		for _, m := range commonMembers {
-			if checkAllBalance {
+			if checkMembersBalance {
 				if m.GetReference() == feeMemberRef {
 					continue
 				}
