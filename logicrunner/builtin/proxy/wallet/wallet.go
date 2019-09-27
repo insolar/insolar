@@ -20,6 +20,8 @@
 package wallet
 
 import (
+	"fmt"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/logicrunner/common"
@@ -190,6 +192,9 @@ func (r *Wallet) GetAccount(assetName string) (*insolar.Reference, error) {
 	if err != nil {
 		return ret0, err
 	}
+	fmt.Println("love xoxo resultContainer - ", resultContainer)
+	fmt.Println("love xoxo ret - ", ret)
+	fmt.Println("love xoxo ret0 - ", ret0)
 	if resultContainer.Error != nil {
 		err = resultContainer.Error
 		return ret0, err
