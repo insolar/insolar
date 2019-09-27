@@ -222,7 +222,6 @@ type LogLevelGetter interface {
 }
 
 type LogObjectWriter interface {
-	AddStructFields(s interface{})
 	AddFieldMap(map[string]interface{})
 	AddField(key string, v interface{})
 	AddRawJSON(key string, b []byte)
