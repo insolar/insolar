@@ -948,3 +948,51 @@ func Test_SetRequest_NoObjectReturnsError(t *testing.T) {
 		RequireErrorCode(rep, payload.CodeNotFound)
 	})
 }
+
+func Test_SetRequest_LoopDetected(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+	s, err := NewServer(ctx, DefaultLightConfig(), nil)
+	require.NoError(t, err)
+
+	s.SetPulse(ctx)
+
+	t.Run("two requests with the same APIRequest trigger loop detection", func(t *testing.T) {
+		msg, _ := MakeSetIncomingRequest(
+			gen.ID(),
+			gen.IDWithPulse(s.Pulse()),
+			insolar.ID{},
+			true,
+			true,
+			"object",
+		)
+		rep := SendMessage(ctx, s, &msg)
+		RequireNotError(rep)
+		objectID := rep.(*payload.RequestInfo).RequestID
+
+		s.SetPulse(ctx)
+
+		msg, _ = MakeSetIncomingRequest(
+			objectID,
+			gen.IDWithPulse(s.Pulse()),
+			insolar.ID{},
+			false,
+			true,
+			"same request",
+		)
+		rep = SendMessage(ctx, s, &msg)
+		RequireNotError(rep)
+
+		msg, _ = MakeSetIncomingRequest(
+			objectID,
+			gen.IDWithPulse(s.Pulse()),
+			insolar.ID{},
+			false,
+			true,
+			"same request",
+		)
+		rep = SendMessage(ctx, s, &msg)
+		RequireErrorCode(rep, payload.CodeLoopDetected)
+	})
+}
