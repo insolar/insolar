@@ -47,6 +47,7 @@ type HotObjects struct {
 	indexes                []record.Index
 	pulse                  insolar.PulseNumber
 	availableNotifications uint
+	oldestRequestPulse     insolar.PulseNumber
 
 	dep struct {
 		drops       drop.Modifier
@@ -149,7 +150,13 @@ func (p *HotObjects) Proceed(ctx context.Context) error {
 		logger.Debugf("[handleHotRecords] lifeline with id - %v saved", idx.ObjID.DebugString())
 
 		p.notifyPending(ctx, idx.ObjID, idx.Lifeline, pendingNotifyPulse.PulseNumber)
+	}
 
+	if p.oldestRequestPulse != 0 {
+		pulseDiff := int64(p.pulse - p.oldestRequestPulse)
+		stats.Record(ctx, statAbandonedRequestAge.M(pulseDiff))
+	} else {
+		stats.Record(ctx, statAbandonedRequestAge.M(0))
 	}
 
 	logger.Infof("before releasing jetFetcher for jet %s and pulse %s", p.jetID.DebugString(), p.pulse)
@@ -204,17 +211,28 @@ func (p *HotObjects) notifyPending(
 		return
 	}
 
+	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+		"object":        objectID.String(),
+		"earliestPulse": *lifeline.EarliestOpenRequest,
+	})
+
 	if p.availableNotifications <= 0 {
-		inslogger.FromContext(ctx).Warn("out of AbandonedRequestsNotification limit")
+		logger.Warn("out of AbandonedRequestsNotification limit")
 		return
 	}
 	p.availableNotifications--
+
+	// This is needed for metrics: we collect the earliest requests pulse we got
+	if p.oldestRequestPulse > *lifeline.EarliestOpenRequest {
+		p.oldestRequestPulse = *lifeline.EarliestOpenRequest
+	}
+	logger.Debug("sending AbandonedRequestNotification")
 
 	msg, err := payload.NewMessage(&payload.AbandonedRequestsNotification{
 		ObjectID: objectID,
 	})
 	if err != nil {
-		inslogger.FromContext(ctx).Error("failed to notify about pending requests: ", err.Error())
+		logger.Error("failed to notify about pending requests: ", err.Error())
 		return
 	}
 
