@@ -335,7 +335,9 @@ func (z LoggerBuilder) prepareOutput(metrics *logmetrics.MetricsHelper, needsLow
 	if needsLowLatency {
 		return nil, errors.New("low latency buffer was disabled but is required")
 	}
-	return critlog.NewFatalDirectWriter(output), nil
+
+	fdw := critlog.NewFatalDirectWriter(output)
+	return fdw, nil
 }
 
 func (z LoggerBuilder) loggerMissedEvent(level insolar.LogLevel) critlog.MissedEventFunc {
