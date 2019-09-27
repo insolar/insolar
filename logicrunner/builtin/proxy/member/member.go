@@ -29,8 +29,8 @@ type CreateResponse struct {
 	Reference string `json:"reference"`
 }
 type GetBalanceResponse struct {
-	Balance  string                 `json:"balance"`
-	Deposits map[string]interface{} `json:"deposits"`
+	Balance  string        `json:"balance"`
+	Deposits []interface{} `json:"deposits"`
 }
 type GetResponse struct {
 	Reference        string `json:"reference"`

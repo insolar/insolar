@@ -23,13 +23,14 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // For better coverage of corner cases (pulse changing, messages from different pulses, etc)
@@ -177,6 +178,14 @@ func Test_IncomingRequest_Duplicate(t *testing.T) {
 		RequireNotError(rep)
 		reasonID := rep.(*payload.RequestInfo).RequestID
 
+		// Closing 2 request
+		{
+			resMsg, _ := MakeSetResult(objectID, objectID)
+			// Set result.
+			rep := SendMessage(ctx, s, &resMsg)
+			RequireNotError(rep)
+		}
+
 		s.SetPulse(ctx)
 
 		duplicate, _ := MakeSetOutgoingRequest(objectID, reasonID, false)
@@ -203,6 +212,7 @@ func Test_IncomingRequest_Duplicate(t *testing.T) {
 	})
 
 	t.Run("method request duplicate with result found", func(t *testing.T) {
+		// Creating root object.
 		msg, _ := MakeSetIncomingRequest(
 			gen.ID(),
 			gen.IDWithPulse(s.Pulse()),
@@ -217,6 +227,9 @@ func Test_IncomingRequest_Duplicate(t *testing.T) {
 
 		s.SetPulse(ctx)
 
+		_, _ = CallActivateObject(ctx, s, objectID)
+
+		// Creating another object.
 		msg, _ = MakeSetIncomingRequest(
 			objectID,
 			gen.IDWithPulse(s.Pulse()),
@@ -237,7 +250,7 @@ func Test_IncomingRequest_Duplicate(t *testing.T) {
 			false,
 		)
 
-		// Set first request.
+		// Set first request on second object.
 		rep = SendMessage(ctx, s, &requestMsg)
 		RequireNotError(rep)
 		require.Nil(t, rep.(*payload.RequestInfo).Request)
@@ -246,7 +259,7 @@ func Test_IncomingRequest_Duplicate(t *testing.T) {
 
 		s.SetPulse(ctx)
 
-		// Set result.
+		// Set result on second object..
 		resMsg, resultVirtual := MakeSetResult(objectID, requestID)
 		rep = SendMessage(ctx, s, &resMsg)
 		RequireNotError(rep)
@@ -366,6 +379,7 @@ func Test_DetachedRequest_notification(t *testing.T) {
 	s.SetPulse(ctx)
 
 	t.Run("detached notification sent on detached reason close", func(t *testing.T) {
+		// Creating root object.
 		msg, _ := MakeSetIncomingRequest(
 			gen.ID(),
 			gen.IDWithPulse(s.Pulse()),
@@ -377,6 +391,12 @@ func Test_DetachedRequest_notification(t *testing.T) {
 		rep := SendMessage(ctx, s, &msg)
 		RequireNotError(rep)
 		objectID := rep.(*payload.RequestInfo).ObjectID
+		rootReqID := rep.(*payload.RequestInfo).RequestID
+
+		// Set result - closing creation request for root object.
+		resMsg, _ := MakeSetResult(objectID, rootReqID)
+		rep = SendMessage(ctx, s, &resMsg)
+		RequireNotError(rep)
 
 		s.SetPulse(ctx)
 
@@ -400,7 +420,7 @@ func Test_DetachedRequest_notification(t *testing.T) {
 
 		s.SetPulse(ctx)
 
-		resMsg, _ := MakeSetResult(objectID, reasonID)
+		resMsg, _ = MakeSetResult(objectID, reasonID)
 		rep = SendMessage(ctx, s, &resMsg)
 		RequireNotError(rep)
 
@@ -538,7 +558,7 @@ func Test_IncomingRequest_ClosingWithOpenOutgoings(t *testing.T) {
 			resMsg, _ := MakeSetResult(objectID, reasonID)
 			// Set result.
 			rep := SendMessage(ctx, s, &resMsg)
-			RequireErrorCode(rep, payload.CodeNonClosedOutgoing)
+			RequireErrorCode(rep, payload.CodeRequestNonClosedOutgoing)
 		}
 	})
 }
@@ -561,9 +581,10 @@ func Test_IncomingRequest_ClosedReason_FromOtherObject(t *testing.T) {
 	// 		t.Run("happy concurrent", func(t *testing.T) {...})
 	t.Run("detached incoming request from another object on closed reason", func(t *testing.T) {
 		runner := func(t *testing.T) {
-			var objectID insolar.ID  // Root reason object.
-			var reasonID insolar.ID  // Root reason request.
-			var anotherID insolar.ID // Another object.
+			var creationID insolar.ID // Creation Request ID of root object.
+			var objectID insolar.ID   // Root reason object.
+			var reasonID insolar.ID   // Root reason request.
+			var anotherID insolar.ID  // Another object.
 
 			// Creating root reason object.
 			{
@@ -580,6 +601,16 @@ func Test_IncomingRequest_ClosedReason_FromOtherObject(t *testing.T) {
 				})
 				RequireNotError(rep)
 				objectID = rep.(*payload.RequestInfo).ObjectID
+				creationID = rep.(*payload.RequestInfo).RequestID
+			}
+
+			// Closing creation request of root object.
+			{
+				resMsg, _ := MakeSetResult(objectID, creationID)
+				rep := retryIfCancelled(func() payload.Payload {
+					return SendMessage(ctx, s, &resMsg)
+				})
+				RequireNotError(rep)
 			}
 
 			// Creating root reason request.
@@ -601,8 +632,11 @@ func Test_IncomingRequest_ClosedReason_FromOtherObject(t *testing.T) {
 
 			// Creating detached outgoing request
 			{
-				p, _ := CallSetOutgoingRequest(ctx, s, objectID, reasonID, true)
-				RequireNotError(p)
+				rep := retryIfCancelled(func() payload.Payload {
+					p, _ := CallSetOutgoingRequest(ctx, s, objectID, reasonID, true)
+					return p
+				})
+				RequireNotError(rep)
 			}
 
 			// Creating another object.
@@ -703,7 +737,7 @@ func Test_OutgoingRequest_ClosedReason(t *testing.T) {
 		{
 			pl, _ := MakeSetOutgoingRequest(reasonID, reasonID, false)
 			rep := SendMessage(ctx, s, &pl)
-			RequireErrorCode(rep, payload.CodeReasonNotFound)
+			RequireErrorCode(rep, payload.CodeReasonIsWrong)
 		}
 	})
 }
@@ -757,7 +791,7 @@ func Test_Requests_OutgoingReason(t *testing.T) {
 		{
 			msg, _ := MakeSetOutgoingRequest(rootID, reasonID, false)
 			rep := SendMessage(ctx, s, &msg)
-			RequireErrorCode(rep, payload.CodeReasonNotFound)
+			RequireErrorCode(rep, payload.CodeReasonIsWrong)
 		}
 	})
 }
@@ -798,7 +832,7 @@ func Test_OutgoingRequests_DifferentObjects(t *testing.T) {
 		{
 			pl, _ := MakeSetOutgoingRequest(rootID, rootID2, false)
 			rep := SendMessage(ctx, s, &pl)
-			RequireErrorCode(rep, payload.CodeReasonNotFound)
+			RequireErrorCode(rep, payload.CodeReasonIsWrong)
 		}
 	})
 }
@@ -900,6 +934,7 @@ func Test_IncomingRequest_DifferentResults(t *testing.T) {
 		}
 
 		s.SetPulse(ctx)
+
 		{
 			resMsg, _ := MakeSetResult(reasonID, reasonID)
 			rep := SendMessage(ctx, s, &resMsg)

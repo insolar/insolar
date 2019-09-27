@@ -277,6 +277,9 @@ func CalculateRequestAffinityRef(
 // ObjectIDFromRequest calculates object is from request. Passed hasher must be newly created.
 func ObjectIDFromRequest(hasher hash.Hash, request Request, requestID insolar.ID) (insolar.ID, error) {
 	if !request.IsCreationRequest() {
+		if request.AffinityRef() == nil {
+			return insolar.ID{}, errors.New("affinity ref is empty")
+		}
 		return *request.AffinityRef().GetLocal(), nil
 	}
 	virtual := Wrap(request)

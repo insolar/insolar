@@ -217,8 +217,8 @@ func (m *Member) registerNodeCall(params map[string]interface{}) (interface{}, e
 }
 
 type GetBalanceResponse struct {
-	Balance  string                 `json:"balance"`
-	Deposits map[string]interface{} `json:"deposits"`
+	Balance  string        `json:"balance"`
+	Deposits []interface{} `json:"deposits"`
 }
 
 func (m *Member) getBalanceCall(params map[string]interface{}) (interface{}, error) {

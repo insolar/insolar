@@ -46,6 +46,44 @@ type Deposit struct {
 	VestingStep             int64                  `json:"vestingStepInPulses"`
 }
 
+// Form of Deposit that is applied in API
+type DepositOut struct {
+	Balance                 string                 `json:"balance"`
+	PulseDepositUnHold      insolar.PulseNumber    `json:"holdReleaseDate"`
+	MigrationDaemonConfirms []DaemonConfirm        `json:"confirmerReferences"`
+	Amount                  string                 `json:"amount"`
+	TxHash                  string                 `json:"ethTxHash"`
+	VestingType             foundation.VestingType `json:"vestingType"`
+	MaturePulse             insolar.PulseNumber    `json:"maturePulse"`
+	Lockup                  int64                  `json:"lockupInPulses"`
+	Vesting                 int64                  `json:"vestingInPulses"`
+	VestingStep             int64                  `json:"vestingStepInPulses"`
+}
+
+type DaemonConfirm struct {
+	Reference string `json:"reference"`
+	Amount    string `json:"amount"`
+}
+
+func (d Deposit) toOut() DepositOut {
+	var daemonConfirms = make([]DaemonConfirm, 0, len(d.MigrationDaemonConfirms))
+	for k, v := range d.MigrationDaemonConfirms {
+		daemonConfirms = append(daemonConfirms, DaemonConfirm{Reference: k, Amount: v})
+	}
+	return DepositOut{
+		Balance:                 d.Balance,
+		PulseDepositUnHold:      d.PulseDepositUnHold,
+		MigrationDaemonConfirms: daemonConfirms,
+		Amount:                  d.Amount,
+		TxHash:                  d.TxHash,
+		VestingType:             d.VestingType,
+		MaturePulse:             d.MaturePulse,
+		Lockup:                  d.Lockup,
+		Vesting:                 d.Vesting,
+		VestingStep:             d.VestingStep,
+	}
+}
+
 // GetTxHash gets transaction hash.
 func (d *Deposit) GetTxHash() (string, error) {
 	return d.TxHash, nil
@@ -85,7 +123,7 @@ func New(migrationDaemonRef insolar.Reference, txHash string, amount string,
 // Itself gets deposit information.
 // ins:immutable
 func (d *Deposit) Itself() (interface{}, error) {
-	return &d, nil
+	return d.toOut(), nil
 }
 
 // Confirm adds confirm for deposit by migration daemon.
