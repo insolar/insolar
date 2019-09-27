@@ -478,6 +478,36 @@ func callConstructor(t testing.TB, prototypeRef *insolar.Reference, method strin
 	return objectRef
 }
 
+func callConstructorExpectSystemError(t testing.TB, prototypeRef *insolar.Reference, method string, args ...interface{}) string {
+	argsSerialized, err := insolar.Serialize(args)
+	require.NoError(t, err)
+
+	objectBody := getRPSResponseBody(t, launchnet.TestRPCUrl, postParams{
+		"jsonrpc": "2.0",
+		"method":  "funcTestContract.callConstructor",
+		"id":      "",
+		"params": map[string]interface{}{
+			"PrototypeRefString": prototypeRef.String(),
+			"Method":             method,
+			"MethodArgs":         argsSerialized,
+		},
+	})
+	require.NotEmpty(t, objectBody)
+
+	callConstructorRes := struct {
+		Version string              `json:"jsonrpc"`
+		ID      string              `json:"id"`
+		Result  api.CallMethodReply `json:"result"`
+		Error   json2.Error         `json:"error"`
+	}{}
+
+	err = json.Unmarshal(objectBody, &callConstructorRes)
+	require.NoError(t, err)
+	require.NotEmpty(t, callConstructorRes.Error)
+
+	return callConstructorRes.Error.Message
+}
+
 type callRes struct {
 	Version string              `json:"jsonrpc"`
 	ID      string              `json:"id"`
