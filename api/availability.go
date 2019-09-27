@@ -96,9 +96,9 @@ func (nc *NetworkChecker) updateAvailability(ctx context.Context) {
 		return
 	}
 
-	if resp != nil || resp.StatusCode != http.StatusOK {
+	if resp == nil || resp.StatusCode != http.StatusOK {
 		nc.isAvailable = false
-		logger.Error("[ NetworkChecker ] Can't get keeper status: no response or bad StatusCode")
+		logger.Error("[ NetworkChecker ] Can't get keeper status: no response or bad StatusCode: ", resp.StatusCode)
 		return
 	}
 
