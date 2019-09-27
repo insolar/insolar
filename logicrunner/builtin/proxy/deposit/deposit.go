@@ -25,6 +25,23 @@ import (
 	"github.com/insolar/insolar/logicrunner/common"
 )
 
+type DaemonConfirm struct {
+	Reference string `json:"reference"`
+	Amount    string `json:"amount"`
+}
+type DepositOut struct {
+	Balance                 string                 `json:"balance"`
+	PulseDepositUnHold      insolar.PulseNumber    `json:"holdReleaseDate"`
+	MigrationDaemonConfirms []DaemonConfirm        `json:"confirmerReferences"`
+	Amount                  string                 `json:"amount"`
+	TxHash                  string                 `json:"ethTxHash"`
+	VestingType             foundation.VestingType `json:"vestingType"`
+	MaturePulse             insolar.PulseNumber    `json:"maturePulse"`
+	Lockup                  int64                  `json:"lockupInPulses"`
+	Vesting                 int64                  `json:"vestingInPulses"`
+	VestingStep             int64                  `json:"vestingStepInPulses"`
+}
+
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
 var PrototypeReference, _ = insolar.NewReferenceFromBase58("0111A7ctasuNUug8BoK4VJNuAFJ73rnH8bH5zqd5HrDj")
