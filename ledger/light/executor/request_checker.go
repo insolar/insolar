@@ -91,7 +91,7 @@ func (c *RequestCheckerDefault) CheckRequest(ctx context.Context, requestID inso
 			if err != nil {
 				return errors.Wrap(err, "loop detection failed")
 			}
-			if hasAPIRequest(openedRequests, r.APIRequestID) {
+			if hasIncomingAPIRequest(openedRequests, r.APIRequestID) {
 				return &payload.CodedError{
 					Text: "request loop detected",
 					Code: payload.CodeLoopDetected,
@@ -349,14 +349,9 @@ func (c *RequestCheckerDefault) getRequestLocal(
 	return &reqInfo, nil
 }
 
-func hasAPIRequest(reqs []record.CompositeFilamentRecord, apiRequest string) bool {
+func hasIncomingAPIRequest(reqs []record.CompositeFilamentRecord, apiRequest string) bool {
 	for _, req := range reqs {
-		switch r := record.Unwrap(&req.Record.Virtual).(type) {
-		case *record.IncomingRequest:
-			if r.APIRequestID == apiRequest {
-				return true
-			}
-		case *record.OutgoingRequest:
+		if r, ok := record.Unwrap(&req.Record.Virtual).(*record.IncomingRequest); ok {
 			if r.APIRequestID == apiRequest {
 				return true
 			}
