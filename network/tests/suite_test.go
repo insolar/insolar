@@ -194,9 +194,11 @@ func (s *consensusSuite) Setup() {
 			bnodes = append(bnodes, o)
 		}
 		for _, n := range s.bootstrapNodes {
-			n.serviceNetwork.ConsensusMode = consensus.ReadyNetwork
+			n.serviceNetwork.BaseGateway.ConsensusMode = consensus.ReadyNetwork
 			n.serviceNetwork.NodeKeeper.SetInitialSnapshot(bnodes)
 			err := n.serviceNetwork.PulseAppender.AppendPulse(s.ctx, *insolar.GenesisPulse)
+			require.NoError(s.t, err)
+			err = n.serviceNetwork.BaseGateway.StartConsensus(s.ctx)
 			require.NoError(s.t, err)
 			n.serviceNetwork.Gatewayer.SwitchState(s.ctx, insolar.CompleteNetworkState, *insolar.GenesisPulse)
 			pulseReceivers = append(pulseReceivers, n.host)
@@ -280,7 +282,7 @@ func (s *testSuite) StartNodesNetwork(nodes []*networkNode) {
 	results := make(chan error, len(nodes))
 	startNode := func(node *networkNode) {
 		err := node.componentManager.Start(node.ctx)
-		node.serviceNetwork.RegisterConsensusFinishedNotifier(func(ctx context.Context, report network.Report) {
+		node.serviceNetwork.BaseGateway.ConsensusController.RegisterFinishedNotifier(func(ctx context.Context, report network.Report) {
 			node.consensusResult <- report.PulseNumber
 		})
 		results <- err
