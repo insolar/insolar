@@ -78,7 +78,7 @@ func (c *RequestCheckerDefault) CheckRequest(ctx context.Context, requestID inso
 		}
 	}
 
-	objectID, err := record.ObjectIDFromRequest(c.scheme.ReferenceHasher(), request, requestID)
+	objectID, err := record.ObjectIDFromRequest(c.scheme, request, requestID)
 	if err != nil {
 		return errors.Wrap(err, "failed to calculate object id")
 	}

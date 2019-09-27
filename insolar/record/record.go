@@ -19,8 +19,6 @@ package record
 import (
 	"github.com/insolar/insolar/insolar"
 
-	"hash"
-
 	"github.com/pkg/errors"
 )
 
@@ -274,8 +272,8 @@ func CalculateRequestAffinityRef(
 	return affinityRef
 }
 
-// ObjectIDFromRequest calculates object is from request. Passed hasher must be newly created.
-func ObjectIDFromRequest(hasher hash.Hash, request Request, requestID insolar.ID) (insolar.ID, error) {
+// ObjectIDFromRequest calculates object is from request.
+func ObjectIDFromRequest(cs insolar.PlatformCryptographyScheme, request Request, requestID insolar.ID) (insolar.ID, error) {
 	if !request.IsCreationRequest() {
 		if request.AffinityRef() == nil {
 			return insolar.ID{}, errors.New("affinity ref is empty")
@@ -287,6 +285,7 @@ func ObjectIDFromRequest(hasher hash.Hash, request Request, requestID insolar.ID
 	if err != nil {
 		return insolar.ID{}, err
 	}
+	hasher := cs.ReferenceHasher()
 	_, err = hasher.Write(buf)
 	if err != nil {
 		return insolar.ID{}, errors.Wrap(err, "failed to calculate id")
