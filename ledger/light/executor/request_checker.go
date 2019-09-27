@@ -78,10 +78,29 @@ func (c *RequestCheckerDefault) CheckRequest(ctx context.Context, requestID inso
 		}
 	}
 
+	objectID, err := record.ObjectIDFromRequest(c.scheme.ReferenceHasher(), request, requestID)
+	if err != nil {
+		return errors.Wrap(err, "failed to calculate object id")
+	}
+
 	switch r := request.(type) {
 	case *record.IncomingRequest:
+		// Check for request loops if not creation.
+		if !request.IsCreationRequest() {
+			openedRequests, err := c.filaments.OpenedRequests(ctx, requestID.Pulse(), objectID, false)
+			if err != nil {
+				return errors.Wrap(err, "loop detection failed")
+			}
+			if hasAPIRequest(openedRequests, r.APIRequestID) {
+				return &payload.CodedError{
+					Text: "request loop detected",
+					Code: payload.CodeLoopDetected,
+				}
+			}
+		}
+
 		if !r.IsAPIRequest() {
-			err := c.checkReasonForIncomingRequest(ctx, r, reasonID, requestID)
+			err := c.checkReasonForIncomingRequest(ctx, r, reasonID, requestID, objectID)
 			if err != nil {
 				return &payload.CodedError{
 					Text: err.Error(),
@@ -90,7 +109,7 @@ func (c *RequestCheckerDefault) CheckRequest(ctx context.Context, requestID inso
 			}
 		}
 	case *record.OutgoingRequest:
-		err := c.checkReasonForOutgoingRequest(ctx, r, reasonID, requestID)
+		err := c.checkReasonForOutgoingRequest(ctx, r, reasonID, requestID, objectID)
 		if err != nil {
 			return &payload.CodedError{
 				Text: err.Error(),
@@ -107,12 +126,13 @@ func (c *RequestCheckerDefault) checkReasonForOutgoingRequest(
 	outgoingRequest *record.OutgoingRequest,
 	reasonID insolar.ID,
 	requestID insolar.ID,
+	objectID insolar.ID,
 ) error {
 	// FIXME: replace with "FindRequest" calculator method.
 	requests, err := c.filaments.OpenedRequests(
 		ctx,
 		requestID.Pulse(),
-		*outgoingRequest.AffinityRef().GetLocal(),
+		objectID,
 		true,
 	)
 	if err != nil {
@@ -138,28 +158,8 @@ func (c *RequestCheckerDefault) checkReasonForIncomingRequest(
 	incomingRequest *record.IncomingRequest,
 	reasonID insolar.ID,
 	requestID insolar.ID,
+	objectID insolar.ID,
 ) error {
-	var objectID insolar.ID
-
-	if incomingRequest.IsCreationRequest() {
-		virt := record.Wrap(incomingRequest)
-		buf, err := virt.Marshal()
-		if err != nil {
-			return err
-		}
-
-		hasher := c.scheme.ReferenceHasher()
-
-		_, err = hasher.Write(buf)
-		if err != nil {
-			return errors.Wrap(err, "failed to calculate id")
-		}
-
-		objectID = *insolar.NewID(requestID.Pulse(), hasher.Sum(nil))
-	} else {
-		objectID = *incomingRequest.AffinityRef().GetLocal()
-	}
-
 	var (
 		reasonInfo *payload.RequestInfo
 		err        error
@@ -312,6 +312,22 @@ func findRecord(
 	for _, p := range filamentRecords {
 		if p.RecordID == requestID {
 			return true
+		}
+	}
+	return false
+}
+
+func hasAPIRequest(reqs []record.CompositeFilamentRecord, apiRequest string) bool {
+	for _, req := range reqs {
+		switch r := record.Unwrap(&req.Record.Virtual).(type) {
+		case *record.IncomingRequest:
+			if r.APIRequestID == apiRequest {
+				return true
+			}
+		case *record.OutgoingRequest:
+			if r.APIRequestID == apiRequest {
+				return true
+			}
 		}
 	}
 	return false

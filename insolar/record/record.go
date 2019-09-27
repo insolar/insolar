@@ -18,6 +18,9 @@ package record
 
 import (
 	"github.com/insolar/insolar/insolar"
+
+	"hash"
+
 	"github.com/pkg/errors"
 )
 
@@ -269,4 +272,21 @@ func CalculateRequestAffinityRef(
 		affinityRef = insolar.NewReference(*recID)
 	}
 	return affinityRef
+}
+
+// ObjectIDFromRequest calculates object is from request. Passed hasher must be newly created.
+func ObjectIDFromRequest(hasher hash.Hash, request Request, requestID insolar.ID) (insolar.ID, error) {
+	if !request.IsCreationRequest() {
+		return *request.AffinityRef().GetLocal(), nil
+	}
+	virtual := Wrap(request)
+	buf, err := virtual.Marshal()
+	if err != nil {
+		return insolar.ID{}, err
+	}
+	_, err = hasher.Write(buf)
+	if err != nil {
+		return insolar.ID{}, errors.Wrap(err, "failed to calculate id")
+	}
+	return *insolar.NewID(requestID.Pulse(), hasher.Sum(nil)), nil
 }
