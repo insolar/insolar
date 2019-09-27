@@ -14,26 +14,42 @@
 // limitations under the License.
 //
 
-package log
+package main
 
 import (
-	"bytes"
-	"testing"
-
-	"github.com/stretchr/testify/require"
+	"time"
 
 	"github.com/insolar/insolar/configuration"
 )
 
-func TestZeroLogAdapter_CallerInfo(t *testing.T) {
-	log, err := NewLog(configuration.Log{Level: "info", Adapter: "zerolog", Formatter: "json"})
-	require.NoError(t, err)
-	require.NotNil(t, log)
+type Config struct {
+	Log    configuration.Log
+	Keeper KeeperConfig
+}
 
-	var buf bytes.Buffer
-	log = log.WithOutput(&buf)
+func NewConfig() Config {
+	return Config{
+		Log:    configuration.NewLog(),
+		Keeper: NewKeeperConfig(),
+	}
+}
 
-	log.Error("test")
+type KeeperConfig struct {
+	ListenAddress string
+	FakeTrue      bool
+	PollPeriod    time.Duration
+	QueryURL      string
+	Queries       []string
+	MaxMetricLag  time.Duration
+}
 
-	require.Contains(t, buf.String(), "zerolog_test.go:36")
+func NewKeeperConfig() KeeperConfig {
+	return KeeperConfig{
+		ListenAddress: ":12012",
+		FakeTrue:      false,
+		PollPeriod:    5 * time.Second,
+		QueryURL:      "https://prometheus.insolar.io/api/v1/query?query=",
+		Queries:       make([]string, 0),
+		MaxMetricLag:  2 * time.Minute,
+	}
 }

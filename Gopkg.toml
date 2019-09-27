@@ -100,3 +100,7 @@ required = [
 [[constraint]]
   branch = "v1"
   name = "github.com/insolar/rpc"
+
+[[constraint]]
+  branch = "master"
+  name = "gonum.org/v1/gonum"

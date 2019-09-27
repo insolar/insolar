@@ -62,12 +62,6 @@ func TestTimeoutSuite(t *testing.T) {
 	userRef := gen.Reference().String()
 	user, err := requester.CreateUserConfig(userRef, string(sKeyString), string(pKeyString))
 
-	http.DefaultServeMux = new(http.ServeMux)
-	cfg := configuration.NewAPIRunner(false)
-	cfg.Address = "localhost:19192"
-	api, err := NewRunner(&cfg, nil, nil, nil, nil, nil, nil, nil, nil)
-	require.NoError(t, err)
-
 	cr := testutils.NewContractRequesterMock(mc)
 	cr.CallMock.Set(func(p context.Context, p1 *insolar.Reference, method string, p3 []interface{}, p4 insolar.PulseNumber) (insolar.Reply, *insolar.Reference, error) {
 		requestReference, _ := insolar.NewReferenceFromBase58("14K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.14FFB8zfQoGznSmzDxwv4njX1aR9ioL8GHSH17QXH2AFa")
@@ -83,8 +77,25 @@ func TestTimeoutSuite(t *testing.T) {
 		}
 	})
 
-	api.ContractRequester = cr
+	checker := testutils.NewAvailabilityCheckerMock(mc)
+	checker.IsAvailableMock.Return(true)
 
+	http.DefaultServeMux = new(http.ServeMux)
+	cfg := configuration.NewAPIRunner(false)
+	cfg.Address = "localhost:19192"
+	api, err := NewRunner(
+		&cfg,
+		nil,
+		cr,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		checker,
+	)
+	require.NoError(t, err)
 	seed, err := api.SeedGenerator.Next()
 	require.NoError(t, err)
 

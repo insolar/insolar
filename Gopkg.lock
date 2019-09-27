@@ -715,6 +715,31 @@
   revision = "b29f5f60c37a1dd56e6942c2717b85b976e4a592"
 
 [[projects]]
+  branch = "master"
+  digest = "1:8430374f97c909c66614e080d08ea19d9730e9264034be270cd638ffa1aed837"
+  name = "gonum.org/v1/gonum"
+  packages = [
+    "blas",
+    "blas/blas64",
+    "blas/cblas128",
+    "blas/gonum",
+    "floats",
+    "internal/asm/c128",
+    "internal/asm/c64",
+    "internal/asm/f32",
+    "internal/asm/f64",
+    "internal/cmplx64",
+    "internal/math32",
+    "lapack",
+    "lapack/gonum",
+    "lapack/lapack64",
+    "mat",
+    "stat",
+  ]
+  pruneopts = "UT"
+  revision = "40fa6a493b3df38b974481987358c70e5a1a144d"
+
+[[projects]]
   digest = "1:5f003878aabe31d7f6b842d4de32b41c46c214bb629bb485387dbcce1edf5643"
   name = "google.golang.org/api"
   packages = ["support/bundler"]
@@ -797,6 +822,7 @@
     "github.com/ThreeDotsLabs/watermill/pubsub/gochannel",
     "github.com/dgraph-io/badger",
     "github.com/fortytw2/leaktest",
+    "github.com/fsnotify/fsnotify",
     "github.com/gogo/protobuf/gogoproto",
     "github.com/gogo/protobuf/proto",
     "github.com/gogo/protobuf/protoc-gen-gogoslick",
@@ -842,6 +868,7 @@
     "golang.org/x/net/context",
     "golang.org/x/net/http2",
     "golang.org/x/net/http2/h2c",
+    "gonum.org/v1/gonum/stat",
     "google.golang.org/genproto/googleapis/api/annotations",
     "google.golang.org/grpc",
     "google.golang.org/grpc/codes",

@@ -30,40 +30,27 @@ import (
 	"github.com/insolar/rpc/v2/json2"
 )
 
-const (
-	ParseError                 = -31700
-	ParseErrorShort            = "ParseError"
-	ParseErrorMessage          = "Parsing error on the server side: received an invalid JSON."
-	InvalidRequestError        = -31600
-	InvalidRequestErrorShort   = "InvalidRequest"
-	InvalidRequestErrorMessage = "The JSON received is not a valid request payload."
-	MethodNotFoundError        = -31601
-	MethodNotFoundErrorShort   = "MethodNotFound"
-	MethodNotFoundErrorMessage = "Method does not exist / is not available."
-	InvalidParamsError         = -31602
-	InvalidParamsErrorShort    = "InvalidParams"
-	InvalidParamsErrorMessage  = "Invalid method parameter(s)."
-	InternalError              = -31603
-	InternalErrorShort         = "Internal"
-	InternalErrorMessage       = "Internal Platform error."
-	TimeoutError               = -31106
-	TimeoutErrorShort          = "Timeout"
-	TimeoutErrorMessage        = "Request's timeout has expired."
-	UnauthorizedError          = -31401
-	UnauthorizedErrorShort     = "Unauthorized"
-	UnauthorizedErrorMessage   = "Action is not authorized."
-	ExecutionError             = -31103
-	ExecutionErrorShort        = "Execution"
-	ExecutionErrorMessage      = "Execution error."
-)
-
 func wrapCall(ctx context.Context, runner *Runner, allowedMethods map[string]bool, req *http.Request, args *requester.Params, requestBody *rpc.RequestBody, result *requester.ContractResult) error {
 	instr := instrumenter.GetInstrumenter(ctx)
 	traceID := instr.TraceID()
 	logger := inslogger.FromContext(ctx)
 
+	if !runner.AvailabilityChecker.IsAvailable(ctx) {
+		logger.Error("API is no available")
+
+		instr.SetError(errors.New(ServiceUnavailableErrorMessage), ServiceUnavailableErrorShort)
+		return &json2.Error{
+			Code:    ServiceUnavailableError,
+			Message: ServiceUnavailableErrorMessage,
+			Data: requester.Data{
+				TraceID: traceID,
+			},
+		}
+	}
+
 	_, ok := allowedMethods[args.CallSite]
 	if !ok {
+		logger.Info("CallSite is not in list of allowed methods")
 		instr.SetError(errors.New(MethodNotFoundErrorMessage), MethodNotFoundErrorShort)
 		return &json2.Error{
 			Code:    MethodNotFoundError,
@@ -81,6 +68,7 @@ func wrapCall(ctx context.Context, runner *Runner, allowedMethods map[string]boo
 
 	signature, err := validateRequestHeaders(req.Header.Get(requester.Digest), req.Header.Get(requester.Signature), requestBody.Raw)
 	if err != nil {
+		logger.Info("validateRequestHeaders return error: ", err.Error())
 		instr.SetError(err, InvalidParamsErrorShort)
 		return &json2.Error{
 			Code:    InvalidParamsError,
@@ -94,6 +82,7 @@ func wrapCall(ctx context.Context, runner *Runner, allowedMethods map[string]boo
 
 	seedPulse, err := runner.checkSeed(args.Seed)
 	if err != nil {
+		logger.Info("checkSeed return error: ", err.Error())
 		instr.SetError(err, InvalidRequestErrorShort)
 		return &json2.Error{
 			Code:    InvalidRequestError,

@@ -28,20 +28,21 @@ import (
 
 // Configuration contains configuration params for all Insolar components
 type Configuration struct {
-	Host            HostNetwork
-	Service         ServiceNetwork
-	Ledger          Ledger
-	Log             Log
-	Metrics         Metrics
-	LogicRunner     LogicRunner
-	APIRunner       APIRunner
-	AdminAPIRunner  APIRunner
-	KeysPath        string
-	CertificatePath string
-	Tracer          Tracer
-	Introspection   Introspection
-	Exporter        Exporter
-	Bus             Bus
+	Host                HostNetwork
+	Service             ServiceNetwork
+	Ledger              Ledger
+	Log                 Log
+	Metrics             Metrics
+	LogicRunner         LogicRunner
+	APIRunner           APIRunner
+	AdminAPIRunner      APIRunner
+	AvailabilityChecker AvailabilityChecker
+	KeysPath            string
+	CertificatePath     string
+	Tracer              Tracer
+	Introspection       Introspection
+	Exporter            Exporter
+	Bus                 Bus
 }
 
 // PulsarConfiguration contains configuration params for the pulsar node
@@ -62,20 +63,21 @@ type Holder struct {
 // NewConfiguration creates new default configuration
 func NewConfiguration() Configuration {
 	cfg := Configuration{
-		Host:            NewHostNetwork(),
-		Service:         NewServiceNetwork(),
-		Ledger:          NewLedger(),
-		Log:             NewLog(),
-		Metrics:         NewMetrics(),
-		LogicRunner:     NewLogicRunner(),
-		APIRunner:       NewAPIRunner(false),
-		AdminAPIRunner:  NewAPIRunner(true),
-		KeysPath:        "./",
-		CertificatePath: "",
-		Tracer:          NewTracer(),
-		Introspection:   NewIntrospection(),
-		Exporter:        NewExporter(),
-		Bus:             NewBus(),
+		Host:                NewHostNetwork(),
+		Service:             NewServiceNetwork(),
+		Ledger:              NewLedger(),
+		Log:                 NewLog(),
+		Metrics:             NewMetrics(),
+		LogicRunner:         NewLogicRunner(),
+		APIRunner:           NewAPIRunner(false),
+		AdminAPIRunner:      NewAPIRunner(true),
+		AvailabilityChecker: NewAvailabilityChecker(),
+		KeysPath:            "./",
+		CertificatePath:     "",
+		Tracer:              NewTracer(),
+		Introspection:       NewIntrospection(),
+		Exporter:            NewExporter(),
+		Bus:                 NewBus(),
 	}
 
 	return cfg

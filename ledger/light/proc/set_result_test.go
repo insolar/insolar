@@ -252,7 +252,7 @@ func TestSetResult_Proceed_ResultDuplicated(t *testing.T) {
 			RecordID: resultID,
 		}, nil
 	})
-	sender.ReplyMock.Set(func(_ context.Context, receivedMeta payload.Meta, resMsg *message.Message) {
+	sender.ReplyMock.Inspect(func(_ context.Context, receivedMeta payload.Meta, resMsg *message.Message) {
 		require.Equal(t, msg, receivedMeta)
 
 		resp, err := payload.Unmarshal(resMsg.Payload)
@@ -265,7 +265,7 @@ func TestSetResult_Proceed_ResultDuplicated(t *testing.T) {
 		err = receivedResult.Unmarshal(res.Result)
 		require.NoError(t, err)
 		require.Equal(t, virtual, receivedResult.Virtual)
-	})
+	}).Return()
 
 	setResultProc := proc.NewSetResult(msg, jetID, *res, nil)
 	setResultProc.Dep(writeAccessor, sender, object.NewIndexLocker(), filaments, records, indexes, pcs, detachedNotifier)
