@@ -82,7 +82,7 @@ func (rf *requestFetcher) tryTakeActive(ctx context.Context) (context.Context, b
 }
 
 // TODO tests are required for this behaviour
-func (rf *requestFetcher) shouldNotRefetch(ctx context.Context) bool {
+func (rf *requestFetcher) shouldRefetch(ctx context.Context) bool {
 	rf.isActiveLock.Lock()
 	defer rf.isActiveLock.Unlock()
 
@@ -91,11 +91,12 @@ func (rf *requestFetcher) shouldNotRefetch(ctx context.Context) bool {
 		return false
 	default:
 	}
-	if !rf.reactivatedWhileActive {
-		return false
+	if rf.reactivatedWhileActive {
+		rf.reactivatedWhileActive = false
+		return true
 	}
-	rf.reactivatedWhileActive = false
-	return true
+
+	return false
 }
 
 func (rf *requestFetcher) releaseActive(_ context.Context) {
@@ -141,7 +142,7 @@ func (rf *requestFetcher) fetchWrapper(ctx context.Context) {
 			logger.Error("couldn't make fetch round: ", err.Error())
 		}
 
-		if rf.shouldNotRefetch(ctx) {
+		if !rf.shouldRefetch(ctx) {
 			break
 		}
 	}
