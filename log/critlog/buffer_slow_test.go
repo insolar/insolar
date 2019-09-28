@@ -205,14 +205,12 @@ func NewTestLogger(ctx context.Context, w io.Writer, parWrites uint8, bufSize in
 	if !fair {
 		flags = 0
 	}
-
-	var bp *BackpressureBuffer
 	if bufSize == 0 {
-		bp = NewBackpressureBufferWithBypass(w, 100, parWrites, flags, nil)
-	} else {
-		bp = NewBackpressureBuffer(w, bufSize, parWrites, flags, nil)
+		flags |= BufferBypassForRegular
+		bufSize = 100
 	}
 
+	bp := NewBackpressureBuffer(w, bufSize, 0, parWrites, flags, nil)
 	bp.StartWorker(ctx)
 	return bp
 }
