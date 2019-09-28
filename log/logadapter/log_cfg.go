@@ -17,9 +17,10 @@
 package logadapter
 
 import (
+	"strconv"
+
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
-	"strconv"
 )
 
 const TimestampFormat = "2006-01-02T15:04:05.000000000Z07:00"
@@ -42,6 +43,7 @@ const defaultLowLatencyBufferSize = 100
 func DefaultLoggerSettings() ParsedLogConfig {
 	r := ParsedLogConfig{}
 	r.Instruments.MetricsMode = insolar.LogMetricsEventCount | insolar.LogMetricsWriteDelayReport | insolar.LogMetricsWriteDelayField
+	r.Instruments.CallerMode = insolar.CallerField
 	return r
 }
 
