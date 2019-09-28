@@ -473,12 +473,23 @@ func checkBalance(insSDK *sdk.SDK, totalBalanceBefore *big.Int, balanceCheckMemb
 		time.Sleep(balanceCheckDelay)
 
 	}
+
 	fmt.Printf("Total balance before: %v and after: %v\n", totalBalanceBefore, totalBalanceAfter)
 	if totalBalanceAfter.Cmp(totalBalanceBefore) != 0 {
 		log.Fatal("Total balance mismatch!\n")
-	} else {
-		fmt.Printf("Total balance successfully matched\n")
 	}
+
+	for n := 0; n < 2; n++ {
+		totalBalanceAfter, membersWithBalanceMap = getTotalBalance(insSDK, balanceCheckMembers)
+		if totalBalanceAfter.Cmp(totalBalanceBefore) != 0 {
+			log.Fatal("Total balance mismatch!\n")
+		}
+
+		fmt.Println("Wait if balance changes after matching: ", n)
+		time.Sleep(balanceCheckDelay)
+	}
+
+	fmt.Printf("Total balance successfully matched\n")
 	return membersWithBalanceMap
 }
 

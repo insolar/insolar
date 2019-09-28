@@ -12,6 +12,9 @@ BACKUPMANAGER = backupmanager
 APIREQUESTER = apirequester
 HEALTHCHECK = healthcheck
 KEEPERD = keeperd
+BADGER = badger
+HEAVY_BADGER_TOOL= heavy-badger
+
 
 ALL_PACKAGES = ./...
 MOCKS_PACKAGE = github.com/insolar/insolar/testutils
@@ -87,7 +90,8 @@ ensure: ## install all dependencies
 	dep ensure
 
 .PHONY: build
-build: $(BIN_DIR) $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(TESTPULSARD) $(INSGORUND) $(HEALTHCHECK) $(BENCHMARK) $(APIREQUESTER) $(PULSEWATCHER) $(BACKUPMANAGER) $(KEEPERD) ## build all binaries
+build: $(BIN_DIR) $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(TESTPULSARD) $(INSGORUND) $(HEALTHCHECK) $(BENCHMARK) ## build all binaries
+build: $(APIREQUESTER) $(PULSEWATCHER) $(BACKUPMANAGER) $(KEEPERD) $(BADGER) $(HEAVY_BADGER_TOOL)
 
 $(BIN_DIR):
 	mkdir -p $(BIN_DIR)
@@ -142,6 +146,13 @@ $(HEALTHCHECK):
 $(KEEPERD):
 	$(GOBUILD) -o $(BIN_DIR)/$(KEEPERD) -ldflags "${LDFLAGS}" cmd/keeperd/*.go
 
+.PHONY: $(BADGER)
+$(BADGER):
+	GOBIN=$(shell realpath $(BIN_DIR)) ./scripts/build/fetchdeps github.com/dgraph-io/badger/badger v1.6.0
+
+.PHONY: $(HEAVY_BADGER_TOOL)
+$(HEAVY_BADGER_TOOL):
+	$(GOBUILD) -o $(BIN_DIR)/$(HEAVY_BADGER_TOOL) ./cmd/heavy-badger/
 
 .PHONY: test_unit
 test_unit: ## run all unit tests
