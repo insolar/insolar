@@ -147,8 +147,7 @@ $(KEEPERD):
 
 .PHONY: $(BADGER)
 $(BADGER):
-	./scripts/build/fetchdeps github.com/dgraph-io/badger/badger v1.6.0
-	cp $(shell go env GOPATH)/bin/badger $(BIN_DIR)/$(BADGER)
+	GOBIN=$(shell realpath $(BIN_DIR)) ./scripts/build/fetchdeps github.com/dgraph-io/badger/badger v1.6.0
 
 .PHONY: $(HEAVY_BADGER_TOOL)
 $(HEAVY_BADGER_TOOL):
