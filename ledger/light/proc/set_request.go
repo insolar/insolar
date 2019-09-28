@@ -138,9 +138,15 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 			LifelineLastUsed: p.requestID.Pulse(),
 		}
 	} else {
-		idx, err := p.dep.indexes.ForID(ctx, flow.Pulse(ctx), objectID)
+		index, err = p.dep.indexes.ForID(ctx, flow.Pulse(ctx), objectID)
 		if err != nil {
 			return errors.Wrap(err, "failed to check an object state")
+		}
+		if index.Lifeline.StateID == record.StateUndefined {
+			return &payload.CodedError{
+				Text: "object is not activated",
+				Code: payload.CodeNonActivated,
+			}
 		}
 		if index.Lifeline.StateID == record.StateDeactivation {
 			return &payload.CodedError{
@@ -148,10 +154,9 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 				Code: payload.CodeDeactivated,
 			}
 		}
-		if idx.Lifeline.LatestRequest != nil && p.requestID.Pulse() < idx.Lifeline.LatestRequest.Pulse() {
+		if index.Lifeline.LatestRequest != nil && p.requestID.Pulse() < index.Lifeline.LatestRequest.Pulse() {
 			return errors.New("request from the past")
 		}
-		index = idx
 	}
 
 	// Checking request validity.

@@ -22,6 +22,9 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/gojuno/minimock"
+	"github.com/pkg/errors"
+	"github.com/stretchr/testify/require"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
@@ -33,8 +36,8 @@ import (
 	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/insolar/insolar/ledger/object"
+	"github.com/insolar/insolar/pulse"
 	"github.com/insolar/insolar/testutils"
-	"github.com/stretchr/testify/require"
 )
 
 func TestSetRequest_Proceed(t *testing.T) {
@@ -218,5 +221,96 @@ func TestSetRequest_Proceed(t *testing.T) {
 		require.Error(t, err)
 
 		mc.Finish()
+	})
+
+	t.Run("object is not activated error", func(t *testing.T) {
+		resetComponents()
+		defer mc.Finish()
+
+		request := record.IncomingRequest{
+			Object:   &ref,
+			CallType: record.CTMethod,
+		}
+		coordinator.VirtualExecutorForObjectMock.Set(func(_ context.Context, objID insolar.ID, pn insolar.PulseNumber) (r *insolar.Reference, r1 error) {
+			require.Equal(t, flowPN, pn)
+			require.Equal(t, *ref.GetLocal(), objID)
+
+			return &virtualRef, nil
+		})
+		idxStorage.ForIDMock.Return(record.Index{
+			Lifeline: record.Lifeline{
+				StateID: record.StateUndefined,
+			},
+		}, nil)
+
+		p := proc.NewSetRequest(msg, &request, requestID, jetID)
+		p.Dep(writeAccessor, filaments, sender, object.NewIndexLocker(), idxStorage, records, pcs, checker, coordinator)
+
+		err = p.Proceed(ctx)
+		require.Error(t, err)
+		insError, ok := errors.Cause(err).(*payload.CodedError)
+		require.True(t, ok)
+		require.Equal(t, uint32(payload.CodeNonActivated), insError.GetCode())
+	})
+
+	t.Run("object is deactivated error", func(t *testing.T) {
+		resetComponents()
+		defer mc.Finish()
+
+		request := record.IncomingRequest{
+			Object:   &ref,
+			CallType: record.CTMethod,
+		}
+		coordinator.VirtualExecutorForObjectMock.Set(func(_ context.Context, objID insolar.ID, pn insolar.PulseNumber) (r *insolar.Reference, r1 error) {
+			require.Equal(t, flowPN, pn)
+			require.Equal(t, *ref.GetLocal(), objID)
+
+			return &virtualRef, nil
+		})
+		idxStorage.ForIDMock.Return(record.Index{
+			Lifeline: record.Lifeline{
+				StateID: record.StateDeactivation,
+			},
+		}, nil)
+
+		p := proc.NewSetRequest(msg, &request, requestID, jetID)
+		p.Dep(writeAccessor, filaments, sender, object.NewIndexLocker(), idxStorage, records, pcs, checker, coordinator)
+
+		err = p.Proceed(ctx)
+		require.Error(t, err)
+		insError, ok := errors.Cause(err).(*payload.CodedError)
+		require.True(t, ok)
+		require.Equal(t, uint32(payload.CodeDeactivated), insError.GetCode())
+	})
+
+	t.Run("request from past error", func(t *testing.T) {
+		resetComponents()
+		defer mc.Finish()
+
+		last := gen.IDWithPulse(pulse.MinTimePulse + 100)
+		requestID := gen.IDWithPulse(pulse.MinTimePulse + 1)
+
+		request := record.IncomingRequest{
+			Object:   &ref,
+			CallType: record.CTMethod,
+		}
+		coordinator.VirtualExecutorForObjectMock.Set(func(_ context.Context, objID insolar.ID, pn insolar.PulseNumber) (r *insolar.Reference, r1 error) {
+			require.Equal(t, flowPN, pn)
+			require.Equal(t, *ref.GetLocal(), objID)
+
+			return &virtualRef, nil
+		})
+		idxStorage.ForIDMock.Return(record.Index{
+			Lifeline: record.Lifeline{
+				StateID:       record.StateActivation,
+				LatestRequest: &last,
+			},
+		}, nil)
+
+		p := proc.NewSetRequest(msg, &request, requestID, jetID)
+		p.Dep(writeAccessor, filaments, sender, object.NewIndexLocker(), idxStorage, records, pcs, checker, coordinator)
+
+		err = p.Proceed(ctx)
+		require.Error(t, err)
 	})
 }

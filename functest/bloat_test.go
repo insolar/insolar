@@ -171,3 +171,87 @@ func (c *First) GetName() (string, error) {
 	require.Empty(t, resp.Error)
 	require.Contains(t, resp.Result.Error.S, "try to call method of prototype as method of another prototype")
 }
+
+func TestContractWithEmbeddedConstructor(t *testing.T) {
+	var contractOneCode = `
+package main
+
+import ("github.com/insolar/insolar/logicrunner/builtin/foundation")
+
+type One struct {
+	foundation.BaseContract
+	Number int
+}
+
+func New() (*One, error) {
+	return &One{Number: 0}, nil
+}
+
+func NewWithNumber(num int) (*One, error) {
+	return &One{Number: num}, nil
+}
+
+var INSATTR_Get_API = true
+
+func (c *One) Get() (int, error) {
+	return c.Number, nil
+}
+
+var INSATTR_DoNothing_API = true
+
+func (r *One) DoNothing() (error) {
+	return nil
+}
+`
+
+	var contractTwoCode = `
+package main
+
+import (
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/logicrunner/builtin/foundation"
+	one "github.com/insolar/insolar/application/proxy/parent_one"
+)
+
+type Two struct {
+	foundation.BaseContract
+	Number int
+	OneRef insolar.Reference
+}
+
+
+func New() (*Two, error) {
+	return &Two{Number: 10, OneRef: *insolar.NewEmptyReference()}, nil
+}
+
+func NewWithOne(oneNumber int) (*Two, error) {
+	holder := one.NewWithNumber(oneNumber)
+
+	objOne, err := holder.AsChild(foundation.GetRootDomain())
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &Two{Number: oneNumber, OneRef: objOne.GetReference() }, nil
+}
+
+var INSATTR_DoNothing_API = true
+
+func (r *Two) DoNothing() (error) {
+	return nil
+}
+
+var INSATTR_Get_API = true
+
+func (c * Two) Get() (int, error) {
+	return c.Number, nil
+}
+`
+	codeOneRef := uploadContractOnce(t, "parent_one", contractOneCode)
+	codeTwoRef := uploadContractOnce(t, "parent_two", contractTwoCode)
+
+	_ = callConstructor(t, codeOneRef, "New")
+	errorMsg := callConstructorExpectSystemError(t, codeTwoRef, "NewWithOne", 10)
+	require.Contains(t, errorMsg, "object is not activated")
+}

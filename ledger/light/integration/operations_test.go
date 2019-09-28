@@ -138,6 +138,36 @@ func MakeSetIncomingRequestDetached(
 	return pl, rec
 }
 
+func CreateAndActivateObject(ctx context.Context, server *Server, APIRequest string) insolar.ID {
+	args := make([]byte, 100)
+	_, err := rand.Read(args)
+	panicIfErr(err)
+
+	req := record.IncomingRequest{
+		Arguments:    args,
+		Reason:       *insolar.NewReference(gen.IDWithPulse(server.Pulse())),
+		APINode:      gen.Reference(),
+		CallType:     record.CTSaveAsChild,
+		APIRequestID: APIRequest,
+	}
+
+	rec := record.Wrap(&req)
+	msg := payload.SetIncomingRequest{
+		Request: rec,
+	}
+
+	resp := retryIfCancelled(func() payload.Payload {
+		return SendMessage(ctx, server, &msg)
+	})
+	RequireNotError(resp)
+
+	objectID := resp.(*payload.RequestInfo).ObjectID
+
+	CallActivateObject(ctx, server, objectID)
+
+	return objectID
+}
+
 func MakeSetOutgoingRequest(
 	objectID, reasonID insolar.ID, detached bool,
 ) (payload.SetOutgoingRequest, record.Virtual) {
