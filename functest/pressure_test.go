@@ -223,14 +223,17 @@ func (c *One) Rollback(amount int) error {
 		require.Greater(syncT, successes, uint32(0))
 		require.Greater(syncT, errors, uint32(0))
 
-		r1 := callMethod(syncT, w1Ref, "Balance")
-		require.Empty(syncT, r1.Error)
-		r2 := callMethod(syncT, w2Ref, "Balance")
-		require.Empty(syncT, r2.Error)
+		getBalance := func() float64 {
+			r1 := callMethod(syncT, w1Ref, "Balance")
+			require.Empty(syncT, r1.Error)
+			r2 := callMethod(syncT, w2Ref, "Balance")
+			require.Empty(syncT, r2.Error)
+			return r1.ExtractedReply.(float64) + r2.ExtractedReply.(float64)
+		}
 
 		pass := false
 		for i := 0; i < 10; i++ {
-			bal := r1.ExtractedReply.(float64) + r2.ExtractedReply.(float64)
+			bal := getBalance()
 			if bal != float64(1) {
 				time.Sleep(1 * time.Second)
 				continue
@@ -242,7 +245,7 @@ func (c *One) Rollback(amount int) error {
 		}
 
 		for i := 0; i < 3; i++ {
-			bal := r1.ExtractedReply.(float64) + r2.ExtractedReply.(float64)
+			bal := getBalance()
 			require.Equal(t, float64(1), bal)
 			time.Sleep(1 * time.Second)
 		}
