@@ -86,7 +86,7 @@ func (c *RequestCheckerDefault) CheckRequest(ctx context.Context, requestID inso
 	switch r := request.(type) {
 	case *record.IncomingRequest:
 		// Check for request loops if not creation.
-		if !request.IsCreationRequest() && !r.IsDetachedCall() {
+		if !request.IsCreationRequest() {
 			openedRequests, err := c.filaments.OpenedRequests(ctx, requestID.Pulse(), objectID, false)
 			if err != nil {
 				return errors.Wrap(err, "loop detection failed")
