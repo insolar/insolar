@@ -27,6 +27,11 @@ var (
 		"How many abandoned requests in hot data",
 		stats.UnitDimensionless,
 	)
+	statAbandonedRequestAge = stats.Int64(
+		"oldest_abandoned_request_age",
+		"How many pulses passed from last abandoned request creation",
+		stats.UnitDimensionless,
+	)
 )
 
 func init() {
@@ -36,6 +41,12 @@ func init() {
 			Description: statHotsAbandoned.Description(),
 			Measure:     statHotsAbandoned,
 			Aggregation: view.Count(),
+		},
+		&view.View{
+			Name:        statAbandonedRequestAge.Name(),
+			Description: statAbandonedRequestAge.Description(),
+			Measure:     statAbandonedRequestAge,
+			Aggregation: view.LastValue(),
 		},
 	)
 	if err != nil {

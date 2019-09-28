@@ -113,6 +113,7 @@ func New(cfg configuration.Ledger) *Handler {
 			p.Dep(
 				h.IndexAccessor,
 				h.PulseCalculator,
+				h.PulseAccessor,
 				h.Sender,
 			)
 		},

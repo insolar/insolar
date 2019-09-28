@@ -17,10 +17,9 @@
 package insolar_test
 
 import (
-	"encoding/base64"
 	"testing"
 
-	"github.com/jbenet/go-base58"
+	base58 "github.com/jbenet/go-base58"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -49,7 +48,7 @@ func TestNewIDFromBase58(t *testing.T) {
 
 func TestRecordID_String(t *testing.T) {
 	id := gen.ID()
-	idStr := "base64+insolarv1:1" + base64.RawURLEncoding.EncodeToString(id.Bytes()) + ".record"
+	idStr := "1" + base58.Encode(id.Bytes()) + ".record"
 
 	assert.Equal(t, idStr, id.String())
 }

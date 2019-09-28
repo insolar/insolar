@@ -24,6 +24,7 @@ import (
 	"strconv"
 	"strings"
 
+	base58 "github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/longbits"
@@ -174,7 +175,7 @@ func (p *byteWriter) isFull() bool {
 
 // String implements stringer on ID and returns base58 encoded value
 func (v Local) String() string {
-	repr, err := Base64Encoder().EncodeRecord(&v)
+	repr, err := DefaultEncoder().EncodeRecord(&v)
 	if err != nil {
 		return ""
 	}
@@ -317,5 +318,5 @@ func (v *Local) DebugString() string {
 		return v.debugStringJet()
 	}
 
-	return fmt.Sprintf("[%d | %d | %s]", v.Pulse(), v.getScope(), v.String())
+	return fmt.Sprintf("%s [%d | %d | %s]", v.String(), v.Pulse(), v.getScope(), base58.Encode(v.Hash()))
 }

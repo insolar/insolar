@@ -41,7 +41,6 @@ LDFLAGS += -X github.com/insolar/insolar/version.GitHash=${BUILD_HASH}
 
 BININSGOCC=$(BIN_DIR)/$(INSGOCC)
 
-
 .PHONY: all
 all: clean install-deps pre-build build ## cleanup, install deps, (re)generate all code and build all binaries
 
