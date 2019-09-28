@@ -174,6 +174,7 @@ func (rf *requestFetcher) fetch(ctx context.Context) error {
 
 		switch v := request.(type) {
 		case *record.IncomingRequest:
+			logger.Debug("get abandoned IncomingRequest from ledger: ", v.String())
 			if err := checkIncomingRequest(ctx, v); err != nil {
 				err = errors.Wrap(err, "failed to check incoming request")
 				logger.Error(err.Error())
@@ -183,6 +184,7 @@ func (rf *requestFetcher) fetch(ctx context.Context) error {
 			tr := common.NewTranscriptCloneContext(ctx, reqRef, *v)
 			rf.broker.AddRequestsFromLedger(ctx, tr)
 		case *record.OutgoingRequest:
+			logger.Debug("get abandoned OutgoingRequest from ledger: ", v.String())
 			if err := checkOutgoingRequest(ctx, v); err != nil {
 				err = errors.Wrap(err, "failed to check outgoing request")
 				logger.Error(err.Error())
