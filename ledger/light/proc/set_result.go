@@ -87,6 +87,8 @@ func (p *SetResult) Dep(
 }
 
 func (p *SetResult) Proceed(ctx context.Context) error {
+	stats.Record(ctx, statSetResultTotal.M(1))
+
 	var resultID insolar.ID
 	{
 		hash := record.HashVirtual(p.dep.pcs.ReferenceHasher(), record.Wrap(&p.result))
@@ -150,6 +152,7 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 
 			logger.Debug("result duplicate found")
 			p.dep.sender.Reply(ctx, p.message, msg)
+			stats.Record(ctx, statSetResultDuplicate.M(1))
 			return nil
 		}
 	}
@@ -289,6 +292,7 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 	}
 	logger.Debug("result saved")
 	p.dep.sender.Reply(ctx, p.message, msg)
+	stats.Record(ctx, statSetResultSuccess.M(1))
 	return nil
 }
 

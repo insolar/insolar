@@ -90,6 +90,7 @@ func (p *SetRequest) Dep(
 }
 
 func (p *SetRequest) Proceed(ctx context.Context) error {
+	stats.Record(ctx, statSetRequestTotal.M(1))
 
 	if p.requestID.IsEmpty() {
 		return errors.New("request id is empty")
@@ -209,6 +210,7 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 				"has_result":  res != nil,
 				"is_creation": p.request.IsCreationRequest(),
 			}).Debug("duplicate found")
+			stats.Record(ctx, statSetRequestDuplicate.M(1))
 			return nil
 		}
 	}
@@ -296,5 +298,6 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 			return ok
 		}(),
 	}).Debug("request saved")
+	stats.Record(ctx, statSetRequestSuccess.M(1))
 	return nil
 }
