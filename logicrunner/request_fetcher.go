@@ -43,9 +43,10 @@ type RequestFetcher interface {
 type requestFetcher struct {
 	object insolar.Reference
 
-	isActiveLock sync.Mutex
-	isActive     bool
-	stopFetching func()
+	isActiveLock           sync.Mutex
+	isActive               bool
+	reactivatedWhileActive bool
+	stopFetching           func()
 
 	broker ExecutionBrokerI
 	am     artifacts.Client
@@ -68,6 +69,7 @@ func (rf *requestFetcher) tryTakeActive(ctx context.Context) (context.Context, b
 	defer rf.isActiveLock.Unlock()
 
 	if rf.isActive {
+		rf.reactivatedWhileActive = true
 		return ctx, false
 	}
 
@@ -77,6 +79,23 @@ func (rf *requestFetcher) tryTakeActive(ctx context.Context) (context.Context, b
 	rf.stopFetching = cancelFunc
 
 	return ctx, true
+}
+
+// TODO tests are required for this behaviour
+func (rf *requestFetcher) shouldNotRefetch(ctx context.Context) bool {
+	rf.isActiveLock.Lock()
+	defer rf.isActiveLock.Unlock()
+
+	select {
+	case <-ctx.Done():
+		return false
+	default:
+	}
+	if !rf.reactivatedWhileActive {
+		return false
+	}
+	rf.reactivatedWhileActive = false
+	return true
 }
 
 func (rf *requestFetcher) releaseActive(_ context.Context) {
@@ -116,9 +135,15 @@ func (rf *requestFetcher) fetchWrapper(ctx context.Context) {
 	logger := inslogger.FromContext(ctx)
 	logger.Debug("requestFetcher starting")
 
-	err := rf.fetch(ctx)
-	if err != nil {
-		logger.Error("couldn't make fetch round: ", err.Error())
+	for {
+		err := rf.fetch(ctx)
+		if err != nil {
+			logger.Error("couldn't make fetch round: ", err.Error())
+		}
+
+		if rf.shouldNotRefetch(ctx) {
+			break
+		}
 	}
 }
 
