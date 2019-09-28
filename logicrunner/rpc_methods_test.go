@@ -23,9 +23,6 @@ import (
 
 	"github.com/gojuno/minimock"
 	"github.com/insolar/go-actors/actor/system"
-	"github.com/pkg/errors"
-	"github.com/stretchr/testify/require"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/payload"
@@ -38,6 +35,8 @@ import (
 	"github.com/insolar/insolar/logicrunner/executionregistry"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 	"github.com/insolar/insolar/testutils"
+	"github.com/pkg/errors"
+	"github.com/stretchr/testify/require"
 )
 
 func TestRPCMethods_New(t *testing.T) {
@@ -397,8 +396,13 @@ func TestRouteCallRegistersOutgoingRequestAlreadyHasResult(t *testing.T) {
 		require.Equal(t, record.ReturnResult, r.ReturnMode)
 		outreq = r
 		id := *outgoingReqRef.GetLocal()
-		result := append(make([]byte, 1),1)
-		return &payload.RequestInfo{RequestID: id, Result: result}, nil
+		result := append(make([]byte, 1), 1)
+		resRecord := &record.Result{Payload: result}
+		virtResRecord := record.Wrap(resRecord)
+		matRecord := record.Material{Virtual: virtResRecord}
+		matRecordSerialized, err := matRecord.Marshal()
+		require.NoError(t, err)
+		return &payload.RequestInfo{RequestID: id, Result: matRecordSerialized}, nil
 	})
 
 	err := rpcm.RouteCall(ctx, transcript, req, resp)
