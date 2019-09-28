@@ -266,6 +266,7 @@ func (q *ExecutionBroker) processTranscript(ctx context.Context, transcript *com
 		err       error
 	)
 
+	sendReply := true
 	if transcript.Request.CallType == record.CTMethod {
 		logger.Info("processing transcript with method")
 		var objDesc artifacts.ObjectDescriptor
@@ -278,6 +279,7 @@ func (q *ExecutionBroker) processTranscript(ctx context.Context, transcript *com
 				!transcript.RequestRef.GetLocal().Equal(*transcript.ObjectDescriptor.EarliestRequestID()) {
 				logger.Info("Got different earliest request from ledger")
 
+				sendReply = false
 				q.resetMutableQueue(ctx)
 			}
 		}
@@ -296,7 +298,9 @@ func (q *ExecutionBroker) processTranscript(ctx context.Context, transcript *com
 
 	q.finishTask(ctx, transcript)
 
-	go q.requestsExecutor.SendReply(ctx, transcript.RequestRef, *transcript.Request, replyData, err)
+	if sendReply {
+		go q.requestsExecutor.SendReply(ctx, transcript.RequestRef, *transcript.Request, replyData, err)
+	}
 
 	// we're checking here that pulse was changed and we should send
 	// a message that we've finished processing tasks
