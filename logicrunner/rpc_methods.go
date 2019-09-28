@@ -198,7 +198,17 @@ func (m *executionProxyImplementation) RouteCall(
 
 	// if we replay abandoned request after node was down we can already have Result
 	if outReqInfo.Result != nil {
-		rep.Result = outReqInfo.Result
+		rec := record.Material{}
+		err := rec.Unmarshal(outReqInfo.Result)
+		if err != nil {
+			return errors.Wrap(err, "failed to unmarshal existing result")
+		}
+		virtual := record.Unwrap(&rec.Virtual)
+		resultRecord, ok := virtual.(*record.Result)
+		if !ok {
+			return fmt.Errorf("unexpected record %T", virtual)
+		}
+		rep.Result = resultRecord.Payload
 		return nil
 	}
 
