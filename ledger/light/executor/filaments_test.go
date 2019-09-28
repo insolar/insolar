@@ -31,6 +31,7 @@ import (
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
+	pulseStorage "github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/light/executor"
@@ -571,6 +572,7 @@ func TestFilamentCalculatorDefault_RequestDuplicate(t *testing.T) {
 		sender      *bus.SenderMock
 		pcs         insolar.PlatformCryptographyScheme
 		calculator  *executor.FilamentCalculatorDefault
+		pulses      *pulseStorage.CalculatorMock
 	)
 	resetComponents := func() {
 		indexes = object.NewIndexStorageMemory()
@@ -579,7 +581,8 @@ func TestFilamentCalculatorDefault_RequestDuplicate(t *testing.T) {
 		jetFetcher = executor.NewJetFetcherMock(mc)
 		sender = bus.NewSenderMock(mc)
 		pcs = testutils.NewPlatformCryptographyScheme()
-		calculator = executor.NewFilamentCalculator(indexes, records, coordinator, jetFetcher, sender, nil)
+		pulses = pulseStorage.NewCalculatorMock(mc)
+		calculator = executor.NewFilamentCalculator(indexes, records, coordinator, jetFetcher, sender, pulses)
 	}
 
 	resetComponents()
@@ -658,6 +661,29 @@ func TestFilamentCalculatorDefault_RequestDuplicate(t *testing.T) {
 		mc.Finish()
 	})
 
+	resetComponents()
+	t.Run("creation returns duplicate", func(t *testing.T) {
+		b := newFilamentBuilder(ctx, pcs, records)
+		reason := *insolar.NewReference(*insolar.NewID(pulse.MinTimePulse, nil))
+		request := record.IncomingRequest{Nonce: rand.Uint64(), Reason: reason, CallType: record.CTSaveAsChild}
+		reqComposite := b.Append(pulse.MinTimePulse+1, &request)
+
+		lookupID := *insolar.NewID(pulse.MinTimePulse+2, reqComposite.RecordID.Hash())
+		indexes.Set(ctx, reqComposite.RecordID.Pulse(), record.Index{
+			ObjID: reqComposite.RecordID,
+			Lifeline: record.Lifeline{
+				LatestRequest: &reqComposite.MetaID,
+			},
+		})
+		pulses.BackwardsMock.Return(insolar.Pulse{PulseNumber: pulse.MinTimePulse + 1}, nil)
+
+		fReq, fRes, err := calculator.RequestDuplicate(ctx, reqComposite.RecordID, lookupID, &request)
+		require.NoError(t, err)
+		require.Equal(t, *fReq, reqComposite)
+		require.Nil(t, fRes)
+
+		mc.Finish()
+	})
 }
 
 type filamentBuilder struct {
