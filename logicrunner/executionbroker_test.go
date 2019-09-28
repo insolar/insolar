@@ -621,13 +621,15 @@ func TestExecutionBroker_MoreRequestsOnLedger(t *testing.T) {
 		nil,
 	)
 
+	am := artifacts.NewClientMock(t).GetPendingsMock.Return(nil, nil)
+
 	objectRef := gen.Reference()
 	b := NewExecutionBroker(
-		objectRef, nil, nil, nil, nil, nil, nil, pa,
+		objectRef, nil, nil, nil, am, nil, nil, pa,
 	)
 	b.MoreRequestsOnLedger(ctx)
 	require.True(t, b.ledgerHasMoreRequests)
-	require.Empty(t, b.requestsFetcher)
+	require.NotEmpty(t, b.requestsFetcher)
 }
 
 func TestExecutionBroker_NoMoreRequestsOnLedger(t *testing.T) {
