@@ -167,12 +167,13 @@ func (b *BadgerDB) Stop(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
 	defer logger.Info("BadgerDB: database closed")
 
-	logger.Info("BadgerDB: wait values GC")
-	close(b.stopGC)
-	<-b.doneGC
+	if b.stopGC != nil {
+		logger.Info("BadgerDB: wait values GC")
+		close(b.stopGC)
+		<-b.doneGC
+	}
 
 	logger.Info("BadgerDB: closing database...")
-
 	return b.backend.Close()
 }
 
