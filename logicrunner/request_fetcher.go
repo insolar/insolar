@@ -136,18 +136,7 @@ func (rf *requestFetcher) fetch(ctx context.Context) error {
 		return err
 	}
 
-	var (
-		uniqueTaken        = 0
-		uniqueLimitReached = false
-	)
-
 	for _, reqRef := range reqRefs {
-		// limit count of unique and unknown taken requests to MaxFetchCount
-		if uniqueTaken >= MaxFetchCount {
-			uniqueLimitReached = true
-			break
-		}
-
 		if !reqRef.IsRecordScope() {
 			logger.Errorf("skipping request with bad reference, ref=%s", reqRef.String())
 		} else if rf.broker.IsKnownRequest(ctx, reqRef) {
@@ -170,8 +159,6 @@ func (rf *requestFetcher) fetch(ctx context.Context) error {
 		default:
 		}
 
-		uniqueTaken++
-
 		switch v := request.(type) {
 		case *record.IncomingRequest:
 			if err := checkIncomingRequest(ctx, v); err != nil {
@@ -193,12 +180,6 @@ func (rf *requestFetcher) fetch(ctx context.Context) error {
 		default:
 			logger.Error("requestFetcher fetched unknown request")
 		}
-	}
-
-	if !uniqueLimitReached {
-		logger.Debug("no more pendings on ledger, we've fetched everything")
-
-		rf.broker.NoMoreRequestsOnLedger(ctx)
 	}
 
 	return nil
