@@ -547,7 +547,7 @@ func (suite *LogicRunnerTestSuite) TestImmutableOrder() {
 		RegisterMock.Return(nil).
 		DoneMock.Return(true)
 
-	syncT := testutils.SyncT{T: suite.T()}
+	syncT := &testutils.SyncT{T: suite.T()}
 
 	// prepare default object and execution state
 	objectRef := gen.Reference()
