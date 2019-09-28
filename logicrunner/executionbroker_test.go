@@ -629,7 +629,6 @@ func TestExecutionBroker_MoreRequestsOnLedger(t *testing.T) {
 	)
 	b.MoreRequestsOnLedger(ctx)
 	require.True(t, b.ledgerHasMoreRequests)
-	require.NotEmpty(t, b.requestsFetcher)
 }
 
 func TestExecutionBroker_NoMoreRequestsOnLedger(t *testing.T) {
