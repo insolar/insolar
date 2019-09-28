@@ -547,10 +547,12 @@ func (suite *LogicRunnerTestSuite) TestImmutableOrder() {
 		RegisterMock.Return(nil).
 		DoneMock.Return(true)
 
+	syncT := testutils.SyncT{T: suite.T()}
+
 	// prepare default object and execution state
 	objectRef := gen.Reference()
-	am := artifacts.NewClientMock(suite.T()).GetObjectMock.Set(func(ctx context.Context, head insolar.Reference, request *insolar.Reference) (o1 artifacts.ObjectDescriptor, err error) {
-		return artifacts.NewObjectDescriptorMock(suite.T()).EarliestRequestIDMock.Return(request.GetLocal()), nil
+	am := artifacts.NewClientMock(syncT).GetObjectMock.Set(func(ctx context.Context, head insolar.Reference, request *insolar.Reference) (o1 artifacts.ObjectDescriptor, err error) {
+		return artifacts.NewObjectDescriptorMock(syncT).EarliestRequestIDMock.Return(request.GetLocal()), nil
 	})
 	broker := NewExecutionBroker(objectRef, nil, suite.re, nil, am, er, nil, pa)
 	broker.pending = insolar.NotPending
