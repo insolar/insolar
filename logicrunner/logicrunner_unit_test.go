@@ -538,21 +538,21 @@ func TestLogicRunner_OnPulse_Order(t *testing.T) {
 }
 
 func (suite *LogicRunnerTestSuite) TestImmutableOrder() {
-	pa := insolarPulse.NewAccessorMock(suite.mc).LatestMock.Return(
+	syncT := &testutils.SyncT{T: suite.T()}
+
+	pa := insolarPulse.NewAccessorMock(syncT).LatestMock.Return(
 		insolar.Pulse{PulseNumber: pulse.MinTimePulse},
 		nil,
 	)
 
-	er := executionregistry.NewExecutionRegistryMock(suite.mc).
-		RegisterMock.Return(nil).
-		DoneMock.Return(true)
-
-	syncT := &testutils.SyncT{T: suite.T()}
+	er := executionregistry.NewExecutionRegistryMock(syncT).
+		RegisterMock.Return(nil)
 
 	// prepare default object and execution state
 	objectRef := gen.Reference()
 	am := artifacts.NewClientMock(syncT).GetObjectMock.Set(func(ctx context.Context, head insolar.Reference, request *insolar.Reference) (o1 artifacts.ObjectDescriptor, err error) {
-		return artifacts.NewObjectDescriptorMock(syncT).EarliestRequestIDMock.Return(request.GetLocal()), nil
+		reqID := *request.GetLocal()
+		return artifacts.NewObjectDescriptorMock(syncT).EarliestRequestIDMock.Return(&reqID), nil
 	})
 	broker := NewExecutionBroker(objectRef, nil, suite.re, nil, am, er, nil, pa)
 	broker.pending = insolar.NotPending
@@ -570,8 +570,7 @@ func (suite *LogicRunnerTestSuite) TestImmutableOrder() {
 		Immutable:    false,
 	}
 	mutableTranscript := common.NewTranscript(suite.ctx, mutableRequestRef, mutableRequest)
-	er.GetActiveTranscriptMock.When(mutableRequestRef).Then(nil).
-		DoneMock.When(mutableTranscript).Then(true)
+	er.GetActiveTranscriptMock.When(mutableRequestRef).Then(nil)
 
 	immutableRequest1 := record.IncomingRequest{
 		ReturnMode:   record.ReturnResult,
@@ -580,8 +579,7 @@ func (suite *LogicRunnerTestSuite) TestImmutableOrder() {
 		Immutable:    true,
 	}
 	immutableTranscript1 := common.NewTranscript(suite.ctx, immutableRequestRef1, immutableRequest1)
-	er.GetActiveTranscriptMock.When(immutableRequestRef1).Then(nil).
-		DoneMock.When(immutableTranscript1).Then(true)
+	er.GetActiveTranscriptMock.When(immutableRequestRef1).Then(nil)
 
 	immutableRequest2 := record.IncomingRequest{
 		ReturnMode:   record.ReturnResult,
@@ -590,8 +588,16 @@ func (suite *LogicRunnerTestSuite) TestImmutableOrder() {
 		Immutable:    true,
 	}
 	immutableTranscript2 := common.NewTranscript(suite.ctx, immutableRequestRef2, immutableRequest2)
-	er.GetActiveTranscriptMock.When(immutableRequestRef2).Then(nil).
-		DoneMock.When(immutableTranscript2).Then(true)
+	er.GetActiveTranscriptMock.When(immutableRequestRef2).Then(nil)
+
+	er.DoneMock.Set(func(transcript *common.Transcript) (b1 bool) {
+		switch transcript.RequestRef {
+		case mutableRequestRef, immutableRequestRef1, immutableRequestRef2:
+			return true
+		default:
+			panic("should not be called")
+		}
+	})
 
 	// Set custom executor, that'll:
 	// 1) mutable will start execution and wait until something will ping it on channel 1
@@ -606,7 +612,6 @@ func (suite *LogicRunnerTestSuite) TestImmutableOrder() {
 
 	suite.re.SendReplyMock.Return()
 	suite.re.ExecuteAndSaveMock.Set(func(ctx context.Context, transcript *common.Transcript) (artifacts.RequestResult, error) {
-
 		if transcript.RequestRef.Equal(mutableRequestRef) {
 			log.Debug("mutableChan 1")
 			select {

@@ -299,7 +299,7 @@ func (q *ExecutionBroker) processTranscript(ctx context.Context, transcript *com
 		if !transcript.Request.Immutable &&
 			transcript.ObjectDescriptor.EarliestRequestID() != nil &&
 			!transcript.RequestRef.GetLocal().Equal(*transcript.ObjectDescriptor.EarliestRequestID()) {
-			logger.Info("Got different earliest request from ledger")
+			logger.Warn("Got different earliest request from ledger")
 
 			sendReply = false
 			q.resetMutableQueueWithCurrent(ctx, transcript)
@@ -313,6 +313,7 @@ func (q *ExecutionBroker) processTranscript(ctx context.Context, transcript *com
 		logger.Warn("contract execution error: ", err)
 		return
 	}
+	logger.Debug("finished executing method")
 
 	objRef := result.ObjectReference()
 	replyData = &reply.CallMethod{Result: result.Result(), Object: &objRef}
