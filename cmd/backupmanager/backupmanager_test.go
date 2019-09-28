@@ -19,10 +19,13 @@ package main_test
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -31,27 +34,69 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/store"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/heavy/executor"
 )
 
-var binaryPath string
+const BackupManagerBinary = "backupmanager"
+
+var backupManagerBinaryPath string
+
+func findProjectRoot() (string, error) {
+	workdir, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+	for {
+		if filepath.Clean(workdir) == "/" {
+			return "", errors.New("no directory contains .gir")
+		}
+		if fileInfo, err := os.Stat(filepath.Join(workdir, ".git")); err == nil && fileInfo.IsDir() {
+			return filepath.Clean(workdir), nil
+		}
+		workdir = filepath.Join(workdir, "..")
+	}
+}
 
 func init() {
-	wd, err := os.Getwd()
-	binaryPath = filepath.Join(wd, "..", "..", "bin")
-
+	rootDir, err := findProjectRoot()
 	if err != nil {
-		panic(err.Error())
+		panic("failed to find project root: " + err.Error())
 	}
+	fmt.Println("Found project root:", rootDir)
 
-	// Always rebuild backupmanager
-	bashCmd := "cd " + binaryPath + " && (rm backupmanager || true) && go build ../cmd/backupmanager"
-	cmd := exec.Command("bash", "-c", bashCmd)
-	err = cmd.Run()
+	cmd := exec.Command("make", BackupManagerBinary)
+	cmd.Dir = rootDir
+	output, err := cmd.CombinedOutput()
 	if err != nil {
-		panic(err.Error())
+		fmt.Println("Failed to build backupmanager:", err.Error())
+		for _, line := range strings.Split(string(output), "\n") {
+			fmt.Println(line)
+		}
+		runtime.Goexit()
 	}
+	fmt.Println("Successfully build backupmanager")
+
+	backupManagerBinaryPath = filepath.Join(rootDir, "bin", BackupManagerBinary)
+}
+
+type BadgerLogger struct {
+	insolar.Logger
+}
+
+func (b BadgerLogger) Warningf(fmt string, args ...interface{}) {
+	b.Warnf(fmt, args...)
+}
+
+func defaultBadgerOpts(ctx context.Context, dbPath string) badger.Options {
+	_, logger := inslogger.WithField(ctx, "component", "badger")
+	badgerLogger := BadgerLogger{Logger: logger}
+
+	opts := badger.DefaultOptions(dbPath)
+	opts.Logger = badgerLogger
+	return opts
 }
 
 func logOutput(t testing.TB, text string) {
@@ -62,18 +107,9 @@ func logOutput(t testing.TB, text string) {
 }
 
 func invoke(args ...string) (string, error) {
-	cmd := exec.Command(binaryPath+"/backupmanager", args...)
+	cmd := exec.Command(backupManagerBinaryPath, args...)
 	output, err := cmd.CombinedOutput()
 	return string(output), err
-}
-
-func invokeExpectSuccess(t testing.TB, args ...string) string {
-	output, err := invoke(args...)
-	if !assert.NoError(t, err) {
-		logOutput(t, output)
-		t.FailNow()
-	}
-	return output
 }
 
 func invokeExpectFailure(t testing.TB, args ...string) string {
@@ -85,76 +121,107 @@ func invokeExpectFailure(t testing.TB, args ...string) string {
 	return output
 }
 
+func prepareTemporaryDir(t *testing.T, init bool) (string, func(*testing.T)) {
+	tmpdir, err := ioutil.TempDir("", "bdb-test-")
+	if err != nil {
+		t.Fatal("Failed to create testing directory: ", err.Error())
+	}
+
+	cleanup := func(t *testing.T) {
+		err := os.RemoveAll(tmpdir)
+		if err != nil {
+			t.Log("Failed to cleanup (remove directory): ", err.Error())
+		}
+	}
+
+	invokeExpectSuccess := func(t testing.TB, args ...string) bool {
+		output, err := invoke(args...)
+		success := assert.NoError(t, err)
+		if !success {
+			logOutput(t, output)
+		}
+		return success
+	}
+
+	if init && !invokeExpectSuccess(t, "create", "-d", tmpdir) {
+		cleanup(t)
+		t.FailNow()
+	}
+
+	return tmpdir, cleanup
+}
+
 // create
 func TestNoCreateToExistingDir(t *testing.T) {
-	tmpdir, err := ioutil.TempDir("", "bdb-test-")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
+	t.Parallel()
 
-	invokeExpectSuccess(t, "create", "-d", tmpdir)
+	tmpdir, cleanup := prepareTemporaryDir(t, true)
+	defer cleanup(t)
 
 	for i := 0; i < 3; i++ {
-		output, err := invoke("create", "-d", tmpdir)
-		assert.IsType(t, err, (*exec.ExitError)(nil))
-
-		require.Contains(t, output, "DB must be empty")
+		output := invokeExpectFailure(t, "create", "-d", tmpdir)
+		require.Contains(t, output, "database must be empty")
 	}
 }
 
 func TestCreateHappyPath(t *testing.T) {
-	tmpdir, err := ioutil.TempDir("", "bdb-test-")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
+	t.Parallel()
 
-	invokeExpectSuccess(t, "create", "-d", tmpdir)
+	tmpdir, cleanup := prepareTemporaryDir(t, true)
+	defer cleanup(t)
 
-	db, err := store.NewBadgerDB(badger.DefaultOptions(tmpdir))
-	require.NoError(t, err)
+	{
+		ctx := context.Background()
 
-	var key executor.DBInitializedKey
-	val, err := db.Get(key)
-	require.NoError(t, err)
+		db, err := store.NewBadgerDB(defaultBadgerOpts(ctx, tmpdir))
+		require.NoError(t, err)
 
-	timeValue := time.Time{}
-	err = timeValue.UnmarshalBinary(val)
-	require.NoError(t, err, "failed to parse time")
-	require.False(t, timeValue.IsZero())
+		var key executor.DBInitializedKey
+		val, err := db.Get(key)
+		require.NoError(t, err)
+
+		timeValue := time.Time{}
+		err = timeValue.UnmarshalBinary(val)
+		require.NoError(t, err, "failed to parse time")
+		require.False(t, timeValue.IsZero())
+	}
 }
 
 // merge
 func TestFailToMergeBadBackupFile(t *testing.T) {
-	tmpdir, err := ioutil.TempDir("", "bdb-test-")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
+	t.Parallel()
 
-	invokeExpectSuccess(t, "create", "-d", tmpdir)
+	tmpdir, cleanup := prepareTemporaryDir(t, true)
+	defer cleanup(t)
 
-	bkpFile := tmpdir + "/incr.bkp"
-	err = ioutil.WriteFile(bkpFile, []byte("test Data"), 0600)
-	require.NoError(t, err)
+	{
+		bkpFile := tmpdir + "/incr.bkp"
+		err := ioutil.WriteFile(bkpFile, []byte("test Data"), 0600)
+		require.NoError(t, err)
 
-	for i := 0; i < 3; i++ {
-		invokeExpectFailure(t, "merge", "-t", tmpdir, "-n", bkpFile)
+		for i := 0; i < 3; i++ {
+			invokeExpectFailure(t, "merge", "-t", tmpdir, "-n", bkpFile)
+		}
 	}
 }
 
 func TestNoMergeToEmptyDb(t *testing.T) {
-	tmpdir, err := ioutil.TempDir("", "bdb-test-")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
+	t.Parallel()
+
+	tmpdir, cleanup := prepareTemporaryDir(t, false)
+	defer cleanup(t)
 
 	for i := 0; i < 3; i++ {
 		output := invokeExpectFailure(t, "merge", "-t", tmpdir, "-n", "TEST")
-		require.Contains(t, output, "db must not be empty")
+		require.Contains(t, output, "database must not be empty")
 	}
 }
 
 func TestMergeNoBackupFile(t *testing.T) {
-	tmpdir, err := ioutil.TempDir("", "bdb-test-")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
+	t.Parallel()
 
-	invokeExpectSuccess(t, "create", "-d", tmpdir)
+	tmpdir, cleanup := prepareTemporaryDir(t, true)
+	defer cleanup(t)
 
 	for i := 0; i < 3; i++ {
 		output := invokeExpectFailure(t, "merge", "-t", tmpdir, "-n", "TEST")
@@ -164,9 +231,10 @@ func TestMergeNoBackupFile(t *testing.T) {
 
 // prepare
 func TestNoPrepareBackupToEmptyDb(t *testing.T) {
-	tmpdir, err := ioutil.TempDir("", "bdb-test-")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
+	t.Parallel()
+
+	tmpdir, cleanup := prepareTemporaryDir(t, false)
+	defer cleanup(t)
 
 	for i := 0; i < 3; i++ {
 		output := invokeExpectFailure(t, "prepare_backup", "-d", tmpdir, "-l", "TEST")
@@ -175,24 +243,27 @@ func TestNoPrepareBackupToEmptyDb(t *testing.T) {
 }
 
 func TestPrepareBackupToEmptyDb(t *testing.T) {
-	tmpdir, err := ioutil.TempDir("", "bdb-test-")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpdir)
+	t.Parallel()
 
-	invokeExpectSuccess(t, "create", "-d", tmpdir)
+	tmpdir, cleanup := prepareTemporaryDir(t, true)
+	defer cleanup(t)
 
-	db, err := store.NewBadgerDB(badger.DefaultOptions(tmpdir))
-	require.NoError(t, err)
+	{
+		ctx := context.Background()
 
-	var key executor.BackupStartKey
-	err = db.Set(key, []byte{})
-	require.NoError(t, err)
+		db, err := store.NewBadgerDB(defaultBadgerOpts(ctx, tmpdir))
+		require.NoError(t, err)
 
-	err = db.Stop(context.Background())
-	require.NoError(t, err)
+		var key executor.BackupStartKey
+		err = db.Set(key, []byte{})
+		require.NoError(t, err)
 
-	for i := 0; i < 3; i++ {
-		output := invokeExpectFailure(t, "prepare_backup", "-d", tmpdir, "-l", "TEST")
-		require.Contains(t, output, "failed to finalizeLastPulse")
+		err = db.Stop(ctx)
+		require.NoError(t, err)
+
+		for i := 0; i < 3; i++ {
+			output := invokeExpectFailure(t, "prepare_backup", "-d", tmpdir, "-l", "TEST")
+			require.Contains(t, output, "failed to finalizeLastPulse")
+		}
 	}
 }

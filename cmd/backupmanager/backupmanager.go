@@ -38,46 +38,6 @@ import (
 	"github.com/insolar/insolar/log"
 )
 
-func exitWithError(err error) {
-	log.Error(err.Error())
-	Exit(1)
-}
-
-func exit(err error) {
-	if err == nil {
-		Exit(0)
-	}
-	exitWithError(err)
-}
-
-func stopDB(ctx context.Context, bdb *store.BadgerDB, originalError error) {
-	closeError := bdb.Stop(ctx)
-	if closeError != nil {
-		err := errors.Wrap(originalError, "failed to stop store.BadgerDB")
-		log.Error(err.Error())
-	}
-	if originalError != nil {
-		log.Error(originalError.Error())
-	}
-	if originalError != nil || closeError != nil {
-		Exit(1)
-	}
-}
-
-func closeRawDB(bdb *badger.DB, originalError error) {
-	closeError := bdb.Close()
-	if closeError != nil {
-		closeError = errors.Wrap(originalError, "failed to close badger.DB")
-		log.Error(closeError.Error())
-	}
-	if originalError != nil {
-		log.Error(originalError.Error())
-	}
-	if originalError != nil || closeError != nil {
-		Exit(1)
-	}
-}
-
 type BadgerLogger struct {
 	insolar.Logger
 }
@@ -86,49 +46,80 @@ func (b BadgerLogger) Warningf(fmt string, args ...interface{}) {
 	b.Warnf(fmt, args...)
 }
 
-var (
-	badgerLogger BadgerLogger
-)
+func exit(ctx context.Context, err error) {
+	if err != nil {
+		inslogger.FromContext(ctx).Error(err.Error())
+		Exit(1)
+	}
+	Exit(0)
+}
 
-func merge(_ context.Context, targetDBPath string, backupFileName string, numberOfWorkers int) {
-	log.GlobalLogger().WithFields(map[string]interface{}{
+func dbIsEmpty(bdb *badger.DB) bool {
+	badgerTables := bdb.Tables(false)
+	if len(badgerTables) != 0 {
+		return false
+	}
+
+	lsmSize, vlogSize := bdb.Size()
+	return lsmSize == 0 && vlogSize == 0
+}
+
+func dbClose(ctx context.Context, bdb *badger.DB) {
+	err := bdb.Close()
+	if err != nil {
+		inslogger.FromContext(ctx).Errorf("Failed to close database: %s", err.Error())
+	}
+}
+
+func dbStop(ctx context.Context, bdb *store.BadgerDB) {
+	err := bdb.Stop(ctx)
+	if err != nil {
+		inslogger.FromContext(ctx).Errorf("Failed to stop database: %s", err.Error())
+	}
+}
+
+func defaultBadgerOpts(ctx context.Context, dbPath string) badger.Options {
+	_, logger := inslogger.WithField(ctx, "component", "badger")
+	badgerLogger := BadgerLogger{Logger: logger}
+
+	opts := badger.DefaultOptions(dbPath)
+	opts.Logger = badgerLogger
+	return opts
+}
+
+func merge(ctx context.Context, targetDBPath string, backupFileName string, numberOfWorkers int) error {
+	logger := inslogger.FromContext(ctx)
+	logger.WithFields(map[string]interface{}{
 		"targetDBPath":    targetDBPath,
 		"backupFileName":  backupFileName,
 		"numberOfWorkers": numberOfWorkers,
 	}).Info("merge started")
 
-	ops := badger.DefaultOptions(targetDBPath)
-	ops.Logger = badgerLogger
-	bdb, err := badger.Open(ops)
+	bdb, err := badger.Open(defaultBadgerOpts(ctx, targetDBPath))
 	if err != nil {
-		err = errors.Wrap(err, "failed to open badger")
-		exitWithError(err)
+		return errors.Wrap(err, "failed to open database")
 	}
-	log.Info("DB is opened")
+	logger.Info("database is opened")
+	defer dbClose(ctx, bdb)
 
-	err = isDBEmpty(bdb)
-	if err == nil {
-		// will exit
-		err = errors.New("db must not be empty")
-		closeRawDB(bdb, err)
+	if dbIsEmpty(bdb) {
+		return errors.New("database must not be empty")
 	}
-	log.Info("DB is not empty")
+	logger.Info("database is not empty")
 
 	bkpFile, err := os.Open(backupFileName)
 	if err != nil {
-		// will exit
-		closeRawDB(bdb, err)
+		return errors.Wrap(err, "failed to open backup file")
 	}
-	log.Info("Backup file is opened")
+	logger.Info("Backup file is opened")
 
 	err = bdb.Load(bkpFile, numberOfWorkers)
 	if err != nil {
-		// will exit
-		closeRawDB(bdb, err)
+		return errors.Wrap(err, "failed to load backup file")
 	}
+	logger.Info("Successfully merged")
 
-	log.Info("Successfully merged")
-	closeRawDB(bdb, nil)
+	return nil
 }
 
 func parseMergeParams(ctx context.Context) *cobra.Command {
@@ -142,7 +133,7 @@ func parseMergeParams(ctx context.Context) *cobra.Command {
 		Use:   "merge",
 		Short: "merge incremental backup to existing db",
 		Run: func(cmd *cobra.Command, args []string) {
-			merge(ctx, targetDBPath, backupFileName, numberOfWorkers)
+			exit(ctx, merge(ctx, targetDBPath, backupFileName, numberOfWorkers))
 		},
 	}
 	mergeFlags := mergeCmd.Flags()
@@ -157,78 +148,49 @@ func parseMergeParams(ctx context.Context) *cobra.Command {
 
 	err := cobra.MarkFlagRequired(mergeFlags, targetDBFlagName)
 	if err != nil {
-		err := errors.Wrap(err, "failed to set required param: "+targetDBFlagName)
-		exitWithError(err)
+		exit(ctx, errors.Wrap(err, "failed to set required param: "+targetDBFlagName))
 	}
 	err = cobra.MarkFlagRequired(mergeFlags, bkpFileName)
 	if err != nil {
-		err := errors.Wrap(err, "failed to set required param: "+bkpFileName)
-		exitWithError(err)
+		exit(ctx, errors.Wrap(err, "failed to set required param: "+bkpFileName))
 	}
 
 	return mergeCmd
 }
 
-func isDBEmpty(bdb *badger.DB) error {
-	tableInfo := bdb.Tables(true)
-	if len(tableInfo) != 0 {
-		return errors.New("tableInfo is not empty")
-	}
+func createEmptyBadger(ctx context.Context, dbDir string) error {
+	logger := inslogger.FromContext(ctx)
+	logger.Info("createEmptyBadger. dbDir: ", dbDir)
 
-	lsm, vlog := bdb.Size()
-	if lsm != 0 || vlog != 0 {
-		log.Infof("lsm: %zd, vlog: %zd", lsm, vlog)
-		return errors.New("lsm or vlog are not empty")
-	}
-
-	return nil
-}
-
-func createEmptyBadger(_ context.Context, dbDir string) {
-	log.Info("createEmptyBadger. dbDir: ", dbDir)
-
-	ops := badger.DefaultOptions(dbDir)
-	ops.Logger = badgerLogger
-	bdb, err := badger.Open(ops)
+	bdb, err := badger.Open(defaultBadgerOpts(ctx, dbDir))
 	if err != nil {
-		err = errors.Wrap(err, "failed to open DB")
-		exitWithError(err)
+		return errors.Wrap(err, "failed to open database")
 	}
-	log.Info("DB is opened")
+	logger.Info("database is opened")
+	defer dbClose(ctx, bdb)
 
-	err = isDBEmpty(bdb)
-	if err != nil {
-		// will exit
-		closeRawDB(bdb, errors.Wrap(err, "DB must be empty"))
+	if !dbIsEmpty(bdb) {
+		return errors.New("database must be empty")
 	}
-	log.Info("DB is empty")
+	logger.Info("database is empty")
 
-	value, err := time.Now().MarshalBinary()
+	timeValue := time.Now()
+	timeMarshalled, err := timeValue.MarshalBinary()
 	if err != nil {
-		log.Panic("failed to marshal time: ", err.Error())
+		return errors.New("failed to marshal time: " + err.Error())
 	}
 	var key executor.DBInitializedKey
 	fullKey := append(key.Scope().Bytes(), key.ID()...)
 
 	err = bdb.Update(func(txn *badger.Txn) error {
-		return txn.Set(fullKey, value)
+		return txn.Set(fullKey, timeMarshalled)
 	})
 	if err != nil {
-		closeRawDB(bdb, err)
-		return
+		return errors.New("failed to set DBInitializedKey")
 	}
+	logger.Info("DBInitializedKey is set: ", timeValue.String())
 
-	log.Info("DBInitializedKey is set")
-
-	t := time.Time{}
-	err = t.UnmarshalBinary(value)
-	if err != nil {
-		// will exit
-		closeRawDB(bdb, err)
-	}
-	log.Info("Set db initialized key: ", t.String())
-
-	closeRawDB(bdb, nil)
+	return nil
 }
 
 func parseCreateParams(ctx context.Context) *cobra.Command {
@@ -237,7 +199,7 @@ func parseCreateParams(ctx context.Context) *cobra.Command {
 		Use:   "create",
 		Short: "create new empty DB",
 		Run: func(cmd *cobra.Command, args []string) {
-			createEmptyBadger(ctx, dbDir)
+			exit(ctx, createEmptyBadger(ctx, dbDir))
 		},
 	}
 
@@ -247,8 +209,7 @@ func parseCreateParams(ctx context.Context) *cobra.Command {
 
 	err := cobra.MarkFlagRequired(createCmd.Flags(), dbDirFlagName)
 	if err != nil {
-		err := errors.Wrap(err, "failed to set required param: "+dbDirFlagName)
-		exitWithError(err)
+		exit(ctx, errors.Wrap(err, "failed to set required param: "+dbDirFlagName))
 	}
 
 	return createCmd
@@ -268,10 +229,11 @@ func writeLastBackupFile(to string, lastBackupedVersion uint64) error {
 }
 
 func finalizeLastPulse(ctx context.Context, bdb store.DB) (insolar.PulseNumber, error) {
+	logger := inslogger.FromContext(ctx)
 	pulsesDB := pulse.NewDB(bdb)
 
 	jetKeeper := executor.NewJetKeeper(jet.NewDBStore(bdb), bdb, pulsesDB)
-	log.Info("Current top sync pulse: ", jetKeeper.TopSyncPulse().String())
+	logger.Info("Current top sync pulse: ", jetKeeper.TopSyncPulse().String())
 
 	it := bdb.NewIterator(executor.BackupStartKey(math.MaxUint32), true)
 	if !it.Next() {
@@ -279,7 +241,7 @@ func finalizeLastPulse(ctx context.Context, bdb store.DB) (insolar.PulseNumber, 
 	}
 
 	pulseNumber := insolar.NewPulseNumber(it.Key())
-	log.Info("Found last backup start key: ", pulseNumber.String())
+	logger.Info("Found last backup start key: ", pulseNumber.String())
 
 	if pulseNumber < jetKeeper.TopSyncPulse() {
 		return 0, errors.New("Found last backup start key must be grater or equal to top sync pulse")
@@ -289,7 +251,7 @@ func finalizeLastPulse(ctx context.Context, bdb store.DB) (insolar.PulseNumber, 
 		return 0, errors.New("data is inconsistent. pulse " + pulseNumber.String() + " must have all confirms")
 	}
 
-	log.Info("All jets confirmed for pulse: ", pulseNumber.String())
+	logger.Info("All jets confirmed for pulse: ", pulseNumber.String())
 	err := jetKeeper.AddBackupConfirmation(ctx, pulseNumber)
 	if err != nil {
 		return 0, errors.Wrap(err, "failed to add backup confirmation for pulse "+pulseNumber.String())
@@ -313,40 +275,35 @@ func (nopWriter) Write(p []byte) (n int, err error) {
 // 1. finalize last pulse, since it comes not finalized ( since we set finalization after success of backup )
 // 2. gets last backuped version
 // 3. write 2. to file
-func prepareBackup(_ context.Context, dbDir string, lastBackupedVersionFile string) {
-	log.Info("prepareBackup. dbDir: ", dbDir, ", lastBackupedVersionFile: ", lastBackupedVersionFile)
+func prepareBackup(ctx context.Context, dbDir string, lastBackupedVersionFile string) error {
+	logger := inslogger.FromContext(ctx)
+	logger.Info("prepareBackup. dbDir: ", dbDir, ", lastBackupedVersionFile: ", lastBackupedVersionFile)
 
-	ops := badger.DefaultOptions(dbDir)
-	ops.Logger = badgerLogger
-	bdb, err := store.NewBadgerDB(ops)
+	bdb, err := store.NewBadgerDB(defaultBadgerOpts(ctx, dbDir))
 	if err != nil {
-		err := errors.Wrap(err, "failed to open DB")
-		exitWithError(err)
+		return errors.Wrap(err, "failed to open database")
 	}
-	log.Info("DB is opened")
-	ctx := context.Background()
+	logger.Info("database is opened")
+	defer dbStop(ctx, bdb)
 
 	topSyncPulse, err := finalizeLastPulse(ctx, bdb)
 	if err != nil {
-		err = errors.Wrap(err, "failed to finalizeLastPulse")
-		stopDB(ctx, bdb, err)
+		return errors.Wrap(err, "failed to finalizeLastPulse")
 	}
 
 	lastVersion, err := bdb.Backup(nopWriter{}, 0)
 	if err != nil {
-		err = errors.Wrap(err, "failed to calculate last backuped version")
-		stopDB(ctx, bdb, err)
+		return errors.Wrap(err, "failed to calculate last backuped version")
 	}
-	log.Info("Got last backup version: ", lastVersion)
+	logger.Info("Got last backup version: ", lastVersion)
 
 	if err := writeLastBackupFile(lastBackupedVersionFile, lastVersion); err != nil {
-		err = errors.Wrap(err, "failed to writeLastBackupFile")
-		stopDB(ctx, bdb, err)
+		return errors.Wrap(err, "failed to writeLastBackupFile")
 	}
-	log.Info("Write last backup version file: ", lastBackupedVersionFile)
+	logger.Info("Write last backup version file: ", lastBackupedVersionFile)
+	logger.Info("New top sync pulse: ", topSyncPulse.String())
 
-	stopDB(ctx, bdb, nil)
-	log.Info("New top sync pulse: ", topSyncPulse.String())
+	return nil
 }
 
 func parsePrepareBackupParams(ctx context.Context) *cobra.Command {
@@ -358,7 +315,7 @@ func parsePrepareBackupParams(ctx context.Context) *cobra.Command {
 		Use:   "prepare_backup",
 		Short: "prepare backup for usage",
 		Run: func(cmd *cobra.Command, args []string) {
-			prepareBackup(ctx, dbDir, dbDir+"/"+lastBackupedVersionFile)
+			exit(ctx, prepareBackup(ctx, dbDir, dbDir+"/"+lastBackupedVersionFile))
 		},
 	}
 
@@ -371,20 +328,18 @@ func parsePrepareBackupParams(ctx context.Context) *cobra.Command {
 
 	err := cobra.MarkFlagRequired(prepareBackupCmd.Flags(), dbDirFlagName)
 	if err != nil {
-		err = errors.Wrap(err, "failed to set required param: "+dbDirFlagName)
-		exitWithError(err)
+		exit(ctx, errors.Wrap(err, "failed to set required param: "+dbDirFlagName))
 	}
 
 	err = cobra.MarkFlagRequired(prepareBackupCmd.Flags(), lastBackupFileFlagName)
 	if err != nil {
-		err = errors.Wrap(err, "failed to set required param: "+lastBackupFileFlagName)
-		exitWithError(err)
+		exit(ctx, errors.Wrap(err, "failed to set required param: "+lastBackupFileFlagName))
 	}
 
 	return prepareBackupCmd
 }
 
-func parseInputParams(ctx context.Context) {
+func parseInputParams(ctx context.Context) error {
 	var rootCmd = &cobra.Command{
 		Use:   "backupmanager",
 		Short: "backupmanager is the command line client for managing backups",
@@ -394,23 +349,20 @@ func parseInputParams(ctx context.Context) {
 	rootCmd.AddCommand(parseCreateParams(ctx))
 	rootCmd.AddCommand(parsePrepareBackupParams(ctx))
 
-	exit(rootCmd.Execute())
+	return rootCmd.Execute()
 }
 
 func initLogger() context.Context {
 	err := log.SetLevel("Debug")
 	if err != nil {
-		err = errors.Wrap(err, "failed to set log level")
-		exitWithError(err)
+		exit(context.Background(), errors.Wrap(err, "failed to set log level"))
 	}
 
 	cfg := configuration.NewLog()
 	cfg.Level = "Debug"
 	cfg.Formatter = "text"
 
-	ctx, logger := inslogger.InitNodeLogger(context.Background(), cfg, "", "", "backuper")
-	badgerLogger.Logger = logger.WithField("component", "badger")
-
+	ctx, _ := inslogger.InitNodeLogger(context.Background(), cfg, "", "", "backuper")
 	return ctx
 }
 
@@ -425,5 +377,5 @@ func initExit(ctx context.Context) {
 func main() {
 	ctx := initLogger()
 	initExit(ctx)
-	parseInputParams(ctx)
+	exit(ctx, parseInputParams(ctx))
 }
