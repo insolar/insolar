@@ -17,6 +17,7 @@
 package proc
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 
@@ -134,7 +135,7 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 			}
 
 			var msg *message.Message
-			if res.RecordID == resultID {
+			if bytes.Equal(res.RecordID.Hash(), resultID.Hash()) {
 				msg, err = payload.NewMessage(&payload.ResultInfo{
 					ObjectID: p.result.Object,
 					ResultID: res.RecordID,
