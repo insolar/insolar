@@ -29,25 +29,50 @@ import (
 
 // BadgerDB is a badger DB implementation.
 type BadgerDB struct {
-	backend *badger.DB
+	backend   *badger.DB
+	extraOpts BadgerOptions
 
 	stopGC  chan struct{}
 	forceGC chan chan struct{}
 	doneGC  chan struct{}
 }
 
+type BadgerOptions struct {
+	// ValueLogDiscardRatio set parameter for RunValueLogGC badger.DB method.
+	valueLogDiscardRatio float64
+}
+
+type BadgerOption func(*BadgerOptions)
+
+// ValueLogDiscardRatio configures values files garbage collection discard ratio.
+// If value is greater than zero, NewBadgerDB starts values garbage collection in detached goroutine.
+//
+// More info about how it works in documentation of badger.DB's RunValueLogGC method.
+func ValueLogDiscardRatio(value float64) BadgerOption {
+	return func(s *BadgerOptions) {
+		s.valueLogDiscardRatio = value
+	}
+}
+
 // NewBadgerDB creates new BadgerDB instance.
 // Creates new badger.DB instance with provided working dir and use it as backend for BadgerDB.
-func NewBadgerDB(ops badger.Options) (*BadgerDB, error) {
+func NewBadgerDB(opts badger.Options, extras ...BadgerOption) (*BadgerDB, error) {
+	b := &BadgerDB{}
+	for _, opt := range extras {
+		opt(&b.extraOpts)
+	}
+
 	// always allow to truncate vlog if necessary (actually it should have been a default behavior)
-	ops.Truncate = true
-	bdb, err := badger.Open(ops)
+	opts.Truncate = true
+	bdb, err := badger.Open(opts)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to open badger")
 	}
+	b.backend = bdb
 
-	b := &BadgerDB{backend: bdb}
-	b.runGC(context.Background())
+	if b.extraOpts.valueLogDiscardRatio > 0 {
+		b.runGC(context.Background())
+	}
 	return b, nil
 }
 
@@ -86,7 +111,7 @@ func (b *BadgerDB) runGC(ctx context.Context) {
 		logger.Info("BadgerDB: values GC start")
 		defer logger.Info("BadgerDB: values GC end")
 
-		err := db.RunValueLogGC(0.7)
+		err := db.RunValueLogGC(b.extraOpts.valueLogDiscardRatio)
 		if err != nil && err != badger.ErrNoRewrite {
 			logger.Errorf("BadgerDB: GC failed with error: %v", err.Error())
 		}
