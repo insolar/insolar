@@ -234,7 +234,7 @@ func (q *ExecutionBroker) finishTask(ctx context.Context, transcript *common.Tra
 	}
 }
 
-func (q *ExecutionBroker) resetMutableQueue(ctx context.Context) {
+func (q *ExecutionBroker) resetMutableQueueWithCurrent(ctx context.Context, transcript *common.Transcript) {
 	q.stateLock.Lock()
 	defer q.stateLock.Unlock()
 
@@ -242,6 +242,8 @@ func (q *ExecutionBroker) resetMutableQueue(ctx context.Context) {
 	for _, item := range items {
 		delete(q.deduplicationTable, item.RequestRef)
 	}
+
+	delete(q.deduplicationTable, transcript.RequestRef)
 
 	q.ledgerHasMoreRequests = true
 }
@@ -300,7 +302,7 @@ func (q *ExecutionBroker) processTranscript(ctx context.Context, transcript *com
 			logger.Info("Got different earliest request from ledger")
 
 			sendReply = false
-			q.resetMutableQueue(ctx)
+			q.resetMutableQueueWithCurrent(ctx, transcript)
 			return
 		}
 	}
@@ -540,7 +542,7 @@ func (q *ExecutionBroker) OnPulse(ctx context.Context) []payload.Payload {
 		q.pending = insolar.NotPending
 		sendExecResults = true
 		q.ledgerHasMoreRequests = true
-	case len(q.finished) > 0 || len(requests) > 0:
+	case len(q.finished) > 0 || len(requests) > 0 || q.ledgerHasMoreRequests:
 		sendExecResults = true
 	}
 
@@ -667,6 +669,7 @@ func (q *ExecutionBroker) MoreRequestsOnLedger(ctx context.Context) {
 	defer q.stateLock.Unlock()
 
 	q.ledgerHasMoreRequests = true
+	q.startRequestsFetcher(ctx)
 }
 
 func (q *ExecutionBroker) startRequestsFetcher(ctx context.Context) {
@@ -696,7 +699,10 @@ func (q *ExecutionBroker) AddFreshRequest(
 
 	if !q.ledgerHasMoreRequests {
 		q.add(ctx, requestsqueue.FromThisPulse, tr)
+	} else {
+		q.startRequestsFetcher(ctx)
 	}
+
 	q.startProcessors(ctx)
 }
 
