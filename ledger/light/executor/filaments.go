@@ -565,7 +565,7 @@ func (c *FilamentCalculatorDefault) findLifeline(
 	ctx context.Context, until insolar.PulseNumber, requestID insolar.ID,
 ) (record.Lifeline, error) {
 	iter := requestID.Pulse()
-	for {
+	for iter >= until {
 		// We should find lifeline for `iter` pulse,
 		// because requestID.Pulse() may be different.
 		idx, err := c.indexes.ForID(ctx, iter, *insolar.NewID(iter, requestID.Hash()))
@@ -582,10 +582,9 @@ func (c *FilamentCalculatorDefault) findLifeline(
 		}
 
 		iter = prev.PulseNumber
-		if iter > until {
-			return record.Lifeline{}, object.ErrIndexNotFound
-		}
 	}
+
+	return record.Lifeline{}, object.ErrIndexNotFound
 }
 
 type fetchingIterator struct {

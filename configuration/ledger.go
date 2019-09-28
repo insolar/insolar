@@ -20,6 +20,9 @@ package configuration
 type Storage struct {
 	// DataDirectory is a directory where database's files live.
 	DataDirectory string
+	// BadgerValueLogGCDiscardRatio controls badger's value log GC behaviour.
+	// Compaction on value log file happens only if data would be compacted to at least 1-BadgerValueLogGCDiscardRatio ratio.
+	BadgerValueLogGCDiscardRatio float64
 }
 
 // JetSplit holds configuration for jet split.
@@ -110,7 +113,8 @@ func NewLedger() Ledger {
 	dataDir := "./data"
 	return Ledger{
 		Storage: Storage{
-			DataDirectory: dataDir,
+			DataDirectory:                dataDir,
+			BadgerValueLogGCDiscardRatio: 0.4,
 		},
 
 		JetSplit: JetSplit{
