@@ -19,7 +19,6 @@ package log_test
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/insolar/insolar/insolar"
 	"runtime"
 	"strconv"
 	"testing"
@@ -53,8 +52,7 @@ func TestExtLog_ZerologCaller(t *testing.T) {
 	require.NoError(t, err, "log creation")
 
 	var b bytes.Buffer
-	l, err = l.Copy().WithOutput(&b).WithCaller(insolar.CallerField).Build()
-	require.NoError(t, err)
+	l = l.WithOutput(&b)
 
 	_, _, line, _ := runtime.Caller(0)
 	l.Info("test")
@@ -75,8 +73,8 @@ func TestExtLog_ZerologCallerWithFunc(t *testing.T) {
 	require.NoError(t, err, "log creation")
 
 	var b bytes.Buffer
-	l, err = l.Copy().WithOutput(&b).WithCaller(insolar.CallerFieldWithFuncName).Build()
-	require.NoError(t, err)
+	l = l.WithFuncName(true)
+	l = l.WithOutput(&b)
 
 	_, _, line, _ := runtime.Caller(0)
 	l.Info("test")
@@ -88,45 +86,35 @@ func TestExtLog_ZerologCallerWithFunc(t *testing.T) {
 }
 
 func TestExtLog_GlobalCaller(t *testing.T) {
-	defer log.SaveGlobalLogger()()
+	gl := log.GlobalLogger
+	defer func() { log.GlobalLogger = gl }()
 
 	var b bytes.Buffer
-	gl2, err := log.GlobalLogger().Copy().WithOutput(&b).WithCaller(insolar.CallerField).Build()
-	require.NoError(t, err)
-	log.SetGlobalLogger(gl2)
-
-	err = log.SetLevel("info")
-	require.NoError(t, err)
+	log.GlobalLogger = log.GlobalLogger.WithOutput(&b)
+	log.SetLevel("info")
 
 	_, _, line, _ := runtime.Caller(0)
 	log.Info("test")
-	log.Debug("test2shouldNotBeThere")
 
-	s := b.String()
-	lf := logFields(t, []byte(s))
+	lf := logFields(t, b.Bytes())
 	assert.Regexp(t, "^log/caller_ext_test.go:"+strconv.Itoa(line+1), lf.Caller, "log contains proper call place")
 	assert.Equal(t, "", lf.Func, "log not contains func name")
-	assert.NotContains(t, s, "test2shouldNotBeThere")
 }
 
+// this test result depends on test name!
 func TestExtLog_GlobalCallerWithFunc(t *testing.T) {
-	defer log.SaveGlobalLogger()()
+	gl := log.GlobalLogger
+	defer func() { log.GlobalLogger = gl }()
 
 	var b bytes.Buffer
-	gl2, err := log.GlobalLogger().Copy().WithOutput(&b).WithCaller(insolar.CallerFieldWithFuncName).Build()
-	require.NoError(t, err)
-	log.SetGlobalLogger(gl2)
-
-	err = log.SetLevel("info")
-	require.NoError(t, err)
+	log.GlobalLogger = log.GlobalLogger.WithOutput(&b)
+	log.GlobalLogger = log.GlobalLogger.WithFuncName(true)
+	log.SetLevel("info")
 
 	_, _, line, _ := runtime.Caller(0)
 	log.Info("test")
-	log.Debug("test2shouldNotBeThere")
 
-	s := b.String()
-	lf := logFields(t, []byte(s))
-	assert.Regexp(t, "^log/caller_ext_test.go:"+strconv.Itoa(line+1), lf.Caller, "log contains proper call place")
-	assert.Equal(t, "TestExtLog_GlobalCallerWithFunc", lf.Func, "log contains func name")
-	assert.NotContains(t, s, "test2shouldNotBeThere")
+	lf := logFields(t, b.Bytes())
+	assert.Regexp(t, "^log/caller_ext_test.go:"+strconv.Itoa(line+1), lf.Caller, "log contains call place")
+	assert.Equal(t, "TestExtLog_GlobalCallerWithFunc", lf.Func, "log contains call place")
 }

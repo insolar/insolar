@@ -64,7 +64,6 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
-	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/keystore"
 	"github.com/insolar/insolar/network"
@@ -234,13 +233,10 @@ func initPulsar(ctx context.Context, delta uint16, ns InitializedNodes) {
 
 func initLogger(level insolar.LogLevel) context.Context {
 	ctx := context.Background()
-
-	cfg := configuration.NewLog()
-	cfg.LLBufferSize = 0
-	cfg.Level = level.String()
-	cfg.Formatter = insolar.TextFormat.String()
-
-	ctx, _ = inslogger.InitNodeLogger(ctx, cfg, "main_"+utils.RandTraceID(), "", "")
+	logger := inslogger.FromContext(ctx).WithCaller(false)
+	logger, _ = logger.WithLevelNumber(level)
+	logger, _ = logger.WithFormat(insolar.TextFormat)
+	ctx = inslogger.SetLogger(ctx, logger)
 	return ctx
 }
 

@@ -19,7 +19,6 @@ package heavy
 import (
 	"context"
 	"fmt"
-	"github.com/insolar/insolar/log/logwatermill"
 	"net"
 	"path/filepath"
 
@@ -54,6 +53,7 @@ import (
 	"github.com/insolar/insolar/ledger/heavy/handler"
 	"github.com/insolar/insolar/ledger/heavy/pulsemanager"
 	"github.com/insolar/insolar/ledger/object"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/servicenetwork"
@@ -120,12 +120,12 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 
 	// Watermill stuff.
 	var (
-		wmLogger   *logwatermill.WatermillLogAdapter
+		wmLogger   *log.WatermillLogAdapter
 		publisher  watermillMsg.Publisher
 		subscriber watermillMsg.Subscriber
 	)
 	{
-		wmLogger = logwatermill.NewWatermillLogAdapter(logger)
+		wmLogger = log.NewWatermillLogAdapter(logger)
 		pubsub := gochannel.NewGoChannel(gochannel.Config{}, wmLogger)
 		subscriber = pubsub
 		publisher = pubsub

@@ -17,320 +17,180 @@
 package log
 
 import (
+	"fmt"
+	stdlog "log"
+	"os"
+	"strings"
+	"time"
+
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog"
+
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/log/critlog"
-	"github.com/insolar/insolar/log/logadapter"
-	"github.com/insolar/insolar/log/zlogadapter"
-	"github.com/pkg/errors"
-	stdlog "log"
-	"strings"
-	"sync"
-	"time"
 )
+
+const timestampFormat = "2006-01-02T15:04:05.000000000Z07:00"
+
+const defaultCallerSkipFrameCount = 3
+
+var fieldsOrder = []string{
+	zerolog.TimestampFieldName,
+	zerolog.LevelFieldName,
+	zerolog.MessageFieldName,
+	zerolog.CallerFieldName,
+}
+
+var cwd string
+
+func init() {
+	var err error
+	cwd, err = os.Getwd()
+	if err != nil {
+		cwd = ""
+		fmt.Println("couldn't get current working directory: ", err.Error())
+	}
+}
+
+func formatCaller() zerolog.Formatter {
+	return func(i interface{}) string {
+		var c string
+		if cc, ok := i.(string); ok {
+			c = cc
+		}
+		if len(c) > 0 {
+			if len(cwd) > 0 {
+				c = strings.TrimPrefix(c, cwd)
+				c = strings.TrimPrefix(c, "/")
+			}
+			c = "file=" + c
+		}
+		return c
+	}
+}
 
 // NewLog creates logger instance with particular configuration
 func NewLog(cfg configuration.Log) (insolar.Logger, error) {
-	return NewLogExt(cfg, 0)
-}
+	var logger insolar.Logger
+	var err error
 
-// NewLog creates logger instance with particular configuration
-func NewLogExt(cfg configuration.Log, skipFrameBaselineAdjustment int8) (insolar.Logger, error) {
-
-	defaults := logadapter.DefaultLoggerSettings()
-	pCfg, err := logadapter.ParseLogConfigWithDefaults(cfg, defaults)
+	switch strings.ToLower(cfg.Adapter) {
+	case "zerolog":
+		logger, err = newZerologAdapter(cfg)
+	default:
+		err = errors.New("unknown adapter")
+	}
 
 	if err == nil {
-		var logger insolar.Logger
-
-		pCfg.SkipFrameBaselineAdjustment = skipFrameBaselineAdjustment
-
-		msgFmt := logadapter.GetDefaultLogMsgFormatter()
-
-		switch strings.ToLower(cfg.Adapter) {
-		case "zerolog":
-			logger, err = zlogadapter.NewZerologAdapter(pCfg, msgFmt)
-		default:
-			err = errors.New("unknown adapter")
-		}
-
-		if err == nil {
-			if logger != nil {
-				return logger, nil
-			}
-			return nil, errors.New("logger was not initialized")
-		}
-	}
-	return nil, errors.Wrap(err, "invalid logger config")
-}
-
-var globalLogger = struct {
-	mutex   sync.RWMutex
-	output  critlog.ProxyLoggerOutput
-	logger  insolar.Logger
-	adapter insolar.GlobalLogAdapter
-}{}
-
-func g() insolar.EmbeddedLogger {
-	return GlobalLogger().Embeddable()
-}
-
-func GlobalLogger() insolar.Logger {
-	globalLogger.mutex.RLock()
-	l := globalLogger.logger
-	globalLogger.mutex.RUnlock()
-
-	if l != nil {
-		return l
+		logger, err = logger.WithLevel(cfg.Level)
 	}
 
-	globalLogger.mutex.Lock()
-	defer globalLogger.mutex.Unlock()
-	if globalLogger.logger == nil {
-		createNoConfigGlobalLogger()
+	if err != nil {
+		return nil, errors.Wrap(err, "invalid logger config")
 	}
 
-	return globalLogger.logger
-}
-
-func CopyGlobalLoggerForContext() insolar.Logger {
-	return GlobalLogger()
-}
-
-func SaveGlobalLogger() func() {
-	return SaveGlobalLoggerAndFilter(false)
-}
-
-func SaveGlobalLoggerAndFilter(includeFilter bool) func() {
-	globalLogger.mutex.RLock()
-	defer globalLogger.mutex.RUnlock()
-
-	loggerCopy := globalLogger.logger
-	outputCopy := globalLogger.output.GetTarget()
-	hasLoggerFilter, loggerFilter := getGlobalLevelFilter()
-
-	return func() {
-		globalLogger.mutex.Lock()
-		defer globalLogger.mutex.Unlock()
-
-		globalLogger.logger = loggerCopy
-		globalLogger.output.SetTarget(outputCopy)
-
-		if includeFilter && hasLoggerFilter {
-			_ = setGlobalLevelFilter(loggerFilter)
-		}
-	}
-}
-
-var globalTickerOnce sync.Once
-
-func InitTicker() {
-	globalTickerOnce.Do(func() {
-		// as we use GlobalLogger() - the copy will follow any redirection made on the GlobalLogger()
-		tickLogger, err := GlobalLogger().Copy().WithCaller(insolar.NoCallerField).Build()
-		if err != nil {
-			panic(err)
-		}
-
-		go func() {
-			for {
-				// Tick between seconds
-				time.Sleep(time.Second - time.Since(time.Now().Truncate(time.Second)))
-				tickLogger.Debug("Logger tick")
-			}
-		}()
-	})
+	return logger, nil
 }
 
 // GlobalLogger creates global logger with correct skipCallNumber
-func createNoConfigGlobalLogger() {
+// TODO: make it private again
+var GlobalLogger = func() insolar.Logger {
 	holder := configuration.NewHolder().MustInit(false)
-	logCfg := holder.Configuration.Log
 
-	// enforce buffer-less for a non-configured logger
-	logCfg.BufferSize = 0
-	logCfg.LLBufferSize = -1
-
-	logger, err := NewLog(logCfg)
-
-	if err == nil {
-		err = setGlobalLogger(logger, true)
-	}
-
-	if err != nil || logger == nil {
-		stdlog.Println("warning: ", err)
-		panic("unable to initialize global logger with default config")
-	}
-}
-
-func getGlobalLogAdapter(b insolar.LoggerBuilder) insolar.GlobalLogAdapter {
-	if f, ok := b.(insolar.GlobalLogAdapterFactory); ok {
-		return f.CreateGlobalLogAdapter()
-	}
-	return nil
-}
-
-func setGlobalLogger(logger insolar.Logger, isDefault bool) error {
-	b := logger.Copy()
-
-	output := b.(insolar.LoggerOutputGetter).GetLoggerOutput()
-	b = b.WithOutput(&globalLogger.output)
-
-	if isDefault {
-		// TODO move to logger construction configuration?
-		b = b.WithCaller(insolar.CallerField)
-	}
-
-	adapter := getGlobalLogAdapter(b)
-
-	var err error
-	logger, err = b.Build()
+	logger, err := NewLog(holder.Configuration.Log)
 	if err != nil {
-		return err
+		stdlog.Println("warning:", err.Error())
 	}
-	if isDefault {
-		logger = logger.WithField("loginstance", "global_default")
-	} else {
-		logger = logger.WithField("loginstance", "global")
+	if logger == nil {
+		panic("couldn't initialize global logger with default config")
 	}
 
-	if globalLogger.adapter != nil && adapter != nil && globalLogger.adapter != adapter {
-		adapter.SetGlobalLoggerFilter(globalLogger.adapter.GetGlobalLoggerFilter())
+	return logger.WithCaller(true).WithSkipFrameCount(1).WithField("loginstance", "global_default")
+}()
+
+func InitTicker(l insolar.Logger) {
+	if l.Is(insolar.DebugLevel) {
+		go func() {
+			innerLogger := l.WithCaller(false)
+			for {
+				// Tick between seconds
+				time.Sleep(time.Second - time.Since(time.Now().Truncate(time.Second)))
+				innerLogger.Debug("Logger tick")
+			}
+		}()
 	}
-	globalLogger.adapter = adapter
-	globalLogger.logger = logger
-	globalLogger.output.SetTarget(output)
-	return nil
 }
 
 func SetGlobalLogger(logger insolar.Logger) {
-	globalLogger.mutex.Lock()
-	defer globalLogger.mutex.Unlock()
-
-	if globalLogger.logger == logger {
-		return
-	}
-
-	err := setGlobalLogger(logger, false)
-
-	if err != nil || logger == nil {
-		stdlog.Println("warning: ", err)
-		panic("unable to update global logger")
-	}
+	GlobalLogger = logger.WithSkipFrameCount(1).WithField("loginstance", "global")
 }
 
 // SetLevel lets log level for global logger
 func SetLevel(level string) error {
-	lvl, err := insolar.ParseLevel(level)
+	newGlobalLogger, err := GlobalLogger.WithLevel(level)
 	if err != nil {
 		return err
 	}
-
-	SetLogLevel(lvl)
+	GlobalLogger = newGlobalLogger
 	return nil
 }
 
-func SetLogLevel(level insolar.LogLevel) {
-	globalLogger.mutex.Lock()
-	defer globalLogger.mutex.Unlock()
-
-	if globalLogger.logger == nil {
-		createNoConfigGlobalLogger()
-	}
-
-	globalLogger.logger = globalLogger.logger.Level(level)
-}
-
-func SetGlobalLevelFilter(level insolar.LogLevel) error {
-	globalLogger.mutex.RLock()
-	defer globalLogger.mutex.RUnlock()
-
-	return setGlobalLevelFilter(level)
-}
-
-func setGlobalLevelFilter(level insolar.LogLevel) error {
-	if globalLogger.adapter != nil {
-		globalLogger.adapter.SetGlobalLoggerFilter(level)
-		return nil
-	}
-	return errors.New("not supported")
-}
-
-func GetGlobalLevelFilter() insolar.LogLevel {
-	globalLogger.mutex.RLock()
-	defer globalLogger.mutex.RUnlock()
-
-	_, l := getGlobalLevelFilter()
-	return l
-}
-
-func getGlobalLevelFilter() (bool, insolar.LogLevel) {
-	if globalLogger.adapter != nil {
-		return true, globalLogger.adapter.GetGlobalLoggerFilter()
-	}
-	return false, insolar.NoLevel
-}
-
-/*
-We use EmbeddedEvent functions here to avoid SkipStackFrame corrections
-*/
-
+// Debug logs a message at level Debug to the global logger.
 func Debug(args ...interface{}) {
-	g().EmbeddedEvent(insolar.DebugLevel, args...)
+	GlobalLogger.Debug(args...)
 }
 
+// Debugf logs a message at level Debug to the global logger.
 func Debugf(format string, args ...interface{}) {
-	g().EmbeddedEventf(insolar.DebugLevel, format, args...)
+	GlobalLogger.Debugf(format, args...)
 }
 
+// Info logs a message at level Info to the global logger.
 func Info(args ...interface{}) {
-	g().EmbeddedEvent(insolar.InfoLevel, args...)
+	GlobalLogger.Info(args...)
 }
 
+// Infof logs a message at level Info to the global logger.
 func Infof(format string, args ...interface{}) {
-	g().EmbeddedEventf(insolar.InfoLevel, format, args...)
+	GlobalLogger.Infof(format, args...)
 }
 
+// Warn logs a message at level Warn to the global logger.
 func Warn(args ...interface{}) {
-	g().EmbeddedEvent(insolar.WarnLevel, args...)
+	GlobalLogger.Warn(args...)
 }
 
+// Warnf logs a message at level Warn to the global logger.
 func Warnf(format string, args ...interface{}) {
-	g().EmbeddedEventf(insolar.WarnLevel, format, args...)
+	GlobalLogger.Warnf(format, args...)
 }
 
+// Error logs a message at level Error to the global logger.
 func Error(args ...interface{}) {
-	g().EmbeddedEvent(insolar.ErrorLevel, args...)
+	GlobalLogger.Error(args...)
 }
 
+// Errorf logs a message at level Error to the global logger.
 func Errorf(format string, args ...interface{}) {
-	g().EmbeddedEventf(insolar.ErrorLevel, format, args...)
+	GlobalLogger.Errorf(format, args...)
 }
 
+// Fatal logs a message at level Fatal to the global logger.
 func Fatal(args ...interface{}) {
-	g().EmbeddedEvent(insolar.FatalLevel, args...)
+	GlobalLogger.Fatal(args...)
 }
 
+// Fatalf logs a message at level Fatal to the global logger.
 func Fatalf(format string, args ...interface{}) {
-	g().EmbeddedEventf(insolar.FatalLevel, format, args...)
+	GlobalLogger.Fatalf(format, args...)
 }
 
+// Panic logs a message at level Panic to the global logger.
 func Panic(args ...interface{}) {
-	g().EmbeddedEvent(insolar.PanicLevel, args...)
+	GlobalLogger.Panic(args...)
 }
 
+// Panicf logs a message at level Panic to the global logger.
 func Panicf(format string, args ...interface{}) {
-	g().EmbeddedEventf(insolar.PanicLevel, format, args...)
-}
-
-func Event(level insolar.LogLevel, args ...interface{}) {
-	g().EmbeddedEvent(level, args...)
-}
-
-func Eventf(level insolar.LogLevel, format string, args ...interface{}) {
-	g().EmbeddedEventf(level, format, args...)
-}
-
-func Flush() {
-	g().EmbeddedFlush("Global logger flush")
+	GlobalLogger.Panicf(format, args...)
 }

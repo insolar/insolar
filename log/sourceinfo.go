@@ -1,4 +1,4 @@
-///
+//
 // Copyright 2019 Insolar Technologies GmbH
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,23 +12,37 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-///
+//
 
-package bits
+package log
 
 import (
-	"testing"
-
-	"github.com/stretchr/testify/require"
+	"runtime"
+	"strings"
 )
 
-func TestResetBits(t *testing.T) {
-	orig := []byte{0xFF}
-	got := ResetBits(orig, 5)
-	require.NotEqual(t, &orig, &got, "without overflow returns a new slice")
+// callInfo bundles the info about the call environment
+// when a logging statement occurred.
+type callInfo struct {
+	fileName string
+	funcName string
+	line     int
+}
 
-	gotWithOverflow := ResetBits(orig, 9)
-	require.Equal(t, []byte{0xFF}, gotWithOverflow, "returns equals slice on overflow")
-	require.Equal(t, &orig, &gotWithOverflow, "on overflow returns the same slice")
-	require.Equal(t, []byte{0xFF}, orig, "original unchanged after resetBits")
+func getCallInfo(skipCallNumber int) *callInfo {
+	pc, file, line, _ := runtime.Caller(skipCallNumber)
+
+	parts := strings.Split(runtime.FuncForPC(pc).Name(), ".")
+	pl := len(parts)
+	funcName := parts[pl-1]
+
+	if pl > 1 && strings.HasPrefix(parts[pl-2], "(") {
+		funcName = parts[pl-2] + "." + funcName
+	}
+
+	return &callInfo{
+		fileName: trimInsolarPrefix(file, line),
+		funcName: funcName,
+		line:     line,
+	}
 }

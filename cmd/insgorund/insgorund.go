@@ -52,7 +52,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Couldn't set log level to %q: %s", *logLevel, err)
 	}
-	log.InitTicker()
+	log.InitTicker(log.GlobalLogger)
 
 	if *path == "" {
 		tmpDir, err := ioutil.TempDir("", "funcTestContractcache-")

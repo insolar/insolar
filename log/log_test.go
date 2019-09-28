@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	"github.com/rs/zerolog"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -31,15 +32,11 @@ import (
 )
 
 func capture(f func()) string {
-	defer SaveGlobalLogger()()
-
 	var buf bytes.Buffer
 
-	gl, err := GlobalLogger().Copy().WithOutput(&buf).Build()
-	if err != nil {
-		panic(err)
-	}
-	SetGlobalLogger(gl)
+	orig := GlobalLogger
+	GlobalLogger = GlobalLogger.WithOutput(&buf)
+	defer func() { GlobalLogger = orig }()
 
 	f()
 
@@ -48,33 +45,6 @@ func capture(f func()) string {
 
 func assertHelloWorld(t *testing.T, out string) {
 	assert.Contains(t, out, "HelloWorld")
-}
-
-func TestLog_GlobalLogger_redirection(t *testing.T) {
-	defer SaveGlobalLogger()()
-
-	SetLogLevel(insolar.InfoLevel)
-
-	originalG := GlobalLogger()
-
-	var buf bytes.Buffer
-	newGL, err := GlobalLogger().Copy().WithOutput(&buf).WithBuffer(10, false).Build()
-	require.NoError(t, err)
-
-	SetGlobalLogger(newGL)
-	newCopyLL, err := GlobalLogger().Copy().BuildLowLatency()
-	require.NoError(t, err)
-
-	originalG.Info("viaOriginalGlobal")
-	newGL.Info("viaNewInstance")
-	GlobalLogger().Info("viaNewGlobal")
-	newCopyLL.Info("viaNewLLCopyOfGlobal")
-
-	s := buf.String()
-	require.Contains(t, s, "viaOriginalGlobal")
-	require.Contains(t, s, "viaNewInstance")
-	require.Contains(t, s, "viaNewGlobal")
-	require.Contains(t, s, "viaNewLLCopyOfGlobal")
 }
 
 func TestLog_GlobalLogger(t *testing.T) {
@@ -133,47 +103,9 @@ func TestLog_NewLog_Config(t *testing.T) {
 }
 
 func TestLog_GlobalLogger_Level(t *testing.T) {
-	defer SaveGlobalLogger()()
-
+	defer SetLevel("info")
 	assert.NoError(t, SetLevel("error"))
 	assert.Error(t, SetLevel("errorrr"))
-}
-
-func TestLog_GlobalLogger_FilterLevel(t *testing.T) {
-	defer SaveGlobalLoggerAndFilter(true)()
-
-	assert.NoError(t, SetLevel("debug"))
-	assert.NoError(t, SetGlobalLevelFilter(insolar.DebugLevel))
-	assertHelloWorld(t, capture(func() { Debug("HelloWorld") }))
-	assert.NoError(t, SetGlobalLevelFilter(insolar.InfoLevel))
-	assert.Equal(t, "", capture(func() { Debug("HelloWorld") }))
-}
-
-func TestLog_GlobalLogger_Save(t *testing.T) {
-	assert.NotNil(t, GlobalLogger()) // ensure initialization
-
-	restoreFn := SaveGlobalLoggerAndFilter(true)
-	level := GlobalLogger().Copy().GetLogLevel()
-	filter := GetGlobalLevelFilter()
-
-	if level != insolar.PanicLevel {
-		SetLogLevel(level + 1)
-	} else {
-		SetLogLevel(insolar.DebugLevel)
-	}
-	assert.NotEqual(t, level, GlobalLogger().Copy().GetLogLevel())
-
-	if filter != insolar.PanicLevel {
-		assert.NoError(t, SetGlobalLevelFilter(filter+1))
-	} else {
-		assert.NoError(t, SetGlobalLevelFilter(insolar.DebugLevel))
-	}
-	assert.NotEqual(t, filter, GetGlobalLevelFilter())
-
-	restoreFn()
-
-	assert.Equal(t, level, GlobalLogger().Copy().GetLogLevel())
-	assert.Equal(t, filter, GetGlobalLevelFilter())
 }
 
 func TestLog_AddFields(t *testing.T) {
@@ -205,12 +137,11 @@ func TestLog_AddFields(t *testing.T) {
 
 	for _, tItem := range tt {
 		t.Run(tItem.name, func(t *testing.T) {
-			la, err := NewLog(configuration.NewLog())
+			la, err := newZerologAdapter(configuration.NewLog())
 			assert.NoError(t, err)
 
 			var b bytes.Buffer
-			logger, err := la.Copy().WithOutput(&b).Build()
-			assert.NoError(t, err)
+			logger := la.WithOutput(&b)
 
 			tItem.fieldfn(logger).Error(errtxt1)
 			logger.Error(errtxt2)
@@ -239,46 +170,16 @@ func TestLog_Timestamp(t *testing.T) {
 	for _, adapter := range []string{"zerolog"} {
 		adapter := adapter
 		t.Run(adapter, func(t *testing.T) {
-			logger, err := NewLog(configuration.Log{Level: "info", Adapter: adapter, Formatter: "json"})
+			log, err := NewLog(configuration.Log{Level: "info", Adapter: adapter, Formatter: "json"})
 			require.NoError(t, err)
-			require.NotNil(t, logger)
+			require.NotNil(t, log)
 
 			var buf bytes.Buffer
-			logger, err = logger.Copy().WithOutput(&buf).Build()
-			require.NoError(t, err)
+			log = log.WithOutput(&buf)
 
-			logger.Error("test")
+			log.Error("test")
 
-			assert.Regexp(t, regexp.MustCompile("[0-9][0-9]:[0-9][0-9]:[0-9][0-9]"), buf.String())
-		})
-	}
-}
-
-func TestLog_WriteDuration(t *testing.T) {
-	for _, adapter := range []string{"zerolog"} {
-		adapter := adapter
-		t.Run(adapter, func(t *testing.T) {
-			logger, err := NewLog(configuration.Log{Level: "info", Adapter: adapter, Formatter: "json"})
-			require.NoError(t, err)
-			require.NotNil(t, logger)
-
-			var buf bytes.Buffer
-			logger, err = logger.Copy().WithOutput(&buf).WithMetrics(insolar.LogMetricsResetMode).Build()
-			require.NoError(t, err)
-
-			logger2, err := logger.Copy().WithMetrics(insolar.LogMetricsWriteDelayField).Build()
-			require.NoError(t, err)
-
-			logger3, err := logger.Copy().WithMetrics(insolar.LogMetricsResetMode).Build()
-			require.NoError(t, err)
-
-			logger.Error("test")
-			assert.NotContains(t, buf.String(), `,"writeDuration":"`)
-			logger3.Error("test")
-			assert.NotContains(t, buf.String(), `,"writeDuration":"`)
-			logger2.Error("test2")
-			s := buf.String()
-			assert.Contains(t, s, `,"writeDuration":"`)
+			require.Regexp(t, regexp.MustCompile("[0-9][0-9]:[0-9][0-9]:[0-9][0-9]"), buf.String())
 		})
 	}
 }

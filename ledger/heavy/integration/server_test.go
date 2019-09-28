@@ -20,7 +20,6 @@ package integration_test
 import (
 	"context"
 	"crypto"
-	"github.com/insolar/insolar/log/logwatermill"
 	"io/ioutil"
 	"math"
 	"sync"
@@ -181,7 +180,7 @@ func NewServer(
 		Coordinator = c
 	}
 
-	logger := logwatermill.NewWatermillLogAdapter(inslogger.FromContext(ctx))
+	logger := log.NewWatermillLogAdapter(inslogger.FromContext(ctx))
 	// Communication.
 	var (
 		ServerBus, ClientBus       *bus.Bus
