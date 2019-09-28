@@ -12,6 +12,9 @@ BACKUPMANAGER = backupmanager
 APIREQUESTER = apirequester
 HEALTHCHECK = healthcheck
 KEEPERD = keeperd
+BADGER = badger
+HEAVY_BADGER_TOOL= heavy-badger
+
 
 ALL_PACKAGES = ./...
 MOCKS_PACKAGE = github.com/insolar/insolar/testutils
@@ -141,6 +144,14 @@ $(HEALTHCHECK):
 $(KEEPERD):
 	$(GOBUILD) -o $(BIN_DIR)/$(KEEPERD) -ldflags "${LDFLAGS}" cmd/keeperd/*.go
 
+.PHONY: $(BADGER)
+$(BADGER):
+	./scripts/build/fetchdeps github.com/dgraph-io/badger/badger v1.6.0
+	cp $(shell go env GOPATH)/bin/badger $(BIN_DIR)/$(BADGER)
+
+.PHONY: $(HEAVY_BADGER_TOOL)
+$(HEAVY_BADGER_TOOL):
+	$(GOBUILD) -o $(BIN_DIR)/$(HEAVY_BADGER_TOOL) ./cmd/heavy-badger/
 
 .PHONY: test_unit
 test_unit: ## run all unit tests
