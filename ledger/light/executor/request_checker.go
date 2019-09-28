@@ -33,6 +33,9 @@ import (
 //go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.RequestChecker -o ./ -s _mock.go -g
 
 type RequestChecker interface {
+	// ValidateRequest is a smoke test. It doesn't perform expensive checks. Good to check requests before deduplication.
+	ValidateRequest(ctx context.Context, requestID insolar.ID, request record.Request) error
+	// CheckRequest performs a complete expensive request check.
 	CheckRequest(ctx context.Context, requestID insolar.ID, request record.Request) error
 }
 
@@ -60,7 +63,7 @@ func NewRequestChecker(
 	}
 }
 
-func (c *RequestCheckerDefault) CheckRequest(ctx context.Context, requestID insolar.ID, request record.Request) error {
+func (c *RequestCheckerDefault) ValidateRequest(ctx context.Context, requestID insolar.ID, request record.Request) error {
 	if err := request.Validate(); err != nil {
 		return &payload.CodedError{
 			Text: err.Error(),
@@ -70,7 +73,6 @@ func (c *RequestCheckerDefault) CheckRequest(ctx context.Context, requestID inso
 
 	reasonRef := request.ReasonRef()
 	reasonID := *reasonRef.GetLocal()
-
 	if reasonID.Pulse() > requestID.Pulse() {
 		return &payload.CodedError{
 			Text: "request is older than its reason",
@@ -78,6 +80,16 @@ func (c *RequestCheckerDefault) CheckRequest(ctx context.Context, requestID inso
 		}
 	}
 
+	return nil
+}
+
+func (c *RequestCheckerDefault) CheckRequest(ctx context.Context, requestID insolar.ID, request record.Request) error {
+	if err := c.ValidateRequest(ctx, requestID, request); err != nil {
+		return err
+	}
+
+	reasonRef := request.ReasonRef()
+	reasonID := *reasonRef.GetLocal()
 	objectID, err := record.ObjectIDFromRequest(c.scheme, request, requestID)
 	if err != nil {
 		return errors.Wrap(err, "failed to calculate object id")

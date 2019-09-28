@@ -159,8 +159,8 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 		}
 	}
 
-	// Checking request validity.
-	err = p.dep.checker.CheckRequest(ctx, p.requestID, p.request)
+	// Fast request validity test.
+	err = p.dep.checker.ValidateRequest(ctx, p.requestID, p.request)
 	if err != nil {
 		return errors.Wrap(err, "request check failed")
 	}
@@ -211,6 +211,12 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 			}).Debug("duplicate found")
 			return nil
 		}
+	}
+
+	// Full expensive check on request.
+	err = p.dep.checker.CheckRequest(ctx, p.requestID, p.request)
+	if err != nil {
+		return errors.Wrap(err, "request check failed")
 	}
 
 	// Start writing to db.

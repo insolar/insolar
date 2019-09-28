@@ -146,6 +146,11 @@ func TestSetRequest_Proceed(t *testing.T) {
 			require.Equal(t, calcID, filament.ID)
 			return nil
 		})
+		checker.ValidateRequestMock.Set(func(_ context.Context, id insolar.ID, req record.Request) (r error) {
+			require.Equal(t, requestID, id)
+			require.Equal(t, &request, req)
+			return nil
+		})
 		checker.CheckRequestMock.Set(func(_ context.Context, id insolar.ID, req record.Request) (r error) {
 			require.Equal(t, requestID, id)
 			require.Equal(t, &request, req)
@@ -170,7 +175,7 @@ func TestSetRequest_Proceed(t *testing.T) {
 				StateID: record.StateActivation,
 			},
 		}, nil)
-		checker.CheckRequestMock.Set(func(_ context.Context, id insolar.ID, req record.Request) (r error) {
+		checker.ValidateRequestMock.Set(func(_ context.Context, id insolar.ID, req record.Request) (r error) {
 			require.Equal(t, requestID, id)
 			require.Equal(t, &request, req)
 			return nil
