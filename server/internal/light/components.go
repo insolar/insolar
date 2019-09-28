@@ -18,6 +18,7 @@ package light
 
 import (
 	"context"
+
 	"github.com/insolar/insolar/log/logwatermill"
 
 	"github.com/ThreeDotsLabs/watermill"
@@ -220,6 +221,8 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		comps.NodeRole,
 	)
 
+	metricsRegistry := executor.NewMetricsRegistry()
+
 	// Light components.
 	var (
 		PulseManager   *executor.PulseManager
@@ -319,6 +322,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			requestChecker,
 			detachedNotifier,
 			conf,
+			metricsRegistry,
 		)
 
 		initHandle := func(msg *message.Message) *handle.Init {
@@ -349,6 +353,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			writeController,
 			stateIniter,
 			hotWaitReleaser,
+			metricsRegistry,
 		)
 	}
 

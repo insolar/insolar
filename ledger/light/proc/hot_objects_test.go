@@ -53,6 +53,7 @@ func TestHotObjects_Proceed(t *testing.T) {
 		coordinator *jet.CoordinatorMock
 		calculator  *insolarPulse.CalculatorMock
 		sender      *bus.SenderMock
+		registry    *executor.MetricsRegistryMock
 	)
 
 	setup := func(mc minimock.MockController) {
@@ -64,6 +65,7 @@ func TestHotObjects_Proceed(t *testing.T) {
 		coordinator = jet.NewCoordinatorMock(mc)
 		calculator = insolarPulse.NewCalculatorMock(mc)
 		sender = bus.NewSenderMock(mc)
+		registry = executor.NewMetricsRegistryMock(mc)
 	}
 
 	t.Run("basic ok", func(t *testing.T) {
@@ -125,7 +127,7 @@ func TestHotObjects_Proceed(t *testing.T) {
 
 		// start test
 		p := proc.NewHotObjects(meta, expectedPulse.PulseNumber, expectedJetID, expectedDrop, idxs, 10)
-		p.Dep(drops, indexes, jetStorage, jetFetcher, jetReleaser, coordinator, calculator, sender)
+		p.Dep(drops, indexes, jetStorage, jetFetcher, jetReleaser, coordinator, calculator, sender, registry)
 
 		err := p.Proceed(ctx)
 		assert.NoError(t, err)
@@ -209,9 +211,11 @@ func TestHotObjects_Proceed(t *testing.T) {
 			assert.True(t, false, "didn't receive at least 2 messages")
 		}).Return(make(chan *message.Message), func() {})
 
+		registry.SetOldestAbandonedRequestAgeMock.Return()
+
 		// start test
 		p := proc.NewHotObjects(meta, currentPulse.PulseNumber, expectedJetID, expectedDrop, idxs, 10)
-		p.Dep(drops, indexes, jetStorage, jetFetcher, jetReleaser, coordinator, calculator, sender)
+		p.Dep(drops, indexes, jetStorage, jetFetcher, jetReleaser, coordinator, calculator, sender, registry)
 
 		err := p.Proceed(ctx)
 		assert.NoError(t, err)
@@ -287,7 +291,7 @@ func TestHotObjects_Proceed(t *testing.T) {
 
 		// start test
 		p := proc.NewHotObjects(meta, currentPulse.PulseNumber, expectedJetID, expectedDrop, idxs, 0)
-		p.Dep(drops, indexes, jetStorage, jetFetcher, jetReleaser, coordinator, calculator, sender)
+		p.Dep(drops, indexes, jetStorage, jetFetcher, jetReleaser, coordinator, calculator, sender, registry)
 
 		err := p.Proceed(ctx)
 		assert.NoError(t, err)
