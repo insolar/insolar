@@ -287,7 +287,10 @@ func (m *Member) transferCall(params map[string]interface{}) (interface{}, error
 	}
 	_, err = member.GetObject(*recipientReference).GetWallet()
 	if err != nil {
-		return nil, fmt.Errorf("recipient member does not exist")
+		if strings.Contains(err.Error(), "index not found") {
+			return nil, fmt.Errorf("recipient member does not exist")
+		}
+		return nil, fmt.Errorf("failed to get destination wallet: %s", err.Error())
 	}
 
 	return wallet.GetObject(m.Wallet).Transfer(m.RootDomain, asset, amount, recipientReference)
