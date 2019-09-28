@@ -18,6 +18,7 @@ package virtual
 
 import (
 	"context"
+	"github.com/insolar/insolar/log/logwatermill"
 	"io"
 
 	"github.com/ThreeDotsLabs/watermill"
@@ -38,7 +39,6 @@ import (
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/keystore"
-	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/logicexecutor"
@@ -111,12 +111,12 @@ func initComponents(
 
 	// Watermill.
 	var (
-		wmLogger   *log.WatermillLogAdapter
+		wmLogger   *logwatermill.WatermillLogAdapter
 		publisher  message.Publisher
 		subscriber message.Subscriber
 	)
 	{
-		wmLogger = log.NewWatermillLogAdapter(inslogger.FromContext(ctx))
+		wmLogger = logwatermill.NewWatermillLogAdapter(inslogger.FromContext(ctx))
 		pubsub := gochannel.NewGoChannel(gochannel.Config{}, wmLogger)
 		subscriber = pubsub
 		publisher = pubsub
@@ -145,6 +145,7 @@ func initComponents(
 	checkError(ctx, err, "failed to start ContractRequester")
 
 	artifactsClient := artifacts.NewClient(b)
+	availabilityChecker := api.NewNetworkChecker(cfg.AvailabilityChecker)
 
 	API, err := api.NewRunner(
 		&cfg.APIRunner,
@@ -156,6 +157,7 @@ func initComponents(
 		artifactsClient,
 		jc,
 		nw,
+		availabilityChecker,
 	)
 	checkError(ctx, err, "failed to start ApiRunner")
 
@@ -169,6 +171,7 @@ func initComponents(
 		artifactsClient,
 		jc,
 		nw,
+		availabilityChecker,
 	)
 	checkError(ctx, err, "failed to start AdminAPIRunner")
 
@@ -190,6 +193,7 @@ func initComponents(
 		logicrunner.NewRequestsExecutor(),
 		machinesmanager.NewMachinesManager(),
 		APIWrapper,
+		availabilityChecker,
 		nw,
 		pm,
 	)

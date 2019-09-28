@@ -4,30 +4,7 @@
 Architecture
 ============
 
-Insolar aims to deliver an open and collaborative environment required to enable third-party companies to build and maintain templates and services, provide hardware capacities, and adapt services and functions to local practices and legal and regulatory requirements.
-
-Below is an illustration of the layered architecture that facilitates such a collaborative environment. The use of multilayer architecture makes platform design a challenging task, but with proper use it enables building complex solutions with better control of development risks and (later) of ownership costs. Insolar is currently designing the proposed platform in an incremental fashion allowing it to progressively grow into the ultimate decentralized collaborative environment for various kinds of industries, companies, governments, and communities.
-
-.. figure:: imgs/layers.png
-    :align: center
-    :alt: Layers of the Insolar Blockchain
-    :figclass: align-center
-
-The architecture is split into four layers:
-
-* At the top layer are applications (:ref:`contracts <contracts>`) owned by and tailored for companies who serve other companies.
-* The next layer represents business services and templates (:ref:`domains <domains>`) for business applications provided by vendors.
-* At the third layer is the :ref:`federation of clouds <fed_of_clouds>`. Their infrastructure can also be public and offered by governments or even communities as a public good (crowd-sourced computational resources).
-* At the bottom layer, there are providers of :ref:`hardware capacities <globulas>` organized into national and/or industrial compute & storage resources.
-
-Let's take a closer look at the *three bottom layers* since they are the Insolar's development focus.
-
-.. _key_design_concepts:
-
-Architecture Diagram
---------------------
-
-Below is the platform architecture diagram aimed to address the aforementioned interconnected layers. The architecture has multiple components and consensuses to address the complexity and variety of requirements.
+Below is the platform architecture diagram aimed to address the :ref:`interconnected layers <big_pic>`. The architecture has multiple components and consensuses to address the complexity and variety of requirements.
 
 Components in the diagram are *clickable*, the links will lead you to respective definitions.
 
@@ -40,7 +17,7 @@ All components communicate via messaging to achieve respective :ref:`consensuses
 Clouds and Their Federations
 ----------------------------
 
-:term:`Clouds <cloud>` organize and unify software capabilities, hardware capacities, and the financial and legal liability of :term:`nodes <node>` to ensure seamless operation of business services. The Insolar Platform transparently connects multiple clouds and each cloud is governed independently, e.g., by a community, company, industry consortia, or national agency. Thus, multiple clouds can unite into a federation on the Insolar network. 
+:term:`Clouds <cloud>` organize and unify software capabilities, hardware capacities, and the financial and legal liability of :term:`nodes <node>` to ensure seamless operation of business services. The Insolar Platform transparently connects multiple clouds and each cloud is governed independently, e.g., by a community, company, industry consortia, or national agency. Thus, multiple clouds can unite into a federation on the Insolar network.
 
 The cloud itself establishes governance of both network operations and business logic. Therefore, it is a dual entity that controls:
 
@@ -86,7 +63,7 @@ Insolar also supports larger node networks of up to 100 globulas (a total of 100
 Multi-Role Nodes
 ----------------
 
-Insolar utilizes a multi-role model for :term:`nodes <node>`: each node has a single :ref:`static role <static_roles>` that defines its primary purpose and a set of :ref:`dynamically assigned roles <dynamic_roles>`. Dynamic role allocation functions enable the :ref:`omni-scaling <omniscaling>` feature of the Insolar Platform.
+Insolar utilizes a multi-role model for :term:`nodes <node>`: each node has a single :ref:`static role <static_roles>` that defines its primary purpose and a set of :ref:`dynamically assigned roles <dynamic_roles>`. Dynamic role allocation functions enable the :ref:`omni-scaling <omni_scaling>` feature of the Insolar Platform.
 
 .. _static_roles:
 
@@ -100,7 +77,7 @@ The node’s static role defines what kind of resource and functionality are del
 * :ref:`heavy material <heavy_material>` -- performs long-term data storage;
 * :ref:`neutral <neutral>` -- participates in the network consensus (not in the workload distribution) and has at least one utility role.
 
-Static role correlates with the type of resource the node can provide to the cloud, and is a part of the :ref:`omni-scaling <omniscaling>` feature of the Insolar Platform. All static role categories are detailed below.
+Static role correlates with the type of resource the node can provide to the cloud, and is a part of the :ref:`omni-scaling <omni_scaling>` feature of the Insolar Platform. All static role categories are detailed below.
 
 .. _neutral:
 
@@ -278,7 +255,7 @@ The reason is simple: a trustful workload factor in distributed systems requires
 
 Pseudo-random workload distribution can cause distribution anomalies within a workload control cycle but it provides a relatively smooth distribution on longer timescales, without the need for full visibility and operations aggregation.
 
-Such a workload distribution and the entorpy-based allocation functions for :ref:`dynamic roles <dynamic_roles>` are the core instruments that enable the :ref:`omni-scaling <omniscaling>` feature of the Insolar Platform. This feature provides a balance in accordance with client's needs.
+Such a workload distribution and the entorpy-based allocation functions for :ref:`dynamic roles <dynamic_roles>` are the core instruments that enable the :ref:`omni-scaling <omni_scaling>` feature of the Insolar Platform. This feature provides a balance in accordance with client's needs.
 
 Processing costs can be traded off against:
 
@@ -297,7 +274,7 @@ The Insolar Platform works on the principle of actions executed by one node, val
 
 The number of selected validators can be determined in accordance with the :ref:`business process <domains>` at hand and, since validators in shared enterprise networks will have liability and legal guarantees, this works as transaction insurance.
 
-As described in the :ref:`network consistency section <network_consistency>`, validator selections are *not* based on voting; instead, they are part of the :ref:`omni-scaling <omniscaling>` feature. Insolar uses the active node list and :ref:`entropy <pulsars>` generated by consensus of the :ref:`globula network protocol <network_consensus>`, and then applies deterministic allocation functions for :ref:`node roles <dynamic_roles>`. This avoids wasting efforts on numerous per-transaction and network-wide consensuses.
+As described in the :ref:`network consistency section <network_consistency>`, validator selections are *not* based on voting; instead, they are part of the :ref:`omni-scaling <omni_scaling>` feature. Insolar uses the active node list and :ref:`entropy <pulsars>` generated by consensus of the :ref:`globula network protocol <network_consensus>`, and then applies deterministic allocation functions for :ref:`node roles <dynamic_roles>`. This avoids wasting efforts on numerous per-transaction and network-wide consensuses.
 
 Since Insolar sets apart functionality using :ref:`node roles <multi_role_nodes>`, it has two sets of execution & validation procedures: **virtual** and **material**.
 

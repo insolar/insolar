@@ -86,7 +86,12 @@ func Test_AbandonedNotification_WhenLightEmpty(t *testing.T) {
 					{JetID: insolar.ZeroJetID, Pulse: pulse.MinTimePulse},
 				},
 			}}
+		case *payload.SearchIndex:
+			return []payload.Payload{
+				&payload.SearchIndexInfo{},
+			}
 		}
+
 		panic(fmt.Sprintf("unexpected message to heavy %T", pl))
 	}
 
@@ -114,7 +119,14 @@ func Test_AbandonedNotification_WhenLightEmpty(t *testing.T) {
 
 	t.Run("abandoned notification", func(t *testing.T) {
 		// Set incoming request.
-		msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), insolar.ID{}, true, true)
+		msg, _ := MakeSetIncomingRequest(
+			gen.ID(),
+			gen.IDWithPulse(s.Pulse()),
+			insolar.ID{},
+			true,
+			true,
+			"",
+		)
 		rep := SendMessage(ctx, s, &msg)
 		RequireNotError(rep)
 		reqInfo := rep.(*payload.RequestInfo)

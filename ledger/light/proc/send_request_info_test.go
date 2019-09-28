@@ -18,11 +18,14 @@ package proc_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/gojuno/minimock"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
@@ -100,7 +103,10 @@ func TestSendRequestInfo_Proceed(t *testing.T) {
 			Result:    resBuf,
 		})
 
-		filament.RequestInfoMock.Return(&request, &result, nil)
+		filament.RequestInfoMock.Return(executor.FilamentsRequestInfo{
+			Request: &request,
+			Result:  &result,
+		}, nil)
 
 		sender.ReplyMock.Inspect(func(ctx context.Context, origin payload.Meta, reply *message.Message) {
 			assert.Equal(t, reply.Payload, replyMsg.Payload)
@@ -115,5 +121,31 @@ func TestSendRequestInfo_Proceed(t *testing.T) {
 		err = p.Proceed(ctx)
 
 		assert.NoError(t, err)
+	})
+
+	t.Run("request not found error", func(t *testing.T) {
+		setup()
+		defer mc.Finish()
+
+		reqID := gen.ID()
+		objID := reqID
+		msg := payload.Meta{}
+
+		locker.UnlockMock.Return()
+		locker.LockMock.Return()
+
+		filament.RequestInfoMock.Return(executor.FilamentsRequestInfo{}, &payload.CodedError{
+			Text: fmt.Sprintf("requestInfo not found request %s", reqID.DebugString()),
+			Code: payload.CodeRequestNotFound,
+		})
+
+		p := proc.NewSendRequestInfo(msg, objID, reqID, pulse.MinTimePulse)
+		p.Dep(filament, sender, locker)
+		err := p.Proceed(ctx)
+
+		assert.Error(t, err)
+		insError, ok := errors.Cause(err).(*payload.CodedError)
+		require.True(t, ok)
+		require.Equal(t, uint32(payload.CodeRequestNotFound), insError.GetCode())
 	})
 }

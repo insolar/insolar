@@ -152,11 +152,8 @@ func getAmountFromParam(params map[string]interface{}) (*big.Int, error) {
 
 func addConfirmToDeposit(tokenHolderRef string, txDepositRef insolar.Reference, caller string, txHash string, amount string) (*DepositMigrationResult, error) {
 	txDeposit := deposit.GetObject(txDepositRef)
-	unHoldPulse, err := txDeposit.GetPulseUnHold()
-	if unHoldPulse != 0 {
-		return nil, fmt.Errorf("migration is done for this deposit %s", txHash)
-	}
-	err = txDeposit.Confirm(caller, txHash, amount)
+
+	err := txDeposit.Confirm(caller, txHash, amount)
 	if err != nil {
 		return nil, fmt.Errorf("confirmed failed: %s", err.Error())
 	}

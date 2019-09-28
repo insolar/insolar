@@ -158,6 +158,7 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to calculate pending requests")
 	}
+
 	closedRequest, err := findClosed(opened, p.result)
 	if err != nil {
 		return errors.Wrap(err, "failed to find request being closed")
@@ -167,6 +168,21 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 		err = checkRequestCanChangeState(closedRequest)
 		if err != nil {
 			return errors.Wrap(err, "request is not allowed to change object state")
+		}
+	}
+
+	incoming, isIncomingRequest := record.Unwrap(&closedRequest.Record.Virtual).(*record.IncomingRequest)
+
+	// If closing request is mutable incoming then check oldest opened mutable request.
+	if isIncomingRequest && !incoming.Immutable {
+		oldestMutable := executor.OldestMutable(opened)
+		resultRequestID := *p.result.Request.GetLocal()
+		// We should return error if current result trying to close non-oldest opened mutable request.
+		if oldestMutable != nil && !oldestMutable.RecordID.Equal(resultRequestID) {
+			return &payload.CodedError{
+				Text: "attempt to close the non-oldest mutable request",
+				Code: payload.CodeRequestNonOldestMutable,
+			}
 		}
 	}
 
@@ -260,7 +276,7 @@ func (p *SetResult) Proceed(ctx context.Context) error {
 	stats.Record(ctx, executor.StatRequestsClosed.M(1))
 
 	// Only incoming request can be a reason. We are only interested in potential reason requests.
-	if _, ok := record.Unwrap(&closedRequest.Record.Virtual).(*record.IncomingRequest); ok {
+	if isIncomingRequest {
 		p.dep.detachedNotifier.Notify(ctx, opened, objectID, closedRequest.RecordID)
 	}
 
@@ -327,7 +343,7 @@ func calcPending(opened []record.CompositeFilamentRecord, closedRequestID insola
 	return &p, nil
 }
 
-// findClosed looks for request that was closed by provided result. Returns error if not found.
+// findClosed looks for request that are closing by provided result. Returns error if not found.
 func findClosed(reqs []record.CompositeFilamentRecord, result record.Result) (record.CompositeFilamentRecord, error) {
 	for _, req := range reqs {
 		if req.RecordID == *result.Request.GetLocal() {
@@ -362,7 +378,7 @@ func checkOutgoings(openedRequests []record.CompositeFilamentRecord, closedReque
 		if !out.IsDetached() && out.Reason.GetLocal().Equal(closedRequestID) {
 			return &payload.CodedError{
 				Text: "request " + closedRequestID.DebugString() + " is reason for non closed outgoing request " + req.RecordID.DebugString(),
-				Code: payload.CodeNonClosedOutgoing,
+				Code: payload.CodeRequestNonClosedOutgoing,
 			}
 		}
 	}

@@ -21,7 +21,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
-	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -37,7 +36,6 @@ import (
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/logicrunner/builtin/foundation"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils/launchnet"
 
@@ -149,30 +147,63 @@ func generateMigrationAddress() (string, error) {
 	return hex.EncodeToString(bytes), nil
 }
 
-func addMigrationAddress(t *testing.T) {
-	ba, err := generateMigrationAddress()
-	require.NoError(t, err)
-	_, err = signedRequest(t, launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.addAddresses",
-		map[string]interface{}{"migrationAddresses": []string{ba}})
-	require.NoError(t, err)
-}
-
 func getBalanceNoErr(t *testing.T, caller *launchnet.User, reference string) *big.Int {
-	balance, err := getBalance(t, caller, reference)
-	require.NoError(t, err)
+	balance, _ := getBalanceAndDepositsNoErr(t, caller, reference)
 	return balance
 }
 
-func getBalance(t *testing.T, caller *launchnet.User, reference string) (*big.Int, error) {
+func getBalanceAndDepositsNoErr(t *testing.T, caller *launchnet.User, reference string) (*big.Int, map[string]interface{}) {
+	balance, deposits, err := getBalanceAndDeposits(t, caller, reference)
+	require.NoError(t, err)
+	return balance, deposits
+}
+
+func getBalanceAndDeposits(t *testing.T, caller *launchnet.User, reference string) (*big.Int, map[string]interface{}, error) {
 	res, err := signedRequest(t, launchnet.TestRPCUrl, caller, "member.getBalance", map[string]interface{}{"reference": reference})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	amount, ok := new(big.Int).SetString(res.(map[string]interface{})["balance"].(string), 10)
+	balance, ok := new(big.Int).SetString(res.(map[string]interface{})["balance"].(string), 10)
 	if !ok {
-		return nil, fmt.Errorf("can't parse input amount")
+		return nil, nil, fmt.Errorf("can't parse balance")
 	}
-	return amount, nil
+	depositsSliced, ok := res.(map[string]interface{})["deposits"].([]interface{})
+	if !ok {
+		return balance, nil, fmt.Errorf("can't parse deposits")
+	}
+
+	var depositsMap = map[string]interface{}{}
+	for _, d := range depositsSliced {
+		dMap := d.(map[string]interface{})
+		ethTxHash, ok := dMap["ethTxHash"].(string)
+		if !ok {
+			return balance, nil, fmt.Errorf("can't parse ethTxHash")
+		}
+
+		confirmerReferencesSliced, ok := dMap["confirmerReferences"].([]interface{})
+		if !ok {
+			return balance, nil, fmt.Errorf("can't parse confirmerReferences")
+		}
+
+		var confirmerReferences = map[string]interface{}{}
+		for _, cr := range confirmerReferencesSliced {
+			crMap := cr.(map[string]interface{})
+			reference, ok := crMap["reference"].(string)
+			if !ok {
+				return balance, nil, fmt.Errorf("can't parse reference")
+			}
+			amount, ok := crMap["amount"]
+			if !ok {
+				return balance, nil, fmt.Errorf("can't get amount")
+			}
+			confirmerReferences[reference] = amount
+		}
+
+		dMap["confirmerReferences"] = confirmerReferences
+		depositsMap[ethTxHash] = dMap
+	}
+
+	return balance, depositsMap, nil
 }
 
 func migrate(t *testing.T, memberRef string, amount string, tx string, ma string, mdNum int) map[string]interface{} {
@@ -184,19 +215,11 @@ func migrate(t *testing.T, memberRef string, amount string, tx string, ma string
 		"deposit.migration",
 		map[string]interface{}{"amount": amount, "ethTxHash": tx, "migrationAddress": ma})
 	require.NoError(t, err)
-	res, err := signedRequest(t, launchnet.TestRPCUrl, anotherMember, "member.getBalance", map[string]interface{}{"reference": memberRef})
-	require.NoError(t, err)
-	deposits, ok := res.(map[string]interface{})["deposits"].(map[string]interface{})
-	require.True(t, ok)
+	_, deposits := getBalanceAndDepositsNoErr(t, anotherMember, memberRef)
 	deposit, ok := deposits[tx].(map[string]interface{})
-	sm := make(foundation.StableMap)
-	require.NoError(t, err)
-	confirmerReferencesMap := deposit["confirmerReferences"].(string)
-	decoded, err := base64.StdEncoding.DecodeString(confirmerReferencesMap)
-	require.NoError(t, err)
-	err = sm.UnmarshalBinary(decoded)
 	require.True(t, ok)
-	require.Equal(t, amount+"0", sm[launchnet.MigrationDaemons[mdNum].Ref])
+	confirmations := deposit["confirmerReferences"].(map[string]interface{})
+	require.Equal(t, amount+"0", confirmations[launchnet.MigrationDaemons[mdNum].Ref])
 
 	return deposit
 }

@@ -43,7 +43,14 @@ func Test_GetObject_PassingRequestID(t *testing.T) {
 		var firstReqID insolar.ID
 		// Creating root reason request.
 		{
-			msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), insolar.ID{}, true, true)
+			msg, _ := MakeSetIncomingRequest(
+				gen.ID(),
+				gen.IDWithPulse(s.Pulse()),
+				insolar.ID{},
+				true,
+				true,
+				"first",
+			)
 			rep := SendMessage(ctx, s, &msg)
 			RequireNotError(rep)
 			firstReqID = rep.(*payload.RequestInfo).RequestID
@@ -58,12 +65,26 @@ func Test_GetObject_PassingRequestID(t *testing.T) {
 		var thirdreqID insolar.ID
 		// Register second request
 		{
-			msg, _ := MakeSetIncomingRequest(firstReqID, firstReqID, insolar.ID{}, false, true)
+			msg, _ := MakeSetIncomingRequest(
+				firstReqID,
+				firstReqID,
+				insolar.ID{},
+				false,
+				true,
+				"second",
+			)
 			rep := SendMessage(ctx, s, &msg)
 			RequireNotError(rep)
 			secondReqID = rep.(*payload.RequestInfo).RequestID
 
-			msg, _ = MakeSetIncomingRequest(firstReqID, firstReqID, insolar.ID{}, false, true)
+			msg, _ = MakeSetIncomingRequest(
+				firstReqID,
+				firstReqID,
+				insolar.ID{},
+				false,
+				true,
+				"third",
+			)
 			rep = SendMessage(ctx, s, &msg)
 			RequireNotError(rep)
 			thirdreqID = rep.(*payload.RequestInfo).RequestID

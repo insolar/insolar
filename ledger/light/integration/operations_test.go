@@ -81,14 +81,16 @@ func MakeSetIncomingRequest(
 	reasonObjectID insolar.ID,
 	isCreation bool,
 	isAPI bool,
+	APIRequest string,
 ) (payload.SetIncomingRequest, record.Virtual) {
 	args := make([]byte, 100)
 	_, err := rand.Read(args)
 	panicIfErr(err)
 
 	req := record.IncomingRequest{
-		Arguments: args,
-		Reason:    *insolar.NewReference(reasonID),
+		Arguments:    args,
+		Reason:       *insolar.NewReference(reasonID),
+		APIRequestID: APIRequest,
 	}
 
 	if isCreation {
@@ -114,17 +116,19 @@ func MakeSetIncomingRequestDetached(
 	objectID insolar.ID,
 	reasonID insolar.ID,
 	reasonObjectID insolar.ID,
+	APIRequest string,
 ) (payload.SetIncomingRequest, record.Virtual) {
 	args := make([]byte, 100)
 	_, err := rand.Read(args)
 	panicIfErr(err)
 
 	req := record.IncomingRequest{
-		Arguments:  args,
-		Reason:     *insolar.NewReference(reasonID),
-		ReturnMode: record.ReturnSaga,
-		Caller:     *insolar.NewReference(reasonObjectID),
-		Object:     insolar.NewReference(objectID),
+		Arguments:    args,
+		Reason:       *insolar.NewReference(reasonID),
+		ReturnMode:   record.ReturnSaga,
+		Caller:       *insolar.NewReference(reasonObjectID),
+		Object:       insolar.NewReference(objectID),
+		APIRequestID: APIRequest,
 	}
 
 	rec := record.Wrap(&req)

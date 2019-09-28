@@ -19,14 +19,15 @@
 package functest
 
 import (
-	"encoding/base64"
+	"fmt"
 	"math/big"
+	"sync"
 	"testing"
 
-	"github.com/insolar/insolar/api/requester"
-	"github.com/insolar/insolar/logicrunner/builtin/foundation"
-	"github.com/insolar/insolar/testutils/launchnet"
 	"github.com/stretchr/testify/require"
+
+	"github.com/insolar/insolar/api/requester"
+	"github.com/insolar/insolar/testutils/launchnet"
 )
 
 func TestMigrationToken(t *testing.T) {
@@ -42,15 +43,11 @@ func TestMigrationToken(t *testing.T) {
 	for i := 1; i < len(activeDaemons); i++ {
 		deposit = migrate(t, member.Ref, "1000", "Test_TxHash", member.MigrationAddress, i)
 	}
-	sm := make(foundation.StableMap)
-	confirmerReferencesMap := deposit["confirmerReferences"].(string)
-	decoded, err := base64.StdEncoding.DecodeString(confirmerReferencesMap)
-	require.NoError(t, err)
 
-	err = sm.UnmarshalBinary(decoded)
+	confirmations := deposit["confirmerReferences"].(map[string]interface{})
 
 	for _, daemons := range activeDaemons {
-		require.Equal(t, sm[daemons.Ref], "10000")
+		require.Equal(t, confirmations[daemons.Ref], "10000")
 	}
 
 	require.Equal(t, deposit["ethTxHash"], "Test_TxHash")
@@ -88,17 +85,9 @@ func TestMigrationTokenOnDifferentDeposits(t *testing.T) {
 	_ = migrate(t, member.Ref, "1000", "Test_TxHash", member.MigrationAddress, 0)
 	deposit := migrate(t, member.Ref, "1000", "Test_TxHash", member.MigrationAddress, 1)
 
-	sm := make(foundation.StableMap)
-	confirmerReferencesMap := deposit["confirmerReferences"].(string)
-	decoded, err := base64.StdEncoding.DecodeString(confirmerReferencesMap)
-	require.NoError(t, err)
-
-	err = sm.UnmarshalBinary(decoded)
-	require.NoError(t, err)
-
-	require.NoError(t, err)
-	require.Equal(t, sm[launchnet.MigrationDaemons[0].Ref], "10000")
-	require.Equal(t, sm[launchnet.MigrationDaemons[1].Ref], "10000")
+	confirmations := deposit["confirmerReferences"].(map[string]interface{})
+	require.Equal(t, confirmations[launchnet.MigrationDaemons[0].Ref], "10000")
+	require.Equal(t, confirmations[launchnet.MigrationDaemons[1].Ref], "10000")
 }
 
 func TestMigrationTokenNotInTheList(t *testing.T) {
@@ -212,4 +201,47 @@ func TestMigrationAnotherAmountSameTx(t *testing.T) {
 	require.IsType(t, &requester.Error{}, err)
 	data := err.(*requester.Error).Data
 	require.Contains(t, data.Trace, "failed to check amount in confirmation from migration daemon")
+}
+
+func TestMigrationTokenDoubleSpend(t *testing.T) {
+	var wg sync.WaitGroup
+	wg.Add(3)
+	_ = activateDaemons(t, countTwoActiveDaemon)
+	member := createMigrationMemberForMA(t)
+	anotherMember := createMember(t)
+
+	deposit := migrate(t, member.Ref, "1000", "Test_TxHash", member.MigrationAddress, 0)
+	firstMemberBalance := deposit["balance"].(string)
+
+	require.Equal(t, "0", firstMemberBalance)
+	firstMABalance := getBalanceNoErr(t, &launchnet.MigrationAdmin, launchnet.MigrationAdmin.Ref)
+	for i := 0; i < countThreeActiveDaemon; i++ {
+		go func(i int) {
+
+			res, _, err := makeSignedRequest(
+				launchnet.TestRPCUrl,
+				launchnet.MigrationDaemons[i],
+				"deposit.migration",
+				map[string]interface{}{"amount": "1000", "ethTxHash": "Test_TxHash", "migrationAddress": member.MigrationAddress})
+			if err != nil {
+				fmt.Println(err.(*requester.Error).Data)
+			} else {
+				fmt.Println(res)
+			}
+			wg.Done()
+		}(i)
+	}
+	wg.Wait()
+
+	_, deposits := getBalanceAndDepositsNoErr(t, anotherMember, member.Ref)
+	deposit, ok := deposits["Test_TxHash"].(map[string]interface{})
+	require.True(t, ok)
+
+	require.Equal(t, deposit["ethTxHash"], "Test_TxHash")
+	require.Equal(t, deposit["amount"], "10000")
+	secondMemberBalance := deposit["balance"].(string)
+	require.Equal(t, "10000", secondMemberBalance)
+	secondMABalance := getBalanceNoErr(t, &launchnet.MigrationAdmin, launchnet.MigrationAdmin.Ref)
+	dif := new(big.Int).Sub(firstMABalance, secondMABalance)
+	require.Equal(t, "10000", dif.String())
 }

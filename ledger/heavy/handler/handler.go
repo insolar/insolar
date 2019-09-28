@@ -109,6 +109,14 @@ func New(cfg configuration.Ledger) *Handler {
 				h.Sender,
 			)
 		},
+		SearchIndex: func(p *proc.SearchIndex) {
+			p.Dep(
+				h.IndexAccessor,
+				h.PulseCalculator,
+				h.PulseAccessor,
+				h.Sender,
+			)
+		},
 		SendInitialState: func(p *proc.SendInitialState) {
 			p.Dep(
 				h.StartPulse,
@@ -197,6 +205,10 @@ func (h *Handler) handle(ctx context.Context, meta payload.Meta) error {
 	case payload.TypeGetIndex:
 		p := proc.NewSendIndex(meta)
 		h.dep.SendIndex(p)
+		err = p.Proceed(ctx)
+	case payload.TypeSearchIndex:
+		p := proc.NewSearchIndex(meta)
+		h.dep.SearchIndex(p)
 		err = p.Proceed(ctx)
 	case payload.TypePass:
 		err = h.handlePass(ctx, meta)

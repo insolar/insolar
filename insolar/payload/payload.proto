@@ -67,6 +67,12 @@ message Index {
     bytes EarliestRequest = 22;
 }
 
+message SearchIndexInfo {
+    uint32 Polymorph = 16;
+
+    record.Index Index = 20 [(gogoproto.nullable) = true];
+}
+
 message Code {
     uint32 Polymorph = 16;
 
@@ -181,6 +187,7 @@ message RequestInfo {
     bytes RequestID = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
     bytes Request = 22;
     bytes Result = 23;
+    bool OldestMutable = 24;
 }
 
 message GotHotConfirmation {
@@ -357,6 +364,13 @@ message GetIndex {
     uint32 Polymorph = 16;
 
     bytes ObjectID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+}
+
+message SearchIndex{
+    uint32 Polymorph = 16;
+
+    bytes ObjectID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+    bytes Until = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
 }
 
 message UpdateJet {
