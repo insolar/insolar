@@ -319,7 +319,7 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 	})
 
 	suite.am.GetObjectMock.Set(func(ctx context.Context, head insolar.Reference, request *insolar.Reference) (o1 artifacts.ObjectDescriptor, err error) {
-		return artifacts.NewObjectDescriptorMock(suite.T()).EarliestRequestIDMock.Return(request.GetLocal()), nil
+		return artifacts.NewObjectDescriptorMock(syncT).EarliestRequestIDMock.Return(request.GetLocal()), nil
 	})
 
 	suite.re.ExecuteAndSaveMock.Return(requestresult.New([]byte{1, 2, 3}, gen.Reference()), nil)
