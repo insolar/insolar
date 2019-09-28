@@ -138,16 +138,17 @@ func MakeSetIncomingRequestDetached(
 	return pl, rec
 }
 
-func CreateAndActivateObject(ctx context.Context, server *Server) insolar.ID {
+func CreateAndActivateObject(ctx context.Context, server *Server, APIRequest string) insolar.ID {
 	args := make([]byte, 100)
 	_, err := rand.Read(args)
 	panicIfErr(err)
 
 	req := record.IncomingRequest{
-		Arguments: args,
-		Reason:    *insolar.NewReference(gen.IDWithPulse(server.Pulse())),
-		APINode:   gen.Reference(),
-		CallType:  record.CTSaveAsChild,
+		Arguments:    args,
+		Reason:       *insolar.NewReference(gen.IDWithPulse(server.Pulse())),
+		APINode:      gen.Reference(),
+		CallType:     record.CTSaveAsChild,
+		APIRequestID: APIRequest,
 	}
 
 	rec := record.Wrap(&req)
