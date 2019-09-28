@@ -41,6 +41,7 @@ LDFLAGS += -X github.com/insolar/insolar/version.GitHash=${BUILD_HASH}
 
 BININSGOCC=$(BIN_DIR)/$(INSGOCC)
 
+SLOW_PKGS = ./logicrunner/... ./server/internal/... ./cmd/backupmanager/... ./ledger/light/integration/... ./ledger/heavy/executor/integration/...  ./ledger/heavy/integration/... ./virtual/integration ./api
 
 .PHONY: all
 all: clean install-deps pre-build build ## cleanup, install deps, (re)generate all code and build all binaries
@@ -161,7 +162,7 @@ test_func: functest ## alias for functest
 
 .PHONY: test_slow
 test_slow: ## run tests with slowtest tag
-	CGO_ENABLED=1 go test $(TEST_ARGS) -tags slowtest ./logicrunner/... ./server/internal/... ./cmd/backupmanager/... ./ledger/light/integration/... ./ledger/heavy/executor/integration/...  ./ledger/heavy/integration/... ./virtual/integration ./api
+	CGO_ENABLED=1 go test $(TEST_ARGS) -tags slowtest $(SLOW_PKGS)
 
 .PHONY: test
 test: test_unit ## alias for test_unit
@@ -194,7 +195,7 @@ ci_test_unit: ## run unit tests 10 times and -race flag, redirects json output t
 .PHONY: ci_test_slow
 ci_test_slow: ## run slow tests just once, redirects json output to file (CI)
 	GOMAXPROCS=$(CI_GOMAXPROCS) CGO_ENABLED=1 \
-		go test $(CI_TEST_ARGS) $(TEST_ARGS) -json -v -failfast -tags slowtest ./logicrunner/... ./server/internal/... ./cmd/backupmanager/... ./ledger/heavy/executor/integration/...  ./ledger/heavy/integration/... ./ledger/light/integration/... -count 1 | tee -a ci_test_unit.json
+		go test $(CI_TEST_ARGS) $(TEST_ARGS) -json -v -failfast -tags slowtest $(SLOW_PKGS) -count 1 | tee -a ci_test_unit.json
 
 .PHONY: ci_test_func
 ci_test_func: ## run functest 3 times, redirects json output to file (CI)
