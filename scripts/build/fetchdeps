@@ -32,4 +32,4 @@ git fetch --all -q
 git checkout -q "$GITREF" >/dev/null
 echo "install $1@$GITREF"
 # if mod file available we want to have consitent dependency tree
-GO111MODULE=on go install
+GO111MODULE=on go install -mod=vendor
