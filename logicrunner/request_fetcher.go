@@ -169,10 +169,10 @@ func (rf *requestFetcher) fetch(ctx context.Context, trs chan<- *common.Transcri
 				logger.Debug("we guess that ledger has no more requests")
 				rf.broker.NoMoreRequestsOnLedger(ctx)
 				return nil
-			} else {
-				logger.Warn("we can not get more requests")
-				return nil
 			}
+
+			logger.Warn("we can not get more requests")
+			return nil
 		}
 	}
 }

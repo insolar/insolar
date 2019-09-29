@@ -113,7 +113,7 @@ func NewExecutionBroker(
 		Ref:  ref,
 		name: "executionbroker-" + pulseObject.PulseNumber.String(),
 
-		closed:                     make(chan struct{}, 0),
+		closed:                     make(chan struct{}),
 		probablyMoreSinceLastFetch: make(chan struct{}, 1),
 
 		outgoingSender:    outgoingSender,
@@ -131,7 +131,7 @@ func (q *ExecutionBroker) HasMoreRequests(ctx context.Context) {
 	q.stateLock.Lock()
 	defer q.stateLock.Unlock()
 
-	q.setHaveMoreRequests(ctx)
+	q.setHasMoreRequests()
 	go q.startProcessor(ctx)
 }
 
@@ -144,7 +144,7 @@ func (q *ExecutionBroker) AbandonedRequestsOnLedger(ctx context.Context) {
 		q.PendingConfirmed = false
 	}
 
-	q.setHaveMoreRequests(ctx)
+	q.setHasMoreRequests()
 	go q.startProcessor(ctx)
 }
 
@@ -570,7 +570,7 @@ func (q *ExecutionBroker) isClosed() bool {
 }
 
 // must be called under lock
-func (q *ExecutionBroker) setHaveMoreRequests(ctx context.Context) {
+func (q *ExecutionBroker) setHasMoreRequests() {
 	q.ledgerHasMoreRequests = true
 	select {
 	case q.probablyMoreSinceLastFetch <- struct{}{}:
