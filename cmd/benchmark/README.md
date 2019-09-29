@@ -71,6 +71,7 @@ or you can run benchmark with
                 Name of scenario. Default scenario is transfer scenario.
                 You can choose "createMember" for create member scenario.
                 You can choose "migration" for migration scenario.
+                You can choose "transferTwoSides" for two sides transfer scenario.
 
         --discovery-nodes-logs-dir
                 Launchnet logs dir for checking errors

@@ -130,6 +130,18 @@ func newTransferDifferentMemberScenarios(out io.Writer, insSDK *sdk.SDK, concurr
 	}
 }
 
+func newTransferTwoSidesScenario(out io.Writer, insSDK *sdk.SDK, concurrent int, repetitions int) benchmark {
+	return benchmark{
+		scenario: &walletToWalletTwoSidesScenario{
+			insSDK: insSDK,
+		},
+		concurrent:  concurrent,
+		repetitions: repetitions,
+		name:        "TransferTwoSides",
+		out:         out,
+	}
+}
+
 func newCreateMemberScenarios(out io.Writer, insSDK *sdk.SDK, concurrent int, repetitions int) benchmark {
 	return benchmark{
 		scenario: &createMemberScenario{
@@ -446,6 +458,8 @@ func switchScenario(out io.Writer, insSDK *sdk.SDK) benchmark {
 	var b benchmark
 
 	switch scenarioName {
+	case "transferTwoSides":
+		b = newTransferTwoSidesScenario(out, insSDK, concurrent, repetitions)
 	case "createMember":
 		b = newCreateMemberScenarios(out, insSDK, concurrent, repetitions)
 	case "migration":
