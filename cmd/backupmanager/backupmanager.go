@@ -127,6 +127,11 @@ func merge(_ context.Context, targetDBPath string, backupFileName string, number
 		closeRawDB(bdb, err)
 	}
 
+	err = bdb.RunValueLogGC(0.7)
+	if err != nil {
+		log.Warn("Failed to run GC: " + err.Error())
+	}
+
 	log.Info("Successfully merged")
 	closeRawDB(bdb, nil)
 }
