@@ -40,7 +40,7 @@ type Client interface {
 	GetRequest(ctx context.Context, objectRef, reqRef insolar.Reference) (record.Request, error)
 
 	// GetPendings returns pending request IDs of an object.
-	GetPendings(ctx context.Context, objectRef insolar.Reference) ([]insolar.Reference, error)
+	GetPendings(ctx context.Context, objectRef insolar.Reference, skip []insolar.ID) ([]insolar.Reference, error)
 
 	// HasPendings returns true if object has unclosed requests.
 	HasPendings(ctx context.Context, object insolar.Reference) (bool, error)

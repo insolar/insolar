@@ -42,8 +42,8 @@ type ClientMock struct {
 	beforeGetObjectCounter uint64
 	GetObjectMock          mClientMockGetObject
 
-	funcGetPendings          func(ctx context.Context, objectRef insolar.Reference) (ra1 []insolar.Reference, err error)
-	inspectFuncGetPendings   func(ctx context.Context, objectRef insolar.Reference)
+	funcGetPendings          func(ctx context.Context, objectRef insolar.Reference, skip []insolar.ID) (ra1 []insolar.Reference, err error)
+	inspectFuncGetPendings   func(ctx context.Context, objectRef insolar.Reference, skip []insolar.ID)
 	afterGetPendingsCounter  uint64
 	beforeGetPendingsCounter uint64
 	GetPendingsMock          mClientMockGetPendings
@@ -1047,6 +1047,7 @@ type ClientMockGetPendingsExpectation struct {
 type ClientMockGetPendingsParams struct {
 	ctx       context.Context
 	objectRef insolar.Reference
+	skip      []insolar.ID
 }
 
 // ClientMockGetPendingsResults contains results of the Client.GetPendings
@@ -1056,7 +1057,7 @@ type ClientMockGetPendingsResults struct {
 }
 
 // Expect sets up expected params for Client.GetPendings
-func (mmGetPendings *mClientMockGetPendings) Expect(ctx context.Context, objectRef insolar.Reference) *mClientMockGetPendings {
+func (mmGetPendings *mClientMockGetPendings) Expect(ctx context.Context, objectRef insolar.Reference, skip []insolar.ID) *mClientMockGetPendings {
 	if mmGetPendings.mock.funcGetPendings != nil {
 		mmGetPendings.mock.t.Fatalf("ClientMock.GetPendings mock is already set by Set")
 	}
@@ -1065,7 +1066,7 @@ func (mmGetPendings *mClientMockGetPendings) Expect(ctx context.Context, objectR
 		mmGetPendings.defaultExpectation = &ClientMockGetPendingsExpectation{}
 	}
 
-	mmGetPendings.defaultExpectation.params = &ClientMockGetPendingsParams{ctx, objectRef}
+	mmGetPendings.defaultExpectation.params = &ClientMockGetPendingsParams{ctx, objectRef, skip}
 	for _, e := range mmGetPendings.expectations {
 		if minimock.Equal(e.params, mmGetPendings.defaultExpectation.params) {
 			mmGetPendings.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmGetPendings.defaultExpectation.params)
@@ -1076,7 +1077,7 @@ func (mmGetPendings *mClientMockGetPendings) Expect(ctx context.Context, objectR
 }
 
 // Inspect accepts an inspector function that has same arguments as the Client.GetPendings
-func (mmGetPendings *mClientMockGetPendings) Inspect(f func(ctx context.Context, objectRef insolar.Reference)) *mClientMockGetPendings {
+func (mmGetPendings *mClientMockGetPendings) Inspect(f func(ctx context.Context, objectRef insolar.Reference, skip []insolar.ID)) *mClientMockGetPendings {
 	if mmGetPendings.mock.inspectFuncGetPendings != nil {
 		mmGetPendings.mock.t.Fatalf("Inspect function is already set for ClientMock.GetPendings")
 	}
@@ -1100,7 +1101,7 @@ func (mmGetPendings *mClientMockGetPendings) Return(ra1 []insolar.Reference, err
 }
 
 //Set uses given function f to mock the Client.GetPendings method
-func (mmGetPendings *mClientMockGetPendings) Set(f func(ctx context.Context, objectRef insolar.Reference) (ra1 []insolar.Reference, err error)) *ClientMock {
+func (mmGetPendings *mClientMockGetPendings) Set(f func(ctx context.Context, objectRef insolar.Reference, skip []insolar.ID) (ra1 []insolar.Reference, err error)) *ClientMock {
 	if mmGetPendings.defaultExpectation != nil {
 		mmGetPendings.mock.t.Fatalf("Default expectation is already set for the Client.GetPendings method")
 	}
@@ -1115,14 +1116,14 @@ func (mmGetPendings *mClientMockGetPendings) Set(f func(ctx context.Context, obj
 
 // When sets expectation for the Client.GetPendings which will trigger the result defined by the following
 // Then helper
-func (mmGetPendings *mClientMockGetPendings) When(ctx context.Context, objectRef insolar.Reference) *ClientMockGetPendingsExpectation {
+func (mmGetPendings *mClientMockGetPendings) When(ctx context.Context, objectRef insolar.Reference, skip []insolar.ID) *ClientMockGetPendingsExpectation {
 	if mmGetPendings.mock.funcGetPendings != nil {
 		mmGetPendings.mock.t.Fatalf("ClientMock.GetPendings mock is already set by Set")
 	}
 
 	expectation := &ClientMockGetPendingsExpectation{
 		mock:   mmGetPendings.mock,
-		params: &ClientMockGetPendingsParams{ctx, objectRef},
+		params: &ClientMockGetPendingsParams{ctx, objectRef, skip},
 	}
 	mmGetPendings.expectations = append(mmGetPendings.expectations, expectation)
 	return expectation
@@ -1135,15 +1136,15 @@ func (e *ClientMockGetPendingsExpectation) Then(ra1 []insolar.Reference, err err
 }
 
 // GetPendings implements Client
-func (mmGetPendings *ClientMock) GetPendings(ctx context.Context, objectRef insolar.Reference) (ra1 []insolar.Reference, err error) {
+func (mmGetPendings *ClientMock) GetPendings(ctx context.Context, objectRef insolar.Reference, skip []insolar.ID) (ra1 []insolar.Reference, err error) {
 	mm_atomic.AddUint64(&mmGetPendings.beforeGetPendingsCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetPendings.afterGetPendingsCounter, 1)
 
 	if mmGetPendings.inspectFuncGetPendings != nil {
-		mmGetPendings.inspectFuncGetPendings(ctx, objectRef)
+		mmGetPendings.inspectFuncGetPendings(ctx, objectRef, skip)
 	}
 
-	params := &ClientMockGetPendingsParams{ctx, objectRef}
+	params := &ClientMockGetPendingsParams{ctx, objectRef, skip}
 
 	// Record call args
 	mmGetPendings.GetPendingsMock.mutex.Lock()
@@ -1160,7 +1161,7 @@ func (mmGetPendings *ClientMock) GetPendings(ctx context.Context, objectRef inso
 	if mmGetPendings.GetPendingsMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetPendings.GetPendingsMock.defaultExpectation.Counter, 1)
 		want := mmGetPendings.GetPendingsMock.defaultExpectation.params
-		got := ClientMockGetPendingsParams{ctx, objectRef}
+		got := ClientMockGetPendingsParams{ctx, objectRef, skip}
 		if want != nil && !minimock.Equal(*want, got) {
 			mmGetPendings.t.Errorf("ClientMock.GetPendings got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
 		}
@@ -1172,9 +1173,9 @@ func (mmGetPendings *ClientMock) GetPendings(ctx context.Context, objectRef inso
 		return (*results).ra1, (*results).err
 	}
 	if mmGetPendings.funcGetPendings != nil {
-		return mmGetPendings.funcGetPendings(ctx, objectRef)
+		return mmGetPendings.funcGetPendings(ctx, objectRef, skip)
 	}
-	mmGetPendings.t.Fatalf("Unexpected call to ClientMock.GetPendings. %v %v", ctx, objectRef)
+	mmGetPendings.t.Fatalf("Unexpected call to ClientMock.GetPendings. %v %v %v", ctx, objectRef, skip)
 	return
 }
 

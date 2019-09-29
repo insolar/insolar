@@ -493,7 +493,11 @@ func (m *client) GetRequest(
 }
 
 // GetPendings returns a list of pending requests
-func (m *client) GetPendings(ctx context.Context, object insolar.Reference) ([]insolar.Reference, error) {
+func (m *client) GetPendings(
+	ctx context.Context, object insolar.Reference, skip []insolar.ID,
+) (
+	[]insolar.Reference, error,
+) {
 	var err error
 	instrumenter := instrument(ctx, "GetPendings").err(&err)
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.GetPendings")
@@ -506,8 +510,9 @@ func (m *client) GetPendings(ctx context.Context, object insolar.Reference) ([]i
 	}()
 
 	getPendingsPl := &payload.GetPendings{
-		ObjectID: *object.GetLocal(),
-		Count:    getPendingLimit,
+		ObjectID:        *object.GetLocal(),
+		Count:           getPendingLimit,
+		SkipRequestRefs: skip,
 	}
 
 	pl, err := m.sendToLight(ctx, m.sender, getPendingsPl, object)

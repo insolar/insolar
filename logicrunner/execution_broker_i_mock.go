@@ -29,12 +29,6 @@ type ExecutionBrokerIMock struct {
 	beforeHasMoreRequestsCounter uint64
 	HasMoreRequestsMock          mExecutionBrokerIMockHasMoreRequests
 
-	funcIsKnownRequest          func(ctx context.Context, req insolar.Reference) (b1 bool)
-	inspectFuncIsKnownRequest   func(ctx context.Context, req insolar.Reference)
-	afterIsKnownRequestCounter  uint64
-	beforeIsKnownRequestCounter uint64
-	IsKnownRequestMock          mExecutionBrokerIMockIsKnownRequest
-
 	funcNoMoreRequestsOnLedger          func(ctx context.Context)
 	inspectFuncNoMoreRequestsOnLedger   func(ctx context.Context)
 	afterNoMoreRequestsOnLedgerCounter  uint64
@@ -90,9 +84,6 @@ func NewExecutionBrokerIMock(t minimock.Tester) *ExecutionBrokerIMock {
 
 	m.HasMoreRequestsMock = mExecutionBrokerIMockHasMoreRequests{mock: m}
 	m.HasMoreRequestsMock.callArgs = []*ExecutionBrokerIMockHasMoreRequestsParams{}
-
-	m.IsKnownRequestMock = mExecutionBrokerIMockIsKnownRequest{mock: m}
-	m.IsKnownRequestMock.callArgs = []*ExecutionBrokerIMockIsKnownRequestParams{}
 
 	m.NoMoreRequestsOnLedgerMock = mExecutionBrokerIMockNoMoreRequestsOnLedger{mock: m}
 	m.NoMoreRequestsOnLedgerMock.callArgs = []*ExecutionBrokerIMockNoMoreRequestsOnLedgerParams{}
@@ -488,222 +479,6 @@ func (m *ExecutionBrokerIMock) MinimockHasMoreRequestsInspect() {
 	// if func was set then invocations count should be greater than zero
 	if m.funcHasMoreRequests != nil && mm_atomic.LoadUint64(&m.afterHasMoreRequestsCounter) < 1 {
 		m.t.Error("Expected call to ExecutionBrokerIMock.HasMoreRequests")
-	}
-}
-
-type mExecutionBrokerIMockIsKnownRequest struct {
-	mock               *ExecutionBrokerIMock
-	defaultExpectation *ExecutionBrokerIMockIsKnownRequestExpectation
-	expectations       []*ExecutionBrokerIMockIsKnownRequestExpectation
-
-	callArgs []*ExecutionBrokerIMockIsKnownRequestParams
-	mutex    sync.RWMutex
-}
-
-// ExecutionBrokerIMockIsKnownRequestExpectation specifies expectation struct of the ExecutionBrokerI.IsKnownRequest
-type ExecutionBrokerIMockIsKnownRequestExpectation struct {
-	mock    *ExecutionBrokerIMock
-	params  *ExecutionBrokerIMockIsKnownRequestParams
-	results *ExecutionBrokerIMockIsKnownRequestResults
-	Counter uint64
-}
-
-// ExecutionBrokerIMockIsKnownRequestParams contains parameters of the ExecutionBrokerI.IsKnownRequest
-type ExecutionBrokerIMockIsKnownRequestParams struct {
-	ctx context.Context
-	req insolar.Reference
-}
-
-// ExecutionBrokerIMockIsKnownRequestResults contains results of the ExecutionBrokerI.IsKnownRequest
-type ExecutionBrokerIMockIsKnownRequestResults struct {
-	b1 bool
-}
-
-// Expect sets up expected params for ExecutionBrokerI.IsKnownRequest
-func (mmIsKnownRequest *mExecutionBrokerIMockIsKnownRequest) Expect(ctx context.Context, req insolar.Reference) *mExecutionBrokerIMockIsKnownRequest {
-	if mmIsKnownRequest.mock.funcIsKnownRequest != nil {
-		mmIsKnownRequest.mock.t.Fatalf("ExecutionBrokerIMock.IsKnownRequest mock is already set by Set")
-	}
-
-	if mmIsKnownRequest.defaultExpectation == nil {
-		mmIsKnownRequest.defaultExpectation = &ExecutionBrokerIMockIsKnownRequestExpectation{}
-	}
-
-	mmIsKnownRequest.defaultExpectation.params = &ExecutionBrokerIMockIsKnownRequestParams{ctx, req}
-	for _, e := range mmIsKnownRequest.expectations {
-		if minimock.Equal(e.params, mmIsKnownRequest.defaultExpectation.params) {
-			mmIsKnownRequest.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmIsKnownRequest.defaultExpectation.params)
-		}
-	}
-
-	return mmIsKnownRequest
-}
-
-// Inspect accepts an inspector function that has same arguments as the ExecutionBrokerI.IsKnownRequest
-func (mmIsKnownRequest *mExecutionBrokerIMockIsKnownRequest) Inspect(f func(ctx context.Context, req insolar.Reference)) *mExecutionBrokerIMockIsKnownRequest {
-	if mmIsKnownRequest.mock.inspectFuncIsKnownRequest != nil {
-		mmIsKnownRequest.mock.t.Fatalf("Inspect function is already set for ExecutionBrokerIMock.IsKnownRequest")
-	}
-
-	mmIsKnownRequest.mock.inspectFuncIsKnownRequest = f
-
-	return mmIsKnownRequest
-}
-
-// Return sets up results that will be returned by ExecutionBrokerI.IsKnownRequest
-func (mmIsKnownRequest *mExecutionBrokerIMockIsKnownRequest) Return(b1 bool) *ExecutionBrokerIMock {
-	if mmIsKnownRequest.mock.funcIsKnownRequest != nil {
-		mmIsKnownRequest.mock.t.Fatalf("ExecutionBrokerIMock.IsKnownRequest mock is already set by Set")
-	}
-
-	if mmIsKnownRequest.defaultExpectation == nil {
-		mmIsKnownRequest.defaultExpectation = &ExecutionBrokerIMockIsKnownRequestExpectation{mock: mmIsKnownRequest.mock}
-	}
-	mmIsKnownRequest.defaultExpectation.results = &ExecutionBrokerIMockIsKnownRequestResults{b1}
-	return mmIsKnownRequest.mock
-}
-
-//Set uses given function f to mock the ExecutionBrokerI.IsKnownRequest method
-func (mmIsKnownRequest *mExecutionBrokerIMockIsKnownRequest) Set(f func(ctx context.Context, req insolar.Reference) (b1 bool)) *ExecutionBrokerIMock {
-	if mmIsKnownRequest.defaultExpectation != nil {
-		mmIsKnownRequest.mock.t.Fatalf("Default expectation is already set for the ExecutionBrokerI.IsKnownRequest method")
-	}
-
-	if len(mmIsKnownRequest.expectations) > 0 {
-		mmIsKnownRequest.mock.t.Fatalf("Some expectations are already set for the ExecutionBrokerI.IsKnownRequest method")
-	}
-
-	mmIsKnownRequest.mock.funcIsKnownRequest = f
-	return mmIsKnownRequest.mock
-}
-
-// When sets expectation for the ExecutionBrokerI.IsKnownRequest which will trigger the result defined by the following
-// Then helper
-func (mmIsKnownRequest *mExecutionBrokerIMockIsKnownRequest) When(ctx context.Context, req insolar.Reference) *ExecutionBrokerIMockIsKnownRequestExpectation {
-	if mmIsKnownRequest.mock.funcIsKnownRequest != nil {
-		mmIsKnownRequest.mock.t.Fatalf("ExecutionBrokerIMock.IsKnownRequest mock is already set by Set")
-	}
-
-	expectation := &ExecutionBrokerIMockIsKnownRequestExpectation{
-		mock:   mmIsKnownRequest.mock,
-		params: &ExecutionBrokerIMockIsKnownRequestParams{ctx, req},
-	}
-	mmIsKnownRequest.expectations = append(mmIsKnownRequest.expectations, expectation)
-	return expectation
-}
-
-// Then sets up ExecutionBrokerI.IsKnownRequest return parameters for the expectation previously defined by the When method
-func (e *ExecutionBrokerIMockIsKnownRequestExpectation) Then(b1 bool) *ExecutionBrokerIMock {
-	e.results = &ExecutionBrokerIMockIsKnownRequestResults{b1}
-	return e.mock
-}
-
-// IsKnownRequest implements ExecutionBrokerI
-func (mmIsKnownRequest *ExecutionBrokerIMock) IsKnownRequest(ctx context.Context, req insolar.Reference) (b1 bool) {
-	mm_atomic.AddUint64(&mmIsKnownRequest.beforeIsKnownRequestCounter, 1)
-	defer mm_atomic.AddUint64(&mmIsKnownRequest.afterIsKnownRequestCounter, 1)
-
-	if mmIsKnownRequest.inspectFuncIsKnownRequest != nil {
-		mmIsKnownRequest.inspectFuncIsKnownRequest(ctx, req)
-	}
-
-	params := &ExecutionBrokerIMockIsKnownRequestParams{ctx, req}
-
-	// Record call args
-	mmIsKnownRequest.IsKnownRequestMock.mutex.Lock()
-	mmIsKnownRequest.IsKnownRequestMock.callArgs = append(mmIsKnownRequest.IsKnownRequestMock.callArgs, params)
-	mmIsKnownRequest.IsKnownRequestMock.mutex.Unlock()
-
-	for _, e := range mmIsKnownRequest.IsKnownRequestMock.expectations {
-		if minimock.Equal(e.params, params) {
-			mm_atomic.AddUint64(&e.Counter, 1)
-			return e.results.b1
-		}
-	}
-
-	if mmIsKnownRequest.IsKnownRequestMock.defaultExpectation != nil {
-		mm_atomic.AddUint64(&mmIsKnownRequest.IsKnownRequestMock.defaultExpectation.Counter, 1)
-		want := mmIsKnownRequest.IsKnownRequestMock.defaultExpectation.params
-		got := ExecutionBrokerIMockIsKnownRequestParams{ctx, req}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmIsKnownRequest.t.Errorf("ExecutionBrokerIMock.IsKnownRequest got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
-		}
-
-		results := mmIsKnownRequest.IsKnownRequestMock.defaultExpectation.results
-		if results == nil {
-			mmIsKnownRequest.t.Fatal("No results are set for the ExecutionBrokerIMock.IsKnownRequest")
-		}
-		return (*results).b1
-	}
-	if mmIsKnownRequest.funcIsKnownRequest != nil {
-		return mmIsKnownRequest.funcIsKnownRequest(ctx, req)
-	}
-	mmIsKnownRequest.t.Fatalf("Unexpected call to ExecutionBrokerIMock.IsKnownRequest. %v %v", ctx, req)
-	return
-}
-
-// IsKnownRequestAfterCounter returns a count of finished ExecutionBrokerIMock.IsKnownRequest invocations
-func (mmIsKnownRequest *ExecutionBrokerIMock) IsKnownRequestAfterCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmIsKnownRequest.afterIsKnownRequestCounter)
-}
-
-// IsKnownRequestBeforeCounter returns a count of ExecutionBrokerIMock.IsKnownRequest invocations
-func (mmIsKnownRequest *ExecutionBrokerIMock) IsKnownRequestBeforeCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmIsKnownRequest.beforeIsKnownRequestCounter)
-}
-
-// Calls returns a list of arguments used in each call to ExecutionBrokerIMock.IsKnownRequest.
-// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
-func (mmIsKnownRequest *mExecutionBrokerIMockIsKnownRequest) Calls() []*ExecutionBrokerIMockIsKnownRequestParams {
-	mmIsKnownRequest.mutex.RLock()
-
-	argCopy := make([]*ExecutionBrokerIMockIsKnownRequestParams, len(mmIsKnownRequest.callArgs))
-	copy(argCopy, mmIsKnownRequest.callArgs)
-
-	mmIsKnownRequest.mutex.RUnlock()
-
-	return argCopy
-}
-
-// MinimockIsKnownRequestDone returns true if the count of the IsKnownRequest invocations corresponds
-// the number of defined expectations
-func (m *ExecutionBrokerIMock) MinimockIsKnownRequestDone() bool {
-	for _, e := range m.IsKnownRequestMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			return false
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.IsKnownRequestMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterIsKnownRequestCounter) < 1 {
-		return false
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcIsKnownRequest != nil && mm_atomic.LoadUint64(&m.afterIsKnownRequestCounter) < 1 {
-		return false
-	}
-	return true
-}
-
-// MinimockIsKnownRequestInspect logs each unmet expectation
-func (m *ExecutionBrokerIMock) MinimockIsKnownRequestInspect() {
-	for _, e := range m.IsKnownRequestMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			m.t.Errorf("Expected call to ExecutionBrokerIMock.IsKnownRequest with params: %#v", *e.params)
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.IsKnownRequestMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterIsKnownRequestCounter) < 1 {
-		if m.IsKnownRequestMock.defaultExpectation.params == nil {
-			m.t.Error("Expected call to ExecutionBrokerIMock.IsKnownRequest")
-		} else {
-			m.t.Errorf("Expected call to ExecutionBrokerIMock.IsKnownRequest with params: %#v", *m.IsKnownRequestMock.defaultExpectation.params)
-		}
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcIsKnownRequest != nil && mm_atomic.LoadUint64(&m.afterIsKnownRequestCounter) < 1 {
-		m.t.Error("Expected call to ExecutionBrokerIMock.IsKnownRequest")
 	}
 }
 
@@ -2064,8 +1839,6 @@ func (m *ExecutionBrokerIMock) MinimockFinish() {
 
 		m.MinimockHasMoreRequestsInspect()
 
-		m.MinimockIsKnownRequestInspect()
-
 		m.MinimockNoMoreRequestsOnLedgerInspect()
 
 		m.MinimockOnPulseInspect()
@@ -2104,7 +1877,6 @@ func (m *ExecutionBrokerIMock) minimockDone() bool {
 	return done &&
 		m.MinimockAbandonedRequestsOnLedgerDone() &&
 		m.MinimockHasMoreRequestsDone() &&
-		m.MinimockIsKnownRequestDone() &&
 		m.MinimockNoMoreRequestsOnLedgerDone() &&
 		m.MinimockOnPulseDone() &&
 		m.MinimockPendingStateDone() &&

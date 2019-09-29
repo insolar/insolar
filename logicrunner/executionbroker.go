@@ -59,8 +59,6 @@ type ExecutionBrokerI interface {
 	PrevExecutorSentPendingFinished(ctx context.Context) error
 	SetNotPending(ctx context.Context)
 
-	IsKnownRequest(ctx context.Context, req insolar.Reference) bool
-
 	OnPulse(ctx context.Context) []payload.Payload
 }
 
@@ -594,15 +592,5 @@ func (q *ExecutionBroker) upsertToDuplicationTable(ctx context.Context, transcri
 		return true
 	}
 	q.deduplicationTable[transcript.RequestRef] = true
-	return false
-}
-
-func (q *ExecutionBroker) IsKnownRequest(ctx context.Context, req insolar.Reference) bool {
-	q.stateLock.Lock()
-	defer q.stateLock.Unlock()
-
-	if _, ok := q.deduplicationTable[req]; ok {
-		return true
-	}
 	return false
 }

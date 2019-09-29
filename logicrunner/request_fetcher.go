@@ -43,6 +43,7 @@ type requestFetcher struct {
 
 	aborted      chan struct{}
 	stopFetching func()
+	skipSlice    []insolar.ID
 
 	broker           ExecutionBrokerI
 	artifactsManager artifacts.Client
@@ -61,6 +62,7 @@ func NewRequestsFetcher(
 		outgoingsSender:  os,
 		aborted:          aborted,
 		stopFetching:     func() { once.Do(func() { close(aborted) }) },
+		skipSlice:        make([]insolar.ID, 0),
 	}
 }
 
@@ -97,8 +99,7 @@ func (rf *requestFetcher) FetchPendings(ctx context.Context) <-chan *common.Tran
 	return trs
 }
 
-// XXX: merge with value in GetPendings, duplicate
-const limit = 100
+const skipSliceSizeLimit = 300
 
 func (rf *requestFetcher) fetch(ctx context.Context, trs chan<- *common.Transcript) error {
 	defer close(trs)
@@ -107,7 +108,12 @@ func (rf *requestFetcher) fetch(ctx context.Context, trs chan<- *common.Transcri
 
 	for {
 		stats.Record(ctx, metrics.RequestFetcherFetchCall.M(1))
-		reqRefs, err := rf.artifactsManager.GetPendings(ctx, rf.object)
+
+		if len(rf.skipSlice) > skipSliceSizeLimit {
+			rf.skipSlice = rf.skipSlice[len(rf.skipSlice):]
+		}
+
+		reqRefs, err := rf.artifactsManager.GetPendings(ctx, rf.object, rf.skipSlice)
 		if err != nil {
 			if err == insolar.ErrNoPendingRequest {
 				logger.Debug("no more pendings on ledger")
@@ -117,17 +123,13 @@ func (rf *requestFetcher) fetch(ctx context.Context, trs chan<- *common.Transcri
 			return err
 		}
 
-		addedCount := 0
 		for _, reqRef := range reqRefs {
+			rf.skipSlice = append(rf.skipSlice, *reqRef.GetLocal())
+
 			if !reqRef.IsRecordScope() {
 				logger.Errorf("skipping request with bad reference, ref=%s", reqRef.String())
 				continue
-			} else if rf.broker.IsKnownRequest(ctx, reqRef) {
-				logger.Debug("skipping known request ", reqRef.String())
-				stats.Record(ctx, metrics.RequestFetcherFetchKnown.M(1))
-				continue
 			}
-			addedCount++
 
 			logger.Debug("getting request from ledger")
 			stats.Record(ctx, metrics.RequestFetcherFetchUnique.M(1))
@@ -163,16 +165,6 @@ func (rf *requestFetcher) fetch(ctx context.Context, trs chan<- *common.Transcri
 			default:
 				logger.Error("requestFetcher fetched unknown request")
 			}
-		}
-		if addedCount == 0 {
-			if len(reqRefs) < limit {
-				logger.Debug("we guess that ledger has no more requests")
-				rf.broker.NoMoreRequestsOnLedger(ctx)
-				return nil
-			}
-
-			logger.Warn("we can not get more requests")
-			return nil
 		}
 	}
 }

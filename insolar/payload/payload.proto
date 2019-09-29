@@ -297,6 +297,7 @@ message GetPendings {
 
     bytes ObjectID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
     uint32 Count = 21;
+    repeated bytes SkipRequestRefs = 22 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
 }
 
 message HasPendings {
