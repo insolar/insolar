@@ -103,10 +103,17 @@ func TestExecutionBroker_AddFreshRequest(t *testing.T) {
 				er := executionregistry.NewExecutionRegistryMock(t).
 					RegisterMock.Return(nil).
 					DoneMock.Return(true)
+				count := 0
 				am := artifacts.NewClientMock(t).
 					HasPendingsMock.Return(false, nil).
 					GetObjectMock.Return(artifacts.NewObjectDescriptorMock(t).EarliestRequestIDMock.Return(reqRef.GetLocal()), nil).
-					GetPendingsMock.Return([]insolar.Reference{reqRef}, nil).
+					GetPendingsMock.Set(func(ctx context.Context, objectRef insolar.Reference, skip []insolar.ID) (ra1 []insolar.Reference, err error) {
+					if count > 0 {
+						return nil, insolar.ErrNoPendingRequest
+					}
+					count++
+					return []insolar.Reference{reqRef}, nil
+				}).
 					GetRequestMock.Return(
 					&record.IncomingRequest{
 						ReturnMode:   record.ReturnResult,
@@ -278,7 +285,12 @@ func TestExecutionBroker_ExecuteImmutable(t *testing.T) {
 		Reason:       gen.RecordReference(),
 	}
 
-	am.GetPendingsMock.Set(func(ctx context.Context, objectRef insolar.Reference) (ra1 []insolar.Reference, err error) {
+	count := 0
+	am.GetPendingsMock.Set(func(ctx context.Context, objectRef insolar.Reference, skipSlice []insolar.ID) (ra1 []insolar.Reference, err error) {
+		if count > 0 {
+			return nil, insolar.ErrNoPendingRequest
+		}
+		count++
 		return []insolar.Reference{immutableRequestRef1}, nil
 	}).GetRequestMock.Return(&immutableRequest1, nil)
 
@@ -442,9 +454,16 @@ func TestExecutionBroker_AddFreshRequestWithOnPulse(t *testing.T) {
 					IsEmptyMock.Set(func() bool { return doneCalled }).
 					RegisterMock.Return(nil).
 					DoneMock.Set(func(_ *common.Transcript) bool { doneCalled = true; return true })
+				count := 0
 				am := artifacts.NewClientMock(t).
 					HasPendingsMock.Return(false, nil).GetObjectMock.Return(artifacts.NewObjectDescriptorMock(t).EarliestRequestIDMock.Return(reqRef.GetLocal()), nil).
-					GetPendingsMock.Return([]insolar.Reference{reqRef}, nil).GetRequestMock.Return(&record.IncomingRequest{
+					GetPendingsMock.Set(func(ctx context.Context, objectRef insolar.Reference, skip []insolar.ID) (ra1 []insolar.Reference, err error) {
+					if count > 0 {
+						return nil, insolar.ErrNoPendingRequest
+					}
+					count++
+					return []insolar.Reference{reqRef}, nil
+				}).GetRequestMock.Return(&record.IncomingRequest{
 					ReturnMode:   record.ReturnResult,
 					Object:       &objectRef,
 					APIRequestID: utils.RandTraceID(),
@@ -497,31 +516,6 @@ func TestExecutionBroker_AddFreshRequestWithOnPulse(t *testing.T) {
 			test.checks(ctx, t, *msgs)
 		})
 	}
-}
-
-func TestExecutionBroker_IsKnownRequest(t *testing.T) {
-	ctx := inslogger.TestContext(t)
-	mc := minimock.NewController(t)
-	defer mc.Finish()
-
-	reqRef1 := gen.Reference()
-
-	pa := insolarPulse.NewAccessorMock(t).LatestMock.Return(
-		insolar.Pulse{PulseNumber: pulse.MinTimePulse},
-		nil,
-	)
-
-	objectRef := gen.Reference()
-	b := NewExecutionBroker(
-		objectRef, nil, nil, nil, nil, nil, nil, pa,
-	)
-
-	tr := common.NewTranscript(ctx, reqRef1, record.IncomingRequest{})
-	b.upsertToDuplicationTable(ctx, tr)
-
-	require.True(t, b.IsKnownRequest(ctx, reqRef1))
-
-	require.False(t, b.IsKnownRequest(ctx, gen.Reference()))
 }
 
 func TestExecutionBroker_NoMoreRequestsOnLedger(t *testing.T) {
@@ -593,9 +587,15 @@ func TestExecutionBroker_AbandonedRequestsOnLedger_Integration(t *testing.T) {
 			name: "request on ledger, abort during fetch",
 			mocks: func(t minimock.Tester) *ExecutionBroker {
 				reqRef := gen.RecordReference()
+				count := 0
 				am := artifacts.NewClientMock(mc).
-					GetPendingsMock.
-					Return([]insolar.Reference{reqRef}, nil)
+					GetPendingsMock.Set(func(ctx context.Context, objectRef insolar.Reference, skip []insolar.ID) (ra1 []insolar.Reference, err error) {
+					if count > 0 {
+						return nil, insolar.ErrNoPendingRequest
+					}
+					count++
+					return []insolar.Reference{reqRef}, nil
+				})
 				b := NewExecutionBroker(
 					objectRef, nil, nil, nil, am, nil, nil, pa,
 				)

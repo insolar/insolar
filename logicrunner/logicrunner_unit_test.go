@@ -371,7 +371,7 @@ func TestLogicRunner_OnPulse_Order(t *testing.T) {
 	require.NoError(t, err)
 
 	mc := minimock.NewController(t)
-	defer mc.Wait(time.Second)
+	defer mc.Wait(time.Minute)
 
 	orderChan := make(chan OnPulseCallOrderEnum, 6)
 
@@ -479,7 +479,14 @@ func (suite *LogicRunnerTestSuite) TestImmutableOrder() {
 		Caller:       gen.Reference(),
 	}
 
-	am.GetPendingsMock.Return([]insolar.Reference{immutableRequestRef1, immutableRequestRef2, mutableRequestRef}, nil)
+	count := 0
+	am.GetPendingsMock.Set(func(ctx context.Context, objectRef insolar.Reference, skip []insolar.ID) (ra1 []insolar.Reference, err error) {
+		if count > 0 {
+			return nil, insolar.ErrNoPendingRequest
+		}
+		count++
+		return []insolar.Reference{immutableRequestRef1, immutableRequestRef2, mutableRequestRef}, nil
+	})
 	am.GetRequestMock.Set(func(_ context.Context, objRef insolar.Reference, reqRef insolar.Reference) (r1 record.Request, err error) {
 		if objRef != objectRef {
 			return nil, errors.New("bad objectRef")
