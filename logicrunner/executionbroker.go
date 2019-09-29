@@ -191,11 +191,13 @@ func (q *ExecutionBroker) startProcessor(ctx context.Context) {
 	fetcher := NewRequestsFetcher(q.Ref, q.artifactsManager, q, q.outgoingSender)
 	feedMutable := make(chan *common.Transcript, 10)
 	feedImmutable := make(chan *common.Transcript, 10)
+	transcriptFeed := fetcher.FetchPendings(ctx)
+
 	go func() {
 		defer q.stopProcessor(ctx, fetcher, feedMutable, feedImmutable)
 		for {
 			select {
-			case tr, ok := <-fetcher.FetchPendings(ctx):
+			case tr, ok := <-transcriptFeed:
 				if !ok {
 					logger.Debug("fetcher stopped producing")
 
@@ -205,6 +207,7 @@ func (q *ExecutionBroker) startProcessor(ctx context.Context) {
 
 						fetcher.Abort(ctx)
 						fetcher = NewRequestsFetcher(q.Ref, q.artifactsManager, q, q.outgoingSender)
+						transcriptFeed = fetcher.FetchPendings(ctx)
 						continue
 					case <-q.closed:
 						return
