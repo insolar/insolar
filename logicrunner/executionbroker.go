@@ -588,6 +588,9 @@ func (q *ExecutionBroker) setHaveMoreRequests(ctx context.Context) {
 }
 
 func (q *ExecutionBroker) storeWithoutDuplication(ctx context.Context, transcript *common.Transcript) bool {
+	q.stateLock.Lock()
+	defer q.stateLock.Unlock()
+
 	if _, ok := q.deduplicationTable[transcript.RequestRef]; ok {
 		logger := inslogger.FromContext(ctx)
 		logger.Infof("Already know about request %s, skipping", transcript.RequestRef.String())
