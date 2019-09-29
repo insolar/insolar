@@ -44,7 +44,6 @@ import (
 const (
 	defaultStdoutPath   = "-"
 	createMemberRetries = 5
-	balanceCheckRetries = 10
 	balanceCheckDelay   = 5 * time.Second
 )
 
@@ -64,6 +63,7 @@ var (
 	saveMembersToFile   bool
 	useMembersFromFile  bool
 	noCheckBalance      bool
+	balanceCheckRetries int
 	checkMembersBalance bool
 	checkAllBalance     bool
 	checkTotalBalance   bool
@@ -84,6 +84,7 @@ func parseInputParams() {
 	pflag.BoolVarP(&useMembersFromFile, "usemembers", "m", false, "use members from file")
 	pflag.StringVarP(&memberFile, "members-file", "", defaultMemberFile, "dir for saving members data")
 	pflag.BoolVarP(&noCheckBalance, "nocheckbalance", "b", false, "don't check balance at the end")
+	pflag.IntVarP(&balanceCheckRetries, "balance-check-retries", "R", 12, "balance check retries (every 5 sec)")
 	pflag.BoolVarP(&checkMembersBalance, "check-members-balance", "", false, "check balance of every ordinary member from file, don't run any scenario")
 	pflag.BoolVarP(&checkAllBalance, "check-all-balance", "", false, "check balance of every object from file, and don't run any scenario")
 	pflag.BoolVarP(&checkTotalBalance, "check-total-balance", "", false, "check total balance of members from file, don't run any scenario")
