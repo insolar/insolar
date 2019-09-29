@@ -48,7 +48,7 @@ type RequestsQueue interface {
 	// Number of elements in queue
 	Length() int
 	// Clean cleans queue
-	Clean(ctx context.Context)
+	Clean(ctx context.Context) []*common.Transcript
 }
 
 type queue struct {
@@ -100,18 +100,27 @@ func (q *queue) NumberOfOld(_ context.Context) int {
 	return len(q.lists[FromLedger]) + len(q.lists[FromPreviousExecutor])
 }
 
-func (q *queue) Clean(_ context.Context) {
+func (q *queue) Clean(_ context.Context) []*common.Transcript {
 	q.lock.Lock()
 	defer q.lock.Unlock()
 
+	res := make([]*common.Transcript, 0, q.length())
 	for i := 0; i < int(numberOfSources); i++ {
+		for itemNum := range q.lists[i] {
+			res = append(res, q.lists[i][itemNum])
+		}
 		q.lists[i] = nil
 	}
+	return res
 }
 
 func (q *queue) Length() int {
 	q.lock.Lock()
 	defer q.lock.Unlock()
 
+	return q.length()
+}
+
+func (q *queue) length() int {
 	return len(q.lists[FromLedger]) + len(q.lists[FromPreviousExecutor]) + len(q.lists[FromThisPulse])
 }

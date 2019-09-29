@@ -344,6 +344,12 @@ func buildIncomingRequestFromOutgoing(outgoing *record.OutgoingRequest) *record.
 	// CommonRequestData structures or something like this.
 	// This being said the implementation of Request interface differs for Incoming and
 	// OutgoingRequest. See corresponding implementation of the interface methods.
+	apiReqID := outgoing.APIRequestID
+
+	if outgoing.ReturnMode == record.ReturnSaga {
+		apiReqID += fmt.Sprintf("-saga-%d", outgoing.Nonce)
+	}
+
 	incoming := record.IncomingRequest{
 		Caller:          outgoing.Caller,
 		CallerPrototype: outgoing.CallerPrototype,
@@ -359,7 +365,7 @@ func buildIncomingRequestFromOutgoing(outgoing *record.OutgoingRequest) *record.
 		Method:    outgoing.Method,
 		Arguments: outgoing.Arguments,
 
-		APIRequestID: outgoing.APIRequestID,
+		APIRequestID: apiReqID,
 		Reason:       outgoing.Reason,
 	}
 

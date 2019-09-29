@@ -30,7 +30,6 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/artifacts"
-	"github.com/insolar/insolar/logicrunner/common"
 )
 
 func TestRequestsFetcher_New(t *testing.T) {
@@ -56,8 +55,7 @@ func TestRequestsFetcher_FetchPendings(t *testing.T) {
 
 				broker := NewExecutionBrokerIMock(t).
 					IsKnownRequestMock.Return(false).
-					AddRequestsFromLedgerMock.Return().
-					NoMoreRequestsOnLedgerMock.Return()
+					AddRequestsFromLedgerMock.Return()
 
 				return *incoming.Object, am, broker
 			},
@@ -78,72 +76,43 @@ func TestRequestsFetcher_FetchPendings(t *testing.T) {
 	}
 }
 
-func checkRequestRef(reference insolar.Reference, array []insolar.Reference, takenFrom int, takenTo int, lastElement int) bool {
-	for i := 0; i < lastElement; i++ {
-		if i >= takenFrom && i < takenTo && array[i].Equal(reference) {
+func isKnownRequest(reference insolar.Reference, array []insolar.Reference) bool {
+	for i := range array {
+		if array[i].Equal(reference) {
 			return false
 		}
-
-		if array[i].Equal(reference) {
-			return true
-		}
 	}
 
-	panic("unreachable")
-}
-
-func isKnownRequest(reference insolar.Reference, array []insolar.Reference, takenFrom int, takenTo int) bool {
-	for i := takenFrom; i < takenTo; i++ {
-		if array[i].Equal(reference) {
-			return true
-		}
-	}
-
-	return false
+	panic("should be known request")
 }
 
 func TestRequestsFetcher_Limits(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
 	mc := minimock.NewController(t)
-	defer mc.Wait(1 * time.Minute)
+	defer mc.Wait(1 * time.Second)
 
 	objectRef := gen.Reference()
-	pendingsCount := 50
-	pendings := gen.UniqueRecordReferences(pendingsCount)
-	alreadyPresentedFrom, alreadyPresentedTo := 10, 20
-	lastElement := (alreadyPresentedTo - alreadyPresentedFrom) + MaxFetchCount
+	pendings := gen.UniqueRecordReferences(20)
 
 	am := artifacts.NewClientMock(mc).
-		GetPendingsMock.Return(pendings, nil).
+		GetPendingsMock.Inspect(func(_ context.Context, objectRef insolar.Reference) {
+		t.Logf("incoming obj %s", objectRef)
+	}).Return(pendings, nil).
 		GetAbandonedRequestMock.Set(
 		func(ctx context.Context, objectRef insolar.Reference, requestRef insolar.Reference) (record.Request, error) {
-			assert.True(
-				t,
-				checkRequestRef(requestRef, pendings, alreadyPresentedFrom, alreadyPresentedTo, lastElement),
-				"only first ten and third ten requsts should be taken",
-			)
+			t.Logf("GetAbandonedRequest %s", requestRef)
 			return genIncomingRequest(), nil
 		})
 
 	eb := NewExecutionBrokerIMock(mc).
-		IsKnownRequestMock.Set(
-		func(ctx context.Context, req insolar.Reference) (b1 bool) {
-			return isKnownRequest(req, pendings, alreadyPresentedFrom, alreadyPresentedTo)
-		}).
-		AddRequestsFromLedgerMock.Set(
-		func(ctx context.Context, transcripts ...*common.Transcript) {
-			assert.False(
-				t,
-				isKnownRequest(transcripts[0].RequestRef, pendings, alreadyPresentedFrom, alreadyPresentedTo),
-				"only first ten and third ten requsts should be taken",
-			)
-		})
+		IsKnownRequestMock.Return(false).
+		AddRequestsFromLedgerMock.Return()
 
 	fetcher := NewRequestsFetcher(objectRef, am, eb, nil)
 
 	fetcherOriginal := fetcher.(*requestFetcher)
 	err := fetcherOriginal.fetch(ctx)
 	assert.NoError(t, err)
-	assert.Equal(t, uint64(20), am.GetAbandonedRequestAfterCounter())
+	assert.Equal(t, uint64(len(pendings)), am.GetAbandonedRequestAfterCounter())
 }

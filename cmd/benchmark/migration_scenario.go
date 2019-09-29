@@ -22,7 +22,6 @@ import (
 	"strconv"
 
 	"github.com/insolar/insolar/api/sdk"
-	"github.com/insolar/insolar/log"
 )
 
 const migrationAmount = 101
@@ -51,18 +50,16 @@ func (s *migrationScenario) prepare() {
 	check("Error while loading members: ", err)
 
 	if useMembersFromFile {
-		if members[len(members)-1].GetReference() != s.insSDK.GetMigrationAdminMember().GetReference() {
-			log.Fatal("last element must be migration admin, but its not")
-		}
-		members = members[:len(members)-1]
+		members = members[:len(members)-2]
 	}
 
 	s.members = members
 
 	s.migrationDaemons = s.insSDK.GetMigrationDaemonMembers()
 
-	s.balanceCheckMembers = make([]sdk.Member, len(s.members), len(s.members)+1)
+	s.balanceCheckMembers = make([]sdk.Member, len(s.members), len(s.members)+2)
 	copy(s.balanceCheckMembers, s.members)
+	s.balanceCheckMembers = append(s.balanceCheckMembers, s.insSDK.GetFeeMember())
 	s.balanceCheckMembers = append(s.balanceCheckMembers, s.insSDK.GetMigrationAdminMember())
 }
 

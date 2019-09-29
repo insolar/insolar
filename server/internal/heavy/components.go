@@ -19,7 +19,6 @@ package heavy
 import (
 	"context"
 	"fmt"
-	"github.com/insolar/insolar/log/logwatermill"
 	"net"
 	"path/filepath"
 
@@ -54,6 +53,7 @@ import (
 	"github.com/insolar/insolar/ledger/heavy/handler"
 	"github.com/insolar/insolar/ledger/heavy/pulsemanager"
 	"github.com/insolar/insolar/ledger/object"
+	"github.com/insolar/insolar/log/logwatermill"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/servicenetwork"
@@ -160,7 +160,10 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		if err != nil {
 			panic(errors.Wrap(err, "failed to get absolute path for DataDirectory"))
 		}
-		DB, err = store.NewBadgerDB(badger.DefaultOptions(fullDataDirectoryPath))
+		DB, err = store.NewBadgerDB(
+			badger.DefaultOptions(fullDataDirectoryPath),
+			store.ValueLogDiscardRatio(cfg.Ledger.Storage.BadgerValueLogGCDiscardRatio),
+		)
 		if err != nil {
 			panic(errors.Wrap(err, "failed to initialize DB"))
 		}

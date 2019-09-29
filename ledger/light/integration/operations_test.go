@@ -81,14 +81,16 @@ func MakeSetIncomingRequest(
 	reasonObjectID insolar.ID,
 	isCreation bool,
 	isAPI bool,
+	APIRequest string,
 ) (payload.SetIncomingRequest, record.Virtual) {
 	args := make([]byte, 100)
 	_, err := rand.Read(args)
 	panicIfErr(err)
 
 	req := record.IncomingRequest{
-		Arguments: args,
-		Reason:    *insolar.NewReference(reasonID),
+		Arguments:    args,
+		Reason:       *insolar.NewReference(reasonID),
+		APIRequestID: APIRequest,
 	}
 
 	if isCreation {
@@ -114,17 +116,19 @@ func MakeSetIncomingRequestDetached(
 	objectID insolar.ID,
 	reasonID insolar.ID,
 	reasonObjectID insolar.ID,
+	APIRequest string,
 ) (payload.SetIncomingRequest, record.Virtual) {
 	args := make([]byte, 100)
 	_, err := rand.Read(args)
 	panicIfErr(err)
 
 	req := record.IncomingRequest{
-		Arguments:  args,
-		Reason:     *insolar.NewReference(reasonID),
-		ReturnMode: record.ReturnSaga,
-		Caller:     *insolar.NewReference(reasonObjectID),
-		Object:     insolar.NewReference(objectID),
+		Arguments:    args,
+		Reason:       *insolar.NewReference(reasonID),
+		ReturnMode:   record.ReturnSaga,
+		Caller:       *insolar.NewReference(reasonObjectID),
+		Object:       insolar.NewReference(objectID),
+		APIRequestID: APIRequest,
 	}
 
 	rec := record.Wrap(&req)
@@ -132,6 +136,36 @@ func MakeSetIncomingRequestDetached(
 		Request: rec,
 	}
 	return pl, rec
+}
+
+func CreateAndActivateObject(ctx context.Context, server *Server, APIRequest string) insolar.ID {
+	args := make([]byte, 100)
+	_, err := rand.Read(args)
+	panicIfErr(err)
+
+	req := record.IncomingRequest{
+		Arguments:    args,
+		Reason:       *insolar.NewReference(gen.IDWithPulse(server.Pulse())),
+		APINode:      gen.Reference(),
+		CallType:     record.CTSaveAsChild,
+		APIRequestID: APIRequest,
+	}
+
+	rec := record.Wrap(&req)
+	msg := payload.SetIncomingRequest{
+		Request: rec,
+	}
+
+	resp := retryIfCancelled(func() payload.Payload {
+		return SendMessage(ctx, server, &msg)
+	})
+	RequireNotError(resp)
+
+	objectID := resp.(*payload.RequestInfo).ObjectID
+
+	CallActivateObject(ctx, server, objectID)
+
+	return objectID
 }
 
 func MakeSetOutgoingRequest(

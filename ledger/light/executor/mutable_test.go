@@ -14,19 +14,21 @@
 // limitations under the License.
 //
 
-package proc
+package executor_test
 
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/stretchr/testify/require"
+	"github.com/insolar/insolar/ledger/light/executor"
 )
 
 func TestOldestMutable(t *testing.T) {
-	t.Run("return nothing if recieve nothing", func(t *testing.T) {
-		res := oldestMutable(nil)
+	t.Run("return nothing if receive nothing", func(t *testing.T) {
+		res := executor.OldestMutable(nil)
 		require.Nil(t, res)
 	})
 
@@ -63,7 +65,7 @@ func TestOldestMutable(t *testing.T) {
 			},
 		}
 
-		res := oldestMutable([]record.CompositeFilamentRecord{
+		res := executor.OldestMutable([]record.CompositeFilamentRecord{
 			outCom, inImCom, expected,
 		})
 

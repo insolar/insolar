@@ -30,6 +30,7 @@ import (
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/log"
@@ -51,7 +52,7 @@ const passToNextLimit = 50
 
 // prefetchLimit - when we reach this number of requests in queue, we start
 // pre-fetching requests from ledger
-const prefetchLimit = 5
+const prefetchLimit = 0
 
 const mutableExecutionLimit = 1
 const immutableExecutionLimit = 30
@@ -144,6 +145,11 @@ type ExecutionBroker struct {
 	deduplicationTable map[insolar.Reference]bool
 }
 
+const (
+	ImmutableQueueName = "immutable"
+	MutableQueueName   = "mutable"
+)
+
 func NewExecutionBroker(
 	ref insolar.Reference,
 	publisher watermillMsg.Publisher,
@@ -159,19 +165,18 @@ func NewExecutionBroker(
 		log.Error("failed to create execution broker ", err.Error())
 		return nil
 	}
-
 	return &ExecutionBroker{
 		Ref:  ref,
 		name: "executionbroker-" + pulseObject.PulseNumber.String(),
 
 		mutable: processorState{
-			name:         "mutable",
+			name:         MutableQueueName,
 			workers:      0,
 			workersLimit: mutableExecutionLimit,
 			queue:        requestsqueue.New(),
 		},
 		immutable: processorState{
-			name:         "immutable",
+			name:         ImmutableQueueName,
 			workers:      0,
 			workersLimit: immutableExecutionLimit,
 			queue:        requestsqueue.New(),
@@ -229,6 +234,20 @@ func (q *ExecutionBroker) finishTask(ctx context.Context, transcript *common.Tra
 	}
 }
 
+func (q *ExecutionBroker) resetMutableQueueWithCurrent(ctx context.Context, transcript *common.Transcript) {
+	q.stateLock.Lock()
+	defer q.stateLock.Unlock()
+
+	items := q.mutable.queue.Clean(ctx)
+	for _, item := range items {
+		delete(q.deduplicationTable, item.RequestRef)
+	}
+
+	delete(q.deduplicationTable, transcript.RequestRef)
+
+	q.ledgerHasMoreRequests = true
+}
+
 func (q *ExecutionBroker) processTranscript(ctx context.Context, transcript *common.Transcript) {
 	stats.Record(ctx, metrics.ExecutionBrokerExecutionStarted.M(1))
 	defer stats.Record(ctx, metrics.ExecutionBrokerExecutionFinished.M(1))
@@ -243,24 +262,62 @@ func (q *ExecutionBroker) processTranscript(ctx context.Context, transcript *com
 		"request": transcript.RequestRef.String(),
 		"broker":  q.name,
 	})
-	logger.Debug("processed request")
 
-	replyData, err := q.requestsExecutor.ExecuteAndSave(ctx, transcript)
-	if err != nil {
-		logger.Warn("contract execution error: ", err)
+	var (
+		replyData insolar.Reply
+		err       error
+	)
+
+	sendReply := true
+
+	defer func() {
+		q.finishTask(ctx, transcript)
+
+		if sendReply {
+			go q.requestsExecutor.SendReply(ctx, transcript.RequestRef, *transcript.Request, replyData, err)
+		}
+
+		// we're checking here that pulse was changed and we should send
+		// a message that we've finished processing tasks
+		// note: ideally we should tell here that we've stopped executing
+		//       but we only hoped that OnPulse had already told us that
+		//       pulse changed and we should stop execution
+		logger.Debug("finished request, try to finish pending if needed")
+		q.finishPendingIfNeeded(ctx)
+	}()
+
+	if transcript.Request.CallType == record.CTMethod {
+		logger.Info("processing transcript with method")
+		var objDesc artifacts.ObjectDescriptor
+		objDesc, err = q.artifactsManager.GetObject(ctx, *transcript.Request.Object, &transcript.RequestRef)
+		if err != nil {
+			logger.Warn("GetObject: ", err)
+			return
+		}
+		transcript.ObjectDescriptor = objDesc
+
+		if !transcript.Request.Immutable &&
+			transcript.ObjectDescriptor.EarliestRequestID() != nil &&
+			!transcript.RequestRef.GetLocal().Equal(*transcript.ObjectDescriptor.EarliestRequestID()) {
+			logger.Warn("Got different earliest request from ledger")
+
+			sendReply = false
+			q.resetMutableQueueWithCurrent(ctx, transcript)
+			return
+		}
 	}
 
-	q.finishTask(ctx, transcript)
+	var result artifacts.RequestResult
+	result, err = q.requestsExecutor.ExecuteAndSave(ctx, transcript)
+	if err != nil {
+		logger.Warn("contract execution error: ", err)
+		return
+	}
+	logger.Debug("finished executing method")
 
-	go q.requestsExecutor.SendReply(ctx, transcript.RequestRef, *transcript.Request, replyData, err)
-
-	// we're checking here that pulse was changed and we should send
-	// a message that we've finished processing tasks
-	// note: ideally we should tell here that we've stopped executing
-	//       but we only hoped that OnPulse had already told us that
-	//       pulse changed and we should stop execution
-	logger.Debug("finished request, try to finish pending if needed")
-	q.finishPendingIfNeeded(ctx)
+	objRef := result.ObjectReference()
+	replyData = &reply.CallMethod{Result: result.Result(), Object: &objRef}
+	// Execution is in defer
 }
 
 func (q *ExecutionBroker) storeWithoutDuplication(ctx context.Context, transcript *common.Transcript) bool {
@@ -486,7 +543,7 @@ func (q *ExecutionBroker) OnPulse(ctx context.Context) []payload.Payload {
 		q.pending = insolar.NotPending
 		sendExecResults = true
 		q.ledgerHasMoreRequests = true
-	case len(q.finished) > 0 || len(requests) > 0:
+	case len(q.finished) > 0 || len(requests) > 0 || q.ledgerHasMoreRequests:
 		sendExecResults = true
 	}
 
@@ -613,6 +670,7 @@ func (q *ExecutionBroker) MoreRequestsOnLedger(ctx context.Context) {
 	defer q.stateLock.Unlock()
 
 	q.ledgerHasMoreRequests = true
+	q.startRequestsFetcher(ctx)
 }
 
 func (q *ExecutionBroker) startRequestsFetcher(ctx context.Context) {
@@ -640,7 +698,12 @@ func (q *ExecutionBroker) AddFreshRequest(
 		q.pending = insolar.NotPending
 	}
 
-	q.add(ctx, requestsqueue.FromThisPulse, tr)
+	if !q.ledgerHasMoreRequests {
+		q.add(ctx, requestsqueue.FromThisPulse, tr)
+	} else {
+		q.startRequestsFetcher(ctx)
+	}
+
 	q.startProcessors(ctx)
 }
 

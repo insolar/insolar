@@ -14,29 +14,17 @@ import (
 type ObjectDescriptorMock struct {
 	t minimock.Tester
 
-	funcChildPointer          func() (ip1 *insolar.ID)
-	inspectFuncChildPointer   func()
-	afterChildPointerCounter  uint64
-	beforeChildPointerCounter uint64
-	ChildPointerMock          mObjectDescriptorMockChildPointer
-
-	funcCode          func() (rp1 *insolar.Reference, err error)
-	inspectFuncCode   func()
-	afterCodeCounter  uint64
-	beforeCodeCounter uint64
-	CodeMock          mObjectDescriptorMockCode
+	funcEarliestRequestID          func() (ip1 *insolar.ID)
+	inspectFuncEarliestRequestID   func()
+	afterEarliestRequestIDCounter  uint64
+	beforeEarliestRequestIDCounter uint64
+	EarliestRequestIDMock          mObjectDescriptorMockEarliestRequestID
 
 	funcHeadRef          func() (rp1 *insolar.Reference)
 	inspectFuncHeadRef   func()
 	afterHeadRefCounter  uint64
 	beforeHeadRefCounter uint64
 	HeadRefMock          mObjectDescriptorMockHeadRef
-
-	funcIsPrototype          func() (b1 bool)
-	inspectFuncIsPrototype   func()
-	afterIsPrototypeCounter  uint64
-	beforeIsPrototypeCounter uint64
-	IsPrototypeMock          mObjectDescriptorMockIsPrototype
 
 	funcMemory          func() (ba1 []byte)
 	inspectFuncMemory   func()
@@ -70,13 +58,9 @@ func NewObjectDescriptorMock(t minimock.Tester) *ObjectDescriptorMock {
 		controller.RegisterMocker(m)
 	}
 
-	m.ChildPointerMock = mObjectDescriptorMockChildPointer{mock: m}
-
-	m.CodeMock = mObjectDescriptorMockCode{mock: m}
+	m.EarliestRequestIDMock = mObjectDescriptorMockEarliestRequestID{mock: m}
 
 	m.HeadRefMock = mObjectDescriptorMockHeadRef{mock: m}
-
-	m.IsPrototypeMock = mObjectDescriptorMockIsPrototype{mock: m}
 
 	m.MemoryMock = mObjectDescriptorMockMemory{mock: m}
 
@@ -89,290 +73,146 @@ func NewObjectDescriptorMock(t minimock.Tester) *ObjectDescriptorMock {
 	return m
 }
 
-type mObjectDescriptorMockChildPointer struct {
+type mObjectDescriptorMockEarliestRequestID struct {
 	mock               *ObjectDescriptorMock
-	defaultExpectation *ObjectDescriptorMockChildPointerExpectation
-	expectations       []*ObjectDescriptorMockChildPointerExpectation
+	defaultExpectation *ObjectDescriptorMockEarliestRequestIDExpectation
+	expectations       []*ObjectDescriptorMockEarliestRequestIDExpectation
 }
 
-// ObjectDescriptorMockChildPointerExpectation specifies expectation struct of the ObjectDescriptor.ChildPointer
-type ObjectDescriptorMockChildPointerExpectation struct {
+// ObjectDescriptorMockEarliestRequestIDExpectation specifies expectation struct of the ObjectDescriptor.EarliestRequestID
+type ObjectDescriptorMockEarliestRequestIDExpectation struct {
 	mock *ObjectDescriptorMock
 
-	results *ObjectDescriptorMockChildPointerResults
+	results *ObjectDescriptorMockEarliestRequestIDResults
 	Counter uint64
 }
 
-// ObjectDescriptorMockChildPointerResults contains results of the ObjectDescriptor.ChildPointer
-type ObjectDescriptorMockChildPointerResults struct {
+// ObjectDescriptorMockEarliestRequestIDResults contains results of the ObjectDescriptor.EarliestRequestID
+type ObjectDescriptorMockEarliestRequestIDResults struct {
 	ip1 *insolar.ID
 }
 
-// Expect sets up expected params for ObjectDescriptor.ChildPointer
-func (mmChildPointer *mObjectDescriptorMockChildPointer) Expect() *mObjectDescriptorMockChildPointer {
-	if mmChildPointer.mock.funcChildPointer != nil {
-		mmChildPointer.mock.t.Fatalf("ObjectDescriptorMock.ChildPointer mock is already set by Set")
+// Expect sets up expected params for ObjectDescriptor.EarliestRequestID
+func (mmEarliestRequestID *mObjectDescriptorMockEarliestRequestID) Expect() *mObjectDescriptorMockEarliestRequestID {
+	if mmEarliestRequestID.mock.funcEarliestRequestID != nil {
+		mmEarliestRequestID.mock.t.Fatalf("ObjectDescriptorMock.EarliestRequestID mock is already set by Set")
 	}
 
-	if mmChildPointer.defaultExpectation == nil {
-		mmChildPointer.defaultExpectation = &ObjectDescriptorMockChildPointerExpectation{}
+	if mmEarliestRequestID.defaultExpectation == nil {
+		mmEarliestRequestID.defaultExpectation = &ObjectDescriptorMockEarliestRequestIDExpectation{}
 	}
 
-	return mmChildPointer
+	return mmEarliestRequestID
 }
 
-// Inspect accepts an inspector function that has same arguments as the ObjectDescriptor.ChildPointer
-func (mmChildPointer *mObjectDescriptorMockChildPointer) Inspect(f func()) *mObjectDescriptorMockChildPointer {
-	if mmChildPointer.mock.inspectFuncChildPointer != nil {
-		mmChildPointer.mock.t.Fatalf("Inspect function is already set for ObjectDescriptorMock.ChildPointer")
+// Inspect accepts an inspector function that has same arguments as the ObjectDescriptor.EarliestRequestID
+func (mmEarliestRequestID *mObjectDescriptorMockEarliestRequestID) Inspect(f func()) *mObjectDescriptorMockEarliestRequestID {
+	if mmEarliestRequestID.mock.inspectFuncEarliestRequestID != nil {
+		mmEarliestRequestID.mock.t.Fatalf("Inspect function is already set for ObjectDescriptorMock.EarliestRequestID")
 	}
 
-	mmChildPointer.mock.inspectFuncChildPointer = f
+	mmEarliestRequestID.mock.inspectFuncEarliestRequestID = f
 
-	return mmChildPointer
+	return mmEarliestRequestID
 }
 
-// Return sets up results that will be returned by ObjectDescriptor.ChildPointer
-func (mmChildPointer *mObjectDescriptorMockChildPointer) Return(ip1 *insolar.ID) *ObjectDescriptorMock {
-	if mmChildPointer.mock.funcChildPointer != nil {
-		mmChildPointer.mock.t.Fatalf("ObjectDescriptorMock.ChildPointer mock is already set by Set")
+// Return sets up results that will be returned by ObjectDescriptor.EarliestRequestID
+func (mmEarliestRequestID *mObjectDescriptorMockEarliestRequestID) Return(ip1 *insolar.ID) *ObjectDescriptorMock {
+	if mmEarliestRequestID.mock.funcEarliestRequestID != nil {
+		mmEarliestRequestID.mock.t.Fatalf("ObjectDescriptorMock.EarliestRequestID mock is already set by Set")
 	}
 
-	if mmChildPointer.defaultExpectation == nil {
-		mmChildPointer.defaultExpectation = &ObjectDescriptorMockChildPointerExpectation{mock: mmChildPointer.mock}
+	if mmEarliestRequestID.defaultExpectation == nil {
+		mmEarliestRequestID.defaultExpectation = &ObjectDescriptorMockEarliestRequestIDExpectation{mock: mmEarliestRequestID.mock}
 	}
-	mmChildPointer.defaultExpectation.results = &ObjectDescriptorMockChildPointerResults{ip1}
-	return mmChildPointer.mock
+	mmEarliestRequestID.defaultExpectation.results = &ObjectDescriptorMockEarliestRequestIDResults{ip1}
+	return mmEarliestRequestID.mock
 }
 
-//Set uses given function f to mock the ObjectDescriptor.ChildPointer method
-func (mmChildPointer *mObjectDescriptorMockChildPointer) Set(f func() (ip1 *insolar.ID)) *ObjectDescriptorMock {
-	if mmChildPointer.defaultExpectation != nil {
-		mmChildPointer.mock.t.Fatalf("Default expectation is already set for the ObjectDescriptor.ChildPointer method")
+//Set uses given function f to mock the ObjectDescriptor.EarliestRequestID method
+func (mmEarliestRequestID *mObjectDescriptorMockEarliestRequestID) Set(f func() (ip1 *insolar.ID)) *ObjectDescriptorMock {
+	if mmEarliestRequestID.defaultExpectation != nil {
+		mmEarliestRequestID.mock.t.Fatalf("Default expectation is already set for the ObjectDescriptor.EarliestRequestID method")
 	}
 
-	if len(mmChildPointer.expectations) > 0 {
-		mmChildPointer.mock.t.Fatalf("Some expectations are already set for the ObjectDescriptor.ChildPointer method")
+	if len(mmEarliestRequestID.expectations) > 0 {
+		mmEarliestRequestID.mock.t.Fatalf("Some expectations are already set for the ObjectDescriptor.EarliestRequestID method")
 	}
 
-	mmChildPointer.mock.funcChildPointer = f
-	return mmChildPointer.mock
+	mmEarliestRequestID.mock.funcEarliestRequestID = f
+	return mmEarliestRequestID.mock
 }
 
-// ChildPointer implements ObjectDescriptor
-func (mmChildPointer *ObjectDescriptorMock) ChildPointer() (ip1 *insolar.ID) {
-	mm_atomic.AddUint64(&mmChildPointer.beforeChildPointerCounter, 1)
-	defer mm_atomic.AddUint64(&mmChildPointer.afterChildPointerCounter, 1)
+// EarliestRequestID implements ObjectDescriptor
+func (mmEarliestRequestID *ObjectDescriptorMock) EarliestRequestID() (ip1 *insolar.ID) {
+	mm_atomic.AddUint64(&mmEarliestRequestID.beforeEarliestRequestIDCounter, 1)
+	defer mm_atomic.AddUint64(&mmEarliestRequestID.afterEarliestRequestIDCounter, 1)
 
-	if mmChildPointer.inspectFuncChildPointer != nil {
-		mmChildPointer.inspectFuncChildPointer()
+	if mmEarliestRequestID.inspectFuncEarliestRequestID != nil {
+		mmEarliestRequestID.inspectFuncEarliestRequestID()
 	}
 
-	if mmChildPointer.ChildPointerMock.defaultExpectation != nil {
-		mm_atomic.AddUint64(&mmChildPointer.ChildPointerMock.defaultExpectation.Counter, 1)
+	if mmEarliestRequestID.EarliestRequestIDMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmEarliestRequestID.EarliestRequestIDMock.defaultExpectation.Counter, 1)
 
-		results := mmChildPointer.ChildPointerMock.defaultExpectation.results
+		results := mmEarliestRequestID.EarliestRequestIDMock.defaultExpectation.results
 		if results == nil {
-			mmChildPointer.t.Fatal("No results are set for the ObjectDescriptorMock.ChildPointer")
+			mmEarliestRequestID.t.Fatal("No results are set for the ObjectDescriptorMock.EarliestRequestID")
 		}
 		return (*results).ip1
 	}
-	if mmChildPointer.funcChildPointer != nil {
-		return mmChildPointer.funcChildPointer()
+	if mmEarliestRequestID.funcEarliestRequestID != nil {
+		return mmEarliestRequestID.funcEarliestRequestID()
 	}
-	mmChildPointer.t.Fatalf("Unexpected call to ObjectDescriptorMock.ChildPointer.")
+	mmEarliestRequestID.t.Fatalf("Unexpected call to ObjectDescriptorMock.EarliestRequestID.")
 	return
 }
 
-// ChildPointerAfterCounter returns a count of finished ObjectDescriptorMock.ChildPointer invocations
-func (mmChildPointer *ObjectDescriptorMock) ChildPointerAfterCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmChildPointer.afterChildPointerCounter)
+// EarliestRequestIDAfterCounter returns a count of finished ObjectDescriptorMock.EarliestRequestID invocations
+func (mmEarliestRequestID *ObjectDescriptorMock) EarliestRequestIDAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmEarliestRequestID.afterEarliestRequestIDCounter)
 }
 
-// ChildPointerBeforeCounter returns a count of ObjectDescriptorMock.ChildPointer invocations
-func (mmChildPointer *ObjectDescriptorMock) ChildPointerBeforeCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmChildPointer.beforeChildPointerCounter)
+// EarliestRequestIDBeforeCounter returns a count of ObjectDescriptorMock.EarliestRequestID invocations
+func (mmEarliestRequestID *ObjectDescriptorMock) EarliestRequestIDBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmEarliestRequestID.beforeEarliestRequestIDCounter)
 }
 
-// MinimockChildPointerDone returns true if the count of the ChildPointer invocations corresponds
+// MinimockEarliestRequestIDDone returns true if the count of the EarliestRequestID invocations corresponds
 // the number of defined expectations
-func (m *ObjectDescriptorMock) MinimockChildPointerDone() bool {
-	for _, e := range m.ChildPointerMock.expectations {
+func (m *ObjectDescriptorMock) MinimockEarliestRequestIDDone() bool {
+	for _, e := range m.EarliestRequestIDMock.expectations {
 		if mm_atomic.LoadUint64(&e.Counter) < 1 {
 			return false
 		}
 	}
 
 	// if default expectation was set then invocations count should be greater than zero
-	if m.ChildPointerMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterChildPointerCounter) < 1 {
+	if m.EarliestRequestIDMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterEarliestRequestIDCounter) < 1 {
 		return false
 	}
 	// if func was set then invocations count should be greater than zero
-	if m.funcChildPointer != nil && mm_atomic.LoadUint64(&m.afterChildPointerCounter) < 1 {
-		return false
-	}
-	return true
-}
-
-// MinimockChildPointerInspect logs each unmet expectation
-func (m *ObjectDescriptorMock) MinimockChildPointerInspect() {
-	for _, e := range m.ChildPointerMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			m.t.Error("Expected call to ObjectDescriptorMock.ChildPointer")
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.ChildPointerMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterChildPointerCounter) < 1 {
-		m.t.Error("Expected call to ObjectDescriptorMock.ChildPointer")
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcChildPointer != nil && mm_atomic.LoadUint64(&m.afterChildPointerCounter) < 1 {
-		m.t.Error("Expected call to ObjectDescriptorMock.ChildPointer")
-	}
-}
-
-type mObjectDescriptorMockCode struct {
-	mock               *ObjectDescriptorMock
-	defaultExpectation *ObjectDescriptorMockCodeExpectation
-	expectations       []*ObjectDescriptorMockCodeExpectation
-}
-
-// ObjectDescriptorMockCodeExpectation specifies expectation struct of the ObjectDescriptor.Code
-type ObjectDescriptorMockCodeExpectation struct {
-	mock *ObjectDescriptorMock
-
-	results *ObjectDescriptorMockCodeResults
-	Counter uint64
-}
-
-// ObjectDescriptorMockCodeResults contains results of the ObjectDescriptor.Code
-type ObjectDescriptorMockCodeResults struct {
-	rp1 *insolar.Reference
-	err error
-}
-
-// Expect sets up expected params for ObjectDescriptor.Code
-func (mmCode *mObjectDescriptorMockCode) Expect() *mObjectDescriptorMockCode {
-	if mmCode.mock.funcCode != nil {
-		mmCode.mock.t.Fatalf("ObjectDescriptorMock.Code mock is already set by Set")
-	}
-
-	if mmCode.defaultExpectation == nil {
-		mmCode.defaultExpectation = &ObjectDescriptorMockCodeExpectation{}
-	}
-
-	return mmCode
-}
-
-// Inspect accepts an inspector function that has same arguments as the ObjectDescriptor.Code
-func (mmCode *mObjectDescriptorMockCode) Inspect(f func()) *mObjectDescriptorMockCode {
-	if mmCode.mock.inspectFuncCode != nil {
-		mmCode.mock.t.Fatalf("Inspect function is already set for ObjectDescriptorMock.Code")
-	}
-
-	mmCode.mock.inspectFuncCode = f
-
-	return mmCode
-}
-
-// Return sets up results that will be returned by ObjectDescriptor.Code
-func (mmCode *mObjectDescriptorMockCode) Return(rp1 *insolar.Reference, err error) *ObjectDescriptorMock {
-	if mmCode.mock.funcCode != nil {
-		mmCode.mock.t.Fatalf("ObjectDescriptorMock.Code mock is already set by Set")
-	}
-
-	if mmCode.defaultExpectation == nil {
-		mmCode.defaultExpectation = &ObjectDescriptorMockCodeExpectation{mock: mmCode.mock}
-	}
-	mmCode.defaultExpectation.results = &ObjectDescriptorMockCodeResults{rp1, err}
-	return mmCode.mock
-}
-
-//Set uses given function f to mock the ObjectDescriptor.Code method
-func (mmCode *mObjectDescriptorMockCode) Set(f func() (rp1 *insolar.Reference, err error)) *ObjectDescriptorMock {
-	if mmCode.defaultExpectation != nil {
-		mmCode.mock.t.Fatalf("Default expectation is already set for the ObjectDescriptor.Code method")
-	}
-
-	if len(mmCode.expectations) > 0 {
-		mmCode.mock.t.Fatalf("Some expectations are already set for the ObjectDescriptor.Code method")
-	}
-
-	mmCode.mock.funcCode = f
-	return mmCode.mock
-}
-
-// Code implements ObjectDescriptor
-func (mmCode *ObjectDescriptorMock) Code() (rp1 *insolar.Reference, err error) {
-	mm_atomic.AddUint64(&mmCode.beforeCodeCounter, 1)
-	defer mm_atomic.AddUint64(&mmCode.afterCodeCounter, 1)
-
-	if mmCode.inspectFuncCode != nil {
-		mmCode.inspectFuncCode()
-	}
-
-	if mmCode.CodeMock.defaultExpectation != nil {
-		mm_atomic.AddUint64(&mmCode.CodeMock.defaultExpectation.Counter, 1)
-
-		results := mmCode.CodeMock.defaultExpectation.results
-		if results == nil {
-			mmCode.t.Fatal("No results are set for the ObjectDescriptorMock.Code")
-		}
-		return (*results).rp1, (*results).err
-	}
-	if mmCode.funcCode != nil {
-		return mmCode.funcCode()
-	}
-	mmCode.t.Fatalf("Unexpected call to ObjectDescriptorMock.Code.")
-	return
-}
-
-// CodeAfterCounter returns a count of finished ObjectDescriptorMock.Code invocations
-func (mmCode *ObjectDescriptorMock) CodeAfterCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmCode.afterCodeCounter)
-}
-
-// CodeBeforeCounter returns a count of ObjectDescriptorMock.Code invocations
-func (mmCode *ObjectDescriptorMock) CodeBeforeCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmCode.beforeCodeCounter)
-}
-
-// MinimockCodeDone returns true if the count of the Code invocations corresponds
-// the number of defined expectations
-func (m *ObjectDescriptorMock) MinimockCodeDone() bool {
-	for _, e := range m.CodeMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			return false
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.CodeMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterCodeCounter) < 1 {
-		return false
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcCode != nil && mm_atomic.LoadUint64(&m.afterCodeCounter) < 1 {
+	if m.funcEarliestRequestID != nil && mm_atomic.LoadUint64(&m.afterEarliestRequestIDCounter) < 1 {
 		return false
 	}
 	return true
 }
 
-// MinimockCodeInspect logs each unmet expectation
-func (m *ObjectDescriptorMock) MinimockCodeInspect() {
-	for _, e := range m.CodeMock.expectations {
+// MinimockEarliestRequestIDInspect logs each unmet expectation
+func (m *ObjectDescriptorMock) MinimockEarliestRequestIDInspect() {
+	for _, e := range m.EarliestRequestIDMock.expectations {
 		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			m.t.Error("Expected call to ObjectDescriptorMock.Code")
+			m.t.Error("Expected call to ObjectDescriptorMock.EarliestRequestID")
 		}
 	}
 
 	// if default expectation was set then invocations count should be greater than zero
-	if m.CodeMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterCodeCounter) < 1 {
-		m.t.Error("Expected call to ObjectDescriptorMock.Code")
+	if m.EarliestRequestIDMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterEarliestRequestIDCounter) < 1 {
+		m.t.Error("Expected call to ObjectDescriptorMock.EarliestRequestID")
 	}
 	// if func was set then invocations count should be greater than zero
-	if m.funcCode != nil && mm_atomic.LoadUint64(&m.afterCodeCounter) < 1 {
-		m.t.Error("Expected call to ObjectDescriptorMock.Code")
+	if m.funcEarliestRequestID != nil && mm_atomic.LoadUint64(&m.afterEarliestRequestIDCounter) < 1 {
+		m.t.Error("Expected call to ObjectDescriptorMock.EarliestRequestID")
 	}
 }
 
@@ -516,149 +356,6 @@ func (m *ObjectDescriptorMock) MinimockHeadRefInspect() {
 	// if func was set then invocations count should be greater than zero
 	if m.funcHeadRef != nil && mm_atomic.LoadUint64(&m.afterHeadRefCounter) < 1 {
 		m.t.Error("Expected call to ObjectDescriptorMock.HeadRef")
-	}
-}
-
-type mObjectDescriptorMockIsPrototype struct {
-	mock               *ObjectDescriptorMock
-	defaultExpectation *ObjectDescriptorMockIsPrototypeExpectation
-	expectations       []*ObjectDescriptorMockIsPrototypeExpectation
-}
-
-// ObjectDescriptorMockIsPrototypeExpectation specifies expectation struct of the ObjectDescriptor.IsPrototype
-type ObjectDescriptorMockIsPrototypeExpectation struct {
-	mock *ObjectDescriptorMock
-
-	results *ObjectDescriptorMockIsPrototypeResults
-	Counter uint64
-}
-
-// ObjectDescriptorMockIsPrototypeResults contains results of the ObjectDescriptor.IsPrototype
-type ObjectDescriptorMockIsPrototypeResults struct {
-	b1 bool
-}
-
-// Expect sets up expected params for ObjectDescriptor.IsPrototype
-func (mmIsPrototype *mObjectDescriptorMockIsPrototype) Expect() *mObjectDescriptorMockIsPrototype {
-	if mmIsPrototype.mock.funcIsPrototype != nil {
-		mmIsPrototype.mock.t.Fatalf("ObjectDescriptorMock.IsPrototype mock is already set by Set")
-	}
-
-	if mmIsPrototype.defaultExpectation == nil {
-		mmIsPrototype.defaultExpectation = &ObjectDescriptorMockIsPrototypeExpectation{}
-	}
-
-	return mmIsPrototype
-}
-
-// Inspect accepts an inspector function that has same arguments as the ObjectDescriptor.IsPrototype
-func (mmIsPrototype *mObjectDescriptorMockIsPrototype) Inspect(f func()) *mObjectDescriptorMockIsPrototype {
-	if mmIsPrototype.mock.inspectFuncIsPrototype != nil {
-		mmIsPrototype.mock.t.Fatalf("Inspect function is already set for ObjectDescriptorMock.IsPrototype")
-	}
-
-	mmIsPrototype.mock.inspectFuncIsPrototype = f
-
-	return mmIsPrototype
-}
-
-// Return sets up results that will be returned by ObjectDescriptor.IsPrototype
-func (mmIsPrototype *mObjectDescriptorMockIsPrototype) Return(b1 bool) *ObjectDescriptorMock {
-	if mmIsPrototype.mock.funcIsPrototype != nil {
-		mmIsPrototype.mock.t.Fatalf("ObjectDescriptorMock.IsPrototype mock is already set by Set")
-	}
-
-	if mmIsPrototype.defaultExpectation == nil {
-		mmIsPrototype.defaultExpectation = &ObjectDescriptorMockIsPrototypeExpectation{mock: mmIsPrototype.mock}
-	}
-	mmIsPrototype.defaultExpectation.results = &ObjectDescriptorMockIsPrototypeResults{b1}
-	return mmIsPrototype.mock
-}
-
-//Set uses given function f to mock the ObjectDescriptor.IsPrototype method
-func (mmIsPrototype *mObjectDescriptorMockIsPrototype) Set(f func() (b1 bool)) *ObjectDescriptorMock {
-	if mmIsPrototype.defaultExpectation != nil {
-		mmIsPrototype.mock.t.Fatalf("Default expectation is already set for the ObjectDescriptor.IsPrototype method")
-	}
-
-	if len(mmIsPrototype.expectations) > 0 {
-		mmIsPrototype.mock.t.Fatalf("Some expectations are already set for the ObjectDescriptor.IsPrototype method")
-	}
-
-	mmIsPrototype.mock.funcIsPrototype = f
-	return mmIsPrototype.mock
-}
-
-// IsPrototype implements ObjectDescriptor
-func (mmIsPrototype *ObjectDescriptorMock) IsPrototype() (b1 bool) {
-	mm_atomic.AddUint64(&mmIsPrototype.beforeIsPrototypeCounter, 1)
-	defer mm_atomic.AddUint64(&mmIsPrototype.afterIsPrototypeCounter, 1)
-
-	if mmIsPrototype.inspectFuncIsPrototype != nil {
-		mmIsPrototype.inspectFuncIsPrototype()
-	}
-
-	if mmIsPrototype.IsPrototypeMock.defaultExpectation != nil {
-		mm_atomic.AddUint64(&mmIsPrototype.IsPrototypeMock.defaultExpectation.Counter, 1)
-
-		results := mmIsPrototype.IsPrototypeMock.defaultExpectation.results
-		if results == nil {
-			mmIsPrototype.t.Fatal("No results are set for the ObjectDescriptorMock.IsPrototype")
-		}
-		return (*results).b1
-	}
-	if mmIsPrototype.funcIsPrototype != nil {
-		return mmIsPrototype.funcIsPrototype()
-	}
-	mmIsPrototype.t.Fatalf("Unexpected call to ObjectDescriptorMock.IsPrototype.")
-	return
-}
-
-// IsPrototypeAfterCounter returns a count of finished ObjectDescriptorMock.IsPrototype invocations
-func (mmIsPrototype *ObjectDescriptorMock) IsPrototypeAfterCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmIsPrototype.afterIsPrototypeCounter)
-}
-
-// IsPrototypeBeforeCounter returns a count of ObjectDescriptorMock.IsPrototype invocations
-func (mmIsPrototype *ObjectDescriptorMock) IsPrototypeBeforeCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmIsPrototype.beforeIsPrototypeCounter)
-}
-
-// MinimockIsPrototypeDone returns true if the count of the IsPrototype invocations corresponds
-// the number of defined expectations
-func (m *ObjectDescriptorMock) MinimockIsPrototypeDone() bool {
-	for _, e := range m.IsPrototypeMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			return false
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.IsPrototypeMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterIsPrototypeCounter) < 1 {
-		return false
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcIsPrototype != nil && mm_atomic.LoadUint64(&m.afterIsPrototypeCounter) < 1 {
-		return false
-	}
-	return true
-}
-
-// MinimockIsPrototypeInspect logs each unmet expectation
-func (m *ObjectDescriptorMock) MinimockIsPrototypeInspect() {
-	for _, e := range m.IsPrototypeMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			m.t.Error("Expected call to ObjectDescriptorMock.IsPrototype")
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.IsPrototypeMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterIsPrototypeCounter) < 1 {
-		m.t.Error("Expected call to ObjectDescriptorMock.IsPrototype")
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcIsPrototype != nil && mm_atomic.LoadUint64(&m.afterIsPrototypeCounter) < 1 {
-		m.t.Error("Expected call to ObjectDescriptorMock.IsPrototype")
 	}
 }
 
@@ -1238,13 +935,9 @@ func (m *ObjectDescriptorMock) MinimockStateIDInspect() {
 // MinimockFinish checks that all mocked methods have been called the expected number of times
 func (m *ObjectDescriptorMock) MinimockFinish() {
 	if !m.minimockDone() {
-		m.MinimockChildPointerInspect()
-
-		m.MinimockCodeInspect()
+		m.MinimockEarliestRequestIDInspect()
 
 		m.MinimockHeadRefInspect()
-
-		m.MinimockIsPrototypeInspect()
 
 		m.MinimockMemoryInspect()
 
@@ -1276,10 +969,8 @@ func (m *ObjectDescriptorMock) MinimockWait(timeout mm_time.Duration) {
 func (m *ObjectDescriptorMock) minimockDone() bool {
 	done := true
 	return done &&
-		m.MinimockChildPointerDone() &&
-		m.MinimockCodeDone() &&
+		m.MinimockEarliestRequestIDDone() &&
 		m.MinimockHeadRefDone() &&
-		m.MinimockIsPrototypeDone() &&
 		m.MinimockMemoryDone() &&
 		m.MinimockParentDone() &&
 		m.MinimockPrototypeDone() &&

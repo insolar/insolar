@@ -23,7 +23,6 @@ import (
 	"github.com/gojuno/minimock"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
@@ -181,71 +180,6 @@ func (s *ExecutionRegistrySuite) TestOnPulse() {
 	{
 		msgs := registryI.OnPulse(ctx)
 		s.Len(msgs, 0)
-	}
-
-	mc.Finish()
-}
-
-func (s *ExecutionRegistrySuite) TestFindRequestLoop() {
-	ctx := inslogger.TestContext(s.T())
-	mc := minimock.NewController(s.T())
-
-	jc := jet.NewCoordinatorMock(mc)
-	objRef := gen.Reference()
-	reqRef := gen.Reference()
-
-	registryI := New(objRef, jc)
-	{ // no requests with current apirequestid
-		id := s.genAPIRequestID()
-
-		s.False(registryI.FindRequestLoop(ctx, reqRef, id))
-
-		// cleanup after
-		registryI.(*executionRegistry).registry = make(map[insolar.Reference]*common.Transcript)
-	}
-
-	T := s.genTranscriptForObject()
-	{ // go request with current apirequestid (loop found)
-		err := registryI.Register(ctx, T)
-		s.NoError(err)
-
-		s.True(registryI.FindRequestLoop(ctx, reqRef, T.Request.APIRequestID))
-
-		// cleanup after
-		registryI.(*executionRegistry).registry = make(map[insolar.Reference]*common.Transcript)
-	}
-
-	{ // go request with current apirequestid, but record returnsaga (loop not found)
-		id := s.genAPIRequestID()
-
-		T.Request.ReturnMode = record.ReturnSaga
-		err := registryI.Register(ctx, T)
-		s.NoError(err)
-
-		s.False(registryI.FindRequestLoop(ctx, reqRef, id))
-
-		// cleanup after
-		registryI.(*executionRegistry).registry = make(map[insolar.Reference]*common.Transcript)
-	}
-
-	T1 := s.genTranscriptForObject()
-	T2 := s.genTranscriptForObject()
-	T2.Request.ReturnMode = record.ReturnSaga
-	{ // combined test
-		id := s.genAPIRequestID()
-
-		err := registryI.Register(ctx, T1)
-		s.NoError(err)
-
-		err = registryI.Register(ctx, T2)
-		s.NoError(err)
-
-		s.False(registryI.FindRequestLoop(ctx, reqRef, T2.Request.APIRequestID))
-		s.True(registryI.FindRequestLoop(ctx, reqRef, T1.Request.APIRequestID))
-		s.False(registryI.FindRequestLoop(ctx, reqRef, id))
-
-		// cleanup after
-		registryI.(*executionRegistry).registry = make(map[insolar.Reference]*common.Transcript)
 	}
 
 	mc.Finish()
