@@ -192,34 +192,11 @@ func (g *Base) initConsensus(ctx context.Context) error {
 	}
 	g.datagramTransport = datagramTransport
 
-	// sign origin
-	origin := g.NodeKeeper.GetOrigin()
-	mutableOrigin := origin.(node.MutableNode)
-	mutableOrigin.SetAddress(datagramTransport.Address())
-	keyStore := getKeyStore(g.CryptographyService)
-
-	digest, sign, err := getAnnounceSignature(
-		origin,
-		network.OriginIsDiscovery(g.CertificateManager.GetCertificate()),
-		g.KeyProcessor,
-		keyStore,
-		g.CryptographyScheme,
-	)
-	if err != nil {
-		return errors.Wrap(err, "failed to getAnnounceSignature")
-	}
-	mutableOrigin.SetSignature(digest, *sign)
-	g.NodeKeeper.SetInitialSnapshot([]insolar.NetworkNode{origin})
-
-	staticProfile := adapters.NewStaticProfile(origin, g.CertificateManager.GetCertificate(), g.KeyProcessor)
-	candidate := adapters.NewCandidate(staticProfile, g.KeyProcessor)
-	g.originCandidate = candidate
-
 	g.consensusInstaller = consensus.New(ctx, consensus.Dep{
 		KeyProcessor:        g.KeyProcessor,
 		Scheme:              g.CryptographyScheme,
 		CertificateManager:  g.CertificateManager,
-		KeyStore:            keyStore,
+		KeyStore:            getKeyStore(g.CryptographyService),
 		NodeKeeper:          g.NodeKeeper,
 		StateGetter:         randomState{},
 		PulseChanger:        g,
@@ -228,15 +205,44 @@ func (g *Base) initConsensus(ctx context.Context) error {
 		EphemeralController: g,
 	})
 
+	err = g.datagramTransport.Start(ctx)
+	if err != nil {
+		return errors.Wrap(err, "failed to start datagram transport")
+	}
+
+	err = g.createOriginCandidate()
+	if err != nil {
+		return errors.Wrap(err, "failed to createOriginCandidate")
+	}
+
+	return nil
+}
+
+func (g *Base) createOriginCandidate() error {
+	// sign origin
+	origin := g.NodeKeeper.GetOrigin()
+	mutableOrigin := origin.(node.MutableNode)
+	mutableOrigin.SetAddress(g.datagramTransport.Address())
+
+	digest, sign, err := getAnnounceSignature(
+		origin,
+		network.OriginIsDiscovery(g.CertificateManager.GetCertificate()),
+		g.KeyProcessor,
+		getKeyStore(g.CryptographyService),
+		g.CryptographyScheme,
+	)
+	if err != nil {
+		return err
+	}
+	mutableOrigin.SetSignature(digest, *sign)
+	g.NodeKeeper.SetInitialSnapshot([]insolar.NetworkNode{origin})
+
+	staticProfile := adapters.NewStaticProfile(origin, g.CertificateManager.GetCertificate(), g.KeyProcessor)
+	g.originCandidate = adapters.NewCandidate(staticProfile, g.KeyProcessor)
 	return nil
 }
 
 func (g *Base) StartConsensus(ctx context.Context) error {
-
-	err := g.datagramTransport.Start(ctx)
-	if err != nil {
-		return errors.Wrap(err, "failed to start datagram transport")
-	}
 
 	if g.NodeKeeper.GetOrigin().Role() == insolar.StaticRoleHeavyMaterial {
 		g.ConsensusMode = consensus.ReadyNetwork
