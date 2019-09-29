@@ -131,7 +131,7 @@ func TestExecutionBroker_AddFreshRequest(t *testing.T) {
 			mc := minimock.NewController(t)
 
 			broker := test.mocks(ctx, mc)
-			broker.AddFreshRequest(ctx, transcript)
+			broker.HaveMoreRequests(ctx, transcript)
 
 			mc.Wait(1 * time.Minute)
 			mc.Finish()
@@ -356,7 +356,7 @@ func TestExecutionBroker_ExecuteImmutable(t *testing.T) {
 	re.ExecuteAndSaveMock.Return(requestresult.New([]byte{1, 2, 3}, gen.Reference()), nil)
 	re.SendReplyMock.Return()
 
-	broker.AddFreshRequest(ctx, immutableTranscript1)
+	broker.HaveMoreRequests(ctx, immutableTranscript1)
 }
 
 func TestExecutionBroker_OnPulse(t *testing.T) {
@@ -572,7 +572,7 @@ func TestExecutionBroker_AddFreshRequestWithOnPulse(t *testing.T) {
 			mc := minimock.NewController(t)
 
 			broker, msgs := test.mocks(ctx, mc)
-			broker.AddFreshRequest(ctx, transcript)
+			broker.HaveMoreRequests(ctx, transcript)
 
 			mc.Wait(1 * time.Minute)
 			mc.Finish()

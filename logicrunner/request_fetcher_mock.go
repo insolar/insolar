@@ -9,6 +9,7 @@ import (
 	mm_time "time"
 
 	"github.com/gojuno/minimock"
+	"github.com/insolar/insolar/logicrunner/common"
 )
 
 // RequestFetcherMock implements RequestFetcher
@@ -21,8 +22,8 @@ type RequestFetcherMock struct {
 	beforeAbortCounter uint64
 	AbortMock          mRequestFetcherMockAbort
 
-	funcFetchPendings          func(ctx context.Context)
-	inspectFuncFetchPendings   func(ctx context.Context)
+	funcFetchPendings          func(ctx context.Context, trs chan<- common.Transcript)
+	inspectFuncFetchPendings   func(ctx context.Context, trs chan<- common.Transcript)
 	afterFetchPendingsCounter  uint64
 	beforeFetchPendingsCounter uint64
 	FetchPendingsMock          mRequestFetcherMockFetchPendings
@@ -251,10 +252,11 @@ type RequestFetcherMockFetchPendingsExpectation struct {
 // RequestFetcherMockFetchPendingsParams contains parameters of the RequestFetcher.FetchPendings
 type RequestFetcherMockFetchPendingsParams struct {
 	ctx context.Context
+	trs chan<- common.Transcript
 }
 
 // Expect sets up expected params for RequestFetcher.FetchPendings
-func (mmFetchPendings *mRequestFetcherMockFetchPendings) Expect(ctx context.Context) *mRequestFetcherMockFetchPendings {
+func (mmFetchPendings *mRequestFetcherMockFetchPendings) Expect(ctx context.Context, trs chan<- common.Transcript) *mRequestFetcherMockFetchPendings {
 	if mmFetchPendings.mock.funcFetchPendings != nil {
 		mmFetchPendings.mock.t.Fatalf("RequestFetcherMock.FetchPendings mock is already set by Set")
 	}
@@ -263,7 +265,7 @@ func (mmFetchPendings *mRequestFetcherMockFetchPendings) Expect(ctx context.Cont
 		mmFetchPendings.defaultExpectation = &RequestFetcherMockFetchPendingsExpectation{}
 	}
 
-	mmFetchPendings.defaultExpectation.params = &RequestFetcherMockFetchPendingsParams{ctx}
+	mmFetchPendings.defaultExpectation.params = &RequestFetcherMockFetchPendingsParams{ctx, trs}
 	for _, e := range mmFetchPendings.expectations {
 		if minimock.Equal(e.params, mmFetchPendings.defaultExpectation.params) {
 			mmFetchPendings.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmFetchPendings.defaultExpectation.params)
@@ -274,7 +276,7 @@ func (mmFetchPendings *mRequestFetcherMockFetchPendings) Expect(ctx context.Cont
 }
 
 // Inspect accepts an inspector function that has same arguments as the RequestFetcher.FetchPendings
-func (mmFetchPendings *mRequestFetcherMockFetchPendings) Inspect(f func(ctx context.Context)) *mRequestFetcherMockFetchPendings {
+func (mmFetchPendings *mRequestFetcherMockFetchPendings) Inspect(f func(ctx context.Context, trs chan<- common.Transcript)) *mRequestFetcherMockFetchPendings {
 	if mmFetchPendings.mock.inspectFuncFetchPendings != nil {
 		mmFetchPendings.mock.t.Fatalf("Inspect function is already set for RequestFetcherMock.FetchPendings")
 	}
@@ -298,7 +300,7 @@ func (mmFetchPendings *mRequestFetcherMockFetchPendings) Return() *RequestFetche
 }
 
 //Set uses given function f to mock the RequestFetcher.FetchPendings method
-func (mmFetchPendings *mRequestFetcherMockFetchPendings) Set(f func(ctx context.Context)) *RequestFetcherMock {
+func (mmFetchPendings *mRequestFetcherMockFetchPendings) Set(f func(ctx context.Context, trs chan<- common.Transcript)) *RequestFetcherMock {
 	if mmFetchPendings.defaultExpectation != nil {
 		mmFetchPendings.mock.t.Fatalf("Default expectation is already set for the RequestFetcher.FetchPendings method")
 	}
@@ -312,15 +314,15 @@ func (mmFetchPendings *mRequestFetcherMockFetchPendings) Set(f func(ctx context.
 }
 
 // FetchPendings implements RequestFetcher
-func (mmFetchPendings *RequestFetcherMock) FetchPendings(ctx context.Context) {
+func (mmFetchPendings *RequestFetcherMock) FetchPendings(ctx context.Context, trs chan<- common.Transcript) {
 	mm_atomic.AddUint64(&mmFetchPendings.beforeFetchPendingsCounter, 1)
 	defer mm_atomic.AddUint64(&mmFetchPendings.afterFetchPendingsCounter, 1)
 
 	if mmFetchPendings.inspectFuncFetchPendings != nil {
-		mmFetchPendings.inspectFuncFetchPendings(ctx)
+		mmFetchPendings.inspectFuncFetchPendings(ctx, trs)
 	}
 
-	params := &RequestFetcherMockFetchPendingsParams{ctx}
+	params := &RequestFetcherMockFetchPendingsParams{ctx, trs}
 
 	// Record call args
 	mmFetchPendings.FetchPendingsMock.mutex.Lock()
@@ -337,7 +339,7 @@ func (mmFetchPendings *RequestFetcherMock) FetchPendings(ctx context.Context) {
 	if mmFetchPendings.FetchPendingsMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmFetchPendings.FetchPendingsMock.defaultExpectation.Counter, 1)
 		want := mmFetchPendings.FetchPendingsMock.defaultExpectation.params
-		got := RequestFetcherMockFetchPendingsParams{ctx}
+		got := RequestFetcherMockFetchPendingsParams{ctx, trs}
 		if want != nil && !minimock.Equal(*want, got) {
 			mmFetchPendings.t.Errorf("RequestFetcherMock.FetchPendings got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
 		}
@@ -346,10 +348,10 @@ func (mmFetchPendings *RequestFetcherMock) FetchPendings(ctx context.Context) {
 
 	}
 	if mmFetchPendings.funcFetchPendings != nil {
-		mmFetchPendings.funcFetchPendings(ctx)
+		mmFetchPendings.funcFetchPendings(ctx, trs)
 		return
 	}
-	mmFetchPendings.t.Fatalf("Unexpected call to RequestFetcherMock.FetchPendings. %v", ctx)
+	mmFetchPendings.t.Fatalf("Unexpected call to RequestFetcherMock.FetchPendings. %v %v", ctx, trs)
 
 }
 

@@ -27,7 +27,6 @@ import (
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/writecontroller"
 )
 
@@ -43,9 +42,8 @@ func (p *AdditionalCallFromPreviousExecutor) Proceed(ctx context.Context) error 
 	if p.message.Pending == insolar.NotPending {
 		broker.SetNotPending(ctx)
 	}
+	broker.HaveMoreRequests(ctx)
 
-	tr := common.NewTranscriptCloneContext(ctx, p.message.RequestRef, *p.message.Request)
-	broker.AddAdditionalRequestFromPrevExecutor(ctx, tr)
 	return nil
 }
 

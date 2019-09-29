@@ -242,14 +242,6 @@ message ServiceData {
     bytes TraceSpanData = 22;
 }
 
-message ExecutionQueueElement {
-    uint32 Polymorph = 16;
-
-    bytes RequestRef = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
-    record.IncomingRequest Incoming = 21;
-    ServiceData ServiceData = 22;
-}
-
 message ReturnResults {
     uint32 Polymorph = 16;
 
@@ -272,7 +264,6 @@ message ExecutorResults {
 
     bytes Caller = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
     bytes RecordRef = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
-    repeated ExecutionQueueElement Queue = 22;
     bool LedgerHasMoreRequests = 23;
     int32 Pending = 24 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PendingState", (gogoproto.nullable) = false];
 }
