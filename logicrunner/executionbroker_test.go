@@ -41,7 +41,6 @@ import (
 	"github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/executionregistry"
 	"github.com/insolar/insolar/logicrunner/requestresult"
-	"github.com/insolar/insolar/logicrunner/requestsqueue"
 	"github.com/insolar/insolar/pulse"
 )
 
@@ -88,9 +87,7 @@ func finishedCount(args ...interface{}) bool {
 func TestExecutionBroker_AddFreshRequest(t *testing.T) {
 	objectRef := gen.Reference()
 
-	ctx := inslogger.TestContext(t)
 	reqRef := gen.RecordReference()
-	transcript := common.NewTranscript(ctx, reqRef, record.IncomingRequest{Object: &objectRef})
 
 	pa := insolarPulse.NewAccessorMock(t).LatestMock.Return(
 		insolar.Pulse{PulseNumber: pulse.MinTimePulse},
@@ -131,91 +128,12 @@ func TestExecutionBroker_AddFreshRequest(t *testing.T) {
 			mc := minimock.NewController(t)
 
 			broker := test.mocks(ctx, mc)
-			broker.HaveMoreRequests(ctx, transcript)
+			broker.HasMoreRequests(ctx)
 
 			mc.Wait(1 * time.Minute)
 			mc.Finish()
 		})
 	}
-}
-
-func TestExecutionBroker_Deduplication(t *testing.T) {
-	objectRef := gen.Reference()
-	reqRef := gen.RecordReference()
-
-	pa := insolarPulse.NewAccessorMock(t).LatestMock.Return(
-		insolar.Pulse{PulseNumber: pulse.MinTimePulse},
-		nil,
-	)
-
-	tests := []struct {
-		name   string
-		mocks  func(ctx context.Context, t minimock.Tester) *ExecutionBroker
-		checks func(t *testing.T, b *ExecutionBroker)
-	}{
-		{
-			name: "request known to broker, gets deduplicated",
-			mocks: func(ctx context.Context, t minimock.Tester) *ExecutionBroker {
-				er := executionregistry.NewExecutionRegistryMock(t).
-					GetActiveTranscriptMock.Expect(reqRef).Return(nil)
-
-				b := NewExecutionBroker(
-					objectRef, nil, nil, nil, nil, er, nil, pa,
-				)
-
-				queueMock := requestsqueue.NewRequestsQueueMock(t).AppendMock.Return()
-				b.mutable.queue = queueMock
-
-				tr := common.NewTranscript(ctx, reqRef, record.IncomingRequest{})
-				b.add(ctx, requestsqueue.FromLedger, tr)
-
-				return b
-			},
-			checks: func(t *testing.T, b *ExecutionBroker) {
-				appended := b.mutable.queue.(*requestsqueue.RequestsQueueMock).AppendAfterCounter()
-				require.Equal(t, 1, int(appended))
-			},
-		},
-		{
-			name: "request NOT known to broker, but registry, gets deduplicated",
-			mocks: func(ctx context.Context, t minimock.Tester) *ExecutionBroker {
-				tr := common.NewTranscript(ctx, reqRef, record.IncomingRequest{})
-				er := executionregistry.NewExecutionRegistryMock(t).
-					GetActiveTranscriptMock.Expect(reqRef).Return(tr)
-
-				b := NewExecutionBroker(
-					objectRef, nil, nil, nil, nil, er, nil, pa,
-				)
-
-				queueMock := requestsqueue.NewRequestsQueueMock(t)
-				b.mutable.queue = queueMock
-
-				return b
-			},
-			checks: func(t *testing.T, b *ExecutionBroker) {
-				appended := b.mutable.queue.(*requestsqueue.RequestsQueueMock).AppendAfterCounter()
-				require.Equal(t, 0, int(appended))
-			},
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			ctx := inslogger.TestContext(t)
-			mc := minimock.NewController(t)
-
-			broker := test.mocks(ctx, mc)
-
-			tr := common.NewTranscript(ctx, reqRef, record.IncomingRequest{})
-			broker.add(ctx, requestsqueue.FromLedger, tr)
-
-			mc.Wait(1 * time.Minute)
-			mc.Finish()
-
-			test.checks(t, broker)
-		})
-	}
-
 }
 
 func TestExecutionBroker_PendingFinishedIfNeed(t *testing.T) {
@@ -356,7 +274,7 @@ func TestExecutionBroker_ExecuteImmutable(t *testing.T) {
 	re.ExecuteAndSaveMock.Return(requestresult.New([]byte{1, 2, 3}, gen.Reference()), nil)
 	re.SendReplyMock.Return()
 
-	broker.HaveMoreRequests(ctx, immutableTranscript1)
+	broker.HasMoreRequests(ctx)
 }
 
 func TestExecutionBroker_OnPulse(t *testing.T) {
@@ -572,7 +490,7 @@ func TestExecutionBroker_AddFreshRequestWithOnPulse(t *testing.T) {
 			mc := minimock.NewController(t)
 
 			broker, msgs := test.mocks(ctx, mc)
-			broker.HaveMoreRequests(ctx, transcript)
+			broker.HasMoreRequests(ctx, transcript)
 
 			mc.Wait(1 * time.Minute)
 			mc.Finish()
@@ -600,11 +518,8 @@ func TestExecutionBroker_IsKnownRequest(t *testing.T) {
 		objectRef, nil, nil, nil, nil, er, nil, pa,
 	)
 
-	queueMock := requestsqueue.NewRequestsQueueMock(mc).AppendMock.Return()
-	b.mutable.queue = queueMock
-
 	tr := common.NewTranscript(ctx, reqRef1, record.IncomingRequest{})
-	b.add(ctx, requestsqueue.FromLedger, tr)
+	b.upsertToDuplicationTable(ctx, tr)
 
 	require.True(t, b.IsKnownRequest(ctx, reqRef1))
 

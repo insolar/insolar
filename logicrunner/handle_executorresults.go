@@ -80,7 +80,7 @@ func (h *HandleExecutorResults) handleMessage(ctx context.Context, msg payload.E
 	broker.PrevExecutorPendingResult(ctx, msg.Pending)
 
 	if msg.LedgerHasMoreRequests {
-		broker.HaveMoreRequests(ctx)
+		broker.HasMoreRequests(ctx)
 	}
 
 	return nil

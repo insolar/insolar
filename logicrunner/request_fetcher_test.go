@@ -101,7 +101,7 @@ func TestRequestsFetcher_Limits(t *testing.T) {
 	}).Return(pendings, nil).
 		GetAbandonedRequestMock.Set(
 		func(ctx context.Context, objectRef insolar.Reference, requestRef insolar.Reference) (record.Request, error) {
-			t.Logf("GetAbandonedRequest %s", requestRef)
+			t.Logf("GetRequest %s", requestRef)
 			return genIncomingRequest(), nil
 		})
 

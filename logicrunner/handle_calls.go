@@ -192,7 +192,7 @@ func (h *HandleCall) handleActual(
 	defer done()
 
 	broker := h.dep.StateStorage.UpsertExecutionState(*objectRef)
-	broker.HaveMoreRequests(ctx)
+	broker.HasMoreRequests(ctx)
 
 	return registeredRequestReply, nil
 }

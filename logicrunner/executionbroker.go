@@ -49,7 +49,7 @@ const immutableExecutionLimit = 30
 //go:generate minimock -i github.com/insolar/insolar/logicrunner.ExecutionBrokerI -o ./ -s _mock.go -g
 
 type ExecutionBrokerI interface {
-	HaveMoreRequests(ctx context.Context)
+	HasMoreRequests(ctx context.Context)
 	AbandonedRequestsOnLedger(ctx context.Context)
 	NoMoreRequestsOnLedger(ctx context.Context)
 
@@ -127,7 +127,7 @@ func NewExecutionBroker(
 	}
 }
 
-func (q *ExecutionBroker) HaveMoreRequests(ctx context.Context) {
+func (q *ExecutionBroker) HasMoreRequests(ctx context.Context) {
 	q.stateLock.Lock()
 	defer q.stateLock.Unlock()
 
@@ -188,16 +188,7 @@ func (q *ExecutionBroker) startProcessor(ctx context.Context) {
 
 	logger.Debug("starting requests processor")
 
-	var feed chan *common.Transcript
-	startFetcher := func() RequestFetcher {
-		feed = make(chan *common.Transcript, 10)
-
-		f := NewRequestsFetcher(q.Ref, q.artifactsManager, q, q.outgoingSender)
-		go f.FetchPendings(ctx, feed)
-		return f
-	}
-
-	fetcher := startFetcher()
+	fetcher := NewRequestsFetcher(q.Ref, q.artifactsManager, q, q.outgoingSender)
 	feedMutable := make(chan *common.Transcript, 10)
 	feedImmutable := make(chan *common.Transcript, 10)
 	go func() {
@@ -209,7 +200,7 @@ func (q *ExecutionBroker) startProcessor(ctx context.Context) {
 		}()
 		for {
 			select {
-			case tr, ok := <-feed:
+			case tr, ok := <-fetcher.FetchPendings(ctx):
 				if !ok {
 					logger.Debug("fetcher stopped producing")
 
@@ -218,13 +209,13 @@ func (q *ExecutionBroker) startProcessor(ctx context.Context) {
 						logger.Debug("had request since last fetch, re-checking ledger")
 
 						fetcher.Abort(ctx)
-						fetcher = startFetcher()
+						fetcher = NewRequestsFetcher(q.Ref, q.artifactsManager, q, q.outgoingSender)
 						continue
 					case <-q.closed:
 						return
 					}
 				}
-				if q.storeWithoutDuplication(ctx, tr) {
+				if q.upsertToDuplicationTable(ctx, tr) {
 					continue
 				}
 				if tr.Request.Immutable {
@@ -587,7 +578,7 @@ func (q *ExecutionBroker) setHaveMoreRequests(ctx context.Context) {
 	}
 }
 
-func (q *ExecutionBroker) storeWithoutDuplication(ctx context.Context, transcript *common.Transcript) bool {
+func (q *ExecutionBroker) upsertToDuplicationTable(ctx context.Context, transcript *common.Transcript) (alreadyInTable bool) {
 	q.stateLock.Lock()
 	defer q.stateLock.Unlock()
 

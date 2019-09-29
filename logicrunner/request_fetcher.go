@@ -34,7 +34,7 @@ import (
 //go:generate minimock -i github.com/insolar/insolar/logicrunner.RequestFetcher -o ./ -s _mock.go -g
 
 type RequestFetcher interface {
-	FetchPendings(ctx context.Context, trs chan<- *common.Transcript)
+	FetchPendings(ctx context.Context) <-chan *common.Transcript
 	Abort(ctx context.Context)
 }
 
@@ -77,8 +77,9 @@ func (rf *requestFetcher) isAborted() bool {
 	}
 }
 
-func (rf *requestFetcher) FetchPendings(ctx context.Context, trs chan<- *common.Transcript) {
-	defer close(trs)
+func (rf *requestFetcher) FetchPendings(ctx context.Context) <-chan *common.Transcript {
+	// TODO: move to const
+	trs := make(chan *common.Transcript, 10)
 
 	ctx, logger := inslogger.WithFields(ctx, map[string]interface{}{
 		"object": rf.object.String(),
@@ -86,16 +87,22 @@ func (rf *requestFetcher) FetchPendings(ctx context.Context, trs chan<- *common.
 
 	logger.Debug("request fetcher starting")
 
-	err := rf.fetch(ctx, trs)
-	if err != nil {
-		logger.Error("couldn't make fetch round: ", err.Error())
-	}
+	go func() {
+		err := rf.fetch(ctx, trs)
+		if err != nil {
+			logger.Error("couldn't make fetch round: ", err.Error())
+		}
+	}()
+
+	return trs
 }
 
 // XXX: merge with value in GetPendings, duplicate
 const limit = 100
 
 func (rf *requestFetcher) fetch(ctx context.Context, trs chan<- *common.Transcript) error {
+	defer close(trs)
+
 	logger := inslogger.FromContext(ctx)
 
 	for {
@@ -124,7 +131,7 @@ func (rf *requestFetcher) fetch(ctx context.Context, trs chan<- *common.Transcri
 
 			logger.Debug("getting request from ledger")
 			stats.Record(ctx, metrics.RequestFetcherFetchUnique.M(1))
-			request, err := rf.artifactsManager.GetAbandonedRequest(ctx, rf.object, reqRef)
+			request, err := rf.artifactsManager.GetRequest(ctx, rf.object, reqRef)
 			if err != nil {
 				return errors.Wrap(err, "couldn't get request")
 			}

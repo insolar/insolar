@@ -42,7 +42,7 @@ func (p *AdditionalCallFromPreviousExecutor) Proceed(ctx context.Context) error 
 	if p.message.Pending == insolar.NotPending {
 		broker.SetNotPending(ctx)
 	}
-	broker.HaveMoreRequests(ctx)
+	broker.HasMoreRequests(ctx)
 
 	return nil
 }
