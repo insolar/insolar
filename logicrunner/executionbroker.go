@@ -192,12 +192,7 @@ func (q *ExecutionBroker) startProcessor(ctx context.Context) {
 	feedMutable := make(chan *common.Transcript, 10)
 	feedImmutable := make(chan *common.Transcript, 10)
 	go func() {
-		defer func() {
-			logger.Debug("broker stopped, stopping processor")
-			close(feedMutable)
-			close(feedImmutable)
-			fetcher.Abort(ctx)
-		}()
+		defer q.stopProcessor(ctx, fetcher, feedMutable, feedImmutable)
 		for {
 			select {
 			case tr, ok := <-fetcher.FetchPendings(ctx):
@@ -206,7 +201,7 @@ func (q *ExecutionBroker) startProcessor(ctx context.Context) {
 
 					select {
 					case <-q.probablyMoreSinceLastFetch:
-						logger.Debug("had request since last fetch, re-checking ledger")
+						logger.Debug("had request since last fetch, reset fetcher")
 
 						fetcher.Abort(ctx)
 						fetcher = NewRequestsFetcher(q.Ref, q.artifactsManager, q, q.outgoingSender)
@@ -242,6 +237,14 @@ func (q *ExecutionBroker) startProcessor(ctx context.Context) {
 	go reader(feedMutable)
 }
 
+func (q *ExecutionBroker) stopProcessor(ctx context.Context, fetcher RequestFetcher, feeds ...chan *common.Transcript) {
+	inslogger.FromContext(ctx).Debug("broker stopped, stopping processor")
+	for i := range feeds {
+		close(feeds[i])
+	}
+	fetcher.Abort(ctx)
+}
+
 func (q *ExecutionBroker) processTranscript(ctx context.Context, transcript *common.Transcript) {
 	stats.Record(ctx, metrics.ExecutionBrokerExecutionStarted.M(1))
 	defer stats.Record(ctx, metrics.ExecutionBrokerExecutionFinished.M(1))
@@ -257,7 +260,7 @@ func (q *ExecutionBroker) processTranscript(ctx context.Context, transcript *com
 		"broker":  q.name,
 	})
 
-	if !q.startTranscript(ctx, transcript) {
+	if !q.canProcessTranscript(ctx, transcript) {
 		// either closed broker or we're executing this already
 		return
 	}
@@ -268,7 +271,6 @@ func (q *ExecutionBroker) processTranscript(ctx context.Context, transcript *com
 	)
 
 	sendReply := true
-
 	defer func() {
 		q.finishTranscript(ctx, transcript)
 
@@ -319,7 +321,7 @@ func (q *ExecutionBroker) processTranscript(ctx context.Context, transcript *com
 	// cleanup and reply is in defer
 }
 
-func (q *ExecutionBroker) startTranscript(ctx context.Context, transcript *common.Transcript) bool {
+func (q *ExecutionBroker) canProcessTranscript(ctx context.Context, transcript *common.Transcript) bool {
 	q.stateLock.Lock()
 	defer q.stateLock.Unlock()
 

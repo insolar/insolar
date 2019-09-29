@@ -18,14 +18,13 @@ package logicrunner
 
 import (
 	"context"
-	"strconv"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/ThreeDotsLabs/watermill"
 	message2 "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/gojuno/minimock"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
@@ -263,115 +262,6 @@ func (suite *LogicRunnerTestSuite) TestStartStop() {
 	suite.Require().NoError(err)
 }
 
-func WaitGroup_TimeoutWait(wg *sync.WaitGroup, timeout time.Duration) bool {
-	waitChannel := make(chan struct{}, 0)
-
-	go func() {
-		wg.Wait()
-		waitChannel <- struct{}{}
-	}()
-
-	select {
-	case <-waitChannel:
-		return true
-	case <-time.After(timeout):
-		return false
-	}
-}
-
-func (suite *LogicRunnerTestSuite) TestConcurrency() {
-	objectRef := gen.Reference()
-	parentRef := gen.Reference()
-	protoRef := gen.Reference()
-	codeRef := gen.RecordReference()
-
-	notMeRef := gen.Reference()
-
-	pulseNum := insolar.PulseNumber(pulse.MinTimePulse)
-
-	suite.jc.IsMeAuthorizedNowMock.Return(true, nil)
-
-	syncT := &testutils.SyncT{T: suite.T()}
-	meRef := gen.Reference()
-	nodeMock := network.NewNetworkNodeMock(syncT)
-	nodeMock.IDMock.Return(meRef)
-
-	od := artifacts.NewObjectDescriptorMock(syncT)
-	od.PrototypeMock.Return(&protoRef, nil)
-	od.MemoryMock.Return([]byte{1, 2, 3})
-	od.ParentMock.Return(&parentRef)
-	od.HeadRefMock.Return(&objectRef)
-
-	pd := artifacts.NewPrototypeDescriptorMock(syncT)
-	pd.CodeMock.Return(&codeRef)
-	pd.HeadRefMock.Return(&protoRef)
-
-	cd := artifacts.NewCodeDescriptorMock(syncT)
-	cd.MachineTypeMock.Return(insolar.MachineTypeBuiltin)
-	cd.RefMock.Return(&codeRef)
-
-	suite.am.HasPendingsMock.Return(false, nil)
-
-	suite.am.RegisterIncomingRequestMock.Set(func(ctx context.Context, r *record.IncomingRequest) (*payload.RequestInfo, error) {
-		reqId := gen.ID()
-		return &payload.RequestInfo{RequestID: reqId, ObjectID: *objectRef.GetLocal()}, nil
-	})
-
-	suite.am.GetObjectMock.Set(func(ctx context.Context, head insolar.Reference, request *insolar.Reference) (o1 artifacts.ObjectDescriptor, err error) {
-		return artifacts.NewObjectDescriptorMock(syncT).EarliestRequestIDMock.Return(request.GetLocal()), nil
-	})
-
-	suite.re.ExecuteAndSaveMock.Return(requestresult.New([]byte{1, 2, 3}, gen.Reference()), nil)
-	suite.re.SendReplyMock.Return()
-
-	num := 100
-	wg := sync.WaitGroup{}
-	wg.Add(num)
-
-	suite.sender.ReplyMock.Set(func(p context.Context, p1 payload.Meta, p2 *message2.Message) {
-		wg.Done()
-	})
-
-	suite.ps.LatestMock.Set(func(p context.Context) (r insolar.Pulse, r1 error) {
-		return insolar.Pulse{PulseNumber: pulseNum}, nil
-	})
-	for i := 0; i < num; i++ {
-		go func(i int) {
-			incoming := genIncomingRequest()
-			incoming.Object = &objectRef
-			incoming.Prototype = &protoRef
-			payloadData := &payload.CallMethod{
-				Request: incoming,
-			}
-
-			msg, err := payload.Marshal(payloadData)
-			require.NoError(syncT, err, "NewMessage")
-			wrapper := payload.Meta{
-				Payload: msg,
-				Pulse:   pulseNum,
-				Sender:  notMeRef,
-			}
-			buf, err := wrapper.Marshal()
-			require.NoError(syncT, err)
-
-			wmMsg := message2.NewMessage(watermill.NewUUID(), buf)
-			require.NoError(syncT, err, "marshal")
-			wmMsg.Metadata.Set(meta.Pulse, pulseNum.String())
-			wmMsg.Metadata.Set(meta.Sender, notMeRef.String())
-			sp, err := instracer.Serialize(context.Background())
-			require.NoError(syncT, err)
-			wmMsg.Metadata.Set(meta.SpanData, string(sp))
-			wmMsg.Metadata.Set(meta.TraceID, "req-"+strconv.Itoa(i))
-
-			err = suite.lr.FlowDispatcher.Process(wmMsg)
-			require.NoError(syncT, err)
-		}(i)
-	}
-
-	suite.Require().True(WaitGroup_TimeoutWait(&wg, 2*time.Minute),
-		"Failed to wait for all requests to be processed")
-}
-
 func TestLogicRunner(t *testing.T) {
 	// Hello my friend! I bet you would like to place t.Parallel() here.
 	// Of course this may sound as a good idea. This will run multiple
@@ -557,9 +447,9 @@ func (suite *LogicRunnerTestSuite) TestImmutableOrder() {
 	broker.pending = insolar.NotPending
 
 	// prepare request objects
-	mutableRequestRef := gen.Reference()
-	immutableRequestRef1 := gen.Reference()
-	immutableRequestRef2 := gen.Reference()
+	mutableRequestRef := gen.RecordReference()
+	immutableRequestRef1 := gen.RecordReference()
+	immutableRequestRef2 := gen.RecordReference()
 
 	// prepare all three requests
 	mutableRequest := record.IncomingRequest{
@@ -567,27 +457,44 @@ func (suite *LogicRunnerTestSuite) TestImmutableOrder() {
 		Object:       &objectRef,
 		APIRequestID: utils.RandTraceID(),
 		Immutable:    false,
+		Reason:       gen.RecordReference(),
+		Caller:       gen.Reference(),
 	}
-	mutableTranscript := common.NewTranscript(suite.ctx, mutableRequestRef, mutableRequest)
-	er.GetActiveTranscriptMock.When(mutableRequestRef).Then(nil)
 
 	immutableRequest1 := record.IncomingRequest{
 		ReturnMode:   record.ReturnResult,
 		Object:       &objectRef,
 		APIRequestID: utils.RandTraceID(),
 		Immutable:    true,
+		Reason:       gen.RecordReference(),
+		Caller:       gen.Reference(),
 	}
-	immutableTranscript1 := common.NewTranscript(suite.ctx, immutableRequestRef1, immutableRequest1)
-	er.GetActiveTranscriptMock.When(immutableRequestRef1).Then(nil)
 
 	immutableRequest2 := record.IncomingRequest{
 		ReturnMode:   record.ReturnResult,
 		Object:       &objectRef,
 		APIRequestID: utils.RandTraceID(),
 		Immutable:    true,
+		Reason:       gen.RecordReference(),
+		Caller:       gen.Reference(),
 	}
-	immutableTranscript2 := common.NewTranscript(suite.ctx, immutableRequestRef2, immutableRequest2)
-	er.GetActiveTranscriptMock.When(immutableRequestRef2).Then(nil)
+
+	am.GetPendingsMock.Return([]insolar.Reference{immutableRequestRef1, immutableRequestRef2, mutableRequestRef}, nil)
+	am.GetRequestMock.Set(func(_ context.Context, objRef insolar.Reference, reqRef insolar.Reference) (r1 record.Request, err error) {
+		if objRef != objectRef {
+			return nil, errors.New("bad objectRef")
+		}
+		var res record.Request
+		switch reqRef {
+		case mutableRequestRef:
+			res = &mutableRequest
+		case immutableRequestRef1:
+			res = &immutableRequest1
+		case immutableRequestRef2:
+			res = &immutableRequest2
+		}
+		return res, nil
+	})
 
 	er.DoneMock.Set(func(transcript *common.Transcript) (b1 bool) {
 		switch transcript.RequestRef {
@@ -652,9 +559,7 @@ func (suite *LogicRunnerTestSuite) TestImmutableOrder() {
 		panic("unreachable")
 	})
 
-	broker.add(suite.ctx, requestsqueue.FromLedger, mutableTranscript)
-	broker.add(suite.ctx, requestsqueue.FromLedger, immutableTranscript1, immutableTranscript2)
-	broker.startProcessors(suite.ctx)
+	broker.HasMoreRequests(suite.ctx)
 
 	suite.True(wait(finishedCount, broker, 3))
 }

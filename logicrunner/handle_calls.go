@@ -137,6 +137,7 @@ func (h *HandleCall) handleActual(
 		}
 		return nil, errors.Wrap(err, "[ HandleCall.handleActual ] can't create request")
 	}
+	logger.Debug("registered request")
 
 	reqInfo := procRegisterRequest.getResult()
 	requestRef := *getRequestReference(reqInfo)
