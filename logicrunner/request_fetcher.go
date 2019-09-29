@@ -92,6 +92,9 @@ func (rf *requestFetcher) FetchPendings(ctx context.Context, trs chan<- *common.
 	}
 }
 
+// XXX: merge with value in GetPendings, duplicate
+const limit = 100
+
 func (rf *requestFetcher) fetch(ctx context.Context, trs chan<- *common.Transcript) error {
 	logger := inslogger.FromContext(ctx)
 
@@ -107,11 +110,17 @@ func (rf *requestFetcher) fetch(ctx context.Context, trs chan<- *common.Transcri
 			return err
 		}
 
+		addedCount := 0
 		for _, reqRef := range reqRefs {
 			if !reqRef.IsRecordScope() {
 				logger.Errorf("skipping request with bad reference, ref=%s", reqRef.String())
 				continue
+			} else if rf.broker.IsKnownRequest(ctx, reqRef) {
+				logger.Debug("skipping known request ", reqRef.String())
+				stats.Record(ctx, metrics.RequestFetcherFetchKnown.M(1))
+				continue
 			}
+			addedCount++
 
 			logger.Debug("getting request from ledger")
 			stats.Record(ctx, metrics.RequestFetcherFetchUnique.M(1))
@@ -146,6 +155,16 @@ func (rf *requestFetcher) fetch(ctx context.Context, trs chan<- *common.Transcri
 				rf.outgoingsSender.SendAbandonedOutgoingRequest(ctx, reqRef, v)
 			default:
 				logger.Error("requestFetcher fetched unknown request")
+			}
+		}
+		if addedCount == 0 {
+			if len(reqRefs) < limit {
+				logger.Debug("we guess that ledger has no more requests")
+				rf.broker.NoMoreRequestsOnLedger(ctx)
+				return nil
+			} else {
+				logger.Warn("we can not get more requests")
+				return nil
 			}
 		}
 	}

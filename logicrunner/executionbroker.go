@@ -59,6 +59,8 @@ type ExecutionBrokerI interface {
 	PrevExecutorSentPendingFinished(ctx context.Context) error
 	SetNotPending(ctx context.Context)
 
+	IsKnownRequest(ctx context.Context, req insolar.Reference) bool
+
 	OnPulse(ctx context.Context) []payload.Payload
 }
 
@@ -88,6 +90,8 @@ type ExecutionBroker struct {
 	pending              insolar.PendingState
 	PendingConfirmed     bool
 	HasPendingCheckMutex sync.Mutex
+
+	deduplicationTable map[insolar.Reference]bool
 }
 
 func NewExecutionBroker(
@@ -118,6 +122,8 @@ func NewExecutionBroker(
 		sender:            sender,
 		artifactsManager:  artifactsManager,
 		executionRegistry: executionRegistry,
+
+		deduplicationTable: make(map[insolar.Reference]bool),
 	}
 }
 
@@ -205,16 +211,21 @@ func (q *ExecutionBroker) startProcessor(ctx context.Context) {
 			select {
 			case tr, ok := <-feed:
 				if !ok {
-					logger.Debug("fetcher stopped producing, stopping processor")
+					logger.Debug("fetcher stopped producing")
 
 					select {
 					case <-q.probablyMoreSinceLastFetch:
+						logger.Debug("had request since last fetch, re-checking ledger")
+
 						fetcher.Abort(ctx)
 						fetcher = startFetcher()
 						continue
 					case <-q.closed:
 						return
 					}
+				}
+				if q.storeWithoutDuplication(ctx, tr) {
+					continue
 				}
 				if tr.Request.Immutable {
 					feedImmutable <- tr
@@ -403,6 +414,7 @@ func (q *ExecutionBroker) OnPulse(ctx context.Context) []payload.Payload {
 	defer func() {
 		// clean everything, just in case
 		q.finished = nil
+		q.deduplicationTable = make(map[insolar.Reference]bool)
 		q.pending = insolar.InPending
 		q.PendingConfirmed = true
 	}()
@@ -573,4 +585,25 @@ func (q *ExecutionBroker) setHaveMoreRequests(ctx context.Context) {
 	case q.probablyMoreSinceLastFetch <- struct{}{}:
 	default:
 	}
+}
+
+func (q *ExecutionBroker) storeWithoutDuplication(ctx context.Context, transcript *common.Transcript) bool {
+	if _, ok := q.deduplicationTable[transcript.RequestRef]; ok {
+		logger := inslogger.FromContext(ctx)
+		logger.Infof("Already know about request %s, skipping", transcript.RequestRef.String())
+
+		return true
+	}
+	q.deduplicationTable[transcript.RequestRef] = true
+	return false
+}
+
+func (q *ExecutionBroker) IsKnownRequest(ctx context.Context, req insolar.Reference) bool {
+	q.stateLock.Lock()
+	defer q.stateLock.Unlock()
+
+	if _, ok := q.deduplicationTable[req]; ok {
+		return true
+	}
+	return false
 }
