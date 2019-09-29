@@ -88,7 +88,7 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 				dc := artifacts.NewDescriptorsCacheMock(mc).
 					ByObjectDescriptorMock.
 					Return(
-						artifacts.NewObjectDescriptorMock(mc).
+						artifacts.NewPrototypeDescriptorMock(mc).
 							HeadRefMock.Return(&protoRef),
 						artifacts.NewCodeDescriptorMock(mc).
 							RefMock.Return(&codeRef).
@@ -128,7 +128,7 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 				dc := artifacts.NewDescriptorsCacheMock(mc).
 					ByObjectDescriptorMock.
 					Return(
-						artifacts.NewObjectDescriptorMock(mc).
+						artifacts.NewPrototypeDescriptorMock(mc).
 							HeadRefMock.Return(&protoRef),
 						artifacts.NewCodeDescriptorMock(mc).
 							RefMock.Return(&codeRef).
@@ -166,7 +166,7 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 				dc := artifacts.NewDescriptorsCacheMock(mc).
 					ByObjectDescriptorMock.
 					Return(
-						artifacts.NewObjectDescriptorMock(mc).
+						artifacts.NewPrototypeDescriptorMock(mc).
 							HeadRefMock.Return(&protoRef),
 						artifacts.NewCodeDescriptorMock(mc).
 							RefMock.Return(&codeRef).
@@ -205,7 +205,7 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 				dc := artifacts.NewDescriptorsCacheMock(mc).
 					ByObjectDescriptorMock.
 					Return(
-						artifacts.NewObjectDescriptorMock(mc).
+						artifacts.NewPrototypeDescriptorMock(mc).
 							HeadRefMock.Return(&protoRef),
 						artifacts.NewCodeDescriptorMock(mc).
 							RefMock.Return(&codeRef).
@@ -234,7 +234,7 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 				dc := artifacts.NewDescriptorsCacheMock(mc).
 					ByObjectDescriptorMock.
 					Return(
-						artifacts.NewObjectDescriptorMock(mc).HeadRefMock.Return(&protoRef),
+						artifacts.NewPrototypeDescriptorMock(mc).HeadRefMock.Return(&protoRef),
 						artifacts.NewCodeDescriptorMock(mc),
 						nil,
 					)
@@ -289,7 +289,7 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 				dc := artifacts.NewDescriptorsCacheMock(mc).
 					ByObjectDescriptorMock.
 					Return(
-						artifacts.NewObjectDescriptorMock(mc).
+						artifacts.NewPrototypeDescriptorMock(mc).
 							HeadRefMock.Return(&protoRef),
 						artifacts.NewCodeDescriptorMock(mc).
 							MachineTypeMock.Return(insolar.MachineTypeBuiltin),
@@ -321,7 +321,7 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 				dc := artifacts.NewDescriptorsCacheMock(mc).
 					ByObjectDescriptorMock.
 					Return(
-						artifacts.NewObjectDescriptorMock(mc).
+						artifacts.NewPrototypeDescriptorMock(mc).
 							HeadRefMock.Return(&protoRef),
 						artifacts.NewCodeDescriptorMock(mc).
 							RefMock.Return(&codeRef).
@@ -354,7 +354,7 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 				dc := artifacts.NewDescriptorsCacheMock(mc).
 					ByObjectDescriptorMock.
 					Return(
-						artifacts.NewObjectDescriptorMock(mc).
+						artifacts.NewPrototypeDescriptorMock(mc).
 							HeadRefMock.Return(&protoRef),
 						artifacts.NewCodeDescriptorMock(mc).
 							RefMock.Return(&codeRef).
@@ -387,7 +387,7 @@ func TestLogicExecutor_ExecuteMethod(t *testing.T) {
 				dc := artifacts.NewDescriptorsCacheMock(mc).
 					ByObjectDescriptorMock.
 					Return(
-						artifacts.NewObjectDescriptorMock(mc).
+						artifacts.NewPrototypeDescriptorMock(mc).
 							HeadRefMock.Return(&protoRef),
 						artifacts.NewCodeDescriptorMock(mc).
 							RefMock.Return(&codeRef).
@@ -456,7 +456,7 @@ func TestLogicExecutor_ExecuteConstructor(t *testing.T) {
 				dc := artifacts.NewDescriptorsCacheMock(mc).
 					ByPrototypeRefMock.
 					Return(
-						artifacts.NewObjectDescriptorMock(mc).
+						artifacts.NewPrototypeDescriptorMock(mc).
 							HeadRefMock.Return(&protoRef),
 						artifacts.NewCodeDescriptorMock(mc).
 							RefMock.Return(&codeRef).
@@ -496,7 +496,7 @@ func TestLogicExecutor_ExecuteConstructor(t *testing.T) {
 				dc := artifacts.NewDescriptorsCacheMock(mc).
 					ByPrototypeRefMock.
 					Return(
-						artifacts.NewObjectDescriptorMock(mc).
+						artifacts.NewPrototypeDescriptorMock(mc).
 							HeadRefMock.Return(&protoRef),
 						artifacts.NewCodeDescriptorMock(mc).
 							RefMock.Return(&codeRef).
@@ -534,7 +534,7 @@ func TestLogicExecutor_ExecuteConstructor(t *testing.T) {
 				dc := artifacts.NewDescriptorsCacheMock(mc).
 					ByPrototypeRefMock.
 					Return(
-						artifacts.NewObjectDescriptorMock(mc).
+						artifacts.NewPrototypeDescriptorMock(mc).
 							HeadRefMock.Return(&protoRef),
 						artifacts.NewCodeDescriptorMock(mc).
 							RefMock.Return(&codeRef).
@@ -569,7 +569,7 @@ func TestLogicExecutor_ExecuteConstructor(t *testing.T) {
 				dc := artifacts.NewDescriptorsCacheMock(mc).
 					ByPrototypeRefMock.
 					Return(
-						artifacts.NewObjectDescriptorMock(mc).
+						artifacts.NewPrototypeDescriptorMock(mc).
 							HeadRefMock.Return(&protoRef),
 						artifacts.NewCodeDescriptorMock(mc).
 							RefMock.Return(&codeRef).
@@ -598,7 +598,7 @@ func TestLogicExecutor_ExecuteConstructor(t *testing.T) {
 				dc := artifacts.NewDescriptorsCacheMock(mc).
 					ByPrototypeRefMock.
 					Return(
-						artifacts.NewObjectDescriptorMock(mc),
+						artifacts.NewPrototypeDescriptorMock(mc),
 						artifacts.NewCodeDescriptorMock(mc).
 							MachineTypeMock.Return(insolar.MachineTypeBuiltin),
 						nil,

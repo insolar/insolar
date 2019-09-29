@@ -74,8 +74,7 @@ func TestHandleExecutorResults_Present(t *testing.T) {
 							Return(
 								NewExecutionBrokerIMock(t).
 									PrevExecutorPendingResultMock.Return().
-									MoreRequestsOnLedgerMock.Return().
-									AddRequestsFromPrevExecutorMock.Return(),
+									MoreRequestsOnLedgerMock.Return(),
 							),
 					},
 					meta: payload.Meta{Payload: buf},

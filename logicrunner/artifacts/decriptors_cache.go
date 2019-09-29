@@ -42,18 +42,14 @@ func NewDescriptorsCache() DescriptorsCache {
 func (c *descriptorsCache) ByPrototypeRef(
 	ctx context.Context, protoRef insolar.Reference,
 ) (
-	ObjectDescriptor, CodeDescriptor, error,
+	PrototypeDescriptor, CodeDescriptor, error,
 ) {
 	protoDesc, err := c.GetPrototype(ctx, protoRef)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "couldn't get prototype descriptor")
 	}
 
-	codeRef, err := protoDesc.Code()
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "couldn't get code reference")
-	}
-
+	codeRef := protoDesc.Code()
 	codeDesc, err := c.GetCode(ctx, *codeRef)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "couldn't get code descriptor")
@@ -65,11 +61,15 @@ func (c *descriptorsCache) ByPrototypeRef(
 func (c *descriptorsCache) ByObjectDescriptor(
 	ctx context.Context, obj ObjectDescriptor,
 ) (
-	ObjectDescriptor, CodeDescriptor, error,
+	PrototypeDescriptor, CodeDescriptor, error,
 ) {
 	protoRef, err := obj.Prototype()
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "couldn't get prototype reference")
+	}
+
+	if protoRef == nil {
+		return nil, nil, errors.New("Empty prototype")
 	}
 
 	return c.ByPrototypeRef(ctx, *protoRef)
@@ -78,21 +78,16 @@ func (c *descriptorsCache) ByObjectDescriptor(
 func (c *descriptorsCache) GetPrototype(
 	ctx context.Context, ref insolar.Reference,
 ) (
-	ObjectDescriptor, error,
+	PrototypeDescriptor, error,
 ) {
 	res, err := c.protoCache.get(ref, func() (interface{}, error) {
-		return c.Client.GetObject(ctx, ref, nil)
+		return c.Client.GetPrototype(ctx, ref)
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get object")
 	}
 
-	desc := res.(ObjectDescriptor)
-	if !desc.IsPrototype() {
-		return nil, errors.New("is not a prototype")
-	}
-
-	return desc, nil
+	return res.(PrototypeDescriptor), nil
 }
 
 func (c *descriptorsCache) GetCode(

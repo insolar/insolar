@@ -23,6 +23,7 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/gojuno/minimock"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -121,7 +122,7 @@ func TestFilamentCalculatorDefault_Requests(t *testing.T) {
 	})
 }
 
-func TestFilamentCalculatorDefault_PendingRequests(t *testing.T) {
+func TestFilamentCalculatorDefault_OpenedRequests(t *testing.T) {
 	t.Parallel()
 	mc := minimock.NewController(t)
 	ctx := inslogger.TestContext(t)
@@ -436,6 +437,334 @@ func TestFilamentCalculatorDefault_PendingRequests(t *testing.T) {
 		require.Equal(t, outgoing, recs[0])
 
 		mc.Finish()
+	})
+}
+
+func TestFilamentCalculatorDefault_RequestInfo(t *testing.T) {
+	t.Parallel()
+	mc := minimock.NewController(t)
+	ctx := inslogger.TestContext(t)
+
+	var (
+		indexes     *object.MemoryIndexStorageMock
+		records     object.AtomicRecordStorage
+		coordinator *jet.CoordinatorMock
+		jetFetcher  *executor.JetFetcherMock
+		sender      *bus.SenderMock
+		pcs         insolar.PlatformCryptographyScheme
+		calculator  *executor.FilamentCalculatorDefault
+	)
+	resetComponents := func() {
+		indexes = object.NewMemoryIndexStorageMock(mc)
+		records = object.NewRecordMemory()
+		coordinator = jet.NewCoordinatorMock(mc)
+		jetFetcher = executor.NewJetFetcherMock(mc)
+		sender = bus.NewSenderMock(mc)
+		pcs = testutils.NewPlatformCryptographyScheme()
+		calculator = executor.NewFilamentCalculator(indexes, records, coordinator, jetFetcher, sender, nil)
+	}
+
+	t.Run("returns error if object does not exist", func(t *testing.T) {
+		resetComponents()
+		defer mc.Finish()
+
+		indexes.ForIDMock.Return(record.Index{}, object.ErrIndexNotFound)
+		_, err := calculator.RequestInfo(ctx, gen.ID(), gen.ID(), gen.PulseNumber())
+		assert.Error(t, err)
+	})
+
+	t.Run("empty indexes error", func(t *testing.T) {
+		resetComponents()
+		defer mc.Finish()
+
+		objectID := gen.ID()
+		fromPulse := gen.PulseNumber()
+		indexes.ForIDMock.Inspect(func(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) {
+			assert.Equal(t, pn, fromPulse)
+			assert.Equal(t, objectID, objID)
+		}).Return(record.Index{}, object.ErrIndexNotFound)
+
+		_, err := calculator.RequestInfo(ctx, objectID, objectID, fromPulse)
+		require.Error(t, err)
+	})
+
+	t.Run("empty LatestRequest error", func(t *testing.T) {
+		resetComponents()
+		defer mc.Finish()
+
+		objectID := gen.ID()
+		fromPulse := gen.PulseNumber()
+		indexes.ForIDMock.Inspect(func(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) {
+			assert.Equal(t, pn, fromPulse)
+			assert.Equal(t, objectID, objID)
+		}).Return(
+			record.Index{
+				Lifeline: record.Lifeline{
+					LatestRequest: nil,
+				},
+			}, nil)
+
+		_, err := calculator.RequestInfo(ctx, objectID, objectID, fromPulse)
+		require.Error(t, err)
+	})
+
+	t.Run("simple success", func(t *testing.T) {
+		resetComponents()
+		defer mc.Finish()
+
+		objectID := gen.IDWithPulse(pulse.MinTimePulse)
+		objRef := insolar.NewReference(objectID)
+
+		currentPulse := pulse.MinTimePulse + 100
+		b := newFilamentBuilder(ctx, pcs, records)
+		reasonRec := b.Append(pulse.MinTimePulse+1, &record.IncomingRequest{
+			Nonce:  rand.Uint64(),
+			Object: objRef,
+		})
+
+		result := b.Append(pulse.MinTimePulse+1, &record.Result{
+			Request: *insolar.NewReference(reasonRec.RecordID),
+			Object:  objectID,
+		})
+
+		indexes.ForIDMock.Inspect(func(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) {
+			assert.Equal(t, pn, insolar.PulseNumber(currentPulse))
+			assert.Equal(t, objectID, objID)
+		}).Return(record.Index{
+			ObjID: objectID,
+			Lifeline: record.Lifeline{
+				LatestRequest:       &result.MetaID,
+				EarliestOpenRequest: nil,
+			},
+		}, nil)
+
+		info, err := calculator.RequestInfo(ctx, objectID, reasonRec.RecordID, insolar.PulseNumber(currentPulse))
+		require.NoError(t, err)
+		assert.Equal(t, info.Request.RecordID, reasonRec.RecordID)
+		assert.Equal(t, info.Result.RecordID, result.RecordID)
+		assert.True(t, info.OldestMutable)
+	})
+
+	t.Run("simple Success without result", func(t *testing.T) {
+		resetComponents()
+		defer mc.Finish()
+
+		objectID := gen.IDWithPulse(pulse.MinTimePulse)
+		objRef := insolar.NewReference(objectID)
+
+		currentPulse := pulse.MinTimePulse + 100
+		b := newFilamentBuilder(ctx, pcs, records)
+		reasonRec := b.Append(pulse.MinTimePulse+1, &record.IncomingRequest{
+			Nonce:  rand.Uint64(),
+			Object: objRef,
+		})
+
+		indexes.ForIDMock.Inspect(func(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) {
+			assert.Equal(t, pn, insolar.PulseNumber(currentPulse))
+			assert.Equal(t, objectID, objID)
+		}).Return(record.Index{
+			ObjID: objectID,
+			Lifeline: record.Lifeline{
+				LatestRequest:       &reasonRec.MetaID,
+				EarliestOpenRequest: nil,
+			},
+		}, nil)
+
+		info, err := calculator.RequestInfo(ctx, objectID, reasonRec.RecordID, insolar.PulseNumber(currentPulse))
+		require.NoError(t, err)
+		assert.Equal(t, info.Request.RecordID, reasonRec.RecordID)
+		assert.Nil(t, info.Result)
+		assert.True(t, info.OldestMutable)
+	})
+
+	t.Run("test select minimal pulse from request or index", func(t *testing.T) {
+		resetComponents()
+		defer mc.Finish()
+
+		objectID := gen.IDWithPulse(pulse.MinTimePulse)
+		objRef := insolar.NewReference(objectID)
+
+		currentPulse := pulse.MinTimePulse + 100
+		b := newFilamentBuilder(ctx, pcs, records)
+		reasonRec := b.Append(pulse.MinTimePulse+1, &record.IncomingRequest{
+			Nonce:  rand.Uint64(),
+			Object: objRef,
+		})
+		incRec := b.Append(pulse.MinTimePulse+2, &record.IncomingRequest{
+			Nonce:  rand.Uint64(),
+			Object: objRef,
+		})
+
+		incRec2 := b.Append(pulse.MinTimePulse+2, &record.IncomingRequest{
+			Nonce:  rand.Uint64(),
+			Object: objRef,
+		})
+
+		earliestPending := incRec.MetaID.Pulse()
+		indexes.ForIDMock.Inspect(func(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) {
+			assert.Equal(t, pn, insolar.PulseNumber(currentPulse))
+			assert.Equal(t, objectID, objID)
+		}).Return(record.Index{
+			ObjID: objectID,
+			Lifeline: record.Lifeline{
+				LatestRequest:       &incRec2.MetaID,
+				EarliestOpenRequest: &earliestPending,
+			},
+		}, nil)
+
+		// searching before EarliestOpenRequest
+		info, err := calculator.RequestInfo(ctx, objectID, reasonRec.RecordID, insolar.PulseNumber(currentPulse))
+		require.NoError(t, err)
+		assert.Equal(t, info.Request.RecordID, reasonRec.RecordID)
+		assert.Nil(t, info.Result)
+
+		// searching after EarliestOpenRequest
+		info, err = calculator.RequestInfo(ctx, objectID, incRec2.RecordID, insolar.PulseNumber(currentPulse))
+		require.NoError(t, err)
+		assert.Equal(t, info.Request.RecordID, incRec2.RecordID)
+		assert.Nil(t, info.Result)
+	})
+
+	t.Run("request is oldest opened mutable", func(t *testing.T) {
+		resetComponents()
+		defer mc.Finish()
+
+		objectID := gen.IDWithPulse(pulse.MinTimePulse)
+		objRef := insolar.NewReference(objectID)
+
+		currentPulse := pulse.MinTimePulse + 100
+		b := newFilamentBuilder(ctx, pcs, records)
+		// closed mutable
+		reasonRec := b.Append(pulse.MinTimePulse+1, &record.IncomingRequest{
+			Nonce:     rand.Uint64(),
+			Object:    objRef,
+			Immutable: false,
+		})
+		b.Append(pulse.MinTimePulse+1, &record.Result{
+			Request: *insolar.NewReference(reasonRec.RecordID),
+			Object:  objectID,
+		})
+		// opened immutable, in EarliestOpenRequest index
+		incRec := b.Append(pulse.MinTimePulse+2, &record.IncomingRequest{
+			Nonce:     rand.Uint64(),
+			Object:    objRef,
+			Immutable: true,
+		})
+
+		// oldest
+		incRec2 := b.Append(pulse.MinTimePulse+2, &record.IncomingRequest{
+			Nonce:     rand.Uint64(),
+			Object:    objRef,
+			Immutable: false,
+		})
+
+		earliestPending := incRec.MetaID.Pulse()
+		indexes.ForIDMock.Inspect(func(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) {
+			assert.Equal(t, pn, insolar.PulseNumber(currentPulse))
+			assert.Equal(t, objectID, objID)
+		}).Return(record.Index{
+			ObjID: objectID,
+			Lifeline: record.Lifeline{
+				LatestRequest:       &incRec2.MetaID,
+				EarliestOpenRequest: &earliestPending,
+			},
+		}, nil)
+
+		// searching before EarliestOpenRequest
+		info, err := calculator.RequestInfo(ctx, objectID, incRec2.RecordID, insolar.PulseNumber(currentPulse))
+		require.NoError(t, err)
+		assert.Equal(t, info.Request.RecordID, incRec2.RecordID)
+		assert.Nil(t, info.Result)
+		assert.True(t, info.OldestMutable)
+	})
+
+	t.Run("request is opened immutable, oldest=false", func(t *testing.T) {
+		resetComponents()
+		defer mc.Finish()
+
+		objectID := gen.IDWithPulse(pulse.MinTimePulse)
+		objRef := insolar.NewReference(objectID)
+
+		currentPulse := pulse.MinTimePulse + 100
+		b := newFilamentBuilder(ctx, pcs, records)
+		// closed mutable
+		reasonRec := b.Append(pulse.MinTimePulse+1, &record.IncomingRequest{
+			Nonce:     rand.Uint64(),
+			Object:    objRef,
+			Immutable: false,
+		})
+		b.Append(pulse.MinTimePulse+1, &record.Result{
+			Request: *insolar.NewReference(reasonRec.RecordID),
+			Object:  objectID,
+		})
+		// opened immutable, in EarliestOpenRequest index
+		incRec := b.Append(pulse.MinTimePulse+2, &record.IncomingRequest{
+			Nonce:     rand.Uint64(),
+			Object:    objRef,
+			Immutable: true,
+		})
+
+		// oldest here
+		incRec2 := b.Append(pulse.MinTimePulse+2, &record.IncomingRequest{
+			Nonce:     rand.Uint64(),
+			Object:    objRef,
+			Immutable: false,
+		})
+
+		earliestPending := incRec.MetaID.Pulse()
+		indexes.ForIDMock.Inspect(func(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) {
+			assert.Equal(t, pn, insolar.PulseNumber(currentPulse))
+			assert.Equal(t, objectID, objID)
+		}).Return(record.Index{
+			ObjID: objectID,
+			Lifeline: record.Lifeline{
+				LatestRequest:       &incRec2.MetaID,
+				EarliestOpenRequest: &earliestPending,
+			},
+		}, nil)
+
+		// searching before EarliestOpenRequest
+		info, err := calculator.RequestInfo(ctx, objectID, incRec.RecordID, insolar.PulseNumber(currentPulse))
+		require.NoError(t, err)
+		assert.Equal(t, info.Request.RecordID, incRec.RecordID)
+		assert.Nil(t, info.Result)
+		assert.False(t, info.OldestMutable)
+	})
+
+	t.Run("request not found returns error", func(t *testing.T) {
+		resetComponents()
+		defer mc.Finish()
+
+		objectID := gen.IDWithPulse(pulse.MinTimePulse)
+		objRef := insolar.NewReference(objectID)
+
+		currentPulse := pulse.MinTimePulse + 100
+		b := newFilamentBuilder(ctx, pcs, records)
+		// opened immutable, it is in EarliestOpenRequest index
+		incRec := b.Append(pulse.MinTimePulse+2, &record.IncomingRequest{
+			Nonce:     rand.Uint64(),
+			Object:    objRef,
+			Immutable: true,
+		})
+
+		earliestPending := incRec.MetaID.Pulse()
+		indexes.ForIDMock.Inspect(func(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) {
+			assert.Equal(t, pn, insolar.PulseNumber(currentPulse))
+			assert.Equal(t, objectID, objID)
+		}).Return(record.Index{
+			ObjID: objectID,
+			Lifeline: record.Lifeline{
+				LatestRequest:       &incRec.MetaID,
+				EarliestOpenRequest: &earliestPending,
+			},
+		}, nil)
+
+		// searching before EarliestOpenRequest
+		_, err := calculator.RequestInfo(ctx, objectID, gen.ID(), insolar.PulseNumber(currentPulse))
+		require.Error(t, err)
+		insError, ok := errors.Cause(err).(*payload.CodedError)
+		require.True(t, ok)
+		require.Equal(t, uint32(payload.CodeRequestNotFound), insError.GetCode())
 	})
 }
 

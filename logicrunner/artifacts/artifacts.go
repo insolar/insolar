@@ -50,11 +50,11 @@ type Client interface {
 	// This method is used by VM to fetch code for execution.
 	GetCode(ctx context.Context, ref insolar.Reference) (CodeDescriptor, error)
 
-	// GetObject returns descriptor for provided state.
-	//
-	// If provided state is nil, the latest state will be returned (with deactivation check). Returned descriptor will
-	// provide methods for fetching all related data.
+	// GetObject returns object descriptor for the latest state.
 	GetObject(ctx context.Context, head insolar.Reference, request *insolar.Reference) (ObjectDescriptor, error)
+
+	// GetPrototype returns prototype descriptor.
+	GetPrototype(ctx context.Context, head insolar.Reference) (PrototypeDescriptor, error)
 
 	// DeployCode creates new code record in storage.
 	//
@@ -73,8 +73,8 @@ type Client interface {
 
 	// InjectCodeDescriptor injects code descriptor needed by builtin contracts
 	InjectCodeDescriptor(insolar.Reference, CodeDescriptor)
-	// InjectObjectDescriptor injects object descriptor needed by builtin contracts (to store prototypes)
-	InjectObjectDescriptor(insolar.Reference, ObjectDescriptor)
+	// InjectPrototypeDescriptor injects object descriptor needed by builtin contracts (to store prototypes)
+	InjectPrototypeDescriptor(insolar.Reference, PrototypeDescriptor)
 	// InjectFinish finalizes all injects, all next injects will panic
 	InjectFinish()
 }
@@ -106,26 +106,28 @@ type ObjectDescriptor interface {
 	// Memory fetches object memory from storage.
 	Memory() []byte
 
-	// IsPrototype determines if the object is a prototype.
-	IsPrototype() bool
-
-	// Code returns code reference.
-	Code() (*insolar.Reference, error)
-
 	// Prototype returns prototype reference.
 	Prototype() (*insolar.Reference, error)
 
-	// ChildPointer returns the latest child for this object.
-	ChildPointer() *insolar.ID
-
 	// Parent returns object's parent.
 	Parent() *insolar.Reference
+
+	// EarliestRequestID returns latest requestID for this object
+	EarliestRequestID() *insolar.ID
 }
 
-// RefIterator is used for iteration over affined children(parts) of container.
-type RefIterator interface {
-	Next() (*insolar.Reference, error)
-	HasNext() bool
+//go:generate minimock -i github.com/insolar/insolar/logicrunner/artifacts.PrototypeDescriptor -o ./ -s _mock.go -g
+
+// PrototypeDescriptor represents meta info required to fetch all prototype data.
+type PrototypeDescriptor interface {
+	// HeadRef returns head reference to represented object record.
+	HeadRef() *insolar.Reference
+
+	// StateID returns reference to object state record.
+	StateID() *insolar.ID
+
+	// Code returns code reference.
+	Code() *insolar.Reference
 }
 
 //go:generate minimock -i github.com/insolar/insolar/logicrunner/artifacts.DescriptorsCache -o ./ -s _mock.go -g
@@ -133,9 +135,9 @@ type RefIterator interface {
 // DescriptorsCache provides convenient way to get prototype and code descriptors
 // of objects without fetching them twice
 type DescriptorsCache interface {
-	ByPrototypeRef(ctx context.Context, protoRef insolar.Reference) (ObjectDescriptor, CodeDescriptor, error)
-	ByObjectDescriptor(ctx context.Context, obj ObjectDescriptor) (ObjectDescriptor, CodeDescriptor, error)
-	GetPrototype(ctx context.Context, ref insolar.Reference) (ObjectDescriptor, error)
+	ByPrototypeRef(ctx context.Context, protoRef insolar.Reference) (PrototypeDescriptor, CodeDescriptor, error)
+	ByObjectDescriptor(ctx context.Context, obj ObjectDescriptor) (PrototypeDescriptor, CodeDescriptor, error)
+	GetPrototype(ctx context.Context, ref insolar.Reference) (PrototypeDescriptor, error)
 	GetCode(ctx context.Context, ref insolar.Reference) (CodeDescriptor, error)
 }
 

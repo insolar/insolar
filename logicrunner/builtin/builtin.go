@@ -61,7 +61,7 @@ func NewBuiltIn(am artifacts.Client, stub LogicRunnerRPCStub) *BuiltIn {
 
 	prototypeDescriptors := InitializePrototypeDescriptors()
 	for _, prototypeDescriptor := range prototypeDescriptors {
-		am.InjectObjectDescriptor(*prototypeDescriptor.HeadRef(), prototypeDescriptor)
+		am.InjectPrototypeDescriptor(*prototypeDescriptor.HeadRef(), prototypeDescriptor)
 	}
 
 	lrCommon.CurrentProxyCtx = NewProxyHelper(stub)

@@ -25,8 +25,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/payload"
-	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/common"
 )
 
@@ -46,7 +44,6 @@ type ExecutionRegistry interface {
 	Length() int
 	IsEmpty() bool
 	OnPulse(ctx context.Context) []payload.Payload
-	FindRequestLoop(ctx context.Context, reqRef insolar.Reference, apiRequestID string) bool
 	GetActiveTranscript(req insolar.Reference) *common.Transcript
 }
 
@@ -133,28 +130,6 @@ func (r *executionRegistry) OnPulse(_ context.Context) []payload.Payload {
 		})
 	}
 	return messages
-}
-
-func (r *executionRegistry) FindRequestLoop(ctx context.Context, reqRef insolar.Reference, apiRequestID string) bool {
-	r.registryLock.Lock()
-	defer r.registryLock.Unlock()
-
-	if _, ok := r.registry[reqRef]; ok {
-		// we're executing this request right now
-		// de-duplication should deal with this case
-		inslogger.FromContext(ctx).Info("already executing exactly this request")
-		return false
-	}
-
-	for _, transcript := range r.registry {
-		req := transcript.Request
-		if req.APIRequestID == apiRequestID && req.ReturnMode != record.ReturnSaga {
-			inslogger.FromContext(ctx).Error("execution loop detected with request ", transcript.RequestRef.String())
-			return true
-		}
-	}
-
-	return false
 }
 
 func (r *executionRegistry) GetActiveTranscript(request insolar.Reference) *common.Transcript {

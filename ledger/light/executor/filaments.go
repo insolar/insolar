@@ -86,10 +86,15 @@ type FilamentCalculator interface {
 		requestID insolar.ID,
 		pulse insolar.PulseNumber,
 	) (
-		foundRequest *record.CompositeFilamentRecord,
-		foundResult *record.CompositeFilamentRecord,
+		requestInfo FilamentsRequestInfo,
 		err error,
 	)
+}
+
+type FilamentsRequestInfo struct {
+	Request       *record.CompositeFilamentRecord
+	Result        *record.CompositeFilamentRecord
+	OldestMutable bool
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.FilamentCleaner -o ./ -s _mock.go -g
@@ -228,7 +233,7 @@ func (c *FilamentCalculatorDefault) OpenedRequests(ctx context.Context, pulse in
 		}
 	}
 
-	// We need to reverse opened because we iterated from the end when selecting them.
+	// We need to reverse opened to time-ascending because we iterated from the end when selecting them.
 	ordered := make([]record.CompositeFilamentRecord, len(opened))
 	count := len(opened)
 	for i, pend := range opened {
@@ -401,8 +406,7 @@ func (c *FilamentCalculatorDefault) RequestInfo(
 	requestID insolar.ID,
 	pulse insolar.PulseNumber,
 ) (
-	*record.CompositeFilamentRecord,
-	*record.CompositeFilamentRecord,
+	FilamentsRequestInfo,
 	error,
 ) {
 	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
@@ -415,11 +419,11 @@ func (c *FilamentCalculatorDefault) RequestInfo(
 
 	idx, err := c.indexes.ForID(ctx, pulse, objectID)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, fmt.Sprintf("object: %s", objectID.DebugString()))
+		return FilamentsRequestInfo{}, errors.Wrap(err, fmt.Sprintf("object: %s", objectID.DebugString()))
 	}
 
 	if idx.Lifeline.LatestRequest == nil {
-		return nil, nil, errors.Wrap(err, "latest request in lifeline is empty")
+		return FilamentsRequestInfo{}, errors.New("latest request in lifeline is empty")
 	}
 
 	logger.Debugf("latest request from index %s", idx.Lifeline.LatestRequest.DebugString())
@@ -428,42 +432,83 @@ func (c *FilamentCalculatorDefault) RequestInfo(
 	cache.Lock()
 	defer cache.Unlock()
 
+	// Select the min pulse to we can search for closed requests
+	var minPulse insolar.PulseNumber
+	if idx.Lifeline.EarliestOpenRequest != nil && *idx.Lifeline.EarliestOpenRequest <= requestID.GetPulseNumber() {
+		minPulse = *idx.Lifeline.EarliestOpenRequest
+	} else {
+		minPulse = requestID.GetPulseNumber()
+	}
+
 	iter := newFetchingIterator(
 		ctx,
 		cache,
 		objectID,
 		*idx.Lifeline.LatestRequest,
-		requestID.Pulse(),
+		minPulse,
 		c.jetFetcher,
 		c.coordinator,
 		c.sender,
 	)
 
-	var foundRequest *record.CompositeFilamentRecord
-	var foundResult *record.CompositeFilamentRecord
+	var foundRequestInfo FilamentsRequestInfo
+	foundRequestInfo.OldestMutable = true
+	closedRequests := map[insolar.ID]struct{}{}
+
+	isMutableRequest := func(virtual record.Record) bool {
+		if in, ok := virtual.(*record.IncomingRequest); ok && !in.Immutable {
+			return true
+		}
+		return false
+	}
 
 	for iter.HasPrev() {
 		rec, err := iter.Prev(ctx)
 		if err != nil {
-			return nil, nil, errors.Wrap(err, "failed to calculate filament")
+			return FilamentsRequestInfo{}, errors.Wrap(err, "failed to calculate filament")
 		}
+		virtual := record.Unwrap(&rec.Record.Virtual)
 
 		if rec.RecordID == requestID {
-			foundRequest = &rec
+			foundRequestInfo.Request = &rec
 			logger.Debugf("found request %s", rec.RecordID.DebugString())
+			// if immutable found, we can don't need to search deeper
+			if !isMutableRequest(virtual) {
+				foundRequestInfo.OldestMutable = false
+				return foundRequestInfo, nil
+			}
+			continue
 		}
 
-		virtual := record.Unwrap(&rec.Record.Virtual)
 		if r, ok := virtual.(*record.Result); ok {
+			closedRequests[*r.Request.GetLocal()] = struct{}{}
 
 			if *r.Request.GetLocal() == requestID {
-				foundResult = &rec
+				foundRequestInfo.Result = &rec
 				logger.Debugf("found result %s", rec.RecordID.DebugString())
+			}
+		}
+
+		// request found, check if we have another opened mutable incoming older than that
+		if foundRequestInfo.Request != nil {
+			if _, ok := closedRequests[rec.RecordID]; !ok {
+				if isMutableRequest(virtual) {
+					foundRequestInfo.OldestMutable = false
+					logger.Debugf("found oldest %s", rec.RecordID.DebugString())
+				}
 			}
 		}
 	}
 
-	return foundRequest, foundResult, nil
+	if foundRequestInfo.Request == nil {
+		return FilamentsRequestInfo{},
+			&payload.CodedError{
+				Text: fmt.Sprintf("requestInfo not found request %s", requestID.DebugString()),
+				Code: payload.CodeRequestNotFound,
+			}
+	}
+
+	return foundRequestInfo, nil
 }
 
 func (c *FilamentCalculatorDefault) ClearIfLonger(objID insolar.ID, limit int) {
