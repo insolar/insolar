@@ -55,7 +55,7 @@ func (mi *methodInstrumenter) end() {
 	code := "2xx"
 	if mi.errlink != nil && *mi.errlink != nil && *mi.errlink != flow.ErrCancelled {
 		code = "5xx"
-		inslog.Error(*mi.errlink)
+		inslog.Debug("Failed to execute: ", *mi.errlink)
 	}
 
 	ctx := insmetrics.InsertTag(mi.ctx, tagMethod, mi.name)
