@@ -50,6 +50,7 @@ const immutableExecutionLimit = 30
 
 type ExecutionBrokerI interface {
 	HasMoreRequests(ctx context.Context)
+
 	AbandonedRequestsOnLedger(ctx context.Context)
 	NoMoreRequestsOnLedger(ctx context.Context)
 
@@ -213,6 +214,7 @@ func (q *ExecutionBroker) startProcessor(ctx context.Context) {
 				}
 				if tr == nil {
 					q.NoMoreRequestsOnLedger(ctx)
+					return
 				}
 				if q.upsertToDuplicationTable(ctx, tr) {
 					continue
