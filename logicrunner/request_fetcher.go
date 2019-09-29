@@ -18,6 +18,7 @@ package logicrunner
 
 import (
 	"context"
+	"sync"
 
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
@@ -40,6 +41,7 @@ type RequestFetcher interface {
 type requestFetcher struct {
 	object insolar.Reference
 
+	aborted      chan struct{}
 	stopFetching func()
 
 	broker           ExecutionBrokerI
@@ -50,12 +52,15 @@ type requestFetcher struct {
 func NewRequestsFetcher(
 	obj insolar.Reference, am artifacts.Client, br ExecutionBrokerI, os OutgoingRequestSender,
 ) RequestFetcher {
+	aborted := make(chan struct{})
+	once := sync.Once{}
 	return &requestFetcher{
 		object:           obj,
 		broker:           br,
 		artifactsManager: am,
 		outgoingsSender:  os,
-		stopFetching:     func() {},
+		aborted:          aborted,
+		stopFetching:     func() { once.Do(func() { close(aborted) }) },
 	}
 }
 
@@ -63,12 +68,17 @@ func (rf *requestFetcher) Abort(ctx context.Context) {
 	rf.stopFetching()
 }
 
+func (rf *requestFetcher) isAborted() bool {
+	select {
+	case <-rf.aborted:
+		return true
+	default:
+		return false
+	}
+}
+
 func (rf *requestFetcher) FetchPendings(ctx context.Context, trs chan<- *common.Transcript) {
 	defer close(trs)
-
-	ctx, cancelFunc := context.WithCancel(ctx)
-	defer cancelFunc()
-	rf.stopFetching = cancelFunc
 
 	ctx, logger := inslogger.WithFields(ctx, map[string]interface{}{
 		"object": rf.object.String(),
@@ -110,11 +120,9 @@ func (rf *requestFetcher) fetch(ctx context.Context, trs chan<- *common.Transcri
 				return errors.Wrap(err, "couldn't get request")
 			}
 
-			select {
-			case <-ctx.Done():
-				logger.Debug("request fetcher stopping")
+			if rf.isAborted() {
+				logger.Debug("request fetcher was aborted, not returning request")
 				return nil
-			default:
 			}
 
 			switch v := request.(type) {
