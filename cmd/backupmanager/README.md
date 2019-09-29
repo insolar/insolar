@@ -38,7 +38,7 @@ ledger:
     - ./bin/backupmanager merge -n $INSOLAR_CURRENT_BACKUP_DIR/incr.bkp -t ./heavy_backup && touch $INSOLAR_CURRENT_BACKUP_DIR/BACKUPED
 ```
 
-The script should run `backupmanager merge` for a given incremental backup (the path is provided in `$INSOLAR_CURRENT_BACKUP_DIR` environment variable) and the backup directery, created at the first step. When backup is merged the script should create a BACKUPED file in the `$INSOLAR_CURRENT_BACKUP_DIR` directory. When Heavy sees this file it knows that the backup was sucessfuly done and the pulse can be finilized. If necessary the `postprocessbackupcmd` can use `rsync`, `scp`, etc.
+The script should run `backupmanager merge` for a given incremental backup (the path is provided in `$INSOLAR_CURRENT_BACKUP_DIR` environment variable) and the backup directory, created at the first step. When backup is merged the script should create a BACKUPED file in the `$INSOLAR_CURRENT_BACKUP_DIR` directory. When Heavy sees this file it knows that the backup was sucessfuly done and the pulse can be finilized. If necessary the `postprocessbackupcmd` can use `rsync`, `scp`, etc.
 
 To restore the database from a backup run:
 
