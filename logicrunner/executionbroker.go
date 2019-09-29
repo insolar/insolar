@@ -203,8 +203,8 @@ func (q *ExecutionBroker) startProcessor(ctx context.Context) {
 		}()
 		for {
 			select {
-			case tr, closed := <-feed:
-				if closed {
+			case tr, ok := <-feed:
+				if !ok {
 					logger.Debug("fetcher stopped producing, stopping processor")
 
 					select {
