@@ -75,6 +75,18 @@ func (p *SearchIndex) Proceed(ctx context.Context) error {
 	}
 	currentPN := currentP.PulseNumber
 
+	// Until is above heavy's current pulse
+	// It's impossible to find an index
+	if currentPN < searchIndex.Until {
+		msg, err := payload.NewMessage(&payload.SearchIndexInfo{})
+		if err != nil {
+			return errors.Wrap(err, "failed to create reply")
+		}
+
+		p.dep.sender.Reply(ctx, p.meta, msg)
+		return nil
+	}
+
 	var idx *record.Index
 	for currentPN >= searchIndex.Until {
 		savedIdx, err := p.dep.indexes.ForID(ctx, currentPN, *insolar.NewID(currentPN, searchIndex.ObjectID.Hash()))
