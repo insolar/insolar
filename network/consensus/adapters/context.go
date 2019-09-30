@@ -65,7 +65,7 @@ func ConsensusContext(ctx context.Context) context.Context {
 		return logger.Copy().WithFields(map[string]interface{}{
 			"component":  "consensus",
 			"LowLatency": true,
-		}).WithMetrics(insolar.LogMetricsWriteDelayField).Build() // .BuildLowLatency
+		}).WithMetrics(insolar.LogMetricsWriteDelayField).BuildLowLatency()
 	})
 }
 
