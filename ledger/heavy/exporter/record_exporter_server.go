@@ -70,7 +70,6 @@ type RecordServer struct {
 	recordIndex     object.RecordPositionAccessor
 	recordAccessor  object.RecordAccessor
 	jetKeeper       executor.JetKeeper
-	limiter         *OneRequestLimiter
 }
 
 func NewRecordServer(
@@ -78,20 +77,16 @@ func NewRecordServer(
 	recordIndex object.RecordPositionAccessor,
 	recordAccessor object.RecordAccessor,
 	jetKeeper executor.JetKeeper,
-	limiter *OneRequestLimiter,
 ) *RecordServer {
 	return &RecordServer{
 		pulseCalculator: pulseCalculator,
 		recordIndex:     recordIndex,
 		recordAccessor:  recordAccessor,
 		jetKeeper:       jetKeeper,
-		limiter:         limiter,
 	}
 }
 
 func (r *RecordServer) Export(getRecords *GetRecords, stream RecordExporter_ExportServer) error {
-	r.limiter.Take(stream.Context())
-
 	ctx := stream.Context()
 
 	exportStart := time.Now()
