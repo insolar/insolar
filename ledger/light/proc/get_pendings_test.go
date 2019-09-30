@@ -66,7 +66,7 @@ func TestGetPendings_Proceed(t *testing.T) {
 			assert.Equal(t, expectedMsg.Payload, reply.Payload)
 		}).Return()
 
-		p := proc.NewGetPendings(payload.Meta{}, gen.ID(), 1, nil)
+		p := proc.NewGetPendings(payload.Meta{}, gen.ID(), 1, emptyRefs)
 
 		p.Dep(filaments, sender)
 
@@ -170,7 +170,7 @@ func TestGetPendings_Proceed(t *testing.T) {
 		}).Return()
 
 		p := proc.NewGetPendings(payload.Meta{}, gen.ID(), 2, []insolar.ID{Pending0, Pending1})
-		p.Dep(filaments,  sender)
+		p.Dep(filaments, sender)
 
 		err := p.Proceed(ctx)
 		assert.NoError(t, err)
