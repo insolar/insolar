@@ -54,7 +54,7 @@ func (w *Wallet) GetAccount(assetName string) (*insolar.Reference, error) {
 	if !ok {
 		return nil, fmt.Errorf("asset not found: %s", assetName)
 	}
-	return insolar.NewReferenceFromBase58(accountReference)
+	return insolar.NewObjectReferenceFromBase58(accountReference)
 }
 
 // Transfer transfers money to given wallet.
@@ -93,7 +93,7 @@ func (w *Wallet) GetDeposits() ([]interface{}, error) {
 	result := []interface{}{}
 	for _, dRef := range w.Deposits {
 
-		reference, err := insolar.NewReferenceFromBase58(dRef)
+		reference, err := insolar.NewObjectReferenceFromBase58(dRef)
 		if err != nil {
 			return nil, err
 		}
@@ -113,7 +113,7 @@ func (w *Wallet) GetDeposits() ([]interface{}, error) {
 // ins:immutable
 func (w *Wallet) FindDeposit(transactionHash string) (bool, *insolar.Reference, error) {
 	if depositReferenceStr, ok := w.Deposits[transactionHash]; ok {
-		depositReference, _ := insolar.NewReferenceFromBase58(depositReferenceStr)
+		depositReference, _ := insolar.NewObjectReferenceFromBase58(depositReferenceStr)
 		return true, depositReference, nil
 	}
 

@@ -31,7 +31,7 @@ import (
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = insolar.NewReferenceFromBase58("{{ .ClassReference }}")
+var PrototypeReference, _ = insolar.NewObjectReferenceFromBase58("{{ .ClassReference }}")
 
 
 // {{ .ContractType }} holds proxy type

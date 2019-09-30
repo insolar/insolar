@@ -178,7 +178,7 @@ func (mA *MigrationAdmin) GetDepositParameters() (*VestingParams, error) {
 // ins:immutable
 func (mA *MigrationAdmin) GetMigrationDaemonByMemberRef(memberRef string) (insolar.Reference, error) {
 
-	migrationDaemonMemberRef, err := insolar.NewReferenceFromBase58(memberRef)
+	migrationDaemonMemberRef, err := insolar.NewObjectReferenceFromBase58(memberRef)
 	if err != nil {
 		return insolar.Reference{}, fmt.Errorf(" failed to parse params.Reference")
 	}
@@ -206,7 +206,7 @@ func (mA *MigrationAdmin) GetMemberByMigrationAddress(migrationAddress string) (
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get reference in shard")
 	}
-	ref, err := insolar.NewReferenceFromBase58(refStr)
+	ref, err := insolar.NewObjectReferenceFromBase58(refStr)
 	if err != nil {
 		return nil, errors.Wrap(err, "bad member reference for this migration address")
 	}
