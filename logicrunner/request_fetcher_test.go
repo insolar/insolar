@@ -34,18 +34,18 @@ import (
 )
 
 func TestRequestsFetcher_New(t *testing.T) {
-	rf := NewRequestsFetcher(gen.Reference(), nil, nil, nil)
+	rf := NewRequestsFetcher(gen.Reference(), nil, nil)
 	require.NotNil(t, rf)
 }
 
 func TestRequestsFetcher_FetchPendings(t *testing.T) {
 	tests := []struct {
 		name  string
-		mocks func(t minimock.Tester) (insolar.Reference, artifacts.Client, ExecutionBrokerI)
+		mocks func(t minimock.Tester) (insolar.Reference, artifacts.Client)
 	}{
 		{
 			name: "success",
-			mocks: func(t minimock.Tester) (insolar.Reference, artifacts.Client, ExecutionBrokerI) {
+			mocks: func(t minimock.Tester) (insolar.Reference, artifacts.Client) {
 
 				requestRef := gen.RecordReference()
 				incoming := genIncomingRequest()
@@ -60,9 +60,7 @@ func TestRequestsFetcher_FetchPendings(t *testing.T) {
 				}).
 					GetRequestMock.Return(incoming, nil)
 
-				broker := NewExecutionBrokerIMock(t).NoMoreRequestsOnLedgerMock.Return()
-
-				return *incoming.Object, am, broker
+				return *incoming.Object, am
 			},
 		},
 	}
@@ -74,8 +72,8 @@ func TestRequestsFetcher_FetchPendings(t *testing.T) {
 			defer mc.Finish()
 			defer mc.Wait(1 * time.Minute)
 
-			obj, am, br := test.mocks(mc)
-			rf := NewRequestsFetcher(obj, am, br, nil)
+			obj, am := test.mocks(mc)
+			rf := NewRequestsFetcher(obj, am, nil)
 			feed := rf.FetchPendings(ctx)
 			wg := &sync.WaitGroup{}
 			wg.Add(1)
@@ -87,7 +85,9 @@ func TestRequestsFetcher_FetchPendings(t *testing.T) {
 				wg.Done()
 			}()
 			wg.Wait()
-			assert.Equal(t, 1, len(result))
+			assert.Equal(t, 2, len(result))
+			assert.NotEqual(t, nil, result[0])
+			assert.Equal(t, (*common.Transcript)(nil), result[1])
 		})
 	}
 }

@@ -186,7 +186,7 @@ func (q *ExecutionBroker) startProcessor(ctx context.Context) {
 
 	logger.Debug("starting requests processor")
 
-	fetcher := NewRequestsFetcher(q.Ref, q.artifactsManager, q, q.outgoingSender)
+	fetcher := NewRequestsFetcher(q.Ref, q.artifactsManager, q.outgoingSender)
 	feedMutable := make(chan *common.Transcript, 10)
 	feedImmutable := make(chan *common.Transcript, 10)
 	transcriptFeed := fetcher.FetchPendings(ctx)
@@ -204,12 +204,15 @@ func (q *ExecutionBroker) startProcessor(ctx context.Context) {
 						logger.Debug("had request since last fetch, reset fetcher")
 
 						fetcher.Abort(ctx)
-						fetcher = NewRequestsFetcher(q.Ref, q.artifactsManager, q, q.outgoingSender)
+						fetcher = NewRequestsFetcher(q.Ref, q.artifactsManager, q.outgoingSender)
 						transcriptFeed = fetcher.FetchPendings(ctx)
 						continue
 					case <-q.closed:
 						return
 					}
+				}
+				if tr == nil {
+					q.NoMoreRequestsOnLedger(ctx)
 				}
 				if q.upsertToDuplicationTable(ctx, tr) {
 					continue

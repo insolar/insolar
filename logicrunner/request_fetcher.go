@@ -45,19 +45,17 @@ type requestFetcher struct {
 	stopFetching func()
 	skipSlice    []insolar.ID
 
-	broker           ExecutionBrokerI
 	artifactsManager artifacts.Client
 	outgoingsSender  OutgoingRequestSender
 }
 
 func NewRequestsFetcher(
-	obj insolar.Reference, am artifacts.Client, br ExecutionBrokerI, os OutgoingRequestSender,
+	obj insolar.Reference, am artifacts.Client, os OutgoingRequestSender,
 ) RequestFetcher {
 	aborted := make(chan struct{})
 	once := sync.Once{}
 	return &requestFetcher{
 		object:           obj,
-		broker:           br,
 		artifactsManager: am,
 		outgoingsSender:  os,
 		aborted:          aborted,
@@ -117,7 +115,7 @@ func (rf *requestFetcher) fetch(ctx context.Context, trs chan<- *common.Transcri
 		if err != nil {
 			if err == insolar.ErrNoPendingRequest {
 				logger.Debug("no more pendings on ledger")
-				rf.broker.NoMoreRequestsOnLedger(ctx)
+				trs <- nil
 				return nil
 			}
 			return err
