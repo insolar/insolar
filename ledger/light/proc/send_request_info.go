@@ -85,10 +85,6 @@ func (p *SendRequestInfo) Proceed(ctx context.Context) error {
 	})
 	logger.Debug("send request info started")
 
-	// Prevent concurrent object modifications.
-	p.dep.locker.Lock(p.objectID)
-	defer p.dep.locker.Unlock(p.objectID)
-
 	var (
 		reqBuf []byte
 		resBuf []byte
