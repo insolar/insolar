@@ -76,7 +76,7 @@ func TestSearchIndex_Proceed(t *testing.T) {
 	})
 
 	resetComponents()
-	t.Run("fails if until is bigger than current pulse", func(t *testing.T) {
+	t.Run("not fails if until is bigger than current pulse", func(t *testing.T) {
 		msg := payload.SearchIndex{
 			Until: pulse_core.MinTimePulse + 1,
 		}
@@ -84,11 +84,22 @@ func TestSearchIndex_Proceed(t *testing.T) {
 		require.NoError(t, err)
 		receivedMeta := payload.Meta{Payload: buf}
 		p := newProc(receivedMeta)
+		sender.ReplyMock.Set(func(_ context.Context, origin payload.Meta, rep *message.Message) {
+			require.Equal(t, receivedMeta, origin)
+
+			resp, err := payload.Unmarshal(rep.Payload)
+			require.NoError(t, err)
+
+			res, ok := resp.(*payload.SearchIndexInfo)
+			require.True(t, ok)
+
+			require.Nil(t, res.Index)
+		})
 
 		pulseAccessor.LatestMock.Return(*insolar.GenesisPulse, nil)
 
 		err = p.Proceed(ctx)
-		require.Error(t, err)
+		require.NoError(t, err)
 
 		mc.Finish()
 	})
