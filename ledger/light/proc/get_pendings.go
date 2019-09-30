@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/light/executor"
 )
 
@@ -60,11 +61,18 @@ func (p *GetPendings) Proceed(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to calculate pending")
 	}
+	logger := inslogger.FromContext(ctx)
 	if len(pendings) == 0 {
-		return &payload.CodedError{
+		errMsg, errErr := payload.NewMessage(&payload.Error{
 			Text: insolar.ErrNoPendingRequest.Error(),
 			Code: payload.CodeNoPendings,
+		})
+		if errErr != nil {
+			logger.Error("Failed to return error reply: ", errErr.Error())
+			return errErr
 		}
+		p.dep.sender.Reply(ctx, p.message, errMsg)
+		return nil
 	}
 
 	var ids []insolar.ID
@@ -73,6 +81,19 @@ func (p *GetPendings) Proceed(ctx context.Context) error {
 			break
 		}
 		ids = append(ids, pend.RecordID)
+	}
+
+	if len(ids) == 0 {
+		errMsg, errErr := payload.NewMessage(&payload.Error{
+			Text: insolar.ErrNoPendingRequest.Error(),
+			Code: payload.CodeNoPendings,
+		})
+		if errErr != nil {
+			logger.Error("Failed to return error reply: ", errErr.Error())
+			return errErr
+		}
+		p.dep.sender.Reply(ctx, p.message, errMsg)
+		return nil
 	}
 
 	msg, err := payload.NewMessage(&payload.IDs{

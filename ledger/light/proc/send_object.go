@@ -159,7 +159,7 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 		}
 		var node insolar.Reference
 		if onHeavy {
-			inslogger.FromContext(ctx).Warnf("State not found on light. Go to heavy. StateID:%v, CurrentPN:%v", stateID.DebugString(), flow.Pulse(ctx))
+			inslogger.FromContext(ctx).Infof("State not found on light. Go to heavy. StateID:%v, CurrentPN:%v", stateID.DebugString(), flow.Pulse(ctx))
 			h, err := p.dep.coordinator.Heavy(ctx)
 			if err != nil {
 				return errors.Wrap(err, "failed to calculate heavy")
@@ -167,7 +167,7 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 			node = *h
 			span.Annotate(nil, fmt.Sprintf("Send StateID:%v to heavy", stateID.DebugString()))
 		} else {
-			inslogger.FromContext(ctx).Warnf("State not found on light. Go to light. StateID:%v, CurrentPN:%v", stateID.DebugString(), flow.Pulse(ctx))
+			inslogger.FromContext(ctx).Infof("State not found on light. Go to light. StateID:%v, CurrentPN:%v", stateID.DebugString(), flow.Pulse(ctx))
 			jetID, err := p.dep.jetFetcher.Fetch(ctx, p.objectID, stateID.Pulse())
 			if err != nil {
 				return errors.Wrap(err, "failed to fetch jet")
