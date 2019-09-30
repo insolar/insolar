@@ -50,6 +50,7 @@ func TestGetPendings_Proceed(t *testing.T) {
 		sender = bus.NewSenderMock(mc)
 	}
 
+	emptyRefs := make([]insolar.ID, 0)
 	t.Run("ok, pendings is empty", func(t *testing.T) {
 		setup()
 		defer mc.Finish()
@@ -65,7 +66,8 @@ func TestGetPendings_Proceed(t *testing.T) {
 			assert.Equal(t, expectedMsg.Payload, reply.Payload)
 		}).Return()
 
-		p := proc.NewGetPendings(payload.Meta{}, gen.ID(), 1)
+		p := proc.NewGetPendings(payload.Meta{}, gen.ID(), 1, nil)
+
 		p.Dep(filaments, sender)
 
 		err := p.Proceed(ctx)
@@ -97,7 +99,7 @@ func TestGetPendings_Proceed(t *testing.T) {
 			assert.Equal(t, expectedMsg.Payload, reply.Payload)
 		}).Return()
 
-		p := proc.NewGetPendings(payload.Meta{}, gen.ID(), 10)
+		p := proc.NewGetPendings(payload.Meta{}, gen.ID(), 10, emptyRefs)
 		p.Dep(filaments, sender)
 
 		err := p.Proceed(ctx)
@@ -129,7 +131,7 @@ func TestGetPendings_Proceed(t *testing.T) {
 			assert.Equal(t, expectedMsg.Payload, reply.Payload)
 		}).Return()
 
-		p := proc.NewGetPendings(payload.Meta{}, gen.ID(), 3)
+		p := proc.NewGetPendings(payload.Meta{}, gen.ID(), 3, emptyRefs)
 		p.Dep(filaments, sender)
 
 		err := p.Proceed(ctx)
