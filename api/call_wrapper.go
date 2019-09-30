@@ -50,7 +50,7 @@ func wrapCall(ctx context.Context, runner *Runner, allowedMethods map[string]boo
 
 	_, ok := allowedMethods[args.CallSite]
 	if !ok {
-		logger.Infof("CallSite '%s' is not in list of allowed methods", args.CallSite)
+		logger.Warnf("CallSite '%s' is not in list of allowed methods", args.CallSite)
 		instr.SetError(errors.New(MethodNotFoundErrorMessage), MethodNotFoundErrorShort)
 		return &json2.Error{
 			Code:    MethodNotFoundError,
