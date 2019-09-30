@@ -81,7 +81,24 @@ func (i *IndexStorageMemory) Set(ctx context.Context, pn insolar.PulseNumber, bu
 	if !ok {
 		i.buckets[pn] = map[insolar.ID]*record.Index{}
 	}
+	i.set(ctx, pn, bucket)
+}
 
+func (i *IndexStorageMemory) SetIfNone(ctx context.Context, pn insolar.PulseNumber, bucket record.Index) {
+	i.bucketsLock.Lock()
+	defer i.bucketsLock.Unlock()
+
+	_, ok := i.buckets[pn]
+	if !ok {
+		i.buckets[pn] = map[insolar.ID]*record.Index{}
+	}
+	if _, ok := i.buckets[pn][bucket.ObjID]; ok {
+		return
+	}
+	i.set(ctx, pn, bucket)
+}
+
+func (i *IndexStorageMemory) set(ctx context.Context, pn insolar.PulseNumber, bucket record.Index) {
 	if i.buckets[pn][bucket.ObjID] != nil {
 		savedBuck := i.buckets[pn][bucket.ObjID]
 		if savedBuck.LifelineLastUsed > bucket.LifelineLastUsed {
@@ -123,11 +140,8 @@ func (i *IndexStorageMemory) Set(ctx context.Context, pn insolar.PulseNumber, bu
 
 	if _, ok := i.buckets[pn][bucket.ObjID]; !ok {
 		stats.Record(ctx, statIndexesAddedCount.M(1))
-
 	}
-
 	i.buckets[pn][bucket.ObjID] = &bucket
-
 }
 
 // DeleteForPN deletes all buckets for a provided pulse number

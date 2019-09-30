@@ -90,7 +90,6 @@ func NewDependencies(
 		},
 		EnsureIndex: func(p *EnsureIndex) {
 			p.Dep(
-				indexLocker,
 				indexStorage,
 				jetCoordinator,
 				sender,
