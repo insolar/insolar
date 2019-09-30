@@ -166,6 +166,18 @@ func newMigrationScenarios(out io.Writer, insSDK *sdk.SDK, concurrent int, repet
 	}
 }
 
+func newDepositTransferScenarios(out io.Writer, insSDK *sdk.SDK, concurrent int, repetitions int) benchmark {
+	return benchmark{
+		scenario: &depositTransferScenario{
+			insSDK: insSDK,
+		},
+		concurrent:  concurrent,
+		repetitions: repetitions,
+		name:        "DepositTransfer",
+		out:         out,
+	}
+}
+
 func startScenario(ctx context.Context, b benchmark) {
 	err := b.scenario.canBeStarted()
 	check(fmt.Sprintf("Scenario %s can not be started:", b.getName()), err)
@@ -470,6 +482,8 @@ func switchScenario(out io.Writer, insSDK *sdk.SDK) benchmark {
 			}
 		}
 		b = newMigrationScenarios(out, insSDK, concurrent, repetitions)
+	case "depositTransfer":
+		b = newDepositTransferScenarios(out, insSDK, concurrent, repetitions)
 	default:
 		b = newTransferDifferentMemberScenarios(out, insSDK, concurrent, repetitions)
 	}

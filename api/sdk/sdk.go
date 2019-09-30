@@ -401,6 +401,36 @@ func (sdk *SDK) Migration(daemon Member, ethTxHash string, amount string, migrat
 	return response.TraceID, nil
 }
 
+// FullMigration method do  migration by all daemons
+func (sdk *SDK) FullMigration(daemons []Member, ethTxHash string, amount string, migrationAddress string) error {
+	for _, d := range daemons {
+		if _, err := sdk.Migration(d, ethTxHash, amount, migrationAddress); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// DepositTransfer method send money from deposit to account
+func (sdk *SDK) DepositTransfer(amount string, member Member, ethTxHash string) (string, error) {
+	userConfig, err := requester.CreateUserConfig(member.GetReference(), member.GetPrivateKey(), member.GetPublicKey())
+	if err != nil {
+		return "", errors.Wrap(err, "failed to create user config for request")
+	}
+	response, err := sdk.DoRequest(
+		sdk.publicAPIURLs,
+		userConfig,
+		"deposit.transfer",
+		map[string]interface{}{"amount": amount, "ethTxHash": ethTxHash},
+	)
+	if err != nil {
+		return "", errors.Wrap(err, "request was failed ")
+	}
+
+	return response.TraceID, nil
+}
+
 func (sdk *SDK) DoRequest(urls *ringBuffer, user *requester.UserConfigJSON, method string, params map[string]interface{}) (*requester.ContractResult, error) {
 	ctx := inslogger.ContextWithTrace(context.Background(), method)
 
