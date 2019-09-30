@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math/big"
+	"strings"
 	"sync"
 
 	"github.com/pkg/errors"
@@ -157,6 +158,18 @@ func (sdk *SDK) GetMigrationDaemonMembers() []Member {
 		}
 	}
 	return r
+}
+
+func (sdk *SDK) GetActivateMigrationDaemonMembers() ([]Member, error) {
+	md := sdk.GetMigrationDaemonMembers()
+	for _, md := range md {
+		_, err := sdk.ActivateDaemon(md.GetReference())
+		if err != nil && !strings.Contains(err.Error(), "[daemon member already activated]") {
+			return nil, errors.Wrap(err, "error while activating daemons: ")
+		}
+	}
+
+	return md, nil
 }
 
 func (sdk *SDK) SetLogLevel(logLevel string) error {
@@ -402,14 +415,12 @@ func (sdk *SDK) Migration(daemon Member, ethTxHash string, amount string, migrat
 }
 
 // FullMigration method do  migration by all daemons
-func (sdk *SDK) FullMigration(daemons []Member, ethTxHash string, amount string, migrationAddress string) error {
-	for _, d := range daemons {
-		if _, err := sdk.Migration(d, ethTxHash, amount, migrationAddress); err != nil {
-			return err
-		}
+func (sdk *SDK) FullMigration(daemons []Member, ethTxHash string, amount string, migrationAddress string) (string, error) {
+	if traceID, err := sdk.Migration(daemons[0], ethTxHash, amount, migrationAddress); err != nil {
+		return traceID, err
 	}
+	return sdk.Migration(daemons[1], ethTxHash, amount, migrationAddress)
 
-	return nil
 }
 
 // DepositTransfer method send money from deposit to account

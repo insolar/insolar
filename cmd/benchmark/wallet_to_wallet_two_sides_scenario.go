@@ -43,7 +43,7 @@ func (s *walletToWalletTwoSidesScenario) canBeStarted() error {
 	return nil
 }
 
-func (s *walletToWalletTwoSidesScenario) prepare() {
+func (s *walletToWalletTwoSidesScenario) prepare(repetition int) {
 	members, err := getMembers(s.insSDK, concurrent*2, false)
 	check("Error while loading members: ", err)
 

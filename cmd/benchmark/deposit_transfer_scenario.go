@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"math/big"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/insolar/insolar/api/sdk"
@@ -43,7 +45,7 @@ func (s *depositTransferScenario) canBeStarted() error {
 	return nil
 }
 
-func (s *depositTransferScenario) prepare() {
+func (s *depositTransferScenario) prepare(repetition int) {
 	members, err := getMembers(s.insSDK, concurrent, true)
 	check("Error while loading members: ", err)
 
@@ -53,7 +55,15 @@ func (s *depositTransferScenario) prepare() {
 
 	s.members = members
 
-	s.migrationDaemons = s.insSDK.GetMigrationDaemonMembers()
+	s.migrationDaemons, err = s.insSDK.GetActivateMigrationDaemonMembers()
+	check("failed to get migration daemons: ", err)
+
+	for _, md := range s.migrationDaemons {
+		_, err := s.insSDK.ActivateDaemon(md.GetReference())
+		if err != nil && !strings.Contains(err.Error(), "[daemon member already activated]") {
+			check("Error while activating daemons: ", err)
+		}
+	}
 
 	s.balanceCheckMembers = make([]sdk.Member, len(s.members), len(s.members)+2)
 	copy(s.balanceCheckMembers, s.members)
@@ -65,9 +75,10 @@ func (s *depositTransferScenario) prepare() {
 			fmt.Println("failed to cast member to migration member")
 			os.Exit(1)
 		}
-		err := s.insSDK.FullMigration(s.migrationDaemons, ethTxHash, big.NewInt(migrationAmount).String(), mm.MigrationAddress)
-
-		check("Error while loading members: ", err)
+		for i := 0; i < repetition; i++ {
+			_, err := s.insSDK.FullMigration(s.migrationDaemons, txHashPrefix+strconv.Itoa(i), big.NewInt(migrationAmount).String(), mm.MigrationAddress)
+			check("Error while migrating tokens: ", err)
+		}
 	}
 
 	time.Sleep(30 * time.Second)
@@ -81,7 +92,7 @@ func (s *depositTransferScenario) start(concurrentIndex int, repetitionIndex int
 		return "", fmt.Errorf("unexpected member type: %T", s.members[concurrentIndex])
 	}
 
-	return s.insSDK.DepositTransfer(big.NewInt(migrationAmount).String(), migrationMember, ethTxHash)
+	return s.insSDK.DepositTransfer(big.NewInt(migrationAmount).String(), migrationMember, txHashPrefix+strconv.Itoa(repetitionIndex))
 }
 
 func (s *depositTransferScenario) getBalanceCheckMembers() []sdk.Member {
