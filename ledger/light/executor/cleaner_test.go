@@ -38,7 +38,6 @@ func TestCleaner_cleanPulse(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
 	inputPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(111)}
-	latestPulse := insolar.PulseNumber(123)
 
 	ctrl := minimock.NewController(t)
 
@@ -62,16 +61,16 @@ func TestCleaner_cleanPulse(t *testing.T) {
 
 	objID := gen.ID()
 	ia := object.NewIndexAccessorMock(ctrl)
-	ia.ForPulseMock.Expect(ctx, latestPulse).Return([]record.Index{
-		{ObjID: objID, LifelineLastUsed: latestPulse},
+	ia.ForPulseMock.Expect(ctx, inputPulse.PulseNumber).Return([]record.Index{
+		{ObjID: objID, LifelineLastUsed: insolar.PulseNumber(110)},
 	}, nil)
 
 	fc := NewFilamentCleanerMock(ctrl)
-	fc.ClearIfLongerMock.Expect(100)
+	fc.ClearIfLongerMock.Expect(objID, 0)
 
 	cleaner := NewCleaner(jm, nm, dc, rc, ic, ps, nil, ia, fc, 0, 0, 100)
 
-	cleaner.cleanPulse(ctx, inputPulse.PulseNumber, latestPulse)
+	cleaner.cleanPulse(ctx, inputPulse.PulseNumber)
 
 	ctrl.Finish()
 }
@@ -123,16 +122,14 @@ func TestCleaner_clean(t *testing.T) {
 	objID := gen.ID()
 	ia := object.NewIndexAccessorMock(ctrl)
 	ia.ForPulseMock.Set(func(p context.Context, p1 insolar.PulseNumber) (r []record.Index, r1 error) {
-		require.Equal(t, inputPulse.PulseNumber, p1)
+		require.Equal(t, calculatedPulse.PulseNumber, p1)
 
 		return []record.Index{
 			{ObjID: objID, LifelineLastUsed: insolar.PulseNumber(110)},
 		}, nil
 	})
 	fc := NewFilamentCleanerMock(ctrl)
-	fc.ClearIfLongerMock.Set(func(limit int) {
-		require.Equal(t, limit, 100)
-	})
+	fc.ClearIfLongerMock.Expect(objID, 0)
 
 	cleaner := NewCleaner(jm, nm, dc, rc, ic, ps, pc, ia, fc, limit, 1, 100)
 	defer close(cleaner.pulseForClean)
@@ -183,14 +180,14 @@ func TestLightCleaner_NotifyAboutPulse(t *testing.T) {
 	objID := gen.ID()
 	ia := object.NewIndexAccessorMock(ctrl)
 	ia.ForPulseMock.Set(func(p context.Context, p1 insolar.PulseNumber) (r []record.Index, r1 error) {
-		require.Equal(t, inputPulse.PulseNumber, p1)
+		require.Equal(t, calculatedPulse.PulseNumber, p1)
 
 		return []record.Index{
 			{ObjID: objID, LifelineLastUsed: insolar.PulseNumber(110)},
 		}, nil
 	})
 	fc := NewFilamentCleanerMock(ctrl)
-	fc.ClearIfLongerMock.Expect(100)
+	fc.ClearIfLongerMock.Expect(objID, 0)
 
 	cleaner := NewCleaner(jm, nm, dc, rc, ic, ps, pc, ia, fc, limit, 1, 100)
 	defer close(cleaner.pulseForClean)

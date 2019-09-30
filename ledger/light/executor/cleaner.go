@@ -136,7 +136,7 @@ func (c *LightCleaner) clean(ctx context.Context) {
 		if err != nil {
 			logger.Panic(err)
 		}
-		c.cleanPulse(ctx, expiredPn.PulseNumber, pn)
+		c.cleanPulse(ctx, expiredPn.PulseNumber)
 	}
 
 	for {
@@ -153,33 +153,37 @@ func (c *LightCleaner) clean(ctx context.Context) {
 	}
 }
 
-func (c *LightCleaner) cleanPulse(ctx context.Context, cleanFrom, latest insolar.PulseNumber) {
+func (c *LightCleaner) cleanPulse(ctx context.Context, pn insolar.PulseNumber) {
 	logger := inslogger.FromContext(ctx)
 
-	logger.Infof("start cleaning pn:%v", cleanFrom)
+	logger.Infof("start cleaning pn:%v", pn)
 
-	c.nodeModifier.DeleteForPN(cleanFrom)
-	c.dropCleaner.DeleteForPN(ctx, cleanFrom)
-	c.recCleaner.DeleteForPN(ctx, cleanFrom)
-	c.jetCleaner.DeleteForPN(ctx, cleanFrom)
-	c.indexCleaner.DeleteForPN(ctx, cleanFrom)
+	c.nodeModifier.DeleteForPN(pn)
+	c.dropCleaner.DeleteForPN(ctx, pn)
+	c.recCleaner.DeleteForPN(ctx, pn)
 
-	indexes, err := c.indexAccessor.ForPulse(ctx, latest)
-	if err == nil && err != object.ErrIndexNotFound {
-		logger.Errorf("Can't get indexes for pulse: %s", err)
-	} else {
-		ids := make([]insolar.ID, len(indexes))
-		for i, index := range indexes {
-			ids[i] = index.ObjID
+	c.jetCleaner.DeleteForPN(ctx, pn)
+
+	idxs, err := c.indexAccessor.ForPulse(ctx, pn)
+	if err == nil {
+		for _, idx := range idxs {
+			if idx.LifelineLastUsed < pn {
+				c.filamentCleaner.ClearIfLonger(idx.ObjID, 0)
+			} else {
+				c.filamentCleaner.ClearIfLonger(idx.ObjID, c.filamentLimit)
+			}
 		}
-		c.filamentCleaner.ClearAllExcept(ids)
-	}
-	c.filamentCleaner.ClearIfLonger(c.filamentLimit)
 
-	err = c.pulseShifter.Shift(ctx, cleanFrom)
+	} else if err != object.ErrIndexNotFound {
+		logger.Errorf("Can't get indexes for pulse: %s", err)
+	}
+
+	c.indexCleaner.DeleteForPN(ctx, pn)
+
+	err = c.pulseShifter.Shift(ctx, pn)
 	if err != nil {
 		logger.Errorf("can't clean pulse-tracker from pulse: %s", err)
 	}
 
-	logger.Infof("finish cleaning pn:%v", cleanFrom)
+	logger.Infof("finish cleaning pn:%v", pn)
 }
