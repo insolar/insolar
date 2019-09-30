@@ -86,8 +86,8 @@ func (p *GetPendings) Proceed(ctx context.Context) error {
 	}
 
 	var ids []insolar.ID
-	for i, pend := range pendings {
-		if i >= p.count {
+	for _, pend := range pendings {
+		if len(ids) >= p.count {
 			break
 		}
 		if skipMap != nil {

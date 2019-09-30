@@ -137,4 +137,42 @@ func TestGetPendings_Proceed(t *testing.T) {
 		err := p.Proceed(ctx)
 		assert.NoError(t, err)
 	})
+
+	t.Run("skip few requests", func(t *testing.T) {
+		setup()
+		defer mc.Finish()
+
+		Pending0 := gen.ID()
+		Pending1 := gen.ID()
+		Pending2 := gen.ID()
+		Pending3 := gen.ID()
+
+		pendings := []record.CompositeFilamentRecord{
+			{RecordID: Pending0},
+			{RecordID: Pending1},
+			{RecordID: Pending2},
+			{RecordID: Pending3},
+		}
+
+		ids := make([]insolar.ID, len(pendings))
+		for i, pend := range pendings {
+			ids[i] = pend.RecordID
+		}
+
+		expectedMsg, _ := payload.NewMessage(&payload.IDs{
+			IDs: ids[2:4],
+		})
+
+		filaments.OpenedRequestsMock.Return(pendings, nil)
+
+		sender.ReplyMock.Inspect(func(ctx context.Context, origin payload.Meta, reply *message.Message) {
+			assert.Equal(t, expectedMsg.Payload, reply.Payload)
+		}).Return()
+
+		p := proc.NewGetPendings(payload.Meta{}, gen.ID(), 2, []insolar.ID{Pending0, Pending1})
+		p.Dep(filaments,  sender)
+
+		err := p.Proceed(ctx)
+		assert.NoError(t, err)
+	})
 }
