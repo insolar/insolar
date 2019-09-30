@@ -50,6 +50,7 @@ type PulseManager struct {
 	writeManager     WriteManager
 	stateIniter      StateIniter
 	hotStatusChecker HotDataStatusChecker
+	registry         MetricsRegistry
 }
 
 // NewPulseManager creates PulseManager instance.
@@ -66,6 +67,7 @@ func NewPulseManager(
 	writeManager WriteManager,
 	stateIniter StateIniter,
 	hotStatusChecker HotDataStatusChecker,
+	registry MetricsRegistry,
 ) *PulseManager {
 	pm := &PulseManager{
 		nodeNet:          nodeNet,
@@ -80,6 +82,7 @@ func NewPulseManager(
 		writeManager:     writeManager,
 		stateIniter:      stateIniter,
 		hotStatusChecker: hotStatusChecker,
+		registry:         registry,
 	}
 	return pm
 }
@@ -207,6 +210,9 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse) error {
 		logger.Info("going to notify cleaner about new pulse")
 		go m.lightReplicator.NotifyAboutPulse(ctx, newPulse.PulseNumber)
 	}
+
+	// set metrics and reset all counters
+	m.registry.UpdateMetrics(ctx)
 
 	logger.Info("new pulse is set")
 	return nil

@@ -72,6 +72,7 @@ func NewDependencies(
 	detachedNotifier executor.DetachedNotifier,
 
 	config configuration.Ledger,
+	registry executor.MetricsRegistry,
 ) *Dependencies {
 	dep := &Dependencies{
 		FetchJet: func(p *FetchJet) {
@@ -183,6 +184,7 @@ func NewDependencies(
 				jetCoordinator,
 				pulseCalculator,
 				sender,
+				registry,
 			)
 		},
 		SendFilament: func(p *SendFilament) {

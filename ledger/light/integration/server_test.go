@@ -21,7 +21,6 @@ import (
 	"context"
 	"crypto"
 	"fmt"
-	"github.com/insolar/insolar/log/logwatermill"
 	"math"
 	"sync"
 	"time"
@@ -52,6 +51,7 @@ import (
 	"github.com/insolar/insolar/ledger/light/handle"
 	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/insolar/insolar/ledger/object"
+	"github.com/insolar/insolar/log/logwatermill"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network"
 	networknode "github.com/insolar/insolar/network/node"
@@ -296,6 +296,8 @@ func NewServer(
 			Jets, hotWaitReleaser, drops, Nodes, ServerBus, Pulses, Pulses, jetCalculator, indexes,
 		)
 
+		metricsRegistry := executor.NewMetricsRegistry()
+
 		dep := proc.NewDependencies(
 			CryptoScheme,
 			Coordinator,
@@ -314,6 +316,7 @@ func NewServer(
 			requestChecker,
 			detachedNotifier,
 			configuration.NewLedger(),
+			metricsRegistry,
 		)
 
 		initHandle := func(msg *message.Message) *handle.Init {
@@ -344,6 +347,7 @@ func NewServer(
 			writeController,
 			stateIniter,
 			hotWaitReleaser,
+			metricsRegistry,
 		)
 	}
 
