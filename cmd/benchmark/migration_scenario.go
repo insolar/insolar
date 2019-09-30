@@ -60,7 +60,8 @@ func (s *migrationScenario) prepare(repetition int) {
 
 	s.members = members
 
-	s.migrationDaemons, err = s.insSDK.GetActivateMigrationDaemonMembers()
+	s.migrationDaemons, err = s.insSDK.GetAndActivateMigrationDaemonMembers()
+	check("failed to get and activate migration daemons: ", err)
 
 	for _, md := range s.migrationDaemons {
 		_, err := s.insSDK.ActivateDaemon(md.GetReference())

@@ -160,7 +160,7 @@ func (sdk *SDK) GetMigrationDaemonMembers() []Member {
 	return r
 }
 
-func (sdk *SDK) GetActivateMigrationDaemonMembers() ([]Member, error) {
+func (sdk *SDK) GetAndActivateMigrationDaemonMembers() ([]Member, error) {
 	md := sdk.GetMigrationDaemonMembers()
 	for _, md := range md {
 		_, err := sdk.ActivateDaemon(md.GetReference())

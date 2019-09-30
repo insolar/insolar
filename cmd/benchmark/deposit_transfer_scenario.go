@@ -27,8 +27,6 @@ import (
 	"github.com/insolar/insolar/api/sdk"
 )
 
-const ethTxHash = "ethTxHash_test"
-
 type depositTransferScenario struct {
 	insSDK           *sdk.SDK
 	members          []sdk.Member
@@ -55,8 +53,8 @@ func (s *depositTransferScenario) prepare(repetition int) {
 
 	s.members = members
 
-	s.migrationDaemons, err = s.insSDK.GetActivateMigrationDaemonMembers()
-	check("failed to get migration daemons: ", err)
+	s.migrationDaemons, err = s.insSDK.GetAndActivateMigrationDaemonMembers()
+	check("failed to get and activate migration daemons: ", err)
 
 	for _, md := range s.migrationDaemons {
 		_, err := s.insSDK.ActivateDaemon(md.GetReference())
