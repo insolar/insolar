@@ -41,7 +41,6 @@ type EnsureIndex struct {
 	pulse   insolar.PulseNumber
 
 	dep struct {
-		indexLocker   object.IndexLocker
 		indexes       object.MemoryIndexStorage
 		coordinator   jet.Coordinator
 		sender        bus.Sender
@@ -59,13 +58,11 @@ func NewEnsureIndex(obj insolar.ID, jetID insolar.JetID, msg payload.Meta, pulse
 }
 
 func (p *EnsureIndex) Dep(
-	il object.IndexLocker,
 	idxs object.MemoryIndexStorage,
 	c jet.Coordinator,
 	s bus.Sender,
 	wc executor.WriteAccessor,
 ) {
-	p.dep.indexLocker = il
 	p.dep.indexes = idxs
 	p.dep.coordinator = c
 	p.dep.sender = s
@@ -82,13 +79,8 @@ func (p *EnsureIndex) Proceed(ctx context.Context) error {
 		trace.StringAttribute("object_id", p.object.DebugString()),
 	)
 
-	p.dep.indexLocker.Lock(p.object)
-	defer p.dep.indexLocker.Unlock(p.object)
-
-	idx, err := p.dep.indexes.ForID(ctx, p.pulse, p.object)
+	_, err := p.dep.indexes.ForID(ctx, p.pulse, p.object)
 	if err == nil {
-		idx.LifelineLastUsed = p.pulse
-		p.dep.indexes.Set(ctx, p.pulse, idx)
 		return nil
 	}
 	if err != object.ErrIndexNotFound {
@@ -137,7 +129,7 @@ func (p *EnsureIndex) Proceed(ctx context.Context) error {
 		}
 		defer done()
 
-		p.dep.indexes.Set(ctx, p.pulse, record.Index{
+		p.dep.indexes.SetIfNone(ctx, p.pulse, record.Index{
 			LifelineLastUsed: p.pulse,
 			Lifeline:         idx,
 			PendingRecords:   []insolar.ID{},
