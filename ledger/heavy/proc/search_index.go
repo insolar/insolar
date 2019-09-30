@@ -75,10 +75,6 @@ func (p *SearchIndex) Proceed(ctx context.Context) error {
 	}
 	currentPN := currentP.PulseNumber
 
-	if currentPN < searchIndex.Until {
-		return errors.New("searching index with until more than heavy's current pulse is impossible")
-	}
-
 	var idx *record.Index
 	for currentPN >= searchIndex.Until {
 		savedIdx, err := p.dep.indexes.ForID(ctx, currentPN, *insolar.NewID(currentPN, searchIndex.ObjectID.Hash()))
