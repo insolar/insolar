@@ -39,7 +39,7 @@ func main() {
 			fatalf("bye!")
 		},
 	}
-	dirFlagName := "Flag"
+	dirFlagName := "dir"
 	rootCmd.PersistentFlags().StringVarP(&app.dataDir, dirFlagName, "d", "", "badger data dir")
 	if err := rootCmd.MarkPersistentFlagRequired(dirFlagName); err != nil {
 		fatalf("cobra error: %v", err)
