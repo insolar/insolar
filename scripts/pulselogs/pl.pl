@@ -2,31 +2,36 @@
 
 # God thanks this is not rust
 
-=HEAD
+=head1 NAME
+
+    pl.pl
+
+=head1 SYNOPSIS
 
     Script for analysing insolar node logs for consistence
 
 =cut
 
 use 5.018;
-
 use Data::Dumper;
 use FindBin;
 use JSON::XS;
 
-
-our @F = map {LogFile->new("$FindBin::Bin/../../.artifacts/launchnet/logs/discoverynodes/$_/output.log", $_)->init} (1..5);
+our $logspath = "$FindBin::Bin/../../.artifacts/launchnet/logs/discoverynodes";
+opendir D, $logspath or die "Can't open directory $logspath $!";
+our @F = map {LogFile->new("$logspath/$_/output.log", $_)->init} grep { !/^\./ } readdir(D);;
+closedir D;
 
 my $mixer = new LogMixer(@F);
 
-$mixer->get_pulse();
+$mixer->get_pulse;
+
+warn map { $_->{time}."\t".$_->{message}."\n"} grep { $_->{message} =~ /round/ } $mixer->get_pulse();
 
 
 package ConsensusAnalyzer;
 
 use 5.018;
-
-
 
 
 
@@ -43,32 +48,31 @@ sub new {
 sub get_pulse {
     my $self = shift;
     my @ret;
-
+    $self->seek_consensus;
     for my $source (@{ $self->{inputs} }) {
         my $starttime = 0;
         while(my $obj = $source->read_line) {
             $obj->{time} = str2time($obj->{time});
-            $source->putback(), last if $starttime != 0 and $obj->{time} - 10 > $starttime;
             push @ret, $obj;
+            last if $obj->{message} =~ /^Stopping consensus round/;
         }
     }
-    return @ret;
+    return sort { $a->{time} <=> $b->{time} } @ret;
 }
 
-sub enchance {
-    my $obj = shift;
-    if ($obj->{message} =~ /^Consensus started/) {
-
-    } elsif (1) {
-
-    } else {
-        die "Unhandled consensus log record: ", Dumper($obj);
+sub seek_consensus {
+    my ($self) = @_;
+    for my $source (@{ $self->{inputs} }) {
+        my $starttime = 0;
+        while(my $obj = $source->read_line) {
+            next unless $obj->{message} =~ /^Starting consensus round/;
+            $obj->{time} = str2time($
+                obj->{time});
+            $source->putback($obj);
+            last;
+        }
     }
-
-    return $obj;
 }
-
-
 
 package LogFile;
 
@@ -124,3 +128,17 @@ sub read_line {
         return $obj if $obj->{component} eq "consensus";
     }
 }
+
+sub enchance {
+    my $obj = shift;
+    i f ($obj->{message} =~ /^Consensus started/) {
+
+    } elsif (1) {
+
+    } else {
+        die "Unhandled consensus log record: ", Dumper($obj);
+    }
+
+    return $obj;
+}
+
