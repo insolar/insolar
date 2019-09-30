@@ -56,7 +56,7 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 		if err == flow.ErrCancelled {
 			logger.Info("Handling flow cancelled")
 		} else {
-			logger.Error("Handling error: %s", err.Error())
+			logger.Error("Handling error: ", err.Error())
 		}
 	}
 	return err
