@@ -18,6 +18,7 @@ package insolar
 
 import (
 	"encoding/binary"
+	"fmt"
 
 	"github.com/insolar/insolar/longbits"
 	"github.com/insolar/insolar/reference"
@@ -57,6 +58,18 @@ func NewRecordReference(local ID) *Reference {
 func NewGlobalReference(local ID, base ID) *Reference {
 	global := reference.NewGlobal(base, local)
 	return &global
+}
+
+// NewObjectReferenceFromBase58 deserializes reference from base58 encoded string and checks if it object reference
+func NewObjectReferenceFromBase58(input string) (*Reference, error) {
+	global, err := NewReferenceFromBase58(input)
+	if err != nil {
+		return nil, err
+	}
+	if !global.IsObjectReference() {
+		return nil, fmt.Errorf("provided reference is not object")
+	}
+	return global, nil
 }
 
 // NewReferenceFromBase58 deserializes reference from base58 encoded string
