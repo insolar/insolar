@@ -23,7 +23,7 @@ import (
 	"github.com/insolar/insolar/insolar/store"
 )
 
-func (app *appCtx) addFixCommand(parent *cobra.Command) {
+func (app *appCtx) fixCommand() *cobra.Command {
 	var fixCmd = &cobra.Command{
 		Use:   "fix",
 		Short: "opens and closes badger database. Could fix 'Database was not properly closed' error.",
@@ -43,6 +43,5 @@ func (app *appCtx) addFixCommand(parent *cobra.Command) {
 			}
 		},
 	}
-
-	parent.AddCommand(fixCmd)
+	return fixCmd
 }

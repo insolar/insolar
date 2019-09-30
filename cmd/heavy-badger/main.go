@@ -45,12 +45,15 @@ func main() {
 		fatalf("cobra error: %v", err)
 	}
 
-	app.addFixCommand(rootCmd)
+	rootCmd.AddCommand(
+		app.fixCommand(),
+		app.scanCommand(),
+	)
+
 	err := rootCmd.Execute()
 	if err != nil {
 		fatalf("%v execution failed: %v", arg0, err)
 	}
-
 }
 
 func checkDirectory(dir string) error {
