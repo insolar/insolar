@@ -18,10 +18,10 @@ package insolar
 
 import (
 	"encoding/binary"
-	"fmt"
 
 	"github.com/insolar/insolar/longbits"
 	"github.com/insolar/insolar/reference"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -67,7 +67,7 @@ func NewObjectReferenceFromBase58(input string) (*Reference, error) {
 		return nil, err
 	}
 	if !global.IsObjectReference() {
-		return nil, fmt.Errorf("provided reference is not object")
+		return nil, errors.New("provided reference is not object")
 	}
 	return global, nil
 }
