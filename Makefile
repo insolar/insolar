@@ -148,7 +148,7 @@ $(KEEPERD):
 
 .PHONY: $(BADGER)
 $(BADGER):
-	GOBIN=$(shell realpath $(BIN_DIR)) ./scripts/build/fetchdeps github.com/dgraph-io/badger/badger v1.6.0
+	GOBIN=$(shell ./scripts/build/realpath.go $(BIN_DIR)) ./scripts/build/fetchdeps github.com/dgraph-io/badger/badger v1.6.0
 
 .PHONY: $(HEAVY_BADGER_TOOL)
 $(HEAVY_BADGER_TOOL):
