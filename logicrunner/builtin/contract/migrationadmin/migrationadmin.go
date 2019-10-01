@@ -125,7 +125,7 @@ func (mA *MigrationAdmin) deactivateDaemonCall(params map[string]interface{}, me
 }
 
 type AddMaResponse struct {
-	Count int `json:"totalNumberOf"`
+	Count int `json:"totalNumber"`
 }
 
 func (mA *MigrationAdmin) addMigrationAddressesCall(params map[string]interface{}, memberRef insolar.Reference) (interface{}, error) {
