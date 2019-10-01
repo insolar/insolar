@@ -329,20 +329,22 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 	reasonID := *reasonRef.GetLocal()
 	var lifeline record.Lifeline
 	if request.IsCreationRequest() {
+		logger.Debug("looking for index locally")
 		l, err := c.findLifeline(ctx, reasonID.Pulse(), requestID)
-		if err != nil && err == object.ErrIndexNotFound {
+		if err == object.ErrIndexNotFound {
 			// Searching for the requests in the network
 			// We need to be sure, that there is no duplicate of creationg request
 			// INS-3607
+			logger.Debug("looking for index on heavy")
 			lfl, err := c.checkHeavyForLifeline(ctx, requestID, reasonID.Pulse())
 			if err != nil && err != object.ErrIndexNotFound {
 				return nil, nil, errors.Wrap(err, "failed to fetch index")
 			}
 			if err == object.ErrIndexNotFound {
+				logger.Debug("index not found")
 				return nil, nil, nil
 			}
 			lifeline = lfl
-
 		} else if err != nil {
 			return nil, nil, errors.Wrap(err, "failed to find index")
 		}
@@ -356,6 +358,7 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 	}
 
 	if lifeline.LatestRequest == nil {
+		logger.Warn("request pointer is nil")
 		return nil, nil, nil
 	}
 
