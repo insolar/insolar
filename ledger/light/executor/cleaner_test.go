@@ -60,9 +60,17 @@ func TestCleaner_cleanPulse(t *testing.T) {
 	ps := pulse.NewShifterMock(ctrl)
 	ps.ShiftMock.Expect(ctx, inputPulse.PulseNumber).Return(nil)
 
+	prevPulseFromInput := insolar.Pulse{PulseNumber: inputPulse.PulseNumber - 1}
+	pc := pulse.NewCalculatorMock(t)
+	pc.BackwardsMock.Set(func(_ context.Context, pn insolar.PulseNumber, steps int) (p1 insolar.Pulse, err error) {
+		require.Equal(t, latestPulse, pn)
+		require.Equal(t, 1, steps)
+		return prevPulseFromInput, nil
+	})
+
 	objID := gen.ID()
 	ia := object.NewIndexAccessorMock(ctrl)
-	ia.ForPulseMock.Expect(ctx, inputPulse.PulseNumber).Return([]record.Index{
+	ia.ForPulseMock.Expect(ctx, prevPulseFromInput.PulseNumber).Return([]record.Index{
 		{ObjID: objID, LifelineLastUsed: latestPulse},
 	}, nil)
 
@@ -71,13 +79,6 @@ func TestCleaner_cleanPulse(t *testing.T) {
 	fc.ClearAllExceptMock.Set(func(ids []insolar.ID) {
 		require.Equal(t, 1, len(ids))
 		require.Equal(t, objID, ids[0])
-	})
-
-	pc := pulse.NewCalculatorMock(t)
-	pc.BackwardsMock.Set(func(_ context.Context, pn insolar.PulseNumber, steps int) (p1 insolar.Pulse, err error) {
-		require.Equal(t, latestPulse, pn)
-		require.Equal(t, 1, steps)
-		return inputPulse, nil
 	})
 
 	cleaner := NewCleaner(jm, nm, dc, rc, ic, ps, pc, ia, fc, 0, 0, 100)
