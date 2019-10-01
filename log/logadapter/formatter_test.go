@@ -63,7 +63,7 @@ func TestTryFormatStrValue(t *testing.T) {
 func TestTryFormatValue(t *testing.T) {
 	s := "test"
 	require.Equal(t, "test", formatValue(&s))
-	require.Equal(t, "<nil>", formatValue((*string)(nil)))
+	require.Equal(t, nil, formatValue((*string)(nil)))
 	require.Equal(t, "test", formatValue("test"))
 	require.Equal(t, "test", formatValue(args.LazyFmt("%s", "test")))
 	require.Equal(t, "test", formatValue(func() string { return "test" }))

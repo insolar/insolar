@@ -165,7 +165,10 @@ func toInterface(v reflect.Value) interface{} {
 }
 
 func tryReflectStrValue(v reflect.Value) (bool, string, interface{}) {
-	if v.Kind() == reflect.String {
+	switch k := v.Kind(); k {
+	case reflect.Invalid:
+		return false, "", nil
+	case reflect.String:
 		return true, v.String(), nil
 	}
 	iv := toInterface(v)
@@ -184,7 +187,7 @@ func tryReflectValue(v reflect.Value) (bool, interface{}) {
 			return true, nil
 		}
 	case reflect.Invalid:
-		return false, nil
+		return true, nil
 	}
 	iv := toInterface(v)
 	if ok, s := tryStrValue(iv); ok {
