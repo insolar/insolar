@@ -134,17 +134,16 @@ func printFields(sv reflect.Value, output insolar.LogObjectWriter) string {
 				msg = fmt.Sprintf(tag, iv)
 			}
 		default:
-			if ok, iv := tryReflectValue(fv); ok {
-				if hasFmt {
-					output.AddField(ft.Name, fmt.Sprintf(tag, iv))
-					continue
-				}
+			iv := prepareReflectValue(fv)
+			if hasFmt {
+				output.AddField(ft.Name, fmt.Sprintf(tag, iv))
+				continue
+			}
 
-				if rawTag, ok := quickTag(`raw:"`, ft.Tag); ok {
-					output.AddRawJSON(ft.Name, []byte(fmt.Sprintf(rawTag, iv)))
-				} else {
-					output.AddField(ft.Name, iv)
-				}
+			if rawTag, ok := quickTag(`raw:"`, ft.Tag); ok {
+				output.AddRawJSON(ft.Name, []byte(fmt.Sprintf(rawTag, iv)))
+			} else {
+				output.AddField(ft.Name, iv)
 			}
 		}
 	}
@@ -178,22 +177,22 @@ func tryReflectStrValue(v reflect.Value) (bool, string, interface{}) {
 	return false, "", iv
 }
 
-func tryReflectValue(v reflect.Value) (bool, interface{}) {
+func prepareReflectValue(v reflect.Value) interface{} {
 	switch k := v.Kind(); k {
 	case reflect.String:
-		return true, v.String()
+		return v.String()
 	case reflect.Ptr:
 		if v.IsNil() {
-			return true, nil
+			return nil
 		}
 	case reflect.Invalid:
-		return true, nil
+		return nil
 	}
 	iv := toInterface(v)
 	if ok, s := tryStrValue(iv); ok {
-		return true, s
+		return s
 	}
-	return true, iv
+	return iv
 }
 
 func tryStrValue(v interface{}) (bool, string) {

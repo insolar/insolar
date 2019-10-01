@@ -42,11 +42,7 @@ func formatStrValue(a interface{}) string {
 
 func formatValue(a interface{}) interface{} {
 	v := reflect.ValueOf(a)
-	if ok, iv := tryReflectValue(v); ok {
-		return iv
-	} else {
-		return "?"
-	}
+	return prepareReflectValue(v)
 }
 
 func TestTryFormatStrValue(t *testing.T) {
