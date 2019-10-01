@@ -249,6 +249,7 @@ func (a *actorDeps) sendOutgoingRequest(ctx context.Context, outgoingReqRef inso
 		result = v.Request.Bytes()
 	default:
 		err = fmt.Errorf("sendOutgoingRequest: cr.Call returned unexpected type %T", res)
+		inslogger.FromContext(ctx).Error(err)
 		return nil, nil, nil, err
 	}
 

@@ -169,7 +169,8 @@ func (m *executionProxyImplementation) GetCode(
 func (m *executionProxyImplementation) RouteCall(
 	ctx context.Context, current *common.Transcript, req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp,
 ) error {
-	inslogger.FromContext(ctx).Debug(
+	logger := inslogger.FromContext(ctx)
+	logger.Debug(
 		"call to others contract method ", req.Method,
 		" on object ", req.Object,
 	)
@@ -214,8 +215,13 @@ func (m *executionProxyImplementation) RouteCall(
 
 	// Step 2. Send the request and register the result (both is done by outgoingSender)
 	_, rep.Result, _, err = m.outgoingSender.SendOutgoingRequest(ctx, *getRequestReference(outReqInfo), outgoing)
-
-	return err
+	if err != nil {
+		err = errors.Wrap(err, "failed to send outgoing request")
+		logger.Error(err)
+		return err
+	}
+	logger.Debug("got result of outgoing request")
+	return nil
 }
 
 // SaveAsChild is an RPC saving data as memory of a contract as child a parent
