@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/member/signer"
@@ -433,6 +434,8 @@ func (m *Member) createMember(name string, key string, migrationAddress string) 
 	if err != nil {
 		return nil, fmt.Errorf("failed to create wallet for member: %s", err.Error())
 	}
+
+	time.Sleep(11*time.Second)
 
 	memberHolder := member.New(m.RootDomain, name, key, migrationAddress, walletRef.Reference)
 	created, err := memberHolder.AsChild(m.RootDomain)
