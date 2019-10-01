@@ -39,6 +39,8 @@ type RequestFetcher interface {
 }
 
 type requestFetcher struct {
+	mu sync.Mutex
+
 	object insolar.Reference
 
 	aborted      chan struct{}
@@ -65,6 +67,9 @@ func NewRequestsFetcher(
 }
 
 func (rf *requestFetcher) Abort(ctx context.Context) {
+	rf.mu.Lock()
+	defer rf.mu.Unlock()
+
 	rf.stopFetching()
 }
 
@@ -80,6 +85,14 @@ func (rf *requestFetcher) isAborted() bool {
 func (rf *requestFetcher) FetchPendings(ctx context.Context) <-chan *common.Transcript {
 	// TODO: move to const
 	trs := make(chan *common.Transcript, 10)
+
+	aborted := make(chan struct{})
+	once := sync.Once{}
+
+	rf.mu.Lock()
+	rf.aborted = aborted
+	rf.stopFetching = func() { once.Do(func() { close(aborted) }) }
+	rf.mu.Unlock()
 
 	ctx, logger := inslogger.WithFields(ctx, map[string]interface{}{
 		"object": rf.object.String(),

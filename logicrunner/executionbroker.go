@@ -202,10 +202,8 @@ func (q *ExecutionBroker) startProcessor(ctx context.Context) {
 
 					select {
 					case <-q.probablyMoreSinceLastFetch:
-						logger.Debug("had request since last fetch, reset fetcher")
+						logger.Debug("had request since last fetch, restarting fetcher")
 
-						fetcher.Abort(ctx)
-						fetcher = NewRequestsFetcher(q.Ref, q.artifactsManager, q.outgoingSender)
 						transcriptFeed = fetcher.FetchPendings(ctx)
 						continue
 					case <-q.closed:
