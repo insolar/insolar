@@ -214,7 +214,7 @@ func (q *ExecutionBroker) startProcessor(ctx context.Context) {
 				}
 				if tr == nil {
 					q.NoMoreRequestsOnLedger(ctx)
-					return
+					continue
 				}
 				if q.upsertToDuplicationTable(ctx, tr) {
 					continue
