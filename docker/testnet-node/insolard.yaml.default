@@ -35,8 +35,6 @@ adminapirunner:
   address: ""
   rpc: /admin-api/rpc
   isadmin: true
-versionmanager:
-  minalowedversion: v0.3.0
 keyspath: ""
 certificatepath: ""
 tracer:
