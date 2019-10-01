@@ -27,6 +27,36 @@ var (
 		"How many abandoned requests in hot data",
 		stats.UnitDimensionless,
 	)
+	statSetRequestTotal = stats.Int64(
+		"set_request_total",
+		"How many requests have been set",
+		stats.UnitDimensionless,
+	)
+	statSetRequestDuplicate = stats.Int64(
+		"set_request_duplicate",
+		"How many requests have been duplicated",
+		stats.UnitDimensionless,
+	)
+	statSetRequestSuccess = stats.Int64(
+		"set_request_success",
+		"How many requests have been saved successfully",
+		stats.UnitDimensionless,
+	)
+	statSetResultTotal = stats.Int64(
+		"set_result_total",
+		"How many results have been set",
+		stats.UnitDimensionless,
+	)
+	statSetResultDuplicate = stats.Int64(
+		"set_result_duplicate",
+		"How many results have been duplicated",
+		stats.UnitDimensionless,
+	)
+	statSetResultSuccess = stats.Int64(
+		"set_result_success",
+		"How many results have been saved successfully",
+		stats.UnitDimensionless,
+	)
 )
 
 func init() {
@@ -35,6 +65,42 @@ func init() {
 			Name:        statHotsAbandoned.Name(),
 			Description: statHotsAbandoned.Description(),
 			Measure:     statHotsAbandoned,
+			Aggregation: view.Count(),
+		},
+		&view.View{
+			Name:        statSetRequestTotal.Name(),
+			Description: statSetRequestTotal.Description(),
+			Measure:     statSetRequestTotal,
+			Aggregation: view.Count(),
+		},
+		&view.View{
+			Name:        statSetRequestSuccess.Name(),
+			Description: statSetRequestSuccess.Description(),
+			Measure:     statSetRequestSuccess,
+			Aggregation: view.Count(),
+		},
+		&view.View{
+			Name:        statSetRequestDuplicate.Name(),
+			Description: statSetRequestDuplicate.Description(),
+			Measure:     statSetRequestDuplicate,
+			Aggregation: view.Count(),
+		},
+		&view.View{
+			Name:        statSetResultTotal.Name(),
+			Description: statSetResultTotal.Description(),
+			Measure:     statSetResultTotal,
+			Aggregation: view.Count(),
+		},
+		&view.View{
+			Name:        statSetResultSuccess.Name(),
+			Description: statSetResultSuccess.Description(),
+			Measure:     statSetResultSuccess,
+			Aggregation: view.Count(),
+		},
+		&view.View{
+			Name:        statSetResultDuplicate.Name(),
+			Description: statSetResultDuplicate.Description(),
+			Measure:     statSetResultDuplicate,
 			Aggregation: view.Count(),
 		},
 	)

@@ -141,10 +141,10 @@ func (d *dispatcher) Process(msg *message.Message) error {
 		if err != nil {
 			if errors.Cause(err) == flow.ErrCancelled {
 				result = "cancelled"
-				logger.Info(errors.Wrap(err, "flow handling failed"))
+				logger.Info("Flow handling failed: ", err.Error())
 			} else {
 				result = "error"
-				logger.Error(errors.Wrap(err, "flow handling failed"))
+				logger.Error("Flow handling failed: ", err.Error())
 			}
 		}
 

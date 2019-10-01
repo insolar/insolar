@@ -43,9 +43,10 @@ type RequestFetcher interface {
 type requestFetcher struct {
 	object insolar.Reference
 
-	isActiveLock sync.Mutex
-	isActive     bool
-	stopFetching func()
+	isActiveLock           sync.Mutex
+	isActive               bool
+	reactivatedWhileActive bool
+	stopFetching           func()
 
 	broker ExecutionBrokerI
 	am     artifacts.Client
@@ -68,6 +69,7 @@ func (rf *requestFetcher) tryTakeActive(ctx context.Context) (context.Context, b
 	defer rf.isActiveLock.Unlock()
 
 	if rf.isActive {
+		rf.reactivatedWhileActive = true
 		return ctx, false
 	}
 
@@ -77,6 +79,24 @@ func (rf *requestFetcher) tryTakeActive(ctx context.Context) (context.Context, b
 	rf.stopFetching = cancelFunc
 
 	return ctx, true
+}
+
+// TODO tests are required for this behaviour
+func (rf *requestFetcher) shouldRefetch(ctx context.Context) bool {
+	rf.isActiveLock.Lock()
+	defer rf.isActiveLock.Unlock()
+
+	select {
+	case <-ctx.Done():
+		return false
+	default:
+	}
+	if rf.reactivatedWhileActive {
+		rf.reactivatedWhileActive = false
+		return true
+	}
+
+	return false
 }
 
 func (rf *requestFetcher) releaseActive(_ context.Context) {
@@ -116,9 +136,15 @@ func (rf *requestFetcher) fetchWrapper(ctx context.Context) {
 	logger := inslogger.FromContext(ctx)
 	logger.Debug("requestFetcher starting")
 
-	err := rf.fetch(ctx)
-	if err != nil {
-		logger.Error("couldn't make fetch round: ", err.Error())
+	for {
+		err := rf.fetch(ctx)
+		if err != nil {
+			logger.Error("couldn't make fetch round: ", err.Error())
+		}
+
+		if !rf.shouldRefetch(ctx) {
+			break
+		}
 	}
 }
 
@@ -136,18 +162,7 @@ func (rf *requestFetcher) fetch(ctx context.Context) error {
 		return err
 	}
 
-	var (
-		uniqueTaken        = 0
-		uniqueLimitReached = false
-	)
-
 	for _, reqRef := range reqRefs {
-		// limit count of unique and unknown taken requests to MaxFetchCount
-		if uniqueTaken >= MaxFetchCount {
-			uniqueLimitReached = true
-			break
-		}
-
 		if !reqRef.IsRecordScope() {
 			logger.Errorf("skipping request with bad reference, ref=%s", reqRef.String())
 		} else if rf.broker.IsKnownRequest(ctx, reqRef) {
@@ -170,8 +185,6 @@ func (rf *requestFetcher) fetch(ctx context.Context) error {
 		default:
 		}
 
-		uniqueTaken++
-
 		switch v := request.(type) {
 		case *record.IncomingRequest:
 			if err := checkIncomingRequest(ctx, v); err != nil {
@@ -193,12 +206,6 @@ func (rf *requestFetcher) fetch(ctx context.Context) error {
 		default:
 			logger.Error("requestFetcher fetched unknown request")
 		}
-	}
-
-	if !uniqueLimitReached {
-		logger.Debug("no more pendings on ledger, we've fetched everything")
-
-		rf.broker.NoMoreRequestsOnLedger(ctx)
 	}
 
 	return nil

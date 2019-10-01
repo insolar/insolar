@@ -94,6 +94,8 @@ func (h *HandleExecutorResults) handleMessage(ctx context.Context, msg payload.E
 	if msg.LedgerHasMoreRequests {
 		stats.Record(ctx, metrics.ExecutorResultsRequestsFromPrevExecutor.M(1))
 		broker.MoreRequestsOnLedger(ctx)
+
+		return nil
 	}
 
 	if len(msg.Queue) > 0 {

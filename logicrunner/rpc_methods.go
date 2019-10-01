@@ -18,6 +18,7 @@ package logicrunner
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
 
@@ -189,18 +190,31 @@ func (m *executionProxyImplementation) RouteCall(
 	if req.Saga {
 		// Saga methods are not executed right away. LME will send a method
 		// to the VE when current object finishes the execution and validation.
+		if outReqInfo.Result != nil {
+			return errors.New("RegisterOutgoingRequest returns Result for Saga Call")
+		}
+		return nil
+	}
+
+	// if we replay abandoned request after node was down we can already have Result
+	if outReqInfo.Result != nil {
+		rec := record.Material{}
+		err := rec.Unmarshal(outReqInfo.Result)
+		if err != nil {
+			return errors.Wrap(err, "failed to unmarshal existing result")
+		}
+		virtual := record.Unwrap(&rec.Virtual)
+		resultRecord, ok := virtual.(*record.Result)
+		if !ok {
+			return fmt.Errorf("unexpected record %T", virtual)
+		}
+		rep.Result = resultRecord.Payload
 		return nil
 	}
 
 	// Step 2. Send the request and register the result (both is done by outgoingSender)
+	_, rep.Result, _, err = m.outgoingSender.SendOutgoingRequest(ctx, *getRequestReference(outReqInfo), outgoing)
 
-	outgoingReqRef := *getRequestReference(outReqInfo)
-
-	var incoming *record.IncomingRequest
-	_, rep.Result, incoming, err = m.outgoingSender.SendOutgoingRequest(ctx, outgoingReqRef, outgoing)
-	if incoming != nil {
-		current.AddOutgoingRequest(ctx, *incoming, rep.Result, nil, err)
-	}
 	return err
 }
 
@@ -330,6 +344,12 @@ func buildIncomingRequestFromOutgoing(outgoing *record.OutgoingRequest) *record.
 	// CommonRequestData structures or something like this.
 	// This being said the implementation of Request interface differs for Incoming and
 	// OutgoingRequest. See corresponding implementation of the interface methods.
+	apiReqID := outgoing.APIRequestID
+
+	if outgoing.ReturnMode == record.ReturnSaga {
+		apiReqID += fmt.Sprintf("-saga-%d", outgoing.Nonce)
+	}
+
 	incoming := record.IncomingRequest{
 		Caller:          outgoing.Caller,
 		CallerPrototype: outgoing.CallerPrototype,
@@ -345,7 +365,7 @@ func buildIncomingRequestFromOutgoing(outgoing *record.OutgoingRequest) *record.
 		Method:    outgoing.Method,
 		Arguments: outgoing.Arguments,
 
-		APIRequestID: outgoing.APIRequestID,
+		APIRequestID: apiReqID,
 		Reason:       outgoing.Reason,
 	}
 

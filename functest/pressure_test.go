@@ -20,10 +20,13 @@ package functest
 
 import (
 	"sync"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/testutils"
 )
 
@@ -133,5 +136,118 @@ func (c *One) Dec() (int, error) {
 			}
 		}
 		wg.Wait()
+	})
+}
+
+func TestCoinPassing(t *testing.T) {
+	var contractCode = `
+package main
+
+import "github.com/insolar/insolar/insolar"
+import "github.com/insolar/insolar/logicrunner/builtin/foundation"
+import "github.com/insolar/insolar/application/proxy/testCoinPassing"
+import "errors"
+
+type One struct {
+	foundation.BaseContract
+	Amount int
+}
+
+func New(n int) (*One, error) {
+	return &One{Amount: n}, nil
+}
+
+var INSATTR_Balance_API = true
+func (c *One) Balance() (int, error) {
+	return c.Amount, nil
+}
+
+var INSATTR_Transfer_API = true
+func (c *One) Transfer(ref insolar.Reference) (error) {
+	if c.Amount <= 0 {
+		return errors.New("Oops")
+	}
+
+	c.Amount -= 1
+
+	w := testCoinPassing.GetObject(ref)
+	err := w.Accept(1)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+//ins:saga(Rollback)
+func (c *One) Accept(amount int) error {
+	c.Amount += amount
+	return nil
+}
+
+func (c *One) Rollback(amount int) error {
+	c.Amount -= amount
+	return nil
+}
+`
+	protoRef := uploadContractOnce(t, "testCoinPassing", contractCode)
+
+	t.Run("pass one coin in parallel between two wallets", func(t *testing.T) {
+		syncT := &testutils.SyncT{T: t}
+
+		w1Ref := callConstructor(syncT, protoRef, "New", 1)
+		w2Ref := callConstructor(syncT, protoRef, "New", 0)
+
+		transfers := 30
+		wg := sync.WaitGroup{}
+		wg.Add(transfers * 2)
+
+		var successes uint32
+		var errors uint32
+
+		f := func(from, to *insolar.Reference) {
+			for i := 0; i < transfers; i++ {
+				res := callMethod(syncT, from, "Transfer", to)
+				if res.ExtractedError != "" {
+					atomic.AddUint32(&errors, 1)
+				} else if res.Error == nil {
+					atomic.AddUint32(&successes, 1)
+				}
+				wg.Done()
+				time.Sleep(100 * time.Millisecond)
+			}
+		}
+		go f(w1Ref, w2Ref)
+		go f(w2Ref, w1Ref)
+		wg.Wait()
+
+		require.Greater(syncT, successes, uint32(0))
+		require.Greater(syncT, errors, uint32(0))
+
+		getBalance := func() float64 {
+			r1 := callMethod(syncT, w1Ref, "Balance")
+			require.Empty(syncT, r1.Error)
+			r2 := callMethod(syncT, w2Ref, "Balance")
+			require.Empty(syncT, r2.Error)
+			return r1.ExtractedReply.(float64) + r2.ExtractedReply.(float64)
+		}
+
+		pass := false
+		for i := 0; i < 10; i++ {
+			bal := getBalance()
+			if bal != float64(1) {
+				time.Sleep(1 * time.Second)
+				continue
+			}
+			pass = true
+		}
+		if !pass {
+			require.Fail(t, "balance missmatch")
+		}
+
+		for i := 0; i < 3; i++ {
+			bal := getBalance()
+			require.Equal(t, float64(1), bal)
+			time.Sleep(1 * time.Second)
+		}
 	})
 }

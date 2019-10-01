@@ -2,6 +2,7 @@ package logicrunner
 
 import (
 	"context"
+	"fmt"
 	"math/rand"
 	"testing"
 	"time"
@@ -55,7 +56,11 @@ func checkIncomingAndOutgoingMatch(t *testing.T, incoming *record.IncomingReques
 	require.Equal(t, outgoing.Prototype, incoming.Prototype)
 	require.Equal(t, outgoing.Method, incoming.Method)
 	require.Equal(t, outgoing.Arguments, incoming.Arguments)
-	require.Equal(t, outgoing.APIRequestID, incoming.APIRequestID)
+	if outgoing.ReturnMode == record.ReturnSaga {
+		require.Equal(t, fmt.Sprintf("%s-saga-%d", outgoing.APIRequestID, incoming.Nonce), incoming.APIRequestID)
+	} else {
+		require.Equal(t, outgoing.APIRequestID, incoming.APIRequestID)
+	}
 	require.Equal(t, outgoing.Reason, incoming.Reason)
 }
 

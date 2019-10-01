@@ -23,6 +23,7 @@ BIN_DIR=bin
 INSOLAR_CLI=${BIN_DIR}/insolar
 INSOLARD=$BIN_DIR/insolard
 INSGORUND=$BIN_DIR/insgorund
+KEEPERD=$BIN_DIR/keeperd
 PULSARD=$BIN_DIR/pulsard
 PULSEWATCHER=$BIN_DIR/pulsewatcher
 
@@ -47,6 +48,9 @@ DISCOVERY_NODES_HEAVY_DATA=${DISCOVERY_NODES_DATA}1/
 BOOTSTRAP_TEMPLATE=${SCRIPTS_DIR}bootstrap_template.yaml
 BOOTSTRAP_CONFIG=${LAUNCHNET_BASE_DIR}bootstrap.yaml
 BOOTSTRAP_INSOLARD_CONFIG=${LAUNCHNET_BASE_DIR}insolard.yaml
+
+KEEPERD_CONFIG=${LAUNCHNET_BASE_DIR}keeperd.yaml
+KEEPERD_LOG=${LAUNCHNET_LOGS_DIR}keeperd.log
 
 PULSEWATCHER_CONFIG=${LAUNCHNET_BASE_DIR}pulsewatcher.yaml
 
@@ -126,7 +130,8 @@ stop_listening()
     fi
 
     transport_ports=$( grep "host:" ${BOOTSTRAP_CONFIG} | grep -o ":\d\+" | grep -o "\d\+" | tr '\n' ' ' )
-    ports="$ports $transport_ports"
+    keeperd_port=$( grep "listenaddress:" ${KEEPERD_CONFIG} | grep -o ":\d\+" | grep -o "\d\+" | tr '\n' ' ' )
+    ports="$ports $transport_ports $keeperd_port"
 
     for port in $ports
     do
@@ -348,6 +353,15 @@ launch_insgorund()
     done < "${INSGORUND_PORT_FILE}"
 }
 
+launch_keeperd()
+{
+    echo "launch_keeperd() starts ..."
+    ${KEEPERD} --config=${KEEPERD_CONFIG} \
+    &> ${KEEPERD_LOG} &
+
+    echo "launch_keeperd() end."
+}
+
 copy_discovery_certs()
 {
     echo "copy_certs() starts ..."
@@ -444,6 +458,8 @@ mkdir -p ${PULSAR_DATA_DIR}
 ${PULSARD} -c ${PULSAR_CONFIG} &> ${LAUNCHNET_LOGS_DIR}pulsar_output.log &
 { set +x; } 2>/dev/null
 echo "pulsar log: ${LAUNCHNET_LOGS_DIR}pulsar_output.log"
+
+launch_keeperd
 
 if [[ "$run_insgorund" == "true" ]]
 then

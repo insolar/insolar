@@ -154,10 +154,12 @@ func (d *distributor) Distribute(ctx context.Context, pulse insolar.Pulse) {
 		}
 	}()
 
-	traceID := "pulse_" + strconv.FormatUint(uint64(pulse.PulseNumber), 10)
-	ctx, logger = inslogger.WithTraceField(ctx, traceID)
+	pulseCtx := inslogger.SetLogger(context.Background(), logger)
 
-	ctx, span := instracer.StartSpan(ctx, "Pulsar.Distribute")
+	traceID := "pulse_" + strconv.FormatUint(uint64(pulse.PulseNumber), 10)
+	pulseCtx, logger = inslogger.WithTraceField(pulseCtx, traceID)
+
+	pulseCtx, span := instracer.StartSpan(pulseCtx, "Pulsar.Distribute")
 	span.AddAttributes(
 		trace.Int64Attribute("pulse.PulseNumber", int64(pulse.PulseNumber)),
 	)
@@ -186,7 +188,7 @@ func (d *distributor) Distribute(ctx context.Context, pulse insolar.Pulse) {
 
 			atomic.AddInt32(&distributed, 1)
 			logger.Infof("Successfully sent pulse %d to node %s", pulse.PulseNumber, nodeAddr)
-		}(ctx, pulse, nodeAddr)
+		}(pulseCtx, pulse, nodeAddr)
 	}
 	wg.Wait()
 

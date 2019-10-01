@@ -19,20 +19,20 @@ package proc
 import (
 	"context"
 
-	"github.com/insolar/insolar/insolar/bus"
-	wbus "github.com/insolar/insolar/insolar/bus"
-	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/payload"
-	"github.com/insolar/insolar/insolar/pulse"
-	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/bus"
+	wbus "github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/drop"
+	"github.com/insolar/insolar/ledger/light/executor"
 	"github.com/insolar/insolar/ledger/object"
 )
 
@@ -57,6 +57,7 @@ type HotObjects struct {
 		coordinator jet.Coordinator
 		calculator  pulse.Calculator
 		sender      wbus.Sender
+		registry    executor.MetricsRegistry
 	}
 }
 
@@ -87,6 +88,7 @@ func (p *HotObjects) Dep(
 	coordinator jet.Coordinator,
 	pCalc pulse.Calculator,
 	sender bus.Sender,
+	registry executor.MetricsRegistry,
 ) {
 	p.dep.drops = drops
 	p.dep.indexes = indexes
@@ -96,6 +98,7 @@ func (p *HotObjects) Dep(
 	p.dep.coordinator = coordinator
 	p.dep.calculator = pCalc
 	p.dep.sender = sender
+	p.dep.registry = registry
 }
 
 func (p *HotObjects) Proceed(ctx context.Context) error {
@@ -149,7 +152,6 @@ func (p *HotObjects) Proceed(ctx context.Context) error {
 		logger.Debugf("[handleHotRecords] lifeline with id - %v saved", idx.ObjID.DebugString())
 
 		p.notifyPending(ctx, idx.ObjID, idx.Lifeline, pendingNotifyPulse.PulseNumber)
-
 	}
 
 	logger.Infof("before releasing jetFetcher for jet %s and pulse %s", p.jetID.DebugString(), p.pulse)
@@ -204,17 +206,26 @@ func (p *HotObjects) notifyPending(
 		return
 	}
 
+	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+		"object":        objectID.String(),
+		"earliestPulse": *lifeline.EarliestOpenRequest,
+	})
+
 	if p.availableNotifications <= 0 {
-		inslogger.FromContext(ctx).Warn("out of AbandonedRequestsNotification limit")
+		logger.Warn("out of AbandonedRequestsNotification limit")
 		return
 	}
 	p.availableNotifications--
+
+	// This is needed for metrics: we collect the earliest requests pulse we got
+	p.dep.registry.SetOldestAbandonedRequestAge(int(p.pulse - *lifeline.EarliestOpenRequest))
+	logger.Debug("sending AbandonedRequestNotification")
 
 	msg, err := payload.NewMessage(&payload.AbandonedRequestsNotification{
 		ObjectID: objectID,
 	})
 	if err != nil {
-		inslogger.FromContext(ctx).Error("failed to notify about pending requests: ", err.Error())
+		logger.Error("failed to notify about pending requests: ", err.Error())
 		return
 	}
 

@@ -17,6 +17,8 @@ Quick Start
 
 To take a deep dive into Insolar technologies, start with the :ref:`Understanding Insolar <basics>` section and take a look at the :ref:`Architecture <architecture>`.
 
+To test token migration during the testing period of Insolar MainNet, go thought the :ref:`migration test steps <migration_test>`.
+
 To integrate with Insolar, go through :ref:`step-by-step instructions <integration>`.
 
 .. _toc:
@@ -36,4 +38,5 @@ Table of Contents
    :maxdepth: 2
    :caption: Integration
 
+   migration-test
    integration

@@ -47,6 +47,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/executionregistry"
 	"github.com/insolar/insolar/logicrunner/machinesmanager"
+	"github.com/insolar/insolar/logicrunner/requestresult"
 	"github.com/insolar/insolar/logicrunner/requestsqueue"
 	"github.com/insolar/insolar/logicrunner/shutdown"
 	"github.com/insolar/insolar/logicrunner/writecontroller"
@@ -249,7 +250,7 @@ func (suite *LogicRunnerTestSuite) TestStartStop() {
 	lr.MachinesManager = suite.mm
 
 	suite.am.InjectCodeDescriptorMock.Return()
-	suite.am.InjectObjectDescriptorMock.Return()
+	suite.am.InjectPrototypeDescriptorMock.Return()
 	suite.am.InjectFinishMock.Return()
 	lr.ArtifactManager = suite.am
 
@@ -302,8 +303,8 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 	od.ParentMock.Return(&parentRef)
 	od.HeadRefMock.Return(&objectRef)
 
-	pd := artifacts.NewObjectDescriptorMock(syncT)
-	pd.CodeMock.Return(&codeRef, nil)
+	pd := artifacts.NewPrototypeDescriptorMock(syncT)
+	pd.CodeMock.Return(&codeRef)
 	pd.HeadRefMock.Return(&protoRef)
 
 	cd := artifacts.NewCodeDescriptorMock(syncT)
@@ -317,7 +318,11 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 		return &payload.RequestInfo{RequestID: reqId, ObjectID: *objectRef.GetLocal()}, nil
 	})
 
-	suite.re.ExecuteAndSaveMock.Return(nil, nil)
+	suite.am.GetObjectMock.Set(func(ctx context.Context, head insolar.Reference, request *insolar.Reference) (o1 artifacts.ObjectDescriptor, err error) {
+		return artifacts.NewObjectDescriptorMock(syncT).EarliestRequestIDMock.Return(request.GetLocal()), nil
+	})
+
+	suite.re.ExecuteAndSaveMock.Return(requestresult.New([]byte{1, 2, 3}, gen.Reference()), nil)
 	suite.re.SendReplyMock.Return()
 
 	num := 100
@@ -533,18 +538,23 @@ func TestLogicRunner_OnPulse_Order(t *testing.T) {
 }
 
 func (suite *LogicRunnerTestSuite) TestImmutableOrder() {
-	pa := insolarPulse.NewAccessorMock(suite.mc).LatestMock.Return(
+	syncT := &testutils.SyncT{T: suite.T()}
+
+	pa := insolarPulse.NewAccessorMock(syncT).LatestMock.Return(
 		insolar.Pulse{PulseNumber: pulse.MinTimePulse},
 		nil,
 	)
 
-	er := executionregistry.NewExecutionRegistryMock(suite.mc).
-		RegisterMock.Return(nil).
-		DoneMock.Return(true)
+	er := executionregistry.NewExecutionRegistryMock(syncT).
+		RegisterMock.Return(nil)
 
 	// prepare default object and execution state
 	objectRef := gen.Reference()
-	broker := NewExecutionBroker(objectRef, nil, suite.re, nil, nil, er, nil, pa)
+	am := artifacts.NewClientMock(syncT).GetObjectMock.Set(func(ctx context.Context, head insolar.Reference, request *insolar.Reference) (o1 artifacts.ObjectDescriptor, err error) {
+		reqID := *request.GetLocal()
+		return artifacts.NewObjectDescriptorMock(syncT).EarliestRequestIDMock.Return(&reqID), nil
+	})
+	broker := NewExecutionBroker(objectRef, nil, suite.re, nil, am, er, nil, pa)
 	broker.pending = insolar.NotPending
 
 	// prepare request objects
@@ -560,8 +570,7 @@ func (suite *LogicRunnerTestSuite) TestImmutableOrder() {
 		Immutable:    false,
 	}
 	mutableTranscript := common.NewTranscript(suite.ctx, mutableRequestRef, mutableRequest)
-	er.GetActiveTranscriptMock.When(mutableRequestRef).Then(nil).
-		DoneMock.When(mutableTranscript).Then(true)
+	er.GetActiveTranscriptMock.When(mutableRequestRef).Then(nil)
 
 	immutableRequest1 := record.IncomingRequest{
 		ReturnMode:   record.ReturnResult,
@@ -570,8 +579,7 @@ func (suite *LogicRunnerTestSuite) TestImmutableOrder() {
 		Immutable:    true,
 	}
 	immutableTranscript1 := common.NewTranscript(suite.ctx, immutableRequestRef1, immutableRequest1)
-	er.GetActiveTranscriptMock.When(immutableRequestRef1).Then(nil).
-		DoneMock.When(immutableTranscript1).Then(true)
+	er.GetActiveTranscriptMock.When(immutableRequestRef1).Then(nil)
 
 	immutableRequest2 := record.IncomingRequest{
 		ReturnMode:   record.ReturnResult,
@@ -580,8 +588,16 @@ func (suite *LogicRunnerTestSuite) TestImmutableOrder() {
 		Immutable:    true,
 	}
 	immutableTranscript2 := common.NewTranscript(suite.ctx, immutableRequestRef2, immutableRequest2)
-	er.GetActiveTranscriptMock.When(immutableRequestRef2).Then(nil).
-		DoneMock.When(immutableTranscript2).Then(true)
+	er.GetActiveTranscriptMock.When(immutableRequestRef2).Then(nil)
+
+	er.DoneMock.Set(func(transcript *common.Transcript) (b1 bool) {
+		switch transcript.RequestRef {
+		case mutableRequestRef, immutableRequestRef1, immutableRequestRef2:
+			return true
+		default:
+			panic("should not be called")
+		}
+	})
 
 	// Set custom executor, that'll:
 	// 1) mutable will start execution and wait until something will ping it on channel 1
@@ -595,18 +611,20 @@ func (suite *LogicRunnerTestSuite) TestImmutableOrder() {
 	var immutableLock = sync.Mutex{}
 
 	suite.re.SendReplyMock.Return()
-	suite.re.ExecuteAndSaveMock.Set(func(ctx context.Context, transcript *common.Transcript) (insolar.Reply, error) {
-
+	suite.re.ExecuteAndSaveMock.Set(func(ctx context.Context, transcript *common.Transcript) (artifacts.RequestResult, error) {
 		if transcript.RequestRef.Equal(mutableRequestRef) {
 			log.Debug("mutableChan 1")
 			select {
 			case _ = <-mutableChan:
 				log.Info("mutable got notifications")
-				return &reply.CallMethod{Result: []byte{1, 2, 3}}, nil
+				return requestresult.New([]byte{1, 2, 3}, gen.Reference()), nil
 			case <-time.After(2 * time.Minute):
 				panic("timeout on waiting for immutable request 1 pinged us")
 			}
-		} else if transcript.RequestRef.Equal(immutableRequestRef1) || transcript.RequestRef.Equal(immutableRequestRef2) {
+			return requestresult.New([]byte{1, 2, 3}, gen.Reference()), nil
+		}
+
+		if transcript.RequestRef.Equal(immutableRequestRef1) || transcript.RequestRef.Equal(immutableRequestRef2) {
 			newChan := false
 			immutableLock.Lock()
 			if immutableChan == nil {
@@ -620,7 +638,7 @@ func (suite *LogicRunnerTestSuite) TestImmutableOrder() {
 				case _ = <-immutableChan:
 					mutableChan <- struct{}{}
 					log.Info("notify mutable chan and exit")
-					return &reply.CallMethod{Result: []byte{1, 2, 3}}, nil
+					return requestresult.New([]byte{1, 2, 3}, gen.Reference()), nil
 				case <-time.After(2 * time.Minute):
 					panic("timeout on waiting for immutable request 2 pinged us")
 				}
@@ -628,10 +646,11 @@ func (suite *LogicRunnerTestSuite) TestImmutableOrder() {
 				log.Info("notify immutable chan and exit")
 				immutableChan <- struct{}{}
 			}
-		} else {
-			panic("unreachable")
+
+			return requestresult.New([]byte{1, 2, 3}, gen.Reference()), nil
 		}
-		return &reply.CallMethod{Result: []byte{1, 2, 3}}, nil
+
+		panic("unreachable")
 	})
 
 	broker.add(suite.ctx, requestsqueue.FromLedger, mutableTranscript)

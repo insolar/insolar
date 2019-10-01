@@ -52,23 +52,23 @@ var (
 	defaultMemberFile         = filepath.Join(defaults.ArtifactsDir(), "bench-members", "members.txt")
 	defaultDiscoveryNodesLogs = defaults.LaunchnetDiscoveryNodesLogsDir()
 
-	memberFile             string
-	output                 string
-	concurrent             int
-	repetitions            int
-	memberKeys             string
-	adminAPIURLs           []string
-	publicAPIURLs          []string
-	logLevel               string
-	logLevelServer         string
-	saveMembersToFile      bool
-	useMembersFromFile     bool
-	noCheckBalance         bool
-	checkEveryMember       bool
-	checkBalanceWithoutFee bool
-	checkTotalBalance      bool
-	scenarioName           string
-	discoveryNodesLogs     string
+	memberFile          string
+	output              string
+	concurrent          int
+	repetitions         int
+	memberKeys          string
+	adminAPIURLs        []string
+	publicAPIURLs       []string
+	logLevel            string
+	logLevelServer      string
+	saveMembersToFile   bool
+	useMembersFromFile  bool
+	noCheckBalance      bool
+	checkMembersBalance bool
+	checkAllBalance     bool
+	checkTotalBalance   bool
+	scenarioName        string
+	discoveryNodesLogs  string
 )
 
 func parseInputParams() {
@@ -84,8 +84,8 @@ func parseInputParams() {
 	pflag.BoolVarP(&useMembersFromFile, "usemembers", "m", false, "use members from file")
 	pflag.StringVarP(&memberFile, "members-file", "", defaultMemberFile, "dir for saving members data")
 	pflag.BoolVarP(&noCheckBalance, "nocheckbalance", "b", false, "don't check balance at the end")
-	pflag.BoolVarP(&checkEveryMember, "check-every-member", "", false, "check balance of every member from file, don't run any scenario")
-	pflag.BoolVarP(&checkBalanceWithoutFee, "check-balance-without-fee", "", false, "check balance of every member from file, except fee wallet, and don't run any scenario")
+	pflag.BoolVarP(&checkMembersBalance, "check-members-balance", "", false, "check balance of every ordinary member from file, don't run any scenario")
+	pflag.BoolVarP(&checkAllBalance, "check-all-balance", "", false, "check balance of every object from file, and don't run any scenario")
 	pflag.BoolVarP(&checkTotalBalance, "check-total-balance", "", false, "check total balance of members from file, don't run any scenario")
 	pflag.StringVarP(&scenarioName, "scenarioname", "t", "", "name of scenario")
 	pflag.StringVarP(&discoveryNodesLogs, "discovery-nodes-logs-dir", "", defaultDiscoveryNodesLogs, "launchnet logs dir for checking errors")
@@ -126,6 +126,18 @@ func newTransferDifferentMemberScenarios(out io.Writer, insSDK *sdk.SDK, concurr
 		concurrent:  concurrent,
 		repetitions: repetitions,
 		name:        "TransferDifferentMembers",
+		out:         out,
+	}
+}
+
+func newTransferTwoSidesScenario(out io.Writer, insSDK *sdk.SDK, concurrent int, repetitions int) benchmark {
+	return benchmark{
+		scenario: &walletToWalletTwoSidesScenario{
+			insSDK: insSDK,
+		},
+		concurrent:  concurrent,
+		repetitions: repetitions,
+		name:        "TransferTwoSides",
 		out:         out,
 	}
 }
@@ -274,7 +286,7 @@ func getMembers(insSDK *sdk.SDK, number int, migration bool) ([]sdk.Member, erro
 
 	if useMembersFromFile {
 		// from file we load not just number of members, but also migration admin or fee member
-		for i := 0; i < number+1; i++ {
+		for i := 0; i < number+2; i++ {
 			if migration {
 				members = append(members, &sdk.MigrationMember{})
 			} else {
@@ -378,7 +390,7 @@ func main() {
 		}
 	}()
 
-	if checkEveryMember || checkTotalBalance || checkBalanceWithoutFee {
+	if checkMembersBalance || checkTotalBalance || checkAllBalance {
 		var commonMembers []*sdk.CommonMember
 		rawMembers, err := ioutil.ReadFile(memberFile)
 		check("Can't read members from file: ", err)
@@ -388,9 +400,13 @@ func main() {
 		var members []sdk.Member
 
 		feeMemberRef := insSDK.GetFeeMember().GetReference()
+		migrationAdminRef := insSDK.GetMigrationAdminMember().GetReference()
 		for _, m := range commonMembers {
-			if checkBalanceWithoutFee {
+			if checkMembersBalance {
 				if m.GetReference() == feeMemberRef {
+					continue
+				}
+				if m.GetReference() == migrationAdminRef {
 					continue
 				}
 			}
@@ -442,6 +458,8 @@ func switchScenario(out io.Writer, insSDK *sdk.SDK) benchmark {
 	var b benchmark
 
 	switch scenarioName {
+	case "transferTwoSides":
+		b = newTransferTwoSidesScenario(out, insSDK, concurrent, repetitions)
 	case "createMember":
 		b = newCreateMemberScenarios(out, insSDK, concurrent, repetitions)
 	case "migration":
@@ -473,12 +491,23 @@ func checkBalance(insSDK *sdk.SDK, totalBalanceBefore *big.Int, balanceCheckMemb
 		time.Sleep(balanceCheckDelay)
 
 	}
+
 	fmt.Printf("Total balance before: %v and after: %v\n", totalBalanceBefore, totalBalanceAfter)
 	if totalBalanceAfter.Cmp(totalBalanceBefore) != 0 {
 		log.Fatal("Total balance mismatch!\n")
-	} else {
-		fmt.Printf("Total balance successfully matched\n")
 	}
+
+	for n := 0; n < 2; n++ {
+		totalBalanceAfter, membersWithBalanceMap = getTotalBalance(insSDK, balanceCheckMembers)
+		if totalBalanceAfter.Cmp(totalBalanceBefore) != 0 {
+			log.Fatal("Total balance mismatch!\n")
+		}
+
+		fmt.Println("Wait if balance changes after matching: ", n)
+		time.Sleep(balanceCheckDelay)
+	}
+
+	fmt.Printf("Total balance successfully matched\n")
 	return membersWithBalanceMap
 }
 
@@ -489,7 +518,7 @@ func checkBalanceAtFile(members []sdk.Member, membersWithBalanceMap map[string]*
 		b := m.GetBalance()
 		totalFileBalance = totalFileBalance.Add(totalFileBalance, b)
 
-		if checkEveryMember || checkBalanceWithoutFee {
+		if checkMembersBalance || checkAllBalance {
 			if membersWithBalanceMap[m.GetReference()] == nil {
 				log.Fatalf("Balance mismatch: member with ref %s exists in file, but we didn't get its system balance. Balance at file - %s. \n", m.GetReference(), m.GetBalance())
 			}

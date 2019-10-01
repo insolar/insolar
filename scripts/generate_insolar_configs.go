@@ -59,6 +59,9 @@ var (
 	pulsardConfigTmpl = "scripts/insolard/pulsar_template.yaml"
 	pulsardFileName   = withBaseDir("pulsar.yaml")
 
+	keeperdConfigTmpl = "scripts/insolard/keeperd_template.yaml"
+	keeperdFileName   = withBaseDir("keeperd.yaml")
+
 	insolardDefaultsConfig = "scripts/insolard/defaults/insolard.yaml"
 )
 
@@ -151,7 +154,8 @@ func main() {
 		}
 
 		conf.APIRunner.Address = fmt.Sprintf(defaultHost+":191%02d", nodeIndex)
-		conf.AvailabilityChecker.Enabled = false
+		conf.AvailabilityChecker.Enabled = true
+		conf.AvailabilityChecker.KeeperURL = "http://127.0.0.1:12012/check"
 		conf.AdminAPIRunner.Address = fmt.Sprintf(defaultHost+":190%02d", nodeIndex)
 		conf.Metrics.ListenAddress = fmt.Sprintf(defaultHost+":80%02d", nodeIndex)
 		conf.Introspection.Addr = fmt.Sprintf(defaultHost+":555%02d", nodeIndex)
@@ -228,6 +232,8 @@ func main() {
 	pulsarConf.AgentEndpoint = defaultJaegerEndPoint
 	writePulsarConfig(pulsarConf)
 
+	writeKeeperdConfig()
+
 	pwConfig.Interval = 500 * time.Millisecond
 	pwConfig.Timeout = 1 * time.Second
 	mustMakeDir(filepath.Dir(pulsewatcherFileName))
@@ -278,6 +284,17 @@ func writePulsarConfig(pcv *pulsarConfigVars) {
 	check("Can't process template: "+pulsardConfigTmpl, err)
 	err = makeFile(pulsardFileName, b.String())
 	check("Can't makeFileWithDir: "+pulsardFileName, err)
+}
+
+func writeKeeperdConfig() {
+	templates, err := template.ParseFiles(keeperdConfigTmpl)
+	check("Can't parse template: "+keeperdConfigTmpl, err)
+
+	var b bytes.Buffer
+	err = templates.Execute(&b, nil)
+	check("Can't process template: "+keeperdConfigTmpl, err)
+	err = makeFile(keeperdFileName, b.String())
+	check("Can't makeFileWithDir: "+keeperdFileName, err)
 }
 
 type promConfigVars struct {

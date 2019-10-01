@@ -20,12 +20,11 @@ or you can run benchmark with
     ./scripts/bench.sh
 
 ### Options
+        --check-all-balance
+                If true, just check balance of every object from file and don't run any scenario. Default is false.
 
-        --check-every-member
-                If true, just check balance of every member from file and don't run any scenario. Default is false.
-
-        --check-balance-without-fee
-                If true, just check balance of every member from file, except fee wallet, and don't run any scenario. Default is false.
+        --check-members-balance
+                If true, just check balance of every ordinary member from file, (without general entities), and don't run any scenario. Default is false.
 
         --check-total-balance
                 If true, check total balance of members from file and don't run any scenario. Default is false.
@@ -72,6 +71,7 @@ or you can run benchmark with
                 Name of scenario. Default scenario is transfer scenario.
                 You can choose "createMember" for create member scenario.
                 You can choose "migration" for migration scenario.
+                You can choose "transferTwoSides" for two sides transfer scenario.
 
         --discovery-nodes-logs-dir
                 Launchnet logs dir for checking errors

@@ -38,16 +38,19 @@ import (
 var binaryPath string
 
 func init() {
-	var ok bool
+	wd, err := os.Getwd()
+	binaryPath = filepath.Join(wd, "..", "..", "bin")
 
-	binaryPath, ok = os.LookupEnv("BIN_DIR")
-	if !ok {
-		wd, err := os.Getwd()
-		binaryPath = filepath.Join(wd, "..", "..", "bin")
+	if err != nil {
+		panic(err.Error())
+	}
 
-		if err != nil {
-			panic(err.Error())
-		}
+	// Always rebuild backupmanager
+	bashCmd := "cd " + binaryPath + " && (rm backupmanager || true) && go build ../cmd/backupmanager"
+	cmd := exec.Command("bash", "-c", bashCmd)
+	err = cmd.Run()
+	if err != nil {
+		panic(err.Error())
 	}
 }
 
