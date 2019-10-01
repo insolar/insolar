@@ -121,6 +121,7 @@ func (h *HandleCall) handleActual(
 	procRegisterRequest := NewRegisterIncomingRequest(*request, h.dep)
 	err := f.Procedure(ctx, procRegisterRequest, true)
 	if err != nil {
+		logger.WithField("error", err.Error()).Debug("failed to register incoming request")
 		if err == flow.ErrCancelled {
 			inslogger.FromContext(ctx).Info("pulse change during registration, asking caller for retry")
 			// Requests need to be deduplicated. For now in case of ErrCancelled we may have 2 registered requests
@@ -165,6 +166,7 @@ func (h *HandleCall) handleActual(
 	logger.Debug("registered incoming request")
 
 	if !objectRef.GetLocal().Equal(reqInfo.ObjectID) {
+		logger.Debug("incoming request invalid object reference")
 		return nil, errors.New("object id we calculated doesn't match ledger")
 	}
 
