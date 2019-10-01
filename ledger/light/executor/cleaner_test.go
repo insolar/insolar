@@ -61,7 +61,7 @@ func TestCleaner_cleanPulse(t *testing.T) {
 	ps.ShiftMock.Expect(ctx, inputPulse.PulseNumber).Return(nil)
 
 	prevPulseFromInput := insolar.Pulse{PulseNumber: inputPulse.PulseNumber - 1}
-	pc := pulse.NewCalculatorMock(t)
+	pc := pulse.NewCalculatorMock(ctrl)
 	pc.BackwardsMock.Set(func(_ context.Context, pn insolar.PulseNumber, steps int) (p1 insolar.Pulse, err error) {
 		require.Equal(t, latestPulse, pn)
 		require.Equal(t, 1, steps)
