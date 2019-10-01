@@ -19,9 +19,12 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"flag"
+	"fmt"
 	"io/ioutil"
 	"math"
 	"os"
+	"runtime/pprof"
 	"time"
 
 	"github.com/dgraph-io/badger"
@@ -427,7 +430,20 @@ func initExit(ctx context.Context) {
 	})
 }
 
+var pprofFlag = flag.Bool("pprof", false, "run with cpu profile")
+
 func main() {
+	flag.Parse()
+	if *pprofFlag {
+		f, err := os.Create(fmt.Sprint(time.Now().Unix()) + ".pprof")
+		if err != nil {
+			log.Fatal("could not create CPU profile: ", err)
+		}
+		if err := pprof.StartCPUProfile(f); err != nil {
+			log.Fatal("could not start CPU profile: ", err)
+		}
+		defer pprof.StopCPUProfile()
+	}
 	ctx := initLogger()
 	initExit(ctx)
 	parseInputParams(ctx)
