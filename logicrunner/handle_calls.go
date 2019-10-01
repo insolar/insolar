@@ -118,6 +118,7 @@ func (h *HandleCall) handleActual(
 	}
 
 	logger.Debug("registering incoming request")
+
 	procRegisterRequest := NewRegisterIncomingRequest(*request, h.dep)
 	err := f.Procedure(ctx, procRegisterRequest, true)
 	if err != nil {
