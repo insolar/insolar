@@ -664,6 +664,7 @@
       "targets": [
         {
           "expr": "insolar_oldest_abandoned_request_age{installation=~\"$installation\",instance=~\"$instance\"}",
+          "legendFormat": "{{ instance }}",
           "refId": "A"
         }
       ],
