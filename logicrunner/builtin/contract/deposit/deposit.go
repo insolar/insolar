@@ -191,7 +191,7 @@ func (d *Deposit) checkConfirm(migrationDaemonRef string, amountStr string) erro
 	var activateDaemons []string
 
 	for ref := range d.MigrationDaemonConfirms {
-		migrationDaemonMemberRef, err := insolar.NewObjectReferenceFromBase58(ref)
+		migrationDaemonMemberRef, err := insolar.NewSelfScopeObjectReferenceFromBase58(ref)
 		if err != nil {
 			return fmt.Errorf(" failed to parse params.Reference")
 		}

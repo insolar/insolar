@@ -60,6 +60,18 @@ func NewGlobalReference(local ID, base ID) *Reference {
 	return &global
 }
 
+// NewSelfScopeObjectReferenceFromBase58 deserializes reference from base58 encoded string and checks if it self scoped object reference
+func NewSelfScopeObjectReferenceFromBase58(input string) (*Reference, error) {
+	global, err := NewObjectReferenceFromBase58(input)
+	if err != nil {
+		return nil, err
+	}
+	if !global.IsSelfScope() {
+		return nil, errors.New("provided reference is not self-scoped")
+	}
+	return global, nil
+}
+
 // NewObjectReferenceFromBase58 deserializes reference from base58 encoded string and checks if it object reference
 func NewObjectReferenceFromBase58(input string) (*Reference, error) {
 	global, err := NewReferenceFromBase58(input)

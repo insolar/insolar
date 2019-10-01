@@ -48,7 +48,7 @@ type Text struct {
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = insolar.NewObjectReferenceFromBase58("0111A85JAZugtAkQErbDe3eAaTw56DPLku8QGymJUCt2")
+var PrototypeReference, _ = insolar.NewSelfScopeObjectReferenceFromBase58("0111A85JAZugtAkQErbDe3eAaTw56DPLku8QGymJUCt2")
 
 // HelloWorld holds proxy type
 type HelloWorld struct {
