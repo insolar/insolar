@@ -314,6 +314,13 @@ func sendRequest(sendURL string, adminURL, rootKeysFile string, paramsPath strin
 	userCfg, err := requester.ReadUserConfigFromFile(rootKeysFile)
 	check("[ sendRequest ]", err)
 
+	pPath := paramsPath
+	if len(pPath) == 0 {
+		pPath = rootKeysFile
+	}
+	reqCfg, err := requester.ReadRequestParamsFromFile(pPath)
+	check("[ sendRequest ]", err)
+
 	if userCfg.Caller == "" {
 		info, err := requester.Info(adminURL)
 		check("[ sendRequest ]", err)
@@ -322,15 +329,9 @@ func sendRequest(sendURL string, adminURL, rootKeysFile string, paramsPath strin
 		}
 		if maAsCaller {
 			userCfg.Caller = info.MigrationAdminMember
+			reqCfg.PublicKey = userCfg.PublicKey
 		}
 	}
-
-	pPath := paramsPath
-	if len(pPath) == 0 {
-		pPath = rootKeysFile
-	}
-	reqCfg, err := requester.ReadRequestParamsFromFile(pPath)
-	check("[ sendRequest ]", err)
 
 	verboseInfo(fmt.Sprintln("User Config: ", userCfg))
 	verboseInfo(fmt.Sprintln("Requester Config: ", reqCfg))
