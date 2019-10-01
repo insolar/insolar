@@ -19,6 +19,7 @@ package log
 import (
 	"bytes"
 	"io"
+	"os"
 	"regexp"
 	"testing"
 
@@ -281,4 +282,15 @@ func TestLog_WriteDuration(t *testing.T) {
 			assert.Contains(t, s, `,"writeDuration":"`)
 		})
 	}
+}
+
+func TestMain(m *testing.M) {
+	l, err := GlobalLogger().Copy().WithFormat(insolar.JSONFormat).WithLevel(insolar.DebugLevel).Build()
+	if err != nil {
+		panic(err)
+	}
+	SetGlobalLogger(l)
+	_ = SetGlobalLevelFilter(insolar.DebugLevel)
+	exitCode := m.Run()
+	os.Exit(exitCode)
 }

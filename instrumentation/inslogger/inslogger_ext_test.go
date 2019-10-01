@@ -182,11 +182,12 @@ func logCallerGlobal(ctx context.Context, t *testing.T) (loggerField, string) {
 }
 
 func TestMain(m *testing.M) {
-	l, err := log.GlobalLogger().Copy().WithFormat(insolar.JSONFormat).Build()
+	l, err := log.GlobalLogger().Copy().WithFormat(insolar.JSONFormat).WithLevel(insolar.DebugLevel).Build()
 	if err != nil {
 		panic(err)
 	}
 	log.SetGlobalLogger(l)
+	_ = log.SetGlobalLevelFilter(insolar.DebugLevel)
 	exitCode := m.Run()
 	os.Exit(exitCode)
 }
