@@ -147,7 +147,7 @@ func (h *HandleCall) handleActual(
 
 	objectRef := request.Object
 
-	if objectRef == nil {
+	if objectRef == nil || !objectRef.IsSelfScope() {
 		return nil, errors.New("can't get object reference")
 	}
 
