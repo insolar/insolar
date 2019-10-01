@@ -69,6 +69,9 @@ func NewObjectReferenceFromBase58(input string) (*Reference, error) {
 	if !global.IsObjectReference() {
 		return nil, errors.New("provided reference is not object")
 	}
+	if !global.IsSelfScope() {
+		return nil, errors.New("provided reference is not self-scoped")
+	}
 	return global, nil
 }
 
