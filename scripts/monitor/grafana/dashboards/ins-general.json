@@ -15,7 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1569947254919,
+  "iteration": 1569959743610,
   "links": [],
   "panels": [
     {
@@ -36,7 +36,7 @@
         "thresholdMarkers": true
       },
       "gridPos": {
-        "h": 5,
+        "h": 3,
         "w": 4,
         "x": 0,
         "y": 0
@@ -82,7 +82,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "insolar_current_pulse{instance=\"heavy-01.br20.insolar.io:8080\"}",
+          "expr": "insolar_current_pulse{role=\"heavy_material\", installation=~\"$installation\"}",
           "refId": "A"
         }
       ],
@@ -107,7 +107,7 @@
       "cacheTimeout": null,
       "dashLength": 10,
       "dashes": false,
-      "fill": 0,
+      "fill": 2,
       "fillGradient": 0,
       "gridPos": {
         "h": 5,
@@ -135,25 +135,42 @@
       "percentage": false,
       "pluginVersion": "6.3.6",
       "pointradius": 1,
-      "points": true,
+      "points": false,
       "renderer": "flot",
-      "seriesOverrides": [],
+      "seriesOverrides": [
+        {
+          "alias": "/^state.*/",
+          "fill": 0,
+          "linewidth": 1,
+          "pointradius": 3,
+          "points": true,
+          "stack": false,
+          "yaxis": 2
+        }
+      ],
       "spaceLength": 10,
-      "stack": false,
+      "stack": true,
       "steppedLine": false,
       "targets": [
         {
           "expr": "sum(insolar_consensus_active_nodes_count{installation=~\"$installation\", instance=~\"$instance\"}) by (instance)",
+          "hide": false,
           "instant": false,
-          "legendFormat": "{{ instance }}",
+          "legendFormat": "list {{ instance }}",
           "refId": "A"
+        },
+        {
+          "expr": "insolar_network_state{installation=~\"$installation\", instance=~\"$instance\"}",
+          "hide": true,
+          "legendFormat": "state {{ instance }}",
+          "refId": "B"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Nodes in consensus",
+      "title": "Active list size",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -182,7 +199,7 @@
           "logBase": 1,
           "max": null,
           "min": null,
-          "show": false
+          "show": true
         }
       ],
       "yaxis": {
@@ -363,6 +380,91 @@
         "align": false,
         "alignLevel": null
       }
+    },
+    {
+      "cacheTimeout": null,
+      "colorBackground": true,
+      "colorPostfix": false,
+      "colorPrefix": false,
+      "colorValue": false,
+      "colors": [
+        "#96D98D",
+        "#FFB357",
+        "#FF7383"
+      ],
+      "format": "none",
+      "gauge": {
+        "maxValue": 100,
+        "minValue": 0,
+        "show": false,
+        "thresholdLabels": false,
+        "thresholdMarkers": true
+      },
+      "gridPos": {
+        "h": 2,
+        "w": 4,
+        "x": 0,
+        "y": 3
+      },
+      "id": 46,
+      "interval": null,
+      "links": [],
+      "mappingType": 1,
+      "mappingTypes": [
+        {
+          "name": "value to text",
+          "value": 1
+        },
+        {
+          "name": "range to text",
+          "value": 2
+        }
+      ],
+      "maxDataPoints": 100,
+      "nullPointMode": "connected",
+      "nullText": null,
+      "options": {},
+      "postfix": "",
+      "postfixFontSize": "50%",
+      "prefix": "",
+      "prefixFontSize": "50%",
+      "rangeMaps": [
+        {
+          "from": "null",
+          "text": "N/A",
+          "to": "null"
+        }
+      ],
+      "sparkline": {
+        "fillColor": "rgba(31, 118, 189, 0.18)",
+        "full": false,
+        "lineColor": "rgb(31, 120, 193)",
+        "show": false,
+        "ymax": null,
+        "ymin": null
+      },
+      "tableColumn": "",
+      "targets": [
+        {
+          "expr": "(insolar_current_pulse{role=\"heavy_material\", installation=~\"$installation\"} - insolar_heavy_finalized_pulse{role=\"heavy_material\", installation=~\"$installation\"}) / 10",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "thresholds": "3,5",
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Finalized pulse delta",
+      "type": "singlestat",
+      "valueFontSize": "80%",
+      "valueMaps": [
+        {
+          "op": "=",
+          "text": "N/A",
+          "value": "null"
+        }
+      ],
+      "valueName": "current"
     },
     {
       "aliasColors": {},
