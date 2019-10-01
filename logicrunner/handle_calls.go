@@ -173,6 +173,10 @@ func (h *HandleCall) handleActual(
 
 	registeredRequestReply := &reply.RegisterRequest{Request: requestRef}
 
+	if len(reqInfo.Request) != 0 {
+		logger.Debug("duplicated request")
+	}
+
 	if len(reqInfo.Result) != 0 {
 		logger.Debug("incoming request already has result on ledger, returning it")
 		go func() {
