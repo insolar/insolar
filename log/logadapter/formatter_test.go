@@ -18,7 +18,6 @@ package logadapter
 
 import (
 	"fmt"
-	"github.com/insolar/insolar/log"
 	"reflect"
 	"strings"
 	"testing"
@@ -91,22 +90,6 @@ func TestPrintFields(t *testing.T) {
 			args.LazyFmt("stringer_test"),
 			func() string { return "func_result" },
 		}))
-
-	log.Debug(struct {
-		msg string
-		f0  int `fmt:"%4d"`
-		f1  int
-		f2  string `raw:"%s"`
-		f3  *string
-		f4  *string
-		f5  interface{}
-		f6  func() string
-	}{
-		"message title",
-		99, 999, "test_raw", &s, nil,
-		args.LazyFmt("stringer_test"),
-		func() string { return "func_result" },
-	})
 }
 
 func printFieldsOut(v interface{}) string {
