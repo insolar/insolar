@@ -59,8 +59,6 @@ func TestHandleCall_Present(t *testing.T) {
 			case *RegisterIncomingRequest:
 				p.result <- &payload.RequestInfo{RequestID: gen.ID(), ObjectID: *objRef.GetLocal()}
 				return nil
-			case *AddFreshRequest:
-				return nil
 			default:
 				t.Fatalf("Unknown procedure: %T", proc)
 			}
@@ -71,7 +69,7 @@ func TestHandleCall_Present(t *testing.T) {
 			dep: &Dependencies{
 				Publisher: nil,
 				StateStorage: NewStateStorageMock(mc).
-					UpsertExecutionStateMock.Expect(objRef).Return(nil),
+					UpsertExecutionStateMock.Expect(objRef).Return(NewExecutionBrokerIMock(mc).HasMoreRequestsMock.Return()),
 				ResultsMatcher:  nil,
 				ArtifactManager: artifacts.NewClientMock(mc),
 				Sender:          nil,
@@ -111,8 +109,6 @@ func TestHandleCall_Present(t *testing.T) {
 				return nil
 			case *RegisterIncomingRequest:
 				p.result <- &payload.RequestInfo{RequestID: gen.ID(), ObjectID: *objRef.GetLocal()}
-				return nil
-			case *AddFreshRequest:
 				return nil
 			default:
 				t.Fatalf("Unknown procedure: %T", proc)
@@ -170,8 +166,6 @@ func TestHandleCall_Present(t *testing.T) {
 				return ErrCantExecute
 			case *RegisterIncomingRequest:
 				t.Fatalf("Shouldn't be called: %T", proc)
-			case *AddFreshRequest:
-				t.Fatalf("Shouldn't be called: %T", proc)
 			default:
 				t.Fatalf("Unknown procedure: %T", proc)
 			}
@@ -220,8 +214,6 @@ func TestHandleCall_Present(t *testing.T) {
 				return nil
 			case *RegisterIncomingRequest:
 				return flow.ErrCancelled
-			case *AddFreshRequest:
-				t.Fatalf("Shouldn't be called: %T", proc)
 			default:
 				t.Fatalf("Unknown procedure: %T", proc)
 			}
@@ -256,56 +248,6 @@ func TestHandleCall_Present(t *testing.T) {
 		mc.Finish()
 	})
 
-	t.Run("objectRef for CTMethod is empty", func(t *testing.T) {
-		t.Parallel()
-
-		ctx := flow.TestContextWithPulse(inslogger.TestContext(t), gen.PulseNumber())
-		mc := minimock.NewController(t)
-
-		fm := flow.NewFlowMock(mc)
-		fm.ProcedureMock.Set(func(ctx context.Context, proc flow.Procedure, cancelable bool) (err error) {
-			switch proc.(type) {
-			case *CheckOurRole:
-				return nil
-			case *RegisterIncomingRequest:
-				return flow.ErrCancelled
-			case *AddFreshRequest:
-				t.Fatalf("Shouldn't be called: %T", proc)
-			default:
-				t.Fatalf("Unknown procedure: %T", proc)
-			}
-			return nil
-		})
-
-		handler := HandleCall{
-			dep: &Dependencies{
-				Publisher:       nil,
-				StateStorage:    NewStateStorageMock(mc),
-				ResultsMatcher:  nil,
-				ArtifactManager: artifacts.NewClientMock(mc),
-				Sender:          nil,
-				JetStorage:      nil,
-				WriteAccessor:   writecontroller.NewAccessorMock(mc),
-			},
-			Message: payload.Meta{},
-		}
-
-		msg := payload.CallMethod{
-			Request: &record.IncomingRequest{
-				CallType: record.CTMethod,
-				Object:   nil,
-			},
-			PulseNumber: gen.PulseNumber(),
-		}
-
-		reply, err := handler.handleActual(ctx, msg, fm)
-		assert.Nil(t, reply)
-		assert.Error(t, err)
-
-		mc.Wait(time.Minute)
-		mc.Finish()
-	})
-
 	t.Run("write accessor failed to fetch lock AND registry is empty after on pulse", func(t *testing.T) {
 		t.Parallel()
 
@@ -321,8 +263,6 @@ func TestHandleCall_Present(t *testing.T) {
 				return nil
 			case *RegisterIncomingRequest:
 				p.result <- &payload.RequestInfo{RequestID: gen.ID(), ObjectID: *objRef.GetLocal()}
-				return nil
-			case *AddFreshRequest:
 				return nil
 			default:
 				t.Fatalf("Unknown procedure: %T", proc)
@@ -366,65 +306,6 @@ func TestHandleCall_Present(t *testing.T) {
 		mc.Finish()
 	})
 
-	t.Run("already completed request", func(t *testing.T) {
-		t.Parallel()
-
-		ctx := flow.TestContextWithPulse(inslogger.TestContext(t), gen.PulseNumber())
-		mc := minimock.NewController(t)
-
-		objRef := gen.Reference()
-		reqRef := gen.RecordReference()
-
-		resRecord := &record.Result{Payload: []byte{3, 2, 1}}
-		virtResRecord := record.Wrap(resRecord)
-		matRecord := record.Material{Virtual: virtResRecord}
-		matRecordSerialized, err := matRecord.Marshal()
-		require.NoError(t, err)
-
-		fm := flow.NewFlowMock(mc)
-		fm.ProcedureMock.Set(func(ctx context.Context, proc flow.Procedure, cancelable bool) (err error) {
-			switch p := proc.(type) {
-			case *CheckOurRole:
-				return nil
-			case *RegisterIncomingRequest:
-				p.result <- &payload.RequestInfo{
-					RequestID: *reqRef.GetLocal(),
-					ObjectID:  *objRef.GetLocal(),
-					Request:   []byte{1, 2, 3},
-					Result:    matRecordSerialized,
-				}
-				return nil
-			case *AddFreshRequest:
-				return nil
-			default:
-				t.Fatalf("Unknown procedure: %T", proc)
-			}
-			return nil
-		})
-
-		handler := HandleCall{
-			dep: &Dependencies{
-				ArtifactManager:  artifacts.NewClientMock(mc),
-				RequestsExecutor: NewRequestsExecutorMock(mc).SendReplyMock.Return(),
-			},
-			Message: payload.Meta{},
-		}
-
-		msg := payload.CallMethod{
-			Request: &record.IncomingRequest{
-				CallType: record.CTMethod,
-				Object:   &objRef,
-			},
-		}
-
-		gotReply, err := handler.handleActual(ctx, msg, fm)
-		require.NoError(t, err)
-		require.Equal(t, &reply.RegisterRequest{Request: reqRef}, gotReply)
-
-		mc.Wait(time.Minute)
-		mc.Finish()
-	})
-
 	t.Run("object not found during request registration", func(t *testing.T) {
 		t.Parallel()
 
@@ -442,8 +323,6 @@ func TestHandleCall_Present(t *testing.T) {
 				return errors.Wrap(
 					&payload.CodedError{Code: payload.CodeNotFound, Text: "index not found"},
 					"RegisterIncomingRequest")
-			case *AddFreshRequest:
-				return nil
 			default:
 				t.Fatalf("Unknown procedure: %T", proc)
 			}

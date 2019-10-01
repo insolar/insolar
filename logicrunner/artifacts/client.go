@@ -441,12 +441,12 @@ func (m *client) sendGetObject(
 	return res, nil
 }
 
-func (m *client) GetAbandonedRequest(
+func (m *client) GetRequest(
 	ctx context.Context, object, reqRef insolar.Reference,
 ) (record.Request, error) {
 	var err error
-	instrumenter := instrument(ctx, "GetAbandonedRequest").err(&err)
-	ctx, span := instracer.StartSpan(ctx, "artifacts.GetAbandonedRequest")
+	instrumenter := instrument(ctx, "GetRequest").err(&err)
+	ctx, span := instracer.StartSpan(ctx, "artifacts.GetRequest")
 	defer func() {
 		if err != nil {
 			instracer.AddError(span, err)
@@ -476,7 +476,7 @@ func (m *client) GetAbandonedRequest(
 		case *record.OutgoingRequest:
 			result = v
 		default:
-			err = fmt.Errorf("GetAbandonedRequest: unexpected message: %#v", concrete)
+			err = fmt.Errorf("GetRequest: unexpected message: %#v", concrete)
 			return nil, err
 		}
 
@@ -493,7 +493,11 @@ func (m *client) GetAbandonedRequest(
 }
 
 // GetPendings returns a list of pending requests
-func (m *client) GetPendings(ctx context.Context, object insolar.Reference) ([]insolar.Reference, error) {
+func (m *client) GetPendings(
+	ctx context.Context, object insolar.Reference, skip []insolar.ID,
+) (
+	[]insolar.Reference, error,
+) {
 	var err error
 	instrumenter := instrument(ctx, "GetPendings").err(&err)
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.GetPendings")
@@ -506,8 +510,9 @@ func (m *client) GetPendings(ctx context.Context, object insolar.Reference) ([]i
 	}()
 
 	getPendingsPl := &payload.GetPendings{
-		ObjectID: *object.GetLocal(),
-		Count:    getPendingLimit,
+		ObjectID:        *object.GetLocal(),
+		Count:           getPendingLimit,
+		SkipRequestRefs: skip,
 	}
 
 	pl, err := m.sendToLight(ctx, m.sender, getPendingsPl, object)

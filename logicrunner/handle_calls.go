@@ -137,6 +137,7 @@ func (h *HandleCall) handleActual(
 		}
 		return nil, errors.Wrap(err, "[ HandleCall.handleActual ] can't create request")
 	}
+	logger.Debug("registered request")
 
 	reqInfo := procRegisterRequest.getResult()
 	requestRef := *getRequestReference(reqInfo)
@@ -192,11 +193,7 @@ func (h *HandleCall) handleActual(
 	defer done()
 
 	broker := h.dep.StateStorage.UpsertExecutionState(*objectRef)
-
-	proc := AddFreshRequest{broker: broker, requestRef: requestRef, request: *request}
-	if err := f.Procedure(ctx, &proc, true); err != nil {
-		return nil, errors.Wrap(err, "couldn't pass request to broker")
-	}
+	broker.HasMoreRequests(ctx)
 
 	return registeredRequestReply, nil
 }
