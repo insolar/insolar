@@ -128,10 +128,30 @@ func Test_IncomingRequest_Duplicate(t *testing.T) {
 	s.SetPulse(ctx)
 
 	t.Run("creation request duplicate found", func(t *testing.T) {
-		msg, _ := MakeSetIncomingRequest(gen.ID(), gen.IDWithPulse(s.Pulse()), insolar.ID{}, true, true, "")
+		msg, _ := MakeSetIncomingRequest(
+			gen.ID(),
+			gen.IDWithPulse(s.Pulse()),
+			insolar.ID{},
+			true,
+			true,
+			"reason",
+		)
+		// Create reason.
+		rep := SendMessage(ctx, s, &msg)
+		RequireNotError(rep)
+		reasonID := rep.(*payload.RequestInfo).RequestID
+
+		msg, _ = MakeSetIncomingRequest(
+			gen.ID(),
+			reasonID,
+			reasonID,
+			true,
+			false,
+			"",
+		)
 
 		// Set first request.
-		rep := SendMessage(ctx, s, &msg)
+		rep = SendMessage(ctx, s, &msg)
 		RequireNotError(rep)
 		require.Nil(t, rep.(*payload.RequestInfo).Request)
 		require.Nil(t, rep.(*payload.RequestInfo).Result)
