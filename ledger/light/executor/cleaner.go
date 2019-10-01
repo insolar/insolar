@@ -164,16 +164,22 @@ func (c *LightCleaner) cleanPulse(ctx context.Context, cleanFrom, latest insolar
 	c.jetCleaner.DeleteForPN(ctx, cleanFrom)
 	c.indexCleaner.DeleteForPN(ctx, cleanFrom)
 
-	indexes, err := c.indexAccessor.ForPulse(ctx, latest)
-	if err == nil && err != object.ErrIndexNotFound {
-		logger.Errorf("Can't get indexes for pulse: %s", err)
-	} else {
-		ids := make([]insolar.ID, len(indexes))
-		for i, index := range indexes {
-			ids[i] = index.ObjID
+	prev, err := c.pulseCalculator.Backwards(ctx, latest, 1)
+	if err == nil {
+		indexes, err := c.indexAccessor.ForPulse(ctx, prev.PulseNumber)
+		if err != nil && err != object.ErrIndexNotFound {
+			logger.Errorf("Can't get indexes for pulse: %s", err)
+		} else {
+			ids := make([]insolar.ID, len(indexes))
+			for i, index := range indexes {
+				ids[i] = index.ObjID
+			}
+			c.filamentCleaner.ClearAllExcept(ids)
 		}
-		c.filamentCleaner.ClearAllExcept(ids)
+	} else {
+		logger.Error("Can't get prev pulse", err)
 	}
+
 	c.filamentCleaner.ClearIfLonger(c.filamentLimit)
 
 	err = c.pulseShifter.Shift(ctx, cleanFrom)
