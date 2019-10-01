@@ -31,16 +31,16 @@ func NewMessage(pl Payload) (*message.Message, error) {
 	return message.NewMessage(watermill.NewUUID(), buf), nil
 }
 
-func MustNewMessage(p Payload) *message.Message {
-	msg, err := NewMessage(p)
+func MustNewMessage(pl Payload) *message.Message {
+	msg, err := NewMessage(pl)
 	if err != nil {
 		panic(err)
 	}
 	return msg
 }
 
-func NewResultMessage(payload Payload) (*message.Message, error) {
-	msg, err := NewMessage(payload)
+func NewResultMessage(pl Payload) (*message.Message, error) {
+	msg, err := NewMessage(pl)
 	if err != nil {
 		return nil, err
 	}

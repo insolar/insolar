@@ -40,6 +40,7 @@ type IndexModifier interface {
 // MemoryIndexModifier writes index to in-memory storage.
 type MemoryIndexModifier interface {
 	Set(ctx context.Context, pn insolar.PulseNumber, index record.Index)
+	SetIfNone(ctx context.Context, pn insolar.PulseNumber, index record.Index)
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexAccessor -o ./ -s _mock.go -g

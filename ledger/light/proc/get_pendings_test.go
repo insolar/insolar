@@ -22,7 +22,6 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/gojuno/minimock"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/insolar"
@@ -57,14 +56,20 @@ func TestGetPendings_Proceed(t *testing.T) {
 
 		filaments.OpenedRequestsMock.Return([]record.CompositeFilamentRecord{}, nil)
 
+		expectedMsg, _ := payload.NewMessage(&payload.Error{
+			Text: insolar.ErrNoPendingRequest.Error(),
+			Code: payload.CodeNoPendings,
+		})
+
+		sender.ReplyMock.Inspect(func(ctx context.Context, origin payload.Meta, reply *message.Message) {
+			assert.Equal(t, expectedMsg.Payload, reply.Payload)
+		}).Return()
+
 		p := proc.NewGetPendings(payload.Meta{}, gen.ID(), 1)
 		p.Dep(filaments, sender)
 
 		err := p.Proceed(ctx)
-		assert.Error(t, err)
-		insError, ok := errors.Cause(err).(*payload.CodedError)
-		assert.True(t, ok)
-		assert.Equal(t, uint32(payload.CodeNoPendings), insError.GetCode())
+		assert.NoError(t, err)
 	})
 
 	t.Run("ok, pendings found", func(t *testing.T) {

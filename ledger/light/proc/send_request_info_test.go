@@ -113,9 +113,6 @@ func TestSendRequestInfo_Proceed(t *testing.T) {
 			assert.Equal(t, reply.Metadata, replyMsg.Metadata)
 		}).Return()
 
-		locker.UnlockMock.Return()
-		locker.LockMock.Return()
-
 		p := proc.NewSendRequestInfo(msg, objID, reqID, pulse.MinTimePulse)
 		p.Dep(filament, sender, locker)
 		err = p.Proceed(ctx)
@@ -130,9 +127,6 @@ func TestSendRequestInfo_Proceed(t *testing.T) {
 		reqID := gen.ID()
 		objID := reqID
 		msg := payload.Meta{}
-
-		locker.UnlockMock.Return()
-		locker.LockMock.Return()
 
 		filament.RequestInfoMock.Return(executor.FilamentsRequestInfo{}, &payload.CodedError{
 			Text: fmt.Sprintf("requestInfo not found request %s", reqID.DebugString()),
