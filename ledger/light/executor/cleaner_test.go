@@ -124,20 +124,18 @@ func TestCleaner_clean(t *testing.T) {
 	}).Return(nil)
 
 	pc := pulse.NewCalculatorMock(ctrl)
-	pc.BackwardsMock.Inspect(func(ctx context.Context, pn insolar.PulseNumber, steps int) {
-		require.Equal(t, inputPulse.PulseNumber, pn)
-		require.Equal(t, limit+1, steps)
-	}).Return(calculatedPulse, nil)
+	pc.BackwardsMock.Return(calculatedPulse, nil)
 
 	objID := gen.ID()
 	ia := object.NewIndexAccessorMock(ctrl)
 	ia.ForPulseMock.Inspect(func(ctx context.Context, pn insolar.PulseNumber) {
-		require.Equal(t, inputPulse.PulseNumber, pn)
+		require.Equal(t, calculatedPulse.PulseNumber, pn)
 	}).Return([]record.Index{
 		{ObjID: objID, LifelineLastUsed: insolar.PulseNumber(110)},
 	}, nil)
 
 	fc := NewFilamentCleanerMock(ctrl)
+	fc.ClearAllExceptMock.Expect([]insolar.ID{objID})
 	fc.ClearIfLongerMock.Inspect(func(limit int) {
 		require.Equal(t, limit, 100)
 	}).Return()
