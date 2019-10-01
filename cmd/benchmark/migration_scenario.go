@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"math/big"
 	"strconv"
-	"strings"
 
 	"github.com/insolar/insolar/api/sdk"
 )
@@ -44,7 +43,7 @@ func (s *migrationScenario) canBeStarted() error {
 		return fmt.Errorf("not enough members for start")
 	}
 
-	if len(s.migrationDaemons) < 3 {
+	if len(s.migrationDaemons) < 2 {
 		return fmt.Errorf("not enough migration daemons")
 	}
 	return nil
@@ -62,13 +61,6 @@ func (s *migrationScenario) prepare(repetition int) {
 
 	s.migrationDaemons, err = s.insSDK.GetAndActivateMigrationDaemonMembers()
 	check("failed to get and activate migration daemons: ", err)
-
-	for _, md := range s.migrationDaemons {
-		_, err := s.insSDK.ActivateDaemon(md.GetReference())
-		if err != nil && !strings.Contains(err.Error(), "[daemon member already activated]") {
-			check("Error while activating daemons: ", err)
-		}
-	}
 
 	s.balanceCheckMembers = make([]sdk.Member, len(s.members), len(s.members)+2)
 	copy(s.balanceCheckMembers, s.members)

@@ -21,7 +21,6 @@ import (
 	"math/big"
 	"os"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/insolar/insolar/api/sdk"
@@ -55,13 +54,6 @@ func (s *depositTransferScenario) prepare(repetition int) {
 
 	s.migrationDaemons, err = s.insSDK.GetAndActivateMigrationDaemonMembers()
 	check("failed to get and activate migration daemons: ", err)
-
-	for _, md := range s.migrationDaemons {
-		_, err := s.insSDK.ActivateDaemon(md.GetReference())
-		if err != nil && !strings.Contains(err.Error(), "[daemon member already activated]") {
-			check("Error while activating daemons: ", err)
-		}
-	}
 
 	s.balanceCheckMembers = make([]sdk.Member, len(s.members), len(s.members)+2)
 	copy(s.balanceCheckMembers, s.members)
