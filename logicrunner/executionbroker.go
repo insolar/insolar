@@ -52,7 +52,6 @@ type ExecutionBrokerI interface {
 	HasMoreRequests(ctx context.Context)
 
 	AbandonedRequestsOnLedger(ctx context.Context)
-	NoMoreRequestsOnLedger(ctx context.Context)
 
 	PendingState() insolar.PendingState
 	PrevExecutorStillExecuting(ctx context.Context) error
@@ -147,11 +146,13 @@ func (q *ExecutionBroker) AbandonedRequestsOnLedger(ctx context.Context) {
 	go q.startProcessor(ctx)
 }
 
-func (q *ExecutionBroker) NoMoreRequestsOnLedger(ctx context.Context) {
+func (q *ExecutionBroker) noMoreRequestsOnLedger(ctx context.Context) {
 	q.stateLock.Lock()
 	defer q.stateLock.Unlock()
 
-	q.ledgerHasMoreRequests = false
+	if len(q.probablyMoreSinceLastFetch) == 0 {
+		q.ledgerHasMoreRequests = false
+	}
 }
 
 // startProcessors starts one processing goroutine
@@ -211,7 +212,7 @@ func (q *ExecutionBroker) startProcessor(ctx context.Context) {
 					}
 				}
 				if tr == nil {
-					q.NoMoreRequestsOnLedger(ctx)
+					q.noMoreRequestsOnLedger(ctx)
 					continue
 				}
 				if q.upsertToDuplicationTable(ctx, tr) {
