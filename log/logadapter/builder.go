@@ -310,7 +310,7 @@ func (z LoggerBuilder) prepareOutput(metrics *logmetrics.MetricsHelper, needsLow
 			flags |= critlog.BufferReuse
 		}
 
-		missedFn := z.loggerMissedEvent(insolar.WarnLevel)
+		missedFn := z.loggerMissedEvent(insolar.WarnLevel, metrics)
 
 		var bpb *critlog.BackpressureBuffer
 		switch {
@@ -340,8 +340,9 @@ func (z LoggerBuilder) prepareOutput(metrics *logmetrics.MetricsHelper, needsLow
 	return fdw, nil
 }
 
-func (z LoggerBuilder) loggerMissedEvent(level insolar.LogLevel) critlog.MissedEventFunc {
+func (z LoggerBuilder) loggerMissedEvent(level insolar.LogLevel, metrics *logmetrics.MetricsHelper) critlog.MissedEventFunc {
 	return func(missed int) (insolar.LogLevel, []byte) {
+		metrics.OnWriteSkip(missed)
 		return level, ([]byte)(
 			fmt.Sprintf(`{"level":"%v","message":"logger dropped %d messages"}`, level.String(), missed))
 	}
