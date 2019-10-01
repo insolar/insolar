@@ -15,25 +15,23 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 21,
+  "iteration": 1569947254919,
   "links": [],
   "panels": [
     {
       "cacheTimeout": null,
       "colorBackground": false,
-      "colorPrefix": false,
       "colorValue": false,
       "colors": [
         "#299c46",
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "decimals": null,
       "format": "none",
       "gauge": {
-        "maxValue": 11,
+        "maxValue": 100,
         "minValue": 0,
-        "show": true,
+        "show": false,
         "thresholdLabels": false,
         "thresholdMarkers": true
       },
@@ -41,174 +39,6 @@
         "h": 5,
         "w": 4,
         "x": 0,
-        "y": 0
-      },
-      "id": 20,
-      "interval": "",
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "options": {},
-      "pluginVersion": "6.3.6",
-      "postfix": " nodes",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": true,
-        "ymax": null,
-        "ymin": null
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "expr": "sum(insolar_consensus_active_nodes_count{instance=\"heavy-01.br20.insolar.io:8080\"})",
-          "instant": false,
-          "refId": "A"
-        }
-      ],
-      "thresholds": "50, 95",
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "Consensus Nodes On Heavy",
-      "type": "singlestat",
-      "valueFontSize": "50%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ],
-      "valueName": "current"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": true,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "datasource": "prometheus",
-      "format": "none",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 6,
-        "x": 4,
-        "y": 0
-      },
-      "id": 31,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "options": {},
-      "pluginVersion": "6.3.6",
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": true,
-        "ymax": null,
-        "ymin": null
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "expr": "sum(insolar_log_calls{level=\"error\"})",
-          "refId": "A"
-        }
-      ],
-      "thresholds": "0,1",
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "Errors In Logs",
-      "type": "singlestat",
-      "valueFontSize": "80%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ],
-      "valueName": "current"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": false,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "format": "none",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 4,
-        "x": 10,
         "y": 0
       },
       "id": 34,
@@ -274,14 +104,192 @@
     {
       "aliasColors": {},
       "bars": false,
+      "cacheTimeout": null,
+      "dashLength": 10,
+      "dashes": false,
+      "fill": 0,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 5,
+        "w": 7,
+        "x": 4,
+        "y": 0
+      },
+      "id": 20,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": false,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pluginVersion": "6.3.6",
+      "pointradius": 1,
+      "points": true,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum(insolar_consensus_active_nodes_count{installation=~\"$installation\", instance=~\"$instance\"}) by (instance)",
+          "instant": false,
+          "legendFormat": "{{ instance }}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Nodes in consensus",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "cacheTimeout": null,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "prometheus",
+      "fill": 6,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 11,
+        "y": 0
+      },
+      "id": 31,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": false,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null as zero",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pluginVersion": "6.3.6",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum(rate(insolar_log_calls{level=\"error\",installation=~\"$installation\", instance=~\"$instance\"}[1m])) by (instance)",
+          "legendFormat": "{{instance}}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Log errors / sec",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
       "dashLength": 10,
       "dashes": false,
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
         "h": 5,
-        "w": 10,
-        "x": 14,
+        "w": 7,
+        "x": 17,
         "y": 0
       },
       "id": 28,
@@ -306,12 +314,12 @@
       "renderer": "flot",
       "seriesOverrides": [],
       "spaceLength": 10,
-      "stack": false,
+      "stack": true,
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(increase(insolar_vm_handle_finished{vm_handle_finished_with_error!=\"\", installation=\"$installation\", instance=~\"$instance\"}[5m])) by (vm_handle_payload_type, vm_handle_finished_with_error, instance)",
-          "legendFormat": "{{vm_handle_payload_type}}: {{instance}} \"{{vm_handle_finished_with_error}}\"",
+          "expr": "sum(rate(insolar_vm_handle_finished{vm_handle_finished_with_error!=\"\", installation=~\"$installation\", instance=~\"$instance\"}[1m])) by (vm_handle_finished_with_error)",
+          "legendFormat": "{{vm_handle_finished_with_error}}",
           "refId": "A"
         }
       ],
@@ -319,7 +327,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "VM Handle finished with errors",
+      "title": "VM handle errors / sec",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -364,8 +372,8 @@
       "fill": 10,
       "fillGradient": 0,
       "gridPos": {
-        "h": 7,
-        "w": 11,
+        "h": 6,
+        "w": 6,
         "x": 0,
         "y": 5
       },
@@ -375,13 +383,13 @@
         "current": false,
         "max": false,
         "min": false,
-        "show": true,
+        "show": false,
         "total": false,
         "values": false
       },
       "lines": true,
       "linewidth": 1,
-      "nullPointMode": "null",
+      "nullPointMode": "null as zero",
       "options": {
         "dataLinks": []
       },
@@ -395,7 +403,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(irate(insolar_contract_requester_send_message_timing_count{role=\"virtual\"}[5m])) by (instance)",
+          "expr": "sum(rate(insolar_api_incoming{installation=~\"$installation\",instance=~\"$instance\"}[1m])) by (instance)",
           "legendFormat": "{{instance}}",
           "refId": "A"
         }
@@ -404,7 +412,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "TPS",
+      "title": "RPS",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -449,9 +457,9 @@
       "fill": 0,
       "fillGradient": 0,
       "gridPos": {
-        "h": 7,
-        "w": 13,
-        "x": 11,
+        "h": 6,
+        "w": 7,
+        "x": 6,
         "y": 5
       },
       "id": 36,
@@ -460,7 +468,7 @@
         "current": false,
         "max": false,
         "min": false,
-        "show": true,
+        "show": false,
         "total": false,
         "values": false
       },
@@ -480,8 +488,8 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "deriv(insolar_current_pulse{installation=\"prod\"}[60s])",
-          "legendFormat": "P {{instance}}",
+          "expr": "deriv(insolar_current_pulse{installation=~\"$installation\",instance=~\"$instance\"}[1m])",
+          "legendFormat": "{{instance}}",
           "refId": "A"
         }
       ],
@@ -527,296 +535,439 @@
       }
     },
     {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "fill": 3,
+      "fillGradient": 0,
       "gridPos": {
-        "h": 5,
+        "h": 6,
+        "w": 6,
+        "x": 13,
+        "y": 5
+      },
+      "id": 38,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": false,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 2,
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "opened_requests",
+          "color": "#E02F44"
+        }
+      ],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum(insolar_requests_opened{instance=~\"$instance\", installation=~\"$installation\"}-insolar_requests_closed{instance=~\"$instance\", installation=~\"$installation\"})",
+          "legendFormat": "opened_requests",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Opened requests",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 6,
+        "w": 5,
+        "x": 19,
+        "y": 5
+      },
+      "id": 40,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": false,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "insolar_oldest_abandoned_request_age{installation=~\"$installation\",instance=~\"$instance\"}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Abandon age",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "s",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "fill": 0,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 6,
         "w": 8,
         "x": 0,
-        "y": 12
+        "y": 11
       },
-      "id": 24,
+      "id": 42,
+      "legend": {
+        "alignAsTable": false,
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "rightSide": true,
+        "show": false,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 2,
+      "nullPointMode": "null",
       "options": {
-        "displayMode": "lcd",
-        "fieldOptions": {
-          "calcs": [
-            "mean"
-          ],
-          "defaults": {
-            "mappings": [],
-            "max": 100,
-            "min": 0,
-            "thresholds": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "override": {},
-          "values": false
-        },
-        "orientation": "horizontal"
+        "dataLinks": []
       },
-      "pluginVersion": "6.3.6",
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
       "targets": [
         {
-          "expr": "(1 - avg(rate(node_cpu_seconds_total{mode=\"idle\", instance=\"heavy-01.br20.insolar.io:9100\"}[5m])) by (host)) * 100",
-          "legendFormat": "{{host}}",
+          "expr": "1 - avg(rate(node_cpu_seconds_total{mode=\"idle\", host=~\".*.br20.insolar.io\"}[1m])) by (host)",
+          "legendFormat": "{{ host }}",
           "refId": "A"
-        },
-        {
-          "expr": "(1 - avg(rate(node_cpu_seconds_total{mode=\"idle\", instance=\"light-01.br20.insolar.io:9100\"}[5m])) by (host)) * 100",
-          "legendFormat": "{{host}}",
-          "refId": "B"
-        },
-        {
-          "expr": "(1 - avg(rate(node_cpu_seconds_total{mode=\"idle\", instance=\"light-01.br20.insolar.io:9100\"}[5m])) by (host)) * 100",
-          "legendFormat": "{{host}}",
-          "refId": "C"
-        },
-        {
-          "expr": "(1 - avg(rate(node_cpu_seconds_total{mode=\"idle\", instance=\"light-03.br20.insolar.io:9100\"}[5m])) by (host)) * 100",
-          "legendFormat": "{{host}}",
-          "refId": "D"
-        },
-        {
-          "expr": "(1 - avg(rate(node_cpu_seconds_total{mode=\"idle\", instance=\"light-01.br20.insolar.io:9100\"}[5m])) by (host)) * 100",
-          "legendFormat": "{{host}}",
-          "refId": "E"
-        },
-        {
-          "expr": "(1 - avg(rate(node_cpu_seconds_total{mode=\"idle\", instance=\"light-05.br20.insolar.io:9100\"}[5m])) by (host)) * 100",
-          "legendFormat": "{{host}}",
-          "refId": "F"
-        },
-        {
-          "expr": "(1 - avg(rate(node_cpu_seconds_total{mode=\"idle\", instance=\"virtual-01.br20.insolar.io:9100\"}[5m])) by (host)) * 100",
-          "legendFormat": "{{host}}",
-          "refId": "G"
-        },
-        {
-          "expr": "(1 - avg(rate(node_cpu_seconds_total{mode=\"idle\", instance=\"virtual-02.br20.insolar.io:9100\"}[5m])) by (host)) * 100",
-          "legendFormat": "{{host}}",
-          "refId": "H"
-        },
-        {
-          "expr": "(1 - avg(rate(node_cpu_seconds_total{mode=\"idle\", instance=\"virtual-03.br20.insolar.io:9100\"}[5m])) by (host)) * 100",
-          "legendFormat": "{{host}}",
-          "refId": "I"
-        },
-        {
-          "expr": "(1 - avg(rate(node_cpu_seconds_total{mode=\"idle\", instance=\"virtual-04.br20.insolar.io:9100\"}[5m])) by (host)) * 100",
-          "legendFormat": "{{host}}",
-          "refId": "J"
-        },
-        {
-          "expr": "(1 - avg(rate(node_cpu_seconds_total{mode=\"idle\", instance=\"virtual-05.br20.insolar.io:9100\"}[5m])) by (host)) * 100",
-          "legendFormat": "{{host}}",
-          "refId": "K"
         }
       ],
+      "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
-      "title": "CPU Usage, %",
-      "type": "bargauge"
+      "title": "CPU",
+      "tooltip": {
+        "shared": true,
+        "sort": 2,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "percentunit",
+          "label": null,
+          "logBase": 1,
+          "max": "1",
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     },
     {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "fill": 0,
+      "fillGradient": 0,
       "gridPos": {
-        "h": 5,
+        "h": 6,
         "w": 8,
         "x": 8,
-        "y": 12
+        "y": 11
       },
-      "id": 22,
+      "id": 43,
+      "legend": {
+        "alignAsTable": false,
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "rightSide": true,
+        "show": false,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 2,
+      "nullPointMode": "null",
       "options": {
-        "displayMode": "lcd",
-        "fieldOptions": {
-          "calcs": [
-            "last"
-          ],
-          "defaults": {
-            "mappings": [],
-            "max": 100,
-            "min": 0,
-            "thresholds": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ],
-            "title": ""
-          },
-          "override": {},
-          "values": false
-        },
-        "orientation": "horizontal"
+        "dataLinks": []
       },
-      "pluginVersion": "6.3.6",
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
       "targets": [
         {
-          "expr": "(1 - node_memory_MemAvailable_bytes{host=\"heavy-01.br20.insolar.io\"} / node_memory_MemTotal_bytes) * 100",
-          "legendFormat": "{{host}}",
+          "expr": "1 - node_memory_MemAvailable_bytes{host=~\".*.br20.insolar.io\"} / node_memory_MemTotal_bytes",
+          "legendFormat": "{{ host }}",
           "refId": "A"
-        },
-        {
-          "expr": "(1 - node_memory_MemAvailable_bytes{host=\"light-01.br20.insolar.io\"} / node_memory_MemTotal_bytes) * 100",
-          "legendFormat": "{{host}}",
-          "refId": "B"
-        },
-        {
-          "expr": "(1 - node_memory_MemAvailable_bytes{host=\"light-01.br20.insolar.io\"} / node_memory_MemTotal_bytes) * 100",
-          "legendFormat": "{{host}}",
-          "refId": "C"
-        },
-        {
-          "expr": "(1 - node_memory_MemAvailable_bytes{host=\"light-03.br20.insolar.io\"} / node_memory_MemTotal_bytes) * 100",
-          "legendFormat": "{{host}}",
-          "refId": "D"
-        },
-        {
-          "expr": "(1 - node_memory_MemAvailable_bytes{host=\"light-01.br20.insolar.io\"} / node_memory_MemTotal_bytes) * 100",
-          "legendFormat": "{{host}}",
-          "refId": "E"
-        },
-        {
-          "expr": "(1 - node_memory_MemAvailable_bytes{host=\"light-05.br20.insolar.io\"} / node_memory_MemTotal_bytes) * 100",
-          "legendFormat": "{{host}}",
-          "refId": "F"
-        },
-        {
-          "expr": "(1 - node_memory_MemAvailable_bytes{host=\"virtual-01.br20.insolar.io\"} / node_memory_MemTotal_bytes) * 100",
-          "legendFormat": "{{host}}",
-          "refId": "G"
-        },
-        {
-          "expr": "(1 - node_memory_MemAvailable_bytes{host=\"virtual-02.br20.insolar.io\"} / node_memory_MemTotal_bytes) * 100",
-          "legendFormat": "{{host}}",
-          "refId": "H"
-        },
-        {
-          "expr": "(1 - node_memory_MemAvailable_bytes{host=\"virtual-03.br20.insolar.io\"} / node_memory_MemTotal_bytes) * 100",
-          "legendFormat": "{{host}}",
-          "refId": "I"
-        },
-        {
-          "expr": "(1 - node_memory_MemAvailable_bytes{host=\"virtual-03.br20.insolar.io\"} / node_memory_MemTotal_bytes) * 100",
-          "legendFormat": "{{host}}",
-          "refId": "J"
-        },
-        {
-          "expr": "(1 - node_memory_MemAvailable_bytes{host=\"virtual-05.br20.insolar.io\"} / node_memory_MemTotal_bytes) * 100",
-          "legendFormat": "{{host}}",
-          "refId": "K"
         }
       ],
+      "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
-      "title": "Memory Usage, %",
-      "type": "bargauge"
+      "title": "Memory",
+      "tooltip": {
+        "shared": true,
+        "sort": 2,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "percentunit",
+          "label": null,
+          "logBase": 1,
+          "max": "1",
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     },
     {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "fill": 0,
+      "fillGradient": 0,
       "gridPos": {
-        "h": 5,
+        "h": 6,
         "w": 8,
         "x": 16,
-        "y": 12
+        "y": 11
       },
-      "id": 32,
+      "id": 44,
+      "legend": {
+        "alignAsTable": false,
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "rightSide": true,
+        "show": false,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 2,
+      "nullPointMode": "null",
       "options": {
-        "displayMode": "lcd",
-        "fieldOptions": {
-          "calcs": [
-            "mean"
-          ],
-          "defaults": {
-            "mappings": [],
-            "max": 100,
-            "min": 0,
-            "thresholds": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "override": {},
-          "values": false
-        },
-        "orientation": "horizontal"
+        "dataLinks": []
       },
-      "pluginVersion": "6.3.6",
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
       "targets": [
         {
-          "expr": "SUM(100 - ((node_filesystem_avail_bytes{instance=~\"heavy-01.br20.insolar.io:9100\",job=~\"node-exporter\",device!~'rootfs'} * 100) / node_filesystem_size_bytes{instance=~\"heavy-01.br20.insolar.io:9100\",job=~\"node-exporter\",device!~'rootfs'}))",
-          "legendFormat": "heavy-01",
-          "refId": "A"
-        },
-        {
-          "expr": "SUM(100 - ((node_filesystem_avail_bytes{instance=~\"light-01.br20.insolar.io:9100\",job=~\"node-exporter\",device!~'rootfs'} * 100) / node_filesystem_size_bytes{instance=~\"light-01.br20.insolar.io:9100\",job=~\"node-exporter\",device!~'rootfs'}))",
-          "legendFormat": "light-01",
+          "expr": "sum(1 - ((node_filesystem_avail_bytes{host=~\".*.br20.insolar.io\",device!~'rootfs'}) / node_filesystem_size_bytes{host=~\".*.br20.insolar.io\",device!~'rootfs'})) by (host)",
+          "legendFormat": "{{ host }}",
           "refId": "B"
-        },
-        {
-          "expr": "SUM(100 - ((node_filesystem_avail_bytes{instance=~\"light-02.br20.insolar.io:9100\",job=~\"node-exporter\",device!~'rootfs'} * 100) / node_filesystem_size_bytes{instance=~\"light-02.br20.insolar.io:9100\",job=~\"node-exporter\",device!~'rootfs'}))",
-          "legendFormat": "light-02",
-          "refId": "C"
-        },
-        {
-          "expr": "SUM(100 - ((node_filesystem_avail_bytes{instance=~\"light-03.br20.insolar.io:9100\",job=~\"node-exporter\",device!~'rootfs'} * 100) / node_filesystem_size_bytes{instance=~\"light-03.br20.insolar.io:9100\",job=~\"node-exporter\",device!~'rootfs'}))",
-          "legendFormat": "light-03",
-          "refId": "D"
-        },
-        {
-          "expr": "SUM(100 - ((node_filesystem_avail_bytes{instance=~\"light-04.br20.insolar.io:9100\",job=~\"node-exporter\",device!~'rootfs'} * 100) / node_filesystem_size_bytes{instance=~\"light-04.br20.insolar.io:9100\",job=~\"node-exporter\",device!~'rootfs'}))",
-          "legendFormat": "light-04",
-          "refId": "E"
-        },
-        {
-          "expr": "SUM(100 - ((node_filesystem_avail_bytes{instance=~\"light-05.br20.insolar.io:9100\",job=~\"node-exporter\",device!~'rootfs'} * 100) / node_filesystem_size_bytes{instance=~\"light-05.br20.insolar.io:9100\",job=~\"node-exporter\",device!~'rootfs'}))",
-          "legendFormat": "light-05",
-          "refId": "F"
-        },
-        {
-          "expr": "SUM(100 - ((node_filesystem_avail_bytes{instance=~\"virtual-01.br20.insolar.io:9100\",job=~\"node-exporter\",device!~'rootfs'} * 100) / node_filesystem_size_bytes{instance=~\"virtual-01.br20.insolar.io:9100\",job=~\"node-exporter\",device!~'rootfs'}))",
-          "legendFormat": "virtual-01",
-          "refId": "G"
-        },
-        {
-          "expr": "SUM(100 - ((node_filesystem_avail_bytes{instance=~\"virtual-02.br20.insolar.io:9100\",job=~\"node-exporter\",device!~'rootfs'} * 100) / node_filesystem_size_bytes{instance=~\"virtual-01.br20.insolar.io:9100\",job=~\"node-exporter\",device!~'rootfs'}))",
-          "legendFormat": "virtual-02",
-          "refId": "H"
-        },
-        {
-          "expr": "SUM(100 - ((node_filesystem_avail_bytes{instance=~\"virtual-03.br20.insolar.io:9100\",job=~\"node-exporter\",device!~'rootfs'} * 100) / node_filesystem_size_bytes{instance=~\"virtual-03.br20.insolar.io:9100\",job=~\"node-exporter\",device!~'rootfs'}))",
-          "legendFormat": "virtual-03",
-          "refId": "I"
-        },
-        {
-          "expr": "SUM(100 - ((node_filesystem_avail_bytes{instance=~\"virtual-04.br20.insolar.io:9100\",job=~\"node-exporter\",device!~'rootfs'} * 100) / node_filesystem_size_bytes{instance=~\"virtual-04.br20.insolar.io:9100\",job=~\"node-exporter\",device!~'rootfs'}))",
-          "legendFormat": "virtual-04",
-          "refId": "J"
-        },
-        {
-          "expr": "SUM(100 - ((node_filesystem_avail_bytes{instance=~\"virtual-05.br20.insolar.io:9100\",job=~\"node-exporter\",device!~'rootfs'} * 100) / node_filesystem_size_bytes{instance=~\"virtual-05.br20.insolar.io:9100\",job=~\"node-exporter\",device!~'rootfs'}))",
-          "legendFormat": "virtual-05",
-          "refId": "K"
         }
       ],
+      "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
-      "title": "Disk Usage, %",
-      "type": "bargauge"
+      "title": "Disk",
+      "tooltip": {
+        "shared": true,
+        "sort": 2,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "percentunit",
+          "label": null,
+          "logBase": 1,
+          "max": "1",
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     }
   ],
   "refresh": "10s",
@@ -824,10 +975,63 @@
   "style": "dark",
   "tags": [],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "allValue": null,
+        "current": {
+          "text": "prod",
+          "value": "prod"
+        },
+        "datasource": "prometheus",
+        "definition": "label_values(insolar_consensus_active_nodes_count, installation)",
+        "hide": 0,
+        "includeAll": false,
+        "label": null,
+        "multi": false,
+        "name": "installation",
+        "options": [],
+        "query": "label_values(insolar_consensus_active_nodes_count, installation)",
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "allValue": null,
+        "current": {
+          "text": "All",
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": "prometheus",
+        "definition": "label_values(insolar_consensus_active_nodes_count{installation=~\"$installation\"}, instance)",
+        "hide": 0,
+        "includeAll": true,
+        "label": null,
+        "multi": true,
+        "name": "instance",
+        "options": [],
+        "query": "label_values(insolar_consensus_active_nodes_count{installation=~\"$installation\"}, instance)",
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      }
+    ]
   },
   "time": {
-    "from": "now-1h",
+    "from": "now-15m",
     "to": "now"
   },
   "timepicker": {
@@ -847,5 +1051,5 @@
   "timezone": "",
   "title": "INS-General",
   "uid": "LmD-fXFZZ",
-  "version": 18
+  "version": 1
 }
