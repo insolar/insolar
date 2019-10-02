@@ -18,10 +18,11 @@ package logadapter
 
 import (
 	"fmt"
-	"github.com/insolar/insolar/insolar"
 	"reflect"
 	"strings"
 	"unsafe"
+
+	"github.com/insolar/insolar/insolar"
 )
 
 type LogStringer interface {
@@ -31,50 +32,77 @@ type LogStringer interface {
 type FormatFunc func(...interface{}) string
 type FormatfFunc func(string, ...interface{}) string
 
+type MsgFormatConfig struct {
+	Sformat  FormatFunc
+	Sformatf FormatfFunc
+	MFactory MarshallerFactory
+}
+
 func GetDefaultLogMsgFormatter() MsgFormatConfig {
 	return MsgFormatConfig{
 		Sformat:  fmt.Sprint,
 		Sformatf: fmt.Sprintf,
+		MFactory: GetDefaultLogMsgMarshallerFactory(),
 	}
 }
 
-type MsgFormatConfig struct {
-	Sformat  FormatFunc
-	Sformatf FormatfFunc
+type MarshallerFactory interface {
+	CreateLogObjectMarshaller(o reflect.Value) insolar.LogObjectMarshaller
+}
+
+func GetDefaultLogMsgMarshallerFactory() MarshallerFactory {
+	return marshallerFactory
 }
 
 func (v MsgFormatConfig) TryLogObject(a ...interface{}) (insolar.LogObjectMarshaller, string) {
 	if len(a) == 1 {
-		switch v := a[0].(type) {
-		case nil: // the most obvious case(s)
+		switch vv := a[0].(type) {
+		case nil: // the most obvious case
 			break
-		case string: // the most obvious case(s)
-			return nil, v
+		case string: // the most obvious case
+			return nil, vv
+		case *string: // handled separately to avoid unnecessary reflect on nil
+			if vv == nil {
+				break
+			}
+			return nil, *vv
+		case insolar.LogObject:
+			m := vv.GetLogObjectMarshaller()
+			if m != nil {
+				return m, ""
+			}
+			vr := reflect.ValueOf(vv)
+			if vr.Kind() == reflect.Ptr {
+				vr = vr.Elem()
+			}
+			return v.MFactory.CreateLogObjectMarshaller(vr), ""
 		case insolar.LogObjectMarshaller:
-			return v, ""
+			return vv, ""
 		default:
-			vt := reflect.ValueOf(v)
-			if vt.Kind() == reflect.Struct && len(vt.Type().Name()) == 0 {
-				return defaultLogObjectMarshaller{vt}, ""
+			if ok, s := tryStrValue(vv); ok {
+				return nil, s
+			}
+
+			vr := reflect.ValueOf(vv)
+			switch k := vr.Kind(); k {
+			case reflect.Ptr:
+				if vr.IsNil() {
+					break
+				}
+				vr = vr.Elem()
+				k = vr.Kind()
+				if k != reflect.Struct {
+					break
+				}
+				fallthrough
+			case reflect.Struct:
+				if len(vr.Type().Name()) == 0 {
+					return v.MFactory.CreateLogObjectMarshaller(vr), ""
+				}
 			}
 		}
 	}
 	return nil, v.Sformat(a...)
-}
-
-func GetInlineLogObjectMarshaller(v reflect.Value) insolar.LogObjectMarshaller {
-	if v.Kind() != reflect.Struct {
-		panic("illegal value")
-	}
-	return defaultLogObjectMarshaller{v}
-}
-
-type defaultLogObjectMarshaller struct {
-	v reflect.Value
-}
-
-func (v defaultLogObjectMarshaller) MarshalLogObject(output insolar.LogObjectWriter) string {
-	return printFields(v.v, output)
 }
 
 func quickTag(prefix string, tag reflect.StructTag) (string, bool) {

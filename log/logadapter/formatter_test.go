@@ -67,25 +67,128 @@ func TestTryFormatValue(t *testing.T) {
 	require.Equal(t, nil, formatValue(nil))
 }
 
-func TestPrintFields(t *testing.T) {
+func createSampleStruct() interface{} {
 	s := "test2"
+	return struct {
+		msg string
+		f0  int `fmt:"%4d"`
+		f1  int
+		f2  string `raw:"%s"`
+		f3  *string
+		f4  *string
+		f5  interface{}
+		f6  func() string
+	}{
+		"message title",
+		99, 999, "test_raw", &s, nil,
+		args.LazyFmt("stringer_test"),
+		func() string { return "func_result" },
+	}
+}
+
+func TestPrintFields(t *testing.T) {
 	require.Equal(t,
 		"f0:  99:string,f1:999:int,f2:test_raw,f3:test2:string,f4:nil,f5:stringer_test:string,f6:func_result:string,msg:message title",
-		printFieldsOut(struct {
+		printFieldsOut(createSampleStruct()))
+}
+
+func TestTryLogObject_Many(t *testing.T) {
+	f := GetDefaultLogMsgFormatter()
+
+	require.Equal(t,
+		"{message title 99} 888",
+		f.testTryLogObject(struct {
 			msg string
-			f0  int `fmt:"%4d"`
 			f1  int
-			f2  string `raw:"%s"`
-			f3  *string
-			f4  *string
-			f5  interface{}
-			f6  func() string
 		}{
 			"message title",
-			99, 999, "test_raw", &s, nil,
-			args.LazyFmt("stringer_test"),
-			func() string { return "func_result" },
-		}))
+			99,
+		}, 888))
+}
+
+func TestTryLogObject_Str(t *testing.T) {
+	f := GetDefaultLogMsgFormatter()
+
+	require.Equal(t, "text", f.testTryLogObject("text"))
+	s := "text"
+	require.Equal(t, "text", f.testTryLogObject(s))
+	require.Equal(t, "text", f.testTryLogObject(&s))
+	ps := &s
+	require.Equal(t, "text", f.testTryLogObject(ps))
+	ps = nil
+	require.Equal(t, "<nil>", f.testTryLogObject(ps))
+
+	require.Equal(t, "text", f.testTryLogObject(func() string { return "text" }))
+}
+
+func TestTryLogObject_SingleUnnamed(t *testing.T) {
+	f := GetDefaultLogMsgFormatter()
+
+	require.Equal(t,
+		"f0:  99:string,f1:999:int,f2:test_raw,f3:test2:string,f4:nil,f5:stringer_test:string,f6:func_result:string,msg:message title",
+		f.testTryLogObject(createSampleStruct()))
+}
+
+func TestTryLogObject_SingleNamed(t *testing.T) {
+	f := GetDefaultLogMsgFormatter()
+
+	type SomeType struct {
+		i int
+	}
+
+	require.Equal(t,
+		"{7}",
+		f.testTryLogObject(SomeType{7}))
+}
+
+var _ insolar.LogObject = SomeLogObjectValue{}
+
+type SomeLogObjectValue struct {
+	IntVal int
+	Msg    string
+}
+
+func (SomeLogObjectValue) GetLogObjectMarshaller() insolar.LogObjectMarshaller {
+	return nil // use default
+}
+
+var _ insolar.LogObject = &SomeLogObjectPtr{}
+
+type SomeLogObjectPtr struct {
+	IntVal int
+	Msg    string
+}
+
+func (*SomeLogObjectPtr) GetLogObjectMarshaller() insolar.LogObjectMarshaller {
+	return nil // use default
+}
+
+func TestTryLogObject_SingleLogObject(t *testing.T) {
+	f := GetDefaultLogMsgFormatter()
+
+	require.Equal(t,
+		"IntVal:7:int,msg:msgText",
+		f.testTryLogObject(SomeLogObjectValue{7, "msgText"}))
+
+	require.Equal(t,
+		"IntVal:7:int,msg:msgText",
+		f.testTryLogObject(&SomeLogObjectPtr{7, "msgText"}))
+
+	require.Equal(t,
+		"{7 msgText}",
+		f.testTryLogObject(SomeLogObjectPtr{7, "msgText"}))
+}
+
+func (v MsgFormatConfig) testTryLogObject(a ...interface{}) string {
+	m, s := v.TryLogObject(a...)
+	if m == nil {
+		return s
+	}
+	o := output{}
+	msg := m.MarshalLogObject(&o)
+	o.buf.WriteString("msg:")
+	o.buf.WriteString(msg)
+	return o.buf.String()
 }
 
 func printFieldsOut(v interface{}) string {

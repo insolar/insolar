@@ -227,6 +227,12 @@ type LogObjectWriter interface {
 	AddRawJSON(key string, b []byte)
 }
 
+// Presence of this interface indicates that this object can be used as a log event
+type LogObject interface {
+	// should return nil to use default (external) marshaller
+	GetLogObjectMarshaller() LogObjectMarshaller
+}
+
 type LogObjectMarshaller interface {
 	MarshalLogObject(LogObjectWriter) string
 }
