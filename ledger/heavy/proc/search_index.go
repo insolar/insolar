@@ -45,11 +45,13 @@ func (p *SearchIndex) Dep(
 	indexes object.IndexAccessor,
 	pulseCalculator pulse.Calculator,
 	pulseStorage pulse.Accessor,
+	records object.RecordAccessor,
 	sender bus.Sender,
 ) {
 	p.dep.indexes = indexes
 	p.dep.sender = sender
 	p.dep.pulseCalculator = pulseCalculator
+	p.dep.records = records
 	p.dep.pulseStorage = pulseStorage
 }
 
@@ -104,7 +106,7 @@ func (p *SearchIndex) Proceed(ctx context.Context) error {
 			if err != nil {
 				return errors.Wrapf(
 					err,
-					"failed to fetch index for record", reqID.DebugString(),
+					"failed to fetch index for record %v", reqID.DebugString(),
 				)
 			}
 			idx = &savedIdx
