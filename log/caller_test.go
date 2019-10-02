@@ -19,14 +19,15 @@ package log
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/insolar"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"os"
 	"runtime"
 	"strconv"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/insolar"
 )
 
 // Beware, test results there depends on test file name (caller_test.go)!
@@ -128,15 +129,4 @@ func TestLog_GlobalCallerWithFunc(t *testing.T) {
 	assert.Regexp(t, "^log/caller_test.go:"+strconv.Itoa(line+1), lf.Caller, "log contains proper call place")
 	assert.Equal(t, "TestLog_GlobalCallerWithFunc", lf.Func, "log contains func name")
 	assert.NotContains(t, s, "test2shouldNotBeThere")
-}
-
-func TestMain(m *testing.M) {
-	lg, err := GlobalLogger().Copy().WithFormat(insolar.JSONFormat).Build()
-	if err != nil {
-		panic(err)
-	}
-	SetGlobalLogger(lg)
-
-	code := m.Run()
-	os.Exit(code)
 }
