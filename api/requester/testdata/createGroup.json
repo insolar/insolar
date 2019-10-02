@@ -1,0 +1,12 @@
+{
+  "jsonrpc": "2.0",
+  "method": "contract.call",
+  "id": 1,
+  "params": {
+    "callSite": "group.create",
+    "callParams": {
+      "name": "The mortgage 7"
+    },
+    "reference": "16WzewYjNAVnkMp3wykV5gQLTfeC2aCkyCtPfMNk7d6h"
+  }
+}
