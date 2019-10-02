@@ -142,11 +142,11 @@ func (e *requestsExecutor) SendReply(
 	}
 
 	if req.APINode.IsEmpty() {
-		e.sendToCaller(ctx, reqRef, req, replyBytes, errStr)
+		go e.sendToCaller(ctx, reqRef, req, replyBytes, errStr)
 		return
 	}
 
-	e.sendToAPINode(ctx, reqRef, req, replyBytes, errStr)
+	go e.sendToAPINode(ctx, reqRef, req, replyBytes, errStr)
 }
 
 func (e *requestsExecutor) sendToCaller(
