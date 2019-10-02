@@ -31,6 +31,20 @@ var marshallerFactory MarshallerFactory = &defaultLogObjectMarshallerFactory{}
 type defaultLogObjectMarshallerFactory struct {
 	mutex       sync.RWMutex
 	marshallers map[reflect.Type]*typeMarshaller
+	reporters   map[reflect.Type]FieldReporterFunc
+}
+
+func (p *defaultLogObjectMarshallerFactory) RegisterFieldReporter(fieldType reflect.Type, fn FieldReporterFunc) {
+	if fn == nil {
+		panic("illegal value")
+	}
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+
+	if p.reporters == nil {
+		p.reporters = make(map[reflect.Type]FieldReporterFunc)
+	}
+	p.reporters[fieldType] = fn
 }
 
 func (p *defaultLogObjectMarshallerFactory) CreateLogObjectMarshaller(o reflect.Value) insolar.LogObjectMarshaller {
@@ -39,6 +53,13 @@ func (p *defaultLogObjectMarshallerFactory) CreateLogObjectMarshaller(o reflect.
 	}
 	t := p.getTypeMarshaller(o.Type())
 	return defaultLogObjectMarshaller{t, o}
+}
+
+func (p *defaultLogObjectMarshallerFactory) getFieldReporter(t reflect.Type) FieldReporterFunc {
+	p.mutex.RLock()
+	fr := p.reporters[t]
+	p.mutex.RUnlock()
+	return fr
 }
 
 func (p *defaultLogObjectMarshallerFactory) getTypeMarshaller(t reflect.Type) *typeMarshaller {
@@ -69,42 +90,106 @@ func (p *defaultLogObjectMarshallerFactory) getTypeMarshaller(t reflect.Type) *t
 type fieldValueGetterFunc func(value reflect.Value) interface{}
 
 var fieldValueGetters = map[reflect.Kind]func(unexported bool, t reflect.Type) (bool, fieldValueGetterFunc){
+	// ======== Simple values, are safe to read from unexported fields ============
 	reflect.Bool: func(bool, reflect.Type) (bool, fieldValueGetterFunc) {
 		return false, func(value reflect.Value) interface{} {
 			return value.Bool()
 		}
 	},
-	//reflect.Int
-	//reflect.Int8
-	//reflect.Int16
-	//reflect.Int32
-	//reflect.Int64
-	//reflect.Uint
-	//reflect.Uint8
-	//reflect.Uint16
-	//reflect.Uint32
-	//reflect.Uint64
-	//reflect.Uintptr
-	//reflect.Float32
-	//reflect.Float64
-	//reflect.Complex64
-	//reflect.Complex128
-	//reflect.String
+	reflect.Int: func(bool, reflect.Type) (bool, fieldValueGetterFunc) {
+		return false, func(value reflect.Value) interface{} {
+			return int(value.Int())
+		}
+	},
+	reflect.Int8: func(bool, reflect.Type) (bool, fieldValueGetterFunc) {
+		return false, func(value reflect.Value) interface{} {
+			return int8(value.Int())
+		}
+	},
+	reflect.Int16: func(bool, reflect.Type) (bool, fieldValueGetterFunc) {
+		return false, func(value reflect.Value) interface{} {
+			return int16(value.Int())
+		}
+	},
+	reflect.Int32: func(bool, reflect.Type) (bool, fieldValueGetterFunc) {
+		return false, func(value reflect.Value) interface{} {
+			return int32(value.Int())
+		}
+	},
+	reflect.Int64: func(bool, reflect.Type) (bool, fieldValueGetterFunc) {
+		return false, func(value reflect.Value) interface{} {
+			return int64(value.Int())
+		}
+	},
+	reflect.Uint: func(bool, reflect.Type) (bool, fieldValueGetterFunc) {
+		return false, func(value reflect.Value) interface{} {
+			return uint(value.Uint())
+		}
+	},
+	reflect.Uint8: func(bool, reflect.Type) (bool, fieldValueGetterFunc) {
+		return false, func(value reflect.Value) interface{} {
+			return uint8(value.Uint())
+		}
+	},
+	reflect.Uint16: func(bool, reflect.Type) (bool, fieldValueGetterFunc) {
+		return false, func(value reflect.Value) interface{} {
+			return uint16(value.Uint())
+		}
+	},
+	reflect.Uint32: func(bool, reflect.Type) (bool, fieldValueGetterFunc) {
+		return false, func(value reflect.Value) interface{} {
+			return uint32(value.Uint())
+		}
+	},
+	reflect.Uint64: func(bool, reflect.Type) (bool, fieldValueGetterFunc) {
+		return false, func(value reflect.Value) interface{} {
+			return uint64(value.Uint())
+		}
+	},
+	reflect.Uintptr: func(bool, reflect.Type) (bool, fieldValueGetterFunc) {
+		return false, func(value reflect.Value) interface{} {
+			return uintptr(value.Uint())
+		}
+	},
+	reflect.Float32: func(bool, reflect.Type) (bool, fieldValueGetterFunc) {
+		return false, func(value reflect.Value) interface{} {
+			return float32(value.Float())
+		}
+	},
+	reflect.Float64: func(bool, reflect.Type) (bool, fieldValueGetterFunc) {
+		return false, func(value reflect.Value) interface{} {
+			return float64(value.Float())
+		}
+	},
+	reflect.Complex64: func(bool, reflect.Type) (bool, fieldValueGetterFunc) {
+		return false, func(value reflect.Value) interface{} {
+			return complex64(value.Complex())
+		}
+	},
+	reflect.Complex128: func(bool, reflect.Type) (bool, fieldValueGetterFunc) {
+		return false, func(value reflect.Value) interface{} {
+			return complex128(value.Complex())
+		}
+	},
+	reflect.String: func(bool, reflect.Type) (bool, fieldValueGetterFunc) {
+		return false, func(value reflect.Value) interface{} {
+			return value.String()
+		}
+	},
 
-	// ============ Special Handling ===========
-	reflect.Ptr: func(_ bool, t reflect.Type) (bool, fieldValueGetterFunc) {
+	// ============ Special handling for unexported fields ===========
+
+	reflect.Ptr: func(unexported bool, t reflect.Type) (bool, fieldValueGetterFunc) {
 		te := t.Elem()
-		switch te.Kind() {
-		case reflect.String:
+		if te.Kind() == reflect.String {
 			return false, func(value reflect.Value) interface{} {
 				if value.IsNil() {
 					return nil
 				}
 				return value.Elem().String()
 			}
-		default:
-			return false, nil
 		}
+		return defaultObjFieldGetterFactory(unexported, t)
 	},
 
 	reflect.Func: func(unexported bool, t reflect.Type) (bool, fieldValueGetterFunc) {
@@ -130,7 +215,8 @@ var fieldValueGetters = map[reflect.Kind]func(unexported bool, t reflect.Type) (
 			case func() string:
 				return vv()
 			default:
-				return defaultValuePrepare(vv)
+				vv, _ = tryDefaultValuePrepare(vv)
+				return vv
 			}
 		}
 	},
@@ -139,36 +225,82 @@ var fieldValueGetters = map[reflect.Kind]func(unexported bool, t reflect.Type) (
 	reflect.Array:  defaultObjFieldGetterFactory,
 	reflect.Map:    defaultObjFieldGetterFactory,
 	reflect.Slice:  defaultObjFieldGetterFactory,
+	reflect.Chan:   defaultObjFieldGetterFactory,
 
 	// ============ Excluded ===================
-	//reflect.Chan
 	//reflect.UnsafePointer
 }
 
-func defaultValuePrepare(iv interface{}) interface{} {
+// NB! MUST match list and SEQUENCE of types with reflectFilterObjTypes[]
+func tryDefaultValuePrepare(iv interface{}) (interface{}, bool) {
 	switch vv := iv.(type) {
 	case LogStringer:
-		return vv.LogString()
+		return vv.LogString(), true
 	case fmt.Stringer:
-		return vv.String()
+		return vv.String(), true
 	default:
-		return vv
+		return vv, false
 	}
 }
 
-var filterReflectTypes = []reflect.Type{
-	reflect.TypeOf((*LogStringer)(nil)).Elem(),
-	reflect.TypeOf((*fmt.Stringer)(nil)).Elem(),
+var reflectFilterObjTypes = map[reflect.Type]func(reflect.Type) fieldValueGetterFunc{
+	reflect.TypeOf((*LogStringer)(nil)).Elem(): func(t reflect.Type) fieldValueGetterFunc {
+		if t.Kind() == reflect.Struct {
+			return func(value reflect.Value) interface{} {
+				vv := value.Interface().(LogStringer)
+				return vv.LogString()
+			}
+		}
+		return func(value reflect.Value) interface{} {
+			if value.IsNil() {
+				return nil
+			}
+			vv := value.Interface().(LogStringer)
+			return vv.LogString()
+		}
+	},
+	reflect.TypeOf((*fmt.Stringer)(nil)).Elem(): func(t reflect.Type) fieldValueGetterFunc {
+		if t.Kind() == reflect.Struct {
+			return func(value reflect.Value) interface{} {
+				vv := value.Interface().(fmt.Stringer)
+				return vv.String()
+			}
+		}
+		return func(value reflect.Value) interface{} {
+			if value.IsNil() {
+				return nil
+			}
+			vv := value.Interface().(fmt.Stringer)
+			return vv.String()
+		}
+	},
 }
 
-func defaultObjFieldGetterFactory(unexported bool, t reflect.Type) (b bool, getterFunc fieldValueGetterFunc) {
-	for _, ft := range filterReflectTypes {
-
+func defaultStrValuePrepare(iv interface{}) (string, bool) {
+	switch vv := iv.(type) {
+	case string:
+		return vv, true
+	case *string:
+		if vv == nil {
+			return "", false
+		}
+		return *vv, true
+	case func() string:
+		return vv(), true
 	}
-
-	return unexported, func(value reflect.Value) interface{} {
-		return defaultValuePrepare(value.Interface())
+	if vv, ok := tryDefaultValuePrepare(iv); ok {
+		return vv.(string), true
 	}
+	return "", false
+}
+
+func defaultObjFieldGetterFactory(unexported bool, t reflect.Type) (bool, fieldValueGetterFunc) {
+	for ft, fn := range reflectFilterObjTypes {
+		if t.Implements(ft) {
+			return unexported, fn(t)
+		}
+	}
+	return unexported, reflect.Value.Interface
 }
 
 func getFieldGetter(index int, fd reflect.StructField, useAddr bool, baseOffset uintptr) func(reflect.Value) reflect.Value {
@@ -186,7 +318,7 @@ func getFieldGetter(index int, fd reflect.StructField, useAddr bool, baseOffset 
 	}
 }
 
-func getFieldsOf(t reflect.Type, baseOffset uintptr) (bool, []fieldMarshallerFunc, fieldMarshallerMsgFunc) {
+func getFieldsOf(t reflect.Type, baseOffset uintptr, getReporterFn func(reflect.Type) FieldReporterFunc) (bool, []fieldMarshallerFunc, fieldMarshallerMsgFunc) {
 	n := t.NumField()
 
 	type fieldDesc struct {
@@ -221,20 +353,6 @@ func getFieldsOf(t reflect.Type, baseOffset uintptr) (bool, []fieldMarshallerFun
 			needsAddr = true
 		}
 
-		//if tf.Anonymous {
-		//	switch k {
-		//	case reflect.Ptr:
-		//		et := tf.Type.Elem()
-		//		if et.Kind() == reflect.Struct {
-		//			p.addFieldsOf(et)
-		//			continue
-		//		}
-		//	case reflect.Struct:
-		//		p.addFieldsOf(tf.Type)
-		//		continue
-		//	}
-		//}
-
 		fd := fieldDesc{tf, valueGetter, i}
 		switch fieldName {
 		case "msg", "Msg", "message", "Message":
@@ -254,12 +372,16 @@ func getFieldsOf(t reflect.Type, baseOffset uintptr) (bool, []fieldMarshallerFun
 		fieldGetter := getFieldGetter(fd.index, fd.StructField, needsAddr, baseOffset)
 		valueGetter := fd.fn
 		fieldName := fd.Name
+		fieldReporter := getReporterFn(fd.Type)
 
 		switch tagType, fmtStr := singleTag(fd.Tag); tagType {
 		case "fmt":
 			fields[i] = func(obj reflect.Value, writer insolar.LogObjectWriter) {
 				f := fieldGetter(obj)
 				v := valueGetter(f)
+				if fieldReporter != nil {
+					fieldReporter(fieldName, v)
+				}
 				s := fmt.Sprintf(fmtStr, v)
 				writer.AddField(fieldName, s)
 			}
@@ -267,6 +389,9 @@ func getFieldsOf(t reflect.Type, baseOffset uintptr) (bool, []fieldMarshallerFun
 			fields[i] = func(obj reflect.Value, writer insolar.LogObjectWriter) {
 				f := fieldGetter(obj)
 				v := valueGetter(f)
+				if fieldReporter != nil {
+					fieldReporter(fieldName, v)
+				}
 				s := fmt.Sprintf(fmtStr, v)
 				writer.AddRawJSON(fieldName, []byte(s))
 			}
@@ -274,6 +399,9 @@ func getFieldsOf(t reflect.Type, baseOffset uintptr) (bool, []fieldMarshallerFun
 			fields[i] = func(obj reflect.Value, writer insolar.LogObjectWriter) {
 				f := fieldGetter(obj)
 				v := valueGetter(f)
+				if fieldReporter != nil {
+					fieldReporter(fieldName, v)
+				}
 				writer.AddField(fieldName, v)
 			}
 		}
@@ -309,14 +437,13 @@ func offsetFieldGetter(v reflect.Value, fieldOffset uintptr, fieldType reflect.T
 }
 
 func (p *defaultLogObjectMarshallerFactory) buildTypeMarshaller(t reflect.Type) *typeMarshaller {
-
 	n := t.NumField()
 	if n <= 0 {
 		return nil
 	}
 
 	tm := typeMarshaller{}
-	tm.needsAddr, tm.fields, tm.msgField = getFieldsOf(t, 0)
+	tm.needsAddr, tm.fields, tm.msgField = getFieldsOf(t, 0, p.getFieldReporter)
 	if len(tm.fields) == 0 && tm.msgField == nil {
 		return nil
 	}

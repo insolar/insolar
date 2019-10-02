@@ -28,43 +28,29 @@ import (
 	"github.com/insolar/insolar/network/consensus/common/args"
 )
 
-func formatStrValue(a interface{}) string {
-	v := reflect.ValueOf(a)
-	if ok, s, iv := tryReflectStrValue(v); ok {
-		return s
-	} else {
-		if iv == nil {
-			return fmt.Sprint(nil)
-		}
-		return fmt.Sprintf("%v", iv)
-	}
+const sampleStructAsString = "f0:  99:string,f1:999:int,f2:test_raw,f3:test2:string,f4:nil,f5:stringer_test:string,f6:func_result:string,f7:stringerVal:string,f8:stringerRef:string,f9:nil,f10:{}:stubStruct,msg:message title"
+
+type stringerStruct struct {
+	s string
 }
 
-func formatValue(a interface{}) interface{} {
-	v := reflect.ValueOf(a)
-	return prepareReflectValue(v)
+func (v stringerStruct) String() string {
+	return "wrong" // must take LogString() first
 }
 
-func TestTryFormatStrValue(t *testing.T) {
-	s := "test"
-	require.Equal(t, "test", formatStrValue(&s))
-	require.Equal(t, "<nil>", formatStrValue((*string)(nil)))
-	require.Equal(t, "test", formatStrValue("test"))
-	require.Equal(t, "test", formatStrValue(args.LazyFmt("%s", "test")))
-	require.Equal(t, "test", formatStrValue(func() string { return "test" }))
-	require.Equal(t, "123", formatStrValue(123))
-	require.Equal(t, "<nil>", formatStrValue(nil))
+func (v stringerStruct) LogString() string {
+	return v.s
 }
 
-func TestTryFormatValue(t *testing.T) {
-	s := "test"
-	require.Equal(t, "test", formatValue(&s))
-	require.Equal(t, nil, formatValue((*string)(nil)))
-	require.Equal(t, "test", formatValue("test"))
-	require.Equal(t, "test", formatValue(args.LazyFmt("%s", "test")))
-	require.Equal(t, "test", formatValue(func() string { return "test" }))
-	require.Equal(t, 123, formatValue(123))
-	require.Equal(t, nil, formatValue(nil))
+type stringerRefStruct struct {
+	s string
+}
+
+func (p *stringerRefStruct) String() string {
+	return p.s
+}
+
+type stubStruct struct {
 }
 
 func createSampleStruct() interface{} {
@@ -78,18 +64,20 @@ func createSampleStruct() interface{} {
 		f4  *string
 		f5  interface{}
 		f6  func() string
+		f7  stringerStruct
+		f8  *stringerRefStruct
+		f9  *stringerRefStruct
+		f10 stubStruct // no special handling
 	}{
 		"message title",
 		99, 999, "test_raw", &s, nil,
 		args.LazyFmt("stringer_test"),
 		func() string { return "func_result" },
+		stringerStruct{"stringerVal"},
+		&stringerRefStruct{"stringerRef"},
+		nil,
+		stubStruct{},
 	}
-}
-
-func TestPrintFields(t *testing.T) {
-	require.Equal(t,
-		"f0:  99:string,f1:999:int,f2:test_raw,f3:test2:string,f4:nil,f5:stringer_test:string,f6:func_result:string,msg:message title",
-		printFieldsOut(createSampleStruct()))
 }
 
 func TestTryLogObject_Many(t *testing.T) {
@@ -124,9 +112,7 @@ func TestTryLogObject_Str(t *testing.T) {
 func TestTryLogObject_SingleUnnamed(t *testing.T) {
 	f := GetDefaultLogMsgFormatter()
 
-	require.Equal(t,
-		"f0:  99:string,f1:999:int,f2:test_raw,f3:test2:string,f4:nil,f5:stringer_test:string,f6:func_result:string,msg:message title",
-		f.testTryLogObject(createSampleStruct()))
+	require.Equal(t, sampleStructAsString, f.testTryLogObject(createSampleStruct()))
 }
 
 func TestTryLogObject_SingleNamed(t *testing.T) {
@@ -186,14 +172,6 @@ func (v MsgFormatConfig) testTryLogObject(a ...interface{}) string {
 	}
 	o := output{}
 	msg := m.MarshalLogObject(&o)
-	o.buf.WriteString("msg:")
-	o.buf.WriteString(msg)
-	return o.buf.String()
-}
-
-func printFieldsOut(v interface{}) string {
-	o := output{}
-	msg := printFields(reflect.ValueOf(v), &o)
 	o.buf.WriteString("msg:")
 	o.buf.WriteString(msg)
 	return o.buf.String()
