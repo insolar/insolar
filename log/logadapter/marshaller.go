@@ -231,7 +231,7 @@ var fieldValueGetters = map[reflect.Kind]func(unexported bool, t reflect.Type) (
 	//reflect.UnsafePointer
 }
 
-// NB! MUST match list and SEQUENCE of types with reflectFilterObjTypes[]
+// NB! MUST match set and SEQUENCE of types with reflectFilterObjTypes[]
 func tryDefaultValuePrepare(iv interface{}) (interface{}, bool) {
 	switch vv := iv.(type) {
 	case LogStringer:
@@ -243,6 +243,7 @@ func tryDefaultValuePrepare(iv interface{}) (interface{}, bool) {
 	}
 }
 
+// NB! MUST match set and SEQUENCE of types with tryDefaultValuePrepare()
 var reflectFilterObjTypes = map[reflect.Type]func(reflect.Type) fieldValueGetterFunc{
 	reflect.TypeOf((*LogStringer)(nil)).Elem(): func(t reflect.Type) fieldValueGetterFunc {
 		if t.Kind() == reflect.Struct {
