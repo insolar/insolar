@@ -118,7 +118,7 @@ func FromZerologLevel(zLevel zerolog.Level) insolar.LogLevel {
 	return zerologReverseMapping[zLevel]
 }
 
-func selectOutput(output insolar.LogOutput, param string) (io.WriteCloser, error) {
+func selectOutput(output insolar.LogOutput, param string) (w io.Writer, err error) {
 	switch output {
 	case insolar.StdErrOutput:
 		return os.Stderr, nil
@@ -169,10 +169,6 @@ func NewZerologAdapter(pCfg logadapter.ParsedLogConfig, msgFmt logadapter.MsgFor
 
 type zerologMarshaller struct {
 	event *zerolog.Event
-}
-
-func (m zerologMarshaller) AddStructFields(s interface{}) {
-	panic("implement me")
 }
 
 func (m zerologMarshaller) AddFieldMap(fields map[string]interface{}) {
@@ -367,7 +363,8 @@ func checkNewLoggerOutput(output zerolog.LevelWriter) zerolog.LevelWriter {
 	return output
 }
 
-func (zf zerologFactory) createNewLogger(output zerolog.LevelWriter, level insolar.LogLevel, config logadapter.Config) (insolar.Logger, error) {
+func (zf zerologFactory) createNewLogger(output zerolog.LevelWriter, level insolar.LogLevel,
+	config logadapter.Config, dynFields map[string]func() interface{}) (insolar.Logger, error) {
 
 	ls := zerolog.New(checkNewLoggerOutput(output)).Level(ToZerologLevel(level))
 
@@ -389,6 +386,10 @@ func (zf zerologFactory) createNewLogger(output zerolog.LevelWriter, level insol
 		ls = ls.Hook(newCallerHook(2 + skipFrames))
 	}
 
+	if len(dynFields) > 0 {
+		ls = ls.Hook(newDynFieldsHook(dynFields))
+	}
+
 	if config.Instruments.MetricsMode == insolar.NoLogMetrics {
 		config.Metrics = nil
 	}
@@ -396,12 +397,17 @@ func (zf zerologFactory) createNewLogger(output zerolog.LevelWriter, level insol
 	return &zerologAdapter{logger: ls, config: &config}, nil
 }
 
-func (zf zerologFactory) CreateNewLowLatencyLogger(level insolar.LogLevel, config logadapter.Config) (insolar.Logger, error) {
-	return zf.createNewLogger(zerologAdapterLLOutput{config.LoggerOutput}, level, config)
-}
+func (zf zerologFactory) CreateNewLogger(level insolar.LogLevel, config logadapter.Config, lowLatency bool,
+	dynFields map[string]func() interface{}) (insolar.Logger, error) {
 
-func (zf zerologFactory) CreateNewLogger(level insolar.LogLevel, config logadapter.Config) (insolar.Logger, error) {
-	return zf.createNewLogger(zerologAdapterOutput{config.LoggerOutput}, level, config)
+	var output zerolog.LevelWriter
+	if lowLatency {
+		output = zerologAdapterLLOutput{config.LoggerOutput}
+	} else {
+		output = zerologAdapterOutput{config.LoggerOutput}
+	}
+
+	return zf.createNewLogger(output, level, config, dynFields)
 }
 
 func (zf zerologFactory) CanReuseMsgBuffer() bool {
@@ -467,4 +473,27 @@ type zerologAdapterLLOutput struct {
 
 func (z zerologAdapterLLOutput) WriteLevel(level zerolog.Level, b []byte) (int, error) {
 	return z.LoggerOutput.LowLatencyWrite(FromZerologLevel(level), b)
+}
+
+/* ========================================= */
+
+func newDynFieldsHook(dynFields map[string]func() interface{}) zerolog.Hook {
+	return dynamicFieldsHook{dynFields}
+}
+
+type dynamicFieldsHook struct {
+	dynFields map[string]func() interface{}
+}
+
+func (v dynamicFieldsHook) Run(e *zerolog.Event, level zerolog.Level, message string) {
+	for k, fn := range v.dynFields {
+		if fn == nil {
+			continue
+		}
+		vv := fn()
+		if vv == nil {
+			continue
+		}
+		e.Interface(k, vv)
+	}
 }

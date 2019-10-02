@@ -36,6 +36,10 @@ type FatalDirectWriter struct {
 	fatal  FatalHelper
 }
 
+func (p *FatalDirectWriter) SetNoClosePropagation() bool {
+	return p.output.SetNoClosePropagation()
+}
+
 func (p *FatalDirectWriter) Close() error {
 	return p.output.Close()
 }

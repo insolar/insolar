@@ -102,9 +102,9 @@ type Logger interface {
 	// Is() returns true when a message of the given level will get to output. Considers the global log filter.
 	Is(level LogLevel) bool
 
-	// WithFields return copy of Logger with the given fields added.
+	// WithFields return copy of Logger with the given fields added. Fields are not deduplicated.
 	WithFields(map[string]interface{}) Logger
-	// WithField return copy of Logger with the given field added.
+	// WithField return copy of Logger with the given field added. Fields are not deduplicated.
 	WithField(string, interface{}) Logger
 
 	// Provides a builder based on configuration of this logger.
@@ -145,10 +145,13 @@ type LoggerBuilder interface {
 	//Sets an custom recorder for metric collection.
 	WithMetricsRecorder(recorder LogMetricsRecorder) LoggerBuilder
 
-	// WithFields adds fields for to-be-built logger.
+	// WithFields adds fields for to-be-built logger. Fields are deduplicated within a single builder only.
 	WithFields(map[string]interface{}) LoggerBuilder
-	// WithField add a fields for to-be-built logger.
+	// WithField add a fields for to-be-built logger. Fields are deduplicated within a single builder only.
 	WithField(string, interface{}) LoggerBuilder
+
+	// Adds a dynamically-evaluated field. Fields are deduplicated within a single builder only. When func=nil or func()=nil then the field is omitted.
+	WithDynamicField(string, func() interface{}) LoggerBuilder
 
 	// Creates a logger.
 	Build() (Logger, error)
@@ -222,7 +225,6 @@ type LogLevelGetter interface {
 }
 
 type LogObjectWriter interface {
-	AddStructFields(s interface{})
 	AddFieldMap(map[string]interface{})
 	AddField(key string, v interface{})
 	AddRawJSON(key string, b []byte)
