@@ -30,7 +30,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
-	"github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/metrics"
 	"github.com/insolar/insolar/logicrunner/requestresult"
 )
@@ -93,26 +92,12 @@ func (r *RegisterIncomingRequest) Proceed(ctx context.Context) error {
 	ctx, span := instracer.StartSpan(ctx, "RegisterIncomingRequest.Proceed")
 	defer span.End()
 
-	inslogger.FromContext(ctx).Debug("registering incoming request")
-
 	reqInfo, err := r.ArtifactManager.RegisterIncomingRequest(ctx, &r.request)
 	if err != nil {
 		return err
 	}
 
 	r.setResult(reqInfo)
-	return nil
-}
-
-type AddFreshRequest struct {
-	broker     ExecutionBrokerI
-	requestRef insolar.Reference
-	request    record.IncomingRequest
-}
-
-func (c *AddFreshRequest) Proceed(ctx context.Context) error {
-	tr := common.NewTranscriptCloneContext(ctx, c.requestRef, c.request)
-	c.broker.AddFreshRequest(ctx, tr)
 	return nil
 }
 

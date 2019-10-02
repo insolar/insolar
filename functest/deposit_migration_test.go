@@ -205,8 +205,8 @@ func TestMigrationAnotherAmountSameTx(t *testing.T) {
 
 func TestMigrationTokenDoubleSpend(t *testing.T) {
 	var wg sync.WaitGroup
-	wg.Add(3)
-	_ = activateDaemons(t, countTwoActiveDaemon)
+	wg.Add(2)
+	_ = activateDaemons(t, countThreeActiveDaemon)
 	member := createMigrationMemberForMA(t)
 	anotherMember := createMember(t)
 
@@ -215,9 +215,8 @@ func TestMigrationTokenDoubleSpend(t *testing.T) {
 
 	require.Equal(t, "0", firstMemberBalance)
 	firstMABalance := getBalanceNoErr(t, &launchnet.MigrationAdmin, launchnet.MigrationAdmin.Ref)
-	for i := 0; i < countThreeActiveDaemon; i++ {
+	for i := 1; i < countThreeActiveDaemon; i++ {
 		go func(i int) {
-
 			res, _, err := makeSignedRequest(
 				launchnet.TestRPCUrl,
 				launchnet.MigrationDaemons[i],

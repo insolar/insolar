@@ -144,9 +144,8 @@ func TestAdditionalCallFromPreviousExecutor_Proceed(t *testing.T) {
 
 		stateStorage := NewStateStorageMock(t).
 			UpsertExecutionStateMock.Expect(*incoming.Object).Return(
-			NewExecutionBrokerIMock(t).
-				AddAdditionalRequestFromPrevExecutorMock.Return().
-				SetNotPendingMock.Return(),
+			NewExecutionBrokerIMock(t).SetNotPendingMock.Return().
+				HasMoreRequestsMock.Return(),
 		)
 
 		proc := AdditionalCallFromPreviousExecutor{stateStorage: stateStorage, message: msg}
@@ -176,7 +175,7 @@ func TestAdditionalCallFromPreviousExecutor_Proceed(t *testing.T) {
 		stateStorage := NewStateStorageMock(t).
 			UpsertExecutionStateMock.Expect(*incoming.Object).Return(
 			NewExecutionBrokerIMock(t).
-				AddAdditionalRequestFromPrevExecutorMock.Return(),
+				HasMoreRequestsMock.Return(),
 		)
 
 		proc := AdditionalCallFromPreviousExecutor{stateStorage: stateStorage, message: msg}
