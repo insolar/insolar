@@ -52,7 +52,7 @@ func (p *defaultLogObjectMarshallerFactory) CreateLogObjectMarshaller(o reflect.
 		panic("illegal value")
 	}
 	t := p.getTypeMarshaller(o.Type())
-	return defaultLogObjectMarshaller{t, o}
+	return defaultLogObjectMarshaller{t, t.prepareValue(o)} // do prepare for a repeated use of marshaller
 }
 
 func (p *defaultLogObjectMarshallerFactory) getFieldReporter(t reflect.Type) FieldReporterFunc {
@@ -468,12 +468,17 @@ type typeMarshaller struct {
 	needsAddr bool
 }
 
-func (p *typeMarshaller) printFields(value reflect.Value, writer insolar.LogObjectWriter) string {
-	if p.needsAddr && !value.CanAddr() {
-		s2 := reflect.New(value.Type()).Elem()
-		s2.Set(value)
-		value = s2
+func (p *typeMarshaller) prepareValue(value reflect.Value) reflect.Value {
+	if !p.needsAddr || value.CanAddr() {
+		return value
 	}
+	valueCopy := reflect.New(value.Type()).Elem()
+	valueCopy.Set(value)
+	return valueCopy
+}
+
+func (p *typeMarshaller) printFields(value reflect.Value, writer insolar.LogObjectWriter) string {
+	value = p.prepareValue(value) // double check
 
 	for _, fn := range p.fields {
 		fn(value, writer)
