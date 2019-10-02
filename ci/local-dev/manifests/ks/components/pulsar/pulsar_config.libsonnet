@@ -6,8 +6,6 @@ local utils = params.utils;
 
 {
 	"pulsar": {
-		"connectiontype": "tcp",
-		"mainlisteneraddress": "0.0.0.0:58090",
 		"storage": {
 			"datadirectory": "/opt/insolar/pulsar",
 			"txretriesonconflict": 0
