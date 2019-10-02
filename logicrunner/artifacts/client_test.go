@@ -155,7 +155,7 @@ func (s *ArtifactsMangerClientSuite) AfterTest(suiteName, testName string) {
 	s.mc.Finish()
 }
 
-func (s *ArtifactsMangerClientSuite) TestGetAbandonedRequest() {
+func (s *ArtifactsMangerClientSuite) TestGetRequest() {
 	// Arrange
 	iRequest, requestRef := genIncomingRequest()
 	oRequest := (*record.OutgoingRequest)(iRequest)
@@ -261,14 +261,14 @@ func (s *ArtifactsMangerClientSuite) TestGetAbandonedRequest() {
 			)
 
 			// Act
-			recordRequest, err := s.amClient.GetAbandonedRequest(s.ctx, *objectRef, requestRef)
+			recordRequest, err := s.amClient.GetRequest(s.ctx, *objectRef, requestRef)
 			// Check
 			test.check(recordRequest, err)
 		})
 	}
 }
 
-func (s *ArtifactsMangerClientSuite) TestGetAbandonedRequest_FailedToSend() {
+func (s *ArtifactsMangerClientSuite) TestRequest_FailedToSend() {
 	// Arrange
 	request, requestRef := genIncomingRequest()
 
@@ -277,7 +277,7 @@ func (s *ArtifactsMangerClientSuite) TestGetAbandonedRequest_FailedToSend() {
 	s.busSender.SendRoleMock.Return(ch, func() {})
 
 	// Act
-	_, err := s.amClient.GetAbandonedRequest(s.ctx, *request.Object, requestRef)
+	_, err := s.amClient.GetRequest(s.ctx, *request.Object, requestRef)
 
 	// Assert
 	s.Error(err)
@@ -387,7 +387,7 @@ func (s *ArtifactsMangerClientSuite) TestGetPendings() {
 			)
 
 			// Act
-			references, err := s.amClient.GetPendings(s.ctx, objectRef)
+			references, err := s.amClient.GetPendings(s.ctx, objectRef, make([] insolar.ID, 0))
 
 			// Assert
 			test.check(references, err)
@@ -405,7 +405,7 @@ func (s *ArtifactsMangerClientSuite) TestGetPendings_FailedToSend() {
 	s.busSender.SendRoleMock.Return(ch, func() {})
 
 	// Act
-	_, err := s.amClient.GetPendings(s.ctx, *request.Object)
+	_, err := s.amClient.GetPendings(s.ctx, *request.Object, make([] insolar.ID, 0))
 
 	// Assert
 	s.Error(err)

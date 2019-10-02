@@ -96,14 +96,14 @@ func (e *requestsExecutor) Execute(
 func (e *requestsExecutor) Save(
 	ctx context.Context, transcript *common.Transcript, res artifacts.RequestResult,
 ) error {
-	inslogger.FromContext(ctx).Debug("saving result")
+	inslogger.FromContext(ctx).Debug("registering IncomingRequest result")
 
 	err := e.ArtifactManager.RegisterResult(ctx, transcript.RequestRef, res)
 	if err != nil {
 		return errors.Wrapf(err, "couldn't save result with %s side effect", res.Type().String())
 	}
 
-	inslogger.FromContext(ctx).Debug("saved result")
+	inslogger.FromContext(ctx).Debug("registered IncomingRequest result")
 
 	return nil
 }

@@ -20,11 +20,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"github.com/insolar/insolar/insolar"
 	"os"
 	"runtime"
 	"strconv"
 	"testing"
+
+	"github.com/insolar/insolar/insolar"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

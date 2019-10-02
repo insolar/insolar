@@ -68,7 +68,7 @@ func (s *GetPendings) Present(ctx context.Context, f flow.Flow) error {
 		return err
 	}
 
-	getPendings := proc.NewGetPendings(s.meta, msg.ObjectID, int(msg.Count))
+	getPendings := proc.NewGetPendings(s.meta, msg.ObjectID, int(msg.Count), msg.SkipRequestRefs)
 	s.dep.GetPendings(getPendings)
 	if err := f.Procedure(ctx, getPendings, false); err != nil {
 		return err

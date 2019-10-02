@@ -110,7 +110,18 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 		"request_id": p.requestID.DebugString(),
 		"object_id":  objectID.DebugString(),
 	})
-	logger.Debug("trying to save request")
+
+	buf, err := p.request.Marshal()
+	if err != nil {
+		return errors.Wrap(err, "failed to marshal request")
+	}
+	logger.WithFields(map[string]interface{}{
+		"is_outgoing": func() bool {
+			_, ok := p.request.(*record.OutgoingRequest)
+			return ok
+		}(),
+		"request_body": base64.StdEncoding.EncodeToString(buf),
+	}).Debug("trying to save request")
 
 	// Check virtual executor.
 	virtualExecutor, err := p.dep.coordinator.VirtualExecutorForObject(ctx, objectID, flow.Pulse(ctx))
@@ -284,19 +295,10 @@ func (p *SetRequest) Proceed(ctx context.Context) error {
 	}
 	p.dep.sender.Reply(ctx, p.message, msg)
 
-	buf, err := p.request.Marshal()
-	if err != nil {
-		return errors.Wrap(err, "failed to marshal request")
-	}
 	logger.WithFields(map[string]interface{}{
 		"is_creation":                p.request.IsCreationRequest(),
 		"latest_pending_filament_id": Filament.ID.DebugString(),
 		"reason_id":                  p.request.ReasonRef().GetLocal().DebugString(),
-		"request_body":               base64.StdEncoding.EncodeToString(buf),
-		"is_outgoing": func() bool {
-			_, ok := p.request.(*record.OutgoingRequest)
-			return ok
-		}(),
 	}).Debug("request saved")
 	stats.Record(ctx, statSetRequestSuccess.M(1))
 	return nil
