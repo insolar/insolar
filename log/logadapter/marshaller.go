@@ -233,14 +233,14 @@ var fieldValueGetters = map[reflect.Kind]func(unexported bool, t reflect.Type) (
 
 // NB! MUST match set and SEQUENCE of types with reflectFilterObjTypes[]
 func tryDefaultValuePrepare(iv interface{}) (interface{}, bool) {
-	switch vv := iv.(type) {
-	case LogStringer:
+	// NB! Do NOT use type-switch-case here as sometimes it violates the sequence when a few types are supported
+	if vv, ok := iv.(LogStringer); ok {
 		return vv.LogString(), true
-	case fmt.Stringer:
-		return vv.String(), true
-	default:
-		return vv, false
 	}
+	if vv, ok := iv.(fmt.Stringer); ok {
+		return vv.String(), true
+	}
+	return iv, false
 }
 
 // NB! MUST match set and SEQUENCE of types with tryDefaultValuePrepare()
