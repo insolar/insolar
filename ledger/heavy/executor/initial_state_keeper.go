@@ -51,7 +51,7 @@ type InitialState struct {
 type InitialStateKeeper struct {
 	jetAccessor    jet.Accessor
 	jetCoordinator jet.Coordinator
-	indexStorage   object.IndexAccessor
+	indexStorage   object.MemoryIndexAccessor
 	dropStorage    drop.Accessor
 
 	syncPulse insolar.PulseNumber
@@ -66,7 +66,7 @@ func NewInitialStateKeeper(
 	jetKeeper JetKeeper,
 	jetAccessor jet.Accessor,
 	jetCoordinator jet.Coordinator,
-	indexStorage object.IndexAccessor,
+	indexStorage object.MemoryIndexAccessor,
 	dropStorage drop.Accessor,
 ) *InitialStateKeeper {
 	return &InitialStateKeeper{

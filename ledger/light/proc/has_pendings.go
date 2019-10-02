@@ -32,7 +32,7 @@ type HasPendings struct {
 	objectID insolar.ID
 
 	dep struct {
-		index  object.IndexAccessor
+		index  object.MemoryIndexAccessor
 		sender bus.Sender
 	}
 }
@@ -45,7 +45,7 @@ func NewHasPendings(msg payload.Meta, objectID insolar.ID) *HasPendings {
 }
 
 func (hp *HasPendings) Dep(
-	index object.IndexAccessor,
+	index object.MemoryIndexAccessor,
 	sender bus.Sender,
 ) {
 	hp.dep.index = index

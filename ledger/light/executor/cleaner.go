@@ -53,7 +53,7 @@ type LightCleaner struct {
 	recCleaner   object.RecordCleaner
 
 	indexCleaner  object.IndexCleaner
-	indexAccessor object.IndexAccessor
+	indexAccessor object.MemoryIndexAccessor
 
 	pulseShifter    pulse.Shifter
 	pulseCalculator pulse.Calculator
@@ -74,7 +74,7 @@ func NewCleaner(
 	indexCleaner object.IndexCleaner,
 	pulseShifter pulse.Shifter,
 	pulseCalculator pulse.Calculator,
-	indexAccessor object.IndexAccessor,
+	indexAccessor object.MemoryIndexAccessor,
 	filamentCleaner FilamentCleaner,
 	lightChainLimit int,
 	cleanerDelay int,

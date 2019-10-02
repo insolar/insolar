@@ -105,7 +105,7 @@ type FilamentCleaner interface {
 
 type FilamentCalculatorDefault struct {
 	cache       *cacheStore
-	indexes     object.IndexAccessor
+	indexes     object.MemoryIndexAccessor
 	coordinator jet.Coordinator
 	jetFetcher  JetFetcher
 	sender      bus.Sender
@@ -113,7 +113,7 @@ type FilamentCalculatorDefault struct {
 }
 
 func NewFilamentCalculator(
-	indexes object.IndexAccessor,
+	indexes object.MemoryIndexAccessor,
 	records object.RecordAccessor,
 	coordinator jet.Coordinator,
 	jetFetcher JetFetcher,
@@ -569,9 +569,9 @@ func (c *FilamentCalculatorDefault) findLifeline(
 ) (record.Lifeline, error) {
 	iter := requestID.Pulse()
 	for iter >= until {
-		// We should find lifeline for `iter` pulse,
-		// because requestID.Pulse() may be different.
-		idx, err := c.indexes.ForID(ctx, iter, *insolar.NewID(iter, requestID.Hash()))
+		// We search for combination of id in a latest bucket
+		// requestID.Pulse() is a latest, because findLifeline is called only for Creationg requests
+		idx, err := c.indexes.ForID(ctx, requestID.Pulse(), *insolar.NewID(iter, requestID.Hash()))
 		if err != nil && err != object.ErrIndexNotFound {
 			return record.Lifeline{}, errors.Wrap(err, "failed to fetch index")
 		}
