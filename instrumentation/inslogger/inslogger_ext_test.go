@@ -21,6 +21,7 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/insolar/insolar/insolar"
+	"os"
 	"runtime"
 	"strconv"
 	"testing"
@@ -178,4 +179,15 @@ func logCallerGlobal(ctx context.Context, t *testing.T) (loggerField, string) {
 	_, _, line, _ := runtime.Caller(0)
 	l.Info("test")
 	return logFields(t, b.Bytes()), strconv.Itoa(line + 1)
+}
+
+func TestMain(m *testing.M) {
+	lg, err := log.GlobalLogger().Copy().WithFormat(insolar.JSONFormat).Build()
+	if err != nil {
+		panic(err)
+	}
+	log.SetGlobalLogger(lg)
+
+	code := m.Run()
+	os.Exit(code)
 }
