@@ -82,8 +82,8 @@ func (rm *resultsMatcher) AddUnwantedResponse(ctx context.Context, msg payload.R
 	defer rm.lock.Unlock()
 
 	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
-		"parent_request": msg.Reason,
-		"request":        msg.RequestRef,
+		"parent_request": msg.Reason.String(),
+		"request":        msg.RequestRef.String(),
 	})
 	logger.Debug("got unwanted response to request")
 
@@ -122,11 +122,14 @@ func (rm *resultsMatcher) send(ctx context.Context, msg payload.ReturnResults, r
 	stats.Record(ctx, metrics.ResultsMatcherSentResults.M(1))
 	logger := inslogger.FromContext(ctx)
 
-	logger.Debug("resending result of request ", msg.RequestRef.String(), " to ", receiver.String())
+	logger.WithFields(map[string]interface{}{
+		"receiver": receiver.String(),
+		"request":  msg.RequestRef.String(),
+	}).Debug("resending result of request")
 
 	msgData, err := payload.NewResultMessage(&msg)
 	if err != nil {
-		inslogger.FromContext(ctx).Debug("failed to serialize message")
+		logger.Debug("failed to serialize message")
 		return
 	}
 
