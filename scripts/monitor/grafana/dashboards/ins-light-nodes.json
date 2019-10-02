@@ -15,7 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1569866609223,
+  "iteration": 1570024084599,
   "links": [],
   "panels": [
     {
@@ -147,7 +147,7 @@
         "x": 12,
         "y": 1
       },
-      "id": 80,
+      "id": 83,
       "interval": null,
       "links": [],
       "mappingType": 1,
@@ -179,7 +179,7 @@
       ],
       "repeat": null,
       "repeatDirection": "h",
-      "repeatIteration": 1569866609223,
+      "repeatIteration": 1570024084599,
       "repeatPanelId": 28,
       "scopedVars": {
         "instance": {
@@ -808,6 +808,7 @@
         },
         {
           "expr": "insolar_heavy_jets_counter",
+          "hide": false,
           "legendFormat": "heavy jets",
           "refId": "B"
         }
@@ -1145,12 +1146,12 @@
       "legend": {
         "alignAsTable": true,
         "avg": false,
-        "current": false,
+        "current": true,
         "max": false,
         "min": false,
         "show": true,
-        "total": false,
-        "values": false
+        "total": true,
+        "values": true
       },
       "lines": true,
       "linewidth": 1,
@@ -1169,15 +1170,19 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(insolar_set_request_duplicate{instance=~\"$instance\", installation=\"$installation\"}[1m]))*10",
+          "expr": "sum(rate(insolar_proc_set_request_duplicate{instance=~\"$instance\", installation=\"$installation\"}[1m]))*10",
           "format": "time_series",
+          "hide": false,
           "instant": false,
           "legendFormat": "SetRequest Duplicates",
           "refId": "A"
         },
         {
-          "expr": "sum(rate(insolar_set_request_total{instance=~\"$instance\", installation=\"$installation\"}[1m])-rate(insolar_set_request_success{instance=~\"$instance\", installation=\"$installation\"}[1m]))*10 -sum(rate(insolar_set_request_duplicate{instance=~\"$instance\", installation=\"$installation\"}[1m]))*10",
-          "legendFormat": "Other SetRequest Errors",
+          "expr": "sum by (error_code) (rate(insolar_proc_errors{instance=~\"$instance\", installation=\"$installation\", proc_name=\"TypeSetRequest\", error_code!=\"1002\"}[1m]))*10",
+          "format": "time_series",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "SetRequest Errors",
           "refId": "B"
         }
       ],
@@ -1242,12 +1247,12 @@
       "legend": {
         "alignAsTable": true,
         "avg": false,
-        "current": false,
+        "current": true,
         "max": false,
         "min": false,
         "show": true,
-        "total": false,
-        "values": false
+        "total": true,
+        "values": true
       },
       "lines": true,
       "linewidth": 1,
@@ -1266,15 +1271,19 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(insolar_set_result_duplicate{instance=~\"$instance\", installation=\"$installation\"}[1m]))*10",
+          "expr": "sum(rate(insolar_proc_set_result_duplicate{instance=~\"$instance\", installation=\"$installation\"}[1m]))*10",
           "format": "time_series",
+          "hide": false,
           "instant": false,
           "legendFormat": "SetResult duplicates",
           "refId": "A"
         },
         {
-          "expr": "sum(rate(insolar_set_result_total{instance=~\"$instance\", installation=\"$installation\"}[1m])-rate(insolar_set_result_success{instance=~\"$instance\", installation=\"$installation\"}[1m]))*10 -sum(rate(insolar_set_result_duplicate{instance=~\"$instance\", installation=\"$installation\"}[1m]))*10",
-          "legendFormat": "Other SetResult errors",
+          "expr": "sum by (error_code) (rate(insolar_proc_errors{instance=~\"$instance\", installation=\"$installation\", proc_name=\"TypeSetRequest\", error_code!=\"1002\"}[1m]))*10",
+          "format": "time_series",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "SetResult Errors",
           "refId": "B"
         }
       ],
@@ -1318,9 +1327,202 @@
         "align": false,
         "alignLevel": null
       }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "cacheTimeout": null,
+      "dashLength": 10,
+      "dashes": false,
+      "description": "All errors occurs in procedures",
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 10,
+        "w": 13,
+        "x": 0,
+        "y": 39
+      },
+      "id": 81,
+      "interval": "",
+      "legend": {
+        "alignAsTable": true,
+        "avg": false,
+        "current": true,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": true,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum by (error_code) (rate(insolar_proc_errors{instance=~\"$instance\", error_code!=\"1002\", installation=\"$installation\"}[1m]))*10",
+          "format": "time_series",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "Error {{error_code}}",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(insolar_proc_errors{instance=~\"$instance\", error_code=\"1002\", installation=\"$installation\"}[1m]))*10",
+          "format": "time_series",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "Flow cancelled",
+          "refId": "C"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Procedure Errors",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "cacheTimeout": null,
+      "dashLength": 10,
+      "dashes": false,
+      "description": "",
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 10,
+        "w": 11,
+        "x": 13,
+        "y": 39
+      },
+      "id": 82,
+      "interval": "",
+      "legend": {
+        "alignAsTable": true,
+        "avg": false,
+        "current": true,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": true,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum by (proc_name) (rate(insolar_proc_errors{instance=~\"$instance\", error_code!=\"1002\", installation=\"$installation\"}[1m]))*10",
+          "format": "time_series",
+          "instant": false,
+          "legendFormat": "{{proc_name}}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Erors in procedures",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     }
   ],
-  "refresh": false,
+  "refresh": "10s",
   "schemaVersion": 19,
   "style": "dark",
   "tags": [
@@ -1343,7 +1545,7 @@
         "name": "installation",
         "options": [],
         "query": "label_values(insolar_light_last_sent_pulse, installation)",
-        "refresh": 1,
+        "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
         "sort": 1,
@@ -1368,10 +1570,36 @@
         "name": "instance",
         "options": [],
         "query": "label_values(insolar_light_last_sent_pulse{installation=\"$installation\"}, instance)",
-        "refresh": 1,
+        "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
         "sort": 0,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "allValue": null,
+        "current": {
+          "isNone": true,
+          "text": "None",
+          "value": ""
+        },
+        "datasource": "prometheus",
+        "definition": "label_values(insolar_proc_errors, error_code)",
+        "hide": 2,
+        "includeAll": false,
+        "label": null,
+        "multi": false,
+        "name": "errorCodes",
+        "options": [],
+        "query": "label_values(insolar_proc_errors, error_code)",
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 3,
         "tagValuesQuery": "",
         "tags": [],
         "tagsQuery": "",
@@ -1412,5 +1640,5 @@
   "timezone": "",
   "title": "INS-Light Nodes",
   "uid": "8cp74fKZz2",
-  "version": 1
+  "version": 7
 }

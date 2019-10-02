@@ -19,15 +19,18 @@ package handle
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/bus/meta"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/ledger/light/proc"
 )
 
@@ -139,8 +142,25 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 	}
 	if err != nil {
 		bus.ReplyError(ctx, s.sender, meta, err)
+		s.errorMetrics(ctx, payloadType.String(), err)
 	}
 	return err
+}
+
+func (s *Init) errorMetrics(ctx context.Context, msgType string, err error) {
+	errCode := payload.CodeUnknown
+	if err == flow.ErrCancelled {
+		errCode = payload.CodeFlowCanceled
+	}
+	cause := errors.Cause(err)
+	insError, ok := cause.(*payload.CodedError)
+	if ok {
+		errCode = int(insError.GetCode())
+	}
+
+	ctx = insmetrics.InsertTag(ctx, KeyErrorCode, strconv.Itoa(errCode))
+	ctx = insmetrics.InsertTag(ctx, KeyProcName, msgType)
+	stats.Record(ctx, statProcError.M(1))
 }
 
 func (s *Init) handlePass(ctx context.Context, f flow.Flow, meta payload.Meta) error {
