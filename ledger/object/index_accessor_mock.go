@@ -28,6 +28,12 @@ type IndexAccessorMock struct {
 	afterForPulseCounter  uint64
 	beforeForPulseCounter uint64
 	ForPulseMock          mIndexAccessorMockForPulse
+
+	funcLastKnownForID          func(ctx context.Context, objID insolar.ID) (i1 record.Index, err error)
+	inspectFuncLastKnownForID   func(ctx context.Context, objID insolar.ID)
+	afterLastKnownForIDCounter  uint64
+	beforeLastKnownForIDCounter uint64
+	LastKnownForIDMock          mIndexAccessorMockLastKnownForID
 }
 
 // NewIndexAccessorMock returns a mock for IndexAccessor
@@ -42,6 +48,9 @@ func NewIndexAccessorMock(t minimock.Tester) *IndexAccessorMock {
 
 	m.ForPulseMock = mIndexAccessorMockForPulse{mock: m}
 	m.ForPulseMock.callArgs = []*IndexAccessorMockForPulseParams{}
+
+	m.LastKnownForIDMock = mIndexAccessorMockLastKnownForID{mock: m}
+	m.LastKnownForIDMock.callArgs = []*IndexAccessorMockLastKnownForIDParams{}
 
 	return m
 }
@@ -481,12 +490,231 @@ func (m *IndexAccessorMock) MinimockForPulseInspect() {
 	}
 }
 
+type mIndexAccessorMockLastKnownForID struct {
+	mock               *IndexAccessorMock
+	defaultExpectation *IndexAccessorMockLastKnownForIDExpectation
+	expectations       []*IndexAccessorMockLastKnownForIDExpectation
+
+	callArgs []*IndexAccessorMockLastKnownForIDParams
+	mutex    sync.RWMutex
+}
+
+// IndexAccessorMockLastKnownForIDExpectation specifies expectation struct of the IndexAccessor.LastKnownForID
+type IndexAccessorMockLastKnownForIDExpectation struct {
+	mock    *IndexAccessorMock
+	params  *IndexAccessorMockLastKnownForIDParams
+	results *IndexAccessorMockLastKnownForIDResults
+	Counter uint64
+}
+
+// IndexAccessorMockLastKnownForIDParams contains parameters of the IndexAccessor.LastKnownForID
+type IndexAccessorMockLastKnownForIDParams struct {
+	ctx   context.Context
+	objID insolar.ID
+}
+
+// IndexAccessorMockLastKnownForIDResults contains results of the IndexAccessor.LastKnownForID
+type IndexAccessorMockLastKnownForIDResults struct {
+	i1  record.Index
+	err error
+}
+
+// Expect sets up expected params for IndexAccessor.LastKnownForID
+func (mmLastKnownForID *mIndexAccessorMockLastKnownForID) Expect(ctx context.Context, objID insolar.ID) *mIndexAccessorMockLastKnownForID {
+	if mmLastKnownForID.mock.funcLastKnownForID != nil {
+		mmLastKnownForID.mock.t.Fatalf("IndexAccessorMock.LastKnownForID mock is already set by Set")
+	}
+
+	if mmLastKnownForID.defaultExpectation == nil {
+		mmLastKnownForID.defaultExpectation = &IndexAccessorMockLastKnownForIDExpectation{}
+	}
+
+	mmLastKnownForID.defaultExpectation.params = &IndexAccessorMockLastKnownForIDParams{ctx, objID}
+	for _, e := range mmLastKnownForID.expectations {
+		if minimock.Equal(e.params, mmLastKnownForID.defaultExpectation.params) {
+			mmLastKnownForID.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmLastKnownForID.defaultExpectation.params)
+		}
+	}
+
+	return mmLastKnownForID
+}
+
+// Inspect accepts an inspector function that has same arguments as the IndexAccessor.LastKnownForID
+func (mmLastKnownForID *mIndexAccessorMockLastKnownForID) Inspect(f func(ctx context.Context, objID insolar.ID)) *mIndexAccessorMockLastKnownForID {
+	if mmLastKnownForID.mock.inspectFuncLastKnownForID != nil {
+		mmLastKnownForID.mock.t.Fatalf("Inspect function is already set for IndexAccessorMock.LastKnownForID")
+	}
+
+	mmLastKnownForID.mock.inspectFuncLastKnownForID = f
+
+	return mmLastKnownForID
+}
+
+// Return sets up results that will be returned by IndexAccessor.LastKnownForID
+func (mmLastKnownForID *mIndexAccessorMockLastKnownForID) Return(i1 record.Index, err error) *IndexAccessorMock {
+	if mmLastKnownForID.mock.funcLastKnownForID != nil {
+		mmLastKnownForID.mock.t.Fatalf("IndexAccessorMock.LastKnownForID mock is already set by Set")
+	}
+
+	if mmLastKnownForID.defaultExpectation == nil {
+		mmLastKnownForID.defaultExpectation = &IndexAccessorMockLastKnownForIDExpectation{mock: mmLastKnownForID.mock}
+	}
+	mmLastKnownForID.defaultExpectation.results = &IndexAccessorMockLastKnownForIDResults{i1, err}
+	return mmLastKnownForID.mock
+}
+
+//Set uses given function f to mock the IndexAccessor.LastKnownForID method
+func (mmLastKnownForID *mIndexAccessorMockLastKnownForID) Set(f func(ctx context.Context, objID insolar.ID) (i1 record.Index, err error)) *IndexAccessorMock {
+	if mmLastKnownForID.defaultExpectation != nil {
+		mmLastKnownForID.mock.t.Fatalf("Default expectation is already set for the IndexAccessor.LastKnownForID method")
+	}
+
+	if len(mmLastKnownForID.expectations) > 0 {
+		mmLastKnownForID.mock.t.Fatalf("Some expectations are already set for the IndexAccessor.LastKnownForID method")
+	}
+
+	mmLastKnownForID.mock.funcLastKnownForID = f
+	return mmLastKnownForID.mock
+}
+
+// When sets expectation for the IndexAccessor.LastKnownForID which will trigger the result defined by the following
+// Then helper
+func (mmLastKnownForID *mIndexAccessorMockLastKnownForID) When(ctx context.Context, objID insolar.ID) *IndexAccessorMockLastKnownForIDExpectation {
+	if mmLastKnownForID.mock.funcLastKnownForID != nil {
+		mmLastKnownForID.mock.t.Fatalf("IndexAccessorMock.LastKnownForID mock is already set by Set")
+	}
+
+	expectation := &IndexAccessorMockLastKnownForIDExpectation{
+		mock:   mmLastKnownForID.mock,
+		params: &IndexAccessorMockLastKnownForIDParams{ctx, objID},
+	}
+	mmLastKnownForID.expectations = append(mmLastKnownForID.expectations, expectation)
+	return expectation
+}
+
+// Then sets up IndexAccessor.LastKnownForID return parameters for the expectation previously defined by the When method
+func (e *IndexAccessorMockLastKnownForIDExpectation) Then(i1 record.Index, err error) *IndexAccessorMock {
+	e.results = &IndexAccessorMockLastKnownForIDResults{i1, err}
+	return e.mock
+}
+
+// LastKnownForID implements IndexAccessor
+func (mmLastKnownForID *IndexAccessorMock) LastKnownForID(ctx context.Context, objID insolar.ID) (i1 record.Index, err error) {
+	mm_atomic.AddUint64(&mmLastKnownForID.beforeLastKnownForIDCounter, 1)
+	defer mm_atomic.AddUint64(&mmLastKnownForID.afterLastKnownForIDCounter, 1)
+
+	if mmLastKnownForID.inspectFuncLastKnownForID != nil {
+		mmLastKnownForID.inspectFuncLastKnownForID(ctx, objID)
+	}
+
+	params := &IndexAccessorMockLastKnownForIDParams{ctx, objID}
+
+	// Record call args
+	mmLastKnownForID.LastKnownForIDMock.mutex.Lock()
+	mmLastKnownForID.LastKnownForIDMock.callArgs = append(mmLastKnownForID.LastKnownForIDMock.callArgs, params)
+	mmLastKnownForID.LastKnownForIDMock.mutex.Unlock()
+
+	for _, e := range mmLastKnownForID.LastKnownForIDMock.expectations {
+		if minimock.Equal(e.params, params) {
+			mm_atomic.AddUint64(&e.Counter, 1)
+			return e.results.i1, e.results.err
+		}
+	}
+
+	if mmLastKnownForID.LastKnownForIDMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmLastKnownForID.LastKnownForIDMock.defaultExpectation.Counter, 1)
+		want := mmLastKnownForID.LastKnownForIDMock.defaultExpectation.params
+		got := IndexAccessorMockLastKnownForIDParams{ctx, objID}
+		if want != nil && !minimock.Equal(*want, got) {
+			mmLastKnownForID.t.Errorf("IndexAccessorMock.LastKnownForID got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		}
+
+		results := mmLastKnownForID.LastKnownForIDMock.defaultExpectation.results
+		if results == nil {
+			mmLastKnownForID.t.Fatal("No results are set for the IndexAccessorMock.LastKnownForID")
+		}
+		return (*results).i1, (*results).err
+	}
+	if mmLastKnownForID.funcLastKnownForID != nil {
+		return mmLastKnownForID.funcLastKnownForID(ctx, objID)
+	}
+	mmLastKnownForID.t.Fatalf("Unexpected call to IndexAccessorMock.LastKnownForID. %v %v", ctx, objID)
+	return
+}
+
+// LastKnownForIDAfterCounter returns a count of finished IndexAccessorMock.LastKnownForID invocations
+func (mmLastKnownForID *IndexAccessorMock) LastKnownForIDAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmLastKnownForID.afterLastKnownForIDCounter)
+}
+
+// LastKnownForIDBeforeCounter returns a count of IndexAccessorMock.LastKnownForID invocations
+func (mmLastKnownForID *IndexAccessorMock) LastKnownForIDBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmLastKnownForID.beforeLastKnownForIDCounter)
+}
+
+// Calls returns a list of arguments used in each call to IndexAccessorMock.LastKnownForID.
+// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
+func (mmLastKnownForID *mIndexAccessorMockLastKnownForID) Calls() []*IndexAccessorMockLastKnownForIDParams {
+	mmLastKnownForID.mutex.RLock()
+
+	argCopy := make([]*IndexAccessorMockLastKnownForIDParams, len(mmLastKnownForID.callArgs))
+	copy(argCopy, mmLastKnownForID.callArgs)
+
+	mmLastKnownForID.mutex.RUnlock()
+
+	return argCopy
+}
+
+// MinimockLastKnownForIDDone returns true if the count of the LastKnownForID invocations corresponds
+// the number of defined expectations
+func (m *IndexAccessorMock) MinimockLastKnownForIDDone() bool {
+	for _, e := range m.LastKnownForIDMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			return false
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.LastKnownForIDMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterLastKnownForIDCounter) < 1 {
+		return false
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcLastKnownForID != nil && mm_atomic.LoadUint64(&m.afterLastKnownForIDCounter) < 1 {
+		return false
+	}
+	return true
+}
+
+// MinimockLastKnownForIDInspect logs each unmet expectation
+func (m *IndexAccessorMock) MinimockLastKnownForIDInspect() {
+	for _, e := range m.LastKnownForIDMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			m.t.Errorf("Expected call to IndexAccessorMock.LastKnownForID with params: %#v", *e.params)
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.LastKnownForIDMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterLastKnownForIDCounter) < 1 {
+		if m.LastKnownForIDMock.defaultExpectation.params == nil {
+			m.t.Error("Expected call to IndexAccessorMock.LastKnownForID")
+		} else {
+			m.t.Errorf("Expected call to IndexAccessorMock.LastKnownForID with params: %#v", *m.LastKnownForIDMock.defaultExpectation.params)
+		}
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcLastKnownForID != nil && mm_atomic.LoadUint64(&m.afterLastKnownForIDCounter) < 1 {
+		m.t.Error("Expected call to IndexAccessorMock.LastKnownForID")
+	}
+}
+
 // MinimockFinish checks that all mocked methods have been called the expected number of times
 func (m *IndexAccessorMock) MinimockFinish() {
 	if !m.minimockDone() {
 		m.MinimockForIDInspect()
 
 		m.MinimockForPulseInspect()
+
+		m.MinimockLastKnownForIDInspect()
 		m.t.FailNow()
 	}
 }
@@ -511,5 +739,6 @@ func (m *IndexAccessorMock) minimockDone() bool {
 	done := true
 	return done &&
 		m.MinimockForIDDone() &&
-		m.MinimockForPulseDone()
+		m.MinimockForPulseDone() &&
+		m.MinimockLastKnownForIDDone()
 }

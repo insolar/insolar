@@ -34,6 +34,7 @@ type SearchIndex struct {
 
 	dep struct {
 		indexes         object.IndexAccessor
+		records         object.RecordAccessor
 		pulseCalculator pulse.Calculator
 		pulseStorage    pulse.Accessor
 		sender          bus.Sender
@@ -44,11 +45,13 @@ func (p *SearchIndex) Dep(
 	indexes object.IndexAccessor,
 	pulseCalculator pulse.Calculator,
 	pulseStorage pulse.Accessor,
+	records object.RecordAccessor,
 	sender bus.Sender,
 ) {
 	p.dep.indexes = indexes
 	p.dep.sender = sender
 	p.dep.pulseCalculator = pulseCalculator
+	p.dep.records = records
 	p.dep.pulseStorage = pulseStorage
 }
 
@@ -89,14 +92,23 @@ func (p *SearchIndex) Proceed(ctx context.Context) error {
 
 	var idx *record.Index
 	for currentPN >= searchIndex.Until {
-		savedIdx, err := p.dep.indexes.ForID(ctx, currentPN, *insolar.NewID(currentPN, searchIndex.ObjectID.Hash()))
-		if err != nil && err != object.ErrIndexNotFound {
+		// searching for creation request
+		reqID := *insolar.NewID(currentPN, searchIndex.ObjectID.Hash())
+		_, err := p.dep.records.ForID(ctx, reqID)
+		if err != nil && err != object.ErrNotFound {
 			return errors.Wrapf(
 				err,
 				"failed to fetch object index for %v", *insolar.NewID(currentPN, searchIndex.ObjectID.Hash()),
 			)
 		}
 		if err == nil {
+			savedIdx, err := p.dep.indexes.LastKnownForID(ctx, reqID)
+			if err != nil {
+				return errors.Wrapf(
+					err,
+					"failed to fetch index for record %v", reqID.DebugString(),
+				)
+			}
 			idx = &savedIdx
 			break
 		}

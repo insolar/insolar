@@ -57,7 +57,7 @@ type LightReplicatorDefault struct {
 
 	dropAccessor drop.Accessor
 	recsAccessor object.RecordCollectionAccessor
-	idxAccessor  object.IndexAccessor
+	idxAccessor  object.MemoryIndexAccessor
 	jetAccessor  jet.Accessor
 
 	syncWaitingPulses chan insolar.PulseNumber
@@ -71,7 +71,7 @@ func NewReplicatorDefault(
 	calculator pulse.Calculator,
 	dropAccessor drop.Accessor,
 	recsAccessor object.RecordCollectionAccessor,
-	idxAccessor object.IndexAccessor,
+	idxAccessor object.MemoryIndexAccessor,
 	jetAccessor jet.Accessor,
 ) *LightReplicatorDefault {
 	return &LightReplicatorDefault{

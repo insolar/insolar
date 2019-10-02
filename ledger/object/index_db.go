@@ -195,6 +195,20 @@ func (i *IndexDB) ForPulse(ctx context.Context, pn insolar.PulseNumber) ([]recor
 	return indexes, nil
 }
 
+func (i *IndexDB) LastKnownForID(ctx context.Context, objID insolar.ID) (record.Index, error) {
+	lastPN, err := i.getLastKnownPN(objID)
+	if err != nil {
+		return record.Index{}, ErrIndexNotFound
+	}
+
+	idx, err := i.getBucket(lastPN, objID)
+	if err != nil {
+		return record.Index{}, err
+	}
+
+	return *idx, nil
+}
+
 func (i *IndexDB) setBucket(pn insolar.PulseNumber, objID insolar.ID, bucket *record.Index) error {
 	key := indexKey{pn: pn, objID: objID}
 
