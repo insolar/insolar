@@ -14,8 +14,8 @@
   },
   "editable": true,
   "gnetId": null,
-  "graphTooltip": 0,
-  "iteration": 1569959743610,
+  "graphTooltip": 1,
+  "iteration": 1569961740071,
   "links": [],
   "panels": [
     {
@@ -137,17 +137,7 @@
       "pointradius": 1,
       "points": false,
       "renderer": "flot",
-      "seriesOverrides": [
-        {
-          "alias": "/^state.*/",
-          "fill": 0,
-          "linewidth": 1,
-          "pointradius": 3,
-          "points": true,
-          "stack": false,
-          "yaxis": 2
-        }
-      ],
+      "seriesOverrides": [],
       "spaceLength": 10,
       "stack": true,
       "steppedLine": false,
@@ -388,9 +378,9 @@
       "colorPrefix": false,
       "colorValue": false,
       "colors": [
-        "#96D98D",
-        "#FFB357",
-        "#FF7383"
+        "rgba(25, 115, 14, 0.5)",
+        "rgba(229, 84, 0, 0.5)",
+        "rgba(173, 3, 23, 0.5)"
       ],
       "format": "none",
       "gauge": {
@@ -602,7 +592,7 @@
       "title": "Pulse deviation",
       "tooltip": {
         "shared": true,
-        "sort": 0,
+        "sort": 2,
         "value_type": "individual"
       },
       "type": "graph",
@@ -777,7 +767,7 @@
       "title": "Abandon age",
       "tooltip": {
         "shared": true,
-        "sort": 0,
+        "sort": 2,
         "value_type": "individual"
       },
       "type": "graph",
