@@ -44,6 +44,7 @@ func TestSearchIndex_Proceed(t *testing.T) {
 		pulseCalculator *pulse.CalculatorMock
 		pulseAccessor   *pulse.AccessorMock
 		sender          *bus.SenderMock
+		recordAccessor  *object.RecordAccessorMock
 	)
 
 	resetComponents := func() {
@@ -51,11 +52,12 @@ func TestSearchIndex_Proceed(t *testing.T) {
 		pulseCalculator = pulse.NewCalculatorMock(t)
 		sender = bus.NewSenderMock(t)
 		pulseAccessor = pulse.NewAccessorMock(t)
+		recordAccessor = object.NewRecordAccessorMock(t)
 	}
 
 	newProc := func(msg payload.Meta) *proc.SearchIndex {
 		p := proc.NewSearchIndex(msg)
-		p.Dep(index, pulseCalculator, pulseAccessor, sender)
+		p.Dep(index, pulseCalculator, pulseAccessor, recordAccessor, sender)
 		return p
 	}
 
@@ -120,9 +122,11 @@ func TestSearchIndex_Proceed(t *testing.T) {
 
 		pulseAccessor.LatestMock.Return(insolar.Pulse{PulseNumber: pulse_core.MinTimePulse + 100}, nil)
 
-		index.ForIDMock.When(ctx, insolar.PulseNumber(pulse_core.MinTimePulse+100), objID).Then(record.Index{}, object.ErrIndexNotFound)
-		index.ForIDMock.When(ctx, insolar.PulseNumber(pulse_core.MinTimePulse+99), *insolar.NewID(pulse_core.MinTimePulse+99, []byte{1, 2, 3, 4})).Then(record.Index{}, object.ErrIndexNotFound)
-		index.ForIDMock.When(ctx, insolar.PulseNumber(pulse_core.MinTimePulse+98), *insolar.NewID(pulse_core.MinTimePulse+98, []byte{1, 2, 3, 4})).Then(expectedIdx, nil)
+		recordAccessor.ForIDMock.When(ctx, objID).Then(record.Material{}, object.ErrNotFound)
+		recordAccessor.ForIDMock.When(ctx, *insolar.NewID(pulse_core.MinTimePulse+99, []byte{1, 2, 3, 4})).Then(record.Material{}, object.ErrNotFound)
+		recordAccessor.ForIDMock.When(ctx, *insolar.NewID(pulse_core.MinTimePulse+98, []byte{1, 2, 3, 4})).Then(record.Material{}, nil)
+
+		index.LastKnownForIDMock.When(ctx, *insolar.NewID(pulse_core.MinTimePulse+98, []byte{1, 2, 3, 4})).Then(expectedIdx, nil)
 
 		pulseCalculator.BackwardsMock.When(ctx, insolar.PulseNumber(pulse_core.MinTimePulse+100), 1).Then(insolar.Pulse{
 			PulseNumber: pulse_core.MinTimePulse + 99,
@@ -175,9 +179,11 @@ func TestSearchIndex_Proceed(t *testing.T) {
 
 		pulseAccessor.LatestMock.Return(insolar.Pulse{PulseNumber: pulse_core.MinTimePulse + 100}, nil)
 
-		index.ForIDMock.When(ctx, insolar.PulseNumber(pulse_core.MinTimePulse+100), *insolar.NewID(pulse_core.MinTimePulse+100, []byte{1, 2, 3, 4})).Then(record.Index{}, object.ErrIndexNotFound)
-		index.ForIDMock.When(ctx, insolar.PulseNumber(pulse_core.MinTimePulse+99), *insolar.NewID(pulse_core.MinTimePulse+99, []byte{1, 2, 3, 4})).Then(record.Index{}, object.ErrIndexNotFound)
-		index.ForIDMock.When(ctx, insolar.PulseNumber(pulse_core.MinTimePulse+98), *insolar.NewID(pulse_core.MinTimePulse+98, []byte{1, 2, 3, 4})).Then(expectedIdx, nil)
+		recordAccessor.ForIDMock.When(ctx, *insolar.NewID(pulse_core.MinTimePulse+100, []byte{1, 2, 3, 4})).Then(record.Material{}, object.ErrNotFound)
+		recordAccessor.ForIDMock.When(ctx, *insolar.NewID(pulse_core.MinTimePulse+99, []byte{1, 2, 3, 4})).Then(record.Material{}, object.ErrNotFound)
+		recordAccessor.ForIDMock.When(ctx, *insolar.NewID(pulse_core.MinTimePulse+98, []byte{1, 2, 3, 4})).Then(record.Material{}, nil)
+
+		index.LastKnownForIDMock.When(ctx, *insolar.NewID(pulse_core.MinTimePulse+98, []byte{1, 2, 3, 4})).Then(expectedIdx, nil)
 
 		pulseCalculator.BackwardsMock.When(ctx, insolar.PulseNumber(pulse_core.MinTimePulse+100), 1).Then(insolar.Pulse{
 			PulseNumber: pulse_core.MinTimePulse + 99,
@@ -220,9 +226,9 @@ func TestSearchIndex_Proceed(t *testing.T) {
 
 		pulseAccessor.LatestMock.Return(insolar.Pulse{PulseNumber: pulse_core.MinTimePulse + 100}, nil)
 
-		index.ForIDMock.When(ctx, insolar.PulseNumber(pulse_core.MinTimePulse+100), objID).Then(record.Index{}, object.ErrIndexNotFound)
-		index.ForIDMock.When(ctx, insolar.PulseNumber(pulse_core.MinTimePulse+99), *insolar.NewID(pulse_core.MinTimePulse+99, []byte{1, 2, 3, 4})).Then(record.Index{}, object.ErrIndexNotFound)
-		index.ForIDMock.When(ctx, insolar.PulseNumber(pulse_core.MinTimePulse+98), *insolar.NewID(pulse_core.MinTimePulse+98, []byte{1, 2, 3, 4})).Then(record.Index{}, object.ErrIndexNotFound)
+		recordAccessor.ForIDMock.When(ctx, objID).Then(record.Material{}, object.ErrNotFound)
+		recordAccessor.ForIDMock.When(ctx, *insolar.NewID(pulse_core.MinTimePulse+99, []byte{1, 2, 3, 4})).Then(record.Material{}, object.ErrNotFound)
+		recordAccessor.ForIDMock.When(ctx, *insolar.NewID(pulse_core.MinTimePulse+98, []byte{1, 2, 3, 4})).Then(record.Material{}, object.ErrNotFound)
 
 		pulseCalculator.BackwardsMock.When(ctx, insolar.PulseNumber(pulse_core.MinTimePulse+100), 1).Then(insolar.Pulse{
 			PulseNumber: pulse_core.MinTimePulse + 99,
