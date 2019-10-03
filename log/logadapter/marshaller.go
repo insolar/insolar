@@ -391,19 +391,20 @@ func (p *typeMarshaller) getFieldsOf(t reflect.Type, baseOffset uintptr, getRepo
 		if fd.getFn == nil {
 			continue
 		}
-		fd.reportFn = getReporterFn(fd.Type)
-		if needsAddr {
-			p.printNeedsAddr = true
-			if fd.reportFn != nil {
-				p.reportNeedsAddr = true
-			}
-		}
 
 		switch fieldName {
 		case "msg", "Msg", "message", "Message":
 			msgGetter = fd
 		default:
+			fd.reportFn = getReporterFn(fd.Type)
 			valueGetters = append(valueGetters, fd)
+		}
+
+		if needsAddr {
+			p.printNeedsAddr = true
+			if fd.reportFn != nil {
+				p.reportNeedsAddr = true
+			}
 		}
 	}
 
