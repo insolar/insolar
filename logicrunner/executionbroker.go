@@ -151,6 +151,7 @@ func (q *ExecutionBroker) noMoreRequestsOnLedger(ctx context.Context) {
 	defer q.stateLock.Unlock()
 
 	if len(q.probablyMoreSinceLastFetch) == 0 {
+		inslogger.FromContext(ctx).Debug("marking that there is no more requests on ledger")
 		q.ledgerHasMoreRequests = false
 	}
 }
