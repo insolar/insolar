@@ -110,7 +110,7 @@ func TestExecutionBroker_AddFreshRequest(t *testing.T) {
 				wg.Add(1)
 				er := executionregistry.NewExecutionRegistryMock(t).
 					RegisterMock.Return(nil).
-					DoneMock.Return(true).IsEmptyMock.Return(true)
+					DoneMock.Return(true)
 				count := 0
 				am := artifacts.NewClientMock(t).
 					HasPendingsMock.Return(false, nil).
@@ -139,7 +139,7 @@ func TestExecutionBroker_AddFreshRequest(t *testing.T) {
 					return &requestresult.RequestResult{}, nil
 				})
 				broker := NewExecutionBroker(objectRef,
-					nil, re, senderOKMock(t, nil), am, er, nil, pa)
+					nil, re, nil, am, er, nil, pa)
 				return broker, wg
 			},
 		},
@@ -155,8 +155,8 @@ func TestExecutionBroker_AddFreshRequest(t *testing.T) {
 			broker.HasMoreRequests(ctx)
 
 			wg.Wait()
-			// we need to call onpulse to stop broker/fetcher
-			broker.OnPulse(ctx)
+			// we need to stop broker to stop fetcher
+			close(broker.closed)
 
 			mc.Wait(1 * time.Minute)
 			mc.Finish()
