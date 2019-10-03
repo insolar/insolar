@@ -659,13 +659,9 @@ func (c *cacheStore) DeleteAllExcept(ids []insolar.ID) {
 
 	newCaches := map[insolar.ID]*filamentCache{}
 	for _, id := range ids {
-		c.caches[id].RLock()
-
 		if cache, ok := c.caches[id]; ok {
 			newCaches[id] = cache
 		}
-
-		c.caches[id].RUnlock()
 	}
 	c.caches = newCaches
 }
