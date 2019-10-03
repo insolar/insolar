@@ -60,10 +60,10 @@ func (Key) Scope() store.Scope {
 const (
 	XNS                        = "XNS"
 	FundsDepositName           = "genesis_deposit"
-	MigrationDaemonLockup      = 1604102400
-	MigrationDaemonVesting     = 1735689600
-	MigrationDaemonVestingStep = 2629746
-	MigrationDaemonMaturePulse = 1635638400
+	MigrationDaemonLockup      = 1578700800 // 11.01.2020
+	MigrationDaemonVesting     = 1735689600 // ?
+	MigrationDaemonVestingStep = 2629746    // 1 month
+	MigrationDaemonMaturePulse = 1610323200 // 11.01.2021
 
 	EnterpriseLockup      = 0
 	EnterpriseVesting     = 10
@@ -75,20 +75,20 @@ const (
 	FundsVestingStep = 10
 	FundsMaturePulse = 0
 
-	NetworkIncentivesLockup      = 1593475200
-	NetworkIncentivesVesting     = 315569520
-	NetworkIncentivesVestingStep = 2629746
-	NetworkIncentivesMaturePulse = 1909008000
+	NetworkIncentivesLockup      = 1593561600 // 01.07.2020
+	NetworkIncentivesVesting     = 315569520  // 10 years
+	NetworkIncentivesVestingStep = 2629746    // 1 month
+	NetworkIncentivesMaturePulse = 1909094400 // 01.07.2030
 
-	ApplicationIncentivesLockup      = 1593475200
-	ApplicationIncentivesVesting     = 315569520
-	ApplicationIncentivesVestingStep = 2629746
-	ApplicationIncentivesMaturePulse = 1909008000
+	ApplicationIncentivesLockup      = 1593561600 // 01.07.2020
+	ApplicationIncentivesVesting     = 315569520  // 10 years
+	ApplicationIncentivesVestingStep = 2629746    // 1 month
+	ApplicationIncentivesMaturePulse = 1909094400 // 01.07.2030
 
-	FoundationLockup      = 1672444800
+	FoundationLockup      = 1672444800 // 31.12.2022
 	FoundationVesting     = 10
 	FoundationVestingStep = 10
-	FoundationMaturePulse = 1672444800
+	FoundationMaturePulse = 1672444800 // 31.12.2022
 )
 
 // IsGenesisRequired checks if genesis record already exists.
