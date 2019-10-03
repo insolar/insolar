@@ -26,7 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestGetFreeAddressesCount(t *testing.T) {
+func TestGetFreeAddressCount(t *testing.T) {
 	migrationShardsMap := getAddressCount(t, 0)
 
 	for _, m := range migrationShardsMap {
@@ -34,7 +34,7 @@ func TestGetFreeAddressesCount(t *testing.T) {
 	}
 }
 
-func TestGetFreeAddressesCount_ChangesAfterMigration(t *testing.T) {
+func TestGetFreeAddressCount_ChangesAfterMigration(t *testing.T) {
 	var migrationShardsMapBefore = getAddressCount(t, 0)
 
 	member, err := newUserWithKeys()
@@ -69,7 +69,7 @@ func TestGetFreeAddressesCount_ChangesAfterMigration(t *testing.T) {
 	require.True(t, isFound)
 }
 
-func TestGetFreeAddressesCount_StartIndexTooBig(t *testing.T) {
+func TestGetFreeAddressCount_StartIndexTooBig(t *testing.T) {
 	_, _, err := makeSignedRequest(launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.getAddressCount",
 		map[string]interface{}{"startWithIndex": 1})
 	require.Error(t, err)
@@ -78,7 +78,7 @@ func TestGetFreeAddressesCount_StartIndexTooBig(t *testing.T) {
 	require.Contains(t, data.Trace, "incorrect start shard index")
 }
 
-func TestGetFreeAddressesCount_IncorrectIndexType(t *testing.T) {
+func TestGetFreeAddressCount_IncorrectIndexType(t *testing.T) {
 	_, _, err := makeSignedRequest(launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.getAddressCount",
 		map[string]interface{}{"startWithIndex": "0"})
 	require.Error(t, err)
@@ -87,7 +87,7 @@ func TestGetFreeAddressesCount_IncorrectIndexType(t *testing.T) {
 	require.Contains(t, data.Trace, "failed to get 'startWithIndex' param")
 }
 
-func TestGetFreeAddressesCount_FromMember(t *testing.T) {
+func TestGetFreeAddressCount_FromMember(t *testing.T) {
 	member := createMember(t)
 	_, _, err := makeSignedRequest(launchnet.TestRPCUrl, member, "migration.getAddressCount",
 		map[string]interface{}{"startWithIndex": 0})
