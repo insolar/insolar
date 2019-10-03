@@ -645,7 +645,10 @@ func (c *cacheStore) DeleteIfLonger(limit int) {
 	defer c.lock.Unlock()
 
 	for id, cache := range c.caches {
-		if len(cache.cache) > limit {
+		cache.RLock()
+		cacheLen := len(cache.cache)
+		cache.RUnlock()
+		if cacheLen > limit {
 			delete(c.caches, id)
 		}
 	}
