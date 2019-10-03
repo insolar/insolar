@@ -645,9 +645,11 @@ func (c *cacheStore) DeleteIfLonger(limit int) {
 	defer c.lock.Unlock()
 
 	for id, cache := range c.caches {
+		cache.RLock()
 		if len(cache.cache) > limit {
 			delete(c.caches, id)
 		}
+		defer cache.RUnlock()
 	}
 }
 
@@ -657,9 +659,13 @@ func (c *cacheStore) DeleteAllExcept(ids []insolar.ID) {
 
 	newCaches := map[insolar.ID]*filamentCache{}
 	for _, id := range ids {
+		c.caches[id].RLock()
+
 		if cache, ok := c.caches[id]; ok {
 			newCaches[id] = cache
 		}
+
+		c.caches[id].RUnlock()
 	}
 	c.caches = newCaches
 }
