@@ -281,7 +281,7 @@ func (q *ExecutionBroker) processTranscript(ctx context.Context, transcript *com
 		q.finishTranscript(ctx, transcript)
 
 		if sendReply {
-			go q.requestsExecutor.SendReply(ctx, transcript.RequestRef, *transcript.Request, replyData, err)
+			q.requestsExecutor.SendReply(ctx, transcript.RequestRef, *transcript.Request, replyData, err)
 		}
 
 		// we're checking here that pulse was changed and we should send
