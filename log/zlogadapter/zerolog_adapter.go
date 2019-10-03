@@ -123,7 +123,7 @@ func selectOutput(output insolar.LogOutput, param string) (w io.Writer, err erro
 	case insolar.StdErrOutput:
 		return os.Stderr, nil
 	case insolar.SysLogOutput:
-		return inssyslog.ConnectSyslogByParam(param, "insolar") // breaks dependency on windows
+		return inssyslog.ConnectSyslogByParam(param, "insolar")
 	default:
 		return nil, errors.New("unknown output " + output.String())
 	}
@@ -227,20 +227,23 @@ func (z *zerologAdapter) newEvent(level insolar.LogLevel) *zerolog.Event {
 
 func (z *zerologAdapter) EmbeddedEvent(level insolar.LogLevel, args ...interface{}) {
 	event := z.newEvent(level)
-	if event != nil { // avoid unnecessary call to fmt.Sprint
-		obj, msgStr := z.config.MsgFormat.TryLogObject(args...)
-		if obj != nil {
-			msgStr = obj.MarshalLogObject(zerologMarshaller{event})
-		}
-		event.Msg(msgStr)
+	if event == nil {
+		return
 	}
+
+	obj, msgStr := z.config.MsgFormat.FmtLogObject(args...)
+	if obj != nil {
+		msgStr = obj.MarshalLogObject(zerologMarshaller{event})
+	}
+	event.Msg(msgStr)
 }
 
 func (z *zerologAdapter) EmbeddedEventf(level insolar.LogLevel, fmt string, args ...interface{}) {
 	event := z.newEvent(level)
-	if event != nil { // avoid unnecessary call to fmt.Sprintf
-		event.Msg(z.config.MsgFormat.Sformatf(fmt, args...))
+	if event == nil {
+		return
 	}
+	event.Msg(z.config.MsgFormat.Sformatf(fmt, args...))
 }
 
 func (z *zerologAdapter) EmbeddedFlush(msg string) {
