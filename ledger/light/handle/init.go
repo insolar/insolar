@@ -91,7 +91,7 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 		err = f.Handle(ctx, h.Present)
 	case payload.TypeGetFilament:
 		h := NewGetFilament(s.dep, meta)
-		return f.Handle(ctx, h.Present)
+		err = f.Handle(ctx, h.Present)
 	case payload.TypePassState:
 		h := NewPassState(s.dep, meta)
 		err = f.Handle(ctx, h.Present)
