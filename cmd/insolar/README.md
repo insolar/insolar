@@ -73,7 +73,9 @@ Help on any command: `./bin/insolar help COMMAND`
             "amount": "1000000000",
             "ethTxHash": "394578234932493486739856jfgd48756348563495846djf",
             "migrationAddress": "0x83274348763847632487326482346328462384632486234"
-          }
+          }, 
+          "reference":"1734543583274348763847632487326482346328462384632",
+          "publicKey":"-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE3xcoC2lnprrVuc83K6b2R1gvA5kB\nfEUI7xBi1GX/LWtDzex5s47oEXPlXhysnrLOKL75kP8/5hRc3QJm12KuRw==\n-----END PUBLIC KEY-----\n"
         }
         ​
     ./bin/insolar send-request --root-keys=./scripts/insolard/configs/migration_daemon_keys.json --params=params.json -u=http://localhost:19001/admin-api/rpc -a=http://localhost:19001/admin-api/rpc

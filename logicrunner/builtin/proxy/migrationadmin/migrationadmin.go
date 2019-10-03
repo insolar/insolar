@@ -25,6 +25,9 @@ import (
 	"github.com/insolar/insolar/logicrunner/common"
 )
 
+type AddMaResponse struct {
+	Count int `json:"totalNumber"`
+}
 type CheckDaemonResponse struct {
 	Status string `json:"status"`
 }
