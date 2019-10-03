@@ -28,7 +28,7 @@ import (
 type CheckDaemonResponse struct {
 	Status string `json:"status"`
 }
-type GetAddressCountResponse struct {
+type GetAddressesCountResponse struct {
 	ShardIndex int `json:"shardIndex"`
 	FreeCount  int `json:"freeCount"`
 }
