@@ -348,8 +348,9 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 			index = idx
 		} else if err != nil {
 			return nil, nil, errors.Wrap(err, "failed to find index")
+		} else {
+			index = idx
 		}
-		index = idx
 	} else {
 		idx, err := c.indexes.ForID(ctx, requestID.Pulse(), objectID)
 		if err != nil {
