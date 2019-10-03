@@ -42,7 +42,7 @@ func getfreeMigrationCount(adminUrls []string, publicUrls []string, memberKeysDi
 				errors.New("error while converting result"),
 			)
 		}
-		// var migrationShardsMap = map[int]int{}
+
 		for _, r := range partSliced {
 			rMap := r.(map[string]interface{})
 			s, ok := rMap["shardIndex"].(float64)
