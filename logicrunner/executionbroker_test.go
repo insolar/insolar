@@ -534,7 +534,7 @@ func TestExecutionBroker_NoMoreRequestsOnLedger(t *testing.T) {
 	)
 
 	b.ledgerHasMoreRequests = true
-	b.NoMoreRequestsOnLedger(ctx)
+	b.noMoreRequestsOnLedger(ctx)
 
 	require.False(t, b.ledgerHasMoreRequests)
 }
