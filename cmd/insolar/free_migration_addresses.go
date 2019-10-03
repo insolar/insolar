@@ -32,11 +32,14 @@ func getfreeMigrationCount(adminUrls []string, publicUrls []string, memberKeysDi
 	var shoudAlert []map[int]int
 	var freeAdressesInShards = map[int]int{}
 	for i := 0; i < shardsCount; i += shardsAtOneTime {
-		part, err := insSDK.GetAddressesCount(i)
+		part, _, err := insSDK.GetAddressesCount(i)
 		check(fmt.Sprintf("Error while getting addresses from shards %d to %d: ", i, i+shardsAtOneTime), err)
 		partSliced, ok := part.([]interface{})
 		if !ok {
-			check(fmt.Sprintf("Error while getting addresses from shards %d to %d: ", i, i+shardsAtOneTime), errors.New("error while converting result"))
+			check(
+				fmt.Sprintf("Error while getting addresses from shards %d to %d: ", i, i+shardsAtOneTime),
+				errors.New("error while converting result"),
+			)
 		}
 		// var migrationShardsMap = map[int]int{}
 		for _, r := range partSliced {

@@ -83,7 +83,7 @@ Help on any command: `./bin/insolar help COMMAND`
 
 ## How to get count of free migration addresses in every shard
 
-    ./bin/insolar free-migration-count --migration-admin-keys=scripts/insolard/configs/root_member_keys.json --alert-level=100 --shards-count=10
+    ./bin/insolar free-migration-count --migration-admin-keys=.artifacts/launchnet/configs/ --alert-level=100 --shards-count=10
 
 ### Options
 

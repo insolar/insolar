@@ -19,7 +19,6 @@
 package functest
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/insolar/insolar/api/requester"
@@ -95,8 +94,5 @@ func TestGetFreeAddressesCount_FromMember(t *testing.T) {
 	require.Error(t, err)
 	require.IsType(t, &requester.Error{}, err)
 	data := err.(*requester.Error).Data
-	fmt.Println(err.Error())
-	fmt.Println(data)
-	fmt.Println(data.Trace)
 	require.Contains(t, data.Trace, "only migration daemon admin can call this method")
 }

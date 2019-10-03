@@ -184,13 +184,14 @@ func main() {
 	)
 	var freeMigrationCountCmd = &cobra.Command{
 		Use: "free-migration-count",
-		// Short: "generate default configs for bootstrap, node and pulsar",
 		Run: func(cmd *cobra.Command, args []string) {
 			getfreeMigrationCount([]string{adminURL}, []string{sendURL}, migrationAdminKeys, shardsCount, alertLevel)
 		},
 	}
 	freeMigrationCountCmd.Flags().StringVarP(
-		&migrationAdminKeys, "migration-admin-keys", "k", "", "Config that contains public/private keys of root member")
+		&migrationAdminKeys, "migration-admin-keys", "k", "",
+		"Config that contains public/private keys of root member",
+	)
 	freeMigrationCountCmd.Flags().IntVarP(
 		&alertLevel, "alert-level", "a", 0,
 		"If one of shard have less free addresses than this value, command will print alert message",
