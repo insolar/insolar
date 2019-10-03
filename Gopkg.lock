@@ -44,6 +44,14 @@
   version = "v1.0.0-rc.1"
 
 [[projects]]
+  digest = "1:e626376fab8608a972d47e91b3c1bbbddaecaf1d42b82be6dcc52d10a7557893"
+  name = "github.com/VividCortex/ewma"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "b24eb346a94c3ba12c1da1e564dbac1b498a77ce"
+  version = "v1.1.1"
+
+[[projects]]
   digest = "1:b39cf81d5f440b9c0757a25058432d33af867e5201109bf53621356d9dab4b73"
   name = "github.com/apache/thrift"
   packages = ["lib/go/thrift"]
@@ -60,12 +68,31 @@
   version = "v1.0.1"
 
 [[projects]]
+  digest = "1:ac1e0c1c60a7dc4f68415338717c7a9bd3b314c7712f897242497755ba0eb700"
+  name = "github.com/campoy/tools"
+  packages = ["imgcat"]
+  pruneopts = "UT"
+  revision = "c445bd4548958502638777f4b21d75dd9d5a0251"
+  version = "v2.0.1"
+
+[[projects]]
   digest = "1:c1100fc71e23b6a32b2c68a5202a848fd13811d5a10b12edb8019c3667d1cd9a"
   name = "github.com/cenkalti/backoff"
   packages = ["."]
   pruneopts = "UT"
   revision = "4b4cebaf850ec58f1bb1fec5bdebdf8501c2bc3f"
   version = "v3.0.0"
+
+[[projects]]
+  digest = "1:6ebea58289a0a056e3e41bffa48c0719f4722c9d9b193b71288b3e6ddffe6f42"
+  name = "github.com/cheggaaa/pb"
+  packages = [
+    "v3",
+    "v3/termutil",
+  ]
+  pruneopts = "UT"
+  revision = "40231cf7fa00b7c9098939b6a9e6f54f4b3ce020"
+  version = "v3.0.1"
 
 [[projects]]
   digest = "1:ffe9824d294da03b391f44e1ae8281281b4afc1bdaa9588c9097785e3af10cec"
@@ -105,6 +132,14 @@
   pruneopts = "UT"
   revision = "9f541cc9db5d55bce703bd99987c9d5cb8eea45e"
   version = "v1.0.0"
+
+[[projects]]
+  digest = "1:938a2672d6ebbb7f7bc63eee3e4b9464c16ffcf77ec8913d3edbf32b4e3984dd"
+  name = "github.com/fatih/color"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "570b54cabe6b8eb0bc2dfce68d964677d63b5260"
+  version = "v1.5.0"
 
 [[projects]]
   digest = "1:547f5df5f708c880f0af507317c8d022b8d62053a5cb075e23c6eeed09eb2e4e"
@@ -165,6 +200,17 @@
   pruneopts = "UT"
   revision = "1672f6126e23b7f7fd76ce77268c71689e435eeb"
   version = "v2.1.9"
+
+[[projects]]
+  branch = "master"
+  digest = "1:62c57507df491b657e9ae2645f30958d9964c8eeb380600469eedc951ebb3a0e"
+  name = "github.com/golang/freetype"
+  packages = [
+    "raster",
+    "truetype",
+  ]
+  pruneopts = "UT"
+  revision = "e2365dfdc4a05e4b8299a783240d4a7d5a65d4e4"
 
 [[projects]]
   digest = "1:b532ee3f683c057e797694b5bfeb3827d89e6adf41c53dbc80e549bca76364ea"
@@ -349,6 +395,22 @@
   pruneopts = "UT"
   revision = "de8848e004dd33dc07a2947b3d76f618a7fc7ef1"
   version = "v1.8.1"
+
+[[projects]]
+  digest = "1:4a29eeb25603debe8f2098a9902c4d3851034cf70d33be428826e86e8c30a1b0"
+  name = "github.com/mattn/go-colorable"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "98ec13f34aabf44cc914c65a1cfb7b9bc815aef1"
+  version = "v0.1.4"
+
+[[projects]]
+  digest = "1:36325ebb862e0382f2f14feef409ba9351271b89ada286ae56836c603d43b59c"
+  name = "github.com/mattn/go-isatty"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "e1f7b56ace729e4a73a29a6b4fac6cd5fcda7ab3"
+  version = "v0.0.9"
 
 [[projects]]
   digest = "1:0356f3312c9bd1cbeda81505b7fd437501d8e778ab66998ef69f00d7f9b3a0d7"
@@ -597,6 +659,21 @@
   revision = "772ced7fd4c2f6322c07537a9a93b68d74551fa6"
 
 [[projects]]
+  digest = "1:cf762a0ce01d48d8ac03f717aa41f66b655abea67c616d89994ce091a2cc6831"
+  name = "github.com/wcharczuk/go-chart"
+  packages = [
+    ".",
+    "drawing",
+    "matrix",
+    "roboto",
+    "seq",
+    "util",
+  ]
+  pruneopts = "UT"
+  revision = "7c3982fe3d8ab0c9eea9ab5d2aced51e45d447bc"
+  version = "v2.0.1"
+
+[[projects]]
   digest = "1:b7c2ac33d95453f9285cb06d1dd07e666341f597e8090c0c925af4e9f8a3a150"
   name = "go.opencensus.io"
   packages = [
@@ -634,6 +711,19 @@
   ]
   pruneopts = "UT"
   revision = "60c769a6c58655dab1b9adac0d58967dd517cfba"
+
+[[projects]]
+  branch = "master"
+  digest = "1:8aa52c7f7476f9ce660f5db479eb0e19681b58783442f33459954757fc6732fe"
+  name = "golang.org/x/image"
+  packages = [
+    "draw",
+    "font",
+    "math/f64",
+    "math/fixed",
+  ]
+  pruneopts = "UT"
+  revision = "69e4b8554b2a817a1f0015867f0858d02801f0f5"
 
 [[projects]]
   branch = "master"
@@ -820,7 +910,10 @@
     "github.com/ThreeDotsLabs/watermill/message",
     "github.com/ThreeDotsLabs/watermill/message/router/middleware",
     "github.com/ThreeDotsLabs/watermill/pubsub/gochannel",
+    "github.com/campoy/tools/imgcat",
+    "github.com/cheggaaa/pb/v3",
     "github.com/dgraph-io/badger",
+    "github.com/dustin/go-humanize",
     "github.com/fortytw2/leaktest",
     "github.com/fsnotify/fsnotify",
     "github.com/gogo/protobuf/gogoproto",
@@ -859,6 +952,7 @@
     "github.com/stretchr/testify/suite",
     "github.com/tylerb/gls",
     "github.com/ugorji/go/codec",
+    "github.com/wcharczuk/go-chart",
     "go.opencensus.io/stats",
     "go.opencensus.io/stats/view",
     "go.opencensus.io/tag",

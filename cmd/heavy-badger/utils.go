@@ -17,39 +17,28 @@
 package main
 
 import (
+	"fmt"
 	"os"
-
-	"github.com/spf13/cobra"
+	"strings"
 )
 
-type appCtx struct {
-	dataDir string
+func (dbs *dbScanner) failIfStrictf(format string, args ...interface{}) {
+	if dbs.nonStrict {
+		format = "WARNING: " + format
+	} else {
+		format = "ERROR: " + format
+	}
+	_, _ = fmt.Fprintf(os.Stderr, "\n"+format+"\n\n", args...)
+	if !dbs.nonStrict {
+		os.Exit(1)
+	}
 }
 
-func main() {
-	arg0 := os.Args[0]
+func fatalf(format string, args ...interface{}) {
+	_, _ = fmt.Fprintf(os.Stderr, format, args...)
+	os.Exit(1)
+}
 
-	app := appCtx{}
-	var rootCmd = &cobra.Command{
-		Use: arg0,
-		Run: func(_ *cobra.Command, _ []string) {
-			fatalf("bye!")
-		},
-	}
-	dirFlagName := "dir"
-	rootCmd.PersistentFlags().StringVarP(&app.dataDir, dirFlagName, "d", "", "badger data dir")
-	if err := rootCmd.MarkPersistentFlagRequired(dirFlagName); err != nil {
-		fatalf("cobra error: %v", err)
-	}
-
-	rootCmd.AddCommand(
-		app.fixCommand(),
-		app.scanCommand(),
-		scopesListCommand(),
-	)
-
-	err := rootCmd.Execute()
-	if err != nil {
-		fatalf("%v execution failed: %v", arg0, err)
-	}
+func printLine(s string) {
+	fmt.Println(strings.Repeat(s, 50))
 }

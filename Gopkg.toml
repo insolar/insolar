@@ -104,3 +104,15 @@ required = [
 [[constraint]]
   branch = "master"
   name = "gonum.org/v1/gonum"
+
+[[constraint]]
+  name = "github.com/cheggaaa/pb"
+  version = "3.0.1"
+
+[[constraint]]
+  name = "github.com/campoy/tools"
+  version = "2.0.1"
+
+[[constraint]]
+  name = "github.com/wcharczuk/go-chart"
+  version = "2.0.1"

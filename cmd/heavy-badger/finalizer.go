@@ -17,39 +17,41 @@
 package main
 
 import (
+	"fmt"
 	"os"
-
-	"github.com/spf13/cobra"
+	"os/signal"
 )
 
-type appCtx struct {
-	dataDir string
+type finalizersHolder struct {
+	finalizers []func() error
 }
 
-func main() {
-	arg0 := os.Args[0]
+func (f *finalizersHolder) add(fn func() error) {
+	f.finalizers = append(f.finalizers, fn)
+}
 
-	app := appCtx{}
-	var rootCmd = &cobra.Command{
-		Use: arg0,
-		Run: func(_ *cobra.Command, _ []string) {
-			fatalf("bye!")
-		},
+func (f *finalizersHolder) run() {
+	for _, fn := range f.finalizers {
+		err := fn()
+		if err != nil {
+			_, _ = fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
+		}
 	}
-	dirFlagName := "dir"
-	rootCmd.PersistentFlags().StringVarP(&app.dataDir, dirFlagName, "d", "", "badger data dir")
-	if err := rootCmd.MarkPersistentFlagRequired(dirFlagName); err != nil {
-		fatalf("cobra error: %v", err)
-	}
+}
 
-	rootCmd.AddCommand(
-		app.fixCommand(),
-		app.scanCommand(),
-		scopesListCommand(),
-	)
-
-	err := rootCmd.Execute()
-	if err != nil {
-		fatalf("%v execution failed: %v", arg0, err)
+func (f *finalizersHolder) onSignals(signals ...os.Signal) <-chan struct{} {
+	ret := make(chan struct{})
+	if len(signals) < 1 {
+		close(ret)
+		return ret
 	}
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, signals...)
+
+	go func() {
+		<-sigs
+		f.run()
+		close(ret)
+	}()
+	return ret
 }
