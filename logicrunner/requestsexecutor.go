@@ -108,9 +108,6 @@ func (e *requestsExecutor) Save(
 	return nil
 }
 
-// objRef := res.ObjectReference()
-// return &reply.CallMethod{Result: res.Result(), Object: &objRef}, nil
-
 func (e *requestsExecutor) SendReply(
 	ctx context.Context,
 	reqRef insolar.Reference, req record.IncomingRequest,
