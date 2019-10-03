@@ -27,7 +27,7 @@ import (
 )
 
 func TestGetFreeAddressesCount(t *testing.T) {
-	migrationShardsMap := getAddressesCount(t, 0)
+	migrationShardsMap := getAddressCount(t, 0)
 
 	for _, m := range migrationShardsMap {
 		require.True(t, m > 0)
@@ -35,7 +35,7 @@ func TestGetFreeAddressesCount(t *testing.T) {
 }
 
 func TestGetFreeAddressesCount_ChangesAfterMigration(t *testing.T) {
-	var migrationShardsMapBefore = getAddressesCount(t, 0)
+	var migrationShardsMapBefore = getAddressCount(t, 0)
 
 	member, err := newUserWithKeys()
 	require.NoError(t, err)
@@ -46,11 +46,11 @@ func TestGetFreeAddressesCount_ChangesAfterMigration(t *testing.T) {
 	require.NotEqual(t, "", output["reference"])
 	require.NotEqual(t, "", output["migrationAddress"])
 
-	result, err = signedRequest(t, launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.getAddressesCount",
+	result, err = signedRequest(t, launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.getAddressCount",
 		map[string]interface{}{"startWithShard": 0})
 	require.NoError(t, err)
 
-	var migrationShardsMapAfter = getAddressesCount(t, 0)
+	var migrationShardsMapAfter = getAddressCount(t, 0)
 	isFound := false
 	for i, countBefore := range migrationShardsMapBefore {
 		countAfter := migrationShardsMapAfter[i]
@@ -70,7 +70,7 @@ func TestGetFreeAddressesCount_ChangesAfterMigration(t *testing.T) {
 }
 
 func TestGetFreeAddressesCount_StartIndexTooBig(t *testing.T) {
-	_, _, err := makeSignedRequest(launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.getAddressesCount",
+	_, _, err := makeSignedRequest(launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.getAddressCount",
 		map[string]interface{}{"startWithShard": 1})
 	require.Error(t, err)
 	require.IsType(t, &requester.Error{}, err)
@@ -79,7 +79,7 @@ func TestGetFreeAddressesCount_StartIndexTooBig(t *testing.T) {
 }
 
 func TestGetFreeAddressesCount_IncorrectIndexType(t *testing.T) {
-	_, _, err := makeSignedRequest(launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.getAddressesCount",
+	_, _, err := makeSignedRequest(launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.getAddressCount",
 		map[string]interface{}{"startWithShard": "0"})
 	require.Error(t, err)
 	require.IsType(t, &requester.Error{}, err)
@@ -89,7 +89,7 @@ func TestGetFreeAddressesCount_IncorrectIndexType(t *testing.T) {
 
 func TestGetFreeAddressesCount_FromMember(t *testing.T) {
 	member := createMember(t)
-	_, _, err := makeSignedRequest(launchnet.TestRPCUrl, member, "migration.getAddressesCount",
+	_, _, err := makeSignedRequest(launchnet.TestRPCUrl, member, "migration.getAddressCount",
 		map[string]interface{}{"startWithShard": 0})
 	require.Error(t, err)
 	require.IsType(t, &requester.Error{}, err)

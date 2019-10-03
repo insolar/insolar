@@ -325,7 +325,7 @@ func (sdk *SDK) GetAddressesCount(startWithShard int) (interface{}, string, erro
 	response, err := sdk.DoRequest(
 		sdk.adminAPIURLs,
 		userConfig,
-		"migration.getAddressesCount",
+		"migration.getAddressCount",
 		map[string]interface{}{"startWithShard": startWithShard},
 	)
 	if err != nil {

@@ -59,8 +59,8 @@ func (mA *MigrationAdmin) MigrationAdminCall(params map[string]interface{}, name
 	case "addAddresses":
 		return mA.addMigrationAddressesCall(params, caller)
 
-	case "getAddressesCount":
-		return mA.getAddressesCount(params, caller)
+	case "getAddressCount":
+		return mA.getAddressCount(params, caller)
 
 	case "activateDaemon":
 		return mA.activateDaemonCall(params, caller)
@@ -159,7 +159,7 @@ type GetAddressesCountResponse struct {
 	FreeCount  int `json:"freeCount"`
 }
 
-func (mA *MigrationAdmin) getAddressesCount(params map[string]interface{}, memberRef insolar.Reference) (interface{}, error) {
+func (mA *MigrationAdmin) getAddressCount(params map[string]interface{}, memberRef insolar.Reference) (interface{}, error) {
 	startWithShardFloat, ok := params["startWithShard"].(float64)
 	if !ok {
 		return nil, fmt.Errorf("incorect input: failed to get 'startWithShard' param")

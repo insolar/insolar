@@ -629,8 +629,8 @@ func setMigrationDaemonsRef() error {
 	return nil
 }
 
-func getAddressesCount(t *testing.T, startWithShard int) map[int]int {
-	result, err := signedRequest(t, launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.getAddressesCount",
+func getAddressCount(t *testing.T, startWithShard int) map[int]int {
+	result, err := signedRequest(t, launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.getAddressCount",
 		map[string]interface{}{"startWithShard": startWithShard})
 	require.NoError(t, err)
 	resultsSliced, ok := result.([]interface{})
