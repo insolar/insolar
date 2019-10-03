@@ -154,7 +154,7 @@ func (mA *MigrationAdmin) addMigrationAddressesCall(params map[string]interface{
 	return nil, nil
 }
 
-type GetAddressesCountResponse struct {
+type GetAddressCountResponse struct {
 	ShardIndex int `json:"shardIndex"`
 	FreeCount  int `json:"freeCount"`
 }
@@ -174,7 +174,7 @@ func (mA *MigrationAdmin) getAddressCount(params map[string]interface{}, memberR
 		return nil, fmt.Errorf("incorrect start shard index: too big")
 	}
 
-	var res []*GetAddressesCountResponse
+	var res []*GetAddressCountResponse
 
 	for i := startWithIndex; i < startWithIndex+10; i++ {
 		s := migrationshard.GetObject(mA.MigrationAddressShards[i])
@@ -182,7 +182,7 @@ func (mA *MigrationAdmin) getAddressCount(params map[string]interface{}, memberR
 		if err != nil {
 			return nil, fmt.Errorf("failed to get count of migration addresses in shard with index %d", i)
 		}
-		res = append(res, &GetAddressesCountResponse{ShardIndex: i, FreeCount: count})
+		res = append(res, &GetAddressCountResponse{ShardIndex: i, FreeCount: count})
 	}
 
 	return &res, nil
