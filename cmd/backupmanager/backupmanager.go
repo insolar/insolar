@@ -22,6 +22,7 @@ import (
 	"io/ioutil"
 	"math"
 	"os"
+	"runtime/pprof"
 	"time"
 
 	"github.com/dgraph-io/badger"
@@ -141,12 +142,24 @@ func parseMergeParams(ctx context.Context) *cobra.Command {
 		targetDBPath    string
 		backupFileName  string
 		numberOfWorkers int
+		pprofFlag       bool
 	)
 
 	var mergeCmd = &cobra.Command{
 		Use:   "merge",
 		Short: "merge incremental backup to existing db",
 		Run: func(cmd *cobra.Command, args []string) {
+			if pprofFlag {
+				f, err := os.Create(string(time.Now().Unix()) + ".pprof")
+				if err != nil {
+					log.Fatal("could not create CPU profile: ", err)
+				}
+				if err := pprof.StartCPUProfile(f); err != nil {
+					log.Fatal("could not start CPU profile: ", err)
+				}
+				defer pprof.StopCPUProfile()
+			}
+
 			merge(ctx, targetDBPath, backupFileName, numberOfWorkers)
 		},
 	}
@@ -159,6 +172,8 @@ func parseMergeParams(ctx context.Context) *cobra.Command {
 		&backupFileName, bkpFileName, "n", "", "file name if incremental backup (required)")
 	mergeFlags.IntVarP(
 		&numberOfWorkers, "workers-num", "w", 1, "number of workers to read backup file")
+	mergeFlags.BoolVarP(
+		&pprofFlag, "pprof", "p", false, "run merge with cpu profile")
 
 	err := cobra.MarkFlagRequired(mergeFlags, targetDBFlagName)
 	if err != nil {

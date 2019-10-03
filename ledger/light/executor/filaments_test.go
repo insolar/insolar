@@ -998,7 +998,7 @@ func TestFilamentCalculatorDefault_RequestDuplicate(t *testing.T) {
 		reqComposite := b.Append(pulse.MinTimePulse+1, &request)
 
 		lookupID := *insolar.NewID(pulse.MinTimePulse+2, reqComposite.RecordID.Hash())
-		indexes.Set(ctx, reqComposite.RecordID.Pulse(), record.Index{
+		indexes.Set(ctx, pulse.MinTimePulse+2, record.Index{
 			ObjID: reqComposite.RecordID,
 			Lifeline: record.Lifeline{
 				LatestRequest: &reqComposite.MetaID,
