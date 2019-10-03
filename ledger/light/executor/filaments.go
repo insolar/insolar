@@ -328,34 +328,23 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 
 	reasonRef := request.ReasonRef()
 	reasonID := *reasonRef.GetLocal()
-	var index record.Index
+	var (
+		index record.Index
+		err   error
+	)
 	if request.IsCreationRequest() {
-		logger.Debug("looking for index locally")
-		idx, err := c.findIndex(ctx, reasonID.Pulse(), requestID)
+		index, err = c.findIndex(ctx, reasonID, requestID)
 		if err == object.ErrIndexNotFound {
-			// Searching for the requests in the network
-			// We need to be sure, that there is no duplicate of creationg request
-			// INS-3607
-			logger.Debug("looking for index on heavy")
-			idx, err := c.checkHeavyForIndex(ctx, requestID, reasonID.Pulse())
-			if err != nil && err != object.ErrIndexNotFound {
-				return nil, nil, errors.Wrap(err, "failed to fetch index")
-			}
-			if err == object.ErrIndexNotFound {
-				logger.Debug("index not found")
-				return nil, nil, nil
-			}
-			index = idx
-		} else if err != nil {
+			return nil, nil, nil
+		}
+		if err != nil {
 			return nil, nil, errors.Wrap(err, "failed to find index")
 		}
-		index = idx
 	} else {
-		idx, err := c.indexes.ForID(ctx, requestID.Pulse(), objectID)
+		index, err = c.indexes.ForID(ctx, requestID.Pulse(), objectID)
 		if err != nil {
 			return nil, nil, err
 		}
-		index = idx
 	}
 
 	if index.Lifeline.LatestRequest == nil {
@@ -523,7 +512,26 @@ func (c *FilamentCalculatorDefault) ClearAllExcept(ids []insolar.ID) {
 	c.cache.DeleteAllExcept(ids)
 }
 
-func (c FilamentCalculatorDefault) checkHeavyForIndex(
+func (c FilamentCalculatorDefault) findIndex(ctx context.Context, reasonID, requestID insolar.ID) (record.Index, error) {
+	logger := inslogger.FromContext(ctx)
+
+	logger.Debug("looking for index locally")
+	idx, err := c.findIndexLocal(ctx, reasonID.Pulse(), requestID)
+	if err == nil {
+		return idx, nil
+	}
+	if err != object.ErrIndexNotFound {
+		return record.Index{}, errors.Wrap(err, "failed to find index")
+	}
+
+	// Searching for the requests in the network
+	// We need to be sure, that there is no duplicate of creationg request
+	// INS-3607
+	logger.Debug("looking for index on heavy")
+	return c.findIndexHeavy(ctx, requestID, reasonID.Pulse())
+}
+
+func (c FilamentCalculatorDefault) findIndexHeavy(
 	ctx context.Context, objID insolar.ID, readUntil insolar.PulseNumber,
 ) (record.Index, error) {
 	node, err := c.coordinator.Heavy(ctx)
@@ -569,7 +577,7 @@ func (c FilamentCalculatorDefault) checkHeavyForIndex(
 	}
 }
 
-func (c *FilamentCalculatorDefault) findIndex(
+func (c *FilamentCalculatorDefault) findIndexLocal(
 	ctx context.Context, until insolar.PulseNumber, requestID insolar.ID,
 ) (record.Index, error) {
 	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
