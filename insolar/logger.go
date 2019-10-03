@@ -223,12 +223,6 @@ type LogLevelGetter interface {
 	GetLogLevel() LogLevel
 }
 
-type LogObjectWriter interface {
-	AddFieldMap(map[string]interface{})
-	AddField(key string, v interface{})
-	AddRawJSON(key string, b []byte)
-}
-
 // Presence of this interface indicates that this object can be used as a log event
 type LogObject interface {
 	// should return nil to use default (external) marshaller
@@ -244,7 +238,19 @@ func (*LogObjectTemplate) GetLogObjectMarshaller() LogObjectMarshaller {
 }
 
 type LogObjectMarshaller interface {
-	MarshalLogObject(LogObjectWriter) string
+	MarshalLogObject(LogObjectWriter, LogObjectMetricCollector) string
+	MarshalMutedLogObject(LogObjectMetricCollector)
+}
+
+type LogObjectMetricCollector interface {
+	LogObjectMetricCollector()
+	//ReportMetricSample(metricType uint32, reporterFieldName string, value interface{})
+}
+
+type LogObjectWriter interface {
+	AddFieldMap(map[string]interface{})
+	AddField(key string, v interface{})
+	AddRawJSON(key string, b []byte)
 }
 
 type LogLevelWriter interface {

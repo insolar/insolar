@@ -187,7 +187,7 @@ func (v MsgFormatConfig) testTryLogObject(a ...interface{}) string {
 		return s
 	}
 	o := output{}
-	msg := m.MarshalLogObject(&o)
+	msg := m.MarshalLogObject(&o, nil)
 	o.buf.WriteString("msg:")
 	o.buf.WriteString(msg)
 	return o.buf.String()

@@ -227,13 +227,21 @@ func (z *zerologAdapter) newEvent(level insolar.LogLevel) *zerolog.Event {
 
 func (z *zerologAdapter) EmbeddedEvent(level insolar.LogLevel, args ...interface{}) {
 	event := z.newEvent(level)
+
 	if event == nil {
+		collector := z.config.Metrics.GetMetricsCollector()
+		if collector != nil {
+			if obj := z.config.MsgFormat.PrepareMutedLogObject(args...); obj != nil {
+				obj.MarshalMutedLogObject(collector)
+			}
+		}
 		return
 	}
 
 	obj, msgStr := z.config.MsgFormat.FmtLogObject(args...)
 	if obj != nil {
-		msgStr = obj.MarshalLogObject(zerologMarshaller{event})
+		collector := z.config.Metrics.GetMetricsCollector()
+		msgStr = obj.MarshalLogObject(zerologMarshaller{event}, collector)
 	}
 	event.Msg(msgStr)
 }

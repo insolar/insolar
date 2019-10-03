@@ -44,7 +44,7 @@ func GetDefaultLogMsgFormatter() MsgFormatConfig {
 	}
 }
 
-type FieldReporterFunc func(fieldName string, v interface{})
+type FieldReporterFunc func(collector insolar.LogObjectMetricCollector, fieldName string, v interface{})
 
 type MarshallerFactory interface {
 	CreateLogObjectMarshaller(o reflect.Value) insolar.LogObjectMarshaller
@@ -58,13 +58,6 @@ func GetDefaultLogMsgMarshallerFactory() MarshallerFactory {
 func (v MsgFormatConfig) FmtLogObject(a ...interface{}) (insolar.LogObjectMarshaller, string) {
 	if len(a) == 1 {
 		switch vv := a[0].(type) {
-		case string: // the most obvious case
-			return nil, vv
-		case *string: // handled separately to avoid unnecessary reflect
-			if vv == nil {
-				break
-			}
-			return nil, *vv
 		case insolar.LogObject:
 			m := vv.GetLogObjectMarshaller()
 			if m != nil {
@@ -77,6 +70,13 @@ func (v MsgFormatConfig) FmtLogObject(a ...interface{}) (insolar.LogObjectMarsha
 			return v.MFactory.CreateLogObjectMarshaller(vr), ""
 		case insolar.LogObjectMarshaller:
 			return vv, ""
+		case string: // the most obvious case
+			return nil, vv
+		case *string: // handled separately to avoid unnecessary reflect
+			if vv == nil {
+				break
+			}
+			return nil, *vv
 		case nil:
 			break
 		default:
@@ -103,4 +103,45 @@ func (v MsgFormatConfig) FmtLogObject(a ...interface{}) (insolar.LogObjectMarsha
 		}
 	}
 	return nil, v.Sformat(a...)
+}
+
+func (v MsgFormatConfig) PrepareMutedLogObject(a ...interface{}) insolar.LogObjectMarshaller {
+	if len(a) != 1 {
+		return nil
+	}
+
+	switch vv := a[0].(type) {
+	case insolar.LogObject:
+		m := vv.GetLogObjectMarshaller()
+		if m != nil {
+			return m
+		}
+		vr := reflect.ValueOf(vv)
+		if vr.Kind() == reflect.Ptr {
+			vr = vr.Elem()
+		}
+		return v.MFactory.CreateLogObjectMarshaller(vr)
+	case insolar.LogObjectMarshaller:
+		return vv
+	case string, *string, nil: // the most obvious case(s) - avoid reflect
+		return nil
+	default:
+		vr := reflect.ValueOf(vv)
+		switch vr.Kind() {
+		case reflect.Ptr:
+			if vr.IsNil() {
+				return nil
+			}
+			vr = vr.Elem()
+			if vr.Kind() != reflect.Struct {
+				return nil
+			}
+			fallthrough
+		case reflect.Struct:
+			if len(vr.Type().Name()) == 0 { // only unnamed objects are handled by default
+				return v.MFactory.CreateLogObjectMarshaller(vr)
+			}
+		}
+	}
+	return nil
 }
