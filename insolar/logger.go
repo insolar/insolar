@@ -54,7 +54,6 @@ type LogOutput uint8
 const (
 	StdErrOutput LogOutput = iota
 	SysLogOutput
-	//JournalDOutput
 )
 const DefaultLogOutput = StdErrOutput
 
@@ -236,6 +235,14 @@ type LogObject interface {
 	GetLogObjectMarshaller() LogObjectMarshaller
 }
 
+var _ LogObject = &LogObjectTemplate{}
+
+type LogObjectTemplate struct{}
+
+func (*LogObjectTemplate) GetLogObjectMarshaller() LogObjectMarshaller {
+	return nil
+}
+
 type LogObjectMarshaller interface {
 	MarshalLogObject(LogObjectWriter) string
 }
@@ -320,8 +327,6 @@ func ParseOutput(outputStr string, defValue LogOutput) (LogOutput, error) {
 		return StdErrOutput, nil
 	case SysLogOutput.String():
 		return SysLogOutput, nil
-		//case JournalDOutput.String():
-		//	return JournalDOutput, nil
 	}
 	return defValue, fmt.Errorf("unknown Output: '%s', replaced with '%s'", outputStr, defValue)
 }
@@ -332,8 +337,6 @@ func (l LogOutput) String() string {
 		return "stderr"
 	case SysLogOutput:
 		return "syslog"
-		//case JournalDOutput:
-		//	return "journald"
 	}
 	return string(l)
 }

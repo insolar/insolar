@@ -55,14 +55,12 @@ func GetDefaultLogMsgMarshallerFactory() MarshallerFactory {
 	return marshallerFactory
 }
 
-func (v MsgFormatConfig) TryLogObject(a ...interface{}) (insolar.LogObjectMarshaller, string) {
+func (v MsgFormatConfig) FmtLogObject(a ...interface{}) (insolar.LogObjectMarshaller, string) {
 	if len(a) == 1 {
 		switch vv := a[0].(type) {
-		case nil: // the most obvious case
-			break
 		case string: // the most obvious case
 			return nil, vv
-		case *string: // handled separately to avoid unnecessary reflect on nil
+		case *string: // handled separately to avoid unnecessary reflect
 			if vv == nil {
 				break
 			}
@@ -79,25 +77,26 @@ func (v MsgFormatConfig) TryLogObject(a ...interface{}) (insolar.LogObjectMarsha
 			return v.MFactory.CreateLogObjectMarshaller(vr), ""
 		case insolar.LogObjectMarshaller:
 			return vv, ""
+		case nil:
+			break
 		default:
 			if s, ok := defaultStrValuePrepare(vv); ok {
 				return nil, s
 			}
 
 			vr := reflect.ValueOf(vv)
-			switch k := vr.Kind(); k {
+			switch vr.Kind() {
 			case reflect.Ptr:
 				if vr.IsNil() {
 					break
 				}
 				vr = vr.Elem()
-				k = vr.Kind()
-				if k != reflect.Struct {
+				if vr.Kind() != reflect.Struct {
 					break
 				}
 				fallthrough
 			case reflect.Struct:
-				if len(vr.Type().Name()) == 0 {
+				if len(vr.Type().Name()) == 0 { // only unnamed objects are handled by default
 					return v.MFactory.CreateLogObjectMarshaller(vr), ""
 				}
 			}

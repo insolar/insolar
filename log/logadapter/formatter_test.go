@@ -135,7 +135,7 @@ type SomeLogObjectValue struct {
 }
 
 func (SomeLogObjectValue) GetLogObjectMarshaller() insolar.LogObjectMarshaller {
-	return nil // use default
+	return nil
 }
 
 var _ insolar.LogObject = &SomeLogObjectPtr{}
@@ -146,7 +146,15 @@ type SomeLogObjectPtr struct {
 }
 
 func (*SomeLogObjectPtr) GetLogObjectMarshaller() insolar.LogObjectMarshaller {
-	return nil // use default
+	return nil
+}
+
+var _ insolar.LogObject = SomeLogObjectWithTemplate{}
+var _ insolar.LogObject = &SomeLogObjectWithTemplate{}
+
+type SomeLogObjectWithTemplate struct {
+	*insolar.LogObjectTemplate
+	IntVal int
 }
 
 func TestTryLogObject_SingleLogObject(t *testing.T) {
@@ -162,11 +170,19 @@ func TestTryLogObject_SingleLogObject(t *testing.T) {
 
 	require.Equal(t,
 		"{7 msgText}",
-		f.testTryLogObject(SomeLogObjectPtr{7, "msgText"}))
+		f.testTryLogObject(SomeLogObjectPtr{7, "msgText"})) // function has ptr receiver and is not taken
+
+	require.Equal(t,
+		"IntVal:7:int,msg:",
+		f.testTryLogObject(&SomeLogObjectWithTemplate{nil, 7}))
+
+	require.Equal(t,
+		"IntVal:7:int,msg:",
+		f.testTryLogObject(SomeLogObjectWithTemplate{nil, 7}))
 }
 
 func (v MsgFormatConfig) testTryLogObject(a ...interface{}) string {
-	m, s := v.TryLogObject(a...)
+	m, s := v.FmtLogObject(a...)
 	if m == nil {
 		return s
 	}

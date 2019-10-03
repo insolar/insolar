@@ -70,7 +70,7 @@ func (p *defaultLogObjectMarshallerFactory) getTypeMarshaller(t reflect.Type) *t
 		return tm
 	}
 
-	tm = p.buildTypeMarshaller(t)
+	tm = p.buildTypeMarshaller(t) // do before lock to reduce in-lock time
 
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
@@ -231,50 +231,22 @@ var fieldValueGetters = map[reflect.Kind]func(unexported bool, t reflect.Type) (
 	//reflect.UnsafePointer
 }
 
-// NB! MUST match set and SEQUENCE of types with reflectFilterObjTypes[]
-func tryDefaultValuePrepare(iv interface{}) (interface{}, bool) {
-	// NB! Do NOT use type-switch-case here as sometimes it violates the sequence when a few types are supported
-	if vv, ok := iv.(LogStringer); ok {
-		return vv.LogString(), true
-	}
-	if vv, ok := iv.(fmt.Stringer); ok {
-		return vv.String(), true
-	}
-	return iv, false
-}
-
-// NB! MUST match set and SEQUENCE of types with tryDefaultValuePrepare()
-var reflectFilterObjTypes = map[reflect.Type]func(reflect.Type) fieldValueGetterFunc{
-	reflect.TypeOf((*LogStringer)(nil)).Elem(): func(t reflect.Type) fieldValueGetterFunc {
-		if t.Kind() == reflect.Struct {
-			return func(value reflect.Value) interface{} {
-				vv := value.Interface().(LogStringer)
-				return vv.LogString()
-			}
+var prepareObjTypes = []struct {
+	t  reflect.Type
+	fn func(interface{}) (interface{}, bool)
+}{
+	{reflect.TypeOf((*LogStringer)(nil)).Elem(), func(value interface{}) (interface{}, bool) {
+		if vv, ok := value.(LogStringer); ok {
+			return vv.LogString(), true
 		}
-		return func(value reflect.Value) interface{} {
-			if value.IsNil() {
-				return nil
-			}
-			vv := value.Interface().(LogStringer)
-			return vv.LogString()
+		return value, false
+	}},
+	{reflect.TypeOf((*fmt.Stringer)(nil)).Elem(), func(value interface{}) (interface{}, bool) {
+		if vv, ok := value.(fmt.Stringer); ok {
+			return vv.String(), true
 		}
-	},
-	reflect.TypeOf((*fmt.Stringer)(nil)).Elem(): func(t reflect.Type) fieldValueGetterFunc {
-		if t.Kind() == reflect.Struct {
-			return func(value reflect.Value) interface{} {
-				vv := value.Interface().(fmt.Stringer)
-				return vv.String()
-			}
-		}
-		return func(value reflect.Value) interface{} {
-			if value.IsNil() {
-				return nil
-			}
-			vv := value.Interface().(fmt.Stringer)
-			return vv.String()
-		}
-	},
+		return value, false
+	}},
 }
 
 func defaultStrValuePrepare(iv interface{}) (string, bool) {
@@ -296,12 +268,35 @@ func defaultStrValuePrepare(iv interface{}) (string, bool) {
 }
 
 func defaultObjFieldGetterFactory(unexported bool, t reflect.Type) (bool, fieldValueGetterFunc) {
-	for ft, fn := range reflectFilterObjTypes {
-		if t.Implements(ft) {
-			return unexported, fn(t)
+	for _, f := range prepareObjTypes {
+		if t.Implements(f.t) {
+			fn := f.fn
+			if t.Kind() == reflect.Struct {
+				return unexported, func(value reflect.Value) interface{} {
+					vv, _ := fn(value.Interface())
+					return vv
+				}
+			}
+
+			return unexported, func(value reflect.Value) interface{} {
+				if value.IsNil() {
+					return nil
+				}
+				vv, _ := fn(value.Interface())
+				return vv
+			}
 		}
 	}
 	return unexported, reflect.Value.Interface
+}
+
+func tryDefaultValuePrepare(iv interface{}) (interface{}, bool) {
+	for _, f := range prepareObjTypes {
+		if vv, ok := f.fn(iv); ok {
+			return vv, true
+		}
+	}
+	return iv, false
 }
 
 func getFieldGetter(index int, fd reflect.StructField, useAddr bool, baseOffset uintptr) func(reflect.Value) reflect.Value {
