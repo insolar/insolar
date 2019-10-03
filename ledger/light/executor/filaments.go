@@ -572,7 +572,12 @@ func (c FilamentCalculatorDefault) checkHeavyForLifeline(
 func (c *FilamentCalculatorDefault) findLifeline(
 	ctx context.Context, until insolar.PulseNumber, requestID insolar.ID,
 ) (record.Lifeline, error) {
+	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+		"objID": requestID.DebugString(),
+		"until": until,
+	})
 	iter := requestID.Pulse()
+	logger.Debug("findLifeline. start executing")
 	for iter >= until {
 		// We search for combination of id in a latest bucket
 		// requestID.Pulse() is a latest, because findLifeline is called only for Creationg requests
@@ -581,8 +586,10 @@ func (c *FilamentCalculatorDefault) findLifeline(
 			return record.Lifeline{}, errors.Wrap(err, "failed to fetch index")
 		}
 		if err == nil {
+			logger.Debug("findLifeline. found:", idx.ObjID)
 			return idx.Lifeline, nil
 		}
+		logger.Debug("findLifeline. didn't find for:", iter)
 
 		prev, err := c.pulses.Backwards(ctx, iter, 1)
 		if err != nil {
@@ -590,6 +597,7 @@ func (c *FilamentCalculatorDefault) findLifeline(
 		}
 
 		iter = prev.PulseNumber
+		logger.Debug("findLifeline. next iter:", iter)
 	}
 
 	return record.Lifeline{}, object.ErrIndexNotFound

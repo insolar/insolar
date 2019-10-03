@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/object"
 	pulse_core "github.com/insolar/insolar/pulse"
 	"github.com/pkg/errors"
@@ -68,6 +69,12 @@ func (p *SearchIndex) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "failed to unmarshal searchIndex message")
 	}
 
+	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+		"objID": searchIndex.ObjectID.DebugString(),
+		"until": searchIndex.Until,
+	})
+	logger.Debug("search index. start to search index")
+
 	if searchIndex.Until < pulse_core.MinTimePulse {
 		return errors.New("searching index with until less than MinTimePulse is impossible")
 	}
@@ -77,10 +84,13 @@ func (p *SearchIndex) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "fail to fetch pulse")
 	}
 	currentPN := currentP.PulseNumber
+	logger.Debug("search index. currentPN:", currentPN)
 
 	// Until is above heavy's current pulse
 	// It's impossible to find an index
 	if currentPN < searchIndex.Until {
+		logger.Warn("search index. currentPN < searchIndex.Until")
+
 		msg, err := payload.NewMessage(&payload.SearchIndexInfo{})
 		if err != nil {
 			return errors.Wrap(err, "failed to create reply")
@@ -112,6 +122,7 @@ func (p *SearchIndex) Proceed(ctx context.Context) error {
 			idx = &savedIdx
 			break
 		}
+		logger.Debug("search index. didn't find for", currentPN)
 		prev, err := p.dep.pulseCalculator.Backwards(ctx, currentPN, 1)
 		if err != nil {
 			return errors.Wrapf(
@@ -120,8 +131,12 @@ func (p *SearchIndex) Proceed(ctx context.Context) error {
 			)
 		}
 		currentPN = prev.PulseNumber
+		logger.Debug("search index. nextPN", currentPN)
 	}
 
+	if idx != nil {
+		logger.Debug("search index. found index:", idx.ObjID.DebugString())
+	}
 	msg, err := payload.NewMessage(&payload.SearchIndexInfo{
 		Index: idx,
 	})
