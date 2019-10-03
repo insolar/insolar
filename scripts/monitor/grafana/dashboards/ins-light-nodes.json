@@ -15,7 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1570097855274,
+  "iteration": 1570100751408,
   "links": [],
   "panels": [
     {
@@ -179,7 +179,7 @@
       ],
       "repeat": null,
       "repeatDirection": "h",
-      "repeatIteration": 1570097855274,
+      "repeatIteration": 1570100751408,
       "repeatPanelId": 28,
       "scopedVars": {
         "instance": {
@@ -1388,20 +1388,12 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum by (error_code) (irate(insolar_handler_errors{instance=~\"$instance\", error_code!=\"CodeFlowCanceled\", installation=~\"$installation\"}[1m]))*10",
+          "expr": "sum by (error_code) (irate(insolar_handler_errors{instance=~\"$instance\", installation=~\"$installation\"}[1m]))*10",
           "format": "time_series",
           "hide": false,
           "instant": false,
           "legendFormat": "Error {{error_code}}",
           "refId": "A"
-        },
-        {
-          "expr": "sum(irate(insolar_handler_errors{instance=~\"$instance\", error_code=\"CodeFlowCanceled\", installation=~\"$installation\"}[1m]))",
-          "format": "time_series",
-          "hide": false,
-          "instant": false,
-          "legendFormat": "Flow cancelled",
-          "refId": "C"
         }
       ],
       "thresholds": [],
@@ -1655,5 +1647,5 @@
   "timezone": "",
   "title": "INS-Light Nodes",
   "uid": "8cp74fKZz2",
-  "version": 7
+  "version": 1
 }
