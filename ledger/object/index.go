@@ -35,17 +35,29 @@ type IndexModifier interface {
 	UpdateLastKnownPulse(ctx context.Context, pn insolar.PulseNumber) error
 }
 
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexAccessor -o ./ -s _mock.go -g
+
+// IndexAccessor provides an interface for fetching buckets from an index.
+type IndexAccessor interface {
+	ForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (record.Index, error)
+	// ForPulse returns a collection of buckets for a provided pulse number.
+	ForPulse(ctx context.Context, pn insolar.PulseNumber) ([]record.Index, error)
+	// LastKnownForID returns a latest version of an index
+	LastKnownForID(ctx context.Context, objID insolar.ID) (record.Index, error)
+}
+
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.MemoryIndexModifier -o ./ -s _mock.go
 
 // MemoryIndexModifier writes index to in-memory storage.
 type MemoryIndexModifier interface {
 	Set(ctx context.Context, pn insolar.PulseNumber, index record.Index)
+	SetIfNone(ctx context.Context, pn insolar.PulseNumber, index record.Index)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexAccessor -o ./ -s _mock.go -g
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.MemoryIndexAccessor -o ./ -s _mock.go -g
 
-// IndexAccessor provides an interface for fetching buckets from an index.
-type IndexAccessor interface {
+// MemoryIndexAccessor provides an interface for fetching buckets from an index.
+type MemoryIndexAccessor interface {
 	ForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (record.Index, error)
 	// ForPulse returns a collection of buckets for a provided pulse number.
 	ForPulse(ctx context.Context, pn insolar.PulseNumber) ([]record.Index, error)
@@ -61,7 +73,7 @@ type IndexStorage interface {
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.MemoryIndexStorage -o ./ -s _mock.go -g
 
 type MemoryIndexStorage interface {
-	IndexAccessor
+	MemoryIndexAccessor
 	MemoryIndexModifier
 }
 

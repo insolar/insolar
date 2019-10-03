@@ -31,175 +31,151 @@ import (
 	"github.com/insolar/insolar/logicrunner/metrics"
 )
 
-const MaxFetchCount = 20
-
 //go:generate minimock -i github.com/insolar/insolar/logicrunner.RequestFetcher -o ./ -s _mock.go -g
 
 type RequestFetcher interface {
-	FetchPendings(ctx context.Context)
+	FetchPendings(ctx context.Context) <-chan *common.Transcript
 	Abort(ctx context.Context)
 }
 
 type requestFetcher struct {
+	mu sync.Mutex
+
 	object insolar.Reference
 
-	isActiveLock sync.Mutex
-	isActive     bool
+	aborted      chan struct{}
 	stopFetching func()
+	skipSlice    []insolar.ID
 
-	broker ExecutionBrokerI
-	am     artifacts.Client
-	os     OutgoingRequestSender
+	artifactsManager artifacts.Client
+	outgoingsSender  OutgoingRequestSender
 }
 
 func NewRequestsFetcher(
-	obj insolar.Reference, am artifacts.Client, br ExecutionBrokerI, os OutgoingRequestSender,
+	obj insolar.Reference, am artifacts.Client, os OutgoingRequestSender,
 ) RequestFetcher {
+	aborted := make(chan struct{})
+	once := sync.Once{}
 	return &requestFetcher{
-		object: obj,
-		broker: br,
-		am:     am,
-		os:     os,
+		object:           obj,
+		artifactsManager: am,
+		outgoingsSender:  os,
+		aborted:          aborted,
+		stopFetching:     func() { once.Do(func() { close(aborted) }) },
+		skipSlice:        make([]insolar.ID, 0),
 	}
-}
-
-func (rf *requestFetcher) tryTakeActive(ctx context.Context) (context.Context, bool) {
-	rf.isActiveLock.Lock()
-	defer rf.isActiveLock.Unlock()
-
-	if rf.isActive {
-		return ctx, false
-	}
-
-	ctx, cancelFunc := context.WithCancel(ctx)
-
-	rf.isActive = true
-	rf.stopFetching = cancelFunc
-
-	return ctx, true
-}
-
-func (rf *requestFetcher) releaseActive(_ context.Context) {
-	rf.isActiveLock.Lock()
-	defer rf.isActiveLock.Unlock()
-
-	rf.isActive = false
-	rf.stopFetching = nil
 }
 
 func (rf *requestFetcher) Abort(ctx context.Context) {
-	rf.isActiveLock.Lock()
-	defer rf.isActiveLock.Unlock()
+	rf.mu.Lock()
+	defer rf.mu.Unlock()
 
-	if rf.isActive {
-		rf.stopFetching()
+	rf.stopFetching()
+}
+
+func (rf *requestFetcher) isAborted() bool {
+	select {
+	case <-rf.aborted:
+		return true
+	default:
+		return false
 	}
 }
 
-func (rf *requestFetcher) FetchPendings(ctx context.Context) {
+func (rf *requestFetcher) FetchPendings(ctx context.Context) <-chan *common.Transcript {
+	// TODO: move to const
+	trs := make(chan *common.Transcript, 10)
+
+	aborted := make(chan struct{})
+	once := sync.Once{}
+
+	rf.mu.Lock()
+	rf.aborted = aborted
+	rf.stopFetching = func() { once.Do(func() { close(aborted) }) }
+	rf.mu.Unlock()
+
 	ctx, logger := inslogger.WithFields(ctx, map[string]interface{}{
 		"object": rf.object.String(),
 	})
 
-	ctx, success := rf.tryTakeActive(ctx)
-	if !success {
-		logger.Debug("requestFetcher already started")
-		return
-	}
+	logger.Debug("request fetcher starting")
 
-	go rf.fetchWrapper(ctx)
-}
-
-func (rf *requestFetcher) fetchWrapper(ctx context.Context) {
-	defer rf.releaseActive(ctx)
-
-	logger := inslogger.FromContext(ctx)
-	logger.Debug("requestFetcher starting")
-
-	err := rf.fetch(ctx)
-	if err != nil {
-		logger.Error("couldn't make fetch round: ", err.Error())
-	}
-}
-
-func (rf *requestFetcher) fetch(ctx context.Context) error {
-	logger := inslogger.FromContext(ctx)
-
-	stats.Record(ctx, metrics.RequestFetcherFetchCall.M(1))
-	reqRefs, err := rf.am.GetPendings(ctx, rf.object)
-	if err != nil {
-		if err == insolar.ErrNoPendingRequest {
-			logger.Debug("no more pendings on ledger")
-			rf.broker.NoMoreRequestsOnLedger(ctx)
-			return nil
-		}
-		return err
-	}
-
-	var (
-		uniqueTaken        = 0
-		uniqueLimitReached = false
-	)
-
-	for _, reqRef := range reqRefs {
-		// limit count of unique and unknown taken requests to MaxFetchCount
-		if uniqueTaken >= MaxFetchCount {
-			uniqueLimitReached = true
-			break
-		}
-
-		if !reqRef.IsRecordScope() {
-			logger.Errorf("skipping request with bad reference, ref=%s", reqRef.String())
-		} else if rf.broker.IsKnownRequest(ctx, reqRef) {
-			logger.Debug("skipping known request ", reqRef.String())
-			stats.Record(ctx, metrics.RequestFetcherFetchKnown.M(1))
-			continue
-		}
-
-		logger.Debug("getting abandoned request from ledger")
-		stats.Record(ctx, metrics.RequestFetcherFetchUnique.M(1))
-		request, err := rf.am.GetAbandonedRequest(ctx, rf.object, reqRef)
+	go func() {
+		err := rf.fetch(ctx, trs)
 		if err != nil {
-			return errors.Wrap(err, "couldn't get request")
+			logger.Error("couldn't make fetch round: ", err.Error())
+		}
+	}()
+
+	return trs
+}
+
+const skipSliceSizeLimit = 300
+
+func (rf *requestFetcher) fetch(ctx context.Context, trs chan<- *common.Transcript) error {
+	defer close(trs)
+
+	logger := inslogger.FromContext(ctx)
+
+	for {
+		stats.Record(ctx, metrics.RequestFetcherFetchCall.M(1))
+
+		if len(rf.skipSlice) > skipSliceSizeLimit {
+			rf.skipSlice = rf.skipSlice[len(rf.skipSlice):]
 		}
 
-		select {
-		case <-ctx.Done():
-			logger.Debug("requestFetcher stopping")
-			return nil
-		default:
+		reqRefs, err := rf.artifactsManager.GetPendings(ctx, rf.object, rf.skipSlice)
+		if err != nil {
+			if err == insolar.ErrNoPendingRequest {
+				logger.Debug("no more pendings on ledger")
+				trs <- nil
+				return nil
+			}
+			return err
 		}
 
-		uniqueTaken++
+		for _, reqRef := range reqRefs {
+			rf.skipSlice = append(rf.skipSlice, *reqRef.GetLocal())
 
-		switch v := request.(type) {
-		case *record.IncomingRequest:
-			if err := checkIncomingRequest(ctx, v); err != nil {
-				err = errors.Wrap(err, "failed to check incoming request")
-				logger.Error(err.Error())
-
+			if !reqRef.IsRecordScope() {
+				logger.Errorf("skipping request with bad reference, ref=%s", reqRef.String())
 				continue
 			}
-			tr := common.NewTranscriptCloneContext(ctx, reqRef, *v)
-			rf.broker.AddRequestsFromLedger(ctx, tr)
-		case *record.OutgoingRequest:
-			if err := checkOutgoingRequest(ctx, v); err != nil {
-				err = errors.Wrap(err, "failed to check outgoing request")
-				logger.Error(err.Error())
 
-				continue
+			logger.Debug("getting request from ledger")
+			stats.Record(ctx, metrics.RequestFetcherFetchUnique.M(1))
+			request, err := rf.artifactsManager.GetRequest(ctx, rf.object, reqRef)
+			if err != nil {
+				return errors.Wrap(err, "couldn't get request")
 			}
-			rf.os.SendAbandonedOutgoingRequest(ctx, reqRef, v)
-		default:
-			logger.Error("requestFetcher fetched unknown request")
+
+			if rf.isAborted() {
+				logger.Debug("request fetcher was aborted, not returning request")
+				return nil
+			}
+
+			switch v := request.(type) {
+			case *record.IncomingRequest:
+				if err := checkIncomingRequest(ctx, v); err != nil {
+					err = errors.Wrap(err, "failed to check incoming request")
+					logger.Error(err.Error())
+
+					continue
+				}
+				tr := common.NewTranscriptCloneContext(ctx, reqRef, *v)
+				trs <- tr
+			case *record.OutgoingRequest:
+				if err := checkOutgoingRequest(ctx, v); err != nil {
+					err = errors.Wrap(err, "failed to check outgoing request")
+					logger.Error(err.Error())
+
+					continue
+				}
+				// FIXME: limit there may slow down things, placing "go" here is not good too
+				rf.outgoingsSender.SendAbandonedOutgoingRequest(ctx, reqRef, v)
+			default:
+				logger.Error("requestFetcher fetched unknown request")
+			}
 		}
 	}
-
-	if !uniqueLimitReached {
-		logger.Debug("no more pendings on ledger, we've fetched everything")
-
-		rf.broker.NoMoreRequestsOnLedger(ctx)
-	}
-
-	return nil
 }

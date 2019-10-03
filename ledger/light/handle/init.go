@@ -54,9 +54,9 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 	err := s.handle(ctx, f)
 	if err != nil {
 		if err == flow.ErrCancelled {
-			logger.Info(errors.Wrap(err, "handling error"))
+			logger.Info("Handling flow cancelled")
 		} else {
-			logger.Error(errors.Wrap(err, "handling error"))
+			logger.Error("Handling error: ", err.Error())
 		}
 	}
 	return err
@@ -91,7 +91,7 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 		err = f.Handle(ctx, h.Present)
 	case payload.TypeGetFilament:
 		h := NewGetFilament(s.dep, meta)
-		return f.Handle(ctx, h.Present)
+		err = f.Handle(ctx, h.Present)
 	case payload.TypePassState:
 		h := NewPassState(s.dep, meta)
 		err = f.Handle(ctx, h.Present)

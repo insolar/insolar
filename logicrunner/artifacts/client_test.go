@@ -155,7 +155,7 @@ func (s *ArtifactsMangerClientSuite) AfterTest(suiteName, testName string) {
 	s.mc.Finish()
 }
 
-func (s *ArtifactsMangerClientSuite) TestGetAbandonedRequest() {
+func (s *ArtifactsMangerClientSuite) TestGetRequest() {
 	// Arrange
 	iRequest, requestRef := genIncomingRequest()
 	oRequest := (*record.OutgoingRequest)(iRequest)
@@ -261,14 +261,14 @@ func (s *ArtifactsMangerClientSuite) TestGetAbandonedRequest() {
 			)
 
 			// Act
-			recordRequest, err := s.amClient.GetAbandonedRequest(s.ctx, *objectRef, requestRef)
+			recordRequest, err := s.amClient.GetRequest(s.ctx, *objectRef, requestRef)
 			// Check
 			test.check(recordRequest, err)
 		})
 	}
 }
 
-func (s *ArtifactsMangerClientSuite) TestGetAbandonedRequest_FailedToSend() {
+func (s *ArtifactsMangerClientSuite) TestRequest_FailedToSend() {
 	// Arrange
 	request, requestRef := genIncomingRequest()
 
@@ -277,7 +277,7 @@ func (s *ArtifactsMangerClientSuite) TestGetAbandonedRequest_FailedToSend() {
 	s.busSender.SendRoleMock.Return(ch, func() {})
 
 	// Act
-	_, err := s.amClient.GetAbandonedRequest(s.ctx, *request.Object, requestRef)
+	_, err := s.amClient.GetRequest(s.ctx, *request.Object, requestRef)
 
 	// Assert
 	s.Error(err)
@@ -387,7 +387,7 @@ func (s *ArtifactsMangerClientSuite) TestGetPendings() {
 			)
 
 			// Act
-			references, err := s.amClient.GetPendings(s.ctx, objectRef)
+			references, err := s.amClient.GetPendings(s.ctx, objectRef, make([] insolar.ID, 0))
 
 			// Assert
 			test.check(references, err)
@@ -405,7 +405,7 @@ func (s *ArtifactsMangerClientSuite) TestGetPendings_FailedToSend() {
 	s.busSender.SendRoleMock.Return(ch, func() {})
 
 	// Act
-	_, err := s.amClient.GetPendings(s.ctx, *request.Object)
+	_, err := s.amClient.GetPendings(s.ctx, *request.Object, make([] insolar.ID, 0))
 
 	// Assert
 	s.Error(err)
@@ -1270,11 +1270,16 @@ func (s *ArtifactsMangerClientSuite) TestGetObject() {
 	parentRef := gen.Reference()
 	imageRef := gen.Reference()
 
+	codeRef := gen.Reference()
+
+	s.amClientOriginal.localStorage.StoreObject(imageRef, NewPrototypeDescriptor(imageRef, gen.ID(), codeRef))
+
 	memoryBytes := []byte(testutils.RandomString())
 
 	for name, test := range map[string]struct {
-		response []payload.Payload
-		check    func(ObjectDescriptor, error)
+		response    []payload.Payload
+		checkObject func(ObjectDescriptor, error)
+		checkProto  func(PrototypeDescriptor, error)
 	}{
 		"success_activate": {
 			response: []payload.Payload{
@@ -1297,22 +1302,21 @@ func (s *ArtifactsMangerClientSuite) TestGetObject() {
 					}),
 				},
 			},
-			check: func(desc ObjectDescriptor, err error) {
+			checkObject: func(desc ObjectDescriptor, err error) {
 				s.Require().NoError(err)
-
-				code, err := desc.Code()
-				s.Error(err)
-				s.Equal(code, (*insolar.Reference)(nil))
 
 				proto, err := desc.Prototype()
 				s.NoError(err)
 				s.Equal(*proto, imageRef)
 
 				s.Equal(desc.Memory(), memoryBytes)
-				s.Equal(desc.IsPrototype(), false)
 				s.Equal(*desc.HeadRef(), *objectRef)
 				s.Equal(*desc.Parent(), parentRef)
 				s.Equal(*desc.StateID(), stateID)
+			},
+			checkProto: func(desc PrototypeDescriptor, err error) {
+				s.Require().NoError(err, "GetPrototype error")
+				s.Equal(desc.Code(), &codeRef, "prototype code")
 			},
 		},
 		"success_amend": {
@@ -1336,22 +1340,21 @@ func (s *ArtifactsMangerClientSuite) TestGetObject() {
 					}),
 				},
 			},
-			check: func(desc ObjectDescriptor, err error) {
-				s.Require().NoError(err)
-
-				code, err := desc.Code()
-				s.Error(err)
-				s.Equal(code, (*insolar.Reference)(nil))
+			checkObject: func(desc ObjectDescriptor, err error) {
+				s.Require().NoError(err, "GetObj error")
 
 				proto, err := desc.Prototype()
-				s.NoError(err)
-				s.Equal(*proto, imageRef)
+				s.NoError(err, "Prototype call error")
+				s.Equal(*proto, imageRef, "proto should be image")
 
-				s.Equal(desc.Memory(), memoryBytes)
-				s.Equal(desc.IsPrototype(), false)
-				s.Equal(*desc.HeadRef(), *objectRef)
-				s.Equal(*desc.Parent(), parentRef)
-				s.Equal(*desc.StateID(), stateID)
+				s.Equal(desc.Memory(), memoryBytes, "memory")
+				s.Equal(*desc.HeadRef(), *objectRef, "headref")
+				s.Equal(*desc.Parent(), parentRef, "parentref")
+				s.Equal(*desc.StateID(), stateID, "stateID")
+			},
+			checkProto: func(desc PrototypeDescriptor, err error) {
+				s.Require().NoError(err, "GetPrototype error")
+				s.Equal(desc.Code(), &codeRef, "prototype code")
 			},
 		},
 		"success_deactivate_1": {
@@ -1361,9 +1364,11 @@ func (s *ArtifactsMangerClientSuite) TestGetObject() {
 					Text: "object is deactivated",
 				},
 			},
-			check: func(desc ObjectDescriptor, err error) {
+			checkObject: func(desc ObjectDescriptor, err error) {
 				s.Require().Error(err)
 				s.Equal(err, insolar.ErrDeactivated)
+			},
+			checkProto: func(desc PrototypeDescriptor, err error) {
 			},
 		},
 		"success_deactivate_2": {
@@ -1391,9 +1396,9 @@ func (s *ArtifactsMangerClientSuite) TestGetObject() {
 					}),
 				},
 			},
-			check: func(desc ObjectDescriptor, err error) {
-				s.Require().Error(err)
-				s.Equal(err, insolar.ErrDeactivated)
+			checkObject: func(desc ObjectDescriptor, err error) {
+				s.Require().Error(err, "GetObj error")
+				s.Equal(err, insolar.ErrDeactivated, "GetObj error check")
 			},
 		},
 		"unknown error": {
@@ -1403,43 +1408,44 @@ func (s *ArtifactsMangerClientSuite) TestGetObject() {
 					Text: "some error",
 				},
 			},
-			check: func(desc ObjectDescriptor, err error) {
-				s.Require().Error(err)
-				s.Contains(err.Error(), "some error")
+			checkObject: func(desc ObjectDescriptor, err error) {
+				s.Require().Nil(desc, "ObjectDescriptor should be nil")
+				s.Require().Error(err, "GetObj error")
+				s.Contains(err.Error(), "some error", "GetObj error check")
 			},
 		},
 		"bad lifeline": {
 			response: []payload.Payload{
 				&payload.Index{Index: s.marshalRecord(&record.Deactivate{})},
 			},
-			check: func(desc ObjectDescriptor, err error) {
-				s.Require().Error(err)
-				s.Contains(err.Error(), "failed to unmarshal index")
+			checkObject: func(desc ObjectDescriptor, err error) {
+				s.Require().Error(err, "GetObj error")
+				s.Contains(err.Error(), "failed to unmarshal index", "GetObj error check")
 			},
 		},
 		"bad state 1": {
 			response: []payload.Payload{
 				&payload.State{Record: s.packMaterialRecord(&record.IncomingRequest{})},
 			},
-			check: func(desc ObjectDescriptor, err error) {
-				s.Require().Error(err)
-				s.Contains(err.Error(), "wrong state record")
+			checkObject: func(desc ObjectDescriptor, err error) {
+				s.Require().Error(err, "GetObj error")
+				s.Contains(err.Error(), "wrong state record", "GetObj error check")
 			},
 		},
 		"bad state 2": {
 			response: []payload.Payload{
 				&payload.State{Record: s.packVirtualRecord(&record.IncomingRequest{})},
 			},
-			check: func(desc ObjectDescriptor, err error) {
-				s.Require().Error(err)
-				s.Contains(err.Error(), "wrong state record")
+			checkObject: func(desc ObjectDescriptor, err error) {
+				s.Require().Error(err, "GetObj error")
+				s.Contains(err.Error(), "wrong state record", "GetObj error check")
 			},
 		},
 		"unexpected reply": {
 			response: []payload.Payload{&payload.GetPendings{}},
-			check: func(desc ObjectDescriptor, err error) {
-				s.Require().Error(err)
-				s.Contains(err.Error(), "GetObject: unexpected reply")
+			checkObject: func(desc ObjectDescriptor, err error) {
+				s.Require().Error(err, "GetObj error")
+				s.Contains(err.Error(), "GetObject: unexpected reply", "GetObj error check")
 			},
 		},
 		"flow cancelled": {
@@ -1449,9 +1455,9 @@ func (s *ArtifactsMangerClientSuite) TestGetObject() {
 					Text: "flow cancelled",
 				},
 			},
-			check: func(desc ObjectDescriptor, err error) {
-				s.Error(err)
-				s.Contains(err.Error(), "timeout while awaiting reply from watermill")
+			checkObject: func(desc ObjectDescriptor, err error) {
+				s.Error(err, "GetObj error")
+				s.Contains(err.Error(), "timeout while awaiting reply from watermill", "GetObj error check")
 			},
 		},
 	} {
@@ -1478,20 +1484,20 @@ func (s *ArtifactsMangerClientSuite) TestGetObject() {
 				) {
 					payloadGetObject := payload.GetObject{}
 					err := payloadGetObject.Unmarshal(msg.Payload)
-					s.Require().NoError(err)
+					s.Require().NoError(err, "unmarshal error")
 
-					s.Equal(objectID, payloadGetObject.ObjectID)
+					s.Equal(objectID, payloadGetObject.ObjectID, "payloadGetObject")
 
 					ch := make(chan *wmMessage.Message, 10)
 					for _, pl := range test.response {
 						resMsg, err := payload.NewMessage(pl)
-						s.Require().NoError(err)
+						s.Require().NoError(err, "marshal error")
 
 						meta := payload.Meta{
 							Payload: resMsg.Payload,
 						}
 						buf, err := meta.Marshal()
-						s.Require().NoError(err)
+						s.Require().NoError(err, "marshal eror")
 
 						resMsg.Payload = buf
 
@@ -1503,7 +1509,15 @@ func (s *ArtifactsMangerClientSuite) TestGetObject() {
 
 			desc, err := s.amClient.GetObject(s.ctx, *objectRef, nil)
 
-			test.check(desc, err)
+			test.checkObject(desc, err)
+
+			if desc != nil {
+				proto, err := desc.Prototype()
+				s.Require().NoError(err, "object Prototype call")
+
+				protoDesc, err := s.amClient.GetPrototype(s.ctx, *proto)
+				test.checkProto(protoDesc, err)
+			}
 		})
 	}
 }
@@ -1522,18 +1536,14 @@ func (s *ArtifactsMangerClientSuite) TestLocalStorage() {
 		/* machineType: */ insolar.MachineTypeBuiltin,
 		/* ref:         */ shouldLoadRef("0111A7rimrANEAnwBT1kvAhHeHp9NPTFJMLKVng8GLH5.record"),
 	)
-	var protoDesc ObjectDescriptor
+	var protoDesc PrototypeDescriptor
 	{ // account
 		pRef := shouldLoadRef("0111A62X73fkPeY5vK6NjcXgmL9d37DgRRNtHNLGaEse")
 		cRef := shouldLoadRef("0111A7rimrANEAnwBT1kvAhHeHp9NPTFJMLKVng8GLH5.record")
-		protoDesc = NewObjectDescriptor(
+		protoDesc = NewPrototypeDescriptor(
 			/* head:         */ pRef,
 			/* state:        */ *pRef.GetLocal(),
-			/* prototype:    */ &cRef,
-			/* isPrototype:  */ true,
-			/* childPointer: */ nil,
-			/* memory:       */ nil,
-			/* parent:       */ gen.Reference(),
+			/* code:         */ cRef,
 		)
 	}
 
@@ -1541,9 +1551,9 @@ func (s *ArtifactsMangerClientSuite) TestLocalStorage() {
 		s.prepareContext()
 		s.prepareAMClient()
 
-		s.amClient.InjectObjectDescriptor(*protoDesc.HeadRef(), protoDesc)
+		s.amClient.InjectPrototypeDescriptor(*protoDesc.HeadRef(), protoDesc)
 
-		desc, err := s.amClient.GetObject(s.ctx, *protoDesc.HeadRef(), nil)
+		desc, err := s.amClient.GetPrototype(s.ctx, *protoDesc.HeadRef())
 		s.NoError(err)
 		s.Equal(desc, protoDesc)
 	})
@@ -1615,7 +1625,7 @@ func (s *ArtifactsMangerClientSuite) TestLocalStorage() {
 			Code: payload.CodeNotFound,
 		}
 
-		s.amClient.InjectObjectDescriptor(*protoDesc.HeadRef(), protoDesc)
+		s.amClient.InjectPrototypeDescriptor(*protoDesc.HeadRef(), protoDesc)
 
 		pulseObject := insolar.Pulse{PulseNumber: gen.PulseNumber()}
 		s.pulseAccessor.LatestMock.Return(pulseObject, nil)

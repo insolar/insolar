@@ -172,7 +172,7 @@ func (le *logicExecutor) ExecuteConstructor(
 func (le *logicExecutor) genLogicCallContext(
 	ctx context.Context,
 	transcript *common.Transcript,
-	protoDesc artifacts.ObjectDescriptor,
+	protoDesc artifacts.PrototypeDescriptor,
 	codeDesc artifacts.CodeDescriptor,
 ) *insolar.LogicCallContext {
 	request := transcript.Request

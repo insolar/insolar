@@ -30,6 +30,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/heavy/proc"
 	"github.com/insolar/insolar/ledger/object"
+	pulse_core "github.com/insolar/insolar/pulse"
 	"github.com/stretchr/testify/require"
 )
 
@@ -39,26 +40,75 @@ func TestSearchIndex_Proceed(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
 	var (
-		index  *object.IndexAccessorMock
-		pulses *pulse.CalculatorMock
-		sender *bus.SenderMock
+		index           *object.IndexAccessorMock
+		pulseCalculator *pulse.CalculatorMock
+		pulseAccessor   *pulse.AccessorMock
+		sender          *bus.SenderMock
+		recordAccessor  *object.RecordAccessorMock
 	)
 
 	resetComponents := func() {
 		index = object.NewIndexAccessorMock(t)
-		pulses = pulse.NewCalculatorMock(t)
+		pulseCalculator = pulse.NewCalculatorMock(t)
 		sender = bus.NewSenderMock(t)
+		pulseAccessor = pulse.NewAccessorMock(t)
+		recordAccessor = object.NewRecordAccessorMock(t)
 	}
 
 	newProc := func(msg payload.Meta) *proc.SearchIndex {
 		p := proc.NewSearchIndex(msg)
-		p.Dep(index, pulses, sender)
+		p.Dep(index, pulseCalculator, pulseAccessor, recordAccessor, sender)
 		return p
 	}
 
 	resetComponents()
+	t.Run("fails if until is less than MinPulseTime", func(t *testing.T) {
+		msg := payload.SearchIndex{
+			Until: pulse_core.MinTimePulse - 1,
+		}
+		buf, err := msg.Marshal()
+		require.NoError(t, err)
+		receivedMeta := payload.Meta{Payload: buf}
+		p := newProc(receivedMeta)
+
+		err = p.Proceed(ctx)
+		require.Error(t, err)
+
+		mc.Finish()
+	})
+
+	resetComponents()
+	t.Run("not fails if until is bigger than current pulse", func(t *testing.T) {
+		msg := payload.SearchIndex{
+			Until: pulse_core.MinTimePulse + 1,
+		}
+		buf, err := msg.Marshal()
+		require.NoError(t, err)
+		receivedMeta := payload.Meta{Payload: buf}
+		p := newProc(receivedMeta)
+		sender.ReplyMock.Set(func(_ context.Context, origin payload.Meta, rep *message.Message) {
+			require.Equal(t, receivedMeta, origin)
+
+			resp, err := payload.Unmarshal(rep.Payload)
+			require.NoError(t, err)
+
+			res, ok := resp.(*payload.SearchIndexInfo)
+			require.True(t, ok)
+
+			require.Nil(t, res.Index)
+		})
+
+		pulseAccessor.LatestMock.Return(*insolar.GenesisPulse, nil)
+
+		err = p.Proceed(ctx)
+		require.NoError(t, err)
+
+		mc.Finish()
+	})
+
+	resetComponents()
 	t.Run("search through 3 pulsed and find the index", func(t *testing.T) {
-		objID := *insolar.NewID(100, []byte{1, 2, 3, 4})
+		objID := *insolar.NewID(pulse_core.MinTimePulse+100, []byte{1, 2, 3, 4})
 		lflParent := gen.RecordReference()
 		expectedIdx := record.Index{
 			Polymorph: 0,
@@ -70,21 +120,82 @@ func TestSearchIndex_Proceed(t *testing.T) {
 			PendingRecords:   nil,
 		}
 
-		index.ForIDMock.When(ctx, insolar.PulseNumber(100), objID).Then(record.Index{}, object.ErrIndexNotFound)
-		index.ForIDMock.When(ctx, insolar.PulseNumber(99), *insolar.NewID(99, []byte{1, 2, 3, 4})).Then(record.Index{}, object.ErrIndexNotFound)
-		index.ForIDMock.When(ctx, insolar.PulseNumber(98), *insolar.NewID(98, []byte{1, 2, 3, 4})).Then(expectedIdx, nil)
+		pulseAccessor.LatestMock.Return(insolar.Pulse{PulseNumber: pulse_core.MinTimePulse + 100}, nil)
 
-		pulses.BackwardsMock.When(ctx, insolar.PulseNumber(100), 1).Then(insolar.Pulse{
-			PulseNumber: 99,
+		recordAccessor.ForIDMock.When(ctx, objID).Then(record.Material{}, object.ErrNotFound)
+		recordAccessor.ForIDMock.When(ctx, *insolar.NewID(pulse_core.MinTimePulse+99, []byte{1, 2, 3, 4})).Then(record.Material{}, object.ErrNotFound)
+		recordAccessor.ForIDMock.When(ctx, *insolar.NewID(pulse_core.MinTimePulse+98, []byte{1, 2, 3, 4})).Then(record.Material{}, nil)
+
+		index.LastKnownForIDMock.When(ctx, *insolar.NewID(pulse_core.MinTimePulse+98, []byte{1, 2, 3, 4})).Then(expectedIdx, nil)
+
+		pulseCalculator.BackwardsMock.When(ctx, insolar.PulseNumber(pulse_core.MinTimePulse+100), 1).Then(insolar.Pulse{
+			PulseNumber: pulse_core.MinTimePulse + 99,
 		}, nil)
 
-		pulses.BackwardsMock.When(ctx, insolar.PulseNumber(99), 1).Then(insolar.Pulse{
-			PulseNumber: 98,
+		pulseCalculator.BackwardsMock.When(ctx, insolar.PulseNumber(pulse_core.MinTimePulse+99), 1).Then(insolar.Pulse{
+			PulseNumber: pulse_core.MinTimePulse + 98,
 		}, nil)
 
 		msg := payload.SearchIndex{
 			ObjectID: objID,
-			Until:    insolar.PulseNumber(90),
+			Until:    insolar.PulseNumber(pulse_core.MinTimePulse + 90),
+		}
+		buf, err := msg.Marshal()
+		require.NoError(t, err)
+		receivedMeta := payload.Meta{Payload: buf}
+		p := newProc(receivedMeta)
+
+		sender.ReplyMock.Set(func(_ context.Context, origin payload.Meta, rep *message.Message) {
+			require.Equal(t, receivedMeta, origin)
+
+			resp, err := payload.Unmarshal(rep.Payload)
+			require.NoError(t, err)
+
+			res, ok := resp.(*payload.SearchIndexInfo)
+			require.True(t, ok)
+
+			require.Equal(t, lflParent, res.Index.Lifeline.Parent)
+		})
+
+		err = p.Proceed(ctx)
+		require.NoError(t, err)
+
+		mc.Finish()
+	})
+
+	resetComponents()
+	t.Run("search through 3 pulsed with objID bigger than Latest", func(t *testing.T) {
+		objID := *insolar.NewID(pulse_core.MinTimePulse+400, []byte{1, 2, 3, 4})
+		lflParent := gen.RecordReference()
+		expectedIdx := record.Index{
+			Polymorph: 0,
+			ObjID:     objID,
+			Lifeline: record.Lifeline{
+				Parent: lflParent,
+			},
+			LifelineLastUsed: 0,
+			PendingRecords:   nil,
+		}
+
+		pulseAccessor.LatestMock.Return(insolar.Pulse{PulseNumber: pulse_core.MinTimePulse + 100}, nil)
+
+		recordAccessor.ForIDMock.When(ctx, *insolar.NewID(pulse_core.MinTimePulse+100, []byte{1, 2, 3, 4})).Then(record.Material{}, object.ErrNotFound)
+		recordAccessor.ForIDMock.When(ctx, *insolar.NewID(pulse_core.MinTimePulse+99, []byte{1, 2, 3, 4})).Then(record.Material{}, object.ErrNotFound)
+		recordAccessor.ForIDMock.When(ctx, *insolar.NewID(pulse_core.MinTimePulse+98, []byte{1, 2, 3, 4})).Then(record.Material{}, nil)
+
+		index.LastKnownForIDMock.When(ctx, *insolar.NewID(pulse_core.MinTimePulse+98, []byte{1, 2, 3, 4})).Then(expectedIdx, nil)
+
+		pulseCalculator.BackwardsMock.When(ctx, insolar.PulseNumber(pulse_core.MinTimePulse+100), 1).Then(insolar.Pulse{
+			PulseNumber: pulse_core.MinTimePulse + 99,
+		}, nil)
+
+		pulseCalculator.BackwardsMock.When(ctx, insolar.PulseNumber(pulse_core.MinTimePulse+99), 1).Then(insolar.Pulse{
+			PulseNumber: pulse_core.MinTimePulse + 98,
+		}, nil)
+
+		msg := payload.SearchIndex{
+			ObjectID: objID,
+			Until:    insolar.PulseNumber(pulse_core.MinTimePulse + 90),
 		}
 		buf, err := msg.Marshal()
 		require.NoError(t, err)
@@ -111,26 +222,28 @@ func TestSearchIndex_Proceed(t *testing.T) {
 
 	resetComponents()
 	t.Run("fails if no lifeline and reaches the limit", func(t *testing.T) {
-		objID := *insolar.NewID(100, []byte{1, 2, 3, 4})
+		objID := *insolar.NewID(pulse_core.MinTimePulse+100, []byte{1, 2, 3, 4})
 
-		index.ForIDMock.When(ctx, insolar.PulseNumber(100), objID).Then(record.Index{}, object.ErrIndexNotFound)
-		index.ForIDMock.When(ctx, insolar.PulseNumber(99), *insolar.NewID(99, []byte{1, 2, 3, 4})).Then(record.Index{}, object.ErrIndexNotFound)
-		index.ForIDMock.When(ctx, insolar.PulseNumber(98), *insolar.NewID(98, []byte{1, 2, 3, 4})).Then(record.Index{}, object.ErrIndexNotFound)
+		pulseAccessor.LatestMock.Return(insolar.Pulse{PulseNumber: pulse_core.MinTimePulse + 100}, nil)
 
-		pulses.BackwardsMock.When(ctx, insolar.PulseNumber(100), 1).Then(insolar.Pulse{
-			PulseNumber: 99,
+		recordAccessor.ForIDMock.When(ctx, objID).Then(record.Material{}, object.ErrNotFound)
+		recordAccessor.ForIDMock.When(ctx, *insolar.NewID(pulse_core.MinTimePulse+99, []byte{1, 2, 3, 4})).Then(record.Material{}, object.ErrNotFound)
+		recordAccessor.ForIDMock.When(ctx, *insolar.NewID(pulse_core.MinTimePulse+98, []byte{1, 2, 3, 4})).Then(record.Material{}, object.ErrNotFound)
+
+		pulseCalculator.BackwardsMock.When(ctx, insolar.PulseNumber(pulse_core.MinTimePulse+100), 1).Then(insolar.Pulse{
+			PulseNumber: pulse_core.MinTimePulse + 99,
 		}, nil)
 
-		pulses.BackwardsMock.When(ctx, insolar.PulseNumber(99), 1).Then(insolar.Pulse{
-			PulseNumber: 98,
+		pulseCalculator.BackwardsMock.When(ctx, insolar.PulseNumber(pulse_core.MinTimePulse+99), 1).Then(insolar.Pulse{
+			PulseNumber: pulse_core.MinTimePulse + 98,
 		}, nil)
-		pulses.BackwardsMock.When(ctx, insolar.PulseNumber(98), 1).Then(insolar.Pulse{
-			PulseNumber: 97,
+		pulseCalculator.BackwardsMock.When(ctx, insolar.PulseNumber(pulse_core.MinTimePulse+98), 1).Then(insolar.Pulse{
+			PulseNumber: pulse_core.MinTimePulse + 97,
 		}, nil)
 
 		msg := payload.SearchIndex{
 			ObjectID: objID,
-			Until:    insolar.PulseNumber(98),
+			Until:    insolar.PulseNumber(pulse_core.MinTimePulse + 98),
 		}
 		buf, err := msg.Marshal()
 		require.NoError(t, err)
@@ -154,4 +267,5 @@ func TestSearchIndex_Proceed(t *testing.T) {
 
 		mc.Finish()
 	})
+
 }

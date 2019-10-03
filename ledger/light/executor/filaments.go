@@ -86,21 +86,27 @@ type FilamentCalculator interface {
 		requestID insolar.ID,
 		pulse insolar.PulseNumber,
 	) (
-		foundRequest *record.CompositeFilamentRecord,
-		foundResult *record.CompositeFilamentRecord,
+		requestInfo FilamentsRequestInfo,
 		err error,
 	)
+}
+
+type FilamentsRequestInfo struct {
+	Request       *record.CompositeFilamentRecord
+	Result        *record.CompositeFilamentRecord
+	OldestMutable bool
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.FilamentCleaner -o ./ -s _mock.go -g
 
 type FilamentCleaner interface {
-	ClearIfLonger(objID insolar.ID, limit int)
+	ClearIfLonger(limit int)
+	ClearAllExcept(ids []insolar.ID)
 }
 
 type FilamentCalculatorDefault struct {
 	cache       *cacheStore
-	indexes     object.IndexAccessor
+	indexes     object.MemoryIndexAccessor
 	coordinator jet.Coordinator
 	jetFetcher  JetFetcher
 	sender      bus.Sender
@@ -108,7 +114,7 @@ type FilamentCalculatorDefault struct {
 }
 
 func NewFilamentCalculator(
-	indexes object.IndexAccessor,
+	indexes object.MemoryIndexAccessor,
 	records object.RecordAccessor,
 	coordinator jet.Coordinator,
 	jetFetcher JetFetcher,
@@ -228,7 +234,7 @@ func (c *FilamentCalculatorDefault) OpenedRequests(ctx context.Context, pulse in
 		}
 	}
 
-	// We need to reverse opened because we iterated from the end when selecting them.
+	// We need to reverse opened to time-ascending because we iterated from the end when selecting them.
 	ordered := make([]record.CompositeFilamentRecord, len(opened))
 	count := len(opened)
 	for i, pend := range opened {
@@ -324,20 +330,22 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 	reasonID := *reasonRef.GetLocal()
 	var lifeline record.Lifeline
 	if request.IsCreationRequest() {
+		logger.Debug("looking for index locally")
 		l, err := c.findLifeline(ctx, reasonID.Pulse(), requestID)
-		if err != nil && err == object.ErrIndexNotFound {
+		if err == object.ErrIndexNotFound {
 			// Searching for the requests in the network
 			// We need to be sure, that there is no duplicate of creationg request
 			// INS-3607
+			logger.Debug("looking for index on heavy")
 			lfl, err := c.checkHeavyForLifeline(ctx, requestID, reasonID.Pulse())
 			if err != nil && err != object.ErrIndexNotFound {
 				return nil, nil, errors.Wrap(err, "failed to fetch index")
 			}
 			if err == object.ErrIndexNotFound {
+				logger.Debug("index not found")
 				return nil, nil, nil
 			}
 			lifeline = lfl
-
 		} else if err != nil {
 			return nil, nil, errors.Wrap(err, "failed to find index")
 		}
@@ -351,6 +359,7 @@ func (c *FilamentCalculatorDefault) RequestDuplicate(
 	}
 
 	if lifeline.LatestRequest == nil {
+		logger.Warn("request pointer is nil")
 		return nil, nil, nil
 	}
 
@@ -401,8 +410,7 @@ func (c *FilamentCalculatorDefault) RequestInfo(
 	requestID insolar.ID,
 	pulse insolar.PulseNumber,
 ) (
-	*record.CompositeFilamentRecord,
-	*record.CompositeFilamentRecord,
+	FilamentsRequestInfo,
 	error,
 ) {
 	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
@@ -415,11 +423,11 @@ func (c *FilamentCalculatorDefault) RequestInfo(
 
 	idx, err := c.indexes.ForID(ctx, pulse, objectID)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, fmt.Sprintf("object: %s", objectID.DebugString()))
+		return FilamentsRequestInfo{}, errors.Wrap(err, fmt.Sprintf("object: %s", objectID.DebugString()))
 	}
 
 	if idx.Lifeline.LatestRequest == nil {
-		return nil, nil, errors.Wrap(err, "latest request in lifeline is empty")
+		return FilamentsRequestInfo{}, errors.New("latest request in lifeline is empty")
 	}
 
 	logger.Debugf("latest request from index %s", idx.Lifeline.LatestRequest.DebugString())
@@ -428,46 +436,91 @@ func (c *FilamentCalculatorDefault) RequestInfo(
 	cache.Lock()
 	defer cache.Unlock()
 
+	// Select the min pulse to we can search for closed requests
+	var minPulse insolar.PulseNumber
+	if idx.Lifeline.EarliestOpenRequest != nil && *idx.Lifeline.EarliestOpenRequest <= requestID.GetPulseNumber() {
+		minPulse = *idx.Lifeline.EarliestOpenRequest
+	} else {
+		minPulse = requestID.GetPulseNumber()
+	}
+
 	iter := newFetchingIterator(
 		ctx,
 		cache,
 		objectID,
 		*idx.Lifeline.LatestRequest,
-		requestID.Pulse(),
+		minPulse,
 		c.jetFetcher,
 		c.coordinator,
 		c.sender,
 	)
 
-	var foundRequest *record.CompositeFilamentRecord
-	var foundResult *record.CompositeFilamentRecord
+	var foundRequestInfo FilamentsRequestInfo
+	foundRequestInfo.OldestMutable = true
+	closedRequests := map[insolar.ID]struct{}{}
+
+	isMutableRequest := func(virtual record.Record) bool {
+		if in, ok := virtual.(*record.IncomingRequest); ok && !in.Immutable {
+			return true
+		}
+		return false
+	}
 
 	for iter.HasPrev() {
 		rec, err := iter.Prev(ctx)
 		if err != nil {
-			return nil, nil, errors.Wrap(err, "failed to calculate filament")
+			return FilamentsRequestInfo{}, errors.Wrap(err, "failed to calculate filament")
 		}
+		virtual := record.Unwrap(&rec.Record.Virtual)
 
 		if rec.RecordID == requestID {
-			foundRequest = &rec
+			foundRequestInfo.Request = &rec
 			logger.Debugf("found request %s", rec.RecordID.DebugString())
+			// if immutable found, we can don't need to search deeper
+			if !isMutableRequest(virtual) {
+				foundRequestInfo.OldestMutable = false
+				return foundRequestInfo, nil
+			}
+			continue
 		}
 
-		virtual := record.Unwrap(&rec.Record.Virtual)
 		if r, ok := virtual.(*record.Result); ok {
+			closedRequests[*r.Request.GetLocal()] = struct{}{}
 
 			if *r.Request.GetLocal() == requestID {
-				foundResult = &rec
+				foundRequestInfo.Result = &rec
 				logger.Debugf("found result %s", rec.RecordID.DebugString())
+			}
+		}
+
+		// request found, check if we have another opened mutable incoming older than that
+		if foundRequestInfo.Request != nil {
+			if _, ok := closedRequests[rec.RecordID]; !ok {
+				if isMutableRequest(virtual) {
+					foundRequestInfo.OldestMutable = false
+					logger.Debugf("found oldest %s", rec.RecordID.DebugString())
+				}
 			}
 		}
 	}
 
-	return foundRequest, foundResult, nil
+	if foundRequestInfo.Request == nil {
+		return FilamentsRequestInfo{},
+			&payload.CodedError{
+				Text: fmt.Sprintf("requestInfo not found request %s", requestID.DebugString()),
+				Code: payload.CodeRequestNotFound,
+			}
+	}
+
+	return foundRequestInfo, nil
 }
 
-func (c *FilamentCalculatorDefault) ClearIfLonger(objID insolar.ID, limit int) {
-	c.cache.DeleteIfLonger(objID, limit)
+func (c *FilamentCalculatorDefault) ClearIfLonger(limit int) {
+	c.cache.DeleteIfLonger(limit)
+}
+
+func (c *FilamentCalculatorDefault) ClearAllExcept(ids []insolar.ID) {
+	c.cache.DeleteAllExcept(ids)
 }
 
 func (c FilamentCalculatorDefault) checkHeavyForLifeline(
@@ -520,10 +573,10 @@ func (c *FilamentCalculatorDefault) findLifeline(
 	ctx context.Context, until insolar.PulseNumber, requestID insolar.ID,
 ) (record.Lifeline, error) {
 	iter := requestID.Pulse()
-	for {
-		// We should find lifeline for `iter` pulse,
-		// because requestID.Pulse() may be different.
-		idx, err := c.indexes.ForID(ctx, iter, *insolar.NewID(iter, requestID.Hash()))
+	for iter >= until {
+		// We search for combination of id in a latest bucket
+		// requestID.Pulse() is a latest, because findLifeline is called only for Creationg requests
+		idx, err := c.indexes.ForID(ctx, requestID.Pulse(), *insolar.NewID(iter, requestID.Hash()))
 		if err != nil && err != object.ErrIndexNotFound {
 			return record.Lifeline{}, errors.Wrap(err, "failed to fetch index")
 		}
@@ -537,10 +590,9 @@ func (c *FilamentCalculatorDefault) findLifeline(
 		}
 
 		iter = prev.PulseNumber
-		if iter > until {
-			return record.Lifeline{}, object.ErrIndexNotFound
-		}
 	}
+
+	return record.Lifeline{}, object.ErrIndexNotFound
 }
 
 type fetchingIterator struct {
@@ -588,12 +640,31 @@ func (c *cacheStore) Delete(id insolar.ID) {
 	delete(c.caches, id)
 }
 
-func (c *cacheStore) DeleteIfLonger(id insolar.ID, limit int) {
+func (c *cacheStore) DeleteIfLonger(limit int) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	if _, ok := c.caches[id]; ok && len(c.caches[id].cache) > limit {
-		delete(c.caches, id)
+
+	for id, cache := range c.caches {
+		cache.RLock()
+		cacheLen := len(cache.cache)
+		cache.RUnlock()
+		if cacheLen > limit {
+			delete(c.caches, id)
+		}
 	}
+}
+
+func (c *cacheStore) DeleteAllExcept(ids []insolar.ID) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	newCaches := map[insolar.ID]*filamentCache{}
+	for _, id := range ids {
+		if cache, ok := c.caches[id]; ok {
+			newCaches[id] = cache
+		}
+	}
+	c.caches = newCaches
 }
 
 type filamentCache struct {

@@ -20,6 +20,7 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
@@ -29,7 +30,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/builtin/foundation"
-	"github.com/insolar/insolar/logicrunner/common"
+	"github.com/insolar/insolar/logicrunner/metrics"
 	"github.com/insolar/insolar/logicrunner/requestresult"
 )
 
@@ -91,26 +92,12 @@ func (r *RegisterIncomingRequest) Proceed(ctx context.Context) error {
 	ctx, span := instracer.StartSpan(ctx, "RegisterIncomingRequest.Proceed")
 	defer span.End()
 
-	inslogger.FromContext(ctx).Debug("registering incoming request")
-
 	reqInfo, err := r.ArtifactManager.RegisterIncomingRequest(ctx, &r.request)
 	if err != nil {
 		return err
 	}
 
 	r.setResult(reqInfo)
-	return nil
-}
-
-type AddFreshRequest struct {
-	broker     ExecutionBrokerI
-	requestRef insolar.Reference
-	request    record.IncomingRequest
-}
-
-func (c *AddFreshRequest) Proceed(ctx context.Context) error {
-	tr := common.NewTranscriptCloneContext(ctx, c.requestRef, c.request)
-	c.broker.AddFreshRequest(ctx, tr)
 	return nil
 }
 
@@ -147,7 +134,16 @@ func (r *RecordErrorResult) Proceed(ctx context.Context) error {
 	return nil
 }
 
-func ProcessLogicalError(err error) bool {
+func ProcessLogicalError(ctx context.Context, err error) bool {
 	e, ok := errors.Cause(err).(*payload.CodedError)
-	return ok && e.Code == payload.CodeNotFound
+	if ok {
+		switch e.Code {
+		case payload.CodeNotFound:
+			return true
+		case payload.CodeLoopDetected:
+			stats.Record(ctx, metrics.CallMethodLoopDetected.M(1))
+			return true
+		}
+	}
+	return false
 }

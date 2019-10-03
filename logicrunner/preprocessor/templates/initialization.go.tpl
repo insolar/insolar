@@ -27,7 +27,6 @@ import (
 
     XXX_insolar "github.com/insolar/insolar/insolar"
     XXX_artifacts "github.com/insolar/insolar/logicrunner/artifacts"
-    XXX_genesisrefs "github.com/insolar/insolar/insolar/genesisrefs"
 )
 
 func InitializeContractMethods() map[string]XXX_insolar.ContractWrapper {
@@ -47,7 +46,7 @@ func shouldLoadRef(strRef string) XXX_insolar.Reference {
 }
 
 func InitializeCodeRefs() map[XXX_insolar.Reference]string {
-    rv := make(map[XXX_insolar.Reference]string, 0)
+    rv := make(map[XXX_insolar.Reference]string, {{ len .Contracts }})
 
     {{ range $contract := .Contracts -}}
     rv[shouldLoadRef("{{ $contract.CodeReference }}")] = "{{ $contract.Name }}"
@@ -57,7 +56,7 @@ func InitializeCodeRefs() map[XXX_insolar.Reference]string {
 }
 
 func InitializePrototypeRefs() map[XXX_insolar.Reference]string {
-    rv := make(map[XXX_insolar.Reference]string, 0)
+    rv := make(map[XXX_insolar.Reference]string, {{ len .Contracts }})
 
     {{ range $contract := .Contracts -}}
     rv[shouldLoadRef("{{ $contract.PrototypeReference }}")] = "{{ $contract.Name }}"
@@ -67,7 +66,7 @@ func InitializePrototypeRefs() map[XXX_insolar.Reference]string {
 }
 
 func InitializeCodeDescriptors() []XXX_artifacts.CodeDescriptor {
-    rv := make([]XXX_artifacts.CodeDescriptor, 0)
+    rv := make([]XXX_artifacts.CodeDescriptor, 0, {{ len .Contracts }})
 
     {{ range $contract := .Contracts -}}
     // {{ $contract.Name }}
@@ -80,21 +79,17 @@ func InitializeCodeDescriptors() []XXX_artifacts.CodeDescriptor {
     return rv
 }
 
-func InitializePrototypeDescriptors() []XXX_artifacts.ObjectDescriptor {
-    rv := make([]XXX_artifacts.ObjectDescriptor, 0)
+func InitializePrototypeDescriptors() []XXX_artifacts.PrototypeDescriptor {
+    rv := make([]XXX_artifacts.PrototypeDescriptor, 0, {{ len .Contracts }})
 
     {{ range $contract := .Contracts }}
     { // {{ $contract.Name }}
         pRef := shouldLoadRef("{{ $contract.PrototypeReference }}")
         cRef := shouldLoadRef("{{ $contract.CodeReference }}")
-        rv = append(rv, XXX_artifacts.NewObjectDescriptor(
+        rv = append(rv, XXX_artifacts.NewPrototypeDescriptor(
             /* head:         */ pRef,
             /* state:        */ *pRef.GetLocal(),
-            /* prototype:    */ &cRef,
-            /* isPrototype:  */ true,
-            /* childPointer: */ nil,
-            /* memory:       */ nil,
-            /* parent:       */ XXX_genesisrefs.RootDomain.Reference(),
+            /* code:         */ cRef,
         ))
     }
     {{ end }}

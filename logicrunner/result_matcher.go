@@ -81,7 +81,16 @@ func (rm *resultsMatcher) AddUnwantedResponse(ctx context.Context, msg payload.R
 	rm.lock.Lock()
 	defer rm.lock.Unlock()
 
-	inslogger.FromContext(ctx).Debug("got unwanted response to request ", msg.RequestRef.String())
+	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+		"parent_request": msg.Reason,
+		"request":        msg.RequestRef,
+	})
+	logger.Debug("got unwanted response to request")
+
+	if msg.Reason.IsEmpty() {
+		logger.Error("got unwanted response with empty reason, skipping")
+		return
+	}
 
 	if node, ok := rm.executionNodes[msg.Reason]; ok {
 		go rm.send(ctx, msg, node)
@@ -97,13 +106,15 @@ func (rm *resultsMatcher) Clear(ctx context.Context) {
 	rm.lock.Lock()
 	defer rm.lock.Unlock()
 
-	rm.executionNodes = make(map[insolar.Reference]insolar.Reference)
-
-	logger := inslogger.FromContext(ctx)
 	stats.Record(ctx, metrics.ResultsMatcherDroppedResults.M(int64(len(rm.unwantedResponses))))
-	for reqRef := range rm.unwantedResponses {
-		logger.Warn("not claimed response to request ", reqRef.String(), ", not confirmed pending?")
+
+	for _, result := range rm.unwantedResponses {
+		inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+			"parent_request": result.result.Reason,
+			"request":        result.result.RequestRef,
+		}).Warn("not claimed response (not confirmed pending)")
 	}
+	rm.executionNodes = make(map[insolar.Reference]insolar.Reference)
 	rm.unwantedResponses = make(map[insolar.Reference]resultWithContext)
 }
 

@@ -77,7 +77,7 @@ type Scope struct {
 	RecordModifier object.RecordModifier
 	RecordAccessor object.RecordAccessor
 
-	IndexAccessor object.IndexAccessor
+	IndexAccessor object.MemoryIndexAccessor
 	IndexModifier object.IndexModifier
 }
 

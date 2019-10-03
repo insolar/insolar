@@ -20,11 +20,12 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/light/executor"
-	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
@@ -44,7 +45,7 @@ type SendObject struct {
 		jets        jet.Storage
 		jetFetcher  executor.JetFetcher
 		records     object.RecordAccessor
-		indexes     object.IndexAccessor
+		indexes     object.MemoryIndexAccessor
 		sender      bus.Sender
 		filament    executor.FilamentCalculator
 	}
@@ -67,7 +68,7 @@ func (p *SendObject) Dep(
 	jets jet.Storage,
 	jetFetcher executor.JetFetcher,
 	records object.RecordAccessor,
-	indexes object.IndexAccessor,
+	indexes object.MemoryIndexAccessor,
 	sender bus.Sender,
 	filament executor.FilamentCalculator,
 ) {
@@ -101,7 +102,7 @@ func (p *SendObject) ensureOldestRequest(ctx context.Context) (*record.Composite
 		return nil, nil
 	}
 
-	return oldestMutable(openReqs), nil
+	return executor.OldestMutable(openReqs), nil
 }
 
 func (p *SendObject) Proceed(ctx context.Context) error {
@@ -158,7 +159,7 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 		}
 		var node insolar.Reference
 		if onHeavy {
-			inslogger.FromContext(ctx).Warnf("State not found on light. Go to heavy. StateID:%v, CurrentPN:%v", stateID.DebugString(), flow.Pulse(ctx))
+			inslogger.FromContext(ctx).Infof("State not found on light. Go to heavy. StateID:%v, CurrentPN:%v", stateID.DebugString(), flow.Pulse(ctx))
 			h, err := p.dep.coordinator.Heavy(ctx)
 			if err != nil {
 				return errors.Wrap(err, "failed to calculate heavy")
@@ -166,7 +167,7 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 			node = *h
 			span.Annotate(nil, fmt.Sprintf("Send StateID:%v to heavy", stateID.DebugString()))
 		} else {
-			inslogger.FromContext(ctx).Warnf("State not found on light. Go to light. StateID:%v, CurrentPN:%v", stateID.DebugString(), flow.Pulse(ctx))
+			inslogger.FromContext(ctx).Infof("State not found on light. Go to light. StateID:%v, CurrentPN:%v", stateID.DebugString(), flow.Pulse(ctx))
 			jetID, err := p.dep.jetFetcher.Fetch(ctx, p.objectID, stateID.Pulse())
 			if err != nil {
 				return errors.Wrap(err, "failed to fetch jet")
@@ -207,8 +208,6 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 	}
 
 	var earliestRequestID *insolar.ID
-	var earliestRequest []byte
-
 	// We know the request, that is processing by ve
 	// if the request isn't earliest, we return object + earliest request instead
 	if p.requestID != nil {
@@ -217,12 +216,7 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 			return errors.Wrap(err, "failed to check request status")
 		}
 		if oldest != nil && oldest.RecordID != *p.requestID {
-			reqBuf, err := oldest.Record.Virtual.Marshal()
-			if err != nil {
-				return errors.Wrap(err, "failed to marshal request")
-			}
 			earliestRequestID = &oldest.RecordID
-			earliestRequest = reqBuf
 		}
 	}
 
@@ -235,7 +229,6 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 		msg, err := payload.NewMessage(&payload.Index{
 			Index:             buf,
 			EarliestRequestID: earliestRequestID,
-			EarliestRequest:   earliestRequest,
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to create reply")

@@ -24,12 +24,6 @@ type ExecutionRegistryMock struct {
 	beforeDoneCounter uint64
 	DoneMock          mExecutionRegistryMockDone
 
-	funcFindRequestLoop          func(ctx context.Context, reqRef insolar.Reference, apiRequestID string) (b1 bool)
-	inspectFuncFindRequestLoop   func(ctx context.Context, reqRef insolar.Reference, apiRequestID string)
-	afterFindRequestLoopCounter  uint64
-	beforeFindRequestLoopCounter uint64
-	FindRequestLoopMock          mExecutionRegistryMockFindRequestLoop
-
 	funcGetActiveTranscript          func(req insolar.Reference) (tp1 *common.Transcript)
 	inspectFuncGetActiveTranscript   func(req insolar.Reference)
 	afterGetActiveTranscriptCounter  uint64
@@ -70,9 +64,6 @@ func NewExecutionRegistryMock(t minimock.Tester) *ExecutionRegistryMock {
 
 	m.DoneMock = mExecutionRegistryMockDone{mock: m}
 	m.DoneMock.callArgs = []*ExecutionRegistryMockDoneParams{}
-
-	m.FindRequestLoopMock = mExecutionRegistryMockFindRequestLoop{mock: m}
-	m.FindRequestLoopMock.callArgs = []*ExecutionRegistryMockFindRequestLoopParams{}
 
 	m.GetActiveTranscriptMock = mExecutionRegistryMockGetActiveTranscript{mock: m}
 	m.GetActiveTranscriptMock.callArgs = []*ExecutionRegistryMockGetActiveTranscriptParams{}
@@ -302,223 +293,6 @@ func (m *ExecutionRegistryMock) MinimockDoneInspect() {
 	// if func was set then invocations count should be greater than zero
 	if m.funcDone != nil && mm_atomic.LoadUint64(&m.afterDoneCounter) < 1 {
 		m.t.Error("Expected call to ExecutionRegistryMock.Done")
-	}
-}
-
-type mExecutionRegistryMockFindRequestLoop struct {
-	mock               *ExecutionRegistryMock
-	defaultExpectation *ExecutionRegistryMockFindRequestLoopExpectation
-	expectations       []*ExecutionRegistryMockFindRequestLoopExpectation
-
-	callArgs []*ExecutionRegistryMockFindRequestLoopParams
-	mutex    sync.RWMutex
-}
-
-// ExecutionRegistryMockFindRequestLoopExpectation specifies expectation struct of the ExecutionRegistry.FindRequestLoop
-type ExecutionRegistryMockFindRequestLoopExpectation struct {
-	mock    *ExecutionRegistryMock
-	params  *ExecutionRegistryMockFindRequestLoopParams
-	results *ExecutionRegistryMockFindRequestLoopResults
-	Counter uint64
-}
-
-// ExecutionRegistryMockFindRequestLoopParams contains parameters of the ExecutionRegistry.FindRequestLoop
-type ExecutionRegistryMockFindRequestLoopParams struct {
-	ctx          context.Context
-	reqRef       insolar.Reference
-	apiRequestID string
-}
-
-// ExecutionRegistryMockFindRequestLoopResults contains results of the ExecutionRegistry.FindRequestLoop
-type ExecutionRegistryMockFindRequestLoopResults struct {
-	b1 bool
-}
-
-// Expect sets up expected params for ExecutionRegistry.FindRequestLoop
-func (mmFindRequestLoop *mExecutionRegistryMockFindRequestLoop) Expect(ctx context.Context, reqRef insolar.Reference, apiRequestID string) *mExecutionRegistryMockFindRequestLoop {
-	if mmFindRequestLoop.mock.funcFindRequestLoop != nil {
-		mmFindRequestLoop.mock.t.Fatalf("ExecutionRegistryMock.FindRequestLoop mock is already set by Set")
-	}
-
-	if mmFindRequestLoop.defaultExpectation == nil {
-		mmFindRequestLoop.defaultExpectation = &ExecutionRegistryMockFindRequestLoopExpectation{}
-	}
-
-	mmFindRequestLoop.defaultExpectation.params = &ExecutionRegistryMockFindRequestLoopParams{ctx, reqRef, apiRequestID}
-	for _, e := range mmFindRequestLoop.expectations {
-		if minimock.Equal(e.params, mmFindRequestLoop.defaultExpectation.params) {
-			mmFindRequestLoop.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmFindRequestLoop.defaultExpectation.params)
-		}
-	}
-
-	return mmFindRequestLoop
-}
-
-// Inspect accepts an inspector function that has same arguments as the ExecutionRegistry.FindRequestLoop
-func (mmFindRequestLoop *mExecutionRegistryMockFindRequestLoop) Inspect(f func(ctx context.Context, reqRef insolar.Reference, apiRequestID string)) *mExecutionRegistryMockFindRequestLoop {
-	if mmFindRequestLoop.mock.inspectFuncFindRequestLoop != nil {
-		mmFindRequestLoop.mock.t.Fatalf("Inspect function is already set for ExecutionRegistryMock.FindRequestLoop")
-	}
-
-	mmFindRequestLoop.mock.inspectFuncFindRequestLoop = f
-
-	return mmFindRequestLoop
-}
-
-// Return sets up results that will be returned by ExecutionRegistry.FindRequestLoop
-func (mmFindRequestLoop *mExecutionRegistryMockFindRequestLoop) Return(b1 bool) *ExecutionRegistryMock {
-	if mmFindRequestLoop.mock.funcFindRequestLoop != nil {
-		mmFindRequestLoop.mock.t.Fatalf("ExecutionRegistryMock.FindRequestLoop mock is already set by Set")
-	}
-
-	if mmFindRequestLoop.defaultExpectation == nil {
-		mmFindRequestLoop.defaultExpectation = &ExecutionRegistryMockFindRequestLoopExpectation{mock: mmFindRequestLoop.mock}
-	}
-	mmFindRequestLoop.defaultExpectation.results = &ExecutionRegistryMockFindRequestLoopResults{b1}
-	return mmFindRequestLoop.mock
-}
-
-//Set uses given function f to mock the ExecutionRegistry.FindRequestLoop method
-func (mmFindRequestLoop *mExecutionRegistryMockFindRequestLoop) Set(f func(ctx context.Context, reqRef insolar.Reference, apiRequestID string) (b1 bool)) *ExecutionRegistryMock {
-	if mmFindRequestLoop.defaultExpectation != nil {
-		mmFindRequestLoop.mock.t.Fatalf("Default expectation is already set for the ExecutionRegistry.FindRequestLoop method")
-	}
-
-	if len(mmFindRequestLoop.expectations) > 0 {
-		mmFindRequestLoop.mock.t.Fatalf("Some expectations are already set for the ExecutionRegistry.FindRequestLoop method")
-	}
-
-	mmFindRequestLoop.mock.funcFindRequestLoop = f
-	return mmFindRequestLoop.mock
-}
-
-// When sets expectation for the ExecutionRegistry.FindRequestLoop which will trigger the result defined by the following
-// Then helper
-func (mmFindRequestLoop *mExecutionRegistryMockFindRequestLoop) When(ctx context.Context, reqRef insolar.Reference, apiRequestID string) *ExecutionRegistryMockFindRequestLoopExpectation {
-	if mmFindRequestLoop.mock.funcFindRequestLoop != nil {
-		mmFindRequestLoop.mock.t.Fatalf("ExecutionRegistryMock.FindRequestLoop mock is already set by Set")
-	}
-
-	expectation := &ExecutionRegistryMockFindRequestLoopExpectation{
-		mock:   mmFindRequestLoop.mock,
-		params: &ExecutionRegistryMockFindRequestLoopParams{ctx, reqRef, apiRequestID},
-	}
-	mmFindRequestLoop.expectations = append(mmFindRequestLoop.expectations, expectation)
-	return expectation
-}
-
-// Then sets up ExecutionRegistry.FindRequestLoop return parameters for the expectation previously defined by the When method
-func (e *ExecutionRegistryMockFindRequestLoopExpectation) Then(b1 bool) *ExecutionRegistryMock {
-	e.results = &ExecutionRegistryMockFindRequestLoopResults{b1}
-	return e.mock
-}
-
-// FindRequestLoop implements ExecutionRegistry
-func (mmFindRequestLoop *ExecutionRegistryMock) FindRequestLoop(ctx context.Context, reqRef insolar.Reference, apiRequestID string) (b1 bool) {
-	mm_atomic.AddUint64(&mmFindRequestLoop.beforeFindRequestLoopCounter, 1)
-	defer mm_atomic.AddUint64(&mmFindRequestLoop.afterFindRequestLoopCounter, 1)
-
-	if mmFindRequestLoop.inspectFuncFindRequestLoop != nil {
-		mmFindRequestLoop.inspectFuncFindRequestLoop(ctx, reqRef, apiRequestID)
-	}
-
-	params := &ExecutionRegistryMockFindRequestLoopParams{ctx, reqRef, apiRequestID}
-
-	// Record call args
-	mmFindRequestLoop.FindRequestLoopMock.mutex.Lock()
-	mmFindRequestLoop.FindRequestLoopMock.callArgs = append(mmFindRequestLoop.FindRequestLoopMock.callArgs, params)
-	mmFindRequestLoop.FindRequestLoopMock.mutex.Unlock()
-
-	for _, e := range mmFindRequestLoop.FindRequestLoopMock.expectations {
-		if minimock.Equal(e.params, params) {
-			mm_atomic.AddUint64(&e.Counter, 1)
-			return e.results.b1
-		}
-	}
-
-	if mmFindRequestLoop.FindRequestLoopMock.defaultExpectation != nil {
-		mm_atomic.AddUint64(&mmFindRequestLoop.FindRequestLoopMock.defaultExpectation.Counter, 1)
-		want := mmFindRequestLoop.FindRequestLoopMock.defaultExpectation.params
-		got := ExecutionRegistryMockFindRequestLoopParams{ctx, reqRef, apiRequestID}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmFindRequestLoop.t.Errorf("ExecutionRegistryMock.FindRequestLoop got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
-		}
-
-		results := mmFindRequestLoop.FindRequestLoopMock.defaultExpectation.results
-		if results == nil {
-			mmFindRequestLoop.t.Fatal("No results are set for the ExecutionRegistryMock.FindRequestLoop")
-		}
-		return (*results).b1
-	}
-	if mmFindRequestLoop.funcFindRequestLoop != nil {
-		return mmFindRequestLoop.funcFindRequestLoop(ctx, reqRef, apiRequestID)
-	}
-	mmFindRequestLoop.t.Fatalf("Unexpected call to ExecutionRegistryMock.FindRequestLoop. %v %v %v", ctx, reqRef, apiRequestID)
-	return
-}
-
-// FindRequestLoopAfterCounter returns a count of finished ExecutionRegistryMock.FindRequestLoop invocations
-func (mmFindRequestLoop *ExecutionRegistryMock) FindRequestLoopAfterCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmFindRequestLoop.afterFindRequestLoopCounter)
-}
-
-// FindRequestLoopBeforeCounter returns a count of ExecutionRegistryMock.FindRequestLoop invocations
-func (mmFindRequestLoop *ExecutionRegistryMock) FindRequestLoopBeforeCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmFindRequestLoop.beforeFindRequestLoopCounter)
-}
-
-// Calls returns a list of arguments used in each call to ExecutionRegistryMock.FindRequestLoop.
-// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
-func (mmFindRequestLoop *mExecutionRegistryMockFindRequestLoop) Calls() []*ExecutionRegistryMockFindRequestLoopParams {
-	mmFindRequestLoop.mutex.RLock()
-
-	argCopy := make([]*ExecutionRegistryMockFindRequestLoopParams, len(mmFindRequestLoop.callArgs))
-	copy(argCopy, mmFindRequestLoop.callArgs)
-
-	mmFindRequestLoop.mutex.RUnlock()
-
-	return argCopy
-}
-
-// MinimockFindRequestLoopDone returns true if the count of the FindRequestLoop invocations corresponds
-// the number of defined expectations
-func (m *ExecutionRegistryMock) MinimockFindRequestLoopDone() bool {
-	for _, e := range m.FindRequestLoopMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			return false
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.FindRequestLoopMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterFindRequestLoopCounter) < 1 {
-		return false
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcFindRequestLoop != nil && mm_atomic.LoadUint64(&m.afterFindRequestLoopCounter) < 1 {
-		return false
-	}
-	return true
-}
-
-// MinimockFindRequestLoopInspect logs each unmet expectation
-func (m *ExecutionRegistryMock) MinimockFindRequestLoopInspect() {
-	for _, e := range m.FindRequestLoopMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			m.t.Errorf("Expected call to ExecutionRegistryMock.FindRequestLoop with params: %#v", *e.params)
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.FindRequestLoopMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterFindRequestLoopCounter) < 1 {
-		if m.FindRequestLoopMock.defaultExpectation.params == nil {
-			m.t.Error("Expected call to ExecutionRegistryMock.FindRequestLoop")
-		} else {
-			m.t.Errorf("Expected call to ExecutionRegistryMock.FindRequestLoop with params: %#v", *m.FindRequestLoopMock.defaultExpectation.params)
-		}
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcFindRequestLoop != nil && mm_atomic.LoadUint64(&m.afterFindRequestLoopCounter) < 1 {
-		m.t.Error("Expected call to ExecutionRegistryMock.FindRequestLoop")
 	}
 }
 
@@ -1459,8 +1233,6 @@ func (m *ExecutionRegistryMock) MinimockFinish() {
 	if !m.minimockDone() {
 		m.MinimockDoneInspect()
 
-		m.MinimockFindRequestLoopInspect()
-
 		m.MinimockGetActiveTranscriptInspect()
 
 		m.MinimockIsEmptyInspect()
@@ -1494,7 +1266,6 @@ func (m *ExecutionRegistryMock) minimockDone() bool {
 	done := true
 	return done &&
 		m.MinimockDoneDone() &&
-		m.MinimockFindRequestLoopDone() &&
 		m.MinimockGetActiveTranscriptDone() &&
 		m.MinimockIsEmptyDone() &&
 		m.MinimockLengthDone() &&

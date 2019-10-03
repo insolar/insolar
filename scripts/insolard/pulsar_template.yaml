@@ -1,10 +1,4 @@
 pulsar:
-  connectiontype: tcp
-  mainlisteneraddress: 127.0.0.1:58090
-  storage:
-    datadirectory: "{{ .DataDir }}"
-    datadirectorynewdb: ""
-    txretriesonconflict: 0
   pulsetime: 10000
   receivingsigntimeout: 1000
   receivingnumbertimeout: 1000
@@ -25,8 +19,6 @@ pulsar:
     randomhostsrequesttimeout: 1000
     pulserequesttimeout: 1000
     randomnodescount: 5
-versionmanager:
-  minalowedversion: v0.3.0
 keyspath: "{{ .BaseDir }}/configs/pulsar_keys.json"
 tracer:
   jaeger:

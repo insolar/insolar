@@ -37,9 +37,9 @@ import (
 //go:generate minimock -i github.com/insolar/insolar/logicrunner.RequestsExecutor -o ./ -s _mock.go -g
 
 type RequestsExecutor interface {
-	ExecuteAndSave(ctx context.Context, current *common.Transcript) (insolar.Reply, error)
+	ExecuteAndSave(ctx context.Context, current *common.Transcript) (artifacts.RequestResult, error)
 	Execute(ctx context.Context, current *common.Transcript) (artifacts.RequestResult, error)
-	Save(ctx context.Context, current *common.Transcript, res artifacts.RequestResult) (insolar.Reply, error)
+	Save(ctx context.Context, current *common.Transcript, res artifacts.RequestResult) error
 	SendReply(ctx context.Context, reqRef insolar.Reference, req record.IncomingRequest, re insolar.Reply, err error)
 }
 
@@ -57,7 +57,7 @@ func NewRequestsExecutor() RequestsExecutor {
 func (e *requestsExecutor) ExecuteAndSave(
 	ctx context.Context, transcript *common.Transcript,
 ) (
-	insolar.Reply, error,
+	artifacts.RequestResult, error,
 ) {
 	ctx, span := instracer.StartSpan(ctx, "RequestsExecutor.ExecuteAndSave")
 	defer span.End()
@@ -67,14 +67,12 @@ func (e *requestsExecutor) ExecuteAndSave(
 		return nil, errors.Wrap(err, "couldn't execute request")
 	}
 
-	repl, err := e.Save(ctx, transcript, result)
+	err = e.Save(ctx, transcript, result)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't save request result")
 	}
 
-	inslogger.FromContext(ctx).Debug("saved result")
-
-	return repl, nil
+	return result, nil
 }
 
 func (e *requestsExecutor) Execute(
@@ -85,15 +83,7 @@ func (e *requestsExecutor) Execute(
 	ctx, span := instracer.StartSpan(ctx, "LogicRunner.executeLogic")
 	defer span.End()
 
-	inslogger.FromContext(ctx).Debug("Executing request")
-
-	if transcript.Request.CallType == record.CTMethod {
-		objDesc, err := e.ArtifactManager.GetObject(ctx, *transcript.Request.Object, &transcript.RequestRef)
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't get object")
-		}
-		transcript.ObjectDescriptor = objDesc
-	}
+	inslogger.FromContext(ctx).Debug("executing request")
 
 	result, err := e.LogicExecutor.Execute(ctx, transcript)
 	if err != nil {
@@ -105,19 +95,21 @@ func (e *requestsExecutor) Execute(
 
 func (e *requestsExecutor) Save(
 	ctx context.Context, transcript *common.Transcript, res artifacts.RequestResult,
-) (
-	insolar.Reply, error,
-) {
-	inslogger.FromContext(ctx).Debug("Saving result")
+) error {
+	inslogger.FromContext(ctx).Debug("registering IncomingRequest result")
 
 	err := e.ArtifactManager.RegisterResult(ctx, transcript.RequestRef, res)
 	if err != nil {
-		return nil, errors.Wrapf(err, "couldn't save result with %s side effect", res.Type().String())
+		return errors.Wrapf(err, "couldn't save result with %s side effect", res.Type().String())
 	}
 
-	objRef := res.ObjectReference()
-	return &reply.CallMethod{Result: res.Result(), Object: &objRef}, nil
+	inslogger.FromContext(ctx).Debug("registered IncomingRequest result")
+
+	return nil
 }
+
+// objRef := res.ObjectReference()
+// return &reply.CallMethod{Result: res.Result(), Object: &objRef}, nil
 
 func (e *requestsExecutor) SendReply(
 	ctx context.Context,

@@ -18,6 +18,7 @@ package logicrunner
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
 
@@ -168,14 +169,22 @@ func (m *executionProxyImplementation) GetCode(
 func (m *executionProxyImplementation) RouteCall(
 	ctx context.Context, current *common.Transcript, req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp,
 ) error {
-	inslogger.FromContext(ctx).Debug(
+	logger := inslogger.FromContext(ctx)
+	logger.Debug(
 		"call to others contract method ", req.Method,
 		" on object ", req.Object,
 	)
 
+	logger = logger.WithFields(map[string]interface{}{
+		"call_to":   req.Method,
+		"on_object": req.Object,
+	})
+
 	outgoing := buildOutgoingRequest(ctx, current, req)
 
 	// Step 1. Register outgoing request.
+
+	logger.Debug("registering outgoing request")
 
 	// If pulse changes during registering of OutgoingRequest we don't care because
 	// we _already_ are processing the request. We should continue to execute and
@@ -186,36 +195,68 @@ func (m *executionProxyImplementation) RouteCall(
 		return err
 	}
 
+	logger.Debug("registered outgoing request")
+
 	if req.Saga {
 		// Saga methods are not executed right away. LME will send a method
 		// to the VE when current object finishes the execution and validation.
+		if outReqInfo.Result != nil {
+			return errors.New("RegisterOutgoingRequest returns Result for Saga Call")
+		}
 		return nil
 	}
 
-	// Step 2. Send the request and register the result (both is done by outgoingSender)
-
-	outgoingReqRef := *getRequestReference(outReqInfo)
-
-	var incoming *record.IncomingRequest
-	_, rep.Result, incoming, err = m.outgoingSender.SendOutgoingRequest(ctx, outgoingReqRef, outgoing)
-	if incoming != nil {
-		current.AddOutgoingRequest(ctx, *incoming, rep.Result, nil, err)
+	// if we replay abandoned request after node was down we can already have Result
+	if outReqInfo.Result != nil {
+		rec := record.Material{}
+		err := rec.Unmarshal(outReqInfo.Result)
+		if err != nil {
+			return errors.Wrap(err, "failed to unmarshal existing result")
+		}
+		virtual := record.Unwrap(&rec.Virtual)
+		resultRecord, ok := virtual.(*record.Result)
+		if !ok {
+			return fmt.Errorf("unexpected record %T", virtual)
+		}
+		rep.Result = resultRecord.Payload
+		return nil
 	}
-	return err
+
+	logger.Debug("sending outgoing request")
+
+	// Step 2. Send the request and register the result (both is done by outgoingSender)
+	_, rep.Result, _, err = m.outgoingSender.SendOutgoingRequest(ctx, *getRequestReference(outReqInfo), outgoing)
+	if err != nil {
+		err = errors.Wrap(err, "failed to send outgoing request")
+		logger.Error(err)
+		return err
+	}
+
+	logger.Debug("got result of outgoing request")
+
+	return nil
 }
 
 // SaveAsChild is an RPC saving data as memory of a contract as child a parent
 func (m *executionProxyImplementation) SaveAsChild(
 	ctx context.Context, current *common.Transcript, req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveAsChildResp,
 ) error {
-	inslogger.FromContext(ctx).Debug(
+	logger := inslogger.FromContext(ctx)
+	logger.Debug(
 		"call to others contract constructor ", req.ConstructorName,
 		" on prototype ", req.Prototype.String(),
 	)
 	ctx, span := instracer.StartSpan(ctx, "RPC.SaveAsChild")
 	defer span.End()
 
+	logger = logger.WithFields(map[string]interface{}{
+		"call_to":   req.ConstructorName,
+		"on_object": req.Prototype,
+	})
+
 	outgoing := buildOutgoingSaveAsChildRequest(ctx, current, req)
+
+	logger.Debug("registering outgoing request")
 
 	// Register outgoing request
 	outReqInfo, err := m.am.RegisterOutgoingRequest(ctx, outgoing)
@@ -223,14 +264,21 @@ func (m *executionProxyImplementation) SaveAsChild(
 		return err
 	}
 
+	logger.Debug("registered outgoing request")
+
 	// Register result of the outgoing method
 	outgoingReqRef := *getRequestReference(outReqInfo)
+
+	logger.Debug("sending outgoing request")
 
 	var incoming *record.IncomingRequest
 	rep.Reference, rep.Result, incoming, err = m.outgoingSender.SendOutgoingRequest(ctx, outgoingReqRef, outgoing)
 	if incoming != nil {
 		current.AddOutgoingRequest(ctx, *incoming, rep.Result, nil, err)
 	}
+
+	logger.Debug("got result of outgoing request")
+
 	return err
 }
 
@@ -330,6 +378,12 @@ func buildIncomingRequestFromOutgoing(outgoing *record.OutgoingRequest) *record.
 	// CommonRequestData structures or something like this.
 	// This being said the implementation of Request interface differs for Incoming and
 	// OutgoingRequest. See corresponding implementation of the interface methods.
+	apiReqID := outgoing.APIRequestID
+
+	if outgoing.ReturnMode == record.ReturnSaga {
+		apiReqID += fmt.Sprintf("-saga-%d", outgoing.Nonce)
+	}
+
 	incoming := record.IncomingRequest{
 		Caller:          outgoing.Caller,
 		CallerPrototype: outgoing.CallerPrototype,
@@ -345,7 +399,7 @@ func buildIncomingRequestFromOutgoing(outgoing *record.OutgoingRequest) *record.
 		Method:    outgoing.Method,
 		Arguments: outgoing.Arguments,
 
-		APIRequestID: outgoing.APIRequestID,
+		APIRequestID: apiReqID,
 		Reason:       outgoing.Reason,
 	}
 

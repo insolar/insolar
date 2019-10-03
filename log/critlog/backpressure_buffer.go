@@ -20,7 +20,6 @@ const (
 	BufferDropOnFatal BackpressureBufferFlags = 1 << iota
 	// Buffer may apply additional delay to writes done into a queue to equalize timings.
 	// This mode requires either BufferTrackWriteDuration flag or use of SetAvgWriteDuration() externally.
-	// This flag has no effect when BufferBypassForRegular is set.
 	BufferWriteDelayFairness
 	// With this flag the buffer will update GetAvgWriteDuration with every regular write.
 	BufferTrackWriteDuration
@@ -31,14 +30,14 @@ const (
 	// This is AGAINST existing conventions and MUST ONLY be used when a writer's code is proprietary and never reuses the argument.
 	BufferReuse
 	// Regular (not-lowLatency) writes will go directly to output, ignoring queue and parallel write limits.
-	BufferBypassForRegular
+	bufferBypassForRegular
 )
 
 func NewBackpressureBufferWithBypass(output io.Writer, bufSize int, maxParWrites uint8,
 	flags BackpressureBufferFlags, missFn MissedEventFunc,
 ) *BackpressureBuffer {
 
-	if flags >= BufferBypassForRegular {
+	if flags >= bufferBypassForRegular {
 		panic("illegal value")
 	}
 
@@ -49,14 +48,14 @@ func NewBackpressureBufferWithBypass(output io.Writer, bufSize int, maxParWrites
 		bypassCond = sync.NewCond(&sync.Mutex{})
 	}
 
-	return newBackpressureBuffer(output, bufSize, 0, maxParWrites, flags|BufferBypassForRegular, missFn, bypassCond)
+	return newBackpressureBuffer(output, bufSize, 0, maxParWrites, flags|bufferBypassForRegular, missFn, bypassCond)
 }
 
 func NewBackpressureBuffer(output io.Writer, bufSize int, maxParWrites uint8,
 	flags BackpressureBufferFlags, missFn MissedEventFunc,
 ) *BackpressureBuffer {
 
-	if flags >= BufferBypassForRegular {
+	if flags >= bufferBypassForRegular {
 		panic("illegal value")
 	}
 
@@ -91,7 +90,7 @@ func newBackpressureBuffer(output io.Writer, bufSize int, extraPenalty uint8, ma
 	}
 
 	switch {
-	case flags&BufferBypassForRegular == 0:
+	case flags&bufferBypassForRegular == 0:
 		internal.writeFn = internal.checkWrite
 	case bypassCond != nil:
 		internal.writeFn = internal.bypassWrite
@@ -172,23 +171,31 @@ func (p *BackpressureBuffer) StartWorker(ctx context.Context) *BackpressureBuffe
 	return p
 }
 
+func (p *internalBackpressureBuffer) SetNoClosePropagation() bool {
+	return p.output.SetNoClosePropagation()
+}
+
 const internalOpLevel = insolar.LogLevel(255)
 
 func (p *internalBackpressureBuffer) Close() error {
+	ok, closeDown := p.output.SetClosed()
+
 	if p.fatal.IsFatal() {
-		if p.output.SetClosed() {
+		if closeDown {
 			_, _ = p.output.DoClose()
 		}
 		p.fatal.LockFatal()
 		return nil
 	}
 
-	if !p.output.SetClosed() {
+	if !ok {
 		return errors.New("closed")
 	}
 
 	_, _ = p.flushTillDepletion(internalOpLevel, nil, 0)
-	_, _ = p.output.DoClose()
+	if closeDown {
+		_, _ = p.output.DoClose()
+	}
 	return nil
 }
 

@@ -20,11 +20,8 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/insolar/payload"
-	"github.com/insolar/insolar/logicrunner/common"
-	"github.com/insolar/insolar/logicrunner/metrics"
 	"github.com/insolar/insolar/logicrunner/writecontroller"
 
 	"github.com/insolar/insolar/insolar/flow"
@@ -44,15 +41,6 @@ func checkPayloadExecutorResults(ctx context.Context, results payload.ExecutorRe
 	}
 	if !results.RecordRef.IsObjectReference() {
 		return errors.Errorf("results.RecordRef should be ObjectReference; ref=%s", results.RecordRef.String())
-	}
-
-	for _, elem := range results.Queue {
-		if !elem.RequestRef.IsRecordScope() {
-			return errors.Errorf("results.RecordRef should be RecordReference; ref=%s", results.RecordRef.String())
-		}
-		if err := checkIncomingRequest(ctx, elem.Incoming); err != nil {
-			return errors.Wrap(err, "failed to check ExecutionQueue of ExecutorResults")
-		}
 	}
 
 	return nil
@@ -92,16 +80,7 @@ func (h *HandleExecutorResults) handleMessage(ctx context.Context, msg payload.E
 	broker.PrevExecutorPendingResult(ctx, msg.Pending)
 
 	if msg.LedgerHasMoreRequests {
-		stats.Record(ctx, metrics.ExecutorResultsRequestsFromPrevExecutor.M(1))
-		broker.MoreRequestsOnLedger(ctx)
-	}
-
-	if len(msg.Queue) > 0 {
-		transcripts := make([]*common.Transcript, len(msg.Queue))
-		for i, qe := range msg.Queue {
-			transcripts[i] = common.NewTranscriptCloneContext(qe.ServiceData, qe.RequestRef, *qe.Incoming)
-		}
-		broker.AddRequestsFromPrevExecutor(ctx, transcripts...)
+		broker.HasMoreRequests(ctx)
 	}
 
 	return nil

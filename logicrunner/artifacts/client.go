@@ -81,6 +81,18 @@ func (s *localStorage) Object(reference insolar.Reference) ObjectDescriptor {
 	return objectDesc
 }
 
+func (s *localStorage) Prototype(reference insolar.Reference) PrototypeDescriptor {
+	objectDescI, ok := s.storage[reference]
+	if !ok {
+		return nil
+	}
+	desc, ok := objectDescI.(PrototypeDescriptor)
+	if !ok {
+		return nil
+	}
+	return desc
+}
+
 func newLocalStorage() *localStorage {
 	return &localStorage{
 		initialized: false,
@@ -260,23 +272,83 @@ func (m *client) GetCode(
 	}
 }
 
-// GetObject returns descriptor for provided state.
-//
-// If provided state is nil, the latest state will be returned (with deactivation check). Returned descriptor will
-// provide methods for fetching all related data.
+// GetObject returns object descriptor with latest state.
 func (m *client) GetObject(
 	ctx context.Context,
 	head insolar.Reference,
 	request *insolar.Reference,
 ) (ObjectDescriptor, error) {
-	var (
-		err error
-	)
 
 	if desc := m.localStorage.Object(head); desc != nil {
 		return desc, nil
 	}
+	getObjectRes, err := m.sendGetObject(ctx, head, request)
+	if err != nil {
+		return nil, err
+	}
 
+	if getObjectRes.state.GetIsPrototype() {
+		return nil, errors.New("record is prototype, not an object")
+	}
+
+	desc := &objectDescriptor{
+		head:      head,
+		state:     *getObjectRes.index.LatestState,
+		prototype: getObjectRes.state.GetImage(),
+		memory:    getObjectRes.state.GetMemory(),
+		parent:    getObjectRes.index.Parent,
+		requestID: getObjectRes.lastRequestID,
+	}
+	return desc, nil
+}
+
+// GetPrototype returns prototype descriptor with latest state.
+func (m *client) GetPrototype(
+	ctx context.Context,
+	head insolar.Reference,
+) (PrototypeDescriptor, error) {
+
+	if desc := m.localStorage.Prototype(head); desc != nil {
+		return desc, nil
+	}
+
+	getObjectRes, err := m.sendGetObject(ctx, head, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if !getObjectRes.state.GetIsPrototype() {
+		return nil, errors.New("record is not a prototype")
+	}
+
+	ref := getObjectRes.state.GetImage()
+	if ref == nil {
+		return nil, errors.New("prototype has no code reference")
+	}
+
+	desc := &prototypeDescriptor{
+		head:  head,
+		state: *getObjectRes.index.LatestState,
+		code:  *ref,
+	}
+	return desc, nil
+}
+
+type getObjectRes struct {
+	index         *record.Lifeline
+	state         record.State
+	lastRequestID *insolar.ID
+}
+
+func (m *client) sendGetObject(
+	ctx context.Context,
+	head insolar.Reference,
+	request *insolar.Reference,
+) (*getObjectRes, error) {
+	var (
+		err error
+		res = &getObjectRes{}
+	)
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.Getobject")
 	instrumenter := instrument(ctx, "GetObject").err(&err)
 	defer func() {
@@ -308,12 +380,8 @@ func (m *client) GetObject(
 	reps, done := r.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, head)
 	defer done()
 
-	var (
-		index *record.Lifeline
-		state record.State
-	)
 	success := func() bool {
-		return index != nil && state != nil
+		return res.index != nil && res.state != nil
 	}
 
 	for rep := range reps {
@@ -325,11 +393,12 @@ func (m *client) GetObject(
 		switch p := replyPayload.(type) {
 		case *payload.Index:
 			logger.Debug("reply index")
-			index = &record.Lifeline{}
-			err := index.Unmarshal(p.Index)
+			res.index = &record.Lifeline{}
+			err := res.index.Unmarshal(p.Index)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to unmarshal index")
 			}
+			res.lastRequestID = p.EarliestRequestID
 		case *payload.State:
 			logger.Debug("reply state")
 			rec := record.Material{}
@@ -343,7 +412,7 @@ func (m *client) GetObject(
 				err = errors.New("wrong state record")
 				return nil, err
 			}
-			state = s
+			res.state = s
 		case *payload.Error:
 			logger.Debug("reply error: ", p.Text)
 			switch p.Code {
@@ -369,23 +438,15 @@ func (m *client) GetObject(
 		return nil, err
 	}
 
-	desc := &objectDescriptor{
-		head:        head,
-		state:       *index.LatestState,
-		prototype:   state.GetImage(),
-		isPrototype: state.GetIsPrototype(),
-		memory:      state.GetMemory(),
-		parent:      index.Parent,
-	}
-	return desc, nil
+	return res, nil
 }
 
-func (m *client) GetAbandonedRequest(
+func (m *client) GetRequest(
 	ctx context.Context, object, reqRef insolar.Reference,
 ) (record.Request, error) {
 	var err error
-	instrumenter := instrument(ctx, "GetAbandonedRequest").err(&err)
-	ctx, span := instracer.StartSpan(ctx, "artifacts.GetAbandonedRequest")
+	instrumenter := instrument(ctx, "GetRequest").err(&err)
+	ctx, span := instracer.StartSpan(ctx, "artifacts.GetRequest")
 	defer func() {
 		if err != nil {
 			instracer.AddError(span, err)
@@ -415,7 +476,7 @@ func (m *client) GetAbandonedRequest(
 		case *record.OutgoingRequest:
 			result = v
 		default:
-			err = fmt.Errorf("GetAbandonedRequest: unexpected message: %#v", concrete)
+			err = fmt.Errorf("GetRequest: unexpected message: %#v", concrete)
 			return nil, err
 		}
 
@@ -432,7 +493,11 @@ func (m *client) GetAbandonedRequest(
 }
 
 // GetPendings returns a list of pending requests
-func (m *client) GetPendings(ctx context.Context, object insolar.Reference) ([]insolar.Reference, error) {
+func (m *client) GetPendings(
+	ctx context.Context, object insolar.Reference, skip []insolar.ID,
+) (
+	[]insolar.Reference, error,
+) {
 	var err error
 	instrumenter := instrument(ctx, "GetPendings").err(&err)
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.GetPendings")
@@ -445,8 +510,9 @@ func (m *client) GetPendings(ctx context.Context, object insolar.Reference) ([]i
 	}()
 
 	getPendingsPl := &payload.GetPendings{
-		ObjectID: *object.GetLocal(),
-		Count:    getPendingLimit,
+		ObjectID:        *object.GetLocal(),
+		Count:           getPendingLimit,
+		SkipRequestRefs: skip,
 	}
 
 	pl, err := m.sendToLight(ctx, m.sender, getPendingsPl, object)
@@ -662,7 +728,7 @@ func (m *client) InjectCodeDescriptor(reference insolar.Reference, descriptor Co
 	m.localStorage.StoreObject(reference, descriptor)
 }
 
-func (m *client) InjectObjectDescriptor(reference insolar.Reference, descriptor ObjectDescriptor) {
+func (m *client) InjectPrototypeDescriptor(reference insolar.Reference, descriptor PrototypeDescriptor) {
 	m.localStorage.StoreObject(reference, descriptor)
 }
 
@@ -681,7 +747,6 @@ func (m *client) RegisterResult(
 		payloadInput payload.Payload,
 		obj insolar.Reference,
 	) (*insolar.ID, error) {
-
 		payloadOutput, err := m.sendToLight(
 			ctx, bus.NewRetrySender(m.sender, m.PulseAccessor, 1, 1), payloadInput, obj,
 		)
@@ -691,7 +756,7 @@ func (m *client) RegisterResult(
 
 		switch p := payloadOutput.(type) {
 		case *payload.ResultInfo:
-			return &payloadOutput.(*payload.ResultInfo).ResultID, nil
+			return &p.ResultID, nil
 		case *payload.ErrorResultExists:
 			return nil, errors.New("another result already exists")
 		case *payload.Error:
@@ -802,7 +867,6 @@ func (m *client) RegisterResult(
 			return errors.Wrap(err, "RegisterResult: can't serialize Result record")
 		}
 		pl = &plTyped
-
 	case RequestSideEffectNone:
 		vResultRecord := record.Wrap(&resultRecord)
 

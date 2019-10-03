@@ -30,13 +30,13 @@ type SendIndex struct {
 	meta payload.Meta
 
 	dep struct {
-		indexes object.IndexAccessor
+		indexes object.MemoryIndexAccessor
 		sender  bus.Sender
 	}
 }
 
 func (p *SendIndex) Dep(
-	indexes object.IndexAccessor,
+	indexes object.MemoryIndexAccessor,
 	sender bus.Sender,
 ) {
 	p.dep.indexes = indexes

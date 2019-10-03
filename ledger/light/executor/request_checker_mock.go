@@ -22,6 +22,12 @@ type RequestCheckerMock struct {
 	afterCheckRequestCounter  uint64
 	beforeCheckRequestCounter uint64
 	CheckRequestMock          mRequestCheckerMockCheckRequest
+
+	funcValidateRequest          func(ctx context.Context, requestID insolar.ID, request record.Request) (err error)
+	inspectFuncValidateRequest   func(ctx context.Context, requestID insolar.ID, request record.Request)
+	afterValidateRequestCounter  uint64
+	beforeValidateRequestCounter uint64
+	ValidateRequestMock          mRequestCheckerMockValidateRequest
 }
 
 // NewRequestCheckerMock returns a mock for RequestChecker
@@ -33,6 +39,9 @@ func NewRequestCheckerMock(t minimock.Tester) *RequestCheckerMock {
 
 	m.CheckRequestMock = mRequestCheckerMockCheckRequest{mock: m}
 	m.CheckRequestMock.callArgs = []*RequestCheckerMockCheckRequestParams{}
+
+	m.ValidateRequestMock = mRequestCheckerMockValidateRequest{mock: m}
+	m.ValidateRequestMock.callArgs = []*RequestCheckerMockValidateRequestParams{}
 
 	return m
 }
@@ -254,10 +263,229 @@ func (m *RequestCheckerMock) MinimockCheckRequestInspect() {
 	}
 }
 
+type mRequestCheckerMockValidateRequest struct {
+	mock               *RequestCheckerMock
+	defaultExpectation *RequestCheckerMockValidateRequestExpectation
+	expectations       []*RequestCheckerMockValidateRequestExpectation
+
+	callArgs []*RequestCheckerMockValidateRequestParams
+	mutex    sync.RWMutex
+}
+
+// RequestCheckerMockValidateRequestExpectation specifies expectation struct of the RequestChecker.ValidateRequest
+type RequestCheckerMockValidateRequestExpectation struct {
+	mock    *RequestCheckerMock
+	params  *RequestCheckerMockValidateRequestParams
+	results *RequestCheckerMockValidateRequestResults
+	Counter uint64
+}
+
+// RequestCheckerMockValidateRequestParams contains parameters of the RequestChecker.ValidateRequest
+type RequestCheckerMockValidateRequestParams struct {
+	ctx       context.Context
+	requestID insolar.ID
+	request   record.Request
+}
+
+// RequestCheckerMockValidateRequestResults contains results of the RequestChecker.ValidateRequest
+type RequestCheckerMockValidateRequestResults struct {
+	err error
+}
+
+// Expect sets up expected params for RequestChecker.ValidateRequest
+func (mmValidateRequest *mRequestCheckerMockValidateRequest) Expect(ctx context.Context, requestID insolar.ID, request record.Request) *mRequestCheckerMockValidateRequest {
+	if mmValidateRequest.mock.funcValidateRequest != nil {
+		mmValidateRequest.mock.t.Fatalf("RequestCheckerMock.ValidateRequest mock is already set by Set")
+	}
+
+	if mmValidateRequest.defaultExpectation == nil {
+		mmValidateRequest.defaultExpectation = &RequestCheckerMockValidateRequestExpectation{}
+	}
+
+	mmValidateRequest.defaultExpectation.params = &RequestCheckerMockValidateRequestParams{ctx, requestID, request}
+	for _, e := range mmValidateRequest.expectations {
+		if minimock.Equal(e.params, mmValidateRequest.defaultExpectation.params) {
+			mmValidateRequest.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmValidateRequest.defaultExpectation.params)
+		}
+	}
+
+	return mmValidateRequest
+}
+
+// Inspect accepts an inspector function that has same arguments as the RequestChecker.ValidateRequest
+func (mmValidateRequest *mRequestCheckerMockValidateRequest) Inspect(f func(ctx context.Context, requestID insolar.ID, request record.Request)) *mRequestCheckerMockValidateRequest {
+	if mmValidateRequest.mock.inspectFuncValidateRequest != nil {
+		mmValidateRequest.mock.t.Fatalf("Inspect function is already set for RequestCheckerMock.ValidateRequest")
+	}
+
+	mmValidateRequest.mock.inspectFuncValidateRequest = f
+
+	return mmValidateRequest
+}
+
+// Return sets up results that will be returned by RequestChecker.ValidateRequest
+func (mmValidateRequest *mRequestCheckerMockValidateRequest) Return(err error) *RequestCheckerMock {
+	if mmValidateRequest.mock.funcValidateRequest != nil {
+		mmValidateRequest.mock.t.Fatalf("RequestCheckerMock.ValidateRequest mock is already set by Set")
+	}
+
+	if mmValidateRequest.defaultExpectation == nil {
+		mmValidateRequest.defaultExpectation = &RequestCheckerMockValidateRequestExpectation{mock: mmValidateRequest.mock}
+	}
+	mmValidateRequest.defaultExpectation.results = &RequestCheckerMockValidateRequestResults{err}
+	return mmValidateRequest.mock
+}
+
+//Set uses given function f to mock the RequestChecker.ValidateRequest method
+func (mmValidateRequest *mRequestCheckerMockValidateRequest) Set(f func(ctx context.Context, requestID insolar.ID, request record.Request) (err error)) *RequestCheckerMock {
+	if mmValidateRequest.defaultExpectation != nil {
+		mmValidateRequest.mock.t.Fatalf("Default expectation is already set for the RequestChecker.ValidateRequest method")
+	}
+
+	if len(mmValidateRequest.expectations) > 0 {
+		mmValidateRequest.mock.t.Fatalf("Some expectations are already set for the RequestChecker.ValidateRequest method")
+	}
+
+	mmValidateRequest.mock.funcValidateRequest = f
+	return mmValidateRequest.mock
+}
+
+// When sets expectation for the RequestChecker.ValidateRequest which will trigger the result defined by the following
+// Then helper
+func (mmValidateRequest *mRequestCheckerMockValidateRequest) When(ctx context.Context, requestID insolar.ID, request record.Request) *RequestCheckerMockValidateRequestExpectation {
+	if mmValidateRequest.mock.funcValidateRequest != nil {
+		mmValidateRequest.mock.t.Fatalf("RequestCheckerMock.ValidateRequest mock is already set by Set")
+	}
+
+	expectation := &RequestCheckerMockValidateRequestExpectation{
+		mock:   mmValidateRequest.mock,
+		params: &RequestCheckerMockValidateRequestParams{ctx, requestID, request},
+	}
+	mmValidateRequest.expectations = append(mmValidateRequest.expectations, expectation)
+	return expectation
+}
+
+// Then sets up RequestChecker.ValidateRequest return parameters for the expectation previously defined by the When method
+func (e *RequestCheckerMockValidateRequestExpectation) Then(err error) *RequestCheckerMock {
+	e.results = &RequestCheckerMockValidateRequestResults{err}
+	return e.mock
+}
+
+// ValidateRequest implements RequestChecker
+func (mmValidateRequest *RequestCheckerMock) ValidateRequest(ctx context.Context, requestID insolar.ID, request record.Request) (err error) {
+	mm_atomic.AddUint64(&mmValidateRequest.beforeValidateRequestCounter, 1)
+	defer mm_atomic.AddUint64(&mmValidateRequest.afterValidateRequestCounter, 1)
+
+	if mmValidateRequest.inspectFuncValidateRequest != nil {
+		mmValidateRequest.inspectFuncValidateRequest(ctx, requestID, request)
+	}
+
+	params := &RequestCheckerMockValidateRequestParams{ctx, requestID, request}
+
+	// Record call args
+	mmValidateRequest.ValidateRequestMock.mutex.Lock()
+	mmValidateRequest.ValidateRequestMock.callArgs = append(mmValidateRequest.ValidateRequestMock.callArgs, params)
+	mmValidateRequest.ValidateRequestMock.mutex.Unlock()
+
+	for _, e := range mmValidateRequest.ValidateRequestMock.expectations {
+		if minimock.Equal(e.params, params) {
+			mm_atomic.AddUint64(&e.Counter, 1)
+			return e.results.err
+		}
+	}
+
+	if mmValidateRequest.ValidateRequestMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmValidateRequest.ValidateRequestMock.defaultExpectation.Counter, 1)
+		want := mmValidateRequest.ValidateRequestMock.defaultExpectation.params
+		got := RequestCheckerMockValidateRequestParams{ctx, requestID, request}
+		if want != nil && !minimock.Equal(*want, got) {
+			mmValidateRequest.t.Errorf("RequestCheckerMock.ValidateRequest got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		}
+
+		results := mmValidateRequest.ValidateRequestMock.defaultExpectation.results
+		if results == nil {
+			mmValidateRequest.t.Fatal("No results are set for the RequestCheckerMock.ValidateRequest")
+		}
+		return (*results).err
+	}
+	if mmValidateRequest.funcValidateRequest != nil {
+		return mmValidateRequest.funcValidateRequest(ctx, requestID, request)
+	}
+	mmValidateRequest.t.Fatalf("Unexpected call to RequestCheckerMock.ValidateRequest. %v %v %v", ctx, requestID, request)
+	return
+}
+
+// ValidateRequestAfterCounter returns a count of finished RequestCheckerMock.ValidateRequest invocations
+func (mmValidateRequest *RequestCheckerMock) ValidateRequestAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmValidateRequest.afterValidateRequestCounter)
+}
+
+// ValidateRequestBeforeCounter returns a count of RequestCheckerMock.ValidateRequest invocations
+func (mmValidateRequest *RequestCheckerMock) ValidateRequestBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmValidateRequest.beforeValidateRequestCounter)
+}
+
+// Calls returns a list of arguments used in each call to RequestCheckerMock.ValidateRequest.
+// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
+func (mmValidateRequest *mRequestCheckerMockValidateRequest) Calls() []*RequestCheckerMockValidateRequestParams {
+	mmValidateRequest.mutex.RLock()
+
+	argCopy := make([]*RequestCheckerMockValidateRequestParams, len(mmValidateRequest.callArgs))
+	copy(argCopy, mmValidateRequest.callArgs)
+
+	mmValidateRequest.mutex.RUnlock()
+
+	return argCopy
+}
+
+// MinimockValidateRequestDone returns true if the count of the ValidateRequest invocations corresponds
+// the number of defined expectations
+func (m *RequestCheckerMock) MinimockValidateRequestDone() bool {
+	for _, e := range m.ValidateRequestMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			return false
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.ValidateRequestMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterValidateRequestCounter) < 1 {
+		return false
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcValidateRequest != nil && mm_atomic.LoadUint64(&m.afterValidateRequestCounter) < 1 {
+		return false
+	}
+	return true
+}
+
+// MinimockValidateRequestInspect logs each unmet expectation
+func (m *RequestCheckerMock) MinimockValidateRequestInspect() {
+	for _, e := range m.ValidateRequestMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			m.t.Errorf("Expected call to RequestCheckerMock.ValidateRequest with params: %#v", *e.params)
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.ValidateRequestMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterValidateRequestCounter) < 1 {
+		if m.ValidateRequestMock.defaultExpectation.params == nil {
+			m.t.Error("Expected call to RequestCheckerMock.ValidateRequest")
+		} else {
+			m.t.Errorf("Expected call to RequestCheckerMock.ValidateRequest with params: %#v", *m.ValidateRequestMock.defaultExpectation.params)
+		}
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcValidateRequest != nil && mm_atomic.LoadUint64(&m.afterValidateRequestCounter) < 1 {
+		m.t.Error("Expected call to RequestCheckerMock.ValidateRequest")
+	}
+}
+
 // MinimockFinish checks that all mocked methods have been called the expected number of times
 func (m *RequestCheckerMock) MinimockFinish() {
 	if !m.minimockDone() {
 		m.MinimockCheckRequestInspect()
+
+		m.MinimockValidateRequestInspect()
 		m.t.FailNow()
 	}
 }
@@ -281,5 +509,6 @@ func (m *RequestCheckerMock) MinimockWait(timeout mm_time.Duration) {
 func (m *RequestCheckerMock) minimockDone() bool {
 	done := true
 	return done &&
-		m.MinimockCheckRequestDone()
+		m.MinimockCheckRequestDone() &&
+		m.MinimockValidateRequestDone()
 }

@@ -24,6 +24,12 @@ type MemoryIndexModifierMock struct {
 	afterSetCounter  uint64
 	beforeSetCounter uint64
 	SetMock          mMemoryIndexModifierMockSet
+
+	funcSetIfNone          func(ctx context.Context, pn insolar.PulseNumber, index record.Index)
+	inspectFuncSetIfNone   func(ctx context.Context, pn insolar.PulseNumber, index record.Index)
+	afterSetIfNoneCounter  uint64
+	beforeSetIfNoneCounter uint64
+	SetIfNoneMock          mMemoryIndexModifierMockSetIfNone
 }
 
 // NewMemoryIndexModifierMock returns a mock for MemoryIndexModifier
@@ -35,6 +41,9 @@ func NewMemoryIndexModifierMock(t minimock.Tester) *MemoryIndexModifierMock {
 
 	m.SetMock = mMemoryIndexModifierMockSet{mock: m}
 	m.SetMock.callArgs = []*MemoryIndexModifierMockSetParams{}
+
+	m.SetIfNoneMock = mMemoryIndexModifierMockSetIfNone{mock: m}
+	m.SetIfNoneMock.callArgs = []*MemoryIndexModifierMockSetIfNoneParams{}
 
 	return m
 }
@@ -228,10 +237,201 @@ func (m *MemoryIndexModifierMock) MinimockSetInspect() {
 	}
 }
 
+type mMemoryIndexModifierMockSetIfNone struct {
+	mock               *MemoryIndexModifierMock
+	defaultExpectation *MemoryIndexModifierMockSetIfNoneExpectation
+	expectations       []*MemoryIndexModifierMockSetIfNoneExpectation
+
+	callArgs []*MemoryIndexModifierMockSetIfNoneParams
+	mutex    sync.RWMutex
+}
+
+// MemoryIndexModifierMockSetIfNoneExpectation specifies expectation struct of the MemoryIndexModifier.SetIfNone
+type MemoryIndexModifierMockSetIfNoneExpectation struct {
+	mock   *MemoryIndexModifierMock
+	params *MemoryIndexModifierMockSetIfNoneParams
+
+	Counter uint64
+}
+
+// MemoryIndexModifierMockSetIfNoneParams contains parameters of the MemoryIndexModifier.SetIfNone
+type MemoryIndexModifierMockSetIfNoneParams struct {
+	ctx   context.Context
+	pn    insolar.PulseNumber
+	index record.Index
+}
+
+// Expect sets up expected params for MemoryIndexModifier.SetIfNone
+func (mmSetIfNone *mMemoryIndexModifierMockSetIfNone) Expect(ctx context.Context, pn insolar.PulseNumber, index record.Index) *mMemoryIndexModifierMockSetIfNone {
+	if mmSetIfNone.mock.funcSetIfNone != nil {
+		mmSetIfNone.mock.t.Fatalf("MemoryIndexModifierMock.SetIfNone mock is already set by Set")
+	}
+
+	if mmSetIfNone.defaultExpectation == nil {
+		mmSetIfNone.defaultExpectation = &MemoryIndexModifierMockSetIfNoneExpectation{}
+	}
+
+	mmSetIfNone.defaultExpectation.params = &MemoryIndexModifierMockSetIfNoneParams{ctx, pn, index}
+	for _, e := range mmSetIfNone.expectations {
+		if minimock.Equal(e.params, mmSetIfNone.defaultExpectation.params) {
+			mmSetIfNone.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmSetIfNone.defaultExpectation.params)
+		}
+	}
+
+	return mmSetIfNone
+}
+
+// Inspect accepts an inspector function that has same arguments as the MemoryIndexModifier.SetIfNone
+func (mmSetIfNone *mMemoryIndexModifierMockSetIfNone) Inspect(f func(ctx context.Context, pn insolar.PulseNumber, index record.Index)) *mMemoryIndexModifierMockSetIfNone {
+	if mmSetIfNone.mock.inspectFuncSetIfNone != nil {
+		mmSetIfNone.mock.t.Fatalf("Inspect function is already set for MemoryIndexModifierMock.SetIfNone")
+	}
+
+	mmSetIfNone.mock.inspectFuncSetIfNone = f
+
+	return mmSetIfNone
+}
+
+// Return sets up results that will be returned by MemoryIndexModifier.SetIfNone
+func (mmSetIfNone *mMemoryIndexModifierMockSetIfNone) Return() *MemoryIndexModifierMock {
+	if mmSetIfNone.mock.funcSetIfNone != nil {
+		mmSetIfNone.mock.t.Fatalf("MemoryIndexModifierMock.SetIfNone mock is already set by Set")
+	}
+
+	if mmSetIfNone.defaultExpectation == nil {
+		mmSetIfNone.defaultExpectation = &MemoryIndexModifierMockSetIfNoneExpectation{mock: mmSetIfNone.mock}
+	}
+
+	return mmSetIfNone.mock
+}
+
+//Set uses given function f to mock the MemoryIndexModifier.SetIfNone method
+func (mmSetIfNone *mMemoryIndexModifierMockSetIfNone) Set(f func(ctx context.Context, pn insolar.PulseNumber, index record.Index)) *MemoryIndexModifierMock {
+	if mmSetIfNone.defaultExpectation != nil {
+		mmSetIfNone.mock.t.Fatalf("Default expectation is already set for the MemoryIndexModifier.SetIfNone method")
+	}
+
+	if len(mmSetIfNone.expectations) > 0 {
+		mmSetIfNone.mock.t.Fatalf("Some expectations are already set for the MemoryIndexModifier.SetIfNone method")
+	}
+
+	mmSetIfNone.mock.funcSetIfNone = f
+	return mmSetIfNone.mock
+}
+
+// SetIfNone implements MemoryIndexModifier
+func (mmSetIfNone *MemoryIndexModifierMock) SetIfNone(ctx context.Context, pn insolar.PulseNumber, index record.Index) {
+	mm_atomic.AddUint64(&mmSetIfNone.beforeSetIfNoneCounter, 1)
+	defer mm_atomic.AddUint64(&mmSetIfNone.afterSetIfNoneCounter, 1)
+
+	if mmSetIfNone.inspectFuncSetIfNone != nil {
+		mmSetIfNone.inspectFuncSetIfNone(ctx, pn, index)
+	}
+
+	params := &MemoryIndexModifierMockSetIfNoneParams{ctx, pn, index}
+
+	// Record call args
+	mmSetIfNone.SetIfNoneMock.mutex.Lock()
+	mmSetIfNone.SetIfNoneMock.callArgs = append(mmSetIfNone.SetIfNoneMock.callArgs, params)
+	mmSetIfNone.SetIfNoneMock.mutex.Unlock()
+
+	for _, e := range mmSetIfNone.SetIfNoneMock.expectations {
+		if minimock.Equal(e.params, params) {
+			mm_atomic.AddUint64(&e.Counter, 1)
+			return
+		}
+	}
+
+	if mmSetIfNone.SetIfNoneMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmSetIfNone.SetIfNoneMock.defaultExpectation.Counter, 1)
+		want := mmSetIfNone.SetIfNoneMock.defaultExpectation.params
+		got := MemoryIndexModifierMockSetIfNoneParams{ctx, pn, index}
+		if want != nil && !minimock.Equal(*want, got) {
+			mmSetIfNone.t.Errorf("MemoryIndexModifierMock.SetIfNone got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		}
+
+		return
+
+	}
+	if mmSetIfNone.funcSetIfNone != nil {
+		mmSetIfNone.funcSetIfNone(ctx, pn, index)
+		return
+	}
+	mmSetIfNone.t.Fatalf("Unexpected call to MemoryIndexModifierMock.SetIfNone. %v %v %v", ctx, pn, index)
+
+}
+
+// SetIfNoneAfterCounter returns a count of finished MemoryIndexModifierMock.SetIfNone invocations
+func (mmSetIfNone *MemoryIndexModifierMock) SetIfNoneAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmSetIfNone.afterSetIfNoneCounter)
+}
+
+// SetIfNoneBeforeCounter returns a count of MemoryIndexModifierMock.SetIfNone invocations
+func (mmSetIfNone *MemoryIndexModifierMock) SetIfNoneBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmSetIfNone.beforeSetIfNoneCounter)
+}
+
+// Calls returns a list of arguments used in each call to MemoryIndexModifierMock.SetIfNone.
+// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
+func (mmSetIfNone *mMemoryIndexModifierMockSetIfNone) Calls() []*MemoryIndexModifierMockSetIfNoneParams {
+	mmSetIfNone.mutex.RLock()
+
+	argCopy := make([]*MemoryIndexModifierMockSetIfNoneParams, len(mmSetIfNone.callArgs))
+	copy(argCopy, mmSetIfNone.callArgs)
+
+	mmSetIfNone.mutex.RUnlock()
+
+	return argCopy
+}
+
+// MinimockSetIfNoneDone returns true if the count of the SetIfNone invocations corresponds
+// the number of defined expectations
+func (m *MemoryIndexModifierMock) MinimockSetIfNoneDone() bool {
+	for _, e := range m.SetIfNoneMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			return false
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.SetIfNoneMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterSetIfNoneCounter) < 1 {
+		return false
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcSetIfNone != nil && mm_atomic.LoadUint64(&m.afterSetIfNoneCounter) < 1 {
+		return false
+	}
+	return true
+}
+
+// MinimockSetIfNoneInspect logs each unmet expectation
+func (m *MemoryIndexModifierMock) MinimockSetIfNoneInspect() {
+	for _, e := range m.SetIfNoneMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			m.t.Errorf("Expected call to MemoryIndexModifierMock.SetIfNone with params: %#v", *e.params)
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.SetIfNoneMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterSetIfNoneCounter) < 1 {
+		if m.SetIfNoneMock.defaultExpectation.params == nil {
+			m.t.Error("Expected call to MemoryIndexModifierMock.SetIfNone")
+		} else {
+			m.t.Errorf("Expected call to MemoryIndexModifierMock.SetIfNone with params: %#v", *m.SetIfNoneMock.defaultExpectation.params)
+		}
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcSetIfNone != nil && mm_atomic.LoadUint64(&m.afterSetIfNoneCounter) < 1 {
+		m.t.Error("Expected call to MemoryIndexModifierMock.SetIfNone")
+	}
+}
+
 // MinimockFinish checks that all mocked methods have been called the expected number of times
 func (m *MemoryIndexModifierMock) MinimockFinish() {
 	if !m.minimockDone() {
 		m.MinimockSetInspect()
+
+		m.MinimockSetIfNoneInspect()
 		m.t.FailNow()
 	}
 }
@@ -255,5 +455,6 @@ func (m *MemoryIndexModifierMock) MinimockWait(timeout mm_time.Duration) {
 func (m *MemoryIndexModifierMock) minimockDone() bool {
 	done := true
 	return done &&
-		m.MinimockSetDone()
+		m.MinimockSetDone() &&
+		m.MinimockSetIfNoneDone()
 }

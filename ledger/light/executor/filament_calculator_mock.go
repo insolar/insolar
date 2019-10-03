@@ -29,7 +29,7 @@ type FilamentCalculatorMock struct {
 	beforeRequestDuplicateCounter uint64
 	RequestDuplicateMock          mFilamentCalculatorMockRequestDuplicate
 
-	funcRequestInfo          func(ctx context.Context, objectID insolar.ID, requestID insolar.ID, pulse insolar.PulseNumber) (foundRequest *record.CompositeFilamentRecord, foundResult *record.CompositeFilamentRecord, err error)
+	funcRequestInfo          func(ctx context.Context, objectID insolar.ID, requestID insolar.ID, pulse insolar.PulseNumber) (requestInfo FilamentsRequestInfo, err error)
 	inspectFuncRequestInfo   func(ctx context.Context, objectID insolar.ID, requestID insolar.ID, pulse insolar.PulseNumber)
 	afterRequestInfoCounter  uint64
 	beforeRequestInfoCounter uint64
@@ -539,9 +539,8 @@ type FilamentCalculatorMockRequestInfoParams struct {
 
 // FilamentCalculatorMockRequestInfoResults contains results of the FilamentCalculator.RequestInfo
 type FilamentCalculatorMockRequestInfoResults struct {
-	foundRequest *record.CompositeFilamentRecord
-	foundResult  *record.CompositeFilamentRecord
-	err          error
+	requestInfo FilamentsRequestInfo
+	err         error
 }
 
 // Expect sets up expected params for FilamentCalculator.RequestInfo
@@ -576,7 +575,7 @@ func (mmRequestInfo *mFilamentCalculatorMockRequestInfo) Inspect(f func(ctx cont
 }
 
 // Return sets up results that will be returned by FilamentCalculator.RequestInfo
-func (mmRequestInfo *mFilamentCalculatorMockRequestInfo) Return(foundRequest *record.CompositeFilamentRecord, foundResult *record.CompositeFilamentRecord, err error) *FilamentCalculatorMock {
+func (mmRequestInfo *mFilamentCalculatorMockRequestInfo) Return(requestInfo FilamentsRequestInfo, err error) *FilamentCalculatorMock {
 	if mmRequestInfo.mock.funcRequestInfo != nil {
 		mmRequestInfo.mock.t.Fatalf("FilamentCalculatorMock.RequestInfo mock is already set by Set")
 	}
@@ -584,12 +583,12 @@ func (mmRequestInfo *mFilamentCalculatorMockRequestInfo) Return(foundRequest *re
 	if mmRequestInfo.defaultExpectation == nil {
 		mmRequestInfo.defaultExpectation = &FilamentCalculatorMockRequestInfoExpectation{mock: mmRequestInfo.mock}
 	}
-	mmRequestInfo.defaultExpectation.results = &FilamentCalculatorMockRequestInfoResults{foundRequest, foundResult, err}
+	mmRequestInfo.defaultExpectation.results = &FilamentCalculatorMockRequestInfoResults{requestInfo, err}
 	return mmRequestInfo.mock
 }
 
 //Set uses given function f to mock the FilamentCalculator.RequestInfo method
-func (mmRequestInfo *mFilamentCalculatorMockRequestInfo) Set(f func(ctx context.Context, objectID insolar.ID, requestID insolar.ID, pulse insolar.PulseNumber) (foundRequest *record.CompositeFilamentRecord, foundResult *record.CompositeFilamentRecord, err error)) *FilamentCalculatorMock {
+func (mmRequestInfo *mFilamentCalculatorMockRequestInfo) Set(f func(ctx context.Context, objectID insolar.ID, requestID insolar.ID, pulse insolar.PulseNumber) (requestInfo FilamentsRequestInfo, err error)) *FilamentCalculatorMock {
 	if mmRequestInfo.defaultExpectation != nil {
 		mmRequestInfo.mock.t.Fatalf("Default expectation is already set for the FilamentCalculator.RequestInfo method")
 	}
@@ -618,13 +617,13 @@ func (mmRequestInfo *mFilamentCalculatorMockRequestInfo) When(ctx context.Contex
 }
 
 // Then sets up FilamentCalculator.RequestInfo return parameters for the expectation previously defined by the When method
-func (e *FilamentCalculatorMockRequestInfoExpectation) Then(foundRequest *record.CompositeFilamentRecord, foundResult *record.CompositeFilamentRecord, err error) *FilamentCalculatorMock {
-	e.results = &FilamentCalculatorMockRequestInfoResults{foundRequest, foundResult, err}
+func (e *FilamentCalculatorMockRequestInfoExpectation) Then(requestInfo FilamentsRequestInfo, err error) *FilamentCalculatorMock {
+	e.results = &FilamentCalculatorMockRequestInfoResults{requestInfo, err}
 	return e.mock
 }
 
 // RequestInfo implements FilamentCalculator
-func (mmRequestInfo *FilamentCalculatorMock) RequestInfo(ctx context.Context, objectID insolar.ID, requestID insolar.ID, pulse insolar.PulseNumber) (foundRequest *record.CompositeFilamentRecord, foundResult *record.CompositeFilamentRecord, err error) {
+func (mmRequestInfo *FilamentCalculatorMock) RequestInfo(ctx context.Context, objectID insolar.ID, requestID insolar.ID, pulse insolar.PulseNumber) (requestInfo FilamentsRequestInfo, err error) {
 	mm_atomic.AddUint64(&mmRequestInfo.beforeRequestInfoCounter, 1)
 	defer mm_atomic.AddUint64(&mmRequestInfo.afterRequestInfoCounter, 1)
 
@@ -642,7 +641,7 @@ func (mmRequestInfo *FilamentCalculatorMock) RequestInfo(ctx context.Context, ob
 	for _, e := range mmRequestInfo.RequestInfoMock.expectations {
 		if minimock.Equal(e.params, params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
-			return e.results.foundRequest, e.results.foundResult, e.results.err
+			return e.results.requestInfo, e.results.err
 		}
 	}
 
@@ -658,7 +657,7 @@ func (mmRequestInfo *FilamentCalculatorMock) RequestInfo(ctx context.Context, ob
 		if results == nil {
 			mmRequestInfo.t.Fatal("No results are set for the FilamentCalculatorMock.RequestInfo")
 		}
-		return (*results).foundRequest, (*results).foundResult, (*results).err
+		return (*results).requestInfo, (*results).err
 	}
 	if mmRequestInfo.funcRequestInfo != nil {
 		return mmRequestInfo.funcRequestInfo(ctx, objectID, requestID, pulse)

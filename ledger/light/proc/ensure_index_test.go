@@ -45,21 +45,16 @@ func TestEnsureIndex_Proceed(t *testing.T) {
 	mc := minimock.NewController(t)
 
 	var (
-		locker        *object.IndexLockerMock
 		indexes       *object.MemoryIndexStorageMock
 		cord          *jet.CoordinatorMock
 		sender        *bus.SenderMock
 		writeAccessor *executor.WriteAccessorMock
 	)
 	setup := func() {
-		locker = object.NewIndexLockerMock(mc)
 		indexes = object.NewMemoryIndexStorageMock(mc)
 		cord = jet.NewCoordinatorMock(mc)
 		sender = bus.NewSenderMock(mc)
 		writeAccessor = executor.NewWriteAccessorMock(mc)
-
-		locker.LockMock.Return()
-		locker.UnlockMock.Return()
 	}
 
 	t.Run("Simple success", func(t *testing.T) {
@@ -75,13 +70,8 @@ func TestEnsureIndex_Proceed(t *testing.T) {
 		}
 		indexes.ForIDMock.Return(idx, nil)
 
-		indexes.SetMock.Inspect(func(ctx context.Context, pn insolar.PulseNumber, index record.Index) {
-			assert.Equal(t, pulse, pn)
-			assert.Equal(t, idx, index)
-		}).Return()
-
 		p := proc.NewEnsureIndex(gen.ID(), gen.JetID(), payload.Meta{}, pulse)
-		p.Dep(locker, indexes, cord, sender, writeAccessor)
+		p.Dep(indexes, cord, sender, writeAccessor)
 		err := p.Proceed(ctx)
 		assert.NoError(t, err)
 	})
@@ -104,7 +94,7 @@ func TestEnsureIndex_Proceed(t *testing.T) {
 		writeAccessor.BeginMock.Return(func() {}, executor.ErrWriteClosed)
 
 		p := proc.NewEnsureIndex(gen.ID(), gen.JetID(), payload.Meta{}, pulse.MinTimePulse)
-		p.Dep(locker, indexes, cord, sender, writeAccessor)
+		p.Dep(indexes, cord, sender, writeAccessor)
 		err = p.Proceed(ctx)
 		assert.Error(t, err)
 		assert.Equal(t, err, flow.ErrCancelled)
@@ -126,10 +116,10 @@ func TestEnsureIndex_Proceed(t *testing.T) {
 		})
 		sender.SendTargetMock.Return(reps, func() {})
 		writeAccessor.BeginMock.Return(func() {}, nil)
-		indexes.SetMock.Return()
+		indexes.SetIfNoneMock.Return()
 
 		p := proc.NewEnsureIndex(gen.ID(), gen.JetID(), payload.Meta{}, pulse.MinTimePulse)
-		p.Dep(locker, indexes, cord, sender, writeAccessor)
+		p.Dep(indexes, cord, sender, writeAccessor)
 		err = p.Proceed(ctx)
 		assert.NoError(t, err)
 	})
@@ -155,7 +145,7 @@ func TestEnsureIndex_Proceed(t *testing.T) {
 		sender.SendTargetMock.Return(reps, func() {})
 
 		p := proc.NewEnsureIndex(objectID, gen.JetID(), payload.Meta{}, pulse.MinTimePulse)
-		p.Dep(locker, indexes, cord, sender, writeAccessor)
+		p.Dep(indexes, cord, sender, writeAccessor)
 		err := p.Proceed(ctx)
 		assert.Error(t, err)
 		coded, ok := err.(*payload.CodedError)

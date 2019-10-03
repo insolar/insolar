@@ -33,6 +33,9 @@ import (
 //go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.RequestChecker -o ./ -s _mock.go -g
 
 type RequestChecker interface {
+	// ValidateRequest is a smoke test. It doesn't perform expensive checks. Good to check requests before deduplication.
+	ValidateRequest(ctx context.Context, requestID insolar.ID, request record.Request) error
+	// CheckRequest performs a complete expensive request check.
 	CheckRequest(ctx context.Context, requestID insolar.ID, request record.Request) error
 }
 
@@ -60,7 +63,7 @@ func NewRequestChecker(
 	}
 }
 
-func (c *RequestCheckerDefault) CheckRequest(ctx context.Context, requestID insolar.ID, request record.Request) error {
+func (c *RequestCheckerDefault) ValidateRequest(ctx context.Context, requestID insolar.ID, request record.Request) error {
 	if err := request.Validate(); err != nil {
 		return &payload.CodedError{
 			Text: err.Error(),
@@ -70,7 +73,6 @@ func (c *RequestCheckerDefault) CheckRequest(ctx context.Context, requestID inso
 
 	reasonRef := request.ReasonRef()
 	reasonID := *reasonRef.GetLocal()
-
 	if reasonID.Pulse() > requestID.Pulse() {
 		return &payload.CodedError{
 			Text: "request is older than its reason",
@@ -78,24 +80,51 @@ func (c *RequestCheckerDefault) CheckRequest(ctx context.Context, requestID inso
 		}
 	}
 
+	return nil
+}
+
+func (c *RequestCheckerDefault) CheckRequest(ctx context.Context, requestID insolar.ID, request record.Request) error {
+	if err := c.ValidateRequest(ctx, requestID, request); err != nil {
+		return err
+	}
+
+	reasonRef := request.ReasonRef()
+	reasonID := *reasonRef.GetLocal()
+	objectID, err := record.ObjectIDFromRequest(c.scheme, request, requestID)
+	if err != nil {
+		return errors.Wrap(err, "failed to calculate object id")
+	}
+
 	switch r := request.(type) {
 	case *record.IncomingRequest:
-		if !r.IsAPIRequest() {
-			err := c.checkReasonForIncomingRequest(ctx, r, reasonID, requestID)
+		// Check for request loops if not creation.
+		if !request.IsCreationRequest() {
+			openedRequests, err := c.filaments.OpenedRequests(ctx, requestID.Pulse(), objectID, false)
 			if err != nil {
+				return errors.Wrap(err, "loop detection failed")
+			}
+			if req := findIncomingAPIRequest(openedRequests, r.APIRequestID); req != nil {
 				return &payload.CodedError{
-					Text: err.Error(),
-					Code: payload.CodeReasonIsWrong,
+					Text: fmt.Sprintf(
+						"request loop detected (received %s collided with existing %s)",
+						requestID.DebugString(),
+						req.RecordID.DebugString(),
+					),
+					Code: payload.CodeLoopDetected,
 				}
 			}
 		}
-	case *record.OutgoingRequest:
-		err := c.checkReasonForOutgoingRequest(ctx, r, reasonID, requestID)
-		if err != nil {
-			return &payload.CodedError{
-				Text: err.Error(),
-				Code: payload.CodeReasonNotFound,
+
+		if !r.IsAPIRequest() {
+			err := c.checkReasonForIncomingRequest(ctx, r, reasonID, requestID, objectID)
+			if err != nil {
+				return errors.Wrap(err, "incoming request check failed")
 			}
+		}
+	case *record.OutgoingRequest:
+		err := c.checkReasonForOutgoingRequest(ctx, r, reasonID, requestID, objectID)
+		if err != nil {
+			return errors.Wrap(err, "outgoing request check failed")
 		}
 	}
 
@@ -106,31 +135,64 @@ func (c *RequestCheckerDefault) checkReasonForOutgoingRequest(
 	ctx context.Context,
 	outgoingRequest *record.OutgoingRequest,
 	reasonID insolar.ID,
-	requestID insolar.ID,
+	outgoingRequestID insolar.ID,
+	objectID insolar.ID,
 ) error {
-	// FIXME: replace with "FindRequest" calculator method.
-	requests, err := c.filaments.OpenedRequests(
+	openedRequests, err := c.filaments.OpenedRequests(
 		ctx,
-		requestID.Pulse(),
-		*outgoingRequest.AffinityRef().GetLocal(),
+		outgoingRequestID.Pulse(),
+		objectID,
 		true,
 	)
 	if err != nil {
-		return &payload.CodedError{
-			Text: "failed fetch pending requests",
-			Code: payload.CodeReasonNotFound,
-		}
+		return errors.Wrap(err, "failed fetch pending requests")
 	}
 
-	found := findRecord(requests, reasonID)
-	if !found {
+	reason, err := findRequest(openedRequests, reasonID)
+	if err != nil {
+		return errors.Wrap(err, "failed to check reason")
+	}
+	incomingReason, ok := record.Unwrap(&reason.Record.Virtual).(*record.IncomingRequest)
+	if !ok {
+		return errors.New("reason is not incoming")
+	}
+
+	if incomingReason.Immutable {
+		return nil
+	}
+
+	// Checking reason is oldest if its mutable.
+	oldestRequest := OldestMutable(openedRequests)
+	if oldestRequest == nil {
 		return &payload.CodedError{
-			Text: "request reason not found in opened requests",
-			Code: payload.CodeReasonNotFound,
+			Text: "reason is not the oldest mutable",
+			Code: payload.CodeReasonIsWrong,
+		}
+	}
+	if oldestRequest.RecordID != reasonID {
+		return &payload.CodedError{
+			Text: fmt.Sprintf("request reason is not the oldest in filament, oldest %s", oldestRequest.RecordID.DebugString()),
+			Code: payload.CodeReasonIsWrong,
 		}
 	}
 
 	return nil
+}
+
+func findRequest(
+	requests []record.CompositeFilamentRecord,
+	requestID insolar.ID,
+) (record.CompositeFilamentRecord, error) {
+	for _, p := range requests {
+		if p.RecordID == requestID {
+			return p, nil
+		}
+	}
+
+	return record.CompositeFilamentRecord{}, &payload.CodedError{
+		Text: "request not found",
+		Code: payload.CodeReasonIsWrong,
+	}
 }
 
 func (c *RequestCheckerDefault) checkReasonForIncomingRequest(
@@ -138,28 +200,8 @@ func (c *RequestCheckerDefault) checkReasonForIncomingRequest(
 	incomingRequest *record.IncomingRequest,
 	reasonID insolar.ID,
 	requestID insolar.ID,
+	objectID insolar.ID,
 ) error {
-	var objectID insolar.ID
-
-	if incomingRequest.IsCreationRequest() {
-		virt := record.Wrap(incomingRequest)
-		buf, err := virt.Marshal()
-		if err != nil {
-			return err
-		}
-
-		hasher := c.scheme.ReferenceHasher()
-
-		_, err = hasher.Write(buf)
-		if err != nil {
-			return errors.Wrap(err, "failed to calculate id")
-		}
-
-		objectID = *insolar.NewID(requestID.Pulse(), hasher.Sum(nil))
-	} else {
-		objectID = *incomingRequest.AffinityRef().GetLocal()
-	}
-
 	var (
 		reasonInfo *payload.RequestInfo
 		err        error
@@ -175,7 +217,7 @@ func (c *RequestCheckerDefault) checkReasonForIncomingRequest(
 		reasonInfo, err = c.getRequest(ctx, reasonObjectID, reasonID, requestID.Pulse())
 	}
 	if err != nil {
-		return errors.Wrap(err, "reason request not found")
+		return errors.Wrap(err, "reason request search failed")
 	}
 
 	material := record.Material{}
@@ -185,20 +227,36 @@ func (c *RequestCheckerDefault) checkReasonForIncomingRequest(
 	}
 
 	virtual := record.Unwrap(&material.Virtual)
-	_, ok := virtual.(*record.IncomingRequest)
+	inc, ok := virtual.(*record.IncomingRequest)
 	if !ok {
-		return fmt.Errorf("reason request must be Incoming, %T received", virtual)
+		return &payload.CodedError{
+			Text: fmt.Sprintf("reason request must be Incoming, %T received", virtual),
+			Code: payload.CodeReasonIsWrong,
+		}
+	}
+
+	if !inc.Immutable && !reasonInfo.OldestMutable {
+		return &payload.CodedError{
+			Text: "request reason is not the oldest in filament",
+			Code: payload.CodeReasonIsWrong,
+		}
 	}
 
 	isClosed := len(reasonInfo.Result) != 0
 	if !incomingRequest.IsDetachedCall() && isClosed {
 		// This is regular request, should NOT have closed reason.
-		return errors.New("reason request is closed for a regular (not detached) call")
+		return &payload.CodedError{
+			Text: "reason request is closed for a regular (not detached) call",
+			Code: payload.CodeReasonIsWrong,
+		}
 	}
 
 	if incomingRequest.IsDetachedCall() && !isClosed {
 		// This is "detached incoming request", should have closed reason.
-		return errors.New("reason request is not closed for a detached call")
+		return &payload.CodedError{
+			Text: "reason request is not closed for a detached call",
+			Code: payload.CodeReasonIsWrong,
+		}
 	}
 
 	return nil
@@ -250,7 +308,10 @@ func (c *RequestCheckerDefault) getRequest(
 		return concrete, nil
 	case *payload.Error:
 		inslogger.FromContext(ctx).Debug("SendTarget failed: ", reasonObjectID.DebugString(), currentPulse.String())
-		return nil, errors.New(concrete.Text)
+		return nil, &payload.CodedError{
+			Text: concrete.Text,
+			Code: concrete.Code,
+		}
 	default:
 		return nil, fmt.Errorf("unexpected reply %T", pl)
 	}
@@ -273,46 +334,44 @@ func (c *RequestCheckerDefault) getRequestLocal(
 		reqBuf []byte
 		resBuf []byte
 	)
-	foundRequest, foundResult, err := c.filaments.RequestInfo(ctx, reasonObjectID, reasonID, currentPulse)
+	foundReqInfo, err := c.filaments.RequestInfo(ctx, reasonObjectID, reasonID, currentPulse)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get local request info")
 	}
 
 	var reqInfo payload.RequestInfo
 
-	if foundRequest != nil {
-		reqBuf, err = foundRequest.Record.Marshal()
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to marshal local request record")
-		}
-		reqInfo.Request = reqBuf
-
+	reqBuf, err = foundReqInfo.Request.Record.Marshal()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to marshal local request record")
 	}
+	reqInfo.Request = reqBuf
 
-	if foundResult != nil {
-		resBuf, err = foundResult.Record.Marshal()
+	if foundReqInfo.Result != nil {
+		resBuf, err = foundReqInfo.Result.Record.Marshal()
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to marshal local result record")
 		}
 		reqInfo.Result = resBuf
 	}
 
+	reqInfo.OldestMutable = foundReqInfo.OldestMutable
+
 	logger.WithFields(map[string]interface{}{
-		"request":    foundRequest != nil,
-		"has_result": foundResult != nil,
+		"request":    foundReqInfo.Request != nil,
+		"has_result": foundReqInfo.Result != nil,
 	}).Debug("local result info found")
 
 	return &reqInfo, nil
 }
 
-func findRecord(
-	filamentRecords []record.CompositeFilamentRecord,
-	requestID insolar.ID,
-) bool {
-	for _, p := range filamentRecords {
-		if p.RecordID == requestID {
-			return true
+func findIncomingAPIRequest(reqs []record.CompositeFilamentRecord, apiRequest string) *record.CompositeFilamentRecord {
+	for _, req := range reqs {
+		if r, ok := record.Unwrap(&req.Record.Virtual).(*record.IncomingRequest); ok {
+			if r.APIRequestID == apiRequest {
+				return &req
+			}
 		}
 	}
-	return false
+	return nil
 }
