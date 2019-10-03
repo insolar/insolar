@@ -5,8 +5,12 @@
   "params": {
     "callSite": "group.create",
     "callParams": {
-      "name": "The mortgage 7"
+      "name": "Some members",
+      "members": [
+        "16Y6FGrTUhVA7juV7dRNxT4BXnbLtVseimrDsWMwLhoB",
+        "16Y6GBAVqteXTSyv7mKUEpxvV8iuV5qsuJtiasFXk2sx"
+      ]
     },
-    "reference": "16WzewYjNAVnkMp3wykV5gQLTfeC2aCkyCtPfMNk7d6h"
+    "reference": "16Y6EpfLtqmNcAf9qJFmvESx3AdqJEAbefJGp22VTjZe"
   }
 }

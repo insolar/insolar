@@ -148,10 +148,10 @@ func importPrivateKeyPEM(pemEncoded []byte) (xcrypto.PrivateKey, string, error) 
 		return nil, "", fmt.Errorf("[ ImportPrivateKey ] Problems with decoding. Key - %v", pemEncoded)
 	}
 	x509Encoded := block.Bytes
-	privateKey, err := xx509.ParseECPrivateKey(x509Encoded)
+	privateKey, err := xx509.ParsePKCS8PrivateKey(x509Encoded)
 
 	if err != nil {
 		return nil, "", fmt.Errorf("[ ImportPrivateKey ] Problems with parsing. Key - %v", pemEncoded)
 	}
-	return privateKey, privateKey.Curve.Params().Name, nil
+	return privateKey, privateKey.(*xecdsa.PrivateKey).Curve.Params().Name, nil
 }
