@@ -573,8 +573,8 @@ func (c *FilamentCalculatorDefault) findLifeline(
 	ctx context.Context, until insolar.PulseNumber, requestID insolar.ID,
 ) (record.Lifeline, error) {
 	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
-		"objID": requestID.DebugString(),
-		"until": until,
+		"object_id": requestID.DebugString(),
+		"until":     until,
 	})
 	iter := requestID.Pulse()
 	logger.Debug("findLifeline. start executing")

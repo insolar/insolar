@@ -70,8 +70,8 @@ func (p *SearchIndex) Proceed(ctx context.Context) error {
 	}
 
 	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
-		"objID": searchIndex.ObjectID.DebugString(),
-		"until": searchIndex.Until,
+		"object_id": searchIndex.ObjectID.DebugString(),
+		"until":     searchIndex.Until,
 	})
 	logger.Debug("search index. start to search index")
 
