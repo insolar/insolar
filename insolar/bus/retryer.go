@@ -204,7 +204,7 @@ func getErrorType(ctx context.Context, rep *message.Message) messageType {
 }
 
 func ReplyError(ctx context.Context, sender Sender, meta payload.Meta, err error) {
-	errCode := uint32(payload.CodeUnknown)
+	errCode := payload.CodeUnknown
 
 	// Throwing custom error code
 	cause := errors.Cause(err)
@@ -215,7 +215,7 @@ func ReplyError(ctx context.Context, sender Sender, meta payload.Meta, err error
 
 	// todo refactor this #INS-3191
 	if cause == flow.ErrCancelled {
-		errCode = uint32(payload.CodeFlowCanceled)
+		errCode = payload.CodeFlowCanceled
 	}
 	errMsg, newErr := payload.NewMessage(&payload.Error{Text: err.Error(), Code: errCode})
 	if newErr != nil {

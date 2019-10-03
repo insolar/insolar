@@ -19,7 +19,6 @@ package handle
 import (
 	"context"
 	"fmt"
-	"strconv"
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/pkg/errors"
@@ -155,12 +154,12 @@ func (s *Init) errorMetrics(ctx context.Context, msgType string, err error) {
 	cause := errors.Cause(err)
 	insError, ok := cause.(*payload.CodedError)
 	if ok {
-		errCode = int(insError.GetCode())
+		errCode = insError.GetCode()
 	}
 
-	ctx = insmetrics.InsertTag(ctx, KeyErrorCode, strconv.Itoa(errCode))
-	ctx = insmetrics.InsertTag(ctx, KeyProcName, msgType)
-	stats.Record(ctx, statProcError.M(1))
+	ctx = insmetrics.InsertTag(ctx, KeyErrorCode, errCode.String())
+	ctx = insmetrics.InsertTag(ctx, KeyMsgType, msgType)
+	stats.Record(ctx, statHandlerError.M(1))
 }
 
 func (s *Init) handlePass(ctx context.Context, f flow.Flow, meta payload.Meta) error {
@@ -237,6 +236,7 @@ func (s *Init) handlePass(ctx context.Context, f flow.Flow, meta payload.Meta) e
 	}
 	if err != nil {
 		bus.ReplyError(ctx, s.sender, originMeta, err)
+		s.errorMetrics(ctx, payloadType.String(), err)
 	}
 
 	return err

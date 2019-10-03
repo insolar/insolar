@@ -15,7 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1570024084599,
+  "iteration": 1570097855274,
   "links": [],
   "panels": [
     {
@@ -179,7 +179,7 @@
       ],
       "repeat": null,
       "repeatDirection": "h",
-      "repeatIteration": 1570024084599,
+      "repeatIteration": 1570097855274,
       "repeatPanelId": 28,
       "scopedVars": {
         "instance": {
@@ -1170,7 +1170,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(insolar_proc_set_request_duplicate{instance=~\"$instance\", installation=\"$installation\"}[1m]))*10",
+          "expr": "sum(irate(insolar_proc_set_request_duplicate{instance=~\"$instance\", installation=~\"$installation\"}[1m]))",
           "format": "time_series",
           "hide": false,
           "instant": false,
@@ -1178,19 +1178,27 @@
           "refId": "A"
         },
         {
-          "expr": "sum by (error_code) (rate(insolar_proc_errors{instance=~\"$instance\", installation=\"$installation\", proc_name=\"TypeSetRequest\", error_code!=\"1002\"}[1m]))*10",
+          "expr": "sum by (error_code) (irate(insolar_handler_errors{instance=~\"$instance\", installation=~\"$installation\", msg_type=\"TypeSetRequest\", error_code!=\"CodeFlowCanceled\"}[1m]))",
           "format": "time_series",
           "hide": false,
           "instant": false,
           "legendFormat": "SetRequest Errors",
           "refId": "B"
+        },
+        {
+          "expr": "sum(irate(insolar_proc_set_request_total{instance=~\"$instance\", installation=~\"$installation\"}[1m]))",
+          "format": "time_series",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "SetRequest Total",
+          "refId": "C"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "SetRequest Errors",
+      "title": "SetRequest Errors/Duplicates",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -1271,7 +1279,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(insolar_proc_set_result_duplicate{instance=~\"$instance\", installation=\"$installation\"}[1m]))*10",
+          "expr": "sum(irate(insolar_proc_set_result_duplicate{instance=~\"$instance\", installation=~\"$installation\"}[1m]))",
           "format": "time_series",
           "hide": false,
           "instant": false,
@@ -1279,19 +1287,27 @@
           "refId": "A"
         },
         {
-          "expr": "sum by (error_code) (rate(insolar_proc_errors{instance=~\"$instance\", installation=\"$installation\", proc_name=\"TypeSetRequest\", error_code!=\"1002\"}[1m]))*10",
+          "expr": "sum by (error_code) (irate(insolar_handler_errors{instance=~\"$instance\", installation=~\"$installation\", msg_type=\"TypeSetRequest\", error_code!=\"CodeFlowCanceled\"}[1m]))",
           "format": "time_series",
           "hide": false,
           "instant": false,
           "legendFormat": "SetResult Errors",
           "refId": "B"
+        },
+        {
+          "expr": "sum(irate(insolar_proc_set_result_total{instance=~\"$instance\", installation=~\"$installation\"}[1m]))",
+          "format": "time_series",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "SetResult Total",
+          "refId": "C"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "SetResult errors per pulse",
+      "title": "SetResult Errors/Duplicates",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -1358,7 +1374,7 @@
       "lines": true,
       "linewidth": 1,
       "links": [],
-      "nullPointMode": "null",
+      "nullPointMode": "connected",
       "options": {
         "dataLinks": []
       },
@@ -1372,7 +1388,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum by (error_code) (rate(insolar_proc_errors{instance=~\"$instance\", error_code!=\"1002\", installation=\"$installation\"}[1m]))*10",
+          "expr": "sum by (error_code) (irate(insolar_handler_errors{instance=~\"$instance\", error_code!=\"CodeFlowCanceled\", installation=~\"$installation\"}[1m]))*10",
           "format": "time_series",
           "hide": false,
           "instant": false,
@@ -1380,7 +1396,7 @@
           "refId": "A"
         },
         {
-          "expr": "sum(rate(insolar_proc_errors{instance=~\"$instance\", error_code=\"1002\", installation=\"$installation\"}[1m]))*10",
+          "expr": "sum(irate(insolar_handler_errors{instance=~\"$instance\", error_code=\"CodeFlowCanceled\", installation=~\"$installation\"}[1m]))",
           "format": "time_series",
           "hide": false,
           "instant": false,
@@ -1392,7 +1408,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Procedure Errors",
+      "title": "All Handler Errors",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -1473,10 +1489,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum by (proc_name) (rate(insolar_proc_errors{instance=~\"$instance\", error_code!=\"1002\", installation=\"$installation\"}[1m]))*10",
+          "expr": "sum by (msg_type) (rate(insolar_handler_errors{instance=~\"$instance\", error_code!=\"CodeFlowCanceled\", installation=\"$installation\"}[1m]))*10",
           "format": "time_series",
           "instant": false,
-          "legendFormat": "{{proc_name}}",
+          "legendFormat": "{{msg_type}}",
           "refId": "A"
         }
       ],
@@ -1484,7 +1500,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Erors in procedures",
+      "title": "Errors by MessageType (w/o FlowCancelled)",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -1583,19 +1599,18 @@
       {
         "allValue": null,
         "current": {
-          "isNone": true,
-          "text": "None",
-          "value": ""
+          "text": "CodeFlowCanceled",
+          "value": "CodeFlowCanceled"
         },
         "datasource": "prometheus",
-        "definition": "label_values(insolar_proc_errors, error_code)",
+        "definition": "label_values(insolar_handler_errors, error_code)",
         "hide": 2,
         "includeAll": false,
         "label": null,
         "multi": false,
         "name": "errorCodes",
         "options": [],
-        "query": "label_values(insolar_proc_errors, error_code)",
+        "query": "label_values(insolar_handler_errors, error_code)",
         "refresh": 2,
         "regex": "",
         "skipUrlSync": false,

@@ -25,13 +25,13 @@ import (
 )
 
 var (
-	KeyProcName  = insmetrics.MustTagKey("proc_name")
+	KeyMsgType   = insmetrics.MustTagKey("msg_type")
 	KeyErrorCode = insmetrics.MustTagKey("error_code")
 )
 
 var (
-	statProcError = stats.Int64(
-		"proc_errors",
+	statHandlerError = stats.Int64(
+		"handler_errors",
 		"How many procedures return errors",
 		stats.UnitDimensionless,
 	)
@@ -40,10 +40,10 @@ var (
 func init() {
 	err := view.Register(
 		&view.View{
-			Name:        statProcError.Name(),
-			Description: statProcError.Description(),
-			Measure:     statProcError,
-			TagKeys:     []tag.Key{KeyProcName, KeyErrorCode},
+			Name:        statHandlerError.Name(),
+			Description: statHandlerError.Description(),
+			Measure:     statHandlerError,
+			TagKeys:     []tag.Key{KeyMsgType, KeyErrorCode},
 			Aggregation: view.Count(),
 		},
 	)

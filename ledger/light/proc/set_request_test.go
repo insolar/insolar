@@ -255,7 +255,7 @@ func TestSetRequest_Proceed(t *testing.T) {
 		require.Error(t, err)
 		insError, ok := errors.Cause(err).(*payload.CodedError)
 		require.True(t, ok)
-		require.Equal(t, uint32(payload.CodeNonActivated), insError.GetCode())
+		require.Equal(t, payload.CodeNonActivated, insError.GetCode())
 	})
 
 	t.Run("object is deactivated error", func(t *testing.T) {
@@ -285,7 +285,7 @@ func TestSetRequest_Proceed(t *testing.T) {
 		require.Error(t, err)
 		insError, ok := errors.Cause(err).(*payload.CodedError)
 		require.True(t, ok)
-		require.Equal(t, uint32(payload.CodeDeactivated), insError.GetCode())
+		require.Equal(t, payload.CodeDeactivated, insError.GetCode())
 	})
 
 	t.Run("request from past error", func(t *testing.T) {
