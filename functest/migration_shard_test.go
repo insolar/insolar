@@ -47,7 +47,7 @@ func TestGetFreeAddressesCount_ChangesAfterMigration(t *testing.T) {
 	require.NotEqual(t, "", output["migrationAddress"])
 
 	result, err = signedRequest(t, launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.getAddressCount",
-		map[string]interface{}{"startWithShard": 0})
+		map[string]interface{}{"startWithIndex": 0})
 	require.NoError(t, err)
 
 	var migrationShardsMapAfter = getAddressCount(t, 0)
@@ -71,7 +71,7 @@ func TestGetFreeAddressesCount_ChangesAfterMigration(t *testing.T) {
 
 func TestGetFreeAddressesCount_StartIndexTooBig(t *testing.T) {
 	_, _, err := makeSignedRequest(launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.getAddressCount",
-		map[string]interface{}{"startWithShard": 1})
+		map[string]interface{}{"startWithIndex": 1})
 	require.Error(t, err)
 	require.IsType(t, &requester.Error{}, err)
 	data := err.(*requester.Error).Data
@@ -80,17 +80,17 @@ func TestGetFreeAddressesCount_StartIndexTooBig(t *testing.T) {
 
 func TestGetFreeAddressesCount_IncorrectIndexType(t *testing.T) {
 	_, _, err := makeSignedRequest(launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.getAddressCount",
-		map[string]interface{}{"startWithShard": "0"})
+		map[string]interface{}{"startWithIndex": "0"})
 	require.Error(t, err)
 	require.IsType(t, &requester.Error{}, err)
 	data := err.(*requester.Error).Data
-	require.Contains(t, data.Trace, "failed to get 'startWithShard' param")
+	require.Contains(t, data.Trace, "failed to get 'startWithIndex' param")
 }
 
 func TestGetFreeAddressesCount_FromMember(t *testing.T) {
 	member := createMember(t)
 	_, _, err := makeSignedRequest(launchnet.TestRPCUrl, member, "migration.getAddressCount",
-		map[string]interface{}{"startWithShard": 0})
+		map[string]interface{}{"startWithIndex": 0})
 	require.Error(t, err)
 	require.IsType(t, &requester.Error{}, err)
 	data := err.(*requester.Error).Data

@@ -316,7 +316,7 @@ func (sdk *SDK) AddMigrationAddresses(migrationAddresses []string) (string, erro
 }
 
 // GetAddressesCount method gets burn addresses from shards
-func (sdk *SDK) GetAddressesCount(startWithShard int) (interface{}, string, error) {
+func (sdk *SDK) GetAddressesCount(startWithIndex int) (interface{}, string, error) {
 	userConfig, err := requester.CreateUserConfig(sdk.migrationAdminMember.Caller, sdk.migrationAdminMember.PrivateKey, sdk.migrationAdminMember.PublicKey)
 	if err != nil {
 		return nil, "", errors.Wrap(err, "failed to create user config for request")
@@ -326,7 +326,7 @@ func (sdk *SDK) GetAddressesCount(startWithShard int) (interface{}, string, erro
 		sdk.adminAPIURLs,
 		userConfig,
 		"migration.getAddressCount",
-		map[string]interface{}{"startWithShard": startWithShard},
+		map[string]interface{}{"startWithIndex": startWithIndex},
 	)
 	if err != nil {
 		return nil, "", errors.Wrap(err, "request was failed ")

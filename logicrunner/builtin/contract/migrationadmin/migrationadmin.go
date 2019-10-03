@@ -160,23 +160,23 @@ type GetAddressesCountResponse struct {
 }
 
 func (mA *MigrationAdmin) getAddressCount(params map[string]interface{}, memberRef insolar.Reference) (interface{}, error) {
-	startWithShardFloat, ok := params["startWithShard"].(float64)
+	startWithIndexFloat, ok := params["startWithIndex"].(float64)
 	if !ok {
-		return nil, fmt.Errorf("incorect input: failed to get 'startWithShard' param")
+		return nil, fmt.Errorf("incorect input: failed to get 'startWithIndex' param")
 	}
-	startWithShard := int(startWithShardFloat)
+	startWithIndex := int(startWithIndexFloat)
 
 	if memberRef != mA.MigrationAdminMember {
 		return nil, fmt.Errorf("only migration daemon admin can call this method")
 	}
 
-	if len(mA.MigrationAddressShards) < startWithShard+10 {
+	if len(mA.MigrationAddressShards) < startWithIndex+10 {
 		return nil, fmt.Errorf("incorrect start shard index: too big")
 	}
 
 	var res []*GetAddressesCountResponse
 
-	for i := startWithShard; i < startWithShard+10; i++ {
+	for i := startWithIndex; i < startWithIndex+10; i++ {
 		s := migrationshard.GetObject(mA.MigrationAddressShards[i])
 		count, err := s.GetMigrationAddressesAmount()
 		if err != nil {
