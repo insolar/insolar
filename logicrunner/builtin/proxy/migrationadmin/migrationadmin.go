@@ -26,7 +26,7 @@ import (
 )
 
 type AddMaResponse struct {
-	Count int `json:"totalNumberOf"`
+	Count int `json:"totalNumber"`
 }
 type CheckDaemonResponse struct {
 	Status string `json:"status"`
