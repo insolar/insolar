@@ -20,11 +20,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"github.com/insolar/insolar/insolar"
 	"os"
 	"runtime"
 	"strconv"
 	"testing"
+
+	"github.com/insolar/insolar/insolar"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -181,13 +182,23 @@ func logCallerGlobal(ctx context.Context, t *testing.T) (loggerField, string) {
 	return logFields(t, b.Bytes()), strconv.Itoa(line + 1)
 }
 
-func TestMain(m *testing.M) {
-	lg, err := log.GlobalLogger().Copy().WithFormat(insolar.JSONFormat).Build()
+func TestExt_Check_LoggerProxy_DoesntLoop(t *testing.T) {
+	l, err := log.GlobalLogger().Copy().WithFormat(insolar.JSONFormat).WithLevel(insolar.DebugLevel).Build()
 	if err != nil {
 		panic(err)
 	}
-	log.SetGlobalLogger(lg)
+	log.SetGlobalLogger(l.Level(insolar.InfoLevel)) // enforce different instance
 
-	code := m.Run()
-	os.Exit(code)
+	l.Info("test") // here will be a stack overflow if logger proxy doesn't handle self-setting
+}
+
+func TestMain(m *testing.M) {
+	l, err := log.GlobalLogger().Copy().WithFormat(insolar.JSONFormat).WithLevel(insolar.DebugLevel).Build()
+	if err != nil {
+		panic(err)
+	}
+	log.SetGlobalLogger(l)
+	_ = log.SetGlobalLevelFilter(insolar.DebugLevel)
+	exitCode := m.Run()
+	os.Exit(exitCode)
 }

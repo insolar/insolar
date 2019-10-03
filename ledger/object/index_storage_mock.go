@@ -29,6 +29,12 @@ type IndexStorageMock struct {
 	beforeForPulseCounter uint64
 	ForPulseMock          mIndexStorageMockForPulse
 
+	funcLastKnownForID          func(ctx context.Context, objID insolar.ID) (i1 record.Index, err error)
+	inspectFuncLastKnownForID   func(ctx context.Context, objID insolar.ID)
+	afterLastKnownForIDCounter  uint64
+	beforeLastKnownForIDCounter uint64
+	LastKnownForIDMock          mIndexStorageMockLastKnownForID
+
 	funcSetIndex          func(ctx context.Context, pn insolar.PulseNumber, index record.Index) (err error)
 	inspectFuncSetIndex   func(ctx context.Context, pn insolar.PulseNumber, index record.Index)
 	afterSetIndexCounter  uint64
@@ -54,6 +60,9 @@ func NewIndexStorageMock(t minimock.Tester) *IndexStorageMock {
 
 	m.ForPulseMock = mIndexStorageMockForPulse{mock: m}
 	m.ForPulseMock.callArgs = []*IndexStorageMockForPulseParams{}
+
+	m.LastKnownForIDMock = mIndexStorageMockLastKnownForID{mock: m}
+	m.LastKnownForIDMock.callArgs = []*IndexStorageMockLastKnownForIDParams{}
 
 	m.SetIndexMock = mIndexStorageMockSetIndex{mock: m}
 	m.SetIndexMock.callArgs = []*IndexStorageMockSetIndexParams{}
@@ -499,6 +508,223 @@ func (m *IndexStorageMock) MinimockForPulseInspect() {
 	}
 }
 
+type mIndexStorageMockLastKnownForID struct {
+	mock               *IndexStorageMock
+	defaultExpectation *IndexStorageMockLastKnownForIDExpectation
+	expectations       []*IndexStorageMockLastKnownForIDExpectation
+
+	callArgs []*IndexStorageMockLastKnownForIDParams
+	mutex    sync.RWMutex
+}
+
+// IndexStorageMockLastKnownForIDExpectation specifies expectation struct of the IndexStorage.LastKnownForID
+type IndexStorageMockLastKnownForIDExpectation struct {
+	mock    *IndexStorageMock
+	params  *IndexStorageMockLastKnownForIDParams
+	results *IndexStorageMockLastKnownForIDResults
+	Counter uint64
+}
+
+// IndexStorageMockLastKnownForIDParams contains parameters of the IndexStorage.LastKnownForID
+type IndexStorageMockLastKnownForIDParams struct {
+	ctx   context.Context
+	objID insolar.ID
+}
+
+// IndexStorageMockLastKnownForIDResults contains results of the IndexStorage.LastKnownForID
+type IndexStorageMockLastKnownForIDResults struct {
+	i1  record.Index
+	err error
+}
+
+// Expect sets up expected params for IndexStorage.LastKnownForID
+func (mmLastKnownForID *mIndexStorageMockLastKnownForID) Expect(ctx context.Context, objID insolar.ID) *mIndexStorageMockLastKnownForID {
+	if mmLastKnownForID.mock.funcLastKnownForID != nil {
+		mmLastKnownForID.mock.t.Fatalf("IndexStorageMock.LastKnownForID mock is already set by Set")
+	}
+
+	if mmLastKnownForID.defaultExpectation == nil {
+		mmLastKnownForID.defaultExpectation = &IndexStorageMockLastKnownForIDExpectation{}
+	}
+
+	mmLastKnownForID.defaultExpectation.params = &IndexStorageMockLastKnownForIDParams{ctx, objID}
+	for _, e := range mmLastKnownForID.expectations {
+		if minimock.Equal(e.params, mmLastKnownForID.defaultExpectation.params) {
+			mmLastKnownForID.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmLastKnownForID.defaultExpectation.params)
+		}
+	}
+
+	return mmLastKnownForID
+}
+
+// Inspect accepts an inspector function that has same arguments as the IndexStorage.LastKnownForID
+func (mmLastKnownForID *mIndexStorageMockLastKnownForID) Inspect(f func(ctx context.Context, objID insolar.ID)) *mIndexStorageMockLastKnownForID {
+	if mmLastKnownForID.mock.inspectFuncLastKnownForID != nil {
+		mmLastKnownForID.mock.t.Fatalf("Inspect function is already set for IndexStorageMock.LastKnownForID")
+	}
+
+	mmLastKnownForID.mock.inspectFuncLastKnownForID = f
+
+	return mmLastKnownForID
+}
+
+// Return sets up results that will be returned by IndexStorage.LastKnownForID
+func (mmLastKnownForID *mIndexStorageMockLastKnownForID) Return(i1 record.Index, err error) *IndexStorageMock {
+	if mmLastKnownForID.mock.funcLastKnownForID != nil {
+		mmLastKnownForID.mock.t.Fatalf("IndexStorageMock.LastKnownForID mock is already set by Set")
+	}
+
+	if mmLastKnownForID.defaultExpectation == nil {
+		mmLastKnownForID.defaultExpectation = &IndexStorageMockLastKnownForIDExpectation{mock: mmLastKnownForID.mock}
+	}
+	mmLastKnownForID.defaultExpectation.results = &IndexStorageMockLastKnownForIDResults{i1, err}
+	return mmLastKnownForID.mock
+}
+
+//Set uses given function f to mock the IndexStorage.LastKnownForID method
+func (mmLastKnownForID *mIndexStorageMockLastKnownForID) Set(f func(ctx context.Context, objID insolar.ID) (i1 record.Index, err error)) *IndexStorageMock {
+	if mmLastKnownForID.defaultExpectation != nil {
+		mmLastKnownForID.mock.t.Fatalf("Default expectation is already set for the IndexStorage.LastKnownForID method")
+	}
+
+	if len(mmLastKnownForID.expectations) > 0 {
+		mmLastKnownForID.mock.t.Fatalf("Some expectations are already set for the IndexStorage.LastKnownForID method")
+	}
+
+	mmLastKnownForID.mock.funcLastKnownForID = f
+	return mmLastKnownForID.mock
+}
+
+// When sets expectation for the IndexStorage.LastKnownForID which will trigger the result defined by the following
+// Then helper
+func (mmLastKnownForID *mIndexStorageMockLastKnownForID) When(ctx context.Context, objID insolar.ID) *IndexStorageMockLastKnownForIDExpectation {
+	if mmLastKnownForID.mock.funcLastKnownForID != nil {
+		mmLastKnownForID.mock.t.Fatalf("IndexStorageMock.LastKnownForID mock is already set by Set")
+	}
+
+	expectation := &IndexStorageMockLastKnownForIDExpectation{
+		mock:   mmLastKnownForID.mock,
+		params: &IndexStorageMockLastKnownForIDParams{ctx, objID},
+	}
+	mmLastKnownForID.expectations = append(mmLastKnownForID.expectations, expectation)
+	return expectation
+}
+
+// Then sets up IndexStorage.LastKnownForID return parameters for the expectation previously defined by the When method
+func (e *IndexStorageMockLastKnownForIDExpectation) Then(i1 record.Index, err error) *IndexStorageMock {
+	e.results = &IndexStorageMockLastKnownForIDResults{i1, err}
+	return e.mock
+}
+
+// LastKnownForID implements IndexStorage
+func (mmLastKnownForID *IndexStorageMock) LastKnownForID(ctx context.Context, objID insolar.ID) (i1 record.Index, err error) {
+	mm_atomic.AddUint64(&mmLastKnownForID.beforeLastKnownForIDCounter, 1)
+	defer mm_atomic.AddUint64(&mmLastKnownForID.afterLastKnownForIDCounter, 1)
+
+	if mmLastKnownForID.inspectFuncLastKnownForID != nil {
+		mmLastKnownForID.inspectFuncLastKnownForID(ctx, objID)
+	}
+
+	params := &IndexStorageMockLastKnownForIDParams{ctx, objID}
+
+	// Record call args
+	mmLastKnownForID.LastKnownForIDMock.mutex.Lock()
+	mmLastKnownForID.LastKnownForIDMock.callArgs = append(mmLastKnownForID.LastKnownForIDMock.callArgs, params)
+	mmLastKnownForID.LastKnownForIDMock.mutex.Unlock()
+
+	for _, e := range mmLastKnownForID.LastKnownForIDMock.expectations {
+		if minimock.Equal(e.params, params) {
+			mm_atomic.AddUint64(&e.Counter, 1)
+			return e.results.i1, e.results.err
+		}
+	}
+
+	if mmLastKnownForID.LastKnownForIDMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmLastKnownForID.LastKnownForIDMock.defaultExpectation.Counter, 1)
+		want := mmLastKnownForID.LastKnownForIDMock.defaultExpectation.params
+		got := IndexStorageMockLastKnownForIDParams{ctx, objID}
+		if want != nil && !minimock.Equal(*want, got) {
+			mmLastKnownForID.t.Errorf("IndexStorageMock.LastKnownForID got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		}
+
+		results := mmLastKnownForID.LastKnownForIDMock.defaultExpectation.results
+		if results == nil {
+			mmLastKnownForID.t.Fatal("No results are set for the IndexStorageMock.LastKnownForID")
+		}
+		return (*results).i1, (*results).err
+	}
+	if mmLastKnownForID.funcLastKnownForID != nil {
+		return mmLastKnownForID.funcLastKnownForID(ctx, objID)
+	}
+	mmLastKnownForID.t.Fatalf("Unexpected call to IndexStorageMock.LastKnownForID. %v %v", ctx, objID)
+	return
+}
+
+// LastKnownForIDAfterCounter returns a count of finished IndexStorageMock.LastKnownForID invocations
+func (mmLastKnownForID *IndexStorageMock) LastKnownForIDAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmLastKnownForID.afterLastKnownForIDCounter)
+}
+
+// LastKnownForIDBeforeCounter returns a count of IndexStorageMock.LastKnownForID invocations
+func (mmLastKnownForID *IndexStorageMock) LastKnownForIDBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmLastKnownForID.beforeLastKnownForIDCounter)
+}
+
+// Calls returns a list of arguments used in each call to IndexStorageMock.LastKnownForID.
+// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
+func (mmLastKnownForID *mIndexStorageMockLastKnownForID) Calls() []*IndexStorageMockLastKnownForIDParams {
+	mmLastKnownForID.mutex.RLock()
+
+	argCopy := make([]*IndexStorageMockLastKnownForIDParams, len(mmLastKnownForID.callArgs))
+	copy(argCopy, mmLastKnownForID.callArgs)
+
+	mmLastKnownForID.mutex.RUnlock()
+
+	return argCopy
+}
+
+// MinimockLastKnownForIDDone returns true if the count of the LastKnownForID invocations corresponds
+// the number of defined expectations
+func (m *IndexStorageMock) MinimockLastKnownForIDDone() bool {
+	for _, e := range m.LastKnownForIDMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			return false
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.LastKnownForIDMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterLastKnownForIDCounter) < 1 {
+		return false
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcLastKnownForID != nil && mm_atomic.LoadUint64(&m.afterLastKnownForIDCounter) < 1 {
+		return false
+	}
+	return true
+}
+
+// MinimockLastKnownForIDInspect logs each unmet expectation
+func (m *IndexStorageMock) MinimockLastKnownForIDInspect() {
+	for _, e := range m.LastKnownForIDMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			m.t.Errorf("Expected call to IndexStorageMock.LastKnownForID with params: %#v", *e.params)
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.LastKnownForIDMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterLastKnownForIDCounter) < 1 {
+		if m.LastKnownForIDMock.defaultExpectation.params == nil {
+			m.t.Error("Expected call to IndexStorageMock.LastKnownForID")
+		} else {
+			m.t.Errorf("Expected call to IndexStorageMock.LastKnownForID with params: %#v", *m.LastKnownForIDMock.defaultExpectation.params)
+		}
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcLastKnownForID != nil && mm_atomic.LoadUint64(&m.afterLastKnownForIDCounter) < 1 {
+		m.t.Error("Expected call to IndexStorageMock.LastKnownForID")
+	}
+}
+
 type mIndexStorageMockSetIndex struct {
 	mock               *IndexStorageMock
 	defaultExpectation *IndexStorageMockSetIndexExpectation
@@ -939,6 +1165,8 @@ func (m *IndexStorageMock) MinimockFinish() {
 
 		m.MinimockForPulseInspect()
 
+		m.MinimockLastKnownForIDInspect()
+
 		m.MinimockSetIndexInspect()
 
 		m.MinimockUpdateLastKnownPulseInspect()
@@ -967,6 +1195,7 @@ func (m *IndexStorageMock) minimockDone() bool {
 	return done &&
 		m.MinimockForIDDone() &&
 		m.MinimockForPulseDone() &&
+		m.MinimockLastKnownForIDDone() &&
 		m.MinimockSetIndexDone() &&
 		m.MinimockUpdateLastKnownPulseDone()
 }

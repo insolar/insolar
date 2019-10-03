@@ -114,6 +114,7 @@ func New(cfg configuration.Ledger) *Handler {
 				h.IndexAccessor,
 				h.PulseCalculator,
 				h.PulseAccessor,
+				h.RecordAccessor,
 				h.Sender,
 			)
 		},

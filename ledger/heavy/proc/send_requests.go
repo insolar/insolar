@@ -35,7 +35,7 @@ type SendRequests struct {
 	dep struct {
 		sender  bus.Sender
 		records object.RecordAccessor
-		indexes object.IndexAccessor
+		indexes object.MemoryIndexAccessor
 	}
 }
 
@@ -45,7 +45,7 @@ func NewSendRequests(meta payload.Meta) *SendRequests {
 	}
 }
 
-func (p *SendRequests) Dep(sender bus.Sender, records object.RecordAccessor, indexes object.IndexAccessor) {
+func (p *SendRequests) Dep(sender bus.Sender, records object.RecordAccessor, indexes object.MemoryIndexAccessor) {
 	p.dep.sender = sender
 	p.dep.records = records
 	p.dep.indexes = indexes

@@ -37,6 +37,17 @@ func (p *ProxyLoggerOutput) GetTarget() insolar.LoggerOutput {
 }
 
 func (p *ProxyLoggerOutput) SetTarget(t insolar.LoggerOutput) {
+	for {
+		if t == p {
+			return
+		}
+		if tp, ok := t.(*ProxyLoggerOutput); ok {
+			t = tp.GetTarget()
+		} else {
+			break
+		}
+	}
+
 	p.mutex.Lock()
 	p.target = t
 	p.mutex.Unlock()

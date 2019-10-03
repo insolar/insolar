@@ -100,12 +100,13 @@ type FilamentsRequestInfo struct {
 //go:generate minimock -i github.com/insolar/insolar/ledger/light/executor.FilamentCleaner -o ./ -s _mock.go -g
 
 type FilamentCleaner interface {
-	ClearIfLonger(objID insolar.ID, limit int)
+	ClearIfLonger(limit int)
+	ClearAllExcept(ids []insolar.ID)
 }
 
 type FilamentCalculatorDefault struct {
 	cache       *cacheStore
-	indexes     object.IndexAccessor
+	indexes     object.MemoryIndexAccessor
 	coordinator jet.Coordinator
 	jetFetcher  JetFetcher
 	sender      bus.Sender
@@ -113,7 +114,7 @@ type FilamentCalculatorDefault struct {
 }
 
 func NewFilamentCalculator(
-	indexes object.IndexAccessor,
+	indexes object.MemoryIndexAccessor,
 	records object.RecordAccessor,
 	coordinator jet.Coordinator,
 	jetFetcher JetFetcher,
@@ -514,8 +515,12 @@ func (c *FilamentCalculatorDefault) RequestInfo(
 	return foundRequestInfo, nil
 }
 
-func (c *FilamentCalculatorDefault) ClearIfLonger(objID insolar.ID, limit int) {
-	c.cache.DeleteIfLonger(objID, limit)
+func (c *FilamentCalculatorDefault) ClearIfLonger(limit int) {
+	c.cache.DeleteIfLonger(limit)
+}
+
+func (c *FilamentCalculatorDefault) ClearAllExcept(ids []insolar.ID) {
+	c.cache.DeleteAllExcept(ids)
 }
 
 func (c FilamentCalculatorDefault) checkHeavyForLifeline(
@@ -569,9 +574,9 @@ func (c *FilamentCalculatorDefault) findLifeline(
 ) (record.Lifeline, error) {
 	iter := requestID.Pulse()
 	for iter >= until {
-		// We should find lifeline for `iter` pulse,
-		// because requestID.Pulse() may be different.
-		idx, err := c.indexes.ForID(ctx, iter, *insolar.NewID(iter, requestID.Hash()))
+		// We search for combination of id in a latest bucket
+		// requestID.Pulse() is a latest, because findLifeline is called only for Creationg requests
+		idx, err := c.indexes.ForID(ctx, requestID.Pulse(), *insolar.NewID(iter, requestID.Hash()))
 		if err != nil && err != object.ErrIndexNotFound {
 			return record.Lifeline{}, errors.Wrap(err, "failed to fetch index")
 		}
@@ -635,12 +640,31 @@ func (c *cacheStore) Delete(id insolar.ID) {
 	delete(c.caches, id)
 }
 
-func (c *cacheStore) DeleteIfLonger(id insolar.ID, limit int) {
+func (c *cacheStore) DeleteIfLonger(limit int) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	if _, ok := c.caches[id]; ok && len(c.caches[id].cache) > limit {
-		delete(c.caches, id)
+
+	for id, cache := range c.caches {
+		cache.RLock()
+		cacheLen := len(cache.cache)
+		cache.RUnlock()
+		if cacheLen > limit {
+			delete(c.caches, id)
+		}
 	}
+}
+
+func (c *cacheStore) DeleteAllExcept(ids []insolar.ID) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	newCaches := map[insolar.ID]*filamentCache{}
+	for _, id := range ids {
+		if cache, ok := c.caches[id]; ok {
+			newCaches[id] = cache
+		}
+	}
+	c.caches = newCaches
 }
 
 type filamentCache struct {

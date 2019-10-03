@@ -358,6 +358,6 @@ func check(msg string, err error) {
 
 	logCfg := configuration.NewLog()
 	logCfg.Formatter = "text"
-	inslog, _ := log.NewLog(logCfg)
+	inslog, _ := log.NewGlobalLogger(logCfg)
 	inslog.WithField("error", err).Fatal(msg)
 }

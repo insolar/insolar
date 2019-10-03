@@ -41,7 +41,7 @@ type HotSender interface {
 // HotSenderDefault implements HotSender.
 type HotSenderDefault struct {
 	dropAccessor    drop.Accessor
-	indexAccessor   object.IndexAccessor
+	indexAccessor   object.MemoryIndexAccessor
 	pulseCalculator pulse.Calculator
 	jetAccessor     jet.Accessor
 	sender          bus.Sender
@@ -53,7 +53,7 @@ type HotSenderDefault struct {
 // NewHotSender returns a new instance of a default HotSender implementation.
 func NewHotSender(
 	dropAccessor drop.Accessor,
-	indexAccessor object.IndexAccessor,
+	indexAccessor object.MemoryIndexAccessor,
 	pulseCalculator pulse.Calculator,
 	jetAccessor jet.Accessor,
 	lightChainLimit int,

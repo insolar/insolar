@@ -75,3 +75,10 @@ func (p *MetricsHelper) GetOnWriteDurationReport() DurationReportFunc {
 	}
 	return p.OnWriteDuration
 }
+
+func (p *MetricsHelper) OnWriteSkip(skippedCount int) {
+	if p == nil {
+		return
+	}
+	stats.Record(context.Background(), statLogSkips.M(int64(skippedCount)))
+}

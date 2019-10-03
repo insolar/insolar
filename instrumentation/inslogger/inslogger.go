@@ -35,7 +35,7 @@ func InitNodeLogger(
 ) (
 	context.Context, insolar.Logger,
 ) {
-	inslog, err := logger.NewLog(cfg)
+	inslog, err := logger.NewGlobalLogger(cfg)
 	if err != nil {
 		panic(err)
 	}

@@ -29,6 +29,29 @@ import (
 	"time"
 )
 
+// Creates and sets global logger. It has a different effect than SetGlobalLogger(NewLog(...)) as it sets a global filter also.
+func NewGlobalLogger(cfg configuration.Log) (insolar.Logger, error) {
+	logger, err := NewLog(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	b := logger.Copy()
+	a := getGlobalLogAdapter(b)
+	if a == nil {
+		return nil, errors.New("Log adapter has no global filter")
+	}
+
+	globalLogger.mutex.Lock()
+	defer globalLogger.mutex.Unlock()
+	err = setGlobalLogger(logger, false, true)
+	if err != nil {
+		return nil, err
+	}
+
+	return globalLogger.logger, nil
+}
+
 // NewLog creates logger instance with particular configuration
 func NewLog(cfg configuration.Log) (insolar.Logger, error) {
 	return NewLogExt(cfg, 0)
@@ -154,7 +177,7 @@ func createNoConfigGlobalLogger() {
 	logger, err := NewLog(logCfg)
 
 	if err == nil {
-		err = setGlobalLogger(logger, true)
+		err = setGlobalLogger(logger, true, true)
 	}
 
 	if err != nil || logger == nil {
@@ -170,7 +193,7 @@ func getGlobalLogAdapter(b insolar.LoggerBuilder) insolar.GlobalLogAdapter {
 	return nil
 }
 
-func setGlobalLogger(logger insolar.Logger, isDefault bool) error {
+func setGlobalLogger(logger insolar.Logger, isDefault, isNewGlobal bool) error {
 	b := logger.Copy()
 
 	output := b.(insolar.LoggerOutputGetter).GetLoggerOutput()
@@ -179,26 +202,31 @@ func setGlobalLogger(logger insolar.Logger, isDefault bool) error {
 	if isDefault {
 		// TODO move to logger construction configuration?
 		b = b.WithCaller(insolar.CallerField)
+		b = b.WithField("loginstance", "global_default")
+	} else {
+		b = b.WithField("loginstance", "global")
 	}
 
 	adapter := getGlobalLogAdapter(b)
+	lvl := b.GetLogLevel()
 
 	var err error
 	logger, err = b.Build()
-	if err != nil {
+	switch {
+	case err != nil:
 		return err
-	}
-	if isDefault {
-		logger = logger.WithField("loginstance", "global_default")
-	} else {
-		logger = logger.WithField("loginstance", "global")
-	}
-
-	if globalLogger.adapter != nil && adapter != nil && globalLogger.adapter != adapter {
+	case adapter == nil:
+		break
+	case isNewGlobal:
+		adapter.SetGlobalLoggerFilter(lvl)
+		logger = logger.Level(insolar.DebugLevel)
+	case globalLogger.adapter != adapter && globalLogger.adapter != nil:
 		adapter.SetGlobalLoggerFilter(globalLogger.adapter.GetGlobalLoggerFilter())
 	}
+
 	globalLogger.adapter = adapter
 	globalLogger.logger = logger
+
 	globalLogger.output.SetTarget(output)
 	return nil
 }
@@ -211,7 +239,7 @@ func SetGlobalLogger(logger insolar.Logger) {
 		return
 	}
 
-	err := setGlobalLogger(logger, false)
+	err := setGlobalLogger(logger, false, false)
 
 	if err != nil || logger == nil {
 		stdlog.Println("warning: ", err)

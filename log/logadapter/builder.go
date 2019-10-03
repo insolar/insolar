@@ -78,10 +78,7 @@ func (v InstrumentationConfig) CanReuseOutputFor(config InstrumentationConfig) b
 
 type Factory interface {
 	PrepareBareOutput(output io.Writer, metrics *logmetrics.MetricsHelper, config BuildConfig) (io.Writer, error)
-
-	CreateNewLowLatencyLogger(level insolar.LogLevel, config Config) (insolar.Logger, error)
-	CreateNewLogger(level insolar.LogLevel, config Config) (insolar.Logger, error)
-
+	CreateNewLogger(level insolar.LogLevel, config Config, lowLatency bool, dynFields map[string]func() interface{}) (insolar.Logger, error)
 	CanReuseMsgBuffer() bool
 }
 
@@ -119,6 +116,7 @@ type LoggerBuilder struct {
 	hasTemplate bool
 	level       insolar.LogLevel
 	fields      map[string]interface{}
+	dynFields   map[string]func() interface{}
 	Config
 }
 
@@ -201,6 +199,7 @@ func (z LoggerBuilder) WithFields(fields map[string]interface{}) insolar.LoggerB
 		z.fields = make(map[string]interface{}, len(fields))
 	}
 	for k, v := range fields {
+		delete(z.dynFields, k)
 		z.fields[k] = v
 	}
 	return z
@@ -210,7 +209,20 @@ func (z LoggerBuilder) WithField(k string, v interface{}) insolar.LoggerBuilder 
 	if z.fields == nil {
 		z.fields = make(map[string]interface{})
 	}
+	delete(z.dynFields, k)
 	z.fields[k] = v
+	return z
+}
+
+func (z LoggerBuilder) WithDynamicField(k string, fn func() interface{}) insolar.LoggerBuilder {
+	if fn == nil {
+		panic("illegal value")
+	}
+	if z.dynFields == nil {
+		z.dynFields = make(map[string]func() interface{})
+	}
+	delete(z.fields, k)
+	z.dynFields[k] = fn
 	return z
 }
 
@@ -269,13 +281,7 @@ func (z LoggerBuilder) build(needsLowLatency bool) (insolar.Logger, error) {
 	z.Config.Metrics = metrics
 	z.Config.LoggerOutput = output
 
-	var logger insolar.Logger
-	var err error
-	if needsLowLatency {
-		logger, err = z.factory.CreateNewLowLatencyLogger(z.level, z.Config)
-	} else {
-		logger, err = z.factory.CreateNewLogger(z.level, z.Config)
-	}
+	logger, err := z.factory.CreateNewLogger(z.level, z.Config, needsLowLatency, z.dynFields)
 
 	if len(z.fields) > 0 && logger != nil && err == nil {
 		logger = logger.WithFields(z.fields)
@@ -310,7 +316,7 @@ func (z LoggerBuilder) prepareOutput(metrics *logmetrics.MetricsHelper, needsLow
 			flags |= critlog.BufferReuse
 		}
 
-		missedFn := z.loggerMissedEvent(insolar.WarnLevel)
+		missedFn := z.loggerMissedEvent(insolar.WarnLevel, metrics)
 
 		var bpb *critlog.BackpressureBuffer
 		switch {
@@ -335,11 +341,14 @@ func (z LoggerBuilder) prepareOutput(metrics *logmetrics.MetricsHelper, needsLow
 	if needsLowLatency {
 		return nil, errors.New("low latency buffer was disabled but is required")
 	}
-	return critlog.NewFatalDirectWriter(output), nil
+
+	fdw := critlog.NewFatalDirectWriter(output)
+	return fdw, nil
 }
 
-func (z LoggerBuilder) loggerMissedEvent(level insolar.LogLevel) critlog.MissedEventFunc {
+func (z LoggerBuilder) loggerMissedEvent(level insolar.LogLevel, metrics *logmetrics.MetricsHelper) critlog.MissedEventFunc {
 	return func(missed int) (insolar.LogLevel, []byte) {
+		metrics.OnWriteSkip(missed)
 		return level, ([]byte)(
 			fmt.Sprintf(`{"level":"%v","message":"logger dropped %d messages"}`, level.String(), missed))
 	}

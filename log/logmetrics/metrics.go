@@ -71,6 +71,11 @@ var (
 		"number of log actually written",
 		stats.UnitDimensionless,
 	)
+	statLogSkips = stats.Int64(
+		"log_skipped",
+		"number of log entries skipped due to overflow",
+		stats.UnitDimensionless,
+	)
 	statLogWriteDelays = stats.Int64(
 		"log_write_delays",
 		"duration of log writes",
@@ -92,6 +97,13 @@ func init() {
 			Name:        statLogWrites.Name(),
 			Description: statLogWrites.Description(),
 			Measure:     statLogWrites,
+			Aggregation: view.Count(),
+			TagKeys:     tags,
+		},
+		&view.View{
+			Name:        statLogSkips.Name(),
+			Description: statLogSkips.Description(),
+			Measure:     statLogSkips,
 			Aggregation: view.Count(),
 			TagKeys:     tags,
 		},
