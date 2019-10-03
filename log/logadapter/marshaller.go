@@ -118,7 +118,7 @@ var fieldValueGetters = map[reflect.Kind]func(unexported bool, t reflect.Type) (
 	},
 	reflect.Int64: func(bool, reflect.Type) (bool, fieldValueGetterFunc) {
 		return false, func(value reflect.Value) interface{} {
-			return int64(value.Int())
+			return value.Int()
 		}
 	},
 	reflect.Uint: func(bool, reflect.Type) (bool, fieldValueGetterFunc) {
@@ -143,7 +143,7 @@ var fieldValueGetters = map[reflect.Kind]func(unexported bool, t reflect.Type) (
 	},
 	reflect.Uint64: func(bool, reflect.Type) (bool, fieldValueGetterFunc) {
 		return false, func(value reflect.Value) interface{} {
-			return uint64(value.Uint())
+			return value.Uint()
 		}
 	},
 	reflect.Uintptr: func(bool, reflect.Type) (bool, fieldValueGetterFunc) {
@@ -158,7 +158,7 @@ var fieldValueGetters = map[reflect.Kind]func(unexported bool, t reflect.Type) (
 	},
 	reflect.Float64: func(bool, reflect.Type) (bool, fieldValueGetterFunc) {
 		return false, func(value reflect.Value) interface{} {
-			return float64(value.Float())
+			return value.Float()
 		}
 	},
 	reflect.Complex64: func(bool, reflect.Type) (bool, fieldValueGetterFunc) {
@@ -168,7 +168,7 @@ var fieldValueGetters = map[reflect.Kind]func(unexported bool, t reflect.Type) (
 	},
 	reflect.Complex128: func(bool, reflect.Type) (bool, fieldValueGetterFunc) {
 		return false, func(value reflect.Value) interface{} {
-			return complex128(value.Complex())
+			return value.Complex()
 		}
 	},
 	reflect.String: func(bool, reflect.Type) (bool, fieldValueGetterFunc) {
@@ -205,7 +205,7 @@ var fieldValueGetters = map[reflect.Kind]func(unexported bool, t reflect.Type) (
 		return unexported, reflect.Value.Interface
 	},
 
-	reflect.Interface: func(unexported bool, t reflect.Type) (b bool, getterFunc fieldValueGetterFunc) {
+	reflect.Interface: func(unexported bool, _ reflect.Type) (b bool, getterFunc fieldValueGetterFunc) {
 		return unexported, func(value reflect.Value) interface{} {
 			if value.IsNil() {
 				return nil
