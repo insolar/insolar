@@ -28,6 +28,10 @@ import (
 type CheckDaemonResponse struct {
 	Status string `json:"status"`
 }
+type GetAddressesCountResponse struct {
+	ShardIndex int `json:"shardIndex"`
+	FreeAmount int `json:"freeAmount"`
+}
 type VestingParams struct {
 	Lockup      int64 `json:"lockupInPulses"`
 	Vesting     int64 `json:"vestingInPulses"`

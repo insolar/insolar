@@ -161,9 +161,8 @@ func (r *MigrationShard) GetCode() (insolar.Reference, error) {
 }
 
 // GetMigrationAddressesAmount is proxy generated method
-func (r *MigrationShard) GetMigrationAddressesAmountAsMutable(migrationAddresses []string) (int, error) {
-	var args [1]interface{}
-	args[0] = migrationAddresses
+func (r *MigrationShard) GetMigrationAddressesAmountAsMutable() (int, error) {
+	var args [0]interface{}
 
 	var argsSerialized []byte
 
@@ -201,9 +200,8 @@ func (r *MigrationShard) GetMigrationAddressesAmountAsMutable(migrationAddresses
 }
 
 // GetMigrationAddressesAmountAsImmutable is proxy generated method
-func (r *MigrationShard) GetMigrationAddressesAmount(migrationAddresses []string) (int, error) {
-	var args [1]interface{}
-	args[0] = migrationAddresses
+func (r *MigrationShard) GetMigrationAddressesAmount() (int, error) {
+	var args [0]interface{}
 
 	var argsSerialized []byte
 
