@@ -1013,6 +1013,48 @@ func TestFilamentCalculatorDefault_RequestDuplicate(t *testing.T) {
 
 		mc.Finish()
 	})
+
+	resetComponents()
+	t.Run("creation returns duplicate if not found locally", func(t *testing.T) {
+		b := newFilamentBuilder(ctx, pcs, records)
+		heavyRef := gen.Reference()
+		reason := *insolar.NewReference(*insolar.NewID(pulse.MinTimePulse+1, nil))
+		request := record.IncomingRequest{Nonce: rand.Uint64(), Reason: reason, CallType: record.CTSaveAsChild}
+		reqComposite := b.Append(pulse.MinTimePulse+2, &request)
+
+		lookupID := *insolar.NewID(pulse.MinTimePulse+3, reqComposite.RecordID.Hash())
+		pulses.BackwardsMock.Return(insolar.Pulse{PulseNumber: pulse.MinTimePulse}, nil)
+
+		coordinator.HeavyMock.Return(&heavyRef, nil)
+		sender.SendTargetMock.Set(func(_ context.Context, msg *message.Message, target insolar.Reference) (ch1 <-chan *message.Message, f1 func()) {
+			search := payload.SearchIndex{}
+			err := search.Unmarshal(msg.Payload)
+			require.NoError(t, err)
+			require.Equal(t, lookupID, search.ObjectID)
+			require.Equal(t, reason.GetLocal().Pulse(), search.Until)
+			require.Equal(t, heavyRef, target)
+
+			rep := make(chan *message.Message, 1)
+			rep <- payload.MustNewMessage(&payload.Meta{
+				Payload: payload.MustMarshal(&payload.SearchIndexInfo{
+					Index: &record.Index{
+						Lifeline: record.Lifeline{
+							LatestRequest: &reqComposite.MetaID,
+						},
+					},
+				}),
+			})
+			return rep, func() {}
+		})
+
+		fReq, fRes, err := calculator.RequestDuplicate(ctx, reqComposite.RecordID, lookupID, &request)
+		require.NoError(t, err)
+		require.NotNil(t, fReq)
+		require.Equal(t, *fReq, reqComposite)
+		require.Nil(t, fRes)
+
+		mc.Finish()
+	})
 }
 
 type filamentBuilder struct {
