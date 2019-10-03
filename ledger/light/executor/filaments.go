@@ -649,7 +649,7 @@ func (c *cacheStore) DeleteIfLonger(limit int) {
 		if len(cache.cache) > limit {
 			delete(c.caches, id)
 		}
-		defer cache.RUnlock()
+		cache.RUnlock()
 	}
 }
 
