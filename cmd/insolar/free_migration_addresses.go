@@ -29,8 +29,9 @@ func getfreeMigrationCount(adminUrls []string, publicUrls []string, memberKeysDi
 	insSDK, err := sdk.NewSDK(adminUrls, publicUrls, memberKeysDirPath)
 	check("SDK is not initialized: ", err)
 
-	var shoudAlert []map[int]int
-	var freeAdressesInShards = map[int]int{}
+	shoudAlert := map[int]int{}
+	freeAdressesInShards := map[int]int{}
+
 	for i := 0; i < shardsCount; i += shardsAtOneTime {
 		part, _, err := insSDK.GetAddressesCount(i)
 		check(fmt.Sprintf("Error while getting addresses from shards %d to %d: ", i, i+shardsAtOneTime), err)
@@ -64,12 +65,14 @@ func getfreeMigrationCount(adminUrls []string, publicUrls []string, memberKeysDi
 
 			freeAdressesInShards[shardIndex] = freeAmount
 			if freeAmount <= alertCount {
-				shoudAlert = append(shoudAlert, map[int]int{shardIndex: freeAmount})
+				shoudAlert[shardIndex] = freeAmount
+				fmt.Printf("Shard: %4d. Amount: %d\n", shardIndex, freeAmount)
 			}
 		}
 	}
-	fmt.Println("free addresses by shard: ", freeAdressesInShards)
 	if len(shoudAlert) > 0 {
-		fmt.Println("ALERT: too little free addresses in shards: ", shoudAlert)
+		fmt.Println("ALERT: too little free addresses in shards!")
+	} else {
+		fmt.Println("All shards have enough free addresses")
 	}
 }
