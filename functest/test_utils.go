@@ -628,3 +628,22 @@ func setMigrationDaemonsRef() error {
 	}
 	return nil
 }
+
+func getAddressesCount(t *testing.T, startWithShard int) map[int]int {
+	result, err := signedRequest(t, launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.getAddressesCount",
+		map[string]interface{}{"startWithShard": startWithShard})
+	require.NoError(t, err)
+	resultsSliced, ok := result.([]interface{})
+	require.True(t, ok)
+
+	var migrationShardsMap = map[int]int{}
+	for _, r := range resultsSliced {
+		rMap := r.(map[string]interface{})
+		shardIndex, ok := rMap["shardIndex"].(float64)
+		require.True(t, ok)
+		freeAmount, ok := rMap["freeAmount"].(float64)
+		require.True(t, ok)
+		migrationShardsMap[int(shardIndex)] = int(freeAmount)
+	}
+	return migrationShardsMap
+}

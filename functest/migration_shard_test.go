@@ -1,0 +1,102 @@
+///
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+///
+
+// +build functest
+
+package functest
+
+import (
+	"fmt"
+	"testing"
+
+	"github.com/insolar/insolar/api/requester"
+	"github.com/insolar/insolar/testutils/launchnet"
+	"github.com/stretchr/testify/require"
+)
+
+func TestGetFreeAddressesCount(t *testing.T) {
+	migrationShardsMap := getAddressesCount(t, 0)
+
+	for _, m := range migrationShardsMap {
+		require.True(t, m > 0)
+	}
+}
+
+func TestGetFreeAddressesCount_ChangesAfterMigration(t *testing.T) {
+	var migrationShardsMapBefore = getAddressesCount(t, 0)
+
+	member, err := newUserWithKeys()
+	require.NoError(t, err)
+	result, err := signedRequest(t, launchnet.TestRPCUrlPublic, member, "member.migrationCreate", nil)
+	require.NoError(t, err)
+	output, ok := result.(map[string]interface{})
+	require.True(t, ok)
+	require.NotEqual(t, "", output["reference"])
+	require.NotEqual(t, "", output["migrationAddress"])
+
+	result, err = signedRequest(t, launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.getAddressesCount",
+		map[string]interface{}{"startWithShard": 0})
+	require.NoError(t, err)
+
+	var migrationShardsMapAfter = getAddressesCount(t, 0)
+	isFound := false
+	for i, countBefore := range migrationShardsMapBefore {
+		countAfter := migrationShardsMapAfter[i]
+		if countBefore == countAfter {
+			continue
+		}
+		if (countBefore-countAfter) == 1 && !isFound {
+			isFound = true
+			continue
+		}
+		t.Errorf("Wrong amount of free migration addresses: for shard %d, "+
+			"amount before one migration is %d, "+
+			"after %d (migration was already found - %t)", i, countBefore, countAfter, isFound)
+
+	}
+	require.True(t, isFound)
+}
+
+func TestGetFreeAddressesCount_StartIndexTooBig(t *testing.T) {
+	_, _, err := makeSignedRequest(launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.getAddressesCount",
+		map[string]interface{}{"startWithShard": 1})
+	require.Error(t, err)
+	require.IsType(t, &requester.Error{}, err)
+	data := err.(*requester.Error).Data
+	require.Contains(t, data.Trace, "incorrect start shard index")
+}
+
+func TestGetFreeAddressesCount_IncorrectIndexType(t *testing.T) {
+	_, _, err := makeSignedRequest(launchnet.TestRPCUrl, &launchnet.MigrationAdmin, "migration.getAddressesCount",
+		map[string]interface{}{"startWithShard": "0"})
+	require.Error(t, err)
+	require.IsType(t, &requester.Error{}, err)
+	data := err.(*requester.Error).Data
+	require.Contains(t, data.Trace, "failed to get 'startWithShard' param")
+}
+
+func TestGetFreeAddressesCount_FromMember(t *testing.T) {
+	member := createMember(t)
+	_, _, err := makeSignedRequest(launchnet.TestRPCUrl, member, "migration.getAddressesCount",
+		map[string]interface{}{"startWithShard": 0})
+	require.Error(t, err)
+	require.IsType(t, &requester.Error{}, err)
+	data := err.(*requester.Error).Data
+	fmt.Println(err.Error())
+	fmt.Println(data)
+	fmt.Println(data.Trace)
+	require.Contains(t, data.Trace, "only migration daemon admin can call this method")
+}
