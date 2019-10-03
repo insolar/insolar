@@ -147,6 +147,9 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 }
 
 func (s *Init) errorMetrics(ctx context.Context, msgType string, err error) {
+	if err == nil {
+		return
+	}
 	errCode := payload.CodeUnknown
 	if err == flow.ErrCancelled {
 		errCode = payload.CodeFlowCanceled
