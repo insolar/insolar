@@ -374,7 +374,7 @@ func (p *typeMarshaller) getFieldsOf(t reflect.Type, baseOffset uintptr, getRepo
 		tf := t.Field(i)
 		fieldName := tf.Name
 
-		if fieldName == "" || fieldName[0] == '_' || tf.Anonymous || strings.HasPrefix(string(tf.Tag), `skip:"`) {
+		if tf.Anonymous || fieldName == "" || fieldName[0] == '_' || strings.HasPrefix(string(tf.Tag), `skip:"`) {
 			continue
 		}
 
