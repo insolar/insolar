@@ -27,8 +27,8 @@ You should have ```params.json``` with something like this:
 
 Than use send_request command with this file:
 
-    ./bin/insolar send-request --root-keys=./scripts/insolard/configs/root_member_keys.json --root-caller --params=params.json
-    ./bin/insolar send-request --root-keys=./scripts/insolard/configs/root_member_keys.json --migration-admin-caller --params=params.json
+    ./bin/insolar send-request --root-keys=.artifacts/launchnet/configs/ --root-caller --params=params.json
+    ./bin/insolar send-request --root-keys=.artifacts/launchnet/configs/ --migration-admin-caller --params=params.json
 
 Check available commands: `./bin/insolar -h`
 
@@ -80,3 +80,16 @@ Help on any command: `./bin/insolar help COMMAND`
 
     for localhost:
     ./bin/insolar send-request --root-keys=./scripts/insolard/configs/migration_daemon_keys.json --params=params.json -u=http://localhost:19001/admin-api/rpc
+
+## How to get count of free migration addresses in every shard
+
+    ./bin/insolar free-migration-count --migration-admin-keys=scripts/insolard/configs/root_member_keys.json --alert-level=100 --shards-count=10
+
+### Options
+
+        -k migration-admin-keys
+                Path to dir with config that contains public/private keys of migration admin.
+        -a alert-level
+                If one of shard have less free addresses than this value, command will print alert message.
+        -s shards-count
+                Count of shards at platform (must be a multiple of ten).
