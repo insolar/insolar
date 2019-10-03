@@ -30,7 +30,7 @@ type CheckDaemonResponse struct {
 }
 type GetAddressesCountResponse struct {
 	ShardIndex int `json:"shardIndex"`
-	FreeAmount int `json:"freeAmount"`
+	FreeCount  int `json:"freeCount"`
 }
 type VestingParams struct {
 	Lockup      int64 `json:"lockupInPulses"`

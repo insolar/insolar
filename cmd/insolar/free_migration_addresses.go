@@ -54,19 +54,19 @@ func getfreeMigrationCount(adminUrls []string, publicUrls []string, memberKeysDi
 			}
 			shardIndex := int(s)
 
-			f, ok := rMap["freeAmount"].(float64)
+			f, ok := rMap["freeCount"].(float64)
 			if !ok {
 				check(
 					fmt.Sprintf("Error while getting addresses from shard %d: ", shardIndex),
-					errors.New("error while converting freeAmount"),
+					errors.New("error while converting freeCount"),
 				)
 			}
-			freeAmount := int(f)
+			freeCount := int(f)
 
-			freeAdressesInShards[shardIndex] = freeAmount
-			if freeAmount <= alertCount {
-				shoudAlert[shardIndex] = freeAmount
-				fmt.Printf("Shard: %4d. Amount: %d\n", shardIndex, freeAmount)
+			freeAdressesInShards[shardIndex] = freeCount
+			if freeCount <= alertCount {
+				shoudAlert[shardIndex] = freeCount
+				fmt.Printf("Shard: %4d. Count: %d\n", shardIndex, freeCount)
 			}
 		}
 	}

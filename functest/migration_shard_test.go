@@ -61,8 +61,8 @@ func TestGetFreeAddressesCount_ChangesAfterMigration(t *testing.T) {
 			isFound = true
 			continue
 		}
-		t.Errorf("Wrong amount of free migration addresses: for shard %d, "+
-			"amount before one migration is %d, "+
+		t.Errorf("Wrong count of free migration addresses: for shard %d, "+
+			"count before one migration is %d, "+
 			"after %d (migration was already found - %t)", i, countBefore, countAfter, isFound)
 
 	}

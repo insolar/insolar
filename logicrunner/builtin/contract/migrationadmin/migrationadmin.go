@@ -156,7 +156,7 @@ func (mA *MigrationAdmin) addMigrationAddressesCall(params map[string]interface{
 
 type GetAddressesCountResponse struct {
 	ShardIndex int `json:"shardIndex"`
-	FreeAmount int `json:"freeAmount"`
+	FreeCount  int `json:"freeCount"`
 }
 
 func (mA *MigrationAdmin) getAddressesCount(params map[string]interface{}, memberRef insolar.Reference) (interface{}, error) {
@@ -178,11 +178,11 @@ func (mA *MigrationAdmin) getAddressesCount(params map[string]interface{}, membe
 
 	for i := startWithShard; i < startWithShard+10; i++ {
 		s := migrationshard.GetObject(mA.MigrationAddressShards[i])
-		amount, err := s.GetMigrationAddressesAmount()
+		count, err := s.GetMigrationAddressesAmount()
 		if err != nil {
-			return nil, fmt.Errorf("failed to get amount of migration addresses in shard with index %d", i)
+			return nil, fmt.Errorf("failed to get count of migration addresses in shard with index %d", i)
 		}
-		res = append(res, &GetAddressesCountResponse{ShardIndex: i, FreeAmount: amount})
+		res = append(res, &GetAddressesCountResponse{ShardIndex: i, FreeCount: count})
 	}
 
 	return &res, nil

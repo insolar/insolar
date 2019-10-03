@@ -641,9 +641,9 @@ func getAddressesCount(t *testing.T, startWithShard int) map[int]int {
 		rMap := r.(map[string]interface{})
 		shardIndex, ok := rMap["shardIndex"].(float64)
 		require.True(t, ok)
-		freeAmount, ok := rMap["freeAmount"].(float64)
+		freeCount, ok := rMap["freeCount"].(float64)
 		require.True(t, ok)
-		migrationShardsMap[int(shardIndex)] = int(freeAmount)
+		migrationShardsMap[int(shardIndex)] = int(freeCount)
 	}
 	return migrationShardsMap
 }
