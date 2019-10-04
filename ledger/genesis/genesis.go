@@ -262,7 +262,7 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 		contracts.GetDepositGenesisContractState(
 			"0",
 			int64(pulse.OfUnixTime(MigrationDaemonLockup)),
-			int64(pulse.OfUnixTime(MigrationDaemonVesting)),
+			MigrationDaemonVesting,
 			MigrationDaemonVestingStep,
 			foundation.Vesting2,
 			pulse.OfUnixTime(MigrationDaemonMaturePulse),
@@ -323,7 +323,7 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 		states = append(states, contracts.GetDepositGenesisContractState(
 			insolar.DefaultDistributionAmount,
 			int64(pulse.OfUnixTime(NetworkIncentivesLockup)),
-			int64(pulse.OfUnixTime(NetworkIncentivesVesting)),
+			NetworkIncentivesVesting,
 			NetworkIncentivesVestingStep,
 			foundation.Vesting2,
 			pulse.OfUnixTime(NetworkIncentivesMaturePulse),
@@ -337,7 +337,7 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 		states = append(states, contracts.GetDepositGenesisContractState(
 			insolar.DefaultDistributionAmount,
 			int64(pulse.OfUnixTime(ApplicationIncentivesLockup)),
-			int64(pulse.OfUnixTime(ApplicationIncentivesVesting)),
+			ApplicationIncentivesVesting,
 			ApplicationIncentivesVestingStep,
 			foundation.Vesting2,
 			pulse.OfUnixTime(ApplicationIncentivesMaturePulse),
@@ -351,7 +351,7 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 		states = append(states, contracts.GetDepositGenesisContractState(
 			insolar.DefaultDistributionAmount,
 			int64(pulse.OfUnixTime(FoundationLockup)),
-			int64(pulse.OfUnixTime(FoundationVesting)),
+			FoundationVesting,
 			FoundationVestingStep,
 			foundation.Vesting2,
 			pulse.OfUnixTime(FoundationMaturePulse),
@@ -364,11 +364,11 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 	for i := range g.ContractsConfig.FundsPublicKeys {
 		states = append(states, contracts.GetDepositGenesisContractState(
 			insolar.DefaultDistributionAmount,
-			int64(pulse.OfUnixTime(FundsLockup)),
-			int64(pulse.OfUnixTime(FundsVesting)),
+			FundsLockup,
+			FundsVesting,
 			FundsVestingStep,
 			foundation.Vesting2,
-			pulse.OfUnixTime(FundsMaturePulse),
+			FundsMaturePulse,
 			0,
 			insolar.GenesisNameFundsDeposits[i],
 			insolar.GenesisNameRootDomain,
@@ -378,11 +378,11 @@ func (g *Genesis) storeContracts(ctx context.Context) error {
 	for i := range g.ContractsConfig.EnterprisePublicKeys {
 		states = append(states, contracts.GetDepositGenesisContractState(
 			insolar.DefaultDistributionAmount,
-			int64(pulse.OfUnixTime(EnterpriseLockup)),
-			int64(pulse.OfUnixTime(EnterpriseVesting)),
+			EnterpriseLockup,
+			EnterpriseVesting,
 			EnterpriseVestingStep,
 			foundation.Vesting2,
-			pulse.OfUnixTime(EnterpriseMaturePulse),
+			EnterpriseMaturePulse,
 			0,
 			insolar.GenesisNameEnterpriseDeposits[i],
 			insolar.GenesisNameRootDomain,
