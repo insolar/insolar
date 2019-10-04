@@ -181,10 +181,10 @@ func (q *ExecutionBroker) startProcessor(ctx context.Context) {
 
 	q.processorActive = true
 
+	// Clear flag if there were more requests before fetching started
 	select {
 	case <-q.probablyMoreSinceLastFetch:
 	default:
-		logger.Warn("no record in probablyMoreSinceLastFetch channel during processor activation, impossible situation")
 	}
 
 	logger.Debug("starting requests processor")
@@ -418,7 +418,7 @@ func (q *ExecutionBroker) OnPulse(ctx context.Context) []payload.Payload {
 		q.PendingConfirmed = true
 	}()
 
-	close(q.closed)
+	q.close()
 
 	sendExecResults := false
 
@@ -574,6 +574,12 @@ func (q *ExecutionBroker) isClosed() bool {
 		return true
 	default:
 		return false
+	}
+}
+
+func (q *ExecutionBroker) close() {
+	if !q.isClosed() {
+		close(q.closed)
 	}
 }
 
