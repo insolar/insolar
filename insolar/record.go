@@ -86,7 +86,7 @@ func NewReferenceFromBase58(input string) (*Reference, error) {
 
 // IsReferenceInBase58 checks the validity of the reference
 func IsReferenceInBase58(input string) bool {
-	_, err := NewReferenceFromBase58(input)
+	_, err := NewObjectReferenceFromBase58(input)
 	return err == nil
 }
 
