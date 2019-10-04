@@ -18,6 +18,7 @@ package logicrunner
 
 import (
 	"context"
+	"sync"
 	"testing"
 	"time"
 
@@ -27,37 +28,39 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
-	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/artifacts"
+	"github.com/insolar/insolar/logicrunner/common"
 )
 
 func TestRequestsFetcher_New(t *testing.T) {
-	rf := NewRequestsFetcher(gen.Reference(), nil, nil, nil)
+	rf := NewRequestsFetcher(gen.Reference(), nil, nil)
 	require.NotNil(t, rf)
 }
 
 func TestRequestsFetcher_FetchPendings(t *testing.T) {
 	tests := []struct {
 		name  string
-		mocks func(t minimock.Tester) (insolar.Reference, artifacts.Client, ExecutionBrokerI)
+		mocks func(t minimock.Tester) (insolar.Reference, artifacts.Client)
 	}{
 		{
 			name: "success",
-			mocks: func(t minimock.Tester) (insolar.Reference, artifacts.Client, ExecutionBrokerI) {
+			mocks: func(t minimock.Tester) (insolar.Reference, artifacts.Client) {
 
 				requestRef := gen.RecordReference()
 				incoming := genIncomingRequest()
-
+				count := 0
 				am := artifacts.NewClientMock(t).
-					GetPendingsMock.Return([]insolar.Reference{requestRef}, nil).
-					GetAbandonedRequestMock.Return(incoming, nil)
+					GetPendingsMock.Set(func(ctx context.Context, objectRef insolar.Reference, skip []insolar.ID) (ra1 []insolar.Reference, err error) {
+					if count > 0 {
+						return nil, insolar.ErrNoPendingRequest
+					}
+					count++
+					return []insolar.Reference{requestRef}, nil
+				}).
+					GetRequestMock.Return(incoming, nil)
 
-				broker := NewExecutionBrokerIMock(t).
-					IsKnownRequestMock.Return(false).
-					AddRequestsFromLedgerMock.Return()
-
-				return *incoming.Object, am, broker
+				return *incoming.Object, am
 			},
 		},
 	}
@@ -69,50 +72,22 @@ func TestRequestsFetcher_FetchPendings(t *testing.T) {
 			defer mc.Finish()
 			defer mc.Wait(1 * time.Minute)
 
-			obj, am, br := test.mocks(mc)
-			rf := NewRequestsFetcher(obj, am, br, nil)
-			rf.FetchPendings(ctx)
+			obj, am := test.mocks(mc)
+			rf := NewRequestsFetcher(obj, am, nil)
+			feed := rf.FetchPendings(ctx)
+			wg := &sync.WaitGroup{}
+			wg.Add(1)
+			var result []*common.Transcript
+			go func() {
+				for res := range feed {
+					result = append(result, res)
+				}
+				wg.Done()
+			}()
+			wg.Wait()
+			assert.Equal(t, 2, len(result))
+			assert.NotEqual(t, nil, result[0])
+			assert.Equal(t, (*common.Transcript)(nil), result[1])
 		})
 	}
-}
-
-func isKnownRequest(reference insolar.Reference, array []insolar.Reference) bool {
-	for i := range array {
-		if array[i].Equal(reference) {
-			return false
-		}
-	}
-
-	panic("should be known request")
-}
-
-func TestRequestsFetcher_Limits(t *testing.T) {
-	ctx := inslogger.TestContext(t)
-
-	mc := minimock.NewController(t)
-	defer mc.Wait(1 * time.Second)
-
-	objectRef := gen.Reference()
-	pendings := gen.UniqueRecordReferences(20)
-
-	am := artifacts.NewClientMock(mc).
-		GetPendingsMock.Inspect(func(_ context.Context, objectRef insolar.Reference) {
-		t.Logf("incoming obj %s", objectRef)
-	}).Return(pendings, nil).
-		GetAbandonedRequestMock.Set(
-		func(ctx context.Context, objectRef insolar.Reference, requestRef insolar.Reference) (record.Request, error) {
-			t.Logf("GetAbandonedRequest %s", requestRef)
-			return genIncomingRequest(), nil
-		})
-
-	eb := NewExecutionBrokerIMock(mc).
-		IsKnownRequestMock.Return(false).
-		AddRequestsFromLedgerMock.Return()
-
-	fetcher := NewRequestsFetcher(objectRef, am, eb, nil)
-
-	fetcherOriginal := fetcher.(*requestFetcher)
-	err := fetcherOriginal.fetch(ctx)
-	assert.NoError(t, err)
-	assert.Equal(t, uint64(len(pendings)), am.GetAbandonedRequestAfterCounter())
 }

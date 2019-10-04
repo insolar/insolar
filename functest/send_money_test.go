@@ -20,6 +20,7 @@ package functest
 
 import (
 	"math/big"
+	"strings"
 	"testing"
 	"time"
 
@@ -76,6 +77,62 @@ func TestTransferMoney(t *testing.T) {
 	checkBalanceFewTimes(t, &launchnet.FeeMember, feeMemberRef, expectedFeeBalance)
 	newFeeBalance := getBalanceNoErr(t, &launchnet.FeeMember, feeMemberRef)
 	require.Equal(t, expectedFeeBalance, newFeeBalance)
+}
+
+func TestTransferMoneyToNotObjectRef(t *testing.T) {
+	firstMember := createMember(t)
+	secondMember := createMember(t)
+	oldFirstBalance := getBalanceNoErr(t, firstMember, firstMember.Ref)
+	oldSecondBalance := getBalanceNoErr(t, secondMember, secondMember.Ref)
+
+	feeRes, err := signedRequest(t, launchnet.TestRPCUrlPublic, &launchnet.FeeMember, "member.get", nil)
+	require.Nil(t, err)
+	feeMemberRef, ok := feeRes.(map[string]interface{})["reference"].(string)
+	require.True(t, ok)
+	launchnet.FeeMember.Ref = feeMemberRef
+	feeBalance := getBalanceNoErr(t, &launchnet.FeeMember, feeMemberRef)
+
+	amountStr := "10"
+
+	_, _, err = makeSignedRequest(launchnet.TestRPCUrlPublic, firstMember, "member.transfer",
+		map[string]interface{}{"amount": amountStr, "toMemberReference": secondMember.Ref + ".record"})
+	require.Error(t, err)
+	require.Contains(t, strings.Join(err.(*requester.Error).Data.Trace, ": "), "provided reference is not object")
+
+	newFirstBalance := getBalanceNoErr(t, firstMember, firstMember.Ref)
+	newSecondBalance := getBalanceNoErr(t, secondMember, secondMember.Ref)
+	newFeeBalance := getBalanceNoErr(t, &launchnet.FeeMember, feeMemberRef)
+	require.Equal(t, oldFirstBalance, newFirstBalance)
+	require.Equal(t, oldSecondBalance, newSecondBalance)
+	require.Equal(t, feeBalance, newFeeBalance)
+}
+
+func TestTransferMoneyToNotSelfScopedRef(t *testing.T) {
+	firstMember := createMember(t)
+	secondMember := createMember(t)
+	oldFirstBalance := getBalanceNoErr(t, firstMember, firstMember.Ref)
+	oldSecondBalance := getBalanceNoErr(t, secondMember, secondMember.Ref)
+
+	feeRes, err := signedRequest(t, launchnet.TestRPCUrlPublic, &launchnet.FeeMember, "member.get", nil)
+	require.Nil(t, err)
+	feeMemberRef, ok := feeRes.(map[string]interface{})["reference"].(string)
+	require.True(t, ok)
+	launchnet.FeeMember.Ref = feeMemberRef
+	feeBalance := getBalanceNoErr(t, &launchnet.FeeMember, feeMemberRef)
+
+	amountStr := "10"
+
+	_, _, err = makeSignedRequest(launchnet.TestRPCUrlPublic, firstMember, "member.transfer",
+		map[string]interface{}{"amount": amountStr, "toMemberReference": secondMember.Ref + "." + firstMember.Ref})
+	require.Error(t, err)
+	require.Contains(t, strings.Join(err.(*requester.Error).Data.Trace, ": "), "provided reference is not self-scoped")
+
+	newFirstBalance := getBalanceNoErr(t, firstMember, firstMember.Ref)
+	newSecondBalance := getBalanceNoErr(t, secondMember, secondMember.Ref)
+	newFeeBalance := getBalanceNoErr(t, &launchnet.FeeMember, feeMemberRef)
+	require.Equal(t, oldFirstBalance, newFirstBalance)
+	require.Equal(t, oldSecondBalance, newSecondBalance)
+	require.Equal(t, feeBalance, newFeeBalance)
 }
 
 func TestTransferMoneyFromNotExist(t *testing.T) {

@@ -45,7 +45,7 @@ type SendObject struct {
 		jets        jet.Storage
 		jetFetcher  executor.JetFetcher
 		records     object.RecordAccessor
-		indexes     object.IndexAccessor
+		indexes     object.MemoryIndexAccessor
 		sender      bus.Sender
 		filament    executor.FilamentCalculator
 	}
@@ -68,7 +68,7 @@ func (p *SendObject) Dep(
 	jets jet.Storage,
 	jetFetcher executor.JetFetcher,
 	records object.RecordAccessor,
-	indexes object.IndexAccessor,
+	indexes object.MemoryIndexAccessor,
 	sender bus.Sender,
 	filament executor.FilamentCalculator,
 ) {

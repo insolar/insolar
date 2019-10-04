@@ -19,13 +19,15 @@ package log
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/insolar"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"runtime"
 	"strconv"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/insolar"
 )
 
 // Beware, test results there depends on test file name (caller_test.go)!

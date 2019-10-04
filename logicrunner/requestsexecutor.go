@@ -96,20 +96,17 @@ func (e *requestsExecutor) Execute(
 func (e *requestsExecutor) Save(
 	ctx context.Context, transcript *common.Transcript, res artifacts.RequestResult,
 ) error {
-	inslogger.FromContext(ctx).Debug("saving result")
+	inslogger.FromContext(ctx).Debug("registering IncomingRequest result")
 
 	err := e.ArtifactManager.RegisterResult(ctx, transcript.RequestRef, res)
 	if err != nil {
 		return errors.Wrapf(err, "couldn't save result with %s side effect", res.Type().String())
 	}
 
-	inslogger.FromContext(ctx).Debug("saved result")
+	inslogger.FromContext(ctx).Debug("registered IncomingRequest result")
 
 	return nil
 }
-
-// objRef := res.ObjectReference()
-// return &reply.CallMethod{Result: res.Result(), Object: &objRef}, nil
 
 func (e *requestsExecutor) SendReply(
 	ctx context.Context,
@@ -142,11 +139,11 @@ func (e *requestsExecutor) SendReply(
 	}
 
 	if req.APINode.IsEmpty() {
-		e.sendToCaller(ctx, reqRef, req, replyBytes, errStr)
+		go e.sendToCaller(ctx, reqRef, req, replyBytes, errStr)
 		return
 	}
 
-	e.sendToAPINode(ctx, reqRef, req, replyBytes, errStr)
+	go e.sendToAPINode(ctx, reqRef, req, replyBytes, errStr)
 }
 
 func (e *requestsExecutor) sendToCaller(

@@ -37,11 +37,6 @@ apirunner:
   port: 19191
   location: /api/v1
 pulsar:
-  connectiontype: tcp
-  mainlisteneraddress: 0.0.0.0:18090
-  storage:
-    datadirectory: ./.artifacts/pulsar_data
-    txretriesonconflict: 0
   pulsetime: 10000
   receivingsigntimeout: 1000
   receivingnumbertimeout: 1000

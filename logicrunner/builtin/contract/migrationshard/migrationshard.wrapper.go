@@ -98,9 +98,7 @@ func INSMETHOD_GetMigrationAddressesAmount(object []byte, data []byte) ([]byte, 
 		return nil, nil, e
 	}
 
-	args := make([]interface{}, 1)
-	var args0 []string
-	args[0] = &args0
+	args := []interface{}{}
 
 	err = ph.Deserialize(data, &args)
 	if err != nil {
@@ -108,7 +106,7 @@ func INSMETHOD_GetMigrationAddressesAmount(object []byte, data []byte) ([]byte, 
 		return nil, nil, e
 	}
 
-	ret0, ret1 := self.GetMigrationAddressesAmount(args0)
+	ret0, ret1 := self.GetMigrationAddressesAmount()
 
 	if ph.GetSystemError() != nil {
 		return nil, nil, ph.GetSystemError()

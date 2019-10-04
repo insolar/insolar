@@ -104,3 +104,26 @@ func TestFatalDirectWriter_close_on_no_flush(t *testing.T) {
 	assert.Contains(t, testLog, "FATAL must pass")
 	assert.NotContains(t, testLog, "must NOT pass")
 }
+
+func TestFatalDirectWriter_close(t *testing.T) {
+	tw := testWriter{}
+	writer := NewFatalDirectWriter(&tw)
+
+	assert.False(t, tw.closed)
+	require.NoError(t, writer.Close())
+	assert.True(t, tw.closed)
+	require.Error(t, writer.Close())
+	assert.True(t, tw.closed)
+}
+
+func TestFatalDirectWriter_no_close(t *testing.T) {
+	tw := testWriter{}
+	writer := NewFatalDirectWriter(&tw)
+	writer.SetNoClosePropagation()
+
+	assert.False(t, tw.closed)
+	require.NoError(t, writer.Close())
+	assert.False(t, tw.closed)
+	require.Error(t, writer.Close())
+	assert.False(t, tw.closed)
+}

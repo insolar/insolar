@@ -26,10 +26,12 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/api"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
+	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/machinesmanager"
 	"github.com/insolar/insolar/platformpolicy"
@@ -44,7 +46,7 @@ func TestVirtual_BasicOperations(t *testing.T) {
 
 	t.Run("happy path", func(t *testing.T) {
 		objRef := gen.Reference()
-		reqRef := gen.Reference()
+		reqRef := gen.RecordReference()
 		objID := objRef.GetLocal()
 
 		var requestID insolar.ID
@@ -73,7 +75,41 @@ func TestVirtual_BasicOperations(t *testing.T) {
 			codeData, err := codeRecord.Marshal()
 			require.NoError(t, err)
 
+			call := 0
+
 			switch data := pl.(type) {
+			case *payload.GetPendings:
+				if call > 0 {
+					return []payload.Payload{
+						&payload.Error{
+							Code: payload.CodeNoPendings,
+							Text: "No pendings",
+						},
+					}
+				}
+				call++
+				return []payload.Payload{
+					&payload.IDs{IDs: []insolar.ID{requestID}},
+				}
+			case *payload.GetRequest:
+				req := &record.IncomingRequest{
+					Object:       &objRef,
+					Method:       "good.CallMethod",
+					Arguments:    nil,
+					APIRequestID: utils.TraceID(ctx),
+					APINode:      virtual.ref,
+					Reason:       api.MakeReason(insolar.GenesisPulse.PulseNumber, nil),
+					Immutable:    true,
+				}
+
+				virtReqRecord := record.Wrap(req)
+
+				return []payload.Payload{
+					&payload.Request{
+						RequestID: data.RequestID,
+						Request:   virtReqRecord,
+					},
+				}
 			// getters
 			case *payload.SetIncomingRequest:
 				buf, err := data.Request.Marshal()

@@ -253,7 +253,7 @@ func checkOutgoingRequest(ctx context.Context, request *record.OutgoingRequest) 
 	return checkIncomingRequest(ctx, (*record.IncomingRequest)(request))
 }
 
-func checkIncomingRequest(ctx context.Context, request *record.IncomingRequest) error {
+func checkIncomingRequest(_ context.Context, request *record.IncomingRequest) error {
 	if !request.CallerPrototype.IsEmpty() && !request.CallerPrototype.IsObjectReference() {
 		return errors.Errorf("request.CallerPrototype should be ObjectReference; ref=%s", request.CallerPrototype.String())
 	}

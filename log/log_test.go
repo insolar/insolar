@@ -19,6 +19,7 @@ package log
 import (
 	"bytes"
 	"io"
+	"os"
 	"regexp"
 	"testing"
 
@@ -235,8 +236,10 @@ func TestLog_AddFields(t *testing.T) {
 	}
 }
 
+var adapters = []string{"zerolog"}
+
 func TestLog_Timestamp(t *testing.T) {
-	for _, adapter := range []string{"zerolog"} {
+	for _, adapter := range adapters {
 		adapter := adapter
 		t.Run(adapter, func(t *testing.T) {
 			logger, err := NewLog(configuration.Log{Level: "info", Adapter: adapter, Formatter: "json"})
@@ -255,7 +258,7 @@ func TestLog_Timestamp(t *testing.T) {
 }
 
 func TestLog_WriteDuration(t *testing.T) {
-	for _, adapter := range []string{"zerolog"} {
+	for _, adapter := range adapters {
 		adapter := adapter
 		t.Run(adapter, func(t *testing.T) {
 			logger, err := NewLog(configuration.Log{Level: "info", Adapter: adapter, Formatter: "json"})
@@ -281,4 +284,46 @@ func TestLog_WriteDuration(t *testing.T) {
 			assert.Contains(t, s, `,"writeDuration":"`)
 		})
 	}
+}
+
+func TestLog_DynField(t *testing.T) {
+	for _, adapter := range adapters {
+		adapter := adapter
+		t.Run(adapter, func(t *testing.T) {
+			logger, err := NewLog(configuration.Log{Level: "info", Adapter: adapter, Formatter: "json"})
+			require.NoError(t, err)
+			require.NotNil(t, logger)
+
+			const skipConstant = "---skip---"
+			dynFieldValue := skipConstant
+			var buf bytes.Buffer
+			logger, err = logger.Copy().WithOutput(&buf).WithDynamicField("dynField1", func() interface{} {
+				if dynFieldValue == skipConstant {
+					return nil
+				}
+				return dynFieldValue
+			}).Build()
+			require.NoError(t, err)
+
+			logger.Error("test1")
+			assert.NotContains(t, buf.String(), `"dynField1":`)
+			dynFieldValue = ""
+			logger.Error("test2")
+			assert.Contains(t, buf.String(), `"dynField1":""`)
+			dynFieldValue = "some text"
+			logger.Error("test3")
+			assert.Contains(t, buf.String(), `"dynField1":"some text"`)
+		})
+	}
+}
+
+func TestMain(m *testing.M) {
+	l, err := GlobalLogger().Copy().WithFormat(insolar.JSONFormat).WithLevel(insolar.DebugLevel).Build()
+	if err != nil {
+		panic(err)
+	}
+	SetGlobalLogger(l)
+	_ = SetGlobalLevelFilter(insolar.DebugLevel)
+	exitCode := m.Run()
+	os.Exit(exitCode)
 }

@@ -49,18 +49,6 @@ func TestHandleExecutorResults_Present(t *testing.T) {
 					RecordRef:             *incoming1.Object,
 					Pending:               insolar.NotPending,
 					LedgerHasMoreRequests: true,
-					Queue: []*payload.ExecutionQueueElement{
-						{
-							RequestRef:  gen.RecordReference(),
-							Incoming:    incoming1,
-							ServiceData: &payload.ServiceData{},
-						},
-						{
-							RequestRef:  gen.RecordReference(),
-							Incoming:    incoming2,
-							ServiceData: &payload.ServiceData{},
-						},
-					},
 				}
 
 				buf, err := payload.Marshal(receivedPayload)
@@ -74,7 +62,7 @@ func TestHandleExecutorResults_Present(t *testing.T) {
 							Return(
 								NewExecutionBrokerIMock(t).
 									PrevExecutorPendingResultMock.Return().
-									MoreRequestsOnLedgerMock.Return(),
+									HasMoreRequestsMock.Return(),
 							),
 					},
 					meta: payload.Meta{Payload: buf},

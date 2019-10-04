@@ -3,9 +3,6 @@ local params = std.mergePatch( base_params.components, std.extVar("__ksonnet/par
 local insolar_params = params.insolar;
 
 {
-    "versionmanager": {
-        "minalowedversion": "v0.3.0"
-    },
     "host": {
         "transport": {
             "protocol": "TCP",

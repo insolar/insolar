@@ -315,6 +315,26 @@ func (sdk *SDK) AddMigrationAddresses(migrationAddresses []string) (string, erro
 	return response.TraceID, nil
 }
 
+// GetAddressCount method gets burn addresses from shards
+func (sdk *SDK) GetAddressCount(startWithIndex int) (interface{}, string, error) {
+	userConfig, err := requester.CreateUserConfig(sdk.migrationAdminMember.Caller, sdk.migrationAdminMember.PrivateKey, sdk.migrationAdminMember.PublicKey)
+	if err != nil {
+		return nil, "", errors.Wrap(err, "failed to create user config for request")
+	}
+
+	response, err := sdk.DoRequest(
+		sdk.adminAPIURLs,
+		userConfig,
+		"migration.getAddressCount",
+		map[string]interface{}{"startWithIndex": startWithIndex},
+	)
+	if err != nil {
+		return nil, "", errors.Wrap(err, "request was failed ")
+	}
+
+	return response.CallResult, response.TraceID, nil
+}
+
 // ActivateDaemon activate daemon from migration admin
 func (sdk *SDK) ActivateDaemon(daemonReference string) (string, error) {
 	userConfig, err := requester.CreateUserConfig(sdk.migrationAdminMember.Caller, sdk.migrationAdminMember.PrivateKey, sdk.migrationAdminMember.PublicKey)

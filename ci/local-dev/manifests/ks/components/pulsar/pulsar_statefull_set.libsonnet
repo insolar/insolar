@@ -83,10 +83,6 @@ local image_params = params.insolar.image;
 								}
 							},
 							{
-								"name": "INSOLAR_PULSAR_MAINLISTENERADDRESS",
-								"value": "$(POD_IP):58090"
-							},
-							{
 								"name": "INSOLAR_PULSAR_DISTRIBUTIONTRANSPORT_ADDRESS",
 								"value": "$(POD_IP):58091"
 							}

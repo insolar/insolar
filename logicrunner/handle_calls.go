@@ -117,9 +117,12 @@ func (h *HandleCall) handleActual(
 		return nil, errors.Wrap(err, "[ HandleCall.handleActual ] can't play role")
 	}
 
+	logger.Debug("registering incoming request")
+
 	procRegisterRequest := NewRegisterIncomingRequest(*request, h.dep)
 	err := f.Procedure(ctx, procRegisterRequest, true)
 	if err != nil {
+		logger.WithField("error", err.Error()).Debug("failed to register incoming request")
 		if err == flow.ErrCancelled {
 			inslogger.FromContext(ctx).Info("pulse change during registration, asking caller for retry")
 			// Requests need to be deduplicated. For now in case of ErrCancelled we may have 2 registered requests
@@ -137,6 +140,7 @@ func (h *HandleCall) handleActual(
 		}
 		return nil, errors.Wrap(err, "[ HandleCall.handleActual ] can't create request")
 	}
+	logger.Debug("registered request")
 
 	reqInfo := procRegisterRequest.getResult()
 	requestRef := *getRequestReference(reqInfo)
@@ -147,7 +151,8 @@ func (h *HandleCall) handleActual(
 
 	objectRef := request.Object
 
-	if objectRef == nil {
+	if objectRef == nil || !objectRef.IsSelfScope() {
+		logger.Debug("incoming request bad object reference")
 		return nil, errors.New("can't get object reference")
 	}
 
@@ -159,7 +164,10 @@ func (h *HandleCall) handleActual(
 		},
 	)
 
+	logger.Debug("registered incoming request")
+
 	if !objectRef.GetLocal().Equal(reqInfo.ObjectID) {
+		logger.Debug("incoming request invalid object reference")
 		return nil, errors.New("object id we calculated doesn't match ledger")
 	}
 
@@ -170,7 +178,7 @@ func (h *HandleCall) handleActual(
 	}
 
 	if len(reqInfo.Result) != 0 {
-		logger.Debug("request already has result on ledger, returning it")
+		logger.Debug("incoming request already has result on ledger, returning it")
 		go func() {
 			err := h.sendRequestResult(ctx, *objectRef, requestRef, *request, *reqInfo)
 			if err != nil {
@@ -182,6 +190,7 @@ func (h *HandleCall) handleActual(
 
 	done, err := h.dep.WriteAccessor.Begin(ctx, flow.Pulse(ctx))
 	if err != nil {
+		logger.WithField("error", err).Debug("failed to acquire write accessor")
 		if err == writecontroller.ErrWriteClosed {
 			stats.Record(ctx, metrics.CallMethodAdditionalCall.M(1))
 			go h.sendToNextExecutor(ctx, *objectRef, requestRef, *request)
@@ -192,11 +201,7 @@ func (h *HandleCall) handleActual(
 	defer done()
 
 	broker := h.dep.StateStorage.UpsertExecutionState(*objectRef)
-
-	proc := AddFreshRequest{broker: broker, requestRef: requestRef, request: *request}
-	if err := f.Procedure(ctx, &proc, true); err != nil {
-		return nil, errors.Wrap(err, "couldn't pass request to broker")
-	}
+	broker.HasMoreRequests(ctx)
 
 	return registeredRequestReply, nil
 }

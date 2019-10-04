@@ -30,12 +30,6 @@ type ClientMock struct {
 	beforeDeployCodeCounter uint64
 	DeployCodeMock          mClientMockDeployCode
 
-	funcGetAbandonedRequest          func(ctx context.Context, objectRef insolar.Reference, reqRef insolar.Reference) (r1 record.Request, err error)
-	inspectFuncGetAbandonedRequest   func(ctx context.Context, objectRef insolar.Reference, reqRef insolar.Reference)
-	afterGetAbandonedRequestCounter  uint64
-	beforeGetAbandonedRequestCounter uint64
-	GetAbandonedRequestMock          mClientMockGetAbandonedRequest
-
 	funcGetCode          func(ctx context.Context, ref insolar.Reference) (c2 CodeDescriptor, err error)
 	inspectFuncGetCode   func(ctx context.Context, ref insolar.Reference)
 	afterGetCodeCounter  uint64
@@ -48,8 +42,8 @@ type ClientMock struct {
 	beforeGetObjectCounter uint64
 	GetObjectMock          mClientMockGetObject
 
-	funcGetPendings          func(ctx context.Context, objectRef insolar.Reference) (ra1 []insolar.Reference, err error)
-	inspectFuncGetPendings   func(ctx context.Context, objectRef insolar.Reference)
+	funcGetPendings          func(ctx context.Context, objectRef insolar.Reference, skip []insolar.ID) (ra1 []insolar.Reference, err error)
+	inspectFuncGetPendings   func(ctx context.Context, objectRef insolar.Reference, skip []insolar.ID)
 	afterGetPendingsCounter  uint64
 	beforeGetPendingsCounter uint64
 	GetPendingsMock          mClientMockGetPendings
@@ -59,6 +53,12 @@ type ClientMock struct {
 	afterGetPrototypeCounter  uint64
 	beforeGetPrototypeCounter uint64
 	GetPrototypeMock          mClientMockGetPrototype
+
+	funcGetRequest          func(ctx context.Context, objectRef insolar.Reference, reqRef insolar.Reference) (r1 record.Request, err error)
+	inspectFuncGetRequest   func(ctx context.Context, objectRef insolar.Reference, reqRef insolar.Reference)
+	afterGetRequestCounter  uint64
+	beforeGetRequestCounter uint64
+	GetRequestMock          mClientMockGetRequest
 
 	funcHasPendings          func(ctx context.Context, object insolar.Reference) (b1 bool, err error)
 	inspectFuncHasPendings   func(ctx context.Context, object insolar.Reference)
@@ -116,9 +116,6 @@ func NewClientMock(t minimock.Tester) *ClientMock {
 	m.DeployCodeMock = mClientMockDeployCode{mock: m}
 	m.DeployCodeMock.callArgs = []*ClientMockDeployCodeParams{}
 
-	m.GetAbandonedRequestMock = mClientMockGetAbandonedRequest{mock: m}
-	m.GetAbandonedRequestMock.callArgs = []*ClientMockGetAbandonedRequestParams{}
-
 	m.GetCodeMock = mClientMockGetCode{mock: m}
 	m.GetCodeMock.callArgs = []*ClientMockGetCodeParams{}
 
@@ -130,6 +127,9 @@ func NewClientMock(t minimock.Tester) *ClientMock {
 
 	m.GetPrototypeMock = mClientMockGetPrototype{mock: m}
 	m.GetPrototypeMock.callArgs = []*ClientMockGetPrototypeParams{}
+
+	m.GetRequestMock = mClientMockGetRequest{mock: m}
+	m.GetRequestMock.callArgs = []*ClientMockGetRequestParams{}
 
 	m.HasPendingsMock = mClientMockHasPendings{mock: m}
 	m.HasPendingsMock.callArgs = []*ClientMockHasPendingsParams{}
@@ -591,224 +591,6 @@ func (m *ClientMock) MinimockDeployCodeInspect() {
 	}
 }
 
-type mClientMockGetAbandonedRequest struct {
-	mock               *ClientMock
-	defaultExpectation *ClientMockGetAbandonedRequestExpectation
-	expectations       []*ClientMockGetAbandonedRequestExpectation
-
-	callArgs []*ClientMockGetAbandonedRequestParams
-	mutex    sync.RWMutex
-}
-
-// ClientMockGetAbandonedRequestExpectation specifies expectation struct of the Client.GetAbandonedRequest
-type ClientMockGetAbandonedRequestExpectation struct {
-	mock    *ClientMock
-	params  *ClientMockGetAbandonedRequestParams
-	results *ClientMockGetAbandonedRequestResults
-	Counter uint64
-}
-
-// ClientMockGetAbandonedRequestParams contains parameters of the Client.GetAbandonedRequest
-type ClientMockGetAbandonedRequestParams struct {
-	ctx       context.Context
-	objectRef insolar.Reference
-	reqRef    insolar.Reference
-}
-
-// ClientMockGetAbandonedRequestResults contains results of the Client.GetAbandonedRequest
-type ClientMockGetAbandonedRequestResults struct {
-	r1  record.Request
-	err error
-}
-
-// Expect sets up expected params for Client.GetAbandonedRequest
-func (mmGetAbandonedRequest *mClientMockGetAbandonedRequest) Expect(ctx context.Context, objectRef insolar.Reference, reqRef insolar.Reference) *mClientMockGetAbandonedRequest {
-	if mmGetAbandonedRequest.mock.funcGetAbandonedRequest != nil {
-		mmGetAbandonedRequest.mock.t.Fatalf("ClientMock.GetAbandonedRequest mock is already set by Set")
-	}
-
-	if mmGetAbandonedRequest.defaultExpectation == nil {
-		mmGetAbandonedRequest.defaultExpectation = &ClientMockGetAbandonedRequestExpectation{}
-	}
-
-	mmGetAbandonedRequest.defaultExpectation.params = &ClientMockGetAbandonedRequestParams{ctx, objectRef, reqRef}
-	for _, e := range mmGetAbandonedRequest.expectations {
-		if minimock.Equal(e.params, mmGetAbandonedRequest.defaultExpectation.params) {
-			mmGetAbandonedRequest.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmGetAbandonedRequest.defaultExpectation.params)
-		}
-	}
-
-	return mmGetAbandonedRequest
-}
-
-// Inspect accepts an inspector function that has same arguments as the Client.GetAbandonedRequest
-func (mmGetAbandonedRequest *mClientMockGetAbandonedRequest) Inspect(f func(ctx context.Context, objectRef insolar.Reference, reqRef insolar.Reference)) *mClientMockGetAbandonedRequest {
-	if mmGetAbandonedRequest.mock.inspectFuncGetAbandonedRequest != nil {
-		mmGetAbandonedRequest.mock.t.Fatalf("Inspect function is already set for ClientMock.GetAbandonedRequest")
-	}
-
-	mmGetAbandonedRequest.mock.inspectFuncGetAbandonedRequest = f
-
-	return mmGetAbandonedRequest
-}
-
-// Return sets up results that will be returned by Client.GetAbandonedRequest
-func (mmGetAbandonedRequest *mClientMockGetAbandonedRequest) Return(r1 record.Request, err error) *ClientMock {
-	if mmGetAbandonedRequest.mock.funcGetAbandonedRequest != nil {
-		mmGetAbandonedRequest.mock.t.Fatalf("ClientMock.GetAbandonedRequest mock is already set by Set")
-	}
-
-	if mmGetAbandonedRequest.defaultExpectation == nil {
-		mmGetAbandonedRequest.defaultExpectation = &ClientMockGetAbandonedRequestExpectation{mock: mmGetAbandonedRequest.mock}
-	}
-	mmGetAbandonedRequest.defaultExpectation.results = &ClientMockGetAbandonedRequestResults{r1, err}
-	return mmGetAbandonedRequest.mock
-}
-
-//Set uses given function f to mock the Client.GetAbandonedRequest method
-func (mmGetAbandonedRequest *mClientMockGetAbandonedRequest) Set(f func(ctx context.Context, objectRef insolar.Reference, reqRef insolar.Reference) (r1 record.Request, err error)) *ClientMock {
-	if mmGetAbandonedRequest.defaultExpectation != nil {
-		mmGetAbandonedRequest.mock.t.Fatalf("Default expectation is already set for the Client.GetAbandonedRequest method")
-	}
-
-	if len(mmGetAbandonedRequest.expectations) > 0 {
-		mmGetAbandonedRequest.mock.t.Fatalf("Some expectations are already set for the Client.GetAbandonedRequest method")
-	}
-
-	mmGetAbandonedRequest.mock.funcGetAbandonedRequest = f
-	return mmGetAbandonedRequest.mock
-}
-
-// When sets expectation for the Client.GetAbandonedRequest which will trigger the result defined by the following
-// Then helper
-func (mmGetAbandonedRequest *mClientMockGetAbandonedRequest) When(ctx context.Context, objectRef insolar.Reference, reqRef insolar.Reference) *ClientMockGetAbandonedRequestExpectation {
-	if mmGetAbandonedRequest.mock.funcGetAbandonedRequest != nil {
-		mmGetAbandonedRequest.mock.t.Fatalf("ClientMock.GetAbandonedRequest mock is already set by Set")
-	}
-
-	expectation := &ClientMockGetAbandonedRequestExpectation{
-		mock:   mmGetAbandonedRequest.mock,
-		params: &ClientMockGetAbandonedRequestParams{ctx, objectRef, reqRef},
-	}
-	mmGetAbandonedRequest.expectations = append(mmGetAbandonedRequest.expectations, expectation)
-	return expectation
-}
-
-// Then sets up Client.GetAbandonedRequest return parameters for the expectation previously defined by the When method
-func (e *ClientMockGetAbandonedRequestExpectation) Then(r1 record.Request, err error) *ClientMock {
-	e.results = &ClientMockGetAbandonedRequestResults{r1, err}
-	return e.mock
-}
-
-// GetAbandonedRequest implements Client
-func (mmGetAbandonedRequest *ClientMock) GetAbandonedRequest(ctx context.Context, objectRef insolar.Reference, reqRef insolar.Reference) (r1 record.Request, err error) {
-	mm_atomic.AddUint64(&mmGetAbandonedRequest.beforeGetAbandonedRequestCounter, 1)
-	defer mm_atomic.AddUint64(&mmGetAbandonedRequest.afterGetAbandonedRequestCounter, 1)
-
-	if mmGetAbandonedRequest.inspectFuncGetAbandonedRequest != nil {
-		mmGetAbandonedRequest.inspectFuncGetAbandonedRequest(ctx, objectRef, reqRef)
-	}
-
-	params := &ClientMockGetAbandonedRequestParams{ctx, objectRef, reqRef}
-
-	// Record call args
-	mmGetAbandonedRequest.GetAbandonedRequestMock.mutex.Lock()
-	mmGetAbandonedRequest.GetAbandonedRequestMock.callArgs = append(mmGetAbandonedRequest.GetAbandonedRequestMock.callArgs, params)
-	mmGetAbandonedRequest.GetAbandonedRequestMock.mutex.Unlock()
-
-	for _, e := range mmGetAbandonedRequest.GetAbandonedRequestMock.expectations {
-		if minimock.Equal(e.params, params) {
-			mm_atomic.AddUint64(&e.Counter, 1)
-			return e.results.r1, e.results.err
-		}
-	}
-
-	if mmGetAbandonedRequest.GetAbandonedRequestMock.defaultExpectation != nil {
-		mm_atomic.AddUint64(&mmGetAbandonedRequest.GetAbandonedRequestMock.defaultExpectation.Counter, 1)
-		want := mmGetAbandonedRequest.GetAbandonedRequestMock.defaultExpectation.params
-		got := ClientMockGetAbandonedRequestParams{ctx, objectRef, reqRef}
-		if want != nil && !minimock.Equal(*want, got) {
-			mmGetAbandonedRequest.t.Errorf("ClientMock.GetAbandonedRequest got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
-		}
-
-		results := mmGetAbandonedRequest.GetAbandonedRequestMock.defaultExpectation.results
-		if results == nil {
-			mmGetAbandonedRequest.t.Fatal("No results are set for the ClientMock.GetAbandonedRequest")
-		}
-		return (*results).r1, (*results).err
-	}
-	if mmGetAbandonedRequest.funcGetAbandonedRequest != nil {
-		return mmGetAbandonedRequest.funcGetAbandonedRequest(ctx, objectRef, reqRef)
-	}
-	mmGetAbandonedRequest.t.Fatalf("Unexpected call to ClientMock.GetAbandonedRequest. %v %v %v", ctx, objectRef, reqRef)
-	return
-}
-
-// GetAbandonedRequestAfterCounter returns a count of finished ClientMock.GetAbandonedRequest invocations
-func (mmGetAbandonedRequest *ClientMock) GetAbandonedRequestAfterCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmGetAbandonedRequest.afterGetAbandonedRequestCounter)
-}
-
-// GetAbandonedRequestBeforeCounter returns a count of ClientMock.GetAbandonedRequest invocations
-func (mmGetAbandonedRequest *ClientMock) GetAbandonedRequestBeforeCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmGetAbandonedRequest.beforeGetAbandonedRequestCounter)
-}
-
-// Calls returns a list of arguments used in each call to ClientMock.GetAbandonedRequest.
-// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
-func (mmGetAbandonedRequest *mClientMockGetAbandonedRequest) Calls() []*ClientMockGetAbandonedRequestParams {
-	mmGetAbandonedRequest.mutex.RLock()
-
-	argCopy := make([]*ClientMockGetAbandonedRequestParams, len(mmGetAbandonedRequest.callArgs))
-	copy(argCopy, mmGetAbandonedRequest.callArgs)
-
-	mmGetAbandonedRequest.mutex.RUnlock()
-
-	return argCopy
-}
-
-// MinimockGetAbandonedRequestDone returns true if the count of the GetAbandonedRequest invocations corresponds
-// the number of defined expectations
-func (m *ClientMock) MinimockGetAbandonedRequestDone() bool {
-	for _, e := range m.GetAbandonedRequestMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			return false
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.GetAbandonedRequestMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterGetAbandonedRequestCounter) < 1 {
-		return false
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcGetAbandonedRequest != nil && mm_atomic.LoadUint64(&m.afterGetAbandonedRequestCounter) < 1 {
-		return false
-	}
-	return true
-}
-
-// MinimockGetAbandonedRequestInspect logs each unmet expectation
-func (m *ClientMock) MinimockGetAbandonedRequestInspect() {
-	for _, e := range m.GetAbandonedRequestMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			m.t.Errorf("Expected call to ClientMock.GetAbandonedRequest with params: %#v", *e.params)
-		}
-	}
-
-	// if default expectation was set then invocations count should be greater than zero
-	if m.GetAbandonedRequestMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterGetAbandonedRequestCounter) < 1 {
-		if m.GetAbandonedRequestMock.defaultExpectation.params == nil {
-			m.t.Error("Expected call to ClientMock.GetAbandonedRequest")
-		} else {
-			m.t.Errorf("Expected call to ClientMock.GetAbandonedRequest with params: %#v", *m.GetAbandonedRequestMock.defaultExpectation.params)
-		}
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcGetAbandonedRequest != nil && mm_atomic.LoadUint64(&m.afterGetAbandonedRequestCounter) < 1 {
-		m.t.Error("Expected call to ClientMock.GetAbandonedRequest")
-	}
-}
-
 type mClientMockGetCode struct {
 	mock               *ClientMock
 	defaultExpectation *ClientMockGetCodeExpectation
@@ -1265,6 +1047,7 @@ type ClientMockGetPendingsExpectation struct {
 type ClientMockGetPendingsParams struct {
 	ctx       context.Context
 	objectRef insolar.Reference
+	skip      []insolar.ID
 }
 
 // ClientMockGetPendingsResults contains results of the Client.GetPendings
@@ -1274,7 +1057,7 @@ type ClientMockGetPendingsResults struct {
 }
 
 // Expect sets up expected params for Client.GetPendings
-func (mmGetPendings *mClientMockGetPendings) Expect(ctx context.Context, objectRef insolar.Reference) *mClientMockGetPendings {
+func (mmGetPendings *mClientMockGetPendings) Expect(ctx context.Context, objectRef insolar.Reference, skip []insolar.ID) *mClientMockGetPendings {
 	if mmGetPendings.mock.funcGetPendings != nil {
 		mmGetPendings.mock.t.Fatalf("ClientMock.GetPendings mock is already set by Set")
 	}
@@ -1283,7 +1066,7 @@ func (mmGetPendings *mClientMockGetPendings) Expect(ctx context.Context, objectR
 		mmGetPendings.defaultExpectation = &ClientMockGetPendingsExpectation{}
 	}
 
-	mmGetPendings.defaultExpectation.params = &ClientMockGetPendingsParams{ctx, objectRef}
+	mmGetPendings.defaultExpectation.params = &ClientMockGetPendingsParams{ctx, objectRef, skip}
 	for _, e := range mmGetPendings.expectations {
 		if minimock.Equal(e.params, mmGetPendings.defaultExpectation.params) {
 			mmGetPendings.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmGetPendings.defaultExpectation.params)
@@ -1294,7 +1077,7 @@ func (mmGetPendings *mClientMockGetPendings) Expect(ctx context.Context, objectR
 }
 
 // Inspect accepts an inspector function that has same arguments as the Client.GetPendings
-func (mmGetPendings *mClientMockGetPendings) Inspect(f func(ctx context.Context, objectRef insolar.Reference)) *mClientMockGetPendings {
+func (mmGetPendings *mClientMockGetPendings) Inspect(f func(ctx context.Context, objectRef insolar.Reference, skip []insolar.ID)) *mClientMockGetPendings {
 	if mmGetPendings.mock.inspectFuncGetPendings != nil {
 		mmGetPendings.mock.t.Fatalf("Inspect function is already set for ClientMock.GetPendings")
 	}
@@ -1318,7 +1101,7 @@ func (mmGetPendings *mClientMockGetPendings) Return(ra1 []insolar.Reference, err
 }
 
 //Set uses given function f to mock the Client.GetPendings method
-func (mmGetPendings *mClientMockGetPendings) Set(f func(ctx context.Context, objectRef insolar.Reference) (ra1 []insolar.Reference, err error)) *ClientMock {
+func (mmGetPendings *mClientMockGetPendings) Set(f func(ctx context.Context, objectRef insolar.Reference, skip []insolar.ID) (ra1 []insolar.Reference, err error)) *ClientMock {
 	if mmGetPendings.defaultExpectation != nil {
 		mmGetPendings.mock.t.Fatalf("Default expectation is already set for the Client.GetPendings method")
 	}
@@ -1333,14 +1116,14 @@ func (mmGetPendings *mClientMockGetPendings) Set(f func(ctx context.Context, obj
 
 // When sets expectation for the Client.GetPendings which will trigger the result defined by the following
 // Then helper
-func (mmGetPendings *mClientMockGetPendings) When(ctx context.Context, objectRef insolar.Reference) *ClientMockGetPendingsExpectation {
+func (mmGetPendings *mClientMockGetPendings) When(ctx context.Context, objectRef insolar.Reference, skip []insolar.ID) *ClientMockGetPendingsExpectation {
 	if mmGetPendings.mock.funcGetPendings != nil {
 		mmGetPendings.mock.t.Fatalf("ClientMock.GetPendings mock is already set by Set")
 	}
 
 	expectation := &ClientMockGetPendingsExpectation{
 		mock:   mmGetPendings.mock,
-		params: &ClientMockGetPendingsParams{ctx, objectRef},
+		params: &ClientMockGetPendingsParams{ctx, objectRef, skip},
 	}
 	mmGetPendings.expectations = append(mmGetPendings.expectations, expectation)
 	return expectation
@@ -1353,15 +1136,15 @@ func (e *ClientMockGetPendingsExpectation) Then(ra1 []insolar.Reference, err err
 }
 
 // GetPendings implements Client
-func (mmGetPendings *ClientMock) GetPendings(ctx context.Context, objectRef insolar.Reference) (ra1 []insolar.Reference, err error) {
+func (mmGetPendings *ClientMock) GetPendings(ctx context.Context, objectRef insolar.Reference, skip []insolar.ID) (ra1 []insolar.Reference, err error) {
 	mm_atomic.AddUint64(&mmGetPendings.beforeGetPendingsCounter, 1)
 	defer mm_atomic.AddUint64(&mmGetPendings.afterGetPendingsCounter, 1)
 
 	if mmGetPendings.inspectFuncGetPendings != nil {
-		mmGetPendings.inspectFuncGetPendings(ctx, objectRef)
+		mmGetPendings.inspectFuncGetPendings(ctx, objectRef, skip)
 	}
 
-	params := &ClientMockGetPendingsParams{ctx, objectRef}
+	params := &ClientMockGetPendingsParams{ctx, objectRef, skip}
 
 	// Record call args
 	mmGetPendings.GetPendingsMock.mutex.Lock()
@@ -1378,7 +1161,7 @@ func (mmGetPendings *ClientMock) GetPendings(ctx context.Context, objectRef inso
 	if mmGetPendings.GetPendingsMock.defaultExpectation != nil {
 		mm_atomic.AddUint64(&mmGetPendings.GetPendingsMock.defaultExpectation.Counter, 1)
 		want := mmGetPendings.GetPendingsMock.defaultExpectation.params
-		got := ClientMockGetPendingsParams{ctx, objectRef}
+		got := ClientMockGetPendingsParams{ctx, objectRef, skip}
 		if want != nil && !minimock.Equal(*want, got) {
 			mmGetPendings.t.Errorf("ClientMock.GetPendings got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
 		}
@@ -1390,9 +1173,9 @@ func (mmGetPendings *ClientMock) GetPendings(ctx context.Context, objectRef inso
 		return (*results).ra1, (*results).err
 	}
 	if mmGetPendings.funcGetPendings != nil {
-		return mmGetPendings.funcGetPendings(ctx, objectRef)
+		return mmGetPendings.funcGetPendings(ctx, objectRef, skip)
 	}
-	mmGetPendings.t.Fatalf("Unexpected call to ClientMock.GetPendings. %v %v", ctx, objectRef)
+	mmGetPendings.t.Fatalf("Unexpected call to ClientMock.GetPendings. %v %v %v", ctx, objectRef, skip)
 	return
 }
 
@@ -1675,6 +1458,224 @@ func (m *ClientMock) MinimockGetPrototypeInspect() {
 	// if func was set then invocations count should be greater than zero
 	if m.funcGetPrototype != nil && mm_atomic.LoadUint64(&m.afterGetPrototypeCounter) < 1 {
 		m.t.Error("Expected call to ClientMock.GetPrototype")
+	}
+}
+
+type mClientMockGetRequest struct {
+	mock               *ClientMock
+	defaultExpectation *ClientMockGetRequestExpectation
+	expectations       []*ClientMockGetRequestExpectation
+
+	callArgs []*ClientMockGetRequestParams
+	mutex    sync.RWMutex
+}
+
+// ClientMockGetRequestExpectation specifies expectation struct of the Client.GetRequest
+type ClientMockGetRequestExpectation struct {
+	mock    *ClientMock
+	params  *ClientMockGetRequestParams
+	results *ClientMockGetRequestResults
+	Counter uint64
+}
+
+// ClientMockGetRequestParams contains parameters of the Client.GetRequest
+type ClientMockGetRequestParams struct {
+	ctx       context.Context
+	objectRef insolar.Reference
+	reqRef    insolar.Reference
+}
+
+// ClientMockGetRequestResults contains results of the Client.GetRequest
+type ClientMockGetRequestResults struct {
+	r1  record.Request
+	err error
+}
+
+// Expect sets up expected params for Client.GetRequest
+func (mmGetRequest *mClientMockGetRequest) Expect(ctx context.Context, objectRef insolar.Reference, reqRef insolar.Reference) *mClientMockGetRequest {
+	if mmGetRequest.mock.funcGetRequest != nil {
+		mmGetRequest.mock.t.Fatalf("ClientMock.GetRequest mock is already set by Set")
+	}
+
+	if mmGetRequest.defaultExpectation == nil {
+		mmGetRequest.defaultExpectation = &ClientMockGetRequestExpectation{}
+	}
+
+	mmGetRequest.defaultExpectation.params = &ClientMockGetRequestParams{ctx, objectRef, reqRef}
+	for _, e := range mmGetRequest.expectations {
+		if minimock.Equal(e.params, mmGetRequest.defaultExpectation.params) {
+			mmGetRequest.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmGetRequest.defaultExpectation.params)
+		}
+	}
+
+	return mmGetRequest
+}
+
+// Inspect accepts an inspector function that has same arguments as the Client.GetRequest
+func (mmGetRequest *mClientMockGetRequest) Inspect(f func(ctx context.Context, objectRef insolar.Reference, reqRef insolar.Reference)) *mClientMockGetRequest {
+	if mmGetRequest.mock.inspectFuncGetRequest != nil {
+		mmGetRequest.mock.t.Fatalf("Inspect function is already set for ClientMock.GetRequest")
+	}
+
+	mmGetRequest.mock.inspectFuncGetRequest = f
+
+	return mmGetRequest
+}
+
+// Return sets up results that will be returned by Client.GetRequest
+func (mmGetRequest *mClientMockGetRequest) Return(r1 record.Request, err error) *ClientMock {
+	if mmGetRequest.mock.funcGetRequest != nil {
+		mmGetRequest.mock.t.Fatalf("ClientMock.GetRequest mock is already set by Set")
+	}
+
+	if mmGetRequest.defaultExpectation == nil {
+		mmGetRequest.defaultExpectation = &ClientMockGetRequestExpectation{mock: mmGetRequest.mock}
+	}
+	mmGetRequest.defaultExpectation.results = &ClientMockGetRequestResults{r1, err}
+	return mmGetRequest.mock
+}
+
+//Set uses given function f to mock the Client.GetRequest method
+func (mmGetRequest *mClientMockGetRequest) Set(f func(ctx context.Context, objectRef insolar.Reference, reqRef insolar.Reference) (r1 record.Request, err error)) *ClientMock {
+	if mmGetRequest.defaultExpectation != nil {
+		mmGetRequest.mock.t.Fatalf("Default expectation is already set for the Client.GetRequest method")
+	}
+
+	if len(mmGetRequest.expectations) > 0 {
+		mmGetRequest.mock.t.Fatalf("Some expectations are already set for the Client.GetRequest method")
+	}
+
+	mmGetRequest.mock.funcGetRequest = f
+	return mmGetRequest.mock
+}
+
+// When sets expectation for the Client.GetRequest which will trigger the result defined by the following
+// Then helper
+func (mmGetRequest *mClientMockGetRequest) When(ctx context.Context, objectRef insolar.Reference, reqRef insolar.Reference) *ClientMockGetRequestExpectation {
+	if mmGetRequest.mock.funcGetRequest != nil {
+		mmGetRequest.mock.t.Fatalf("ClientMock.GetRequest mock is already set by Set")
+	}
+
+	expectation := &ClientMockGetRequestExpectation{
+		mock:   mmGetRequest.mock,
+		params: &ClientMockGetRequestParams{ctx, objectRef, reqRef},
+	}
+	mmGetRequest.expectations = append(mmGetRequest.expectations, expectation)
+	return expectation
+}
+
+// Then sets up Client.GetRequest return parameters for the expectation previously defined by the When method
+func (e *ClientMockGetRequestExpectation) Then(r1 record.Request, err error) *ClientMock {
+	e.results = &ClientMockGetRequestResults{r1, err}
+	return e.mock
+}
+
+// GetRequest implements Client
+func (mmGetRequest *ClientMock) GetRequest(ctx context.Context, objectRef insolar.Reference, reqRef insolar.Reference) (r1 record.Request, err error) {
+	mm_atomic.AddUint64(&mmGetRequest.beforeGetRequestCounter, 1)
+	defer mm_atomic.AddUint64(&mmGetRequest.afterGetRequestCounter, 1)
+
+	if mmGetRequest.inspectFuncGetRequest != nil {
+		mmGetRequest.inspectFuncGetRequest(ctx, objectRef, reqRef)
+	}
+
+	params := &ClientMockGetRequestParams{ctx, objectRef, reqRef}
+
+	// Record call args
+	mmGetRequest.GetRequestMock.mutex.Lock()
+	mmGetRequest.GetRequestMock.callArgs = append(mmGetRequest.GetRequestMock.callArgs, params)
+	mmGetRequest.GetRequestMock.mutex.Unlock()
+
+	for _, e := range mmGetRequest.GetRequestMock.expectations {
+		if minimock.Equal(e.params, params) {
+			mm_atomic.AddUint64(&e.Counter, 1)
+			return e.results.r1, e.results.err
+		}
+	}
+
+	if mmGetRequest.GetRequestMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmGetRequest.GetRequestMock.defaultExpectation.Counter, 1)
+		want := mmGetRequest.GetRequestMock.defaultExpectation.params
+		got := ClientMockGetRequestParams{ctx, objectRef, reqRef}
+		if want != nil && !minimock.Equal(*want, got) {
+			mmGetRequest.t.Errorf("ClientMock.GetRequest got unexpected parameters, want: %#v, got: %#v%s\n", *want, got, minimock.Diff(*want, got))
+		}
+
+		results := mmGetRequest.GetRequestMock.defaultExpectation.results
+		if results == nil {
+			mmGetRequest.t.Fatal("No results are set for the ClientMock.GetRequest")
+		}
+		return (*results).r1, (*results).err
+	}
+	if mmGetRequest.funcGetRequest != nil {
+		return mmGetRequest.funcGetRequest(ctx, objectRef, reqRef)
+	}
+	mmGetRequest.t.Fatalf("Unexpected call to ClientMock.GetRequest. %v %v %v", ctx, objectRef, reqRef)
+	return
+}
+
+// GetRequestAfterCounter returns a count of finished ClientMock.GetRequest invocations
+func (mmGetRequest *ClientMock) GetRequestAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmGetRequest.afterGetRequestCounter)
+}
+
+// GetRequestBeforeCounter returns a count of ClientMock.GetRequest invocations
+func (mmGetRequest *ClientMock) GetRequestBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmGetRequest.beforeGetRequestCounter)
+}
+
+// Calls returns a list of arguments used in each call to ClientMock.GetRequest.
+// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
+func (mmGetRequest *mClientMockGetRequest) Calls() []*ClientMockGetRequestParams {
+	mmGetRequest.mutex.RLock()
+
+	argCopy := make([]*ClientMockGetRequestParams, len(mmGetRequest.callArgs))
+	copy(argCopy, mmGetRequest.callArgs)
+
+	mmGetRequest.mutex.RUnlock()
+
+	return argCopy
+}
+
+// MinimockGetRequestDone returns true if the count of the GetRequest invocations corresponds
+// the number of defined expectations
+func (m *ClientMock) MinimockGetRequestDone() bool {
+	for _, e := range m.GetRequestMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			return false
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.GetRequestMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterGetRequestCounter) < 1 {
+		return false
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcGetRequest != nil && mm_atomic.LoadUint64(&m.afterGetRequestCounter) < 1 {
+		return false
+	}
+	return true
+}
+
+// MinimockGetRequestInspect logs each unmet expectation
+func (m *ClientMock) MinimockGetRequestInspect() {
+	for _, e := range m.GetRequestMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			m.t.Errorf("Expected call to ClientMock.GetRequest with params: %#v", *e.params)
+		}
+	}
+
+	// if default expectation was set then invocations count should be greater than zero
+	if m.GetRequestMock.defaultExpectation != nil && mm_atomic.LoadUint64(&m.afterGetRequestCounter) < 1 {
+		if m.GetRequestMock.defaultExpectation.params == nil {
+			m.t.Error("Expected call to ClientMock.GetRequest")
+		} else {
+			m.t.Errorf("Expected call to ClientMock.GetRequest with params: %#v", *m.GetRequestMock.defaultExpectation.params)
+		}
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcGetRequest != nil && mm_atomic.LoadUint64(&m.afterGetRequestCounter) < 1 {
+		m.t.Error("Expected call to ClientMock.GetRequest")
 	}
 }
 
@@ -3064,8 +3065,6 @@ func (m *ClientMock) MinimockFinish() {
 
 		m.MinimockDeployCodeInspect()
 
-		m.MinimockGetAbandonedRequestInspect()
-
 		m.MinimockGetCodeInspect()
 
 		m.MinimockGetObjectInspect()
@@ -3073,6 +3072,8 @@ func (m *ClientMock) MinimockFinish() {
 		m.MinimockGetPendingsInspect()
 
 		m.MinimockGetPrototypeInspect()
+
+		m.MinimockGetRequestInspect()
 
 		m.MinimockHasPendingsInspect()
 
@@ -3112,11 +3113,11 @@ func (m *ClientMock) minimockDone() bool {
 	return done &&
 		m.MinimockActivatePrototypeDone() &&
 		m.MinimockDeployCodeDone() &&
-		m.MinimockGetAbandonedRequestDone() &&
 		m.MinimockGetCodeDone() &&
 		m.MinimockGetObjectDone() &&
 		m.MinimockGetPendingsDone() &&
 		m.MinimockGetPrototypeDone() &&
+		m.MinimockGetRequestDone() &&
 		m.MinimockHasPendingsDone() &&
 		m.MinimockInjectCodeDescriptorDone() &&
 		m.MinimockInjectFinishDone() &&

@@ -29,9 +29,13 @@ func NewFlushBypass(output io.Writer) FlushBypass {
 	return FlushBypass{Writer: output}
 }
 
+func NewFlushBypassNoClose(output io.Writer) FlushBypass {
+	return FlushBypass{Writer: output, mode: 1}
+}
+
 type FlushBypass struct {
 	io.Writer
-	closed uint32
+	mode uint32 // atomic
 }
 
 func (p *FlushBypass) DoLevelWrite(level insolar.LogLevel, b []byte) (n int, err error) {
@@ -63,12 +67,24 @@ func (p *FlushBypass) Write(b []byte) (int, error) {
 	return p.DoLevelWrite(insolar.NoLevel, b)
 }
 
-func (p *FlushBypass) SetClosed() bool {
-	return atomic.CompareAndSwapUint32(&p.closed, 0, 1)
+func (p *FlushBypass) SetNoClosePropagation() bool {
+	return atomic.CompareAndSwapUint32(&p.mode, 0, 1)
+}
+
+func (p *FlushBypass) SetClosed() (ok, closeUnderlying bool) {
+	for {
+		v := atomic.LoadUint32(&p.mode)
+		if v > 1 {
+			return false, false
+		}
+		if atomic.CompareAndSwapUint32(&p.mode, v, v+2) {
+			return true, v == 0
+		}
+	}
 }
 
 func (p *FlushBypass) IsClosed() bool {
-	return atomic.LoadUint32(&p.closed) != 0
+	return atomic.LoadUint32(&p.mode) > 1
 }
 
 func (p *FlushBypass) DoClose() (bool, error) {
@@ -111,8 +127,10 @@ func (p *FlushBypass) DoFlushOrSync() (bool, error) {
 }
 
 func (p *FlushBypass) Close() error {
-	if p.SetClosed() {
-		_, _ = p.DoClose()
+	if ok, c := p.SetClosed(); ok {
+		if c {
+			_, _ = p.DoClose()
+		}
 		return nil
 	}
 	return p.ClosedError()

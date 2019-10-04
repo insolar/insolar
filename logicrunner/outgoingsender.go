@@ -232,12 +232,17 @@ func (a *actorDeps) sendOutgoingRequest(ctx context.Context, outgoingReqRef inso
 		err = errors.Wrapf(err, "sendOutgoingRequest: failed to get current pulse")
 		return nil, nil, nil, err
 	}
+
+	inslogger.FromContext(ctx).Debug("sending incoming for outgoing request")
+
 	// Actually make a call.
 	callMsg := &payload.CallMethod{Request: incoming, PulseNumber: latestPulse.PulseNumber}
 	res, _, err := a.cr.SendRequest(ctx, callMsg)
 	if err != nil {
 		return nil, nil, nil, err
 	}
+
+	inslogger.FromContext(ctx).Debug("sent incoming for outgoing request")
 
 	var result []byte
 
@@ -249,8 +254,11 @@ func (a *actorDeps) sendOutgoingRequest(ctx context.Context, outgoingReqRef inso
 		result = v.Request.Bytes()
 	default:
 		err = fmt.Errorf("sendOutgoingRequest: cr.Call returned unexpected type %T", res)
+		inslogger.FromContext(ctx).Error(err)
 		return nil, nil, nil, err
 	}
+
+	inslogger.FromContext(ctx).Debug("registering outgoing request result")
 
 	//  Register result of the outgoing method
 	reqResult := requestresult.New(result, outgoing.Caller)
@@ -258,6 +266,8 @@ func (a *actorDeps) sendOutgoingRequest(ctx context.Context, outgoingReqRef inso
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "can't register result")
 	}
+
+	inslogger.FromContext(ctx).Debug("registered outgoing request result")
 
 	return object, result, incoming, nil
 }
