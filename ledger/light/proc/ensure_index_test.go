@@ -150,6 +150,6 @@ func TestEnsureIndex_Proceed(t *testing.T) {
 		assert.Error(t, err)
 		coded, ok := err.(*payload.CodedError)
 		require.True(t, ok, "wrong error type")
-		assert.Equal(t, uint32(payload.CodeNotFound), coded.Code, "wrong error code")
+		assert.Equal(t, payload.CodeNotFound, coded.Code, "wrong error code")
 	})
 }

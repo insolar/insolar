@@ -1,4 +1,4 @@
-// /
+///
 // Copyright 2019 Insolar Technologies GmbH
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,25 +12,22 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-// /
+///
 
 package main
 
 import (
 	"fmt"
 	"math/big"
+	"os"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/insolar/insolar/api/sdk"
 )
 
-const (
-	migrationAmount = 101
-
-	txHashPrefix = "tx_hash_"
-)
-
-type migrationScenario struct {
+type depositTransferScenario struct {
 	insSDK           *sdk.SDK
 	members          []sdk.Member
 	migrationDaemons []sdk.Member
@@ -38,18 +35,15 @@ type migrationScenario struct {
 	balanceCheckMembers []sdk.Member
 }
 
-func (s *migrationScenario) canBeStarted() error {
+func (s *depositTransferScenario) canBeStarted() error {
 	if len(s.members) < concurrent {
 		return fmt.Errorf("not enough members for start")
 	}
 
-	if len(s.migrationDaemons) < 2 {
-		return fmt.Errorf("not enough migration daemons")
-	}
 	return nil
 }
 
-func (s *migrationScenario) prepare(repetition int) {
+func (s *depositTransferScenario) prepare(repetition int) {
 	members, err := getMembers(s.insSDK, concurrent, true)
 	check("Error while loading members: ", err)
 
@@ -66,21 +60,36 @@ func (s *migrationScenario) prepare(repetition int) {
 	copy(s.balanceCheckMembers, s.members)
 	s.balanceCheckMembers = append(s.balanceCheckMembers, s.insSDK.GetFeeMember())
 	s.balanceCheckMembers = append(s.balanceCheckMembers, s.insSDK.GetMigrationAdminMember())
+
+	for _, m := range s.members {
+		mm, ok := m.(*sdk.MigrationMember)
+		if !ok {
+			fmt.Println("failed to cast member to migration member")
+			os.Exit(1)
+		}
+		for i := 0; i < repetition; i++ {
+			_, err := s.insSDK.FullMigration(s.migrationDaemons, txHashPrefix+strconv.Itoa(i), big.NewInt(migrationAmount).String(), mm.MigrationAddress)
+			if err != nil && !strings.Contains(err.Error(), "migration is done for this deposit") {
+				check("Error while migrating tokens: ", err)
+			}
+		}
+	}
+
+	// wait for hold period end
+	time.Sleep(30 * time.Second)
+
 }
 
-func (s *migrationScenario) start(concurrentIndex int, repetitionIndex int) (string, error) {
+func (s *depositTransferScenario) start(concurrentIndex int, repetitionIndex int) (string, error) {
 	var migrationMember *sdk.MigrationMember
 	migrationMember, ok := s.members[concurrentIndex].(*sdk.MigrationMember)
 	if !ok {
 		return "", fmt.Errorf("unexpected member type: %T", s.members[concurrentIndex])
 	}
 
-	if traceID, err := s.insSDK.Migration(s.migrationDaemons[0], txHashPrefix+strconv.Itoa(repetitionIndex), big.NewInt(migrationAmount).String(), migrationMember.MigrationAddress); err != nil {
-		return traceID, err
-	}
-	return s.insSDK.Migration(s.migrationDaemons[1], txHashPrefix+strconv.Itoa(repetitionIndex), big.NewInt(migrationAmount).String(), migrationMember.MigrationAddress)
+	return s.insSDK.DepositTransfer(big.NewInt(migrationAmount*10).String(), migrationMember, txHashPrefix+strconv.Itoa(repetitionIndex))
 }
 
-func (s *migrationScenario) getBalanceCheckMembers() []sdk.Member {
+func (s *depositTransferScenario) getBalanceCheckMembers() []sdk.Member {
 	return s.balanceCheckMembers
 }
