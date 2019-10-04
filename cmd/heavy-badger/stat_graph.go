@@ -82,7 +82,6 @@ func (g *ConsoleGraph) genImage() []byte {
 		width = len(g.y)
 	}
 	graph := chart.Chart{
-		// Log:    chart.NewLogger(),
 		Width:  width,
 		Height: 720,
 		Background: chart.Style{
@@ -96,9 +95,6 @@ func (g *ConsoleGraph) genImage() []byte {
 			TickStyle: chart.Style{
 				TextRotationDegrees: 45.0,
 			},
-			// ValueFormatter: func(v interface{}) string {
-			// 	return fmt.Sprintf("%d bytes", int(v.(float64)))
-			// },
 		},
 		XAxis: chart.XAxis{
 			Style: chart.Style{

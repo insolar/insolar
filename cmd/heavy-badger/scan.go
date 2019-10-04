@@ -190,7 +190,6 @@ func (dbs *dbScanner) getAllPulses() (pulses []insolar.Pulse) {
 	pulses = append(pulses, p)
 
 	for ; err == nil; p, err = pulseStore.Backwards(ctx, p.PulseNumber, 1) {
-		// fmt.Println("found:", p.PulseNumber)
 		pulses = append(pulses, p)
 	}
 	if err != nil && err != pulsedb.ErrNotFound {
@@ -334,7 +333,6 @@ func (dbs *dbScanner) scanScopePules(scope store.Scope) {
 		fmt.Printf("scan %v of %v pulses\n", limit, len(pulses))
 	}
 
-	// var exceedIter func(k, v []byte) error
 	var sumPrinters []printer
 
 	baseIters := make([]iteration, 0, 8)

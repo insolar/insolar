@@ -267,10 +267,8 @@ func (bi *badgerIterator) Next() bool {
 	bi.once.Do(func() {
 		prefix := append(bi.pivot.Scope().Bytes(), bi.pivot.ID()...)
 		bi.it.Seek(prefix)
-		// fmt.Printf(">>> Iterator.Seek to %x\n", prefix)
 	})
 	if !bi.it.ValidForPrefix(scope) {
-		// fmt.Printf("<<< Stop on key %x\n", bi.it.Item().Key())
 		return false
 	}
 

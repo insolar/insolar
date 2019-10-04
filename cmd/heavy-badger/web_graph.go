@@ -116,7 +116,6 @@ func (g *webGraph) Draw() {
 		fatalf("failed to make web draw: %v", err)
 	}
 
-	// log.Println("open", tmpFile.Name())
 	cmd := exec.Command("open", "--wait-apps", tmpFile.Name())
 
 	fin := &finalizersHolder{}
