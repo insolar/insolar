@@ -462,9 +462,7 @@ func TestExecutionBroker_HasMoreRequestsWithOnPulse(t *testing.T) {
 
 	objectRef := gen.Reference()
 
-	// ctx := inslogger.TestContext(t)
 	reqRef := gen.RecordReference()
-	// transcript := common.NewTranscript(ctx, reqRef, record.IncomingRequest{Object: &objectRef})
 
 	pa := insolarPulse.NewAccessorMock(t).LatestMock.Return(
 		insolar.Pulse{PulseNumber: pulse.MinTimePulse},
@@ -473,12 +471,12 @@ func TestExecutionBroker_HasMoreRequestsWithOnPulse(t *testing.T) {
 
 	table := []struct {
 		name   string
-		mocks  func(ctx context.Context, t minimock.Tester) (*ExecutionBroker, *[]payload.Payload, *sync.WaitGroup)
+		mocks  func(ctx context.Context, t minimock.Tester) (*ExecutionBroker, *[]payload.Payload)
 		checks func(ctx context.Context, t *testing.T, msgs []payload.Payload)
 	}{
 		{
 			name: "pulse change in HasPendings",
-			mocks: func(ctx context.Context, t minimock.Tester) (*ExecutionBroker, *[]payload.Payload, *sync.WaitGroup) {
+			mocks: func(ctx context.Context, t minimock.Tester) (*ExecutionBroker, *[]payload.Payload) {
 				am := artifacts.NewClientMock(t)
 
 				er := executionregistry.NewExecutionRegistryMock(t).
@@ -490,7 +488,7 @@ func TestExecutionBroker_HasMoreRequestsWithOnPulse(t *testing.T) {
 					msgs = broker.OnPulse(ctx)
 					return false, nil
 				})
-				return broker, &msgs, &sync.WaitGroup{}
+				return broker, &msgs
 			},
 			checks: func(ctx context.Context, t *testing.T, msgs []payload.Payload) {
 				require.Len(t, msgs, 1)
@@ -503,9 +501,7 @@ func TestExecutionBroker_HasMoreRequestsWithOnPulse(t *testing.T) {
 		},
 		{
 			name: "pulse change in Execute",
-			mocks: func(ctx context.Context, t minimock.Tester) (*ExecutionBroker, *[]payload.Payload, *sync.WaitGroup) {
-				wg := &sync.WaitGroup{}
-				wg.Add(1)
+			mocks: func(ctx context.Context, t minimock.Tester) (*ExecutionBroker, *[]payload.Payload) {
 				doneCalled := false
 				er := executionregistry.NewExecutionRegistryMock(t).
 					IsEmptyMock.Set(func() bool { return doneCalled }).
@@ -530,7 +526,6 @@ func TestExecutionBroker_HasMoreRequestsWithOnPulse(t *testing.T) {
 				}, nil)
 				re := NewRequestsExecutorMock(t).
 					SendReplyMock.Set(func(ctx context.Context, reqRef insolar.Reference, req record.IncomingRequest, re insolar.Reply, err error) {
-					wg.Done()
 				})
 				sender := senderOKMock(t, nil)
 				pulseMock := insolarPulse.NewAccessorMock(t).LatestMock.Set(func(p context.Context) (r insolar.Pulse, r1 error) {
@@ -546,14 +541,13 @@ func TestExecutionBroker_HasMoreRequestsWithOnPulse(t *testing.T) {
 					msgs = broker.OnPulse(ctx)
 					return &requestresult.RequestResult{}, nil
 				})
-				return broker, &msgs, wg
+				return broker, &msgs
 			},
 			checks: func(ctx context.Context, t *testing.T, msgs []payload.Payload) {
 				require.Len(t, msgs, 1)
 
 				results, ok := msgs[0].(*payload.ExecutorResults)
 				assert.True(t, ok)
-				assert.False(t, results.LedgerHasMoreRequests)
 				assert.Equal(t, insolar.InPending, results.Pending)
 			},
 		},
@@ -566,13 +560,13 @@ func TestExecutionBroker_HasMoreRequestsWithOnPulse(t *testing.T) {
 			ctx := inslogger.TestContext(t)
 			mc := minimock.NewController(t)
 
-			broker, msgs, wg := test.mocks(ctx, mc)
+			broker, msgs := test.mocks(ctx, mc)
 			broker.HasMoreRequests(ctx)
-
-			wg.Wait()
 
 			mc.Wait(1 * time.Minute)
 			mc.Finish()
+
+			broker.close()
 
 			test.checks(ctx, t, *msgs)
 		})
