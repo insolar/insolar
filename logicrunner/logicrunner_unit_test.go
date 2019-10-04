@@ -23,6 +23,7 @@ import (
 	"time"
 
 	message2 "github.com/ThreeDotsLabs/watermill/message"
+	"github.com/fortytw2/leaktest"
 	"github.com/gojuno/minimock"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
@@ -428,6 +429,7 @@ func TestLogicRunner_OnPulse_Order(t *testing.T) {
 
 func (suite *LogicRunnerTestSuite) TestImmutableOrder() {
 	syncT := &testutils.SyncT{T: suite.T()}
+	defer leaktest.Check(syncT)()
 
 	wg := &sync.WaitGroup{}
 
@@ -582,5 +584,5 @@ func (suite *LogicRunnerTestSuite) TestImmutableOrder() {
 
 	wg.Wait()
 
-	suite.True(wait(finishedCount, broker, 3))
+	broker.close()
 }
