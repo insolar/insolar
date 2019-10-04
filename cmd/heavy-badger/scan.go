@@ -48,7 +48,6 @@ type dbScanner struct {
 	limitPulses int
 	skipPulses  int
 
-	searchValuesPrint       bool
 	searchValuesGreaterThan int64
 }
 
