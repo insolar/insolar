@@ -145,7 +145,7 @@ func TestNoMergeToEmptyDb(t *testing.T) {
 
 	for i := 0; i < 3; i++ {
 		output := invokeExpectFailure(t, "merge", "-t", tmpdir, "-n", "TEST")
-		require.Contains(t, output, "db must not be empty")
+		require.Contains(t, output, "DB must not be empty")
 	}
 }
 
