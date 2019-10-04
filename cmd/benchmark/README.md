@@ -72,6 +72,7 @@ or you can run benchmark with
                 You can choose "createMember" for create member scenario.
                 You can choose "migration" for migration scenario.
                 You can choose "transferTwoSides" for two sides transfer scenario.
+                You can choose "depositTransfer" for transfer money from deposit to account.
 
         --discovery-nodes-logs-dir
                 Launchnet logs dir for checking errors

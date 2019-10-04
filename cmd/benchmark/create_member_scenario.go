@@ -28,7 +28,7 @@ func (s *createMemberScenario) canBeStarted() error {
 	return nil
 }
 
-func (s *createMemberScenario) prepare() {}
+func (s *createMemberScenario) prepare(repetition int) {}
 
 func (s *createMemberScenario) start(concurrentIndex int, repetitionIndex int) (string, error) {
 	_, traceID, err := s.insSDK.CreateMember()

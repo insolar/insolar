@@ -27,7 +27,6 @@ import (
 	"os/signal"
 	"path"
 	"path/filepath"
-	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -162,6 +161,18 @@ func newMigrationScenarios(out io.Writer, insSDK *sdk.SDK, concurrent int, repet
 		concurrent:  concurrent,
 		repetitions: repetitions,
 		name:        "Migration",
+		out:         out,
+	}
+}
+
+func newDepositTransferScenarios(out io.Writer, insSDK *sdk.SDK, concurrent int, repetitions int) benchmark {
+	return benchmark{
+		scenario: &depositTransferScenario{
+			insSDK: insSDK,
+		},
+		concurrent:  concurrent,
+		repetitions: repetitions,
+		name:        "DepositTransfer",
 		out:         out,
 	}
 }
@@ -422,7 +433,7 @@ func main() {
 		return
 	}
 
-	b.scenario.prepare()
+	b.scenario.prepare(repetitions)
 
 	var totalBalanceBefore *big.Int
 	if !noCheckBalance {
@@ -463,13 +474,9 @@ func switchScenario(out io.Writer, insSDK *sdk.SDK) benchmark {
 	case "createMember":
 		b = newCreateMemberScenarios(out, insSDK, concurrent, repetitions)
 	case "migration":
-		for _, md := range insSDK.GetMigrationDaemonMembers() {
-			_, err := insSDK.ActivateDaemon(md.GetReference())
-			if err != nil && !strings.Contains(err.Error(), "[daemon member already activated]") {
-				check("Error while activating daemons: ", err)
-			}
-		}
 		b = newMigrationScenarios(out, insSDK, concurrent, repetitions)
+	case "depositTransfer":
+		b = newDepositTransferScenarios(out, insSDK, concurrent, repetitions)
 	default:
 		b = newTransferDifferentMemberScenarios(out, insSDK, concurrent, repetitions)
 	}
