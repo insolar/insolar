@@ -18,7 +18,6 @@ package main
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/dustin/go-humanize"
 
@@ -28,24 +27,23 @@ import (
 func prettyPrintVirtual(v *record.Virtual) string {
 	switch r := v.Union.(type) {
 	case *record.Virtual_Genesis:
-		return "Genesis"
+		return pairsToString(20, "Type", "Genesis")
 	case *record.Virtual_IncomingRequest:
-		return "IncomingRequest"
+		return pairsToString(20, "Type", "IncomingRequest")
 	case *record.Virtual_OutgoingRequest:
-		return "OutgoingRequest"
+		return pairsToString(20, "Type", "OutgoingRequest")
 	case *record.Virtual_Result:
-		return "Result"
+		return pairsToString(20, "Type", "Result")
 	case *record.Virtual_Code:
-		return "Code"
+		return pairsToString(20, "Type", "Code")
 	case *record.Virtual_Activate:
-		return "Activate"
+		return pairsToString(20, "Type", "Activate")
 	case *record.Virtual_Amend:
 		return amendPrettyPrint(r)
 	case *record.Virtual_Deactivate:
-		return "Deactivate"
+		return pairsToString(20, "Type", "Deactivate")
 	case *record.Virtual_PendingFilament:
-		return "PendingFilament"
-		// return r.PendingFilament
+		return pairsToString(20, "Type", "PendingFilament")
 	case nil:
 		return "nil"
 	default:
@@ -55,12 +53,12 @@ func prettyPrintVirtual(v *record.Virtual) string {
 
 func amendPrettyPrint(virtualRecord *record.Virtual_Amend) string {
 	rec := virtualRecord.Amend
-	lines := []string{
-		"request: " + rec.Request.String(),
-		"memory: " + humanize.Bytes(uint64(len(rec.Memory))),
-		"image: " + rec.Image.String(),
-		"isPrototype: " + fmt.Sprint(rec.IsPrototype),
-		"prevState: " + rec.PrevState.String(),
-	}
-	return strings.Join(lines, "\n")
+	return pairsToString(20,
+		"Type", "*record.Amend",
+		"request", rec.Request.String(),
+		"memory", humanize.Bytes(uint64(len(rec.Memory))),
+		"image", rec.Image.String(),
+		"isPrototype", fmt.Sprint(rec.IsPrototype),
+		"prevState", rec.PrevState.String(),
+	)
 }

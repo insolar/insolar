@@ -82,8 +82,15 @@ func (app *appCtx) valueHexDumpCommand() *cobra.Command {
 				fatalf("failed to decode value to record.Material: %v", err)
 			}
 
-			fmt.Println("virtual pretty dump:")
 			printLine("-")
+			fmt.Println("Material Record:")
+			fmt.Println(pairsToString(20,
+				"ID", material.ID.String(),
+				"JetID", material.JetID.DebugString(),
+				"ObjectID", material.ObjectID.String(),
+			))
+
+			fmt.Println("\nVirtual Record:")
 			fmt.Println(prettyPrintVirtual(&material.Virtual))
 			printLine("-")
 		},

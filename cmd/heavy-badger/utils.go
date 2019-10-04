@@ -44,13 +44,8 @@ func fatalf(format string, args ...interface{}) {
 }
 
 func printLine(s string) {
-	fmt.Println(strings.Repeat(s, 50))
+	fmt.Println(strings.Repeat(s, 78))
 }
-
-// type progressBar interface {
-// 	Increment()
-// 	Finish()
-// }
 
 type progressBarHolder struct {
 	disable bool
@@ -88,7 +83,6 @@ func formatInt(n int, sep string) string {
 	for {
 		order := n % 1000
 		n /= 1000
-		// parts = append(parts, fmt.Sprintf("%"+fill+"3s", strconv.Itoa(n)))
 		numParts = append(numParts, order)
 		if n == 0 {
 			break
@@ -116,5 +110,16 @@ func reverseInts(a []int) {
 func pressEnter(s string) {
 	fmt.Print(s)
 	_, _ = bufio.NewReader(os.Stdin).ReadBytes('\n')
+}
 
+func pairsToString(width int, pairs ...string) string {
+	format := "%" + fmt.Sprintf("%ds", width) + ": %s"
+	lines := make([]string, 0, len(pairs)/2)
+	for i := range pairs {
+		if i%2 == 1 {
+			continue
+		}
+		lines = append(lines, fmt.Sprintf(format, pairs[i], pairs[i+1]))
+	}
+	return strings.Join(lines, "\n")
 }

@@ -57,7 +57,28 @@ it prints all found keys in hex and some extra info (pulse number, record id, va
 
     key=02016805ec45b214bb07805950ecea9a948ff4f61ef81fdb9cd25692a807de7d2f - FOUND VALUE: size=944 kB type=*record.Amend id=18q4S3nzBAWpZCfH5Z4eNp1LQwWQc5MacU7W3zEBBxKW.record pulse=33646597
 
-now we can dump value by key:
+now we can show binary dump of value by key:
 
-    ./bin/heavy-badger --dir ./data/ dump-value 020168074028f5debd3359226e348e9f09b7f2c26aa762095a0bc4a1e681613961 | hexdump -C | vim -
+    ./bin/heavy-badger --dir ./data/ dump bin 020168074028f5debd3359226e348e9f09b7f2c26aa762095a0bc4a1e681613961 | hexdump -C | vim -
 
+or try to deserialize value to record by key:
+
+    ./bin/heavy-badger --dir ./data/ dump record 020168074028f5debd3359226e348e9f09b7f2c26aa762095a0bc4a1e681613961
+
+
+you can get:
+
+    ------------------------------------------------------------------------------
+    Material Record:
+                      ID: 16VQqDEE1tw75K9ib85MRHsqCbsfUApnFHZGt9x3H6XH.record
+                   JetID: [JET 5 11001]
+                ObjectID: 11tJDm7rr8RVx1PA9Sakpwf8YmyS5fpKHMEVuc9E5P2.record
+
+    Virtual Record:
+                    Type: *record.Amend
+                 request: 16VQqCzpd5Smbdi89b8N7CTK6a8sNWFk4ZNFLWGBSCbt.record
+                  memory: 935 kB
+                   image: 0111A5x8N1VJTm7BKYgzSe6TWHcFi98QZgw3AnkYiKML
+             isPrototype: false
+               prevState: 16VQpHpBmwLis59DYUEoFEWbHtKJ8tDNWDKtRhxZWRDx.record
+    ------------------------------------------------------------------------------
