@@ -95,3 +95,16 @@ Help on any command: `./bin/insolar help COMMAND`
                 If one of shard have less free addresses than this value, command will print alert message.
         -s shards-count
                 Count of shards at platform (must be a multiple of ten).
+
+## How to add migration addresses from files to every shard
+
+    ./bin/insolar add-migration-addresses --migration-admin-keys=.artifacts/launchnet/configs/ --shards-count=100 --addresses=../../migrationAddressGenerator/bin/addresses.json
+
+### Options
+
+        -k migration-admin-keys
+                Dir with config that contains public/private keys of admin member.
+        -a addresses
+                Path to files with addresses. We expect files will be match generator utility output (from insolar/migrationAddressGenerator).
+        -s shards-count
+                Count of shards at platform (must be a multiple of ten).
