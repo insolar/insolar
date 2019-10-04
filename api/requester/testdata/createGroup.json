@@ -5,12 +5,12 @@
   "params": {
     "callSite": "group.create",
     "callParams": {
-      "name": "Some members",
+      "name": "MGR",
       "members": [
-        "16Y6FGrTUhVA7juV7dRNxT4BXnbLtVseimrDsWMwLhoB",
-        "16Y6GBAVqteXTSyv7mKUEpxvV8iuV5qsuJtiasFXk2sx"
+        "16aKmk3fCcE25m41ewEU7pRWeH7s3WMRdRCN3bLCz3Ms",
+        "16aKnBq676W3QpopJL4cSq5Yjc2BvXSGfLjGXwWtvhBp"
       ]
     },
-    "reference": "16Y6EpfLtqmNcAf9qJFmvESx3AdqJEAbefJGp22VTjZe"
+    "reference": "16aKmJiwhV9wwQ4weVf4ddNWaAC3tmaYEN7c3LAxNHvU"
   }
 }

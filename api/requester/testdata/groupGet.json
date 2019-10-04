@@ -3,9 +3,9 @@
   "method": "contract.call",
   "id": 1,
   "params": {
-    "callSite": "user.get",
+    "callSite": "group.get",
     "callParams": {
-      "reference": "16aKhfCKne8hqR82QXv8NfQNJWNyL8oBZo9MxJeNEE78"
+      "reference": "16aKnfW1ys2YFMfaHvXo6VVDA1cudGHmj35p3Egp2bxG"
     }
   }
 }
