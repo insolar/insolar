@@ -34,20 +34,6 @@ type histogramData struct {
 	sum         int64
 }
 
-// sizeHistogram contains keySize histogram and valueSize histogram
-// type sizeHistogram struct {
-// 	keySizeHistogram, valueSizeHistogram histogramData
-// }
-
-// newSizeHistogram returns a new instance of keyValueSizeHistogram with
-// properly initialized fields.
-// func newSizeHistogram() *sizeHistogram {
-// 	// TODO(ibrahim): find appropriate bin size.
-// 	keyBins := createHistogramBins(1, 16)
-// 	valueBins := createHistogramBins(1, 30)
-// 	return &sizeHistogram{}
-// }
-
 func newKeyHistogram() *histogramData {
 	keyBins := createHistogramBins(1, 16)
 	return &histogramData{
