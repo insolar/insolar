@@ -369,6 +369,10 @@ func sendRequest(sendURL string, adminURL, rootKeysFile string, paramsPath strin
 	reqCfg, err := requester.ReadRequestParamsFromFile(pPath)
 	check("[ sendRequest ]", err)
 
+	if !insolar.IsReferenceInBase58(userCfg.Caller) && insolar.IsReferenceInBase58(reqCfg.Reference) {
+		userCfg.Caller = reqCfg.Reference
+	}
+
 	if userCfg.Caller == "" {
 		info, err := requester.Info(adminURL)
 		check("[ sendRequest ]", err)
