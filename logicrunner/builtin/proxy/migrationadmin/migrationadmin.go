@@ -31,6 +31,10 @@ type AddMaResponse struct {
 type CheckDaemonResponse struct {
 	Status string `json:"status"`
 }
+type GetAddressCountResponse struct {
+	ShardIndex int `json:"shardIndex"`
+	FreeCount  int `json:"freeCount"`
+}
 type VestingParams struct {
 	Lockup      int64 `json:"lockupInPulses"`
 	Vesting     int64 `json:"vestingInPulses"`
