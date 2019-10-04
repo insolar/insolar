@@ -61,7 +61,7 @@ const (
 	XNS                        = "XNS"
 	FundsDepositName           = "genesis_deposit"
 	MigrationDaemonLockup      = 1578700800 // 11.01.2020
-	MigrationDaemonVesting     = 1735689600 // ?
+	MigrationDaemonVesting     = 31622400   // 1 year
 	MigrationDaemonVestingStep = 2629746    // 1 month
 	MigrationDaemonMaturePulse = 1610323200 // 11.01.2021
 
